@@ -145,7 +145,8 @@ run_job() {
   tar -xzf "$TMPD/src.tgz" -C "$TMPD/src" --strip-components=1 --no-same-owner 2>>"$LOG" || { fail "Kunne ikke pakke ut arkivet."; return; }
   local SRC="$TMPD/src"
   [ -f "$SRC/docker-compose.yml" ] && [ -f "$SRC/server/index.js" ] || { fail "Arkivet mangler docker-compose.yml eller server/index.js. Ingenting er endret."; return; }
-  VERSION=$(sed -n 's/^## *\[\([0-9][0-9.]*\)\].*/\1/p' "$SRC/CHANGELOG.md" 2>/dev/null | head -n 1)
+  # Prompt 36: «## [4.29.0]», «## 4.29.0» og «## v4.29.0 – dato» (samme regler som parseChangelog i serveren).
+  VERSION=$(sed -n -E 's/^## *\[? *[vV]?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' "$SRC/CHANGELOG.md" 2>/dev/null | head -n 1)
   log "Versjon i arkivet: ${VERSION:-ukjent}"
 
   # 2. Kopier inn. .env, data/ og proton/ fjernes fra kopien og utelates i tillegg (bare på toppnivå: server/data er kode).

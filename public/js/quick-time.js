@@ -45,7 +45,8 @@ export const TYPES = ['lege', 'tannlege', 'frisør', 'fysio', 'psykolog', 'optik
 export const DURATION = { frisør: 45, lege: 30, tannlege: 60, fysio: 45, psykolog: 50, optiker: 30, vaksine: 15, annet: 60 };
 export const NO_DATE = 'Fant ikke dato. Skriv f.eks. «25.09» eller «tirsdag».';
 export const NO_TIME = 'Fant ikke klokkeslett, lagt inn som hele dagen.';
-const INTENT = /(^|[^a-zæøå])(time|timen|timer|avtale|avtalen|legg til|book|booke|booket|bestill|bestilt|bestille)([^a-zæøå]|$)/;
+// Prompt 36: «timer» (antall timer), «timeplan» og «sommertid» er ikke en avtale – bare hele ord time/timen/timeavtale/avtale.
+const INTENT = /(^|[^a-zæøå])(time|timen|timeavtale|avtale|avtalen|legg til|book|booke|booket|bestill|bestilt|bestille)([^a-zæøå]|$)/;
 
 const PRE_SKIP = /^(?:(?:du|jeg|vi|dere)\s+(?:har|skal ha|fikk)\s+(?:fått\s+)?)?(?:legg til|lag|sett opp|book|bestill|bestilt|ny)?\s*(?:en\s+|ny\s+)?(?:time|timen|avtale|avtalen|konsultasjon|timebestilling|påminnelse om time)?$/i;
 const toMin = (s) => { const [a, b] = s.split(':'); return +a * 60 + +b; };

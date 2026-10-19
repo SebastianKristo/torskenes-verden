@@ -37,7 +37,7 @@
 import { Hono } from 'hono';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash, createHmac, randomBytes } from 'node:crypto';
-import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, lstatSync, statfsSync } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, lstatSync, statfsSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -82,6 +82,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS backup_jobs (
 );`);
 // Prompt 30: kopi til nettverksdisk (SMB). {ok, at, path, file?, removed?, error?}
 if (!db.prepare('PRAGMA table_info(backup_jobs)').all().some((c) => c.name === 'smb')) db.exec('ALTER TABLE backup_jobs ADD COLUMN smb TEXT');
+// Prompt 36: kvittering per kjøring {target, fullPath, url, method, bytes, sha256, verified, retention:[…], ms, error, name, folder}.
+if (!db.prepare('PRAGMA table_info(backup_jobs)').all().some((c) => c.name === 'report')) db.exec('ALTER TABLE backup_jobs ADD COLUMN report TEXT');
 
 /* ---------------- Moduler → tabeller, kv-nøkler og filmapper ---------------- */
 
@@ -249,7 +251,29 @@ export function jobOut(r) {
   if (r.error) o.error = r.error;
   if (r.cloud) o.cloud = JSON.parse(r.cloud);
   if (r.smb) o.smb = JSON.parse(r.smb);
+  // Prompt 36: kvitteringen (bare etter verifisering er ok:true).
+  if (r.report) {
+    const rep = JSON.parse(r.report);
+    Object.assign(o, { name: rep.name ?? null, target: rep.target ?? null, fullPath: rep.fullPath ?? null, url: rep.url ?? null, method: rep.method ?? null, bytes: rep.bytes ?? r.size ?? null,
+      sha256: rep.sha256 ?? r.sha256 ?? null, verified: !!rep.verified, retention: rep.retention ?? [], ms: rep.ms ?? null, folder: rep.folder ?? null, receipt: rep.receipt ?? null, log: rep.log ?? [] });
+    if (rep.error && !o.error) o.error = rep.error;
+  }
   return o;
+}
+const SCOPE_SLUG = { all: 'hele', finans: 'finans', custom: 'egendefinert' };
+/** Synlig filnavn (prompt 36): homelab-2026-10-19_2130-hele.tar.zst (+ .enc). Oslo-tid. */
+export function visibleName(t, scope, ext) {
+  const o = osloParts(t);
+  return `homelab-${o.date}_${String(o.hh).padStart(2, '0')}${String(o.mm).padStart(2, '0')}-${SCOPE_SLUG[scope] ?? 'hele'}.${ext}`;
+}
+const manifestNameOf = (name) => name.replace(/\.tar\.(gz|zst)(\.enc)?$/, '.json');
+const gb = (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1).replace('.', ',')} GB` : n >= 1e6 ? `${(n / 1e6).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1e3))} kB`);
+/** Lokal mappe: hvis BACKUP_DIR skal være et monteringspunkt (BACKUP_REQUIRE_MOUNT=1), må den være montert. Ingen stille fallback. */
+export function checkBackupMount(dir = BACKUP_DIR) {
+  if (process.env.BACKUP_REQUIRE_MOUNT !== '1') return null;
+  try { if (statSync(dir).dev === statSync(resolve(dir, '..')).dev) return `${dir} er ikke montert (mountpoint mangler). Backupen ble ikke skrevet, så den ikke havner i en tom lokal mappe.`; }
+  catch (e) { return `${dir} finnes ikke: ${e.message}`; }
+  return null;
 }
 const modulesOf = (scope, modules) => (scope === 'all' ? [...MODULE_IDS] : scope === 'finans' ? ['finans'] : MODULE_IDS.filter((m) => (modules ?? []).includes(m)));
 
@@ -371,6 +395,7 @@ export function startBackup({ scope = 'all', modules = null, kind = 'manual', by
     const out = join(BACKUP_DIR, file), part = out + '.part';
     try {
       if (st.encrypt && !key) throw new Error('Krypteringsnøkkelen mangler. Lag en ny under Hvor → Krypter backup.');
+      { const mErr = checkBackupMount(); if (mErr) throw new Error(mErr); }
       mkdirSync(work, { recursive: true });
       const snap = join(work, 'homelab.db');
       const info = await snapshot(snap, mods);
@@ -394,23 +419,43 @@ export function startBackup({ scope = 'all', modules = null, kind = 'manual', by
       const tap = new Transform({ transform(ch, _e, cb) { fileHash.update(ch); cb(null, ch); } });
       const ws = createWriteStream(part, { mode: 0o600 });
       const src = Readable.from(tarWithHashes(entries, hashes, (n) => { sent += n; progress(id, 10 + (total ? (sent / total) * 85 : 85)); }, manifest));
-      if (key) await pipeline(src, compressor(), encryptStream(key, tap), tap, ws);
-      else await pipeline(src, compressor(), tap, ws);
+      let bytes = 0;
+      const count = new Transform({ transform(ch, _e, cb) { bytes += ch.length; cb(null, ch); } });
+      if (key) await pipeline(src, compressor(), encryptStream(key, tap), tap, count, ws);
+      else await pipeline(src, compressor(), tap, count, ws);
       renameSync(part, out);
+      // Prompt 36: verifiser lokalt (stat + størrelse + mappeliste) før noe kalles ferdig.
       const size = statSync(out).size;
-      setJob(id, { state: 'done', pct: 100, finished: Date.now(), size, file, encrypted: key ? 1 : 0, key_id: encKeyId, sha256: fileHash.digest('hex'), tables: JSON.stringify(info.tables) });
-      if (kind !== 'safety') rotate(st.keep);
+      if (size !== bytes) throw new Error(`Backupfila har feil størrelse (${size} av ${bytes} byte)`);
+      if (!readdirSync(BACKUP_DIR).includes(file)) throw new Error(`Fant ikke ${file} i ${BACKUP_DIR} etter skriving`);
+      const sha256 = fileHash.digest('hex');
+      const name = visibleName(t0, scope, FORMAT + (key ? '.enc' : ''));
+      const man = { ...manifest(), file: name, localFile: file, bytes: size, sha256 };
+      writeFileSync(join(BACKUP_DIR, `${id}.json`), JSON.stringify(man, null, 1), { mode: 0o600 });
+      setJob(id, { state: 'verifying', pct: 96, size, file, encrypted: key ? 1 : 0, key_id: encKeyId, sha256, tables: JSON.stringify(info.tables) });
+      broadcast('system-backup', { action: 'progress', id, pct: 96, step: 'verifying' });
+      let rep = { target: 'local', fullPath: join(BACKUP_DIR, file), url: null, method: 'local', bytes: size, sha256, verified: true, retention: [], name, log: [] };
+      if (st.smb.enabled && kind !== 'safety') {
+        const sm = await smbUpload(id, { name, manifestPath: join(BACKUP_DIR, `${id}.json`) });
+        if (!sm.ok) throw Object.assign(new Error(`Kopien til nettverksdisken feilet: ${sm.error}. Backupen ligger bare lokalt (${join(BACKUP_DIR, file)}).`), { report: { ...rep, ...sm, target: 'smb', verified: false } });
+        rep = { ...rep, ...sm, target: 'smb', name: sm.file, retention: [...(sm.retention ?? [])] };
+      }
+      // Retention kjøres etter verifiseringen og aldri på fila som nettopp ble laget.
+      if (kind !== 'safety') { rotate(st.keep, Date.now(), id); rep.retention.push(...lastRotated.map((n) => ({ where: 'local', name: n, action: 'slettet' }))); }
       else rotateSafety();
+      rep.ms = Date.now() - t0;
+      rep.receipt = `✓ ${gb(size)} · ${rep.url ?? rep.fullPath} · verifisert`;
+      setJob(id, { state: 'done', pct: 100, finished: Date.now(), report: JSON.stringify(rep) });
+      console.info(`[system-backup] ${id} mål=${rep.target} sti=${rep.fullPath} metode=${rep.method} bytes=${size} sha256=${sha256} verifisert=${rep.verified} retention=${JSON.stringify(rep.retention)} tid=${rep.ms} ms`);
       if (st.cloud.enabled && kind !== 'safety') await cloudUpload(id).catch(() => {});
-      if (st.smb.enabled && kind !== 'safety') await smbUpload(id).catch(() => {});
       const job = jobOut(getJob(id));
-      broadcast('system-backup', { action: 'done', id, job, title: 'Backup', body: '✓ Backup ferdig', category: 'system' });
+      broadcast('system-backup', { action: 'done', id, job, title: 'Backup', body: `✓ Backup ferdig · ${gb(size)} · verifisert`, category: 'system' });
       return job;
     } catch (e) {
       rmSync(part, { force: true });
       const msg = String(e?.message ?? e).slice(0, 500);
       console.error(`[system-backup] ${id} feilet: ${msg}`);
-      setJob(id, { state: 'failed', finished: Date.now(), error: msg });
+      setJob(id, { state: 'failed', finished: Date.now(), error: msg, report: JSON.stringify({ target: st.smb.enabled && kind !== 'safety' ? 'smb' : 'local', verified: false, ms: Date.now() - t0, retention: [], ...(e.report ?? {}), error: msg }) });
       const job = jobOut(getJob(id));
       broadcast('system-backup', { action: 'failed', id, job, title: 'Backup feilet', body: `Backup feilet: ${msg}`, category: 'system', silent: !st.notifyFail });
       // Ingen e-posttjeneste for utgående post finnes på serveren: varselet går som sanntid/push til administratorene og loggen.
@@ -428,17 +473,22 @@ export function startBackup({ scope = 'all', modules = null, kind = 'manual', by
 
 function removeJob(r) {
   if (r.file && FILE.test(r.file)) rmSync(join(BACKUP_DIR, r.file), { force: true });
+  if (ID.test(r.id)) rmSync(join(BACKUP_DIR, `${r.id}.json`), { force: true });
   q('DELETE FROM backup_jobs WHERE id=?').run(r.id);
 }
 /** Sletter gamle backuper etter keep ('7' | '30' | '90d' | '1y'). Den nyeste vellykkede beholdes alltid. → antall slettet. */
-export function rotate(keep = backupSettings().keep, now = Date.now()) {
+let lastRotated = [];
+// Prompt 36: except (id) slettes aldri, selv om sortering/tidssone skulle være feil. Gir lista over slettede filer.
+export function rotate(keep = backupSettings().keep, now = Date.now(), except = null) {
   const ok = q("SELECT * FROM backup_jobs WHERE state='done' AND kind<>'safety' ORDER BY started DESC").all();
   let gone = [];
   if (keep === '7' || keep === '30') gone = ok.slice(Number(keep));
   else { const days = keep === '1y' ? 365 : 90; gone = ok.slice(1).filter((r) => now - r.started > days * 86_400_000); }
-  for (const r of gone) removeJob(r);
+  gone = gone.filter((r) => r.id !== except);
+  for (const r of gone) { console.info(`[system-backup] retention: sletter ${r.file ?? r.id}`); removeJob(r); }
   // Feilede jobber: behold de 20 siste radene.
-  for (const r of q("SELECT * FROM backup_jobs WHERE state='failed' ORDER BY started DESC").all().slice(20)) removeJob(r);
+  for (const r of q("SELECT * FROM backup_jobs WHERE state='failed' ORDER BY started DESC").all().slice(20)) if (r.id !== except) removeJob(r);
+  lastRotated = gone.map((r) => r.file ?? r.id);
   return gone.length;
 }
 function rotateSafety() { for (const r of q("SELECT * FROM backup_jobs WHERE state='done' AND kind='safety' ORDER BY started DESC").all().slice(5)) removeJob(r); }
@@ -547,7 +597,13 @@ export function smbPathOf(p) {
   if (segs.length > 24 || !segs.every((x) => SMB_SEG.test(x))) throw new Error('Ugyldig mappe på nettverksdisken');
   return segs.join('/');
 }
-export const smbTarget = () => { const m = backupSettings().smb; return { enabled: !!m.enabled, share: m.share || '', path: m.path || '', label: m.share ? `${m.share}${m.path ? '/' + m.path : ''}` : '' }; };
+// Prompt 36: målet er {host, share, path}; vises som smb://host/share/path. share/label beholdes for eldre klienter.
+export const smbTarget = () => {
+  const m = backupSettings().smb, sp = splitShare(m.share || '');
+  const host = sp.share.split('/')[2] || '', shareName = sp.share.split('/')[3] || '', path = [sp.sub, m.path].filter(Boolean).join('/');
+  return { enabled: !!m.enabled, share: m.share || '', path: m.path || '', label: m.share ? `${m.share}${m.path ? '/' + m.path : ''}` : '',
+    host, shareName, url: host && shareName ? `smb://${host}/${shareName}${path ? '/' + path : ''}` : '', folder: host && shareName ? { host, share: shareName, path } : null };
+};
 export function setSmbTarget(o) {
   const cur = backupSettings();
   const next = { ...cur.smb, ...(o.enabled !== undefined ? { enabled: !!o.enabled } : {}), ...(o.share !== undefined ? { share: o.share ? normShare(o.share) ?? '' : '' } : {}), ...(o.path !== undefined ? { path: smbPathOf(o.path) } : {}) };
@@ -557,37 +613,99 @@ export function setSmbTarget(o) {
 }
 const smbConn = () => { const f = fhSettings(OWNER); return { user: f.smbUser, password: fhSecret('smbPass', OWNER), domain: f.smbDomain, proto: f.smbVersion }; };
 const smbWhere = (m) => { const { share, sub } = splitShare(m.share); return { share, dir: [sub, m.path].filter(Boolean).join('/') }; };
-/** Navnene som skal slettes på nettverksdisken etter keep (nyeste først; den nyeste beholdes alltid). */
-export function smbRotateList(names, keep, now = Date.now()) {
-  const list = names.filter((n) => FILE.test(n)).sort().reverse();
-  if (keep === '7' || keep === '30') return list.slice(Number(keep));
-  const days = keep === '1y' ? 365 : 90;
-  return list.slice(1).filter((n) => { const m = n.match(/^bk-(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)/); return m && now - Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]) > days * 86_400_000; });
+// Backupfiler på nettverksdisken: de gamle bk-<id>.tar.* og de synlige homelab-YYYY-MM-DD_HHMM-<omfang>.tar.* (prompt 36).
+const NEW_FILE = /^homelab-(\d{4})-(\d\d)-(\d\d)_(\d\d)(\d\d)-[a-z]+(?:-\d+)?\.tar\.(gz|zst)(\.enc)?$/;
+const remoteKey = (n) => { let m = n.match(/^bk-(\d{8})-(\d{6})/); if (m && FILE.test(n)) return m[1] + m[2]; m = n.match(NEW_FILE); return m ? `${m[1]}${m[2]}${m[3]}${m[4]}${m[5]}00` : null; };
+const remoteTime = (k) => Date.UTC(+k.slice(0, 4), +k.slice(4, 6) - 1, +k.slice(6, 8), +k.slice(8, 10), +k.slice(10, 12), +k.slice(12, 14));
+/** Navnene som skal slettes på nettverksdisken etter keep (nyeste først; den nyeste og except beholdes alltid). */
+export function smbRotateList(names, keep, now = Date.now(), except = null) {
+  const list = names.filter((n) => remoteKey(n)).sort((a, b) => remoteKey(b).localeCompare(remoteKey(a)) || b.localeCompare(a));
+  let out;
+  if (keep === '7' || keep === '30') out = list.slice(Number(keep));
+  else { const days = keep === '1y' ? 365 : 90; out = list.slice(1).filter((n) => now - remoteTime(remoteKey(n)) > days * 86_400_000); }
+  return out.filter((n) => n !== except);
 }
-/** Kopierer backupen id til nettverksdisken og roterer der. Feil lagres i jobben (smb). */
-export async function smbUpload(id) {
+const smbFail = (out) => { const stc = smbPutError(out); return stc ? `${smbErrorText(stc).message} (${stc.replace(/^NT_/, '')})` : null; };
+const READBACK_MAX = Number(process.env.BACKUP_VERIFY_READBACK_MAX ?? 512 * 1024 * 1024);
+/**
+ * Kopierer backupen id til nettverksdisken, verifiserer og roterer der (prompt 36).
+ * 1) lager mappene (mkdir/cd), 2) laster opp med --directory=<mappe> (finnes den ikke, feiler smbclient – aldri stille til roten
+ * av sharen), til «.part» og rename, 3) manifest <navn>.json ved siden av, 4) ls: fila må finnes med riktig størrelse, og
+ * SHA-256 sjekkes ved å lese fila tilbake (opp til BACKUP_VERIFY_READBACK_MAX), 5) retention (aldri den nye fila).
+ * → {ok, file, fullPath, url, folder, method, bytes, sha256, verified, retention, removed, path, log, error?}. Lagres i jobben (smb).
+ */
+export async function smbUpload(id, { name = null, manifestPath = null } = {}) {
   const r = getJob(id);
-  const st = backupSettings();
-  const mark = (o) => { setJob(id, { smb: JSON.stringify({ at: new Date().toISOString(), path: smbTarget().label, ...o }) }); return o; };
-  if (!r || r.state !== 'done' || !r.file || !FILE.test(r.file)) throw new Error('Fant ikke backupen');
+  const st = backupSettings(), t0 = Date.now(), tgt = smbTarget(), log = [];
+  const mark = (o) => { setJob(id, { smb: JSON.stringify({ at: new Date().toISOString(), path: tgt.label, ...o }) }); return o; };
+  if (!r || !r.file || !FILE.test(r.file)) throw new Error('Fant ikke backupen');
   if (!st.smb.share) return mark({ ok: false, error: 'Nettverksdisken er ikke satt opp' });
   const { share, dir } = smbWhere(st.smb);
   const c = smbConn();
+  const local = join(BACKUP_DIR, r.file), bytes = statSync(local).size;
+  let file = name ?? r.file, partLeft = null;
+  const base = { method: 'smbclient', folder: tgt.folder, url: null, fullPath: null, bytes, sha256: r.sha256 ?? null, verified: false, retention: [], log };
   try {
-    // Prompt 34: til «.part» først, så rename når opplastingen er ferdig. NT_STATUS-feil i -c gir den ekte feilkoden.
-    const putOut = await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}put "${localArg(join(BACKUP_DIR, r.file))}" "${r.file}.part"; rename "${r.file}.part" "${r.file}"`, timeout: 6 * 3_600_000 });
-    { const stc = smbPutError(putOut); if (stc) throw new Error(`${smbErrorText(stc).message} (${stc.replace(/^NT_/, '')})`); }
+    // 1) Mappene finnes (mkdir på en mappe som finnes gir OBJECT_NAME_COLLISION og ignoreres).
+    if (dir) { const o = await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}pwd`, timeout: 60_000 }); const f = smbFail(o); if (f) throw new Error(f); }
+    const ls0 = parseSmbLs(await smbRun({ share, ...c, dir: dir || undefined, cmd: 'ls', timeout: 60_000 }));
+    const names0 = new Set(ls0.map((x) => x.name));
+    if (name) for (let i = 2; names0.has(file) || names0.has(manifestNameOf(file)); i++) file = name.replace(/(\.tar\.)/, `-${i}$1`);
+    // Halve filer fra avbrutte kjøringer ryddes.
+    const stale = ls0.filter((x) => x.type === 'file' && /\.part$/.test(x.name) && (remoteKey(x.name.replace(/\.part$/, '')) || /^homelab-.*\.json\.part$/.test(x.name))).map((x) => x.name);
+    if (stale.length) { await smbRun({ share, ...c, dir: dir || undefined, cmd: stale.map((n) => `del "${n}"`).join('; '), timeout: 60_000 }).catch(() => {}); log.push(`ryddet ${stale.join(', ')}`); }
+    const where = `${share}${dir ? '/' + dir : ''}`;
+    base.fullPath = `${where}/${file}`;
+    base.url = `${tgt.url ? tgt.url.replace(/\/+$/, '') : 'smb:' + where}/${file}`;
+    // 2) Opplasting til .part + rename. NT_STATUS-feil i -c gir den ekte feilkoden.
+    partLeft = `${file}.part`;
+    const putOut = await smbRun({ share, ...c, dir: dir || undefined, cmd: `put "${localArg(local)}" "${file}.part"; rename "${file}.part" "${file}"`, timeout: 6 * 3_600_000 });
+    { const f = smbFail(putOut); if (f) throw new Error(f); }
+    partLeft = null;
+    log.push(`lastet opp ${bytes} byte til ${base.fullPath}`);
+    // 3) Manifest ved siden av.
+    const mname = manifestNameOf(file);
+    if (manifestPath && existsSync(manifestPath)) {
+      const mOut = await smbRun({ share, ...c, dir: dir || undefined, cmd: `put "${localArg(manifestPath)}" "${mname}.part"; rename "${mname}.part" "${mname}"`, timeout: 120_000 });
+      const f = smbFail(mOut); if (f) throw new Error(`Manifestet: ${f}`);
+    }
+    // 4) Verifiser: list mappen, sjekk størrelse, og les tilbake for SHA-256.
+    const ls = parseSmbLs(await smbRun({ share, ...c, dir: dir || undefined, cmd: 'ls', timeout: 60_000 }));
+    const got = ls.find((x) => x.name === file && x.type === 'file');
+    if (!got) throw new Error(`Fila kom ikke fram på nettverksdisken (${base.fullPath} finnes ikke etter opplasting)`);
+    if (got.size !== bytes) throw new Error(`Fila på nettverksdisken har feil størrelse: ${got.size} av ${bytes} byte`);
+    if (manifestPath && !ls.some((x) => x.name === mname)) throw new Error(`Manifestet ${mname} kom ikke fram`);
+    let hashOk = null;
+    if (bytes <= READBACK_MAX && r.sha256) {
+      const back = join(BACKUP_DIR, `.verify-${id}`);
+      try {
+        await smbRun({ share, ...c, dir: dir || undefined, cmd: `get "${file}" "${localArg(back)}"`, timeout: 6 * 3_600_000 });
+        const h = createHash('sha256');
+        for await (const ch of createReadStream(back)) h.update(ch);
+        hashOk = h.digest('hex') === r.sha256;
+      } finally { rmSync(back, { force: true }); }
+      if (!hashOk) throw new Error('SHA-256 for fila på nettverksdisken stemmer ikke med backupen');
+    }
+    log.push(`verifisert: stat + størrelse${hashOk ? ' + sha256' : ''} + mappeliste`);
+    // 5) Retention etter verifisering, aldri den nye fila. Manifestet til en slettet fil slettes også.
     let removed = 0;
+    const retention = [];
     try {
-      const names = parseSmbLs(await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}ls`, timeout: 60_000 })).filter((x) => x.type === 'file').map((x) => x.name);
-      if (!names.includes(r.file)) throw new Error('Fila kom ikke fram på nettverksdisken');
-      const old = smbRotateList(names, st.keep);
-      if (old.length) { await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}${old.map((n) => `del "${n}"`).join('; ')}`, timeout: 120_000 }); removed = old.length; }
-    } catch (e) { if (/kom ikke fram/.test(e.message)) throw e; console.warn('[system-backup] rotasjon på nettverksdisk:', e.message); }
-    return mark({ ok: true, file: r.file, removed });
+      const names = ls.filter((x) => x.type === 'file').map((x) => x.name);
+      const old = smbRotateList(names, st.keep, Date.now(), file);
+      const del = old.flatMap((n) => [n, ...(names.includes(manifestNameOf(n)) && manifestNameOf(n) !== n ? [manifestNameOf(n)] : [])]);
+      if (del.length) {
+        await smbRun({ share, ...c, dir: dir || undefined, cmd: del.map((n) => `del "${n}"`).join('; '), timeout: 120_000 });
+        removed = old.length;
+        for (const n of del) retention.push({ where: 'smb', name: n, action: 'slettet' });
+        console.info(`[system-backup] retention på nettverksdisk (${where}): sletter ${del.join(', ')}`);
+      }
+    } catch (e) { console.warn('[system-backup] rotasjon på nettverksdisk:', e.message); retention.push({ where: 'smb', action: 'feilet', error: e.message }); }
+    return mark({ ...base, ok: true, file, verified: true, sha256: r.sha256 ?? null, removed, retention, ms: Date.now() - t0 });
   } catch (e) {
+    if (partLeft) await smbRun({ share, ...c, dir: dir || undefined, cmd: `del "${partLeft}"`, timeout: 60_000 }).catch(() => {});
     console.error(`[system-backup] ${id} kopi til nettverksdisk feilet: ${e.message}`);
-    return mark({ ok: false, error: String(e.message).slice(0, 300) });
+    return mark({ ...base, ok: false, file, error: String(e.message).slice(0, 300), ms: Date.now() - t0 });
   }
 }
 

@@ -173,15 +173,15 @@ test('sporing: per bruker, samme nummer kan spores av flere, ingen ser eller end
   assert.equal(db.prepare('SELECT user_id FROM hl_shipments WHERE id=?').get(kid).user_id, kariId);
 });
 
-test('Mat og Home OS: hver sin', async () => {
+test('Mat er felles for husstanden (prompt 36), Home OS er per bruker', async () => {
   const k = await K('/mat/api/week');
   assert.equal(k.status, 200);
-  assert.ok(!k.text.includes('Sebastians taco'));
+  assert.ok(k.text.includes('Sebastians taco'), 'felles matplan');
   assert.equal((await K('/mat/api/meals', 'POST', { name: 'Karis lasagne' })).status < 300, true);
-  assert.ok(!(await S('/mat/api/week')).text.includes('Karis lasagne'));
-  assert.ok(!(await R('/mat/api/week')).text.includes('Karis lasagne'));
+  assert.ok((await S('/mat/api/week')).text.includes('Karis lasagne'));
+  assert.ok((await R('/mat/api/week')).text.includes('Karis lasagne'));
   const fk = (await K('/mat/api/folders')).body, fs = (await S('/mat/api/folders')).body;
-  assert.ok(fk.length && fk.every((f) => !fs.some((x) => x.id === f.id)), 'egne mapper');
+  assert.deepEqual(fk.map((f) => f.id), fs.map((f) => f.id), 'samme mapper');
   // Kalenderfeeden følger nøkkelen.
   const ics = await app.request('/mat/calendar.ics?key=sebastian-kalender-nokkel-123');
   assert.equal(ics.status, 200);

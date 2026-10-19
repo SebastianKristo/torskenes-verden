@@ -76,6 +76,7 @@ import { calendarAnswer } from './kalender33.js'; // prompt 33: source:'calendar
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { extractPlace, placeWeather, PlaceNotFound } from './weather35.js'; // prompt 35: været for et sted
 import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from './ai-run.js';
+import { isSunQuestion, daylight } from './sun36.js'; // prompt 36: dagslys lokalt
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -169,16 +170,64 @@ export function navTarget(text) {
   return hit ? { target: hit[1], label: hit[2], web: hit[3] } : null;
 }
 
+/* ---------------- Prompt 36: spørsmål eller handling ---------------- */
+// Spørsmål → svaret vises i kortet under søkefeltet (ingen pille). Handling/beskjed → bare Glimt-pillen (live activity).
+const Q_PREFIX = /^(?:spørsmål\s*[:,.-]?\s*)?(?:hei\s*,?\s*|glimt\s*,?\s*)?/i;
+const Q_START = /^(spørsmål|hva|hvor|hvem|hvilken|hvilket|hvilke|hvordan|hvorfor|når|kan du|vet du|fortell|what|when|where|how|who|why|which|is|are|do|does|can)\b/i;
+const Q_PHRASE = /\b(hvor (mange|mye|lenge|langt)|hva (er|blir|skjer|har)|når (går|er|kommer|blir|skal)|hvordan (blir|er))\b/i;
+const ACT_VERB = /^(?:spørsmål\s*[:,]?\s*)?(legg (til|inn)|book|booke|bestill|påminn|minn meg|husk|lagre|last opp|avbestill|sett opp|lag (en )?(avtale|påminnelse))\b/i;
+/** Lokale regler. → {kind:'question'|'action', sure, reason} */
+export function questionGuard(text) {
+  const t = String(text ?? '').trim(), n = t.toLowerCase();
+  if (ACT_VERB.test(n)) return { kind: 'action', sure: true, reason: 'handlingsverb' };
+  if (/\?/.test(n)) return { kind: 'question', sure: true, reason: 'spørsmålstegn' };
+  const body = n.replace(Q_PREFIX, '');
+  if (/^spørsmål\b/.test(n) || Q_START.test(body)) return { kind: 'question', sure: true, reason: 'spørreord' };
+  if (Q_PHRASE.test(n)) return { kind: 'question', sure: true, reason: 'spørrefrase' };
+  return { kind: null, sure: false, reason: null };
+}
+export const isQuestion = (text) => questionGuard(text).kind === 'question';
+const ACTION_INTENTS = new Set(['appointment.create', 'trial.create', 'memory.add']);
+/** kind for et svar/intent: lokale regler først, så intensjonen. sure:false betyr at en kort LLM-klassifisering kan avgjøre. */
+export function classifyLocal(text, intent = detectIntent(text)) {
+  const g = questionGuard(text);
+  if (g.kind) return { kind: g.kind, sure: true, reason: g.reason, intent };
+  if (ACTION_INTENTS.has(intent)) return { kind: 'action', sure: true, reason: 'avtale/påminnelse', intent };
+  if (intent !== 'llm') return { kind: 'question', sure: true, reason: 'verktøy', intent };
+  return { kind: 'question', sure: false, reason: 'uklart', intent };
+}
+let classifyImpl = null;
+/** Bare for tester: (text) → 'question'|'action'. */
+export const _setClassifyLlm = (fn) => { classifyImpl = fn; };
+/** Lokale regler, og ved tvil et kort klassifiseringskall (maks 300 ms, lokal modell). → {kind, sure, reason, intent, via} */
+export async function classify(user, text, { today = osloTodayISO(), maxMs = 300 } = {}) {
+  const c = classifyLocal(text, detectIntent(text, today));
+  if (c.sure) return { ...c, via: 'regler' };
+  try {
+    const call = classifyImpl ? Promise.resolve(classifyImpl(text))
+      : (MOCK && !process.env.OLLAMA_URL) ? Promise.resolve(null)
+        : aiRun('sok', { user, prompt: `Er dette et spørsmål som skal besvares, eller en beskjed/handling som skal utføres (legge i kalender, lagre, påminne)? Svar KUN med JSON {"type":"question"|"action"}.\nTekst: ${String(text).slice(0, 300)}`, json: true, numPredict: 12, temperature: 0, localOnly: true, background: true, title: 'Glimt · klassifisering' }).then((o) => o.text);
+    const out = await Promise.race([call, new Promise((r) => setTimeout(() => r(null), maxMs))]);
+    const v = typeof out === 'string' ? (out.match(/"type"\s*:\s*"(question|action)"/)?.[1] ?? (/^(question|action)$/.test(out.trim()) ? out.trim() : null)) : null;
+    if (v) return { ...c, kind: v, sure: true, reason: 'llm', via: 'llm' };
+  } catch { /* modellen nede: bruk reglene */ }
+  return { ...c, via: 'regler' };
+}
+
 /** Hvilket verktøy spørsmålet går til (uten å hente data). → intent */
 export function detectIntent(text, today = osloTodayISO()) {
   const n = String(text ?? '').toLowerCase();
   if (navTarget(text)) return 'nav';
+  // Prompt 36: dagslys/soloppgang/solnedgang besvares lokalt (før avtaletolkning).
+  if (isSunQuestion(text)) return 'sun.daylight';
+  const asked = isQuestion(text);
   // Prøveperiode: «gratis», «trial», «prøveperiode», eller «prøve/avslutt/si opp» sammen med en tjeneste («Storytel prøve til 25.11»).
   if (RE.trial.test(n) && (/gratis|trial|prøveperiode|prøvetid/.test(n) || serviceOf(text))) return 'trial.create';
   if (parseMemoryIntent(text)) return 'memory.add';
   if (RE.next.test(n) && RE.nextWhat.test(n)) return 'calendar.next';
   const pq = parseQuick(text, today);
-  if (pq.isAppointment && pq.ok && pq.date && !/\?\s*$/.test(n) && !/^(hva|hvor|når|hvem|hvordan)\b/.test(n)) return 'appointment.create';
+  // Prompt 36: spørsmålsvakt – et spørsmål med dato er aldri en avtale («hvor mange timer med dagslys er det den 29.06.2027»).
+  if (pq.isAppointment && pq.ok && pq.date && !asked) return 'appointment.create';
   if (RE.weather.test(n)) return 'weather';
   if (RE.finance.test(n)) return 'finance.spent';
   if (RE.tasks.test(n)) return 'tasks';
@@ -378,6 +427,27 @@ function toolAppointment(user, text, today) {
   return { text: `Legger til **${pq.title || 'avtalen'} · ${quickLabel(pq)}** i kalenderen.`, source: 'Kalender · rask time', tool: 'Kalender', quickJobId: r.jobId };
 }
 
+/** Prompt 36: dagslys, soloppgang og solnedgang for dato og sted, regnet lokalt. Kortet har «Åpne Vær ›». */
+async function toolSun(user, text, today) {
+  const date = parseDay(text, today)?.date ?? (parseQuick(text, today).date || today);
+  const n = String(text).toLowerCase();
+  const list = kv.get(user, 'wx_places', null);
+  const own = Array.isArray(list) ? list : [];
+  let p = own.find((x) => x?.name && new RegExp(`(^|[^a-zæøå])${String(x.name).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-zæøå]|$)`).test(n))
+    ?? Object.values(PLACES).find((x) => new RegExp(`(^|[^a-zæøå])${x.name.toLowerCase()}([^a-zæøå]|$)`).test(n));
+  let tz = 'Europe/Oslo', note = '';
+  const named = !p ? extractPlace(text) : null;
+  if (!p && named) {
+    try { const r = await (placeImpl ? placeImpl(named, { offset: 0 }) : placeWeather(named, { offset: 0 })); p = { name: r.place.label ?? r.place.name, lat: r.place.lat, lon: r.place.lon }; tz = r.place.tz || tz; }
+    catch { note = ` (fant ikke ${named}, viser Oslo)`; }
+  }
+  p ??= own[0]?.lat != null ? own[0] : PLACES.oslo;
+  const d = daylight(date, { name: p.name, lat: p.lat, lon: p.lon, tz });
+  const open = { route: 'vaer', name: p.name, lat: p.lat, lon: p.lon, date };
+  return { text: d.text + note, source: 'Glimt · sol (lokal beregning)', tool: 'Vær', open, place: { name: p.name, label: p.name, lat: p.lat, lon: p.lon, tz },
+    card: { k: 'sun', date, place: p.name, sunrise: d.sunrise, sunset: d.sunset, daylightMin: d.daylightMin, daylight: { h: Math.floor(d.daylightMin / 60), m: d.daylightMin % 60 }, polar: d.polar, open, action: { label: 'Åpne Vær', open } } };
+}
+
 async function toolMemory(user, text, ctx) {
   const intent = parseMemoryIntent(text);
   return learnFromAssist(user, text, intent, ctx ?? getContext(user));
@@ -437,9 +507,15 @@ async function toolLlmTest(user, text) {
 
 /* ---------------- Svar ---------------- */
 
-const TITLES = { 'calendar.free_slots': 'Finner ledig tid', 'calendar.search': 'Leter i kalenderen', 'calendar.summary': 'Oppsummerer', 'calendar.create': 'Legger til i kalenderen', 'weather.daily': 'Sjekker været', 'calendar.ask': 'Glimt tenker', weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
+// Prompt 36: spørsmål med dato til modellen får datoen med som kontekst (ingen avtale).
+function withDateContext(text, today) {
+  const d = isQuestion(text) ? parseDay(text, today) : null;
+  return d?.date ? `${text}\n(Dato i spørsmålet: ${d.date}, ${d.label}. I dag er ${today}.)` : text;
+}
+
+const TITLES = { 'sun.daylight': 'Regner på sola', 'calendar.free_slots': 'Finner ledig tid', 'calendar.search': 'Leter i kalenderen', 'calendar.summary': 'Oppsummerer', 'calendar.create': 'Legger til i kalenderen', 'weather.daily': 'Sjekker været', 'calendar.ask': 'Glimt tenker', weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
   'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
-const TOOL_OF = { 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei' };
+const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
 export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null } = {}) {
@@ -450,6 +526,7 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   try {
     const nv = intent === 'nav' ? navTarget(text) : null;
     r = nv ? { text: `Åpner **${nv.label}**.`, source: 'Snarvei', nav: { target: nv.target, label: nv.label, web: nv.web, deepLink: `finanshub://${nv.target}`, delayMs: 450 } }
+      : intent === 'sun.daylight' ? await toolSun(user, text, today)
       : intent === 'weather' ? await toolWeather(user, text)
       : intent === 'calendar.day' ? await toolCalendarDay(user, text, today)
         : intent === 'calendar.next' ? await toolCalendarNext(user, text, today)
@@ -460,13 +537,14 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
                   : intent === 'trial.create' ? toolTrial(user, text, today)
                     : intent === 'appointment.create' ? toolAppointment(user, text, today)
                       : intent === 'memory.add' ? await toolMemory(user, text, ctx)
-                        : await toolLlm(user, text);
+                        : await toolLlm(user, withDateContext(text, today));
   } catch (e) {
     console.warn('[glimt]', intent, e?.message ?? e);
     r = { text: `Fikk ikke hentet ${TOOL_OF[intent]?.toLowerCase() ?? 'svaret'} akkurat nå. **Prøv igjen** om litt.`, source: 'Glimt', tool: TOOL_OF[intent], error: String(e?.message ?? e).slice(0, 200) };
   }
   onStep(2, intent);
-  const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
+  const kc = classifyLocal(text, intent);
+  const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, kind: kc.kind, surface: kc.kind === 'action' ? 'pill' : 'inline', ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
     model: r.model ?? 'Glimt · verktøy', engine: r.engine ?? (intent === 'llm' ? 'none' : 'tool') };
   for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound']) if (r[k] !== undefined) out[k] = r[k];
   if (r.nav) { out.target = r.nav.target; out.nav = r.nav; }
@@ -635,7 +713,17 @@ api.post('/', async (c) => {
   // Klienten venter ikke lenger: varsle når den blir ferdig.
   q('UPDATE assist_jobs SET direct=0 WHERE id=?').run(id);
   if (row?.state === 'failed') return c.json({ jobId: id, state: 'failed', error: row.error }, 502);
-  return c.json({ jobId: id }, 202);
+  const kc = classifyLocal(text, detectIntent(text, osloTodayISO()));
+  return c.json({ jobId: id, kind: kc.kind, surface: kc.kind === 'action' ? 'pill' : 'inline', intent: kc.intent }, 202);
+});
+// Prompt 36: POST /api/assist/classify {q} → {kind:'question'|'action', surface:'inline'|'pill', sure, reason, intent, via}
+// Raskt (lokale regler, ved tvil maks 300 ms LLM), så klienten vet om den skal vise kortet under søket eller pillen.
+api.post('/classify', async (c) => {
+  const b = await c.req.json().catch(() => null);
+  const text = typeof b?.q === 'string' ? b.q.replace(/\s+/g, ' ').trim().slice(0, MAX_Q) : '';
+  if (!text) return c.json({ error: 'Mangler q' }, 400);
+  const r = await classify(c.get('user'), text);
+  return c.json({ ...r, surface: r.kind === 'action' ? 'pill' : 'inline' });
 });
 
 api.get('/:id', (c) => {

@@ -1,6 +1,7 @@
 // Mat (prompt 13): mapper, oppskrifter fra nettsider og skannede bilder, og lenker/filer per rett.
 //
-// Per bruker (ISO2): alle fire tabellene har user_id (gamle rader tilhører OWNER), og alle spørringer filtrerer på brukeren.
+// Felles for husstanden (prompt 36): alle fire tabellene har user_id, og radene til husstanden har user_id = HOUSEHOLD (OWNER).
+// Rader som ble lagt til side ved sammenslåingen har user_id 'pre36:<bruker>' (beholdes, slettes aldri).
 //
 // Datamodell (SQLite, ved siden av rettene i kv user/'mat'):
 //   food_folder(id, name, sort)                          – dish.folderId peker hit
@@ -39,8 +40,10 @@ for (const t of ['food_folder', 'dish_link', 'mat_file', 'mat_scan_job']) {
   db.prepare(`UPDATE ${t} SET user_id=? WHERE user_id IS NULL`).run(OWNER);
 }
 db.exec('CREATE INDEX IF NOT EXISTS food_folder_user ON food_folder(user_id)');
-// Brukeren forespørselen eller jobben gjelder.
-const mu = () => { const u = activeUser(); if (!u) throw Object.assign(new Error('Ikke innlogget'), { status: 401 }); return u; };
+// Prompt 36: Mat er alltid felles for husstanden (alle brukere på serveren). Radene lagres under husstanden (HOUSEHOLD = OWNER);
+// innlogging kreves fortsatt. Gamle rader fra andre brukere slås sammen av mergeHousehold36() i mat.js.
+export const HOUSEHOLD = OWNER;
+const mu = () => { const u = activeUser(); if (!u) throw Object.assign(new Error('Ikke innlogget'), { status: 401 }); return HOUSEHOLD; };
 
 /* ---------------- Mapper ---------------- */
 

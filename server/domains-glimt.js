@@ -35,7 +35,7 @@ import { sessionUser, userInfo, isAdmin, listUsers } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { settings as fhSettings } from './finans/db.js';
 import { notifyUser } from './notify.js';
-import { summaryFacts, domainNames } from './domains.js';
+import { summaryFacts, domainNames, domainsOverview, PER_RANGE } from './domains.js';
 import { run as aiRun } from './ai-run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -443,13 +443,45 @@ gscApi.delete('/', async (c) => {
 /** /api/domains/:domain/summary og /api/domains/:domain/gsc (bare admin). */
 export const domainGlimtApi = new Hono();
 const known = (d) => d === '*' || domainNames().includes(d);
+// Prompt 36: oppsummeringen blokkerer aldri. Finnes dagens, gis den. Ellers startes den i bakgrunnen, og svaret er den
+// siste lagrede (stale:true) eller den regelbaserte (sumLocal) med pending:true. ?wait=1 venter som før.
+const inflight = new Map();
+const makeBg = (u, d) => { const k = `${u}|${d}`; if (!inflight.has(k)) inflight.set(k, makeSummary(u, d).catch((e) => { console.warn('[domener] oppsummering:', e.message); return null; }).finally(() => inflight.delete(k))); return inflight.get(k); };
+export async function summaryNow(u, d, { wait = false, graceMs = 250 } = {}) {
+  const label = d === '*' ? 'Alle domener' : d;
+  const row = q('SELECT * FROM domain_summary WHERE user_id=? AND domain=? AND date=?').get(u, d, osloDate());
+  if (row) return sumOut(row, label);
+  const job = makeBg(u, d);
+  const quick = wait ? await job : await Promise.race([job, new Promise((r) => setTimeout(() => r(undefined), graceMs))]);
+  if (quick) { const { warn, ...s } = quick; return s; }
+  const last = q('SELECT * FROM domain_summary WHERE user_id=? AND domain=? ORDER BY date DESC LIMIT 1').get(u, d);
+  if (last) return { ...sumOut(last, label), stale: true, pending: true };
+  const F = await summaryFacts(d).catch(() => []);
+  const loc = sumLocal(F, d === '*');
+  return { domain: d, label, date: osloDate(), createdAt: new Date().toISOString(), manual: false, daily: false, ai: false, model: 'Glimt · regler', head: loc.head,
+    pts: loc.pts.map((p) => ({ t: p.t, tone: COLOR[p.tone] ? p.tone : 'info', color: COLOR[p.tone] ?? COLOR.info })), meta: `Glimt leser statistikken … · ${label}`, pending: true };
+}
 domainGlimtApi.get('/:domain/summary', adminGuard, async (c) => {
   const u = c.get('user'), d = normDomain(c.req.param('domain'));
   if (!known(d)) return c.json({ error: 'Fant ikke domenet' }, 404);
+  return c.json(await summaryNow(u, d, { wait: c.req.query('wait') === '1' }));
+});
+/**
+ * Prompt 36: GET /api/domains/overview?per=24t|7d|30d[&domain=] – alt Domener trenger i ett svar (KPI-er, grafer, land,
+ * sider, oppetid, per domene), server-cache 5 min. gsc: Google Søk fra den daglige synken (6 t, ingen nye kall her).
+ * summary: dagens lagrede Glimt-oppsummering eller null – den lages aldri her (egen rute, ikke-blokkerende).
+ */
+domainGlimtApi.get('/overview', adminGuard, async (c) => {
+  const u = c.get('user');
+  const per = PER_RANGE[c.req.query('per') ?? ''] ? c.req.query('per') : '24t';
+  const d = normDomain(c.req.query('domain') ?? '*');
+  if (!known(d)) return c.json({ error: 'Fant ikke domenet' }, 404);
+  const o = await domainsOverview(per, d);
+  if (!o) return c.json({ error: 'Fant ikke domenet' }, 404);
+  let gsc = null;
+  if (d !== '*') { try { const v = gscView(u, d, 28); gsc = v.connected && !v.loading ? v : { connected: !!v.connected, loading: !!v.loading, needsSite: !!v.needsSite }; } catch { gsc = null; } }
   const row = q('SELECT * FROM domain_summary WHERE user_id=? AND domain=? AND date=?').get(u, d, osloDate());
-  if (row) return c.json(sumOut(row, d === '*' ? 'Alle domener' : d));
-  const { warn, ...s } = await makeSummary(u, d);
-  return c.json(s);
+  return c.json({ ...o, gsc, summary: row ? sumOut(row, d === '*' ? 'Alle domener' : d) : null, summaryUrl: `/api/domains/${encodeURIComponent(d)}/summary` }, 200, { 'Cache-Control': 'private, max-age=60' });
 });
 domainGlimtApi.post('/:domain/summary', adminGuard, async (c) => {
   const u = c.get('user'), d = normDomain(c.req.param('domain'));

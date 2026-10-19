@@ -1,3 +1,4 @@
+import { bootStep, bootState, bootFinish } from './boot36.js'; // prompt 36: oppstartsstatus (først, så db-steget måles)
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
@@ -10,7 +11,7 @@ import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
 import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
-import { cfg, publicConfig, updateConfig, runRequest, userCfgSet } from './settings.js';
+import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
 import finansApi from './finans/routes.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
@@ -42,6 +43,7 @@ import { reauthHandler } from './reauth.js'; // prompt 31: POST /api/auth/reauth
 import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (alias per bruker)
 import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
 import aiApi, { glimtApi } from './ai-api.js';
+import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -56,12 +58,19 @@ import { describeApi as calendarDescribeApi, searchAiMiddleware as calendarSearc
 import { calendarsApi as kalCalendarsApi, weatherApi as kalWeatherApi, eventsMiddleware as kalEventsMw, widgetMiddleware as kalWidgetMw, companionApi, companionsOf } from './kalender33.js'; // prompt 33 (SERVER33)
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
+// Prompt 36: alle moduler (og migreringene de kjører når de lastes) er ferdige her.
+bootStep('migrate', 'ok');
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
 if (api !== integrations) console.warn('[mock] MOCK_DATA=1 – viser eksempeldata.');
 
 const app = new Hono();
 // ISO2: hver forespørsel kjører med sin egen brukerkontekst, så cfg() gir den innloggedes personlige integrasjoner.
 app.use('*', (c, next) => runRequest(c, next));
+// Prompt 36: «Starter opp»-siden. Registrert før secureHeaders: siden er én fil med innebygd skript/stil, så den får sin
+// egen strenge CSP (ingen eksterne skript, bare fonten fra Google Fonts, fetch bare til samme opphav).
+app.get('/starting.html', async (c) => c.body(await readFile(join(resolve('public'), 'starting.html'), 'utf8'), 200, {
+  'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer',
+  'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'" }));
 const UPLOADS = resolve(config.dataDir, 'uploads');
 const PUBLIC = resolve('public');
 
@@ -122,6 +131,16 @@ app.use('/vendor/satellite/*', serveStatic({ root: './node_modules/satellite.js/
 app.get('/manifest.webmanifest', async (c) => c.body(await page('manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
 app.get('/sw.js', async (c) => c.body(await page('sw.js'), 200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache' }));
 app.get('/healthz', (c) => c.text('ok'));
+// Prompt 36: GET /api/health → {ready, version, steps:[{id, label, status, ms}], startedAt, uptimeMs} uten innlogging (oppstartssiden).
+// Innlogget (og ?boot=1 ikke satt) svarer den som før med tjenestestatusen, og oppstartsfeltene flettes inn.
+app.get('/api/health', async (c, next) => {
+  const b = bootState();
+  const authd = !!(c.req.header('authorization') || sessionUser(c));
+  if (c.req.query('boot') === '1' || !b.ready || !authd) return c.json(b, 200, { 'Cache-Control': 'no-store' });
+  await next();
+  if (c.res.status !== 200) { c.res = c.json(b, 200, { 'Cache-Control': 'no-store' }); return; }
+  try { const j = await c.res.clone().json(); c.res = c.json({ ...j, ...b }, 200, { 'Cache-Control': 'no-store' }); } catch { /* lar svaret stå */ }
+});
 
 /* ---------------- Innlogging ---------------- */
 
@@ -633,6 +652,7 @@ app.route('/api/backup', systemBackupApi); // prompt 29: bare admin; endringer k
 app.route('/api/system/update', systemUpdateApi); // bare admin; start/rollback krever passordet og økt eller admin-token (finance:write)
 // Prompt 30: kort versjonssvar for oppdateringsbanneret (samme tilgang som /api/system/update).
 app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/version'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); });
+app.get('/api/system/changelog', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/changelog'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); }); // prompt 36
 app.route('/api/glimt/memory', glimtMemoryApi); // prompt 33: GET/POST/DELETE, POST /:id/apply (sesjon eller app-token, per bruker)
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
 app.route('/api/ai', aiApi); // prompt 34: AI-kontroll
@@ -654,6 +674,7 @@ app.post('/api/domains/token/verify', async (c) => { const u = new URL(c.req.url
 app.get('/api/domener/sammendrag', authOrToken, domainPill);
 app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt) og /:domain/gsc (Google Search Console), bare admin
 app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
+app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
@@ -671,9 +692,16 @@ app.onError((err, c) => {
 // requestTimeout gjelder hele forespørselen (10 min), socketTimeout 0 = ingen grense for inaktiv socket (SSE fra /finans/api/jobs).
 export const HTTP_TIMEOUTS = { requestTimeout: 600_000, headersTimeout: 65_000, keepAliveTimeout: 75_000, socketTimeout: 0 };
 
+if (process.env.NODE_ENV === 'test') { bootStep('api', 'ok'); bootStep('ai', 'ok'); bootStep('integrations', 'ok'); }
 if (process.env.NODE_ENV !== 'test') {
   const server = serve({ fetch: app.fetch, port: config.port, serverOptions: { requestTimeout: HTTP_TIMEOUTS.requestTimeout, headersTimeout: HTTP_TIMEOUTS.headersTimeout, keepAliveTimeout: HTTP_TIMEOUTS.keepAliveTimeout } },
-    (info) => console.log(`OS kjører på http://localhost:${info.port}`));
+    (info) => {
+      console.log(`OS kjører på http://localhost:${info.port}`);
+      bootStep('api', 'ok');
+      // AI og integrasjoner: i bakgrunnen med tidsgrense (siden blir aldri stående).
+      bootFinish({ aiCheck: () => runAsUser(OWNER, async () => (await import('./finans/ai.js')).health()) })
+        .then((b) => console.log(`[boot] klar: ${b.steps.map((s) => `${s.id} ${s.ms ?? '–'} ms`).join(' · ')}`));
+    });
   server.setTimeout(HTTP_TIMEOUTS.socketTimeout);
   attachRealtime(server, wsUser);
 }

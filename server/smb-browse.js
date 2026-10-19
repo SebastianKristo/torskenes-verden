@@ -19,7 +19,8 @@
 //   POST /browse   {host, share | manual, path, user, password, domain?, protocol?, showHidden?} → [{name, type:'dir', locked?, code?, reason?, display?, hidden?, link?}]
 //   POST /list     samme kropp → {path, share, folders:[…som over], filtered:[{name, attrs, why}], rawCount, protocol, hint?}
 //                  share kan være skjult (backup$); manual:'/backup/homelab' = «Skriv sti manuelt»
-//   POST /mkdir    {…, path, name}             → {ok, path}
+//   POST /mkdir    {…, path, name}             → {ok, path, writable, url, message} (prompt 36: tester skrivetilgang med en gang)
+//   (prompt 36) /list svarer også {host, url:'smb://host/share/a/b', breadcrumb:[{name, path, share}], parent, empty, files, target:{host, share, path}}
 //   POST /test     {…, path}                   → {ok, writable, readBack?, message:'✓ Kan skrive · 38 MB/s …'|'✗ Ingen skrivetilgang: STATUS_ACCESS_DENIED …', mbps?, code?}
 //   POST /save     {host, share, path, user, password, domain, protocol, use:['finans','system']}
 //                  → {ok, share, path, label, use, finans:{…smbConfig}, system:{enabled, share, path}}
@@ -352,14 +353,29 @@ export async function list(t, { showHidden = false, checkAccess = true } = {}) {
       }
     } catch (e) { console.warn(`[smb] tilgangssjekk i ${where} feilet: ${e.message}`); }
   }
-  return { path: t.path, share: t.share, folders: d.folders, filtered: d.filtered, rawCount: d.raw.length, protocol: t.protocol };
+  // Prompt 36: navigering i undermapper – url, brødsmulesti, forelder og «Tom mappe».
+  const files = parseLs(out).filter((r) => r.type !== 'dir').length;
+  return { path: t.path, share: t.share, host: t.host, url: smbUrl(t.host, t.share, t.path), breadcrumb: crumbsOf(t.host, t.share, t.path),
+    parent: t.path ? t.path.split('/').slice(0, -1).join('/') : null, empty: !d.folders.length && !files, files,
+    target: { host: t.host, share: t.share, path: t.path ? '/' + t.path : '' },
+    folders: d.folders, filtered: d.filtered, rawCount: d.raw.length, protocol: t.protocol };
 }
 // Prompt 30-formen (array). Mapper uten tilgang er med (locked:true) i stedet for å forsvinne.
 export const browse = async (t, o = {}) => (await list(t, o)).folders;
-export async function mkdir(t, name) {
+/** Prompt 36: lager mappen der man står og tester skrivetilgang i den med en gang. → {ok, path, writable, url, message?, code?} */
+export async function mkdir(t, name, { test = true } = {}) {
   await inShare(t, { cmd: `mkdir "${cleanName(name)}"` });
-  return { ok: true, path: [t.path, name].filter(Boolean).join('/') };
+  const path = [t.path, name].filter(Boolean).join('/');
+  const out = { ok: true, path, url: smbUrl(t.host, t.share, path) };
+  if (!test) return out;
+  const w = await writeTest({ ...t, path }).catch((e) => ({ writable: false, message: e.message }));
+  return { ...out, writable: !!w.writable, message: w.message, ...(w.code ? { code: w.code } : {}), ...(w.mbps ? { mbps: w.mbps } : {}) };
 }
+/** smb://host/share/a/b */
+export const smbUrl = (host, share, path = '') => `smb://${host}/${share}${path ? '/' + path : ''}`;
+/** Brødsmulesti: [{name:'truenas.local', path:null}, {name:'backup', path:''}, {name:'homelab', path:'homelab'}] */
+export const crumbsOf = (host, share, path = '') => [{ name: host, path: null, share: null }, { name: share, path: '', share },
+  ...String(path || '').split('/').filter(Boolean).map((seg, i, a) => ({ name: seg, path: a.slice(0, i + 1).join('/'), share }))];
 const statusOf = (e) => { const m = String(e?.raw ?? e?.message ?? '').match(/NT_STATUS_([A-Z_]+)/); return m ? `STATUS_${m[1]}` : null; };
 /**
  * Test skrivetilgang (prompt 34): skriver .homelab-test-{uuid} (1 MiB), leser den tilbake og sammenligner, sletter den.
@@ -405,7 +421,7 @@ export async function saveTarget(t, use) {
   setSecret('smbPass', t.password || '');
   if (use.includes('system')) setSmbTarget({ enabled: true, share, path: t.path });
   else if (smbTarget().enabled && smbTarget().share === share) setSmbTarget({ enabled: false });
-  return { ok: true, share, path: t.path, label: `${share}${t.path ? '/' + t.path : ''}`, use, finans: smbConfig(), system: smbTarget() };
+  return { ok: true, share, path: t.path, label: `${share}${t.path ? '/' + t.path : ''}`, url: smbUrl(t.host, t.share, t.path), target: { host: t.host, share: t.share, path: t.path ? '/' + t.path : '' }, use, finans: smbConfig(), system: smbTarget() };
 }
 
 /* ---------------- Ruter ---------------- */
@@ -457,6 +473,7 @@ api.post('/list', run(async (b) => {
   await checkHost(t.host);
   const r = await list(t, { showHidden: b.showHidden === true });
   if (r.folders.some((f) => f.locked)) r.hint = `Mapper med lås er synlige, men ${t.user || 'gjest'} har ikke tilgang. Gi brukeren lese- og skrivetilgang til mappen i NAS-ens innstillinger (Synology DSM: Kontrollpanel → Delt mappe → Rediger → Tillatelser; TrueNAS: Datasets → Edit Permissions).`;
+  else if (r.empty) r.hint = 'Tom mappe. Lag en undermappe med «+ Ny mappe», eller trykk «Bruk denne mappen».';
   else if (!r.folders.length) r.hint = 'Ingen mapper her. Ser du ikke mappen du venter? Den kan være skjult for brukeren (Access-Based Enumeration) eller være en egen share. Skriv stien manuelt, for eksempel /backup/homelab, og test den.';
   return r;
 }));

@@ -237,7 +237,7 @@ test('browse, mkdir og skrivetest', async () => {
   assert.match(missing.body.error, /Fant ikke mappen/);
   const mk = await A('/api/smb/mkdir', 'POST', { ...T, path: 'homelab', name: 'Server 1' });
   assert.equal(mk.status, 200, mk.text);
-  assert.deepEqual(mk.body, { ok: true, path: 'homelab/Server 1' });
+  assert.deepEqual([mk.body.ok, mk.body.path, mk.body.writable, mk.body.url], [true, 'homelab/Server 1', true, 'smb://nas.local/backup/homelab/Server 1'], 'prompt 36: mkdir tester skrivetilgang');
   assert.deepEqual((await A('/api/smb/browse', 'POST', { ...T, path: 'homelab' })).body, [{ name: 'Server 1', type: 'dir' }]);
   const dup = await A('/api/smb/mkdir', 'POST', { ...T, path: 'homelab', name: 'Server 1' });
   assert.equal(dup.status, 502);
@@ -276,7 +276,8 @@ test('save → smbConfig (FinansHub) og systembackupens SMB-mål; passordet kryp
   const { kv, OWNER } = await import('../server/db.js');
   assert.match(kv.get(OWNER, 'fh_secret', {}).smbPass, /^enc:/);
   const s = await A('/api/backup/settings');
-  assert.deepEqual({ ...s.body.target.smb, lastUpload: undefined }, { enabled: true, share: '//nas.local/backup', path: 'homelab', label: '//nas.local/backup/homelab', lastUpload: undefined, lastError: null, unencrypted: true });
+  assert.deepEqual({ ...s.body.target.smb, lastUpload: undefined }, { enabled: true, share: '//nas.local/backup', path: 'homelab', label: '//nas.local/backup/homelab', lastUpload: undefined, lastError: null, unencrypted: true,
+    host: 'nas.local', shareName: 'backup', url: 'smb://nas.local/backup/homelab', folder: { host: 'nas.local', share: 'backup', path: 'homelab' } });
   assert.ok(!JSON.stringify((await A('/finans/api/backup')).body).includes('hemmelig-nas-pw'));
   // FinansHub-testen bruker samme pålogging.
   const t = await A('/finans/api/backup/smb/test', 'POST', {});
@@ -308,20 +309,26 @@ test('systembackup kopierer ferdig fil til SMB, roterer etter keep og viser smb 
   assert.equal(job.smb.path, '//nas.local/backup/homelab');
   assert.equal(job.smb.removed, 3);
   const names = Object.keys(dir).sort();
-  assert.ok(names.includes(sb._test.getJob(id).file));
-  assert.equal(names.filter((n) => n.startsWith('bk-')).length, 7);
+  // Prompt 36: synlig navn homelab-YYYY-MM-DD_HHMM-<omfang>.tar.* + .json-manifest, verifisert.
+  assert.match(job.smb.file, /^homelab-\d{4}-\d\d-\d\d_\d{4}-finans\.tar\.(gz|zst)$/);
+  assert.ok(names.includes(job.smb.file));
+  assert.ok(names.includes(job.smb.file.replace(/\.tar\..*$/, '.json')));
+  assert.equal(names.filter((n) => n.startsWith('bk-') || /^homelab-.*\.tar\./.test(n)).length, 7);
   assert.ok(names.includes('notater.txt'));
-  assert.equal(dir[sb._test.getJob(id).file].size, job.size);
-  const put = calls.find((c) => c.args.includes('-c') && c.args[c.args.indexOf('-c') + 1].includes(`"${sb._test.getJob(id).file}"`));
-  assert.match(put.args[put.args.indexOf('-c') + 1], /^mkdir "homelab"; cd "homelab"; put "/);
+  assert.equal(dir[job.smb.file].size, job.size);
+  assert.equal(job.verified, true);
+  const put = calls.find((c) => c.args.includes('-c') && c.args[c.args.indexOf('-c') + 1].includes(`"${job.smb.file}.part"`));
+  assert.match(put.args[put.args.indexOf('-c') + 1], /^put "/);
+  assert.ok(put.args.includes('--directory=homelab'), 'opplasting med --directory (ingen stille fallback til roten)');
   const list = (await A('/api/backup/list')).body;
   assert.equal(list.find((x) => x.id === id).smb.ok, true);
   assert.ok((await A('/api/backup/settings')).body.target.smb.lastUpload);
 
-  // Feil på nettverksdisken: backupen er fortsatt OK lokalt, feilen vises.
+  // Feil på nettverksdisken (prompt 36): status Feilet – aldri «tatt» uten fil. Feilen vises.
   fb._setSmbExec(async (args) => (args[0] === '--version' ? { code: 0, stdout: '', stderr: '' } : { code: 1, stdout: '', stderr: 'session setup failed: NT_STATUS_LOGON_FAILURE' }));
   const j2 = await sb.startBackup({ scope: 'finans', kind: 'manual' }).done;
-  assert.equal(j2.ok, true);
+  assert.equal(j2.ok, false);
+  assert.match(j2.error, /Kopien til nettverksdisken feilet: Feil brukernavn/);
   assert.equal(j2.smb.ok, false);
   assert.match(j2.smb.error, /Feil brukernavn eller passord/);
   assert.match((await A('/api/backup/settings')).body.target.smb.lastError, /Feil brukernavn/);

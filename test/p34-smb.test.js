@@ -107,7 +107,7 @@ test('opplasting: til .part og rename når den er ferdig (ingen halve filer)', a
   assert.equal(fb.smbPutError('NT_STATUS_OBJECT_NAME_COLLISION making remote directory \\x\nputting file'), null, 'mkdir på eksisterende mappe er ikke en feil');
   assert.equal(fb.smbPutError('NT_STATUS_DISK_FULL opening remote file'), 'NT_STATUS_DISK_FULL');
   const src = readFileSync(new URL('../server/system-backup.js', import.meta.url), 'utf8') + readFileSync(new URL('../server/finans/backup.js', import.meta.url), 'utf8');
-  assert.equal((src.match(/\.part"; rename "/g) ?? []).length, 2, 'begge backupene laster opp via .part');
+  assert.ok((src.match(/\.part"; rename "/g) ?? []).length >= 2, 'begge backupene laster opp via .part (prompt 36: systembackupen også manifestet)');
   assert.ok(statSync(local).size === 10);
 });
 

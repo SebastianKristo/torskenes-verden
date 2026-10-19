@@ -77,35 +77,46 @@ export function compareVersions(a, b) {
 
 const clean = (s) => s.replace(/\*\*|__|`/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim();
 
-/** «## [4.20.0] – 19.10.2026 · tittel» + punktlister → [{version, date, title, items}]. Bare toppnivåpunkter tas med. */
+/** «## [4.20.0] – 19.10.2026 · tittel» + punktlister → [{version, date, title, items}]. */
 // Prompt 31: et toppunkt som bare er en overskrift («**Kalender:**») er tomt alene. Underpunktene slås da sammen inn i det
-// («Kalender: Nytt Nå/Neste-kort. Ukenummer i Måned.»); uten underpunkter hoppes det over. Andre underpunkter tas ikke med.
+// («Kalender: Nytt Nå/Neste-kort. Ukenummer i Måned.»); uten underpunkter hoppes det over.
+// Prompt 36 (FEIL «Ingen endringsnotater»): overskriften kan være «## [4.28.0]», «## 4.28.0», «## v4.28.0 – 19.10.2026»,
+// «## [v4.28.0] - 2026-10-19» (store/små bokstaver, valgfri v og dato). Underpunkter under et vanlig punkt flates ut
+// («Kalender: …» når punktet har en kort fet innledning), tomme punkter og bare-overskrift-linjer hoppes over.
 const headingOnly = (t) => /^[^.!?]{1,60}:$/.test(t);
 const sentence = (t) => (/[.!?…]$/.test(t) ? t : t + '.');
+const HEAD_RE = /^##\s*\[?\s*v?(\d+\.\d+\.\d+)\s*\]?\s*(?:[–—-]\s*([^·]*?))?\s*(?:·\s*(.*))?$/i;
+const leadOf = (raw) => { const m = String(raw).match(/^\*\*([^*]{1,40}?)[.:]?\*\*/); return m ? m[1].replace(/[.:]+$/, '').trim() : null; };
 export function parseChangelog(text) {
   const out = [];
-  let cur = null, head = null;
+  let cur = null, head = null, parent = null;
+  const push = (t) => { if (cur.items.length < 60) cur.items.push(t.slice(0, 400)); };
   const flush = () => {
     if (!head) return;
-    if (head.subs.length && cur.items.length < 40) cur.items.push(`${head.text} ${head.subs.map(sentence).join(' ')}`.slice(0, 400));
+    if (head.subs.length) push(`${head.text} ${head.subs.map(sentence).join(' ')}`);
     head = null;
   };
   for (const line of String(text ?? '').split(/\r?\n/)) {
-    const h = line.match(/^##\s*\[(\d+\.\d+\.\d+)\]\s*(?:[–-]\s*([^·]*?))?\s*(?:·\s*(.*))?$/);
-    if (h) { if (cur) flush(); cur = { version: h[1], date: (h[2] ?? '').trim() || null, title: (h[3] ?? '').trim() || null, items: [] }; out.push(cur); continue; }
-    if (/^#\s/.test(line)) { if (cur) flush(); cur = null; continue; }
+    const h = line.match(HEAD_RE);
+    if (h) { if (cur) flush(); parent = null; cur = { version: h[1], date: (h[2] ?? '').trim() || null, title: (h[3] ?? '').trim() || null, items: [] }; out.push(cur); continue; }
+    if (/^#{1,2}\s/.test(line)) { if (cur) flush(); cur = null; parent = null; continue; }
     if (!cur) continue;
-    const it = line.match(/^[-*]\s+(.+)$/);
+    const it = line.match(/^[-*]\s+(.*)$/);
     if (it) {
-      flush();
+      flush(); parent = null;
       const t = clean(it[1]);
       if (!t || /^[-–:.\s]*$/.test(t)) continue; // tomt punkt
       if (headingOnly(t)) { head = { text: t, subs: [] }; continue; }
-      if (cur.items.length < 40) cur.items.push(t.slice(0, 400));
+      push(t);
+      parent = { lead: leadOf(it[1].trim()) };
       continue;
     }
-    const sub = head && line.match(/^\s+[-*]\s+(.+)$/);
-    if (sub) { const t = clean(sub[1]); if (t) head.subs.push(t); }
+    const sub = line.match(/^\s+[-*]\s+(.*)$/);
+    if (!sub) continue;
+    const t = clean(sub[1]);
+    if (!t || /^[-–:.\s]*$/.test(t) || headingOnly(t)) continue;
+    if (head) head.subs.push(t);
+    else if (parent) push(parent.lead ? `${parent.lead}: ${t}` : t);
   }
   if (cur) flush();
   return out;
@@ -171,7 +182,16 @@ function pendingRequest(status) {
   return !!r?.id && r.id !== status.id && Date.now() - Number(r.at || 0) < 2 * 60_000;
 }
 const isRunning = (status = readStatus()) => RUNNING.has(status.state) || pendingRequest(status);
+// Prompt 36: logg over kjøringer (for TIDLIGERE VERSJONER: installert/feilet). Skrives når serveren ser en ferdig jobb.
+export const updateRuns = () => { const v = kv.get(OWNER, 'update_runs', []); return Array.isArray(v) ? v : []; };
+function recordRun(status) {
+  if (!status?.id || !['done', 'failed'].includes(status.state)) return;
+  const runs = updateRuns();
+  if (runs.some((r) => r.id === status.id && r.state === status.state)) return;
+  kv.set(OWNER, 'update_runs', [{ id: status.id, state: status.state, version: status.version ?? null, sha: status.sha ?? null, action: status.action, at: status.finishedAt ?? Date.now(), error: status.error ? String(status.error).slice(0, 300) : null }, ...runs.filter((r) => r.id !== status.id)].slice(0, 100));
+}
 export function statusOut(status = readStatus()) {
+  try { recordRun(status); } catch { /* logg er valgfri */ }
   const pending = pendingRequest(status);
   const req = pending ? readJson('request.json') : null;
   return { ...status, ...(pending ? { state: 'queued', step: 'Venter på updateren', action: req?.action === 'rollback' ? 'rollback' : 'update', error: null } : {}), ...progressOf(status, pending), running: RUNNING.has(status.state) || pending };
@@ -208,7 +228,8 @@ async function fetchLatest() {
     try { sections = parseChangelog(await (await gh(`https://raw.githubusercontent.com/${REPO}/${commit.sha}/CHANGELOG.md`, 'text/plain')).text()); } catch { /* uten endringsliste */ }
     const value = { version: sections[0]?.version ?? null, sha: commit.sha, date: commit.commit?.committer?.date ?? commit.commit?.author?.date ?? null,
       message: String(commit.commit?.message ?? '').split('\n')[0].slice(0, 200), sections };
-    latest = { at: Date.now(), ttl: LATEST_TTL, value, error: null };
+    // Prompt 36: tomt resultat (CHANGELOG kunne ikke hentes) caches bare 1 min, så notatene kommer når GitHub svarer igjen.
+    latest = { at: Date.now(), ttl: sections.length ? LATEST_TTL : 60_000, value, error: null };
   } catch (e) {
     latest = { at: Date.now(), ttl: 60_000, value: latest?.value ?? null, error: e.name === 'TimeoutError' ? 'GitHub svarte ikke' : e.message };
   }
@@ -296,6 +317,7 @@ async function overview(c, force) {
     latestError: l.error, checkedAt: l.at, repo: REPO, branch: BRANCH,
     updateAvailable,
     changes: lv ? newerSections(lv.sections, inst.version).map(({ version, date, title, items }) => ({ version, date, title, items })) : [],
+    notes: updateAvailable ? (await notesForUpdate(inst, lv)).notes : [],
     status: statusOut(status), running,
     log: status.state !== 'idle' ? readLog(60) : undefined,
     canStart: !reason, reason, needsPassword: !!updateSettings().require_password,
@@ -305,16 +327,96 @@ async function overview(c, force) {
   });
 }
 
+/* ---------------- Endringsnotater (prompt 36) ---------------- */
+
+const notesClean = (list) => [...new Set(list.map((t) => String(t ?? '').trim()).filter((t) => t && !headingOnly(t) && !/^[-–:.\s]*$/.test(t)))].slice(0, 40);
+/** Punkter fra en GitHub Release-body (markdown). */
+export function releaseBodyNotes(body) {
+  const fake = `## [0.0.0]\n${String(body ?? '').replace(/^#{1,6}\s+.*$/gm, '')}`;
+  return notesClean(parseChangelog(fake)[0]?.items ?? []);
+}
+/** Commit-meldinger (første linje), uten chore:/ci:/merge. */
+export function commitNotes(messages) {
+  return notesClean((messages ?? []).map((m) => String(m ?? '').split('\n')[0].trim()).filter((m) => m && !/^(chore|ci|build)(\([^)]*\))?!?:/i.test(m) && !/^Merge (pull request|branch)/i.test(m)));
+}
+async function ghReleaseNotes(version) {
+  if (!version) return [];
+  for (const tag of [`v${version}`, version]) {
+    try { const r = await (await gh(`https://api.github.com/repos/${REPO}/releases/tags/${encodeURIComponent(tag)}`, 'application/vnd.github+json')).json(); const n = releaseBodyNotes(r?.body); if (n.length) return n; } catch { /* neste */ }
+  }
+  return [];
+}
+async function ghCommitNotes(base, head) {
+  if (!/^[0-9a-f]{40}$/.test(base ?? '') || !/^[0-9a-f]{40}$/.test(head ?? '') || base === head) return [];
+  try {
+    const r = await (await gh(`https://api.github.com/repos/${REPO}/compare/${base}...${head}`, 'application/vnd.github+json')).json();
+    return commitNotes((Array.isArray(r?.commits) ? r.commits : []).map((x) => x?.commit?.message).reverse());
+  } catch { return []; }
+}
+/**
+ * Notatene for den NYE versjonen: 1) CHANGELOG.md fra den nye commiten (seksjonene nyere enn installert, ellers seksjonen for
+ * den nye versjonen), 2) GitHub Release-body for v<versjon>, 3) commit-meldinger mellom installert og ny sha.
+ * Lagres i kv update_notes per sha – men bare når det faktisk finnes notater. → {notes, version, source, label}
+ */
+export async function notesForUpdate(inst, lv, { force = false } = {}) {
+  if (!lv) return { notes: [], version: null, source: null, label: null };
+  const key = lv.sha || lv.version;
+  const cached = kv.get(OWNER, 'update_notes', null);
+  if (!force && cached?.key === key && cached.installed === (inst.sha || inst.version) && cached.notes?.length) return { notes: cached.notes, version: cached.version, source: cached.source, label: cached.label };
+  let notes = notesClean(newerSections(lv.sections ?? [], inst.version).flatMap((x) => x.items)), source = 'changelog';
+  // Samme versjonsnummer, ny commit (seksjonen er ikke laget ennå): commit-meldingene sier mest om hva som er nytt.
+  const same = !!lv.version && compareVersions(lv.version, inst.version) === 0;
+  const steps = same ? [['commits', () => ghCommitNotes(inst.sha, lv.sha)], ['release', () => ghReleaseNotes(lv.version)]]
+    : [['release', () => ghReleaseNotes(lv.version)], ['commits', () => ghCommitNotes(inst.sha, lv.sha)]];
+  for (const [src, fn] of steps) { if (notes.length) break; notes = await fn(); source = src; }
+  if (!notes.length && same) { notes = notesClean((lv.sections ?? []).find((x) => x.version === lv.version)?.items ?? []); source = 'changelog'; }
+  if (!notes.length && lv.message && availability(inst, lv)) { notes = commitNotes([lv.message]); source = 'commits'; }
+  const out = { notes, version: lv.version ?? null, source: notes.length ? source : null, label: !notes.length ? null : source === 'commits' ? 'Generert fra commits' : source === 'release' ? 'Fra GitHub Release' : null };
+  if (notes.length) kv.set(OWNER, 'update_notes', { key, installed: inst.sha || inst.version, at: Date.now(), ...out });
+  return out;
+}
+
 /** GET /api/system/version: kort svar for banneret. */
 export async function versionInfo(force = false) {
   const inst = installed();
   const l = await getLatest(force);
   const lv = l.value;
-  const notes = lv ? newerSections(lv.sections, inst.version).flatMap((x) => x.items).filter((t) => t && !headingOnly(t)).slice(0, 40) : [];
   const updateAvailable = availability(inst, lv);
+  const n = updateAvailable ? await notesForUpdate(inst, lv, { force }) : { notes: [], version: null, source: null, label: null };
   const sizeBytes = updateAvailable ? await releaseSize(force) : null;
-  return { current: inst.version, latest: lv?.version ?? null, notes, publishedAt: lv?.date ?? null, updateAvailable,
-    name: OS_NAME, codename: OS_CODENAME, tagline: OS_TAGLINE, sizeBytes };
+  const sec = lv?.sections?.find((x) => x.version === lv.version);
+  return { current: inst.version, latest: lv?.version ?? null, notes: n.notes, notesVersion: n.version, notesSource: n.source, notesLabel: n.label,
+    notesDate: sec?.date ?? null, publishedAt: lv?.date ?? null, updateAvailable, sha: lv?.sha ? lv.sha.slice(0, 7) : null,
+    name: OS_NAME, codename: OS_CODENAME, tagline: OS_TAGLINE, sizeBytes, shortName: shortName(lv?.version ?? inst.version) };
+}
+
+/**
+ * GET /api/system/changelog?limit=20&before=4.28.0 (prompt 36): tidligere versjoner, nyeste først.
+ * Seksjonene fra CHANGELOG.md i installert release + (om hentet) den nye, flettet med updaterens historikk og loggen over kjøringer.
+ * → {items:[{version, date, title, notes[], count, commit?, installedAt?, installed, current, failed?, error?}], more}
+ */
+export function changelogPage({ limit = 20, before = null } = {}) {
+  let local = [];
+  try { local = parseChangelog(readFileSync(CHANGELOG, 'utf8')); } catch { /* ingen fil */ }
+  const remote = latest?.value?.sections ?? [];
+  const byV = new Map();
+  for (const sct of [...remote, ...local]) if (!byV.has(sct.version) || (!byV.get(sct.version).items.length && sct.items.length)) byV.set(sct.version, sct);
+  const hist = readJson('history.json'), inst = installed();
+  const entries = Array.isArray(hist?.entries) ? hist.entries.filter((x) => x && typeof x === 'object') : [];
+  const runs = updateRuns();
+  let list = [...byV.values()].sort((a, b) => compareVersions(b.version, a.version));
+  if (before) list = list.filter((x) => compareVersions(x.version, before) < 0);
+  const items = list.slice(0, limit).map((x) => {
+    const h = entries.find((e) => e.version === x.version);
+    const fail = runs.find((r) => r.version === x.version && r.state === 'failed');
+    const ok = runs.find((r) => r.version === x.version && r.state === 'done');
+    const installedAt = Number(h?.at) || (x.version === inst.version ? inst.at : null) || (ok ? ok.at : null);
+    const notes = notesClean(x.items);
+    return { version: x.version, date: x.date, title: x.title, notes, count: notes.length, commit: h?.sha ? String(h.sha).slice(0, 7) : null,
+      ...(installedAt ? { installedAt: new Date(installedAt).toISOString() } : {}), installed: !!installedAt || x.version === inst.version, current: x.version === inst.version,
+      ...(fail && !installedAt ? { failed: true, error: fail.error, failedAt: new Date(fail.at).toISOString() } : {}) };
+  });
+  return { items, more: list.length > limit };
 }
 
 /* ---------------- Brukervalg (serveroppsett, bare admin) ---------------- */
@@ -437,6 +539,11 @@ api.post('/check', (c) => overview(c, true));
 api.get('/log', (c) => c.text(readLog(0), 200, { 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' }));
 api.get('/status', (c) => c.json({ ...statusOut(), current: installed().version }, 200, { 'Cache-Control': 'no-store' }));
 api.get('/version', async (c) => c.json(await versionInfo(c.req.query('force') === '1')));
+api.get('/changelog', (c) => {
+  const limit = Math.max(1, Math.min(50, parseInt(c.req.query('limit') ?? '20', 10) || 20));
+  const before = /^v?\d+\.\d+\.\d+$/.test(c.req.query('before') ?? '') ? c.req.query('before').replace(/^v/, '') : null;
+  return c.json(changelogPage({ limit, before }));
+});
 api.get('/settings', (c) => c.json(updateSettings()));
 api.put('/settings', async (c) => {
   if (!canWrite(c)) return c.json({ error: 'Tokenet mangler tilgangen finance:write' }, 403);

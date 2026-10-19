@@ -150,7 +150,7 @@ export function trialsPart(u, today) {
 /** Prompt 35: dagens middag fra Mat (bare lesing). */
 function dinnerPart(u, today) {
   try {
-    const m = kv.get(u, 'mat', null);
+    const m = kv.get('owner', 'mat', null); // prompt 36: matplanen er felles for husstanden (HOUSEHOLD = OWNER)
     const p = m?.plan?.[today];
     const d = p?.dish ? (m.dishes ?? []).find((x) => x.id === p.dish) : null;
     return d ? { title: d.name, cook: p.cook ?? null } : null;

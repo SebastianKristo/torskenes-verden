@@ -7,6 +7,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { readFile, writeFile, unlink, mkdir, readdir } from 'node:fs/promises';
 import { statfsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
 import os from 'node:os';
 import { config } from './config.js';
 import { kv, OWNER } from './db.js';
@@ -392,15 +393,39 @@ api.post('/me/avatar', authOrToken, bodyLimit({ maxSize: 1024 * 1024 + 64 * 1024
   if (b.length > 1024 * 1024) return c.json({ error: 'Bildet er for stort (maks 1 MB)' }, 413);
   if (!imageKind(b)) return c.json({ error: 'Bruk et JPEG-, PNG- eller WebP-bilde' }, 400);
   const id = c.get('user');
-  await writeFile(avatarFile(id), b);
-  kv.set(id, 'avatar_v', Date.now());
+  await saveAvatar(id, b);
   return c.json(meOut(id));
+});
+// Prompt 36: PUT /api/me/avatar – bildet (512×512 WebP/JPEG fra beskjæringen) som rå kropp (Content-Type image/*) eller
+// multipart «file». Samme lagring som før (DATA_DIR/avatars/<id>.jpg). → {url:'/api/me/avatar?v=<hash>', avatarUrl, ...meOut}
+async function saveAvatar(id, b) {
+  await mkdir(AVATARS, { recursive: true });
+  await writeFile(avatarFile(id), b);
+  kv.set(id, 'avatar_v', createHash('sha256').update(b).digest('hex').slice(0, 12));
+}
+api.put('/me/avatar', authOrToken, bodyLimit({ maxSize: 2 * 1024 * 1024 + 64 * 1024, onError: (c) => c.json({ error: 'Bildet er for stort (maks 2 MB)' }, 413) }), async (c) => {
+  const ct = c.req.header('content-type') ?? '';
+  let b;
+  if (/^multipart\/form-data/i.test(ct)) { const body = await c.req.parseBody().catch(() => ({})); if (!(body.file instanceof File)) return c.json({ error: 'Mangler fil' }, 400); b = Buffer.from(await body.file.arrayBuffer()); }
+  else if (/^application\/json/i.test(ct)) {
+    const j = await c.req.json().catch(() => null);
+    const m = String(j?.image ?? j?.dataUrl ?? '').match(/^data:image\/(?:jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
+    if (!m) return c.json({ error: 'Send bildet som image/webp eller image/jpeg (eller {image:"data:image/webp;base64,…"})' }, 400);
+    b = Buffer.from(m[1], 'base64');
+  } else b = Buffer.from(await c.req.arrayBuffer());
+  if (!b.length) return c.json({ error: 'Mangler bilde' }, 400);
+  if (b.length > 2 * 1024 * 1024) return c.json({ error: 'Bildet er for stort (maks 2 MB)' }, 413);
+  if (!imageKind(b)) return c.json({ error: 'Bruk et JPEG-, PNG- eller WebP-bilde' }, 400);
+  const id = c.get('user');
+  await saveAvatar(id, b);
+  const me = meOut(id);
+  return c.json({ ...me, url: me.avatarUrl, avatarUrl: me.avatarUrl });
 });
 api.delete('/me/avatar', authOrToken, async (c) => {
   const id = c.get('user');
   await removeAvatar(id);
   kv.del(id, 'avatar_v');
-  return c.json(meOut(id));
+  return c.json({ ...meOut(id), ok: true, url: null });
 });
 // Andre brukeres bilder (brukerlisten, delte mapper, Familie, Huskeliste). Bare for innloggede; profilbildet er en del av
 // det trygge utvalget (id, navn, bilde) som alle innloggede ser om hverandre (prompt 21).
@@ -891,7 +916,7 @@ api.get('/mobile/widgets', authOrToken, async (c) => {
     part(safe(ext.getWeather)),
     part(inner(finansApi, '/summary', c)), part(inner(finansApi, '/recurring', c)), part(inner(finansApi, '/stocks', c)), part(inner(finansApi, '/finn', c)),
     part(inner(finansApi, '/folders', c)),
-    part(inner(matApi, '/week', c)), part(inner(matApi, `/week?start=${tomorrow}`, c)), // Matplan er per bruker (ISO2)
+    part(inner(matApi, '/week', c)), part(inner(matApi, `/week?start=${tomorrow}`, c)), // Matplan er felles for husstanden (prompt 36)
     part(inner(finansApi, '/subscriptions', c)),
   ]);
 

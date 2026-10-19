@@ -2,8 +2,12 @@
 // kokker med «best på»-retter, HelloFresh-import, handleliste og ICS-kalender. Mapper, skanning og import fra
 // nettsider ligger i mat-recipes.js.
 //
-// Per bruker (ISO2): hver bruker har sin egen Mat i kv(user,'mat'), matplan_fixed(user_id, weekday) og egne mapper,
-// lenker, filer og skannejobber (user_id i mat-recipes.js). Eierens data ligger der de lå (OWNER).
+// Prompt 36: Mat er ALLTID felles for husstanden (alle brukere på serveren). Den ene planen ligger i kv(HOUSEHOLD,'mat'),
+// matplan_fixed(user_id = HOUSEHOLD) og mat-recipes-tabellene med user_id = HOUSEHOLD (HOUSEHOLD = OWNER, der eierens plan
+// lå fra før). Det finnes ingen deling/privat-innstilling. Gamle private planer (kv(bruker,'mat')) slås sammen én gang av
+// mergeHousehold36(): retter dedupliseres på navn, lenker/filer følger med, konflikter på samme dag avgjøres av nyeste
+// endring og taperen legges i s.history. Originalen beholdes i kv(bruker,'mat_pre36'), loggen i kv(HOUSEHOLD,'mat_merge36').
+// Hver endring stemples med hvem og når (updatedBy/updatedAt per plan og per dag), og meal:changed sendes på /api/ws.
 //
 // Datamodell (kv user/'mat', v: 2):
 //   dishes: [{ id, name, src: 'own'|'hellofresh'|'scan'|'web', ing: [], steps: [], cost,
@@ -20,7 +24,9 @@ import { config } from './config.js';
 import { userInfo } from './auth.js';
 import { userGuard, readJson, bad, str, num, MOCK, aiJson } from './homeos-common.js';
 import { activeUser, runAsUser } from './settings.js';
-import { mountRecipes, ensureDefaultFolders, folders, folderById, guessFolderId, allLinks, linksFor, removeDishData } from './mat-recipes.js';
+import { mountRecipes, ensureDefaultFolders, folders, folderById, guessFolderId, allLinks, linksFor, removeDishData, HOUSEHOLD } from './mat-recipes.js';
+import { broadcast } from './realtime.js';
+export { HOUSEHOLD };
 
 const DN = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 const day = (d) => d.toLocaleDateString('sv-SE');
@@ -52,8 +58,11 @@ const DEMO_DISHES = [
   ['Kremet kyllinggryte med ris', 'hellofresh', ['Kyllinglår', 'Matfløte', 'Paprika', 'Jasminris'], ['Kok risen.', 'Brun kyllingen.', 'Ha i paprika og fløte, og la det småkoke.'], 149],
 ];
 
-// Brukeren Mat gjelder: den innloggede (eller brukeren en bakgrunnsjobb kjører for).
-export const matUser = () => { const u = activeUser(); if (!u) throw Object.assign(new Error('Ikke innlogget'), { status: 401 }); return u; };
+// Lagringsnøkkelen Mat gjelder: alltid husstanden (prompt 36). Innlogging kreves fortsatt.
+export const matUser = () => { const u = activeUser(); if (!u) throw Object.assign(new Error('Ikke innlogget'), { status: 401 }); return HOUSEHOLD; };
+// Den som gjør endringen (for «Endret av …»). Bakgrunnsjobber uten bruker gir null.
+const actor = () => { try { return activeUser() ?? null; } catch { return null; } };
+const nameOf = (u) => (!u ? 'Glimt' : userInfo(u)?.name || (u === OWNER ? config.userName : '') || 'noen');
 
 function demo(u) {
   const me = (u && userInfo(u)?.name) || 'Sebastian';
@@ -125,11 +134,114 @@ const writeFixed = db.transaction((u, fixed) => {
   for (const [k, f] of Object.entries(fixed ?? {})) if (+k >= 0 && +k < 7 && f?.dish) fixedPut.run(u, +k, f.dish, f.cook ?? null);
 });
 
+/* ---------------- Prompt 36: slå sammen private planer til én felles ---------------- */
+
+const RECIPE_TABLES = ['food_folder', 'dish_link', 'mat_file', 'mat_scan_job'];
+const emptyState = () => ({ v: 2, dishes: [], cooks: [], plan: {}, fixed: {}, auto: false, lastAuto: '', shop: {}, fixedDb: true });
+const qOthers = db.prepare("SELECT user, value FROM kv WHERE key='mat' AND user<>?");
+const strayRecipeRows = () => RECIPE_TABLES.some((t) => db.prepare(`SELECT 1 FROM ${t} WHERE user_id<>? AND user_id NOT LIKE 'pre36:%' LIMIT 1`).get(HOUSEHOLD));
+
+/** Slår sammen alle andre brukeres Mat inn i husstandens plan. Idempotent; ingenting slettes (originalen → kv(u,'mat_pre36')). */
+export function mergeHousehold36() {
+  const others = qOthers.all(HOUSEHOLD);
+  if (!others.length && !strayRecipeRows()) return null;
+  const log = [];
+  db.transaction(() => {
+    const rawH = kv.get(HOUSEHOLD, 'mat', null);
+    const h = rawH ? migrate(rawH) : emptyState();
+    h.fixed = h.fixedDb ? loadFixed(HOUSEHOLD) : (h.fixed ?? {});
+    h.history ??= [];
+    const users = [...new Set([...others.map((r) => r.user), ...RECIPE_TABLES.flatMap((t) => db.prepare(`SELECT DISTINCT user_id FROM ${t} WHERE user_id<>? AND user_id NOT LIKE 'pre36:%'`).pluck().all(HOUSEHOLD))])];
+    for (const u of users) {
+      const row = others.find((r) => r.user === u);
+      const raw = row ? JSON.parse(row.value) : null;
+      const o = raw ? migrate(raw) : emptyState();
+      const ofixed = raw && o.fixedDb ? loadFixed(u) : (o.fixed ?? {});
+      const entry0 = { at: Date.now(), user: u, name: nameOf(u), dishesAdded: [], dishesMerged: [], planAdded: 0, conflicts: [], cooksAdded: [], foldersMerged: 0, foldersMoved: 0, links: 0, files: 0 };
+      // Mapper: samme navn → husstandens mappe (den doble raden legges til side som 'pre36:<u>'), ellers flyttes den.
+      const fmap = {};
+      for (const f of db.prepare('SELECT id, name FROM food_folder WHERE user_id=?').all(u)) {
+        const twin = db.prepare('SELECT id FROM food_folder WHERE user_id=? AND lower(name)=lower(?)').get(HOUSEHOLD, f.name);
+        if (twin) { fmap[f.id] = twin.id; db.prepare('UPDATE food_folder SET user_id=? WHERE id=?').run(`pre36:${u}`, f.id); entry0.foldersMerged++; }
+        else { db.prepare('UPDATE food_folder SET user_id=? WHERE id=?').run(HOUSEHOLD, f.id); entry0.foldersMoved++; }
+      }
+      // Retter: dedupliseres på navn (uten hensyn til store/små bokstaver). Tomme felt fylles fra duplikatet.
+      const dmap = {};
+      for (const d of o.dishes ?? []) {
+        const twin = h.dishes.find((x) => low(x.name) === low(d.name));
+        if (twin) {
+          dmap[d.id] = twin.id;
+          for (const k of ['ing', 'steps']) if (!(twin[k] ?? []).length && (d[k] ?? []).length) twin[k] = d[k];
+          for (const k of ['cost', 'image', 'sourceUrl', 'time', 'servings', 'scanFile']) if (!twin[k] && d[k]) twin[k] = d[k];
+          if (!twin.folderId && d.folderId) twin.folderId = fmap[d.folderId] ?? d.folderId;
+          entry0.dishesMerged.push(d.name);
+        } else {
+          const nd = { ...d, folderId: d.folderId ? (fmap[d.folderId] ?? d.folderId) : d.folderId };
+          if (h.dishes.some((x) => x.id === nd.id)) nd.id = id();
+          dmap[d.id] = nd.id; h.dishes.push(nd); entry0.dishesAdded.push(d.name);
+        }
+      }
+      const m = (x) => (x ? (dmap[x] ?? x) : x);
+      // Lenker, filer og skannejobber følger med (dish_id oversettes). Samme lenke på samme rett legges til side.
+      for (const l of db.prepare('SELECT id, dish_id, url FROM dish_link WHERE user_id=?').all(u)) {
+        const to = m(l.dish_id);
+        const dup = l.url && db.prepare('SELECT 1 FROM dish_link WHERE user_id=? AND dish_id=? AND url=?').get(HOUSEHOLD, to, l.url);
+        db.prepare('UPDATE dish_link SET dish_id=?, user_id=? WHERE id=?').run(to, dup ? `pre36:${u}` : HOUSEHOLD, l.id);
+        entry0.links++;
+      }
+      entry0.files = db.prepare('UPDATE mat_file SET user_id=? WHERE user_id=?').run(HOUSEHOLD, u).changes;
+      for (const j of db.prepare('SELECT id, dish_id FROM mat_scan_job WHERE user_id=?').all(u)) db.prepare('UPDATE mat_scan_job SET user_id=?, dish_id=? WHERE id=?').run(HOUSEHOLD, m(j.dish_id), j.id);
+      // Plan: tom dag fylles; ved konflikt vinner nyeste endring (at), taperen legges i historikken.
+      for (const [date, p0] of Object.entries(o.plan ?? {})) {
+        const p = { ...p0, dish: m(p0?.dish) };
+        if (!p.dish) continue;
+        const cur = h.plan[date];
+        if (!cur?.dish) { h.plan[date] = p; entry0.planAdded++; continue; }
+        if (cur.dish === p.dish) continue;
+        const win = (p.at ?? 0) > (cur.at ?? 0);
+        const loser = win ? cur : p;
+        h.history.push({ date, dish: loser.dish, name: dishOf(h, loser.dish)?.name ?? null, cook: loser.cook ?? null, from: win ? HOUSEHOLD : u, at: Date.now(), reason: 'merge36' });
+        if (win) h.plan[date] = p;
+        entry0.conflicts.push(date);
+      }
+      for (const [k, f0] of Object.entries(ofixed)) {
+        const f = { dish: m(f0?.dish), cook: f0?.cook ?? null };
+        if (!f.dish) continue;
+        if (!h.fixed[k]) h.fixed[k] = f;
+        else if (h.fixed[k].dish !== f.dish) { h.history.push({ weekday: +k, dish: f.dish, name: dishOf(h, f.dish)?.name ?? null, cook: f.cook, from: u, at: Date.now(), reason: 'merge36-fixed' }); entry0.conflicts.push(`fast:${DN[k]}`); }
+      }
+      // Kokker: union på navn; «best på» oversettes (en rett har én beste kokk).
+      for (const c of o.cooks ?? []) {
+        let ck = h.cooks.find((x) => low(x.name) === low(c.name));
+        if (!ck) { ck = { name: c.name, best: [] }; h.cooks.push(ck); entry0.cooksAdded.push(c.name); }
+        for (const b of c.best ?? []) { const x = m(b); if (!h.cooks.some((y) => y.best.includes(x))) ck.best.push(x); }
+      }
+      for (const [start, st] of Object.entries(o.shop ?? {})) {
+        const t = (h.shop[start] ??= { done: [], extra: [] });
+        t.done = [...new Set([...(t.done ?? []), ...(st.done ?? [])])];
+        for (const x of st.extra ?? []) if (!t.extra.some((y) => y.id === x.id || low(y.text) === low(x.text))) t.extra.push(x);
+      }
+      h.auto = !!(h.auto || o.auto);
+      if (o.calKey && o.calKey !== h.calKey) h.oldCalKeys = [...new Set([...(h.oldCalKeys ?? []), o.calKey])];
+      if (raw) { kv.set(u, 'mat_pre36', raw); kv.del(u, 'mat'); }
+      log.push(entry0);
+    }
+    h.fixedDb = true;
+    if (h.foldersInit === undefined && rawH) h.foldersInit = true;
+    writeFixed(HOUSEHOLD, h.fixed);
+    kv.set(HOUSEHOLD, 'mat', { ...h, fixed: {} });
+    kv.set(HOUSEHOLD, 'mat_merge36', [...(kv.get(HOUSEHOLD, 'mat_merge36', []) ?? []), ...log].slice(-50));
+  })();
+  for (const l of log) console.log(`[mat] Felles matplan: slo sammen ${l.name} (${l.user}): ${l.dishesAdded.length} nye retter, ${l.dishesMerged.length} like (${l.dishesMerged.join(', ') || '–'}), ${l.planAdded} dager, ${l.conflicts.length} konflikter, ${l.cooksAdded.length} kokker, ${l.links} lenker, ${l.files} filer.`);
+  return log;
+}
+
 function fresh(u) {
   if (MOCK) return demo(u);
   return { v: 2, dishes: [], cooks: [{ name: userInfo(u)?.name || (u === OWNER ? config.userName : '') || 'Meg', best: [] }], plan: {}, fixed: {}, auto: false, lastAuto: '', shop: {} };
 }
 export function state(u = matUser()) {
+  if (u === HOUSEHOLD) mergeHousehold36();
   const raw = kv.get(u, 'mat', null);
   let s = raw ? migrate(raw) : fresh(u), dirty = !raw || raw.v !== 2;
   if (!s.calKey) { s.calKey = randomBytes(18).toString('base64url'); dirty = true; }
@@ -142,10 +254,35 @@ export function state(u = matUser()) {
     for (const d of s.dishes) if (d.folderId === undefined) d.folderId = guessFolderId(d.name, d.ing);
     s.foldersInit = true; dirty = true;
   }
-  if (dirty) save(s, u);
+  if (dirty) save(s, u, { quiet: true });
   return s;
 }
-const save = (s, u = matUser()) => { writeFixed(u, s.fixed); kv.set(u, 'mat', { ...s, fixed: {} }); };
+// Lagrer og stempler: dager som er endret siden sist får at/u/version, planen får updatedAt/updatedBy, og alle klienter
+// får meal:changed på /api/ws (alle brukere, siden planen er felles).
+const save = (s, u = matUser(), { quiet = false } = {}) => {
+  if (quiet) { writeFixed(u, s.fixed); kv.set(u, 'mat', { ...s, fixed: {} }); return; }
+  const prev = kv.get(u, 'mat', null), who = actor(), now = Date.now(), changed = [];
+  const sig = (p) => (p ? `${p.dish ?? ''}|${p.cook ?? ''}` : '|');
+  for (const [date, p] of Object.entries(s.plan ?? {})) {
+    const o = prev?.plan?.[date];
+    if (sig(p) !== sig(o)) { s.plan[date] = { ...p, at: now, u: who, version: (o?.version ?? p.version ?? 0) + 1 }; changed.push(date); }
+  }
+  const prevFixed = JSON.stringify(loadFixed(u)), fixedChanged = JSON.stringify(Object.fromEntries(Object.entries(s.fixed ?? {}).map(([k, f]) => [k, { dish: f.dish, cook: f.cook ?? null }]))) !== prevFixed;
+  const touched = !prev || changed.length || fixedChanged || JSON.stringify({ ...prev, plan: null, fixed: null, updatedAt: null, updatedBy: null }) !== JSON.stringify({ ...s, plan: null, fixed: null, updatedAt: null, updatedBy: null });
+  if (touched) { s.updatedAt = now; s.updatedBy = who; }
+  writeFixed(u, s.fixed); kv.set(u, 'mat', { ...s, fixed: {} });
+  if (touched) mealChanged(s, changed, who);
+};
+// meal:changed til alle innloggede klienter. text: «Kristoffer satte fredag til Taco» når én dag ble endret.
+function mealChanged(s, dates, who) {
+  try {
+    const users = db.prepare('SELECT id FROM users').pluck().all();
+    if (!users.includes(OWNER)) users.push(OWNER);
+    let text = null;
+    if (dates.length === 1) { const d = dishOf(s, s.plan[dates[0]]?.dish); text = d ? `${nameOf(who)} satte ${DN[wd(dates[0])].toLowerCase()} til ${d.name}` : `${nameOf(who)} tømte ${DN[wd(dates[0])].toLowerCase()}`; }
+    broadcast('meal:changed', { dates, updatedBy: nameOf(who), updatedById: who, updatedAt: new Date(s.updatedAt ?? Date.now()).toISOString(), text }, users);
+  } catch { /* sanntid er valgfritt */ }
+}
 
 /* ---------------- Hjelpere ---------------- */
 
@@ -214,7 +351,7 @@ const FOOD_CAT = 'Mat og dagligvarer';
 export function foodBudget(s, today = day(new Date())) {
   try {
     // Brukerens eget regnskap (ISO2): user_id på fh_* når kolonnen finnes; uten den er regnskapet eierens alene.
-    const u = matUser(), own = (t) => !!db.prepare(`SELECT 1 FROM pragma_table_info('${t}') WHERE name='user_id'`).get();
+    const u = actor() ?? OWNER, own = (t) => !!db.prepare(`SELECT 1 FROM pragma_table_info('${t}') WHERE name='user_id'`).get();
     if (!own('fh_categories') && u !== OWNER) return null;
     const by = (t) => (own(t) ? ' AND user_id=?' : ''), arg = (t) => (own(t) ? [u] : []);
     const cat = db.prepare(`SELECT id FROM fh_categories WHERE name=?${by('fh_categories')}`).get(FOOD_CAT, ...arg('fh_categories'));
@@ -244,6 +381,9 @@ function week(s, start) {
       source: !dish ? null : fixed ? 'fixed' : dish.src === 'hellofresh' ? 'hellofresh' : e.by === 'ai' ? 'gemini' : 'own',
       tag: best ? 'best' : dish?.src === 'hellofresh' ? 'hellofresh' : null, bestCook: best?.name ?? null,
       cost: dish?.cost ?? 0, ingredients: dish?.ing ?? [],
+      // Prompt 36: hvem som sist endret dagen (felles plan) og versjonen for optimistisk lås.
+      version: s.plan[date]?.version ?? 0, updatedBy: s.plan[date]?.at ? nameOf(s.plan[date].u) : null, updatedById: s.plan[date]?.u ?? null,
+      updatedAt: s.plan[date]?.at ? new Date(s.plan[date].at).toISOString() : null,
     };
   });
   const used = (dishId) => days.filter((d) => d.dishId === dishId).map((d) => d.index);
@@ -263,7 +403,22 @@ function week(s, start) {
     shopping: shopping(s, start),
     weekCost: days.reduce((a, d) => a + (d.cost || 0), 0),
     auto: s.auto, calendarUrl: `/mat/calendar.ics?key=${s.calKey}`,
+    ...sharedInfo(s),
   };
+}
+
+// Prompt 36: «Felles for husstanden · Endret av Nina 18.42» (klokkeslett i dag, ellers dato + klokkeslett).
+const osloHm = (t) => new Date(t).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+const osloDay = (t) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+export function sharedNote(updatedBy, updatedAt, now = Date.now()) {
+  if (!updatedAt) return 'Felles for husstanden';
+  const t = +new Date(updatedAt), when = osloDay(t) === osloDay(now) ? osloHm(t)
+    : osloDay(t) === osloDay(now - 86400000) ? `i går ${osloHm(t)}` : `${new Date(t).toLocaleDateString('nb-NO', { timeZone: 'Europe/Oslo', day: 'numeric', month: 'numeric' })} ${osloHm(t)}`;
+  return `Felles for husstanden · Endret av ${updatedBy} ${when}`;
+}
+function sharedInfo(s) {
+  const by = s.updatedAt ? nameOf(s.updatedBy) : null, at = s.updatedAt ? new Date(s.updatedAt).toISOString() : null;
+  return { shared: true, household: true, canShare: false, updatedBy: by, updatedById: s.updatedBy ?? null, updatedAt: at, sharedNote: sharedNote(by, at) };
 }
 
 /* ---------------- Ny plan ---------------- */
@@ -391,6 +546,10 @@ matApi.patch('/day/:date', async (c) => {
   const date = c.req.param('date');
   if (!isDate(date)) return bad(c, 'Ugyldig dato');
   const b = await readJson(c), s = state();
+  // Optimistisk lås per dag (prompt 36): siste skriving vinner, men en eldre version gir toast «Oppdatert av Nina».
+  const cur = s.plan[date], me = actor();
+  const conflict = b.version !== undefined && Number.isFinite(+b.version) && (cur?.version ?? 0) > +b.version && cur?.u !== me
+    ? { conflict: true, toast: `Oppdatert av ${nameOf(cur?.u)}`, conflictBy: nameOf(cur?.u) } : {};
   if (b.dishId !== undefined) {
     if (b.dishId !== null && !dishOf(s, b.dishId)) return bad(c, 'Fant ikke retten', 404);
     place(s, date, b.dishId ?? null);
@@ -420,7 +579,7 @@ matApi.patch('/day/:date', async (c) => {
     delete s.fixed[wd(date)];
   }
   save(s);
-  return reply(c, s, monday(date));
+  return reply(c, s, monday(date), conflict);
 });
 
 // Bytt retter (og kokker) mellom to dager.
@@ -657,26 +816,22 @@ mountRecipes(matApi, { state, save, dishOf, addDish, dishOut, reply, startOf });
 
 /* ---------------- ICS-feed (abonneres fra Google/Apple Kalender) ---------------- */
 
-// Nøkkelen avgjør hvem sin kalender det er (ISO2: hver bruker har sin egen calKey).
+// Felles plan (prompt 36): husstandens calKey, og de gamle private nøklene (oldCalKeys) virker fortsatt etter sammenslåingen.
 export function matCalendar(c) {
   const key = String(c.req.query('key') ?? '');
   if (key.length < 16 || !/^[\w-]+$/.test(key)) return c.text('Ugyldig nøkkel', 403);
-  for (const row of db.prepare("SELECT user FROM kv WHERE key='mat' AND instr(value, ?) > 0").all(key)) {
-    const out = runAsUser(row.user, () => {
-      const s = state(row.user);
-      const a = Buffer.from(key), b = Buffer.from(s.calKey ?? '');
-      if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-      return c.body(ics(s, feedDates(s)), 200, { 'Content-Type': 'text/calendar; charset=utf-8', 'Cache-Control': 'no-cache' });
-    });
-    if (out) return out;
-  }
-  return c.text('Ugyldig nøkkel', 403);
+  return runAsUser(HOUSEHOLD, () => {
+    const s = state(HOUSEHOLD), a = Buffer.from(key);
+    const ok = [s.calKey, ...(s.oldCalKeys ?? [])].some((k) => { const b = Buffer.from(String(k ?? '')); return a.length === b.length && timingSafeEqual(a, b); });
+    if (!ok) return c.text('Ugyldig nøkkel', 403);
+    return c.body(ics(s, feedDates(s)), 200, { 'Content-Type': 'text/calendar; charset=utf-8', 'Cache-Control': 'no-cache' });
+  });
 }
 
 /* ---------------- Automatisk plan søndag kl. 18 ---------------- */
 
 export function startMatScheduler() {
-  // Hver bruker med automatisk plan, i sin egen kontekst.
+  // Husstandens felles plan (prompt 36). AI-uka tar hensyn til alle kokkene.
   const tickFor = async (u) => {
     const today = day(new Date());
     const s = state(u);
@@ -688,7 +843,7 @@ export function startMatScheduler() {
   const tick = async () => {
     const now = new Date();
     if (now.getDay() !== 0 || now.getHours() < 18) return;
-    for (const { user } of db.prepare("SELECT user FROM kv WHERE key='mat'").all()) await runAsUser(user, () => tickFor(user)).catch(() => {});
+    await runAsUser(HOUSEHOLD, () => tickFor(HOUSEHOLD)).catch(() => {}); // én felles plan (prompt 36)
   };
   setInterval(tick, 10 * 60_000).unref();
 }

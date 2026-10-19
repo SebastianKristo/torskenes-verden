@@ -77,7 +77,8 @@ test('CHANGELOG-parsing og «nyere enn installert»', () => {
   assert.deepEqual(s.map((x) => x.version), ['99.1.0', '99.0.0', '1.0.0']);
   assert.equal(s[0].date, '20.10.2026');
   assert.equal(s[0].title, 'neste');
-  assert.deepEqual(s[0].items, ['Oppdater fra appen. Fra Innstillinger.', 'Ny ting nummer to']);
+  // Prompt 36: underpunkter flates ut med den fete innledningen foran.
+  assert.deepEqual(s[0].items, ['Oppdater fra appen. Fra Innstillinger.', 'Oppdater fra appen: underpunkt tas ikke med', 'Ny ting nummer to']);
   assert.deepEqual(su.newerSections(s, '99.0.0').map((x) => x.version), ['99.1.0']);
   assert.deepEqual(su.newerSections(s, '99.1.0'), []);
   assert.equal(su.newerSections(s, null).length, 3);

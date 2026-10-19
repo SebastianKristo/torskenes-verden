@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#101a2e">
+<title>Nordlys OS starter opp</title>
+<!--
+  Prompt 36: «Starter opp»-side med Glimt (fasit: Nordlys Starter.dc.html). Én fil uten eksterne avhengigheter (bare fonten,
+  med system-ui som reserve), så den kan vises av reverse-proxyen (Caddy/Nginx ved 502/503) eller fra service worker-cachen
+  mens appen er nede. Poller GET /api/health?boot=1 hvert 1,5 s: {ready, version, steps:[{id, label, status:'wait'|'run'|'ok', ms}]}.
+  Ingen svar = første steg (databasen) er aktivt. ready → «Klar» i 0,8 s og hard reload (service worker skipWaiting).
+  ?v=4.29 viser versjonen før serveren svarer. ?next=/sti går dit når siden er lastet direkte som /starting.html.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#101a2e;--bg2:#1b2340;--peach:#ffd9c2;--orange:#ff8a5c;--green:#3fbf9a;--ok:#2f7d4f;--mut:rgba(255,255,255,.65)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:#fff;font-family:Manrope,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--peach)}a:hover{color:#fff}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.page{position:fixed;inset:0;z-index:9999;overflow:hidden auto;background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%);display:flex;align-items:center;justify-content:center;padding:max(40px,env(safe-area-inset-top)) 20px max(40px,env(safe-area-inset-bottom))}
+.aur{position:absolute;inset:-20%;pointer-events:none;z-index:1}
+.aur i{position:absolute;inset:0;filter:blur(10px);animation:nsAur 14s ease-in-out infinite;
+  background:radial-gradient(50% 40% at 80% 10%,rgba(150,95,215,.7) 0%,transparent 70%),radial-gradient(50% 45% at 15% 90%,rgba(46,190,150,.6) 0%,transparent 70%),radial-gradient(40% 35% at 90% 90%,rgba(220,80,55,.5) 0%,transparent 70%);
+  background:radial-gradient(50% 40% at 80% 10%,oklch(0.62 0.17 300 / .7) 0%,transparent 70%),radial-gradient(50% 45% at 15% 90%,oklch(0.72 0.16 165 / .6) 0%,transparent 70%),radial-gradient(40% 35% at 90% 90%,oklch(0.6 0.19 30 / .5) 0%,transparent 70%)}
+.col{position:relative;z-index:2;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:26px;text-align:center}
+.hero{position:relative;width:208px;height:208px;display:grid;place-items:center}
+.hero svg.ring{position:absolute;inset:0;transform:rotate(-90deg)}
+.ring .bar{transition:stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1)}
+.orbit{position:absolute;inset:0;animation:nsOrbit 9s linear infinite}
+.orbit b{position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:4px}
+.pct{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(16,26,46,.8);border:1px solid rgba(255,255,255,.18);font-size:12px;font-weight:600}
+.float{display:inline-block;animation:nsFloat 3.2s ease-in-out infinite}
+/* Glimt (128 px): regnbuering som spinner, ansikt, gnist */
+.g{position:relative;display:inline-block;width:128px;height:141px;transform-origin:50% 100%}
+.g .spark{position:absolute;left:50%;top:-5px;width:26px;height:26px;margin-left:-13px;animation:gfTw 1.8s ease-in-out infinite}
+.g .rn{position:absolute;left:0;top:15px;width:128px;height:128px;border-radius:50%;background:conic-gradient(from 0deg,#b23a2a,#e8794a,#f2c14e,#3fbf9a,#7a5ad6,#b23a2a);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 8.3px));mask:radial-gradient(farthest-side,transparent calc(100% - 9px),#000 calc(100% - 8.3px));animation:gfSpin 6s linear infinite}
+.g .face{position:absolute;left:10px;top:26px;width:108px;height:108px;border-radius:50%;background:#fffdf8}
+.g .eye{position:absolute;top:40%;width:10px;height:14px;border-radius:10px;background:#1b1a17;animation:gfBlink 4.2s infinite}
+.g .eye::after{content:"";position:absolute;left:18%;top:14%;width:4px;height:4px;border-radius:50%;background:#fff}
+.g .eye.l{left:27%}.g .eye.r{right:27%}
+.g .ck{position:absolute;top:54%;width:13px;height:8px;border-radius:50%;background:rgba(232,121,74,.38)}.g .ck.l{left:14%}.g .ck.r{right:14%}
+.g .mouth{position:absolute;left:50%;top:60%;width:15px;height:7px;margin-left:-7.5px;border-bottom:3.2px solid #1b1a17;border-radius:0 0 11px 11px}
+.g.sleep .eye{height:9px;width:15px;border-radius:0 0 50% 50%;background:none;border-bottom:3.2px solid #1b1a17;animation:none;top:calc(40% + 5px)}.g.sleep .eye::after{display:none}
+.g.sleep .mouth{width:8px;height:8px;margin-left:-4px;border:0;border-radius:50%;background:#1b1a17;opacity:.6}
+.g.sleep{animation:gfSq 3.6s ease-in-out infinite}
+.g.talk .mouth{width:17px;height:13px;margin-left:-8.5px;border:0;border-radius:45%;background:#b23a2a;transform-origin:50% 30%;animation:gfTalk .3s ease-in-out infinite}
+.g.talk .rn{animation-duration:1.4s}
+.g.idle{animation:gfBob 2.6s ease-in-out infinite}
+.zz{position:absolute;right:28px;top:30px;font-weight:800;color:var(--peach);opacity:0;animation:nsZ 2.4s ease-out infinite}
+.kick{font-size:11px;font-weight:600;letter-spacing:.16em;color:var(--peach)}
+.title{font-weight:800;font-size:40px;line-height:1;letter-spacing:-.02em}
+.title span{font-weight:500;opacity:.75}
+.title em{font-style:normal;background:linear-gradient(180deg,#fff 0%,#ffd9c2 45%,#ff8a5c 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.line{font-weight:500;font-size:16px;line-height:1.45;color:rgba(255,255,255,.82);min-height:46px;text-wrap:pretty}
+.card{width:100%;display:flex;flex-direction:column;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);padding:6px 16px}
+.st{display:flex;align-items:center;gap:12px;min-height:44px;transition:opacity .3s}
+.st+.st{border-top:1px solid rgba(255,255,255,.1)}
+.st.wait{opacity:.45}
+.st .ic{flex:none;width:22px;height:22px;display:grid;place-items:center}
+.st .n{flex:1;min-width:0;text-align:left;font-weight:600;font-size:14.5px}
+.st .ms{font-size:12px;font-weight:500;color:rgba(255,255,255,.6)}
+.spin{display:block;width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.2);border-top-color:var(--peach);animation:nsSpin .8s linear infinite}
+.dot{display:block;width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,.3)}
+.okc{animation:nsPop .35s cubic-bezier(.3,1.6,.5,1) both}
+.foot{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;color:var(--mut)}
+.foot a{font-weight:700}
+.slow{color:var(--peach);font-weight:600}
+[hidden]{display:none!important}
+@keyframes nsAur{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,-3%) scale(1.08)}}
+@keyframes nsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes nsOrbit{to{transform:rotate(360deg)}}
+@keyframes nsZ{0%{opacity:0;transform:translate(0,0) scale(.6)}30%{opacity:1}100%{opacity:0;transform:translate(26px,-46px) scale(1.2)}}
+@keyframes nsPop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.15)}100%{transform:none;opacity:1}}
+@keyframes nsSpin{to{transform:rotate(360deg)}}
+@keyframes gfSpin{to{transform:rotate(360deg)}}
+@keyframes gfTw{0%,100%{transform:scale(.8) rotate(0);opacity:.75}50%{transform:scale(1.1) rotate(20deg);opacity:1}}
+@keyframes gfBlink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+@keyframes gfTalk{0%,100%{transform:scaleY(.55)}50%{transform:scaleY(1)}}
+@keyframes gfBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes gfSq{0%,100%{transform:scale(1,1)}50%{transform:scale(1.03,.97)}}
+@media (prefers-reduced-motion:reduce){
+  .orbit,.aur i,.float,.g,.g .rn,.g .eye,.g .spark,.okc,.zz{animation:none!important}
+  .zz{opacity:.8}
+  .ring .bar{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="page" role="status" aria-live="polite">
+  <div class="aur"><i></i></div>
+  <div class="col">
+    <div class="hero" aria-hidden="true">
+      <svg class="ring" width="208" height="208" viewBox="0 0 208 208">
+        <defs><linearGradient id="nsG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#3fbf9a"/><stop offset="55%" stop-color="#ffd9c2"/><stop offset="100%" stop-color="#ff8a5c"/></linearGradient></defs>
+        <circle cx="104" cy="104" r="92" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5"/>
+        <circle class="bar" id="bar" cx="104" cy="104" r="92" fill="none" stroke="url(#nsG)" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <span class="orbit"><b style="background:#ffd9c2;box-shadow:0 0 10px #ffd9c2;transform:rotate(0deg) translateY(-104px)"></b><b style="background:#3fbf9a;box-shadow:0 0 10px #3fbf9a;transform:rotate(120deg) translateY(-104px)"></b><b style="background:#a78bfa;box-shadow:0 0 10px #a78bfa;transform:rotate(240deg) translateY(-104px)"></b></span>
+      <span class="float"><span class="g sleep" id="glimt">
+        <span class="spark"><svg viewBox="0 0 24 24" width="100%" height="100%"><path d="M12 1.5c.6 4.9 4.6 8.9 9.5 9.5v2c-4.9.6-8.9 4.6-9.5 9.5h0c-.6-4.9-4.6-8.9-9.5-9.5v-2C7.4 10.4 11.4 6.4 12 1.5z" fill="#ff7a52"/></svg></span>
+        <span class="rn"></span>
+        <span class="face"><span class="eye l"></span><span class="eye r"></span><span class="ck l"></span><span class="ck r"></span><span class="mouth"></span></span>
+      </span></span>
+      <span id="zz"><span class="zz" style="font-size:14px;animation-delay:0s">z</span><span class="zz" style="font-size:18px;animation-delay:.8s">z</span><span class="zz" style="font-size:22px;animation-delay:1.6s">z</span></span>
+      <span class="pct mono" id="pct">0 %</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+      <span class="kick mono" id="kick">STARTER OPP</span>
+      <b class="title">Nordlys<span>OS</span> <em id="ver"></em></b>
+      <span class="line" id="line">Serveren starter på nytt etter oppdateringen. Glimt sover litt …</span>
+    </div>
+    <div class="card" id="steps"></div>
+    <div class="foot">
+      <span id="foot">Siden lastes inn automatisk når serveren svarer · 0 s</span>
+      <span class="slow" id="slowTxt" hidden>Det tar lengre tid enn vanlig</span>
+      <a href="" id="reload" hidden>Last inn på nytt nå</a>
+      <a href="/api/system/update/log" id="log" target="_blank" rel="noopener" hidden>Vis logg</a>
+    </div>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  var STEPS = [['db', 'Starter databasen'], ['migrate', 'Kjører migrasjoner'], ['api', 'Starter web og API'], ['ai', 'Vekker Glimt og AI-modellene'], ['integrations', 'Kobler til integrasjoner']];
+  var LINES = ['Serveren starter på nytt etter oppdateringen. Glimt sover litt …', 'Glimt våkner og sjekker at alt er på plass.', 'Nesten klar. Glimt varmer opp modellene.', 'Alt kjører! Laster inn Homelab …'];
+  var $ = function (id) { return document.getElementById(id); };
+  var q = new URLSearchParams(location.search);
+  var t0 = Date.now(), done = false, C = 2 * Math.PI * 92;
+  var shortV = function (v) { return String(v || '').split('.').slice(0, 2).join('.'); };
+  if (q.get('v')) $('ver').textContent = shortV(q.get('v'));
+  $('bar').setAttribute('stroke-dasharray', C);
+  var OK = '<svg class="okc" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#2f7d4f"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  var sec = function (ms) { return (ms / 1000).toFixed(1).replace('.', ',') + ' s'; };
+  var lastKey = '';
+  function render(steps, ready) {
+    var key = JSON.stringify(steps) + ready;
+    if (key !== lastKey) {
+      lastKey = key;
+      $('steps').innerHTML = steps.map(function (s) {
+        var st = ready ? 'ok' : s.status;
+        var ic = st === 'ok' ? OK : st === 'run' ? '<span class="spin"></span>' : '<span class="dot"></span>';
+        var ms = st === 'ok' && s.ms != null ? sec(s.ms) : st === 'run' ? '…' : '';
+        return '<div class="st ' + (st === 'wait' ? 'wait' : '') + '"><span class="ic">' + ic + '</span><span class="n">' + esc(s.label) + '</span><span class="ms mono">' + ms + '</span></div>';
+      }).join('');
+    }
+    var nOk = steps.filter(function (s) { return s.status === 'ok'; }).length;
+    var pct = ready ? 100 : Math.round(nOk / steps.length * 100);
+    $('bar').setAttribute('stroke-dashoffset', C * (1 - pct / 100));
+    $('pct').textContent = pct + ' %';
+    var i = steps.findIndex(function (s) { return s.status !== 'ok'; }); if (i < 0) i = steps.length;
+    var phase = ready ? 3 : i < 2 ? 0 : i < 4 ? 1 : 2;
+    $('glimt').className = 'g ' + (phase === 0 ? 'sleep' : phase === 3 ? 'talk' : 'idle');
+    $('zz').hidden = phase !== 0;
+    $('line').textContent = LINES[phase];
+    $('kick').textContent = ready ? 'KLAR' : 'STARTER OPP';
+  }
+  function fallbackSteps() { return STEPS.map(function (s, k) { return { id: s[0], label: s[1], status: k === 0 ? 'run' : 'wait', ms: null }; }); }
+  function finish() {
+    if (done) return; done = true;
+    $('foot').textContent = 'Laster inn siden …';
+    setTimeout(function () {
+      var go = function () {
+        if (/starting\.html$/.test(location.pathname)) location.replace(q.get('next') && /^\/(?!\/)/.test(q.get('next')) ? q.get('next') : '/');
+        else location.reload();
+      };
+      try {
+        if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
+          navigator.serviceWorker.getRegistration().then(function (r) { try { if (r && r.waiting) r.waiting.postMessage({ type: 'SKIP_WAITING' }); if (r) r.update(); } catch (e) {} go(); }, go);
+          return;
+        }
+      } catch (e) {}
+      go();
+    }, 800);
+  }
+  function poll() {
+    if (done) return;
+    var ctl = window.AbortController ? new AbortController() : null;
+    var to = setTimeout(function () { if (ctl) ctl.abort(); }, 4000);
+    fetch('/api/health?boot=1', { cache: 'no-store', credentials: 'same-origin', signal: ctl ? ctl.signal : undefined }).then(function (r) {
+      clearTimeout(to);
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    }).then(function (h) {
+      if (!h || !Array.isArray(h.steps)) throw new Error('ukjent svar');
+      if (h.version) $('ver').textContent = shortV(h.version);
+      var steps = STEPS.map(function (s) { var x = h.steps.find(function (y) { return y.id === s[0]; }) || {}; return { id: s[0], label: x.label || s[1], status: x.status || 'wait', ms: x.ms }; });
+      render(steps, !!h.ready);
+      if (h.ready) finish();
+    }).catch(function () { clearTimeout(to); render(fallbackSteps(), false); });
+  }
+  function tick() {
+    var el = Math.floor((Date.now() - t0) / 1000);
+    if (!done) $('foot').textContent = 'Siden lastes inn automatisk når serveren svarer · ' + el + ' s';
+    $('reload').hidden = done || el < 40;
+    $('slowTxt').hidden = done || el < 180;
+    $('log').hidden = done || el < 180;
+  }
+  $('reload').addEventListener('click', function (e) { e.preventDefault(); location.reload(); });
+  render(fallbackSteps(), false);
+  poll(); tick();
+  setInterval(poll, 1500);
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>

@@ -74,7 +74,7 @@ const status = (s) => writeFileSync(join(UPD, 'status.json'), JSON.stringify(s))
 test('GET /api/system/version: kort svar med notes fra nyere versjoner, bare admin', async () => {
   const r = await TR('/api/system/version');
   assert.equal(r.status, 200, r.text);
-  assert.deepEqual(Object.keys(r.body).sort(), ['codename', 'current', 'latest', 'name', 'notes', 'publishedAt', 'sizeBytes', 'tagline', 'updateAvailable']); // prompt 31: + Nordlys OS
+  assert.deepEqual(Object.keys(r.body).sort(), ['codename', 'current', 'latest', 'name', 'notes', 'notesDate', 'notesLabel', 'notesSource', 'notesVersion', 'publishedAt', 'sha', 'shortName', 'sizeBytes', 'tagline', 'updateAvailable']); // prompt 31: + Nordlys OS, prompt 36: + notes*
   assert.equal(r.body.latest, '99.1.0');
   assert.deepEqual(r.body.notes, ['Oppdater fra mobilen', 'Rollback']);
   assert.equal(r.body.publishedAt, '2026-10-19T10:00:00Z');

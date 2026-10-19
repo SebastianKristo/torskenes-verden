@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from './config.js';
+import { bootStep } from './boot36.js'; // prompt 36: oppstartsstatus
 
 mkdirSync(join(config.dataDir, 'uploads'), { recursive: true });
 
@@ -97,3 +98,5 @@ if (!db.prepare('SELECT 1 FROM grades LIMIT 1').get()) {
   [['Matematikk R2', 5, '4, 5, 5'], ['Fysikk 2', 4, '4, 4, 5'], ['Norsk', 5, '5, 5'], ['Engelsk', 6, '6, 5'], ['Historie', 4, '4, 3, 5']]
     .forEach(([s, g, t], i) => ins.run(OWNER, s, g, t, i));
 }
+
+bootStep('db', 'ok'); // prompt 36: databasen er åpnet og grunntabellene finnes

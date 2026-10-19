@@ -334,7 +334,7 @@ test('serverjobb: > 1,2 s → 202 {jobId}, fortsetter, GET /:id, varsel i køen;
   assist._setAssistLlm(async ({ engine }) => { await new Promise((r) => setTimeout(r, 120)); return engine === 'ollama' ? 'Svaret er **42**.' : 'x'; });
   const r = await A('/api/assist', 'POST', { q: 'hva er meningen med livet?', source: 'search' });
   assert.equal(r.status, 202, r.text);
-  assert.deepEqual(Object.keys(r.body), ['jobId']);
+  assert.deepEqual(Object.keys(r.body), ['jobId', 'kind', 'surface', 'intent']); // prompt 36: kind/surface (spørsmål vs. handling) med en gang
   const mid = (await A(`/api/assist/${r.body.jobId}`)).body;
   assert.equal(mid.state, 'running');
   assert.deepEqual(Object.keys(mid).filter((k) => ['jobId', 'state', 'steps', 'fields', 'progress', 'title', 'model', 'input'].includes(k)).length, 8);

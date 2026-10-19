@@ -394,10 +394,10 @@ export async function smbRun({ share, list, user, password, domain, proto, dir, 
   return r.stdout;
 }
 
-function smb(cmd, { timeout = 120_000 } = {}) {
+function smb(cmd, { timeout = 120_000, dir } = {}) {
   const st = settings(), share = normShare(st.smbShare);
   if (!share) return Promise.reject(new Error('Ugyldig share. Bruk formen //server/share eller \\\\server\\share'));
-  return smbRun({ share: splitShare(share).share, user: st.smbUser, password: secret('smbPass'), domain: st.smbDomain, proto: st.smbVersion, cmd, timeout });
+  return smbRun({ share: splitShare(share).share, user: st.smbUser, password: secret('smbPass'), domain: st.smbDomain, proto: st.smbVersion, cmd, timeout, dir: dir || undefined });
 }
 /**
  * Parser «ls» fra smbclient. → [{name, type:'dir'|'file', size, when, attrs, link?}] uten . og ..
@@ -425,7 +425,8 @@ export function parseSmbLs(out) {
 export const localArg = (p) => { if (/["\r\n\0;]/.test(String(p))) throw new Error('Mappen på serveren (DATA_DIR/BACKUP_DIR) inneholder tegn smbclient ikke kan bruke (" eller ;)'); return p; };
 /** smbclient-kommandoer som lager og går inn i mappen d (relativ til sharen). Mappenavnene er validert med SMB_SEG. */
 export const cdDirOf = (d) => { const s = safeDir(d); return s ? s.split('/').map((p) => `mkdir "${p}"; cd "${p}"`).join('; ') + '; ' : ''; };
-const cdDir = () => cdDirOf([splitShare(normShare(settings().smbShare) ?? '').sub, settings().smbDir].filter(Boolean).join('/'));
+const backupDir = () => safeDir([splitShare(normShare(settings().smbShare) ?? '').sub, settings().smbDir].filter(Boolean).join('/'));
+const cdDir = () => cdDirOf(backupDir());
 
 export async function smbTest() {
   if (!(await smbAvailable())) return { ok: false, message: 'smbclient er ikke installert på serveren (apt install smbclient)' };
@@ -475,8 +476,18 @@ export async function runBackup(reason = 'manuell') {
       file = a;
       q('UPDATE fh_backups SET file=?, size=? WHERE id=?').run(a.name, a.size, row.id);
       // Prompt 34: last opp til «navn.part» og gi nytt navn når den er ferdig, så en avbrutt backup ikke ligger igjen som en halv fil.
-      const outPut = await smb(`${cdDir()}put "${a.path}" "${a.name}.part"; rename "${a.name}.part" "${a.name}"`, { timeout: 30 * 60_000 });
+      // Prompt 36: mappene lages først, og opplasting/kontroll kjøres med --directory=<mappe>. Før gikk alt i én -c med
+      // «mkdir; cd; put»: feilet cd, fortsatte smbclient og la fila i roten av sharen (og ls i roten «fant» den).
+      const dir = backupDir();
+      if (dir) { const o = await smb(`${cdDir()}pwd`, { timeout: 60_000 }); const stc = smbPutError(o); if (stc) throw Object.assign(new Error(`${smbErrorText(stc).message} (${stc.replace(/^NT_/, '')})`), { code: stc }); }
+      const outPut = await smb(`put "${a.path}" "${a.name}.part"; rename "${a.name}.part" "${a.name}"`, { timeout: 30 * 60_000, dir });
       { const stc = smbPutError(outPut); if (stc) throw Object.assign(new Error(`${smbErrorText(stc).message} (${stc.replace(/^NT_/, '')})`), { code: stc }); }
+      // Prompt 36: status OK først når fila faktisk ligger i mappen med riktig størrelse (ikke bare «put» uten feil).
+      const there = parseSmbLs(await smb('ls', { timeout: 60_000, dir })).find((x) => x.name === a.name && x.type === 'file');
+      const where = `${normShare(st.smbShare)}${safeDir(st.smbDir) ? '/' + safeDir(st.smbDir) : ''}/${a.name}`;
+      if (!there) throw new Error(`Fila kom ikke fram på sharen (${where} finnes ikke etter opplasting)`);
+      if (there.size !== a.size) throw new Error(`Fila på sharen har feil størrelse: ${there.size} av ${a.size} byte`);
+      console.info(`[backup] verifisert ${where} (${a.size} byte)`);
       await prune();
       q("UPDATE fh_backups SET status='ok' WHERE id=?").run(row.id);
       kv.set(OWNER, 'fh_backup_last', { at: Date.now(), sig: changeSig(), file: a.name });

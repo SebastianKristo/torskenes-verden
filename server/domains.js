@@ -653,6 +653,86 @@ export function domainOverview() {
   return { total: items.length, up: items.filter((x) => x.up === true).length, down: items.filter((x) => x.up === false).length, items, expiringSoon: soon };
 }
 
+/* ---------- Prompt 36: alt i ett kall (Domener med en gang) ---------- */
+
+// ?per=24t|7d|30d (også 24h, today, 1h, 90d, 1y) → range for analytics().
+export const PER_RANGE = { '24t': '24h', '24h': '24h', '7d': '7d', '30d': '30d', today: 'today', '1h': '1h', '90d': '90d', '1y': '1y', '1t': '1h' };
+const pctCh = (a, b) => (Number.isFinite(a) && Number.isFinite(b) && b ? Math.round(((a - b) / b) * 1000) / 10 : null);
+const sumN = (xs) => { const v = xs.filter((x) => Number.isFinite(x)); return v.length ? v.reduce((a, x) => a + x, 0) : null; };
+function mergeSeries(list) {
+  const m = new Map();
+  for (const ser of list) for (const x of ser ?? []) {
+    const k = String(x.t).slice(0, 13); // per time (eller dag)
+    const o = m.get(k) ?? { t: x.t, requests: 0, cached: 0, visitors: 0 };
+    o.requests += x.requests ?? 0; o.cached += x.cached ?? 0; o.visitors += x.visitors ?? 0; m.set(k, o);
+  }
+  return [...m.values()].sort((a, b) => String(a.t).localeCompare(String(b.t)));
+}
+function mergeCountries(list) {
+  const m = new Map();
+  for (const cs of list) for (const x of cs ?? []) { const o = m.get(x.iso2) ?? { ...x, visitors: 0, threats: 0 }; o.visitors += x.visitors ?? 0; o.threats += x.threats ?? 0; m.set(x.iso2, o); }
+  return [...m.values()].sort((a, b) => b.visitors - a.visitors);
+}
+const mergeCounted = (list, key, limit = 8) => sumBy(list.flat().filter(Boolean), key, 'count').sort((a, b) => b[1] - a[1]).slice(0, limit).map(([k, count]) => ({ [key]: k, count }));
+const mergePct = (list, weights) => {
+  const m = new Map();
+  list.forEach((xs, i) => { for (const x of xs ?? []) m.set(x.name, (m.get(x.name) ?? 0) + (x.pct ?? 0) * (weights[i] || 0)); });
+  return pctList([...m]);
+};
+/**
+ * KPI-er, grafer, land, sider, oppetid og per-domene-tall i ett svar. Server-cache 5 min (analysen per domene har sin egen
+ * 5-minutterscache). domain = navn eller '*' (alle). → se GET /api/domains/overview i domains-glimt.js.
+ */
+export async function domainsOverview(per = '24t', domain = '*') {
+  const range = PER_RANGE[per] ?? '24h';
+  const sel = domain && domain !== '*' && domain !== 'alle' ? String(domain).toLowerCase() : '*';
+  const rows = sel === '*' ? listRows() : [byName(sel)].filter(Boolean);
+  if (sel !== '*' && !rows.length) return null;
+  return cached(`domov:${range}:${sel}:${rows.map((r) => r.id).join(',')}`, 5 * 60_000, async () => {
+    const t0 = Date.now();
+    const parts = await Promise.all(rows.map(async (r) => {
+      const [a, l] = await Promise.all([
+        cached(`dom:${r.id}:${r.source}:${range}`, range === '1h' ? 60_000 : 5 * 60_000, () => analytics(r, range)).catch((e) => ({ ...blank(r), error: e.message })),
+        cached(`domlive:${r.id}`, 30_000, () => live(r)).catch(() => null),
+      ]);
+      return { r, a: { ...a, live: l ?? a.live } };
+    }));
+    const A = parts.map((p) => p.a);
+    const reqs = sumN(A.map((a) => a.requests)), prevReq = sumN(A.map((a) => a.prev?.requests));
+    const vis = sumN(A.map((a) => a.visitors)), prevVis = sumN(A.map((a) => a.prev?.visitors));
+    const thr = sumN(A.map((a) => a.threats?.total)), prevThr = sumN(A.map((a) => a.prev?.threats));
+    const cachedReq = sumN(A.map((a) => (Number.isFinite(a.cachedPct) && Number.isFinite(a.requests) ? a.cachedPct * a.requests / 100 : null)));
+    const up90 = Array.from({ length: 90 }, (_, i) => { const v = A.map((a) => a.uptime90?.[i]).filter((x) => x != null); return v.length ? Math.min(...v) : null; });
+    const upPcts = A.map((a) => a.uptimePct).filter(Number.isFinite);
+    const p50 = A.map((a) => a.ttfb?.p50).filter(Number.isFinite).sort((a, b) => a - b);
+    const weights = A.map((a) => a.visitors ?? 0);
+    const one = sel !== '*' ? A[0] : null;
+    return {
+      per, range, selected: sel, label: sel === '*' ? 'Alle domener' : sel,
+      domains: rows.map(pub),
+      kpi: { requests: reqs, visitors: vis, pageviews: sumN(A.map((a) => a.pageviews)), bytes: sumN(A.map((a) => a.bytes)), threats: thr,
+        cachedPct: reqs && cachedReq != null ? Math.round(cachedReq / reqs * 1000) / 10 : null, ttfbP50: p50.length ? p50[Math.floor(p50.length / 2)] : null,
+        uptimePct: upPcts.length ? Math.min(...upPcts) : null, liveVisitors: sumN(A.map((a) => a.live?.visitors)),
+        change: { requests: pctCh(reqs, prevReq), visitors: pctCh(vis, prevVis), threats: pctCh(thr, prevThr) } },
+      series: one ? one.series : mergeSeries(A.map((a) => a.series)),
+      countries: one ? one.countries : mergeCountries(A.map((a) => a.countries)),
+      topPages: one ? one.topPages : mergeCounted(parts.map((p) => (p.a.topPages ?? []).map((x) => ({ ...x, path: rows.length > 1 ? `${p.r.name}${x.path}` : x.path }))), 'path'),
+      referrers: one ? one.referrers : mergeCounted(A.map((a) => a.referrers ?? []), 'name'),
+      devices: one ? one.devices : mergePct(A.map((a) => a.devices), weights),
+      browsers: one ? one.browsers : mergePct(A.map((a) => a.browsers), weights),
+      statusCodes: one ? one.statusCodes : A.reduce((o, a) => { for (const [k, v] of Object.entries(a.statusCodes ?? {})) o[k] = (o[k] ?? 0) + v; return o; }, {}),
+      threatTypes: one ? one.threats?.types ?? [] : mergeCounted(A.map((a) => a.threats?.types ?? []), 'name', 6),
+      uptime: { pct: upPcts.length ? Math.min(...upPcts) : null, days: one ? one.uptime90 : up90 },
+      perDomain: parts.map(({ r, a }) => ({ name: r.name, source: r.source, requests: a.requests, visitors: a.visitors, cachedPct: a.cachedPct, threats: a.threats?.total ?? null,
+        change: pctCh(a.requests, a.prev?.requests), status: a.status, up: MOCK ? true : lastProbe.get(r.name)?.ok ?? null, uptimePct: a.uptimePct, sslExpires: a.sslExpires, renews: a.renews,
+        live: a.live?.visitors ?? null, spark: (a.series ?? []).map((x) => x.requests), mock: !!a.mock, ...(a.error ? { error: a.error } : {}) })),
+      ...(one ? { detail: one } : {}),
+      mock: A.some((a) => a.mock), errors: parts.filter((p) => p.a.error).map((p) => ({ name: p.r.name, error: p.a.error })),
+      updatedAt: new Date().toISOString(), ms: Date.now() - t0,
+    };
+  });
+}
+
 export default api;
 
 /**
