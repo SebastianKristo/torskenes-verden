@@ -44,6 +44,8 @@ data class Assist31(
     val chatId: String?, val jobId: String?,
     /** Prompt 33 (memory.add): {memoryId, count, title} for «Endre tittel på N avtaler?». */
     val apply: JSONObject? = null,
+    /** Prompt 35: open:{route:'vaer', name, lat, lon} («været i New York»). */
+    val open: JSONObject? = null,
 )
 
 /** Svarboblen under søkefeltet på Hjem. */
@@ -51,7 +53,9 @@ data class HomeAns31(val q: String, val busy: Boolean, val text: String = "", va
     /** Prompt 33: «Endre N avtaler ›» i boblen (POST /api/glimt/memory/:id/apply). */
     val applyId: Int = 0, val applyCount: Int = 0, val applyTitle: String = "",
     /** Prompt 34: Glimt fikk ikke svar (boblen viser Prøv igjen og Åpne AI-kontroll). */
-    val err: Boolean = false)
+    val err: Boolean = false,
+    /** Prompt 35: «geo:lat,lon,navn» – trykk åpner Vær for stedet. */
+    val wxGeo: String? = null)
 
 data class Trial31(
     val id: String, val service: String, val endsAt: LocalDate, val priceAfter: String, val offsets: List<Int>, val status: String,
@@ -198,7 +202,7 @@ private fun parseAssist31(o0: JSONObject): Assist31? {
     return Assist31(
         text, o.s31("source") ?: "Glimt", o.s31("intent") ?: "llm", o.optJSONObject("card"), o.s31("tool"),
         if (o.has("ms")) o.optLong("ms") else null, ctx?.s31("chatId") ?: o.s31("chatId"), o0.s31("jobId") ?: o0.s31("id"),
-        o.optJSONObject("apply"),
+        o.optJSONObject("apply"), o.optJSONObject("open") ?: o0.optJSONObject("open"),
     )
 }
 
@@ -249,6 +253,8 @@ fun AppViewModel.askHome31(q: String) {
     val s = p31
     val t = q.trim()
     if (t.isEmpty()) return
+    // Prompt 35: «været i New York» / «weather in Paris» → været for stedet (ikke Oslo).
+    if (askWeather35(t)) return
     if (s.assistMissing) { openChat(t); return }
     val seq = ++s.ansSeq
     s.ans = HomeAns31(t, busy = true)
@@ -262,7 +268,8 @@ fun AppViewModel.askHome31(q: String) {
             s.ans = HomeAns31(t, false, aiErrText34(p34.lastModel, p34.lastErr), "", err = true)
             return@launch31
         }
-        s.ans = HomeAns31(t, false, r.text, r.source, r.jobId, r.apply?.optInt("memoryId", 0) ?: 0, r.apply?.optInt("count", 0) ?: 0, r.apply?.s31("title") ?: "")
+        s.ans = HomeAns31(t, false, r.text, r.source, r.jobId, r.apply?.optInt("memoryId", 0) ?: 0, r.apply?.optInt("count", 0) ?: 0, r.apply?.s31("title") ?: "",
+            wxGeo = geoOfOpen35(r.open))
         if (r.intent.startsWith("trial")) loadTrials31()
         if (r.intent.startsWith("appointment") || r.intent.startsWith("calendar.create")) reloadKal27()
         answered31(r, t, "hjem", null)

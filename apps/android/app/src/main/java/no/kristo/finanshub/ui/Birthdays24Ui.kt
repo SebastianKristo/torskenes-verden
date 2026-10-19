@@ -419,10 +419,15 @@ internal fun BdCalendars(vm: AppViewModel, ctx: android.content.Context) {
                 Text(if (s.authAt != 0L) "Kobler til …" else "Logg inn med Google", color = Color(0xFF1F1F1F), fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
             }
         } else {
-            Text("Kalender", color = p.mut, fontSize = 12.5.sp)
+            // Prompt 35: velg flere kalendere som hentes (g.cals); den første er der nye bursdager skrives.
             val cals = s.gCals.ifEmpty { listOfNotNull(g.calendarId?.let { BdCal24(it, it) }) }
+            val sel = g.calendarIds.ifEmpty { listOfNotNull(g.calendarId) }
+            Row(Modifier.fillMaxWidth()) {
+                Text("Kalendere som hentes (velg flere)", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.weight(1f))
+                Text("${sel.size} valgt", color = p.mut, fontSize = 12.5.sp)
+            }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                cals.forEach { c -> BdChip(c.name, g.calendarId == c.id) { vm.googleSettings24(calendarId = c.id) } }
+                cals.forEach { c -> val on = c.id in sel; BdChip((if (on) "✓ " else "") + c.name, on) { vm.toggleGoogleCal35(c.id) } }
             }
             Column {
                 BdToggle("Skriv nye bursdager til Google", "Årlig heldagshendelse med påminnelse", g.writeNew) { vm.googleSettings24(writeNew = !g.writeNew) }

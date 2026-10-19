@@ -718,6 +718,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "brief" -> { go(Screen.Homelab); openBrief34() }
             "ai" -> openAiCtl34(uri.path?.trim('/')?.takeIf { it in setOf("ov", "mod", "rt", "job", "use", "api") } ?: "ov")
             "scan" -> { open(Screen.Scan); pendingScan = when (uri.path?.trim('/')) { "camera" -> "camera"; "files" -> "files"; else -> null } }
+            // Prompt 35: Kalender-appen åpner finanshub://settings/glimt og finanshub://settings/kalendere.
+            "settings", "innstillinger" -> settingsLink35(uri.path?.trim('/').orEmpty())
         }
     }
 
@@ -2576,7 +2578,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         weatherError = null
         launch {
             try {
-                val raw = api.hlGet("/weather/full?place=" + URLEncoder.encode(place, "UTF-8"), timeout = 15_000)
+                // Prompt 35: «geo:lat,lon,navn» = midlertidig sted fra AI-søket («været i New York»).
+                val q = if (place.startsWith("geo:")) place.removePrefix("geo:").split(',', limit = 3).let { g ->
+                    "lat=" + g.getOrElse(0) { "" } + "&lon=" + g.getOrElse(1) { "" } + "&name=" + URLEncoder.encode(g.getOrElse(2) { "" }, "UTF-8")
+                } else "place=" + URLEncoder.encode(place, "UTF-8")
+                val raw = api.hlGet("/weather/full?$q", timeout = 15_000)
                 weatherFull = parseWeatherFull(raw)
                 loadWxCmp22(place, raw)
             }
@@ -2731,7 +2737,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         wxCmp22Failed = false
         wxCmp22Busy = true
         viewModelScope.launch {
-            val c = runCatching { parseWxCmp22(JSONObject(api.hlGet("/weather/compare?place=" + URLEncoder.encode(place, "UTF-8"), timeout = 15_000))) }.getOrNull()
+            val c = runCatching { parseWxCmp22(JSONObject(api.hlGet("/weather/compare?" + (if (place.startsWith("geo:")) place.removePrefix("geo:").split(',', limit = 3).let { g -> "lat=" + g.getOrElse(0) { "" } + "&lon=" + g.getOrElse(1) { "" } + "&name=" + URLEncoder.encode(g.getOrElse(2) { "" }, "UTF-8") } else "place=" + URLEncoder.encode(place, "UTF-8")), timeout = 15_000))) }.getOrNull()
             if (weatherPlace == place) {
                 wxCmp22 = c
                 wxCmp22Place = place
@@ -3632,6 +3638,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal val appCtx34: Context get() = appCtx
     /** Kvitteringer og køen hentes på nytt (en AI-analyse ble ferdig eller stoppet). */
     internal fun refreshReceipts34() = launch { loadReceipts(); loadJobs() }
+
+    /* ---------- Prompt 35 (ANDROID35): Glimt-figurene, Glimt-innstillinger, brief med venner/opplesning/bilder/prøver, vær for sted (P35.kt og ui-filene med 35) ---------- */
+    val p35 = P35State()
+    internal suspend fun <T> api35(f: suspend Api.() -> T): T = api.f()
+    internal fun launch35(block: suspend () -> Unit) = launch(block)
+    internal val appCtx35: Context get() = appCtx
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

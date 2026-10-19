@@ -165,6 +165,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         SetRow(vm, i(), Icons.Filled.Dashboard, "Moduler", "Familie, Huskeliste, Avganger, Vær", top = true) { vm.settingsPage = "modules" }
         SetRow(vm, i(), Icons.Filled.Newspaper, "Nyhetsleser", "Kilder og AI", top = true) { vm.openNews(settings = true) }
     }
+    // Prompt 35: ny gruppe GLIMT → «Glimt» (figur, brief, stemme og venner) i fullskjerm.
+    group("Glimt") { _ -> GlimtSettingsRow35(vm) }
     group("App") { i ->
         AiSettingsRow34(vm, i()) // Prompt 34: AI og modeller → AI-kontroll i fullskjerm (ui/AiCtl34.kt)
         SetRow(vm, i(), Icons.Filled.Palette, "Utseende og fanelinje", "Papir ${when (vm.paperMode) { "mork" -> "mørk"; "lys" -> "lys"; else -> "· følger systemet" }} · bakgrunn · ikonfarger", top = true) { vm.settingsPage = "look" }

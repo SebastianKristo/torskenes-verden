@@ -177,7 +177,8 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.familyOpen) FamilyScreen(vm)
     if (vm.tasksOpen) TasksScreen(vm)
     if (vm.compareOpen) CompareScreen(vm)
-    if (vm.p34.briefOpen) BriefPage34(vm) // prompt 34
+    if (vm.p34.briefOpen) BriefPage35(vm) // prompt 34/35: Glimt og vennene, opplesning, bilder og prøver (ui/Brief35.kt)
+    if (vm.p35.glimtOpen) GlimtPage35(vm) // prompt 35: Innstillinger → Glimt
     if (vm.p34.aiOpen) AiControl34(vm)
 }
 

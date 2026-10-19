@@ -41,7 +41,9 @@ data class Bd24(
 }
 
 data class BdGoogle24(val connected: Boolean = false, val calendarId: String? = null, val email: String? = null, val writeNew: Boolean = true, val contacts: Boolean = true,
-    val syncedAt: String? = null, val configured: Boolean = true, val error: String? = null)
+    val syncedAt: String? = null, val configured: Boolean = true, val error: String? = null,
+    /** Prompt 35: flere kalendere som hentes (g.cals). */
+    val calendarIds: List<String> = emptyList())
 /** allowed = false for andre enn administrator (HA-import er bare for admin). */
 data class BdHa24(val entityId: String? = null, val twoWay: Boolean = true, val syncedAt: String? = null, val allowed: Boolean = true, val error: String? = null)
 data class BdCal24(val id: String, val name: String)
@@ -180,7 +182,7 @@ fun AppViewModel.loadBirthdays24(quiet: Boolean = false) {
             s.error = null
             o?.optJSONObject("google")?.let { g ->
                 s.google = BdGoogle24(g.optBoolean("connected", false), g.optStr("calendarId"), g.optStr("email"), g.optBoolean("writeNew", true), g.optBoolean("contacts", true),
-                    g.optStr("syncedAt"), g.optBoolean("configured", true), g.optStr("error"))
+                    g.optStr("syncedAt"), g.optBoolean("configured", true), g.optStr("error"), calIds35(g))
             }
             o?.optJSONObject("ha")?.let { h -> s.ha = BdHa24(h.optStr("entityId"), h.optBoolean("twoWay", true), h.optStr("syncedAt"), h.optBoolean("allowed", true), h.optStr("error")) }
                 ?: run { if (o != null && !o.has("ha")) s.ha = s.ha.copy(allowed = false) }
@@ -318,7 +320,8 @@ fun AppViewModel.googleSettings24(calendarId: String? = null, writeNew: Boolean?
     s.google = g
     Haptics.select()
     launch24a {
-        api24a { hlPut("/birthdays/google", JSONObject().put("calendarId", g.calendarId ?: JSONObject.NULL).put("writeNew", g.writeNew).put("contacts", g.contacts)) }
+        api24a { hlPut("/birthdays/google", JSONObject().put("calendarId", g.calendarId ?: JSONObject.NULL).put("writeNew", g.writeNew).put("contacts", g.contacts)
+            .apply { if (g.calendarIds.isNotEmpty()) put("calendarIds", org.json.JSONArray(g.calendarIds)) }) }
     }
 }
 

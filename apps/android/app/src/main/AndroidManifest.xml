@@ -580,6 +580,19 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s34_brief" />
         </receiver>
+        <!-- Prompt 35: Glimt-brief · Samsung i alle størrelser (2×2, 4×1, 4×4; 4×2 over). Samme responsive innhold, egne oppføringer i velgeren. -->
+        <receiver android:name=".widget.S35Brief22Receiver" android:exported="true" android:enabled="true" android:label="Glimt-brief · Samsung 2×2">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s35_brief22" />
+        </receiver>
+        <receiver android:name=".widget.S35Brief41Receiver" android:exported="true" android:enabled="true" android:label="Glimt-brief · Samsung 4×1">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s35_brief41" />
+        </receiver>
+        <receiver android:name=".widget.S35Brief44Receiver" android:exported="true" android:enabled="true" android:label="Glimt-brief · Samsung 4×4">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s35_brief44" />
+        </receiver>
 
         <!-- Prompt 33: server-adresse og et eget token til Kalender-appen (call «companion»). -->
         <provider

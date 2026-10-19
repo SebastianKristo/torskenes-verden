@@ -160,7 +160,7 @@ private fun DrawScope.drawGlimt34(S: Float, mood: String, spin: Float, blink: Fl
 @Composable
 internal fun HomeBrief34(vm: AppViewModel) {
     val b = vm.p34.brief
-    LaunchedEffect(vm.base, vm.account?.id) { vm.loadBrief34() }
+    LaunchedEffect(vm.base, vm.account?.id) { vm.loadGlimt35(); vm.loadBrief34() }
     val kind = b?.kind ?: briefKind34()
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(BLUE34, Color(0xFF2E5A7F))))
@@ -178,7 +178,7 @@ internal fun HomeBrief34(vm: AppViewModel) {
                 }
             }
         }
-        GlimtFigure34(56.dp)
+        GlimtFig35(b?.host ?: hostChar35(vm.p35.set.char), 56.dp) // prompt 35: verten (brukerens figur)
     }
 }
 
@@ -374,7 +374,7 @@ internal fun BriefPage34(vm: AppViewModel) {
 }
 
 /** Pulserende rød ring rundt kortet Glimt peker på (gbRing 1,3 s). */
-private fun Modifier.ring34(on: Boolean, radius: Dp): Modifier = if (!on) this else this.ringAnim34(radius)
+internal fun Modifier.ring34(on: Boolean, radius: Dp): Modifier = if (!on) this else this.ringAnim34(radius)
 
 @Composable
 private fun ringAlpha34(): Float {

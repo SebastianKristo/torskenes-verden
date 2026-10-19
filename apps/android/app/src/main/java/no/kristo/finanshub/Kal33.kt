@@ -73,7 +73,9 @@ fun AppViewModel.openKalApp33(selId: String? = null, date: LocalDate? = null, li
 
 object Widgets33 {
     // Prompt 34: også Glimt-brief · Samsung.
-    private val SAMSUNG_TRIALS = listOf("no.kristo.finanshub.widget.S32bTrialsSmallReceiver", "no.kristo.finanshub.widget.S32bTrialsWideReceiver", "no.kristo.finanshub.widget.S34BriefReceiver")
+    private val SAMSUNG_TRIALS = listOf("no.kristo.finanshub.widget.S32bTrialsSmallReceiver", "no.kristo.finanshub.widget.S32bTrialsWideReceiver", "no.kristo.finanshub.widget.S34BriefReceiver",
+        // Prompt 35: Glimt-brief · Samsung 2×2, 4×1 og 4×4.
+        "no.kristo.finanshub.widget.S35Brief22Receiver", "no.kristo.finanshub.widget.S35Brief41Receiver", "no.kristo.finanshub.widget.S35Brief44Receiver")
 
     /** Samsung-variantene av prøveperiode-widgetene: av på telefoner som ikke er Samsung (på i manifestet). */
     fun fix(ctx: Context) {

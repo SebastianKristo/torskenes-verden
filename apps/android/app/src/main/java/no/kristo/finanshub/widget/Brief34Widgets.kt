@@ -12,6 +12,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,6 +56,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import no.kristo.finanshub.Api
 import no.kristo.finanshub.Brief34
+import no.kristo.finanshub.BriefEv34
+import no.kristo.finanshub.BriefNews34
 import no.kristo.finanshub.MainActivity
 import no.kristo.finanshub.Notify
 import no.kristo.finanshub.briefKind34
@@ -74,6 +78,12 @@ import java.time.ZoneId
  *  - Trykk → finanshub://brief. Data: GET /api/widgets/brief (kompakt), ellers /api/brief?kind=…; hentes av WidgetWorker hvert
  *    15. minutt (dekker 06:30, 11:00 og 17:00) og når appen lager en ny brief. «Morgenbrief er klar»-varsel én gang per morgen (kan slås av).
  *  - Figuren tegnes som bitmap (android.graphics), samme mål som GlimtFigure34 i appen.
+ * Prompt 35 (ANDROID35): alle størrelser (claude-code-glimt-brief.md → «Alle widget-størrelser»), SizeMode.Responsive:
+ *  - Material You 2×2 (figur, stor temperatur, tilstand, chip med neste) · 4×1 (figur, oppsummering, temperatur-pille) · 4×2 (som før) ·
+ *    4×4 (figur + oppsummering, værkort med nedbør, 2 avtaler, Åpne brief / Spør Glimt).
+ *  - Samsung 2×2 · 4×1 · 4×2 · 4×4 (to fliser, 2 avtaler, 2 nyheter), hvit 78 %, radius 26. Egne oppføringer per størrelse i velgeren.
+ *  - Figuren er en av de 13 Glimt-figurene (ui/GlimtFigs35.kt): temafiguren (Dråpe på regndager), ellers verten. Trykk-vinkingen beholdes.
+ *  - Trykk på avtale → kalender://hendelse/{id}, nyhet → artikkelen, resten → finanshub://brief.
  */
 
 object Brief34Store {
@@ -100,18 +110,27 @@ object Brief34Store {
         data.value = null
     }
 
+    /** Prompt 35: tegn widgetene på nytt i bakgrunnen (ny figur valgt). */
+    fun redrawAsync(ctx: Context) { val app = ctx.applicationContext; Thread { runCatching { kotlinx.coroutines.runBlocking { Brief34Widgets.redraw(app) } } }.start() }
+
     fun notifyOn(ctx: Context): Boolean = sp(ctx).getBoolean("notify", true)
 
     /** «Morgenbrief er klar» én gang per dag, fra 06:30. */
     fun maybeNotify(ctx: Context, b: Brief34) {
-        if (b.kind != "morning" || !notifyOn(ctx)) return
+        // Prompt 35: varsel for hver valgte brief (Innstillinger → Glimt), fra klokkeslettet, én gang per brief og dag.
+        val set = no.kristo.finanshub.Glimt35Prefs.load(ctx)
+        if (!notifyOn(ctx) || set?.brief == false) return
+        val slot = set?.briefs?.get(b.kind)
+        if (set != null && slot?.on != true) return
+        if (set == null && b.kind != "morning") return
         val now = LocalTime.now(ZoneId.of("Europe/Oslo"))
-        if (now.isBefore(LocalTime.of(6, 30))) return
+        val at = slot?.at?.let { runCatching { LocalTime.parse(it.padStart(5, '0')) }.getOrNull() } ?: LocalTime.of(6, 30)
+        if (now.isBefore(at)) return
         val today = LocalDate.now(ZoneId.of("Europe/Oslo")).toString()
         val p = sp(ctx)
-        if (p.getString("notified", null) == today) return
-        p.edit().putString("notified", today).apply()
-        Notify.post(ctx, "Morgenbrief er klar", b.summary, "brief34-$today", "ai")
+        if (p.getString("notified_" + b.kind, null) == today) return
+        p.edit().putString("notified_" + b.kind, today).apply()
+        Notify.post(ctx, briefTitle34(b.kind) + " er klar", b.summary, "brief34-${b.kind}-$today", "ai")
     }
 
     private fun toJson(b: Brief34): JSONObject = JSONObject().put("kind", b.kind).put("title", b.title).put("summary", b.summary)
@@ -121,13 +140,14 @@ object Brief34Store {
                 .put("code", w.code ?: JSONObject.NULL).put("rain12h", JSONArray(w.rain)).put("vsYesterday", w.vsYesterday ?: JSONObject.NULL)
                 .put("sunset", w.sunset ?: JSONObject.NULL).put("place", w.place).put("rainSoon", w.rainSoon)
         } ?: JSONObject.NULL)
-        .put("events", JSONArray().apply { b.events.forEach { e -> put(JSONObject().put("id", e.id ?: JSONObject.NULL).put("title", e.title).put("date", e.date.toString()).put("start", e.start ?: JSONObject.NULL).put("location", e.loc ?: JSONObject.NULL)) } })
-        .put("news", JSONArray().apply { b.news.forEach { n -> put(JSONObject().put("source", n.src).put("title", n.title).put("url", n.url ?: JSONObject.NULL).put("time", n.time ?: JSONObject.NULL)) } })
+        .put("events", JSONArray().apply { b.events.forEach { e -> put(JSONObject().put("id", e.id ?: JSONObject.NULL).put("title", e.title).put("date", e.date.toString()).put("start", e.start ?: JSONObject.NULL).put("location", e.loc ?: JSONObject.NULL).put("color", e.color?.let { "#" + java.lang.Long.toHexString(it and 0xFFFFFFL).padStart(6, '0') } ?: JSONObject.NULL)) } })
+        .put("host", b.host ?: JSONObject.NULL)
+        .put("news", JSONArray().apply { b.news.forEach { n -> put(JSONObject().put("source", n.src).put("title", n.title).put("url", n.url ?: JSONObject.NULL).put("time", n.time ?: JSONObject.NULL).put("image", n.image ?: JSONObject.NULL).put("lead", n.lead ?: JSONObject.NULL)) } })
 }
 
 /** Henter briefen til widgetene (kompakt endepunkt, ellers hele briefen). */
 internal suspend fun fetchBrief34(ctx: Context, api: Api, acct: String?) {
-    val kind = briefKind34()
+    val kind = no.kristo.finanshub.briefKind35(no.kristo.finanshub.Glimt35Prefs.load(ctx))
     val raw = runCatching { api.hlGet("/widgets/brief?kind=$kind", timeout = 8_000) }.getOrNull()
         ?: runCatching { api.hlGet("/brief?kind=$kind", timeout = 8_000) }.getOrNull() ?: return
     val b = runCatching { parseBrief34(raw, kind) }.getOrNull() ?: return
@@ -136,7 +156,7 @@ internal suspend fun fetchBrief34(ctx: Context, api: Api, acct: String?) {
 }
 
 object Brief34Widgets {
-    val ALL: List<GlanceAppWidget> get() = listOf(BriefWidget34(), S34BriefWidget())
+    val ALL: List<GlanceAppWidget> get() = listOf(BriefWidget34(), S34BriefWidget(), S35Brief22Widget(), S35Brief41Widget(), S35Brief44Widget())
     suspend fun redraw(ctx: Context) { ALL.forEach { w -> runCatching { w.updateAll(ctx) } } }
 }
 
@@ -244,35 +264,200 @@ class GlimtPoke34 : ActionCallback {
 
 /* ---------------- Widgetene ---------------- */
 
+/* Prompt 35: de fire størrelsene. Glance velger den største som får plass. */
+private val W22 = DpSize(110.dp, 110.dp)
+private val W41 = DpSize(250.dp, 50.dp)
+private val W42 = DpSize(250.dp, 110.dp)
+private val W44 = DpSize(250.dp, 250.dp)
+
 /** kind: m (Material You) eller s (Samsung). */
 abstract class BriefW34(private val kind: String) : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Exact
+    override val sizeMode: SizeMode = SizeMode.Responsive(setOf(W22, W41, W42, W44))
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val b0 = Brief34Store.current(context)
         provideContent {
             val b by Brief34Store.data.collectAsState()
             val pose by Glimt34Poke.pose.collectAsState()
             val say by Glimt34Poke.bubble.collectAsState()
-            GlanceTheme { if (kind == "m") MBrief34(b ?: b0, pose, say) else SBrief34(b ?: b0, pose, say) }
+            val bb = b ?: b0
+            val size = LocalSize.current
+            val sz = when { size.width < 200.dp -> 22; size.height < 100.dp -> 41; size.height < 220.dp -> 42; else -> 44 }
+            GlanceTheme {
+                if (kind == "m") when (sz) { 22 -> M22Brief35(bb, pose, say); 41 -> M41Brief35(bb, pose, say); 44 -> M44Brief35(bb, pose, say); else -> MBrief34(bb, pose, say) }
+                else when (sz) { 22 -> S22Brief35(bb, pose, say); 41 -> S41Brief35(bb, pose, say); 44 -> S44Brief35(bb, pose, say); else -> SBrief34(bb, pose, say) }
+            }
         }
     }
 }
 class BriefWidget34 : BriefW34("m")
 class S34BriefWidget : BriefW34("s")
+/** Prompt 35: Samsung har egne oppføringer per størrelse i widgetvelgeren (samme responsive innhold). */
+class S35Brief22Widget : BriefW34("s")
+class S35Brief41Widget : BriefW34("s")
+class S35Brief44Widget : BriefW34("s")
 
 class BriefReceiver34 : Receiver24() { override val glanceAppWidget: GlanceAppWidget = BriefWidget34() }
 class S34BriefReceiver : Receiver24() { override val glanceAppWidget: GlanceAppWidget = S34BriefWidget() }
+class S35Brief22Receiver : Receiver24() { override val glanceAppWidget: GlanceAppWidget = S35Brief22Widget() }
+class S35Brief41Receiver : Receiver24() { override val glanceAppWidget: GlanceAppWidget = S35Brief41Widget() }
+class S35Brief44Receiver : Receiver24() { override val glanceAppWidget: GlanceAppWidget = S35Brief44Widget() }
 
 private fun openBrief34(ctx: Context): Action = actionStartActivity(
     Intent(Intent.ACTION_VIEW, Uri.parse("finanshub://brief"), ctx, MainActivity::class.java)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
 )
 
+private fun openUri35(ctx: Context, uri: String): Action = actionStartActivity(
+    Intent(Intent.ACTION_VIEW, Uri.parse(uri), ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+)
+
+/** Trykk på avtale → kalender://hendelse/{id} (Kalender-appen), ellers Kalender i Homelab. */
+private fun openEvent35(ctx: Context, e: BriefEv34): Action {
+    val i = Intent(Intent.ACTION_VIEW, Uri.parse("kalender://hendelse/" + Uri.encode(e.id ?: ""))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    val ok = e.id != null && runCatching { i.resolveActivity(ctx.packageManager) != null }.getOrDefault(false)
+    return if (ok) actionStartActivity(i) else openUri35(ctx, "finanshub://kalender")
+}
+
+/** Trykk på nyhet → artikkelen. */
+private fun openNews35(ctx: Context, n: BriefNews34): Action = n.url?.let { u ->
+    actionStartActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+} ?: openBrief34(ctx)
+
 private fun cp34(c: Long) = ColorProvider(Color(c))
 
 @Composable
 private fun T34(text: String, size: TextUnit, color: ColorProvider, weight: FontWeight = FontWeight.Normal, maxLines: Int = 1, modifier: GlanceModifier = GlanceModifier) =
     Text(text, modifier, style = TextStyle(color = color, fontSize = size, fontWeight = weight), maxLines = maxLines)
+
+/** Temafiguren: Dråpe på regndager, ellers verten (brukerens figur, Glimt Natt 21–06). */
+private fun figId35(ctx: Context, b: Brief34?): String {
+    val w = b?.wx
+    if (w != null && (w.cond.contains("regn") || w.cond.contains("snø") || w.rainSoon.startsWith("regn"))) return "drape"
+    b?.host?.let { return no.kristo.finanshub.ui.Fig35.norm(it) }
+    return no.kristo.finanshub.hostChar35(no.kristo.finanshub.Glimt35Prefs.load(ctx)?.char ?: "glimt")
+}
+
+/** Posituren ved trykk-vinkingen → humør og tidspunkt i figurens animasjon. */
+private fun figPose35(pose: Int): Pair<String, Float?> = when (pose) {
+    GlimtPose34.UP -> "glad" to .55f
+    GlimtPose34.DOWN -> "glad" to .3f
+    GlimtPose34.TALK -> "talk" to .15f
+    GlimtPose34.BLINK -> "idle" to 4.03f
+    else -> "idle" to null
+}
+
+/** Figuren [w] bred (bitmapen har luft rundt for hopp og gnister). */
+@Composable
+private fun Fig35W(b: Brief34?, pose: Int, w: Dp, poke: Boolean = true) {
+    val ctx = LocalContext.current
+    val id = figId35(ctx, b)
+    val (mood, t) = figPose35(pose)
+    val bmp = no.kristo.finanshub.ui.fig35Bitmap(id, 144, mood, t)
+    val h = w * (bmp.height.toFloat() / bmp.width.toFloat())
+    val m = GlanceModifier.size(w, h)
+    Image(ImageProvider(bmp), contentDescription = "Hils på " + no.kristo.finanshub.ui.Fig35.name(id), modifier = if (poke) m.clickable(actionRunCallback<GlimtPoke34>()) else m)
+}
+
+private fun nextLine35(b: Brief34?): String = b?.next?.let { e -> e.title + (e.start?.let { " $it" } ?: "") } ?: "Fri resten av dagen"
+
+/* ---------------- Material You ---------------- */
+
+/** 2 × 2: figur, stor temperatur, tilstand og chip med neste. */
+@Composable
+private fun M22Brief35(b: Brief34?, pose: Int, say: String?) {
+    val ctx = LocalContext.current
+    val c = GlanceTheme.colors
+    Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(c.primaryContainer).padding(14.dp).clickable(openBrief34(ctx))) {
+        Fig35W(b, pose, 34.dp)
+        Spacer(GlanceModifier.defaultWeight())
+        if (say != null) T34(say, 12.sp, c.onPrimaryContainer, FontWeight.Bold, maxLines = 3) else {
+            T34(b?.wx?.now?.let { "$it°" } ?: "–", 32.sp, c.onPrimaryContainer, FontWeight.Bold)
+            T34(b?.wx?.cond ?: briefTitle34(b?.kind ?: briefKind34()), 12.5.sp, c.onPrimaryContainer)
+            Spacer(GlanceModifier.height(8.dp))
+            Box(GlanceModifier.height(26.dp).cornerRadius(13.dp).background(c.secondaryContainer).padding(horizontal = 10.dp), contentAlignment = Alignment.CenterStart) {
+                T34(nextLine35(b), 11.5.sp, c.onSecondaryContainer, FontWeight.Bold)
+            }
+        }
+    }
+}
+
+/** 4 × 1: figur + oppsummering (2 linjer) + temperatur-pille. */
+@Composable
+private fun M41Brief35(b: Brief34?, pose: Int, say: String?) {
+    val ctx = LocalContext.current
+    val c = GlanceTheme.colors
+    Row(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(c.primaryContainer).padding(horizontal = 14.dp, vertical = 8.dp).clickable(openBrief34(ctx)),
+        verticalAlignment = Alignment.CenterVertically) {
+        Fig35W(b, pose, 30.dp)
+        Spacer(GlanceModifier.width(10.dp))
+        T34(say ?: b?.summary ?: "Åpne Homelab for å lage briefen.", 13.sp, c.onPrimaryContainer, if (say != null) FontWeight.Bold else FontWeight.Normal, maxLines = 2, modifier = GlanceModifier.defaultWeight())
+        b?.wx?.now?.let { t ->
+            Spacer(GlanceModifier.width(8.dp))
+            Box(GlanceModifier.height(30.dp).cornerRadius(15.dp).background(c.onPrimaryContainer).padding(horizontal = 10.dp), contentAlignment = Alignment.Center) {
+                T34("$t°", 12.sp, c.primaryContainer, FontWeight.Bold)
+            }
+        }
+    }
+}
+
+/** 4 × 4: figur + oppsummering, værkort med nedbør, 2 avtaler og knappene Åpne brief / Spør Glimt. */
+@Composable
+private fun M44Brief35(b: Brief34?, pose: Int, say: String?) {
+    val ctx = LocalContext.current
+    val c = GlanceTheme.colors
+    Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(c.primaryContainer).padding(16.dp).clickable(openBrief34(ctx))) {
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Fig35W(b, pose, 44.dp)
+            Spacer(GlanceModifier.width(10.dp))
+            Column(GlanceModifier.defaultWeight()) {
+                T34(briefTitle34(b?.kind ?: briefKind34()), 15.sp, c.onPrimaryContainer, FontWeight.Bold)
+                T34(say ?: b?.summary ?: "Åpne Homelab for å lage briefen.", 12.5.sp, c.onPrimaryContainer, if (say != null) FontWeight.Bold else FontWeight.Normal, maxLines = 2)
+            }
+        }
+        Spacer(GlanceModifier.height(10.dp))
+        b?.wx?.let { w ->
+            Column(GlanceModifier.fillMaxWidth().cornerRadius(20.dp).background(c.secondaryContainer).padding(horizontal = 12.dp, vertical = 10.dp)) {
+                Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    T34(w.now?.let { "$it°" } ?: "–", 22.sp, c.onSecondaryContainer, FontWeight.Bold, modifier = GlanceModifier.defaultWeight())
+                    T34("↑${w.hi ?: "–"}° ↓${w.lo ?: "–"}°", 12.sp, c.onSecondaryContainer, FontWeight.Bold)
+                }
+                if (w.rain.isNotEmpty()) {
+                    Spacer(GlanceModifier.height(6.dp))
+                    val mx = maxOf(.6, w.rain.maxOrNull() ?: 0.0)
+                    Row(GlanceModifier.fillMaxWidth().height(30.dp), verticalAlignment = Alignment.Bottom) {
+                        w.rain.take(12).forEachIndexed { i, r ->
+                            if (i > 0) Spacer(GlanceModifier.width(2.dp))
+                            Box(GlanceModifier.defaultWeight().height((30 * (r / mx).coerceIn(.08, 1.0)).dp).cornerRadius(2.dp).background(c.onSecondaryContainer)) {}
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(GlanceModifier.height(6.dp))
+        b?.events?.take(2)?.forEach { e -> EvRow35(e, c.onPrimaryContainer, c.onPrimaryContainer) }
+        Spacer(GlanceModifier.defaultWeight())
+        Row(GlanceModifier.fillMaxWidth()) {
+            Box(GlanceModifier.height(32.dp).cornerRadius(16.dp).background(c.onPrimaryContainer).padding(horizontal = 14.dp).clickable(openBrief34(ctx)), contentAlignment = Alignment.Center) {
+                T34("Åpne brief", 12.sp, c.primaryContainer, FontWeight.Bold)
+            }
+            Spacer(GlanceModifier.width(6.dp))
+            Box(GlanceModifier.height(32.dp).cornerRadius(16.dp).background(c.secondaryContainer).padding(horizontal = 14.dp).clickable(openUri35(ctx, "finanshub://chat")), contentAlignment = Alignment.Center) {
+                T34("Spør Glimt", 12.sp, c.onSecondaryContainer, FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EvRow35(e: BriefEv34, ink: ColorProvider, mut: ColorProvider) {
+    val ctx = LocalContext.current
+    Row(GlanceModifier.fillMaxWidth().padding(vertical = 4.dp).clickable(openEvent35(ctx, e)), verticalAlignment = Alignment.CenterVertically) {
+        Box(GlanceModifier.size(4.dp, 24.dp).cornerRadius(2.dp).background(ColorProvider(Color(e.color ?: 0xFFB23A2A)))) {}
+        Spacer(GlanceModifier.width(8.dp))
+        T34(e.title, 12.5.sp, ink, FontWeight.Bold, modifier = GlanceModifier.defaultWeight())
+        T34(e.start ?: "Hele dagen", 10.5.sp, mut, FontWeight.Medium)
+    }
+}
 
 /** Material You 4 × 2. */
 @Composable
@@ -283,7 +468,7 @@ private fun MBrief34(b: Brief34?, pose: Int, say: String?) {
     val kick = briefTitle34(b?.kind ?: briefKind34())
     Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(c.primaryContainer).padding(16.dp).clickable(openBrief34(ctx))) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Image(ImageProvider(glimtBitmap34(pose)), contentDescription = "Hils på Glimt", modifier = GlanceModifier.size(30.dp, 34.dp).clickable(actionRunCallback<GlimtPoke34>()))
+            Fig35W(b, pose, 30.dp)
             Spacer(GlanceModifier.width(10.dp))
             T34(kick, 14.sp, c.onPrimaryContainer, FontWeight.Bold, modifier = GlanceModifier.defaultWeight())
             b?.wx?.now?.let { t ->
@@ -308,27 +493,103 @@ private fun MBrief34(b: Brief34?, pose: Int, say: String?) {
     }
 }
 
+/* ---------------- Samsung One UI (hvit 78 %, radius 26) ---------------- */
+
+private const val S_BG35 = 0xC7FFFFFF
+private const val S_INK35 = 0xFF1B1A17
+private const val S_SUB35 = 0xFF3D3A33
+private const val S_BLUE35 = 0xFF2B5D8A
+
+/** 2 × 2: figur, temperatur, tittel og neste. */
+@Composable
+private fun S22Brief35(b: Brief34?, pose: Int, say: String?) {
+    val ctx = LocalContext.current
+    Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(26.dp).background(cp34(S_BG35)).padding(horizontal = 16.dp, vertical = 14.dp).clickable(openBrief34(ctx))) {
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            Fig35W(b, pose, 34.dp)
+            Spacer(GlanceModifier.defaultWeight())
+            T34(b?.wx?.now?.let { "$it°" } ?: "", 24.sp, cp34(S_INK35), FontWeight.Bold)
+        }
+        Spacer(GlanceModifier.defaultWeight())
+        T34(briefTitle34(b?.kind ?: briefKind34()), 14.sp, cp34(S_INK35), FontWeight.Bold)
+        T34(say ?: b?.next?.let { e -> e.title + (e.start?.let { " · $it" } ?: "") } ?: "Fri resten av dagen", 12.sp, cp34(S_SUB35), maxLines = 2)
+    }
+}
+
+/** 4 × 1: figur, «Kveldsbrief · 8°», neste og «Åpne ›». */
+@Composable
+private fun S41Brief35(b: Brief34?, pose: Int, say: String?) {
+    val ctx = LocalContext.current
+    Row(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(26.dp).background(cp34(S_BG35)).padding(horizontal = 16.dp, vertical = 8.dp).clickable(openBrief34(ctx)),
+        verticalAlignment = Alignment.CenterVertically) {
+        Fig35W(b, pose, 30.dp)
+        Spacer(GlanceModifier.width(12.dp))
+        Column(GlanceModifier.defaultWeight()) {
+            T34(briefTitle34(b?.kind ?: briefKind34()) + (b?.wx?.now?.let { " · $it°" } ?: ""), 13.5.sp, cp34(S_INK35), FontWeight.Bold)
+            T34(say ?: nextLine35(b), 12.sp, cp34(S_SUB35))
+        }
+        T34("Åpne ›", 12.sp, cp34(S_BLUE35), FontWeight.Bold)
+    }
+}
+
 /** Samsung One UI 4 × 2. */
 @Composable
 private fun SBrief34(b: Brief34?, pose: Int, say: String?) {
     val ctx = LocalContext.current
     val kick = briefTitle34(b?.kind ?: briefKind34())
-    Row(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(26.dp).background(cp34(0xC7FFFFFF)).padding(horizontal = 18.dp, vertical = 16.dp).clickable(openBrief34(ctx)),
+    Row(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(26.dp).background(cp34(S_BG35)).padding(horizontal = 18.dp, vertical = 16.dp).clickable(openBrief34(ctx)),
         verticalAlignment = Alignment.CenterVertically) {
         Column(GlanceModifier.defaultWeight().fillMaxSize()) {
-            T34(kick, 16.sp, cp34(0xFF1B1A17), FontWeight.Bold)
+            T34(kick, 16.sp, cp34(S_INK35), FontWeight.Bold)
             Spacer(GlanceModifier.height(6.dp))
             if (say != null) Box(GlanceModifier.cornerRadius(12.dp).background(cp34(0xFF22476B)).padding(horizontal = 10.dp, vertical = 6.dp)) {
                 T34(say, 13.sp, cp34(0xFFFFFFFF), FontWeight.Bold, maxLines = 3)
-            } else T34(b?.summary ?: "Åpne Homelab for å lage briefen.", 13.sp, cp34(0xFF3D3A33), maxLines = 3)
+            } else T34(b?.summary ?: "Åpne Homelab for å lage briefen.", 13.sp, cp34(S_SUB35), maxLines = 3)
             Spacer(GlanceModifier.defaultWeight())
-            T34("Åpne brief ›", 12.sp, cp34(0xFF2B5D8A), FontWeight.Bold)
+            T34("Åpne brief ›", 12.sp, cp34(S_BLUE35), FontWeight.Bold)
         }
         Spacer(GlanceModifier.width(10.dp))
         Column(GlanceModifier.width(76.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Image(ImageProvider(glimtBitmap34(pose)), contentDescription = "Hils på Glimt", modifier = GlanceModifier.size(56.dp, 63.dp).clickable(actionRunCallback<GlimtPoke34>()))
+            Fig35W(b, pose, 56.dp)
             Spacer(GlanceModifier.height(4.dp))
-            T34(b?.wx?.now?.let { "$it°" } ?: "", 13.sp, cp34(0xFF1B1A17), FontWeight.Bold)
+            T34(b?.wx?.now?.let { "$it°" } ?: "", 13.sp, cp34(S_INK35), FontWeight.Bold)
+        }
+    }
+}
+
+/** 4 × 4: oppsummering, to fliser (vær blå, neste avtale), 2 avtaler og 2 nyheter. */
+@Composable
+private fun S44Brief35(b: Brief34?, pose: Int, say: String?) {
+    val ctx = LocalContext.current
+    Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(26.dp).background(cp34(S_BG35)).padding(horizontal = 18.dp, vertical = 16.dp).clickable(openBrief34(ctx))) {
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Fig35W(b, pose, 44.dp)
+            Spacer(GlanceModifier.width(10.dp))
+            Column(GlanceModifier.defaultWeight()) {
+                T34(briefTitle34(b?.kind ?: briefKind34()), 16.sp, cp34(S_INK35), FontWeight.Bold)
+                T34(say ?: b?.summary ?: "Åpne Homelab for å lage briefen.", 12.5.sp, cp34(S_SUB35), if (say != null) FontWeight.Bold else FontWeight.Normal, maxLines = 2)
+            }
+        }
+        Spacer(GlanceModifier.height(10.dp))
+        Row(GlanceModifier.fillMaxWidth()) {
+            Column(GlanceModifier.defaultWeight().cornerRadius(16.dp).background(cp34(S_BLUE35)).padding(horizontal = 12.dp, vertical = 10.dp)) {
+                T34(b?.wx?.now?.let { "$it°" } ?: "–", 22.sp, cp34(0xFFFFFFFF), FontWeight.Bold)
+                T34((b?.wx?.cond ?: "") + (b?.wx?.hi?.let { " · ↑$it°" } ?: ""), 12.sp, cp34(0xE6FFFFFF))
+            }
+            Spacer(GlanceModifier.width(8.dp))
+            Column(GlanceModifier.defaultWeight().cornerRadius(16.dp).background(cp34(0x1A2B5D8A)).padding(horizontal = 12.dp, vertical = 10.dp)) {
+                T34("Neste", 11.sp, cp34(S_SUB35))
+                T34(b?.next?.title ?: "Fri", 13.5.sp, cp34(S_INK35), FontWeight.Bold)
+                T34(b?.next?.start ?: "", 12.sp, cp34(S_BLUE35), FontWeight.Bold)
+            }
+        }
+        Spacer(GlanceModifier.height(6.dp))
+        b?.events?.take(2)?.forEach { e -> EvRow35(e, cp34(S_INK35), cp34(0xFF6B665C)) }
+        b?.news?.take(2)?.forEach { n ->
+            Row(GlanceModifier.fillMaxWidth().padding(vertical = 5.dp).clickable(openNews35(ctx, n))) {
+                T34(n.src.take(4).uppercase(), 10.sp, cp34(0xFFB23A2A), FontWeight.Bold, modifier = GlanceModifier.width(34.dp))
+                T34(n.title, 13.sp, cp34(S_INK35), FontWeight.Medium, maxLines = 2, modifier = GlanceModifier.defaultWeight())
+            }
         }
     }
 }

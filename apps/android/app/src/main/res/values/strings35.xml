@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 35: Glimt-brief-widgetene i alle størrelser. -->
+<resources>
+    <string name="widget_s35_brief22_desc">Glimt-brief 2 × 2 · figur, temperatur og neste avtale · Samsung</string>
+    <string name="widget_s35_brief41_desc">Glimt-brief 4 × 1 · figur, temperatur og neste · Samsung</string>
+    <string name="widget_s35_brief44_desc">Glimt-brief 4 × 4 · vær, avtaler og nyheter · Samsung</string>
+</resources>

@@ -406,7 +406,8 @@ internal fun PaperApp(
             // Prompt 31: System-siden «Nordlys OS» i fullskjerm (uten bakgrunnsbilde, fanelinje og skann).
             if (vm.p31.nordOpen) NordlysPage31(vm)
             // Prompt 34: Glimt-brief og AI-kontroll i fullskjerm (over Chat, så «Full AI-kontroll ›» i Chat legger seg over).
-            if (vm.p34.briefOpen) BriefPage34(vm)
+            if (vm.p34.briefOpen) BriefPage35(vm)
+            if (vm.p35.glimtOpen) GlimtPage35(vm)
             if (vm.p34.aiOpen) AiControl34(vm)
             // Prompt 29: «Legg til time»-arket, pillen og banneret over alt (Kalender og Hjem). Prompt 31: Glimt-toasten ligger her.
             Quick29Overlay(vm)

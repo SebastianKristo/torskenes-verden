@@ -113,10 +113,12 @@ data class BriefWx34(
     val rainSoon: String,
 )
 data class BriefEv34(val id: String?, val title: String, val date: LocalDate, val start: String?, val loc: String?, val color: Long?, val startMin: Int?)
-data class BriefNews34(val src: String, val title: String, val url: String?, val time: String?)
+data class BriefNews34(val src: String, val title: String, val url: String?, val time: String?, val image: String? = null, val lead: String? = null) // prompt 35: bilde og ingress
 data class Brief34(
     val kind: String, val title: String, val summary: String, val wx: BriefWx34?, val events: List<BriefEv34>, val news: List<BriefNews34>,
     val generatedAt: String?, val local: Boolean, val mood: String? = null, val note: String? = null,
+    /** Prompt 35: prøver som slutter innen 7 dager, guide-runden fra serveren og verten (figur-id). */
+    val trials: List<BriefTrial35> = emptyList(), val guide: List<Guide35> = emptyList(), val host: String? = null,
 ) {
     val next: BriefEv34? get() = events.firstOrNull()
     /** «8° lettskyet · Tannlege 15:15 · 3 nyheter». */
@@ -137,7 +139,7 @@ data class Brief34(
 }
 
 fun briefKind34(h: Int = LocalTime.now(OSLO34).hour): String = if (h < 11) "morning" else if (h < 17) "day" else "evening"
-fun briefTitle34(kind: String): String = when (kind) { "morning" -> "Morgenbrief"; "day" -> "Dagsbrief"; else -> "Kveldsbrief" }
+fun briefTitle34(kind: String): String = when (kind) { "morning" -> "Morgenbrief"; "day" -> "Dagsbrief"; "night" -> "Nattbrief"; else -> "Kveldsbrief" }
 
 /** WMO-kode → sol | delvis | regn | sno | sky (som wk() i prototypen). */
 fun wxKind34(c: Int?): String = when {
@@ -218,10 +220,12 @@ fun parseBrief34(raw: String, kind: String): Brief34? {
     }
     val news = objs34(arr34(o, "news", "nyheter")).mapNotNull { n ->
         val t = s34(n, "title", "t") ?: return@mapNotNull null
-        BriefNews34(s34(n, "source", "s", "feed") ?: "", t, s34(n, "url", "u", "link"), s34(n, "timeLabel", "time", "tm") ?: s34(n, "published")?.let { clock34(it) })
+        BriefNews34(s34(n, "source", "s", "feed") ?: "", t, s34(n, "url", "u", "link"), s34(n, "timeLabel", "time", "tm") ?: s34(n, "published")?.let { clock34(it) },
+            s34(n, "image", "img", "thumb"), s34(n, "lead", "description", "d", "summary"))
     }
-    return Brief34(k, s34(o, "title") ?: briefTitle34(k), summary, parseBriefWx34(o.optJSONObject("weather") ?: o.optJSONObject("wx")), evs.take(3), news.take(3),
-        s34(o, "generatedAt", "madeAt", "generated")?.let { clock34(it) }, false, s34(o.optJSONObject("figure"), "mood") ?: s34(o, "mood", "state"), s34(o, "note", "warning"))
+    return Brief34(k, s34(o, "title") ?: briefTitle34(k), summary, parseBriefWx34(o.optJSONObject("weather") ?: o.optJSONObject("wx")), evs.take(3), news.take(7),
+        s34(o, "generatedAt", "madeAt", "generated")?.let { clock34(it) }, false, s34(o.optJSONObject("figure"), "mood") ?: s34(o, "mood", "state"), s34(o, "note", "warning"),
+        parseTrials35(o.optJSONArray("trials")), parseGuide35(o.optJSONArray("guide")), s34(o, "host"))
 }
 
 /** Prototypens mal: «God kveld, Sebastian. Lettskyet og 8° i Oslo, regn fra ca. 20. Neste er Tannlege kl. 15:15. Ta med paraply.» */
@@ -326,6 +330,7 @@ val ANCHORS34: List<Anchor34> = listOf(
     Anchor34("2fa", "Totrinnsbekreftelse", "Sikkerhet", "2fa totrinn tofaktor autentisering kode"),
     Anchor34("bk-now", "Ta backup nå", "Backup", "backup nå sikkerhetskopi ta", admin = true),
     Anchor34("bk-auto", "Automatisk backup", "Backup", "automatisk backup hver natt", admin = true),
+    Anchor34("glimt", "Glimt", "Glimt", "glimt brief briefer stemme stemmer figur figurer opplesning les opp venner sky dråpe ugle gris morgenbrief kveldsbrief nattbrief tts openai elevenlabs azure"),
     Anchor34("ai-mod", "AI og modeller", "App", "ai modell modeller ollama gemini groq nøkkel tokens jobber glimt"),
 )
 
@@ -463,7 +468,7 @@ internal suspend fun AppViewModel.json34(path: String, read: Int = 15_000): JSON
 
 fun AppViewModel.loadBrief34(force: Boolean = false) {
     val s = p34
-    val kind = briefKind34()
+    val kind = briefKind35(p35.set.takeIf { p35.setLoaded }) // prompt 35: siste valgte brief (Innstillinger → Glimt)
     val acct = account?.id
     if (!force && s.briefFor == acct && s.brief?.kind == kind && System.currentTimeMillis() - s.briefAt < 10 * 60_000L) return
     if (s.briefFor != acct) { s.brief = null; s.tour = 0 }
@@ -471,6 +476,7 @@ fun AppViewModel.loadBrief34(force: Boolean = false) {
     s.briefBusy = true
     launch34 {
         try {
+            loadGlimt35()
             val raw = runCatching { api34 { hlGet("/brief?kind=$kind", timeout = 8_000) } }.getOrNull()
             val b = raw?.let { runCatching { parseBrief34(it, kind) }.getOrNull() }
             s.brief = b ?: localBrief34(kind)
@@ -497,7 +503,7 @@ fun AppViewModel.localBrief34(kind: String = briefKind34()): Brief34 {
     }.sortedWith(compareBy({ it.date }, { it.start ?: LocalTime.MIN })).take(3).map { e ->
         BriefEv34(e.id, e.title, e.date, e.start?.let { hm34(it.hour * 60 + it.minute) }, e.room, e.color, e.start?.let { it.hour * 60 + it.minute })
     }
-    val news = homeNews.ifEmpty { news?.items ?: emptyList() }.take(3).map { n -> BriefNews34(n.feed, n.title, n.url, n.published?.let { timeOf34(it).first }) }
+    val news = homeNews.ifEmpty { news?.items ?: emptyList() }.take(7).map { n -> BriefNews34(n.feed, n.title, n.url, n.published?.let { timeOf34(it).first }, n.image, n.excerpt) }
     return Brief34(kind, briefTitle34(kind), briefSummary34(kind, displayName, wx, evs.firstOrNull(), today), wx, evs, news,
         hm34(nm), true, note = "Laget på telefonen (serveren har ikke Glimt-brief ennå)")
 }
@@ -511,6 +517,7 @@ fun AppViewModel.openBrief34() {
 fun AppViewModel.closeBrief34() {
     Haptics.back()
     p34.briefOpen = false
+    stopSay35()
     if (p34.tour in 1..98) p34.tour = 99
 }
 
@@ -1191,6 +1198,7 @@ fun AppViewModel.goAnchor34(id: String): Boolean {
         "2fa" -> settingsPage = "security"
         "bk-now", "bk-auto" -> settingsPage = "sysbackup"
         "ai-mod" -> { settingsPage = null; b24.sq = ""; openAiCtl34("ov"); return true }
+        "glimt" -> { settingsPage = null; b24.sq = ""; b24.aiAnswer = null; b24.aiIds = null; openGlimt35(); hl34(id); return true }
         else -> return false
     }
     b24.sq = ""; b24.aiAnswer = null; b24.aiIds = null

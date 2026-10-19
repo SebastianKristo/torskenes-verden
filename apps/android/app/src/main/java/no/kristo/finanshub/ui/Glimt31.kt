@@ -91,6 +91,7 @@ import no.kristo.finanshub.cancelAiJob31
 import no.kristo.finanshub.closeAns31
 import no.kristo.finanshub.quickJob31
 import no.kristo.finanshub.retryHome34
+import no.kristo.finanshub.openWeatherGeo35
 
 /*
  * Prompt 31 (ANDROID31): Glimt-merket (Glimt AI.dc.html: Klar, Tenker, Svarer, Ferdig), toasten med glassboblen
@@ -375,6 +376,8 @@ internal fun HomeAnswer31(vm: AppViewModel) {
             ) { Text("Endre ${a.applyCount} ${if (a.applyCount == 1) "avtale" else "avtaler"} ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
             // Prompt 34: Glimt svarte ikke → Prøv igjen og Åpne AI-kontroll.
             if (a.err) AiErrActions34(vm, Color.White, Color.White.copy(alpha = .14f)) { vm.retryHome34() }
+            // Prompt 35: «været i New York» → trykk åpner Vær for stedet.
+            a.wxGeo?.let { geo -> WxOpen35(geo) { vm.openWeatherGeo35(geo) } }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("✦ " + a.source.replace("System-AI", "Glimt").ifBlank { "Glimt" }, color = light.copy(alpha = .55f), fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold,
                     fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
