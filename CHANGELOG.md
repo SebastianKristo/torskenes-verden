@@ -6,6 +6,7 @@ Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. 
 - **Glimt virker igjen:** standardmodellen fantes ikke på Ollama-serveren, og feilen ble skjult. Nå sjekkes modellen mot det som er installert. Mangler den, brukes reserven eller en installert tekstmodell (aldri en bildemodell), og du får en advarsel. Feil vises som «Glimt fikk ikke svar fra {modell}: …» med «Prøv igjen». «Tilkoblet» betyr nå at modellen faktisk svarer.
 - **Full AI-kontroll** på web, i appene og i FinansHub: status, selvtest, modeller (last ned, last inn/ut, slett, standard), modell per oppgave med reserve, jobblogg, tokenforbruk og budsjett, API-nøkler og Glimt-API-nøkler. Bare admin endrer serveroppsettet. FinansHubs AI-innstillinger er ryddet inn i samme panel.
 - **Glimt-brief:** kort øverst på Hjem med animert Glimt-figur, egen brief-side med vær, kalender og nyheter, og widgets for iPhone (inkl. låseskjerm), Android og Samsung. «Morgenbrief er klar» kl. 06:30.
+- **Glimt i widgetene lever:** trykk på figuren, så vinker Glimt og sier det viktigste akkurat nå (neste avtale, været, paraply, nyheter). Hvert trykk gir noe nytt. På iPhone skifter figuren også positur gjennom dagen.
 - **Kalender for Mac:** ny app som DMG i releasen (åpnes første gang med høyreklikk → Åpne).
 - **Kvitteringer:** egen seksjon «Analyseres av AI» med steg og fremdrift, «Følg i Chat» og «Avbryt». Alle skanninger havner i Chat-mappen «Kvitteringer og skanninger».
 - **Innstillingssøk** tar deg til riktig side og markerer knappen, f.eks. «oppdater» → Oppdater nå.

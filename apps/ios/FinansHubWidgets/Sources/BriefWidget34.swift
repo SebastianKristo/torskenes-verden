@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import AppIntents
 
 /* ---------------- Prompt 34: Glimt-brief-widgets (liten, medium, stor og låseskjerm) ----------------
    Fasit: design/Glimt Brief.dc.html → isWi (iOS) og Glimt Brief Oversikt.dc.html.
@@ -12,6 +13,117 @@ struct Brief34Entry: TimelineEntry {
     let date: Date
     let brief: Brief34
     let linked: Bool
+    /// Figurens positur i denne rammen (widgeten tegnes som stillbilder; iOS animerer overgangen mellom rammene).
+    var mood: Glimt34Mood = .idle
+    var phase: Double = 0
+    /// Det Glimt sier etter et trykk (tom = vanlig oppsummering).
+    var bubble: String = ""
+}
+
+/* ---------- Trykk på Glimt: figuren vinker og sier det viktigste akkurat nå ---------- */
+
+struct GlimtPoke34Intent: AppIntent {
+    static var title: LocalizedStringResource = "Hils på Glimt"
+    static var description = IntentDescription("Glimt vinker og forteller det viktigste akkurat nå.")
+
+    func perform() async throws -> some IntentResult {
+        let d: UserDefaults = WidgetShared.defaults
+        d.set(Date().timeIntervalSince1970, forKey: Brief34Pose.pokeKey)
+        d.set(d.integer(forKey: Brief34Pose.tipKey) + 1, forKey: Brief34Pose.tipKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: Brief34.widgetKind)
+        return .result()
+    }
+}
+
+enum Brief34Pose {
+    static let pokeKey: String = "w.brief34.poke"
+    static let tipKey: String = "w.brief34.tip"
+
+    /// Stemningen serveren sender (figure.state), ellers idle.
+    static func base(_ b: Brief34) -> Glimt34Mood {
+        let m: String = b.mood.lowercased()
+        if m == "wave" { return .wave }
+        if m == "point" { return .point }
+        if m == "talk" { return .talk }
+        return .idle
+    }
+
+    static func tips(_ b: Brief34) -> [String] {
+        var t: [String] = []
+        if let e = b.next {
+            let when: String = e.day == "i dag" || e.day.isEmpty ? e.time : e.day + " " + e.time
+            t.append("Neste: " + e.title + " " + when)
+        }
+        if !b.temp.isEmpty {
+            let c: String = b.cond.isEmpty ? "" : ", " + b.cond
+            t.append("Det er " + b.temp + c + " ute")
+        }
+        if b.rain.prefix(12).contains(where: { (v: Double) -> Bool in v >= 0.2 }) { t.append("Ta med paraply i dag ☂") }
+        if let n = b.news.first { t.append(n.source + ": " + n.title) }
+        t.append("Hei! Jeg er Glimt ✦")
+        return t
+    }
+
+    static func bubble(_ b: Brief34) -> String {
+        let all: [String] = tips(b)
+        let i: Int = WidgetShared.defaults.integer(forKey: tipKey)
+        return all[((i % all.count) + all.count) % all.count]
+    }
+
+    /// Rammene: etter et trykk vinker Glimt (armen opp og ned) og snakker, så tilbake til ro.
+    /// Ellers små skift i positur hvert kvarter, så figuren ikke står helt stille.
+    static func entries(_ e: Brief34Entry, poked: Bool) -> [Brief34Entry] {
+        let now: Date = Date()
+        let rest: Glimt34Mood = base(e.brief)
+        var out: [Brief34Entry] = []
+        var start: Date = now
+        if poked {
+            let say: String = bubble(e.brief)
+            let wave: [(Double, Glimt34Mood, Double)] = [(0, .wave, 0.225), (0.8, .wave, 0.675), (1.6, .wave, 0.225), (2.4, .wave, 0.675), (3.2, .talk, 0.16)]
+            for w in wave {
+                out.append(Brief34Entry(date: now.addingTimeInterval(w.0), brief: e.brief, linked: e.linked, mood: w.1, phase: w.2, bubble: say))
+            }
+            out.append(Brief34Entry(date: now.addingTimeInterval(5), brief: e.brief, linked: e.linked, mood: .idle, phase: 1.3, bubble: say))
+            start = now.addingTimeInterval(12)
+        }
+        let phases: [Double] = [0, 0.65, 1.3, 3.8]
+        for (i, ph) in phases.enumerated() {
+            let mood: Glimt34Mood = i == 0 ? rest : .idle
+            out.append(Brief34Entry(date: start.addingTimeInterval(Double(i) * 900), brief: e.brief, linked: e.linked, mood: mood, phase: ph))
+        }
+        return out
+    }
+}
+
+/// Glimt-figuren i widgeten. Trykk → vinker (interaktiv widget, iOS 17).
+struct BriefGlimt34: View {
+    let e: Brief34Entry
+    let size: CGFloat
+
+    var body: some View {
+        Button(intent: GlimtPoke34Intent()) {
+            Glimt34Figure(size: size, mood: e.mood, t: e.phase)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Hils på Glimt")
+    }
+}
+
+/// Snakkeboblen Glimt viser etter et trykk.
+struct BriefBubble34: View {
+    let text: String
+    let dark: Bool
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 12.5, weight: .bold))
+            .foregroundStyle(dark ? Brief34C.blue : Color.white)
+            .lineLimit(3)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(dark ? Color.white : Brief34C.blue, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .transition(.scale(scale: 0.6, anchor: .topLeading).combined(with: .opacity))
+    }
 }
 
 enum Brief34Fetch {
@@ -28,6 +140,11 @@ enum Brief34Fetch {
         }
         let b: Brief34 = Brief34.cached ?? Brief34()
         return Brief34Entry(date: Date(), brief: b, linked: linked)
+    }
+
+    static func cachedEntry() -> Brief34Entry {
+        let linked: Bool = !(WidgetShared.token ?? "").isEmpty
+        return Brief34Entry(date: Date(), brief: Brief34.cached ?? Brief34(), linked: linked)
     }
 
     /// Neste av 06:30, 11:00 og 17:00 (eller om en time, hvis det kommer først).
@@ -57,8 +174,11 @@ struct Brief34Provider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Brief34Entry>) -> Void) {
         Task {
-            let e: Brief34Entry = await Brief34Fetch.load()
-            completion(Timeline(entries: [e], policy: .after(Brief34Fetch.nextRefresh())))
+            let poke: Double = WidgetShared.defaults.double(forKey: Brief34Pose.pokeKey)
+            let poked: Bool = poke > 0 && Date().timeIntervalSince1970 - poke < 20
+            // Etter et trykk: bufret brief, så vinkingen starter med en gang.
+            let e: Brief34Entry = poked ? Brief34Fetch.cachedEntry() : await Brief34Fetch.load()
+            completion(Timeline(entries: Brief34Pose.entries(e, poked: poked), policy: .after(Brief34Fetch.nextRefresh())))
         }
     }
 }
@@ -86,12 +206,12 @@ struct BriefWidgetView34: View {
 
     @ViewBuilder private var content: some View {
         switch family {
-        case .systemMedium: BriefMedium34(b: entry.brief, linked: entry.linked)
-        case .systemLarge: BriefLarge34(b: entry.brief, linked: entry.linked)
+        case .systemMedium: BriefMedium34(b: entry.brief, linked: entry.linked, e: entry)
+        case .systemLarge: BriefLarge34(b: entry.brief, linked: entry.linked, e: entry)
         case .accessoryRectangular: BriefRect34(b: entry.brief)
         case .accessoryCircular: BriefCircle34(b: entry.brief)
         case .accessoryInline: BriefInline34(b: entry.brief)
-        default: BriefSmall34(b: entry.brief, linked: entry.linked)
+        default: BriefSmall34(b: entry.brief, linked: entry.linked, e: entry)
         }
     }
 
@@ -108,18 +228,23 @@ struct BriefWidgetView34: View {
 struct BriefSmall34: View {
     let b: Brief34
     let linked: Bool
+    let e: Brief34Entry
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
-                Glimt34Figure(size: 30, still: true)
+                BriefGlimt34(e: e, size: 30)
                 Spacer(minLength: 0)
                 Text(b.temp.isEmpty ? "–" : b.temp).font(.custom("Newsreader-Medium", size: 30)).foregroundStyle(Color.white)
             }
             Spacer(minLength: 0)
-            Text(b.kick.uppercased()).font(.system(size: 9.5, weight: .semibold, design: .monospaced)).tracking(1.1).foregroundStyle(Brief34C.peach)
-            Text(nextTitle).font(.system(size: 13.5, weight: .bold)).foregroundStyle(Color.white).lineLimit(2)
-            Text(nextTime).font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(Color.white.opacity(0.8))
+            if e.bubble.isEmpty {
+                Text(b.kick.uppercased()).font(.system(size: 9.5, weight: .semibold, design: .monospaced)).tracking(1.1).foregroundStyle(Brief34C.peach)
+                Text(nextTitle).font(.system(size: 13.5, weight: .bold)).foregroundStyle(Color.white).lineLimit(2)
+                Text(nextTime).font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(Color.white.opacity(0.8))
+            } else {
+                BriefBubble34(text: e.bubble, dark: true)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -139,15 +264,20 @@ struct BriefSmall34: View {
 struct BriefMedium34: View {
     let b: Brief34
     let linked: Bool
+    let e: Brief34Entry
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
-                    Glimt34Figure(size: 26, still: true)
+                    BriefGlimt34(e: e, size: 26)
                     Text(b.kick.uppercased()).font(.system(size: 9.5, weight: .semibold, design: .monospaced)).tracking(1.1).foregroundStyle(Brief34C.red)
                 }
-                Text(summary).font(.custom("Newsreader-Medium", size: 14.5)).foregroundStyle(Brief34C.ink).lineLimit(4)
+                if e.bubble.isEmpty {
+                    Text(summary).font(.custom("Newsreader-Medium", size: 14.5)).foregroundStyle(Brief34C.ink).lineLimit(4)
+                } else {
+                    BriefBubble34(text: e.bubble, dark: false)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .leading, spacing: 7) {
@@ -189,17 +319,21 @@ struct BriefKV34: View {
 struct BriefLarge34: View {
     let b: Brief34
     let linked: Bool
+    let e: Brief34Entry
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("GLIMT · " + b.kick.uppercased()).font(.system(size: 10, weight: .semibold, design: .monospaced)).tracking(1.1).foregroundStyle(Brief34C.red)
-                    Text(linked ? (b.summary.isEmpty ? "Glimt lager briefen din …" : b.summary) : "Åpne appen og logg inn for å få briefen.")
-                        .font(.custom("Newsreader-Regular", size: 15)).foregroundStyle(Brief34C.ink).lineLimit(4)
+                    if e.bubble.isEmpty {
+                        Text(largeSummary).font(.custom("Newsreader-Regular", size: 15)).foregroundStyle(Brief34C.ink).lineLimit(4)
+                    } else {
+                        BriefBubble34(text: e.bubble, dark: false)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Glimt34Figure(size: 44, still: true)
+                BriefGlimt34(e: e, size: 44)
             }
             BriefLargeWeather34(b: b)
             VStack(alignment: .leading, spacing: 0) {
@@ -213,6 +347,13 @@ struct BriefLarge34: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+extension BriefLarge34 {
+    var largeSummary: String {
+        if !linked { return "Åpne appen og logg inn for å få briefen." }
+        return b.summary.isEmpty ? "Glimt lager briefen din …" : b.summary
     }
 }
 
