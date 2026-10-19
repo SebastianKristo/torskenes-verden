@@ -299,7 +299,7 @@ internal fun cardTool31(card: JSONObject): String? = when (card.s31("k")) {
 }
 
 /** Svaret er klart: varsel hvis appen er i bakgrunnen, og banneret når brukeren kommer tilbake. */
-private fun AppViewModel.answered31(r: Assist31, q: String, from: String, chatId: String?) {
+internal fun AppViewModel.answered31(r: Assist31, q: String, from: String, chatId: String?) {
     r.jobId?.let { id -> forgetJob31(id); p31.jobs = p31.jobs.filter { it.id != id } }
     Haptics.success()
     if (!inBackground29 || !p31.aiBg) return
@@ -310,7 +310,7 @@ private fun AppViewModel.answered31(r: Assist31, q: String, from: String, chatId
 }
 
 /* Jobber som kan bli ferdige når prosessen er borte: WorkManager følger dem opp (Notify31Worker). */
-private fun AppViewModel.rememberJob31(id: String, q: String, from: String) = Notify31.remember(appCtx29, id, q, from)
+internal fun AppViewModel.rememberJob31(id: String, q: String, from: String) = Notify31.remember(appCtx29, id, q, from)
 private fun AppViewModel.forgetJob31(id: String) = Notify31.forget(appCtx29, id)
 
 /* ---------------- Realtime: assist og calendar-quick ---------------- */
@@ -658,6 +658,7 @@ fun AppViewModel.loadTrials31() {
         s.trialsMissing = false
         s.trials = parseTrials31(raw)
         Notify31.scheduleTrials(appCtx29, s.trials)
+        trialMeta32b(raw) // prompt 32: startdato (fremdrift) og widgetene (widget/Trials32bWidgets.kt)
     }
 }
 

@@ -32,6 +32,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             Deps24Store.useAccount(ctx, null)
             Kal26WidgetStore.useAccount(ctx, null)
             Ruter27Store.useAccount(ctx, null)
+            Trials32bStore.useAccount(ctx, null)
             WidgetStore.fail(ctx, "Logg inn i FinansHub", loggedIn = false)
             WidgetSync.redraw(ctx)
             return Result.success()
@@ -43,6 +44,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         Deps24Store.useAccount(ctx, acc.id)
         Kal26WidgetStore.useAccount(ctx, acc.id)
         Ruter27Store.useAccount(ctx, acc.id)
+        Trials32bStore.useAccount(ctx, acc.id)
         var err: String? = null
         for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
             try {
@@ -57,6 +59,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 runCatching { fetchKal26(ctx, Api(base, acc.token), acc.id) }
                 // Prompt 27: Ruter-widgetene (egen 5-minutters kjede i Ruter27Worker; her også hvert 15. minutt).
                 runCatching { fetchRuter27(ctx, Api(base, acc.token), acc.id); Ruter27Widgets.redraw(ctx) }
+                // Prompt 32: prøveperiode-widgetene (/api/widgets/trials) og logoene.
+                runCatching { fetchTrials32b(ctx, Api(base, acc.token), acc.id); Trials32bWidgets.redraw(ctx) }
                 return Result.success()
             } catch (e: ApiException) {
                 err = e.message
@@ -108,5 +112,6 @@ object WidgetSync {
         S24.redraw(ctx)
         runCatching { Kal26Widgets.redraw(ctx) }
         runCatching { Ruter27Widgets.redraw(ctx) }
+        runCatching { Trials32bWidgets.redraw(ctx) }
     }
 }

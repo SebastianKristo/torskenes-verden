@@ -148,9 +148,10 @@ private fun RailTab25(label: String, icon: String, on: Boolean, style: String, o
 
 /** STIL · FORHÅNDSVISNING (stor, med dine egne faner, Mer og skanneknappen) og de tre stil-kortene. Valget brukes med en gang. */
 @Composable
-internal fun NavStyleSection25(vm: AppViewModel, items: List<TabItem>) {
+internal fun NavStyleSection25(vm: AppViewModel, items: List<TabItem>, mer: Boolean = true) {
     val p = PaperPal.current
-    val prev = remember(items) { items.filter { it.id != "mer" }.take(3).map { it.label to it.icon } + ("Mer" to "⋯") }
+    // Prompt 32: sider uten «Mer» (Domener, Abonnement, Familie) viser ingen ⋯ i forhåndsvisningen.
+    val prev = remember(items, mer) { if (mer) items.filter { it.id != "mer" }.take(3).map { it.label to it.icon } + ("Mer" to "⋯") else items.take(4).map { it.label to it.icon } }
     PLabel("Stil · forhåndsvisning")
     Box(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))

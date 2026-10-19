@@ -178,6 +178,7 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp) {
                 SetRow(vm, 1, Icons.Filled.ViewWeek, "Rediger fanelinjen", "Fjern faner, gi nytt navn og bytt ikon. Du kan også holde inne på linjen.", "›") { vm.tabEdit = true }
             }
         }
+        item { SecNavSettings32b(vm) } // Prompt 32: FANELINJE · ANDRE SIDER (Domener, Abonnement, Familie)
         item { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { PaperNavSettings(vm) } }
     }
 }
@@ -187,63 +188,16 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun TabBarEditor(vm: AppViewModel) {
-    val p = PaperPal.current
-    var items by remember { mutableStateOf(vm.tabBarItems()) }
-    var iconFor by remember { mutableStateOf<String?>(null) }
-    ModalBottomSheet(onDismissRequest = { vm.tabEdit = false }, containerColor = p.bg, contentColor = p.ink) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp, 0.dp, 18.dp, 34.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            PSerif("Fanelinjen", 26.sp)
-            Text("Fjern faner, gi dem nytt navn og velg ikon. «Mer» står alltid sist, og «Hjem» vises bare på Hjem.", color = p.mut, fontSize = 13.sp)
-            PCard {
-                items.forEachIndexed { i, t ->
-                    Column {
-                        if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                        Row(Modifier.fillMaxWidth().padding(10.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Box(
-                                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(if (iconFor == t.id) p.ink else p.surf2).clickable { iconFor = if (iconFor == t.id) null else t.id },
-                                contentAlignment = Alignment.Center,
-                            ) { GlyphIcon(t.icon, if (iconFor == t.id) p.bg else p.ink, 19.dp) }
-                            BasicTextField(
-                                t.label, { v -> items = items.map { if (it.id == t.id) it.copy(label = v.take(18)) else it } }, singleLine = true,
-                                textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = PaperFonts.sans),
-                                cursorBrush = SolidColor(p.lab),
-                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).border(1.dp, p.line, RoundedCornerShape(10.dp)).padding(10.dp, 9.dp),
-                            )
-                            val mer = t.id == "mer"
-                            EditDot("▲", !mer && i > 0) { items = items.toMutableList().also { l -> val x = l[i]; l[i] = l[i - 1]; l[i - 1] = x } }
-                            EditDot("▼", !mer && i < items.size - 2) { items = items.toMutableList().also { l -> val x = l[i]; l[i] = l[i + 1]; l[i + 1] = x } }
-                            EditDot("−", !mer && items.size > 2) { items = items.filter { it.id != t.id } }
-                        }
-                        if (iconFor == t.id) FlowRow(Modifier.fillMaxWidth().padding(10.dp, 0.dp, 10.dp, 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            TAB_ICONS.forEach { ic ->
-                                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (ic == t.icon) p.ink else p.surf2)
-                                    .clickable { items = items.map { if (it.id == t.id) it.copy(icon = ic) else it }; iconFor = null }, contentAlignment = Alignment.Center) {
-                                    GlyphIcon(ic, if (ic == t.icon) p.bg else p.ink)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // Prompt 25: STIL med stor forhåndsvisning av din egen fanelinje (samme valg som Innstillinger → Fanelinje-stil).
-            NavStyleSection25(vm, items)
-            val missing = MAIN_TABS.filter { m -> items.none { it.id == m.id } }
-            if (missing.isNotEmpty() && items.size < 6) {
-                PLabel("Legg til")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    missing.forEach { m ->
-                        Box(Modifier.clip(CircleShape).border(1.dp, p.line, CircleShape).clickable {
-                            items = items.filter { it.id != "mer" } + m + (items.firstOrNull { it.id == "mer" } ?: MAIN_TABS.first { it.id == "mer" })
-                        }.padding(12.dp, 7.dp)) { Text("+ ${m.label}", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
-                    }
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PButton("Tilbakestill", Modifier.weight(1f), kind = "line") { vm.resetTabBar(); items = vm.tabBarItems() }
-                PButton("Lagre", Modifier.weight(1f)) { vm.saveTabBar(items); vm.tabEdit = false }
-            }
-        }
-    }
+    // Prompt 32: samme ark som Finans, Domener, Abonnement og Familie (claude-code-fanelinje-ark-knapper.md): HJEM · FANELINJE,
+    // Ferdig som Papir-pille, ingen Avbryt (lagres når arket lukkes), ↑ og −, STIL · FORHÅNDSVISNING og LEGG TIL. «Mer» står alltid sist.
+    val mer = vm.tabBarItems().firstOrNull { it.id == "mer" } ?: MAIN_TABS.first { it.id == "mer" }
+    fun cur() = vm.tabBarItems().filter { it.id != "mer" }.map { NavEd32b(it.id, it.label, it.icon) }
+    NavEditor32b(
+        vm, "Hjem", cur(), MAIN_TABS.filter { it.id != "mer" }.map { NavEd32b(it.id, it.label, it.icon) }, 5, mer = true, icons = TAB_ICONS,
+        onSave = { l -> vm.saveTabBar(l.map { TabItem(it.key, it.label, it.icon) } + mer) },
+        onReset = { vm.resetTabBar(); cur() },
+        onClose = { vm.tabEdit = false },
+    )
 }
 
 /* ---------------- Vær: egne steder ---------------- */

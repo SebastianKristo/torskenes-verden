@@ -279,8 +279,11 @@ internal fun PaperApp(
     val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
     val barBottom = if (vm.paperPage == "fsok" && imeBottom > navInset) imeBottom + 8.dp else maxOf(12.dp, navInset - 8.dp)
     val float = vm.fabStyle == "float"
+    // Prompt 32: Innstillinger (og alle undersidene) uten fanelinje og skanneknapp; bunnen er 28 dp + systemfeltet.
+    val setHere = (vm.paperPage == "set" || s == Screen.Settings) && !overlay
     // Ekstra luft nederst i listene: plass til fanelinja (telefon) og den flytende skanneknappen.
-    val navBottom = if (wide) 12.dp - PAPER_BAR + navInset + (if (float) 70.dp else 0.dp) else barBottom - 12.dp + (if (float) 70.dp else 0.dp)
+    val navBottom = if (setHere) navInset + 28.dp - PAPER_BAR - 30.dp
+        else if (wide) 12.dp - PAPER_BAR + navInset + (if (float) 70.dp else 0.dp) else barBottom - 12.dp + (if (float) 70.dp else 0.dp)
     val bar = paperBar(vm)
     val pageKey = paperPageKey(vm)
     // Prompt 23: scrollposisjonen huskes per side (tilbake gjenoppretter, nye sider åpner øverst).
@@ -313,7 +316,9 @@ internal fun PaperApp(
                 // Innholdet ligger 23 dp opp i fotovinduet. Så snart man scroller, klippes det ved headerens nederste kant.
                 Box(
                     Modifier.weight(1f).fillMaxWidth().offset(y = (-23).dp).padding(start = if (wide) 112.dp else 0.dp)
-                        .nestedScroll(meter).clip(if (meter.y > 1f) TopCut(23.dp) else RectangleShape),
+                        // Prompt 32 (claude-code-rediger-knapper-plass.md): i redigeringsmodus klippes innholdet 14 dp under ＋/✓
+                        // (WIGGLE_CLIP32B), så widgets glir under en ren stripe og aldri bak knappene; ellers ved papirkanten (23 dp).
+                        .nestedScroll(meter).clip(if (meter.y > 1f) TopCut(if (vm.editPage != null || vm.p32b.fmEdit || vm.b28.merEdit) WIGGLE_CLIP32B else 23.dp) else RectangleShape),
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
@@ -354,12 +359,13 @@ internal fun PaperApp(
                     if (vm.editPage != null) WigglePills28(vm, Modifier.align(Alignment.TopCenter).padding(top = WIGGLE_TOP28).widthIn(max = if (wide) 720.dp else 10_000.dp))
                 }
             }
-            if (wide) {
+            if (setHere) Unit
+            else if (wide) {
                 PaperRail(vm, bar, float, Modifier.align(Alignment.CenterStart).statusBarsPadding().navigationBarsPadding().padding(start = 12.dp, top = 12.dp, bottom = 12.dp), onTap, onHold)
             } else {
                 PaperNav(vm, bar, float, Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = barBottom), onTap, onHold)
             }
-            if (float && bar != "sub" && !noScanHere(vm)) PaperFab(vm, bar,
+            if (float && bar != "sub" && !noScanHere(vm) && !setHere) PaperFab(vm, bar,
                 Modifier.align(Alignment.BottomEnd).padding(end = if (wide) 24.dp else 18.dp, bottom = if (wide) navInset + 24.dp else barBottom + 62.dp + 14.dp), onTap, onHold)
             vm.plusHint?.let { h ->
                 Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (wide) navInset + 96.dp else barBottom + (if (float) 146.dp else 72.dp)).clip(RoundedCornerShape(12.dp)).background(p.ink).padding(12.dp, 8.dp)) {
@@ -404,6 +410,7 @@ internal fun PaperApp(
     }
     if (vm.tabEdit) TabBarEditor(vm)
     if (vm.b26.finEdit) FinTabBarEditor26(vm)
+    if (vm.p32b.secEdit != null) SecNavEditor32b(vm) // Prompt 32: Domener, Abonnement og Familie
     if (vm.scanSheet) PaperScanSheet(vm, takePhoto, pickPhotos, pickFiles)
     if (vm.trkSettings) PaperTrackSettings(vm)
     if (vm.trkAddOpen) NewShipmentSheet(vm)
@@ -566,7 +573,11 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
     val tabs = navTabs(vm, bar, float)
     Row(
         modifier.fillMaxWidth().height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav)
-            .longPressEdit26(bar == "main" || bar == "fin", bar) { Haptics.tap(); if (bar == "fin") vm.b26.finEdit = true else vm.tabEdit = true }.padding(horizontal = 8.dp),
+            // Prompt 32: også Domener og Abonnement har «Rediger fanelinjen».
+            .longPressEdit26(bar == "main" || bar == "fin" || bar == "dom" || bar == "sub", bar) {
+                Haptics.tap()
+                when (bar) { "fin" -> vm.b26.finEdit = true; "dom" -> vm.p32b.secEdit = "dom"; "sub" -> vm.p32b.secEdit = "abo"; else -> vm.tabEdit = true }
+            }.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         // Prompt 24: egen Row per fane (Mer24.kt): ikonboks 18, glyf 16, 1,5 ned, 7 mellomrom, tekst uten fontpadding.
@@ -630,7 +641,7 @@ private fun ScanQueue(vm: AppViewModel) {
 /* ---------------- Hjem ---------------- */
 
 private val HOME_SECS = listOf(
-    PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
+    PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("h11", "Prøveperioder"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
     PSec("h8", "Huskeliste"), PSec("h6", "Posisjon"), PSec("h7", "Bolig"),
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
 )
@@ -692,6 +703,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 "h8" -> HomeTasksCard(vm)
                 "h9" -> HomeBirthdaysCard24(vm)
                 "h10" -> HomeKalCard26(vm)
+                "h11" -> HomeTrials32b(vm) // Prompt 32: prøveperioder (ui/Ui32b.kt)
                 "h6" -> HomePositionCard(vm)
                 "h7" -> HomeBoligCard(vm)
                 "h5" -> PaperNewsCard(vm)

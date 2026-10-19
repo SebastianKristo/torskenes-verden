@@ -93,7 +93,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "accounts" -> item { AccountsPage(vm) }
             "security" -> item { SecurityPage(vm, onPrivacyChanged) }
             "tokens" -> item { TokensPage(vm) }
-            "ai" -> { item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { Memory33Settings(vm) }; item { AiTimeouts23(vm) } }
+            "ai" -> { item { GlimtSearchSettings32b(vm) }; item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { Memory33Settings(vm) }; item { AiTimeouts23(vm) } }
             // Prompt 26: gruppert liste som på web, egen side per integrasjon, og Kalendere.
             "integ" -> item { IntegList26(vm) }
             "kal" -> item { KalSettings26(vm) }
@@ -107,7 +107,8 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "backup" -> item { BackupPage(vm) }
             "about" -> item { AboutPage(vm) }
             "healthpos" -> item { HealthPosPage(vm) }
-            "update" -> item { Update28Page(vm) }
+            // Prompt 32: den gamle Oppdatering-siden (og lenker hit) går til Nordlys-siden.
+            "update" -> item { LaunchedEffect(Unit) { vm.settingsPage = null; vm.openNordlys31() } }
             "sysbackup" -> item { Backup29Page(vm) } // Prompt 29: backup av hele systemet (bare admin)
             else -> sub?.takeIf { it.startsWith("integ:") }?.let { ip -> item { IntegPage26(vm, ip.removePrefix("integ:")) } } ?: settingsMain(vm)
         }
@@ -182,7 +183,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         if (vm.userIsAdmin) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
             Programvare30(vm)
-            SetRow(vm, i(), Icons.Filled.SystemUpdate, "Oppdatering", upd28Summary(vm.upd28), top = true) { vm.settingsPage = "update" }
+            // Prompt 32: «Oppdatering» er fjernet; Nordlys OS-raden over gjør det samme (claude-code-fjern-oppdatering-rad.md).
         }
     }
     item { Spacer(Modifier.height(4.dp)) }
@@ -439,7 +440,11 @@ internal fun TasksScreen(vm: AppViewModel) {
     val lists = t?.lists?.ifEmpty { null } ?: TASK_LISTS_DEFAULT
     val members = t?.members ?: emptyList()
     val today = LocalDate.now().toString()
-    val all = (t?.items ?: emptyList()).filter { vm.taskFilter == "alle" || it.list == vm.taskFilter }
+    // Prompt 32: arkiverte oppgaver telles ikke og vises bare under «Arkivert».
+    val archIds = vm.p32b.archived?.map { it.id }?.toSet() ?: emptySet()
+    val arch = vm.p32b.taskArch
+    LaunchedEffect(vm.account?.id) { vm.loadArchived32b() }
+    val all = (t?.items ?: emptyList()).filter { it.id !in archIds && (vm.taskFilter == "alle" || it.list == vm.taskFilter) }
     val now = all.filter { !it.done && it.due != null && it.due <= today }
     val later = all.filter { !it.done && (it.due == null || it.due > today) }.sortedBy { it.due ?: "9999" }
     val done = all.filter { it.done }
@@ -460,11 +465,17 @@ internal fun TasksScreen(vm: AppViewModel) {
             item { ModuleHero("Dine lister og lister delt med deg", "Huskeliste", "‹ Hjem") { vm.closeTasks() } }
             item {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TaskListChip("Alle", null, vm.taskFilter == "alle", (t?.items ?: emptyList()).count { !it.done }) { vm.taskFilter = "alle" }
-                    lists.forEach { l -> TaskListChip(l.name, l.color, vm.taskFilter == l.id, (t?.items ?: emptyList()).count { !it.done && it.list == l.id }) { vm.taskFilter = l.id } }
+                    TaskListChip("Alle", null, !arch && vm.taskFilter == "alle", (t?.items ?: emptyList()).count { !it.done && it.id !in archIds }) { vm.p32b.taskArch = false; vm.taskFilter = "alle" }
+                    lists.forEach { l -> TaskListChip(l.name, l.color, !arch && vm.taskFilter == l.id, (t?.items ?: emptyList()).count { !it.done && it.list == l.id && it.id !in archIds }) { vm.p32b.taskArch = false; vm.taskFilter = l.id } }
+                    // Prompt 32: «Arkivert · N» sist i listevelgeren.
+                    TaskListChip("Arkivert", null, arch, vm.p32b.archived?.size ?: 0) { Haptics.select(); vm.p32b.taskArch = true; vm.p32b.archClearArm = false; vm.loadArchived32b() }
                 }
             }
             // Prompt 21: eier og «Delt med …» for valgt liste, med «Del liste» (bare eieren kan dele).
+            if (arch) {
+                item { ArchivedList32b(vm, lists) }
+                return@LazyColumn
+            }
             lists.firstOrNull { it.id == vm.taskFilter }?.let { cur -> item { ListShareRow(vm, cur, members) } }
             // Frist og person for nye oppgaver (prompt 22: fylte chips når valgt). Feltet ligger fast nederst, over fanelinjen.
             item {
@@ -480,12 +491,13 @@ internal fun TasksScreen(vm: AppViewModel) {
             if (t == null && vm.tasksError == null) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
             taskGroup(vm, "I dag og forfalt", now, lists, members, today)
             taskGroup(vm, "Senere", later, lists, members, today)
-            taskGroup(vm, "Ferdig", done.take(30), lists, members, today)
+            taskGroup(vm, "Ferdig", done.take(30), lists, members, today, archive = { ids -> vm.archiveDone32b(ids) })
             if (t != null && all.isEmpty()) item { Text("Ingen oppgaver her ennå.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) }
             // Prompt 22: synk med Home Assistant To-do (bare admin).
             if (vm.userIsAdmin && vm.tasksHa != null) item { TasksHaSection(vm, lists) }
         }
-        TaskDock(title, { title = it }, focus, Modifier.align(Alignment.BottomCenter)) { if (title.isBlank()) runCatching { focus.requestFocus() } else add() }
+        // Prompt 32: feltet «Ny oppgave» skjules i Arkivert.
+        if (!arch) TaskDock(title, { title = it }, focus, Modifier.align(Alignment.BottomCenter)) { if (title.isBlank()) runCatching { focus.requestFocus() } else add() }
     }
     vm.taskEditId?.let { id -> (t?.items ?: emptyList()).firstOrNull { it.id == id }?.let { TaskSheet(vm, it, lists, members, today) } }
     vm.shareListId?.let { id -> lists.firstOrNull { it.id == id }?.let { ShareListSheet(vm, it) } }
@@ -543,9 +555,16 @@ private fun dueOptions(today: String): List<Pair<String?, String>> {
     return listOf(today to "I dag", d.plusDays(1).toString() to "I morgen", d.plusWeeks(1).toString() to "Neste uke", null to "Uten dato")
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.taskGroup(vm: AppViewModel, title: String, items: List<TaskItem>, lists: List<TaskList>, members: List<TaskMember>, today: String) {
+private fun androidx.compose.foundation.lazy.LazyListScope.taskGroup(vm: AppViewModel, title: String, items: List<TaskItem>, lists: List<TaskList>, members: List<TaskMember>, today: String,
+    archive: ((List<String>) -> Unit)? = null) {
     if (items.isEmpty()) return
-    item { PLabel("$title · ${items.size}", modifier = Modifier.padding(start = 20.dp, top = 6.dp)) }
+    item {
+        // Prompt 32: FERDIG har «Arkiver alle».
+        Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 16.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            PLabel("$title · ${items.size}", modifier = Modifier.weight(1f))
+            if (archive != null) ArchiveAll32b { archive(items.map { it.id }) }
+        }
+    }
     item {
         PCard(Modifier.padding(horizontal = 16.dp)) {
             items.forEachIndexed { i, it -> TaskRow(vm, it, lists, members, today, top = i > 0) }
@@ -573,6 +592,11 @@ private fun TaskRow(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, member
                 if (meta.isNotBlank()) Text(meta, color = if (!t.done && t.due != null && t.due < today) p.lab else p.mut, fontSize = 12.sp, maxLines = 1)
             }
             if (l != null) Box(Modifier.size(8.dp).clip(CircleShape).background(Color(l.color)))
+            // Prompt 32: fullførte oppgaver kan arkiveres (boks ved siden av ×).
+            if (t.done) {
+                ArchiveBtn32b { vm.archiveTask32b(t.id) }
+                Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.deleteTask(t.id) }, contentAlignment = Alignment.Center) { Text("×", color = p.mut, fontSize = 20.sp) }
+            }
         }
     }
 }
@@ -931,6 +955,9 @@ internal fun glyphVector(g: String): ImageVector? = when (g) {
     "▦" -> Icons.Filled.CalendarMonth
     "✦" -> Icons.Filled.AutoAwesome
     "•" -> Icons.Filled.Circle
+    // Prompt 32: Familie-linja (Soner, Helse) i «Rediger fanelinjen».
+    "◌" -> Icons.Filled.TripOrigin
+    "♡" -> Icons.Filled.FavoriteBorder
     else -> null
 }
 

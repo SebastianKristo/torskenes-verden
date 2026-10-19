@@ -692,7 +692,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "finance", "home" -> go(Screen.Home)
             "list" -> go(Screen.List)
             "review" -> open(Screen.Scan)
-            "subs" -> open(Screen.Sub)
+            // Prompt 32: «+» i prøveperiode-widgetene (finanshub://subs/trial) åpner arket Prøveperiode.
+            "subs" -> { open(Screen.Sub); if (uri.path?.trim('/') == "trial") { resetTrialForm31(); b28.addStep = "trial"; subAdding = true } }
             "stocks" -> open(Screen.Stocks)
             "domains" -> go(Screen.Domains)
             "mat" -> go(Screen.Mat)
@@ -848,10 +849,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun googleUrl(q: String): String {
         val t = q.trim()
         val looksLikeUrl = t.startsWith("http://") || t.startsWith("https://") || (!t.contains(' ') && Regex("""^[\w-]+(\.[\w-]+)+(:\d+)?(/\S*)?$""").matches(t))
-        if (t.isNotBlank()) viewModelScope.launch {
-            runCatching { api.hlPost("/search/history", JSONObject().put("q", t)) }
-            history = (listOf(t) + history.filter { it != t }).take(100)
-        }
+        // Prompt 32: logges med device «mobil» (vises i «Nylige søk» på web, ikke i appen). Passord og kortnummer logges ikke.
+        if (t.isNotBlank()) logSearch32b(t, "google")
         suggestions = emptyList()
         return when {
             t.startsWith("http://") || t.startsWith("https://") -> t
@@ -1733,6 +1732,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         applyLayout20(raw)
         applyLayout24a(raw)
         applyLayout26b(raw)
+        applyLayout32b(raw) // prompt 32: secNav, hs_timeout_s og search_history
         val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
         onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
@@ -2635,6 +2635,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun loadLocalLayout16() {
         loadNavStyle25()
         loadSearchEngine29()
+        loadHsTimeout32b()
         prefs.str(AppPrefs.TAB_BAR + (account?.id ?: ""), "").takeIf { it.isNotBlank() }?.let { raw ->
             runCatching { tabBar = parseLayout16(JSONObject().put("tabBar", JSONObject().put("items", JSONArray(raw))).toString()).tabBar }
         }
@@ -3608,6 +3609,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val mem33 = Mem33State()
     internal suspend fun <T> api33(f: suspend Api.() -> T): T = api.f()
     internal fun launch33(block: suspend () -> Unit) = launch(block)
+
+    /* ---------- Prompt 32 (ANDROID32): fanelinjer på andre sider, Glimt i søkefeltet, søkehistorikk, Huskeliste-arkiv, Kalender-Glimt (P32b.kt og ui-filene med 32b) ---------- */
+    val p32b = P32bState()
+    internal suspend fun <T> api32b(f: suspend Api.() -> T): T = api.f()
+    internal fun launch32b(block: suspend () -> Unit) = launch(block)
+    /** Huskeliste: oppgaver flyttet til Arkivert forsvinner fra listen med en gang. */
+    internal fun setTasks32b(t: TasksData) { tasks = t; taskNext = nextTasks(t) }
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

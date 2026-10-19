@@ -480,12 +480,13 @@ fun AppViewModel.goHome29(): String? {
     val appt = q.homeAppt
     q.homeQ = ""; q.homeAppt = null
     suggest("")
-    if (appt != null) { submitQuick29(t); return null }
+    if (appt != null) { logSearch32b(t, "time"); submitQuick29(t); return null }
     return when (q.engine) {
         "google" -> googleUrl(t)
-        "ddg" -> "https://duckduckgo.com/?q=" + URLEncoder.encode(t, "UTF-8")
+        "ddg" -> { logSearch32b(t, "ddg"); "https://duckduckgo.com/?q=" + URLEncoder.encode(t, "UTF-8") }
         // Prompt 31: Glimt svarer i boblen under feltet (POST /api/assist); eldre server: Chat som før.
-        else -> { askHome31(t); null }
+        // Prompt 32: snarveier først, og Chat bare når svaret tar lengre tid enn hs_timeout_s (P32b.kt).
+        else -> { askHome32b(t); null }
     }
 }
 

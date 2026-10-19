@@ -94,7 +94,10 @@ internal const val IC_LOCK30 = "M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3"
 internal val EASE30 = CubicBezierEasing(.2f, .8f, .2f, 1f)
 
 /** Luft øverst i innholdet i wiggle-modus (64 dp), så verktøylinja aldri dekker første kort eller minus-merket. */
-internal val WIGGLE_PAD30: Dp = 64.dp
+// Prompt 32: knapperaden (＋ / ✓, 40 dp) står 8 dp under papirkanten (WIGGLE_TOP28 = 31 dp i laget som ligger 23 dp opp i bildet);
+// første widget og «−»-merket (9 dp opp) starter med luft under den: 31 + 40 + 26 = 97 dp. Klippes 14 dp under knappene når man scroller.
+internal val WIGGLE_PAD30: Dp = 97.dp
+internal val WIGGLE_CLIP32B: Dp = 85.dp
 
 /** 0 → 64 dp på 280 ms når redigeringen slås på, og tilbake når man trykker ✓. */
 @Composable

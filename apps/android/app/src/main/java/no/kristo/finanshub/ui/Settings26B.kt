@@ -53,7 +53,7 @@ internal fun IntegBadge26(text: String, color: Long, size: Int = 34) {
 }
 
 @Composable
-private fun IntegRow26(badge: String, color: Long, title: String, sub: String?, value: String, valueColor: Color, top: Boolean, chev: Boolean = true, onClick: (() -> Unit)?) {
+private fun IntegRow26(vm: AppViewModel, id: String, badge: String, color: Long, title: String, sub: String?, value: String, valueColor: Color, top: Boolean, chev: Boolean = true, onClick: (() -> Unit)?) {
     val p = PaperPal.current
     Column {
         if (top) Box(Modifier.fillMaxWidth().padding(start = 62.dp).height(1.dp).background(p.line))
@@ -61,7 +61,7 @@ private fun IntegRow26(badge: String, color: Long, title: String, sub: String?, 
             Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier).padding(14.dp, 11.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            IntegBadge26(badge, color)
+            IntegLogo32b(vm, id, badge, color) // prompt 32: ekte logo, bokstavmerket mens den lastes
             Column(Modifier.weight(1f)) {
                 Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (!sub.isNullOrBlank()) Text(sub, color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -95,7 +95,7 @@ internal fun IntegList26(vm: AppViewModel) {
                 list.forEachIndexed { idx, (i, m) ->
                     val (st, ok) = if (i.id == "calendars" && cal?.statusText == null) kalSummary26(vm) else integStatus26(i)
                     Box(Modifier.hl25(vm, "integ:${i.id}")) {
-                        IntegRow26(m.badge, m.color, if (i.id == "calendars") "Kalendere" else i.name, m.description, st, if (ok) p.pos else p.lab, top = idx > 0) { vm.openInteg26(i.id) }
+                        IntegRow26(vm, i.id, m.badge, m.color, if (i.id == "calendars") "Kalendere" else i.name, m.description, st, if (ok) p.pos else p.lab, top = idx > 0) { vm.openInteg26(i.id) }
                     }
                 }
             }
@@ -125,7 +125,7 @@ internal fun IntegPage26(vm: AppViewModel, id: String) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PCard(shadow = true) {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                IntegBadge26(m.badge, m.color, 46)
+                IntegLogo32b(vm, i.id, m.badge, m.color, 46)
                 Column(Modifier.weight(1f)) {
                     PSerif(i.name, 22.sp, maxLines = 2)
                     Text(m.description, color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)

@@ -523,10 +523,12 @@ private fun Fam22Hero(vm: AppViewModel) {
 private fun Fam22TabBar(vm: AppViewModel, tab: String, modifier: Modifier) {
     val p = PaperPal.current
     Row(
-        modifier.fillMaxWidth().height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav).padding(horizontal = 8.dp),
+        modifier.fillMaxWidth().height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav)
+            // Prompt 32: hold inne på linja → «Rediger fanelinjen» (FAMILIE · FANELINJE).
+            .longPressEdit26(true, "kart") { Haptics.tap(); vm.p32b.secEdit = "kart" }.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        listOf(Triple("kart", "Kart", "◎"), Triple("soner", "Soner", "◌"), Triple("helse", "Helse", "♡"), Triple("mer", "Mer", "⋯")).forEach { (k, n, ic) ->
+        (vm.secTabs32b("kart") + Triple("mer", "Mer", "⋯")).forEach { (k, n, ic) ->
             // Prompt 24 (A): felles fane (Mer24.kt) med 7 dp mellomrom og tekst uten fontpadding.
             PaperTab24(n, ic, tab == k, p.navInk, p.navActInk, p.navAct, serif = true) {
                 Haptics.select()

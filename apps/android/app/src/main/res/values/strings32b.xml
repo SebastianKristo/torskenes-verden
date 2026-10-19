@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Prompt 32: prøveperiode-widgetene. -->
+    <string name="widget_trials32b_s_desc">Prøven som slutter først, med dager igjen</string>
+    <string name="widget_trials32b_m_desc">Prøveperioder med Avsluttet-knapp</string>
+    <string name="widget_s32b_trials_s_desc">Dager igjen av prøven · Samsung</string>
+    <string name="widget_s32b_trials_w_desc">Tre prøver og Avslutt-knapp · Samsung</string>
+</resources>

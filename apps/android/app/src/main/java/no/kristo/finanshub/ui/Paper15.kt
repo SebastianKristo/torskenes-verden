@@ -323,8 +323,8 @@ internal class NavTab(val key: String, val label: String, val icon: String, val 
 internal fun navTabs(vm: AppViewModel, bar: String, float: Boolean): List<NavTab> {
     val home = vm.screen == Screen.Homelab && vm.paperPage == null
     return when (bar) {
-        "dom" -> listOf("oversikt" to "Oversikt" to "◎", "publikum" to "Publikum" to "◍", "ytelse" to "Ytelse" to "⚡", "infra" to "Infra" to "▤")
-            .map { (kn, ic) -> NavTab(kn.first, kn.second, ic) { vm.domainSection(kn.first) } }
+        // Prompt 32: rekkefølge, navn og ikon fra «Rediger fanelinjen» (papir_nav_dom).
+        "dom" -> vm.secTabs32b("dom").map { (k, n, ic) -> NavTab(k, n, ic) { vm.domainSection(k) } }
         "fin" -> {
             val l = vm.paperFinTabs.mapNotNull { k -> FIN_TABS.firstOrNull { it.first == k } }
                 .map { (k, n) -> NavTab(k, vm.finTabLabel26(k, n), vm.finTabIcon26(k, finIcon(k))) { vm.paperFinTab(k) } }.toMutableList()
@@ -333,8 +333,7 @@ internal fun navTabs(vm: AppViewModel, bar: String, float: Boolean): List<NavTab
             l
         }
         // Abonnementer: Hjem, Innsikt og Historikk i linja (i stedet for faner øverst). + er en rød sirkel.
-        "sub" -> listOf(Triple("home", "Hjem", "⌂"), Triple("ins", "Innsikt", "◔"), Triple("hist", "Historikk", "↻"))
-            .map { (k, n, ic) -> NavTab(k, n, ic) { vm.subTab = k } }
+        "sub" -> vm.secTabs32b("abo").map { (k, n, ic) -> NavTab(k, n, ic) { vm.subTab = k } }
         else -> buildList {
             // Én linje, satt opp av brukeren (hold inne på linja eller via Innstillinger). «Hjem» kommer bare på Hjem.
             if (home) add(NavTab("hjem", "Hjem", "⌂") { vm.paperTab("hjem") })
@@ -477,6 +476,9 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
         FinTile("innst", "Innstillinger", "Kategorier og regler", Icons.Filled.Settings) { vm.settingsPage = null; vm.openFromFinMer(Screen.Settings) },
     )
     var editing by remember { mutableStateOf(false) }
+    // Prompt 32: innholdet klippes under ＋/✓ når siden scrolles i redigeringsmodus (Paper.kt).
+    LaunchedEffect(editing) { vm.p32b.fmEdit = editing }
+    DisposableEffect(Unit) { onDispose { vm.p32b.fmEdit = false } }
     var order by remember { mutableStateOf(vm.fmOrder) }
     var dragKey by remember { mutableStateOf<String?>(null) }
     var dragOffset by remember { mutableStateOf(Offset.Zero) }

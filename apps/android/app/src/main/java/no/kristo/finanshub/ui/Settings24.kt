@@ -71,6 +71,8 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("scan", "Skanning", "App", "Kamera, beskjæring og opplasting", "scan", "kamera skann"))
     add(SetItem24("server", "Server og synk", "App", "Lokal og ekstern adresse", "server", "server adresse"))
     add(SetItem24("backup", "Backup og data", "App", "Nedlasting og lagring", "backup", "backup eksport"))
+    // Prompt 32: «oppdatering», «versjon» og «update» treffer Nordlys OS (Oppdatering-raden er fjernet).
+    add(SetItem24("nordlys", "Nordlys OS", "Programvare", "Oppdatering, versjon og hva er nytt", null, "oppdatering oppdater versjon update system programvare"))
     (vm.b24.integ ?: INTEG24_FALLBACK).filter { vm.userIsAdmin || it.personal }.forEach { i ->
         add(SetItem24("integ:${i.id}", i.name, "Integrasjoner", i.fields.joinToString(", ") { it.label }, "integ", i.id))
     }
@@ -91,7 +93,7 @@ private val SYN24: Map<String, List<String>> = mapOf(
     "kvitter" to listOf("integ:imap"), "epost" to listOf("integ:imap"), "e-post" to listOf("integ:imap"), "mail" to listOf("integ:imap"), "finn" to listOf("integ:finn"),
     "profil" to listOf("profile:standard", "profile:finans_boliger", "profile:boliger"), "bolig" to listOf("profile:finans_boliger", "profile:boliger"),
     "fane" to listOf("tabedit", "fin"), "widget" to listOf("modules"), "modul" to listOf("modules"), "bruker" to listOf("accounts"),
-    "bilde" to listOf("integ:photos", "look"), "unsplash" to listOf("integ:photos"), "pexels" to listOf("integ:photos"),
+    "bilde" to listOf("integ:photos", "look"), "oppdat" to listOf("nordlys"), "versjon" to listOf("nordlys"), "update" to listOf("nordlys"), "unsplash" to listOf("integ:photos"), "pexels" to listOf("integ:photos"),
 )
 private val STOP24 = Regex("^(hvor|hvordan|kan|jeg|du|meg|min|mitt|mine|en|et|den|det|på|i|til|for|å|og|er|med|endre|bytte|bytter|skru|slå|av|finner|finne|legge|sette|hva|vil)$")
 
@@ -141,6 +143,7 @@ private fun open24(vm: AppViewModel, it: SetItem24) {
         // Prompt 26: hver integrasjon har egen side (Kalendere for skole, Google og HA).
         it.id.startsWith("integ:") -> vm.openInteg26(it.id.removePrefix("integ:"))
         it.id == "kal" -> vm.openKalSettings26(null)
+        it.id == "nordlys" -> vm.openNordlys31()
         it.id == "import" -> main(rowKey25("Bankimport"), 7)
         it.id == "sub" -> main(rowKey25("Subscription OS"), 7)
         it.id == "appname" -> main(rowKey25("Navn på appen"), 9)

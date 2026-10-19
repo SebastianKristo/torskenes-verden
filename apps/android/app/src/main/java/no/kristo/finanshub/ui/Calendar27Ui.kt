@@ -129,7 +129,7 @@ internal fun KalenderScreen27(vm: AppViewModel) {
         K27Bar(vm, Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = navB))
         s.sel?.let { e -> K27Sheet(wide, navB, { s.sel = null; s.delArm = false }) { K27Detail(vm, e) } }
         s.form?.let { f -> K27Sheet(wide, navB, { s.form = null }) { K27Form(vm, f) } }
-        if (s.search) K27Sheet(wide, navB, { s.search = false; s.q = ""; s.results = null }) { K27Search(vm, today) }
+        if (s.search) K27Sheet(wide, navB, { s.search = false; s.q = ""; s.results = null; vm.p32b.kAsk = null; vm.p32b.kFilter = "alle" }) { K27Search(vm, today) }
         // Prompt 33: «Lær Glimt hva dette er…» (ui/Memory33Ui.kt)
         vm.mem33.learn?.let { l -> K27Sheet(wide, navB, { vm.mem33.learn = null }) { Mem33LearnBody(vm, l) } }
         vm.message?.let { m ->
@@ -369,7 +369,8 @@ private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cu
                     val line = p.line
                     BoxWithConstraints(
                         Modifier.weight(1f).fillMaxHeight()
-                            .background(if (isT) p.lab.copy(alpha = .05f) else if (we) p.line.copy(alpha = .3f) else Color.Transparent)
+                            // Prompt 32 (claude-code-kalender-fargekontrast.md): ingen tone på dagens kolonne; helg beholder svak grå.
+                            .background(if (we) p.line.copy(alpha = .3f) else Color.Transparent)
                             .drawBehind {
                                 drawLine(line, Offset(0f, 0f), Offset(0f, size.height), 1.dp.toPx())
                                 val hh = HH.toPx()
@@ -392,7 +393,7 @@ private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cu
                             val tall = ht >= 40.dp && !(narrow7 && x.n > 1)
                             Row(
                                 Modifier.offset(x = W * (x.c.toFloat() / x.n) + 1.dp, y = HH * (x.a / 60f)).width(W / x.n - 3.dp).height(maxOf(18.dp, ht - 2.dp))
-                                    .clip(RoundedCornerShape(6.dp)).background(if (solid) cc else lerp(p.card, cc, .17f))
+                                    .clip(RoundedCornerShape(6.dp)).background(if (solid) cc else lerp(p.card, cc, .22f))
                                     .then(if (sel) Modifier.border(2.dp, p.ink, RoundedCornerShape(6.dp)) else Modifier)
                                     .clickable { s.sel = e; s.mini = false },
                             ) {
@@ -460,8 +461,9 @@ private fun K27Month(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur
                     sh.forEach { e ->
                         val c = Color(kalColor27(e, s))
                         val solid = e.type == "prove" || e.sMin == null || e.type == "innl"
-                        Box(Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(4.dp)).background(if (solid) c else Color.Transparent).padding(horizontal = 4.dp), contentAlignment = Alignment.CenterStart) {
-                            Text(kalShort(e), color = if (solid) Color.White else c, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 16.sp, maxLines = 1, overflow = TextOverflow.Clip, softWrap = false)
+                        // Prompt 32 (claude-code-kalender-maned-brikker.md): alle hendelser får brikke; avtaler 18 % farge og 78 % fargetekst.
+                        Box(Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(6.dp)).background(if (solid) c else lerp(p.card, c, .18f)).padding(horizontal = 5.dp), contentAlignment = Alignment.CenterStart) {
+                            Text(kalShort(e), color = if (solid) Color.White else lerp(p.ink, c, .78f), fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, softWrap = false)
                         }
                     }
                     if (les > 0) Box(Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(4.dp)).background(p.line.copy(alpha = .7f)).padding(horizontal = 4.dp), contentAlignment = Alignment.CenterStart) {
@@ -563,13 +565,13 @@ private fun K27Bar(vm: AppViewModel, modifier: Modifier) {
 @Composable
 private fun K27Sheet(wide: Boolean, navB: Dp, onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val p = PaperPal.current
-    val shape = if (wide) RoundedCornerShape(24.dp) else RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
+    val shape = if (wide) RoundedCornerShape(24.dp) else RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     Box(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = .4f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose),
         contentAlignment = if (wide) Alignment.Center else Alignment.BottomCenter,
     ) {
         Column(
-            Modifier.then(if (wide) Modifier.widthIn(max = 480.dp).fillMaxWidth() else Modifier.fillMaxWidth()).fillMaxHeight(.9f).wrapContentHeight(if (wide) Alignment.CenterVertically else Alignment.Bottom)
+            Modifier.then(if (wide) Modifier.widthIn(max = 480.dp).fillMaxWidth() else Modifier.fillMaxWidth()).fillMaxHeight(.92f).wrapContentHeight(if (wide) Alignment.CenterVertically else Alignment.Bottom)
                 .imePadding().clip(shape).background(p.bg)
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                 .verticalScroll(rememberScrollState()).padding(start = 16.dp, top = 18.dp, end = 16.dp, bottom = if (wide) 22.dp else navB + 8.dp),
@@ -707,6 +709,10 @@ private fun K27Form(vm: AppViewModel, f: Kal27Form) {
         PSerif(if (f.id != null) "Rediger hendelse" else "Ny hendelse", 24.sp, modifier = Modifier.weight(1f))
         K27Close { s.form = null }
     }
+    // Prompt 32: «✦ BESKRIV MED GLIMT» over Tittel (ui/Kal32b.kt).
+    LaunchedEffect(f.id, f.date) { if (vm.p32b.kAiNote.isBlank() && vm.p32b.kAi.isBlank()) vm.p32b.kAiErr = "" }
+    DisposableEffect(Unit) { onDispose { vm.p32b.kAi = ""; vm.p32b.kAiNote = ""; vm.p32b.kAiErr = "" } }
+    KalDescribe32b(vm)
     K27Field(f.title, { set((s.form ?: f).copy(title = it)) }, "Tittel", 52.dp, 17.sp, FontWeight.SemiBold, focus)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(horizontal = 14.dp)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 50.dp).press24 { set(f.copy(allDay = !f.allDay)) }, verticalAlignment = Alignment.CenterVertically) {
@@ -765,56 +771,6 @@ private fun K27Form(vm: AppViewModel, f: Kal27Form) {
 
 @Composable
 private fun K27Search(vm: AppViewModel, today: LocalDate) {
-    val p = PaperPal.current
-    val s = vm.kal26
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.weight(1f).height(48.dp).clip(CircleShape).background(p.card).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (s.q.isEmpty()) WxIcon(K27_SEARCH, p.mut, 18.dp, stroke = 2.2f)
-            else Box(
-                // ✕ til venstre: 26 px sirkel, 36 px trykkflate; fokus blir i feltet.
-                Modifier.offset(x = (-8).dp).size(36.dp).clip(CircleShape).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                    vm.searchKal27(""); runCatching { focus.requestFocus() }
-                }.k27Label("Tøm søket"),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(Modifier.size(26.dp).clip(CircleShape).background(Color(0x387F7F7F)), contentAlignment = Alignment.Center) { Text("✕", color = p.ink, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            }
-            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                if (s.q.isEmpty()) Text("Søk etter timer, prøver, steder", color = p.mut, fontSize = 15.sp, maxLines = 1)
-                BasicTextField(s.q, { vm.searchKal27(it) }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
-                    cursorBrush = SolidColor(p.ink), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.searchKal27(s.q) }),
-                    modifier = Modifier.fillMaxWidth().focusRequester(focus))
-            }
-        }
-        K27Close { s.search = false; s.q = ""; s.results = null }
-    }
-    val res = s.results
-    if (res != null && res.isNotEmpty()) {
-        Text("${res.size}${if (res.size >= 60) "+" else ""} treff", color = p.mut, fontSize = 12.5.sp)
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card)) {
-            res.forEachIndexed { i, e ->
-                if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = 56.dp).press24 {
-                        s.search = false; s.q = ""; s.results = null
-                        s.cur = e.date; s.sel = e
-                        if (s.view == "maaned" || s.view == "liste") vm.setKalView27("dag")
-                    }.padding(horizontal = 14.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Box(Modifier.size(6.dp, 34.dp).clip(RoundedCornerShape(3.dp)).background(Color(kalColor27(e, s))))
-                    Column(Modifier.weight(1f)) {
-                        Text(e.title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(kalCap(kalLong(e.date)) + " · " + e.timeText + (noUrl31(e.room).takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
-                            color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    if (e.date == today) K27Mono("I DAG", p.lab, 9.5.sp)
-                }
-            }
-        }
-    } else if (res != null && s.q.trim().length >= 2) {
-        Text("Ingen treff.", color = p.mut, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp))
-    }
+    // Prompt 32 (claude-code-kalender-sok-glimt.md): ny søkemeny med Glimt (ui/Kal32b.kt).
+    KalSearch32b(vm, today)
 }

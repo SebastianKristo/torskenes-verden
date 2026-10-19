@@ -183,6 +183,7 @@ class Midnight24Worker(ctx: Context, params: WorkerParameters) : CoroutineWorker
         Bd24WidgetStore.items.value = Bd24WidgetStore.current(ctx).let(::bdSort)
         FamilyPrefs.api(ctx)?.let { runCatching { fetch24(ctx, it) } }
         S24.redraw(ctx)
+        runCatching { Trials32bWidgets.redraw(ctx) } // prompt 32: dager igjen i prøveperiode-widgetene
         return Result.success()
     }
 }
@@ -200,6 +201,8 @@ object S24 {
         S24KalReceiver26S::class.java, S24KalReceiver26M::class.java, S24KalReceiver26L::class.java,
         // Prompt 27: Ruter liten, bred og stabel.
         S27RuterSmallReceiver::class.java, S27RuterWideReceiver::class.java, S27RuterStackReceiver::class.java,
+        // Prompt 32: Prøveperioder 2×2 og 4×2.
+        S32bTrialsSmallReceiver::class.java, S32bTrialsWideReceiver::class.java,
     )
 
     val isSamsung: Boolean get() = Build.MANUFACTURER.equals("samsung", ignoreCase = true)

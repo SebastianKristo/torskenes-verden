@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 32: Prøveperioder · Samsung 2 × 2 (gjennomsiktig hvit, radius 28). Av i manifestet til appen ser Samsung (S24.enableProviders). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_s32b_trials_s_desc"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="134dp"
+    android:minHeight="155dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

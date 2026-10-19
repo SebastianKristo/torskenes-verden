@@ -261,8 +261,9 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                     }
                 } else {
                     item { Header(w, Modifier.alpha((1f - sc / 220f).coerceIn(0f, 1f))) }
-                    item { HourCard(vm, w) { vm.weatherSheetDay = 0 } }
-                    item { DaysCard(w) { vm.weatherSheetDay = it } }
+                    // Prompt 32: Forhold-modusene bytter både timeraden og dagslisten (ui/Weather32b.kt).
+                    item { HourCard32b(vm, w) { vm.weatherSheetDay = 0 } }
+                    item { DaysCard32b(vm, w, { DaysCard(w) { vm.weatherSheetDay = it } }) { vm.weatherSheetDay = it } }
                     item { CmpCard(vm, w) { cmpOpen = true } }
                     item { WindCard(w) { open("wind") } }
                     item { MoonCard { open("moon") } }
@@ -295,21 +296,15 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
 private fun TopBar(vm: AppViewModel, w: WeatherFull?, compact: Boolean) {
     val cOp by androidx.compose.animation.core.animateFloatAsState(if (compact) 1f else 0f, label = "wxTop")
     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.height(36.dp).clip(CircleShape).background(Color.White.copy(alpha = .18f)).clickable { vm.weatherOpen = false }.padding(start = 10.dp, end = 14.dp), contentAlignment = Alignment.Center) {
-            Text("‹ Hjem", fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
-        }
+        // Prompt 32 (claude-code-vaer-lukk-x.md): ingen «‹ Hjem»; tom plass til venstre så bynavnet står midt, ✕ til høyre.
+        Spacer(Modifier.width(42.dp))
         Column(Modifier.weight(1f).alpha(cOp), horizontalAlignment = Alignment.CenterHorizontally) {
             if (w != null) {
                 Text(w.place, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("${wxR(w.current.temp)} | ${wxDesc(w.current.code)}", fontSize = 13.sp, modifier = Modifier.alpha(.9f), maxLines = 1)
             }
         }
-        val src = when {
-            w == null -> "Henter …"
-            w.mock -> "Eksempeldata"
-            else -> "MET Norway · yr.no · " + (w.updatedAt?.let { u -> runCatching { java.time.Instant.parse(u).atZone(java.time.ZoneId.systemDefault()).toLocalTime().toString().take(5) }.getOrNull() } ?: "")
-        }
-        Text(src, fontSize = 11.5.sp, textAlign = TextAlign.End, lineHeight = 14.sp, modifier = Modifier.width(72.dp).alpha(.75f), maxLines = 3)
+        WxClose32b { vm.weatherOpen = false }
     }
 }
 
@@ -323,6 +318,9 @@ private fun Header(w: WeatherFull, modifier: Modifier) {
             modifier = Modifier.padding(start = 22.dp, top = 2.dp))
         Text(wxDesc(w.current.code), fontSize = 19.sp, fontWeight = FontWeight.Bold, style = sh, modifier = Modifier.padding(top = 4.dp))
         Text("H:${wxR(w.today.hi ?: w.days.firstOrNull()?.hi)}  L:${wxR(w.today.lo ?: w.days.firstOrNull()?.lo)}", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, style = sh, modifier = Modifier.alpha(.9f))
+        // Prompt 32: kilden og tiden står under H/L (tidligere oppe til høyre).
+        val src = if (w.mock) "Eksempeldata" else "MET Norway · yr.no" + (w.updatedAt?.let { u -> runCatching { " · " + java.time.Instant.parse(u).atZone(java.time.ZoneId.systemDefault()).toLocalTime().toString().take(5) }.getOrNull() } ?: "")
+        Text(src, fontSize = 11.5.sp, style = sh, modifier = Modifier.alpha(.7f).padding(top = 4.dp), maxLines = 1)
     }
 }
 
@@ -828,8 +826,8 @@ private fun WideWeather25(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                 Column(Modifier.weight(5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Header(w, Modifier)
-                    HourCard(vm, w) { vm.weatherSheetDay = 0 }
-                    DaysCard(w) { vm.weatherSheetDay = it }
+                    HourCard32b(vm, w) { vm.weatherSheetDay = 0 }
+                    DaysCard32b(vm, w, { DaysCard(w) { vm.weatherSheetDay = it } }) { vm.weatherSheetDay = it }
                 }
                 Column(Modifier.weight(7f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     WxMapInline25(w, Modifier.fillMaxWidth().height(300.dp).clip(cardShape).border(1.dp, glassBg, cardShape), openMap)

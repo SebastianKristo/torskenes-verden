@@ -179,7 +179,8 @@ private fun GoogleSearch(vm: AppViewModel) {
             colors = TextFieldDefaults.colors(focusedContainerColor = C.surface2, unfocusedContainerColor = C.surface2, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
         )
         if (focused) {
-            val list = if (text.isBlank()) vm.history.take(8) else vm.suggestions
+            // Prompt 32: mobilen viser ikke «Nylige søk» (historikken vises på web); bare forslag mens man skriver.
+            val list = if (text.isBlank()) emptyList() else vm.suggestions
             if (list.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(C.surface2).padding(vertical = 6.dp)) {
                 if (text.isBlank()) Row(Modifier.fillMaxWidth().padding(16.dp, 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Nylige søk", color = C.text2, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))

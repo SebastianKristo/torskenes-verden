@@ -543,6 +543,24 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s27_ruter_stack" />
         </receiver>
 
+        <!-- Prompt 32: Prøveperioder (Material You 2×2 og 4×2) og Samsung-variantene (av til appen ser Samsung: S24.enableProviders). -->
+        <receiver android:name=".widget.TrialsReceiver32bS" android:exported="true" android:enabled="true" android:label="Prøveperioder">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_trials32b_s" />
+        </receiver>
+        <receiver android:name=".widget.TrialsReceiver32bM" android:exported="true" android:enabled="true" android:label="Prøveperioder 4×2">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_trials32b_m" />
+        </receiver>
+        <receiver android:name=".widget.S32bTrialsSmallReceiver" android:exported="true" android:enabled="false" android:label="Prøveperioder · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s32b_trials_s" />
+        </receiver>
+        <receiver android:name=".widget.S32bTrialsWideReceiver" android:exported="true" android:enabled="false" android:label="Prøveperioder 4×2 · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s32b_trials_w" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

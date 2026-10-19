@@ -144,6 +144,9 @@ internal fun NordlysPage31(vm: AppViewModel) {
                             Text(n, color = p.ink, fontFamily = PaperFonts.sans, fontSize = 14.sp, lineHeight = 21.sp)
                         }
                     }
+                    // Prompt 32: fra den gamle Oppdatering-siden (Installert · build, Kopier, Se etter oppdatering, Logg).
+                    Spacer(Modifier.height(6.dp))
+                    NordlysInstalled32b(vm)
                 }
             }
         }
