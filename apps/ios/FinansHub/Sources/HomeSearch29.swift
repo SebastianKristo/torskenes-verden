@@ -70,6 +70,8 @@ final class Search29Model {
         parseTask?.cancel()
         let t: String = q.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.count <= 4 { appt = nil; return }
+        // Prompt 36: spørsmål med dato er ikke en avtale – ingen «Legg i kalender» (Assist36.swift).
+        if Assist36.blocksAppt(t) { parseTask?.cancel(); appt = nil; return }
         parseTask = Task {
             try? await Task.sleep(nanoseconds: 250_000_000)
             if Task.isCancelled { return }
@@ -97,8 +99,9 @@ final class Search29Model {
         // Prompt 32: alle søk logges for brukeren (vises bare på web), og snarveier til sider åpnes med en gang (Search32.swift).
         Search32b.shared.log(t, engine: engine, store)
         if Search32b.shared.tryShortcut(t, engine: engine, store) { appt = nil; return }
-        var isTime: Bool = appt != nil
-        if !isTime && t.count > 4 {
+        let question36: Bool = Assist36.blocksAppt(t)
+        var isTime: Bool = appt != nil && !question36
+        if !isTime && !question36 && t.count > 4 {
             let pv: Quick29Preview? = await Quick29Model.shared.parse(t, store)
             isTime = Search29Model.isAppt(pv)
         }
@@ -117,6 +120,11 @@ final class Search29Model {
             store.suggestions = []
             // Prompt 31: svarboble under feltet via POST /api/assist (eldre server: Chat som før).
             // Prompt 32: tar svaret lengre enn hs_timeout_s, fortsetter jobben i Chat (Search32.swift).
+            // Prompt 36: dagslys / soloppgang / solnedgang for en dato besvares lokalt (Assist36.swift).
+            if let local = Assist36.localAnswer(t, store) {
+                Assist31.shared.showLocal36(t, local)
+                return
+            }
             if Assist31.shared.missing { store.openChat(prompt: t) } else { Search32b.shared.askHome(t, store) }
         }
     }

@@ -156,7 +156,13 @@ struct MatView: View {
     }
 
     @ViewBuilder private var weekSection: some View {
-        if let w = store.week, !w.days.isEmpty { weekList(w) }
+        if let w = store.week, !w.days.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                // Prompt 36: matplanen er alltid felles for alle brukere (ingen deling eller privat-valg).
+                Mat36Shared(note: Mat36Shared.text(w), pal: pal)
+                weekList(w)
+            }
+        }
     }
 
     private var header: some View {

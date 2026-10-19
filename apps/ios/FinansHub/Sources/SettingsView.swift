@@ -133,16 +133,29 @@ private struct Card<C: View>: View {
 private struct Row: View {
     let label: String
     let value: String
-    var body: some View { HStack { Text(label).foregroundStyle(Color.skinFg.opacity(0.65)); Spacer(); Text(value).fontWeight(.medium).lineLimit(1) }.padding(.horizontal, 16).padding(.vertical, 13) }
+    /// Prompt 36: ikonbrikke i Papir (Settings36.swift).
+    var icon: String? = nil
+    var body: some View {
+        HStack(spacing: 14) {
+            if let icon, PaperSkin.palette != nil { Set36Chip(symbol: icon, tint: Set30Colors.innlogging) }
+            Text(label).foregroundStyle(Color.skinFg.opacity(0.65)); Spacer(); Text(value).fontWeight(.medium).lineLimit(1)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 13)
+    }
 }
 
 private struct Switch: View {
     let label: String
     var sub: String? = nil
     @Binding var on: Bool
+    /// Prompt 36: ikonbrikke i Papir (Settings36.swift).
+    var icon: String? = nil
     var body: some View {
         Toggle(isOn: $on) {
-            VStack(alignment: .leading, spacing: 2) { Text(label); if let sub { Text(sub).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) } }
+            HStack(spacing: 14) {
+                if let icon, PaperSkin.palette != nil { Set36Chip(symbol: icon, tint: Set30Colors.innlogging) }
+                VStack(alignment: .leading, spacing: 2) { Text(label); if let sub { Text(sub).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) } }
+            }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
     }
@@ -189,29 +202,34 @@ private struct AccountsPage: View {
     @State private var files = false
     var body: some View {
         VStack(spacing: 12) {
-            // Prompt 28: etiketten ligger i innholdet under toppbildet (24 pt luft), aldri oppå bildet.
-            SectionLabel(text: "Profilbilde").padding(.top, PaperSkin.palette == nil ? 0 : 16)
-            VStack(spacing: 14) {
-                HStack(spacing: 16) {
-                    AvatarImage(size: 72, tint: .accent)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(store.displayName).font(.headline)
-                        Text("Vises i appen og i Homelab. Beskjæres til et kvadrat.").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
+            if PaperSkin.palette != nil {
+                // Prompt 36: profilbildet øverst i Konto, raden Profilbilde med miniatyr og knappene under (Settings36.swift).
+                Konto36Head(photo: $photo, camera: $camera, files: $files)
+            } else {
+                // Prompt 28: etiketten ligger i innholdet under toppbildet (24 pt luft), aldri oppå bildet.
+                SectionLabel(text: "Profilbilde").padding(.top, PaperSkin.palette == nil ? 0 : 16)
+                VStack(spacing: 14) {
+                    HStack(spacing: 16) {
+                        AvatarImage(size: 72, tint: .accent)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(store.displayName).font(.headline)
+                            Text("Vises i appen og i Homelab. Beskjæres til et kvadrat.").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
+                        }
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
+                    HStack(spacing: 8) {
+                        PhotosPicker(selection: $photo, matching: .images) { avatarButton("Bilder", "photo.on.rectangle") }
+                        Button { files = true } label: { avatarButton("Filer", "folder") }
+                        Button { camera = true } label: { avatarButton("Ta bilde", "camera") }
+                    }
+                    .buttonStyle(.plain)
+                    if store.avatar != nil {
+                        Button { store.removeAvatar() } label: { Text("Fjern bildet").font(.subheadline.weight(.bold)).foregroundStyle(PaperSkin.palette?.lab ?? Color.domRed).frame(maxWidth: .infinity, minHeight: 40) }
+                            .buttonStyle(.plain)
+                    }
                 }
-                HStack(spacing: 8) {
-                    PhotosPicker(selection: $photo, matching: .images) { avatarButton("Bilder", "photo.on.rectangle") }
-                    Button { files = true } label: { avatarButton("Filer", "folder") }
-                    Button { camera = true } label: { avatarButton("Ta bilde", "camera") }
-                }
-                .buttonStyle(.plain)
-                if store.avatar != nil {
-                    Button { store.removeAvatar() } label: { Text("Fjern bildet").font(.subheadline.weight(.bold)).foregroundStyle(PaperSkin.palette?.lab ?? Color.domRed).frame(maxWidth: .infinity, minHeight: 40) }
-                        .buttonStyle(.plain)
-                }
+                .padding(16).glass(24)
             }
-            .padding(16).glass(24)
             SectionLabel(text: "Kontoer")
             Note(text: "Hver konto har egne data, tokens og varsler. Bytt raskt ved å holde inne profilbildet.")
             Card {
@@ -267,7 +285,7 @@ private struct SecurityPage: View {
     var body: some View {
         @Bindable var s = store
         VStack(spacing: 12) {
-            Card { Switch(label: "Lås med Face ID", sub: "Kreves når appen åpnes. Koden kan brukes som reserve.", on: $s.lockEnabled) }
+            Card { Switch(label: "Lås med Face ID", sub: "Kreves når appen åpnes. Koden kan brukes som reserve.", on: $s.lockEnabled, icon: "faceid") }
             if store.lockEnabled {
                 SectionLabel(text: "Lås etter")
                 Card {
@@ -277,17 +295,17 @@ private struct SecurityPage: View {
                     }
                 }
             }
-            Card { Switch(label: "Skjul beløp i appveksleren", sub: "Uskarpt bilde i oversikten over åpne apper", on: $s.hideSwitcher) }
+            Card { Switch(label: "Skjul beløp i appveksleren", sub: "Uskarpt bilde i oversikten over åpne apper", on: $s.hideSwitcher, icon: "eye.slash") }
             SectionLabel(text: "Tofaktor (2FA)")
             Card {
-                Row(label: "Status", value: store.me?.twoFactor == true ? "På · TOTP" : store.me?.twoFactor == false ? "Av" : "Ukjent")
+                Row(label: "Status", value: store.me?.twoFactor == true ? "På · TOTP" : store.me?.twoFactor == false ? "Av" : "Ukjent", icon: "key")
                 Sep()
                 link(store.me?.twoFactor == true ? "Slå av 2FA" : "Sett opp 2FA") { if let u = URL(string: store.base + "/") { openURL(u) } }
             }
             Note(text: "Oppsett med QR-kode og gjenopprettingskoder gjøres i Homelab → Innstillinger → Innlogging. Bruk en autentiseringsapp som 1Password, Aegis eller Google Authenticator.")
             SectionLabel(text: "Pålitelige enheter")
             Card {
-                Row(label: "Denne enheten", value: UIDevice.current.name)
+                Row(label: "Denne enheten", value: UIDevice.current.name, icon: "laptopcomputer.and.iphone")
                 Sep()
                 link("Administrer i Homelab") { if let u = URL(string: store.base + "/") { openURL(u) } }
             }

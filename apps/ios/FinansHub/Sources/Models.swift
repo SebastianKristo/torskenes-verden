@@ -223,6 +223,11 @@ struct Week: Decodable {
     var end: String? = nil
     var week: Int? = nil
     var dishes: [Dish]? = nil
+    /// Prompt 36: matplanen er felles for hele husstanden. «Felles for husstanden · Endret av Nina 18.42».
+    /// Tolerante typer (feil type skal aldri velte hele uka).
+    var sharedNote: FlexID? = nil
+    var updatedBy: FlexID? = nil
+    var updatedAt: FlexDate? = nil
 }
 
 /* ---------- Fleksible typer ---------- */

@@ -105,6 +105,8 @@ struct System31Host: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            // Prompt 36: «Starter opp»-skjermen mens serveren starter på nytt (Starter36.swift).
+            .overlay { Starter36Overlay().environment(\.paper, p) }
             .fullScreenCover(isPresented: Binding<Bool>(get: { m.open }, set: { (v: Bool) in m.open = v })) {
                 System31Page()
                     .environment(\.paper, p)
@@ -145,6 +147,8 @@ struct System31Page: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 4)
                     System31Notes()
+                    // Prompt 36: TIDLIGERE VERSJONER (System36.swift).
+                    System36History()
                     // Prompt 32: versjonsinfo og handlinger fra den gamle «Oppdatering»-siden (Settings32.swift).
                     System32bInstalled()
                 }
@@ -162,6 +166,7 @@ struct System31Page: View {
         }
         .background(p.bg.ignoresSafeArea())
         .overlay(alignment: .bottom) { System31BigButton() }
+        .overlay { Starter36Overlay() }
         .environment(\.colorScheme, p.dark ? .dark : .light)
         .task { await u.load(store, force: true) }
         .update30Sheet()
@@ -218,6 +223,8 @@ struct System31Hero: View {
         .padding(22)
         .frame(maxWidth: .infinity, minHeight: 300, alignment: .topLeading)
         .background { System31Aurora() }
+        // Prompt 36: Sherlock-Glimt flyr inn ved «Se etter» (System36.swift).
+        .overlay { System36SherlockLayer() }
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .shadow(color: Color(hex: "#101a2e").opacity(0.55), radius: 20, y: 14)
         .environment(\.colorScheme, .dark)
@@ -232,7 +239,7 @@ struct System31Hero: View {
     }
 
     static func state(_ u: Update30Model) -> String {
-        if u.checking { return "Ser etter oppdatering …" }
+        if u.checking || System36Model.shared.searching { return "Ser etter oppdatering …" }
         switch u.phase {
         case .run: return "Oppdaterer …"
         case .done: return "Oppdatert"
@@ -278,8 +285,8 @@ struct System31CheckPill: View {
     @MainActor private var u: Update30Model { Update30Model.shared }
 
     var body: some View {
-        Button { u.check(store) } label: {
-            Text(u.checking ? "Ser etter …" : "Se etter").font(PF.ui(12, .bold)).foregroundStyle(Color.white)
+        Button { System36Model.shared.sherlock(store) } label: {
+            Text(u.checking || System36Model.shared.searching ? "Ser etter …" : "Se etter").font(PF.ui(12, .bold)).foregroundStyle(Color.white)
                 .padding(.horizontal, 12).frame(height: 32)
                 .background(.ultraThinMaterial, in: Capsule())
                 .background(Color.white.opacity(0.12), in: Capsule())
@@ -325,15 +332,8 @@ struct System31HeroProgress: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            GeometryReader { (g: GeometryProxy) in
-                let w: CGFloat = g.size.width * CGFloat(u.pct) / 100
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.22))
-                    Capsule().fill(Color.white).frame(width: Swift.max(6, w))
-                }
-            }
-            .frame(height: 6)
-            .animation(.easeOut(duration: 0.4), value: u.pct)
+            // Prompt 36: snekker-Glimt hamrer på enden av fyllet (System36.swift).
+            Carp36Track(pct: u.pct, S: 34, track: Color.white.opacity(0.22), fill: Color.white)
             HStack {
                 Text(u.stepText).font(PF.ui(12, .semibold)).foregroundStyle(Color.white.opacity(0.85)).lineLimit(1)
                 Spacer(minLength: 6)
@@ -352,6 +352,7 @@ struct System31VersionCard: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
+                Set36Chip(symbol: "info.circle", tint: Set30Colors.system).padding(.trailing, 4) // prompt 36
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Programvareversjon").font(PF.ui(15, .bold)).foregroundStyle(p.ink)
                     Text(verLine).font(PF.mono(12.5, bold: false)).foregroundStyle(p.mut).lineLimit(1).minimumScaleFactor(0.8)
@@ -363,10 +364,13 @@ struct System31VersionCard: View {
             .padding(.horizontal, 16).padding(.vertical, 14)
             Rectangle().fill(p.line).frame(height: 1)
             Toggle(isOn: Binding<Bool>(get: { u.requirePassword }, set: { (v: Bool) in toggle(v) })) {
+                HStack(spacing: 14) {
+                Set36Chip(symbol: "lock", tint: Set30Colors.system) // prompt 36
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Krev Face ID eller passord").font(PF.ui(15, .bold)).foregroundStyle(p.ink)
                     Text(u.requirePassword ? "Face ID eller passord før oppdateringen starter" : "Av · oppdater med ett trykk")
                         .font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+                }
                 }
             }
             .tint(Color(hex: "#2f7d4f"))

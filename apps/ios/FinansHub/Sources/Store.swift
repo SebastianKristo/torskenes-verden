@@ -1059,7 +1059,8 @@ final class Store {
         run {
             self.busy = true
             defer { self.busy = false }
-            guard let jpeg = img.squared(256).jpegData(compressionQuality: 0.85) else { return }
+            // Prompt 36: 512 × 512 (profilbildet vises i 96 pt i Konto).
+            guard let jpeg = img.squared(512).jpegData(compressionQuality: 0.85) else { return }
             _ = try await self.api.upload("/me/avatar", parts: [API.Part(name: "file", filename: "avatar.jpg", mime: "image/jpeg", data: jpeg)], prefix: "/api")
             self.avatar = UIImage(data: jpeg)
             await self.loadMe()

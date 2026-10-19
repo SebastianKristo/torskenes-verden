@@ -1043,14 +1043,8 @@ struct PaperHero: View {
         let w = store.homeWeather
         let t = w?.temp ?? store.mobileHome?.weather?.temp
         if let t {
-            Button { store.openWeather() } label: {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(Int(t.rounded()))°").font(PF.serif(52))
-                    Text("\(w?.text ?? store.mobileHome?.weather?.text ?? "") · \(clock) ›").font(PF.ui(13)).opacity(0.9).lineLimit(1).minimumScaleFactor(0.8)
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Åpne værmeldingen")
+            // Prompt 36: trykk åpner Vær, hold inne ≥ 550 ms åpner yr.no for stedet (Temp36.swift).
+            Temp36Press(temp: "\(Int(t.rounded()))°", line: "\(w?.text ?? store.mobileHome?.weather?.text ?? "") · \(clock) ›")
         }
     }
 

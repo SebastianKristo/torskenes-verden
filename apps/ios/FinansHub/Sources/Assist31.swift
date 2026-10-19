@@ -124,6 +124,13 @@ final class Assist31 {
             let a: Assist31Answer? = await self.ask(q, source: "search", chatId: nil, page: "hjem", store)
             guard self.homeId == id else { return }
             self.homeBusy = false
+            if self.action36 {
+                // Prompt 36: handling → bare pillen («✓ …»), aldri kortet under søket.
+                self.closeHome()
+                let done: String = a.map { "✓ " + String($0.plain.prefix(70)) } ?? ""
+                AiJobs31.shared.end("", done: done.isEmpty ? nil : done)
+                return
+            }
             if let a {
                 self.homeAnswer = a
                 Haptics.shared.select()
@@ -138,6 +145,18 @@ final class Assist31 {
             }
         }
     }
+
+    /// Prompt 36: svar beregnet i appen (dagslys) vises rett i kortet under søkefeltet.
+    func showLocal36(_ q: String, _ a: Assist31Answer) {
+        homeId += 1
+        homeQ = q
+        homeBusy = false
+        homeAnswer = a
+        Haptics.shared.select()
+    }
+
+    /// Prompt 36: serveren sa kind:'action' – jobben vises i pillen, ikke i kortet under søkefeltet.
+    @ObservationIgnored var action36: Bool = false
 
     func closeHome() {
         homeId += 1
@@ -163,6 +182,7 @@ final class Assist31 {
         if let chatId, !chatId.isEmpty { body["chatId"] = chatId }
         let t0: Date = Date()
         lastError34 = ""
+        if source == "search" { action36 = false }
         do {
             let d: Data = try await store.api.callAt("/api", "POST", "/assist", json: body, timeout: 25)
             missing = false
@@ -171,6 +191,7 @@ final class Assist31 {
                 lastError34 = Assist31.errorText34(err, model: JS.str(o, "model"))
                 return nil
             }
+            if source == "search" && (JS.str(o, "kind") ?? "") == "action" { action36 = true }
             if var a = Assist31Answer.from(o) {
                 if a.ms == 0 { a.ms = Date().timeIntervalSince(t0) * 1000 }
                 deliver(a, q: q, go: page, chatId: chatId ?? a.chatId, jobId: "")
@@ -179,7 +200,12 @@ final class Assist31 {
             }
             guard let jobId = JS.str(o, "jobId") ?? JS.str(o, "id") else { return nil }
             if source == "search" { homeJob32b = jobId }
-            AiJobs31.shared.begin(id: jobId, kind: "assist", title: "Glimt tenker", input: q, steps: AiJobs31.assistSteps, page: page)
+            // Prompt 36: ett Glimt om gangen. Spørsmål fra søkefeltet vises bare i kortet under feltet (ingen pille);
+            // handlinger (kind:'action') vises bare i pillen.
+            if source != "search" || action36 {
+                AiJobs31.shared.begin(id: jobId, kind: "assist", title: action36 ? "Glimt ordner det" : "Glimt tenker", input: q, steps: AiJobs31.assistSteps, page: action36 ? "" : page)
+                if action36 { homeBusy = false }
+            }
             let a: Assist31Answer? = await wait(jobId, store, t0: t0)
             AiJobs31.shared.end(jobId)
             if let a {

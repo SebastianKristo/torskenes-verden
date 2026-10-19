@@ -91,7 +91,8 @@ struct Smb30Body: View {
             } else if m.step == 2 {
                 Smb30Shares()
             } else if m.step == 3 {
-                Smb30Folders()
+                // Prompt 36: mappeleser med undermapper, Velg per rad, lås, skjulte og manuell sti (Smb36Browser.swift).
+                Smb36Folders()
             } else {
                 Smb30Save()
             }
@@ -377,7 +378,7 @@ struct Smb30Footer: View {
             } else {
                 Smb30Secondary(title: m.step == 0 ? "Avbryt" : "‹ Tilbake", enabled: true) { m.back(store) }
                 if m.step == 3 {
-                    Smb30Primary(title: "Velg denne mappen", enabled: !m.busy && m.dirs != nil) { m.go(4) }
+                    Smb30Primary(title: "Bruk denne mappen", enabled: !m.busy && m.dirs != nil) { m.go(4) }
                 } else if m.step == 4 {
                     Smb30Primary(title: m.busy ? "Lagrer …" : "Lagre", enabled: canSave) { Task { await m.save(store) } }
                 }

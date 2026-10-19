@@ -99,10 +99,20 @@ final class Smb30Model {
         open = false
     }
 
+    /// Prompt 36: vises som smb://host/share/sti (lagret mål = {host, share, path}).
     var label: String {
-        let base: String = "//" + server.host + "/" + share
+        let base: String = "smb://" + server.host + "/" + share
         return path.isEmpty ? base : base + "/" + path.joined(separator: "/")
     }
+
+    /* Prompt 36: mappeleseren (Smb36Browser.swift). */
+    /// Mappene der man står, med lås/skjult fra POST /smb/list.
+    var dirs36: [Smb36Dir] = []
+    var showHidden: Bool = false
+    var listHint: String = ""
+    var manualPath: String = ""
+    var showManual: Bool = false
+    var mkdirNote: String = ""
 
     /* ---------- Kall ---------- */
 
@@ -212,11 +222,27 @@ final class Smb30Model {
         error = nil
         showNewDir = false
         defer { busy = false }
+        // Prompt 36: POST /smb/list {…, path, showHidden} → {folders:[{name, locked, hidden, link, …}], hint}; eldre: /browse.
+        var body36: [String: Any] = target(p)
+        body36["showHidden"] = showHidden
+        if let d = try? await post("/list", body36, store) {
+            let o: [String: Any] = JS.obj(d)
+            let rows: [[String: Any]] = JS.list(o, "folders")
+            if !rows.isEmpty || o["folders"] != nil {
+                dirs36 = rows.compactMap { Smb36Dir.from($0) }
+                dirs = dirs36.map { $0.name }
+                listHint = JS.str(o, "hint") ?? ""
+                path = p
+                return
+            }
+        }
         do {
             let d: Data = try await post("/browse", target(p), store)
             let any: Any? = try? JSONSerialization.jsonObject(with: d)
             let rows: [[String: Any]] = (any as? [Any])?.compactMap { $0 as? [String: Any] } ?? []
             dirs = rows.compactMap { JS.str($0, "name") }
+            dirs36 = (dirs ?? []).map { Smb36Dir(name: $0, display: $0, locked: false, hidden: false, reason: "") }
+            listHint = ""
             path = p
         } catch {
             self.error = fail(error)
@@ -234,9 +260,17 @@ final class Smb30Model {
         var body: [String: Any] = target(path)
         body["name"] = n
         do {
-            _ = try await post("/mkdir", body, store)
+            // Prompt 36: {ok, path, writable} – skrivetilgangen testes med en gang.
+            let o: [String: Any] = JS.obj(try await post("/mkdir", body, store))
             busy = false
             newDir = ""
+            showNewDir = false
+            if let w = JS.bool(o, "writable") {
+                mkdirNote = w ? "✓ Laget «" + n + "» · kan skrive" : "Laget «" + n + "», men brukeren har ikke skrivetilgang her."
+            } else {
+                mkdirNote = "✓ Laget «" + n + "»"
+            }
+            Haptics.shared.success()
             await openDir(path + [n], store)
         } catch {
             busy = false
@@ -270,7 +304,7 @@ final class Smb30Model {
         body["use"] = use
         do {
             let o: [String: Any] = JS.obj(try await post("/save", body, timeout: 60, store))
-            doneLabel = JS.str(o, "label") ?? label
+            doneLabel = Smb36Dir.smb(JS.str(o, "label") ?? label)
             password = ""
             Haptics.shared.success()
             await Backup29Model.shared.load(store)

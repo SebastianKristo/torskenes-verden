@@ -19,6 +19,11 @@ struct Backup29Entry: Identifiable, Equatable {
     var error: String
     var encrypted: Bool
     var cloud: Bool
+    /// Prompt 36: kvitteringen fra kjøringen – faktisk full sti (smb://…/fil.tar.zst), verifisert, metode og sha256.
+    var fullPath: String = ""
+    var verified: Bool? = nil
+    var method: String = ""
+    var sha256: String = ""
 
     static func from(_ o: [String: Any]) -> Backup29Entry? {
         guard let id = JS.str(o, "id") else { return nil }
@@ -28,7 +33,20 @@ struct Backup29Entry: Identifiable, Equatable {
         if let b = cloudAny as? Bool { cloud = b } else if cloudAny is [String: Any] { cloud = true } else if let s = cloudAny as? String { cloud = !s.isEmpty }
         return Backup29Entry(id: id, at: at, size: JS.num(o, "size") ?? 0, scope: JS.str(o, "scope") ?? "all",
                              modules: JS.strings(o, "modules"), ok: JS.bool(o, "ok") ?? (JS.str(o, "error") == nil),
-                             error: JS.str(o, "error") ?? "", encrypted: JS.bool(o, "encrypted") ?? false, cloud: cloud)
+                             error: JS.str(o, "error") ?? "", encrypted: JS.bool(o, "encrypted") ?? false, cloud: cloud,
+                             fullPath: Backup29Entry.path36(o), verified: JS.bool(o, "verified") ?? JS.bool(JS.dict(o, "smb"), "verified"),
+                             method: JS.str(o, "method") ?? "", sha256: JS.str(o, "sha256") ?? "")
+    }
+
+    /// fullPath, ellers smb.fullPath / target som {host, share, path}.
+    static func path36(_ o: [String: Any]) -> String {
+        if let f = JS.str(o, "fullPath"), !f.isEmpty { return f }
+        if let f = JS.str(JS.dict(o, "smb"), "fullPath"), !f.isEmpty { return f }
+        if let t = JS.dict(o, "target"), let h = JS.str(t, "host"), let sh = JS.str(t, "share") {
+            let pth: String = (JS.str(t, "path") ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            return "smb://" + h + "/" + sh + (pth.isEmpty ? "" : "/" + pth)
+        }
+        return ""
     }
 }
 
@@ -95,7 +113,8 @@ final class Backup29Model {
     var smbShare: String { JS.str(smb, "share") ?? "" }
     var smbOn: Bool { JS.bool(smb, "enabled") ?? false }
     var smbSub: String {
-        let label: String = JS.str(smb, "label") ?? smbShare
+        // Prompt 36: vises som smb://host/share/sti.
+        let label: String = Smb36Dir.smb(JS.str(smb, "label") ?? smbShare)
         if let e = JS.str(smb, "lastError"), !e.isEmpty { return label + " · siste kopi feilet: " + e }
         if let d = JS.date(smb?["lastUpload"]) { return label + " · sist " + Backup29Model.when(d) }
         return label + (smbOn ? " · kopieres etter hver backup" : "")

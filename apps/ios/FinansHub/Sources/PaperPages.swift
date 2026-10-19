@@ -18,7 +18,7 @@ struct PaperHome: View {
             // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
             PaperCardStack(page: "hjem", cards: [
                 // Prompt 34: Glimt-brief øverst (blått kort med figuren), flyttes og skjules i wiggle-modus (Brief34Page.swift).
-                PaperCardDef(key: "h12", label: "Glimt-brief", view: AnyView(Brief34HomeCard())),
+                PaperCardDef(key: "h12", label: "Glimt-brief", view: AnyView(Brief36SwipeCard())), // prompt 36: sveip bort (Brief36.swift)
                 // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch29.swift).
                 PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { HomeSearch29(); minis })),
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),

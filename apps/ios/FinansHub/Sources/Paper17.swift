@@ -574,6 +574,8 @@ final class Realtime: NSObject {
             Quick29Model.shared.poke(store)
         // Prompt 31: Glimt-svar (POST /api/assist som serverjobb, Assist31.swift).
         case "assist": Assist31.shared.realtime(JS.dict(o, "data") ?? o, store)
+        // Prompt 36: felles matplan endret av noen i husstanden (Mat36.swift).
+        case "meal:changed", "meal": Mat36.changed(JS.dict(o, "data") ?? o, store)
         default: break
         }
     }

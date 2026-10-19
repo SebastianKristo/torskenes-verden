@@ -101,6 +101,9 @@ final class AiJobs31 {
             return
         }
         var j: AiJob31
+        // Prompt 36: Glimt-spørsmål fra søkefeltet vises bare i kortet under feltet. Realtime «assist» lager derfor aldri
+        // en ny pille; den oppdaterer bare jobber som er startet med begin() (Chat og handlinger).
+        if kind == "assist" && !jobs.contains(where: { $0.id == id }) { return }
         if let i = jobs.firstIndex(where: { $0.id == id }) {
             j = jobs[i]
         } else if kind == "quick", let tmp = jobs.firstIndex(where: { $0.id.hasPrefix("tmp-") && $0.kind == "quick" }) {

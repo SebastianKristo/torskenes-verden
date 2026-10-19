@@ -77,6 +77,8 @@ final class Mer28 {
     /// Radene i lagret rekkefølge (nye sist), delt i synlige og skjulte.
     func arrange(_ rows: [More28Row]) -> (visible: [More28Row], hidden: [More28Row]) {
         var out: [More28Row] = []
+        // Prompt 36: «Now Brief» er ny – står den ikke i lagret rekkefølge, legges den øverst.
+        if !order.contains("brief"), let b = rows.first(where: { $0.id == "brief" }) { out.append(b) }
         for k in order {
             if let r = rows.first(where: { $0.id == k }), !out.contains(where: { $0.id == k }) { out.append(r) }
         }
@@ -196,6 +198,8 @@ struct PaperMore28: View {
     private var rows: [More28Row] {
         let inBar: Set<String> = Set(store.mainTabs(floating: store.fabMode == "float", onHome: true).map(\.0))
         var out: [More28Row] = []
+        // Prompt 36: «Now Brief» øverst (✦), også når kortet er sveipet bort fra Hjem (Brief36.swift).
+        out.append(More28Row(id: "brief", name: "Now Brief", sub: Brief36Model.shared.merSub, icon: "sparkle") { Brief34Model.shared.show() })
         if !inBar.contains("hjem") {
             out.append(More28Row(id: "hjem", name: "Hjem", sub: "Pakker, avganger og widgets", icon: "house") { store.paperGo("hjem") })
         }

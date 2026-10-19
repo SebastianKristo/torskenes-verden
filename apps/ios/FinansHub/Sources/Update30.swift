@@ -152,7 +152,10 @@ final class Update30Model {
         let o: [String: Any] = JS.obj(d)
         current = Update30Model.ver(o["current"]) ?? current
         latest = Update30Model.ver(o["latest"]) ?? latest
-        let n: [String] = Update30Model.cleanNotes(JS.strings(o, "notes"))
+        var n: [String] = Update30Model.cleanNotes(JS.strings(o, "notes"))
+        // Prompt 36: notatene kan også ligge i latest.notes / changelog (SERVER36).
+        if n.isEmpty { n = Update30Model.cleanNotes(JS.strings(JS.dict(o, "latest"), "notes")) }
+        if n.isEmpty { n = Update30Model.cleanNotes(JS.strings(o, "changelog")) }
         if !n.isEmpty { notes = Array(n.prefix(12)) }
         // Prompt 31: name, tagline, sizeBytes (SERVER31), sha og dato.
         if let v = JS.str(o, "name") { osName = v }
@@ -527,15 +530,8 @@ struct Update30Progress: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            GeometryReader { (g: GeometryProxy) in
-                let w: CGFloat = g.size.width * CGFloat(m.pct) / 100
-                ZStack(alignment: .leading) {
-                    Capsule().fill(p.line)
-                    Capsule().fill(p.lab).frame(width: Swift.max(6, w))
-                }
-            }
-            .frame(height: 6)
-            .animation(.easeOut(duration: 0.4), value: m.pct)
+            // Prompt 36: snekker-Glimt på fremdriftslinja (System36.swift).
+            Carp36Track(pct: m.pct, S: 28, track: p.line, fill: p.lab)
             HStack {
                 Text(m.stepText).font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
                 Spacer(minLength: 6)
@@ -567,6 +563,7 @@ struct Update30StepRow: View {
 
 struct Update30Notes: View {
     @Environment(\.paper) private var p
+    @Environment(Store.self) private var store
     @MainActor private var m: Update30Model { Update30Model.shared }
 
     var body: some View {
@@ -581,10 +578,14 @@ struct Update30Notes: View {
                 }
                 .font(PF.ui(13))
             }
+            // Prompt 36: «Tidligere versjoner ›» går til Nordlys-siden.
+            System36HistoryLink()
         }
         .padding(.horizontal, 12).padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(p.bg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        // Prompt 36: mangler notatene i /system/version, hentes de fra changelog for samme versjon.
+        .task { if m.notes.isEmpty { await System36Model.shared.loadHistory(store) } }
     }
 }
 

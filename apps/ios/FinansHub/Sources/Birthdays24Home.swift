@@ -99,6 +99,8 @@ struct BirthdayCalendars24: View {
                 }
                 .buttonStyle(.plain)
             }
+            // Prompt 36: Hovedkalender og «Vis også i Kalender» (Gcal36.swift).
+            Gcal36Section()
         }
     }
 

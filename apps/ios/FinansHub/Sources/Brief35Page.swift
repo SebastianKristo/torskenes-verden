@@ -125,15 +125,21 @@ struct Brief35Page: View {
         let steps: [Brief35Step] = Brief35Guide.steps(b, g.extra, g.cfg)
         let idx: Int = Swift.min(Swift.max(0, m.step - 1), steps.count - 1)
         let target: String = m.step > 0 ? steps[idx].target : ""
+        GeometryReader { (geo: GeometryProxy) in
         ZStack(alignment: .bottomTrailing) {
             LinearGradient(stops: [.init(color: Brief34C.rgb(0xe6ecef), location: 0), .init(color: Brief34C.paper, location: 0.46)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
             ScrollViewReader { (proxy: ScrollViewProxy) in
                 ScrollView(.vertical, showsIndicators: false) {
+                    // Prompt 36: fast bredde – innholdet er låst til skjermbredden, så siden aldri kan dras sideveis.
                     Brief35Content(b: b, target: target, openCfg: { cfgOpen = true })
                         .padding(.horizontal, 18).padding(.top, 8).padding(.bottom, 190)
+                        .frame(width: geo.size.width)
+                        .clipped()
                 }
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                .frame(width: geo.size.width)
                 .refreshable {
                     await m.load(store, force: true)
                     g.refreshExtra()
@@ -143,8 +149,12 @@ struct Brief35Page: View {
                     withAnimation(.easeInOut(duration: 0.4)) { proxy.scrollTo("gb35-" + t, anchor: UnitPoint(x: 0.5, y: 0.16)) }
                 }
             }
+            // Figuren og boblen ligger i et eget lag utenfor scroll-innholdet, med fast bredde.
             Brief35GuideView(steps: steps, idx: idx, target: target)
                 .padding(.horizontal, 16).padding(.bottom, 20)
+                .frame(width: geo.size.width, alignment: .bottomTrailing)
+        }
+        .frame(width: geo.size.width, height: geo.size.height)
         }
         .environment(\.colorScheme, .light)
         .sheet(isPresented: $cfgOpen) {
@@ -192,12 +202,13 @@ struct Brief35Content: View {
                     Text(m.error).font(PF.ui(12.5, .semibold)).foregroundStyle(Brief34C.red)
                 }
             }
-            Brief34Weather(b: b).brief34Ring(target == "vaer").id("gb35-vaer")
-            Brief34Calendar(b: b).brief34Ring(target == "kal").id("gb35-kal")
+            // Prompt 36: ringen følger kortets hjørner nøyaktig (Brief36Ring) og settes på selve kortet.
+            Brief34Weather(b: b).brief36Ring(target == "vaer").id("gb35-vaer")
+            Brief34Calendar(b: b).brief36Ring(target == "kal").id("gb35-kal")
             if !g.extra.trials.isEmpty {
-                Brief35TrialsCard(trials: g.extra.trials).brief34Ring(target == "abo").id("gb35-abo")
+                Brief35TrialsCard(trials: g.extra.trials).brief36Ring(target == "abo").id("gb35-abo")
             }
-            Brief35NewsCard(b: b, extra: g.extra).brief34Ring(target == "nyh").id("gb35-nyh")
+            Brief35NewsCard(b: b, extra: g.extra).brief36Ring(target == "nyh").id("gb35-nyh")
             Text(footer).font(PF.ui(12)).foregroundStyle(Brief34C.rgb(0x8a8478))
                 .frame(maxWidth: .infinity).multilineTextAlignment(.center)
         }

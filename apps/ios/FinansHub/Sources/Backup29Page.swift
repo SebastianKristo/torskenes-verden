@@ -82,24 +82,26 @@ struct Backup29Status: View {
         VStack(alignment: .leading, spacing: 0) {
             PLabel(text: "Status").padding(.top, 12).padding(.leading, 4)
             PaperLinkList(rows: [lastRow, runRow])
+            // Prompt 36: faktisk sti og verifisering (Backup36.swift).
+            Backup36Receipt()
         }
     }
 
     private var lastRow: PaperLinkRow {
         guard let l = m.last ?? m.list.first else {
-            return PaperLinkRow(name: "Siste backup", sub: "Ingen backup ennå", value: "–", icon: "externaldrive") {}
+            return PaperLinkRow(name: "Siste backup", sub: "Ingen backup ennå", value: "–", icon: "checkmark.circle", tint30: Color(hex: "#8a8478")) {}
         }
         let sub: String = Backup29Model.when(l.at) + " · " + Backup29Model.size(l.size) + " · " + Backup29Model.scopeName(l)
-        let value: String = l.ok ? "✓ OK" : "Feilet"
-        return PaperLinkRow(name: "Siste backup", sub: l.ok ? sub : sub + "\n" + l.error, value: value, valueColor: l.ok ? p.pos : p.lab, icon: "externaldrive") {}
+        let value: String = l.ok && l.verified != false ? "✓ OK" : "Feilet"
+        return PaperLinkRow(name: "Siste backup", sub: l.ok ? sub : sub + "\n" + l.error, value: value, valueColor: l.ok ? p.pos : p.lab, icon: l.ok ? "checkmark.circle" : "exclamationmark.triangle", tint30: l.ok ? Set36Tint.ok : Set36Tint.bad) {}
     }
 
     private var runRow: PaperLinkRow {
         if let pct = m.runPct {
-            return PaperLinkRow(name: "Tar backup … \(pct) %", sub: "Du kan lukke appen, den fortsetter i bakgrunnen", value: "", icon: "arrow.triangle.2.circlepath") {}
+            return PaperLinkRow(name: "Tar backup … \(pct) %", sub: "Du kan lukke appen, den fortsetter i bakgrunnen", value: "", icon: "arrow.triangle.2.circlepath", tint30: Set30Colors.backup) {}
         }
         let sub: String = Backup29Model.name(Backup29Model.scopes, m.scope)
-        return PaperLinkRow(name: "Ta backup nå", sub: sub, value: "Start ›", valueColor: p.lab, icon: "arrow.triangle.2.circlepath") { m.run(store) }
+        return PaperLinkRow(name: "Ta backup nå", sub: sub, value: "Start ›", valueColor: p.lab, icon: "play.fill", tint30: Set30Colors.backup) { m.run(store) }
     }
 }
 
@@ -115,14 +117,14 @@ struct Backup29Auto: View {
             PLabel(text: "Automatisk").padding(.top, 12).padding(.leading, 4)
             PCard(padding: 0) {
                 VStack(spacing: 0) {
-                    Backup29Toggle(title: "Automatisk backup", sub: "Kjører i bakgrunnen på hjemmeserveren", on: m.auto) { m.setAuto($0, store) }
+                    Backup29Toggle(title: "Automatisk backup", sub: "Kjører i bakgrunnen på hjemmeserveren", on: m.auto, icon: "calendar.badge.clock") { m.setAuto($0, store) }
                     if m.auto {
                         Backup29Sep()
-                        Backup29Cycle(title: "Hvor ofte", sub: Backup29Model.name(Backup29Model.schedules, m.schedule)) { m.nextSchedule(store) }
+                        Backup29Cycle(title: "Hvor ofte", sub: Backup29Model.name(Backup29Model.schedules, m.schedule), icon: "repeat") { m.nextSchedule(store) }
                         Backup29Sep()
-                        Backup29Cycle(title: "Behold", sub: Backup29Model.name(Backup29Model.keeps, m.keep) + " · eldre slettes automatisk") { m.nextKeep(store) }
+                        Backup29Cycle(title: "Behold", sub: Backup29Model.name(Backup29Model.keeps, m.keep) + " · eldre slettes automatisk", icon: "archivebox") { m.nextKeep(store) }
                         Backup29Sep()
-                        Backup29Toggle(title: "Varsle meg", sub: "Når backup feiler (push og e-post)", on: m.notifyFail) { m.setNotify($0, store) }
+                        Backup29Toggle(title: "Varsle meg", sub: "Når backup feiler (push og e-post)", on: m.notifyFail, icon: "bell.badge") { m.setNotify($0, store) }
                     }
                 }
             }
@@ -152,7 +154,7 @@ struct Backup29What: View {
     }
 
     private var rows: [PaperLinkRow] {
-        let first = PaperLinkRow(name: "Omfang", sub: scopeSub, value: Backup29Model.name(Backup29Model.scopes, m.scope) + " ›", valueColor: p.ink, icon: "square.stack.3d.up") {
+        let first = PaperLinkRow(name: "Omfang", sub: scopeSub, value: Backup29Model.name(Backup29Model.scopes, m.scope) + " ›", valueColor: p.ink, icon: "checklist", tint30: Set30Colors.backup) {
             m.nextScope(store)
         }
         var out: [PaperLinkRow] = [first]
@@ -165,7 +167,7 @@ struct Backup29What: View {
     private func moduleRow(_ id: String, _ name: String, _ sub: String) -> PaperLinkRow {
         let inc: Bool = m.includes(id)
         let custom: Bool = m.scope == "custom"
-        return PaperLinkRow(name: name, sub: sub, value: inc ? "✓ Med" : "Ikke med", valueColor: inc ? p.pos : p.mut) {
+        return PaperLinkRow(name: name, sub: sub, value: inc ? "✓ Med" : "Ikke med", valueColor: inc ? p.pos : p.mut, icon: Backup36Icons.module(id)) {
             if custom { m.toggleModule(id, store) } else { store.flash("Velg «Egendefinert» for å velge moduler") }
         }
     }
@@ -183,17 +185,17 @@ struct Backup29Where: View {
             PLabel(text: "Hvor").padding(.top, 12).padding(.leading, 4)
             PCard(padding: 0) {
                 VStack(spacing: 0) {
-                    Backup29Cycle(title: "Lagres på", sub: "Homelab-disk · " + m.path, value: "Lokal") {}
+                    Backup29Cycle(title: "Lagres på", sub: "Homelab-disk · " + m.path, value: "Lokal", icon: "internaldrive") {}
                     Backup29Sep()
                     if m.smbKnown { Backup29Smb() }
-                    Backup29Toggle(title: "Kopi til sky", sub: cloudSub, on: m.cloudOn) { m.setCloud($0, store) }
+                    Backup29Toggle(title: "Kopi til sky", sub: cloudSub, on: m.cloudOn, icon: "icloud") { m.setCloud($0, store) }
                     Backup29Sep()
-                    Backup29Cycle(title: "Skytjeneste", sub: m.cloudSupported ? "Kryptert før opplasting" : "Kommer", value: m.providerName + " ›") { m.nextProvider(store) }
+                    Backup29Cycle(title: "Skytjeneste", sub: m.cloudSupported ? "Kryptert før opplasting" : "Kommer", value: m.providerName + " ›", icon: "cloud") { m.nextProvider(store) }
                     Backup29Sep()
-                    Backup29Toggle(title: "Krypter backup", sub: "AES-256 · nøkkel lagres hos deg", on: m.encrypt) { m.setEncrypt($0, store) }
+                    Backup29Toggle(title: "Krypter backup", sub: "AES-256 · nøkkel lagres hos deg", on: m.encrypt, icon: "lock.shield") { m.setEncrypt($0, store) }
                     if m.encrypt {
                         Backup29Sep()
-                        Backup29Cycle(title: "Gjenopprettingsnøkkel", sub: m.keySet ? "Laget · vises bare én gang" : "Ikke laget ennå", value: m.keySet ? "Ny nøkkel ›" : "Lag ›") { m.makeKey(store) }
+                        Backup29Cycle(title: "Gjenopprettingsnøkkel", sub: m.keySet ? "Laget · vises bare én gang" : "Ikke laget ennå", value: m.keySet ? "Ny nøkkel ›" : "Lag ›", icon: "key") { m.makeKey(store) }
                     }
                 }
             }
@@ -217,11 +219,11 @@ struct Backup29Smb: View {
     var body: some View {
         VStack(spacing: 0) {
             if m.smbShare.isEmpty {
-                Backup29Cycle(title: "SMB / nettverksdisk", sub: "Kopier hver backup til en NAS på hjemmenettet", value: "Sett opp ›") { m.openSmb(store) }
+                Backup29Cycle(title: "SMB / nettverksdisk", sub: "Kopier hver backup til en NAS på hjemmenettet", value: "Sett opp ›", icon: "server.rack") { m.openSmb(store) }
             } else {
-                Backup29Toggle(title: "Kopi til nettverksdisk", sub: m.smbSub, on: m.smbOn) { m.setSmb($0, store) }
+                Backup29Toggle(title: "Kopi til nettverksdisk", sub: m.smbSub, on: m.smbOn, icon: "server.rack") { m.setSmb($0, store) }
                 Backup29Sep()
-                Backup29Cycle(title: "Sett opp nettverksdisk", sub: "Bytt server, bruker eller mappe", value: "Veiviser ›") { m.openSmb(store) }
+                Backup29Cycle(title: "Sett opp nettverksdisk", sub: "Bytt server, bruker eller mappe", value: "Veiviser ›", icon: "folder.badge.gearshape") { m.openSmb(store) }
                 if m.smbOn && !m.encrypt {
                     Backup29Sep()
                     Backup29Note(text: "Kopieres ukryptert. Greit på eget hjemmenett, men «Krypter backup» anbefales.").padding(.horizontal, 10).padding(.bottom, 8)
@@ -257,11 +259,11 @@ struct Backup29Restore: View {
         var out: [PaperLinkRow] = []
         for e in m.list.prefix(8) { out.append(entryRow(e)) }
         if out.isEmpty {
-            out.append(PaperLinkRow(name: "Ingen backuper ennå", sub: "Ta en backup for å kunne gjenopprette", value: "") {})
+            out.append(PaperLinkRow(name: "Ingen backuper ennå", sub: "Ta en backup for å kunne gjenopprette", value: "", icon: "arrow.counterclockwise", tint30: Color(hex: "#8a8478")) {})
         }
         if let first = m.list.first(where: { $0.ok }) {
             let sub: String = (first.encrypted ? "Kryptert · " : "") + Backup29Model.size(first.size) + " · åpnes i nettleseren"
-            out.append(PaperLinkRow(name: "Last ned siste backup", sub: sub, value: "Last ned ›", valueColor: p.ink, icon: "arrow.down.circle") {
+            out.append(PaperLinkRow(name: "Last ned siste backup", sub: sub, value: "Last ned ›", valueColor: p.ink, icon: "arrow.down.circle", tint30: Set30Colors.backup) {
                 store.openURL(Backup29Model.downloadURL(first, store))
             })
         }
@@ -271,7 +273,8 @@ struct Backup29Restore: View {
     private func entryRow(_ e: Backup29Entry) -> PaperLinkRow {
         let name: String = JS.fmt(e.at, "dd.MM HH:mm")
         let sub: String = Backup29Model.size(e.size) + " · " + Backup29Model.scopeName(e) + (e.ok ? "" : " · feilet")
-        return PaperLinkRow(name: name.isEmpty ? e.id : name, sub: sub, value: e.ok ? "Gjenopprett ›" : "Feilet", valueColor: e.ok ? p.lab : p.mut) {
+        return PaperLinkRow(name: name.isEmpty ? e.id : name, sub: sub, value: e.ok ? "Gjenopprett ›" : "Feilet", valueColor: e.ok ? p.lab : p.mut,
+                            icon: e.ok ? "arrow.counterclockwise" : "exclamationmark.triangle", tint30: e.ok ? Set30Colors.backup : Set36Tint.bad) {
             if e.ok { m.restoring = e }
         }
     }
@@ -375,14 +378,20 @@ struct Backup29Toggle: View {
     let title: String
     let sub: String
     let on: Bool
+    /// Prompt 36: ikonbrikke (Settings36.swift).
+    var icon: String? = nil
+    var tint: Color = Set30Colors.backup
     let set: (Bool) -> Void
 
     var body: some View {
         Toggle(isOn: Binding<Bool>(get: { on }, set: { v in set(v) })) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
-                if !sub.isEmpty {
-                    Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 14) {
+                if let icon { Set36Chip(symbol: icon, tint: tint) }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                    if !sub.isEmpty {
+                        Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
         }
@@ -396,11 +405,15 @@ struct Backup29Cycle: View {
     let title: String
     let sub: String
     var value: String = "Endre ›"
+    /// Prompt 36: ikonbrikke (Settings36.swift).
+    var icon: String? = nil
+    var tint: Color = Set30Colors.backup
     let act: () -> Void
 
     var body: some View {
         Button(action: act) {
             HStack(spacing: 10) {
+                if let icon { Set36Chip(symbol: icon, tint: tint).padding(.trailing, 4) }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
                     Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2)
