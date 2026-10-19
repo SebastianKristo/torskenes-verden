@@ -42,10 +42,14 @@ data class AiJob31(
 data class Assist31(
     val text: String, val source: String, val intent: String, val card: JSONObject?, val tool: String?, val ms: Long?,
     val chatId: String?, val jobId: String?,
+    /** Prompt 33 (memory.add): {memoryId, count, title} for «Endre tittel på N avtaler?». */
+    val apply: JSONObject? = null,
 )
 
 /** Svarboblen under søkefeltet på Hjem. */
-data class HomeAns31(val q: String, val busy: Boolean, val text: String = "", val source: String = "", val jobId: String? = null)
+data class HomeAns31(val q: String, val busy: Boolean, val text: String = "", val source: String = "", val jobId: String? = null,
+    /** Prompt 33: «Endre N avtaler ›» i boblen (POST /api/glimt/memory/:id/apply). */
+    val applyId: Int = 0, val applyCount: Int = 0, val applyTitle: String = "")
 
 data class Trial31(
     val id: String, val service: String, val endsAt: LocalDate, val priceAfter: String, val offsets: List<Int>, val status: String,
@@ -192,6 +196,7 @@ private fun parseAssist31(o0: JSONObject): Assist31? {
     return Assist31(
         text, o.s31("source") ?: "Glimt", o.s31("intent") ?: "llm", o.optJSONObject("card"), o.s31("tool"),
         if (o.has("ms")) o.optLong("ms") else null, ctx?.s31("chatId") ?: o.s31("chatId"), o0.s31("jobId") ?: o0.s31("id"),
+        o.optJSONObject("apply"),
     )
 }
 
@@ -245,7 +250,7 @@ fun AppViewModel.askHome31(q: String) {
             s.ans = HomeAns31(t, false, "Jeg fikk ikke svar fra Glimt nå. **Fortsett i Chat** for å prøve igjen.", "")
             return@launch31
         }
-        s.ans = HomeAns31(t, false, r.text, r.source, r.jobId)
+        s.ans = HomeAns31(t, false, r.text, r.source, r.jobId, r.apply?.optInt("memoryId", 0) ?: 0, r.apply?.optInt("count", 0) ?: 0, r.apply?.s31("title") ?: "")
         if (r.intent.startsWith("trial")) loadTrials31()
         if (r.intent.startsWith("appointment") || r.intent.startsWith("calendar.create")) reloadKal27()
         answered31(r, t, "hjem", null)

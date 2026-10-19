@@ -198,7 +198,7 @@ let lastForm = null;
 function ansHtml() {
   if (!GL.q) return '';
   const body = GL.busy ? `<div class="gl-busy">${glimt(22, 'tenker', { dark: true })}<span>Tenker på «<span data-no-i18n>${esc(GL.q)}</span>» …</span></div>`
-    : `<span class="gl-txt" data-no-i18n>${GL.err ? esc(GL.err) : boldHtml(GL.ans?.text || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span><button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button></div>`;
+    : `<span class="gl-txt" data-no-i18n>${GL.err ? esc(GL.err) : boldHtml(GL.ans?.text || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button></div>`;
   return `<div class="gl-ans" data-gl-ans role="status" aria-live="polite" title="Trykk for å lukke">${body}</div>`;
 }
 // Boblen ligger i et eget lag på <body> (over nyhetslinjen og kortene), plassert rett under søkefeltet som ble brukt.
@@ -226,7 +226,7 @@ function paintAns() {
 window.addEventListener('resize', placeAns);
 let placeT = 0; // siden kan tegnes på nytt (data kommer inn), så posisjonen sjekkes jevnlig mens boblen vises
 
-export function closeAns() { GL.ctl?.abort(); GL.seq++; Object.assign(GL, { q: '', busy: false, ans: null, err: '', ctl: null }); document.querySelectorAll('[data-search] [data-sq-eng]').forEach((b) => setGlimt(b, 'klar')); paintAns(); }
+export function closeAns() { GL.ctl?.abort(); GL.seq++; Object.assign(GL, { q: '', busy: false, ans: null, err: '', ctl: null, applied: false }); document.querySelectorAll('[data-search] [data-sq-eng]').forEach((b) => setGlimt(b, 'klar')); paintAns(); }
 async function askGlimt(q, form = null) {
   closeAns();
   ansForm = form;
@@ -313,6 +313,18 @@ export function bindSearch() {
     const b = e.target.closest?.('[data-gl-ans]');
     if (!b) { if (GL.q && !GL.busy && !e.target.closest?.('[data-search],#aij-layer')) closeAns(); return; }
     e.preventDefault(); e.stopPropagation();
+    // Prompt 33: «Endre tittel på N avtaler?» etter «husk at Påhåret er frisøren min».
+    if (e.target.closest('[data-gl-apply]')) {
+      const ap = GL.ans?.apply;
+      if (ap?.memoryId) {
+        GL.applied = true;
+        fetch(`/api/glimt/memory/${encodeURIComponent(ap.memoryId)}/apply`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).then((r) => r.json()).then((d) => {
+          GL.ans = { ...GL.ans, text: `Ferdig: **${d.count ?? 0} ${d.count === 1 ? 'avtale' : 'avtaler'}** heter nå «${ap.title}».` };
+          paintAns();
+        }).catch(() => {});
+      }
+      return;
+    }
     if (e.target.closest('[data-gl-chat]')) { const q = GL.q; closeAns(); import('./chat.js').then((m) => m.openChat(q)).catch(() => { location.hash = '#/chat'; }); return; }
     closeAns();
   });

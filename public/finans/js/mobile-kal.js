@@ -11,6 +11,7 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { BD, bdLoad } from './mobile-p24.js';
 import { parseQuick } from '/assets/js/quick-time.js';
+import { LEARN_TYPES, typeName, loadMemory, memoryNow, addMemory, applyMemory, nameOfEvent, dinOf } from '/assets/js/glimt-memory.js'; // prompt 33
 import * as P29 from './mobile-p29.js';
 
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'], MS = MN.map((x) => x.slice(0, 3));
@@ -284,6 +285,7 @@ function detSheet() {
     <div class="k27-rows">${rows.map(([a, b]) => `<div><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join('')}</div>
     <span class="k27-lab">VARSEL</span><div class="k27-chips">${REMS.map(([v, n]) => `<button class="${r === v ? 'on' : ''}" data-k27="rem" data-v="${v}" aria-pressed="${r === v}">${n}</button>`).join('')}</div>
     ${src ? `<span class="k27-mut sm">${esc(src)}</span>` : ''}
+    ${e.editable && !e.local ? '<button type="button" class="k33-learn" data-k27="learn">Lær Glimt hva dette er…</button>' : ''}
     <div class="k27-btns">${e.editable ? `<button class="ink" data-k27="edit">Rediger</button><button class="red" data-k27="del">${K.delArm ? 'Trykk igjen' : 'Slett'}</button>` : ''}${map ? `<a href="${esc(map)}" target="_blank" rel="noopener">Åpne kart ↗</a>` : ''}${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åpne i ${e.src === 'canvas' ? 'Canvas' : 'kilden'} ↗</a>` : ''}${e.editable || e.kind === 'bursdag' ? '' : '<button data-k27="dup">Kopier til Privat</button>'}</div>`);
 }
 function formSheet() {
@@ -303,12 +305,49 @@ function formSheet() {
       ${F.err ? `<span class="k27-err">${esc(F.err)}</span>` : ''}
       <button type="submit" class="k27-save" ${F.busy ? 'disabled' : ''}>${F.busy ? 'Lagrer …' : 'Lagre'}</button><span class="k27-mut sm">${K.miss || F.local ? 'Lagres på denne enheten til serveren støtter Google Kalender.' : 'Skrives til Google Kalender.'}</span></form>`);
 }
+/* ---------- Prompt 33: «Lær Glimt hva dette er…» (alias i «Glimt husker») ---------- */
+function learnSheet() {
+  const G = K.learn; if (!G) return '';
+  const head = `<div class="k27-dh"><span class="m-grow"><span class="k27-lab">✦ GLIMT HUSKER</span><b class="k27-dt">Lær Glimt hva dette er</b></span><button class="k27-cx" data-k27="lx" aria-label="Lukk">✕</button></div>`;
+  if (G.step === 'ask') {
+    return sheetWrap(`${head}<p class="k33-q">Ok, Glimt husker at <b>${esc(G.name)}</b> er ${esc(dinOf(G.type))}.</p>
+      ${G.count ? `<p class="k33-q">Endre tittel på ${G.count} ${G.count === 1 ? 'avtale' : 'avtaler'} til «${esc(G.title)}»?</p><div class="k27-btns"><button class="ink" data-k27="lapply"${G.busy ? ' disabled' : ''}>${G.busy ? 'Endrer …' : 'Endre'}</button><button data-k27="lx">Nei takk</button></div>`
+    : '<div class="k27-btns"><button class="ink" data-k27="lx">Ferdig</button></div>'}`);
+  }
+  return sheetWrap(`${head}${G.text ? `<p class="k33-q">${esc(G.text)}</p>` : ''}
+    <span class="k27-lab">HVA ER DETTE?</span><div class="k27-chips">${LEARN_TYPES.map(([v, n]) => `<button type="button" class="${G.type === v ? 'on' : ''}" data-k27="ltype" data-v="${v}" aria-pressed="${G.type === v}">${n}</button>`).join('')}</div>
+    <form class="k27-form" data-k27f="learn"><input class="k27-in" id="k33-name" value="${esc(G.name)}" placeholder="Navn på avsender, f.eks. Påhåret" data-k33i="name" autocomplete="off">
+      ${G.type === 'annet' ? `<input class="k27-in" value="${esc(G.title)}" placeholder="Tittel, f.eks. Massasje · Spa Nova" data-k33i="title" autocomplete="off">` : ''}
+      ${G.err ? `<span class="k27-err">${esc(G.err)}</span>` : ''}
+      <button type="submit" class="k27-save"${!G.type || G.busy ? ' disabled' : ''}>${G.busy ? 'Lagrer …' : G.suggest ? 'Husk' : 'Lagre'}</button>
+      <span class="k27-mut sm">Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → AI → Glimt husker.</span></form>`);
+}
+function learnOpen(ev, pre = {}) { K.sel = null; K.learn = { step: 'pick', type: pre.type ?? '', name: pre.name ?? nameOfEvent(ev ?? {}), title: pre.title ?? '', text: pre.text ?? '', suggest: !!pre.suggest, err: '' }; draw(); }
+async function learnSave() {
+  const G = K.learn; if (!G) return;
+  if (!G.type) { G.err = 'Velg hva det er.'; draw(); return; }
+  if (G.name.trim().length < 2) { G.err = 'Skriv navnet på avsenderen.'; draw(); return; }
+  const name = G.name.trim(), title = G.type === 'annet' ? G.title.trim() || name : G.suggest && G.title ? G.title : `${typeName(G.type)} · ${name}`;
+  G.busy = true; G.err = ''; draw();
+  try { const d = await addMemory({ match: name, type: G.type, title }); Object.assign(G, { step: 'ask', id: d.item?.id, count: d.matches ?? 0, title: d.item?.title || title, name }); haptic('ok'); }
+  catch (e) { G.err = e.message; }
+  G.busy = false; draw();
+}
+async function learnApply() {
+  const G = K.learn; if (!G?.id) return;
+  G.busy = true; draw();
+  try { const d = await applyMemory(G.id); K.learn = null; flash(d.count ? `${d.count} ${d.count === 1 ? 'avtale' : 'avtaler'} fikk nytt navn ✓` : 'Ingen avtaler å endre'); await kalLoad(true).catch(() => {}); }
+  catch (e) { G.busy = false; G.err = e.message; G.step = 'pick'; }
+  draw();
+}
+
 /* ---------- Prompt 29: «Legg til time» (rask time med AI, claude-code-kalender-rask-time.md) ---------- */
 const QCHIPS = ['Frisør', 'Lege', 'Tannlege', 'Fysio'];
 function qaPreview(txt) {
   const t = String(txt ?? '').trim();
   if (t.length <= 3) return '';
-  const r = parseQuick(t, key(new Date()));
+  if (!memoryNow().length) loadMemory().then((l) => { if (l.length && K.qa) qaSet(K.qa.txt); });
+  const r = parseQuick(t, key(new Date()), memoryNow());
   if (!r.ok) return `<span class="k29-bad">${esc(r.why || 'Fant ikke dato. Skriv f.eks. «25.09» eller «tirsdag».')}</span>`;
   const d = ofKey(r.date), when = `${WD[d.getDay()]} ${d.getDate()}. ${MN[d.getMonth()]}${r.start ? ` · ${r.start}–${r.end}` : ' · hele dagen'}`;
   return `<div class="k29-pv"><span class="k29-pvb"></span><span class="m-grow"><b>${esc(r.title)}</b><span>${esc(when)}</span>${r.place ? `<span>${esc(r.place)}</span>` : ''}<small>Privat · varsel 1 time før</small></span></div>`;
@@ -382,7 +421,7 @@ export function kalView() {
     ${K.err ? `<span class="k27-note err">${esc(K.err)}</span>` : K.miss ? '<span class="k27-note">Skolens timeplan og Google Kalender krever nyere server. Bursdagene hentes fra Bursdager.</span>' : ''}
     <div class="k27-body">${w ? `<aside class="k27-side">${miniCal()}${calList()}</aside>` : ''}<div class="k27-main" data-k27sw>${body}</div></div>
     <nav class="k27-bar2" aria-label="Kalendervisning">${VIEWS.map(([k, n, ic]) => `<button data-k27="view" data-v="${k}" aria-pressed="${V === k}">${svgP(ic)}<span>${n}</span></button>`).join('')}</nav><button class="k27-fab" data-k27="new" aria-label="Ny hendelse">${svgP('M12 5v14M5 12h14', 24, 2.4)}</button>
-    ${detSheet()}${formSheet()}${searchSheet()}${qaSheet()}</div>`;
+    ${detSheet()}${formSheet()}${searchSheet()}${qaSheet()}${learnSheet()}</div>`;
 }
 /** Etter tegning: rutenettet ruller til nå ved ny visning/periode, ellers beholdes posisjonen. */
 export function kalAfterDraw() {
@@ -455,9 +494,10 @@ async function saveForm() {
   const body = { title, allDay: !!F.allDay, date: F.date, start: F.allDay ? '' : F.start, end: F.allDay ? '' : F.end, ...(F.allDay && F.endDate && F.endDate > F.date ? { endDate: F.endDate } : {}), location: F.location.trim(), calendar: F.calendar, repeat: F.repeat, reminder: F.reminder, note: F.note.trim() };
   F.busy = true; F.err = ''; draw();
   const local = () => { const id = F.uid || `u${Date.now()}`, o = { id, ...body }; L.ue = F.uid ? ue().map((x) => (x.id === F.uid ? o : x)) : [...ue(), o]; keep(); };
+  let sg = null;
   try {
     if (F.local || (K.miss && !F.id)) local();
-    else if (F.id) await hlApi(`/kalender/events/${encodeURIComponent(F.id)}`, { method: 'PATCH', json: body });
+    else if (F.id) sg = (await hlApi(`/kalender/events/${encodeURIComponent(F.id)}`, { method: 'PATCH', json: body }))?.suggestMemory ?? null;
     else await hlApi('/kalender/events', { method: 'POST', json: body });
   } catch (e) {
     if (e.status === 404 || e.status === 405) local();
@@ -465,6 +505,8 @@ async function saveForm() {
     else { F.busy = false; F.err = e.message; draw(); return; }
   }
   K.form = null; K.cur = F.date; haptic('ok'); flash(F.id || F.uid ? 'Hendelsen er oppdatert ✓' : 'Hendelsen er lagret ✓');
+  // Prompt 33: ny tittel på en rask time → foreslå å huske avsenderen (lagres bare med «Husk»).
+  if (sg?.name) learnOpen(null, { name: sg.name, type: sg.type === 'annet' ? '' : sg.type, title: sg.title, text: sg.text, suggest: true });
   await kalLoad(true).catch(() => {}); draw();
 }
 async function delEvent(e) {
@@ -501,6 +543,7 @@ export function kalInput(e, t) {
   if (m.screen !== 'kal') return false;
   if (t.id === 'k27-q') { K.q = t.value; runSearch(); return true; }
   if (t.id === 'k29-qt') { qaSet(t.value); return true; }
+  if (t.dataset?.k33i && K.learn) { K.learn[t.dataset.k33i] = t.value; return true; }
   const f = t.dataset?.k27i;
   if (f && K.form) {
     if (f === 'start') { const d = mm(K.form.end) - mm(K.form.start); K.form.start = t.value; if (t.value && d > 0) K.form.end = hm(Math.min(mm(t.value) + d, 23 * 60 + 59)); const en = document.querySelector('[data-k27i="end"]'); if (en) en.value = K.form.end; }
@@ -513,6 +556,7 @@ export async function kalBind(e, t) {
   if (m.screen !== 'kal') return false;
   if (e.type === 'submit') {
     if (!t.matches?.('[data-k27f]')) return false; e.preventDefault();
+    if (t.dataset.k27f === 'learn') { await learnSave(); return true; }
     if (t.dataset.k27f === 'qa') { const v = (K.qa?.txt ?? '').trim(); if (!v) return true; K.qa = null; document.activeElement?.blur?.(); draw(); P29.quickRun(v); return true; }
     await saveForm(); return true;
   }
@@ -553,9 +597,16 @@ export async function kalBind(e, t) {
     case 'ev': {
       const id = x.dataset.id, ev = EVMAP.get(id);
       if (x.dataset.go && ev) { K.srch = false; K.cur = ev.k; if (view() === 'maaned' || view() === 'liste') save({ kalView: 'dag' }, { view: 'dag' }); }
-      K.sel = id; K.delArm = false; haptic('tap'); break;
+      K.sel = id; K.delArm = false; haptic('tap');
+      // Prompt 33: «sist viste hendelse» for Glimt («det var frisør»).
+      if (ev?.editable && !ev.local) hlApi(`/kalender/events/${encodeURIComponent(ev.base ?? ev.id)}`).catch(() => {});
+      break;
     }
-    case 'shx': K.sel = null; K.form = null; K.srch = false; K.qa = null; K.delArm = false; break;
+    case 'shx': K.sel = null; K.form = null; K.srch = false; K.qa = null; K.delArm = false; K.learn = null; break;
+    case 'learn': { const ev = EVMAP.get(K.sel); if (ev) learnOpen(ev); setTimeout(() => document.getElementById('k33-name')?.focus({ preventScroll: true }), 40); return true; }
+    case 'lx': K.learn = null; break;
+    case 'ltype': if (K.learn) { K.learn.type = x.dataset.v; K.learn.err = ''; haptic('tab'); } break;
+    case 'lapply': await learnApply(); return true;
     case 'rem': { const ev = EVMAP.get(K.sel); if (!ev) return true; const k2 = ev.base ?? ev.id, v = { ...rems(), [k2]: x.dataset.v }; save({ kalReminders: v }, { rem: v }); haptic('tab'); if (x.dataset.v !== 'none' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); break; }
     case 'edit': { const ev = EVMAP.get(K.sel); if (ev) editForm(ev); return true; }
     case 'del': { const ev = EVMAP.get(K.sel); if (!ev) return true; if (!K.delArm) { K.delArm = true; break; } await delEvent(ev); return true; }
@@ -569,4 +620,4 @@ export async function kalBind(e, t) {
   draw(); return true;
 }
 /** Ny side: lukk ark og gå tilbake til i dag. */
-export function kalLeave() { K.qa = null; K.sel = null; K.form = null; K.srch = false; K.mini = false; K.cur = null; K.gk = ''; }
+export function kalLeave() { K.learn = null; K.qa = null; K.sel = null; K.form = null; K.srch = false; K.mini = false; K.cur = null; K.gk = ''; }

@@ -21,6 +21,10 @@ struct Assist31Answer: Equatable {
     var cardJSON: String = ""
     var ms: Double = 0
     var chatId: String = ""
+    /// Prompt 33 (memory.add): «Endre tittel på N avtaler?» → POST /api/glimt/memory/:id/apply
+    var applyId: Int = 0
+    var applyCount: Int = 0
+    var applyTitle: String = ""
 
     var plain: String { text.replacingOccurrences(of: "**", with: "").trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -34,6 +38,7 @@ struct Assist31Answer: Equatable {
         a.tool = JS.str(o, "tool") ?? ""
         a.ms = JS.num(o, "ms") ?? 0
         a.chatId = JS.str(o, "chatId") ?? JS.str(raw, "chatId") ?? ""
+        if let ap = JS.dict(o, "apply") { a.applyId = JS.int(ap, "memoryId") ?? 0; a.applyCount = JS.int(ap, "count") ?? 0; a.applyTitle = JS.str(ap, "title") ?? "" }
         if let c = o["card"] as? [String: Any], let d = try? JSONSerialization.data(withJSONObject: c) {
             a.cardJSON = String(data: d, encoding: .utf8) ?? ""
         }
@@ -255,6 +260,7 @@ struct Assist31Bubble: View {
             } else if let a = m.homeAnswer {
                 Assist31BoldText(text: a.text, size: 17, color: Color(hex: "#f6f2ea"), bold: Color.white)
                     .fixedSize(horizontal: false, vertical: true)
+                if a.applyId > 0 && a.applyCount > 0 { Memory33ApplyButton(a: a) }
                 Assist31BubbleFoot(source: a.source)
             }
         }

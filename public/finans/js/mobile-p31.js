@@ -132,7 +132,7 @@ export function ansBubble() {
   const A = G.ans; if (!A) return '';
   if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …</span></div>`;
   return `<div class="p31-ans ready" data-p31="ansx" role="status" aria-live="polite"><span class="p31-at">${bold(A.text)}</span>${A.card ? cardHtml(A.card, true) : ''}
-    <div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span><button type="button" data-p31="anschat">Fortsett i Chat ›</button></div></div>`;
+    <div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}<button type="button" data-p31="anschat">Fortsett i Chat ›</button></div></div>`;
 }
 const ASSIST_MISSING = { v: false };
 async function assistCall(q, source, extra = {}) {
@@ -176,7 +176,7 @@ export function onQuickRealtime31(d) {
   jobPut(k, { steps: d.steps, fields: d.fields, progress: d.progress, title: d.title, model: d.model, input: d.input, state: d.state === 'done' || d.state === 'failed' ? d.state : null });
   if (G.open) draw();
 }
-const normAns = (r) => ({ text: r?.text ?? r?.answer ?? (r?.bold ? `**${r.bold}**` : ''), src: r?.source ?? 'Glimt', card: r?.card ?? null, intent: r?.intent ?? '', tool: r?.tool ?? null, chatContext: r?.chatContext ?? null, chatId: r?.chatId ?? null });
+const normAns = (r) => ({ text: r?.text ?? r?.answer ?? (r?.bold ? `**${r.bold}**` : ''), src: r?.source ?? 'Glimt', card: r?.card ?? null, intent: r?.intent ?? '', tool: r?.tool ?? null, chatContext: r?.chatContext ?? null, chatId: r?.chatId ?? null, memory: r?.memory ?? null, apply: r?.apply ?? null });
 export async function ask(q) {
   const id = ++G.aid; G.ans = { q, busy: true }; draw();
   const set = (o) => { if (G.aid !== id) return; G.ans = { q, busy: false, ...o }; haptic('ok'); draw(); bgNotify(q, o.text, '#/hl'); };
@@ -281,6 +281,8 @@ const TOOL_RE = [
   ['Pakker', /pakke|sending|posten|bring|postnord|helthjem/],
   ['Finans', /brukt på|hva har jeg brukt|forbruk|budsjett/],
   ['Huskeliste', /huskeliste|oppgaver|gjøremål|handleliste/],
+  // Prompt 33: «husk at Påhåret er frisøren min», «det var frisør»
+  ['Glimt husker', /^(husk at\s+)?.{0,60}\b(er|var|gjelder)\s+(for\s+|hos\s+)?(min\s+|en\s+)?(frisør|frisøren|lege|legen|fastlegen|tannlege|tannlegen|fysio|fysioterapeut(en)?|optiker(en)?|psykolog(en)?)(\s+min)?[.!]?$/],
 ];
 export function toolGuess(q) { const n = String(q ?? '').toLowerCase(); return TOOL_RE.find(([, re]) => re.test(n))?.[0] ?? null; }
 /**
@@ -515,6 +517,14 @@ export async function bind31(e, t) {
     case 'aiundo': { const D = G.done; G.done = null; draw(); await D?.undo?.(); return true; }
     case 'aishow': { const D = G.done; G.done = null; draw(); D?.show?.(); return true; }
     case 'ansx': G.ans = null; G.aid++; draw(); return true;
+    // Prompt 33: «Endre tittel på N avtaler?» etter «husk at Påhåret er frisøren min».
+    case 'ansapply': {
+      const A = G.ans, ap = A?.apply; if (!ap?.memoryId) return true;
+      A.applied = true; draw();
+      try { const d = await hlApi(`/glimt/memory/${encodeURIComponent(ap.memoryId)}/apply`, { method: 'POST', json: {} }); if (G.ans === A) { A.text = `Ferdig: **${d.count ?? 0} ${d.count === 1 ? 'avtale' : 'avtaler'}** heter nå «${ap.title}».`; draw(); } haptic('ok'); }
+      catch (err) { flash(err.message); }
+      return true;
+    }
     case 'anschat': { const q = G.ans?.q; G.ans = null; draw(); const CHAT = await import('./mobile-chat.js'); CHAT.openChat(q ?? ''); return true; }
     case 'away': { const B = G.banner; G.banner = null; draw(); if (B?.url && location.hash !== B.url) location.hash = B.url; return true; }
     case 'go': {

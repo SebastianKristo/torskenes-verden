@@ -3,8 +3,12 @@
 // web og PWA. Port av QP() fra design/Kalender.dc.html, utvidet med reglene i
 // prompts/prompt-29-pakke/claude-code-kalender-rask-time.md punkt 2.
 //
-// parseQuick(text, todayISO?) → {ok, why?, title, date, start, end, place, type,
-//   duration, allDay, confidence, isAppointment}
+// parseQuick(text, todayISO?, memory?) → {ok, why?, title, date, start, end, place, type,
+//   duration, allDay, confidence, isAppointment, business?, memory?}
+// Prompt 33 (GLIMT-MEMORY): avsenderen i signaturen («Mvh X», «Hilsen X», «– X», «Påminnelse fra X») blir bedriftsnavnet,
+// og tittelen blir «Frisør · Påhåret Studio Hoff» (type + bedrift). Linjer med «NB!», «Viktig», «Husk», gebyr/avbestilling,
+// telefonnummer og «kan ikke besvares» blir aldri tittel. memory = brukerens «Glimt husker»-alias
+// [{id?, kind:'alias', match, type, title?}] (GET /api/glimt/memory): treffer teksten match, settes type og tittel derfra.
 // Alle datoer regnes som kalenderdatoer (UTC-midnatt internt), så tidssonen til
 // maskinen påvirker ikke resultatet. Uten todayISO brukes dagens dato i Europe/Oslo.
 
@@ -26,6 +30,17 @@ export const KINDS = [
   [/massasje/, 60, 'Massasje', 'annet'],
   [/hudpleie|negl/, 60, 'Hudpleie', 'annet'],
 ];
+// Prompt 33: ord i bedriftsnavnet («PÅHÅRET Studio Hoff», «Hår1», «Cutters», «Tannhelse Sør»). Brukes bare på navnet.
+const BIZ_KINDS = [
+  [/fris(ø|o)r|hår|salong|klipp|barber|cutters|hair/, 'frisør'],
+  [/tann|dental|kjeveortoped/, 'tannlege'],
+  [/lege|legekontor|legesenter|fastlege|medisinsk/, 'lege'],
+  [/fysio|kiropraktor|naprapat|osteopat/, 'fysio'],
+  [/psykolog/, 'psykolog'],
+  [/optiker|brille|synsam|specsavers|interoptik/, 'optiker'],
+  [/vaksin/, 'vaksine'],
+];
+export const TYPE_LABEL = { frisør: 'Frisør', lege: 'Lege', tannlege: 'Tannlege', fysio: 'Fysioterapi', psykolog: 'Psykolog', optiker: 'Optiker', vaksine: 'Vaksine', annet: '' };
 export const TYPES = ['lege', 'tannlege', 'frisør', 'fysio', 'psykolog', 'optiker', 'annet'];
 export const DURATION = { frisør: 45, lege: 30, tannlege: 60, fysio: 45, psykolog: 50, optiker: 30, vaksine: 15, annet: 60 };
 export const NO_DATE = 'Fant ikke dato. Skriv f.eks. «25.09» eller «tirsdag».';
@@ -39,6 +54,89 @@ const cap = (t) => t.replace(/^./, (c) => c.toUpperCase());
 const iso = (d) => d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
 const addDays = (d, n) => new Date(d.getTime() + n * 864e5);
 const mkDate = (y, m, d) => { const x = new Date(Date.UTC(y, m, d)); return x.getUTCMonth() === m && x.getUTCDate() === d ? x : null; };
+
+/* ---------------- Prompt 33: avsender, støy og «Glimt husker» ---------------- */
+
+/** Små bokstaver uten aksenter (æøå beholdes) – samme som normText på serveren. */
+export const normName = (v) => String(v ?? '').toLowerCase().replace(/å/g, '\u0001').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\u0001/g, 'å').replace(/\s+/g, ' ').trim();
+const KEEP_UPPER = new Set(['AS', 'ASA', 'DA', 'ANS', 'SA', 'BA', 'AB', 'OUS', 'UNN', 'NAV', 'DNB']);
+/** «PÅHÅRET Studio Hoff» → «Påhåret Studio Hoff», «HÅR1» → «Hår1», «HOFFSVEIEN 4, SKØYEN» → «Hoffsveien 4, Skøyen». */
+export function niceCase(name) {
+  const s = String(name ?? '').replace(/\s+/g, ' ').trim();
+  const out = s.replace(/[A-Za-zÆØÅæøåÉéÜüÖöÄä0-9]+/g, (w) => {
+    const letters = w.replace(/[^A-Za-zÆØÅæøåÉéÜüÖöÄä]/g, '');
+    if (letters.length < 2 || letters !== letters.toUpperCase() || KEEP_UPPER.has(w)) return w;
+    return w.charAt(0) + w.slice(1).toLowerCase();
+  });
+  return out.replace(/^./, (c) => c.toUpperCase());
+}
+const PHONE = /(?:\+47[\s-]?)?(?<![\d.:])\d{2}[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}(?![\d.:])|(?<![\d.:])\d{3}[\s-]\d{2}[\s-]\d{3}(?![\d.:])/;
+const NOISE = /^(?:nb\b|nb!|obs\b|obs!|viktig|husk|merk\b|ps\b|unngå gebyr|avbestill|avbestilling|endring|svar\s+stopp|ring\s+oss|tlf|telefon)|kan ikke besvares|unngå gebyr|gebyr|(^|[^a-zæøå])avbestill|ikke møtt|svar\s+(?:stopp|ja|nei)\b/i;
+const ADDR_LINE = /^(?:ny\s+)?(?:adresse|sted|oppmøte|oppmøtested|møtested)\s*:/i;
+/** Linjen/setningen skal aldri bli tittel (NB!, Viktig, Husk, gebyr, avbestill, telefonnummer, «kan ikke besvares»). */
+export const isNoiseLine = (s) => { const x = String(s ?? '').trim(); return !x || NOISE.test(x) || PHONE.test(x) || /^(?:ny\s+)?adresse\b/i.test(x); };
+const SIG_KEY = /(?:^|[\s.!?,;])(med\s+vennlig\s+hilsen|vennlig\s+hilsen|beste\s+hilsen|hilsen\s+fra|hilsen|mvh|m\.v\.h\.?)(?![a-zæøå])\.?[\s,:]*/gi;
+const SIG_LINE = /^(?:med\s+vennlig\s+hilsen|vennlig\s+hilsen|beste\s+hilsen|hilsen|mvh)(?![a-zæøå])/i;
+const NAME_START = /^[A-ZÆØÅ0-9]/;
+const PRONOUN = /^(?:oss|meg|deg|dere|seg|vi|dem)$/i;
+function cleanName(s) {
+  let n = String(s ?? '').split(/\n|[.!?](?:\s|$)|\s(?:tlf|telefon|tel|ring)\b|\s+-\s+|[,;]/i)[0];
+  n = n.replace(PHONE, '').replace(/\s+/g, ' ').replace(/[\s,.:;–-]+$/, '').trim();
+  if (n.length < 2 || n.length > 50 || n.split(' ').length > 6 || !NAME_START.test(n) || PRONOUN.test(n)) return null;
+  if (/^\d+$/.test(n) || isNoiseLine(n)) return null;
+  return n;
+}
+/** Avsenderen/bedriften i teksten («Mvh X», «Hilsen X», «– X» til slutt, «Påminnelse fra X»), pent skrevet, eller null. */
+export function senderOf(text) {
+  const orig = String(text ?? '').replace(/\r\n?/g, '\n');
+  let found = null;
+  for (const m of orig.matchAll(SIG_KEY)) { const n = cleanName(orig.slice(m.index + m[0].length)); if (n) found = n; }
+  if (!found) {
+    // «– Hår1 Majorstuen» helt til slutt (etter at støylinjer er tatt bort).
+    const lines = orig.split(/\n+|(?<=[.!?])\s+/).map((x) => x.trim()).filter(Boolean);
+    while (lines.length && isNoiseLine(lines[lines.length - 1]) && !/[–—]\s*[A-ZÆØÅ]/.test(lines[lines.length - 1])) lines.pop();
+    const tail = lines.join(' ');
+    const d = tail.match(/(?:[.!?]\s+|^)[–—]\s*([A-ZÆØÅ][^\n–—]{1,50}?)\s*\.?\s*$/) || (lines.length > 1 && tail.match(/[.!?]\s+-\s+([A-ZÆØÅ][^\n–—-]{1,50}?)\s*\.?\s*$/));
+    if (d) found = cleanName(d[1]);
+  }
+  if (!found) {
+    const f = orig.match(/(?:påminnelse|melding|sms|varsel|beskjed|hilsen|time|timebekreftelse|bekreftelse)\s+fra\s+([^\n:,!?()]{2,50})/i);
+    if (f) found = cleanName(f[1].replace(/\s+(?:kl|på|den|om|i|til|for)(?![a-zæøå]).*$/i, ''));
+  }
+  return found ? niceCase(found) : null;
+}
+/** Typen et navn peker på («Påhåret Studio Hoff» → frisør), eller null. */
+export function kindOfName(name) {
+  const n = normName(name);
+  if (!n) return null;
+  const k = BIZ_KINDS.find(([re]) => re.test(n));
+  return k ? k[1] : null;
+}
+/** Navnet sier allerede typen («Majorstuen Legekontor», «Tannlegene»): da settes ikke typen foran. */
+const saysType = (name, lab) => !!lab && normName(name).includes(normName(lab).slice(0, 5));
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** Det lengste aliaset i «Glimt husker» som teksten treffer, eller null. memory: liste eller {items}. */
+export function memoryMatch(text, memory) {
+  const list = Array.isArray(memory) ? memory : Array.isArray(memory?.items) ? memory.items : [];
+  const t = normName(text);
+  if (!t || !list.length) return null;
+  let best = null;
+  for (const m of list) {
+    if (!m || (m.kind && m.kind !== 'alias')) continue;
+    const k = normName(m.match);
+    if (k.length < 2) continue;
+    if (!new RegExp('(^|[^a-z0-9æøå])' + escRe(k) + '(?![a-z0-9æøå])').test(t)) continue;
+    if (!best || k.length > normName(best.match).length) best = m;
+  }
+  return best;
+}
+/** Tittelen et alias gir: egen tittel, ellers «Frisør · Påhåret» (type + navn). */
+export function aliasTitle(m, business) {
+  if (m?.title && String(m.title).trim()) return String(m.title).trim();
+  const name = business || niceCase(m?.match ?? '');
+  const lab = TYPE_LABEL[m?.type] ?? '';
+  return lab && !saysType(name, lab) ? `${lab} · ${name}` : name || lab || 'Avtale';
+}
 
 export function osloTodayISO(now = new Date()) {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
@@ -58,7 +156,7 @@ export function quickLabel(r) {
   return WD_SHORT[d.getUTCDay()] + ' ' + d.getUTCDate() + '. ' + MN_SHORT[d.getUTCMonth()] + (r.start ? ' · ' + r.start : '');
 }
 
-export function parseQuick(text, todayISO) {
+export function parseQuick(text, todayISO, memory) {
   const orig = String(text ?? '').replace(/\r\n?/g, '\n');
   const raw = orig.replace(/\s+/g, ' ').trim();
   const t = raw.toLowerCase();
@@ -131,7 +229,12 @@ export function parseQuick(text, todayISO) {
   const dur = kind ? kind[1] : 60;
 
   let ti = '';
-  const hos = raw.match(/(?:time|avtale|konsultasjon|timebestilling)?\s*\bhos\s+(.+?)(?=\s+(?:(?:kl\.?|klokka|den|på|om|i\s+(?:dag|kveld|morgen|overmorgen)|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|neste)(?![a-zæøå])|\d)|[,\n:;!?]|(?<!\b(?:[Dd]r|[Ss]t|[Nn]r|ca|[Tt]annl))\.|$)/i);
+  // Prompt 33: tittelen hentes ikke fra støylinjer (NB!, adresse, gebyr, telefon, signatur).
+  const sentences = orig.split(/\n+|(?<=[.!?])\s+(?=[A-ZÆØÅ])/).map((x) => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const cleanText = sentences.filter((x) => !isNoiseLine(x) && !ADDR_LINE.test(x) && !SIG_LINE.test(x)).join(' ')
+    || raw.replace(/^(?:(?:nb|obs|viktig|husk|merk|ps)(?![a-zæøå])[!:.]?\s*)+/i, '') || raw;
+  let hos = raw.match(/(?:time|avtale|konsultasjon|timebestilling)?\s*\bhos\s+(.+?)(?=\s+(?:(?:kl\.?|klokka|den|på|om|i\s+(?:dag|kveld|morgen|overmorgen)|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|neste)(?![a-zæøå])|\d)|[,\n:;!?]|(?<!\b(?:[Dd]r|[Ss]t|[Nn]r|ca|[Tt]annl))\.|$)/i);
+  if (hos && PRONOUN.test(hos[1].trim())) hos = null;
   if (hos) {
     ti = hos[1].trim();
     // «middag hos mormor» → behold det som står foran «hos» (men ikke «Du har time»)
@@ -139,11 +242,28 @@ export function parseQuick(text, todayISO) {
     const pre = raw.slice(0, at).split(/[.!?:;,\n]/).pop().trim();
     if (pre && !/\d/.test(pre) && pre.length <= 30 && !PRE_SKIP.test(pre)) ti = pre + ' hos ' + ti;
   } else if (kind) ti = kind[2];
-  else ti = raw.replace(/^(legg til|lag|sett opp|book|bestill|ny)\s+/i, '').replace(/\b(time|avtale)\b/i, '').split(/(?:^|\s+)(?:kl\.?|klokka|den|i dag|i kveld|i morgen|i overmorgen|neste|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|\d)(?![a-zæøå])/i)[0].trim();
+  else ti = cleanText.replace(/^(legg til|lag|sett opp|book|bestill|ny)\s+/i, '').replace(/\b(time|avtale)\b/i, '').split(/(?:^|\s+)(?:kl\.?|klokka|den|i dag|i kveld|i morgen|i overmorgen|neste|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|\d)(?![a-zæøå])/i)[0].trim();
   ti = ti.replace(/^(legg til\s+)?(time|avtale)\s+/i, '').replace(/[\s,.:;–-]+$/, '').trim();
   if (!ti) ti = kind ? kind[2] : 'Avtale';
   ti = cap(ti.length > 48 ? ti.slice(0, 46) + '…' : ti);
   if (kind && !kind[0].test(ti.toLowerCase()) && !new RegExp(kind[2], 'i').test(ti) && !/frisør|lege|tannlege|dr\./i.test(ti)) ti = kind[2] + ' · ' + ti;
+
+  // Prompt 33: avsenderen i signaturen blir bedriften; typen fra navnet (eller teksten). «Frisør · Påhåret Studio Hoff».
+  const business = senderOf(orig);
+  let typeOut = type, durOut = dur, kindLabel = kind ? kind[2] : '';
+  if (business) {
+    const bk = kindOfName(business);
+    if (bk) { typeOut = TYPES.includes(bk) ? bk : 'annet'; durOut = DURATION[bk] ?? dur; kindLabel = TYPE_LABEL[bk]; }
+    const name = business.length > 48 ? business.slice(0, 46) + '…' : business;
+    ti = kindLabel && !saysType(name, kindLabel) ? `${kindLabel} · ${name}` : name;
+  }
+  // «Glimt husker»: brukerens eget alias vinner (type + tittel).
+  const mem = memoryMatch(orig, memory);
+  if (mem) {
+    typeOut = TYPES.includes(mem.type) ? mem.type : 'annet';
+    durOut = DURATION[mem.type] ?? durOut;
+    ti = aliasTitle(mem, business);
+  }
 
   // Sted: «Adresse:», «Sted:», «Oppmøte:» eller «på <Stort ord>»
   const one = orig.replace(/[ \t]+/g, ' ');
@@ -153,20 +273,24 @@ export function parseQuick(text, todayISO) {
     if (pm) place = pm[1];
   }
   place = place.trim() || null;
+  if (place && place === place.toUpperCase() && /[A-ZÆØÅ]{3}/.test(place)) place = niceCase(place);
 
-  if (s && !e) e = hm(toMin(s) + dur);
+  if (s && !e) e = hm(toMin(s) + durOut);
   const intent = INTENT.test(t);
   let conf = 0.3;
   if (dt) conf += 0.3;
   if (s) conf += 0.2;
   if (kind) conf += 0.1;
-  if (hos || intent) conf += 0.1;
+  if (hos || intent || business) conf += 0.1;
+  if (business && !kind && typeOut !== 'annet') conf += 0.1;
+  if (mem && dt) conf = Math.max(conf, 0.9);
   conf = Math.round(Math.min(conf, 0.95) * 100) / 100;
+  const extra = { ...(business ? { business } : {}), ...(mem ? { memory: { ...(mem.id != null ? { id: mem.id } : {}), match: mem.match, type: mem.type } } : {}) };
 
   if (!dt) {
-    return { ok: false, why: NO_DATE, title: ti, date: null, start: s || null, end: s ? e : null, place, type, duration: dur, allDay: false, confidence: Math.min(conf, 0.5), isAppointment: false };
+    return { ok: false, why: NO_DATE, title: ti, date: null, start: s || null, end: s ? e : null, place, type: typeOut, duration: durOut, allDay: false, confidence: Math.min(conf, 0.5), isAppointment: false, ...extra };
   }
-  const out = { ok: true, title: ti, date: iso(dt), start: s || null, end: s ? e : null, place, type, duration: dur, allDay: !s, confidence: conf, isAppointment: !!(intent || kind) };
+  const out = { ok: true, title: ti, date: iso(dt), start: s || null, end: s ? e : null, place, type: typeOut, duration: durOut, allDay: !s, confidence: conf, isAppointment: !!(intent || kind || mem || (business && typeOut !== 'annet') || (business && s)), ...extra };
   if (!s) out.why = NO_TIME;
   return out;
 }

@@ -3604,6 +3604,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal fun launch31(block: suspend () -> Unit) = launch(block)
     internal fun launchJob31(block: suspend () -> Unit): kotlinx.coroutines.Job = launch(block)
 
+    /* ---------- Prompt 33 (GLIMT-MEMORY): «Glimt husker» – alias per bruker (Memory33.kt, ui/Memory33Ui.kt) ---------- */
+    val mem33 = Mem33State()
+    internal suspend fun <T> api33(f: suspend Api.() -> T): T = api.f()
+    internal fun launch33(block: suspend () -> Unit) = launch(block)
+
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.
     init {

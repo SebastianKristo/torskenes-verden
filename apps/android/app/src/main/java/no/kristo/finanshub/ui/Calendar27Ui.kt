@@ -130,6 +130,8 @@ internal fun KalenderScreen27(vm: AppViewModel) {
         s.sel?.let { e -> K27Sheet(wide, navB, { s.sel = null; s.delArm = false }) { K27Detail(vm, e) } }
         s.form?.let { f -> K27Sheet(wide, navB, { s.form = null }) { K27Form(vm, f) } }
         if (s.search) K27Sheet(wide, navB, { s.search = false; s.q = ""; s.results = null }) { K27Search(vm, today) }
+        // Prompt 33: «Lær Glimt hva dette er…» (ui/Memory33Ui.kt)
+        vm.mem33.learn?.let { l -> K27Sheet(wide, navB, { vm.mem33.learn = null }) { Mem33LearnBody(vm, l) } }
         vm.message?.let { m ->
             LaunchedEffect(m) { kotlinx.coroutines.delay(2600); if (vm.message == m) vm.message = null }
             Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 60.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.ink).padding(16.dp, 10.dp)) {
@@ -647,6 +649,8 @@ private fun K27Detail(vm: AppViewModel, e: Kal26Ev) {
         KAL_REMS.forEach { (v, n) -> K27Chip(n, rem == v, height = 36.dp) { vm.setKalRemind27(e, v) } }
     }
     Text(if (e.editable) "Lagret i Google Kalender ($calN)." else "Fra ${kalSrc27(e.cat)}. Endres i kilden.", color = p.mut, fontSize = 12.5.sp)
+    // Prompt 33: «Lær Glimt hva dette er…» og «sist viste hendelse» for Glimt (ui/Memory33Ui.kt)
+    Mem33LearnLink(vm, e)
     // Prompt 31: lenken i stedsteksten (f.eks. mazemap) vises som «Åpne kart ↗», teksten uten URL.
     val roomUrl = firstUrl31(e.room)
     val room = noUrl31(e.room)

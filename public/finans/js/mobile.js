@@ -31,6 +31,7 @@ import * as P25 from './mobile-p25.js';
 import * as P26 from './mobile-p26.js';
 import * as KAL from './mobile-kal.js';
 import * as P27 from './mobile-p27.js';
+import * as P33 from './mobile-p33.js'; // prompt 33: Innstillinger → AI → GLIMT HUSKER
 import * as P28 from './mobile-p28.js';
 import * as P29 from './mobile-p29.js';
 import * as P30 from './mobile-p30.js';
@@ -792,6 +793,7 @@ export function bind() {
     if (await P30B.bind30b(e, t)) return; // Prompt 30: Boliger (gjennomgang, rediger utgift, del boligen)
     if (paper() && await P30B.hlBind(e, t, { TX, txLoad })) return; // Prompt 30: kvitteringsmarkering
     if (P28.bind28(e, t)) return; // Prompt 28: Mer – flytt/skjul
+    if (await P33.bind33(e, t)) return; // Prompt 33: GLIMT HUSKER
     if (await P27.bind27(e, t)) return; // Prompt 27: Chat, Kalender v2-ark, ✕ i søk, søkeforslag, Ruter-kortet, nyheter, abonnement fra skjermbilde
     if (await P26.bind26(e, t, { items: () => TR.data?.items ?? [], reload: () => trkLoad() })) return; // Prompt 26: Kalender, Integrasjoner, SPOR VIA, Finans-fanelinja og aktiv fane
     if (P25.bind25(e, t)) return;
@@ -899,6 +901,7 @@ export function bind() {
     if (await P31.submit31(e, e.target)) return;
     if (await P29.submit29(e, e.target)) return;
     if (await P30B.bind30b(e, e.target)) return;
+    if (await P33.submit33(e, e.target)) return;
     if (await P27.submit27(e, e.target)) return;
     if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
     if (await P24.bind24(e, e.target)) return;

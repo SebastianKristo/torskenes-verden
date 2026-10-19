@@ -371,6 +371,8 @@ final class Cal27Model {
                     self.base.setReminder(e, rem)
                 }
                 self.flash(editId == nil ? "Hendelsen er lagret" : "Endringen er lagret")
+                // Prompt 33: ny tittel på en rask time → forslag om å huske avsenderen (lagres bare med «Husk»).
+                if editId != nil { Memory33Model.shared.suggest(JS.dict(o, "suggestMemory")) }
                 Haptics.shared.success()
             } catch let e as APIError {
                 if var ff = self.form {

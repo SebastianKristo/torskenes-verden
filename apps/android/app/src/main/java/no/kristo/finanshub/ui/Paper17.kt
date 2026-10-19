@@ -93,7 +93,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "accounts" -> item { AccountsPage(vm) }
             "security" -> item { SecurityPage(vm, onPrivacyChanged) }
             "tokens" -> item { TokensPage(vm) }
-            "ai" -> { item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { AiTimeouts23(vm) } }
+            "ai" -> { item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { Memory33Settings(vm) }; item { AiTimeouts23(vm) } }
             // Prompt 26: gruppert liste som på web, egen side per integrasjon, og Kalendere.
             "integ" -> item { IntegList26(vm) }
             "kal" -> item { KalSettings26(vm) }

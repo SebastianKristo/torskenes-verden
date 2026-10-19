@@ -1037,6 +1037,8 @@ struct PaperAiSettings: View {
             Privacy27Section()
             // Prompt 27: CHAT (Chat27Settings.swift).
             Chat27SettingsGroup()
+            // Prompt 33: GLIMT HUSKER (Memory33.swift).
+            Memory33SettingsGroup()
             // Prompt 23: tidsgrense per motor, nye forsøk og hva som skjer ved tidsavbrudd (AiTimeouts23.swift).
             AiTimeouts23(locked: !canEdit)
             PLabel(text: "Hvem gjør hva").padding(.leading, 4).padding(.top, 14)

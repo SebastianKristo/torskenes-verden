@@ -3,10 +3,13 @@
 // Gemini, Sjekk logoen før den lagres) med AI-logg (hva som er sendt til sky-motorer, bare egne rader).
 // Data: GET/PATCH /api/chat/settings, GET /api/chat/models, GET/PATCH /finans/api/ai-privacy, GET /finans/api/ai-audit,
 // GET/PUT /api/integrations/openwebui (admin). Mangler et endepunkt (eldre server), vises det som ikke tilgjengelig.
+// Prompt 33: gruppe GLIMT HUSKER – brukerens alias (match → type/tittel) fra GET /api/glimt/memory, Slett (DELETE …/:id)
+// og «Legg til» (POST {match, type, title?}).
 import { esc, api } from './util.js';
 import { store } from './store.js';
+import { LEARN_TYPES, memoryLine, loadMemory, addMemory, deleteMemory, applyMemory } from './glimt-memory.js';
 
-const A = { loaded: false, loading: false, chat: null, chatErr: '', models: null, priv: null, privErr: '', audit: null, auditErr: '', owui: null, msg: '', showLog: false };
+const A = { loaded: false, loading: false, chat: null, chatErr: '', models: null, priv: null, privErr: '', audit: null, auditErr: '', owui: null, msg: '', showLog: false, mem: null, memErr: '', memAdd: false, memMsg: '' };
 const isAdmin = () => store.me?.me?.role === 'admin';
 const fin = async (path, opts = {}) => {
   const r = await fetch('/finans/api' + path, { method: opts.method ?? 'GET', headers: opts.json ? { 'Content-Type': 'application/json' } : {}, body: opts.json ? JSON.stringify(opts.json) : undefined });
@@ -18,7 +21,8 @@ const fin = async (path, opts = {}) => {
 export async function loadAi(reload, force = false) {
   if ((A.loaded && !force) || A.loading) return;
   A.loading = true;
-  const [c, m, p, a, o] = await Promise.allSettled([api('/chat/settings'), api('/chat/models'), fin('/ai-privacy'), fin('/ai-audit?limit=50'), isAdmin() ? api('/integrations/openwebui') : Promise.resolve(null)]);
+  const [c, m, p, a, o, g] = await Promise.allSettled([api('/chat/settings'), api('/chat/models'), fin('/ai-privacy'), fin('/ai-audit?limit=50'), isAdmin() ? api('/integrations/openwebui') : Promise.resolve(null), api('/glimt/memory')]);
+  A.mem = g.status === 'fulfilled' ? g.value.items ?? [] : null; A.memErr = g.status === 'rejected' ? g.reason.message : '';
   A.chat = c.status === 'fulfilled' ? c.value : null; A.chatErr = c.status === 'rejected' ? c.reason.message : '';
   A.models = m.status === 'fulfilled' ? m.value.models ?? [] : [];
   A.priv = p.status === 'fulfilled' ? p.value : null; A.privErr = p.status === 'rejected' ? p.reason.message : '';
@@ -68,12 +72,45 @@ export function aiView({ group, row, note }) {
         : [{ q: '', html: '<div class="sg-row"><span class="sg-txt"><span>Ingenting er sendt til sky-motorer ennå.</span></span></div>' }] });
     }
   } else groups.push(group('Personvern og logoer', [row({ t: 'Ikke tilgjengelig', s: A.privErr ? `Serveren svarte: ${A.privErr}` : 'Oppdater serveren' })]));
+  groups.push(memoryGroup(group, row));
   if (A.msg) groups.push({ t: '', note: '', rows: [{ q: '', html: `<div class="sg-row"><span class="sg-txt"><span>${esc(A.msg)}</span></span></div>` }] });
   void note;
   return { groups };
 }
 
+/* Prompt 33: GLIMT HUSKER */
+function memoryGroup(group, row) {
+  const note = 'Det du lærer Glimt, f.eks. at «Påhåret» er frisøren din. Brukes når du legger inn timer og spør «når er neste frisørtime». Lagres bare for deg og sendes aldri til sky.';
+  if (!A.mem) return group('Glimt husker', [row({ t: 'Ikke tilgjengelig', s: A.memErr ? `Serveren svarte: ${A.memErr}` : 'Oppdater serveren' })], esc(note));
+  const rows = A.mem.map((m) => ({ q: `glimt husker ${m.match} ${m.type ?? ''} ${m.title ?? ''}`, html: `<div class="sg-row"><span class="sg-txt"><b data-no-i18n>${esc(m.match)}</b><span data-no-i18n>${esc(memoryLine(m))}</span></span><button type="button" class="sg-btn2" data-ai-mdel="${esc(m.id)}" aria-label="Slett ${esc(m.match)}">Slett</button></div>` }));
+  if (!rows.length) rows.push({ q: 'glimt husker', html: '<div class="sg-row"><span class="sg-txt"><span>Glimt husker ingenting ennå. Skriv f.eks. «husk at Påhåret er frisøren min» til Glimt.</span></span></div>' });
+  rows.push(A.memAdd ? { q: 'glimt husker legg til', html: `<form class="sg-form" data-ai-mform>
+      <label class="sg-field"><span>Navn</span><input name="match" required minlength="2" maxlength="80" placeholder="Påhåret" autocomplete="off"></label>
+      <label class="sg-field"><span>Type</span><select name="type" aria-label="Type">${LEARN_TYPES.map(([v, n]) => `<option value="${esc(v)}">${esc(n)}</option>`).join('')}</select></label>
+      <label class="sg-field"><span>Tittel (valgfri)</span><input name="title" maxlength="120" placeholder="Frisør · Påhåret" autocomplete="off"></label>
+      <div class="sg-row"><span class="sg-txt"><span>${esc(A.memMsg)}</span></span><button type="button" class="sg-btn2" data-ai-madd>Avbryt</button><button type="submit" class="sg-btn2">Lagre</button></div></form>` }
+    : row({ t: 'Legg til', s: 'Navn på avsender og hva det er', act: 'data-ai-madd', btn: 'Legg til', k: 'glimt husker alias legg til' }));
+  if (A.memApply) rows.push({ q: '', html: `<div class="sg-row"><span class="sg-txt"><b>Endre tittel på ${A.memApply.count} ${A.memApply.count === 1 ? 'avtale' : 'avtaler'}?</b><span data-no-i18n>Til «${esc(A.memApply.title ?? '')}»</span></span><button type="button" class="sg-btn2" data-ai-mapply="0">Nei takk</button><button type="button" class="sg-btn2" data-ai-mapply="1">Endre</button></div>` });
+  if (A.memMsg && !A.memAdd) rows.push({ q: '', html: `<div class="sg-row"><span class="sg-txt"><span>${esc(A.memMsg)}</span></span></div>` });
+  return group('Glimt husker', rows, esc(note));
+}
+
 export async function aiClick(e, rerender) {
+  const g = e.target.closest('[data-ai-mdel],[data-ai-madd],[data-ai-mapply]');
+  if (g) {
+    e.preventDefault();
+    if (g.dataset.aiMapply !== undefined) {
+      const ap = A.memApply; A.memApply = null;
+      if (g.dataset.aiMapply === '1' && ap) { try { const d = await applyMemory(ap.id); A.memMsg = `${d.count} ${d.count === 1 ? 'avtale' : 'avtaler'} fikk nytt navn ✓`; } catch (err) { A.memMsg = `Kunne ikke endre: ${err.message}`; } }
+      rerender();
+      return true;
+    }
+    if (g.dataset.aiMadd !== undefined) { A.memAdd = !A.memAdd; A.memMsg = ''; rerender(); if (A.memAdd) document.querySelector('[data-ai-mform] [name=match]')?.focus(); return true; }
+    const id = Number(g.dataset.aiMdel);
+    try { await deleteMemory(id); A.mem = (A.mem ?? []).filter((m) => m.id !== id); A.memMsg = 'Slettet ✓'; } catch (err) { A.memMsg = `Kunne ikke slette: ${err.message}`; }
+    rerender();
+    return true;
+  }
   const t = e.target.closest('[data-ai-tog],[data-ai-ptog],[data-ai-log],[data-ai-open]');
   if (!t) return false;
   e.preventDefault();
@@ -100,6 +137,20 @@ export async function aiChange(e, rerender) {
 }
 
 export async function aiSubmit(e, rerender) {
+  const mf = e.target.closest?.('[data-ai-mform]');
+  if (mf) {
+    e.preventDefault();
+    const fd = new FormData(mf), body = { match: String(fd.get('match') ?? '').trim(), type: String(fd.get('type') ?? 'annet'), title: String(fd.get('title') ?? '').trim() || null };
+    try {
+      const d = await addMemory(body);
+      A.mem = await loadMemory(true);
+      A.memAdd = false;
+      A.memMsg = 'Lagret ✓';
+      A.memApply = d.matches ? { id: d.item.id, count: d.matches, title: d.item.title } : null;
+    } catch (err) { A.memMsg = `Kunne ikke lagre: ${err.message}`; }
+    rerender();
+    return true;
+  }
   const f = e.target.closest?.('[data-ai-owui]');
   if (!f) return false;
   e.preventDefault();

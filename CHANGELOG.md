@@ -2,6 +2,19 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.25.0] – 19.10.2026 · Glimt husker
+- **Glimt husker:** du kan lære Glimt hva avsendere og steder er, og det huskes bare for deg.
+  - Skriv for eksempel «husk at Påhåret er frisøren min» eller «det var frisør» rett etter en time.
+  - Eller trykk «Lær Glimt hva dette er…» i en hendelse og velg type.
+  - Glimt tilbyr å rette tittelen på avtalene du allerede har.
+  - Neste melding fra samme avsender får riktig tittel.
+  - «Når er neste frisørtime?» finner også disse avtalene.
+  - Se og slett det Glimt husker under Innstillinger → AI → GLIMT HUSKER. Det brukes bare av den lokale modellen og sendes aldri til sky.
+- **Rask time leser SMS bedre:**
+  - Avsenderen i hilsenen («Mvh PÅHÅRET Studio Hoff») blir navnet.
+  - «NB!», gebyr, avbestilling og telefonnumre blir aldri tittel.
+  - Typen gjenkjennes fra navnet, så tittelen blir for eksempel «Frisør · Påhåret Studio Hoff».
+
 ## [4.24.0] – 19.10.2026 · prompt 31 (Nordlys OS og Glimt) og selvoppdatering på Android
 - **Android-appen oppdaterer seg selv.** Når det finnes en ny versjon, vises et banner på Hjem og en rad under Innstillinger → PROGRAMVARE. Trykk «Last ned og installer».
   - APK-en lastes ned via hjemmeserveren og sjekkes mot SHA-256 før den installeres.

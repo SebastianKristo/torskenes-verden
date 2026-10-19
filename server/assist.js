@@ -12,7 +12,7 @@
 //     source    'Open-Meteo · MET Norway' | 'Kalender' | 'Entur' | 'Sporing' | 'Finans' | 'Huskeliste' |
 //               'Abonnementer · varsel planlagt' | 'Abonnementer' | 'Kalender · rask time' | 'Glimt' | 'Glimt · Gemini'
 //     intent    'weather' | 'calendar.day' | 'calendar.next' | 'departures' | 'packages' | 'finance.spent' | 'tasks' |
-//               'trial.create' | 'appointment.create' | 'llm'
+//               'trial.create' | 'appointment.create' | 'memory.add' | 'llm'
 //     tool?     'Vær' | 'Kalender' | 'Avganger' | 'Pakker' | 'Finans' | 'Huskeliste' | 'Abonnementer'
 //     card?     {k:'weather', city, t, ic, icon, d, hi, lo, night, kind, precipProb, wind, day:'today'|'tomorrow', umbrella, h:[{l, t, ic, icon}]}
 //               {k:'calendar', date, wd:'MAN', n:19, t:'I dag', sub:'19. oktober · 2 hendelser', items:[{id, time:'16:30'|'Hele', title, color, place}]}
@@ -28,7 +28,10 @@
 //     followUp? 'chat' når den lokale modellen ikke svarte i tide
 //     trial?    prøven som ble lagret (trial.create), missing?: ['service'|'endsAt'] når noe mangler (da lagres ingenting)
 //     quickJobId? jobben i /api/kalender/quick (appointment.create) – AI-boblen følger «calendar-quick»-hendelsene
+//     memory?   (memory.add, prompt 33) aliaset som ble lagret {id, kind, match, type, title}
+//     apply?    {memoryId, count, title, url} – «Endre tittel på N avtaler?» → POST url
 //   }
+// Prompt 33: POST /api/assist tar også context:{eventId} (hendelsen brukeren ser på) for «det var frisør».
 // GET  /api/assist/:id → {jobId, state:'queued'|'running'|'done'|'failed'|'cancelled', q, source, chatId, title, model, input,
 //                         steps:[{key, label, state}], fields:[{k, v}], progress, created, updated, answer?, error?}
 // POST /api/assist/:id/cancel → {ok, state}
@@ -46,14 +49,15 @@ import { authOrToken, homeDeparturesOf } from './mobile.js';
 import { runAsUser } from './settings.js';
 import { broadcast } from './realtime.js';
 import { notifyOf, notifyUser } from './notify.js';
-import { eventsFor, normText } from './calendar.js';
+import { eventsFor, normText, findEvent } from './calendar.js';
 import { weatherFull, wmoText, iconOf, PLACES } from './weather-full.js';
 import { packagesFor } from './tracking.js';
 import { nextTasks } from './tasks.js';
 import { settings as fhSettings, ensureLedger } from './finans/db.js';
 import { createTrial, trialOut } from './finans/trials.js';
 import { startQuickJob } from './calendar-quick.js';
-import { parseQuick, osloTodayISO, quickLabel } from '../public/js/quick-time.js';
+import { parseQuick, osloTodayISO, quickLabel, senderOf } from '../public/js/quick-time.js';
+import { aliasesOf, aliasPrompt, parseMemoryIntent, learnFromAssist, typeOfWord, eventHitsAlias, getContext, setContext } from './glimt-memory.js'; // prompt 33
 import { parseTrial, serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../public/js/trial-parse.js';
 import * as integrations from './integrations.js';
 
@@ -123,6 +127,7 @@ export function detectIntent(text, today = osloTodayISO()) {
   const n = String(text ?? '').toLowerCase();
   // Prøveperiode: «gratis», «trial», «prøveperiode», eller «prøve/avslutt/si opp» sammen med en tjeneste («Storytel prøve til 25.11»).
   if (RE.trial.test(n) && (/gratis|trial|prøveperiode|prøvetid/.test(n) || serviceOf(text))) return 'trial.create';
+  if (parseMemoryIntent(text)) return 'memory.add';
   if (RE.next.test(n) && RE.nextWhat.test(n)) return 'calendar.next';
   const pq = parseQuick(text, today);
   if (pq.isAppointment && pq.ok && pq.date && !/\?\s*$/.test(n) && !/^(hva|hvor|når|hvem|hvordan)\b/.test(n)) return 'appointment.create';
@@ -208,8 +213,12 @@ async function toolCalendarNext(user, text, today) {
   const kw = text.toLowerCase().replace(/[?.!,«»"]/g, ' ').split(/\s+/).filter((w) => w && !NEXT_STOP.has(w)).map((w) => w.replace(/time(n|r)?$/, '')).filter((w) => w.length > 1);
   const { events } = await runAsUser(user, () => eventsFor(user, today, addDaysISO(today, 365)));
   const now = Date.now();
+  // Prompt 33: «neste frisørtime» finner også avtaler hos et alias med typen frisør («Påhåret»), i tittel eller notat.
+  const types = new Set(kw.map(typeOfWord).filter(Boolean));
+  let aliases = [];
+  try { aliases = types.size ? aliasesOf(user).filter((m) => types.has(m.type)) : []; } catch { /* */ }
   const hits = events.filter((e) => (e.allDay ? e.date >= today : Date.parse(e.start) >= now - 5 * 60_000))
-    .filter((e) => !kw.length || kw.some((w) => normText(`${e.title} ${e.room ?? ''}`).includes(normText(w))));
+    .filter((e) => !kw.length || kw.some((w) => normText(`${e.title} ${e.room ?? ''}`).includes(normText(w))) || aliases.some((m) => eventHitsAlias(e, m)));
   const what = kw.length ? kw.join(' ') : '';
   if (!hits.length) return { text: `Fant ingen kommende ${what ? what + 'time' : 'time'} i kalenderen.`, source: 'Kalender', tool: 'Kalender', card: { k: 'calendar', date: today, wd: '', n: null, t: 'Neste', sub: 'Ingen treff', items: [] } };
   const e = hits[0];
@@ -290,8 +299,15 @@ function toolTrial(user, text, today) {
 function toolAppointment(user, text, today) {
   const r = startQuickJob(user, text);
   if (r.error) return { text: r.error, source: 'Kalender · rask time', tool: 'Kalender' };
-  const pq = parseQuick(text, today);
+  let aliases = [];
+  try { aliases = aliasesOf(user); } catch { /* */ }
+  const pq = parseQuick(text, today, aliases);
   return { text: `Legger til **${pq.title || 'avtalen'} · ${quickLabel(pq)}** i kalenderen.`, source: 'Kalender · rask time', tool: 'Kalender', quickJobId: r.jobId };
+}
+
+async function toolMemory(user, text, ctx) {
+  const intent = parseMemoryIntent(text);
+  return learnFromAssist(user, text, intent, ctx ?? getContext(user));
 }
 
 /* ---------------- LLM ---------------- */
@@ -302,10 +318,16 @@ async function ollamaText(qText, user) {
   if (!base) throw new Error('Ollama er ikke satt opp');
   const r = await fetch(`${base}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(LLM_MS),
     body: JSON.stringify({ model: st.ollamaTextModel || st.ollamaModel, stream: false, keep_alive: '10m', options: { temperature: 0.3, num_predict: 160 },
-      messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: qText }] }) });
+      messages: [{ role: 'system', content: localSystem(user) }, { role: 'user', content: qText }] }) });
   if (!r.ok) throw new Error(`Ollama svarte ${r.status}`);
   const j = await r.json();
   return String(j?.message?.content ?? j?.response ?? '').trim();
+}
+/** Prompt 33: systemprompten til LOKAL Ollama får brukerens egne alias (aldri Gemini/sky). */
+export function localSystem(user) {
+  let a = '';
+  try { a = aliasPrompt(aliasesOf(user)); } catch { /* */ }
+  return a ? `${SYSTEM}\n${a}` : SYSTEM;
 }
 async function geminiText(qText, user) {
   const { geminiFetch, hasGemini } = await import('./finans/gemini-keys.js');
@@ -321,7 +343,7 @@ const short = (t) => { const s = String(t).replace(/\s+/g, ' ').trim(); const pa
 const withTimeout = (p) => Promise.race([p, new Promise((_, rej) => { const t = setTimeout(() => rej(Object.assign(new Error('Svarte ikke i tide'), { timeout: true })), LLM_MS); t.unref?.(); })]);
 
 async function toolLlm(user, text) {
-  const run = llmImpl ? (engine) => llmImpl({ q: text, user, engine }) : MOCK && !process.env.OLLAMA_URL ? null : (engine) => (engine === 'gemini' ? geminiText(text, user) : ollamaText(text, user));
+  const run = llmImpl ? (engine) => llmImpl({ q: text, user, engine, system: engine === 'gemini' ? SYSTEM : localSystem(user) }) : MOCK && !process.env.OLLAMA_URL ? null : (engine) => (engine === 'gemini' ? geminiText(text, user) : ollamaText(text, user));
   if (!run) return { text: `Dette er et eksempelsvar fra **Glimt** på «${text.slice(0, 80)}». Med Ollama svarer den lokale modellen her.`, source: 'Glimt', engine: 'mock', model: 'Glimt · lokal' };
   try {
     const t = short(await withTimeout(run('ollama')));
@@ -341,11 +363,11 @@ async function toolLlm(user, text) {
 /* ---------------- Svar ---------------- */
 
 const TITLES = { weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
-  'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'appointment.create': 'Legger til i kalenderen', llm: 'Glimt tenker' };
-const TOOL_OF = { weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender' };
+  'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', llm: 'Glimt tenker' };
+const TOOL_OF = { weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
-export async function answer(user, text, { today = osloTodayISO(), onStep = () => {} } = {}) {
+export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null } = {}) {
   const t0 = Date.now();
   const intent = detectIntent(text, today);
   onStep(1, intent);
@@ -360,7 +382,8 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
                 : intent === 'tasks' ? toolTasks(user)
                   : intent === 'trial.create' ? toolTrial(user, text, today)
                     : intent === 'appointment.create' ? toolAppointment(user, text, today)
-                      : await toolLlm(user, text);
+                      : intent === 'memory.add' ? await toolMemory(user, text, ctx)
+                        : await toolLlm(user, text);
   } catch (e) {
     console.warn('[glimt]', intent, e?.message ?? e);
     r = { text: `Fikk ikke hentet ${TOOL_OF[intent]?.toLowerCase() ?? 'svaret'} akkurat nå. **Prøv igjen** om litt.`, source: 'Glimt', tool: TOOL_OF[intent], error: String(e?.message ?? e).slice(0, 200) };
@@ -368,7 +391,7 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   onStep(2, intent);
   const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
     model: r.model ?? 'Glimt · verktøy', engine: r.engine ?? (intent === 'llm' ? 'none' : 'tool') };
-  for (const k of ['followUp', 'trial', 'missing', 'quickJobId']) if (r[k] !== undefined) out[k] = r[k];
+  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply']) if (r[k] !== undefined) out[k] = r[k];
   out.chatContext = { q: text, intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: r.text, ...(r.card ? { card: r.card } : {}), ...(r.tool ? { tool: r.tool } : {}) }] };
   return out;
 }
@@ -491,6 +514,14 @@ api.post('/', async (c) => {
   if (!text) return c.json({ error: 'Skriv et spørsmål' }, 400);
   if (text.length > MAX_Q) return c.json({ error: `Spørsmålet er for langt (maks ${MAX_Q} tegn)` }, 400);
   const source = b.source === 'chat' ? 'chat' : 'search';
+  // Prompt 33: hendelsen brukeren ser på (for «det var frisør»).
+  const ctxId = typeof b.context?.eventId === 'string' && b.context.eventId.length <= 120 ? b.context.eventId : null;
+  if (ctxId) {
+    try {
+      const ev = await runAsUser(user, () => findEvent(user, ctxId));
+      if (ev) setContext(user, { source: 'event', eventId: ev.id, title: ev.title ?? '', note: ev.note ?? '', place: ev.room ?? '', business: senderOf(ev.note ?? '') });
+    } catch { /* ukjent hendelse: bruk siste kontekst */ }
+  }
   const chatId = typeof b.chatId === 'string' && b.chatId.length <= 80 ? b.chatId : null;
   // Chat strømmer vanlige spørsmål selv fra valgt modell; Glimt svarer bare når et verktøy passer (unngår to LLM-kall).
   if (source === 'chat' && detectIntent(text, osloTodayISO()) === 'llm') return c.json({ intent: 'chat', followUp: 'chat', text: '', source: 'Glimt' });

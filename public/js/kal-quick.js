@@ -10,6 +10,7 @@ import { esc } from './util.js';
 import { onLive } from './realtime.js';
 import { parseQuick, quickLabel } from './quick-time.js';
 import { aiStart, aiUpdate, aiDone } from './ai-jobs.js';
+import { loadMemory, memoryNow } from './glimt-memory.js';
 
 export { parseQuick, quickLabel };
 const Q = { mine: new Map(), toast: null, err: null, poll: 0, live: false };
@@ -20,8 +21,8 @@ let toastT = 0;
 export function setQuickHooks(h) { Object.assign(hooks, h); }
 
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-/** Tolker lokalt (for forhåndsvisning). */
-export const preview = (text) => parseQuick(text, todayISO());
+/** Tolker lokalt (for forhåndsvisning). Prompt 33: med brukerens «Glimt husker»-alias (hentes én gang). */
+export const preview = (text) => { if (!memoryNow().length) loadMemory(); return parseQuick(text, todayISO(), memoryNow()); };
 
 async function call(path, method = 'GET', json) {
   const r = await fetch('/api' + path, { method, credentials: 'same-origin', cache: 'no-store', headers: json ? { 'Content-Type': 'application/json' } : {}, body: json ? JSON.stringify(json) : undefined });

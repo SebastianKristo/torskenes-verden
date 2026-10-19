@@ -22,7 +22,8 @@ import { notifyOf, notifyUser } from './notify.js';
 import { eventInput, createEvent, deleteEvent } from './calendar.js';
 import { settings } from './finans/db.js';
 import { aiTimeoutsOf, _aiTest, logAi } from './finans/ai.js';
-import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE } from '../public/js/quick-time.js';
+import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE, memoryMatch, aliasTitle, isNoiseLine, senderOf } from '../public/js/quick-time.js';
+import { aliasesOf, aliasPrompt, setContext, touchMemory } from './glimt-memory.js'; // prompt 33: «Glimt husker»
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ORIGIN = 'AI · rask time';
@@ -54,12 +55,21 @@ export const CANCELLED = 'Avbrutt · ingenting ble lagt til';
 
 /* ---------------- Ollama ---------------- */
 
-export const PROMPT = (text, today = osloTodayISO()) => `Dagens dato er ${today} (${WD[new Date(today + 'T12:00:00Z').getUTCDay()]}). Tidssone Europe/Oslo.
+// Prompt 33: tittel = type + avsender/bedrift, aldri en overskrift som «NB!». aliases = brukerens «Glimt husker» (bare lokal Ollama).
+export const PROMPT = (text, today = osloTodayISO(), aliases = []) => `Dagens dato er ${today} (${WD[new Date(today + 'T12:00:00Z').getUTCDay()]}). Tidssone Europe/Oslo.
 Hent ut én avtale fra teksten. Svar KUN JSON:
 {"tittel":string,"dato":"YYYY-MM-DD"|null,"start":"HH:MM"|null,"slutt":"HH:MM"|null,
  "sted":string|null,"type":"lege"|"tannlege"|"frisør"|"fysio"|"psykolog"|"optiker"|"annet","sikkerhet":0-1}
 Regler: dd.mm uten år = neste gang den datoen kommer. "14.30" er klokkeslett, "25.09" er dato.
 Ikke finn på tid eller dato.
+Tittel = type + avsender/bedrift med vanlig store/små bokstaver, f.eks. "Frisør · Påhåret Studio Hoff" eller "Tannlege · Tannhelse Sør".
+Avsenderen står ofte i signaturen til slutt ("Mvh X", "Hilsen X", "Med vennlig hilsen X", "– X") eller som "fra X".
+Finn typen fra ord i navnet eller teksten: frisør/hår/salong/klipp/barber = frisør, lege/legesenter/fastlege = lege, tannlege/tann = tannlege,
+fysio = fysio, optiker = optiker, psykolog = psykolog. Uten type: bare bedriftsnavnet.
+Bruk ALDRI overskrifter eller beskjeder som tittel: "NB!", "Viktig", "Husk", "Ny adresse", "Unngå gebyr", "avbestill", telefonnummer, "kan ikke besvares".
+Sted kommer fra "Adresse:", "Ny adresse:", "Sted:" eller "Oppmøte:".${aliasPrompt(aliases) ? `
+${aliasPrompt(aliases)}
+Treffer teksten et av navnene, bruk den typen og tittelen.` : ''}
 
 Tekst:
 ${text}`;
@@ -112,17 +122,31 @@ export function fromOllama(o) {
   return { ok: true, title, date, start, end, place, type, duration, allDay: !start, confidence: Math.round(conf * 100) / 100, isAppointment: true };
 }
 
-/** Tolker teksten: Ollama først, parseQuick som reserve. → {r, engine} */
+/** Tolker teksten: Ollama først, parseQuick som reserve. → {r, engine}. Prompt 33: «Glimt husker» (aliasene) vinner. */
 export async function interpret(text, user, today = osloTodayISO()) {
-  const local = parseQuick(text, today);
+  let aliases = [];
+  try { aliases = aliasesOf(user); } catch { /* */ }
+  const local = parseQuick(text, today, aliases);
   const fn = ollamaOf();
+  let res = null;
   if (fn) {
     try {
-      const r = fromOllama(await fn(PROMPT(text, today), user));
-      if (r) return { r: { ...r, place: r.place ?? local.place }, engine: 'ollama' };
+      const r = fromOllama(await fn(PROMPT(text, today, aliases), user));
+      if (r) {
+        // Overskrift («NB! NY ADRESSE …») eller telefonnummer som tittel: bruk den lokale tittelen.
+        const bad = isNoiseLine(r.title) || /^(?:nb|obs|viktig|husk|ny adresse)\b/i.test(r.title);
+        res = { r: { ...r, title: bad ? local.title : r.title, type: bad && local.type !== 'annet' ? local.type : r.type, place: r.place ?? local.place, ...(local.business ? { business: local.business } : {}) }, engine: 'ollama' };
+      }
     } catch { /* Ollama nede eller ugyldig svar → lokal tolker */ }
   }
-  return { r: local, engine: 'lokal' };
+  if (!res) res = { r: local, engine: 'lokal' };
+  const mem = memoryMatch(text, aliases);
+  if (mem) {
+    const type = TYPES.includes(mem.type) ? mem.type : 'annet';
+    res.r = { ...res.r, type, title: aliasTitle(mem, local.business ?? senderOf(text)), confidence: Math.max(res.r.confidence ?? 0, 0.9), memory: local.memory ?? { id: mem.id, match: mem.match, type } };
+    touchMemory(user, mem.id);
+  }
+  return res;
 }
 
 /* ---------------- Jobbkø ---------------- */
@@ -205,6 +229,8 @@ async function runJob(id) {
     const ev = await runAsUser(user, () => createEvent(user, { ...v.value, origin: ORIGIN }));
     const result = { eventId: ev?.id ?? null, title: v.value.title, date: v.value.date, start: v.value.start, end: v.value.end, place: v.value.location || null, label: quickLabel({ date: v.value.date, start: v.value.start }) };
     setJob(id, { state: 'done', result: JSON.stringify(result), error: null, found: null, engine });
+    // Prompt 33: «det var frisør» i Glimt gjelder denne avtalen.
+    setContext(user, { source: 'quick', jobId: id, eventId: result.eventId, title: result.title, text, business: r.business ?? senderOf(text) ?? null, type: r.type ?? 'annet' });
   } catch (e) {
     setJob(id, { state: 'failed', error: String(e?.message ?? e).slice(0, 300), found: JSON.stringify({ ...found, reconnect: !!e?.reconnect }), engine });
   }
@@ -242,7 +268,9 @@ api.post('/parse', async (c) => {
   const b = await body(c);
   if (!b || typeof b.text !== 'string') return c.json({ error: 'Forventet {text}' }, 400);
   const today = typeof b.today === 'string' && validDate(b.today) ? b.today : osloTodayISO();
-  const r = parseQuick(b.text.slice(0, MAX_TEXT), today);
+  let aliases = [];
+  try { aliases = aliasesOf(c.get('user')); } catch { /* */ }
+  const r = parseQuick(b.text.slice(0, MAX_TEXT), today, aliases);
   return c.json({ ...r, label: quickLabel(r) });
 });
 

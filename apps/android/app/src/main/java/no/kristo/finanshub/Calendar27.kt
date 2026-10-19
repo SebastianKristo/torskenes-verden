@@ -230,6 +230,8 @@ fun AppViewModel.saveKalForm27() {
             s.cur = f.date
             Haptics.success()
             flash(if (f.id == null) "Hendelsen er lagt til" else "Endringene er lagret")
+            // Prompt 33: ny tittel på en rask time → forslag om å huske avsenderen (lagres bare med «Husk»).
+            if (f.id != null) suggestMem33(runCatching { JSONObject(raw).optJSONObject("suggestMemory") }.getOrNull())
             reloadKal27()
         } catch (e: ApiException) {
             s.form = s.form?.copy(err = kalErr27(e)); Haptics.error()

@@ -38,6 +38,7 @@ import { cached } from './cache.js';
 import { authOrToken, layoutOf } from './mobile.js';
 import { listFor as birthdaysOf, googleCalendarEvents, googleConnected, googleCalendarIds, googleEventWrite, googleCanWrite } from './birthdays.js';
 import { parseIcs, expandIcs as expandCal } from './ical-expand.js';
+import { rememberShown, memorySuggestion } from './glimt-memory.js'; // prompt 33: «Glimt husker»
 import { trialCalendarItems } from './finans/trials.js'; // prompt 31: gratis prøveperioder som heldagshendelser i Privat
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -620,7 +621,7 @@ const inputOf = (e) => ({ title: e.title, allDay: e.allDay, date: e.date, start:
   location: e.room ?? '', calendar: WRITABLE.includes(e.calendar) ? e.calendar : 'privat', repeat: REPEATS.includes(e.recurrence) ? e.recurrence : 'none', reminder: REMINDERS.includes(e.reminder) ? e.reminder : 'none', note: e.note ?? '' });
 
 /** Hendelsen med id-en (fra svaret), eller null. Id-ene slutter med datoen, så bare den dagen leses. */
-async function findEvent(user, id) {
+export async function findEvent(user, id) {
   const base = String(id).split('~')[0];
   const local = localList(user).find((e) => e.id === base);
   const m = String(id).match(/(?:-|~)(\d{4})(\d{2})(\d{2})(?:T\d{4})?$/);
@@ -658,36 +659,57 @@ api.post('/events', async (c) => {
   if (r.error) return c.json({ error: r.error }, 400);
   try { return c.json({ ok: true, event: await createEvent(user, r.value) }, 201); } catch (e) { return fail(c, e); }
 });
+/** Endrer en egen hendelse (Privat/Familie). patch = felter fra skjemaet. → hendelsen, eller kaster {status}. Brukes også av
+ *  «Glimt husker» (POST /api/glimt/memory/:id/apply). */
+export async function updateEvent(user, id, patch, ev0 = null) {
+  const ev = ev0 ?? await findEvent(user, id);
+  if (!ev) throw Object.assign(new Error('Fant ikke hendelsen'), { status: 404 });
+  if (!ev.editable) throw Object.assign(new Error('Skolens hendelser kan ikke endres. Kopier til Privat for å lage din egen.'), { status: 403 });
+  const r = eventInput(patch, inputOf(ev));
+  if (r.error) throw Object.assign(new Error(r.error), { status: 400 });
+  const v = r.value;
+  if (ev.source === 'local') {
+    const base = String(id).split('~')[0];
+    kv.set(user, 'kal_local_events', localList(user).map((e) => (e.id === base ? { ...e, ...v, updated: new Date().toISOString() } : e)));
+    clearCalendarCache(user);
+    return (await eventsFor(user, v.date, v.date)).events.find((x) => String(x.id).split('~')[0] === base) ?? null;
+  }
+  const ids = await googleCalendarIds(user);
+  const target = v.calendar === 'familie' ? ids.familie : ids.privat;
+  if (target && target !== ev.googleCalendarId) { // flyttet mellom Privat og Familie: ny i målkalenderen, slett den gamle
+    const out = await createEvent(user, v);
+    await googleEventWrite(user, 'DELETE', ev.googleCalendarId, ev.googleId);
+    clearCalendarCache(user);
+    return out;
+  }
+  const body = googleBody(v);
+  // Én forekomst i en serie (eller en serie laget utenfor appen): gjentakelsen sendes ikke.
+  if (gIndex.get(user)?.get(id)?.instance || (ev.recurrence === 'custom' && v.repeat === 'none')) delete body.recurrence;
+  const g = await googleEventWrite(user, 'PATCH', ev.googleCalendarId, ev.googleId, body);
+  clearCalendarCache(user);
+  return googleOut(user, [g], ev.calendar, ev.googleCalendarId, ctxOf(user))[0] ?? null;
+}
+// Prompt 33: én hendelse (detaljarket). Lagrer den som «sist viste hendelse» for Glimt («det var frisør»).
+api.get('/events/:id', async (c) => {
+  const user = c.get('user');
+  const ev = await findEvent(user, c.req.param('id'));
+  if (!ev) return c.json({ error: 'Fant ikke hendelsen' }, 404);
+  rememberShown(user, ev);
+  return c.json({ event: ev });
+});
 api.patch('/events/:id', async (c) => {
   const user = c.get('user'), id = c.req.param('id');
   const ev = await findEvent(user, id);
   if (!ev) return c.json({ error: 'Fant ikke hendelsen' }, 404);
   if (!ev.editable) return c.json({ error: 'Skolens hendelser kan ikke endres. Kopier til Privat for å lage din egen.' }, 403);
-  const r = eventInput(await c.req.json().catch(() => null), inputOf(ev));
+  const b = await c.req.json().catch(() => null);
+  const r = eventInput(b, inputOf(ev));
   if (r.error) return c.json({ error: r.error }, 400);
-  const v = r.value;
   try {
-    if (ev.source === 'local') {
-      const base = String(id).split('~')[0];
-      kv.set(user, 'kal_local_events', localList(user).map((e) => (e.id === base ? { ...e, ...v, updated: new Date().toISOString() } : e)));
-      clearCalendarCache(user);
-      const out = (await eventsFor(user, v.date, v.date)).events.find((x) => String(x.id).split('~')[0] === base) ?? null;
-      return c.json({ ok: true, event: out });
-    }
-    const ids = await googleCalendarIds(user);
-    const target = v.calendar === 'familie' ? ids.familie : ids.privat;
-    if (target && target !== ev.googleCalendarId) { // flyttet mellom Privat og Familie: ny i målkalenderen, slett den gamle
-      const out = await createEvent(user, v);
-      await googleEventWrite(user, 'DELETE', ev.googleCalendarId, ev.googleId);
-      clearCalendarCache(user);
-      return c.json({ ok: true, event: out });
-    }
-    const body = googleBody(v);
-    // Én forekomst i en serie (eller en serie laget utenfor appen): gjentakelsen sendes ikke.
-    if (gIndex.get(user)?.get(id)?.instance || (ev.recurrence === 'custom' && v.repeat === 'none')) delete body.recurrence;
-    const g = await googleEventWrite(user, 'PATCH', ev.googleCalendarId, ev.googleId, body);
-    clearCalendarCache(user);
-    return c.json({ ok: true, event: googleOut(user, [g], ev.calendar, ev.googleCalendarId, ctxOf(user))[0] ?? null });
+    const out = await updateEvent(user, id, b, ev);
+    // Prompt 33: brukeren endret selv tittelen på en rask time → foreslå et alias (lagres ikke automatisk).
+    const suggestMemory = r.value.title !== ev.title ? memorySuggestion(user, ev, r.value.title) : null;
+    return c.json({ ok: true, event: out, ...(suggestMemory ? { suggestMemory } : {}) });
   } catch (e) { return fail(c, e); }
 });
 api.delete('/events/:id', async (c) => {

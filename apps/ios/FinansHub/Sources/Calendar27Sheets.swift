@@ -89,12 +89,15 @@ struct Cal27Detail: View {
                     }
                 }
                 if !src.isEmpty { Text(src).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true) }
+                // Prompt 33: «Lær Glimt hva dette er…» (Memory33.swift)
+                if e.editable { Memory33LearnLink(e: e) }
                 actions
             }
             .padding(.horizontal, 16).padding(.top, 18).padding(.bottom, 22)
         }
         .scrollIndicators(.hidden)
         .environment(\.colorScheme, p.dark ? .dark : .light)
+        .onAppear { Memory33Model.shared.shown(e, store) }
     }
 
     private var rowsCard: some View {

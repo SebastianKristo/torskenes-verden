@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import no.kristo.finanshub.AiJob31
 import no.kristo.finanshub.AppViewModel
+import no.kristo.finanshub.applyAns33
 import no.kristo.finanshub.Haptics
 import no.kristo.finanshub.boldParts31
 import no.kristo.finanshub.cancelAiJob31
@@ -365,6 +366,12 @@ internal fun HomeAnswer31(vm: AppViewModel) {
                 },
                 color = light, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 24.sp,
             )
+            // Prompt 33: «Endre N avtaler ›» etter «husk at Påhåret er frisøren min».
+            if (a.applyId > 0 && a.applyCount > 0) Box(
+                Modifier.height(32.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f))
+                    .clickable(role = Role.Button) { Haptics.select(); vm.applyAns33() }.padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text("Endre ${a.applyCount} ${if (a.applyCount == 1) "avtale" else "avtaler"} ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("✦ " + a.source.replace("System-AI", "Glimt").ifBlank { "Glimt" }, color = light.copy(alpha = .55f), fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold,
                     fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

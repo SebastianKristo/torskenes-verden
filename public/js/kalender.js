@@ -19,6 +19,7 @@ import { loadBirthdays } from './birthdays.js';
 import { searchField } from './searchfield.js';
 import { t, locale, dayName, monthName, fmtDate } from './i18n.js';
 import { addQuick, preview, quickLabel, setQuickHooks } from './kal-quick.js';
+import { LEARN_TYPES, typeName, addMemory, applyMemory, nameOfEvent, loadMemory, dinOf } from './glimt-memory.js'; // prompt 33
 /** Prompt 31 (Kalender.dc.html): «Pilestredet park 35 U2005 https://link.mazemap.com/…» → «Pilestredet park 35 U2005». */
 export const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
 const urlIn = (t) => String(t ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
@@ -407,12 +408,68 @@ function detailSheet() {
     <div class="k2-rows">${rows.map(([a, b, u]) => `<div><span>${esc(a)}</span><b${u ? ' data-no-i18n' : ''}>${esc(b)}</b></div>`).join('')}</div>
     <span class="k2-lab">VARSEL</span><div class="k2-chips">${REMS.map(([v, n]) => `<button type="button" class="k2-chip${R === v ? ' on' : ''}" data-k-rem="${v}" aria-pressed="${R === v}">${n}</button>`).join('')}</div>
     ${src ? `<span class="k2-src">${esc(src)}</span>` : ''}
+    ${e.editable ? '<button type="button" class="k2-link k2-learn" data-k-learn>Lær Glimt hva dette er…</button>' : ''}
     ${K.err2 ? `<span class="k2-err">${esc(K.err2)}</span>` : ''}
     <div class="k2-btns">${e.editable ? `<button type="button" class="k2-b ink" data-k-edit>Rediger</button><button type="button" class="k2-b red" data-k-del>${K.delArm ? 'Trykk igjen for å slette' : 'Slett'}</button>` : ''}
       ${map ? `<a class="k2-b line" href="${esc(map)}" target="_blank" rel="noopener">${e.rUrl ? 'Åpne kart ↗' : 'Vis rom på kart ↗'}</a>` : ''}
       ${/^https:\/\//.test(e.url) ? `<a class="k2-b line" href="${esc(e.url)}" target="_blank" rel="noopener">Åpne ${e.src === 'canvas' ? 'i Canvas' : e.src === 'google' ? 'i Google Kalender' : 'kilden'} ↗</a>` : ''}
       ${!e.editable ? `<button type="button" class="k2-b line" data-k-copy>Kopier til Privat</button>` : ''}</div>
   </div></div>`;
+}
+
+/* Prompt 33: «Lær Glimt hva dette er…» – velg type (+ navn), lagres som alias i «Glimt husker»; så «Endre tittel på N avtaler?».
+   Samme ark brukes når brukeren selv har gitt en rask time ny tittel (forslaget fra PATCH: suggestMemory). */
+function learnSheet() {
+  const L = K.learn;
+  if (!L) return '';
+  const chip = (v, n) => `<button type="button" class="k2-chip${L.type === v ? ' on' : ''}" data-k-ltype="${esc(v)}" aria-pressed="${L.type === v}">${esc(n)}</button>`;
+  const inner = L.step === 'ask'
+    ? `<p class="k2-learn-q">Ok, Glimt husker at <b data-no-i18n>${esc(L.name)}</b> er ${esc(dinOf(L.type))}.</p>
+       ${L.count ? `<p class="k2-learn-q">Endre tittel på ${L.count} ${L.count === 1 ? 'avtale' : 'avtaler'} til «<span data-no-i18n>${esc(L.title)}</span>»?</p>
+       <div class="k2-btns"><button type="button" class="k2-b ink" data-k-lapply${K.busy ? ' disabled' : ''}>${K.busy ? 'Endrer …' : 'Endre'}</button><button type="button" class="k2-b line" data-k-lclose>Nei takk</button></div>`
+    : '<div class="k2-btns"><button type="button" class="k2-b ink" data-k-lclose>Ferdig</button></div>'}`
+    : `${L.text ? `<p class="k2-learn-q">${esc(L.text)}</p>` : ''}
+      <span class="k2-lab">HVA ER DETTE?</span><div class="k2-chips">${LEARN_TYPES.map(([v, n]) => chip(v, n)).join('')}</div>
+      <form class="k2-form" data-k-lform>
+        <input class="k2-in" name="name" value="${esc(L.name)}" placeholder="Navn på avsender, f.eks. Påhåret" autocomplete="off" required>
+        ${L.type === 'annet' ? `<input class="k2-in" name="title" value="${esc(L.title ?? '')}" placeholder="Tittel, f.eks. Massasje · Spa Nova" autocomplete="off">` : ''}
+        ${L.err ? `<span class="k2-err">${esc(L.err)}</span>` : ''}
+        <button type="submit" class="k2-b ink"${!L.type || K.busy ? ' disabled' : ''}>${K.busy ? 'Lagrer …' : L.suggest ? 'Husk' : 'Lagre'}</button>
+        <span class="k2-src">Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → AI → Glimt husker.</span>
+      </form>`;
+  return `<div class="k2-sheet-bg" data-k-lclose><div class="k2-sheet k2-learn-sheet" role="dialog" aria-modal="true" aria-label="Lær Glimt hva dette er">
+    <div class="k2-det-h"><div class="k2-grow"><span class="k2-lab">✦ GLIMT HUSKER</span><b>Lær Glimt hva dette er</b></div><button type="button" class="k2-x" data-k-lclose aria-label="Lukk">✕</button></div>
+    ${inner}
+  </div></div>`;
+}
+function openLearn(ev, pre = {}) {
+  K.learn = { step: 'pick', type: pre.type ?? '', name: pre.name ?? nameOfEvent(ev ?? {}), title: pre.title ?? '', text: pre.text ?? '', suggest: !!pre.suggest, err: '', focus: true };
+  paint();
+}
+async function saveLearn(f) {
+  const L = K.learn;
+  const fd = new FormData(f);
+  L.name = String(fd.get('name') ?? '').trim(); L.title = String(fd.get('title') ?? L.title ?? '').trim();
+  if (!L.type) { L.err = 'Velg hva det er.'; return paint(); }
+  if (L.name.length < 2) { L.err = 'Skriv navnet på avsenderen.'; return paint(); }
+  const lab = typeName(L.type);
+  const title = L.type === 'annet' ? L.title || L.name : L.suggest && L.title ? L.title : `${lab} · ${L.name}`;
+  K.busy = true; L.err = ''; paint();
+  try {
+    const d = await addMemory({ match: L.name, type: L.type, title });
+    Object.assign(L, { step: 'ask', id: d.item?.id, count: d.matches ?? 0, title: d.item?.title || title });
+  } catch (e) { L.err = e.message; } finally { K.busy = false; paint(); }
+}
+async function runApply() {
+  const L = K.learn;
+  if (!L?.id) return;
+  K.busy = true; paint();
+  try {
+    const d = await applyMemory(L.id);
+    K.learn = null;
+    flash(d.count ? `${d.count} ${d.count === 1 ? 'avtale' : 'avtaler'} fikk nytt navn` : 'Ingen avtaler å endre');
+    await ensureKal(true);
+  } catch (e) { if (K.learn) { K.learn.err = e.message; K.learn.step = 'pick'; } } finally { K.busy = false; paint(); }
 }
 
 function formSheet() {
@@ -469,7 +526,7 @@ function qaPreview() {
   return `<div class="k2-qa-pv"><span class="k2-strip" style="background:${esc(calById('privat').color)}"></span><div class="k2-grow"><b data-no-i18n>${esc(p.title)}</b><span>${esc(dt)}</span>${p.place ? `<span data-no-i18n>${esc(p.place)}</span>` : ''}<span class="k2-qa-cal">Privat · varsel 1 time før</span></div></div>`;
 }
 function paintQa() { const el = host()?.querySelector('[data-k-qpv]'); if (el) el.innerHTML = qaPreview(); const b = host()?.querySelector('.k2-qa-go'); if (b) { if ((K.qa?.txt ?? '').trim()) b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true'); } }
-function openQa(txt = '') { K.sel = null; K.form = null; K.srch = null; K.drawer = false; K.qa = { txt, err: '', focus: true }; paint(); }
+function openQa(txt = '') { K.sel = null; K.form = null; K.srch = null; K.drawer = false; K.qa = { txt, err: '', focus: true }; paint(); loadMemory().then(() => { if (K.qa) paintQa(); }); }
 function submitQa() {
   const v = (K.qa?.txt ?? '').trim();
   if (!v) { if (K.qa) { K.qa.err = 'Skriv hva timen gjelder.'; paint(); } return; }
@@ -545,7 +602,7 @@ function body() {
     ${nx.prog ? `<span class="k2-now-p" aria-hidden="true"><i style="width:${nx.pct}%"></i></span>` : ''}</button>`;
   const side = mob ? '' : `${nar && K.drawer ? '<div class="k2-drw-bg" data-k-drawer></div>' : ''}<aside class="k2-side${nar ? ` drawer${K.drawer ? ' open' : ''}` : ''}">${miniCal(today, vis)}<div class="k2-cals"><span class="k2-lab">KALENDERE</span>${calFilters()}<button type="button" class="k2-b line sm" data-k-set>Administrer kalendere ›</button></div>
     <span class="k2-keys">Hurtigtaster: ← → bla · T i dag · D dag · W uke · M måned · L liste · N ny · / søk</span>${K.fallback ? '<span class="k2-keys">Eldre server: bare skolens iCal og Bursdager.</span>' : ''}</aside>`;
-  return `${K.toast ? `<div class="k2-toast" role="status">${esc(K.toast)}</div>` : ''}${top}${drop}${strip}<div class="k2-main">${side}<div class="k2-view" data-k-swipe>${vis.html}</div></div>${detailSheet()}${formSheet()}${searchSheet()}${qaSheet()}`;
+  return `${K.toast ? `<div class="k2-toast" role="status">${esc(K.toast)}</div>` : ''}${top}${drop}${strip}<div class="k2-main">${side}<div class="k2-view" data-k-swipe>${vis.html}</div></div>${detailSheet()}${formSheet()}${searchSheet()}${qaSheet()}${learnSheet()}`;
 }
 
 function scrollGrid(h) {
@@ -573,6 +630,7 @@ function paint() {
   const l2 = h.querySelector('[data-k-list]'); if (l2 && lst) l2.scrollTop = lst;
   if (focusQ || (K.srch && K.srch.focus)) { const q = h.querySelector('[data-k-q]'); if (q) { q.focus(); try { q.setSelectionRange(selS || q.value.length, selS || q.value.length); } catch { /* */ } } if (K.srch) K.srch.focus = false; }
   if (K.form?.focus) { K.form.focus = false; h.querySelector('[data-k-form] [name=title]')?.focus(); }
+  if (K.learn?.focus) { K.learn.focus = false; h.querySelector('[data-k-lform] [name=name]')?.focus(); }
   if (focusQa || K.qa?.focus) { const q = h.querySelector('[data-k-qtxt]'); if (q) { q.focus(); const n = focusQa ? selQa : q.value.length; try { q.setSelectionRange(n, n); } catch { /* */ } } if (K.qa) K.qa.focus = false; }
 }
 /** Fullskjerm: kalenderen dekker hele vinduet (position:fixed) og siden bak ruller ikke. */
@@ -683,6 +741,9 @@ async function saveForm(f) {
     if (F.rem && id) { K.rem = { ...K.rem, [id]: F.rem }; savePref('kalReminders', { [id]: F.rem }); }
     K.form = null; K.cur = F.k;
     flash(F.id ? 'Hendelsen er oppdatert' : 'Hendelsen er lagret');
+    // Prompt 33: ny tittel på en rask time → foreslå å huske avsenderen (lagres bare hvis brukeren trykker Husk).
+    const sg = r.d?.suggestMemory;
+    if (sg?.name) openLearn(null, { name: sg.name, type: sg.type === 'annet' ? '' : sg.type, title: sg.title, text: sg.text, suggest: true });
     await ensureKal(true);
   } catch (e) { if (K.form) K.form.err = e.message; } finally { K.busy = false; paint(); }
 }
@@ -758,6 +819,7 @@ function bind(h) {
   h.addEventListener('keydown', (e) => { if (e.target.matches?.('[data-k-qtxt]') && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submitQa(); } });
   h.addEventListener('submit', (e) => {
     if (e.target.closest('[data-k-qform]')) { e.preventDefault(); submitQa(); return; }
+    const lf = e.target.closest('[data-k-lform]'); if (lf) { e.preventDefault(); saveLearn(lf); return; }
     const f = e.target.closest('[data-k-form]'); if (f) { e.preventDefault(); saveForm(f); }
   });
   h.addEventListener('click', (e) => {
@@ -769,7 +831,11 @@ function bind(h) {
     const b = tg.closest('button,[data-k-tap]');
     if (!b || !h.contains(b)) return;
     const d = b.dataset;
+    if ('kLclose' in d) { K.learn = null; paint(); return; }
     if ('kClose' in d || 'kSclose' in d || 'kFclose' in d || 'kQclose' in d) { closeSheets(); return; }
+    if ('kLearn' in d) { const ev = findEv(K.sel); if (ev) { K.sel = null; openLearn(ev); } return; }
+    if (d.kLtype) { const f = host()?.querySelector('[data-k-lform]'); if (f && K.learn) { const fd = new FormData(f); K.learn.name = String(fd.get('name') ?? K.learn.name); K.learn.title = String(fd.get('title') ?? K.learn.title ?? ''); } if (K.learn) { K.learn.type = d.kLtype; K.learn.err = ''; paint(); } return; }
+    if ('kLapply' in d) { runApply(); return; }
     if ('kQa' in d) return openQa();
     if ('kQpaste' in d) { navigator.clipboard?.readText?.().then((v) => { if (v && K.qa) { K.qa.txt = v; K.qa.focus = true; paint(); } }).catch(() => { if (K.qa) { K.qa.err = 'Fikk ikke lese utklippstavlen. Lim inn med ⌘V / Ctrl+V.'; K.qa.focus = true; paint(); } }); return; }
     if (d.kQchip) { if (K.qa) { K.qa.txt = `Time hos ${d.kQchip.toLowerCase()} `; K.qa.focus = true; K.qa.err = ''; paint(); } return; }
@@ -796,7 +862,12 @@ function bind(h) {
     }
     if (d.kCal) { K.filt = { ...K.filt, [d.kCal]: !shownCal(d.kCal) }; savePref('kalFilters', K.filt); return paint(); }
     if (d.kDay) return openDay(d.kDay);
-    if (d.kSel) { K.sel = d.kSel; K.delArm = false; K.err2 = ''; return paint(); }
+    if (d.kSel) {
+      K.sel = d.kSel; K.delArm = false; K.err2 = '';
+      // Prompt 33: «sist viste hendelse» for Glimt («det var frisør»). Svaret trengs ikke.
+      const ev = findEv(d.kSel); if (ev?.editable) fetch(`/api/kalender/events/${encodeURIComponent(ev.oid || ev.id)}`, { cache: 'no-store' }).catch(() => {});
+      return paint();
+    }
     if (d.kHit) { const e = findEv(d.kHit); K.srch = null; K.cur = d.kHitk; if (K.view === 'mnd' || K.view === 'liste') K.view = 'dag'; K.sel = e ? e.id : null; gridKey = ''; return paint(); }
     if (d.kRem) { const ev = findEv(K.sel); if (ev) { const id = ev.oid || ev.id; K.rem = { ...K.rem, [id]: d.kRem, [ev.id]: d.kRem }; savePref('kalReminders', { [id]: d.kRem }); } return paint(); }
     if ('kEdit' in d) { const ev = findEv(K.sel); if (ev) { K.sel = null; K.form = { ...formFromEvent(ev), focus: true }; paint(); } return; }
@@ -815,8 +886,8 @@ function bind(h) {
 }
 function readFormSafe() { const f = host()?.querySelector('[data-k-form]'); if (f && K.form) readForm(f); }
 function closeSheets() {
-  if (!K.sel && !K.form && !K.srch && !K.mini && !K.qa && !K.drawer) return false;
-  K.sel = null; K.form = null; K.srch = null; K.mini = false; K.qa = null; K.drawer = false; K.delArm = false; K.err2 = '';
+  if (!K.sel && !K.form && !K.srch && !K.mini && !K.qa && !K.drawer && !K.learn) return false;
+  K.sel = null; K.form = null; K.srch = null; K.mini = false; K.qa = null; K.drawer = false; K.delArm = false; K.err2 = ''; K.learn = null;
   clearTimeout(sTimer); sCtl?.abort();
   paint();
   return true;

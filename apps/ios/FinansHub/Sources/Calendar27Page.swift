@@ -28,6 +28,12 @@ struct Cal27Page: View {
                 .presentationDetents([.medium, .large])
                 .sheetEdge30(p.bg)
         }
+        // Prompt 33: «Lær Glimt hva dette er…» (Memory33.swift)
+        .sheet(item: Binding<Memory33Learn?>(get: { Memory33Model.shared.learn }, set: { Memory33Model.shared.learn = $0 })) { _ in
+            Memory33LearnSheet()
+                .environment(\.paper, p)
+                .sheetEdge30(p.bg)
+        }
         .sheet(item: Binding<Cal27Form?>(get: { m.form }, set: { m.form = $0 })) { f in
             Cal27FormSheet(start: f)
                 .environment(\.paper, p)

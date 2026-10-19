@@ -29,6 +29,8 @@ export const TOOL_RE = {
   finance: /brukt på|bruker jeg på|forbruk|kostet|utgifter|hvor mye (har jeg )?brukt/i,
   tasks: /huskeliste|handleliste|gjøremål|oppgaver|må jeg huske/i,
   trial: /pr(ø|o)ve(periode)?|gratis i|avslutt|si opp|oppsig|trial/i,
+  // Prompt 33: «husk at Påhåret er frisøren min», «det var frisør», «dette er for tannlegen»
+  memory: /^(husk at\s+)?.{0,60}\b(er|var|gjelder)\s+(for\s+|hos\s+)?(min\s+|en\s+)?(frisør|frisøren|lege|legen|fastlegen|tannlege|tannlegen|fysio|fysioterapeut(en)?|optiker(en)?|psykolog(en)?)(\s+min)?[.!]?$/i,
 };
 export const looksLikeTool = (q) => Object.values(TOOL_RE).some((re) => re.test(String(q ?? '')));
 
@@ -61,7 +63,7 @@ export function normAnswer(d = {}, ms0 = 0) {
   if (!text && (r.pre || r.b || r.post)) text = `${r.pre ?? ''}${r.b ? `**${r.b}**` : ''}${r.post ?? ''}`;
   if (!text && r.bold) text = `**${r.bold}**`;
   return { text: String(text), source: r.source ?? r.src ?? '', intent: r.intent ?? '', card: r.card ?? null, tool: r.tool ?? null, ms: r.ms ?? (ms0 ? Date.now() - ms0 : 0),
-    chatId: r.chatId ?? r.chatContext?.chatId ?? null, chatContext: r.chatContext ?? null, question: r.question ?? null, jobId: r.jobId ?? null, error: r.error ?? null };
+    chatId: r.chatId ?? r.chatContext?.chatId ?? null, chatContext: r.chatContext ?? null, question: r.question ?? null, jobId: r.jobId ?? null, error: r.error ?? null, memory: r.memory ?? null, apply: r.apply ?? null };
 }
 
 /** Venter på en serverjobb: sanntid eller polling, maks 90 s. */
