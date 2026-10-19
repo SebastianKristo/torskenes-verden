@@ -196,8 +196,15 @@ struct MacWindowReader: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            if let w = nsView.window { onWindow(w) }
-        }
+        // Bare når vinduet er et annet enn sist (ellers ny oppdatering for hver tegning).
+        guard let w = nsView.window, context.coordinator.last !== w else { return }
+        context.coordinator.last = w
+        DispatchQueue.main.async { onWindow(w) }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    final class Coordinator {
+        weak var last: NSWindow? = nil
     }
 }

@@ -47,19 +47,25 @@ struct MacRoot: View {
             }
         }
         .background(MacWindowReader { (w: NSWindow) in attach(w) })
+        .onChange(of: store.theme) { (_: String) in
+            // Nytt tema: vindusbakgrunnen følger etter systemutseendet er byttet.
+            DispatchQueue.main.async { if let w = win.window { attach(w) } }
+        }
         .onOpenURL { (url: URL) in MacLinks.handle(url, win: win) }
         .animation(.easeOut(duration: 0.18), value: win.modal)
         .animation(.easeOut(duration: 0.2), value: store.toast)
     }
 
+    /// Setter vindusegenskapene bare når de faktisk endres – hver endring av NSWindow utløser en ny SwiftUI-oppdatering.
     private func attach(_ w: NSWindow) {
         if win.window !== w { win.window = w }
-        w.title = "Kalender"
-        w.titlebarAppearsTransparent = true
-        w.titleVisibility = .visible
-        w.backgroundColor = NSColor(t.bar)
-        w.isMovableByWindowBackground = false
-        w.tabbingMode = .automatic
+        if w.title != "Kalender" { w.title = "Kalender" }
+        if !w.titlebarAppearsTransparent { w.titlebarAppearsTransparent = true }
+        if w.titleVisibility != .visible { w.titleVisibility = .visible }
+        let bg: NSColor = NSColor(t.bar)
+        if w.backgroundColor != bg { w.backgroundColor = bg }
+        if w.isMovableByWindowBackground { w.isMovableByWindowBackground = false }
+        if w.tabbingMode != .automatic { w.tabbingMode = .automatic }
     }
 
     private var main: some View {

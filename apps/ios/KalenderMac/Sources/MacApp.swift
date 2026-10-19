@@ -11,7 +11,9 @@ import UniformTypeIdentifiers
 @main
 struct MacApp: App {
     @NSApplicationDelegateAdaptor(MacAppDelegate.self) private var delegate
-    @StateObject private var store: MacStore = MacStore.shared
+    // Ikke @StateObject på hele MacStore her: da bygges alle scener og menyer på nytt ved hver dataendring, og på macOS 26/27
+    // gikk det i en uendelig løkke (AppGraph.sceneList → MacCommands → … → stabeloverflyt ved oppstart). Bare menylinje-valget observeres.
+    @AppStorage("mac.mb") private var menuBarOn: Bool = true
 
     /// Fanget fra et vindu eller menylinje-panelet, så varsler og menylinja kan åpne hovedvinduet.
     static var opener: OpenWindowAction? = nil
@@ -35,12 +37,20 @@ struct MacApp: App {
         .windowResizability(.contentSize)
         .defaultPosition(.center)
 
-        MenuBarExtra(isInserted: $store.menuBarOn) {
+        MenuBarExtra(isInserted: menuBarBinding) {
             MacThemed { MacMenuBarPanel() }
         } label: {
             MacMenuBarLabel()
         }
         .menuBarExtraStyle(.window)
+    }
+
+    /// Skriver bare når verdien faktisk endres (MenuBarExtra setter bindingen under scene-oppdateringen).
+    private var menuBarBinding: Binding<Bool> {
+        Binding<Bool>(get: { menuBarOn }, set: { (v: Bool) in
+            if v != menuBarOn { menuBarOn = v }
+            if MacStore.shared.menuBarOn != v { MacStore.shared.menuBarOn = v }
+        })
     }
 
     /* ---------- Hjelpere ---------- */
