@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Prompt 34: Glimt-brief-widgetene. -->
+    <string name="widget_brief34_m_desc">Morgen-, dags- og kveldsbrief fra Glimt med vær, neste avtale og nyheter</string>
+    <string name="widget_s34_brief_desc">Glimt-brief med figuren · Samsung</string>
+</resources>

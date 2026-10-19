@@ -438,6 +438,7 @@ fun AppViewModel.openKal26(selId: String? = null, native: Boolean = true) {
 
 fun AppViewModel.closeKal26() {
     val s = kal26
+    Haptics.back() // prompt 34
     when {
         s.form != null -> s.form = null
         s.search -> { s.search = false; s.q = ""; s.results = null }

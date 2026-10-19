@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 34: Glimt-brief 4 × 2 (Material You, primaryContainer, radius 28): figur, tittel, temperatur, oppsummering og chips.
+     previewLayout/previewImage/description/targetCell* som prøveperiode-widgetene (prompt 33), så One UI og andre launchere viser den. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_brief34_m_desc"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/brief34_prev_m"
+    android:previewImage="@drawable/brief34_prev_m"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen|keyguard" />

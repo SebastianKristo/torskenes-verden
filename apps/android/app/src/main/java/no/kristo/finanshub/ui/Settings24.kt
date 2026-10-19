@@ -73,6 +73,8 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("backup", "Backup og data", "App", "Nedlasting og lagring", "backup", "backup eksport"))
     // Prompt 32: «oppdatering», «versjon» og «update» treffer Nordlys OS (Oppdatering-raden er fjernet).
     add(SetItem24("nordlys", "Nordlys OS", "Programvare", "Oppdatering, versjon og hva er nytt", null, "oppdatering oppdater versjon update system programvare"))
+    // Prompt 34: mål-id-er for konkrete kontroller (Oppdater nå, Tema, Haptikk …): treffet går til siden og markerer kontrollen.
+    ANCHORS34.filter { vm.userIsAdmin || !it.admin }.forEach { a -> add(SetItem24(a.id, a.title, a.path, "Markeres på siden", null, a.words)) }
     (vm.b24.integ ?: INTEG24_FALLBACK).filter { vm.userIsAdmin || it.personal }.forEach { i ->
         add(SetItem24("integ:${i.id}", i.name, "Integrasjoner", i.fields.joinToString(", ") { it.label }, "integ", i.id))
     }
@@ -93,7 +95,9 @@ private val SYN24: Map<String, List<String>> = mapOf(
     "kvitter" to listOf("integ:imap"), "epost" to listOf("integ:imap"), "e-post" to listOf("integ:imap"), "mail" to listOf("integ:imap"), "finn" to listOf("integ:finn"),
     "profil" to listOf("profile:standard", "profile:finans_boliger", "profile:boliger"), "bolig" to listOf("profile:finans_boliger", "profile:boliger"),
     "fane" to listOf("tabedit", "fin"), "widget" to listOf("modules"), "modul" to listOf("modules"), "bruker" to listOf("accounts"),
-    "bilde" to listOf("integ:photos", "look"), "oppdat" to listOf("nordlys"), "versjon" to listOf("nordlys"), "update" to listOf("nordlys"), "unsplash" to listOf("integ:photos"), "pexels" to listOf("integ:photos"),
+    "bilde" to listOf("integ:photos", "look"), "oppdat" to listOf("upd", "nordlys"), "versjon" to listOf("chk", "nordlys"), "update" to listOf("upd", "nordlys"),
+    "haptikk" to listOf("haptic"), "vibrer" to listOf("haptic"), "stille" to listOf("quiet"), "2fa" to listOf("2fa"), "totrinn" to listOf("2fa"),
+    "modell" to listOf("ai-mod"), "ollama" to listOf("ai-mod"), "backup" to listOf("bk-now", "bk-auto"), "bakgrunn" to listOf("bg"), "unsplash" to listOf("integ:photos"), "pexels" to listOf("integ:photos"),
 )
 private val STOP24 = Regex("^(hvor|hvordan|kan|jeg|du|meg|min|mitt|mine|en|et|den|det|på|i|til|for|å|og|er|med|endre|bytte|bytter|skru|slå|av|finner|finne|legge|sette|hva|vil)$")
 
@@ -105,7 +109,8 @@ private fun score24(items: List<SetItem24>, q0: String, ai: Boolean): List<SetIt
         val txt = "${a.path} ${a.title} ${a.sub} ${a.extra}".lowercase()
         var x = 0
         if (txt.contains(q)) x += 10
-        words.forEach { w -> if (txt.contains(w)) x += 3 }
+        words.forEach { w -> if (txt.contains(w)) x += 3 else if (w.length >= 6 && txt.contains(w.dropLast(2))) x += 2 } // prompt 34: bøyning («oppdaterer»)
+        if (words.any { w -> a.title.lowercase().contains(w) || (w.length >= 6 && a.title.lowercase().contains(w.dropLast(2))) }) x += 1
         if (ai) words.forEach { w -> SYN24.forEach { (k, l) -> if (w.startsWith(k) || (k.startsWith(w) && w.length > 2)) if (a.id in l) x += 6 } }
         a to x
     }.filter { it.second > 0 }.sortedByDescending { it.second }.take(if (ai) 6 else 12).map { it.first }
@@ -114,6 +119,9 @@ private fun score24(items: List<SetItem24>, q0: String, ai: Boolean): List<SetIt
 private fun localAnswer24(items: List<SetItem24>, q: String): Pair<String?, List<String>> {
     val hits = score24(items, q, true)
     val h = hits.firstOrNull() ?: return "Fant ingen innstilling som passer. Prøv med andre ord, f.eks. «bytte ikon» eller «Bring-nøkkel»." to emptyList()
+    // Prompt 34: mål med egen kontroll: «Gå til System og trykk «Oppdater nå» … Jeg tar deg dit og viser knappen …».
+    if (ANCHORS34.any { it.id == h.id }) return (if (h.id == "upd") "Gå til System og trykk «Oppdater nå». Den tar backup først og bruker ca. 2 minutter. Jeg tar deg dit og viser knappen …"
+        else "Gå til ${h.path} → «${h.title}». Jeg tar deg dit og viser deg hvor den er …") to hits.map { it.id }
     return "Du finner «${h.title}» under Innstillinger → ${h.path}. Trykk på raden for å åpne." to hits.map { it.id }
 }
 
@@ -138,6 +146,8 @@ private fun open24(vm: AppViewModel, it: SetItem24) {
     vm.b24.sq = ""; vm.b24.aiAnswer = null; vm.b24.aiIds = null
     // Plassen til gruppekortet på hovedsiden: søk 0, profilkort 1, PROFIL 2–3, KONTO 4–5, FINANS 6–7, appnavn 8–9, APP 10–11.
     fun main(key: String, index: Int) { vm.settingsPage = null; vm.highlight25(key, index) }
+    // Prompt 34: mål med egen kontroll (Oppdater nå, Tema, Haptikk …) åpnes og markeres med rød ring.
+    if (ANCHORS34.any { a -> a.id == it.id } && vm.goAnchor34(it.id)) return
     when {
         it.id.startsWith("profile:") -> main(it.id, 3)
         // Prompt 26: hver integrasjon har egen side (Kalendere for skole, Google og HA).
@@ -193,7 +203,11 @@ private fun SearchBar24(vm: AppViewModel) {
                 s.sq, { s.sq = it }, singleLine = true, modifier = Modifier.weight(1f),
                 textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.ink),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { if (s.sqAi && s.sq.isNotBlank()) vm.b24AiSearch(s.sq.trim(), items) { q -> localAnswer24(items, q) } }),
+                keyboardActions = KeyboardActions(onSearch = {
+                    if (s.sqAi && s.sq.isNotBlank()) vm.b24AiSearch(s.sq.trim(), items) { q -> localAnswer24(items, q) }
+                    // Prompt 34: vanlig søk + Enter går rett til beste treff med markering.
+                    else if (s.sq.isNotBlank()) score24(items, s.sq, false).firstOrNull()?.let { open24(vm, it) }
+                }),
                 decorationBox = { inner ->
                     Box(contentAlignment = Alignment.CenterStart) {
                         if (s.sq.isEmpty()) Text(if (s.sqAi) "Spør, f.eks. «hvor bytter jeg ikon?»" else "Søk i innstillinger", color = p.mut, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -230,7 +244,10 @@ private fun SearchResults24(vm: AppViewModel) {
                         Text(it, color = p.ink, fontSize = 13.5.sp, lineHeight = 19.6.sp)
                         // Prompt 25: «Ta meg dit →» åpner undersiden, scroller til innstillingen og fremhever den.
                         val first = hits.firstOrNull()
-                        if (first != null && s.aiAnswer != null && !s.aiBusy) Box(
+                        // Prompt 34: har svaret et mål (mål-id), går den dit automatisk etter 1,6 s og markerer kontrollen («Vis meg nå ›»).
+                        val anchor = (vm.p34.aiAnchor ?: first?.id)?.takeIf { id -> ANCHORS34.any { it.id == id } }
+                        if (anchor != null && s.aiAnswer != null && !s.aiBusy) ShowMeNow34(vm, anchor)
+                        else if (first != null && s.aiAnswer != null && !s.aiBusy) Box(
                             Modifier.height(36.dp).clip(CircleShape).background(p.ink)
                                 .clickable(role = Role.Button, onClickLabel = "Ta meg dit") { Haptics.select(); open24(vm, first) }.padding(horizontal = 16.dp),
                             contentAlignment = Alignment.Center,

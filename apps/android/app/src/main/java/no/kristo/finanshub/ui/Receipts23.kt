@@ -146,7 +146,9 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
             add(QRow("u" + u.id, u.name.ifBlank { "Kvittering" }, "Venter på nett · sendes automatisk", p.mut, 1f, false, null) { vm.retryPending() })
         }
         if (vm.uploading > 0) add(QRow("up", if (vm.uploading == 1) "Laster opp 1 fil" else "Laster opp ${vm.uploading} filer", "✦ Leser … 0 %", p.lab, 0.02f, false, null) {})
-        vm.jobs.filter { it.status == "pending" || it.status == "processing" || it.status == "error" }.forEach { j ->
+        // Prompt 34: kvitteringer som leses av AI står i «✦ ANALYSERES AV AI» (RcAiSection34), ikke i KØ.
+        val aiIds34 = vm.p34.rcAi.map { it.id }.toSet()
+        vm.jobs.filter { (it.status == "pending" || it.status == "processing" || it.status == "error") && it.id !in aiIds34 }.forEach { j ->
             val err = j.status == "error"
             val pct = if (err) 1f else (j.progress.coerceIn(0, 99)) / 100f
             add(QRow(j.id, j.name, if (err) "Feilet · prøv ✦ Analyser på nytt" else j.statusText?.takeIf { it.isNotBlank() }?.let { t -> (if (t.startsWith("✦")) t else "✦ $t") + if (t.contains("svarte ikke")) "" else " ${j.progress.coerceIn(0, 99)} %" } ?: "✦ Leser … ${j.progress.coerceIn(0, 99)} %", p.lab, pct, false, null) { vm.reread23(j.id) })
@@ -183,6 +185,7 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
                 PickCard("Filer", Modifier.weight(1f), { Icon(Icons.Outlined.Description, null, tint = p.ink, modifier = Modifier.size(20.dp)) }, files)
             }
         }
+        item { RcAiSection34(vm) } // Prompt 34: ✦ ANALYSERES AV AI · N (ui/Ui34.kt)
         if (q.isNotEmpty()) {
             item { RcLabel("Kø") }
             item {

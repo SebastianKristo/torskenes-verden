@@ -240,7 +240,7 @@ internal fun SecurityPage(vm: AppViewModel, onPrivacyChanged: () -> Unit) = Page
     Section("Tofaktor (2FA)") {
         Group {
             Info("Status", when (vm.me?.totp) { true -> "På · TOTP"; false -> "Av"; null -> "Ukjent" })
-            Row(Modifier.fillMaxWidth().clickable { uri.openUri(homelab(vm)) }.padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().hl34(vm, "2fa", 0.dp).clickable { uri.openUri(homelab(vm)) }.padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically) { // prompt 34: mål «2fa»
                 Text(if (vm.me?.totp == true) "Slå av 2FA" else "Sett opp 2FA", Modifier.weight(1f), color = C.primary)
                 Icon(Icons.Filled.OpenInBrowser, null, tint = C.text2)
             }

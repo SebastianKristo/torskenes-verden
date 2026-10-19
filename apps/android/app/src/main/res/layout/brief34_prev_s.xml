@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 34: forhåndsvisning i widgetgalleriet (Android 12+) med eksempeldata (Kveldsbrief · 8° · Tannlege 15:15). -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:scaleType="fitCenter" android:src="@drawable/brief34_prev_s"
+    android:contentDescription="Glimt-brief" />

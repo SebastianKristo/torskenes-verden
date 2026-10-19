@@ -282,7 +282,8 @@ internal fun PaperApp(
     // Prompt 32: Innstillinger (og alle undersidene) uten fanelinje og skanneknapp; bunnen er 28 dp + systemfeltet.
     val setHere = (vm.paperPage == "set" || s == Screen.Settings) && !overlay
     // Ekstra luft nederst i listene: plass til fanelinja (telefon) og den flytende skanneknappen.
-    val navBottom = if (setHere) navInset + 28.dp - PAPER_BAR - 30.dp
+    // Prompt 34: + 23 dp fordi innholdsboksen nå går helt ned til skjermkanten (underNav34), ikke 23 dp over den.
+    val navBottom = 23.dp + if (setHere) navInset + 28.dp - PAPER_BAR - 30.dp
         else if (wide) 12.dp - PAPER_BAR + navInset + (if (float) 70.dp else 0.dp) else barBottom - 12.dp + (if (float) 70.dp else 0.dp)
     val bar = paperBar(vm)
     val pageKey = paperPageKey(vm)
@@ -315,7 +316,10 @@ internal fun PaperApp(
                 Hero(vm, home, wide) { vm.photoMenu = !vm.photoMenu; if (vm.photoMenu) vm.loadPhotoThumbs() }
                 // Innholdet ligger 23 dp opp i fotovinduet. Så snart man scroller, klippes det ved headerens nederste kant.
                 Box(
-                    Modifier.weight(1f).fillMaxWidth().offset(y = (-23).dp).padding(start = if (wide) 112.dp else 0.dp)
+                    // Prompt 34 (claude-code-innhold-under-navbar.md): før var boksen bare flyttet 23 dp opp (offset), så de nederste 23 dp
+                    // av skjermen ble en flat papirstripe under fanelinja. Nå er den 23 dp høyere enn plassen sin (underNav34), så innholdet
+                    // går helt ned bak den svevende linja og skann-knappen. Listene har fortsatt luft nok til at siste kort scrolles over linja.
+                    Modifier.weight(1f).fillMaxWidth().underNav34(23.dp).padding(start = if (wide) 112.dp else 0.dp)
                         // Prompt 32 (claude-code-rediger-knapper-plass.md): i redigeringsmodus klippes innholdet 14 dp under ＋/✓
                         // (WIGGLE_CLIP32B), så widgets glir under en ren stripe og aldri bak knappene; ellers ved papirkanten (23 dp).
                         .nestedScroll(meter).clip(if (meter.y > 1f) TopCut(if (vm.editPage != null || vm.p32b.fmEdit || vm.b28.merEdit) WIGGLE_CLIP32B else 23.dp) else RectangleShape),
@@ -401,6 +405,9 @@ internal fun PaperApp(
             if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
             // Prompt 31: System-siden «Nordlys OS» i fullskjerm (uten bakgrunnsbilde, fanelinje og skann).
             if (vm.p31.nordOpen) NordlysPage31(vm)
+            // Prompt 34: Glimt-brief og AI-kontroll i fullskjerm (over Chat, så «Full AI-kontroll ›» i Chat legger seg over).
+            if (vm.p34.briefOpen) BriefPage34(vm)
+            if (vm.p34.aiOpen) AiControl34(vm)
             // Prompt 29: «Legg til time»-arket, pillen og banneret over alt (Kalender og Hjem). Prompt 31: Glimt-toasten ligger her.
             Quick29Overlay(vm)
             // Prompt 31: «Glimt svarte mens du var borte».
@@ -641,6 +648,7 @@ private fun ScanQueue(vm: AppViewModel) {
 /* ---------------- Hjem ---------------- */
 
 private val HOME_SECS = listOf(
+    PSec("h12", "Glimt-brief", full = true), // Prompt 34: øverst, over widgetene (kan flyttes og skjules i wiggle-modus)
     PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("h11", "Prøveperioder"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
     PSec("h8", "Huskeliste"), PSec("h6", "Posisjon"), PSec("h7", "Bolig"),
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
@@ -664,6 +672,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
         if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
         pageGridSecs(vm, "hjem", HOME_SECS, wide) { k ->
             when (k) {
+                "h12" -> HomeBrief34(vm) // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt)
                 "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (Glimt / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
                 // Viktigste pakke (klar for henting først).
                 "h2" -> {

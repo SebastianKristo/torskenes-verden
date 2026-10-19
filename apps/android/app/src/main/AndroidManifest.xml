@@ -571,6 +571,16 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s32b_trials_w" />
         </receiver>
 
+        <!-- Prompt 34: Glimt-brief 4×2 (Material You) og Samsung-varianten (på fra installasjonen; av på andre telefoner, Widgets33.fix). -->
+        <receiver android:name=".widget.BriefReceiver34" android:exported="true" android:enabled="true" android:label="Glimt-brief">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_brief34_m" />
+        </receiver>
+        <receiver android:name=".widget.S34BriefReceiver" android:exported="true" android:enabled="true" android:label="Glimt-brief · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s34_brief" />
+        </receiver>
+
         <!-- Prompt 33: server-adresse og et eget token til Kalender-appen (call «companion»). -->
         <provider
             android:name=".KalenderLoginProvider33"

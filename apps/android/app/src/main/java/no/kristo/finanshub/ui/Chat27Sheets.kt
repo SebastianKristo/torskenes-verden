@@ -205,7 +205,7 @@ private fun Ch27ModelSheet(vm: AppViewModel, v: ChatV27) {
     if (sky.isNotEmpty()) { Ch27Label(v, "SKY"); rows(sky) }
     Text("Sky-modeller merkes SKY. Før dine data eller vedlegg sendes dit, får du spørsmål om det.", color = v.mut, fontFamily = v.sans, fontSize = 12.5.sp, lineHeight = 18.sp,
         modifier = Modifier.padding(horizontal = 4.dp))
-    Ch27Btn(v, "Administrer modeller ›", false) { s.sheet = "mods" }
+    Ch27Btn(v, "Administrer modeller ›", false) { s.sheet = null; vm.openAiCtl34("mod") } // prompt 34: AI-kontroll → Modeller
 }
 
 /* ---------------- Samtaleinnstillinger (⚙) ---------------- */
@@ -241,6 +241,8 @@ private fun Ch27ParamsSheet(vm: AppViewModel, v: ChatV27) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         listOf("papir" to "Papir", "noytral" to "Nøytral").forEach { (k, n) -> Ch27Pill(v, n, s.theme == k) { vm.setChatTheme27(k) } }
     }
+    // Prompt 34: «Full AI-kontroll ›» nederst åpner AI-kontroll på fanen Valg.
+    Ch27Btn(v, "Full AI-kontroll ›", false) { s.sheet = null; vm.openAiCtl34("rt") }
     Ch27Btn(v, "Ferdig", true) { s.sheet = null }
 }
 

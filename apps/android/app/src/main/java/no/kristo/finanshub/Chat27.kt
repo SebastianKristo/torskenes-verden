@@ -308,6 +308,7 @@ fun AppViewModel.closeChat27() {
         s.drawer -> s.drawer = false
         s.editIdx != null -> s.editIdx = null
         else -> {
+            Haptics.back() // prompt 34: Chat ‹ med lett haptikk
             s.open = false
             s.voice?.stop(); s.voice = null; s.rec = false
             ChatTts27.stop(); s.speaking = null
@@ -435,6 +436,8 @@ fun AppViewModel.loadChats27() {
             s.pinned = pinned
             val inFolders = s.folders.flatMap { f -> f.chats.map { it.id } }.toSet()
             s.chats = chats.filter { !it.pinned && it.id !in inFolders && pinned.none { p -> p.id == it.id } }
+            // Prompt 34: «Kvitteringer og skanninger» (systemmappe) skilles ut og vises øverst under MAPPER.
+            runCatching { splitScans34(o) }
             s.listLoaded = true
             s.unavailable = false
         } catch (e: ApiException) { if (e.status == 404) s.unavailable = true; s.listLoaded = true }
@@ -809,7 +812,9 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
         if (ms.isNaN()) ms = (System.currentTimeMillis() - t0).toDouble()
         if (tps.isNaN() && full.isNotEmpty()) tps = (full.length / 4.0) / maxOf(.5, ms / 1000.0)
         val content = when {
-            err != null && full.isEmpty() -> "Jeg får ikke kontakt med ${m.label} akkurat nå. $err"
+            // Prompt 34: tydelig feil i stedet for et tomt svar («Glimt fikk ikke svar fra {modell}: {feil}»).
+            err != null && full.isEmpty() -> aiErrText34(m.label, err) + "\n\nPrøv igjen, eller åpne AI-kontroll (Modeller ›) for å bytte modell."
+            full.isBlank() && !stopped -> aiErrText34(m.label, "tomt svar")
             stopped -> "$full …"
             else -> full
         }

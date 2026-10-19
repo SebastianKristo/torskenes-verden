@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 34: Glimt-brief · Samsung 4 × 2 (hvit 78 %, radius 26): tittel, oppsummering, «Åpne brief ›», figur og temperatur.
+     På fra installasjonen; slås av på andre telefoner (Widgets33.fix). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_s34_brief_desc"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/brief34_prev_s"
+    android:previewImage="@drawable/brief34_prev_s"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen|keyguard" />

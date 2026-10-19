@@ -177,6 +177,8 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.familyOpen) FamilyScreen(vm)
     if (vm.tasksOpen) TasksScreen(vm)
     if (vm.compareOpen) CompareScreen(vm)
+    if (vm.p34.briefOpen) BriefPage34(vm) // prompt 34
+    if (vm.p34.aiOpen) AiControl34(vm)
 }
 
 @Composable

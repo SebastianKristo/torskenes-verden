@@ -144,7 +144,7 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         item { PLabel("Utseende", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
-            PCard {
+            PCard(Modifier.hl34(vm, "theme")) { // prompt 34: mål «theme»
                 val sel = "✓"
                 SetRow(vm, 0, Icons.Filled.Palette, "Papir · lys", "Lyst papir og svart fanelinje", if (vm.paperMode == "lys") sel else "") { vm.setPaperMode("lys") }
                 SetRow(vm, 1, Icons.Filled.Palette, "Papir · mørk", "Kveldspapir og lys fanelinje", if (vm.paperMode == "mork") sel else "", top = true) { vm.setPaperMode("mork") }
@@ -171,7 +171,7 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp) {
             }
         }
         item { PLabel("Bakgrunn på Hjem", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
-        item { PaperBgSettings(vm) { own.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } }
+        item { Box(Modifier.hl34(vm, "bg")) { PaperBgSettings(vm) { own.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } } } // prompt 34: mål «bg»
         item { PLabel("Fanelinje", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
             PCard {

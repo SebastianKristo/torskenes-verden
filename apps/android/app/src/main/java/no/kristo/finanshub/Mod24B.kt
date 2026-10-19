@@ -455,13 +455,17 @@ fun AppViewModel.b24AiSearch(q: String, items: List<SetItem24>, local: (String) 
     val s = b24
     val seq = ++s.aiSeq
     s.aiBusy = true
+    p34.aiAnchor = null
     launch24b {
         try {
             val body = JSONObject().put("q", q).put("items", JSONArray().apply { items.forEach { put(JSONObject().put("id", it.id).put("title", it.title).put("path", it.path)) } })
             val raw = runCatching { api24b { request("POST", "/settings/ai-search", body, prefix = Api.HOMELAB, timeout = 8_000, read = 20_000) } }.getOrNull()
             val o = raw?.let { runCatching { JSONObject(it) }.getOrNull() }
             if (seq != s.aiSeq) return@launch24b
-            val ids = o?.optJSONArray("ids").strings().filter { id -> items.any { it.id == id } }
+            // Prompt 34: serverens mål-id ({anchor}, f.eks. «upd») valideres mot indeksen før navigering.
+            p34.aiAnchor = o?.optStr("anchor")?.takeIf { a -> ANCHORS34.any { it.id == a } }
+            val ids0 = o?.optJSONArray("ids").strings().filter { id -> items.any { it.id == id } }
+            val ids = p34.aiAnchor?.let { a -> if (items.any { it.id == a }) listOf(a) + ids0.filter { it != a } else ids0 } ?: ids0
             if (o != null && (ids.isNotEmpty() || o.optStr("answer") != null)) {
                 s.aiIds = ids; s.aiAnswer = o.optStr("answer")
             } else {

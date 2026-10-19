@@ -70,12 +70,12 @@ internal fun Backup29Page(vm: AppViewModel) {
                 Box(Modifier.padding(start = 14.dp, end = 14.dp, bottom = 12.dp).fillMaxWidth().height(4.dp).clip(CircleShape).background(p.line)) {
                     Box(Modifier.fillMaxWidth(pct / 100f).fillMaxHeight().background(p.lab))
                 }
-            } else PRow("Ta backup nå", bkScopeName29(st.scope), "Start ›", valueColor = p.lab, serif = false, top = true) { vm.runBk29() }
+            } else Box(Modifier.hl34(vm, "bk-now", 0.dp)) { PRow("Ta backup nå", bkScopeName29(st.scope), "Start ›", valueColor = p.lab, serif = false, top = true) { vm.runBk29() } } // prompt 34
         }
         // 2. AUTOMATISK
         PLabel("Automatisk", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
-            PToggle("Automatisk backup", "Kjører i bakgrunnen på hjemmeserveren", st.auto) { vm.saveBk29(st.copy(auto = it)) }
+            Box(Modifier.hl34(vm, "bk-auto", 0.dp)) { PToggle("Automatisk backup", "Kjører i bakgrunnen på hjemmeserveren", st.auto) { vm.saveBk29(st.copy(auto = it)) } } // prompt 34
             if (st.auto) {
                 PRow("Hvor ofte", BK29_SCHEDULES.firstOrNull { it.first == st.schedule }?.second ?: st.schedule, "Endre ›", serif = false, top = true) {
                     vm.saveBk29(st.copy(schedule = cyc29(BK29_SCHEDULES, st.schedule)))

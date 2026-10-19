@@ -49,7 +49,9 @@ data class Assist31(
 /** Svarboblen under søkefeltet på Hjem. */
 data class HomeAns31(val q: String, val busy: Boolean, val text: String = "", val source: String = "", val jobId: String? = null,
     /** Prompt 33: «Endre N avtaler ›» i boblen (POST /api/glimt/memory/:id/apply). */
-    val applyId: Int = 0, val applyCount: Int = 0, val applyTitle: String = "")
+    val applyId: Int = 0, val applyCount: Int = 0, val applyTitle: String = "",
+    /** Prompt 34: Glimt fikk ikke svar (boblen viser Prøv igjen og Åpne AI-kontroll). */
+    val err: Boolean = false)
 
 data class Trial31(
     val id: String, val service: String, val endsAt: LocalDate, val priceAfter: String, val offsets: List<Int>, val status: String,
@@ -204,13 +206,21 @@ private fun parseAssist31(o0: JSONObject): Assist31? {
 internal suspend fun AppViewModel.assist31(q: String, source: String, chatId: String? = null, onJob: (String) -> Unit = {}): Assist31? {
     val s = p31
     if (s.assistMissing) return null
+    noteAiErr34(null, null)
     val body = JSONObject().put("q", q).put("source", source)
     chatId?.let { body.put("chatId", it) }
-    val raw = try { api31 { request("POST", "/assist", body, prefix = Api.HOMELAB, timeout = 6000, read = 20_000) } } catch (e: CancellationException) { throw e } catch (e: ApiException) {
+    // Prompt 34: feilen huskes (p34.lastErr/lastModel), så svaret kan si «Glimt fikk ikke svar fra {modell}: {feil}». 25 s: serveren bytter til reserven etter 20 s.
+    val raw = try { api31 { request("POST", "/assist", body, prefix = Api.HOMELAB, timeout = 6000, read = 25_000) } } catch (e: CancellationException) { throw e } catch (e: ApiException) {
         if (e.status == 404 || e.status == 405) s.assistMissing = true
+        noteAiErr34(null, e.message)
         return null
-    } catch (e: Exception) { return null }
-    val o = runCatching { JSONObject(raw) }.getOrNull() ?: return null
+    } catch (e: Exception) { noteAiErr34(null, e.message ?: "fikk ikke kontakt med serveren"); return null }
+    val o = runCatching { JSONObject(raw) }.getOrNull() ?: run { noteAiErr34(null, "uventet svar fra serveren"); return null }
+    // {ok:false, error, model} fra ai.run: tydelig feil i stedet for tomt svar.
+    if (o.optBoolean("ok", true) == false || (o.s31("text") == null && o.s31("error") != null && o.s31("jobId") == null)) {
+        noteAiErr34(o.s31("model"), o.s31("error"))
+        return null
+    }
     parseAssist31(o)?.let { return it }
     val id = o.s31("jobId") ?: o.s31("id") ?: return null
     onJob(id)
@@ -227,9 +237,10 @@ internal suspend fun AppViewModel.waitAssist31(id: String, maxMs: Long = 60_000)
         } catch (e: Exception) { continue }
         val o = runCatching { JSONObject(raw) }.getOrNull() ?: continue
         val st = o.s31("state") ?: o.s31("status")
-        if (st == "failed" || st == "error" || st == "cancelled") return Assist31(o.s31("error") ?: "Glimt fikk ikke svart nå.", "", "error", null, null, null, null, id)
+        if (st == "failed" || st == "error" || st == "cancelled") { noteAiErr34(o.s31("model"), o.s31("error") ?: if (st == "cancelled") "avbrutt" else null); return null }
         parseAssist31(o)?.let { return it.copy(jobId = id) }
     }
+    noteAiErr34(null, "tidsavbrudd etter ${maxMs / 1000} s")
     return null
 }
 
@@ -247,7 +258,8 @@ fun AppViewModel.askHome31(q: String) {
         if (s.ansSeq != seq) return@launch31
         if (r == null) {
             if (s.assistMissing) { s.ans = null; openChat(t); return@launch31 }
-            s.ans = HomeAns31(t, false, "Jeg fikk ikke svar fra Glimt nå. **Fortsett i Chat** for å prøve igjen.", "")
+            // Prompt 34: tydelig feil med Prøv igjen og Åpne AI-kontroll (ikke evig «tenker»).
+            s.ans = HomeAns31(t, false, aiErrText34(p34.lastModel, p34.lastErr), "", err = true)
             return@launch31
         }
         s.ans = HomeAns31(t, false, r.text, r.source, r.jobId, r.apply?.optInt("memoryId", 0) ?: 0, r.apply?.optInt("count", 0) ?: 0, r.apply?.s31("title") ?: "")
@@ -438,7 +450,7 @@ fun AppViewModel.openNordlys31() {
     loadNordlys31()
 }
 
-fun AppViewModel.closeNordlys31() { p31.nordOpen = false; p31.bioAsk = false }
+fun AppViewModel.closeNordlys31() { Haptics.back(); p31.nordOpen = false; p31.bioAsk = false } // prompt 34: haptikk på Tilbake
 
 fun AppViewModel.loadNordlys31() {
     val s = p31

@@ -316,7 +316,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Finans som startside: appen åpner der, og Homelab og modulene ligger i profilmenyen. */
     val financeStart: Boolean get() = startPage != Screen.Homelab
     val startLabel: String get() = if (financeStart) "Finans" else "Homelab"
-    fun goStart() = go(startPage)
+    fun goStart() { Haptics.back(); go(startPage) } // prompt 34: «‹ Homelab / ‹ Finans» med lett haptikk
     /** Startsiden har ikke lenger egen knapp i fanelinja (prompt 14): pila øverst til venstre går hjem. */
     val homeInBar: Boolean get() = false
 
@@ -594,6 +594,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun navigate(s: Screen, from: Screen?) {
         if (s != screen) { selectedTx = null; folder = null; detail = null; detailTx = null; editing = null; original = null; editHome = false; matFull = false; matDay = null }
         // Trykk på Finn-fanen fra en åpen handel går tilbake til listen.
+        // Prompt 34: Hjem fra en annen side (fanen eller ‹ Homelab) gir samme lette haptikk som tilbake.
+        if (!navDry && s == Screen.Homelab && screen != Screen.Homelab) Haptics.back()
         if (s != screen || s == Screen.Finn) { finnSel = null; finnDetail = null }
         if (s != Screen.Tracking) trkSel = null
         if (s != Screen.Stocks) { stockScreen = "ov"; stockSel = null }
@@ -611,6 +613,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Tilbake: lukker det som er åpent, ellers til forrige side (undersider av Mer → Mer, Finans og moduler → Homelab). */
     fun back(): Boolean {
         if (!navDry) navBackSeq++
+        // Prompt 34: lett haptikk på all tilbake (knapp, sveip, systemets tilbake). Ikke når forhåndsvisningen prøvekjører.
+        if (!navDry) Haptics.back()
         when {
             // Prompt 27: en åpen sak lukkes først (artikkelvisningen i Nyhetsleser).
             newsOpen -> { if (b27.articleFor != null) closeArticle27() else if (newsSettings) newsSettings = false else newsOpen = false }
@@ -710,6 +714,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "glimt" -> { openedFromNotify31(); go(Screen.Homelab) }
             "chat" -> { openedFromNotify31(); val id = uri.path?.trim('/').orEmpty(); openChat(); if (id.isNotEmpty()) openChatId27(id) }
             "nordlys", "system" -> openNordlys31()
+            // Prompt 34: Glimt-brief-widgetene (finanshub://brief) og «Åpne AI-kontroll» (finanshub://ai/<fane>).
+            "brief" -> { go(Screen.Homelab); openBrief34() }
+            "ai" -> openAiCtl34(uri.path?.trim('/')?.takeIf { it in setOf("ov", "mod", "rt", "job", "use", "api") } ?: "ov")
             "scan" -> { open(Screen.Scan); pendingScan = when (uri.path?.trim('/')) { "camera" -> "camera"; "files" -> "files"; else -> null } }
         }
     }
@@ -3616,6 +3623,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal fun launch32b(block: suspend () -> Unit) = launch(block)
     /** Huskeliste: oppgaver flyttet til Arkivert forsvinner fra listen med en gang. */
     internal fun setTasks32b(t: TasksData) { tasks = t; taskNext = nextTasks(t) }
+
+    /* ---------- Prompt 34 (ANDROID34): Glimt-brief, AI-kontroll, kvitteringer under AI-analyse, skanninger i Chat, markering i Innstillinger (P34.kt og ui-filene med 34) ---------- */
+    val p34 = P34State()
+    internal suspend fun <T> api34(f: suspend Api.() -> T): T = api.f()
+    internal fun launch34(block: suspend () -> Unit) = launch(block)
+    internal fun launchJob34(block: suspend () -> Unit): kotlinx.coroutines.Job = launch(block)
+    internal val appCtx34: Context get() = appCtx
+    /** Kvitteringer og køen hentes på nytt (en AI-analyse ble ferdig eller stoppet). */
+    internal fun refreshReceipts34() = launch { loadReceipts(); loadJobs() }
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

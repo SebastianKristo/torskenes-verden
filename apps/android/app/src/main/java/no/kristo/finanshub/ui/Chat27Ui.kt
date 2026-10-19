@@ -179,8 +179,10 @@ private fun Ch27Side(vm: AppViewModel, v: ChatV27, wide: Boolean, modifier: Modi
                 found.forEach { Ch27ChatRow(vm, v, it) }
             } else {
                 if (s.pinned.isNotEmpty()) { Ch27Group("FESTET", v); s.pinned.forEach { Ch27ChatRow(vm, v, it) } }
-                if (s.folders.isNotEmpty()) {
+                if (s.folders.isNotEmpty() || vm.p34.scanFolder != null) {
                     Ch27Group("MAPPER", v)
+                    // Prompt 34: systemmappen «Kvitteringer og skanninger» øverst (ui/Ui34.kt).
+                    ScanFolderRow34(vm, v.ink, v.sans) { Ch27ChatRow(vm, v, it) }
                     s.folders.forEach { f ->
                         val open = s.folderOpen[f.id] ?: f.open
                         Row(Modifier.fillMaxWidth().heightIn(min = 40.dp).clip(RoundedCornerShape(12.dp)).press24 { vm.toggleFolder27(f) }.padding(horizontal = 10.dp),
@@ -193,7 +195,7 @@ private fun Ch27Side(vm: AppViewModel, v: ChatV27, wide: Boolean, modifier: Modi
                     }
                 }
                 chatGroups27(s.chats).forEach { (t, l) -> Ch27Group(t, v); l.forEach { Ch27ChatRow(vm, v, it) } }
-                if (s.listLoaded && s.pinned.isEmpty() && s.folders.isEmpty() && s.chats.isEmpty())
+                if (s.listLoaded && s.pinned.isEmpty() && s.folders.isEmpty() && s.chats.isEmpty() && vm.p34.scanFolder == null)
                     Text(if (s.unavailable) "Chat er ikke satt opp på serveren ennå." else "Ingen samtaler ennå.", color = v.mut, fontSize = 14.sp, fontFamily = v.sans, modifier = Modifier.padding(10.dp, 20.dp))
             }
         }
@@ -201,7 +203,8 @@ private fun Ch27Side(vm: AppViewModel, v: ChatV27, wide: Boolean, modifier: Modi
         Column(Modifier.padding(start = 8.dp, top = 6.dp, end = 8.dp, bottom = 12.dp)) {
             val loc = s.models.count { !it.sky && it.installed }
             val sky = s.models.count { it.sky }
-            Ch27SideRow(v, ChIc27.MODELS, "Modeller", "$loc lokale · $sky i skyen") { s.drawer = false; s.sheet = "mods" }
+            // Prompt 34: Modeller åpner AI-kontroll på fanen Modeller (det gamle Modeller-arket brukes ikke lenger).
+            Ch27SideRow(v, ChIc27.MODELS, "Modeller", "$loc lokale · $sky i skyen") { s.drawer = false; vm.openAiCtl34("mod") }
             Ch27SideRow(v, ChIc27.KB, "Kunnskapsbase", s.kb?.let { "${it.size} dokumenter" } ?: "Dokumenter") { s.drawer = false; vm.loadKb27(); s.sheet = "kb" }
             Ch27SideRow(v, ChIc27.THEME, "Tema", if (s.theme == "noytral") "Nøytral" else "Papir") { vm.setChatTheme27(if (s.theme == "noytral") "papir" else "noytral") }
             Text("Historikken synkes mellom mobil og web.", color = v.mut, fontSize = 11.5.sp, fontFamily = v.sans, modifier = Modifier.padding(start = 10.dp, top = 6.dp, end = 10.dp))

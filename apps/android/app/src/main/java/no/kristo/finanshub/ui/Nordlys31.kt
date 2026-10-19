@@ -122,8 +122,10 @@ internal fun NordlysPage31(vm: AppViewModel) {
                         Text(if (inst) "Installert" else "Du har ${u.current.ifBlank { "–" }}", color = if (inst) GREEN31 else p.mut, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
                     }
                     Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                    NordToggle31("Krev fingeravtrykk eller passord",
-                        if (s.reqPw) "Fingeravtrykk eller passord før oppdateringen starter" else "Av · oppdater med ett trykk", s.reqPw) { vm.setReqPw31(it) }
+                    Box(Modifier.hl34(vm, "pw", 0.dp)) { // prompt 34: mål «pw»
+                        NordToggle31("Krev fingeravtrykk eller passord",
+                            if (s.reqPw) "Fingeravtrykk eller passord før oppdateringen starter" else "Av · oppdater med ett trykk", s.reqPw) { vm.setReqPw31(it) }
+                    }
                     if (s.reqPw) {
                         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                         NordToggle31("Bruk fingeravtrykk", if (s.bioOn) "Passordet ligger kryptert på denne telefonen" else "Av · skriv passordet hver gang", s.bioOn) { on ->
@@ -159,8 +161,9 @@ internal fun NordlysPage31(vm: AppViewModel) {
         ) {
             val label = when { run -> "Oppdaterer … ${u.pct} %"; done -> "Ferdig"; failed -> "Prøv igjen"; avail -> if (s.startBusy) "Starter …" else "Oppdater nå"; else -> "Du har siste versjon" }
             val bg = when { done -> GREEN31; avail || run || failed -> BLUE31; else -> Color(0xFFB0A998) }
+            Hl34Bubble(vm, "upd") // prompt 34: «✦ Trykk her for å oppdatere» over knappen når AI-søket viser den
             Box(
-                Modifier.widthIn(max = 520.dp).fillMaxWidth().height(54.dp).alpha(if (run) .75f else 1f)
+                Modifier.widthIn(max = 520.dp).fillMaxWidth().height(54.dp).hl34(vm, "upd", 27.dp).alpha(if (run) .75f else 1f)
                     .shadow(16.dp, RoundedCornerShape(27.dp), ambientColor = BLUE31.copy(alpha = .6f), spotColor = BLUE31.copy(alpha = .6f))
                     .clip(RoundedCornerShape(27.dp)).background(bg)
                     .clickable(enabled = !run, role = Role.Button) {

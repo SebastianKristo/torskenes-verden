@@ -167,6 +167,7 @@ fun AppViewModel.openFinnAd23(id: Int) {
 }
 
 fun AppViewModel.closeFinnAd23() {
+    Haptics.back() // prompt 34
     m23.finnAdFor = null
     finnSel = null
     finnDetail = null

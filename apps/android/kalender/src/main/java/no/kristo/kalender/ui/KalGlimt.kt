@@ -299,6 +299,11 @@ private fun AsstMsg(vm: KalVm, m: KGMsg) {
                 }
                 val uid = m.undoId
                 if (uid != null && vm.find(uid) != null) LinePill("Angre", { vm.glUndo(m) }, h = 30.dp)
+                // Prompt 34: Glimt fikk ikke svar → Prøv igjen og Åpne AI-kontroll (ikke bare hjelpeteksten).
+                if (m.err) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InkPill("Prøv igjen", { vm.glRetry(m) }, h = 30.dp, padH = 14.dp, fs = 12.5.sp)
+                    LinePill("Åpne AI-kontroll", { vm.openAiCtl() }, h = 30.dp)
+                }
             }
         }
     }

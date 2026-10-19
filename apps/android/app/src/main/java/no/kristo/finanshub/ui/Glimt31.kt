@@ -90,6 +90,7 @@ import no.kristo.finanshub.boldParts31
 import no.kristo.finanshub.cancelAiJob31
 import no.kristo.finanshub.closeAns31
 import no.kristo.finanshub.quickJob31
+import no.kristo.finanshub.retryHome34
 
 /*
  * Prompt 31 (ANDROID31): Glimt-merket (Glimt AI.dc.html: Klar, Tenker, Svarer, Ferdig), toasten med glassboblen
@@ -372,6 +373,8 @@ internal fun HomeAnswer31(vm: AppViewModel) {
                     .clickable(role = Role.Button) { Haptics.select(); vm.applyAns33() }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
             ) { Text("Endre ${a.applyCount} ${if (a.applyCount == 1) "avtale" else "avtaler"} ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
+            // Prompt 34: Glimt svarte ikke → Prøv igjen og Åpne AI-kontroll.
+            if (a.err) AiErrActions34(vm, Color.White, Color.White.copy(alpha = .14f)) { vm.retryHome34() }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("✦ " + a.source.replace("System-AI", "Glimt").ifBlank { "Glimt" }, color = light.copy(alpha = .55f), fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold,
                     fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

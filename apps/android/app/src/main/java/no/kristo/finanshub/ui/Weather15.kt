@@ -222,7 +222,7 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
             cmpOpen -> cmpOpen = false
             vm.wxPlacesSheet -> vm.wxPlacesSheet = false
             vm.weatherSheetDay != null -> vm.weatherSheetDay = null
-            else -> vm.weatherOpen = false
+            else -> { Haptics.back(); vm.weatherOpen = false } // prompt 34: haptikk på tilbake
         }
     }
     LaunchedEffect(Unit) { if (vm.wxPlaces.isEmpty()) vm.loadWxPlaces() }
@@ -304,7 +304,7 @@ private fun TopBar(vm: AppViewModel, w: WeatherFull?, compact: Boolean) {
                 Text("${wxR(w.current.temp)} | ${wxDesc(w.current.code)}", fontSize = 13.sp, modifier = Modifier.alpha(.9f), maxLines = 1)
             }
         }
-        WxClose32b { vm.weatherOpen = false }
+        WxClose32b { Haptics.back(); vm.weatherOpen = false } // prompt 34: Vær ✕ med lett haptikk
     }
 }
 

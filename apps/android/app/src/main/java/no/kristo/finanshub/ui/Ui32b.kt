@@ -348,7 +348,7 @@ internal fun NordlysInstalled32b(vm: AppViewModel) {
                 contentAlignment = Alignment.Center,
             ) { Text("Kopier", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
         }
-        PCard {
+        PCard(Modifier.hl34(vm, "chk")) { // prompt 34: mål «chk»
             PRow("Se etter oppdatering", if (vm.p31.checking) "Sjekker …" else "Spør serveren om det finnes en ny versjon", "›", serif = false) { vm.checkNordlys31() }
             if (vm.userIsAdmin) PRow("Logg", "Oppdateringsloggen i nettleseren", "↗", serif = false, top = true) { openLink(ctx, upd28WebUrl(vm)) }
         }

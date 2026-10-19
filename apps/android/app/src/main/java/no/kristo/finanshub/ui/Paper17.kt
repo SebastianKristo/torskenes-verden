@@ -166,7 +166,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         SetRow(vm, i(), Icons.Filled.Newspaper, "Nyhetsleser", "Kilder og AI", top = true) { vm.openNews(settings = true) }
     }
     group("App") { i ->
-        SetRow(vm, i(), Icons.Filled.Palette, "Utseende og fanelinje", "Papir ${when (vm.paperMode) { "mork" -> "mørk"; "lys" -> "lys"; else -> "· følger systemet" }} · bakgrunn · ikonfarger") { vm.settingsPage = "look" }
+        AiSettingsRow34(vm, i()) // Prompt 34: AI og modeller → AI-kontroll i fullskjerm (ui/AiCtl34.kt)
+        SetRow(vm, i(), Icons.Filled.Palette, "Utseende og fanelinje", "Papir ${when (vm.paperMode) { "mork" -> "mørk"; "lys" -> "lys"; else -> "· følger systemet" }} · bakgrunn · ikonfarger", top = true) { vm.settingsPage = "look" }
         SetRow(vm, i(), Icons.Filled.Notifications, "Varsler og haptikk", "Lyd, stille timer og test", top = true) { vm.settingsPage = "notify" }
         SetRow(vm, i(), Icons.Filled.CalendarMonth, "Kalendere", "Google Kalender · Home Assistant · Skole-iCal", top = true) { vm.openKalSettings26(null) }
         SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", if (vm.userIsAdmin) "Home Assistant, Kalendere, Entur, Bring og flere" else "Kalendere, Trading 212, Bring, e-post og flere", top = true) { vm.settingsPage = "integ" }
@@ -243,8 +244,8 @@ private fun NotifySub(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Varsler", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         PCard {
-            PToggle("Varsler", "Hovedbryter for alle varsler fra appen", n.on) { vm.saveNotify(n.copy(on = it)) }
-            PToggle("Stille timer", "${n.quietFrom}–${n.quietTo}: varsler kommer uten lyd", n.quiet, top = true) { vm.saveNotify(n.copy(quiet = it)) }
+            Box(Modifier.hl34(vm, "push", 0.dp)) { PToggle("Varsler", "Hovedbryter for alle varsler fra appen", n.on) { vm.saveNotify(n.copy(on = it)) } } // prompt 34: mål «push»
+            Box(Modifier.hl34(vm, "quiet", 0.dp)) { PToggle("Stille timer", "${n.quietFrom}–${n.quietTo}: varsler kommer uten lyd", n.quiet, top = true) { vm.saveNotify(n.copy(quiet = it)) } }
             // Prompt 31: svar fra Glimt som varsel når appen er i bakgrunnen (ai_bg_notify).
             AiBgToggle31(vm)
             if (n.quiet) Row(Modifier.fillMaxWidth().padding(14.dp, 4.dp, 14.dp, 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -327,7 +328,7 @@ private fun NotifySub(vm: AppViewModel) {
                 ).forEachIndexed { i, (k, name, sub) -> PToggle(name, sub, t.prefs[k] ?: true, top = i > 0) { vm.setTrackingPref(k, it) } }
             }
         } ?: Text("Pakkevarslene vises når Sporing er lastet.", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(4.dp))
-        PCard { SetRow(vm, 2, Icons.Filled.Vibration, "Haptikk", "Styrke og typer", "›") { vm.settingsPage = "haptics" } }
+        PCard(Modifier.hl34(vm, "haptic")) { SetRow(vm, 2, Icons.Filled.Vibration, "Haptikk", "Styrke og typer", "›") { vm.settingsPage = "haptics" } } // prompt 34: mål «haptic»
     }
 }
 

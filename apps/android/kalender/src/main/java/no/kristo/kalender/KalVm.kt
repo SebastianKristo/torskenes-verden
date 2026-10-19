@@ -41,6 +41,9 @@ class KGMsg(val id: Long, val user: Boolean, val text: String) {
     var slots by mutableStateOf<List<KSlot>>(emptyList())
     var undoId by mutableStateOf<String?>(null)
     var engine by mutableStateOf("lokal")
+    /** Prompt 34: Glimt fikk ikke svar – svaret viser feilen med Prøv igjen og Åpne AI-kontroll. */
+    var err by mutableStateOf(false)
+    var q: String = ""
     val words: List<String> get() = full.split(' ').filter { it.isNotEmpty() }
     val done: Boolean get() = !thinking && shown >= words.size
 }
@@ -414,6 +417,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         val id = System.currentTimeMillis()
         gm += KGMsg(id, true, qq)
         val m = KGMsg(id + 1, false, "")
+        m.q = qq
         gm += m
         gq = ""
         glOpen = true
@@ -445,7 +449,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         m.shown = 0
         val n = m.words.size
         while (m.shown < n) { delay(45); m.shown = minOf(n, m.shown + 2) }
-        Hap.done()
+        if (m.err) Hap.error() else Hap.done()
         if (!foreground) KalNotify.glimt(ctx, "Glimt", txt)
     }
 
@@ -462,8 +466,16 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         det?.let { ctxO.put("eventId", it) }
         val body = JSONObject().put("q", qq).put("source", "calendar").put("context", ctxO)
         var ans: JSONObject? = null
+        // Prompt 34 (claude-code-glimt-virker-ikke.md): feil vises i svaret («Glimt fikk ikke svar fra {modell}: {feil}»), ikke hjelpeteksten.
+        var errT: String? = null
+        var errModel: String? = null
+        var missing = false
         try {
-            val o = JSONObject(s.api.post("/api/assist", body, read = 25_000))
+            val o = JSONObject(s.api.post("/api/assist", body, read = 30_000))
+            if (!o.optBoolean("ok", true) || (o.optStrOrNull("text") == null && o.optStrOrNull("error") != null && o.optStrOrNull("jobId") == null)) {
+                errT = o.optStrOrNull("error"); errModel = o.optStrOrNull("model")
+                throw KalApiException(errT ?: "tomt svar")
+            }
             val jobId = o.optStrOrNull("jobId")
             if (o.optStrOrNull("text") != null || o.has("answer")) ans = o.optJSONObject("answer") ?: o
             else if (jobId != null) {
@@ -474,12 +486,24 @@ class KalVm(app: Application) : AndroidViewModel(app) {
                     j.optJSONArray("steps")?.let { a -> val l = (0 until a.length()).mapNotNull { a.optJSONObject(it)?.str("label", "key") }; if (l.isNotEmpty()) { m.steps = l; m.step = (0 until a.length()).count { a.optJSONObject(it)?.optString("state") == "done" } } }
                     when (j.optString("state")) {
                         "done" -> { ans = j.optJSONObject("answer") ?: j; break }
-                        "failed", "cancelled" -> break
+                        "failed", "cancelled" -> { errT = j.optStrOrNull("error") ?: if (j.optString("state") == "cancelled") "avbrutt" else "jobben feilet"; errModel = j.optStrOrNull("model"); break }
                     }
                 }
+                if (ans == null && errT == null) errT = "tidsavbrudd etter 70 s"
             }
-        } catch (e: CancellationException) { throw e } catch (e: Exception) { ans = null }
-        if (ans == null) { tickSteps(m); stream(m, KalAsk.HELP); return }
+        } catch (e: CancellationException) { throw e } catch (e: KalApiException) {
+            ans = null
+            if (e.status == 404 || e.status == 405) missing = true else if (errT == null) errT = e.message
+        } catch (e: Exception) { ans = null; if (errT == null) errT = e.message ?: "fikk ikke kontakt med serveren" }
+        if (ans == null) {
+            tickSteps(m)
+            // Eldre server uten Glimt-ruteren: hjelpeteksten som før. Ellers den ekte feilen.
+            if (missing || errT == null) { stream(m, KalAsk.HELP); return }
+            m.err = true
+            m.engine = "feil"
+            stream(m, "Glimt fikk ikke svar fra " + (errModel ?: "modellen") + ": " + errT + ".")
+            return
+        }
         val a0 = ans!!
         a0.optJSONArray("steps")?.let { arr -> val l = (0 until arr.length()).mapNotNull { arr.opt(it).let { x -> if (x is JSONObject) x.str("label", "key") else x?.toString() } }; if (l.isNotEmpty()) m.steps = l }
         m.step = m.steps.size
@@ -514,6 +538,18 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             refresh()
         } ?: (a0.opt("created") as? String)?.let { m.undoId = it; refresh() }
         stream(m, (a0.str("text", "txt") ?: KalAsk.HELP).replace("**", ""))
+    }
+
+    /** Prompt 34: «Prøv igjen» på et feilet Glimt-svar. */
+    fun glRetry(m: KGMsg) { if (m.q.isNotBlank()) glSend(m.q) }
+
+    /** Prompt 34: «Åpne AI-kontroll» – i Homelab-appen (finanshub://ai), ellers Homelab på web. */
+    fun openAiCtl() {
+        Hap.tick()
+        val c = ctx
+        val i = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("finanshub://ai/ov")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        val ok = KalAuth.homelabInstalled(c) && runCatching { c.startActivity(i) }.isSuccess
+        if (!ok) session?.server?.let { s -> runCatching { c.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(s.trimEnd('/') + "/")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }
     }
 
     private fun hmIn(s: String): Int? = Regex("^(\\d{1,2})[:.](\\d{2})").find(s.trim())?.let { it.groupValues[1].toInt() * 60 + it.groupValues[2].toInt() }

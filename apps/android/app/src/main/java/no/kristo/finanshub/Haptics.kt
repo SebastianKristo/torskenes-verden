@@ -47,8 +47,20 @@ object Haptics {
 
     /** Trykk på en knapp. */
     fun tap() { if (on(TAP)) perform(impact) }
-    /** Fanebytte, chips og valg. */
-    fun select() { if (on(TAP)) perform(HapticFeedbackConstants.CLOCK_TICK) }
+    /** Fanebytte, chips og valg. Ikke rett etter en tilbake-impuls (ett trykk = én impuls). */
+    fun select() { if (on(TAP) && android.os.SystemClock.uptimeMillis() - lastBack > 120) perform(HapticFeedbackConstants.CLOCK_TICK) }
+
+    @Volatile private var lastBack = 0L
+    /**
+     * Prompt 34 (claude-code-haptikk-tilbake.md): lett impuls på alle tilbake-knapper, sveip tilbake (når siden lukkes),
+     * systemets tilbake, Hjem fra en annen side, Ferdig/✕ i fullskjermsider. Debounce 120 ms; følger Haptikk-bryteren.
+     */
+    fun back() {
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastBack < 120) return
+        lastBack = now
+        if (on(TAP)) perform(HapticFeedbackConstants.KEYBOARD_TAP)
+    }
     /** Prompt 30: lett tikk når et ark, en popup eller en meny lukkes (CONTEXT_CLICK). */
     fun dismiss() { if (on(TAP)) perform(HapticFeedbackConstants.CONTEXT_CLICK) }
     fun success() { if (on(DONE)) perform(confirm) }
