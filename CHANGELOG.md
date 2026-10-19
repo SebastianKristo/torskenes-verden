@@ -2,6 +2,20 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.30.0] – 20.10.2026 · prompt 36 – Nordlys-oppstart, wiggle på PC og ekte backup
+- **Backup til nettverksdisk virker:** «tatt, men tom mappe» skyldtes at jobben ble merket ferdig før kopien til disken, og at filen havnet i roten av delingen. Nå lages mappen først, filen skrives i riktig mappe og verifiseres (størrelse og SHA-256) før det står OK. Synlig filnavn `homelab-…tar.zst` + `.json`. Du kan åpne mapper, gå inn i undermapper og lage ny mappe.
+- **Oppdatering:** endringsnotatene vises igjen, og det finnes en liste over **tidligere versjoner**. Sherlock-Glimt leter når du trykker «Se etter oppdatering», snekker-Glimt jobber på fremdriftslinja, og en **«Starter opp»-side** med Glimt vises mens serveren starter på nytt.
+- **Dashboard på PC:** full wiggle-redigering med rutenett (4/6/8/12 kolonner), snapp, flytt og endre størrelse. Profilmenyen → «Rediger widgets», eller hold inne på en widget.
+- **Vær på PC:** ny layout med været for alle stedene dine i sidepanelet og uskarpe kort i himmelfargen.
+- **Temperaturen på Hjem:** trykk åpner Vær, hold inne åpner Yr.
+- **Glimt:** bare én «tenker»-visning om gangen. Spørsmål med dato («hvor mange timer dagslys er det 29.06.2027») besvares i stedet for å bli kalenderavtale, og dagslys/soloppgang/solnedgang regnes ut lokalt.
+- **Brief:** fast bredde mens Glimt viser fram, nøyaktig rød ring, og du kan **sveipe bort brief-kortet** på Hjem (mot høyre) – Now Brief ligger alltid under Mer.
+- **Matplanen er felles** for alle brukere og oppdateres live («Endret av …»).
+- **Google Kalender:** velg **hovedkalender** (Personlig, der nye hendelser lagres) og vis flere Google-kalendere som egne kalendere – i Homelab og i Kalender-appen.
+- **Kalender for Mac:** krasjet ved oppstart på macOS 27 er rettet (uendelig oppdateringsløkke i menyene), pluss flere andre krasjrettelser.
+- **Domener:** statistikken vises med en gang, og Glimt-oppsummeringen ligger bak en Glimt-knapp ved domene-baren.
+- **Konto** viser profilbildet, Innstillinger har ikoner på radene, ingen scroll-strek og ingen tekst over bakgrunnen på web.
+
 ## [4.29.0] – 19.10.2026 · prompt 35 – Glimt-familien og Kalender
 - **13 Glimt-figurer:** Glimt, Halo, Boble, Antenne, Bane, Pastell, Natt, Sky, Dråpe, Ugle, Stjerne, Spire og Gris, med humørene rolig, glad, snakker og sover. Velg din egen Glimt i det nye **Innstillinger → Glimt**. Glimt blir Natt mellom 21 og 06.
 - **Glimt og vennene i briefen:** Sky eller Dråpe forteller om været, Ugle om kalenderen og Gris om prøveperioder, før Glimt tar over igjen.
