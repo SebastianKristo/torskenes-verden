@@ -248,7 +248,7 @@ struct MacSearchRow: View {
     @State private var hover: Bool = false
 
     var body: some View {
-        let c: KalCal? = MacStore.shared.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(MacStore.shared.cal(e.cal), e)
         let when: String = e.allDay ? "Hele dagen" : KalD.hm(e.startMin)
         let sub: String = KalD.dl(KalD.date(e.day)) + (e.loc.isEmpty ? "" : " · " + e.loc)
         Button(action: action) {

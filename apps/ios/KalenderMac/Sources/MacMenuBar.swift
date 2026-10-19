@@ -175,7 +175,7 @@ struct MacMenuRow: View {
     let action: () -> Void
 
     var body: some View {
-        let c: KalCal? = MacStore.shared.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(MacStore.shared.cal(e.cal), e)
         let time: String = e.allDay ? "Hele dagen" : KalD.hm(e.startMin)
         Button(action: action) {
             HStack(spacing: 10) {

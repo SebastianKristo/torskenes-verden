@@ -21,6 +21,8 @@ data class KEv(
     val id: String, val t: String, val cal: String, val d: LocalDate, val s: Int?, val e: Int?, val days: Int = 1,
     val loc: String? = null, val rem: Int? = null, val kind: String? = null, val src: String? = null,
     val editable: Boolean = true, val color: Long? = null, val pending: Boolean = false, val note: String? = null,
+    /** Prompt 37: fagfargen fra serveren (subjectColor), full adresse og koordinater (Glimt-lagte: address + map {lat, lon}). */
+    val subjectHex: Long? = null, val address: String? = null, val lat: Double? = null, val lon: Double? = null,
 ) {
     val all: Boolean get() = s == null
     val key: String get() = d.toString()
@@ -29,6 +31,8 @@ data class KEv(
         .put("s", s ?: JSONObject.NULL).put("e", e ?: JSONObject.NULL).put("days", days).put("loc", loc ?: JSONObject.NULL)
         .put("rem", rem ?: JSONObject.NULL).put("kind", kind ?: JSONObject.NULL).put("src", src ?: JSONObject.NULL)
         .put("editable", editable).put("color", color?.let(::hexOut) ?: JSONObject.NULL).put("pending", pending).put("note", note ?: JSONObject.NULL)
+        .put("subjectColor", subjectHex?.let(::hexOut) ?: JSONObject.NULL).put("address", address ?: JSONObject.NULL)
+        .put("lat", lat ?: JSONObject.NULL).put("lon", lon ?: JSONObject.NULL)
 
     companion object {
         /** Eget lagret format (cache, utboks). */
@@ -38,6 +42,7 @@ data class KEv(
                 o.optIntOrNull("s"), o.optIntOrNull("e"), o.optInt("days", 1).coerceAtLeast(1), o.optStrOrNull("loc"), o.optIntOrNull("rem"),
                 o.optStrOrNull("kind"), o.optStrOrNull("src"), o.optBoolean("editable", true), hexIn(o.optStrOrNull("color")),
                 o.optBoolean("pending", false), o.optStrOrNull("note"),
+                hexIn(o.optStrOrNull("subjectColor")), o.optStrOrNull("address"), optD37(o, "lat"), optD37(o, "lon"),
             )
         }.getOrNull()
     }
@@ -224,10 +229,14 @@ fun parseServerEvent(o: JSONObject, cals: Map<String, KCal>): KEv? {
     val src = o.optJSONObject("glimt")?.optStrOrNull("text") ?: o.str("aiText", "origText", "src")
         ?: (if (o.optStrOrNull("origin")?.contains("AI") == true) o.optStrOrNull("note") else null)
     val editable = if (o.has("editable")) o.optBoolean("editable") else true
+    // Prompt 37: prøveperioder fra Subscription OS er aldri skoleprøver; fagfarge, adresse og kart fra serveren.
+    val trial = o.optStrOrNull("source")?.lowercase() == "trials" || rawCal?.lowercase() == "trials" || type == "trial"
+    val geo = geoOf37(o)
     return KEv(
         id = o.str("id") ?: "${st.first}|${s ?: "all"}|$title", t = title, cal = cal, d = st.first, s = s, e = e, days = days,
-        loc = loc, rem = if (s == null) null else remFromServer(o), kind = kind, src = src,
+        loc = loc, rem = if (s == null) null else remFromServer(o), kind = if (trial) "trial" else kind, src = src,
         editable = editable, color = hexIn(o.str("calendarColor", "color")), note = o.str("note", "description"),
+        subjectHex = hexIn(o.optStrOrNull("subjectColor")), address = o.optStrOrNull("address"), lat = geo?.first, lon = geo?.second,
     )
 }
 

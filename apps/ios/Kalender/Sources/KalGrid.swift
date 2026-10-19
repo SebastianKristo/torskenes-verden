@@ -165,13 +165,13 @@ struct KalAllDayChip: View {
     let e: KalEvent
 
     var body: some View {
-        let c: KalCal? = KalStore.shared.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
         Button(action: { KalStore.shared.openDetail(e) }) {
             Text(e.title).font(KalFont.ui(10, .bold)).lineLimit(1)
                 .foregroundStyle(t.calText(c))
                 .padding(.horizontal, 5).padding(.vertical, 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 5).fill(t.calTint(c, e.kind == "frist" ? 0.22 : 0.13)))
+                .background(RoundedRectangle(cornerRadius: 5).fill(t.calTint(c, e.kind == "frist" ? 0.38 : 0.13)))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(e.title + ", hele dagen")
@@ -285,7 +285,7 @@ struct KalGridBlock: View {
 
     var body: some View {
         let e: KalEvent = l.ev
-        let c: KalCal? = KalStore.shared.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
         let h: CGFloat = Swift.max(20, CGFloat(e.endMin - e.startMin) / 60 * hourH - 2)
         let laneW: CGFloat = width / CGFloat(l.lanes)
         let x: CGFloat = laneW * CGFloat(l.lane) + 2

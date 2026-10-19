@@ -17,6 +17,8 @@ struct MacAnswer {
     var cards: [KalEvent] = []
     var slots: [MacSlot] = []
     var created: KalParsed? = nil
+    /// Prompt 37: stedet i teksten (lagres på hendelsen og vises med kart).
+    var loc: String = ""
     var unknown: Bool = false
     /// Feilmelding fra serveren («Glimt fikk ikke svar fra …»).
     var error: String = ""
@@ -59,7 +61,14 @@ enum MacAsk {
 
         if KalRx.test("ledig|fri tid|finn tid|når kan jeg|har jeg tid|opptatt", ql) { return free(ql, tk: tk, nm: nm) }
         if ql.contains("bursdag") { return birthdays(up) }
-        if KalRx.test("frist|eksamen|innlevering|oblig|prøve", ql) { return deadlines(up) }
+        // Prompt 37: intensjon før tekstsøk – «Neste prøve på skolen» er en skoleprøve i Studie, aldri «Viaplay-prøven slutter».
+        if let sa = KalSchool37.answer(ql, up: up, cal: { (id: String) -> KalCal? in st.cal(id) }, rel: { (k: String) -> String in rel(k) }, tk: tk) {
+            var a: MacAnswer = MacAnswer(steps: sa.steps)
+            a.text = sa.text
+            a.cards = sa.cards
+            return a
+        }
+        if KalRx.test("frist|eksamen|innlevering|oblig", ql) { return deadlines(up) }
         if KalRx.test("(oppsummer|hva skjer|hva har jeg|program|plan|hvordan ser|hva står|what's on|whats on|what is on|what do i have|agenda)", ql)
             || KalDay35.isDayQuestion(q) { return summary(ql, tk: tk) }
         if KalRx.test("vær|regn|paraply", ql) {
@@ -80,6 +89,8 @@ enum MacAsk {
             let tail: String = p.allDay ? "." : ", med varsel " + KalD.remLabel(p.rem) + "."
             a.text = "Jeg la til «" + p.title + "» " + rel(p.day) + when + " i " + calName + tail
             a.created = p
+            a.loc = KalPlace37.extract(q)
+            if !a.loc.isEmpty { a.text += " Sted: " + a.loc + "." }
             return a
         }
         return unknown(up)
@@ -111,7 +122,7 @@ enum MacAsk {
     }
 
     static func deadlines(_ up: [KalEvent]) -> MacAnswer {
-        let list: [KalEvent] = Array(up.filter { (e: KalEvent) -> Bool in e.kind == "frist" }.prefix(4))
+        let list: [KalEvent] = Array(up.filter { (e: KalEvent) -> Bool in e.kind == "frist" && !KalSchool37.isTrialEvent(e) }.prefix(4))
         var a: MacAnswer = MacAnswer(steps: ["Ser i Studie", "Sorterer frister"])
         if let f = list.first {
             a.text = "Neste frist er " + MacStore.stripFrist(f.title) + " " + rel(f.day) + "."
@@ -201,35 +212,14 @@ enum MacAsk {
 
     /* ---------- Søkeord ---------- */
 
-    static let stop: Set<String> = ["når", "er", "neste", "min", "mitt", "mi", "mine", "har", "jeg", "skal", "må", "time", "timen", "timer",
-                                    "hos", "til", "på", "i", "en", "et", "den", "det", "avtale", "avtalen", "hva", "meg", "kommer", "blir", "om"]
-
-    /// «når er neste frisørtime» → ["frisør"].
+    /// Prompt 37: felles søkeord (KalSchool37) – skole-ordene er stoppord, ingen «-en/-et»-stripping («skolen» ble «skol»).
     static func terms(_ q: String) -> [String] {
-        let cleaned: String = KalRx.replace("[?!.,]", q.lowercased(), with: " ")
-        var out: [String] = []
-        for raw in cleaned.split(separator: " ") {
-            let w: String = String(raw)
-            if w.count < 3 || stop.contains(w) { continue }
-            var t: String = KalRx.replace("(timen|timer|time|avtalen|avtale|økta|økt)$", w, with: "")
-            t = KalRx.replace("(ene|en|et|er)$", t, with: "")
-            if t.count >= 3 { out.append(t) }
-        }
-        return out
+        KalSchool37.terms(q)
     }
 
-    /// Delord begge veier med minst 4 tegn felles prefiks.
+    /// Delord begge veier med minst 4 tegn felles begynnelse.
     static func hit(_ hay: String, _ w: String) -> Bool {
-        if hay.contains(w) { return true }
-        let words: [Substring] = hay.split { (c: Character) -> Bool in !(c.isLetter || c.isNumber) }
-        let need: Int = Swift.max(4, w.count - 2)
-        let wp: String = String(w.prefix(need))
-        for x in words where x.count >= 3 {
-            let xs: String = String(x)
-            if w.hasPrefix(xs) && xs.count >= 4 { return true }
-            if xs.hasPrefix(wp) && wp.count >= 4 { return true }
-        }
-        return false
+        KalSchool37.hit(hay, w)
     }
 
     static func hay(_ e: KalEvent, loc: Bool) -> String {
@@ -238,8 +228,15 @@ enum MacAsk {
         return (e.title + " " + place + " " + name + " " + e.note).lowercased()
     }
 
-    static func next(_ ql: String, up: [KalEvent], tk: String) -> MacAnswer {
+    static func next(_ ql: String, up all: [KalEvent], tk: String) -> MacAnswer {
         let kw: [String] = terms(ql)
+        // Prompt 37: skole-ord avgrenser til Studie; prøveperioder er med bare når man spør om dem. Alle søkeordene må treffe.
+        let school: Bool = KalSchool37.isSchoolQ(ql)
+        let trialQ: Bool = KalSchool37.isTrialQ(ql)
+        let up: [KalEvent] = all.filter { (e: KalEvent) -> Bool in
+            if KalSchool37.isTrialEvent(e) && !trialQ { return false }
+            return !school || KalFag37.isStudy(e, MacStore.shared.cal(e.cal))
+        }
         var m: KalEvent? = nil
         if kw.isEmpty {
             m = up.first { (e: KalEvent) -> Bool in !e.allDay }
@@ -248,12 +245,7 @@ enum MacAsk {
                 let h: String = hay(e, loc: true)
                 return kw.allSatisfy { (w: String) -> Bool in hit(h, w) }
             }
-            if m == nil {
-                m = up.first { (e: KalEvent) -> Bool in
-                    let h: String = hay(e, loc: true)
-                    return kw.contains { (w: String) -> Bool in hit(h, w) }
-                }
-            }
+
         }
         let what: String = kw.joined(separator: " ")
         guard let e = m else {
@@ -265,7 +257,7 @@ enum MacAsk {
         let days: Int = KalD.daysBetween(tk, e.day)
         let label: String = what.isEmpty ? "neste" : what
         var a: MacAnswer = MacAnswer(steps: ["Søker etter «" + label + "»", "Fant " + e.title])
-        var t: String = kw.isEmpty ? "Neste er " + e.title + " " : "Neste " + what + " er "
+        var t: String = kw.isEmpty ? "Neste er " + e.title + " " : "Neste " + what + " er " + e.title + " "
         t += rel(e.day)
         if !e.allDay { t += " kl. " + KalD.hm(e.startMin) }
         if !e.loc.isEmpty { t += ", " + e.loc }

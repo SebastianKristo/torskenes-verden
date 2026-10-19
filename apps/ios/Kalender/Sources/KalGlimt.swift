@@ -103,7 +103,7 @@ final class KalGlimtModel {
                 await KalStore.shared.load(force: true)
             }
         } else if let p = ans.created {
-            undoId = await KalStore.shared.add(p, toastPrefix: nil)
+            undoId = await KalStore.shared.add(p, loc: ans.loc, toastPrefix: nil)
             if let e = KalStore.shared.event(undoId) { ans.cards = [e] }
         }
         let steps: [String] = ans.steps.isEmpty ? ["Tenker"] : ans.steps
@@ -397,10 +397,17 @@ struct KalGlimtPanel: View {
             .background(RoundedRectangle(cornerRadius: 25).fill(t.bg))
             .overlay(RoundedRectangle(cornerRadius: 25).strokeBorder(t.line, lineWidth: 1))
         }
-        .padding(.horizontal, 12)
+        // Prompt 37: skrivefeltet går ikke inn i skjermens hjørnerunding – 16 pt sidemarg og 30 + (safe area − 20) nederst
+        // (≈ 44 pt med hjemstrek). Med tastaturet oppe ligger feltet 6 pt over det.
+        .padding(.horizontal, 16)
         .padding(.top, 8)
-        .padding(.bottom, 8)
+        .padding(.bottom, bottomPad)
         .overlay(alignment: .top) { Rectangle().fill(t.line2).frame(height: 1) }
+    }
+
+    private var bottomPad: CGFloat {
+        if KalKb37.shared.height > 40 || focused { return 6 }
+        return 30 + Swift.max(0, KalKeyboard37.safeBottom - 20)
     }
 }
 
@@ -522,7 +529,7 @@ struct KalGlimtCard: View {
 
     var body: some View {
         let s: KalStore = KalStore.shared
-        let c: KalCal? = s.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(s.cal(e.cal), e)
         let sub: String = (e.day == KalD.todayKey() ? "I dag" : KalD.dl(KalD.date(e.day))) + " · " + (e.loc.isEmpty ? (c?.name ?? "") : e.loc)
         Button(action: {
             if s.event(e.id) == nil { s.linkEvent = e }
@@ -542,6 +549,8 @@ struct KalGlimtCard: View {
             .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(t.line2, lineWidth: 1))
         }
         .buttonStyle(.plain)
+        // Prompt 37: minikart med adressen under kortet når Glimt la til hendelsen.
+        KalGlimtMap37(e: e)
     }
 }
 

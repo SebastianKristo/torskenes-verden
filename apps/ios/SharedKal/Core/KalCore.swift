@@ -32,6 +32,12 @@ struct KalEvent: Identifiable, Hashable, Codable {
     var pending: Bool = false
     /// Kopi for dag 2, 3 … av en hendelse over flere dager («FORTS.»).
     var cont: Bool = false
+    /// Prompt 37: fagfargen serveren har gitt hendelsen (subjectColor), «#rrggbb».
+    var subjectHex: String? = nil
+    /// Prompt 37: full adresse og koordinater (Glimt-lagte hendelser: address + map {lat, lon}).
+    var address: String? = nil
+    var lat: Double? = nil
+    var lon: Double? = nil
 
     var allDay: Bool { s == nil }
     var startMin: Int { s ?? 0 }
@@ -500,6 +506,7 @@ enum KalParse {
         ev.editable = bool(o, "editable") ?? false
         ev.serverCal = serverCal
         ev.note = str(o, "note")
+        KalEv37.decorate(&ev, o)
         return ev
     }
 

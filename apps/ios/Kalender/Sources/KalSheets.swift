@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /* ---------------- Prompt 33: Kalender – hendelsesarket og «Ny hendelse» ---------------- */
 // Ark nederfra over hele skjermen (også statuslinjen), bakteppe dim. Hendelse: tittel (Newsreader 28), kalender, Når, Sted, Vær,
@@ -9,6 +10,9 @@ import SwiftUI
 struct KalSheetFrame<Content: View>: View {
     @Environment(\.kal) private var t
     var maxFraction: CGFloat = 0.9
+    /// Prompt 37 (Ny hendelse): arket går helt ned bak tastaturet (krymper ikke). Innholdet får selv
+    /// padding = tastatur + 16, og en flate i arkets farge ligger under, så dimmingen aldri synes i tastaturhjørnene.
+    var behindKeyboard: Bool = false
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -18,16 +22,25 @@ struct KalSheetFrame<Content: View>: View {
                 VStack(alignment: .leading, spacing: 12) {
                     KalGrabber().padding(.top, 10)
                     content()
-                    Color.clear.frame(height: 24)
+                    if !behindKeyboard { Color.clear.frame(height: 24) }
                 }
                 .padding(.horizontal, 18)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(maxHeight: geo.size.height * maxFraction, alignment: .top)
+                .frame(maxHeight: maxHeight(geo.size.height), alignment: .top)
                 .background(t.card)
                 .clipShape(UnevenRoundedRectangle(topLeadingRadius: 28, topTrailingRadius: 28))
                 .shadow(color: Color.black.opacity(0.15), radius: 20, y: -10)
+                .background(alignment: .bottom) {
+                    if behindKeyboard { t.card.frame(height: 260).offset(y: 250) }
+                }
             }
         }
+    }
+
+    /// Med tastatur: 100 % − 40 pt (nesten fullhøyde). Ellers 90 %.
+    private func maxHeight(_ h: CGFloat) -> CGFloat {
+        if behindKeyboard && KalKb37.shared.height > 40 { return Swift.max(200, h - 40) }
+        return h * maxFraction
     }
 }
 
@@ -37,8 +50,17 @@ struct KalDetailSheet: View {
     let e: KalEvent
 
     var body: some View {
-        let c: KalCal? = s.cal(e.cal)
         KalSheetFrame {
+            ViewThatFits(in: .vertical) {
+                detailBody
+                ScrollView { detailBody }.scrollIndicators(.hidden)
+            }
+        }
+    }
+
+    private var detailBody: some View {
+        let c: KalCal? = KalFag37.tint(s.cal(e.cal), e)
+        return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 HStack(spacing: 6) {
                     Circle().fill(t.calColor(c)).frame(width: 10, height: 10)
@@ -49,12 +71,14 @@ struct KalDetailSheet: View {
             }
             Text(e.title).font(KalFont.serif(28)).foregroundStyle(t.ink).fixedSize(horizontal: false, vertical: true)
             rows
+            KalFagPick37(e: e)
             if !e.allDay { reminders }
             Button(action: { s.delete(e) }) {
                 Text("Slett hendelse").font(KalFont.ui(14, .bold)).foregroundStyle(t.acc).frame(height: 44)
             }
             .buttonStyle(.plain)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func close() {
@@ -74,6 +98,8 @@ struct KalDetailSheet: View {
             KalInfoRow(label: "Når", value: whenText)
             if !e.loc.isEmpty {
                 KalInfoRow(label: "Sted", value: e.loc)
+                // Prompt 37: kart med pin, full adresse, «Åpne i Kart» og «Veibeskrivelse ›».
+                KalDetailMap37(e: e)
             }
             if let wx {
                 wxRow(wx)
@@ -159,8 +185,14 @@ struct KalNewSheet: View {
 
     private var ok: Bool { !f.title.trimmingCharacters(in: .whitespaces).isEmpty }
 
+    /// Prompt 37: padding nederst = tastatur + 16 (34 uten tastatur), så innholdet kan scrolles over tastaturet.
+    private var kbPad: CGFloat {
+        let k: CGFloat = KalKb37.shared.height
+        return k > 40 ? k + 16 : 34
+    }
+
     var body: some View {
-        KalSheetFrame {
+        KalSheetFrame(behindKeyboard: true) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     top
@@ -192,16 +224,19 @@ struct KalNewSheet: View {
                     Text("Tips: skriv heller i feltet nederst, f.eks. «frisør 14.30 25.10», så fyller Glimt ut alt.")
                         .font(KalFont.ui(12.5)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
                 }
+                .padding(.bottom, kbPad)
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
         }
         .onAppear {
+            KalKeyboard37.windowBg(UIColor(t.card))
             Task {
                 try? await Task.sleep(nanoseconds: 80_000_000)
                 titleFocus = true
             }
         }
+        .onDisappear { KalKeyboard37.windowBg(nil) }
         .onChange(of: f.start) { (old: Date, new: Date) in
             // Flytt slutten med samme varighet.
             let dur: TimeInterval = Swift.max(900, f.end.timeIntervalSince(old))

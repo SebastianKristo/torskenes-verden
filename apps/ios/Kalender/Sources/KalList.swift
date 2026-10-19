@@ -143,7 +143,7 @@ struct KalEventRow: View {
 
     var body: some View {
         let s: KalStore = KalStore.shared
-        let c: KalCal? = s.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(s.cal(e.cal), e)
         let sub: String = [e.loc, c?.name ?? ""].filter { (x: String) -> Bool in !x.isEmpty }.joined(separator: " · ")
         let tag: String = e.kind == "frist" ? "FRIST" : (e.kind == "bursdag" ? "BURSDAG" : (e.cont ? "FORTS." : ""))
         Button(action: { s.openDetail(e) }) {
@@ -276,7 +276,8 @@ struct KalSearchView: View {
                 .padding(.bottom, 20)
             }
             .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
+            // Prompt 37: scroll i treffene lukker tastaturet (keyboardDismissMode = .onDrag).
+            .scrollDismissesKeyboard(.immediately)
         }
         .background(t.bg)
         .onAppear {

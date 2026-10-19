@@ -230,6 +230,8 @@ targets:
       - SharedKal/Fonts
       # Ren Foundation-tolking av «frisør 14.30 25.10» (KalParsed, KalRx, KalQuick) – delt med iOS-appen uten kopi.
       - path: Kalender/Sources/KalQuick.swift
+      # Prompt 37: adresse og kart (geokoding + kartvisning) deles med iPhone-appen.
+      - path: Kalender/Sources/KalGeo37.swift
     entitlements:
       path: KalenderMac/KalenderMac.entitlements
       properties:

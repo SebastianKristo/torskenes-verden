@@ -121,12 +121,12 @@ struct KalMonthChip: View {
     let e: KalEvent
 
     var body: some View {
-        let c: KalCal? = KalStore.shared.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
         Text(e.title).font(KalFont.ui(9.5, .bold)).lineLimit(1)
             .foregroundStyle(t.calText(c))
             .padding(.horizontal, 4).padding(.vertical, 1)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 4).fill(t.calTint(c, e.kind == "frist" ? 0.22 : 0.13)))
+            .background(RoundedRectangle(cornerRadius: 4).fill(t.calTint(c, e.kind == "frist" ? 0.38 : 0.13)))
     }
 }
 

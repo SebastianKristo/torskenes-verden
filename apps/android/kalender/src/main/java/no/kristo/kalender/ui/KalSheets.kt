@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -81,18 +84,24 @@ import no.kristo.kalender.wkd
 
 /** Felles arkramme: card-bakgrunn, radius 28 28 0 0, skygge, håndtak og plass til gestlinjen. */
 @Composable
-private fun SheetFrame(maxFrac: Float = .9f, content: @Composable () -> Unit) {
+private fun SheetFrame(maxFrac: Float = .9f, behindIme: Boolean = false, content: @Composable () -> Unit) {
     val k = LocalK.current
     val h = LocalConfiguration.current.screenHeightDp.dp
+    // Prompt 37 (Ny hendelse): arket går helt ned bak tastaturet og krymper ikke. Innholdet får padding = tastatur + 16 dp,
+    // og arket kan bli nesten fullhøyde (100 % − 40 dp), så det aldri synes dimming rundt tastaturet.
+    val imeH = WindowInsets.ime.getBottom(LocalDensity.current)
+    val kbOn = behindIme && imeH > 0
+    val outer = Modifier.fillMaxWidth().heightIn(max = if (kbOn) h - 40.dp else h * maxFrac).shadow(24.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(k.card).tap(null) {}
     Column(
-        Modifier.fillMaxWidth().heightIn(max = h * maxFrac).shadow(24.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(k.card).tap(null) {}.imePadding()
-            .verticalScroll(rememberScrollState()).padding(start = 18.dp, end = 18.dp, top = 10.dp).windowInsetsPadding(WindowInsets.navigationBars),
+        (if (behindIme) outer else outer.imePadding())
+            .verticalScroll(rememberScrollState()).padding(start = 18.dp, end = 18.dp, top = 10.dp)
+            .windowInsetsPadding(if (behindIme) WindowInsets.ime.union(WindowInsets.navigationBars) else WindowInsets.navigationBars),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { Grip() }
         content()
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(if (kbOn) 16.dp else 20.dp))
     }
 }
 
@@ -115,7 +124,7 @@ private fun InfoRow(label: String, content: @Composable () -> Unit) {
 fun DetailSheet(vm: KalVm) {
     val k = LocalK.current
     val e = vm.find(vm.det) ?: return
-    val c = vm.cal(e.cal)
+    val c = vm.evCal(e)
     val wx = if (vm.swx) vm.data.wx[e.d] else null
     SheetFrame {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -131,6 +140,8 @@ fun DetailSheet(vm: KalVm) {
                     man(14.sp, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.End), maxLines = 2)
             }
             e.loc?.let { InfoRow("Sted") { Tx(it, man(14.sp, FontWeight.Bold, k.ink).copy(textAlign = TextAlign.End), maxLines = 2) } }
+            // Prompt 37: kart med pin, full adresse, «Åpne i Kart» og «Veibeskrivelse ›».
+            if (e.loc != null || e.lat != null) DetailMap37(vm, e)
             if (wx != null) InfoRow("Vær") {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     WxIcon(wx, 16.dp)
@@ -140,6 +151,7 @@ fun DetailSheet(vm: KalVm) {
             e.src?.let { InfoRow("Lagt til av Glimt") { Tx("«$it»", man(14.sp, FontWeight.Medium, k.mut).copy(fontStyle = FontStyle.Italic, textAlign = TextAlign.End), maxLines = 3) } }
             if (!e.editable) InfoRow("Kilde") { Tx("Skrivebeskyttet kalender", man(14.sp, FontWeight.Medium, k.mut)) }
         }
+        FagPick37(vm, e)
         if (!e.all) {
             Label("VARSEL")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -163,7 +175,7 @@ fun NewSheet(vm: KalVm) {
     val fr = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
     val ok = f.t.isNotBlank()
-    SheetFrame {
+    SheetFrame(behindIme = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             LinePill("Avbryt", { vm.closeNew() })
             Tx("Ny hendelse", news(22.sp, k.ink).copy(textAlign = TextAlign.Center), Modifier.weight(1f))

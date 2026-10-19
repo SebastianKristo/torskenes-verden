@@ -28,7 +28,7 @@ struct MacDetailSheet: View {
     @ObservedObject var store: MacStore = MacStore.shared
 
     var body: some View {
-        let c: KalCal? = store.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(store.cal(e.cal), e)
         MacCard(width: 460) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top, spacing: 12) {
@@ -42,6 +42,9 @@ struct MacDetailSheet: View {
                         .keyboardShortcut(.cancelAction)
                 }
                 rows(c)
+                // Prompt 37: kart med adresse og fagfarge.
+                if !e.loc.isEmpty || e.lat != nil { MacDetailMap37(e: e) }
+                MacFagPick37(e: e)
                 reminders
                 if !e.src.isEmpty {
                     Text("Lagt til av Glimt «" + e.src + "»").font(MacFont.ui(12.5)).foregroundColor(t.mut)

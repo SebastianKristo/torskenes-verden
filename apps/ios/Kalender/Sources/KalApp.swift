@@ -224,8 +224,9 @@ struct KalRoot: View {
         if let f = s.newForm {
             KalDim { withAnimation(.easeOut(duration: 0.22)) { s.newForm = nil } }
                 .zIndex(49)
+            // Prompt 37: arket ligger også bak tastaturet (ingen grå dimming i tastaturets runde hjørner).
             KalNewSheet(form: f)
-                .ignoresSafeArea(.container, edges: .bottom)
+                .ignoresSafeArea([.container, .keyboard], edges: .bottom)
                 .transition(sheetIn)
                 .zIndex(50)
         }

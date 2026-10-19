@@ -112,6 +112,8 @@ fun KalRoot(vm: KalVm, onBackToHomelab: () -> Unit) {
     CompositionLocalProvider(LocalK provides k) {
         Box(Modifier.fillMaxSize().background(k.bg)) {
             if (vm.session == null) LoginScreen(vm) else KalApp(vm, onBackToHomelab)
+            // Prompt 37: fagfarger synkes, og tastaturet lukkes når et hendelsesark åpnes.
+            Kal37Effects(vm)
         }
     }
 }

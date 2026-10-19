@@ -92,7 +92,7 @@ final class MacGlimtModel: ObservableObject {
                 ans.error = srv.error
             }
         } else if let p = ans.created {
-            undoId = await MacStore.shared.add(p, toastPrefix: nil)
+            undoId = await MacStore.shared.add(p, loc: ans.loc, toastPrefix: nil)
             if let e = MacStore.shared.event(undoId) { ans.cards = [e] }
         }
         await animateSteps(id, ans.steps, fromServer: fromServer || unsure)
@@ -486,7 +486,7 @@ struct MacGlimtCard: View {
     @ObservedObject var win: MacWin
 
     var body: some View {
-        let c: KalCal? = MacStore.shared.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(MacStore.shared.cal(e.cal), e)
         let dayText: String = e.day == KalD.todayKey() ? "I dag" : KalD.dl(KalD.date(e.day))
         let place: String = e.loc.isEmpty ? (c?.name ?? "") : e.loc
         let sub: String = dayText + " · " + place
@@ -511,6 +511,8 @@ struct MacGlimtCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // Prompt 37: minikart med adressen når Glimt la til hendelsen.
+        MacGlimtMap37(e: e)
     }
 }
 

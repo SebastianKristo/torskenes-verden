@@ -21,6 +21,8 @@ struct MacSettingsView: View {
                 section("VARSLER") { notifyPrefs }
                 section("UTSEENDE") { appearance }
                 section("VISNING") { display }
+                // Prompt 37: Kalendere → Studie → Fag (egen farge per fag).
+                section("STUDIE · FAG") { MacFagSettings37() }
                 section("KONTO") { account }
                 section("KONTOER OG SYNK") { MacGoogle36Section() }
                 section("OPPDATERING") { update }

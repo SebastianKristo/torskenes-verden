@@ -146,7 +146,8 @@ private class WData(val d: KData, val evs: List<KEv>, showWx: Boolean, sun: Bool
     val next: KEv? = up.firstOrNull { !it.all } ?: up.firstOrNull()
     val wx = if (showWx) d.wx[T] else null
 
-    fun color(e: KEv): Long = cals[e.cal]?.c ?: e.color ?: KCALS[0].c
+    /** Prompt 37: Studie-hendelser får fagfargen (samme som i appen). */
+    fun color(e: KEv): Long = cals[e.cal]?.let { no.kristo.kalender.Fag37.tint(it, e).c } ?: e.color ?: KCALS[0].c
     fun calName(e: KEv): String = cals[e.cal]?.n ?: "Kalender"
     fun whenL(e: KEv): String = when (e.d) { T -> ""; T.plusDays(1) -> "I morgen · "; else -> cap(WS[e.d.jsDay]) + ". " + e.d.dayOfMonth + ". · " }
     fun tm(e: KEv): String = if (e.all) "Hele dagen" else hm(e.s ?: 0) + "–" + hm(e.e ?: ((e.s ?: 0) + 60))
@@ -155,6 +156,7 @@ private class WData(val d: KData, val evs: List<KEv>, showWx: Boolean, sun: Bool
 
 /** Cachen med skjulte kalendere og lokale varsel-valg lagt på. */
 private fun data(ctx: Context): WData {
+    no.kristo.kalender.Fag37.attach(ctx)
     val d0 = KalStore.current(ctx)
     // Prompt 35: egne farger og «Skjul fra menyen» gjelder også widgetene.
     val d = d0.copy(cals = no.kristo.kalender.cals35(ctx, d0.cals))

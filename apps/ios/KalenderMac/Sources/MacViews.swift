@@ -150,7 +150,7 @@ struct MacMonthChip: View {
     let action: () -> Void
 
     var body: some View {
-        let c: KalCal? = MacStore.shared.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(MacStore.shared.cal(e.cal), e)
         Button(action: action) {
             HStack(spacing: 4) {
                 if e.allDay {
@@ -302,7 +302,7 @@ struct MacListRow: View {
     @State private var hover: Bool = false
 
     var body: some View {
-        let c: KalCal? = MacStore.shared.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(MacStore.shared.cal(e.cal), e)
         let time: String = e.allDay ? "Hele dagen" : KalD.hm(e.startMin) + "–" + KalD.hm(e.endMin)
         let sub: String = e.loc.isEmpty ? (c?.name ?? "") : e.loc + " · " + (c?.name ?? "")
         Button(action: action) {

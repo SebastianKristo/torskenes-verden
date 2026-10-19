@@ -32,6 +32,9 @@ struct KalSettings35View: View {
                     general
                     KalLabel(text: "VISNING").padding(.top, 6)
                     display
+                    // Prompt 37: Kalendere → Studie → Fag (egen farge per fag; trykk gir fargevelger).
+                    KalLabel(text: "STUDIE · FAG").padding(.top, 6)
+                    KalFagSettings37()
                     KalLabel(text: "UTSEENDE").padding(.top, 6)
                     KalSegment35(options: [KalSegOpt35(id: "system", name: "System"), KalSegOpt35(id: "light", name: "Lys"), KalSegOpt35(id: "dark", name: "Mørk")],
                                  selected: s.theme) { (v: String) in

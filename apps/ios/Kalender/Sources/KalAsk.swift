@@ -17,6 +17,8 @@ struct KalAnswer {
     var slots: [KalSlot] = []
     /// Lagt til av Glimt (kan angres).
     var created: KalParsed? = nil
+    /// Prompt 37: stedet i teksten («hos Nina frisør», «Hoffsveien 4») – lagres på hendelsen og vises med kart.
+    var loc: String = ""
     /// true = ingen lokal regel passet (send til serveren).
     var unknown: Bool = false
 }
@@ -64,8 +66,15 @@ enum KalAsk {
             a.cards = list
             return a
         }
+        // Prompt 37: intensjon før tekstsøk – «Neste prøve på skolen» er en skoleprøve i Studie, aldri «Viaplay-prøven slutter».
+        if let sa = KalSchool37.answer(ql, up: up, cal: { (id: String) -> KalCal? in st.cal(id) }, rel: { (k: String) -> String in rel(k) }, tk: tk) {
+            var a: KalAnswer = KalAnswer(steps: sa.steps)
+            a.text = sa.text
+            a.cards = sa.cards
+            return a
+        }
         if KalRx.test("frist|eksamen|innlevering|oblig", ql) {
-            let list: [KalEvent] = Array(up.filter { (e: KalEvent) -> Bool in e.kind == "frist" }.prefix(4))
+            let list: [KalEvent] = Array(up.filter { (e: KalEvent) -> Bool in e.kind == "frist" && !KalSchool37.isTrialEvent(e) }.prefix(4))
             var a: KalAnswer = KalAnswer(steps: ["Ser i Studie", "Sorterer frister"])
             if let f = list.first {
                 a.text = "Neste frist er " + KalStore.stripFrist(f.title) + " " + rel(f.day) + "."
@@ -96,6 +105,8 @@ enum KalAsk {
             let calName: String = st.cal(p.cal)?.name ?? "Personlig"
             a.text = "Jeg la til «" + p.title + "» " + rel(p.day) + (p.allDay ? "" : " kl. " + KalD.hm(p.s ?? 0)) + " i " + calName + (p.allDay ? "." : ", med varsel " + KalD.remLabel(p.rem) + ".")
             a.created = p
+            a.loc = KalPlace37.extract(q)
+            if !a.loc.isEmpty { a.text += " Sted: " + a.loc + "." }
             return a
         }
         var a: KalAnswer = KalAnswer(steps: ["Tenker"])
@@ -165,23 +176,23 @@ enum KalAsk {
 
     static func next(_ ql: String, up: [KalEvent], tk: String) -> KalAnswer {
         let st: KalStore = KalStore.shared
-        let stop: Set<String> = ["når", "er", "neste", "min", "mitt", "mine", "har", "jeg", "skal", "må", "time", "timen", "timer", "hos", "til", "på", "i", "en", "et", "den", "det", "avtale", "avtalen", "hva", "meg"]
-        let cleaned: String = KalRx.replace("[?!.,]", ql, with: " ")
-        var terms: [String] = []
-        for w in cleaned.split(separator: " ").map({ (x: Substring) -> String in String(x) }) where w.count > 2 && !stop.contains(w) {
-            let t: String = KalRx.replace("(timen|timer|time|en|et|er)$", w, with: "")
-            if t.count > 2 { terms.append(t) }
-        }
+        // Prompt 37: stoppord inkluderer skole-ordene, ingen «-en/-et»-stripping, og alle søkeordene må treffe.
+        let terms: [String] = KalSchool37.terms(ql)
         func hay(_ e: KalEvent, loc: Bool) -> String {
             let name: String = st.cal(e.cal)?.name ?? ""
-            return (e.title + " " + (loc ? e.loc : "") + " " + name).lowercased()
+            return (e.title + " " + (loc ? e.loc : "") + " " + name + " " + e.note).lowercased()
+        }
+        let school: Bool = KalSchool37.isSchoolQ(ql)
+        let pool: [KalEvent] = up.filter { (e: KalEvent) -> Bool in
+            if KalSchool37.isTrialEvent(e) && !KalSchool37.isTrialQ(ql) { return false }
+            return !school || KalFag37.isStudy(e, st.cal(e.cal))
         }
         var m: KalEvent? = nil
         if terms.isEmpty {
-            m = up.first { (e: KalEvent) -> Bool in !e.allDay }
+            m = pool.first { (e: KalEvent) -> Bool in !e.allDay }
         } else {
-            m = up.first { (e: KalEvent) -> Bool in !e.allDay && terms.contains(where: { (t: String) -> Bool in hay(e, loc: true).contains(t) }) }
-            if m == nil { m = up.first { (e: KalEvent) -> Bool in terms.contains(where: { (t: String) -> Bool in hay(e, loc: false).contains(t) }) } }
+            m = pool.first { (e: KalEvent) -> Bool in !e.allDay && KalSchool37.all(hay(e, loc: true), terms) }
+            if m == nil { m = pool.first { (e: KalEvent) -> Bool in KalSchool37.all(hay(e, loc: true), terms) } }
         }
         let what: String = terms.joined(separator: " ")
         guard let e = m else {
@@ -192,7 +203,7 @@ enum KalAsk {
         }
         let days: Int = KalD.daysBetween(tk, e.day)
         var a: KalAnswer = KalAnswer(steps: ["Søker etter «" + (what.isEmpty ? "neste" : what) + "»", "Fant " + e.title])
-        var t: String = terms.isEmpty ? "Neste er " + e.title + " " : "Neste " + what + " er "
+        var t: String = terms.isEmpty ? "Neste er " + e.title + " " : "Neste " + what + " er " + e.title + " "
         t += rel(e.day) + (e.allDay ? "" : " kl. " + KalD.hm(e.startMin)) + (e.loc.isEmpty ? "" : ", " + e.loc) + "."
         if days > 1 { t += " Det er om " + String(days) + " dager." }
         if let r = e.rem { t += " Du får varsel " + KalD.remLabel(r) + "." }

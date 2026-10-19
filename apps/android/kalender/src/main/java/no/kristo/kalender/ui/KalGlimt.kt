@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -64,6 +65,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -220,8 +222,9 @@ fun GlimtPanel(vm: KalVm) {
             }
         }
         Column(
-            Modifier.fillMaxWidth().drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }.padding(start = 12.dp, end = 12.dp, top = 8.dp)
-                .windowInsetsPadding(WindowInsets.navigationBars).padding(bottom = 12.dp),
+            // Prompt 37: 16 dp sidemarg og 22 dp over gestlinjen, så send-knappen ikke treffer hjørnekurven; 6 dp over tastaturet.
+            Modifier.fillMaxWidth().drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }.padding(start = 16.dp, end = 16.dp, top = 8.dp)
+                .windowInsetsPadding(WindowInsets.navigationBars).padding(bottom = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 6.dp else 22.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (vm.gm.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -313,7 +316,7 @@ private fun AsstMsg(vm: KalVm, m: KGMsg) {
 @Composable
 private fun Card(vm: KalVm, e: KEv) {
     val k = LocalK.current
-    val c = vm.cal(e.cal)
+    val c = vm.evCal(e)
     val T = today()
     val sub = (if (e.d == T) "I dag" else cap(WS[e.d.jsDay]) + ". " + e.d.dayOfMonth + ". " + MS[e.d.monthValue - 1]) + (e.loc?.let { " · $it" } ?: " · " + c.n)
     Row(
@@ -328,5 +331,7 @@ private fun Card(vm: KalVm, e: KEv) {
         }
         Tx(if (e.all) "Hele dagen" else hm(e.s ?: 0), mono(11.5.sp, k.ink))
     }
+    // Prompt 37: minikart med adressen når Glimt la til hendelsen.
+    GlimtMap37(vm, e)
     Spacer(Modifier.height(0.dp))
 }

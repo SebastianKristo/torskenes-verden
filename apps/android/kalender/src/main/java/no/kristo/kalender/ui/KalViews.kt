@@ -78,9 +78,9 @@ private fun KalVm.wxOf(d: LocalDate): KWx? = if (swx) data.wx[d] else null
 @Composable
 private fun EvChip(vm: KalVm, e: KEv, fs: Float, onClick: (() -> Unit)? = null) {
     val k = LocalK.current
-    val c = vm.cal(e.cal)
+    val c = vm.evCal(e)
     Box(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(c.col.copy(alpha = if (e.kind == "frist") .22f else .133f))
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(c.col.copy(alpha = if (e.kind == "frist") .38f else .133f))
             .then(if (onClick != null) Modifier.tap(e.t, onClick = onClick) else Modifier).padding(horizontal = 4.dp, vertical = 1.dp),
     ) { Tx(e.t, man(fs.sp, FontWeight.Bold, c.fg(k), (fs * 1.4f).sp)) }
 }
@@ -247,7 +247,7 @@ fun GridView(vm: KalVm) {
                         val cw = maxWidth
                         lay(by[d].orEmpty().map { it.first }).forEach { l ->
                             val e = l.e
-                            val c = vm.cal(e.cal)
+                            val c = vm.evCal(e)
                             val s = e.s ?: 0
                             val en = e.e ?: (s + 60)
                             val hh = maxOf(20.dp, H * ((en - s) / 60f) - 2.dp)
@@ -313,7 +313,7 @@ fun YearView(vm: KalVm) {
 @Composable
 fun EvRow(vm: KalVm, e: KEv, cont: Boolean = false, twoTimes: Boolean = true) {
     val k = LocalK.current
-    val c = vm.cal(e.cal)
+    val c = vm.evCal(e)
     val tag = when { e.kind == "frist" -> "FRIST"; e.kind == "bursdag" -> "BURSDAG"; cont -> "FORTS."; else -> null }
     Row(
         Modifier.fillMaxWidth().height(IntrinsicSize.Min).heightIn(min = 44.dp).tap(e.t) { vm.openEv(e) }.drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
@@ -429,7 +429,12 @@ fun SearchView(vm: KalVm) {
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             vm.cals.filter { !it.hidMenu }.forEach { c -> Chip(c.n, vm.sf == c.id, { no.kristo.kalender.Hap.tick(); vm.sf = if (vm.sf == c.id) null else c.id }, dot = c.col, h = 32.dp, bgOff = k.card) }
         }
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
+        // Prompt 37: scroll i treffene lukker tastaturet (søketeksten beholdes).
+        val sList = androidx.compose.foundation.lazy.rememberLazyListState()
+        val sFocus = androidx.compose.ui.platform.LocalFocusManager.current
+        val sKb = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+        LaunchedEffect(sList.isScrollInProgress) { if (sList.isScrollInProgress) { sFocus.clearFocus(); sKb?.hide() } }
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp), state = sList) {
             groups.forEach { (d, l) ->
                 item("g$d") {
                     val t = (if (d == T) "I DAG · " else if (d.isBefore(T)) "TIDLIGERE · " else "") +

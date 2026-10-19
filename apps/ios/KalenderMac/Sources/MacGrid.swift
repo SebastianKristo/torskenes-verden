@@ -247,7 +247,7 @@ struct MacGridColumn: View {
 
     private func block(_ l: MacLaid, width: CGFloat) -> some View {
         let e: KalEvent = l.ev
-        let c: KalCal? = store.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(store.cal(e.cal), e)
         let lw: CGFloat = Swift.max(0, width - 4) / CGFloat(Swift.max(1, l.lanes))
         let y: CGFloat = CGFloat(e.startMin) / 60 * hourH
         let h: CGFloat = Swift.max(18, CGFloat(e.endMin - e.startMin) / 60 * hourH - 2)

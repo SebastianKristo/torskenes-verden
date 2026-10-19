@@ -105,6 +105,8 @@ final class MacStore: ObservableObject {
     private var lastDay: String = KalD.todayKey()
 
     init() {
+        // Prompt 37: fagfargene synkes med profilen (PUT/GET /api/me/layout subjectColors).
+        KalFag37.pushEnabled = true
         if let d = UserDefaults.standard.data(forKey: "mac.snapshot"), let snap = try? JSONDecoder().decode(KalSnapshot.self, from: d) {
             if !snap.cals.isEmpty { cals = snap.cals }
             events = snap.events.filter { (e: KalEvent) -> Bool in !e.pending }
@@ -195,6 +197,7 @@ final class MacStore: ObservableObject {
             wx = o
         }
         await flushPending()
+        await KalFag37.pull()
         rebuild()
         saveSnapshot()
     }

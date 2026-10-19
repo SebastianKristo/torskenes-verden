@@ -156,6 +156,9 @@ final class KalStore {
 
     /// Ved oppstart og kalender://login: bruk Homelab-appens token hvis appen ikke er logget inn selv.
     func bootstrap() {
+        // Prompt 37: fagfarger synkes med profilen, og tastaturhøyden følges (Ny hendelse bak tastaturet).
+        KalFag37.pushEnabled = true
+        KalKb37.shared.install()
         if KalGroup.token != nil {
             loggedIn = true
             userName = KalGroup.user
@@ -243,6 +246,7 @@ final class KalStore {
             wx = o
         }
         await flushPending()
+        await KalFag37.pull()
         rebuild()
         saveSnapshot()
     }
@@ -387,6 +391,8 @@ final class KalStore {
     }
 
     func openDetail(_ e: KalEvent) {
+        // Prompt 37: tastaturet lukkes før arket åpnes (søket og treffene beholdes).
+        KalKeyboard37.dismiss()
         KalHaptic.tap()
         detId = e.id
     }

@@ -80,6 +80,11 @@ enum KalWData {
         s.cals.first { (c: KalCal) -> Bool in c.id == id } ?? KalCals.defaults.first { (c: KalCal) -> Bool in c.id == id }
     }
 
+    /// Prompt 37: Studie-hendelser får fagfargen (samme som i appen, fra App Group).
+    static func evCal(_ s: KalSnapshot, _ e: KalEvent) -> KalCal? {
+        KalFag37.tint(cal(s, e.cal), e)
+    }
+
     static func wx(_ s: KalSnapshot, _ key: String) -> KalWxDay? {
         s.wx.first { (w: KalWxDay) -> Bool in w.day == key }
     }
@@ -260,7 +265,7 @@ struct KalWSmall: View {
 
     var body: some View {
         let n: KalEvent? = KalWData.nextTimed(entry.snap, now: entry.date)
-        let c: KalCal? = n.flatMap { (e: KalEvent) -> KalCal? in KalWData.cal(entry.snap, e.cal) }
+        let c: KalCal? = n.flatMap { (e: KalEvent) -> KalCal? in KalWData.evCal(entry.snap, e) }
         VStack(alignment: .leading, spacing: 2) {
             Text(KalD.weekdays[KalD.wd(entry.date)].uppercased()).font(KalFont.monoW(10)).tracking(1.2).foregroundStyle(pal.acc)
             // Prompt 35: «UKE 43» rett til høyre for datoen (baseline-justert), mono 800, 11,5 pt, --ink2.
@@ -332,7 +337,7 @@ struct KalWRow: View {
     let pal: KalWPal
 
     var body: some View {
-        let c: KalCal? = KalWData.cal(snap, e.cal)
+        let c: KalCal? = KalWData.evCal(snap, e)
         HStack(alignment: .top, spacing: 8) {
             RoundedRectangle(cornerRadius: 2).fill(Color(kalHex: c?.hex ?? "#b23a2a")).frame(width: 4)
             VStack(alignment: .leading, spacing: 0) {
@@ -363,7 +368,7 @@ struct KalWLarge: View {
                 ForEach(up, id: \.self) { (e: KalEvent) in
                     Link(destination: KalWData.eventURL(e)) {
                         HStack(spacing: 8) {
-                            Circle().fill(Color(kalHex: KalWData.cal(entry.snap, e.cal)?.hex ?? "#b23a2a")).frame(width: 8, height: 8)
+                            Circle().fill(Color(kalHex: KalWData.evCal(entry.snap, e)?.hex ?? "#b23a2a")).frame(width: 8, height: 8)
                             Text(e.title).font(KalFont.uiW(13, .bold)).foregroundStyle(pal.ink).lineLimit(1)
                             Spacer(minLength: 4)
                             Text(KalWData.whenPrefix(e.day, now: d).replacingOccurrences(of: " · ", with: " ") + (e.allDay ? "Hele dagen" : KalD.hm(e.startMin)))

@@ -377,6 +377,10 @@ fun SettingsPage35(vm: KalVm) {
                 OptRow("Vær", "Oslo · MET / Open-Meteo, 16 dager frem", vm.swx) { vm.setWx(!vm.swx) }
             }
 
+            // Prompt 37: Kalendere → Studie → Fag (egen farge per fag; trykk gir fargevelger).
+            Label("STUDIE · FAG", Modifier.padding(top = 4.dp))
+            FagSettings37(vm)
+
             Label("UTSEENDE", Modifier.padding(top = 4.dp))
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(k.chip).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 listOf("system" to "System", "light" to "Lys", "dark" to "Mørk").forEach { (key, n) ->

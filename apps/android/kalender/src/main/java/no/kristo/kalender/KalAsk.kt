@@ -60,8 +60,10 @@ class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, pr
             val l = up.filter { it.cal == "b" || it.kind == "bursdag" }.take(3)
             return KAns(listOf("Ser i Bursdager"), if (l.isNotEmpty()) "De neste bursdagene: " + l.joinToString(", ") { it.t + " " + rel(it.d) } + "." else "Ingen bursdager de neste ukene.", l)
         }
+        // Prompt 37: intensjon før tekstsøk – «Neste prøve på skolen» er en skoleprøve i Studie, aldri «Viaplay-prøven slutter».
+        School37.answer(ql, up, { cals[it] ?: KCALS.firstOrNull { c -> c.id == it } }, ::rel, T)?.let { return it }
         if (Regex("frist|eksamen|innlevering|oblig").containsMatchIn(ql)) {
-            val l = up.filter { it.kind == "frist" }.take(4)
+            val l = up.filter { it.kind == "frist" && !School37.isTrialEv(it) }.take(4)
             val txt = if (l.isEmpty()) "Ingen frister fremover." else "Neste frist er " + stripFrist(l[0].t) + " " + rel(l[0].d) + "." +
                 (if (l.size > 1) " Etter det: " + l.drop(1).joinToString(", ") { stripFrist(it.t) + " " + rel(it.d) } + "." else "")
             return KAns(listOf("Ser i Studie", "Sorterer frister"), txt, l)
@@ -98,15 +100,17 @@ class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, pr
             return KAns(listOf("Henter værvarsel"), if (w.isEmpty()) "Har ikke værvarsel for den dagen ennå." else w.replaceFirst("Været:", cap(rel(d)) + ":"))
         }
         if (Regex("neste|når er|når har|når skal|når må").containsMatchIn(ql)) {
-            val stop = setOf("når", "er", "neste", "min", "mitt", "mine", "har", "jeg", "skal", "må", "time", "timen", "timer", "hos", "til", "på", "i", "en", "et", "den", "det", "avtale", "avtalen", "hva", "meg")
-            val terms = ql.replace(Regex("[?!.,]"), " ").split(Regex("\\s+")).filter { it.length > 2 && it !in stop }
-                .map { it.replace(Regex("(timen|timer|time|en|et|er)$"), "") }.filter { it.length > 2 }
-            fun hay(e: KEv, loc: Boolean) = (e.t + " " + (if (loc) e.loc.orEmpty() else "") + " " + calName(e.cal)).lowercase()
-            val m = if (terms.isNotEmpty()) up.firstOrNull { e -> !e.all && terms.any { hay(e, true).contains(it) } } ?: up.firstOrNull { e -> terms.any { hay(e, false).contains(it) } }
-            else up.firstOrNull { !it.all }
+            // Prompt 37: skole-ordene er stoppord (kontekst), ingen «-en/-et»-stripping, og alle søkeordene må treffe.
+            val terms = School37.terms(ql)
+            fun hay(e: KEv) = (e.t + " " + e.loc.orEmpty() + " " + calName(e.cal) + " " + e.note.orEmpty()).lowercase()
+            val school = School37.isSchoolQ(ql)
+            val trialQ = School37.isTrialQ(ql)
+            val pool = up.filter { e -> (!School37.isTrialEv(e) || trialQ) && (!school || Fag37.isStudy(e, cals[e.cal])) }
+            val m = if (terms.isNotEmpty()) pool.firstOrNull { e -> !e.all && School37.all(hay(e), terms) } ?: pool.firstOrNull { e -> School37.all(hay(e), terms) }
+            else pool.firstOrNull { !it.all }
             if (m != null) {
                 val days = daysBetween(T, m.d)
-                val txt = (if (terms.isNotEmpty()) "Neste " + terms.joinToString(" ") + " er " else "Neste er " + m.t + " ") + rel(m.d) +
+                val txt = (if (terms.isNotEmpty()) "Neste " + terms.joinToString(" ") + " er " + m.t + " " else "Neste er " + m.t + " ") + rel(m.d) +
                     (if (m.all) "" else " kl. " + hm(m.s ?: 0)) + (m.loc?.let { ", $it" } ?: "") + "." + (if (days > 1) " Det er om $days dager." else "") +
                     (if (m.rem != null) " Du får varsel " + remL(m.rem) + "." else "")
                 return KAns(listOf("Søker etter «" + (terms.joinToString(" ").ifBlank { "neste" }) + "»", "Fant " + m.t), txt, listOf(m))
@@ -116,10 +120,13 @@ class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, pr
         }
         val p = parseQuick(q, defRem, T, nm)
         if (p.s != null || Regex("\\d").containsMatchIn(q) || q.length > 50) {
-            val ev = KEv("u" + System.currentTimeMillis(), p.t, p.cal, p.d, p.s, p.e, loc = null, rem = p.rem, src = p.src)
+            // Prompt 37: stedet i teksten lagres på hendelsen (adresse og kart vises under kortet).
+            val place = Place37.extract(q)
+            val ev = KEv("u" + System.currentTimeMillis(), p.t, p.cal, p.d, p.s, p.e, loc = place, rem = p.rem, src = p.src)
             return KAns(
                 listOf("Leser teksten", "Finner dato og tid", "Legger inn i " + calName(p.cal)),
-                "Jeg la til «" + p.t + "» " + rel(p.d) + (if (p.all) "" else " kl. " + hm(p.s ?: 0)) + " i " + calName(p.cal) + (if (p.all) "." else ", med varsel " + remL(p.rem) + "."),
+                "Jeg la til «" + p.t + "» " + rel(p.d) + (if (p.all) "" else " kl. " + hm(p.s ?: 0)) + " i " + calName(p.cal) + (if (p.all) "." else ", med varsel " + remL(p.rem) + ".") +
+                    (place?.let { " Sted: $it." } ?: ""),
                 listOf(ev), create = ev,
             )
         }

@@ -347,7 +347,7 @@ struct MacNextBanner: View {
         let startAbs: Int = days * 1440 + e.startMin
         let endAbs: Int = days * 1440 + e.endMin
         let now: Bool = startAbs <= nm && endAbs > nm
-        let c: KalCal? = store.cal(e.cal)
+        let c: KalCal? = KalFag37.tint(store.cal(e.cal), e)
         let dayText: String = days == 0 ? "i dag" : (days == 1 ? "i morgen" : KalD.fd(KalD.date(e.day)))
         let tm: String = KalD.hm(e.startMin) + "–" + KalD.hm(e.endMin)
         var big: String = KalD.cap(KalD.weekdaysShort[KalD.wd(KalD.date(e.day))])
