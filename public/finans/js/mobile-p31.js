@@ -13,7 +13,8 @@ import { esc, hlApi, api } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { hsTimeout, NAV_T } from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET
-import * as P34 from './mobile-p34.js'; // prompt 34: tydelige AI-feil i boblen
+import * as P34 from './mobile-p34.js';
+import * as P35 from './mobile-p35.js'; // prompt 35: været for et sted i AI-søket // prompt 34: tydelige AI-feil i boblen
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -134,7 +135,7 @@ export function ansBubble() {
   const A = G.ans; if (!A) return '';
   if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …</span></div>`;
   return `<div class="p31-ans ready" data-p31="ansx" role="status" aria-live="polite"><span class="p31-at">${bold(A.text)}</span>${A.card ? cardHtml(A.card, true) : ''}
-    ${A.err ? P34.errButtons(A.q) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div></div>`;
+    ${A.err ? P34.errButtons(A.q) : ''}${A.open ? P35.wxOpenBtn(A.open) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div></div>`;
 }
 const ASSIST_MISSING = { v: false };
 async function assistCall(q, source, extra = {}) {
@@ -178,7 +179,7 @@ export function onQuickRealtime31(d) {
   jobPut(k, { steps: d.steps, fields: d.fields, progress: d.progress, title: d.title, model: d.model, input: d.input, state: d.state === 'done' || d.state === 'failed' ? d.state : null });
   if (G.open) draw();
 }
-const normAns = (r) => ({ text: r?.text ?? r?.answer ?? (r?.bold ? `**${r.bold}**` : ''), src: r?.source ?? 'Glimt', card: r?.card ?? null, intent: r?.intent ?? '', tool: r?.tool ?? null, chatContext: r?.chatContext ?? null, chatId: r?.chatId ?? null, memory: r?.memory ?? null, apply: r?.apply ?? null });
+const normAns = (r) => ({ text: r?.text ?? r?.answer ?? (r?.bold ? `**${r.bold}**` : ''), src: r?.source ?? 'Glimt', card: r?.card ?? null, intent: r?.intent ?? '', tool: r?.tool ?? null, chatContext: r?.chatContext ?? null, chatId: r?.chatId ?? null, memory: r?.memory ?? null, apply: r?.apply ?? null, open: r?.open ?? (() => { const P = r?.place ?? r?.card?.place; return r?.intent === 'weather' && P?.lat != null ? { route: 'vaer', name: P.name, lat: P.lat, lon: P.lon, label: P.label } : null; })() });
 export async function ask(q) {
   const id = ++G.aid; G.ans = { q, busy: true }; draw();
   const set = (o) => { if (G.aid !== id) return; G.ans = { q, busy: false, ...o }; haptic('ok'); draw(); bgNotify(q, o.text, '#/hl'); };
@@ -192,7 +193,12 @@ export async function ask(q) {
     if (r?.jobId && r.text == null) { jobId = r.jobId; r = await waitJob(r.jobId, { q, title: 'Glimt tenker' }); }
   } catch (e) {
     clearTimeout(timer); if (moved) return;
-    if (e.status === 404 || e.status === 405) { set({ text: 'Jeg svarer best på dette i Chat. **Trykk «Fortsett i Chat».**', src: 'Glimt' }); return; }
+    if (e.status === 404 || e.status === 405) {
+      // Prompt 35: eldre server uten /api/assist – været for et sted tolkes her (claude-code-ai-sok-vaer-sted.md).
+      if (P35.isWxQuery(q)) { const W = await P35.wxAnswer(q).catch(() => null); if (W) { set(W); return; } }
+      if (/pr(ø|o)ve|gratis|trial|avslutt|si opp|oppsig/i.test(q)) { const T = await trialQuick(q).catch(() => null); if (T) { set(T); return; } }
+      set({ text: 'Jeg svarer best på dette i Chat. **Trykk «Fortsett i Chat».**', src: 'Glimt' }); return;
+    }
     // Prompt 34: en ekte feil fra modellen/serveren vises i boblen med Prøv igjen og Åpne AI-kontroll (ikke evig «tenker»).
     if (e.soft || (e.status >= 400 && e.status !== 408 && e.status !== 504)) { haptic('err'); if (G.aid === id) { G.ans = { q, busy: false, text: P34.aiErrText(e, e.model), src: 'Glimt', err: true }; draw(); } return; }
     handoff(q, id, () => jobId, 'Fikk ikke svar her.'); return;
@@ -492,6 +498,18 @@ async function trialSave(after) {
   G.tr = null; G.trials = null; trialsLoad(true);
   flash(`Påminnelse lagret · ${body.service} ✓`); after?.(); draw();
 }
+/** Prompt 35: «Viaplay gratis i 14 dager, påminn meg om å avslutte» uten /api/assist (intent trial.create lokalt). Varsel 1 dag før kl. 09. */
+const MNL2 = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'], WDL = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
+async function trialQuick(q) {
+  const r = await parseTrialAny(q); if (!r) return null;
+  const pr = parseFloat(String(r.price ?? '').replace(/\s/g, '').replace(',', '.'));
+  const body = { service: r.service, endsAt: r.ends_at, priceAfter: Number.isFinite(pr) ? pr : null, remindOffsetsDays: [1], source: 'ai' };
+  try { await api('/subscriptions/trials', { method: 'POST', json: body }); }
+  catch (e) { if (e.status !== 404 && e.status !== 405) return null; const L = lsGet('papir_trials', []); L.push({ id: `t${Date.now()}`, ...body, status: 'active', local: true }); lsSet('papir_trials', L); }
+  G.trials = null; trialsLoad(true).catch(() => {});
+  const end = new Date(`${r.ends_at}T12:00`), rem = new Date(end.getTime() - 864e5), long = (d) => `${WDL[d.getDay()]} ${d.getDate()}. ${MNL2[d.getMonth()]}`;
+  return { text: `Jeg minner deg på å avslutte ${r.service} **${long(rem)} kl. 09**, dagen før prøven slutter ${long(end)}.`, src: 'Abonnementer · varsel planlagt', intent: 'trial.create' };
+}
 /** Aktive prøver (server eller enheten) for merket «Prøve · N dager igjen». */
 export async function trialsLoad(force = false) {
   if (!force && G.trials && Date.now() - G.trialsT < 60000) return G.trials;
@@ -563,6 +581,7 @@ export async function bind31(e, t) {
     case 'go': {
       const h = x.dataset.href, dt = x.dataset.date;
       if (dt && /^#\/kal/.test(h)) { const KAL = await import('./mobile-kal.js'); KAL.kalShowDay(dt); return true; }
+      if (/^#\/vaer/.test(h) && G.ans?.open) { const o = G.ans.open; G.ans = null; await P35.openWx(o); return true; } // prompt 35: Vær for stedet
       location.hash = h.replace(/\?.*$/, ''); return true;
     }
     case 'task': {

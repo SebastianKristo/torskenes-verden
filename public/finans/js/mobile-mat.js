@@ -115,7 +115,7 @@ function weekList() {
   return `<div class="mp2-sec"><span>UKA</span><span>Uke ${w.week}</span></div>
     <div class="mp2-week">${days.map((d, i) => `<button class="mp2-wrow${d.today ? ' on' : ''}" data-mp="${d.dishId ? 'open' : 'day'}" data-id="${esc(d.dishId ?? '')}" data-i="${i}">
       <span class="mp2-wd">${AB[i]}<small>${d8(d.date).getDate()}.</small></span><span class="mp2-wn">${esc(d.name || '–')}</span>
-      <span class="mp2-wc">${esc(d.cook || '')}${d.fixed ? '<em>Fast</em>' : ''}</span></button>`).join('')}</div>`;
+      <span class="mp2-wc"${d.cook ? ` title="${esc(d.cook)}"` : ''}><span class="mp2-wcn">${esc(d.cook || '')}</span>${d.fixed ? '<em>Fast</em>' : ''}</span></button>`).join('')}</div>`;
 }
 
 const scanBtns = () => '<div class="mp2-two"><label class="mp2-big pri">Skann oppskrift<input class="m-file" type="file" accept="image/*,application/pdf,.heic,.heif" multiple data-mpscan></label><a class="mp2-big" href="#/mat/import">Importer lenke</a></div>';

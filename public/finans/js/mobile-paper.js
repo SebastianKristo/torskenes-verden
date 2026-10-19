@@ -29,6 +29,7 @@ import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobi
 import { posCard, ppTi } from './mobile-p20.js';
 import { bgFetch, bgLayers, bgControls, saveBg, takeBg, bgSet } from './mobile-bg.js';
 import * as P34 from './mobile-p34.js'; // prompt 34: Glimt-brief på Hjem (h12)
+import * as P35 from './mobile-p35.js'; // prompt 35: Hjem-kortet med vertsfiguren
 
 /* ---------- Valg (per bruker i /api/me/layout, med lokal kopi) ---------- */
 
@@ -335,7 +336,7 @@ export function paperHome() {
     h5: newsCard(H?.news),
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
     h6: posCard(), h7: bolWidget(), h8: huskeWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(), // Prompt 32: Prøveperioder
-    h12: P34.briefCard(), // Prompt 34: Glimt-brief øverst
+    h12: P35.briefCard(), // Prompt 34/35: Glimt-brief øverst med vertsfiguren
   }, { full: ['h12', 'h1', 'h4', 'h5'] })}</div>`;
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.

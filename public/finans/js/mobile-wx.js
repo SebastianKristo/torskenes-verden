@@ -18,14 +18,22 @@ async function placesLoad() {
   if (WX.places) return;
   try { const r = await hlApi('/weather/places'); WX.places = (Array.isArray(r) ? r : r?.items ?? []).map((x) => [String(x.id), x.name, x]); }
   catch { WX.places = PLACES.map(([k, n]) => [k, n, null]); WX.fixed = true; }
-  if (!WX.places.some(([k]) => k === WX.place) && WX.places[0]) WX.place = WX.places[0][0];
+  if (!plist().some(([k]) => k === WX.place) && WX.places[0]) WX.place = WX.places[0][0];
 }
-const plist = () => WX.places ?? PLACES.map(([k, n]) => [k, n, null]);
+// Prompt 35: sted fra AI-søket («været i New York») legges midlertidig sist i bylista (id «tmp:lat,lon»), lagres ikke.
+const plist = () => [...(WX.places ?? PLACES.map(([k, n]) => [k, n, null])), ...(WX.tmp ? [WX.tmp] : [])];
+export const placeQuery = (p) => { if (String(p).startsWith('tmp:') && WX.tmp?.[0] === p) { const o = WX.tmp[2]; return `lat=${encodeURIComponent(o.lat)}&lon=${encodeURIComponent(o.lon)}&name=${encodeURIComponent(WX.tmp[1])}`; } return `place=${encodeURIComponent(p)}`; };
+export function tempPlace({ name, lat, lon, label }) {
+  const near = (WX.places ?? []).find(([, , o]) => o && Math.abs(+o.lat - lat) < 0.05 && Math.abs(+o.lon - lon) < 0.05);
+  if (near) { WX.place = near[0]; return; }
+  const id = `tmp:${(+lat).toFixed(3)},${(+lon).toFixed(3)}`;
+  WX.tmp = [id, name, { lat, lon, label, tmp: true }]; WX.place = id; WX.sh = null;
+}
 export async function wxLoad(force = false) {
   await placesLoad();
   const p = WX.place;
   if (!force && WX.d[p] && Date.now() - WX.d[p]._t < 10 * 60000) return;
-  try { const r = await hlApi(`/weather/full?place=${encodeURIComponent(p)}`); WX.d[p] = { ...r, _t: Date.now() }; WX.err = ''; }
+  try { const r = await hlApi(`/weather/full?${placeQuery(p)}`); WX.d[p] = { ...r, _t: Date.now() }; WX.err = ''; }
   catch (e) {
     const w = hlData()?.weather;
     if (p === 'oslo' && w) { WX.d[p] = { ...fromHome(w), _t: Date.now() }; WX.err = ''; }

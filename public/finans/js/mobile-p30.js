@@ -212,21 +212,31 @@ async function upTog(k) {
 /* =====================================================================
    3. Chat: skriveboksen over tastaturet (fasit kbInit)
    ===================================================================== */
-const KB = { h: 0 };
+const KB = { h: 0, base: 0, on: false };
+// Prompt 35 (claude-code-chat-tastatur-ios.md): iOS endrer ikke innerHeight og panorerer siden, så den gamle formelen
+// innerHeight − vv.height − vv.offsetTop ga nesten 0. Nå: base = høyeste høyde sett uten fokus, kbH = base − vv.height
+// mens INPUT/TEXTAREA har fokus. Nullstill panoreringen (scrollTo 0,0) og mål på nytt mens tastaturet animeres.
 function kbInit() {
   const vv = window.visualViewport;
-  if (!vv) return;
+  if (!vv || KB.on) return;
+  KB.on = true;
+  KB.base = Math.max(innerHeight, document.documentElement.clientHeight, vv.height);
   const f = () => {
-    const k = Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
+    const ae = document.activeElement, typing = !!(ae && (/^(INPUT|TEXTAREA)$/.test(ae.tagName) || ae.isContentEditable));
+    if (!typing && vv.height > KB.base - 40) KB.base = Math.max(vv.height, innerHeight);
+    const k = typing ? Math.max(0, Math.round((KB.base || innerHeight) - vv.height)) : 0;
+    if (k > 40 && (vv.offsetTop > 0 || scrollY > 0) && m.screen === 'chat') { try { window.scrollTo(0, 0); } catch {} }
     if (Math.abs(k - KB.h) <= 2) return;
     KB.h = k;
     const on = k > 40, r = document.documentElement;
     r.classList.toggle('p30-kb', on); r.style.setProperty('--p30-kb', `${on ? k : 0}px`);
     if (m.screen !== 'chat') return;
-    if (on) { try { window.scrollTo(0, 0); } catch {} }
     setTimeout(() => { const sc = document.getElementById('ch27-sc'); if (sc) sc.scrollTop = sc.scrollHeight; }, 30);
   };
   vv.addEventListener('resize', f); vv.addEventListener('scroll', f);
+  addEventListener('focusin', () => { f(); setTimeout(f, 80); setTimeout(f, 320); setTimeout(f, 650); });
+  addEventListener('focusout', () => setTimeout(f, 120));
+  addEventListener('orientationchange', () => { KB.base = 0; setTimeout(() => { if (!document.activeElement || !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) KB.base = Math.max(vv.height, innerHeight); f(); }, 400); });
 }
 
 /* =====================================================================

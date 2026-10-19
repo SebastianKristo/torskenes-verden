@@ -107,6 +107,8 @@ function profGroup(row, grp) {
 
 export const SS = { q: '', ai: false, ans: '', ids: null, busy: false };
 // Alle innstillinger og undersider: id, tittel, hvor den ligger og hvor trykket går.
+/** Prompt 35: valgte Google-kalendere for Bursdager (flere), med calendarId som reserve. */
+const gSel = (G) => { const L = Array.isArray(G?.calendarIds) ? G.calendarIds : Array.isArray(G?.cals) ? G.cals : G?.calendarId ? [G.calendarId] : []; return L.filter(Boolean); };
 const IDX = [
   ['prof-std', 'Standard', 'Profil', '#/set', 'profil oppsett vanlig'], ['prof-fin', 'Finans + Boliger', 'Profil', '#/set', 'profil boliger finans start'], ['prof-bol', 'Boliger-profil', 'Profil', '#/set', 'profil boliger'],
   ['konto', 'Kontoer og brukere', 'Konto', '#/set/konto', 'bruker logg inn konto'], ['sik', 'Sikkerhet', 'Konto', '#/set/sik', 'passord 2fa totrinn tofaktor lås face id fingeravtrykk økter', '2fa'], ['tok', 'API-tokens', 'Konto', '#/set/tok', 'token nøkkel langtidstoken'], ['sysbk', 'Backup', 'Konto', '#/set/sysbk', 'backup sikkerhetskopi gjenopprett hele systemet kryptering sky', 'bk-now'], ['bk-auto', 'Automatisk backup', 'Konto · Backup', '#/set/sysbk', 'automatisk backup tidsplan natt', 'bk-auto'],
@@ -117,6 +119,9 @@ const IDX = [
   ['pw', 'Krev passord for å oppdatere', 'System', '#/nordlys', 'krev passord oppdater oppdatering', 'pw'],
   ['aictl', 'AI og modeller', 'App', '#/aictl', 'ai modell modeller ollama gemini groq last ned nedlasting tokens jobber forbruk budsjett glimt selvtest', 'selftest'], ['ai-mod', 'Modeller', 'App · AI og modeller', '#/aictl/mod', 'modell modeller last ned slett vram ollama', 'ai-mod'],
   ['ai-sel', 'Hvilken modell gjør hva', 'App · AI og modeller → Valg', '#/aictl/rt', 'ruting reserve modell valg temperatur kontekst keep alive', 'ai-sel'], ['ai-key-gemini', 'Gemini-nøkkel', 'App · AI og modeller → API og nøkler', '#/aictl/api', 'gemini nøkkel api key groq openrouter roboflow', 'ai-key-gemini'],
+  // Prompt 35: Innstillinger → GLIMT → Glimt (figur, brief, stemme og venner).
+  ['glimt', 'Glimt', 'Glimt', '#/glimt', 'glimt figur figurer vert venner gris ugle sky dråpe natt maskot', 'gl-fig'], ['gl-brief', 'Glimt-brief', 'Glimt', '#/glimt', 'brief briefer morgenbrief dagsbrief kveldsbrief nattbrief varsel guide vis meg rundt', 'gl-brief'],
+  ['gl-voice', 'Stemme og opplesning', 'Glimt', '#/glimt', 'stemme stemmer opplesning les opp tts openai elevenlabs azure nora henrik lys tempo språk engelsk', 'gl-voice'],
   ['fai', 'AI og tolkning', 'Finans', '#/aictl/fin', 'ai gemini groq ollama roboflow kvittering ocr finans'], ['kat', 'Kategorier og budsjett', 'Finans', '#/set/kat', 'kategori budsjett'], ['regel', 'Regler', 'Finans', '#/set/regel', 'regel automatisk'],
   ['bank', 'Bankimport', 'Finans', '#/set/bank', 'bank dnb csv import'], ['t212', 'Aksjer · Trading 212', 'Finans', '#/set/t212', 'aksje trading212 t212 fond'], ['fanelinje', 'Fanelinje og Mer i Finans', 'Finans', '#/set/fanelinje', 'fane faner navigasjon'], ['sub', 'Subscription OS', 'Finans', '#/sub', 'abonnement'],
   ['appnavn', 'Navn på appen', 'Homelab', 'nm', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab', 'ic', 'ikon logo app'], ['hjemnav', 'Fanelinje i Hjem', 'Homelab', '#/set/fanelinje', 'fane faner hjem navigasjon'], ['navstil', 'Fanelinje-stil', 'Homelab', 'ns', 'fane fanelinje stil ikoner tekst navn navigasjon'],
@@ -305,7 +310,7 @@ export function calCard() {
   const ents = [...new Set([...(BD.ents ?? []).map(ent), ...(H.entityId ? [H.entityId] : [])])].filter(Boolean);
   return `<div class="p24-bdcal"><span class="p24-lab">KALENDERE</span><div class="p24-card p24-cal">
     <div class="p24-ch"><span class="p24-ci g">${GSVG.replace('18', '20').replace('18', '20')}</span><span class="m-grow"><b>Google Kalender</b><small style="color:${gOn ? 'var(--pp-pos)' : 'var(--pp-mut)'}">${gOn ? `${esc(G.email ?? 'Tilkoblet')} · ${G.syncedAt ? `synket ${hm(G.syncedAt)}` : 'kobler til …'}` : BD.local ? 'Krever nyere server' : 'Ikke koblet til'}</small></span></div>
-    ${gOn ? `<span class="p24-fl">Kalender</span><div class="p24-chips">${(BD.cals ?? []).map(cal).map((c) => chip(G.calendarId === c.id, `data-p24="gcal" data-v="${esc(c.id)}"`, c.n)).join('') || '<span class="p24-mut">Henter kalendere …</span>'}</div>
+    ${gOn ? `<span class="p24-fl">Kalendere · ${gSel(G).length} valgt</span><div class="p24-chips">${(BD.cals ?? []).map(cal).map((c) => chip(gSel(G).includes(c.id), `data-p24="gcal" data-v="${esc(c.id)}"`, `${gSel(G).includes(c.id) ? '✓ ' : ''}${c.n}`)).join('') || '<span class="p24-mut">Henter kalendere …</span>'}</div>
       ${tog(G.writeNew !== false, 'data-p24="gtog" data-k="writeNew"', 'Skriv nye bursdager til Google', 'Årlig heldagshendelse med påminnelse')}${tog(G.contacts !== false, 'data-p24="gtog" data-k="contacts"', 'Hent bursdager fra Google-kontakter', 'Fra kontaktlisten din')}
       <div class="p24-row8"><button class="p24-b lab m-grow" data-p24="gsync" ${BD.busy === 'g' ? 'disabled' : ''}>${BD.busy === 'g' ? 'Synker …' : '↻ Synk nå'}</button><button class="p24-b" data-p24="glogout">Logg ut</button></div>`
     : `<button class="p24-glog" data-p24="glogin" ${BD.local ? 'disabled' : ''}>${GSVG}Logg inn med Google</button>${G.configured === false ? '<span class="p24-mut">Google-klienten er ikke satt opp. Admin legger den inn under Innstillinger → Integrasjoner → Google Kalender.</span>' : ''}`}${G.error ? `<span class="p24-mut" style="color:var(--pp-lab)">${esc(G.error)}</span>` : ''}
@@ -654,8 +659,9 @@ async function bindAsync(e, t) {
       catch { location.href = `/api/birthdays/google/auth?return=${encodeURIComponent(ret)}`; }
       return true;
     }
-    case 'gcal': await bdWrite(() => hlApi('/birthdays/google', { method: 'PUT', json: { calendarId: x.dataset.v, writeNew: BD.d?.google?.writeNew !== false, contacts: BD.d?.google?.contacts !== false } })); return true;
-    case 'gtog': { const G = BD.d?.google ?? {}, kk = x.dataset.k, body = { calendarId: G.calendarId, writeNew: G.writeNew !== false, contacts: G.contacts !== false }; body[kk] = !body[kk]; await bdWrite(() => hlApi('/birthdays/google', { method: 'PUT', json: body })); return true; }
+    // Prompt 35: velg flere kalendere (calendarIds/cals), minst én. calendarId = den første (eldre server).
+    case 'gcal': { const G = BD.d?.google ?? {}, v = x.dataset.v, L = gSel(G), nx = L.includes(v) ? L.filter((y) => y !== v) : [...L, v], ids = nx.length ? nx : L; haptic('tab'); await bdWrite(() => hlApi('/birthdays/google', { method: 'PUT', json: { calendarId: ids[0], calendarIds: ids, cals: ids, writeNew: G.writeNew !== false, contacts: G.contacts !== false } })); return true; }
+    case 'gtog': { const G = BD.d?.google ?? {}, kk = x.dataset.k, body = { calendarId: G.calendarId, calendarIds: gSel(G), writeNew: G.writeNew !== false, contacts: G.contacts !== false }; body[kk] = !body[kk]; await bdWrite(() => hlApi('/birthdays/google', { method: 'PUT', json: body })); return true; }
     case 'gsync': BD.busy = 'g'; draw(); await bdWrite(() => hlApi('/birthdays/google/sync', { method: 'POST' }), 'Synket med Google Kalender'); BD.busy = ''; draw(); return true;
     case 'glogout': BD.cals = null; await bdWrite(() => hlApi('/birthdays/google', { method: 'DELETE' }), 'Logget ut av Google'); return true;
     case 'haent': await bdWrite(() => hlApi('/birthdays/ha', { method: 'PUT', json: { entityId: x.dataset.v, twoWay: BD.d?.ha?.twoWay !== false } })); return true;

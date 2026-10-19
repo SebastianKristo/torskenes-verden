@@ -130,22 +130,22 @@ async function kvStop(id) {
    3. Glimt-brief
    ===================================================================== */
 export const BR = { d: null, t: 0, busy: false, err: '', step: 0, tgt: null, from: 'hl', wx: null };
-const kindNow = () => { const h = new Date().getHours(); return h < 11 ? 'morning' : h < 17 ? 'day' : 'evening'; };
-const KICK = { morning: 'Morgenbrief', day: 'Dagsbrief', evening: 'Kveldsbrief' };
-const WXP = { sol: 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4', delvis: 'M8 2.5V4M2.5 8H4M4.1 4.1l1 1M11.9 4.1l-1 1M5.4 10.4A3 3 0 1 1 10.8 7.2M9 20h8a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 8 13.4A3.3 3.3 0 0 0 9 20z', sky: 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 11.1A3.5 3.5 0 0 0 7 18z', regn: 'M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 7.1A3.5 3.5 0 0 0 7 14zM8 17l-1 3M12 17l-1 3M16 17l-1 3', sno: 'M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 7.1A3.5 3.5 0 0 0 7 14zM8 18h.01M12 20h.01M16 18h.01' };
-const WT = { sol: 'klart', delvis: 'lettskyet', sky: 'skyet', regn: 'regn', sno: 'snø' };
-const wk = (c) => { if (typeof c === 'string' && !/^\d+$/.test(c)) { const s = c.toLowerCase(); return /snø|snow/.test(s) ? 'sno' : /regn|rain|byge|shower/.test(s) ? 'regn' : /klar|clear|sol|fair/.test(s) ? 'sol' : /lett|partly|delvis/.test(s) ? 'delvis' : 'sky'; } c = +c; return c <= 1 ? 'sol' : c === 2 ? 'delvis' : (c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95 ? 'regn' : (c >= 71 && c <= 77) || c === 85 || c === 86 ? 'sno' : 'sky'; };
-const hm = (iso) => { const s = String(iso ?? ''); const x = /T(\d\d:\d\d)/.exec(s) || /^(\d\d:\d\d)/.exec(s); if (x) return x[1]; const d = new Date(s); return Number.isNaN(+d) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
-const firstName = () => String(m.me?.name ?? S.boot?.settings?.name ?? '').split(/\s+/)[0] || '';
-const capF = (x) => String(x ?? '').charAt(0).toUpperCase() + String(x ?? '').slice(1);
+export const kindNow = () => { const h = new Date().getHours(); return h < 11 ? 'morning' : h < 17 ? 'day' : 'evening'; };
+export const KICK = { morning: 'Morgenbrief', day: 'Dagsbrief', evening: 'Kveldsbrief' };
+export const WXP = { sol: 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4', delvis: 'M8 2.5V4M2.5 8H4M4.1 4.1l1 1M11.9 4.1l-1 1M5.4 10.4A3 3 0 1 1 10.8 7.2M9 20h8a3.5 3.5 0 0 0 .4-7A5 5 0 0 0 8 13.4A3.3 3.3 0 0 0 9 20z', sky: 'M7 18h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 11.1A3.5 3.5 0 0 0 7 18z', regn: 'M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 7.1A3.5 3.5 0 0 0 7 14zM8 17l-1 3M12 17l-1 3M16 17l-1 3', sno: 'M7 14h10a4 4 0 0 0 .5-7.97A6 6 0 0 0 6.1 7.1A3.5 3.5 0 0 0 7 14zM8 18h.01M12 20h.01M16 18h.01' };
+export const WT = { sol: 'klart', delvis: 'lettskyet', sky: 'skyet', regn: 'regn', sno: 'snø' };
+export const wk = (c) => { if (typeof c === 'string' && !/^\d+$/.test(c)) { const s = c.toLowerCase(); return /snø|snow/.test(s) ? 'sno' : /regn|rain|byge|shower/.test(s) ? 'regn' : /klar|clear|sol|fair/.test(s) ? 'sol' : /lett|partly|delvis/.test(s) ? 'delvis' : 'sky'; } c = +c; return c <= 1 ? 'sol' : c === 2 ? 'delvis' : (c >= 51 && c <= 67) || (c >= 80 && c <= 82) || c >= 95 ? 'regn' : (c >= 71 && c <= 77) || c === 85 || c === 86 ? 'sno' : 'sky'; };
+export const hm = (iso) => { const s = String(iso ?? ''); const x = /T(\d\d:\d\d)/.exec(s) || /^(\d\d:\d\d)/.exec(s); if (x) return x[1]; const d = new Date(s); return Number.isNaN(+d) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+export const firstName = () => String(m.me?.name ?? S.boot?.settings?.name ?? '').split(/\s+/)[0] || '';
+export const capF = (x) => String(x ?? '').charAt(0).toUpperCase() + String(x ?? '').slice(1);
 
 /** Været fra /api/weather/full (samme kilde som Vær-siden), ellers Hjem-dataene. */
-async function wxFull() {
+export async function wxFull() {
   if (BR.wx && Date.now() - BR.wx._t < 10 * 60e3) return BR.wx;
   try { const r = await hlApi('/weather/full?place=oslo'); BR.wx = { ...r, _t: Date.now() }; } catch { BR.wx = { _t: Date.now(), miss: true }; }
   return BR.wx;
 }
-function localWx() {
+export function localWx() {
   const F = BR.wx && !BR.wx.miss ? BR.wx : null, w = hlData()?.weather ?? {};
   const cur = F?.current ?? {}, td = F?.today ?? {}, yd = F?.yesterday ?? {};
   const code = cur.code ?? w.code ?? w.symbol ?? w.icon, k = wk(code ?? 3), t = cur.temp ?? w.temp ?? w.temperature ?? w.now;
@@ -156,14 +156,14 @@ function localWx() {
   return { now: t != null ? Math.round(t) : null, hi: hi != null ? Math.round(hi) : null, lo: lo != null ? Math.round(lo) : null, cond: cur.text ? cur.text.toLowerCase() : WT[k], code: k, rain12h: rain, vsYesterday: vs, sunset: hm(td.sunset ?? w.sunset),
     rainSoon: !rain.length ? '' : fr < 0 ? 'oppholdsvær de neste 12 timene' : fr === 0 ? 'regn nå' : `regn fra ca. ${pad((h + fr) % 24)}`, place: F?.place?.name ?? w.place ?? 'Oslo' };
 }
-function localEvents() {
+export function localEvents() {
   try { return KAL.upcoming(3).map((e) => ({ title: e.t, loc: e.loc, color: e.c, start: e.s, day: e.i ? 'i morgen' : 'i dag', k: e.k, min: e.min, tomorrow: !!e.i })); } catch { return []; }
 }
-function localNews() {
+export function localNews() {
   const N = hlData()?.news ?? BR.rss ?? [];
   return (Array.isArray(N) ? N : N.items ?? []).slice(0, 3).map((x) => ({ source: x.feed ?? x.source ?? '', title: x.title, url: x.url, time: hm(x.published) }));
 }
-const evStart = (e) => e.start ?? hm(e.s ?? e.startsAt ?? e.time);
+export const evStart = (e) => e.start ?? hm(e.s ?? e.startsAt ?? e.time);
 function summaryOf(kind, wx, ev) {
   const nm = firstName(), hi = kind === 'morning' ? `God morgen${nm ? `, ${nm}` : ''}. ` : kind === 'evening' ? `God kveld${nm ? `, ${nm}` : ''}. ` : '';
   const nx = ev[0], w = wx.now != null ? `${capF(wx.cond || 'været')} og ${wx.now}° i ${wx.place || 'Oslo'}${wx.rainSoon ? `, ${wx.rainSoon}` : ''}. ` : '';
