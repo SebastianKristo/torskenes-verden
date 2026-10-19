@@ -104,7 +104,7 @@ struct MacGoogle36Section: View {
         waitingLogin = true
         Task {
             if let u = await KalGoogleAPI36.loginURL() {
-                _ = NSWorkspace.shared.open(u)
+                await MainActor.run { _ = NSWorkspace.shared.open(u) }
             } else {
                 error = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Integrasjoner."
             }

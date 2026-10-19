@@ -111,7 +111,7 @@ struct KalGoogle36Section: View {
         }
         Task {
             if let u = await KalGoogleAPI36.loginURL() {
-                UIApplication.shared.open(u)
+                await MainActor.run { UIApplication.shared.open(u) }
             } else {
                 error = "Fikk ikke åpnet innloggingen. Logg inn med Google i Homelab → Innstillinger → Integrasjoner."
             }
