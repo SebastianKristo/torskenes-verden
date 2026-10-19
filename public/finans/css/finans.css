@@ -994,3 +994,79 @@ html[data-v3]{--accf-check:var(--card2);--accf-check-ink:var(--card2-ink)}
 .so-sk .s28-btns button:disabled{opacity:.5;cursor:default}
 .so-sk .s28-inst{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
 .so-sk .s28-bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}.so-sk .s28-bar i{display:block;height:100%;background:var(--acc,#FF7A3D)}
+/* Prompt 30: SMB-share → «Sett opp med veiviser» og manuelle felt sammenleggbart under «Avansert». */
+.smb-wiz-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:var(--inner)}
+.smb-wiz-row .grow{flex:1;min-width:200px;overflow-wrap:anywhere}
+.smb-adv{border-top:1px solid var(--sep);padding-top:8px}
+.smb-adv>summary{cursor:pointer;min-height:36px;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--muted);list-style:none}
+.smb-adv>summary::before{content:'›';display:inline-block;margin-right:8px;transition:transform .15s}
+.smb-adv[open]>summary::before{transform:rotate(90deg)}
+.smb-adv>summary::-webkit-details-marker{display:none}
+.smb-adv[open]>.form-grid{margin-top:8px}
+
+/* ---------- Prompt 30: felles SheetButton (pille 36 px, treffflate 44 px) ---------- */
+.sbtn{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:2px;height:36px;padding:0 16px;border-radius:18px;border:0;cursor:pointer;
+  font:700 14px/1 var(--font-ui);white-space:nowrap;text-decoration:none;background:color-mix(in oklab,var(--text) 9%,transparent);color:var(--text);-webkit-tap-highlight-color:transparent}
+.sbtn::before{content:'';position:absolute;inset:-4px}
+.sbtn.pri{background:var(--text);color:var(--bg)}
+.sbtn.back{padding:0 16px 0 10px}
+.sbtn:hover{filter:brightness(.94)}
+.sbtn:active{transform:scale(.97)}
+.sbtn:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+/* Prompt 30: bare profilbildet i toppen (38 px, rundt), ikke @brukernavn. */
+.head .me{padding-left:0}
+.head .me .av{width:38px;height:38px}
+/* Prompt 30: ark helt ned til bunnen på smale skjermer (kant i kant, kun avrunding øverst, maks 92 %). */
+@media (max-width:759px){
+  .bol2-modal{place-items:end stretch;padding:0}
+  .bol2-sheet{width:100%;max-height:92vh;overflow-y:auto;border-radius:28px 28px 0 0;border-bottom:0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
+  .se{border-radius:28px 28px 0 0;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+}
+/* Prompt 30: Boliger – kvittering til godkjenning er trykkbar, rediger utgift, del med brukere. */
+.bol2-rev-h[role=button]{cursor:pointer;border-radius:12px;margin:-6px;padding:6px;transition:background .15s}
+.bol2-rev-h[role=button]:hover{background:var(--hover)}
+.bol2-rev-h[role=button]:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.bol2-chev{flex:none;color:var(--muted);font-size:20px;line-height:1;margin-left:-4px}
+.bol2-edt{display:block;width:100%;margin:4px 0 0;padding:0 0 2px;border:0;border-bottom:1.5px dashed var(--line3);background:transparent;color:var(--text);font:var(--dw) 26px/1.2 var(--font-d);outline:none;box-sizing:border-box}
+.bol2-edt:focus{border-bottom-color:var(--text)}
+.bol2-eamt{display:flex;align-items:baseline;gap:6px;border-bottom:1.5px dashed var(--line3);max-width:260px}
+.bol2-eamt:focus-within{border-bottom-color:var(--text)}
+.bol2-eamt input{flex:1;min-width:0;border:0;background:transparent;color:var(--text);font:400 34px/1.15 var(--font-d);outline:none;padding:0}
+.bol2-eamt span{font-size:15px;color:var(--muted)}
+.bol2-edate{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px}
+.bol2-edate input{border:1px solid var(--line2);border-radius:10px;background:var(--inner);color:var(--text);font:500 13.5px var(--font-ui);padding:5px 8px;color-scheme:inherit}
+.bol2-esave{display:block;min-height:16px;font-size:12px;margin-top:4px}
+.bol2-lab2{font:600 10.5px var(--mono);letter-spacing:.12em;color:var(--muted);margin-top:4px}
+.bol2-ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.bol2-u{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;padding:12px 8px 10px;border-radius:16px;border:1.5px solid var(--line);background:var(--inner);color:var(--text);cursor:pointer;font-family:inherit;text-align:center}
+.bol2-u:hover{border-color:var(--line3)}
+.bol2-u.on{border-color:var(--text);background:var(--card)}
+.bol2-u b{font-size:13.5px;font-weight:600;max-width:100%}
+.bol2-u .note{font-size:11.5px;max-width:100%}
+.bol2-uav{width:44px;height:44px;border-radius:22px;color:#fff;display:grid;place-items:center;font:700 17px var(--font-ui);overflow:hidden}
+.bol2-uav img{width:100%;height:100%;object-fit:cover}
+.bol2-uck{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:10px;background:var(--text);color:var(--bg);display:grid;place-items:center;font:800 11px var(--font-ui);font-style:normal}
+.bol2-allin{padding:10px 0}
+/* Prompt 30: markering av søketreff i kvitteringen. */
+.rc-hlb{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 14px;border-radius:14px;background:#fff4c2;color:#3a2f00;font-size:14px}
+.rc-hlb.none{background:var(--inner);color:var(--text2)}
+.rc-hlgo{flex:1;min-width:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;font:600 14px var(--font-ui);padding:0}
+.rc-hlb .note{color:#6b5a1a}
+.rc-hlq{background:#ffd23f;border-radius:4px;padding:0 3px}
+.rc-hlx{flex:none;height:30px;padding:0 12px;border-radius:15px;border:0;background:rgba(58,47,0,.1);color:inherit;cursor:pointer;font:700 12.5px var(--font-ui)}
+.rc-hlb.none .rc-hlx{background:color-mix(in oklab,var(--text) 9%,transparent)}
+.rc-hlopen{align-self:flex-start;font-size:13px;font-weight:600;color:var(--link)}
+.rc-hlnote{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rc-hll{display:flex;flex-direction:column;gap:2px}
+.rc-hlr{display:flex;justify-content:space-between;gap:10px;padding:3px 6px;border-radius:6px;border:1px solid transparent}
+.rc-hlr.hit,.ai-lines .rc-hit{background:rgba(255,205,40,.42);border:1px solid #e0a800;font-weight:700;color:#2a2200;border-radius:6px}
+.ai-lines .rc-hit{padding:2px 6px}
+.rc-mk{background:#ffd23f;color:#1b1500;border-radius:3px;padding:0 1px}
+.rc-hlwrap{background:#fffdf6}
+.rc-hlimg{position:relative;flex:1 1 220px;max-height:560px;overflow:auto;border-radius:16px;background:var(--deep);touch-action:pinch-zoom pan-x pan-y}
+.rc-hlimg img{display:block;width:100%;height:auto}
+.rc-box{position:absolute;background:rgba(255,210,63,.35);border:2px solid #e0a800;border-radius:4px;pointer-events:none}
+.rc-hlr.pulse,.rc-box.pulse{animation:rc-pulse .9s ease-in-out 2}
+@keyframes rc-pulse{50%{box-shadow:0 0 0 6px rgba(255,210,63,.55)}}
+@media (prefers-reduced-motion:reduce){.rc-hlr.pulse,.rc-box.pulse{animation:none}}
+.rc-hlin{position:relative}

@@ -3,7 +3,7 @@ import { store, on, load, mountAll } from './store.js';
 import { setupDnd, resetLayouts } from './dnd.js';
 import { applyBackground, preloadAll } from './background.js';
 import { bgState } from './bgsvc.js';
-import { openSettings, bindSettings, applyTop } from './settings.js';
+import { openSettings, bindSettings, applyTop, settingsOwnsHash } from './settings.js';
 import { bindPopup, bindSearch, menuLabels, toggle, renderTicker } from './extras.js';
 import { applyHead, toggleHeadEdit, uiDefaults } from './topedit.js';
 import { applyProfile, applyNav } from './profile.js';
@@ -22,6 +22,8 @@ import * as birthdays from './birthdays.js';
 import * as kalender from './kalender.js';
 import * as chat from './chat.js';
 import { initI18n, setLang, lang } from './i18n.js';
+import { loadUpdBanner } from './upd-banner.js';
+import { loadProfileMenu, renderProfileMenu, profileMenuClick, profileMenuClosed } from './profile-menu.js';
 import './finpreload.js';
 import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
@@ -34,7 +36,8 @@ const scrollMem = scrollMemory();
 let route = null, wasMobile = isMobile();
 
 function current() {
-  const r = location.hash.replace(/^#\/?/, '').split('?')[0];
+  // Prompt 30: undersider i adressen (#/kalender/dag/2026-10-21) hører til første ledd.
+  const r = location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[0];
   // Økonomi er nå FinansHub, en egen fullskjerm-app.
   if (r === 'okonomi') { location.replace('/finans/'); return 'dash'; }
   if (r === 'mer' && !isMobile()) return 'nettverk';
@@ -91,22 +94,27 @@ function weatherPill() {
 }
 
 // Profilmenyen: «Språk: Norsk → English» / «Language: English → Norsk».
-function langLabel() {
-  const b = document.getElementById('menu-lang');
-  if (b) b.textContent = lang() === 'en' ? 'Language: English → Norsk' : 'Språk: Norsk → English';
-}
+function langLabel() { renderProfileMenu(); }
 
 function bindShell() {
   const btn = document.getElementById('profile-btn'), menu = document.getElementById('menu');
-  const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
-  btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); });
-  document.addEventListener('click', (e) => { if (!menu.contains(e.target)) close(); });
+  // Prompt 30: menyen tegnes av profile-menu.js (fargede ikoner, egen rekkefølge, «Tilpass denne menyen»).
+  const close = () => { if (menu.hidden) return; menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); profileMenuClosed(); };
+  btn.addEventListener('click', (e) => { e.stopPropagation(); if (menu.hidden) renderProfileMenu(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); if (menu.hidden) profileMenuClosed(); });
+  // Klikk i redigeringen (som tegner menyen på nytt) skal ikke lukke den.
+  menu.addEventListener('click', async (e) => { if (await profileMenuClick(e)) e.hlMenu = true; });
+  document.addEventListener('click', (e) => { if (!e.hlMenu && !menu.contains(e.target)) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { close(); btn.focus(); } });
+  document.addEventListener('hl:menu', renderProfileMenu);
   document.addEventListener('click', async (e) => {
     if (e.target.closest('.ticker-label')) { e.preventDefault(); openNewsReader(); return; }
+    if (e.hlMenu) return;
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (!act) return;
     close();
-    if (act === 'settings') openSettings();
+    // «Innstillinger» åpner alltid innstillingene (fullskjerm, #/innstillinger/konto).
+    if (act === 'settings') { e.preventDefault(); openSettings('konto'); }
+    if (act === 'lock') await logout();
     if (act === 'integrations') { e.preventDefault(); openSettings('int'); }
     if (act === 'hl-theme') await setHlTheme(is2c() ? 'cur' : '2c');
     if (act === 'lang') { await setLang(lang() === 'en' ? 'nb' : 'en'); langLabel(); }
@@ -116,9 +124,15 @@ function bindShell() {
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');
     if (act === 'head-edit') toggleHeadEdit();
-    if (act === 'logout') await logout();
+    if (act === 'logout') {
+      if (!confirm('Logge ut? Denne enheten må da logge inn med passord igjen.')) return;
+      const d = await api('/devices').catch(() => null), cur = d?.devices?.find((x) => x.current);
+      if (cur) await api(`/devices/${cur.id}`, { method: 'DELETE' }).catch(() => {});
+      await logout();
+    }
   });
-  window.addEventListener('hashchange', renderRoute);
+  // Innstillinger legger #/innstillinger/<fane> i adressen (og fjerner den igjen) uten at siden under skal tegnes på nytt.
+  window.addEventListener('hashchange', () => { if (!settingsOwnsHash()) renderRoute(); });
   document.addEventListener('hl:theme', () => { route = null; renderRoute(); weatherPill(); });
   // Nytt språk: tegn visningen på nytt (tekster fra t() og Intl-datoer).
   document.addEventListener('hl:lang', () => { route = null; renderRoute(); weatherPill(); langLabel(); renderTicker(); });
@@ -133,6 +147,7 @@ async function main() {
   noteUser(me?.me?.id); // kontobytte: tøm den forrige brukerens cacher
   store.me.ui = { ...uiDefaults(), ...ui };
   await initI18n(me?.me?.language ?? me?.language ?? me?.settings?.language);
+  loadProfileMenu().then(renderProfileMenu);
   langLabel();
   applyHlTheme();
   applyProfile();
@@ -141,6 +156,7 @@ async function main() {
   bindShell();
   bindPhoto();
   bindSettings();
+  loadUpdBanner(); // prompt 30: oppdateringsbanner (bare admin)
   bindPopup();
   bindSearch();
   setupDnd(document.querySelector('header'));

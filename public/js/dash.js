@@ -9,6 +9,7 @@ import './kalender.js';
 import { pkgLogo, pkgTitle, moreText } from './pkglogo.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
 import { is2c, pwCredit, pwImg } from './hltheme.js';
+import { updBanner } from './upd-banner.js';
 
 // Snarveiene hentes fra serveren per bruker (/api/state.shortcuts), og deles med mobilappen.
 // Ekte logo (favicon via serveren); lokale adresser slås opp med AI én gang. Uten logo vises forbokstavene i en farge.
@@ -418,6 +419,7 @@ function render2c(n, cardH) {
   return `<div class="p-dash">${photoWindow(n)}
     <div class="p-paper">
       <div class="p-search">${store.me.hideSearch ? '' : renderSearch()}</div>
+      ${updBanner('dash')}
       <div id="p-ticker-slot"></div>
       <div class="p-cols">
         <div class="p-col">${card('p_school')}${hiddenWidgets().has('d_cal') ? '' : card('d_cal')}</div>
@@ -449,11 +451,12 @@ export function render() {
       <div class="clock"><div class="clock-hm" id="clock-hm">${p2(n.getHours())}:${p2(n.getMinutes())}</div><div class="clock-s" id="clock-s">${p2(n.getSeconds())}</div></div>
       <div id="lesson">${renderLesson()}</div></div>`;
   if (mob) {
-    return `${hello}<div class="trips" id="trips">${renderTrips()}</div>${store.me.hideSearch ? '' : renderSearch()}
+    return `${updBanner('dash')}${hello}<div class="trips" id="trips">${renderTrips()}</div>${store.me.hideSearch ? '' : renderSearch()}
       <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming', 'd_media', 'd_media_hist', 'd_pos', 'd_bday', 'd_kal'].map(cardH).join('')}</div>`;
   }
   // Toppområdet kan omorganiseres; søkebaren ligger som standard mellom avganger og klokke.
   return `<div style="display:flex;flex-direction:column;gap:28px">
+    ${updBanner('dash')}
     <div data-dnd="top" style="display:flex;flex-direction:column;gap:24px">
       <div class="trips" id="trips">${renderTrips()}</div>
       ${store.me.hideSearch ? '' : renderSearch()}

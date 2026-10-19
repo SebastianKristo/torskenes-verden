@@ -1,13 +1,15 @@
 // Værsiden på web (prompt 22, fasit design/Vaer.dc.html): fullskjerm med systemfont, animert værbakgrunn, Forhold, 7 dager,
-// «Yr og Pent», detaljark for alle kort, kartknapp nede til venstre (Windy med lag) og ☰ nede til høyre (Steder: søk,
+// «Yr og Storm», detaljark for alle kort, kartknapp nede til venstre (Windy med lag) og ☰ nede til høyre (Steder: søk,
 // legg til, hold inne og dra, sveip mot høyre for å slette).
 // Data: GET /api/weather/full?place=<id> (MET/yr via serveren). Nye felt (7 dager time for time, compare) brukes når de finnes,
-// ellers fylles det inn fra døgnverdiene. Pent: full.compare eller GET /api/weather/compare (eldre format).
+// ellers fylles det inn fra døgnverdiene. Storm (tidligere «Pent»): full.compare eller GET /api/weather/compare (eldre format).
 // Steder: GET/POST/DELETE /api/weather/places, PUT /api/weather/places/order. Prompt 28: søk i GET /api/weather/places?q=
 // (Open-Meteo + OpenStreetMap via serveren, {name, sub, lat, lon, country, source}); eldre server: /api/weather/search?q=.
-// Prompt 28: ny værbakgrunn (weather-fx.js, fasit WxFx) og kart · steder i en frostet bunnlinje.
+// Prompt 28: ny værbakgrunn (weather-fx.js, fasit WxFx). Prompt 30: to flytende knapper nederst (kart · steder, ingen
+// linje), lett haptikk når et ark/popup lukkes (sentralt i paintLayer), Yr mot Storm i fullskjerm med Ferdig-pille,
+// «Pent» heter Storm overalt, logoer fra /assets/brands/ (yr.png, storm.png), og hele «Yr og Storm»-kortet er trykkbart.
 import { clearBtn } from '/assets/js/searchfield.js';
-import { api, esc } from './util.js';
+import { api, esc, sheetBtn, haptic } from './util.js';
 import { createWxFx, sunFrac } from './weather-fx.js';
 
 /* ---------------- Konstanter fra designet ---------------- */
@@ -110,7 +112,7 @@ function adapt(full) {
   return { current: C, hourly: H, daily: D };
 }
 
-/** Pent (StormGeo-modell) i designets form: hourly {time, temperature_2m, precipitation}, daily {time, max, min, sum, icon}. */
+/** Storm (ECMWF-modellen, tidligere «Pent») i designets form: hourly {time, temperature_2m, precipitation}, daily {time, max, min, sum, icon}. */
 function adaptCmp(c) {
   if (!c || (!c.hours?.length && !c.days?.length)) return null;
   const P = (x) => x?.pent ?? x?.ecmwf ?? x?.storm ?? null;
@@ -204,7 +206,7 @@ const LSVG = {
 
 function cmpVals(d, nowI) {
   const P = place(), Sx = S.cmp;
-  if (!Sx) return { ready: false, agC: '#9aa3ae', agT: S.cmpBusy ? 'Henter Pent …' : S.cmpErr ? 'Pent svarte ikke' : 'Henter …' };
+  if (!Sx) return { ready: false, agC: '#9aa3ae', agT: S.cmpBusy ? 'Henter Storm …' : S.cmpErr ? 'Storm svarte ikke' : 'Henter …' };
   const H = d.hourly, D = d.daily, SH = Sx.hourly, SD = Sx.daily, si = {};
   SH.time.forEach((t, i) => { si[tKey(t)] = i; });
   const hrs = [];
@@ -227,7 +229,7 @@ function cmpVals(d, nowI) {
   const avg = Sx.avgDiff ?? (diffs.length ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0);
   const ag = Sx.agreement ?? (avg < 1.5 ? 'good' : avg < 3 ? 'mid' : 'bad');
   return { ready: true, yr: ln('y'), st: ln('s'), grid, bars, hx: hrs.map((h, k) => ({ x: X(k).toFixed(1), t: h.t.slice(11, 13) })).filter((_, k) => k % 4 === 0), days, days4: days.slice(0, 4),
-    agC: ag === 'good' ? '#6fdc8c' : ag === 'mid' ? '#ffb347' : '#f26b5e', agT: ag === 'good' ? 'Yr og Pent er enige' : ag === 'mid' ? `Litt uenige · ${f1(avg)}° i snitt` : `Uenige · ${f1(avg)}° i snitt`,
+    agC: ag === 'good' ? '#6fdc8c' : ag === 'mid' ? '#ffb347' : '#f26b5e', agT: ag === 'good' ? 'Yr og Storm er enige' : ag === 'mid' ? `Litt uenige · ${f1(avg)}° i snitt` : `Uenige · ${f1(avg)}° i snitt`,
     agS: `Snitt avvik i makstemperatur: ${f1(avg)}° over ${diffs.length} dager`, place: P.name };
 }
 
@@ -240,7 +242,7 @@ function mainHtml() {
     const i = nowI + k, hh = +t.slice(11, 13), I = ic(H.weather_code[i], !H.is_day[i]), pp = Math.round(H.precipitation_probability[i] ?? 0), j = psi[t.slice(0, 13)];
     const pt = Sx && S.mode === 'temp' && j != null && Sx.hourly.temperature_2m[j] != null ? `${Math.round(Sx.hourly.temperature_2m[j])}°` : '';
     const v = S.mode === 'temp' ? r0(H.temperature_2m[i]) : S.mode === 'rain' ? `${pp} %` : String(Math.round(H.wind_speed_10m[i]));
-    return `<div class="wxp-h"><span style="font-weight:${k ? 700 : 800}">${k ? pad2(hh) : 'Nå'}</span>${svgIc(I.k, 28)}<span class="wxp-pp">${pp >= 20 ? `${pp} %` : ''}</span><b>${v}</b><span class="wxp-pt" title="${pt ? 'Pent (StormGeo-modell)' : ''}">${pt}</span></div>`;
+    return `<div class="wxp-h"><span style="font-weight:${k ? 700 : 800}">${k ? pad2(hh) : 'Nå'}</span>${svgIc(I.k, 28)}<span class="wxp-pp">${pp >= 20 ? `${pp} %` : ''}</span><b>${v}</b><span class="wxp-pt" title="${pt ? 'Storm (ECMWF-modell)' : ''}">${pt}</span></div>`;
   }).join('');
   const di = [1, 2, 3, 4, 5, 6, 7].filter((i) => i < D.time.length), LO = Math.min(...di.map((i) => D.temperature_2m_min[i])), HI = Math.max(...di.map((i) => D.temperature_2m_max[i])), sp = Math.max(1, HI - LO);
   const days = di.map((i, k) => {
@@ -249,9 +251,10 @@ function mainHtml() {
       <span class="wxp-bar"><span style="left:${(((lo - LO) / sp) * 100).toFixed(1)}%;width:${Math.max(8, ((hi - lo) / sp) * 100).toFixed(1)}%"></span>${k === 0 ? `<i style="left:${Math.min(100, Math.max(0, ((C.temperature_2m - LO) / sp) * 100)).toFixed(1)}%"></i>` : ''}</span><span class="wxp-hi">${r0(hi)}</span></button>`;
   }).join('');
   const cmp = cmpVals(d, nowI);
-  const cmpCard = card(`<div class="wxp-cmph"><span class="wxp-yp"><span style="background:#00b9f1">Yr</span><span style="background:#ff8a3d">P</span></span><span class="wxp-grow"><b>Yr og Pent</b><span class="wxp-ag"><i style="background:${cmp.agC}"></i>${esc(cmp.agT)}</span></span></div>
-    ${cmp.ready ? `<div class="wxp-cg wxp-cgh"><span></span><span style="color:#7fd6f5">YR</span><span style="color:#ffb27a">PENT</span><span style="text-align:right">AVVIK</span></div>${cmp.days4.map(cmpRow).join('')}` : `<span class="wxp-busy">${esc(S.cmpBusy ? 'Henter Pent …' : S.cmpErr ? 'Pent (StormGeo-modell) svarte ikke.' : '')}</span>`}
-    <button class="wxp-more" data-wx="cmp"><span>Time for time og hele uka</span><span>›</span></button>`, '', 'wxp-cmp');
+  // Hele kortet åpner Yr mot Storm i fullskjerm.
+  const cmpCard = card(`<div class="wxp-cmph"><span class="wxp-yp">${LOGO('yr', 30)}${LOGO('storm', 30)}</span><span class="wxp-grow"><b>Yr og Storm</b><span class="wxp-ag"><i style="background:${cmp.agC}"></i>${esc(cmp.agT)}</span></span></div>
+    ${cmp.ready ? `<div class="wxp-cg wxp-cgh"><span></span><span style="color:#7fd6f5">YR</span><span style="color:#ffb27a">STORM</span><span style="text-align:right">AVVIK</span></div>${cmp.days4.map(cmpRow).join('')}` : `<span class="wxp-busy">${esc(S.cmpBusy ? 'Henter Storm …' : S.cmpErr ? 'Storm svarte ikke.' : '')}</span>`}
+    <span class="wxp-more"><span>Time for time og hele uka</span><span>›</span></span>`, 'data-wx="cmp" role="button" tabindex="0" aria-label="Yr mot Storm, time for time og hele uka"', 'wxp-cmp');
   // Vind, måne, sol, UV, føles som, mot i går, nedbør, sikt, luftfuktighet, lufttrykk.
   const dir = C.wind_direction_10m ?? 0, dTxt = `${Math.round(dir)}° ${D16[Math.round(dir / 22.5) % 16]}`;
   const rows = (arr) => arr.map(([a, b], i) => `<div class="wxp-row${i ? ' bt' : ''}"><span>${esc(a)}</span><span>${esc(b)}</span></div>`).join('');
@@ -287,7 +290,7 @@ function mainHtml() {
   const MODES = [['temp', 'Temperatur', IC.part], ['rain', 'Nedbør', 'M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z'], ['wind', 'Vind', 'M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8']];
   return `<div class="wxp-hero" style="opacity:${Math.max(0, 1 - S.sc / 220).toFixed(2)}"><span class="wxp-k">${P.id === 'pos' ? 'MIN POSISJON' : esc((P.region && P.region !== P.name ? P.region : P.country || 'Norge').toUpperCase())}</span><span class="wxp-city">${esc(P.name)}</span><span class="wxp-temp">${r0(C.temperature_2m)}</span><span class="wxp-desc">${esc(DESC(code))}</span><span class="wxp-hl">H:${r0(D.temperature_2m_max[1])}  L:${r0(D.temperature_2m_min[1])}</span></div>
     <div class="wxp-cols"><div class="wxp-col">
-    ${card(`<div class="wxp-hrhead"><button class="wxp-link" data-wx-sh="1"><b>Forhold ›</b><span>${S.mode === 'temp' ? 'Temperatur (°C)' : S.mode === 'rain' ? 'Sjanse for nedbør' : 'Vind (m/s)'}${S.mode === 'temp' && Sx ? ' · <em>Pent</em> i oransje' : ''}</span></button><div class="wxp-modes" role="tablist">${MODES.map(([k, n, p]) => `<button role="tab" aria-selected="${S.mode === k}" aria-label="${n}" title="${n}" data-wx-mode="${k}" class="${S.mode === k ? 'on' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${p}"/></svg></button>`).join('')}</div></div>
+    ${card(`<div class="wxp-hrhead"><button class="wxp-link" data-wx-sh="1"><b>Forhold ›</b><span>${S.mode === 'temp' ? 'Temperatur (°C)' : S.mode === 'rain' ? 'Sjanse for nedbør' : 'Vind (m/s)'}${S.mode === 'temp' && Sx ? ' · <em>Storm</em> i oransje' : ''}</span></button><div class="wxp-modes" role="tablist">${MODES.map(([k, n, p]) => `<button role="tab" aria-selected="${S.mode === k}" aria-label="${n}" title="${n}" data-wx-mode="${k}" class="${S.mode === k ? 'on' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${p}"/></svg></button>`).join('')}</div></div>
       <div class="wxp-hours">${hrs}</div>`, '', 'wxp-hcard')}
     ${card(days, '', 'wxp-days')}
     ${cmpCard}</div><div class="wxp-col">
@@ -300,7 +303,9 @@ const cmpRow = (x) => `<div class="wxp-cg wxp-cgr"><b>${esc(x.d)}</b><span class
 /* ---------------- Ark ---------------- */
 const sheet = (inner, kind) => `<div class="wxp-scrim" data-wx-close="${kind}"><div class="wxp-sheet" role="dialog" aria-modal="true">${inner}</div></div>`;
 const xBtn = (kind) => `<button class="wxp-x" data-wx-close="${kind}" aria-label="Lukk">×</button>`;
-const doneBtn = (kind) => `<button class="wxp-done" data-wx-close="${kind}">Ferdig</button>`;
+const doneBtn = (kind) => sheetBtn('Ferdig', `data-wx-close="${kind}"`, 'pri');
+// Logoer (SERVER30 legger dem i /assets/brands/, beskåret til sirkelen). Hentes aldri fra nettet.
+const LOGO = (k, sz) => `<img class="wxp-logo" src="/assets/brands/${k}.png" alt="${k === 'yr' ? 'Yr' : 'Storm'}" width="${sz}" height="${sz}" style="width:${sz}px;height:${sz}px">`;
 
 function forholdSheet(d) {
   const D = d.daily, H = d.hourly, di = S.sh, st = di * 24, W = 300, HT = 170, nowI = nowIndex(H);
@@ -389,15 +394,18 @@ function metricSheet(d) {
 
 function cmpSheet(d) {
   const cmp = cmpVals(d, nowIndex(d.hourly)), P = place();
-  return sheet(`<div class="wxp-shh"><div><b class="wxp-h1">Yr mot Pent</b><span class="wxp-mut">${esc(P.name)} · Pent (StormGeo-modell)</span></div>${doneBtn('cmp')}</div>
-    ${S.cmpBusy ? '<span class="wxp-mut">Henter Pent-data …</span>' : ''}
+  // Fullskjerm (ikke ark): bakgrunn #17191e helt ut, innhold maks 760 px midtstilt, «Ferdig»-pille til høyre. Ingen logoer i toppen.
+  return `<div class="wxp-cmpfs" role="dialog" aria-modal="true" aria-labelledby="wxp-cmpt"><div class="wxp-cmpin">
+    <div class="wxp-shh"><div><b class="wxp-h1 wxp-cmpt" id="wxp-cmpt">Yr mot Storm</b><span class="wxp-mut">${esc(P.name)}</span></div>${doneBtn('cmp')}</div>
+    ${S.cmpBusy ? '<span class="wxp-mut">Henter Storm-data …</span>' : ''}
     ${cmp.ready ? `<div class="wxp-box wxp-agbox"><i style="background:${cmp.agC}"></i><span><b>${esc(cmp.agT)}</b><span class="wxp-mut">${esc(cmp.agS)}</span></span></div>
-    <div class="wxp-box"><div class="wxp-boxh"><span class="wxp-cap">NESTE 24 TIMER</span><span class="wxp-leg"><span><i style="background:#5ec8f2"></i>Yr</span><span><i style="background:#ff8a3d"></i>Pent</span></span></div>
+    <div class="wxp-box"><div class="wxp-boxh"><span class="wxp-cap">NESTE 24 TIMER</span><span class="wxp-leg"><span>${LOGO('yr', 16)}<i style="background:#5ec8f2"></i>Yr</span><span>${LOGO('storm', 16)}<i style="background:#ff8a3d"></i>Storm</span></span></div>
       <svg viewBox="0 0 300 170" style="width:100%;height:auto;display:block">${cmp.grid.map((g) => `<line x1="22" x2="300" y1="${g.y}" y2="${g.y}" stroke="rgba(255,255,255,.08)"/><text x="0" y="${g.ty}" fill="#9aa3ae" font-size="9" font-weight="700">${g.t}</text>`).join('')}${cmp.bars.map((b) => `<rect x="${b.x}" y="${b.y}" width="4" height="${b.h}" rx="1.5" fill="${b.c}"/>`).join('')}<path d="${cmp.yr}" fill="none" stroke="#5ec8f2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="${cmp.st}" fill="none" stroke="#ff8a3d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${cmp.hx.map((h) => `<text x="${h.x}" y="168" fill="#9aa3ae" font-size="9" font-weight="700" text-anchor="middle">${h.t}</text>`).join('')}</svg>
-      <span class="wxp-mut" style="font-size:11.5px">Søyler viser nedbør per time. Yr til venstre, Pent til høyre.</span></div>
-    <div class="wxp-box wxp-cmplist"><div class="wxp-cg wxp-cgh"><span></span><span style="color:#5ec8f2">YR</span><span style="color:#ff8a3d">PENT</span><span style="text-align:right">AVVIK</span></div>${cmp.days.map(cmpRow).join('')}</div>` : S.cmpBusy ? '' : '<span class="wxp-mut">Pent svarte ikke. Prøv igjen senere.</span>'}
-    <div class="wxp-two"><a href="${esc(S.full?.yrUrl ?? `https://www.yr.no/nb/søk?q=${encodeURIComponent(P.name)}`)}" target="_blank" rel="noopener">Åpne yr.no ↗</a><a href="https://www.pent.no/" target="_blank" rel="noopener">Åpne pent.no ↗</a></div>
-    <span class="wxp-mut" style="font-size:12px;line-height:1.45">Yr er MET Norway (api.met.no). Pent (StormGeo) har ikke et åpent API, så Pent-kolonnen viser StormGeo/ECMWF-modellen fra Open-Meteo (ecmwf_ifs025), som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.</span>`, 'cmp');
+      <span class="wxp-mut" style="font-size:11.5px">Søyler viser nedbør per time. Yr til venstre, Storm til høyre.</span></div>
+    <div class="wxp-box wxp-cmplist"><div class="wxp-cg wxp-cgh"><span></span><span class="wxp-lh" style="color:#5ec8f2">${LOGO('yr', 18)}YR</span><span class="wxp-lh" style="color:#ff8a3d">${LOGO('storm', 18)}STORM</span><span style="text-align:right">AVVIK</span></div>${cmp.days.map(cmpRow).join('')}</div>` : S.cmpBusy ? '' : '<span class="wxp-mut">Storm svarte ikke. Prøv igjen senere.</span>'}
+    <div class="wxp-two"><a href="${esc(S.full?.yrUrl ?? `https://www.yr.no/nb/søk?q=${encodeURIComponent(P.name)}`)}" target="_blank" rel="noopener">Åpne yr.no ↗</a><a href="https://www.storm.no/" target="_blank" rel="noopener">Åpne storm.no ↗</a></div>
+    <span class="wxp-mut" style="font-size:12px;line-height:1.45">Yr er MET Norway (api.met.no). Storm (StormGeo) har ikke et åpent API, så Storm-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.</span>
+  </div></div>`;
 }
 
 function placesSheet() {
@@ -458,11 +466,14 @@ function paintMain() {
 function paintLayer() {
   const r = root();
   if (!r) return;
-  const l = r.querySelector('.wxp-layer'), old = l.querySelector('.wxp-sheet'), top = old?.scrollTop ?? 0, same = l.dataset.k === layerKey();
+  const l = r.querySelector('.wxp-layer'), old = l.querySelector('.wxp-sheet,.wxp-cmpin'), top = old?.scrollTop ?? 0, same = l.dataset.k === layerKey();
+  // Felles «dismiss»-hook: et ark/popup som lukkes (✕, Ferdig, trykk utenfor, Esc eller valg av sted) gir ett lett tikk.
+  const was = l.dataset.k || '', next = layerKey();
+  if (was && was !== next && !(was.startsWith('ms:') && next.startsWith('ms:'))) haptic(10);
   const a = document.activeElement, q = a?.name === 'q' && l.contains(a) ? a.selectionStart : null;
   l.innerHTML = layerHtml();
   l.dataset.k = layerKey();
-  if (same) { const s = l.querySelector('.wxp-sheet'); if (s) s.scrollTop = top; }
+  if (same) { const s = l.querySelector('.wxp-sheet,.wxp-cmpin'); if (s) s.scrollTop = top; }
   if (q != null) { const i = l.querySelector('input[name=q]'); i?.focus(); try { i?.setSelectionRange(q, q); } catch { /* */ } }
   document.body.classList.toggle('wxp-modal', !!l.firstElementChild);
 }
@@ -613,7 +624,7 @@ function bind(r) {
       if (S.mpOpen || S.plOpen || S.cmpOpen || S.ms || S.sh != null) { S.mpOpen = S.plOpen = S.cmpOpen = false; S.ms = null; S.sh = null; S.plRes = null; S.plQ = ''; return paintLayer(); }
       location.hash = '#/dash';
     }
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[role=button][data-wx-ms],[role=button][data-wx-pl]')) { e.preventDefault(); e.target.click(); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[role=button][data-wx-ms],[role=button][data-wx-pl],[role=button][data-wx]')) { e.preventDefault(); e.target.click(); }
   });
   r.addEventListener('input', (e) => { if (e.target.name !== 'q') return; S.plQ = e.target.value; clearTimeout(sqT); sqT = setTimeout(() => search(S.plQ), 250); });
   r.addEventListener('submit', (e) => { if (!e.target.matches('[data-wx-search]')) return; e.preventDefault(); clearTimeout(sqT); search(S.plQ); });
@@ -633,10 +644,10 @@ export function render() {
     if (!S.places.some((p) => p.id === S.cur)) S.cur = S.places[0]?.id;
     load();
   });
-  return `<div id="wxp" class="wxp" aria-label="Vær">
+  return `<div id="wxp" class="wxp sb-dark" aria-label="Vær">
     <div class="wxp-sky"></div><canvas class="wxp-fx" aria-hidden="true"></canvas>
     <div class="wxp-top"><a class="wxp-glass wxp-back" href="#/dash">‹ Hjem</a><div class="wxp-tc" aria-hidden="true"></div><span class="wxp-src">${esc(S.src)}</span></div>
     <div class="wxp-scroll"><div class="wxp-inner"></div></div>
-    <nav class="wxp-bnav" aria-label="Vær"><button class="wxp-bb" data-wx="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20"/></svg></button><span></span><button class="wxp-bb" data-wx="places" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></nav>
+    <nav class="wxp-bnav wxp-fab" aria-label="Vær"><button class="wxp-bb" data-wx="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20"/></svg></button><span></span><button class="wxp-bb" data-wx="places" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></nav>
     <div class="wxp-layer"></div></div>`;
 }

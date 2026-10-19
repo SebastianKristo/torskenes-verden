@@ -279,3 +279,7 @@ export async function hlApi(path, opts = {}) {
 // så mobilens skjermnavn oversettes først.
 const NAV_IDS = { hjem: 'ov', home: 'ov', liste: 'tx', list: 'tx', budsjett: 'bud', sok: 'ai' };
 export const navName = (id, def) => (S.navLabels ?? S.boot?.navLabels ?? {})[NAV_IDS[id] ?? id] || def;
+
+/* Prompt 30: felles knapp i toppen av ark og fullskjermvisninger (samme som web: Ferdig = pri, Lukk/Avbryt = sec, ‹ Tilbake = back).
+   Stilen ligger i finans.css (.sbtn) og bruker temaets --text/--bg. */
+export const sheetBtn = (label, attrs = '', kind = 'pri') => `<button type="button" class="sbtn ${kind}" ${attrs}>${kind === 'back' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>' : ''}<span>${esc(label)}</span></button>`;

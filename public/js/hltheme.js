@@ -32,11 +32,8 @@ export function applyHlTheme() {
     logo.dataset.os ??= logo.textContent;
     logo.textContent = theme === '2c' ? (appName() !== 'Homelab' ? appName() : store.me?.serverName || 'Homelab') : logo.dataset.os;
   }
-  // Profilmenyen: bytte av tema, og «Logg ut» i stedet for «Lås» i Vindu og papir.
-  const sw = document.getElementById('menu-theme');
-  if (sw) sw.textContent = theme === '2c' ? 'Bytt til nåværende tema' : 'Bytt til Vindu og papir';
-  const lo = document.querySelector('.menu [data-act="logout"]');
-  if (lo) { lo.dataset.def ??= lo.textContent; lo.textContent = theme === '2c' ? 'Logg ut' : lo.dataset.def; }
+  // Profilmenyen (prompt 30: profile-menu.js) tegnes på nytt med riktig «Bytt til …»-tekst.
+  document.dispatchEvent(new Event('hl:menu'));
   renderBgMenu();
 }
 

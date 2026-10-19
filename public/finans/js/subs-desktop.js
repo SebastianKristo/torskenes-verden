@@ -1,7 +1,7 @@
 // Subscription OS på PC (designet «Subscription OS», web): fanene Oversikt og Kalender, og «+ Legg til abonnement»
 // med Skriv inn selv · Fra kvittering · Fra transaksjoner. Tallene kommer fra GET /subscriptions (byMonth, health,
 // savings, upcoming, thisMonth). Kvitteringer lastes opp med data-mrc="sub" (modules.js), resten håndteres her.
-import { S, api, esc, n0, render, toast, logo, parseAmount } from './core.js';
+import { S, api, esc, n0, render, toast, logo, parseAmount, sheetBtn } from './core.js';
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 
 const u = S.ui;
@@ -282,7 +282,7 @@ function editSheet(d) {
   const dateTxt = `Neste trekk ${e.day}. ${MON_L[(+e.mon || 1) - 1]}, ${CYC_THEN[e.cyc] ?? CYC_THEN.monthly}`;
   return `<div class="se-back" data-sed="close"><form class="se" data-sform="ed" role="dialog" aria-modal="true" aria-label="${e.id ? `Rediger ${esc(e.n)}` : 'Nytt abonnement'}">
     <span class="se-grip" aria-hidden="true"></span>
-    <div class="se-h"><b>${e.id ? `Rediger ${esc(e.n)}` : 'Nytt abonnement'}</b><button type="button" class="x-btn sm" data-sed="close" aria-label="Lukk">×</button></div>
+    <div class="se-h"><b>${e.id ? `Rediger ${esc(e.n)}` : 'Nytt abonnement'}</b>${sheetBtn('Lukk', 'data-sed="close"', 'sec')}</div>
     <div class="se-logorow">${logoBox}<div class="se-lc"><span class="se-l">Logo</span><div class="se-lb">
       <label class="btn sm">↑ Last opp<input type="file" accept="image/png,image/jpeg,image/webp" data-sed-file hidden></label>
       <button type="button" class="btn sm" data-sed="ai" ${e.busy ? 'disabled' : ''}>${e.busy ? '✦ Leter …' : '✦ Finn logo med AI'}</button>

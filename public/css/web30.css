@@ -1,0 +1,235 @@
+/* Prompt 30 (web): innstillinger i fullskjerm med fargede ikoner og AI-søk, Domener-guide, profilmeny med egen
+   rekkefølge, oppdateringsbanner, Vær (to knapper, Yr mot Storm i fullskjerm) og kalender. Fasit:
+   «Innstillinger Web.dc.html», «Homelab Papir Web.dc.html», «Vaer.dc.html», mobil-fasiten for banneret.
+   Lastes etter app.css og paper.css. «Nåværende» (mørkt) er standard; html[data-hl="2c"] er Vindu og papir. */
+
+:root{
+  --w30-bg:#0c1119; --w30-side:#0f1520; --w30-ink:#eef0f4; --w30-mut:#8a93a6; --w30-line:#1f2736; --w30-hov:#1a2231; --w30-card:#111723;
+  --w30-acc:#f26b5e; --w30-field:#0c1119; --w30-chip:rgba(255,255,255,.08);
+}
+html[data-hl="2c"]{
+  --w30-bg:#f3efe6; --w30-side:#f3efe6; --w30-ink:#1b1a17; --w30-mut:#8f897c; --w30-line:#d8d1c2; --w30-hov:#ece6da; --w30-card:#fbf8f1;
+  --w30-acc:#b23a2a; --w30-field:#fff; --w30-chip:#ece6da;
+}
+
+/* ================= Innstillinger: fullskjerm ================= */
+#settings{padding:0;place-items:stretch;z-index:75}
+#settings .set-box{max-width:none;width:100%;height:100vh;height:100dvh;border:0;border-radius:0;box-shadow:none;grid-template-columns:minmax(0,280px) minmax(0,1fr);background:var(--w30-bg)}
+#settings .set-side{background:var(--w30-side);border-right:1px solid var(--w30-line)}
+#settings .set-side-in{padding:28px 18px 12px;gap:0}
+#settings .set-main{position:static}
+.set-done{position:fixed!important;top:20px;right:24px;z-index:70;box-shadow:0 8px 20px -10px rgba(0,0,0,.4)}
+#settings .set-body{padding:36px clamp(20px,4vw,56px) 60px}
+#settings .set-inner{max-width:880px}
+#settings .set-ph{padding-right:110px}
+.set-ph-row{display:flex;align-items:center;gap:14px;min-width:0}
+.set-ph-t{min-width:0;display:flex;flex-direction:column;gap:4px}
+.set-ic{flex:none;display:grid;place-items:center;color:#fff}
+.set-ic svg{display:block!important}
+
+/* Profilblokken er en knapp til Konto. */
+#settings .set-me{gap:12px;padding:6px;margin:-6px -2px;border-radius:16px;color:var(--w30-ink)}
+#settings .set-me:hover,#settings .set-me[aria-current=page]{background:var(--w30-hov)}
+#settings .set-me-av{width:52px;height:52px;font-size:18px}
+#settings .set-me-t span{font-size:13px;color:var(--w30-mut)}
+
+/* Søket med ✦ AI. */
+#settings .set-q{height:42px;margin:16px 0 12px;padding:0 6px 0 14px;gap:8px;border-radius:999px;background:var(--w30-field)}
+#settings .set-q input{font-size:14px}
+.set-q .sf-x{flex:none}
+#settings .set-q .set-aibtn{flex:none;height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--w30-line);background:transparent;color:var(--w30-ink);cursor:pointer;font:700 12px Manrope,Outfit,system-ui,sans-serif;line-height:1}
+#settings .set-q .set-aibtn[aria-pressed=true]{background:var(--w30-acc);border-color:var(--w30-acc);color:#fff}
+.set-res{display:flex;flex-direction:column;gap:14px;margin-bottom:12px}
+.set-cap{font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em;color:var(--w30-acc);padding:0 4px 4px}
+.set-aians{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:16px;background:var(--w30-card);border:1.5px solid var(--w30-acc)}
+.set-aians .set-cap{padding:0}
+.set-aibusy{font-size:13.5px;color:var(--w30-mut)}
+.set-aitxt{font:400 16px/1.4 Newsreader,Georgia,serif;color:var(--w30-ink);text-wrap:pretty}
+.set-aigo{align-self:flex-start;height:34px;padding:0 14px;border-radius:17px;border:0;background:var(--sb-bg);color:var(--sb-fg);cursor:pointer;font:700 13px Manrope,Outfit,system-ui,sans-serif}
+.set-hits{display:flex;flex-direction:column;gap:2px}
+.set-hit{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px;border:0;border-radius:10px;background:transparent;color:var(--w30-ink);cursor:pointer;text-align:left;font-family:inherit}
+.set-hit:hover,.set-hit:focus-visible{background:var(--w30-hov)}
+.set-hit-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.set-hit-t b{font-size:14px;font-weight:600}
+.set-hit-t span{font-size:12px;color:var(--w30-mut)}
+.set-nohit{font-size:13px;color:var(--w30-mut);padding:0 4px}
+@media (min-width:768px){ #settings .set-nav.has-q{display:none} }
+
+/* Sidemenyen: farget ikon i rute, aktiv rad med bakgrunn (ikke understrek). */
+#settings .set-sec{gap:2px;margin-bottom:14px}
+#settings .set-sec-t{font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em;color:var(--w30-acc);padding:0 4px 6px;text-transform:uppercase}
+#settings .set-nav .set-tab{height:44px;padding:0 8px 0 4px;gap:12px;border:0;border-radius:12px;background:transparent;color:var(--w30-ink);font:500 15.5px Manrope,Outfit,system-ui,sans-serif}
+#settings .set-nav .set-tab:hover{background:var(--w30-hov)}
+#settings .set-nav .set-tab[aria-current=page]{background:var(--w30-hov);font-weight:700;border:0}
+#settings .set-badge{background:var(--w30-acc);color:#fff;font:800 11.5px Manrope,system-ui,sans-serif}
+#settings .set-foot{margin:0 18px;border-top:1px solid var(--w30-line)}
+html[data-hl="2c"] #settings .set-me-av{background:var(--ink);color:var(--pp);font:500 20px var(--serif)}
+html[data-hl="2c"] #settings .set-me-t b{font:500 21px/1.15 var(--serif)}
+html[data-hl="2c"] #settings .set-q{box-shadow:0 1px 0 #d8d1c2}
+html[data-hl="2c"] #settings .set-ph h2{font:500 40px/1.05 var(--serif)}
+html[data-hl="2c"] #settings .set-ps{font:italic 400 18px var(--serif);color:var(--ink2)}
+
+@media (max-width:767px){
+  #settings .set-box{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);height:100vh;height:100dvh}
+  #settings .set-side{border-right:0;border-bottom:1px solid var(--w30-line)}
+  #settings .set-side-in{padding:calc(12px + env(safe-area-inset-top,0px)) 14px 8px;overflow:visible}
+  .set-done{top:calc(14px + env(safe-area-inset-top,0px));right:14px}
+  #settings .set-me{margin:0;padding:4px 100px 4px 4px}
+  #settings .set-me-av{width:42px;height:42px;font-size:15px}
+  #settings .set-q{margin:10px 0 10px}
+  #settings .set-res .set-hits,#settings .set-res .set-nohit{display:none}
+  #settings .set-nav .set-tab{height:40px;padding:0 12px 0 5px;gap:8px;font-size:14.5px;border:1px solid var(--w30-line);border-radius:999px}
+  #settings .set-nav .set-tab .set-ic{width:26px!important;height:26px!important;border-radius:13px!important}
+  #settings .set-nav .set-tab .set-ic svg{width:14px;height:14px}
+  #settings .set-nav .set-tab[aria-current=page]{border-color:transparent}
+  #settings .set-body{padding:22px 14px calc(40px + env(safe-area-inset-bottom,0px))}
+  #settings .set-ph{padding-right:0}
+  #settings .set-ph-row .set-ic{width:38px!important;height:38px!important;border-radius:11px!important}
+  html[data-hl="2c"] #settings .set-ph h2{font-size:30px}
+}
+
+/* ================= Domener: ?-knapp, Test token og sidepanel-guide ================= */
+.cfg-qbtn{flex:none;width:26px;height:26px;border-radius:13px;border:1.5px solid currentColor;background:transparent;color:inherit;cursor:pointer;display:inline-grid;place-items:center;padding:0;font:800 13px Manrope,system-ui,sans-serif;vertical-align:middle;margin-left:8px}
+.cfg-test-msg{align-self:center;font-size:13.5px;font-weight:600}
+.cfg-test-msg.ok{color:#2f7d4f}.cfg-test-msg.err{color:var(--w30-acc)}
+:root:not([data-hl="2c"]) .cfg-test-msg.ok{color:#8fe0b0}
+.cfg-perms{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.cfg-perms span{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--w30-chip);color:var(--w30-ink)}
+.cfg-perms span.no{background:rgba(178,58,42,.14);color:var(--w30-acc)}
+.cfg-guide{position:fixed;inset:0;z-index:80;background:rgba(27,26,23,.45);display:flex;justify-content:flex-end;animation:w30-fade .18s ease}
+.cfg-gp{width:min(560px,100%);height:100%;overflow-y:auto;overscroll-behavior:contain;background:#f3efe6;color:#1b1a17;box-shadow:-20px 0 60px -20px rgba(0,0,0,.4);padding:26px 26px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px;font-family:Manrope,system-ui,sans-serif;animation:w30-left .24s cubic-bezier(.2,.8,.2,1);--sb-bg:#1b1a17;--sb-fg:#f3efe6;--sb-bg2:rgba(27,26,23,.08);--sb-fg2:#1b1a17}
+.cfg-gh{display:flex;align-items:flex-start;gap:12px}
+.cfg-gh>div{flex:1;min-width:0}
+.cfg-gk{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em;color:#b23a2a}
+.cfg-gh h2{margin:4px 0 0;font:500 30px/1.1 Newsreader,Georgia,serif}
+.cfg-glead{font-size:14.5px;line-height:1.5;color:#3d3a33;text-wrap:pretty}
+.cfg-gopen{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:0 16px;border-radius:14px;background:#1b1a17;color:#f3efe6!important;text-decoration:none;font:700 14.5px Manrope,system-ui,sans-serif}
+.cfg-gopen:hover{opacity:.92}
+.cfg-st{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:18px;background:#fbf8f1;box-shadow:0 1px 0 #d8d1c2}
+.cfg-st-h{display:flex;gap:12px;align-items:flex-start}
+.cfg-st-n{flex:none;width:28px;height:28px;border-radius:14px;background:#b23a2a;color:#fff;display:grid;place-items:center;font:800 13px Manrope,system-ui,sans-serif}
+.cfg-st-h>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.cfg-st-h b{font-size:15.5px}
+.cfg-st-h span{font-size:13.5px;line-height:1.5;color:#3d3a33;text-wrap:pretty}
+.cfg-sk{border-radius:12px;border:1px solid #d8d1c2;background:#fff;overflow:hidden;font:500 12px Manrope,system-ui,sans-serif;color:#3d3a33}
+.cfg-sk-b{display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;background:#ece6da;border-bottom:1px solid #d8d1c2}
+.cfg-sk-b i{width:7px;height:7px;border-radius:4px;background:#c9c1b1}
+.cfg-sk-b span{flex:1;text-align:center;font:500 10.5px 'IBM Plex Mono',ui-monospace,monospace;color:#8f897c}
+.cfg-sk-in{padding:12px;display:flex;flex-direction:column;gap:6px}
+.cfg-sk-r{display:flex;align-items:center;gap:8px;min-height:28px;padding:0 10px;border-radius:8px;border:1px solid #ece6da;background:#faf8f4;color:#8f897c}
+.cfg-sk-r.hl{border:1.5px solid #f6821f;background:#fff3e6;font-weight:700;color:#1b1a17}
+.cfg-sk-r span{flex:1;min-width:0}
+.cfg-sk-r em{flex:none;font:normal 11px 'IBM Plex Mono',ui-monospace,monospace}
+.cfg-gnote{padding:14px 16px;border-radius:16px;background:#fff4c2;color:#3a2f00;font-size:13.5px;line-height:1.5}
+@media (max-width:767px){ .cfg-gp{width:100%;padding:calc(18px + env(safe-area-inset-top,0px)) 16px calc(30px + env(safe-area-inset-bottom,0px))} }
+@keyframes w30-fade{from{opacity:0}to{opacity:1}}
+@keyframes w30-left{from{transform:translateX(40px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.cfg-guide,.cfg-gp{animation:none}}
+
+/* ================= Profilmenyen ================= */
+#menu.menu{width:250px;min-width:0;padding:6px;border-radius:18px;box-sizing:border-box}
+#menu .pm-head{display:flex;flex-direction:column;gap:1px;padding:10px 12px;border-bottom:1px solid var(--line);margin-bottom:4px}
+#menu .pm-head b{font-size:16px;font-weight:600}
+#menu .pm-head span{font-size:12px;color:var(--muted)}
+html[data-hl="2c"] #menu .pm-head b{font:500 18px var(--serif);color:var(--ink)}
+html[data-hl="2c"] #menu .pm-head span{color:var(--ink3);font:400 12px var(--sans)}
+#menu .pm-it{display:flex;align-items:center;gap:10px;height:42px;padding:0 10px 0 8px;border-radius:10px;font:600 14px Manrope,Outfit,system-ui,sans-serif;text-decoration:none}
+#menu .pm-it>span:last-child{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#menu .pm-it.danger{color:var(--red)}
+html[data-hl="2c"] #menu .pm-it{font:600 14px var(--sans)}
+html[data-hl="2c"] #menu .pm-it.danger{color:var(--acc)}
+.pm-ic{flex:none;border-radius:8px;color:#fff;display:grid;place-items:center}
+#menu .pm-edit{display:flex;align-items:center;gap:10px;height:38px;margin-top:2px;padding:0 10px 0 8px;border:0;border-top:1px solid var(--line);border-radius:0 0 10px 10px;background:transparent;color:var(--muted);cursor:pointer;text-align:left;font:600 12.5px Manrope,Outfit,system-ui,sans-serif}
+#menu .pm-edit>span{flex:none;width:26px;display:grid;place-items:center}
+#menu .pm-edit:hover{background:var(--row)}
+.pm-edh{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 6px 6px 10px}
+.pm-edh>span{font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em;color:var(--red)}
+html[data-hl="2c"] .pm-edh>span{color:var(--acc)}
+#menu .pm-done{height:30px;width:auto;padding:0 14px;border-radius:15px;font-size:12.5px}
+.pm-er{display:flex;align-items:center;gap:8px;min-height:42px;padding:0 4px 0 8px;border-radius:10px}
+.pm-er.off .pm-ic,.pm-er.off .pm-n{opacity:.45}
+.pm-n{flex:1;min-width:0;font:600 13.5px Manrope,Outfit,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#menu .pm-ck{flex:none;width:22px;height:22px;padding:0;border-radius:6px;border:1.5px solid var(--faint,#b0a998);background:transparent;cursor:pointer;display:grid;place-items:center}
+#menu .pm-ck svg{opacity:0}
+#menu .pm-ck.on{background:var(--text);border-color:var(--text)}
+#menu .pm-ck.on svg{opacity:1}
+#menu .pm-ck.on svg path{stroke:var(--sb-fg)}
+#menu .pm-mv{flex:none;width:28px;height:28px;padding:0;border-radius:14px;border:0;background:transparent;color:var(--text);cursor:pointer;display:grid;place-items:center}
+#menu .pm-mv:hover{background:var(--row)}
+#menu .pm-mv:disabled{opacity:.25;cursor:default;background:transparent}
+.pm-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 8px 4px;border-top:1px solid var(--line);margin-top:4px}
+.pm-foot>span{font-size:11.5px;color:var(--muted)}
+#menu .pm-reset{flex:none;width:auto;height:28px;padding:0 10px;border-radius:14px;border:0;background:var(--w30-chip);color:var(--text);cursor:pointer;font:700 11.5px Manrope,Outfit,system-ui,sans-serif}
+html[data-hl="2c"] #menu .pm-reset{background:#e6e0d2}
+
+/* ================= Oppdateringsbanner ================= */
+.ub-slot:empty{display:none}
+.ub{display:flex;flex-direction:column;gap:12px;padding:14px 14px 14px 16px;border-radius:22px;background:var(--w30-card);color:var(--w30-ink);box-shadow:0 10px 30px -14px rgba(0,0,0,.35);border:1px solid var(--w30-line)}
+html[data-hl="2c"] .ub{background:#fff;border-color:transparent}
+.p-paper>.ub-slot{margin:18px 0}
+.set-inner>.ub-slot{margin-bottom:-10px}
+.ub-h{display:flex;align-items:center;gap:12px}
+.ub-ic{flex:none;width:40px;height:40px;border-radius:20px;background:var(--w30-acc);color:#fff;display:grid;place-items:center}
+.ub.fail .ub-ic{background:#b23a2a}
+.ub-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ub-t b{font-size:15px;font-weight:700}
+.ub-t span{font-size:12.5px;color:var(--w30-mut);text-wrap:pretty}
+.ub-x{flex:none;align-self:flex-start;width:30px;height:30px;padding:0;border-radius:15px;border:0;background:var(--w30-chip);color:var(--w30-ink);cursor:pointer;display:grid;place-items:center}
+.ub-prog{display:flex;flex-direction:column;gap:6px}
+.ub-bar{height:6px;border-radius:3px;background:var(--w30-line);overflow:hidden}
+.ub-bar>span{display:block;height:100%;background:var(--w30-acc);border-radius:3px;transition:width .4s ease}
+.ub-st{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--w30-mut)}
+.ub-pct{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.ub-notes{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:14px;background:var(--w30-bg)}
+.ub-notes>span{display:flex;gap:8px;font-size:13px;line-height:1.4}
+.ub-notes i{flex:none;color:var(--w30-acc);font-style:normal}
+.ub-btns{display:flex;gap:8px;flex-wrap:wrap}
+.ub-b{flex:none;height:40px;padding:0 16px;border-radius:20px;border:0;background:var(--w30-chip);color:var(--w30-ink);cursor:pointer;font:700 14px Manrope,Outfit,system-ui,sans-serif}
+.ub-b.pri{flex:1;min-width:140px;background:var(--sb-bg);color:var(--sb-fg)}
+.ub-b.wide{flex:1;width:100%}
+.ub-b:disabled{opacity:.6;cursor:default}
+.ub-host{position:fixed;inset:0;z-index:90}
+.ub-scrim{position:absolute;inset:0;background:rgba(0,0,0,.45);animation:w30-fade .18s ease}
+.ub-sheet{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(520px,100%);max-height:92vh;overflow-y:auto;box-sizing:border-box;margin:0;padding:18px 20px calc(16px + env(safe-area-inset-bottom,0px));border-radius:28px 28px 0 0;background:var(--w30-bg);color:var(--w30-ink);display:flex;flex-direction:column;gap:14px;box-shadow:0 -20px 60px -20px rgba(0,0,0,.5);animation:w30-up .24s cubic-bezier(.2,.8,.2,1)}
+.ub-sh-h{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ub-sh-h b{font-size:18px;font-weight:700}
+html[data-hl="2c"] .ub-sh-h b{font:500 24px var(--serif)}
+.ub-sheet p{margin:0;font-size:14px;line-height:1.5;color:var(--w30-mut)}
+.ub-f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--w30-mut)}
+.ub-f input{height:46px;padding:0 14px;border-radius:12px;border:1px solid var(--w30-line);background:var(--w30-field);color:var(--w30-ink);font-size:16px}
+.ub-err{padding:10px 12px;border-radius:12px;background:rgba(178,58,42,.12);color:var(--w30-acc);font-size:13.5px}
+.ub-toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);z-index:95;padding:10px 16px;border-radius:999px;background:#1b1a17;color:#f3efe6;font:600 13.5px Manrope,system-ui,sans-serif;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.ub-toast.on{opacity:1;transform:translate(-50%,0)}
+@keyframes w30-up{from{transform:translate(-50%,40px);opacity:.6}to{transform:translate(-50%,0);opacity:1}}
+
+/* Programvare-gruppen i System. */
+.sw30-ok{color:#2f7d4f;font-weight:700}
+:root:not([data-hl="2c"]) .sw30-ok{color:#8fe0b0}
+#settings .set-tab>.set-ic{flex:0 0 auto}
+#menu .pm-done{display:inline-flex;color:var(--sb-fg);background:var(--sb-bg);font:700 12.5px Manrope,Outfit,system-ui,sans-serif}
+#menu .pm-ck,#menu .pm-mv,#menu .pm-reset,#menu .pm-edit{width:auto}
+#menu .pm-edit{width:100%}
+
+/* ================= Vær ================= */
+/* To flytende glassknapper nær bunnen, ingen linje mellom dem. */
+.wxp-bnav.wxp-fab{background:none;-webkit-backdrop-filter:none;backdrop-filter:none;border:0;padding:0 18px calc(6px + env(safe-area-inset-bottom,10px));pointer-events:none}
+.wxp-fab .wxp-bb{width:52px;height:52px;border-radius:26px;border:1px solid rgba(255,255,255,.22);background:rgba(10,20,35,.34);-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4);box-shadow:0 8px 24px -10px rgba(0,0,0,.45);pointer-events:auto}
+.wxp-fab .wxp-bb:hover{background:rgba(10,20,35,.48)}
+@media (min-width:768px){.wxp-bnav.wxp-fab{padding-bottom:18px}}
+/* Hele «Yr og Storm»-kortet er trykkbart. */
+.wxp-cmp[role=button]{cursor:pointer;transition:background .15s}
+.wxp-cmp[role=button]:hover{background:rgba(255,255,255,.2)}
+.wxp-cmp[role=button]:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.wxp-yp .wxp-logo{flex:none;border-radius:50%;object-fit:cover;display:block}
+.wxp-yp .wxp-logo+.wxp-logo{margin-left:-8px}
+.wxp-logo{border-radius:50%;object-fit:cover;flex:none}
+.wxp-lh{display:flex;align-items:center;gap:6px}
+/* Yr mot Storm i fullskjerm. */
+.wxp-cmpfs{position:absolute;inset:0;z-index:22;background:#17191e;color:#fff;animation:w30-fade .18s ease}
+.wxp-cmpin{position:absolute;inset:0;overflow-y:auto;scrollbar-width:none;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 48px) max(16px,calc((100% - 760px) / 2)) calc(env(safe-area-inset-bottom,0px) + 30px);box-sizing:border-box;display:flex;flex-direction:column;gap:16px}
+.wxp-cmpin::-webkit-scrollbar{display:none}
+.wxp-cmpin>*{flex-shrink:0}
+.wxp-cmpin .wxp-shh{align-items:flex-start}
+.wxp-cmpt{font-size:30px!important;line-height:1.1}
+.wxp-cmpin .wxp-shh .wxp-mut{font-size:14px}
+.nw-sh .nw-done{height:36px;padding:0 16px;border-radius:18px;font-size:14px}

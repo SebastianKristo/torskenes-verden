@@ -1,6 +1,6 @@
 // FinansHub v2-moduler i sidemenyen: Subscription OS, Delte mapper, Finn-handler og Import.
 // Samme mønster som desktop.js: sidene tegnes fra S, hendelser fanges med delegering (data-m*-attributter).
-import { S, api, esc, n0, n2, sgn, dd, today, render, toast, loadBoot, accs, logo, aiLine, ICONS, parseAmount, ini, smooth, icon } from './core.js';
+import { S, api, esc, n0, n2, sgn, dd, today, render, toast, loadBoot, accs, logo, aiLine, ICONS, parseAmount, ini, smooth, icon, sheetBtn } from './core.js';
 import { clearBtn } from '/assets/js/searchfield.js';
 import { finnPage as finnDesk, loadFinn as loadFinnDesk, bindFinn } from './finn-desktop.js'; // Finn-handler med detaljside
 import { subPage, loadSubs, bindSubs } from './subs-desktop.js'; // Subscription OS: Oversikt og Kalender
@@ -129,7 +129,7 @@ function editHomeSheet() {
   const opts = [['color', 'Farge', ''], ['preset:stromstad', 'Strømstad', STROMSTAD], ...own];
   const last = (S.folders ?? []).length <= 1;
   return `<div class="bol2-modal" data-bol2-back><div class="bol2-sheet bol2-ed" role="dialog" aria-modal="true" aria-label="Rediger bolig">
-    <div class="bol2-sheet-h"><div><div class="bol2-kick">FINANS · BOLIGER</div><h3>Rediger bolig</h3></div><button type="button" class="x-btn" data-bol2-act="close" aria-label="Lukk">×</button></div>
+    <div class="bol2-sheet-h"><div><div class="bol2-kick">FINANS · BOLIGER</div><h3>Rediger bolig</h3></div>${sheetBtn('Lukk', 'data-bol2-act="close"', 'sec')}</div>
     <div class="bol2-ed-prev" style="background:${prev}" data-bol2-edprev>${esc(E.name || 'Bolig')}</div>
     <label class="bol2-f">Navn<input class="inp" data-bol2-ed="name" value="${esc(E.name)}" maxlength="60"></label>
     <label class="bol2-f">Adresse<input class="inp" data-bol2-ed="address" value="${esc(E.address)}" maxlength="120"></label>
@@ -172,7 +172,7 @@ function reviewCards(cur) {
   const list = cur.entries.filter(inReview);
   if (!list.length) return '';
   return `<div class="bol2-lab"><span>TIL GJENNOMGANG · ${list.length}</span>${cur.canEdit && list.some((e) => !e.pending) ? '<button class="link-btn" data-bol2-act="ok-all">Godkjenn alle</button>' : ''}</div>
-    ${list.map((e) => `<div class="bol2-rev"><div class="bol2-rev-h">${bolTile(cur, e)}<span class="grow ell-wrap"><b class="ell">${esc(e.description)}</b><span class="note">${e.pending ? '✦ AI leser kvitteringen …' : `✦ AI foreslår ${esc(e.categoryLabel ?? e.category)} · ${esc(e.paidBy)}`}</span></span><b class="mono">${e.pending ? '…' : kr0(e.amount)}</b></div>
+    ${list.map((e) => `<div class="bol2-rev"><div class="bol2-rev-h" data-bol2-open="${e.id}" role="button" tabindex="0" aria-label="Åpne ${esc(e.description)}">${bolTile(cur, e)}<span class="grow ell-wrap"><b class="ell">${esc(e.description)}</b><span class="note">${e.pending ? '✦ AI leser kvitteringen …' : `✦ AI foreslår ${esc(e.categoryLabel ?? e.category)} · ${esc(e.paidBy)}`}</span></span><b class="mono">${e.pending ? '…' : kr0(e.amount)}</b><span class="bol2-chev" aria-hidden="true">›</span></div>
       ${e.pending || !cur.canEdit ? '' : catChipRow(cur, e)}
       <div class="bol2-rev-b"><button class="btn" data-bol2-open="${e.id}">Detaljer</button>${cur.canEdit ? `<button class="btn pri" data-bol2-ok="${e.id}"${e.pending ? ' disabled' : ''}>Godkjenn</button>` : ''}</div></div>`).join('')}`;
 }
@@ -184,11 +184,13 @@ function entryLine(cur, e, i, full = false) {
 function detailSheet(cur) {
   const e = cur.entries.find((x) => x.id === u.bolSel);
   if (!e) return '';
-  const rv = inReview(e), mem = cur.members.length || 1;
+  const rv = inReview(e), mem = cur.members.length || 1, ed = cur.canEdit && !e.pending;
   return `<div class="bol2-modal" data-bol2-back><div class="bol2-sheet" role="dialog" aria-modal="true" aria-label="${esc(e.description)}">
-    <div class="bol2-sheet-h"><div><div class="bol2-kick">${esc(cur.name.toUpperCase())} · ${e.pending ? 'LESES AV AI' : rv ? 'TIL GJENNOMGANG' : 'GODKJENT'}</div><h3>${esc(e.description)}</h3></div><button class="x-btn" data-bol2-act="close" aria-label="Lukk">×</button></div>
+    <div class="bol2-sheet-h"><div class="grow" style="min-width:0"><div class="bol2-kick">${esc(cur.name.toUpperCase())} · ${e.pending ? 'LESES AV AI' : rv ? 'TIL GJENNOMGANG' : 'GODKJENT'}</div>${ed ? `<input class="bol2-edt" data-bol2-ee="merchant" value="${esc(e.description)}" maxlength="120" aria-label="Butikk eller beskrivelse" autocomplete="off">` : `<h3>${esc(e.description)}</h3>`}</div>${sheetBtn('Ferdig', 'data-bol2-act="close"', 'pri')}</div>
     <div class="bol2-sheet-top">${e.receiptId ? `<a class="bol2-rc" href="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/file" target="_blank" rel="noopener" title="Åpne kvitteringen"><img src="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/thumb" alt=""></a>` : '<span class="bol2-rc empty"></span>'}
-      <div class="grow" style="min-width:0"><div class="bol2-amt">${e.pending ? '…' : kr0(e.amount)}</div><div class="note">${esc(dd(e.date))} · lagt til av ${esc(e.paidBy)}</div>${e.aiShort ? `<div class="bol2-ai">✦ ${esc(e.aiShort)}</div>` : ''}</div></div>
+      <div class="grow" style="min-width:0">${ed ? `<label class="bol2-eamt"><input data-bol2-ee="amount" inputmode="decimal" value="${esc(n2(e.amount))}" aria-label="Beløp i kroner" autocomplete="off"><span>kr</span></label>
+        <div class="bol2-edate"><input type="date" data-bol2-ee="date" value="${esc(e.date ?? '')}" aria-label="Dato"><span class="note">· lagt til av ${esc(e.paidBy)}${e.editedBy ? ` · endret av ${esc(e.editedBy)}` : ''}</span></div><span class="note bol2-esave" data-bol2-esave aria-live="polite"></span>`
+        : `<div class="bol2-amt">${e.pending ? '…' : kr0(e.amount)}</div><div class="note">${esc(dd(e.date))} · lagt til av ${esc(e.paidBy)}</div>`}${e.aiShort ? `<div class="bol2-ai">✦ ${esc(e.aiShort)}</div>` : ''}</div></div>
     ${cur.canEdit && !e.pending ? `<div class="note" style="font-size:13px">Kategori</div>${catChipRow(cur, e)}` : ''}
     ${cur.canEdit && mem > 1 ? `<div class="bol2-opt"><span><b>Betalt av</b><span class="note">Fordeles etter boligens nøkkel (${cur.split === 'equal' ? `likt på ${mem}` : 'egen nøkkel'})</span></span><select class="inp" data-bol2-paid="${e.id}">${cur.members.map((m) => `<option${m.name === e.paidBy ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></div>` : ''}
     ${e.receiptId ? `<a class="bol2-opt" href="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/file" target="_blank" rel="noopener"><b>Original kvittering</b><span class="note">Åpne ›</span></a>` : ''}
@@ -198,12 +200,38 @@ function detailSheet(cur) {
 function newHomeSheet() {
   if (!u.bolNew) return '';
   return `<div class="bol2-modal" data-bol2-back><form class="bol2-sheet" data-mform="folder" role="dialog" aria-modal="true" aria-label="Ny bolig">
-    <div class="bol2-sheet-h"><div><div class="bol2-kick">FINANS · BOLIGER</div><h3>Ny bolig</h3></div><button type="button" class="x-btn" data-bol2-act="close" aria-label="Lukk">×</button></div>
+    <div class="bol2-sheet-h"><div><div class="bol2-kick">FINANS · BOLIGER</div><h3>Ny bolig</h3></div>${sheetBtn('Avbryt', 'data-bol2-act="close"', 'sec')}</div>
     <label class="bol2-f">Navn<input class="inp" name="name" placeholder="F.eks. Hytta Geilo" required></label>
     <label class="bol2-f">Adresse<input class="inp" name="address" placeholder="Valgfritt"></label>
     <label class="bol2-f">Type<select class="inp" name="type">${optList(TYPES.map((t) => [t, t]), 'Hytte')}</select></label>
     <div class="note" style="font-size:12.5px">Du kan dele boligen og sette budsjett under Tilgang etterpå.</div>
     <div class="bol2-sheet-b"><button type="button" class="btn" data-bol2-act="close">Avbryt</button><button class="btn pri">Opprett</button></div></form></div>`;
+}
+const SH = { home: null, list: [], sel: new Set(), loading: false, busy: false };
+function shareState(cur) {
+  if (SH.home !== cur.id) {
+    SH.home = cur.id; SH.sel = new Set(); SH.list = []; SH.loading = true;
+    api(`/users/shareable?home=${cur.id}`).catch(() => api(`/folders/${cur.id}/shareable`)).catch(() => null).then((r) => {
+      // Eldre server: alle brukere minus medlemmene (bare navn vises).
+      SH.list = Array.isArray(r) ? r : (S.users ?? []).filter((x) => !cur.members.some((m) => m.userId === x.id) && x.id !== S.boot?.me?.id)
+        .map((x) => ({ id: x.id, name: x.displayName ?? x.name ?? 'Bruker', color: avColor(x.displayName ?? x.name), avatarUrl: x.avatarUrl ?? null }));
+      SH.loading = false; render();
+    });
+  }
+  return SH;
+}
+async function shareUsers() {
+  const ids = [...SH.sel], role = u.bolInvRole ?? 'editor';
+  if (!ids.length || SH.busy) return;
+  const names = SH.list.filter((x) => SH.sel.has(String(x.id))).map((x) => x.name);
+  SH.busy = true; render();
+  try {
+    try { S.folder = await api(`/folders/${u.dir}/members`, { method: 'POST', json: { userIds: ids, role } }); }
+    catch (err) { if (ids.length > 1 || err.status === 404) { for (const id of ids) S.folder = await api(`/folders/${u.dir}/members`, { method: 'POST', json: { userId: id, role } }); } else throw err; }
+    toast(`${names.length <= 2 ? names.join(' og ') : `${names.length} personer`} har fått tilgang`);
+    SH.home = null; // hent listen på nytt
+  } finally { SH.busy = false; }
+  return reload();
 }
 function accessTab(cur, meta) {
   const ownerCount = cur.members.filter((m) => m.role === 'owner').length;
@@ -215,10 +243,20 @@ function accessTab(cur, meta) {
       ${(cur.isOwner && !m.you) || (m.you && !(m.role === 'owner' && ownerCount < 2)) ? `<button class="bol2-rm" data-brm="${cur.id}:${m.id}"${m.you ? ' data-leave="1"' : ''} aria-label="${m.you ? 'Forlat boligen' : `Fjern ${esc(m.name)}`}" title="${m.you ? 'Forlat boligen' : 'Fjern'}">−</button>` : ''}</div>`;
   }).join('');
   const role = u.bolInvRole ?? 'editor';
-  const invite = cur.isOwner ? `<div class="card bol2-card"><h3 class="bol2-h">Inviter</h3><form class="bol2-inv" data-mform="bol2-invite"><input class="inp" name="who" placeholder="Brukernavn eller navn" required list="bol2-users">
-      <datalist id="bol2-users">${(S.users ?? []).filter((x) => !cur.members.some((m) => m.userId === x.id)).map((x) => `<option value="${esc(x.username || x.displayName || x.name || '')}">${esc(x.displayName ?? x.name ?? x.username ?? '')}</option>`).join('')}</datalist>
-      <div class="bol2-seg">${Object.entries(ROLE_TXT).map(([k, [n]]) => `<button type="button" class="${k === role ? 'on' : ''}" data-bol2-irole="${k}">${n}</button>`).join('')}</div>
-      <div class="note" style="font-size:12.5px">${ROLE_TXT[role][1]}.</div><button class="btn pri bol2-wide">Send invitasjon</button></form></div>` : '';
+  // Prompt 30: «Del boligen» – rutenett med brukerne i Homelab som ikke har tilgang (navn, farge, relasjon; aldri
+  // brukernavn eller e-post). Velg flere, velg rolle, «Del med Ingrid og Pål». Uten valg: e-post til noen utenfor Homelab.
+  const sh = shareState(cur), picked = sh.list.filter((x) => sh.sel.has(String(x.id)));
+  const names = picked.map((x) => x.name), shareL = !names.length ? '' : names.length <= 2 ? `Del med ${names.join(' og ')}` : `Del med ${names.length} personer`;
+  const grid = sh.loading ? '<div class="note">Henter brukere …</div>' : sh.list.length ? `<div class="bol2-ugrid" role="group" aria-label="Brukere i Homelab">${sh.list.map((x) => {
+    const on = sh.sel.has(String(x.id));
+    return `<button type="button" class="bol2-u${on ? ' on' : ''}" data-bol2-pick="${esc(String(x.id))}" aria-pressed="${on}"><span class="bol2-uav" style="background:${esc(x.color ?? avColor(x.name))}">${x.avatarUrl ? `<img src="${esc(x.avatarUrl)}" alt="">` : esc(x.initial ?? ini(x.name))}</span><b class="ell">${esc(x.name)}</b>${x.relation ? `<span class="note ell">${esc(x.relation)}</span>` : ''}${on ? '<i class="bol2-uck" aria-hidden="true">✓</i>' : ''}</button>`;
+  }).join('')}</div>` : '<div class="note bol2-allin">Alle brukerne har allerede tilgang.</div>';
+  const invite = cur.isOwner ? `<div class="card bol2-card"><h3 class="bol2-h">Del boligen</h3>
+      <div class="bol2-lab2">BRUKERE I HOMELAB</div>${grid}
+      <div class="bol2-lab2">ROLLE</div><div class="bol2-seg">${Object.entries(ROLE_TXT).map(([k, [n]]) => `<button type="button" class="${k === role ? 'on' : ''}" data-bol2-irole="${k}">${n}</button>`).join('')}</div>
+      <div class="note" style="font-size:12.5px">${ROLE_TXT[role][1]}.</div>
+      ${names.length ? `<button type="button" class="btn pri bol2-wide" data-bol2-act="share-users"${sh.busy ? ' disabled' : ''}>${sh.busy ? 'Deler …' : esc(shareL)}</button>`
+        : `<form class="bol2-inv" data-mform="bol2-invite"><label class="bol2-f">Eller e-post til noen utenfor Homelab<input class="inp" name="who" type="email" placeholder="navn@eksempel.no" required autocomplete="off"></label><button class="btn pri bol2-wide">Send invitasjon</button></form>`}</div>` : '';
   const sw = (k, on, t, s) => `<label class="bol2-tog"><span><b>${t}</b><span class="note">${s}</span></span><input type="checkbox" data-bol2-meta="${k}"${on ? ' checked' : ''}${cur.isOwner ? '' : ' disabled'}><i></i></label>`;
   const about = `<div class="card bol2-card"><h3 class="bol2-h">Om boligen</h3>
     <label class="bol2-f">Navn<input class="inp" data-bol2-field="name" value="${esc(cur.name)}"${cur.isOwner ? '' : ' disabled'}></label>
@@ -307,7 +345,7 @@ function dirPage() {
     body = `<div class="bol2-cols ov"><div class="bol2-col">${hero}${acts}${reviewCards(cur)}${catsCard}${(cur.upcoming ?? []).length ? upcomingCard(cur, 4, 'padding:20px;gap:6px') : ''}</div>
       <div class="bol2-col">${histCard}${recentCard2}${cur.projects.length ? projMini(cur).replace('flex:3 1 340px;', '') : ''}${shareCard}</div></div>`;
   }
-  const addSheet = u.bolAdd ? `<div class="bol2-modal" data-bol2-back><div class="bol2-sheet" role="dialog" aria-modal="true" aria-label="Ny utgift"><div class="bol2-sheet-h"><div><div class="bol2-kick">${esc(cur.name.toUpperCase())}</div><h3>Ny utgift</h3></div><button class="x-btn" data-bol2-act="close" aria-label="Lukk">×</button></div>${addBoxHtml(cur)}</div></div>` : '';
+  const addSheet = u.bolAdd ? `<div class="bol2-modal" data-bol2-back><div class="bol2-sheet" role="dialog" aria-modal="true" aria-label="Ny utgift"><div class="bol2-sheet-h"><div><div class="bol2-kick">${esc(cur.name.toUpperCase())}</div><h3>Ny utgift</h3></div>${sheetBtn('Lukk', 'data-bol2-act="close"', 'sec')}</div>${addBoxHtml(cur)}</div></div>` : '';
   return `<div class="bol2" data-bol-drop>${top}${tabs}${body}${detailSheet(cur)}${addSheet}${newHomeSheet()}${editHomeSheet()}
     ${cur.canEdit ? '<div class="bol-dropover" aria-hidden="true"><b>Slipp kvitteringene her</b><span>✦ AI leser butikk, dato og beløp, og velger kategori</span></div>' : ''}</div>`;
 }
@@ -607,10 +645,12 @@ export function backupTab() {
       <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av FinansHub og brukes til gjenoppretting. Excel-filen har ett ark per tabell (Info, Kontoer, Kategorier, Transaksjoner, Kvitteringer, Varelinjer, Budsjett, Faste_utgifter, Aksjer, Utbytte, Ordre, Regler og modulene) med ID-kolonner som kobler arkene sammen, filter på overskriftene og beløp som tall. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>
     <form class="mod-box" data-mform="smb"><div class="card-h"><div class="set-label">SMB-share</div><button type="button" class="tog-inline" data-mact="smb-on"><span class="toggle" role="switch" aria-checked="${!!c.on}"></span>${c.on ? 'På' : 'Av'}</button></div>
       ${b.smbclient ? '' : '<div class="err-msg">smbclient er ikke installert på serveren. Docker-imaget har det fra denne versjonen; på andre installasjoner: apt install smbclient.</div>'}
+      <div class="smb-wiz-row"><div class="grow"><div style="font-weight:600;color:var(--text)">${c.share ? esc(`${c.share}${c.dir ? '/' + c.dir : ''}`) : 'Ingen nettverksdisk satt opp'}</div><div class="sub" style="font-size:12.5px">${c.share ? esc(`${c.user ? c.user : 'Gjest'} · SMB ${c.version}${c.pwSet ? ' · passord lagret' : ''}`) : 'Finn NAS-en på nettverket, logg inn og velg mappe – uten å skrive stier for hånd.'}</div></div><button type="button" class="btn pri" data-mact="smb-wiz">Sett opp med veiviser</button></div>
+      <details class="smb-adv"${u.smbAdv ? ' open' : ''}><summary data-mact="smb-adv">Avansert (manuelt oppsett)</summary>
       <div class="form-grid"><label class="f">Share<input class="inp mono" style="font-size:13px" name="share" value="${esc(c.share)}" placeholder="\\\\192.168.1.20\\backup"></label><label class="f">Mappe på sharen<input class="inp" name="dir" value="${esc(c.dir)}" placeholder="finanshub"></label>
         <label class="f">SMB-versjon<select class="inp" name="version">${optList([['3.1.1', 'SMB 3.1.1'], ['3.0', 'SMB 3.0'], ['2.1', 'SMB 2.1']], c.version)}</select></label><label class="f">Brukernavn<input class="inp" name="user" value="${esc(c.user)}" autocomplete="off"></label>
-        <label class="f">Passord<input class="inp" type="password" name="pw" placeholder="${c.pwSet ? '•••••••• lagret kryptert' : 'Lagres kryptert på serveren'}" autocomplete="new-password"></label><label class="f">Domene / arbeidsgruppe<input class="inp" name="domain" value="${esc(c.domain)}" placeholder="WORKGROUP"></label>
-        <label class="f">Tidsplan<select class="inp" name="schedule">${optList(SCHED, c.schedule)}</select></label><label class="f"><span>Behold versjoner · <b class="mono" style="color:var(--text)" data-keep-out>${c.keep}</b></span><input type="range" min="3" max="90" name="keep" value="${c.keep}" data-keep></label></div>
+        <label class="f">Passord<input class="inp" type="password" name="pw" placeholder="${c.pwSet ? '•••••••• lagret kryptert' : 'Lagres kryptert på serveren'}" autocomplete="new-password"></label><label class="f">Domene / arbeidsgruppe<input class="inp" name="domain" value="${esc(c.domain)}" placeholder="WORKGROUP"></label></div></details>
+      <div class="form-grid"><label class="f">Tidsplan<select class="inp" name="schedule">${optList(SCHED, c.schedule)}</select></label><label class="f"><span>Behold versjoner · <b class="mono" style="color:var(--text)" data-keep-out>${c.keep}</b></span><input type="range" min="3" max="90" name="keep" value="${c.keep}" data-keep></label></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">${flags.map(([k2, n]) => `<button type="button" class="flag${c[k2] ? ' on' : ''}" data-mflag="${k2}"><span>${c[k2] ? '✓' : ''}</span>${n}</button>`).join('')}</div>
       ${c.encrypt ? `<label class="f">Passfrase for kryptering (AES-256)<input class="inp" type="password" name="phrase" placeholder="${c.phraseSet ? '•••••••• lagret kryptert – skriv ny for å bytte' : 'Trengs for å gjenopprette – skriv den ned'}" autocomplete="new-password"></label>` : ''}
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button type="button" class="btn" data-mact="smb-test">Test tilkobling</button><button class="btn">Lagre</button>${u.msg?.smb ? `<span class="${u.msg.smbOk ? 'ok-msg' : 'err-msg'}">${esc(u.msg.smb)}</span>` : ''}</div>
@@ -726,6 +766,7 @@ export function bindModules(el) {
     if ((x = d('[data-bol2-ok]'))) { const eid = +x.dataset.bol2Ok; S.folder = await api(`/folders/${u.dir}/entries/${eid}`, { method: 'PATCH', json: { status: 'ok' } }); if (u.bolSel === eid) u.bolSel = null; toast(`Lagret i ${S.folder.name}`); return render(); }
     if ((x = d('[data-bol2-del]'))) { const eid = +x.dataset.bol2Del; if (u.bolDelE !== eid) { u.bolDelE = eid; return render(); } S.folder = await api(`/folders/${u.dir}/entries/${eid}`, { method: 'DELETE' }); u.bolSel = null; u.bolDelE = null; toast('Utgiften er slettet'); return reload(); }
     if ((x = d('[data-bol2-irole]'))) { u.bolInvRole = x.dataset.bol2Irole; return render(); }
+    if ((x = d('[data-bol2-pick]'))) { const id = x.dataset.bol2Pick; if (SH.sel.has(id)) SH.sel.delete(id); else SH.sel.add(id); return render(); }
     if ((x = d('[data-bol2-edc]')) && u.bolEd) { u.bolEd.color = x.dataset.bol2Edc; return render(); }
     if ((x = d('[data-bol2-edbg]')) && u.bolEd) { u.bolEd.bg = x.dataset.bol2Edbg; if (!u.bolEd.bg.startsWith('upload:')) u.bolEd.preview = null; return render(); }
     if ((x = d('[data-bol2-color]'))) { await setBolMeta(S.folder, { color: x.dataset.bol2Color }); return render(); }
@@ -734,6 +775,7 @@ export function bindModules(el) {
     if ((x = d('[data-bol2-act]'))) {
       const a = x.dataset.bol2Act;
       if (a === 'close') { u.bolSel = null; u.bolAdd = false; u.bolNew = false; u.bolDelE = null; u.bolEd = null; return render(); }
+      if (a === 'share-users') return shareUsers();
       if (a === 'edit-home') return openEdit(S.folder.id);
       if (a === 'ed-save') {
         const E = u.bolEd; if (!E || E.busy) return;
@@ -847,6 +889,13 @@ export function bindModules(el) {
         // Alt kan ha endret seg (kontoer, kategorier, mapper): last siden på nytt.
         setTimeout(() => location.reload(), 900); return render();
       }
+      case 'smb-wiz': {
+        // Prompt 30: felles veiviser (finn server → logg inn → delt mappe → mappe → test og lagre).
+        const { openSmbWizard } = await import('/assets/js/smb-wizard.js');
+        openSmbWizard({ use: ['finans'], encrypted: !!S.backup.config.encrypt, onDone: async () => { await loadBackup(); u.msg = { ...(u.msg ?? {}), smb: 'Nettverksdisken er satt opp', smbOk: true }; render(); } });
+        return;
+      }
+      case 'smb-adv': e.preventDefault?.(); u.smbAdv = !u.smbAdv; return render();
       case 'smb-on': S.backup.config = await api('/backup/smb', { method: 'PUT', json: { on: !S.backup.config.on } }); return render();
       case 'smb-test': { u.msg = { ...(u.msg ?? {}), smb: 'Tester …', smbOk: true }; render(); const r = await api('/backup/smb/test', { method: 'POST' }); u.msg.smb = r.message; u.msg.smbOk = r.ok; return render(); }
       case 'fr-empty': await api('/firstrun', { method: 'POST', json: { choice: 'empty' } }); S.boot.firstRun = false; return render();
@@ -890,6 +939,29 @@ export function bindModules(el) {
   }));
   // Escape lukker arkene i Boliger.
   if (!bindModules.esc) { bindModules.esc = true; document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && (u.bolSel || u.bolAdd || u.bolNew || u.bolEd)) { u.bolSel = null; u.bolAdd = false; u.bolNew = false; u.bolEd = null; render(); } }); }
+  // Prompt 30: rediger utgift i detaljarket (butikk, beløp, dato). Lagres fortløpende (400 ms) uten å tegne arket på nytt,
+  // så markøren beholdes. PATCH /folders/:id/entries/:eid {merchant, description, amount, date}; serveren logger «endret av».
+  const eeT = {};
+  const eeSave = async (eid, k, raw) => {
+    const out = el.querySelector('[data-bol2-esave]');
+    let json;
+    if (k === 'amount') { const v = parseAmount(raw); if (!Number.isFinite(v) || v < 0) { if (out) out.textContent = 'Skriv et gyldig beløp'; return; } json = { amount: Math.abs(v) }; }
+    else if (k === 'date') { if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return; json = { date: raw }; }
+    else { const v = String(raw).trim(); if (!v) { if (out) out.textContent = 'Beskrivelsen kan ikke være tom'; return; } json = { merchant: v, description: v }; }
+    if (out) out.textContent = 'Lagrer …';
+    try { S.folder = await api(`/folders/${u.dir}/entries/${eid}`, { method: 'PATCH', json }); if (out) out.textContent = 'Lagret ✓'; if (!u.bolSel) render(); }
+    catch (err) { if (out) out.textContent = err.message; }
+  };
+  el.addEventListener('input', (e) => {
+    const k = e.target.dataset?.bol2Ee;
+    if (!k || !u.bolSel) return;
+    const eid = u.bolSel, v = e.target.value;
+    clearTimeout(eeT[k]); eeT[k] = setTimeout(() => eeSave(eid, k, v), 400);
+  });
+  el.addEventListener('keydown', (e) => {
+    if (e.target.dataset?.bol2Ee && e.key === 'Enter') { e.preventDefault(); e.target.blur(); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.bol2-rev-h[role=button]')) { e.preventDefault(); e.target.click(); }
+  });
   // Prompt 24: «Rediger bolig»: felt oppdateres uten å tegne arket på nytt (markøren beholdes), bilde lastes opp og skaleres.
   el.addEventListener('input', (e) => {
     const k = e.target.dataset?.bol2Ed;

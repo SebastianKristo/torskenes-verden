@@ -2,6 +2,41 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.23.0] – 19.10.2026 · prompt 30 og SMB-veiviser
+- **Sett opp nettverksdisk (SMB) med veiviser:** du skriver ikke lenger stier for hånd. Veiviseren finner NAS-en på nettet, eller du skriver inn IP-adressen. Så logger du inn, velger delt mappe og mappe, appen tester at den kan skrive der, og du lagrer.
+  - Feil vises på norsk, med forslag til hva du kan gjøre.
+  - Disken kan brukes til FinansHub-backupen og til backup av hele systemet.
+  - Finnes på web, FinansHub, PWA, iPhone og Android.
+- **Oppdater fra mobilappen:**
+  - Banner på Hjem og øverst i Innstillinger, med steg og fremdrift.
+  - Admin starter oppdateringen med passord, rett fra appen.
+  - «Gjenopprett» går tilbake til forrige versjon. Dataene beholdes.
+  - Automatiske oppdateringer kl. 03:30 og varsel om ny versjon kan slås av og på.
+- **Felles Ferdig-, Lukk- og Tilbake-pille** i ark og fullskjermvisninger. Arkene går helt ned til bunnen.
+- **Wiggle-redigering:**
+  - + og ✓ ligger ikke lenger oppå kortene.
+  - Mer redigeres som Hjem, med separate kort og en egen seksjon for skjulte.
+  - I Finans → Mer kan du skjule sider.
+- **Vær:**
+  - To flytende knapper nederst igjen.
+  - Lett haptikk når popuper og menyer lukkes.
+  - Yr mot Storm vises i fullskjerm, med Yr-logoen uten hvit kant. «Pent» heter nå Storm.
+- **Boliger:**
+  - Du kan åpne en kvittering som venter på godkjenning.
+  - Du kan dele en bolig med andre brukere uten å vite brukernavnet deres.
+  - Du kan redigere butikk, beløp og dato på utgifter. Endringene logges i en historikk.
+- **Finans-søk** markerer hvor i kvitteringen treffet står, for eksempel «tomat». Bildet zoomes inn på linjen.
+- **Chat:** skriveboksen ligger over tastaturet.
+- **Tilbake-sveip** fra venstre kant virker på flere sider.
+- **Web-innstillinger:**
+  - Fargede ikoner og AI-søk (⌘K).
+  - Profilkortet åpner Konto.
+  - Cloudflare-guiden ligger bak et ?, og en knapp tester tokenet.
+  - Profilmenyen har ikoner og kan tilpasses.
+  - «Innstillinger» i profilmenyen åpner nå innstillingene, med Ferdig-pillen øverst til høyre.
+- **Kalender:** trykk på en dag åpner den dagen.
+- **@brukernavn** vises ikke lenger ved profilbildet i toppen.
+
 ## [4.22.0] – 19.10.2026 · prompt 29
 - **Backup av hele systemet:** Innstillinger → Backup. Bare admin har tilgang.
   - Ta backup nå, med fremdrift.

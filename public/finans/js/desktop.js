@@ -3,11 +3,12 @@ import { scrollMemory } from '/assets/js/scrollmem.js';
 import {
   S, api, esc, n0, n2, sgn, neg, neg0, k, dd, dLong, today, monthName, cap, shiftMonth, ini, rgba, greet, pctChange, parseAmount,
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
-  smooth, spark, conic, icon, logo, aiLine, ICONS, loadLogoRegistry,
+  smooth, spark, conic, icon, logo, aiLine, ICONS, loadLogoRegistry, sheetBtn,
 } from './core.js';
 import { reanalyzeBtn, bindReanalyze } from './reanalyze.js';
 import { clearBtn, bindSearchFields } from '/assets/js/searchfield.js';
 import { bindSuggest } from './fsuggest.js';
+import { linesOf, matchLines, markText, hlBanner, hlList, hlImage, hlFocus } from './rc-hl.js';
 import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, finnImportBox, loadImpTpl, aksSettings, loadStocksSettings } from './modules.js';
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
@@ -61,7 +62,9 @@ function sideNav() {
 function aiPanel() {
   const a = u.ai;
   if (!a) return '';
-  const hits = (a.hits ?? []).map((h) => `<button class="ai-hit" ${h.txId ? `data-open-tx="${h.txId}"` : h.receiptId ? `data-open-rc="${esc(h.receiptId)}"` : ''}><span class="dot" style="background:${esc(h.color ?? '#A0A0AA')}"></span>
+  // Prompt 30: treffet tar med seg søkeordet (matchedText fra serveren, ellers spørsmålet), så kvitteringslinjen markeres.
+  const hlOf = (h) => (h.lineIndex?.length || h.matchedText ? ` data-hl="${esc(h.matchedText || a.q || '')}"` : '');
+  const hits = (a.hits ?? []).map((h) => `<button class="ai-hit" ${h.txId ? `data-open-tx="${h.txId}"` : h.receiptId ? `data-open-rc="${esc(h.receiptId)}"` : ''}${hlOf(h)}><span class="dot" style="background:${esc(h.color ?? '#A0A0AA')}"></span>
     <span class="grow"><span style="font-weight:500">${esc(h.description)}</span> <span class="note" style="font-size:12.5px">· ${dd(h.date)} · ${esc(h.source)}</span><span class="ai-why">${esc(h.reason ?? '')}</span></span>
     <span class="mono" style="white-space:nowrap">${h.amount != null ? sgn(h.amount) + ' kr' : '–'}</span></button>`).join('');
   return `<section class="card ai-panel"><div class="card-h" style="align-items:flex-start"><div style="min-width:0"><div class="ai-k">✦ AI-SØK · ${esc(a.engine ?? (S.boot.settings.provider === 'ollama' ? 'Ollama' : 'Gemini'))}</div>${a.q ? `<div class="ai-q">${esc(a.q)}</div>` : '<div class="ai-q">Spør om økonomien din på vanlig norsk</div>'}</div><button class="x-btn" data-act="ai-close" aria-label="Lukk">×</button></div>
@@ -158,7 +161,7 @@ function shell(content) {
       <div class="head-r">
         ${`<form class="search${aiMode ? ' ai' : ''}${(aiMode ? u.aiDraft : u.q) ? ' has' : ''}" data-form="gsearch" data-sf role="search">${aiMode ? '<span class="ai-star">✦</span>' : `<span class="sf-ic">${icon('search', 17, 'var(--muted)')}</span>`}${clearBtn()}<input name="q" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
         <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>`}
-        <a class="me" href="#/inn" title="${esc(me.name ?? '')}"><div class="av">${me.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : esc(ini(me.username ?? me.name))}</div><div class="me-n"><div>${esc(String(me.name ?? me.username ?? 'Meg').trim().split(/\s+/)[0])}</div><div>@${esc(me.username ?? 'meg')} · ${me.role === 'admin' ? 'Admin' : 'Bruker'}</div></div></a>
+        <a class="me" href="#/inn" title="${esc(me.name ?? '')}" aria-label="Innstillinger for ${esc(me.name ?? 'deg')}"><div class="av">${me.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : esc(ini(me.name ?? me.username))}</div></a>
         <a class="close" href="/#/dash" aria-label="Tilbake til Hjem" title="Tilbake til Hjem">×</a>
       </div>
     </header>
@@ -292,6 +295,15 @@ function overview() {
 
 /* ===================== Transaksjoner ===================== */
 
+/* Prompt 30: søkeordet som skal markeres i kvitteringen (fra søk, AI-treff eller ?hl= i adressen). */
+const hlQ = () => (u.hlOff ? '' : u.hl || u.q || '');
+const txHlIdx = (t) => (hlQ() && t?.lines?.length ? matchLines(t.lines.map((l) => ({ text: l.description, price: l.amount })), hlQ()) : []);
+function txHl(t) {
+  const idx = txHlIdx(t);
+  if (!hlQ() || !t?.lines?.length || !idx.length) return '';
+  return hlBanner(hlQ(), t.lines.map((l) => ({ text: l.description, price: l.amount })), idx)
+    + (t.receiptId ? `<a class="rc-hlopen" href="#/kv" data-open-rc="${esc(t.receiptId)}" data-hl="${esc(hlQ())}">Vis i kvitteringen ›</a>` : '');
+}
 function transactions() {
   const list = S.tx;
   const chips = [{ id: '', name: 'Alle', color: 'var(--text)' }, ...cats()].map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${String(u.cat) === String(c.id)}"><i style="background:${c.color}"></i>${esc(c.name)}</button>`).join('');
@@ -308,12 +320,13 @@ function transactions() {
     <div class="mono" style="font-size:32px;font-weight:600;letter-spacing:-.03em;color:${amtColor(sel.amount)}">${sgn(sel.amount)} <span style="font-size:15px;color:var(--muted);font-weight:400">kr</span></div>
     <div style="display:flex;gap:10px;align-items:flex-end"><div class="seg" style="border-radius:10px;flex:none" role="group" aria-label="Type">${[['expense', 'Utgift'], ['income', 'Inntekt']].map(([k2, l]) => `<button type="button" data-txkind="${k2}" aria-pressed="${sel.type === k2}" style="height:38px;padding:0 14px">${l}</button>`).join('')}</div>
       <label class="f" style="flex:1">Beløp (kr)<input class="inp mono" data-tx-field="amount" inputmode="decimal" value="${n2(Math.abs(sel.amount))}"></label></div>
-    ${sel.aiLong ? `<div class="ai-card"><b>✦ AI-beskrivelse</b><span>${esc(sel.aiLong)}</span>${sel.lines?.length ? `<div class="ai-lines">${sel.lines.map((l) => `<span><span>${esc(l.description)}</span><span class="mono">${n2(l.amount)}</span></span>`).join('')}</div>` : ''}</div>` : ''}
+    ${txHl(sel)}
+    ${sel.aiLong ? `<div class="ai-card"><b>✦ AI-beskrivelse</b><span>${esc(sel.aiLong)}</span>${sel.lines?.length ? `<div class="ai-lines">${sel.lines.map((l, i) => { const on = txHlIdx(sel).includes(i); return `<span class="${on ? 'rc-hit' : ''}"><span>${on ? markText(l.description, hlQ()) : esc(l.description)}</span><span class="mono">${n2(l.amount)}</span></span>`; }).join('')}</div>` : ''}</div>` : ''}
     <label class="f">Kategori<select class="inp" data-tx-field="categoryId">${opt('', 'Ukategorisert', sel.categoryId)}${catOpts(sel.categoryId)}</select></label>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato<input class="inp" type="date" data-tx-field="date" value="${sel.date}"></label><label class="f" style="flex:1">Konto<select class="inp" data-tx-field="accountId">${accOpts(sel.accountId, '–')}</select></label></div>
     <label class="f">Bolig<select class="inp" data-tx-field="folderId">${opt('', 'Ingen', sel.folderId)}${(S.txFolders ?? []).map((f) => opt(f.id, f.name, sel.folderId)).join('')}</select></label>
     <label class="f">Notat<input class="inp" data-tx-field="note" value="${esc(sel.note ?? '')}" placeholder="Legg til notat"></label>
-    <div class="box"><span class="muted">Kvittering</span>${sel.receiptId ? `<a href="#/kv" data-open-rc="${sel.receiptId}">${sel.receipt === 'booked' ? 'Vedlagt – vis' : 'Til gjennomgang →'}</a>` : `<label class="link-btn" style="cursor:pointer">Legg ved kvittering<input type="file" accept="image/*,application/pdf" data-attach-rc="${sel.id}" hidden></label>`}</div>
+    <div class="box"><span class="muted">Kvittering</span>${sel.receiptId ? `<a href="#/kv" data-open-rc="${sel.receiptId}"${hlQ() ? ` data-hl="${esc(hlQ())}"` : ''}>${sel.receipt === 'booked' ? 'Vedlagt – vis' : 'Til gjennomgang →'}</a>` : `<label class="link-btn" style="cursor:pointer">Legg ved kvittering<input type="file" accept="image/*,application/pdf" data-attach-rc="${sel.id}" hidden></label>`}</div>
     <div class="orig-links"><button class="orig-link" data-orig="receipt">${icon('kv', 16, 'var(--muted)')}<span class="grow">Original kvittering</span><span class="note">${sel.receiptId ? (sel.receipt === 'booked' ? 'Vedlagt' : 'Til gjennomgang') : 'Ingen'}</span><span class="muted">›</span></button>
       <button class="orig-link" data-orig="bank">${icon('konto', 16, 'var(--muted)')}<span class="grow">Original banktransaksjon</span><span class="note">${sel.hasBankRow ? 'Fra banken' : sel.source === 'receipt' ? 'Fra kvittering' : 'Lagt inn manuelt'}</span><span class="muted">›</span></button></div>
     <div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" data-act="make-rule">Lag regel</button><button class="btn danger" style="flex:1" data-act="del-tx">Slett</button></div>
@@ -369,7 +382,13 @@ function confirmPanel(R) {
   const conf = R.confidence ?? 0, high = !R.error && conf >= st.minConf / 100 && !R.flag;
   const ex = R.extraction ?? {};
   const other = (R.rawProvider ?? st.provider) === 'ollama' ? 'gemini' : 'ollama';
-  const img = R.file && R.mime?.startsWith('image/')
+  // Prompt 30: markering av søketreff (banner, gule linjer, bbox-rektangler over bildet).
+  const hq = !u.hlOff && u.hl && String(u.hlRc) === String(R.id) ? u.hl : '', L = hq ? linesOf(R) : [], hIdx = hq ? matchLines(L, hq) : [];
+  const hasBox = hIdx.some((i) => L[i]?.bbox);
+  const hlTop = hq ? `${hlBanner(hq, L, hIdx)}${hIdx.length && !hasBox ? `<div class="rc-hlnote"><span class="note">Kvitteringen mangler posisjoner for linjene. Les den på nytt for å markere i bildet.</span><button type="button" class="btn sm ghost" data-act="rc-reread">Les kvitteringen på nytt</button></div>` : ''}` : '';
+  const img = hq && R.file && R.mime?.startsWith('image/') && hasBox ? hlImage(R.file, L, hIdx)
+    : hq && hIdx.length ? `<div class="receipt-img rc-hlwrap">${hlList(hq, L, hIdx)}</div>`
+    : R.file && R.mime?.startsWith('image/')
     ? `<div class="receipt-img photo" style="background-image:url('${R.file}')" role="img" aria-label="Kvitteringsbilde"></div>`
     : `<div class="receipt-img">${R.file && R.mime === 'application/pdf' ? `<a href="${R.file}" target="_blank" class="btn sm" style="align-self:center;margin-bottom:8px">Åpne PDF ↗</a>` : ''}
       <div class="hl" style="text-align:center;font-weight:600;font-size:14px;padding:4px">${esc(R.merchant ?? '–')}</div>${ex.org_number ? `<div style="text-align:center">Org.nr ${esc(ex.org_number)}</div>` : ''}<div class="dash"></div>
@@ -382,6 +401,7 @@ function confirmPanel(R) {
   return `<div class="card-h"><div><h2 style="font-size:18px">${done ? (R.status === 'booked' ? 'Bokført kvittering' : 'Avvist kvittering') : 'Bekreft kvittering'}</h2><div class="note" style="font-size:13px">${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/,?0+$/, '')} s` : ''}${R.model ? ` · ${esc(R.model)}` : ''}` : 'Manuell utfylling'}</div></div>
       ${R.error ? `<span class="conf" style="background:var(--warn-soft);color:var(--acc-l)"><i></i>Må fylles ut</span>` : `<span class="conf" style="background:${high ? 'var(--pos-soft)' : 'var(--warn-soft)'};color:${high ? 'var(--pos)' : 'var(--acc-l)'}"><i></i>${high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span>`}</div>
     ${R.error ? `<div class="err-msg">${esc(R.error)}</div>` : R.flag ? `<div class="err-msg">${esc(R.flag)}</div>` : ''}
+    ${hlTop}
     ${!done && (R.canReanalyze || R.reanalyzeReason) ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--blue-soft);border:1px solid #2A3570"><span style="flex:1 1 220px;font-size:13px;color:#C9D2FF">${R.error ? 'Lesingen mislyktes.' : `Lav sikkerhet${R.provider ? ` fra ${esc(R.provider)}` : ''}.`} Gemini kan lese originalbildet på nytt, og du velger hvilket resultat du vil beholde.</span>${reanalyzeBtn(R, 'btn', 'height:40px')}</div>` : ''}
     <div class="row-flex" style="gap:18px">${img}
       <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:12px">
@@ -789,7 +809,7 @@ function origModal(m, close) {
 function modalHtml() {
   const m = u.add;
   if (!m) return '';
-  const close = '<button type="button" class="x-btn" data-act="close-modal" aria-label="Lukk">×</button>';
+  const close = sheetBtn('Lukk', 'data-act="close-modal"', 'sec');
   if (m.type === 'tx') return `<div class="modal" data-modal><form data-form="tx"><div class="card-h"><h2 style="font-size:19px">Ny transaksjon</h2>${close}</div>
     <div class="seg" style="border-radius:12px"><button type="button" data-txtype="ut" aria-pressed="${m.kind !== 'inn'}" style="flex:1;height:38px">Utgift</button><button type="button" data-txtype="inn" aria-pressed="${m.kind === 'inn'}" style="flex:1;height:38px">Inntekt</button></div>
     <label class="f">Beskrivelse<input class="inp" name="description" required placeholder="F.eks. Rema 1000" autofocus></label>
@@ -837,6 +857,7 @@ export function draw() {
   window.scrollTo(0, scroll);
   window.fhLoaded?.(); // fjerner lasteskjermen fra index.html (loader.js)
   if (focus?.sel) { const f = el.querySelector(focus.sel); if (f) { f.focus(); try { f.setSelectionRange(focus.pos, focus.pos); } catch {} } }
+  if (u.hlFocus && el.querySelector('.rc-hlr.hit,[data-hl-first]')) { u.hlFocus = false; requestAnimationFrame(() => hlFocus(el)); }
 }
 const focusSel = (e) => (e.name ? `[data-form] input[name="${e.name}"]` : e.dataset.txField ? `[data-tx-field="${e.dataset.txField}"]` : e.dataset.rcField ? `[data-rc-field="${e.dataset.rcField}"]` : null);
 
@@ -879,7 +900,10 @@ function takeJump() {
 let scrollMem = null; // lages først når desktop-visningen er i bruk
 export function route() {
   if (takeJump()) { u.setTab = 'look'; if (!location.hash.startsWith('#/inn')) { location.replace('#/inn'); } }
-  let p = location.hash.replace(/^#\/?/, '').split('/')[0];
+  let p = location.hash.replace(/^#\/?/, '').split('?')[0].split('/')[0];
+  // Prompt 30: #/kv?rc=<id>&hl=tomat eller #/tx?tx=<id>&hl=tomat åpner med markering av søkeordet i kvitteringen.
+  const hq = new URLSearchParams(location.hash.split('?')[1] ?? '');
+  if (hq.get('hl')) { u.hl = hq.get('hl'); u.hlOff = false; u.hlFocus = true; if (hq.get('rc')) { u.selRc = hq.get('rc'); u.hlRc = hq.get('rc'); } if (hq.get('tx')) u.sel = +hq.get('tx'); }
   // Matplan er en Homelab-fane; gamle lenker til FinansHub-siden sendes dit.
   if (p === 'mat') { location.replace('/#/matplan'); return; }
   // Gamle lenker til Import-siden åpner Innstillinger → Import.
@@ -1036,8 +1060,8 @@ export function bind() {
     const d = (sel) => t.closest(sel);
     if (d('[data-modal]') && t === d('[data-modal]')) { u.add = null; return render(); }
     let x;
-    if ((x = d('[data-open-tx]'))) { const id = +x.dataset.openTx; if (u.page !== 'tx') { u.sel = id; location.hash = '#/tx'; return; } u.sel = u.sel === id ? null : id; u.msg = {}; return render(); }
-    if ((x = d('[data-open-rc]'))) { e.preventDefault(); u.selRc = x.dataset.openRc; if (u.page !== 'kv') { location.hash = '#/kv'; return; } return render(); }
+    if ((x = d('[data-open-tx]'))) { if (x.dataset.hl !== undefined) { u.hl = x.dataset.hl || null; u.hlOff = false; } const id = +x.dataset.openTx; if (u.page !== 'tx') { u.sel = id; location.hash = '#/tx'; return; } u.sel = u.sel === id ? null : id; u.msg = {}; return render(); }
+    if ((x = d('[data-open-rc]'))) { e.preventDefault(); u.selRc = x.dataset.openRc; if (x.dataset.hl) { u.hl = x.dataset.hl; u.hlRc = x.dataset.openRc; u.hlOff = false; u.hlFocus = true; } if (u.page !== 'kv') { location.hash = '#/kv'; return; } return render(); }
     if ((x = d('[data-gk-act]'))) return gkeyAction(x);
     if ((x = d('[data-olm]'))) return ollamaAction(x);
     if ((x = d('[data-mode]'))) { u.mode = x.dataset.mode; return render(); }
@@ -1076,6 +1100,14 @@ export function bind() {
       case 'goto-import': u.setTab = 'imp'; location.hash = '#/inn'; return u.page === 'inn' && render();
       case 'close-modal': u.add = null; return render();
       case 'close-sel': u.sel = null; return render();
+      case 'hl-clear': u.hlOff = true; return render();
+      case 'hl-scroll': return hlFocus(root());
+      case 'rc-reread': {
+        if (!R) return;
+        try { await api(`/receipts/${R.id}/reread`, { method: 'POST' }); toast('Leser kvitteringen på nytt …'); }
+        catch (err) { toast(err.status === 404 ? 'Serveren kan ikke lese på nytt ennå' : err.message); return; }
+        u.hlFocus = true; return refreshAll();
+      }
       case 'del-tx': if (!confirm('Slette transaksjonen?')) return; await api(`/transactions/${sel.id}`, { method: 'DELETE' }); u.sel = null; await loadTx(); await loadBoot(); return render();
       case 'make-rule': {
         const word = (sel.merchant || sel.description).toUpperCase().replace(/[^A-ZÆØÅ0-9 ]/g, ' ').trim().split(/\s+/).find((w) => w.length >= 3 && !/^(VARER|VISA|VARE|KORTKJØP)$/.test(w));
@@ -1213,7 +1245,7 @@ export function bind() {
       case 'aipage': u.aiPageDraft = ''; if (!String(v.aiq ?? '').trim()) return; return askAi(v.aiq);
       case 'gsearch': if (u.aiMode) return askAi(v.q);
       // fallthrough
-      case 'txsearch': u.q = v.q; u.sel = null; if (u.page !== 'tx') { location.hash = '#/tx'; return; } await loadTx(); return render();
+      case 'txsearch': u.q = v.q; u.sel = null; u.hl = null; u.hlOff = false; if (u.page !== 'tx') { location.hash = '#/tx'; return; } await loadTx(); return render();
       case 'tx': {
         const amt = Math.abs(parseAmount(v.amount) ?? NaN);
         if (!Number.isFinite(amt)) return toast('Ugyldig beløp');

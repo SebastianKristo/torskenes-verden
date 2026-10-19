@@ -332,8 +332,8 @@ export function renderTicker() {
 }
 
 export function menuLabels() {
-  document.getElementById('menu-search').textContent = store.me.hideSearch ? 'Vis søkebar' : 'Skjul søkebar';
-  document.getElementById('menu-news').textContent = store.me.hideNews ? 'Vis nyhetslinje' : 'Skjul nyhetslinje';
+  // Prompt 30: profilmenyen tegnes av profile-menu.js (tekstene følger hideSearch/hideNews).
+  document.dispatchEvent(new Event('hl:menu'));
 }
 
 export async function toggle(key) {

@@ -1166,7 +1166,100 @@
   "Nå nettopp": "Just now",
   "kryptert": "encrypted",
   "i sky": "in cloud",
-  "feilet": "failed"
+  "feilet": "failed",
+  "Se konto ›": "View account ›",
+  "Admin · Se konto ›": "Admin · View account ›",
+  "Bruker · Se konto ›": "User · View account ›",
+  "Åpne kontoen din": "Open your account",
+  "AI-søk": "AI search",
+  "✦ AI-SVAR": "✦ AI ANSWER",
+  "TREFF": "RESULTS",
+  "Leter i innstillingene …": "Searching the settings …",
+  "Ingen treff. Slå på ✦ AI og spør med egne ord.": "No results. Turn on ✦ AI and ask in your own words.",
+  "Spør, f.eks. «hvor bytter jeg bakgrunn?»": "Ask, e.g. “where do I change the background?”",
+  "Spør med egne ord (⌘K / Ctrl+K)": "Ask in your own words (⌘K / Ctrl+K)",
+  "Slik lager du tokenet": "How to create the token",
+  "Test token": "Test token",
+  "Tester …": "Testing …",
+  "CLOUDFLARE · CA. 3 MINUTTER": "CLOUDFLARE · ABOUT 3 MINUTES",
+  "Lag et API-token for statistikk": "Create an API token for statistics",
+  "Tokenet gir Homelab lesetilgang til trafikk, DNS, sikkerhet og utløpsdato for domenet. Det kan ikke endre noe i Cloudflare.": "The token gives Homelab read access to traffic, DNS, security and the expiry date of the domain. It cannot change anything in Cloudflare.",
+  "Åpne API-tokens i Cloudflare": "Open API tokens in Cloudflare",
+  "Åpne API-tokens": "Open API tokens",
+  "Lag et eget token": "Create a custom token",
+  "Gi tokenet et navn": "Name the token",
+  "Legg til tillatelser": "Add permissions",
+  "Velg domenet": "Choose the domain",
+  "Opprett og kopier": "Create and copy",
+  "Logg inn på dash.cloudflare.com. Trykk på profilikonet øverst til høyre → «My Profile» → «API Tokens».": "Log in to dash.cloudflare.com. Click the profile icon at the top right → “My Profile” → “API Tokens”.",
+  "Trykk «Create Token». Bla ned til «Custom token» og trykk «Get started». Ikke bruk Global API Key.": "Click “Create Token”. Scroll down to “Custom token” and click “Get started”. Do not use the Global API Key.",
+  "Skriv for eksempel «Homelab statistikk» i «Token name».": "Type for example “Homelab statistics” in “Token name”.",
+  "Under «Permissions»: trykk «+ Add more» for hver linje. Alle skal være «Read».": "Under “Permissions”: click “+ Add more” for each line. All should be “Read”.",
+  "Under «Zone Resources»: Include → Specific zone → velg domenet ditt. Under «Account Resources»: Include → kontoen din (trengs for utløpsdato).": "Under “Zone Resources”: Include → Specific zone → choose your domain. Under “Account Resources”: Include → your account (needed for the expiry date).",
+  "Trykk «Continue to summary» → «Create Token». Kopier tokenet med en gang, det vises bare én gang.": "Click “Continue to summary” → “Create Token”. Copy the token right away, it is only shown once.",
+  "Tokenet vises bare én gang i Cloudflare. Lim det inn i feltet «API-token» og trykk «Test token». Homelab lagrer det kryptert på serveren, aldri i nettleseren.": "The token is only shown once in Cloudflare. Paste it into the “API token” field and click “Test token”. Homelab stores it encrypted on the server, never in the browser.",
+  "Serveren kan ikke teste tokenet ennå. Oppdater Homelab.": "The server cannot test the token yet. Update Homelab.",
+  "Bytt til Vindu og papir": "Switch to Window and paper",
+  "Tilpass forside og meny": "Customize home and menu",
+  "Tilpass denne menyen": "Customize this menu",
+  "TILPASS MENYEN": "CUSTOMIZE MENU",
+  "Logg ut ligger alltid nederst.": "Sign out is always at the bottom.",
+  "Tilbakestill": "Reset",
+  "Flytt opp": "Move up",
+  "Flytt ned": "Move down",
+  "Logge ut? Denne enheten må da logge inn med passord igjen.": "Sign out? This device will need to sign in with a password again.",
+  "Oppdaterer Homelab": "Updating Homelab",
+  "Du kan bruke appen mens den oppdateres.": "You can use the app while it updates.",
+  "Alt kjører. Endringene er aktive i appen og på web.": "Everything is running. The changes are active in the app and on the web.",
+  "Oppdateringen feilet": "The update failed",
+  "Hva er nytt": "What’s new",
+  "Skjul i 24 timer": "Hide for 24 hours",
+  "Laster ned …": "Downloading …",
+  "Tar backup før oppdatering …": "Backing up before the update …",
+  "Installerer på hjemmeserveren …": "Installing on the home server …",
+  "Starter tjenestene på nytt …": "Restarting the services …",
+  "Du finner oppdateringen i Innstillinger → System": "You can find the update in Settings → System",
+  "Gjenopprett forrige versjon": "Restore the previous version",
+  "Oppdater Homelab": "Update Homelab",
+  "Updateren installerer forrige vellykkede versjon igjen. Dataene dine beholdes (backupen fra før oppdateringen gjenopprettes ikke automatisk).": "The updater reinstalls the previous successful version. Your data is kept (the backup from before the update is not restored automatically).",
+  "Det tas backup først. Serveren starter på nytt, det tar vanligvis 2–5 minutter. Du kan bruke appen imens.": "A backup is taken first. The server restarts, which usually takes 2–5 minutes. You can use the app meanwhile.",
+  "Programvare": "Software",
+  "Automatiske oppdateringer": "Automatic updates",
+  "Kl. 03:30, etter nattlig backup.": "At 03:30, after the nightly backup.",
+  "Varsle om nye versjoner": "Notify about new versions",
+  "Banner på Dashboard og push til administratorer.": "Banner on the Dashboard and push to administrators.",
+  "Siste versjon ✓": "Latest version ✓",
+  "Serveren har ikke disse valgene ennå.": "The server does not have these options yet.",
+  "Fikk ikke hentet valgene.": "Could not load the options.",
+  "Yr og Storm": "Yr and Storm",
+  "Yr mot Storm": "Yr vs Storm",
+  "Yr og Storm er enige": "Yr and Storm agree",
+  "Henter Storm …": "Loading Storm …",
+  "Henter Storm-data …": "Loading Storm data …",
+  "Storm svarte ikke.": "Storm did not respond.",
+  "Storm svarte ikke. Prøv igjen senere.": "Storm did not respond. Try again later.",
+  "Søyler viser nedbør per time. Yr til venstre, Storm til høyre.": "Bars show precipitation per hour. Yr on the left, Storm on the right.",
+  "Åpne storm.no ↗": "Open storm.no ↗",
+  "Yr er MET Norway (api.met.no). Storm (StormGeo) har ikke et åpent API, så Storm-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.": "Yr is MET Norway (api.met.no). Storm (StormGeo) has no open API, so the Storm column shows the ECMWF model from Open-Meteo, the closest open source. Deviation is the difference in maximum temperature.",
+  "Del boligen": "Share the home",
+  "BRUKERE I HOMELAB": "USERS IN HOMELAB",
+  "ROLLE": "ROLE",
+  "Alle brukerne har allerede tilgang.": "All users already have access.",
+  "Eller e-post til noen utenfor Homelab": "Or email someone outside Homelab",
+  "Send invitasjon": "Send invitation",
+  "Henter brukere …": "Loading users …",
+  "Deler …": "Sharing …",
+  "Skriv et gyldig beløp": "Enter a valid amount",
+  "Beskrivelsen kan ikke være tom": "The description cannot be empty",
+  "Vis i kvitteringen ›": "Show in the receipt ›",
+  "Fjern": "Remove",
+  "Les kvitteringen på nytt": "Read the receipt again",
+  "Kvitteringen mangler posisjoner for linjene. Les den på nytt for å markere i bildet.": "The receipt has no line positions. Read it again to highlight in the image.",
+  "Dine domener": "Your domains",
+  "Legg til domene": "Add domain",
+  "Statistikk fra": "Statistics from",
+  "Lagres kun på serveren": "Stored on the server only",
+  "Legger til …": "Adding …"
  },
  "short": {
   "MAN": "MON",
@@ -1258,6 +1351,76 @@
   ]
  ],
  "rules": [
+  [
+   "^Homelab (\\d.*)$",
+   "",
+   "Homelab $1"
+  ],
+  [
+   "^Ny versjon (.+) er klar$",
+   "",
+   "New version $1 is ready"
+  ],
+  [
+   "^Det finner du under (.+?)\\.",
+   "",
+   "You will find it under $1."
+  ],
+  [
+   "^Fant ikke «(.+)» i varelinjene\\.$",
+   "",
+   "Could not find “$1” in the item lines."
+  ],
+  [
+   "^står på linje (\\d+)",
+   "",
+   "is on line $1"
+  ],
+  [
+   "^Del med (.+) og (.+)$",
+   "",
+   "Share with $1 and $2"
+  ],
+  [
+   "^Del med (\\d+) personer$",
+   "",
+   "Share with $1 people"
+  ],
+  [
+   "^Åpne (.+) ›$",
+   "",
+   "Open $1 ›"
+  ],
+  [
+   "^Laster ned (.+) …$",
+   "",
+   "Downloading $1 …"
+  ],
+  [
+   "^Gjenoppretter (\\d[\\w.·\\s]*)$",
+   "",
+   "Restoring $1"
+  ],
+  [
+   "^Gjenopprett (\\d[\\w.·\\s]*)$",
+   "",
+   "Restore $1"
+  ],
+  [
+   "^Oppdatert til (.+)$",
+   "",
+   "Updated to $1"
+  ],
+  [
+   "^Du har (.+)\\. Oppdaterer hjemmeserveren, web og appen\\.$",
+   "",
+   "You have $1. Updates the home server, web and app."
+  ],
+  [
+   "^Ny versjon (.+)$",
+   "",
+   "New version $1"
+  ],
   [
    "^Installert (\\d.*)$",
    "",

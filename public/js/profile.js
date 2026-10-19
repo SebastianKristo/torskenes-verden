@@ -16,7 +16,8 @@ export function applyProfile() {
   const av = document.getElementById('avatar');
   av.innerHTML = avatarHtml(me);
   av.classList.toggle('has-img', !!me.avatarUrl);
-  document.getElementById('menu-name').innerHTML = `${esc(me.name ?? '')}<span>${esc(me.username ? '@' + me.username : '')}${store.me.serverName ? ' · ' + esc(store.me.serverName) : ''}</span>`;
+  // Prompt 30: overskriften i profilmenyen (navn + rolle, ikke @brukernavn) tegnes av profile-menu.js.
+  document.dispatchEvent(new Event('hl:menu'));
 }
 
 /** Beskjærer bildet til et kvadrat på 256×256 og gjør det om til JPEG (kvalitet 0,85) før opplasting. */

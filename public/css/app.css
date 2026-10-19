@@ -1027,3 +1027,16 @@ html:not([data-hl="2c"]) .sq-appt{background:#eef0f4;color:#0c1119}
 html:not([data-hl="2c"]) .sq-appt-b{background:#0c1119;color:#eef0f4}
 .sq-appt:hover{filter:brightness(1.08)}
 .gword[hidden]{display:none}
+
+/* ---------- Prompt 30: felles SheetButton (Ferdig = pri, Lukk/Avbryt = sec, ‹ Tilbake = back) ---------- */
+:root{--sb-bg:#eef0f4;--sb-fg:#0c1119;--sb-bg2:rgba(255,255,255,.1);--sb-fg2:#eef0f4}
+html[data-hl="2c"]{--sb-bg:#1b1a17;--sb-fg:#f3efe6;--sb-bg2:rgba(27,26,23,.08);--sb-fg2:#1b1a17}
+.sb-dark{--sb-bg:#fff;--sb-fg:#17191e;--sb-bg2:rgba(255,255,255,.1);--sb-fg2:#fff}
+.sbtn{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;gap:2px;height:36px;padding:0 16px;border-radius:18px;border:0;cursor:pointer;
+  font:700 14px/1 Manrope,Outfit,system-ui,sans-serif;white-space:nowrap;text-decoration:none;background:var(--sb-bg2);color:var(--sb-fg2);-webkit-tap-highlight-color:transparent;transition:filter .15s,transform .1s}
+.sbtn::before{content:'';position:absolute;inset:-4px -4px}
+.sbtn.pri{background:var(--sb-bg);color:var(--sb-fg)}
+.sbtn.back{padding:0 16px 0 10px}
+.sbtn:hover{filter:brightness(.94)}
+.sbtn:active{transform:scale(.97)}
+.sbtn:focus-visible{outline:2px solid currentColor;outline-offset:2px}

@@ -60,3 +60,25 @@ export async function makeThumb(file, size = 240) {
 let downTarget = null;
 addEventListener('pointerdown', (e) => { downTarget = e.target; }, true);
 export const backdropClick = (e, el) => e.target === el && downTarget === el;
+
+/* ---------- Prompt 30: felles knapp i toppen av ark og fullskjermvisninger, og lett haptikk ---------- */
+const CHEV = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+/**
+ * SheetButton: pille på 36 px (treffflate 44 px). kind: 'pri' (Ferdig), 'sec' (Lukk · Avbryt), 'back' (‹ Tilbake).
+ * attrs er ferdige attributter (data-…), label teksten. Stilen ligger i app.css (.sbtn), med tema-tokens.
+ */
+export const sheetBtn = (label, attrs = '', kind = 'pri') => `<button type="button" class="sbtn ${kind}" ${attrs}>${kind === 'back' ? CHEV : ''}<span>${esc(label)}</span></button>`;
+let hapL = null;
+/** Lett «tikk»: navigator.vibrate (Android) og en skjult iOS-bryter (Safari 18+ gir systemhaptikk ved klikk). */
+export function haptic(ms = 10) {
+  try { navigator.vibrate?.(ms); } catch { /* ikke støttet */ }
+  try {
+    if (!/iP(hone|ad|od)|Macintosh/.test(navigator.userAgent) || !('ontouchend' in document)) return;
+    if (!hapL) {
+      hapL = document.createElement('label'); hapL.setAttribute('aria-hidden', 'true');
+      hapL.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;opacity:0;pointer-events:none';
+      const c = document.createElement('input'); c.type = 'checkbox'; c.setAttribute('switch', ''); c.tabIndex = -1; hapL.appendChild(c); document.body.appendChild(hapL);
+    }
+    hapL.click();
+  } catch { /* */ }
+}

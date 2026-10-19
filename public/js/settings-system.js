@@ -82,12 +82,47 @@ export function systemView(h) {
     if (!busy) rows.push(h.row({ t: 'Oppdater nå', s: d.canStart === false ? d.reason || 'Kan ikke starte nå.' : d.updateAvailable ? 'Laster ned, bygger og starter serveren på nytt. Backup av databasen tas først.' : 'Du har nyeste versjon, men kan installere den på nytt.',
       btn: 'Oppdater nå', act: 'data-upd="open"', disabled: d.canStart === false }));
   }
-  const groups = [h.group('Oppdatering', rows.filter(Boolean), d.available ? 'Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.' : '')];
+  // Prompt 30: PROGRAMVARE – versjon med «Oppdater ›» (åpner passord-arket i banneret) og to brytere.
+  const st = settings30();
+  const soft = h.group('Programvare', [
+    h.row({ t: `Homelab ${verTxt(d.installed)}`, k: 'versjon programvare', s: d.updateAvailable ? `Ny versjon ${verTxt(latest)} er klar` : '', ...(d.updateAvailable && d.available && !busy ? { btn: 'Oppdater', act: 'data-ub="start"' } : { v: d.updateAvailable ? '' : 'Siste versjon ✓', vc: d.updateAvailable ? '' : 'var(--upd-pos, #2f7d4f)' }) }),
+    h.row({ t: 'Automatiske oppdateringer', k: 'auto automatisk natt', s: 'Kl. 03:30, etter nattlig backup.', tog: !!st.auto_update, act: 'data-upd-set="auto_update"', disabled: !st.loaded }),
+    h.row({ t: 'Varsle om nye versjoner', k: 'varsel push banner', s: 'Banner på Dashboard og push til administratorer.', tog: st.notify_updates !== false, act: 'data-upd-set="notify_updates"', disabled: !st.loaded }),
+  ], st.err ? esc(st.err) : '');
+  const groups = [soft, h.group('Oppdatering', rows.filter(Boolean), d.available ? 'Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.' : '')];
   if (d.changes?.length && !busy) groups.push(h.group('Endringer', [changesHtml(d.changes)], d.updateAvailable ? 'Fra CHANGELOG, nyere enn installert versjon.' : ''));
   return { groups, extra: sheetHtml(), mount: (el) => { el.scrollTop = el.scrollHeight; } };
 }
 
+/* Prompt 30: brukervalg for oppdatering (GET/PUT /api/system/update/settings). Eldre server: fra U.d.settings, ellers standard. */
+const SET = { auto_update: false, notify_updates: true, loaded: false, loading: false, err: '' };
+function settings30() {
+  if (!SET.loaded && !SET.loading) {
+    if (U.d?.settings) { Object.assign(SET, U.d.settings); SET.loaded = true; }
+    else {
+      SET.loading = true;
+      fetch('/api/system/update/settings', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (j) Object.assign(SET, j); SET.loaded = !!j; if (!j) SET.err = 'Serveren har ikke disse valgene ennå.'; })
+        .catch(() => { SET.err = 'Fikk ikke hentet valgene.'; }).finally(() => { SET.loading = false; rerender(); });
+    }
+  }
+  return SET;
+}
+async function saveSetting(k) {
+  const v = !(k === 'notify_updates' ? SET[k] !== false : !!SET[k]);
+  SET[k] = v; SET.err = ''; rerender();
+  try {
+    const r = await fetch('/api/system/update/settings', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ [k]: v }) });
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(j?.error || `Serveren svarte ${r.status}`);
+    Object.assign(SET, j ?? {});
+  } catch (err) { SET[k] = !v; SET.err = err.message; }
+  rerender();
+}
+
 export async function systemClick(e) {
+  const ss = e.target.closest('[data-upd-set]');
+  if (ss) { e.preventDefault(); await saveSetting(ss.dataset.updSet); return true; }
   const b = e.target.closest('[data-upd]');
   if (!b) return false;
   e.preventDefault();

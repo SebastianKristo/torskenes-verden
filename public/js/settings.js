@@ -10,7 +10,7 @@ import { DASH_WIDGETS, MOBILE_WIDGETS, TABS as NAV_TABS, FIXED_TABS, hiddenWidge
 import { orderOf, setOrder } from './dnd.js';
 import { toggleHeadEdit, resetHead, setHeadLock, setHeadAlign, headAlign, saveUi } from './topedit.js';
 import { loginView, loadLogin, loginClick, loginSubmit, loginChange, loginData, roleName } from './settings-login.js';
-import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, domainCount } from './settings-domains.js';
+import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, domainCount, domainsEsc } from './settings-domains.js';
 import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from './settings-notify.js';
 import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
 import { loadInteg, integRows, integSub, integClick, integChange, integCount } from './settings-integ.js';
@@ -21,6 +21,9 @@ import { loadAi, aiView, aiClick, aiChange, aiSubmit } from './settings-ai.js';
 import { clearBtn, glassIcon } from './searchfield.js';
 import { loadSystem, systemView, systemClick, systemInput, systemSubmit, systemEsc } from './settings-system.js';
 import { loadBackup, backupView, backupClick, backupChange, backupInput, backupSubmit, backupEsc } from './settings-backup.js';
+import { icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ } from './settings-search.js';
+import { sheetBtn } from './util.js';
+import { updBanner } from './upd-banner.js';
 
 const modal = () => document.getElementById('settings');
 
@@ -547,15 +550,17 @@ function searchView() {
 
 function sideHtml() {
   const me = store.me.me ?? {}, name = me.name || me.username || '', warn = warnCount();
-  const tabs = tabsFor(), secs = [...new Set(tabs.map((t) => t[3]))];
+  const tabs = tabsFor(), secs = [...new Set(tabs.map((t) => t[3]))], qq = q.trim();
+  // Prompt 30: hele profilblokken er en knapp til Konto («Admin · Se konto ›», ingen @brukernavn). Søket har ✦ AI.
   return `<aside class="set-side" aria-label="Innstillinger">
     <div class="set-side-in">
-      <button type="button" class="set-me" data-tab="konto">${me.avatarUrl ? `<span class="set-me-av"><img src="${esc(me.avatarUrl)}" alt=""></span>` : `<span class="set-me-av">${esc(initials(name))}</span>`}
-        <span class="set-me-t"><b>${esc(name)}</b><span>${esc(me.username ? `@${me.username} · ${roleName(me.role)}` : '')}</span></span></button>
-      <div class="set-q${q ? ' has' : ''}" data-sf><span class="sf-ic">${svg(P.search, 18)}</span>${clearBtn()}<input name="setq" value="${esc(q)}" placeholder="Søk i innstillinger" autocomplete="off" spellcheck="false" aria-label="Søk i innstillinger" data-setq></div>
-      <nav class="set-nav">${secs.map((sec) => `<div class="set-sec"><div class="set-sec-t">${esc(sec)}</div>${tabs.filter((t) => t[3] === sec).map(([k, n, , , ic]) => {
-        const on = tab === k && !q.trim(), badge = k === 'int' && warn ? `<span class="set-badge" title="${warn} mangler oppsett">${warn}</span>` : '';
-        return `<button type="button" class="set-tab" data-tab="${k}" aria-current="${on ? 'page' : 'false'}">${svg(ic)}<span>${esc(n)}</span>${badge}</button>`;
+      <button type="button" class="set-me" data-tab="konto" aria-label="Åpne kontoen din" aria-current="${tab === 'konto' && !qq ? 'page' : 'false'}">${me.avatarUrl ? `<span class="set-me-av"><img src="${esc(me.avatarUrl)}" alt=""></span>` : `<span class="set-me-av">${esc(initials(name))}</span>`}
+        <span class="set-me-t"><b>${esc(name)}</b><span>${esc(roleName(me.role))} · Se konto ›</span></span></button>
+      <div class="set-q${q ? ' has' : ''}${SQ.ai ? ' ai' : ''}" data-sf><span class="sf-ic">${svg(P.search, 18)}</span>${clearBtn()}<input name="setq" value="${esc(q)}" placeholder="${SQ.ai ? 'Spør, f.eks. «hvor bytter jeg bakgrunn?»' : 'Søk i innstillinger'}" autocomplete="off" spellcheck="false" aria-label="Søk i innstillinger" enterkeyhint="search" data-setq><button type="button" class="set-aibtn" data-set-ai aria-pressed="${SQ.ai}" aria-label="AI-søk" title="Spør med egne ord (⌘K / Ctrl+K)">✦ AI</button></div>
+      ${qq ? `<div class="set-res">${sideResults(q, (k) => tabOf(ALIAS[k] ?? k)[1])}</div>` : ''}
+      <nav class="set-nav${qq ? ' has-q' : ''}">${secs.map((sec) => `<div class="set-sec"><div class="set-sec-t">${esc(sec)}</div>${tabs.filter((t) => t[3] === sec).map(([k, n]) => {
+        const on = tab === k && !qq, badge = k === 'int' && warn ? `<span class="set-badge" title="${warn} mangler oppsett">${warn}</span>` : '';
+        return `<button type="button" class="set-tab" data-tab="${k}" aria-current="${on ? 'page' : 'false'}">${icBox(k)}<span>${esc(n)}</span>${badge}</button>`;
       }).join('')}</div>`).join('')}</nav>
     </div>
     <div class="set-foot">
@@ -584,11 +589,14 @@ function render() {
   const act = document.activeElement, fk = modal().contains(act) && act.name ? [act.closest('form')?.dataset.group ?? '', act.name, act.selectionStart] : null;
   // Søkefeltet beholdes som samme element (ikke tegnet på nytt), så skriving, markør og tastaturforslag (IME) ikke avbrytes.
   const keepQ = act?.matches?.('[data-setq]') && modal().contains(act) ? act : null;
+  // Prompt 30: fullskjerm med «Ferdig»-pille fast øverst til høyre i vinduet, og sidens ikon foran tittelen.
+  const searching = q.trim() && !sub;
   modal().innerHTML = `<div class="set-box" role="dialog" aria-modal="true" aria-labelledby="set-title">${sideHtml()}
-    <div class="set-main"><button class="set-close" data-close aria-label="Lukk">×</button>
+    <div class="set-main">${sheetBtn('Ferdig', 'data-close data-set-done', 'pri').replace('class="sbtn pri"', 'class="sbtn pri set-done"')}
     <div class="set-body" data-key="${esc(key)}"><div class="set-inner">
+      ${tab === 'system' && !sub && !searching ? updBanner('set') : ''}
       <header class="set-ph">${sub ? `<button type="button" class="set-back" data-back>${svg(P.back, 18)}${esc(tName)}</button>` : ''}
-        <h2 id="set-title">${esc(v.title ?? tName)}</h2><div class="set-ps">${esc(v.sub ?? tSub)}</div></header>
+        <div class="set-ph-row">${searching ? '' : icBox(tab, 44, 22)}<div class="set-ph-t"><h2 id="set-title">${esc(v.title ?? tName)}</h2><div class="set-ps">${esc(v.sub ?? tSub)}</div></div></div></header>
       ${content}</div></div></div></div>`;
   modal().querySelector('.set-body').scrollTop = keep;
   if (keep) requestAnimationFrame(() => { const b = modal().querySelector('.set-body'); if (b && b.dataset.key === key && b.scrollTop < keep - 1) b.scrollTop = keep; });
@@ -611,6 +619,7 @@ function go(to) {
   q = '';
   enter();
   render();
+  syncUrl();
 }
 
 function enter() {
@@ -636,11 +645,31 @@ export function openSettings(which = 'konto', subPage = null) {
   tab = ALIAS[which] ?? which; sub = subPage; q = '';
   // Undersiden bestemmer fanen (gamle lenker kan peke på feil fane, f.eks. «look/speed»).
   if (sub) tab = subTab(sub) ?? tab;
+  if (!TABS.some(([k]) => k === tab)) tab = 'konto';
+  resetAsk();
+  const wasOpen = !modal().hidden;
   render(); modal().hidden = false; modal().querySelector('[data-close]').focus();
-  loadCfg(); loadMail(); enter();
+  document.body.classList.add('set-open');
+  if (!wasOpen) pushUrl();
+  loadCfg(); loadMail(); enter(); loadIndex(() => { if (!modal().hidden && q.trim()) render(); });
   loadHistory(true).then(() => { if (!modal().hidden && tab === 'look') render(); });
 }
-export function closeSettings() { modal().hidden = true; }
+export function closeSettings() {
+  if (modal().hidden) return;
+  modal().hidden = true;
+  document.body.classList.remove('set-open');
+  resetAsk();
+  // Prompt 30: adressen var #/innstillinger/<fane> mens innstillingene var åpne. Tilbake til siden under.
+  if (history.state?.hlSet) { urlBack = true; history.back(); }
+}
+
+/* Prompt 30: #/innstillinger/<fane> i adressefeltet mens innstillingene er åpne (pushState, så siden under ikke tegnes på nytt). */
+let urlBack = false;
+const setHash = () => `#/innstillinger/${tab}${sub && !/[:]/.test(sub) ? `/${sub}` : ''}`;
+function pushUrl() { try { history.pushState({ hlSet: 1, under: location.hash || '#/' }, '', location.pathname + location.search + setHash()); } catch { /* */ } }
+function syncUrl() { if (!modal().hidden && history.state?.hlSet) try { history.replaceState(history.state, '', location.pathname + location.search + setHash()); } catch { /* */ } }
+/** Ble hashendringen laget av innstillingene selv (åpne/lukke)? Da skal ikke siden under tegnes på nytt. */
+export const settingsOwnsHash = () => /^#\/innstillinger/.test(location.hash) || (urlBack && !(urlBack = false));
 
 async function saveCats() {
   await api('/settings/categories', { method: 'PUT', json: { value: store.me.categories } });
@@ -670,7 +699,13 @@ async function signOut(forget) {
 // Lenker som «/#/innstillinger/system» (fra iOS- og Android-appen) eller «#/innstillinger/look/bg» åpner innstillingene.
 function openFromHash() {
   const mm = location.hash.match(/^#\/innstillinger(?:\/([\w-]+))?(?:\/([\w:-]+))?\/?$/);
-  if (!mm) return;
+  if (!mm) {
+    // Tilbake (nettleserknapp eller sveip) fra #/innstillinger/…: lukk innstillingene.
+    if (!modal().hidden && !history.state?.hlSet) { modal().hidden = true; document.body.classList.remove('set-open'); resetAsk(); }
+    return;
+  }
+  if (history.state?.hlSet && !modal().hidden) return; // vår egen adresse
+  // Direkte lenke (fra appene eller en bokmerke): Dashboard under, innstillingene oppå.
   history.replaceState(null, '', location.pathname + location.search + '#/');
   openSettings(mm[1] || 'konto', mm[2] || null);
 }
@@ -684,7 +719,11 @@ export function bindSettings() {
   m.addEventListener('click', async (e) => {
     if (backdropClick(e, m) || e.target.closest('[data-close]')) return closeSettings();
     const t = e.target.closest('[data-tab]');
-    if (t) { tab = t.dataset.tab; sub = null; q = ''; enter(); render(); return; }
+    if (t) { tab = t.dataset.tab; sub = null; q = ''; resetAsk(); enter(); render(); syncUrl(); return; }
+    /* Prompt 30: AI-søk. ✦ AI slår spørsmodus av/på, treff og «Åpne … ›» går til siden. */
+    if (e.target.closest('[data-set-ai]')) { SQ.ai = !SQ.ai; resetAsk(); render(); m.querySelector('[data-setq]')?.focus(); if (SQ.ai && q.trim()) ask(q.trim(), render); return; }
+    const sg = e.target.closest('[data-setgo]');
+    if (sg) { const it = byId(sg.dataset.setgo); if (it) { const r = routeOf(it); resetAsk(); go(r.sub ? `${r.tab}|${r.sub}` : r.tab); } return; }
     if (e.target.closest('[data-back]')) { sub = null; render(); return; }
     if (e.target.closest('[data-setq-clear]')) { q = ''; render(); m.querySelector('[data-setq]')?.focus(); return; }
     if (e.target.closest('[data-set-lock]')) return signOut(false);
@@ -834,6 +873,7 @@ export function bindSettings() {
     if (e.target.matches('[data-setq]')) {
       const val = e.target.value;
       clearTimeout(qTimer);
+      if (!val.trim()) resetAsk();
       qTimer = setTimeout(() => { const first = !q.trim() && val.trim(); q = val; if (val.trim()) sub = null; if (first) enter(); render(); }, 120);
       return;
     }
@@ -925,13 +965,28 @@ export function bindSettings() {
       await saveCats();
     }
   });
-  m.addEventListener('keydown', (e) => { appKey(e); });
+  m.addEventListener('keydown', (e) => {
+    appKey(e);
+    // Enter i søket: spørsmål (✦ AI på, mellomrom eller ?) → AI-svar; ellers rett til beste treff.
+    if (e.key === 'Enter' && e.target.matches?.('[data-setq]')) {
+      e.preventDefault();
+      const val = e.target.value.trim();
+      if (!val) return;
+      clearTimeout(qTimer); q = e.target.value;
+      if (wantsAi(val)) { ask(val, render); return; }
+      const top = topHit(val);
+      if (top) { const r = routeOf(top); go(r.sub ? `${r.tab}|${r.sub}` : r.tab); } else ask(val, render);
+    }
+  });
   document.addEventListener('keydown', (e) => {
     if (m.hidden) return;
+    // ⌘K / Ctrl+K: fokus i søkefeltet.
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); const i = m.querySelector('[data-setq]'); i?.focus(); i?.select(); return; }
     if (e.key === 'Escape') {
       e.preventDefault(); // Kalender i fullskjerm skal ikke lukkes av samme tastetrykk
       if (systemEsc() || backupEsc()) return;
-      if (e.target.matches?.('[data-setq]') && q) { q = ''; render(); m.querySelector('[data-setq]')?.focus(); return; }
+      if (domainsEsc()) return; // Domener-guiden lukkes først
+      if (e.target.matches?.('[data-setq]') && (q || SQ.askQ)) { q = ''; resetAsk(); render(); m.querySelector('[data-setq]')?.focus(); return; }
       if (sub && !e.target.closest?.('input,textarea,select')) { sub = null; render(); } else closeSettings();
     }
   });

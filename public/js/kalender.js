@@ -12,7 +12,7 @@
 // Prompt 29: kalenderen fyller hele vinduet under toppmenyen (claude-code-kalender-web-full.md), eller fullskjerm uten
 // toppmeny (⤢/⤡, ✕ og Esc; calendar_web_layout = menu | full). Under 820 px er sidepanelet en skuff. Nytt Nå/Neste-kort,
 // ukenummer i Måned og minikalender (trykk → Uke), og «✦ Skriv time» (rask time i bakgrunnen, kal-quick.js).
-import { api, esc, isMobile } from './util.js';
+import { api, esc, isMobile, haptic } from './util.js';
 import { store, widget, refresh, emit, on } from './store.js';
 import { openSettings } from './settings.js';
 import { loadBirthdays } from './birthdays.js';
@@ -598,10 +598,35 @@ function shift(dir) {
 }
 function setView(v, cur) {
   if (!VIEW_SRV[v]) return;
+  // Bytter man visning selv mens adressen er en dag, blir adressen #/kalender igjen.
+  if (v !== 'dag' && DAY_RE.test(location.hash)) { dayBack = null; try { history.replaceState(history.state, '', '#/kalender'); } catch { /* */ } }
   K.view = v; K.sel = null; K.mini = false; K.miniOff = 0;
   if (cur !== undefined) K.cur = cur;
   savePref('kalView', VIEW_SRV[v]);
   paint();
+}
+/* Prompt 30: trykk på en dag (minikalender, månedsrute, dagshode) → Dag-visning for datoen, med adressen
+   #/kalender/dag/ÅÅÅÅ-MM-DD, så tilbake-knappen går til forrige visning. */
+let dayBack = null; // visningen før dag-klikket: { v, c }
+const DAY_RE = /^#\/kalender\/dag\/(\d{4}-\d{2}-\d{2})\/?$/;
+function openDay(k) {
+  haptic(8);
+  if (K.view === 'dag' && DAY_RE.test(location.hash)) { try { history.replaceState(history.state, '', `#/kalender/dag/${k}`); } catch { /* */ } setView('dag', k); return; }
+  dayBack = { v: K.view, c: K.cur };
+  try { history.pushState({ kalDay: k }, '', `#/kalender/dag/${k}`); } catch { /* */ }
+  setView('dag', k);
+}
+/** Leser adressen: #/kalender/dag/<dato> → Dag; tilbake til #/kalender etter et dag-klikk → forrige visning. */
+function applyHash() {
+  const m = location.hash.match(DAY_RE);
+  if (m) { K.view = 'dag'; K.cur = m[1]; K.sel = null; return true; }
+  if (dayBack && /^#\/kalender\/?$/.test(location.hash)) {
+    const b = dayBack; dayBack = null;
+    K.view = b.v; K.cur = b.c; K.sel = null; K.mini = false; K.miniOff = 0;
+    savePref('kalView', VIEW_SRV[b.v]);
+    return true;
+  }
+  return false;
 }
 function goToday() { K.cur = null; K.sel = null; K.mini = false; K.miniOff = 0; gridKey = ''; paint(); }
 
@@ -758,9 +783,14 @@ function bind(h) {
     if ('kSearch' in d) { K.srch = { q: '', res: [], focus: true }; K.mini = false; return paint(); }
     if ('kTitl' in d) { if (isMobile()) { K.mini = !K.mini; K.miniOff = 0; paint(); } return; }
     if (d.kMini) { K.miniOff += +d.kMini; return paint(); }
-    if (d.kGo) { K.cur = d.kGo; K.mini = false; K.drawer = false; K.miniOff = 0; if (K.view === 'mnd' || K.view === 'liste') K.view = K.view; return paint(); }
+    // Minikalender: på web → Dag. Mobil (nedtrekk): Dag/3 dager/Uke beholdes og hopper til datoen; fra Måned/Liste → Dag.
+    if (d.kGo) {
+      K.mini = false; K.drawer = false; K.miniOff = 0;
+      if (!isMobile() || K.view === 'mnd' || K.view === 'liste') return openDay(d.kGo);
+      haptic(8); K.cur = d.kGo; return paint();
+    }
     if (d.kCal) { K.filt = { ...K.filt, [d.kCal]: !shownCal(d.kCal) }; savePref('kalFilters', K.filt); return paint(); }
-    if (d.kDay) return setView('dag', d.kDay);
+    if (d.kDay) return openDay(d.kDay);
     if (d.kSel) { K.sel = d.kSel; K.delArm = false; K.err2 = ''; return paint(); }
     if (d.kHit) { const e = findEv(d.kHit); K.srch = null; K.cur = d.kHitk; if (K.view === 'mnd' || K.view === 'liste') K.view = 'dag'; K.sel = e ? e.id : null; gridKey = ''; return paint(); }
     if (d.kRem) { const ev = findEv(K.sel); if (ev) { const id = ev.oid || ev.id; K.rem = { ...K.rem, [id]: d.kRem, [ev.id]: d.kRem }; savePref('kalReminders', { [id]: d.kRem }); } return paint(); }
@@ -850,7 +880,8 @@ export function render() {
       openSettings(qh.get('settings') || 'kal');
       if (g) setTimeout(() => flash(/^(ok|1|true|connected)$/.test(g) ? 'Koblet til Google Kalender' : `Google: ${qs.get('message') || qh.get('message') || 'innloggingen ble avbrutt'}`), 300);
     }
-    loadPrefs().then(paint);
+    applyHash();
+    loadPrefs().then(() => { if (DAY_RE.test(location.hash)) applyHash(); paint(); });
     ensureKal();
     startTick();
   });
