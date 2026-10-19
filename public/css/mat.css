@@ -117,11 +117,22 @@ html[data-hl-theme="cur"] .mat{
 .mat .mp-empty{margin-top:12px;font-size:17px;color:var(--mp-dim);line-height:1.35}
 .mat .mp-tag{font-size:15px;color:var(--mp-acc-l)}
 /* Kokk og «Fast» deler raden uten å overlappe: velgeren krymper, knappen gjør det aldri. */
-.mat .mp-dfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0;min-height:12px}
-.mat .mp-cook{flex:1 1 110px;max-width:170px}
-.mat .mp-cook select{height:42px;border-radius:21px;padding:0 34px 0 16px;background:var(--mp-in)}
-.mat .mp-cook .mp-chev{right:13px}
-.mat .mp-fast{flex:none;margin-left:auto;height:42px;padding:0 14px;border-radius:21px;border:1px solid var(--mp-line2);background:transparent;color:var(--mp-dim);font-size:15.5px;font-weight:500}
+/* Prompt 35 (claude-code-mat-papir-tema.md): navnet i kokkvelgeren kuttes ikke. Velgeren tar resten av raden (flex 1 1 0),
+   «Fast» krymper aldri. «Sebastian» står helt ned til ca. 230 px kortbredde; smalere: ellipsis (+ title), under 200 px: initial i en rund avatar. */
+.mat .mp-day{container-type:inline-size}
+.mat .mp-dfoot{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0;min-height:12px}
+.mat .mp-cook{position:relative;flex:1 1 0;min-width:0;max-width:none}
+.mat .mp-cook select{width:100%;min-width:0;height:40px;border-radius:20px;padding:0 28px 0 13px;background:var(--mp-in);font-size:14.5px;font-weight:600;text-overflow:ellipsis;white-space:nowrap;overflow:hidden}
+.mat .mp-cook .mp-chev{right:10px}
+.mat .mp-cook-av{display:none}
+@container (max-width:160px){
+  .mat .mp-cook{flex:none;width:52px}
+  .mat .mp-cook select{color:transparent;padding:0;width:52px}
+  .mat .mp-cook select option{color:var(--mp-t)}
+  .mat .mp-cook .mp-chev{right:4px}
+  .mat .mp-cook-av{display:grid;place-items:center;position:absolute;left:3px;top:4px;width:32px;height:32px;border-radius:16px;background:var(--mp-acc,#b23a2a);color:#fff;font-size:13.5px;font-weight:700;pointer-events:none}
+}
+.mat .mp-fast{flex:none;margin-left:auto;height:40px;padding:0 11px;border-radius:20px;border:1px solid var(--mp-line2);background:transparent;color:var(--mp-dim);font-size:13.5px;font-weight:600}
 .mat .mp-fast.on{border-color:var(--mp-acc-bd);background:var(--mp-acc-bd);color:var(--mp-acc-ll)}
 .mat .mp-hint{font-size:15px;color:var(--mp-faint);padding:0 4px}
 

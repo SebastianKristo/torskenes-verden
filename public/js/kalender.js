@@ -21,6 +21,7 @@ import { t, locale, dayName, monthName, fmtDate } from './i18n.js';
 import { addQuick, preview, quickLabel, setQuickHooks } from './kal-quick.js';
 import { glimt } from './glimt.js';
 import { LEARN_TYPES, typeName, addMemory, applyMemory, nameOfEvent, loadMemory, dinOf } from './glimt-memory.js'; // prompt 33
+import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 /** Prompt 31 (Kalender.dc.html): «Pilestredet park 35 U2005 https://link.mazemap.com/…» → «Pilestredet park 35 U2005». */
 export const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
 const urlIn = (t) => String(t ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
@@ -384,7 +385,7 @@ function miniCal(today, vis) {
     <div class="k2-mini-g"><span>${esc(t('U'))}</span>${[1, 2, 3, 4, 5, 6, 0].map((i) => `<span>${esc(dayName(i, 'narrow'))}</span>`).join('')}${cells}</div></div>`;
 }
 function calFilters(chips = false) {
-  return calList().map((c) => {
+  return calList().filter((c) => !c.hidMenu).map((c) => { // prompt 35: «Skjul fra menyen»
     const off = !shownCal(c.id);
     return chips
       ? `<button type="button" class="k2-cchip${off ? ' off' : ''}" data-k-cal="${esc(c.id)}" aria-pressed="${!off}"><i style="background:${esc(c.color)}"></i>${esc(c.name)}</button>`
@@ -649,12 +650,10 @@ function srHas(text, w) {
 function srLocal(q) {
   const now = new Date(), today = d0(now), nm = now.getHours() * 60 + now.getMinutes(), n = q.toLowerCase().replace(/[?!.,]/g, ' ');
   let from = null, to = null, lbl = '';
-  if (/i overmorgen/.test(n)) { from = to = add(today, 2); lbl = 'i overmorgen'; }
-  else if (/i morgen/.test(n)) { from = to = add(today, 1); lbl = 'i morgen'; }
-  else if (/i dag|idag/.test(n)) { from = to = today; lbl = 'i dag'; }
-  else if (/neste uke/.test(n)) { const m = add(today, 7 - ((today.getDay() + 6) % 7)); from = m; to = add(m, 6); lbl = 'neste uke'; }
-  else if (/denne uk|resten av uk/.test(n)) { from = today; to = add(today, 6 - ((today.getDay() + 6) % 7)); lbl = 'resten av uka'; }
-  else { const w = WD.findIndex((x) => new RegExp(`(^|\\s)${x}`).test(n)); if (w >= 0) { from = to = add(today, (w - today.getDay() + 7) % 7); lbl = WD[w]; } }
+  // Prompt 35: felles dag-tolkning (parse-day35.js): «imorgen», «i morra», «tomorrow», ukedager og datoer.
+  if (/neste uke|next week/.test(n)) { const m = add(today, 7 - ((today.getDay() + 6) % 7)); from = m; to = add(m, 6); lbl = 'neste uke'; }
+  else if (/denne uk|resten av uk|this week/.test(n)) { from = today; to = add(today, 6 - ((today.getDay() + 6) % 7)); lbl = 'resten av uka'; }
+  else { const pd = parseDay(n, now); if (pd) { from = to = pd.date; lbl = pd.label; } }
   const span = (a, b) => { const out = []; for (let d = a; d <= b; d = add(d, 1)) evOn(d).forEach((e) => { if (srFilt(e) && (d.getTime() !== today.getTime() || !e.e || mm(e.e) > nm || /ledig/.test(n))) out.push({ e, d }); }); return out; };
   const rel = (d) => relOf(Math.round((d - today) / 864e5));
   if (/ledig|fri tid|tid til|opptatt/.test(n)) {
@@ -868,7 +867,7 @@ function body() {
       <span class="k2-now-t"><b data-no-i18n>${esc(nx.t)}</b>${nx.pl ? `<span class="k2-now-pl" data-no-i18n>${esc(nx.pl)}</span>` : ''}</span></span>
     ${nx.wB ? `<span class="k2-now-r"><b>${esc(nx.wB)}</b><span>${esc(nx.wS)}</span></span>` : ''}
     ${nx.prog ? `<span class="k2-now-p" aria-hidden="true"><i style="width:${nx.pct}%"></i></span>` : ''}</button>`;
-  const side = mob ? '' : `${nar && K.drawer ? '<div class="k2-drw-bg" data-k-drawer></div>' : ''}<aside class="k2-side${nar ? ` drawer${K.drawer ? ' open' : ''}` : ''}">${miniCal(today, vis)}<div class="k2-cals"><span class="k2-lab">KALENDERE</span>${calFilters()}<button type="button" class="k2-b line sm" data-k-set>Administrer kalendere ›</button></div>
+  const side = mob ? '' : `${nar && K.drawer ? '<div class="k2-drw-bg" data-k-drawer></div>' : ''}<aside class="k2-side${nar ? ` drawer${K.drawer ? ' open' : ''}` : ''}">${miniCal(today, vis)}<div class="k2-cals"><span class="k2-lab">KALENDERE</span>${calFilters()}<button type="button" class="k2-b line sm" data-k-set>Farger, iCal og Home Assistant ›</button></div>
     <span class="k2-keys">Hurtigtaster: ← → bla · T i dag · D dag · W uke · M måned · L liste · N ny · / søk</span>${K.fallback ? '<span class="k2-keys">Eldre server: bare skolens iCal og Bursdager.</span>' : ''}</aside>`;
   return `${K.toast ? `<div class="k2-toast" role="status">${esc(K.toast)}</div>` : ''}${top}${drop}${strip}<div class="k2-main">${side}<div class="k2-view" data-k-swipe>${vis.html}</div></div>${detailSheet()}${formSheet()}${searchSheet()}${qaSheet()}${learnSheet()}`;
 }
@@ -1139,7 +1138,8 @@ function bind(h) {
     if ('kDrawer' in d) { K.drawer = !K.drawer; return paint(); }
     if (d.kWk) { K.drawer = false; K.miniOff = 0; return setView('uke', d.kWk); }
     if ('kRetry' in d) { ensureKal(true); return; }
-    if ('kSet' in d) { openSettings('kal'); return; }
+    // Prompt 35: farger, vis/skjul, skjul fra menyen, + iCal og + Home Assistant (kal-manage35.js).
+    if ('kSet' in d) { import('./kal-manage35.js').then((m) => m.openCalManager({ onChange: () => ensureKal(true).then(paint) })).catch(() => openSettings('kal')); return; }
     if ('kReconnect' in d) { K.form = null; paint(); openSettings('kal'); return; }
     if (d.kView) return setView(d.kView);
     if (d.kNav) return shift(+d.kNav);

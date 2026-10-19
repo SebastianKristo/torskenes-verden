@@ -65,6 +65,8 @@ export function normAnswer(d = {}, ms0 = 0) {
   return { text: String(text), source: r.source ?? r.src ?? '', intent: r.intent ?? '', card: r.card ?? null, tool: r.tool ?? null, ms: r.ms ?? (ms0 ? Date.now() - ms0 : 0),
     chatId: r.chatId ?? r.chatContext?.chatId ?? null, chatContext: r.chatContext ?? null, question: r.question ?? null, jobId: r.jobId ?? null, error: r.error ?? null, memory: r.memory ?? null, apply: r.apply ?? null,
     // Prompt 34 (SERVER34 ai.run): modell, merknad («Sky-budsjettet er brukt opp …») og advarsler.
+    // Prompt 35: «været i New York» → place {name, label, lat, lon …} og open {route:'vaer', name, lat, lon}.
+    place: r.place ?? null, open: r.open ?? null,
     model: r.model ?? null, notice: r.notice ?? (Array.isArray(r.warnings) && r.warnings.length ? r.warnings.join(' · ') : null) };
 }
 
@@ -120,6 +122,11 @@ export async function assist(q, o = {}) {
     if (aid) aiDone(aid, { silent: true });
   } else if (!r.ok) throw new Error(r.d?.error || `Glimt svarte ikke (feil ${r.status || 'nett'}).`);
   else ans = normAnswer(r.d, t0);
+  // Prompt 35: eldre server svarte med Oslo-været på «været i New York» (uten place): hent været for stedet selv.
+  if (/^weather/.test(ans.intent ?? '') && !ans.place && !ans.open) {
+    const pl = wxPlaceOf(q);
+    if (pl && !new RegExp(pl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(ans.text)) ans = { ...ans, ...(await weatherFor(pl, q.toLowerCase(), t0).catch(() => ({}))) };
+  }
   // Svarte Glimt mens fanen var skjult: banner når brukeren kommer tilbake (varselet sendes av serveren).
   if (document.hidden || hiddenAtStart) awayAnswer(q, ans.text);
   return ans;
@@ -148,6 +155,49 @@ function showAway() {
   clearTimeout(showAway.t); showAway.t = setTimeout(() => el.classList.remove('on'), 4000);
 }
 
+/* ---------------- Prompt 35: været for et sted (claude-code-ai-sok-vaer-sted.md) ---------------- */
+// Stedet står etter «i / på / in / for / at / ved / rundt», fram til «i morgen / i dag / i kveld / nå / tomorrow …» eller slutten.
+const TIME_RE = /\b(i\s+(morgen|morra|dag|kveld|natt|helgen|overmorgen|ettermiddag|formiddag)|imorgen|idag|nå|natt|tomorrow|today|tonight|now|this\s+(weekend|week|evening|morning)|neste\s+uke|denne\s+uka)\b/gi;
+const TIME_W = /^(morgen|morra|dag|kveld|natt|helgen|helga|overmorgen|uka|uken|ettermiddag|formiddag|tomorrow|today|the weekend|weekend|week|norge|nå)$/i;
+/** «hvordan er været i Strømstad i morgen» → «Strømstad». null når teksten ikke nevner et sted. */
+export function wxPlaceOf(q) {
+  const t = ` ${String(q ?? '')} `.replace(TIME_RE, ' | ');
+  for (const m of t.matchAll(/\b(?:i|på|in|for|at|ved|rundt)\s+([^|?.!,;:]+)/gi)) {
+    const v = m[1].replace(/\s+(da|egentlig|nå|eller|og)\s*$/i, '').replace(/\b(været|weather|vær)\b/gi, '').trim();
+    if (v.length >= 2 && !TIME_W.test(v) && !/^\d/.test(v)) return v.replace(/\s+/g, ' ').replace(/(^|[\s-])(\p{Ll})/gu, (x, a, c) => a + c.toUpperCase());
+  }
+  return null;
+}
+const wxTxt = (c) => String(c ?? '').toLowerCase();
+/** Været for et navngitt sted (GET /api/weather/place?q=). Eldre server: stedsøket + /api/weather/full med koordinatene. */
+async function weatherFor(name, n, t0) {
+  const tm = /i\s*morgen|tomorrow/.test(n);
+  let r = await fetch(`/api/weather/place?q=${encodeURIComponent(name)}`, { credentials: 'same-origin', cache: 'no-store' }).catch(() => null);
+  let d = r && r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => null) : null;
+  if (r?.status === 404 && d?.error) return { text: d.error + (d.suggest ? ` Mente du **${d.suggest}**?` : ''), source: 'Vær', intent: 'weather', tool: 'Vær', card: null, ms: Date.now() - t0 };
+  if (!r?.ok || !d?.place) {
+    // Eldre server: finn stedet med stedsøket og hent været for koordinatene.
+    const hits = await jget(`/api/weather/places?q=${encodeURIComponent(name)}`).catch(() => []);
+    const h = (Array.isArray(hits) ? hits : hits?.items ?? [])[0];
+    if (!h) return { text: `Fant ikke stedet «${name}». Prøv en annen stavemåte.`, source: 'Vær', intent: 'weather', tool: 'Vær', card: null, ms: Date.now() - t0 };
+    const f = await jget(`/api/weather/full?lat=${h.lat}&lon=${h.lon}&name=${encodeURIComponent(h.name)}`).catch(() => null);
+    if (!f?.current) return { text: `Fikk ikke hentet været for ${h.name} akkurat nå.`, source: 'Vær', intent: 'weather', tool: 'Vær', card: null, ms: Date.now() - t0 };
+    const norway = /^(no|norge|norway)$/i.test(h.country ?? '') || !h.country;
+    d = { place: { name: h.name, label: norway ? h.name : `${h.name}, ${h.country}`, lat: h.lat, lon: h.lon, norway }, now: { temp: f.current.temp, cond: f.current.text, code: f.current.code, wind: f.current.wind }, today: { hi: f.today?.hi, lo: f.today?.lo }, tomorrow: null };
+  }
+  const P = d.place, N = d.now ?? {}, D = (tm ? d.tomorrow : null) ?? d.today ?? {}, lbl = P.label || P.name;
+  const text = d.text || (tm && d.tomorrow ? `I morgen blir det **${Math.round(D.lo)}–${Math.round(D.hi)}°** og ${wxTxt(D.cond)} i ${lbl}.`
+    : `${String(N.cond ?? '').replace(/^./, (c) => c.toUpperCase())} og **${Math.round(N.temp)}°** i ${lbl} nå${N.wind != null ? `, vind ${Math.round(N.wind)} m/s` : ''}.${D.hi != null ? ` I dag ${Math.round(D.lo)}–${Math.round(D.hi)}°.` : ''}`);
+  const card = { k: 'weather', city: lbl, t: Math.round(N.temp), d: N.cond, hi: Math.round(d.today?.hi ?? N.temp), lo: Math.round(d.today?.lo ?? N.temp), h: [] };
+  return { text, source: P.norway ? 'MET Norway' : 'Open-Meteo', intent: 'weather', tool: 'Vær', card, place: P, open: { route: 'vaer', name: P.name, lat: P.lat, lon: P.lon, country: P.country }, ms: Date.now() - t0 };
+}
+/** Adressen som åpner Vær for stedet (legges midlertidig i bylista). */
+export function wxRoute(open) {
+  if (!open || open.lat == null || open.lon == null) return '#/vaer';
+  const q = new URLSearchParams({ name: open.name ?? '', lat: String(open.lat), lon: String(open.lon), ...(open.country ? { country: open.country } : {}) });
+  return `#/vaer?${q}`;
+}
+
 /* ---------------- Reserve uten /api/assist ---------------- */
 
 const WD = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'], MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
@@ -168,6 +218,8 @@ export async function localAssist(q, o = {}) {
       if (p.isTrial && p.question) return { text: p.question, source: 'Abonnementer', intent: 'trial.create', tool: 'Abonnementer', card: null, ms: Date.now() - t0 };
     }
     if (TOOL_RE.weather.test(n)) {
+      const pl = wxPlaceOf(q);
+      if (pl) return await weatherFor(pl, n, t0);
       const w = await jget('/api/weather');
       const tm = /i morgen/.test(n), um = /paraply|regn/.test(n), place = w.place || 'Oslo';
       const day = tm ? w.days?.[1] ?? w.daily?.[1] : null;

@@ -712,6 +712,13 @@ function bind(r) {
 }
 
 /* ---------------- Rute ---------------- */
+function tempPlace() {
+  const q = new URLSearchParams(location.hash.split('?')[1] ?? ''), lat = +q.get('lat'), lon = +q.get('lon'), name = q.get('name');
+  if (!name || !Number.isFinite(lat) || !Number.isFinite(lon) || (!lat && !lon)) return null;
+  const known = S.places?.find((p) => Math.abs(p.lat - lat) < 0.05 && Math.abs(p.lon - lon) < 0.05);
+  if (known) return { ...known, temp: false, _known: true };
+  return { id: `tmp:${lat.toFixed(3)},${lon.toFixed(3)}`, name, lat, lon, local: true, temp: true, region: q.get('region') || '', country: q.get('country') || '' };
+}
 export function render() {
   setTimeout(async () => {
     const r = root();
@@ -726,6 +733,9 @@ export function render() {
     const onRz = () => { if (!root()) { window.removeEventListener('resize', onRz); return; } clearTimeout(rzT); rzT = setTimeout(() => { if (isDk() !== was) { was = isDk(); paint(); } }, 120); };
     window.addEventListener('resize', onRz);
     await loadPlaces();
+    // Prompt 35: «været i New York» i AI-søket åpner #/vaer?name=…&lat=…&lon=… – stedet legges midlertidig i lista (lagres ikke).
+    const tp = tempPlace();
+    if (tp) { if (!tp._known) S.places = [...S.places.filter((p) => !p.temp), tp]; S.cur = tp.id; }
     if (!S.places.some((p) => p.id === S.cur)) S.cur = S.places[0]?.id;
     load();
   });

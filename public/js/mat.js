@@ -137,8 +137,8 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
       ${tag ? `<div class="mp-tag">${esc(tag)}</div>` : ''}
       <div class="mp-grow"></div>
       <div class="mp-dfoot">
-        <label class="mp-selwrap mp-cook"><span class="mp-sr">Kokk ${DAYS[d.index].toLowerCase()}</span>
-          <select data-cook="${d.date}" ${cooks.length ? '' : 'disabled'}>${cooks.length ? (d.cook ? '' : '<option value="">Velg kokk</option>') + cooks.map((n) => `<option${n === d.cook ? ' selected' : ''}>${esc(n)}</option>`).join('') : '<option>Ingen kokker</option>'}</select>${chev()}</label>
+        <label class="mp-selwrap mp-cook"${d.cook ? ` title="${esc(d.cook)}"` : ''}><span class="mp-sr">Kokk ${DAYS[d.index].toLowerCase()}</span>${d.cook ? `<span class="mp-cook-av" aria-hidden="true">${esc(d.cook.trim().charAt(0).toUpperCase())}</span>` : ''}
+          <select data-cook="${d.date}" ${cooks.length ? '' : 'disabled'}${d.cook ? ` title="${esc(d.cook)}"` : ''}>${cooks.length ? (d.cook ? '' : '<option value="">Velg kokk</option>') + cooks.map((n) => `<option${n === d.cook ? ' selected' : ''}>${esc(n)}</option>`).join('') : '<option>Ingen kokker</option>'}</select>${chev()}</label>
         <button class="mp-fast${d.fixed ? ' on' : ''}" data-a="fast" data-date="${d.date}" aria-pressed="${d.fixed}" title="Samme rett denne dagen hver uke">Fast</button>
       </div></div>`;
   }

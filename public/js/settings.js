@@ -23,6 +23,7 @@ import { loadSystem, systemView, systemClick, systemInput, systemSubmit, systemE
 import { loadBackup, backupView, backupClick, backupChange, backupInput, backupSubmit, backupEsc } from './settings-backup.js';
 import { icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor } from './settings-search.js';
 import { sheetBtn } from './util.js';
+import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt35.js'; // prompt 35: GLIMT → Glimt
 
 const modal = () => document.getElementById('settings');
 
@@ -36,6 +37,7 @@ const P = {
   back: 'M15 18l-6-6 6-6', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', ai: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0', app: 'M5 4h14v16H5zM9 8h6M9 12h6M9 16h3',
   sys: 'M4 5h16v10H4zM8 19h8M12 15v4M12 7.5v5M9.5 10l2.5 2.5 2.5-2.5',
+  star: 'M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z',
   backup: 'M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 7v10c0 1.7 3.6 3 8 3s8-1.3 8-3V7M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
 };
 export const svg = (d, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -77,6 +79,7 @@ const TABS = [
   ['dom', 'Domener', 'Domener, statistikkilder og verdenskart.', 'Generelt', P.map],
   ['varsel', 'Varsler', 'Lyd, stille timer, grupper og test.', 'Generelt', P.bell],
   ['app', 'App', 'Navn på appen, app-ikon, widgets og Kalender-appen.', 'Generelt', P.app],
+  ['glimt', 'Glimt', 'Figur, brief, stemme og venner.', 'Glimt', P.star],
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
   ['ai', 'AI', 'Modeller, jobber, forbruk og nøkler.', 'Tilkoblinger', P.ai],
@@ -86,7 +89,7 @@ const TABS = [
 ];
 const tabsFor = () => TABS.filter((t) => !t[5] || isAdmin());
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup' };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt' };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app' };
@@ -527,7 +530,13 @@ async function saveGroup(name, changes) {
 /* ---------- Søk på tvers av sidene ---------- */
 
 const H = { group, row, note };
-const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView({ ...H, sub }), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H) };
+// Prompt 35: Innstillinger → GLIMT → Glimt (fasit Glimt Brief.dc.html mode="settings"). Samme data som ⚙ i briefen.
+const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [group('Glimt', [
+  row({ t: 'Glimt-figur', s: 'Velg vert: Glimt, Halo, Boble, Antenne, Bane, Pastell, Natt, Sky, Dråpe, Ugle, Stjerne, Spire eller Gris', go: 'glimt', btn: 'Åpne', k: 'glimt figur karakter maskot gris ugle sky' }),
+  row({ t: 'Glimt-brief', s: 'Morgen-, dags-, kvelds- og nattbrief med klokkeslett', go: 'glimt', btn: 'Åpne', k: 'brief morgenbrief kveldsbrief varsel guide venner' }),
+  row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure' }),
+])] });
+const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView({ ...H, sub }), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H) };
 function searchView() {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean), out = [];
   const saved = sub; sub = null;
@@ -679,6 +688,7 @@ function enter() {
   if (tab === 'ai' || q) loadAi(reload, tab === 'ai');
   if (tab === 'system' || q) loadSystem(reload);
   if (tab === 'backup' || q) loadBackup(reload);
+  if (tab === 'glimt') loadGlimt(reload);
 }
 
 async function loadCfg() {
@@ -778,6 +788,8 @@ export function bindSettings() {
     if (e.target.closest('[data-set-logout]')) { if (confirm('Logge ut? Denne enheten må da logge inn med passord igjen.')) signOut(true); return; }
     if (e.target.closest('[data-open-fh-mail]')) { location.href = '/finans/?desktop=1#/inn'; return; }
     if (e.target.closest('[data-hp-edit]')) { closeSettings(); toggleHeadEdit(true); return; }
+    if (e.target.closest('[data-gs-ai]')) return go('ai');
+    if (tab === 'glimt' && !q.trim() && glimtClick(e, render)) return;
     const g = e.target.closest('[data-go]');
     if (g) return go(g.dataset.go);
     if (await loginClick(e)) return;
@@ -895,6 +907,7 @@ export function bindSettings() {
   });
 
   m.addEventListener('submit', async (e) => {
+    if (await glimtSubmit(e, render)) return;
     if (await systemSubmit(e)) return;
     if (await backupSubmit(e)) return;
     if (await aiSubmit(e, render)) return;
@@ -949,6 +962,7 @@ export function bindSettings() {
   m.addEventListener('change', async (e) => {
     const t = e.target;
     if (t.matches('[data-setq]')) return;
+    if (glimtChange(e)) return;
     if (backupChange(e)) return;
     if (await aiChange(e, render)) return;
     if (await loginChange(e)) return;

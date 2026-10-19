@@ -4,7 +4,7 @@ import { store, on, emit } from './store.js';
 import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
 import { addQuick, preview, quickLabel } from './kal-quick.js';
 import { glimt, setGlimt } from './glimt.js';
-import { assist, boldHtml } from './assist.js';
+import { assist, boldHtml, wxRoute } from './assist.js';
 import { toast } from './toast.js';
 
 /* ---------- Popup ---------- */
@@ -291,7 +291,7 @@ function ansHtml() {
     : GL.busy ? `<div class="gl-busy">${glimt(22, 'tenker', { dark: true })}<span>Tenker på «<span data-no-i18n>${esc(GL.q)}</span>» …</span></div>`
     // Prompt 34: feil vises tydelig («Glimt fikk ikke svar fra {modell}: {feil}») med Prøv igjen og Åpne AI-kontroll.
     : GL.err || !GL.ans?.text ? `<span class="gl-txt gl-err" data-no-i18n>${esc(GL.err || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.model || GL.ans?.source || 'Glimt')}</span><button type="button" class="gl-chat" data-gl-retry>Prøv igjen</button><button type="button" class="gl-chat" data-gl-aictl>Åpne AI-kontroll ›</button></div>`
-    : `<span class="gl-txt" data-no-i18n>${boldHtml(GL.ans.text)}</span>${GL.ans.notice ? `<span class="gl-note" data-no-i18n>${esc(GL.ans.notice)}</span>` : ''}<div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}</div>`;
+    : `<span class="gl-txt" data-no-i18n>${boldHtml(GL.ans.text)}</span>${GL.ans.notice ? `<span class="gl-note" data-no-i18n>${esc(GL.ans.notice)}</span>` : ''}<div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.open?.route === 'vaer' ? `<button type="button" class="gl-chat" data-gl-wx>Åpne Vær for ${esc(GL.ans.open.name || 'stedet')} ›</button>` : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}</div>`;
   return `<div class="gl-ans" data-gl-ans role="status" aria-live="polite" title="Trykk for å lukke">${body}</div>`;
 }
 // Boblen ligger i et eget lag på <body> (over nyhetslinjen og kortene), plassert rett under søkefeltet som ble brukt.
@@ -455,6 +455,8 @@ export function bindSearch() {
       return;
     }
     if (e.target.closest('[data-gl-chat]')) { const q = GL.q, jobId = GL.busy ? GL.jobId : null; closeAns(); handoff(q, jobId); return; }
+    // Prompt 35: værsvar for et sted – trykk på svaret (eller «Åpne Vær for …») åpner Vær for stedet.
+    if (GL.ans?.open?.route === 'vaer' && !GL.busy && !e.target.closest('button:not([data-gl-wx])')) { const o = GL.ans.open; closeAns(); location.hash = wxRoute(o); return; }
     if (e.target.closest('[data-gl-retry]')) { const q = GL.q, f = ansForm; askGlimt(q, f); return; }
     if (e.target.closest('[data-gl-aictl]')) { closeAns(); import('./ai-control.js').then((m) => { m.openAiControl({ tab: 'ov', theme: document.documentElement.dataset.hlTheme === '2c' ? 'papir' : 'mork', admin: store.me?.me?.role === 'admin' }); m.runSelftest(); }).catch(() => {}); return; }
     closeAns();

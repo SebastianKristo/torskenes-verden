@@ -21,6 +21,7 @@ export const TAB_IC = {
   users: ['#a8661a', 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3.5a4 4 0 0 1 0 7.5M18 14a6 6 0 0 1 4 6'],
   login: ['#1f6f78', 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'],
   system: ['#6b6558', 'M4 5h16v6H4zM4 13h16v6H4zM8 8h.01M8 16h.01'],
+  glimt: ['#b23a2a', 'M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z'],
   backup: ['#2f6b45', 'M12 3a9 9 0 1 1-8.5 6M3 4v5h5M12 8v4l3 2'],
 };
 export const icBox = (k, size = 30, icon = 16) => {
@@ -58,6 +59,10 @@ const LOCAL = [
   ['chk', 'Se etter oppdatering', 'System → Se etter oppdatering', 'system', 'oppdatering versjon sjekk ny build programvare', 'chk'],
   ['pw', 'Krev passord for å oppdatere', 'System → Krev passord', 'system', 'krev passord oppdater sikkerhet', 'pw'],
   ['backup', 'Automatisk backup', 'Backup → Automatisk', 'backup', 'backup sikkerhetskopi automatisk gjenopprett nas smb', 'bk-auto'],
+  // Prompt 35: GLIMT → Glimt (figur, brief, stemme og venner).
+  ['glimt', 'Glimt', 'Glimt', 'glimt', 'glimt brief morgenbrief kveldsbrief dagsbrief nattbrief venner guide', 'glimt'],
+  ['glimt-figur', 'Glimt-figur', 'Glimt → Glimt-figur', 'glimt', 'figur figurer karakter maskot gris ugle sky dråpe stjerne spire halo boble', 'glimt-fig'],
+  ['glimt-stemme', 'Stemme og opplesning', 'Glimt → Stemmemotor', 'glimt', 'stemme stemmer opplesning les opp tts tale openai elevenlabs azure engelsk tempo', 'glimt-voice'],
   ['backup-now', 'Ta backup nå', 'Backup → Ta backup nå', 'backup', 'backup nå manuell kjør start', 'bk-now'],
 ].map(([id, title, path, web, kw, anchor]) => ({ id, title, path, keywords: kw.split(' '), description: '', route: { web }, ...(anchor ? { anchor } : {}) }));
 
@@ -66,6 +71,7 @@ export const ANCHORS = {
   upd: { sel: '[data-hl="upd"],.ny-act .ny-btn', tip: '✦ Trykk her for å oppdatere' }, chk: { sel: '[data-upd="check"]' }, pw: { sel: '[data-upd-set="require_password"]' },
   theme: { sel: '.sg-theme .sg-box' }, bg: { title: /^Bakgrunnsbilde$/ }, push: { title: /^Varsler på denne enheten$/ }, quiet: { title: /^Stille timer$/ }, '2fa': { title: /^Totrinnsbekreftelse$/ },
   'bk-auto': { title: /^(Backup|Automatisk backup)$/ }, 'bk-now': { title: /^Ta backup nå$/, sel: '[data-bk="run"]' }, invite: { title: /^Ny bruker$/ },
+  glimt: { sel: '[data-gs] .gs-list' }, 'glimt-fig': { sel: '[data-gs] .gs-figs' }, 'glimt-voice': { sel: '[data-gs] .gs-opts' },
   'cf-token': { sel: '.cfg-tokrow' }, 'ai-mod': { sel: '.set-aictl', acTab: 'mod' }, 'ai-key-gemini': { sel: '[data-ac-key="gemini"]', up: '.ac-card', acTab: 'api' },
 };
 
