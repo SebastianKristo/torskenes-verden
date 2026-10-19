@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&amp;family=Manrope:wght@600;700&amp;family=IBM+Plex+Mono:wght@600&amp;display=swap">
+<style>body{margin:0;background:#e9e3d6}a{color:#b23a2a}a:hover{color:#8a2a1d}</style>
+</helmet>
+<section style="padding:56px;display:flex;flex-direction:column;gap:36px;font-family:Manrope,sans-serif;color:#1b1a17">
+<div style="display:flex;flex-direction:column;gap:6px"><b style="font:500 46px/1 Newsreader,serif">AI-kontroll</b><span style="font-size:15px;color:#6b665c;max-width:760px">Ett felles panel for modeller, nedlasting, jobber, tokens, API-nøkler og hvilken modell som gjør hva. Åpnes fra Innstillinger → AI, fra Chat (Modeller og Samtaleinnstillinger → Full AI-kontroll) og i Finans → AI.</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+<div data-screen-label="Web Innstillinger" style="display:flex;flex-direction:column;gap:10px"><b style="font-size:14px">Web · Innstillinger → AI</b><div style="width:1180px;height:820px;border-radius:24px;overflow:hidden;box-shadow:0 30px 60px rgba(27,26,23,.2)"><dc-import name="AI Kontroll" variant="web" scope="alle" theme="papir" style="display:block;width:100%;height:100%" hint-size="1180px,820px"></dc-import></div></div>
+<div data-screen-label="Mobil Modeller" style="display:flex;flex-direction:column;gap:10px"><b style="font-size:14px">Mobil · Chat → Modeller</b><div style="width:393px;height:852px;padding:12px;border-radius:64px;background:#1b1a17;box-shadow:0 30px 60px rgba(27,26,23,.25)"><div style="width:393px;height:852px;border-radius:52px;overflow:hidden"><dc-import name="AI Kontroll" variant="mobile" scope="chat" theme="papir" tab="mod" top-pad="58px" bottom-pad="40px" style="display:block;width:100%;height:100%" hint-size="393px,852px"></dc-import></div></div></div>
+<div data-screen-label="Mobil Jobber" style="display:flex;flex-direction:column;gap:10px"><b style="font-size:14px">Mobil · Jobber</b><div style="width:393px;height:852px;padding:12px;border-radius:64px;background:#1b1a17;box-shadow:0 30px 60px rgba(27,26,23,.25)"><div style="width:393px;height:852px;border-radius:52px;overflow:hidden"><dc-import name="AI Kontroll" variant="mobile" scope="alle" theme="papir" tab="job" top-pad="58px" bottom-pad="40px" style="display:block;width:100%;height:100%" hint-size="393px,852px"></dc-import></div></div></div>
+<div data-screen-label="Finans AI" style="display:flex;flex-direction:column;gap:10px"><b style="font-size:14px">Finans · AI (ryddet)</b><div style="width:1100px;height:780px;border-radius:24px;overflow:hidden;box-shadow:0 30px 60px rgba(27,26,23,.2)"><dc-import name="AI Kontroll" variant="web" scope="finans" theme="finans" style="display:block;width:100%;height:100%" hint-size="1100px,780px"></dc-import></div></div>
+<div data-screen-label="Web Forbruk" style="display:flex;flex-direction:column;gap:10px"><b style="font-size:14px">Web · Forbruk</b><div style="width:1180px;height:820px;border-radius:24px;overflow:hidden;box-shadow:0 30px 60px rgba(27,26,23,.2)"><dc-import name="AI Kontroll" variant="web" scope="alle" theme="mork" tab="use" style="display:block;width:100%;height:100%" hint-size="1180px,820px"></dc-import></div></div>
+</div>
+</section>
+</x-dc>
+</body>
+</html>
