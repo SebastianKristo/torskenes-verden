@@ -19,6 +19,8 @@ struct Cal27Month: View {
         let month: Int = Cal26.cal.component(.month, from: first)
         VStack(spacing: 0) {
             HStack(spacing: 0) {
+                // Prompt 29: ukenummer (U) i egen kolonne; trykk åpner uken (Calendar29Now.swift).
+                Cal29WeekHead(width: 24, size: 10).padding(.top, 4).padding(.bottom, 6)
                 ForEach(Cal26.weekShort, id: \.self) { h in
                     Text(String(h.prefix(1))).font(PF.mono(10)).tracking(0.8).foregroundStyle(p.mut)
                         .frame(maxWidth: .infinity).padding(.top, 4).padding(.bottom, 6)
@@ -29,6 +31,8 @@ struct Cal27Month: View {
             VStack(spacing: 0) {
                 ForEach(0..<6, id: \.self) { r in
                     HStack(spacing: 0) {
+                        Cal29WeekNo(monday: Cal26.add(st, r * 7), width: 24, size: 10)
+                            .overlay(alignment: .bottom) { Rectangle().fill(p.line).frame(height: 1) }
                         ForEach(0..<7, id: \.self) { col in
                             Cal27MonthCell(d: Cal26.add(st, r * 7 + col), month: month, now: now)
                         }

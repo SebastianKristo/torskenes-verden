@@ -15,7 +15,8 @@ struct PaperHome: View {
         VStack(spacing: 10) {
             // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
             PaperCardStack(page: "hjem", cards: [
-                PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { PaperSearch(); minis })),
+                // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch29.swift).
+                PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { HomeSearch29(); minis })),
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
                 // Prompt 27: «Velg stopp» og én gruppe per stopp (RuterHome27.swift).
                 PaperCardDef(key: "h3", label: "Avganger", view: AnyView(RuterHomeCard27())),

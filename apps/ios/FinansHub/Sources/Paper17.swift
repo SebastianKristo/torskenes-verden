@@ -558,6 +558,8 @@ final class Realtime: NSObject {
             }
             Task { await FamilyModel.shared.load(store); await FamilyModel.shared.pollEvents(store.api) }
         case "tracking": Task { try? await store.loadTracking() }
+        // Prompt 29: rask time ferdig eller feilet (Quick29Model.swift).
+        case "calendar-quick": Quick29Model.shared.poke(store)
         default: break
         }
     }
@@ -590,6 +592,7 @@ struct PaperSettings17: View {
         .task {
             await NotifyModel.shared.load(store)
             if Update28Model.isAdmin(store) { await Update28Model.shared.load(store) }
+            if Backup29Model.isAdmin(store) && !Backup29Model.shared.loaded { await Backup29Model.shared.load(store) }
         }
     }
 
@@ -597,11 +600,7 @@ struct PaperSettings17: View {
             profileCard
             // Prompt 24: PROFIL – Standard · Finans + Boliger · Boliger-profil (Profiles24.swift).
             group("Profil", 4, store.prof24Rows(p))
-            group("Konto", 0, [
-                PaperLinkRow(name: "Kontoer og brukere", sub: "Profil, brukere og flere kontoer", icon: "person.2") { store.paperGo("innst-konto") },
-                PaperLinkRow(name: "Sikkerhet", sub: store.lockEnabled ? "Lås med Face ID er på" : "2FA, Face ID og pålitelige enheter", icon: "lock") { store.paperGo("innst-sik") },
-                PaperLinkRow(name: "API-tokens", sub: "Snarveier og integrasjoner", icon: "key") { store.loadTokens(); store.paperGo("innst-api") },
-            ])
+            group("Konto", 0, kontoRows29)
             group("Finans", 3, [
                 PaperLinkRow(name: "AI og tolkning", sub: "Gemini · Groq · Roboflow · Ollama", icon: "sparkles") { store.paperGo("innst-ai") },
                 PaperLinkRow(name: "Kategorier og budsjett", sub: "\(store.boot?.categories.count ?? 0) kategorier", icon: "tag") { store.paperGo("innst-kat") },
@@ -638,6 +637,19 @@ struct PaperSettings17: View {
             ])
             Text("\(AppMeta.shared.name) · versjon \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")")
                 .font(PF.mono(10.5, bold: false)).foregroundStyle(p.mut).frame(maxWidth: .infinity).padding(.top, 14)
+    }
+
+    /// Prompt 29: Backup (hele systemet) under Konto for admin (Backup29Page.swift).
+    private var kontoRows29: [PaperLinkRow] {
+        var rows: [PaperLinkRow] = [
+            PaperLinkRow(name: "Kontoer og brukere", sub: "Profil, brukere og flere kontoer", icon: "person.2") { store.paperGo("innst-konto") },
+            PaperLinkRow(name: "Sikkerhet", sub: store.lockEnabled ? "Lås med Face ID er på" : "2FA, Face ID og pålitelige enheter", icon: "lock") { store.paperGo("innst-sik") },
+        ]
+        if Backup29Model.isAdmin(store) {
+            rows.append(PaperLinkRow(name: "Backup", sub: Backup29Model.shared.summary, icon: "externaldrive.badge.timemachine") { store.paperGo("innst-sysbackup") })
+        }
+        rows.append(PaperLinkRow(name: "API-tokens", sub: "Snarveier og integrasjoner", icon: "key") { store.loadTokens(); store.paperGo("innst-api") })
+        return rows
     }
 
     private var themeSub: String {
@@ -745,6 +757,7 @@ struct PaperSettingsSub: View {
             case "backup": SettingsSubpage(page: "backup")
             case "om": SettingsSubpage(page: "about")
             case "oppdatering": Update28Page()
+            case "sysbackup": Backup29Page()
             default: SettingsSubpage(page: key)
             }
         }
@@ -772,6 +785,7 @@ struct PaperSettingsSub: View {
         "backup": ("Backup og data", "Eksport og gjenoppretting"),
         "om": ("Om appen", "Versjon og lisenser"),
         "oppdatering": ("Oppdatering", "Versjon og oppdatering av serveren"),
+        "sysbackup": ("Backup", "Hele systemet · automatisk og gjenoppretting"),
     ]
 }
 

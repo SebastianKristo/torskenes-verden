@@ -214,9 +214,14 @@ struct PaperShell: View {
                 }
             }
             .overlay(alignment: .topTrailing) {
-                if store.paperBgOpen && store.paperTab == "hjem" && !store.newsOpen && store.dishSel == nil && store.paperClassic == nil {
+                // Prompt 29: samme bakgrunnsmeny fra pillen i toppen av Innstillinger.
+                if store.paperBgOpen && (store.paperTab == "hjem" || store.paperTab == "innst") && !store.newsOpen && store.dishSel == nil && store.paperClassic == nil {
                     PaperBgMenu(top: g.safeAreaInsets.top + 62)
                 }
+            }
+            .overlay(alignment: .top) {
+                // Prompt 29: «✦ Legger til i kalenderen …» og banneret «✓ Nina frisør · …» over hele appen (Quick29Views.swift).
+                Quick29Overlay()
             }
             .environment(\.paperWide, wide)
         }
@@ -947,6 +952,11 @@ struct PaperHero: View {
             Spacer()
             // Finans viser @brukernavn ved profilbildet (ikke fullt navn). Bakgrunnen velges under Innstillinger → Utseende.
             if store.paperInFinance, let u = store.account?.username, !u.isEmpty { pill("@\(u)") { store.paperGo("profil") } }
+            // Prompt 29: «Planeter ▾» rett til venstre for profilbildet på Hjem og i Innstillinger (samme meny, gjelder hele appen).
+            if (home || store.paperTab == "innst") && !store.paperInFinance {
+                pill(bgName + " ▾") { store.paperBgOpen.toggle(); Haptics.shared.select() }
+                    .accessibilityLabel("Bakgrunn: \(bgName)")
+            }
             Button { store.paperGo("profil") } label: {
                 ZStack {
                     Circle().fill(Color(hex: "#f3efe6"))

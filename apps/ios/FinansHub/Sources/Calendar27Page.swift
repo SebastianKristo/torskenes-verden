@@ -37,6 +37,14 @@ struct Cal27Page: View {
                 .presentationDetents([.large])
                 .presentationBackground(p.bg)
         }
+        // Prompt 29: + åpner «Legg til time» (Quick29Views.swift).
+        .sheet(isPresented: Binding<Bool>(get: { Quick29Model.shared.sheetOpen }, set: { Quick29Model.shared.sheetOpen = $0 })) {
+            Quick29Sheet()
+                .environment(\.paper, p)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(p.bg)
+        }
     }
 }
 
@@ -50,7 +58,8 @@ struct Cal27Body: View {
         VStack(spacing: 0) {
             Cal27TopBar(now: now)
             if m.mini { Cal27Mini(now: now).transition(.opacity) }
-            Cal27NextStrip(now: now)
+            // Prompt 29: lyst Nå/Neste-kort i stedet for den svarte stripen (Calendar29Now.swift).
+            Cal29NowCard(now: now)
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
@@ -163,6 +172,8 @@ struct Cal27Mini: View {
                 arrow("›", "Neste måned") { m.miniOff += 1 }
             }
             HStack(spacing: 2) {
+                // Prompt 29: ukenummer (U) til venstre; trykk åpner uken (Calendar29Now.swift).
+                Cal29WeekHead(width: 22, size: 9.5)
                 ForEach(Cal26.weekShort, id: \.self) { h in
                     Text(String(h.prefix(1))).font(PF.mono(9.5)).foregroundStyle(p.mut).frame(maxWidth: .infinity).padding(.vertical, 2)
                 }
@@ -170,6 +181,7 @@ struct Cal27Mini: View {
             VStack(spacing: 2) {
                 ForEach(0..<6, id: \.self) { r in
                     HStack(spacing: 2) {
+                        Cal29WeekNo(monday: Cal26.add(st, r * 7), width: 22, size: 9.5, height: 34)
                         ForEach(0..<7, id: \.self) { c in
                             Cal27MiniCell(d: Cal26.add(st, r * 7 + c), month: month, now: now)
                         }
@@ -303,14 +315,15 @@ struct Cal27BottomBar: View {
             .frame(height: 62)
             .background(p.ink, in: Capsule())
             .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
-            Button { m.newEvent() } label: {
+            // Prompt 29: + åpner «Legg til time» (rask time med AI). «Fyll ut selv» i arket gir det vanlige skjemaet.
+            Button { Quick29Model.shared.openSheet() } label: {
                 Image(systemName: "plus").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.white)
                     .frame(width: 62, height: 62)
                     .background(p.lab, in: Circle())
                     .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Ny hendelse")
+            .accessibilityLabel("Legg til time")
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 6)

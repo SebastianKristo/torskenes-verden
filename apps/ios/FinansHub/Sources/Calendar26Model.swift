@@ -339,6 +339,8 @@ final class Cal26Model {
 
     /// finanshub://kalender[/<id>]
     func openLink(_ url: URL, _ store: Store) {
+        // Prompt 29: finanshub://kalender?date=YYYY-MM-DD (rask time ferdig) og ?quick=<jobb> (feilet → skjemaet).
+        if Quick29Model.shared.openLink(url, store) { return }
         let parts: [String] = url.pathComponents.filter { $0 != "/" }
         if let id = parts.first, !id.isEmpty { pendingOpen = id.removingPercentEncoding ?? id }
         if store.paper { store.paperGo("kalender") }
