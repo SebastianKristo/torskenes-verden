@@ -161,7 +161,7 @@ function dinnerPart(u, today) {
 export function templateSummary(b) {
   const parts = [`${b.greeting}`];
   const w = b.weather;
-  if (w) parts.push(`${w.cond} og ${w.now.temp ?? w.hi}° i ${w.place}${w.rainFrom ? `, regn fra ca. ${w.rainFrom.slice(0, 2).replace(/^0/, '')}` : ''}.`);
+  if (w) parts.push(`${w.cond} og ${w.now.temp ?? w.hi}° i ${w.place}${w.rainFrom ? `, regn fra ${w.rainFrom.slice(0, 2) === '00' ? 'midnatt' : `ca. ${w.rainFrom.slice(0, 2).replace(/^0/, '')}`}` : ''}.`);
   if (b.next) parts.push(`Neste er ${b.next.title} kl. ${b.next.time}${b.next.label.startsWith('I MORGEN') ? ' i morgen' : ''}.`);
   else if (b.events.length) parts.push(`${b.events[0].day} har du ${b.events[0].title}.`);
   else parts.push('Ingen avtaler resten av dagen.');
