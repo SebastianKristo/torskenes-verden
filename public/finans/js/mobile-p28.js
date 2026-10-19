@@ -24,10 +24,13 @@ const toLocal = (r) => ({ o: (r?.o ?? []).map((k) => FROM[k] ?? k), h: (r?.h ?? 
 async function merLoad() {
   if (MER.loaded) return; MER.loaded = true;
   MER.p = lsGet() ?? { o: [], h: [] };
+  // Prompt 37: Gjøremål skal synes i Mer. Én gangs migrering fjerner «huske» fra skjult-listen (papir_mer_huske_v1).
+  let mig = false;
+  try { if (!localStorage.getItem('papir_mer_huske_v1')) { localStorage.setItem('papir_mer_huske_v1', '1'); mig = true; if (MER.p.h?.includes('huske')) { MER.p.h = MER.p.h.filter((k) => k !== 'huske'); lsSet(MER.p); } } } catch {}
   try {
     const r = await hlApi('/prefs/mer');
     MER.server = true;
-    if ((r?.o?.length || r?.h?.length)) { MER.p = toLocal(r); lsSet(MER.p); }
+    if ((r?.o?.length || r?.h?.length)) { MER.p = toLocal(r); if (mig && MER.p.h.includes('huske')) { MER.p.h = MER.p.h.filter((k) => k !== 'huske'); merSave(); } lsSet(MER.p); }
     else if (MER.p.o.length || MER.p.h.length) merSave(); // første gang: lokal rekkefølge flyttes til kontoen
     if (m.screen === 'mer' && !MER.drag) draw();
   } catch { MER.server = false; }

@@ -10,6 +10,7 @@ import { paper } from './mobile-paper.js';
 import * as P27 from './mobile-p27.js';
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 import * as P31 from './mobile-p31.js';
+import * as P37B from './mobile-p37b.js'; // prompt 37: gratis prøveperioder, delte abonnementer, wiggle med skjul
 
 // Prompt 31: Gratis prøveperiode (arket og lagring ligger i mobile-p31.js). Etter Lagre lukkes arket.
 P31.hooks31({ trialSaved: () => { SB.sheet = false; SB.mode = null; }, subsReload: () => subsLoad() });
@@ -30,7 +31,7 @@ const kr = (v) => `${n0(v)} kr`;
 const isI = () => theme() === 'ios';
 
 export async function subsLoad() {
-  if (!SO.loaded) { SO.loaded = true; hlApi('/me/layout').then((r) => { if (Array.isArray(r?.subHomeOrder)) { SO.o = r.subHomeOrder; draw(); } }).catch(() => {}); }
+  if (!SO.loaded) { SO.loaded = true; hlApi('/me/layout').then((r) => { if (Array.isArray(r?.subHomeOrder)) { SO.o = r.subHomeOrder; draw(); } if (Array.isArray(r?.subHomeHid)) { SO.h = r.subHomeHid; draw(); } }).catch(() => {}); }
   try { SB.d = await api('/subscriptions'); SB.err = ''; } catch (e) { SB.err = e.message; }
 }
 
@@ -38,14 +39,17 @@ export async function subsLoad() {
 // Hold inne 0,45 s på et kort → redigering: stiplet ramme, kortet som dras forstørres litt, og pillen
 // «Dra for å flytte · Tilbakestill · Ferdig» øverst. Trykk inne i kortene er blokkert mens du redigerer.
 // Lagres per bruker i /api/me/layout (subHomeOrder), med lokal kopi i sub_home_order.
-const SO_D = ['ai', 'next7', 'check', 'list'];
-export const SO = { o: (() => { try { return JSON.parse(localStorage.getItem('sub_home_order') || 'null'); } catch { return null; } })(), on: false, drag: null, t: null, fired: false, x: 0, y: 0, loaded: false, at: 0 };
+const SO_D = ['trials', 'ai', 'next7', 'check', 'list']; // prompt 37: GRATIS PRØVEPERIODER øverst
+const SO_L = { trials: 'Gratis prøveperioder', ai: 'AI-sparing', next7: 'Neste trekk', check: 'Sjekk', list: 'Kommende trekk' };
+export const SO = { h: (() => { try { return JSON.parse(localStorage.getItem('sub_home_hid') || '[]') || []; } catch { return []; } })(), add: false, sw: 0, dirty: false, o: (() => { try { return JSON.parse(localStorage.getItem('sub_home_order') || 'null'); } catch { return null; } })(), on: false, drag: null, t: null, fired: false, x: 0, y: 0, loaded: false, at: 0 };
 const soOrder = () => { const o = (SO.o ?? SO_D).filter((k) => SO_D.includes(k)); return [...o, ...SO_D.filter((k) => !o.includes(k))]; };
 let soSaveT;
-function soSave(o) {
+function soSave(o, live = false) {
   SO.o = o;
+  // Prompt 37 (krasjfiks): under dra oppdateres bare tilstanden; disk og server skrives én gang ved slipp.
+  if (live) { SO.dirty = true; navigator.vibrate?.(4); return; }
+  SO.dirty = false;
   try { localStorage.setItem('sub_home_order', JSON.stringify(o)); } catch {}
-  navigator.vibrate?.(6);
   clearTimeout(soSaveT);
   soSaveT = setTimeout(() => hlApi('/me/layout', { method: 'PUT', json: { subHomeOrder: o } }).catch(() => {}), 500);
 }
@@ -64,16 +68,22 @@ export function soMove(e) {
   const d = SO.drag;
   if (!d || !SO.on) return false;
   if (e.cancelable) e.preventDefault();
-  const el = document.elementFromPoint(e.clientX, e.clientY), w = el?.closest?.('#app [data-sk]'), to = w?.dataset.sk;
-  if (!to || to === d) return true;
+  let w = null;
+  try { w = document.elementFromPoint(e.clientX, e.clientY)?.closest?.('#app [data-sk]') ?? null; } catch { w = null; }
+  const to = w?.dataset.sk;
+  if (!to || to === d || SO.h.includes(to)) return true;
+  // Bytt bare i midtre 30 % av målet, og maks én gang per 140 ms.
+  const now = Date.now(); if (now - SO.sw < 140) return true;
+  const R = w.getBoundingClientRect(); if (Math.abs(e.clientY - (R.top + R.height / 2)) > R.height * 0.15) return true;
+  SO.sw = now;
   const ord = soOrder(), o = ord.filter((x) => x !== d), i = ord.indexOf(d), j = ord.indexOf(to);
   o.splice(o.indexOf(to) + (j > i ? 1 : 0), 0, d);
-  soSave(o); draw();
+  soSave(o, true); draw();
   return true;
 }
 export function soUp() {
   clearTimeout(SO.t); SO.t = null;
-  if (SO.drag) { SO.drag = null; draw(); return true; }
+  if (SO.drag) { SO.drag = null; if (SO.dirty) soSave(SO.o ?? soOrder()); draw(); return true; }
   return false;
 }
 const soAttr = (k) => `data-sk="${k}" style="order:${soOrder().indexOf(k)}"`;
@@ -115,7 +125,7 @@ const doneSet = () => { if (!SB.done) { try { SB.done = JSON.parse(localStorage.
 
 const lg = (x, size = 38) => (x.logoUrl ? `<span class="sb-logo" style="width:${size}px;height:${size}px;border-radius:${isI() ? size / 2 : 12}px;background-image:url('${esc(x.logoUrl)}')" aria-hidden="true"></span>` : logo({ ...x, description: x.name }, size, isI() ? size / 2 : 12));
 const card = (inner, cls = '') => `<div class="sb-card ${isI() ? 'glass2' : ''} ${cls}">${inner}</div>`;
-const row = (x, right, sub) => `<div class="sb-row"${x.id != null ? ` data-sbed="${esc(x.id)}" role="button" tabindex="0"` : ''}>${lg(x)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(x.name)}${x.plan ? ` <span class="sb-dim" style="font-weight:400">· ${esc(x.plan)}</span>` : ''}</b><span class="sb-dim m-ell">${esc(sub)}</span></span>${right}</div>`;
+const row = (x, right, sub) => `<div class="sb-row"${x.id != null ? ` data-sbed="${esc(x.id)}" role="button" tabindex="0"` : ''}>${lg(x)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(x.name)}${P37B.subAvs(x)}${x.plan ? ` <span class="sb-dim" style="font-weight:400">· ${esc(x.plan)}</span>` : ''}</b><span class="sb-dim m-ell">${esc(sub)}</span>${P37B.subShareLine(x)}</span>${right}</div>`;
 const whenTxt = (d) => { if (!d) return ''; const days = Math.round((new Date(d + 'T12:00') - new Date(today() + 'T12:00')) / 864e5); return days === 0 ? 'I dag' : days === 1 ? 'I morgen' : days > 1 && days < 7 ? new Date(d + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'long' }).replace(/^./, (c) => c.toUpperCase()) : `${+d.slice(8, 10)}. ${MND[+d.slice(5, 7) - 1]}`; };
 
 // Papir: Hjem, Innsikt og Historikk ligger i fanelinja, med + som en rød sirkel (se paperNav), og toppbildet har tittelen.
@@ -204,19 +214,24 @@ function home() {
   const nAi = sv.suggestions?.length ?? low.length;
   const all = [...items()].sort((a, b) => (b.active - a.active) || String(a.nextDate ?? '9999').localeCompare(String(b.nextDate ?? '9999')));
   const num = ['', 'én', 'to', 'tre', 'fire', 'fem'];
-  const cls = (k) => `sb-blk${SO.on ? ' so-ed' : ''}${SO.drag === k ? ' drag' : ''}`;
+  const cls = (k) => `sb-blk${SO.on ? ` so-ed ${SO_D.indexOf(k) % 2 ? 'b' : 'a'}` : ''}${SO.drag === k ? ' drag' : ''}`;
+  if (P31.G.trials === null) P31.trialsLoad().then(() => { if (m.screen === 'sub') draw(); }).catch(() => {});
   const blocks = {
+    trials: `<div class="${cls('trials')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('trials')}>${P37B.trialsCard(P31.G.trials ?? [])}</div>`,
     ai: `<div class="${cls('ai')} sb-hero" ${soAttr('ai')}><span class="sb-k">✦ AI-SPARING</span><div class="sb-big">Spar ${kr(sv.monthly ?? 0)}<br>i måneden</div><div class="sb-hs">${nAi ? `AI fant ${nAi} abonnement${nAi === 1 ? '' : 'er'} å se på${pu ? `, og ${num[pu] ?? pu} prisøkning${pu > 1 ? 'er' : ''}` : ''}.` : 'AI fant ingenting å spare akkurat nå.'}</div><button class="sb-pill" data-sb="tab" data-v="ins">Gå gjennom</button></div>`,
     next7: `<div class="${cls('next7')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('next7')}><div class="sb-wk"><div><span class="sb-dim">Neste 7 dager</span><b class="sb-wkv">${kr(wk)}</b><span class="sb-dim">${up.length} trekk</span></div><div class="sb-bars" aria-hidden="true">${bars.map((v, i) => `<i style="height:${v ? Math.max(8, (v / bmx) * 56) : 4}px" class="${v ? 'on' : ''}${i % 2 ? ' gap' : ''}"></i>`).join('')}</div></div></div>`,
     check: `<div class="${cls('check')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('check')}><div class="sb-chk"><span class="sb-crown">♛</span><div class="m-grow"><b>Abonnementssjekk</b><span class="sb-dim">Gå gjennom før fornyelse</span></div></div><div class="sb-chk2">${low.length ? `<span><b>${low.length} abonnement${low.length > 1 ? 'er' : ''}</b> trenger en titt · spar opptil <span class="sb-acc">${kr(low.reduce((a, x) => a + per(x), 0))}</span></span><span class="sb-avs">${low.slice(0, 4).map((x) => lg(x, 26)).join('')}</span>` : '<span>Alt ser bra ut · ingen trenger en titt</span>'}</div></div>`,
-    list: `<div class="${cls('list')} sb-lblk" ${soAttr('list')}>${P31.trialCard()}<div class="sec">Alle abonnementer · ${kr(SB.d?.monthly ?? 0)}/mnd</div>
+    list: `<div class="${cls('list')} sb-lblk" ${soAttr('list')}><div class="sec">Alle abonnementer · ${kr(act().reduce((a, x) => a + P37B.myShare(x), 0) || (SB.d?.monthly ?? 0))}/mnd</div>
     ${card(all.map((x) => { const [n, c] = ST[statusOf(x)] ?? ST.active, [cl, pr] = CYC[x.cycle] ?? CYC.monthly;
       return row(x, `<span class="sb-r"><b class="m-mono">${n0(x.price)} kr<small class="sb-dim">${pr}</small></b><button class="stchip ${c}" data-subtog="${x.id}" aria-label="${x.active ? 'Si opp' : 'Gjenoppta'} ${esc(x.name)}">${x.active ? (c === 'ok' ? 'Aktiv' : 'Si opp') : 'Sagt opp'}</button></span>`, `${cl}${x.nextDate ? ` · neste ${dd(x.nextDate)}` : ''} · ${catOf(x)}${c !== 'ok' && x.active ? ` · ${n.replace(/^\W+ /, '')}` : ''}`);
     }).join('') || '<div class="m-empty">Ingen abonnementer ennå. Trykk + for å legge til.</div>')}
     <div class="snote" style="text-align:center">Trykk på status for å si opp eller gjenoppta · hold inne på et kort for å flytte det.</div></div>`,
   };
-  const pill = SO.on ? `<div class="sb-sopill" style="order:-1" data-soc><span>Dra for å flytte</span><button data-soc data-sb="soreset">Tilbakestill</button><button data-soc data-sb="sodone" class="on">Ferdig</button></div>` : '';
-  return `<div class="sb-home${SO.on ? ' so-on' : ''}">${pill}${SO_D.map((k) => blocks[k]).join('')}</div>`;
+  const hid = SO.h.filter((k) => SO_D.includes(k));
+  const minus = (k) => (SO.on ? `<button type="button" class="p37-som" data-soc data-sb="sohide" data-v="${k}" aria-label="Skjul ${esc(SO_L[k])}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>` : '');
+  const pill = SO.on ? `<div class="sb-sopill p37-sop" style="order:-1" data-soc><button type="button" class="p37-soadd" data-soc data-sb="soadd" aria-label="Legg til kort${hid.length ? ` (${hid.length} skjult)` : ''}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>${hid.length ? `<b>${hid.length}</b>` : ''}</button><span>Dra for å flytte · − for å skjule</span><button data-soc data-sb="soreset">Tilbakestill</button><button data-soc data-sb="sodone" class="on">Ferdig</button></div>` : '';
+  const addSh = SO.on && SO.add ? `<div class="p37-scrim" data-soc data-sb="soaddx"></div><div class="p37-sheet sm" role="dialog" aria-modal="true" aria-label="Legg til kort" data-soc><span class="p37-grab"></span><div class="p37-shh"><span></span><b>Legg til kort</b><button type="button" class="p37-ok" data-soc data-sb="soaddx">Ferdig</button></div>${hid.length ? `<div class="p37-card p37-grp">${hid.map((k) => `<button type="button" class="p37-r" data-soc data-sb="soshow" data-v="${k}"><b class="m-grow">${esc(SO_L[k])}</b><span class="p37-plus">+</span></button>`).join('')}</div>` : '<span class="p37-hint">Alle kortene vises. Trykk − på et kort for å skjule det.</span>'}</div>` : '';
+  return `<div class="sb-home${SO.on ? ' so-on' : ''}">${pill}${SO_D.filter((k) => !hid.includes(k)).map((k) => blocks[k].replace(/^(<div [^>]*>)/, `$1${minus(k)}`)).join('')}</div>${addSh}`;
 }
 
 function insights() {
@@ -261,7 +276,9 @@ export function openEditor(x) {
   SB.ed = { id: x?.id ?? null, name: x?.name ?? '', plan: x?.plan ?? '', price: x ? String(x.price).replace('.', ',') : '', cycle: x?.cycle ?? 'monthly',
     day: String(x?.billDay ?? x?.chargeDay ?? (nd ? nd.getDate() : d.getDate())), mon: String(x?.billMonth ?? (nd ? nd.getMonth() + 1 : ((d.getMonth() + 1) % 12) + 1)),
     category: x ? catOf(x) : 'Annet', status: x ? (x.state === 'cancelled' || x.active === false ? 'cancelled' : x.status === 'low_use' ? 'low_use' : 'active') : 'active',
-    logoUrl: x?.logoUrl ?? null, domain: x?.domain ?? null, file: null, busy: false, del: false };
+    logoUrl: x?.logoUrl ?? null, domain: x?.domain ?? null, file: null, busy: false, del: false,
+    members: (Array.isArray(x?.members) && x.members.length ? x.members.map((p) => String(p.userId ?? p.id)) : [String(m.me?.id ?? '')]), split: x?.split ?? 'equal', payerId: x?.payerId ?? null, mem0: JSON.stringify(x?.members ?? []) }; // prompt 37: delte abonnementer
+  P37B.household().then((L) => { if (SB.ed) { SB.ed.ppl = L; draw(); } }).catch(() => {});
 }
 function nextCharge(day, mon, cycle) {
   const t = new Date(); t.setHours(12, 0, 0, 0);
@@ -286,6 +303,7 @@ function editor() {
     <div class="sb-two"><label class="sb-lab">Plan<input class="sinp" id="m-sbe-plan" data-sbe="plan" value="${esc(e.plan)}" placeholder="Standard" autocomplete="off"></label><label class="sb-lab">Kategori<select class="sinp" data-sbe="category">${Object.keys(CAT_C).map((c) => `<option ${c === e.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label></div>
     <div class="sb-lab">Hvor ofte<div class="schips">${Object.entries(CYC).map(([k, [n]]) => chip(`data-sbx="cyc" data-v="${k}"`, e.cycle === k, n)).join('')}</div></div>
     <div class="sb-lab">Faktureringsdato<div class="sb-two"><select class="sinp" data-sbe="day" aria-label="Dag">${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}" ${day === i + 1 ? 'selected' : ''}>${i + 1}.</option>`).join('')}</select><select class="sinp" data-sbe="mon" aria-label="Måned">${MNL.map((n, i) => `<option value="${i + 1}" ${mon === i + 1 ? 'selected' : ''}>${n.charAt(0).toUpperCase() + n.slice(1)}</option>`).join('')}</select></div><span class="sb-dim sm">${esc(when)}</span></div>
+    ${P37B.shareSection(e, e.ppl ?? [{ id: String(m.me?.id ?? ''), name: m.me?.name ?? 'Meg' }], e.price)}
     <div class="sb-lab">Status<div class="schips">${STS.map(([k, n]) => chip(`data-sbx="st" data-v="${k}"`, e.status === k, n)).join('')}</div></div>
     <div class="m-row" style="gap:8px"><button class="pri-b" style="flex:1" data-sbx="save" ${e.busy ? 'disabled' : ''}>${e.busy === 'save' ? 'Lagrer …' : 'Lagre'}</button>${e.id ? `<button class="sb-del" data-sbx="del">${e.del ? 'Trykk igjen' : 'Slett'}</button>` : ''}</div></div>`;
 }
@@ -301,6 +319,7 @@ async function saveEditor() {
   try {
     const r = e.id ? await api(`/subscriptions/${e.id}`, { method: 'PATCH', json: body }) : await api('/subscriptions', { method: 'POST', json: body });
     const id = e.id ?? r?.id ?? r?.item?.id;
+    if (e.members.length > 1 || JSON.stringify(e.members) !== JSON.stringify(JSON.parse(e.mem0 || '[]').map((p) => String(p.userId ?? p.id))) && JSON.parse(e.mem0 || '[]').length) await P37B.shareSave(id, e); // prompt 37
     if (e.file && id != null) { const fd = new FormData(); fd.append('file', e.file, e.file.name || 'logo.png'); await api(`/subscriptions/${id}/logo`, { method: 'POST', body: fd }).catch((err) => flash(`Logoen ble ikke lagret: ${err.message}`)); }
     SB.ed = null; await subsLoad(); flash(`${body.name} er lagret`);
   } catch (err) { haptic('err'); flash(err.message); if (SB.ed) SB.ed.busy = false; }
@@ -326,14 +345,25 @@ export async function subsBind(e, t) {
   if (m.screen !== 'sub' || m.sub) return false;
   const d = (s) => t.closest?.(s);
   let x;
-  if (e.type === 'click' && (x = d('[data-sb="soreset"], [data-sb="sodone"]'))) {
-    e.preventDefault();
-    if (x.dataset.sb === 'sodone') { SO.on = false; SO.drag = null; }
-    else { SO.o = null; try { localStorage.removeItem('sub_home_order'); } catch {} hlApi('/me/layout', { method: 'PUT', json: { subHomeOrder: SO_D } }).catch(() => {}); }
+  if (e.type === 'click' && (x = d('[data-sb="soreset"], [data-sb="sodone"], [data-sb="sohide"], [data-sb="soshow"], [data-sb="soadd"], [data-sb="soaddx"]'))) {
+    e.preventDefault(); e.stopPropagation();
+    const hs = (h) => { SO.h = h; try { localStorage.setItem('sub_home_hid', JSON.stringify(h)); } catch {} hlApi('/me/layout', { method: 'PUT', json: { subHomeHid: h } }).catch(() => {}); };
+    if (x.dataset.sb === 'sodone') { SO.on = false; SO.drag = null; SO.add = false; }
+    else if (x.dataset.sb === 'sohide') { hs([...new Set([...SO.h, x.dataset.v])]); haptic('tap'); }
+    else if (x.dataset.sb === 'soshow') { hs(SO.h.filter((k) => k !== x.dataset.v)); haptic('ok'); if (SO.h.length === 0) SO.add = false; }
+    else if (x.dataset.sb === 'soadd') { SO.add = true; haptic('tap'); }
+    else if (x.dataset.sb === 'soaddx') SO.add = false;
+    else { SO.o = null; hs([]); try { localStorage.removeItem('sub_home_order'); } catch {} hlApi('/me/layout', { method: 'PUT', json: { subHomeOrder: SO_D } }).catch(() => {}); }
     draw(); return true;
   }
   // Mens kortene redigeres (og klikket rett etter et langt trykk) åpner ingenting.
   if (e.type === 'click' && d('[data-sk]') && (SO.on || (SO.fired && Date.now() - SO.at < 900))) { e.preventDefault(); e.stopPropagation(); SO.fired = false; return true; }
+  if (SB.ed && e.type === 'click' && (x = d('[data-p37b="shmem"], [data-p37b="shsplit"]'))) {
+    e.preventDefault(); e.stopPropagation(); const ed = SB.ed, me = String(m.me?.id ?? '');
+    if (x.dataset.p37b === 'shmem') { const u = x.dataset.k; if (u !== me) ed.members = ed.members.includes(u) ? ed.members.filter((y) => y !== u) : [...ed.members, u]; }
+    else { ed.split = x.dataset.v; ed.payerId = x.dataset.v === 'payer' ? me : null; }
+    haptic('tab'); draw(); return true;
+  }
   if (SB.ed) {
     if ((e.type === 'input' || e.type === 'change') && t.dataset?.sbe) { SB.ed[t.dataset.sbe] = t.value; if (e.type === 'change') draw(); return true; }
     if (e.type === 'change' && t.matches?.('[data-sblogo]')) { const f = t.files?.[0]; t.value = ''; if (f) { SB.ed.file = f; SB.ed.logoUrl = null; } draw(); return true; }
@@ -341,6 +371,7 @@ export async function subsBind(e, t) {
       e.preventDefault();
       const k = x.dataset.sbx, ed = SB.ed;
       if (k === 'close') SB.ed = null;
+      else if (k === 'x37') return true;
       else if (k === 'cyc') ed.cycle = x.dataset.v;
       else if (k === 'st') ed.status = x.dataset.v;
       else if (k === 'nologo') { ed.logoUrl = null; ed.file = null; }

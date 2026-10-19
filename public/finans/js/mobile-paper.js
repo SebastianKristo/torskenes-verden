@@ -30,6 +30,8 @@ import { posCard, ppTi } from './mobile-p20.js';
 import { bgFetch, bgLayers, bgControls, saveBg, takeBg, bgSet } from './mobile-bg.js';
 import * as P34 from './mobile-p34.js'; // prompt 34: Glimt-brief på Hjem (h12)
 import * as P35 from './mobile-p35.js'; // prompt 35: Hjem-kortet med vertsfiguren
+import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål-widgeten
+import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers på Hjem, Pakker «bare når det er pakker»
 import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief-kortet, Now Brief i Mer, temperatur trykk/hold
 
 /* ---------- Valg (per bruker i /api/me/layout, med lokal kopi) ---------- */
@@ -115,7 +117,7 @@ const PAGE = {
   mer: ['Mer', 'Alle moduler'], set: ['Innstillinger', 'Konto og utseende'], media: ['Media', 'Plex · Jellyfin'],
   dom: ['Domener', 'Trafikk, besøk og oppetid'], 'dom/pub': ['Publikum', 'Kart, land og enheter'], 'dom/ytl': ['Ytelse', 'Statuskoder, fart og sikkerhet'], 'dom/inf': ['Infrastruktur', 'Oppetid, DNS og domeneinfo'], 'dom/admin': ['Domener', 'Legg til og fjern'],
   aks: ['Aksjer', 'Trading 212'], sub: ['Abonnementer', 'Subscription OS'], dir: ['Boliger', 'Utgifter, prosjekter og kvitteringer'], finn: ['Finn', 'Kjøp og salg'],
-  avg: ['Avganger', 'Ruter · sanntid fra Entur'], fam: ['Familie', 'Posisjon, soner og helse'], huske: ['Huskeliste', 'Oppgaver for hele familien'],
+  avg: ['Avganger', 'Ruter · sanntid fra Entur'], fam: ['Familie', 'Posisjon, soner og helse'], huske: ['Gjøremål', 'To-do for hele familien'], bibel: ['Bibel', 'Dagens vers og leseplan'],
   bd: ['Bursdager', 'Familie og venner'], kal: ['Kalender', 'Skole og familie'], kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
   skann: ['Kvittering', 'Bekreft'], opp: ['Kø', 'Kvitteringer'], hl: ['', ''],
 };
@@ -135,7 +137,7 @@ function parentOf(scr) {
   return r[0] === 'hl' && scr !== 'hl' ? ['dir', 'Boliger'] : r;
 }
 function parentOf0(scr) {
-  if (scr === 'bd' || scr === 'kal') return ['mer', 'Mer'];
+  if (scr === 'bd' || scr === 'kal' || scr === 'bibel') return ['mer', 'Mer'];
   if (m.detail && ['liste', 'sok', 'hjem'].includes(scr)) return ['txback', NAMES[scr]];
   if (scr === 'finn' && m.sub) return ['finn', 'Finn'];
   if (scr === 'set' && /^integ\/./.test(m.sub ?? '')) return ['set/integ', 'Integrasjoner'];
@@ -174,7 +176,7 @@ export function paperHero(scr) {
   const own = heroBg(scr), bolK = scr === 'dir' && !m.sub ? P24.bolKicker() : null;
   return `<header class="pp-hero${home ? ' home' : ''}${bgPill && P.open ? ' p29-open' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}${scr === 'dir' ? P24.bolFade() : ''}
     <div class="pp-top">${backBtn}<span class="m-grow"></span>
-      ${bgPill ? `<button class="p29-bgp" data-pp="photo" aria-haspopup="menu" aria-expanded="${P.open}">${esc(BG_N[kind] ?? 'Nåværende')} ▾</button>` : ''}<a class="pp-av${avatarUrl() ? ' img' : ''}" href="#/set/profil" aria-label="Profil">${avInner()}</a></div>
+      ${bgPill ? `<button class="p29-bgp" data-pp="photo" aria-haspopup="menu" aria-expanded="${P.open}">${esc(BG_N[kind] ?? 'Nåværende')} ▾</button>` : ''}<a class="pp-av${avatarUrl() ? ' img' : ''}" href="#/set" aria-label="Innstillinger">${avInner()}</a></div>
     ${failNote}${bgPill && P.open ? bgMenu(kind) : ''}
     <div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(bolK ?? kicker)}</div><h1 class="pp-title${home ? ' big' : ''}">${ttl}</h1></div>${scr === 'dir' ? P24.domPill() : ''}
       ${home && w ? `<a class="pp-temp" href="${esc(yrUrl(w))}" target="_blank" rel="noopener" data-p36temp title="Trykk: Vær · Hold inne: åpne Yr" aria-label="Åpne værvisningen (hold inne for Yr)"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
@@ -329,16 +331,20 @@ export function paperHome() {
   ];
   // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier, Siste nytt).
   // Prompt 24: Pakker vises alltid, også uten aktive pakker.
-  const pkgCard = pkg || `<a class="pp-card pp-pkg p24-nopkg" href="#/spor"><span class="m-grow" style="min-width:0"><span class="pp-lab">PAKKER</span><b class="pp-serif m-ell" style="display:block">Ingen aktive pakker</b><span class="pp-mut m-ell">Legg til et sporingsnummer ›</span></span></a>`;
+  const pkgEmpty = `<a class="pp-card pp-pkg p24-nopkg" href="#/spor"><span class="m-grow" style="min-width:0"><span class="pp-lab">PAKKER</span><b class="pp-serif m-ell" style="display:block">Ingen aktive pakker</b><span class="pp-mut m-ell">Legg til et sporingsnummer ›</span></span></a>`;
+  // Prompt 37: «Vis bare når det er pakker» (standard på) og 1–3 pakker (papir_wopt.h2). Skjult uten pakker utenfor redigering.
+  P37B.H2.pk = pk.length;
+  const pkRows = pk.slice(1, 3).map((p) => `<a class="p37-h2r" href="#/spor">${pkgLogo(p, 30)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(pkgTitle(p))}</b><span class="pp-mut m-ell">${esc(p.pickupPoint || p.statusText || carName(p.carrier))}</span></span></a>`);
+  const pkgCard = P37B.h2Widget(pkg, pkgEmpty, pk.length, pkRows, edOn('hl'));
   return `<div class="pp-home">${P30.updBanner('home')}${edBlocks('hl', {
     h1: P29.searchCard(), // Prompt 29: søkemotor-valg (System-AI / Google / DuckDuckGo) og timer som gjenkjennes
     h2: pkgCard, h3: P27.ruterCard(ruter),
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
     h5: newsCard(H?.news),
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
-    h6: posCard(), h7: bolWidget(), h8: huskeWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(), // Prompt 32: Prøveperioder
-    h12: P36.briefCard(P35.briefCard(), edOn('hl')), // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
-  }, { full: ['h12', 'h1', 'h4', 'h5'] })}</div>`;
+    h6: posCard(), h7: bolWidget(), h8: P37.todoWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(), // Prompt 32: Prøveperioder
+    h12: P36.briefCard(P35.briefCard(), edOn('hl')), h13: P37B.bibleHome(edOn('hl')), // Prompt 37: Dagens bibelvers (bare med modulen) // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
+  }, { full: ['h12', 'h13', 'h1', 'h4', 'h5'] })}</div>`;
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
 const RUTER = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regionbus: '#75A300', water: '#682C88', ferry: '#682C88', rail: '#003087', train: '#003087' };
@@ -382,8 +388,8 @@ export function paperMer() {
   // fanelinja tas ut. I profilene Finans + Boliger og Boliger-profil står Hjem øverst.
   const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k));
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
-  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Now Brief', P36.briefMerSub()], // prompt 36: Now Brief øverst i Mer
-     ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Huskeliste', 'Oppgaver og widgets'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
+  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Now Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
+     ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
     ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     .filter(([k]) => k === 'hl' || k === 'set' || !inBar.has(k));
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).

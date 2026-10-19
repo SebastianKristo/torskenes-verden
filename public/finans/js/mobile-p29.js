@@ -200,7 +200,7 @@ export function quickLayer() {
 const SCHED = [['nightly', 'Hver natt 03:00'], ['6h', 'Hver 6. time'], ['weekly', 'Hver uke · søndag'], ['monthly', 'Hver måned']];
 const KEEP = [['7', '7 siste'], ['30', '30 siste'], ['90d', '90 dager'], ['1y', '1 år']];
 const SCOPE = [['all', 'Hele systemet'], ['finans', 'Bare Finans'], ['custom', 'Egendefinert']];
-const MODS = [['finans', 'Finans', 'Transaksjoner, kvitteringer, budsjett, abonnementer'], ['kalender', 'Kalender', ''], ['familie', 'Familie', ''], ['mat', 'Mat', ''], ['sporing', 'Sporing', ''], ['huske', 'Huskeliste', ''], ['bursdager', 'Bursdager', ''], ['chat', 'Chat', 'Samtaler og kunnskapsbase'], ['domener', 'Domener', ''], ['innstillinger', 'Innstillinger og brukere', ''], ['filer', 'Bilder og filer', '']];
+const MODS = [['finans', 'Finans', 'Transaksjoner, kvitteringer, budsjett, abonnementer'], ['kalender', 'Kalender', ''], ['familie', 'Familie', ''], ['mat', 'Mat', ''], ['sporing', 'Sporing', ''], ['huske', 'Gjøremål', ''], ['bursdager', 'Bursdager', ''], ['chat', 'Chat', 'Samtaler og kunnskapsbase'], ['domener', 'Domener', ''], ['innstillinger', 'Innstillinger og brukere', ''], ['filer', 'Bilder og filer', '']];
 const cloudIn = (c = {}, extra = {}) => { const o = { enabled: !!c.enabled, provider: c.provider ?? 'b2' }; for (const k of ['bucket', 'endpoint', 'region', 'prefix']) if (c[k] != null) o[k] = c[k]; return { ...o, ...extra }; };
 const nm = (L, k) => L.find(([a]) => a === k)?.[1] ?? k;
 export const isAdmin = () => m.me?.role === 'admin';

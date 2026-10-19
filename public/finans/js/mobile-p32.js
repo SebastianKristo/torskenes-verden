@@ -112,7 +112,7 @@ const NAV = [
   [/v(æ|ae)ret? (side|app)|værside|åpne vær/, '#/vaer', 'Vær'], [/innstilling/, '#/set', 'Innstillinger'], [/pakke|sporing|sending/, '#/spor', 'Sporing'],
   [/budsjett/, '#/budsjett', 'Budsjett'], [/kvittering/, '#/kv', 'Kvitteringer'], [/finans|økonomi|saldo|konto/, '#/hjem', 'Finans'],
   [/abonnement|prøveperiode/, '#/sub', 'Abonnement'], [/domene/, '#/dom', 'Domener'], [/familie|posisjon|hvor er/, '#/fam', 'Familie'],
-  [/middag|matplan|oppskrift|\bmat\b/, '#/mat', 'Mat'], [/huskeliste|handleliste|todo/, '#/huske', 'Huskeliste'], [/bursdag/, '#/bd', 'Bursdager'], [/\bchat\b/, '#/chat', 'Chat'],
+  [/middag|matplan|oppskrift|\bmat\b/, '#/mat', 'Mat'], [/huskeliste|handleliste|to-?do|gjøremål/, '#/huske', 'Gjøremål'], [/bursdag/, '#/bd', 'Bursdager'], [/\bchat\b/, '#/chat', 'Chat'],
 ];
 // Serverens intent «nav» bruker sidenavn (claude-code-sok-fullfor-forst.md).
 export const NAV_T = { nordlys: '#/nordlys', kalender: '#/kal', kal: '#/kal', vaer: '#/vaer', innst: '#/set', innstillinger: '#/set', sporing: '#/spor', budsjett: '#/budsjett', kvitt: '#/kv', kvitteringer: '#/kv', finans: '#/hjem', abo: '#/sub', abonnement: '#/sub', domener: '#/dom', kart: '#/fam', familie: '#/fam', mat: '#/mat', huske: '#/huske', huskeliste: '#/huske', bursdag: '#/bd', bursdager: '#/bd', chat: '#/chat' };
@@ -121,6 +121,10 @@ export function shortcut(q) {
   const n = String(q ?? '').toLowerCase().trim();
   if (!n) return null;
   if (!/^(vis( meg)?|åpne|gå til|ta meg til|hvor (er|finner jeg)|finn)\b/.test(n) && n.split(/\s+/).length > 2) return null;
+  // Prompt 37: «hvor er Ingrid» er et spørsmål om posisjonen (mobile-p37b.js whereAnswer), ikke en snarvei til Familie.
+  const wq = /^(hvor|kor)\s+(er|befinner|holder)\s+(seg\s+)?([a-zæøå]+)\??$/.exec(n);
+  if (wq && !NAV.some(([re]) => re.test(wq[4])) && !/^(jeg|det|den|de)$/.test(wq[4]) || /^(where is|posisjonen til)\s/.test(n)) return null;
+  if (wq && wq[4] === 'jeg') return null;
   const hit = NAV.find(([re]) => re.test(n));
   return hit ? { href: hit[1], label: hit[2] } : null;
 }

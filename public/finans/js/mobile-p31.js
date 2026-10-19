@@ -15,7 +15,8 @@ import { haptic } from './mobile-haptics.js';
 import { hsTimeout, NAV_T } from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET
 import * as P34 from './mobile-p34.js';
 import * as P35 from './mobile-p35.js';
-import * as P36 from './mobile-p36.js'; // prompt 36: spørsmål vs. handling, dagslys lokalt // prompt 35: været for et sted i AI-søket // prompt 34: tydelige AI-feil i boblen
+import * as P36 from './mobile-p36.js';
+import * as P37B from './mobile-p37b.js'; // prompt 37: «hvor er X» // prompt 36: spørsmål vs. handling, dagslys lokalt // prompt 35: været for et sted i AI-søket // prompt 34: tydelige AI-feil i boblen
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -136,7 +137,7 @@ export function ansBubble() {
   const A = G.ans; if (!A) return '';
   if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …</span></div>`;
   return `<div class="p31-ans ready" data-p31="ansx" role="status" aria-live="polite"><span class="p31-at">${bold(A.text)}</span>${A.card ? cardHtml(A.card, true) : ''}
-    ${A.err ? P34.errButtons(A.q) : ''}${A.open ? P35.wxOpenBtn(A.open) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div></div>`;
+    ${A.err ? P34.errButtons(A.q) : ''}${A.open ? (A.open.route === 'familie' ? P37B.famOpenBtn(A.open) : P35.wxOpenBtn(A.open)) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div></div>`;
 }
 const ASSIST_MISSING = { v: false };
 async function assistCall(q, source, extra = {}) {
@@ -202,6 +203,8 @@ export async function ask(q, o = {}) {
   if (o.surface === 'pill') { G.ans = null; return askPill(q); }
   const id = ++G.aid; G.ans = { q, busy: true }; draw();
   // Prompt 36: dagslys, soloppgang og solnedgang for en dato regnes ut lokalt (suncalc), med «Åpne Vær ›».
+  // Prompt 37: «hvor er Ingrid?» → posisjonen fra Familie (serverens family.where eller lokalt), med «Vis på kart ›».
+  if (P37B.isWhereQ(q)) { const W0 = await P37B.whereAnswer(q).catch(() => null); if (W0 && G.aid === id) { G.ans = { q, busy: false, ...W0 }; haptic('ok'); draw(); bgNotify(q, W0.text, '#/fam'); return; } }
   if (P36.isSunQ(q)) { const S0 = await P36.sunAnswer(q).catch(() => null); if (S0 && G.aid === id) { G.ans = { q, busy: false, ...S0 }; haptic('ok'); draw(); return; } }
   const set = (o) => { if (G.aid !== id) return; G.ans = { q, busy: false, ...o }; haptic('ok'); draw(); bgNotify(q, o.text, '#/hl'); };
   // Prompt 32 (claude-code-sok-fullfor-forst.md): svaret skal komme i boblen. Tar det lengre enn grensen (hs_timeout_s,
@@ -342,7 +345,7 @@ const TOOL_RE = [
   ['Avganger', /avgang|når går|buss|trikk|t-bane|tog\b|ruter/],
   ['Pakker', /pakke|sending|posten|bring|postnord|helthjem/],
   ['Finans', /brukt på|hva har jeg brukt|forbruk|budsjett/],
-  ['Huskeliste', /huskeliste|oppgaver|gjøremål|handleliste/],
+  ['Gjøremål', /huskeliste|oppgaver|gjøremål|handleliste|to-?do/],
   // Prompt 33: «husk at Påhåret er frisøren min», «det var frisør»
   ['Glimt husker', /^(husk at\s+)?.{0,60}\b(er|var|gjelder)\s+(for\s+|hos\s+)?(min\s+|en\s+)?(frisør|frisøren|lege|legen|fastlegen|tannlege|tannlegen|fysio|fysioterapeut(en)?|optiker(en)?|psykolog(en)?)(\s+min)?[.!]?$/],
 ];

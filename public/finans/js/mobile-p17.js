@@ -153,7 +153,7 @@ export function p17SetMain(T = {}) {
 /** Moduler: snarveier til modulene (de kan også legges i fanelinja). */
 export function p17Modules() {
   const M = [['#/spor', 'Sporing', 'Pakker fra e-post og Finn', 'globe'], ['#/dom', 'Domener', 'Cloudflare-statistikk', 'globe'], ['#/mat', 'Mat', 'Ukeplan og oppskrifter', 'home'], ['#/nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag', 'look'],
-    ['#/huske', 'Huskeliste', 'Egne og delte lister', 'list'], ['#/fam', 'Familie og kart', 'Posisjon, soner og helse', 'users'], ['#/avg', 'Avganger', 'Sanntid fra Entur', 'globe'], ['#/vaer', 'Vær', 'MET og Yr mot Storm', 'look']];
+    ['#/huske', 'Gjøremål', 'To-do: egne og delte lister', 'list'], ['#/fam', 'Familie og kart', 'Posisjon, soner og helse', 'users'], ['#/avg', 'Avganger', 'Sanntid fra Entur', 'globe'], ['#/vaer', 'Vær', 'MET og Yr mot Storm', 'look']];
   return grp('MODULER', M.filter(([h]) => h !== '#/dom' || domOk()).map(([h, n, s, ic]) => row(h, n, s, '', ic, `mod-${n}`))) + '<div class="snote">Modulene kan også legges i fanelinja under Fanelinje i Hjem.</div>';
 }
 
@@ -263,6 +263,7 @@ export async function tasksLoad(force = false) {
   }
 }
 const saveLocal = () => { if (HK.local) { L.tasks = HK.d.items; keep(); } };
+export const saveLocal37 = () => saveLocal(); // prompt 37: Gjøremål (mobile-p37.js) lagrer lokalt på eldre server
 async function taskAdd() {
   const title = HK.nv.trim(); if (!title) return;
   const list = HK.cur === 'alle' ? (HK.d?.lists?.[0]?.id ?? 'hjem') : HK.cur;
@@ -291,6 +292,7 @@ function dueLbl(due) {
 const tsOf = (v) => (v == null || v === '' ? null : typeof v === 'number' ? v : Date.parse(v) || null);
 export const isArch = (x) => !!(x.archived || x.archivedAt || x.archived_at || x.arch) || (x.done && tsOf(x.doneAt ?? x.done_at ?? x.completedAt ?? x.completed_at) != null && Date.now() - tsOf(x.doneAt ?? x.done_at ?? x.completedAt ?? x.completed_at) > 7 * 864e5);
 const archOf = () => { const own = (HK.d?.items ?? []).filter(isArch), ex = (HK.arch ?? []).filter((x) => !own.some((y) => String(y.id) === String(x.id))); return [...own, ...ex].sort((a, b) => (tsOf(b.archivedAt ?? b.archived_at ?? b.doneAt ?? b.done_at) ?? 0) - (tsOf(a.archivedAt ?? a.archived_at ?? a.doneAt ?? a.done_at) ?? 0)); };
+export const archLoad37 = () => archLoad(); export const archOf37 = () => archOf(); // prompt 37
 async function archLoad() {
   if (HK.local || HK.archT && Date.now() - HK.archT < 15000) return;
   HK.archT = Date.now();

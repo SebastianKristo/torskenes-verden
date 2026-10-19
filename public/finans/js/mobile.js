@@ -41,6 +41,8 @@ import * as P32 from './mobile-p32.js'; // prompt 32: fanelinje på Domener/Abon
 import * as CHAT from './mobile-chat.js';
 import * as P34 from './mobile-p34.js'; // prompt 34: haptikk tilbake, kvitteringer under AI-analyse, Glimt-brief, markering i Innstillinger
 import * as P34AI from './mobile-p34ai.js'; // prompt 34: AI-kontroll (#/aictl)
+import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål (uten fanelinje, detaljark, delte lister, Glimt i ✦-knappen)
+import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
 import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
 import * as P35 from './mobile-p35.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
@@ -73,7 +75,7 @@ const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
 const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
 const HLG = ['hl', 'spor', 'set'];
-const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter', 'fmer', 'vaer', 'avg', 'fam', 'huske', 'bd', 'kal', 'chat', 'nordlys', 'aictl', 'brief', 'glimt'])];
+const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter', 'fmer', 'vaer', 'avg', 'fam', 'huske', 'bd', 'kal', 'chat', 'nordlys', 'aictl', 'brief', 'glimt', 'bibel'])];
 // Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
 const RENAME = ['home', 'list', 'bud', 'finn'];
 // Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
@@ -416,7 +418,7 @@ export function draw() {
   const ppMain = !pp ? null : scr === 'hl' ? paperHome() : m.detail && !m.edit && m.sel != null && ['liste', 'sok', 'hjem'].includes(scr) ? paperTx(m.sel)
     : scr === 'hjem' && plain ? paperFin() : scr === 'mer' ? paperMer()
     : scr === 'bd' ? P24.bdView() : scr === 'kal' ? KAL.kalView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? P23.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
-  const main = scr === 'aictl' ? P34AI.aiView() : scr === 'brief' ? P35.briefView() : scr === 'glimt' ? P35.glimtView() : scr === 'nordlys' ? P30.sysView() : scr === 'chat' ? CHAT.chatView() : scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'huske' ? (pp ? P22.huske22() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Huskeliste</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
+  const main = scr === 'aictl' ? P34AI.aiView() : scr === 'brief' ? P35.briefView() : scr === 'glimt' ? P35.glimtView() : scr === 'nordlys' ? P30.sysView() : scr === 'chat' ? CHAT.chatView() : scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'bibel' ? P37B.bibleView() : scr === 'huske' ? (pp ? P37.huskeView37() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Gjøremål</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
     : scr === 'kal' && !pp ? KAL.kalView() : scr === 'media' ? (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()
     : ppMain ?? (scr === 'set' ? settingsView(th, m.sub)
     : scr === 'hl' ? hlView(th)
@@ -432,12 +434,12 @@ export function draw() {
   const rv = pp && scr === 'avg', fsx = scr === 'chat' || scr === 'kal' || scr === 'nordlys' || scr === 'aictl' || scr === 'brief' || scr === 'glimt'; // Prompt 27: Chat og Kalender i fullskjerm (31: System-siden uten bunnmeny og skann)
   const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr) && scr !== 'vaer', hero = pp && scr !== 'nyheter' && scr !== 'vaer' && !fad && !rv && !fsx;
   const nonav = scr === 'set'; // Prompt 32: Innstillinger og undersidene uten bunnmeny og skann-knapp
-  const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv || fsx || (pp && nonav) ? '' : pp ? P25.nav25(scr === 'huske' ? P22.huskeNav(paperNav(scr)) + P22.huskeDock() : paperNav(scr), scr) : th === 'ios' ? iosNav(n) : andNav(n);
+  const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv || fsx || (pp && nonav) ? '' : pp ? (scr === 'huske' ? P37.huskeBottom() : P25.nav25(paperNav(scr), scr)) : th === 'ios' ? iosNav(n) : andNav(n);
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${scr === 'nordlys' ? ' n31-pg' : ''}${scr === 'aictl' ? ' p34-aipg' : ''}${scr === 'brief' ? ' p34-brpg' : ''}${scr === 'glimt' ? ' p35-glpg' : ''}${pp && scr === 'set' ? ' p32-nonav' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P37.layer37()}${P37B.layer37b(P37B.H2.pk ?? 0)}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -445,7 +447,7 @@ export function draw() {
   if (fad) P23.finnAdAfterDraw();
   P23.arrive(vk, vkChanged);
   P25.afterDraw();
-  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36();
+  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b();
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -499,6 +501,7 @@ async function load() {
     else if (scr === 'chat') jobs.push(CHAT.chatLoad());
     else if (scr === 'aictl') jobs.push(P34AI.aiLoad());
     else if (scr === 'brief') jobs.push(P35.briefLoad());
+    else if (scr === 'bibel') jobs.push(Promise.resolve()); // Prompt 37: Bibel-siden henter selv
     else if (scr === 'glimt') jobs.push(P35.cfgLoad());
     else if (scr === 'dir' && paper()) { P24.noteBol(m.sub); jobs.push(bolLoad(m.sub)); }
     else if (scr === 'finn' && paper() && /^ad\/\d+/.test(m.sub ?? '')) jobs.push(P23.finnAdLoad(+m.sub.split('/')[1]));
@@ -518,6 +521,7 @@ async function load() {
     if (!m.me) jobs.push(loadMe().catch(() => { m.me = { name: S.boot?.settings?.name }; }));
     await Promise.all(jobs);
   } catch (e) { flash(e.message); }
+  if (m.me && paper()) P37B.obCheck().catch(() => {}); // Prompt 37: onboarding – koble brukeren til en profil
   draw();
   poll();
 }
@@ -764,10 +768,10 @@ export function bind() {
   bindGlobal();
   // Prompt 17: navn og ikon på appen, dra for å oppdatere og sanntid (Huskeliste, Familie og Sporing).
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
-  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers }); P31.boot31(); P32.boot32(); P34.boot34(); P35.boot35(); P36.boot36();
+  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers }); P31.boot31(); P32.boot32(); P34.boot34(); P35.boot35(); P36.boot36(); P37.boot37(); P37B.boot37b();
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
-    takeDesign(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); P32.take32(r); takeApp(r);
+    takeDesign(r); P37B.takeWopt(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); P32.take32(r); takeApp(r);
     // Første gang etter innlogging (nye installasjoner): onboarding i tre steg.
     if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => g.showOnboarding(r)).catch(() => {});
     if (document.documentElement.dataset.ui === 'mobile') draw();
@@ -803,6 +807,8 @@ export function bind() {
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
     if (m.screen === 'aictl' && await P34AI.bindAi(e, t)) return; // Prompt 34: AI-kontroll
+    if (await P37B.bind37b(e, t)) return; // Prompt 37: bibelvers, onboarding, «hvor er X», Pakker-widget, prøveperioder
+    if (m.screen === 'huske' || m.screen === 'hl' || m.screen === 'brief') { if (await P37.bind37(e, t)) return; } // Prompt 37: Gjøremål
     if (await P36.bind36(e, t)) return; // Prompt 36: angre brief, tidligere versjoner, profilbilde, temperatur, Google-kalendere
     if (await P35.bind35(e, t)) return; // Prompt 35: brief med venner, ⚙, Innstillinger → Glimt, Vær for sted
     if (await P34.bind34(e, t)) return; // Prompt 34: kvitteringer under AI-analyse, brief, AI-feil
@@ -890,9 +896,11 @@ export function bind() {
     }
     if (act === 'logout') { await logout(); }
   }));
-  el.addEventListener('input', (e) => { if (P36.input36(e, e.target)) return; if (P35.input35(e, e.target)) return; if (P34AI.inputAi(e, e.target)) return; if (P32.input32(e, e.target)) return; if (P31.input31(e, e.target)) return; if (P30.input30(e, e.target)) return; if (P30B.input30b(e, e.target)) return; if (P29.input29(e, e.target)) return; if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { if (P37.input37(e, e.target) || P37B.input37b(e, e.target)) return; if (P36.input36(e, e.target)) return; if (P35.input35(e, e.target)) return; if (P34AI.inputAi(e, e.target)) return; if (P32.input32(e, e.target)) return; if (P31.input31(e, e.target)) return; if (P30.input30(e, e.target)) return; if (P30B.input30b(e, e.target)) return; if (P29.input29(e, e.target)) return; if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
+    if (t.matches?.('[data-p37img]')) { await P37.bind37(e, t); return; } // Prompt 37: bilde av handlelapp til Glimt
+    if (P37.input37(e, t) || P37B.input37b(e, t)) return; // Prompt 37
     if (P36.input36(e, t)) return; // Prompt 36: profilbilde
     if (P35.input35(e, t)) return; // Prompt 35: klokkeslett for briefene, nøkkelfelt
     if (P34AI.changeAi(e, t) || P34AI.inputAi(e, t)) return; // Prompt 34: AI-kontroll (ruting, budsjett, nøkler)
@@ -921,6 +929,7 @@ export function bind() {
     await settingsBind(e, t);
   }));
   el.addEventListener('submit', safe(async (e) => {
+    if (await P37.submit37(e, e.target) || await P37B.submit37b(e, e.target)) return; // Prompt 37
     if (await P34AI.submitAi(e, e.target)) return;
     if (await P31.submit31(e, e.target)) return;
     if (await P29.submit29(e, e.target)) return;

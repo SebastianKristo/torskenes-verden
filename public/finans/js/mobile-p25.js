@@ -65,6 +65,7 @@ export function styleSection(tabs) {
 
 export const ICP = { light: ['#b23a2a', '#2b5d8a', '#2f7a4f', '#a8661a', '#7a3b6b', '#2e6f75'], dark: ['#f08a76', '#8cb8e6', '#8fd3a5', '#f0b56a', '#e3a1cf', '#86cfd6'] };
 export const MER_IC = {
+  bibel: 'M6 3h11a1 1 0 0 1 1 1v17H7a2 2 0 0 1-2-2V5a2 2 0 0 1 1-2zM5 19a2 2 0 0 1 2-2h11M11.5 6.5v6M9 9h5', // prompt 37: Bibel
   brief: 'M12 2.5c.6 4.6 4.4 8.4 9 9-4.6.6-8.4 4.4-9 9-.6-4.6-4.4-8.4-9-9 4.6-.6 8.4-4.4 9-9z', // prompt 36: Now Brief (✦)
   sub: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3', // prompt 28: Subscription OS (to piler i ring)
   hl: HOUSE, dom: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', spor: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',

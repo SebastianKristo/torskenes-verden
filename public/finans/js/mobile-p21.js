@@ -150,7 +150,7 @@ export function dragStart(e, el, { sel, attr, drop }) {
   e?.preventDefault?.();
   const r = el.getBoundingClientRect();
   dr = { el, sel, attr, drop, k: el.getAttribute(attr), id: e.pointerId, ox: e.clientX - r.left, oy: e.clientY - r.top, x: e.clientX, y: e.clientY, moved: false };
-  el.classList.add('p21-drag');
+  el.classList.add('p21-drag'); swAt = 0;
   try { el.setPointerCapture?.(e.pointerId); } catch {}
   follow(e.clientX, e.clientY);
 }
@@ -162,23 +162,42 @@ function follow(x, y) {
   const r = el.getBoundingClientRect();
   el.style.transform = `translate(${x - dr.ox - r.left}px,${y - dr.oy - r.top}px) scale(1.03)`;
 }
+// Prompt 37 (claude-code-wiggle-krasj-ios.md, fasit edVals): ingen «bytte-storm». Bytt bare når pekeren er i midtre
+// 30 % av målkortet og maks én gang per 140 ms, lett haptikk (4 ms) per bytte, try/catch rundt elementsFromPoint, og
+// auto-scroll nær topp/bunn (40 px, maks 12 px per frame). Rekkefølgen lagres først ved slipp (drop i dragEnd).
+let swAt = 0, asRaf = 0, asV = 0;
+function autoScroll() {
+  if (!dr || !asV) { asRaf = 0; return; }
+  window.scrollBy(0, asV); follow(dr.x, dr.y);
+  asRaf = requestAnimationFrame(autoScroll);
+}
 export function dragMove(e) {
   if (!dr || (e.pointerId != null && dr.id != null && e.pointerId !== dr.id)) return false;
   e.preventDefault?.();
   const el = find(); if (!el) { dr = null; return true; }
-  dr.el = el; dr.moved = true;
-  const over = document.elementsFromPoint(e.clientX, e.clientY).map((x) => x.closest?.(dr.sel)).find((x) => x && x !== el && x.parentNode === el.parentNode);
-  if (over) {
-    const kids = [...el.parentNode.children], a = kids.indexOf(el), b = kids.indexOf(over);
-    el.parentNode.insertBefore(el, a < b ? over.nextSibling : over);
-    haptic('tab'); navigator.vibrate?.(6);
+  dr.el = el; dr.moved = true; dr.x = e.clientX; dr.y = e.clientY;
+  const H = window.innerHeight, y = e.clientY;
+  asV = y < 40 ? -Math.min(12, Math.ceil((40 - y) / 3)) : y > H - 40 ? Math.min(12, Math.ceil((y - (H - 40)) / 3)) : 0;
+  if (asV && !asRaf) asRaf = requestAnimationFrame(autoScroll);
+  const now = Date.now();
+  if (now - swAt >= 140) {
+    let over = null;
+    try { over = document.elementsFromPoint(e.clientX, e.clientY).map((x) => x?.closest?.(dr.sel)).find((x) => x && x !== el && x.parentNode === el.parentNode && x.offsetParent !== null); } catch { over = null; }
+    if (over) {
+      const r = over.getBoundingClientRect(), mid = r.top + r.height / 2, band = Math.max(8, r.height * 0.15);
+      if (Math.abs(e.clientY - mid) <= band) {
+        const kids = [...el.parentNode.children], a = kids.indexOf(el), b = kids.indexOf(over);
+        el.parentNode.insertBefore(el, a < b ? over.nextSibling : over);
+        swAt = now; navigator.vibrate?.(4);
+      }
+    }
   }
   follow(e.clientX, e.clientY);
   return true;
 }
 export function dragEnd(e) {
   if (!dr || (e && e.pointerId != null && dr.id != null && e.pointerId !== dr.id)) return false;
-  const el = find(), d = dr; dr = null;
+  const el = find(), d = dr; dr = null; asV = 0;
   if (!el) return true;
   el.classList.remove('p21-drag'); el.style.transform = '';
   const keys = [...el.parentNode.querySelectorAll(`:scope > ${d.sel}`)].map((x) => x.getAttribute(d.attr));

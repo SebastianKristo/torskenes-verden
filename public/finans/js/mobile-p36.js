@@ -16,6 +16,7 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash, loadMe, meName, avatarUrl, avInner } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import * as P35 from './mobile-p35.js';
+import * as P37B from './mobile-p37b.js'; // prompt 37: Profil i husstanden (onboarding)
 
 const pad = (n) => String(n).padStart(2, '0');
 const reduce = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -410,7 +411,7 @@ export function kontoTop() {
   return `<div class="p36-kt">${avBig(88)}<b class="pp-serif">${esc(meName() || 'Konto')}</b><span>${me.username ? `@${esc(me.username)}` : ''}${me.role ? ` · ${me.role === 'admin' ? 'Administrator' : 'Bruker'}` : ''}</span>
     <label class="p36-ktb">Endre bilde<input class="m-file" type="file" accept="image/*" data-p36av></label></div>
     <div class="sec">Profilbilde</div><div class="list"><label class="opt-row p36-pbr"><span class="m-grow">Profilbilde<br><span style="font-size:13px;opacity:.65">${has ? 'Vises i menyen, hilsenen, appene og delte boliger' : 'Ikke lagt til'}</span></span>${has ? `<span class="p36-pbt"><img src="${esc(avatarUrl())}" alt=""></span>` : ''}<span class="sval">Endre →</span><input class="m-file" type="file" accept="image/*" data-p36av></label>
-    <div class="opt-row p36-pbb"><label class="p36-pbk">Last opp nytt<input class="m-file" type="file" accept="image/*" data-p36av></label><label class="p36-pbk">Ta bilde<input class="m-file" type="file" accept="image/*" capture="user" data-p36av></label>${has ? `<button type="button" class="p36-pbk red" data-p36="avdel">${AV.conf ? 'Trykk igjen for å fjerne' : 'Fjern'}</button>` : ''}</div></div>`;
+    <div class="opt-row p36-pbb"><label class="p36-pbk">Last opp nytt<input class="m-file" type="file" accept="image/*" data-p36av></label><label class="p36-pbk">Ta bilde<input class="m-file" type="file" accept="image/*" capture="user" data-p36av></label>${has ? `<button type="button" class="p36-pbk red" data-p36="avdel">${AV.conf ? 'Trykk igjen for å fjerne' : 'Fjern'}</button>` : ''}</div></div>${P37B.obRow()}`;
 }
 async function avPick(file) {
   if (!file) return;

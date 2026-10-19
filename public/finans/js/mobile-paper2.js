@@ -1,6 +1,7 @@
 // Papir (prompt 14): sidene som har fått egne Papir-oppsett. Finans → Liste og Finans → Mer, Finn som rutenett med
 // rediger/legg til, og Sporing med faner, «Varsler og kilder» og omorganisering med langt trykk.
 // Data fra de samme API-ene som Klassisk (/finans/api/transactions, /finans/api/finn, /api/tracking).
+import * as P37B from './mobile-p37b.js'; // prompt 37: husstandens sporingsnøkler (maskert) og kvote
 import { S, api, esc, n0, ini, today, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -256,7 +257,7 @@ function secHtml(k) {
     const one = TT.sel?.size === 1 ? L.find((p) => TT.sel.has(String(p.id))) : null;
     return `${selBar(L)}${one ? P26.sporVia(one) : ''}${TR.err ? `<div class="pp-card pp-mut">${esc(TR.err)}</div>` : ''}${TR.missing ? '<div class="pp-card pp-mut">Serveren har ikke Sporing ennå. Oppdater Homelab for å spore pakker.</div>' : ''}
       ${src === null ? '<div class="m-spin"></div>' : L.map(pkCard).join('') || `<div class="pp-mut" style="padding:16px 4px;font-size:14px">${TT.tab === 'arch' ? 'Ingen arkiverte sendinger.' : 'Ingen pakker her.'}</div>`}
-      ${TR.data?.parcelsapp?.configured ? `<span class="pp-mut" style="font-size:12px;padding:0 4px">ParcelsApp: ${n0(TR.data.parcelsapp.used ?? 0)} av ${n0(TR.data.parcelsapp.limit ?? 3)} oppslag brukt denne måneden</span>` : ''}`;
+      ${P37B.trkKeyLine() ?? (TR.data?.parcelsapp?.configured ? `<span class="pp-mut" style="font-size:12px;padding:0 4px">ParcelsApp: ${n0(TR.data.parcelsapp.used ?? 0)} av ${n0(TR.data.parcelsapp.limit ?? 3)} oppslag brukt denne måneden</span>` : '')}`; // prompt 37: husstandens nøkkel
   }
   if (k === 'add') {
     return `<form class="pp-trkadd" data-pptrkform><input class="pp-in dash" id="pp-trk-no" value="${esc(TT.nv)}" placeholder="Sporingsnummer" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Sporingsnummer"><button class="pp-btn ink" type="submit" ${TT.busy ? 'disabled' : ''}>${TT.busy ? '…' : 'Spor'}</button></form>
@@ -281,6 +282,7 @@ export function paperTrkSheet() {
     <div class="pp-row"><div><div class="pp-lab">SPORING</div><div class="pp-sh">Kilder</div></div><button type="button" class="p30-sb p30-pri" data-pptrk="setx">Ferdig</button></div>
     <a class="pp-card p17-golink" href="#/set/varsler"><span class="m-grow"><b>Varsler</b><span class="pp-mut">Pakkevarsler ligger nå under Innstillinger → Varsler</span></span><span aria-hidden="true">›</span></a>
     <span class="pp-lab">KILDER</span><div class="pp-card pp-tight">${sourceRows()}</div>
+    ${P37B.trkKeysSection()}
     <span class="pp-lab">PARCELSAPP</span><div class="pp-card pp-tight"><div class="pp-tog"><span class="m-grow"><b>Reserve for ukjente transportører</b><span class="pp-mut">${TR.data?.parcelsapp?.configured ? `${n0(TR.data.parcelsapp.used ?? 0)} av ${n0(TR.data.parcelsapp.limit ?? 3)} oppslag brukt denne måneden` : 'Legg inn nøkkelen i Homelab → Innstillinger → Integrasjoner → Sporing. Gratisplanen har 3 oppslag i måneden.'}</span></span><span class="${TR.data?.parcelsapp?.configured ? 'pp-pos' : 'pp-mut'}" style="font-size:12.5px">${TR.data?.parcelsapp?.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div></div>
     ${secHtml('carriers')}
     <span class="pp-mut" style="line-height:1.45">E-post leses via Proton Mail Bridge hvert 15. minutt. Finn-handler med Fiks ferdig hentes automatisk.</span></div>`;
