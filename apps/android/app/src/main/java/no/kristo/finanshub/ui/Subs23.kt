@@ -111,6 +111,8 @@ internal fun PaperSubs23(vm: AppViewModel, navBottom: Dp, lift: Dp = 0.dp) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         if (vm.subAdding) item { AddCard23(vm, t) }
+        // Prompt 27: «Fra skjermbilde» (Ollama leser tjeneste, plan, pris og trekkdato lokalt).
+        if (vm.b27.shotOpen) item { SubShotCard27(vm, t.card, t.fg, t.mut, t.bd, if (Tone.paperDark) Color(0xFFFFB08A) else ORANGE_DK, if (Tone.paperDark) Color(0xFF9FE3C6) else Color(0xFF2F7A4F)) }
         vm.moduleError?.let { e -> item { Text(e, color = t.neg, fontSize = 13.sp, fontFamily = sans) } }
         if (x == null) {
             if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = t.fg) } }
@@ -512,24 +514,26 @@ private fun AgentCard23(vm: AppViewModel, x: SubsX, t: SubTok) {
 private fun AddCard23(vm: AppViewModel, t: SubTok) {
     var mode by remember { mutableStateOf<String?>(null) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) { vm.uploadSubReceipt(uri); vm.subAdding = false } }
+    val shot = rememberShotPicker27(vm)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(t.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Legg til abonnement", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, modifier = Modifier.weight(1f))
             Box(Modifier.size(32.dp).clip(CircleShape).background(t.chip).clickable { vm.subAdding = false }, contentAlignment = Alignment.Center) { Text("×", color = t.fg, fontSize = 18.sp) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(Triple("man", "✎", "Manuelt"), Triple("rc", "⎙", "Kvittering"), Triple("tx", "⇄", "Transaksjon")).forEach { (k, ic, n) ->
+            listOf(Triple("sk", "▣", "Skjermbilde"), Triple("man", "✎", "Manuelt"), Triple("rc", "⎙", "Kvittering"), Triple("tx", "⇄", "Transaksjon")).forEach { (k, ic, n) ->
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(t.card2).border(2.dp, if (mode == k) ORANGE else Color.Transparent, RoundedCornerShape(18.dp))
                     .clickable {
                         Haptics.select()
                         when (k) {
+                            "sk" -> shot()
                             "man" -> { vm.subAdding = false; vm.m23.subEditNew = true }
                             "rc" -> pick.launch(arrayOf("image/*", "application/pdf"))
                             else -> { mode = "tx"; vm.loadSubCandidates() }
                         }
                     }.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(ic, color = PEACH, fontSize = 18.sp)
-                    Text(n, color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
+                    Text(n, color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -626,13 +630,17 @@ private fun SubSheet23(vm: AppViewModel, s: SubItem?, close: () -> Unit) {
 
 @Composable
 private fun SubForm23(vm: AppViewModel, s: SubItem?, t: SubTok, close: () -> Unit) {
-    var name by remember(s?.id) { mutableStateOf(s?.name ?: "") }
-    var price by remember(s?.id) { mutableStateOf(s?.price?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString().replace('.', ',') } ?: "") }
-    var plan by remember(s?.id) { mutableStateOf(s?.plan?.takeIf { it != "–" } ?: "") }
-    var category by remember(s?.id) { mutableStateOf(s?.category ?: "Annet") }
-    var cycle by remember(s?.id) { mutableStateOf(s?.cycle ?: "monthly") }
-    var day by remember(s?.id) { mutableStateOf((s?.billDay ?: s?.chargeDay) ?: LocalDate.now().dayOfMonth) }
-    var month by remember(s?.id) { mutableStateOf(s?.billMonth ?: s?.nextDate?.takeIf { it.length >= 7 }?.substring(5, 7)?.toIntOrNull() ?: LocalDate.now().plusMonths(1).monthValue) }
+    // Prompt 27: «Rediger først» fra skjermbildet fyller ut skjemaet (også ved oppdatering av et eksisterende abonnement).
+    val pre = remember(s?.id) { vm.b27.subPrefill }
+    LaunchedEffect(Unit) { vm.b27.subPrefill = null }
+    val preDay = pre?.let { prefillDay27(it) }
+    var name by remember(s?.id) { mutableStateOf(s?.name ?: pre?.service ?: "") }
+    var price by remember(s?.id) { mutableStateOf((pre?.price ?: s?.price)?.let { if (it % 1.0 == 0.0) it.toLong().toString() else String.format(java.util.Locale.US, "%.2f", it).replace('.', ',') } ?: "") }
+    var plan by remember(s?.id) { mutableStateOf(pre?.plan?.takeIf { it.isNotBlank() } ?: s?.plan?.takeIf { it != "–" } ?: "") }
+    var category by remember(s?.id) { mutableStateOf(s?.category ?: pre?.category ?: "Annet") }
+    var cycle by remember(s?.id) { mutableStateOf(pre?.cycle ?: s?.cycle ?: "monthly") }
+    var day by remember(s?.id) { mutableStateOf(preDay?.first ?: (s?.billDay ?: s?.chargeDay) ?: LocalDate.now().dayOfMonth) }
+    var month by remember(s?.id) { mutableStateOf(preDay?.second ?: s?.billMonth ?: s?.nextDate?.takeIf { it.length >= 7 }?.substring(5, 7)?.toIntOrNull() ?: LocalDate.now().plusMonths(1).monthValue) }
     var status by remember(s?.id) { mutableStateOf(if (s != null && !s.active) "cancelled" else "active") }
     var pending by remember { mutableStateOf<android.net.Uri?>(null) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) { if (s != null) vm.subLogoUpload(s.id, uri) else pending = uri } }

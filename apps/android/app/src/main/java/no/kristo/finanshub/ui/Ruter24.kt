@@ -195,7 +195,8 @@ private fun MyStops24(vm: AppViewModel) {
             Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("⌕", color = p.mut, fontSize = 15.sp)
+            // Prompt 27: ✕ til venstre tømmer søket og avbryter det som venter.
+            SearchLead27(q.isNotEmpty(), p.ink, p.mut, bg = p.line, idle = { Text("⌕", color = p.mut, fontSize = 15.sp) }) { q = ""; vm.searchStops("") }
             BasicTextField(
                 q, { q = it; vm.searchStops(it) }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
                 cursorBrush = SolidColor(p.lab), modifier = Modifier.weight(1f),

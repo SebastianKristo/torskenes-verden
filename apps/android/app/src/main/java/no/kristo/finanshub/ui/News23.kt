@@ -138,7 +138,8 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                 }
                 Row(Modifier.fillMaxWidth().height(46.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).padding(start = 14.dp, end = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("⌕", color = p.mut, fontSize = 18.sp)
+                    // Prompt 27: ✕ til venstre når det står tekst (fasit Nyhetsleser.dc.html, ikonsøk).
+                    SearchLead27(s.icQuery.isNotEmpty(), p.ink, p.mut, bg = p.line, idle = { Text("⌕", color = p.mut, fontSize = 18.sp) }) { s.icQuery = "" }
                     BasicTextField(
                         s.icQuery, { s.icQuery = it }, singleLine = true,
                         textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium),

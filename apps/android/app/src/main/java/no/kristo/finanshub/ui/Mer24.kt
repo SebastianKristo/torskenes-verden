@@ -109,6 +109,7 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
         if (sporingInBar) { if ("domener" !in inBar) add(MerItem24("domener", "Domener", "Trafikk, besøk og oppetid") { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) }) }
         else add(MerItem24("sporing", "Sporing", if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger") { vm.openFromMer(Screen.Tracking) })
         add(MerItem24("bursdag", "Bursdager", "Hvem har bursdag snart") { vm.openBirthdays24() })
+        if ("chat" !in inBar) add(MerItem24("chat", "Chat", "Ollama lokalt, Gemini og Groq") { vm.openChat() })
         add(MerItem24("kalender", "Kalender", "Timeplan, prøver og frister") { vm.openKal26() })
         add(MerItem24("huske", "Huskeliste", "Oppgaver og widgets") { vm.openTasks() })
         if ("familie" !in inBar) add(MerItem24("kart", "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() })

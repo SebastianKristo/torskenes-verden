@@ -687,11 +687,8 @@ internal fun PlacesSheet(vm: AppViewModel) {
         }
         Row(Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF262A31)).padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Canvas(Modifier.size(17.dp)) {
-                val k = size.width / 24f
-                drawCircle(mut2, 7 * k, Offset(11 * k, 11 * k), style = Stroke(2.2f * k))
-                drawLine(mut2, Offset(20 * k, 20 * k), Offset(16.5f * k, 16.5f * k), 2.2f * k, StrokeCap.Round)
-            }
+            // Prompt 27: ✕ til venstre når det står tekst (fasit Vaer.dc.html, finn sted).
+            SearchLead27(q.isNotEmpty(), Color.White, mut2, idle = { MagGlass27(mut2, 17.dp) }) { q = ""; vm.searchWxPlaces("") }
             BasicTextField(
                 q, { q = it; vm.searchWxPlaces(it) }, singleLine = true,
                 textStyle = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, fontFamily = FontFamily.Default),

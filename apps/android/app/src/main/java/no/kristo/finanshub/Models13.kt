@@ -8,6 +8,8 @@ import org.json.JSONObject
 data class NewsItem(
     val id: String, val feedId: String?, val feed: String, val title: String, val url: String, val published: String?,
     val category: String?, val image: String?, val excerpt: String?, val ai: Boolean = false,
+    /** Prompt 27: lesetid i minutter (ord / 230), når serveren sender den. */
+    val readMin: Int? = null,
 )
 data class NewsFeed(val id: String, val name: String, val url: String, val category: String, val enabled: Boolean, val count: Int, val lastError: String?)
 data class NewsCategory(val id: String, val name: String)
@@ -30,6 +32,7 @@ fun parseNewsItem(o: JSONObject) = NewsItem(
     o.idStr(), o.optStr("feedId") ?: o.optStr("feed_id"), o.optStr("feed") ?: o.optStr("source") ?: "", o.optString("title"),
     o.optString("url"), o.optStr("published"), o.optStr("category") ?: o.optStr("ai_category"), o.optStr("image"), o.optStr("excerpt"),
     o.optBoolean("ai") || (o.optStr("ai_category") != null && o.optStr("category") == null),
+    o.optIntOrNull("readMin"),
 )
 
 fun parseNewsItems(a: JSONArray?): List<NewsItem> = a?.map(::parseNewsItem) ?: emptyList()

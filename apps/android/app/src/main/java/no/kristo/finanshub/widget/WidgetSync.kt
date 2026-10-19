@@ -31,6 +31,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             Bd24WidgetStore.useAccount(ctx, null)
             Deps24Store.useAccount(ctx, null)
             Kal26WidgetStore.useAccount(ctx, null)
+            Ruter27Store.useAccount(ctx, null)
             WidgetStore.fail(ctx, "Logg inn i FinansHub", loggedIn = false)
             WidgetSync.redraw(ctx)
             return Result.success()
@@ -41,6 +42,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         Bd24WidgetStore.useAccount(ctx, acc.id)
         Deps24Store.useAccount(ctx, acc.id)
         Kal26WidgetStore.useAccount(ctx, acc.id)
+        Ruter27Store.useAccount(ctx, acc.id)
         var err: String? = null
         for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
             try {
@@ -53,6 +55,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 runCatching { fetch24(ctx, Api(base, acc.token)); S24.redraw(ctx) }
                 // Prompt 26: Kalender-widgetene (lagrer, tegner på nytt og planlegger neste timegrense).
                 runCatching { fetchKal26(ctx, Api(base, acc.token), acc.id) }
+                // Prompt 27: Ruter-widgetene (egen 5-minutters kjede i Ruter27Worker; her også hvert 15. minutt).
+                runCatching { fetchRuter27(ctx, Api(base, acc.token), acc.id); Ruter27Widgets.redraw(ctx) }
                 return Result.success()
             } catch (e: ApiException) {
                 err = e.message
@@ -80,6 +84,8 @@ object WidgetSync {
         // Prompt 24: Samsung-widgetene (bare på Samsung) og bursdagene like etter midnatt.
         runCatching { S24.enableProviders(ctx) }
         runCatching { S24.scheduleMidnight(ctx) }
+        // Prompt 27: Ruter-widgetene hentes hvert 5. minutt så lenge en av dem ligger på hjemskjermen.
+        runCatching { Ruter27Widgets.ensure(ctx) }
     }
 
     /** Henter med en gang (appen åpnet, widget lagt til, innlogging eller kontobytte). */
@@ -101,5 +107,6 @@ object WidgetSync {
         ALL_WIDGETS.forEach { w -> runCatching { w.updateAll(ctx) } }
         S24.redraw(ctx)
         runCatching { Kal26Widgets.redraw(ctx) }
+        runCatching { Ruter27Widgets.redraw(ctx) }
     }
 }

@@ -350,7 +350,7 @@ internal fun navTabs(vm: AppViewModel, bar: String, float: Boolean): List<NavTab
 }
 
 private fun finIcon(k: String) = when (k) {
-    "oversikt" -> "◎"; "liste" -> "≡"; "finn" -> "⇄"; "sok" -> "⌕"; "budsjett" -> "◔"; "kvitt" -> "▤"; "aksjer" -> "↗"; "abo" -> "↻"; "kontoer" -> "▥"; "boliger" -> "⌂"; else -> "•"
+    "oversikt" -> "◎"; "liste" -> "≡"; "finn" -> "⇄"; "sok" -> "⌕"; "budsjett" -> "◔"; "kvitt" -> "▤"; "aksjer" -> "↗"; "abo" -> "↻"; "kontoer" -> "▥"; "boliger" -> "⌂"; "chat" -> "✦"; else -> "•"
 }
 
 /** Nøkkelen fanen har i navCurrent (de gamle nøklene for Finans, Domener og Sporing). */
@@ -615,32 +615,26 @@ internal fun PaperFinSearch(vm: AppViewModel, navBottom: Dp) {
     val q = vm.finSearchQ
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Row(
+            // Prompt 27: ✕ til venstre (SearchField27) og forslag mens du skriver (Mod27B.finSug27).
+            SearchField27(
+                q, { vm.finSearchQ = it; vm.b27.sugHidden = false; vm.finSug27(it) },
+                if (vm.finSearchAi) "Spør, f.eks. «hva brukte jeg på kaffe?»" else "Søk i transaksjoner og kvitteringer",
                 Modifier.fillMaxWidth().height(50.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.card).padding(start = 16.dp, end = 6.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+                p.ink, p.mut, fontSize = 14.5.sp, fontWeight = FontWeight.Normal, cursor = p.lab, gap = 10.dp,
+                idle = { Text("⌕", color = p.mut, fontSize = 16.sp) },
+                onClear = { vm.finSugClear27(hide = false) },
+                onSearch = { vm.finSugClear27(hide = true); vm.runFinSearch() },
+                focusRequester = focus,
             ) {
-                Text("⌕", color = p.mut, fontSize = 16.sp)
-                BasicTextField(
-                    q, { vm.finSearchQ = it }, singleLine = true,
-                    textStyle = TextStyle(color = p.ink, fontSize = 14.5.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { vm.runFinSearch() }),
-                    modifier = Modifier.weight(1f).focusRequester(focus),
-                    decorationBox = { inner ->
-                        Box {
-                            if (q.isEmpty()) Text(if (vm.finSearchAi) "Spør, f.eks. «hva brukte jeg på kaffe?»" else "Søk i transaksjoner og kvitteringer", color = p.mut, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            inner()
-                        }
-                    },
-                )
                 val ai = vm.finSearchAi
                 Box(
                     Modifier.height(38.dp).clip(CircleShape).background(if (ai) p.lab else Color.Transparent).border(1.dp, if (ai) p.lab else p.line, CircleShape)
-                        .clickable { vm.finSearchAi = !ai; Haptics.select(); if (q.isNotBlank()) vm.runFinSearch(ai = !ai) }.padding(horizontal = 14.dp),
+                        .clickable { vm.finSearchAi = !ai; Haptics.select(); vm.finSugClear27(hide = false); if (ai) vm.finSug27(q); if (q.isNotBlank()) vm.runFinSearch(ai = !ai) }.padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center,
                 ) { Text("✦ AI", color = if (ai) p.onLab else p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
             }
         }
+        item { FinSuggest27(vm) }
         if (q.isBlank()) {
             item { PLabel("Prøv", modifier = Modifier.padding(start = 4.dp, top = 6.dp)) }
             item {
@@ -725,6 +719,8 @@ internal fun PaperTxDetail(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
                                 color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
+                    // Prompt 27: «Velg logo» (Finn logo · Last opp · Lim inn domene) når butikken mangler logo.
+                    VelgLogo27(vm, t.domain, t.merchant ?: t.description, t.receiptId ?: d.receipt?.id)
                     PSerif("${signed(t.amount)} kr", 40.sp, if (t.amount > 0) p.pos else p.ink, weight = FontWeight.Normal, maxLines = 1)
                     d.aiSummary?.let { Text("✦ $it", color = p.lab, fontSize = 14.sp) }
                 }

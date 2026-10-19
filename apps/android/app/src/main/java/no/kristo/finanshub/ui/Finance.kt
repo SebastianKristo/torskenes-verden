@@ -304,7 +304,7 @@ internal fun ListScreen(vm: AppViewModel, twoPane: Boolean) {
         item {
             TextField(
                 value = vm.query, onValueChange = { vm.query = it }, placeholder = { Text("Søk i transaksjoner") },
-                leadingIcon = { Icon(Icons.Filled.Search, null) }, singleLine = true,
+                leadingIcon = { SearchLead27(vm.query.isNotEmpty(), C.text, C.text2, idle = { Icon(Icons.Filled.Search, null) }) { vm.query = "" } }, singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.search() }),
                 shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                 colors = TextFieldDefaults.colors(focusedContainerColor = C.surface2, unfocusedContainerColor = C.surface2, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),

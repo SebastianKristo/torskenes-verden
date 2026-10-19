@@ -383,7 +383,8 @@ internal fun PaperApp(
             if (vm.familyOpen) FamilyScreen(vm)
             if (vm.tasksOpen) TasksScreen(vm)
             if (vm.bd24.open) BirthdaysScreen24(vm)
-            if (vm.kal26.open) KalenderScreen26(vm)
+            if (vm.kal26.open) KalenderScreen27(vm)
+            if (vm.chat27.open) ChatScreen27(vm)
             if (vm.compareOpen) CompareScreen(vm)
             // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
             if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
@@ -654,7 +655,8 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                         }
                     }
                 }
-                "h3" -> {
+                // Prompt 27: valgte stopp (Velg stopp), én gruppe per stopp, sanntid hvert 30. s. Uten egne stopp: kortet fra /mobile/home.
+                "h3" -> if (homeRuter27(vm)) RuterHome27(vm, if (wide) Modifier.height(FOLD_CARD) else Modifier) else {
                     val lines = h?.ruter ?: emptyList()
                     // Trykk åpner Avganger (egen side med flere avganger, detaljer og egne stopp).
                     if (lines.isNotEmpty()) PaperRuter(lines, if (wide) Modifier.height(FOLD_CARD) else Modifier) { vm.openRuter() }
@@ -709,7 +711,8 @@ private fun PaperSearch(vm: AppViewModel) {
             Modifier.fillMaxWidth().height(46.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.card).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            GoogleG(18.dp)
+            // Prompt 27: Google-G byttes til ✕ når det står tekst (fokus beholdes).
+            SearchLead27(q.isNotEmpty(), p.ink, p.mut, idle = { GoogleG(18.dp) }) { q = ""; vm.suggest("") }
             BasicTextField(
                 q, { q = it; vm.suggest(it) }, singleLine = true,
                 textStyle = TextStyle(color = p.ink, fontSize = 14.5.sp, fontFamily = PaperFonts.sans),
@@ -719,6 +722,13 @@ private fun PaperSearch(vm: AppViewModel) {
                 modifier = Modifier.weight(1f),
                 decorationBox = { inner -> Box { if (q.isEmpty()) Text("Søk på Google", color = p.mut, fontSize = 14.5.sp); inner() } },
             )
+            // Prompt 27: ✦ AI til høyre åpner Chat med teksten (Chat-siden eies av ANDROID-A).
+            Box(
+                Modifier.offset(x = 10.dp).height(34.dp).clip(CircleShape).background(p.bg)
+                    .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = "Spør AI") { Haptics.select(); val t = q.trim(); q = ""; vm.suggest(""); vm.openChat(t) }
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text("✦ AI", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
         }
         if (q.isNotBlank() && vm.suggestions.isNotEmpty()) PCard {
             vm.suggestions.take(5).forEachIndexed { i, sg ->
@@ -796,7 +806,8 @@ private fun PaperNewsCard(vm: AppViewModel) {
             if (items.isEmpty()) Text("Ingen saker ennå. Legg til kilder i nyhetsleseren.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(vertical = 10.dp))
             items.take(5).forEach { x ->
                 Row(
-                    Modifier.fillMaxWidth().clickable { openLink(ctx, x.url) }.padding(vertical = 6.dp),
+                    // Prompt 27: saken åpnes i Nyhetsleser (bilde, ✦ sammendrag og «Les hele saken»).
+                    Modifier.fillMaxWidth().clickable { vm.openNews(); vm.openArticle27(x) }.padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text(feedShort(x.feed), color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp, maxLines = 1, modifier = Modifier.width(30.dp))

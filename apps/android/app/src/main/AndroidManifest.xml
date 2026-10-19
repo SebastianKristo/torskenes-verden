@@ -20,9 +20,14 @@
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
+    <!-- Prompt 27 (ANDROID-A): mikrofonen i Chat (SpeechRecognizer nb-NO). Spørres om ved første trykk. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
+        <!-- Prompt 27: talegjenkjenning og opplesing (Android 11+ må kunne se tjenestene). -->
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
     </queries>
 
     <!-- Klartekst og brukerinstallerte CA-er tillates via network_security_config (homelab på http://192.168.x.x). -->
@@ -499,6 +504,33 @@
         <receiver android:name=".widget.S24KalReceiver26L" android:exported="true" android:enabled="false" android:label="Kalender 4×4 · Samsung">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s26_kal_l" />
+        </receiver>
+
+        <!-- Prompt 27 (ANDROID-B): Ruter (Material You 2×2, 4×2 med ↻, 4×1 stripe) og Samsung liten, bred og stabel
+             (134 × 155 / 296 × 155 dp, av til appen ser Samsung: S24.enableProviders). -->
+        <receiver android:name=".widget.RuterReceiver27S" android:exported="true" android:enabled="true" android:label="Ruter">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ruter27_s" />
+        </receiver>
+        <receiver android:name=".widget.RuterReceiver27M" android:exported="true" android:enabled="true" android:label="Ruter 4×2">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ruter27_m" />
+        </receiver>
+        <receiver android:name=".widget.RuterReceiver27Strip" android:exported="true" android:enabled="true" android:label="Ruter 4×1">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ruter27_strip" />
+        </receiver>
+        <receiver android:name=".widget.S27RuterSmallReceiver" android:exported="true" android:enabled="false" android:label="Ruter · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s27_ruter_s" />
+        </receiver>
+        <receiver android:name=".widget.S27RuterWideReceiver" android:exported="true" android:enabled="false" android:label="Ruter 4×2 · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s27_ruter_w" />
+        </receiver>
+        <receiver android:name=".widget.S27RuterStackReceiver" android:exported="true" android:enabled="false" android:label="Ruter stabel · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s27_ruter_stack" />
         </receiver>
 
         <provider

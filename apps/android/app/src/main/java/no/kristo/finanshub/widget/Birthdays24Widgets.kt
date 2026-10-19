@@ -198,6 +198,8 @@ object S24 {
         S24PackagesReceiver::class.java, S24DeparturesReceiver::class.java, S24DeparturesWideReceiver::class.java, S24BalanceReceiver::class.java,
         // Prompt 26: Kalender i 134 × 155, 296 × 155 og 296 × 330 dp.
         S24KalReceiver26S::class.java, S24KalReceiver26M::class.java, S24KalReceiver26L::class.java,
+        // Prompt 27: Ruter liten, bred og stabel.
+        S27RuterSmallReceiver::class.java, S27RuterWideReceiver::class.java, S27RuterStackReceiver::class.java,
     )
 
     val isSamsung: Boolean get() = Build.MANUFACTURER.equals("samsung", ignoreCase = true)

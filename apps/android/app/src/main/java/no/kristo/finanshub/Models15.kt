@@ -40,6 +40,7 @@ fun parseLayout15(s: String): Layout15 {
 val FIN_TABS: List<Pair<String, String>> = listOf(
     "oversikt" to "Oversikt", "liste" to "Liste", "finn" to "Finn", "sok" to "Søk", "budsjett" to "Budsjett",
     "kvitt" to "Kvitteringer", "aksjer" to "Aksjer", "abo" to "Abonnementer", "kontoer" to "Kontoer", "boliger" to "Boliger",
+    "chat" to "Chat",
 )
 val FIN_TABS_DEFAULT = listOf("oversikt", "liste", "finn", "sok")
 

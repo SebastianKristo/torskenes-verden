@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_ruter27_s_desc">Neste avganger fra stoppet på Hjem</string>
+    <string name="widget_ruter27_m_desc">Tre avganger med oppdater-knapp</string>
+    <string name="widget_ruter27_strip_desc">Neste avganger på én linje</string>
+    <string name="widget_s27_ruter_s_desc">Neste avgang · Samsung-størrelse</string>
+    <string name="widget_s27_ruter_w_desc">Fire avganger · Samsung-størrelse</string>
+    <string name="widget_s27_ruter_stack_desc">Én avgang per stopp · Samsung-størrelse</string>
+</resources>

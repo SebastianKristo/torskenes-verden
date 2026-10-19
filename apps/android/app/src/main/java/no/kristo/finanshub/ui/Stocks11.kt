@@ -362,7 +362,7 @@ private fun StockTxList(vm: AppViewModel, x: StocksX) {
     Page {
         item { ModuleHeader(vm, "Transaksjoner", back = { vm.back() }) }
         item {
-            TextField(q, { q = it }, placeholder = { Text("Søk i ticker, navn eller type") }, leadingIcon = { Icon(Icons.Filled.Search, null, tint = C.text2) }, singleLine = true,
+            TextField(q, { q = it }, placeholder = { Text("Søk i ticker, navn eller type") }, leadingIcon = { SearchLead27(q.isNotEmpty(), C.text, C.text2, idle = { Icon(Icons.Filled.Search, null, tint = C.text2) }) { q = "" } }, singleLine = true,
                 shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(focusedContainerColor = C.surface2, unfocusedContainerColor = C.surface2, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
         }

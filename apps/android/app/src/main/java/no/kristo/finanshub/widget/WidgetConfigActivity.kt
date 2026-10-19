@@ -35,7 +35,7 @@ class WidgetConfigActivity : ComponentActivity() {
         if (id == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
         val start = WidgetStore.label(this, id)
         // Prompt 24: Samsung-widgetene i Samsung-størrelse har ikke navn under seg, men kan bruke Papir-farger.
-        val s24 = runCatching { AppWidgetManager.getInstance(this).getAppWidgetInfo(id).provider.className.contains(".S24") }.getOrDefault(false)
+        val s24 = runCatching { AppWidgetManager.getInstance(this).getAppWidgetInfo(id).provider.className.let { it.contains(".S24") || it.contains(".S27") } }.getOrDefault(false)
         val papir0 = S24.papir(this, id)
         setContent {
             var on by remember { mutableStateOf(start) }

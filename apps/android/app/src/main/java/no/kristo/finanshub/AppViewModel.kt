@@ -455,6 +455,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         famPositions = null; tracking = null; homePackages = null; myStops = emptyList(); stopDeps = emptyMap(); stopSel = null; ruterOpen = false
         photoThumbs = emptyMap(); photoFailed = emptySet(); bgInfo = null; depOpen = null; shareListId = null; taskUsers = emptyList()
         kal26.open = false; kal26.events = null; kal26.loadedFor = null; kal26.layoutFor = null
+        chat27.open = false; chat27.loadedFor = null
         scopeToAccount()
     }
 
@@ -610,7 +611,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun back(): Boolean {
         if (!navDry) navBackSeq++
         when {
-            newsOpen -> { if (newsSettings) newsSettings = false else newsOpen = false }
+            // Prompt 27: en åpen sak lukkes først (artikkelvisningen i Nyhetsleser).
+            newsOpen -> { if (b27.articleFor != null) closeArticle27() else if (newsSettings) newsSettings = false else newsOpen = false }
             original != null -> original = null
             editing != null -> editing = null
             detail != null -> { detail = null; detailTx = null }
@@ -618,6 +620,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen == Screen.Settings && settingsPage != null -> settingsBack26()
             paper && paperPage == "set" && settingsPage != null -> settingsBack26()
             tasksOpen -> closeTasks()
+            chat27.open -> closeChat27()
             kal26.open -> closeKal26()
             bd24.open -> closeBirthdays24()
             compareOpen -> compareOpen = false
@@ -2106,6 +2109,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "boliger" -> go(Screen.Folders)
             "sok" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "fsok" }
             "mer", "fmer" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "fmer" }
+            "chat" -> { openChat(); Haptics.select(); return }
             else -> go(Screen.Home)
         }
         paperFin = true
@@ -2876,6 +2880,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "boliger" -> { paperPage = null; openFromMer(Screen.Folders) }
             "abonnementer" -> { paperPage = null; openFromMer(Screen.Sub) }
             "media" -> openPaperPage("media")
+            "chat" -> openChat()
             else -> paperTab("hjem")
         }
         Haptics.select()
@@ -3512,6 +3517,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val kal26 = Kal26State()
     internal suspend fun <T> api26a(f: suspend Api.() -> T): T = api.f()
     internal fun launch26a(block: suspend () -> Unit) = launch(block)
+
+    /* ---------- Prompt 27 (ANDROID-B): søkeforslag, personvern og logoer, nyheter, Ruter på Hjem, abonnement fra skjermbilde (Mod27B.kt) ---------- */
+    val b27 = B27State()
+    internal suspend fun <T> api27b(f: suspend Api.() -> T): T = api.f()
+    internal fun launch27b(block: suspend () -> Unit) = launch(block)
+
+    /* ---------- Prompt 27 (ANDROID-A): Chat (Chat27.kt) og Kalender v2 (Calendar27.kt, tilstanden i kal26) ---------- */
+    val chat27 = Chat27State()
+    internal suspend fun <T> api27(f: suspend Api.() -> T): T = api.f()
+    internal fun launch27(block: suspend () -> Unit) = launch(block)
+    /** Åpner Chat. Med tekst (✦ AI på Hjem, ANDROID-B) startes en ny samtale som sendes med en gang. */
+    fun openChat(prompt: String = "") = openChat27(prompt)
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

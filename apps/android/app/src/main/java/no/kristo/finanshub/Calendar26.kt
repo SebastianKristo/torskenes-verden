@@ -38,12 +38,15 @@ data class Kal26Ev(
     val id: String, val title: String, val short: String, val subject: String?, val room: String?, val teacher: String?, val note: String?,
     val date: LocalDate, val endDate: LocalDate, val start: LocalTime?, val end: LocalTime?, val allDay: Boolean,
     val type: String, val color: Long?, val source: String, val url: String?, val mazemap: String?,
+    /** Prompt 27: kalenderen fra serveren (timeplan | prover | skole | privat | familie | bursdager), om den kan endres (Google Privat/Familie),
+     *  gjentakelse (none | daily | weekly | monthly) og varselet lagret i Google. */
+    val calendar: String = "", val editable: Boolean = false, val repeat: String? = null, val remind: String? = null, val googleId: String? = null,
 ) {
     val sMin: Int? get() = start?.let { it.hour * 60 + it.minute }
     val eMin: Int? get() = end?.let { it.hour * 60 + it.minute }
     val isExam: Boolean get() = type == "prove" || type == "innl"
     /** Filteret hendelsen hører til: timeplan, prover, bursdager eller skole. */
-    val cat: String get() = when (type) { "time" -> "timeplan"; "prove", "innl" -> "prover"; "bursdag" -> "bursdager"; else -> "skole" }
+    val cat: String get() = calendar.takeIf { it in KAL_CAL_IDS } ?: when (type) { "time" -> "timeplan"; "prove", "innl" -> "prover"; "bursdag" -> "bursdager"; else -> if (source == "google") "privat" else "skole" }
     val sText: String get() = start?.let(::kalHm) ?: ""
     val eText: String get() = end?.let(::kalHm) ?: ""
     /** «10:00–11:30», «Frist 23:59» eller «Hele dagen». */
@@ -73,12 +76,15 @@ val KAL_CARD_NAMES = mapOf("now" to "Nå-kort", "exams" to "Prøver og frister",
 private val KAL_CARD_ALIAS = mapOf("A" to "now", "B" to "exams", "C" to "cals", "D" to "cal", "E" to "widgets")
 private val KAL_CARD_LETTER = KAL_CARD_ALIAS.entries.associate { (k, v) -> v to k }
 
-/** Filterbrikkene: nøkkel, navn og farge (null = blekk). */
+/** Prompt 27: kalenderne (Kalender.dc.html, CALS): nøkkel, navn, farge og kilde. Serverens `calendars` overstyrer navn og farge. */
 val KAL_FILTERS: List<Triple<String, String, Long?>> = listOf(
-    Triple("timeplan", "Timeplan", null), Triple("prover", "Prøver og frister", KAL_LAB), Triple("bursdager", "Bursdager", KAL_BD), Triple("skole", "Skole", KAL_SKOLE),
+    Triple("timeplan", "Timeplan", 0xFF2B5D8A), Triple("prover", "Prøver og frister", KAL_LAB), Triple("skole", "Skole", KAL_SKOLE),
+    Triple("privat", "Privat", 0xFF6B4FA0), Triple("familie", "Familie", 0xFFD08A1E), Triple("bursdager", "Bursdager", 0xFF3F7A6E),
 )
+val KAL_CAL_IDS: Set<String> = KAL_FILTERS.map { it.first }.toSet()
 private val KAL_FILTER_ALIAS = mapOf("Timeplan" to "timeplan", "Prøver og frister" to "prover", "Bursdager" to "bursdager", "Skole" to "skole",
-    "time" to "timeplan", "prove" to "prover", "exams" to "prover", "bursdag" to "bursdager", "birthdays" to "bursdager", "school" to "skole")
+    "time" to "timeplan", "prove" to "prover", "exams" to "prover", "bursdag" to "bursdager", "birthdays" to "bursdager", "school" to "skole",
+    "tt" to "timeplan", "ex" to "prover", "priv" to "privat", "fam" to "familie", "bd" to "bursdager", "Privat" to "privat", "Familie" to "familie", "private" to "privat", "family" to "familie")
 
 /** Påminnelser: verdi i kalReminders og navn. */
 val KAL_REMS = listOf("none" to "Ingen", "15m" to "15 min før", "1h" to "1 time før", "day" to "Dagen før")
@@ -174,9 +180,16 @@ fun parseKal26(o: JSONObject, subjects: Map<String, Long> = emptyMap()): Kal26Ev
         en.first.isAfter(st.first) -> LocalTime.of(23, 59)
         else -> null
     }
+    val cal = o.optStr("calendar")?.let { KAL_FILTER_ALIAS[it] ?: it }?.takeIf { it in KAL_CAL_IDS } ?: ""
+    val rep = (o.optStr("repeat") ?: o.optStr("recurrence")?.let { r ->
+        val u = r.uppercase()
+        when { "DAILY" in u -> "daily"; "WEEKLY" in u -> "weekly"; "MONTHLY" in u -> "monthly"; else -> null }
+    })?.takeIf { it in setOf("daily", "weekly", "monthly") }
     return Kal26Ev(
         o.optStr("id") ?: "${st.first}|${start ?: "all"}|$title", title, o.optStr("short") ?: "", subject, o.optStr("room") ?: o.optStr("location"),
         o.optStr("teacher"), o.optStr("note") ?: o.optStr("description"), st.first, endDate, start, end, allDay, type, color, source, o.optStr("url"), o.optStr("mazemap"),
+        calendar = cal, editable = o.optBoolean("editable", false), repeat = rep, remind = o.optStr("reminder")?.takeIf { v -> KAL_REMS.any { it.first == v } },
+        googleId = o.optStr("googleId"),
     )
 }
 
@@ -323,8 +336,8 @@ class Kal26State {
     var unavailable by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
     var loading by mutableStateOf(false)
-    /** uke | maaned | agenda */
-    var view by mutableStateOf("uke")
+    /** Prompt 27: dag | 3dager | uke | maaned | liste (gamle «agenda» leses som liste). */
+    var view by mutableStateOf("3dager")
     var off by mutableStateOf(0)
     var day by mutableStateOf<LocalDate?>(null)
     var sel by mutableStateOf<Kal26Ev?>(null)
@@ -336,6 +349,18 @@ class Kal26State {
     var subjectColors by mutableStateOf<Map<String, Long>>(emptyMap())
     /** Hendelsen widgeten pekte på (finanshub://kalender?id=…): åpnes når dataene er hentet. */
     internal var pendingId: String? = null
+    /* Prompt 27 (Kalender v2): dagen visningen tar utgangspunkt i (null = i dag), minikalenderen, søk, skjema og kalenderne fra serveren. */
+    var cur by mutableStateOf<LocalDate?>(null)
+    var mini by mutableStateOf(false)
+    var miniOff by mutableStateOf(0)
+    var search by mutableStateOf(false)
+    var q by mutableStateOf("")
+    var results by mutableStateOf<List<Kal26Ev>?>(null)
+    var form by mutableStateOf<Kal27Form?>(null)
+    var saving by mutableStateOf(false)
+    var delArm by mutableStateOf(false)
+    /** Navn og farge per kalender fra svaret (calendars), og hvilke som kan skrives til. */
+    var cals by mutableStateOf<List<Kal27Cal>>(emptyList())
     internal var range: Pair<LocalDate, LocalDate>? = null
     internal var loadedFor: String? = null
     internal var layoutFor: String? = null
@@ -367,7 +392,7 @@ private fun Kal26State.applyLayout(o: JSONObject) {
         hiddenFilters = if (f != null) f.keys().asSequence().filter { !f.optBoolean(it, true) }.map { KAL_FILTER_ALIAS[it] ?: it }.toSet()
         else o.optJSONArray("kalFilters")?.let { a -> (0 until a.length()).map { KAL_FILTER_ALIAS[a.optString(it)] ?: a.optString(it) }.toSet() } ?: emptySet()
     }
-    o.optStr("kalView")?.let { v -> view = when (v) { "mnd", "maned", "maaned", "month" -> "maaned"; "agenda" -> "agenda"; else -> "uke" } }
+    o.optStr("kalView")?.let { v -> view = when (v) { "mnd", "maned", "maaned", "month" -> "maaned"; "agenda", "liste", "list" -> "liste"; "dag", "day" -> "dag"; "3d", "3dager" -> "3dager"; else -> "uke" } }
     o.optJSONObject("kalReminders")?.let { r -> reminders = r.keys().asSequence().associateWith { r.optString(it) }.filterValues { v -> KAL_REMS.any { it.first == v } } }
     o.optJSONObject("subjectColors")?.let { subjectColors = subjMap(it) }
 }
@@ -403,6 +428,7 @@ fun AppViewModel.openKal26(selId: String? = null) {
     s.sel = null
     s.off = 0
     s.day = null
+    s.cur = null; s.mini = false; s.miniOff = 0; s.search = false; s.q = ""; s.results = null; s.form = null; s.delArm = false
     s.pendingId = selId
     loadKalLayout26()
     loadKal26()
@@ -411,8 +437,11 @@ fun AppViewModel.openKal26(selId: String? = null) {
 fun AppViewModel.closeKal26() {
     val s = kal26
     when {
+        s.form != null -> s.form = null
+        s.search -> { s.search = false; s.q = ""; s.results = null }
+        s.sel != null -> { s.sel = null; s.delArm = false }
+        s.mini -> s.mini = false
         s.edit -> s.edit = false
-        s.sel != null -> s.sel = null
         else -> s.open = false
     }
 }
@@ -438,10 +467,11 @@ fun AppViewModel.loadKal26(quiet: Boolean = false, from: LocalDate? = null, to: 
             val raw = api26a { hlGet("/kalender?from=$a&to=$b", timeout = 15_000) }
             val (evs, subj) = parseKalResp26(raw)
             s.events = evs; s.subjects = subj; s.range = a to b
+            runCatching { parseKalCals27(raw) }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { s.cals = it }
             s.unavailable = false; s.error = null
             pushKalWidgets26(raw, a, b)
             scheduleKalReminders26()
-            s.pendingId?.let { id -> s.pendingId = null; evs.firstOrNull { it.id == id }?.let { e -> s.sel = e; s.view = "agenda" } }
+            s.pendingId?.let { id -> s.pendingId = null; evs.firstOrNull { it.id == id }?.let { e -> s.sel = e; s.cur = e.date } }
         } catch (e: ApiException) {
             if (e.status == 404) { s.unavailable = true; if (s.events == null) s.events = emptyList() }
             else { if (!quiet) s.error = e.message; if (s.events == null) s.events = emptyList() }

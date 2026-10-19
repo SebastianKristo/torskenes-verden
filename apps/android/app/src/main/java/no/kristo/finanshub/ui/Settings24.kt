@@ -183,7 +183,8 @@ private fun SearchBar24(vm: AppViewModel) {
                 .clip(CircleShape).background(p.card).padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(Icons.Filled.Search, null, tint = p.mut, modifier = Modifier.size(18.dp))
+            // Prompt 27: ✕ til venstre (høyre-× er fjernet), fokus beholdes.
+            SearchLead27(s.sq.isNotEmpty(), p.ink, p.mut, idle = { Icon(Icons.Filled.Search, null, tint = p.mut, modifier = Modifier.size(18.dp)) }) { s.sq = ""; s.aiAnswer = null; s.aiIds = null }
             BasicTextField(
                 s.sq, { s.sq = it }, singleLine = true, modifier = Modifier.weight(1f),
                 textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.ink),
@@ -196,10 +197,6 @@ private fun SearchBar24(vm: AppViewModel) {
                     }
                 },
             )
-            if (s.sq.isNotEmpty()) Box(
-                Modifier.size(26.dp).clip(CircleShape).background(p.line).clickable(onClickLabel = "Tøm") { s.sq = "" },
-                contentAlignment = Alignment.Center,
-            ) { Text("×", color = p.ink, fontSize = 13.sp) }
         }
         Box(
             Modifier.height(46.dp).shadow(12.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f)).clip(CircleShape)

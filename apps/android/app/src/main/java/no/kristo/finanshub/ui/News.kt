@@ -52,6 +52,8 @@ internal fun NewsReader(vm: AppViewModel) {
     val cats = d?.categories ?: NEWS_CATS
     // Prompt 24: alle faneikonene lastes med en gang (ikke først når fanen tegnes på nytt).
     LaunchedEffect(d?.ic, d?.icOn, d?.categories) { vm.b24PreloadNewsIcons() }
+    // Prompt 27: saken lukkes når leseren lukkes, så den åpnes på listen neste gang.
+    DisposableEffect(Unit) { onDispose { vm.closeArticle27() } }
     BackHandler { if (vm.newsSettings) vm.newsSettings = false else vm.newsOpen = false }
     Box(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}.statusBarsPadding()) {
         Column(Modifier.fillMaxSize()) {
@@ -90,9 +92,10 @@ internal fun NewsReader(vm: AppViewModel) {
                     items(d.items.size) { i ->
                         val x = d.items[i]
                         Column {
+                            // Prompt 27: trykk åpner saken i appen (NewsArticle27), bilde 76 × 76 til høyre.
                             Row(
-                                Modifier.fillMaxWidth().clickable { openLink(ctx, x.url) }.padding(vertical = 11.dp),
-                                verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                Modifier.fillMaxWidth().clickable { vm.openArticle27(x) }.padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
                             ) {
                                 if (vm.newsCat == "siste") PLabel(catName(x.category ?: "norge", cats), p.lab, modifier = Modifier.width(74.dp).padding(top = 3.dp))
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -100,7 +103,7 @@ internal fun NewsReader(vm: AppViewModel) {
                                     Text(listOf(x.feed, newsTime(x.published)).filter(String::isNotBlank).joinToString(" · ") + if (x.ai && d.aiCategorize) " · ✦ AI" else "",
                                         color = p.mut, fontSize = 12.sp)
                                 }
-                                Text("›", color = p.mut)
+                                NewsImage27(vm, x.image, x.feed, Modifier.size(76.dp), 12.dp)
                             }
                             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                         }
@@ -108,6 +111,7 @@ internal fun NewsReader(vm: AppViewModel) {
                 }
             }
         }
+        if (vm.b27.articleFor != null) NewsArticle27(vm, p, cats)
         if (vm.newsSettings) NewsSettings(vm, p, cats)
         if (vm.m23.icPickFor != null) IconPicker23(vm, p, cats)
     }

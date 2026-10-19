@@ -170,8 +170,9 @@ private fun GoogleSearch(vm: AppViewModel) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         TextField(
             value = text, onValueChange = { text = it; vm.suggest(it) }, placeholder = { Text("Søk på Google eller skriv en adresse") },
-            leadingIcon = { GoogleG(20.dp) },
-            trailingIcon = { if (text.isNotEmpty()) IconButton(onClick = { text = ""; vm.suggest("") }) { Icon(Icons.Filled.Close, "Tøm") } },
+            // Prompt 27: ✕ til venstre (byttes med Google-G), ✦ AI til høyre åpner Chat med teksten.
+            leadingIcon = { SearchLead27(text.isNotEmpty(), C.text, C.text2, idle = { GoogleG(20.dp) }) { text = ""; vm.suggest("") } },
+            trailingIcon = { TextButton(onClick = { val t = text.trim(); text = ""; vm.suggest(""); vm.openChat(t) }) { Text("✦ AI", fontWeight = FontWeight.Bold) } },
             singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Search, autoCorrectEnabled = false),
             keyboardActions = KeyboardActions(onSearch = { go(text) }),
             shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).onFocusChanged { focused = it.isFocused },

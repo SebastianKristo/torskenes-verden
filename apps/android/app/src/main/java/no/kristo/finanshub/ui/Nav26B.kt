@@ -105,7 +105,7 @@ internal fun Modifier.longPressEdit26(enabled: Boolean, key: Any?, onLong: () ->
 /* ---------------- Finans: «Rediger fanelinjen» ---------------- */
 
 internal fun finIcon26(k: String) = when (k) {
-    "oversikt" -> "◎"; "liste" -> "≡"; "finn" -> "⇄"; "sok" -> "⌕"; "budsjett" -> "◔"; "kvitt" -> "▤"; "aksjer" -> "↗"; "abo" -> "↻"; "kontoer" -> "▥"; "boliger" -> "⌂"; else -> "•"
+    "oversikt" -> "◎"; "liste" -> "≡"; "finn" -> "⇄"; "sok" -> "⌕"; "budsjett" -> "◔"; "kvitt" -> "▤"; "aksjer" -> "↗"; "abo" -> "↻"; "kontoer" -> "▥"; "boliger" -> "⌂"; "chat" -> "✦"; else -> "•"
 }
 private fun finName26(k: String) = FIN_TABS.firstOrNull { it.first == k }?.second ?: k
 

@@ -513,7 +513,8 @@ private fun Expenses24(vm: AppViewModel, d: HomeDetail24) {
     val ex = d.entries.filter { (s.fc == "Alle" || it.category == s.fc) && (q.isEmpty() || "${it.description} ${it.category} ${it.aiShort ?: ""} ${it.paidBy ?: ""}".lowercase().contains(q)) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth().height(46.dp).clip(CircleShape).background(p.card).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            svg24("<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20l-3.5-3.5\"/>")?.let { Icon(it, null, tint = p.mut, modifier = Modifier.size(17.dp)) }
+            // Prompt 27: ✕ til venstre når det står tekst.
+            SearchLead27(s.q.isNotEmpty(), p.ink, p.mut, bg = p.line, idle = { svg24("<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20l-3.5-3.5\"/>")?.let { Icon(it, null, tint = p.mut, modifier = Modifier.size(17.dp)) } }) { s.q = "" }
             BasicTextField(
                 s.q, { s.q = it }, singleLine = true, modifier = Modifier.weight(1f),
                 textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium), cursorBrush = SolidColor(p.ink),

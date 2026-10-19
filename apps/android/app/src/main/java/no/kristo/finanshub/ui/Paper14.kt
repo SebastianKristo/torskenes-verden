@@ -208,7 +208,9 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
     val ql = q.trim().lowercase()
     val list = all.filter { t ->
         (cat == "Alle" || (cat == "Til gjennomgang" && t.receipt != null && t.receipt != "booked") || t.category == cat) &&
-            (ql.isEmpty() || listOf(t.description, t.merchant ?: "", t.category, t.note, t.lines.joinToString(" ") { it.first }).joinToString(" ").lowercase().contains(ql))
+            (ql.isEmpty() || listOf(t.description, t.merchant ?: "", t.category, t.note, t.lines.joinToString(" ") { it.first }).joinToString(" ").lowercase().contains(ql) ||
+                // Prompt 27: samme uklare matching som forslagene («blosm» finner Blomsterlandet).
+                score27(t.merchant ?: t.description, ql) > 0)
     }
     val sum = list.sumOf { it.amount }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -217,7 +219,8 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
                 Modifier.fillMaxWidth().height(46.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).padding(start = 16.dp, end = 5.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("⌕", color = p.mut, fontSize = 16.sp)
+                // Prompt 27: ✕ til venstre når det står tekst (fokus beholdes).
+                SearchLead27(q.isNotEmpty(), p.ink, p.mut, idle = { Text("⌕", color = p.mut, fontSize = 16.sp) }) { q = "" }
                 BasicTextField(
                     q, { q = it }, singleLine = true,
                     textStyle = TextStyle(color = p.ink, fontSize = 14.5.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab),

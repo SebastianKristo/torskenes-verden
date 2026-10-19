@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 27: Samsung One UI-størrelse. Det synlige kortet er 134 × 155 dp (radius 20); låst til 2×2 som Samsungs egne widgets. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_s27_ruter_s_desc"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:minWidth="134dp"
+    android:minHeight="155dp"
+    android:maxResizeWidth="134dp"
+    android:maxResizeHeight="155dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:resizeMode="none"
+    android:updatePeriodMillis="0"
+    android:configure="no.kristo.finanshub.widget.WidgetConfigActivity"
+    android:widgetFeatures="reconfigurable|configuration_optional"
+    android:widgetCategory="home_screen" />

@@ -222,7 +222,8 @@ private fun BdSearch(vm: AppViewModel) {
     val s = vm.bd24
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.weight(1f).height(46.dp).clip(CircleShape).background(p.card).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Filled.Search, null, tint = p.mut, modifier = Modifier.size(18.dp))
+            // Prompt 27: ✕ til venstre når det står tekst.
+            SearchLead27(s.q.isNotEmpty(), p.ink, p.mut, bg = p.line, idle = { Icon(Icons.Filled.Search, null, tint = p.mut, modifier = Modifier.size(18.dp)) }) { s.q = "" }
             BasicTextField(
                 s.q, { s.q = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = PaperFonts.sans),
                 cursorBrush = SolidColor(p.lab), modifier = Modifier.weight(1f),

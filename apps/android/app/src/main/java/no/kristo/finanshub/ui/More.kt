@@ -211,7 +211,7 @@ internal fun SearchScreen(vm: AppViewModel) {
         item {
             TextField(
                 value = q, onValueChange = { q = it }, placeholder = { Text(if (ai) "f.eks. Når kjøpte jeg lyspærer?" else "f.eks. kvitteringer med tomater") },
-                leadingIcon = { if (ai) Text("✦", color = C.accentLight, fontSize = 18.sp) else Icon(Icons.Filled.Search, null, tint = C.text2) }, singleLine = true,
+                leadingIcon = { SearchLead27(q.isNotEmpty(), C.text, C.text2, idle = { if (ai) Text("✦", color = C.accentLight, fontSize = 18.sp) else Icon(Icons.Filled.Search, null, tint = C.text2) }) { q = "" } }, singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search(q) }),
                 shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).focusRequester(focus),
                 colors = TextFieldDefaults.colors(focusedContainerColor = C.surface2, unfocusedContainerColor = C.surface2, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),

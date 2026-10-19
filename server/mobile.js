@@ -214,7 +214,7 @@ export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'm
 export const TAB_BAR_DEFAULT = { items: [{ id: 'hjem', label: 'Hjem', icon: 'house' }, { id: 'finans', label: 'Finans', icon: 'wallet' }, { id: 'mat', label: 'Mat', icon: 'fork.knife' }, { id: 'domener', label: 'Domener', icon: 'globe' }, { id: 'sok', label: 'Søk', icon: 'magnifyingglass' }, { id: 'mer', label: 'Mer', icon: 'ellipsis' }] };
 const ICON_THEMES = ['standard', 'varm', 'kjolig', 'mono', 'fargerik'];
 const cardIds = (a) => Array.isArray(a) && a.length <= 40 && a.every((x) => typeof x === 'string' && /^[\w.-]{1,40}$/.test(x));
-const FIN_TABS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger'];
+const FIN_TABS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'chat'];
 const FIN_TABS_DEFAULT = ['oversikt', 'liste', 'finn', 'sok'];
 const TRK_CARDS = ['add', 'shipments', 'notify', 'carriers'];
 const PHOTO_KINDS = ['cur', 'oslo', 'weather', 'planets', 'custom'];

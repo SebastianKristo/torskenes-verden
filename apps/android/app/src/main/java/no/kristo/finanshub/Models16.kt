@@ -25,6 +25,7 @@ val MAIN_TABS: List<TabItem> = listOf(
     TabItem("boliger", "Boliger", "⌂"),
     TabItem("abonnementer", "Abonnementer", "↻"),
     TabItem("media", "Media", "♪"),
+    TabItem("chat", "Chat", "✦"),
     TabItem("sok", "Søk", "⌕"),
     TabItem("mer", "Mer", "⋯"),
 )

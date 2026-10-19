@@ -147,7 +147,8 @@ internal fun MatSurface(vm: AppViewModel, paper: Boolean = false) {
             if (linkOpen || vm.recipeBusy) item { ImportField(vm, p) { linkOpen = false } }
             if (vm.recipeJobs.isNotEmpty()) item { RecipeJobs(vm, p) }
             val sel = vm.matFolderSel
-            val dishes = w.dishes.filter { sel == null || it.folderId == sel }
+            item { DishSearch27(vm.b27.dishQ, { vm.b27.dishQ = it }, p) }
+            val dishes = w.dishes.filter { (sel == null || it.folderId == sel) && dishHit27(it, vm.b27.dishQ) }
             item { MHead(if (sel == null) "Retter" else vm.matFolders.firstOrNull { it.id == sel }?.name ?: "Retter", "${dishes.size}", p) }
             if (dishes.isEmpty()) item { Text("Ingen retter i denne mappen ennå. Skann en oppskrift eller importer en lenke.", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(4.dp)) }
             items(dishes.size) { i ->
@@ -491,8 +492,11 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
         }
         "m3" -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             FolderChips(vm, p)
+            // Prompt 27: søk i retter og ingredienser med ✕ til venstre (fasit Matplan.dc.html).
+            var dq by remember { mutableStateOf("") }
+            DishSearch27(dq, { dq = it }, p)
             val sel = vm.matFolderSel
-            val dishes = w.dishes.filter { sel == null || it.folderId == sel }
+            val dishes = w.dishes.filter { (sel == null || it.folderId == sel) && dishHit27(it, dq) }
             MHead(if (sel == null) "Retter" else vm.matFolders.firstOrNull { it.id == sel }?.name ?: "Retter", "${dishes.size}", p)
             if (dishes.isEmpty()) Text("Ingen retter i denne mappen ennå. Skann en oppskrift eller importer en lenke.", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(4.dp))
             dishes.forEach { dish ->
@@ -538,4 +542,21 @@ private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, lin
             }
         }
     }
+}
+
+/* Prompt 27: søk i retter og ingredienser (✕ til venstre, fokus beholdes). */
+private fun dishHit27(d: Dish, q: String): Boolean {
+    val t = q.trim()
+    if (t.isEmpty()) return true
+    val k = norm27(t)
+    return norm27(d.name).contains(k) || d.ing.any { norm27(it).contains(k) } || score27(d.name, t) > 0
+}
+
+@Composable
+private fun DishSearch27(q: String, set: (String) -> Unit, p: MatPalette) {
+    SearchField27(
+        q, set, "Søk i retter og ingredienser",
+        Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(14.dp)).background(p.card).border(1.dp, p.border, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
+        p.text, p.muted, fontSize = 15.sp, cursor = p.accent,
+    )
 }

@@ -81,6 +81,7 @@ private val ICON_NAMES25: Map<String, String> = mapOf(
     "ellipsis" to "⋯", "more" to "⋯", "more_horiz" to "⋯", "ellipsis.circle" to "⋯",
     "star" to "★", "heart" to "♥", "favorite" to "♥", "envelope" to "✉", "mail" to "✉", "flag" to "⚑", "diamond" to "◆",
     "checklist" to "✓", "checkmark" to "✓", "bolt" to "⚡", "leaf" to "☘", "bag" to "◘", "cart" to "◘", "calendar" to "▦",
+    "sparkles" to "✦", "sparkle" to "✦", "auto_awesome" to "✦", "chat" to "✦", "bubble.left" to "✦",
 )
 
 /** Ikonet fanen skal tegnes med: tegnet appen kjenner, oversatt navn, eller fanens standardikon. Aldri et avkuttet navn. */
@@ -103,7 +104,7 @@ fun tabIconName25(glyph: String): String = when (glyph) {
     "kr" -> "creditcard"; "◐" -> "fork.knife"; "◎" -> "globe"; "▣" -> "shippingbox"; "◉" -> "person.2"; "⇄" -> "tram"; "☀" -> "cloud.sun"
     "▤" -> "newspaper"; "↗" -> "chart.line.uptrend.xyaxis"; "⌂" -> "house"; "↻" -> "repeat"; "♪" -> "music.note"; "⌕" -> "magnifyingglass"
     "⋯" -> "ellipsis"; "★" -> "star"; "♥" -> "heart"; "✉" -> "envelope"; "⚑" -> "flag"; "◆" -> "diamond"; "✓" -> "checklist"
-    "⚡" -> "bolt"; "☘" -> "leaf"; "◘" -> "bag"; "▦" -> "calendar"
+    "⚡" -> "bolt"; "☘" -> "leaf"; "◘" -> "bag"; "▦" -> "calendar"; "✦" -> "sparkles"
     else -> glyph
 }
 
