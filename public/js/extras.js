@@ -3,6 +3,8 @@ import { esc, hm, api, backdropClick } from './util.js';
 import { store, on, emit } from './store.js';
 import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
 import { addQuick, preview, quickLabel } from './kal-quick.js';
+import { glimt, setGlimt } from './glimt.js';
+import { assist, boldHtml } from './assist.js';
 
 /* ---------- Popup ---------- */
 
@@ -48,15 +50,19 @@ export const SEARCH_STYLES = [['light', 'Lys, sentrert'], ['dark', 'Mørk, sentr
 const isGoogle = () => /google\./.test(store.me.searchUrl ?? 'google.');
 
 /* Prompt 29 (claude-code-hjem-sok-ai.md): søkemotor-valg til venstre (ikon + ▾) med menyen «SØK MED» i et eget lag over
-   alt annet: System-AI (standard, svarer i Chat og legger til timer), Google, DuckDuckGo. Valget lagres per bruker
+   alt annet: Glimt (tidligere System-AI, standard, svarer i Chat og legger til timer), Google, DuckDuckGo. Valget lagres per bruker
    (search_engine i /api/me/layout, nettleseren som reserve). Timer gjenkjennes uansett motor (quick-time.js) og legges
    til i bakgrunnen (kal-quick.js). ✦ AI åpner alltid Chat. */
-export const ENGINES = { ai: ['System-AI', 'Spør AI eller skriv «time hos …»', 'Svarer i Chat og legger til timer'], google: ['Google', 'Søk på Google', 'Åpner google.com'], ddg: ['DuckDuckGo', 'Søk med DuckDuckGo', 'Åpner duckduckgo.com'] };
+/* Prompt 31: «System-AI» heter Glimt. Ekte logoer (inline SVG, ikke bokstaver i sirkler): Glimt-merket, Googles firefargede G
+   og DuckDuckGo-anda. Haken står til høyre i menyen og erstatter aldri logoen. */
+export const ENGINES = { ai: ['Glimt', 'Spør om været, eller skriv «time hos …»', 'Svarer i Chat og legger til timer'], google: ['Google', 'Søk på Google', 'Åpner google.com'], ddg: ['DuckDuckGo', 'Søk med DuckDuckGo', 'Åpner duckduckgo.com'] };
 const EKEY = 'hl_search_engine';
 let engine = (() => { try { const v = localStorage.getItem(EKEY); return ENGINES[v] ? v : 'ai'; } catch { return 'ai'; } })();
 export const searchEngine = () => engine;
-const engIcon = (k, big = false) => k === 'google' ? `<img class="sbar-g" src="/assets/google-g.svg" width="${big ? 20 : 18}" height="${big ? 20 : 18}" alt="" aria-hidden="true">`
-  : k === 'ddg' ? '<span class="sq-ei ddg" aria-hidden="true">D</span>' : '<span class="sq-ei ai" aria-hidden="true">✦</span>';
+export const GOOGLE_G = (s = 20) => `<svg class="sq-logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
+// DuckDuckGo-anda: oransje sirkel (#DE5833) med hvit ring, hvit and med mørkt øye, gult nebb og grønt sløyfebånd.
+export const DDG_DUCK = (s = 20) => `<svg class="sq-logo" width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="24" fill="#DE5833"/><circle cx="24" cy="24" r="20.2" fill="none" stroke="#fff" stroke-width="1.6"/><path fill="#fff" d="M16.4 14.6c1.6-3.3 5.2-5 8.9-4.5 4.4.6 7.4 4.5 7.4 9.3 0 2.6-.6 4.4-1.6 6.3-.9 1.8-1.4 3.6-1.3 6.1.1 2.2.8 4.6 1.9 7.3a19 19 0 0 1-9.5.4c-.2-3.4-.9-6.6-2.2-9.9-1.4-3.6-3.1-6.8-3.9-9.6-.4-1.9-.4-3.8.3-5.4z"/><circle cx="25.6" cy="17.8" r="1.6" fill="#2D4F8E"/><circle cx="26.1" cy="17.3" r=".5" fill="#fff"/><path fill="#2D4F8E" d="M18.9 16.2c.6-.7 1.6-1 2.4-.6-.6.2-1 .5-1.3 1-.3-.2-.7-.3-1.1-.4z"/><path fill="#FDD20A" d="M22.2 24.4c1.2-.6 3.4-1 5.3-.8 1.7.2 3.3.6 4.4 1.3.5.3.4.9-.1 1.1-1.3.5-2.9.8-4.6.8-1.9 0-3.8-.4-5-1.2-.4-.3-.4-.9 0-1.2z"/><path fill="#65BC46" d="M22.6 29.8c.9-.3 2.2.4 3.2 1.3l.1-.1c.9-1 2.1-2 3-1.7.8.3.6 2.3.1 3.4-.4 1-1.2 1.4-2 1.2-.4-.1-.8-.4-1.1-.7l-.1.1c-.9.6-2 1-2.8.8-.9-.2-1.3-1.1-1.3-2.2 0-1 .3-1.9.9-2.1z"/></svg>`;
+const engIcon = (k, big = false) => k === 'google' ? GOOGLE_G(big ? 22 : 18) : k === 'ddg' ? DDG_DUCK(big ? 22 : 18) : glimt(big ? 22 : 20, 'klar');
 export async function setSearchEngine(k, save = true) {
   if (!ENGINES[k]) return;
   engine = k;
@@ -80,7 +86,7 @@ export function renderSearch() {
   loadEngine();
   // Prompt 27: ✕ til venstre for feltet (etter motor-ikonet) når det står tekst i det (searchfield.js).
   const pick = `<button type="button" class="sq-eng" data-sq-eng aria-label="Velg søkemotor" title="Velg søkemotor" aria-haspopup="menu" aria-expanded="false">${engIcon(engine)}<span class="sq-caret" aria-hidden="true">▾</span></button>`;
-  const form = (inner) => `<form class="sbar ${st}" data-search data-sf role="search">${inner}${clearBtn()}<input name="q" placeholder="${esc(ENGINES[engine][1])}" autocomplete="off" aria-label="Søk" role="combobox" aria-autocomplete="list" aria-expanded="false" enterkeyhint="go"><button type="button" class="sq-ai-tog" data-sq-ai aria-label="Spør AI" title="Spør AI i Chat">✦ AI</button><button type="submit">Søk</button><div class="sq-drop" role="listbox" hidden></div></form>`;
+  const form = (inner) => `<form class="sbar ${st}" data-search data-sf role="search">${inner}${clearBtn()}<input name="q" placeholder="${esc(ENGINES[engine][1])}" autocomplete="off" aria-label="Søk" role="combobox" aria-autocomplete="list" aria-expanded="false" enterkeyhint="go"><button type="button" class="sq-ai-tog" data-sq-ai aria-label="Spør Glimt i Chat" title="Spør Glimt i Chat">✦ AI</button><button type="submit">Søk</button><div class="sq-drop" role="listbox" hidden></div></form>`;
   bindSearchFields();
   if (st === 'light' || st === 'dark') return `<div class="search-wrap">${isGoogle() ? GWORD.replace('class="gword"', `class="gword"${engine === 'google' ? '' : ' hidden'}`) : ''}${form(pick)}</div>`;
   return `<div>${form(`${pick}<span class="sep"></span>`)}</div>`;
@@ -177,15 +183,72 @@ function runSearch(q) {
     // keepalive: lagringen fullføres selv om siden byttes ut med søkeresultatet.
     fetch('/api/search/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q }), keepalive: true }).catch(() => {});
   }
-  // Ser det ut som en adresse, gå rett dit. Ellers valgt søkemotor (System-AI → ny samtale i Chat).
+  // Ser det ut som en adresse, gå rett dit. Ellers valgt søkemotor (Glimt → svarboble under feltet).
   if (isUrl(q)) { location.href = /^https?:\/\//i.test(q) ? q : `https://${q}`; return; }
-  if (engine === 'ai') { document.querySelectorAll('[data-search]').forEach((f) => { f.q.value = ''; syncSearch(f.q); f.q.blur(); }); import('./chat.js').then((m) => m.openChat(q)).catch(() => { location.hash = '#/chat'; }); return; }
+  // Prompt 31: Glimt svarer i en boble rett under feltet (vær, kalender … via /api/assist). Hopper ikke til Chat.
+  if (engine === 'ai') { document.querySelectorAll('[data-search]').forEach((f) => { f.q.value = ''; syncSearch(f.q); f.q.blur(); const d = f.querySelector('.sq-drop'); if (d) d.hidden = true; }); askGlimt(q, document.activeElement?.closest?.('[data-search]') ?? lastForm); return; }
   location.href = engine === 'ddg' ? `https://duckduckgo.com/?q=${encodeURIComponent(q)}` : (isGoogle() && store.me.searchUrl ? store.me.searchUrl : 'https://www.google.com/search?q=') + encodeURIComponent(q);
+}
+
+/* ---------- Glimt-svarboble (prompt 31, claude-code-sok-ai-svarboble.md) ---------- */
+// Mørk glass rgba(22,20,18,.78) + blur 30, radius 26. Mens Glimt tenker: animert merke + «Tenker på «…» …».
+// Ferdig: svaret (det viktigste fet og hvitt), kilde «✦ …» og «Fortsett i Chat ›». Trykk på boblen eller et nytt søk lukker.
+const GL = { q: '', busy: false, ans: null, err: '', ctl: null, seq: 0 };
+let lastForm = null;
+function ansHtml() {
+  if (!GL.q) return '';
+  const body = GL.busy ? `<div class="gl-busy">${glimt(22, 'tenker', { dark: true })}<span>Tenker på «<span data-no-i18n>${esc(GL.q)}</span>» …</span></div>`
+    : `<span class="gl-txt" data-no-i18n>${GL.err ? esc(GL.err) : boldHtml(GL.ans?.text || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span><button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button></div>`;
+  return `<div class="gl-ans" data-gl-ans role="status" aria-live="polite" title="Trykk for å lukke">${body}</div>`;
+}
+// Boblen ligger i et eget lag på <body> (over nyhetslinjen og kortene), plassert rett under søkefeltet som ble brukt.
+let ansForm = null;
+function placeAns() {
+  const el = document.getElementById('gl-layer');
+  if (!el) return;
+  const f = ansForm?.isConnected ? ansForm : document.querySelector('[data-search]');
+  if (!f || !f.offsetParent) { el.style.display = 'none'; return; }
+  const r = f.getBoundingClientRect(), w = Math.min(r.width, 680);
+  el.style.display = '';
+  el.style.width = `${w}px`;
+  el.style.left = `${r.left + window.scrollX + (r.width - w) / 2}px`;
+  el.style.top = `${r.bottom + window.scrollY + 10}px`;
+}
+function paintAns() {
+  let el = document.getElementById('gl-layer');
+  const h = ansHtml();
+  if (!h) { el?.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'gl-layer'; el.className = 'gl-layer'; document.body.appendChild(el); }
+  el.innerHTML = h;
+  placeAns();
+  clearInterval(placeT); placeT = setInterval(() => { if (!document.getElementById('gl-layer')) { clearInterval(placeT); placeT = 0; return; } placeAns(); }, 400);
+}
+window.addEventListener('resize', placeAns);
+let placeT = 0; // siden kan tegnes på nytt (data kommer inn), så posisjonen sjekkes jevnlig mens boblen vises
+
+export function closeAns() { GL.ctl?.abort(); GL.seq++; Object.assign(GL, { q: '', busy: false, ans: null, err: '', ctl: null }); document.querySelectorAll('[data-search] [data-sq-eng]').forEach((b) => setGlimt(b, 'klar')); paintAns(); }
+async function askGlimt(q, form = null) {
+  closeAns();
+  ansForm = form;
+  const my = GL.seq, ctl = new AbortController();
+  Object.assign(GL, { q, busy: true, ctl });
+  paintAns();
+  // Motor-ikonet i feltet (Glimt) tenker også mens svaret lages.
+  const engState = (st) => document.querySelectorAll('[data-search] [data-sq-eng]').forEach((b) => setGlimt(b, st));
+  engState('tenker');
+  try {
+    const a = await assist(q, { source: 'search', signal: ctl.signal, hideToast: () => !!document.querySelector('[data-gl-ans]') && !document.hidden });
+    if (my !== GL.seq) return;
+    GL.ans = a; GL.err = a.error || '';
+  } catch (e) { if (e.name === 'AbortError' || my !== GL.seq) { if (my === GL.seq || !GL.busy) engState('klar'); return; } GL.err = e.message || 'Glimt fikk ikke svart akkurat nå.'; }
+  GL.busy = false; GL.ctl = null;
+  engState('klar');
+  paintAns();
 }
 
 /* ✦ AI: korte søk går til vanlig søk; ellers vises svaret fra AI-motoren i nedtrekket, med årsak hvis det feiler. */
 function aiPanel(a) {
-  if (a.loading) return '<div class="sq-ai"><div class="sq-ai-h">✦ AI tenker …</div><div class="skeleton" style="min-height:54px;border-radius:12px"></div></div>';
+  if (a.loading) return `<div class="sq-ai"><div class="sq-ai-h">${glimt(16, 'tenker')} Glimt tenker …</div><div class="skeleton" style="min-height:54px;border-radius:12px"></div></div>`;
   if (a.error) return `<div class="sq-ai err"><div class="sq-ai-h">✦ AI</div><p>${esc(a.error)}</p><div class="sq-ai-act"><button type="button" data-sq-google="${esc(a.q)}">Søk på Google i stedet</button></div></div>`;
   const d = a.data;
   return `<div class="sq-ai"><div class="sq-ai-h">✦ AI · ${esc(d.provider ?? '')}</div><p>${esc(d.answer)}</p>
@@ -216,12 +279,14 @@ async function removeHist(form, t) {
 
 export function bindSearch() {
   const formOf = (e) => e.target.closest?.('[data-search]');
+  document.addEventListener('focusin', (e) => { const f = formOf(e); if (f) lastForm = f; });
   document.addEventListener('submit', (e) => {
     if (!e.target.matches('[data-search]')) return;
     e.preventDefault();
     const it = sq.items[sq.sel];
     const q = it ? it.t : e.target.q.value;
     // Timer gjenkjennes uansett søkemotor og legges til i bakgrunnen.
+    if (GL.q) closeAns();
     if (!it && apptOf(q)) { addAppt(e.target, q.trim()); return; }
     if (aiOn()) askAi(e.target, q); else runSearch(q);
   });
@@ -243,6 +308,16 @@ export function bindSearch() {
       L[(i + (e.key === 'ArrowDown' ? 1 : -1) + L.length) % L.length]?.focus();
     }
   }, true);
+  // Svarboblen: «Fortsett i Chat ›» åpner en ny samtale med spørsmålet; trykk ellers på boblen lukker den.
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest?.('[data-gl-ans]');
+    if (!b) { if (GL.q && !GL.busy && !e.target.closest?.('[data-search],#aij-layer')) closeAns(); return; }
+    e.preventDefault(); e.stopPropagation();
+    if (e.target.closest('[data-gl-chat]')) { const q = GL.q; closeAns(); import('./chat.js').then((m) => m.openChat(q)).catch(() => { location.hash = '#/chat'; }); return; }
+    closeAns();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && GL.q && !document.getElementById('sq-eng-menu')) closeAns(); });
+  window.addEventListener('hashchange', () => { if (GL.q && !GL.busy) closeAns(); });
   window.addEventListener('resize', closeEngMenu);
   window.addEventListener('hashchange', closeEngMenu);
   document.addEventListener('scroll', (e) => { if (!e.target?.closest?.('#sq-eng-menu')) closeEngMenu(); }, true);

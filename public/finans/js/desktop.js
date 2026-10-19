@@ -10,6 +10,7 @@ import { clearBtn, bindSearchFields } from '/assets/js/searchfield.js';
 import { bindSuggest } from './fsuggest.js';
 import { linesOf, matchLines, markText, hlBanner, hlList, hlImage, hlFocus } from './rc-hl.js';
 import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, finnImportBox, loadImpTpl, aksSettings, loadStocksSettings } from './modules.js';
+import { glimt } from '/assets/js/glimt.js'; // prompt 31: Glimt-merket når AI jobber
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'AI-søk'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
@@ -80,7 +81,7 @@ function aiProgress(a) {
   const eng = j.engine ?? a.engineGuess;
   const text = j.text ?? (eng ? `✦ ${eng} tenker … ${el} s${lim ? ` av ${lim} s` : ''}` : `✦ Leser transaksjoner, kvitteringer og varelinjer … ${el} s`);
   const pct = lim ? Math.min(100, Math.round((el / lim) * 100)) : null;
-  return `<div class="ai-job" data-ai-job><div style="display:flex;align-items:center;gap:10px"><span class="spin" style="width:14px;height:14px;display:inline-block;flex:none"></span><span class="sub" style="font-size:14px;flex:1;min-width:0" data-ai-job-text>${esc(text)}</span><button class="btn sm ghost" data-act="ai-cancel">Avbryt</button></div>
+  return `<div class="ai-job" data-ai-job><div style="display:flex;align-items:center;gap:10px">${glimt(20, 'tenker')}<span class="sub" style="font-size:14px;flex:1;min-width:0" data-ai-job-text>${esc(String(text).replace(/^✦\s*/, ''))}</span><button class="btn sm ghost" data-act="ai-cancel">Avbryt</button></div>
     <div style="height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:10px"><span data-ai-job-bar style="display:block;height:100%;width:${pct ?? 0}%;background:var(--acc);transition:width .4s linear${pct == null ? ';opacity:.5;width:30%;animation:aiIndet 1.4s ease-in-out infinite' : ''}"></span></div></div>`;
 }
 if (!document.getElementById('ai-job-css')) {

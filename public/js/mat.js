@@ -3,6 +3,7 @@
 // Selvstendig modul (egen fetch og egen CSS) slik at den kan importeres fra både /assets/js og /finans.
 //   import { mountMatplan } from '/assets/js/mat.js'; mountMatplan(el, { embedded: true });
 import { clearBtn } from '/assets/js/searchfield.js';
+import { glimt } from './glimt.js';
 
 const DAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 const AB = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
@@ -33,7 +34,7 @@ function loadCss() {
 
 const KIND = { sheet: ['XLS', '#1D6F42', 'Regneark'], pdf: ['PDF', '#C8352B', 'PDF'], video: ['▶', '#E62117', 'Video'], doc: ['DOC', '#2B579A', 'Dokument'], image: ['IMG', '#6B4FA0', 'Bilde'], link: ['↗', '#3A3A3E', 'Lenke'] };
 const host = (u) => { try { return new URL(u, location.href).hostname.replace(/^www\./, ''); } catch { return ''; } };
-const JOB = { queued: ['I kø', '#9A9588', '15%'], reading: ['✦ Leser …', '#FFB27F', '60%'], done: ['Ferdig', '#7FD08A', '100%'], error: ['Feilet', '#F59A8F', '100%'] };
+const JOB = { queued: ['I kø', '#9A9588', '15%'], reading: [`${glimt(14, 'tenker')} Leser …`, '#FFB27F', '60%'], done: ['Ferdig', '#7FD08A', '100%'], error: ['Feilet', '#F59A8F', '100%'] };
 
 export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}) {
   loadCss();

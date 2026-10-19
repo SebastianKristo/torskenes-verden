@@ -23,7 +23,6 @@ import { loadSystem, systemView, systemClick, systemInput, systemSubmit, systemE
 import { loadBackup, backupView, backupClick, backupChange, backupInput, backupSubmit, backupEsc } from './settings-backup.js';
 import { icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ } from './settings-search.js';
 import { sheetBtn } from './util.js';
-import { updBanner } from './upd-banner.js';
 
 const modal = () => document.getElementById('settings');
 
@@ -594,7 +593,6 @@ function render() {
   modal().innerHTML = `<div class="set-box" role="dialog" aria-modal="true" aria-labelledby="set-title">${sideHtml()}
     <div class="set-main">${sheetBtn('Ferdig', 'data-close data-set-done', 'pri').replace('class="sbtn pri"', 'class="sbtn pri set-done"')}
     <div class="set-body" data-key="${esc(key)}"><div class="set-inner">
-      ${tab === 'system' && !sub && !searching ? updBanner('set') : ''}
       <header class="set-ph">${sub ? `<button type="button" class="set-back" data-back>${svg(P.back, 18)}${esc(tName)}</button>` : ''}
         <div class="set-ph-row">${searching ? '' : icBox(tab, 44, 22)}<div class="set-ph-t"><h2 id="set-title">${esc(v.title ?? tName)}</h2><div class="set-ps">${esc(v.sub ?? tSub)}</div></div></div></header>
       ${content}</div></div></div></div>`;

@@ -3,15 +3,18 @@
 // Familie, Reise og vær og Haptikk. Lagres per bruker på serveren (/api/me/notify); pakkevarslene er de samme
 // som Sporing brukte (/api/tracking/prefs).
 import { api, esc } from './util.js';
+import { pushSupported, pushState, enablePush, disablePush } from './webpush.js';
+// Prompt 31: «AI-svar i bakgrunnen» (ai_bg_notify i /api/me/notify, på som standard, følger hovedbryteren) og
+// «Varsler på denne enheten» (Web Push: tillatelse + abonnement, se webpush.js).
 
 export const SOUNDS = [['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp'], ['egen', 'Egen lyd'], ['stille', 'Stille']];
 const GROUPS = [['pakker', 'Pakker', 'Ny pakke, klar for henting, ute for levering og levert'], ['finans', 'Finans og hjem', 'Kvitteringer til gjennomgang, faste trekk og boliger'],
   ['familie', 'Familie', 'Når noen kommer til eller forlater en sone'], ['reise', 'Reise og vær', 'Avvik på avganger og farevarsler'], ['birthdays', 'Bursdager', 'Påminnelse kl. 09:00 før bursdager'], ['haptikk', 'Haptikk', 'Vibrasjon sammen med varslene (mobil)']];
 const PKG = [['found', 'Ny pakke funnet', 'Fra Finn eller e-post'], ['pickup', 'Klar for henting', 'Med hentested og frist'], ['out', 'Ute for levering', 'Når budet er på vei'],
   ['delayed', 'Forsinket', 'Når ETA passeres eller transportøren melder avvik'], ['delivered', 'Levert', '']];
-const DEF = { on: true, quietFrom: '22:00', quietTo: '07:00', quietOn: true, sound: 'pling', volume: 70, groups: { pakker: true, finans: true, familie: true, reise: true, birthdays: true, haptikk: true }, customSound: null };
+const DEF = { on: true, ai_bg_notify: true, quietFrom: '22:00', quietTo: '07:00', quietOn: true, sound: 'pling', volume: 70, groups: { pakker: true, finans: true, familie: true, reise: true, birthdays: true, haptikk: true }, customSound: null };
 
-const S = { n: null, pkg: null, err: null, msg: '', busy: false };
+const S = { n: null, pkg: null, err: null, msg: '', busy: false, push: null, pushBusy: false };
 let rerender = () => {};
 
 export async function loadNotify(onChange) {
@@ -20,6 +23,7 @@ export async function loadNotify(onChange) {
   if (n?.__err) { S.n = { ...DEF, groups: { ...DEF.groups } }; S.err = /404|finnes ikke|Not Found/i.test(n.__err.message) ? 'Serveren lagrer ikke varselinnstillinger ennå. Valgene gjelder bare denne nettleseren til Homelab er oppdatert.' : n.__err.message; }
   else { S.n = { ...DEF, ...n, groups: { ...DEF.groups, ...(n.groups ?? {}) } }; S.err = null; }
   S.pkg = t?.prefs ?? null;
+  S.push = await pushState().catch(() => null);
   rerender();
 }
 
@@ -92,7 +96,10 @@ export function notifyView(h) {
       h.row({ t: 'Varsler', s: n.on ? 'Homelab kan varsle deg' : 'Ingen varsler sendes', tog: !!n.on, act: 'data-nf-tog="on"' }),
       h.row({ t: 'Stille timer', s: `${n.quietFrom}–${n.quietTo}: ingen lyd eller vibrasjon`, tog: n.quietOn !== false, act: 'data-nf-tog="quietOn"' }),
       n.quietOn !== false ? `<div class="sg-row"><span class="sg-txt"><b>Fra og til</b><span>Varsler kommer fortsatt, men stille</span></span><span class="nf-times"><input type="time" value="${esc(n.quietFrom)}" data-nf-time="quietFrom" aria-label="Stille fra"><span>–</span><input type="time" value="${esc(n.quietTo)}" data-nf-time="quietTo" aria-label="Stille til"></span></div>` : '',
-      h.row({ t: 'Tillatelse på denne enheten', s: 'Nettleseren må tillate varsler fra Homelab', v: pt, vc: pc, btn: 'Notification' in window && Notification.permission === 'granted' ? false : 'Spør', act: 'data-nf-act="perm"' }),
+      h.row({ t: 'AI-svar i bakgrunnen', k: 'glimt ai svar varsel push bakgrunn', s: n.on ? 'Får du svar mens du er ute av appen, kommer det som varsel' : 'Følger hovedbryteren «Varsler» (av)', tog: !!n.on && n.ai_bg_notify !== false, act: 'data-nf-tog="ai_bg_notify"', disabled: !n.on }),
+      pushSupported()
+        ? h.row({ t: 'Varsler på denne enheten', k: 'push web push nettleser tillatelse', s: S.pushBusy ? 'Slår på …' : S.push?.subscribed ? 'Glimt-svar, prøveperioder og oppdateringer kommer også når fanen er lukket' : Notification.permission === 'denied' ? 'Blokkert i nettleseren. Tillat varsler for denne siden i nettleserens innstillinger.' : 'Nettleseren spør om tillatelse når du slår dette på', tog: !!S.push?.subscribed, act: 'data-nf-act="push"', disabled: S.pushBusy || Notification.permission === 'denied' })
+        : h.row({ t: 'Tillatelse på denne enheten', s: 'Nettleseren må tillate varsler fra Homelab', v: pt, vc: pc, btn: 'Notification' in window && Notification.permission === 'granted' ? false : 'Spør', act: 'data-nf-act="perm"' }),
       h.row({ t: 'Test varsel', s: 'Spiller lyden, vibrerer og viser et varsel', btn: 'Test', act: 'data-nf-act="test"' }),
     ], S.err ? esc(S.err) : S.msg ? esc(S.msg) : ''),
     h.group('Varsellyd', [
@@ -112,7 +119,7 @@ export function notifyView(h) {
 export async function notifyClick(e) {
   const b = e.target.closest('[data-nf-tog],[data-nf-act],[data-nf-sound],[data-nf-grp],[data-nf-pkg]');
   if (!b || !S.n) return false;
-  if (b.dataset.nfTog) { const k = b.dataset.nfTog; await save({ [k]: k === 'quietOn' ? S.n.quietOn === false : !S.n[k] }); return true; }
+  if (b.dataset.nfTog) { const k = b.dataset.nfTog; if (b.disabled) return true; await save({ [k]: k === 'quietOn' ? S.n.quietOn === false : k === 'ai_bg_notify' ? S.n.ai_bg_notify === false : !S.n[k] }); return true; }
   if (b.dataset.nfSound) {
     const id = b.dataset.nfSound;
     if (id === 'egen' && !S.n.customSound) { S.msg = 'Last opp en lyd først.'; rerender(); return true; }
@@ -126,6 +133,14 @@ export async function notifyClick(e) {
   }
   switch (b.dataset.nfAct) {
     case 'test': await testNotify(); return true;
+    case 'push': {
+      if (S.pushBusy) return true;
+      S.pushBusy = true; S.msg = ''; rerender();
+      const r = S.push?.subscribed ? await disablePush() : await enablePush();
+      S.pushBusy = false; S.push = await pushState().catch(() => S.push);
+      S.msg = r.ok ? (S.push?.subscribed ? 'Varsler er slått på for denne enheten.' : 'Varsler er slått av for denne enheten.') : r.error || '';
+      rerender(); return true;
+    }
     case 'perm': if ('Notification' in window) await Notification.requestPermission().catch(() => {}); rerender(); return true;
     case 'unsound':
       try { await api('/me/notify/sound', { method: 'DELETE' }); S.n.customSound = null; if (S.n.sound === 'egen') await save({ sound: 'pling' }); } catch (er) { S.msg = er.message; }

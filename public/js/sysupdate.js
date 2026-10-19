@@ -78,11 +78,16 @@ export async function checkUpdate() {
 
 export function openSheet(on = true) { U.sheet = on; U.pw = ''; U.startErr = ''; emit(); }
 
-export async function startUpdate(password = U.pw) {
-  if (!password) { U.startErr = 'Skriv inn passordet ditt.'; emit(); return false; }
+/**
+ * Starter oppdateringen. Prompt 31: passord bare når admin har slått på «Krev passord for å oppdatere»
+ * (settings.require_password). opt.allowEmpty = start uten passord; svarer serveren at passord kreves (eldre server
+ * eller bryteren er på), returneres 'needpw' så klienten kan vise passordarket.
+ */
+export async function startUpdate(password = U.pw, opt = {}) {
+  if (!password && !opt.allowEmpty) { U.startErr = 'Skriv inn passordet ditt.'; emit(); return false; }
   U.starting = true; U.startErr = ''; emit();
   try {
-    const r = await req('/start', { method: 'POST', json: { password } });
+    const r = await req('/start', { method: 'POST', json: password ? { password } : opt.reauthToken ? { reauthToken: opt.reauthToken } : {} });
     U.prev = { sha: U.d?.installed?.sha ?? null, version: U.d?.installed?.version ?? null };
     U.jobId = r?.id ?? null;
     U.sheet = false; U.pw = ''; U.backup = r?.backup ?? null;
@@ -92,6 +97,7 @@ export async function startUpdate(password = U.pw) {
     return true;
   } catch (e) {
     U.starting = false;
+    if (!password && (e.status === 401 || e.status === 403) && /passord|password/i.test(e.message)) { U.startErr = ''; emit(); return 'needpw'; }
     U.startErr = e.status === 404 ? 'Serveren har ikke oppdatering fra appen ennå.' : e.message;
     emit(); return false;
   }

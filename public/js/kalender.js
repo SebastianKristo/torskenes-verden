@@ -19,6 +19,9 @@ import { loadBirthdays } from './birthdays.js';
 import { searchField } from './searchfield.js';
 import { t, locale, dayName, monthName, fmtDate } from './i18n.js';
 import { addQuick, preview, quickLabel, setQuickHooks } from './kal-quick.js';
+/** Prompt 31 (Kalender.dc.html): «Pilestredet park 35 U2005 https://link.mazemap.com/…» → «Pilestredet park 35 U2005». */
+export const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
+const urlIn = (t) => String(t ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
 
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const MS = MN.map((m) => m.slice(0, 3));
@@ -153,7 +156,9 @@ function normalize(r) {
     const kind = own ? 'g' : TYPES.includes(x.type) ? x.type : x.type === 'bd' ? 'bursdag' : 'time';
     const cal = calOf(x, kind);
     const base = { id: String(x.id ?? `${x.start}|${x.title}`), oid: String(x.id ?? ''), kind, cal, t: String(x.title ?? ''), short: x.short || '', subj: x.subject || (kind === 'time' ? String(x.title ?? '') : ''),
-      r: x.room || x.location || '', teacher: x.teacher || '', n: x.note || '', c: x.color || '', src: x.source || '', url: x.url || '', map: x.mazemap || '',
+      // Prompt 31: URL-er (f.eks. mazemap-lenker fra timeplan-importen) fjernes fra stedsteksten i alle korte visninger;
+      // lenken vises som «Åpne kart ↗» i detaljarket. rRaw beholdes til redigering.
+      r: noUrl(x.room || x.location || ''), rRaw: x.room || x.location || '', rUrl: urlIn(x.room || x.location || ''), teacher: x.teacher || '', n: x.note || '', c: x.color || '', src: x.source || '', url: x.url || '', map: x.mazemap || '',
       editable: !!x.editable, rep: x.repeat || (x.recurrence ? 'rec' : ''), recurrence: x.recurrence || null, srvRem: x.reminder || '', all: !!x.allDay, startRaw: x.start, endRaw: x.end };
     if (x.allDay) {
       // Heldagshendelser over flere dager: én oppføring per dag (slutt er eksklusiv).
@@ -395,7 +400,7 @@ function detailSheet() {
   const rows = [e.r && ['Sted', e.r, 1], e.teacher && ['Lærer', e.teacher, 1], ['Kalender', cal.name], e.kind !== 'time' && e.subj && ['Fag', e.subj, 1], e.n && ['Merknad', e.n, 1],
     e.rep && e.rep !== 'none' && ['Gjentas', { daily: 'Hver dag', weekly: 'Hver uke', monthly: 'Hver måned', rec: 'Ja' }[e.rep] ?? e.rep]].filter(Boolean);
   const kk = cal.name.toUpperCase() + (e.kind === 'prove' ? ' · PRØVE' : e.kind === 'innl' ? ' · INNLEVERING' : '');
-  const map = e.map || (e.r && /^[A-Z]{1,2}-?\d|aula|hall|gym|bibl|rom\b|sal\b/i.test(e.r) && e.kind !== 'bursdag' ? `https://use.mazemap.com/#v=1&search=${encodeURIComponent(e.r)}` : '');
+  const map = e.rUrl || e.map || (e.r && /^[A-Z]{1,2}-?\d|aula|hall|gym|bibl|rom\b|sal\b/i.test(e.r) && e.kind !== 'bursdag' ? `https://use.mazemap.com/#v=1&search=${encodeURIComponent(e.r)}` : '');
   const src = e.editable ? `Lagret i Google Kalender (${cal.name}).` : cal.src ? `Fra ${cal.src}. Endres i kilden.` : '';
   return `<div class="k2-sheet-bg" data-k-close><div class="k2-sheet" role="dialog" aria-modal="true" aria-label="${esc(e.t)}" style="--c:${esc(col(e))}">
     <div class="k2-det-h"><span class="k2-strip"></span><div class="k2-grow"><span class="k2-lab">${esc(kk)}</span><b data-no-i18n>${esc(e.t)}</b><span>${esc(`${longDate(sd)} · `)}${esc(tmOf(e))}</span></div><button type="button" class="k2-x" data-k-close aria-label="Lukk">✕</button></div>
@@ -404,7 +409,7 @@ function detailSheet() {
     ${src ? `<span class="k2-src">${esc(src)}</span>` : ''}
     ${K.err2 ? `<span class="k2-err">${esc(K.err2)}</span>` : ''}
     <div class="k2-btns">${e.editable ? `<button type="button" class="k2-b ink" data-k-edit>Rediger</button><button type="button" class="k2-b red" data-k-del>${K.delArm ? 'Trykk igjen for å slette' : 'Slett'}</button>` : ''}
-      ${map ? `<a class="k2-b line" href="${esc(map)}" target="_blank" rel="noopener">Vis rom på kart ↗</a>` : ''}
+      ${map ? `<a class="k2-b line" href="${esc(map)}" target="_blank" rel="noopener">${e.rUrl ? 'Åpne kart ↗' : 'Vis rom på kart ↗'}</a>` : ''}
       ${/^https:\/\//.test(e.url) ? `<a class="k2-b line" href="${esc(e.url)}" target="_blank" rel="noopener">Åpne ${e.src === 'canvas' ? 'i Canvas' : e.src === 'google' ? 'i Google Kalender' : 'kilden'} ↗</a>` : ''}
       ${!e.editable ? `<button type="button" class="k2-b line" data-k-copy>Kopier til Privat</button>` : ''}</div>
   </div></div>`;
@@ -643,7 +648,7 @@ function formFromEvent(e) {
   let endDate = '';
   if (allD && e.endRaw && /^\d{4}-\d{2}-\d{2}$/.test(e.endRaw)) endDate = key(add(fromKey(e.endRaw), -1));
   const k0 = e.startRaw && /^\d{4}-\d{2}-\d{2}/.test(e.startRaw) ? (allD ? String(e.startRaw).slice(0, 10) : key(new Date(e.startRaw))) : e.k;
-  return { id: e.oid || e.id, t: e.t, k: k0, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: allD, endDate, cal: e.cal === 'familie' ? 'familie' : 'privat', r: e.r, rep: ['daily', 'weekly', 'monthly'].includes(e.rep) ? e.rep : 'none', rem: remOf(e), n: e.n, err: '' };
+  return { id: e.oid || e.id, t: e.t, k: k0, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: allD, endDate, cal: e.cal === 'familie' ? 'familie' : 'privat', r: e.rRaw ?? e.r, rep: ['daily', 'weekly', 'monthly'].includes(e.rep) ? e.rep : 'none', rem: remOf(e), n: e.n, err: '' };
 }
 function readForm(f) {
   const F = K.form, fd = new FormData(f);
@@ -695,7 +700,7 @@ async function copyEvent(e) {
   if (r.ok) { K.sel = null; flash('Kopiert til Privat'); ensureKal(true); return; }
   if (r.status === 409 || r.d?.reconnect) { K.err2 = r.d?.error || 'Google Kalender må kobles til på nytt for å kunne skrive.'; return paint(); }
   // Eldre server: åpne skjemaet ferdig utfylt.
-  openForm({ t: e.t, k: e.k, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: !e.s, cal: 'privat', r: e.r, n: e.n });
+  openForm({ t: e.t, k: e.k, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: !e.s, cal: 'privat', r: e.rRaw ?? e.r, n: e.n });
 }
 
 /* ---------------- Søk ---------------- */

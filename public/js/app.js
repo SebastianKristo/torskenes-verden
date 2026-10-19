@@ -191,6 +191,8 @@ async function main() {
   setTimeout(() => import('./news.js').then((m) => m.preloadNewsIcons?.()).catch(() => {}), 1200);
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  // Prompt 31: presence-heartbeat mens fanen er synlig (serveren holder push tilbake da) og Web Push hvis slått på her.
+  import('./webpush.js').then((m) => m.startPresence()).catch(() => {});
 }
 
 main().catch((e) => { view.innerHTML = `<div class="err">Kunne ikke starte: ${esc(e.message)}</div>`; });

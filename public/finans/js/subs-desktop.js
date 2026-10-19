@@ -3,6 +3,72 @@
 // savings, upcoming, thisMonth). Kvitteringer lastes opp med data-mrc="sub" (modules.js), resten håndteres her.
 import { S, api, esc, n0, render, toast, logo, parseAmount, sheetBtn } from './core.js';
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
+import { parseTrial, trialPreview, trialBadge, cancelUrlFor, REMIND_OPTIONS, longDay } from '/assets/js/trial-parse.js';
+import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
+import { glimt } from '/assets/js/glimt.js';
+
+/* Prompt 31 (claude-code-prove-paminnelse.md, fasit «Abonnement Legg til ark.dc.html» → Gratis prøveperiode):
+   «+ Legg til abonnement» → Gratis prøveperiode (✦ AI) → arket «Prøveperiode»: «✦ Skriv det med egne ord» + Fyll ut
+   (trial-parse.js tolker teksten), Tjeneste · Prøven slutter · Pris etterpå, VARSLE MEG (flervalg, 1 dag før er standard),
+   forhåndsvisning av varselet og «Lagre påminnelse». Lagres med POST /subscriptions/trials; serveren sender varslene.
+   Aktive prøver vises i kortet «Prøveperioder» med merket «Prøve · N dager igjen» og Avslutt nå · Behold · Minn meg i morgen. */
+const TR_CSS = `.str{gap:14px}
+.str-ai{margin:0;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:20px;background:var(--inner,#fff);border:1.5px solid #b23a2a}
+.str-cap{font-size:11.5px;font-weight:800;letter-spacing:.12em;color:#e0614f}
+.str-ai>div{display:flex;gap:8px}
+.str-ai input{flex:1;min-width:0}
+.str-f{border-radius:20px;border:1px solid var(--line2);overflow:hidden;display:flex;flex-direction:column}
+.str-f label{display:grid;grid-template-columns:130px minmax(0,1fr);align-items:center;gap:12px;min-height:52px;padding:0 16px;border-top:1px solid var(--line2);font-size:14px;font-weight:600;color:var(--muted)}
+.str-f label:first-child{border-top:0}
+.str-f input{min-width:0;height:44px;border:0;outline:none;background:transparent;text-align:right;color:var(--text);font-family:inherit;font-size:15px;font-weight:600;color-scheme:light dark}
+.str-rem{display:flex;gap:6px;flex-wrap:wrap}
+.str-rem .se-chip{flex:none;padding:0 14px}
+.str-pv{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:18px;background:var(--inner,rgba(255,255,255,.06));border:1px solid var(--line2)}
+.str-pv>i{flex:none;width:34px;height:34px;border-radius:9px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:500 15px Newsreader,Georgia,serif;font-style:normal}
+.str-pv>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.str-pv small{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+.str-pv small b{color:var(--text);font-weight:700}
+.str-pv strong{font-size:14px}
+.str-pv em{font-style:normal;font-size:13px;line-height:1.35;color:var(--muted)}
+.str-save{min-height:52px;border:0;border-radius:16px;background:#b23a2a;color:#fff;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer}
+.str-save:disabled{opacity:.6}
+.str-err{font-size:13px;font-weight:600;color:#e0614f}
+.so-tr-badge{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;background:rgba(232,121,74,.16);color:#e8794a;font-size:12px;font-weight:700;white-space:nowrap}
+.so-trials .so-li{flex-wrap:wrap}
+.so-tr-acts{display:flex;gap:6px;flex-wrap:wrap}
+.so-mi.ai{color:#e8794a}`;
+function trCss() { if (document.getElementById('str-css')) return; const st = document.createElement('style'); st.id = 'str-css'; st.textContent = TR_CSS; document.head.appendChild(st); }
+const isoToday = () => new Date().toLocaleDateString('sv-SE');
+function openTrial() { u.subMenu = false; u.subTr = { ai: '', n: '', e: '', p: '', rem: [1], err: '', busy: false }; }
+function trialSheet() {
+  const T = u.subTr;
+  if (!T) return '';
+  trCss();
+  const price = parseAmount(T.p);
+  const pv = T.e ? trialPreview({ service: T.n || 'Tjenesten', endsAt: T.e, priceAfter: price > 0 ? price : null, remindOffsetsDays: T.rem.length ? T.rem : [0] }) : null;
+  return `<div class="se-back" data-str="close"><div class="se str" role="dialog" aria-modal="true" aria-label="Prøveperiode">
+    <span class="se-grip" aria-hidden="true"></span>
+    <div class="se-h"><b>Prøveperiode</b>${sheetBtn('Lukk', 'data-str="close"', 'sec')}</div>
+    <span class="se-note" style="margin-top:-8px">Vi minner deg på å avslutte før den blir betalt.</span>
+    <form class="str-ai" data-sform="trai"><span class="str-cap">✦ SKRIV DET MED EGNE ORD</span><div><input class="inp" name="ai" value="${esc(T.ai)}" placeholder="Viaplay gratis i 14 dager, påminn meg" enterkeyhint="go" autocomplete="off"><button class="btn pri">Fyll ut</button></div></form>
+    <div class="str-f">
+      <label>Tjeneste<input name="n" value="${esc(T.n)}" placeholder="Viaplay" data-str-f="n" autocomplete="off"></label>
+      <label>Prøven slutter<input type="date" name="e" value="${esc(T.e)}" min="${isoToday()}" data-str-f="e"></label>
+      <label>Pris etterpå<input name="p" value="${esc(T.p)}" placeholder="149 kr/mnd" inputmode="decimal" data-str-f="p"></label></div>
+    <div class="se-f"><span class="se-l str-cap">VARSLE MEG</span><div class="str-rem">${REMIND_OPTIONS.map((o) => `<button type="button" class="se-chip" data-str-rem="${o.days}" aria-pressed="${T.rem.includes(o.days)}">${esc(o.label)}</button>`).join('')}</div></div>
+    ${pv ? `<div class="str-pv" aria-label="Forhåndsvisning av varselet"><i>H</i><span><small><b>HOMELAB</b><span>${esc(pv.when)}</span></small><strong>${esc(pv.title)}</strong><em>${esc(pv.body)}</em></span></div>` : ''}
+    ${T.err ? `<span class="str-err" role="alert">${esc(T.err)}</span>` : ''}
+    <button type="button" class="str-save" data-str="save" ${T.busy ? 'disabled' : ''}>${T.busy ? 'Lagrer …' : 'Lagre påminnelse'}</button>
+  </div></div>`;
+}
+function trialsCard(d) {
+  const L = (d.trials ?? []).filter((t) => t.status === 'active');
+  if (!L.length) return '';
+  trCss();
+  return `<section class="card so-trials"><div class="card-h"><h2>Prøveperioder</h2><span class="muted">${L.length} aktiv${L.length === 1 ? '' : 'e'}</span></div>
+    ${L.map((t) => `<div class="so-li"><span class="grow"><b>${esc(t.service)}</b><small>Slutter ${esc(longDay(t.endsAt))}${t.priceLabel ? ` · deretter ${esc(t.priceLabel)}` : ''}</small></span><span class="so-tr-badge">${esc(t.badge || trialBadge(t.endsAt))}</span>
+      <span class="so-tr-acts">${t.cancelUrl || cancelUrlFor(t.service) ? `<a class="btn sm" href="${esc(t.cancelUrl || cancelUrlFor(t.service))}" target="_blank" rel="noopener" data-str-cancel="${t.id}">Avslutt nå ↗</a>` : `<button class="btn sm" data-str-cancel="${t.id}">Avsluttet</button>`}<button class="btn sm" data-str-keep="${t.id}">Behold</button><button class="btn sm ghost" data-str-snooze="${t.id}">Minn meg i morgen</button></span></div>`).join('')}</section>`;
+}
 
 const u = S.ui;
 const kr = (v) => `${n0(v)} kr`;
@@ -43,6 +109,7 @@ function head() {
     ${u.subMenu ? `<div class="so-menu" role="menu">
       <label role="menuitem"><span class="so-mi">▣</span><span><b>Fra skjermbilde</b><small>✦ Ollama finner tjeneste, plan, pris og trekkdato</small></span>
         <input type="file" accept="image/*" data-ssk hidden></label>
+      <button data-sact="trial" role="menuitem"><span class="so-mi ai">◷</span><span><b>Gratis prøveperiode</b><small>✦ Få varsel før prøven går over til betalt</small></span></button>
       <button data-sact="manual" role="menuitem"><span class="so-mi">✎</span><span><b>Skriv inn selv</b><small>Tjeneste, beløp og trekkdag</small></span></button>
       <label role="menuitem"><span class="so-mi">⎙</span><span><b>Fra kvittering</b><small>✦ AI leser bilde, PDF eller e-post</small></span>
         <input type="file" multiple accept="image/*,application/pdf,.eml,message/rfc822,.txt,text/plain" data-mrc="sub" hidden></label>
@@ -80,10 +147,14 @@ async function readSk(file, engine = 'ollama') {
   u.subMenu = false; render();
   const t = setInterval(() => { if (u.subSk !== K || !K.busy) return clearInterval(t); K.pct = Math.min(92, K.pct + 3 + Math.random() * 6); const b = document.querySelector('.so-sk-bar span'); if (b) b.style.width = `${Math.round(K.pct)}%`; }, 300);
   const slow = setTimeout(() => { if (u.subSk === K && K.busy && engine !== 'gemini') { K.slow = true; render(); } }, SLOW_MS);
+  // Prompt 31: Glimt-toasten og glassboblen følger lesingen (skjules mens kortet med fremdriften er synlig).
+  const job = aiStart({ title: engine === 'gemini' ? 'Gemini leser skjermbildet' : 'Ollama leser skjermbildet', toast: `${engine === 'gemini' ? 'Gemini' : 'Ollama'} leser skjermbildet …`, model: engine === 'gemini' ? 'Glimt · Gemini (sky)' : 'Glimt · lokal', input: file.name,
+    steps: ['Gjør bildet klart', 'Leser teksten i bildet', 'Finner tjeneste, plan og pris', 'Finner trekkdato'], dur: 9000, hideToast: () => !!document.querySelector('.so-sk') && !document.hidden });
   try {
     K.img ??= await toJpeg(file);
     K.r = await readShot(K.img, { engine });
   } catch (e) { K.err = e; }
+  aiDone(job, { text: K.err ? '' : K.r?.tjeneste ? `✓ Fant ${K.r.tjeneste}` : '', ok: !K.err, silent: !!document.querySelector('.so-sk') && !document.hidden });
   clearInterval(t); clearTimeout(slow); K.busy = false; K.pct = 100;
   if (u.subSk === K) render();
 }
@@ -226,7 +297,7 @@ function tipsCard(d, byId) {
 }
 
 function overview(d, byId) {
-  return `<div class="so-r1">${savingsCard(d)}${totalCard(d)}</div>${banner(d)}
+  return `<div class="so-r1">${savingsCard(d)}${totalCard(d)}</div>${banner(d)}${trialsCard(d)}
     <div class="so-r2">${yearChart(d)}${monthCard(d, byId)}</div>
     <div class="so-r3">${table(d)}<div class="so-side">${healthCard(d)}${tipsCard(d, byId)}</div></div>`;
 }
@@ -285,7 +356,7 @@ function editSheet(d) {
     <div class="se-h"><b>${e.id ? `Rediger ${esc(e.n)}` : 'Nytt abonnement'}</b>${sheetBtn('Lukk', 'data-sed="close"', 'sec')}</div>
     <div class="se-logorow">${logoBox}<div class="se-lc"><span class="se-l">Logo</span><div class="se-lb">
       <label class="btn sm">↑ Last opp<input type="file" accept="image/png,image/jpeg,image/webp" data-sed-file hidden></label>
-      <button type="button" class="btn sm" data-sed="ai" ${e.busy ? 'disabled' : ''}>${e.busy ? '✦ Leter …' : '✦ Finn logo med AI'}</button>
+      <button type="button" class="btn sm" data-sed="ai" ${e.busy ? 'disabled' : ''}>${e.busy ? `${glimt(14, 'tenker')} Leter …` : '✦ Finn logo med AI'}</button>
       ${pv ? '<button type="button" class="btn sm ghost" data-sed="nologo">Fjern</button>' : ''}</div>
       ${e.aiPending ? '<small class="se-note">✦ Logoen hentes når abonnementet er lagret.</small>' : ''}</div></div>
     <div class="se-g2"><label>Navn<input class="inp" name="n" value="${esc(e.n)}" placeholder="F.eks. HBO Max" required></label><label>Pris (kr)<input class="inp mono" name="v" value="${esc(e.v)}" inputmode="decimal" placeholder="129" required></label></div>
@@ -302,7 +373,7 @@ export function subPage() {
   const d = S.subs;
   if (!d?.byMonth) return skel(400);
   const byId = new Map(d.items.map((s) => [s.id, s]));
-  return `<div class="so">${head()}${skPanel()}${candPanel()}${(u.subTab ?? 'ov') === 'cal' ? calendar(d, byId) : overview(d, byId)}</div>${editSheet(d)}`;
+  return `<div class="so">${head()}${skPanel()}${candPanel()}${(u.subTab ?? 'ov') === 'cal' ? calendar(d, byId) : overview(d, byId)}</div>${editSheet(d)}${trialSheet()}`;
 }
 
 /* ---------- Hendelser ---------- */
@@ -350,6 +421,33 @@ export function bindSubs(el) {
         await api(`/subscriptions/${e2.id}`, { method: 'DELETE' }); toast(`${e2.n} er slettet`); u.subEd = null; return reload();
       }
     }
+    /* Prøveperiode-arket og -kortet (prompt 31). */
+    if ((x = d('[data-str]')) && !(x.classList.contains('se-back') && e.target !== x)) {
+      const T = u.subTr, k = x.dataset.str;
+      if (k === 'close') { u.subTr = null; return render(); }
+      if (k === 'save' && T) {
+        const price = parseAmount(T.p);
+        if (!T.n.trim() || !T.e) { T.err = 'Fyll inn tjeneste og sluttdato'; return render(); }
+        T.busy = true; T.err = ''; render();
+        try {
+          const r = await api('/subscriptions/trials', { method: 'POST', json: { service: T.n.trim(), endsAt: T.e, priceAfter: price > 0 ? price : null, remindOffsetsDays: T.rem.length ? [...T.rem].sort((a, b) => a - b) : [0], source: T.fromAi ? 'glimt' : 'skjema' } });
+          u.subTr = null; toast(`Påminnelse lagret · ${r?.service ?? T.n.trim()}`); return reload();
+        } catch (err) { T.busy = false; T.err = err.status === 404 ? 'Serveren har ikke prøveperioder ennå. Oppdater Nordlys.' : err.message; return render(); }
+      }
+    }
+    if (u.subTr && d('.str')) {
+      if ((x = d('[data-str-rem]'))) { const v = +x.dataset.strRem, T = u.subTr; T.rem = T.rem.includes(v) ? T.rem.filter((y) => y !== v) : [...T.rem, v]; return render(); }
+      return;
+    }
+    if ((x = d('[data-str-keep]'))) { await api(`/subscriptions/trials/${x.dataset.strKeep}`, { method: 'PATCH', json: { status: 'kept' } }); toast('Gjort om til vanlig abonnement'); return reload(); }
+    if ((x = d('[data-str-snooze]'))) { await api(`/subscriptions/trials/${x.dataset.strSnooze}`, { method: 'PATCH', json: { snooze: 'tomorrow' } }); toast('Du får et nytt varsel i morgen kl. 09:00'); return reload(); }
+    if ((x = d('[data-str-cancel]'))) {
+      // «Avslutt nå» åpner oppsigelsessiden (lenken) og markerer prøven som avsluttet.
+      const id = x.dataset.strCancel;
+      if (x.tagName !== 'A' && !confirm('Markere prøven som avsluttet?')) return;
+      await api(`/subscriptions/trials/${id}`, { method: 'PATCH', json: { status: 'cancelled' } }).catch((err) => toast(err.message));
+      toast('Prøven er markert som avsluttet'); return reload();
+    }
     if (u.subEd && d('.se')) {
       if ((x = d('[data-sed-cyc]'))) { u.subEd.cyc = x.dataset.sedCyc; return render(); }
       if ((x = d('[data-sed-st]'))) { u.subEd.st = x.dataset.sedSt; return render(); }
@@ -382,6 +480,7 @@ export function bindSubs(el) {
       switch (x.dataset.sact) {
         case 'menu': u.subMenu = !u.subMenu; return render();
         case 'manual': openEd(null); render(); el.querySelector('.se [name=n]')?.focus(); return;
+        case 'trial': openTrial(); render(); el.querySelector('.str [name=ai]')?.focus(); return;
         case 'add-close': u.subAdd = false; u.subF = null; return render();
         case 'cands': u.subMenu = false; u.subCand = true; S.subCands = null; render(); S.subCands = await api('/subscriptions/candidates'); return render();
         case 'cands-close': u.subCand = false; return render();
@@ -428,11 +527,16 @@ export function bindSubs(el) {
   }));
   // Feltene i den nye raden beholdes når siden tegnes på nytt.
   el.addEventListener('input', (e) => {
+    if (u.subTr && e.target.closest('.str')) {
+      const t = e.target, T = u.subTr;
+      if (t.name === 'ai') { T.ai = t.value; return; }
+      if (t.dataset.strF) { T[t.dataset.strF] = t.value; T.err = ''; const pv = el.querySelector('.str-pv'); if (t.dataset.strF !== 'p' || pv) { clearTimeout(T.t); T.t = setTimeout(() => { const a = document.activeElement, nm = a?.name, pos = a?.selectionStart; render(); if (nm) { const n2 = el.querySelector(`.str [name=${nm}]`); n2?.focus(); try { n2?.setSelectionRange(pos, pos); } catch { /* date */ } } }, 350); } return; }
+    }
     const f = e.target.closest('[data-sform=new]'); if (f) u.subF = Object.fromEntries(new FormData(f));
     if (u.subEd && e.target.closest('[data-sform=ed]') && e.target.name) u.subEd[e.target.name] = e.target.value;
   });
   // Escape lukker arket uansett hvor fokus står (lytteren ligger på document, bare én gang).
-  if (!document.body.dataset.subEsc) { document.body.dataset.subEsc = '1'; document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && u.subEd && u.page === 'sub') { u.subEd = null; render(); } }); }
+  if (!document.body.dataset.subEsc) { document.body.dataset.subEsc = '1'; document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && (u.subEd || u.subTr) && u.page === 'sub') { u.subEd = null; u.subTr = null; render(); } }); }
   el.addEventListener('keydown', (e) => {
     if (u.page !== 'sub') return;
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.so-click[data-ssub-edit]')) { e.preventDefault(); e.target.click(); }
@@ -442,6 +546,21 @@ export function bindSubs(el) {
     if (!f) return;
     e.preventDefault();
     if (f.dataset.sform === 'ed') return saveEd();
+    if (f.dataset.sform === 'trai') {
+      // «Fyll ut»: Glimt tolker teksten (trial-parse.js, samme tolker som serveren) og fyller feltene.
+      const T = u.subTr, txt = (T?.ai ?? '').trim();
+      if (!T || !txt) return;
+      const job = aiStart({ title: 'Leser prøveperioden', toast: 'Glimt fyller ut …', model: 'Glimt · lokal', input: txt, steps: ['Finner tjenesten', 'Finner sluttdatoen', 'Finner prisen'], dur: 700 });
+      const r = parseTrial(txt, isoToday());
+      setTimeout(() => {
+        aiDone(job, { silent: true });
+        if (!r.service && !r.endsAt) { T.err = r.question || 'Fant ikke tjeneste eller dato'; return render(); }
+        Object.assign(T, { n: r.service || T.n, e: r.endsAt || T.e, p: r.priceAfter != null ? `${r.priceLabel || r.priceAfter}` : T.p, err: r.ok ? '' : r.question || '', fromAi: true });
+        if (Array.isArray(r.remindOffsetsDays) && r.remindOffsetsDays.length) T.rem = [...r.remindOffsetsDays];
+        render();
+      }, 450);
+      return;
+    }
     const v = Object.fromEntries(new FormData(f));
     const price = parseAmount(v.price);
     if (!v.name.trim() || !(price > 0)) return toast('Skriv tjeneste og beløp');

@@ -1,0 +1,153 @@
+/* Prompt 31 (web): innstillingene som vindu, System-siden «Nordlys OS», Glimt i søkefeltet (logoer og svarboble),
+   Chat med Glimt og kort, «Glimt svarte mens du var borte», Kalender uten URL-er i stedsteksten.
+   Fasit: «Innstillinger Web.dc.html» (System, vinduet), «Homelab Papir Web.dc.html», «Glimt AI.dc.html»,
+   «Mobil Papir App.dc.html» (aiSpark, aiToastEl, chCardVals), «Kalender.dc.html».
+   Lastes etter web30.css. «Nåværende» (mørkt) er standard; html[data-hl="2c"] er Vindu og papir (lyst). */
+
+/* ================= Innstillinger som vindu ================= */
+/* Mørk, uskarp bakgrunn bak; vinduet maks 1180 × 860, radius 24, stor skygge. Fast høyde på roten (overflow:hidden),
+   og sidemeny og innhold har hver sin rulling (height:100%; overflow-y:auto). Ferdig-pillen sitter i vinduets hjørne. */
+#settings{--w31-m:clamp(12px,3vw,40px);padding:var(--w31-m);place-items:center;background:rgba(14,13,11,.5);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);z-index:75;overflow:hidden}
+#settings .set-box{position:relative;width:min(1180px,100%);max-width:1180px;height:min(860px,calc(100vh - 2 * var(--w31-m)));height:min(860px,calc(100dvh - 2 * var(--w31-m)));min-height:0;border-radius:24px;overflow:hidden;
+  grid-template-columns:minmax(0,280px) minmax(0,1fr);grid-template-rows:minmax(0,100%);box-shadow:0 40px 100px -30px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);border:0}
+#settings .set-side{height:100%;min-height:0;overflow:hidden}
+#settings .set-side-in{height:auto;flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+#settings .set-main{position:relative;height:100%;min-height:0;overflow:hidden}
+#settings .set-body{height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;box-sizing:border-box}
+#settings .set-done,.set-done{position:absolute!important;top:18px;right:20px;z-index:5}
+html[data-hl="2c"] #settings .set-box{background:var(--pp,#f3efe6)}
+@media (max-width:767px){
+  #settings{--w31-m:8px}
+  #settings .set-box{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);height:calc(100vh - 16px);height:calc(100dvh - 16px);border-radius:20px}
+  #settings .set-side{height:auto;overflow:visible}
+  #settings .set-side-in{overflow:visible}
+  #settings .set-main{position:static}
+  #settings .set-done,.set-done{top:calc(12px + env(safe-area-inset-top,0px));right:12px}
+}
+
+/* ================= System: Nordlys OS ================= */
+.ny{display:flex;flex-direction:column;gap:26px;min-width:0}
+.ny-hero{position:relative;overflow:hidden;border-radius:28px;min-height:320px;padding:30px 32px 28px;box-sizing:border-box;color:#fff;display:flex;flex-direction:column;justify-content:space-between;gap:24px;
+  background:radial-gradient(120% 90% at 85% 0%,oklch(0.62 0.17 300 / .95) 0%,transparent 55%),radial-gradient(90% 80% at 10% 100%,oklch(0.72 0.16 165 / .9) 0%,transparent 60%),radial-gradient(70% 60% at 100% 100%,oklch(0.6 0.19 30 / .85) 0%,transparent 60%),linear-gradient(160deg,#101a2e 0%,#1b2340 100%)}
+.ny-arc{position:absolute;border-radius:50%;pointer-events:none}
+.ny-arc.a{inset:-20% -10% auto auto;width:70%;height:140%;border:1.5px solid rgba(255,255,255,.18);transform:rotate(-18deg)}
+.ny-arc.b{inset:auto auto -60% -20%;width:80%;height:120%;border:1px solid rgba(255,255,255,.12)}
+.ny-top{position:relative;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;min-width:0}
+.ny-big{font:800 clamp(88px,12vw,148px)/.85 Manrope,Outfit,system-ui,sans-serif;letter-spacing:-.04em;background:linear-gradient(180deg,#fff 0%,#ffd9c2 45%,#ff8a5c 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:.04em}
+#settings .ny-chk{flex:none;height:34px;padding:0 14px;border-radius:17px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;cursor:pointer;font:700 12.5px Manrope,Outfit,system-ui,sans-serif;white-space:nowrap}
+#settings .ny-chk:hover:not(:disabled){background:rgba(255,255,255,.2)}
+#settings .ny-chk:disabled{opacity:.6;cursor:default}
+.ny-bot{position:relative;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ny-st{font:500 19px Manrope,Outfit,system-ui,sans-serif;color:rgba(255,255,255,.88)}
+.ny-name{font:800 clamp(34px,4.4vw,48px)/1 Manrope,Outfit,system-ui,sans-serif;letter-spacing:-.02em}
+.ny-name span{font-weight:500;opacity:.75}
+.ny-host{font:600 13px Manrope,Outfit,system-ui,sans-serif;color:rgba(255,255,255,.75);overflow-wrap:anywhere}
+.ny-prog{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-width:520px}
+.ny-bar{display:block;height:6px;border-radius:3px;background:rgba(255,255,255,.22);overflow:hidden}
+.ny-bar>span{display:block;height:100%;border-radius:3px;background:#fff;transition:width .4s ease}
+.ny-ps{display:flex;justify-content:space-between;gap:12px;font:600 12.5px Manrope,Outfit,system-ui,sans-serif;color:rgba(255,255,255,.85)}
+.ny-pct{font-family:'IBM Plex Mono',ui-monospace,monospace}
+.ny-act{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:-6px}
+#settings .ny-btn{flex:none;min-width:240px;height:54px;padding:0 30px;border-radius:27px;border:0;color:#fff;cursor:pointer;font:800 16px Manrope,Outfit,system-ui,sans-serif;box-shadow:0 12px 26px -14px rgba(43,93,138,.7)}
+#settings .ny-btn.blue{background:#2b5d8a}
+#settings .ny-btn.blue:hover:not(:disabled){filter:brightness(1.08)}
+#settings .ny-btn.green{background:#2f7d4f;box-shadow:0 12px 26px -14px rgba(47,125,79,.7)}
+#settings .ny-btn.grey{background:#b0a998;box-shadow:none;cursor:default}
+#settings .ny-btn.busy{opacity:.75;cursor:default}
+#settings .ny-btn:disabled{cursor:default}
+.ny-sub{flex:1 1 220px;min-width:0;font-size:13.5px;color:var(--w30-mut,#6b6558)}
+html[data-hl="2c"] .ny-sub{color:#6b6558}
+.ny-sec{display:flex;flex-direction:column}
+.ny-row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:16px 0;border-bottom:1px solid var(--w30-line,#d8d1c2);min-width:0}
+.ny-rt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ny-rt b{font-size:16px}
+.ny-mono{font:500 13.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--w30-mut,#6b6558);overflow-wrap:anywhere}
+.ny-inst{flex:none;font:600 13px Manrope,Outfit,system-ui,sans-serif;color:var(--w30-mut,#6b6558)}
+.ny-inst.ok{color:#2f7d4f}
+html:not([data-hl="2c"]) .ny-inst.ok{color:#8fe0b0}
+#settings .ny-sec>.sg-row{padding-left:0;padding-right:0;border-bottom:1px solid var(--w30-line,#d8d1c2);border-radius:0;background:transparent}
+.ny-note{font-size:13px;color:var(--w30-mut,#8f897c);padding:12px 0 0}
+.ny-note.red{color:#b23a2a}
+.ny-setup{gap:8px;padding:16px 18px;border-radius:18px;border:1px solid var(--w30-line,#d8d1c2)}
+.ny-setup>span{font-size:13.5px;color:var(--w30-mut,#6b6558)}
+.ny-setup .upd-cmd{display:flex;gap:10px;align-items:center;min-width:0}
+.ny-setup .upd-cmd code{flex:1;min-width:0;overflow-wrap:anywhere}
+.ny-notes{display:flex;flex-direction:column;gap:12px;padding-bottom:20px}
+.ny-h{font:500 26px/1.2 Newsreader,Georgia,serif}
+html:not([data-hl="2c"]) .ny-h{font-family:Outfit,system-ui,sans-serif;font-weight:600;font-size:24px}
+.ny-cap{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em;color:var(--w30-acc,#b23a2a);padding-top:6px}
+.ny-notes ul{margin:0;padding:0 0 0 20px;display:flex;flex-direction:column;gap:8px;font-size:15px;line-height:1.5;color:var(--w30-ink,#3d3a33)}
+html[data-hl="2c"] .ny-notes ul{color:#3d3a33}
+.ny-notes li{text-wrap:pretty}
+.ny-dlg-bg{position:fixed;inset:0;z-index:90;background:rgba(27,26,23,.45)}
+.ny-dlg{position:fixed;z-index:91;left:50%;top:50%;transform:translate(-50%,-50%);margin:0;width:min(400px,calc(100vw - 40px));box-sizing:border-box;padding:22px;border-radius:24px;background:var(--w30-bg,#f3efe6);color:var(--w30-ink,#1b1a17);box-shadow:0 30px 60px -20px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:12px}
+.ny-dlg>b{font:500 24px Newsreader,Georgia,serif}
+.ny-dlg>span{font-size:13.5px;color:var(--w30-mut,#6b6558)}
+.ny-dlg input{height:46px;padding:0 14px;border-radius:14px;border:1px solid var(--w30-line,#d8d1c2);background:var(--w30-field,#fff);color:inherit;font:500 15px Manrope,Outfit,system-ui,sans-serif;outline:none}
+.ny-dlg .ny-err{font-size:13px;font-weight:600;color:#b23a2a}
+.ny-dlg-b{display:flex;gap:8px;justify-content:flex-end}
+.ny-dlg-b button{height:40px;padding:0 16px;border-radius:20px;border:0;cursor:pointer;font:700 14px Manrope,Outfit,system-ui,sans-serif}
+.ny-dlg-c{background:var(--w30-chip,#e6e0d2);color:inherit}
+.ny-dlg-ok{background:#2b5d8a;color:#fff;padding:0 18px!important}
+.ny-chk-s{display:none}
+@media (max-width:767px){
+  .ny-hero{min-height:260px;padding:22px 20px 20px;border-radius:24px}
+  .ny-big{font-size:clamp(64px,22vw,104px)}
+  .ny-chk-l{display:none}.ny-chk-s{display:inline}
+  #settings .ny-btn{flex:1 1 100%;min-width:0}
+}
+
+/* Oppdateringsbanneret er trykkbart (åpner System). */
+.ub-slot[data-ub-slot="dash"] .ub{cursor:pointer}
+.ub-slot[data-ub-slot="dash"] .ub:hover{box-shadow:0 14px 34px -14px rgba(0,0,0,.45)}
+
+/* ================= Søkefeltet: logoer og Glimt ================= */
+.sq-logo{flex:none;display:block}
+.sbar .sq-eng .glm,.sbar .sq-eng .sq-logo{margin:0 1px}
+.sq-eng-menu [data-sq-pick]>.glm,.sq-eng-menu [data-sq-pick]>.sq-logo{flex:none}
+.sq-eng-menu .sq-eng-ck{margin-left:auto;flex:none}
+/* Svarboblen under feltet: mørk glass, det viktigste fet og hvitt, kilde og «Fortsett i Chat ›». */
+.gl-layer{position:absolute;z-index:60;max-width:calc(100vw - 24px)}
+.gl-ans{box-sizing:border-box;padding:16px 18px 14px;border-radius:26px;background:rgba(22,20,18,.78);-webkit-backdrop-filter:blur(30px) saturate(1.5);backdrop-filter:blur(30px) saturate(1.5);color:#f6f2ea;
+  box-shadow:0 20px 50px -18px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.1);display:flex;flex-direction:column;gap:10px;cursor:pointer;text-align:left;font-family:Manrope,Outfit,system-ui,sans-serif;animation:glAnsIn .26s cubic-bezier(.2,.8,.2,1)}
+@keyframes glAnsIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.gl-busy{display:flex;align-items:center;gap:10px;min-height:28px;font:500 16px/1.4 Manrope,Outfit,system-ui,sans-serif;color:rgba(246,242,234,.75);min-width:0}
+.gl-busy>span{min-width:0;overflow-wrap:anywhere}
+.gl-txt{font:500 17px/1.45 Manrope,Outfit,system-ui,sans-serif;text-wrap:pretty;overflow-wrap:anywhere}
+.gl-txt b{font-weight:800;color:#fff}
+.gl-foot{display:flex;align-items:center;gap:8px}
+.gl-src{flex:1;min-width:0;font:600 11.5px Manrope,Outfit,system-ui,sans-serif;color:rgba(246,242,234,.55);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gl-layer button.gl-chat{flex:none;height:32px;padding:0 14px;border-radius:16px;border:0;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;font:700 12.5px Manrope,Outfit,system-ui,sans-serif;box-shadow:none;width:auto;margin:0}
+#gl-layer button.gl-chat:hover{background:rgba(255,255,255,.22)}
+@media (prefers-reduced-motion:reduce){.gl-ans{animation:none}}
+
+/* «Glimt svarte mens du var borte» (4 s). */
+.glimt-away{position:fixed;z-index:96;left:50%;top:calc(env(safe-area-inset-top,0px) + 16px);transform:translate(-50%,-140%);width:min(440px,calc(100vw - 32px));box-sizing:border-box;display:flex;align-items:flex-start;gap:12px;padding:12px 16px 12px 12px;border-radius:22px;background:rgba(27,26,23,.92);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#f3efe6;box-shadow:0 18px 40px -14px rgba(0,0,0,.55);transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .3s;opacity:0;cursor:pointer;font-family:Manrope,Outfit,system-ui,sans-serif}
+.glimt-away.on{transform:translate(-50%,0);opacity:1}
+.glimt-away-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.glimt-away-t>b{font-size:13px;color:#ffb38a}
+.glimt-away-t>span{font-size:14px;line-height:1.4;overflow-wrap:anywhere}
+.glimt-away-t>span b{color:#fff}
+
+/* ================= Chat: Glimt som avsender, verktøy-chip og kort ================= */
+.ch-lab .glm{margin-right:6px}
+.ch-ah .ch-lab{display:inline-flex;align-items:center}
+.ch-think{display:inline-flex;align-items:center;gap:8px}
+.ch-tool{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;background:var(--ch-chip,rgba(127,127,127,.14));font-size:11.5px;font-weight:600;opacity:.85}
+.ch-card{margin-top:4px;min-width:0;max-width:100%}
+
+/* ================= Kalender: ingen tekst kan gjøre visningen bredere ================= */
+.k2{min-width:0}
+.k2 .k2-grow,.kal-hw .kal-grow{min-width:0}
+.kal-hw{min-width:0;overflow:hidden}
+.kal-hw .kal-grow>span,.kal-hw .kal-grow>b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k2-ev>span,.k2-it span,.k2-sr span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.k2-it .k2-grow>span,.k2-sr .k2-grow>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k2-rows>div>b{min-width:0;overflow-wrap:anywhere}
+/* NÅ/NESTE-kortet: stedspillen krymper (maks 55 %) og kuttes med …, tittelen får plass. */
+.k2-now-pl{flex:0 1 auto!important;min-width:0;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k2-now-t b{flex:0 1 auto;min-width:3.5em}
+/* Innstillinger: Glimt-merket i AI-svaret. */
+.set-aians .set-cap{display:inline-flex;align-items:center;gap:7px}
+.sq-ai-h .glm{margin-right:6px}
+.ai-job .glm{flex:none}

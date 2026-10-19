@@ -1,6 +1,7 @@
 // Finn-handler på PC: listen med sammendrag per handel, og detaljsiden med fire kort
 // (Annonsen, Original kvittering, E-poster i handelen, Bilder). Klikk på en handel for å åpne den.
 import { S, api, esc, n0, dd, render, toast } from './core.js';
+import { glimt } from '/assets/js/glimt.js';
 
 const u = S.ui;
 const kr0 = (v) => `${n0(v)} kr`;
@@ -66,7 +67,7 @@ function addPanel() {
     <div class="fh-seg" role="radiogroup" aria-label="Type">${[['bought', 'Kjøp'], ['sold', 'Salg']].map(([k, n]) => `<label><input type="radio" name="role" value="${k}"${(f.role ?? 'bought') === k ? ' checked' : ''}><span>${n}</span></label>`).join('')}</div>
     <label class="fh-fl">Finn-lenke<input class="inp" name="adUrl" value="${esc(f.adUrl ?? '')}" placeholder="https://www.finn.no/recommerce/forsale/item/…" inputmode="url"><small>✦ AI henter tittel, pris, tekst og bilder fra annonsen</small></label>
     <div class="fh-g3"><label class="fh-fl">Tittel<input class="inp" name="item" value="${esc(f.item ?? '')}" placeholder="Hentes fra annonsen"></label><label class="fh-fl">Pris (kr)<input class="inp mono" name="amount" value="${esc(f.amount ?? '')}" inputmode="decimal" placeholder="0"></label><label class="fh-fl">${(f.role ?? 'bought') === 'sold' ? 'Kjøper' : 'Selger'}<input class="inp" name="counterpart" value="${esc(f.counterpart ?? '')}"></label></div>
-    <div style="display:flex;gap:8px;align-items:center"><button class="btn pri" ${u.finnBusy === 'new' ? 'disabled' : ''}>${u.finnBusy === 'new' ? '✦ Henter annonsen …' : 'Legg til'}</button><span class="note" style="font-size:12.5px">Du trenger enten en lenke eller tittel og pris.</span></div></form>`;
+    <div style="display:flex;gap:8px;align-items:center"><button class="btn pri" ${u.finnBusy === 'new' ? 'disabled' : ''}>${u.finnBusy === 'new' ? `${glimt(14, 'tenker')} Henter annonsen …` : 'Legg til'}</button><span class="note" style="font-size:12.5px">Du trenger enten en lenke eller tittel og pris.</span></div></form>`;
 }
 
 function adCard(d) {

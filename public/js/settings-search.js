@@ -4,6 +4,7 @@
 // - Vanlig skriving gir treffliste (ikon + navn + sti). ✦ AI på, eller tekst med mellomrom/spørsmålstegn + Enter:
 //   POST /api/settings/ask {q} → {answer, targetId}. Bare spørsmålet sendes (serveren legger ved indeksen, aldri brukerdata).
 //   Feiler kallet, svarer en enkel nøkkelordmatch lokalt.
+import { glimt } from './glimt.js';
 import { api, esc } from './util.js';
 
 /** Fargede ikoner per side (samme farger som mobilens Innstillinger-liste). [nøkkel i settings.js, farge, sti] */
@@ -122,7 +123,8 @@ export function sideResults(q, tabName) {
   if (!qq) return '';
   const showAi = X.askQ && X.askQ === qq;
   const list = hits(qq);
-  const ai = showAi ? `<div class="set-aians" role="status" aria-live="polite"><span class="set-cap">✦ AI-SVAR</span>${X.busy ? '<span class="set-aibusy">Leter i innstillingene …</span>'
+  // Prompt 31: Glimt-merket (Tenker mens den leter, Ferdig med svaret).
+  const ai = showAi ? `<div class="set-aians" role="status" aria-live="polite"><span class="set-cap">${glimt(18, X.busy ? 'tenker' : 'klar')}GLIMT · SVAR</span>${X.busy ? '<span class="set-aibusy">Leter i innstillingene …</span>'
     : `<span class="set-aitxt">${esc(X.ans?.answer ?? '')}</span>${X.ans?.target ? `<button type="button" class="set-aigo" data-setgo="${esc(X.ans.target.id)}">Åpne ${esc(tabName(routeOf(X.ans.target).tab))} ›</button>` : ''}`}</div>` : '';
   const hl = list.length ? `<div class="set-hits"><span class="set-cap">TREFF</span>${list.map((h) => `<button type="button" class="set-hit" data-setgo="${esc(h.id)}">${icBox(routeOf(h).tab, 28, 15)}<span class="set-hit-t"><b>${esc(h.title)}</b><span>${esc(h.path)}</span></span></button>`).join('')}</div>`
     : showAi ? '' : '<span class="set-nohit">Ingen treff. Slå på ✦ AI og spør med egne ord.</span>';

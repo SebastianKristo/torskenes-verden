@@ -4,6 +4,7 @@
 import { api, esc, backdropClick } from './util.js';
 import { ICON_LIBS, iconHtml, searchIcons, suggestIcon, keywordFor, preloadIcons } from './icons.js';
 import { clearBtn, bindSearchFields } from './searchfield.js';
+import { glimt } from './glimt.js';
 
 const CSS_ID = 'news-css';
 const ensureCss = () => {
@@ -215,7 +216,7 @@ export function openNews(opts = {}) {
         <span class="nw-tx"><b>${esc(c.name)}</b><span class="nw-icid">${esc(id || 'ingen ikon')}</span></span>
         <span class="nw-icsrc${src === '✦ AI' ? ' ai' : ''}">${src}</span><span class="nw-ch" aria-hidden="true">›</span></button>`;
     }).join('');
-    return `<div class="nw-row"><span class="nw-lab">IKONER PÅ FANENE</span><button class="nw-link" data-act="ic-ai-all" ${st.icAll ? 'disabled' : ''}>${st.icAll ? '✦ Velger …' : '✦ La AI velge alle'}</button></div>
+    return `<div class="nw-row"><span class="nw-lab">IKONER PÅ FANENE</span><button class="nw-link" data-act="ic-ai-all" ${st.icAll ? 'disabled' : ''}>${st.icAll ? `${glimt(14, 'tenker')} Velger …` : '✦ La AI velge alle'}</button></div>
       <div class="nw-box"><button class="nw-tog" data-act="ic-tgl" aria-pressed="${x.icOn}"><span class="nw-tx"><b>Vis ikoner</b><span>Ved siden av navnet på hver fane</span></span><span class="nw-sw ink ${x.icOn ? 'on' : ''}"><span></span></span></button>${rows}</div>
       ${st.icErr ? `<span class="nw-hint err">${esc(st.icErr)}</span>` : ''}`;
   }
@@ -231,7 +232,7 @@ export function openNews(opts = {}) {
         <form class="nw-ipq${ip.q ? ' has' : ''}" data-ip-form data-sf><span class="sf-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></span>${clearBtn()}
           <input name="ipq" value="${esc(ip.q)}" placeholder="Søk etter ikon (engelsk), f.eks. football" autocomplete="off" aria-label="Søk etter ikon"><button type="submit">Søk</button></form>
         <div class="nw-iplibs">${ICON_LIBS.map(([k, n]) => `<button data-ip-lib="${k}" class="${ip.lib === k ? 'on' : ''}" aria-pressed="${ip.lib === k}">${esc(n)}</button>`).join('')}</div>
-        <div class="nw-ipa"><button class="nw-ipai" data-act="ip-ai" ${ip.ai ? 'disabled' : ''}>${ip.ai ? '✦ Velger …' : '✦ La AI velge'}</button><button class="nw-ipno" data-act="ip-none">Ingen ikon</button></div>
+        <div class="nw-ipa"><button class="nw-ipai" data-act="ip-ai" ${ip.ai ? 'disabled' : ''}>${ip.ai ? `${glimt(14, 'tenker')} Velger …` : '✦ La AI velge'}</button><button class="nw-ipno" data-act="ip-none">Ingen ikon</button></div>
         <span class="nw-hint">${esc(status)}</span></div>
       <div class="nw-ipg">${(ip.res ?? []).map((id) => `<button data-ip-pick="${esc(id)}" title="${esc(id)}" class="${id === cur ? 'on' : ''}">${iconHtml(id, 26)}</button>`).join('')}</div>
     </div></div>`;

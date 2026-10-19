@@ -2,6 +2,30 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.24.0] – 19.10.2026 · prompt 31 (Nordlys OS og Glimt) og selvoppdatering på Android
+- **Android-appen oppdaterer seg selv.** Når det finnes en ny versjon, vises et banner på Hjem og en rad under Innstillinger → PROGRAMVARE. Trykk «Last ned og installer».
+  - APK-en lastes ned via hjemmeserveren og sjekkes mot SHA-256 før den installeres.
+  - Android spør om du vil oppdatere, og data og innlogging beholdes.
+  - På iPhone vises den nye versjonen med en lenke til IPA-en.
+- **Nordlys OS:** systemet har fått navn.
+  - Ny System-side med nordlys-hero, versjon, «Dette er Nordlys …» og en stor «Oppdater nå»-knapp. På mobil har siden ingen bakgrunn, bunnmeny eller skann-knapp.
+  - Trykk på oppdateringskortet åpner System-siden.
+  - Admin oppdaterer uten passord som standard. Bryteren «Krev passord for å oppdatere» slår på passord, eller Face ID og fingeravtrykk i appene.
+- **Innstillinger på web** åpnes som et vindu igjen, og scrollingen virker.
+- **Glimt:** AI-agenten har fått navn og et animert merke.
+  - Trykk på «Legger til …»-toasten åpner en glassboble med stegene, og jobben kan avbrytes.
+- **Spør Glimt i søkefeltet:** for eksempel «trenger jeg paraply?» eller «når er neste frisørtime?». Svaret kommer i en boble under feltet, med det viktigste i fet skrift.
+- **Kort i Chat:** svar om vær, kalender, avganger, pakker, finans og huskeliste kommer med et kort. Værkortet er nå én flate.
+- **Gratis prøveperioder:** skriv «Viaplay gratis i 14 dager, påminn meg om å avslutte», eller bruk skjemaet.
+  - Du får varsel før prøven blir betalt, med Avslutt nå, Behold og Minn meg i morgen.
+  - Prøven vises i Subscription OS og som heldagshendelse i kalenderen.
+- **Svar når appen er lukket:**
+  - Web og PWA får Web Push.
+  - iPhone og Android henter varslene i bakgrunnen og planlegger prøvevarsler på telefonen.
+  - Kommer du tilbake uten å ha sett varselet: «Glimt svarte mens du var borte».
+- **Søkemotor-menyen** viser riktige logoer for Google og DuckDuckGo.
+- **Kalender:** lange stedslenker (MazeMap) gjør ikke lenger visningen for bred. Lenken vises som «Åpne kart ↗».
+
 ## [4.23.0] – 19.10.2026 · prompt 30 og SMB-veiviser
 - **Sett opp nettverksdisk (SMB) med veiviser:** du skriver ikke lenger stier for hånd. Veiviseren finner NAS-en på nettet, eller du skriver inn IP-adressen. Så logger du inn, velger delt mappe og mappe, appen tester at den kan skrive der, og du lagrer.
   - Feil vises på norsk, med forslag til hva du kan gjøre.

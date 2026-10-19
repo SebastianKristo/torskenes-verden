@@ -4,6 +4,8 @@ import { S, api, esc, n0, n2, sgn, dd, today, render, toast, loadBoot, accs, log
 import { clearBtn } from '/assets/js/searchfield.js';
 import { finnPage as finnDesk, loadFinn as loadFinnDesk, bindFinn } from './finn-desktop.js'; // Finn-handler med detaljside
 import { subPage, loadSubs, bindSubs } from './subs-desktop.js'; // Subscription OS: Oversikt og Kalender
+import { glimt } from '/assets/js/glimt.js';
+import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
 
 Object.assign(ICONS, {
   sub: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
@@ -57,7 +59,7 @@ function upcomingCard(cur, n = 6, style = 'flex:2 1 260px;padding:20px;gap:6px')
   return card(`<div class="card-h" style="align-items:baseline"><h3>Kommende forfall</h3><button class="link-btn" data-mbol-tab="rg">Regninger ›</button></div>${rows || '<div class="note" style="font-size:13.5px">Ingen regninger eller avdrag forfaller de neste 90 dagene. Legg inn faste regninger under Regninger.</div>'}`, style);
 }
 function recentCard(cur) {
-  const rows = cur.entries.slice(0, 6).map((e) => `<div class="dir-row2">${logo({ ...e, color: '#A0A0AA' }, 30, 8)}<span class="grow ell-wrap"><span class="ell" style="display:block">${esc(e.description)}</span><span class="dir-meta"><span class="mtag" style="background:${e.color}1F;color:${e.color}">${e.pending ? '✦ Kategoriseres …' : `${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}`}</span>${dd(e.date)}${e.receiptId ? ' · 🧾' : ''}</span></span><b class="mono" style="white-space:nowrap">${e.pending ? '…' : kr0(e.amount)}</b></div>`).join('');
+  const rows = cur.entries.slice(0, 6).map((e) => `<div class="dir-row2">${logo({ ...e, color: '#A0A0AA' }, 30, 8)}<span class="grow ell-wrap"><span class="ell" style="display:block">${esc(e.description)}</span><span class="dir-meta"><span class="mtag" style="background:${e.color}1F;color:${e.color}">${e.pending ? `${glimt(12, 'tenker')} Kategoriseres …` : `${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}`}</span>${dd(e.date)}${e.receiptId ? ' · 🧾' : ''}</span></span><b class="mono" style="white-space:nowrap">${e.pending ? '…' : kr0(e.amount)}</b></div>`).join('');
   return card(`<div class="card-h" style="padding:12px 0 4px;align-items:baseline"><h3>Siste utgifter</h3><button class="link-btn" data-mbol-tab="ut">Alle ${cur.entries.length} ›</button></div>${rows || '<div class="note" style="padding:14px 0">Ingen utgifter ennå. Dra en kvittering inn på siden for å komme i gang.</div>'}`, 'padding:8px 20px 14px;gap:0');
 }
 function projMini(cur) {
@@ -80,7 +82,7 @@ function timelineCard(cur) {
 function entryRow(cur, e) {
   return `<div class="dir-row2">${e.receiptId ? `<a class="bol-thumb" href="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/file" target="_blank" rel="noopener" title="Åpne kvitteringen"><img src="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/thumb" alt="" loading="lazy"></a>` : logo({ ...e, color: '#A0A0AA' }, 30, 8)}<span class="grow ell-wrap"><span class="ell" style="display:block">${esc(e.description)}</span>
     <span class="dir-meta">${cur.canEdit && !e.pending ? `<label class="mtag mtag-sel" style="background:${e.color}1F;color:${e.color}" title="Endre kategori">${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}<select data-mentry-cat="${e.id}" aria-label="Kategori for ${esc(e.description)}">${(cur.catTree ?? []).map((o) => `<option value="${o.id}"${o.id === e.categoryId ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`
-      : `<span class="mtag" style="background:${e.color}1F;color:${e.color}">${e.pending ? '✦ Kategoriseres …' : `${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}`}</span>`}${e.project ? `<span class="mtag">${esc(e.project)}</span>` : ''}${dd(e.date)} · betalt av ${esc(e.paidBy)}</span>${aiLine(e.aiShort, 'd-ai')}</span>
+      : `<span class="mtag" style="background:${e.color}1F;color:${e.color}">${e.pending ? `${glimt(12, 'tenker')} Kategoriseres …` : `${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}`}</span>`}${e.project ? `<span class="mtag">${esc(e.project)}</span>` : ''}${dd(e.date)} · betalt av ${esc(e.paidBy)}</span>${aiLine(e.aiShort, 'd-ai')}</span>
     <b class="mono" style="white-space:nowrap">${e.pending ? '…' : kr0(e.amount)}</b>${cur.canEdit ? `<button class="x-btn sm" data-mentry-del="${e.id}" aria-label="Fjern">×</button>` : ''}</div>`;
 }
 function receiptsCard(cur) {
@@ -508,7 +510,7 @@ export function finnImportBox() {
   const codes = [...new Set([...(fi.links.matchAll(/finn\.no\/[^\s]*?(?:item\/|finnkode=)(\d{6,12})/gi))].map((m) => m[1]))];
   const j = fi.job;
   const items = (j?.items ?? []).map((r) => `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--inner,#1B1B20)"><span style="flex:none;width:44px;height:44px;border-radius:10px;background:hsl(${(+r.code) % 360} 35% 30%)"></span><span style="flex:1;min-width:0"><b style="display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.title ?? r.error ?? '')}</b><span class="note mono" style="font-size:12px">Finn-kode ${esc(r.code)}${r.status === 'ok' ? ` · ${r.images} bilde${r.images === 1 ? '' : 'r'}` : ''}</span></span><span style="font-size:12.5px;color:${r.status === 'ok' ? 'var(--pos)' : 'var(--neg)'}">${r.status === 'ok' ? '✓ Lagret' : 'Feilet'}</span></div>`).join('');
-  const status = j ? `<div class="${j.errors?.length && !j.added && !j.linked ? 'err-msg' : 'ok-msg'}" style="font-size:13px">${j.running ? `✦ Arbeider … ${j.done} av ${j.total || '?'}` : esc(j.message ?? '')}${!j.running && j.errors?.length ? `<br><span class="note" style="font-size:12px">${j.errors.slice(0, 3).map(esc).join('<br>')}</span>` : ''}</div>` : '';
+  const status = j ? `<div class="${j.errors?.length && !j.added && !j.linked ? 'err-msg' : 'ok-msg'}" style="font-size:13px">${j.running ? `${glimt(14, 'tenker')} Arbeider … ${j.done} av ${j.total || '?'}` : esc(j.message ?? '')}${!j.running && j.errors?.length ? `<br><span class="note" style="font-size:12px">${j.errors.slice(0, 3).map(esc).join('<br>')}</span>` : ''}</div>` : '';
   return `<div class="mod-box" style="padding:18px;border-radius:18px;gap:12px">
     <div style="display:flex;align-items:center;gap:12px"><img src="/finans/api/logo/finn.no" alt="" style="width:36px;height:36px;border-radius:10px;background:#fff;padding:5px"><div style="flex:1;min-width:0"><b style="font-weight:600">Finn.no</b><div class="note" style="font-size:12.5px">Tidligere kjøp, salg og annonser legges i Finn-handler</div></div></div>
     <label style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:1.5px dashed var(--line,#3A3A42);cursor:pointer"><span style="width:34px;height:34px;border-radius:10px;background:var(--inner,#1B1B20);display:grid;place-items:center;color:var(--acc-l)">✉</span><span style="flex:1;min-width:0"><b style="font-weight:500">Finn-e-poster (.eml, .mbox eller Proton-eksport)</b><br><span class="note" style="font-size:12.5px">Kvitteringer, «Du har solgt», Fiks ferdig og utbetalinger kobles til riktig handel, også annonser du har lagt inn fra lenke. Annonsen hentes fra finn.no når Finn-koden står i e-posten.</span></span><input type="file" multiple accept=".eml,.mbox,.zip,.txt,message/rfc822" data-mfinn-imp hidden></label>
@@ -739,10 +741,20 @@ async function uploadTo(kind, files) {
   for (const f of files) fd.append('file', f);
   // Boliger: kvitteringene havner i boligen valgt under «Legg i bolig».
   const path = kind === 'sub' ? '/subscriptions/receipts' : `/folders/${target()}/receipts`;
-  const r = await api(path, { method: 'POST', body: fd });
+  const n0 = files.length;
+  // Prompt 31: Glimt-toasten (ai-jobs.js) mens kvitteringene leses. Trykk på den viser stegene.
+  const job = aiStart({ title: n0 > 1 ? `Leser ${n0} kvitteringer` : 'Leser kvitteringen', toast: n0 > 1 ? `Leser ${n0} kvitteringer …` : 'Leser kvitteringen …', model: 'Glimt · lokal', input: files.map((f) => f.name).join(', '),
+    steps: ['Laster opp', 'Leser teksten', 'Finner butikk, dato og beløp', 'Velger kategori'], dur: 15000 });
+  let r;
+  try { r = await api(path, { method: 'POST', body: fd }); } catch (e) { aiDone(job, { silent: true }); throw e; }
   toast(`${r.jobs.length} kvittering${r.jobs.length === 1 ? '' : 'er'} leses i bakgrunnen`);
   // Følg med til AI-en er ferdig, så havner kvitteringen i listen.
-  const poll = async (n) => { if (n > 30 || !['sub', 'dir'].includes(u.page)) return; await reload(); if (!(await api('/receipts/jobs')).some((j) => r.jobs.some((x) => x.id === j.id) && ['pending', 'processing'].includes(j.status))) return; setTimeout(() => poll(n + 1), 2500); };
+  const poll = async (n) => {
+    if (n > 30 || !['sub', 'dir'].includes(u.page)) { aiDone(job, { silent: true }); return; }
+    await reload();
+    if (!(await api('/receipts/jobs')).some((j) => r.jobs.some((x) => x.id === j.id) && ['pending', 'processing'].includes(j.status))) { aiDone(job, { text: n0 > 1 ? `✓ ${n0} kvitteringer er lest` : '✓ Kvitteringen er lest' }); return; }
+    setTimeout(() => poll(n + 1), 2500);
+  };
   setTimeout(() => poll(0), 2500);
 }
 // Følg med på en backup som kjører.

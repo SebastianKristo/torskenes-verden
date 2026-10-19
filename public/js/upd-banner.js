@@ -6,9 +6,12 @@
 //   Gjenopprett: POST /api/system/update/rollback {password} (updateren laster ned forrige vellykkede versjon; data beholdes).
 // - ✕ på Dashboard skjuler banneret i 24 t (localStorage «hl_upd_hide»). Under og etter oppdatering vises det alltid.
 // - Fremdrift: status.steps [{key, state}] og status.pct fra SERVER30; eldre server: anslag ut fra steget.
+// Prompt 31: navnet er Nordlys OS («Nordlys 4.22 er klar»). Trykk på kortet åpner Innstillinger → System; knappene
+// (Oppdater nå, Hva er nytt, ✕, Ferdig) gjør fortsatt sin egen handling. Oppdater nå starter uten passord, med mindre
+// admin har slått på «Krev passord for å oppdatere» (da passordarket).
 import { esc, sheetBtn, haptic } from './util.js';
 import { store } from './store.js';
-import { U, onUpdate, loadUpdate, startUpdate, state, stepIndex, running, verTxt, watch } from './sysupdate.js';
+import { U, onUpdate, loadUpdate, startUpdate, state, stepIndex, running, verTxt, watch, ms } from './sysupdate.js';
 
 const HIDE_KEY = 'hl_upd_hide', ACK_KEY = 'hl_upd_ack';
 const B = { notes: null, notesOpen: false, sheet: null, pw: '', busy: false, err: '', slots: new Set(), rolling: false };
@@ -22,7 +25,7 @@ const STEP_TXT = { download: 'Laster ned {v} …', backup: 'Tar backup før oppd
 const STEP_PCT = { download: 8, backup: 35, install: 60, restart: 85 };
 const LEGACY = ['download', 'install', 'restart', 'restart']; // sysupdate STEPS: downloading, building, restarting, done
 
-function progress() {
+export function progress() {
   const s = U.d?.status ?? {};
   let key = null;
   if (Array.isArray(s.steps) && s.steps.length) key = (s.steps.find((x) => x.state === 'running' || x.state === 'active') ?? s.steps.filter((x) => x.state === 'done').pop())?.key ?? null;
@@ -38,9 +41,27 @@ function phase() {
   const st = state(), s = U.d.status ?? {};
   if (running() || U.reloading) return 'run';
   if (st === 'failed') return ls(ACK_KEY) === `f:${s.id ?? s.finishedAt ?? ''}` ? (U.d.updateAvailable ? 'avail' : null) : 'fail';
-  if (st === 'done' && s.finishedAt && Date.now() - (Date.parse(s.finishedAt) || 0) < 864e5 && ls(ACK_KEY) !== `d:${s.id ?? s.finishedAt}`) return 'done';
+  if (doneRecent()) return 'done';
   if (U.d.updateAvailable) return 'avail';
   return null;
+}
+
+/** Ferdig de siste 24 t og ikke kvittert ut med «Ferdig». */
+export function doneRecent() {
+  const s = U.d?.status ?? {};
+  return state() === 'done' && !!s.finishedAt && Date.now() - (Date.parse(s.finishedAt) || ms(s.finishedAt) || 0) < 864e5 && ls(ACK_KEY) !== `d:${s.id ?? s.finishedAt}`;
+}
+/** «Ferdig» trykket (banneret eller System-siden). */
+export function ackDone() { const s = U.d?.status ?? {}; ls(ACK_KEY, `d:${s.id ?? s.finishedAt}`); haptic([10, 40, 10]); paint(); }
+const requirePw = () => U.d?.settings?.require_password === true;
+async function startNoPw() {
+  if (requirePw()) { B.sheet = 'start'; B.err = ''; B.pw = ''; paint(); return; }
+  B.busy = true; paint();
+  const r = await startUpdate('', { allowEmpty: true });
+  B.busy = false;
+  if (r === 'needpw') { B.sheet = 'start'; B.err = ''; B.pw = ''; }
+  else if (!r) flash(U.startErr || 'Kunne ikke starte oppdateringen.');
+  paint();
 }
 
 async function loadNotes() {
@@ -66,31 +87,31 @@ export function updBanner(where = 'dash') {
   const cur = ver(U.d.installed), nv = ver(U.d.latest), s = U.d.status ?? {};
   let ic = IC_DOWN, t = '', sub = '', body = '', btns = '', x = '', cls = '';
   if (ph === 'avail') {
-    t = `Ny versjon ${nv}`; sub = `Du har ${cur}. Oppdaterer hjemmeserveren, web og appen.`;
+    t = `Nordlys ${nv} er klar`; sub = `Du har ${cur}. Oppdaterer hjemmeserveren, web og appen.`;
     if (where === 'dash') x = '<button type="button" class="ub-x" data-ub="later" aria-label="Skjul i 24 timer" title="Skjul i 24 timer"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
     if (B.notesOpen) body = `<div class="ub-notes" data-no-i18n>${(B.notes ?? []).length ? B.notes.map((n) => `<span><i>•</i><span>${esc(n)}</span></span>`).join('') : '<span>Ingen endringsnotater.</span>'}</div>`;
-    btns = `<div class="ub-btns"><button type="button" class="ub-b pri" data-ub="start">Oppdater nå</button><button type="button" class="ub-b" data-ub="notes" aria-expanded="${B.notesOpen}">${B.notesOpen ? 'Skjul' : 'Hva er nytt'}</button></div>`;
+    btns = `<div class="ub-btns"><button type="button" class="ub-b pri" data-ub="start" ${B.busy ? 'disabled' : ''}>${B.busy ? 'Starter …' : 'Oppdater nå'}</button><button type="button" class="ub-b" data-ub="notes" aria-expanded="${B.notesOpen}">${B.notesOpen ? 'Skjul' : 'Hva er nytt'}</button></div>`;
   } else if (ph === 'run') {
     const p = progress();
-    t = B.rolling ? `Gjenoppretter ${cur}` : 'Oppdaterer Homelab'; sub = U.reloading ? 'Ny versjon svarer. Laster siden på nytt …' : 'Du kan bruke appen mens den oppdateres.';
+    t = B.rolling ? `Gjenoppretter ${cur}` : 'Oppdaterer Nordlys OS'; sub = U.reloading ? 'Ny versjon svarer. Laster siden på nytt …' : 'Du kan bruke appen mens den oppdateres.';
     body = `<div class="ub-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><span class="ub-bar"><span style="width:${p.pct}%"></span></span><span class="ub-st"><span>${esc(p.txt)}</span><span class="ub-pct">${p.pct} %</span></span></div>`;
     cls = ' run';
   } else if (ph === 'done') {
-    ic = IC_OK; t = `Oppdatert til ${cur}`; sub = 'Alt kjører. Endringene er aktive i appen og på web.';
+    ic = IC_OK; t = `Oppdatert til Nordlys ${cur}`; sub = 'Alt kjører. Endringene er aktive i appen og på web.';
     btns = '<div class="ub-btns"><button type="button" class="ub-b pri wide" data-ub="ack">Ferdig</button></div>';
   } else {
     ic = IC_ERR; cls = ' fail'; t = 'Oppdateringen feilet'; sub = s.error ? String(s.error) : 'Ukjent feil. Se loggen under Innstillinger → System.';
     const rb = U.d.rollback, rbV = rb?.version ?? U.prev?.version ?? cur;
     btns = `<div class="ub-btns"><button type="button" class="ub-b pri" data-ub="retry">Prøv igjen</button>${rb && rb.available === false && !rb.version ? '' : `<button type="button" class="ub-b" data-ub="rollback">Gjenopprett ${esc(rbV)}</button>`}</div>`;
   }
-  return slot(`<section class="ub${cls}" role="status" aria-live="polite"><div class="ub-h"><span class="ub-ic">${ic}</span><span class="ub-t"><b>${esc(t)}</b><span${ph === 'fail' ? ' data-no-i18n' : ''}>${esc(sub)}</span></span>${x}</div>${body}${btns}</section>`);
+  return slot(`<section class="ub${cls}" role="status" aria-live="polite" data-ub-card title="Åpne System"><div class="ub-h"><span class="ub-ic">${ic}</span><span class="ub-t"><b>${esc(t)}</b><span${ph === 'fail' ? ' data-no-i18n' : ''}>${esc(sub)}</span></span>${x}</div>${body}${btns}</section>`);
 }
 
 function sheetHtml() {
   if (!B.sheet) return '';
   const rb = B.sheet === 'rollback', nv = ver(U.d?.latest);
   return `<div class="ub-scrim" data-ub="close"></div><form class="ub-sheet" role="dialog" aria-modal="true" aria-labelledby="ub-sh-t" data-ub-form>
-    <div class="ub-sh-h"><b id="ub-sh-t">${rb ? 'Gjenopprett forrige versjon' : nv ? `Oppdater til ${esc(nv)}` : 'Oppdater Homelab'}</b>${sheetBtn('Avbryt', 'data-ub="close"', 'sec')}</div>
+    <div class="ub-sh-h"><b id="ub-sh-t">${rb ? 'Gjenopprett forrige versjon' : nv ? `Oppdater til Nordlys ${esc(nv)}` : 'Oppdater Nordlys OS'}</b>${sheetBtn('Avbryt', 'data-ub="close"', 'sec')}</div>
     <p>${rb ? 'Updateren installerer forrige vellykkede versjon igjen. Dataene dine beholdes (backupen fra før oppdateringen gjenopprettes ikke automatisk).' : 'Det tas backup først. Serveren starter på nytt, det tar vanligvis 2–5 minutter. Du kan bruke appen imens.'}</p>
     <label class="ub-f"><span>Passord</span><input type="password" name="ubpw" value="${esc(B.pw)}" autocomplete="current-password" placeholder="Ditt passord" required data-ub-pw></label>
     ${B.err ? `<div class="ub-err" role="alert">${esc(B.err)}</div>` : ''}
@@ -108,8 +129,9 @@ function paint() {
 }
 
 async function rollback(password) {
-  const r = await fetch('/api/system/update/rollback', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+  const r = await fetch('/api/system/update/rollback', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(password ? { password } : {}) });
   const j = await r.json().catch(() => ({}));
+  if (!password && (r.status === 401 || r.status === 403) && /passord|password/i.test(j.error ?? '')) throw Object.assign(new Error(''), { needpw: true });
   if (!r.ok) throw new Error(r.status === 404 ? 'Serveren har ikke gjenoppretting ennå. Oppdater Homelab først, eller kjør update.sh på serveren.' : j.error || `Serveren svarte ${r.status}`);
   U.jobId = j.id ?? null;
   U.d = { ...(U.d ?? {}), status: { ...(U.d?.status ?? {}), id: j.id, state: 'downloading', step: 'downloading', error: null, startedAt: new Date().toISOString(), finishedAt: null } };
@@ -127,16 +149,27 @@ export function loadUpdBanner() {
   import('./realtime.js').then((m) => m.onLive?.('system-update-available', () => { U.st = 'ok'; loadUpdate(); })).catch(() => {});
   document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-ub]');
-    if (!b) return;
+    // Trykk på selve kortet (ikke en knapp) åpner System-siden. Inne i Innstillinger → System er man der allerede.
+    if (!b) {
+      const card = e.target.closest('[data-ub-card]');
+      if (card && !e.target.closest('button,a,input') && card.closest('[data-ub-slot]')?.dataset.ubSlot === 'dash') { e.preventDefault(); haptic(6); document.dispatchEvent(new CustomEvent('hl:open-settings', { detail: 'system' })); }
+      return;
+    }
     const a = b.dataset.ub;
     if (a === 'close' && e.target !== b && b.classList.contains('ub-scrim')) return;
     e.preventDefault();
     if (a === 'later') { ls(HIDE_KEY, String(Date.now())); haptic(8); paint(); flash('Du finner oppdateringen i Innstillinger → System'); return; }
     if (a === 'notes') { B.notesOpen = !B.notesOpen; if (B.notesOpen) await loadNotes(); paint(); return; }
-    if (a === 'start' || a === 'retry') { B.sheet = 'start'; B.err = ''; B.pw = ''; paint(); return; }
-    if (a === 'rollback') { B.sheet = 'rollback'; B.err = ''; B.pw = ''; paint(); return; }
+    if (a === 'start' || a === 'retry') { if (state() === 'failed') { const s = U.d?.status ?? {}; ls(ACK_KEY, `f:${s.id ?? s.finishedAt ?? ''}`); } await startNoPw(); return; }
+    if (a === 'rollback') {
+      if (requirePw()) { B.sheet = 'rollback'; B.err = ''; B.pw = ''; paint(); return; }
+      const s = U.d?.status ?? {}; ls(ACK_KEY, `f:${s.id ?? s.finishedAt ?? ''}`);
+      B.rolling = true; B.busy = true; paint();
+      try { await rollback(''); } catch (err) { B.rolling = false; if (err.needpw) { B.sheet = 'rollback'; B.err = ''; B.pw = ''; } else flash(err.message); }
+      B.busy = false; paint(); return;
+    }
     if (a === 'close') { B.sheet = null; haptic(8); paint(); return; }
-    if (a === 'ack') { const s = U.d?.status ?? {}; ls(ACK_KEY, `d:${s.id ?? s.finishedAt}`); haptic([10, 40, 10]); paint(); }
+    if (a === 'ack') ackDone();
   });
   document.addEventListener('input', (e) => { if (e.target.matches?.('[data-ub-pw]')) B.pw = e.target.value; });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && B.sheet) { e.preventDefault(); e.stopPropagation(); B.sheet = null; paint(); } }, true);

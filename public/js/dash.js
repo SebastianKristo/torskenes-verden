@@ -10,6 +10,9 @@ import { pkgLogo, pkgTitle, moreText } from './pkglogo.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
 import { is2c, pwCredit, pwImg } from './hltheme.js';
 import { updBanner } from './upd-banner.js';
+// Prompt 31: URL-er i stedsteksten vises ikke (lenken brukes som kart-lenke i stedet).
+const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
+const urlOf = (t) => String(t ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
 
 // Snarveiene hentes fra serveren per bruker (/api/state.shortcuts), og deles med mobilappen.
 // Ekte logo (favicon via serveren); lokale adresser slås opp med AI én gang. Uten logo vises forbokstavene i en farge.
@@ -43,10 +46,10 @@ export function lessonNow(now = store.now) {
   const mins = (ms) => Math.max(0, Math.round(ms / 60000));
   const campus = store.data.school?.mazemapCampusId;
   return {
-    label: cur ? 'NÅ' : 'NESTE', subj: l.title, room: l.location || '–', time: `${hm(s)}–${hm(e)}`,
+    label: cur ? 'NÅ' : 'NESTE', subj: l.title, room: noUrl(l.location) || '–', time: `${hm(s)}–${hm(e)}`,
     left: cur ? `${mins(e - t)} min igjen` : `starter om ${mins(s - t)} min`,
     pct: cur ? ((t - s) / (e - s)) * 100 : 0,
-    map: l.location ? `https://use.mazemap.com/#v=1${campus ? `&campusid=${encodeURIComponent(campus)}` : ''}&search=${encodeURIComponent(l.location)}` : null,
+    map: urlOf(l.location) || (l.location ? `https://use.mazemap.com/#v=1${campus ? `&campusid=${encodeURIComponent(campus)}` : ''}&search=${encodeURIComponent(noUrl(l.location))}` : null),
   };
 }
 
@@ -297,7 +300,7 @@ popHandler('up', (key) => {
 
 /* ---------- Popup for kalenderdag, agenda og aksjer ---------- */
 
-const evRow = (e) => `<div class="row" style="justify-content:flex-start"><span class="dot" style="background:${e.color}"></span><span class="mono sub" style="font-size:13px;width:48px;flex:0 0 auto">${e.allDay ? 'hele' : hm(new Date(e.start))}</span><span style="flex:1;min-width:0">${esc(e.title)}</span><span class="muted" style="font-size:12px">${esc(e.location)}</span></div>`;
+const evRow = (e) => `<div class="row" style="justify-content:flex-start"><span class="dot" style="background:${e.color}"></span><span class="mono sub" style="font-size:13px;width:48px;flex:0 0 auto">${e.allDay ? 'hele' : hm(new Date(e.start))}</span><span style="flex:1;min-width:0">${esc(e.title)}</span><span class="muted" style="font-size:12px;min-width:0;max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(noUrl(e.location))}</span></div>`;
 
 popHandler('day', (iso) => {
   const list = events().filter((e) => isoDay(new Date(e.start)) === iso);
@@ -312,9 +315,9 @@ popHandler('ev', (key) => {
   if (!e) return null;
   const s = new Date(e.start), en = new Date(e.end);
   const campus = store.data.school?.mazemapCampusId;
-  const map = e.location ? `https://use.mazemap.com/#v=1${campus ? `&campusid=${encodeURIComponent(campus)}` : ''}&search=${encodeURIComponent(e.location)}` : null;
+  const map = urlOf(e.location) || (e.location ? `https://use.mazemap.com/#v=1${campus ? `&campusid=${encodeURIComponent(campus)}` : ''}&search=${encodeURIComponent(noUrl(e.location))}` : null);
   return { title: e.title, body: `<div class="mono sub" style="font-size:13px">${cap(s.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }))}${e.allDay ? '' : ` · ${hm(s)}–${hm(en)}`}</div>
-    ${e.location ? `<div>Rom/sted: <b>${esc(e.location)}</b></div>` : ''}${e.deadline ? '<div style="color:var(--red)">Frist</div>' : ''}
+    ${noUrl(e.location) ? `<div>Rom/sted: <b>${esc(noUrl(e.location))}</b></div>` : ''}${e.deadline ? '<div style="color:var(--red)">Frist</div>' : ''}
     ${map ? `<a class="btn" href="${esc(map)}" target="_blank" rel="noopener" style="align-self:flex-start">MazeMap ↗</a>` : ''}` };
 });
 

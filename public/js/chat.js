@@ -8,6 +8,39 @@
 import { esc, isMobile } from './util.js';
 import { searchField } from './searchfield.js';
 import { lang, locale } from './i18n.js';
+import { glimt, glimtDots } from './glimt.js';
+import { assist, looksLikeTool } from './assist.js';
+import { cardHtml, bindCards } from './chat-cards.js';
+
+/* Prompt 31: Glimt i Chat (claude-code-chat-kort-vaer-kalender.md, claude-code-glimt-ai.md).
+   - Avsender er Glimt-merket (22 px) + modellnavnet; mens svaret kommer: merket animert og tre prikker (ikke «Tenker …»).
+   - Spørsmål om vær, kalender, avganger, pakker, finans, huskeliste og prøveperioder går først til /api/assist
+     (source:'chat'). Svaret er én kort setning + et kort under, med verktøy-chip («Vær», «Kalender») og «Verktøy · 0,6 s».
+   - Kortet lagres i meldingen (meta.card). Lagrer serveren svaret i samtalen (chatId i svaret), hentes den på nytt;
+     ellers lagres kortet i nettleseren (hl_chat_tools_v1) og flettes inn når samtalen åpnes. «Kopier» kopierer bare teksten. */
+const TKEY = 'hl_chat_tools_v1';
+const isLocalId = (id) => typeof id === 'string' && id.startsWith('g:');
+function toolsRead() { try { return JSON.parse(localStorage.getItem(TKEY) || '{}') ?? {}; } catch { return {}; } }
+function toolsWrite(o) { try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch { /* privat modus */ } }
+function toolsAdd(id, msgs) { const o = toolsRead(); o[id] = [...(o[id] ?? []), ...msgs].slice(-120); toolsWrite(o); }
+function toolsRekey(from, to) { const o = toolsRead(); if (!o[from]) return; o[to] = [...(o[to] ?? []), ...o[from]]; delete o[from]; toolsWrite(o); }
+function toolsDrop(id) { const o = toolsRead(); if (o[id]) { delete o[id]; toolsWrite(o); } }
+/** Fletter lokale Glimt-svar inn i meldingene fra serveren: samme tekst fra serveren får kortet, resten settes inn etter tid. */
+function mergeTools(id, msgs) {
+  const L = toolsRead()[id];
+  if (!L?.length) return msgs;
+  const out = msgs.map((m) => ({ ...m })), used = new Set();
+  for (const t of L) {
+    const j = out.findIndex((m, i) => !used.has(i) && m.role === t.role && m.content === t.content);
+    if (j >= 0) { used.add(j); if (t.meta) out[j].meta = { ...(out[j].meta ?? {}), ...t.meta }; continue; }
+    let k = out.findIndex((m) => (m.ts ?? 0) > (t.ts ?? 0));
+    if (k < 0) k = out.length;
+    out.splice(k, 0, { ...t });
+    for (const u of [...used]) if (u >= k) { used.delete(u); used.add(u + 1); }
+    used.add(k);
+  }
+  return out;
+}
 
 const PERS = [['standard', 'Standard'], ['okonomi', 'Økonomi'], ['homelab', 'Homelab'], ['norsklarer', 'Norsklærer']];
 const CTXS = [4096, 8192, 16384, 32768];
@@ -69,7 +102,13 @@ async function refreshList() {
   paint();
 }
 async function loadChat(id, repaint = true) {
-  try { C.chat = await call(`/chats/${encodeURIComponent(id)}`); C.cur = id; } catch { C.chat = null; C.cur = null; }
+  if (isLocalId(id)) {
+    const L = toolsRead()[id] ?? [];
+    if (L.length) { C.chat = { id, local: true, title: L.find((m) => m.role === 'user')?.content?.slice(0, 60) ?? 'Glimt', model: C.draftModel, settings: { ...C.draftSet }, messages: L }; C.cur = id; }
+    else { C.chat = null; C.cur = null; }
+  } else {
+    try { C.chat = await call(`/chats/${encodeURIComponent(id)}`); C.cur = id; C.chat.messages = mergeTools(id, C.chat.messages ?? []); } catch { C.chat = null; C.cur = null; }
+  }
   writeLocal();
   if (repaint) { paint(); toBottom(); }
 }
@@ -87,9 +126,11 @@ function searchChats(q, now = false) {
 
 const allModels = () => C.models ?? [];
 const modelOf = (id) => allModels().find((m) => m.id === id) ?? { id, name: id || 'Ingen modell', kind: /^(gemini|groq):/.test(id) ? 'sky' : 'lokal', installed: true };
-const curModelId = () => (C.chat ? C.chat.model || C.draftModel : C.draftModel);
+// Samtaler som Glimt (/api/assist) startet har modellen «glimt»; nye meldinger der går til valgt språkmodell.
+const isGlimtModel = (id) => /^glimt\b/i.test(String(id ?? ''));
+const curModelId = () => (C.chat && C.chat.model && !isGlimtModel(C.chat.model) ? C.chat.model : C.draftModel);
 const isSky = (id) => modelOf(id).kind === 'sky';
-const mName = (id) => { const m = modelOf(id); return m.kind === 'sky' ? m.name : m.id; };
+const mName = (id) => { if (isGlimtModel(id)) return 'Glimt'; const m = modelOf(id); return m.kind === 'sky' ? m.name : m.id; };
 const curSet = () => ({ ...DEF, ...(C.chat ? C.chat.settings : C.draftSet) });
 
 /* ---------------- Tekst ---------------- */
@@ -169,17 +210,22 @@ function msgsHtml() {
       return `<div class="ch-u">${att.length ? `<div class="ch-atts">${att.map((n) => `<span data-no-i18n>${esc(n)}</span>`).join('')}</div>` : ''}<div class="ch-ub" data-no-i18n>${esc(m.content)}</div>
         <div class="ch-acts">${busyHere ? '' : `<button type="button" data-ch-edit="${i}">Rediger</button>`}<button type="button" data-ch-copy="${i}">${C.copied === key ? 'Kopiert' : 'Kopier'}</button></div></div>`;
     }
-    const meta = m.meta ?? {}, used = meta.used ?? [];
-    const st = [meta.stopped ? 'Stoppet' : '', meta.tokensPerSec ? `${String(meta.tokensPerSec).replace('.', ',')} tok/s` : '', meta.ms ? `${(meta.ms / 1000).toFixed(1).replace('.', ',')} s` : ''].filter(Boolean).join(' · ');
-    return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">✦ ${esc(mName(meta.model || C.chat?.model || '').toUpperCase())}</span>${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-      <div class="ch-md" data-no-i18n>${md(m.content)}</div>${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}
-      <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
+    const meta = m.meta ?? {}, used = meta.used ?? [], tool = meta.tool ? [].concat(meta.tool) : [];
+    const sec = meta.ms ? `${(meta.ms / 1000).toFixed(1).replace('.', ',')} s` : '';
+    const st = meta.glimt || tool.length ? [`Verktøy${sec ? ` · ${sec}` : ''}`, meta.source && meta.source !== 'Glimt' ? meta.source : ''].filter(Boolean).join(' · ')
+      : [meta.stopped ? 'Stoppet' : '', meta.tokensPerSec ? `${String(meta.tokensPerSec).replace('.', ',')} tok/s` : '', sec].filter(Boolean).join(' · ');
+    const who = meta.glimt ? 'GLIMT' : `GLIMT · ${mName(meta.model || C.chat?.model || '').toUpperCase()}`;
+    return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
+      <div class="ch-md" data-no-i18n>${md(m.content)}</div>${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}
+      <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
   }).join('') + (busyHere ? streamHtml() : '');
 }
 function streamHtml() {
   const b = C.busy;
-  return `<div class="ch-a" data-ch-stream><div class="ch-ah"><span class="ch-lab">✦ ${esc(mName(b.model).toUpperCase())}</span>${(b.reading ?? []).map((u) => `<span class="ch-used">Leser <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-    ${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : '<span class="ch-think">Tenker …</span>'}</div>`;
+  // Prompt 31: Glimt-merket ved siden av modellnavnet: Tenker (før første ord), Svarer (mens teksten strømmer inn).
+  const who = b.glimt ? 'GLIMT · TENKER' : `GLIMT · ${mName(b.model).toUpperCase()}`;
+  return `<div class="ch-a" data-ch-stream><div class="ch-ah"><span class="ch-lab">${glimt(22, b.text ? 'svarer' : 'tenker')}${esc(who)}</span>${(b.reading ?? []).map((u) => `<span class="ch-used">Leser <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
+    ${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}</div>`;
 }
 function emptyHtml() {
   const id = curModelId(), m = modelOf(id), P = curSet();
@@ -329,8 +375,11 @@ async function send(text, opt = {}) {
   if (C.busy) return;
   if (!t && opt.editFrom == null) return;
   if (C.att.some((a) => a.up)) { toast('Vent til vedleggene er lastet opp'); return; }
+  if (opt.editFrom == null && !opt.history && !opt.noTool && !C.att.length && looksLikeTool(t) && await sendTool(t)) return;
   const model = curModelId();
   if (!model) { toast('Ingen modell er tilgjengelig'); return; }
+  // En samtale som bare finnes lokalt (bare Glimt-svar så langt) blir en ny samtale på serveren nå.
+  if (isLocalId(C.cur)) { C.pendingLocal = C.cur; C.cur = null; if (C.chat) C.chat = { ...C.chat, id: null }; }
   const prev = (C.chat?.messages ?? []).filter((m) => m.role !== 'system');
   const imgs = C.att.filter((a) => a.kind === 'img').map((a) => a.b64);
   const files = C.att.filter((a) => a.kind !== 'img' && a.id).map((a) => a.id);
@@ -365,6 +414,41 @@ async function send(text, opt = {}) {
   await readSse(res, ctl);
 }
 
+/** Glimt-verktøy (vær, kalender …): true når svaret er vist, false = send til språkmodellen som vanlig. */
+async function sendTool(t) {
+  const before = { chat: C.chat, cur: C.cur, inp: C.inp };
+  const ts = Date.now(), userMsg = { role: 'user', content: t, ts };
+  const shown = { ...(C.chat ?? { id: null, title: t.slice(0, 60), model: curModelId(), settings: curSet() }), messages: [...(C.chat?.messages ?? []), userMsg] };
+  const ctl = new AbortController();
+  C.chat = shown; C.inp = ''; C.sheet = null; C.edit = null;
+  C.busy = { chatId: C.cur, model: curModelId(), glimt: true, text: '', ctl };
+  paint(); toBottom();
+  let a;
+  try { a = await assist(t, { source: 'chat', chatId: C.cur && !isLocalId(C.cur) ? C.cur : undefined, signal: ctl.signal, toast: false }); }
+  catch (e) {
+    C.busy = null;
+    if (e.name === 'AbortError') { C.chat = before.chat; C.inp = before.inp; paint(); return true; }
+    C.chat = before.chat; return false;
+  }
+  C.busy = null;
+  if (!a?.text || a.intent === 'llm' || a.intent === 'chat' || (!a.card && !a.tool && !/^(weather|calendar|departures|packages|finance|tasks|trial|appointment)/.test(a.intent ?? ''))) { C.chat = before.chat; return false; }
+  const am = { role: 'assistant', content: a.text, ts: Date.now(), meta: { glimt: true, tool: a.tool ?? null, card: a.card ?? null, ms: a.ms ?? 0, source: a.source ?? '', model: 'Glimt' } };
+  if (a.chatId && !isLocalId(a.chatId)) {
+    // Serveren lagret spørsmålet og svaret i samtalen. Kortet lagres også lokalt, i tilfelle serveren ikke tar vare på det.
+    toolsAdd(String(a.chatId), [userMsg, am]);
+    if (isLocalId(C.cur)) { toolsRekey(C.cur, String(a.chatId)); }
+    C.cur = String(a.chatId); await loadChat(C.cur, false);
+    if (!(C.chat?.messages ?? []).some((m) => m.role === 'assistant' && m.content === am.content)) C.chat = { ...shown, id: C.cur, messages: [...shown.messages, am] };
+    refreshList();
+  } else {
+    const id = C.cur || `g:${Date.now().toString(36)}`;
+    toolsAdd(id, [userMsg, am]);
+    C.cur = id; C.chat = { ...shown, id, ...(isLocalId(id) ? { local: true } : {}), messages: [...shown.messages, am] };
+  }
+  writeLocal(); paint(); toBottom();
+  return true;
+}
+
 async function readSse(res, ctl) {
   const rd = res.body.getReader(), dec = new TextDecoder();
   let buf = '', ev = 'message', chatId = C.cur, done = null, raf = 0;
@@ -380,7 +464,7 @@ async function readSse(res, ctl) {
         if (line.startsWith('event:')) { ev = line.slice(6).trim(); continue; }
         if (!line.startsWith('data:')) { if (!line) ev = 'message'; continue; }
         let d; try { d = JSON.parse(line.slice(5).trim()); } catch { continue; }
-        if (ev === 'meta') { chatId = d.chatId ?? chatId; if (!C.cur) { C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
+        if (ev === 'meta') { chatId = d.chatId ?? chatId; if (!C.cur) { if (C.pendingLocal && chatId) { toolsRekey(C.pendingLocal, chatId); C.pendingLocal = null; } C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
         else if (ev === 'delta') { C.busy.text += d.text ?? ''; if (!raf) raf = requestAnimationFrame(flush); }
         else if (ev === 'done') done = d;
         else if (ev === 'error') { C.busy.error = d.error || 'Ukjent feil'; paintStream(); }
@@ -546,6 +630,7 @@ async function menuAct(act, arg) {
     if (!C.delArm) { C.delArm = true; paint(); return; }
     C.delArm = false; C.sheet = null;
     try { await call(`/chats/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { toast(e.message); }
+    toolsDrop(id);
     if (C.cur === id) { C.cur = null; C.chat = null; writeLocal(); }
     refreshList();
   }
@@ -554,6 +639,7 @@ async function menuAct(act, arg) {
 /* ---------------- Hendelser ---------------- */
 
 function bind(h) {
+  bindCards();
   if (h.dataset.chBound) return;
   h.dataset.chBound = '1';
   h.addEventListener('input', (e) => {
