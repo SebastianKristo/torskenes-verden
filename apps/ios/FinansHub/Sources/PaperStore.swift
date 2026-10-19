@@ -106,7 +106,8 @@ extension Store {
         if t == "innst-oppdatering" { System31Model.shared.show(); return }
         // Prompt 33: kalenderfanen, Mer → Kalender, varsler og Glimt åpner Kalender-appen når den er installert (KalLink33.swift).
         if t == "kalender" && paperTab != "kalender" && KalLink33.today() { return }
-        Haptics.shared.select()
+        // Prompt 34: en tilbake-handling har allerede gitt én lett impuls (Haptic34) – ikke et valg-tikk i tillegg.
+        if !Haptic34.recent { Haptics.shared.select() }
         // Mellom Domener-fanene byttes bare seksjonen (dataene er de samme).
         if paperInDomains && Store.paperDomTabs.contains(t) && module == .domains {
             paperTab = t
@@ -156,6 +157,7 @@ extension Store {
 
     /// Pila øverst til venstre: i Finans og Domener tilbake til Hjem (Domener: dit brukeren kom fra).
     func paperUp() {
+        Haptic34.back() // prompt 34: lett impuls på alle tilbake-knapper (Nav34.swift)
         // En Finans-side fra den klassiske appen (Liste med valgt rad, Budsjett …): rett tilbake til Papir-fanen.
         if paperFin != nil && original == nil && editing == nil && detail == nil {
             selectedTx = nil
@@ -215,6 +217,7 @@ extension Store {
 
     /// Tilbake i Papir: lukker det som er åpent, ellers tilbake til fanen.
     func paperBack() {
+        Haptic34.back()
         if paperEditPage != nil { paperEditPage = nil; return }
         if newsOpen { newsOpen = false; return }
         if dishSel != nil { dishSel = nil; return }

@@ -91,6 +91,7 @@ struct System32bInstalled: View {
             PaperLinkList(rows: [
                 PaperLinkRow(name: "Se etter oppdatering", sub: u.checking ? "Sjekker …" : "Sjekk mot GitHub nå", value: "›", icon: "arrow.clockwise") { u.check(store) },
             ])
+            .hl34("chk", radius: 18) // prompt 34: markeres fra søket i Innstillinger
         }
         .padding(.horizontal, 4)
         .task { if !old.loaded { await old.load(store) } }

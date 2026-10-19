@@ -29,11 +29,13 @@ final class Receipts23Model {
     private var seenActive: Set<String> = []
     private var ready: [String] = []
 
-    var active: Bool { jobs.contains { $0.kind == "read" } }
+    /// Prompt 34: kvitteringer under AI-analyse står i egen seksjon (Receipts34.swift) og holder rask oppdatering i gang.
+    var active: Bool { jobs.contains { $0.kind == "read" } || !Receipts34AiModel.shared.items.isEmpty }
 
     func load(_ store: Store) async {
         if let d = try? await store.api.call("GET", "/receipts/jobs"), let list = (try? JSONSerialization.jsonObject(with: d)) as? [[String: Any]] {
             var out: [Receipt23Queued] = []
+            var aiRaw: [[String: Any]] = []
             for o in list {
                 let id: String = JS.str(o, "id") ?? ""
                 let st: String = JS.str(o, "status") ?? ""
@@ -42,16 +44,17 @@ final class Receipts23Model {
                 // Prompt 23 (server): statusText, f.eks. «✦ Gemini svarte ikke innen 20 s · prøver Groq …».
                 let note: String? = JS.str(o, "statusText")
                 if st == "pending" || st == "processing" {
+                    // Prompt 34: går automatisk videre til «Analyseres av AI» (ikke en linje i KØ).
                     seenActive.insert(id)
-                    out.append(Receipt23Queued(id: id, name: name, kind: "read", text: note ?? "✦ Leser … \(p) %", progress: p, job: true))
+                    aiRaw.append(o)
+                    _ = p
                 } else if st == "error" {
                     out.append(Receipt23Queued(id: id, name: name, kind: "error", text: note ?? ("Feilet · " + (JS.str(o, "error") ?? "prøv igjen")), progress: 100, job: true))
-                } else if st == "needs_review" && seenActive.contains(id) {
-                    if !ready.contains(id) { ready.append(id) }
-                    out.append(Receipt23Queued(id: id, name: name, kind: "ready", text: "Klar · trykk for å bekrefte", progress: 100, job: true))
                 }
+                // Prompt 34: ferdig lest flyttes rett til Til gjennomgang (eller Bokført), ingen «Klar»-linje i KØ.
             }
             jobs = out
+            await Receipts34AiModel.shared.take(aiRaw, store)
         }
         if let r = try? await store.api.get("/receipts?status=needs_review", as: [Receipt].self) {
             let readyIds: [String] = ready
@@ -137,6 +140,8 @@ struct Receipts23Page: View {
                 Button { Haptics.shared.tap(); importing = true } label: { Receipts23SourceLabel(title: "Filer", icon: "doc") }
                     .buttonStyle(.plain)
             }
+            // Prompt 34: ✦ ANALYSERES AV AI · N over KØ og TIL GJENNOMGANG (Receipts34.swift).
+            Receipts34AiSection()
             Receipts23QueueSection(model: model)
             Receipts23ReviewSection(model: model)
             Receipts23BookedSection(model: model)

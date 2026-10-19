@@ -128,7 +128,7 @@ struct Chat27ModelSheet: View {
         card(s.skyModels, empty: "Ingen sky-modeller er satt opp.")
         Text("Sky-modeller merkes SKY. Før dine data eller vedlegg sendes dit, får du spørsmål om det.")
             .font(c.ui(12.5)).foregroundStyle(c.mut).fixedSize(horizontal: false, vertical: true)
-        Chat27WideButton(title: "Administrer modeller ›", c: c) { s.sheet = "mods" }
+        Chat27WideButton(title: "Administrer modeller ›", c: c) { Chat34Scans.openAiControl("mod") }
     }
 
     private func card(_ list: [ChatLLM27], empty: String) -> some View {
@@ -216,6 +216,8 @@ struct Chat27ParamsSheet: View {
             Chat27Pill(name: "Papir", on: s.theme != "noytral", c: c) { s.setTheme("papir", store) }
             Chat27Pill(name: "Nøytral", on: s.theme == "noytral", c: c) { s.setTheme("noytral", store) }
         }
+        // Prompt 34: «Full AI-kontroll ›» nederst åpner fanen Valg i AI-kontroll.
+        Chat27WideButton(title: "Full AI-kontroll ›", c: c) { Chat34Scans.openAiControl("rt") }
         Chat27WideButton(title: "Ferdig", filled: true, c: c) { s.sheet = nil }
             .padding(.top, 6)
         }
@@ -268,7 +270,8 @@ struct Chat27MenuSheet: View {
             Chat27Label(text: "FLYTT TIL MAPPE", c: c)
             Flow(spacing: 6) {
                 Chat27Pill(name: "Ingen mappe", on: mc.folderId.isEmpty, c: c) { s.move(to: "", store) }
-                ForEach(s.folders) { f in
+                // Prompt 34: systemmappen for skanninger er ikke et mål for flytting.
+                ForEach(s.folders.filter { !$0.sys }) { f in
                     Chat27Pill(name: f.name, on: mc.folderId == f.id, c: c) { s.move(to: f.id, store) }
                 }
             }

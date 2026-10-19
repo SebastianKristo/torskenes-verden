@@ -55,6 +55,8 @@ struct Set25Row<C: View>: View {
             .overlay(alignment: .leading) {
                 Rectangle().fill(p.lab).frame(width: 3).opacity(on ? 1 : 0)
             }
+            // Prompt 34: samme pulserende røde ring som på web (Settings34.swift).
+            .overlay { if on { Hl34Ring(radius: 8).padding(3).allowsHitTesting(false) } }
             .animation(.easeOut(duration: 0.6), value: on)
     }
 }
@@ -76,6 +78,8 @@ extension Set24Model {
         if it.route.hasPrefix("integ:") {
             Int24Model.shared.focus = String(it.route.dropFirst(6))
         }
+        // Prompt 34: mål-id (Oppdater nå …) eller AI-kontroll: egen side og rød ring (Settings34.swift).
+        if open34(it, store) { return }
         if let parent {
             store.paperGo(parent.route)
         } else if store.paperTab != "innst" {
@@ -92,7 +96,7 @@ struct Set25GoButton: View {
 
     var body: some View {
         Button(action: act) {
-            Text("Ta meg dit →").font(PF.ui(13.5, .bold)).foregroundStyle(p.bg)
+            Text("Vis meg nå ›").font(PF.ui(13.5, .bold)).foregroundStyle(p.bg)
                 .padding(.horizontal, 16).frame(height: 38)
                 .background(p.ink, in: Capsule())
         }

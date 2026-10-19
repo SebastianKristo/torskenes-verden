@@ -100,7 +100,7 @@ final class FinnAd23Model {
     }
 
     func close() {
-        Haptics.shared.select()
+        Haptic34.back()
         openId = nil
     }
 

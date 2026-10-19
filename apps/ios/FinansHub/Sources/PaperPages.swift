@@ -17,6 +17,8 @@ struct PaperHome: View {
             Update30Banner(home: true)
             // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
             PaperCardStack(page: "hjem", cards: [
+                // Prompt 34: Glimt-brief øverst (blått kort med figuren), flyttes og skjules i wiggle-modus (Brief34Page.swift).
+                PaperCardDef(key: "h12", label: "Glimt-brief", view: AnyView(Brief34HomeCard())),
                 // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch29.swift).
                 PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { HomeSearch29(); minis })),
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
@@ -32,7 +34,7 @@ struct PaperHome: View {
                 PaperCardDef(key: "h7", label: "Posisjon", view: AnyView(PaperFamilyCard())),
                 PaperCardDef(key: "h8", label: "Bolig", view: AnyView(PaperHomeBoligCard())),
                 PaperCardDef(key: "h9", label: "Bursdager", view: AnyView(PaperBirthdaysCard24())),
-            ], fullWidth: ["h1", "h5"], twoColumns: true)
+            ], fullWidth: ["h1", "h5", "h12"], twoColumns: true)
             if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
         }
         .update30Sheet()

@@ -39,7 +39,7 @@ extension Store {
 
     /// Den røde Hjem-knappen: rett til Hjem, historikken nullstilles.
     func paperGoHome25() {
-        Haptics.shared.tap()
+        Haptic34.back()
         dishSel = nil
         newsOpen = false
         paperGo("hjem")

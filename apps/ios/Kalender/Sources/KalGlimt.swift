@@ -16,6 +16,9 @@ struct KalGlimtMsg: Identifiable, Equatable {
     var slots: [KalSlot] = []
     var undoId: String = ""
     var undone: Bool = false
+    /// Prompt 34: svaret er en feil fra Glimt («Glimt fikk ikke svar fra {modell}: {feil}») → Prøv igjen.
+    var error34: Bool = false
+    var q34: String = ""
 
     var words: [String] { text.split(separator: " ").map { (s: Substring) -> String in String(s) } }
     var done: Bool { !thinking && shown >= words.count }
@@ -68,6 +71,7 @@ final class KalGlimtModel {
         let unsure: Bool = local.unknown || (q.count > 50 && local.created?.s == nil)
         var ans: KalAnswer = local
         var fromServer: Bool = false
+        var failed: Bool = false
         var undoId: String = ""
         if unsure {
             update(id) { (m: inout KalGlimtMsg) in m.steps = ["Spør Glimt", "Leser kalenderen", "Skriver svar"] }
@@ -83,6 +87,13 @@ final class KalGlimtModel {
             if let srv {
                 ans = srv
                 fromServer = true
+                if KalGlimtServer.lastError != nil { failed = true }
+            } else if let err = KalGlimtServer.lastError {
+                // Prompt 34: den ekte feilen (ikke den lokale «Jeg kan svare på …»-teksten).
+                var e: KalAnswer = KalAnswer(steps: ["Spør Glimt"])
+                e.text = err
+                ans = e
+                failed = true
             }
         }
         if fromServer {
@@ -118,8 +129,11 @@ final class KalGlimtModel {
         let cards: [KalEvent] = ans.cards
         let slots: [KalSlot] = ans.slots
         let uid: String = undoId
+        let isErr: Bool = failed
         update(id) { (m: inout KalGlimtMsg) in
             m.thinking = false
+            m.error34 = isErr
+            m.q34 = q
             m.text = text
             m.cards = cards
             m.slots = slots
@@ -134,7 +148,13 @@ final class KalGlimtModel {
             update(id) { (m: inout KalGlimtMsg) in m.shown = shown }
             await pause(45)
         }
-        KalHaptic.done()
+        if failed { KalHaptic.tap() } else { KalHaptic.done() }
+    }
+
+    /// Prompt 34: «Prøv igjen» på et feilsvar sender spørsmålet på nytt.
+    func retry(_ m: KalGlimtMsg) {
+        if m.q34.isEmpty { return }
+        send(m.q34)
     }
 
     func undo(_ m: KalGlimtMsg) {
@@ -155,10 +175,34 @@ final class KalGlimtModel {
 @MainActor
 enum KalGlimtServer {
     static var lastCreated: String? = nil
+    /// Prompt 34: feilteksten fra siste spørsmål (nil = ingen feil). Serveren sender «Glimt fikk ikke svar fra {modell}: {feil}».
+    static var lastError: String? = nil
+
+    static func errorText(_ err: String, model: String?) -> String {
+        let e: String = err.trimmingCharacters(in: .whitespacesAndNewlines)
+        if e.hasPrefix("Glimt") || e.hasPrefix("Sky-budsjettet") { return e }
+        if let model, !model.isEmpty { return "Glimt fikk ikke svar fra " + model + ": " + e }
+        return "Glimt fikk ikke svar: " + e
+    }
 
     static func ask(_ q: String, onSteps: @escaping ([String], Int) -> Void) async -> KalAnswer? {
-        guard let d = try? await KalNet.send("POST", "/api/assist", json: ["q": q, "source": "calendar"], timeout: 30) else { return nil }
+        lastError = nil
+        let d: Data
+        do {
+            d = try await KalNet.send("POST", "/api/assist", json: ["q": q, "source": "calendar"], timeout: 30)
+        } catch let e as KalNetError {
+            lastError = e.status == 404 ? nil : errorText(e.message, model: nil)
+            return nil
+        } catch {
+            lastError = errorText(error.localizedDescription, model: nil)
+            return nil
+        }
         var o: [String: Any] = ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any]) ?? [:]
+        // SERVER34: {text: «Glimt fikk ikke svar fra …», error: «…»} når modellen feilet → vises som feil (rødt, Prøv igjen).
+        if let err = o["error"] as? String, !err.isEmpty {
+            lastError = errorText(err, model: o["model"] as? String)
+            if o["text"] == nil && o["answer"] == nil { return nil }
+        }
         if let a = answer(o) { return a }
         guard let job = (o["jobId"] as? String) ?? (o["id"] as? String) else { return nil }
         var rounds: Int = 0
@@ -167,12 +211,19 @@ enum KalGlimtServer {
             rounds += 1
             guard let d2 = try? await KalNet.get("/api/assist/" + KalNet.enc(job)) else { continue }
             o = ((try? JSONSerialization.jsonObject(with: d2)) as? [String: Any]) ?? [:]
-            let state: String = (o["state"] as? String) ?? ""
-            if state == "failed" || state == "cancelled" { return nil }
+            let state: String = (o["state"] as? String) ?? (o["status"] as? String) ?? ""
+            if state == "failed" || state == "cancelled" {
+                if state == "failed" {
+                    let err: String = (o["error"] as? String) ?? "jobben feilet"
+                    lastError = errorText(err, model: o["model"] as? String)
+                }
+                return nil
+            }
             let st: ([String], Int) = steps(o)
             onSteps(st.0, st.1)
             if state == "done" || state.isEmpty, let a = answer(o) { return a }
         }
+        lastError = "Glimt fikk ikke svar innen 90 sekunder. Modellen kan være for treg; sjekk AI-kontroll i Homelab."
         return nil
     }
 
@@ -413,8 +464,12 @@ struct KalGlimtRow: View {
     @ViewBuilder private var answer: some View {
         let shownText: String = m.words.prefix(m.shown).joined(separator: " ")
         HStack(alignment: .lastTextBaseline, spacing: 2) {
-            Text(shownText).font(KalFont.ui(14.5)).foregroundStyle(t.ink).lineSpacing(3)
+            Text(shownText).font(KalFont.ui(14.5)).foregroundStyle(m.error34 ? Color(kalHex: "#b23a2a") : t.ink).lineSpacing(3)
             if !m.done { KalCaret() }
+        }
+        if m.done && m.error34 {
+            // Prompt 34: tydelig feil med Prøv igjen.
+            KalPill(title: "Prøv igjen", filled: false, height: 32) { KalGlimtModel.shared.retry(m) }
         }
         if m.done {
             ForEach(m.cards) { (e: KalEvent) in KalGlimtCard(e: e) }

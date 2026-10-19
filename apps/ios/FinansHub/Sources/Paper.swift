@@ -175,7 +175,10 @@ struct PaperShell: View {
                     content(store.finPalette22(p)).environment(\.paper, store.finPalette22(p)).frame(maxWidth: .infinity, maxHeight: .infinity)
                         // Sidene fra den klassiske appen skal ikke ligge under skinnen på bred skjerm.
                         .padding(.leading, wide && showBar && (store.paperClassic != nil || store.paperFin != nil) ? 108 : 0)
-                    if showBar && !wide { Color.clear.frame(height: 62 - shift + 10) }
+                        // Prompt 34: innholdet går helt ned bak fanelinjen og skann-knappen (claude-code-innhold-under-navbar.md).
+                        // Tidligere sto en Color.clear-rad her, så scroll-innholdet stoppet over linja og bakgrunnen ble en flat stripe.
+                        // safeAreaInset gir scroll-visningene luft nederst, men de tegner fortsatt under linja (Nav34.swift).
+                        .safeAreaInset(edge: .bottom, spacing: 0) { Nav34BarSpace(height: showBar && !wide ? 62 - shift + 10 : 0) }
                 }
                 if showBar && wide {
                     PaperTabBar(scan: scan, rail: true)
@@ -271,6 +274,9 @@ struct PaperShell: View {
         .dismissHaptic30(store.weatherOpen)
         // Prompt 31: System-siden «Nordlys OS» i fullskjerm, varsel-trykk og prøve-varsler (System31.swift).
         .system31Host(p)
+        // Prompt 34: AI-kontroll i fullskjerm (AiCtl34Page.swift) og Glimt-briefen (Brief34Page.swift).
+        .aiCtl34Host(p)
+        .brief34Host(p)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)
@@ -307,7 +313,7 @@ struct PaperShell: View {
 
     @ViewBuilder private func content(_ p: PaperPalette) -> some View {
         if store.newsOpen {
-            NewsReaderView(back: { store.newsOpen = false }).environment(\.paper, p)
+            NewsReaderView(back: { Haptic34.back(); store.newsOpen = false }).environment(\.paper, p)
                 .environment(\.colorScheme, p.dark ? .dark : .light)
         } else if let id = store.dishSel {
             DishDetailView(id: id, pal: MatPal.paper(p)).environment(\.paper, p)
@@ -515,6 +521,8 @@ struct PaperTabBar: View {
         // Prompt 26: aktiv fane → fanens rot, og et nytt trykk scroller til toppen (Nav26.swift).
         if on { store.nav26TapActive(id); return }
         if id == "domener" && !store.paperInDomains { store.paperOpenDomains(from: "hjem"); return }
+        // Prompt 34: Hjem-fanen fra en annen side er en tilbake-handling (lett impuls).
+        if id == "hjem" { Haptic34.back() }
         if !store.paperInFinance && !store.paperInDomains { store.paperMainTab(id); return }
         store.paperFinGo(id)
     }
@@ -814,7 +822,8 @@ struct PaperPage: View {
                 VStack(spacing: 0) {
                     // Prompt 32: i redigeringsmodus klippes innholdet under ＋ / ✓, så kortene aldri glir bak knappene.
                     Color.clear.frame(height: scrolled ? (Wiggle30.topPad(store) > 0 ? Wiggle30.clipEdit : 23) : 0)
-                    Color.black
+                    // Prompt 34: masken går langt under rammen, så kortene synes bak fanelinjen og hjemstreken.
+                    Color.black.padding(.bottom, -400)
                 }
             )
             .padding(.top, -23)

@@ -14,9 +14,11 @@ struct FinansHubWidgetBundle: WidgetBundle {
     }
 }
 
-/// Gruppe 1: økonomi og hjem (9 widgets).
+/// Gruppe 1: økonomi og hjem (10 widgets – full; nye widgets går i gruppe 2 eller en ny gruppe).
 struct FinansHubWidgetsA: WidgetBundle {
     var body: some Widget {
+        // Prompt 34: Glimt-brief (liten, medium, stor og låseskjerm), BriefWidget34.swift.
+        BriefWidget34()
         WeatherWidget()
         PackagesWidget()
         BudgetWidget()

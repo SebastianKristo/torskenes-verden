@@ -307,8 +307,9 @@ struct Chat27History: View {
             Rectangle().fill(c.line).frame(height: 1)
             VStack(spacing: 0) {
                 footRow("cpu", "Modeller", "\(s.localModels.count) lokale · \(s.skyModels.count) i skyen") {
+                    // Prompt 34: Modeller åpner AI-kontroll på fanen Modeller (det gamle Modeller-arket brukes ikke lenger).
                     s.drawer = false
-                    s.sheet = "mods"
+                    AiCtl34.shared.show("mod", scope: "chat")
                 }
                 footRow("books.vertical", "Kunnskapsbase", "\(s.knowledge.count) dokumenter") {
                     s.drawer = false
@@ -333,7 +334,7 @@ struct Chat27History: View {
         if !s.folders.isEmpty {
             out.append(Chat27Group(id: "mapper", title: "MAPPER", folder: nil, rows: []))
             for f in s.folders {
-                out.append(Chat27Group(id: "f:" + f.id, title: f.name + " · \(f.chats.count)", folder: f, rows: f.open ? f.chats.sorted { $0.updatedAt > $1.updatedAt } : []))
+                out.append(Chat27Group(id: "f:" + f.id, title: Chat34Scans.title(f), folder: f, rows: f.open ? f.chats.sorted { $0.updatedAt > $1.updatedAt } : []))
             }
         }
         let cal: Calendar = Calendar.current
@@ -356,7 +357,8 @@ struct Chat27History: View {
             Button { s.toggleFolder(f, store) } label: {
                 HStack(spacing: 8) {
                     Text(f.open ? "▾" : "▸").font(c.ui(12)).foregroundStyle(c.mut).frame(width: 12)
-                    Image(systemName: "folder").font(.system(size: 13, weight: .semibold)).foregroundStyle(c.mut)
+                    // Prompt 34: kvitteringsikon i rødt for «Kvitteringer og skanninger».
+                    Image(systemName: f.sys ? "doc.text" : "folder").font(.system(size: 13, weight: .semibold)).foregroundStyle(f.sys ? Chat34Scans.red : c.mut)
                     Text(g.title).font(c.ui(13.5, .semibold)).foregroundStyle(c.ink).lineLimit(1)
                     Spacer(minLength: 0)
                 }

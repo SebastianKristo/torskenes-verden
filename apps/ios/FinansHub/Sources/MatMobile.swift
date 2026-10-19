@@ -504,7 +504,7 @@ struct DishDetailView: View {
         let d = store.dish(id)
         VStack(spacing: 0) {
             HStack {
-                Button { store.dishSel = nil } label: {
+                Button { Haptic34.back(); store.dishSel = nil } label: {
                     Text("‹ Mat").font(pal.ui(13, .semibold)).foregroundStyle(pal.text).padding(.leading, 10).padding(.trailing, 14).frame(height: 36)
                         .overlay(Capsule().stroke(pal.line, lineWidth: 1)).contentShape(Capsule())
                 }

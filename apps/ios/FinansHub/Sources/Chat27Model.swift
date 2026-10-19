@@ -40,6 +40,10 @@ struct ChatFolder27: Identifiable, Hashable {
     var name: String
     var open: Bool
     var chats: [ChatSummary27]
+    /// Prompt 34: systemmappen «Kvitteringer og skanninger» (kan ikke slettes eller få nytt navn, lukket som standard).
+    var sys: Bool = false
+    /// Prompt 34: antall samtaler i mappen der bilaget venter på godkjenning.
+    var pending: Int = 0
 }
 
 struct ChatMsg27: Identifiable, Hashable {
@@ -343,11 +347,19 @@ final class ChatStore27 {
         let old: [String: Bool] = Dictionary(folders.map { ($0.id, $0.open) }, uniquingKeysWith: { a, _ in a })
         pinned = JS.list(o, "pinned").compactMap { ChatStore27.summary($0) }
         chats = JS.list(o, "chats").compactMap { ChatStore27.summary($0) }
-        folders = JS.list(o, "folders").compactMap { (f: [String: Any]) -> ChatFolder27? in
+        let raw: [ChatFolder27] = JS.list(o, "folders").compactMap { (f: [String: Any]) -> ChatFolder27? in
             guard let id = JS.str(f, "id") else { return nil }
             let list: [ChatSummary27] = JS.list(f, "chats").compactMap { ChatStore27.summary($0) }
-            return ChatFolder27(id: id, name: JS.str(f, "name") ?? "Mappe", open: old[id] ?? JS.bool(f, "open") ?? true, chats: list)
+            let name: String = JS.str(f, "name") ?? "Mappe"
+            // Prompt 34: skanne-mappen er lukket som standard (Chat34Scans.swift).
+            let sys: Bool = Chat34Scans.isScanFolder(f, name: name)
+            let open: Bool = old[id] ?? JS.bool(f, "open") ?? !sys
+            var folder: ChatFolder27 = ChatFolder27(id: id, name: name, open: open, chats: list)
+            folder.sys = sys
+            folder.pending = JS.int(f, "pending") ?? JS.int(f, "review") ?? JS.int(f, "needsReview") ?? 0
+            return folder
         }
+        folders = Chat34Scans.sorted(raw)
         loadedChats = true
     }
 

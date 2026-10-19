@@ -28,6 +28,7 @@ final class System31Model {
     }
 
     func close() {
+        Haptic34.back()
         open = false
     }
 }
@@ -134,6 +135,7 @@ struct System31Page: View {
     var body: some View {
         VStack(spacing: 0) {
             System31Top()
+            ScrollViewReader { (proxy: ScrollViewProxy) in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 14) {
                     System31Hero()
@@ -150,6 +152,12 @@ struct System31Page: View {
                 .padding(.bottom, 120)
                 .frame(maxWidth: 640)
                 .frame(maxWidth: .infinity)
+            }
+            // Prompt 34: målet fra søket i Innstillinger midt i innholdet.
+            .onChange(of: Set34Focus.shared.tick) { (_: Int, _: Int) in
+                guard let a = Set34Focus.shared.target, a != "upd" else { return }
+                withAnimation(.easeInOut(duration: 0.35)) { proxy.scrollTo(Set34Focus.rowId(a), anchor: .center) }
+            }
             }
         }
         .background(p.bg.ignoresSafeArea())
@@ -363,6 +371,7 @@ struct System31VersionCard: View {
             }
             .tint(Color(hex: "#2f7d4f"))
             .padding(.horizontal, 16).padding(.vertical, 12)
+            .hl34("pw", radius: 14)
         }
         .background(p.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .shadow(color: Color.black.opacity(0.12), radius: 15, y: 10)
@@ -450,6 +459,8 @@ struct System31BigButton: View {
             }
             .buttonStyle(.plain)
             .disabled(u.phase == .run || u.busy)
+            // Prompt 34: «Oppdater nå» markeres fra søket i Innstillinger (rød ring + «✦ Trykk her for å oppdatere»).
+            .hl34("upd", radius: 27)
             Text(sub).font(PF.ui(12)).foregroundStyle(p.mut)
         }
         .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 14)

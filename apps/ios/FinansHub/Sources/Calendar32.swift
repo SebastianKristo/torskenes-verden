@@ -140,8 +140,16 @@ final class Cal32bSearch {
                 let d: Data = try await store.api.callAt("/api", "GET", "/kalender/search?q=\(qq)&ai=1", timeout: 40)
                 let o: [String: Any] = JS.obj(d)
                 let ans: String = JS.str(o, "answer") ?? JS.str(o, "text") ?? JS.str(JS.dict(o, "ai"), "answer") ?? ""
-                out.text = ans.isEmpty ? "Glimt fant ikke noe svar i kalenderen." : ans
+                // Prompt 34: AI-feil fra serveren (aiError / error) vises i stedet for et tomt svar.
+                let aiErr: String = JS.str(o, "aiError") ?? JS.str(o, "aiErrorText") ?? JS.str(JS.dict(o, "ai"), "error") ?? ""
+                if ans.isEmpty && !aiErr.isEmpty {
+                    out.text = Assist31.errorText34(aiErr, model: JS.str(JS.dict(o, "ai"), "model"))
+                } else {
+                    out.text = ans.isEmpty ? "Glimt fant ikke noe svar i kalenderen." : ans
+                }
                 out.events = Array(Cal26.parse(d).events.prefix(6))
+            } catch let e as APIError {
+                out.text = Assist31.errorText34(e.message, model: nil) + " Prøv igjen, eller søk med vanlige ord."
             } catch {
                 out.text = "Glimt svarte ikke. Prøv igjen, eller søk med vanlige ord."
             }

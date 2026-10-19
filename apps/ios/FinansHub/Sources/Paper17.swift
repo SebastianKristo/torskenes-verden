@@ -620,7 +620,8 @@ struct PaperSettings17: View {
             group("Profil", 4, store.prof24Rows(p))
             group("Konto", 0, kontoRows29)
             group("Finans", 3, [
-                PaperLinkRow(name: "AI og tolkning", sub: "Gemini · Groq · Roboflow · Ollama", icon: "sparkles") { store.paperGo("innst-ai") },
+                // Prompt 34: AI i Finans er AI-kontroll med scope finans (AI-valg, Tilkoblinger, Jobber, Forbruk).
+                PaperLinkRow(name: "AI og tolkning", sub: "Modeller per oppgave, tilkoblinger, jobber og forbruk", icon: "sparkles") { AiCtl34.shared.show("rt", scope: "finans") },
                 PaperLinkRow(name: "Kategorier og budsjett", sub: "\(store.boot?.categories.count ?? 0) kategorier", icon: "tag") { store.paperGo("innst-kat") },
                 PaperLinkRow(name: "Regler", sub: "Auto-kategorisering", icon: "list.bullet.rectangle") { store.paperGo("innst-regler") },
                 PaperLinkRow(name: "Bankimport", sub: "DNB · CSV · ✦ AI", icon: "building.columns") { store.paperOpen(.imports) },
@@ -638,6 +639,8 @@ struct PaperSettings17: View {
             ])
             group("App", 2, [
                 PaperLinkRow(name: "Utseende og fanelinje", sub: themeSub, icon: "paintpalette") { store.paperGo("innst-ut") },
+                // Prompt 34: APP → AI og modeller (AI-kontroll i fullskjerm).
+                PaperLinkRow(name: "AI og modeller", sub: "Modeller, jobber, forbruk og nøkler", icon: "cpu") { AiCtl34.shared.show("ov") },
                 PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
                 PaperLinkRow(name: "Kalendere", sub: "Google Kalender · Home Assistant · Skole-iCal", icon: "calendar") { Int26Nav.openKal(from: nil, store) },
                 PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Kalendere, Entur, Bring og flere", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },

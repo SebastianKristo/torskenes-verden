@@ -10,8 +10,10 @@ struct Set24Item: Identifiable, Hashable {
     let title: String
     let sub: String
     let path: String
-    /// innst-… (side), profile:…, integ:…, naming, icon, tabbar, news, imports, abo.
+    /// innst-… (side), profile:…, integ:…, naming, icon, tabbar, news, imports, abo, aictl:<fane> (prompt 34).
     let route: String
+    /// Prompt 34: mål-id for kontrollen som markeres på siden (upd, chk, pw …). Tom = raden selv (Set25Focus).
+    var anchor: String = ""
 }
 
 @MainActor
@@ -89,6 +91,8 @@ final class Set24Model {
         add("om", "Om appen", "Versjon og lisenser", "Avansert", "innst-om")
         // Prompt 32: «oppdatering», «versjon», «update» treffer Nordlys OS (innst-oppdatering sendes dit, PaperStore.paperGo).
         if Update28Model.isAdmin(store) { add("oppdatering", "Nordlys OS", "Oppdatering, versjon og update", "Programvare", "innst-oppdatering") }
+        // Prompt 34: handlinger med mål-id (Oppdater nå, Se etter oppdatering, Krev passord) og AI-kontroll (Settings34.swift).
+        out += Set24Model.items34(store)
         let integ: [Int24Item] = Int24Model.shared.items
         if integ.isEmpty {
             for n in Int24Model.fallbackNames { add("integ." + n.lowercased(), n, "Status, felt og test", "Integrasjoner", "integ:" + n.lowercased()) }
@@ -119,6 +123,8 @@ final class Set24Model {
                     }
                 }
             }
+            // Prompt 34: poengsum for handlingene med mål-id (helt ord 3, prefiks 2, tittel 1, ordlisten i AI-modus).
+            if !it.anchor.isEmpty || it.route.hasPrefix("aictl:") { x += Set24Model.score34(it, words: words, ai: ai) }
             if x > 0 { scored.append((it, x)) }
         }
         scored.sort { $0.1 > $1.1 }
@@ -173,10 +179,17 @@ final class Set24Model {
             if q != query.trimmingCharacters(in: .whitespaces) { busy = false; return }
             answer = JS.str(o, "answer") ?? ""
             aiIds = JS.strings(o, "ids")
+            // Prompt 34: {anchor|target} fra serveren – gyldig bare hvis den finnes i indeksen; den oppføringen kommer først.
+            let anchor: String = JS.str(o, "anchor") ?? JS.str(JS.dict(o, "target"), "anchor") ?? JS.str(o, "targetId") ?? ""
+            if !anchor.isEmpty, let hit = index(store).first(where: { $0.anchor == anchor || $0.id == anchor }) {
+                aiIds = [hit.id] + aiIds.filter { $0 != hit.id }
+            }
+            scheduleAutoGo34(q, store)
         } catch {
             // 404 (eldre server) eller ingen AI: ordlisten.
             answer = ""
             aiIds = []
+            scheduleAutoGo34(q, store)
         }
         busy = false
     }
@@ -188,6 +201,8 @@ final class Set24Model {
         answer = ""
         aiIds = []
         if r.hasPrefix("profile:") { Prof24.shared.pick(String(r.dropFirst(8)), store); return }
+        // Prompt 34: AI-kontroll og handlinger med mål-id (Oppdater nå …) markeres med rød ring.
+        if open34(it, store) { return }
         if r.hasPrefix("integ:") {
             // Prompt 26: rett til siden for integrasjonen når den er kjent.
             if Int24Model.shared.open26(String(r.dropFirst(6)), store) { return }
@@ -223,7 +238,8 @@ struct Set24Search: View {
     var body: some View {
         HStack(spacing: 8) {
             // Prompt 27: ✕ til venstre (SearchField27), høyre-× er fjernet.
-            SearchField27(text: text, placeholder: m.ai ? "Spør, f.eks. «hvor bytter jeg ikon?»" : "Søk i innstillinger")
+            // Prompt 34: Enter går rett til beste treff og markerer det (Settings34.swift).
+            SearchField27(text: text, placeholder: m.ai ? "Spør, f.eks. «hvor bytter jeg ikon?»" : "Søk i innstillinger", onSubmit: { m.submit34(store) })
             .padding(.horizontal, 16)
             .frame(height: 46)
             .background(Capsule().fill(p.card))

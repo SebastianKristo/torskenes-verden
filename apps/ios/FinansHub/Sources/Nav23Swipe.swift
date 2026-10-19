@@ -75,14 +75,14 @@ struct EdgeSwipeBack: ViewModifier {
         let over: Bool = dx > Swift.min(110, w * 0.28)
         if over != crossed {
             crossed = over
-            if over { Nav23History.lightTick() }
+            // Prompt 34: ingen impuls når terskelen passeres; den kommer når siden faktisk lukkes (Haptic34.backSwipe).
         }
     }
 
     private func ended(_ t: CGFloat, _ v: CGFloat, _ w: CGFloat) {
         let go: Bool = t > Swift.min(110, w * 0.28) || (v > 500 && t > 10)
         if go {
-            if !crossed { Nav23History.lightTick() }
+            Haptic34.backSwipe()
             withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.26)) { dx = w }
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(250))

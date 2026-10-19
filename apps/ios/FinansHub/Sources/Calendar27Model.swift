@@ -604,6 +604,7 @@ enum Nav27 {
     }
 
     static func back(_ store: Store) {
+        Haptic34.back()
         let page: String = store.paperTab
         let t: String = from[page] ?? (page == "kalender" ? "mer" : "hjem")
         from[page] = nil

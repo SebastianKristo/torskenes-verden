@@ -27,6 +27,8 @@ struct Assist31Answer: Equatable {
     var applyTitle: String = ""
     /// Prompt 32: intent «nav» (side-snarvei fra serveren): siden som skal åpnes (nordlys, kalender …).
     var target32b: String = ""
+    /// Prompt 34: svaret er en feilmelding («Glimt fikk ikke svar fra {modell}: {feil}») → Prøv igjen / Åpne AI-kontroll.
+    var failed34: Bool = false
 
     var plain: String { text.replacingOccurrences(of: "**", with: "").trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -45,6 +47,21 @@ struct Assist31Answer: Equatable {
         if let c = o["card"] as? [String: Any], let d = try? JSONSerialization.data(withJSONObject: c) {
             a.cardJSON = String(data: d, encoding: .utf8) ?? ""
         }
+        // Prompt 34 (SERVER34): feil kommer som tydelig tekst i svaret, med ok:false / error:true / status «failed».
+        let st: String = (JS.str(o, "status") ?? JS.str(raw, "status") ?? "").lowercased()
+        let notOk: Bool = JS.bool(o, "ok") == false || JS.bool(raw, "ok") == false
+        // SERVER34 sender {text: «Glimt fikk ikke svar fra …», error: «…», fix} når modellen feilet.
+        let errFlag: Bool = (o["error"] as? Bool) == true || (o["error"] as? String)?.isEmpty == false
+        a.failed34 = notOk || errFlag || st == "failed" || st == "error"
+        return a
+    }
+
+    /// Prompt 34: feilsvar som vises i boblen i stedet for evig «tenker».
+    static func failure34(_ text: String) -> Assist31Answer {
+        var a = Assist31Answer()
+        a.text = text
+        a.source = Glimt31.name
+        a.failed34 = true
         return a
     }
 }
@@ -62,6 +79,8 @@ final class Assist31 {
 
     /// Serveren mangler /api/assist (404): søkefeltet går til Chat som før.
     var missing: Bool = false
+    /// Prompt 34: siste feil fra Glimt (serverens tekst, f.eks. «Glimt fikk ikke svar fra qwen3:8b: 404 model not found»).
+    var lastError34: String = ""
     /// Prompt 32: jobb-id-en til spørsmålet fra søkefeltet (for POST /api/assist/:id/handoff, Search32.swift).
     @ObservationIgnored var homeJob32b: String = ""
 
@@ -100,9 +119,10 @@ final class Assist31 {
                 self.closeHome()
                 store.openChat(prompt: q)
             } else {
-                var f = Assist31Answer()
-                f.text = "Jeg fikk ikke svar akkurat nå. **Fortsett i Chat** for å prøve igjen."
-                self.homeAnswer = f
+                // Prompt 34: vis den ekte feilen med Prøv igjen og Åpne AI-kontroll (ikke en generisk tekst).
+                let err: String = self.lastError34.isEmpty ? "Glimt fikk ikke svar akkurat nå." : self.lastError34
+                self.homeAnswer = Assist31Answer.failure34(err)
+                Haptics.shared.warning()
             }
         }
     }
@@ -130,10 +150,15 @@ final class Assist31 {
         var body: [String: Any] = ["q": q, "source": source]
         if let chatId, !chatId.isEmpty { body["chatId"] = chatId }
         let t0: Date = Date()
+        lastError34 = ""
         do {
             let d: Data = try await store.api.callAt("/api", "POST", "/assist", json: body, timeout: 25)
             missing = false
             let o: [String: Any] = JS.obj(d)
+            if let err = JS.str(o, "error"), JS.str(o, "text") == nil, JS.str(o, "answer") == nil {
+                lastError34 = Assist31.errorText34(err, model: JS.str(o, "model"))
+                return nil
+            }
             if var a = Assist31Answer.from(o) {
                 if a.ms == 0 { a.ms = Date().timeIntervalSince(t0) * 1000 }
                 deliver(a, q: q, go: page, chatId: chatId ?? a.chatId, jobId: "")
@@ -152,10 +177,20 @@ final class Assist31 {
             return a
         } catch let e as APIError {
             if e.status == 404 || e.status == 405 { missing = true }
+            lastError34 = Assist31.errorText34(e.message, model: nil)
             return nil
         } catch {
+            lastError34 = Assist31.errorText34(error.localizedDescription, model: nil)
             return nil
         }
+    }
+
+    /// «Glimt fikk ikke svar fra {modell}: {feil}». Serverens ferdige tekst brukes som den er.
+    static func errorText34(_ err: String, model: String?) -> String {
+        let e: String = err.trimmingCharacters(in: .whitespacesAndNewlines)
+        if e.hasPrefix("Glimt") || e.hasPrefix("Sky-budsjettet") { return e }
+        if let model, !model.isEmpty { return "Glimt fikk ikke svar fra " + model + ": " + e }
+        return "Glimt fikk ikke svar: " + e
     }
 
     /// Prøveperiode lagt inn eller time lagt til: last inn på nytt (lokale prøve-varsler planlegges i Trial31Model).
@@ -175,7 +210,14 @@ final class Assist31 {
             if let d = try? await store.api.callAt("/api", "GET", "/assist/" + Cal27Model.enc(id), timeout: 15) {
                 let o: [String: Any] = JS.obj(d)
                 let state: String = JS.str(o, "state") ?? JS.str(o, "status") ?? ""
-                if state == "failed" || state == "cancelled" { return nil }
+                if state == "failed" || state == "cancelled" {
+                    // Prompt 34: feilteksten fra jobben (modell + årsak) vises i boblen.
+                    if state == "failed" {
+                        let err: String = JS.str(o, "error") ?? JS.str(JS.dict(o, "result"), "error") ?? "jobben feilet"
+                        lastError34 = Assist31.errorText34(err, model: JS.str(o, "model"))
+                    }
+                    return nil
+                }
                 if state == "done" || state.isEmpty, var a = Assist31Answer.from(o) {
                     if a.ms == 0 { a.ms = Date().timeIntervalSince(t0) * 1000 }
                     return a
@@ -185,6 +227,7 @@ final class Assist31 {
             await sleepOrPoke(id)
             rounds += 1
         }
+        lastError34 = "Glimt fikk ikke svar innen 2 minutter. Modellen kan være for stor for GPU-en."
         return nil
     }
 
@@ -267,7 +310,8 @@ struct Assist31Bubble: View {
                 Assist31BoldText(text: a.text, size: 17, color: Color(hex: "#f6f2ea"), bold: Color.white)
                     .fixedSize(horizontal: false, vertical: true)
                 if a.applyId > 0 && a.applyCount > 0 { Memory33ApplyButton(a: a) }
-                Assist31BubbleFoot(source: a.source)
+                // Prompt 34: feil → Prøv igjen og Åpne AI-kontroll (Assist34.swift).
+                if a.failed34 { Assist34ErrorFoot() } else { Assist31BubbleFoot(source: a.source) }
             }
         }
         .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 14)

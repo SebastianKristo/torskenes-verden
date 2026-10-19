@@ -34,6 +34,8 @@ extension Store {
         // Prompt 26: finanshub://kalender[/<id>] åpner Kalender (og detaljkortet for timen).
         // Prompt 33: kalender-login fra Kalender-appen, og widget-lenkene videre til Kalender-appen når den er installert.
         if page == "kalender-login" { KalCompanion33.loginLink(self); return }
+        // Prompt 34: finanshub://brief (Glimt-brief-widgetene) åpner briefen i fullskjerm.
+        if page == "brief" { if paper { paperGo("hjem") }; Brief34Model.shared.show(); return }
         if (page == "kalender" || page == "calendar") && KalLink33.forward(url) { return }
         if page == "kalender" || page == "calendar" { Cal26Model.shared.openLink(url, self); return }
         if paper { paperDeepLink(page, sub); return }

@@ -70,7 +70,9 @@ extension Store {
         var order = l.order.filter { keys.contains($0) }
         for k in keys where !order.contains(k) {
             // Prompt 32: Prøveperioder (h11) kommer rett under Avganger også med lagret oppsett.
-            if k == "h11", let i = order.firstIndex(of: "h3") { order.insert(k, at: i + 1) } else { order.append(k) }
+            if k == "h11", let i = order.firstIndex(of: "h3") { order.insert(k, at: i + 1) }
+            // Prompt 34: Glimt-brief (h12) står øverst også med lagret oppsett.
+            else if k == "h12" { order.insert(k, at: 0) } else { order.append(k) }
         }
         let hid = l.hidden.filter { keys.contains($0) }
         return (order.filter { !hid.contains($0) }, hid)
