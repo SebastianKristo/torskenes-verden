@@ -64,7 +64,7 @@ export const fourth = () => { if (!domOk()) return 'spor'; const f = fourthPref(
 /* ---------- Tilpass hver side: hold inne → vugging, ▲ ▼ og − ---------- */
 
 const PG = {
-  hl: [['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Huskeliste'], ['h9', 'Bursdager']],
+  hl: [['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h11', 'Prøveperioder'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Huskeliste'], ['h9', 'Bursdager']],
   hjem: [['f1', 'Saldo'], ['f2', 'Kvitteringer'], ['f3', 'Siste transaksjoner'], ['f4', 'Budsjett']],
   mat: [['m1', 'Dagens middag'], ['m2', 'Ukeplan'], ['m3', 'Mapper'], ['m4', 'Skann og import']],
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
@@ -84,7 +84,10 @@ function pageCfg(page) {
   const keys = PG[page].map(([k]) => k), cur = L.pages?.[page] ?? {};
   // Prompt 24: en eldre migrering kunne skjule Pakker (h2). Den vises igjen én gang; nye kort legges til etter lagret rekkefølge.
   const saved = (cur.order ?? []).filter((k) => keys.includes(k));
-  return { order: [...saved, ...keys.filter((k) => !saved.includes(k))], hidden: (cur.hidden ?? []).filter((k) => keys.includes(k)) };
+  // Prompt 32: nye kort settes inn etter kortet de står etter i standardrekkefølgen (Prøveperioder under Avganger).
+  const order = [...saved];
+  keys.forEach((k, i) => { if (order.includes(k)) return; const prev = keys.slice(0, i).reverse().find((x) => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : order.length, 0, k); });
+  return { order, hidden: (cur.hidden ?? []).filter((k) => keys.includes(k)) };
 }
 function savePage(page, order, hidden) {
   L.pages = { ...(L.pages ?? {}), [page]: { order, hidden } }; keep();

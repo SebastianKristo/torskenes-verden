@@ -356,7 +356,7 @@ export function huske22() {
   if (!HA.t && isAdmin() && !HA.miss) haLoad().then(draw).catch(() => {});
   return v.replace(/<\/div>$/, `${haSection()}</div>`);
 }
-export const huskeDock = () => `<form class="h22-dock" data-p17form="task" role="search"><input id="p17-tk" data-p17in="tk" value="${esc(HK.nv)}" placeholder="Ny oppgave …" enterkeyhint="done" autocomplete="off" aria-label="Ny oppgave"></form>`;
+export const huskeDock = () => String(HK.cur) === 'arkiv' ? '' : `<form class="h22-dock" data-p17form="task" role="search"><input id="p17-tk" data-p17in="tk" value="${esc(HK.nv)}" placeholder="Ny oppgave …" enterkeyhint="done" autocomplete="off" aria-label="Ny oppgave"></form>`;
 const PLUS = 'M12 5v14M5 12h14';
 /** Fanelinja på Huskeliste: knappen viser + og legger til oppgaven. */
 export function huskeNav(nav) {

@@ -9,6 +9,7 @@ import { hlData } from './mobile-hl.js';
 import { cmpView, CMP, cmpLoad } from './mobile-p17.js';
 import { WX2, normCmp, pentAt, cmpCard, bottomBtns, mapView, placesSheet, metricSheet, fxKind, fxAfterDraw, wx22Bind } from './mobile-wx22.js';
 import * as P25 from './mobile-p25.js';
+import { haptic } from './mobile-haptics.js';
 
 const PLACES = [['oslo', 'Oslo'], ['bergen', 'Bergen'], ['trondheim', 'Trondheim'], ['tromso', 'Tromsø']];
 export const WX = { places: null, add: false, q: '', res: null, sErr: '', busy: false, edit: false, place: (() => { try { return localStorage.getItem('fh_wx_place') || 'oslo'; } catch { return 'oslo'; } })(), d: {}, err: '', mode: 'temp', sh: null, feel: false, from: 'hl' };
@@ -113,13 +114,14 @@ const dShort = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? '�
 
 export function wxView() {
   const D = WX.d[WX.place];
-  const back = `<button class="vx-back" data-wx="back" data-swipeback>‹ ${WX.from === 'hl' ? 'Hjem' : 'Tilbake'}</button>`;
+  // Prompt 32 (claude-code-vaer-lukk-x.md): ingen «‹ Hjem». Tom plass til venstre (42 px) og ✕ Lukk oppe til høyre.
+  const back = '<span class="w32-sp" aria-hidden="true"></span>', close = `<button class="w32-x" data-wx="back" data-swipeback aria-label="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
   // Stedsvelgeren nederst: egne steder kan legges til (søk) og fjernes (Rediger → ✕).
   // Prompt 22: ingen stedspiller nederst. Kartknapp nede til venstre, ☰ (Steder) nede til høyre.
   const P0 = plist().find(([k]) => k === WX.place)?.[2] ?? D?.place;
   const places = `${bottomBtns()}${placesSheet(WX, plist)}${mapView(P0, D?.place?.name ?? plist().find(([k]) => k === WX.place)?.[1])}`;
   if (!D) WX.fx = null;
-  if (!D) return `<div class="vx" style="background:${SKY.cloudy[0]}"><div class="vx-bar">${back}</div><div class="vx-in">${WX.err ? `<div class="vx-card vx-pad">${esc(WX.err)}</div>` : '<div class="m-spin"></div>'}</div>${places}</div>`;
+  if (!D) return `<div class="vx" style="background:${SKY.cloudy[0]}"><div class="vx-bar">${back}<span class="m-grow"></span>${close}</div><div class="vx-in">${WX.err ? `<div class="vx-card vx-pad">${esc(WX.err)}</div>` : '<div class="m-spin"></div>'}</div>${places}</div>`;
   const c = D.current ?? {}, td = D.today ?? {}, kind0 = D.kind ?? kindOf(c.code), kind = nightOf(kind0 === 'night' ? 'clear' : kind0, c.isDay !== false && kind0 !== 'night');
   const [sky, glow] = SKY[kind] ?? SKY.cloudy, desc = descOf(c.code, c.text), city = D.place?.name ?? plist().find(([k]) => k === WX.place)?.[1] ?? '';
   const nowT = Date.now(), hours = (D.hours ?? []).filter((h) => new Date(h.t) >= nowT - 3600e3).slice(0, 24);
@@ -128,9 +130,12 @@ export function wxView() {
   const hv = (h) => (WX.mode === 'rain' ? `${Math.round(h.precipProb ?? (h.precip > 0 ? 60 : 0))} %` : WX.mode === 'wind' ? `${Math.round(h.wind ?? 0)}` : deg(h.temp));
   const nr = D.nextRain, hrTitle = nr?.t ? `Nedbør ventet rundt ${hm(nr.t)}` : kind === 'rain' ? 'Regn akkurat nå' : 'Opphold de neste timene';
   const C2 = cmpOf();
-  const hrs = hours.map((h, i) => { const pt = WX.mode === 'temp' ? pentAt(C2, h.t) : null; const k = nightOf(kindOf(h.code), h.isDay !== false && new Date(h.t).getHours() > 6 && new Date(h.t).getHours() < 20);
+  // Prompt 32 (claude-code-vaer-forhold-moduser.md): ☁ / 💧 / 🌬 bytter både timeraden og dagslisten.
+  const M = WX.mode === 'rain' || WX.mode === 'wind' ? WX.mode : 'temp';
+  const hrTitle2 = M === 'rain' ? 'Nedbør (mm) · Sjanse' : M === 'wind' ? 'Vind (m/s) · Kast' : 'Temperatur (°C)';
+  const hrs = M !== 'temp' ? hoursMode(M, hours) : hours.map((h, i) => { const pt = WX.mode === 'temp' ? pentAt(C2, h.t) : null; const k = nightOf(kindOf(h.code), h.isDay !== false && new Date(h.t).getHours() > 6 && new Date(h.t).getHours() < 20);
     return `<div class="vx-h"><span${i === 0 ? ' class="b"' : ''}>${i === 0 ? 'Nå' : String(new Date(h.t).getHours()).padStart(2, '0')}</span>${ico(k, 28)}<span class="vx-pp">${(h.precipProb ?? 0) >= 20 ? `${Math.round(h.precipProb)} %` : ''}</span><b>${hv(h)}</b><span class="w22-pt">${pt != null ? `${Math.round(pt)}°` : ''}</span></div>`; }).join('');
-  const dayRows = days.map((d, i) => { const k = kindOf(d.code), l = (((d.lo ?? lo) - lo) / span) * 100, w = (((d.hi ?? hi) - (d.lo ?? lo)) / span) * 100;
+  const dayRows = M !== 'temp' ? daysMode(M, days, D) : days.map((d, i) => { const k = kindOf(d.code), l = (((d.lo ?? lo) - lo) / span) * 100, w = (((d.hi ?? hi) - (d.lo ?? lo)) / span) * 100;
     const nowL = i === 0 && c.temp != null ? Math.max(0, Math.min(100, ((c.temp - lo) / span) * 100)) : null, dt = new Date(d.date + 'T12:00');
     return `<button class="vx-d" data-wx="day" data-i="${i}"><span class="vx-dn">${i === 0 ? 'I dag' : WD[dt.getDay()].replace(/^./, (x) => x.toUpperCase())}</span><span class="vx-di">${ico(k, 24)}<small>${(d.precipProb ?? 0) >= 20 ? `${Math.round(d.precipProb)} %` : ''}</small></span>
       <span class="vx-lo">${deg(d.lo)}</span><span class="vx-rng"><i style="left:${l.toFixed(1)}%;width:${Math.max(4, w).toFixed(1)}%"></i>${nowL != null ? `<em style="left:${nowL.toFixed(1)}%"></em>` : ''}</span><span class="vx-hi">${deg(d.hi)}</span></button>`; }).join('');
@@ -184,16 +189,53 @@ export function wxView() {
   const srT = +new Date(td.sunrise ?? days[0]?.sunrise ?? NaN), ssT = +new Date(td.sunset ?? days[0]?.sunset ?? NaN), sunF = ssT > srT ? Math.min(1, Math.max(0, (Date.now() - srT) / (ssT - srT))) : 0.5;
   WX.fx = fxKind(kind0 === 'night' ? 'night' : kind0, c.isDay !== false && kind0 !== 'night', c.code, sunF); // prompt 28: sola følger soloppgang/-nedgang
   return `<div class="vx" style="background:${sky}"><div class="w22-fx" id="w22-fx" aria-hidden="true"></div><div class="vx-glow" style="background:${glow}"></div>
-    <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div><span class="vx-src">${D.mock ? 'Eksempeldata' : D.fallback || D.source === 'met' ? 'MET' : 'Open-Meteo'}</span></div>
+    <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div>${close}</div>
     <div class="vx-in${fold ? ' p25-fold' : ''}"><div class="p25-c1">
-      <div class="vx-head"><span class="vx-pos">MIN POSISJON</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span></div>
-      ${hours.length ? `<div class="vx-card vx-hours"><div class="vx-hrow"><button class="vx-forh" data-wx="day" data-i="0"><b>Forhold ›</b><span>${esc(hrTitle)}</span></button><div class="vx-modes">${modes.map(([k, n, p]) => `<button data-wx="mode" data-k="${k}" aria-label="${n}" aria-pressed="${WX.mode === k}">${tIco(p, k === 'rain', 18)}</button>`).join('')}</div></div><div class="vx-hs">${hrs}</div></div>` : ''}
-      ${days.length ? `<div class="vx-card vx-days">${dayRows}</div>` : ''}</div><div class="p25-c2">${fold ? P25.wxMapCard(P0, WX2.layer) : ''}
+      <div class="vx-head"><span class="vx-pos">MIN POSISJON</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span><span class="w32-src">${esc(srcLine(D))}</span></div>
+      ${hours.length ? `<div class="vx-card vx-hours w32-${M}"><div class="vx-hrow"><button class="vx-forh w32-fh" data-wx="day" data-i="0"><b>Forhold ›</b><span>${esc(hrTitle2)}</span></button><div class="vx-modes">${modes.map(([k, n, p]) => `<button data-wx="mode" data-k="${k}" aria-label="${n}" aria-pressed="${WX.mode === k}">${tIco(p, k === 'rain', 18)}</button>`).join('')}</div></div><div class="vx-hs">${hrs}</div></div>` : ''}
+      ${days.length ? `<div class="vx-card vx-days w32-${M}">${dayRows}</div>` : ''}</div><div class="p25-c2">${fold ? P25.wxMapCard(P0, WX2.layer) : ''}
       ${cmpCard(C2, D, { IC, ICC, kindOf, busy: CMP.busy, err: CMP.err })}
       ${wind}${moon}
       <div class="vx-grid">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div></div>
       <a class="vx-yr" href="${esc(D.yrUrl || 'https://www.yr.no/nb')}" target="_blank" rel="noopener">${esc(D.credit || `Data: ${D.fallback || D.source === 'met' ? 'MET Norge' : 'Open-Meteo'}`)} · Se også yr.no ↗</a>
     </div>${places}${WX.sh != null ? sheet(D) : ''}${metricSheet(D)}${cmpView(WX.place, city)}</div>`;
+}
+/* ---------- Prompt 32: Forhold-moduser for nedbør og vind ---------- */
+const f1 = (v) => String(Math.round((+v || 0) * 10) / 10).replace('.', ',');
+function srcLine(D) {
+  const t = D.updatedAt ?? D.fetchedAt ?? D.time ?? D.current?.t ?? null, d = t ? new Date(t) : new Date(), hh = Number.isNaN(+d) ? '' : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${D.mock ? 'Eksempeldata' : D.fallback || D.source === 'met' ? 'MET Norway · yr.no' : 'Open-Meteo · MET Norway'}${hh ? ` · ${hh}` : ''}`;
+}
+/** 24 timer for en dato fra detail.days (MET, 7 dager) eller timelisten. */
+function dayHrs32(D, date) {
+  const det = (D.detail?.days ?? []).find((x) => String(x.date).slice(0, 10) === date)?.hours;
+  const src = det?.length ? det : [...(D.yesterday?.hours ?? []), ...(D.hours ?? [])];
+  return src.filter((h) => String(h.t ?? h.time ?? '').slice(0, 10) === date).sort((a, b) => String(a.t ?? a.time).localeCompare(String(b.t ?? b.time)));
+}
+function hoursMode(M, hours) {
+  if (M === 'rain') return hours.map((h, i) => { const mmv = +h.precip || 0, pp = Math.round(h.precipProb ?? 0);
+    return `<div class="vx-h w32-h"><span${i === 0 ? ' class="b"' : ''}>${i === 0 ? 'Nå' : String(new Date(h.t).getHours()).padStart(2, '0')}</span><span class="w32-bar"><i class="l1"></i><i class="l2"></i><em style="height:${Math.min(100, (mmv / 3) * 100).toFixed(0)}%;border-radius:${mmv >= 3 ? '9px' : '0 0 9px 9px'}"></em></span><span class="w32-mm">${mmv >= 0.05 ? `${f1(mmv)} mm` : ''}</span><span class="w32-pp">${pp} %</span></div>`; }).join('');
+  const WS = hours.map((h) => +h.wind || 0), WG = hours.map((h, i) => Math.max(+h.gust || 0, WS[i])), mx = Math.max(4, ...WG), wy = (v) => (34 - Math.min(1, v / mx) * 30).toFixed(1);
+  return hours.map((h, i) => { const a = WS[Math.max(0, i - 1)], b = WS[i], c2 = WS[i + 1] ?? b, ga = WG[Math.max(0, i - 1)], gb = WG[i], gc = WG[i + 1] ?? gb;
+    return `<div class="vx-h w32-h"><span${i === 0 ? ' class="b"' : ''}>${i === 0 ? 'Nå' : String(new Date(h.t).getHours()).padStart(2, '0')}</span><b class="w32-ws">${Math.round(b)}</b><span class="w32-u">m/s</span><span class="w32-g">kast ${Math.round(gb)}</span>
+      <svg class="w32-wl" width="56" height="34" viewBox="0 0 56 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 34 L0 ${wy((ga + gb) / 2)} L28 ${wy(gb)} L56 ${wy((gb + gc) / 2)} L56 34 Z" fill="rgba(90,209,255,.28)"/><path d="M0 ${wy((a + b) / 2)} L28 ${wy(b)} L56 ${wy((b + c2) / 2)}" fill="none" stroke="#3fd0e0" stroke-width="3" stroke-linecap="round"/></svg></div>`; }).join('');
+}
+function daysMode(M, days, D) {
+  const nowH = new Date().getHours();
+  return days.map((d, k) => {
+    const dt = new Date(d.date + 'T12:00'), name = k === 0 ? 'I dag' : WD[dt.getDay()].replace(/^./, (x) => x.toUpperCase()), H = dayHrs32(D, d.date), pp = Math.round(d.precipProb ?? 0);
+    if (M === 'rain') {
+      const by = Array(24).fill(0); H.forEach((h) => { by[new Date(h.t ?? h.time).getHours()] = +h.precip || 0; });
+      const two = Array.from({ length: 12 }, (_, q) => by[q * 2] + by[q * 2 + 1]), sum = d.precipSum ?? two.reduce((a, v) => a + v, 0);
+      const bars = two.map((v, q) => `<span class="w32-rb${q >= 3 && q < 9 ? ' day' : ''}${k === 0 && Math.floor(nowH / 2) === q ? ' now' : ''}"><i style="height:${Math.min(100, (v / 4) * 100).toFixed(0)}%"></i></span>`).join('');
+      return `<button class="vx-d w32-dr" data-wx="day" data-i="${k}"><span class="vx-dn">${name}</span><span class="w32-rbs">${bars}</span><span class="w32-sum${sum >= 0.05 ? '' : ' dim'}">${f1(sum)} mm</span><span class="w32-dp${pp >= 30 ? '' : ' dim'}">${pp >= 30 ? '<svg width="12" height="14" viewBox="0 0 24 24" fill="#5ad1ff" aria-hidden="true"><path d="M12 2c3.5 4.6 7 8.6 7 12.6a7 7 0 0 1-14 0C5 10.6 8.5 6.6 12 2z"/></svg>' : ''}${pp}%</span></button>`;
+    }
+    const sp = H.map((h) => +h.wind || 0), gs = H.map((h, i) => Math.max(+h.gust || 0, sp[i])), mx = Math.max(4, ...gs), yy = (v) => (26 - Math.min(1, v / mx) * 22).toFixed(1), px = (q) => ((q / Math.max(1, H.length - 1)) * 120).toFixed(1);
+    const sL = sp.length ? `M${sp.map((v, q) => `${px(q)} ${yy(v)}`).join(' L')}` : '', gA = gs.length ? `M0 28 L${gs.map((v, q) => `${px(q)} ${yy(v)}`).join(' L')} L120 28 Z` : '';
+    const ni = Math.min(sp.length - 1, nowH), dot = k === 0 && sp.length ? `<span class="w32-dot" style="left:${((+px(ni) / 120) * 100).toFixed(1)}%;top:${((+yy(sp[ni]) / 28) * 100).toFixed(1)}%"></span>` : '';
+    const wr = sp.length ? `${Math.round(Math.min(...sp))}–${Math.round(Math.max(...gs))}` : d.windMax != null ? `–${Math.round(d.windMax)}` : '–';
+    return `<button class="vx-d w32-dw" data-wx="day" data-i="${k}"><span class="vx-dn">${name}</span><span class="w32-mg"><svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><rect x="30" y="0" width="60" height="28" fill="rgba(255,255,255,.08)"/><path d="${gA}" fill="rgba(90,209,255,.3)"/><path d="${sL}" fill="none" stroke="#3fd0e0" stroke-width="2.4" stroke-linecap="round" ${k === 0 ? 'stroke-dasharray="5 4"' : ''} vector-effect="non-scaling-stroke"/></svg>${dot}</span><span class="w32-wr">${wr} <span>m/s</span></span></button>`;
+  }).join('');
 }
 function tIco(p, fill = false, size = 15) { return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${p}"/></svg>`; }
 
@@ -281,7 +323,7 @@ export async function wxBind(e, t) {
   if (!x) return false;
   e.preventDefault();
   const k = x.dataset.wx;
-  if (k === 'back') { if (history.length > 1) history.back(); else location.hash = '#/hl'; return true; }
+  if (k === 'back') { haptic('tap'); if (history.length > 1) history.back(); else location.hash = '#/hl'; return true; }
   if (k === 'place') { WX.place = x.dataset.k; try { localStorage.setItem('fh_wx_place', WX.place); } catch {} WX.sh = null; draw(); scrollTo(0, 0); await wxLoad(); draw(); return true; }
   if (k === 'addpl') { WX.add = true; WX.q = ''; WX.res = null; WX.sErr = ''; draw(); setTimeout(() => document.getElementById('vx-q')?.focus(), 40); return true; }
   if (k === 'addx') WX.add = false;

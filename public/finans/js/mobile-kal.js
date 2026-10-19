@@ -13,6 +13,7 @@ import { BD, bdLoad } from './mobile-p24.js';
 import { parseQuick } from '/assets/js/quick-time.js';
 import { LEARN_TYPES, typeName, loadMemory, memoryNow, addMemory, applyMemory, nameOfEvent, dinOf } from '/assets/js/glimt-memory.js'; // prompt 33
 import * as P29 from './mobile-p29.js';
+import { glimt } from './mobile-p31.js'; // prompt 32: Glimt-merket i søket og «Beskriv med Glimt»
 
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'], MS = MN.map((x) => x.slice(0, 3));
 const WD = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'], WS = ['MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR', 'SØN'];
@@ -20,7 +21,7 @@ const LAB = 'var(--pp-lab)';
 // Kalenderne (kontrakt 27). Serveren kan sende egne navn/farger i `calendars`.
 const CALS0 = [['timeplan', 'Timeplan', '#2b5d8a', 'Skolens iCal'], ['prover', 'Prøver og frister', '#b23a2a', 'Skolens iCal'], ['skole', 'Skole', '#a8661a', 'Skolens iCal'], ['privat', 'Privat', '#6b4fa0', 'Google Kalender'], ['familie', 'Familie', '#d08a1e', 'Google · delt med familien'], ['bursdager', 'Bursdager', '#3f7a6e', 'Bursdager-modulen']];
 const VIEWS = [['dag', 'Dag', 'M5 4h14v16H5zM5 9h14'], ['3dager', '3 dager', 'M3 5h18v15H3zM9 5v15M15 5v15'], ['uke', 'Uke', 'M3 5h18v15H3zM3 10h18M7.5 5v15M12 5v15M16.5 5v15'], ['maaned', 'Måned', 'M3 5h18v15H3zM3 10h18M3 15h18M9 5v15M15 5v15'], ['liste', 'Liste', 'M4 6h16M4 12h16M4 18h10']];
-const REMS = [['none', 'Ingen'], ['15m', '15 min'], ['1h', '1 time'], ['day', 'Dagen før']];
+const REMS = [['none', 'Ingen'], ['10m', '10 min'], ['15m', '15 min'], ['1h', '1 time'], ['day', 'Dagen før']];
 const REPS = [['none', 'Ingen'], ['daily', 'Hver dag'], ['weekly', 'Hver uke'], ['monthly', 'Hver måned']];
 
 const LS = 'fh_kal';
@@ -241,7 +242,7 @@ function gridView() {
   const grid = `<div class="k27-grid" style="grid-template-columns:${cols}"><div class="k27-hrs" style="height:${gh}px">${hrs.map((h) => `<span style="top:${h * HH}px">${pad(h)}</span>`).join('')}</div>
     ${days.map((x) => `<div class="k27-col${x.isT ? ' t' : x.we ? ' we' : ''}" data-k27col="${x.k}" data-hh="${HH}" style="height:${gh}px">${lines}${lay(x.L0).map((y) => {
       const e = reg(y.e), c = col(e), solid = e.kind === 'prove', ht = ((y.b - y.a) / 60) * HH;
-      return `<button class="k27-ev${solid ? ' solid' : ''}" ${evAttr(e)} style="top:${(y.a / 60) * HH}px;height:${Math.max(18, ht - 2)}px;left:calc(${(y.c / y.n) * 100}% + 1px);width:calc(${100 / y.n}% - 3px);border-left-color:${c};background:${solid ? c : `color-mix(in oklab,${c} 17%,var(--pp-card))`}${sel === e.id ? ';outline:2px solid var(--pp-ink);outline-offset:1px' : ''};font-size:${narrow ? '10.5px' : '12px'}"><b>${esc(short(e))}</b>${ht >= 40 && !(narrow && y.n > 1) ? `<span>${esc(`${e.s}–${e.e}${e.r ? ` · ${e.r}` : ''}`)}</span>` : ''}</button>`;
+      return `<button class="k27-ev${solid ? ' solid' : ''}" ${evAttr(e)} style="top:${(y.a / 60) * HH}px;height:${Math.max(18, ht - 2)}px;left:calc(${(y.c / y.n) * 100}% + 1px);width:calc(${100 / y.n}% - 3px);border-left-color:${c};background:${solid ? c : `color-mix(in oklab,${c} 22%,var(--pp-card))`}${sel === e.id ? ';outline:2px solid var(--pp-ink);outline-offset:1px' : ''};font-size:${narrow ? '10.5px' : '12px'}"><b>${esc(short(e))}</b>${ht >= 40 && !(narrow && y.n > 1) ? `<span>${esc(`${e.s}–${e.e}${e.r ? ` · ${e.r}` : ''}`)}</span>` : ''}</button>`;
     }).join('')}${x.isT ? `<span class="k27-now" style="top:${(nm / 60) * HH}px"><i></i></span>` : ''}</div>`).join('')}</div>`;
   K.gkNow = `${V}|${a}`; K.gy = Math.max(0, (days.some((x) => x.isT) ? nm / 60 : 7.75) * HH - (days.some((x) => x.isT) ? HH * 1.5 : 0));
   return `${head}${allRow}<div class="k27-gs" id="k27-gs">${grid}</div>`;
@@ -252,7 +253,7 @@ function monthView() {
   const cells = Array.from({ length: 42 }, (_, i) => {
     const d = add(st, i), k = key(d), L0 = evOn(d), isT = k === tk, inM = d.getMonth() === cur.getMonth(), les = L0.filter((e) => e.kind === 'time').length, oth = L0.filter((e) => e.kind !== 'time'), mx = w ? 4 : 3, sh = oth.slice(0, les ? mx - 1 : mx);
     const chips = sh.map((e) => { reg(e); const solid = e.kind === 'prove' || !e.s || e.kind === 'innl'; // Prompt 30: hendelsen i dagruta åpner hendelsen (detaljarket); handleren tar nærmeste [data-k27], så ruta selv (dday → Dag) får ikke trykket.
-      return `<span class="k30-mev" role="button" tabindex="0" ${evAttr(e)} style="background:${solid ? col(e) : 'transparent'};color:${solid ? '#fff' : col(e)}">${esc(`${e.s && e.kind !== 'innl' && w ? `${e.s} ` : ''}${short(e)}`)}</span>`; });
+      return `<span class="k30-mev" role="button" tabindex="0" ${evAttr(e)} style="background:${solid ? col(e) : `color-mix(in oklab,${col(e)} 18%,var(--pp-card))`};color:${solid ? '#fff' : `color-mix(in oklab,${col(e)} 78%,var(--pp-ink))`}">${esc(`${e.s && e.kind !== 'innl' && w ? `${e.s} ` : ''}${short(e)}`)}</span>`; });
     if (les) chips.push(`<span class="les">${les}${w ? ' timer' : ' t'}</span>`);
     const wk = i % 7 === 0 ? `<button class="k29-wk" data-k27="wk" data-k="${k}" aria-label="Uke ${isoW(d)}">${isoW(d)}</button>` : '';
     return `${wk}<button class="k27-md${isT ? ' t' : ''}${inM ? '' : ' o'}" data-k27="dday" data-k="${k}"><b>${d.getDate()}</b>${chips.join('')}${oth.length > sh.length ? `<em>+${oth.length - sh.length}</em>` : ''}</button>`;
@@ -288,12 +289,55 @@ function detSheet() {
     ${e.editable && !e.local ? '<button type="button" class="k33-learn" data-k27="learn">Lær Glimt hva dette er…</button>' : ''}
     <div class="k27-btns">${e.editable ? `<button class="ink" data-k27="edit">Rediger</button><button class="red" data-k27="del">${K.delArm ? 'Trykk igjen' : 'Slett'}</button>` : ''}${map ? `<a href="${esc(map)}" target="_blank" rel="noopener">Åpne kart ↗</a>` : ''}${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åpne i ${e.src === 'canvas' ? 'Canvas' : 'kilden'} ↗</a>` : ''}${e.editable || e.kind === 'bursdag' ? '' : '<button data-k27="dup">Kopier til Privat</button>'}</div>`);
 }
+/* ---------- Prompt 32: «✦ Beskriv med Glimt» i Ny hendelse (Kalender.dc.html → fmAi) ---------- */
+function aiBox(F) {
+  const A = F.aiS ?? {}, txt = F.ai ?? '', busy = !!A.busy, has = !!txt.trim();
+  return `<div class="k32-fm"><div class="k32-fmh"><span class="k32-fml">✦ BESKRIV MED GLIMT</span><span class="m-grow"></span>${A.done ? `<span class="k32-fmok">✓ ${esc(A.note)}</span>` : ''}</div>
+    <div class="k32-fmr"><textarea id="k32-ai" rows="2" data-k27i="ai" placeholder="F.eks. «Tannlege hos Dr. Berg tirsdag 10.30, Bogstadveien 12, minn meg dagen før» eller lim inn en melding" aria-label="Beskriv hendelsen">${esc(txt)}</textarea>
+    <button type="button" class="k32-fill${has ? ' on' : ''}${busy ? ' busy' : ''}" data-k27="fai" ${!has || busy ? 'disabled' : ''}>${glimt(28, busy ? 'think' : 'ready')}<span>${busy ? 'Fyller ut …' : 'Fyll ut'}</span></button></div>
+    ${A.err ? `<span class="k32-fmerr">${esc(A.err)}</span>` : ''}</div>`;
+}
+function aiApply(r, txt) {
+  const F = K.form; if (!F) return;
+  const t = txt.toLowerCase(), got = [];
+  if (r.title) { F.title = r.title; got.push('tittel'); }
+  if (r.date) { F.date = r.date; got.push('dato'); }
+  if (r.allDay) F.allDay = true;
+  else if (r.start) { F.allDay = false; F.start = r.start; F.end = r.end || hm(Math.min(mm(r.start) + (r.duration || 60), 23 * 60 + 59)); got.push('tid'); }
+  if (r.place) { F.location = r.place; got.push('sted'); }
+  const rp = /hver dag|daglig/.test(t) ? 'daily' : /hver uke|ukentlig|hver (mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag)/.test(t) ? 'weekly' : /hver måned|månedlig/.test(t) ? 'monthly' : r.repeat && REPS.some(([k]) => k === r.repeat) ? r.repeat : null;
+  if (rp) { F.repeat = rp; got.push('gjentakelse'); }
+  const rm = /dagen før/.test(t) ? 'day' : /(1|en) time før|times? før/.test(t) ? '1h' : /15 min/.test(t) ? '15m' : /10 min/.test(t) ? '10m' : /ingen varsel|ikke varsle/.test(t) ? 'none' : r.reminder && REMS.some(([k]) => k === r.reminder) ? r.reminder : null;
+  if (rm) { F.reminder = rm; got.push('varsel'); }
+  if (/familie|famil|barna|mamma|pappa/.test(t) || r.calendar === 'familie') { F.calendar = 'familie'; got.push('kalender'); } else F.calendar = F.calendar || 'privat';
+  if (txt.length > 60 && !F.note) F.note = txt;
+  const list = got.length > 2 ? `${got.slice(0, -1).join(', ')} og ${got[got.length - 1]}` : got.join(' og ');
+  F.aiS = r.date ? { done: true, note: r.srvNote || `Fylte ut ${list || 'feltene'}` } : { err: r.srvErr || 'Fant ikke dato. Velg dato under.' };
+}
+async function fillAi() {
+  const F = K.form; if (!F) return;
+  const txt = String(F.ai ?? '').trim(); if (!txt || F.aiS?.busy) return;
+  F.aiS = { busy: true }; draw();
+  let r = null; try { r = parseQuick(txt, key(new Date())); } catch {}
+  if (r?.ok && r.date) { await new Promise((ok) => setTimeout(ok, 450)); }
+  else {
+    // Parseren fant ikke dato: spør serveren (lokal modell), POST /api/kalender/describe {text}.
+    try {
+      const d = await hlApi('/kalender/describe', { method: 'POST', json: { text: txt, today: key(new Date()) } }), x = d?.event ?? d ?? {};
+      const tm = (v) => (v == null || v === '' ? null : /^\d{1,2}:\d{2}$/.test(String(v)) ? String(v).padStart(5, '0') : when(v)?.hm || null);
+      const dk = x.date ?? (/^\d{4}-\d{2}-\d{2}/.test(String(x.start ?? '')) ? String(x.start).slice(0, 10) : null);
+      r = { title: x.title ?? r?.title ?? '', date: dk, start: x.allDay ? null : tm(x.start), end: x.allDay ? null : tm(x.end), place: x.location ?? r?.place ?? '', allDay: !!x.allDay && !!dk, repeat: x.repeat, reminder: x.reminder, calendar: x.calendar, note: x.note, srvNote: d?.note, srvErr: d?.error };
+    } catch { r = { title: r?.title ?? '', date: null, start: r?.start ?? null, end: r?.end ?? null, place: r?.place ?? '' }; }
+  }
+  if (K.form !== F) return;
+  aiApply(r, txt); haptic(F.aiS.done ? 'ok' : 'err'); draw();
+}
 function formSheet() {
   const F = K.form; if (!F) return '';
   const chip = (on) => (on ? ' class="on"' : '');
   const wc = cals().filter((c) => c.writable);
   return sheetWrap(`<div class="k27-dh"><b class="m-grow k27-fh">${F.id ? 'Rediger hendelse' : 'Ny hendelse'}</b><button class="k27-cx" data-k27="shx" aria-label="Lukk">✕</button></div>
-    <form class="k27-form" data-k27f="save"><input id="k27-ft" class="k27-in big" value="${esc(F.title)}" placeholder="Tittel" autocomplete="off" data-k27i="title">
+    <form class="k27-form" data-k27f="save">${aiBox(F)}<input id="k27-ft" class="k27-in big" value="${esc(F.title)}" placeholder="Tittel" autocomplete="off" data-k27i="title">
       <div class="k27-fbox"><button type="button" class="k27-tg" data-k27="fall" role="switch" aria-checked="${!!F.allDay}"><span>Hele dagen</span><span class="k27-sw${F.allDay ? ' on' : ''}"><i></i></span></button>
         <label><span>Dato</span><input type="date" value="${esc(F.date)}" data-k27i="date"></label>
         ${F.allDay ? `<label><span>Til og med</span><input type="date" value="${esc(F.endDate || F.date)}" data-k27i="endDate"></label>` : `<label><span>Fra</span><input type="time" step="300" value="${esc(F.start)}" data-k27i="start"></label><label><span>Til</span><input type="time" step="300" value="${esc(F.end)}" data-k27i="end"></label>`}</div>
@@ -381,27 +425,105 @@ export function kalAddLocal(body) { const id = `u${Date.now()}`; L.ue = [...ue()
 export function kalDelLocal(id) { const n = ue().length; L.ue = ue().filter((x) => x.id !== id); keep(); return ue().length < n; }
 export const kalMissing = () => K.miss;
 
+/* ---------- Prompt 32: søkemeny med Glimt (Kalender.dc.html → sr, srLocal, srCloud, srMark) ---------- */
+const relOf = (i) => (i === 0 ? 'I dag' : i === 1 ? 'I morgen' : i === -1 ? 'I går' : i > 0 ? `om ${i} dager` : `${-i} dager siden`);
+const SUGG = ['Hva har jeg i morgen?', 'Når er neste prøve?', 'Er jeg ledig fredag ettermiddag?', 'Hva skjer neste uke?'];
+function srHits(q, F) {
+  const t = d0(new Date()), out = [];
+  for (let i = -30; i < 120 && out.length < 60; i++) { const d = add(t, i); for (const e of evOn(d, false)) if (out.length < 60 && (F === '*' || e.cal === F) && `${e.t} ${e.r} ${noUrl(e.n)} ${e.subj}`.toLowerCase().includes(q)) out.push({ e, d, i }); }
+  return [...out.filter((x) => x.i >= 0), ...out.filter((x) => x.i < 0).reverse()];
+}
+const hit = (t, q) => { const s0 = String(t ?? ''), ix = q ? s0.toLowerCase().indexOf(q) : -1; return ix < 0 ? esc(s0) : `${esc(s0.slice(0, ix))}<mark class="k32-hit">${esc(s0.slice(ix, ix + q.length))}</mark>${esc(s0.slice(ix + q.length))}`; };
+/** Lokale svar uten nett: dag/periode, ledig tid, prøver/frister og «neste X». null = ikke forstått. */
+function srLocal(q) {
+  const today = d0(new Date()), now = new Date(), nm = now.getHours() * 60 + now.getMinutes(), n = q.toLowerCase().replace(/[?!.]/g, ' ');
+  let from = null, to = null, lbl = '';
+  if (/i overmorgen/.test(n)) { from = to = add(today, 2); lbl = 'i overmorgen'; }
+  else if (/i morgen/.test(n)) { from = to = add(today, 1); lbl = 'i morgen'; }
+  else if (/i dag|idag/.test(n)) { from = to = today; lbl = 'i dag'; }
+  else if (/neste uke/.test(n)) { const mo = add(today, 7 - ((today.getDay() + 6) % 7)); from = mo; to = add(mo, 6); lbl = 'neste uke'; }
+  else if (/denne uk|resten av uk/.test(n)) { from = today; to = add(today, 6 - ((today.getDay() + 6) % 7)); lbl = 'resten av uka'; }
+  else { const w = WD.findIndex((x) => new RegExp(`\\b${x}`).test(n)); if (w >= 0) { from = to = add(today, (w - today.getDay() + 7) % 7); lbl = WD[w]; } }
+  const span = (a, b) => { const out = []; for (let d = a; d <= b; d = add(d, 1)) evOn(d).forEach((e) => { if (+d !== +today || !e.e || mm(e.e) > nm || /ledig/.test(n)) out.push({ e, d }); }); return out; };
+  const rel = (d) => { const i = Math.round((d - today) / 864e5); return i === 0 ? 'i dag' : i === 1 ? 'i morgen' : `om ${i} dager`; };
+  if (/ledig|fri tid|tid til|opptatt/.test(n)) {
+    const d = from || today, pm = /ettermiddag|kveld/.test(n), am = /formiddag|morgen\b/.test(n) && !/i morgen/.test(n);
+    const A0 = pm ? 720 : 480, B0 = pm ? 1200 : am ? 720 : 1200, Lx = evOn(d).filter((e) => e.s && e.e).map((e) => [mm(e.s), mm(e.e)]).sort((a, b) => a[0] - b[0]);
+    let t = A0; if (+d === +today) t = Math.max(t, Math.ceil(nm / 15) * 15);
+    const fr = []; Lx.forEach(([a, b]) => { if (a > t && a - t >= 30) fr.push([t, Math.min(a, B0)]); t = Math.max(t, b); }); if (B0 - t >= 30) fr.push([t, B0]);
+    const f = fr.filter(([a, b]) => b - a >= 30 && a < B0);
+    return { txt: `${cap(dLong(d))}${f.length ? ` er du ledig ${f.map(([a, b]) => `${hm(a)}–${hm(b)}`).join(', ')}.` : ` er du opptatt hele ${pm ? 'ettermiddagen' : 'dagen'}.`}`, items: span(d, d).filter((x) => x.e.s) };
+  }
+  if (/prøve|eksamen|frist|innlever|oblig/.test(n) && !from) {
+    const out = []; for (let i = 0; i < 120 && out.length < 5; i++) { const d = add(today, i); evOn(d).filter((e) => e.kind === 'prove' || e.kind === 'innl').forEach((e) => out.push({ e, d })); }
+    if (!out.length) return { txt: 'Ingen prøver eller frister de neste fire månedene.', items: [] };
+    const x = out[0]; return { txt: `Neste er ${short(x.e)} ${dLong(x.d)} (${rel(x.d)})${out.length > 1 ? `. Deretter ${out.length - 1} til.` : '.'}`, items: out };
+  }
+  if (from) { const Lx = span(from, to); if (!Lx.length) return { txt: `Du har ingenting i kalenderen ${lbl}.`, items: [] }; const nT = Lx.filter((x) => x.e.kind === 'time').length; return { txt: `${cap(lbl)} har du ${Lx.length} ting${nT ? `, ${nT} av dem i timeplanen` : ''}. Først ut: ${short(Lx[0].e)}${Lx[0].e.s ? ` kl. ${Lx[0].e.s}` : ''}.`, items: Lx }; }
+  if (/neste|når/.test(n) && !/\bsist\b|forrige|hadde/.test(n)) {
+    const stop = new Set(['når', 'er', 'neste', 'min', 'mitt', 'mi', 'time', 'timen', 'har', 'jeg', 'skal', 'hva', 'hos', 'den', 'det', 'en', 'et', 'på', 'i', 'meg', 'til', 'sist', 'hadde']);
+    const kw = n.split(/\s+/).filter((w) => w && !stop.has(w));
+    if (kw.length) {
+      for (let i = 0; i < 120; i++) { const d = add(today, i), e = evOn(d).find((x) => (i > 0 || !x.e || mm(x.e) > nm) && kw.every((w) => `${x.t} ${x.subj || ''} ${x.r || ''}`.toLowerCase().includes(w))); if (e) return { txt: `${short(e)} er ${dLong(d)}${e.s ? ` kl. ${e.s}` : ''} (${rel(d)}).`, items: [{ e, d }] }; }
+      if (!/sist/.test(n)) return { txt: `Fant ingen kommende «${kw.join(' ')}» de neste fire månedene.`, items: [] };
+    }
+  }
+  return null;
+}
+/** Spør Glimt: lokalt først, ellers serveren (GET /api/kalender/search?q=&ai=1 → {answer, events}). */
+async function srAsk(t) {
+  const q = String(t ?? K.q).trim(); if (!q) return;
+  K.q = q; const loc = srLocal(q);
+  K.ai = { q, busy: true }; draw();
+  if (loc) { setTimeout(() => { if (K.ai?.q === q) { K.ai = { q, ...loc }; haptic('ok'); draw(); } }, 450); return; }
+  try {
+    const r = await hlApi(`/kalender/search?q=${encodeURIComponent(q)}&ai=1`);
+    const an = r?.answer && typeof r.answer === 'object' ? r.answer : { text: r?.answer ?? r?.text ?? '' };
+    const txt = String(an.text ?? '').replace(/\*\*/g, '').replace(/\s*\[\d+\]/g, '').trim();
+    const evs = (an.items?.length ? an.items : an.kind === 'none' ? [] : r?.events ?? []).flatMap(norm).filter((e) => !e.cont).slice(0, 6).map((e) => ({ e, d: ofKey(e.k) }));
+    if (K.ai?.q !== q) return;
+    K.ai = { q, txt: txt || (evs.length ? `Fant ${evs.length} ${evs.length === 1 ? 'hendelse' : 'hendelser'}.` : 'Jeg fant ikke noe konkret svar i kalenderen. Prøv «hva har jeg på fredag?» eller «når er neste prøve?».'), items: evs };
+  } catch { if (K.ai?.q === q) K.ai = { q, txt: 'Jeg fant ikke noe konkret svar i kalenderen. Prøv «hva har jeg på fredag?» eller «når er neste prøve?».', items: [] }; }
+  haptic('ok'); draw();
+}
+const srRow = (x, q, withDay) => { reg(x.e); return `<button ${evAttr(x.e)} data-go="1"><span class="k27-bar" style="background:${col(x.e)}"></span>${withDay ? `<span class="k32-dn"><span>${WS[(x.d.getDay() + 6) % 7]}</span><b>${x.d.getDate()}</b></span>` : `<span class="k32-tm">${esc(x.e.s || 'Hele')}</span>`}<span class="m-grow"><b>${q ? hit(short(x.e), q) : esc(short(x.e))}</b><span>${esc(withDay ? `${tmOf(x.e)}${x.e.r ? ` · ${x.e.r}` : ''}` : `${x.e.r || noUrl(x.e.n) || tmOf(x.e)}`)}</span></span></button>`; };
+const aiRow = (x) => { reg(x.e); return `<button ${evAttr(x.e)} data-go="1"><span class="k27-bar" style="background:${col(x.e)}"></span><span class="k32-tm">${esc(x.e.s || 'Hele')}</span><span class="m-grow"><b>${esc(short(x.e))}</b><span>${esc(cap(dLong(x.d)))}${x.e.r ? ` · ${esc(x.e.r)}` : ''}</span></span></button>`; };
 function searchSheet() {
   if (!K.srch) return '';
-  const q = K.q.trim(), R = K.res;
-  return sheetWrap(`<div class="k27-srow"><div class="k27-sf p27-sf${K.q ? ' has' : ''}"><span class="p27-ic" aria-hidden="true">${svgP('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.6-3.6', 18, 2.2)}</span><button type="button" class="p27-x" data-p27clr aria-label="Tøm søket"><span>${svgP('M6 6l12 12M18 6L6 18', 11, 3.2)}</span></button><input id="k27-q" type="search" value="${esc(K.q)}" placeholder="Søk etter timer, prøver, steder" autocomplete="off" enterkeyhint="search"></div><button class="k27-cx" data-k27="shx" aria-label="Lukk">✕</button></div>
-    ${q.length >= 2 && R ? (R.length ? `<span class="k27-mut sm">${R.length}${R.length >= 40 ? '+' : ''} treff</span><div class="k27-res">${R.map((e) => { reg(e); return `<button ${evAttr(e)} data-go="1"><span class="k27-bar" style="background:${col(e)}"></span><span class="m-grow"><b>${esc(e.t)}</b><span>${esc(`${cap(dLong(ofKey(e.k)))} · ${tmOf(e)}${e.r ? ` · ${e.r}` : ''}`)}</span></span></button>`; }).join('')}</div>` : '<span class="k27-mut">Ingen treff de neste fire månedene.</span>') : ''}`);
+  const q0 = K.q.trim(), q = q0.toLowerCase(), F = K.srF ?? '*', A = K.ai && K.ai.q === q0 ? K.ai : null;
+  const chips = [['*', 'Alle', ''], ...cals().map((c) => [c.id, c.name, c.color])].map(([k, n, c]) => `<button type="button" data-k27="srf" data-v="${esc(k)}" aria-pressed="${F === k}">${c ? `<i style="background:${esc(c)}"></i>` : ''}${esc(n)}</button>`).join('');
+  const ai = A ? `<div class="k32-ai"><div class="k32-aih">${glimt(28, A.busy ? 'think' : 'done')}<span class="m-grow"><span class="k32-ail">GLIMT</span><span class="k32-aiq">«${esc(A.q)}»</span></span></div>
+      ${A.busy ? '<span class="k32-mut">Leser kalenderen …</span>' : `<span class="k32-ait">${esc(A.txt)}</span>${A.items?.length ? `<div class="k32-ail2">${A.items.slice(0, 6).map(aiRow).join('')}</div>` : ''}`}</div>` : '';
+  let body = '';
+  if (!q0 && !A) {
+    const today = d0(new Date()), nm = new Date().getHours() * 60 + new Date().getMinutes(), soon = [];
+    for (let i = 0; i < 14 && soon.length < 4; i++) { const d = add(today, i); evOn(d).filter((e) => e.s && (i > 0 || mm(e.e) > nm) && (F === '*' || e.cal === F)).forEach((e) => { if (soon.length < 4) soon.push({ e, d }); }); }
+    body = `<span class="k32-lab">SPØR GLIMT</span><div class="k32-list">${SUGG.map((t) => `<button type="button" data-k27="srask" data-v="${esc(t)}"><span class="k32-sp">✦</span><span class="m-grow">${esc(t)}</span><span class="k32-mut">↗</span></button>`).join('')}</div>
+      ${soon.length ? `<span class="k32-lab">SNART</span><div class="k32-list k27-res">${soon.map((x) => srRow(x, '', true)).join('')}</div>` : ''}`;
+  } else if (q.length >= 2) {
+    const R = srHits(q, F), G = [];
+    R.forEach((x) => { const k2 = key(x.d); let g = G.find((y) => y.k === k2); if (!g) G.push(g = { k: k2, d: x.d, i: x.i, rows: [] }); g.rows.push(x); });
+    const fn = F === '*' ? '' : ` i ${calOf(F).name}`;
+    body = R.length ? `<span class="k32-mut sm">${R.length}${R.length >= 60 ? '+' : ''} treff${esc(fn)}</span>${G.map((g) => `<div class="k32-g"><span class="k32-gh"><b>${esc(cap(dLong(g.d)))}</b><span>${esc(relOf(g.i))}</span></span><div class="k27-res">${g.rows.map((x) => srRow(x, q, false)).join('')}</div></div>`).join('')}`
+      : (A ? '' : '<span class="k32-mut">Ingen treff de neste fire månedene. Trykk «✦ Spør» for å spørre Glimt.</span>');
+  }
+  return `<div class="k27-shbg k32-srbg" data-k27="shx"><div class="k27-sheet k32-sr" data-k27stop role="dialog" aria-label="Søk i kalenderen">
+    <form class="k27-srow" data-k27f="ask"><div class="k27-sf p27-sf k32-sf${K.q ? ' has' : ''}"><span class="p27-ic" aria-hidden="true">${svgP('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.6-3.6', 18, 2.2)}</span><input id="k27-q" type="search" value="${esc(K.q)}" placeholder="Søk, eller spør Glimt …" autocomplete="off" enterkeyhint="search"><button type="button" class="p27-x" data-p27clr aria-label="Tøm søket"><span>${svgP('M6 6l12 12M18 6L6 18', 11, 3.2)}</span></button><button type="submit" class="k32-ask${q0 ? ' on' : ''}" aria-disabled="${!q0}">✦ Spør</button></div><button type="button" class="k27-cx" data-k27="shx" aria-label="Lukk">✕</button></form>
+    <div class="k32-fl">${chips}</div>
+    <div class="k32-body">${ai}${body}</div></div></div>`;
 }
-let srT = null, srC = null;
+let srT = null;
+/** Mens man skriver: tegn treffene på nytt (lokalt, ingen nettkall). */
 function runSearch() {
-  const q = K.q.trim();
-  clearTimeout(srT); srC?.abort();
-  if (q.length < 2) { K.res = null; draw(); return; }
-  srT = setTimeout(async () => {
-    const local = () => { const t = d0(new Date()), out = [], n = q.toLowerCase(); for (let i = -7; i < 120 && out.length < 40; i++) for (const e of evOn(add(t, i), false)) if (out.length < 40 && `${e.t} ${e.r} ${e.n} ${e.subj} ${e.teacher}`.toLowerCase().includes(n)) out.push(e); return out; };
-    srC = new AbortController();
-    try {
-      const r = await fetch(`/api/kalender/search?q=${encodeURIComponent(q)}`, { signal: srC.signal });
-      if (!r.ok) throw new Error(String(r.status));
-      const j = await r.json(); K.res = (Array.isArray(j) ? j : j?.events ?? j?.items ?? []).flatMap(norm).filter((e) => !e.cont).slice(0, 40);
-    } catch (e) { if (e.name === 'AbortError') return; K.res = local(); }
-    if (K.q.trim() === q) draw();
-  }, 180);
+  clearTimeout(srT);
+  srT = setTimeout(() => {
+    const el = document.querySelector('.k32-body'), ask = document.querySelector('.k32-ask');
+    if (!el) { draw(); return; }
+    const tmp = document.createElement('div'); tmp.innerHTML = searchSheet();
+    const nb = tmp.querySelector('.k32-body'); if (nb) el.replaceWith(nb);
+    if (ask) { const on = !!K.q.trim(); ask.classList.toggle('on', on); ask.setAttribute('aria-disabled', String(!on)); }
+    document.querySelector('.k32-sf')?.classList.toggle('has', !!K.q);
+  }, 120);
 }
 /** Mer → Kalender (#/kal): fullskjerm. */
 export function kalView() {
@@ -464,6 +586,7 @@ export function kalBoot() {
     if ((m.screen === 'kal' || m.screen === 'hl') && K.ev && !K.form && !K.srch && !K.qa && !(ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName))) draw();
   }, 60000);
   addEventListener('keydown', (e) => {
+    if (e.target?.id === 'k32-ai' && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); fillAi(); return; }
     if (m.screen !== 'kal' || /INPUT|TEXTAREA|SELECT/.test(e.target?.tagName ?? '') || e.metaKey || e.ctrlKey || e.altKey) return;
     if (K.form || K.srch || K.sel || K.qa) { if (e.key === 'Escape') { K.form = null; K.srch = false; K.sel = null; K.qa = null; draw(); } return; }
     const V = { d: 'dag', 3: '3dager', w: 'uke', m: 'maaned', l: 'liste' }[e.key.toLowerCase()];
@@ -478,7 +601,7 @@ function shift(dir) {
   K.cur = key(n); K.sel = null; draw();
 }
 function setView(v) { if (v !== view()) save({ kalView: v }, { view: v }); K.sel = null; K.mini = false; haptic('tab'); draw(); }
-function openSearch() { K.srch = true; K.q = ''; K.res = null; K.mini = false; draw(); setTimeout(() => document.getElementById('k27-q')?.focus({ preventScroll: true }), 30); }
+function openSearch() { K.srch = true; K.q = ''; K.res = null; K.ai = null; K.mini = false; draw(); setTimeout(() => document.getElementById('k27-q')?.focus({ preventScroll: true }), 30); }
 function openForm(pre) {
   const c = curD(), now = new Date(), st = Math.min(22 * 60, Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 30);
   K.sel = null; K.mini = false;
@@ -541,13 +664,14 @@ export function kalUp(e) {
 }
 export function kalInput(e, t) {
   if (m.screen !== 'kal') return false;
-  if (t.id === 'k27-q') { K.q = t.value; runSearch(); return true; }
+  if (t.id === 'k27-q') { K.q = t.value; if (K.ai && K.ai.q !== K.q.trim()) K.ai = null; runSearch(); return true; }
   if (t.id === 'k29-qt') { qaSet(t.value); return true; }
   if (t.dataset?.k33i && K.learn) { K.learn[t.dataset.k33i] = t.value; return true; }
   const f = t.dataset?.k27i;
   if (f && K.form) {
     if (f === 'start') { const d = mm(K.form.end) - mm(K.form.start); K.form.start = t.value; if (t.value && d > 0) K.form.end = hm(Math.min(mm(t.value) + d, 23 * 60 + 59)); const en = document.querySelector('[data-k27i="end"]'); if (en) en.value = K.form.end; }
     else K.form[f] = t.value;
+    if (f === 'ai') { const on = !!t.value.trim(), b = document.querySelector('.k32-fill'); if (b && !K.form.aiS?.busy) { b.disabled = !on; b.classList.toggle('on', on); } if (K.form.aiS?.done || K.form.aiS?.err) K.form.aiS = {}; }
     return true;
   }
   return false;
@@ -557,12 +681,13 @@ export async function kalBind(e, t) {
   if (e.type === 'submit') {
     if (!t.matches?.('[data-k27f]')) return false; e.preventDefault();
     if (t.dataset.k27f === 'learn') { await learnSave(); return true; }
+    if (t.dataset.k27f === 'ask') { document.activeElement?.blur?.(); await srAsk(); return true; }
     if (t.dataset.k27f === 'qa') { const v = (K.qa?.txt ?? '').trim(); if (!v) return true; K.qa = null; document.activeElement?.blur?.(); draw(); P29.quickRun(v); return true; }
     await saveForm(); return true;
   }
   if (e.type !== 'click') return false;
   if (Date.now() - K.swiped < 350) { K.swiped = 0; e.preventDefault(); e.stopPropagation(); return true; }
-  if (t.closest?.('[data-p27clr]') && t.closest('.k27-sf')) { K.q = ''; K.res = null; const i = document.getElementById('k27-q'); if (i) { i.value = ''; i.focus(); i.parentElement.classList.remove('has'); } draw(); return true; }
+  if (t.closest?.('[data-p27clr]') && t.closest('.k27-sf')) { K.q = ''; K.res = null; K.ai = null; const i = document.getElementById('k27-q'); if (i) { i.value = ''; i.focus(); i.parentElement.classList.remove('has'); } draw(); return true; }
   const x = t.closest?.('[data-k27]');
   if (!x) {
     // Trykk på tom plass i rutenettet: ny hendelse på den halvtimen.
@@ -588,6 +713,9 @@ export async function kalBind(e, t) {
     case 'next': shift(1); return true;
     case 'today': K.cur = null; K.sel = null; K.mini = false; K.gk = ''; haptic('tap'); break;
     case 'search': openSearch(); return true;
+    case 'srf': K.srF = x.dataset.v; haptic('tab'); break;
+    case 'srask': await srAsk(x.dataset.v); return true;
+    case 'fai': await fillAi(); return true;
     case 'view': setView(x.dataset.v); return true;
     case 'new': qaOpen(''); return true; // Prompt 29: + åpner «Legg til time»
     case 'qchip': qaSet(`Time hos ${x.dataset.v.toLowerCase()} `); document.getElementById('k29-qt')?.focus(); return true;
@@ -620,4 +748,4 @@ export async function kalBind(e, t) {
   draw(); return true;
 }
 /** Ny side: lukk ark og gå tilbake til i dag. */
-export function kalLeave() { K.learn = null; K.qa = null; K.sel = null; K.form = null; K.srch = false; K.mini = false; K.cur = null; K.gk = ''; }
+export function kalLeave() { K.ai = null; K.learn = null; K.qa = null; K.sel = null; K.form = null; K.srch = false; K.mini = false; K.cur = null; K.gk = ''; }

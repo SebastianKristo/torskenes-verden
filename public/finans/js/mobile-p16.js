@@ -103,8 +103,8 @@ export function tabEditor() {
 }
 export function tabSheet() {
   if (!TBE.open) return '';
-  return `<div class="sheet-bg" data-p16="tbx"></div><div class="pp-sheet p16-sheet" role="dialog" aria-label="Rediger fanelinja"><span class="pp-grab"></span>
-    <div class="pp-row" style="align-items:center"><div class="pp-sh">Rediger fanelinja</div><button type="button" class="p30-sb p30-pri" data-p16="tbx">Ferdig</button></div>${tabEditor()}</div>`;
+  return `<div class="sheet-bg" data-p16="tbx"></div><div class="pp-sheet p16-sheet" role="dialog" aria-label="Rediger fanelinjen"><span class="pp-grab"></span>
+    <div class="p26-feh"><div><span class="pp-lab">HJEM · FANELINJE</span><b class="pp-serif">Rediger fanelinjen</b></div><button type="button" class="p30-sb p30-pri" data-p16="tbx">Ferdig</button></div>${tabEditor()}</div>`; // prompt 32: samme topp som Finans, Domener, Abonnement og Familie
 }
 function setItems(items) {
   const clean = items.map(({ id, label, icon }) => ({ id, ...(label ? { label } : {}), ...(icon ? { icon } : {}) }));

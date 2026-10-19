@@ -23,6 +23,7 @@ import * as P26 from './mobile-p26.js';
 import * as KAL from './mobile-kal.js';
 import * as P27 from './mobile-p27.js';
 import * as P28 from './mobile-p28.js';
+import * as P32 from './mobile-p32.js';
 import { setTitle } from './mobile-set.js';
 import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-p17.js';
 import { posCard, ppTi } from './mobile-p20.js';
@@ -224,7 +225,8 @@ export function paperNav(scr) {
     tabs.push(['fmer', 'Mer', '⋯']);
     cur = tabs.some(([k]) => k === scr) ? scr : 'fmer'; plus = scanCtx() === 'bol' ? ['Legg kvittering i boligen', 'bol'] : ['Legg til kvittering', 'fin'];
   } else if (ctx === 'dom') {
-    tabs = [['dom', 'Oversikt', '◎'], ['dom/pub', 'Publikum', '◍'], ['dom/ytl', 'Ytelse', '⚡'], ['dom/inf', 'Infra', '▤']];
+    // Prompt 32: egne faner (rekkefølge, navn, ikon) fra «Rediger fanelinjen» (hold inne på fanelinja).
+    tabs = P32.secTabs('dom').map(([k, n, ic]) => [k === 'dom' ? 'dom' : `dom/${k}`, n, ic]);
     cur = ['pub', 'ytl', 'inf'].includes(m.sub) ? `dom/${m.sub}` : 'dom'; plus = ['Legg til domene', 'dom'];
   } else {
     // Hovedlinja kan redigeres: hold inne på linja, eller Innstillinger → Fanelinje (navn, ikon, rekkefølge, fjern).
@@ -234,19 +236,19 @@ export function paperNav(scr) {
   }
   // Abonnementer: Hjem, Innsikt og Historikk i fanelinja, og + som en rød sirkel.
   if (scr === 'sub') {
-    return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav sb-nav" data-ctx="sub" aria-label="Abonnementer">${[['home', 'Hjem', '⌂'], ['ins', 'Innsikt', '◔'], ['hist', 'Historikk', '↻']].map(([k, n, ic]) => `<button data-sb="tab" data-v="${k}" ${SB.tab === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></button>`).join('')}
+    return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav sb-nav" data-ctx="sub" aria-label="Abonnementer (hold inne for å redigere)">${P32.secTabs('abo').map(([k, n, ic]) => `<button data-sb="tab" data-v="${k}" ${SB.tab === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></button>`).join('')}
       <button class="pp-scan sb-red${SB.sheet ? ' on' : ''}" data-sb="sheet" aria-label="${SB.sheet ? 'Lukk' : 'Legg til abonnement'}" aria-expanded="${SB.sheet}">${SB.sheet ? '×' : '+'}</button></nav>`;
   }
   // Familie (prompt 21): Kart, Soner og Helse i fanelinja, pluss Mer (som Abonnementer). Knappene øverst er skjult.
   if (scr === 'fam') {
-    return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav p21-fnav" data-ctx="fam" aria-label="Familie">${[['kart', 'Kart', '◎'], ['soner', 'Soner', '◌'], ['helse', 'Helse', '♡']].map(([k, n, ic]) => `<a href="#/fam" data-p17="ftab" data-k="${k}" role="tab" aria-selected="${FT.tab === k}" ${FT.tab === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}<a href="#/mer" data-tab="mer"><i>⋯</i><span>Mer</span></a></nav>`;
+    return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav p21-fnav" data-ctx="fam" aria-label="Familie (hold inne for å redigere)">${P32.secTabs('kart').map(([k, n, ic]) => `<a href="#/fam" data-p17="ftab" data-k="${k}" role="tab" aria-selected="${FT.tab === k}" ${FT.tab === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}</nav>`;
   }
   if (ctx === 'dom') plus = ['Legg til domene', 'dom'];
   const fabIc = plus[1] === 'spor' || plus[1] === 'dom' ? 'M12 5v14M5 12h14' : SCAN_IC;
   // Aksjer har ingen skanneknapp (prompt 23).
   const noPlus = scr === 'aks';
   const fab = flyt && !noPlus ? `<button class="pp-fab${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]}${plus[1] === 'spor' || plus[1] === 'dom' ? '' : ' (trykk for kamera, hold inne for valg)'}" title="${esc(plus[0])}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fabIc}"/></svg></button>` : '';
-  return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav${flyt ? ' flyt' : ''}" data-ctx="${ctx}" aria-label="Faner${ctx === 'main' ? ' (hold inne for å redigere)' : ''}">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}
+  return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav${flyt ? ' flyt' : ''}" data-ctx="${ctx}" aria-label="Faner${ctx === 'main' || ctx === 'dom' ? ' (hold inne for å redigere)' : ''}">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}
     ${flyt || noPlus ? '' : `<button class="pp-scan${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]} (trykk for kamera, hold inne for valg)" title="Trykk for kamera · hold inne for valg">+</button>`}</nav>${fab}
     <input class="m-file" id="pp-cam" type="file" accept="image/*" capture="environment" data-ppquick="${['spor', 'dom', 'main'].includes(plus[1]) ? 'fin' : plus[1]}">
     ${P.hint ? `<div class="pp-hint" role="status">${esc(P.hint)}</div>` : ''}`;
@@ -331,7 +333,7 @@ export function paperHome() {
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
     h5: newsCard(H?.news),
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
-    h6: posCard(), h7: bolWidget(), h8: huskeWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(),
+    h6: posCard(), h7: bolWidget(), h8: huskeWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(), // Prompt 32: Prøveperioder
   }, { full: ['h1', 'h4', 'h5'] })}</div>`;
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
@@ -486,7 +488,7 @@ export async function paperBind(e, t) {
   }
   if (e.type === 'input') { if (t.closest?.('[data-ppform=feed]')) { P.nf = t.value; return true; } return false; }
   if (e.type === 'submit') {
-    if (t.matches?.('[data-ppsearch]')) { e.preventDefault(); const q = t.q.value.trim(); if (q) { hlApi('/search/history', { method: 'POST', json: { q } }).catch(() => {}); location.href = /^\S+\.\S+$/.test(q) && !/\s/.test(q) ? (/^https?:/.test(q) ? q : 'https://' + q) : `https://www.google.com/search?q=${encodeURIComponent(q)}`; } return true; }
+    if (t.matches?.('[data-ppsearch]')) { e.preventDefault(); const q = t.q.value.trim(); if (q) { hlApi('/search/history', { method: 'POST', json: { q, engine: 'google', device: 'mobil' } }).catch(() => {}); location.href = /^\S+\.\S+$/.test(q) && !/\s/.test(q) ? (/^https?:/.test(q) ? q : 'https://' + q) : `https://www.google.com/search?q=${encodeURIComponent(q)}`; } return true; }
     if (t.matches?.('[data-ppform=feed]')) {
       e.preventDefault(); const v = String(new FormData(t).get('url') || '').trim(); if (!v) return true;
       P.busy = true; draw();

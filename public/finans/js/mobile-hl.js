@@ -178,8 +178,9 @@ function wClock(th) {
 }
 
 function dropItems() {
-  const lq = H.q.toLowerCase().trim(), hist = H.hist ?? [];
-  const hm = lq ? hist.filter((x) => x.toLowerCase().includes(lq)).slice(0, 3) : hist.slice(0, 8);
+  // Prompt 32 (claude-code-sokehistorikk-synk.md): mobil viser ikke «Nylige søk»; søkene logges og vises på web.
+  const lq = H.q.toLowerCase().trim();
+  const hm = [];
   const sg = lq ? H.sug.filter((x) => !hm.some((y) => y.toLowerCase() === x.toLowerCase())).slice(0, 5) : [];
   return [...hm.map((t) => ({ t, hist: true })), ...sg.map((t) => ({ t, hist: false }))];
 }
@@ -309,7 +310,7 @@ function run(text) {
   if (!q) return;
   if (H.set.save) {
     saveHist([q, ...(H.hist ?? []).filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, 100));
-    hlApi('/search/history', { method: 'POST', json: { q } }).catch(() => {});
+    hlApi('/search/history', { method: 'POST', json: { q, engine: 'google', device: 'mobil' } }).catch(() => {});
   }
   H.q = ''; H.open = false; H.sug = []; H.sel = -1;
   const url = !/\s/.test(q) && /^(https?:\/\/|[\w-]+(\.[\w-]+)*\.[a-z]{2,}(:\d+)?(\/|$))/i.test(q) ? (/^https?:/i.test(q) ? q : 'https://' + q) : 'https://www.google.com/search?q=' + encodeURIComponent(q);

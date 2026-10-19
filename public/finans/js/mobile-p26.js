@@ -51,6 +51,15 @@ const meta = (g) => { const d = META[g.id] ?? []; return { cat: CATS.includes(g.
 const okOf = (g) => g.status === 'ok' || g.statusText === 'Tilkoblet';
 const stText = (g) => g.statusText ?? (g.status === 'ok' ? 'Tilkoblet' : g.status === 'error' ? 'Feil' : (g.fields ?? []).some((f) => f.required && !f.saved && !f.value) ? 'Mangler API-nøkkel' : 'Ikke satt opp');
 const badge = (b, c) => `<span class="p26-bd" style="background:${esc(c)}">${esc(b)}</span>`;
+// Prompt 32 (claude-code-integrasjoner-logoer.md): tjenestens ekte logo i en hvit rute (34×34, radius 10), hentet én gang og
+// cachet på Homelab (/finans/api/logo/<domene>). Bokstavmerket ligger under til logoen er lastet, og blir stående hvis den feiler.
+const ILOGO = { ha: 'home-assistant.io', calendars: 'calendar.google.com', calendar: 'calendar.google.com', google: 'calendar.google.com', entur: 'entur.no', mybring: 'bring.no', bring: 'bring.no', postnord: 'postnord.no', parcelsapp: 'parcelsapp.com', t212: 'trading212.com', imap: 'proton.me', email: 'proton.me', finn: 'finn.no', ai: 'gemini.google.com', gemini: 'gemini.google.com', cloudflare: 'cloudflare.com', met: '@yr', map: 'kartverket.no', icons: 'iconify.design', plex: 'plex.tv', jellyfin: 'jellyfin.org', sonarr: 'sonarr.tv', radarr: 'radarr.video' };
+const ibadge = (id, b, c) => {
+  const d = ILOGO[id];
+  if (!d) return badge(b, c);
+  const yr = d === '@yr', src = yr ? '/assets/brands/yr.png' : `/finans/api/logo/${d}`;
+  return `<span class="p32-ilg${yr ? ' full' : ''}">${badge(b, c)}<img class="p32-li" src="${src}" alt="" loading="lazy" decoding="async"></span>`;
+};
 const isAdmin = () => m.me?.role === 'admin' || m.me?.isMainAdmin === true;
 const lbl = (t) => `<span class="pp-lab p26-gl">${esc(t)}</span>`;
 const row = (attrs, inner) => `<${attrs.startsWith('href') ? `a class="p26-r" ${attrs}` : `button class="p26-r" ${attrs}`}>${inner}</${attrs.startsWith('href') ? 'a' : 'button'}>`;
@@ -61,7 +70,7 @@ function integList() {
   return groups.map(([c, list]) => `${lbl(c.toUpperCase())}<div class="p26-card">${list.map((g) => {
     const M = meta(g), own = OWN[g.id], ok = okOf(g);
     const st = g.id === 'calendars' ? calStatus(g) : [stText(g), ok];
-    return row(`href="${own ? OWN[g.id] : `#/set/integ/${encodeURIComponent(g.id)}`}" id="ig-${esc(g.id)}" data-set="integ:${esc(g.id)}"`, `${badge(M.badge, M.color)}<span class="m-grow p26-rt"><b>${esc(g.name)}</b><span>${esc(M.desc)}${g.scope === 'server' ? ' · server' : ''}</span></span><span class="p26-v ${st[1] ? 'pos' : 'lab'}">${esc(st[0])}</span><span class="p26-ch" aria-hidden="true">›</span>`);
+    return row(`href="${own ? OWN[g.id] : `#/set/integ/${encodeURIComponent(g.id)}`}" id="ig-${esc(g.id)}" data-set="integ:${esc(g.id)}"`, `${ibadge(g.id, M.badge, M.color)}<span class="m-grow p26-rt"><b>${esc(g.name)}</b><span>${esc(M.desc)}${g.scope === 'server' ? ' · server' : ''}</span></span><span class="p26-v ${st[1] ? 'pos' : 'lab'}">${esc(st[0])}</span><span class="p26-ch" aria-hidden="true">›</span>`);
   }).join('')}</div>`).join('');
 }
 // Kalendere: «Google + HA», «Skole-iCal» eller «Ikke koblet».
@@ -86,7 +95,7 @@ function integOne(id) {
   const g = (IG.list ?? []).find((x) => x.id === id);
   if (!g) return `<div class="p26-card"><div class="p26-r"><span class="m-grow p26-rt"><b>Fant ikke integrasjonen</b><span>Den kan være fjernet, eller bare tilgjengelig for administrator.</span></span></div></div><a class="pp-btn" href="#/set/integ" style="align-self:flex-start">‹ Integrasjoner</a>`;
   const M = meta(g), ok = okOf(g), t = IG.test[g.id], any = (g.fields ?? []).some((f) => f.saved || f.value);
-  return `<div class="p26-card"><div class="p26-r top">${badge(M.badge, M.color)}<span class="m-grow p26-rt"><b>${esc(g.name)}</b><span>${esc(M.desc)}</span></span><span class="p26-v ${ok ? 'pos' : 'lab'}">${esc(stText(g))}</span></div></div>
+  return `<div class="p26-card"><div class="p26-r top">${ibadge(g.id, M.badge, M.color)}<span class="m-grow p26-rt"><b>${esc(g.name)}</b><span>${esc(M.desc)}</span></span><span class="p26-v ${ok ? 'pos' : 'lab'}">${esc(stText(g))}</span></div></div>
     ${(g.fields ?? []).length ? `${lbl('OPPSETT')}<div class="p26-card">${fieldRows(g)}</div>` : ''}
     ${g.id === 'calendars' || g.id === 'calendar' ? `<div class="p26-card">${row('href="#/set/kal"', `<span class="m-grow p26-rt"><b>Google Kalender og Home Assistant</b><span>Logg inn, velg kalender og synk</span></span><span class="p26-v mut">Kalendere</span><span class="p26-ch">›</span>`)}</div>` : ''}
     ${g.id === 'ha' ? haSection() : ''}

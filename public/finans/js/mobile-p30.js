@@ -63,6 +63,7 @@ function upLoad() {
     hlApi('/system/update/settings').then((c) => { UP.cfg = c ?? {}; draw(); }).catch((e) => { UP.cfg = e.status === 404 ? false : null; });
   }
 }
+const instSha = () => String(U.d?.installed?.sha ?? U.d?.installed?.commit ?? UP.v?.currentSha ?? UP.v?.sha ?? '').slice(0, 7);
 export const ver = () => {
   const d = U.d ?? {};
   return { cur: d.installed?.version ?? UP.v?.current ?? '', lat: d.latest?.version ?? UP.v?.latest ?? '' };
@@ -125,7 +126,7 @@ export function updBanner(where) {
     ${updLinkRow(where)}</div>`;
 }
 // «Oppdater i nettleseren» er ikke lenger eneste vei; detaljer og logg ligger fortsatt under Innstillinger → Oppdatering.
-const updLinkRow = (where) => (where === 'set' ? '<a class="p30-uplink" href="#/set/oppd">Detaljer og logg ›</a>' : '');
+const updLinkRow = (where) => (where === 'set' ? '<a class="p30-uplink" href="#/nordlys">Detaljer og logg ›</a>' : ''); // prompt 32: Oppdatering-siden er slått sammen med Nordlys OS
 
 const tog = (key, label, sub, on) => `<button type="button" class="opt-row p17-row p30-tg" data-p30="uptog" data-k="${key}" role="switch" aria-checked="${!!on}"><span class="m-grow p17-rt"><b>${esc(label)}</b><small>${esc(sub)}</small></span><span class="sw" aria-hidden="true" aria-checked="${!!on}"></span></button>`;
 /** Gruppen PROGRAMVARE i Innstillinger (bare admin). row = radbyggeren i mobile-p17.js. */
@@ -377,7 +378,8 @@ export function sysView() {
       ${adm && UP.cfg && typeof UP.cfg === 'object' ? `<button type="button" class="n31-row n31-tg" data-p30="uptog" data-k="require_password" role="switch" aria-checked="${req}"><span class="m-grow"><b>Krev passord for å oppdatere</b><span>${req ? 'Passord kreves før oppdateringen starter' : 'Av · admin kan oppdatere med ett trykk'}</span></span><span class="sw" aria-hidden="true" aria-checked="${req}"></span></button>` : ''}</div>
     <span class="n31-note">Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.</span>
     <div class="n31-new"><b class="n31-tag">Dette er Nordlys ${esc(short(nv))}. ${esc(V.tagline || 'Lys i mørket, kjørt hjemme.')}</b>
-      ${notes.length ? `<span class="n31-lab">NYTT I ${esc(nv)}${date ? ` · ${esc(date)}` : ''}</span><ul>${notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</div></div>`;
+      ${notes.length ? `<span class="n31-lab">NYTT I ${esc(nv)}${date ? ` · ${esc(date)}` : ''}</span><ul>${notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+      ${cur ? `<span class="p32-inst"><span class="p30-mono">Installert ${esc(cur)}${instSha() ? ` · build ${esc(instSha())}` : ''}</span><button type="button" class="p32-copy" data-p30="instcopy">Kopier</button></span>` : ''}</div></div>`;
 }
 /** Knappen fast nederst (utenfor scroll-innholdet), med fade fra bakgrunnsfargen. */
 export function sysBottom() {
@@ -418,6 +420,7 @@ export async function bind30(e, t) {
   e.preventDefault();
   if (a === 'uplater') { UP.hide = Date.now(); ls.set('papir_upd_hide', UP.hide); flash('Du finner oppdateringen i Innstillinger'); return true; }
   if (a === 'upnotes') { UP.notes = !UP.notes; draw(); return true; }
+  if (a === 'instcopy') { const v = ver().cur, t = `Nordlys OS ${v}${instSha() ? ` · build ${instSha()}` : ''}`; try { await navigator.clipboard.writeText(t); flash('Kopiert ✓'); } catch { flash(t); } return true; }
   if (a === 'upopen' || a === 'uprb') { await upNow(a === 'uprb'); return true; }
   if (a === 'upchk') { if (running()) return true; UP.chk = true; draw(); await checkUpdate().catch(() => {}); UP.vt = 0; upLoad(); UP.chk = false; hapLight(); draw(); return true; }
   if (a === 'upbig') { const k = upState(); if (k === 'avail' || k === 'fail') await upNow(); else if (k === 'done') { ls.set(JOB, null); hapLight(); draw(); } else if (k === 'fresh') { UP.chk = true; draw(); await checkUpdate().catch(() => {}); UP.vt = 0; upLoad(); UP.chk = false; draw(); } return true; }

@@ -12,6 +12,7 @@
 import { esc, hlApi, api } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import { hsTimeout, NAV_T } from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -132,7 +133,7 @@ export function ansBubble() {
   const A = G.ans; if (!A) return '';
   if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …</span></div>`;
   return `<div class="p31-ans ready" data-p31="ansx" role="status" aria-live="polite"><span class="p31-at">${bold(A.text)}</span>${A.card ? cardHtml(A.card, true) : ''}
-    <div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}<button type="button" data-p31="anschat">Fortsett i Chat ›</button></div></div>`;
+    <div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div></div>`;
 }
 const ASSIST_MISSING = { v: false };
 async function assistCall(q, source, extra = {}) {
@@ -180,17 +181,45 @@ const normAns = (r) => ({ text: r?.text ?? r?.answer ?? (r?.bold ? `**${r.bold}*
 export async function ask(q) {
   const id = ++G.aid; G.ans = { q, busy: true }; draw();
   const set = (o) => { if (G.aid !== id) return; G.ans = { q, busy: false, ...o }; haptic('ok'); draw(); bgNotify(q, o.text, '#/hl'); };
+  // Prompt 32 (claude-code-sok-fullfor-forst.md): svaret skal komme i boblen. Tar det lengre enn grensen (hs_timeout_s,
+  // standard 8 s), flyttes jobben til en Chat-tråd (POST /api/assist/:id/handoff → {chatId}) og Chat åpnes.
+  let jobId = null, moved = false;
+  const timer = setTimeout(() => { if (G.aid === id) { moved = true; handoff(q, id, () => jobId, 'Dette tar litt tid.'); } }, hsTimeout() * 1000);
   let r;
   try {
     r = await assistCall(q, 'search');
-    if (r?.jobId && r.text == null) r = await waitJob(r.jobId, { q, title: 'Glimt tenker' });
+    if (r?.jobId && r.text == null) { jobId = r.jobId; r = await waitJob(r.jobId, { q, title: 'Glimt tenker' }); }
   } catch (e) {
+    clearTimeout(timer); if (moved) return;
     if (e.status === 404 || e.status === 405) { set({ text: 'Jeg svarer best på dette i Chat. **Trykk «Fortsett i Chat».**', src: 'Glimt' }); return; }
-    set({ text: `Jeg fikk ikke svar nå. **Fortsett i Chat** for å prøve igjen.`, src: '' }); return;
+    handoff(q, id, () => jobId, 'Fikk ikke svar her.'); return;
   }
+  clearTimeout(timer); if (moved) return;
   const A = normAns(r);
   if (/trial/.test(A.intent)) { G.trials = null; }
+  // Serverens snarvei: {intent:'nav', target, text}.
+  if (A.intent === 'nav' && (r?.target || r?.href)) { const href = r.href ?? NAV_T[r.target] ?? `#/${r.target}`; navAns(q, href, null, A.src || 'Snarvei', A.text, id); return; }
   set(A);
+}
+/** Boblen «Åpner **side**.» og siden åpnes etter 0,45 s. */
+export function navAns(q, href, label, src = 'Snarvei', text = null, aid = null) {
+  const id = aid ?? ++G.aid;
+  G.ans = { q, busy: false, text: text || `Åpner **${label}**.`, src }; haptic('ok'); draw();
+  setTimeout(() => { if (G.aid !== id) return; G.ans = null; if (location.hash !== href) location.hash = href; else draw(); }, 450);
+}
+async function handoff(q, id, jobOf, why) {
+  if (G.aid !== id) return;
+  G.aid = id + 0.5; // et sent svar skal ikke overskrive boblen
+  G.ans = { q, busy: false, text: `${why} **Fortsetter i Chat** …`, src: 'Glimt' }; draw();
+  let chatId = null;
+  const jid = jobOf();
+  if (jid) { try { chatId = (await hlApi(`/assist/${encodeURIComponent(jid)}/handoff`, { method: 'POST', json: {} }))?.chatId ?? null; } catch {} }
+  if (jid && waiters.has(String(jid))) { const w = waiters.get(String(jid)); clearTimeout(w.t); waiters.delete(String(jid)); jobDrop(jid); }
+  setTimeout(async () => {
+    G.ans = null; draw();
+    const CHAT = await import('./mobile-chat.js');
+    if (chatId && CHAT.openChatId) CHAT.openChatId(chatId); else CHAT.openChat(q);
+  }, 700);
 }
 
 /* =====================================================================

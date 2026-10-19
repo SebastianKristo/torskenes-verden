@@ -4060,3 +4060,171 @@ html.p30-kb .m .ch27 :is(.pp-nav,.tabbar,.navbar){display:none}
 .m .p33-del.ink{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
 .m .p33-form{display:flex;flex-direction:column;gap:10px;padding:12px 14px}
 .m .p33-ask{gap:4px}
+
+/* ===== Prompt 32 (PWA) ===== */
+/* Innstillinger og undersidene uten bunnmeny og skann-knapp (claude-code-innstillinger-uten-navbar.md) */
+.m.papir.p32-nonav .m-scroll{padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+/* Wiggle: + / ✓ på egen rad, 8 px fra toppen, 40 px høy; innholdet starter 74 px ned, og når man scroller
+   glir kortene under en ren stripe på 62 px i stedet for bak knappene (claude-code-rediger-knapper-plass.md). */
+.m .m-scroll:has(>.p28-pills){padding-top:0}
+.m .m-scroll>.p28-pills{position:sticky!important;top:0;left:auto!important;right:auto!important;width:auto!important;height:62px!important;box-sizing:border-box;margin:0 -16px 2px!important;padding:8px 16px 0!important;max-width:none;align-items:flex-start;background:transparent}
+.m .m-scroll>.p28-pills.p32-stuck{background:var(--pp-bg);box-shadow:0 calc(-1 * env(safe-area-inset-top)) 0 var(--pp-bg),0 8px 14px -12px rgba(0,0,0,.25)}
+.m.two .m-scroll>.p28-pills{top:0;padding-top:calc(env(safe-area-inset-top) + 8px)!important;height:calc(env(safe-area-inset-top) + 62px)!important}
+.m.two .m-scroll:has(>.p28-pills){padding-top:0}
+.m .m-scroll>.p28-pills .p28-pill{height:40px}
+
+/* GLIMT I SØKEFELTET */
+.m .p32-seg{flex:none;display:flex;gap:2px;padding:3px;border-radius:999px;background:color-mix(in oklab,var(--pp-ink) 7%,transparent)}
+.m .p32-seg i{font:700 12px Manrope,system-ui,sans-serif;font-style:normal;padding:5px 8px;border-radius:999px;color:var(--pp-mut)}
+.m .p32-seg i.on{background:var(--pp-ink);color:var(--pp-bg)}
+.m .p32-hs .p17-row{align-items:center;gap:10px}
+.m .p32-secs .sval{color:var(--pp-mut);font-weight:600}
+
+/* Hjem-widget h11 Prøveperioder */
+.m .p32-trw{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:var(--pp-ink)}
+.m .p32-trt{display:flex;align-items:center;gap:12px;min-width:0}
+.m .p32-trm{min-width:0;display:flex;flex-direction:column;gap:1px}
+.m .p32-trm b{font:500 20px/1.15 Newsreader,Georgia,serif}
+.m .p32-trm .pp-mut{font-size:12.5px}
+.m .p32-trd{flex:none;display:flex;flex-direction:column;align-items:flex-end;line-height:1}
+.m .p32-trd b{font:500 28px Newsreader,Georgia,serif;color:inherit}
+.m .p32-trd span{font-size:11.5px;font-weight:700;margin-top:3px}
+.m .p32-trp{display:block;height:5px;border-radius:3px;background:var(--pp-line);overflow:hidden}
+.m .p32-trp i{display:block;height:100%;border-radius:3px}
+.m .p32-trmore{display:flex;gap:6px;min-width:0}
+.m .p32-trmore>span{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:12px;background:var(--pp-bg)}
+.m .p32-trmore b{flex:1;min-width:0;font-size:12.5px;font-weight:700}
+.m .p32-trmore em{flex:none;font:600 11px 'IBM Plex Mono',ui-monospace,monospace;font-style:normal}
+.m .p32-trbs{display:flex;gap:8px}
+.m .p32-trb{flex:none;height:38px;padding:0 14px;border-radius:19px;border:0;background:var(--pp-bg);color:var(--pp-ink);font:700 13px Manrope,system-ui,sans-serif;cursor:pointer}
+.m .p32-trb.ink{flex:1;background:var(--pp-ink);color:var(--pp-bg)}
+.m .p32-trn{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.m .p32-trn .pp-mut{font-size:14px}
+.m .p32-tlg{position:relative;flex:none;border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--pp-line) inset;display:grid;place-items:center;overflow:hidden}
+.m .p32-trmore .p32-tlg{border-radius:4px}
+.m .p32-tlg b{font:700 13px Manrope,system-ui,sans-serif;color:#1b1a17}
+.m .p32-trmore .p32-tlg b{font-size:9px}
+.m .p32-tlg img{position:absolute;inset:18%;width:64%;height:64%;object-fit:contain;background:#fff}
+.m .p32-trmore .p32-tlg img{inset:0;width:100%;height:100%}
+
+/* Integrasjoner: ekte logo i hvit rute (claude-code-integrasjoner-logoer.md) */
+.m .p32-ilg{position:relative;flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;overflow:hidden}
+.m .p32-ilg>.p26-bd{position:absolute;inset:0;width:34px;height:34px;margin:0}
+.m .p32-ilg img{position:relative;width:22px;height:22px;object-fit:contain;opacity:0;transition:opacity .15s}
+.m .p32-ilg.ok{background:#fff;box-shadow:0 0 0 1px rgba(27,26,23,.08) inset}
+.m .p32-ilg.ok>.p26-bd{visibility:hidden}
+.m .p32-ilg.ok img{opacity:1}
+.m .p32-ilg.full img{width:34px;height:34px}
+
+/* Nordlys OS: installert versjon */
+.m .p32-inst{display:flex;align-items:center;gap:10px;margin-top:6px;font-size:12px;color:var(--pp-mut)}
+.m .p32-copy{height:28px;padding:0 12px;border-radius:14px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 12px Manrope,system-ui,sans-serif;cursor:pointer}
+
+/* Kalender: ingen tone på dagens kolonne (claude-code-kalender-fargekontrast.md) */
+.m .k27-col.t{background:transparent!important}
+/* Søk med Glimt (Kalender.dc.html → sr) */
+.m .k32-srbg{background:rgba(20,18,14,.38);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.m .k27-sheet.k32-sr{max-height:92%;padding:14px 0 0;gap:0;overflow:hidden}
+.m .k32-sr .k27-srow{padding:0 14px 10px;margin:0}
+.m .k32-sf{flex:1;min-width:0;height:50px;padding:0 8px 0 14px!important;gap:10px}
+.m .k32-sf input{flex:1;min-width:0}
+.m .k32-ask{flex:none;height:36px;padding:0 12px 0 10px;border:0;border-radius:18px;background:transparent;color:var(--pp-mut);font:700 13px Manrope,system-ui,sans-serif;white-space:nowrap;cursor:pointer}
+.m .k32-ask.on{background:var(--pp-ink);color:var(--pp-bg)}
+.m .k32-sr .k27-cx{width:44px;height:44px;border-radius:22px;flex:none}
+.m .k32-fl{flex:none;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:0 14px 10px}
+.m .k32-fl::-webkit-scrollbar{display:none}
+.m .k32-fl button{flex:none;display:flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:600 12.5px Manrope,system-ui,sans-serif;white-space:nowrap;cursor:pointer}
+.m .k32-fl button[aria-pressed=true]{background:var(--pp-ink);border-color:var(--pp-ink);color:var(--pp-bg)}
+.m .k32-fl i{width:8px;height:8px;border-radius:4px}
+.m .k32-body{flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:2px 14px calc(env(safe-area-inset-bottom) + 18px);display:flex;flex-direction:column;gap:12px}
+.m .k32-lab{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--pp-mut);padding:0 4px}
+.m .k32-mut{font-size:14px;color:var(--pp-mut);padding:0 4px}.m .k32-mut.sm{font-size:12.5px}
+.m .k32-list{display:flex;flex-direction:column;border-radius:16px;background:var(--pp-card);overflow:hidden;margin-top:-4px}
+.m .k32-list>button{display:flex;align-items:center;gap:12px;width:100%;min-height:48px;padding:6px 14px;border:0;border-top:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);text-align:left;font:500 14.5px Manrope,system-ui,sans-serif;cursor:pointer}
+.m .k32-list>button:first-child{border-top:0}
+.m .k32-sp{flex:none;width:28px;height:28px;border-radius:14px;background:color-mix(in oklab,#7a5ad6 14%,var(--pp-card));color:#7a5ad6;display:grid;place-items:center;font-size:13px}
+.m .k32-dn{flex:none;width:42px;display:flex;flex-direction:column;align-items:center;line-height:1}
+.m .k32-dn span{font:600 10px 'IBM Plex Mono',ui-monospace,monospace;color:var(--pp-lab)}
+.m .k32-dn b{font:500 20px Newsreader,Georgia,serif;white-space:normal!important}
+.m .k32-tm{flex:none;width:50px;font:500 12px 'IBM Plex Mono',ui-monospace,monospace;color:var(--pp-mut)}
+.m .k32-g{display:flex;flex-direction:column;gap:6px}
+.m .k32-gh{display:flex;align-items:baseline;gap:8px;padding:0 4px}
+.m .k32-gh b{font:500 17px Newsreader,Georgia,serif}.m .k32-gh span{font-size:12px;color:var(--pp-mut)}
+.m .k32-hit{font-weight:800;background:color-mix(in oklab,#e8b73a 38%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.m .k32-ai{border-radius:20px;background:var(--pp-card);padding:14px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 0 0 1px color-mix(in oklab,#7a5ad6 22%,transparent) inset}
+.m .k32-aih{display:flex;align-items:center;gap:10px}
+.m .k32-aih .m-grow{min-width:0;display:flex;flex-direction:column}
+.m .k32-ail{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:#7a5ad6}
+.m .k32-aiq{font-size:12px;color:var(--pp-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .k32-ait{font:500 16px/1.45 Manrope,system-ui,sans-serif;text-wrap:pretty}
+.m .k32-ail2{display:flex;flex-direction:column;border-radius:14px;background:var(--pp-bg);overflow:hidden}
+.m .k32-ail2>button,.m .k32-sr .k27-res>button{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:6px 12px;border:0;border-top:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);text-align:left;cursor:pointer}
+.m .k32-ail2>button:first-child{border-top:0}
+.m .k32-ail2 .k27-bar{width:4px;height:28px;align-self:auto}
+.m .k32-ail2 .m-grow{min-width:0;display:flex;flex-direction:column}
+.m .k32-ail2 b{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .k32-ail2 .m-grow span{font-size:11.5px;color:var(--pp-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .k32-sr .k27-res .k27-bar{width:4px;height:32px}
+.m .k32-sr .k27-res b{font-weight:600}
+@media (min-width:600px){.m .k27.wide .k32-srbg{align-items:flex-start;padding-top:10vh}.m .k27.wide .k27-sheet.k32-sr{max-width:640px;max-height:78vh;border-radius:24px;box-shadow:0 30px 80px -24px rgba(0,0,0,.5)}}
+/* Beskriv med Glimt (Kalender.dc.html → fmAi) */
+.m .k32-fm{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:18px;background:color-mix(in oklab,#7a5ad6 9%,var(--pp-card));box-shadow:0 0 0 1px color-mix(in oklab,#7a5ad6 24%,transparent) inset}
+.m .k32-fmh{display:flex;align-items:center;gap:8px}
+.m .k32-fml{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:#7a5ad6}
+.m .k32-fmok{font-size:12px;font-weight:700;color:#2f7d4f}
+.m.pd .k32-fmok{color:#8fd3a5}
+.m .k32-fmr{display:flex;align-items:flex-end;gap:8px}
+.m .k32-fmr textarea{flex:1;min-width:0;resize:none;min-height:52px;padding:10px 12px;border-radius:14px;border:0;background:var(--pp-card);color:var(--pp-ink);font:500 14.5px/1.4 Manrope,system-ui,sans-serif;outline:none;box-sizing:border-box}
+.m .k32-fill{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px 0 8px;border-radius:22px;border:0;background:color-mix(in oklab,#7a5ad6 14%,var(--pp-card));color:#7a5ad6;font:700 13.5px Manrope,system-ui,sans-serif;white-space:nowrap;cursor:pointer}
+.m .k32-fill.on{background:var(--pp-ink);color:var(--pp-bg)}
+.m .k32-fill:disabled{cursor:default}
+.m .k32-fmerr{font-size:12.5px;font-weight:600;color:#b23a2a}
+.m.pd .k32-fmerr{color:#f08a76}
+
+/* Vær: ✕ oppe til høyre, kilden under H/L (claude-code-vaer-lukk-x.md) */
+.m .vx-bar .w32-sp{width:42px;flex:none}
+.m .w32-x{flex:none;width:42px;height:42px;padding:0!important;border-radius:21px;border:0;background:rgba(255,255,255,.22)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff!important;display:grid;place-items:center;cursor:pointer}
+.m .vx-head .w32-src{font-size:11.5px;font-weight:500;opacity:.7;margin-top:6px}
+/* Forhold: lik plassering i alle visninger (claude-code-vaer-forhold-moduser.md) */
+.m .w32-fh b{line-height:20px;height:20px}
+.m .w32-fh span{display:block;line-height:17px;height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .vx-hours .vx-h{height:142px;box-sizing:border-box}
+.m .w32-h{gap:8px}
+.m .w32-bar{position:relative;display:block;width:30px;height:62px;border-radius:9px;background:rgba(0,0,0,.16);overflow:hidden}
+.m .w32-bar i{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,255,255,.28)}
+.m .w32-bar i.l1{top:33%}.m .w32-bar i.l2{top:66%}
+.m .w32-bar em{position:absolute;left:0;right:0;bottom:0;background:#5ad1ff}
+.m .w32-mm{font-size:13px;font-weight:700;min-height:16px}
+.m .w32-pp{font-size:13px;font-weight:700;color:#9fe0ff}
+.m .w32-ws{font-size:20px!important;font-weight:700;margin-top:4px}
+.m .w32-u{font-size:11.5px;font-weight:700;color:#9fe0ff;margin-top:-6px}
+.m .w32-g{font-size:11px;font-weight:700;opacity:.7;min-height:13px}
+.m .w32-wl{display:block;width:56px;height:34px}
+.m .vx-hs:has(.w32-wl){gap:0}
+.m .vx-d.w32-dr{grid-template-columns:52px minmax(0,1fr) 62px 58px;gap:10px}
+.m .vx-d.w32-dw{grid-template-columns:52px minmax(0,1fr) 88px;gap:12px}
+.m .w32-rbs{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;height:26px}
+.m .w32-rb{position:relative;border-radius:4px;background:rgba(0,0,0,.16);overflow:hidden}
+.m .w32-rb.day{background:rgba(255,255,255,.2)}
+.m .w32-rb.now{outline:2px solid #fff;outline-offset:1px;overflow:visible}
+.m .w32-rb i{position:absolute;left:0;right:0;bottom:0;background:#5ad1ff;border-radius:4px}
+.m .w32-sum{font-size:16px;font-weight:700;text-align:right}
+.m .w32-sum.dim{color:#9fe0ff}
+.m .w32-dp{display:flex;align-items:center;justify-content:flex-end;gap:3px;font-size:16px;font-weight:700}
+.m .w32-dp.dim{color:#9fe0ff}
+.m .w32-mg{position:relative;display:block;height:28px;min-width:0}
+.m .w32-mg svg{width:100%;height:28px;display:block;border-radius:5px;background:rgba(0,0,0,.12)}
+.m .w32-dot{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(40,90,150,.5)}
+.m .w32-wr{font-size:16px;font-weight:700;text-align:right;white-space:nowrap}
+.m .w32-wr span{color:#9fe0ff}
+
+/* Huskeliste: Arkivert */
+.m .p32-gh{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.m .p32-gb{height:28px;padding:0 12px;border-radius:14px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 12px Manrope,system-ui,sans-serif;letter-spacing:0;cursor:pointer}
+.m .p32-rs{flex:none;height:30px;padding:0 10px;border-radius:15px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 12px Manrope,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.m .p32-ar{display:grid;place-items:center;color:var(--pp-mut)}
+/* overflow-x:hidden på .m gjør .m til scroll-container for sticky; clip klipper uten å ta over scrollingen. */
+.m.papir:has(>.m-scroll>.p28-pills){overflow-x:clip;overflow-y:visible}
+.m .k32-fml{white-space:nowrap;flex:none}
+.m .k32-fmok{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right}
+.m .k32-fmh .m-grow{flex:1 1 0;min-width:0}

@@ -285,28 +285,55 @@ function dueLbl(due) {
   const n = Math.round((new Date(String(due).slice(0, 10) + 'T12:00') - new Date(dayIso(0) + 'T12:00')) / 864e5);
   return n < 0 ? [`Forfalt ${-n} d`, 'lab'] : n === 0 ? ['I dag', 'lab'] : n === 1 ? ['I morgen', 'ink'] : [new Date(String(due).slice(0, 10) + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }), 'mut'];
 }
-const openTasks = () => (HK.d?.items ?? []).filter((x) => !x.done).sort((a, b) => String(a.due ?? '9999').localeCompare(String(b.due ?? '9999')));
+// Prompt 32 (claude-code-rom-fullskjerm-bursdag-huskeliste.md): Arkivert. Fullførte oppgaver arkiveres automatisk etter 7 dager.
+const tsOf = (v) => (v == null || v === '' ? null : typeof v === 'number' ? v : Date.parse(v) || null);
+export const isArch = (x) => !!(x.archived || x.archivedAt || x.archived_at || x.arch) || (x.done && tsOf(x.doneAt ?? x.done_at ?? x.completedAt ?? x.completed_at) != null && Date.now() - tsOf(x.doneAt ?? x.done_at ?? x.completedAt ?? x.completed_at) > 7 * 864e5);
+const archOf = () => { const own = (HK.d?.items ?? []).filter(isArch), ex = (HK.arch ?? []).filter((x) => !own.some((y) => String(y.id) === String(x.id))); return [...own, ...ex].sort((a, b) => (tsOf(b.archivedAt ?? b.archived_at ?? b.doneAt ?? b.done_at) ?? 0) - (tsOf(a.archivedAt ?? a.archived_at ?? a.doneAt ?? a.done_at) ?? 0)); };
+async function archLoad() {
+  if (HK.local || HK.archT && Date.now() - HK.archT < 15000) return;
+  HK.archT = Date.now();
+  try { const r = await hlApi('/tasks?archived=1'); HK.arch = (r?.items ?? (Array.isArray(r) ? r : [])).filter(isArch); } catch { HK.arch = []; }
+}
+async function archSet(ids, on) {
+  const now = new Date().toISOString(), S = new Set(ids.map(String));
+  const patch = on ? { archived: true, archivedAt: now } : { archived: false, archivedAt: null, done: false, doneAt: null };
+  const all = [...(HK.d?.items ?? []), ...(HK.arch ?? [])].filter((x) => S.has(String(x.id)));
+  HK.d.items = HK.d.items.filter((x) => !S.has(String(x.id)));
+  HK.arch = (HK.arch ?? []).filter((x) => !S.has(String(x.id)));
+  for (const x of all) { const n = { ...x, ...patch, arch: on || undefined }; if (!on) { delete n.arch; delete n.archived_at; delete n.done_at; delete n.completedAt; } if (on) HK.arch.unshift(n); else HK.d.items.unshift(n); }
+  saveLocal(); draw();
+  if (!HK.local) for (const id of S) await hlApi(`/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', json: patch }).catch((e) => flash(e.message));
+}
+async function archDel(ids) {
+  const S = new Set(ids.map(String));
+  HK.d.items = HK.d.items.filter((x) => !S.has(String(x.id))); HK.arch = (HK.arch ?? []).filter((x) => !S.has(String(x.id))); saveLocal(); draw();
+  if (!HK.local) for (const id of S) await hlApi(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch((e) => flash(e.message));
+}
+const ARCH_IC = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18v4H3zM5 9v10h14V9M10 13h4"/></svg>';
+const openTasks = () => (HK.d?.items ?? []).filter((x) => !x.done && !isArch(x)).sort((a, b) => String(a.due ?? '9999').localeCompare(String(b.due ?? '9999')));
 function taskRow(x, all) {
   const l = listOf(x.list), [dt, dc] = dueLbl(x.due);
   const meta = [dt, whoName(x.assignee), all ? l.name : ''].filter(Boolean).join(' · ');
   return `<div class="p17-tk${x.done ? ' done' : ''}"><button class="p17-chk" data-p17="tick" data-id="${esc(x.id)}" style="--c:${esc(l.color)};--cb:${x.done ? esc(l.color) : 'transparent'}" aria-label="${x.done ? 'Angre' : 'Fullfør'} ${esc(x.title)}">${x.done ? '✓' : ''}</button>
-    <span class="m-grow p17-rt"><b>${esc(x.title)}</b>${meta ? `<small class="${!x.done && dc === 'lab' ? 'pp-lab-c' : ''}">${esc(meta)}</small>` : ''}</span><button class="p17-x" data-p17="tdel" data-id="${esc(x.id)}" aria-label="Slett ${esc(x.title)}">×</button></div>`;
+    <span class="m-grow p17-rt"><b>${esc(x.title)}</b>${meta ? `<small class="${!x.done && dc === 'lab' ? 'pp-lab-c' : ''}">${esc(meta)}</small>` : ''}</span>${x.done && !isArch(x) ? `<button class="p17-x p32-ar" data-p17="tarch" data-id="${esc(x.id)}" aria-label="Arkiver ${esc(x.title)}">${ARCH_IC}</button>` : ''}${isArch(x) ? `<button class="p32-rs" data-p17="trest" data-id="${esc(x.id)}">↺ Gjenopprett</button>` : ''}<button class="p17-x" data-p17="tdel" data-id="${esc(x.id)}" aria-label="Slett ${esc(x.title)}">×</button></div>`;
 }
 export function huskeView() {
   if (!HK.d) return '<div class="m-spin"></div>';
-  const lists = HK.d.lists ?? LISTS0, items = HK.d.items ?? [], all = HK.cur === 'alle';
-  const inL = items.filter((x) => all || String(x.list) === String(HK.cur));
+  const lists = HK.d.lists ?? LISTS0, items = (HK.d.items ?? []).filter((x) => !isArch(x)), all = HK.cur === 'alle', AR = HK.cur === 'arkiv';
+  if (AR && !HK.archT) archLoad().then(draw).catch(() => {});
+  const arch = archOf();
+  const inL = AR ? [] : items.filter((x) => all || String(x.list) === String(HK.cur));
   const t0 = dayIso(0), soon = inL.filter((x) => !x.done && x.due && String(x.due).slice(0, 10) <= t0), later = inL.filter((x) => !x.done && !(x.due && String(x.due).slice(0, 10) <= t0)), done = inL.filter((x) => x.done);
-  const curN = all ? 'Alle' : listOf(HK.cur).name;
+  const curN = all ? 'Alle' : AR ? 'Arkivert' : listOf(HK.cur).name;
   const mem = HK.d.members ?? [];
-  const groups = [['I DAG OG FORFALT', soon], ['SENERE', later], ['FERDIG', done.slice(0, 12)]].filter(([, a]) => a.length);
+  const groups = AR ? (arch.length ? [[`ARKIVERT · ${arch.length}`, arch, 'Tøm arkivet', 'tarchclr']] : []) : [['I DAG OG FORFALT', soon], ['SENERE', later], ['FERDIG', done.slice(0, 12), 'Arkiver alle', 'tarchall']].filter(([, a]) => a.length);
   return `<div class="pp-col p17-hk">
-    <form class="pp-card p17-hadd" data-p17form="task"><input class="sinp" id="p17-tk" data-p17in="tk" value="${esc(HK.nv)}" placeholder="Ny oppgave i ${esc(curN)}" autocomplete="off" aria-label="Ny oppgave"><button class="p17-plus" type="submit" aria-label="Legg til">+</button></form>
-    <div class="pp-chips p17-lists" role="tablist"><button class="pp-fchip" data-p17="hlist" data-k="alle" aria-pressed="${all}">Alle <span>${items.filter((x) => !x.done).length}</span></button>${lists.map((l) => `<button class="pp-fchip" data-p17="hlist" data-k="${esc(l.id)}" aria-pressed="${String(HK.cur) === String(l.id)}"><i style="background:${esc(l.color)}"></i>${esc(l.name)}${l.shared || (l.members ?? []).length || l.mine === false ? ' <b class="p21-shr" aria-label="Delt">⇄</b>' : ''} <span>${items.filter((x) => !x.done && String(x.list) === String(l.id)).length}</span></button>`).join('')}</div>
+    ${AR ? '' : `<form class="pp-card p17-hadd" data-p17form="task"><input class="sinp" id="p17-tk" data-p17in="tk" value="${esc(HK.nv)}" placeholder="Ny oppgave i ${esc(curN)}" autocomplete="off" aria-label="Ny oppgave"><button class="p17-plus" type="submit" aria-label="Legg til">+</button></form>`}
+    <div class="pp-chips p17-lists" role="tablist"><button class="pp-fchip" data-p17="hlist" data-k="alle" aria-pressed="${all}">Alle <span>${items.filter((x) => !x.done).length}</span></button>${lists.map((l) => `<button class="pp-fchip" data-p17="hlist" data-k="${esc(l.id)}" aria-pressed="${String(HK.cur) === String(l.id)}"><i style="background:${esc(l.color)}"></i>${esc(l.name)}${l.shared || (l.members ?? []).length || l.mine === false ? ' <b class="p21-shr" aria-label="Delt">⇄</b>' : ''} <span>${items.filter((x) => !x.done && String(x.list) === String(l.id)).length}</span></button>`).join('')}<button class="pp-fchip" data-p17="hlist" data-k="arkiv" aria-pressed="${AR}">Arkivert · ${arch.length}</button></div>
     <div class="pp-chips p17-due">${[[0, 'I dag'], [1, 'I morgen'], [7, 'Neste uke'], [null, 'Uten dato']].map(([v, n]) => `<button class="pp-fchip sm" data-p17="tdue" data-v="${v ?? ''}" aria-pressed="${HK.due === v}">${n}</button>`).join('')}${mem.length ? `<span class="p17-sep"></span>${[['', 'Alle'], ...mem.map((p) => [String(p.userId ?? p.id), (p.name ?? p.username ?? '').split(' ')[0]])].map(([v, n]) => `<button class="pp-fchip sm" data-p17="twho" data-v="${esc(v)}" aria-pressed="${HK.who === v}">${esc(n)}</button>`).join('')}` : ''}</div>
-    ${all || HK.local ? '' : listShareLine(listOf(HK.cur), mem, m.me?.id ?? currentUser())}
+    ${all || AR || HK.local ? '' : listShareLine(listOf(HK.cur), mem, m.me?.id ?? currentUser())}
     ${HK.err ? `<div class="pp-card pp-mut">${esc(HK.err)}</div>` : ''}
-    ${groups.map(([t, a]) => `<span class="pp-lab">${t}</span><div class="pp-card p17-tks">${a.map((x) => taskRow(x, all)).join('')}</div>`).join('') || `<div class="pp-card pp-mut">Ingen oppgaver i ${esc(curN)}.</div>`}
+    ${groups.map(([t, a, an, ak]) => `<span class="pp-lab p32-gh"><span>${t}</span>${an ? `<button type="button" class="p32-gb" data-p17="${ak}">${an}</button>` : ''}</span><div class="pp-card p17-tks">${a.map((x) => taskRow(x, all || AR)).join('')}</div>`).join('') || `<div class="pp-card pp-mut">${AR ? 'Ingenting i arkivet. Fullførte oppgaver arkiveres automatisk etter 7 dager.' : `Ingen oppgaver i ${esc(curN)}.`}</div>`}
     ${HK.local ? '<span class="pp-mut" style="font-size:12px;padding:0 4px">Lagres på denne enheten til serveren har Huskeliste. Oppdater Homelab for å dele listen med familien.</span>' : '<span class="pp-mut" style="font-size:12px;padding:0 4px">Listene dine er private. Velg en liste og trykk «Del liste» for å dele den med navngitte personer.</span>'}</div>`;
 }
 /** Hjem-kortet: de tre neste oppgavene med avkrysning. */
@@ -611,7 +638,11 @@ export async function p17Bind(e, t) {
     case 'tdue': HK.due = x.dataset.v === '' ? null : +x.dataset.v; haptic('tab'); draw(); return true;
     case 'twho': HK.who = x.dataset.v; haptic('tab'); draw(); return true;
     case 'tick': { const it = (HK.d?.items ?? []).find((y) => String(y.id) === String(id)); if (!it) return true; haptic(it.done ? 'tap' : 'ok'); navigator.vibrate?.(8); await taskPatch(id, { done: !it.done, doneAt: it.done ? null : Date.now() }); return true; }
-    case 'tdel': await taskDel(id); return true;
+    case 'tdel': if (String(HK.cur) === 'arkiv') { await archDel([id]); return true; } await taskDel(id); return true;
+    case 'tarch': haptic('tap'); await archSet([id], true); flash('Arkivert'); return true;
+    case 'trest': haptic('ok'); await archSet([id], false); flash('Gjenopprettet ✓'); return true;
+    case 'tarchall': { const dn = (HK.d?.items ?? []).filter((y) => y.done && !isArch(y) && (HK.cur === 'alle' || String(y.list) === String(HK.cur))).map((y) => y.id); if (dn.length) { haptic('ok'); await archSet(dn, true); flash(`${dn.length} arkivert`); } return true; }
+    case 'tarchclr': { const ids = archOf().map((y) => y.id); if (ids.length) { haptic('err'); await archDel(ids); flash('Arkivet er tømt'); } return true; }
     case 'ftab': FT.tab = x.dataset.k; haptic('tab'); draw(); return true;
     case 'psx': FM.sel = null; draw(); return true;
     case 'ping': hlApi(`/family/ping/${encodeURIComponent(id)}`, { method: 'POST' }).then((r) => flash(r?.delivered === false ? 'Telefonen er ikke på nett nå' : 'Spiller av lyd på telefonen ✓')).catch((err) => flash(err.status === 404 ? 'Serveren støtter ikke «Spill av lyd» ennå' : err.message)); return true;

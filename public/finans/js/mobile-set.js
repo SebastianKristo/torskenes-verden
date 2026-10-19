@@ -18,6 +18,7 @@ import { haSection } from './mobile-p22.js';
 import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-p17.js';
 import * as P27 from './mobile-p27.js';
 import * as P33 from './mobile-p33.js'; // prompt 33: GLIMT HUSKER
+import * as P32 from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET, fanelinje på andre sider
 import { updLoad, updPage, updSummary, updAdmin, updBind } from './mobile-upd.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
@@ -98,7 +99,7 @@ function main() {
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
     ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('hap', 'Haptikk', hpref('hap') ? 'På' : 'Av', 'vib', '#FF2D55'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF')])}
     ${G('Finans', [nav('fai', 'AI-motor', !canSrv() ? ADMIN_NOTE : st.provider === 'gemini' ? 'Gemini' : st.fallback ? 'Ollama + Gemini' : 'Ollama', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
-    ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), updAdmin() ? nav('oppd', 'Oppdatering', updSummary(), 'backup', '#30D158') : '', nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
+    ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
     ${G('', [btn(`Logg ut ${esc(meName())}`, 'logout', '#FF8A80')])}`;
 }
 
@@ -151,7 +152,7 @@ const PAGE = {
 
   look: (th) => {
     // Papir: tema, profil, bakgrunn, fanelinje og ikonfarger (Utseende og fanelinje).
-    if (paper()) return paperTop();
+    if (paper()) return paperTop() + P32.secNavSettings(); // Prompt 32: FANELINJE · ANDRE SIDER
     const cur = (() => { try { return localStorage.getItem('fh_theme') || 'auto'; } catch { return 'auto'; } })();
     const st = { hl: 'homelab', hjem: 'fin-hjem', liste: 'fin-liste', budsjett: 'fin-budsjett' }[startScr()] ?? 'homelab';
     return `${G('Mobildesign', [chips('mdesign', 'Design', [['klassisk', 'Klassisk'], ['papir', 'Papir']], pref('mDesign'))],
@@ -226,6 +227,7 @@ const PAGE = {
       const MODE = { ollama: 'Ollama lokalt', gemini: 'Gemini', groq: 'Groq', both: 'Ollama + Gemini' };
       return `${G('Motor', [val('Hovedmotor', esc(MODE[aiMode()] ?? '–')), val('Minste sikkerhet', `0,${String(st.minConf ?? 85).padStart(2, '0')}`)], `🔒 ${ADMIN_NOTE}. Under minste sikkerhet markeres kvitteringen «Sjekk beløp».`)}
       ${P27.aiSections()}
+      ${P32.glimtSearchSection()}
       ${P33.memSection()}
       ${paper() ? P23.aiTimeoutsView() : ''}
       ${p17AiExtra()}`;
@@ -235,6 +237,7 @@ const PAGE = {
       ${G('Gemini', [inp('geminiModel', 'Modell', f.geminiModel ?? st.geminiModel, 'gemini-2.5-flash'), inp('geminiKey', st.geminiKeySet ? 'API-nøkkel (lagret – skriv for å bytte)' : 'API-nøkkel', f.geminiKey ?? '', '••••••••', 'password')])}
       ${G('', [btn('Lagre', 'aisave'), btn('Test motor', 'aitest')], T.ai ?? '')}
       ${P27.aiSections()}
+      ${P32.glimtSearchSection()}
       ${P33.memSection()}
       ${paper() ? P23.aiTimeoutsView() : ''}
       ${p17AiExtra()}`;

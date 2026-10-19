@@ -2,6 +2,46 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.26.0] – 19.10.2026 · prompt 32
+- **Ny versjon uten Cmd+Shift+R:** nettleseren henter nye filer selv. Står en fane åpen når en ny versjon kommer, vises «Ny versjon av Nordlys er klar · Last inn på nytt». Fanen lastes automatisk på nytt når den har vært skjult og ingenting er ulagret.
+- **Domener:** Glimt oppsummerer domenene hvert døgn, og du kan be om en oppsummering når som helst. Nytt: statistikk fra **Google Search Console** (klikk, visninger, CTR, posisjon, søkeord og sider). Krever bare lesetilgang.
+- **Web:**
+  - Vær har eget oppsett for PC, med visninger for nedbør og vind.
+  - Nytt design på Familie.
+  - Mat er likt Matplan.
+  - Chat vises i fullskjerm.
+  - Bursdager har ikke lenger widgets.
+- **Rom (1A):**
+  - Fullskjerm med alle satellitter på kartet, ISS med bakkebane og «Over Oslo nå».
+  - Dagens bilde fra NASA.
+  - Siste bilder fra Mars-roverne.
+- **Kalender:**
+  - Fagfarger med kontrast mot dagens kolonne.
+  - Alle hendelser får brikke med bakgrunn i Måned.
+  - Ny søkemeny med Glimt, for eksempel «når hadde jeg tannlege sist».
+  - «Beskriv med Glimt» i Ny hendelse.
+- **Søk:**
+  - Snarveier som «vis meg oppdatering» åpner siden direkte.
+  - Glimt svarer i boblen og går bare over til Chat hvis svaret tar for lang tid. Grensen er 5, 8, 15 eller 30 s; du velger selv.
+  - Søk fra mobilen vises under «Nylige søk» på web.
+- **FinansHub AI-søk:**
+  - Abonnementene dine er med, og søket vet hva tjenestene inneholder. «Har jeg musikk-abonnement?» kan for eksempel gi Ja med YouTube Premium.
+  - Svaret begynner med Ja eller Nei, og kildemarkører som «[1]» er fjernet.
+- **Prøveperioder:**
+  - Widgets for iPhone (også låseskjerm, med ✓ Avsluttet), Android (Material You) og Samsung.
+  - Nytt kort på Hjem.
+- **Mobil:**
+  - Rediger fanelinjen på alle sider med egen fanelinje, med Papir-knapper.
+  - Knappene i redigeringsmodus har fått egen rad.
+  - Innstillinger vises uten navbar og skann-knapp.
+  - Ekte logoer på Integrasjoner.
+  - Oppdatering-raden er fjernet, fordi Nordlys tar seg av det.
+- **iPhone:**
+  - Skrivefeltet i Chat løftes over tastaturet.
+  - Fargestripen under fanelinjen i Kalender er borte.
+- **Huskeliste:** Arkivert, på web og mobil.
+- **Boliger:** den tomme svarte toasten er rettet.
+
 ## [4.25.0] – 19.10.2026 · Glimt husker
 - **Glimt husker:** du kan lære Glimt hva avsendere og steder er, og det huskes bare for deg.
   - Skriv for eksempel «husk at Påhåret er frisøren min» eller «det var frisør» rett etter en time.

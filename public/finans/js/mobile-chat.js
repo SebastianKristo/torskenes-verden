@@ -495,6 +495,13 @@ export function openChat(prompt = '') {
   const p = String(prompt).trim();
   if (p) { const go = () => (C.list ? send(p) : chatLoad().then(() => send(p))); setTimeout(go, 60); }
 }
+/** Prompt 32: åpner en Chat-tråd som en Glimt-jobb ble flyttet til (POST /api/assist/:id/handoff → {chatId}). */
+export function openChatId(id) {
+  if (m.screen !== 'chat') C.from = m.screen;
+  C.sh = null; C.drawer = false; C.inp = '';
+  if (location.hash !== '#/chat') location.hash = '#/chat';
+  setTimeout(async () => { await chatLoad(true).catch(() => {}); if (C.list?.chats.some((x) => x.id === id)) openConv(id); else { C.list?.chats.unshift(normChat({ id, title: 'Glimt' })); openConv(id); } }, 80);
+}
 export function chatEnter(prev) { if (prev && prev !== 'chat') C.from = prev; }
 export function chatLeave() { C.sh = null; C.drawer = false; try { window.speechSynthesis?.cancel(); } catch {} C.spk = null; }
 

@@ -12,6 +12,7 @@ import * as CHAT from './mobile-chat.js';
 import * as KAL from './mobile-kal.js';
 import { parseQuick, quickLabel } from '/assets/js/quick-time.js';
 import * as P31 from './mobile-p31.js';
+import * as P32 from './mobile-p32.js';
 
 const svg = (d, s = 16, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -67,15 +68,19 @@ function syncSearch() {
 function searchGo() {
   const t = SE.q.trim(); if (!t) return;
   document.activeElement?.blur?.();
+  // Prompt 32: alt som sendes fra søkefeltet logges for brukeren (vises bare på web under «Nylige søk»).
+  P32.hsLog(t, SE.eng === 'ai' ? 'glimt' : SE.eng);
   const r = apptOf(t);
   if (r) { SE.q = ''; draw(); quickRun(t, r); return; }
   if (SE.eng === 'google' || SE.eng === 'ddg') {
-    hlApi('/search/history', { method: 'POST', json: { q: t } }).catch(() => {});
     const url = SE.eng === 'google' ? `https://www.google.com/search?q=${encodeURIComponent(t)}` : `https://duckduckgo.com/?q=${encodeURIComponent(t)}`;
     SE.q = ''; draw(); window.open(url, '_blank', 'noopener'); return;
   }
   // Prompt 31: Glimt svarer i en boble under søkefeltet (ikke hopp til Chat). «Fortsett i Chat ›» åpner samtalen.
-  SE.q = ''; draw(); P31.ask(t);
+  // Prompt 32: snarveier først (lokalt, umiddelbart), så lokale verktøy og Glimt med grense før Chat tar over.
+  SE.q = ''; const sc = P32.shortcut(t);
+  if (sc) { P31.navAns(t, sc.href, sc.label, 'Snarvei'); return; }
+  draw(); P31.ask(t);
 }
 
 /* =====================================================================
