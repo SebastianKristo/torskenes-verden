@@ -300,9 +300,9 @@ struct PaperWeatherView: View {
         GeometryReader { g in
             let isWide: Bool = g.size.width >= 700
             ZStack(alignment: .top) {
-                WxSky22(code: code, night: night).ignoresSafeArea()
-                WxFx22(kind: wxFxKind22(code, night: night), heavy: code == 65 || code == 82 || code >= 95, thunder: code >= 95)
-                    .ignoresSafeArea()
+                // Prompt 28: ny himmel og væranimasjon (Weather28Fx.swift / Weather28Sim.swift).
+                WxSky28(code: code, night: night).ignoresSafeArea()
+                fx(w, code: code, night: night)
                 if isWide, let w {
                     WxWide25(w: w, width: g.size.width, mode: $mode, open: { k in open(k) }, openDay: { i in openDay(i) },
                              compare: { openCompare() }, fullMap: { map = true })
@@ -310,7 +310,7 @@ struct PaperWeatherView: View {
                     scrollBody(w)
                 }
                 WxTopBar22(w: w, scrolled: isWide ? false : scroll > 200)
-                WxBottomButtons22(map: { Haptics.shared.tap(); map = true }, places: { Haptics.shared.tap(); places = true })
+                WxBottomBar28(map: { Haptics.shared.tap(); map = true }, places: { Haptics.shared.tap(); places = true })
                 if isWide { WxSidePanel25(width: g.size.width) }
             }
             .frame(width: g.size.width, height: g.size.height)
@@ -359,7 +359,7 @@ struct PaperWeatherView: View {
                     ProgressView().tint(.white).padding(.top, 160)
                 }
             }
-            .padding(.horizontal, 16).padding(.top, 56).padding(.bottom, 100)
+            .padding(.horizontal, 16).padding(.top, 56).padding(.bottom, WxBottomBar28.height + 16)
         }
         .scrollIndicators(.hidden)
         .coordinateSpace(name: "wxscroll")
@@ -385,6 +385,14 @@ struct PaperWeatherView: View {
         if w.mock {
             Text("Eksempeldata – serveren fikk ikke kontakt med MET.").font(.system(size: 11.5)).opacity(0.7)
         }
+    }
+
+    /// Prompt 28: animasjonen får soloppgang/-nedgang for i dag (sunF).
+    private func fx(_ w: WeatherFull?, code: Int, night: Bool) -> some View {
+        let cfg: WxFxCfg28 = WxFxCfg28.from(code: code, night: night)
+        let rise: Date? = WeatherFull.parse(w?.sunrise ?? "")
+        let set: Date? = WeatherFull.parse(w?.sunset ?? "")
+        return WxFx28(cfg: cfg, sunrise: rise, sunset: set).ignoresSafeArea()
     }
 
     private func open(_ k: String) {

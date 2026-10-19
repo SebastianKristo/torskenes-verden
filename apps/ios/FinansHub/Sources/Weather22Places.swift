@@ -4,7 +4,7 @@ import WebKit
 
 /* ---------------- Prompt 22: Steder (☰ nede til høyre) og værkart (knappen nede til venstre) ---------------- */
 
-/// «Steder»: søk og legg til (Open-Meteo via /api/weather/search), bytt sted, hold inne og dra for å flytte,
+/// «Steder»: søk og legg til (prompt 28: /api/weather/places?q=, reserve /api/weather/search), bytt sted, hold inne og dra for å flytte,
 /// sveip mot høyre for å slette. Det siste stedet kan ikke slettes.
 struct WxPlacesSheet22: View {
     @Environment(Store.self) private var store
@@ -13,6 +13,8 @@ struct WxPlacesSheet22: View {
     @State private var hits: [WxPlace] = []
     @State private var busy: Bool = false
     @State private var searched: Bool = false
+    /// Prompt 28: nettet eller serveren feilet («Får ikke søkt nå. Prøv igjen.»).
+    @State private var failed: Bool = false
 
     var body: some View {
         List {
@@ -21,9 +23,7 @@ struct WxPlacesSheet22: View {
                 searchField
                 if busy { Text("Søker …").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22() }
                 if !hits.isEmpty { results }
-                if searched && hits.isEmpty && !busy && q.count >= 2 {
-                    Text("Fant ingen steder.").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
-                }
+                if searched && !busy && q.count >= 2 { emptyText }
                 Text("MINE STEDER").font(.system(size: 11, weight: .semibold)).tracking(1.32).foregroundStyle(Color(hex: "#9aa3ae"))
                     .plainRow22().padding(.top, 4)
             }
@@ -47,7 +47,7 @@ struct WxPlacesSheet22: View {
             }
             Section {
                 Text("Hold inne for å flytte · sveip mot høyre for å slette").font(.system(size: 12)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
-                Text("Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo.")
+                Text("Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo og OpenStreetMap.")
                     .font(.system(size: 12)).lineSpacing(4).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
             }
         }
@@ -59,15 +59,33 @@ struct WxPlacesSheet22: View {
         .environment(\.colorScheme, .dark)
         .task(id: q) {
             let t: String = q.trimmingCharacters(in: .whitespaces)
-            if t.count < 2 { hits = []; searched = false; busy = false; return }
-            try? await Task.sleep(for: .milliseconds(300))
+            if t.count < 2 { hits = []; searched = false; busy = false; failed = false; return }
+            // Prompt 28: 250 ms debounce, nytt søk (Weather28Places.swift) med reserve til det gamle.
+            try? await Task.sleep(for: .milliseconds(250))
             if Task.isCancelled { return }
             busy = true
-            let found: [WxPlace] = await store.searchWeatherPlaces(t)
+            let res: WxSearch28 = await store.searchWeatherPlaces28(t)
             if Task.isCancelled { return }
-            hits = found
+            switch res {
+            case .hits(let found):
+                hits = found
+                failed = false
+            case .failed:
+                hits = []
+                failed = true
+            }
             busy = false
             searched = true
+        }
+    }
+
+    /// Ingen treff eller feil (tekstene fra claude-code-vaer-stedssok.md).
+    @ViewBuilder private var emptyText: some View {
+        let t: String = q.trimmingCharacters(in: .whitespaces)
+        if failed {
+            Text("Får ikke søkt nå. Prøv igjen.").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
+        } else if hits.isEmpty {
+            Text("Fant ingen steder som heter «\(t)»").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
         }
     }
 
@@ -88,7 +106,7 @@ struct WxPlacesSheet22: View {
     private var searchField: some View {
         // Prompt 27: ✕ til venstre (SearchField27). Tømming lukker treffene.
         SearchField27(text: $q, placeholder: "Søk etter by eller sted", font: .system(size: 16, weight: .medium), ink: Color.white,
-                      placeholderColor: Color(hex: "#9aa3ae"), onClear: { hits = []; searched = false; busy = false }, lead: {
+                      placeholderColor: Color(hex: "#9aa3ae"), onClear: { hits = []; searched = false; busy = false; failed = false }, lead: {
             Glyph22Icon(name: "search", size: 17, color: Color(hex: "#9aa3ae"), stroke: 2.2)
         })
         .padding(.horizontal, 14).frame(height: 46)

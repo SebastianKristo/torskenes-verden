@@ -72,35 +72,7 @@ struct WxTopBar22: View {
     }
 }
 
-/// Rund kartknapp nede til venstre og ☰ (Steder) nede til høyre: 52 pt, rgba(10,20,35,.5) og uskarphet.
-struct WxBottomButtons22: View {
-    let map: () -> Void
-    let places: () -> Void
-
-    var body: some View {
-        VStack {
-            Spacer()
-            HStack(spacing: 10) {
-                round("map", stroke: 2, label: "Værkart", act: map)
-                Spacer()
-                round("menu", stroke: 2.2, label: "Steder", act: places)
-            }
-            .padding(.horizontal, 16).padding(.bottom, 18)
-        }
-    }
-
-    private func round(_ icon: String, stroke: CGFloat, label: String, act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            Glyph22Icon(name: icon, size: 24, color: .white, stroke: stroke)
-                .frame(width: 52, height: 52)
-                .background(.ultraThinMaterial, in: Circle())
-                .background(Color(hex: "#0a1423").opacity(0.5), in: Circle())
-                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
-    }
-}
+// Prompt 28: de runde knappene (WxBottomButtons22) er erstattet av bunnlinjen WxBottomBar28 (Weather28Places.swift).
 
 /* ---------- Toppteksten ---------- */
 
