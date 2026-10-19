@@ -46,14 +46,15 @@ async function req(path, body) {
 }
 const cred = () => ({ host: W.host, user: W.guest ? '' : W.user, password: W.guest ? '' : W.password, domain: W.guest ? '' : W.domain });
 const target = (path = W.path) => ({ ...cred(), share: W.share, path: path.join('/'), protocol: W.protocol });
-const label = () => `//${W.host}/${W.share}${W.path.length ? '/' + W.path.join('/') : ''}`;
+// Prompt 36: lagret mål = {host, share, path}, vist som smb://host/share/path.
+const label = () => `smb://${W.host}/${W.share}${W.path.length ? '/' + W.path.join('/') : ''}`;
 
 /** Åpner veiviseren. use: forhåndsvalgt bruk ('finans' | 'system'). encrypted: om systembackupen krypteres (advarsel ellers). */
-export function openSmbWizard({ use = ['system'], encrypted = null, onDone = null } = {}) {
+export function openSmbWizard({ use = ['system'], encrypted = null, onDone = null, at = null } = {}) {
   css();
   lastFocus = document.activeElement;
   W = { step: 0, servers: null, scanning: false, manual: '', host: '', ip: '', name: '', user: '', password: '', domain: '', guest: false, showPw: false,
-    shares: null, protocol: 'SMB3', share: '', path: [], dirs: null, newDir: null, test: null, use: [...use], encrypted, onDone, busy: false, err: null, done: null, probeFail: null };
+    shares: null, protocol: 'SMB3', share: '', path: [], dirs: null, newDir: null, at: at?.host ? at : null, hidden: false, manualPath: null, openIx: -1, test: null, use: [...use], encrypted, onDone, busy: false, err: null, done: null, probeFail: null };
   root?.remove();
   root = document.createElement('div');
   root.className = 'smbw';
@@ -63,6 +64,7 @@ export function openSmbWizard({ use = ['system'], encrypted = null, onDone = nul
   root.addEventListener('keydown', onKey);
   document.body.appendChild(root);
   document.documentElement.classList.add('smbw-open');
+  if (W.at) { W.host = W.at.host; W.ip = ''; W.name = ''; W.step = 1; draw(); return; }
   draw();
   scan();
 }
@@ -103,21 +105,35 @@ async function login(guest) {
   W.guest = !!guest;
   if (!W.guest && !W.user.trim()) { W.err = { message: 'Skriv brukernavnet, eller trykk «Gjest».' }; return draw(); }
   W.busy = true; W.err = null; draw();
-  try { const r = await req('/shares', cred()); W.shares = r.shares ?? []; W.protocol = r.protocol === 'SMB2' ? 'SMB2' : 'SMB3'; W.busy = false; go(2); }
+  try {
+    const r = await req('/shares', cred()); W.shares = r.shares ?? []; W.protocol = r.protocol === 'SMB2' ? 'SMB2' : 'SMB3'; W.busy = false;
+    // Prompt 36: «Åpne mappe ›» fra backup-kvitteringen går rett til den lagrede mappen.
+    if (W.at?.share) { const a = W.at; W.at = null; W.share = a.share; W.step = 3; await openDir(String(a.path ?? '').split('/').filter(Boolean)); return; }
+    go(2);
+  }
   catch (e) { W.busy = false; W.err = { message: e.message, kind: e.kind }; draw(); }
 }
 async function openDir(path) {
-  W.busy = true; W.err = null; W.newDir = null; draw();
-  try { W.dirs = await req('/browse', target(path)); W.path = path; }
+  W.busy = true; W.err = null; W.newDir = null; W.mkOk = null; draw();
+  try { W.dirs = await listDir(path); W.path = path; W.openIx = -1; }
   catch (e) { W.err = { message: e.message, kind: e.kind }; }
   if (!W) return;
   W.busy = false; draw();
+}
+// Prompt 36: POST /api/smb/list {host, share, path, …} (navigerer i undermapper); eldre server: /api/smb/browse.
+// Hver mappe kan ha locked/access:false (🔒 «Ingen tilgang for {bruker}»). Skjulte (punktum foran) vises bare med «Vis skjulte».
+async function listDir(path) {
+  let r;
+  try { r = await req('/list', { ...target(path), hidden: W.hidden }); }
+  catch (e) { if (e.status !== 404) throw e; r = await req('/browse', target(path)); }
+  const L = Array.isArray(r) ? r : r?.dirs ?? r?.items ?? r?.folders ?? [];
+  return L.filter((d) => d && (d.dir !== false && d.type !== 'file')).map((d) => (typeof d === 'string' ? { name: d } : d));
 }
 async function mkdir() {
   const n = (W.newDir ?? '').trim();
   if (!SEG.test(n)) { W.err = { message: 'Ugyldig mappenavn. Bruk bokstaver, tall, mellomrom og . _ - ( ) (ikke / \\ " \' ; eller ..).' }; return draw(); }
   W.busy = true; W.err = null; draw();
-  try { await req('/mkdir', { ...target(), name: n }); W.busy = false; await openDir([...W.path, n]); }
+  try { const r = await req('/mkdir', { ...target(), name: n }); W.busy = false; const ok = r?.writable === false ? `Mappen «${n}» er laget, men brukeren kan ikke skrive i den.` : `Mappen «${n}» er laget ✓`; await openDir([...W.path, n]); if (W) { W.mkOk = ok; draw(); } }
   catch (e) { W.busy = false; W.err = { message: e.message, kind: e.kind }; draw(); }
 }
 async function runTest() {
@@ -165,7 +181,10 @@ function onClick(e) {
   if (a === 'login') return login(false);
   if (a === 'showpw') { W.showPw = !W.showPw; draw(); return root.querySelector('[data-f=password]')?.focus(); }
   if (a === 'share') { W.share = W.shares[+b.dataset.i].name; W.path = []; W.dirs = null; return go(3); }
-  if (a === 'dir') return openDir([...W.path, W.dirs[+b.dataset.i].name]);
+  if (a === 'dir') { const d = W.dirs[+b.dataset.i]; if (d.locked || d.access === false) { W.err = { message: `Ingen tilgang til «${d.name}» for ${W.guest ? 'gjest' : W.user || 'brukeren'}.`, kind: 'access' }; return draw(); } W.openIx = +b.dataset.i; draw(); return openDir([...W.path, d.name]); }
+  if (a === 'pick') { const d = W.dirs[+b.dataset.i]; W.path = [...W.path, d.name]; W.dirs = []; return go(4); }
+  if (a === 'hidden') { W.hidden = !W.hidden; return openDir(W.path); }
+  if (a === 'manpath') { W.manualPath = W.manualPath === null ? `/${W.path.join('/')}` : null; W.err = null; draw(); return root.querySelector('[data-f=manualPath]')?.focus(); }
   if (a === 'crumb') return openDir(W.path.slice(0, +b.dataset.i));
   if (a === 'up') return openDir(W.path.slice(0, -1));
   if (a === 'newdir') { W.newDir = W.newDir === null ? '' : null; W.err = null; draw(); return root.querySelector('[data-f=newDir]')?.focus(); }
@@ -188,6 +207,7 @@ function onSubmit(e) {
   if (f === 'manual') manual(false);
   else if (f === 'login') login(false);
   else if (f === 'mkdir') mkdir();
+  else if (f === 'manpath') { const p = String(W.manualPath ?? '').split(/[\\/]+/).filter(Boolean); W.manualPath = null; openDir(p); }
 }
 function onKey(e) {
   if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); if (W?.newDir !== null && W?.step === 3) { W.newDir = null; draw(); } else closeSmbWizard(); }
@@ -240,12 +260,20 @@ function step2() {
     ${errBox(W.err)}`;
 }
 function step3() {
-  const crumbs = [`<button type="button" class="smbw-crumb" data-w="crumb" data-i="0">${esc(W.share)}</button>`, ...W.path.map((p, i) => `<button type="button" class="smbw-crumb" data-w="crumb" data-i="${i + 1}"${i === W.path.length - 1 ? ' aria-current="true"' : ''}>${esc(p)}</button>`)];
-  const dirs = W.dirs ?? [];
+  // Prompt 36: smb://host › share › … (trykk hopper opp), trykk på en mappe åpner den, «Velg» per rad, «Bruk denne mappen» øverst.
+  const crumbs = [`<span class="smbw-crumb host">smb://${esc(W.host)}</span>`, `<button type="button" class="smbw-crumb" data-w="crumb" data-i="0"${W.path.length ? '' : ' aria-current="true"'}>${esc(W.share)}</button>`, ...W.path.map((p, i) => `<button type="button" class="smbw-crumb" data-w="crumb" data-i="${i + 1}"${i === W.path.length - 1 ? ' aria-current="true"' : ''}>${esc(p)}</button>`)];
+  const dirs = W.dirs ?? [], who = W.guest ? 'gjest' : W.user || 'brukeren';
+  const drow = (d, i) => {
+    const lock = d.locked || d.access === false;
+    return `<div class="smbw-drow${lock ? ' lock' : ''}"><button type="button" class="smbw-row" data-w="dir" data-i="${i}"><span class="smbw-ico sm" aria-hidden="true">${lock ? '🔒' : '📁'}</span><span class="smbw-rt"><b>${esc(d.name)}</b>${lock ? `<small>Ingen tilgang for ${esc(who)}</small>` : d.link ? '<small>Lenke / montert volum</small>' : ''}</span><span class="smbw-chev" aria-hidden="true">${W.busy && W.openIx === i ? '<span class="smbw-spin"></span>' : '›'}</span></button>${lock ? '' : `<button type="button" class="smbw-mini smbw-pick" data-w="pick" data-i="${i}" aria-label="Velg ${esc(d.name)}">Velg</button>`}</div>`;
+  };
   return `<nav class="smbw-crumbs" aria-label="Mappesti">${crumbs.join('<span aria-hidden="true">›</span>')}</nav>
-    <div class="smbw-tools"><button type="button" class="smbw-mini" data-w="up" ${W.path.length && !W.busy ? '' : 'disabled'}>‹ Opp</button><button type="button" class="smbw-mini" data-w="newdir" ${W.busy ? 'disabled' : ''}>+ Ny mappe</button></div>
+    <button type="button" class="smbw-btn wide smbw-usehere" data-w="choose" ${W.busy || !W.dirs ? 'disabled' : ''}>Bruk denne mappen<small class="smbw-mono">${esc(label())}</small></button>
+    <div class="smbw-tools"><button type="button" class="smbw-mini" data-w="up" ${W.path.length && !W.busy ? '' : 'disabled'}>‹ Opp</button><button type="button" class="smbw-mini" data-w="newdir" ${W.busy ? 'disabled' : ''}>+ Ny mappe</button><button type="button" class="smbw-mini" data-w="manpath">Skriv sti manuelt</button><button type="button" class="smbw-mini${W.hidden ? ' on' : ''}" data-w="hidden" aria-pressed="${W.hidden}">Vis skjulte</button></div>
     ${W.newDir !== null ? `<form class="smbw-man" data-form="mkdir"><label class="smbw-f"><span>Navn på ny mappe</span><input data-f="newDir" value="${esc(W.newDir)}" placeholder="homelab" autocomplete="off" autocapitalize="off" spellcheck="false"></label><button class="smbw-btn" ${W.busy ? 'disabled' : ''}>Lag</button></form>` : ''}
-    <div class="smbw-list">${W.busy && !W.dirs ? spin('Henter mapper …') : dirs.length ? dirs.map((d, i) => row(`data-w="dir" data-i="${i}"`, d.name, '', '›')).join('') : '<div class="smbw-empty">Ingen undermapper her. Velg denne mappen, eller lag en ny.</div>'}</div>
+    ${W.manualPath !== null ? `<form class="smbw-man" data-form="manpath"><label class="smbw-f"><span>Sti i ${esc(W.share)}</span><input data-f="manualPath" value="${esc(W.manualPath)}" placeholder="/backup/homelab" autocomplete="off" autocapitalize="off" spellcheck="false"></label><button class="smbw-btn" ${W.busy ? 'disabled' : ''}>Åpne</button></form>` : ''}
+    ${W.mkOk ? `<div class="smbw-res ok" role="status"><b>${esc(W.mkOk)}</b></div>` : ''}
+    <div class="smbw-list">${W.busy && !W.dirs ? spin('Henter mapper …') : dirs.length ? dirs.map(drow).join('') : '<div class="smbw-empty">Tom mappe. Bruk denne mappen, eller lag en ny.</div>'}</div>
     ${errBox(W.err)}`;
 }
 function step4() {
@@ -271,7 +299,7 @@ function draw() {
   const active = document.activeElement, af = active?.dataset?.f, sel = af ? [active.selectionStart, active.selectionEnd] : null;
   const body = W.done ? doneView() : [step0, step1, step2, step3, step4][W.step]();
   const foot = W.done ? '<button type="button" class="smbw-btn wide" data-w="done" data-autofocus>Ferdig</button>'
-    : `<button type="button" class="smbw-btn ghost" data-w="back">${W.step === 0 ? 'Avbryt' : '‹ Tilbake'}</button>${W.step === 3 ? `<button type="button" class="smbw-btn" data-w="choose" ${W.busy || !W.dirs ? 'disabled' : ''}>Velg denne mappen</button>` : W.step === 4 ? `<button type="button" class="smbw-btn" data-w="save" ${W.busy || !W.test?.writable || !W.use.length ? 'disabled' : ''}>${W.busy ? 'Lagrer …' : 'Lagre'}</button>` : ''}`;
+    : `<button type="button" class="smbw-btn ghost" data-w="back">${W.step === 0 ? 'Avbryt' : '‹ Tilbake'}</button>${W.step === 3 ? `<button type="button" class="smbw-btn" data-w="choose" ${W.busy || !W.dirs ? 'disabled' : ''}>Bruk denne mappen</button>` : W.step === 4 ? `<button type="button" class="smbw-btn" data-w="save" ${W.busy || !W.test?.writable || !W.use.length ? 'disabled' : ''}>${W.busy ? 'Lagrer …' : 'Lagre'}</button>` : ''}`;
   root.innerHTML = `<div class="smbw-bg" data-w="bg"></div>
   <section class="smbw-sheet" role="dialog" aria-modal="true" aria-labelledby="smbw-t">
     <header class="smbw-head"><div><span class="smbw-kick">Nettverksdisk · ${W.done ? 'Ferdig' : `steg ${W.step + 1} av 5`}</span><h2 id="smbw-t">${W.done ? 'Klar' : esc(STEPS[W.step])}</h2></div><button type="button" class="smbw-x" data-w="close" aria-label="Lukk">✕</button></header>

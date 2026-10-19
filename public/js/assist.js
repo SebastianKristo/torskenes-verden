@@ -11,6 +11,7 @@ import { onLive } from './realtime.js';
 import { aiStart, aiUpdate, aiDone } from './ai-jobs.js';
 import { glimt } from './glimt.js';
 import { parseTrial, trialSentence } from './trial-parse.js';
+import { isQuestion } from './ask36.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
@@ -115,7 +116,9 @@ export async function assist(q, o = {}) {
   else if (r.status === 202) {
     const jobId = String(r.d.jobId ?? r.d.id);
     o.onJob?.(jobId);
-    const aid = o.toast === false ? null : aiStart({ id: `as:${jobId}`, title: r.d.title || 'Glimt tenker', toast: r.d.toast || `Glimt tenker på «${q.length > 28 ? `${q.slice(0, 27)}…` : q}»`, model: r.d.model || 'Glimt · lokal', input: q,
+    // Prompt 36: ett Glimt-varsel om gangen. Spørsmål fra søkefeltet vises bare i kortet under feltet (ingen pille).
+    const isQ = r.d.kind === 'question' || (r.d.kind !== 'action' && isQuestion(q));
+    const aid = o.toast === false || ((o.source ?? 'search') === 'search' && isQ) ? null : aiStart({ id: `as:${jobId}`, title: r.d.title || 'Glimt tenker', toast: r.d.toast || `Glimt tenker på «${q.length > 28 ? `${q.slice(0, 27)}…` : q}»`, model: r.d.model || 'Glimt · lokal', input: q,
       steps: r.d.steps ?? ['Forstår spørsmålet', 'Henter data', 'Skriver svaret'], fields: r.d.fields, dur: 6000, hideToast: o.hideToast,
       cancel: () => { fetch(`/api/assist/${encodeURIComponent(jobId)}/cancel`, { method: 'POST', credentials: 'same-origin' }).catch(() => {}); o.onCancel?.(); } });
     try { ans = normAnswer(await waitJob(jobId, o.signal), t0); } catch (e) { if (aid) aiDone(aid, { silent: true }); throw e; }

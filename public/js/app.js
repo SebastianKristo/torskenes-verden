@@ -29,12 +29,14 @@ import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
 import { scrollMemory } from './scrollmem.js';
 import { startVersionCheck } from './vercheck.js';
+import { mountDash, startEdit } from './dash-edit36.js';
+import { initWeb36 } from './web36.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
 const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 const scrollMem = scrollMemory();
-let route = null, wasMobile = isMobile();
+let route = null, wasMobile = isMobile(), isEditingPending = false;
 
 function current() {
   // Prompt 30: undersider i adressen (#/kalender/dag/2026-10-21) hører til første ledd.
@@ -63,6 +65,7 @@ function renderRoute() {
   paintPhoto();
   mountAll(view);
   setupDnd(view);
+  if (route === 'dash') { mountDash(view); if (isEditingPending) { isEditingPending = false; requestAnimationFrame(() => startEdit()); } }
   // Rom er en underside av «Mer» på mobil.
   const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'domener', 'bursdager', 'kalender'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -125,6 +128,7 @@ function bindShell() {
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');
     if (act === 'head-edit') toggleHeadEdit();
+    if (act === 'dash-edit') { if (current() !== 'dash') { isEditingPending = true; location.hash = '#/dash'; } else startEdit(); }
     if (act === 'logout') {
       if (!confirm('Logge ut? Denne enheten må da logge inn med passord igjen.')) return;
       const d = await api('/devices').catch(() => null), cur = d?.devices?.find((x) => x.current);
@@ -138,6 +142,7 @@ function bindShell() {
   // Nytt språk: tegn visningen på nytt (tekster fra t() og Intl-datoer).
   document.addEventListener('hl:lang', () => { route = null; renderRoute(); weatherPill(); langLabel(); renderTicker(); });
   document.addEventListener('hl:name', renderRoute); // nytt navn i hilsenen med en gang
+  document.addEventListener('hl:dash36', () => { if (route === 'dash') { route = null; renderRoute(); } }); // prompt 36: widget lagt til igjen
   document.addEventListener('hl:app', () => { setTitle(); applyHlTheme(); }); // nytt appnavn eller ikon
   window.addEventListener('resize', () => { if (isMobile() !== wasMobile) { wasMobile = isMobile(); renderRoute(); weatherPill(); } });
 }
@@ -159,6 +164,7 @@ async function main() {
   bindSettings();
   loadUpdBanner(); // prompt 30: oppdateringsbanner (bare admin)
   bindPopup();
+  initWeb36();
   bindSearch();
   setupDnd(document.querySelector('header'));
   study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);

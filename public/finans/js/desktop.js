@@ -1366,3 +1366,12 @@ export function bind() {
     if (e.key === 'Escape' && u.add) { u.add = null; render(); }
   });
 }
+
+// Prompt 36: ingen synlig scroll-strek på web (FinansHub på PC), scrolling virker som før.
+(() => {
+  if (document.getElementById('hl36-noscroll')) return;
+  const st = document.createElement('style');
+  st.id = 'hl36-noscroll';
+  st.textContent = 'html[data-ui="desktop"] *{scrollbar-width:none!important}html[data-ui="desktop"] *::-webkit-scrollbar{width:0!important;height:0!important;display:none!important}';
+  document.head.appendChild(st);
+})();

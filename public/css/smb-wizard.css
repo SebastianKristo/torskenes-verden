@@ -86,3 +86,16 @@ html.smbw-open,html.smbw-open body{overflow:hidden}
   .smbw-foot .smbw-btn{flex:1;padding:0 12px}
   .smbw-man{flex-direction:column;align-items:stretch}
 }
+
+/* Prompt 36: mappeleser med «Velg» per rad, «Bruk denne mappen» øverst, låste mapper og «Tom mappe». */
+.smbw-crumb.host{font-family:ui-monospace,'IBM Plex Mono',monospace;opacity:.7;padding:0 2px}
+.smbw-usehere{display:flex;flex-direction:column;align-items:center;gap:2px;height:auto!important;min-height:54px;padding:8px 16px!important;margin:6px 0 4px}
+.smbw-usehere small{font-size:11.5px;font-weight:500;opacity:.8;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.smbw-drow{display:flex;align-items:center;gap:8px}
+.smbw-drow>.smbw-row{flex:1;min-width:0}
+.smbw-drow.lock>.smbw-row{opacity:.75}
+.smbw-pick{flex:none}
+.smbw-ico.sm{font-size:18px;width:28px;flex:none;text-align:center}
+.smbw-tools{flex-wrap:wrap}
+.smbw-mini.on{background:#1b1a17;color:#f3efe6}
+.smbw-chev .smbw-spin{width:14px;height:14px}

@@ -13,6 +13,7 @@ import { esc } from './util.js';
 import { store } from './store.js';
 import { U, UPD_CMD, onUpdate, loadUpdate, checkUpdate, openSheet, startUpdate, toggleLog, copyCmd, running, state, verTxt, ms, shortSha } from './sysupdate.js';
 import { progress, ackDone, doneRecent } from './upd-banner.js';
+import { carpOnBar, sherlockFly, setSherlockText } from './glimt-outfits36.js'; // prompt 36: Sherlock- og snekker-Glimt
 
 let rerender = () => {}, subscribed = false;
 const admin = () => store.me?.me?.role === 'admin';
@@ -63,7 +64,7 @@ function heroHtml(ph, d) {
   let prog = '';
   if (ph === 'run') {
     const p = progress();
-    prog = `<div class="ny-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><span class="ny-bar"><span style="width:${p.pct}%"></span></span><span class="ny-ps"><span>${esc((STEP_TXT[p.key] ?? STEP_TXT.download).replace('{v}', lat.version || ''))}</span><span class="ny-pct">${p.pct} %</span></span></div>`;
+    prog = `<div class="ny-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><span class="ny-bar cp36-host">${carpOnBar(p.pct, 36)}<span style="width:${p.pct}%"></span></span><span class="ny-ps"><span>${esc((STEP_TXT[p.key] ?? STEP_TXT.download).replace('{v}', lat.version || ''))}</span><span class="ny-pct">${p.pct} %</span></span></div>`;
   }
   return `<section class="ny-hero" data-ph="${ph}"><span class="ny-arc a" aria-hidden="true"></span><span class="ny-arc b" aria-hidden="true"></span>
     <div class="ny-top"><span class="ny-big" data-no-i18n>${esc(big)}</span><button type="button" class="ny-chk" data-hl="chk" data-upd="check" ${ph === 'run' || U.checking ? 'disabled' : ''}>${U.checking ? 'Ser etter …' : '<span class="ny-chk-l">Se etter oppdatering</span><span class="ny-chk-s">Se etter</span>'}</button></div>
@@ -113,7 +114,37 @@ function notesHtml(ph, d) {
   items = items.slice(0, 16);
   return `<section class="ny-notes"><b class="ny-h">Dette er Nordlys ${esc(majMin(v) || '')}. ${esc(tag)}</b>
     ${v ? `<span class="ny-cap">NYTT I <span data-no-i18n>${esc(v)}</span>${date ? ` · <span data-no-i18n>${esc(date)}</span>` : ''}</span>` : ''}
-    ${items.length ? `<ul data-no-i18n>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span class="ny-note">Ingen endringsnotater for denne versjonen ennå.</span>'}${buildLine(d)}</section>`;
+    ${items.length ? `<ul data-no-i18n>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span class="ny-note">Ingen endringsnotater for denne versjonen ennå.</span>'}${buildLine(d)}</section>${histHtml(v, d)}`;
+}
+
+// Prompt 36: TIDLIGERE VERSJONER. GET /api/system/changelog?limit=20&before=<v> → {items:[{version, date, notes[], installedAt?, failed?}], more}.
+// Eldre server: changes fra /api/system/update. Én åpen om gangen, «Vis flere» henter neste side.
+const HI = { items: null, more: false, open: '', busy: false, key: '', err: '' };
+const cleanNotes = (a) => (a ?? []).map((x) => String(x ?? '').trim()).filter((x) => x && !/^[^.!?]{1,60}:$/.test(x) && !/^[-–:.\s]*$/.test(x));
+function loadHist(before, more = false) {
+  if (HI.busy) return;
+  HI.busy = true;
+  fetch(`/api/system/changelog?limit=20${before ? `&before=${encodeURIComponent(before)}` : ''}`, { credentials: 'same-origin', cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((j) => { const L = (Array.isArray(j) ? j : j?.items ?? []).map((x) => ({ ...x, notes: cleanNotes(x.notes ?? x.items) })); HI.items = more ? [...(HI.items ?? []), ...L] : L; HI.more = !!j?.more; })
+    .catch(() => { if (!more) { HI.items = null; HI.fallback = true; } })
+    .finally(() => { HI.busy = false; rerender(); });
+}
+function histHtml(v, d) {
+  const key = v || '';
+  if (HI.key !== key) { HI.key = key; HI.items = null; HI.fallback = false; HI.open = ''; loadHist(v); }
+  let L = HI.items;
+  if (!L && HI.fallback) L = (d?.changes ?? []).filter((c) => c.version && c.version !== v).map((c) => ({ version: c.version, date: c.date, notes: cleanNotes(c.items) }));
+  if (!L) return `<section class="ny-hist"><span class="ny-cap">TIDLIGERE VERSJONER</span><span class="ny-note">Henter …</span></section>`;
+  if (!L.length) return '';
+  const when = (t) => { const x = new Date(ms(t) ?? t); return Number.isNaN(+x) ? '' : `${pad(x.getDate())}.${pad(x.getMonth() + 1)} kl. ${pad(x.getHours())}.${pad(x.getMinutes())}`; };
+  return `<section class="ny-hist" id="ny-hist"><span class="ny-cap">TIDLIGERE VERSJONER</span><div class="ny-hl">${L.map((x) => {
+    const on = HI.open === x.version, n = x.notes?.length ?? 0;
+    const meta = [x.date ? (/^\d{4}-/.test(x.date) ? dmy(x.date) : x.date) : '', `${n} ${n === 1 ? 'endring' : 'endringer'}`].filter(Boolean).join(' · ');
+    const tag = x.failed ? '<span class="ny-hf">Feilet</span>' : x.installedAt ? `<span class="ny-hi">Installert ${esc(when(x.installedAt))}</span>` : '';
+    return `<div class="ny-hr${on ? ' on' : ''}"><button type="button" class="ny-hb" data-upd="hist:${esc(x.version)}" aria-expanded="${on}"><span class="ny-hv"><b data-no-i18n>Nordlys ${esc(x.version)}</b><span>${esc(meta)}</span></span>${tag}<span class="ny-chev" aria-hidden="true">›</span></button>
+      ${on ? `<div class="ny-hn">${n ? `<ul data-no-i18n>${x.notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<span class="ny-note">Ingen endringsnotater.</span>'}${x.failed ? `<button type="button" class="sg-link" data-upd="log">Vis logg</button>` : ''}</div>` : ''}</div>`;
+  }).join('')}</div>${HI.more ? `<button type="button" class="ny-more" data-upd="histmore"${HI.busy ? ' disabled' : ''}>${HI.busy ? 'Henter …' : 'Vis flere'}</button>` : ''}</section>`;
 }
 // Prompt 32 (claude-code-fjern-oppdatering-rad.md): «Installert 4.24.0 · build 8512626» med Kopier, flyttet hit fra den
 // gamle Oppdatering-raden. Nordlys OS er det eneste stedet å oppdatere.
@@ -213,11 +244,20 @@ export async function systemClick(e) {
   if (b.classList.contains('ny-dlg-bg') && e.target !== b) return false;
   e.preventDefault();
   const a = b.dataset.upd;
-  if (a === 'check') { await checkUpdate(); loadVersion(true); }
+  if (a === 'check') {
+    // Prompt 36: Glimt i Sherlock Holmes-drakt flyr inn i kortet og leter mens vi spør GitHub.
+    const fly = sherlockFly(document.querySelector('#settings .ny-hero'), 'Hmm, la meg se …');
+    await checkUpdate(); loadVersion(true);
+    const lat = U.d?.latest?.version;
+    setSherlockText(U.d?.updateAvailable && lat ? `Aha! Jeg fant Nordlys ${majMin(lat)}.` : U.st === 'ok' ? 'Elementært! Du har siste versjon.' : 'Hmm, fikk ikke svar fra GitHub.');
+    await fly;
+  }
   else if (a === 'reload') { U.st = 'loading'; rerender(); await loadUpdate(); }
   else if (a === 'open') await startNow();
   else if (a === 'close') openSheet(false);
   else if (a === 'log') toggleLog();
+  else if (a.startsWith('hist:')) { const v = a.slice(5); HI.open = HI.open === v ? '' : v; rerender(); }
+  else if (a === 'histmore') loadHist(HI.items?.at(-1)?.version, true);
   else if (a === 'copy') await copyCmd();
   else if (a === 'copybuild') { try { await navigator.clipboard.writeText(buildTxt(U.d)); } catch { /* */ } copiedBuild = true; rerender(); setTimeout(() => { copiedBuild = false; rerender(); }, 1800); }
   return true;

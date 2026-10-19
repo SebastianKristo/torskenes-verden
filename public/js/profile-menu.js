@@ -9,7 +9,7 @@ import { lang } from './i18n.js';
 import { is2c } from './hltheme.js';
 import { roleName } from './settings-login.js';
 
-export const PM_KEYS = ['innstillinger', 'tema', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'cv', 'las'];
+export const PM_KEYS = ['innstillinger', 'tema', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'widgets', 'cv', 'las']; // prompt 36: «Rediger widgets»
 const DEF = () => ({ order: [...PM_KEYS], hidden: ['sokebar', 'nyhetslinje', 'las'] });
 const LS = 'hl_profile_menu';
 const IC = {
@@ -17,11 +17,11 @@ const IC = {
   innstillinger: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4',
   tema: 'M12 3a9 9 0 1 0 0 18V3zM12 3a9 9 0 0 1 0 18', sokebar: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4',
   nyhetslinje: 'M4 5h13v14H6a2 2 0 0 1-2-2zM17 9h3v8a2 2 0 0 1-2 2M8 9h5M8 13h5', tilpass: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z',
-  cv: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6', las: 'M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3', out: 'M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10',
+  cv: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6', widgets: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 17.5h7M17.5 14v7', las: 'M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3', out: 'M15 4h4a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-4M10 16l-4-4 4-4M6 12h10',
 };
-const COL = { innstillinger: '#6b6558', tema: '#7a5ad6', sprak: '#2b5d8a', sokebar: '#7a3b6b', nyhetslinje: '#c0562a', tilpass: '#3f7a6e', cv: '#a8661a', las: '#1f6f78', out: '#b23a2a' };
+const COL = { innstillinger: '#6b6558', tema: '#7a5ad6', sprak: '#2b5d8a', sokebar: '#7a3b6b', nyhetslinje: '#c0562a', tilpass: '#3f7a6e', widgets: '#b23a2a', cv: '#a8661a', las: '#1f6f78', out: '#b23a2a' };
 // Handlingene finnes fra før i app.js (data-act); CV er en lenke.
-const ACT = { innstillinger: 'settings', tema: 'hl-theme', sprak: 'lang', sokebar: 'toggle-search', nyhetslinje: 'toggle-news', tilpass: 'layout', las: 'lock' };
+const ACT = { innstillinger: 'settings', tema: 'hl-theme', sprak: 'lang', sokebar: 'toggle-search', nyhetslinje: 'toggle-news', tilpass: 'layout', widgets: 'dash-edit', las: 'lock' };
 function label(k) {
   if (k === 'innstillinger') return 'Innstillinger';
   if (k === 'tema') return is2c() ? 'Bytt til nåværende tema' : 'Bytt til Vindu og papir';
@@ -29,6 +29,7 @@ function label(k) {
   if (k === 'sokebar') return store.me?.hideSearch ? 'Vis søkebar' : 'Skjul søkebar';
   if (k === 'nyhetslinje') return store.me?.hideNews ? 'Vis nyhetslinje' : 'Skjul nyhetslinje';
   if (k === 'tilpass') return 'Tilpass forside og meny';
+  if (k === 'widgets') return 'Rediger widgets';
   if (k === 'cv') return 'CV ↗';
   return 'Lås skjermen';
 }
@@ -36,7 +37,9 @@ function label(k) {
 const M = { pm: null, edit: false, loaded: false };
 const clean = (v) => {
   const d = DEF(), o = Array.isArray(v?.order) ? v.order.filter((k) => PM_KEYS.includes(k)) : [];
-  const order = [...new Set([...o, ...PM_KEYS.filter((k) => !o.includes(k))])];
+  // Nye rader (prompt 36: «Rediger widgets») legges rett etter raden foran seg i standardrekkefølgen.
+  const order = [...new Set(o)];
+  PM_KEYS.forEach((k, i) => { if (order.includes(k)) return; const prev = PM_KEYS[i - 1], at = prev ? order.indexOf(prev) : -1; order.splice(at + 1, 0, k); });
   const hidden = Array.isArray(v?.hidden) ? [...new Set(v.hidden.filter((k) => PM_KEYS.includes(k)))] : d.hidden;
   return { order, hidden };
 };
@@ -64,7 +67,7 @@ export function renderProfileMenu() {
       <div class="pm-foot"><span>Logg ut ligger alltid nederst.</span><button type="button" class="pm-reset" data-pm="reset">Tilbakestill</button></div>`;
     return;
   }
-  const items = pm.order.filter((k) => !pm.hidden.includes(k)).map((k) => (k === 'cv'
+  const items = pm.order.filter((k) => !pm.hidden.includes(k) && (k !== 'widgets' || window.innerWidth >= 900)).map((k) => (k === 'cv'
     ? `<a role="menuitem" class="pm-it" href="/cv" target="_blank" rel="noopener">${ic(k)}<span>${esc(label(k))}</span></a>`
     : `<button role="menuitem" class="pm-it" data-act="${ACT[k]}"${k === 'sprak' ? ' data-no-i18n id="menu-lang"' : ''}>${ic(k)}<span>${esc(label(k))}</span></button>`)).join('');
   el.innerHTML = `${head}${items}<button role="menuitem" class="pm-it danger" data-act="logout">${ic('out')}<span>Logg ut</span></button>

@@ -5,6 +5,7 @@
 import { clearBtn } from '/assets/js/searchfield.js';
 import { glimt } from './glimt.js';
 import { is2c } from './hltheme.js';
+import { onLive } from './realtime.js'; // prompt 36: matplanen er felles, endringer kommer som meal:changed
 
 const DAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 const AB = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
@@ -103,12 +104,18 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
 
   const dishById = (id) => S.w?.dishes.find((d) => d.id === id);
 
+  // Prompt 36: matplanen er alltid felles for hele husstanden (ingen deleknapp eller privat-valg).
+  function sharedNote(w) {
+    if (w.sharedNote) return w.sharedNote;
+    const t = w.updatedAt ? new Date(w.updatedAt) : null, by = w.updatedBy?.name ?? w.updatedBy;
+    return `Felles for husstanden${by ? ` · Endret av ${by}${t && !Number.isNaN(+t) ? ` ${String(t.getHours()).padStart(2, '0')}.${String(t.getMinutes()).padStart(2, '0')}` : ''}` : ''}`;
+  }
   function header(w) {
     const m = parse(w.start), e = parse(w.end);
     const range = m.getMonth() === e.getMonth() ? `${m.getDate()}.–${e.getDate()}. ${MON[m.getMonth()]}` : `${m.getDate()}. ${MON[m.getMonth()]}–${e.getDate()}. ${MON[e.getMonth()]}`;
     const feed = `webcal://${location.host}${w.calendarUrl}`;
     return `<div class="mp-head">
-      <div class="mp-titles"><div class="mp-kicker">${esc(`Uke ${w.week} · ${range}`.toUpperCase())}</div>${embedded ? '' : '<h1 class="mp-h1">Mat</h1>'}</div>
+      <div class="mp-titles"><div class="mp-kicker">${esc(`Uke ${w.week} · ${range}`.toUpperCase())}</div>${embedded ? '' : '<h1 class="mp-h1">Mat</h1>'}<div class="mp-shared">${esc(sharedNote(w))}</div></div>
       <div class="mp-actions">
         <button class="mp-btn mp-toggle" data-a="auto" role="switch" aria-checked="${w.auto}"><span class="mp-sw${w.auto ? ' on' : ''}"><i></i></span>Ny plan hver søndag</button>
         <div class="mp-calwrap" data-mp-cal>
@@ -552,6 +559,13 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
 
   paint();
   load().then(pollJobs);
+  // Sanntid: en annen bruker endret planen → hent uka på nytt og vis hvem.
+  const off = onLive('meal:changed', (m) => {
+    if (!el.isConnected) { off?.(); return; }
+    if (S.ed || S.hfOpen) return; // ikke forstyrr et åpent skjema
+    const who = m?.updatedBy?.name ?? m?.updatedBy ?? m?.by ?? '';
+    load().then(() => { if (who) { flash(`Oppdatert av ${who}`); paintStatus(); } });
+  });
   return { reload: load, el };
 }
 

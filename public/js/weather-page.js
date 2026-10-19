@@ -235,7 +235,17 @@ function cmpVals(d, nowI) {
 
 // Prompt 32: PC-oppsett (fasit Vaer.dc.html med desktop=true): sidepanel med steder til venstre, innhold i to kolonner 5:7
 // (topp, Forhold og 7 dager til venstre; værkart, Yr og Storm, vind, måne og fliser til høyre). Under 900 px: mobiloppsettet.
-const isDk = () => window.innerWidth >= 900;
+// Prompt 36: nytt PC-oppsett (Vær på Mac) fra 800 px; under det mobiloppsettet.
+const isDk = () => window.innerWidth >= 800;
+// Kortfargen tones etter himmelen (fasit Vaer.dc.html → cardBg).
+function cardBgOf(code, night) {
+  if (night) return 'rgba(34,38,78,.58)';
+  if (code <= 2) return 'rgba(24,82,168,.34)';
+  if (code === 3) return 'rgba(62,84,110,.42)';
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95) return 'rgba(34,42,56,.5)';
+  if ((code >= 71 && code <= 77) || code >= 85) return 'rgba(84,98,118,.4)';
+  return 'rgba(52,64,80,.45)';
+}
 const MODE_SUB = { temp: 'Temperatur (°C)', rain: 'Nedbør (mm) · Sjanse', wind: 'Vind (m/s) · Kast' };
 const f1n = (v) => (v < 0.05 ? '0' : v < 10 ? String(Math.round(v * 10) / 10).replace('.', ',') : String(Math.round(v)));
 const DROP = '<svg width="12" height="14" viewBox="0 0 24 24" fill="#5ad1ff" aria-hidden="true"><path d="M12 2c3.5 4.6 7 8.6 7 12.6a7 7 0 0 1-14 0C5 10.6 8.5 6.6 12 2z"/></svg>';
@@ -305,7 +315,9 @@ function cmpCardHtml(d) {
 }
 
 // Vind, måne, sol, UV, føles som, mot i går, nedbør, sikt, luftfuktighet, lufttrykk.
-function restHtml(d) {
+function restHtml(d) { const R = restParts(d); return `${R.wind}${R.moon}<div class="wxp-tiles">${R.tiles.join('')}</div>`; }
+// Prompt 36: delene hver for seg, så PC-oppsettet kan legge dem i et 5-kolonners rutenett.
+function restParts(d) {
   const C = d.current, D = d.daily, H = d.hourly, nowI = nowIndex(H), di = [1, 2, 3, 4, 5, 6, 7].filter((i) => i < D.time.length);
   const dir = C.wind_direction_10m ?? 0, dTxt = `${Math.round(dir)}° ${D16[Math.round(dir / 22.5) % 16]}`;
   const rows = (arr) => arr.map(([a, b], i) => `<div class="wxp-row${i ? ' bt' : ''}"><span>${esc(a)}</span><span>${esc(b)}</span></div>`).join('');
@@ -337,8 +349,9 @@ function restHtml(d) {
     tile('vis', `${lab(LSVG.vis, 'SIKT')}<b class="wxp-big">${visKm >= 30 ? `+${Math.round(visKm)}` : visKm >= 10 ? Math.round(visKm) : f1(visKm)} km</b><span class="wxp-small wxp-auto">${visKm >= 20 ? 'Helt klar sikt.' : visKm >= 10 ? 'God sikt.' : visKm >= 4 ? 'Moderat sikt.' : 'Dårlig sikt.'}</span>`),
     tile('hum', `${lab(LSVG.hum, 'LUFTFUKTIGHET')}<b class="wxp-big">${Math.round(C.relative_humidity_2m)} %</b><span class="wxp-small wxp-auto">Duggpunktet er ${Math.round(dew)}° akkurat nå.</span>`),
     tile('pres', `${lab(LSVG.pres, 'LUFTTRYKK')}<svg viewBox="0 0 100 86" class="wxp-pres"><circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="8" stroke-dasharray="0.9 2.4" transform="rotate(135 50 50)" pathLength="100"/><g transform="rotate(${(-135 + pf * 270).toFixed(0)} 50 50)"><line x1="50" y1="9" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g><text x="50" y="40" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">${arrow}</text><text x="50" y="56" fill="#fff" font-size="15" font-weight="800" text-anchor="middle">${Math.round(pr).toLocaleString('nb-NO')}</text><text x="50" y="66" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">hPa</text><text x="26" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Lavt</text><text x="74" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Høyt</text></svg>`),
-  ].join('');
-  return `${windCard}${moonCard}<div class="wxp-tiles">${tiles}</div>`;
+  ];
+  const [sun, uvT, feel, ydT, rain, vis, hum, pres] = tiles;
+  return { wind: windCard, moon: moonCard, tiles, sun, uv: uvT, feel, yd: ydT, rain, vis, hum, pres };
 }
 
 const mapSrc = (P) => `https://embed.windy.com/embed2.html?lat=${P.lat}&lon=${P.lon}&detailLat=${P.lat}&detailLon=${P.lon}&zoom=7&level=surface&overlay=${S.mpL}&product=ecmwf&menu=&message=true&marker=true&calendar=now&type=map&location=coordinates&metricWind=m%2Fs&metricTemp=%C2%B0C`;
@@ -355,23 +368,99 @@ function paintMap(r) {
   slot.innerHTML = `<iframe src="${esc(src)}" title="Værkart for ${esc(P.name)}" loading="lazy" referrerpolicy="no-referrer"></iframe>`;
 }
 
-// Sidepanelet på PC: «Vær» + «+», søkefelt, Mine steder som kort (valgt sted viser temperatur, beskrivelse og H/L), kilden nederst.
+// Prompt 36: sidepanelet på PC (320 px, fra topp til bunn): søkefelt + rund «+», og stedskort med været for HVERT sted
+// (temperatur, H/L, beskrivelse eller «85 % sjanse for regn på torsdag», lokal tid når tidssonen er en annen) på stedets egen himmel.
+const DN = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
 function sideHtml() {
   const L = S.places ?? DEFP, C = S.d?.current, D = S.d?.daily, cur = place();
   const list = L.map((P) => {
-    const on = P.id === cur.id;
-    return `<button class="wxp-sc${on ? ' on' : ''}" data-wx-pl="${esc(P.id)}"${on ? ' aria-current="true"' : ''}><span class="wxp-sc1"><b>${esc(P.name)}</b><span>${on && C ? r0(C.temperature_2m) : ''}</span></span><span class="wxp-sc2"><span>${esc(on && C ? DESC(C.weather_code) : [P.region, P.country || 'Norge'].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(', '))}</span><span>${on && D ? `H:${r0(D.temperature_2m_max[1])} L:${r0(D.temperature_2m_min[1])}` : ''}</span></span></button>`;
+    const on = P.id === cur.id, Q = S.pw?.[P.id];
+    let t = '', sub = [P.region, P.country || 'Norge'].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(', '), hl = '', tag = '', bg = '';
+    if (on && C) { t = r0(C.temperature_2m); sub = DESC(C.weather_code); hl = `H:${r0(D.temperature_2m_max[1])}  L:${r0(D.temperature_2m_min[1])}`; tag = P.id === 'pos' || P.mine ? 'Min posisjon' : (P.region && P.region !== P.name ? P.region : P.country || 'Norge'); }
+    else if (Q) {
+      t = r0(Q.t); hl = Q.hi != null ? `H:${r0(Q.hi)}  L:${r0(Q.lo)}` : ''; bg = skyOf(Q.code ?? 2, Q.day === false);
+      tag = Q.time || P.region || P.country || '';
+      sub = Q.pp >= 60 ? `${Math.round(Q.pp)} % sjanse for regn ${Q.ppD}` : DESC(Q.code ?? 2);
+    }
+    return `<button class="wx36-pc${on ? ' on' : ''}" data-wx-pl="${esc(P.id)}"${on ? ' aria-current="true"' : ''}${bg ? ` style="background:${bg}"` : ''}><span class="wx36-pc1"><span class="wx36-pcn"><b>${esc(P.name)}</b><span>${esc(tag)}</span></span><span class="wx36-pct">${t}</span></span><span class="wx36-pc2"><span>${esc(sub)}</span><span>${hl}</span></span></button>`;
   }).join('');
-  return `<div class="wxp-sh1"><b>Vær</b><button class="wxp-plus" data-wx="places" aria-label="Legg til sted" title="Legg til sted">+</button></div>
-    <button class="wxp-sq" data-wx="places"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>Søk etter by eller sted</button>
-    <div class="wxp-scs">${list}</div><span class="wxp-grow"></span><span class="wxp-sidesrc">${esc(S.src)}</span>`;
+  return `<div class="wx36-sq"><button class="wx36-sqb" data-wx="places"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>Søk etter by eller sted</button><button class="wx36-plus" data-wx="places" aria-label="Legg til sted" title="Legg til sted"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+    <div class="wx36-pcs">${list}</div><span class="wxp-sidesrc">${esc(S.src)}</span>`;
+}
+
+// Været for alle steder i ett kall: GET /api/weather/places/summary (prompt 36). Tåler 404 / andre former: da hentes
+// /api/weather/full per sted. Oppdateres hvert 10. min og når steder legges til eller fjernes.
+function normQ(x) {
+  if (!x) return null;
+  const c = x.current ?? x, days = x.days ?? x.daily ?? null;
+  const t = pick(c, 'temp', 't', 'temperature', 'temperature_2m');
+  if (t == null) return null;
+  const code = pick(c, 'code', 'weatherCode', 'weather_code') ?? 2;
+  const dayRaw = pick(c, 'isDay', 'day', 'is_day');
+  let hi = pick(x, 'hi', 'max', 'high'), lo = pick(x, 'lo', 'min', 'low');
+  let pp = pick(x, 'pp', 'precipProbMax', 'rainChance'), ppD = x.ppDay ?? x.ppD ?? null, ppDate = x.ppDate ?? null;
+  if (Array.isArray(days) && days.length) {
+    hi ??= pick(days[0], 'hi', 'max'); lo ??= pick(days[0], 'lo', 'min');
+    if (pp == null) { let k = 0; days.slice(0, 4).forEach((dd, q) => { if ((pick(dd, 'precipProb', 'pp') ?? 0) > (pick(days[k], 'precipProb', 'pp') ?? 0)) k = q; }); pp = pick(days[k], 'precipProb', 'pp') ?? 0; ppDate = String(days[k].date ?? '').slice(0, 10); ppD = k === 0 ? 'i dag' : k === 1 ? 'i morgen' : null; }
+  }
+  if (!ppD && ppDate) { const dd = new Date(`${ppDate}T12:00`), today = dayKey(new Date()), tm = new Date(); tm.setDate(tm.getDate() + 1); ppD = ppDate === today ? 'i dag' : ppDate === dayKey(tm) ? 'i morgen' : `på ${DN[dd.getDay()]}`; }
+  // Lokal tid når stedet har en annen tidssone (New York 15:49).
+  let time = '';
+  const tz = x.tz ?? x.timezone ?? null, off = pick(x, 'utcOffset', 'utc_offset_seconds', 'offsetSec');
+  try {
+    if (tz && typeof tz === 'string') {
+      const there = new Date().toLocaleTimeString('nb-NO', { timeZone: tz, hour: '2-digit', minute: '2-digit' }), here = new Date().toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+      if (there !== here) time = there;
+    } else if (off != null && Math.abs(off + new Date().getTimezoneOffset() * 60) >= 60) time = new Date(Date.now() + (off + new Date().getTimezoneOffset() * 60) * 1000).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+  } catch { /* ukjent tidssone */ }
+  return { t, code, day: dayRaw == null ? null : !!dayRaw, hi, lo, pp: pp ?? 0, ppD: ppD ?? '', time };
+}
+function fromFull(f) {
+  if (!f?.current) return null;
+  const days = (f.days ?? []).map((x) => ({ date: x.date, hi: x.hi ?? x.max, lo: x.lo ?? x.min, precipProb: x.precipProb ?? 0 }));
+  return normQ({ current: f.current, days, tz: f.timezone ?? f.tz ?? null });
+}
+let pwTimer = null;
+async function loadAll(force) {
+  if (!isDk() || !root()) return;
+  const L = S.places ?? DEFP, key = L.map((p) => p.id).join(',');
+  if (!force && S.pwKey === key && Date.now() - (S.pwAt || 0) < 6e5) return;
+  S.pwKey = key; S.pwAt = Date.now();
+  let got = null;
+  try {
+    const r = await api('/weather/places/summary');
+    const arr = Array.isArray(r) ? r : r?.places ?? r?.items ?? r?.summary ?? null;
+    if (Array.isArray(arr)) { got = {}; for (const x of arr) { const q = normQ(x); const id = x.id ?? x.placeId; if (q && id != null) got[id] = q; } }
+    else if (r && typeof r === 'object') { got = {}; for (const [id, x] of Object.entries(r)) { const q = normQ(x); if (q) got[id] = q; } }
+    if (got && !Object.keys(got).length) got = null;
+  } catch { got = null; }
+  if (!got) {
+    got = {};
+    await Promise.all(L.map(async (P) => { try { got[P.id] = fromFull(await api(`/weather/full?${!P.local ? `place=${encodeURIComponent(P.id)}` : `lat=${P.lat}&lon=${P.lon}&name=${encodeURIComponent(P.name)}`}`)); } catch { /* stedet vises uten vær */ } }));
+  }
+  S.pw = { ...(S.pw ?? {}), ...got };
+  const side = root()?.querySelector('.wxp-side');
+  if (side && isDk()) side.innerHTML = sideHtml();
+  clearTimeout(pwTimer);
+  pwTimer = setTimeout(() => { if (root()) loadAll(true); }, 6e5);
+}
+
+// Prompt 36: hoveddelen på PC: toppen sentrert, så et 5-kolonners rutenett (3 under 1100 px) der kortene i samme rad har lik høyde.
+function dkHtml(d, P) {
+  const C = d.current, D = d.daily, R = restParts(d), mine = P.id === 'pos' || P.mine;
+  const kick = mine ? 'MIN POSISJON' : (P.region && P.region !== P.name ? P.region : P.country || 'Norge').toUpperCase();
+  const arrow = mine ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.5L13 21z"/></svg>' : '';
+  const c = (cls, inner) => `<div class="wx36-c ${cls}">${inner}</div>`;
+  return `<div class="wx36-hero" style="opacity:${Math.max(0, 1 - S.sc / 220).toFixed(2)}"><span class="wx36-k">${arrow}${esc(kick)}</span><span class="wx36-city">${esc(P.name)}</span><span class="wx36-temp">${r0(C.temperature_2m)}</span><span class="wx36-desc">${esc(DESC(C.weather_code))}</span><span class="wx36-hl">H:${r0(D.temperature_2m_max[1])}  L:${r0(D.temperature_2m_min[1])}</span></div>
+    <div class="wx36-grid">${c('s5 forhold', forholdHtml(d))}${c('s2 r2 days', daysHtml(d))}${c('s2 map', mapCardHtml())}${c('s1', R.sun)}${c('s2', R.moon)}${c('s1', R.uv)}${c('s2', cmpCardHtml(d))}${c('s1', R.feel)}${c('s1', R.yd)}${c('s1', R.rain)}${c('s1', R.vis)}${c('s1', R.hum)}${c('s1', R.pres)}${c('s2', R.wind)}</div>
+    <div class="wx36-foot"><b>Vær for ${esc(P.name)}</b><span class="wxp-sidesrc">${esc(S.src)}</span><a href="${esc(S.full?.yrUrl ?? 'https://www.yr.no/')}" target="_blank" rel="noopener">Se også yr.no ↗</a></div>`;
 }
 
 function mainHtml() {
   const d = S.d, P = place();
   if (!d) return `<div class="wxp-hero"><span class="wxp-city">${esc(P.name)}</span><span class="wxp-desc">${esc(S.src === 'Henter …' ? 'Henter været …' : 'Fikk ikke hentet været')}</span>${S.src === 'Henter …' ? '' : '<button class="wxp-pill" data-wx="retry">Prøv igjen</button>'}</div>`;
   const credit = `<a class="wxp-credit" href="${esc(S.full?.yrUrl ?? 'https://www.yr.no/')}" target="_blank" rel="noopener">${esc(S.full?.credit ?? 'Data: MET Norway')} · Se også yr.no ↗</a>`;
-  if (isDk()) return `<div class="wxp-cols dk"><div class="wxp-col">${heroHtml(d, P)}${forholdHtml(d)}${daysHtml(d)}</div><div class="wxp-col">${mapCardHtml()}${cmpCardHtml(d)}${restHtml(d)}</div></div>${credit}`;
+  if (isDk()) return dkHtml(d, P);
   return `${heroHtml(d, P)}<div class="wxp-cols"><div class="wxp-col">${forholdHtml(d)}${daysHtml(d)}${cmpCardHtml(d)}</div><div class="wxp-col">${restHtml(d)}</div></div>${credit}`;
 }
 const cmpRow = (x) => `<div class="wxp-cg wxp-cgr"><b>${esc(x.d)}</b><span class="wxp-cc">${svgIc(x.yk, 22)}<span><b>${esc(x.yt)}</b><span>${esc(x.yp)}</span></span></span><span class="wxp-cc">${x.sk ? svgIc(x.sk, 22) : '<span style="width:22px"></span>'}<span><b>${esc(x.stt)}</b><span>${esc(x.sp)}</span></span></span><span class="wxp-df" style="background:${x.dbg}">${esc(x.df)}</span></div>`;
@@ -521,9 +610,11 @@ function paintTop() {
   if (!r) return;
   const P = place(), C = S.d?.current;
   r.querySelectorAll('.wxp-hsrc,.wxp-sidesrc').forEach((x) => { x.textContent = S.src; });
-  const c = r.querySelector('.wxp-tc');
-  c.innerHTML = `<b>${esc(P.name)}</b><span>${C ? `${r0(C.temperature_2m)} | ${esc(DESC(C.weather_code))}` : ''}</span>`;
-  c.style.opacity = S.sc > 200 ? 1 : 0;
+  const c = r.querySelector('.wxp-tc'), dk = isDk(), mine = P.id === 'pos' || P.mine;
+  // Prompt 36 (PC): kompakt tittel «MIN POSISJON / Oslo / 5° | Delvis skyet» tones inn etter 170 px.
+  c.innerHTML = `${dk ? `<span class="wx36-tk">${esc(mine ? 'MIN POSISJON' : (P.region && P.region !== P.name ? P.region : P.country || 'Norge').toUpperCase())}</span>` : ''}<b>${esc(P.name)}</b><span>${C ? `${r0(C.temperature_2m)}${dk ? '  |  ' : ' | '}${esc(DESC(C.weather_code))}` : ''}</span>`;
+  c.style.opacity = S.sc > (dk ? 170 : 200) ? 1 : 0;
+  c.classList.toggle('in', S.sc > (dk ? 170 : 200));
 }
 function paintMain() {
   const r = root();
@@ -531,6 +622,7 @@ function paintMain() {
   const sc = r.querySelector('.wxp-scroll'), top = sc.scrollTop;
   const dk = isDk();
   r.classList.toggle('dk', dk);
+  r.classList.toggle('dk36', dk);
   sc.querySelector('.wxp-inner').innerHTML = mainHtml();
   sc.scrollTop = top;
   const side = r.querySelector('.wxp-side');
@@ -539,6 +631,9 @@ function paintMain() {
   const C = S.d?.current, night = C ? C.is_day === 0 : new Date().getHours() < 7 || new Date().getHours() >= 19;
   const code = C?.weather_code ?? 2;
   r.querySelector('.wxp-sky').style.background = skyOf(code, night);
+  // Prompt 36: kortene får himmelfargen (--vcard) og valgt stedskort samme himmel som hovedvisningen (--vsky).
+  r.style.setProperty('--vsky', skyOf(code, night));
+  r.style.setProperty('--vcard', cardBgOf(code, night));
   const D = S.d?.daily, sunF = D ? sunFrac(D.sunrise?.[1], D.sunset?.[1]) : 0.5;
   fx?.set({ kind: kindOf(code, night), heavy: code === 65 || code === 82 || code >= 95, thunder: code >= 95, day: !night, sunF });
   paintTop();
@@ -584,7 +679,7 @@ export async function searchPlaces(q) {
   return (Array.isArray(r) ? r : r?.results ?? []).slice(0, 10).map(norm);
 }
 function paintRes() { const r = root()?.querySelector('[data-wx-resbox]'); if (!r) return; const tmp = document.createElement('div'); tmp.innerHTML = placesSheet(); r.replaceWith(tmp.querySelector('[data-wx-resbox]')); }
-function selectPlace(id) { S.cur = id; lsSet('wx_city', id); S.plOpen = false; S.plQ = ''; S.plRes = null; S.sh = null; S.ms = null; S.cmp = null; paintLayer(); load(); }
+function selectPlace(id) { setTimeout(() => loadAll(), 0); S.cur = id; lsSet('wx_city', id); S.plOpen = false; S.plQ = ''; S.plRes = null; S.sh = null; S.ms = null; S.cmp = null; paintLayer(); load(); }
 async function addPlace(r) {
   const have = S.places.find((x) => Math.abs(x.lat - r.lat) < 0.05 && Math.abs(x.lon - r.lon) < 0.05);
   if (have) return selectPlace(have.id);
@@ -668,8 +763,9 @@ function bind(r) {
     const v = e.currentTarget.scrollTop;
     if (Math.abs(v - S.sc) < 8) return;
     S.sc = v;
-    const h = r.querySelector('.wxp-hero:not(.dk)'); if (h) h.style.opacity = Math.max(0, 1 - v / 220).toFixed(2);
-    r.querySelector('.wxp-tc').style.opacity = v > 200 ? 1 : 0;
+    const h = r.querySelector('.wxp-hero:not(.dk),.wx36-hero'); if (h) h.style.opacity = Math.max(0, 1 - v / 220).toFixed(2);
+    const lim = isDk() ? 170 : 200, tc = r.querySelector('.wxp-tc');
+    tc.style.opacity = v > lim ? 1 : 0; tc.classList.toggle('in', v > lim); r.classList.toggle('wx36-scd', v > lim);
   }, { passive: true });
   r.addEventListener('click', (e) => {
     const t = e.target;
@@ -730,9 +826,10 @@ export function render() {
     paint();
     // PC ↔ mobil når vinduet endrer bredde (app.js tegner bare på nytt ved mobilgrensen).
     let rzT = null, was = isDk();
-    const onRz = () => { if (!root()) { window.removeEventListener('resize', onRz); return; } clearTimeout(rzT); rzT = setTimeout(() => { if (isDk() !== was) { was = isDk(); paint(); } }, 120); };
+    const onRz = () => { if (!root()) { window.removeEventListener('resize', onRz); return; } clearTimeout(rzT); rzT = setTimeout(() => { if (isDk() !== was) { was = isDk(); paint(); loadAll(); } }, 120); };
     window.addEventListener('resize', onRz);
     await loadPlaces();
+    loadAll();
     // Prompt 35: «været i New York» i AI-søket åpner #/vaer?name=…&lat=…&lon=… – stedet legges midlertidig i lista (lagres ikke).
     const tp = tempPlace();
     if (tp) { if (!tp._known) S.places = [...S.places.filter((p) => !p.temp), tp]; S.cur = tp.id; }

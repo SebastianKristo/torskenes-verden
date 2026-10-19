@@ -21,7 +21,9 @@ import { loadAi, aiView, aiClick, aiChange, aiSubmit, setAiTab } from './setting
 import { clearBtn, glassIcon } from './searchfield.js';
 import { loadSystem, systemView, systemClick, systemInput, systemSubmit, systemEsc } from './settings-system.js';
 import { loadBackup, backupView, backupClick, backupChange, backupInput, backupSubmit, backupEsc } from './settings-backup.js';
-import { icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor } from './settings-search.js';
+import { decorateRows } from './settings-icons36.js';
+import { kontoAvatar, avatarRow } from './avatar36.js'; // prompt 36: profilbilde i Konto // prompt 36: ikon på hver rad
+import { TAB_IC, icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor } from './settings-search.js';
 import { sheetBtn } from './util.js';
 import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt35.js'; // prompt 35: GLIMT → Glimt
 
@@ -113,12 +115,12 @@ const ui = () => store.me.ui ?? {};
 function kontoView() {
   const d = loginData(), me = store.me.me ?? d?.me ?? {}, mu = d?.users?.find((u) => u.id === me.id) ?? me;
   const name = me.name || me.username || '';
-  if (!sub) return { groups: [
+  if (!sub) return { sub: [me.name || me.username, me.username ? '@' + me.username : ''].filter(Boolean).join(' · '), groups: [
     group('Profil', [
       row({ t: 'Navn', v: name, go: 'konto|me' }),
       row({ t: 'Brukernavn', v: me.username ? '@' + me.username : '' }),
       row({ t: 'Rolle', v: `${roleName(me.role)}${me.isMainAdmin ? ' · hovedadmin' : ''}` }),
-      row({ t: 'Profilbilde', k: 'avatar bilde', s: 'Vises i menyen, i hilsenen og i mobilappen.', v: me.avatarUrl ? 'Lagt til' : 'Ingen', go: 'konto|me' }),
+      { html: avatarRow(store.me.me ?? me), q: 'Profilbilde avatar bilde last opp fjern' },
     ]),
     group('Innlogging', d ? [
       row({ t: 'Totrinnsbekreftelse', k: '2FA tofaktor TOTP kode autentisering', s: 'Krev en kode fra autentiseringsappen når du logger inn.', v: mu.totp ? 'På' : 'Av', vc: mu.totp ? '#8fe0b0' : '#8a93a6', btn: 'Administrer', go: 'konto|tfa' }),
@@ -603,12 +605,16 @@ function render() {
     <div class="set-main">${sheetBtn('Ferdig', 'data-close data-set-done', 'pri').replace('class="sbtn pri"', 'class="sbtn pri set-done"')}
     <div class="set-body" data-key="${esc(key)}"><div class="set-inner">
       <header class="set-ph">${sub ? `<button type="button" class="set-back" data-back>${svg(P.back, 18)}${esc(tName)}</button>` : ''}
-        <div class="set-ph-row">${searching ? '' : icBox(tab, 44, 22)}<div class="set-ph-t"><h2 id="set-title">${esc(v.title ?? tName)}</h2><div class="set-ps">${esc(v.sub ?? tSub)}</div></div></div></header>
+        <div class="set-ph-row">${searching ? '' : tab === 'konto' && !sub ? kontoAvatar(store.me.me ?? {}) : icBox(tab, 44, 22)}<div class="set-ph-t"><h2 id="set-title">${esc(v.title ?? tName)}</h2><div class="set-ps">${esc(v.sub ?? tSub)}</div></div></div></header>
       ${content}</div></div></div></div>`;
   modal().querySelector('.set-body').scrollTop = keep;
   if (keep) requestAnimationFrame(() => { const b = modal().querySelector('.set-body'); if (b && b.dataset.key === key && b.scrollTop < keep - 1) b.scrollTop = keep; });
   if (keepQ) { const nq = modal().querySelector('[data-setq]'); if (nq) { nq.replaceWith(keepQ); keepQ.focus({ preventScroll: true }); } }
   if (v.mount) { const slot = modal().querySelector('[data-mail-host],[data-mount-host]'); if (slot) v.mount(slot); }
+  // Prompt 36: ikonbrikker i sidens farge på alle rader (også de som tegnes senere av andre moduler).
+  modal().querySelector('.set-main')?.style.setProperty('--pg', (TAB_IC[tab] ?? TAB_IC.app)[0]);
+  decorateRows(modal());
+  if (!modal().dataset.si36) { modal().dataset.si36 = '1'; new MutationObserver(() => decorateRows(modal())).observe(modal(), { childList: true, subtree: true }); }
   applyHl();
   if (fk && !keepQ) {
     const el = [...modal().querySelectorAll(`[name="${CSS.escape(fk[1])}"]`)].find((e) => (e.closest('form')?.dataset.group ?? '') === fk[0]);
@@ -773,6 +779,7 @@ export function bindSettings() {
   document.addEventListener('hl:open-settings', (e) => { const [a, b] = String(e.detail ?? 'look/bg').split('/'); openSettings(a, b ?? null); });
   // Prompt 34: markeringen forsvinner ved første trykk (etter at siden er scrollet dit).
   document.addEventListener('hl:reapply', () => { if (HL && !modal().hidden) applyHl(); });
+  document.addEventListener('hl:avatar', () => { if (!modal().hidden) render(); }); // prompt 36: nytt profilbilde vises med en gang
   m.addEventListener('pointerdown', (e) => { if (HL?.scrolled && !e.target.closest('[data-setgo]')) clearHl(); });
   m.addEventListener('click', async (e) => {
     if (backdropClick(e, m) || e.target.closest('[data-close]')) return closeSettings();

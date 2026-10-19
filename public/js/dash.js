@@ -8,9 +8,10 @@ import './bdwidget.js';
 import './kalender.js';
 import { pkgLogo, pkgTitle, moreText } from './pkglogo.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
-import { is2c, pwCredit, pwImg } from './hltheme.js';
+import { is2c, pwImg } from './hltheme.js'; // prompt 36: ingen kreditlinje over bildet (vises bare i Innstillinger → Bakgrunn)
 import { updBanner } from './upd-banner.js';
-import { briefCardSlot } from './brief35.js'; // prompt 35: Glimt-brief-kortet under søkefeltet
+import { briefCardSlot } from './brief35.js';
+import { gridHtml } from './dash-edit36.js'; // prompt 36: rutenett med wiggle-redigering // prompt 35: Glimt-brief-kortet under søkefeltet
 // Prompt 31: URL-er i stedsteksten vises ikke (lenken brukes som kart-lenke i stedet).
 const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
 const urlOf = (t) => String(t ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
@@ -414,9 +415,21 @@ function photoWindow(n) {
   return `<section class="pw pw-dash">${pwImg()}
     <div class="pw-bottom">
       <div><div class="pw-date" id="date">${pdate(n)}</div><div class="pw-hello"><span id="greet">${greeting(n.getHours())}</span>, ${esc(store.me.user)}</div></div>
-      <a class="pw-wx" href="${esc(w?.lat != null ? `https://www.yr.no/nb/v%C3%A6rvarsel/daglig-tabell/${w.lat},${w.lon}` : 'https://www.yr.no')}" target="_blank" rel="noopener"><div class="pw-temp" id="pw-temp">${w ? `${w.temp}°` : '–°'}</div><div class="pw-cond"><span id="pw-cond">${w ? esc(w.text) : ''}</span>${w ? ' · ' : ''}<span id="clock-hm">${p2(n.getHours())}:${p2(n.getMinutes())}</span> ›</div></a>
+      <a class="pw-wx" data-wxtap href="${esc(w?.lat != null ? `https://www.yr.no/nb/v%C3%A6rvarsel/daglig-tabell/${w.lat},${w.lon}` : 'https://www.yr.no')}" target="_blank" rel="noopener" title="Trykk: Vær · Hold inne: åpne Yr"><div class="pw-temp" id="pw-temp">${w ? `${w.temp}°` : '–°'}</div><div class="pw-cond"><span id="pw-cond">${w ? esc(w.text) : ''}</span><span id="pw-sep">${w ? ' · ' : ''}</span><span id="clock-hm">${p2(n.getHours())}:${p2(n.getMinutes())}</span> ›</div></a>
     </div>
-    <div class="pw-credit">${esc(pwCredit())}</div><button type="button" class="pw-fail" hidden>Fikk ikke lastet bildet · trykk for å prøve igjen</button></section>`;
+    <button type="button" class="pw-fail" hidden>Fikk ikke lastet bildet · trykk for å prøve igjen</button></section>`;
+}
+
+// Prompt 36: PC/nettbrett: alle widgets i ett rutenett (dash-edit36.js), samme widget-komponenter som før.
+function grid2c() {
+  const ids = ['p_school', 'd_cal', 'p_kal', 'p_energy', 'p_wx', 'p_pk', 'p_pos', 'p_bday', 'p_play', 'p_money', 'p_links', 'd_upcoming', 'd_media', 'd_media_hist', 'd_trading', 'd_eco'];
+  const bodies = Object.fromEntries(ids.map((id) => [id, card(id)]));
+  bodies.p_trips = `<section class="p-sec">${lab('AVGANGER')}<div id="trips" class="p-trips">${renderTrips()}</div></section>`;
+  return gridHtml(bodies);
+}
+function gridCur() {
+  const ids = ['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media', 'd_media_hist', 'd_pos', 'd_bday', 'd_kal'];
+  return gridHtml(Object.fromEntries(ids.map((id) => [id, card(id)])));
 }
 
 function render2c(n, cardH) {
@@ -425,12 +438,12 @@ function render2c(n, cardH) {
       <div class="p-search">${store.me.hideSearch ? '' : renderSearch()}</div>${briefCardSlot()}
       ${updBanner('dash')}
       <div id="p-ticker-slot"></div>
-      <div class="p-cols">
+      ${!isMobile() ? grid2c() : `<div class="p-cols">
         <div class="p-col">${card('p_school')}${hiddenWidgets().has('d_cal') ? '' : card('d_cal')}</div>
         <div class="p-col">${lab('AVGANGER')}<div id="trips" class="p-trips">${renderTrips()}</div>${hiddenWidgets().has('d_kal') ? '' : card('p_kal')}${hiddenWidgets().has('d_energy') ? '' : card('p_energy')}${card('p_wx')}${card('p_pk')}</div>
         <div class="p-col">${hiddenWidgets().has('d_pos') ? '' : card('p_pos')}${hiddenWidgets().has('d_bday') ? '' : card('p_bday')}${card('p_play')}${hiddenWidgets().has('d_trading') && hiddenWidgets().has('d_eco') ? '' : card('p_money')}${hiddenWidgets().has('d_links') ? '' : card('p_links')}</div>
       </div>
-      <div class="grid" data-dnd="dash2c">${['d_upcoming', 'd_media', 'd_media_hist', 'd_trading', 'd_eco'].map(cardH).join('')}</div>
+      <div class="grid" data-dnd="dash2c">${['d_upcoming', 'd_media', 'd_media_hist', 'd_trading', 'd_eco'].map(cardH).join('')}</div>`}
     </div></div>`;
 }
 
@@ -466,7 +479,7 @@ export function render() {
       ${store.me.hideSearch ? briefCardSlot() : `<div class="gb-sqw">${renderSearch()}${briefCardSlot()}</div>`}
       <div class="hero">${hello}<div class="weather" id="weather">${carousel()}</div></div>
     </div>
-    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media', 'd_media_hist', 'd_pos', 'd_bday', 'd_kal'].map(cardH).join('')}</div></div>`;
+    ${gridCur()}</div>`;
 }
 
 const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
@@ -498,7 +511,7 @@ on('finans', () => refresh('d_eco', 'p_money'));
 // Vindu og papir: temperatur i vinduet og seksjonene for vær, pakker og media.
 on('weather', () => {
   const w = store.data.weather;
-  if (w) { setHtml('pw-temp', `${w.temp}°`); setHtml('pw-cond', esc(w.text)); }
+  if (w) { setHtml('pw-temp', `${w.temp}°`); setHtml('pw-cond', esc(w.text)); setHtml('pw-sep', ' · '); }
   refresh('p_wx');
 });
 on('trackw', () => refresh('p_pk'));

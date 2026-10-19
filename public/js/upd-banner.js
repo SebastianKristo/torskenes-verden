@@ -12,6 +12,7 @@
 import { esc, sheetBtn, haptic } from './util.js';
 import { store } from './store.js';
 import { U, onUpdate, loadUpdate, startUpdate, state, stepIndex, running, verTxt, watch, ms } from './sysupdate.js';
+import { carpOnBar } from './glimt-outfits36.js'; // prompt 36: snekker-Glimt på fremdriftslinja
 
 const HIDE_KEY = 'hl_upd_hide', ACK_KEY = 'hl_upd_ack';
 const B = { notes: null, notesOpen: false, sheet: null, pw: '', busy: false, err: '', slots: new Set(), rolling: false };
@@ -94,7 +95,7 @@ export function updBanner(where = 'dash') {
   } else if (ph === 'run') {
     const p = progress();
     t = B.rolling ? `Gjenoppretter ${cur}` : 'Oppdaterer Nordlys OS'; sub = U.reloading ? 'Ny versjon svarer. Laster siden på nytt …' : 'Du kan bruke appen mens den oppdateres.';
-    body = `<div class="ub-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><span class="ub-bar"><span style="width:${p.pct}%"></span></span><span class="ub-st"><span>${esc(p.txt)}</span><span class="ub-pct">${p.pct} %</span></span></div>`;
+    body = `<div class="ub-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><span class="ub-bar cp36-host">${carpOnBar(p.pct, 30)}<span style="width:${p.pct}%"></span></span><span class="ub-st"><span>${esc(p.txt)}</span><span class="ub-pct">${p.pct} %</span></span></div>`;
     cls = ' run';
   } else if (ph === 'done') {
     ic = IC_OK; t = `Oppdatert til Nordlys ${cur}`; sub = 'Alt kjører. Endringene er aktive i appen og på web.';

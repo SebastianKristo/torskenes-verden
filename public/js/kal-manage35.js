@@ -37,7 +37,7 @@ function paint() {
   const box = M.el.querySelector('.km35-in'), L = M.list;
   const rows = L == null ? '<p class="km35-note">Henter kalenderne …</p>' : L.length ? L.map((c) => {
     const badge = c.badge || (c.source && c.source !== 'builtin' && c.source !== 'own' ? SRC[c.source] ?? c.source : '');
-    const del = c.source === 'ical' || c.source === 'ha';
+    const del = c.source === 'ical' || c.source === 'ha' || c.source === 'google'; // prompt 36: også Google (g-…)
     return `<div class="km35-row${c.visible === false ? ' off' : ''}">
       <label class="km35-col" title="Velg farge"><input type="color" value="${esc(c.color || '#7a7468')}" data-km-color="${esc(c.id)}" aria-label="Farge for ${esc(c.name)}"><i style="background:${esc(c.color || '#7a7468')}"></i></label>
       <span class="km35-n"><b>${esc(c.name)}</b>${badge ? `<span class="km35-badge">${esc(badge)}</span>` : ''}</span>

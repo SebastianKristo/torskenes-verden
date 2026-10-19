@@ -129,6 +129,7 @@ export function backupView(h) {
   const status = [
     h.row({ t: 'Siste backup', k, s: lastTxt, v: !L ? '' : L.ok === false ? 'Feilet' : '✓ OK', vc: L?.ok === false ? 'var(--bk-neg)' : 'var(--bk-pos)' }),
     L?.ok === false && L.error ? `<div class="sg-row bk-err" data-no-i18n>${esc(L.error)}</div>` : '',
+    receipt(L),
     run ? `<div class="sg-row bk-run" role="status" aria-live="polite"><span class="sg-txt"><b>Tar backup … ${pct} %</b><span>Du kan lukke appen, den fortsetter i bakgrunnen.</span><span class="bk-bar"><i style="width:${pct}%"></i></span></span></div>`
       : h.row({ t: 'Ta backup nå', s: scopeName(S), btn: 'Start', act: 'data-bk="run"' }),
     B.msg ? `<div class="sg-row bk-msg" role="status">${esc(B.msg)}</div>` : '',
@@ -178,6 +179,20 @@ export function backupView(h) {
 }
 
 /** Prompt 30: HVOR → SMB / nettverksdisk (veiviseren i smb-wizard.js). */
+// Prompt 36: kvittering for siste kjøring {target, fullPath, method, bytes, sha256, verified, retention, ms, error}:
+// «✓ 2,4 GB · smb://truenas.local/backup/homelab/homelab-2026-10-19_2130-hele.tar.zst · verifisert» + Åpne mappe › og Vis logg.
+function receipt(L) {
+  if (!L || (!L.fullPath && !L.target && L.verified == null)) return '';
+  const tg = typeof L.target === 'object' && L.target ? L.target : null;
+  const where = L.fullPath ? (/^smb:\/\//.test(L.fullPath) || !tg?.host ? L.fullPath : `smb://${tg.host}/${tg.share}${L.fullPath.startsWith('/') ? '' : '/'}${L.fullPath}`) : tg ? `smb://${tg.host}/${tg.share}${tg.path ? `/${String(tg.path).replace(/^\/+/, '')}` : ''}` : '';
+  const bad = L.ok === false || L.verified === false || !!L.error;
+  const line = [bad ? '✗ Feilet' : '✓', size(L.bytes ?? L.size), where, L.verified ? 'verifisert' : bad ? '' : 'ikke verifisert'].filter(Boolean).join(' · ');
+  const extra = [L.method ? `Metode: ${L.method}` : '', L.sha256 ? `SHA-256 ${String(L.sha256).slice(0, 12)}…` : '', L.ms ? `${(L.ms / 1000).toFixed(1).replace('.', ',')} s` : '', Array.isArray(L.retention) && L.retention.length ? `Ryddet bort ${L.retention.length} eldre` : ''].filter(Boolean).join(' · ');
+  B.logTxt = [line, extra, L.error ? `Feil: ${L.error}` : '', ...(Array.isArray(L.retention) ? L.retention.map((r) => `Slettet: ${typeof r === 'string' ? r : r?.name ?? r?.path ?? JSON.stringify(r)}`) : [])].filter(Boolean).join('\n');
+  return `<div class="sg-row bk-rcpt${bad ? ' bad' : ''}" data-no-i18n><span class="sg-txt"><b class="bk-rl">${esc(line)}</b>${extra ? `<span>${esc(extra)}</span>` : ''}${L.error ? `<span class="bk-rerr">${esc(L.error)}</span>` : ''}
+    <span class="bk-racts">${tg?.host && tg?.share ? `<button type="button" class="sg-btn" data-bk="opendir">Åpne mappe ›</button>` : ''}<button type="button" class="sg-btn" data-bk="rlog">${B.logOpen ? 'Skjul logg' : 'Vis logg'}</button></span>
+    ${B.logOpen ? `<pre class="bk-rlog">${esc(B.logTxt)}</pre>` : ''}</span></div>`;
+}
 function smbRows(h, S) {
   const m = S.target?.smb;
   if (!m) return [];
@@ -277,6 +292,8 @@ export async function backupClick(e) {
   const a = d.bk;
   if (a === 'reload') { B.st = 'loading'; rerender(); loadBackup(); }
   else if (a === 'smb') smbWizard();
+  else if (a === 'rlog') { B.logOpen = !B.logOpen; rerender(); }
+  else if (a === 'opendir') { const L = lastJob(), tg = L?.target ?? {}; openSmbWizard({ use: ['system'], encrypted: !!B.s?.encrypt, at: { host: tg.host, share: tg.share, path: tg.path ?? '' }, onDone: () => { req('/settings').then((x) => { B.s = norm(x); rerender(); }).catch(() => {}); } }); }
   else if (a === 'run') {
     B.err = '';
     try { await req('/run', { method: 'POST', json: { scope: B.s.scope, modules: B.s.scope === 'custom' ? B.s.modules : undefined } }); B.status = { ...(B.status ?? {}), running: { pct: 0, state: 'running' } }; watch(); }

@@ -6,6 +6,9 @@ import { drawMap } from './worldmap.js';
 import { SRC } from './settings-domains.js';
 import { is2c } from './hltheme.js';
 import { glimt } from './glimt.js';
+import { fig, hostFor } from './glimt-figs.js';
+import { gs } from './glimt35.js';
+const figHtml = () => { let w = 'glimt'; try { w = hostFor(gs().char); } catch { /* */ } return fig(w, 26, 'idle'); };
 
 const D = (p, o) => api('/../domains/api' + p, o);
 const PERIODS = [['1h', '1t'], ['24h', '24t'], ['7d', '7d'], ['30d', '30d']];
@@ -29,16 +32,48 @@ const delta = (cur, prev, good = true) => {
 };
 
 /* ---------- Data ---------- */
+// Prompt 36 (claude-code-domener-hurtig.md): stale-while-revalidate. Siste statistikk per domene og periode ligger i
+// localStorage og vises med en gang; ferske tall hentes i bakgrunnen (eldre enn 60 s) og byttes uten skjelett.
+// Forhåndshentes når web er ledig (requestIdleCallback) og ved hover på «Domener» i menyen.
 const key = (n) => `${n}|${S.per}`;
+const AT = new Map(); // nøkkel → tidspunkt hentet
+const LSK = () => `hl_dom_cache_v1:${store.me?.me?.id ?? ''}`;
+let cacheRead = false;
+function readCache() {
+  if (cacheRead) return; cacheRead = true;
+  try {
+    const c = JSON.parse(localStorage.getItem(LSK()) || 'null');
+    if (!c) return;
+    if (!S.list && Array.isArray(c.list)) S.list = c.list;
+    for (const [k, v] of Object.entries(c.data ?? {})) if (!S.data.has(k) && v && !v.error) { S.data.set(k, v); AT.set(k, 0); }
+  } catch { /* */ }
+}
+let saveT = null;
+function writeCache() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => { try { const data = {}; for (const [k, v] of S.data) if (v && !v.error) data[k] = v; localStorage.setItem(LSK(), JSON.stringify({ list: S.list, data })); } catch { /* full eller privat */ } }, 300);
+}
 async function fetchOne(name, force) {
-  if (!force && S.data.has(key(name))) return S.data.get(key(name));
+  const k = key(name);
+  if (!force && S.data.has(k) && Date.now() - (AT.get(k) ?? 0) < 60_000) return S.data.get(k);
   const d = await D(`/${encodeURIComponent(name)}/analytics?range=${S.per}`).catch((e) => ({ name, error: e.message }));
-  S.data.set(key(name), d);
+  if (d?.error && S.data.get(k) && !S.data.get(k).error) return S.data.get(k); // behold forrige tall ved feil
+  S.data.set(k, d); AT.set(k, Date.now()); writeCache();
   return d;
 }
-async function loadAll(force) {
+/** Forhåndshenter liste og statistikk (24 t) for alle domener i bakgrunnen. */
+export async function prefetchDomains() {
+  readCache();
   try {
-    S.list ??= await D('/domains');
+    if (!S.list || Date.now() - (AT.get('list') ?? 0) > 60_000) { S.list = await D('/domains'); AT.set('list', Date.now()); writeCache(); }
+    await Promise.all((S.list ?? []).map((x) => fetchOne(x.name)));
+  } catch { /* prøves igjen når siden åpnes */ }
+}
+async function loadAll(force) {
+  readCache();
+  try {
+    if (!S.list || force) { S.list = await D('/domains'); AT.set('list', Date.now()); writeCache(); }
+    else if (Date.now() - (AT.get('list') ?? 0) > 60_000) D('/domains').then((l) => { if (Array.isArray(l)) { S.list = l; AT.set('list', Date.now()); writeCache(); paint(); } }).catch(() => {});
     if (S.sel === null) S.sel = sessionStorage.getItem('hl_dom_sel') ?? (S.list.length > 1 ? '*' : S.list[0]?.name ?? '*');
     if (S.sel !== '*' && !S.list.some((x) => x.name === S.sel)) S.sel = '*';
     paint();
@@ -132,8 +167,8 @@ function sumHtml() {
   const busy = !st || st.busy, c = st?.data, who = sel === '*' ? 'Alle domener' : sel;
   const hm = (t) => new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
   const meta = busy ? 'Glimt leser statistikken …' : c?.meta ? c.meta : c ? `${c.manual ? `Laget nå kl. ${hm(c.at ?? Date.now())}` : `Daglig · i dag kl. ${hm(c.at ?? Date.now())}`} · ${who}` : st?.err ? `Fikk ikke laget oppsummeringen: ${st.err}` : `Ingen statistikk ennå · ${who}`;
-  return `<section class="dm-card dm-sum" data-dm-sum><div class="dm-sum-h">${glimt(30, busy ? 'tenker' : 'klar')}<span class="dm-sum-k"><span class="dm-sum-l">GLIMT · OPPSUMMERING</span><span class="dm-sum-m" data-no-i18n>${esc(meta)}</span></span>
-    <button type="button" class="dm-sum-b" data-dom-sumrun${busy ? ' disabled' : ''}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>${busy ? 'Lager …' : 'Lag ny'}</button></div>
+  return `<section class="dm-card dm-sum dm36-in" data-dm-sum><div class="dm-sum-h">${glimt(30, busy ? 'tenker' : 'klar')}<span class="dm-sum-k"><span class="dm-sum-l">GLIMT · OPPSUMMERING</span><span class="dm-sum-m" data-no-i18n>${esc(meta)}</span></span>
+    <button type="button" class="dm36-hide" data-dom-sumtog aria-label="Skjul oppsummeringen" title="Skjul"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button><button type="button" class="dm-sum-b" data-dom-sumrun${busy ? ' disabled' : ''}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>${busy ? 'Lager …' : 'Lag ny'}</button></div>
     ${busy ? `<div class="dm-sum-sk">${['82%', '96%', '88%', '70%'].map((w, i) => `<span style="width:${w};height:${i ? 12 : 18}px"></span>`).join('')}</div>`
     : c ? `<b class="dm-sum-t" data-no-i18n>${esc(c.head)}</b><div class="dm-sum-p">${c.pts.map((p) => `<div><i style="background:${TONE_C[p.tone] ?? TONE_C.info}"></i><span data-no-i18n>${esc(p.t)}</span></div>`).join('')}</div>` : ''}</section>`;
 }
@@ -231,10 +266,24 @@ const bars = (list, valFn, nameFn, max) => {
   return list.map((x) => `<div class="dm-bar"><div><span>${esc(nameFn(x))}</span><span class="mono">${nb(valFn(x))}</span></div><div class="t"><div style="width:${(valFn(x) / m * 100).toFixed(1)}%"></div></div></div>`).join('') || '<div class="dm-empty">Ingen data</div>';
 };
 
+// Prompt 36: oppsummeringen er skjult bak en Glimt-knapp rett til høyre for domene-baren (variant «ved siden»):
+// mørk pille med orb (Glimt-figuren + roterende regnbuering), «GLIMT» over «Oppsummering», oransje prikk når dagens er ny.
+// Åpen/lukket huskes ikke mellom besøk.
+const SEEN = 'hl_dom_sum_seen';
+function sumNew() {
+  const c = SUM.get(S.sel)?.data, d = new Date().toISOString().slice(0, 10);
+  if (!c || c.manual) return false;
+  try { return localStorage.getItem(SEEN) !== `${S.sel}|${d}`; } catch { return false; }
+}
+function glimtBtn() {
+  if (!S.list?.length) return '';
+  const st = SUM.get(S.sel); if (!st) setTimeout(() => sumLoad(S.sel)); // dagens hentes i bakgrunnen, så åpning er umiddelbar
+  return `<button type="button" class="dm36-gb${S.sumOpen ? ' on' : ''}" data-dom-sumtog aria-expanded="${!!S.sumOpen}"><span class="dm36-orb" aria-hidden="true"><span class="dm36-ring"></span><span class="dm36-fig">${figHtml()}</span></span><span class="dm36-gt"><span>GLIMT</span><b>Oppsummering</b></span>${sumNew() && !S.sumOpen ? '<i class="dm36-dot" aria-label="Ny oppsummering"></i>' : ''}</button>`;
+}
 function pills() {
   const all = [['*', 'Alle domener', '#a8d4fb'], ...(S.list ?? []).map((x) => [x.name, x.name, '#8fe0b0'])];
-  return `<div class="dm-top"><div class="dm-pills">${all.map(([k, n, dot]) => `<button data-dom-sel="${esc(k)}" aria-pressed="${S.sel === k}"><i style="background:${dot}"></i>${esc(n)}</button>`).join('')}
-      <button class="add" data-dom-manage title="Legg til og fjern domener i Innstillinger">Administrer domener</button></div>
+  return `<div class="dm-top"><div class="dm36-row"><div class="dm-pills">${all.map(([k, n, dot]) => `<button data-dom-sel="${esc(k)}" aria-pressed="${S.sel === k}"><i style="background:${dot}"></i>${esc(n)}</button>`).join('')}
+      <button class="add" data-dom-manage title="Legg til og fjern domener i Innstillinger">Administrer domener</button></div>${glimtBtn()}</div>
     <div class="dm-per">${PERIODS.map(([k, n]) => `<button data-dom-per="${k}" aria-pressed="${S.per === k}">${n}</button>`).join('')}<button data-dom-refresh title="Oppdater" aria-label="Oppdater">↻</button></div></div>`;
 }
 
@@ -375,7 +424,7 @@ function one() {
 function body() {
   if (S.err && !S.list) return `<div class="dm-card dm-warn">${esc(S.err)}</div>`;
   if (!S.list) return `${pills()}<div class="skeleton" style="min-height:320px;border-radius:24px"></div>`;
-  return `${pills()}${sumHtml()}${S.sel === '*' ? overview() : one()}`;
+  return `${pills()}${S.sumOpen ? sumHtml() : ''}${S.sel === '*' ? overview() : one()}`;
 }
 
 function paint() {
@@ -389,6 +438,9 @@ function paint() {
 }
 
 export function render() {
+  S.sumOpen = false;
+  readCache();
+  if (S.list && S.sel === null) { S.sel = sessionStorage.getItem('hl_dom_sel') ?? (S.list.length > 1 ? '*' : S.list[0]?.name ?? '*'); if (S.sel !== '*' && !S.list.some((x) => x.name === S.sel)) S.sel = '*'; }
   setTimeout(() => { loadAll(); startLive(); });
   return `<div class="os-title">Dom<b>ener</b></div><div id="dom-os" class="dm">${body()}</div>`;
 }
@@ -406,6 +458,7 @@ export function bind(view) {
     if (s) return pick(s.dataset.domSel);
     const p = e.target.closest('[data-dom-per]');
     if (p) { S.per = p.dataset.domPer; return loadAll(); }
+    if (e.target.closest('[data-dom-sumtog]')) { S.sumOpen = !S.sumOpen; if (S.sumOpen) { try { localStorage.setItem(SEEN, `${S.sel}|${new Date().toISOString().slice(0, 10)}`); } catch { /* */ } const st = SUM.get(S.sel); if (!st || (!st.busy && !st.data)) sumLoad(S.sel); } return paint(); }
     if (e.target.closest('[data-dom-sumrun]')) return sumLoad(S.sel, true);
     const gp = e.target.closest('[data-dom-gper]');
     if (gp) { GSC.per = +gp.dataset.domGper; paintGsc(); return gscLoad(S.sel); }

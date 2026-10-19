@@ -217,7 +217,36 @@ function body() {
 function calBody() {
   if (S.err && !S.d) return `<div class="bd-card bd-empty">Kunne ikke hente kalenderoppsettet: ${esc(S.err)}</div>`;
   if (!S.d) return '<div class="bd-card bd-empty">Laster …</div>';
-  return `${S.toast && !host() ? `<div class="bd-toast" role="status">${esc(S.toast)}</div>` : ''}${calendars()}`;
+  return `${S.toast && !host() ? `<div class="bd-toast" role="status">${esc(S.toast)}</div>` : ''}${calendars()}${kgHtml()}`;
+}
+
+// Prompt 36: Innstillinger → Kalendere → Google: «Hovedkalender» (nye hendelser lagres her) og «Vis også i Kalender».
+// GET/PUT /api/kalender/calendars/google → {connected, configured, email, main:{id,name}|null, calendars:[{id, googleId, name, primary, color, writable, access, main, shown, appId}]}
+function kgHtml() {
+  const K = S.kg;
+  if (K === undefined) { if (!S.local) loadKg(); return ''; }
+  if (!K || !K.connected) return '';
+  const L = [...(K.calendars ?? [])].sort((a, b) => (b.primary ? 1 : 0) - (a.primary ? 1 : 0));
+  const dot = (c) => `<span class="bd-kgdot" style="background:${esc(c.color || '#4285f4')}" aria-hidden="true"></span>`;
+  const keyOf = (c) => (c.primary ? 'primary' : c.googleId ?? c.id);
+  const W = L.filter((c) => c.writable), O = L.filter((c) => !c.main);
+  return `<div class="bd-card bd-cals bd-kg">
+    <span class="bd-lbl">Hovedkalender</span><span class="bd-note">Personlig – nye hendelser lagres her</span>
+    <div class="bd-kgl" role="radiogroup" aria-label="Hovedkalender">${W.map((c) => `<button type="button" class="bd-kgr" role="radio" aria-checked="${!!c.main}" data-bd-kgmain="${esc(keyOf(c))}"${S.busy === 'kg' ? ' disabled' : ''}><span class="bd-kgrad${c.main ? ' on' : ''}"></span>${dot(c)}<span class="bd-grow"><b>${esc(c.name)}</b>${c.primary ? '<span>Primær</span>' : ''}</span></button>`).join('') || '<span class="bd-note">Fant ingen kalendere du kan skrive til.</span>'}</div>
+    ${O.length ? `<span class="bd-lbl">Vis også i Kalender</span>${O.map((c) => `<button type="button" class="bd-tog" data-bd-kgshow="${esc(c.googleId ?? c.id)}" aria-pressed="${!!c.shown}">${dot(c)}<span class="bd-grow"><b>${esc(c.name)}</b><span>${c.writable ? 'Kan redigeres' : 'Bare lesing'}</span></span><span class="bd-sw${c.shown ? ' on' : ''}"><i></i></span></button>`).join('')}` : ''}
+    ${S.kgErr ? `<span class="err">${esc(S.kgErr)}</span>` : ''}</div>`;
+}
+async function loadKg() {
+  if (S.kgBusy) return;
+  S.kgBusy = true;
+  try { S.kg = await api('/kalender/calendars/google'); } catch (e) { S.kg = null; if (e.status !== 404) S.kgErr = e.message; }
+  S.kgBusy = false; paintCal();
+}
+async function putKg(json) {
+  S.busy = 'kg'; S.kgErr = ''; paintCal();
+  try { S.kg = await api('/kalender/calendars/google', { method: 'PUT', json }); document.dispatchEvent(new Event('hl:kal-cals')); }
+  catch (e) { S.kgErr = e.status === 400 ? 'Den kalenderen kan ikke brukes som hovedkalender (bare lesing).' : e.message; }
+  S.busy = ''; paintCal();
 }
 function paintCal() { if (calHost?.isConnected) calHost.innerHTML = calBody(); }
 /** Innstillinger → Kalendere: Google Kalender og Home Assistant i et eget element som beholdes mellom omtegningene. */
@@ -324,7 +353,7 @@ async function act(a) {
       try { const r = await api('/birthdays/google/sync', { method: 'POST' }); S.busy = ''; await reload(); const n = countOf(r); flash(n ? `Synket med Google Kalender · ${n} nye` : 'Synket med Google Kalender'); } catch (e) { S.busy = ''; paint(); flash(e.message); }
       return;
     case 'glogout':
-      try { await api('/birthdays/google', { method: 'DELETE' }); S.gcals = null; await reload(); flash('Logget ut av Google'); } catch (e) { flash(e.message); }
+      try { await api('/birthdays/google', { method: 'DELETE' }); S.gcals = null; S.kg = undefined; await reload(); flash('Logget ut av Google'); } catch (e) { flash(e.message); }
       return;
     case 'haimp':
       S.busy = 'haimp'; paint();
@@ -351,6 +380,8 @@ function bind(h) {
     if (d.bdRem !== undefined) return patch(d.bdRem, { reminderDays: remVal(d.v) });
     if (d.bdEdit) { const x = byId(d.bdEdit); S.add = true; S.editId = x.id; S.f = { name: x.name, day: x.day, month: x.month, year: x.year ? String(x.year) : '', relation: x.relation, reminderDays: x.reminderDays, saveTo: x.source }; paint(); h.querySelector('[data-bd-form]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
     if (d.bdDel) return del(d.bdDel);
+    if (d.bdKgmain) return putKg({ main: d.bdKgmain });
+    if (d.bdKgshow) { const cur = (S.kg?.calendars ?? []).filter((c) => c.shown && !c.main).map((c) => c.googleId ?? c.id); const id = d.bdKgshow; return putKg({ show: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] }); }
     if (d.bdGcal) return putG({ calendarId: d.bdGcal });
     if (d.bdGtog) return putG({ [d.bdGtog]: !(S.d.google?.[d.bdGtog] !== false) });
     if (d.bdHaent) return putHa({ entityId: d.bdHaent, twoWay: !!S.d.ha?.twoWay });
