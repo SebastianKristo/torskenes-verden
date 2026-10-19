@@ -135,10 +135,10 @@ internal fun BriefPage35(vm: AppViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             val kind = b?.kind ?: briefKind35(set)
+            // Prompt 38: tittelen og Ferdig på samme linje; 🔇 og ⚙ er fjernet (opplesning og brief-valg ligger i Innstillinger → Glimt).
             BriefTop35(vm, kind, host)
             if (g.speaking != null) SpeakingPill35(vm)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(briefTitle34(kind), color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 40.sp, lineHeight = 41.sp)
                 Text(b?.summary ?: if (s.briefBusy) "Glimt lager briefen …" else "Fikk ikke laget briefen.", color = if (dark) p.ink else Color(0xFF3D3A33),
                     fontFamily = PaperFonts.serif, fontSize = 17.sp, lineHeight = 24.5.sp)
             }
@@ -158,6 +158,8 @@ internal fun BriefPage35(vm: AppViewModel) {
             // Prompt 37: Gjøremål · 3 gjøremål i dag (forfalt + i dag), avkrysning i briefen.
             BriefTodos37(vm)
             if (trials.isNotEmpty()) Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["abo"] = it.positionInParent().y }) { BriefTrials35(vm, trials, ring("abo")) }
+            // Prompt 38: Pakker, Familie, Skole og jobb, Bursdager og Nordlys i natt (etter Abonnementer, før Nyheter).
+            BriefCards38(vm, kind)
             Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["nyh"] = it.positionInParent().y }) { BriefNews35(vm, b, ring("nyh")) }
             if (vm.bibleAllowed37() && vm.bibleAtBottom37()) BriefBible37(vm, biblePeriod37())
             Text("Laget av Glimt ${b.generatedAt ?: ""} · Vær: MET / Open-Meteo · Nyheter: ${b.news.map { it.src }.distinct().filter { it.isNotBlank() }.ifEmpty { listOf("NRK", "VG", "E24") }.take(4).joinToString(", ")}",
@@ -220,24 +222,11 @@ internal fun PopFig35(id: String, size: Dp, mood: String) {
 }
 
 @Composable
-private fun BriefTop35(vm: AppViewModel, kind: String, host: String) {
+private fun BriefTop35(vm: AppViewModel, kind: String, @Suppress("UNUSED_PARAMETER") host: String) {
     val p = PaperPal.current
-    val g = vm.p35
-    val voiceOn = g.set.readAloud
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        // Prompt 37: etiketten «GLIMT · KVELDSBRIEF» er fjernet (dobbelt med den store tittelen); knappene står høyrejustert.
-        Spacer(Modifier.weight(1f))
-        // Høyttaler: opplesning av/på (huskes).
-        Box(Modifier.size(36.dp).clip(CircleShape).background(if (voiceOn) p.ink else p.card).border(1.dp, p.line, CircleShape)
-            .clickable(role = Role.Switch, onClickLabel = if (voiceOn) "Slå av opplesning" else "Slå på opplesning") {
-                val on = !voiceOn
-                vm.setGlimt35(JSONObject().put("readAloud", on)) { it.copy(readAloud = on) }
-                if (on) vm.say35("Lyden er på. Jeg leser briefen for deg.", host, force = true) else vm.stopSay35()
-            }, contentAlignment = Alignment.Center) {
-            WxIcon("M4 9h4l5-4v14l-5-4H4z" + if (voiceOn) "M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" else "M16 9l5 6M21 9l-5 6", if (voiceOn) p.bg else p.ink, 17.dp, stroke = 2.2f)
-        }
-        Box(Modifier.size(36.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Brief-innstillinger") { Haptics.tap(); vm.p35.cfgSheet = true },
-            contentAlignment = Alignment.Center) { Text("⚙", color = p.ink, fontSize = 17.sp) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(briefTitle34(kind), color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 40.sp, lineHeight = 41.sp,
+            modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
         Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(p.ink).clickable(role = Role.Button) { vm.stopSay35(); vm.closeBrief34() }.padding(horizontal = 18.dp),
             contentAlignment = Alignment.Center) { Text("Ferdig", color = p.bg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.5.sp) }
     }

@@ -348,17 +348,19 @@ private fun Step31(label: String, state: String) {
 
 /**
  * Mørk glassboble (radius 26, innerkant 10 % hvit): mens Glimt tenker: merket + «Tenker på «…» …». Svaret 17 sp med det viktigste
- * fet og hvitt, kilde («✦ Open-Meteo · MET Norway» / «✦ Glimt») og «Fortsett i Chat ›». Trykk på boblen lukker den.
+ * fet og hvitt, kilde («✦ Open-Meteo · MET Norway» / «✦ Glimt») og «Fortsett i Chat ›». Prompt 38: lukkes med ✕, sveip opp eller trykk utenfor.
  */
 @Composable
 internal fun HomeAnswer31(vm: AppViewModel) {
     val a = vm.p31.ans ?: return
     val light = Color(0xFFF6F2EA)
+    // Prompt 38: trykk i boblen lukker den ikke lenger. ✕, sveip opp (> 40 dp) eller trykk utenfor (AnsScrim38) lukker (ui/Ui38.kt).
+    AnsBox38(vm) {
     Column(
         Modifier.fillMaxWidth().shadow(22.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = .6f), spotColor = Color.Black.copy(alpha = .6f))
             .clip(RoundedCornerShape(26.dp)).background(Color(0xF0161412)).border(1.dp, Color.White.copy(alpha = .1f), RoundedCornerShape(26.dp))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { vm.closeAns31(); Haptics.dismiss() }
-            .padding(start = 18.dp, top = 16.dp, end = 18.dp, bottom = 14.dp),
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+            .padding(start = 18.dp, top = 16.dp, end = 46.dp, bottom = 18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         if (a.busy) Row(Modifier.heightIn(min = 28.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -393,6 +395,7 @@ internal fun HomeAnswer31(vm: AppViewModel) {
                 ) { Text("Fortsett i Chat ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
             }
         }
+    }
     }
 }
 

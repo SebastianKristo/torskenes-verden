@@ -480,6 +480,8 @@ fun AppViewModel.loadBrief34(force: Boolean = false) {
             val raw = runCatching { api34 { hlGet("/brief?kind=$kind", timeout = 8_000) } }.getOrNull()
             val b = raw?.let { runCatching { parseBrief34(it, kind) }.getOrNull() }
             s.brief = b ?: localBrief34(kind)
+            // Prompt 38: pakker, familie, skole/jobb, bursdager og nordlys fra samme svar.
+            p38.bx = raw?.let { runCatching { parseBx38(it) }.getOrNull() }
             s.briefAt = System.currentTimeMillis()
             // Widgetene (Glance) får samme brief.
             runCatching { no.kristo.finanshub.widget.Brief34Store.save(appCtx34, s.brief!!, acct) }
@@ -635,6 +637,7 @@ fun AppViewModel.loadAiStatus34() {
                 n34(o, "cost30", "cloudCost30") ?: n34(o.optJSONObject("usage"), "cost", "cost30") ?: n34(o.optJSONObject("budget"), "monthCostKr"),
                 n34(o, "budget") ?: n34(o.optJSONObject("budget"), "monthlyKr", "limit"),
             )
+            runCatching { parseAiHw38(o) } // prompt 38: Mac mini M4 (server.hw) og anbefalingene
             s.aiMissing = false
         } catch (e: CancellationException) { throw e } catch (e: Exception) { aiFail34(e) }
     }

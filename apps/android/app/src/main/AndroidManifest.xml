@@ -67,6 +67,19 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="finanshub" />
             </intent-filter>
+            <!-- Prompt 38: QR-innlogging på ny enhet. Systemkameraet åpner homelab://login?c=<sid>.<nonce> eller https://<vert>/l/<sid>.<nonce>. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="homelab" android:host="login" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="home.kristo.no" android:pathPrefix="/l/" />
+            </intent-filter>
             <!-- «Del → FinansHub» fra Galleri: kvitteringen lastes opp direkte. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

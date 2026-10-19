@@ -39,6 +39,8 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? 
     Page {
         // Papir har egen fanelinje (Oversikt, Publikum, Ytelse og Infra) og et hvitt toppkort med domenevelger og periode.
         if (paper) item { PaperDomTop(vm) }
+        // Prompt 38: Glimt-knappen (✦ nede til høyre) åpner oppsummeringen øverst på Oversikt.
+        if (paper && section == "oversikt" && vm.p38.domSumOpen && !vm.domAll) item { DomGlimt38(vm) }
         else if (section == null || section == "oversikt") item { DomainHeader(vm) }
         if (twoPane && section == null) item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(P.card).padding(4.dp)) {

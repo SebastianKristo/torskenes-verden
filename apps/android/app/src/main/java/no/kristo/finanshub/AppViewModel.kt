@@ -685,6 +685,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var pendingScan by mutableStateOf<String?>(null)
 
     fun deepLink(uri: Uri) {
+        // Prompt 38: homelab://login?c=… / https://<vert>/l/… (QR-innlogging på ny enhet).
+        if (qrLink38(uri)) return
         if (uri.scheme != "finanshub" || !loggedIn) return
         menuOpen = false
         when (uri.host ?: "") {
@@ -3672,6 +3674,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun loadFamily37() = loadFamilyNow(first = true)
     /** Wiggle: rekkefølgen fra draget lagres én gang (disk + server) når kortet slippes. */
     fun commitPage37(page: String) { pageLayouts[page]?.let { savePage(page, it) } }
+
+    /* ---------- Prompt 38 (ANDROID38): QR-innlogging på ny enhet, Konto → ØKT, svarboblen, nye brief-kort, Domener-Glimt, Mac mini i AI-kontroll (P38.kt, ui/Ui38.kt) ---------- */
+    val p38 = P38State()
+    internal suspend fun <T> api38(f: suspend Api.() -> T): T = api.f()
+    internal fun launch38(block: suspend () -> Unit) = launch(block)
+    internal suspend fun loadDomains38() = loadDomains()
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

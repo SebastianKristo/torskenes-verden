@@ -299,7 +299,7 @@ internal fun PaperApp(
     val meter = nav.meter(scrollKey)
     val onTap: () -> Unit = {
         when {
-            bar == "dom" -> vm.domainManager = true
+            bar == "dom" -> vm.domGlimt38() // prompt 38: Glimt-oppsummering (Legg til domene ligger i domenevelgeren)
             bar == "sub" -> vm.subAdding = true
             vm.screen == Screen.Tracking && bar == "main" -> vm.trkAddOpen = true
             // Trykk: kameraet åpnes med en gang (i Mat som oppskrift, i en bolig rett inn i boligen).
@@ -397,6 +397,8 @@ internal fun PaperApp(
             // Meldinger ligger over fanelinja, ikke midt i innholdet.
             SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).padding(bottom = if (wide) navInset + 24.dp else barBottom + 70.dp))
             if (vm.busy) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) }
+            // Prompt 38: trykk utenfor Glimt-boblen lukker den og fanges (under fullskjermsflatene under).
+            AnsScrim38(vm)
             if (vm.newsOpen) NewsReader(vm)
             // Prompt 37: Vær åpnet fra briefen legger seg over briefen (lenger ned); ✕ går tilbake til briefen.
             if (vm.weatherOpen && !vm.p34.briefOpen) WeatherApp(vm)
@@ -425,6 +427,8 @@ internal fun PaperApp(
             StartGate36(vm)
             // Prompt 37: onboarding med profil, Bibel-siden/-arket og Pakker-valgene.
             Global37(vm)
+            // Prompt 38: QR-innlogging på ny enhet, Konto → ØKT, forhåndshenting av Domener.
+            Global38(vm)
         }
       }
     }
@@ -610,7 +614,7 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
     ) {
         // Prompt 24: egen Row per fane (Mer24.kt): ikonboks 18, glyf 16, 1,5 ned, 7 mellomrom, tekst uten fontpadding.
         tabs.forEach { t -> PaperTab24(t.label, t.icon, cur == t.key, p.navInk, p.navActInk, p.navAct) { if (cur == t.key) vm.tabReselect26(bar, t) else t.go(); Haptics.select() } }
-        if ((!float || bar == "sub") && !noScanHere(vm)) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
+        if ((!float || bar == "sub") && !noScanHere(vm)) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text(if (bar == "dom") "✦" else "+", color = p.onLab, fontSize = if (bar == "dom") 19.sp else 22.sp) }
     }
 }
 

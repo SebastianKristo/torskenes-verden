@@ -402,7 +402,7 @@ internal fun ScanPress(vm: AppViewModel, bar: String, modifier: Modifier, size: 
     val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
     val trk = vm.screen == Screen.Tracking && bar == "main"
-    val label = when { bar == "dom" -> "Legg til domene"; bar == "sub" -> "Legg til abonnement"; trk -> "Ny sending"; bar == "fin" -> "Legg til kvittering"; vm.screen == Screen.Mat -> "Skann oppskrift"; else -> "Skann" }
+    val label = when { bar == "dom" -> "Glimt · oppsummering av domenene"; bar == "sub" -> "Legg til abonnement"; trk -> "Ny sending"; bar == "fin" -> "Legg til kvittering"; vm.screen == Screen.Mat -> "Skann oppskrift"; else -> "Skann" }
     Box(
         modifier.size(size).scale(if (pressed) 0.9f else 1f).clip(shape).background(p.lab)
             .semantics { contentDescription = if (trk || bar == "dom" || bar == "sub") label else "$label. Trykk for valg, hold inne for å laste opp." }
@@ -441,7 +441,9 @@ internal fun PaperFab(vm: AppViewModel, bar: String, modifier: Modifier, onTap: 
     val shape = RoundedCornerShape(22.dp)
     Box(modifier.shadow(14.dp, shape, ambientColor = Color.Black.copy(alpha = .35f), spotColor = Color.Black.copy(alpha = .35f))) {
         ScanPress(vm, bar, Modifier, 60.dp, shape, onTap, onHold) {
-            Icon(if (trk || bar == "dom") Icons.Filled.Add else Icons.Filled.DocumentScanner, null, tint = p.onLab, modifier = Modifier.size(26.dp))
+            // Prompt 38: på Domener er knappen Glimt (fylt ✦), ikke Skann/Legg til.
+            if (bar == "dom") Text("✦", color = p.onLab, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            else Icon(if (trk) Icons.Filled.Add else Icons.Filled.DocumentScanner, null, tint = p.onLab, modifier = Modifier.size(26.dp))
         }
     }
 }

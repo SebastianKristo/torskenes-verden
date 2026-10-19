@@ -45,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -361,9 +362,15 @@ private val LINES36 = listOf(
 internal fun StartGate36(vm: AppViewModel) {
     val u = vm.p30.upd
     val restarting = u.phase == "run" && (u.lost || u.stepText.startsWith("Starter tjenestene"))
-    LaunchedEffect(restarting) { if (restarting) vm.startScreen36() }
+    // Prompt 38 (flimrer inn og ut): tilstanden må stå i 1,2 s før siden vises, og den åpnes ikke igjen innen 60 s etter «Klar».
+    LaunchedEffect(restarting) {
+        if (restarting) { delay(1200); if (System.currentTimeMillis() - vm.p38.startClosedAt > 60_000L) vm.startScreen36() }
+    }
     LaunchedEffect(u.phase) { if (u.phase != "run") vm.p36.startDismissed = false }
-    if (vm.p36.startOn) StartScreen36(vm)
+    var wasOn by remember { mutableStateOf(false) }
+    LaunchedEffect(vm.p36.startOn) { if (wasOn && !vm.p36.startOn) vm.p38.startClosedAt = System.currentTimeMillis(); wasOn = vm.p36.startOn }
+    // Toner inn (0,2 s) og ut (0,3 s), så det ikke blinker når appen kommer tilbake.
+    AnimatedVisibility(vm.p36.startOn, enter = fadeIn(tween(200)), exit = fadeOut(tween(300))) { StartScreen36(vm) }
 }
 
 @Composable
@@ -377,20 +384,20 @@ internal fun StartScreen36(vm: AppViewModel) {
     val phase = when { done -> 3; i < 2 -> 0; i < 4 -> 1; else -> 2 }
     val mood = when (phase) { 0 -> "sov"; 3 -> "talk"; else -> "idle" }
     val pct = if (done) 100 else Math.round(steps.count { it.status == "ok" } * 100f / steps.size.coerceAtLeast(1))
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) { while (true) { delay(1000); now = System.currentTimeMillis() } }
-    val el = ((now - s.startAt) / 1000).coerceAtLeast(0)
+    // Prompt 38 (flimring): animasjonene leses bare i tegne-/lagfasen (ikke i komposisjonen), så siden og figuren bygges ikke på nytt
+    // hver frame; sekundtelleren ligger i bunnteksten alene og stopper når serveren er klar. Nordlyset beveger seg sakte (18 s).
     val inf = rememberInfiniteTransition(label = "start36")
-    val aur by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(7000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "aur")
-    val orbit by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "orb")
-    val float by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "flt")
-    val z by inf.animateFloat(0f, 1f, infiniteRepeatable(tween(2400, easing = LinearEasing)), label = "z")
+    val aurS = inf.animateFloat(0f, 1f, infiniteRepeatable(tween(9000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "aur")
+    val orbitS = inf.animateFloat(0f, 360f, infiniteRepeatable(tween(9000, easing = LinearEasing)), label = "orb")
+    val floatS = inf.animateFloat(0f, 1f, infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "flt")
+    val zS = inf.animateFloat(0f, 1f, infiniteRepeatable(tween(2400, easing = LinearEasing)), label = "z")
     val ring by animateFloatAsState(pct / 100f, tween(600), label = "ring36")
     val violet = Color(0xFF9864D6); val green = Color(0xFF2CBF8E); val warm = Color(0xFFD5493A)
     Box(
         Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF101A2E), Color(0xFF1B2340)), Offset.Zero, Offset(700f, 1500f)))
             .drawBehind {
                 val w = size.width; val h = size.height
+                val aur = aurS.value
                 val dx = if (reduce) 0f else aur * w * .04f
                 val dy = if (reduce) 0f else -aur * h * .03f
                 drawRect(Brush.radialGradient(listOf(violet.copy(alpha = .7f), Color.Transparent), Offset(w * .8f + dx, h * .1f + dy), w * .8f))
@@ -406,6 +413,7 @@ internal fun StartScreen36(vm: AppViewModel) {
         ) {
             Box(Modifier.size(208.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.size(208.dp)) {
+                    val orbit = orbitS.value
                     val r = 92.dp.toPx()
                     val sw = 5.dp.toPx()
                     val tl = Offset(center.x - r, center.y - r)
@@ -419,12 +427,11 @@ internal fun StartScreen36(vm: AppViewModel) {
                         drawCircle(c, 3.5.dp.toPx(), pnt)
                     }
                 }
-                Box(Modifier.graphicsLayer { translationY = if (reduce) 0f else -10f * float * density }) { GlimtFig35(hostChar35(vm.p35.set.char), 128.dp, mood) }
+                Box(Modifier.graphicsLayer { translationY = if (reduce) 0f else -10f * floatS.value * density }) { GlimtFig35(hostChar35(vm.p35.set.char), 128.dp, mood) }
                 if (phase == 0 && !reduce) for (k in 0..2) {
-                    val q = ((z + k / 3f) % 1f)
                     Text("z", color = Color(0xFFFFD9C2), fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = (14 + k * 4).sp,
                         modifier = Modifier.align(Alignment.TopEnd).padding(top = 30.dp, end = 28.dp)
-                            .graphicsLayer { alpha = if (q < .3f) q / .3f else 1f - (q - .3f) / .7f; translationX = 26f * q * density; translationY = -46f * q * density; scaleX = .6f + .6f * q; scaleY = .6f + .6f * q })
+                            .graphicsLayer { val q = ((zS.value + k / 3f) % 1f); alpha = if (q < .3f) q / .3f else 1f - (q - .3f) / .7f; translationX = 26f * q * density; translationY = -46f * q * density; scaleX = .6f + .6f * q; scaleY = .6f + .6f * q })
                 }
                 Box(Modifier.align(Alignment.BottomCenter).offset(y = 6.dp).clip(CircleShape).background(Color(0xCC101A2E)).border(1.dp, Color.White.copy(alpha = .18f), CircleShape)
                     .padding(horizontal = 10.dp, vertical = 3.dp)) {
@@ -464,6 +471,18 @@ internal fun StartScreen36(vm: AppViewModel) {
                     }
                 }
             }
+            StartFoot36(vm, done)
+        }
+    }
+}
+
+/** Bunnteksten med sekundtelleren (eneste del som oppdateres hvert sekund; stopper når serveren er klar). */
+@Composable
+private fun StartFoot36(vm: AppViewModel, done: Boolean) {
+    val s = vm.p36
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(done) { while (!done) { delay(1000); now = System.currentTimeMillis() } }
+    val el = ((now - s.startAt) / 1000).coerceAtLeast(0)
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(when { done -> "Laster inn appen …"; el > 180 -> "Det tar lengre tid enn vanlig · $el s"; else -> "Appen lastes inn automatisk når serveren svarer · $el s" },
                     color = Color.White.copy(alpha = .65f), fontFamily = PaperFonts.sans, fontSize = 13.sp, textAlign = TextAlign.Center)
@@ -472,8 +491,6 @@ internal fun StartScreen36(vm: AppViewModel) {
                 if (!done && el > 180) Text("Vis logg", color = Color(0xFFFFD9C2), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.sp,
                     modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { vm.closeStart36(dismiss = true); vm.openNordlys31() }.padding(8.dp, 6.dp))
             }
-        }
-    }
 }
 
 @Composable

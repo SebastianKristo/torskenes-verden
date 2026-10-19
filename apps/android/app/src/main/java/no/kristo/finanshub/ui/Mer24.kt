@@ -122,7 +122,7 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
         if ("familie" !in inBar) row("kart", "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() }
         if ("media" !in inBar) row("media", "Media", "Spilles nå og historikk") { vm.openPaperPage("media") }
         if ("finans" !in inBar) row("finans", "Finans", "Oversikt, liste, Finn og mer") { vm.paperTab("fin") }
-        row("abo", "Subscription OS", "Abonnementer og faste trekk") { vm.openFromMer(Screen.Sub) }
+        row("abo", "Subscription OS", "Abonnementer og faste trekk") { vm.openSubFromMer38() }
         if ("nyheter" !in inBar) row("rss", "Nyhetsleser", "RSS med AI-sammendrag") { vm.openNews() }
         row("innst", "Innstillinger", "Tema, bakgrunn og konto") { vm.openPaperPage("set") }
     }

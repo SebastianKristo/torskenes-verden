@@ -90,9 +90,13 @@ internal fun BriefBible37(vm: AppViewModel, period: String) {
         drawCircle(l.glow, radius = 70.dp.toPx(), center = Offset(size.width - 40.dp.toPx(), 40.dp.toPx()))
     }.clickable(role = Role.Button, onClickLabel = "Les verset") { vm.p37.bibleSheet = true }.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(l.kick, color = l.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
-                Text(dateText37(), color = l.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(l.kick, color = l.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.5.sp)
+                    Text(dateText37(), color = l.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                }
+                // Prompt 38: Glimt i prestedrakt (46 dp) oppe til høyre, ved dato og etikett.
+                PriestFig38(46.dp, if (vm.p35.speaking != null) "talk" else "idle")
             }
             Text("«${v.text}»", color = l.fg, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = 22.sp, lineHeight = 30.sp)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -334,6 +338,11 @@ internal fun BiblePage37(vm: AppViewModel) {
                 Row {
                     Text("DAGENS VERS", color = l.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
                     Text(dateText37(), color = l.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp)
+                }
+                // Prompt 38: Glimt i prestedrakt (72 dp) leser verset med deg.
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PriestFig38(72.dp, if (vm.p35.speaking != null) "talk" else "idle")
+                    Text("Glimt leser dagens vers med deg", color = l.mut, fontSize = 13.sp, modifier = Modifier.weight(1f))
                 }
                 Text("«${v.text}»", color = l.fg, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = 22.sp, lineHeight = 30.sp,
                     modifier = Modifier.clickable(role = Role.Button, onClickLabel = "Les i sammenheng") { s.bibleSheet = true })

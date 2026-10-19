@@ -124,17 +124,17 @@ internal fun AiControl34(vm: AppViewModel) {
 /* ---------------- Felles biter ---------------- */
 
 @Composable
-private fun AcCard34(T: AcT34, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) =
+internal fun AcCard34(T: AcT34, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) =
     Column(modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(T.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
 
 @Composable
-private fun AcHead34(T: AcT34, t: String, right: String? = null) = Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp), verticalAlignment = Alignment.Bottom) {
+internal fun AcHead34(T: AcT34, t: String, right: String? = null) = Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp), verticalAlignment = Alignment.Bottom) {
     Text(t, color = T.acc, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp, modifier = Modifier.weight(1f))
     right?.let { Text(it, color = T.mut, fontSize = 12.sp) }
 }
 
 @Composable
-private fun AcPill34(T: AcT34, t: String, solid: Boolean = false, color: Color? = null, enabled: Boolean = true, onClick: () -> Unit) =
+internal fun AcPill34(T: AcT34, t: String, solid: Boolean = false, color: Color? = null, enabled: Boolean = true, onClick: () -> Unit) =
     Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(if (solid) T.ink else Color.Transparent)
         .then(if (solid) Modifier else Modifier.border(1.dp, T.line, RoundedCornerShape(17.dp))).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 13.dp),
         contentAlignment = Alignment.Center) { Text(t, color = if (solid) T.bg else color ?: T.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
@@ -168,7 +168,7 @@ private fun AcSeg34(T: AcT34, opts: List<Pair<String, String>>, cur: String, onP
 }
 
 @Composable
-private fun AcBar34(T: AcT34, frac: Float, color: Color, h: Dp = 6.dp) = Box(Modifier.fillMaxWidth().height(h).clip(RoundedCornerShape(h / 2)).background(T.fld)) {
+internal fun AcBar34(T: AcT34, frac: Float, color: Color, h: Dp = 6.dp) = Box(Modifier.fillMaxWidth().height(h).clip(RoundedCornerShape(h / 2)).background(T.fld)) {
     Box(Modifier.fillMaxHeight().fillMaxWidth(frac.coerceIn(0f, 1f)).clip(RoundedCornerShape(h / 2)).background(color))
 }
 
@@ -246,9 +246,9 @@ private fun AcOverview34(vm: AppViewModel, T: AcT34) {
             }
         }
     }
-    // Hjemmeserveren.
-    AcHead34(T, "HJEMMESERVER")
-    AcCard34(T) {
+    // Hjemmeserveren. Prompt 38: med maskininfo (server.hw) vises Mac mini-kortet i stedet (ui/Ui38.kt).
+    if (!AiHw38(vm, T)) AcHead34(T, "HJEMMESERVER")
+    if (vm.p38.hw == null) AcCard34(T) {
         Text(st?.gpu ?: "GPU ukjent", color = T.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
         val vu = st?.vramUsed; val vt = st?.vramTotal
         if (vt != null && vt > 0) {
@@ -371,7 +371,8 @@ private fun AcModels34(vm: AppViewModel, T: AcT34) {
             val has = models?.any { it.id == l.id } == true
             val pulling = l.id in s.aiPulls
             // Som serveren (fitOf): PASSER ≤ VRAM − 0,5 GB, DELVIS CPU ≤ 2 × VRAM, ellers FOR STOR.
-            val fit = if (l.gb <= vram - .5) "PASSER" else if (l.gb <= vram * 2) "DELVIS CPU" else "FOR STOR"
+            // Prompt 38: med maskininfo PASSER ≤ 8 GB, TRANGT ≤ 10,5 GB, FOR STOR over (av GPU-budsjettet, Mac mini M4 16 GB).
+            val fit = vm.fit38(l.gb) ?: if (l.gb <= vram - .5) "PASSER" else if (l.gb <= vram * 2) "DELVIS CPU" else "FOR STOR"
             val fc = when (fit) { "PASSER" -> T.ok; "FOR STOR" -> T.bad; else -> T.warn }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f)) {
@@ -424,9 +425,11 @@ private fun AcRouting34(vm: AppViewModel, T: AcT34) {
     val cloud = s.aiCloud.filter { it.on }.map { it.id to "${it.id} · ${it.provider}" }
     val all = s.aiRtModels.ifEmpty { local + cloud }
     val fin = s.aiRules["finLocal"] == true
+    // Prompt 38: Finans-oppgavene har egen liste med 4 rader og tom tilstand (ui/Ui38.kt); her står resten.
+    AiFinRouting38(vm, T)
     AcHead34(T, "HVILKEN MODELL GJØR HVA")
     AcCard34(T) {
-        s.aiTasks.forEachIndexed { i, t ->
+        s.aiTasks.filter { !it.fin }.forEachIndexed { i, t ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line))
             Text(t.name, color = T.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
             Text(t.sub, color = T.mut, fontSize = 12.sp)
@@ -468,7 +471,7 @@ private fun AcRouting34(vm: AppViewModel, T: AcT34) {
 }
 
 @Composable
-private fun AcDrop34(T: AcT34, label: String, cur: String, opts: List<Pair<String, String>>, modifier: Modifier, onPick: (String) -> Unit) {
+internal fun AcDrop34(T: AcT34, label: String, cur: String, opts: List<Pair<String, String>>, modifier: Modifier, onPick: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val shown = opts.firstOrNull { it.first == cur }?.second ?: if (cur.isBlank()) "Ingen" else "$cur · ikke tilgjengelig"
     Box(modifier) {

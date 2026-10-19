@@ -194,11 +194,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         }
     }
     item { Spacer(Modifier.height(4.dp)) }
-    item {
-        PCard {
-            SetRow(vm, 0, Icons.AutoMirrored.Filled.Logout, "Logg ut", null, "") { vm.logout() }
-        }
-    }
+    // Prompt 38: «Logg ut» (og Lås skjermen) ligger nå under Konto → ØKT (ui/Ui38.kt → Session38).
     item {
         val ctx = LocalContext.current
         val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "–" }
