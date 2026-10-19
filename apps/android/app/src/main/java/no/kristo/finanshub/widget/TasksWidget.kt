@@ -153,7 +153,7 @@ private fun TasksBody(ctx: Context, items: List<WTask>) {
         GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(24.dp).background(c.widgetBackground).padding(14.dp),
     ) {
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text("Huskeliste", modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity(open)),
+            Text("Gjøremål", modifier = GlanceModifier.defaultWeight().clickable(actionStartActivity(open)),
                 style = TextStyle(color = c.onSurface, fontSize = 15.sp, fontWeight = FontWeight.Bold))
             Box(GlanceModifier.size(30.dp).cornerRadius(15.dp).background(c.primary).clickable(actionStartActivity(add)), contentAlignment = Alignment.Center) {
                 Text("+", style = TextStyle(color = c.onPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold))

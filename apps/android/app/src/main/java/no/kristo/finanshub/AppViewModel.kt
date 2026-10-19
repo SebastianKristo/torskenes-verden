@@ -716,6 +716,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "nordlys", "system" -> openNordlys31()
             // Prompt 34: Glimt-brief-widgetene (finanshub://brief) og «Åpne AI-kontroll» (finanshub://ai/<fane>).
             "brief" -> { go(Screen.Homelab); openBrief34() }
+            // Prompt 37: bibelvers-widgetene og påminnelsen åpner Bibel-siden (bare med modulen).
+            "bibel", "bible" -> { go(Screen.Homelab); loadBible37(); p37.biblePage = true }
             "ai" -> openAiCtl34(uri.path?.trim('/')?.takeIf { it in setOf("ov", "mod", "rt", "job", "use", "api") } ?: "ov")
             "scan" -> { open(Screen.Scan); pendingScan = when (uri.path?.trim('/')) { "camera" -> "camera"; "files" -> "files"; else -> null } }
             // Prompt 35: Kalender-appen åpner finanshub://settings/glimt og finanshub://settings/kalendere.
@@ -2378,7 +2380,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Flytter et synlig kort opp (−1) eller ned (+1) forbi nabokortet som vises. */
-    fun movePageItem(page: String, keys: List<String>, key: String, dir: Int) {
+    /** Prompt 37: live = under dra (bare state, ingen disk/nett/haptikk); lagres én gang ved slipp (commitPage37). */
+    fun movePageItem(page: String, keys: List<String>, key: String, dir: Int, live: Boolean = false) {
         val order = pageOrder(page, keys).toMutableList()
         val hid = pageHidden(page)
         val vis = order.filter { it !in hid }
@@ -2386,6 +2389,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val other = vis.getOrNull(v + dir) ?: return
         val a = order.indexOf(key); val b = order.indexOf(other)
         order[a] = other; order[b] = key
+        if (live) { pageLayouts = pageLayouts + (page to PageLay(order, hid.toList())); p37.dirty.add(page); return }
         savePage(page, PageLay(order, hid.toList()))
     }
     fun hidePageItem(page: String, keys: List<String>, key: String) {
@@ -3179,8 +3183,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             tasks = t
             tasksError = null
             taskNext = nextTasks(t)
+            // Prompt 37: Viktig = alarm, tidlig påminnelse = varsel (planlegges på nytt hver gang listen hentes).
+            runCatching { Alarms37.schedule(appCtx, t) }
         } catch (e: ApiException) {
-            tasksError = if (e.status == 404) "Huskeliste trenger en nyere Homelab-server." else e.message
+            tasksError = if (e.status == 404) "Gjøremål trenger en nyere Homelab-server." else e.message
         }
     }
     private fun nextTasks(t: TasksData): List<TaskItem> =
@@ -3455,7 +3461,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // Sanntid: én WebSocket mot /api/ws mens appen er i forgrunnen.
     private val realtime = Realtime { type, msg ->
         when (type) {
-            "tasks" -> if (tasks != null) viewModelScope.launch { loadTasksNow(); no.kristo.finanshub.widget.TasksWidgetSync.refresh(appCtx) }
+            // Prompt 37: «todo:changed» (Gjøremål, delte lister) som «tasks».
+            "tasks", "todo", "todo:changed" -> if (tasks != null) viewModelScope.launch { loadTasksNow(); no.kristo.finanshub.widget.TasksWidgetSync.refresh(appCtx) }
             "family" -> if (msg.optString("kind") == "ping") {
                 // Noen i familien ber denne telefonen spille av lyd.
                 Notify.test(appCtx, notifyPrefs.copy(sound = notifyPrefs.sound.takeIf { it != "stille" } ?: "klokke"))
@@ -3657,6 +3664,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal fun squareJpeg36(data: ByteArray, size: Int, quality: Int): ByteArray? = squareJpeg(data, size, quality)
     internal suspend fun reloadMe36() = loadMe()
     internal fun setAvatar36(b: android.graphics.Bitmap?) { avatar = b }
+
+    /* ---------- Prompt 37 (ANDROID37): wiggle uten bytte-storm, Pakker-widget, onboarding med profil, Gjøremål, sporingsnøkler, delte abonnementer, bibelvers, «hvor er» (P37.kt og ui-filene med 37) ---------- */
+    val p37 = P37State()
+    internal suspend fun <T> api37(f: suspend Api.() -> T): T = api.f()
+    internal fun launch37(block: suspend () -> Unit) = launch(block)
+    internal suspend fun loadFamily37() = loadFamilyNow(first = true)
+    /** Wiggle: rekkefølgen fra draget lagres én gang (disk + server) når kortet slippes. */
+    fun commitPage37(page: String) { pageLayouts[page]?.let { savePage(page, it) } }
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

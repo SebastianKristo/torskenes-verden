@@ -398,10 +398,11 @@ internal fun PaperApp(
             SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).padding(bottom = if (wide) navInset + 24.dp else barBottom + 70.dp))
             if (vm.busy) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) }
             if (vm.newsOpen) NewsReader(vm)
-            if (vm.weatherOpen) WeatherApp(vm)
+            // Prompt 37: Vær åpnet fra briefen legger seg over briefen (lenger ned); ✕ går tilbake til briefen.
+            if (vm.weatherOpen && !vm.p34.briefOpen) WeatherApp(vm)
             if (vm.ruterOpen) RuterScreen24(vm)
             if (vm.familyOpen) FamilyScreen(vm)
-            if (vm.tasksOpen) TasksScreen(vm)
+            if (vm.tasksOpen) TasksScreen37(vm) // Prompt 37: Gjøremål (ui/Tasks37.kt)
             if (vm.bd24.open) BirthdaysScreen24(vm)
             if (vm.kal26.open) KalenderScreen27(vm)
             if (vm.chat27.open) ChatScreen27(vm)
@@ -412,6 +413,7 @@ internal fun PaperApp(
             if (vm.p31.nordOpen) NordlysPage31(vm)
             // Prompt 34: Glimt-brief og AI-kontroll i fullskjerm (over Chat, så «Full AI-kontroll ›» i Chat legger seg over).
             if (vm.p34.briefOpen) BriefPage35(vm)
+            if (vm.p34.briefOpen && vm.weatherOpen) WeatherApp(vm)
             if (vm.p35.glimtOpen) GlimtPage35(vm)
             if (vm.p34.aiOpen) AiControl34(vm)
             // Prompt 29: «Legg til time»-arket, pillen og banneret over alt (Kalender og Hjem). Prompt 31: Glimt-toasten ligger her.
@@ -421,6 +423,8 @@ internal fun PaperApp(
             // Prompt 36: «Brief skjult til …» med Angre, og «Starter opp» mens serveren starter på nytt etter oppdateringen.
             BriefToast36(vm, Modifier.align(Alignment.BottomCenter).padding(bottom = if (wide) navInset + 24.dp else barBottom + 74.dp))
             StartGate36(vm)
+            // Prompt 37: onboarding med profil, Bibel-siden/-arket og Pakker-valgene.
+            Global37(vm)
         }
       }
     }
@@ -667,9 +671,12 @@ private fun ScanQueue(vm: AppViewModel) {
 private val HOME_SECS = listOf(
     PSec("h12", "Glimt-brief", full = true), // Prompt 34: øverst, over widgetene (kan flyttes og skjules i wiggle-modus)
     PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("h11", "Prøveperioder"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
-    PSec("h8", "Huskeliste"), PSec("h6", "Posisjon"), PSec("h7", "Bolig"),
+    PSec("h8", "Gjøremål"), PSec("h6", "Posisjon"), PSec("h7", "Bolig"),
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
 )
+
+/** Prompt 37: «Dagens bibelvers» (h13) under brief-kortet, bare for brukere med modulen (ellers ikke i «+ Legg til widget»). */
+private val HOME_SECS37 = HOME_SECS.take(1) + PSec("h13", "Dagens bibelvers", full = true) + HOME_SECS.drop(1)
 
 @Composable
 private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
@@ -677,22 +684,28 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val ctx = LocalContext.current
     val h = vm.mobileHome
     LaunchedEffect(vm.base) { vm.loadHomeExtras(); vm.loadUpd30(); vm.loadUpdSettings30() }
+    // Prompt 37: Pakker-valgene (h2), onboarding med profil og bibelverset.
+    LaunchedEffect(vm.account?.id) { vm.loadWopt37(); vm.checkOnboard37(); vm.loadBible37() }
     AppUpd32Effects(vm) // prompt 32: ny versjon av selve appen (ui/AppUpdate32Ui.kt)
     if (vm.p30.upd.pwFor != null) UpdPwSheet30(vm)
+    val grid37 = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    WiggleScroll37(vm, grid37)
+    val secs37 = if (vm.bibleAllowed37()) HOME_SECS37 else HOME_SECS
     LazyVerticalGrid(
-        GridCells.Fixed(if (wide) 2 else 1), Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
+        GridCells.Fixed(if (wide) 2 else 1), Modifier.fillMaxSize().gridBounds37(vm), state = grid37, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
         verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         vm.homeError?.let { e -> item(span = { GridItemSpan(maxLineSpan) }) { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(4.dp)) } }
         // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (admin; ✕ skjuler «Tilgjengelig» i 24 t).
         if (vm.editPage != "hjem" && upd30Show(vm, home = true)) item(key = "upd30", span = { GridItemSpan(maxLineSpan) }) { UpdateBanner30(vm, home = true) }
         if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
-        pageGridSecs(vm, "hjem", HOME_SECS, wide) { k ->
+        pageGridSecs(vm, "hjem", secs37, wide, skip = { k -> (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) }) { k ->
             when (k) {
                 "h12" -> SwipeBrief36(vm) { HomeBrief34(vm) } // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt). Prompt 36: sveip mot høyre skjuler til neste brief
+                "h13" -> BibleHome37(vm) // Prompt 37: dagens bibelvers (ui/Bible37.kt)
                 "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (Glimt / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
-                // Viktigste pakke (klar for henting først).
-                "h2" -> {
+                // Prompt 37: «Vis bare når det er pakker» (skjult uten aktive pakker, dempet i wiggle) og 1–3 pakker.
+                "h2" -> Packages37(vm, wide) {
                     val pk = (vm.homePackages ?: emptyList()).sortedByDescending { it.ready }.firstOrNull()
                     // På Fold står pakkekortet ved siden av Avganger og er like høyt.
                     val cardMod = if (wide) Modifier.height(FOLD_CARD) else Modifier
@@ -985,7 +998,7 @@ private fun PaperMore(vm: AppViewModel, navBottom: Dp) {
                 val rows: List<Triple<String, String, () -> Unit>> = listOf(
                     if (vm.tab4 == "sporing") Triple("Domener", "Trafikk, besøk og oppetid", { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) })
                     else Triple("Sporing", if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger", { vm.openFromMer(Screen.Tracking) }),
-                    Triple("Huskeliste", "Oppgaver og widgets", { vm.openTasks() }),
+                    Triple("Gjøremål", "To-do for hele familien", { vm.openTasks() }),
                     Triple("Familie og kart", "Hvor alle er, soner og helse", { vm.openFamily() }),
                     Triple("Avganger", "Ruter i sanntid og egne stopp", { vm.openRuter() }),
                     Triple("Vær", "Steder og varsel fra MET (yr.no)", { vm.openWeather() }),

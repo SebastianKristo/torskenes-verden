@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Prompt 37: bibelvers-widgetene (bare for brukere med modulen) og Viktige gjøremål. -->
+    <string name="widget_bible37_m_desc">Dagens bibelvers (Bibelen 1930) med «Neste ›»</string>
+    <string name="widget_bible37_round_desc">Dagens bibelvers · rund</string>
+    <string name="widget_s37_bible_desc">Dagens bibelvers · Samsung</string>
+</resources>

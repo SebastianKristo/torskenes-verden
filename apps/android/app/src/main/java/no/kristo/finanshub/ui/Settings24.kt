@@ -61,7 +61,7 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("appicon", "App-ikon", vm.appName, "Bytt ikon på appen", null, "ikon logo"))
     add(SetItem24("navstyle", "Fanelinje-stil", vm.appName, "Tekst, bare ikoner eller ikoner + navn på valgt", null, "fane faner ikon ikoner stil navbar"))
     add(SetItem24("tabedit", "Fanelinje i Hjem", vm.appName, "Fjern, flytt, gi nytt navn og ikon", null, "fane faner"))
-    add(SetItem24("modules", "Moduler", vm.appName, "Familie, Huskeliste, Avganger, Vær", "modules", "widget modul"))
+    add(SetItem24("modules", "Moduler", vm.appName, "Familie, Gjøremål, Avganger, Vær", "modules", "widget modul"))
     add(SetItem24("news", "Nyhetsleser", vm.appName, "Kilder og AI", null, "nyheter rss"))
     add(SetItem24("look", "Utseende og fanelinje", "App", "Tema (lys og mørk), bakgrunn og ikonfarger", "look", "tema mørk lys farge bakgrunn"))
     add(SetItem24("notify", "Varsler og haptikk", "App", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))

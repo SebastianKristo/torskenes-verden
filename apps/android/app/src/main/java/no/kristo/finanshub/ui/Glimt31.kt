@@ -381,6 +381,8 @@ internal fun HomeAnswer31(vm: AppViewModel) {
             if (a.err) AiErrActions34(vm, Color.White, Color.White.copy(alpha = .14f)) { vm.retryHome34() }
             // Prompt 35: «været i New York» → trykk åpner Vær for stedet.
             a.wxGeo?.let { geo -> WxOpen35(geo) { vm.openWeatherGeo35(geo) } }
+            // Prompt 37: «hvor er Ingrid» → Vis på kart ›.
+            a.famPerson37?.let { who -> WhereOpen37(vm, who) }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("✦ " + a.source.replace("System-AI", "Glimt").ifBlank { "Glimt" }, color = light.copy(alpha = .55f), fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold,
                     fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))

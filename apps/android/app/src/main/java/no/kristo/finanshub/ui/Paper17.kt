@@ -97,7 +97,8 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "tokens" -> item { TokensPage(vm) }
             "ai" -> { item { GlimtSearchSettings32b(vm) }; item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { Memory33Settings(vm) }; item { AiTimeouts23(vm) } }
             // Prompt 26: gruppert liste som på web, egen side per integrasjon, og Kalendere.
-            "integ" -> item { IntegList26(vm) }
+            // Prompt 37: husstandens sporingsnøkler øverst (maskert, bare admin endrer).
+            "integ" -> { item { TrkKeys37Section(vm) }; item { IntegList26(vm) } }
             "kal" -> item { KalSettings26(vm) }
             "cats" -> item { CategoriesPage(vm) }
             "rules" -> item { RulesPage(vm) }
@@ -165,7 +166,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         // Prompt 25: Fanelinje-stil (Tekst / Bare ikoner / Ikoner + navn på valgt). Trykk bytter til neste, lagres i layout.navStyle.
         SetRow(vm, i(), Icons.Filled.ViewWeek, "Fanelinje-stil", navStyleSub25(), navStyleName25() + " ›", top = true) { vm.setNavStyle25(nextNavStyle25()) }
         SetRow(vm, i(), Icons.Filled.ViewWeek, "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", top = true) { vm.tabEdit = true }
-        SetRow(vm, i(), Icons.Filled.Dashboard, "Moduler", "Familie, Huskeliste, Avganger, Vær", top = true) { vm.settingsPage = "modules" }
+        SetRow(vm, i(), Icons.Filled.Dashboard, "Moduler", "Familie, Gjøremål, Avganger, Vær", top = true) { vm.settingsPage = "modules" }
         SetRow(vm, i(), Icons.Filled.Newspaper, "Nyhetsleser", "Kilder og AI", top = true) { vm.openNews(settings = true) }
     }
     // Prompt 35: ny gruppe GLIMT → «Glimt» (figur, brief, stemme og venner) i fullskjerm.
@@ -224,7 +225,7 @@ private fun ModulesSub(vm: AppViewModel) {
         PLabel("Moduler", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         PCard {
             SetRow(vm, 0, Icons.Filled.MyLocation, "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() }
-            SetRow(vm, 1, Icons.Filled.Checklist, "Huskeliste", "Oppgaver for hele familien", top = true) { vm.openTasks() }
+            SetRow(vm, 1, Icons.Filled.Checklist, "Gjøremål", "To-do for hele familien", top = true) { vm.openTasks() }
             SetRow(vm, 2, Icons.Filled.DirectionsBus, "Avganger", "Holdeplasser og sanntid fra Ruter", top = true) { vm.openRuter() }
             SetRow(vm, 3, Icons.Filled.WbSunny, "Vær", "Steder, varsel og Yr mot Storm", top = true) { vm.openWeather() }
             SetRow(vm, 4, Icons.Filled.Newspaper, "Nyhetsleser", "RSS med ✦ AI-sammendrag", top = true) { vm.openNews() }
@@ -882,7 +883,7 @@ internal fun HomeTasksCard(vm: AppViewModel) {
     PCard(onClick = { vm.openTasks() }) {
         Column(Modifier.padding(14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                PLabel("Huskeliste", modifier = Modifier.weight(1f))
+                PLabel("Gjøremål", modifier = Modifier.weight(1f))
                 Text("+ Ny", color = p.lab, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable { vm.openTasks(newTask = true) }.padding(8.dp, 4.dp))
             }
             if (next.isEmpty()) Text("Ingen oppgaver. Trykk + Ny for å legge til.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))

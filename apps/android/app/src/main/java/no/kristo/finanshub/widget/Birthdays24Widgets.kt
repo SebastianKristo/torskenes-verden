@@ -477,7 +477,7 @@ private fun STasks(tasks: List<WTask>, papir: Boolean, wide: Boolean) {
     val ctx = LocalContext.current
     val u = palette(papir, accent = false)
     SCard("huske", u.bg, wide) {
-        Tx("Huskeliste · ${tasks.size}", 13.sp, u.fg, FontWeight.Bold)
+        Tx("Gjøremål · ${tasks.size}", 13.sp, u.fg, FontWeight.Bold)
         Spacer(GlanceModifier.height(4.dp))
         if (tasks.isEmpty()) Tx("Ingen oppgaver.", 12.sp, u.sub, FontWeight.Medium)
         tasks.take(3).forEachIndexed { i, t ->

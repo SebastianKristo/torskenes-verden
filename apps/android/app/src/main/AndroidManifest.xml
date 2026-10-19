@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Lokale varsler fra Sporing (Android 13+ spør brukeren). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Prompt 37: «Viktig» i Gjøremål ringer som en alarm (setAlarmClock + fullskjerm-varsel). -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Familie: deling av posisjon (også i bakgrunnen, som forgrunnstjeneste med varsel). -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -402,7 +405,7 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_finn" />
         </receiver>
-        <receiver android:name=".widget.TasksReceiver" android:exported="true" android:label="Huskeliste">
+        <receiver android:name=".widget.TasksReceiver" android:exported="true" android:label="Gjøremål">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_tasks" />
         </receiver>
@@ -469,11 +472,11 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_scan" />
         </receiver>
-        <receiver android:name=".widget.S24TasksReceiver" android:exported="true" android:enabled="false" android:label="Huskeliste · Samsung">
+        <receiver android:name=".widget.S24TasksReceiver" android:exported="true" android:enabled="false" android:label="Gjøremål · Samsung">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_tasks" />
         </receiver>
-        <receiver android:name=".widget.S24TasksWideReceiver" android:exported="true" android:enabled="false" android:label="Huskeliste 4×2 · Samsung">
+        <receiver android:name=".widget.S24TasksWideReceiver" android:exported="true" android:enabled="false" android:label="Gjøremål 4×2 · Samsung">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_tasks_wide" />
         </receiver>
@@ -593,6 +596,22 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s35_brief44" />
         </receiver>
+
+        <!-- Prompt 37: bibelvers-widgetene (Material You 4×2, rund 2×2 og Samsung 4×2). Slås av for brukere uten modulen (Bible37Store). -->
+        <receiver android:name=".widget.Bible37Receiver" android:exported="true" android:enabled="true" android:label="Bibelvers">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_bible37_m" />
+        </receiver>
+        <receiver android:name=".widget.Bible37RoundReceiver" android:exported="true" android:enabled="true" android:label="Bibelvers rund">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_bible37_round" />
+        </receiver>
+        <receiver android:name=".widget.S37BibleReceiver" android:exported="true" android:enabled="true" android:label="Bibelvers · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s37_bible" />
+        </receiver>
+        <!-- Prompt 37: Viktige gjøremål (alarm), tidlige påminnelser og «Dagens vers er klart». -->
+        <receiver android:name=".Task37Receiver" android:exported="false" />
 
         <!-- Prompt 33: server-adresse og et eget token til Kalender-appen (call «companion»). -->
         <provider

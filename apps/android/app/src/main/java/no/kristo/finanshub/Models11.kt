@@ -306,7 +306,13 @@ data class SubItem(
     val category: String, val status: String, val active: Boolean, val domain: String?, val aiShort: String?,
     /** Prompt 14: faktureringsdato som dag + måned (årlige), egen logo og neste trekk fra serveren. */
     val billDay: Int? = null, val billMonth: Int? = null, val logoUrl: String? = null, val nextCharge: String? = null,
+    /** Prompt 37: delte abonnementer (Starlink) – medlemmer, deling (equal | payer), hvem som betaler og min del per måned. */
+    val members: List<SubMember37> = emptyList(), val split: String? = null, val payerId: String? = null, val myShare: Double? = null,
+    val ownerId: String? = null,
+    /** Eier eller betaler kan endre delingen; «Delt · din del 400 kr/mnd» fra serveren. */
+    val canEdit: Boolean? = null, val shareLabel: String? = null, val sharedFlag: Boolean? = null,
 ) {
+    val shared get() = sharedFlag ?: (members.size > 1)
     val cycleName get() = when (cycle) { "yearly" -> "Årlig"; "biennial" -> "Hvert 2. år"; else -> "Månedlig" }
     val flagged get() = active && (status == "low_use" || status == "price_up")
 }
@@ -335,7 +341,9 @@ fun parseSubsX(s: String): SubsX {
             x.optIntOrNull("chargeDay") ?: next.takeIf { it.length >= 10 }?.substring(8, 10)?.toIntOrNull(), x.optStr("category") ?: "Annet",
             x.optStr("status") ?: if (!active) "cancelled" else if (x.optBoolean("lowUse")) "low_use" else "active", active, x.optStr("domain"), x.optStr("aiShort"),
             x.optIntOrNull("billDay") ?: x.optIntOrNull("bill_day"), x.optIntOrNull("billMonth") ?: x.optIntOrNull("bill_month"),
-            x.optStr("logoUrl") ?: x.optStr("logo_url"), x.optJSONObject("nextCharge")?.optStr("label") ?: x.optStr("nextCharge"))
+            x.optStr("logoUrl") ?: x.optStr("logo_url"), x.optJSONObject("nextCharge")?.optStr("label") ?: x.optStr("nextCharge"),
+            subMembers37(x.optJSONArray("members")), x.optStr("split"), x.optStr("payerId"), x.optDoubleOrNull("myShareMonthly") ?: x.optDoubleOrNull("myShare"), x.optStr("ownerId") ?: x.optStr("userId"),
+            if (x.has("canEdit") && !x.isNull("canEdit")) x.optBoolean("canEdit") else null, x.optStr("shareLabel"), if (x.has("shared") && !x.isNull("shared")) x.optBoolean("shared") else null)
     } ?: emptyList()
     val act = items.filter { it.active }
     val h = o.optJSONObject("health")

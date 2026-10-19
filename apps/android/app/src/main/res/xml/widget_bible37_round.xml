@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 37: Bibelvers rund 2 × 2: ✝, referansen og «Trykk for å lese». -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_bible37_round_desc"
+    android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/bible37_prev_round"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="90dp"
+    android:minResizeHeight="90dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen|keyguard" />

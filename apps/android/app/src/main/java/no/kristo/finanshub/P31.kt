@@ -57,7 +57,9 @@ data class HomeAns31(val q: String, val busy: Boolean, val text: String = "", va
     /** Prompt 34: Glimt fikk ikke svar (boblen viser Prøv igjen og Åpne AI-kontroll). */
     val err: Boolean = false,
     /** Prompt 35: «geo:lat,lon,navn» – trykk åpner Vær for stedet. */
-    val wxGeo: String? = null)
+    val wxGeo: String? = null,
+    /** Prompt 37: «hvor er Ingrid» → «Vis på kart ›» åpner Familie med personen valgt. */
+    val famPerson37: String? = null)
 
 data class Trial31(
     val id: String, val service: String, val endsAt: LocalDate, val priceAfter: String, val offsets: List<Int>, val status: String,
@@ -257,6 +259,7 @@ fun AppViewModel.askHome31(q: String) {
     if (t.isEmpty()) return
     // Prompt 35: «været i New York» / «weather in Paris» → været for stedet (ikke Oslo).
     if (askWeather35(t)) return
+    if (askWhere37(t)) return // prompt 37: «hvor er Ingrid»
     if (s.assistMissing) { openChat(t); return }
     val seq = ++s.ansSeq
     s.ans = HomeAns31(t, busy = true)
@@ -316,7 +319,7 @@ fun AppViewModel.chatTool31(text: String): Boolean {
 /** Verktøynavnet ut fra kortet. */
 internal fun cardTool31(card: JSONObject): String? = when (card.s31("k")) {
     "weather", "wx" -> "Vær"; "calendar", "cal" -> "Kalender"; "departures", "dep" -> "Avganger"; "packages", "pk" -> "Pakker"
-    "finance", "fin" -> "Finans"; "tasks" -> "Huskeliste"; "trial", "trials" -> "Abonnementer"; else -> null
+    "finance", "fin" -> "Finans"; "tasks" -> "Gjøremål"; "trial", "trials" -> "Abonnementer"; else -> null
 }
 
 /** Svaret er klart: varsel hvis appen er i bakgrunnen, og banneret når brukeren kommer tilbake. */

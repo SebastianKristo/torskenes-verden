@@ -35,7 +35,8 @@ data class AiTimeouts23(val gemini: Int = 20, val groq: Int = 15, val roboflow: 
 }
 
 /** Kortene på Abonnementer → Hjem, i standardrekkefølge (layout-feltet subHomeOrder). */
-val SUB_HOME_DEFAULT = listOf("ai", "next7", "check", "list")
+/** Prompt 37: «trials» (Gratis prøveperioder) øverst. */
+val SUB_HOME_DEFAULT = listOf("trials", "ai", "next7", "check", "list")
 /** Trinnene når man trykker på en tidsgrense. */
 val AI_TO_STEPS = listOf(5, 10, 15, 20, 30, 45, 60, 90, 120)
 /** Ikonbibliotekene i velgeren (samme som Nyhetsleser.dc.html og /api/icons/sets). */
@@ -93,7 +94,9 @@ class Mod23State {
 
 internal fun normalizeSubOrder(l: List<String>): List<String> {
     val known = l.map { if (it == "next") "next7" else it }.filter { it in SUB_HOME_DEFAULT }.distinct()
-    return known + SUB_HOME_DEFAULT.filter { it !in known }
+    // Prompt 37: eldre oppsett uten prøveperiode-kortet får det øverst.
+    val head = if ("trials" !in known) listOf("trials") else emptyList()
+    return head + known + SUB_HOME_DEFAULT.filter { it !in known && it !in head }
 }
 
 /** Leser subHomeOrder fra /api/me/layout én gang (per bruker; lokalt lagret rekkefølge brukes til svaret kommer). */

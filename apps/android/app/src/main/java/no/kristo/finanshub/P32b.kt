@@ -217,7 +217,7 @@ private val NAV32B: List<Triple<Regex, String, String>> = listOf(
     Triple(Regex("domene"), "domener", "Domener"),
     Triple(Regex("familie|posisjon|hvor er"), "kart", "Familie"),
     Triple(Regex("middag|matplan|oppskrift|\\bmat\\b"), "mat", "Mat"),
-    Triple(Regex("huskeliste|handleliste|todo"), "huske", "Huskeliste"),
+    Triple(Regex("gjøremål|to-do|todo|huskeliste|handleliste"), "huske", "Gjøremål"),
     Triple(Regex("bursdag"), "bursdag", "Bursdager"),
     Triple(Regex("\\bchat\\b"), "chat", "Chat"),
 )
@@ -263,6 +263,8 @@ fun AppViewModel.askHome32b(q: String) {
     val t = q.trim()
     if (t.isEmpty()) return
     logSearch32b(t, "glimt")
+    // Prompt 37: «hvor er Ingrid» svarer med posisjonen (før snarveien «hvor er → Familie»).
+    if (askWhere37(t)) return
     navShortcut32b(t)?.let { (label, page) ->
         val seq = ++s.ansSeq
         s.ans = HomeAns31(t, busy = false, text = "Åpner **$label**.", source = "Snarvei")

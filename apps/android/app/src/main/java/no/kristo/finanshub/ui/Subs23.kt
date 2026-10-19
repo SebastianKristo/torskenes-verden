@@ -3,6 +3,7 @@ package no.kristo.finanshub.ui
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -103,7 +104,7 @@ private fun whenText23(date: String): String {
 internal fun PaperSubs23(vm: AppViewModel, navBottom: Dp, lift: Dp = 0.dp) {
     val t = subTok
     val x = vm.subsX
-    LaunchedEffect(vm.account?.id) { vm.loadSubOrder23(); vm.loadTrials31() }
+    LaunchedEffect(vm.account?.id) { vm.loadSubOrder23(); vm.loadTrials31(); vm.loadSubHid37(); vm.loadUsers37() }
     // Ved bytte av fane: avslutt flytting.
     LaunchedEffect(vm.subTab) { vm.m23.subArrange = false; vm.m23.subDrag = null }
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -146,8 +147,7 @@ internal fun PaperSubs23(vm: AppViewModel, navBottom: Dp, lift: Dp = 0.dp) {
                 }
             }
             else -> {
-                // Prompt 31: aktive prøveperioder («Prøve · 12 dager igjen») øverst på Hjem i Subscription OS.
-                if (vm.p31.trials.any { it.status == "active" }) item { TrialsCard31(vm, t.card, t.fg, t.mut) }
+                // Prompt 37: GRATIS PRØVEPERIODER er et eget kort i rekkefølgen (øverst), med wiggle-redigering av kortene.
                 item { HomeCards23(vm, x, t) }
             }
         }
@@ -166,31 +166,50 @@ private fun RoundLogo23(vm: AppViewModel, s: SubItem?, name: String, size: Int, 
 
 /* ---------------- Hjem: kortene, med hold inne og dra ---------------- */
 
+private val SUB_NAMES37 = mapOf("trials" to "Gratis prøveperioder", "ai" to "AI-sparing", "next7" to "Neste trekk", "check" to "Sjekk", "list" to "Kommende trekk")
+
+/**
+ * Prompt 37: wiggle-redigering som Hjem og Mer. Hold inne 450 ms: kortene vugger (±0,6°, 0,6 s, annenhver retning) med stiplet ramme,
+ * − skjuler, ＋ (rødt tall) åpner «Legg til kort», Tilbakestill og Ferdig. Flytting med krasjfiksen: bytt bare når fingeren står i
+ * midtre 30 % av nabokortet og maks hver 140 ms, lagres ved slipp.
+ */
 @Composable
 private fun HomeCards23(vm: AppViewModel, x: SubsX, t: SubTok) {
     val s = vm.m23
+    val hid = vm.p37.subHid
+    val order = s.subOrder.filter { it !in hid }
     val heights = remember { HashMap<String, Int>() }
     val offset = remember { mutableFloatStateOf(0f) }
     val gapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 14.dp.toPx() }
+    val wob = androidx.compose.animation.core.rememberInfiniteTransition(label = "soWig").animateFloat(-.6f, .6f,
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(300), androidx.compose.animation.core.RepeatMode.Reverse), label = "w")
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (s.subArrange) {
             Row(Modifier.fillMaxWidth().shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .35f), spotColor = Color.Black.copy(alpha = .35f)).clip(CircleShape).background(t.card)
-                .padding(start = 14.dp, top = 8.dp, end = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Dra for å flytte", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable { vm.saveSubOrder23(SUB_HOME_DEFAULT) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                    Text("Tilbakestill", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable { Haptics.select(); vm.p37.subAdd = true }.padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("＋", color = t.fg, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    if (hid.isNotEmpty()) Text("${hid.size}", color = t.neg, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
-                Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.fg).clickable { s.subArrange = false; s.subDrag = null; Haptics.success() }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                Text("Dra for å flytte · − for å skjule", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, modifier = Modifier.weight(1f), maxLines = 2)
+                Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable { Haptics.select(); vm.saveSubOrder23(SUB_HOME_DEFAULT); vm.setSubHid37(emptyList()) }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                    Text("Tilbakestill", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
+                }
+                Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.fg).clickable { s.subArrange = false; s.subDrag = null; vm.p37.subAdd = false; Haptics.success() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                     Text("Ferdig", color = t.card, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
-        s.subOrder.forEach { key ->
+        order.forEachIndexed { idx, key ->
             val drag = s.subDrag == key
             val r = if (key == "ai") 28.dp else 24.dp
             Box(
                 Modifier.zIndex(if (drag) 1f else 0f)
-                    .graphicsLayer { translationY = if (drag) offset.floatValue else 0f; val k = if (drag) 1.03f else 1f; scaleX = k; scaleY = k; alpha = if (drag) .85f else 1f }
+                    .graphicsLayer {
+                        translationY = if (drag) offset.floatValue else 0f; val k = if (drag) 1.03f else 1f; scaleX = k; scaleY = k; alpha = if (drag) .85f else 1f
+                        rotationZ = if (s.subArrange && !drag) wob.value * (if (idx % 2 == 0) 1f else -1f) else 0f
+                    }
                     .drawBehind {
                         if (s.subArrange) {
                             val o = 3.dp.toPx()
@@ -204,7 +223,7 @@ private fun HomeCards23(vm: AppViewModel, x: SubsX, t: SubTok) {
                         awaitEachGesture {
                             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                             if (!s.subArrange) {
-                                // Hold inne 0,45 s uten å flytte fingeren: start flytting. Ellers vanlig trykk eller rulling.
+                                // Hold inne 0,45 s uten å flytte fingeren: start redigering. Ellers vanlig trykk eller rulling.
                                 var early = false
                                 val timedOut = withTimeoutOrNull(450L) {
                                     while (!early) {
@@ -220,23 +239,36 @@ private fun HomeCards23(vm: AppViewModel, x: SubsX, t: SubTok) {
                             } else down.consume()
                             s.subDrag = key
                             offset.floatValue = 0f
+                            var lastSw = 0L
                             while (true) {
                                 val e = awaitPointerEvent(PointerEventPass.Initial)
                                 val c = e.changes.firstOrNull { it.id == down.id } ?: break
                                 c.consume()
                                 if (!c.pressed) break
                                 offset.floatValue += c.position.y - c.previousPosition.y
-                                val l = s.subOrder
+                                val now = android.os.SystemClock.uptimeMillis()
+                                if (now - lastSw < 140) continue
+                                val l = s.subOrder.filter { it !in vm.p37.subHid }
                                 val i = l.indexOf(key)
                                 val next = l.getOrNull(i + 1)
                                 val prev = l.getOrNull(i - 1)
-                                if (next != null && offset.floatValue > ((heights[next] ?: 0) + gapPx) / 2f) {
-                                    offset.floatValue -= (heights[next] ?: 0) + gapPx
-                                    s.subOrder = l.toMutableList().apply { removeAt(i); add(i + 1, key) }
+                                val own = (heights[key] ?: 0).toFloat()
+                                // Pekeren i forhold til toppen av eget kort (der kortet lå da draget startet / etter siste bytte).
+                                val py = down.position.y + offset.floatValue
+                                val hn = (heights[next] ?: 0).toFloat()
+                                val hp = (heights[prev] ?: 0).toFloat()
+                                val full = s.subOrder.toMutableList()
+                                if (next != null && hn > 0 && py in (own + gapPx + hn * .35f)..(own + gapPx + hn * .65f)) {
+                                    offset.floatValue -= hn + gapPx
+                                    full.remove(key); full.add(full.indexOf(next) + 1, key)
+                                    s.subOrder = full
+                                    lastSw = now
                                     Haptics.select()
-                                } else if (prev != null && offset.floatValue < -((heights[prev] ?: 0) + gapPx) / 2f) {
-                                    offset.floatValue += (heights[prev] ?: 0) + gapPx
-                                    s.subOrder = l.toMutableList().apply { removeAt(i); add(i - 1, key) }
+                                } else if (prev != null && hp > 0 && py in (-gapPx - hp * .65f)..(-gapPx - hp * .35f)) {
+                                    offset.floatValue += hp + gapPx
+                                    full.remove(key); full.add(full.indexOf(prev), key)
+                                    s.subOrder = full
+                                    lastSw = now
                                     Haptics.select()
                                 }
                             }
@@ -247,10 +279,101 @@ private fun HomeCards23(vm: AppViewModel, x: SubsX, t: SubTok) {
                     },
             ) {
                 when (key) {
+                    "trials" -> TrialsOS37(vm, t)
                     "ai" -> AiCard23(vm, x)
                     "next7" -> WeekCard23(x, t)
                     "check" -> CheckCard23(vm, x, t)
                     else -> ListCard23(vm, x, t)
+                }
+                if (s.subArrange && !drag) {
+                    Box(Modifier.matchParentSize().clickable(remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, null) {})
+                    MinusDot28(SUB_NAMES37[key] ?: key, Modifier.align(Alignment.TopStart)) { Haptics.select(); vm.setSubHid37(vm.p37.subHid + key) }
+                }
+            }
+        }
+    }
+    if (vm.p37.subAdd) SubAddCards37(vm, t)
+}
+
+/** «Legg til kort»: skjulte kort med grønn ＋. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SubAddCards37(vm: AppViewModel, t: SubTok) {
+    val hid = vm.p37.subHid
+    val close = { vm.p37.subAdd = false }
+    ModalBottomSheet(onDismissRequest = close, containerColor = t.sheet, contentColor = t.fg) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 18.dp, end = 18.dp, bottom = 26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Legg til kort", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, modifier = Modifier.weight(1f))
+                SheetButton30("Ferdig", dark = t.card.luminance() < .5f, onClick = close)
+            }
+            if (hid.isEmpty()) Text("Alle kortene vises. Trykk − på et kort for å skjule det.", color = t.mut, fontFamily = sans, fontSize = 13.5.sp)
+            else Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(t.card)) {
+                hid.forEachIndexed { i, k ->
+                    if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(t.bd))
+                    Row(Modifier.fillMaxWidth().heightIn(min = 54.dp).clickable { Haptics.select(); vm.setSubHid37(hid - k); if (hid.size <= 1) close() }.padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(SUB_NAMES37[k] ?: k, color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        Box(Modifier.size(28.dp).clip(CircleShape).background(Color(0xFF2F7A4F)), contentAlignment = Alignment.Center) { Text("＋", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* ---------------- Prompt 37: GRATIS PRØVEPERIODER ---------------- */
+
+private val WD37S = listOf("man", "tir", "ons", "tor", "fre", "lør", "søn")
+private fun day37(d: LocalDate) = "${WD37S[d.dayOfWeek.value - 1]} ${d.dayOfMonth}. ${MON_L[d.monthValue - 1].take(3)}"
+
+/**
+ * Øverst på Oversikt: én rad per aktiv prøve (færrest dager igjen først) med logo, «Slutter fre 24. okt · deretter 149 kr/mnd», stort tall
+ * (rødt ≤ 2, gult ≤ 7), fremdriftslinje, Avslutt nå ↗, Behold · legg til og «Varsel tor 23. okt». Tom: «Ingen aktive prøveperioder …».
+ */
+@Composable
+private fun TrialsOS37(vm: AppViewModel, t: SubTok) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val today = LocalDate.now()
+    val l = vm.p31.trials.filter { it.status == "active" && !it.endsAt.isBefore(today) }.sortedBy { it.endsAt }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(t.card).padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("GRATIS PRØVEPERIODER" + if (l.isNotEmpty()) " · ${l.size}" else "", color = ORANGE, fontFamily = mono, fontWeight = FontWeight.SemiBold, fontSize = 11.sp, letterSpacing = 1.2.sp, modifier = Modifier.weight(1f))
+            Text("+ Legg til", color = t.fg, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.clip(CircleShape).clickable { if (!vm.m23.subArrange) { Haptics.select(); vm.resetTrialForm31(); vm.b28.addStep = "trial"; vm.subAdding = true } }.padding(8.dp, 4.dp))
+        }
+        if (l.isEmpty()) Text("Ingen aktive prøveperioder. Legg til en, så minner Glimt deg på å avslutte i tide.", color = t.mut, fontFamily = sans, fontSize = 13.5.sp)
+        l.forEach { tr ->
+            val left = ChronoUnit.DAYS.between(today, tr.endsAt)
+            val col = when { left <= 2 -> t.neg; left <= 7 -> Color(0xFFD9A21B); else -> t.fg }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    RoundLogo23(vm, null, tr.service, 40)
+                    Column(Modifier.weight(1f)) {
+                        Text(tr.service, color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("Slutter ${day37(tr.endsAt)}" + (tr.priceAfter.takeIf { it.isNotBlank() }?.let { " · deretter $it" } ?: ""), color = t.mut, fontFamily = sans, fontSize = 12.5.sp, maxLines = 2)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("$left", color = col, fontFamily = mono, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 28.sp)
+                        Text(if (left == 1L) "dag igjen" else "dager igjen", color = t.mut, fontFamily = sans, fontSize = 11.sp)
+                    }
+                }
+                Box(Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)).background(t.chip)) {
+                    Box(Modifier.fillMaxWidth((1f - left / maxOf(30f, left.toFloat())).coerceIn(.04f, 1f)).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(col))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.height(32.dp).clip(CircleShape).background(t.fg).clickable {
+                        Haptics.select(); tr.cancelUrl?.let { openLink(ctx, it) }; vm.patchTrial31(tr.id, "cancelled")
+                    }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) { Text("Avslutt nå ↗", color = t.card, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                    Box(Modifier.height(32.dp).clip(CircleShape).border(1.dp, t.bd, CircleShape).clickable {
+                        Haptics.select()
+                        vm.patchTrial31(tr.id, "kept")
+                        val price = Regex("(\\d+[\\d ]*[,.]?\\d*)").find(tr.priceAfter)?.value?.replace(" ", "")?.replace(',', '.')?.toDoubleOrNull() ?: 0.0
+                        vm.b27.subPrefill = SubShot27(tr.service, "", price, "NOK", null, "monthly", tr.endsAt.toString(), "Annet", null, null, emptySet(), null)
+                        vm.m23.subEditNew = true
+                    }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) { Text("Behold · legg til", color = t.fg, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                    Spacer(Modifier.weight(1f))
+                    Text("Varsel ${day37(tr.endsAt.minusDays(1))}", color = t.mut, fontFamily = sans, fontSize = 11.5.sp, maxLines = 1)
                 }
             }
         }
@@ -346,9 +469,14 @@ private fun ListCard23(vm: AppViewModel, x: SubsX, t: SubTok) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 RoundLogo23(vm, s, s.name, 34)
                 Column(Modifier.weight(1f)) {
-                    Text(s.name, color = t.fg, fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(s.name, color = t.fg, fontFamily = sans, fontWeight = FontWeight.Medium, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        // Prompt 37: delte abonnementer viser medlemmene som små avatarer.
+                        if (s.shared) Avatars37(s.members.map { it.name to it.color }, ring = t.card)
+                    }
                     Text(listOfNotNull(s.plan.takeIf { it.isNotBlank() && it != "–" }, s.nextDate.takeIf { it.isNotBlank() }?.let { whenText23(it) }).joinToString(" · ").ifBlank { s.cycleName },
                         color = t.mut, fontFamily = sans, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (s.shared) Text(s.shareLabel ?: "Delt · din del ${kr23(vm.myShare37(s))}/mnd", color = Color(0xFF2F7A4F), fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
                 }
                 Text(kr23(s.price), color = t.fg, fontFamily = mono, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
@@ -693,6 +821,8 @@ private fun SubForm23(vm: AppViewModel, s: SubItem?, t: SubTok, close: () -> Uni
             Text(nextChargeText(day, if (cycle == "monthly") null else month, cycle), color = t.neg, fontFamily = sans, fontSize = 12.5.sp)
         }
         SheetChips("Status", listOf("active" to "Aktiv", "cancelled" to "Sagt opp"), status, t) { status = it }
+        // Prompt 37: Del med husstanden (Starlink): medlemmer, Del likt / Jeg betaler, din del.
+        if (s != null) SubShare37(vm, s, t)
         Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f).height(48.dp).alpha(if (valid) 1f else .4f).clip(RoundedCornerShape(24.dp)).background(t.on).clickable(enabled = valid) {
                 Haptics.tap()
@@ -703,5 +833,53 @@ private fun SubForm23(vm: AppViewModel, s: SubItem?, t: SubTok, close: () -> Uni
                 .padding(horizontal = 18.dp), contentAlignment = Alignment.Center) { Text("Slett", color = t.neg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 15.sp) }
         }
         if (!valid) Text(if (name.isBlank()) "Skriv inn navnet på tjenesten." else "Skriv inn prisen i kroner, f.eks. 149.", color = t.mut, fontFamily = sans, fontSize = 12.5.sp)
+    }
+}
+
+/* ---------------- Prompt 37: Del med husstanden ---------------- */
+
+/**
+ * Redigeringsarket → DEL MED HUSSTANDEN: brukerne som chips med avatar (du selv er alltid med), Del likt / Jeg betaler og hintet
+ * «Hver betaler 400 kr/mnd …». Lagres med PUT /finans/api/subscriptions/:id/members. Medlemmer som ikke eier/betaler kan forlate.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SubShare37(vm: AppViewModel, s: SubItem, t: SubTok) {
+    val me = vm.p37.myId
+    val users = vm.p37.users
+    var picked by remember(s.id, s.members) { mutableStateOf(s.members.map { it.userId }.toSet()) }
+    var split by remember(s.id, s.split) { mutableStateOf(s.split ?: "equal") }
+    val canEdit = s.canEdit ?: (s.ownerId == null || s.ownerId == me || s.payerId == me || !s.shared)
+    val all = (picked + listOfNotNull(me)).toList()
+    val n = all.size.coerceAtLeast(1)
+    val changed = picked != s.members.map { it.userId }.toSet() || split != (s.split ?: "equal")
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Del med husstanden", color = t.mut, fontFamily = sans, fontSize = 12.5.sp)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            users.forEach { u ->
+                val self = u.id == me
+                val on = self || u.id in picked
+                Row(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) t.on else t.card).border(1.dp, if (on) t.on else t.bd, RoundedCornerShape(18.dp))
+                    .clickable(enabled = canEdit && !self) { Haptics.select(); picked = if (on) picked - u.id else picked + u.id }.padding(start = 4.dp, end = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Avatars37(listOf(u.name to u.color), size = 28.dp, ring = if (on) t.on else t.card)
+                    Text(firstName37(u.name).ifBlank { "Uten navn" } + if (self) " (deg)" else "", color = if (on) t.onFg else t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                }
+            }
+            if (users.isEmpty()) Text("Henter husstanden …", color = t.mut, fontFamily = sans, fontSize = 13.sp)
+        }
+        if (all.size > 1) {
+            SheetChips("Deling", listOf("equal" to "Del likt", "payer" to "Jeg betaler"), split, t) { if (canEdit) split = it }
+            Text(if (split == "equal") "Hver betaler ${kr23(s.monthly / n)}/mnd. Alle ser abonnementet, trekkdato og varsler. Bare din del teller i ditt budsjett."
+                else "Du betaler hele beløpet (${kr23(s.monthly)}/mnd). De andre ser abonnementet, men det teller 0 i deres budsjett.",
+                color = t.mut, fontFamily = sans, fontSize = 12.5.sp)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (canEdit && changed) Box(Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(t.on).clickable(enabled = !vm.p37.subShareBusy) {
+                Haptics.tap(); vm.shareSub37(s.id, all, split, if (split == "payer") me else s.payerId)
+            }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text(if (vm.p37.subShareBusy) "Lagrer …" else "Lagre deling", color = t.onFg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
+            if (s.shared && !canEdit) Box(Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, t.bd, RoundedCornerShape(20.dp)).clickable { Haptics.tap(); vm.leaveSub37(s.id) }
+                .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) { Text("Forlat abonnementet", color = t.neg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
+        }
     }
 }

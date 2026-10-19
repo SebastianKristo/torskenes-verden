@@ -46,6 +46,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         Ruter27Store.useAccount(ctx, acc.id)
         Trials32bStore.useAccount(ctx, acc.id)
         Brief34Store.useAccount(ctx, acc.id)
+        Bible37Store.useAccount(ctx, acc.id)
         var err: String? = null
         for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
             try {
@@ -64,6 +65,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 runCatching { fetchTrials32b(ctx, Api(base, acc.token), acc.id); Trials32bWidgets.redraw(ctx) }
                 // Prompt 34: Glimt-brief-widgetene (morgen/dag/kveld) og «Morgenbrief er klar».
                 runCatching { fetchBrief34(ctx, Api(base, acc.token), acc.id); Brief34Widgets.redraw(ctx) }
+                // Prompt 37: bibelvers-widgetene (bare med modulen; ellers slås mottakerne av).
+                runCatching { fetchBible37(ctx, Api(base, acc.token), acc.id, acc.username) }
                 return Result.success()
             } catch (e: ApiException) {
                 err = e.message
@@ -119,5 +122,6 @@ object WidgetSync {
         runCatching { Ruter27Widgets.redraw(ctx) }
         runCatching { Trials32bWidgets.redraw(ctx) }
         runCatching { Brief34Widgets.redraw(ctx) }
+        runCatching { Bible37Widgets.redraw(ctx) }
     }
 }

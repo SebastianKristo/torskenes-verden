@@ -526,7 +526,8 @@ internal fun PaperTracking(vm: AppViewModel, navBottom: Dp) {
                         Box(Modifier.size(34.dp).clip(CircleShape).clickable { vm.trkSettings = true }, contentAlignment = Alignment.Center) { Text("⚙", color = p.ink, fontSize = 16.sp) }
                     }
                 }
-                "s2" -> TrkShipments(vm, items)
+                // Prompt 37: «Bruker husstandens ParcelsApp-nøkkel · 17 oppslag igjen» under listen.
+                "s2" -> Column { TrkShipments(vm, items); TrkLine37(vm) }
                 "s3" -> TrkAdd(vm, t)
                 // Varslene er samlet i Innstillinger → Varsler; Sporing har bare en lenke dit.
                 "s4" -> PCard(onClick = { vm.settingsPage = "notify"; vm.openPaperPage("set") }) {

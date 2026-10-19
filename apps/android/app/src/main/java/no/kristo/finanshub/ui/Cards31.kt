@@ -264,7 +264,7 @@ private fun TasksCard31(vm: AppViewModel, v: ChatV27, o: JSONObject) {
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Row(Modifier.fillMaxWidth().clickable { Haptics.select(); vm.openTasks() }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(o.c31("title", "list") ?: "Huskeliste", color = v.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text(o.c31("title", "list") ?: "Gjøremål", color = v.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.weight(1f))
             Text("›", color = v.mut, fontSize = 18.sp)
         }
         if (items.isEmpty()) Text("Ingenting på lista.", color = v.mut, fontFamily = PaperFonts.sans, fontSize = 13.5.sp)

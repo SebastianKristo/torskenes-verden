@@ -156,16 +156,21 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
     val cnt by rememberUpdatedState(count)
     // Prompt 28: samme vugging som iOS (±0,45°, 0,6 s, annenhver i motfase).
     val angle = wobbleAngle(edit && !dragging, index, 0.45f)
+    val dens = androidx.compose.ui.platform.LocalDensity.current.density
+    val bkey = "$page|${sec.key}"
+    // Prompt 37 (krasjfiksen, claude-code-wiggle-krasj-ios.md A): bytt bare når fingeren står i midtre 30 % av nabokortet og maks hver 140 ms;
+    // under dra endres bare state (ingen disk, nett eller sterk haptikk), lagring én gang ved slipp, auto-scroll nær kantene.
     fun follow() {
         val outer = st.top() - st.applied
         if (st.startY.isNaN()) return
         ty = st.startOuter + (st.lastY - st.startY) - outer
-        if (outer != st.swapAt) {
-            val h = st.height.coerceAtLeast(1f)
-            val dir = when { ty > h * .5f && idx < cnt - 1 -> 1; ty < -h * .5f && idx > 0 -> -1; else -> 0 }
-            if (dir != 0) { st.swapAt = outer; vm.movePageItem(page, keys, sec.key, dir) }
-        }
+        vm.wiggleEdge37(st.lastY, 40f * dens)
+        val now = android.os.SystemClock.uptimeMillis()
+        if (outer == st.swapAt && now - st.swapT < 400) return
+        val dir = vm.wiggleHit37(page, vm.pageVisible37(page, keys), sec.key, Offset(st.lastX, st.lastY))
+        if (dir != 0) { st.swapAt = outer; st.swapT = now; vm.movePageItem(page, keys, sec.key, dir, live = true); Haptics.select() }
     }
+    DisposableEffect(bkey) { onDispose { vm.p37.bounds.remove(bkey) } }
     Box(
         Modifier.fillMaxWidth().zIndex(if (dragging) 5f else 0f)
             .graphicsLayer {
@@ -175,16 +180,19 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
             }
             .onGloballyPositioned { c ->
                 st.coords = c; st.height = c.size.height.toFloat(); st.visualTop = c.positionInRoot().y
+                // Grensene til kortene som ikke dras (målet for midtre 30 %).
+                if (!dragging) vm.p37.bounds[bkey] = androidx.compose.ui.geometry.Rect(c.positionInRoot(), androidx.compose.ui.geometry.Size(c.size.width.toFloat(), c.size.height.toFloat()))
+                else vm.p37.bounds.remove(bkey)
                 if (dragging) follow()
             }
-            .holdDrag(sec.hold || edit,
-                onLong = { Haptics.tap(); vm.editPage = page; dragging = true; ty = 0f; st.startY = Float.NaN; st.swapAt = Float.NaN },
-                onDrag = { y ->
-                    if (st.startY.isNaN()) { st.startY = y; st.startOuter = st.top() - st.applied }
-                    st.lastY = y; follow()
+            .holdDrag37(sec.hold || edit,
+                onLong = { Haptics.tap(); vm.editPage = page; dragging = true; ty = 0f; st.startY = Float.NaN; st.swapAt = Float.NaN; st.swapT = 0L },
+                onDrag = { pt ->
+                    if (st.startY.isNaN()) { st.startY = pt.y; st.startOuter = st.top() - st.applied }
+                    st.lastY = pt.y; st.lastX = pt.x; follow()
                 },
-                onEnd = { dragging = false; ty = 0f; st.startY = Float.NaN },
-                toRootY = { o -> st.coords?.takeIf { it.isAttached }?.localToRoot(o)?.y ?: o.y },
+                onEnd = { dragging = false; ty = 0f; st.startY = Float.NaN; vm.wiggleEnd37(page) },
+                toRoot = { o -> st.coords?.takeIf { it.isAttached }?.localToRoot(o) ?: o },
             ),
     ) {
         content()
@@ -208,6 +216,9 @@ internal class DragTrack {
     var visualTop = 0f
     var startY = Float.NaN
     var lastY = 0f
+    var lastX = Float.NaN
+    /** Prompt 37: tidspunktet for siste bytte (maks hver 140 ms). */
+    var swapT = 0L
     var startOuter = 0f
     var swapAt = Float.NaN
     /** Flyttingen laget faktisk har nå (kan ligge én ramme bak tilstanden). */
@@ -265,12 +276,13 @@ internal fun LazyListScope.pageSecs(vm: AppViewModel, page: String, secs: List<P
 }
 
 /** Samme som over i et rutenett (Hjem på Fold i to kolonner; søk, minikort og Siste nytt over hele bredden). */
-internal fun LazyGridScope.pageGridSecs(vm: AppViewModel, page: String, secs: List<PSec>, wide: Boolean, body: @Composable (String) -> Unit) {
+/** Prompt 37: skip = kort som skjules helt utenfor redigeringsmodus (Pakker uten pakker, bibelverset som er lest). */
+internal fun LazyGridScope.pageGridSecs(vm: AppViewModel, page: String, secs: List<PSec>, wide: Boolean, skip: (String) -> Boolean = { false }, body: @Composable (String) -> Unit) {
     val keys = secs.map { it.key }
     val edit = vm.editPage == page
     vm.b28.pageSecs[page] = secs.map { it.key to it.label }
     val hid = vm.pageHidden(page)
-    val vis = vm.pageOrder(page, keys).filter { it !in hid }
+    val vis = vm.pageOrder(page, keys).filter { it !in hid && (edit || !skip(it)) }
     // Prompt 30: luft over hele første rad (begge kolonnene på Fold), animert.
     if (edit) item(key = "edit-$page", span = { GridItemSpan(maxLineSpan) }) { WiggleSpace30(true, extra = (-10).dp) }
     vis.forEachIndexed { i, k ->

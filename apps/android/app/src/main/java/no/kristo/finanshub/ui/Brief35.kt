@@ -17,6 +17,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -95,6 +96,7 @@ internal fun BriefPage35(vm: AppViewModel) {
     LaunchedEffect(Unit) {
         vm.loadGlimt35()
         vm.loadBrief34()
+        vm.loadBible37()
         if (vm.p31.trials.isEmpty()) vm.loadTrials31()
         // Guide-runden starter automatisk første gang briefen åpnes («Vis meg rundt automatisk»).
         if (g.set.guide && !vm.tourWasSeen34()) { delay(900); if (s.tour == 0) { s.tour = 1; vm.tourSeen34() } }
@@ -141,10 +143,23 @@ internal fun BriefPage35(vm: AppViewModel) {
                     fontFamily = PaperFonts.serif, fontSize = 17.sp, lineHeight = 24.5.sp)
             }
             if (b == null) return@Column
-            b.wx?.let { w -> Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["vaer"] = it.positionInParent().y }) { BriefWx35(w, ring("vaer")) } }
+            // Prompt 37: hele Vær-kortet er trykkbart og åpner Vær over briefen (✕ går tilbake hit, på samme sted). Talen stoppes.
+            b.wx?.let { w ->
+                val src = remember { MutableInteractionSource() }
+                val down by src.collectIsPressedAsState()
+                Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["vaer"] = it.positionInParent().y }
+                    .graphicsLayer { val k = if (down) .985f else 1f; scaleX = k; scaleY = k }
+                    .clickable(src, null, role = Role.Button, onClickLabel = "Åpne Vær") { vm.stopSay35(); Haptics.tap(); vm.openWeather() }) { BriefWx35(w, ring("vaer")) }
+            }
+            // Prompt 37: dagens bibelvers i morgen- og kveldsbriefen (bare med modulen), øverst til det er lest eller sveipet bort på Hjem.
+            val bibleTop = vm.bibleAllowed37() && !vm.bibleAtBottom37() && when (kind) { "morning" -> vm.p37.bibleSet.morning || vm.p37.bibleMissing; "evening", "night" -> vm.p37.bibleSet.evening || vm.p37.bibleMissing; else -> false }
+            if (bibleTop) BriefBible37(vm, if (kind == "morning") "morning" else "evening")
             Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["kal"] = it.positionInParent().y }) { BriefKal35(vm, b, ring("kal")) }
+            // Prompt 37: Gjøremål · 3 gjøremål i dag (forfalt + i dag), avkrysning i briefen.
+            BriefTodos37(vm)
             if (trials.isNotEmpty()) Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["abo"] = it.positionInParent().y }) { BriefTrials35(vm, trials, ring("abo")) }
             Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["nyh"] = it.positionInParent().y }) { BriefNews35(vm, b, ring("nyh")) }
+            if (vm.bibleAllowed37() && vm.bibleAtBottom37()) BriefBible37(vm, biblePeriod37())
             Text("Laget av Glimt ${b.generatedAt ?: ""} · Vær: MET / Open-Meteo · Nyheter: ${b.news.map { it.src }.distinct().filter { it.isNotBlank() }.ifEmpty { listOf("NRK", "VG", "E24") }.take(4).joinToString(", ")}",
                 color = p.mut, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             b.note?.let { Text(it, color = p.mut, fontSize = 11.5.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
@@ -210,8 +225,8 @@ private fun BriefTop35(vm: AppViewModel, kind: String, host: String) {
     val g = vm.p35
     val voiceOn = g.set.readAloud
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("GLIMT · " + briefTitle34(kind).uppercase(), color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.5.sp,
-            modifier = Modifier.weight(1f), maxLines = 1)
+        // Prompt 37: etiketten «GLIMT · KVELDSBRIEF» er fjernet (dobbelt med den store tittelen); knappene står høyrejustert.
+        Spacer(Modifier.weight(1f))
         // Høyttaler: opplesning av/på (huskes).
         Box(Modifier.size(36.dp).clip(CircleShape).background(if (voiceOn) p.ink else p.card).border(1.dp, p.line, CircleShape)
             .clickable(role = Role.Switch, onClickLabel = if (voiceOn) "Slå av opplesning" else "Slå på opplesning") {
@@ -558,6 +573,8 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
             }
         }
         Text("Bare valgte briefer lages og varsles. Widgets og Hjem-kortet viser siste valgte brief.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp))
+        // Prompt 37: Bibelvers (bare for brukere med modulen).
+        if (figures) BibleSettings37(vm)
         Lab35("STEMMEMOTOR")
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             ENGINES35.forEach { e -> EngineRow35(vm, e) }

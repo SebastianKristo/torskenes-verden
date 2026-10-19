@@ -29,7 +29,7 @@ val BK29_MODULES = listOf(
     Triple("familie", "Familie", "Posisjoner, soner og helse"),
     Triple("mat", "Mat", "Oppskrifter og ukeplan"),
     Triple("sporing", "Sporing", "Pakker og historikk"),
-    Triple("huske", "Huskeliste", "Lister og oppgaver"),
+    Triple("huske", "Gjøremål", "Lister og oppgaver"),
     Triple("bursdager", "Bursdager", ""),
     Triple("chat", "Chat", "Samtaler og kunnskapsbase"),
     Triple("domener", "Domener", "Oppsett og statistikk"),

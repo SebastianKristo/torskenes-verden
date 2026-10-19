@@ -172,12 +172,13 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.widgetGallery) WidgetGallery(vm)
     if (vm.scanSheet) ScanSheet(vm, takePhoto, photos = pickPhotos, files = pickFiles)
     if (vm.newsOpen) NewsReader(vm)
-    if (vm.weatherOpen) WeatherApp(vm)
+    if (vm.weatherOpen && !vm.p34.briefOpen) WeatherApp(vm)
     if (vm.ruterOpen) RuterScreen24(vm)
     if (vm.familyOpen) FamilyScreen(vm)
-    if (vm.tasksOpen) TasksScreen(vm)
+    if (vm.tasksOpen) TasksScreen37(vm)
     if (vm.compareOpen) CompareScreen(vm)
     if (vm.p34.briefOpen) BriefPage35(vm) // prompt 34/35: Glimt og vennene, opplesning, bilder og prøver (ui/Brief35.kt)
+    if (vm.p34.briefOpen && vm.weatherOpen) WeatherApp(vm) // prompt 37: Vær over briefen
     if (vm.p35.glimtOpen) GlimtPage35(vm) // prompt 35: Innstillinger → Glimt
     if (vm.p34.aiOpen) AiControl34(vm)
     StartGate36(vm) // prompt 36: «Starter opp» mens serveren starter på nytt etter oppdateringen
@@ -380,7 +381,7 @@ private fun MenuContent(vm: AppViewModel) {
             MenuRow("Nyhetsleser", "RSS med ✦ AI-sammendrag", Icons.Filled.Newspaper, vm.newsOpen, 4, 8) { vm.openNews() }
             MenuRow("Familie og kart", "Posisjon, soner og helse", Icons.Filled.MyLocation, vm.familyOpen, 5, 8) { vm.menuOpen = false; vm.openFamily() }
             MenuRow("Avganger", "Ruter i sanntid og egne stopp", Icons.Filled.DirectionsBus, vm.ruterOpen, 6, 8) { vm.menuOpen = false; vm.openRuter() }
-            MenuRow("Huskeliste", "Oppgaver for hele familien", Icons.Filled.Checklist, vm.tasksOpen, 7, 8) { vm.menuOpen = false; vm.openTasks() }
+            MenuRow("Gjøremål", "To-do for hele familien", Icons.Filled.Checklist, vm.tasksOpen, 7, 8) { vm.menuOpen = false; vm.openTasks() }
         }
         Spacer(Modifier.height(4.dp))
         MenuRow("Rediger forsiden", "Widgets og fanelinjer", Icons.Filled.Edit, vm.editHome, 0, 1) { vm.go(Screen.Homelab); vm.editHome = true }

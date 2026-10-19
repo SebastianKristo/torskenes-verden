@@ -11,12 +11,17 @@ data class TaskList(
     val id: String, val name: String, val color: Long,
     /** Prompt 21: eieren av listen (id og navn), personene den er delt med, og om listen er min (bare eieren kan dele og slette). */
     val owner: String? = null, val ownerName: String? = null, val members: List<TaskMember> = emptyList(), val mine: Boolean = true,
+    /** Prompt 37: delt med andre (medlemmer) eller privat («Mine»). Null = eldre server (vet ikke). */
+    val shared: Boolean? = null, val priv: Boolean? = null,
 )
 data class TaskItem(
     val id: String, val title: String, val list: String?, val due: String?, val assignee: String?,
     val done: Boolean, val doneAt: String?, val createdBy: String?,
+    /** Prompt 37 (Gjøremål): detaljarket – notater, tid, viktig (alarm), gjenta, tidlig påminnelse, prioritet 0–3, flagg, tagger, deloppgaver og sted. */
+    val notes: String? = null, val time: String? = null, val urgent: Boolean = false, val rep: String? = null, val early: String? = null,
+    val prio: Int = 0, val flag: Boolean = false, val tags: List<String> = emptyList(), val subs: List<TaskSub37> = emptyList(), val place: String? = null,
 )
-data class TaskMember(val id: String, val name: String)
+data class TaskMember(val id: String, val name: String, val color: Long? = null, val role: String? = null)
 data class TasksData(val lists: List<TaskList>, val items: List<TaskItem>, val members: List<TaskMember>)
 
 fun parseTasks(s: String): TasksData {
@@ -29,9 +34,14 @@ fun parseTasks(s: String): TasksData {
     val ia = o.optJSONArray("items") ?: JSONArray()
     val items = (0 until ia.length()).mapNotNull { i ->
         val t = ia.optJSONObject(i) ?: return@mapNotNull null
+        // Prompt 37: kortnavnene fra Gjøremål-modellen (n, l, who, by) godtas også.
         TaskItem(
-            t.optStr("id") ?: return@mapNotNull null, t.optStr("title") ?: "", t.optStr("list"), t.optStr("due")?.take(10),
-            t.optStr("assignee"), t.optBoolean("done", false), t.optStr("doneAt"), t.optStr("createdBy"),
+            t.optStr("id") ?: return@mapNotNull null, t.optStr("title") ?: t.optStr("n") ?: "", t.optStr("list") ?: t.optStr("l"), t.optStr("due")?.take(10),
+            t.optStr("assignee") ?: t.optStr("who"), t.optBoolean("done", false), t.optStr("doneAt"), t.optStr("createdBy") ?: t.optStr("by"),
+            notes = t.optStr("notes"), time = t.optStr("time")?.take(5) ?: t.optStr("due")?.takeIf { it.length >= 16 }?.substring(11, 16),
+            urgent = t.optBoolean("urgent", false), rep = t.optStr("rep")?.takeIf { it != "none" && it != "never" && it != "aldri" }, early = t.optStr("early")?.takeIf { it != "none" },
+            prio = prio37(t.opt("prio")), flag = t.optBoolean("flag", false), tags = strs37(t.optJSONArray("tags")), subs = subs37(t.optJSONArray("subs")),
+            place = t.optStr("place"),
         )
     }
     val ma = o.optJSONArray("members") ?: JSONArray()
@@ -51,10 +61,14 @@ fun parseTaskList(l: JSONObject): TaskList? {
     val ma = l.optJSONArray("members") ?: JSONArray()
     val members = (0 until ma.length()).mapNotNull { i ->
         val m = ma.optJSONObject(i) ?: return@mapNotNull ma.optString(i).takeIf { it.isNotBlank() }?.let { TaskMember(it, "") }
-        TaskMember(m.optStr("id") ?: m.optStr("userId") ?: return@mapNotNull null, m.optStr("name") ?: m.optStr("username") ?: "")
+        TaskMember(m.optStr("id") ?: m.optStr("userId") ?: return@mapNotNull null, m.optStr("name") ?: m.optStr("username") ?: "", parseHex(m.optStr("color")), m.optStr("role"))
     }
+    // Prompt 37: ownerId; «mine» = eieren er meg (serveren sier det, ellers eldre server: min).
+    val owner2 = owner ?: l.optStr("ownerId")
     val mine = if (l.has("mine") && !l.isNull("mine")) l.optBoolean("mine") else true
-    return TaskList(id, l.optStr("name") ?: "Liste", parseHex(l.optStr("color")) ?: 0xFF6B665C, owner, ownerName, members, mine)
+    val shared = if (l.has("shared") && !l.isNull("shared")) l.optBoolean("shared") else null
+    val priv = if (l.has("private") && !l.isNull("private")) l.optBoolean("private") else null
+    return TaskList(id, l.optStr("name") ?: "Liste", parseHex(l.optStr("color")) ?: 0xFF6B665C, owner2, ownerName, members, mine, shared, priv)
 }
 
 /** GET /api/tasks/lists → [..] eller {lists:[..]}. */

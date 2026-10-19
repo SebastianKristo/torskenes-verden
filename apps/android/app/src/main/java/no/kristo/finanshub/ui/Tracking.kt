@@ -296,7 +296,7 @@ private fun CarriersCard(t: TrackingData) {
     TCard {
         Column {
             Text("Transportører", fontWeight = FontWeight.SemiBold)
-            Text("Nøkler legges inn i Innstillinger → Integrasjoner → Sporing (web)", color = C.text2, fontSize = 12.sp)
+            Text("Nøklene deles i husstanden (Innstillinger → Integrasjoner → Sporing). Pakkene dine er private.", color = C.text2, fontSize = 12.sp)
         }
         list.forEach { c ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {

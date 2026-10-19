@@ -291,7 +291,7 @@ private fun Ch27GuardSheet(vm: AppViewModel, v: ChatV27, g: ChatGuard27) {
     val s = vm.chat27
     Ch27Head(v, "Sende til ${g.model}?", null) { s.sheet = null; s.guard = null }
     Text("Dette er en sky-modell. Dette forlater hjemmeserveren hvis du sender:", color = v.ink, fontFamily = v.sans, fontSize = 14.5.sp, lineHeight = 21.sp)
-    val items = g.leaves.ifEmpty { listOfNotNull("Meldingen din", if (g.hasData) "Data fra Finans, Kalender og Huskeliste" else null) + s.att.map { "Vedlegg: " + it.name } }
+    val items = g.leaves.ifEmpty { listOfNotNull("Meldingen din", if (g.hasData) "Data fra Finans, Kalender og Gjøremål" else null) + s.att.map { "Vedlegg: " + it.name } }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(v.line), verticalArrangement = Arrangement.spacedBy(1.dp)) {
         items.forEach { n ->
             Row(Modifier.fillMaxWidth().heightIn(min = 46.dp).background(v.card).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -390,7 +390,7 @@ internal fun ChatSettings27(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Chat", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
-            PToggle("Chat kan lese mine data", "Finans, Kalender og Huskeliste når «Mine data» er på", s.myDataOn) { vm.setChatMyData27(it) }
+            PToggle("Chat kan lese mine data", "Finans, Kalender og Gjøremål når «Mine data» er på", s.myDataOn) { vm.setChatMyData27(it) }
             PToggle("Spør før sky-modeller får data", "Gemini og Groq må godkjennes per samtale", s.askCloud, top = true) { vm.setChatAskCloud27(it) }
             SetRow(vm, 1, Icons.Filled.Memory, "Standardmodell", "For nye samtaler", s.defModel?.let { s.modelLabel27(it) } ?: "Velg", top = true) { pick = !pick }
             if (pick) s.models.filter { it.sky || it.installed }.forEach { m ->

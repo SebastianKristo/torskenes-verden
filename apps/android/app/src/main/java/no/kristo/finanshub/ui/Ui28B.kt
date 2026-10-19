@@ -452,7 +452,10 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
                                 val at = l.indexOf(k)
                                 val h = (heights[k] ?: 140).toFloat()
                                 val sw = when { dy > h / 2 && at in 0 until l.size - 1 -> 1; dy < -h / 2 && at > 0 -> -1; else -> 0 }
-                                if (sw != 0) {
+                                // Prompt 37 (krasjfiksen): maks ett bytte per 140 ms; lagres først ved slipp.
+                                val now37 = android.os.SystemClock.uptimeMillis()
+                                if (sw != 0 && now37 - vm.p37.lastSw >= 140) {
+                                    vm.p37.lastSw = now37
                                     val o = l[at + sw]; l[at + sw] = k; l[at] = o
                                     dy -= sw * (heights[o] ?: h.toInt())
                                     work = l
@@ -698,6 +701,7 @@ internal fun UpDown28(text: String, enabled: Boolean, onClick: () -> Unit) {
 /** Kortene på Hjem som har egne innstillinger («✎ Rediger widget»). */
 internal fun editWidgetAction28(vm: AppViewModel, page: String, key: String): (() -> Unit)? = when {
     page == "hjem" && key == "h3" -> ({ vm.b27.homeSheet = true })
+    page == "hjem" && key == "h2" -> ({ vm.p37.h2Menu = true }) // prompt 37: vis bare når det er pakker, 1–3 pakker
     else -> null
 }
 
