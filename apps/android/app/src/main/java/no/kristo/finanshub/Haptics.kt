@@ -49,6 +49,8 @@ object Haptics {
     fun tap() { if (on(TAP)) perform(impact) }
     /** Fanebytte, chips og valg. */
     fun select() { if (on(TAP)) perform(HapticFeedbackConstants.CLOCK_TICK) }
+    /** Prompt 30: lett tikk når et ark, en popup eller en meny lukkes (CONTEXT_CLICK). */
+    fun dismiss() { if (on(TAP)) perform(HapticFeedbackConstants.CONTEXT_CLICK) }
     fun success() { if (on(DONE)) perform(confirm) }
     fun error() { if (on(ERROR)) perform(reject) }
     /** Ny pakkestatus (klar for henting, levert …). */

@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.sp
 import no.kristo.finanshub.ApiException
 import no.kristo.finanshub.AppViewModel
 import no.kristo.finanshub.openCustomTab24
+import no.kristo.finanshub.loadUpd30
+import no.kristo.finanshub.loadUpdSettings30
 import org.json.JSONObject
 
 /*
@@ -96,16 +98,19 @@ internal fun Update28Page(vm: AppViewModel) {
     val p = PaperPal.current
     val s: Upd28State = vm.upd28
     val ctx = LocalContext.current
-    LaunchedEffect(Unit) { if (vm.userIsAdmin) vm.loadUpd28() }
+    LaunchedEffect(Unit) { if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadUpd30(force = true); vm.loadUpdSettings30() } }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PLabel("Oppdatering", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         if (!vm.userIsAdmin) {
             PCard { PRow("Oppdatering", "Gjøres av en administrator", "Bare admin", serif = false) }
             return@Column
         }
+        // Prompt 30: banneret og PROGRAMVARE (oppdater fra appen med passord); nettleseren er bare en sekundær vei.
+        UpdateBanner30(vm, home = false)
+        PCard { Programvare30(vm) }
         PCard { Update28Rows(s) }
         Text(upd28Note(s), color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
-        PButton("Oppdater i nettleseren ›", Modifier.fillMaxWidth()) { openCustomTab24(ctx, upd28WebUrl(vm)) }
+        PButton("Oppdater i nettleseren ›", Modifier.fillMaxWidth(), kind = "line", height = 44.dp) { openCustomTab24(ctx, upd28WebUrl(vm)) }
         PButton(if (s.loading) "Henter …" else "Se etter på nytt", Modifier.fillMaxWidth(), kind = "line", height = 44.dp) { vm.loadUpd28() }
     }
 }
@@ -134,4 +139,4 @@ private fun Update28Rows(s: Upd28State) {
 
 private fun upd28Note(s: Upd28State): String =
     if (s.missing || (s.loaded && !s.available)) "Kjør update.sh én gang fra Proxmox for å slå på oppdatering fra appen. Kommandoen finnes på nettsiden under Innstillinger → System."
-    else "Oppdateringen startes fra nettleseren, der du skriver passordet ditt på nytt. Serveren tar backup av databasen og starter på nytt (vanligvis 2–5 minutter)."
+    else "Trykk «Oppdater ›» og skriv passordet ditt på nytt. Serveren tar backup av databasen og starter på nytt (vanligvis 2–5 minutter)."

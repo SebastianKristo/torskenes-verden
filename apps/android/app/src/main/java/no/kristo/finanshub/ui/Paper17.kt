@@ -71,7 +71,7 @@ internal val PAPER_SET_TITLES = mapOf(
 internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: () -> Unit) {
     val sub = vm.settingsPage
     LaunchedEffect(sub) {
-        when (sub) { "tokens" -> vm.loadTokens(); "notify" -> vm.loadNotify(); null -> { vm.loadAppInfo(); if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadBk29() } } }
+        when (sub) { "tokens" -> vm.loadTokens(); "notify" -> vm.loadNotify(); null -> { vm.loadAppInfo(); if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadBk29(); vm.loadUpd30(); vm.loadUpdSettings30() } } }
     }
     // Utseende: tema, ikonfarger, bakgrunn og fanelinje (egen liste fra prompt 16).
     if (sub == "look") { PaperSettings16(vm, navBottom); return }
@@ -114,19 +114,24 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
     }
     if (vm.appNameEdit) AppNameSheet24(vm)
     if (vm.appIconEdit) AppIconSheet24(vm)
+    // Prompt 30: passord-arket for oppdatering/gjenoppretting ligger utenfor listen (komponeres selv om banneret er scrollet bort).
+    if (vm.p30.upd.pwFor != null) UpdPwSheet30(vm)
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppViewModel) {
     // Prompt 24: søk og ✦ AI øverst; med tekst i feltet vises bare treffene.
     if (settingsSearch24(vm)) return
+    // Prompt 30: oppdateringsbanneret øverst (bare admin, kan ikke skjules her).
+    if (upd30Show(vm, home = false)) item { UpdateBanner30(vm, home = false) }
     item {
         val p = PaperPal.current
         PCard(shadow = true) {
-            Row(Modifier.fillMaxWidth().clickable { vm.settingsPage = "accounts" }.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            // Prompt 30: hele profilkortet åpner Konto; brukernavnet vises ikke her (bare i Konto → Profil).
+            Row(Modifier.fillMaxWidth().clickable(onClickLabel = "Se konto") { vm.settingsPage = "accounts" }.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 AvatarImage(vm, 56, p.surf2, p.ink)
                 Column(Modifier.weight(1f)) {
                     PSerif(vm.displayName.ifBlank { "Profil" }, 22.sp, maxLines = 1)
-                    Text("@${vm.account?.username?.ifBlank { null } ?: "konto"} · ${roleName(vm.me?.role ?: vm.account?.role)}", color = p.mut, fontSize = 13.sp, maxLines = 1)
+                    Text(listOf(roleName(vm.me?.role ?: vm.account?.role), "Se konto ›").filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 13.sp, maxLines = 1)
                     Text(vm.base.substringAfter("://").ifBlank { vm.account?.server?.substringAfter("://") ?: "" }, color = p.mut, fontSize = 12.sp, maxLines = 1, fontFamily = PaperFonts.mono)
                 }
                 Text("›", color = p.mut, fontSize = 18.sp)
@@ -170,8 +175,10 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         SetRow(vm, i(), Icons.Filled.Backup, "Backup og data", "Nedlasting og lagring", top = true) { vm.settingsPage = "backup" }
     }
     // Prompt 28: oppdatering av hele systemet (bare admin; startes i nettleseren). ui/Update28.kt.
-    if (vm.userIsAdmin) group("System") { i ->
-        SetRow(vm, i(), Icons.Filled.SystemUpdate, "Oppdatering", upd28Summary(vm.upd28)) { vm.settingsPage = "update" }
+    // Prompt 30: PROGRAMVARE med «Oppdater ›» (passord-ark) og bryterne for automatiske oppdateringer og varsler.
+    if (vm.userIsAdmin) group("Programvare") { i ->
+        Programvare30(vm)
+        SetRow(vm, i(), Icons.Filled.SystemUpdate, "Oppdatering", upd28Summary(vm.upd28), top = true) { vm.settingsPage = "update" }
     }
     item { Spacer(Modifier.height(4.dp)) }
     item {

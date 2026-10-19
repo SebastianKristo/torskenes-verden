@@ -348,13 +348,18 @@ private fun Review24(vm: AppViewModel, d: HomeDetail24, rv: List<HomeEntry24>) {
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).border(1.5.dp, if (ai) p.line else p.lab, RoundedCornerShape(20.dp)).padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Prompt 30: hele toppraden (miniatyr · butikk · forslag · beløp · ›) åpner detaljarket, også mens AI leser.
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClickLabel = "Åpne ${e.description}") { Haptics.select(); vm.b24.sel = e.id },
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     ReceiptThumb24(vm, id, e, Modifier.size(42.dp, 52.dp))
                     Column(Modifier.weight(1f)) {
                         Text(e.description, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(if (ai) "Gemini leser kvitteringen …" else "AI foreslår ${e.category}" + (e.paidBy?.let { " · $it" } ?: ""), color = if (ai) p.lab else p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Text(if (ai) "…" else kr24(e.amount), color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
+                    Text("›", color = p.mut, fontSize = 17.sp)
                 }
                 if (!ai) {
                     val opts = (listOf(e.category) + (d.cats.ifEmpty { CATS24.map { it.first } }).filter { it != e.category && it != "Annet" }).take(4)
@@ -548,8 +553,6 @@ private fun Expenses24(vm: AppViewModel, d: HomeDetail24) {
 private fun Access24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
     val p = PaperPal.current
     val id = d.home.id
-    var inv by remember { mutableStateOf("") }
-    var invRole by remember { mutableStateOf("editor") }
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp, 4.dp)) {
             PSerif("Hvem har tilgang", 20.sp, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp), maxLines = 1)
@@ -581,22 +584,8 @@ private fun Access24(vm: AppViewModel, d: HomeDetail24, homeCount: Int) {
                 }
             }
         }
-        if (d.isOwner) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            PSerif("Inviter", 20.sp, maxLines = 1)
-            Input24(inv, { inv = it }, "Navn eller e-post", bg = p.bg, weight = FontWeight.Medium) { if (inv.isNotBlank()) { vm.b24Invite(id, inv, invRole); inv = "" } }
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ROLES24.forEach { r ->
-                    val on = invRole == r
-                    Box(
-                        Modifier.weight(1f).height(36.dp).clip(RoundedCornerShape(18.dp)).background(if (on) p.ink else Color.Transparent).border(1.dp, if (on) p.ink else p.line, RoundedCornerShape(18.dp))
-                            .clickable { invRole = r },
-                        contentAlignment = Alignment.Center,
-                    ) { Text(roleName24(r), color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1, softWrap = false) }
-                }
-            }
-            Text(roleDesc24(invRole) + ".", color = p.mut, fontSize = 12.sp, lineHeight = 17.4.sp)
-            PillBtn24("Send invitasjon", Modifier.fillMaxWidth(), 46.dp) { if (inv.isNotBlank()) { vm.b24Invite(id, inv, invRole); inv = "" } }
-        }
+        // Prompt 30: «Del boligen» med brukerne i Homelab (ui/Boliger30.kt) i stedet for «Inviter»; e-post/navn som før når ingen er valgt.
+        if (d.isOwner) ShareHome30(vm, d) { who, role -> vm.b24Invite(id, who, role) }
         AboutHome24(vm, d, homeCount)
     }
 }
@@ -861,12 +850,11 @@ private fun EntrySheet24(vm: AppViewModel, d: HomeDetail24, e: HomeEntry24) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f)) {
                     PLabel(d.home.name + " · " + when (e.status) { "ok" -> "Godkjent"; "ai" -> "Leses av AI"; else -> "Til gjennomgang" }, size = 11.sp)
-                    PSerif(e.description, 26.sp, modifier = Modifier.padding(top = 4.dp), maxLines = 3)
+                    // Prompt 30: butikk/beskrivelse kan redigeres (lagres fortløpende).
+                    if (d.canEdit && e.status != "ai") EntryTitle30(vm, id, e, Modifier.padding(top = 4.dp))
+                    else PSerif(e.description, 26.sp, modifier = Modifier.padding(top = 4.dp), maxLines = 3)
                 }
-                Box(
-                    Modifier.size(38.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Lukk") { s.sel = null },
-                    contentAlignment = Alignment.Center,
-                ) { Text("×", color = p.ink, fontSize = 16.sp) }
+                SheetButton30("Ferdig") { s.sel = null }
             }
             Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.width(96.dp).heightIn(min = 124.dp).fillMaxHeight().clip(RoundedCornerShape(12.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
@@ -874,8 +862,13 @@ private fun EntrySheet24(vm: AppViewModel, d: HomeDetail24, e: HomeEntry24) {
                     else Text("Ingen kvittering", color = p.mut, fontSize = 12.sp, textAlign = TextAlign.Center)
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PSerif(if (e.status == "ai") "…" else kr24(e.amount), 34.sp, maxLines = 1)
-                    Text(ddmm24(e.date) + (e.paidBy?.let { " · lagt til av $it" } ?: ""), color = p.mut, fontSize = 13.sp)
+                    if (d.canEdit && e.status != "ai") {
+                        EntryAmountDate30(vm, id, e)
+                        e.paidBy?.let { Text("Lagt til av $it", color = p.mut, fontSize = 12.sp) }
+                    } else {
+                        PSerif(if (e.status == "ai") "…" else kr24(e.amount), 34.sp, maxLines = 1)
+                        Text(ddmm24(e.date) + (e.paidBy?.let { " · lagt til av $it" } ?: ""), color = p.mut, fontSize = 13.sp)
+                    }
                     e.aiShort?.let { Text("✦ $it", color = p.ink, fontSize = 13.sp, lineHeight = 18.9.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.card).padding(12.dp, 10.dp)) }
                 }
             }

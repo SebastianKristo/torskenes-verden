@@ -636,12 +636,15 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val p = PaperPal.current
     val ctx = LocalContext.current
     val h = vm.mobileHome
-    LaunchedEffect(vm.base) { vm.loadHomeExtras() }
+    LaunchedEffect(vm.base) { vm.loadHomeExtras(); vm.loadUpd30(); vm.loadUpdSettings30() }
+    if (vm.p30.upd.pwFor != null) UpdPwSheet30(vm)
     LazyVerticalGrid(
         GridCells.Fixed(if (wide) 2 else 1), Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
         verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         vm.homeError?.let { e -> item(span = { GridItemSpan(maxLineSpan) }) { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(4.dp)) } }
+        // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (admin; ✕ skjuler «Tilgjengelig» i 24 t).
+        if (vm.editPage != "hjem" && upd30Show(vm, home = true)) item(key = "upd30", span = { GridItemSpan(maxLineSpan) }) { UpdateBanner30(vm, home = true) }
         pageGridSecs(vm, "hjem", HOME_SECS, wide) { k ->
             when (k) {
                 "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (System-AI / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
@@ -978,7 +981,7 @@ private fun PaperSettings(vm: AppViewModel, navBottom: Dp) {
         item { PLabel("Konto", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
             PCard {
-                PRow(vm.displayName.ifBlank { "Konto" }, "@${vm.account?.username?.ifBlank { null } ?: "konto"} · ${vm.me?.role ?: vm.account?.role ?: ""}", "Kontoer ›", serif = false) { vm.menuOpen = true }
+                PRow(vm.displayName.ifBlank { "Konto" }, (vm.me?.role ?: vm.account?.role ?: "").ifBlank { "Konto" }, "Kontoer ›", serif = false) { vm.menuOpen = true }
                 PRow("Totrinnsbekreftelse", "Autentiseringsapp", if (vm.me?.totp == true) "På" else "Av", if (vm.me?.totp == true) p.pos else p.mut, serif = false, top = true) {
                     vm.settingsPage = "security"; vm.openFromMer(Screen.Settings)
                 }

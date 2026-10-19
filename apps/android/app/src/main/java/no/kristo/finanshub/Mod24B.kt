@@ -510,7 +510,7 @@ fun AppViewModel.b24SyncFolder() {
     launch24b { runCatching { b24.details[id] = parseHomeDetail24(api24b { get("/folders/$id") }) } }
 }
 
-private fun AppViewModel.applyDetail24(raw: String) {
+internal fun AppViewModel.applyDetail24(raw: String) {
     val d = parseHomeDetail24(raw)
     b24.details[d.home.id] = d
     b24.homes = b24.homes?.map { if (it.id == d.home.id) d.home else it }

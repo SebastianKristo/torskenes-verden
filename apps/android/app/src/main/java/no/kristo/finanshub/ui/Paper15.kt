@@ -58,6 +58,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
@@ -253,12 +254,12 @@ internal fun LazyListScope.pageSecs(vm: AppViewModel, page: String, secs: List<P
     val edit = vm.editPage == page
     // Prompt 28: ingen redigeringslinje; pillene (WigglePills28) ligger over listen, her bare luft til dem.
     vm.b28.pageSecs[page] = secs.map { it.key to it.label }
-    if (edit) item(key = "edit-$page") { Spacer(Modifier.height(WIGGLE_SPACE28)) }
+    // Prompt 30: 64 dp luft (animert 280 ms) i første kort i stedet for en egen rad, så verktøylinja aldri dekker det.
     val hid = vm.pageHidden(page)
     val vis = vm.pageOrder(page, keys).filter { it !in hid }
     vis.forEachIndexed { i, k ->
         val s = secs.first { it.key == k }
-        item(key = "sec-$page-$k") { EditWrap(vm, page, s, keys, i, vis.size) { body(k) } }
+        item(key = "sec-$page-$k") { Column { if (i == 0) WiggleSpace30(edit); EditWrap(vm, page, s, keys, i, vis.size) { body(k) } } }
     }
     if (!edit) item(key = "hint-$page") { EditHint() }
 }
@@ -268,9 +269,10 @@ internal fun LazyGridScope.pageGridSecs(vm: AppViewModel, page: String, secs: Li
     val keys = secs.map { it.key }
     val edit = vm.editPage == page
     vm.b28.pageSecs[page] = secs.map { it.key to it.label }
-    if (edit) item(key = "edit-$page", span = { GridItemSpan(maxLineSpan) }) { Spacer(Modifier.height(WIGGLE_SPACE28)) }
     val hid = vm.pageHidden(page)
     val vis = vm.pageOrder(page, keys).filter { it !in hid }
+    // Prompt 30: luft over hele første rad (begge kolonnene på Fold), animert.
+    if (edit) item(key = "edit-$page", span = { GridItemSpan(maxLineSpan) }) { WiggleSpace30(true, extra = (-10).dp) }
     vis.forEachIndexed { i, k ->
         val s = secs.first { it.key == k }
         item(key = "sec-$page-$k", span = { GridItemSpan(if (!wide || s.full) maxLineSpan else 1) }) { EditWrap(vm, page, s, keys, i, vis.size) { body(k) } }
@@ -481,8 +483,15 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     LaunchedEffect(vm.fmOrder) { if (!editing) order = vm.fmOrder }
     val byKey = all.associateBy { it.key }
     // Prompt 24: i profilene (Finans + Boliger, Boliger-profil) ligger Hjem som første flis i Finans → Mer.
+    // Prompt 30: skjulte sider (finance_more_hidden) vises ikke; i redigering viser ＋ dem i SKJULT-seksjonen.
+    LaunchedEffect(vm.account?.id) { vm.loadFinHidden30() }
+    val finHid = vm.p30.finHidden
     val tiles = (if (vm.b24ProfileOn) listOf(FinTile("hjem", "Hjem", "Pakker, avganger og widgets", Icons.Filled.Home) { vm.paperTab("hjem") }) else emptyList()) +
-        order.mapNotNull { byKey[it] }.filter { it.key !in vm.paperFinTabs }
+        order.mapNotNull { byKey[it] }.filter { it.key !in vm.paperFinTabs && it.key !in finHid }
+    val hidTiles = order.mapNotNull { byKey[it] }.filter { it.key !in vm.paperFinTabs && it.key in finHid }
+    DisposableEffect(Unit) { onDispose { vm.p30.fmAdd = false } }
+    // Prompt 30: tilbake (også predictive back) avslutter redigeringen og lagrer rekkefølgen.
+    androidx.activity.compose.BackHandler(enabled = editing) { editing = false; vm.p30.fmAdd = false; vm.saveFmOrder(order) }
     val grid = rememberLazyGridState()
     // Prompt 28: samme vugging som Hjem (±0,45°, 0,6 s).
     val wobble = rememberInfiniteTransition(label = "wobble").animateFloat(-1f, 1f, infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w")
@@ -492,7 +501,7 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val editNow by rememberUpdatedState(editing)
     val dragMod = Modifier.pointerInput(Unit) {
         fun hit(pos: Offset) = grid.layoutInfo.visibleItemsInfo.firstOrNull { i ->
-            i.key is String && (i.key as String) != "fm-head" && pos.x >= i.offset.x && pos.x <= i.offset.x + i.size.width && pos.y >= i.offset.y && pos.y <= i.offset.y + i.size.height
+            i.key is String && !(i.key as String).startsWith("fm-") && pos.x >= i.offset.x && pos.x <= i.offset.x + i.size.width && pos.y >= i.offset.y && pos.y <= i.offset.y + i.size.height
         }
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -558,19 +567,21 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                     PLabel("Finans · Mer")
                     Text("Alt fra FinansHub på nettsiden · hold inne for å flytte", color = p.mut, fontSize = 13.sp)
                 }
-            } else Spacer(Modifier.height(WIGGLE_SPACE28)) // Prompt 28: pillene ↺ Tilbakestill · ✓ ligger over rutenettet
+            } else WiggleSpace30(true, extra = (-10).dp) // Prompt 30: 64 dp luft under ＋ N · ✓ (animert)
         }
         items(tiles.size, key = { tiles[it].key }) { i ->
             val t = tiles[i]
             val tint = Color(FM_COLORS[t.key] ?: 0xFF6F6A60)
             val dragging = dragKey == t.key
             val tileMod = when {
-                dragging -> Modifier.zIndex(2f).graphicsLayer { translationX = dragOffset.x; translationY = dragOffset.y; scaleX = 1.05f; scaleY = 1.05f }
+                dragging -> Modifier.zIndex(2f).graphicsLayer { translationX = dragOffset.x; translationY = dragOffset.y; scaleX = 1.04f; scaleY = 1.04f }
+                    .shadow(16.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black.copy(alpha = .35f), spotColor = Color.Black.copy(alpha = .35f))
                 editing -> Modifier.graphicsLayer { rotationZ = wobble.value * (if (i % 2 == 0) .45f else -.45f) }
                 else -> Modifier
             }
+            Box(tileMod) {
             Column(
-                tileMod.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(20.dp)).background(p.card)
+                Modifier.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(20.dp)).background(p.card)
                     .then(if (editing) Modifier else Modifier.clickable(onClickLabel = t.title) { Haptics.select(); t.go() })
                     .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -590,12 +601,47 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 PSerif(t.title, 20.sp, maxLines = 1)
                 Text(t.value, color = if (t.pos) p.pos else p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            // Prompt 30: minus-merke (skjul) øverst til venstre; Innstillinger har lås og kan ikke skjules. Hjem (profil) er fast.
+            if (editing && !dragging && t.key == "innst") LockDot30(Modifier.align(Alignment.TopStart))
+            else if (editing && !dragging && t.key != "hjem") MinusDot28(t.title, Modifier.align(Alignment.TopStart)) { vm.setFinHidden30(finHid + t.key) ; Haptics.select() }
+            }
+        }
+        // Prompt 30: SKJULT · TRYKK + FOR Å VISE, med «Tilbakestill rekkefølge» (flyttet hit fra verktøylinja).
+        if (editing && vm.p30.fmAdd && hidTiles.isNotEmpty()) {
+            item(key = "fm-hid-head", span = { GridItemSpan(maxLineSpan) }) {
+                Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("SKJULT · TRYKK + FOR Å VISE", color = p.lab, fontWeight = FontWeight.ExtraBold, fontSize = 11.5.sp, letterSpacing = 1.4.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                    Box(Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(p.line).clickable { order = FM_DEFAULT_ORDER; vm.resetFmOrder(); Haptics.select() }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                        Text("Tilbakestill rekkefølge", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+                    }
+                }
+            }
+            items(hidTiles.size, key = { "fm-h-" + hidTiles[it].key }) { i ->
+                val t = hidTiles[i]
+                val tint = Color(FM_COLORS[t.key] ?: 0xFF6F6A60)
+                Box {
+                    Column(
+                        Modifier.fillMaxWidth().height(132.dp).alpha(.55f).clip(RoundedCornerShape(20.dp)).background(p.card)
+                            .clickable(onClickLabel = "Vis ${t.title}") { Haptics.select(); order = order.filter { it != t.key } + t.key; vm.saveFmOrder(order); vm.setFinHidden30(finHid - t.key) }
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(androidx.compose.ui.graphics.lerp(p.card, tint, .14f)), contentAlignment = Alignment.Center) {
+                            Icon(t.icon, null, tint = tint, modifier = Modifier.size(22.dp))
+                        }
+                        Spacer(Modifier.weight(1f))
+                        PSerif(t.title, 20.sp, maxLines = 1)
+                        Text(t.value, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    PlusDot30("Vis ${t.title}", Modifier.align(Alignment.TopStart)) { Haptics.select(); order = order.filter { it != t.key } + t.key; vm.saveFmOrder(order); vm.setFinHidden30(finHid - t.key) }
+                }
+            }
         }
     }
-    // Prompt 28: flytende piller utenfor rutenettet (kuttes aldri når man scroller): ↺ Tilbakestill · ✓.
-    if (editing) WiggleBar28(Modifier.align(Alignment.TopCenter).padding(top = WIGGLE_TOP28), left = "reset",
-        onLeft = { order = FM_DEFAULT_ORDER; vm.resetFmOrder(); Haptics.select() },
-        onDone = { editing = false; vm.saveFmOrder(order); Haptics.success() })
+    // Prompt 30: ＋ N (antall skjulte) til venstre, ✓ til høyre; ＋ viser/skjuler SKJULT-seksjonen.
+    if (editing) WiggleBar28(Modifier.align(Alignment.TopCenter).padding(top = WIGGLE_TOP28), left = if (hidTiles.isNotEmpty()) "add" else null, hidden = hidTiles.size,
+        onLeft = { vm.p30.fmAdd = !vm.p30.fmAdd; Haptics.select() },
+        onDone = { editing = false; vm.p30.fmAdd = false; vm.saveFmOrder(order); Haptics.success() })
     }
 }
 
@@ -667,7 +713,7 @@ internal fun PaperFinSearch(vm: AppViewModel, navBottom: Dp) {
                     val h = r.hits[i]
                     Column {
                         Row(
-                            Modifier.fillMaxWidth().clickable(enabled = h.txId != null) { h.txId?.let { vm.openTx(it) } }.padding(2.dp, 8.dp),
+                            Modifier.fillMaxWidth().clickable(enabled = h.txId != null) { h.txId?.let { vm.openTxHl30(it, q.takeIf { q.trim().split(Regex("\\s+")).size <= 2 }) } }.padding(2.dp, 8.dp), // Prompt 30: ?hl= søkeordet
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             Column(Modifier.weight(1f)) {
@@ -692,7 +738,22 @@ internal fun PaperTxDetail(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
     val id = vm.selectedTx ?: return
     LaunchedEffect(id) { if (vm.txDetail?.tx?.id != id) vm.loadTxDetail(id) }
     val d = vm.txDetail?.takeIf { it.tx.id == id }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // Prompt 30: kvitteringsmarkering når transaksjonen er åpnet fra Søk/Liste med søkeord (P30.openTxHl30).
+    val hlQ = vm.p30.hl?.takeIf { vm.p30.hlTx == id }
+    val terms = remember(hlQ) { hlQ?.let { hlTerms30(it) } ?: emptyList() }
+    val txList = androidx.compose.foundation.lazy.rememberLazyListState()
+    val pulse = rememberHlPulse30(vm.p30.hlSeq)
+    val dens = androidx.compose.ui.platform.LocalDensity.current
+    val hit0: Int = if (terms.isEmpty()) -1 else d?.let { dd -> val ls = dd.receipt?.lines?.ifEmpty { dd.tx.lines } ?: emptyList(); vm.p30.hlIdx?.firstOrNull { it in ls.indices } ?: ls.indices.firstOrNull { hlMatch30(ls[it].first, terms) != null } } ?: -1
+    // Siden scroller så den første markerte linjen står omtrent midt på skjermen (lappen er element 4: kort, etikett, banner, bilde).
+    LaunchedEffect(vm.p30.hlSeq, hit0, d?.receipt?.id) {
+        if (hit0 < 0) return@LaunchedEffect
+        kotlinx.coroutines.delay(300)
+        val vp = txList.layoutInfo.viewportSize.height
+        val lineY = with(dens) { (78 + hit0 * 19).dp.toPx() }.toInt()
+        runCatching { if (lineY - vp / 2 > 0) txList.animateScrollToItem(4, lineY - vp / 2) else txList.animateScrollToItem(2) }
+    }
+    LazyColumn(Modifier.fillMaxSize(), state = txList, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (d == null) {
             item {
                 PCard(shadow = true) {
@@ -740,7 +801,18 @@ internal fun PaperTxDetail(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
                     }
                 }
             }
-        } else item {
+        } else {
+        val hlLines = rc.lines.ifEmpty { t.lines }
+        val srvIdx = vm.p30.hlIdx?.takeIf { vm.p30.boxesFor == id }?.filter { it in hlLines.indices }
+        val hitIdx = if (terms.isEmpty()) emptyList() else srvIdx?.takeIf { it.isNotEmpty() } ?: hlLines.indices.filter { hlMatch30(hlLines[it].first, terms) != null }
+        if (hitIdx.isNotEmpty()) item(key = "hl30") {
+            val f = hlLines[hitIdx[0]]
+            HlBanner30(hlQ ?: "", hitIdx[0] + 1, n2(f.second), hitIdx.size - 1,
+                onGo = { vm.p30.hlSeq++ },
+                onClear = { vm.clearHl30() })
+        }
+        if (hitIdx.isNotEmpty()) item(key = "boxes30") { ReceiptBoxes30(vm, rc, t.id, terms) }
+        item(key = "slip30") {
             // Papirlapp: lys bakgrunn, monospace, stiplet linje.
             val slip = Color(0xFFFBF8F1)
             val ink = Color(0xFF2A2822)
@@ -754,10 +826,16 @@ internal fun PaperTxDetail(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
                 Dashed(ink)
                 val lines = rc.lines.ifEmpty { t.lines }
                 if (lines.isEmpty()) Text("Varelinjene er ikke lest ennå", color = ink.copy(alpha = .6f), fontFamily = PaperFonts.mono, fontSize = 12.sp)
-                lines.forEach { (n, v) ->
-                    Row(Modifier.fillMaxWidth()) {
-                        Text(n, color = ink, fontFamily = PaperFonts.mono, fontSize = 12.5.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(n2(v), color = ink, fontFamily = PaperFonts.mono, fontSize = 12.5.sp)
+                lines.forEachIndexed { li, (n, v) ->
+                    val on = li in hitIdx
+                    // Prompt 30: gul linje (kant #e0a800), fet tekst og pris, ordet som markeringstusj; pulserer to ganger.
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 0.dp)
+                            .then(if (on) Modifier.clip(RoundedCornerShape(5.dp)).background(androidx.compose.ui.graphics.lerp(HL_LINE30, HL_WORD30, pulse * .6f)).border(1.5.dp, HL_EDGE30, RoundedCornerShape(5.dp)).padding(horizontal = 6.dp, vertical = 2.dp) else Modifier),
+                    ) {
+                        Text(if (on) hlText30(n, terms) else androidx.compose.ui.text.AnnotatedString(n), color = ink, fontFamily = PaperFonts.mono, fontSize = 12.5.sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                            modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(n2(v), color = ink, fontFamily = PaperFonts.mono, fontSize = 12.5.sp, fontWeight = if (on) FontWeight.Bold else FontWeight.Normal)
                     }
                 }
                 Dashed(ink)
@@ -767,6 +845,7 @@ internal fun PaperTxDetail(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
                 }
                 if (rc.fileUrl != null) Text("Trykk for originalen", color = ink.copy(alpha = .55f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             }
+        }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {

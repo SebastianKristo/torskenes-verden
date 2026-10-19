@@ -252,7 +252,7 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
             val t = list[i]
             val rc = when (t.receipt) { "booked" -> "kvittering"; null -> "ingen kvittering"; else -> "til gjennomgang" }
             Column {
-                Row(Modifier.fillMaxWidth().clickable { vm.openTx(t.id) }.padding(2.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { vm.openTxHl30(t.id, q) }.padding(2.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Logo(vm, t.domain, t.merchant ?: t.description, t.color, 38, RoundedCornerShape(11.dp))
                     Column(Modifier.weight(1f)) {
                         Text(t.merchant ?: t.description, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

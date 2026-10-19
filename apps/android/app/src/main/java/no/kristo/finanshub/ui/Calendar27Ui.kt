@@ -219,7 +219,7 @@ private fun K27Mini(vm: AppViewModel, cur: LocalDate, today: LocalDate) {
                 Column(
                     Modifier.weight(1f).height(34.dp).alpha(if (d.monthValue == mBase.monthValue) 1f else .35f).clip(RoundedCornerShape(17.dp))
                         .background(if (isT) Color(KAL_LAB) else if (inW) p.ink.copy(alpha = .1f) else Color.Transparent)
-                        .press24 { s.cur = d; s.mini = false; s.miniOff = 0; Haptics.select() },
+                        .press24 { s.cur = d; s.mini = false; s.miniOff = 0; Haptics.select(); if (V == "maaned" || V == "liste") vm.setKalView27("dag") }, // Prompt 30: fra Måned/Liste → Dag
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
                     Text("${d.dayOfMonth}", color = if (isT) Color.White else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp)
@@ -449,7 +449,7 @@ private fun K27Month(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur
                     Modifier.weight(1f).fillMaxHeight().alpha(if (d.monthValue == m0.monthValue) 1f else .4f)
                         .background(if (isT) p.lab.copy(alpha = .06f) else Color.Transparent)
                         .drawBehind { drawLine(p.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
-                        .clickable { s.cur = d; vm.setKalView27("dag") }.padding(horizontal = 2.dp, vertical = 4.dp),
+                        .clickable { s.cur = d; Haptics.select(); vm.setKalView27("dag") }.padding(horizontal = 2.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     Box(Modifier.align(Alignment.CenterHorizontally).size(24.dp).clip(CircleShape).background(if (isT) p.lab else Color.Transparent), contentAlignment = Alignment.Center) {

@@ -102,6 +102,7 @@ internal fun Backup29Page(vm: AppViewModel) {
         PLabel("Hvor", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
             PRow("Lagres på", "Homelab-disk · ${st.path}", "Lokal", serif = false)
+            if (st.smbKnown) Smb30Rows(vm, st)
             val prov = if (st.provider == "gdrive") "Google Drive" else "Backblaze B2"
             if (st.cloudSupported) PToggle("Kopi til sky", listOf("$prov · kryptert før opplasting", st.cloudStatus).filter { it.isNotBlank() }.joinToString(" · "), st.cloud, top = true) { vm.setBkCloud29(it) }
             else PRow("Kopi til sky", "$prov · kryptert før opplasting", "Kommer", serif = false, top = true)
@@ -123,6 +124,7 @@ internal fun Backup29Page(vm: AppViewModel) {
             }
         }
     }
+    if (vm.smb30.open) Smb30Dialog(vm)
     s.restore?.let { Restore29Dialog(vm, it) }
     s.newKey?.let { KeyDialog29(vm, it) }
 }

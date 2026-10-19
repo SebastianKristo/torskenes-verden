@@ -4,6 +4,11 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -121,17 +126,10 @@ internal fun AddSubSheet28(vm: AppViewModel) {
         ) {
             val step = s.addStep
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (step != "menu") Row(
-                    Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button, onClickLabel = "Tilbake") { s.addStep = "menu" },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    WxIcon(IC_BACK28, p.lab, 18.dp, stroke = 2.2f)
-                    Text("Tilbake", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                }
+                // Prompt 30: felles piller (‹ Tilbake til venstre, Lukk til høyre) i stedet for røde tekstlenker.
+                if (step != "menu") SheetButton30("Tilbake", "back") { s.addStep = "menu" }
                 PSerif(when (step) { "form" -> "Skriv inn selv"; "tx" -> "Fra transaksjon"; else -> "Legg til abonnement" }, 26.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Box(Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button, onClick = close).padding(horizontal = 4.dp), contentAlignment = Alignment.Center) {
-                    Text("Lukk", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                }
+                SheetButton30("Lukk", "secondary", onClick = close)
             }
             Text(
                 when (step) { "form" -> "Du kan endre alt senere."; "tx" -> "Gjentakende trekk fra banken som ikke er registrert."; else -> "Velg hvordan du vil legge det inn." },
@@ -288,9 +286,7 @@ internal fun SubShotCard28(vm: AppViewModel) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PLabel(if (t.shotEngine == "gemini") "✦ Gemini leser skjermbildet" else "✦ Ollama leser skjermbildet", modifier = Modifier.weight(1f))
-            Box(Modifier.heightIn(min = 40.dp).clip(RoundedCornerShape(10.dp)).clickable(role = Role.Button) { vm.closeShot28() }.padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {
-                Text("Lukk", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            }
+            SheetButton30("Lukk", "secondary") { vm.closeShot28() }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.Top) {
             Box(Modifier.size(64.dp, 110.dp).clip(RoundedCornerShape(12.dp)).background(p.surf2).border(1.dp, p.line, RoundedCornerShape(12.dp))) {
@@ -396,7 +392,12 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
         vm.saveMer28(MerPref28(o, s.mer.h + k))
     }
     fun show(k: String) { Haptics.select(); vm.saveMer28(s.mer.copy(h = s.mer.h - k)) }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, barSpace + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(if (edit) 0.dp else 10.dp)) {
+    // Prompt 30: samme wiggle som Hjem: separate kort som vugger, minus-/lås-merke, ＋ N · ✓ som flytende verktøylinje og 64 dp luft.
+    val wobble = rememberInfiniteTransition(label = "merWob").animateFloat(-1f, 1f, infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w")
+    val add30 = vm.p30.merAdd && hid.isNotEmpty()
+    DisposableEffect(Unit) { onDispose { vm.p30.merAdd = false } }
+    Box(Modifier.fillMaxSize()) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, barSpace + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (!edit) {
             item(key = "mer-card") {
                 PCard(shadow = true) {
@@ -409,38 +410,26 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
             }
             return@LazyColumn
         }
-        item(key = "mer-head") {
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = 10.dp).shadow(14.dp, RoundedCornerShape(18.dp), ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
-                    .clip(RoundedCornerShape(18.dp)).background(p.card).padding(start = 16.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    PLabel("Redigerer Mer")
-                    Text("Dra ≡ for å flytte. Trykk − for å skjule.", color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 17.sp)
-                }
-                Box(Modifier.heightIn(min = 36.dp).clip(CircleShape).background(p.ink).clickable(role = Role.Button) { Haptics.success(); s.merEdit = false; drag = null; work = null }.padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center) { Text("Ferdig", color = p.bg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
-            }
-        }
-        val n = visKeys.size
+        item(key = "mer-space") { WiggleSpace30(true, extra = (-10).dp) }
         itemsIndexed(visKeys, key = { _, k -> "mer-$k" }) { i, k ->
             val r = byKey[k] ?: return@itemsIndexed
             val on = drag == k
-            val shape = RoundedCornerShape(topStart = if (i == 0) 20.dp else 0.dp, topEnd = if (i == 0) 20.dp else 0.dp, bottomStart = if (i == n - 1) 20.dp else 0.dp, bottomEnd = if (i == n - 1) 20.dp else 0.dp)
-            Column(
+            val shape = RoundedCornerShape(18.dp)
+            Box(
                 Modifier.fillMaxWidth().then(if (on) Modifier else Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = tween(180)))
                     .zIndex(if (on) 5f else 0f)
-                    .graphicsLayer { translationY = if (on) dy else 0f; val sc = if (on) 1.02f else 1f; scaleX = sc; scaleY = sc }
-                    .shadow(if (on) 14.dp else 0.dp, if (on) RoundedCornerShape(14.dp) else shape).clip(if (on) RoundedCornerShape(14.dp) else shape).background(p.card)
+                    .graphicsLayer {
+                        translationY = if (on) dy else 0f
+                        val sc = if (on) 1.02f else 1f; scaleX = sc; scaleY = sc
+                        rotationZ = if (on) 0f else wobble.value * (if (i % 2 == 0) .45f else -.45f)
+                    }
                     .onSizeChanged { heights[k] = it.height },
             ) {
-                if (i > 0 && !on) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp, top = 5.dp, bottom = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    if (k == "innst") Box(Modifier.size(26.dp).semantics { contentDescription = "Kan ikke skjules" }, contentAlignment = Alignment.Center) { WxIcon(IC_LOCK28, p.mut, 15.dp, stroke = 2f) }
-                    else Box(Modifier.size(26.dp).clip(CircleShape).background(p.lab).clickable(role = Role.Button, onClickLabel = "Skjul ${r.title}") { hide(k) }, contentAlignment = Alignment.Center) {
-                        WxIcon(IC_MINUS28, p.onLab, 14.dp, stroke = 3f)
-                    }
+                Row(
+                    Modifier.fillMaxWidth().shadow(if (on) 18.dp else 8.dp, shape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
+                        .clip(shape).background(p.card).padding(start = 14.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     MerIcon25(vm, r.index, r.key)
                     Column(Modifier.weight(1f)) {
                         PSerif(r.title, 19.sp, maxLines = 1)
@@ -470,31 +459,41 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
                         contentAlignment = Alignment.Center,
                     ) { WxIcon(IC_GRIP28, p.mut, 20.dp, stroke = 2f) }
                 }
-            }
-        }
-        if (hid.isNotEmpty()) {
-            item(key = "mer-hid-label") {
-                Text("SKJULT", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = 11.5.sp, letterSpacing = 1.4.sp,
-                    modifier = Modifier.padding(start = 4.dp, top = 18.dp, bottom = 10.dp))
-            }
-            item(key = "mer-hid") {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card)) {
-                    hid.forEachIndexed { i, r ->
-                        if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(26.dp).clip(CircleShape).background(p.pos).clickable(role = Role.Button, onClickLabel = "Vis ${r.title}") { show(r.key) }, contentAlignment = Alignment.Center) {
-                                WxIcon(IC_PLUS28, Color.White, 14.dp, stroke = 3f)
-                            }
-                            Box(Modifier.alpha(.5f)) { MerIcon25(vm, r.index, r.key) }
-                            Column(Modifier.weight(1f).alpha(.5f)) {
-                                PSerif(r.title, 19.sp, maxLines = 1)
-                                Text(r.sub, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                        }
-                    }
+                if (!on) {
+                    if (k == "innst") LockDot30(Modifier.align(Alignment.TopStart))
+                    else MinusDot28(r.title, Modifier.align(Alignment.TopStart)) { hide(k) }
                 }
             }
         }
+        if (add30) {
+            item(key = "mer-hid-label") {
+                Text("SKJULT · TRYKK + FOR Å VISE", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = 11.5.sp, letterSpacing = 1.4.sp,
+                    modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+            }
+            itemsIndexed(hid, key = { _, r -> "mer-h-${r.key}" }) { _, r ->
+                Box(Modifier.fillMaxWidth()) {
+                    Row(
+                        Modifier.fillMaxWidth().shadow(8.dp, RoundedCornerShape(18.dp), ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
+                            .clip(RoundedCornerShape(18.dp)).background(p.card).clickable(role = Role.Button, onClickLabel = "Vis ${r.title}") { show(r.key) }
+                            .padding(horizontal = 14.dp, vertical = 13.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(Modifier.alpha(.5f)) { MerIcon25(vm, r.index, r.key) }
+                        Column(Modifier.weight(1f).alpha(.5f)) {
+                            PSerif(r.title, 19.sp, maxLines = 1)
+                            Text(r.sub, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    PlusDot30("Vis ${r.title}", Modifier.align(Alignment.TopStart)) { show(r.key) }
+                }
+            }
+        }
+    }
+    if (edit) WiggleBar28(
+        Modifier.align(Alignment.TopCenter).padding(top = 8.dp), left = if (hid.isNotEmpty()) "add" else null, hidden = hid.size,
+        onLeft = { vm.p30.merAdd = !vm.p30.merAdd; Haptics.select() },
+        onDone = { Haptics.success(); s.merEdit = false; vm.p30.merAdd = false; drag = null; work = null },
+    )
     }
 }
 
@@ -631,9 +630,7 @@ private fun AddWidgetSheet28(vm: AppViewModel, page: String) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 30.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 PSerif("Legg til widget", 24.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                Box(Modifier.size(36.dp).clip(CircleShape).background(p.card).clickable(role = Role.Button, onClickLabel = "Lukk", onClick = close), contentAlignment = Alignment.Center) {
-                    WxIcon(IC_X28, p.ink, 14.dp, stroke = 2.6f)
-                }
+                SheetButton30("Ferdig", onClick = close)
             }
             if (list.isEmpty()) Text("Alle widgets vises allerede. Trykk − på en widget for å skjule den.", color = p.mut, fontFamily = PaperFonts.sans, fontSize = 14.sp,
                 modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 8.dp))

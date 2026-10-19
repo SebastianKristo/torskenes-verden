@@ -345,6 +345,9 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
     val list = rememberLazyListState()
     val n = s.msgs.size + (if (s.busy) 1 else 0)
     LaunchedEffect(s.curId, n, s.stream.length / 80) { if (n > 0) runCatching { list.scrollToItem(n - 1, Int.MAX_VALUE / 2) } }
+    // Prompt 30: skriveboksen ligger over tastaturet (imePadding på composeren); når tastaturet åpnes scrolles meldingene til bunnen.
+    val imeUp = androidx.compose.foundation.layout.WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    LaunchedEffect(imeUp) { if (imeUp && n > 0) runCatching { list.animateScrollToItem(n - 1, Int.MAX_VALUE / 2) } }
     val lastA = s.msgs.indexOfLast { it.role == "assistant" }
     // Prompt 28: trykk hvor som helst i meldingsområdet skjuler tastaturet (knapper og lenker får trykket først).
     val focus = androidx.compose.ui.platform.LocalFocusManager.current

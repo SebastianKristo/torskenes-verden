@@ -45,6 +45,8 @@ data class Bk29Settings(
     val scope: String = "all", val modules: Set<String> = setOf("finans", "kalender"), val path: String = "/srv/backup",
     val cloud: Boolean = false, val provider: String = "b2", val cloudSupported: Boolean = true, val cloudStatus: String = "",
     val encrypt: Boolean = true, val keySet: Boolean = false,
+    // Prompt 30: nettverksdisk (target.smb). smbKnown = serveren kjenner SMB-målet.
+    val smbKnown: Boolean = false, val smbShare: String = "", val smbOn: Boolean = false, val smbLabel: String = "", val smbStatus: String = "",
 )
 
 data class Bk29Item(val id: String, val at: String, val size: String, val scope: String, val modules: List<String>, val ok: Boolean, val error: String, val encrypted: Boolean)
@@ -121,6 +123,7 @@ private fun settingsOf29(o0: JSONObject): Bk29Settings {
     val o = o0.optJSONObject("settings") ?: o0
     val cloud = o.optJSONObject("cloud")
     val target = o.optJSONObject("target")
+    val smb = target?.optJSONObject("smb")
     val prov = cloud?.s29("provider") ?: "b2"
     // cloud.providers: [{id, supported}] – Google Drive er «Kommer» til serveren støtter det.
     val provs = cloud?.optJSONArray("providers")
@@ -131,6 +134,8 @@ private fun settingsOf29(o0: JSONObject): Bk29Settings {
         o.s29("scope") ?: "all", strList29(o.optJSONArray("modules")).toSet(), target?.s29("path") ?: "/srv/backup",
         cloud?.optBoolean("enabled", false) ?: false, prov, sup,
         cloud?.s29("lastError")?.let { "Feilet: $it" } ?: cloud?.s29("lastUpload")?.let { "Sist lastet opp " + bkWhen29(it).replaceFirstChar { c -> c.lowercase() } } ?: "", o.optBoolean("encrypt", false), o.optBoolean("keySet", false),
+        smbKnown = smb != null, smbShare = smb?.s29("share") ?: "", smbOn = smb?.optBoolean("enabled", false) ?: false, smbLabel = smb?.s29("label") ?: (smb?.s29("share") ?: ""),
+        smbStatus = smb?.s29("lastError")?.let { "siste kopi feilet: $it" } ?: smb?.s29("lastUpload")?.let { "sist " + bkWhen29(it).replaceFirstChar { c -> c.lowercase() } } ?: "",
     )
 }
 

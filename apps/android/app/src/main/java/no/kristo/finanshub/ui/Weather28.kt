@@ -7,6 +7,7 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -14,6 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
@@ -698,26 +702,29 @@ internal fun wxSunF28(w: WeatherFull?): Float {
 
 /* ---------- Bunnlinja: kart til venstre, steder til høyre ---------- */
 
-/** Høyden på bunnlinja uten systemlinja: 6 + 48 + 8 dp. Innholdet får like mye luft nederst. */
+/** Luft nederst i innholdet: 6 + 52 dp (knappene) + 4 dp. */
 internal val WX_BAR28: Dp = 62.dp
 
 /**
- * Frostet linje helt nederst i full bredde (rgba(10,20,35,.32), 1 px hvit 14 %-kant øverst), ikoner 24 dp hvite uten egen
- * sirkel, treffflate 48 × 48, padding 6 dp + systemlinja nederst.
+ * Prompt 30 (claude-code-vaer-bunnknapper.md): ingen linje. To separate runde glassknapper, Kart til venstre og Steder ☰ til
+ * høyre, 52 × 52, rgba(10,20,35,.34), 1 dp hvit 22 %-kant og skygge, 18 dp fra sidene og 6 dp + systemlinja fra bunnen.
+ * Mellom knappene er det ingenting, så værbakgrunnen synes helt ned og innholdet kan scrolles bak.
  */
 @Composable
 internal fun WxBottomBar28(modifier: Modifier, onMap: () -> Unit, onPlaces: () -> Unit) {
-    Column(modifier.fillMaxWidth().background(Color(0x520A1423))) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .14f)))
-        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 14.dp, end = 14.dp, top = 5.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            WxBarBtn28("M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20", 2f) { Haptics.select(); onMap() }
-            Spacer(Modifier.weight(1f))
-            WxBarBtn28("M4 7h16M4 12h16M4 17h16", 2.2f) { Haptics.select(); onPlaces() }
-        }
+    Row(modifier.fillMaxWidth().navigationBarsPadding().padding(start = 18.dp, end = 18.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        WxBarBtn28("Værkart", "M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20", 2f) { Haptics.select(); onMap() }
+        Spacer(Modifier.weight(1f))
+        WxBarBtn28("Steder", "M4 7h16M4 12h16M4 17h16", 2.2f) { Haptics.select(); onPlaces() }
     }
 }
 
 @Composable
-private fun WxBarBtn28(d: String, stroke: Float, onClick: () -> Unit) {
-    Box(Modifier.size(48.dp).clip(CircleShape).clickable(onClick = onClick), contentAlignment = Alignment.Center) { WxIcon(d, Color.White, 24.dp, stroke = stroke) }
+private fun WxBarBtn28(label: String, d: String, stroke: Float, onClick: () -> Unit) {
+    Box(
+        Modifier.size(52.dp).shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .45f), spotColor = Color.Black.copy(alpha = .45f))
+            .clip(CircleShape).background(Color(0x570A1423)).border(1.dp, Color.White.copy(alpha = .22f), CircleShape)
+            .clickable(onClickLabel = label, onClick = onClick).semantics { contentDescription = label },
+        contentAlignment = Alignment.Center,
+    ) { WxIcon(d, Color.White, 24.dp, stroke = stroke) }
 }

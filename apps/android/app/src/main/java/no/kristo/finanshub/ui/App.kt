@@ -360,8 +360,8 @@ private fun MenuContent(vm: AppViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(vertical = 8.dp)) {
             AvatarImage(vm, 52)
             Column(Modifier.weight(1f)) {
-                // Brukerchipen: @brukernavn, ikke fullt navn.
-                Text("@${vm.account?.username?.ifBlank { null } ?: "konto"}", style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // Prompt 30: ikke brukernavn ved profilbildet (bare i Innstillinger → Konto).
+                Text(vm.displayName.ifBlank { "Konto" }, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("${vm.me?.role ?: vm.account?.role ?: ""} · ${vm.me?.serverName ?: vm.mobileHome?.serverName ?: host(vm.base)}",
                     color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }

@@ -226,6 +226,12 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
         }
     }
     LaunchedEffect(Unit) { if (vm.wxPlaces.isEmpty()) vm.loadWxPlaces() }
+    // Prompt 30: ett lett tikk når Steder, værkartet, Yr mot Storm, dag-popupen eller en detalj-popup lukkes (ikke ved åpning).
+    DismissHaptic30(mapOpen)
+    DismissHaptic30(ms != null)
+    DismissHaptic30(cmpOpen)
+    DismissHaptic30(vm.wxPlacesSheet)
+    DismissHaptic30(vm.weatherSheetDay != null)
     val state = rememberLazyListState()
     val wideScroll = rememberScrollState()
     val density = LocalDensity.current
@@ -272,7 +278,7 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                 }
             }
             TopBar(vm, w, sc > 200f)
-            // Prompt 28: bunnlinje helt nederst (kart til venstre, ☰ Steder til høyre) i stedet for flytende sirkler.
+            // Prompt 30: to flytende glassknapper nær bunnen (kart til venstre, ☰ Steder til høyre), ingen linje.
             WxBottomBar28(Modifier.align(Alignment.BottomCenter), onMap = { mapOpen = true }, onPlaces = { vm.wxPlacesSheet = true })
         }
         val d = vm.weatherSheetDay
@@ -407,7 +413,7 @@ private fun DaysCard(w: WeatherFull, open: (Int) -> Unit) {
     }
 }
 
-/* ---------- Yr og Pent ---------- */
+/* ---------- Yr og Storm (prompt 30: «Pent» heter Storm) ---------- */
 
 internal data class CmpRow(val d: String, val yKey: String, val yt: String, val yp: String, val sKey: String?, val st: String, val sp: String, val df: String, val dbg: Color)
 internal data class CmpView(val ready: Boolean, val agC: Color, val agT: String, val agS: String, val rows: List<CmpRow>)
@@ -416,7 +422,7 @@ private fun mm(v: Double?) = if (v == null) "–" else wxF1(v) + " mm"
 
 /** Rader og enighet som cmpVals i designet. */
 internal fun cmpView(vm: AppViewModel, w: WeatherFull): CmpView {
-    val c = vm.wxCmp22 ?: return CmpView(false, Color(0xFF9AA3AE), if (vm.wxCmp22Failed) "Pent svarte ikke" else "Henter …", "", emptyList())
+    val c = vm.wxCmp22 ?: return CmpView(false, Color(0xFF9AA3AE), if (vm.wxCmp22Failed) "Storm svarte ikke" else "Henter …", "", emptyList())
     val byDate = c.days.associateBy { it.date.take(10) }
     val diffs = ArrayList<Double>()
     val rows = w.days.take(7).mapIndexed { k, d ->
@@ -437,7 +443,7 @@ internal fun cmpView(vm: AppViewModel, w: WeatherFull): CmpView {
     }
     val avg = c.avgDiff ?: if (diffs.isNotEmpty()) diffs.average() else when (c.agreement) { "good" -> 1.0; "mid" -> 2.0; "bad" -> 3.5; else -> 0.0 }
     val col = if (avg < 1.5) Color(0xFF6FDC8C) else if (avg < 3) Color(0xFFFFB347) else Color(0xFFF26B5E)
-    val t = if (avg < 1.5) "Yr og Pent er enige" else if (avg < 3) "Litt uenige · ${wxF1(avg)}° i snitt" else "Uenige · ${wxF1(avg)}° i snitt"
+    val t = if (avg < 1.5) "Yr og Storm er enige" else if (avg < 3) "Litt uenige · ${wxF1(avg)}° i snitt" else "Uenige · ${wxF1(avg)}° i snitt"
     return CmpView(true, col, t, "Snitt avvik i makstemperatur: ${wxF1(avg)}° over ${diffs.size} dager", rows)
 }
 
@@ -468,11 +474,18 @@ private fun CmpCell(key: String?, t: String, p: String, modifier: Modifier) {
 }
 
 @Composable
-internal fun CmpHead(yr: Color, pent: Color, mut: Color, dayW: Dp, chipW: Dp, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+internal fun CmpHead(yr: Color, pent: Color, mut: Color, dayW: Dp, chipW: Dp, modifier: Modifier = Modifier, logo: Dp? = null) {
+    // Prompt 30: «Pent» heter Storm; i fullskjerm står en liten logo (18 dp) foran YR og STORM.
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(dayW))
-        Text("YR", color = yr, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em, modifier = Modifier.weight(1f))
-        Text("PENT", color = pent, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em, modifier = Modifier.weight(1f))
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (logo != null) BrandLogo30("yr", logo)
+            Text("YR", color = yr, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
+        }
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (logo != null) BrandLogo30("storm", logo)
+            Text("STORM", color = pent, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em)
+        }
         Text("AVVIK", color = mut, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = .08.em, textAlign = TextAlign.End, modifier = Modifier.width(chipW))
     }
 }
@@ -480,14 +493,15 @@ internal fun CmpHead(yr: Color, pent: Color, mut: Color, dayW: Dp, chipW: Dp, mo
 @Composable
 private fun CmpCard(vm: AppViewModel, w: WeatherFull, openIt: () -> Unit) {
     val v = cmpView(vm, w)
-    Column(Modifier.fillMaxWidth().glass().padding(16.dp, 14.dp, 16.dp, 6.dp)) {
+    // Prompt 30: hele kortet åpner Yr mot Storm i fullskjerm; ekte logoer (30 dp, overlappende) i stedet for bokstavsirkler.
+    Column(Modifier.fillMaxWidth().glass().clickable(onClickLabel = "Yr mot Storm") { Haptics.select(); openIt() }.padding(16.dp, 14.dp, 16.dp, 6.dp)) {
         Row(Modifier.padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.width(48.dp).height(28.dp)) {
-                Badge("Yr", Color(0xFF00B9F1), Modifier.align(Alignment.CenterStart))
-                Badge("P", Color(0xFFFF8A3D), Modifier.align(Alignment.CenterEnd))
+            Row {
+                BrandLogo30("yr", 30.dp)
+                BrandLogo30("storm", 30.dp, Modifier.offset(x = (-8).dp))
             }
             Column(Modifier.weight(1f)) {
-                Text("Yr og Pent", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Yr og Storm", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Row(Modifier.alpha(.85f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(v.agC))
                     Text(v.agT, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -498,9 +512,9 @@ private fun CmpCard(vm: AppViewModel, w: WeatherFull, openIt: () -> Unit) {
             CmpHead(Color(0xFF7FD6F5), Color(0xFFFFB27A), Color.White, 44.dp, 40.dp, Modifier.alpha(.8f).padding(bottom = 6.dp))
             v.rows.take(4).forEach { CmpTableRow(it, Color.White.copy(alpha = .18f), 44.dp, 40.dp) }
         }
-        if (vm.wxCmp22Busy) Text("Henter Pent …", fontSize = 13.sp, modifier = Modifier.alpha(.75f).padding(top = 8.dp, bottom = 10.dp))
+        if (vm.wxCmp22Busy) Text("Henter Storm …", fontSize = 13.sp, modifier = Modifier.alpha(.75f).padding(top = 8.dp, bottom = 10.dp))
         Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .18f)))
-        Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(onClick = openIt), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Time for time og hele uka", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Text("›", fontSize = 14.sp, modifier = Modifier.alpha(.7f))
         }

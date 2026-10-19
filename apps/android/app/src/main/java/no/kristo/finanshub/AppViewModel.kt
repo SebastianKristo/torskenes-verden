@@ -2625,6 +2625,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         l.iconTheme?.let { prefs.set(AppPrefs.ICON_THEME, it); prefTick++ }
         applyNavStyle25(raw)
         applySearchEngine29(raw)
+        applyLayout30(raw)
     }
     fun loadLocalLayout16() {
         loadNavStyle25()
@@ -3443,6 +3444,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } else if (familyOpen || family != null) loadFamily()
             "tracking" -> viewModelScope.launch { pollTracking() }
             "calendar-quick" -> onQuickEvent29(msg)
+            // Prompt 30: ny versjon / status for oppdateringen (bare admin bryr seg).
+            "system-update-available", "system-update" -> onUpdEvent30()
         }
     }
     fun startRealtime() { if (loggedIn && !locked) realtime.start(base.ifBlank { account?.server ?: "" }, account?.token) }
@@ -3575,11 +3578,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /* ---------- Prompt 29 (ANDROID29): rask time, søkemotor på Hjem og systembackup (Calendar29.kt, Backup29.kt og ui-filene med 29) ---------- */
     val q29 = Quick29State()
     val bk29 = Bk29State()
+    /** Prompt 30: SMB-veiviseren «Sett opp nettverksdisk» (Smb30.kt, ui/Smb30Ui.kt). */
+    val smb30 = Smb30State()
     internal suspend fun <T> api29(f: suspend Api.() -> T): T = api.f()
     internal fun launch29(block: suspend () -> Unit) = launch(block)
     internal val appCtx29: Context get() = appCtx
     /** true mens appen er i bakgrunnen (varsel når en rask time eller backup blir ferdig). */
     internal val inBackground29: Boolean get() = backgroundAt != null
+
+    /* ---------- Prompt 30 (ANDROID30): oppdatering fra appen, Finans → Mer skjult, Boliger, kvitteringsmarkering (P30.kt, ui/Ui30.kt) ---------- */
+    val p30 = P30State()
+    internal suspend fun <T> api30(f: suspend Api.() -> T): T = api.f()
+    internal fun launch30(block: suspend () -> Unit) = launch(block)
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

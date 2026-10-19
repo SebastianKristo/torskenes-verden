@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
@@ -255,7 +256,7 @@ internal fun SubShotCard27(vm: AppViewModel, card: Color = SK_CARD, fg: Color = 
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("✦ Ollama leser skjermbildet", color = fg, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, fontFamily = PaperFonts.sans, modifier = Modifier.weight(1f))
-            Text("Lukk", color = mut, fontSize = 13.5.sp, modifier = Modifier.clickable { s.shotOpen = false; s.shot = null; s.shotThumb = null }.padding(4.dp))
+            SheetButton30("Lukk", "secondary", dark = card.luminance() < .5f) { s.shotOpen = false; s.shot = null; s.shotThumb = null } // Prompt 30
         }
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.Top) {
             Box(Modifier.size(76.dp, 130.dp).clip(RoundedCornerShape(12.dp)).background(line).border(1.dp, line, RoundedCornerShape(12.dp))) {

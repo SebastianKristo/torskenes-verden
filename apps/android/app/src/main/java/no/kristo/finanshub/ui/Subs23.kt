@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -652,7 +653,7 @@ private fun SubForm23(vm: AppViewModel, s: SubItem?, t: SubTok, close: () -> Uni
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(if (s == null) "Nytt abonnement" else "Rediger ${s.name}", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, letterSpacing = (-0.2).sp,
                 maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Text("Lukk", color = t.neg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, modifier = Modifier.clickable { close() }.padding(6.dp))
+            SheetButton30("Lukk", "secondary", dark = t.card.luminance() < .5f, onClick = close) // Prompt 30: felles pille
         }
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(t.card).padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Box(Modifier.size(64.dp).clip(RoundedCornerShape(18.dp))) { SubLogo(vm, s, name.ifBlank { "?" }, 64) }

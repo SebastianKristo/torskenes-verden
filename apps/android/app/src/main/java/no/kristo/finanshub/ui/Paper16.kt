@@ -99,9 +99,10 @@ internal fun GoogleG(size: Dp = 18.dp) {
 
 /** Ikon i farget rute (Innstillinger). Fargen følger fargetemaet brukeren har valgt. */
 @Composable
-internal fun IconTile(vm: AppViewModel, i: Int, icon: ImageVector) {
+internal fun IconTile(vm: AppViewModel, i: Int, icon: ImageVector, fixed: Long? = null) {
     val pal = iconPalette(vm.iconTheme)
-    val c = Color(pal[((i % pal.size) + pal.size) % pal.size])
+    // Prompt 30: faste farger som på web for de kjente radene (setColor30), ellers fargetemaet.
+    val c = Color(fixed ?: pal[((i % pal.size) + pal.size) % pal.size])
     Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(c), contentAlignment = Alignment.Center) {
         Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp))
     }
@@ -117,7 +118,7 @@ internal fun SetRow(vm: AppViewModel, i: Int, icon: ImageVector, title: String, 
             Modifier.fillMaxWidth().hl25(vm, rowKey25(title)).clickable(onClick = onClick).padding(14.dp, 11.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            IconTile(vm, i, icon)
+            IconTile(vm, i, icon, setColor30(title))
             Column(Modifier.weight(1f)) {
                 Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (!sub.isNullOrBlank()) Text(sub, color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)

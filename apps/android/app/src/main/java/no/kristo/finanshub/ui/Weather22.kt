@@ -452,23 +452,33 @@ private fun BigSub(big: String, sub: String) {
     }
 }
 
-/* ---------- «Yr mot Pent» ---------- */
+/* ---------- «Yr mot Storm» (prompt 30: fullskjerm) ---------- */
 
+/**
+ * Fullskjerm (#17191e helt ut, innhold maks 760 dp midtstilt, topp = statuslinja + 48 dp). Ingen logoer i headeren, bare
+ * «Yr mot Storm» (30 sp), stedet under og Ferdig-pillen til høyre. Små logoer i grafforklaringen (16) og tabellhodet (18).
+ */
 @Composable
 internal fun CmpSheet(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
     val v = cmpView(vm, w)
     val ctx = LocalContext.current
     val tm = rememberTextMeasurer()
-    WxSheetShell(close, z = 22f) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    Box(Modifier.fillMaxSize().zIndex(22f).background(sheetBg).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}, contentAlignment = Alignment.TopCenter) {
+    Column(
+        Modifier.widthIn(max = 760.dp).fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()).navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, top = top + 48.dp, bottom = 30.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
-                Text("Yr mot Pent", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(w.place, fontSize = 13.sp, color = mut2)
+                Text("Yr mot Storm", fontSize = 30.sp, lineHeight = 33.sp, fontWeight = FontWeight.Bold)
+                Text(w.place, fontSize = 14.sp, color = mut2)
             }
-            WhitePill("Ferdig", close)
+            SheetButton30("Ferdig", dark = true, onClick = close)
         }
-        if (vm.wxCmp22Busy) Text("Henter Pent-data …", fontSize = 13.sp, color = mut2)
-        if (!v.ready && vm.wxCmp22Failed) Text("Pent svarte ikke. Prøv igjen senere.", fontSize = 13.sp, color = mut2)
+        if (vm.wxCmp22Busy) Text("Henter Storm-data …", fontSize = 13.sp, color = mut2)
+        if (!v.ready && vm.wxCmp22Failed) Text("Storm svarte ikke. Prøv igjen senere.", fontSize = 13.sp, color = mut2)
         if (v.ready) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(sheetCard).padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(12.dp).clip(CircleShape).background(v.agC))
@@ -482,7 +492,7 @@ internal fun CmpSheet(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
             if (c != null && hrs.size >= 2) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(sheetCard).padding(14.dp, 14.dp, 14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("NESTE 24 TIMER", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = .12.em, color = mut2, modifier = Modifier.weight(1f))
-                    Legend("Yr", sky); Spacer(Modifier.width(12.dp)); Legend("Pent", Color(0xFFFF8A3D))
+                    Legend("Yr", sky, "yr"); Spacer(Modifier.width(12.dp)); Legend("Storm", Color(0xFFFF8A3D), "storm")
                 }
                 val ys = hrs.map { c.yrHours[it.t.take(13)] ?: it.temp }
                 val ss = hrs.map { c.pentHours[it.t.take(13)] }
@@ -513,10 +523,10 @@ internal fun CmpSheet(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
                         for (i in 0 until n step 4) svgText(tm, hrs[i].t.drop(11).take(2), X(i) / k, 168f, k, 9f, mut2, anchor = 1)
                     }
                 }
-                Text("Søyler viser nedbør per time. Yr til venstre, Pent til høyre.", fontSize = 11.5.sp, color = mut2)
+                Text("Søyler viser nedbør per time. Yr til venstre, Storm til høyre.", fontSize = 11.5.sp, color = mut2)
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(sheetCard).padding(horizontal = 14.dp, vertical = 4.dp)) {
-                CmpHead(sky, Color(0xFFFF8A3D), mut2, 44.dp, 44.dp, Modifier.padding(top = 10.dp, bottom = 8.dp))
+                CmpHead(sky, Color(0xFFFF8A3D), mut2, 44.dp, 44.dp, Modifier.padding(top = 10.dp, bottom = 8.dp), logo = 18.dp)
                 v.rows.forEach { CmpTableRow(it, Color.White.copy(alpha = .08f), 44.dp, 44.dp) }
             }
         }
@@ -527,14 +537,16 @@ internal fun CmpSheet(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
                 }
             }
         }
-        Text("Yr er MET Norway (api.met.no). Pent (StormGeo) har ikke et åpent API, så Pent-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.",
+        Text("Yr er MET Norway (api.met.no). Storm (StormGeo) har ikke et åpent API, så Storm-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.",
             fontSize = 12.sp, color = mut2, lineHeight = 17.sp)
+    }
     }
 }
 
 @Composable
-private fun Legend(t: String, c: Color) {
+private fun Legend(t: String, c: Color, logo: String? = null) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        if (logo != null) BrandLogo30(logo, 16.dp)
         Box(Modifier.size(14.dp, 3.dp).clip(RoundedCornerShape(2.dp)).background(c))
         Text(t, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
@@ -542,9 +554,8 @@ private fun Legend(t: String, c: Color) {
 
 @Composable
 private fun WhitePill(t: String, onClick: () -> Unit) {
-    Box(Modifier.height(38.dp).clip(CircleShape).background(Color.White).clickable(onClick = onClick).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-        Text(t, fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = sheetBg)
-    }
+    // Prompt 30: felles pille (hvit på mørk flate).
+    SheetButton30(t, dark = true, onClick = onClick)
 }
 
 /* ---------- Steder: søk, legg til, hold inne og dra, sveip mot høyre for å slette ---------- */
