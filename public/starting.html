@@ -23,9 +23,12 @@ a{color:var(--peach)}a:hover{color:#fff}
 .mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
 .page{position:fixed;inset:0;z-index:9999;overflow:hidden auto;background:linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%);display:flex;align-items:center;justify-content:center;padding:max(40px,env(safe-area-inset-top)) 20px max(40px,env(safe-area-inset-bottom))}
 .aur{position:absolute;inset:-20%;pointer-events:none;z-index:1}
-.aur i{position:absolute;inset:0;filter:blur(10px);animation:nsAur 14s ease-in-out infinite;
-  background:radial-gradient(50% 40% at 80% 10%,rgba(150,95,215,.7) 0%,transparent 70%),radial-gradient(50% 45% at 15% 90%,rgba(46,190,150,.6) 0%,transparent 70%),radial-gradient(40% 35% at 90% 90%,rgba(220,80,55,.5) 0%,transparent 70%);
-  background:radial-gradient(50% 40% at 80% 10%,oklch(0.62 0.17 300 / .7) 0%,transparent 70%),radial-gradient(50% 45% at 15% 90%,oklch(0.72 0.16 165 / .6) 0%,transparent 70%),radial-gradient(40% 35% at 90% 90%,oklch(0.6 0.19 30 / .5) 0%,transparent 70%)}
+/* Prompt 38 (flimmer): ingen filter:blur på det animerte laget (WebKit rasteriserer det på nytt hver frame). Myke
+   radial-gradienter (72 % fade) i et eget komposittlag, og roligere bevegelse (18 s). */
+.aur i{position:absolute;inset:0;animation:nsAur 18s ease-in-out infinite;will-change:transform;transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  background:radial-gradient(50% 40% at 80% 10%,rgba(150,95,215,.6) 0%,transparent 72%),radial-gradient(50% 45% at 15% 90%,rgba(46,190,150,.5) 0%,transparent 72%),radial-gradient(40% 35% at 90% 90%,rgba(220,80,55,.42) 0%,transparent 72%);
+  background:radial-gradient(50% 40% at 80% 10%,oklch(0.62 0.17 300 / .6) 0%,transparent 72%),radial-gradient(50% 45% at 15% 90%,oklch(0.72 0.16 165 / .5) 0%,transparent 72%),radial-gradient(40% 35% at 90% 90%,oklch(0.6 0.19 30 / .42) 0%,transparent 72%)}
+.page{transition:opacity .3s ease}.page.out{opacity:0}
 .col{position:relative;z-index:2;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:26px;text-align:center}
 .hero{position:relative;width:208px;height:208px;display:grid;place-items:center}
 .hero svg.ring{position:absolute;inset:0;transform:rotate(-90deg)}
@@ -71,7 +74,7 @@ a{color:var(--peach)}a:hover{color:#fff}
 .foot a{font-weight:700}
 .slow{color:var(--peach);font-weight:600}
 [hidden]{display:none!important}
-@keyframes nsAur{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,-3%) scale(1.08)}}
+@keyframes nsAur{0%,100%{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(4%,-3%,0) scale(1.08)}}
 @keyframes nsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 @keyframes nsOrbit{to{transform:rotate(360deg)}}
 @keyframes nsZ{0%{opacity:0;transform:translate(0,0) scale(.6)}30%{opacity:1}100%{opacity:0;transform:translate(26px,-46px) scale(1.2)}}
@@ -137,7 +140,7 @@ a{color:var(--peach)}a:hover{color:#fff}
   var OK = '<svg class="okc" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#2f7d4f"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var sec = function (ms) { return (ms / 1000).toFixed(1).replace('.', ',') + ' s'; };
-  var lastKey = '';
+  var lastKey = '', lastPhase = -1, timers = [];
   function render(steps, ready) {
     var key = JSON.stringify(steps) + ready;
     if (key !== lastKey) {
@@ -155,6 +158,9 @@ a{color:var(--peach)}a:hover{color:#fff}
     $('pct').textContent = pct + ' %';
     var i = steps.findIndex(function (s) { return s.status !== 'ok'; }); if (i < 0) i = steps.length;
     var phase = ready ? 3 : i < 2 ? 0 : i < 4 ? 1 : 2;
+    // Figuren bygges aldri på nytt: bare når humøret faktisk endres (ellers starter animasjonene om igjen og blinker).
+    if (phase === lastPhase) return;
+    lastPhase = phase;
     $('glimt').className = 'g ' + (phase === 0 ? 'sleep' : phase === 3 ? 'talk' : 'idle');
     $('zz').hidden = phase !== 0;
     $('line').textContent = LINES[phase];
@@ -163,12 +169,15 @@ a{color:var(--peach)}a:hover{color:#fff}
   function fallbackSteps() { return STEPS.map(function (s, k) { return { id: s[0], label: s[1], status: k === 0 ? 'run' : 'wait', ms: null }; }); }
   function finish() {
     if (done) return; done = true;
+    timers.forEach(clearInterval); // ingen teller eller polling etter «Klar»; siden står til den lastes på nytt
     $('foot').textContent = 'Laster inn siden …';
     setTimeout(function () {
-      var go = function () {
+      var leave = function () {
         if (/starting\.html$/.test(location.pathname)) location.replace(q.get('next') && /^\/(?!\/)/.test(q.get('next')) ? q.get('next') : '/');
         else location.reload();
       };
+      // Fade ut 0,3 s før reload, så det ikke blinker hvitt (html har samme mørke bakgrunn og theme-color).
+      var go = function () { var pg = document.querySelector('.page'); if (pg) pg.classList.add('out'); setTimeout(leave, 300); };
       try {
         if (navigator.serviceWorker && navigator.serviceWorker.getRegistration) {
           navigator.serviceWorker.getRegistration().then(function (r) { try { if (r && r.waiting) r.waiting.postMessage({ type: 'SKIP_WAITING' }); if (r) r.update(); } catch (e) {} go(); }, go);
@@ -204,8 +213,7 @@ a{color:var(--peach)}a:hover{color:#fff}
   $('reload').addEventListener('click', function (e) { e.preventDefault(); location.reload(); });
   render(fallbackSteps(), false);
   poll(); tick();
-  setInterval(poll, 1500);
-  setInterval(tick, 1000);
+  timers.push(setInterval(poll, 1500), setInterval(tick, 1000));
 })();
 </script>
 </body>

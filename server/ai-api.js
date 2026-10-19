@@ -43,6 +43,7 @@ import { settings as fhSettings, saveSettings, secret, setSecret, secretSource }
 import { geminiKeys } from './finans/gemini-keys.js';
 import * as ai from './ai-run.js';
 import { getAzureRegion, setAzureRegion } from './glimt35.js'; // prompt 35: Azure-region for TTS
+import { hostHw, envHw, hwOut, fit38, recommendFor, SUGGESTED_MODELS, TIMEOUTS, FIT_LABEL } from './aihw38.js'; // prompt 38: Mac mini M4
 
 const api = new Hono();
 api.use('*', authOrToken);
@@ -52,9 +53,11 @@ const wantsSse = (c) => c.req.query('stream') === '1' || /text\/event-stream/.te
 
 /* ---------------- GPU og Ollama ---------------- */
 
-const gpu = () => ({ name: process.env.AI_GPU_NAME || 'RTX 2080', vramGb: Number(process.env.AI_GPU_VRAM_GB) > 0 ? Number(process.env.AI_GPU_VRAM_GB) : 8 });
-/** PASSER (≤ VRAM − 0,5 GB), DELVIS CPU (≤ 2 × VRAM) eller FOR STOR. */
-export const fitOf = (sizeGb, vramGb = gpu().vramGb) => (sizeGb == null ? null : sizeGb <= vramGb - 0.5 ? 'PASSER' : sizeGb <= vramGb * 2 ? 'DELVIS CPU' : 'FOR STOR');
+// Prompt 38: maskinen er Ollama-verten (standard Mac mini M4, 16 GB samlet minne → ca. 10,7 GB til modeller), ikke «RTX 2080».
+// AI_GPU_NAME / AI_GPU_VRAM_GB overstyrer fortsatt (eldre oppsett med eget grafikkort).
+const gpu = () => { const hw = envHw(); return { name: process.env.AI_GPU_NAME || `${hw.chip ?? hw.model} GPU`, vramGb: Number(process.env.AI_GPU_VRAM_GB) > 0 ? Number(process.env.AI_GPU_VRAM_GB) : hw.gpuBudgetGb, unified: !process.env.AI_GPU_NAME && hw.unified }; };
+/** Prompt 38: PASSER ≤ 8 GB, TRANGT ≤ 10,5 GB (bare én om gangen), FOR STOR over (av GPU-budsjettet, se aihw38.js). */
+export const fitOf = (sizeGb, vramGb = gpu().vramGb) => fit38(sizeGb, vramGb);
 let F = (u, i) => fetch(u, i);
 export const _setAiApiFetch = (fn) => { F = fn ?? ((u, i) => fetch(u, i)); };
 const base = () => String(fhSettings(OWNER).ollamaUrl || '').replace(/\/+$/, '');
@@ -80,8 +83,11 @@ api.get('/status', async (c) => {
   const ps = inv.ok && !inv.mock ? await loaded() : [];
   let version = null;
   if (inv.ok && !inv.mock) { try { version = (await ollamaJson('/api/version', { timeout: 2500 })).version ?? null; } catch { /* valgfritt */ } }
-  return c.json({ ...st, server: { url: base() || null, version, gpu: gpu(), vramUsedGb: Math.round(ps.reduce((a, m) => a + (m.size_vram ?? 0), 0) / 1e8) / 10,
-    diskGb: Math.round(inv.models.reduce((a, m) => a + (m.sizeGb ?? 0), 0) * 10) / 10, loaded: ps.map((m) => m.name ?? m.model) }, budget: ai.budgetState() }, 200, { 'Cache-Control': 'no-store' });
+  const vramUsedGb = Math.round(ps.reduce((a, m) => a + (m.size_vram ?? 0), 0) / 1e8) / 10, diskGb = Math.round(inv.models.reduce((a, m) => a + (m.sizeGb ?? 0), 0) * 10) / 10;
+  // Prompt 38: maskinkortet (Mac mini M4 · 16 GB · 2 TB ekstern disk), anbefalinger og tidsavbrudd for lasting fra disk.
+  const hw = hwOut(await hostHw({ force: c.req.query('fresh') === '1' }), { modelsGb: diskGb, vramUsedGb, ollamaOk: inv.ok, modelCount: inv.models.length, mock: !!inv.mock });
+  return c.json({ ...st, server: { url: base() || null, version, gpu: gpu(), vramUsedGb, diskGb, loaded: ps.map((m) => m.name ?? m.model), hw },
+    recommend: recommendFor(hw, ai.routing(OWNER)), suggested: SUGGESTED_MODELS, timeouts: TIMEOUTS, warnings: [...(st.warnings ?? []), ...hw.warnings], budget: ai.budgetState() }, 200, { 'Cache-Control': 'no-store' });
 });
 
 /* ---------------- Modeller ---------------- */
@@ -94,10 +100,10 @@ api.get('/models', async (c) => {
   const installed = inv.models.map((m) => {
     const p = ps.find((x) => (x.name ?? x.model) === m.name);
     return { id: m.name, name: m.name, sizeGb: m.sizeGb, quant: m.quant, params: m.params, family: m.family, kind: m.kind, loaded: !!p,
-      vramGb: p ? Math.round((p.size_vram ?? 0) / 1e8) / 10 : null, expiresAt: p?.expires_at ?? null, lastUsed: lu[m.name] ?? null, fit: fitOf(m.sizeGb) };
+      vramGb: p ? Math.round((p.size_vram ?? 0) / 1e8) / 10 : null, expiresAt: p?.expires_at ?? null, lastUsed: lu[m.name] ?? null, fit: fitOf(m.sizeGb), fitLabel: FIT_LABEL[fitOf(m.sizeGb)] ?? null };
   });
   const cloud = ai.CLOUD_MODELS.map((m) => ({ ...m, on: r.cloudOn[m.id] !== false, available: m.provider === 'gemini' ? geminiKeys().length > 0 : !!secret(m.provider === 'groq' ? 'groqKey' : 'openrouterKey') }));
-  return c.json({ ok: inv.ok, ...(inv.ok ? {} : { error: inv.err }), url: base() || null, gpu: gpu(), installed, pulls: pullsOut(), cloud, defaults: { chat: r.tasks.chat.model || null } }, 200, { 'Cache-Control': 'no-store' });
+  return c.json({ ok: inv.ok, ...(inv.ok ? {} : { error: inv.err }), url: base() || null, gpu: gpu(), hw: envHw(), installed, pulls: pullsOut(), cloud, defaults: { chat: r.tasks.chat.model || null } }, 200, { 'Cache-Control': 'no-store' });
 });
 
 // Nedlastinger: navn → {model, status, completed, total, pct, mbps, done, error, started, ctrl}
@@ -205,7 +211,7 @@ api.put('/cloud', adminOnly, async (c) => {
 
 // Utvalg fra ollama.com/library med omtrentlig størrelse (q4). Alt annet kan skrives inn som navn og lastes ned direkte.
 const LIB = [['qwen3:8b', 'Qwen 3 · rask tekst og verktøy', 5.2, 'tekst'], ['qwen3:14b', 'Qwen 3 · resonnering og verktøy', 9.3, 'tekst'], ['gemma3:4b', 'Gemma 3 · liten med bilder', 3.3, 'bilde'],
-  ['gemma3:12b', 'Gemma 3 · sterk norsk, leser bilder', 8.1, 'bilde'], ['gemma3:27b', 'Gemma 3 · stor', 17, 'bilde'], ['llama3.2:3b', 'Llama 3.2 · liten og rask', 2.0, 'tekst'], ['llama3.1:8b', 'Llama 3.1 · allsidig', 4.9, 'tekst'],
+  ['gemma3:12b', 'Gemma 3 · sterk norsk, leser bilder', 8.1, 'bilde'], ['gemma4:latest', 'Gemma 4 · Glimt og Finans · spør', 9.6, 'bilde'], ['gemma3:27b', 'Gemma 3 · stor', 17, 'bilde'], ['llama3.2:3b', 'Llama 3.2 · liten og rask', 2.0, 'tekst'], ['llama3.1:8b', 'Llama 3.1 · allsidig', 4.9, 'tekst'],
   ['mistral-nemo:12b', 'Mistral Nemo · europeiske språk', 7.1, 'tekst'], ['mistral-small3.2', 'Mistral Small 3.2 · rask med verktøy', 15, 'tekst'], ['phi4:14b', 'Microsoft Phi-4 · liten og skarp', 9.1, 'tekst'],
   ['qwen2.5vl:7b', 'Qwen 2.5 VL · leser kvitteringer og bilder', 6.0, 'bilde'], ['minicpm-v', 'MiniCPM-V · bilde på lite minne', 5.5, 'bilde'], ['llava:13b', 'LLaVA · bildebeskrivelse', 8.0, 'bilde'],
   ['deepseek-r1:8b', 'DeepSeek R1 · tenker før den svarer', 5.2, 'resonnering'], ['deepseek-r1:14b', 'DeepSeek R1 · 14B', 9.0, 'resonnering'], ['llama3.3:70b', 'Meta Llama 3.3 · stor allrounder', 43, 'tekst'],
@@ -214,9 +220,9 @@ api.get('/library', async (c) => {
   const q = String(c.req.query('q') ?? '').trim().toLowerCase().slice(0, 80), cat = c.req.query('cat');
   const inv = await ai.ollamaInventory();
   const has = (id) => inv.models.some((m) => m.name === id || m.name === `${id}:latest`);
-  let items = LIB.filter(([id, d, , k]) => (!q || id.includes(q) || d.toLowerCase().includes(q)) && (!cat || cat === 'alle' || k === cat)).map(([id, desc, sizeGb, k]) => ({ id, desc, sizeGb, cat: k, fit: fitOf(sizeGb), installed: has(id) }));
+  let items = LIB.filter(([id, d, , k]) => (!q || id.includes(q) || d.toLowerCase().includes(q)) && (!cat || cat === 'alle' || k === cat)).map(([id, desc, sizeGb, k]) => ({ id, desc, sizeGb, cat: k, fit: fitOf(sizeGb), fitLabel: FIT_LABEL[fitOf(sizeGb)] ?? null, installed: has(id) }));
   if (q && MODEL_RE.test(q) && !items.some((x) => x.id === q)) items = [{ id: q, desc: 'Skriv inn modellnavnet fra ollama.com/library', sizeGb: null, cat: null, fit: null, installed: has(q), custom: true }, ...items];
-  return c.json({ gpu: gpu(), items });
+  return c.json({ gpu: gpu(), hw: envHw(), items });
 });
 
 /* ---------------- Ruting ---------------- */
@@ -240,7 +246,11 @@ async function routingOut(u) {
   return { tasks, rules: r.rules, params: r.params, budget: { ...r.budget, ...ai.budgetState(r) }, cloudOn: r.cloudOn, options: { keepAlive: ai.KEEP_ALIVE, numCtx: ai.NUM_CTX },
     models, admin: isAdmin(u), ollama: { ok: inv.ok, error: inv.err }, warnings: tasks.filter((t) => t.warning).map((t) => `${t.name}: ${t.warning}`) };
 }
-api.get('/routing', async (c) => c.json(await routingOut(c.get('user')), 200, { 'Cache-Control': 'no-store' }));
+api.get('/routing', async (c) => {
+  const out = await routingOut(c.get('user'));
+  if (c.req.query('scope') === 'finans' || c.req.query('scope') === 'finance') return c.json(await finansRouting(c.get('user'), out), 200, { 'Cache-Control': 'no-store' });
+  return c.json(out, 200, { 'Cache-Control': 'no-store' });
+});
 api.put('/routing', async (c) => {
   const u = c.get('user');
   const b = await c.req.json().catch(() => null);
@@ -261,6 +271,40 @@ api.put('/routing', async (c) => {
   }
   return c.json(await routingOut(u));
 });
+
+/* ---------------- Prompt 38: «Hvilken modell gjør hva i Finans» ---------------- */
+// GET /api/ai/routing?scope=finans → samme som /routing, men tasks er alltid de 4 Finans-radene:
+//   {id, name, desc, model, fallback, isDefault, default:{model, fallback}, resolved, provider,
+//    options:[{id, label, local, provider, tag:'LOKAL'|'SKY', installed, missing?}], warning, cloudBlocked}
+//   + scope:'finans', finLocal, empty (ingen modeller installert eller tilkoblet), emptyText, installRoute:'ai/modeller'.
+export const FIN_DEFAULTS = { rc: { model: 'qwen2.5vl:7b', fallback: 'gemini-2.5-flash' }, kat: { model: 'llama3.2:3b', fallback: 'llama-3.3-70b-versatile' },
+  fsok: { model: 'gemma4:latest', fallback: 'gemini-2.5-flash' }, bar: { model: 'roboflow/kvittering/1', fallback: 'qwen2.5vl:7b' } };
+async function finansRouting(u, out) {
+  const inv = await ai.ollamaInventory();
+  const r = ai.routing(u);
+  const finLocal = !!r.rules.finLocal;
+  const keyOk = (p) => (p === 'gemini' ? geminiKeys().length > 0 : p === 'groq' ? !!secret('groqKey') : p === 'openrouter' ? !!secret('openrouterKey') : p === 'roboflow' ? !!secret('roboflowKey') : false);
+  const local = inv.models.filter((m) => m.kind !== 'embedding').map((m) => ({ id: m.name, label: m.name, local: true, provider: 'ollama', tag: 'LOKAL', installed: true, kind: m.kind }));
+  const cloud = ai.CLOUD_MODELS.filter((m) => r.cloudOn[m.id] !== false && keyOk(m.provider)).map((m) => ({ id: m.id, label: m.id, local: false, provider: m.provider, tag: 'SKY', installed: true, kind: m.vision ? 'bilde' : 'tekst' }));
+  const base = [...local, ...cloud];
+  const rows = ['rc', 'kat', 'fsok', 'bar'].map((id) => {
+    const t = ai.AI_TASKS.find((x) => x.id === id), o = out.tasks.find((x) => x.id === id) ?? {};
+    const own = r.tasks[id] ?? { model: '', fallback: '' }, d = FIN_DEFAULTS[id];
+    const model = own.model || d.model, fallback = own.fallback || d.fallback;
+    const opts = base.filter((m) => (t.kind === 'vision' ? m.kind === 'bilde' || !m.local : true)).map(({ kind, ...m }) => m);
+    if (id === 'bar' && keyOk('roboflow')) opts.unshift({ id: model.startsWith('roboflow/') ? model : 'roboflow/kvittering/1', label: model.startsWith('roboflow/') ? model : 'roboflow/kvittering/1', local: false, provider: 'roboflow', tag: 'SKY', installed: true });
+    for (const v of [model, fallback]) if (v && !opts.some((x) => x.id === v || x.id === `${v}:latest`)) { const p = ai.providerOf(v).provider; opts.push({ id: v, label: v, local: p === 'ollama', provider: p, tag: p === 'ollama' ? 'LOKAL' : 'SKY', installed: false, missing: true }); }
+    const cloudM = model && ai.isCloud(ai.providerOf(model).provider), cloudF = fallback && ai.isCloud(ai.providerOf(fallback).provider);
+    const warns = [];
+    if (finLocal && cloudM) warns.push(`«Finansdata forlater aldri huset» er på, men ${model} er en sky-modell. Velg en lokal modell.`);
+    else if (finLocal && cloudF) warns.push(`Reserven ${fallback} er i skyen og brukes ikke mens «Finansdata forlater aldri huset» er på.`);
+    if (o.warning) warns.push(o.warning);
+    return { id, name: t.name, desc: t.desc, model, fallback, isDefault: !own.model && !own.fallback, default: d, resolved: o.resolved ?? null, provider: o.provider ?? null,
+      options: opts, warning: warns.length ? warns.join(' · ') : null, cloudBlocked: !!(finLocal && (cloudM || cloudF)), finCloud: !!o.finCloud };
+  });
+  const empty = !base.length;
+  return { ...out, scope: 'finans', tasks: rows, finLocal, empty, emptyText: empty ? 'Ingen modeller ennå' : null, installRoute: 'ai/modeller', installLabel: 'Installer modell ›' };
+}
 
 /* ---------------- Jobber ---------------- */
 

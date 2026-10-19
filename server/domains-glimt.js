@@ -470,6 +470,7 @@ domainGlimtApi.get('/:domain/summary', adminGuard, async (c) => {
  * Prompt 36: GET /api/domains/overview?per=24t|7d|30d[&domain=] – alt Domener trenger i ett svar (KPI-er, grafer, land,
  * sider, oppetid, per domene), server-cache 5 min. gsc: Google Søk fra den daglige synken (6 t, ingen nye kall her).
  * summary: dagens lagrede Glimt-oppsummering eller null – den lages aldri her (egen rute, ikke-blokkerende).
+ * Prompt 38: ?all=1 (med domain=*) gir i tillegg byDomain:{<navn>: samme form for ett domene + summary/summaryUrl}.
  */
 domainGlimtApi.get('/overview', adminGuard, async (c) => {
   const u = c.get('user');
@@ -481,7 +482,16 @@ domainGlimtApi.get('/overview', adminGuard, async (c) => {
   let gsc = null;
   if (d !== '*') { try { const v = gscView(u, d, 28); gsc = v.connected && !v.loading ? v : { connected: !!v.connected, loading: !!v.loading, needsSite: !!v.needsSite }; } catch { gsc = null; } }
   const row = q('SELECT * FROM domain_summary WHERE user_id=? AND domain=? AND date=?').get(u, d, osloDate());
-  return c.json({ ...o, gsc, summary: row ? sumOut(row, d === '*' ? 'Alle domener' : d) : null, summaryUrl: `/api/domains/${encodeURIComponent(d)}/summary` }, 200, { 'Cache-Control': 'private, max-age=60' });
+  // Prompt 38: ?all=1 → også hvert domene (byDomain) i samme svar, så alt er lastet når Domener åpnes. Glimt lages aldri her.
+  let byDomain;
+  if (c.req.query('all') === '1' && d === '*') {
+    byDomain = Object.fromEntries((await Promise.all((o.domains ?? []).map(async (x) => {
+      const one = await domainsOverview(per, x.name).catch(() => null);
+      const sr = one ? q('SELECT * FROM domain_summary WHERE user_id=? AND domain=? AND date=?').get(u, x.name, osloDate()) : null;
+      return one ? [x.name, { ...one, summary: sr ? sumOut(sr, x.name) : null, summaryUrl: `/api/domains/${encodeURIComponent(x.name)}/summary` }] : null;
+    }))).filter(Boolean));
+  }
+  return c.json({ ...o, ...(byDomain ? { byDomain } : {}), gsc, summary: row ? sumOut(row, d === '*' ? 'Alle domener' : d) : null, summaryUrl: `/api/domains/${encodeURIComponent(d)}/summary` }, 200, { 'Cache-Control': 'private, max-age=60' });
 });
 domainGlimtApi.post('/:domain/summary', adminGuard, async (c) => {
   const u = c.get('user'), d = normDomain(c.req.param('domain'));

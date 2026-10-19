@@ -305,11 +305,11 @@ test('modeller, bibliotek, Glimt-API-nøkler og jobb-SSE', async () => {
   const m = (await A('/api/ai/models')).body;
   assert.equal(m.ok, true);
   const g = m.installed.find((x) => x.id === 'gemma4:12b');
-  assert.equal(g.fit, 'DELVIS CPU', '9,6 GB på et 8 GB-kort');
+  assert.equal(g.fit, 'TRANGT', '9,6 GB av 10,7 GB på Mac mini M4 (prompt 38)');
   assert.equal(m.installed.find((x) => x.id === 'qwen3:8b').fit, 'PASSER');
   assert.equal((await K('/api/ai/models/pull', 'POST', { model: 'qwen3:14b' })).status, 403);
   const lib = (await A('/api/ai/library?q=qwen3')).body;
-  assert.ok(lib.items.some((x) => x.id === 'qwen3:14b' && x.fit === 'FOR STOR' || x.fit === 'DELVIS CPU'));
+  assert.ok(lib.items.some((x) => x.id === 'qwen3:14b' && x.fit === 'TRANGT')); // prompt 38: 9,3 GB av 10,7 GB
   const t = await K('/api/ai/tokens', 'POST', { name: 'Snarvei' });
   assert.equal(t.status, 201);
   assert.match(t.body.token, /^fh_pat_/);

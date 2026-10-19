@@ -45,6 +45,7 @@ import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (v
 import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi, trackingKeysApi, kal37Api } from './api37.js'; // prompt 37 (SERVER37)
+import { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler, brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -107,6 +108,13 @@ app.get('/login', async (c) => sessionUser(c) ? c.redirect('/') : html(c, await 
 app.get('/cv', async (c) => html(c, await page('cv.html')));
 // Prompt 33: /chat åpnes direkte (alltid fullskjerm) – webappen ruter med hash.
 app.get('/chat', (c) => c.redirect(sessionUser(c) ? '/#/chat' : '/login'));
+// Prompt 38 (WEB38): /kalender åpner Kalender i fullskjerm. /kalender?app=mac er siden Kalender.app for Mac laster i sin
+// WKWebView (samme bundel som web, uten Homelab-menyen; hl-boot.js setter html[data-kal-app]).
+app.get('/kalender', async (c) => {
+  const appQ = c.req.query('app');
+  if (!sessionUser(c)) return c.redirect(`/login?next=${encodeURIComponent(appQ ? `/kalender?app=${encodeURIComponent(appQ)}` : '/kalender')}`);
+  return appQ && /^[a-z]{2,12}$/.test(appQ) ? html(c, await page('app.html')) : c.redirect('/#/kalender');
+});
 // FinansHub: egen fullskjerm-app (desktop og mobil/PWA). API-et har egen tilgangskontroll (sesjon eller token).
 app.get('/finans', (c) => c.redirect('/finans/'));
 // Mobil uten innlogging får appskallet, som viser sin egen Papir-innlogging (mobile-gate.js). Desktop og en tom server går til /login.
@@ -165,16 +173,25 @@ app.post('/api/auth/login', passwordLogin);
 app.post('/api/login', passwordLogin);
 // Steg 2: 6-sifret kode fra autentiseringsappen eller en gjenopprettingskode.
 const totpStep = async (c) => {
-  const { ticket, code, remember } = await c.req.json().catch(() => ({}));
+  const b = await c.req.json().catch(() => ({})) ?? {};
+  const { code, remember } = b;
+  const ticket = b.ticket || preAuthTicket(c); // prompt 38: QR-innloggingens pre-auth-cookie (hl_pre)
   const r = redeemTicket(ticket, code, clientIp(c));
   if (!r.ok) { await sleep(400); return c.json({ error: r.error, expired: !!r.expired }, r.status); }
   finishLogin(c, r.user.id, remember ?? r.remember);
+  qrAfter2fa(c, ticket, r.user.id); // prompt 38: enheten fra QR-innloggingen → Pålitelige enheter + varsel
   return c.json({ ok: true, user: r.user });
 };
 app.post('/api/auth/totp', totpStep);
 app.post('/api/auth/2fa', totpStep); // prompt 25: samme steg under navnet i designet
 // Prompt 31: bekreft passordet på nytt → kortlivet engangstoken (5 min, bundet til brukeren) for biometri-flyten i appene.
 app.post('/api/auth/reauth', authOrToken, reauthHandler);
+// Prompt 38: QR-innlogging (/api/auth/qr*), app-økt for Kalender på Mac, logg ut av alle enheter, GET /api/me/sessions og /l/:code.
+app.route('/api/auth', qrAuthApi);
+app.route('/api', meSessionsApi);
+app.get('/l/:code', qrLinkHandler);
+app.get('/.well-known/assetlinks.json', assetLinksHandler); // prompt 38: Android App Links for /l/*
+app.get('/.well-known/apple-app-site-association', appleAssociationHandler); // prompt 38: iOS universal links for /l/*
 
 /* ---------------- Førstegangsoppsett ---------------- */
 
@@ -659,6 +676,7 @@ app.get('/api/system/changelog', (c) => { const u = new URL(c.req.url); u.pathna
 app.route('/api/glimt/memory', glimtMemoryApi); // prompt 33: GET/POST/DELETE, POST /:id/apply (sesjon eller app-token, per bruker)
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
 app.route('/api/ai', aiApi); // prompt 34: AI-kontroll
+app.route('/api/brief', brief38Api); // prompt 38: nye kort (pakker, familie, skole og jobb, bursdager, nordlys) + POST /api/brief/gift
 app.route('/api/brief', briefApi); // prompt 34: Glimt-brief
 app.route('/api/glimt/settings', glimtSettingsApi); // prompt 35
 app.route('/api/tts', ttsApi); // prompt 35
@@ -686,7 +704,7 @@ app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); }
 
 app.onError((err, c) => {
   console.error(err);

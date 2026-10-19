@@ -9,6 +9,8 @@
 //      voices:[{id, name, desc}], rates:[{id, name, speed}], host:'glimt'|'natt'|…}
 // PUT /api/glimt/settings {…delvis} → samme. 400 {error, errors[]} ved ugyldige verdier. Synkes til alle klienter
 //      (realtime «glimt-settings»). /api/brief/settings er alias for {notify, guide, home} (eldre klienter).
+//      Prompt 38: + cards:[{id, on, label}] (rekkefølge og av/på i Now Brief, se cards38.js) og auroraNotify:true
+//      (push kl. 20 ved Kp ≥ 4 og skydekke < 40 %). PUT {cards:[{id, on}] | ['id', …]} lagrer ny rekkefølge.
 // POST /api/tts {text, character?, voice?, rate?, lang?} → audio/mpeg (X-TTS-Engine: openai|elevenlabs|azure|mock,
 //      X-TTS-Cache: hit|miss, X-TTS-Voice, X-TTS-Chars). Uten klar motor/nøkkel, motor «browser» eller brukt opp sky-budsjett:
 //      503 {error, fallback:'browser'}. Cache 30 dager (motor, stemme, figur, tempo, språk, tekst). Teksten normaliseres for
@@ -30,6 +32,7 @@ import { isAdmin } from './auth.js';
 import { secret } from './finans/db.js';
 import { broadcast } from './realtime.js';
 import * as ai from './ai-run.js';
+import { cardsOf, cleanCards, saveCards, auroraNotifyOf, setAuroraNotify } from './cards38.js'; // prompt 38: kortene i Now Brief
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 
@@ -105,7 +108,9 @@ export function glimtSettingsOf(u) {
 export function cleanGlimtPatch(b, cur) {
   const errors = [], next = JSON.parse(JSON.stringify(cur));
   if (!b || typeof b !== 'object' || Array.isArray(b)) return { next, errors: ['Forventet et objekt'] };
-  const known = new Set(['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefs', 'tts', 'engines', 'chars', 'voices', 'rates', 'host']);
+  const known = new Set(['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefs', 'tts', 'engines', 'chars', 'voices', 'rates', 'host', 'cards', 'auroraNotify']);
+  if (b.cards !== undefined) { const r = cleanCards(b.cards); errors.push(...r.errors); if (!r.errors.length) next.cards = r.cards; } // prompt 38
+  if (b.auroraNotify !== undefined) { if (typeof b.auroraNotify !== 'boolean') errors.push('auroraNotify må være true eller false'); else next.auroraNotify = b.auroraNotify; }
   for (const k of Object.keys(b)) if (!known.has(k)) errors.push(`Ukjent nøkkel ${k}`);
   if (b.char !== undefined) { if (!CHAR_IDS.has(b.char)) errors.push(`Ukjent figur ${b.char}`); else next.char = b.char; }
   for (const k of ['friends', 'brief', 'readAloud', 'guide', 'notify']) if (b[k] !== undefined) { if (typeof b[k] !== 'boolean') errors.push(`${k} må være true eller false`); else next[k] = b[k]; }
@@ -133,6 +138,8 @@ export function cleanGlimtPatch(b, cur) {
 export function saveGlimtSettings(u, next) {
   const { char, friends, brief, readAloud, guide, notify, briefs, tts } = next;
   kv.set(u, 'glimt35_settings', { char, friends, brief, readAloud, guide, notify, briefs, tts });
+  if (Array.isArray(next.cards)) saveCards(u, next.cards); // prompt 38
+  if (typeof next.auroraNotify === 'boolean') setAuroraNotify(u, next.auroraNotify);
   // Eldre lesere (brief34, appene før 35) leser brief_settings.
   const old = kv.get(u, 'brief_settings', null) ?? {};
   kv.set(u, 'brief_settings', { ...old, notify, guide });
@@ -158,7 +165,7 @@ export function enginesOut(u) {
     tail: e.id === 'browser' ? null : tail(keyOf(e.id)), admin, link: e.link, ...(e.id === 'azure' ? { region: azureRegion() || null } : {}) }));
 }
 export function settingsOut(u) {
-  return { ...glimtSettingsOf(u), engines: enginesOut(u), chars: CHARS, voices: VOICES.map(({ id, name, desc }) => ({ id, name, desc })), rates: RATES, host: hostOf(u) };
+  return { ...glimtSettingsOf(u), cards: cardsOf(u), auroraNotify: auroraNotifyOf(u), engines: enginesOut(u), chars: CHARS, voices: VOICES.map(({ id, name, desc }) => ({ id, name, desc })), rates: RATES, host: hostOf(u) };
 }
 
 export const settingsApi = new Hono();

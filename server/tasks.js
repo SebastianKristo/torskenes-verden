@@ -171,6 +171,8 @@ function resolveList(raw, uid) {
 }
 // Prompt 37: standardlisten for nye oppgaver: valgt i Innstillinger → Gjøremål (kv tasks_default_list), ellers «Mine».
 const mineOf = (uid) => q("SELECT id FROM hl_task_lists WHERE owner=? AND kind='mine' ORDER BY created LIMIT 1").get(uid)?.id ?? null;
+/** Prompt 38: brukerens private liste «Mine» (lages om den mangler), for «+ Gave til … i Gjøremål» i briefen. */
+export const mineListOf = (uid) => { ensureLists(uid); return mineOf(uid); };
 const defaultList = (uid) => {
   const want = kv.get(uid, 'tasks_default_list', null);
   if (want && canSeeList(listRow(want), uid)) return want;

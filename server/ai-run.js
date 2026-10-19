@@ -59,7 +59,14 @@ export const taskName = (t) => TASK[taskId(t)]?.name ?? EXTRA_TASKS[t] ?? String
 let F = (u, i) => fetch(u, i);
 export const _setAiFetch = (fn) => { F = fn ?? ((u, i) => fetch(u, i)); invalidateInventory(); statusCache.clear(); };
 // Tester: kortere tidsgrenser.
-export const _aiRunTest = { attemptMs: 20_000, lastMs: null, statusMs: 15_000 };
+// Prompt 38: 30 s per forsøk, og 60 s (2 × attemptMs) første kall etter at en Ollama-modell er lastet ut (lasting fra ekstern HDD).
+export const _aiRunTest = { attemptMs: 30_000, lastMs: null, statusMs: 15_000 };
+const warmUntil = new Map(); // Ollama-modell → tidspunkt den regnes som lastet ut (keep_alive)
+const keepAliveMs = (v) => (v === -1 ? Infinity : v === 0 ? 0 : (() => { const m = String(v ?? '30m').match(/^(\d+)(m|h)$/); return m ? +m[1] * (m[2] === 'h' ? 3600_000 : 60_000) : 30 * 60_000; })());
+/** true når Ollama-modellen trolig må lastes fra disk (ikke brukt innen keep_alive siden serveren startet). */
+export const isCold = (model, now = Date.now()) => !((warmUntil.get(model) ?? 0) > now);
+export const markWarm = (model, keepAlive, now = Date.now()) => warmUntil.set(model, now + keepAliveMs(keepAlive));
+export const _warmModels = warmUntil;
 const MOCK = () => process.env.MOCK_DATA === '1' && !process.env.OLLAMA_URL;
 
 /* ---------------- Ruting ---------------- */
@@ -598,13 +605,16 @@ export async function run(task, o = {}) {
   try {
     for (let i = 0; i < res.list.length; i++) {
       const c = res.list[i], last = i === res.list.length - 1;
-      const limitMs = o.timeoutMs ?? (last ? (_aiRunTest.lastMs ?? Math.max(_aiRunTest.attemptMs, (fhSettings(OWNER).aiTimeouts?.ollama ?? 45) * 1000)) : _aiRunTest.attemptMs);
+      const cold = c.provider === 'ollama' && !MOCK() && isCold(c.id);
+      const normalMs = last ? (_aiRunTest.lastMs ?? Math.max(_aiRunTest.attemptMs, (fhSettings(OWNER).aiTimeouts?.ollama ?? 45) * 1000)) : _aiRunTest.attemptMs;
+      const limitMs = o.timeoutMs ?? (cold ? Math.max(normalMs, _aiRunTest.attemptMs * 2) : normalMs);
       const sig = AbortSignal.any([ctrl.signal, AbortSignal.timeout(limitMs)]);
       const ta = Date.now();
-      jobUpdate(jobId, { model: c.id, provider: c.provider, ...(i ? { fallbackFrom: res.list[0].id } : {}), step: `Spør ${c.id}` });
+      jobUpdate(jobId, { model: c.id, provider: c.provider, ...(i ? { fallbackFrom: res.list[0].id } : {}), step: cold ? 'Laster modellen fra disk …' : `Spør ${c.id}` });
       try {
         const out = MOCK() && c.provider === 'ollama' ? { text: o.json || o.schema ? '{"ok":true}' : 'ok', tin: 4, tout: 1 } : await CALL[c.provider](c.id, opts, sig, r);
         if (!String(out.text ?? '').trim()) throw new Error('tomt svar');
+        if (c.provider === 'ollama') markWarm(c.id, r.params.keepAlive);
         const data = o.json || o.schema ? parseJsonText(out.text) : undefined;
         const ms = Date.now() - ta, cost = costKr(c.provider, c.id, out.tin, out.tout);
         jobEnd(jobId, { ms: Date.now() - t0, tokIn: out.tin, tokOut: out.tout, costKr: cost, step: null, error: errors.length ? errors.map((x) => `${x.model}: ${x.error}`).join(' · ').slice(0, 400) : null });

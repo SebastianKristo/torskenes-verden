@@ -291,11 +291,22 @@ setInterval(() => { const now = Date.now(); for (const [k, t] of tickets) if (t.
 
 /* ---------------- Sesjoner ---------------- */
 
+// Prompt 38: Secure-flagget droppes bare når forespørselen er ren http fra lokalt nett uten proxy foran (Kalender-appen på Mac
+// og nettlesere mot http://192.168.x.x), ellers ville cookien aldri bli sendt tilbake. Bak Cloudflare/https er den alltid Secure.
+export function cookieSecure(c) {
+  if (!config.secureCookies) return false;
+  if (c.req.header('cf-connecting-ip') || /https/i.test(c.req.header('x-forwarded-proto') ?? '') || /https/i.test(c.req.header('cf-visitor') ?? '')) return true;
+  let proto = 'https:';
+  try { proto = new URL(c.req.url).protocol; } catch { /* */ }
+  const ip = (c.env?.incoming?.socket?.remoteAddress ?? '').replace(/^::ffff:/, '');
+  return !(proto === 'http:' && ip && isLan(ip));
+}
+
 export function createSession(c, user = OWNER) {
   const sid = randomBytes(32).toString('base64url');
   const now = Date.now();
   db.prepare('INSERT INTO sessions(id,user,created,expires) VALUES(?,?,?,?)').run(sidKey(sid), user, now, now + MAX_AGE * 1000);
-  setCookie(c, COOKIE, sid, { httpOnly: true, secure: config.secureCookies, sameSite: 'Lax', path: '/', maxAge: MAX_AGE });
+  setCookie(c, COOKIE, sid, { httpOnly: true, secure: cookieSecure(c), sameSite: 'Lax', path: '/', maxAge: MAX_AGE });
   return sidKey(sid);
 }
 
@@ -361,7 +372,7 @@ export function rememberDevice(c, user) {
   const token = randomBytes(32).toString('base64url');
   const now = Date.now();
   db.prepare('INSERT INTO devices(id,user,name,created,last_seen,last_ip) VALUES(?,?,?,?,?,?)').run(sidKey(token), user, deviceName(c), now, now, trustIp(c));
-  setCookie(c, DEVICE_COOKIE, token, { httpOnly: true, secure: config.secureCookies, sameSite: 'Lax', path: '/', maxAge: DEVICE_AGE });
+  setCookie(c, DEVICE_COOKIE, token, { httpOnly: true, secure: cookieSecure(c), sameSite: 'Lax', path: '/', maxAge: DEVICE_AGE });
 }
 
 function trustedDevice(c) {
