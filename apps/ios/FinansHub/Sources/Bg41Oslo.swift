@@ -44,7 +44,7 @@ final class Oslo41 {
         c.urlCache = URLCache(memoryCapacity: 8 * 1024 * 1024, diskCapacity: 60 * 1024 * 1024, diskPath: "oslo41")
         c.requestCachePolicy = .returnCacheDataElseLoad
         c.timeoutIntervalForRequest = 20
-        return c
+        return URLSession(configuration: c)
     }()
 
     nonisolated static func fileURL(_ file: String, width: Int) -> URL? {
