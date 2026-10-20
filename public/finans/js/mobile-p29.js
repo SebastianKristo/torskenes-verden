@@ -57,7 +57,7 @@ export function searchCard() {
     <input id="p29-q" name="q" type="text" enterkeyhint="go" value="${esc(SE.q)}" placeholder="${esc(ENG[e][1])}" aria-label="${esc(ENG[e][1])}" autocomplete="off" autocapitalize="sentences">
     <button type="button" class="p29-clr${SE.q ? '' : ' off'}" data-p29="clr" aria-label="Tøm">${svg('M6 6l12 12M18 6L6 18', 11, 3.2)}</button>
     <button type="button" class="p29-ai" data-p29="chat" aria-label="Åpne Chat">✦ AI</button></form>
-    <div id="p29-apw">${apptHtml(r)}</div>${P31.ansBubble()}</div>`;
+    <div id="p29-apw">${apptHtml(r) || (globalThis.P41?.huskeRow?.(SE.q) ?? '')}</div>${P31.ansBubble()}</div>`;
 }
 /** Eget overlay-lag (fast posisjon) så menyen alltid ligger over kortene på Hjem. */
 export function searchLayer() {
@@ -68,7 +68,7 @@ export function searchLayer() {
 }
 function syncSearch() {
   const r = apptOf(SE.q), w = document.getElementById('p29-apw');
-  if (w) w.innerHTML = apptHtml(r);
+  if (w) w.innerHTML = apptHtml(r) || (globalThis.P41?.huskeRow?.(SE.q) ?? ''); // prompt 41: «Legg i Huskeliste»
   document.querySelector('.p29-clr')?.classList.toggle('off', !SE.q);
 }
 function searchGo() {
@@ -78,6 +78,8 @@ function searchGo() {
   P32.hsLog(t, SE.eng === 'ai' ? 'glimt' : SE.eng);
   const r = apptOf(t);
   if (r) { SE.q = ''; draw(); quickRun(t, r); return; }
+  // Prompt 41: huskebeskjeder («vi må huske å …») går til Huskeliste som Glimt-jobb i bakgrunnen, med samme animasjon som timer.
+  if (SE.eng === 'ai' && globalThis.P41?.isHuske?.(t)) { SE.q = ''; draw(); globalThis.P41.huskeFromHome(t); return; }
   if (SE.eng === 'google' || SE.eng === 'ddg') {
     const url = SE.eng === 'google' ? `https://www.google.com/search?q=${encodeURIComponent(t)}` : `https://duckduckgo.com/?q=${encodeURIComponent(t)}`;
     SE.q = ''; draw(); window.open(url, '_blank', 'noopener'); return;

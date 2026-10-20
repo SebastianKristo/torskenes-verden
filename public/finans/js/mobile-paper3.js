@@ -64,7 +64,7 @@ export const fourth = () => { if (!domOk()) return 'spor'; const f = fourthPref(
 /* ---------- Tilpass hver side: hold inne → vugging, ▲ ▼ og − ---------- */
 
 const PG = {
-  hl: [['h12', 'Glimt-brief'], ['h13', 'Dagens bibelvers'], ['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h11', 'Prøveperioder'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Gjøremål'], ['h9', 'Bursdager'], ['h14', 'Hjemlys']],
+  hl: [['h12', 'Glimt-brief'], ['h13', 'Dagens bibelvers'], ['h1', 'Søk'], ['h2', 'Pakker'], ['h15', 'Min reise'], ['h3', 'Avganger'], ['h11', 'Prøveperioder'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Gjøremål'], ['h9', 'Bursdager'], ['h14', 'Hjemlys']],
   hjem: [['f1', 'Saldo'], ['f2', 'Kvitteringer'], ['f3', 'Siste transaksjoner'], ['f4', 'Budsjett']],
   mat: [['m1', 'Dagens middag'], ['m2', 'Ukeplan'], ['m3', 'Mapper'], ['m4', 'Skann og import']],
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
@@ -109,7 +109,7 @@ export function edBlocks(page, blocks, { full = [] } = {}) {
   const pills = on ? `<div class="p28-pills" role="toolbar" aria-label="Rediger siden">${arrows ? '<span></span>' : `<button class="p28-pill plus" data-ped="add" aria-label="Legg til widget${hidden.length ? ` (${hidden.length} skjult)` : ''}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>${hidden.length ? `<b>${hidden.length}</b>` : ''}</button>`}
       <button class="p28-pill ok" data-ped="done" aria-label="Ferdig"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div>` : '';
   const html = vis.map((k, i) => `<div class="pp-ed${on ? ' on p28-wig' : ''}${i % 2 ? ' odd' : ''}${full.includes(k) ? ' full' : ''}" data-edk="${k}" data-edp="${page}">${on ? `<button class="p28-minus" data-ped="hide" data-k="${k}" aria-label="Skjul ${esc(lab[k])}">${MINUS}</button>${arrows ? '' : `<span class="p40-grab" data-p40grab="${k}" role="button" aria-label="Dra ${esc(lab[k])} for å flytte">≡</span>`}${ED_SET[k] && page === 'hl' ? `<button class="p28-edw" data-ped="widget" data-k="${k}">✎ Rediger widget</button>` : ''}${arrows ? `<div class="p28-arr"><button data-ped="mv" data-k="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} opp">▲</button><button data-ped="mv" data-k="${k}" data-d="1" ${i === vis.length - 1 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} ned">▼</button></div>` : ''}` : ''}${blocks[k]}</div>`).join('');
-  return pills + html + (on ? '' : '<span class="pp-edhint">Hold inne et kort for å flytte eller skjule det</span>') + (on && ED.add ? addSheet(page, hidden.filter((k) => k !== 'h13' || !!blocks.h13), lab) : '');
+  return pills + html + (on ? '' : '<span class="pp-edhint">Hold inne et kort for å flytte eller skjule det</span>') + (on && ED.add ? addSheet(page, hidden.filter((k) => (k !== 'h13' || !!blocks.h13) && k !== 'h15'), lab) : '');
 }
 function addSheet(page, hidden, lab) {
   return `<div class="p28-scrim" data-ped="addx"></div><div class="p28-sheet" role="dialog" aria-modal="true" aria-label="Legg til widget"><span class="p28-grip" aria-hidden="true"></span>

@@ -304,6 +304,7 @@ export function famView22() {
   const tab = FT.tab;
   const hjl = globalThis.P40?.hjemlysFam?.() ?? ''; // prompt 40: Hjemlys på Familie-kortet (status for husstanden + enkel start)
   if (tab === 'helse') return `<div class="f22">${healthBlock()}</div>`;
+  if (tab === 'hjemlys') return `<div class="f22">${globalThis.P41?.famHjemlys?.() ?? '<div class="m-spin"></div>'}</div>`; // prompt 41: Hjemlys-fanen (Start · Hvem · Klar · Aktiv)
   if (tab === 'soner') {
     const zones = FM.d.zones ?? [];
     return `<div class="f22">${mapBlock()}${draftCard()}${zones.map(zoneCard).join('') || (FM.zone ? '' : '<div class="f22-card"><span class="f22-mut">Ingen soner ennå. Trykk «+ Ny sone på kartet» og så på kartet, for eksempel hjemme, skolen eller jobben.</span></div>')}

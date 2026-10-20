@@ -135,10 +135,10 @@ export function hintToast(t) {
    ===================================================================== */
 export function ansBubble() {
   const A = G.ans; if (!A) return '';
-  if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …</span></div>`;
+  if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …${globalThis.P41?.wxComplex?.(A.q) ? '<small class="p41-step">Leser værdata for uken …</small>' : ''}</span></div>`; // prompt 41
   // Prompt 38: trykk i boblen lukker den ikke lenger (tekst kan markeres). ✕, sveip opp og trykk utenfor lukker (mobile-p38.js).
   return `<div class="p31-ans ready p38-ans" role="status" aria-live="polite"><button type="button" class="p38-ax" data-p31="ansx" aria-label="Lukk svar">${svg('M6 6l12 12M18 6L6 18', 12, 2.8)}</button><span class="p31-at">${bold(A.text)}</span>${A.card ? cardHtml(A.card, true) : ''}
-    ${A.err ? P34.errButtons(A.q) : ''}${A.open ? (A.open.route === 'familie' ? P37B.famOpenBtn(A.open) : P35.wxOpenBtn(A.open)) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div><span class="p38-ah" aria-hidden="true"></span></div>`;
+    ${A.err ? P34.errButtons(A.q) : ''}${A.open ? (A.open.route === 'familie' ? P37B.famOpenBtn(A.open) : P35.wxOpenBtn(A.open)) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(String(A.src || 'Glimt').replace(/^✦\s*/, ''))}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div><span class="p38-ah" aria-hidden="true"></span></div>`;
 }
 const ASSIST_MISSING = { v: false };
 async function assistCall(q, source, extra = {}) {
@@ -357,6 +357,9 @@ export function toolGuess(q) { const n = String(q ?? '').toLowerCase(); return T
  */
 export async function chatTool(q, chatId, cb) {
   const guess = toolGuess(q); if (!guess || ASSIST_MISSING.v) return false;
+  // Prompt 41 (claude-code-glimt-vaer-uke-ai.md): ukes- og «når/hvilken dag»-spørsmål om været går til modellen med
+  // ukesdataene (serveren legger dem ved i /api/chat/send), ikke til hurtigsvaret for i dag/i morgen.
+  if (guess === 'Vær' && globalThis.P41?.wxComplex?.(q)) return false;
   const t0 = performance.now();
   cb.busy([guess]);
   let r;

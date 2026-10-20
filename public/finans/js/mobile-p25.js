@@ -36,7 +36,7 @@ const HOUSE = 'M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6';
 export function nav25(html, scr) {
   if (!html) return html;
   const home = startScr(), atHome = scr === home && !m.sub;
-  const btn = atHome ? '' : `<a class="p25-home" href="#/${home}" data-p25="home" aria-label="Til Hjem" title="Hjem"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${HOUSE}"/></svg></a>`;
+  const btn = atHome ? '' : `<a class="p25-home" href="#/${home}" data-p25="home" aria-label="Til Hjem" title="Hjem"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${HOUSE}"/></svg><span>Hjem</span></a>`; // prompt 41: samme form som aktiv fane (rød), ikon over «Hjem»
   return html
     .replace(/<nav class="pp-nav([^"]*)"([^>]*)>/, (_, c, rest) => `<nav class="pp-nav ${NS_CLS[navStyle()]}${c}"${rest}>${btn}`)
     .replace(/<(a|button)\b((?:(?!aria-label)[^>])*)>(<i\b[^>]*>[\s\S]*?<\/i>)<span>([^<]*)<\/span>/g, (all, tag, attrs, ic, name) => `<${tag}${attrs} aria-label="${name}">${ic.replace(/^<i\b/, '<i aria-hidden="true"')}<span>${name}</span>`);
@@ -55,7 +55,7 @@ export function styleSection(tabs) {
   const base = tabs.filter(([k]) => k !== 'mer').slice(0, 4).map(([, n, ic]) => [/[<]/.test(String(ic)) ? '•' : ic, n]);
   const PV = [...(base.length ? base : [['⌂', 'Hjem'], ['kr', 'Finans'], ['◐', 'Mat']]), ['⋯', 'Mer']], cur = navStyle();
   return `<span class="pp-lab p25-sl">STIL · FORHÅNDSVISNING</span>
-    <div class="p25-pvbg"><div class="p25-pvbar big ${NS_CLS[cur]}">${preview(PV, cur, true)}<span class="p25-pvplus" aria-hidden="true">+</span></div></div>
+    <div class="p25-pvbg"><div class="p25-pvbar big ${NS_CLS[cur]}">${preview(PV, cur, true)}${globalThis.P41?.scanHome?.() === false ? '' : '<span class="p25-pvplus" aria-hidden="true">+</span>'}</div></div>
     <div class="p25-styles" role="radiogroup" aria-label="Fanelinje-stil">${NAV_STYLES.map(([k, n]) => `<button class="p25-style" data-p25="ns" data-k="${k}" role="radio" aria-checked="${cur === k}"><span class="p25-pvbar sm" aria-hidden="true">${preview(PV.slice(0, 3), k, false)}</span><b>${esc(n)}</b></button>`).join('')}</div>`;
 }
 

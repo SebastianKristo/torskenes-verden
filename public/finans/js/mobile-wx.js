@@ -150,14 +150,14 @@ export function wxView() {
       <span class="vx-lo">${deg(d.lo)}</span><span class="vx-rng"><i style="left:${l.toFixed(1)}%;width:${Math.max(4, w).toFixed(1)}%"></i>${nowL != null ? `<em style="left:${nowL.toFixed(1)}%"></em>` : ''}</span><span class="vx-hi">${deg(d.hi)}</span></button>`; }).join('');
   // Vind
   const ws = c.wind != null ? Math.round(c.wind) : null, wg = c.gust != null ? Math.round(c.gust) : null;
-  const wind = `<div class="vx-card vx-split" data-wx2="ms" data-k="wind" role="button" tabindex="0"><div class="vx-col"><div class="vx-t">${tIco('M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8')}VIND</div>
+  const wind = `<div class="vx-card vx-split" data-wxk="vind" data-wx2="ms" data-k="wind" role="button" tabindex="0"><div class="vx-col"><div class="vx-t">${tIco('M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8')}VIND</div>
       ${[['Vind', ws != null ? `${ws} m/s` : '–'], ['Vindkast', wg != null ? `${wg} m/s` : '–'], ['Retning', c.windDir != null ? `${Math.round(c.windDir)}° ${dirName(c.windDir)}` : '–']].map(([a, b], i) => `<div class="vx-r${i ? ' bt' : ''}"><span>${a}</span><span>${b}</span></div>`).join('')}</div>
     <svg viewBox="0 0 100 100" class="vx-comp" aria-hidden="true"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="7" stroke-dasharray="0.8 2.5"/><text x="50" y="12" fill="#fff" font-size="8" font-weight="800" text-anchor="middle">N</text><text x="91" y="53" fill="#fff" font-size="8" font-weight="800" text-anchor="middle" opacity=".75">Ø</text><text x="50" y="97" fill="#fff" font-size="8" font-weight="800" text-anchor="middle" opacity=".75">S</text><text x="9" y="53" fill="#fff" font-size="8" font-weight="800" text-anchor="middle" opacity=".75">V</text>
       <g transform="rotate(${Math.round(c.windDir ?? 0)} 50 50)"><circle cx="50" cy="12" r="3.2" fill="#fff"/><line x1="50" y1="15" x2="50" y2="34" stroke="#fff" stroke-width="2"/><line x1="50" y1="66" x2="50" y2="86" stroke="#fff" stroke-width="2"/><path d="M45 80 L50 89 L55 80" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></g>
       <circle cx="50" cy="50" r="19" fill="rgba(20,50,90,.35)"/><text x="50" y="51" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">${ws ?? '–'}</text><text x="50" y="61" fill="#fff" font-size="7.5" font-weight="700" text-anchor="middle">m/s</text></svg></div>`;
   // Måne
   const mo = D.moon?.phase != null ? D.moon : moonOf(), mp = mo.phase ?? moonOf().phase;
-  const moon = `<div class="vx-card vx-split" data-wx2="ms" data-k="moon" role="button" tabindex="0"><div class="vx-col"><div class="vx-t">${tIco('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z')}${esc(String(mo.name ?? moonOf().name).toUpperCase())}</div>
+  const moon = `<div class="vx-card vx-split" data-wxk="mane" data-wx2="ms" data-k="moon" role="button" tabindex="0"><div class="vx-col"><div class="vx-t">${tIco('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z')}${esc(String(mo.name ?? moonOf().name).toUpperCase())}</div>
       ${[['Belyst', `${Math.round(mo.illum ?? moonOf().illum)} %`], ['Neste fullmåne', dShort(mo.nextFull ?? moonOf().nextFull)], ['Neste nymåne', dShort(mo.nextNew ?? moonOf().nextNew)]].map(([a, b], i) => `<div class="vx-r${i ? ' bt' : ''}"><span>${a}</span><span>${b}</span></div>`).join('')}</div>
     <svg viewBox="0 0 56 56" class="vx-moon" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="rgba(20,40,70,.55)"/><path d="${moonPath(mp)}" fill="#e9eef5"/><circle cx="20" cy="20" r="3" fill="rgba(120,140,170,.25)"/><circle cx="33" cy="33" r="4.5" fill="rgba(120,140,170,.22)"/><circle cx="34" cy="18" r="2" fill="rgba(120,140,170,.25)"/></svg></div>`;
   // Sol
@@ -197,16 +197,19 @@ export function wxView() {
   const fold = P25.wxFold();
   const srT = +new Date(td.sunrise ?? days[0]?.sunrise ?? NaN), ssT = +new Date(td.sunset ?? days[0]?.sunset ?? NaN), sunF = ssT > srT ? Math.min(1, Math.max(0, (Date.now() - srT) / (ssT - srT))) : 0.5;
   WX.fx = fxKind(kind0 === 'night' ? 'night' : kind0, c.isDay !== false && kind0 !== 'night', c.code, sunF); // prompt 28: sola følger soloppgang/-nedgang
-  return `<div class="vx" style="background:${sky}"><div class="w22-fx" id="w22-fx" aria-hidden="true"></div><div class="vx-glow" style="background:${glow}"></div>
+  const W41 = globalThis.P41; // prompt 41: rediger kort (wiggle), Glimt skiføre
+  return `<div class="vx${W41?.wxEditing?.() ? ' p41-wxed' : ''}" style="background:${sky}">${W41?.wxStyle?.() ?? ''}<div class="w22-fx" id="w22-fx" aria-hidden="true"></div><div class="vx-glow" style="background:${glow}"></div>
     <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div>${close}</div>
     <div class="vx-in${fold ? ' p25-fold' : ''}"><div class="p25-c1">
-      <div class="vx-head"><span class="vx-pos">MIN POSISJON</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span><span class="w32-src">${esc(srcLine(D))}</span></div>
-      ${hours.length ? `<div class="vx-card vx-hours w32-${M}"><div class="vx-hrow"><button class="vx-forh w32-fh" data-wx="day" data-i="0"><b>Forhold ›</b><span>${esc(hrTitle2)}</span></button><div class="vx-modes">${modes.map(([k, n, p]) => `<button data-wx="mode" data-k="${k}" aria-label="${n}" aria-pressed="${WX.mode === k}">${tIco(p, k === 'rain', 18)}</button>`).join('')}</div></div><div class="vx-hs">${hrs}</div></div>` : ''}
-      ${days.length ? `<div class="vx-card vx-days w32-${M}">${dayRows}</div>` : ''}</div><div class="p25-c2">${fold ? P25.wxMapCard(P0, WX2.layer) : ''}
-      ${cmpCard(C2, D, { IC, ICC, kindOf, busy: CMP.busy, err: CMP.err })}
+      <div class="vx-head" data-wxk="na"><span class="vx-pos">MIN POSISJON</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span><span class="w32-src">${esc(srcLine(D))}</span></div>
+      ${W41?.skiCard?.(D) ?? ''}
+      ${hours.length ? `<div class="vx-card vx-hours w32-${M}" data-wxk="timer"><div class="vx-hrow"><button class="vx-forh w32-fh" data-wx="day" data-i="0"><b>Forhold ›</b><span>${esc(hrTitle2)}</span></button><div class="vx-modes">${modes.map(([k, n, p]) => `<button data-wx="mode" data-k="${k}" aria-label="${n}" aria-pressed="${WX.mode === k}">${tIco(p, k === 'rain', 18)}</button>`).join('')}</div></div><div class="vx-hs">${hrs}</div></div>` : ''}
+      ${days.length ? `<div class="vx-card vx-days w32-${M}" data-wxk="dager">${dayRows}</div>` : ''}</div><div class="p25-c2">${fold ? P25.wxMapCard(P0, WX2.layer) : ''}
+      <div class="p41-wb" data-wxk="cmp">${cmpCard(C2, D, { IC, ICC, kindOf, busy: CMP.busy, err: CMP.err })}</div>
       ${wind}${moon}
-      <div class="vx-grid">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div></div>
-      ${P39.wkCard(D, WX.place)}
+      <div class="vx-grid" data-wxk="detaljer">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div></div>
+      <div class="p41-wb" data-wxk="uke">${P39.wkCard(D, WX.place)}</div>
+      ${W41?.wxEditBtn?.() ?? ''}
       <a class="vx-yr" href="${esc(D.yrUrl || 'https://www.yr.no/nb')}" target="_blank" rel="noopener">${esc(D.credit || `Data: ${D.fallback || D.source === 'met' ? 'MET Norge' : 'Open-Meteo'}`)} · Se også yr.no ↗</a>
     </div>${places}${WX.sh != null ? sheet(D) : ''}${metricSheet(D)}${P39.cmpView39(WX.place, city)}</div>`;
 }

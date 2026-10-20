@@ -143,6 +143,8 @@ function swClick(e) {
 }
 /** Prompt 40: andre moduler (brief-siden, bibelkortet) kan spørre om siste trykk var en bevegelse. */
 export const swMoved = () => !!SW.t?.moved;
+/** Prompt 41: flere kort med samme sveip-bort (Min reise på Hjem). */
+export const swAdd = (c) => { if (!SWC.some((x) => x.card === c.card)) SWC.push(c); };
 
 /* =====================================================================
    2. Redigeringsark: fast i bunnen, bakteppe over alt, siden låst og vuggingen pauset
@@ -409,7 +411,7 @@ function paintRe(id) {
   root.querySelectorAll('[data-p39rp]').forEach((x) => { x.textContent = `${P} %`; });
   root.querySelectorAll('[data-p39rw]').forEach((x) => { x.style.width = `${Math.max(2, P)}%`; });
   const b = root.querySelector('[data-p39rb]'); if (b) b.textContent = `✦ ${P} %`;
-  const meta = root.querySelector('[data-p39rm]'); if (meta) meta.textContent = `✦ Analyserer på nytt … ${P} %`;
+  const meta = root.querySelector('[data-p39rm]'); if (meta) meta.textContent = `✦ Glimt analyserer på nytt … ${P} %`;
   const st = root.querySelector('[data-p39rs]'); if (st) { const i = RST.findIndex(([k]) => k === R.step); st.textContent = `${(RST[i] ?? RST[0])[1]} …`; root.querySelectorAll('[data-p39ri]').forEach((x) => { const j = +x.dataset.p39ri; x.className = j < i ? 'ok' : j === i ? 'on' : ''; x.firstChild.textContent = j < i ? '✓' : j === i ? '•' : '·'; }); }
 }
 export async function rcRe(id, engine = 'gemini') {
@@ -435,7 +437,8 @@ export async function rcRe(id, engine = 'gemini') {
     await reDone(id);
   } catch (e) {
     if (!alive()) return;
-    reFail(id, !e.status || e.status >= 500 ? `${engine === 'tesseract' ? 'Lokal OCR' : 'Gemini'} svarte ikke` : e.message || 'Noe gikk galt');
+    // Prompt 41: alle statuser kan leses på nytt; mangler originalen, sier vi det (ikke en generisk feil).
+    reFail(id, e.status === 410 || /no_file|missing_file|original/i.test(`${e.code ?? ''} ${e.message ?? ''}`) ? 'Fant ikke originalbildet. Last det opp på nytt for å lese det.' : !e.status || e.status >= 500 ? `${engine === 'tesseract' ? 'Lokal OCR' : 'Gemini'} svarte ikke` : e.message || 'Noe gikk galt');
   }
 }
 async function reWait(id, seq) {
@@ -474,7 +477,7 @@ async function reDone(id, conf) {
   if (ch.length) { HLF[id] = ch; setTimeout(() => { delete HLF[id]; if (m.screen === 'kv') draw(); }, 2000); }
   delete RE[id];
   const c = conf ?? r?.confidence; const pc = c != null ? Math.round(c * (c <= 1 ? 100 : 1)) : null;
-  flash(`✦ Analysert på nytt${pc != null ? ` · ${pc} % sikker` : ''}`, 'ok');
+  flash(`✦ Glimt har analysert på nytt${pc != null ? ` · ${pc} % sikker` : ''}`, 'ok');
   if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
     try { navigator.serviceWorker?.getRegistration?.('/finans/').then((g) => g?.showNotification('Glimt', { body: `Kvitteringen fra ${r?.merchant || 'butikken'} er lest på nytt`, icon: '/assets/glimt-varsel.png', badge: '/assets/glimt-badge.png', tag: `rc-${id}`, data: { url: '/finans/#/kv' } })).catch(() => {}); } catch {}
   }
@@ -487,7 +490,7 @@ function reStop(id) {
   delete RE[id]; haptic('tap'); flash('Avbrutt · ingenting ble endret'); draw();
 }
 /** Raden i TIL GJENNOMGANG: undertekst og tynn linje mens analysen pågår. */
-export const reMeta = (id) => { const R = RE[id]; if (!R) return null; return R.err ? `<span style="color:var(--pp-lab)">✕ ${esc(R.err)}</span>` : `<span data-p39rm style="color:var(--pp-lab)">✦ Analyserer på nytt … ${Math.floor(R.pct)} %</span>`; };
+export const reMeta = (id) => { const R = RE[id]; if (!R) return null; return R.err ? `<span style="color:var(--pp-lab)">✕ ${esc(R.err)}</span>` : `<span data-p39rm style="color:var(--pp-lab)">✦ Glimt analyserer på nytt … ${Math.floor(R.pct)} %</span>`; };
 export const reLine = (id) => (RE[id] && !RE[id].err ? `<span class="p39-rl" aria-hidden="true"><i data-p39rw style="width:${Math.max(2, Math.floor(RE[id].pct))}%"></i></span>` : '');
 export const reBtn = (id) => { const R = RE[id]; return R && !R.err ? `<button class="p23-re" disabled data-p39rb>✦ ${Math.floor(R.pct)} %</button>` : `<button class="p23-re" data-p39="rcre" data-id="${esc(id)}">✦ På nytt</button>`; };
 export function rePanel(id) {

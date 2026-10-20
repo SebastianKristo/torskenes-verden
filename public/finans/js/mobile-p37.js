@@ -208,17 +208,27 @@ async function calLoad() {
 /* =====================================================================
    Siden
    ===================================================================== */
+function listChips(L, GL) {
+  const live = visible().filter((x) => !isArch(x.raw));
+  const chip = (k, n, c, cnt, l) => { const on = String(HK.cur) === k; return `<button type="button" class="p37-lc${on ? ' on' : ''}" data-p37="list" data-k="${esc(k)}" aria-pressed="${on}">${c ? `<i style="background:${esc(c)}"></i>` : ''}${esc(n)}${l?.shared ? avs(l.members) : ''}<span>${cnt}</span></button>`; };
+  const gl = GL.length ? `<button type="button" class="p37-lc p41-glc${HK.cur === 'glimt' ? ' on' : ''}" data-p37="list" data-k="glimt" aria-pressed="${HK.cur === 'glimt'}"><i class="p41-gdot"></i>Laget med Glimt<span>${GL.length}</span></button>` : '';
+  return `<div class="p37-chips" role="tablist">${chip('alle', 'Alle', '', live.filter((x) => !x.done).length)}${L.map((l) => chip(l.id, l.name, l.color, live.filter((x) => !x.done && String(x.list) === l.id).length, l)).join('')}${gl}${chip('arkiv', 'Arkivert', '', archOf37().length)}<button type="button" class="p37-lc new" data-p37="newlist">+ Ny liste</button></div>`;
+}
 export function huskeView37() {
   if (!HK.d) return '<div class="m-spin"></div>';
   if (!window.__p37calT) calLoad().then(() => { if (m.screen === 'huske') draw(); }).catch(() => {});
   const L = lists(), all = HK.cur === 'alle', AR = HK.cur === 'arkiv';
+  // Prompt 41: «Laget med Glimt» (originalbeskjedene) som egen fane i liste-raden.
+  const GL = globalThis.P41?.glimtSrc?.(visible().map((x) => x.raw ?? x)) ?? [];
+  if (HK.cur === 'glimt' && GL.length) return `<div class="p37-hk">${listChips(L, GL)}${globalThis.P41.huskeJobRows()}${globalThis.P41.glimtView(GL, (x) => row(T(x), 0, true))}</div>`;
+  if (HK.cur === 'glimt') HK.cur = 'alle';
   if (!all && !AR && !L.some((l) => l.id === String(HK.cur))) HK.cur = 'alle';
   if (AR && !HK.archT) archLoad37().then(draw).catch(() => {});
   const live = visible().filter((x) => !isArch(x.raw)), arch = AR ? archOf37().map(T) : [];
   const inL = AR ? arch : live.filter((x) => all || String(x.list) === String(HK.cur));
   const curL = all || AR ? null : listOf(HK.cur), curN = all ? 'Alle' : AR ? 'Arkivert' : curL.name;
   const chip = (k, n, c, cnt, l) => { const on = String(HK.cur) === k; return `<button type="button" class="p37-lc${on ? ' on' : ''}" data-p37="list" data-k="${esc(k)}" aria-pressed="${on}">${c ? `<i style="background:${esc(c)}"></i>` : ''}${esc(n)}${l?.shared ? avs(l.members) : ''}<span>${cnt}</span></button>`; };
-  const chips = `<div class="p37-chips" role="tablist">${chip('alle', 'Alle', '', live.filter((x) => !x.done).length)}${L.map((l) => chip(l.id, l.name, l.color, live.filter((x) => !x.done && String(x.list) === l.id).length, l)).join('')}${chip('arkiv', 'Arkivert', '', archOf37().length)}<button type="button" class="p37-lc new" data-p37="newlist">+ Ny liste</button></div>`;
+  const chips = listChips(L, GL);
   let info = '';
   if (curL) {
     const oth = curL.members.filter((p) => p.id !== meId()).map((p) => first(p.name));
@@ -232,7 +242,7 @@ export function huskeView37() {
   const dueC = `<div class="p37-chips p37-wr">${[[0, 'I dag'], [1, 'I morgen'], [7, 'Neste uke'], [null, 'Uten dato']].map(([v, n]) => `<button type="button" class="p37-sc${HK.due === v ? ' on' : ''}" data-p17="tdue" data-v="${v ?? ''}" aria-pressed="${HK.due === v}">${n}</button>`).join('')}</div>`;
   return `<div class="p37-hk">${chips}${info}
     ${tp.map((x) => `<div class="p37-tip"><span class="p37-tic" style="--c:${x.c}">${svg(x.p, 16)}</span><span class="m-grow"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></span><span class="p37-tb"><button type="button" class="ink" data-p37="tip" data-a="${x.a1}" data-ids="${esc((x.ids ?? []).join(','))}" data-ev="${esc(x.ev ?? '')}">${esc(x.l1)}</button>${x.l2 ? `<button type="button" data-p37="tip" data-a="${x.a2}" data-ev="${esc(x.ev ?? '')}">${esc(x.l2)}</button>` : ''}${x.l3 ? `<button type="button" data-p37="tip" data-a="${x.a3}" data-ev="${esc(x.ev ?? '')}">${esc(x.l3)}</button>` : ''}</span></div>`).join('')}
-    ${AR ? '' : dueC}
+    ${AR ? '' : globalThis.P41?.huskeJobRows?.() ?? ''}${AR ? '' : dueC}
     ${HK.err ? `<div class="p37-card p37-mut">${esc(HK.err)}</div>` : ''}
     ${groups.map(([t, c, a, an, ak]) => `<div class="p37-gh"><span class="${c}">${t}</span>${an ? `<button type="button" data-p17="${ak}">${an}</button>` : ''}</div><div class="p37-card p37-rows">${a.map((x, i) => row(x, i, all || AR)).join('')}</div>`).join('')
       || `<div class="p37-empty">${AR ? 'Ingenting i arkivet. Fullførte oppgaver arkiveres automatisk etter 7 dager.' : `Ingen oppgaver i ${esc(curN)}.`}</div>`}
@@ -428,6 +438,12 @@ export async function gRun(q0, extra = {}) {
   const q = String(q0 ?? '').trim(); if (!q && !extra.image) return;
   try { document.activeElement?.blur?.(); } catch {}
   G7.lastQ = q; G7.gl = true; G7.gq = ''; G7.gBusy = extra.image ? 'Leser bildet …' : 'Glimt tenker …'; G7.gAns = null; draw();
+  // Prompt 41 (claude-code-huskeliste-glimt-ai-bakgrunn.md): lange beskjeder deles opp av AI i bakgrunnen. Arket lukkes
+  // med en gang, og en stiplet rad øverst i lista viser «Glimt deler opp beskjeden …».
+  if (!HK.local && !extra.image && globalThis.P41?.needsAI?.(q)) {
+    const ok = await globalThis.P41.huskeAsync(q, HK.cur !== 'alle' && HK.cur !== 'arkiv' && HK.cur !== 'glimt' ? HK.cur : undefined, 'huskeliste');
+    if (ok) { G7.gl = false; G7.gBusy = ''; draw(); return; }
+  }
   if (!HK.local && !G7.noSrv) {
     try {
       const r = await hlApi('/tasks/glimt', { method: 'POST', json: { q, list: HK.cur !== 'alle' && HK.cur !== 'arkiv' ? HK.cur : undefined, ...extra } });

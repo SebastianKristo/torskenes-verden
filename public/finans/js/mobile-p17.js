@@ -559,6 +559,7 @@ export function wsConnect(onMsg) {
 }
 let rtT = null;
 export function onRealtime(d) {
+  if (globalThis.P41?.onRt41?.(d)) return; // Prompt 41: glimt-job (Huskeliste), todo:changed, hjemlys notice, ruter journey
   if (globalThis.P40?.onRt40?.(d)) return; // Prompt 40: hjemlys, glimt:settings (julemodus), news/tasks
   if (d.type === 'calendar-quick') { P29.onQuickRealtime(d); return; } // Prompt 29: rask time ferdig/feilet (31: steg og felt)
   if (d.type === 'assist') { P31.onAssistRealtime(d); return; }

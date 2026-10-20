@@ -30,7 +30,7 @@ const META = {
   google: ['Informasjon', 'G', '#4285F4', 'OAuth-klient for Google Kalender', [['Lag en OAuth-klient', 'console.cloud.google.com → API-er og tjenester → Legitimasjon → Opprett OAuth-klient-ID (Nettapplikasjon).'], ['Omdirigering', 'Legg inn https://<din adresse>/api/birthdays/google/callback som autorisert omdirigerings-URI.']]],
   entur: ['Transport og pakker', 'R', '#d0605a', 'Sanntid for avganger', [['Velg et navn', 'Entur krever en identifikator på formen «firma-app». Ingen nøkkel trengs.']]],
   mybring: ['Transport og pakker', 'B', '#7BC144', 'Sporing hos Posten og Bring', [['Lag nøkkel', 'Logg inn på mybring.com → Innstillinger → API. Opprett en nøkkel og kopier den.'], ['Bruker', 'API-brukeren er e-posten du logger inn med.']]],
-  postnord: ['Transport og pakker', 'PN', '#00A0D6', 'Sporing hos PostNord', [['Registrer deg', 'Gratis på developer.postnord.com. Lag en app og kopier API-nøkkelen.']]],
+  postnord: ['Transport og pakker', 'PN', '#00A0D6', 'Sporing uten konto og uten nøkkel', [['Ingen oppsett', 'Lim inn et PostNord-nummer i Sporing (00370…, 2 bokstaver + 9 sifre + SE/DK/NO/FI). Homelab bruker det offentlige sporingsoppslaget, som postnord.no. Teststatus: «OK · offentlig endepunkt».'], ['API-nøkkel (valgfri)', 'Har du en nøkkel fra developer.postnord.com, brukes det offisielle API-et først.']]], // prompt 41
   parcelsapp: ['Transport og pakker', 'PA', '#4B5BD6', 'Reserve for alle transportører', [['Hent nøkkel', 'parcelsapp.com → API → Dashboard. Gratisnivået holder for vanlig bruk.']]],
   t212: ['Økonomi', 'T', '#13a37f', 'Aksjer og kontoer', null],
   bank: ['Økonomi', 'BK', '#2b5d8a', 'Banker og filimport', null],

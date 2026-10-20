@@ -45,22 +45,48 @@ export function ansClose(slide = false) {
   else done();
 }
 let SW = null;
+// Prompt 41 (claude-code-sok-pille-dra-til-chat.md): dra NED fra pillen åpner spørsmålet i Chat. Pillen strekker seg
+// (bunnmarg 0,65 × dra, flytter seg 0,35 × dra), håndtaket blir bredere, og «Dra ned …» → «Slipp for å åpne i Chat» ved
+// 70 px (lett haptikk begge veier). Etter 70 px gir draget motstand (0,4). Opp lukker som før.
+const PULL = 70;
 function ansDown(e) {
-  const b = e.target.closest?.('#app .p31-ans.ready');
-  if (!b || e.target.closest('button, a, input, select, textarea')) return;
-  SW = { y: e.clientY, id: e.pointerId, el: b, dy: 0 };
+  const b = e.target.closest?.('#app .p31-ans');
+  if (!b || e.target.closest('button:not([data-p31="ansx"]), a, input, select, textarea') || (e.target.closest('button') && b.classList.contains('ready'))) return;
+  SW = { y: e.clientY, id: e.pointerId, el: b, dy: 0, over: false };
   b.style.transition = 'none';
 }
 function ansMove(e) {
   if (!SW || e.pointerId !== SW.id) return;
-  const dy = Math.min(0, e.clientY - SW.y);
-  if (dy < -4 && !SW.cap) { SW.cap = true; try { SW.el.setPointerCapture(e.pointerId); } catch {} }
-  SW.dy = dy; SW.el.style.transform = `translateY(${dy}px)`; SW.el.style.opacity = String(Math.max(0, 1 + dy / 120));
+  const raw = e.clientY - SW.y;
+  if (Math.abs(raw) > 4 && !SW.cap) { SW.cap = true; try { SW.el.setPointerCapture(e.pointerId); } catch {} }
+  if (raw <= 0) {
+    if (SW.down) pullPaint(SW.el, 0, false);
+    SW.down = false; SW.dy = raw; SW.el.style.transform = `translateY(${raw}px)`; SW.el.style.opacity = String(Math.max(0, 1 + raw / 120));
+  } else {
+    const d = raw > PULL ? PULL + (raw - PULL) * 0.4 : raw, over = raw >= PULL;
+    SW.down = true; SW.dy = raw; SW.el.style.opacity = '';
+    if (over !== SW.over) { SW.over = over; vib(over ? 8 : 4); haptic('tap'); }
+    pullPaint(SW.el, d, over);
+  }
   if (SW.cap && e.cancelable) e.preventDefault();
+}
+function pullPaint(el, d, over) {
+  el.style.transform = d ? `translateY(${(d * 0.35).toFixed(1)}px)` : '';
+  el.style.paddingBottom = d ? `${(14 + d * 0.65).toFixed(1)}px` : '';
+  el.classList.toggle('p41-pull', d > 0); el.classList.toggle('p41-over', !!over);
+  let h = el.querySelector('.p41-pullt');
+  if (d > 0 && !h) { h = document.createElement('span'); h.className = 'p41-pullt'; h.setAttribute('aria-hidden', 'true'); el.appendChild(h); }
+  if (h) { h.textContent = over ? 'Slipp for å åpne i Chat' : 'Dra ned for å åpne i Chat'; h.style.opacity = String(Math.min(1, d / 40)); if (!d) h.remove(); }
+  const ah = el.querySelector('.p38-ah'); if (ah) ah.style.width = d ? `${Math.min(80, 34 + d * 0.66)}px` : '';
 }
 function ansUp(e) {
   const s = SW; if (!s || e.pointerId !== s.id) return;
   SW = null;
+  if (s.down) {
+    ANS_SUP = Date.now();
+    if (s.dy >= PULL && G31.ans?.q) { vib(10); globalThis.P41?.pillToChat ? globalThis.P41.pillToChat(s.el, G31.ans) : import('./mobile-chat.js').then((C) => { const q = G31.ans?.q; G31.ans = null; draw(); C.openChat(q ?? ''); }); return; }
+    s.el.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1),padding-bottom .25s cubic-bezier(.2,.8,.2,1)'; pullPaint(s.el, 0, false); return;
+  }
   if (s.dy < -40) { s.el.style.transition = 'transform .2s cubic-bezier(.2,.8,.2,1),opacity .2s'; ansClose(true); ANS_SUP = Date.now(); return; }
   s.el.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1),opacity .25s'; s.el.style.transform = ''; s.el.style.opacity = '';
   if (s.cap) ANS_SUP = Date.now();

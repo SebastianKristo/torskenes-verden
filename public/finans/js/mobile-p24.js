@@ -267,7 +267,9 @@ const people = () => (BD.d?.items ?? []).map((p) => {
 const inis = (n) => String(n).split(/\s+/).map((w) => w[0] ?? '').join('').slice(0, 2).toUpperCase();
 const when = (d) => (d === 0 ? 'I dag' : d === 1 ? 'I morgen' : `om ${d} d`);
 const dtx = (x) => `${WD[x.getDay()]} ${x.getDate()}. ${MN[x.getMonth()]}`;
-const bav = (p, s) => `<span class="p24-bav" style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${p.avatarUrl ? 'transparent' : RELC[p.rel]};font-size:${s >= 40 ? 14 : s >= 30 ? 11 : 10}px">${p.avatarUrl ? `<img src="${esc(p.avatarUrl)}" alt="">` : esc(inis(p.name))}</span>`;
+// Prompt 41 (claude-code-bursdag-bilder.md): eget opplastet bilde går foran kontaktbildet; uten bilde: initialer + lite «+».
+const photoOf = (p) => p.photoUrl ?? p.photo_url ?? p.photos?.[0]?.url ?? p.avatarUrl ?? null;
+const bav = (p, s, plus = false) => { const u = photoOf(p); return `<span class="p24-bav${!u && plus ? ' p41-bplus' : ''}" style="width:${s}px;height:${s}px;border-radius:${s / 2}px;background:${u ? 'transparent' : RELC[p.rel]};font-size:${s >= 40 ? 14 : s >= 30 ? 11 : 10}px">${u ? `<img src="${esc(u)}" alt="">` : esc(inis(p.name))}</span>`; };
 
 export async function bdLoad(force = false) {
   if (!force && BD.d && Date.now() - BD.t < 60000) return;
@@ -299,9 +301,9 @@ function addCard() {
 }
 function bdRow(p, i) {
   const open = BD.sel === p.id;
-  return `<div class="p24-bdr"${i ? '' : ' style="border-top:0"'}><button class="p24-bdh" data-p24="bdsel" data-id="${esc(p.id)}" aria-expanded="${open}">${bav(p, 42)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(p.name)}</b><span class="p24-mut">${p.x.getDate()}. ${MS[p.x.getMonth()]}${p.age != null ? ` · fyller ${p.age}` : ''} · ${RELN[p.rel]}</span></span>
+  return `<div class="p24-bdr"${i ? '' : ' style="border-top:0"'}><button class="p24-bdh" data-p24="bdsel" data-id="${esc(p.id)}" aria-expanded="${open}">${bav(p, 42, true)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(p.name)}</b><span class="p24-mut">${p.x.getDate()}. ${MS[p.x.getMonth()]}${p.age != null ? ` · fyller ${p.age}` : ''} · ${RELN[p.rel]}</span></span>
     <span class="p24-bdw"><b class="${p.days <= 7 ? 'soon' : ''}">${when(p.days)}</b><small>${SRC[p.src]}</small></span></button>
-    ${open ? `<div class="p24-bdo"><span>${esc(dtx(p.x).replace(/^./, (c) => c.toUpperCase()))}${p.year ? ` · født ${p.year}` : ''} · ${p.days === 0 ? 'har bursdag i dag' : `om ${p.days} dager`}</span>
+    ${open ? `<div class="p24-bdo">${globalThis.P41?.bdPhotoBar?.(p, photoOf(p)) ?? ''}<span>${esc(dtx(p.x).replace(/^./, (c) => c.toUpperCase()))}${p.year ? ` · født ${p.year}` : ''} · ${p.days === 0 ? 'har bursdag i dag' : `om ${p.days} dager`}</span>
       <span class="p24-fl">Påminnelse</span><div class="p24-chips">${REMS.map(([v, n]) => chip(p.rem === v, `data-p24="bdprem" data-id="${esc(p.id)}" data-v="${v ?? ''}"`, n)).join('')}</div>
       <div class="p24-chips">${p.src === 'google' ? '<a class="p24-ob" href="https://calendar.google.com/" target="_blank" rel="noopener">Åpne i Google Kalender</a>' : ''}<button class="p24-ob" data-p24="bdedit" data-id="${esc(p.id)}">Rediger</button><button class="p24-ob lab" data-p24="bddel" data-id="${esc(p.id)}">${BD.delArm === p.id ? 'Trykk igjen for å slette' : 'Slett'}</button></div></div>` : ''}</div>`;
 }
@@ -332,7 +334,8 @@ export function bdView() {
   if (!BD.d) { if (!BD.err && !BD.busyL) { BD.busyL = true; bdLoad().then(draw).catch(() => {}).finally(() => { BD.busyL = false; }); } return BD.err ? `<div class="p24-card p24-mut">${esc(BD.err)}</div>` : '<div class="m-spin"></div>'; }
   const L0 = people(), q = BD.q.trim().toLowerCase(), F = q ? L0.filter((x) => String(x.name).toLowerCase().includes(q)) : L0;
   const h = L0[0], same = h ? L0.filter((x) => x.days === h.days) : [], nxt = h ? L0.filter((x) => x.days > h.days).slice(0, 2) : [];
-  const hero = h ? `<button class="p24-bdhero" data-p24="bdsel" data-id="${esc(h.id)}"><span class="p24-bdk"><span>${h.days === 0 ? 'BURSDAG I DAG' : 'NESTE BURSDAG'}</span><span>${same.length > 1 ? '' : SRC[h.src]}</span></span>
+  const party = h && h.days === 0 ? globalThis.P41?.bdParty?.(same.map((x) => x.name).join(' og ')) ?? '' : ''; // prompt 41: jenka-tog i toppkortet
+  const hero = h ? `<button class="p24-bdhero${party ? ' p41-party' : ''}" data-p24="bdsel" data-id="${esc(h.id)}">${party}<span class="p24-bdk"><span>${h.days === 0 ? 'BURSDAG I DAG' : 'NESTE BURSDAG'}</span><span>${same.length > 1 ? '' : SRC[h.src]}</span></span>
       <span class="p24-bdm"><span style="min-width:0"><b class="p24-bdn">${esc(same.map((x) => x.name).join(' og '))}</b><span class="p24-bds">${same.length === 1 && h.age != null ? `Fyller ${h.age} · ` : ''}${esc(dtx(h.x))}</span></span><span class="p24-bdbig"><b>${h.days === 0 ? 'I dag' : h.days}</b><small>${h.days === 0 ? '' : h.days === 1 ? 'dag igjen' : 'dager igjen'}</small></span></span>
       ${nxt.length ? `<span class="p24-bdmore">Deretter: ${esc(nxt.map((x) => `${x.name} ${x.x.getDate()}. ${MS[x.x.getMonth()]}`).join(' · '))}</span>` : ''}</button>` : '';
   const G = [], yr = new Date().getFullYear(), soon = F.filter((x) => x.days <= 30);
@@ -341,9 +344,9 @@ export function bdView() {
   return `<div class="p24-bd">${hero}
     <div class="p24-bdq"><label class="p24-ssf"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input id="p24-bdq" data-p24in="bdq" type="search" value="${esc(BD.q)}" placeholder="Søk etter navn" autocomplete="off" aria-label="Søk etter navn"></label><button class="p24-add" data-p24="bdadd">${BD.add ? 'Lukk' : '+ Legg til'}</button></div>
     ${BD.add ? addCard() : ''}
-    ${!F.length ? `<div class="p24-card p24-mut">${L0.length ? 'Ingen treff.' : 'Ingen bursdager ennå. Trykk «+ Legg til», eller koble til Google Kalender eller Home Assistant under Kalendere.'}</div>` : ''}
+    ${!F.length ? `<div class="p24-card p24-mut">${L0.length ? 'Ingen treff.' : 'Ingen bursdager ennå. Trykk «+ Legg til», eller koble til Google Kalender eller Home Assistant i Innstillinger → Kalendere.'}</div>` : ''}
     ${G.map((g) => `<div class="p24-bdg"><span class="p24-lab"><span>${esc(g.t)}</span><span class="p24-c">${g.items.length}</span></span><div class="p24-card p24-bdl">${g.items.map(bdRow).join('')}</div></div>`).join('')}
-    ${P26.bdCalLink()}</div>`;
+    </div>`; // prompt 41: Kalendere er fjernet fra siden (oppsettet ligger i Innstillinger → Kalendere)
 }
 /** Hjem-widgeten «BURSDAGER · NESTE» (h9): de tre neste og «alle ›». */
 export function bdWidget() {
@@ -415,7 +418,7 @@ export function ruterView() {
   return `<div class="p24-rv"><div class="p24-rvh" style="${heroBg('avg')}">
       <div class="p24-rvt"><a class="p24-gp" href="#/hl" data-swipeback>‹ Hjem</a><span class="m-grow"></span><button class="p24-gp" data-p24="rvref" aria-label="Oppdater">↻ ${esc(hm(AV.t || Date.now()))}</button></div>
       <div class="p24-rvk"><span>Sanntid · Ruter</span><h1>${esc(name)}</h1><small>${esc(sub)}</small></div></div>
-    <div class="p24-rvb">${pills}${ed}
+    <div class="p24-rvb">${globalThis.P41?.tripRuter?.() ?? '' /* prompt 41: MIN REISE · SEBASTIAN */}${pills}${ed}
       ${loading && !failed ? '<span class="p24-st">Henter sanntid fra Entur …</span>' : ''}${failed ? '<span class="p24-st lab">Fikk ikke kontakt med Entur. Trykk ↻ for å prøve igjen.</span>' : ''}
       ${mlist.length > 1 ? `<div class="p24-seg">${mlist.map((x) => `<button data-p24="rvmode" data-v="${esc(x)}" aria-pressed="${RV.mode === x}">${esc(x)}</button>`).join('')}</div>` : ''}
       ${alert ? `<div class="p24-alert"><b>!</b><span>${esc(alert)}</span></div>` : ''}

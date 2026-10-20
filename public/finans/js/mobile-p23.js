@@ -233,7 +233,16 @@ export function kvView() {
     const op = !booked && KV.open === r.id, e = KV.e[r.id] ?? { n: r.merchant ?? '', v: r.total != null ? n2(r.total) : '', cat: r.categoryId ?? null };
     const meta = !booked && P39.reMeta(r.id) ? P39.reMeta(r.id) /* prompt 39: ✦ Analyserer på nytt … 42 % */ : booked ? `${dd(r.date)} · ${esc(r.category ?? 'Ukategorisert')}` : r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.provider ?? 'Manuell')}${conf(r) ? ` · ${conf(r)}` : ''}` : `<span style="color:var(--pp-lab)">Kunne ikke leses · fyll ut selv</span>`;
     const head = `${rcLogo(r)}<span class="p23-rt"><b class="${P39.hlOf(r.id, 'merchant')}">${esc(r.merchant || 'Ny kvittering')}</b><span class="${P39.hlOf(r.id, 'date')}${P39.hlOf(r.id, 'cat')}">${meta}</span></span><span class="p23-rv${P39.hlOf(r.id, 'total')}">${r.total != null ? kr2(r.total) : '–'}</span>`;
-    if (booked) return `<div class="p23-rrow" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}">${head}<button class="p23-undo" data-p23="rcundo" data-id="${esc(r.id)}" aria-label="Angre" title="Tilbake til gjennomgang">↺</button></div>`;
+    // Prompt 41 (claude-code-finans-les-pa-nytt-alltid.md): bokførte kan åpnes (bilde, navn og beløp, kategori,
+    // «Lagre endringer» og «↺ Til gjennomgang»), og «✦ På nytt» står på raden.
+    if (booked) {
+      const bo = KV.open === r.id, be = KV.e[r.id] ?? { n: r.merchant ?? '', v: r.total != null ? n2(r.total) : '', cat: r.categoryId ?? null };
+      return `<div data-p39re="${esc(r.id)}" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><div class="p23-rrow p41-bk"><button class="p23-rbtn p41-bkb" data-p23="rcopen" data-id="${esc(r.id)}" aria-expanded="${bo}" aria-label="Åpne kvitteringen">${head}</button>${P39.reBtn(r.id).replace('class="p23-re"', 'class="p23-re p41-re" title="Les på nytt med Glimt"')}</div>${P39.reLine(r.id)}
+        ${bo ? `<div class="p23-red p41-bko">${r.hasFile === false ? `<div class="p41-rsum"><b>${esc(r.merchant || 'Kvittering')}</b><span>${esc(dd(r.date))} · ${esc(r.category ?? '')}</span><span class="p41-rtot"><span>TOTAL</span><b>${r.total != null ? kr2(r.total) : '–'}</b></span></div>` : `<button type="button" class="p41-rimg" data-p23="rcimg" data-id="${esc(r.id)}" aria-label="Åpne bildet i fullskjerm" style="background-image:url('/finans/api/receipts/${encodeURIComponent(r.id)}/file')"></button>`}
+          <span class="p41-lab">BOKFØRT · ENDRE</span><div class="p23-red2"><input class="p23-in" id="p23-rn-${esc(r.id)}" data-p23in="rcn" data-id="${esc(r.id)}" value="${esc(be.n)}" aria-label="Butikk" autocomplete="off"><input class="p23-in mono" id="p23-rv-${esc(r.id)}" data-p23in="rcv" data-id="${esc(r.id)}" value="${esc(be.v)}" inputmode="decimal" aria-label="Beløp"></div>
+          <div class="p23-cats">${cats.map((c) => `<button class="p23-cat" data-p23="rccat" data-id="${esc(r.id)}" data-c="${c.id}" aria-pressed="${+be.cat === c.id}">${esc(c.name)}</button>`).join('')}</div>
+          <div class="p41-bka"><button class="p23-ok" data-p23="rcsave" data-id="${esc(r.id)}" ${KV.busy === r.id ? 'disabled' : ''}>${KV.busy === r.id ? 'Lagrer …' : 'Lagre endringer'}</button><button class="p41-undo" data-p23="rcundo" data-id="${esc(r.id)}">↺ Til gjennomgang</button></div>${P39.rePanel(r.id)}</div>` : ''}</div>`;
+    }
     return `<div data-p39re="${esc(r.id)}" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><button class="p23-rrow p23-rbtn" data-p23="rcopen" data-id="${esc(r.id)}" aria-expanded="${op}">${head}</button>${P39.reLine(r.id)}
       ${op ? `<div class="p23-red"><div class="p23-red2"><input class="p23-in" id="p23-rn-${esc(r.id)}" data-p23in="rcn" data-id="${esc(r.id)}" value="${esc(e.n)}" aria-label="Butikk" autocomplete="off"><input class="p23-in mono" id="p23-rv-${esc(r.id)}" data-p23in="rcv" data-id="${esc(r.id)}" value="${esc(e.v)}" inputmode="decimal" aria-label="Beløp"></div>
         <div class="p23-cats">${cats.map((c) => `<button class="p23-cat" data-p23="rccat" data-id="${esc(r.id)}" data-c="${c.id}" aria-pressed="${+e.cat === c.id}">${esc(c.name)}</button>`).join('')}</div>
@@ -269,12 +278,27 @@ async function rcBook(id) {
   } catch (err) { haptic('err'); flash(err.message); }
   KV.busy = null; draw();
 }
+/** Prompt 41: lagrer endringer på en bokført kvittering (serveren oppdaterer transaksjonen og logger hvem/når/hva). */
+async function rcSave(id) {
+  const r = (S.receipts ?? []).find((x) => x.id === id); if (!r) return;
+  const e = KV.e[id] ?? {}, patch = {};
+  if (e.n != null && e.n !== (r.merchant ?? '')) patch.merchant = e.n;
+  if (e.v != null) { const v = parseAmount(String(e.v)); if (Number.isFinite(v) && Math.abs(v) !== r.total) patch.total = Math.abs(v); }
+  if (e.cat != null && +e.cat !== r.categoryId) patch.categoryId = +e.cat;
+  if (!Object.keys(patch).length) { KV.open = null; draw(); return; }
+  KV.busy = id; draw();
+  try { await api(`/receipts/${id}`, { method: 'PATCH', json: patch }); KV.open = null; delete KV.e[id]; await loadReceipts(); flash('Endringene er lagret'); }
+  catch (err) { haptic('err'); flash(err.message); }
+  KV.busy = null; draw();
+}
 async function kvBind(e, t, x) {
   const k = x.dataset.p23, id = x.dataset.id;
   if (k === 'cam') { document.getElementById('p23-cap')?.click(); return true; }
   if (k === 'rcopen') { KV.open = KV.open === id ? null : id; KV.del = null; draw(); return true; }
   if (k === 'rccat') { const r = (S.receipts ?? []).find((y) => y.id === id); KV.e[id] = { n: r?.merchant ?? '', v: r?.total != null ? n2(r.total) : '', ...(KV.e[id] ?? {}), cat: +x.dataset.c }; haptic('tab'); draw(); return true; }
   if (k === 'rcok') { syncInputs(id); await rcBook(id); return true; }
+  if (k === 'rcsave') { syncInputs(id); await rcSave(id); return true; } // prompt 41: endre en bokført kvittering
+  if (k === 'rcimg') { const u = `/finans/api/receipts/${encodeURIComponent(id)}/file`; globalThis.P41?.zoomImg ? globalThis.P41.zoomImg(u) : window.open(u, '_blank', 'noopener'); return true; }
   if (k === 'rcre') {
     P39.rcRe(id); return true; // Prompt 39: fremdrift i raden i stedet for side-om-side-dialogen
     try { const mod = await import('./reanalyze.js'); await mod.openReanalyze(id, { engine: 'gemini', onDone: async () => { await Promise.all([loadReceipts().catch(() => {}), loadJobs().catch(() => {})]); draw(); } }); }

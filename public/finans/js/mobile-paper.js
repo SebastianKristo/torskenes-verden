@@ -39,7 +39,7 @@ import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief-kortet, N
 export const paper = () => pref('mDesign') === 'papir';
 export const paperDark = () => { const v = pref('paperMode'); return v === 'mork' || (v === 'auto' && !!matchMedia('(prefers-color-scheme: dark)').matches); };
 const PHOTOS = [['weather', 'Vær'], ['planets', 'Planeter'], ['oslo', 'Oslo'], ['cur', 'Ingen']];
-const PHOTO_SUB = { cur: 'Bare mørk gradient', oslo: 'Oslo fra luften', weather: 'Følger været der du er (MET)', planets: 'Jorda, Månen, Jupiter, Mars og Saturn (NASA)', custom: 'Ditt eget bilde' };
+const PHOTO_SUB = { cur: 'Bare mørk gradient', oslo: 'Oslo fra lufta · skifter gjennom dagen', weather: 'Følger været der du er (MET)', planets: 'Jorda, Månen, Jupiter, Mars og Saturn (NASA)', custom: 'Ditt eget bilde' };
 const WX_NB = { clear: 'klart', klart: 'klart', cloudy: 'skyet', sky: 'skyet', rain: 'regn', regn: 'regn', snow: 'snø', fog: 'tåke', night: 'natt' };
 export const photoKind = () => pref('photo') || 'cur';
 
@@ -71,7 +71,7 @@ export async function photoLoad(kind = photoKind(), force = false) {
   if (kind === 'cur') { P.photo.cur = { url: null, gradient: FALLBACK.cur, t: Date.now() }; return; }
   if (!force && P.photo[kind]?.t > Date.now() - 10 * 60000) return;
   // Felles bakgrunnstjeneste (/api/background); eldre servere: /api/photo-window (se mobile-bg.js).
-  try { const r = await bgFetch(kind); P.photo[kind] = { ...r, t: Date.now() }; }
+  try { let r = await bgFetch(kind); if (kind === 'oslo' && globalThis.P41?.osloPatch) r = globalThis.P41.osloPatch(r); P.photo[kind] = { ...r, t: Date.now() }; } // prompt 41: Oslo fra lufta gjennom døgnet
   catch { P.photo[kind] = { url: null, gradient: FALLBACK[kind], t: Date.now() }; }
   await probe(kind, force);
 }
@@ -93,7 +93,32 @@ function probe(kind, force) {
 }
 // Fotovinduet tegnes som lag (bilde med uskarphet/papirfilter, mørklegging, scrim, tekstur og partikler), se mobile-bg.js.
 const bgOf = (kind) => bgLayers({ img: P.img[kind], gradient: P.photo[kind]?.gradient || FALLBACK[kind] || FALLBACK.cur,
-  particles: P.photo[kind]?.particles, papir: true, hint: heroHint(kind) });
+  particles: P.photo[kind]?.particles, papir: true, hint: heroHint(kind) }) + xfade(kind);
+// Prompt 41 (claude-code-bakgrunn-oslo-dognet.md): nytt bilde ved hel time med 600 ms krysstoning (det gamle tones ut over
+// det nye), aldri blankt: neste bilde lastes ferdig før det byttes. Animasjonen fortsetter riktig om siden tegnes på nytt.
+function xfade(kind) {
+  const X = P.prev; if (!X || X.kind !== kind || !X.u) return '';
+  const el = Date.now() - X.at; if (el > 640) { P.prev = null; return ''; }
+  return `<span class="bgx p41-xf" aria-hidden="true" style="animation-delay:-${el}ms"><span class="bgx-img" style="background-image:url('${esc(X.u)}')"></span></span>`;
+}
+/** Bytter bakgrunnsbildet (Oslo hver hele time): henter listen, laster første bilde som virker, og krysstoner. */
+export async function photoRotate(kind) {
+  let r; try { r = await bgFetch(kind); } catch { r = { url: null, fallbacks: [] }; }
+  if (kind === 'oslo' && globalThis.P41?.osloPatch) r = globalThis.P41.osloPatch(r);
+  const list = [r.url, ...(r.fallbacks ?? [])].filter(Boolean), prev = P.img[kind];
+  for (const u of list) {
+    const ok = await new Promise((done) => { const im = new Image(), to = setTimeout(() => done(false), 9000); im.onload = () => { clearTimeout(to); done(true); }; im.onerror = () => { clearTimeout(to); done(false); }; im.src = u; });
+    if (!ok) continue;
+    P.photo[kind] = { ...r, t: Date.now() }; P.img[kind] = u; P.fail[kind] = false;
+    if (prev && prev !== u && !matchMedia('(prefers-reduced-motion: reduce)').matches) P.prev = { kind, u: prev, at: Date.now() };
+    draw(); return true;
+  }
+  return false;
+}
+/** Prompt 41: bakgrunnslagene for Hjem (Fold 1c: det store Glimt-kortet bruker samme bilde). */
+export const heroLayers = (kind = photoKind()) => bgOf(kind);
+/** Bildet som vises nå for en type (Innstillinger → Bakgrunn bruker det til krediteringen). */
+export const photoNow = (kind) => ({ img: P.img[kind] ?? null, photo: P.photo[kind] ?? null });
 // theme_hint gjelder bildet, eller serverens gradient når bildet mangler; reservegradientene er mørke.
 export const heroHint = (kind = photoKind()) => (P.photo[kind]?.hint === 'light' && (P.img[kind] || P.photo[kind]?.gradient) ? 'light' : 'dark');
 /** Klassisk Hjem: samme bakgrunn som et bånd bak hilsenen (null ved «Ingen»). */
@@ -102,7 +127,7 @@ export function classicBand() {
   if (kind === 'cur') return null;
   if (!P.photo[kind] && !P.band) { P.band = true; photoLoad(kind).then(draw).catch(() => {}).finally(() => { P.band = false; }); }
   const p = P.photo[kind], img = P.img[kind];
-  const credit = p?.credit && img ? `<span class="p19-cr">${p.creditUrl ? `<a href="${esc(p.creditUrl)}" target="_blank" rel="noopener" style="color:inherit">${esc(p.credit)}</a>` : esc(p.credit)}</span>` : '';
+  const credit = ''; // prompt 41: krediteringen står i Innstillinger → Tilpass → Bakgrunn, ikke på Hjem
   return { cls: ` p19-band${heroHint(kind) === 'light' ? ' hint-light' : ''}`,
     html: bgLayers({ img, gradient: p?.gradient || FALLBACK[kind] || FALLBACK.cur, particles: p?.particles, papir: false, hint: heroHint(kind) }) + credit };
 }
@@ -177,19 +202,19 @@ export function paperHero(scr) {
   // Prompt 29: «Planeter ▾» på Hjem og øverst i Innstillinger (claude-code-innst-bakgrunn.md), samme meny begge steder.
   const bgPill = home || (scr === 'set' && !m.sub);
   const own = heroBg(scr), bolK = scr === 'dir' && !m.sub ? P24.bolKicker() : null;
-  return `<header class="pp-hero${home ? ' home' : ''}${bgPill && P.open ? ' p29-open' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}${scr === 'dir' ? P24.bolFade() : ''}
+  const mai = home ? globalThis.P41?.heroMai?.() : null; // prompt 41: 17. mai (rød topp, flaggrekke, «Gratulerer med dagen»)
+  return `<header class="pp-hero${home ? ' home' : ''}${mai ? ' p41-mai' : ''}${bgPill && P.open ? ' p29-open' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}${scr === 'dir' ? P24.bolFade() : ''}
     <div class="pp-top">${backBtn}<span class="m-grow"></span>
       ${bgPill ? `<button class="p29-bgp" data-pp="photo" aria-haspopup="menu" aria-expanded="${P.open}">${esc(BG_N[kind] ?? 'Nåværende')} ▾</button>` : ''}<a class="pp-av${avatarUrl() ? ' img' : ''}" href="#/set" aria-label="Innstillinger">${avInner()}</a></div>
     ${failNote}${bgPill && P.open ? bgMenu(kind) : ''}
-    <div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(bolK ?? kicker)}</div><h1 class="pp-title${home ? ' big' : ''}">${ttl}</h1></div>${scr === 'dir' ? P24.domPill() : ''}
+    ${mai ? mai.top : ''}<div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(mai?.kicker ?? bolK ?? kicker)}</div><h1 class="pp-title${home ? ' big' : ''}${mai ? ' p41-mait' : ''}">${mai ? mai.title : ttl}</h1></div>${scr === 'dir' ? P24.domPill() : ''}
       ${home && w ? `<a class="pp-temp" href="${esc(yrUrl(w))}" target="_blank" rel="noopener" data-p36temp title="Trykk: Vær · Hold inne: åpne Yr" aria-label="Åpne værvisningen (hold inne for Yr)"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
-    ${P.photo[kind]?.credit && home && P.img[kind] ? (P.photo[kind].creditUrl ? `<a class="pp-credit" href="${esc(P.photo[kind].creditUrl)}" target="_blank" rel="noopener">${esc(P.photo[kind].credit)}</a>` : `<span class="pp-credit">${esc(P.photo[kind].credit)}</span>`) : ''}
   </header>`;
 }
 
 // Prompt 29: bakgrunnsmenyen fra pillen (fasit: Mobil Papir App → Hjem/Innstillinger, «Planeter ▾»).
 const BG_N = { cur: 'Nåværende', oslo: 'Oslo', weather: 'Vær nå', planets: 'Planeter', custom: 'Eget bilde' };
-const BG_S = { cur: 'Mørk gradient', oslo: 'Bilde av Oslo', weather: 'Følger været nå', planets: 'Ny planet hver dag (NASA)' };
+const BG_S = { cur: 'Mørk gradient', oslo: 'Oslo fra lufta · skifter gjennom dagen', weather: 'Følger været nå', planets: 'Ny planet hver dag (NASA)' };
 function bgMenu(kind) {
   const th = (k) => (P.img[k] ? `background-image:url("${esc(P.img[k])}")` : `background-image:${P.photo[k]?.gradient || FALLBACK[k] || 'linear-gradient(170deg,#4a5a6a,#1d242c)'}`);
   const opt = (k) => `<button class="p29-bo${kind === k ? ' on' : ''}" role="menuitemradio" aria-checked="${kind === k}" data-pp="setphoto" data-k="${k}"><span class="p29-bth" style='${th(k)}'></span><span class="m-grow"><b>${BG_N[k]}</b><small>${P.fail[k] ? 'Fikk ikke lastet bildet · trykk for å prøve igjen' : BG_S[k]}</small></span><span class="p29-bck">${kind === k ? '✓' : P.fail[k] ? '!' : ''}</span></button>`;
@@ -214,7 +239,7 @@ export function photoChoices() {
     <label class="p19-prev own" aria-checked="${kind === 'custom'}"><span class="p19-th">${kind === 'custom' && P.img.custom ? bgLayers({ img: P.img.custom, papir: true }) : '<span class="p19-plus">+</span>'}<span class="p19-ck">${kind === 'custom' ? '✓' : ''}</span></span>
       <span class="p19-n">Eget bilde</span><small>${kind === 'custom' ? 'Valgt · trykk for å bytte' : 'Last opp fra Bilder eller Filer'}</small><input class="m-file" type="file" accept="image/jpeg,image/png,image/webp" data-ppfile></label></div>
     ${kind === 'cur' ? '' : bgControls(kind)}
-    ${P.photo[kind]?.credit && P.img[kind] ? `<div class="snote">Foto: ${P.photo[kind].creditUrl ? `<a href="${esc(P.photo[kind].creditUrl)}" target="_blank" rel="noopener">${esc(P.photo[kind].credit)}</a>` : esc(P.photo[kind].credit)}</div>` : ''}`;
+    ${globalThis.P41?.creditLine?.(kind, P.img[kind], P.photo[kind]) ?? (P.photo[kind]?.credit && P.img[kind] ? `<div class="snote">Foto: ${P.photo[kind].creditUrl ? `<a href="${esc(P.photo[kind].creditUrl)}" target="_blank" rel="noopener">${esc(P.photo[kind].credit)}</a>` : esc(P.photo[kind].credit)}</div>` : '')}`; // prompt 41: «Foto: forfatter · lisens · Wikimedia Commons»
 }
 
 // Fanelinja: jevnt fordelte faner (aktiv fane har ikon og egen bredde). Hjem vises bare på Hjem; ellers går pila
@@ -254,7 +279,7 @@ export function paperNav(scr) {
   if (ctx === 'dom') plus = ['Legg til domene', 'dom'];
   const fabIc = plus[1] === 'spor' || plus[1] === 'dom' ? 'M12 5v14M5 12h14' : SCAN_IC;
   // Aksjer har ingen skanneknapp (prompt 23).
-  const noPlus = scr === 'aks';
+  const noPlus = scr === 'aks' || (scr === 'hl' && globalThis.P41?.scanHome?.() === false); // prompt 41: Skanneknapp på Hjem av
   // Prompt 38: Domener har ingen Skann/+ – den runde knappen er Glimt (fylt ✦) med oppsummering av domenene.
   const domG = ctx === 'dom' && m.sub !== 'admin';
   const gBtn = (cls) => `<button type="button" class="${cls} p38-domg" data-p38="domg" aria-label="Glimt · oppsummering av domenene" title="Glimt · oppsummering av domenene"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.3 6.4 6.7.6-5.1 4.4 1.6 6.6L12 17l-5.5 3.5 1.6-6.6L3 9.5l6.7-.6z" fill="currentColor"/></svg></button>`;
@@ -317,7 +342,8 @@ const lab = (t, r = '') => `<div class="pp-sec"><span>${esc(t)}</span>${r ? `<sp
 const timeOf = (iso) => { if (!iso) return ''; const d = new Date(iso); if (Number.isNaN(+d)) return ''; return d.toDateString() === new Date().toDateString() ? d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }); };
 const srcIni = (s) => { const t = String(s ?? '').trim(); return /^[A-ZÆØÅ0-9]{2,4}$/.test(t) ? t : t.slice(0, 3).toUpperCase(); };
 
-export function paperHome() {
+/** Prompt 41: kortene på Hjem som objekt (Fold 1c velger kort per fane). */
+export function homeBlocks() {
   const H = hlData(), w = H?.weather;
   const pk = active(TR.data?.items ?? []).sort((a, b) => (a.status === 'ready_for_pickup' ? -1 : 0) - (b.status === 'ready_for_pickup' ? -1 : 0));
   const p0 = pk[0];
@@ -342,7 +368,7 @@ export function paperHome() {
   P37B.H2.pk = pk.length;
   const pkRows = pk.slice(1, 3).map((p) => `<a class="p37-h2r" href="#/spor">${pkgLogo(p, 30)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(pkgTitle(p))}</b><span class="pp-mut m-ell">${esc(p.pickupPoint || p.statusText || carName(p.carrier))}</span></span></a>`);
   const pkgCard = P37B.h2Widget(pkg, pkgEmpty, pk.length, pkRows, edOn('hl'));
-  return `<div class="pp-home">${P30.updBanner('home')}${edBlocks('hl', {
+  const B = {
     h1: P29.searchCard(), // Prompt 29: søkemotor-valg (System-AI / Google / DuckDuckGo) og timer som gjenkjennes
     h2: pkgCard, h3: P27.ruterCard(ruter),
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
@@ -350,7 +376,15 @@ export function paperHome() {
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
     h6: posCard(), h7: bolWidget(), h8: P37.todoWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(), // Prompt 32: Prøveperioder
     h12: P36.briefCard(P35.briefCard(), edOn('hl')), h13: P37B.bibleHome(edOn('hl')), h14: globalThis.P40?.hjemlysHome?.(edOn('hl')) ?? '', // Prompt 40: Hjemlys // Prompt 37: Dagens bibelvers (bare med modulen) // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
-  }, { full: ['h12', 'h13', 'h1', 'h4', 'h5'] })}</div>`;
+    h15: globalThis.P41?.tripHome?.(edOn('hl')) ?? '', // Prompt 41: Min reise · forlot skolen (bare når relevant)
+  };
+  // Prompt 41: «I stedet» skjuler Avganger mens reisen er aktiv.
+  if (B.h15 && globalThis.P41?.tripInstead?.()) B.h3 = '';
+  return B;
+}
+export function paperHome() {
+  const B = homeBlocks();
+  return `<div class="pp-home">${P30.updBanner('home')}${globalThis.P41?.maiHome?.() ?? ''}${edBlocks('hl', B, { full: ['h12', 'h13', 'h1', 'h4', 'h5', 'h15'] })}</div>`;
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
 const RUTER = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regionbus: '#75A300', water: '#682C88', ferry: '#682C88', rail: '#003087', train: '#003087' };

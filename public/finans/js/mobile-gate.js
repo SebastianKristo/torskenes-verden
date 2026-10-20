@@ -1,5 +1,5 @@
 // Papir-innlogging og onboarding på mobil (prompt 14, Mobil Papir App → «gate»).
-// Innlogging: fotoheader, deretter Server, Brukernavn og Passord som understrekede felter, og 2FA med sekssifret kode
+// Innlogging: fotoheader, deretter Brukernavn og Passord (prompt 41: uten Server-felt) som understrekede felter, og 2FA med sekssifret kode
 // og «Husk denne enheten i 30 dager». Samme API som /login (/api/auth/login og /api/auth/totp).
 // Onboarding (første gang etter innlogging, layout.onboarded === false): design, bakgrunn, og varsler og tilgang.
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -24,7 +24,6 @@ function view() {
   const host = location.host;
   if (G.step === 'login') return `${hero(`Homelab · ${host}`, 'Hei,\nvelkommen hjem')}
     <form class="pp-gform" data-g="login" novalidate>
-      <label>SERVER<input value="${esc(host)}" readonly aria-readonly="true" tabindex="-1"></label>
       <label>BRUKERNAVN<input name="username" value="${esc(G.user)}" autocomplete="username" autocapitalize="off" spellcheck="false" ${G.user ? '' : 'autofocus'}></label>
       <label>PASSORD<input name="password" type="password" autocomplete="current-password" ${G.user ? 'autofocus' : ''}></label>
       ${G.err ? `<span class="pp-gerr" role="alert">${esc(G.err)}</span>` : ''}
@@ -76,7 +75,7 @@ function bindGate() {
         if (data.needsTotp) { G.ticket = data.ticket; G.user = data.username || u; G.step = '2fa'; return mount(); }
         if (ok) return done();
         G.err = data.error || 'Feil brukernavn eller passord.';
-      } catch { G.busy = false; G.err = 'Fikk ikke kontakt med serveren.'; }
+      } catch { G.busy = false; G.err = 'Får ikke kontakt med Homelab. Prøv igjen, eller endre serveradressen i Innstillinger → Konto → Server.'; }
       return mount();
     }
     if (k === 'totp') {

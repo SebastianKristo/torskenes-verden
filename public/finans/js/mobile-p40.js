@@ -350,7 +350,13 @@ export function txTools(id, t) {
         ${rr.res.total_ok === false ? '<span class="p40-err">Summen av linjene stemmer ikke med beløpet. Sjekk med «Rediger alt».</span>' : ''}<div class="p40-two"><button type="button" class="p40-pri" data-p40="rrapply" data-id="${esc(id)}">Bruk endringene</button><button type="button" class="p40-sec" data-p40="rrkeep" data-id="${esc(id)}">Behold som før</button></div></div>`
         : `<div class="p40-rr col"><b>Ingen endringer</b><span>Butikk, dato og ${(r?.lines ?? []).length ? `alle ${(r.lines ?? []).length} linjer` : 'linjene'} stemmer${r?.total != null ? `, og summen er ${kr(r.total)}` : ''}.</span>${rr.res.total_ok === false ? '<span class="p40-err">Summen stemmer ikke. Rett den med «Rediger alt».</span>' : ''}<button type="button" class="p40-sec" data-p40="rrkeep" data-id="${esc(id)}">OK</button></div>`;
     }
-    if (!read) read = `<button type="button" class="p40-dark" data-p40="reread" data-id="${esc(id)}" data-r="${esc(rid)}">✦ La Glimt lese kvitteringen på nytt</button>`;
+    if (!read) read = `<button type="button" class="p40-dark" data-p40="reread" data-id="${esc(id)}" data-r="${esc(rid)}">✦ Les på nytt med Glimt</button>`;
+  } else if (t) {
+    // Prompt 41: transaksjoner uten kvittering kan også leses på nytt (POST /transactions/:id/reread), uansett status.
+    if (rr?.busy) read = `<div class="p40-rr"><span class="p40-glb">✦</span><span class="m-grow"><b>Glimt leser transaksjonen på nytt …</b><span>Sjekker butikk, dato, beløp og kategori</span></span></div>`;
+    else if (rr?.res) read = (rr.res.changes ?? []).length ? `<div class="p40-rr col"><b>Glimt fant ${rr.res.changes.length} endring${rr.res.changes.length === 1 ? '' : 'er'}</b>${rr.res.changes.map((c) => `<div class="p40-rrd"><span>${esc(c.label ?? c.field)}</span><s>${esc(c.old ?? '–')}</s><span>→</span><b>${esc(c.new ?? '–')}</b></div>`).join('')}<div class="p40-two"><button type="button" class="p40-pri" data-p40="rrapply" data-id="${esc(id)}">Bruk endringene</button><button type="button" class="p40-sec" data-p40="rrkeep" data-id="${esc(id)}">Behold som det er</button></div></div>`
+      : `<div class="p40-rr col"><b>Ingen endringer</b><span>Butikk, dato og beløp stemmer.</span><button type="button" class="p40-sec" data-p40="rrkeep" data-id="${esc(id)}">OK</button></div>`;
+    else read = `<button type="button" class="p40-dark" data-p40="reread" data-id="${esc(id)}" data-r="">✦ Les på nytt med Glimt</button>`;
   }
   return `${read}<button type="button" class="pp-btn p40-edall" data-p40="edall" data-id="${esc(id)}">Rediger alt</button>${addedLine(t, 'tx')}${r ? addedLine({ ...r, added: r.added }, 'rc').replace(/Lagt til/, 'Kvittering lagt til') : ''}`;
 }
@@ -358,9 +364,9 @@ async function reread(id, rid) {
   const T0 = MOD.p3?.TX?.d?.[id];
   TXE.rr = { id, busy: true }; draw();
   try {
-    const r = await api(`/receipts/${rid}/reanalyze`, { method: 'POST', json: { engine: 'gemini', full: true } });
-    if (r?.jobId && MOD.p39) { TXE.rr = null; delete MOD.p39.RE[rid]; MOD.p39.rcRe(rid); return; } // fremdrift som i prompt 39
-    const N = r?.result ?? r?.candidate ?? r ?? {}, O = T0?.receipt ?? {};
+    const r = rid ? await api(`/receipts/${rid}/reanalyze`, { method: 'POST', json: { engine: 'gemini', full: true } }) : await api(`/transactions/${id}/reread`, { method: 'POST', json: {} }); // prompt 41
+    if (r?.jobId && MOD.p39 && rid) { TXE.rr = null; delete MOD.p39.RE[rid]; MOD.p39.rcRe(rid); return; } // fremdrift som i prompt 39
+    const N = r?.result ?? r?.candidate ?? r ?? {}, O = rid ? T0?.receipt ?? {} : { merchant: T0?.merchant ?? T0?.description, date: T0?.date, total: T0?.amount != null ? Math.abs(T0.amount) : null };
     const ch = Array.isArray(r?.changes) ? r.changes : [['merchant', 'Butikk'], ['date', 'Dato'], ['total', 'Beløp'], ['vat', 'MVA']].map(([f, label]) => ({ field: f, label, old: O[f], new: N[f] })).filter((c) => c.new != null && String(c.new) !== String(c.old ?? ''));
     const ln = (L) => (L ?? []).map((l) => `${l.name} ${l.price}`).join('|');
     if (!r?.changes && N.lines && ln(N.lines) !== ln(O.lines)) ch.push({ field: 'lines', label: 'Linjer', old: `${(O.lines ?? []).length} linjer`, new: `${N.lines.length} linjer` });
@@ -372,7 +378,8 @@ async function reread(id, rid) {
 }
 async function rrApply(id, keep) {
   const R = TXE.rr; TXE.rr = null;
-  if (R?.cand) { try { await api(`/receipts/${R.rid}/reanalyze/apply`, { method: 'POST', json: { candidateId: R.cand, keep: keep ? 'old' : 'new' } }); } catch (e) { flash(e.message, 'err'); } }
+  if (R?.cand && !R.rid) { try { await api(`/transactions/${id}/reread/apply`, { method: 'POST', json: { candidateId: R.cand, keep: keep ? 'old' : 'new' } }); } catch (e) { flash(e.message, 'err'); } }
+  else if (R?.cand) { try { await api(`/receipts/${R.rid}/reanalyze/apply`, { method: 'POST', json: { candidateId: R.cand, keep: keep ? 'old' : 'new' } }); } catch (e) { flash(e.message, 'err'); } }
   if (!keep) { flash('✦ Endringene er tatt i bruk', 'ok'); await MOD.p3?.txLoad?.(id, true).catch(() => {}); }
   draw();
 }
@@ -529,7 +536,10 @@ async function ngLocal() {
   return { title: NG.per === 'uke' ? 'Uka i nyheter' : NG.per === 'idag' ? 'Dette skjer i dag' : 'Siste døgn', lead: refs.length ? `${refs.length} saker fra ${srcN.slice(0, 3).join(', ')}${srcN.length > 3 ? ' og flere' : ''}. Glimt har samlet det viktigste per tema.` : 'Ingen saker passer valgene dine akkurat nå.', sections, refs, local: true, updatedAt: new Date().toISOString(), t: Date.now() };
 }
 const refChip = (n, R) => { const r = R.find((x) => +x.n === +n); return r ? `<a class="p40-ref" href="${esc(r.url ?? '#')}" target="_blank" rel="noopener" aria-label="Kilde ${n}: ${esc(r.title)}">${n}</a>` : ''; };
-function ngText(t, R) { return esc(cleanMd(t)).replace(/\s*\[(\d+)\]/g, (a, n) => refChip(n, R)); }
+// Prompt 41 (claude-code-nyhet-oppsummering-bredde.md): kildene som små tall (aldri halve hakeparenteser) og egennavn med stor forbokstav.
+const PROPER = ['Norge', 'Oslo', 'Bergen', 'Trondheim', 'Stavanger', 'Tromsø', 'Sverige', 'Danmark', 'Europa', 'USA', 'Ukraina', 'Russland', 'Kina', 'Israel', 'Gaza'];
+const tidy = (t) => { let x = String(t ?? ''); for (const w of PROPER) x = x.replace(new RegExp(`\\b${w}\\b`, 'gi'), w); return x.replace(/\bom ([^.,]+?) og ([^.,]+?) og ([^.,]+?)\./g, 'om $1, $2 og $3.'); };
+function ngText(t, R) { return esc(tidy(cleanMd(t))).replace(/\s*\[(\d+)\]/g, (a, n) => refChip(n, R)).replace(/\s*\[\d*|\d*\](\s*·)?/g, ''); }
 function ngLayer() {
   if (!NG.open || m.screen !== 'nyheter') return '';
   const D = NG.d, R = D?.refs ?? [], used = new Set(), imgs = D?.images ?? [];

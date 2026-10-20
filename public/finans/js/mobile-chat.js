@@ -25,7 +25,7 @@ L.chats ??= []; L.folders ??= []; L.open ??= {};
 const keep = () => { try { localStorage.setItem(LS, JSON.stringify(L)); } catch { /* privat modus */ } };
 
 export const C = {
-  srv: null, list: null, cur: null, models: null, mErr: '', q: '', drawer: false, sh: null, inp: '', att: [], web: false, data: false,
+  srv: null, list: null, cur: null, models: null, mErr: '', q: '', drawer: false, sh: null, inp: '', att: [], web: false, data: true, // prompt 41: «Mine data» er på i hver nye samtale
   busy: false, stream: '', used: [], ctrl: null, ed: null, mn: null, rn: '', nf: '', del: false, cop: null, spk: null, rec: false,
   toast: '', guard: null, pend: '', rem: false, kb: null, kbSel: [], pulls: {}, pn: '', mdel: null, sc: 0, bottom: false, from: 'hl', t: 0,
 };
@@ -44,24 +44,29 @@ export async function setPers(group, key, v) {
   try { await hlApi(`/integrations/${group}`, { method: 'PUT', json: { [key]: typeof v === 'boolean' ? (v ? '1' : '0') : v } }); return true; }
   catch { return false; } // lagret på enheten
 }
-const dataOK = () => pers('chat_my_data', false);
+const dataOK = () => pers('chat_my_data', true); // prompt 41 (claude-code-chat-mine-data-standard.md): på som standard
 const askCloud = () => pers('chat_ask_cloud', true);
 const theme = () => (L.th || pers('chat_theme', 'papir')) === 'noytral' ? 'noytral' : 'papir';
 
 /* ---------- Modeller ---------- */
 const fallbackModels = () => [...LOC0.map(([id, name, size, s]) => ({ id, name, kind: 'lokal', provider: 'ollama', size, sub: s, vision: /vl|gemma3/.test(id), installed: true })), ...SKY0.map(([id, name, size, s, p]) => ({ id, name, kind: 'sky', provider: p, size, sub: s, vision: true, installed: true }))];
 const models = () => C.models ?? fallbackModels();
-const mOf = (id) => models().find((x) => x.id === id) ?? { id, name: id, kind: /gemini|groq|gpt/i.test(id) ? 'sky' : 'lokal', provider: /gemini/i.test(id) ? 'gemini' : /groq/i.test(id) ? 'groq' : 'ollama' };
+// Prompt 41 (claude-code-chat-auto-modell.md): «✦ Auto» – Glimt velger beste modell for hver melding, og er standard.
+const AUTO = { id: 'auto', name: '✦ Auto', kind: 'auto', provider: 'glimt', sub: 'Glimt velger beste modell for hver melding · lokalt når dine data er med' };
+const autoOf = () => { const a = C.auto; return a ? { ...AUTO, name: a.label || AUTO.name } : AUTO; };
+if (!L.autoMig) { L.autoMig = 1; L.model = 'auto'; keep(); } // eksisterende brukere flyttes til Auto én gang
+const mOf = (id) => (id === 'auto' ? autoOf() : null) ?? models().find((x) => x.id === id) ?? { id, name: id, kind: /gemini|groq|gpt/i.test(id) ? 'sky' : 'lokal', provider: /gemini/i.test(id) ? 'gemini' : /groq/i.test(id) ? 'groq' : 'ollama' };
 const isSky = (id) => mOf(id).kind === 'sky';
-const mLbl = (id) => { const x = mOf(id); return x.kind === 'sky' ? x.name : x.id; };
-const curModel = () => C.cur?.model || L.model || pers('chat_default_model', '') || models().find((x) => x.kind === 'lokal' && x.installed !== false)?.id || 'llama3.1:8b';
+const mLbl = (id) => { const x = mOf(id); return x.kind === 'sky' || x.kind === 'auto' ? x.name : x.id; };
+const curModel = () => C.cur?.model || L.model || pers('chat_default_model', '') || 'auto';
 const firstLocal = () => models().find((x) => x.kind === 'lokal' && x.installed !== false)?.id ?? 'llama3.1:8b';
 
 async function loadModels() {
   try {
     const r = await hlApi('/chat/models');
     const list = Array.isArray(r) ? r : r?.models ?? [];
-    C.models = list.map((x) => ({ ...x, id: x.id ?? x.name, name: x.name ?? x.id }));
+    C.models = list.filter((x) => (x.id ?? x.name) !== 'auto').map((x) => ({ ...x, id: x.id ?? x.name, name: x.name ?? x.id }));
+    C.auto = r?.auto ?? null; // {id:'auto', label:'✦ Auto', picks:{text, vision, long}}
     if (r?.default && !L.model) L.model = r.default;
     C.mErr = '';
   } catch (e) { C.models = null; C.mErr = e.status === 404 ? 'Serveren har ikke Chat ennå' : e.message; }
@@ -204,7 +209,7 @@ async function send(text, opt = {}) {
   if (!t || C.busy) return;
   const model = C.cur?.model || curModel(), useData = C.data && dataOK();
   // Spør før data forlater serveren (klientsjekk; serveren svarer også 409 needsConfirm).
-  if (isSky(model) && (useData || C.att.length) && !opt.ok && askCloud() && !C.cur?.settings?.skipCloudAsk) {
+  if (model !== 'auto' && isSky(model) && (useData || C.att.length) && !opt.ok && askCloud() && !C.cur?.settings?.skipCloudAsk) {
     C.pend = t; C.guard = { model: mLbl(model), leaves: guardItems(useData), hasData: useData }; C.sh = 'guard'; C.rem = false; draw(); return;
   }
   const cur = ensureCur();
@@ -230,7 +235,7 @@ async function run(o = {}) {
   const files = cur.messages.flatMap((x) => x.files ?? []);
   const body = { chatId: cur.id && !String(cur.id).startsWith('l') ? cur.id : undefined, model, messages: cur.messages.map(toApi), settings: cur.settings, webSearch: C.web, myData: o.myData ?? (C.data && dataOK()), files, ...(o.editFrom != null ? { editFrom: o.editFrom } : {}), ...(o.confirmCloud ? { confirmCloud: true } : {}), ...(o.withoutMyData ? { withoutMyData: true } : {}) };
   const ctrl = new AbortController(); C.ctrl = ctrl;
-  let full = '', stats = null, err = '', stopped = false;
+  let full = '', stats = null, err = '', stopped = false, pick = null;
   try {
     const res = await fetch('/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' }, body: JSON.stringify(body), signal: ctrl.signal });
     if (res.status === 409) {
@@ -255,7 +260,7 @@ async function run(o = {}) {
         let ev = 'message', data = '';
         for (const ln of raw.split('\n')) { if (ln.startsWith('event:')) ev = ln.slice(6).trim(); else if (ln.startsWith('data:')) data += ln.slice(5).trim(); }
         let d = {}; try { d = data ? JSON.parse(data) : {}; } catch { d = { text: data }; }
-        if (ev === 'meta') { if (d.chatId) cur.id = d.chatId; if (d.used) C.used = d.used; }
+        if (ev === 'meta') { if (d.chatId) cur.id = d.chatId; if (d.used) C.used = d.used; if (d.pick || d.picked) pick = d.pick ?? d.picked; else if (model === 'auto' && d.model && d.model !== 'auto') pick = { model: d.model, label: d.reason ?? d.label }; }
         else if (ev === 'facts') { C.facts41 = d.facts ?? null; draw(); } // prompt 41
         else if (ev === 'delta') { full += d.text ?? ''; C.stream = full; paintStream(); }
         else if (ev === 'done') stats = d;
@@ -267,7 +272,10 @@ async function run(o = {}) {
   const sec = (performance.now() - t0) / 1000;
   const toks = stats?.tokensPerSec ?? Math.max(1, Math.round(full.length / 4 / Math.max(0.5, sec)));
   const facts = stats?.facts ?? C.facts41 ?? null; C.facts41 = null;
-  if (full || stopped) cur.messages.push({ r: 'a', t: full + (stopped ? ' …' : ''), m: model, tool: stats?.used ?? C.used ?? [], ...(facts?.length ? { facts } : {}), st: `${stopped ? 'Stoppet · ' : ''}${Math.round(toks)} tok/s · ${((stats?.ms ?? sec * 1000) / 1000).toFixed(1).replace('.', ',')} s` });
+  // Auto: hvert svar viser hvilken modell som faktisk ble brukt og hvorfor («✦ Kode · Qwen 3 · 42 tok/s · 3,1 s»).
+  const pk = pick ?? stats?.pick ?? stats?.picked ?? (model === 'auto' && stats?.model && stats.model !== 'auto' ? { model: stats.model, label: stats.reason ?? stats.label } : null);
+  const used = pk?.model ?? (model === 'auto' ? null : model), why = pk ? `✦ ${[pk.label ?? pk.reason ?? pk.kind, pk.name ?? (used ? mLbl(used) : '')].filter(Boolean).join(' · ').replace(/^✦\s*/, '')} · ` : '';
+  if (full || stopped) cur.messages.push({ r: 'a', t: full + (stopped ? ' …' : ''), m: used ?? model, tool: stats?.used ?? C.used ?? [], ...(facts?.length ? { facts } : {}), st: `${stopped ? 'Stoppet · ' : ''}${why}${Math.round(toks)} tok/s · ${((stats?.ms ?? sec * 1000) / 1000).toFixed(1).replace('.', ',')} s` });
   if (err) cur.messages.push({ r: 'a', t: err, m: model, tool: [], st: 'Feil', err: true });
   if (stopped) haptic('tap'); else if (!err) haptic('ok');
   commit(cur);
@@ -430,7 +438,8 @@ function sheets() {
   if (s === 'model') {
     const r = (x) => `<button class="ch27-mr" data-c27="pick" data-id="${esc(x.id)}"><span class="m-grow"><span class="ch27-mn"><b>${esc(x.kind === 'sky' ? x.name : x.id)}</b><em class="${x.kind === 'sky' ? 'sky' : 'loc'}">${x.kind === 'sky' ? 'SKY' : 'LOKAL'}</em></span><span>${esc(x.kind === 'sky' ? [x.size || x.provider, x.sub].filter(Boolean).join(' · ') : [x.name !== x.id ? x.name : '', x.size, x.sub].filter(Boolean).join(' · '))}</span></span><b class="ch27-ck">${x.id === model ? '✓' : ''}</b></button>`;
     const loc = models().filter((x) => x.kind === 'lokal' && x.installed !== false), sky = models().filter((x) => x.kind === 'sky');
-    return sheetWrap(`${shHead('Velg modell')}${C.mErr ? `<span class="ch27-mut">${esc(C.mErr)} · viser standardlisten.</span>` : ''}<div class="ch27-gl">LOKALT · OLLAMA PÅ HJEMMESERVEREN</div><div class="ch27-box">${loc.map(r).join('') || '<div class="ch27-none">Ingen lokale modeller</div>'}</div>
+    const auto = `<div class="ch27-box"><button class="ch27-mr" data-c27="pick" data-id="auto"><span class="m-grow"><span class="ch27-mn"><b>✦ Auto</b><em class="p41-auto">AUTO</em></span><span>Glimt velger beste modell for hver melding · lokalt når dine data er med</span></span><b class="ch27-ck">${model === 'auto' ? '✓' : ''}</b></button></div>`;
+    return sheetWrap(`${shHead('Velg modell')}${C.mErr ? `<span class="ch27-mut">${esc(C.mErr)} · viser standardlisten.</span>` : ''}${auto}<div class="ch27-gl">LOKALT · OLLAMA PÅ HJEMMESERVEREN</div><div class="ch27-box">${loc.map(r).join('') || '<div class="ch27-none">Ingen lokale modeller</div>'}</div>
       <div class="ch27-gl">SKY</div><div class="ch27-box">${sky.map(r).join('') || '<div class="ch27-none">Ingen sky-modeller (legg inn Gemini- eller Groq-nøkkel)</div>'}</div>
       <span class="ch27-mut">Sky-modeller merkes SKY. Før dine data eller vedlegg sendes dit, får du spørsmål om det.</span><button class="ch27-ob" data-c27="mods">Administrer modeller ›</button>`);
   }
@@ -492,7 +501,7 @@ export function chatView() {
   const model = C.cur?.model || curModel(), M = mOf(model), sky = M.kind === 'sky', msgs = C.cur?.messages ?? [], lastA = msgs.map((x) => x.r).lastIndexOf('a');
   const empty = !msgs.length && !C.busy, w = wide(), th = theme();
   const dOn = C.data && dataOK();
-  const body = C.cur && C.cur.messages === null ? '<div class="m-spin"></div>' : empty ? `<div class="ch27-empty"><div><span class="ch27-ml">${esc((sky ? `${M.name} · ${M.size || M.provider}` : `${M.id} · lokalt på hjemmeserveren`).toUpperCase())}</span><span class="ch27-hi">Hva kan jeg hjelpe med?</span></div>
+  const body = C.cur && C.cur.messages === null ? '<div class="m-spin"></div>' : empty ? `<div class="ch27-empty"><div><span class="ch27-ml">${esc((M.kind === 'auto' ? '✦ Auto · Glimt velger modell for hver melding' : sky ? `${M.name} · ${M.size || M.provider}` : `${M.id} · lokalt på hjemmeserveren`).toUpperCase())}</span><span class="ch27-hi">Hva kan jeg hjelpe med?</span></div>
       <div class="ch27-chips sc">${PERS.map(([k, n]) => `<button class="ch27-pc${chip(((C.cur?.settings ?? L.def ?? DEF).persona || 'std') === k)}" data-c27="per" data-k="${k}">${n}</button>`).join('')}</div>
       <div class="ch27-sug">${SUGG.map(([t, s2, x], i) => `<button data-c27="sugg" data-i="${i}"><b>${esc(t)}</b>${s2 ? `<span>${esc(s2)}</span>` : ''}</button>`).join('')}</div></div>`
     : `${msgs.map((x, i) => msgView(x, i, lastA)).join('')}${C.busy ? `<div class="ch27-a"><div class="ch27-ah p31-cha"><span id="ch27-gl">${P31.glimt(22, C.stream ? 'answer' : 'think')}</span><span id="ch27-ghl">${esc((C.g31 ? 'Glimt' : mLbl(model)).toUpperCase())}${C.stream ? '' : ' · TENKER'}</span>${(C.used ?? []).map((n) => `<em>${C.g31 ? '' : 'Leser '}${esc(n)}</em>`).join('')}</div>${C.stream ? '' : '<span class="m-sr" id="ch27-think">Glimt tenker …</span>'}<div class="ch27-md" id="ch27-stream">${md(C.stream)}</div>${facts41(C.facts41)}</div>` : ''}`;
@@ -500,12 +509,12 @@ export function chatView() {
   return `<div class="ch27 ${th}${w ? ' wide' : ''}" data-c27root>
     ${w ? side(false) : ''}
     <div class="ch27-main"><div class="ch27-top">${w ? '' : `<button class="ch27-ib back" data-c27="exit" aria-label="Tilbake">‹</button><button class="ch27-ib" data-c27="drawer" aria-label="Historikk">${svg(IC.menu, 21)}</button>`}
-      <button class="ch27-model" data-c27="model"><b>${esc(sky ? M.name : M.id)}</b><em class="${sky ? 'sky' : 'loc'}">${sky ? 'SKY' : 'LOKAL'}</em><span>▼</span></button><span class="m-grow"></span>
+      <button class="ch27-model" data-c27="model"><b>${esc(sky || M.kind === 'auto' ? M.name : M.id)}</b><em class="${M.kind === 'auto' ? 'p41-auto' : sky ? 'sky' : 'loc'}">${M.kind === 'auto' ? 'AUTO' : sky ? 'SKY' : 'LOKAL'}</em><span>▼</span></button><span class="m-grow"></span>
       <button class="ch27-ib" data-c27="params" aria-label="Samtaleinnstillinger">${svg(IC.tune)}</button>${w ? '' : `<button class="ch27-ib" data-c27="new" aria-label="Ny chat">${svg(IC.pen)}</button>`}</div>
     <div class="ch27-sc" id="ch27-sc"><div class="ch27-msgs">${body}</div></div>
     <div class="ch27-dock">${C.toast ? `<div class="ch27-toast" role="status">${esc(C.toast)}</div>` : ''}<div class="ch27-comp">
       ${C.att.length ? `<div class="ch27-attl">${C.att.map((a, i) => `<span><em>${a.kind === 'img' ? '▣' : a.kind === 'doc' ? '#' : '⎙'}</em><span class="m-ell">${esc(a.name)}</span><button data-c27="arm" data-i="${i}" aria-label="Fjern vedlegg">✕</button></span>`).join('')}</div>` : ''}
-      ${C.rec ? `<div class="ch27-rec"><i></i><span class="m-grow">Lytter … snakk nå</span><span class="ch27-wave">${'<b></b>'.repeat(7)}</span></div>` : `<textarea id="ch27-in" rows="${rows}" placeholder="Spør ${esc(sky ? M.name : M.id)} …" enterkeyhint="send" aria-label="Melding">${esc(C.inp)}</textarea>`}
+      ${C.rec ? `<div class="ch27-rec"><i></i><span class="m-grow">Lytter … snakk nå</span><span class="ch27-wave">${'<b></b>'.repeat(7)}</span></div>` : `<textarea id="ch27-in" rows="${rows}" placeholder="Spør ${esc(M.kind === 'auto' ? 'Glimt' : sky ? M.name : M.id)} …" enterkeyhint="send" aria-label="Melding">${esc(C.inp)}</textarea>`}
       <div class="ch27-tools"><button class="ch27-plus" data-c27="plus" aria-label="Legg ved">${svg(IC.plus, 18, 2.2)}</button><button class="ch27-tg${chip(C.web)}" data-c27="web" aria-pressed="${C.web}">${svg(IC.web, 15)}Nettsøk</button><button class="ch27-tg${chip(dOn)}" data-c27="data" aria-pressed="${dOn}">${svg(IC.db, 15)}Mine data</button><span class="m-grow"></span>
         <button class="ch27-mic${C.rec ? ' on' : ''}" data-c27="mic" aria-label="Snakk">${svg(IC.mic, 19)}</button>${C.busy ? '<button class="ch27-send" data-c27="stop" aria-label="Stopp"><i class="sq"></i></button>' : `<button class="ch27-send${C.inp.trim() ? '' : ' dim'}" data-c27="send" aria-label="Send" id="ch27-send">${svg(IC.up, 18, 2.6)}</button>`}</div></div>
       ${sky ? `<div class="ch27-foot">Sky-modell: meldingen sendes til ${M.provider === 'groq' || /groq/i.test(model) ? 'Groq' : 'Google'}.</div>` : ''}</div></div>
@@ -535,10 +544,18 @@ addEventListener('scroll', (e) => { const t = e.target; if (t?.id === 'ch27-sc')
 /** Åpne Chat (fra ✦ AI på Hjem, Mer eller fanelinja). Med tekst startes en ny samtale med den. */
 export function openChat(prompt = '') {
   if (m.screen !== 'chat') C.from = m.screen;
-  C.cur = null; C.inp = ''; C.att = []; C.sh = null; C.drawer = false;
+  C.cur = null; C.data = true; C.inp = ''; C.att = []; C.sh = null; C.drawer = false;
   if (location.hash !== '#/chat') location.hash = '#/chat';
   const p = String(prompt).trim();
   if (p) { const go = () => (C.list ? send(p) : chatLoad().then(() => send(p))); setTimeout(go, 60); }
+}
+/** Prompt 41: åpner Chat med spørsmålet og svaret fra søkepillen (ikke spør på nytt når svaret er ferdig). */
+export function openChatWith(q, answer, src = 'glimt') {
+  if (m.screen !== 'chat') C.from = m.screen;
+  C.inp = ''; C.att = []; C.sh = null; C.drawer = false; C.data = true;
+  if (location.hash !== '#/chat') location.hash = '#/chat';
+  const go = () => { C.cur = { id: null, title: q.length > 42 ? `${q.slice(0, 40)} …` : q, model: curModel(), pinned: false, folderId: null, up: nowMs(), settings: { ...DEF, ...(L.def ?? {}) }, messages: [{ r: 'u', t: q }, { r: 'a', t: String(answer ?? ''), m: src, tool: [], st: 'Fra søket på Hjem' }] }; commit(C.cur); };
+  setTimeout(() => (C.list ? go() : chatLoad().then(go).catch(go)), 60);
 }
 /** Prompt 32: åpner en Chat-tråd som en Glimt-jobb ble flyttet til (POST /api/assist/:id/handoff → {chatId}). */
 export function openChatId(id) {
@@ -631,7 +648,7 @@ export async function chatBind(e, t) {
     case 'exit': chatLeave(); location.hash = `#/${C.from && C.from !== 'chat' ? C.from : 'hl'}`; return true;
     case 'drawer': C.drawer = true; break;
     case 'drawerx': C.drawer = false; break;
-    case 'new': C.cur = null; C.drawer = false; C.inp = ''; C.att = []; C.ed = null; draw(); document.getElementById('ch27-in')?.focus({ preventScroll: true }); return true;
+    case 'new': C.cur = null; C.data = true; C.drawer = false; C.inp = ''; C.att = []; C.ed = null; draw(); document.getElementById('ch27-in')?.focus({ preventScroll: true }); return true;
     case 'open': await openConv(x.dataset.id); return true;
     case 'menu': C.mn = x.dataset.id; C.rn = c?.title ?? ''; C.nf = ''; C.del = false; C.sh = 'menu'; break;
     case 'fold': togFolder(x.dataset.id); break;

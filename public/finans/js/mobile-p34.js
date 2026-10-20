@@ -98,7 +98,7 @@ function aiRow(j) {
 export function kvAi() {
   const L = aiJobs();
   if (!L.length) return '';
-  return `<span class="p34-lab">${SPARK}<span>ANALYSERES AV AI · ${L.length}</span></span><div class="p34-ais">${L.map(aiRow).join('')}</div>`;
+  return `<span class="p34-lab">${SPARK}<span>ANALYSERES AV GLIMT · ${L.length}</span></span><div class="p34-ais">${L.map(aiRow).join('')}</div>`;
 }
 // Ferdig lest: toast «✦ Kvittering lest · KIWI Majorstuen» med dobbel haptikk (ok-mønsteret har to impulser).
 const SEEN = new Map();

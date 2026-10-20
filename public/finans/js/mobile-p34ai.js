@@ -344,12 +344,29 @@ function rt() {
 }
 
 // Jobber
+// Prompt 41 (claude-code-ai-jobber-klokkeslett.md): tidskolonne til høyre (startet / lagt i kø / når den sluttet + «… siden»).
+const p2 = (n) => String(n).padStart(2, '0');
+const tOf = (v) => { if (v == null || v === '') return null; const d = new Date(typeof v === 'number' && v < 1e12 ? v * 1000 : v); return Number.isNaN(+d) ? null : d; };
+const hmOf = (d) => `${p2(d.getHours())}:${p2(d.getMinutes())}`;
+const dayLbl = (d) => { const t = new Date(); t.setHours(0, 0, 0, 0); const k = new Date(d); k.setHours(0, 0, 0, 0); const n = Math.round((t - k) / 864e5); return n === 0 ? hmOf(d) : n === 1 ? `i går ${hmOf(d)}` : `${p2(d.getDate())}.${p2(d.getMonth() + 1)} ${hmOf(d)}`; };
+const agoOf = (d) => { const s = (Date.now() - d) / 1000; return s < 60 ? 'nå nettopp' : s < 3600 ? `${Math.floor(s / 60)} min siden` : s < 86400 ? `${Math.floor(s / 3600)} t siden` : `${Math.floor(s / 86400)} d siden`; };
+function jobTime(j) {
+  const run = j.status === 'run', q = j.status === 'queue';
+  const cr = tOf(j.createdAt ?? j.created_at), st = tOf(j.startedAt ?? j.started_at), en = tOf(j.endedAt ?? j.finishedAt ?? j.finished_at ?? j.ended_at);
+  const first = tOf(j.firstAt ?? j.first_at);
+  let a = '', b = '';
+  if (run && (st || cr)) a = `startet ${hmOf(st ?? cr)}`;
+  else if (q) a = j.when ? '' : cr ? `lagt i kø ${hmOf(cr)}` : '';
+  else if (en || st || cr) { const d = en ?? st ?? cr; a = first && en && first < en ? `${hmOf(first)}–${hmOf(en)}` : dayLbl(d); b = agoOf(d); }
+  else if (j.timeLabel) a = j.timeLabel;
+  return a ? `<span class="p41-jt" data-p41ago="${en || st || cr ? +(en ?? st ?? cr) : ''}"><b>${esc(a)}</b>${b ? `<small>${esc(b)}</small>` : ''}</span>` : '';
+}
 function jobRow(j, i) {
   const run = j.status === 'run', q = j.status === 'queue', ok = j.status === 'ok', bad = j.status === 'fail' || j.status === 'cancelled';
   const tok = j.tokens ? (j.tokens.in ?? 0) + (j.tokens.out ?? 0) : 0;
   const sub = [j.model, run ? `${Math.floor(j.progress ?? 0)} %${j.step ? ` · ${j.step}` : ''}` : '', q ? (j.when ? j.when : 'venter') : '', j.ms != null && !run ? sec(j.ms) : '', tok ? `${nb(tok)} tok` : '', j.costKr ? kr(j.costKr) : '', j.fallbackFrom ? `reserve for ${j.fallbackFrom}` : '', j.error ?? ''].filter(Boolean).join(' · ');
   const act = run || q ? (j.cancellable !== false ? ['jcancel', 'Avbryt', 'bad'] : null) : bad && j.retryable !== false ? ['jretry', 'Prøv igjen', ''] : null;
-  return `<div class="p34a-job" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><div class="p34a-mh"><span class="p34a-ring${run ? ' spin' : q ? ' dash' : ok ? ' ok' : bad ? ' bad' : ''}">${ok ? '✓' : bad ? '!' : ''}</span><span class="m-grow p34a-rtn"><b>${esc(j.title ?? j.taskName ?? j.task)}</b><span${bad ? ' class="bad"' : ''}>${esc(sub)}</span></span>${act ? `<button type="button" class="p34-ghost sm ${act[2]}" data-ai="${act[0]}" data-id="${esc(j.id)}">${act[1]}</button>` : ''}</div>
+  return `<div class="p34a-job" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><div class="p34a-mh"><span class="p34a-ring${run ? ' spin' : q ? ' dash' : ok ? ' ok' : bad ? ' bad' : ''}">${ok ? '✓' : bad ? '!' : ''}</span><span class="m-grow p34a-rtn"><b>${esc(j.title ?? j.taskName ?? j.task)}</b><span${bad ? ' class="bad"' : ''}>${esc(sub)}</span></span>${jobTime(j)}${act ? `<button type="button" class="p34-ghost sm ${act[2]}" data-ai="${act[0]}" data-id="${esc(j.id)}">${act[1]}</button>` : ''}</div>
     ${run ? `<span class="p34a-bt"><i style="width:${Math.max(3, j.progress ?? 5)}%"></i></span>` : ''}</div>`;
 }
 function job() {
