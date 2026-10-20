@@ -2,6 +2,39 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.34.0] – 20.10.2026 · prompt 40 – Hjemlys, julemodus og Hjem 2c
+- **Hjemlys (nytt):** «Et lite lys som står på til du er hjemme.» Start på vei hjem, så får husstanden beskjed hvis du ikke er hjemme i tide. Ingenting deles før du er sen, og ruten slettes etter 24 t.
+  - Dagtid: kart med ruten hjem og reisemåter med ankomsttid.
+  - Glimt foreslår å starte etter for eksempel kino, sjekker inn underveis og fører logg.
+  - Nattmodus etter kl. 21 med nedtellingsring og rød skjerm hos familien (Ring / Åpne kart / Ring 112).
+  - Live Activity i Dynamic Island og på låseskjermen på iPhone, og Live Update i statuslinja og Now Bar på Android og Samsung.
+  - Hjem-widget «Start for meg», og kort i Familie på web.
+- **Glimt i julemodus** 1. desember–13. januar: advent, jul, nyttår og vinter, med lue, skjerf og festhatt overalt der Glimt vises (også widgets). Nedtelling og «Dagens luke» i briefen. Velg Auto, Av eller På (med fase) i Innstillinger → Glimt, og slå snø og julelyd av og på.
+- **Hjem på web (2c):** widgetene har ikon og egen farge, og de viktigste er helfargede, så de er lettere å skille. Alt over widgetene er som før.
+- **AI-selvtestene virker igjen:** de feilet med «svarte ikke innen 15 s» fordi alle modellene ble testet samtidig, og innlasting fra disk telte med. Nå får innlasting 180 s og svaret 60 s, og testene kjøres én modell om gangen. Hvis Ollama ikke svarer, får du én melding. Feil grupperes i Jobber, og tallet viser bare nye feil.
+- **Backup til nettverksdisk:** mapper som `[05] Backup` godtas. Veiviseren har mappevelger, egen feilmelding for hver type feil og «Opprett mappen».
+- **Totrinnsbekreftelse settes opp i appen** (iPhone og Android), uten nettleseren.
+- **Finans:**
+  - Viser når og hvordan en transaksjon eller kvittering ble lagt til.
+  - Du kan redigere alt i en transaksjon, også dato og varelinjer.
+  - Glimt kan lese kvitteringen på nytt.
+  - Søket gir korte svar med kort i stedet for en tekstblokk med markdown.
+- **Gjøremål:** Glimt deler en setning opp i flere punkter med rekkefølge, sted og person. Baren ligger over tastaturet, tilbake går til Hjem, og på web åpnes Gjøremål i fullskjerm.
+- **Nyheter:** egen Glimt-side med langt sammendrag, kildehenvisninger og bilder, og du velger selv kildene. Den åpnes fra briefen.
+- **Mobil:**
+  - Et avbrutt sveip åpner ikke briefen.
+  - Hjem i redigering kan scrolles, med et ≡-håndtak for å flytte.
+  - Trykk på bibelverset i briefen åpner Bibel, og Bibel-kortet ligger oppe i bildet.
+  - Vær og Yr mot Storm har samme ✕ overalt og ingen kuttet tekst i toppen.
+  - Alle sider fra Mer kan legges i fanelinja.
+- **Android:** forhåndsvisning i widgetvelgeren og 12 nye låseskjerm-widgets.
+- **Web:**
+  - Kalender i lys, mørk eller automatisk modus.
+  - «✦ AI» i søket åpner samtalen med spørsmålet.
+  - «Starter opp»-siden vises ikke lenger ved vanlig sideoppdatering.
+  - Ikonene og fargene i Innstillinger → Domener og Kalendere er rettet.
+- **Nytt Økonomi-ikon:** hvit lommebok med budsjettringen som lås, på mørk blå.
+
 ## [4.33.0] – 20.10.2026 · prompt 39 – fire kalendere, web lik Mac og myk lyd
 - **Kalender på web ser nå ut som Mac-appen:** samme toppfelt, Neste-kort, sidemeny med minikalender, KALENDERE og «Glimt · dagen din», uke-rutenett, Måned, År og Liste, og mørkt tema. Mac-appen viser igjen sin egen kalender (web-kalenderen kan slås på som eksperiment).
 - **Fire kalendere:** Personlig (Google), Bursdager (Google), Skole (iCal-adresse) og Helligdager (innebygd, Norge). De gamle kalenderne ryddes inn i disse én gang – ingen hendelser slettes, og du kan angre i 30 dager. Ny Kalendere-liste, Rediger og Legg til på iPhone og Android, og «Hvilken kalender er hva?» for Google på web og Mac.
