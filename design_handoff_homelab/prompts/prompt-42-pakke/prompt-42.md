@@ -1,0 +1,156 @@
+# Prompt 42
+
+Startet: 2026-10-20
+
+## Ønsker
+- 2026-10-20: «ios app for kalender gi støtte for ipad også»
+- 2026-10-20: «tror ikke denne funksjonen funker.» (vedlegg `uploads/Screenshot 2026-10-20 at 18.44.38.png`: FinansHub Glimt-søk «har jeg noen abonnementer» henger på «Ollama tenker … 0 s»)
+- 2026-10-20: «funket noe men brukte velding lang tid»
+- 2026-10-20: «i aksje i finans på web vis logo til aksjene.» (vedlegg `uploads/Screenshot 2026-10-20 at 18.46.11.png`)
+- 2026-10-20: «lag et nytt mer brukervenlig funksjkonelt side for boliger på web, laget par forskjllge design. to av personene som skal bruke det er i 60 og 70 årene.» (vedlegg `uploads/Screenshot 2026-10-20 at 18.46.35.png`)
+  - Tre retninger i `Boliger Web v2.dc.html`: 1a Rolig oversikt, 1b Kontobok, 1c Hva vil du gjøre?
+- 2026-10-20: «i finn i finans web. bilder visese ikke i full høyd. og dette bildet av en dame dukker opp i alle annonser,» (vedlegg `uploads/Screenshot 2026-10-20 at 18.47.34.png`, `… 18.48.09.png`)
+- 2026-10-20: «legg in design 1b.» (vedlegg `uploads/Screenshot 2026-10-20 at 18.50.04.png`)
+- 2026-10-20: «i subcscriptions, legg også trekkdatoene som en egen kalender som også synes i kalender appen»
+- 2026-10-20: «ikke alle ikoner vises helt riktig. feks starlink vises riktig på mobil men ikke her i web.» (vedlegg `uploads/Screenshot 2026-10-20 at 18.51.29.png`)
+- 2026-10-20: «kom opp med noen ny boliger design» (vedlegg `uploads/Screenshot 2026-10-20 at 18.56.51.png`)
+  - Runde 2 i `Boliger Web v2.dc.html`: 2a Alle boligene på ett ark, 2b Året som en liste, 2c Sammenlign boligene
+- 2026-10-20: «start med å implmentere 2a» (vedlegg `uploads/Screenshot 2026-10-20 at 18.59.31.png`)
+- 2026-10-20: «feil med farge på ikone» (vedlegg `uploads/Screenshot 2026-10-20 at 19.00.35.png`: Handlinger i Finans)
+- 2026-10-20: «jeg ser ikke det nye boliger designet bare det gamle som under» (vedlegg `uploads/Screenshot 2026-10-20 at 19.01.12.png`)
+- 2026-10-20: «legg til støtte for aliexpress i sporing for pakker. hent fra eposter fra mappen aliexpress. https://github.com/yohaybn/HA_aliexpress_package_tracker_sensor»
+- 2026-10-20: «men i boliger legg til det nye desinget som at jeg kan redigeredet og slikt»
+  - Ny fungerende side `Boliger Web.dc.html` (2a forside + 1b inne i bolig) med redigering av boliger, utgifter, regninger, prosjekter og tilgang
+- 2026-10-20: «legg inn pewviewn av boliger i https://claude.ai/design/p/1c302a94-9115-41e1-b0bc-5c29929ea26d?file=Homelab%20Papir%20Web.dc.html&present=1»
+  - Homelab Papir Web → Økonomi → Boliger viser nå `Boliger Web` (embedded) i stedet for gamle `Boliger`
+- 2026-10-20: «vis alltid åpne bibel side.» (vedlegg `uploads/Screenshot 2026-10-20 at 19.23.56.png`: knappen kuttes nederst i arket)
+- 2026-10-20: «ser du forkjsllen bilde 1 er fra ios appen mens bildet 2 er fra designet ditt. ditt desing har en større snu knapp, jeg vil at den skal ha lik størrelse» (vedlegg `uploads/Screenshot 2026-10-20 at 19.26.02.png`, `… 19.26.16.png`, `… 19.26.38.png`)
+- 2026-10-20: «postnord sporing funker fortsatt ikke» (vedlegg `uploads/Screenshot 2026-10-20 at 19.30.32.png`)
+- 2026-10-20: «glimt ai så ivhertfall ut som den jobbet men delte fortsatt ikke opp teksten jeg ga til den.» (vedlegg `uploads/Screenshot 2026-10-20 at 19.30.51.png`)
+- 2026-10-20: «ikke vis de i finanshub v2» (vedlegg `uploads/Screenshot 2026-10-20 at 20.18.44.png`: «Dette må gjøres» skjules når Boliger vises inne i FinansHub)
+- 2026-10-20: «når åpen ikke vis noe bakgrunn farge» (vedlegg `uploads/Screenshot 2026-10-20 at 20.19.43.png`: åpnet bolig i FinansHub har ikke lenger egen bakgrunn/ramme/sidepanelfarge)
+- 2026-10-20: «ikke vis dene, men vis tilbake knpp.» (vedlegg `uploads/Screenshot 2026-10-20 at 20.20.01.png`: boliglista til venstre er fjernet fra åpnet bolig, bare «‹ Alle boligene» vises)
+- 2026-10-20: «ikke vis noe bakgrunn» (vedlegg `uploads/Screenshot 2026-10-20 at 20.20.40.png`: Boliger Web har transparent bakgrunn inne i FinansHub)
+- 2026-10-20: «legg disse her oppe» (vedlegg `uploads/Screenshot 2026-10-20 at 20.21.20.png`, `… 20.21.26.png`, `… 20.21.33.png`: «‹ Alle boligene», «Rediger bolig» og «+ Legg til utgift» flyttet opp i sidetoppen ved tittelen)
+- 2026-10-20: «legg til kateogrier,» → Boliger Web: «Kategorier i oktober / hele året» med søyler under tallkortene, og «+ Ny kategori» i utgiftsskjemaet (egne kategorier lagres)
+- 2026-10-20: «jeg tenke at kategorier kan legges vedsidna regningere» (vedlegg `uploads/Screenshot 2026-10-20 at 20.24.12.png`) → egen fane «Kategorier» etter Regninger, med måned/år-oversikt og administrering av kategorier
+- 2026-10-20: «fjern budsjett. fra boliger det er ikke relevant.» → fjernet «Igjen av budsjettet»-kortet og budsjettfeltet i «Rediger bolig»
+- 2026-10-20: «fjer nogså regninger,» → Regninger-fanen, «Neste regning» på kortene og regninger i «Dette må gjøres» fjernet
+- 2026-10-20: «og prosjekter. den skal brukes mer for opplastning og kategoriseing av kvitteringer og hva slgas utgifter.» → Prosjekter fjernet, stort opplastingsfelt (dra og slipp / velg filer) øverst i Utgifter som legger kvitteringer til gjennomgang
+- 2026-10-20: «behold prosjekter men legg de mer slik at man kan legg etil regninger og kjøp relatert til visse ting.» → Prosjekter tilbake som samlemapper for kjøp/regninger (koble utgifter, + Legg til kjøp, valgfritt budsjett)
+- 2026-10-20: «legg til i prossjekter glimt ai. feks at jeg kan spørre legg til alle transaskjoenr og kvttierng relatert til basseng i det prosjektet» → «✦ Spør Glimt» i prosjektet, finner relaterte kjøp med avkrysning og «Legg til N valgte»
+- 2026-10-20: «men lag nytt design på dette» (vedlegg `uploads/Screenshot 2026-10-20 at 20.27.45.png`: prosjektlista) → prosjektkort i rutenett med farge, sum, siste kjøp og «+ Nytt prosjekt»-rute
+- 2026-10-20: «i kategorier, det skal mer være selve kateogirer feks blomster, møbler, mat, også videre. når en kittering er lastet opp i boliger og kateogri ikke eksisterer skal passende kateogri bli laget av glimt ai» (vedlegg `uploads/Screenshot 2026-10-20 at 20.28.44.png`)
+- 2026-10-20: «nytt design på dette kortet» (vedlegg `uploads/Screenshot 2026-10-20 at 20.29.38.png`: kvitteringer til gjennomgang) → kvitteringskort med papirminiatyr, stort beløp, kategori-chips og Godkjenn
+- 2026-10-20: «gjør også ting litt mindre, her er mange av kortene og ting ganske stort» (vedlegg `uploads/Screenshot 2026-10-20 at 20.31.07.png`) → Boliger skalert til 80 % i FinansHub (88 % alene), kompakt opplastingsfelt
+- 2026-10-20: «jeg vil kunne åpne opp en kategori og se innholdet i den.» → kategorier kan åpnes (liste over kjøp, måned/år/alt, + Legg til utgift i kategorien)
+- 2026-10-20: «dette er allerde dekket av legg til utgift knappen» (vedlegg `uploads/Screenshot 2026-10-20 at 20.32.22.png`, `… 20.32.46.png`) → opplastingsfeltet fjernet
+- 2026-10-20: «ta bedre bruk av skjermen, det er mye tomrom på sidene» (vedlegg `uploads/Screenshot 2026-10-20 at 20.33.44.png`) → maks-bredde fjernet i FinansHub
+- 2026-10-20: «i kategori og kviteirnggo jeg vil kunne se orginalen» → «Vis original»-visning for kvitteringer (Glimt-kort, tabell, kategoriside, skjema)
+- 2026-10-20: «også en slik av kviteringer med full redigerin og analyser på nytt med glimt» (vedlegg `uploads/Screenshot 2026-10-20 at 20.35.12.png`) → utgiftspanel fra høyre med AI-beskrivelse, varelinjer og «✦ Analyser på nytt med Glimt»
+- 2026-10-20: «ai knapper i økonomi skal hetete glimt og ha samme glimt figurer og glimt farger som i resten av web» (vedlegg `uploads/Screenshot 2026-10-20 at 20.35.58.png`) → `FinansHub v3 Temaer.dc.html` + `claude-code-okonomi-glimt-knapper.md`
+- 2026-10-20: «lag bedre mer informativ for kategorie» (vedlegg `uploads/Screenshot 2026-10-20 at 20.38.06.png`) → nøkkeltall, fordelingsstolpe, kategorikort med endring og minigraf
+- 2026-10-20: «gi også glimt fargene til glimt her» (vedlegg `uploads/Screenshot 2026-10-20 at 20.39.58.png`) → Glimt-figuren i stedet for svart ✦ i Boliger
+- 2026-10-20: «jeg tenkte mer som dette,» (vedlegg `uploads/Screenshot 2026-10-20 at 20.41.02.png`, `… 20.41.12.png`) → Glimt-orben (fargering + rød ✦) i Boliger og Økonomi
+- 2026-10-20: «samme her oppe.» (vedlegg `uploads/Screenshot 2026-10-20 at 20.41.23.png`, `… 20.41.29.png`) → Glimt-knappen i søkefeltet bruker orben (fylt firetakket stjerne, tynnere ring)
+- 2026-10-20: «legg til se orginalen» (vedlegg `uploads/Screenshot 2026-10-20 at 20.42.18.png`) → «Se originalen ⤢» åpner kvitteringen i fullskjerm
+- 2026-10-20: «forbedre analyser på nytt knappen» (vedlegg `uploads/Screenshot 2026-10-20 at 20.42.58.png`) → stor Glimt-pille med gradientkant, orb, undertekst og arbeidsstatus
+- 2026-10-20: «samme med vis orginalen.» (vedlegg `uploads/Screenshot 2026-10-20 at 20.43.18.png`) → «Vis original kvittering» som stort kort med miniatyr
+- 2026-10-20: «vis den nye logoen her» (vedlegg `uploads/Screenshot 2026-10-20 at 20.44.08.png`, `… 20.44.22.png`) → FinansHub-logoen er Økonomi-ikonet 3c (mørk blå lommebok med budsjettring)
+- 2026-10-20: «gi farger på ikonene.» (vedlegg `uploads/Screenshot 2026-10-20 at 20.44.39.png`) → fargede ikonbrikker i FinansHub-menyen
+- 2026-10-20: «fjern dette designet fra finans slett det gamle desinget her. samme med liqud glass og material you design i mobil appene.» (vedlegg `uploads/Screenshot 2026-10-20 at 20.45.06.png`) → v2-kortet, «Klassisk» og «Bytt til nåværende tema» fjernet
+- 2026-10-20: «kom opp med et nytt navn en finanshub» → navneforslag i chat (Lommebok anbefalt). Ikke bygget inn ennå.
+- 2026-10-20: «gi glimt fargene og logo sine her» (vedlegg `uploads/Screenshot 2026-10-20 at 20.46.54.png`) → Glimt i FinansHub-menyen bruker Glimt-orben
+- 2026-10-20: «når jeg trykker her åpne ai innstlignene» (vedlegg `uploads/Screenshot 2026-10-20 at 20.47.24.png`) → AI-motor-kortet åpner Innstillinger → AI-motor
+- 2026-10-20: «gi den en liten diskre bakgrunn rudnt ikonet» (vedlegg `uploads/Screenshot 2026-10-20 at 20.48.08.png`) → Glimt-orben i menyen har en svak Glimt-fargetone bak (12–14 %)
+- 2026-10-20: «i glimt her gi den også avansert ai funksjoner som da også kan gå i bakgrunnen som. gi meg en rapport over forbruk der og da» (vedlegg `uploads/Screenshot 2026-10-20 at 20.48.48.png`) → «Avanserte oppgaver» med bakgrunnsjobber og forbruksrapport
+- 2026-10-20: «når boliger er åpen vis man søker med glimt i toppen søk bare i boliger og i boligen man er inni» (vedlegg `uploads/Screenshot 2026-10-20 at 21.00.49.png`) → søkefeltet avgrenses til Boliger / boligen som er åpen
+- 2026-10-20: «… lag en rapport som en pdg en pen og oversiktelig pdf.» → `Forbruksrapport.dc.html` (A4, 2 sider) + «Last ned som PDF» i jobben
+- 2026-10-20: «slike søk, burde gå fort. du har butikken i sprøsmålet, og mat typen og slikt. lag en database som olllama glimt kan lese fort og effektivft igjennom.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.04.54.png`) → `claude-code-glimt-sokedatabase.md`
+- 2026-10-20: «vis også sekunder og tankemåten til glimt. skriv at glimt tenker.» → seksjon 7 i `claude-code-glimt-sokedatabase.md`
+- 2026-10-20: «når glimt og vanlig søj åpne søkeboksen i boliger» (vedlegg `uploads/Screenshot 2026-10-20 at 21.07.13.png`) → søk/Glimt i toppen åpner et resultatkort inne i Boliger
+- 2026-10-20: «jeg vil se etter år i boliger.» → Måned/År-velger i Utgifter
+- 2026-10-20: «jeg vil kunne se flere år av gangen. mer oversiktetlig.» → «Flere år» med kortet «År for år»
+- 2026-10-20: «ikke vis den, start heller med bokser med hvert sitt årstall og kostnad det året.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.12.40.png`) → velgeren fjernet, årsbokser øverst
+- 2026-10-20: «legg til pil elelr scrolle for å se flere årstall.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.14.31.png`) → årsboksene kan scrolles og har piler ‹ ›
+- 2026-10-20: «legg den over teksten» (vedlegg `uploads/Screenshot 2026-10-20 at 21.15.20.png`, `…21.15.26.png`) → årsboksene flyttet over fanene
+- 2026-10-20: «ikke vis scrolle streken.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.15.43.png`) → scrollefeltet under årsboksene skjult (pilene + sveip/hjul virker fortsatt)
+- 2026-10-20: «vis den over i alle sider, utgifter kateogreiri proskjeterk.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.16.40.png`) → årsboksene vises på alle fanene i boligen
+- 2026-10-20: «legg til en glimt søke knapp som åpner glimt søkefelt i siden» (vedlegg `uploads/Screenshot 2026-10-20 at 21.17.16.png`) → «Søk med Glimt»-knapp + søkefelt i boligen
+- 2026-10-20: «fjern denne.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.18.32.png`) → «Fordeling»-kortet i Kategorier fjernet
+- 2026-10-20: «hvis resulatet fra glimt søkebar under glimt søkebar.» → resultatkortet står rett under Glimt-søkefeltet
+- 2026-10-20: «legg inn i hele finans hub filter verktøy, kan velge butikk, dato feks fra juli til september eller uke 34 til 50» → filterrad under toppfeltet (butikk + måneder/uker/datoer)
+- 2026-10-20: «la meg også importere fra bank rett inn i boliger en spesefik bolig legg den mulighten i import innstligner i instligner i finans hub.» → Innstillinger → Import: «Import rett til Boliger» (regler) + «Importer fil til en bolig»
+- 2026-10-20: «når filter åpnes åpne en egen side som viser hver transaksjon i liste. legg heller filter i sidemeny undef glimt» (vedlegg `uploads/Screenshot 2026-10-20 at 21.22.02.png`) → Filter er egen side i sidemenyen under Glimt
+- 2026-10-20: «denne liger allerde i boliger valg menyen» (vedlegg `uploads/Screenshot 2026-10-20 at 21.23.16.png`, `…21.23.41.png`) → «Rediger bolig»-knappen fjernet fra boligens topp
+- 2026-10-20: «i filter la meg søke etter butikk når man skal velge det som filter» → søkefelt over butikkbrikkene i Filter
+- 2026-10-20: «legg også til at man kan velge beløp, fek mellom 500kr og 5000kr.» → Beløp-filter (fra–til + hurtigvalg)
+- 2026-10-20: «legg til glimt ai søk vedsidna for raskere og mer avansert søk.» → Glimt-felt øverst i Filter som fyller ut filteret fra fritekst
+- 2026-10-20: «la meg også velge kategori. og velge boliger som filter og en spesefik bolig.» → Kategori- og Bolig-filter (Alle boliger / én bolig)
+- 2026-10-20: «legg de vedsidna hverandre» (vedlegg `uploads/Screenshot 2026-10-20 at 21.26.05.png`) → Glimt-feltet og butikksøket på samme rad
+- 2026-10-20: «ordne det slikt at menyen ikke blir ovesømt med kateogoier og butitiker når man har mange av de» (vedlegg `uploads/Screenshot 2026-10-20 at 21.26.26.png`) → viser 6 mest brukte + «+ N flere»
+- 2026-10-20: «la meg åpne kviterinene» (vedlegg `uploads/Screenshot 2026-10-20 at 21.32.25.png`) → radene i Filter åpner kvitteringspanel
+- 2026-10-20: «få alle kateogeri til å dukke opp på denne måten» (vedlegg `uploads/Screenshot 2026-10-20 at 21.33.19.png`, `…21.33.25.png`) → alle kategorier vises som kort i Boliger → Kategorier
+- 2026-10-20: «ikke vis hjemlys der oppe.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.41.27.png`) → `claude-code-familie-fjern-hjemlys-kort.md`
+- 2026-10-20: «ikke vis kartet i soner meny» (vedlegg `uploads/Screenshot 2026-10-20 at 21.42.49.png`) → Soner uten kart (kartet bare når man legger til sone) · `claude-code-familie-soner-uten-kart.md`
+- 2026-10-20: «legg dette i innsligner ikke i helse» (vedlegg `uploads/Screenshot 2026-10-20 at 21.43.08.png`) → helsekildene flyttet til Innstillinger · `claude-code-familie-helsekilder-innstillinger.md`
+- 2026-10-20: «legg til slike kret i hjemlys menyen, og lag et nytt navn, apple kalte det check inn.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.43.53.png`) → nytt navn **Vel fremme** + kortene · `claude-code-vel-fremme.md`
+- 2026-10-20: «i familie side ikke vis mer i navbaren» → «Mer» fjernet fra fanelinja på Familie
+- 2026-10-20: «ordene toppen her» (vedlegg `uploads/Screenshot 2026-10-20 at 21.45.58.png`, `…21.46.08.png`) → Vel fremme-innholdet starter under toppbildet
+- 2026-10-20: «når bibel vers viser kan jeg ikke scrolle hvis jeg prøver å scrolle over bibelverset ordene det.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.46.56.png`) → `claude-code-bibelvers-scroll-fiks.md`
+- 2026-10-20: «la meg velge hvilke som helst ikoner» (vedlegg `uploads/Screenshot 2026-10-20 at 21.48.45.png`) → ikonsøk + 50 ikoner + Vis alle i sonevelgeren
+- 2026-10-20: «helsedate la mg importere helse data fra mobile app i homeassisatn.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.51.29.png`) → `claude-code-helse-fra-home-assistant.md` + rad i Innstillinger → Helse (Familie)
+- 2026-10-20: «finn noen støøre ikon bibloteker jeg kan søke etter» (vedlegg `uploads/Screenshot 2026-10-20 at 21.54.26.png`) → ikonsøket søker også i Lucide + Tabler (Iconify, 7 500+ ikoner)
+- 2026-10-20: «fortsatt feil viser ikke post nord logoen» (vedlegg `uploads/Screenshot 2026-10-20 at 21.57.57.png`, `…21.58.08.png`) → `claude-code-postnord-logo-fiks.md`
+- 2026-10-20: «kan du finne en bedre løsning på navbaren, at man alltid har en hjem knapp som man slipper pilen tilbake øverst. ikke gjør noe kom med noen design forslag.» (vedlegg `uploads/Screenshot 2026-10-20 at 21.57.57-79f65f73.png`, `…21.59.37.png`) → forslag 1a–1d i `Navbar Hjem-knapp Forslag.dc.html` (ikke bygget inn)
+- 2026-10-20: «legg inn alle de designene som mulig navbar design, la meg velge i tilpass menyen til navbar og vis preview.» → Innstillinger → Fanelinje → Hjem-knapp (Standard/1a/1b/1c/1d) med forhåndsvisning · `claude-code-navbar-hjem-knapp.md`
+- 2026-10-20: «legg til de nye navbarene her» (vedlegg `uploads/Screenshot 2026-10-20 at 22.10.55.png`) → Hjem-knapp-valgene med forhåndsvisning også i «Rediger fanelinjen»
+- 2026-10-20: «feil med preview» (vedlegg `uploads/Screenshot 2026-10-20 at 22.12.37.png`) → forhåndsvisningene gjort kompakte (ikoner, ingen tekst som renner ut)
+- 2026-10-20: «viser ikke ny navbar når valgt. husk at kommer an på hvilke navbar som er valgt om tilbake knappene vises.» (vedlegg `uploads/Screenshot 2026-10-20 at 22.12.45.png`) → valgt fanelinje også på Hjem (Hjem-fanen erstattes av Hjem-knappen), tilbake-knapp følger valget
+
+## Tilhørende filer
+- `claude-code-kalender-ipad.md`
+- `Kalender iPad.dc.html`
+- `claude-code-finans-glimt-abonnement.md`
+- `claude-code-finans-aksje-logoer.md`
+- `Boliger Web v2.dc.html`
+- `claude-code-finn-bilder.md`
+- `claude-code-boliger-web-kontobok.md`
+- `claude-code-abonnement-kalender.md`
+- `Kalender App.dc.html` (kalenderen Abonnementer)
+- `claude-code-abonnement-logoer-web.md`
+- `claude-code-boliger-web-forside-2a.md`
+- `claude-code-finans-handlinger-ikonfarge.md`
+- `FinansHub v3 Temaer.dc.html` (Handlinger-ikoner)
+- `claude-code-boliger-web-vises-ikke.md`
+- `claude-code-sporing-aliexpress.md`
+- `Sporing.dc.html` (AliExpress-transportør)
+- `Boliger Web.dc.html`
+- `claude-code-boliger-web-kontobok.md`
+- `claude-code-okonomi-glimt-knapper.md`
+- `claude-code-finanshub-ny-logo.md`
+- `claude-code-slett-gamle-design.md`
+- `claude-code-glimt-avanserte-oppgaver.md`
+- `claude-code-boliger-sok-scope.md`
+- `Forbruksrapport.dc.html` + `doc-page.js`
+- `claude-code-glimt-sokedatabase.md`
+- `claude-code-finanshub-filter.md`
+- `claude-code-import-til-boliger.md`
+- `claude-code-familie-fjern-hjemlys-kort.md`
+- `claude-code-familie-soner-uten-kart.md`
+- `claude-code-familie-helsekilder-innstillinger.md`
+- `claude-code-vel-fremme.md`
+- `claude-code-bibelvers-scroll-fiks.md`
+- `claude-code-helse-fra-home-assistant.md`
+- `claude-code-postnord-logo-fiks.md`
+- `Navbar Hjem-knapp Forslag.dc.html`
+- `claude-code-navbar-hjem-knapp.md`
+- `FinansHub v3 Temaer.dc.html`
+- `glimt-figurer.js` (brukes av FinansHub v3 Temaer)
+- `FinansHub v2.dc.html` (Boliger-siden bruker Boliger Web)
+- `FinansHub v3 Temaer.dc.html` (Boliger-siden bruker Boliger Web)
+- `claude-code-bibel-ark-knapp-alltid.md`
+- `claude-code-ruter-snu-knapp.md`
+- `claude-code-postnord-fortsatt-feil.md`
+- `claude-code-postnord-uten-nokkel.md` (forrige forsøk, referanse)
+- `claude-code-huskeliste-glimt-del-opp.md`

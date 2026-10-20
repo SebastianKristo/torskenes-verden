@@ -90,7 +90,8 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;1100px&quot;,&quot;height&quot;:&quot;1300px&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;page&quot;,&quot;widget&quot;,&quot;mini&quot;],&quot;default&quot;:&quot;page&quot;,&quot;tsType&quot;:&quot;'page' | 'widget'&quot;},&quot;mobile&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;onOpen&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
 const CAR=[
- ['posten','Posten','P','#E32D22','#fff',[/^[A-Z]{2}\d{9}NO$/,/^(LP|LZ)\d{12,}$/],'https://sporing.posten.no/sporing/'],
+ ['aliexpress','AliExpress · Cainiao','AE','#E62E04','#fff',[/^LP\d{12,}$/,/^AEG?\d{10,}$/,/^CN[A-Z0-9]{10,}$/,/^[A-Z]{2}\d{9}CN$/],'https://global.cainiao.com/newDetail.htm?mailNoList='],
+ ['posten','Posten','P','#E32D22','#fff',[/^[A-Z]{2}\d{9}NO$/,/^LZ\d{12,}$/],'https://sporing.posten.no/sporing/'],
  ['bring','Bring','B','#7BC144','#0f2a05',[/^70\d{15}$/,/^\d{17}$/],'https://tracking.bring.com/tracking/'],
  ['postnord','PostNord','PN','#00A0D6','#fff',[/^00370\d{15}$/,/^[A-Z]{2}\d{9}(SE|DK|FI)$/,/^\d{18,20}$/],'https://www.postnord.no/sporing?shipmentId='],
  ['dhl','DHL','DHL','#FFCC00','#D40511',[/^JJD\d{10,}$/,/^(JVGL|GM)\w{8,}$/,/^\d{10}$/],'https://www.dhl.com/no-no/home/sporing.html?tracking-id='],
@@ -102,7 +103,7 @@ const CAR=[
  ['budbee','Budbee','BB','#2BCE96','#05271b',[/^BB[A-Z0-9]{8,}$/],'https://tracking.budbee.com/'],
  ['instabox','Instabox','IB','#FF4E00','#fff',[/^IB[A-Z0-9]{8,}$/],'https://track.instabox.io/'],
  ['other','Annen (17TRACK)','17','#3A4252','#eef0f4',[/./],'https://t.17track.net/no#nums=']];
-const CDOM={posten:'posten.no',bring:'bring.no',postnord:'postnord.com',dhl:'dhl.com',ups:'ups.com',fedex:'fedex.com',gls:'gls-group.eu',schenker:'dbschenker.com',helthjem:'helthjem.no',budbee:'budbee.com',instabox:'instabox.io',other:'17track.net'};
+const CDOM={aliexpress:'aliexpress.com',posten:'posten.no',bring:'bring.no',postnord:'postnord.com',dhl:'dhl.com',ups:'ups.com',fedex:'fedex.com',gls:'gls-group.eu',schenker:'dbschenker.com',helthjem:'helthjem.no',budbee:'budbee.com',instabox:'instabox.io',other:'17track.net'};
 const cLogo=k=>CDOM[k]?'https://icons.duckduckgo.com/ip3/'+CDOM[k].replace('postnord.com','postnord.no')+'.ico':'';
 const CM=Object.fromEntries(CAR.map(c=>[c[0],{k:c[0],n:c[1],ini:c[2],c:c[3],fg:c[4],re:c[5],url:c[6]}]));
 const detect=no=>{for(const c of CAR)if(c[0]!=='other'&&c[5].some(r=>r.test(no)))return c[0];return'other'};
@@ -112,7 +113,7 @@ const SEED=[
  {id:'t2',no:'CV704418877NO',car:'posten',name:'PS5 + 2 kontroller',src:'Finn',ref:'Solgt til Jonas B. · Fiks ferdig-etikett fra Finn',st:0,from:'Oslo',to:'Bergen',out:true,day:16,eta:'Lever pakken innen 19.10'},
  {id:'t3',no:'00370726201234567890',car:'postnord',name:'Komplett · skjerm',src:'E-post',ref:'Funnet i e-post fra Komplett.no, 13.10',st:3,from:'Sandefjord',pick:'Kiwi Pilestredet',day:13,eta:'Hent innen 24.10'},
  {id:'t4',no:'JJD000390007882034',car:'dhl',name:'Zalando · jakke',src:'E-post',ref:'Funnet i e-post fra Zalando, 15.10',st:2,from:'Tyskland',day:15,eta:'Ventet mandag 20.10'},
- {id:'t5',no:'LP005123456789012',car:'posten',name:'AliExpress · USB-C-kabler',src:'E-post',ref:'Funnet i e-post fra AliExpress, 06.10',st:2,from:'Kina',day:6,eta:'Ventet 22.–29.10'},
+ {id:'t5',no:'LP005123456789012',car:'aliexpress',name:'AliExpress · USB-C-kabler',src:'E-post',ref:'Funnet i e-postmappen AliExpress, 06.10 · ordre 8195…4402',st:2,from:'Kina',day:6,eta:'Ventet 22.–29.10'},
  {id:'t6',no:'HH40211873',car:'helthjem',name:'Elkjøp · støvsuger',src:'E-post',ref:'Funnet i e-post fra Elkjøp, 12.10',st:4,from:'Jessheim',day:12,eta:'Levert 15.10'},
  {id:'t7',no:'1Z999AA10123456784',car:'ups',name:'Apple · AirPods',src:'E-post',ref:'Funnet i e-post fra Apple, 08.10',st:4,from:'Nederland',day:8,eta:'Levert 11.10'}];
 const LATE={id:'t8',no:'00370726209876543210',car:'postnord',name:'Clas Ohlson · lyspærer',src:'E-post',ref:'Funnet i e-post fra Clas Ohlson, 17.10',st:1,from:'Insjön',day:17,eta:'Ventet 21.10'};

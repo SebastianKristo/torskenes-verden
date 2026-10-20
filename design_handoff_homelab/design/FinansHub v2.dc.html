@@ -274,7 +274,7 @@
 </div>
 </sc-if>
 
-<sc-if value="{{ isDirPg }}"><div style="padding:4px 0 40px"><dc-import name="Boliger" variant="web" theme="dark" hint-size="100%,1100px"></dc-import></div></sc-if>
+<sc-if value="{{ isDirPg }}"><div style="padding:4px 0 40px"><dc-import name="Boliger Web" embedded="{{ true }}" hint-size="100%,1300px"></dc-import></div></sc-if>
 <sc-if value="{{ isOs }}"><dc-import name="FinansHub v2 Moduler" embedded="{{ true }}" start-page="{{ osPage }}" on-add-bolig="{{ goBolSet }}" hint-size="100%,600px"></dc-import></sc-if>
 <sc-if value="{{ isFast }}">
 <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
