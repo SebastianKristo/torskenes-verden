@@ -307,7 +307,8 @@ class Component extends DCLogic {
       galleries:[['MARS-ROVERE',s.mars],['JAMES WEBB-TELESKOPET',s.webb],['HUBBLE-TELESKOPET',s.hubble]].map(([name,items])=>({name,items:items||[]}))}}
   chLoad(){if(!this._chL){this._chL=true;try{window.addEventListener('storage',e=>{if(e.key==='papir_chat_v1'){this._chD=null;this.forceUpdate()}});window.addEventListener('resize',()=>{if(this._chW!==(window.innerWidth>=820)){this._chW=window.innerWidth>=820;this.forceUpdate()}})}catch(e){}}
     if(this._chD)return this._chD;let D=null;try{D=JSON.parse(localStorage.getItem('papir_chat_v1')||'null')}catch(e){}
-    if(!D||!D.chats)D={chats:CH_SEED(),folders:['Hytta','Homelab','Skole'],cur:null,th:'papir',model:'llama3.1:8b',loc:CH_LOC.map(x=>x[0]),open:{},def:{per:'std',sys:'',temp:.7,topP:.9,ctx:8192}};
+    if(!D||!D.chats)D={chats:CH_SEED(),folders:['Hytta','Homelab','Skole'],cur:null,th:'papir',model:'auto',autoMig:true,loc:CH_LOC.map(x=>x[0]),open:{},def:{per:'std',sys:'',temp:.7,topP:.9,ctx:8192}};
+    if(D&&!D.autoMig){D={...D,autoMig:true,model:'auto'}}
     if(D&&!D.scanSeeded){D={...D,folders:[SCAN_F,...(D.folders||[]).filter(x=>x!==SCAN_F)],chats:[...SCAN_SEED(),...D.chats.filter(c=>!/^scan_/.test(c.id))],open:{...(D.open||{}),[SCAN_F]:false},scanSeeded:1};try{localStorage.setItem('papir_chat_v1',JSON.stringify(D))}catch(e){}}
     if(!this._scL){this._scL=true;try{window.addEventListener('papir-scan',ev=>{const x=ev.detail||{};const id='scan_'+Date.now();this.chPut(D2=>{D2.folders=[SCAN_F,...(D2.folders||[]).filter(y=>y!==SCAN_F)];D2.chats=[{id,t:x.title||'Ny skanning',f:SCAN_F,sys:true,m:x.model||'qwen2.5vl:7b',up:Date.now(),msgs:[{r:'u',t:x.src||'Kvittering skannet',att:x.att||[]},{r:'a',m:x.model||'qwen2.5vl:7b',t:x.text||'Leser …',tool:x.tool||['Leste kvittering']}]},...D2.chats]})})}catch(e){}}
     this._chD=D;return D}
@@ -315,24 +316,31 @@ class Component extends DCLogic {
   chCur(){const D=this.chLoad();return D.chats.find(c=>c.id===D.cur)||null}
   chBottom(){setTimeout(()=>{const el=this._chSc;if(el)el.scrollTop=el.scrollHeight},40)}
   chSend(txt,opt){opt=opt||{};const s=this.state,t=(txt||'').trim();if(!t||s.chBusy)return;const D=this.chLoad(),ch=this.chCur(),model=ch?ch.m:D.model,tg=s.tg||{};
-    const sky=CH_SKY.some(x=>x[0]===model),dataOn=!!s.chData&&tg.ch_data!==false,att=s.chAtt||[];
+    const dataOn=(s.chData!==false)&&tg.ch_data!==false,att=s.chAtt||[],PK=model==='auto'?this.chPick(t,att,dataOn):null,eff=PK?PK[0]:model,sky=CH_SKY.some(x=>x[0]===eff);
     if(sky&&(dataOn||att.length)&&!opt.ok&&!(ch&&ch.skyOk)&&tg.ch_guard!==false){this.setState({chSh:'guard',chPend:t});return}
     const useData=dataOn&&!opt.noData,id=ch?ch.id:'c'+Date.now(),um={r:'u',t,att:att.map(a=>a.n),ts:Date.now()},P=D.def||{per:'std',sys:'',temp:.7,topP:.9,ctx:8192};
     this.chPut(D2=>{if(!ch){D2.chats=[{id,t:t.length>42?t.slice(0,40)+' …':t,pin:false,f:'',m:model,...P,up:Date.now(),msgs:[um],skyOk:!!opt.remember},...D2.chats];D2.cur=id}else D2.chats=D2.chats.map(c=>c.id===id?{...c,msgs:[...c.msgs,um],up:Date.now(),skyOk:c.skyOk||!!opt.remember}:c)});
     this.setState({chIn:'',chAtt:[],chSh:null,chPend:'',chRem:false});this.chBottom();
-    this.chRun(id,{data:useData,web:!!s.chWeb,att:att.map(a=>a.n)})}
-  chRun(id,o){o=o||{};const ch=this.chLoad().chats.find(c=>c.id===id);if(!ch)return;const per=CH_PER.find(p=>p[0]===ch.per)||CH_PER[0],M=[...CH_LOC,...CH_LIB,...CH_SKY].find(x=>x[0]===ch.m);
+    this.chRun(id,{data:useData,web:!!s.chWeb,att:att.map(a=>a.n),mm:PK?PK[0]:null,why:PK?PK[1]:''})}
+  chPick(t,att,dataOn){const D=this.chLoad(),tg=this.state.tg||{},L=D.loc||CH_LOC.map(x=>x[0]),has=k=>L.includes(k),sky=tg.ch_sky!==false,low=(t||'').toLowerCase(),A=(att||[]).map(a=>String(a.n||a)).join(' ').toLowerCase();
+    if(/\.(jpe?g|png|heic|webp)|img_|kvitter|bilde/.test(A)||/\b(bildet|kvitteringen|skjermbildet)\b/.test(low))return[has('qwen2.5vl:7b')?'qwen2.5vl:7b':'gemma3:12b','Bilde · leser bilder lokalt'];
+    if(/\.(pdf|docx?)/.test(A)&&sky&&!dataOn)return['gemini-2.5-flash','Langt dokument · Gemini'];
+    if(/\b(docker|compose|python|kode|script|bash|yaml|proxmox|home assistant|regex|sql|feil(melding)?|error)\b/.test(low))return[has('qwen3:8b')?'qwen3:8b':has('deepseek-r1:8b')?'deepseek-r1:8b':'llama3.1:8b','Kode · '+(has('qwen3:8b')?'Qwen 3':'DeepSeek R1')];
+    if(/\b(regn ut|hvorfor|forklar|sammenlign|planlegg|lag en plan|budsjett|hvor mye|beregn|tenk)\b/.test(low)||low.length>280)return[has('deepseek-r1:8b')?'deepseek-r1:8b':'llama3.1:8b','Krever resonnering · DeepSeek R1'];
+    if(low.length>1200&&sky&&!dataOn)return['gemini-2.5-flash','Lang tekst · Gemini'];
+    return[has('llama3.1:8b')?'llama3.1:8b':L[0],dataOn?'Dine data · holdes lokalt':'Kort spørsmål · raskest lokalt']}
+  chRun(id,o){o=o||{};const ch=this.chLoad().chats.find(c=>c.id===id);if(!ch)return;const per=CH_PER.find(p=>p[0]===ch.per)||CH_PER[0],lastU0=[...ch.msgs].reverse().find(m=>m.r==='u'),PK=ch.m==='auto'?(o.mm?[o.mm,o.why]:this.chPick(lastU0&&lastU0.t,lastU0&&lastU0.att,o.data)):null,mm=PK?PK[0]:ch.m,M=[...CH_LOC,...CH_LIB,...CH_SKY].find(x=>x[0]===mm);
     const lastU=[...ch.msgs].reverse().find(m=>m.r==='u'),att=(o.att&&o.att.length?o.att:(lastU&&lastU.att)||[]);
     const tool=[...(o.data?['Finans','Kalender','Huskeliste']:[]),...(o.web?['Nettsøk']:[]),...att];
     const sys=['Du er en assistent i appen Homelab for familien Kristo. Svar på norsk bokmål, kort og konkret. Bruk vanlige avsnitt og enkle lister med «- ». Ikke bruk overskrifter eller tabeller.',per[2],ch.sys,o.data?'Brukerens data:\n'+CH_CTX:'',o.web?'Nettsøk er på. Ikke finn på kilder eller lenker.':'',att.length?'Vedlagt: '+att.join(', ')+'. Du ser ikke innholdet i denne demoen; si kort hva du ville sett etter i dokumentet.':''].filter(Boolean).join('\n\n');
     const prompt=sys+'\n\n'+ch.msgs.slice(-12).map(m=>(m.r==='u'?'Bruker: ':'Assistent: ')+m.t).join('\n\n')+'\n\nAssistent:';
     this._chStop=false;const t0=Date.now();this.setState({chBusy:id,chStream:'',chTool:tool});
     const fin=(full,stopped)=>{clearInterval(this._chT);this._chFin=null;const sec=(Date.now()-t0)/1000,tok=Math.round(full.length/4);
-      const am={r:'a',t:full+(stopped?' …':''),m:ch.m,tool,st:(stopped?'Stoppet · ':'')+Math.max(8,Math.round(tok/Math.max(.5,sec)))+' tok/s · '+sec.toFixed(1).replace('.',',')+' s',ts:Date.now()};
+      const am={r:'a',t:full+(stopped?' …':''),m:mm,auto:!!PK,why:PK?PK[1]:'',tool,st:(PK?'✦ '+PK[1]+' · ':'')+(stopped?'Stoppet · ':'')+Math.max(8,Math.round(tok/Math.max(.5,sec)))+' tok/s · '+sec.toFixed(1).replace('.',',')+' s',ts:Date.now()};
       this.chPut(D=>{D.chats=D.chats.map(c=>c.id===id?{...c,msgs:[...c.msgs,am],up:Date.now()}:c)});this.setState({chBusy:null,chStream:'',chTool:null})};
     this._chFin=fin;
     const go=full=>{if(this._chStop)return;let p=0;clearInterval(this._chT);this._chT=setInterval(()=>{p+=2+Math.floor(Math.random()*6);if(p>=full.length)fin(full);else this.setState({chStream:full.slice(0,p)});const el=this._chSc;if(el)el.scrollTop=el.scrollHeight},28)};
-    const fb='Jeg får ikke kontakt med '+(M?M[1]:ch.m)+' akkurat nå. Sjekk at Ollama kjører på 192.168.1.40:11434, eller velg en annen modell.';
+    const fb='Jeg får ikke kontakt med '+(M?M[1]:mm)+' akkurat nå. Sjekk at Ollama kjører på 192.168.1.40:11434, eller velg en annen modell.';
     let done=false;const to=setTimeout(()=>{if(!done){done=true;go(fb)}},45000);
     let pr;try{pr=window.claude&&window.claude.complete?window.claude.complete(prompt):Promise.reject()}catch(e){pr=Promise.reject()}
     pr.then(r=>{if(done)return;done=true;clearTimeout(to);go(String(r||'').trim()||fb)}).catch(()=>{if(done)return;done=true;clearTimeout(to);go(fb)})}
@@ -353,7 +361,7 @@ class Component extends DCLogic {
   chVals(c,o){const s=this.state,D=this.chLoad(),ch=this.chCur(),wide=!!o.wide,set=x=>this.setState(x),tg=s.tg||{},neutral=D.th==='noytral';
     const v=neutral?{bg:'#212121',card:'#2f2f2f',ink:'#ececec',mut:'#a3a3a3',line:'#3a3a3a',acc:'#ececec',side:'#171717',ub:'#303030',uI:'#ececec'}:{bg:c.bg,card:c.card,ink:c.ink,mut:c.mut,line:c.line,acc:c.lab,side:o.dark?'#1b1a15':'#ebe6da',ub:c.ink,uI:c.bg};
     const ff=neutral?"-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif":'Manrope,system-ui,sans-serif',hff=neutral?ff:'Newsreader,serif';
-    const ALL=[...CH_LOC,...CH_LIB,...CH_SKY],isSky=k=>CH_SKY.some(x=>x[0]===k),mk=ch?ch.m:D.model,M=ALL.find(x=>x[0]===mk)||[mk,mk,'',''],sky=isSky(mk),mLbl=k=>{const x=ALL.find(y=>y[0]===k);return isSky(k)&&x?x[1]:k};
+    const ALL=[...CH_LOC,...CH_LIB,...CH_SKY],isSky=k=>CH_SKY.some(x=>x[0]===k),mk=ch?ch.m:D.model,M=mk==='auto'?['auto','✦ Auto','Glimt velger','Beste modell per melding']:ALL.find(x=>x[0]===mk)||[mk,mk,'',''],sky=isSky(mk),mLbl=k=>{if(k==='auto')return'✦ Auto';const x=ALL.find(y=>y[0]===k);return isSky(k)&&x?x[1]:k};
     const P=ch||D.def||{per:'std',sys:'',temp:.7,topP:.9,ctx:8192},close=()=>set({chSh:null,chMdel:null,chDel:false});
     const setP=x=>this.chPut(D2=>{if(ch)D2.chats=D2.chats.map(q=>q.id===ch.id?{...q,...x}:q);else D2.def={...P,...x}});
     const chip=on=>({bg:on?'var(--ci)':'transparent',fg:on?'var(--cb)':'var(--ci)',bd:on?'var(--ci)':'var(--cl)'});
@@ -366,7 +374,7 @@ class Component extends DCLogic {
       const fg=(D.folders||[]).map(f=>{const L=sorted.filter(x=>!x.pin&&x.f===f),open=f===SCAN_F?op[f]===true:op[f]!==false,isS=f===SCAN_F,rv=isS?L.filter(x=>/godkjenning/i.test((x.msgs[1]||{}).t||'')).length:0;return{ic:isS?'M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4':'M3 6h6l2 2h10v11H3z',fc:isS?'#b23a2a':'var(--cm)',t:f+' · '+L.length+(rv?' · '+rv+' til godkjenning':''),isF:true,notF:false,arrow:open?'▾':'▸',tog:()=>this.chPut(D2=>{D2.open={...(D2.open||{}),[f]:!open}}),rows:open?L.map(row):[]}});
       groups=[...[['FESTET',sorted.filter(x=>x.pin)]].filter(g=>g[1].length).map(g=>G(g[0],g[1])),...(fg.length?[G('MAPPER',[])]:[]),...fg,
         ...[['I DAG',rest.filter(x=>x.up>=sod)],['I GÅR',rest.filter(x=>x.up<sod&&x.up>=sod-864e5)],['SISTE 7 DAGER',rest.filter(x=>x.up<sod-864e5&&x.up>=sod-7*864e5)],['ELDRE',rest.filter(x=>x.up<sod-7*864e5)]].filter(g=>g[1].length).map(g=>G(g[0],g[1]))]}
-    const busy=!!(s.chBusy&&ch&&s.chBusy===ch.id),msgs=ch?ch.msgs:[],lastA=msgs.map(m=>m.r).lastIndexOf('a'),runO={data:!!s.chData&&tg.ch_data!==false,web:!!s.chWeb};
+    const busy=!!(s.chBusy&&ch&&s.chBusy===ch.id),msgs=ch?ch.msgs:[],lastA=msgs.map(m=>m.r).lastIndexOf('a'),runO={data:(s.chData!==false)&&tg.ch_data!==false,web:!!s.chWeb};
     const ML=msgs.map((m,i)=>{const key=(ch&&ch.id)+':'+i,ed=!!(s.chEd&&ch&&s.chEd.id===ch.id&&s.chEd.i===i);return{isU:m.r==='u',isA:m.r==='a',t:m.t,view:!ed,editing:ed,
       hasAtt:!!(m.att&&m.att.length),att:(m.att||[]).map(n=>({n})),head:(m.m?mLbl(m.m):'').toUpperCase(),hasTool:!!(m.tool&&m.tool.length),tool:(m.tool||[]).map(n=>({n})),
       bl:m.r==='a'?this.chMd(m.t):[],st:m.st||'',cpL:s.chCop===key?'Kopiert':'Kopier',
@@ -392,14 +400,14 @@ class Component extends DCLogic {
       inp,onIn:e=>set({chIn:e.target.value}),rows:Math.min(6,Math.max(1,inp.split('\n').length)),ph:'Spør '+(sky?M[1]:M[0])+' …',
       onKey:e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();this.chSend(this.state.chIn)}},send:()=>this.chSend(s.chIn),stopRun:()=>this.chStopRun(),
       sendOp:inp.trim()?1:.35,showSend:!busy,showStop:busy,hasAtt:att.length>0,att:att.map((a,i)=>({n:a.n,ic:a.k==='img'?'▣':a.k==='doc'?'#':'⎙',rm:()=>set({chAtt:att.filter((_,j)=>j!==i)})})),
-      web:chip(!!s.chWeb),togWeb:()=>set({chWeb:!s.chWeb}),dat:chip(!!s.chData&&dataOK),togData:()=>{if(!dataOK){this.chToast('Slått av i Innstillinger → AI og tolkning');return}set({chData:!s.chData})},
+      web:chip(!!s.chWeb),togWeb:()=>set({chWeb:!s.chWeb}),dat:chip((s.chData!==false)&&dataOK),togData:()=>{if(!dataOK){this.chToast('Slått av i Innstillinger → AI og tolkning');return}set({chData:s.chData===false})},
       rec:!!s.chRec,noRec:!s.chRec,mic:()=>this.chMic(),micBg:s.chRec?'#b23a2a':'transparent',micFg:s.chRec?'#fff':'var(--ci)',plus:()=>set({chSh:'plus'}),
       wave:s.chRec?React.createElement('span',{style:{display:'flex',alignItems:'center',gap:3,height:22,color:'#b23a2a'}},[0,1,2,3,4,5,6].map(i=>React.createElement('span',{key:i,style:{width:3,height:22,borderRadius:2,background:'currentColor',animation:'chWave .9s ease-in-out '+(i*.11)+'s infinite'}}))):null,
       foot:sky?'Sky-modell: meldingen sendes til '+(mk.indexOf('groq')===0?'Groq':'Google')+'.':'Kjører lokalt på hjemmeserveren. Ingenting sendes ut.',
       toast:s.chToast||'',hasToast:!!s.chToast,
       sh:{model:s.chSh==='model',params:s.chSh==='params',menu:s.chSh==='menu'&&!!mc,guard:s.chSh==='guard',kb:s.chSh==='kb',plus:s.chSh==='plus',mods:s.chSh==='mods'},
       shAl:wide?'center':'flex-end',shR:wide?'24px':'26px 26px 0 0',shW:wide?'460px':'100%',shPb:wide?'22px':o.pb||'22px',close,stop:e=>e.stopPropagation(),
-      locRows:(D.loc||[]).map(k=>ALL.find(y=>y[0]===k)||[k,k,'—','']).map(x=>mrow(x,false)),skyRows:CH_SKY.map(x=>mrow(x,true)),
+      locRows:[{n:'✦ Auto',s:'Glimt velger beste modell for hver melding · lokalt når dine data er med',chk:mk==='auto'?'✓':'',go:()=>selM('auto'),b:'AUTO',bBg:'#7a5ad6'},...(D.loc||[]).map(k=>ALL.find(y=>y[0]===k)||[k,k,'—','']).map(x=>mrow(x,false))],skyRows:CH_SKY.map(x=>mrow(x,true)),
       sys:P.sys||'',onSys:e=>setP({sys:e.target.value}),temp:P.temp,tempL:String(P.temp).replace('.',','),onTemp:e=>setP({temp:+e.target.value}),topP:P.topP,topPL:String(P.topP).replace('.',','),onTopP:e=>setP({topP:+e.target.value}),
       ctxs:[4096,8192,16384,32768].map(n=>{const on=(P.ctx||8192)===n;return{n:(n/1024)+'k',bg:on?'var(--ci)':'var(--cc)',fg:on?'var(--cb)':'var(--ci)',go:()=>setP({ctx:n})}}),
       ths:[['papir','Papir'],['noytral','Nøytral']].map(([k,n])=>{const on=(D.th||'papir')===k;return{n,bg:on?'var(--ci)':'var(--cc)',fg:on?'var(--cb)':'var(--ci)',go:()=>this.chPut(D2=>{D2.th=k})}}),
@@ -410,7 +418,7 @@ class Component extends DCLogic {
         nf:s.chNf||'',onNf:e=>set({chNf:e.target.value}),addF:e=>{e.preventDefault();const t=(s.chNf||'').trim();if(!t)return;this.chPut(D2=>{D2.folders=[...new Set([...(D2.folders||[]),t])];D2.chats=D2.chats.map(x=>x.id===mc.id?{...x,f:t}:x)});set({chNf:''})},
         exp:()=>{this.chExport(mc);close()},share:()=>{this.chShare(mc);close()},delL:s.chDel?'Trykk igjen for å slette':'Slett samtalen',
         del:()=>{if(!s.chDel){set({chDel:true});return}this.chPut(D2=>{D2.chats=D2.chats.filter(x=>x.id!==mc.id);if(D2.cur===mc.id)D2.cur=null});close()}}:{fl:[]},
-      gd:{t:'Sende til '+M[1]+'?',items:[['Meldingen din',1],['Data fra Finans, Kalender og Huskeliste',s.chData?1:0],...att.map(a=>['Vedlegg: '+a.n,1])].filter(x=>x[1]).map(x=>({n:x[0]})),hasData:!!s.chData,
+      gd:{t:'Sende til '+M[1]+'?',items:[['Meldingen din',1],['Data fra Finans, Kalender og Huskeliste',s.chData?1:0],...att.map(a=>['Vedlegg: '+a.n,1])].filter(x=>x[1]).map(x=>({n:x[0]})),hasData:(s.chData!==false),
         send:()=>this.chSend(s.chPend,{ok:true,remember:!!s.chRem}),noData:()=>this.chSend(s.chPend,{ok:true,noData:true}),
         local:()=>{const p=s.chPend;this.chPut(D2=>{if(ch)D2.chats=D2.chats.map(x=>x.id===ch.id?{...x,m:'llama3.1:8b'}:x);D2.model='llama3.1:8b'});setTimeout(()=>this.chSend(p,{ok:true}),0)},
         rem:s.chRem?'☑':'☐',togRem:()=>set({chRem:!s.chRem})},
