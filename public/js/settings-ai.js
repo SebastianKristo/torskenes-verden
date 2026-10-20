@@ -48,7 +48,9 @@ function sent(f) {
 // innstillingene er åpne; settings-search kan be om en bestemt fane (ai-mod → Modeller, ai-key-* → API og nøkler).
 let acTab = null;
 export function setAiTab(t) { acTab = t; }
-const acMount = (el) => mountAiControl(el, { variant: matchMedia('(max-width: 767px)').matches ? 'mobile' : 'web', scope: 'alle', theme: (document.documentElement.dataset.hlTheme ? document.documentElement.dataset.hlTheme === '2c' : is2c()) ? 'papir' : 'mork', tab: acTab ?? undefined, admin: isAdmin(), embedded: true, hideTitle: true, onTab: (t) => { acTab = t; }, onPaint: () => document.dispatchEvent(new Event('hl:reapply')) });
+const acMount = (el) => mountAiControl(el, { variant: matchMedia('(max-width: 767px)').matches ? 'mobile' : 'web', scope: 'alle', theme: (document.documentElement.dataset.hlTheme ? document.documentElement.dataset.hlTheme === '2c' : is2c()) ? 'papir' : 'mork', tab: acTab ?? undefined, admin: isAdmin(), embedded: true, hideTitle: true, onTab: (t) => { acTab = t; }, onPaint: () => document.dispatchEvent(new Event('hl:reapply')),
+  // Prompt 39: statuslinjen («5 lokale modeller · 5 i skyen · 2 jobber kjører») står i undertittelen til Innstillinger-toppen.
+  onStatus: (st) => { const el = document.querySelector('#settings .set-ps'); if (el && st && document.getElementById('set-title')?.textContent === 'AI' && el.textContent !== st) el.textContent = st; } });
 export function aiView({ group, row, note }) {
   const pre = '<div class="set-aictl" data-mount-host data-hl="ai-mod"></div><h3 class="sg-t set-aimore">Chat, Glimt og personvern</h3>';
   if (!A.loaded) return { pre, mount: acMount, groups: [group('', [row({ t: 'Laster …' })])] };

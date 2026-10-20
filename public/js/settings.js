@@ -356,6 +356,7 @@ function domView() {
   if (!sub) {
     const n = domainCount();
     return { groups: [group('Domener', [
+      row({ t: 'Google Search Console', s: 'Klikk, visninger og søkeord fra Google · hent domener', k: 'search console google gsc søk klikk visninger søkeord seo', btn: 'Åpne', go: 'dom|doms' }), // prompt 39
       row({ t: 'Administrer domener', s: 'Legg til, fjern og velg statistikkilde.', v: n == null ? '' : `${n} ${n === 1 ? 'domene' : 'domener'}`, btn: 'Administrer', go: 'dom|doms' }),
       row({ t: 'Verdenskart med besøk per land', s: 'Vises på Domener-siden.', tog: ui().domMap !== false, act: 'data-toggle="ui:domMap"' }),
     ], 'Cloudflare-domener uten eget token bruker standard-tokenet under Integrasjoner → Cloudflare.')] };
@@ -622,12 +623,21 @@ function render() {
   const keepQ = act?.matches?.('[data-setq]') && modal().contains(act) ? act : null;
   // Prompt 30: fullskjerm med «Ferdig»-pille fast øverst til høyre i vinduet, og sidens ikon foran tittelen.
   const searching = q.trim() && !sub;
+  // Prompt 39 (claude-code-scroll-stabil-innstillinger.md): samme side tegnes på nytt (lagring, bryter, verdi) → scrollen står stille.
+  // Det monterte innholdet (AI-kontroll, Google/HA …) flyttes over til den nye siden i stedet for å tegnes tomt, og siden får
+  // midlertidig minst samme høyde, så nettleseren ikke klemmer scrollen til toppen eller bunnen mens noe lastes.
+  const same = !!keep && body?.dataset.key === key, oldMount = same ? body.querySelector('[data-mail-host],[data-mount-host]') : null, oldH = same ? body.querySelector('.set-inner')?.offsetHeight ?? 0 : 0;
   modal().innerHTML = `<div class="set-box" role="dialog" aria-modal="true" aria-labelledby="set-title">${sideHtml()}
     <div class="set-main">${sheetBtn('Ferdig', 'data-close data-set-done', 'pri').replace('class="sbtn pri"', 'class="sbtn pri set-done"')}
     <div class="set-body" data-key="${esc(key)}"><div class="set-inner">
       <header class="set-ph">${sub ? `<button type="button" class="set-back" data-back>${svg(P.back, 18)}${esc(tName)}</button>` : ''}
         <div class="set-ph-row">${searching ? '' : tab === 'konto' && !sub ? kontoAvatar(store.me.me ?? {}) : icBox(tab, 44, 22)}<div class="set-ph-t"><h2 id="set-title">${esc(v.title ?? tName)}</h2><div class="set-ps">${esc(v.sub ?? tSub)}</div></div></div></header>
       ${content}</div></div></div></div>`;
+  if (same) {
+    const inner = modal().querySelector('.set-inner'), slot = modal().querySelector('[data-mail-host],[data-mount-host]');
+    if (oldMount && slot && v.mount && slot.className === oldMount.className) slot.replaceWith(oldMount);
+    if (inner && oldH) { inner.style.minHeight = `${oldH}px`; clearTimeout(render.mh); render.mh = setTimeout(() => { const i = modal().querySelector('.set-inner'); if (i) i.style.minHeight = ''; }, 1500); }
+  }
   modal().querySelector('.set-body').scrollTop = keep;
   if (keep) requestAnimationFrame(() => { const b = modal().querySelector('.set-body'); if (b && b.dataset.key === key && b.scrollTop < keep - 1) b.scrollTop = keep; });
   if (keepQ) { const nq = modal().querySelector('[data-setq]'); if (nq) { nq.replaceWith(keepQ); keepQ.focus({ preventScroll: true }); } }

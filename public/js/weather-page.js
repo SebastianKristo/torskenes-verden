@@ -11,6 +11,8 @@
 import { clearBtn } from '/assets/js/searchfield.js';
 import { api, esc, sheetBtn, haptic } from './util.js';
 import { createWxFx, sunFrac } from './weather-fx.js';
+import { cmp39Html, bindCmp39, cmp39Reset } from './weather-cmp39.js'; // prompt 39: Yr mot Storm 2a + wiggle
+import { fig } from './glimt-figs.js'; // prompt 39: Glimt · ukas vær
 
 /* ---------------- Konstanter fra designet ---------------- */
 const IC = { sun: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', part: 'M8 4v1.5M3.5 9H5M4.8 5.8l1 1M11.2 5.8l-1 1M8 7a3 3 0 0 0-2.8 4M7 19h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.4 1.5A3.3 3.3 0 0 0 7 19z', cloud: 'M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z', rain: 'M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14zM8 17l-1 3M12 17l-1 3M16 17l-1 3', snow: 'M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14zM8 18h.01M12 20h.01M16 18h.01', fog: 'M4 10h16M6 14h12M4 18h16', storm: 'M7 13h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 13zM12 14l-2 4h3l-2 4' };
@@ -223,7 +225,7 @@ function cmpVals(d, nowI) {
     const day = D.time[i], j = sdi[day], yI = ic(D.weather_code[i], false), sk = j != null ? SD.icon[j] ?? yI.k : null;
     const yh = D.temperature_2m_max[i], sh = j != null ? SD.temperature_2m_max[j] : null, df = sh == null || yh == null ? null : Math.round(yh - sh);
     if (df != null) diffs.push(Math.abs(yh - sh));
-    return { d: k ? WD[new Date(`${day}T12:00`).getDay()] : 'I dag', yk: yI.k, sk, yt: `${r0(yh)} / ${r0(D.temperature_2m_min[i])}`, stt: j != null ? `${r0(sh)} / ${r0(SD.temperature_2m_min[j])}` : '–', yp: mm(D.precipitation_sum[i]), sp: j != null ? mm(SD.precipitation_sum[j]) : '–',
+    return { d: k ? WD[new Date(`${day}T12:00`).getDay()] : 'I dag', yk: yI.k, sk, yh, sh, dfN: df, ypN: D.precipitation_sum[i] ?? 0, spN: j != null ? SD.precipitation_sum[j] ?? 0 : null, ylo: D.temperature_2m_min[i], slo: j != null ? SD.temperature_2m_min[j] : null, yt: `${r0(yh)} / ${r0(D.temperature_2m_min[i])}`, stt: j != null ? `${r0(sh)} / ${r0(SD.temperature_2m_min[j])}` : '–', yp: mm(D.precipitation_sum[i]), sp: j != null ? mm(SD.precipitation_sum[j]) : '–',
       df: df == null ? '–' : `${df > 0 ? '+' : ''}${df}°`, dbg: df == null || Math.abs(df) < 2 ? 'rgba(255,255,255,.1)' : Math.abs(df) < 4 ? 'rgba(255,179,71,.3)' : 'rgba(242,107,94,.4)' };
   });
   const avg = Sx.avgDiff ?? (diffs.length ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0);
@@ -453,6 +455,7 @@ function dkHtml(d, P) {
   const c = (cls, inner) => `<div class="wx36-c ${cls}">${inner}</div>`;
   return `<div class="wx36-hero" style="opacity:${Math.max(0, 1 - S.sc / 220).toFixed(2)}"><span class="wx36-k">${arrow}${esc(kick)}</span><span class="wx36-city">${esc(P.name)}</span><span class="wx36-temp">${r0(C.temperature_2m)}</span><span class="wx36-desc">${esc(DESC(C.weather_code))}</span><span class="wx36-hl">H:${r0(D.temperature_2m_max[1])}  L:${r0(D.temperature_2m_min[1])}</span></div>
     <div class="wx36-grid">${c('s5 forhold', forholdHtml(d))}${c('s2 r2 days', daysHtml(d))}${c('s2 map', mapCardHtml())}${c('s1', R.sun)}${c('s2', R.moon)}${c('s1', R.uv)}${c('s2', cmpCardHtml(d))}${c('s1', R.feel)}${c('s1', R.yd)}${c('s1', R.rain)}${c('s1', R.vis)}${c('s1', R.hum)}${c('s1', R.pres)}${c('s2', R.wind)}</div>
+    ${weekCardHtml(P)}
     <div class="wx36-foot"><b>Vær for ${esc(P.name)}</b><span class="wxp-sidesrc">${esc(S.src)}</span><a href="${esc(S.full?.yrUrl ?? 'https://www.yr.no/')}" target="_blank" rel="noopener">Se også yr.no ↗</a></div>`;
 }
 
@@ -461,7 +464,28 @@ function mainHtml() {
   if (!d) return `<div class="wxp-hero"><span class="wxp-city">${esc(P.name)}</span><span class="wxp-desc">${esc(S.src === 'Henter …' ? 'Henter været …' : 'Fikk ikke hentet været')}</span>${S.src === 'Henter …' ? '' : '<button class="wxp-pill" data-wx="retry">Prøv igjen</button>'}</div>`;
   const credit = `<a class="wxp-credit" href="${esc(S.full?.yrUrl ?? 'https://www.yr.no/')}" target="_blank" rel="noopener">${esc(S.full?.credit ?? 'Data: MET Norway')} · Se også yr.no ↗</a>`;
   if (isDk()) return dkHtml(d, P);
-  return `${heroHtml(d, P)}<div class="wxp-cols"><div class="wxp-col">${forholdHtml(d)}${daysHtml(d)}${cmpCardHtml(d)}</div><div class="wxp-col">${restHtml(d)}</div></div>${credit}`;
+  return `${heroHtml(d, P)}<div class="wxp-cols"><div class="wxp-col">${forholdHtml(d)}${daysHtml(d)}${cmpCardHtml(d)}</div><div class="wxp-col">${restHtml(d)}</div></div>${weekCardHtml(P)}${credit}`;
+}
+
+/* ---------- Prompt 39: «Glimt · ukas vær» nederst (claude-code-vaer-glimt-ukas-vaer.md, GET /api/weather/week-summary) ---------- */
+const WK_CH = [['sky', 'Sky', 'den rolige'], ['ugle', 'Ugle', 'tallknuseren'], ['spire', 'Spire', 'ut og lek']];
+function loadWeek(P = place(), ch) {
+  const key = `${P.id}|${ch ?? S.wkCh ?? ''}`;
+  if (S.wkKey === key && (S.wk || S.wkBusy)) return;
+  S.wkKey = key; S.wkBusy = true; S.wkErr = '';
+  const q = !P.local && P.id !== 'pos' ? `place=${encodeURIComponent(P.name)}` : `place=${P.lat},${P.lon}`;
+  api(`/weather/week-summary?${q}${ch ? `&char=${ch}` : ''}`).then((r) => { if (S.wkKey !== key) return; S.wk = r; S.wkCh = r?.char ?? ch ?? 'sky'; }).catch((e) => { if (S.wkKey === key) { S.wk = null; S.wkErr = e.status === 404 ? 'none' : e.message; } })
+    .finally(() => { if (S.wkKey === key) { S.wkBusy = false; paintMain(); } });
+}
+function weekCardHtml(P) {
+  if (!S.wk && !S.wkBusy && S.wkKey !== `${P.id}|${S.wkCh ?? ''}`) queueMicrotask(() => loadWeek(P));
+  if (S.wkErr === 'none' || (!S.wk && !S.wkBusy && S.wkErr)) return '';
+  const w = S.wk, ch = S.wkCh ?? w?.char ?? 'sky';
+  const tiles = w?.tiles ?? [], hl = w?.highlights ?? [];
+  return `<section class="wk39" aria-label="Glimt · ukas vær"><div class="wk39-h"><span class="wk39-k">✦ GLIMT · UKAS VÆR</span><span class="wk39-chs" role="radiogroup" aria-label="Personlighet">${WK_CH.map(([id, n, d]) => `<button type="button" role="radio" aria-checked="${ch === id}" class="${ch === id ? 'on' : ''}" data-wx-wkc="${id}" title="${n} · ${d}">${fig(id, 26, ch === id ? 'talk' : 'idle')}<span>${n}</span></button>`).join('')}</span></div>
+    <div class="wk39-b">${fig(ch, 54, S.wkBusy ? 'tenker' : 'talk')}<p>${w ? esc(w.text) : 'Glimt ser på uka …'}</p></div>
+    ${tiles.length ? `<div class="wk39-t">${tiles.map((t) => `<span><span class="wk39-tl">${esc(t.label)}</span><b>${esc(t.value)}</b><span>${esc(t.sub ?? '')}</span></span>`).join('')}</div>` : ''}
+    ${hl.length ? `<div class="wk39-r">${hl.map((x) => `<span><span>${esc(x.label)}</span><b>${esc(x.text)}</b></span>`).join('')}</div>` : ''}</section>`;
 }
 const cmpRow = (x) => `<div class="wxp-cg wxp-cgr"><b>${esc(x.d)}</b><span class="wxp-cc">${svgIc(x.yk, 22)}<span><b>${esc(x.yt)}</b><span>${esc(x.yp)}</span></span></span><span class="wxp-cc">${x.sk ? svgIc(x.sk, 22) : '<span style="width:22px"></span>'}<span><b>${esc(x.stt)}</b><span>${esc(x.sp)}</span></span></span><span class="wxp-df" style="background:${x.dbg}">${esc(x.df)}</span></div>`;
 
@@ -557,22 +581,11 @@ function metricSheet(d) {
     <div class="wxp-chart"><svg viewBox="0 0 336 182">${grid}${bars}${line}${nowM}${xt}</svg>${legend}${ppRow}</div>${scale}${about}`, 'ms');
 }
 
+// Prompt 39: Yr mot Storm 2a (himmel + glasskort, duell, enighet, Glimt forklarer) med wiggle-redigering (weather-cmp39.js).
 function cmpSheet(d) {
   const cmp = cmpVals(d, nowIndex(d.hourly)), P = place();
-  // Fullskjerm (ikke ark): bakgrunn #17191e helt ut, innhold maks 760 px midtstilt, «Ferdig»-pille til høyre. Ingen logoer i toppen.
-  return `<div class="wxp-cmpfs" role="dialog" aria-modal="true" aria-labelledby="wxp-cmpt"><div class="wxp-cmpin">
-    <div class="wxp-shh"><div><b class="wxp-h1 wxp-cmpt" id="wxp-cmpt">Yr mot Storm</b><span class="wxp-mut">${esc(P.name)}</span></div>${doneBtn('cmp')}</div>
-    ${S.cmpBusy ? '<span class="wxp-mut">Henter Storm-data …</span>' : ''}
-    ${cmp.ready ? `<div class="wxp-box wxp-agbox"><i style="background:${cmp.agC}"></i><span><b>${esc(cmp.agT)}</b><span class="wxp-mut">${esc(cmp.agS)}</span></span></div>
-    <div class="wxp-box"><div class="wxp-boxh"><span class="wxp-cap">NESTE 24 TIMER</span><span class="wxp-leg"><span>${LOGO('yr', 16)}<i style="background:#5ec8f2"></i>Yr</span><span>${LOGO('storm', 16)}<i style="background:#ff8a3d"></i>Storm</span></span></div>
-      <svg viewBox="0 0 300 170" style="width:100%;height:auto;display:block">${cmp.grid.map((g) => `<line x1="22" x2="300" y1="${g.y}" y2="${g.y}" stroke="rgba(255,255,255,.08)"/><text x="0" y="${g.ty}" fill="#9aa3ae" font-size="9" font-weight="700">${g.t}</text>`).join('')}${cmp.bars.map((b) => `<rect x="${b.x}" y="${b.y}" width="4" height="${b.h}" rx="1.5" fill="${b.c}"/>`).join('')}<path d="${cmp.yr}" fill="none" stroke="#5ec8f2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="${cmp.st}" fill="none" stroke="#ff8a3d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${cmp.hx.map((h) => `<text x="${h.x}" y="168" fill="#9aa3ae" font-size="9" font-weight="700" text-anchor="middle">${h.t}</text>`).join('')}</svg>
-      <span class="wxp-mut" style="font-size:11.5px">Søyler viser nedbør per time. Yr til venstre, Storm til høyre.</span></div>
-    <div class="wxp-box wxp-cmplist"><div class="wxp-cg wxp-cgh"><span></span><span class="wxp-lh" style="color:#5ec8f2">${LOGO('yr', 18)}YR</span><span class="wxp-lh" style="color:#ff8a3d">${LOGO('storm', 18)}STORM</span><span style="text-align:right">AVVIK</span></div>${cmp.days.map(cmpRow).join('')}</div>` : S.cmpBusy ? '' : '<span class="wxp-mut">Storm svarte ikke. Prøv igjen senere.</span>'}
-    <div class="wxp-two"><a href="${esc(S.full?.yrUrl ?? `https://www.yr.no/nb/søk?q=${encodeURIComponent(P.name)}`)}" target="_blank" rel="noopener">Åpne yr.no ↗</a><a href="https://www.storm.no/" target="_blank" rel="noopener">Åpne storm.no ↗</a></div>
-    <span class="wxp-mut" style="font-size:12px;line-height:1.45">Yr er MET Norway (api.met.no). Storm (StormGeo) har ikke et åpent API, så Storm-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.</span>
-  </div></div>`;
+  return cmp39Html(cmp, { P, busy: S.cmpBusy, err: S.cmpErr, LOGO, svgIc, cmpRow, done: doneBtn('cmp'), yrUrl: S.full?.yrUrl, upd: S.full?.updatedAt ?? S.d?.updatedAt ?? null });
 }
-
 function placesSheet() {
   const L = S.places ?? DEFP, res = S.plRes ?? [];
   const resHtml = res.length ? `<div class="wxp-box wxp-res">${res.map((r, i) => { const have = L.find((x) => Math.abs(x.lat - r.lat) < 0.05 && Math.abs(x.lon - r.lon) < 0.05); return `<button data-wx-res="${i}"${i ? ' class="bt"' : ''}><span><b>${esc(r.name)}</b><span class="wxp-mut">${esc(r.sub || [r.region, r.country].filter(Boolean).join(', '))}</span></span><span class="${have ? 'wxp-mut' : 'wxp-blue2'}">${have ? 'Vis' : '+ Legg til'}</span></button>`; }).join('')}</div>` : '';
@@ -759,6 +772,7 @@ function bindPlaces(layer) {
 function bind(r) {
   const layer = r.querySelector('.wxp-layer');
   bindPlaces(layer);
+  bindCmp39(layer, () => paintLayer());
   r.querySelector('.wxp-scroll').addEventListener('scroll', (e) => {
     const v = e.currentTarget.scrollTop;
     if (Math.abs(v - S.sc) < 8) return;
@@ -770,16 +784,17 @@ function bind(r) {
   r.addEventListener('click', (e) => {
     const t = e.target;
     if (layer.dataset.noTap) { delete layer.dataset.noTap; if (layer.contains(t)) return; }
-    const b = t.closest('[data-wx],[data-wx-sh],[data-wx-shd],[data-wx-ms],[data-wx-msd],[data-wx-mode],[data-wx-feel],[data-wx-close],[data-wx-layer],[data-wx-pl],[data-wx-del],[data-wx-res]');
+    const b = t.closest('[data-wx],[data-wx-wkc],[data-wx-sh],[data-wx-shd],[data-wx-ms],[data-wx-msd],[data-wx-mode],[data-wx-feel],[data-wx-close],[data-wx-layer],[data-wx-pl],[data-wx-del],[data-wx-res]');
     if (!b) return;
     const ds = b.dataset;
     if (ds.wxClose) {
       if (b.classList.contains('wxp-scrim') && t !== b) return; // klikk inne i arket
       const k = ds.wxClose;
-      if (k === 'sh') S.sh = null; if (k === 'ms') S.ms = null; if (k === 'cmp') S.cmpOpen = false; if (k === 'mp') S.mpOpen = false;
+      if (k === 'sh') S.sh = null; if (k === 'ms') S.ms = null; if (k === 'cmp') { S.cmpOpen = false; cmp39Reset(); } if (k === 'mp') S.mpOpen = false;
       if (k === 'pl') { S.plOpen = false; S.plQ = ''; S.plRes = null; S.swOpen = null; }
       return paintLayer();
     }
+    if (ds.wxWkc) { const ch = ds.wxWkc; haptic(8); S.wkCh = ch; S.wk = null; S.wkKey = ''; loadWeek(place(), ch); api('/weather/week-summary', { method: 'PUT', json: { char: ch } }).catch(() => {}); return paintMain(); }
     if (ds.wx === 'retry') return load();
     if (ds.wx === 'close') { haptic(10); location.hash = '#/dash'; return; }
     if (ds.wx === 'cmp') { S.cmpOpen = true; paintLayer(); if (!S.cmp && !S.cmpBusy) loadCmp(); return; }

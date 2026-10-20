@@ -140,7 +140,9 @@ async function loadCards() {
   catch (er) { if (er.status === 404 && k === 'alle') S.cards = false; }
 }
 function srvTips() {
-  return S.cards.map((c, i) => { const [ic, col] = CARD_IC[c.kind] ?? CARD_IC.merge; return `<div class="tk-tip"><span class="tk-tipi" style="--c:${col}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ic}"/></svg></span><span class="tk-main"><b>${esc(c.text)}</b>${CARD_SUB[c.kind] && !/\?$/.test(c.text) ? `<span class="tk-meta">${esc(c.kind === 'store' && c.list ? `${CARD_SUB.store.replace('Appen', `${c.list.name}: appen`)}` : CARD_SUB[c.kind])}</span>` : ''}</span><span class="tk-tipb">${(c.actions ?? []).map((a, j) => `<button type="button" class="tk-gbtn${j ? '' : ' pri'}" data-tk-card="${i}:${j}">${esc(a.label)}</button>`).join('')}${(c.actions ?? []).some((a) => a.action === 'dismiss') ? '' : `<button type="button" class="tk-gbtn" data-tk-card="${i}:x">Ikke nå</button>`}</span></div>`; }).join('');
+  // Prompt 39 (claude-code-gjoremal-glimt-forslag.md): pakkeliste bare for reise/hytte – ikke bursdager, prøver o.l.
+  const ok = (c) => c.kind !== 'packlist' || (/hytt|reise|ferie|fjell|tur\b|camping|fly|tog|ski/i.test(c.event?.title ?? c.text ?? '') && !/bursdag|fødselsdag|prøve|eksamen|innlevering/i.test(c.event?.title ?? c.text ?? ''));
+  return S.cards.map((c, i) => (ok(c) ? [c, i] : null)).filter(Boolean).map(([c, i]) => { const [ic, col] = CARD_IC[c.kind] ?? CARD_IC.merge; return `<div class="tk-tip"><span class="tk-tipi" style="--c:${col}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ic}"/></svg></span><span class="tk-main"><b>${esc(c.text)}</b>${CARD_SUB[c.kind] && !/\?$/.test(c.text) ? `<span class="tk-meta">${esc(c.kind === 'store' && c.list ? `${CARD_SUB.store.replace('Appen', `${c.list.name}: appen`)}` : CARD_SUB[c.kind])}</span>` : ''}</span><span class="tk-tipb">${(c.actions ?? []).map((a, j) => `<button type="button" class="tk-gbtn${j ? '' : ' pri'}" data-tk-card="${i}:${j}">${esc(a.label)}</button>`).join('')}${(c.actions ?? []).some((a) => a.action === 'dismiss') ? '' : `<button type="button" class="tk-gbtn" data-tk-card="${i}:x">Ikke nå</button>`}</span></div>`; }).join('');
 }
 async function cardAct(ref) {
   const [i, j] = ref.split(':'), c = S.cards?.[+i];
@@ -220,11 +222,13 @@ function body() {
   const group = (title, cls, arr, act = '') => (arr.length ? `<section class="tk-group"><span class="tk-gh"><span class="tk-gt ${cls}">${title}</span>${act}</span><div class="card tk-card">${arr.map(row).join('')}</div></section>` : '');
   const actBtn = (k, n) => `<button type="button" class="tk-gbtn" data-tk-act="${k}"${S.busy ? ' disabled' : ''}>${n}</button>`;
   const lists2 = `<div class="tk-lists">${chip('alle', 'Alle', 'var(--t-ink)')}${lists.map((l) => chip(l.id, l.name, l.color)).join('')}${chip('arkiv', 'Arkivert', 'var(--t-mut)')}<button type="button" class="tk-list tk-new" data-tk-act="newlist">+ Ny liste</button></div>`;
+  if (ARC && wide()) return webBody(S.arch, curName);
   if (ARC) {
     return `${lists2}${group(`ARKIVERT · ${S.arch.length}`, 'mut', S.arch, actBtn('arch-clear', 'Tøm arkivet'))}
       ${S.arch.length ? '' : '<div class="tk-empty">Ingenting i arkivet. Fullførte oppgaver arkiveres automatisk etter 7 dager.</div>'}
       <div class="tk-foot">Arkiverte oppgaver telles ikke i lister, widgets eller på Hjem. ↺ Gjenopprett legger oppgaven tilbake som åpen i sin liste.</div>`;
   }
+  if (wide()) return webBody(inL, curName); // prompt 39: 2a = sidemeny + detaljer (1a) med tavle (1b) som visning
   const curL = S.cur === 'alle' ? null : listOf(S.cur);
   const allowed = curL ? new Set(listPeople(curL).map((p) => p.id)) : null;
   const who = [[null, 'Meg'], ...people().filter((m) => m.id !== myId() && (!allowed || allowed.has(m.id))).map((m) => [m.id, m.name])];
@@ -561,6 +565,7 @@ function bind(h) {
     try { await createItem({ n: title, list: defaultList(), due: S.nd == null ? null : isoDay(S.nd), who: S.nw ?? myId() ?? null }); S.nv = ''; } catch (er) { flash(er.message); }
     S.busy = false; paint();
   });
+  bindBoard(h);
   h.addEventListener('click', async (e) => {
     const t = e.target.closest('button');
     if (!t) return;
@@ -569,6 +574,10 @@ function bind(h) {
       if (S.cur === id && id !== 'alle' && id !== 'arkiv') return openList(id); // trykk på aktiv chip åpner listearket
       S.cur = id; if (S.cards !== false) { S.cards = null; loadCards(); } return paint();
     }
+    if (t.dataset.twSel) { S.sel = t.dataset.twSel; if (innerWidth < 1000) { S.ed = t.dataset.twSel; S.tagIn = ''; S.subIn = ''; paintSheets(); } return paint(); }
+    if (t.dataset.twView) { S.view = t.dataset.twView; try { localStorage.setItem('huske_web_view', S.view); } catch { /* */ } return paint(); }
+    if (t.dataset.twPf !== undefined) { S.pf = t.dataset.twPf || null; return paint(); }
+    if (t.dataset.twAct) return webAct(t.dataset.twAct, t.dataset.twId);
     if (t.dataset.tkEd) { S.ed = t.dataset.tkEd; S.tagIn = ''; S.subIn = ''; return paintSheets(); }
     if (t.dataset.tkGq) return glimtRun(t.dataset.tkGq);
     if (t.dataset.tkG === 'undo') return undo();
@@ -773,5 +782,157 @@ export function render() {
       if (!document.hidden && !liveOn() && !layer) load();
     }, 30_000);
   });
+  bindWide();
   return `<div class="tk-top"><div class="os-title">Gjøre<b>mål</b></div><div class="tk-sub">To-do for hele familien · dine lister og lister som er delt med deg</div></div><div id="tasks" class="tk">${body()}</div>`;
+}
+
+/* ================= Prompt 39: Gjøremål på web (claude-code-huskeliste-web.md, fasit Huskeliste Web Design.dc.html → 2a) =================
+   ≥ 1000 px: sidemeny 240 px (lister, personer, + Ny liste) · midten (Glimt, tittel + personfilter, grupper, + Ny oppgave) ·
+   høyre 340 px (VALGT + ✦ Glimt-forslag). «▥ Tavle» slår sammen midten og høyre: én kolonne per liste (Alle) eller per person
+   (én liste valgt); dra kort mellom kolonnene for å bytte liste/person. Valget huskes i huske_web_view. 760–1000 px: ikon-skinne. */
+const wide = () => !!host() && matchMedia('(min-width: 760px)').matches && !matchMedia('(pointer: coarse) and (max-width: 1023px)').matches;
+try { S.view = localStorage.getItem('huske_web_view') === 'tavle' ? 'tavle' : 'liste'; } catch { S.view = 'liste'; }
+S.pf = null; S.sel = null;
+let wideWas = null;
+function bindWide() {
+  if (bindWide.on) return;
+  bindWide.on = true;
+  window.addEventListener('resize', () => { if (!host()) return; const w = wide(); if (wideWas !== null && w !== wideWas) paint(); wideWas = w; });
+  window.addEventListener('keydown', (e) => {
+    if (!host() || !wide() || e.metaKey || e.ctrlKey || e.altKey || layer) return;
+    if (/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName ?? '') || e.target?.isContentEditable) return;
+    const vis = [...host().querySelectorAll('[data-tw-sel]')].map((b) => b.dataset.twSel), i = vis.indexOf(String(S.sel));
+    const k = e.key.toLowerCase();
+    if (k === 'n') { e.preventDefault(); host().querySelector('[data-tk-form] input')?.focus(); return; }
+    if (k === 'l' || k === 't') { S.view = k === 't' ? 'tavle' : 'liste'; try { localStorage.setItem('huske_web_view', S.view); } catch { /* */ } paint(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const j = Math.max(0, Math.min(vis.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1))); if (vis[j]) { S.sel = vis[j]; paint(); host().querySelector(`[data-tw-sel="${CSS.escape(vis[j])}"]`)?.scrollIntoView({ block: 'nearest' }); } return; }
+    if (!S.sel) return;
+    if (e.key === ' ') { e.preventDefault(); tick(String(S.sel)); return; }
+    if (k === 'e') { S.ed = String(S.sel); paintSheets(); return; }
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); archive([String(S.sel)]); }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (host() && wide() && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && !layer) { e.preventDefault(); host().querySelector('[data-tk-gform] input')?.focus(); }
+  });
+}
+const initial = (n) => String(n ?? '?').trim().slice(0, 1).toUpperCase() || '?';
+const endOfWeek = () => { const d = new Date(today() + 'T12:00'); return isoDay((7 - ((d.getDay() + 6) % 7)) - 1); };
+function twGroups(inL) {
+  const t0 = today(), t1 = isoDay(1), we = endOfWeek(), open = inL.filter((t) => !t.done);
+  const by = (a, b) => (a.due ?? '9').localeCompare(b.due ?? '9') || String(a.time ?? '').localeCompare(String(b.time ?? '')) || (b.prio ?? 0) - (a.prio ?? 0);
+  return [
+    ['I DAG OG FORFALT', 'late', open.filter((t) => t.due && t.due <= t0).sort(by)],
+    ['I MORGEN', '', open.filter((t) => t.due === t1).sort(by)],
+    ['SENERE DENNE UKA', '', open.filter((t) => t.due && t.due > t1 && t.due <= we).sort(by)],
+    ['SENERE', 'mut', open.filter((t) => t.due && t.due > we && t.due > t1).sort(by)],
+    ['UTEN DATO', 'mut', open.filter((t) => !t.due)],
+    ['FERDIG', 'pos', inL.filter((t) => t.done).sort((a, b) => (doneMs(b) ?? 0) - (doneMs(a) ?? 0)).slice(0, 20)],
+  ].filter((g) => g[2].length);
+}
+function twPerson(uid, size = 22) {
+  if (!uid) return '';
+  const p = person(uid) ?? { name: nameOf(uid) };
+  return `<span class="tw-av" style="--s:${size}px;background:${esc(pColor(p))}" title="${esc(nameOf(uid) || p.name || '')}">${esc(initial(p.name))}</span>`;
+}
+function twRow(t) {
+  const [dt, dc] = dueLabel(t), c = colorOf(tList(t)), subs = Array.isArray(t.subs) ? t.subs : [], l = listOf(tList(t));
+  const meta = [dt, subs.length ? `${subs.filter((x) => x.done).length}/${subs.length}` : '', t.rep && t.rep !== 'none' ? '↻' : ''].filter(Boolean).join(' · ');
+  return `<div class="tw-row${t.done ? ' done' : ''}${String(S.sel) === String(t.id) ? ' on' : ''}">
+    <button type="button" class="tk-chk" style="--c:${esc(c)}" data-tk-tick="${esc(t.id)}" aria-label="${t.done ? 'Marker som ikke gjort' : 'Fullfør'}" aria-pressed="${t.done}">${t.done ? '✓' : ''}</button>
+    <button type="button" class="tw-rm" data-tw-sel="${esc(t.id)}"><span class="tw-rn">${t.flag ? '<span class="tk-flag">⚑</span>' : ''}${t.prio ? `<span class="tk-prio">${'!'.repeat(Math.min(3, +t.prio))}</span>` : ''}${esc(tTitle(t))}</span>${meta ? `<span class="tw-rmeta ${t.done ? '' : dc}">${esc(meta)}</span>` : ''}</button>
+    ${S.cur === 'alle' && l ? `<span class="tw-lb" style="--c:${esc(l.color)}">${esc(l.name)}</span>` : ''}${twPerson(tWho(t))}
+    ${S.cur === 'arkiv' ? `<button type="button" class="tk-restore" data-tk-restore="${esc(t.id)}">↺</button>` : ''}
+  </div>`;
+}
+function twSide() {
+  const items = S.d.items ?? [], lists = S.d.lists ?? [];
+  const n = (id) => (id === 'arkiv' ? S.arch.length : (id === 'alle' ? items : items.filter((t) => tList(t) === id)).filter((t) => !t.done).length);
+  const mine = items.filter((t) => !t.done && (tWho(t) === myId() || (!tWho(t) && myId()))).length;
+  const li = (id, name, color, cnt, ic = '') => `<button type="button" class="tw-li${S.cur === id ? ' on' : ''}" data-tk-list="${esc(id)}" aria-pressed="${S.cur === id}" title="${esc(name)}">${ic || `<span class="tw-dot" style="background:${esc(color)}"></span>`}<span class="tw-ln">${esc(name)}</span><span class="tw-k">${cnt}</span></button>`;
+  const ppl = people();
+  return `<aside class="tw-side"><div class="tw-brand"><b>Gjøremål</b><span>Hjem, handel og hytta</span></div>
+    <nav class="tw-lists">${li('alle', 'Alle', 'var(--t-ink)', n('alle'))}<button type="button" class="tw-li${S.pf === 'me' && S.cur === 'alle' ? ' on' : ''}" data-tw-act="mine" title="Mine"><span class="tw-dot ring"></span><span class="tw-ln">Mine</span><span class="tw-k">${mine}</span></button>
+      ${lists.map((l) => li(l.id, l.name, l.color, n(l.id))).join('')}${li('arkiv', 'Arkiv', 'var(--t-mut)', n('arkiv'), `<span class="tw-ic">${ARCH_SVG}</span>`)}</nav>
+    ${ppl.length ? `<span class="tw-lab">PERSONER</span><nav class="tw-lists">${ppl.map((p) => `<button type="button" class="tw-li${S.pf === p.id ? ' on' : ''}" data-tw-pf="${esc(p.id)}" title="${esc(p.name)}">${twPerson(p.id, 20)}<span class="tw-ln">${esc(p.id === myId() ? `${p.name} (meg)` : p.name)}</span><span class="tw-k">${items.filter((t) => !t.done && tWho(t) === p.id).length}</span></button>`).join('')}</nav>` : ''}
+    <button type="button" class="tw-newl" data-tk-act="newlist">+ Ny liste</button>
+    ${isAdmin() ? '<div class="tk-ha-slot"></div>' : ''}</aside>`;
+}
+function twSelPanel() {
+  const t = S.sel != null && (S.d.items.find((x) => String(x.id) === String(S.sel)) ?? S.arch.find((x) => String(x.id) === String(S.sel)));
+  if (!t) return '<div class="tw-sel empty"><span class="tw-lab">VALGT</span><p>Trykk på en oppgave for å se detaljer.</p></div>';
+  const l = listOf(tList(t)), [dt] = dueLabel(t), subs = Array.isArray(t.subs) ? t.subs : [];
+  const rows = [['Liste', l ? `<span class="tw-dot" style="background:${esc(l.color)}"></span>${esc(l.name)}` : '–'], ['Hvem', tWho(t) ? `${twPerson(tWho(t), 18)}${esc(nameOf(tWho(t)))}` : 'Ingen'], ['Frist', esc(dt || 'Ingen')]];
+  if (t.rep && t.rep !== 'none') rows.push(['Gjentas', esc(REP.find((r) => r[0] === t.rep)?.[1] ?? t.rep)]);
+  return `<div class="tw-sel"><span class="tw-lab">VALGT</span><b class="tw-st">${esc(tTitle(t))}</b>
+    <div class="tw-rows">${rows.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('')}</div>
+    ${subs.length ? `<span class="tw-lab">DELOPPGAVER · ${subs.filter((x) => x.done).length}/${subs.length}</span><div class="tw-subs">${subs.map((x) => `<span class="${x.done ? 'done' : ''}"><i>${x.done ? '✓' : ''}</i>${esc(x.n ?? x.title ?? '')}</span>`).join('')}</div>` : ''}
+    ${tNotes(t) ? `<p class="tw-note">${linkify(tNotes(t))}</p>` : ''}
+    <div class="tw-btns"><button type="button" class="tw-b ink" data-tk-tick="${esc(t.id)}">${t.done ? '↺ Ikke ferdig' : '✓ Ferdig'}</button><button type="button" class="tw-b" data-tw-act="tomorrow" data-tw-id="${esc(t.id)}">I morgen</button><button type="button" class="tw-b" data-tk-ed="${esc(t.id)}">Påminn</button></div>
+    <button type="button" class="tw-link" data-tk-ed="${esc(t.id)}">Alle detaljer ›</button></div>`;
+}
+function twGlimt() {
+  const g = S.g;
+  return `<form class="tk-gf tw-gf" data-tk-gform>${spk(!!g.busy)}<input name="gq" value="${esc(g.q)}" placeholder="${esc(g.busy || 'Spør Glimt eller skriv en oppgave …')}" autocomplete="off" maxlength="2000" aria-label="Spør Glimt eller skriv en oppgave"${g.busy ? ' disabled' : ''}><span class="tw-kbd">⌘K</span>
+    <button type="submit" class="tk-gsend" aria-label="Send til Glimt"${g.busy ? ' disabled' : ''}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></form>`;
+}
+const twSwitch = () => `<div class="tw-sw" role="tablist" aria-label="Visning"><button type="button" role="tab" class="${S.view !== 'tavle' ? 'on' : ''}" aria-selected="${S.view !== 'tavle'}" data-tw-view="liste" title="Liste (L)">≡ Liste</button><button type="button" role="tab" class="${S.view === 'tavle' ? 'on' : ''}" aria-selected="${S.view === 'tavle'}" data-tw-view="tavle" title="Tavle (T)">▥ Tavle</button></div>`;
+function twAns() {
+  const a = S.g.ans;
+  if (!a) return '';
+  return `<div class="tk-gans tw-ans" role="status"><div class="tk-gat">${spk(false)}<span>${esc(a.text)}</span></div><div class="tk-opts">${a.undo ? '<button type="button" class="tk-gbtn" data-tk-g="undo">Angre</button>' : ''}<button type="button" class="tk-gbtn" data-tk-g="clear">Lukk</button></div></div>`;
+}
+function webBody(inL0, curName) {
+  const ARC = S.cur === 'arkiv', curL = S.cur === 'alle' || ARC ? null : listOf(S.cur);
+  const pf = S.pf === 'me' ? myId() : S.pf;
+  const inL = pf ? inL0.filter((t) => tWho(t) === pf || (S.pf === 'me' && !tWho(t))) : inL0;
+  const allowed = curL ? new Set(listPeople(curL).map((p) => p.id)) : null;
+  const pchips = [['', 'Alle'], ['me', 'Meg'], ...people().filter((m) => m.id !== myId() && (!allowed || allowed.has(m.id))).map((m) => [m.id, m.name])];
+  const filt = `<div class="tw-pf">${pchips.map(([v, n]) => `<button type="button" class="tk-opt${(S.pf ?? '') === v ? ' on' : ''}" data-tw-pf="${esc(v)}" aria-pressed="${(S.pf ?? '') === v}">${esc(n)}</button>`).join('')}</div>`;
+  const head = `<div class="tw-head"><div class="tw-ht">${curL ? `<span class="tw-dot big" style="background:${esc(curL.color)}"></span>` : ''}<h2>${esc(curName)}</h2>${curL ? `<button type="button" class="tw-link" data-tk-act="lsv">${isShared(curL) ? 'Delt · administrer' : 'Del'}</button>` : ''}</div>${filt}</div>`;
+  const add = ARC ? '' : `<form class="tk-add tw-add" data-tk-form><input name="title" value="${esc(S.nv)}" placeholder="+ Ny oppgave i ${esc(curName)}" autocomplete="off" maxlength="200" aria-label="Ny oppgave"><button type="submit" aria-label="Legg til"${S.busy ? ' disabled' : ''}>+</button></form>`;
+  let main;
+  if (S.view === 'tavle' && !ARC) {
+    const cols = curL
+      ? [...listPeople(curL), { id: '', name: 'Ingen' }].map((p) => ({ key: `p:${p.id ?? ''}`, name: p.id === myId() ? 'Meg' : p.name || 'Ingen', color: p.id ? pColor(p) : 'var(--t-mut)', items: inL.filter((t) => !t.done && (tWho(t) ?? '') === (p.id ?? '')), add: { who: p.id || null, list: curL.id } }))
+      : (S.d.lists ?? []).map((l) => ({ key: `l:${l.id}`, name: l.name, color: l.color, items: inL.filter((t) => !t.done && tList(t) === l.id), add: { list: l.id } }));
+    const card = (t) => { const [dt, dc] = dueLabel(t), subs = Array.isArray(t.subs) ? t.subs : []; return `<div class="tw-card${String(S.sel) === String(t.id) ? ' on' : ''}" draggable="true" data-tw-drag="${esc(t.id)}"><button type="button" class="tk-chk" style="--c:${esc(colorOf(tList(t)))}" data-tk-tick="${esc(t.id)}" aria-label="Fullfør">${t.done ? '✓' : ''}</button><button type="button" class="tw-rm" data-tw-sel="${esc(t.id)}"><span class="tw-rn">${esc(tTitle(t))}</span><span class="tw-cm">${dt ? `<span class="${dc}">${esc(dt)}</span>` : ''}${subs.length ? `<span>${subs.filter((x) => x.done).length}/${subs.length}</span>` : ''}</span></button>${curL ? '' : twPerson(tWho(t), 20)}</div>`; };
+    main = `<div class="tw-board-top">${twGlimt()}${twSwitch()}</div>${twAns()}<div class="tw-tipsrow">${tips(inL0)}</div>${head}
+      <div class="tw-board">${cols.map((c) => `<section class="tw-col" data-tw-col="${esc(c.key)}"><header><span class="tw-dot" style="background:${esc(c.color)}"></span><b>${esc(c.name)}</b><span class="tw-k">${c.items.length}</span></header><div class="tw-cards">${c.items.map(card).join('')}</div><button type="button" class="tw-cadd" data-tw-act="coladd" data-tw-id="${esc(JSON.stringify(c.add))}">+ Legg til</button></section>`).join('')}</div>`;
+    return `<div class="tw tw-tavle">${twSide()}<main class="tw-mid wide">${main}</main></div>`;
+  }
+  const groups = twGroups(inL).map(([title, cls, arr]) => `<section class="tw-group"><span class="tk-gt ${cls}">${title} · ${arr.length}</span><div class="tw-card-l">${arr.map(twRow).join('')}</div></section>`).join('');
+  main = `<div class="tw-board-top">${twGlimt()}${twSwitch()}</div>${twAns()}${head}${add}${groups || `<div class="tk-empty">Ingen oppgaver i ${esc(curName)}.</div>`}
+    ${ARC && S.arch.length ? '<button type="button" class="tk-gbtn" data-tk-act="arch-clear">Tøm arkivet</button>' : ''}
+    <div class="tk-foot">${liveOn() ? '● Sanntid' : 'Oppdateres automatisk'} · ⌘K Glimt · N ny · L/T visning · ↑↓ velg · Mellomrom kryss av · E rediger · Delete arkiver</div>`;
+  return `<div class="tw">${twSide()}<main class="tw-mid">${main}</main><aside class="tw-right">${twSelPanel()}<div class="tw-tips"><span class="tw-lab">✦ GLIMT</span>${tips(inL0) || '<p class="tw-none">Ingen forslag akkurat nå.</p>'}</div></aside></div>`;
+}
+async function webAct(a, id) {
+  if (a === 'mine') { S.cur = 'alle'; S.pf = S.pf === 'me' ? null : 'me'; return paint(); }
+  if (a === 'tomorrow') { const t = S.d.items.find((x) => String(x.id) === String(id)); if (t) { await patchItem(t, { due: isoDay(1) }); flash('Flyttet til i morgen'); } return paint(); }
+  if (a === 'coladd') {
+    const o = JSON.parse(id || '{}'), title = prompt('Ny oppgave');
+    if (!title?.trim()) return;
+    try { await createItem({ n: title.trim(), list: o.list ?? defaultList(), due: null, who: o.who ?? myId() ?? null }); } catch (er) { flash(er.message); }
+    return paint();
+  }
+}
+/** Tavle: dra kort mellom kolonnene (liste eller person), med løft og skygge som Hjem-wiggle. */
+function bindBoard(h) {
+  let dragId = null;
+  h.addEventListener('dragstart', (e) => { const c = e.target.closest?.('[data-tw-drag]'); if (!c) return; dragId = c.dataset.twDrag; c.classList.add('lift'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', dragId); } catch { /* */ } navigator.vibrate?.(8); });
+  h.addEventListener('dragend', (e) => { e.target.closest?.('[data-tw-drag]')?.classList.remove('lift'); h.querySelectorAll('.tw-col.over').forEach((x) => x.classList.remove('over')); dragId = null; });
+  h.addEventListener('dragover', (e) => { const col = e.target.closest?.('[data-tw-col]'); if (!col || !dragId) return; e.preventDefault(); h.querySelectorAll('.tw-col.over').forEach((x) => x !== col && x.classList.remove('over')); col.classList.add('over'); });
+  h.addEventListener('drop', async (e) => {
+    const col = e.target.closest?.('[data-tw-col]');
+    if (!col || !dragId) return;
+    e.preventDefault();
+    const t = S.d.items.find((x) => String(x.id) === String(dragId)), [k, v] = col.dataset.twCol.split(/:(.*)/s);
+    col.classList.remove('over');
+    if (!t) return;
+    const ch = k === 'l' ? { list: v } : { assignee: v || null };
+    if ((k === 'l' && tList(t) === v) || (k === 'p' && (tWho(t) ?? '') === v)) return;
+    navigator.vibrate?.(12);
+    Object.assign(t, ch); paint();
+    await patchItem(t, ch); paint();
+  });
 }

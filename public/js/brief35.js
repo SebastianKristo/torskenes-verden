@@ -118,12 +118,16 @@ export function briefCardSlot() {
   queueMicrotask(() => { loadBrief(); paintCards(); });
   return `<div class="gb-slot" data-gb-card>${cardHtml()}</div>`;
 }
+/** Prompt 39 (claude-code-brief-glimt-av.md): «Glimt i briefen» av = ingen figur, bobler eller automatisk guide-runde. */
+const figOn = () => gs().briefGlimt !== false && (gs().briefGlimt === true || (() => { try { return localStorage.getItem('glimt_brief_fig') !== '0'; } catch { return true; } })());
+document.addEventListener('glimt-cfg', () => { paintCards(); if (P.open) paintPanel(); });
+window.addEventListener('storage', (e) => { if (e.key === 'glimt_brief_fig') { paintCards(); if (P.open) paintPanel(); } });
 function cardHtml() {
   if (!B.data) return B.err ? '' : `<div class="gb-card gb-skel" aria-hidden="true"><span></span><span></span><span></span></div>`;
   const v = view(), kick = v.title.toUpperCase();
   const chips = v.chips.length ? v.chips : [v.wx ? `${v.wx.t} ${v.wx.txt}` : null, v.nx ? `${v.nx.title} ${v.nx.time ?? ''}` : 'Fri', v.news.length ? `${Math.min(3, v.news.length)} nyheter` : null].filter(Boolean);
   if (v.tr.length && !chips.some((c) => /prøve/i.test(c))) chips.push(`${v.tr[0].service} · ${v.tr[0].daysLeft} d igjen`);
-  return `<button type="button" class="gb-card" data-gb-open aria-label="Åpne ${esc(v.title)}"><span class="gb-cl"><span class="gb-ck">${esc(kick)} · GLIMT</span><span class="gb-cs">${esc(v.summary)}</span><span class="gb-cc">${chips.slice(0, 4).map((c) => `<span>${esc(c)}</span>`).join('')}</span></span><span class="gb-cf">${fig(v.host, 56, 'idle')}</span></button>`;
+  return `<button type="button" class="gb-card" data-gb-open aria-label="Åpne ${esc(v.title)}"><span class="gb-cl"><span class="gb-ck">${esc(kick)} · GLIMT</span><span class="gb-cs">${esc(v.summary)}</span><span class="gb-cc">${chips.slice(0, 4).map((c) => `<span>${esc(c)}</span>`).join('')}</span></span>${figOn() ? `<span class="gb-cf">${fig(v.host, 56, 'idle')}</span>` : ''}</button>`;
 }
 /* Prompt 38 (Hjem web 1c, claude-code-hjem-web-topp-1c.md): briefen som glasspanel i helten under hilsenen.
    Glimt-figur 44 px, «KVELDSBRIEF · GLIMT» + «Åpne ›», oppsummering (Newsreader 18/1.42, maks 3 linjer) og chips. */
@@ -139,7 +143,7 @@ function glassHtml() {
   const v = view(), kick = v.title.toUpperCase();
   const chips = v.chips.length ? v.chips : [v.wx ? `${v.wx.t} ${v.wx.txt}` : null, v.nx ? `${v.nx.title} ${v.nx.time ?? ''}` : 'Fri', v.news.length ? `${Math.min(7, v.news.length)} nyheter` : null].filter(Boolean);
   if (v.tr.length && !chips.some((c) => /prøve/i.test(c))) chips.push(`${v.tr[0].service}-prøve ${v.tr[0].daysLeft} dager igjen`);
-  return `<button type="button" class="gb38-glass" data-gb-open aria-label="Åpne ${esc(v.title)}"><span class="gb38-gf">${fig(v.host, 44, 'idle')}</span><span class="gb38-gm"><span class="gb38-gk"><span>${esc(kick)} · GLIMT</span><span class="gb38-go">Åpne ›</span></span><span class="gb38-gs">${esc(v.summary)}</span><span class="gb38-gc">${chips.slice(0, 4).map((c) => `<span>${esc(c)}</span>`).join('')}</span></span></button>`;
+  return `<button type="button" class="gb38-glass" data-gb-open aria-label="Åpne ${esc(v.title)}">${figOn() ? `<span class="gb38-gf">${fig(v.host, 44, 'idle')}</span>` : ''}<span class="gb38-gm"><span class="gb38-gk"><span>${esc(kick)} · GLIMT</span><span class="gb38-go">Åpne ›</span></span><span class="gb38-gs">${esc(v.summary)}</span><span class="gb38-gc">${chips.slice(0, 4).map((c) => `<span>${esc(c)}</span>`).join('')}</span></span></button>`;
 }
 function paintCards() {
   document.querySelectorAll('[data-gb-card]').forEach((el) => { el.hidden = !gs().brief || (!B.data && !!B.err); el.innerHTML = el.dataset.gbCard === 'glass' ? glassHtml() : cardHtml(); });
@@ -165,7 +169,7 @@ export function openBrief({ tapped = true } = {}) {
     // Guide-runden starter automatisk første gang denne briefen åpnes i dag (kan slås av).
     const key = `gb_tour_${new Date().toLocaleDateString('sv-SE')}_${B.kind}`;
     let seen = false; try { seen = !!localStorage.getItem(key); } catch { /* */ }
-    if (gs().guide && !seen) P.tour0 = setTimeout(() => { if (P.open && P.step === 0) { try { localStorage.setItem(key, '1'); } catch { /* */ } P.step = 1; paintPanel(); } }, 900);
+    if (gs().guide && figOn() && !seen) P.tour0 = setTimeout(() => { if (P.open && P.step === 0) { try { localStorage.setItem(key, '1'); } catch { /* */ } P.step = 1; paintPanel(); } }, 900);
   });
   el.querySelector('.gb-panel').focus?.();
 }
@@ -228,7 +232,7 @@ function panelHtml() {
       ${cardOrder38({ cards: gs().cards ?? B.data?.cards }, { vaer, bibel: bibleHtml('top'), huske: todosHtml(v), kal, abo, ...briefCards38(B.data), nyh })}${bibleHtml('bottom')}
       <span class="gb-foot">${esc(foot)}</span>
     </div></div>
-    <div class="gb-guide">${bub}<button type="button" class="gb-figbtn" data-gb-fig aria-label="${bubble ? 'Avslutt guide-runden' : 'Start guide-runden med Glimt'}">${pop ? `<span class="gf-pop">${fig(ch, 82, mood)}</span>` : fig(ch, 82, mood)}</button></div>
+    ${figOn() ? `<div class="gb-guide">${bub}<button type="button" class="gb-figbtn" data-gb-fig aria-label="${bubble ? 'Avslutt guide-runden' : 'Start guide-runden med Glimt'}">${pop ? `<span class="gf-pop">${fig(ch, 82, mood)}</span>` : fig(ch, 82, mood)}</button></div>` : ''}
     ${P.cfg ? `<div class="gb-sback" data-gb-cfgclose></div><div class="gb-sheet" role="dialog" aria-label="Brief-innstillinger"><span class="gb-grab"></span><div class="gb-sh"><b>Glimt-brief</b><button type="button" class="gs-pill dark" data-gb-cfgclose>Ferdig</button></div>${glimtSettingsHtml()}</div>` : ''}`;
 }
 function spkHtml() {

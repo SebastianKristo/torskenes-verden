@@ -9,7 +9,8 @@ import { fig, FIGS, hostFor } from './glimt-figs.js';
 import { CARDS38, cardList38, toSrv38 } from './brief38.js'; // prompt 38: kortene i briefen (av/på og rekkefølge)
 
 export const DEF = {
-  char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true,
+  char: 'glimt', friends: true, brief: true, briefGlimt: true, // prompt 39: «Glimt i briefen» (figuren av/på)
+  readAloud: false, guide: true, notify: true,
   briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
   tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' },
   engines: null, chars: null,
@@ -173,6 +174,7 @@ const isAdmin = () => store.me?.me?.role === 'admin';
 const sw = (on) => `<span class="gs-sw${on ? ' on' : ''}" aria-hidden="true"><i></i></span>`;
 const MAIN = [
   ['brief', 'Glimt-brief', 'Lag briefer gjennom dagen'],
+  ['briefGlimt', 'Glimt i briefen', 'Vis Glimt-figuren og vennene i briefen, på Hjem-kortet og i widgets'],
   ['readAloud', 'Les opp', 'Glimt og vennene leser briefen høyt'],
   ['guide', 'Vis meg rundt automatisk', 'Starter guide-runden når briefen åpnes'],
   ['friends', 'Venner av Glimt', 'Sky, Dråpe, Ugle og Gris tar over når temaet passer'],
@@ -206,7 +208,7 @@ export function glimtSettingsHtml({ figs = false } = {}) {
     <div class="gs-figs" data-hl="glimt-fig">${FIGS.map((f) => { const on = sel === f.id; return `<button type="button" class="gs-fig${f.id === 'natt' ? ' dark' : ''}" data-gs-char="${f.id}" aria-pressed="${on}" aria-label="${esc(f.name)}"><span class="gs-fi">${fig(f.id, 54, on ? 'glad' : 'idle')}</span><b>${esc(f.name)}</b></button>`; }).join('')}</div>
     <p class="gs-note">Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle …) tar over når temaet passer, om det er slått på under.${sel === 'glimt' ? ' Mellom 21 og 06 blir Glimt automatisk Glimt Natt.' : ''}</p>` : '';
   return `<div class="gs" data-gs>${grid}
-    <div class="gs-list" data-hl="glimt">${MAIN.map(([k, n, d]) => `<button type="button" class="gs-row" data-gs-tog="${k}" role="switch" aria-checked="${!!s[k]}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span>${sw(!!s[k])}</button>`).join('')}</div>
+    <div class="gs-list" data-hl="glimt">${MAIN.map(([k, n, d]) => `<button type="button" class="gs-row${k === 'friends' && s.briefGlimt === false ? ' gs-dim' : ''}" data-gs-tog="${k}" role="switch" aria-checked="${!!s[k]}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span>${sw(!!s[k])}</button>`).join('')}</div>
     <span class="gs-h">BRIEFER GJENNOM DAGEN</span>
     <div class="gs-list">${BR.map(([k, n, d]) => { const B = s.briefs[k]; return `<div class="gs-row gs-br${s.brief ? '' : ' off'}"><button type="button" class="gs-brt" data-gs-brief="${k}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span></button><input type="time" value="${esc(B.at)}" data-gs-at="${k}" aria-label="Klokkeslett for ${esc(n)}"><button type="button" class="gs-swb" data-gs-brief="${k}" role="switch" aria-checked="${!!B.on}" aria-label="${esc(n)}">${sw(!!B.on)}</button></div>`; }).join('')}</div>
     <span class="gs-h">KORT I BRIEFEN</span>
@@ -238,7 +240,7 @@ export function glimtClick(e, redraw) {
     return true;
   }
   const tg = t.closest('[data-gs-tog]');
-  if (tg) { const k = tg.dataset.gsTog; saveGlimt({ [k]: !gs()[k] }); if (k === 'readAloud' && !gs().readAloud) stopSpeak(); redraw(); return true; }
+  if (tg) { const k = tg.dataset.gsTog; saveGlimt({ [k]: !gs()[k] }); if (k === 'briefGlimt') { try { localStorage.setItem('glimt_brief_fig', gs().briefGlimt ? '1' : '0'); } catch { /* */ } document.dispatchEvent(new Event('glimt-cfg')); } if (k === 'readAloud' && !gs().readAloud) stopSpeak(); redraw(); return true; }
   const br = t.closest('[data-gs-brief]');
   if (br) { const k = br.dataset.gsBrief, B = gs().briefs[k]; saveGlimt({ briefs: { [k]: { ...B, on: !B.on } } }); redraw(); return true; }
   // Prompt 38: kortene i briefen.

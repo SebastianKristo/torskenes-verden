@@ -180,15 +180,18 @@ export async function whereIs(q, t0 = Date.now()) {
 /* ---------------- «Glimt svarte mens du var borte» ---------------- */
 
 let away = null;
+// Prompt 39: «Vis svaret i appen også» (n_ai_in i /api/me/notify, standard på). Av = ingen banner, svaret ligger bare i chatten.
+let aiIn = null;
+const loadAiIn = () => fetch('/api/me/notify', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { const n = j?.notify ?? j; aiIn = n && typeof n === 'object' ? n.n_ai_in !== false : true; }).catch(() => { aiIn = true; });
 function awayAnswer(q, text) {
   if (!text) return;
   away = { q, text };
-  if (!document.hidden) showAway();
+  loadAiIn().then(() => { if (!aiIn) away = null; else if (!document.hidden) showAway(); });
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && away) setTimeout(showAway, 250); });
 function showAway() {
   const a = away; away = null;
-  if (!a) return;
+  if (!a || aiIn === false) return;
   let el = document.getElementById('glimt-away');
   if (!el) {
     el = document.createElement('div'); el.id = 'glimt-away'; el.className = 'glimt-away'; el.setAttribute('role', 'status');

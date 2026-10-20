@@ -247,6 +247,7 @@ function pull(id) {
     const P = G.pulls[id]; delete G.pulls[id];
     if (P?.err) toast(`Kunne ikke laste ned ${id}: ${P.err}`); else { toast(`${id} er lastet ned`); vibe(); }
     loadModels(); loadStatus();
+    const nx = G.pullQ?.shift(); if (nx) pull(nx); // prompt 39: «Last ned det som mangler» – én om gangen
   }).catch((e) => { delete G.pulls[id]; if (e.name !== 'AbortError') toast(`Kunne ikke laste ned ${id}: ${e.message}`); redraw(); });
 }
 
@@ -349,17 +350,125 @@ function modTab(o) {
   const cl = cloud();
   return `${G.legacy ? missingNote('Full modellstyring (laste inn/ut, slette, standard)') : ''}<div class="ac-sec"><span class="ac-row ac-sb">${lab(`INSTALLERT LOKALT · ${I.length}`)}<span class="ac-mono ac-mut">${gbs(I.reduce((a, m) => a + (m.gb ?? 0), 0))} på disk</span></span><div class="ac-card ac-list">${instH}</div></div>
     ${pulls ? `<div class="ac-sec">${lab('LASTER NED')}${pulls}</div>` : ''}
+    ${recModCard()}
     <div class="ac-sec">${lab('LAST NED FRA OLLAMA')}
       <div class="ac-search">${svg('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 16)}<input data-ac-q value="${esc(G.q)}" placeholder="Søk eller skriv modellnavn, f.eks. qwen3:14b" autocomplete="off" spellcheck="false" aria-label="Søk i Ollama-biblioteket"${admin ? '' : ' disabled'}>${q && okName && admin && !lib.some((l) => l.id === q) && !I.some((m) => m.id === q) ? btn('Last ned', `data-ac-pull="${esc(q)}"`, 'ink') : ''}</div>
       <div class="ac-chips">${[['alle', 'Alle'], ['tekst', 'Tekst'], ['bilde', 'Bilde'], ['resonnering', 'Resonnering'], ['embedding', 'Embeddings']].map(([k, n]) => `<button type="button" class="${G.cat === k ? 'on' : ''}" data-ac-cat="${k}">${n}</button>`).join('')}</div>
       <div class="ac-card ac-list">${libH}</div>${admin ? '' : '<div class="ac-note">Bare administrator kan laste ned og slette modeller.</div>'}${G.missing.lib === true ? '<div class="ac-note">Viser et utvalg. Serveren har ikke biblioteksøk ennå.</div>' : ''}</div>
-    <div class="ac-sec">${lab('SKY-MODELLER')}<div class="ac-card ac-list">${cl.map((m) => `<button type="button" class="ac-li" data-ac-cloud="${esc(m.id)}"${admin ? '' : ' disabled'} role="switch" aria-checked="${m.on}"><span class="ac-dot" style="background:${m.on ? 'var(--acc)' : 'var(--line)'}"></span><span class="ac-col ac-grow"><b class="ac-mono ac-ell">${esc(m.id)}</b><span>${esc(m.desc || m.provider)}${m.key === false ? ' · mangler nøkkel' : ''}</span></span>${sw(m.on)}</button>`).join('')}</div></div>`;
+    <div class="ac-sec">${lab('SKY-MODELLER')}<div class="ac-card ac-list">${cl.map((m) => `<button type="button" class="ac-li" data-ac-cloud="${esc(m.id)}"${admin ? '' : ' disabled'} role="switch" aria-checked="${m.on}">${logo(PROV_LOGO[m.provider] ?? '', String(m.provider ?? '?').slice(0, 1).toUpperCase(), 'var(--mut)').replace('ac-logo', 'ac-logo sm')}<span class="ac-col ac-grow"><b class="ac-mono ac-ell">${esc(m.id)}</b><span>${esc(m.desc || m.provider)}${m.key === false ? ' · mangler nøkkel' : ''}</span></span>${sw(m.on)}</button>`).join('')}</div></div>`;
 }
 
 function allModelOpts() {
   const L = [...installed().map((m) => ({ v: m.id, n: `${m.id} · lokal`, loc: true })), ...cloud().filter((c) => c.on).map((c) => ({ v: c.id, n: `${c.id} · ${c.provider}`, loc: false }))];
   return L;
 }
+
+/* ---------------- Prompt 39: Glimt anbefaler modeller (claude-code-ai-glimt-anbefaler-modeller.md, fasit AI Kontroll.dc.html → REC/RKW) ---------------- */
+// Kuratert tabell (start fra REC i fasiten): [modell, GB, hvorfor]. Rangert per oppgave. Serverens GET /api/ai/recommend vinner når den finnes.
+const REC = {
+  chat: [['gemma4:latest', 9.6, 'Best på norsk av det som får plass, og svarer raskt.'], ['gemma3:12b', 8.1, 'Sterk norsk og leser bilder.'], ['qwen3:8b', 5.2, 'Rask og god til verktøy.'], ['llama3.2:3b', 2.0, 'Liten og rask når minnet er knapt.']],
+  sok: [['gemma4:latest', 9.6, 'Forstår norske spørsmål godt og deler modell med Chat.'], ['qwen3:8b', 5.2, 'Rask med verktøy og søk.'], ['llama3.2:3b', 2.0, 'Raskest, men svakere norsk.']],
+  glimt: [['gemma4:latest', 9.6, 'Forstår datoer og steder på norsk, samme modell som Chat.'], ['qwen3:8b', 5.2, 'Rask og presis på strukturerte svar.'], ['gemma3:12b', 8.1, 'God norsk.']],
+  brief: [['gemma4:latest', 9.6, 'Skriver naturlig norsk og gjenbruker modellen som allerede er lastet.'], ['qwen3:8b', 5.2, 'Rask.'], ['llama3.2:3b', 2.0, 'Liten.']],
+  rc: [['qwen2.5vl:7b', 6.0, 'Best til å lese tekst i bilder, bare 6 GB.'], ['gemma3:12b', 8.1, 'Leser bilder og forstår norske varenavn.'], ['minicpm-v', 5.5, 'Bilde på lite minne.']],
+  kat: [['llama3.2:3b', 2.0, 'Kategorisering er en enkel oppgave – den minste modellen er rask nok.'], ['qwen3:8b', 5.2, 'Mer presis på vanskelige butikknavn.'], ['gemma4:latest', 9.6, 'Deler modell med Chat.']],
+  fsok: [['qwen3:8b', 5.2, 'Rask med verktøy og tall.'], ['gemma4:latest', 9.6, 'God norsk.'], ['llama3.2:3b', 2.0, 'Liten.']],
+  bar: [['qwen2.5vl:7b', 6.0, 'Leser pakkelapper og strekkoder fra bilder.'], ['minicpm-v', 5.5, 'Bilde på lite minne.'], ['gemma3:12b', 8.1, 'Leser bilder.']],
+  dom: [['qwen3:8b', 5.2, 'Korte sammendrag – rask og presis.'], ['gemma4:latest', 9.6, 'God norsk.'], ['llama3.2:3b', 2.0, 'Liten.']],
+  kb: [['bge-m3', 1.2, 'Flerspråklige embeddings, god på norsk.'], ['nomic-embed-text', 0.27, 'Liten og rask.']],
+};
+// Nøkkelord for «Spør Glimt» (RKW): tekst → oppgave.
+const RKW = [[/kvitt|bong|kassalapp|bilde|lese tekst/i, 'rc'], [/kategori|transaksj|bank/i, 'kat'], [/strekkode|pakke|lapp|qr/i, 'bar'], [/kalender|avtale|time|dato/i, 'glimt'],
+  [/søk|spørsmål|finne/i, 'sok'], [/brief|morgen|oppsummer/i, 'brief'], [/domene|nettside/i, 'dom'], [/dokument|kunnskap|pdf|embedd/i, 'kb'], [/økonomi|finans|penger|abonnement/i, 'fsok'], [/chat|prat|skriv|kode|norsk/i, 'chat']];
+const loadRec = () => get('rec', '/recommend', (d) => (Array.isArray(d) ? d : d?.items ?? d?.tasks ?? null));
+const instHas = (id) => installed().some((m) => m.id === id || m.id === `${id}:latest` || `${m.id}:latest` === id || m.id.split(':')[0] === id.replace(/:latest$/, ''));
+const instId = (id) => installed().find((m) => m.id === id || m.id === `${id}:latest` || `${m.id}:latest` === id || m.id.split(':')[0] === id.replace(/:latest$/, ''))?.id ?? id;
+/** Én anbefaling per oppgave: {task, name, model, gb, why, alt, fit, installed, inUse}. */
+function recRows() {
+  const R = routingOf(), srv = Array.isArray(G.rec) ? G.rec : null, finLocal = !!R.rules?.finLocal;
+  return tasksOf().map(([k, n, , isFin]) => {
+    const s = srv?.find((x) => x.task === k);
+    const cands = REC[k] ?? REC.chat, best = s ? [s.model, s.sizeGb, s.why] : cands.find((c) => (c[1] ?? 0) <= (gpu().vram || 10.7)) ?? cands[0];
+    const alt = s?.alt ?? cands.find((c) => c[0] !== best[0])?.[0] ?? '';
+    const cur = R.tasks?.[k]?.model ?? '', id = instHas(best[0]) ? instId(best[0]) : best[0];
+    return { task: k, name: n, model: id, gb: best[1], why: s?.why ?? best[2], alt, fit: s?.fit ?? fitOf(best[1]), installed: s?.installed ?? instHas(best[0]), inUse: s?.inUse ?? (!!cur && (cur === id || cur === best[0])), fin: !!isFin && finLocal, pullCmd: s?.pullCmd };
+  });
+}
+/** «La Glimt velge»: førstevalg blant installerte modeller per oppgave (R.rt.glPlan). Reserven røres ikke. */
+function glPlan() {
+  const R = routingOf(), cloudIds = new Set(cloud().map((c) => c.id)), plan = {}; let missing = 0;
+  for (const [k, , , isFin, personal] of tasksOf()) {
+    if (!G.admin && !personal) continue;
+    const cands = REC[k] ?? REC.chat, srv = Array.isArray(G.rec) ? G.rec.find((x) => x.task === k) : null;
+    const order = srv ? [srv.model, srv.alt, ...cands.map((c) => c[0])] : cands.map((c) => c[0]);
+    const pick = order.filter(Boolean).find((m) => instHas(m) && !(isFin && R.rules?.finLocal && cloudIds.has(m)));
+    if (!pick) { missing++; continue; }
+    const id = instId(pick), cur = R.tasks?.[k]?.model ?? '';
+    if (cur !== id) plan[k] = { model: id };
+  }
+  return { plan, n: Object.keys(plan).length, missing };
+}
+function glCard() {
+  const { n, missing } = glPlan(), done = !n;
+  const sub = done ? `Alle oppgaver bruker allerede Glimts anbefaling${missing ? ` · ${missing} ${missing === 1 ? 'modell bør' : 'modeller bør'} lastes ned (se Modeller)` : ''}.` : `Fyller ut ${n} ${n === 1 ? 'oppgave' : 'oppgaver'} med beste installerte modell${missing ? ` · ${missing} mangler (se Modeller)` : ''}.`;
+  return `<div class="ac-card ac-gl39"><span class="ac-glm" aria-hidden="true"><i></i><b>✦</b></span><span class="ac-col ac-grow"><b class="ac-h3">La Glimt velge modeller</b><span class="ac-mut">${esc(sub)}</span></span>
+    ${G.glUndo ? btn('Angre', 'data-ac-glundo') : ''}${done ? '<span class="ac-glok" aria-disabled="true">✓ Følger anbefaling</span>' : btn('✦ Fyll ut', 'data-ac-glgo', 'ink')}</div>`;
+}
+async function glGo() {
+  const { plan, n } = glPlan();
+  if (!n) return;
+  const R = routingOf(), prev = Object.fromEntries(Object.keys(plan).map((k) => [k, { model: R.tasks?.[k]?.model ?? '' }]));
+  vibe();
+  await saveRouting({ tasks: plan }, `✦ Glimt fylte ut ${n} ${n === 1 ? 'valg' : 'valg'}`);
+  G.glUndo = prev; redraw();
+  clearTimeout(glGo.t); glGo.t = setTimeout(() => { G.glUndo = null; redraw(); }, 5000);
+}
+function recModCard() {
+  const rows = recRows(), miss = rows.filter((r) => !r.installed && !G.pulls[r.model]), uniq = [...new Map(miss.map((r) => [r.model, r])).values()];
+  const useable = rows.filter((r) => r.installed && !r.inUse), g = gpu(), admin = G.admin;
+  const nm = String(g.name || 'hjemmeserveren').split(' · ')[0], head = `✦ GLIMT ANBEFALER · ${esc(nm)}${g.mem ? ` · ${nb(g.mem)} GB` : ''}`;
+  const A = G.recAsk;
+  const ask = `<form class="ac-ask" data-ac-askf><input data-ac-ask value="${esc(A?.q ?? '')}" placeholder="Spør Glimt: hva vil du bruke AI til?" autocomplete="off" aria-label="Spør Glimt hva du vil bruke AI til">${btn(A?.busy ? 'Tenker …' : 'Spør', 'type="submit"', 'ink')}</form>
+    ${A?.text ? `<div class="ac-askr"><span>${esc(A.text)}</span>${A.model && !instHas(A.model) && admin ? btn(`Last ned ${esc(A.model)}`, `data-ac-pull="${esc(A.model)}"`, 'ink') : ''}</div>` : ''}`;
+  return `<div class="ac-sec">${lab(head)}<div class="ac-card ac-list ac-recm">${rows.map((r) => {
+    const fc = r.fit === 'PASSER' ? 'ok' : r.fit === 'FOR STOR' ? 'bad' : 'warn', pl = G.pulls[r.model];
+    const b = r.inUse ? btn('I bruk', 'disabled') : r.installed ? btn('Bruk', `data-ac-recuse="${esc(r.task)}" data-m="${esc(r.model)}"${admin || ['chat', 'sok', 'glimt', 'brief'].includes(r.task) ? '' : ' disabled'}`) : pl ? btn('Laster …', 'disabled') : btn(`Last ned · ${esc(gbs(r.gb))}`, `data-ac-pull="${esc(r.model)}"${admin ? '' : ' disabled'}`);
+    return `<div class="ac-li ac-recr"><span class="ac-col ac-grow"><span class="ac-row"><b>${esc(r.name)}</b><code class="ac-mono">${esc(r.model)}</code>${r.fit ? `<span class="ac-fit ${fc}">${esc(r.fit)}</span>` : ''}</span><span class="ac-mut">${esc(r.why)}${r.alt ? ` Alternativ: ${esc(r.alt)}.` : ''}</span></span>${b}</div>`;
+  }).join('')}
+    <div class="ac-li ac-recb">${uniq.length ? btn(`Last ned det som mangler · ${esc(gbs(uniq.reduce((a, r) => a + (r.gb ?? 0), 0)))}`, `data-ac-recpull${admin ? '' : ' disabled'}`, 'ink') : ''}${useable.length ? btn(`Bruk alle anbefalinger (${useable.length})`, 'data-ac-recall') : ''}${!uniq.length && !useable.length ? '<span class="ac-mut">Alt følger Glimts anbefaling.</span>' : ''}</div></div>${ask}</div>`;
+}
+/** Laster ned én om gangen (kø). */
+function pullQueue(ids) {
+  G.pullQ = [...new Set([...(G.pullQ ?? []), ...ids])].filter((id) => !instHas(id));
+  if (!Object.keys(G.pulls).length) { const n = G.pullQ.shift(); if (n) pull(n); }
+}
+async function recAsk(q) {
+  q = String(q ?? '').trim();
+  if (!q) return;
+  G.recAsk = { q, busy: true }; redraw();
+  try {
+    const d = await call('/recommend/ask', { method: 'POST', json: { q } });
+    G.recAsk = { q, text: d.text ?? d.answer ?? '', model: d.model ?? d.recommend?.model ?? '' };
+  } catch {
+    const k = RKW.find(([re]) => re.test(q))?.[1], r = k ? recRows().find((x) => x.task === k) : null;
+    G.recAsk = r ? { q, text: `Til ${r.name.toLowerCase()} anbefaler jeg ${r.model} (${gbs(r.gb)}, ${String(r.fit || 'passer').toLowerCase()}). ${r.why}${r.alt ? ` Alternativ: ${r.alt}.` : ''}`, model: r.model }
+      : { q, text: 'Jeg er ikke sikker på hva du vil bruke den til. En god allrounder er gemma4:latest (chat, søk og Glimt). Prøv f.eks. «lese kvitteringer», «kalender» eller «dokumenter».', model: 'gemma4:latest' };
+  }
+  redraw();
+}
+// Logoene til AI-tjenestene (40 px hvit brikke med tynn kant). Innebygde SVG-er – ingen nett trengs.
+const LOGO = {
+  ollama: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#1b1a17" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5c-.9 0-1.4 1.6-1.4 3.6v2.1A5.5 5.5 0 0 0 5 13v6.5h14V13a5.5 5.5 0 0 0-1.6-3.8V7.1c0-2-.5-3.6-1.4-3.6s-1.4 1.6-1.4 3.6v1A6 6 0 0 0 12 7.8a6 6 0 0 0-2.6.3v-1c0-2-.5-3.6-1.4-3.6z"/><circle cx="9.3" cy="12.4" r=".7" fill="#1b1a17"/><circle cx="14.7" cy="12.4" r=".7" fill="#1b1a17"/><path d="M10.6 15.2c.8.6 2 .6 2.8 0"/></svg>',
+  gemini: '<svg viewBox="0 0 24 24" width="24" height="24"><defs><linearGradient id="acgem" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f8df5"/><stop offset=".55" stop-color="#9b72cb"/><stop offset="1" stop-color="#d96570"/></linearGradient></defs><path d="M12 2c.6 5.3 4.7 9.4 10 10-5.3.6-9.4 4.7-10 10-.6-5.3-4.7-9.4-10-10C7.3 11.4 11.4 7.3 12 2z" fill="url(#acgem)"/></svg>',
+  groq: '<svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="11" fill="#f55036"/><path d="M12 6.6a5.2 5.2 0 1 0 0 10.4h.1a5.2 5.2 0 0 0 5.1-5.2v-.1A5.2 5.2 0 0 0 12 6.6zm0 2.4a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z" fill="#fff"/></svg>',
+  openrouter: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#6467f2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 12h4.2c2.2 0 3.3-1 4.6-3.3l.6-1c1.2-2.1 2.4-3.2 4.7-3.2H21"/><path d="M2.5 12h4.2c2.2 0 3.3 1 4.6 3.3l.6 1c1.2 2.1 2.4 3.2 4.7 3.2H21"/><path d="M18 1.6l3 2.9-3 2.9M18 16.6l3 2.9-3 2.9"/></svg>',
+  roboflow: '<svg viewBox="0 0 24 24" width="24" height="24"><path d="M4 4h9.5a5.5 5.5 0 0 1 1.7 10.7L20 20h-4.4l-4.2-4.8H8V20H4z" fill="#8315f9"/><path d="M8 7.6v4.2h5.3a2.1 2.1 0 0 0 0-4.2z" fill="#fff"/></svg>',
+  openai: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#111" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v8.5l7.4 4.2M12 12l-7.4 4.2"/></svg>',
+  anthropic: '<svg viewBox="0 0 24 24" width="24" height="24"><path d="M14.2 4h-3l5.6 16h3zM7.6 4L2 20h3.1l1.2-3.4h5.9l1.2 3.4h3.1L10.9 4zm-.3 9.9l2-5.7 2 5.7z" fill="#191919"/></svg>',
+};
+const logo = (k, fb, c) => `<span class="ac-logo" aria-hidden="true">${LOGO[k] ?? `<b style="color:${c}">${esc(fb)}</b>`}</span>`;
+const PROV_LOGO = { gemini: 'gemini', groq: 'groq', openrouter: 'openrouter', ollama: 'ollama', openai: 'openai', anthropic: 'anthropic' };
+
 function rtTab(o) {
   if (G.missing.routing) return missingNote('Ruting per oppgave');
   const fin = o.scope === 'finans', R = routingOf(), all = allModelOpts(), web = o.variant !== 'mobile', admin = G.admin;
@@ -384,7 +493,7 @@ function rtTab(o) {
   const par = (fin ? [['minConf', 'Minste sikkerhet før «Sjekk»', 'Lavere enn dette havner i Til godkjenning', CONF], ['parallel', 'Samtidige kvitteringer', 'Flere samtidig krever mer VRAM', PAR]]
     : [['keepAlive', 'Hold modell lastet', 'Hvor lenge modellen blir i VRAM etter bruk (keep_alive)', KEEP], ['numCtx', 'Kontekst', 'Standard kontekstlengde (num_ctx)', CTX], ['temperature', 'Temperatur', 'Lav = presis, høy = kreativ', TEMP], ['parallel', 'Samtidige jobber', 'Maks jobber som kjører på serveren samtidig', PAR]])
     .map(([k, n, s, opts]) => { const cur = opts.find((x) => String(x[0]) === String(P[k])); return `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>${n}</b><span>${s}</span></span><b class="ac-mono">${esc(cur?.[1] ?? P[k] ?? '–')}</b></span><div class="ac-seg">${opts.map(([v, l]) => `<button type="button" class="${String(P[k]) === String(v) ? 'on' : ''}" data-ac-par="${k}" data-v="${esc(JSON.stringify(v))}"${admin || k === 'temperature' ? '' : ' disabled'}>${l}</button>`).join('')}</div></div>`; }).join('');
-  return `<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
+  return `${fin ? '' : glCard()}<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
     <div class="ac-sec">${lab('REGLER')}<div class="ac-card ac-list">${rules}</div></div>
     <div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>`;
 }
@@ -477,7 +586,7 @@ function apiTab(o) {
       const phx = isKey && p.keyTail ? `•••• ${p.keyTail} · satt` : ph;
       return `<label class="ac-fld"><span class="ac-row ac-sb"><span>${l}</span>${link ? `<a href="${href}" target="_blank" rel="noopener">${link} ↗</a>` : ''}</span><span class="ac-in"><input type="${isKey && !G.eye[`${k}.${f}`] ? 'password' : 'text'}" data-ac-key="${k}" data-f="${f}" value="${esc(cur)}" placeholder="${esc(phx)}" autocomplete="off" spellcheck="false"${admin ? '' : ' disabled'}>${isKey && admin ? `<button type="button" data-ac-eye="${k}.${f}">${G.eye[`${k}.${f}`] ? 'Skjul' : 'Vis'}</button>` : ''}</span></label>`;
     }).join('');
-    return `<div class="ac-card ac-gap"><div class="ac-row"><span class="ac-pic" style="color:${c}">${ic}</span><span class="ac-col ac-grow"><b class="ac-h3">${n}</b><span class="ac-stl" style="color:${stc}"><i style="background:${stc}"></i>${esc(st)}</span></span>${btn(t?.busy ? 'Tester …' : 'Test', `data-ac-test="${k}"`)}</div>${F}${meta ? `<span class="ac-mono ac-mut">${esc(meta)}</span>` : ''}</div>`;
+    return `<div class="ac-card ac-gap"><div class="ac-row">${logo(k, ic, c)}<span class="ac-col ac-grow"><b class="ac-h3">${n}</b><span class="ac-stl" style="color:${stc}"><i style="background:${stc}"></i>${esc(st)}</span></span>${btn(t?.busy ? 'Tester …' : 'Test', `data-ac-test="${k}"`)}</div>${F}${meta ? `<span class="ac-mono ac-mut">${esc(meta)}</span>` : ''}</div>`;
   }).join('');
   const toks = fin ? '' : `<div class="ac-card ac-gap"><span class="ac-row ac-sb"><span class="ac-col"><b class="ac-h3">Glimt-API for egne skript</b><span class="ac-mono ac-mut">POST ${esc(location.origin)}/api/glimt</span></span>${btn('+ Ny nøkkel', 'data-ac-newtok', 'ink')}</span>
     ${G.fresh ? `<div class="ac-fresh"><span>Kopier nå. Nøkkelen vises bare én gang.</span><b class="ac-mono">${esc(G.fresh)}</b></div>` : ''}
@@ -492,9 +601,10 @@ function html(p) {
   const J = jobsF(fin), runN = J.filter((j) => j.status === 'run').length, failN = J.filter((j) => j.status === 'fail').length, I = installed();
   const status = `${fin ? 'Kvitteringer, kategorier og spørsmål' : `${I.length} lokale modeller · ${cloud().filter((c) => c.on).length} i skyen`} · ${runN ? `${runN} jobb${runN > 1 ? 'er' : ''} kjører` : 'ingen jobber kjører'}`;
   const body = { ov: ovTab, mod: modTab, rt: rtTab, job: jobTab, use: useTab, api: apiTab }[p.tab](o);
+  p.status = status; // prompt 39: innebygd på web vises statuslinjen i Innstillinger-toppen (o.onStatus)
   const style = Object.entries(T).map(([k, v]) => `--${k}:${v}`).join(';');
   return `<div class="ac ${web ? 'web' : 'mob'} th-${esc(o.theme ?? 'papir')}${o.embedded ? ' emb' : ''}" style="${style}" data-ac-root>
-    <div class="ac-hd"><div class="ac-col ac-grow"><span class="ac-kick">${fin ? 'FINANSHUB · KUNSTIG INTELLIGENS' : 'GLIMT · AI-KONTROLL'}</span>${o.hideTitle ? '' : `<b class="ac-title">${fin ? 'AI i Finans' : 'AI'}</b>`}<span class="ac-mut">${esc(status)}</span></div>${o.onClose ? '<button type="button" class="ac-done" data-ac-close>Ferdig</button>' : ''}</div>
+    ${o.embedded && web ? '' : `<div class="ac-hd"><div class="ac-col ac-grow"><span class="ac-kick">${fin ? 'FINANSHUB · KUNSTIG INTELLIGENS' : 'GLIMT · AI-KONTROLL'}</span>${o.hideTitle ? '' : `<b class="ac-title">${fin ? 'AI i Finans' : 'AI'}</b>`}<span class="ac-mut">${esc(status)}</span></div>${o.onClose ? '<button type="button" class="ac-done" data-ac-close>Ferdig</button>' : ''}</div>`}
     <div class="ac-body"><nav class="ac-nav" aria-label="AI-kontroll">${tabs.map(([k, n]) => { const b = k === 'job' ? runN + failN : 0; return `<button type="button" class="${p.tab === k ? 'on' : ''}" data-ac-tab="${k}" aria-current="${p.tab === k ? 'page' : 'false'}">${web ? svg(IC[k]) : ''}<span>${n}</span>${b ? `<i class="ac-badge">${b}</i>` : ''}</button>`; }).join('')}</nav>
       <div class="ac-main" data-ac-main>${body}</div></div>
     ${G.toast ? `<div class="ac-toast" role="status">${esc(G.toast)}</div>` : ''}</div>`;
@@ -514,6 +624,7 @@ function paint(p) {
   const nav = p.el.querySelector('.ac-nav'), on = nav?.querySelector('.on');
   if (nav && on && nav.scrollWidth > nav.clientWidth) { const l = on.offsetLeft - nav.offsetLeft; if (l < nav.scrollLeft || l + on.offsetWidth > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = l - 16; }
   p.o.onPaint?.(p.el);
+  if (p.o.embedded) p.o.onStatus?.(p.status);
   if (sel) {
     const el = sel[2] ? p.el.querySelector('[data-ac-q]') : p.el.querySelector(`[data-ac-key="${sel[0]}"][data-f="${sel[1]}"]`);
     if (el) { if (!sel[2]) el.value = sel[4]; el.focus({ preventScroll: true }); try { el.setSelectionRange(sel[3], sel[3]); } catch { /* */ } }
@@ -523,8 +634,8 @@ function paint(p) {
 function enterTab(p) {
   const t = p.tab;
   if (t === 'ov') { loadStatus(); loadJobs(); loadUsage(); loadModels(); }
-  if (t === 'mod') { loadModels(); loadRouting(); if (G.libQ == null) loadLib(''); }
-  if (t === 'rt') { loadRouting(); loadModels(); loadStatus(); }
+  if (t === 'mod') { loadModels(); loadRouting(); loadStatus(); loadRec(); if (G.libQ == null) loadLib(''); }
+  if (t === 'rt') { loadRouting(); loadModels(); loadStatus(); loadRec(); }
   if (t === 'job') { loadJobs(); loadRouting(); }
   if (t === 'use') { loadUsage(); loadRouting(); }
   if (t === 'api') { loadStatus(); loadKeys(); if (p.o.scope !== 'finans') loadTokens(); }
@@ -541,6 +652,12 @@ function bind(el) {
     if (d.acTab) { vibe(); p.tab = d.acTab; p.o.onTab?.(p.tab); enterTab(p); paint(p); const m = el.querySelector('[data-ac-main]'); if (m) m.scrollTop = 0; return; }
     if ('acInstmod' in d) { vibe(); if (tabsFor(p.o).some(([k]) => k === 'mod')) { p.tab = 'mod'; p.o.onTab?.(p.tab); enterTab(p); paint(p); } else openAiControl({ ...p.o, scope: 'alle', tab: 'mod' }); return; }
     if ('acSelf' in d) return selftest(false);
+    // Prompt 39: La Glimt velge / Glimt anbefaler
+    if ('acGlgo' in d) return glGo();
+    if ('acGlundo' in d) { const u = G.glUndo; G.glUndo = null; if (u) await saveRouting({ tasks: u }, 'Angret'); return; }
+    if (d.acRecuse) { vibe(); return saveRouting({ tasks: { [d.acRecuse]: { model: d.m } } }, `${d.m} brukes nå`); }
+    if ('acRecall' in d) { const L = recRows().filter((r) => r.installed && !r.inUse); vibe(); return saveRouting({ tasks: Object.fromEntries(L.map((r) => [r.task, { model: r.model }])) }, `Bruker ${L.length} anbefalinger`); }
+    if ('acRecpull' in d) { vibe(); return pullQueue([...new Set(recRows().filter((r) => !r.installed).map((r) => r.model))]); }
     if (d.acPull) return pull(d.acPull);
     if (d.acPstop) { const id = d.acPstop; G.pulls[id]?.ctl.abort(); delete G.pulls[id]; vibe(); redraw(); call(`/models/pulls/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {}); return; }
     if (d.acCat) { G.cat = d.acCat; vibe(); redraw(); return; }
@@ -565,6 +682,7 @@ function bind(el) {
     if ('acNewtok' in d) { try { const r = await call('/tokens', { method: 'POST', json: { name: 'Ny nøkkel' } }); G.fresh = r.token ?? r.key ?? null; vibe(); } catch (err) { toast(err.message); } loadTokens(); return; }
     if (d.acDeltok) { if (!confirm('Trekke tilbake nøkkelen? Skript som bruker den slutter å virke.')) return; try { await call(`/tokens/${encodeURIComponent(d.acDeltok)}`, { method: 'DELETE' }); vibe(); } catch (err) { toast(err.message); } loadTokens(); }
   });
+  el.addEventListener('submit', (e) => { const f = e.target.closest?.('[data-ac-askf]'); if (!f) return; e.preventDefault(); recAsk(f.querySelector('[data-ac-ask]')?.value); });
   el.addEventListener('change', (e) => {
     const t = e.target;
     if (t.matches('[data-ac-rt]')) { vibe(); return saveRouting({ tasks: { [t.dataset.acRt]: { [t.dataset.f]: t.value } } }).then(() => { G.at.finRouting = 0; get('finRouting', '/routing?scope=finans', normRouting); }); }

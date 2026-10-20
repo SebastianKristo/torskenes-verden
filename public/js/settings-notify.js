@@ -4,6 +4,7 @@
 // som Sporing brukte (/api/tracking/prefs).
 import { api, esc } from './util.js';
 import { pushSupported, pushState, enablePush, disablePush } from './webpush.js';
+import { updNotifyRow } from './settings-system.js'; // prompt 39
 // Prompt 31: «AI-svar i bakgrunnen» (ai_bg_notify i /api/me/notify, på som standard, følger hovedbryteren) og
 // «Varsler på denne enheten» (Web Push: tillatelse + abonnement, se webpush.js).
 
@@ -97,6 +98,9 @@ export function notifyView(h) {
       h.row({ t: 'Stille timer', s: `${n.quietFrom}–${n.quietTo}: ingen lyd eller vibrasjon`, tog: n.quietOn !== false, act: 'data-nf-tog="quietOn"' }),
       n.quietOn !== false ? `<div class="sg-row"><span class="sg-txt"><b>Fra og til</b><span>Varsler kommer fortsatt, men stille</span></span><span class="nf-times"><input type="time" value="${esc(n.quietFrom)}" data-nf-time="quietFrom" aria-label="Stille fra"><span>–</span><input type="time" value="${esc(n.quietTo)}" data-nf-time="quietTo" aria-label="Stille til"></span></div>` : '',
       h.row({ t: 'AI-svar i bakgrunnen', k: 'glimt ai svar varsel push bakgrunn', s: n.on ? 'Får du svar mens du er ute av appen, kommer det som varsel' : 'Følger hovedbryteren «Varsler» (av)', tog: !!n.on && n.ai_bg_notify !== false, act: 'data-nf-tog="ai_bg_notify"', disabled: !n.on }),
+      // Prompt 39 (claude-code-glimt-varsel-ikon.md): banneret i appen når svaret kom mens du var borte (n_ai_in, standard på).
+      h.row({ t: 'Vis svaret i appen også', k: 'glimt ai svar banner i appen varsel', s: 'Banner øverst når du kommer tilbake til appen', tog: !!n.on && n.ai_bg_notify !== false && n.n_ai_in !== false, act: 'data-nf-tog="n_ai_in"', disabled: !n.on || n.ai_bg_notify === false }),
+      updNotifyRow(h),
       pushSupported()
         ? h.row({ t: 'Varsler på denne enheten', k: 'push web push nettleser tillatelse', s: S.pushBusy ? 'Slår på …' : S.push?.subscribed ? 'Glimt-svar, prøveperioder og oppdateringer kommer også når fanen er lukket' : Notification.permission === 'denied' ? 'Blokkert i nettleseren. Tillat varsler for denne siden i nettleserens innstillinger.' : 'Nettleseren spør om tillatelse når du slår dette på', tog: !!S.push?.subscribed, act: 'data-nf-act="push"', disabled: S.pushBusy || Notification.permission === 'denied' })
         : h.row({ t: 'Tillatelse på denne enheten', s: 'Nettleseren må tillate varsler fra Homelab', v: pt, vc: pc, btn: 'Notification' in window && Notification.permission === 'granted' ? false : 'Spør', act: 'data-nf-act="perm"' }),
@@ -119,7 +123,7 @@ export function notifyView(h) {
 export async function notifyClick(e) {
   const b = e.target.closest('[data-nf-tog],[data-nf-act],[data-nf-sound],[data-nf-grp],[data-nf-pkg]');
   if (!b || !S.n) return false;
-  if (b.dataset.nfTog) { const k = b.dataset.nfTog; if (b.disabled) return true; await save({ [k]: k === 'quietOn' ? S.n.quietOn === false : k === 'ai_bg_notify' ? S.n.ai_bg_notify === false : !S.n[k] }); return true; }
+  if (b.dataset.nfTog) { const k = b.dataset.nfTog; if (b.disabled) return true; await save({ [k]: k === 'quietOn' ? S.n.quietOn === false : k === 'ai_bg_notify' || k === 'n_ai_in' ? S.n[k] === false : !S.n[k] }); return true; }
   if (b.dataset.nfSound) {
     const id = b.dataset.nfSound;
     if (id === 'egen' && !S.n.customSound) { S.msg = 'Last opp en lyd først.'; rerender(); return true; }

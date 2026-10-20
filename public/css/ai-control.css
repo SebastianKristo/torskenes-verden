@@ -190,3 +190,29 @@
 .ac-adv[open] summary::after{content:' ⌄'}
 .ac-adv .ac-mut{display:block;margin-top:6px;font-size:12.5px;line-height:1.5}
 .ac-adv code{padding:1px 6px;border-radius:5px;background:var(--fld)}
+
+/* Prompt 39: fyll kortet i Innstillinger (ingen egen topp, fanemeny 200 px, 24 px mellomrom), «La Glimt velge», Glimt anbefaler og logoer. */
+.ac.emb.web .ac-body{gap:24px;padding:4px 0 0}
+.ac.emb.web .ac-nav{width:200px}
+.set-aictl{margin:0 0 26px;min-height:max(640px,calc(100vh - 150px))}
+.set-aictl>.ac{border-radius:0;margin:0}
+.ac-card.ac-gl39{display:flex;flex-direction:row;align-items:center;text-align:left;gap:14px;background:var(--card);border:1px solid var(--line)}
+.ac-glm{position:relative;flex:none;width:34px;height:34px;display:grid;place-items:center}
+.ac-glm i{position:absolute;inset:0;border-radius:50%;background:conic-gradient(#b23a2a,#e8794a,#7a5ad6,#3fbf9a,#b23a2a);-webkit-mask:radial-gradient(circle,transparent 12px,#000 12.5px);mask:radial-gradient(circle,transparent 12px,#000 12.5px);animation:acspin 3.2s linear infinite}
+.ac-glm b{font-size:15px;color:var(--acc)}
+@keyframes acspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.ac-glm i{animation:none}}
+.ac-glok{flex:none;display:inline-flex;align-items:center;height:36px;padding:0 16px;border-radius:18px;background:color-mix(in srgb,var(--ok) 12%,transparent);border:1px solid var(--ok);color:var(--ok);font:700 13px Manrope,system-ui,sans-serif;cursor:default;white-space:nowrap}
+.ac-recm .ac-recr{align-items:center;gap:12px}
+.ac-recr .ac-row{gap:8px;flex-wrap:wrap}
+.ac-recr code{font-size:12px;padding:2px 7px;border-radius:6px;background:var(--fld)}
+.ac-recb{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.ac-ask{display:flex;gap:8px;margin-top:10px}
+.ac-ask input{flex:1;min-width:0;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:500 14px Manrope,system-ui,sans-serif;outline:none}
+.ac-ask input:focus{border-color:var(--ink)}
+.ac-askr{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:13.5px;line-height:1.45}
+.ac-askr span{flex:1;min-width:220px}
+.ac-logo{flex:none;width:40px;height:40px;border-radius:12px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
+.ac-logo b{font:800 15px Manrope,sans-serif}
+.ac-logo.sm{width:24px;height:24px;border-radius:7px}
+.ac-logo.sm svg{width:16px;height:16px}

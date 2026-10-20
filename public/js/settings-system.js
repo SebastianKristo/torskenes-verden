@@ -187,10 +187,16 @@ export function systemView(h) {
   if (U.st === 'forbidden') return { groups: [h.group('Oppdatering', [h.row({ t: 'Oppdatering fra appen', v: 'Ikke tilgjengelig', s: 'Bare administrator kan se og starte oppdateringer.' })])] };
   const soft = h.group('Programvare', [
     h.row({ t: 'Automatiske oppdateringer', k: 'auto automatisk natt', s: 'Kl. 03:30, etter nattlig backup.', tog: !!st.auto_update, act: 'data-upd-set="auto_update"', disabled: !st.loaded }),
-    h.row({ t: 'Varsle om nye versjoner', k: 'varsel push banner', s: 'Banner på Dashboard og push til administratorer.', tog: st.notify_updates !== false, act: 'data-upd-set="notify_updates"', disabled: !st.loaded }),
-  ]);
+  ]); // prompt 39: «Varsle om nye versjoner» ligger nå under Varsler (updNotifyRow)
   const html = `<div class="ny">${heroHtml(ph, d)}${btnHtml(ph, d)}${d ? verHtml(ph, d, h) : ''}${d && d.available === false ? setupHtml('Oppdatering fra appen er ikke satt opp.') : ''}${logHtml(ph)}${d ? notesHtml(ph, d) : ''}</div>`;
   return { html: html + `<section class="sg"><h3 class="sg-t">Programvare</h3><div class="sg-box">${soft.rows.map((r) => r.html).join('')}</div></section>`, extra: sheetHtml(), mount: (el) => { el.scrollTop = el.scrollHeight; } };
+}
+
+/** Prompt 39 (claude-code-varsler-versjon-app-ikon.md): raden i Innstillinger → Varsler (samme nøkkel notify_updates, bare admin). */
+export function updNotifyRow(h) {
+  if (!admin()) return '';
+  const st = settings30();
+  return h.row({ t: 'Varsle om nye versjoner', k: 'varsel push banner nordlys os versjon oppdatering', s: 'Nordlys OS · banner på Hjem og push', tog: st.notify_updates !== false, act: 'data-upd-set="notify_updates"', disabled: !st.loaded });
 }
 
 /* Brukervalg for oppdatering (GET/PUT /api/system/update/settings). Eldre server: fra U.d.settings, ellers standard. */
