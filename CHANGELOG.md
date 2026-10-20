@@ -2,6 +2,39 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.37.0] – 20.10.2026 · prompt 42 – Boliger på web, raskt Glimt-søk og Vel fremme
+- **Boliger på web (nytt design):**
+  - Forsiden viser alle boligene på ett ark (2a). Inne i en bolig er det en kontobok (1b) med årsbokser øverst på alle fanene.
+  - Utgifter vises med tabell og CSV. Kategorier, som blomster, møbler og mat, er kort du kan åpne. Glimt lager en ny kategori når ingen passer.
+  - Prosjekter er samlemapper for kjøp, og Glimt kan finne relaterte kjøp («alt til bassenget»).
+  - Kvitteringspanelet har «Analyser på nytt med Glimt» og «Se originalen».
+  - Søket i toppen leter bare i Boliger, eller i boligen du står i. Budsjett og regninger er fjernet fra visningen, men dataene er beholdt. Laget for å være lett å bruke.
+- **Glimt-søk i Finans går fort:** en ny søkedatabase finner for eksempel «kvittering til tomater på ica» eller «har jeg noen abonnementer» på under 0,3 s uten AI. Mens søket går står det «Glimt tenker … 1,4 s» med tankestegene.
+- **FinansHub:**
+  - Ny Filter-side der du velger butikk, kategori, bolig, beløp og periode (måneder, uker eller datoer), eller skriver hva du vil se til Glimt.
+  - Avanserte Glimt-oppgaver kjører i bakgrunnen, blant annet en forbruksrapport som PDF.
+  - Import fra bank kan gå rett til en bolig.
+  - Ny logo, fargede menyikoner og Glimt-orben på alle Glimt-knappene.
+  - Logoer på aksjer og abonnementer, og Finn-bildene vises riktig.
+- **Gamle design er slettet:** FinansHub v2 (mørk og oransje) på web og «Klassisk» (Liquid Glass og Material You) i appene. Alle står nå på Papir lys eller mørk.
+- **Fanelinja:** velg en fast Hjem-knapp (Standard, 1a, 1b, 1c eller 1d) med forhåndsvisning. Tilbake-knappen øverst følger valget.
+- **Vel fremme** er det nye navnet på Hjemlys.
+  - Den har egen fane med «Aktive i familien» og Glimt-forslag.
+  - Soner vises uten kart, og du kan søke i over 7 500 ikoner (Lucide og Tabler).
+  - Helsekildene er flyttet til Innstillinger, og helsedata kan hentes fra Home Assistant-mobilappen.
+- **Kalender:**
+  - Støtter iPad med egen layout, sidepanel, alle retninger, Split View og tastatursnarveier.
+  - Trekkdatoene for abonnementer er en egen kalender i alle appene.
+- **Sporing:**
+  - AliExpress-pakker hentes fra e-postmappen «AliExpress» og følges videre hos norsk transportør.
+  - PostNord prøver flere nummervarianter og bruker ParcelsApp eller 17TRACK som reserve. Feilmeldingen sier hva som er galt, og «Test nå» viser hva PostNord svarer (bare for admin).
+  - PostNord-logoen vises riktig.
+- **Rettet:**
+  - Glimt i Huskeliste deler nå opp beskjeden i flere oppgaver, med Angre.
+  - Du kan scrolle selv om fingeren starter på bibelverset.
+  - «Åpne Bibel-siden» er alltid synlig i bibelvers-arket.
+  - Snu-knappen i Min reise har samme størrelse som i designet.
+
 ## [4.36.0] – 20.10.2026 · prompt 41 – Hjemlys «Si fra», Min reise og Fold 1c
 - **Hjemlys «Si fra»:** gi beskjed fra hvor som helst, uten at det må være en tur hjem.
   - Velg Sjekket inn, Drar snart eller Drar nå.
