@@ -150,9 +150,9 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp, head: (androidx.co
                 SetRow(vm, 0, Icons.Filled.Palette, "Papir · lys", "Lyst papir og svart fanelinje", if (vm.paperMode == "lys") sel else "") { vm.setPaperMode("lys") }
                 SetRow(vm, 1, Icons.Filled.Palette, "Papir · mørk", "Kveldspapir og lys fanelinje", if (vm.paperMode == "mork") sel else "", top = true) { vm.setPaperMode("mork") }
                 SetRow(vm, 2, Icons.Filled.Palette, "Følg systemet", "Lys om dagen, mørk når telefonen er mørk", if (vm.paperMode == "auto") sel else "", top = true) { vm.setPaperMode("auto") }
-                SetRow(vm, 3, Icons.Filled.Palette, "Klassisk (Material You)", "Bytt tilbake til det forrige mobildesignet", "Bytt ›", top = true) { vm.setMobileDesign("klassisk") }
             }
         }
+        item { LookExtras42(vm) } // Prompt 42: personvern og widget-valgene fra den slettede klassiske Utseende-siden
         item { PLabel("Ikonfarger", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
             PCard {

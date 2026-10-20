@@ -30,113 +30,21 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private data class SettingsGroup(val title: String, val items: List<Triple<String, String, ImageVector>>)
-
-private val groups = listOf(
-    SettingsGroup("Konto", listOf(
-        Triple("accounts", "Kontoer og brukere", Icons.Filled.People),
-        Triple("security", "Sikkerhet", Icons.Filled.Lock),
-        Triple("tokens", "API-tokens", Icons.Filled.Key),
-    )),
-    SettingsGroup("App", listOf(
-        Triple("look", "Utseende", Icons.Filled.Palette),
-        Triple("scan", "Skanning og AI", Icons.Filled.DocumentScanner),
-        Triple("notify", "Varsler", Icons.Filled.Notifications),
-        Triple("haptics", "Haptikk", Icons.Filled.Vibration),
-    )),
-    SettingsGroup("Finans", listOf(
-        Triple("ai", "AI-motor", Icons.Filled.AutoAwesome),
-        Triple("cats", "Kategorier", Icons.Filled.Category),
-        Triple("rules", "Regler", Icons.Filled.Tune),
-        Triple("bank", "Bank og import", Icons.Filled.AccountBalance),
-        Triple("stocks", "Aksjer · Trading 212", Icons.AutoMirrored.Filled.ShowChart),
-        Triple("backup", "Backup og data", Icons.Filled.Backup),
-    )),
-    SettingsGroup("System", listOf(
-        Triple("server", "Server og synk", Icons.Filled.Dns),
-        Triple("data", "Data og lagring", Icons.Filled.Storage),
-        Triple("about", "Om FinansHub", Icons.Filled.Info),
-    )),
-)
-
 private val when_ = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale("nb", "NO"))
 private fun time(t: Long?) = t?.let { when_.format(Date(it)) } ?: "–"
 
-/** Innstillinger i appen: profilkort øverst og gruppene Konto, App og System. */
-@Composable
-internal fun SettingsScreen(vm: AppViewModel, onPrivacyChanged: () -> Unit) {
-    val page = vm.settingsPage
-    val title = groups.flatMap { it.items }.firstOrNull { it.first == page }?.second ?: "Innstillinger"
-    Page {
-        item { ModuleHeader(vm, title, back = if (page != null) ({ vm.settingsPage = null }) else null) }
-        when (page) {
-            null -> {
-                item {
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.container).clickable { vm.settingsPage = "accounts" }.padding(18.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        AvatarImage(vm, 56, C.primary, C.onPrimary)
-                        Column(Modifier.weight(1f)) {
-                            Text(vm.displayName, color = C.onContainer, style = MaterialTheme.typography.titleLarge)
-                            Text("${vm.account?.username?.ifBlank { null } ?: "–"} · ${vm.me?.role ?: vm.account?.role ?: ""}", color = C.onContainer.copy(alpha = .8f), fontSize = 13.sp)
-                            Text(host(vm.base), color = C.onContainer.copy(alpha = .7f), fontSize = 12.sp)
-                        }
-                        Icon(Icons.Filled.ChevronRight, null, tint = C.onContainer)
-                    }
-                }
-                groups.forEach { g ->
-                    item { SectionLabel(g.title) }
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            g.items.forEachIndexed { i, (k, label, icon) ->
-                                Row(Modifier.fillMaxWidth().clip(itemShape(i, g.items.size)).background(C.surface1).clickable {
-                                    when (k) { "bank" -> vm.open(Screen.Import); else -> { vm.settingsPage = k; if (k == "tokens") vm.loadTokens() } }
-                                }.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                                    Icon(icon, null, tint = C.primary)
-                                    Text(label, Modifier.weight(1f))
-                                    Icon(Icons.Filled.ChevronRight, null, tint = C.text2)
-                                }
-                            }
-                        }
-                    }
-                }
-                item {
-                    OutlinedButton(onClick = { vm.logout() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Logg ut av ${vm.displayName}", color = C.primary) }
-                }
-            }
-            "accounts" -> item { AccountsPage(vm) }
-            "security" -> item { SecurityPage(vm, onPrivacyChanged) }
-            "tokens" -> item { TokensPage(vm) }
-            "look" -> item { LookPage(vm) }
-            "scan" -> item { ScanPage(vm) }
-            "notify" -> item { NotifyPage(vm) }
-            "haptics" -> item { HapticsPage(vm) }
-            "server" -> item { ServerPage(vm) }
-            "data" -> item { DataPage(vm) }
-            "about" -> item { AboutPage(vm) }
-            "ai" -> item { AiPage(vm) }
-            "cats" -> item { CategoriesPage(vm) }
-            "rules" -> item { RulesPage(vm) }
-            "stocks" -> item { StocksPrefsPage(vm) }
-            "backup" -> item { BackupPage(vm) }
-        }
-    }
-}
+// Prompt 42: den klassiske Innstillinger-skjermen (Material You) er slettet. Papir viser sidene under fra PaperSettings17.
 
 /* ---------------- Byggeklosser ---------------- */
 
 @Composable
 private fun Group(content: @Composable ColumnScope.() -> Unit) =
-    // Papir: hvite kort med 20 dp runding (samme som PCard), ellers Material-gruppen.
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(if (Tone.paper) 20.dp else 24.dp)).background(C.surface1).padding(vertical = 4.dp), content = content)
+    // Papir: hvite kort med 20 dp runding (samme som PCard).
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(C.surface1).padding(vertical = 4.dp), content = content)
 
 @Composable
 private fun Toggle(label: String, sub: String?, on: Boolean, onChange: (Boolean) -> Unit) {
-    if (Tone.paper) { PToggle(label, sub, on, onChange = onChange); return }
-    Row(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) { Text(label); sub?.let { Text(it, color = C.text2, fontSize = 12.sp) } }
-        Switch(checked = on, onCheckedChange = onChange, colors = SwitchDefaults.colors(checkedTrackColor = C.primary, checkedThumbColor = C.onPrimary))
-    }
+    PToggle(label, sub, on, onChange = onChange)
 }
 
 @Composable
@@ -169,37 +77,11 @@ private fun homelab(vm: AppViewModel) = vm.base.trimEnd('/') + "/"
 
 @Composable
 internal fun AccountsPage(vm: AppViewModel) = Pages {
-    val ctx = LocalContext.current
-    var shot by remember { mutableStateOf<android.net.Uri?>(null) }
-    val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::uploadAvatar) }
-    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::uploadAvatar) }
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) shot?.let(vm::uploadAvatar) }
     // Prompt 28 (konto-farger): i Papir ligger innholdet 23 dp opp i toppbildet; etiketten PROFILBILDE skal stå under bildet.
-    if (Tone.paper) Spacer(Modifier.height(28.dp))
+    Spacer(Modifier.height(28.dp))
     // Prompt 36: Konto viser profilbildet sentrert (88–96 dp) over navnet, med «Endre bilde» (ui/Ui36.kt).
     // Prompt 37: Konto → Profil (koblingen bruker ⟷ profil i husstanden).
-    if (Tone.paper) { KontoAvatar36(vm); ProfileLink37(vm) } else Section("Profilbilde") {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                AvatarImage(vm, 64)
-                Column(Modifier.weight(1f)) {
-                    Text(vm.displayName, fontWeight = FontWeight.SemiBold)
-                    Text("Vises i menyknappen i Homelab og i appen. Beskjæres til 256 × 256.", color = C.text2, fontSize = 12.sp)
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(onClick = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, shape = RoundedCornerShape(18.dp)) { Text("Bilder") }
-                FilledTonalButton(onClick = { pickFile.launch(arrayOf("image/*")) }, shape = RoundedCornerShape(18.dp)) { Text("Filer") }
-                FilledTonalButton(onClick = {
-                    val f = java.io.File(java.io.File(ctx.cacheDir, "scans").apply { mkdirs() }, "profil-${System.currentTimeMillis()}.jpg")
-                    val u = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
-                    shot = u; camera.launch(u)
-                }, shape = RoundedCornerShape(18.dp)) { Text("Ta bilde") }
-            }
-            // Destruktiv tekstknapp i aksentfargen (lab), fet og uten opasitet.
-            if (vm.avatar != null) TextButton(onClick = { vm.removeAvatar() }) { Text("Fjern bildet", color = if (Tone.paper) PaperPal.current.lab else C.red, fontWeight = FontWeight.Bold) }
-        }
-    }
+    KontoAvatar36(vm); ProfileLink37(vm)
     Note("Hver konto har egne data, tokens og varsler. Bytt raskt ved å holde inne profilbildet.")
     Group {
         vm.accounts.forEach { a ->
@@ -211,18 +93,17 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
                     Text(a.name.ifBlank { a.username.ifBlank { "Konto" } } + if (a.id == vm.activeId) " · aktiv" else "", fontWeight = FontWeight.Medium)
                     Text("${a.username.ifBlank { "–" }} · ${a.role} · ${host(a.server)}", color = C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                TextButton(onClick = { vm.logout(a.id) }) { Text("Logg ut", color = if (Tone.paper) PaperPal.current.lab else C.primary, fontWeight = if (Tone.paper) FontWeight.Bold else null) }
+                TextButton(onClick = { vm.logout(a.id) }) { Text("Logg ut", color = PaperPal.current.lab, fontWeight = FontWeight.Bold) }
             }
         }
     }
     // Primærknapp: lab-bakgrunn med onLab-tekst i Papir (aldri hvit på lys rosa); ikonet følger tekstfargen.
     Button(onClick = { vm.addingAccount = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
-        colors = if (Tone.paper) ButtonDefaults.buttonColors(containerColor = PaperPal.current.lab, contentColor = PaperPal.current.onLab)
-            else ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Icon(Icons.Filled.PersonAdd, null); Spacer(Modifier.width(8.dp)); Text("Legg til konto", fontWeight = FontWeight.Bold) }
+        colors = ButtonDefaults.buttonColors(containerColor = PaperPal.current.lab, contentColor = PaperPal.current.onLab)) { Icon(Icons.Filled.PersonAdd, null); Spacer(Modifier.width(8.dp)); Text("Legg til konto", fontWeight = FontWeight.Bold) }
     if (vm.accounts.size > 1) OutlinedButton(onClick = { vm.logoutOthers() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Logg ut andre kontoer") }
     Note("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.")
     // Prompt 38: ENHETER (Logg inn på ny enhet) og ØKT (Lås skjermen, Logg ut, Logg ut av alle enheter) nederst på Konto.
-    if (Tone.paper) { Server41(vm); Session38(vm) } // Prompt 41: Konto → SERVER (lokal, ekstern, bytt automatisk)
+    Server41(vm); Session38(vm) // Prompt 41: Konto → SERVER (lokal, ekstern, bytt automatisk)
 }
 
 @Composable
@@ -321,101 +202,6 @@ internal fun TokensPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun LookPage(vm: AppViewModel) = Pages {
-    Section("Mobildesign") {
-        Group {
-            Choice("Klassisk", "Material You, som appen har sett ut til nå", on = !vm.paper) { vm.setMobileDesign("klassisk") }
-            Choice("Papir", "Lyst papir, fotovindu øverst og nyheter på forsiden (likt med iPhone)", on = vm.paper) { vm.setMobileDesign("papir") }
-        }
-        if (vm.paper) Group {
-            listOf("auto" to "Følg systemet", "lys" to "Papir · lys", "mork" to "Papir · mørk").forEach { (k, n) ->
-                Choice(n, on = vm.paperMode == k) { vm.setPaperMode(k) }
-            }
-        }
-        Note("Papir har de samme sidene og funksjonene. Du kan bytte tilbake her eller i Papir → Innstillinger.")
-    }
-    Section("Nyhetsleser") {
-        Group {
-            Row(Modifier.fillMaxWidth().clickable { vm.openNews(settings = true) }.padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { Text("Kilder og AI"); Text("RSS- og Atom-adresser, ✦ AI-sammendrag og ✦ AI-kategorisering", color = C.text2, fontSize = 12.sp) }
-                Icon(Icons.Filled.ChevronRight, null, tint = C.text2)
-            }
-        }
-    }
-    Section("Oppstart") {
-        Group {
-            listOf("homelab" to "Homelab", "home" to "Finans · Hjem", "list" to "Finans · Liste", "budget" to "Finans · Budsjett").forEach { (k, n) ->
-                Choice(n, on = vm.option(AppPrefs.START, "homelab") == k) { vm.setPref(AppPrefs.START, k) }
-            }
-        }
-        Note("Med Finans som startside åpner appen der, og Homelab og de andre modulene ligger i profilmenyen.")
-    }
-    Section("Navigasjonslinje") {
-        var open by remember { mutableStateOf(false) }
-        Group {
-            Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Endre navn, rekkefølge og skjul faner", Modifier.weight(1f))
-                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = C.text2)
-            }
-        }
-        if (open) NavEditors(vm)
-    }
-    Section("Sider") {
-        Group {
-            Choice("Samme overalt", "Alle sidene, også Domener og Mat, bruker fargetemaet under", on = vm.option(AppPrefs.PAGES, "same") == "same") { vm.setPref(AppPrefs.PAGES, "same") }
-            Choice("Egen farge per side", "Domener er rosa, og modulene beholder sine egne kulører", on = vm.option(AppPrefs.PAGES, "same") == "own") { vm.setPref(AppPrefs.PAGES, "own") }
-        }
-        Note("Mat følger alltid appens tema og lys/mørk-valget.")
-    }
-    Group {
-        Toggle("Skjul beløp til jeg trykker", "Beløp vises som prikker til du trykker på saldoen eller øyet", vm.flag(AppPrefs.HIDE_AMOUNTS)) { vm.setPref(AppPrefs.HIDE_AMOUNTS, it) }
-    }
-    Section("Farger") {
-        Group {
-            SEEDS.forEach { (k, n, c) ->
-                Row(Modifier.fillMaxWidth().clickable { vm.setPref(AppPrefs.COLOR, k) }.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.size(24.dp).clip(CircleShape).background(if (k == "system") C.primary else androidx.compose.ui.graphics.Color(c)))
-                    Column(Modifier.weight(1f)) {
-                        Text(n)
-                        if (k == "system") Text(if (android.os.Build.VERSION.SDK_INT >= 31) "Material You: fargene fra bakgrunnsbildet" else "Krever Android 12 – bruker oransje", color = C.text2, fontSize = 12.sp)
-                    }
-                    RadioButton(selected = vm.option(AppPrefs.COLOR, "system") == k, onClick = { vm.setPref(AppPrefs.COLOR, k) }, colors = RadioButtonDefaults.colors(selectedColor = C.primary))
-                }
-            }
-        }
-    }
-    Section("Lys eller mørk") {
-        Group { MODES.forEach { (k, n) -> Choice(n, on = vm.option(AppPrefs.MODE, "dark") == k) { vm.setPref(AppPrefs.MODE, k) } } }
-    }
-    Section("Widgets · One UI-stil") {
-        val ctx = LocalContext.current
-        var alpha by remember { mutableStateOf(vm.optionInt(AppPrefs.W_ALPHA, 75).toFloat()) }
-        Group {
-            listOf("system" to "Som systemet", "dark" to "Mørk", "light" to "Lys").forEach { (k, n) ->
-                Choice(n, on = vm.option(AppPrefs.W_THEME, "system") == k) { vm.setPref(AppPrefs.W_THEME, k); no.kristo.finanshub.widget.WidgetSync.styleChanged(ctx) }
-            }
-            Column(Modifier.fillMaxWidth().padding(16.dp, 8.dp)) {
-                Row { Text("Bakgrunn", Modifier.weight(1f)); Text("${alpha.toInt()} %", color = C.text2) }
-                Slider(value = alpha, onValueChange = { alpha = it }, valueRange = 0f..100f, steps = 9,
-                    onValueChangeFinished = { vm.setPref(AppPrefs.W_ALPHA, alpha.toInt()); no.kristo.finanshub.widget.WidgetSync.styleChanged(ctx) },
-                    colors = SliderDefaults.colors(thumbColor = C.primary, activeTrackColor = C.primary))
-            }
-        }
-        Note("Gjelder Samsung-widgetene (Søk, Klokke, Vær, Pakker, Skann, Budsjett, Aksjer, Middag, FinansHub, Domener og Finn). Material You-widgetene følger fargene fra bakgrunnsbildet.")
-    }
-    // Prompt 40 (claude-code-widgets-android-samsung-preview-las.md): låseskjerm-widgetene (små 1 × 1 og brede 4 × 1).
-    Section("Widgets · låseskjerm") {
-        val ctx = LocalContext.current
-        var hide by remember { mutableStateOf(no.kristo.finanshub.widget.Lock40.hide(ctx)) }
-        Group {
-            Toggle("Skjul beløp og navn på låseskjermen", "Budsjett og Pakker viser «•••» til telefonen er låst opp", hide) { hide = it; no.kristo.finanshub.widget.Lock40.setHide(ctx, it) }
-        }
-        Note("Små: Vær, Gjøremål, Pakker, Budsjett, Avgang og Prøveperiode. Brede: Neste time, Avganger, Gjøremål, Pakker, Glimt brief og Dagens bibelvers. Legg dem til fra låseskjermen (Pixel: sveip fra høyre kant · Samsung: hold inne på låseskjermen → Widgets).")
-    }
-    Note("Fargebakgrunn (lysflekker bak glasset) finnes i iPhone-appen.")
-}
-
-@Composable
 internal fun ScanPage(vm: AppViewModel) = Pages {
     Section("Skanneknappen") {
         Group {
@@ -439,26 +225,6 @@ internal fun ScanPage(vm: AppViewModel) = Pages {
         }
         if (!vm.canEditServer) Note(SERVER_LOCKED)
     }
-}
-
-@Composable
-private fun NotifyPage(vm: AppViewModel) = Pages {
-    Note("Send varsel når …")
-    Group {
-        Toggle("Kvittering er lest", "Når AI er ferdig og noe må bekreftes", vm.flag(AppPrefs.N_RECEIPT, true)) { vm.setPref(AppPrefs.N_RECEIPT, it); vm.saveSetting("nRc", it) }
-        Toggle("Budsjett passerer 80 %", null, vm.flag(AppPrefs.N_BUDGET, true)) { vm.setPref(AppPrefs.N_BUDGET, it); vm.saveSetting("n80", it) }
-        Toggle("Abonnement trekkes snart", "Dagen før trekk", vm.flag(AppPrefs.N_SUB, true)) { vm.setPref(AppPrefs.N_SUB, it) }
-        Toggle("Domene eller SSL utløper", "30 og 7 dager før", vm.flag(AppPrefs.N_DOMAIN, true)) { vm.setPref(AppPrefs.N_DOMAIN, it) }
-        Toggle("Ukesoppsummering", "Søndag kl. 18", vm.flag(AppPrefs.N_WEEKLY)) { vm.setPref(AppPrefs.N_WEEKLY, it) }
-    }
-    Note("Kvittering og budsjett lagres også på serveren. Mens appen er åpen vises ferdige kvitteringer i køen med en gang.")
-    LaunchedEffect(Unit) { if (vm.tracking == null) vm.pollTracking() }
-    Section("Sporing") {
-        Group {
-            TRK_PREFS.forEach { (k, l, sub) -> Toggle(l, sub, vm.tracking?.prefs?.get(k) ?: (k != "delayed")) { vm.setTrackingPref(k, it) } }
-        }
-    }
-    Note("Lagres på serveren og gjelder også Sporing på web. Varslene vises som lokale varsler når appen henter status; ekte push fra serveren er ikke bygget ennå.")
 }
 
 /** Innstillinger → App → Haptikk: hovedbryter, styrke, brytere per type og test. */

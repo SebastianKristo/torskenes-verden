@@ -40,7 +40,8 @@ data class Carrier(val id: String, val name: String, val ini: String, val color:
             Carrier("ups", "UPS", "UPS", 0xFF351C15, 0xFFFFB500), Carrier("fedex", "FedEx", "FX", 0xFF4D148C, 0xFFFFFFFF),
             Carrier("gls", "GLS", "GLS", 0xFF172154, 0xFFFFD100), Carrier("schenker", "DB Schenker", "DB", 0xFFEC0016, 0xFFFFFFFF),
             Carrier("helthjem", "Helthjem", "HH", 0xFF2E2A6B, 0xFFFFFFFF), Carrier("budbee", "Budbee", "BB", 0xFF2BCE96, 0xFF05271B),
-            Carrier("instabox", "Instabox", "IB", 0xFFFF4E00, 0xFFFFFFFF), Carrier("other", "Annen (17TRACK)", "17", 0xFF3A4252, 0xFFEEF0F4),
+            Carrier("instabox", "Instabox", "IB", 0xFFFF4E00, 0xFFFFFFFF), Carrier("aliexpress", "AliExpress", "AE", 0xFFE62E04, 0xFFFFFFFF), // prompt 42
+            Carrier("other", "Annen (17TRACK)", "17", 0xFF3A4252, 0xFFEEF0F4),
         )
         private val PATTERNS = listOf(
             "posten" to listOf("^[A-Z]{2}\\d{9}NO$", "^(LP|LZ)\\d{12,}$"),
@@ -124,7 +125,9 @@ data class Shipment(
 }
 
 fun parseShipment(o: JSONObject): Shipment {
-    val carrier = o.optStr("carrier") ?: "other"
+    // Prompt 42: «POSTNORD», «PostNord AB», «postnord_no» … → «postnord» (carrier_id) én gang ved innlesing (P42.kt).
+    val raw = o.optStr("carrierId") ?: o.optStr("carrier")
+    val carrier = carrierId42(raw)?.takeIf { id -> Carrier.KNOWN.any { it.id == id } } ?: raw ?: "other"
     val def = Carrier.KNOWN.firstOrNull { it.id == carrier }
     val carrierName = o.optStr("carrierName") ?: def?.name ?: carrier.replaceFirstChar { it.uppercase() }
     val no = o.optStr("trackingNo") ?: o.optStr("no") ?: ""
@@ -170,8 +173,6 @@ data class TrackingData(
     val autoArchive: TrackSource = TrackSource(true, null),
 ) {
     val lastCheck: Instant? get() = listOfNotNull(finn.lastCheck, email.lastCheck, lastRun).maxOrNull()
-    val activeCount get() = items.count { it.active }
-    val pickupCount get() = items.count { !it.archived && it.ready }
     /** De viktigste: klar for henting først, så lengst kommet. */
     fun top(n: Int) = items.filter { it.active }.sortedWith(compareByDescending<Shipment> { it.ready }.thenByDescending { it.step }).take(n)
 

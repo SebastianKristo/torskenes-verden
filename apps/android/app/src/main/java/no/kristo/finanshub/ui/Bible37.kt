@@ -178,24 +178,46 @@ internal fun BibleSheet37(vm: AppViewModel) {
     val close = { vm.p37.bibleSheet = false }
     var copied by remember { mutableStateOf(false) }
     LaunchedEffect(copied) { if (copied) { delay(1600); copied = false } }
+    // Prompt 42 (claude-code-bibel-ark-knapp-alltid.md): topp (tittel + Ferdig), innhold som scroller, og fast bunn med
+    // «Åpne Bibel-siden ›» som alltid står over hjemstreken, uansett tekstlengde og skriftstørrelse.
+    var more by remember(v.ref) { mutableStateOf(false) }
+    val before = if (more) v.before else v.before.takeLast(3)
+    val after = if (more) v.after else v.after.take(3)
+    val hidden = v.before.size - before.size + v.after.size - after.size
     ModalBottomSheet(onDismissRequest = close, containerColor = p.bg, contentColor = p.ink, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         dragHandle = { BottomSheetDefaults.DragHandle(width = 36.dp, height = 5.dp, color = p.line) }) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 18.dp, end = 18.dp, bottom = 26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth()) {
+            Row(Modifier.padding(start = 18.dp, end = 18.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 PSerif(v.ref, 24.sp, modifier = Modifier.weight(1f), maxLines = 1)
                 SheetButton30("Ferdig", onClick = close)
             }
-            v.before.forEach { Text(it, color = p.mut, fontFamily = PaperFonts.serif, fontSize = 16.sp, lineHeight = 23.sp) }
-            Text("«${v.text}»", color = p.ink, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = 21.sp, lineHeight = 29.sp)
-            v.after.forEach { Text(it, color = p.mut, fontFamily = PaperFonts.serif, fontSize = 16.sp, lineHeight = 23.sp) }
-            if (v.before.isEmpty() && v.after.isEmpty()) Text("Sammenhengen hentes fra serveren når den har bibelteksten.", color = p.mut, fontSize = 12.5.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                PButton("Del", Modifier.weight(1f), kind = "line") {
-                    runCatching { ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "«${v.text}» ${v.ref}"), "Del verset").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            Column(Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 18.dp, end = 18.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                before.forEach { Text(it, color = p.mut, fontFamily = PaperFonts.serif, fontSize = 16.sp, lineHeight = 23.sp) }
+                Text("«${v.text}»", color = p.ink, fontFamily = PaperFonts.serif, fontStyle = FontStyle.Italic, fontSize = 21.sp, lineHeight = 29.sp)
+                after.forEach { Text(it, color = p.mut, fontFamily = PaperFonts.serif, fontSize = 16.sp, lineHeight = 23.sp) }
+                if (hidden > 0) Text("Vis mer", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
+                    modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { more = true }.padding(vertical = 4.dp))
+                if (v.before.isEmpty() && v.after.isEmpty()) Text("Sammenhengen hentes fra serveren når den har bibelteksten.", color = p.mut, fontSize = 12.5.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    PButton("Del", Modifier.weight(1f), kind = "line") {
+                        runCatching { ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, "«${v.text}» ${v.ref}"), "Del verset").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    }
+                    PButton(if (copied) "Kopiert" else "Kopier", Modifier.weight(1f)) { copy37(ctx, v); copied = true; Haptics.select() }
                 }
-                PButton(if (copied) "Kopiert" else "Kopier", Modifier.weight(1f)) { copy37(ctx, v); copied = true; Haptics.select() }
+                Text("Tekst: Bibelen 1930 (fri bruk).", color = p.mut, fontSize = 11.5.sp)
             }
-            Text("Tekst: Bibelen 1930 (fri bruk).", color = p.mut, fontSize = 11.5.sp)
+            // Fast bunn: samme bakgrunn som arket, med en svak skygge over så det synes at innholdet scroller under.
+            Box(Modifier.fillMaxWidth().drawBehind {
+                drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color(0x2E1B1A17))), topLeft = Offset(0f, -16.dp.toPx()), size = androidx.compose.ui.geometry.Size(size.width, 16.dp.toPx()))
+            }.background(p.bg).navigationBarsPadding().padding(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 12.dp)) {
+                Box(
+                    Modifier.fillMaxWidth().height(56.dp).clip(CircleShape).background(Color(0xFF1B1A17))
+                        .clickable(role = Role.Button, onClickLabel = "Åpne Bibel-siden") { Haptics.tap(); close(); vm.p37.biblePage = true },
+                    contentAlignment = Alignment.Center,
+                ) { Text("Åpne Bibel-siden ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1) }
+            }
         }
     }
 }

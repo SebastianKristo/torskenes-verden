@@ -181,10 +181,10 @@ fun AppViewModel.startHjemlys40(etaMs: Long, waitMin: Int, mode: String = p40.hl
                 Hjemlys40Prefs.sync(appCtx40, ses, account?.id)
                 Hjemlys40Service.start(appCtx40)
             }
-            flash("Hjemlys er på · husstanden ser at du er på vei")
+            flash("Vel fremme er på · husstanden ser at du er på vei")
             loadHjemlys40(force = true)
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
-            message = if (e.status == 404) "Hjemlys finnes ikke på serveren ennå. Oppdater Homelab." else e.message
+            message = if (e.status == 404) "Vel fremme finnes ikke på serveren ennå. Oppdater Homelab." else e.message
         } catch (e: Exception) { message = e.message } finally { s.hlBusy = false }
     }
 }
@@ -294,17 +294,17 @@ object Hjemlys40Notify {
 
     fun channels(ctx: Context) {
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(CH) == null) nm.createNotificationChannel(NotificationChannel(CH, "Hjemlys · på vei hjem", NotificationManager.IMPORTANCE_DEFAULT).apply {
-            description = "Live Update mens Hjemlys er på (tid igjen, etapper, + 10 min og Jeg er hjemme)"
+        if (nm.getNotificationChannel(CH) == null) nm.createNotificationChannel(NotificationChannel(CH, "Vel fremme · på vei hjem", NotificationManager.IMPORTANCE_DEFAULT).apply {
+            description = "Live Update mens Vel fremme er på (tid igjen, etapper, + 10 min og Jeg er hjemme)"
             setSound(null, null); enableVibration(false); setShowBadge(false)
         })
         // Høy viktighet for «sen» (kan overstyre Ikke forstyrr hvis brukeren tillater det for kanalen).
-        if (nm.getNotificationChannel(CH_LATE) == null) nm.createNotificationChannel(NotificationChannel(CH_LATE, "Hjemlys · noen er sen", NotificationManager.IMPORTANCE_HIGH).apply {
+        if (nm.getNotificationChannel(CH_LATE) == null) nm.createNotificationChannel(NotificationChannel(CH_LATE, "Vel fremme · noen er sen", NotificationManager.IMPORTANCE_HIGH).apply {
             description = "Når noen i husstanden ikke er hjemme til forventet tid og ikke har svart"
             enableVibration(true); setBypassDnd(true); lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         })
-        if (nm.getNotificationChannel(CH_FOLLOW) == null) nm.createNotificationChannel(NotificationChannel(CH_FOLLOW, "Hjemlys · følg hjem", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "«Følg … hjem» mens noen i husstanden har Hjemlys på, og «er hjemme»"
+        if (nm.getNotificationChannel(CH_FOLLOW) == null) nm.createNotificationChannel(NotificationChannel(CH_FOLLOW, "Vel fremme · følg hjem", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "«Følg … hjem» mens noen i husstanden har Vel fremme på, og «er hjemme»"
             setShowBadge(false)
         })
     }
@@ -332,7 +332,7 @@ object Hjemlys40Notify {
             else -> "På vei"
         }
         val eta = hlClock40(s.eta)
-        val title = when { home -> "Hjemme ${hlClock40(Instant.now().toString())} ✓"; late -> "Hjemlys · ${s.lateMinutes ?: -(mins ?: 0)} min over"; else -> "På vei hjem" + (eta?.let { " · $it" } ?: "") }
+        val title = when { home -> "Hjemme ${hlClock40(Instant.now().toString())} ✓"; late -> "Vel fremme · ${s.lateMinutes ?: -(mins ?: 0)} min over"; else -> "På vei hjem" + (eta?.let { " · $it" } ?: "") }
         val text = when {
             home -> "$recipients har fått beskjed"
             late -> "Familien har fått beskjed med posisjonen din"
@@ -344,7 +344,7 @@ object Hjemlys40Notify {
         b.setSmallIcon(icon(ctx))
         b.setContentTitle(title)
             .setContentText(text)
-            .setSubText("Hjemlys")
+            .setSubText("Vel fremme")
             .setOngoing(!home)
             .setOnlyAlertOnce(!late)
             .setCategory(Notification.CATEGORY_NAVIGATION)
@@ -365,11 +365,11 @@ object Hjemlys40Notify {
         // Samsung One UI 7+ (Now Bar / Live Notifications): feltene leses der de støttes, ellers ignoreres de.
         extras.putInt("android.ongoingActivityNoti.style", 1)
         extras.putString("android.ongoingActivityNoti.primaryInfo", if (home) "Hjemme" else if (late) chip else "Hjem om $chip")
-        extras.putString("android.ongoingActivityNoti.secondaryInfo", s.leg ?: "Hjemlys")
+        extras.putString("android.ongoingActivityNoti.secondaryInfo", s.leg ?: "Vel fremme")
         extras.putString("android.ongoingActivityNoti.chipExpandedText", chip)
         extras.putInt("android.ongoingActivityNoti.chipBgColor", color)
         extras.putString("android.ongoingActivityNoti.nowbarPrimaryInfo", if (home) "Hjemme" else chip)
-        extras.putString("android.ongoingActivityNoti.nowbarSecondaryInfo", "Hjemlys")
+        extras.putString("android.ongoingActivityNoti.nowbarSecondaryInfo", "Vel fremme")
         extras.putInt("android.ongoingActivityNoti.progress", pr)
         extras.putInt("android.ongoingActivityNoti.progressMax", 100)
         if (Build.VERSION.SDK_INT >= 36 && !home) {
@@ -452,11 +452,11 @@ object Hjemlys40Notify {
         shownOther[key] = s.state
         val n = when (s.state) {
             "late" -> Notification.Builder(ctx, CH_LATE).setSmallIcon(icon(ctx))
-                .setContentTitle("$who er ikke hjemme ennå")
+                .setContentTitle("Vel fremme: $who er ikke hjemme ennå")
                 .setContentText("Ventet ${hlClock40(s.eta) ?: "–"}" + (s.lateMinutes?.let { " · $it min over" } ?: "") + " · trykk for siste posisjon")
                 .setCategory(Notification.CATEGORY_ALARM).setColor(RED).setAutoCancel(true).setContentIntent(open(ctx, nid))
             "home" -> Notification.Builder(ctx, CH_FOLLOW).setSmallIcon(icon(ctx))
-                .setContentTitle("$who er hjemme ${hlClock40(Instant.now().toString())}").setContentText("Hjemlys er avsluttet")
+                .setContentTitle("$who er vel fremme ${hlClock40(Instant.now().toString())}").setContentText("Vel fremme er avsluttet")
                 .setColor(GOLD).setAutoCancel(true).setContentIntent(open(ctx, nid))
             "ended" -> { nm.cancel(nid); return }
             else -> Notification.Builder(ctx, CH_FOLLOW).setSmallIcon(icon(ctx))

@@ -98,8 +98,6 @@ class B27State {
     /** «Rediger først»: skjemaet for nytt abonnement fylles ut med dette. */
     var subPrefill by mutableStateOf<SubShot27?>(null)
 
-    /** Søk i retter (Mat, klassisk liste). */
-    var dishQ by mutableStateOf("")
 }
 
 /* ---------- Normalisering og uklar matching (samme regler som serveren) ---------- */

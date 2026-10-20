@@ -144,5 +144,4 @@ internal fun pendingSub(u: PendingUpload): String {
 }
 
 /** Arkene (Legg til / endre abonnement) i Papir: papirflate og blekk i stedet for den klassiske mørke flaten. */
-internal fun sheetBg(): Color = if (Tone.paper) PaperPal.current.bg else C.surface1
-internal fun sheetInk(): Color = if (Tone.paper) PaperPal.current.ink else C.text
+internal fun sheetBg(): Color = PaperPal.current.bg

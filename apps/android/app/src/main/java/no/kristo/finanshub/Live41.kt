@@ -79,7 +79,7 @@ object Live41 {
     private fun build(ctx: Context, title: String, text: String, chip: String, color: Int, link: String, actions: List<Pair<String, PendingIntent>>, timeoutMs: Long?, progress: Int? = null): Notification {
         channel(ctx)
         val b = Notification.Builder(ctx, CH)
-            .setSmallIcon(Hjemlys40Notify.icon(ctx)).setContentTitle(title).setContentText(text).setSubText("Hjemlys")
+            .setSmallIcon(Hjemlys40Notify.icon(ctx)).setContentTitle(title).setContentText(text).setSubText("Vel fremme")
             .setOngoing(true).setOnlyAlertOnce(true).setCategory(Notification.CATEGORY_STATUS).setVisibility(Notification.VISIBILITY_PUBLIC)
             .setColor(color).setContentIntent(open(ctx, link, 7420)).setShowWhen(false)
         timeoutMs?.let { b.setTimeoutAfter(it.coerceAtLeast(60_000L)) }

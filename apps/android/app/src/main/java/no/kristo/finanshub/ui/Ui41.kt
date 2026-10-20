@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -337,7 +338,7 @@ private fun SiFraSheet41(vm: AppViewModel, kind: String) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("home" to "Hjem", "place" to "Annet sted", "none" to "Ikke oppgi").forEach { (k, n) -> Pill41(n, dest == k) { dest = k } }
             }
-            if (dest != "none") Text("Med mål starter Hjemlys en tur med forventet tid og «Alt OK?». Uten mål sendes bare beskjeden.", color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
+            if (dest != "none") Text("Med mål starter Vel fremme en tur med forventet tid og «Alt OK?». Uten mål sendes bare beskjeden.", color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
         }
         PLabel("Hvem får beskjed?", p.mut)
         if (people.isEmpty()) Text("Ingen i husstanden ennå. Legg til personer i Familie.", color = p.mut, fontSize = 13.sp)
@@ -401,13 +402,21 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
     val first = firstName37(vm.displayName).uppercase()
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).then(if (home) Modifier.clickable { vm.openRuter() } else Modifier).padding(16.dp, 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+        // Prompt 42 (claude-code-ruter-snu-knapp.md): raden er sentrert loddrett mot etikett + tittel, med 10 dp mellomrom.
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 PLabel(if (home) "Min reise · forlot skolen ${hm41(s.journey?.leftAt)}" else "Min reise · $first")
-                Text("${t.from} → ${t.to}", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                PSerif("${t.from} → ${t.to}", 21.sp, p.ink, maxLines = 1)
             }
-            if (!home) Text("⇄ Snu", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp,
-                modifier = Modifier.clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(role = Role.Button) { vm.flipTrip41() }.padding(12.dp, 6.dp))
+            // «⇄ Snu» som i designet: 36 dp høy pille, 13 dp sidemarg, 1 dp kant, Manrope 700 12,5; treffflate minst 48 dp.
+            if (!home) Box(
+                Modifier.minimumInteractiveComponentSize().clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Snu retning") { Haptics.select(); vm.flipTrip41() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.height(36.dp).clip(RoundedCornerShape(18.dp)).border(1.dp, p.line, RoundedCornerShape(18.dp)).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
+                    Text("⇄ Snu", color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1, softWrap = false)
+                }
+            }
         }
         t.alert?.let { a ->
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Color(0x1FC0392B)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -488,7 +497,9 @@ internal fun GlimtJobs41(vm: AppViewModel) {
     s.glimtDone?.let { d ->
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(d, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
-            Text("Se", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { vm.loadSources41(); s.srcOpen = true }.padding(6.dp))
+            // Prompt 42: «Angre» slår delingen sammen igjen, «Endre» åpner «Laget med Glimt».
+            if (s.glimtUndo42 != null || s.glimtUndoIds42.isNotEmpty()) Text("Angre", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { vm.undoGlimt42() }.padding(6.dp))
+            Text(if (s.glimtUndo42 != null || s.glimtUndoIds42.isNotEmpty()) "Endre" else "Se", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { vm.loadSources41(); s.srcOpen = true }.padding(6.dp))
             Text("✕", color = p.mut, modifier = Modifier.clickable { s.glimtDone = null }.padding(6.dp))
         }
     }

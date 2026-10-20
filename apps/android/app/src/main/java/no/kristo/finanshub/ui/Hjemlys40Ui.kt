@@ -99,7 +99,7 @@ internal fun HjemlysPage40(vm: AppViewModel) {
                 Text(if (mine != null || late != null) "‹ Tilbake" else "Avbryt", color = ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp,
                     modifier = Modifier.clip(CircleShape).clickable(role = Role.Button) { s.hlSheet = false; s.hlLateFor = null }.padding(8.dp, 6.dp))
                 Spacer(Modifier.weight(1f))
-                Text("Hjemlys", color = ink, fontFamily = PaperFonts.serif, fontSize = 20.sp)
+                Text("Vel fremme", color = ink, fontFamily = PaperFonts.serif, fontSize = 20.sp)
                 Spacer(Modifier.weight(1f))
                 Spacer(Modifier.width(60.dp))
             }
@@ -253,7 +253,7 @@ private fun StartNight40(vm: AppViewModel) {
     }
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(NIGHT_CARD).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("HVA DELES", color = NIGHT_MUT, fontFamily = PaperFonts.mono, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
-        Text("Nå: ingenting. ${names40(recipients40(vm))} ser bare at Hjemlys er på.", color = NIGHT_INK, fontSize = 13.5.sp)
+        Text("Nå: ingenting. ${names40(recipients40(vm))} ser bare at Vel fremme er på.", color = NIGHT_INK, fontSize = 13.5.sp)
         Text("Hvis du er sen: siste posisjon, ruten, batteri og dekning, siste opplåsing og hvem du var med.", color = NIGHT_MUT, fontSize = 12.5.sp, lineHeight = 17.sp)
     }
     Box(Modifier.fillMaxWidth().height(54.dp).clip(RoundedCornerShape(27.dp)).background(HL_GOLD).clickable(role = Role.Button) { go(eta, wait) }, contentAlignment = Alignment.Center) {
@@ -389,7 +389,7 @@ private fun LateView40(vm: AppViewModel, m: HlMember40, night: Boolean) {
     val sh = m.share
     val ink = if (night) Color.White else p.ink
     val mut = if (night) Color.White.copy(alpha = .75f) else p.mut
-    Text(if (night) "MOTTAKER · HJEMLYS" else "${firstName37(vm.me?.name ?: "")} SER DETTE".trim().uppercase(), color = mut, fontFamily = PaperFonts.mono, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
+    Text(if (night) "MOTTAKER · VEL FREMME" else "${firstName37(vm.me?.name ?: "")} SER DETTE".trim().uppercase(), color = mut, fontFamily = PaperFonts.mono, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
     Text(if (night && mins != null) "$who er $mins min forsinket" else "$who er ikke hjemme ennå", color = ink, fontFamily = PaperFonts.serif, fontSize = 32.sp, lineHeight = 36.sp)
     Text("Ventet ${hlClock40(m.eta) ?: "–"}" + (mins?.let { " · $it min over" } ?: "") + " · svarte ikke på «Alt OK?»", color = mut, fontSize = 14.sp)
     val pos = sh?.optJSONObject("pos")

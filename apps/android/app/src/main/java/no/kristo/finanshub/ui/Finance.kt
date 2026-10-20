@@ -68,8 +68,7 @@ internal fun Empty(text: String) = Box(Modifier.fillMaxWidth().padding(32.dp), c
 @Composable
 internal fun SectionLabel(text: String) {
     // Papir: etiketter i IBM Plex Mono, versaler og aksentfarge, som i designet.
-    if (Tone.paper) PLabel(text, modifier = Modifier.padding(start = 6.dp, top = 10.dp))
-    else Text(text, color = C.primary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp, top = 8.dp))
+    PLabel(text, modifier = Modifier.padding(start = 6.dp, top = 10.dp))
 }
 
 @Composable
@@ -127,13 +126,6 @@ internal fun TxRow(vm: AppViewModel, t: Tx, shape: RoundedCornerShape, selected:
 }
 
 @Composable
-internal fun TxGroup(list: List<Tx>, vm: AppViewModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        list.forEachIndexed { i, t -> TxRow(vm, t, itemShape(i, list.size), vm.selectedTx == t.id) { vm.selectedTx = t.id } }
-    }
-}
-
-@Composable
 internal fun Hero(vm: AppViewModel) {
     val s = vm.summary ?: return Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) }
     val pct = if (s.budgetTotal > 0) (s.budgetUsed / s.budgetTotal).toFloat().coerceIn(0f, 1f) else 0f
@@ -175,158 +167,10 @@ internal fun ReviewCta(vm: AppViewModel) {
 /* ---------------- Skjermer ---------------- */
 
 @Composable
-internal fun HomeScreen(vm: AppViewModel) {
-    val s = vm.summary
-    val name = vm.displayName
-    Page {
-        item {
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.weight(1f)) {
-                    // Prompt 30: bare profilbildet, ikke @brukernavn.
-                    AvatarImage(vm, 24)
-                    Text(monthLabel(s?.month ?: ""), style = MaterialTheme.typography.displaySmall)
-                }
-                if (vm.flag(AppPrefs.HIDE_AMOUNTS)) IconButton(onClick = { Privacy.hidden = !Privacy.hidden }) {
-                    Icon(if (Privacy.hidden) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, if (Privacy.hidden) "Vis beløp" else "Skjul beløp", tint = C.text2)
-                }
-                IconButton(onClick = { vm.refresh() }) { Icon(Icons.Filled.Refresh, "Oppdater", tint = C.text2) }
-                Avatar(vm)
-            }
-        }
-        item { Hero(vm) }
-        // «N kvitteringer til gjennomgang» rett under saldokortet: teksten åpner køen, «Skann ›» åpner skannearket.
-        (vm.reviewCount ?: s?.review?.count { it.status == "needs_review" })?.takeIf { it > 0 }?.let { n ->
-            item { ReviewBanner(n, open = { vm.openReview() }, scan = { vm.scanSheet = true }, bg = C.accent, fg = Color.White) }
-        }
-        if (s != null) item {
-            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                InnCard(s, Modifier.weight(1f).fillMaxHeight())
-                SavedCard(s, Modifier.weight(1f).fillMaxHeight())
-            }
-        }
-        item { UploadPill(vm) }
-        item { SectionLabel("Siste") }
-        item { s?.recent?.take(6)?.let { TxGroup(it, vm) } ?: Empty("Laster …") }
-    }
-}
-
-/** «Inn i oktober»: pil-badge og sju mini-stolper der siste (denne måneden) er grønn. */
-@Composable
-internal fun InnCard(s: Summary, modifier: Modifier) {
-    val bars = (s.innMonthly.ifEmpty { listOf(s.inn) }).takeLast(7)
-    val max = maxOf(1.0, bars.maxOrNull() ?: 1.0)
-    Column(modifier.clip(RoundedCornerShape(28.dp, 10.dp, 28.dp, 28.dp)).background(C.surface2).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Inn i ${monthLabel(s.month).lowercase()}", color = C.text2, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            Box(Modifier.size(24.dp).clip(CircleShape).background(C.positiveBg), contentAlignment = Alignment.Center) { Icon(Icons.Filled.SouthWest, null, tint = C.positive, modifier = Modifier.size(14.dp)) }
-        }
-        Text(n0(s.inn), fontFamily = Mono, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-        Row(Modifier.fillMaxWidth().height(28.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
-            bars.forEachIndexed { i, v ->
-                Box(Modifier.weight(1f).fillMaxHeight((v / max).toFloat().coerceIn(0.08f, 1f)).clip(RoundedCornerShape(3.dp))
-                    .background(if (i == bars.lastIndex) C.positive else C.surface3))
-            }
-        }
-    }
-}
-
-/** «Spart i år»: konisk ring (58 px) mot årsmålet. */
-@Composable
-internal fun SavedCard(s: Summary, modifier: Modifier) {
-    val pct = if (s.yearGoal > 0) (s.savedYear / s.yearGoal).toFloat().coerceIn(0f, 1f) else 0f
-    Column(modifier.clip(RoundedCornerShape(10.dp, 28.dp, 28.dp, 28.dp)).background(C.surface3).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Spart i år", color = C.text2, fontSize = 13.sp)
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(58.dp), contentAlignment = Alignment.Center) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val w = 8.dp.toPx()
-                    val tl = Offset(w / 2, w / 2); val sz = Size(size.width - w, size.height - w)
-                    drawArc(C.surface1, 0f, 360f, false, tl, sz, style = Stroke(w))
-                    drawArc(C.primary, -90f, 360f * pct, false, tl, sz, style = Stroke(w, cap = StrokeCap.Round))
-                }
-                Text("${(pct * 100).toInt()}%", fontFamily = Mono, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            }
-            Column {
-                Text(n0(s.savedYear), fontFamily = Mono, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                if (s.yearGoal > 0) Text("av ${n0(s.yearGoal)}", color = C.text2, fontSize = 12.sp)
-            }
-        }
-        if (s.yearGoal > 0) Text("${n0(maxOf(0.0, s.yearGoal - s.savedYear))} kr igjen", color = C.text2, fontSize = 12.sp)
-    }
-}
-
-/** Pille på forsiden som viser fremdrift i opplastingskøen. */
-@Composable
-internal fun UploadPill(vm: AppViewModel) {
-    val active = vm.jobs.filter { it.status == "pending" || it.status == "processing" }
-    val ready = vm.jobs.count { it.status == "needs_review" }
-    if (active.isEmpty() && vm.uploading == 0 && ready == 0) return
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface2).clickable { vm.open(Screen.Scan) }.padding(16.dp, 12.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (active.isNotEmpty() || vm.uploading > 0) CircularProgressIndicator(color = C.primary, strokeWidth = 3.dp, modifier = Modifier.size(22.dp))
-        else Icon(Icons.Filled.CheckCircle, null, tint = C.positive)
-        Text(
-            when {
-                vm.uploading > 0 -> "Laster opp ${vm.uploading} fil${if (vm.uploading > 1) "er" else ""} …"
-                active.isNotEmpty() -> "Gemini leser ${active.size} kvittering${if (active.size > 1) "er" else ""} · ${active.map { it.progress }.average().toInt()} %"
-                else -> "$ready klar · trykk for å bekrefte"
-            }, Modifier.weight(1f), fontWeight = FontWeight.Medium,
-        )
-        Icon(Icons.Filled.ChevronRight, null, tint = C.text2)
-    }
-}
-
-@Composable
 internal fun Tile(label: String, value: String, shape: RoundedCornerShape, bg: Color, modifier: Modifier) {
     Column(modifier.clip(shape).background(bg).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, color = C.text2, fontSize = 13.sp)
         Text(value, fontFamily = Mono, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
-internal fun ListScreen(vm: AppViewModel, twoPane: Boolean) {
-    val txs = vm.txs
-    Page {
-        item {
-            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Transaksjoner", style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
-                FilledTonalButton(onClick = { vm.newTx() }, shape = RoundedCornerShape(20.dp)) { Icon(Icons.Filled.Add, null); Spacer(Modifier.width(4.dp)); Text("Ny") }
-                Spacer(Modifier.width(8.dp))
-                Avatar(vm)
-            }
-        }
-        item {
-            TextField(
-                value = vm.query, onValueChange = { vm.query = it }, placeholder = { Text("Søk i transaksjoner") },
-                leadingIcon = { SearchLead27(vm.query.isNotEmpty(), C.text, C.text2, idle = { Icon(Icons.Filled.Search, null) }) { vm.query = "" } }, singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.search() }),
-                shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                colors = TextFieldDefaults.colors(focusedContainerColor = C.surface2, unfocusedContainerColor = C.surface2, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
-            )
-        }
-        item {
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("" to "Alle", "ut" to "Utgifter", "inn" to "Inntekter").forEach { (k, n) ->
-                    val on = vm.filter == k
-                    FilterChip(selected = on, onClick = { vm.filter = k; vm.search() }, label = { Text(n) },
-                        shape = RoundedCornerShape(if (on) 18.dp else 10.dp),
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = C.container, selectedLabelColor = C.onContainer))
-                }
-            }
-        }
-        if (txs == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }
-        else if (txs.isEmpty()) item { Empty("Ingen treff.") }
-        else txs.groupBy { it.date }.forEach { (date, list) ->
-            item(key = date) {
-                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    SectionLabel(dayLabel(date))
-                    TxGroup(list, vm)
-                }
-            }
-        }
     }
 }
 
@@ -379,24 +223,6 @@ internal fun BudgetScreen(vm: AppViewModel) {
                 }
             }
         }
-    }
-}
-
-@Composable
-internal fun BudgetDetail(vm: AppViewModel) {
-    val s = vm.summary ?: return
-    val b = s.budgets.firstOrNull { it.categoryId == vm.selectedBudget } ?: s.budgets.firstOrNull { it.budget > 0 } ?: return Empty("Velg en kategori.")
-    val items = vm.txs?.filter { it.categoryId == b.categoryId && it.date >= s.from && it.date < s.to } ?: emptyList()
-    val over = b.used > b.budget
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Text(b.category, style = MaterialTheme.typography.headlineMedium)
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface2).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Brukt av ${n0(b.budget)} kr", color = C.text2)
-            Text("${n0(b.used)} kr", fontFamily = Mono, fontSize = 36.sp, fontWeight = FontWeight.SemiBold)
-            LinearProgressIndicator(progress = { (b.used / maxOf(1.0, b.budget)).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = if (over) C.accent else Color(b.color), trackColor = C.surface1)
-            Text(if (over) "Over budsjett med ${n0(b.used - b.budget)} kr." else "${n0(b.budget - b.used)} kr igjen denne måneden.", color = C.text2)
-        }
-        if (items.isNotEmpty()) { SectionLabel("Transaksjoner"); TxGroup(items, vm) }
     }
 }
 

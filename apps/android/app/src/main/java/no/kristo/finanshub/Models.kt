@@ -244,7 +244,6 @@ data class Entry(val id: Int, val description: String, val date: String, val amo
     val categoryPath: String? get() = category?.let { c -> (if (aiCategory) "✦ " else "") + (subcategory?.let { "$c › $it" } ?: c) }
 }
 /** Boligkategori med underkategorier (GET /finans/api/boliger/categories). */
-data class BoligCategory(val id: Int, val name: String, val color: Long, val ai: Boolean, val children: List<BoligCategory>)
 data class CategoryShare(val name: String, val amount: Double, val children: List<Pair<String, Double>>)
 data class Installment(val label: String, val due: String?, val amount: Double, val paid: Boolean)
 data class Project(val id: Int, val name: String, val vendor: String?, val budget: Double, val spent: Double, val installments: List<Installment>)
@@ -576,14 +575,6 @@ fun parseFolders(s: String): List<Folder> {
     val t = s.trim()
     val a = if (t.startsWith("[")) JSONArray(t) else JSONObject(t).optJSONArray("items") ?: JSONArray()
     return a.map(::parseFolder)
-}
-
-fun parseBoligCategories(s: String): List<BoligCategory> {
-    val t = s.trim()
-    val a = if (t.startsWith("[")) JSONArray(t) else JSONObject(t).optJSONArray("items") ?: JSONObject(t).optJSONArray("categories") ?: JSONArray()
-    fun one(o: JSONObject): BoligCategory = BoligCategory(o.optInt("id"), o.optString("name"), color(o.optStr("color")), o.optBoolean("ai", o.optBoolean("createdByAi")),
-        (o.optJSONArray("children") ?: o.optJSONArray("subcategories"))?.map { one(it) } ?: emptyList())
-    return a.map { one(it) }
 }
 
 private fun JSONObject.sumOrAmount(): Double = if (has("sum")) num("sum") else num("amount")

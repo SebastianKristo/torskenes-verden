@@ -34,13 +34,13 @@ import no.kristo.finanshub.*
  * Trafikk, Besøk, Ytelse og Sikkerhet; på brettbar vises fanene øverst.
  */
 @Composable
-internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? = null, paper: Boolean = false) {
+internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? = null) {
     val a = vm.analytics
     Page {
         // Papir har egen fanelinje (Oversikt, Publikum, Ytelse og Infra) og et hvitt toppkort med domenevelger og periode.
-        if (paper) item { PaperDomTop(vm) }
+        item { PaperDomTop(vm) }
         // Prompt 38: Glimt-knappen (✦ nede til høyre) åpner oppsummeringen øverst på Oversikt.
-        if (paper && section == "oversikt" && vm.p38.domSumOpen && !vm.domAll) item { DomGlimt38(vm) }
+        if (section == "oversikt" && vm.p38.domSumOpen && !vm.domAll) item { DomGlimt38(vm) }
         else if (section == null || section == "oversikt") item { DomainHeader(vm) }
         if (twoPane && section == null) item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(P.card).padding(4.dp)) {
@@ -61,12 +61,12 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? 
                 }
             }
         }
-        if (paper && vm.domAll) { allDomains(vm); return@Page }
+        if (vm.domAll) { allDomains(vm); return@Page }
         if (a == null && vm.moduleError == null && vm.domains?.isEmpty() != true) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = P.accent) } }
         if (a != null) {
             if (a.mock) item { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.", color = P.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp)) }
             when (section) {
-                "oversikt" -> traffic(vm, a, withCard = false, ranges = !paper)
+                "oversikt" -> traffic(vm, a, withCard = false, ranges = false)
                 "publikum" -> visits(vm, a)
                 "ytelse" -> { perf(a, withUptime = false); item { Title("Sikkerhet") }; security(a) }
                 "infra" -> infra(vm, a)

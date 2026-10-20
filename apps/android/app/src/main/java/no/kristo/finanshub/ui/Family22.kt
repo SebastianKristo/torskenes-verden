@@ -106,9 +106,47 @@ internal val FAM22_ICONS: List<Triple<String, String, String>> = listOf(
     Triple("plane", "Reise", "M2 13l20-8-6 16-3-7-7-1z"),
     Triple("star", "Favoritt", "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"),
     Triple("pin", "Sted", "M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"),
+    // Prompt 42 (claude-code-familie-soner-uten-kart.md): 50 ikoner i alt (ZIC i Familie.dc.html), søkbare med norske ord.
+    Triple("car", "Bil", "M5 16V11l2-5h10l2 5v5M3 16h18v3H3zM7 19v1M17 19v1M5 11h14"),
+    Triple("bus", "Buss", "M5 4h14v13H5zM5 11h14M8 20v-3M16 20v-3M8 14h.01M16 14h.01"),
+    Triple("train", "Tog", "M6 4h12v11H6zM6 10h12M8 19l-2 2M16 19l2 2M9 15h.01M15 15h.01"),
+    Triple("bike", "Sykkel", "M6 17a3 3 0 1 0 0-.01M18 17a3 3 0 1 0 0-.01M6 17l4-8h5l3 8M10 9l-1-3H7"),
+    Triple("boat", "Båt", "M3 17l2 3h14l2-3zM6 17V10l6-5 6 5v7M12 5v12"),
+    Triple("hospital", "Sykehus", "M4 4h16v16H4zM12 8v8M8 12h8"),
+    Triple("doctor", "Lege", "M9 3v6a3 3 0 0 0 6 0V3M12 12v3a4 4 0 0 0 8 0v-1M20 13a1 1 0 1 0 0-.01"),
+    Triple("pill", "Apotek", "M8 4h8a4 4 0 0 1 0 8H8a4 4 0 0 1 0-8zM12 4v8M7 16h10M9 20h6"),
+    Triple("church", "Kirke", "M12 2v4M10 4h4M6 21V11l6-4 6 4v10M10 21v-5h4v5"),
+    Triple("book", "Bibliotek", "M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-7a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h7z"),
+    Triple("music", "Musikk", "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"),
+    Triple("film", "Kino", "M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4"),
+    Triple("food", "Restaurant", "M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 2-2 6 0 8v10"),
+    Triple("cart", "Matbutikk", "M3 4h2l2 11h11l2-8H6M9 20a1 1 0 1 0 0-.01M17 20a1 1 0 1 0 0-.01"),
+    Triple("fuel", "Bensin", "M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M6 9h6M14 10h2a2 2 0 0 1 2 2v5a1 1 0 0 0 2 0V8l-3-3"),
+    Triple("bolt", "Lading", "M13 2L4 14h7l-1 8 9-12h-7z"),
+    Triple("paw", "Dyr", "M12 14c-3 0-5 2.5-5 4.5S9 21 12 21s5-.5 5-2.5S15 14 12 14zM6 10a2 2 0 1 0 0-.01M18 10a2 2 0 1 0 0-.01M9 6a2 2 0 1 0 0-.01M15 6a2 2 0 1 0 0-.01"),
+    Triple("baby", "Barnehage", "M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM6 21v-3a6 6 0 0 1 12 0v3M10 7h.01M14 7h.01"),
+    Triple("swim", "Svømmehall", "M2 18c2 0 2-1.5 4-1.5S8 18 10 18s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M6 14l4-6 4 3 3-4M17 5a1.5 1.5 0 1 0 0-.01"),
+    Triple("ski", "Ski", "M4 20L20 4M8 20L20 8M14 4a2 2 0 1 0 0-.01"),
+    Triple("tent", "Camping", "M3 20L12 4l9 16zM12 4v16M9 20l3-6 3 6"),
+    Triple("mountain", "Fjell", "M3 20l6-11 4 6 2-3 6 8zM9 9l2 4"),
+    Triple("beach", "Strand", "M3 20h18M12 20c0-6 2-10 7-12M12 20c0-6-2-10-7-12M12 8c-3-3-6-3-8-2M12 8c3-3 6-3 8-2"),
+    Triple("sun", "Sol", "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"),
+    Triple("gift", "Gave", "M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7c-2-4-6-3-5 0M12 7c2-4 6-3 5 0"),
+    Triple("cake", "Bursdag", "M4 21h16v-8H4zM4 16c2 1 4 1 6 0s4-1 6 0 4 1 4 0M12 9v4M12 5a1 1 0 0 0 0 2"),
+    Triple("game", "Spill", "M6 9h12a4 4 0 0 1 0 8l-2-2H8l-2 2a4 4 0 0 1 0-8zM8 11v3M6.5 12.5h3M15 12h.01M17 14h.01"),
+    Triple("laptop", "Kontor", "M4 5h16v11H4zM2 19h20"),
+    Triple("tool", "Verksted", "M14 7a4 4 0 0 0-5 5l-6 6 3 3 6-6a4 4 0 0 0 5-5l-2 2-2-1-1-2z"),
+    Triple("key", "Utleie", "M15 9a4 4 0 1 0-4 4l-8 8M9 17l2 2M12 14l2 2"),
+    Triple("bed", "Hotell", "M3 18V7M3 13h18v5M21 13a3 3 0 0 0-3-3h-7v3M7 11a1.5 1.5 0 1 0 0-.01"),
+    Triple("flag", "Mål", "M5 21V4M5 4h11l-2 4 2 4H5"),
+    Triple("bell", "Varsel", "M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"),
+    Triple("camera", "Foto", "M4 8h4l2-3h4l2 3h4v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"),
+    Triple("anchor", "Havn", "M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 8v13M5 13a7 7 0 0 0 14 0M9 11h6"),
+    Triple("leaf", "Hage", "M5 19C5 10 10 5 20 4c-1 10-6 15-15 15zM5 19l7-7"),
 )
 
-internal fun fam22IconPath(key: String): String = FAM22_ICONS.firstOrNull { it.first == key }?.third ?: FAM22_ICONS.last().third
+internal fun fam22IconPath(key: String): String = FAM22_ICONS.firstOrNull { it.first == key }?.third
+    ?: (if (key.startsWith("ify:")) Ify42.paths[key] else null) ?: FAM22_ICONS.first { it.first == "pin" }.third
 
 /** De 10 forhåndsvalgte sonefargene (ZPAL). */
 private val FAM22_PAL = listOf("#b23a2a", "#d9662a", "#d9a400", "#2f7a4f", "#2e6f75", "#2b5d8a", "#5b4bb5", "#7a3b6b", "#c2417a", "#5c5850")
@@ -132,7 +170,9 @@ private object Fam22IconPrefs {
 
 private fun fam22ZoneIcon(ctx: Context, acc: String?, z: FamZone): String {
     val k = z.icon ?: Fam22IconPrefs.get(ctx, acc, z.id) ?: fam22DefaultIcon(z.name)
-    return if (FAM22_ICONS.any { it.first == k }) k else fam22DefaultIcon(z.name)
+    // Prompt 42: også ikoner fra Lucide/Tabler («ify:lucide:sailboat») når banen er kjent (lagret lokalt eller fra serveren).
+    Ify42.load(ctx)
+    return if (FAM22_ICONS.any { it.first == k } || (k.startsWith("ify:") && Ify42.paths[k] != null)) k else fam22DefaultIcon(z.name)
 }
 
 /** Ny sone som ikke er lagret ennå. */
@@ -252,7 +292,8 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
     val f = vm.family
     val acc = vm.account?.id
     val meId = f?.me?.userId
-    val tab = vm.famTab.takeIf { it in setOf("kart", "soner", "helse") } ?: "kart"
+    // Prompt 42: fanen Vel fremme (tidligere Hjemlys) i Familie (ui/Ui42.kt).
+    val tab = vm.famTab.takeIf { it in setOf("kart", "soner", "helse", "velfremme") } ?: "kart"
     val ctl = remember { Fam22MapCtl() }
 
     var placing by remember { mutableStateOf(false) }
@@ -327,7 +368,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
     /* ----- Lagring av soner (umiddelbart; navn etter 600 ms pause) ----- */
     fun zoneBody(name: String, lat: Double, lon: Double, r: Double, color: String, icon: String, shared: Boolean) =
         JSONObject().put("name", name.trim().ifBlank { "Sone" }).put("lat", lat).put("lon", lon).put("radius", r).put("color", color.lowercase())
-            .put("icon", icon).put("shared", shared)
+            .put("icon", icon).put("shared", shared).apply { if (icon.startsWith("ify:")) Ify42.paths[icon]?.let { put("icp", it) } }
 
     fun editZone(z: FamZone, wait: Boolean) {
         zEdits[z.id] = z
@@ -386,6 +427,16 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
     LaunchedEffect(f != null, sharingMembers.size) {
         if (f != null && !fitted && sharingMembers.isNotEmpty()) { delay(150); fitAll(); fitted = true }
     }
+    // Prompt 42: Soner viser ikke kartet. Kartet kommer bare mens en ny sone plasseres (eller skjemaet er åpent).
+    val showMap = tab == "kart" || (tab == "soner" && (placing || draft != null))
+    // «Vis på kart» fra Soner: Kart-fanen åpnes sentrert på sonen (når kartet er tegnet).
+    LaunchedEffect(tab, vm.p42.vfShowZone) {
+        val zid = vm.p42.vfShowZone ?: return@LaunchedEffect
+        if (tab != "kart") return@LaunchedEffect
+        delay(250)
+        zones.firstOrNull { it.id == zid }?.let { z -> ctl.showZone(z.lat, z.lon, z.radius, 420f) }
+        vm.p42.vfShowZone = null
+    }
 
     val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val barBottom = maxOf(12.dp, navInset - 8.dp)
@@ -394,12 +445,19 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             Fam22Hero(vm)
             Column(
-                Modifier.fillMaxWidth().offset(y = (-23).dp).padding(horizontal = 16.dp),
+                // Prompt 42: bare Kart har verktøyraden delvis over toppbildet; Vel fremme (og de andre) starter 16 dp under bildet.
+                Modifier.fillMaxWidth().offset(y = if (tab == "kart") (-23).dp else 16.dp).padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 vm.familyError?.let { e -> Fam22Text(e, 13.sp, p.lab, modifier = Modifier.padding(horizontal = 4.dp)) }
-                if (tab != "helse") {
-                    Fam22Toolbar(placing, { placing = !placing; draft = null }, fitAll) {
+                if (tab == "soner") Box(
+                    Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.ink).clickable(role = Role.Button) { placing = !placing; if (!placing) draft = null }
+                        .padding(horizontal = 18.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Fam22Text(if (placing || draft != null) "Avbryt ny sone" else "+ Ny sone på kartet", 14.sp, p.bg, FontWeight.Bold, maxLines = 1) }
+                if (tab == "kart") VelFremmeStatus42(vm) // Prompt 42: liten statuslinje når en Vel fremme-økt pågår
+                if (showMap) {
+                    if (tab == "kart") Fam22Toolbar(placing, { placing = !placing; draft = null }, fitAll) {
                         scope.launch { vm.loadFamily().join(); vm.flash("Posisjoner oppdatert") }
                     }
                     Box(Modifier.fillMaxWidth().height(420.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xFFE9E5DC))) {
@@ -431,8 +489,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                 if (f == null && vm.familyError == null) Fam22Text("Henter familien …", 13.sp, p.mut, modifier = Modifier.padding(horizontal = 4.dp))
                 when (tab) {
                     "kart" -> {
-                        // Prompt 40: Hjemlys – status for husstanden og enkel start (ui/Ui40.kt).
-                        HjemlysCard40(vm)
+                        // Prompt 42 (claude-code-familie-fjern-hjemlys-kort.md): ikke Vel fremme-kortet øverst på Kart; det ligger i egen fane.
                         val sel = members.firstOrNull { it.userId == selId }
                         if (cardOpen && sel != null) Fam22PersonCard(vm, sel, sel.userId == meId, colorOf(sel), photos[sel.userId], zones,
                             onPhoto = { pickFor(sel.userId) }, onClose = { cardOpen = false },
@@ -451,7 +508,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                         zones.forEach { z ->
                             Fam22ZoneCard(
                                 z, fam22ZoneIcon(ctx, acc, z), members, meId, photos, ::colorOf, zEd == z.id,
-                                onShow = { ctl.showZone(z.lat, z.lon, z.radius, 420f) },
+                                onShow = { vm.p42.vfShowZone = z.id; vm.famTab = "kart" },
                                 onEdit = { zEd = if (zEd == z.id) null else z.id },
                                 onRemove = {
                                     if (rmArm != z.id) {
@@ -469,6 +526,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                         Fam22Text("Trykk på en person i en sone for å slå varsel av eller på når de kommer og går.", 12.sp, p.mut,
                             modifier = Modifier.padding(horizontal = 4.dp), lineHeight = 17.4.sp)
                     }
+                    "velfremme" -> VelFremmeTab42(vm)
                     else -> Fam22Health(vm, members, meId, photos, ::colorOf)
                 }
             }
@@ -520,7 +578,7 @@ private fun Fam22Hero(vm: AppViewModel) {
 
 /* ---------------- Fanelinja ---------------- */
 
-/** Kart ◎ · Soner ◌ · Helse ♡ · Mer ⋯: flytende svart pille, valgt fane er lys pille med ikon og tekst. Ingen skann-knapp. */
+/** Kart ◎ · Soner ◌ · Helse ♡ · Vel fremme ●: flytende svart pille, valgt fane er lys pille med ikon og tekst. Ingen skann-knapp. */
 @Composable
 private fun Fam22TabBar(vm: AppViewModel, tab: String, modifier: Modifier) {
     val p = PaperPal.current
@@ -530,11 +588,13 @@ private fun Fam22TabBar(vm: AppViewModel, tab: String, modifier: Modifier) {
             .longPressEdit26(true, "kart") { Haptics.tap(); vm.p32b.secEdit = "kart" }.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        (vm.secTabs32b("kart") + Triple("mer", "Mer", "⋯")).forEach { (k, n, ic) ->
+        // Prompt 42: Kart · Soner · Helse · Vel fremme, uten «⋯ Mer» (tilbake med «‹ Hjem» øverst).
+        val l = vm.secTabs32b("kart").let { t -> if (t.none { it.first == "velfremme" }) t + Triple("velfremme", "Vel fremme", "●") else t }
+        l.forEach { (k, n, ic) ->
             // Prompt 24 (A): felles fane (Mer24.kt) med 7 dp mellomrom og tekst uten fontpadding.
             PaperTab24(n, ic, tab == k, p.navInk, p.navActInk, p.navAct, serif = true) {
                 Haptics.select()
-                if (k == "mer") { vm.closeFamily(); vm.paperTab("mer") } else vm.famTab = k
+                vm.famTab = k
             }
         }
     }
@@ -769,25 +829,11 @@ private fun Fam22MySharing(vm: AppViewModel, me: FamMe, startSharing: () -> Unit
 /** Rutenett med 13 ikoner (auto-fill, minst [min] dp brede, 6 dp mellomrom). Valgt: fylt i sonefargen, hvitt ikon. */
 @Composable
 private fun Fam22IconGrid(selected: String, accent: Color, min: Dp, iconSize: Dp, onPick: (String) -> Unit) {
-    val p = PaperPal.current
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val cols = maxOf(1, ((maxWidth + 6.dp) / (min + 6.dp)).toInt())
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            FAM22_ICONS.chunked(cols).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    row.forEach { (k, n, _) ->
-                        val on = k == selected
-                        Box(
-                            Modifier.weight(1f).height(min).clip(RoundedCornerShape(12.dp)).background(if (on) accent else Color.Transparent)
-                                .border(2.dp, if (on) accent else p.line, RoundedCornerShape(12.dp))
-                                .clickable(role = Role.Button, onClickLabel = n) { onPick(k) }.semantics { contentDescription = n },
-                            contentAlignment = Alignment.Center,
-                        ) { Fam22Icon(k, iconSize, 1.9f, if (on) Color.White else p.ink) }
-                    }
-                    repeat(cols - row.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
-        }
+    // Prompt 42: søkefelt, 18 vanlige + «Vis alle», og treff fra Lucide og Tabler (Iconify) under de innebygde (ui/Ui42.kt).
+    val ctx = LocalContext.current
+    IconPicker42(selected, accent, min, FAM22_ICONS, { k, c -> Fam22Icon(k, iconSize, 1.9f, c) }) { k ->
+        if (k.startsWith("ify:")) Ify42.paths[k]?.let { Ify42.put(ctx, k, it) }
+        onPick(k)
     }
 }
 
@@ -1041,31 +1087,8 @@ private fun fam22IsApple(m: FamMember): Boolean = m.last?.device?.let { it.conta
 private fun Fam22Health(vm: AppViewModel, members: List<FamMember>, meId: String?, photos: Map<String, Bitmap>, colorOf: (FamMember) -> Long) {
     val p = PaperPal.current
     val ctx = LocalContext.current
-    // Health Connect-oppslag går utenfor hovedtråden (prompt 20).
-    val st by produceState(2) { value = HealthSync.statusIo(ctx) }
-    val myShare = vm.family?.me?.shareHealth?.any { it.value } == true
-    val appleOn = members.any { fam22IsApple(it) && it.health != null }
-    val hcOn = st == 0 && myShare
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(
-            listOf("Apple Health", "♥", "iPhone"),
-            listOf("Health Connect", "✚", "Android"),
-        ).forEachIndexed { i, (n, ic, dv) ->
-            val on = if (i == 0) appleOn else hcOn
-            val c = if (i == 0) Color(0xFFE0245E) else Color(0xFF3B6FD6)
-            Column(
-                Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(p.card).border(1.5.dp, if (on) p.pos else p.line, RoundedCornerShape(20.dp))
-                    .clickable {
-                        if (i == 1) vm.famPrivacy = true else vm.flash("Åpne Homelab-appen på iPhone for å godkjenne Apple Health")
-                    }.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Box(Modifier.size(36.dp).clip(RoundedCornerShape(11.dp)).background(c), contentAlignment = Alignment.Center) { Fam22Text(ic, 18.sp, Color.White, maxLines = 1) }
-                Fam22Text(n, 14.sp, p.ink, FontWeight.Bold, maxLines = 1)
-                Fam22Text(if (on) "Koblet til via appen · $dv" else "Ikke koblet til · trykk for å koble", 12.sp, if (on) p.pos else p.mut, maxLines = 2)
-            }
-        }
-    }
+    // Prompt 42 (claude-code-familie-helsekilder-innstillinger.md): kildekortene (Apple Health / Health Connect) ligger nå i
+    // Innstillinger → Helse og posisjon → HELSE (FAMILIE). Fanen starter rett med personene.
     members.forEach { m ->
         val h = m.health
         val on = h != null

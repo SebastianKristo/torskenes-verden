@@ -89,6 +89,9 @@ class P41State {
     /* Gjøremål-Glimt i bakgrunnen */
     var glimtJobs by mutableStateOf<List<GJob41>>(emptyList())
     var glimtDone by mutableStateOf<String?>(null)
+    /** Prompt 42: Angre for hele delingen (token fra jobben, ellers id-ene som ble laget). */
+    var glimtUndo42 by mutableStateOf<String?>(null)
+    var glimtUndoIds42 by mutableStateOf<List<String>>(emptyList())
 
     /* Søkepillen vokser inn i Chat: rammen den starter fra og spørsmålet. */
     var grow by mutableStateOf<Pair<androidx.compose.ui.geometry.Rect, String>?>(null)
@@ -680,8 +683,25 @@ fun AppViewModel.glimtAsync41(r: JSONObject, q: String) {
             val status = st?.s37("state") ?: st?.s37("status") ?: st?.optJSONObject("job")?.let { it.s37("state") ?: it.s37("status") }
             if (status in setOf("done", "ferdig", "failed", "error") || (status == null && (tasks?.items?.size ?: 0) > before + 1)) {
                 done = status !in setOf("failed", "error")
-                val n = st?.optJSONArray("items")?.length() ?: st?.optInt("count", 0)?.takeIf { it > 0 } ?: ((tasks?.items?.size ?: 0) - before).coerceAtLeast(0)
-                s.glimtDone = if (done) "✓ Glimt lagde $n punkter i riktig rekkefølge" else "Glimt fikk ikke delt opp beskjeden. Den ligger som ett punkt."
+                // Prompt 42 (claude-code-huskeliste-glimt-del-opp.md): svaret er tasks[] (eller items[]); én Angre for hele delingen.
+                val arr = st?.optJSONArray("tasks") ?: st?.optJSONArray("items") ?: st?.optJSONObject("result")?.optJSONArray("tasks")
+                val n = arr?.length() ?: st?.optInt("count", 0)?.takeIf { it > 0 } ?: ((tasks?.items?.size ?: 0) - before).coerceAtLeast(0)
+                s.glimtUndo42 = st?.optJSONObject("undo")?.s37("token") ?: st?.s37("undoToken") ?: st?.optJSONObject("result")?.optJSONObject("undo")?.s37("token")
+                s.glimtUndoIds42 = arr?.let { a -> (0 until a.length()).mapNotNull { a.optJSONObject(it)?.s37("id") } } ?: emptyList()
+                s.glimtDone = if (done && n >= 2) "✦ Glimt delte beskjeden i $n oppgaver" else if (done) "✓ Glimt er ferdig med beskjeden" else "Glimt fikk ikke delt opp beskjeden. Den ligger som ett punkt."
+                // AI-en feilet: lokal forhåndsdeling (gjentatt stedsnavn, «og hent …») i stedet for ett langt punkt.
+                if (!done) localSplit42(q)?.let { parts ->
+                    val ph = r.s37("placeholderId") ?: r.optJSONObject("placeholder")?.s37("id")
+                    val lists = tasks?.lists ?: TASK_LISTS_DEFAULT
+                    val made = runCatching { localMulti40(q, null, lists, tasks?.members ?: emptyList()) }.getOrNull()
+                    if (made != null && made.items.size >= 2) {
+                        ph?.let { id -> runCatching { api41 { hlDelete("/tasks/" + URLEncoder.encode(id, "UTF-8")) } } }
+                        s.glimtUndoIds42 = made.localIds
+                        s.glimtDone = "Glimt delte beskjeden i ${made.items.size} oppgaver (lokalt)"
+                        done = true
+                        refreshTasks37()
+                    }
+                }
                 break
             }
         }
@@ -692,6 +712,23 @@ fun AppViewModel.glimtAsync41(r: JSONObject, q: String) {
         if (inBackground29) Notify.post(appCtx40, "Glimt", s.glimtDone ?: "", "glimt41-$id", "tasks")
         delay(10_000)
         s.glimtDone = null
+        s.glimtUndo42 = null; s.glimtUndoIds42 = emptyList()
+    }
+}
+
+/** Prompt 42: én Angre for hele Glimt-delingen (slår sammen igjen: serveren gjenoppretter originalen med token). */
+fun AppViewModel.undoGlimt42() {
+    val s = p41
+    val tok = s.glimtUndo42
+    val ids = s.glimtUndoIds42
+    if (tok == null && ids.isEmpty()) return
+    s.glimtUndo42 = null; s.glimtUndoIds42 = emptyList()
+    s.glimtDone = "Angret."
+    Haptics.select()
+    launch41 {
+        if (tok != null) runCatching { api41 { hlPost("/tasks/glimt/undo", JSONObject().put("token", tok)) } }
+        else ids.forEach { id -> runCatching { api41 { hlDelete("/tasks/" + URLEncoder.encode(id, "UTF-8")) } } }
+        refreshTasks37()
     }
 }
 

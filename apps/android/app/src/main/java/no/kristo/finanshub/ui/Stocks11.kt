@@ -160,17 +160,6 @@ private fun StockOverview(vm: AppViewModel, x: StocksX?, range: String, onRange:
     val trade = rememberTrade(vm)
     Page {
         // Papir: tittelen står i bildeheaderen, og innstillingene for aksjer ligger under Innstillinger.
-        if (!vm.paper) item { ModuleHeader(vm, "Aksjer", actions = { IconButton(onClick = { vm.syncStocks() }) { Icon(Icons.Filled.Sync, "Synk nå", tint = C.primary) } }) }
-        if (x != null && !vm.paper) item {
-            val ok = x.error.isBlank() && (x.configured || x.mock)
-            val whenText = x.syncedAt?.let { fmtTime(it, if (it.atZone(ZoneId.systemDefault()).toLocalDate() == LocalDate.now()) "HH:mm" else "dd.MM HH:mm") }
-            Row(Modifier.fillMaxWidth().clickable { vm.settingsPage = "stocks"; vm.open(Screen.Settings); vm.settingsPage = "stocks" }.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.size(8.dp).clip(CircleShape).background(if (ok) up else down))
-                Text(listOfNotNull("Trading 212", if (x.error.isNotBlank()) x.error else if (x.mock) "Demodata" else if (x.configured) "Synkronisert" else "Ikke koblet til", whenText).joinToString(" · "),
-                    color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Text("Innstillinger ›", color = C.primary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
         vm.moduleError?.let { e -> item { Empty(e) } }
         if (x == null) { if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }; return@Page }
         if (!x.configured && !x.mock && x.positions.isEmpty()) item {

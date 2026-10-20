@@ -59,7 +59,7 @@ internal data class MatPalette(
 internal fun matPalette(@Suppress("UNUSED_PARAMETER") vm: AppViewModel): MatPalette = MatPalette(
     dark = !Tone.light, bg = C.bg, text = C.text, sub = C.text2, muted = C.outline, card = C.surface1, accent = Color(0xFFFF8A4C),
     lime = Color(0xFFD4F25A), onLime = Color(0xFF141A06), border = C.surface3, black = C.primary, onBlack = C.onPrimary, row = C.surface2,
-    label = if (Tone.paper) PaperPal.current.lab else C.text2,
+    label = PaperPal.current.lab,
 )
 
 private val shortDay = listOf("MAN", "TIR", "ONS", "TOR", "FRE", "LØR", "SØN")
@@ -90,120 +90,27 @@ private fun MHead(label: String, right: String?, p: MatPalette) {
 
 /** Mat på mobil. paper = i Papir-skallet (fotovinduet har tittelen og profilbildet). */
 @Composable
-internal fun MatSurface(vm: AppViewModel, paper: Boolean = false) {
+internal fun MatSurface(vm: AppViewModel) {
     val p = matPalette(vm)
     val w = vm.week
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     var linkOpen by remember { mutableStateOf(false) }
     LazyColumn(
-        Modifier.fillMaxSize().background(if (paper) Color.Transparent else p.bg),
-        contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, (if (paper) 104.dp else 48.dp) + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp),
+        Modifier.fillMaxSize().background(Color.Transparent),
+        contentPadding = PaddingValues(16.dp, 4.dp, 16.dp, 104.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        if (!paper) {
-            vm.topRowTitle(true)?.let { t -> item { TopBackRow(vm, t, p.text, p.card, p.border) } }
-            item { MatHeader(vm, p) }
-        }
         vm.moduleError?.let { e -> item { Text(e, color = p.accent, fontSize = 13.sp) } }
         if (w == null || w.days.isEmpty()) {
             if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.text) } }
-        } else if (paper) {
+        } else {
             // Prompt 36: matplanen er felles for alle på serveren (ingen dele- eller privat-valg).
             item { MealNote36(vm, p) }
             // Papir: kortene kan flyttes og skjules (hold inne), og rekkefølgen lagres per bruker.
             pageSecs(vm, "mat", MAT_SECS) { k -> MatPaperSec(vm, w, k, p, linkOpen) { linkOpen = it } }
-        } else {
-            val todayIso = LocalDate.now().toString()
-            val ti = w.days.indexOfFirst { it.today || it.date == todayIso }.coerceAtLeast(0)
-            val today = w.days[ti]
-            val todayDish = w.dishes.firstOrNull { it.id == today.dishId } ?: w.dishes.firstOrNull { it.name == today.name }
-            item { TodayCard(vm, today, todayDish, p) { vm.matDay = ti; vm.dishOpen = todayDish?.id ?: "" } }
-            item { MHead("Uka", w.week?.let { "Uke $it" }, p) }
-            items(w.days.size) { i ->
-                val d = w.days[i]
-                val dish = w.dishes.firstOrNull { it.id == d.dishId } ?: w.dishes.firstOrNull { it.name == d.name }
-                Column {
-                    Row(
-                        Modifier.fillMaxWidth().clickable { vm.matDay = i; vm.dishOpen = dish?.id ?: "" }.padding(2.dp, 8.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        MLabel(shortDay[dayIdx(d.date)], if (i == ti) p.accent else p.muted, Modifier.width(36.dp))
-                        MSerif(d.name ?: "Ingen rett ennå", 18, if (d.name == null) p.muted else p.text, Modifier.weight(1f), maxLines = 1)
-                        Text(listOfNotNull(d.cook, if (d.fixed) "fast" else null).joinToString(" · "), color = p.muted, fontSize = 12.sp, maxLines = 1)
-                    }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(p.border))
-                }
-            }
-            item {
-                Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MatButton("✦ Ny plan for uka", p, Modifier.weight(1f), accent = true) { vm.planWeek() }
-                    MatButton("Hele uka", p, Modifier.weight(1f), outline = true) { vm.matFull = true }
-                }
-            }
-            item { FolderChips(vm, p) }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MatButton("Skann oppskrift", p, Modifier.weight(1f)) { vm.scanTarget = "recipe"; vm.scanSheet = true }
-                    MatButton("Importer lenke", p, Modifier.weight(1f), outline = true) { linkOpen = !linkOpen }
-                }
-            }
-            if (linkOpen || vm.recipeBusy) item { ImportField(vm, p) { linkOpen = false } }
-            if (vm.recipeJobs.isNotEmpty()) item { RecipeJobs(vm, p) }
-            val sel = vm.matFolderSel
-            item { DishSearch27(vm.b27.dishQ, { vm.b27.dishQ = it }, p) }
-            val dishes = w.dishes.filter { (sel == null || it.folderId == sel) && dishHit27(it, vm.b27.dishQ) }
-            item { MHead(if (sel == null) "Retter" else vm.matFolders.firstOrNull { it.id == sel }?.name ?: "Retter", "${dishes.size}", p) }
-            if (dishes.isEmpty()) item { Text("Ingen retter i denne mappen ennå. Skann en oppskrift eller importer en lenke.", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(4.dp)) }
-            items(dishes.size) { i ->
-                val dish = dishes[i]
-                Column {
-                    Row(
-                        Modifier.fillMaxWidth().clickable { vm.matDay = null; vm.dishOpen = dish.id }.padding(2.dp, 9.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            MSerif(dish.name, 18, p.text, maxLines = 1)
-                            Text(listOfNotNull(
-                                vm.matFolders.firstOrNull { it.id == dish.folderId }?.name?.takeIf { sel == null },
-                                if (dish.ing.isNotEmpty()) "${dish.ing.size} ingredienser" else null, dish.time,
-                                if (dish.src == "hellofresh") "HelloFresh" else null, if (dish.links.isNotEmpty()) "${dish.links.size} vedlegg" else null,
-                            ).joinToString(" · "), color = p.muted, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        Text("›", color = p.muted)
-                    }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(p.border))
-                }
-            }
-            item { MHead("Handleliste", "${w.shopping.count { !it.done }} igjen", p) }
-            if (w.shopping.isEmpty()) item { Text("Handlelisten er tom.", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(4.dp)) }
-            items(w.shopping.size) { i ->
-                val sh = w.shopping[i]
-                Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(role = Role.Checkbox) { vm.toggleShop(sh.id) }.padding(vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(if (sh.done) p.lime else Color.Transparent)
-                        .border(1.5.dp, if (sh.done) p.lime else p.muted, RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
-                        if (sh.done) Text("✓", color = p.onLime, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                    Text(sh.text, color = if (sh.done) p.muted else p.text, textDecoration = if (sh.done) TextDecoration.LineThrough else null)
-                }
-            }
         }
     }
     if (vm.dishOpen != null) DishSheet(vm, p)
     vm.recipePreview?.let { RecipePreviewDialog(vm, it, p) }
-}
-
-@Composable
-private fun MatHeader(vm: AppViewModel, p: MatPalette) {
-    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Column(Modifier.weight(1f)) {
-            MLabel(vm.week?.let { w -> "Uke ${w.week ?: ""} · ${ddmm(w.start)}–${ddmm(w.end)}" } ?: "Mat", p.muted)
-            Text("Mat", color = p.text, fontFamily = PaperFonts.serif, fontSize = 52.sp, lineHeight = 52.sp)
-            MealNote36(vm, p)
-        }
-        if (vm.topRowTitle(true) == null) Avatar(vm)
-    }
 }
 
 /** Dagens rett: limegrønt kort med dag og tid, retten i stor fet skrift og hvem som lager middag. */

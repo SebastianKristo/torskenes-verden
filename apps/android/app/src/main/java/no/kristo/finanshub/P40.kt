@@ -161,6 +161,8 @@ internal fun place40(s: String, members: List<TaskMember>): String? {
 
 /** Er dette flere handlinger i én tekst (signalord for rekkefølge eller flere setninger med «må/skal»)? */
 internal fun isMulti40(q: String): Boolean {
+    // Prompt 42: også uten tegnsetting (gjentatt stedsnavn, «og så», «og hent …»).
+    if (localSplit42(q) != null) return true
     if (BEFORE40.containsMatchIn(q) && Regex("(?i)\\b(men|først)\\b").containsMatchIn(q) && q.split(Regex("\\s+")).size >= 5) return true
     if (AFTER40.containsMatchIn(q)) return true
     val sent = q.split(Regex("(?<=[.!?])\\s+")).filter { it.isNotBlank() }
@@ -190,6 +192,8 @@ internal fun splitMulti40(q: String): List<String> {
     // Bygg rekkefølgen: et «før»-ledd settes foran leddet det står etter.
     val out = ArrayList<String>()
     for ((t, b) in parts) { if (b && out.isNotEmpty()) out.add(out.size - 1, t) else out += t }
+    // Prompt 42: beskjed uten punktum og komma deles på gjentatt stedsnavn / «og så» / «og hent …» (P42.kt).
+    if (out.size < 2) localSplit42(q)?.let { return it }
     return out
 }
 
@@ -203,7 +207,8 @@ internal suspend fun AppViewModel.localMulti40(q: String, list: String?, lists: 
     val parts = splitMulti40(q).takeIf { it.size >= 2 } ?: return null
     val place = place40(q, members)
     val trip = place?.lowercase()
-    val parsed = parts.map { part -> parseGlimt37(imperative40(part), lists, members).first() }
+    // Prompt 42: begrunnelser («siden vi skal …») blir notat, ikke en del av tittelen.
+    val parsed = parts.map { part -> parseGlimt37(imperative40(stripReason42(part)), lists, members).first() }
     // Dato og tid fra samme forespørsel gjelder alle punktene.
     val due = parsed.firstNotNullOfOrNull { it.s37("due") }
     val time = parsed.firstNotNullOfOrNull { it.s37("time") }
@@ -230,6 +235,7 @@ internal suspend fun AppViewModel.localMulti40(q: String, list: String?, lists: 
             if (!has("time") && time != null) put("time", time)
             prevId?.let { put("after", it) }
             myPlace?.let { put("placeName", it) }
+            if (!has("notes")) reason42(parts[i])?.let { put("notes", it) }
         }
         val id = runCatching { createTask37(title, l, extra) }.getOrElse {
             // Eldre server som ikke godtar de nye feltene: prøv uten (rekkefølgen står da i notatet).

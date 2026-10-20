@@ -89,10 +89,6 @@ internal fun openLink(ctx: Context, url: String) {
     runCatching { ctx.startActivity(i) }
 }
 
-/** Ruter-appen (universal link) med avreisestoppet. */
-internal fun ruterLink(stop: String?): String =
-    if (stop.isNullOrBlank()) "https://reise.ruter.no/" else "https://ruter.no/reise/?from=" + java.net.URLEncoder.encode(stop, "UTF-8").replace("+", "%20")
-
 /** Yr for stedet: koordinater når serveren sender dem, ellers søk på stedsnavnet. */
 internal fun yrLink(w: Weather?): String {
     if (w?.lat != null && w.lon != null) return String.format(Locale.US, "https://www.yr.no/nb/v%%C3%%A6rvarsel/daglig-tabell/%.4f,%.4f", w.lat, w.lon)
@@ -351,8 +347,8 @@ internal fun PaperApp(
                             s == Screen.Finn -> PaperFinn(vm, navBottom, wide)
                             s == Screen.Tracking -> PaperTracking(vm, navBottom)
                             // Toppkortet (domenevelger og periode) overlapper bildeheaderen; resten er egne kort på papiret.
-                            s == Screen.Domains -> Box(Modifier.fillMaxSize().padding(bottom = PAPER_BAR + navBottom)) { DomainsScreen(vm, false, section = vm.domSection, paper = true) }
-                            s == Screen.Mat && !vm.matFull -> MatSurface(vm, paper = true)
+                            s == Screen.Domains -> Box(Modifier.fillMaxSize().padding(bottom = PAPER_BAR + navBottom)) { DomainsScreen(vm, false, section = vm.domSection) }
+                            s == Screen.Mat && !vm.matFull -> MatSurface(vm)
                             // Verdikortet ligger delvis oppe i bildeheaderen, som på Sporing.
                             s == Screen.Stocks && vm.stockScreen == "ov" -> PaperStocks23(vm, navBottom)
                             s == Screen.Stocks -> Box(Modifier.fillMaxSize()) { MainPane(vm, false, scan, onPrivacyChanged) }
@@ -374,6 +370,7 @@ internal fun PaperApp(
                 PaperRail(vm, bar, float, Modifier.align(Alignment.CenterStart).statusBarsPadding().navigationBarsPadding().padding(start = 12.dp, top = 12.dp, bottom = 12.dp), onTap, onHold)
             } else {
                 PaperNav(vm, bar, float, Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = barBottom), onTap, onHold)
+                ModPicker42(vm, barBottom + 72.dp) // Prompt 42: 1d Modulvelger (rutenett over fanelinja)
             }
             if (float && bar != "sub" && !noScanHere(vm) && !setHere) PaperFab(vm, bar,
                 Modifier.align(Alignment.BottomEnd).padding(end = if (wide) 24.dp else 18.dp, bottom = if (wide) navInset + 24.dp else barBottom + 62.dp + 14.dp), onTap, onHold)
@@ -438,6 +435,7 @@ internal fun PaperApp(
       }
     }
     if (vm.tabEdit) TabBarEditor(vm)
+    if (vm.p42.navHomeSheet) NavHomeSheet42(vm) // Prompt 42: Innstillinger → Tilpass → Fanelinje → Hjem-knapp
     if (vm.b26.finEdit) FinTabBarEditor26(vm)
     if (vm.p32b.secEdit != null) SecNavEditor32b(vm) // Prompt 32: Domener, Abonnement og Familie
     if (vm.scanSheet) PaperScanSheet(vm, takePhoto, pickPhotos, pickFiles)
@@ -487,7 +485,8 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
                 else {
                     // Prompt 24: ingen tilbakeknapp på rotsidene i profilene (profilbildet står fortsatt til høyre).
                     // Prompt 25: på Fold viser sidelinja en rød Hjem-knapp; da trengs ikke «‹ Hjem» (andre mål vises fortsatt).
-                    if (!vm.b24IsRoot() && !(wide && backLabel(vm) == "Hjem")) Box(
+                    // Prompt 42: med Hjem-knapp i fanelinja (1a–1d) står ikke «‹ Hjem» på modulens toppside (ui/Ui42.kt).
+                    if (!vm.b24IsRoot() && !(wide && backLabel(vm) == "Hjem") && !navHomeHidesBack42(vm, wide, backLabel(vm))) Box(
                         Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake") { if (!vm.b24Back()) vm.back() }.padding(start = 10.dp, end = 14.dp),
                         contentAlignment = Alignment.Center,
                     ) { Text("‹ ${backLabel(vm)}", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }
@@ -607,20 +606,60 @@ private fun PhotoMenu(vm: AppViewModel, modifier: Modifier, own: () -> Unit) {
 private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Modifier, onTap: () -> Unit, onHold: () -> Unit) {
     val p = PaperPal.current
     val cur = navCurrent(vm, bar)
-    val tabs = navTabs(vm, bar, float)
+    // Prompt 42: Hjem-knappen (Standard / 1a / 1b / 1c / 1d, ui/Ui42.kt). Med 1a–1c tas «Hjem»-fanen ut av lista.
+    val nh = vm.navHome42()
+    val home = vm.screen == Screen.Homelab && vm.paperPage == null
+    val tabs = navTabs(vm, bar, float).let { l -> if (nh in setOf("1a", "1b", "1c")) l.filter { it.key != "hjem" } else l }
+    val tab: @Composable RowScope.(NavTab) -> Unit = { t -> PaperTab24(t.label, t.icon, cur == t.key, p.navInk, p.navActInk, p.navAct) { if (cur == t.key) vm.tabReselect26(bar, t) else t.go(); Haptics.select() } }
+    val scanHere = (!float || bar == "sub") && !noScanHere(vm)
+    if (nh == "1a") {
+        Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            HomeCircle42(vm, home)
+            PaperNavPill(vm, bar, Modifier.weight(1f)) {
+                tabs.forEach { tab(it) }
+                if (scanHere) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text(if (bar == "dom") "✦" else "+", color = p.onLab, fontSize = if (bar == "dom") 19.sp else 22.sp) }
+            }
+        }
+        return
+    }
+    if (nh == "1c") {
+        val mid = (tabs.size + 1) / 2
+        Box(modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+            PaperNavPill(vm, bar, Modifier.fillMaxWidth()) {
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) { tabs.take(mid).forEach { tab(it) } }
+                Spacer(Modifier.width(66.dp))
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    tabs.drop(mid).forEach { tab(it) }
+                    if (scanHere) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text(if (bar == "dom") "✦" else "+", color = p.onLab, fontSize = if (bar == "dom") 19.sp else 22.sp) }
+                }
+            }
+            HomeRaised42(vm, home, Modifier.padding(bottom = 22.dp))
+        }
+        return
+    }
+    PaperNavPill(vm, bar, modifier.fillMaxWidth()) {
+        if (nh == "1b") HomeSlot42(vm, home)
+        if (nh == "1d") ModuleChip42(vm)
+        // Prompt 24: egen Row per fane (Mer24.kt): ikonboks 18, glyf 16, 1,5 ned, 7 mellomrom, tekst uten fontpadding.
+        tabs.forEach { tab(it) }
+        if (scanHere) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text(if (bar == "dom") "✦" else "+", color = p.onLab, fontSize = if (bar == "dom") 19.sp else 22.sp) }
+    }
+}
+
+/** Selve pillen (62 dp, skygge, mørk): hold inne → «Rediger fanelinjen». */
+@Composable
+private fun PaperNavPill(vm: AppViewModel, bar: String, modifier: Modifier, content: @Composable RowScope.() -> Unit) {
+    val p = PaperPal.current
     Row(
-        modifier.fillMaxWidth().height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav)
+        modifier.height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav)
             // Prompt 32: også Domener og Abonnement har «Rediger fanelinjen».
             .longPressEdit26(bar == "main" || bar == "fin" || bar == "dom" || bar == "sub", bar) {
                 Haptics.tap()
                 when (bar) { "fin" -> vm.b26.finEdit = true; "dom" -> vm.p32b.secEdit = "dom"; "sub" -> vm.p32b.secEdit = "abo"; else -> vm.tabEdit = true }
             }.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        // Prompt 24: egen Row per fane (Mer24.kt): ikonboks 18, glyf 16, 1,5 ned, 7 mellomrom, tekst uten fontpadding.
-        tabs.forEach { t -> PaperTab24(t.label, t.icon, cur == t.key, p.navInk, p.navActInk, p.navAct) { if (cur == t.key) vm.tabReselect26(bar, t) else t.go(); Haptics.select() } }
-        if ((!float || bar == "sub") && !noScanHere(vm)) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text(if (bar == "dom") "✦" else "+", color = p.onLab, fontSize = if (bar == "dom") 19.sp else 22.sp) }
-    }
+        content = content,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -680,7 +719,7 @@ private fun ScanQueue(vm: AppViewModel) {
 private val HOME_SECS = listOf(
     PSec("h12", "Glimt-brief", full = true), // Prompt 34: øverst, over widgetene (kan flyttes og skjules i wiggle-modus)
     PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("h11", "Prøveperioder"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
-    PSec("h8", "Gjøremål"), PSec("h6", "Posisjon"), PSec("h40", "Hjemlys"), PSec("h7", "Bolig"), // prompt 40: Hjemlys
+    PSec("h8", "Gjøremål"), PSec("h6", "Posisjon"), PSec("h40", "Vel fremme"), PSec("h7", "Bolig"), // prompt 40: Hjemlys
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
 )
 
@@ -1004,7 +1043,7 @@ private fun PaperFinance(vm: AppViewModel, navBottom: Dp) {
     }
 }
 
-/** Banneret «N kvitteringer til gjennomgang» (Papir og Klassisk): aksentflate, hvit tekst og «Skann ›» til høyre. */
+/** Banneret «N kvitteringer til gjennomgang» : aksentflate, hvit tekst og «Skann ›» til høyre. */
 @Composable
 internal fun ReviewBanner(n: Int, open: () -> Unit, scan: () -> Unit, bg: Color = PaperPal.current.lab, fg: Color = PaperPal.current.onLab) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(bg), verticalAlignment = Alignment.CenterVertically) {
@@ -1053,7 +1092,6 @@ private fun PaperSettings(vm: AppViewModel, navBottom: Dp) {
                 PRow("Papir · lys", "Lyst papir og svart fanelinje", if (vm.paperMode == "lys") sel else "", p.pos, serif = false) { vm.setPaperMode("lys") }
                 PRow("Papir · mørk", "Kveldspapir og lys fanelinje", if (vm.paperMode == "mork") sel else "", p.pos, serif = false, top = true) { vm.setPaperMode("mork") }
                 PRow("Følg systemet", "Lys om dagen, mørk når telefonen er mørk", if (vm.paperMode == "auto") sel else "", p.pos, serif = false, top = true) { vm.setPaperMode("auto") }
-                PRow("Klassisk (Material You)", "Bytt tilbake til det forrige mobildesignet", "Bytt ›", p.lab, serif = false, top = true) { vm.setMobileDesign("klassisk") }
             }
         }
         item { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { PaperNavSettings(vm) } }

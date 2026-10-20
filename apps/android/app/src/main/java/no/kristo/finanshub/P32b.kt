@@ -75,7 +75,8 @@ class P32bState {
 val SEC32B: Map<String, Pair<String, List<Triple<String, String, String>>>> = mapOf(
     "dom" to ("Domener" to listOf(Triple("oversikt", "Oversikt", "◎"), Triple("publikum", "Publikum", "◍"), Triple("ytelse", "Ytelse", "⚡"), Triple("infra", "Infra", "▤"))),
     "abo" to ("Abonnement" to listOf(Triple("home", "Hjem", "⌂"), Triple("ins", "Innsikt", "◔"), Triple("hist", "Historikk", "↻"))),
-    "kart" to ("Familie" to listOf(Triple("kart", "Kart", "◎"), Triple("soner", "Soner", "◌"), Triple("helse", "Helse", "♡"))),
+    // Prompt 42: Vel fremme (tidligere Hjemlys) er en fane i Familie.
+    "kart" to ("Familie" to listOf(Triple("kart", "Kart", "◎"), Triple("soner", "Soner", "◌"), Triple("helse", "Helse", "♡"), Triple("velfremme", "Vel fremme", "●"))),
 )
 
 private fun AppViewModel.secKey32b(sec: String) = "papir_nav_${sec}_" + (account?.id ?: "")

@@ -80,9 +80,6 @@ class AppPrefs(ctx: Context) {
         const val HIDE_SWITCHER = "hide_switcher"
         const val HIDE_AMOUNTS = "hide_amounts"
         const val START = "start"               // homelab | home | list | budget
-        const val COLOR = "m3_seed"             // system | orange | blue | green | purple | pink | yellow
-        const val MODE = "m3_mode"              // system | light | dark
-        const val PAGES = "m3_pages"            // same | own: samme farger på alle sider, eller egen farge per side
         const val W_ALPHA = "w_alpha"           // Samsung-widgetene: dekkevne på bakgrunnen i prosent (0–100)
         const val W_THEME = "w_theme"           // Samsung-widgetene: system | dark | light
         const val LAYOUT = "layout_"            // + konto-ID: oppsettet av mobilforsiden (per bruker og enhet)
@@ -91,14 +88,9 @@ class AppPrefs(ctx: Context) {
         const val KEEP_ORIGINAL = "keep_original"
         const val WIFI_ONLY = "wifi_only"
         const val AI_ENGINE = "ai_engine"       // ollama | gemini | both
-        const val N_RECEIPT = "n_receipt"
-        const val N_BUDGET = "n_budget"
-        const val N_SUB = "n_sub"
-        const val N_DOMAIN = "n_domain"
-        const val N_WEEKLY = "n_weekly"
         const val USE_LOCAL = "use_local"
         const val SEARCH_MODE = "search_mode"   // ai | plain
-        const val MOBILE_DESIGN = "mobile_design" // klassisk | papir
+        const val MOBILE_DESIGN = "mobile_design" // papir (prompt 42: «klassisk» migreres til papir ved oppstart)
         const val PAPER_MODE = "paper_mode"     // auto | lys | mork
         const val PHOTO = "photo_window"        // cur | oslo | weather | planets | custom
         const val BG_PLANET = "bg_planet"       // auto | earth | moon | jupiter | mars | saturn (prompt 19 og 21)

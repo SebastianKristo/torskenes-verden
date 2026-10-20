@@ -67,7 +67,8 @@ private fun svgPath(d: String): Path = PathParser().parsePathString(d).toPath()
 
 /** Id-en for merket, eller null når transportøren er ukjent (da brukes initialer på merkefargen). */
 internal fun carrierMarkId(id: String?, ini: String): String? {
-    val k = id?.lowercase()?.trim()
+    // Prompt 42: «POSTNORD», «PostNord AB», «postnord_no» … normaliseres før oppslaget (P42.kt).
+    val k = no.kristo.finanshub.carrierId42(id)
     if (k != null && MARKS.containsKey(k)) return k
     return BY_INI[ini.uppercase()]
 }

@@ -36,7 +36,7 @@ import no.kristo.finanshub.*
 
 /*
  * Nyhetsleser (Nyhetsleser.dc.html, variant mobil): morgenavis med kategorifaner, ✦ AI-sammendrag øverst og
- * én rad per sak. Tannhjulet åpner «Kilder og AI». Brukes både i Papir og i Klassisk (der med papirfargene).
+ * én rad per sak. Tannhjulet åpner «Kilder og AI». Papirfargene (lys eller mørk).
  */
 
 /** Feedens kategori som etikett: «auto» blir «Auto» (med ✦ når AI-kategorisering er på). */
@@ -45,8 +45,7 @@ private fun catName(id: String, cats: List<NewsCategory>): String =
 
 @Composable
 internal fun NewsReader(vm: AppViewModel) {
-    // Papirfargene også i Klassisk, slik designet er tegnet (lys eller mørk etter appens modus).
-    val p = if (Tone.paper) PaperPal.current else if (Tone.light) PaperPal.LIGHT else PaperPal.DARK
+    val p = PaperPal.current
     val ctx = LocalContext.current
     val d = vm.news
     val cats = d?.categories ?: NEWS_CATS

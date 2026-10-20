@@ -247,7 +247,7 @@ private suspend fun <T> AppViewModel.try404(f: suspend Api.() -> T): T? = try { 
 
 /* ---------- Profiler ---------- */
 
-val AppViewModel.b24ProfileOn: Boolean get() = paper && b24.profile != "standard"
+val AppViewModel.b24ProfileOn: Boolean get() = b24.profile != "standard"
 
 /** Leser profilen fra enheten (med en gang) og fra serveren, og åpner startsiden én gang per oppstart. */
 fun AppViewModel.b24Start() {
@@ -314,7 +314,6 @@ fun AppViewModel.b24BackLabel(): String? = if (b24ProfileOn && screen == Screen.
  * true = håndtert her.
  */
 fun AppViewModel.b24Back(): Boolean {
-    if (!paper) return false
     // Boliger: valgt bolig er en del av siden (pillene), ikke en underside.
     if (screen == Screen.Folders && folder != null && previewBack { screen == Screen.Folders && folder == null } == true) {
         val f = folder

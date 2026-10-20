@@ -80,11 +80,14 @@ private val KAL_CARD_LETTER = KAL_CARD_ALIAS.entries.associate { (k, v) -> v to 
 val KAL_FILTERS: List<Triple<String, String, Long?>> = listOf(
     Triple("timeplan", "Timeplan", 0xFF2B5D8A), Triple("prover", "Prøver og frister", KAL_LAB), Triple("skole", "Skole", KAL_SKOLE),
     Triple("privat", "Privat", 0xFF6B4FA0), Triple("familie", "Familie", 0xFFD08A1E), Triple("bursdager", "Bursdager", 0xFF3F7A6E),
+    // Prompt 42 (claude-code-abonnement-kalender.md): innebygd kalender med trekkdatoene fra Finans → Abonnementer (kan skjules).
+    Triple("abonnementer", "Abonnementer", 0xFF3D7F8A),
 )
 val KAL_CAL_IDS: Set<String> = KAL_FILTERS.map { it.first }.toSet()
 private val KAL_FILTER_ALIAS = mapOf("Timeplan" to "timeplan", "Prøver og frister" to "prover", "Bursdager" to "bursdager", "Skole" to "skole",
     "time" to "timeplan", "prove" to "prover", "exams" to "prover", "bursdag" to "bursdager", "birthdays" to "bursdager", "school" to "skole",
-    "tt" to "timeplan", "ex" to "prover", "priv" to "privat", "fam" to "familie", "bd" to "bursdager", "Privat" to "privat", "Familie" to "familie", "private" to "privat", "family" to "familie")
+    "tt" to "timeplan", "ex" to "prover", "priv" to "privat", "fam" to "familie", "bd" to "bursdager", "Privat" to "privat", "Familie" to "familie", "private" to "privat", "family" to "familie",
+    "ab" to "abonnementer", "Abonnementer" to "abonnementer", "subscriptions" to "abonnementer", "abo" to "abonnementer")
 
 /** Påminnelser: verdi i kalReminders og navn. */
 val KAL_REMS = listOf("none" to "Ingen", "15m" to "15 min før", "1h" to "1 time før", "day" to "Dagen før")

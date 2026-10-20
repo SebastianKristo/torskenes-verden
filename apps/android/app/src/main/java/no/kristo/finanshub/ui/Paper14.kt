@@ -460,7 +460,7 @@ internal fun ReorderCard(vm: AppViewModel, id: String, title: String, index: Int
     ReorderWrap(vm, id, title, index, count, p.ink, p.bg, content)
 }
 
-/** Felles for Papir og Klassisk: fargene på linja med ▲/▼ sendes inn. */
+/** Fargene på linja med ▲/▼ sendes inn. */
 @Composable
 internal fun ReorderWrap(vm: AppViewModel, id: String, title: String, index: Int, count: Int, barBg: Color, barFg: Color, content: @Composable () -> Unit) {
     val edit = vm.trkEdit
@@ -730,7 +730,6 @@ internal fun PaperLogin(vm: AppViewModel) {
                     PButton(if (vm.busy) "Logger inn …" else "Logg inn", Modifier.fillMaxWidth(), height = 54.dp) { if (server.isNotBlank() && pw.isNotBlank() && !vm.busy) vm.login(server, user, pw) }
                     Text("Face ID / fingeravtrykk kan slås på etter innlogging, under Innstillinger → Sikkerhet.", color = p.mut, fontSize = 12.sp)
                     if (vm.addingAccount) Text("‹ Avbryt", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.addingAccount = false })
-                    else Text("Bytt til Klassisk innlogging", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.clickable { vm.setMobileDesign("klassisk") })
                 } else {
                     Text("Skriv inn den sekssifrede koden fra autentiseringsappen for ${pend.username.ifBlank { "kontoen" }}.", color = p.mut, fontSize = 14.sp)
                     PField("Kode", code, { v -> code = v.filter { it.isLetterOrDigit() || it == '-' }.take(11) },
@@ -783,24 +782,22 @@ internal fun PaperOnboarding(vm: AppViewModel) {
                 when (step) {
                     0 -> {
                         Text("Velg designet appen skal ha. Du kan bytte under Innstillinger → Utseende.", color = p.mut, fontSize = 14.sp)
-                        val cur = if (!vm.paper) "klassisk" else if (vm.paperMode == "mork") "mork" else "lys"
+                        val cur = if (vm.paperMode == "mork") "mork" else "lys"
                         listOf(
                             Triple("lys", "Papir · lys", "Lyst papir, avisspalter og svart fanelinje."),
                             Triple("mork", "Papir · mørk", "Kveldspapir med lys fanelinje."),
-                            Triple("klassisk", "Klassisk", "Material You, som appen så ut før."),
                         ).forEach { (k, n, sub) ->
                             Row(
                                 Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).border(2.dp, if (cur == k) p.ink else Color.Transparent, RoundedCornerShape(18.dp))
                                     .clickable {
                                         Haptics.select()
-                                        if (k == "klassisk") vm.setMobileDesign("klassisk") else { vm.setMobileDesign("papir"); vm.setPaperMode(k) }
+                                        vm.setPaperMode(k)
                                     }.padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 val sw = when (k) {
                                     "lys" -> Brush.verticalGradient(0f to Color(0xFF5D7690), .4f to Color(0xFF5D7690), .4f to Color(0xFFF3EFE6), 1f to Color(0xFFF3EFE6))
-                                    "mork" -> Brush.verticalGradient(0f to Color(0xFF2A3440), .4f to Color(0xFF2A3440), .4f to Color(0xFF14130F), 1f to Color(0xFF14130F))
-                                    else -> Brush.linearGradient(listOf(Color(0xFF3B6FD6), Color(0xFF6B3FB5)))
+                                    else -> Brush.verticalGradient(0f to Color(0xFF2A3440), .4f to Color(0xFF2A3440), .4f to Color(0xFF14130F), 1f to Color(0xFF14130F))
                                 }
                                 Box(Modifier.size(54.dp, 72.dp).clip(RoundedCornerShape(10.dp)).background(sw))
                                 Column(Modifier.weight(1f)) {

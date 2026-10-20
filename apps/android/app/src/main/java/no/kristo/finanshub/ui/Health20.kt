@@ -88,6 +88,8 @@ internal fun HealthPosPage(vm: AppViewModel) {
     val finePerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> vm.famSetPrecision(if (ok) "exact" else "approx") }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Prompt 42: HELSE (FAMILIE) – Apple Health, Health Connect, hva som deles og Home Assistant · Mobilapp (ui/Ui42.kt).
+        HealthFamily42(vm, hc, keys) { ask(if (keys.isNotEmpty()) keys else HEALTH_ALL_KEYS) }
         PLabel("Helse · Health Connect", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         when (hc) {
             1 -> Text("Health Connect må installeres eller oppdateres fra Play Butikk.", color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(4.dp))

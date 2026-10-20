@@ -208,7 +208,9 @@ internal fun SwipeDismiss39(
                     rotationZ = (v / w[0]) * 4f
                 }
                 .pointerInput(enabled) {
-                    val slop = 6.dp.toPx()
+                    // Prompt 42 (claude-code-bibelvers-scroll-fiks.md): retningen låses etter 9 dp (8–10 pt). Loddrett eller skrått
+                    // (|dx| ≤ |dy| · 1,15) slipper gesten uten å konsumere, så listen på Hjem scroller uansett hvor fingeren starter.
+                    val slop = 9.dp.toPx()
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                         if (phase.intValue >= 2) return@awaitEachGesture

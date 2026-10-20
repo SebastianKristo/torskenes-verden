@@ -164,16 +164,21 @@ internal fun PackageLogo(vm: AppViewModel, s: Shipment, size: Int = 52) {
     val shape = RoundedCornerShape((size * 14f / 52f).dp)
     var shopBmp by remember(s.id, s.shopDomain, s.logoId) { mutableStateOf<android.graphics.Bitmap?>(null) }
     var carrierBmp by remember(s.id, s.carrier) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    // Prompt 42: fraktselskapet normaliseres (carrier_id) før oppslag; PostNord er pakket med appen og slås ikke opp på nett.
+    val cid = no.kristo.finanshub.carrierId42(s.carrier)?.takeIf { it != "other" } ?: no.kristo.finanshub.carrierId42(s.carrierName)
+    val bundled = cid == "postnord"
     LaunchedEffect(s.id, s.shopDomain, s.logoId, s.carrier) {
         if (s.hasShopLogo) shopBmp = runCatching { vm.logoFor(s.shopDomain, s.shop.ifBlank { s.logoId }) }.getOrNull()
         // Prompt 22: fraktselskapet bare fra manuelt kontrollerte filer i logobiblioteket, aldri et tilfeldig favicon.
-        carrierBmp = runCatching { vm.carrierRegLogo(s.carrierDomain ?: CARRIER_DOMAINS[s.carrier], s.carrierName) }.getOrNull()
+        if (!bundled) carrierBmp = runCatching { vm.carrierRegLogo(s.carrierDomain ?: CARRIER_DOMAINS[cid ?: s.carrier] ?: CARRIER_DOMAINS[s.carrier], s.carrierName) }.getOrNull()
+        if (!bundled && carrierBmp == null && carrierMarkId(cid, s.carrierIni) == null) android.util.Log.d("logo", "logo_miss carrier=\"${s.carrierName}\" normalized=\"$cid\" source=app")
     }
     val main = shopBmp
     Box(Modifier.size((size + 4).dp)) {
         Box(Modifier.size(size.dp).clip(shape).background(Color.White).border(1.dp, p.line, shape), contentAlignment = Alignment.Center) {
             val img = main ?: carrierBmp
-            if (img != null) androidx.compose.foundation.Image(img.asImageBitmap(), null, contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            if (img == null && bundled) PostNordLogo42(size, white = false)
+            else if (img != null) androidx.compose.foundation.Image(img.asImageBitmap(), null, contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                 modifier = Modifier.fillMaxSize().padding((size * .14f).dp))
             else CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg, size, s.carrier)
         }
@@ -183,7 +188,8 @@ internal fun PackageLogo(vm: AppViewModel, s: Shipment, size: Int = 52) {
             contentAlignment = Alignment.Center,
         ) {
             val cb = carrierBmp
-            if (cb != null) androidx.compose.foundation.Image(cb.asImageBitmap(), null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize().padding(2.dp).clip(CircleShape))
+            if (bundled) PostNordLogo42(18, white = false)
+            else if (cb != null) androidx.compose.foundation.Image(cb.asImageBitmap(), null, contentScale = androidx.compose.ui.layout.ContentScale.Fit, modifier = Modifier.fillMaxSize().padding(2.dp).clip(CircleShape))
             else Box(Modifier.fillMaxSize().clip(CircleShape).background(Color(s.carrierColor)), contentAlignment = Alignment.Center) {
                 Text(s.carrierIni.take(1), color = Color(s.carrierFg), fontSize = 9.sp, fontWeight = FontWeight.Black)
             }

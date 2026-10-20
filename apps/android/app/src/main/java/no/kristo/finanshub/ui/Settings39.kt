@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.ViewWeek
 import androidx.compose.material3.Text
@@ -38,6 +39,8 @@ internal fun LazyListScope.tilpassHead39(vm: AppViewModel) {
             ScanHomeRow41(vm) // Prompt 41: «Skanneknapp på Hjem» øverst i FANELINJE
             SetRow(vm, 2, Icons.Filled.ViewWeek, "Fanelinje-stil", navStyleSub25(), navStyleName25() + " ›", top = true) { vm.setNavStyle25(nextNavStyle25()) }
             SetRow(vm, 3, Icons.Filled.ViewWeek, "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", top = true) { vm.tabEdit = true }
+            // Prompt 42: Hjem-knapp (Standard / 1a–1d) med forhåndsvisning i et ark (ui/Ui42.kt).
+            SetRow(vm, 4, Icons.Filled.Home, "Hjem-knapp", NAV_HOME42.firstOrNull { it.first == vm.navHome42() }?.third, vm.navHomeLabel42() + " ›", top = true) { vm.p42.navHomeSheet = true }
         }
     }
 }

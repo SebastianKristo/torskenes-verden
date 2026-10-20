@@ -237,6 +237,8 @@ fun parseFamily(s: String): Family {
         z.optJSONObject("notify")?.let { n -> n.keys().forEach { k -> n.optJSONObject(k)?.let { v -> notify[k] = v.optBoolean("enter") to v.optBoolean("leave") } } }
         val owner = z.optStr("owner") ?: z.optStr("createdBy") ?: z.optStr("created_by")
         val mine = if (z.has("mine") && !z.isNull("mine")) z.optBoolean("mine") else (owner == null || owner == me?.userId)
+        // Prompt 42: ikon fra Lucide/Tabler («ify:…») kommer med banen (icp), så sonen ser lik ut på iOS, Android og web.
+        z.optStr("icon")?.takeIf { it.startsWith("ify:") }?.let { k -> z.optStr("icp")?.let { Ify42.paths[k] = it } }
         FamZone(z.optStr("id") ?: "$i", z.optStr("name") ?: "Sone", z.optDouble("lat", 0.0), z.optDouble("lon", 0.0), z.optDouble("radius", 150.0),
             z.optStr("color")?.let(::color) ?: 0xFFB23A2A, notify,
             shared = z.optBoolean("shared", false) || z.optInt("shared", 0) == 1, owner = owner, mine = mine, ownerName = z.optStr("ownerName"),

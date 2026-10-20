@@ -260,7 +260,7 @@ internal fun DrawScope.drawOkonomi40(px: Float) {
 
 /* ======================= Felles lag ======================= */
 
-/** Fullskjermsflatene og arkene fra prompt 40 (legges øverst i Paper og klassisk). */
+/** Fullskjermsflatene og arkene fra prompt 40 (legges øverst i Papir). */
 @Composable
 internal fun Global40(vm: AppViewModel) {
     val s = vm.p40
@@ -889,7 +889,7 @@ internal fun HjemlysCard40(vm: AppViewModel, compact: Boolean = false) {
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             HlDot40(null, 30.dp)
             Column(Modifier.weight(1f)) {
-                Text("Hjemlys", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
+                Text("Vel fremme", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
                 Text("Si fra til familien når du er hjemme", color = p.mut, fontSize = 12.5.sp, maxLines = 1)
             }
             Text("Start ›", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
@@ -900,14 +900,14 @@ internal fun HjemlysCard40(vm: AppViewModel, compact: Boolean = false) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             HlDot40(mine?.state)
             Column(Modifier.weight(1f)) {
-                PLabel("FAMILIE · HJEMLYS", p.mut)
+                PLabel("FAMILIE · VEL FREMME", p.mut)
                 Text(mine?.let { hlStateText40(it.state, it.eta) } ?: "Si fra når du er hjemme", color = if (mine?.state == "late") HL_RED40 else p.ink, fontWeight = FontWeight.Bold, fontSize = 15.5.sp)
             }
             mine?.let { m -> hlMinutes40(m.eta)?.takeIf { it >= 0 }?.let { Text("$it min", color = HL_GREEN40, fontFamily = PaperFonts.serif, fontSize = 24.sp) } }
         }
         if (mine != null) {
-            Text("Åpne Hjemlys ›", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { s.hlSheet = true })
-            Text(if (mine.state == "late") "Familien har fått beskjed med posisjonen din." else "Husstanden ser at Hjemlys er på. Ingenting deles før du er sen.",
+            Text("Åpne Vel fremme ›", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { s.hlSheet = true })
+            Text(if (mine.state == "late") "Familien har fått beskjed med posisjonen din." else "Husstanden ser at Vel fremme er på. Ingenting deles før du er sen.",
                 color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (mine.state == "late") {
@@ -940,6 +940,6 @@ internal fun HjemlysCard40(vm: AppViewModel, compact: Boolean = false) {
         }
         // 1b: Glimt foreslår («Ja, start» / «Ikke nå»).
         if (mine == null) Suggest40(vm, false)
-        if (mine == null) PButton("Start Hjemlys", Modifier.fillMaxWidth(), kind = "lab", height = 44.dp) { s.hlSheet = true }
+        if (mine == null) PButton("Start Vel fremme", Modifier.fillMaxWidth(), kind = "lab", height = 44.dp) { s.hlSheet = true }
     }
 }

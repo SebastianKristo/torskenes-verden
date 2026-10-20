@@ -48,12 +48,9 @@ enum class Screen(val label: String) {
 
     /** Fanelinja for Finans vises (Mer er markert på undersidene). */
     val isFinance get() = this in FINANCE
-    val isMorePage get() = this in MORE_PAGES
-
     companion object {
         val FINANCE = setOf(Home, List, Budget, Search, More, Scan, Fast, Accounts, Stocks, Reports, Import, Sub, Folders, Finn)
         /** Under Mer. Budsjett og Finn er egne faner, men ligger under Mer når de er skjult som fane. */
-        val MORE_PAGES = setOf(Scan, Fast, Accounts, Stocks, Reports, Import, Sub, Folders)
         /** Faner i Finans og på Homelab, med ID-ene som lagres i oppsettet. */
         val FIN_TAB = mapOf("home" to Home, "list" to List, "finn" to Finn, "bud" to Budget, "ai" to Search, "mer" to More)
         val HL_TAB = mapOf("hl" to Homelab, "home" to Home, "trk" to Tracking, "dom" to Domains, "mat" to Mat)
@@ -200,7 +197,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var trkSel by mutableStateOf<String?>(null)
     /** active | pickup | out | done */
     var trkFilter by mutableStateOf("active")
-    var trkChecking by mutableStateOf(false)
     var stocksX by mutableStateOf<StocksX?>(null)
     /** ov | det | tx (Portefølje, Aksjedetaljer, Transaksjoner) */
     var stockScreen by mutableStateOf("ov")
@@ -315,32 +311,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val startPage: Screen get() = if (prefTick >= 0) startScreen() else Screen.Homelab
     /** Finans som startside: appen åpner der, og Homelab og modulene ligger i profilmenyen. */
     val financeStart: Boolean get() = startPage != Screen.Homelab
-    val startLabel: String get() = if (financeStart) "Finans" else "Homelab"
-    fun goStart() { Haptics.back(); go(startPage) } // prompt 34: «‹ Homelab / ‹ Finans» med lett haptikk
-    /** Startsiden har ikke lenger egen knapp i fanelinja (prompt 14): pila øverst til venstre går hjem. */
-    val homeInBar: Boolean get() = false
-
-    /** «‹ Homelab» / «‹ Finans» øverst med profilbildet til høyre på samme rad. null = ingen topprad. */
-    fun topRowTitle(compact: Boolean): String? {
-        if (editing != null || detail != null || original != null || editHome) return null
-        // Mat er en egen flate uten fanelinje: pilen vises alltid der.
-        if (screen == Screen.Mat) return if (matFull) null else startLabel
-        if (!compact) return null
-        return when (screen) {
-            Screen.Domains -> startLabel
-            Screen.Homelab, Screen.Tracking -> if (financeStart) "Finans" else null
-            Screen.Home, Screen.List, Screen.Budget, Screen.Search, Screen.More -> if (financeStart || selectedTx != null) null else "Homelab"
-            Screen.Finn -> if (financeStart || finnSel != null) null else "Homelab"
-            else -> null
-        }
-    }
-
-    /** Fanenavn fra oppsettet (eget navn eller standard). Nøkler: «fin.<id>» og «hl.<id>». */
-    fun finName(s: Screen): String = Screen.FIN_TAB.entries.firstOrNull { it.value == s }?.key?.let { layout.names["fin.$it"] } ?: if (s == Screen.Finn) "Finn" else s.label
     /** Er fanen synlig i fanelinja (Budsjett og Finn vises ellers under Mer)? */
     fun finTabShown(s: Screen): Boolean = s in finTabs
-    fun hlName(s: Screen): String = Screen.HL_TAB.entries.firstOrNull { it.value == s }?.key?.let { layout.names["hl.$it"] } ?: if (s == Screen.Home) "Finans" else s.label
-
     /** Nytt navn på en fane (tomt = standardnavnet). */
     fun rename(key: String, name: String) {
         val n = name.trim()
@@ -622,7 +594,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             detail != null -> { detail = null; detailTx = null }
             editHome -> editHome = false
             screen == Screen.Settings && settingsPage != null -> settingsBack26()
-            paper && paperPage == "set" && settingsPage != null -> settingsBack26()
+            paperPage == "set" && settingsPage != null -> settingsBack26()
             tasksOpen -> closeTasks()
             chat27.open -> closeChat27()
             kal26.open -> closeKal26()
@@ -637,19 +609,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen == Screen.Domains && domainManager -> domainManager = false
             screen == Screen.Mat && matFull -> matFull = false
             screen == Screen.Mat && dishOpen != null -> dishOpen = null
-            paper && paperPage == "fmer" -> { paperPage = null; navigate(Screen.Homelab, null) }
-            paper && paperFromFinMer -> { navigate(Screen.Home, null); paperFin = true; paperPage = "fmer" }
-            paper && paperPage == "fsok" -> { paperPage = null; navigate(Screen.Homelab, null) }
-            paper && paperFin && screen in PAPER_FIN_SCREENS -> navigate(Screen.Homelab, null)
+            paperPage == "fmer" -> { paperPage = null; navigate(Screen.Homelab, null) }
+            paperFromFinMer -> { navigate(Screen.Home, null); paperFin = true; paperPage = "fmer" }
+            paperPage == "fsok" -> { paperPage = null; navigate(Screen.Homelab, null) }
+            paperFin && screen in PAPER_FIN_SCREENS -> navigate(Screen.Homelab, null)
             // Domener i Papir: pila og kantsveipet går alltid til Hjem, også når siden ble åpnet fra Mer.
-            paper && screen == Screen.Domains -> { domAll = false; navigate(Screen.Homelab, null) }
-            paper && paperPage != null && paperPage != "mer" -> paperPage = "mer"
-            paper && paperPage == "mer" -> { paperPage = null; navigate(Screen.Homelab, null) }
-            paper && paperFromMer -> { paperFromMer = false; paperPage = "mer" }
-            paper && screen == Screen.Homelab && backTo == null -> return false
-            paper && screen != Screen.Homelab && backTo == null -> navigate(Screen.Homelab, null)
-            screen == startPage && backTo == null -> return false
-            else -> navigate(backTo ?: if (screen.isMorePage || (screen in setOf(Screen.Finn, Screen.Budget) && !finTabShown(screen))) Screen.More else startPage, null)
+            screen == Screen.Domains -> { domAll = false; navigate(Screen.Homelab, null) }
+            paperPage != null && paperPage != "mer" -> paperPage = "mer"
+            paperPage == "mer" -> { paperPage = null; navigate(Screen.Homelab, null) }
+            paperFromMer -> { paperFromMer = false; paperPage = "mer" }
+            screen == Screen.Homelab && backTo == null -> return false
+            screen != Screen.Homelab && backTo == null -> navigate(Screen.Homelab, null)
+            else -> navigate(backTo ?: Screen.Homelab, null)
         }
         return true
     }
@@ -692,8 +663,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         menuOpen = false
         when (uri.host ?: "") {
             "homelab" -> go(Screen.Homelab)
-            // Vær-widgetene åpner værappen i Papir (Klassisk: Homelab-forsiden).
-            "weather", "vaer" -> { go(Screen.Homelab); if (paper) openWeather() }
+            // Vær-widgetene åpner værappen.
+            "weather", "vaer" -> { go(Screen.Homelab); openWeather() }
             "tracking", "packages" -> go(Screen.Tracking)
             "budget" -> go(Screen.Budget)
             "finance", "home" -> go(Screen.Home)
@@ -812,7 +783,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }.getOrNull()
         if (avatar == null) loadAvatar(me?.avatarUrl ?: mobileHome?.avatarUrl)
         syncDesignFromServer()
-        if (paper && photo == null && photoKind != "cur") loadPhotoNow()
+        if (photo == null && photoKind != "cur") loadPhotoNow()
         pollTracking()
     }
 
@@ -875,28 +846,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun removeHistory(q: String) = launch {
-        history = history.filter { it != q }
-        api.hlDelete("/search/history/" + URLEncoder.encode(q, "UTF-8").replace("+", "%20"))
-    }
-
-    fun clearHistory() = launch { history = emptyList(); api.hlDelete("/search/history"); message = "Søkehistorikken er tømt" }
-
     /* ---------- Profilbilde ---------- */
-
-    /** Beskjæres til kvadrat, skaleres til 256 × 256 og lagres som JPEG (kvalitet 0,85). */
-    fun uploadAvatar(uri: Uri) = launch {
-        busy = true
-        try {
-            val ctx = getApplication<Application>()
-            val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() } }
-            val jpeg = withContext(Dispatchers.Default) { squareJpeg(data, 256, 85) } ?: run { message = "Kunne ikke lese bildet"; return@launch }
-            api.upload("/me/avatar", listOf(Api.Part("file", "avatar.jpg", "image/jpeg", jpeg)), prefix = Api.HOMELAB)
-            avatar = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
-            loadMe()
-            message = "Profilbildet er oppdatert"
-        } finally { busy = false }
-    }
 
     fun removeAvatar() = launch {
         api.hlDelete("/me/avatar")
@@ -1001,11 +951,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val txPool: List<Tx> get() = (txs ?: emptyList()) + (summary?.recent ?: emptyList()) + (detailTx ?: emptyList())
 
     /* ---------- Transaksjoner: legg til, rediger, slett ---------- */
-
-    fun newTx() {
-        if (folders == null) launch { folders = runCatching { parseFolders(api.get("/folders")) }.getOrNull() }
-        editing = TxDraft(null, false, "", "", LocalDate.now().toString(), null, boot?.accounts?.firstOrNull()?.id, null, "", null)
-    }
 
     fun editTx(t: Tx) {
         if (folders == null) launch { folders = runCatching { parseFolders(api.get("/folders")) }.getOrNull() }
@@ -1113,33 +1058,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 runCatching { finn = parseFinn(api.get("/finn")) }
             } catch (e: ApiException) {
                 message = if (e.status == 404) "Serveren støtter ikke opplasting til Finn-handler ennå. Oppdater homelab." else e.message
-            } finally { finnBusy = null }
-        }
-    }
-
-    fun finnRemove(kind: String, fileId: String) {
-        val id = finnSel ?: return
-        launch {
-            // Kvitteringer og bilder er filer i handelen; e-postene har egen rute.
-            val res = api.delete("/finn/$id/${if (kind == "emails") "emails" else "files"}/" + URLEncoder.encode(fileId, "UTF-8"))
-            finnDetail = runCatching { parseFinnDetail(res) }.getOrNull()?.takeIf { it.deal.id == id } ?: finnDetail
-            if (finnDetail?.deal?.id != id) loadFinnDetail(id)
-        }
-    }
-
-    /** ✦ Hent annonsen fra finn.no (serveren henter tittel, pris, sted, beskrivelse og bildene og lagrer dem). */
-    fun finnFetchAd(url: String? = null) {
-        val id = finnSel ?: return
-        if (finnBusy != null) return
-        launch {
-            finnBusy = "ad"
-            try {
-                val res = api.post("/finn/$id/ad", JSONObject().apply { url?.takeIf { it.isNotBlank() }?.let { put("url", it.trim()) } })
-                finnDetail = runCatching { parseFinnDetail(res) }.getOrNull()?.takeIf { it.deal.id == id } ?: run { loadFinnDetail(id); finnDetail }
-                message = runCatching { JSONObject(res).optStr("message") }.getOrNull()
-                    ?: ("✦ Annonsen er lagret" + (finnDetail?.ad?.images?.size?.takeIf { it > 0 }?.let { " med $it bilder" } ?: ""))
-            } catch (e: ApiException) {
-                message = if (e.status == 404) "Serveren kan ikke hente annonser ennå. Oppdater homelab." else e.message
             } finally { finnBusy = null }
         }
     }
@@ -1403,26 +1321,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var folderExtra by mutableStateOf<FolderExtra?>(null)
         private set
     /** Boligkategorier med underkategorier (Innstillinger → Boliger på PC). Tom liste på eldre servere. */
-    var boligCats by mutableStateOf<List<BoligCategory>>(emptyList())
     /** «Legg i bolig»: målet for skann og opplasting mens man står i Boliger (null = boligen som er åpen). */
     var uploadFolder by mutableStateOf<Int?>(null)
-
-    fun loadBoligCategories() = launch {
-        boligCats = runCatching { parseBoligCategories(api.get("/boliger/categories")) }.getOrDefault(boligCats)
-    }
-
-    fun addFolderEntry(desc: String, amount: String, paidBy: String?, targetId: Int? = null, categoryId: Int? = null) = launch {
-        val f = folder ?: return@launch
-        val id = targetId ?: f.folder.id
-        val body = JSONObject().put("description", desc).put("amount", amount.replace(" ", "").replace(',', '.'))
-        paidBy?.let { body.put("paidBy", it) }
-        categoryId?.let { body.put("categoryId", it) }
-        val res = parseFolderDetail(api.post("/folders/$id/entries", body))
-        // Lagt i en annen bolig: den åpne boligen lastes på nytt.
-        folder = if (id == f.folder.id) res else parseFolderDetail(api.get("/folders/${f.folder.id}"))
-        folders = parseFolders(api.get("/folders"))
-        message = "Lagt til i ${res.folder.name}"
-    }
 
     /* ---------- Domener ---------- */
 
@@ -1526,34 +1426,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         flash(o.optStr("message") ?: "Sendingen spores")
     }
 
-    fun archiveTracking(s: Shipment, on: Boolean) = launch {
-        api.request("PATCH", "/tracking/${s.id}", JSONObject().put("archived", on), prefix = Api.HOMELAB)
-        if (on) trkSel = null
-        loadTracking()
-        flash(if (on) "${s.name} er arkivert" else "${s.name} er hentet tilbake")
-    }
-
-    fun deleteTracking(s: Shipment) = launch {
-        api.request("DELETE", "/tracking/${s.id}", prefix = Api.HOMELAB)
-        trkSel = null
-        loadTracking()
-        flash("${s.name} er slettet")
-    }
-
-    /** «Sjekk nå»: leser e-post og Finn, og henter status hos transportørene. */
-    fun checkTracking() {
-        if (trkChecking) return
-        trkChecking = true
-        launch {
-            try {
-                val d = api.request("POST", "/tracking/check", prefix = Api.HOMELAB, timeout = 60_000)
-                val o = JSONObject(d)
-                if (o.has("items")) { val t = parseTracking(d); tracking = t; notifyTracking(t) } else loadTracking()
-                flash(o.optStr("message") ?: "Sporing er oppdatert")
-            } finally { trkChecking = false }
-        }
-    }
-
     fun setTrackingPref(k: String, on: Boolean) {
         tracking = tracking?.let { it.copy(prefs = it.prefs + (k to on)) }
         launch { api.hlPut("/tracking/prefs", JSONObject().put(k, on)) }
@@ -1609,26 +1481,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         subsX = parseSubsX(d)
     }
 
-    fun setSubItemActive(s: SubItem, active: Boolean) = launch {
-        api.patch("/subscriptions/${s.id}", JSONObject().put("active", active))
-        loadSubs()
-        flash(if (active) "${s.name} er aktivert igjen" else "${s.name} er markert som sagt opp")
-    }
-
-    /** «Skriv inn selv»: tjeneste, plan, beløp, syklus og trekkdag. */
-    fun addSubManual(name: String, plan: String, price: String, cycle: String, day: Int?) = launch {
-        val body = JSONObject().put("name", name).put("plan", plan).put("price", price.replace(" ", "").replace(',', '.')).put("cycle", cycle)
-        if (day != null && day in 1..31) {
-            val now = LocalDate.now()
-            var d = now.withDayOfMonth(minOf(day, now.lengthOfMonth()))
-            if (d.isBefore(now)) { val m = now.plusMonths(1); d = m.withDayOfMonth(minOf(day, m.lengthOfMonth())) }
-            body.put("chargeDay", day).put("nextDate", d.toString())
-        }
-        api.post("/subscriptions", body)
-        loadSubs()
-        flash("$name lagt til")
-    }
-
     /** «Fra transaksjoner»: faste trekk sett minst 3 ganger som ikke er registrert. */
     fun loadSubCandidates() { subCandidates = null; launch { subCandidates = parseSubCandidates(api.get("/subscriptions/candidates")) } }
 
@@ -1678,8 +1530,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Prompt 13: mobildesign Papir, fotovindu, nyhetsleser, media og Mat ---------- */
 
-    /** Innstillinger → Utseende → Mobildesign: «klassisk» (Material You) eller «papir». */
-    val paper: Boolean get() = option(AppPrefs.MOBILE_DESIGN, "klassisk") == "papir"
     /** Papir: «auto» (følger systemet), «lys» eller «mork». */
     val paperMode: String get() = option(AppPrefs.PAPER_MODE, "auto")
     /** Bakgrunnen i fotovinduet: cur (gradient), oslo, weather, planets eller custom. */
@@ -1698,12 +1548,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var photoMenu by mutableStateOf(false)
 
-    fun setMobileDesign(d: String) {
-        setPref(AppPrefs.MOBILE_DESIGN, d)
-        paperPage = null
-        if (d == "papir") loadPhoto()
-        pushDesign()
-    }
     fun setPaperMode(m: String) { setPref(AppPrefs.PAPER_MODE, m); pushDesign() }
     fun setPhotoKind(k: String) { setPref(AppPrefs.PHOTO, k); photoMenu = false; loadPhoto(); pushDesign() }
 
@@ -1731,7 +1575,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun pushDesign() {
         viewModelScope.launch {
             runCatching {
-                api.hlPut("/me/layout", JSONObject().put("mobileDesign", option(AppPrefs.MOBILE_DESIGN, "klassisk")).put("paperMode", paperMode)
+                api.hlPut("/me/layout", JSONObject().put("mobileDesign", "papir").put("paperMode", paperMode)
                     .put("photo", if (photoKind == "none") "cur" else photoKind).put("bgType", photoKind))
             }
         }
@@ -1753,8 +1597,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
         onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
-        // Ny installasjon står i Papir: serverens standardverdi «klassisk» skal ikke bytte tilbake.
-        x.mobileDesign?.takeIf { it == "papir" || (it == "klassisk" && !prefs.bool(AppPrefs.FRESH_PAPIR)) }?.let { prefs.set(AppPrefs.MOBILE_DESIGN, it) }
+        // Prompt 42: «mobileDesign» fra serveren leses ikke lenger (Papir er eneste design; «klassisk» migreres i init).
         // Ny enhet starter i «lys» (prompt 22): serverens standardverdi «auto» skal ikke bytte tilbake, et eget valg (lys/mørk) gjelder.
         x.paperMode?.takeIf { it in setOf("lys", "mork") || (it == "auto" && !prefs.bool(AppPrefs.FRESH_PAPIR)) }?.let { prefs.set(AppPrefs.PAPER_MODE, it) }
         x.photo?.takeIf { it in setOf("cur", "oslo", "weather", "planets", "custom") }?.let { prefs.set(AppPrefs.PHOTO, it) }
@@ -2476,7 +2319,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Banneret: trykk på teksten åpner køen filtrert på «Til gjennomgang». */
     fun openReview() {
         reviewFilter = true
-        if (paper) openFromFinMer(Screen.Scan) else open(Screen.Scan)
+        openFromFinMer(Screen.Scan)
         // Køen åpnes på første kvittering som er lest av AI og venter på bekreftelse.
         launch { if (receipts == null) loadReceipts(); selectedReceipt = receipts?.firstOrNull { it.status == "needs_review" }?.id }
     }
@@ -2658,6 +2501,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (l.tabBar.isNotEmpty()) tabBar = l.tabBar
         l.iconTheme?.let { prefs.set(AppPrefs.ICON_THEME, it); prefTick++ }
         applyNavStyle25(raw)
+        applyNavHome42(raw) // prompt 42: Hjem-knappen i fanelinja (homeButton)
         applySearchEngine29(raw)
         applyLayout30(raw)
     }
@@ -3719,6 +3563,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun loadSubs40() = loadSubs()
     internal suspend fun loadNews40() = loadNews().join()
 
+    /* ---------- Prompt 42 (ANDROID42): Klassisk slettet, Hjem-knapp i fanelinja, Vel fremme, helse fra HA (P42.kt, ui/Ui42.kt) ---------- */
+    val p42 = P42State()
+    internal suspend fun <T> api42(f: suspend Api.() -> T): T = api.f()
+    internal fun launch42(block: suspend () -> Unit) = launch(block)
+
+    private fun migrateDesign42() {
+        val d = prefs.str(AppPrefs.MOBILE_DESIGN, "")
+        if (d == "papir") return
+        val fresh = d.isEmpty() && accounts.isEmpty()
+        if (fresh) prefs.set(AppPrefs.FRESH_PAPIR, true)
+        // Prompt 22: «Lys hovedbok» er standard på nye enheter. Lagrede valg (fra serveren eller brukeren) overskrives ikke.
+        if (fresh) { if (prefs.str(AppPrefs.PAPER_MODE, "").isEmpty()) prefs.set(AppPrefs.PAPER_MODE, "lys") }
+        else {
+            val night = (appCtx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            prefs.set(AppPrefs.PAPER_MODE, if (night) "mork" else "lys")
+        }
+        prefs.set(AppPrefs.MOBILE_DESIGN, "papir")
+        if (!fresh) pushDesign()
+    }
+
     /* ---------- Prompt 41 (ANDROID41): Fold 1c, skanneknapp på Hjem, server uten adressefelt, Kalender-innlogging, Oslo-bakgrunn, Si fra, Min reise (P41.kt, ui/Ui41.kt, ui/Fold41.kt) ---------- */
     val p41 = P41State()
     internal suspend fun <T> api41(f: suspend Api.() -> T): T = api.f()
@@ -3728,14 +3592,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.
     init {
-        // Ny installasjon: Papir er standard (prompt 14). Eksisterende installasjoner beholder det de har.
-        if (prefs.str(AppPrefs.MOBILE_DESIGN, "").isEmpty()) {
-            prefs.set(AppPrefs.MOBILE_DESIGN, if (accounts.isEmpty()) "papir" else "klassisk")
-            if (accounts.isEmpty()) prefs.set(AppPrefs.FRESH_PAPIR, true)
-            // Prompt 22: «Lys hovedbok» er standard på nye enheter. Lagrede valg (fra serveren eller brukeren) overskrives ikke.
-            if (prefs.str(AppPrefs.PAPER_MODE, "").isEmpty()) prefs.set(AppPrefs.PAPER_MODE, "lys")
-            if (prefs.str(AppPrefs.MODE, "").isEmpty()) prefs.set(AppPrefs.MODE, "light")
-        }
+        // Ny installasjon: Papir er standard (prompt 14). Prompt 42: Material You-«Klassisk» er slettet, og den som sto der
+        // flyttes uten dialog til Papir · lys (Papir · mørk når systemet er mørkt).
+        migrateDesign42()
         Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
         layout = localLayout()
         loadLocalLayout15()

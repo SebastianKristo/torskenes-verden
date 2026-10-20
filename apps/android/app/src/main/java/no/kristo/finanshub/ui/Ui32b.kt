@@ -135,6 +135,7 @@ internal fun NavEditor32b(
                 }
             }
             NavStyleSection25(vm, items.map { TabItem(it.key, it.label.ifBlank { defLabel(it.key) }, it.icon) }, mer = mer)
+            if (title == "Hjem" || title == "Finans") HomeBtnSection42(vm) // Prompt 42: HJEM-KNAPP · FORHÅNDSVISNING
             if (title == "Hjem") PCard { ScanHomeRow41(vm) } // Prompt 41: samme valg som Innstillinger → Tilpass → Fanelinje
             val missing = all.filter { a -> items.none { it.key == a.key } }
             if (missing.isNotEmpty() && items.size < max) {

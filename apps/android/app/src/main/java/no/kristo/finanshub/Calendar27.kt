@@ -42,6 +42,7 @@ val KAL27_VIEWS = listOf(
 private val KAL27_SRC = mapOf(
     "timeplan" to "skolens iCal", "prover" to "skolens iCal", "skole" to "skolens iCal",
     "privat" to "Google Kalender", "familie" to "Google Kalender (delt med familien)", "bursdager" to "Bursdager-modulen",
+    "abonnementer" to "Finans → Abonnementer (innebygd, endres i Finans)", // prompt 42
 )
 
 fun parseKalCals27(raw: String): List<Kal27Cal> {
@@ -50,7 +51,8 @@ fun parseKalCals27(raw: String): List<Kal27Cal> {
     val a = JSONObject(t).optJSONArray("calendars") ?: return emptyList()
     return (0 until a.length()).mapNotNull { i ->
         val o = a.optJSONObject(i) ?: return@mapNotNull null
-        val id = o.optStr("id") ?: return@mapNotNull null
+        // Prompt 42: den innebygde kalenderen Abonnementer (id «ab», source «builtin») har fast nøkkel i appen.
+        val id = o.optStr("id")?.let { if (it == "ab" || it == "subscriptions") "abonnementer" else it } ?: return@mapNotNull null
         val def = KAL_FILTERS.firstOrNull { it.first == id }
         Kal27Cal(id, o.optStr("name") ?: def?.second ?: id, kalHex(o.optStr("color")) ?: def?.third ?: 0xFF7A7468,
             o.optBoolean("writable", id == "privat" || id == "familie"), o.optBoolean("enabled", true))

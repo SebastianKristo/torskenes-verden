@@ -1,7 +1,6 @@
 package no.kristo.finanshub.ui
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
@@ -9,18 +8,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -41,44 +36,21 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /*
- * Farger: designet (1b) er tegnet i én mørk tonal palett fra #FF7A3D. Hver designfarge har en fast rolle
- * (flate, kort, tekst, primær, container …). Med «Følg systemet» (Android 12+) hentes rollene rett fra
- * dynamicDarkColorScheme / dynamicLightColorScheme. De andre frøfargene lager rollene i OKLCH: bare kulørtonen
- * byttes, og hver rolle har egen lyshet og metning i lys og mørk modus (ikke invertering). Statusfarger
- * (grønn, rød, gul) følger ikke aksentfargen. Med «Samme overalt» (Innstillinger → Utseende → Sider, standard) får alle
- * sidene samme fargetema: øvrige designfarger flyttes til frøfargens kulør, og Domener bruker de samme rollene i stedet for rosa.
- * Med «Egen farge per side» beholder hver side sin kulør (Domener rosa, Subscription lilla osv.).
+ * Farger: skjermene er tegnet med designfargene fra den gamle mørke paletten (#FF7A3D). Hver designfarge har en fast rolle
+ * (flate, kort, tekst, primær, container …), og i Papir får rollene papirfargene (PaperPal). Øvrige designfarger legges på
+ * blekkrødt i OKLCH. Prompt 42: Material You-«Klassisk» (dynamiske farger, frøfarger og egne sidefarger) er slettet.
  */
 
-/** Frøfarger i Innstillinger → Utseende → Farger. «system» = dynamiske farger fra bakgrunnsbildet (Android 12+). */
-val SEEDS: List<Triple<String, String, Long>> = listOf(
-    Triple("system", "Følg systemet", 0xFFFFB68A),
-    Triple("orange", "Oransje", 0xFFFFB68A),
-    Triple("blue", "Blå", 0xFFA8C7FA),
-    Triple("green", "Grønn", 0xFF8CD5B0),
-    Triple("purple", "Lilla", 0xFFD0BCFF),
-    Triple("pink", "Rosa", 0xFFFFB1C8),
-    Triple("yellow", "Gul", 0xFFE9C46A),
-)
-val MODES: List<Pair<String, String>> = listOf("system" to "Følg systemet", "light" to "Lys", "dark" to "Mørk")
-
-private const val BASE_SEED = 0xFFFFB68A
 /** Statusfarger og Domener-rosa: samme kulør uansett frøfarge (lys modus får egne toner). */
 private val FIXED = setOf(
     0xFF9FE3C6, 0xFF7BE3A0, 0xFF1F3A2F, 0xFFC9E4D8, 0xFF07301F, 0xFFFF8A80, 0xFFF2B56B, 0xFFF2C14E, 0xFFE60000, 0xFF4285F4,
     0xFF7B2949, 0xFFFFD9E2, 0xFFFFB1C8, 0xFF2A2024, 0xFF3A2C31, 0xFFD5C2C6, 0xFF3A0B07, 0xFF4A1F25,
 )
 
-/** Rollene i paletten: (lyshet, metning) i OKLCH for mørk og lys modus, og kulørforskyvning (tertiær). */
-private enum class Role(val dl: Double, val dc: Double, val ll: Double, val lc: Double, val dh: Double = 0.0) {
-    SURFACE(.17, .012, .985, .006), SURFACE_LOW(.205, .013, .97, .008), SURFACE1(.24, .015, .955, .009),
-    SURFACE2(.285, .017, .935, .011), SURFACE3(.33, .018, .915, .013),
-    PRIMARY(.84, .105, .50, .13), ON_PRIMARY(.32, .08, .995, .0),
-    PRIMARY_CONTAINER(.42, .10, .92, .05), ON_PRIMARY_CONTAINER(.93, .045, .30, .08),
-    SECONDARY_CONTAINER(.42, .04, .92, .03), ON_SECONDARY_CONTAINER(.93, .03, .28, .04),
-    TERTIARY_CONTAINER(.40, .04, .92, .04, 60.0), ON_TERTIARY_CONTAINER(.92, .05, .28, .05, 60.0),
-    ON_SURFACE(.92, .012, .22, .01), ON_SURFACE_VARIANT(.83, .02, .42, .02), OUTLINE(.66, .02, .56, .02),
-    ACCENT(.71, .17, .58, .17),
+/** Rollene i paletten. */
+private enum class Role {
+    SURFACE, SURFACE_LOW, SURFACE1, SURFACE2, SURFACE3, PRIMARY, ON_PRIMARY, PRIMARY_CONTAINER, ON_PRIMARY_CONTAINER,
+    SECONDARY_CONTAINER, ON_SECONDARY_CONTAINER, TERTIARY_CONTAINER, ON_TERTIARY_CONTAINER, ON_SURFACE, ON_SURFACE_VARIANT, OUTLINE, ACCENT,
 }
 
 /** Designfargene og rollene deres. */
@@ -132,25 +104,19 @@ private object Ok {
     }
 }
 
-/** Gjeldende tone (frøfarge, lys/mørk og eventuelt systemets dynamiske skjema). Leses i komposisjonen. */
+/** Gjeldende tone: lys eller mørk papir. Leses i komposisjonen. */
 object Tone {
-    var seed by mutableStateOf(BASE_SEED)
-    var light by mutableStateOf(false)
-    var dynamic by mutableStateOf<ColorScheme?>(null)
-    /** «Samme overalt»: alle sider i samme fargetema (standard). */
-    var samePages by mutableStateOf(true)
-    /** Mobildesign «Papir» (prompt 13): papir og blekk i stedet for Material You. paperDark = kveldspapir. */
-    var paper by mutableStateOf(false)
+    /** Lys papir (= !paperDark). */
+    var light by mutableStateOf(true)
+    /** Kveldspapir. */
     var paperDark by mutableStateOf(false)
     private val cache = HashMap<Long, Color>()
     private var cacheKey: Any? = null
 
     fun map(c: Long): Color {
-        val s = seed; val l = light; val d = dynamic; val same = samePages; val pp = paper; val pd = paperDark
-        if (!pp && s == BASE_SEED && !l && d == null && !same) return Color(c)
-        val key = listOf(s, l, d, same, pp, pd)
-        if (key != cacheKey) { cache.clear(); cacheKey = key }
-        return cache.getOrPut(c) { if (pp) paperResolve(c, pd) else resolve(c, s, l, d, same) }
+        val pd = paperDark
+        if (pd != cacheKey) { cache.clear(); cacheKey = pd }
+        return cache.getOrPut(c) { paperResolve(c, pd) }
     }
 
     /** Papir: rollene får papirfargene; øvrige designfarger legges på blekkrødt (som «Samme overalt»). */
@@ -178,53 +144,19 @@ object Tone {
             Role.ON_SURFACE_VARIANT -> pal.sub
             Role.OUTLINE -> pal.mut
             Role.ACCENT -> pal.lab
-            null -> return resolve(c, 0xFF000000 or (pal.lab.toArgb().toLong() and 0xFFFFFF), !dark, null, true)
+            null -> return resolve(c, 0xFF000000 or (pal.lab.toArgb().toLong() and 0xFFFFFF), !dark)
         }
         return r.copy(alpha = alpha)
     }
 
-    private fun resolve(c: Long, seed: Long, light: Boolean, d: ColorScheme?, same: Boolean): Color {
+    /** Øvrige designfarger: behold lyshet og metning, flytt kuløren til blekkrødt (unntatt faste og grå), og egne toner på lyst papir. */
+    private fun resolve(c: Long, seed: Long, light: Boolean): Color {
         val argb = 0xFF000000 or (c and 0xFFFFFF)
         val alpha = (c shr 24) and 0xFF
-        val role = if (argb in FIXED) null else ROLE_OF[argb]
-        if (role != null) {
-            if (d != null) return fromScheme(role, d).copy(alpha = alpha / 255f)
-            val sh = Ok.lch(seed)
-            val k = (sh[1] / 0.10).coerceIn(0.5, 1.4) // svake frøfarger gir roligere toner
-            val L = if (light) role.ll else role.dl
-            val C = (if (light) role.lc else role.dc) * k
-            return Color(Ok.color(L, C, sh[2] + role.dh, alpha))
-        }
-        // Øvrige designfarger: behold lyshet og metning, flytt kulør (unntatt faste), og egne toner i lys modus.
-        // «Samme overalt» legger dem på frøfargens kulør, så alle sidene får samme tema.
         val o = Ok.lch(argb)
-        val fixed = argb in FIXED
-        val h = when {
-            fixed || o[1] < 0.02 -> o[2]
-            same -> Ok.lch(seed)[2]
-            else -> o[2] + (Ok.lch(seed)[2] - Ok.lch(BASE_SEED)[2])
-        }
+        val h = if (argb in FIXED || o[1] < 0.02) o[2] else Ok.lch(seed)[2]
         val L = if (!light) o[0] else if (o[0] < 0.5) 0.98 - o[0] * 0.25 else (1.17 - o[0]).coerceIn(0.22, 0.6)
         return Color(Ok.color(L, o[1], h, alpha))
-    }
-
-    private fun fromScheme(r: Role, s: ColorScheme): Color = when (r) {
-        Role.SURFACE -> s.surface
-        Role.SURFACE_LOW -> s.surfaceContainerLow
-        Role.SURFACE1 -> s.surfaceContainer
-        Role.SURFACE2 -> s.surfaceContainerHigh
-        Role.SURFACE3 -> s.surfaceContainerHighest
-        Role.PRIMARY, Role.ACCENT -> s.primary
-        Role.ON_PRIMARY -> s.onPrimary
-        Role.PRIMARY_CONTAINER -> s.primaryContainer
-        Role.ON_PRIMARY_CONTAINER -> s.onPrimaryContainer
-        Role.SECONDARY_CONTAINER -> s.secondaryContainer
-        Role.ON_SECONDARY_CONTAINER -> s.onSecondaryContainer
-        Role.TERTIARY_CONTAINER -> s.tertiaryContainer
-        Role.ON_TERTIARY_CONTAINER -> s.onTertiaryContainer
-        Role.ON_SURFACE -> s.onSurface
-        Role.ON_SURFACE_VARIANT -> s.onSurfaceVariant
-        Role.OUTLINE -> s.outline
     }
 }
 
@@ -289,19 +221,16 @@ object C {
     val red: Color get() = tc(0xFFFF8A80)
 }
 
-// Domener: rosa tonal palett (designet 1b, Cloudflare-statistikk). Med «Samme overalt» brukes appens roller.
+// Domener: samme roller som resten av appen (Papir).
 object P {
-    val hero: Color get() = if (Tone.samePages) C.heroAi else tc(0xFF7B2949)
-    val onHero: Color get() = if (Tone.samePages) C.onContainer else tc(0xFFFFD9E2)
-    val accent: Color get() = if (Tone.samePages) C.primary else tc(0xFFFFB1C8)
-    val card: Color get() = if (Tone.samePages) C.surface1 else tc(0xFF2A2024)
-    val card2: Color get() = if (Tone.samePages) C.surface3 else tc(0xFF3A2C31)
-    val text2: Color get() = if (Tone.samePages) C.text2 else tc(0xFFD5C2C6)
+    val hero: Color get() = C.heroAi
+    val onHero: Color get() = C.onContainer
+    val accent: Color get() = C.primary
+    val card: Color get() = C.surface1
+    val card2: Color get() = C.surface3
+    val text2: Color get() = C.text2
     val red: Color get() = tc(0xFFFF8A80)
 }
-
-/** Valgene i Innstillinger → Utseende → Sider. */
-val PAGE_COLORS: List<Pair<String, String>> = listOf("same" to "Samme overalt", "own" to "Egen farge per side")
 
 /** «Skjul beløp til jeg trykker»: formaterte beløp vises som prikker mens dette er på. */
 object Privacy {
@@ -324,16 +253,6 @@ private fun schemeFromPalette(light: Boolean): ColorScheme = if (light) lightCol
 
 val Mono = FontFamily.Monospace
 
-private val type = Typography(
-    displaySmall = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.5).sp),
-    headlineMedium = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold),
-    titleLarge = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold),
-    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 16.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp),
-    labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
-)
-
 /** Papir: Manrope i brødtekst, Newsreader i titler. */
 private val paperType = Typography(
     displaySmall = TextStyle(fontFamily = PaperFonts.serif, fontSize = 40.sp, fontWeight = FontWeight.Medium),
@@ -353,53 +272,24 @@ private val shapes = Shapes(
     small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp), extraLarge = RoundedCornerShape(32.dp),
 )
 
-/**
- * color: system | orange | blue | green | purple | pink | yellow. mode: system | light | dark (standard mørk).
- * «Følg systemet» bruker dynamiske farger (Android 12+) direkte: både Compose-skjemaet og designets egne flater
- * hentes fra rollene i dynamicDark/LightColorScheme. Eldre Android faller tilbake til oransje.
- */
+/** Papir · lys, Papir · mørk eller «auto» (følger systemet). Prompt 42: det eneste temaet (Material You-«Klassisk» er slettet). */
 @Composable
-fun FinansTheme(
-    color: String = "system", mode: String = "dark", samePages: Boolean = true,
-    /** Papir: «auto» følger systemet, ellers «lys» eller «mork». null = Klassisk. */
-    paperMode: String? = null,
-    content: @Composable () -> Unit,
-) {
-    val ctx = LocalContext.current
+fun FinansTheme(paperMode: String, content: @Composable () -> Unit) {
     val sysDark = isSystemInDarkTheme()
-    val paper = paperMode != null
     val paperDark = when (paperMode) { "mork" -> true; "lys" -> false; else -> sysDark }
-    val light = if (paper) !paperDark else when (mode) { "light" -> true; "system" -> !sysDark; else -> false }
-    if (Tone.paper != paper) Tone.paper = paper
     if (Tone.paperDark != paperDark) Tone.paperDark = paperDark
-    val dynamic = !paper && color == "system" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    // Systemets skjema: lages på nytt når bakgrunnsbildet (og dermed aksentfargen) byttes, fordi aktiviteten da får ny konfigurasjon.
-    val dyn = remember(dynamic, light, ctx) {
-        when {
-            dynamic && light -> dynamicLightColorScheme(ctx)
-            dynamic -> dynamicDarkColorScheme(ctx)
-            else -> null
-        }
-    }
-    val seed = when {
-        dyn != null -> 0xFF000000 or (dyn.primary.toArgb().toLong() and 0xFFFFFF)
-        else -> SEEDS.firstOrNull { it.first == color }?.third ?: BASE_SEED
-    }
-    if (Tone.seed != seed) Tone.seed = seed
-    if (Tone.light != light) Tone.light = light
-    if (Tone.dynamic != dyn) Tone.dynamic = dyn
-    if (Tone.samePages != (samePages || paper)) Tone.samePages = samePages || paper
-    val scheme = dyn ?: schemeFromPalette(light)
+    if (Tone.light != !paperDark) Tone.light = !paperDark
+    val scheme = schemeFromPalette(!paperDark)
     val view = LocalView.current
     if (!view.isInEditMode) SideEffect {
         (view.context as? Activity)?.window?.let { w ->
             val c = WindowCompat.getInsetsController(w, view)
             // Papir har fotovinduet øverst: lyse ikoner i statuslinjen.
-            c.isAppearanceLightStatusBars = light && !paper
-            c.isAppearanceLightNavigationBars = light
+            c.isAppearanceLightStatusBars = false
+            c.isAppearanceLightNavigationBars = !paperDark
         }
     }
-    MaterialTheme(colorScheme = scheme, typography = if (paper) paperType else type, shapes = shapes, content = content)
+    MaterialTheme(colorScheme = scheme, typography = paperType, shapes = shapes, content = content)
 }
 
 /* ---------- Formatering (norsk, minus som −) ---------- */
