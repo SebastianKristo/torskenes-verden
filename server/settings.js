@@ -64,7 +64,8 @@ export const SCHEMA = [
   // Prompt 24: Bursdager. OAuth-klienten (type «Web application») lages i Google Cloud Console; hver bruker logger inn selv.
   ['Google Kalender', { id: 'google', domain: 'calendar.google.com', category: 'Hjem', help: 'Brukes av Bursdager. Lag en OAuth-klient (Web application) i Google Cloud Console → APIs & Services → Credentials, slå på Google Calendar API, og legg inn omdirigerings-URI-en https://<din adresse>/api/birthdays/google/callback.', guide: [
     ['Lag klienten', 'console.cloud.google.com → APIs & Services → Credentials → Create credentials → OAuth client ID → Web application.'],
-    ['Omdirigering', 'Under «Authorized redirect URIs»: https://<din adresse>/api/birthdays/google/callback. Tomt felt for omdirigerings-URI her betyr at serveren bruker adressen den blir nådd på.'],
+    ['Omdirigering', 'Under «Authorized redirect URIs» legger du inn BEGGE: https://<din adresse>/api/birthdays/google/callback (Kalender og Bursdager) og https://<din adresse>/api/gsc/callback (Search Console). Tomt felt for omdirigerings-URI her betyr at serveren bruker adressen den blir nådd på.'],
+    ['Search Console', 'Slå også på «Google Search Console API» under APIs & Services → Library, og legg til scopet webmasters.readonly på samtykkeskjermen.'],
     ['Samtykke', 'OAuth consent screen: legg til scopene calendar.events og calendar.readonly, og legg brukerne inn som testbrukere til appen er publisert.'],
   ] }, [
     ['googleClientId', 'Klient-ID', e('GOOGLE_CLIENT_ID')],

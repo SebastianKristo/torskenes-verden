@@ -178,6 +178,14 @@ const GSC_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
 const SCOPES = ['openid', 'email', GSC_SCOPE];
 // Samme Google-klient som Bursdager/Kalender (Innstillinger → Integrasjoner → Google). Egen omdirigering kan settes med gscRedirectUri.
 const googleClient = () => ({ id: String(cfg('googleClientId') ?? '').trim(), secret: String(cfg('googleClientSecret') ?? '').trim(), redirect: String(cfg('gscRedirectUri') ?? '').trim() });
+/** Omdirigerings-URI for Search Console: gscRedirectUri, ellers verten fra googleRedirectUri, ellers adressen serveren nås på. */
+export function gscRedirectOf(c) {
+  const fixed = googleClient().redirect;
+  if (fixed) return fixed;
+  const cal = String(cfg('googleRedirectUri') ?? '').trim();
+  if (cal) { try { return `${new URL(cal).origin}/api/gsc/callback`; } catch { /* ugyldig – faller tilbake */ } }
+  return `${originOf(c)}/api/gsc/callback`;
+}
 let gscFetch = null;
 /** Bare for tester: erstatter fetch mot Google. */
 export const _setGscFetch = (fn) => { gscFetch = fn; accessCache.clear(); };
@@ -394,7 +402,9 @@ gscApi.get('/auth', async (c, next) => {
   const client = googleClient();
   if (!client.id && !mockGsc()) return c.html('<!doctype html><meta charset="utf-8"><title>Google Search Console</title><p>Google er ikke satt opp. En administrator må legge inn klient-ID og hemmelighet under Innstillinger → Integrasjoner → Google.</p>', 409);
   const verifier = b64u(randomBytes(32)), state = b64u(randomBytes(18));
-  const redirect = client.redirect || `${originOf(c)}/api/gsc/callback`;
+  // Google godtar bare registrerte omdirigerings-URI-er. Er Kalenderens faste URI satt (offentlig https-adresse), brukes samme vert,
+  // så innlogging startet fra lokal IP også treffer en adresse som står i Google Cloud. Ellers adressen serveren nås på.
+  const redirect = gscRedirectOf(c);
   let ret = c.get('ret') ?? safeReturn(c.req.query('return'));
   if (ret.startsWith('/')) ret = `${originOf(c)}${ret}`;
   pending.set(state, { user: c.get('user'), verifier, ret, redirect, exp: Date.now() + 10 * 60_000 });
@@ -499,7 +509,7 @@ async function sitesMerged(u) {
 domainGlimtApi.get('/gsc/sites', adminGuard, async (c) => {
   const u = c.get('user'), x = conf(u);
   const configured = !!googleClient().id || mockGsc();
-  if (!x.refresh) return c.json({ connected: false, configured, scope: 'webmasters.readonly', connectUrl: '/api/gsc/auth', steps: GSC_STEPS39, sites: [], count: 0 });
+  if (!x.refresh) return c.json({ connected: false, configured, scope: 'webmasters.readonly', connectUrl: '/api/gsc/auth', redirectUri: gscRedirectOf(c), steps: GSC_STEPS39, sites: [], count: 0 });
   try { const sites = await sitesMerged(u); return c.json({ connected: true, configured, email: x.email ?? null, scope: 'webmasters.readonly', count: sites.length, sites, label: `${sites.length} ${sites.length === 1 ? 'eiendom' : 'eiendommer'} · kun lesetilgang` }); }
   catch (e) { return c.json({ connected: false, reconnect: true, configured, error: e.message, sites: [], count: 0 }); }
 });

@@ -33,17 +33,19 @@ const GSTEPS = [
   ['Legg til eiendom → «Domene»', 'Velg typen «Domene» (ikke «URL-prefiks») og skriv domenet uten https://, f.eks. {dom}.', '…/search-console/welcome', [['Domene', '{dom}', 1], ['URL-prefiks', '']]],
   ['Bekreft med DNS', 'Google viser en TXT-post. Legg den inn i Cloudflare → DNS → Records → Add record (Type TXT, navn @). Har Cloudflare-tokenet DNS:Edit, kan Homelab gjøre det for deg («Legg inn for meg»).', 'dash.cloudflare.com/…/dns/records', [['Type', 'TXT', 1], ['Name', '@'], ['Content', 'google-site-verification=…', 1]]],
   ['Trykk «Bekreft»', 'Tilbake i Search Console: trykk «Bekreft». Det tar fra minutter til 24 timer. TXT-posten må bli liggende.', '…/search-console', [['Bekreft', '', 1]]],
+  ['Første gang: legg til omdirigering', 'Bare én gang, for den som eier Google-klienten: console.cloud.google.com → APIs & Services → Credentials → OAuth-klienten → «Authorized redirect URIs» → legg til {cb}. Slå også på «Google Search Console API» under Library. Uten dette svarer Google «Error 400: redirect_uri_mismatch».', 'console.cloud.google.com/apis/credentials', [['Authorized redirect URIs', '{cb}', 1]]],
   ['Koble til Homelab', 'Trykk «Koble til med Google» her og godta «Se Search Console-data for de bekreftede nettstedene dine».', 'accounts.google.com', [['Se Search Console-data', 'Tillat', 1]]],
   ['Velg domenene', 'Eiendommene vises i listen. Trykk «+ Legg til» eller «Bruk». De siste 16 månedene hentes i bakgrunnen.', 'home · Innstillinger · Domener', [['{dom}', '+ Legg til', 1]]],
 ];
 function gscGuideHtml() {
   const dom = S.form.name.trim() || S.gsc?.sites?.[0]?.domain || 'eksempel.no';
+  const cb = S.gsc?.redirectUri || `${location.origin}/api/gsc/callback`;
   return `<div class="cfg-guide" data-dom-gclose><div class="cfg-gp" role="dialog" aria-modal="true" aria-labelledby="cfg-gt">
     <div class="cfg-gh"><div><span class="cfg-gk">GOOGLE SEARCH CONSOLE · CA. 5 MINUTTER</span><h2 id="cfg-gt">Koble til Google Search Console</h2></div>${sheetBtn('Ferdig', 'data-dom-gclose', 'pri')}</div>
     <span class="cfg-glead">Search Console gir klikk, visninger, søkeord og sider fra Google Søk for domenene dine. Homelab får bare lesetilgang.</span>
     <a class="cfg-gopen" href="${GSC_URL}" target="_blank" rel="noopener noreferrer"><span>Åpne Search Console</span><span aria-hidden="true">↗</span></a>
-    ${GSTEPS.map(([t, d, url, rows], i) => `<div class="cfg-st"><div class="cfg-st-h"><span class="cfg-st-n">${i + 1}</span><div><b>${esc(t)}</b><span>${esc(d.replace('{dom}', dom))}</span></div></div>
-      <div class="cfg-sk" aria-hidden="true"><div class="cfg-sk-b"><i></i><i></i><span data-no-i18n>${esc(url)}</span></div><div class="cfg-sk-in">${rows.map(([a, b, hl]) => `<div class="cfg-sk-r${hl ? ' hl' : ''}"><span data-no-i18n>${esc(String(a).replace('{dom}', dom))}</span><em data-no-i18n>${esc(String(b).replace('{dom}', dom))}</em></div>`).join('')}</div></div></div>`).join('')}
+    ${GSTEPS.map(([t, d, url, rows], i) => `<div class="cfg-st"><div class="cfg-st-h"><span class="cfg-st-n">${i + 1}</span><div><b>${esc(t)}</b><span>${esc(d.replace('{dom}', dom).replace('{cb}', cb))}</span></div></div>
+      <div class="cfg-sk" aria-hidden="true"><div class="cfg-sk-b"><i></i><i></i><span data-no-i18n>${esc(url)}</span></div><div class="cfg-sk-in">${rows.map(([a, b, hl]) => `<div class="cfg-sk-r${hl ? ' hl' : ''}"><span data-no-i18n>${esc(String(a).replace('{dom}', dom))}</span><em data-no-i18n>${esc(String(b).replace('{dom}', dom).replace('{cb}', cb))}</em></div>`).join('')}</div></div></div>`).join('')}
     <div class="cfg-gnote">Homelab ber bare om lesetilgang (webmasters.readonly). Du kan trekke tilgangen tilbake når som helst på myaccount.google.com/permissions eller med «Koble fra» her.</div>
   </div></div>`;
 }
