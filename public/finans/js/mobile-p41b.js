@@ -1,8 +1,8 @@
-// Prompt 41 (PWA41) del 2: Min reise (Ruter + Hjem), Hjemlys i Familie («Si fra» og tur), Bursdager (jenka-tog og bilder).
+// Prompt 41 (PWA41) del 2: Min reise (Ruter + Hjem), Vel fremme i Familie («Si fra» og tur), Bursdager (jenka-tog og bilder).
 //   · claude-code-ruter-forhandsruter-sebastian.md: MIN REISE · SEBASTIAN over transportfilteret, forsinket trikk fra Frydenlund,
 //     SKOLESONER (chips + «+ Sone»), «PÅ HJEM NÅR DU FORLATER SKOLEN» (Over · I stedet · Av), og kortet på Hjem som bare vises
 //     når «forlot skolen» er aktiv – sveipes bort som briefen (mobile-p39.js swAdd), med Angre i 4,5 s.
-//   · claude-code-hjemlys.md: Familie → Hjemlys (Start med fire valg + aktive i familien · Hvem får beskjed? · Klar · Sendt/Aktiv).
+//   · claude-code-hjemlys.md: Familie → Vel fremme (Start med fire valg + aktive i familien · Hvem får beskjed? · Klar · Sendt/Aktiv).
 //     Bare beskjeden og stedet du velger sendes. Du selv er aldri i mottakerlista.
 //   · claude-code-bursdag-jenka-glimt.md + -bilder.md: konfetti og jenka-tog i det røde toppkortet, last opp / bytt / fjern bilde.
 // API (SERVER41): /api/ruter/my-trip, /school-zones, /journey(/hide|/home), /settings · /api/hjemlys/notice, /recipients, /start ·
@@ -117,7 +117,7 @@ function tripHide() {
 }
 
 /* =====================================================================
-   2. Familie → Hjemlys
+   2. Familie → Vel fremme
    ===================================================================== */
 const HF = { view: 'start', kind: null, sel: null, q: '', filt: 'hus', rem: true, dest: 'home', destName: '', place: '', soon: 30, eta: 30, wait: 15, sh: { pos: true, bat: true, with: true }, rec: null, recT: 0, sent: null, busy: false, contacts: [], cName: '', cPhone: '', addC: false };
 const KINDS = [
@@ -146,15 +146,22 @@ function defaultSel(kind) {
 const KNAME = { home: 'På vei hjem', checkin: 'Sjekket inn', soon: 'Drar snart', now: 'Drar nå' };
 const namesOf = (ids) => { const P = people(), n = [...ids].map((id) => P.find((p) => String(p.userId) === String(id))?.name?.split(' ')[0]).filter(Boolean); const c = HF.contacts.map((x) => x.name.split(' ')[0]); const all = [...n, ...c]; return all.length > 2 ? `${all.slice(0, 2).join(', ')} og ${all.length - 2} til` : all.join(' og '); };
 function startView() {
-  const act = HM.famCard?.() ?? '';
+  // Prompt 42 (claude-code-vel-fremme.md): tittel, «Hva vil du si fra om?», AKTIVE I FAMILIEN og Glimt-forslaget (som Familie.dc.html).
+  const mineP = HM.velMine?.() ?? '';
   const others = (HM.HJ.d?.household ?? []).filter((p) => String(p.userId) !== meId() && p.state && p.state !== 'ended');
   const rec = (HM.HJ.d?.notices?.received ?? []).slice(0, 4);
   const tiles = KINDS.map(([k, n, s, i], j) => `<button type="button" class="p41-hk${j === 0 ? ' dark' : ''}" data-p41b="hk" data-k="${k}"><span class="p41-hki" aria-hidden="true">${i}</span><b>${n}</b><small>${s}</small></button>`).join('');
-  const rows = [...others.map((p) => `<button type="button" class="p41-hor" data-p40="hjwho" data-u="${esc(p.userId)}"><span class="p41-av" style="background:${colOf(p.name)}">${esc(ini(p.name))}</span><span class="m-grow"><b>${esc(p.name)}</b><small>${esc(p.state === 'late' ? `${p.lateMinutes ?? ''} min forsinket` : `På vei · hjemme ca. ${hm(p.eta)}`)}</small></span><i class="p41-dot${p.state === 'late' ? ' late' : ''}"></i></button>`),
-    ...rec.map((x) => `<div class="p41-hor"><span class="p41-av" style="background:${colOf(x.name)}">${esc(ini(x.name))}</span><span class="m-grow"><b>${esc(x.text ?? `${x.name} · ${KNAME[x.kind] ?? ''}`)}</b><small>${esc(hm(x.createdAt))}</small></span><i class="p41-dot ok"></i></div>`)].join('');
-  return `<div class="p41-hjh"><span class="p41-glow" aria-hidden="true"></span><b class="pp-serif">Hjemlys</b></div>${act}
+  const fn = (n) => String(n ?? '').trim().split(/\s+/)[0] || 'Noen';
+  // Rekkefølge: forsinket først, så på vei, så sjekket inn. Prikk: rød = forsinket, grønn = i rute, gul = sjekket inn.
+  const late = others.filter((p) => p.state === 'late'), way = others.filter((p) => p.state !== 'late');
+  const row = (p, t, s, dot, tap) => `<${tap ? `button type="button" data-p40="hjwho" data-u="${esc(p.userId)}"` : 'div'} class="p41-hor"><span class="p41-av" style="background:${colOf(p.name)}">${esc(ini(p.name))}</span><span class="m-grow"><b>${esc(t)}</b><small>${esc(s)}</small></span><i class="p41-dot ${dot}"></i></${tap ? 'button' : 'div'}>`;
+  const rows = [...late.map((p) => row(p, `${fn(p.name)} er ${p.lateMinutes ? `${p.lateMinutes} min ` : ''}forsinket`, 'Trykk for siste posisjon og ring', 'late', true)),
+    ...way.map((p) => row(p, `${fn(p.name)} er på vei ${p.destination?.kind === 'place' && p.destination?.name ? `til ${p.destination.name}` : 'hjem'}`, `${p.destination?.kind === 'place' ? 'Fremme' : 'Hjemme'} ca. ${hm(p.eta)} · i rute`, 'ok', true)),
+    ...rec.map((x) => row(x, x.kind === 'checkin' ? `${fn(x.name)} sjekket inn` : x.text ?? `${fn(x.name)} · ${KNAME[x.kind] ?? ''}`, [x.place, hm(x.createdAt)].filter(Boolean).join(' · '), x.kind === 'checkin' ? 'chk' : 'ok', false))].join('');
+  return `<div class="p41-hjh"><span class="p41-glow" aria-hidden="true"></span><b class="pp-serif">Vel fremme</b></div>${mineP}
     <span class="p41-mut" style="padding:0 4px">Hva vil du si fra om?</span><div class="p41-hks">${tiles}</div>
-    <span class="p41-lab mut">AKTIVE I FAMILIEN</span><div class="p41-hos">${rows || '<span class="p41-mut" style="padding:12px 14px">Ingen har Hjemlys på akkurat nå.</span>'}</div>`;
+    <span class="p41-lab mut">AKTIVE I FAMILIEN</span><div class="p41-hos">${rows || '<span class="p41-mut" style="padding:12px 14px">Ingen har Vel fremme på akkurat nå.</span>'}</div>
+    ${HM.velSug?.() ?? ''}`;
 }
 function whoView() {
   const P = people(), q = HF.q.trim().toLowerCase(), sel = HF.sel;
@@ -190,7 +197,7 @@ function readyView() {
 function sentView() {
   const S = HF.sent, N = S?.notice ?? {};
   return `<div class="p41-hjh"><span class="p41-glow" aria-hidden="true"></span><b class="pp-serif">Sendt</b></div>
-    <div class="pp-card p41-sent"><span class="p41-lab">${esc(KNAME[HF.kind] ?? 'Hjemlys')} · ${esc(hm(N.createdAt ?? Date.now()))}</span><b>«${esc(N.text ?? S?.text ?? '')}»</b><span class="p41-mut">Til ${esc((N.recipients ?? []).map((r) => r.name).join(', ') || namesOf(HF.sel))}</span>
+    <div class="pp-card p41-sent"><span class="p41-lab">${esc(KNAME[HF.kind] ?? 'Vel fremme')} · ${esc(hm(N.createdAt ?? Date.now()))}</span><b>«${esc(N.text ?? S?.text ?? '')}»</b><span class="p41-mut">Til ${esc((N.recipients ?? []).map((r) => r.name).join(', ') || namesOf(HF.sel))}</span>
       ${(S?.links ?? []).map((l) => `<a class="p24-b sm" href="${esc(l.sms ?? `sms:${l.phone}?&body=${encodeURIComponent(`${N.text ?? ''} ${l.url}`)}`)}">SMS til ${esc(l.name)}</a>`).join('')}
       ${HF.kind === 'soon' && N.id ? `<div class="p24-two"><button type="button" class="p24-b" data-p41b="hplus">+ 15 min</button><button type="button" class="p24-b ink" data-p41b="hnow">Drar nå</button></div>` : ''}</div>
     <button type="button" class="p24-b ghost" data-p41b="hdone">Ferdig</button>`;

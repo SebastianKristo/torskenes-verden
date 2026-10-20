@@ -40,7 +40,7 @@ function view() {
   // Onboarding
   const ob = G.ob, name = (G.layout?.name || '').split(' ')[0];
   const dots = [0, 1, 2].map((i) => `<span class="${i <= ob ? 'on' : ''}"></span>`).join('');
-  const THEMES = [['lys', 'Papir · lys', 'Lyst papir, avisspalter og svart fanelinje.', 'linear-gradient(#5d7690 0 40%,#f3efe6 40%)'], ['mork', 'Papir · mørk', 'Kveldspapir med lys fanelinje.', 'linear-gradient(#2a3440 0 40%,#14130f 40%)'], ['klassisk', 'Klassisk', 'Liquid Glass på iPhone, Material You på Android.', 'linear-gradient(160deg,#3b6fd6,#6b3fb5)']];
+  const THEMES = [['lys', 'Papir · lys', 'Lyst papir, avisspalter og svart fanelinje.', 'linear-gradient(#5d7690 0 40%,#f3efe6 40%)'], ['mork', 'Papir · mørk', 'Kveldspapir med lys fanelinje.', 'linear-gradient(#2a3440 0 40%,#14130f 40%)']]; // prompt 42: Klassisk er slettet
   const BGS = [['cur', 'Nåværende'], ['oslo', 'Oslo'], ['weather', 'Vær nå'], ['planets', 'Planeter']];
   const PERMS = [['push', 'Varsler', 'Pakker, frister og kvitteringer'], ['cam', 'Kamera', 'For å skanne kvitteringer og oppskrifter'], ['bio', 'Lås med Face ID / fingeravtrykk', 'Låser appen når den har vært i bakgrunnen'], ['hap', 'Haptisk tilbakemelding', 'Små vibrasjoner ved trykk']];
   const pick = G.pick ?? 'lys', ph = G.photo ?? 'oslo';
@@ -126,7 +126,7 @@ async function loadThumbs() {
 
 async function finish() {
   const pick = G.pick ?? 'lys', photo = G.photo ?? 'oslo';
-  const patch = { onboarded: true, mobileDesign: pick === 'klassisk' ? 'klassisk' : 'papir', photo, bgType: photo, ...(pick !== 'klassisk' ? { paperMode: pick } : {}) };
+  const patch = { onboarded: true, mobileDesign: 'papir', photo, bgType: photo, paperMode: pick === 'mork' ? 'mork' : 'lys' };
   G.busy = true; mount();
   await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }).catch(() => {});
   // mobile.js tar valgene (design, bakgrunn, lås og haptikk) inn i sine lokale innstillinger og tegner på nytt.
@@ -141,7 +141,7 @@ function loadBgGuest() { try { G.bg = localStorage.getItem('fh_gate_bg') || null
 /** Onboarding i tre steg første gang etter innlogging. */
 export function showOnboarding(layout) {
   if (el) return;
-  G.step = 'onb'; G.ob = 0; G.layout = layout; G.pick = layout?.mobileDesign === 'klassisk' ? 'klassisk' : layout?.paperMode === 'mork' ? 'mork' : 'lys'; G.photo = layout?.photo && layout.photo !== 'custom' ? layout.photo : 'oslo';
+  G.step = 'onb'; G.ob = 0; G.layout = layout; G.pick = layout?.paperMode === 'mork' ? 'mork' : 'lys'; G.photo = layout?.photo && layout.photo !== 'custom' ? layout.photo : 'oslo';
   G.perm = { push: 'Notification' in window && Notification.permission === 'granted', cam: false, hap: true, bio: false };
   fetch('/api/me').then((r) => (r.ok ? r.json() : null)).then((me) => { if (me && G.step === 'onb') { G.layout = { ...(G.layout ?? {}), name: me.displayName || me.name || '' }; mount(); } }).catch(() => {});
   fetch(`/api/background?type=oslo&w=${Math.round(Math.min(1600, innerWidth * 2))}&dpr=1`).then((r) => (r.ok ? r.json().then((d) => ({ url: d?.image_url })) : fetch('/api/photo-window?kind=oslo').then((x) => x.json()))).then((r) => { if (r?.url) { G.bg = r.url; try { localStorage.setItem('fh_gate_bg', r.url); } catch {} mount(); } }).catch(() => {});

@@ -6,7 +6,7 @@ import { esc, hlApi, logoMatch } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import * as UPQ from './mobile-upq.js';
-import { badge, carOf } from './mobile-track.js';
+import { badge, carOf, carId, CAR_BUNDLED, logoMiss } from './mobile-track.js';
 
 /* ---------- Brukerskille: cacher på enheten ---------- */
 
@@ -83,10 +83,12 @@ function shopSrc(p) {
  * fargefyll med navnet (label), aldri et tilfeldig favicon. En streng er en eldre server sin logo-URL.
  */
 export function carBadge(carrier, size, lg) {
+  if (CAR_BUNDLED[carId(lg && typeof lg === 'object' ? lg.id || carrier : carrier)]) return badge(carrier, size, lg); // prompt 42: PostNord pakket med appen
   if (lg && typeof lg === 'object') {
     if (lg.url) return badge(carrier, size, lg.url);
-    const txt = size >= 30 ? lg.label || lg.name || lg.letter : lg.letter || String(lg.label ?? '').charAt(0);
-    const fs = size >= 30 ? Math.min(size * 0.3, (size * 1.5) / Math.max(3, String(txt).length)) : size * (String(txt).length > 2 ? 0.3 : 0.42);
+    logoMiss(lg.name || lg.label || carrier); // prompt 42: reserven er 1–3 bokstaver, aldri hele navnet
+    const l0 = String(lg.letter ?? '').trim(), txt = l0 && l0.length <= 3 ? l0 : String(lg.label || lg.name || '').split(/[\s-]+/).filter(Boolean).map((x) => x[0]).join('').slice(0, 3).toUpperCase();
+    const fs = size * (String(txt).length > 2 ? 0.3 : 0.42);
     return `<span class="trk-badge p22-cf" style="width:${size}px;height:${size}px;background:${esc(lg.color || carOf(carrier).c)};color:${esc(lg.fg || '#fff')};font-size:${fs.toFixed(1)}px;border-radius:${Math.round(size * 0.29)}px" aria-label="${esc(lg.label || lg.name || '')}">${esc(txt || '•')}</span>`;
   }
   return badge(carrier, size, lg || null);

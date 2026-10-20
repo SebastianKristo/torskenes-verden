@@ -178,11 +178,15 @@ function bibleSheet() {
   if (!BB.sheet || !bibleOn()) return '';
   const v = verse(per(), 0), c = v.context ?? {}, ctx = (a) => (Array.isArray(a) ? a : []).map((x) => (typeof x === 'string' ? x : `${x.text ?? ''}${x.ref ? ` (${x.ref})` : ''}`)).filter(Boolean);
   const bf = ctx(c.before), af = ctx(c.after);
-  return `<div class="p37-scrim" data-p37b="bsx"></div><div class="p37-sheet" role="dialog" aria-modal="true" aria-label="Dagens bibelvers"><span class="p37-grab"></span>
+  // Prompt 42 (claude-code-bibel-ark-knapp-alltid.md): topp + innhold som scroller + fast bunn med «Åpne Bibel-siden ›».
+  // Lange kontekstvers: maks 3 linjer før og etter med «Vis mer».
+  const more = !!BB.ctxAll, clip = (t) => `<p class="ctx${more ? '' : ' p42-cl3'}">${esc(t)}</p>`, long = [...bf, ...af].join(' ').length > 260;
+  return `<div class="p37-scrim" data-p37b="bsx"></div><div class="p37-sheet p42-bsh" role="dialog" aria-modal="true" aria-label="Dagens bibelvers"><span class="p37-grab"></span>
     <div class="p37-shh"><button type="button" class="p37-cx" data-p37b="bsx" aria-label="Lukk">${X_IC}</button><b>Dagens vers</b><button type="button" class="p37-ok" data-p37b="bsx">Ferdig</button></div>
-    <div class="p37-card p37-bvs">${bf.map((t) => `<p class="ctx">${esc(t)}</p>`).join('')}<p class="main">«${esc(v.text)}»</p>${af.map((t) => `<p class="ctx">${esc(t)}</p>`).join('')}<b>${esc(v.ref)}</b>${bf.length || af.length ? '' : '<small>Sammenhengen vises når serveren har hele kapitlet. Les mer på bibel.no.</small>'}</div>
-    <div class="p37-row2"><button type="button" class="p37-pill ink" data-p37b="bshare">Del</button><button type="button" class="p37-pill" data-p37b="bcopy">${BB.copied ? 'Kopiert' : 'Kopier'}</button><a class="p37-pill" href="#/bibel" data-p37b="bpage">Bibel-siden ›</a></div>
-    <span class="p37-hint">Tekst: Bibelen 1930 (fri bruk).</span></div>`;
+    <div class="p42-bsc"><div class="p37-card p37-bvs">${bf.length ? `<div class="p42-ctx">${bf.map(clip).join('')}</div>` : ''}<p class="main">«${esc(v.text)}»</p>${af.length ? `<div class="p42-ctx">${af.map(clip).join('')}</div>` : ''}<b>${esc(v.ref)}</b>${long && !more ? '<button type="button" class="p42-vm" data-p42="bvmore">Vis mer</button>' : ''}${bf.length || af.length ? '' : '<small>Sammenhengen vises når serveren har hele kapitlet. Les mer på bibel.no.</small>'}</div>
+    <div class="p37-row2"><button type="button" class="p37-pill ink" data-p37b="bshare">Del</button><button type="button" class="p37-pill" data-p37b="bcopy">${BB.copied ? 'Kopiert' : 'Kopier'}</button></div>
+    <span class="p37-hint">Tekst: Bibelen 1930 (fri bruk).</span></div>
+    <div class="p42-bsf"><a class="p42-bopen" href="#/bibel" data-p37b="bpage">Åpne Bibel-siden ›</a></div></div>`;
 }
 /** Innstillinger → Glimt → Bibelvers (bare for brukere med modulen). */
 export function bibleSettings() {
@@ -505,13 +509,13 @@ export async function bind37b(e, t) {
     return false;
   }
   const a = x.dataset.p37b;
-  if (a === 'bpage') { BB.sheet = false; return false; } // lenken åpner #/bibel
+  if (a === 'bpage') { BB.sheet = false; BB.ctxAll = false; haptic('tap'); return false; } // lenken åpner #/bibel
   e.preventDefault();
   const v = verse(per(), 0);
   switch (a) {
     case 'bcopy': { const vv = m.screen === 'brief' ? verse(new Date().getHours() >= 5 && new Date().getHours() < 17 ? 'm' : 'k') : v; try { await navigator.clipboard?.writeText(`«${vv.text}» ${vv.ref}`); } catch {} BB.copied = true; haptic('ok'); draw(); setTimeout(() => { BB.copied = false; draw(); }, 1600); return true; }
     case 'bnext': BB.off += 1; vib(6); draw(); return true;
-    case 'bsx': BB.sheet = false; draw(); return true;
+    case 'bsx': BB.sheet = false; BB.ctxAll = false; draw(); return true;
     case 'bshare': try { if (navigator.share) await navigator.share({ text: `«${v.text}» ${v.ref}` }); else { await navigator.clipboard?.writeText(`«${v.text}» ${v.ref}`); flash('Kopiert ✓'); } } catch {} return true;
     case 'bset': { const k = x.dataset.k, cur = BB.set?.[k] ?? (k !== 'notify'); BB.set = { ...(BB.set ?? { enabled: true }), [k]: !cur }; haptic('tab'); draw(); hlApi('/bible/settings', { method: 'PUT', json: { [k]: !cur } }).catch(() => {}); return true; }
     case 'bread': if (!days().has(todayIso())) await markRead(); return true;

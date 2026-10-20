@@ -10,7 +10,7 @@
 //   · Vær: rediger kort (wiggle + ark) og Glimt skiføre (claude-code-vaer-rediger-ski-julfigur.md)
 //   · Værspørsmål om uka går til modellen (wxComplex, claude-code-glimt-vaer-uke-ai.md)
 //   · AI-jobber: «… siden» oppdateres hvert minutt (claude-code-ai-jobber-klokkeslett.md)
-// Min reise, Hjemlys i Familie og Bursdager ligger i mobile-p41b.js.
+// Min reise, Vel fremme i Familie og Bursdager ligger i mobile-p41b.js.
 // Lastes med dynamisk import fra mobile.js (statiske importer herfra er trygge fordi resten allerede er evaluert).
 // Alle API-er (kontrakt 41, SERVER41) tåler 404: da brukes lokal reserve eller kortet skjules.
 import { esc, hlApi } from './core.js';
@@ -188,8 +188,9 @@ export async function huskeAsync(q, list, origin = 'huske', onDone = null) {
   haptic('tap'); pollJobs(); draw();
   return true;
 }
-function doneRow(n, srcId) {
-  HJ41.done = { n, srcId, at: Date.now() }; vib(12); haptic('ok');
+function doneRow(n, srcId, J = null, d = null) {
+  // Prompt 42 (claude-code-huskeliste-glimt-del-opp.md): «Glimt delte beskjeden i N oppgaver» med Angre (slår sammen igjen) og Endre.
+  HJ41.done = { n, srcId, at: Date.now(), q: J?.q ?? d?.text ?? '', jobId: J?.id ?? d?.jobId ?? null, ids: (d?.items ?? []).map((x) => x?.id).filter((x) => x != null), list: d?.list ?? null }; vib(12); haptic('ok');
   clearTimeout(HJ41.doneT); HJ41.doneT = setTimeout(() => { HJ41.done = null; if (m.screen === 'huske') draw(); }, 10_000);
 }
 async function jobFinished(J, d) {
@@ -197,7 +198,7 @@ async function jobFinished(J, d) {
   await reloadTasks(); HJ41.srcT = 0;
   const n = d?.count ?? d?.items?.length ?? 0;
   if (d?.state === 'failed') { flash(`Glimt fikk ikke delt opp beskjeden${d?.error ? `: ${d.error}` : ''}`, 'err'); J.onDone?.(-1); draw(); return; }
-  doneRow(n, d?.srcId ?? null); J.onDone?.(n); draw();
+  doneRow(n, d?.srcId ?? null, J, d); J.onDone?.(n); draw();
 }
 function pollJobs() {
   if (HJ41.poll) return;
@@ -215,7 +216,7 @@ function pollJobs() {
 export function huskeJobRows() {
   const run = HJ41.jobs.map((J) => `<div class="p41-hjob" role="status"><span class="p41-spk" aria-hidden="true">✦</span><span class="m-grow"><b>Glimt deler opp beskjeden …</b><small>«${esc(J.q.length > 90 ? `${J.q.slice(0, 88)}…` : J.q)}»</small></span></div>`).join('');
   const D = HJ41.done;
-  const dn = D ? `<div class="p41-hdone" role="status"><span class="p41-ok" aria-hidden="true">✓</span><span class="m-grow"><b>${D.n > 1 ? `Glimt lagde ${D.n} punkter i riktig rekkefølge` : D.n === 1 ? 'Glimt lagde 1 punkt' : 'Glimt er ferdig'}</b></span><button type="button" data-p41="hsee">Se</button><button type="button" class="x" data-p41="hdx" aria-label="Lukk">✕</button></div>` : '';
+  const dn = D ? `<div class="p41-hdone" role="status"><span class="p41-ok" aria-hidden="true">✓</span><span class="m-grow"><b>${D.n > 1 ? `Glimt delte beskjeden i ${D.n} oppgaver` : D.n === 1 ? 'Glimt lagde 1 oppgave' : 'Glimt er ferdig'}</b></span>${D.n > 1 && D.ids?.length ? '<button type="button" data-p41="hundo">Angre</button>' : ''}<button type="button" data-p41="hsee">${D.n > 1 ? 'Endre' : 'Se'}</button><button type="button" class="x" data-p41="hdx" aria-label="Lukk">✕</button></div>` : '';
   return run + dn;
 }
 /** Beskjedene punktene ble laget av: GET /api/tasks/glimt/sources, ellers gruppert fra origin på punktene. */
@@ -468,6 +469,18 @@ export async function bind41(e, t) {
     case 'fwx': return false; // vanlig lenke til Vær
     case 'hsee': e.preventDefault(); { const id = HJ41.done?.srcId; HJ41.done = null; const P17 = await import('./mobile-p17.js'); P17.HK.cur = 'glimt'; void id; if (location.hash !== '#/huske') location.hash = '#/huske'; draw(); } return true;
     case 'hdx': e.preventDefault(); HJ41.done = null; draw(); return true;
+    case 'hundo': { // prompt 42: én Angre som tilbakestiller alt – én oppgave med originalteksten
+      e.preventDefault(); const D = HJ41.done; if (!D) return true; HJ41.done = null; draw();
+      let ok = false;
+      if (D.jobId) { try { await hlApi(`/tasks/glimt/jobs/${encodeURIComponent(D.jobId)}/undo`, { method: 'POST', json: {} }); ok = true; } catch (err) { if (err.status !== 404 && err.status !== 405) { flash(err.message, 'err'); return true; } } }
+      if (!ok) {
+        const P37 = await import('./mobile-p37.js');
+        for (const id of D.ids) await P37.delTask(id);
+        const q = String(D.q ?? '').trim();
+        if (q) await P37.addTask({ title: q.length > 60 ? `${q.slice(0, 58).trim()}…` : q, notes: q, list: D.list ?? undefined }).catch(() => null);
+      }
+      await reloadTasks(); haptic('ok'); flash('Angret · beskjeden er én oppgave igjen'); draw(); return true;
+    }
     case 'gredo': e.preventDefault(); try { const r = await hlApi(`/tasks/glimt/sources/${encodeURIComponent(x.dataset.id)}/redo`, { method: 'POST', json: {} }); const id = r?.jobId ?? r?.job_id; if (id) { const s = (HJ41.srcs ?? []).find((y) => String(y.id) === String(x.dataset.id)); HJ41.jobs.push({ id: String(id), q: s?.text ?? '', t0: Date.now() }); pollJobs(); } haptic('tap'); } catch (err) { flash(err.message, 'err'); } draw(); return true;
     case 'gforget': e.preventDefault(); try { await hlApi(`/tasks/glimt/sources/${encodeURIComponent(x.dataset.id)}`, { method: 'DELETE' }); HJ41.srcs = (HJ41.srcs ?? []).filter((y) => String(y.id) !== String(x.dataset.id)); flash('Beskjeden er glemt · punktene blir'); } catch (err) { flash(err.message, 'err'); } draw(); return true;
     case 'srvedit': e.preventDefault(); SV.sheet = k; SV.f[k] = (SV.d ?? {})[k] ?? (k === 'external' ? location.origin : ''); SV.test = ''; haptic('tap'); draw(); setTimeout(() => document.getElementById('p41-srvin')?.focus(), 80); return true;

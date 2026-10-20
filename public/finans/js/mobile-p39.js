@@ -82,7 +82,7 @@ function swMove(e) {
   swTrack(e.clientX, e.clientY, e.pointerId);
   const g = SW.g; if (!g || e.pointerId !== g.pid) return;
   const ddx = e.clientX - g.x0, ddy = e.clientY - g.y0;
-  if (g.lock == null && (Math.abs(ddx) > 6 || Math.abs(ddy) > 6)) g.lock = Math.abs(ddx) > Math.abs(ddy) * 1.15 && ddx > 0 ? 'x' : 'y';
+  if (g.lock == null && (Math.abs(ddx) > 10 || Math.abs(ddy) > 10)) g.lock = Math.abs(ddx) > Math.abs(ddy) * 1.15 && ddx > 0 ? 'x' : 'y'; // prompt 42: lås etter 10 px (bibelvers-scroll-fiks)
   if (g.lock === 'y') { SW.g = null; return; }
   if (g.lock !== 'x') return;
   if (!g.cap) {

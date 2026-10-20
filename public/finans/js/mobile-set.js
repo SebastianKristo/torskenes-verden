@@ -86,8 +86,7 @@ export function settingsView(th, sub) {
 const PHOTO_N = { cur: 'Ingen', oslo: 'Oslo', weather: 'Vær', planets: 'Planeter', custom: 'Eget bilde' };
 function paperTop() {
   const md = pref('paperMode'), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
-  return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk'),
-    `<button class="opt-row" data-sact="design" data-v="klassisk"><span class="m-grow"><b style="font-weight:600">Klassisk (Liquid Glass / Material You)</b><br><span style="font-size:13px;opacity:.65">Bytt tilbake til det forrige mobildesignet</span></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:600">Bytt ›</span></button>`])}
+  return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk')])}
     ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Hjem', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
     <div class="sec">Ikonfarger</div>${iconThemeRow()}
 `;
@@ -112,9 +111,8 @@ const PAGE = {
     const md = pref('paperMode'), r = (k, n, s2) => `<button class="opt-row p17-row" data-sact="ppmode" data-v="${k}"><span class="m-grow p17-rt"><b>${n}</b><small>${s2}</small></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:700' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
     const st = { hl: 'homelab', hjem: 'fin-hjem', liste: 'fin-liste', budsjett: 'fin-budsjett' }[startScr()] ?? 'homelab';
     return `${grp('IDENTITET', [row('', 'Navn på appen', '', appName(), 'home', 'appnavn', 'data-p17="nm"'), row('', 'App-ikon', '', ICONS.find(([k]) => k === appIcon())?.[1] ?? '', 'img', 'appikon', 'data-p17="ic"')])}
-      ${grp('FANELINJE', [...(globalThis.P41 ? [globalThis.P41.scanRow(false)] : []), row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'), row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav')])}
-      <span class="pp-lab p17-gl" data-hl="theme">TEMA</span><div class="list p17-list">${[r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk'),
-        `<button class="opt-row p17-row" data-sact="design" data-v="klassisk"><span class="m-grow p17-rt"><b>Klassisk (Liquid Glass / Material You)</b><small>Bytt tilbake til det forrige mobildesignet</small></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:700">Bytt ›</span></button>`].join('')}</div>
+      ${grp('FANELINJE', [...(globalThis.P42 ? [globalThis.P42.nhRow(row)] : []) /* prompt 42: Hjem-knapp */, ...(globalThis.P41 ? [globalThis.P41.scanRow(false)] : []), row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'), row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav')])}
+      <span class="pp-lab p17-gl" data-hl="theme">TEMA</span><div class="list p17-list">${[r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk')].join('')}</div>
       <span class="pp-lab p17-gl">IKONFARGER</span>${iconThemeRow()}
       ${grp('BAKGRUNN', [row('#/set/bakgrunn', 'Bakgrunn på Hjem', 'Toppbilde, vær, planeter eller eget bilde', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', 'bakgrunn')])}
       ${globalThis.P41?.holidayGroup?.() ?? '' /* prompt 41: HØYTIDER · 17. mai */}
@@ -139,7 +137,7 @@ const PAGE = {
       ${G('', [nav('konto', 'Kontoer og brukere', '', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', me.totp ? '2FA på' : '', 'shield', '#34C759')])}
       ${G('', [P38.qrRow()])}${P38.oktGroup(G) /* prompt 38: ØKT */}`;
   },
-  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem, i Papir og klassisk. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er ekte Oslo-bilder fra lufta (Wikimedia Commons) som skifter gjennom døgnet. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
+  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er ekte Oslo-bilder fra lufta (Wikimedia Commons) som skifter gjennom døgnet. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
   fanelinje: () => `<div class="sec">Hovedlinja</div>${tabEditor()}<div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>`,
   konto: () => `${P36.kontoTop() /* prompt 36: profilbildet øverst, miniatyr i raden, Last opp nytt · Ta bilde · Fjern */}
     ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],
@@ -171,26 +169,8 @@ const PAGE = {
         btn('Lag token', 'mktok')])}`;
   },
 
-  look: (th) => {
-    // Papir: tema, profil, bakgrunn, fanelinje og ikonfarger (Utseende og fanelinje).
-    if (paper()) return paperTop() + P32.secNavSettings(); // Prompt 32: FANELINJE · ANDRE SIDER
-    const cur = (() => { try { return localStorage.getItem('fh_theme') || 'auto'; } catch { return 'auto'; } })();
-    const st = { hl: 'homelab', hjem: 'fin-hjem', liste: 'fin-liste', budsjett: 'fin-budsjett' }[startScr()] ?? 'homelab';
-    return `${G('Mobildesign', [chips('mdesign', 'Design', [['klassisk', 'Klassisk'], ['papir', 'Papir']], pref('mDesign'))],
-        '«Papir» er det nye felles designet for iPhone og Android: lyst eller mørkt papir, fotovindu øverst, Siste nytt og en ny fanelinje. «Klassisk» er Liquid Glass eller Material You. Valget lagres på kontoen.')}
-      ${paper() ? G('Papir', [chips('ppMode', 'Lys eller mørk', [['auto', 'Følg systemet'], ['lys', 'Lys'], ['mork', 'Mørk']], pref('paperMode'))]) : ''}
-      ${paper() ? '' : `${G('Designstil', [chips('theme', 'Utseende på denne enheten', [['auto', `Automatisk (${isIOS() ? 'iOS' : 'Android'})`], ['ios', 'iOS · Liquid Glass'], ['and', 'Android · Material 3']], cur)],
-        'Samme skjermer, data, kontoer og innstillinger i begge stilene. Valget gjelder bare denne enheten, og du bytter tilbake her.')}
-      ${th === 'ios' ? G('Bakgrunn', [tog('iosbg', 'Fargebakgrunn', 'Fargede lysflekker bak glassflatene', iosBg())]) : ''}
-      ${th === 'and' ? `${G('Farger', [chips('m3Seed', 'Fargetema', Object.entries(SEEDS).map(([k, [n]]) => [k, n]), pref('m3Seed'))], '«Følg systemet» bruker Material You-fargen fra telefonen når nettleseren gir tilgang til den (Android 12 og nyere), ellers oransje. Fargene regnes ut i OKLCH med faste toner per rolle. Grønt, rødt og Domener-rosa følger ikke aksentfargen.')}
-      ${G('Modus', [chips('m3Mode', 'Lys eller mørk', Object.entries(MODES), pref('m3Mode'))])}
-      ${G('Sider', [chips('pageColors', 'Farger på sidene', [['same', 'Samme overalt'], ['per', 'Egen farge per side']], pref('pageColors'))], '«Samme overalt» gir Domener, Mat, Finans og resten samme fargetema. «Egen farge per side» gir Domener sin rosa farge.')}` : ''}
-      `}${G('Oppstart', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Finans · Hjem'], ['fin-liste', 'Finans · Liste'], ['fin-budsjett', 'Finans · Budsjett']], st)],
-        st === 'homelab' ? 'Appen åpner på Homelab. Finans, Mat og Domener ligger bak profilbildet.' : 'Appen åpner i Finans, og hjem-knappen går til Finans. Homelab og de andre modulene ligger bak profilbildet.')}
-      ${G('Navigasjonslinje', [nav('nav', 'Endre navn, rekkefølge og skjul faner', '', 'list', '#5E5CE6')],
-        'Pila øverst til venstre («‹ Homelab» eller «‹ Finans») går alltid tilbake til startsiden.')}
-      ${G('Personvern', [tog('hideAmt', 'Skjul beløp til jeg trykker', 'Viser •••• i stedet for tall på Hjem', pref('hideAmt'))])}`;
-  },
+  // Prompt 42 (claude-code-slett-gamle-design.md): bare Papir. Klassisk-grenen (Liquid Glass / Material 3, fargetema, iOS-bakgrunn) er slettet.
+  look: () => paperTop() + P32.secNavSettings(), // Prompt 32: FANELINJE · ANDRE SIDER
 
   nav: (th) => {
     const L = LAY();
@@ -334,7 +314,7 @@ export async function settingsBind(e, t) {
   }
   if ((x = d('[data-schip]'))) {
     const id = x.dataset.schip, v = x.dataset.v;
-    if (id === 'mdesign') { saveDesign({ mobileDesign: v }, false); }
+    if (id === 'mdesign') { saveDesign({ mobileDesign: 'papir' }, false); } // prompt 42: Klassisk er slettet
     else if (id === 'ppMode') { saveDesign({ paperMode: v }, false); }
     else if (id === 'theme') { try { if (v === 'auto') localStorage.removeItem('fh_theme'); else localStorage.setItem('fh_theme', v); } catch {} }
     else if (id === 'startL') { saveLayout({ start: v }, false); setPref('start', { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-budsjett': 'budsjett' }[v]); }

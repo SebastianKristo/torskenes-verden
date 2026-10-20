@@ -1,4 +1,4 @@
-// Prompt 40 (PWA40) · Hjemlys – hele flyten (tillegg i kontrakt 40: 1a + 1b + 1c som deler av samme funksjon).
+// Prompt 40 (PWA40) · Vel fremme – hele flyten (tillegg i kontrakt 40: 1a + 1b + 1c som deler av samme funksjon).
 // Fasit: design_handoff_homelab/prompts/prompt-40-pakke/design/Hjemme trygt Varianter.dc.html, spec claude-code-hjemlys.md.
 //   1a «Rolig og papir» (dagtid): kart med rute hjem, «Fra Majorstuen · 2,1 km», reisemåter med ankomsttid, mottakere,
 //      «Start · hjemme ca. 23:38». Aktiv økt: stor tid, fremdrift, Følger med / Deler nå / Hvis du er sen, + 10 min, Avslutt.
@@ -110,27 +110,42 @@ function sugCard() {
   const S0 = HJ.sug; if (!S0 || HJ.sugOff || mine()) return '';
   const R = Array.isArray(S0.recipients) && S0.recipients.length ? S0.recipients.map((r) => (typeof r === 'object' ? r : { name: r })) : others();
   const txt = S0.text || `${S0.reason ? `${S0.reason.replace(/[.·]\s*$/, '')}. ` : ''}Skal jeg si fra til ${names(R)} når du er hjemme?`;
-  return `<div class="h40-sug"><span class="h40-gm">✦</span><span class="m-grow"><b>Glimt</b><span>${esc(txt)}</span>${S0.eta ? `<small>hjemme ca. ${esc(hm(S0.eta))}</small>` : ''}</span>
+  const sub = [S0.route ?? S0.leg ?? null, S0.eta ? `hjemme ca. ${hm(S0.eta)}` : null].filter(Boolean).join(' · '); // prompt 42: rute + ETA
+  return `<div class="h40-sug"><span class="h40-gm">✦</span><span class="m-grow"><b>Glimt <em class="p42-now">nå</em></b><span>${esc(txt)}</span>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
     <div class="h40-sugb"><button type="button" class="pri" data-p40="hjsugyes">Ja, start</button><button type="button" data-p40="hjsugno">Ikke nå</button></div></div>`;
 }
-/** Familie: Hjemlys i familien (status, egen økt, Glimt-forslag, logg). */
+/* Prompt 42 (claude-code-vel-fremme.md, -familie-fjern-hjemlys-kort.md): byggeklosser for Vel fremme-fanen og statuslinja på Kart. */
+export const velMine = () => { hjLoad(); const M = mine(); return M ? minePill(M) : ''; };
+export const velSug = () => { hjLoad(); return sugCard(); };
+/** Kart: liten statuslinje bare når en økt pågår («Vel fremme på · Rune er på vei · 12 min»). Ingen start-knapp. */
+export function velStatus() {
+  hjLoad();
+  if (HJ.miss) return '';
+  const M = mine(), H = activeOthers();
+  if (!M && !H.length) return '';
+  const left = (t) => (t ? Math.max(0, Math.round((new Date(t) - Date.now()) / 60e3)) : null);
+  const p = H.find((x) => x.state === 'late') ?? H[0];
+  const txt = M ? `Du er på vei${left(M.eta) != null ? ` · ${left(M.eta)} min` : ''}` : p.state === 'late' ? `${first(p.name)} er ${p.lateMinutes ? `${p.lateMinutes} min ` : ''}forsinket` : `${first(p.name)} er på vei${left(p.eta) != null ? ` · ${left(p.eta)} min` : ''}`;
+  return `<a href="#/fam" class="p42-vst${p?.state === 'late' && !M ? ' late' : ''}" data-p17="ftab" data-k="hjemlys">${glow(18)}<span class="m-grow"><b>Vel fremme på</b> · ${esc(txt)}${H.length > 1 ? ` · +${H.length - 1}` : ''}</span><span aria-hidden="true">›</span></a>`;
+}
+/** Familie: Vel fremme i familien (status, egen økt, Glimt-forslag, logg). */
 export function famCard() {
   hjLoad();
   if (HJ.miss) return '';
   const M = mine(), H = activeOthers();
   const logs = (HJ.d?.log ?? []).slice(0, 3);
-  return `<div class="f22-card h40-card"><div class="h40-h">${glow()}<span class="m-grow"><b>Hjemlys</b><span>Et lite lys som står på til du er hjemme.</span></span>${M ? '' : '<button type="button" class="h40-start" data-p40="hjstart">Start</button>'}</div>
+  return `<div class="f22-card h40-card"><div class="h40-h">${glow()}<span class="m-grow"><b>Vel fremme</b><span>Et lite lys som står på til du er hjemme.</span></span>${M ? '' : '<button type="button" class="h40-start" data-p40="hjstart">Start</button>'}</div>
     ${M ? minePill(M) : ''}${sugCard()}
-    ${H.length ? `<span class="h40-lab">HJEMLYS I FAMILIEN</span><div class="h40-fam">${H.map((p) => `<button type="button" data-p40="hjwho" data-u="${esc(p.userId)}">${av(p)}<span class="m-grow"><b>${esc(first(p.name))}</b><span class="${p.state === 'late' ? 'red' : ''}">${esc(stateLine(p))}</span></span>${dot(p.state)}</button>`).join('')}</div>` : '<span class="h40-note">Ingen i husstanden har Hjemlys på nå.</span>'}
+    ${H.length ? `<span class="h40-lab">VEL FREMME I FAMILIEN</span><div class="h40-fam">${H.map((p) => `<button type="button" data-p40="hjwho" data-u="${esc(p.userId)}">${av(p)}<span class="m-grow"><b>${esc(first(p.name))}</b><span class="${p.state === 'late' ? 'red' : ''}">${esc(stateLine(p))}</span></span>${dot(p.state)}</button>`).join('')}</div>` : '<span class="h40-note">Ingen i husstanden har Vel fremme på nå.</span>'}
     ${logs.length ? `<div class="h40-log">${logs.map((l) => `<span>${esc(hm(l.at))} · ${esc(l.text)}</span>`).join('')}</div>` : ''}
     <span class="h40-note">Ingenting deles før du er sen. Da får husstanden siste posisjon, ruten, batteri og dekning.</span></div>`;
 }
 /** Hjem-widgeten (h14): aktiv økt, husstanden, «Start for meg». */
 export function homeCard(editing = false) {
   hjLoad();
-  if (HJ.miss) return editing ? `<div class="pp-card h40-card"><div class="h40-h">${glow()}<span class="m-grow"><b>Hjemlys</b><span>Krever en nyere server</span></span></div></div>` : '';
+  if (HJ.miss) return editing ? `<div class="pp-card h40-card"><div class="h40-h">${glow()}<span class="m-grow"><b>Vel fremme</b><span>Krever en nyere server</span></span></div></div>` : '';
   const M = mine(), H = others();
-  return `<div class="pp-card h40-card"><div class="h40-h">${glow(30)}<span class="m-grow"><b class="h40-k">HJEMLYS</b></span></div>
+  return `<div class="pp-card h40-card"><div class="h40-h">${glow(30)}<span class="m-grow"><b class="h40-k">VEL FREMME</b></span></div>
     ${M ? minePill(M) : sugCard()}
     ${H.length ? `<div class="h40-fam sm">${H.slice(0, 4).map((p) => `<button type="button" data-p40="hjwho" data-u="${esc(p.userId)}">${av(p, 26)}<span class="m-grow"><b>${esc(first(p.name))}</b></span><span class="${p.state === 'late' ? 'red' : ''}">${esc(p.state && p.state !== 'ended' ? stateLine(p) : 'hjemme')}</span></button>`).join('')}</div>` : ''}
     ${M ? '' : '<button type="button" class="h40-startw" data-p40="hjstart">Start for meg</button>'}</div>`;
@@ -141,7 +156,7 @@ function startView(dk) {
   const R = HJ.route, O = opts(), to = R?.to?.name ?? R?.home?.name ?? 'Hjem', from = R?.from;
   const rc = others(), eta = etaDate();
   const share = [['Posisjon'], ['Rute'], ['Batteri og dekning'], ['Siste opplåsing'], ['Hvem du var med']];
-  return `<div class="h40-top"><button type="button" class="h40-back" data-p40="hjx">Avbryt</button><b>Hjemlys</b><span class="h40-sp"></span></div>
+  return `<div class="h40-top"><button type="button" class="h40-back" data-p40="hjx">Avbryt</button><b>Vel fremme</b><span class="h40-sp"></span></div>
     ${dk ? '' : mapSvg(false)}
     <span class="h40-lab">${dk ? `HJEM: ${esc(to.toUpperCase())}${from?.km != null ? ` · ${esc(String(from.km).replace('.', ','))} KM` : ''}` : 'SI FRA NÅR JEG ER HJEMME'}</span>
     ${dk ? '' : `<div class="h40-dest"><b>${esc(to)}</b><span>${from?.name ? `Fra ${esc(from.name)}` : 'Fra der du er'}${from?.km != null ? ` · ${esc(String(from.km).replace('.', ','))} km` : ''}</span></div>`}
@@ -165,7 +180,7 @@ function activeView(M, dk) {
   const pr = Math.max(0.04, Math.min(1, M.progress ?? (Date.now() - new Date(M.startedAt ?? Date.now())) / Math.max(1, end - new Date(M.startedAt ?? Date.now()))));
   const leg = M.leg ? (typeof M.leg === 'string' ? M.leg : M.leg.label ?? '') : '';
   const L = [...(HJ.log[M.id] ?? []), ...HJ.chat.filter((c) => c.sid === M.id)].sort((a, b) => new Date(a.at) - new Date(b.at));
-  const head = `<div class="h40-top"><button type="button" class="h40-back" data-p40="hjx">‹ ${m.screen === 'fam' ? 'Familie' : 'Tilbake'}</button><b>Hjemlys</b>${X('data-p40="hjx"', ' h40-x')}</div>`;
+  const head = `<div class="h40-top"><button type="button" class="h40-back" data-p40="hjx">‹ ${m.screen === 'fam' ? 'Familie' : 'Tilbake'}</button><b>Vel fremme</b>${X('data-p40="hjx"', ' h40-x')}</div>`;
   const btns = late ? `<button type="button" class="h40-big" data-p40="hjok">Alt OK</button><button type="button" class="h40-big alt" data-p40="hjplus" data-v="15">+ 15 min</button>`
     : `<button type="button" class="h40-big alt" data-p40="hjplus" data-v="10">+ 10 min</button><button type="button" class="h40-big" data-p40="hjhome">Jeg er hjemme</button>`;
   const body = dk ? `${ring(M)}<span class="h40-leg">${esc(leg || (late ? 'Familien har fått beskjed med posisjonen din' : 'I rute'))}</span><span class="h40-fol">${esc(names(recips()))} følger med</span>`
@@ -175,7 +190,7 @@ function activeView(M, dk) {
       <div class="h40-rows"><div><span>Følger med</span><b>${esc(names(recips()))}</b></div><div><span>Deler nå</span><b>${late ? 'Posisjon, rute, batteri' : 'Ingenting'}</b></div><div><span>Hvis du er sen</span><b>Posisjon, rute, batteri +2</b></div></div></div>`;
   const chat = `<div class="h40-chat"><span class="h40-lab">✦ GLIMT FØLGER MED</span>${L.length ? L.slice(-8).map((c) => `<div class="${c.me ? 'me' : ''}">${esc(c.text)}<small>${esc(hm(c.at))}</small></div>`).join('') : `<div>Startet ${esc(hm(M.startedAt ?? Date.now()))}. ${esc(names(recips()))} får beskjed når du er hjemme, ca. ${esc(hm(M.eta))}.</div>`}
     <form class="h40-cf" data-p40form="hjchat"><input id="h40-q" data-p40in="hjq" value="${esc(HJ.q)}" placeholder="Skriv til Glimt …" autocomplete="off" enterkeyhint="send" aria-label="Skriv til Glimt"><button type="submit" aria-label="Send">↑</button></form></div>`;
-  return `${head}${body}<div class="h40-btns">${btns}</div>${dk ? '' : ''}${chat}<button type="button" class="h40-end" data-p40="hjend">Avslutt Hjemlys</button>
+  return `${head}${body}<div class="h40-btns">${btns}</div>${dk ? '' : ''}${chat}<button type="button" class="h40-end" data-p40="hjend">Avslutt Vel fremme</button>
     <span class="h40-note">Avsluttes av seg selv når telefonen kobler til hjemme-Wi-Fi eller er innenfor 60 m av hjemmet.</span>`;
 }
 /** Mottaker: «X er ikke hjemme ennå» (1a) / rød alarmskjerm (1c). */
@@ -195,14 +210,14 @@ function whoView(p, alarm) {
 export function layer() {
   if (HJ.alarm) {
     const p = others().find((x) => String(x.userId) === String(HJ.alarm.userId)) ?? HJ.alarm;
-    return `<div class="h40-v alarm" role="alertdialog" aria-modal="true" aria-label="Hjemlys · forsinket"><div class="h40-in">${whoView(p, true)}</div></div>`;
+    return `<div class="h40-v alarm" role="alertdialog" aria-modal="true" aria-label="Vel fremme · forsinket"><div class="h40-in">${whoView(p, true)}</div></div>`;
   }
   if (!HJ.open) return '';
   const M = mine(), dk = night();
   let inner;
   if (HJ.view === 'who') { const p = others().find((x) => String(x.userId) === String(HJ.who)); inner = p ? whoView(p, false) : startView(dk); }
   else inner = M ? activeView(M, dk) : startView(dk);
-  return `<div class="h40-v${dk ? ' dk' : ''}" role="dialog" aria-modal="true" aria-label="Hjemlys"><div class="h40-in">${inner}</div></div>`;
+  return `<div class="h40-v${dk ? ' dk' : ''}" role="dialog" aria-modal="true" aria-label="Vel fremme"><div class="h40-in">${inner}</div></div>`;
 }
 
 /* ---------- Handlinger ---------- */
@@ -228,7 +243,7 @@ async function start() {
     HJ.d = { ...(HJ.d ?? {}), mine: r?.session ?? r }; haptic('ok'); vib([8, 30, 12]);
     const M = mine(); if (M?.id) { glimtSay(M.id, `Startet ${hm(Date.now())}. ${names(recips())} får beskjed når du er hjemme, ca. ${hm(M.eta)}.`); logLoad(M.id).then(draw); }
     HJ.view = 'start'; HJ.sugOff = true;
-  } catch (e) { flash(e.status === 404 ? 'Hjemlys krever en nyere server' : e.message, 'err'); }
+  } catch (e) { flash(e.status === 404 ? 'Vel fremme krever en nyere server' : e.message, 'err'); }
   await hjLoad(true); watch(true);
 }
 /** 1b: korte svar fra Glimt i økta (lokalt; serveren logger hendelsene). */
@@ -252,7 +267,7 @@ function tickOn() {
   }, 1000);
   if (!on && HJ.tick) { clearInterval(HJ.tick); HJ.tick = null; }
 }
-/** Posisjon mens økta er aktiv (maks hvert 30. s / 50 m). Starter bare etter at brukeren selv har startet Hjemlys. */
+/** Posisjon mens økta er aktiv (maks hvert 30. s / 50 m). Starter bare etter at brukeren selv har startet Vel fremme. */
 function watch(user = false) {
   const M = mine(), on = !!(M && (M.state === 'onTheWay' || M.state === 'late'));
   if (!on) { if (HJ.watch != null) { try { navigator.geolocation.clearWatch(HJ.watch); } catch {} HJ.watch = null; } return; }

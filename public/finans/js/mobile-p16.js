@@ -102,7 +102,7 @@ function tbAdd() {
 /** Selve redigeringen (brukes både i arket og under Innstillinger → Fanelinje). */
 export function tabEditor() {
   // Prompt 25: STIL · FORHÅNDSVISNING over «Legg til» (samme valg som Innstillinger → Fanelinje-stil).
-  return `<div class="pp-card p16-tbe">${tbRows()}</div>${P25.styleSection(mainTabs('hl'))}${globalThis.P41?.scanRow?.(true) ?? '' /* prompt 41: Skanneknapp på Hjem */}
+  return `<div class="pp-card p16-tbe">${tbRows()}</div>${P25.styleSection(mainTabs('hl'))}${globalThis.P42?.nhSection?.() ?? '' /* prompt 42: HJEM-KNAPP · FORHÅNDSVISNING */}${globalThis.P41?.scanRow?.(true) ?? '' /* prompt 41: Skanneknapp på Hjem */}
     <span class="pp-lab">LEGG TIL FANE</span>${tbAdd()}
     <div class="pp-mut">Trykk på ikonet for å bytte det. Et tomt navn gir standardnavnet. Hjem vises bare på Hjem, og Mer står alltid sist.</div>
     <button class="pp-btn sm" data-p16="tbreset" style="align-self:flex-start">Tilbakestill fanelinja</button>`;

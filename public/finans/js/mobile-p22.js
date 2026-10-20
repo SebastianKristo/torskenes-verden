@@ -12,19 +12,38 @@ import { paper, paperDark } from './mobile-paper.js';
 
 /* ---------- Sone-ikoner og farger (fasit: Familie.dc.html) ---------- */
 
-export const ZIC = {
+export const ZIC = { // prompt 42: 50 ikoner som i Familie.dc.html
   home: ['Hjem', 'M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6'], work: ['Jobb', 'M4 8h16v11H4zM9 8V5h6v3M4 13h16'], school: ['Skole', 'M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5'],
   heart: ['Familie', 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z'], cabin: ['Hytte', 'M3 20h18M5 20V11l7-6 7 6v9M10 20v-5h4v5'], gym: ['Trening', 'M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12'],
-  shop: ['Butikk', 'M5 8h14l-1 12H6zM9 8a3 3 0 0 1 6 0'], ball: ['Sport', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3.5 9h17M3.5 15h17M12 3c-3 3-3 15 0 18M12 3c3 3 3 15 0 18'],
-  coffee: ['Kafé', 'M5 9h11v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5zM16 10h2a2 2 0 0 1 0 4h-2M8 3v3M11 3v3'], tree: ['Natur', 'M12 3l6 9h-4l4 6H6l4-6H6zM12 18v3'], plane: ['Reise', 'M2 13l20-8-6 16-3-7-7-1z'],
-  star: ['Favoritt', 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z'], pin: ['Sted', 'M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
+  shop: ['Butikk', 'M5 8h14l-1 12H6zM9 8a3 3 0 0 1 6 0'], ball: ['Sport', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3.5 9h17M3.5 15h17M12 3c-3 3-3 15 0 18M12 3c3 3 3 15 0 18'], coffee: ['Kafé', 'M5 9h11v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5zM16 10h2a2 2 0 0 1 0 4h-2M8 3v3M11 3v3'],
+  tree: ['Natur', 'M12 3l6 9h-4l4 6H6l4-6H6zM12 18v3'], plane: ['Reise', 'M2 13l20-8-6 16-3-7-7-1z'], star: ['Favoritt', 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z'],
+  pin: ['Sted', 'M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'], car: ['Bil', 'M5 16V11l2-5h10l2 5v5M3 16h18v3H3zM7 19v1M17 19v1M5 11h14'], bus: ['Buss', 'M5 4h14v13H5zM5 11h14M8 20v-3M16 20v-3M8 14h.01M16 14h.01'],
+  train: ['Tog', 'M6 4h12v11H6zM6 10h12M8 19l-2 2M16 19l2 2M9 15h.01M15 15h.01'], bike: ['Sykkel', 'M6 17a3 3 0 1 0 0-.01M18 17a3 3 0 1 0 0-.01M6 17l4-8h5l3 8M10 9l-1-3H7'], boat: ['Båt', 'M3 17l2 3h14l2-3zM6 17V10l6-5 6 5v7M12 5v12'],
+  hospital: ['Sykehus', 'M4 4h16v16H4zM12 8v8M8 12h8'], doctor: ['Lege', 'M9 3v6a3 3 0 0 0 6 0V3M12 12v3a4 4 0 0 0 8 0v-1M20 13a1 1 0 1 0 0-.01'], pill: ['Apotek', 'M8 4h8a4 4 0 0 1 0 8H8a4 4 0 0 1 0-8zM12 4v8M7 16h10M9 20h6'],
+  church: ['Kirke', 'M12 2v4M10 4h4M6 21V11l6-4 6 4v10M10 21v-5h4v5'], book: ['Bibliotek', 'M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-7a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h7z'], music: ['Musikk', 'M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM21 16a3 3 0 1 1-6 0 3 3 0 0 1 6 0z'],
+  film: ['Kino', 'M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4'], food: ['Restaurant', 'M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M17 3c-2 2-2 6 0 8v10'], cart: ['Matbutikk', 'M3 4h2l2 11h11l2-8H6M9 20a1 1 0 1 0 0-.01M17 20a1 1 0 1 0 0-.01'],
+  fuel: ['Bensin', 'M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M6 9h6M14 10h2a2 2 0 0 1 2 2v5a1 1 0 0 0 2 0V8l-3-3'], bolt: ['Lading', 'M13 2L4 14h7l-1 8 9-12h-7z'], paw: ['Dyr', 'M12 14c-3 0-5 2.5-5 4.5S9 21 12 21s5-.5 5-2.5S15 14 12 14zM6 10a2 2 0 1 0 0-.01M18 10a2 2 0 1 0 0-.01M9 6a2 2 0 1 0 0-.01M15 6a2 2 0 1 0 0-.01'],
+  baby: ['Barnehage', 'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM6 21v-3a6 6 0 0 1 12 0v3M10 7h.01M14 7h.01'], swim: ['Svømmehall', 'M2 18c2 0 2-1.5 4-1.5S8 18 10 18s2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M6 14l4-6 4 3 3-4M17 5a1.5 1.5 0 1 0 0-.01'], ski: ['Ski', 'M4 20L20 4M8 20L20 8M14 4a2 2 0 1 0 0-.01'],
+  tent: ['Camping', 'M3 20L12 4l9 16zM12 4v16M9 20l3-6 3 6'], mountain: ['Fjell', 'M3 20l6-11 4 6 2-3 6 8zM9 9l2 4'], beach: ['Strand', 'M3 20h18M12 20c0-6 2-10 7-12M12 20c0-6-2-10-7-12M12 8c-3-3-6-3-8-2M12 8c3-3 6-3 8-2'],
+  sun: ['Sol', 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4'], gift: ['Gave', 'M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7c-2-4-6-3-5 0M12 7c2-4 6-3 5 0'], cake: ['Bursdag', 'M4 21h16v-8H4zM4 16c2 1 4 1 6 0s4-1 6 0 4 1 4 0M12 9v4M12 5a1 1 0 0 0 0 2'],
+  game: ['Spill', 'M6 9h12a4 4 0 0 1 0 8l-2-2H8l-2 2a4 4 0 0 1 0-8zM8 11v3M6.5 12.5h3M15 12h.01M17 14h.01'], laptop: ['Kontor', 'M4 5h16v11H4zM2 19h20'], tool: ['Verksted', 'M14 7a4 4 0 0 0-5 5l-6 6 3 3 6-6a4 4 0 0 0 5-5l-2 2-2-1-1-2z'],
+  key: ['Utleie', 'M15 9a4 4 0 1 0-4 4l-8 8M9 17l2 2M12 14l2 2'], bed: ['Hotell', 'M3 18V7M3 13h18v5M21 13a3 3 0 0 0-3-3h-7v3M7 11a1.5 1.5 0 1 0 0-.01'], flag: ['Mål', 'M5 21V4M5 4h11l-2 4 2 4H5'],
+  bell: ['Varsel', 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0'], camera: ['Foto', 'M4 8h4l2-3h4l2 3h4v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z'], anchor: ['Havn', 'M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 8v13M5 13a7 7 0 0 0 14 0M9 11h6'],
+  leaf: ['Hage', 'M5 19C5 10 10 5 20 4c-1 10-6 15-15 15zM5 19l7-7'],
 };
 export const ZPAL = ['#b23a2a', '#d9662a', '#d9a400', '#2f7a4f', '#2e6f75', '#2b5d8a', '#5b4bb5', '#7a3b6b', '#c2417a', '#5c5850'];
 const ZDEF = ['#b23a2a', '#2b5d8a', '#2f6b45', '#a8661a', '#7a3b6b'];
 // Eldre server uten icon-kolonne: ikonet huskes på enheten (fam_zicons).
 const ZLOC = (() => { try { return JSON.parse(localStorage.getItem('fam_zicons') || '{}') || {}; } catch { return {}; } })();
 const zLocal = (id, k) => { ZLOC[id] = k; try { localStorage.setItem('fam_zicons', JSON.stringify(ZLOC)); } catch {} };
-export const zIcon = (z) => (ZIC[z?.icon] ? z.icon : ZIC[ZLOC[z?.id]] ? ZLOC[z.id] : { hjem: 'home', jobb: 'work', skole: 'school', mormor: 'heart', hytta: 'cabin', hytte: 'cabin' }[String(z?.name ?? '').trim().toLowerCase()] || 'pin');
+// Prompt 42: ikoner fra Lucide/Tabler (Iconify) lagres som 'ify:<sett>:<navn>' + path-data (icp), så de vises uten nett.
+const IFY = (() => { try { return JSON.parse(localStorage.getItem('fam_zicons42') || '{}') || {}; } catch { return {}; } })();
+export const ifyKeep = (k, p) => { if (!/^ify:/.test(k) || !p) return; IFY[k] = p; try { localStorage.setItem('fam_zicons42', JSON.stringify(IFY)); } catch {} };
+const okIc = (k) => !!(k && (ZIC[k] || IFY[k]));
+/** Path-data for et ikon (innebygd eller Iconify). */
+export const icPath = (k, icp) => ZIC[k]?.[1] ?? IFY[k] ?? icp ?? ZIC.pin[1];
+export const zPath = (z) => (z?.icp && /^ify:/.test(String(z.icon ?? '')) ? z.icp : icPath(zIcon(z), z?.icp));
+export const zIcon = (z) => (okIc(z?.icon) ? z.icon : okIc(ZLOC[z?.id]) ? ZLOC[z.id] : { hjem: 'home', jobb: 'work', skole: 'school', mormor: 'heart', hytta: 'cabin', hytte: 'cabin' }[String(z?.name ?? '').trim().toLowerCase()] || 'pin');
 const svg = (p, s, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${p}"/></svg>`;
 const hex = (c) => (/^#[0-9a-f]{6}$/i.test(String(c ?? '')) ? String(c).toLowerCase() : '#b23a2a');
 const rTxt = (r) => (r >= 1000 ? `${(r / 1000).toFixed(1).replace('.', ',')} km` : `${Math.round(r)} m`);
@@ -135,7 +154,7 @@ function repaint() {
   for (const z of zones) {
     const c = hex(z.color);
     Lf.circle([z.lat, z.lon], { radius: z.radius, color: c, weight: 2, fillColor: c, fillOpacity: 0x22 / 255, dashArray: z.draft ? '6 5' : null, interactive: false }).addTo(layer);
-    Lf.marker([z.lat, z.lon], { interactive: false, keyboard: false, icon: Lf.divIcon({ className: 'f22-zi', iconSize: [0, 0], html: `<span class="f22-zic" style="background:${c}">${svg(ZIC[zIcon(z)][1], 15, 2.2)}</span>` }) }).addTo(layer);
+    Lf.marker([z.lat, z.lon], { interactive: false, keyboard: false, icon: Lf.divIcon({ className: 'f22-zi', iconSize: [0, 0], html: `<span class="f22-zic" style="background:${c}">${svg(zPath(z), 15, 2.2)}</span>` }) }).addTo(layer);
     Lf.marker([z.lat - z.radius / 111320, z.lon], { interactive: false, keyboard: false, icon: Lf.divIcon({ className: 'f22-zi', iconSize: [0, 0], html: `<span class="f22-zl">${esc(z.name || 'Ny sone')}</span>` }) }).addTo(layer);
   }
   for (const p of sharers()) {
@@ -248,8 +267,51 @@ function shareCard() {
   return `<div class="f22-card f22-share"><b class="f22-h">Min deling</b>${rows.map(([a, k, n, s, v, c], i) => `<button class="f22-sr" data-p16="${a}"${k ? ` data-k="${k}"` : ''}${i ? '' : ' style="border-top:0"'}><span class="m-grow" style="min-width:0"><b>${n}</b><span class="f22-mut">${esc(s)}</span></span><span class="f22-v" style="color:${c}">${esc(v)}</span></button>`).join('')}
     <span class="f22-note">Deling er av som standard. Hver person kan pause eller slå av når som helst, og de andre ser det.</span></div>`;
 }
+// Prompt 42 (claude-code-familie-soner-uten-kart.md): søk i ikoner, 18 vanlige + «Vis alle», og treff fra Lucide og Tabler
+// via serverens Iconify-proxy (/api/icons/search, /api/icons/:sett/:navn.svg). Norske ord oversettes først.
+export const ICS = { q: '', all: false, res: [], busy: false, qe: '', n: 0, t: null };
+const NO_EN = { 'båt': 'boat', 'seilbåt': 'sailboat', kirke: 'church', hus: 'house', hjem: 'home', hytte: 'cabin', skole: 'school', jobb: 'briefcase', bil: 'car', sykkel: 'bike', fotball: 'ball', trening: 'barbell', butikk: 'shopping', mat: 'food', 'kafé': 'coffee', kafe: 'coffee', kaffe: 'coffee', tog: 'train', buss: 'bus', fly: 'plane', flyplass: 'plane', strand: 'beach', fjell: 'mountain', tre: 'tree', skog: 'trees', sykehus: 'hospital', lege: 'stethoscope', apotek: 'pill', bok: 'book', bibliotek: 'library', musikk: 'music', kino: 'movie', spill: 'gamepad', hund: 'dog', katt: 'cat', hest: 'horse', fisk: 'fish', barnehage: 'baby', 'svømming': 'swim', basseng: 'pool', telt: 'tent', gave: 'gift', kake: 'cake', bursdag: 'cake', stjerne: 'star', hjerte: 'heart', sol: 'sun', 'snø': 'snowflake', vann: 'droplet', havn: 'anchor', verksted: 'tool', kontor: 'building', hotell: 'bed', 'øl': 'beer', vin: 'wine', bensin: 'gas', lading: 'charging', lekeplass: 'playground', venner: 'users', trikk: 'tram', 't-bane': 'train', stasjon: 'train', fjord: 'waves', 'sjø': 'waves', hage: 'plant', blomst: 'flower', dyrlege: 'paw', 'frisør': 'scissors', tannlege: 'tooth', bank: 'bank', post: 'mail', pakke: 'package', idrett: 'trophy', scene: 'microphone', teater: 'masks', museum: 'building-museum', slott: 'castle', bro: 'bridge', ferge: 'ship', skip: 'ship', camping: 'tent', grill: 'grill', fest: 'confetti', bryllup: 'rings', sky: 'cloud', regn: 'umbrella', 'skøyter': 'ice-skating', handel: 'shopping-cart', ski: 'ski' };
+/** SVG-tekst → én path-streng (path, circle, rect, line, polyline, polygon), som toD() i fasiten. */
+export function svgToD(body) {
+  const D = [], at = (t, a) => { const mm = t.match(new RegExp(`\\s${a}="([^"]*)"`)); return mm ? mm[1] : null; };
+  for (const t of String(body).match(/<(path|circle|rect|line|polyline|polygon|ellipse)\b[^>]*>/g) ?? []) {
+    if (/stroke="none"/.test(t) && !/fill="currentColor"/.test(t)) continue;
+    const g = t.match(/^<(\w+)/)[1], n = (a) => parseFloat(at(t, a) || '0');
+    if (g === 'path') { const d = at(t, 'd'); if (d) D.push(d); }
+    else if (g === 'circle' || g === 'ellipse') { const cx = n('cx'), cy = n('cy'), rx = g === 'circle' ? n('r') : n('rx'), ry = g === 'circle' ? n('r') : n('ry'); D.push(`M${cx - rx} ${cy}a${rx} ${ry} 0 1 0 ${2 * rx} 0a${rx} ${ry} 0 1 0 ${-2 * rx} 0`); }
+    else if (g === 'rect') { const x = n('x'), y = n('y'), w = n('width'), h = n('height'); D.push(`M${x} ${y}h${w}v${h}h${-w}z`); }
+    else if (g === 'line') D.push(`M${n('x1')} ${n('y1')}L${n('x2')} ${n('y2')}`);
+    else { const pts = (at(t, 'points') || '').trim().split(/[\s,]+/).map(Number); let d = ''; for (let i = 0; i + 1 < pts.length; i += 2) d += `${i ? 'L' : 'M'}${pts[i]} ${pts[i + 1]}`; if (g === 'polygon') d += 'z'; if (d) D.push(d); }
+  }
+  return D.join(' ');
+}
+async function ifySearch(raw) {
+  const q = String(raw ?? '').trim().toLowerCase();
+  if (q.length < 2) { ICS.res = []; ICS.busy = false; return; }
+  const en = NO_EN[q] ?? q, tk = ++ICS.n;
+  ICS.busy = true;
+  try {
+    const L = await Promise.all(['lucide', 'tabler'].map((pf) => hlApi(`/icons/search?q=${encodeURIComponent(en)}&prefix=${pf}&limit=24`).then((r) => (r?.icons ?? []).slice(0, 18)).catch(() => [])));
+    const ids = L.flat().map((x) => (typeof x === 'string' ? x : x.id ?? `${x.prefix}:${x.name}`)).filter((id) => /^(lucide|tabler):[a-z0-9-]+$/.test(id)).slice(0, 36);
+    const out = (await Promise.all(ids.map(async (id) => {
+      const [pf, nm] = id.split(':'), k = `ify:${id}`;
+      try { const r = await fetch(`/api/icons/${pf}/${nm}.svg`, { credentials: 'same-origin' }); if (!r.ok) return null; const tx = await r.text(); if (!/viewBox="0 0 24 24"/.test(tx)) return null; const d = svgToD(tx); return d ? { k, n: `${nm.replace(/-/g, ' ')} · ${pf === 'lucide' ? 'Lucide' : 'Tabler'}`, p: d } : null; } catch { return null; }
+    }))).filter(Boolean);
+    if (tk !== ICS.n) return;
+    ICS.res = out; ICS.qe = en;
+  } catch { if (tk === ICS.n) { ICS.res = []; ICS.qe = en; } }
+  if (tk === ICS.n) { ICS.busy = false; draw(); }
+}
 function iconGrid(cur, color, act, id, size) {
-  return `<div class="f22-ig" style="grid-template-columns:repeat(auto-fill,minmax(${size}px,1fr))">${Object.entries(ZIC).map(([k, [n, p]]) => { const on = cur === k; return `<button data-f22="${act}" data-k="${k}"${id != null ? ` data-id="${esc(id)}"` : ''} aria-label="${n}" title="${n}" aria-pressed="${on}" style="height:${size}px;border-color:${on ? color : 'var(--pp-line)'};background:${on ? color : 'transparent'};color:${on ? '#fff' : 'var(--pp-ink)'}">${svg(p, size >= 40 ? 20 : 19, 1.9)}</button>`; }).join('')}</div>`;
+  const qn = ICS.q.trim().toLowerCase(), all = Object.entries(ZIC);
+  const hit = qn ? all.filter(([k, [nm]]) => nm.toLowerCase().includes(qn) || k.includes(qn)) : ICS.all ? all : all.slice(0, 18);
+  const btn = (k, n, p) => { const on = cur === k; return `<button data-f22="${act}" data-k="${esc(k)}"${id != null ? ` data-id="${esc(id)}"` : ''} aria-label="${esc(n)}" title="${esc(n)}" aria-pressed="${on}" style="height:${size}px;border-color:${on ? color : 'var(--pp-line)'};background:${on ? color : 'transparent'};color:${on ? '#fff' : 'var(--pp-ink)'}">${svg(p, size >= 40 ? 20 : 19, 1.9)}</button>`; };
+  const grid = (h) => `<div class="f22-ig" style="grid-template-columns:repeat(auto-fill,minmax(${size}px,1fr))">${h}</div>`;
+  const curIfy = /^ify:/.test(cur ?? '') && !hit.some(([k]) => k === cur) ? btn(cur, cur.split(':').slice(1).join(' '), icPath(cur)) : '';
+  const info = qn ? (hit.length ? `${hit.length} treff` : `Ingen ikoner heter «${esc(ICS.q.trim())}»`) : `${all.length} ikoner`;
+  const ext = qn.length > 1 ? `<div class="p42-ext"><span class="f22-mut">${ICS.busy ? 'Søker i Lucide og Tabler (7 500+ ikoner) …' : ICS.res.length ? `${ICS.res.length} fra Lucide og Tabler · søkte «${esc(ICS.qe)}»` : 'Ingen treff i Lucide og Tabler'}</span>${ICS.res.length ? grid(ICS.res.map((x) => btn(x.k, x.n, x.p)).join('')) : ''}</div>` : '';
+  return `<input class="f22-in sm p42-ics" id="p42-ics-${esc(act)}" data-f22in="icq" value="${esc(ICS.q)}" placeholder="Søk i ikoner, f.eks. båt, kirke, ski …" autocomplete="off" enterkeyhint="search" aria-label="Søk i ikoner">
+    ${grid(curIfy + hit.map(([k, [n, p]]) => btn(k, n, p)).join(''))}<div class="p42-icinfo"><span class="f22-mut">${info}</span>${qn ? '' : `<button type="button" class="p42-icmore" data-f22="icall">${ICS.all ? 'Vis færre' : 'Vis alle'}</button>`}</div>${ext}`;
 }
 function colorRow(cur, act, id, size) {
   const c = hex(cur), cust = !ZPAL.includes(c);
@@ -271,7 +333,7 @@ function zoneCard(z) {
   const c = hex(z.color), ed = String(F22.edit) === String(z.id), mineZ = z.mine ?? (z.createdBy == null || String(z.createdBy) === String(meId()));
   const there = sharers().filter((p) => hav(p.last.lat, p.last.lon, z.lat, z.lon) <= z.radius).map((p) => (isMe(p) ? 'deg' : firstN(p)));
   const others = mem().filter((p) => !isMe(p)), nt = z.notify ?? {};
-  return `<div class="f22-card f22-zone"><div class="f22-row"><button class="f22-zb" data-f22="zshow" data-id="${esc(z.id)}" aria-label="Vis ${esc(z.name)} på kartet" style="background:${c}">${svg(ZIC[zIcon(z)][1], 21, 2)}</button>
+  return `<div class="f22-card f22-zone"><div class="f22-row"><button class="f22-zb" data-f22="zshow" data-id="${esc(z.id)}" aria-label="Vis ${esc(z.name)} på kartet" style="background:${c}">${svg(zPath(z), 21, 2)}</button>
       <span class="m-grow" style="min-width:0"><b class="f22-zn">${esc(z.name)}</b><span class="f22-mut">${rTxt(z.radius)} radius · ${esc(there.join(', ') || 'ingen der nå')}${mineZ ? (z.shared === false ? ' · bare deg' : '') : ` · delt av ${esc(firstN(memOf(z.createdBy)) || 'familien')}`}</span></span>
       ${mineZ ? `<button class="f22-zx" data-f22="zed" data-id="${esc(z.id)}" aria-label="Rediger sone" aria-pressed="${ed}">✎</button><button class="f22-zx rm" data-f22="zrm" data-id="${esc(z.id)}" aria-label="Slett sone">${String(F22.rm) === String(z.id) ? '?' : '−'}</button>` : ''}</div>
     ${ed ? `<div class="f22-zed"><input class="f22-in sm" data-f22in="zname" data-id="${esc(z.id)}" value="${esc(z.name)}" maxlength="40" aria-label="Navn">${iconGrid(zIcon(z), c, 'zicon', z.id, 38)}${colorRow(c, 'zcol', z.id, 30)}
@@ -295,19 +357,21 @@ function healthBlock() {
       <div class="f22-met">${met.map(([l, v, s]) => `<div><span>${l}</span><b>${esc(v)}</b><small>${s}</small></div>`).join('')}</div>
       ${wk.length ? `<div class="f22-wk" aria-label="Skritt siste 7 dager">${wk.map((d, i) => `<span style="height:${Math.max(8, ((d.steps ?? 0) / mx) * 100).toFixed(0)}%;background:${i === wk.length - 1 ? c : `${c}55`}"></span>`).join('')}</div>` : ''}</div>`;
   }).join('');
-  return `${src}${cards}${list.some((p) => !isMe(p)) ? '' : '<div class="f22-card"><b class="f22-h" style="font-size:18px">Ingen deler helse med deg ennå</b><span class="f22-mut">Helsedeling er av som standard.</span></div>'}
+  return `${cards}${list.some((p) => !isMe(p)) ? '' : '<div class="f22-card"><b class="f22-h" style="font-size:18px">Ingen deler helse med deg ennå</b><span class="f22-mut">Helsedeling er av som standard.</span></div>'}
     <span class="f22-note" style="padding:0 4px">Apple Health og Health Connect kan bare leses av appen på telefonen. Homelab-appen sender et sammendrag hit hvert 15. minutt, og bare det personen har valgt å dele.</span>`;
 }
 export function famView22() {
   if (FM.err && !FM.d) return `<div class="f22"><div class="f22-card f22-mut">${esc(FM.err)}</div></div>`;
   if (!FM.d) return '<div class="m-spin"></div>';
   const tab = FT.tab;
-  const hjl = globalThis.P40?.hjemlysFam?.() ?? ''; // prompt 40: Hjemlys på Familie-kortet (status for husstanden + enkel start)
+  const hjl = globalThis.P42?.velStatus?.() ?? ''; // prompt 42: ikke Vel fremme-kortet på Kart, bare en statuslinje når en økt pågår
   if (tab === 'helse') return `<div class="f22">${healthBlock()}</div>`;
-  if (tab === 'hjemlys') return `<div class="f22">${globalThis.P41?.famHjemlys?.() ?? '<div class="m-spin"></div>'}</div>`; // prompt 41: Hjemlys-fanen (Start · Hvem · Klar · Aktiv)
+  if (tab === 'hjemlys') return `<div class="f22">${globalThis.P41?.famHjemlys?.() ?? '<div class="m-spin"></div>'}</div>`; // prompt 41: Vel fremme-fanen (Start · Hvem · Klar · Aktiv)
   if (tab === 'soner') {
     const zones = FM.d.zones ?? [];
-    return `<div class="f22">${mapBlock()}${draftCard()}${zones.map(zoneCard).join('') || (FM.zone ? '' : '<div class="f22-card"><span class="f22-mut">Ingen soner ennå. Trykk «+ Ny sone på kartet» og så på kartet, for eksempel hjemme, skolen eller jobben.</span></div>')}
+    // Prompt 42: Soner uten kart – kartet vises bare mens en ny sone plasseres (trådkors, radius, navn, farge, ikon).
+    const placing = FM.zoneMode || !!FM.zone;
+    return `<div class="f22">${placing ? mapBlock() : '<button type="button" class="f22-tb ink p42-snadd" data-f22="place">+ Ny sone på kartet</button>'}${draftCard()}${zones.map(zoneCard).join('') || (FM.zone ? '' : '<div class="f22-card"><span class="f22-mut">Ingen soner ennå. Trykk «+ Ny sone på kartet» og så på kartet, for eksempel hjemme, skolen eller jobben.</span></div>')}
       <span class="f22-note" style="padding:0 4px">Trykk på en person i en sone for å slå varsel av eller på når de kommer og går.</span></div>`;
   }
   const others = mem().filter((p) => !isMe(p)), shr = others.filter((p) => p.sharing === 'on');
@@ -402,6 +466,7 @@ export async function bind(e, t) {
       return true;
     }
     if (!k) return false;
+    if (k === 'icq') { if (ty !== 'input') return true; ICS.q = t.value; clearTimeout(ICS.t); const v = t.value; ICS.t = setTimeout(() => ifySearch(v).then(() => draw()), 350); if (v.trim().length < 2) ICS.res = []; draw(); return true; } // prompt 42
     if (k === 'dname' && FM.zone) { FM.zone.name = t.value; return true; }
     if (k === 'drad' && FM.zone) { FM.zone.radius = +t.value; const b = document.getElementById('f22-dr'); if (b) b.textContent = rTxt(+t.value); repaint(); return true; }
     if (k === 'zname') { if (ty === 'change' && t.value.trim()) { zPatch(t.dataset.id, { name: t.value.trim() }); draw(); } else { const z = zoneOf(t.dataset.id); if (z && t.value.trim()) z.name = t.value; } return true; }
@@ -447,18 +512,20 @@ export async function bind(e, t) {
     case 'sel': { const p = memOf(id); if (p && (p.sharing === 'on' || isMe(p))) pick(id); else flash(`${firstN(p) || 'Personen'} deler ikke posisjon`); return true; }
     case 'psx': FM.sel = null; break;
     case 'shareme': try { await navigator.clipboard?.writeText(`https://www.google.com/maps?q=${memOf(id ?? meId())?.last?.lat},${memOf(id ?? meId())?.last?.lon}`); flash('Lenke kopiert ✓'); } catch { flash('Kunne ikke kopiere lenken'); } return true;
-    case 'dx': FM.zone = null; break;
-    case 'dicon': if (FM.zone) FM.zone.icon = x.dataset.k; haptic('tab'); break;
+    case 'dx': FM.zone = null; FM.zoneMode = false; ICS.q = ''; ICS.res = []; break;
+    case 'icall': ICS.all = !ICS.all; haptic('tab'); break; // prompt 42
+    case 'dicon': if (FM.zone) { const kk = x.dataset.k, r = ICS.res.find((q) => q.k === kk); if (r) { ifyKeep(kk, r.p); FM.zone.icp = r.p; } else delete FM.zone.icp; FM.zone.icon = kk; } haptic('tab'); break;
     case 'dcol': if (FM.zone) FM.zone.color = x.dataset.c; haptic('tab'); break;
     case 'dsave': {
       const z = FM.zone; if (!z) return true;
-      const body = { name: z.name.trim() || `Sone ${(FM.d?.zones ?? []).length + 1}`, lat: z.lat, lon: z.lon, radius: z.radius, color: hex(z.color), icon: zIcon(z) };
+      const body = { name: z.name.trim() || `Sone ${(FM.d?.zones ?? []).length + 1}`, lat: z.lat, lon: z.lon, radius: z.radius, color: hex(z.color), icon: zIcon(z), ...(z.icp ? { icp: z.icp } : {}) };
       try { const r = await hlApi('/family/zones', { method: 'POST', json: body }); const nid = r?.id ?? r?.zone?.id; if (nid != null) zLocal(nid, body.icon); FM.zone = null; await famLoad(); flash(`${body.name} er lagret ✓`); } catch (err) { flash(err.message); }
       break;
     }
-    case 'zshow': { const z = zoneOf(id); if (z && map) { map.fitBounds(window.L.latLng(z.lat, z.lon).toBounds(z.radius * 2.6)); scrollTo({ top: 0, behavior: 'smooth' }); } return true; }
+    case 'zshow': { const z = zoneOf(id); if (z && FT.tab === 'soner' && !FM.zoneMode && !FM.zone) { FT.tab = 'kart'; haptic('tab'); draw(); setTimeout(() => { if (map) map.fitBounds(window.L.latLng(z.lat, z.lon).toBounds(z.radius * 2.6)); scrollTo({ top: 0, behavior: 'smooth' }); }, 350); return true; } // prompt 42: «Vis på kart» åpner Kart
+      if (z && map) { map.fitBounds(window.L.latLng(z.lat, z.lon).toBounds(z.radius * 2.6)); scrollTo({ top: 0, behavior: 'smooth' }); } return true; }
     case 'zed': F22.edit = String(F22.edit) === String(id) ? null : id; break;
-    case 'zicon': zLocal(id, x.dataset.k); zPatch(id, { icon: x.dataset.k }); haptic('tab'); break;
+    case 'zicon': { const kk = x.dataset.k, r = ICS.res.find((q) => q.k === kk); if (r) ifyKeep(kk, r.p); zLocal(id, kk); zPatch(id, r ? { icon: kk, icp: r.p } : { icon: kk }); haptic('tab'); break; } // prompt 42: Iconify lagres som ify:<sett>:<navn> + icp
     case 'zcol': zPatch(id, { color: x.dataset.c }); haptic('tab'); break;
     case 'zrm': {
       if (String(F22.rm) !== String(id)) { F22.rm = id; flash(`Trykk igjen for å slette ${zoneOf(id)?.name ?? 'sonen'}`); setTimeout(() => { if (String(F22.rm) === String(id)) { F22.rm = null; draw(); } }, 2500); break; }

@@ -36,7 +36,8 @@ import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief-kortet, N
 
 /* ---------- Valg (per bruker i /api/me/layout, med lokal kopi) ---------- */
 
-export const paper = () => pref('mDesign') === 'papir';
+// Prompt 42 (claude-code-slett-gamle-design.md): Klassisk (Liquid Glass / Material You) er slettet – appen er alltid Papir.
+export const paper = () => true;
 export const paperDark = () => { const v = pref('paperMode'); return v === 'mork' || (v === 'auto' && !!matchMedia('(prefers-color-scheme: dark)').matches); };
 const PHOTOS = [['weather', 'Vær'], ['planets', 'Planeter'], ['oslo', 'Oslo'], ['cur', 'Ingen']];
 const PHOTO_SUB = { cur: 'Bare mørk gradient', oslo: 'Oslo fra lufta · skifter gjennom dagen', weather: 'Følger været der du er (MET)', planets: 'Jorda, Månen, Jupiter, Mars og Saturn (NASA)', custom: 'Ditt eget bilde' };
@@ -45,6 +46,7 @@ export const photoKind = () => pref('photo') || 'cur';
 
 // Lagres i /api/me/layout (designfeltene ligger på toppnivå). Eldre servere avviser feltene; da gjelder valget bare her.
 export function saveDesign(patch, redraw = true) {
+  if (patch.mobileDesign === 'klassisk') patch.mobileDesign = 'papir'; // prompt 42: Klassisk er slettet
   for (const [k, v] of Object.entries(patch)) setPref({ mobileDesign: 'mDesign' }[k] ?? k, v);
   hlApi('/me/layout', { method: 'PUT', json: patch }).catch(() => {});
   if (redraw) draw();
@@ -52,7 +54,13 @@ export function saveDesign(patch, redraw = true) {
 /** Leser designvalgene fra serveren (kalles når /api/me/layout er hentet). */
 export function takeDesign(r) {
   if (!r) return;
-  if (r.mobileDesign === 'papir' || r.mobileDesign === 'klassisk') setPref('mDesign', r.mobileDesign);
+  // Prompt 42: Klassisk finnes ikke lenger. Står kontoen på Klassisk, flyttes den til Papir (lys/mørk etter systemet) uten dialog.
+  setPref('mDesign', 'papir');
+  if (r.mobileDesign === 'klassisk') {
+    const mode = ['auto', 'lys', 'mork'].includes(r.paperMode) ? r.paperMode : (matchMedia('(prefers-color-scheme: dark)').matches ? 'mork' : 'lys');
+    r.mobileDesign = 'papir'; r.paperMode = mode;
+    fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mobileDesign: 'papir', paperMode: mode }) }).catch(() => {});
+  }
   if (['auto', 'lys', 'mork'].includes(r.paperMode)) setPref('paperMode', r.paperMode);
   if (['cur', 'oslo', 'weather', 'planets', 'custom'].includes(r.photo)) setPref('photo', r.photo);
   takeBg(r);
@@ -375,7 +383,7 @@ export function homeBlocks() {
     h5: newsCard(H?.news),
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
     h6: posCard(), h7: bolWidget(), h8: P37.todoWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(), // Prompt 32: Prøveperioder
-    h12: P36.briefCard(P35.briefCard(), edOn('hl')), h13: P37B.bibleHome(edOn('hl')), h14: globalThis.P40?.hjemlysHome?.(edOn('hl')) ?? '', // Prompt 40: Hjemlys // Prompt 37: Dagens bibelvers (bare med modulen) // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
+    h12: P36.briefCard(P35.briefCard(), edOn('hl')), h13: P37B.bibleHome(edOn('hl')), h14: globalThis.P40?.hjemlysHome?.(edOn('hl')) ?? '', // Prompt 40: Vel fremme // Prompt 37: Dagens bibelvers (bare med modulen) // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
     h15: globalThis.P41?.tripHome?.(edOn('hl')) ?? '', // Prompt 41: Min reise · forlot skolen (bare når relevant)
   };
   // Prompt 41: «I stedet» skjuler Avganger mens reisen er aktiv.

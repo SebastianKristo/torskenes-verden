@@ -19,7 +19,7 @@ const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else 
 export const SECN = {
   dom: { t: 'DOMENER', all: [['dom', 'Oversikt', '◎'], ['pub', 'Publikum', '◍'], ['ytl', 'Ytelse', '⚡'], ['inf', 'Infra', '▤']] },
   abo: { t: 'ABONNEMENT', all: [['home', 'Hjem', '⌂'], ['ins', 'Innsikt', '◔'], ['hist', 'Historikk', '↺']] },
-  kart: { t: 'FAMILIE', all: [['kart', 'Kart', '◎'], ['soner', 'Soner', '◌'], ['helse', 'Helse', '♡'], ['hjemlys', 'Hjemlys', '◉']] }, // prompt 41: Hjemlys i Familie
+  kart: { t: 'FAMILIE', all: [['kart', 'Kart', '◎'], ['soner', 'Soner', '◌'], ['helse', 'Helse', '♡'], ['hjemlys', 'Vel fremme', '◉']] }, // prompt 41: Vel fremme i Familie
 };
 const SEC_OF = { dom: 'dom', sub: 'abo', fam: 'kart' };
 const ICONS = ['⌂', 'kr', '◐', '▣', '◎', '◍', '⚡', '▤', '◔', '↺', '↻', '◌', '♡', '◉', '★', '●', '◆', '♪', '✉', '⚑', '≡', '⇄', '☼', '✦'];
@@ -27,7 +27,7 @@ const valid = (k, v) => Array.isArray(v) && v.length ? v.filter((x) => x && SECN
 /** Lagret liste [{k, n?, ic?}] for en side, eller standard. */
 export function secNav(k) {
   const v = valid(k, lsGet(`papir_nav_${k}`));
-  // Prompt 41: Hjemlys-fanen legges til i lagrede Familie-lister som ikke har den ennå.
+  // Prompt 41: Vel fremme-fanen legges til i lagrede Familie-lister som ikke har den ennå.
   if (v && v.length && k === 'kart' && !lsGet('papir_nav_kart_hj41')) { lsSet('papir_nav_kart_hj41', 1); if (!v.some((x) => x.k === 'hjemlys')) { v.push({ k: 'hjemlys' }); lsSet('papir_nav_kart', v); } }
   return v && v.length ? v : SECN[k].all.map(([id]) => ({ k: id }));
 }

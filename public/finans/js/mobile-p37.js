@@ -97,7 +97,7 @@ export async function patchTask(id, patch, redraw = true) {
   try { return await hlApi(`/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', json: toServer(patch) }); }
   catch (e) { flash(e.message, 'err'); return null; }
 }
-async function addTask(t) {
+export async function addTask(t) { // prompt 42: brukes også av Angre i mobile-p41.js
   const body = toServer({ title: t.title, list: t.list, due: t.due ?? null, who: t.who ?? null, notes: t.notes ?? '', ...Object.fromEntries(EXTRA.filter((k) => t[k] !== undefined).map((k) => [k, t[k]])), by: meId() || undefined });
   if (HK.local) { const it = { id: `l${Date.now()}${Math.random().toString(36).slice(2, 5)}`, ...body, done: false, createdAt: Date.now() }; HK.d.items = [it, ...HK.d.items]; extraSave(it.id, t); saveLocal37(); return it; }
   const r = await hlApi('/tasks', { method: 'POST', json: body });
@@ -105,7 +105,7 @@ async function addTask(t) {
   if (it?.id != null) { extraSave(it.id, t); HK.d.items = [it, ...HK.d.items.filter((x) => String(x.id) !== String(it.id))]; }
   return it;
 }
-async function delTask(id) {
+export async function delTask(id) {
   HK.d.items = HK.d.items.filter((x) => String(x.id) !== String(id)); saveLocal37(); delete XT[String(id)]; lsSet(XK, XT);
   if (!HK.local) await hlApi(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch((e) => flash(e.message, 'err'));
 }
@@ -470,6 +470,13 @@ export async function gRun(q0, extra = {}) {
   if (/rydd|forfalte/i.test(q) && !/\?/.test(q)) { answer('Bruk kortet i listen: flytt de forfalte til i morgen eller arkiver dem.'); return; }
   const isQ = /\?|^\s*(hva|hvem|hvor|når|hvilke|har|kan du|vet du)(\s|$)/i.test(q);
   if (isQ) { const A = gAsk(q); answer(A ? A.text : 'Det vet jeg ikke her. Spør meg i Chat for mer.', A?.res ?? [], null, !A); return; }
+  { // prompt 42 (claude-code-huskeliste-glimt-del-opp.md, punkt 4): lokal forhåndsdeling uten tegnsetting, med én Angre
+    const LS = globalThis.P42?.splitLocal?.(q) ?? [];
+    if (LS.length > 1) {
+      const L = await addMany(LS.map((x) => ({ title: x.title, notes: [x.note, x.dueText ? `Frist: ${x.dueText}` : '', `Original beskjed: «${q}»`].filter(Boolean).join('\n'), list: HK.cur !== 'alle' && HK.cur !== 'arkiv' && HK.cur !== 'glimt' ? HK.cur : undefined, due: x.due ?? undefined, ...(x.place ? { place: x.place } : {}) })));
+      haptic('ok'); answer(`Glimt delte beskjeden i ${L.length} oppgaver.`, resOf(L), { ids: L.map((x) => x.id) }); return;
+    }
+  }
   if (globalThis.P40?.isMulti?.(q)) { await globalThis.P40.gMulti(q, { lists, people, addTask, answer, resOf, cur: HK.cur, meId }); return; } // prompt 40
   const P = gParse(q, HK.cur), L = await addMany(P), one = T(L[0] ?? P[0] ?? {});
   if (!L.length) { answer('Fikk ikke lagt til oppgaven.'); return; }

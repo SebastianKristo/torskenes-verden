@@ -6010,3 +6010,106 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 #p23-under:not(.on) *{visibility:hidden!important}
 .m .p41-mait .pp-gl{font-size:28px!important}
 .m .p41-ski{padding:16px}
+
+/* ===================== Prompt 42 (mobile-p42.js m.fl.) ===================== */
+/* Fanelinja: Hjem-knapp 1a–1d (claude-code-navbar-hjem-knapp.md). Bare under 600 px – bred visning bruker sidemenyen. */
+.m.p42-nh .pp-back.to-home{display:none}
+.m .p42-nha{position:fixed;z-index:21;left:12px;bottom:var(--pp-navb);width:62px;height:62px;border-radius:50%;background:var(--pp-nav);color:var(--pp-navInk);display:grid;place-items:center;text-decoration:none;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 16px 30px -12px rgba(0,0,0,.5);-webkit-tap-highlight-color:transparent}
+.m .p42-nha.on{background:var(--pp-navAct);color:var(--pp-navActInk)}
+.m .p42-nha:active,.m .p42-nhb:active,.m .p42-nhc:active,.m .p42-nhd:active{transform:scale(.94)}
+.m .pp-nav.p42-n1a{left:86px!important;margin:0!important;max-width:none}
+.m .pp-nav>a.p42-nhb{flex:none!important;width:52px!important;height:46px;padding:0!important;margin-right:4px;border-radius:23px 0 0 23px!important;border-right:1px solid rgba(255,255,255,.16);background:transparent;color:var(--pp-navInk);display:grid!important;place-items:center}
+.m.pl .pp-nav>a.p42-nhb{border-right-color:rgba(255,255,255,.16)}.m.pd .pp-nav>a.p42-nhb{border-right-color:rgba(0,0,0,.14)}
+.m .pp-nav>a.p42-nhb.on{background:var(--pp-navAct);color:var(--pp-navActInk)}
+.m .pp-nav.p42-n1c{overflow:visible}
+.m .pp-nav>a.p42-nhc{flex:none!important;width:60px!important;height:60px!important;margin-top:-28px;padding:0!important;box-sizing:border-box;border-radius:30px!important;border:5px solid var(--pp-bg);background:var(--pp-lab)!important;color:#fff!important;display:grid!important;place-items:center;box-shadow:0 8px 18px -8px rgba(0,0,0,.5)}
+.m .pp-nav>a.p42-nhc.on{border-color:var(--pp-navAct)}
+.m .pp-nav>.p42-nhd{flex:none;height:46px;padding:0 12px 0 8px;border-radius:23px;border:0;background:rgba(255,255,255,.1);color:var(--pp-navInk);display:flex;align-items:center;gap:6px;font:700 13px Manrope,sans-serif;white-space:nowrap;cursor:pointer}
+.m.pd .pp-nav>.p42-nhd{background:rgba(0,0,0,.08)}
+.m .p42-nhdi{width:26px;height:26px;border-radius:8px;background:var(--pp-lab);color:#fff;display:grid;place-items:center;font:600 12px Newsreader,serif}
+.m .p42-nhda{font-size:10px;opacity:.7}
+.m .p42-mscrim{position:fixed;inset:0;z-index:22;background:rgba(0,0,0,.25)}
+.m .p42-mods{position:fixed;z-index:23;left:12px;right:12px;bottom:calc(var(--pp-navb) + 78px);padding:8px;border-radius:24px;background:var(--pp-nav);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;box-shadow:0 20px 40px -16px rgba(0,0,0,.6);animation:p37up .22s cubic-bezier(.2,.8,.2,1) both}
+.m .p42-mod{height:64px;border-radius:16px;background:rgba(255,255,255,.08);color:var(--pp-navInk);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:700 11.5px Manrope,sans-serif;text-decoration:none}
+.m.pd .p42-mod{background:rgba(0,0,0,.06)}
+.m .p42-mod>span{font:500 19px/1 Newsreader,serif}
+.m .p42-mod.on{background:var(--pp-navAct);color:var(--pp-navActInk)}
+.m .p42-mod.home{background:var(--pp-lab);color:#fff}
+@media (min-width:600px){ .m .p42-nha,.m .p42-nhb,.m .p42-nhc,.m .p42-nhd,.m .p42-mods,.m .p42-mscrim{display:none!important} }
+/* Valgarket og kortene med forhåndsvisning */
+.m .p42-nhsheet{gap:12px}
+.m .p42-shh{display:flex;justify-content:space-between;align-items:center;gap:10px}.m .p42-shh>b{font:500 24px Newsreader,serif}
+.m .p42-done{flex:none;height:38px;padding:0 16px;border-radius:19px;border:0;background:var(--pp-ink);color:var(--pp-bg);font:700 14px Manrope,sans-serif;cursor:pointer}
+.m .p42-mut{font-size:13px;color:var(--pp-mut);line-height:1.45}
+.m .p42-nhlist{display:flex;flex-direction:column;gap:12px}
+.m .p42-nhgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.m .p42-sl{display:block;margin-top:4px}
+.m .p42-nhopt{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:18px;border:2px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);cursor:pointer;text-align:left;font-family:Manrope,sans-serif;min-width:0;width:100%;box-sizing:border-box}
+.m .p42-nhopt.sm{padding:10px;gap:8px}
+.m .p42-nhopt.on{border-color:var(--pp-ink)}
+.m .p42-nhot{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;min-width:0}
+.m .p42-nhot .m-grow{display:flex;flex-direction:column;min-width:0}
+.m .p42-nhot b{font-size:15px}.m .p42-nhot small{font-size:12.5px;color:var(--pp-mut);line-height:1.3}
+.m .p42-nhopt.sm .p42-nhot b{font-size:12.5px;line-height:1.25}.m .p42-nhopt.sm .p42-nhot small{font-size:11px}
+.m .p42-ck{flex:none;width:26px;height:26px;border-radius:13px;border:1.5px solid var(--pp-line);display:grid;place-items:center;font:800 13px Manrope,sans-serif}
+.m .p42-nhopt.on .p42-ck{border-color:var(--pp-ink)}
+.m .p42-nhopt.sm .p42-ck{width:22px;height:22px;font-size:11px}
+.m .p42-pvbg{display:block;width:100%;padding:18px 10px 10px;box-sizing:border-box;border-radius:14px;background:linear-gradient(180deg,#d9d2c4,#ebe5d9)}
+.m .p42-nhopt.sm .p42-pvbg{padding:16px 6px 8px}
+.m .p42-pvbar{display:flex;align-items:center;gap:2px;height:34px;min-width:0;overflow:hidden;border-radius:17px;background:#1b1a17;padding:0 4px;box-sizing:border-box}
+.m .p42-pvbar.vis{overflow:visible;gap:0}.m .p42-pvbar.grow{flex:1}
+.m .p42-pvon{flex:none;height:26px;padding:0 9px;border-radius:13px;background:#f3efe6;color:#1b1a17;display:grid;place-items:center;font:500 14px/1 Newsreader,serif}
+.m .p42-pvt{flex:1 1 0;min-width:0;text-align:center;color:#b3ada1;font:500 14px/1 Newsreader,serif}
+.m .p42-pvcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.m .p42-pvback{align-self:flex-start;height:18px;padding:0 8px;border-radius:9px;background:rgba(27,26,23,.55);color:#fff;font:700 9.5px Manrope,sans-serif;display:flex;align-items:center;white-space:nowrap}
+.m .p42-pvrow{display:flex;gap:4px;align-items:center;min-width:0}
+.m .p42-pvha{flex:none;width:34px;height:34px;border-radius:50%;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:500 14px/1 Newsreader,serif}
+.m .p42-pvhb{flex:none;width:26px;height:26px;display:grid;place-items:center;color:#f3efe6;font:500 14px/1 Newsreader,serif;border-right:1px solid rgba(255,255,255,.2)}
+.m .p42-pvhc{flex:none;width:38px;height:38px;margin-top:-16px;box-sizing:border-box;border-radius:19px;background:#b23a2a;border:3px solid #ebe5d9;color:#fff;display:grid;place-items:center;font:500 14px/1 Newsreader,serif}
+.m .p42-pvhd{flex:none;height:26px;padding:0 6px 0 3px;border-radius:13px;background:#3a3732;color:#f3efe6;display:flex;align-items:center;gap:3px;font:700 9px Manrope,sans-serif;white-space:nowrap}
+.m .p42-pvhd>span{width:18px;height:18px;border-radius:5px;background:#b23a2a;display:grid;place-items:center;font:600 9px Newsreader,serif}
+@media (max-width:370px){ .m .p42-nhopt.sm .p42-pvt{font-size:12px} .m .p42-nhopt.sm .p42-pvon{padding:0 6px} }
+
+/* Bibelvers-arket: topp · innhold som scroller · fast bunn med «Åpne Bibel-siden ›» (claude-code-bibel-ark-knapp-alltid.md) */
+.m .p37-sheet.p42-bsh{display:flex;flex-direction:column;overflow:hidden;max-height:calc(100dvh - env(safe-area-inset-top,0px) - 12px);padding-bottom:0}
+.m .p42-bsh>.p37-shh{flex:none}
+.m .p42-bsc{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:14px;scrollbar-width:none;margin:0 -16px;padding:0 16px 8px}
+.m .p42-bsc::-webkit-scrollbar{display:none}
+.m .p42-bsf{flex:none;margin:0 -16px;padding:12px 24px calc(env(safe-area-inset-bottom,0px) + 12px);background:var(--pp-bg);box-shadow:0 -12px 16px -12px rgba(27,26,23,.18)}
+.m.pd .p42-bsf{box-shadow:0 -12px 16px -12px rgba(0,0,0,.6)}
+.m .p42-bopen{display:flex;align-items:center;justify-content:center;width:100%;height:56px;border-radius:28px;background:#1b1a17;color:#fff;font:700 18px Manrope,sans-serif;text-decoration:none}
+.m.pd .p42-bopen{background:#f3efe6;color:#1b1a17}
+.m .p42-ctx{display:flex;flex-direction:column;gap:6px}
+.m .p37-bvs .ctx.p42-cl3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.m .p42-vm{align-self:flex-start;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 12.5px Manrope,sans-serif;cursor:pointer}
+/* Bibelvers-kortet: loddrett scroll slippes alltid gjennom (claude-code-bibelvers-scroll-fiks.md) */
+.m .p37-bsw,.m .p37-bh,.m .p37-bh *{touch-action:pan-y}
+
+/* Ruter → Min reise: «⇄ Snu» 36 px, sentrert mot etikett + tittel, treffflate ≥ 44 px (claude-code-ruter-snu-knapp.md) */
+.m .p41-trh{justify-content:space-between}
+.m .p41-trh>.m-grow{display:flex;flex-direction:column;gap:1px;min-width:0}
+.m .p41-flipb{position:relative;flex:none;white-space:nowrap;line-height:1}
+.m .p41-flipb::before{content:'';position:absolute;left:-4px;right:-4px;top:-4px;bottom:-4px;min-height:44px}
+
+/* Familie: Soner uten kart, ikonsøk, Vel fremme (claude-code-familie-*.md, -vel-fremme.md) */
+.m .p42-snadd{align-self:flex-start;margin:16px 0 0}
+.m .p42-ics{width:100%;box-sizing:border-box}
+.m .p42-icinfo{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.m .p42-icinfo .f22-mut{font-size:12px}
+.m .p42-icmore{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 12.5px Manrope,sans-serif;cursor:pointer}
+.m .p42-ext{display:flex;flex-direction:column;gap:6px;padding-top:4px}.m .p42-ext .f22-mut{font-size:12px}
+.m .p42-vst{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:var(--pp-card);color:var(--pp-ink);font:500 13.5px Manrope,sans-serif;text-decoration:none;box-shadow:0 6px 18px -14px rgba(0,0,0,.4)}
+.m .p42-vst b{font-weight:700}.m .p42-vst.late{box-shadow:inset 0 0 0 1.5px var(--pp-lab)}
+.m .p41-hos .p41-dot.ok{background:#3fbf7a}.m .p41-hos .p41-dot.late{background:#e5483b}.m .p41-hos .p41-dot.chk{background:#f2c14e}
+.m .p41-hos button.p41-hor{width:100%;border:0;background:transparent;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.m .h40-sug .p42-now{font-style:normal;font-weight:500;color:var(--pp-mut);margin-left:6px;font-size:12px}
+/* Vel fremme-fanen starter under toppbildet med 16 px luft (bare Kart har verktøyraden delvis over bildet) */
+.m .f22>.p41-hjl{padding-top:16px}
+
+/* PostNord-logoen pakket med appen: hvit flis, 12 % luft (claude-code-postnord-logo-fiks.md) */
+.m .trk-badge.p42-cl{background:#fff!important;border:1px solid var(--pp-line,rgba(0,0,0,.08));box-sizing:border-box}
+.m .trk-badge.p42-cl img{padding:12%!important;background:#fff;object-fit:contain}
+.m .p21-pcb .trk-badge.p42-cl img{padding:6%!important}
+.m .p37-sheet.p42-still,.m .p37-scrim.p42-still{animation:none!important}
+.m .p42-bsh .p37-bvs .main{flex:none!important;padding:0!important;margin:0!important;min-height:0!important;height:auto!important}
+.m .p21-pcb .trk-badge{width:100%!important;height:100%!important} /* prompt 42: merkelappen var 18 px i en 14 px innholdsboks og ble kuttet til høyre */
