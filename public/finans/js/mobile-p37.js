@@ -34,7 +34,7 @@ const meId = () => String(m.me?.id ?? '');
    ===================================================================== */
 // Felt en eldre server ikke lagrer (tid, viktig, gjenta, tagger …) huskes på enheten til serveren kan dem.
 const XK = 'p37_task_extra';
-const EXTRA = ['time', 'urgent', 'rep', 'early', 'prio', 'flag', 'tags', 'subs', 'place'];
+const EXTRA = ['time', 'urgent', 'rep', 'early', 'prio', 'flag', 'tags', 'subs', 'place', 'placeName', 'after', 'mentions'];
 let XT = lsGet(XK, {}) || {};
 const dueOf = (v) => (v == null || v === '' ? null : typeof v === 'number' ? iso(new Date(v)) : String(v).slice(0, 10));
 export function T(x) {
@@ -44,7 +44,7 @@ export function T(x) {
     ...x, raw: x, title: x.title ?? x.n ?? '', list: x.list ?? x.l ?? null, notes: x.notes ?? x.note ?? '', due: dueOf(x.due),
     time: pick('time', null), urgent: !!pick('urgent', false), rep: pick('rep', 'aldri') || 'aldri', early: pick('early', 'ingen') || 'ingen',
     prio: +pick('prio', 0) || 0, flag: !!pick('flag', false), tags: Array.isArray(pick('tags', [])) ? pick('tags', []) : [], subs: Array.isArray(pick('subs', [])) ? pick('subs', []) : [],
-    place: pick('place', '') || '', who: x.who ?? x.assignee ?? null, by: x.by ?? x.createdBy ?? null, done: !!x.done, doneAt: x.doneAt ?? null,
+    place: pick('place', '') || '', placeName: pick('placeName', x.place_name ?? '') || '', after: pick('after', x.afterId ?? x.after_id ?? null), who: x.who ?? x.assignee ?? null, by: x.by ?? x.createdBy ?? null, done: !!x.done, doneAt: x.doneAt ?? null,
   };
 }
 const items = () => (HK.d?.items ?? []).map(T);
@@ -147,7 +147,7 @@ const avs = (mem, s = 18) => `<span class="p37-avs">${mem.slice(0, 3).map((p, i)
 const PR = ['', '!', '!!', '!!!'];
 function row(x, i, all) {
   const l = listOf(x.list), [dt, dc] = dueLbl(x.due), sd = x.subs.length, sdd = x.subs.filter((u) => u.done).length, ar = isArch(x.raw);
-  const meta = [dt && x.time ? `${dt} ${x.time}` : dt, x.rep && x.rep !== 'aldri' ? '↻' : '', x.urgent ? '⏰' : '', sd ? `${sdd}/${sd}` : '', whoName(x.who), all ? l.name : '', ...x.tags.map((g) => `#${g}`)].filter(Boolean).join(' · ');
+  const meta = [dt && x.time ? `${dt} ${x.time}` : dt, x.rep && x.rep !== 'aldri' ? '↻' : '', x.urgent ? '⏰' : '', sd ? `${sdd}/${sd}` : '', whoName(x.who), x.placeName || '', globalThis.P40?.afterLbl?.(x, items) ?? '', all ? l.name : '', ...x.tags.map((g) => `#${g}`)].filter(Boolean).join(' · ');
   return `<div class="p37-tr${x.done ? ' done' : ''}${i ? '' : ' first'}"><button type="button" class="p37-ck" data-p37="tick" data-id="${esc(x.id)}" style="--c:${esc(l.color)}" aria-label="${x.done ? 'Angre' : 'Fullfør'} ${esc(x.title)}">${x.done ? '✓' : ''}</button>
     <button type="button" class="p37-tt" data-p37="open" data-id="${esc(x.id)}"><span class="p37-tn">${x.flag ? '<span class="p37-flag" aria-label="Flagget">⚑</span>' : ''}${x.prio ? `<span class="p37-pr">${PR[x.prio]}</span>` : ''}<b>${esc(x.title)}</b></span>${meta ? `<small class="${!x.done && dc === 'lab' ? 'lab' : ''}">${esc(meta)}</small>` : ''}</button>
     ${x.done && !ar ? `<button type="button" class="p37-ib" data-p17="tarch" data-id="${esc(x.id)}" aria-label="Arkiver ${esc(x.title)}">${svg('M3 5h18v4H3zM5 9v10h14V9M10 13h4', 16, 2)}</button>` : ''}${ar ? `<button type="button" class="p37-rs" data-p17="trest" data-id="${esc(x.id)}">↺ Gjenopprett</button>` : ''}
@@ -434,7 +434,7 @@ export async function gRun(q0, extra = {}) {
       const its = Array.isArray(r?.items) ? r.items : [];
       if (r?.kind === 'add' || r?.kind === 'action') { HK.t = 0; await tasksLoad(true).catch(() => {}); }
       haptic('ok');
-      answer(r?.text ?? (its.length ? `La til ${its.length} gjøremål.` : 'Ferdig.'), its.map((x) => (x.n && x.c ? x : resOf([x])[0])), r?.undo?.token ? { token: r.undo.token } : null, r?.kind === 'question' && !its.length && /chat/i.test(r?.text ?? ''));
+      answer(r?.text ?? (its.length ? `La til ${its.length} gjøremål.` : 'Ferdig.'), its.map((x) => { if (x.n && x.c) return x; const o = resOf([x])[0]; return { ...o, m: [x.step?.label, o.m, x.placeName, ...(x.mentions ?? []).map((u) => (u?.name ? `@${u.name}` : ''))].filter(Boolean).join(' · ') }; }) /* prompt 40: steg, sted, @person */, r?.undo?.token ? { token: r.undo.token } : null, r?.kind === 'question' && !its.length && /chat/i.test(r?.text ?? ''));
       return;
     } catch (e) { if (e.status === 404 || e.status === 405) G7.noSrv = true; else if (e.status && e.status !== 501) { G7.gBusy = ''; answer(`Fikk ikke svar: ${e.message}`); return; } }
   }
@@ -454,6 +454,7 @@ export async function gRun(q0, extra = {}) {
   if (/rydd|forfalte/i.test(q) && !/\?/.test(q)) { answer('Bruk kortet i listen: flytt de forfalte til i morgen eller arkiver dem.'); return; }
   const isQ = /\?|^\s*(hva|hvem|hvor|når|hvilke|har|kan du|vet du)(\s|$)/i.test(q);
   if (isQ) { const A = gAsk(q); answer(A ? A.text : 'Det vet jeg ikke her. Spør meg i Chat for mer.', A?.res ?? [], null, !A); return; }
+  if (globalThis.P40?.isMulti?.(q)) { await globalThis.P40.gMulti(q, { lists, people, addTask, answer, resOf, cur: HK.cur, meId }); return; } // prompt 40
   const P = gParse(q, HK.cur), L = await addMany(P), one = T(L[0] ?? P[0] ?? {});
   if (!L.length) { answer('Fikk ikke lagt til oppgaven.'); return; }
   const dd = one.due ? new Date(`${one.due}T12:00`).toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
@@ -546,6 +547,8 @@ export async function submit37(e, t) {
   e.preventDefault();
   if (f === 'add') {
     const title = HK.nv.trim(); if (!title) return true;
+    // Prompt 40 (claude-code-huskeliste-glimt-forstar.md): setninger med flere handlinger («… men først …») går via Glimt.
+    if (globalThis.P40?.isMulti?.(title)) { HK.nv = ''; await gRun(title); return true; }
     HK.nv = ''; haptic('ok');
     const L = lists(), list = HK.cur === 'alle' || HK.cur === 'arkiv' ? (lsGet('p37_deflist', null) && L.some((l) => l.id === lsGet('p37_deflist')) ? lsGet('p37_deflist') : (L.find((l) => !l.shared && l.mine) ?? L[0])?.id ?? null) : String(HK.cur);
     try { await addTask({ title, list, due: HK.due == null ? null : dayIso(HK.due), who: HK.who || null }); } catch (err) { flash(err.message, 'err'); }

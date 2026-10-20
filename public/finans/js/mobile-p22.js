@@ -302,6 +302,7 @@ export function famView22() {
   if (FM.err && !FM.d) return `<div class="f22"><div class="f22-card f22-mut">${esc(FM.err)}</div></div>`;
   if (!FM.d) return '<div class="m-spin"></div>';
   const tab = FT.tab;
+  const hjl = globalThis.P40?.hjemlysFam?.() ?? ''; // prompt 40: Hjemlys på Familie-kortet (status for husstanden + enkel start)
   if (tab === 'helse') return `<div class="f22">${healthBlock()}</div>`;
   if (tab === 'soner') {
     const zones = FM.d.zones ?? [];
@@ -309,7 +310,7 @@ export function famView22() {
       <span class="f22-note" style="padding:0 4px">Trykk på en person i en sone for å slå varsel av eller på når de kommer og går.</span></div>`;
   }
   const others = mem().filter((p) => !isMe(p)), shr = others.filter((p) => p.sharing === 'on');
-  return `<div class="f22">${mapBlock()}${personCard()}${peopleCard()}${shr.length ? '' : '<div class="f22-card"><b class="f22-h" style="font-size:18px">Ingen deler posisjon med deg ennå</b><span class="f22-mut">Deling er av som standard. Når noen i familien slår på deling i sin app, vises de her og på kartet.</span></div>'}${eventsCard()}${shareCard()}</div>`;
+  return `<div class="f22">${hjl}${mapBlock()}${personCard()}${peopleCard()}${shr.length ? '' : '<div class="f22-card"><b class="f22-h" style="font-size:18px">Ingen deler posisjon med deg ennå</b><span class="f22-mut">Deling er av som standard. Når noen i familien slår på deling i sin app, vises de her og på kartet.</span></div>'}${eventsCard()}${shareCard()}</div>`;
 }
 
 /* ---------- Huskeliste: «Ny oppgave …» over fanelinjen, + på knappen, HA-synk ---------- */

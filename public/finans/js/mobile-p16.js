@@ -45,14 +45,20 @@ export const TB = {
   hjem: ['hl', 'Hjem', '⌂'], finans: ['hjem', 'Finans', 'kr'], mat: ['mat', 'Mat', '◐'], auto: [null, 'Domener / Sporing', '◎'],
   domener: ['dom', 'Domener', '◎'], sporing: ['spor', 'Sporing', '▣'], sok: ['sok', 'Søk', '⌕'], boliger: ['dir', 'Boliger', '⌂'],
   avganger: ['avg', 'Avganger', '⇆'], familie: ['fam', 'Familie', '◉'], vaer: ['vaer', 'Vær', '☼'], nyheter: ['nyheter', 'Nyheter', '▤'],
-  aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], media: ['media', 'Media', '♪'], huske: ['huske', 'Gjøremål', '☑'], chat: ['chat', 'Chat', '✦'], mer: ['mer', 'Mer', '⋯'],
+  aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], media: ['media', 'Media', '♪'], huske: ['huske', 'Gjøremål', '☑'], chat: ['chat', 'Chat', '✦'],
+  // Prompt 40 (claude-code-fanelinje-alle-sider.md): alt som finnes i Mer kan legges i fanelinja.
+  kalender: ['kal', 'Kalender', '▦'], bursdager: ['bd', 'Bursdager', '✿'], brief: ['brief', 'Now Brief', '✧'], bibel: ['bibel', 'Bibel', '✝'],
+  nordlys: ['nordlys', 'Nordlys', '◇'], innstillinger: ['set', 'Innstillinger', '⚙'], mer: ['mer', 'Mer', '⋯'],
 };
-export const TB_ICONS = ['☑', '⌂', 'kr', '◐', '◎', '▣', '⌕', '⇆', '◉', '☼', '▤', '↗', '↻', '♥', '★', '✦', '◔', '≡', '⇄', '▢', '✉', '♪', '⚑'];
+// Bibel bare for brukere med modulen (lest lat, så importrekkefølgen ikke endres).
+let B37 = null; import('./mobile-p37b.js').then((x) => { B37 = x; }).catch(() => {});
+const tbOk = (k) => k !== 'bibel' || !!B37?.bibleOn?.();
+export const TB_ICONS = ['▦', '✿', '✧', '✝', '◇', '⚙', '☑', '⌂', 'kr', '◐', '◎', '▣', '⌕', '⇆', '◉', '☼', '▤', '↗', '↻', '♥', '★', '✦', '◔', '≡', '⇄', '▢', '✉', '♪', '⚑'];
 const defItems = () => ['hjem', 'finans', 'mat', 'auto', ...(fabStyle() === 'float' ? ['sok'] : []), 'mer'].map((id) => ({ id }));
 export const tbItems = () => {
   // ISO2: Domener bare for admin. En lagret Domener-fane filtreres bort for andre (og «auto» når Sporing alt ligger der).
   const all = L.tabBar?.items ?? defItems(), dOk = domOk(), hasSpor = all.some((x) => x.id === 'sporing');
-  const v = all.filter((x) => TB[x.id] && x.id !== 'mer' && (dOk || (x.id !== 'domener' && !(x.id === 'auto' && hasSpor))));
+  const v = all.filter((x) => TB[x.id] && x.id !== 'mer' && tbOk(x.id) && (dOk || (x.id !== 'domener' && !(x.id === 'auto' && hasSpor))));
   return [...v.slice(0, 5), { id: 'mer', ...(L.tabBar?.items ?? []).find((x) => x.id === 'mer') }];
 };
 const routeOf = (id) => (id === 'auto' ? fourth() : TB[id][0]);
@@ -89,7 +95,7 @@ function tbRows() {
   }).join('');
 }
 function tbAdd() {
-  const used = new Set(tbItems().map((x) => x.id)), free = Object.keys(TB).filter((k) => !used.has(k) && !(k === 'auto' && (used.has('domener') || used.has('sporing'))) && (domOk() || (k !== 'domener' && k !== 'auto')));
+  const used = new Set(tbItems().map((x) => x.id)), free = Object.keys(TB).filter((k) => !used.has(k) && k !== 'mer' && tbOk(k) && !(k === 'auto' && (used.has('domener') || used.has('sporing'))) && (domOk() || (k !== 'domener' && k !== 'auto')));
   if (tbItems().length >= 6) return '<div class="pp-mut">Fanelinja har plass til 6 faner. Fjern en for å legge til en ny.</div>';
   return `<div class="p16-chips">${free.map((k) => `<button class="p16-chip" data-p16="tbadd" data-k="${k}">+ ${esc(TB[k][1])}</button>`).join('')}</div>`;
 }

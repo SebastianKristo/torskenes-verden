@@ -39,9 +39,11 @@ const NC = { gris: '#f6b3c1', glimt: '#ffc7b8', natt: '#ffe7a8', sky: '#bcd7ef',
 let GF = null;
 import('/assets/js/glimt-figs.js').then((x) => { GF = typeof x.fig === 'function' ? x : false; if (GF && document.documentElement.dataset.ui === 'mobile') draw(); }).catch(() => { GF = false; });
 /** fig(id, størrelse, humør) → HTML. humør: idle | glad | talk | sov. */
-export function fig(id, S0 = 56, mood = 'idle') {
-  if (GF) return GF.fig(IDS.includes(id) ? id : 'glimt', S0, mood);
-  return P34.figure(S0, mood === 'talk' ? 'talk' : 'idle');
+export function fig(id, S0 = 56, mood = 'idle', o = null) {
+  // Prompt 40 (claude-code-glimt-jul.md): julemodus legges på av figurbiblioteket selv (julOn); mangler det i en eldre
+  // glimt-figs.js, kler mobile-p40.js på figuren her. {noJul:true} = figurvelgeren.
+  const h = GF ? GF.fig(IDS.includes(id) ? id : 'glimt', S0, mood, o ?? undefined) : P34.figure(S0, mood === 'talk' ? 'talk' : 'idle');
+  return o?.noJul || typeof GF?.julOn === 'function' || typeof GF?.fig?.julOn === 'function' ? h : globalThis.P40?.dress?.(h, S0) ?? h;
 }
 const night = (d = new Date()) => { const h = d.getHours(); return h >= 21 || h < 6; };
 const sleepy = (d = new Date()) => { const h = d.getHours(); return h >= 23 || h < 6; };
@@ -300,7 +302,7 @@ function newsCard(b) {
   const [top, ...rest] = b.news;
   if (!top) return `<div class="p34-bcard${B5.tgt === 'nyh' ? ' p34-on' : ''}" data-gb="nyh"><span class="p34-bh"><b>Nyheter</b></span><a class="p34-none" href="#/nyheter">Ingen nyheter ennå. Åpne nyhetsleseren ›</a></div>`;
   const bg = (u) => (u ? ` style="background-image:url('${esc(u)}')"` : '');
-  return `<div class="p34-bcard p35-nws${B5.tgt === 'nyh' ? ' p34-on' : ''}" data-gb="nyh"><span class="p34-bh"><b>Nyheter</b></span>
+  return `<div class="p34-bcard p35-nws${B5.tgt === 'nyh' ? ' p34-on' : ''}" data-gb="nyh"><span class="p34-bh"><b>Nyheter</b><button type="button" class="p40-ngl" data-p40="ngl">✦ Glimt-sammendrag ›</button></span>
     <a class="p35-top" href="${esc(top.url)}" target="_blank" rel="noopener"><span class="p35-img${top.image ? '' : ' none'}"${bg(top.image)}></span><span class="p35-meta"><span>${esc(String(top.source).toUpperCase())}</span><span>${esc(top.time)}</span></span><b>${esc(top.title)}</b>${top.lead ? `<span class="p35-lead">${esc(top.lead)}</span>` : ''}</a>
     ${rest.slice(0, 6).map((n) => `<a class="p35-nw" href="${esc(n.url)}" target="_blank" rel="noopener"><span class="p35-th${n.image ? '' : ' none'}"${bg(n.image)}></span><span class="p35-nwx"><span class="p35-meta"><span>${esc(String(n.source).toUpperCase())}</span><span>${esc(n.time)}</span></span><span class="p35-nwt">${esc(n.title)}</span></span></a>`).join('')}</div>`;
 }
@@ -411,8 +413,9 @@ export function glimtView() {
   const c = cfg(), sel = IDS.includes(c.char) ? c.char : 'glimt';
   return `<div class="p35-gl"><div class="p35-glh"><b>Glimt</b><button type="button" class="p34-done" data-p35="glclose" data-p34back>Ferdig</button></div>
     <span class="p35-lab">GLIMT-FIGUR</span>
-    <div class="p35-figs" data-hl="gl-fig">${FIGS.map(([k, n]) => `<button type="button" class="p35-fg${k === 'natt' ? ' dark' : ''}" data-p35="char" data-v="${k}" aria-pressed="${sel === k}"><span class="p35-fgi">${fig(k, 54, sel === k ? 'glad' : 'idle')}</span><b>${esc(n)}</b></button>`).join('')}</div>
+    <div class="p35-figs" data-hl="gl-fig">${FIGS.map(([k, n]) => `<button type="button" class="p35-fg${k === 'natt' ? ' dark' : ''}" data-p35="char" data-v="${k}" aria-pressed="${sel === k}"><span class="p35-fgi">${fig(k, 54, sel === k ? 'glad' : 'idle', { noJul: true })}</span><b>${esc(n)}</b></button>`).join('')}</div>
     <span class="p35-note">Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Er «Glimt» valgt, blir verten Glimt Natt mellom 21 og 06. Vennene (Sky, Dråpe, Ugle, Gris …) tar over når temaet passer, om det er slått på under.</span>
+    ${globalThis.P40?.julCard?.() ?? '' /* prompt 40: Julemodus (Auto · Av · På) */}
     ${cfgBody(false)}${P38.cardsCfg()}${P37B.bibleSettings()}${P39.tipsCfg() /* prompt 39 */}</div>`;
 }
 

@@ -100,7 +100,8 @@ export function bibleBrief(place) {
   const p = h >= 5 && h < 17 ? 'm' : 'k';
   if (place === 'top' && BB.set && BB.set[p === 'm' ? 'morning' : 'evening'] === false) return '';
   const v = verse(p), L = look(p);
-  return `<div class="p37-bv" data-gb="bibel" style="background:${L.bg};color:${L.fg}"><i class="p37-bvg" style="background:${L.glow}"></i>
+  // Prompt 40 (claude-code-brief-bibel-trykk.md): hele kortet åpner Bibel-siden (mobile-p40.js tar trykket).
+  return `<div class="p37-bv p40-bvo" data-gb="bibel" data-p40="bibel" role="button" tabindex="0" aria-label="Åpne Bibel" style="background:${L.bg};color:${L.fg}"><i class="p37-bvg" style="background:${L.glow}"></i>
     <div class="p37-bvh p38-bvh"><span class="p38-bvk"><span style="color:${L.lab}">${L.kick}</span><span style="color:${L.mut}">${esc(dateLbl())}</span></span><span class="p38-bvf">${P38.priest(46, TTalk() ? 'talk' : 'idle') /* prompt 38: Glimt i prestedrakt */}</span></div>
     <span class="p37-bvt">«${esc(v.text)}»</span>
     <div class="p37-bvf"><b>${esc(v.ref)}</b><span><button type="button" style="background:${L.chip};color:${L.fg}" data-p37b="bcopy">${BB.copied ? 'Kopiert' : 'Kopier'}</button><button type="button" class="ic" style="background:${L.chip};color:${L.fg}" data-p37b="bnext" aria-label="Nytt vers">${svg('M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7', 14, 2.4)}</button></span></div></div>`;

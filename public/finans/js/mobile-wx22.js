@@ -76,7 +76,7 @@ export function mapView(P, city) {
   const la = (+P?.lat || 59.91).toFixed(3), lo = (+P?.lon || 10.75).toFixed(3);
   const src = `https://embed.windy.com/embed2.html?lat=${la}&lon=${lo}&detailLat=${la}&detailLon=${lo}&zoom=7&level=surface&overlay=${WX2.layer}&product=ecmwf&menu=&message=true&marker=true&calendar=now&type=map&location=coordinates&metricWind=m%2Fs&metricTemp=%C2%B0C`;
   return `<div class="w22-map" role="dialog" aria-label="Værkart"><iframe src="${esc(src)}" title="Værkart" allowfullscreen></iframe>
-    <div class="w22-mtop"><button type="button" class="p30-sb w30-mapx" data-wx2="mapx">Ferdig</button><b>${esc(city ?? '')}</b><span></span></div>
+    <div class="w22-mtop"><span class="w32-sp" aria-hidden="true"></span><b>${esc(city ?? '')}</b><button type="button" class="w32-x p40-dk" data-wx2="mapx" aria-label="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="w22-mlay"><div>${LAYERS.map(([k, n]) => `<button data-wx2="layer" data-k="${k}" aria-pressed="${WX2.layer === k}">${n}</button>`).join('')}</div></div></div>`;
 }
 
@@ -94,7 +94,7 @@ export function placesSheet(WX, plist) {
       <div class="w22-plin" data-wx2="sel" data-k="${esc(id)}" style="transform:translateX(${dx}px);transition:${sw != null ? 'none' : 'transform .2s ease-out'}"><span class="m-grow" style="min-width:0"><b>${esc(n)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="w22-hdl" aria-hidden="true">≡</span></div></div>`;
   }).join('');
   return `<div class="vx-shbg w22-bg" data-wx2="plx"></div><div class="vx-sh w22-sh" role="dialog" aria-label="Steder">
-    <div class="w22-shh"><b>Steder</b><button type="button" class="w22-done p30-sb p30-pri" data-wx2="plx">Ferdig</button></div>
+    <div class="w22-shh"><b>Steder</b><button type="button" class="w32-x p40-dk" data-wx2="plx" aria-label="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form class="w22-q" data-wx2form><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9aa3ae" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="w22-q" data-wx2q value="${esc(WX2.q)}" placeholder="Søk etter by eller sted" autocomplete="off" enterkeyhint="search" aria-label="Søk etter sted"></form>
     ${WX2.busy ? '<span class="w22-m">Søker …</span>' : ''}${WX2.err ? `<span class="w22-m">${esc(WX2.err)}</span>` : ''}${resHtml}${WX2.res && !res.length && !WX2.busy && !WX2.err ? `<span class="w22-m">Fant ingen steder som heter «${esc(WX2.q.trim())}»</span>` : ''}
     <span class="w22-lab">MINE STEDER</span><div class="w22-pls">${rows}</div>
@@ -191,7 +191,7 @@ export function metricSheet(D) {
   }
   const scale = M.scale ? `<div class="w22-box"><b>Skala</b><div class="w22-scb">${M.scale.map(([, , c]) => `<span style="background:${c}"></span>`).join('')}</div><div class="w22-scl">${M.scale.map(([a, b]) => `<span><b>${a}</b>${b}</span>`).join('')}</div></div>` : '';
   return `<div class="vx-shbg" data-wx2="msx"></div><div class="vx-sh w22-ms" role="dialog" aria-label="${esc(M.t)}">
-    <div class="vx-shtop"><span></span><b>${esc(M.t)}</b><button class="vx-x" data-wx2="msx" aria-label="Lukk">×</button></div>
+    <div class="vx-shtop"><span></span><b>${esc(M.t)}</b><button type="button" class="w32-x" data-wx2="msx" aria-label="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     ${picker}<div class="vx-shdate">${esc(date)}</div>
     <div class="w22-big"><b>${esc(big)}</b><span>${esc(sub)}</span></div>
     ${body}${scale}<div class="w22-box"><b>Om ${esc(M.t.toLowerCase() === 'månen' ? 'månen' : M.t.toLowerCase())}</b><span>${esc(M.about)}</span></div></div>`;

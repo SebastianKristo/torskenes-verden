@@ -559,6 +559,7 @@ export function wsConnect(onMsg) {
 }
 let rtT = null;
 export function onRealtime(d) {
+  if (globalThis.P40?.onRt40?.(d)) return; // Prompt 40: hjemlys, glimt:settings (julemodus), news/tasks
   if (d.type === 'calendar-quick') { P29.onQuickRealtime(d); return; } // Prompt 29: rask time ferdig/feilet (31: steg og felt)
   if (d.type === 'assist') { P31.onAssistRealtime(d); return; }
   if (/^(receipt-job|reanalyze|job)/.test(String(d.type))) { import('./mobile-p39.js').then((x) => x.onRt39(d)).catch(() => {}); } // Prompt 39: fremdrift for «✦ På nytt»

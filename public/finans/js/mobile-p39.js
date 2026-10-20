@@ -41,7 +41,15 @@ const SWC = [
   { card: '[data-p36bsc]', wrap: '[data-p36bs]', ok: () => !edOn('hl'), commit: () => P36?.briefCommit() },
   { card: '[data-p37bvc]', wrap: '[data-p37bv]', ok: () => !edOn('hl'), commit: () => P37B?.bibleCommit() },
 ];
-const SW = { g: null, busy: false, mv: 0 };
+const SW = { g: null, busy: false, mv: 0, t: null };
+// Prompt 40 (claude-code-brief-sveip-og-wiggle-scroll.md, fasit swipe-dismiss.js `moved`): den ekte årsaken til at briefen
+// åpnet seg etter et avbrutt sveip var at klikket bare ble stoppet når (a) retningen var låst som «x» og (b) slippet kom
+// < 350 ms etter siste bevegelse. Gikk fingeren litt opp/ned først (lås «y») ble gesten glemt helt, og klikket på
+// <a href="#/brief"> gikk gjennom. Nå måles total bevegelse fra fingeren traff kortet, uavhengig av lås og tid:
+// over 6 px i noen retning = bevegelse, ikke trykk. Flagget nullstilles ved neste trykk. Måles også på window og med
+// touchmove (iOS sender ikke pointermove når nettleseren selv har tatt over gesten).
+const SWT = 6;
+function swTrack(x, y, id) { const t = SW.t; if (!t || t.moved || (id != null && t.pid != null && id !== t.pid)) return; if (Math.abs(x - t.x) > SWT || Math.abs(y - t.y) > SWT) t.moved = true; }
 const TH = 0.38;
 function lbl(g, w) { for (const [k, sel] of [['i', '[data-sw-idle]'], ['a', '[data-sw-armed]'], ['d', '[data-sw-done]']]) { const el = g.rev?.querySelector(sel); if (el) el.style.opacity = k === w ? '1' : '0'; } }
 function paint(g) {
@@ -58,9 +66,11 @@ function arm(g, a) {
   lbl(g, a ? 'a' : 'i');
 }
 function swDown(e) {
+  if (e.isPrimary !== false) SW.t = null;
   if (SW.busy || SW.g || (e.pointerType === 'mouse' && e.button !== 0)) return;
   for (const c of SWC) {
     const card = e.target.closest?.(`#app ${c.card}`); if (!card) continue;
+    SW.t = { x: e.clientX, y: e.clientY, pid: e.pointerId, moved: false };
     const wrap = card.closest(c.wrap); if (!wrap || (c.ok && !c.ok())) return;
     card.getAnimations?.().forEach((a) => { if (a.id === 'sw') a.cancel(); });
     const rev = wrap.querySelector('[data-sw-rev]');
@@ -69,6 +79,7 @@ function swDown(e) {
   }
 }
 function swMove(e) {
+  swTrack(e.clientX, e.clientY, e.pointerId);
   const g = SW.g; if (!g || e.pointerId !== g.pid) return;
   const ddx = e.clientX - g.x0, ddy = e.clientY - g.y0;
   if (g.lock == null && (Math.abs(ddx) > 6 || Math.abs(ddy) > 6)) g.lock = Math.abs(ddx) > Math.abs(ddy) * 1.15 && ddx > 0 ? 'x' : 'y';
@@ -125,8 +136,13 @@ function commit(g, v) {
   const go = () => setTimeout(fin, reduce() ? 0 : 260);
   if (fly) fly.onfinish = go; else go();
 }
-// Klikk som kommer < 350 ms etter et drag blokkeres (åpner ikke kortet ved et uhell).
-function swClick(e) { if (Date.now() - SW.mv < 350 && e.target.closest?.(SWC.map((c) => c.wrap).join(','))) { e.preventDefault(); e.stopPropagation(); } }
+// Klikk etter en bevegelse over 6 px (uansett hvor lenge fingeren ble holdt) eller < 350 ms etter et drag blokkeres.
+function swClick(e) {
+  if (!e.target.closest?.(SWC.map((c) => c.wrap).join(','))) return;
+  if (SW.t?.moved || Date.now() - SW.mv < 350) { SW.t = null; e.preventDefault(); e.stopPropagation(); }
+}
+/** Prompt 40: andre moduler (brief-siden, bibelkortet) kan spørre om siste trykk var en bevegelse. */
+export const swMoved = () => !!SW.t?.moved;
 
 /* =====================================================================
    2. Redigeringsark: fast i bunnen, bakteppe over alt, siden låst og vuggingen pauset
@@ -179,7 +195,7 @@ function cmBlocks(place, X) {
   const ws = (v) => (v == null ? '' : ` · ${Math.round(v)} m/s`);
   const dd = t0.sH != null && t0.yH != null ? t0.sH - t0.yH : null;
   const hero = `<div class="p39-g p39-duel"><div class="p39-dy"><span class="p39-dk yr"><i>yr</i>YR</span><b>${deg(t0.yH)}</b><span>${f1(t0.yP)} mm${ws(t0.yW)}</span></div>
-    <div class="p39-dm"><span></span><em>${dd == null ? '–' : Math.round(dd) === 0 ? '±0°' : `${dd > 0 ? '+' : '−'}${Math.abs(Math.round(dd))}°`}</em></div>
+    <div class="p39-dm"><span></span><em style="${dd == null || Math.round(dd) === 0 ? '' : `color:${dd > 0 ? '#ffc79e' : '#9fe3ff'}`}">${dd == null ? '–' : Math.round(dd) === 0 ? 'likt' : `Δ ${Math.abs(Math.round(dd))}°`}</em></div>
     <div class="p39-dy r"><span class="p39-dk st">STORM<i>S</i></span><b>${deg(t0.sH)}</b><span>${f1(t0.sP)} mm${ws(t0.sW)}</span></div></div>`;
   const agree = `<div class="p39-g p39-ag"><span class="p39-agh"><b>${nOk} av ${D.length}</b><span>dager der de er enige</span></span>
     <div class="p39-dots">${D.map((x) => `<span><i class="${x.ok ? 'ok' : 'no'}">${x.ok ? '✓' : '≠'}</i><small>${x.d === 'I dag' ? 'I D' : x.d.slice(0, 1).toUpperCase()}</small></span>`).join('')}</div></div>`;
@@ -192,12 +208,12 @@ function cmBlocks(place, X) {
   const rows = D.map((x, i) => {
     const [y, s, df, sc, u] = M[T][1](x), w = Math.min(1, Math.abs(df) / sc) * 50, yr = df > 0, op = CM.open === i;
     const st = x.ok ? 'Enige' : wet(x.yP) !== wet(x.sP) && Math.abs(x.dT) >= 2 ? 'Uenige om regn og temperatur' : wet(x.yP) !== wet(x.sP) ? 'Uenige om regn' : 'Uenige om temperatur';
-    const dft = Math.abs(df) < 0.05 || (u === '°' && Math.round(Math.abs(df)) === 0) ? '' : `${df > 0 ? '+' : '−'}${u === '°' ? Math.abs(Math.round(df)) : f1(Math.abs(df))}${u}`;
+    const dft = Math.abs(df) < 0.05 || (u === '°' && Math.round(Math.abs(df)) === 0) || (u !== '°' && f1(Math.abs(df)) === '0') ? '' : `${u === '°' ? Math.abs(Math.round(df)) : f1(Math.abs(df))}${u === '°' ? '°' : u}`; // prompt 40: uten fortegn
     return `<div class="p39-lr"><button type="button" class="p39-lb" data-p39="cmrow" data-i="${i}" aria-expanded="${op}"><b>${esc(x.d)}</b><span class="n">${esc(y)}</span><span class="p39-bar"><i></i><em></em><s style="left:${yr ? 50 - w : 50}%;width:${Math.max(w, df ? 1.5 : 0)}%;background:${yr ? '#7fd6f5' : '#ffb27a'}"></s><u style="color:${!dft ? 'transparent' : yr ? '#9fe3ff' : '#ffc79e'}">${dft}</u></span><span class="n l">${esc(s)}</span><span class="p39-chv" style="transform:rotate(${op ? 90 : 0}deg)">›</span></button>
       ${op ? `<div class="p39-lx"><span style="color:${x.ok ? '#8ff0b0' : '#ffb3a6'}">${st}</span><div><span class="yr"><small>YR</small><b>${deg(x.yH)} / ${deg(x.yL)}</b><span>${f1(x.yP)} mm${ws(x.yW)}</span></span><span class="st"><small>STORM</small><b>${deg(x.sH)} / ${deg(x.sL)}</b><span>${f1(x.sP)} mm${ws(x.sW)}</span></span></div></div>` : ''}</div>`;
   }).join('');
   const list = `<div class="p39-g p39-tabs">${Object.entries(M).map(([k, [n]]) => `<button type="button" data-p39="cmtab" data-k="${k}" aria-pressed="${T === k}">${n}</button>`).join('')}</div>
-    <div class="p39-g p39-list"><div class="p39-lh"><span></span><span class="yr">YR</span><span class="mid"><span>← Yr</span><span>Storm →</span></span><span class="st">STORM</span><span></span></div>${rows}</div>`;
+    <div class="p39-g p39-list"><div class="p39-lh"><span></span><span class="yr">YR</span><span class="mid"><span>← Yr ${T === 't' ? 'varmere' : 'mer'}</span><span>Storm ${T === 't' ? 'varmere' : 'mer'} →</span></span><span class="st">STORM</span><span></span></div>${rows}</div>`;
   // Neste 24 timer: uenighetsbånd mellom linjene.
   const hrs = C.hours.filter((h) => h.yr != null && h.pent != null).slice(0, 24);
   let chart = '';
@@ -229,7 +245,7 @@ export function cmpView39(place, placeName) {
   }
   const raw = WXM?.WX?.d?.[place]?.compare ?? CMPo().d[place], up = raw?.updatedAt ? new Date(raw.updatedAt).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '';
   return `<div class="p39-cmp" role="dialog" aria-label="Yr mot Storm"><div class="p39-cmsc" id="p39-cmsc"><div class="p39-cmin">
-    <div class="p39-cmh"><span><b>Yr mot Storm</b><span>${esc(placeName ?? '')}${up ? ` · oppdatert ${up}` : ''}</span></span><button type="button" class="p39-done${ed ? ' on' : ''}" data-p39="cmdone">Ferdig</button></div>
+    <div class="p39-cmh"><span><b>Yr mot Storm</b><span>${esc(placeName ?? '')}${up ? ` · oppdatert ${up}` : ''}</span></span>${ed ? '<button type="button" class="p39-done on" data-p39="cmdone">Ferdig</button>' : `<button type="button" class="w32-x" data-p39="cmdone" aria-label="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`}</div>
     ${ed ? '<span class="p39-edh">Dra kortene for å flytte · − for å skjule</span>' : ''}
     <div class="p39-blks" id="p39-blks">${body}</div>
     <span class="p39-src">Yr: MET Norway. Storm: ECMWF via Open-Meteo (Storm har ikke åpent API).</span></div></div></div>`;
@@ -254,7 +270,7 @@ function cmDown(e) {
     hold();
     CD.d = { k, el: n, y0: CD.py, y: CD.y2 ?? CD.py, pid };
     n.classList.add('p39-lift'); vib(6); cmPaint();
-  }, 170);
+  }, 320); // prompt 40: samme regel som Hjem – dra først etter 320 ms stille
 }
 function cmPaint() { const D = CD.d; if (!D) return; D.el.style.transform = `translate3d(0,${(D.y - D.y0).toFixed(1)}px,0) scale(1.03)`; }
 function cmMove(e) {
@@ -524,6 +540,10 @@ export function boot39() {
   if (booted) return; booted = true;
   document.addEventListener('pointerdown', (e) => { swDown(e); cmDown(e); }, true);
   document.addEventListener('pointermove', (e) => { swMove(e); cmMove(e); }, { capture: true, passive: false });
+  // Prompt 40: bevegelse utenfor kortet og touch-bevegelse (iOS) teller også.
+  addEventListener('pointermove', (e) => swTrack(e.clientX, e.clientY, e.pointerId), { passive: true });
+  document.addEventListener('touchmove', (e) => { const t = e.touches?.[0]; if (!t) return; swTrack(t.clientX, t.clientY, null); if (CD.dt && (Math.abs(t.clientX - CD.px) > 6 || Math.abs(t.clientY - CD.py) > 6)) { clearTimeout(CD.dt); CD.dt = null; } }, { capture: true, passive: true });
+  document.addEventListener('scroll', () => { if (CD.dt) { clearTimeout(CD.dt); CD.dt = null; } }, { capture: true, passive: true });
   const up = (e) => { swUp(e); cmUp(e); };
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) document.addEventListener(ev, up, true);
   document.addEventListener('click', (e) => {

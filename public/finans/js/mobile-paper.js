@@ -111,7 +111,7 @@ export function classicBand() {
 
 const PAGE = {
   hjem: ['Finans', () => { const s = S.summary; return s ? `${cap(new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' }))} · ${s.daysLeft} dager igjen` : 'Denne måneden'; }],
-  liste: ['Liste', 'Alle kontoer'], budsjett: ['Budsjett', 'Denne måneden'], sok: ['Søk', '✦ Med AI'], fmer: ['Mer', 'Alt fra FinansHub på nettsiden'],
+  liste: ['Liste', 'Alle kontoer'], budsjett: ['Budsjett', 'Denne måneden'], sok: ['Søk', '✦ Med Glimt'], fmer: ['Mer', 'Alt fra FinansHub på nettsiden'],
   mat: ['Mat', () => { const t = matToday(); return t?.week ? `Uke ${t.week}` : 'Ukeplan og oppskrifter'; }],
   spor: ['Sporing', 'Pakker og sendinger'],
   mer: ['Mer', 'Alle moduler'], set: ['Innstillinger', 'Konto og utseende'], media: ['Media', 'Plex · Jellyfin'],
@@ -349,7 +349,7 @@ export function paperHome() {
     h5: newsCard(H?.news),
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
     h6: posCard(), h7: bolWidget(), h8: P37.todoWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(), // Prompt 32: Prøveperioder
-    h12: P36.briefCard(P35.briefCard(), edOn('hl')), h13: P37B.bibleHome(edOn('hl')), // Prompt 37: Dagens bibelvers (bare med modulen) // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
+    h12: P36.briefCard(P35.briefCard(), edOn('hl')), h13: P37B.bibleHome(edOn('hl')), h14: globalThis.P40?.hjemlysHome?.(edOn('hl')) ?? '', // Prompt 40: Hjemlys // Prompt 37: Dagens bibelvers (bare med modulen) // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
   }, { full: ['h12', 'h13', 'h1', 'h4', 'h5'] })}</div>`;
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
@@ -392,12 +392,12 @@ export function paperFin() {
 export function paperMer() {
   // Prompt 24 (claude-code-mer-lik.md): ett kort, rekkefølge og tekster som i designet. Det som allerede ligger i
   // fanelinja tas ut. I profilene Finans + Boliger og Boliger-profil står Hjem øverst.
-  const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k));
+  const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k)); // inBar: bare for valget Sporing/Domener under
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
   const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Now Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
      ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
     ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
-    .filter(([k]) => k === 'hl' || k === 'set' || !inBar.has(k));
+    ; // prompt 40 (claude-code-fanelinje-alle-sider.md): faner i fanelinja vises fortsatt i Mer
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
   // Prompt 28: hold inne for å flytte og skjule (lagres per konto), Subscription OS etter Finans.
   return P28.merView(rows);
@@ -441,7 +441,7 @@ export function newsView() {
       <button class="pp-gear" data-pp="newsset" aria-label="Kilder og AI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4"/></svg></button></div>
     ${P23.newsTabs(P, cats)}
     ${P.newsErr ? `<div class="pp-card pp-mut">${esc(P.newsErr)}</div>` : !N ? '<div class="m-spin"></div>' : `
-    ${lead ? `<div class="pp-lead">${st.aiSummary && N.digest?.text ? '<span class="pp-lab">✦ AI-SAMMENDRAG</span>' : ''}<p>${esc(lead)}</p></div>` : ''}
+    ${lead ? `<button type="button" class="pp-lead p40-nlead" data-p40="ngl"><span class="pp-lab">✦ GLIMT · SAMMENDRAG</span><p>${esc(lead)}</p><span class="p40-nmore">Les hele sammendraget med kilder og bilder ›</span></button>` : '' /* prompt 40: åpner Glimt-siden */}
     <div class="pp-items p27-items">${items.map((x, i) => `<a href="${esc(x.url)}" target="_blank" rel="noopener" data-p27art="${i}"><span class="m-grow">${P.cat === 'siste' ? `<span class="pp-lab pp-cat">${esc(catName(x.category).toUpperCase())}</span>` : ''}<span class="pp-it">${esc(x.title)}</span><span class="pp-mut">${esc(x.feed)} · ${esc(timeOf(x.published))}${x.ai || x.aiCategory ? ' · ✦ AI' : ''}</span></span>${P27.newsThumb(x, i)}</a>`).join('') || '<div class="pp-mut" style="padding:20px 0">Ingen saker i denne kategorien.</div>'}</div>`}
     ${P.set ? newsSheet(feeds, st, cats) : ''}${P.set ? P23.iconPicker(P) : ''}
   </div>${P27.articleView(items, catName)}`;

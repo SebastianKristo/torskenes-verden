@@ -279,7 +279,7 @@ function sheet(D) {
   const pp = hrs.map((h) => Math.round(h.precipProb ?? 0));
   const nowLine = isToday ? `<line x1="${X(nowH).toFixed(1)}" y1="0" x2="${X(nowH).toFixed(1)}" y2="170" stroke="#9aa0aa" stroke-width="1" stroke-dasharray="3 3"/>` : '';
   return `<div class="vx-shbg" data-wx="shx"></div><div class="vx-sh" role="dialog" aria-label="Forhold">
-    <div class="vx-shtop"><span></span><b>Forhold</b><button class="vx-x" data-wx="shx" aria-label="Lukk">×</button></div>
+    <div class="vx-shtop"><span></span><b>Forhold</b><button type="button" class="w32-x" data-wx="shx" aria-label="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="vx-shdays">${days.map((x, k) => { const t = new Date(x.date + 'T12:00'); return `<button data-wx="day" data-i="${k}" aria-pressed="${k === i}"><span>${WD[t.getDay()].slice(0, 1).toUpperCase()}</span><b>${t.getDate()}</b></button>`; }).join('')}</div>
     <div class="vx-shdate">${WD[dt.getDay()].replace(/^./, (x) => x.toUpperCase())}dag ${dt.getDate()}. ${MON[dt.getMonth()]}</div>
     <div class="vx-shnow"><div><div class="vx-row"><b>${deg(isToday ? D.current?.temp : d.hi)}</b>${ico(kindOf(isToday ? D.current?.code : d.code), 34)}</div><span>H:${deg(d.hi)} L:${deg(d.lo)}</span></div><span class="vx-sm">${esc(descOf(d.code))}</span></div>

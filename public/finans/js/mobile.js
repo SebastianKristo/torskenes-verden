@@ -45,6 +45,7 @@ import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål (uten fanelinje
 import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
 import * as P38 from './mobile-p38.js'; // prompt 38: AI-svar lukk, nye brief-kort, prestedrakt, ØKT, QR-innlogging, Glimt i Domener
 import * as P39 from './mobile-p39.js'; // prompt 39: sveip bort myk, Bibel uten fanelinje, wiggle-ark, Tilpass/Appprofil, Yr mot Storm 2a, ukas vær, kvittering på nytt
+let P40 = null; // prompt 40: mobile-p40.js (dynamisk import i bind())
 import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
 import * as P35 from './mobile-p35.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
@@ -443,7 +444,7 @@ export function draw() {
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${scr === 'bibel' ? ' p39-bib' : ''}${scr === 'nordlys' ? ' n31-pg' : ''}${scr === 'aictl' ? ' p34-aipg' : ''}${scr === 'brief' ? ' p34-brpg' : ''}${scr === 'glimt' ? ' p35-glpg' : ''}${pp && scr === 'set' ? ' p32-nonav' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P37.layer37()}${P37B.layer37b(P37B.H2.pk ?? 0)}${P38.layer38()}${P39.layer39()}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P37.layer37()}${P37B.layer37b(P37B.H2.pk ?? 0)}${P38.layer38()}${P39.layer39()}${P40 ? P40.layer40() : ''}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -451,7 +452,7 @@ export function draw() {
   if (fad) P23.finnAdAfterDraw();
   P23.arrive(vk, vkChanged);
   P25.afterDraw();
-  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39();
+  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39(); P40?.afterDraw40();
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -776,6 +777,8 @@ export function bind() {
   // Prompt 17: navn og ikon på appen, dra for å oppdatere og sanntid (Huskeliste, Familie og Sporing).
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
   wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers }); P31.boot31(); P32.boot32(); P34.boot34(); P35.boot35(); P36.boot36(); P37.boot37(); P37B.boot37b(); P38.boot38(); P39.boot39();
+  // Prompt 40: lastes lat (dynamisk import), så modulrekkefølgen ikke endres (TDZ i sykliske importer).
+  import('./mobile-p40.js').then((x) => { P40 = x; x.boot40(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p40', err));
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
     takeDesign(r); P37B.takeWopt(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); P32.take32(r); takeApp(r); P39.take39(r);
@@ -815,6 +818,7 @@ export function bind() {
     if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
     if (m.screen === 'aictl' && await P34AI.bindAi(e, t)) return; // Prompt 34: AI-kontroll
     if (await P38.bind38(e, t)) return; // Prompt 38: ØKT, QR-innlogging, brief-kort, Glimt i Domener
+    if (P40 && await P40.bind40(e, t)) return; // Prompt 40
     if (await P39.bind39(e, t)) return; // Prompt 39
     if (await P37B.bind37b(e, t)) return; // Prompt 37: bibelvers, onboarding, «hvor er X», Pakker-widget, prøveperioder
     if (m.screen === 'huske' || m.screen === 'hl' || m.screen === 'brief') { if (await P37.bind37(e, t)) return; } // Prompt 37: Gjøremål

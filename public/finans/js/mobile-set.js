@@ -152,8 +152,8 @@ const PAGE = {
     return `${G('Lås', [tog('lock', 'Krev innlogging etter tid i bakgrunnen', 'Face ID og fingeravtrykk finnes i de native appene', pref('lock')),
         chips('lockAfter', 'Lås etter', [['0', 'Umiddelbart'], ['1', '1 min'], ['5', '5 min'], ['15', '15 min']], pref('lockAfter')),
         tog('appHide', 'Skjul beløp i appveksleren', 'Uskarpt bilde når du bytter app', pref('appHide'))])}
-      ${G('Tofaktor', [val(`2FA for ${m.me?.username ? '@' + esc(m.me.username) : 'kontoen'}`, tfa === undefined ? '–' : tfa ? '● På · TOTP' : '○ Av', tfa ? '#7BE3A0' : tfa === false ? '#F2B56B' : ''), link(tfa ? 'Administrer 2FA' : 'Sett opp 2FA', '/', 'Homelab → Innstillinger → Innlogging')],
-        'Bruk en autentiseringsapp som 1Password, Google Authenticator eller Aegis.')}
+      ${globalThis.P40?.tfaGroup ? globalThis.P40.tfaGroup(G) : G('Tofaktor', [val(`2FA for ${m.me?.username ? '@' + esc(m.me.username) : 'kontoen'}`, tfa === undefined ? '–' : tfa ? '● På · TOTP' : '○ Av', tfa ? '#7BE3A0' : tfa === false ? '#F2B56B' : ''), link(tfa ? 'Administrer 2FA' : 'Sett opp 2FA', '/', 'Homelab → Innstillinger → Innlogging')],
+        'Bruk en autentiseringsapp som 1Password, Google Authenticator eller Aegis.') /* prompt 40: oppsett i appen (mobile-p40.js) */}
       ${G('Pålitelige enheter', d?.devices?.length ? d.devices.map((x) => val(`${esc(x.name)}${x.current ? ' · denne' : ''}`, when(x.lastSeen), x.current ? '#7BE3A0' : '')) : [val('Ingen pålitelige enheter', '')],
         d ? (d.lan ? 'Du er på lokalt nett nå.' : 'Du er ikke på lokalt nett nå. Fra internett kreves alltid passord.') : '')}`;
   },

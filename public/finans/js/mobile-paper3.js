@@ -8,7 +8,7 @@ import { haptic } from './mobile-haptics.js';
 import { TR, trkLoad, carOf, normNo, detectLocal } from './mobile-track.js';
 import { hlData } from './mobile-hl.js';
 import { FCOL, FO, fmSort, fmBar, ppTi, FM_MINUS, FM_PLUS, FM_LOCK } from './mobile-p20.js';
-import { dragStart } from './mobile-p21.js';
+import { dragStart, dragging, dragEnd } from './mobile-p21.js';
 import * as P24 from './mobile-p24.js';
 import * as P25 from './mobile-p25.js';
 import * as P26 from './mobile-p26.js';
@@ -64,7 +64,7 @@ export const fourth = () => { if (!domOk()) return 'spor'; const f = fourthPref(
 /* ---------- Tilpass hver side: hold inne → vugging, ▲ ▼ og − ---------- */
 
 const PG = {
-  hl: [['h12', 'Glimt-brief'], ['h13', 'Dagens bibelvers'], ['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h11', 'Prøveperioder'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Gjøremål'], ['h9', 'Bursdager']],
+  hl: [['h12', 'Glimt-brief'], ['h13', 'Dagens bibelvers'], ['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h11', 'Prøveperioder'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Gjøremål'], ['h9', 'Bursdager'], ['h14', 'Hjemlys']],
   hjem: [['f1', 'Saldo'], ['f2', 'Kvitteringer'], ['f3', 'Siste transaksjoner'], ['f4', 'Budsjett']],
   mat: [['m1', 'Dagens middag'], ['m2', 'Ukeplan'], ['m3', 'Mapper'], ['m4', 'Skann og import']],
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
@@ -108,7 +108,7 @@ export function edBlocks(page, blocks, { full = [] } = {}) {
   const arrows = page === 'spor';
   const pills = on ? `<div class="p28-pills" role="toolbar" aria-label="Rediger siden">${arrows ? '<span></span>' : `<button class="p28-pill plus" data-ped="add" aria-label="Legg til widget${hidden.length ? ` (${hidden.length} skjult)` : ''}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>${hidden.length ? `<b>${hidden.length}</b>` : ''}</button>`}
       <button class="p28-pill ok" data-ped="done" aria-label="Ferdig"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div>` : '';
-  const html = vis.map((k, i) => `<div class="pp-ed${on ? ' on p28-wig' : ''}${i % 2 ? ' odd' : ''}${full.includes(k) ? ' full' : ''}" data-edk="${k}" data-edp="${page}">${on ? `<button class="p28-minus" data-ped="hide" data-k="${k}" aria-label="Skjul ${esc(lab[k])}">${MINUS}</button>${ED_SET[k] && page === 'hl' ? `<button class="p28-edw" data-ped="widget" data-k="${k}">✎ Rediger widget</button>` : ''}${arrows ? `<div class="p28-arr"><button data-ped="mv" data-k="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} opp">▲</button><button data-ped="mv" data-k="${k}" data-d="1" ${i === vis.length - 1 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} ned">▼</button></div>` : ''}` : ''}${blocks[k]}</div>`).join('');
+  const html = vis.map((k, i) => `<div class="pp-ed${on ? ' on p28-wig' : ''}${i % 2 ? ' odd' : ''}${full.includes(k) ? ' full' : ''}" data-edk="${k}" data-edp="${page}">${on ? `<button class="p28-minus" data-ped="hide" data-k="${k}" aria-label="Skjul ${esc(lab[k])}">${MINUS}</button>${arrows ? '' : `<span class="p40-grab" data-p40grab="${k}" role="button" aria-label="Dra ${esc(lab[k])} for å flytte">≡</span>`}${ED_SET[k] && page === 'hl' ? `<button class="p28-edw" data-ped="widget" data-k="${k}">✎ Rediger widget</button>` : ''}${arrows ? `<div class="p28-arr"><button data-ped="mv" data-k="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} opp">▲</button><button data-ped="mv" data-k="${k}" data-d="1" ${i === vis.length - 1 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} ned">▼</button></div>` : ''}` : ''}${blocks[k]}</div>`).join('');
   return pills + html + (on ? '' : '<span class="pp-edhint">Hold inne et kort for å flytte eller skjule det</span>') + (on && ED.add ? addSheet(page, hidden.filter((k) => k !== 'h13' || !!blocks.h13), lab) : '');
 }
 function addSheet(page, hidden, lab) {
@@ -126,9 +126,35 @@ const edDrop = (page) => (keys) => {
   savePage(page, [...vis, ...order.filter((k) => !vis.includes(k))], hidden); haptic('ok'); draw();
 };
 const edDrag = (e, el) => dragStart(e, el, { sel: '.pp-ed[data-edk]', attr: 'data-edk', drop: edDrop(el.dataset.edp) });
+// Prompt 40 (claude-code-brief-sveip-og-wiggle-scroll.md, fasit edVals `ed.down`/`_edTm`/`_edSc`): den ekte årsaken til
+// at man ikke fikk scrollet i redigering var (1) at det lange trykket som startet redigeringen også startet et drag av
+// kortet under fingeren (dr satt → touchmove.preventDefault på hele dokumentet til fingeren ble sluppet, og på iOS kom
+// slippet ofte ikke fram fordi kortet ble tegnet på nytt under fingeren), og (2) at draget i redigering startet etter
+// bare 170 ms: på iOS kommer ingen pointermove mens nettleseren selv begynner å scrolle, så tidtakeren fyrte midt i
+// scrollen og låste siden. Nå: langt trykk (500 ms) åpner BARE redigering. I redigering starter draget først når
+// fingeren har holdt stille i 320 ms (< 6 px); touchmove > 6 px, scroll og pointercancel avbryter. ≡ drar med en gang.
+const ED_HOLD = 320, ED_SLOP = 6;
+const dpCancel = () => { if (dp) { clearTimeout(dp.t); dp = null; } };
+let edBooted = false;
+function edBoot() {
+  if (edBooted) return; edBooted = true;
+  document.addEventListener('touchmove', (e) => { const t = e.touches?.[0]; if (t && dp && (Math.abs(t.clientX - dp.x) > ED_SLOP || Math.abs(t.clientY - dp.y) > ED_SLOP)) dpCancel(); if (t && lp && (Math.abs(t.clientX - lp.x) > 8 || Math.abs(t.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; } }, { capture: true, passive: true });
+  document.addEventListener('scroll', () => { dpCancel(); if (lp) { clearTimeout(lp.t); lp = null; } }, { capture: true, passive: true });
+  document.addEventListener('pointercancel', () => { dpCancel(); if (lp) { clearTimeout(lp.t); lp = null; } }, true);
+  // Reserve: draget avsluttes alltid når fingeren slippes, også om slippet havnet på et element som ble tegnet bort.
+  const fin = (e) => { dpCancel(); if (dragging()) dragEnd(e?.type?.startsWith('touch') ? undefined : e); };
+  document.addEventListener('touchend', (e) => { if (!e.touches?.length) fin(e); }, true);
+  document.addEventListener('touchcancel', (e) => { if (!e.touches?.length) fin(e); }, true);
+  addEventListener('pointerup', fin, true);
+  addEventListener('blur', () => fin());
+}
 export function edDown(e) {
+  edBoot();
   lpFired = false;
   if ((e.button ?? 0) > 0) return;
+  // ≡-håndtaket starter draget med en gang.
+  const gr = e.target.closest?.('[data-p40grab]');
+  if (gr && ED.page) { const b0 = gr.closest('[data-edk]'); if (b0 && !ED.add) { e.preventDefault?.(); navigator.vibrate?.(6); edDrag({ pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY, preventDefault() {} }, b0); } return; }
   const b = e.target.closest?.('[data-edk]');
   if (!b || e.target.closest('input,textarea,select,[data-ped],[data-ppplus],.p28-pills')) return;
   // En pakke i Sporing har sitt eget lange trykk (velg flere).
@@ -138,22 +164,21 @@ export function edDown(e) {
   if (ED.page) {
     if (ED.page !== b.dataset.edp || ED.add) return;
     const ev = { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY };
-    clearTimeout(dp?.t);
-    dp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { dp = null; if (b.isConnected) { navigator.vibrate?.(6); edDrag({ ...ev, clientX: lastXY.x ?? ev.clientX, clientY: lastXY.y ?? ev.clientY }, b); } }, 170) };
+    dpCancel();
+    dp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { dp = null; if (b.isConnected) { navigator.vibrate?.(6); edDrag({ ...ev, clientX: lastXY.x ?? ev.clientX, clientY: lastXY.y ?? ev.clientY }, b); } }, ED_HOLD) };
     lastXY = {};
     return;
   }
-  const page = b.dataset.edp, k = b.dataset.edk, ev = { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY };
+  const page = b.dataset.edp;
   lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => {
+    // Bare redigering: ingen kort dras før man trykker på nytt.
     lp = null; lpFired = true; ED.page = page; haptic('ok'); navigator.vibrate?.(15); draw();
-    const n = document.querySelector(`.pp-ed[data-edk="${k}"]`);
-    if (n) edDrag(ev, n);
   }, 500) };
 }
 let dp = null, lastXY = {};
 export function edMove(e) {
   if (lp && (Math.abs(e.clientX - lp.x) > 8 || Math.abs(e.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; }
-  if (dp) { lastXY = { x: e.clientX, y: e.clientY }; if (Math.abs(e.clientX - dp.x) > 8 || Math.abs(e.clientY - dp.y) > 8) { clearTimeout(dp.t); dp = null; } }
+  if (dp) { lastXY = { x: e.clientX, y: e.clientY }; if (Math.abs(e.clientX - dp.x) > ED_SLOP || Math.abs(e.clientY - dp.y) > ED_SLOP) dpCancel(); }
 }
 export function edUp() { if (lp) clearTimeout(lp.t); lp = null; if (dp) clearTimeout(dp.t); dp = null; }
 /** Klikk: «Ferdig», ▲ ▼ − og «+ skjult kort». Mens siden redigeres, åpner ikke kortene noe. */
@@ -236,7 +261,7 @@ export function finMerGrid() {
   const dirs = Array.isArray(D.dirs) ? D.dirs : D.dirs?.items ?? null;
   const T = [
     ...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), // Prompt 24: Hjem som flis i profilene
-    ['sok', 'Søk', '✦ Med AI'], ['liste', 'Liste', 'Alle transaksjoner'], ['finn', 'Finn', 'Kjøp og salg'],
+    ['sok', 'Søk', '✦ Med Glimt'], ['liste', 'Liste', 'Alle transaksjoner'], ['finn', 'Finn', 'Kjøp og salg'],
     ['budsjett', 'Budsjett', s?.budgetTotal ? `${n0(s.left ?? 0)} kr ${(s.left ?? 0) < 0 ? 'over' : 'igjen'}` : 'Ikke satt opp'],
     ['kv', 'Kvitteringer', rv ? `${rv} til gjennomgang` : 'Ingen til gjennomgang', rv],
     ['fast', 'Faste utgifter', D.rec ? `${n0(recNext)} kr/mnd` : 'Neste 30 dager'],
@@ -270,6 +295,10 @@ async function fsRun(force = false) {
   FS.busy = true; FS.err = ''; draw();
   try {
     let r;
+    // Prompt 40 (claude-code-finans-sok-glimt-kort.md): standardspørsmål (abonnementer, forbruk i kategori/butikk, faste,
+    // kontoer, budsjett) får et ryddig Glimt-svar med nøkkeltall og kort, med og uten ✦ Glimt på.
+    const P40 = globalThis.P40;
+    if (P40?.stdQ?.(q, FS.ai)) { const g = await P40.searchAsk(q).catch(() => null); if (my !== fsSeq) return; if (g) { FS.r = { ...(await plainSearch(q).catch(() => ({}))), glimt: g, q }; FS.busy = false; draw(); return; } }
     if (FS.ai && (force || !simple(q))) {
       // Prompt 25: ingen fast 25 s-grense. Tar søket lang tid, blir det en jobb på serveren («✦ Ollama tenker … 34 s av
       // 60 s») med fremdrift og Avbryt. Grensen er motorens; serveren går videre til neste motor når den nås.
@@ -296,21 +325,23 @@ const hitsOf = (r) => (r?.hits ?? r?.items ?? []).filter((h) => h && (h.txId ?? 
 export function paperSearch() {
   const r = FS.r, hits = hitsOf(r), q = FS.q.trim(), sum = hits.reduce((a, h) => a + (Number(h.amount) || 0), 0);
   const big = [...hits].sort((a, b) => Math.abs(b.amount ?? 0) - Math.abs(a.amount ?? 0))[0];
-  const aiTxt = r?.cancelled && FS.ai ? 'Du avbrøt AI-søket. Her er treffene fra vanlig søk.' : r?.aiDown && FS.ai ? `AI svarte ikke: ${r.aiDown}` : r?.ai && (r.answer || r.summary) ? r.answer || r.summary
+  const aiTxt = r?.cancelled && FS.ai ? 'Du avbrøt Glimt-søket. Her er treffene fra vanlig søk.' : r?.aiDown && FS.ai ? `Glimt svarte ikke: ${r.aiDown}` : r?.ai && (r.answer || r.summary) ? r.answer || r.summary
     : FS.ai && r && hits.length ? `Du har ${hits.length} treff på «${r.q}», til sammen ${n0(sum)} kr ${sum < 0 ? 'brukt' : 'inn'}. Største post er ${big?.description ?? big?.merchant ?? ''}.`
       : FS.ai && r && !hits.length ? `Jeg fant ingen kjøp som passer «${r.q}» i transaksjonene, kvitteringene eller varelinjene.` : '';
-  const src = r?.cancelled ? 'Søk på nytt med ✦ AI for å prøve igjen.' : r?.aiDown ? 'Viser treffene fra vanlig søk. Sjekk nøkkel og motor under Innstillinger → AI og tolkning.' : r?.ai ? `✦ ${r.engine || r.provider || 'AI'} leste transaksjoner, kvitteringer og varelinjer.` : 'Fant vanlige treff først, AI oppsummerte.';
-  const sugg = ['rema', 'spotify', 'kyllingfilet', 'hvor mye brukte jeg på mat?', 'strøm i oktober'];
-  return `<form class="pp-search pp-fsq" data-ppfs role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="pp-fsq" name="q" type="search" value="${esc(FS.q)}" enterkeyhint="search" placeholder="${FS.ai ? 'Spør, f.eks. «hva brukte jeg på kaffe?»' : 'Søk i transaksjoner og kvitteringer'}" aria-label="Søk i Finans" autocomplete="off">
-      <button type="button" class="pp-aitog${FS.ai ? ' on' : ''}" data-ppfsk="ai" aria-pressed="${FS.ai}">✦ AI</button></form>${P27.sugBox(FS)}
+  const src = r?.cancelled ? 'Søk på nytt med ✦ Glimt for å prøve igjen.' : r?.aiDown ? 'Viser treffene fra vanlig søk. Sjekk nøkkel og motor under Innstillinger → AI og tolkning.' : r?.ai ? 'Glimt leste transaksjoner, kvitteringer og varelinjer.' : 'Fant vanlige treff først, AI oppsummerte.';
+  const sugg = ['abonnementer', 'rema', 'spotify', 'hvor mye brukte jeg på mat?', 'strøm i oktober'];
+  const G = r?.glimt;
+  return `<form class="pp-search pp-fsq" data-ppfs role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="pp-fsq" name="q" type="search" value="${esc(FS.q)}" enterkeyhint="search" placeholder="${FS.ai ? 'Spør Glimt, f.eks. «hva brukte jeg på kaffe?»' : 'Søk i transaksjoner og kvitteringer'}" aria-label="Søk i Finans" autocomplete="off">
+      <button type="button" class="pp-aitog${FS.ai ? ' on' : ''}" data-ppfsk="ai" aria-pressed="${FS.ai}">✦ Glimt</button></form>${P27.sugBox(FS)}
     ${!q && !r ? `<div class="pp-col" style="gap:8px"><span class="pp-lab" style="padding:4px 2px 0">PRØV</span><div class="pp-chips pp-wrap">${sugg.map((n) => `<button class="pp-fchip" data-ppfsk="sugg" data-q="${esc(n)}">${esc(n)}</button>`).join('')}</div>
-      <span class="pp-mut" style="line-height:1.45;padding:2px">Enkle ord som «rema» eller «spotify» søkes vanlig først. Med ✦ AI kan du spørre fritt, og AI leser også varelinjene i kvitteringene.</span></div>` : ''}
+      <span class="pp-mut" style="line-height:1.45;padding:2px">Enkle ord som «rema» eller «spotify» søkes vanlig først. Med ✦ Glimt kan du spørre fritt, og Glimt leser også varelinjene i kvitteringene.</span></div>` : ''}
     ${FS.busy ? (P25.JOB.cur ? P25.jobCard() : '<div class="m-spin"></div>') : ''}${FS.err ? `<div class="pp-card pp-mut">${esc(FS.err)}</div>` : ''}
-    ${!FS.busy && aiTxt ? `<div class="pp-card pp-aians"><span class="pp-lab">✦ AI-SVAR</span><span class="pp-serif">${esc(aiTxt)}</span><span class="pp-mut">${esc(src)}</span></div>` : ''}
-    ${!FS.busy && hits.length ? `<div class="pp-sec"><span>TREFF · ${hits.length}</span><span>Netto ${sum < 0 ? '−' : '+'}${n0(sum)} kr</span></div>
+    ${!FS.busy && G ? globalThis.P40.glimtCard(G) : ''}
+    ${!FS.busy && aiTxt && !G ? `<div class="pp-card pp-aians"><span class="pp-lab">✦ GLIMT</span><span class="pp-serif">${esc(String(aiTxt).replace(/\*\*|__|\[\d+\]/g, ''))}</span><span class="pp-mut">${esc(src)}</span></div>` : ''}
+    ${!FS.busy && hits.length && !G?.cards?.length ? `<div class="pp-sec"><span>TREFF · ${hits.length}</span><span>Netto ${sum < 0 ? '−' : '+'}${n0(sum)} kr</span></div>
       <div class="pp-rows">${hits.slice(0, 60).map((h) => { const id = h.txId ?? (h.type === 'tx' ? h.id : null), name = h.description ?? h.merchant ?? h.title ?? 'Treff';
         return `<button class="pp-tx" ${id != null ? `data-tx="${esc(id)}" data-hl="${esc(q)}"` : ''}>${ppTi({ ...h, merchant: name }, ini(name), h.color)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(name)}</b><span class="pp-mut m-ell">${esc([h.date ? dd(h.date) : '', h.reason || h.why || h.category || ''].filter(Boolean).join(' · '))}</span></span><span class="pp-serif ${h.amount > 0 ? 'pp-pos' : ''}">${h.amount != null ? `${h.amount < 0 ? '−' : '+'}${n0(h.amount)}` : ''}</span></button>`; }).join('')}</div>` : ''}
-    ${!FS.busy && r && !hits.length && !FS.ai ? '<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen treff. Slå på ✦ AI for å søke i innholdet i kvitteringene.</div>' : ''}`;
+    ${!FS.busy && r && !hits.length && !FS.ai && !G ? '<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen treff. Slå på ✦ Glimt for å søke i innholdet i kvitteringene.</div>' : ''}`;
 }
 
 /* ---------- Transaksjonsdetaljer med original kvittering ---------- */
@@ -357,6 +388,7 @@ export function paperTx(id) {
     <div class="pp-sec"><span>ORIGINAL KVITTERING</span><span class="${st === 'Vedlagt' ? '' : 'pp-lab-c'}">${st}</span></div>
     ${P30B.hlBanner(id, t)}${P30B.hlImage(id, t)}${slip}
     <div class="pp-two"><button class="pp-btn" data-pptx="cat">Endre kategori</button><button class="pp-btn" data-pptx="bank">Bankutskrift</button></div>
+    ${globalThis.P40?.txTools?.(id, t) ?? '' /* prompt 40: Les på nytt, Rediger alt, lagt til */}
     ${cat}${bank}${full}`;
 }
 export async function txBind15(e, t) {
