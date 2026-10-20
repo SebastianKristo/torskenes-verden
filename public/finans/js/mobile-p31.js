@@ -389,7 +389,8 @@ function bgNotify(q, txt, url) {
   if (G.pushOn) return;
   try {
     if ('Notification' in window && Notification.permission === 'granted') {
-      const opts = { body, tag: `glimt-${Date.now()}`, icon: '/assets/finans/icons/icon-192.png', data: { url: `/finans/${url}` } };
+      // Prompt 39: tittel «Glimt» og Glimt-logoen som ikon (badge: hvit silhuett på Android).
+      const opts = { body: body.length > 160 ? `${body.slice(0, 157)}…` : body, tag: `glimt-${Date.now()}`, icon: '/assets/glimt-varsel.png', badge: '/assets/glimt-badge.png', data: { url: `/finans/${url}` } };
       navigator.serviceWorker?.getRegistration?.('/finans/').then((r) => (r ? r.showNotification('Glimt', opts) : new Notification('Glimt', opts))).catch(() => { try { new Notification('Glimt', opts); } catch {} });
     }
   } catch {}
@@ -397,7 +398,7 @@ function bgNotify(q, txt, url) {
 let banT = null;
 function showAway() {
   const p = G.away.pop(); G.away = [];
-  if (!p) return;
+  if (!p || !aiInOn()) return; // prompt 39: «Vis svaret i appen også» av → ingen banner
   G.banner = { t: 'Glimt svarte mens du var borte', b: p.body, url: p.url };
   clearTimeout(banT); banT = setTimeout(() => { G.banner = null; draw(); }, 4200); draw();
 }
@@ -451,7 +452,16 @@ export function varslerRows(tg) {
   const on = aiBgOn(), perm = 'Notification' in window ? Notification.permission : 'unsupported';
   const st = !pushSupported() ? 'Ikke støttet i denne nettleseren' : G.pushOn ? 'På · Glimt kan varsle når appen er lukket' : perm === 'denied' ? 'Blokkert i nettleseren' : 'Av · trykk for å slå på';
   return tg('data-p31="aibg"', 'AI-svar i bakgrunnen', 'Får du svar mens du er ute av appen, kommer det som varsel', on)
+    // Prompt 39 (claude-code-glimt-varsel-ikon.md): banneret i appen kan slås av (n_ai_in, synkes med kontoen).
+    + tg('data-p31="aiin"', 'Vis svaret i appen også', 'Banner øverst når du kommer tilbake til appen', aiInOn())
     + tg('data-p31="pushtog"', 'Varsler på denne enheten', st, !!G.pushOn);
+}
+export const aiInOn = () => (m.nt31?.n_ai_in ?? lsGet('p39_ai_in', true)) !== false;
+async function aiInToggle() {
+  const v = !aiInOn(); lsSet('p39_ai_in', v);
+  m.nt31 = { ...(m.nt31 ?? {}), n_ai_in: v }; draw();
+  try { await hlApi('/me/notify', { method: 'PUT', json: { n_ai_in: v } }); } catch (e) { if (e.status !== 404) flash(e.message); }
+  flash(v ? 'Glimt viser svaret i appen også ✓' : 'Svaret vises bare i chatten og i varselet');
 }
 async function aiBgToggle() {
   const v = !aiBgOn(); lsSet('p31_aibg', v);
@@ -620,6 +630,7 @@ export async function bind31(e, t) {
       return true;
     }
     case 'aibg': await aiBgToggle(); return true;
+    case 'aiin': await aiInToggle(); return true; // prompt 39
     case 'pushtog': if (G.pushOn) await pushDisable(); else await pushEnable(); return true;
     case 'trrem': { const T = G.tr; if (!T) return true; const d = +x.dataset.d; T.rem = T.rem.includes(d) ? T.rem.filter((v) => v !== d) : [...T.rem, d]; if (!T.rem.length) T.rem = [d === 1 ? 0 : 1]; haptic('tab'); draw(); return true; }
     case 'trsave': await trialSave(CB.trialSaved); return true;

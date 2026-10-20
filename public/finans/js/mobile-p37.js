@@ -167,19 +167,30 @@ function tips(live) {
   const hd = byName('handel'), hb = hd ? live.filter((x) => !x.done && String(x.list) === hd.id) : [];
   if (hb.length) out.push({ k: 'geo', p: 'M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z', c: '#2f6b45', t: G7.geoArm ? 'Stedspåminnelse er på' : 'Påminn meg ved butikken', s: G7.geoArm ? `Glimt varsler når du er ved en matbutikk (${hb.length} i Handel).` : `${hb.length} ${hb.length === 1 ? 'vare' : 'varer'} i Handel. Glimt kan varsle når du er ved Kiwi, Rema eller Coop.`, l1: G7.geoArm ? 'Test varsel' : 'Slå på', a1: G7.geoArm ? 'geotest' : 'geoon', ...(G7.geoArm ? { l2: 'Slå av', a2: 'geooff' } : {}) });
   const ht = calTrip();
-  if (ht) out.push({ k: 'trip', p: 'M3 21h18M5 21V10l7-6 7 6v11M10 21v-5h4v5', c: '#a8661a', t: `${ht.title} om ${ht.days} ${ht.days === 1 ? 'dag' : 'dager'}`, s: 'Fra kalenderen. Lage pakkeliste og huske brøyting?', l1: 'Lag pakkeliste', a1: 'pack', l2: 'Ikke nå', a2: 'packno', ev: ht.key });
+  if (ht) out.push({ k: 'trip', p: 'M3 21h18M5 21V10l7-6 7 6v11M10 21v-5h4v5', c: '#a8661a', t: `${ht.title} om ${ht.days} ${ht.days === 1 ? 'dag' : 'dager'}`, s: 'Fra kalenderen. Lage pakkeliste og huske brøyting?', l1: 'Lag pakkeliste', a1: 'pack', l2: 'Ikke nå', a2: 'packno', l3: 'Ikke foreslå slike', a3: 'packoff', ev: ht.key });
   return out;
 }
-// Fra kalenderen: hytte/reise/bursdag/eksamen innen 21 dager → pakkeliste (vises én gang per hendelse).
+// Prompt 39 (claude-code-gjoremal-glimt-forslag.md): pakkeliste bare for reiser – minst 2 dager eller reise-ord, borte fra
+// hjemme, om 1–14 dager og uten pakkeliste fra før. Aldri for bursdager, merkedager, timer, skole, møter eller abonnementer.
+// «Ikke nå» skjuler forslaget for den hendelsen (huske_tip_dismiss), «Ikke foreslå slike» slår av typen (huske_tip_off.pack).
+const TRAVEL = /\b(hytt\w*|hafjell|tur|reise|ferie|fly|tog|hotell|camping|leir)\b|tur til|fly til/i;
+const NO_PACK = /bursdag|fødselsdag|\d+\s*år\b|jubileum|merkedag|bryllupsdag|lege|frisør|tannlege|time hos|forelesning|skole|prøve|eksamen|frist|innlevering|møte|middag|abonnement|prøveperiode|trekk/i;
+export const packOff = () => !!(lsGet('huske_tip_off', {}) || {}).pack;
 function calTrip() {
+  if (packOff()) return null;
   let ev = [];
   try { ev = (window.__p37cal ?? []); } catch {}
-  const seen = lsGet('p37_tip_seen', {}) || {}, now = Date.now();
+  const seen = { ...(lsGet('p37_tip_seen', {}) || {}), ...(lsGet('huske_tip_dismiss', {}) || {}) }, now = Date.now();
+  const packed = new Set((HK.d?.items ?? []).filter((x) => (x.tags ?? []).includes('pakkeliste')).map((x) => String(x.packFor ?? '')).filter(Boolean));
   for (const e of ev) {
-    const title = String(e.title ?? e.summary ?? ''), st = Date.parse(e.start ?? e.date ?? '');
-    if (!/hytt|hafjell|reise|tur til|ferie|fly til/i.test(title) || !Number.isFinite(st)) continue;
+    const title = String(e.title ?? e.summary ?? ''), st = Date.parse(e.start ?? e.date ?? ''), en = Date.parse(e.end ?? '') || st;
+    const cal = String(e.cal ?? e.calendar ?? e.calKey ?? '').toLowerCase(), kind = String(e.kind ?? e.type ?? '').toLowerCase(), loc = String(e.location ?? e.loc ?? '');
+    if (!Number.isFinite(st) || cal === 'b' || /bursdag|birthday|holiday|helligdag/.test(`${cal} ${kind}`) || NO_PACK.test(title)) continue;
+    const len = Math.max(1, Math.round((en - st) / 864e5) + (e.allDay ? 0 : 1)), home = /oslo|hjemme|^$/i.test(loc.trim());
+    if (!(len >= 2 || TRAVEL.test(title))) continue;
+    if (loc && home && !TRAVEL.test(title)) continue;
     const days = Math.round((st - now) / 864e5), key = `${title}|${String(e.start ?? e.date).slice(0, 10)}`;
-    if (days < 1 || days > 21 || seen[key]) continue;
+    if (days < 1 || days > 14 || seen[key] || packed.has(key)) continue;
     return { title, days, key, date: String(e.start ?? e.date).slice(0, 10) };
   }
   return null;
@@ -220,7 +231,7 @@ export function huskeView37() {
   const tp = AR ? [] : tips(live);
   const dueC = `<div class="p37-chips p37-wr">${[[0, 'I dag'], [1, 'I morgen'], [7, 'Neste uke'], [null, 'Uten dato']].map(([v, n]) => `<button type="button" class="p37-sc${HK.due === v ? ' on' : ''}" data-p17="tdue" data-v="${v ?? ''}" aria-pressed="${HK.due === v}">${n}</button>`).join('')}</div>`;
   return `<div class="p37-hk">${chips}${info}
-    ${tp.map((x) => `<div class="p37-tip"><span class="p37-tic" style="--c:${x.c}">${svg(x.p, 16)}</span><span class="m-grow"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></span><span class="p37-tb"><button type="button" class="ink" data-p37="tip" data-a="${x.a1}" data-ids="${esc((x.ids ?? []).join(','))}" data-ev="${esc(x.ev ?? '')}">${esc(x.l1)}</button>${x.l2 ? `<button type="button" data-p37="tip" data-a="${x.a2}" data-ev="${esc(x.ev ?? '')}">${esc(x.l2)}</button>` : ''}</span></div>`).join('')}
+    ${tp.map((x) => `<div class="p37-tip"><span class="p37-tic" style="--c:${x.c}">${svg(x.p, 16)}</span><span class="m-grow"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></span><span class="p37-tb"><button type="button" class="ink" data-p37="tip" data-a="${x.a1}" data-ids="${esc((x.ids ?? []).join(','))}" data-ev="${esc(x.ev ?? '')}">${esc(x.l1)}</button>${x.l2 ? `<button type="button" data-p37="tip" data-a="${x.a2}" data-ev="${esc(x.ev ?? '')}">${esc(x.l2)}</button>` : ''}${x.l3 ? `<button type="button" data-p37="tip" data-a="${x.a3}" data-ev="${esc(x.ev ?? '')}">${esc(x.l3)}</button>` : ''}</span></div>`).join('')}
     ${AR ? '' : dueC}
     ${HK.err ? `<div class="p37-card p37-mut">${esc(HK.err)}</div>` : ''}
     ${groups.map(([t, c, a, an, ak]) => `<div class="p37-gh"><span class="${c}">${t}</span>${an ? `<button type="button" data-p17="${ak}">${an}</button>` : ''}</div><div class="p37-card p37-rows">${a.map((x, i) => row(x, i, all || AR)).join('')}</div>`).join('')
@@ -618,7 +629,8 @@ async function tipAct(x) {
   if (a === 'geoon' || a === 'geooff') { G7.geoArm = a === 'geoon'; lsSet('p37_geo', G7.geoArm); haptic('tab'); draw(); return true; }
   if (a === 'geotest') { vib([10, 40, 10]); G7.geoShow = true; clearTimeout(G7.geoT); G7.geoT = setTimeout(() => { G7.geoShow = false; if (m.screen === 'huske') draw(); }, 5000); draw(); return true; }
   if (a === 'pack') { await packList(x.dataset.ev); return true; }
-  if (a === 'packno') { const s = lsGet('p37_tip_seen', {}) || {}; s[x.dataset.ev] = 1; lsSet('p37_tip_seen', s); draw(); return true; }
+  if (a === 'packno') { const s = lsGet('huske_tip_dismiss', {}) || {}; s[x.dataset.ev] = true; lsSet('huske_tip_dismiss', s); draw(); return true; }
+  if (a === 'packoff') { lsSet('huske_tip_off', { ...(lsGet('huske_tip_off', {}) || {}), pack: true }); hlApi('/me/layout', { method: 'PUT', json: { huske_tip_off: { pack: true } } }).catch(() => {}); haptic('tab'); flash('Glimt foreslår ikke pakkelister lenger · slå på igjen i Innstillinger → Glimt'); draw(); return true; }
   return true;
 }
 async function gImage(f) {

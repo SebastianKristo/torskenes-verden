@@ -133,7 +133,16 @@ export function edDown(e) {
   if (!b || e.target.closest('input,textarea,select,[data-ped],[data-ppplus],.p28-pills')) return;
   // En pakke i Sporing har sitt eget lange trykk (velg flere).
   if (m.screen === 'spor' && e.target.closest('[data-pk]')) return;
-  if (ED.page) { if (ED.page === b.dataset.edp) edDrag(e, b); return; }
+  // Prompt 39 (claude-code-hjem-wiggle-scroll-ark.md): i redigering scroller vanlig sveip siden (touch-action: pan-y).
+  // Draget starter først etter et kort hold (170 ms) uten at fingeren flytter seg mer enn 8 px.
+  if (ED.page) {
+    if (ED.page !== b.dataset.edp || ED.add) return;
+    const ev = { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY };
+    clearTimeout(dp?.t);
+    dp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { dp = null; if (b.isConnected) { navigator.vibrate?.(6); edDrag({ ...ev, clientX: lastXY.x ?? ev.clientX, clientY: lastXY.y ?? ev.clientY }, b); } }, 170) };
+    lastXY = {};
+    return;
+  }
   const page = b.dataset.edp, k = b.dataset.edk, ev = { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY };
   lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => {
     lp = null; lpFired = true; ED.page = page; haptic('ok'); navigator.vibrate?.(15); draw();
@@ -141,8 +150,12 @@ export function edDown(e) {
     if (n) edDrag(ev, n);
   }, 500) };
 }
-export function edMove(e) { if (lp && (Math.abs(e.clientX - lp.x) > 8 || Math.abs(e.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; } }
-export function edUp() { if (lp) clearTimeout(lp.t); lp = null; }
+let dp = null, lastXY = {};
+export function edMove(e) {
+  if (lp && (Math.abs(e.clientX - lp.x) > 8 || Math.abs(e.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; }
+  if (dp) { lastXY = { x: e.clientX, y: e.clientY }; if (Math.abs(e.clientX - dp.x) > 8 || Math.abs(e.clientY - dp.y) > 8) { clearTimeout(dp.t); dp = null; } }
+}
+export function edUp() { if (lp) clearTimeout(lp.t); lp = null; if (dp) clearTimeout(dp.t); dp = null; }
 /** Klikk: «Ferdig», ▲ ▼ − og «+ skjult kort». Mens siden redigeres, åpner ikke kortene noe. */
 export function edClick(e, t) {
   if (lpFired) { lpFired = false; e.preventDefault(); e.stopPropagation(); return true; }

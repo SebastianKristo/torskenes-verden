@@ -142,8 +142,16 @@ export function progGroup(grp, row) {
   const vrow = row('#/nordlys', `Nordlys OS ${cur || ''}`.trim(), k === 'avail' ? `Ny versjon ${lat} er klar` : k === 'run' ? 'Oppdaterer …' : k === 'fail' ? 'Oppdateringen feilet' : k === 'done' ? 'Oppdatert · siste versjon' : 'Siste versjon', k === 'avail' ? 'Oppdater' : k === 'run' ? `${progress().pct} %` : k === 'fail' ? '!' : '✓', 'backup', 'oppd')
     .replace('<span class="sval">', `<span class="sval${k === 'avail' || k === 'fail' ? ' p31-red' : ' p31-ok'}">`);
   const rows = [vrow];
-  if (c && typeof c === 'object') rows.push(tog('auto_update', 'Automatiske oppdateringer', 'Installeres om natten kl. 03:30, etter backup', c.auto_update === true), tog('notify_updates', 'Varsle om nye versjoner', 'Banner på Hjem og push', c.notify_updates !== false));
+  if (c && typeof c === 'object') rows.push(tog('auto_update', 'Automatiske oppdateringer', 'Installeres om natten kl. 03:30, etter backup', c.auto_update === true)); // prompt 39: «Varsle om nye versjoner» ligger under Varsler
   return grp('PROGRAMVARE', rows).replace('<div class="list p17-list">', '<div class="list p17-list p30-prog">');
+}
+
+/** Prompt 39 (claude-code-varsler-versjon-app-ikon.md): «Varsle om nye versjoner» i Innstillinger → Varsler (samme nøkkel). tg = radbyggeren der. */
+export function updNoteRow(tg) {
+  if (UP.cfg == null) upLoad();
+  const c = UP.cfg;
+  if (!updAdmin() || !c || typeof c !== 'object') return '';
+  return tg('data-p30="uptog" data-k="notify_updates"', 'Varsle om nye versjoner', 'Nordlys OS · banner på Hjem og push', c.notify_updates !== false);
 }
 
 /** Passord-arket for Oppdater nå / Gjenopprett. Legges i draw() sammen med de andre arkene. */

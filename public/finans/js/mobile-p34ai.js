@@ -33,7 +33,7 @@ async function get(key, path, force = false, ttl = 15000) {
   catch (e) { if (e.status === 404) AC.miss = true; AC.err[key] = e.status === 404 ? missMsg : e.message; }
   return AC[key];
 }
-const NEED = { ov: ['st', 'md', 'use30', 'jobs'], mod: ['md', 'lib', 'rt'], rt: ['rt'], job: ['jobs'], use: ['use'], api: ['keys', 'toks', 'st'] };
+const NEED = { ov: ['st', 'md', 'use30', 'jobs'], mod: ['md', 'lib', 'rt'], rt: ['rt', 'md'], job: ['jobs'], use: ['use'], api: ['keys', 'toks', 'st'] };
 export async function aiLoad(force = false) {
   const t = curTab(), P = [];
   for (const k of NEED[t] ?? []) {
@@ -160,11 +160,123 @@ function mod() {
     <span class="p34a-lab" data-hl="ai-mod"><span>INSTALLERT LOKALT · ${md?.installed?.length ?? 0}</span><span>${md ? `${gb((md.installed ?? []).reduce((a, x) => a + (x.sizeGb ?? 0), 0))} på disk` : ''}</span></span>
     <div class="p34a-list">${inst || `<div class="p34a-none">${md ? 'Ingen modeller er installert på Ollama.' : 'Henter modeller …'}</div>`}</div>
     ${pulls.length ? `${lab('LASTER NED')}${pulls.map((p) => `<div class="p34a-card p34a-pull"><span class="p34a-row2"><b class="p34a-mono">${esc(p.id)}</b><span class="p34a-mono">${Math.floor(p.pct || 0)} %</span></span><span class="p34a-bt stripe"><i style="width:${Math.max(2, p.pct || 0)}%"></i></span><span class="p34a-row2 sm"><span>${p.total ? `${gb((p.done ?? 0) / 1e9).replace(' GB', '')} av ${gb(p.total / 1e9)}` : esc(p.status || 'Starter …')}${p.mbps ? ` · ${Math.round(p.mbps)} MB/s` : ''}</span><button type="button" class="p34-txt bad" data-ai="pullx" data-id="${esc(p.id)}">Avbryt</button></span></div>`).join('')}` : ''}
+    ${AC.fin ? '' : recCard() /* prompt 39 */}
     ${A ? `${lab('LAST NED FRA OLLAMA')}<form class="p34a-q" data-aif="pull"><span>${SV('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 16)}</span><input id="p34a-q" data-aiin="q" value="${esc(AC.q)}" placeholder="Søk eller skriv modellnavn, f.eks. qwen3:14b" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go">${canQ ? '<button type="submit" class="p34-ink sm">Last ned</button>' : ''}</form>
       <div class="p34a-cats">${[['alle', 'Alle'], ['tekst', 'Tekst'], ['bilde', 'Bilde'], ['resonnering', 'Resonnering'], ['embedding', 'Embeddings']].map(([k, n]) => `<button type="button" data-ai="cat" data-k="${k}" aria-pressed="${AC.cat === k}">${n}</button>`).join('')}</div>
       <div class="p34a-list">${lib.length ? lib.map((l, i) => { const inS = has.has(l.id) || l.installed, pl = pulls.some((p) => p.id === l.id); return `<div class="p34a-lib" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="m-grow"><span class="p34a-mh"><b class="p34a-mono">${esc(l.id)}</b>${l.fit ? `<span class="p34a-fit ${fitC(l.fit)}">${esc(l.fit)}</span>` : ''}</span><span>${esc([l.desc, l.sizeGb != null ? gb(l.sizeGb) : ''].filter(Boolean).join(' · '))}</span></span><button type="button" class="p34-ghost sm" data-ai="pull" data-id="${esc(l.id)}" ${inS || pl ? 'disabled' : ''}>${inS ? 'Installert' : pl ? 'Laster …' : 'Last ned'}</button></div>`; }).join('') : `<div class="p34a-none">${AC.lib ? 'Ingen treff. Skriv hele navnet (f.eks. qwen3:14b) for å laste ned.' : 'Henter biblioteket …'}</div>`}</div>` : ''}
     ${lab('SKY-MODELLER')}<div class="p34a-list">${(md?.cloud ?? []).map((c, i) => `<button type="button" class="p34a-prow" data-ai="cloud" data-id="${esc(c.id)}" data-on="${c.on ? 1 : 0}" ${A ? '' : 'disabled'} role="switch" aria-checked="${!!c.on}" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-dot" style="background:${c.on ? 'var(--pp-lab)' : 'var(--pp-line)'}"></span><span class="m-grow"><b class="p34a-mono">${esc(c.id)}</b><span>${esc([c.desc, c.available === false ? 'mangler nøkkel' : ''].filter(Boolean).join(' · '))}</span></span>${tg(c.on)}</button>`).join('') || '<div class="p34a-none">Ingen sky-modeller.</div>'}</div>
     <span class="p34a-foot">Bare sky-modeller som er på kan velges under Valg.</span>`;
+}
+
+/* =====================================================================
+   Prompt 39 (claude-code-ai-glimt-anbefaler-modeller.md): ✦ GLIMT ANBEFALER i Modeller og «La Glimt velge modeller» i Valg.
+   GET /api/ai/recommend → [{task, model, why, alt, fit, installed, inUse, sizeGb}] (eller {items, host}),
+   POST /api/ai/recommend/ask {q}, POST /api/ai/recommend/apply {tasks?}. Eldre server (404): kuratert tabell her (REC i fasiten).
+   ===================================================================== */
+const REC = {
+  chat: [['gemma4:latest', 'Best norsk av modellene som passer i minnet', 9.6], ['gemma3:12b', 'Nesten like god, litt mindre', 8.1]],
+  sok: [['qwen3:8b', 'Rask og flink til å bruke søk og verktøy', 5.2], ['gemma4:latest', 'Bedre språk, men tregere', 9.6]],
+  glimt: [['qwen3:8b', 'Forstår datoer og tider, rask nok til samtale', 5.2], ['gemma3:12b', 'Bedre norsk, litt tregere', 8.1]],
+  brief: [['qwen3:8b', 'Kort og presis, deler modell med Glimt', 5.2], ['gemma4:latest', 'Varmere språk, tregere', 9.6]],
+  rc: [['qwen2.5vl:7b', 'Best til å lese tekst i bilder, bare 6 GB', 6.0], ['minicpm-v', 'Mindre og raskere, svakere på krøllete kvitteringer', 5.5]],
+  kat: [['llama3.2:3b', 'Liten og rask, kan ligge lastet sammen med en stor', 2.0], ['qwen3:8b', 'Mer presis, men tar mer minne', 5.2]],
+  fsok: [['qwen3:8b', 'God på tall og verktøykall mot Finans', 5.2], ['gemma4:latest', 'Bedre forklaringer, tregere', 9.6]],
+  bar: [['qwen2.5vl:7b', 'Leser tekst på pakkelapper når strekkoden svikter', 6.0], ['minicpm-v', 'Lettere reserve', 5.5]],
+  dom: [['gemma4:latest', 'Skriver gode norske sammendrag', 9.6], ['gemma3:12b', 'Nesten like god', 8.1]],
+  kb: [['bge-m3', 'Flerspråklig, bedre på norsk enn nomic', 1.2], ['nomic-embed-text', 'Mindre og raskere', 0.3]],
+  kode: [['qwen3:8b', 'God på kode og verktøy, passer godt i minnet', 5.2], ['deepseek-r1:14b', 'Tenker grundigere, men trangt i 16 GB', 9.0]],
+};
+const RKW = [['rc', /kvitter|bilde|foto|skann|ocr/], ['bar', /strekkode|pakke|qr|etikett/], ['kat', /kategori|sorter/], ['fsok', /finans|penger|budsjett|abonnement|forbruk/], ['glimt', /kalender|glimt|time|avtale|dato/], ['sok', /søk|finne|spørsmål/], ['dom', /sammendrag|oppsumm|nyhet|domene|rapport/], ['kb', /dokument|kunnskap|notat|pdf|embedding/], ['kode', /kode|program|script|utvikl/], ['chat', /chat|prat|samtale|skriv|tekst|norsk/]];
+const RC9 = { d: null, t: 0, busy: false, miss: false, q: '', ans: null, asking: false, undo: null, undoT: null, queue: [] };
+const baseId = (id) => String(id ?? '').replace(/:latest$/, '');
+const instSet = () => new Set((AC.md?.installed ?? []).map((x) => baseId(x.id)));
+const taskCur = (id) => { const t = (AC.rt?.tasks ?? []).find((x) => x.id === id); return t ? t.model || t.resolved || '' : ''; };
+async function recLoad(force = false) {
+  if (RC9.busy || (!force && RC9.t && Date.now() - RC9.t < 60e3)) return;
+  RC9.busy = true;
+  try { const r = await hlApi('/ai/recommend'); RC9.d = Array.isArray(r) ? { items: r } : r; RC9.miss = false; }
+  catch (e) { RC9.miss = true; RC9.d = null; }
+  RC9.t = Date.now(); RC9.busy = false; if (m.screen === 'aictl') draw();
+}
+function recItems() {
+  const hw = AC.md?.hw ?? null, budget = hw?.gpuBudgetGb ?? AC.md?.gpu?.vramGb ?? 10.7, I = instSet();
+  const tasks = (AC.rt?.tasks ?? []).filter((t) => !AC.fin || t.fin);
+  const names = Object.fromEntries((AC.rt?.tasks ?? []).map((t) => [t.id, t.name]));
+  if (RC9.d?.items?.length) {
+    return RC9.d.items.map((x) => ({ task: x.task, name: names[x.task] ?? x.name ?? x.task, model: x.model, why: x.why ?? '', alt: x.alt ?? '', fit: String(x.fit ?? '').toUpperCase() || 'PASSER', installed: x.installed ?? I.has(baseId(x.model)), inUse: x.inUse ?? baseId(taskCur(x.task)) === baseId(x.model), sizeGb: x.sizeGb ?? null }));
+  }
+  return tasks.filter((t) => REC[t.id]).map((t) => {
+    const C = REC[t.id].filter(([, , g]) => g <= budget), c = C.find(([id]) => I.has(baseId(id))) ?? C[0] ?? REC[t.id][0];
+    const alt = REC[t.id].find(([id]) => id !== c[0]);
+    return { task: t.id, name: t.name, model: c[0], why: c[1], alt: alt?.[0] ?? '', fit: c[2] > budget * 0.85 ? 'TRANGT' : 'PASSER', installed: I.has(baseId(c[0])), inUse: baseId(taskCur(t.id)) === baseId(c[0]), sizeGb: c[2] };
+  });
+}
+function recBtn(x) {
+  if (x.inUse) return '<button type="button" class="p34-ghost sm" disabled>I bruk</button>';
+  if (AC.pulls[x.model]) return '<button type="button" class="p34-ghost sm" disabled>Laster …</button>';
+  if (x.installed) return `<button type="button" class="p34-ink sm" data-ai="recuse" data-k="${esc(x.task)}" data-id="${esc(x.model)}" ${admin() ? '' : 'disabled'}>Bruk</button>`;
+  return `<button type="button" class="p34-ghost sm" data-ai="pull" data-id="${esc(x.model)}" ${admin() ? '' : 'disabled'}>Last ned${x.sizeGb != null ? ` · ${gb(x.sizeGb)}` : ''}</button>`;
+}
+/** Kortet øverst i Modeller (over «Last ned fra Ollama»). */
+export function recCard() {
+  if (!RC9.t && !RC9.busy) recLoad();
+  const hw = AC.md?.hw, X = recItems();
+  if (!X.length) return '';
+  const miss = [...new Map(X.filter((x) => !x.installed).map((x) => [baseId(x.model), x])).values()], missGb = miss.reduce((a, x) => a + (+x.sizeGb || 0), 0);
+  const usable = X.filter((x) => x.installed && !x.inUse);
+  const A = RC9.ans;
+  return `<span class="p34a-lab p39-reclab"><span>✦ GLIMT ANBEFALER${hw ? ` · ${esc(String(hw.model ?? '').toUpperCase())}${hw.memGb ? ` · ${hw.memGb} GB` : ''}` : ''}</span></span>
+    <div class="p34a-list p39-rec">${X.map((x, i) => `<div class="p39-rr" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="m-grow"><span class="p39-rrh"><b>${esc(x.name)}</b><span class="p34a-mono">${esc(x.model)}</span><span class="p34a-fit ${x.fit === 'TRANGT' ? 'warn' : 'ok'}">${esc(x.fit)}</span></span><span class="p39-rrw">${esc(x.why)}${x.alt ? ` Alternativ: ${esc(x.alt)}.` : ''}</span></span>${recBtn(x)}</div>`).join('')}</div>
+    ${admin() ? `<div class="p39-recb">${miss.length ? `<button type="button" class="p34-ink sm" data-ai="recpullall">Last ned det som mangler · ${gb(missGb)}</button>` : ''}${usable.length ? `<button type="button" class="p34-ghost sm" data-ai="recuseall">Bruk alle anbefalinger (${usable.length})</button>` : ''}</div>` : ''}
+    <form class="p34a-q p39-ask" data-aif="recask"><span>✦</span><input id="p39-recq" data-aiin="recq" value="${esc(RC9.q)}" placeholder="Spør Glimt: Hva vil du bruke AI til?" autocomplete="off" enterkeyhint="send" aria-label="Spør Glimt om modeller"><button type="submit" class="p34-ink sm" ${RC9.asking ? 'disabled' : ''}>${RC9.asking ? '…' : 'Spør'}</button></form>
+    ${A ? `<div class="p34a-card p39-recans"><span>${esc(A.text)}</span>${A.model && !instSet().has(baseId(A.model)) && admin() ? `<button type="button" class="p34-ink sm" data-ai="pull" data-id="${esc(A.model)}">Last ned ${esc(A.model)}</button>` : ''}</div>` : ''}`;
+}
+/** «✦ La Glimt velge modeller» øverst i Valg (og AI-valg i Finans). */
+function glPlan() {
+  const I = instSet(), tasks = (AC.rt?.tasks ?? []).filter((t) => (AC.fin ? t.fin : true) && REC[t.id]);
+  const finLocal = !!AC.rt?.rules?.finLocal, cloud = new Set((AC.md?.cloud ?? []).filter((c) => c.on).map((c) => c.id));
+  const plan = [], miss = new Set();
+  for (const t of tasks) {
+    const best = REC[t.id].map(([id]) => id).find((id) => I.has(baseId(id)) || (!(finLocal && t.fin) && cloud.has(id)));
+    if (!best) { miss.add(REC[t.id][0][0]); continue; }
+    const real = (AC.md?.installed ?? []).find((x) => baseId(x.id) === baseId(best))?.id ?? best;
+    if (baseId(taskCur(t.id)) !== baseId(real)) plan.push({ k: t.id, best: real, prev: t.model ?? '' });
+  }
+  return { plan, miss: [...miss] };
+}
+export function glPick() {
+  if (!AC.rt || !admin()) return '';
+  const { plan, miss } = glPlan();
+  const sub = plan.length ? `Fyller ut ${plan.length} oppgave${plan.length === 1 ? '' : 'r'} med beste installerte modell${miss.length ? ` · ${miss.length} mangler (se Modeller)` : ''}` : `Alle oppgaver bruker allerede Glimts anbefaling${miss.length ? ` · ${miss.length} modell${miss.length === 1 ? '' : 'er'} bør lastes ned` : ''}`;
+  return `<div class="p34a-card p39-glp"><span class="m-grow"><b>✦ La Glimt velge modeller</b><span>${esc(sub)}</span></span>${RC9.undo ? '<button type="button" class="p34-ghost sm" data-ai="glundo">Angre</button>' : ''}<button type="button" class="p39-glb${plan.length ? '' : ' ok'}" data-ai="glgo" ${plan.length ? '' : 'disabled'}>${plan.length ? 'Fyll ut' : '✓ Ferdig'}</button></div>`;
+}
+async function glGo() {
+  const { plan } = glPlan(); if (!plan.length) return;
+  RC9.undo = plan.map((x) => ({ k: x.k, prev: x.prev }));
+  clearTimeout(RC9.undoT); RC9.undoT = setTimeout(() => { RC9.undo = null; if (m.screen === 'aictl') draw(); }, 5000);
+  let ok = false;
+  try { const r = await hlApi('/ai/recommend/apply', { method: 'POST', json: { tasks: plan.map((x) => x.k), fin: AC.fin } }); if (r && typeof r === 'object' && r.tasks) { AC.rt = r; ok = true; } else ok = !!r; } catch (e) { if (e.status !== 404 && e.status !== 405) { flash(e.message, 'err'); return; } }
+  if (!ok) await routingPut({ tasks: Object.fromEntries(plan.map((x) => [x.k, { model: x.best }])), scope: 'server' });
+  else { await get('rt', '/ai/routing', true); }
+  haptic('ok'); flash(`✦ Glimt fylte ut ${plan.length} valg`, 'ok'); draw();
+}
+async function recAsk() {
+  const q = RC9.q.trim(); if (!q) return;
+  RC9.asking = true; draw();
+  let A = null;
+  try { const r = await hlApi('/ai/recommend/ask', { method: 'POST', json: { q } }); if (r && (r.text || r.answer)) A = { text: String(r.text ?? r.answer).replace(/\*\*/g, ''), model: r.model ?? r.recommendation?.model ?? null }; } catch { /* lokal reserve */ }
+  if (!A) {
+    const ql = q.toLowerCase(), hit = RKW.find(([, re]) => re.test(ql)), X = recItems();
+    if (hit) { const k = hit[0], x = X.find((y) => y.task === k), c = x ? [x.model, x.why, x.sizeGb] : REC[k][0], alt = REC[k].find(([id]) => id !== c[0]);
+      A = { text: `Til ${(AC.rt?.tasks ?? []).find((t) => t.id === k)?.name?.toLowerCase() ?? k} anbefaler jeg ${c[0]}${c[2] ? ` (${gb(c[2])}, passer)` : ''}. ${c[1]}.${alt ? ` Alternativ: ${alt[0]}.` : ''}`, model: c[0] }; }
+    else A = { text: 'Til det meste holder en allrounder som qwen3:8b (5 GB). Prøv å skrive hva du vil gjøre, for eksempel «lese kvitteringer», «kode» eller «oppsummere nyheter».', model: 'qwen3:8b' };
+  }
+  RC9.ans = A; RC9.asking = false; draw();
+}
+async function pullAll() {
+  const miss = [...new Set(recItems().filter((x) => !x.installed).map((x) => x.model))];
+  // Én om gangen: neste starter når den forrige er ferdig.
+  for (const id of miss) { if (!AC.pulls[id]) await pull(id); }
 }
 
 // Valg (ruting)
@@ -225,6 +337,7 @@ function rt() {
     : [['keepAlive', 'Hold modell lastet', 'Hvor lenge modellen blir i VRAM etter bruk (keep_alive)', KEEP, A], ['numCtx', 'Kontekst', 'Standard kontekstlengde (num_ctx)', CTX, A], ['temperature', 'Temperatur', 'Lav = presis, høy = kreativ', TEMP, true], ['parallel', 'Samtidige jobber', 'Maks jobber som kjører på serveren samtidig', [[1, '1'], [2, '2'], [3, '3'], [4, '4']], A]])
     .map(([k, n, s, o, can], i) => `<div class="p34a-par" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-row2"><span class="p34a-rtn"><b>${n}</b><span>${s}</span></span><b class="p34a-mono">${esc((o.find(([v]) => String(v) === String(P[k])) ?? [0, P[k] ?? '–'])[1])}</b></span>${seg(k, o, can)}</div>`).join('');
   return `${(R.warnings ?? []).length ? `<div class="p34a-err">${esc(R.warnings.join(' · '))}</div>` : ''}
+    ${glPick() /* prompt 39: La Glimt velge modeller */}
     <span class="p34a-lab" data-hl="ai-sel"><span>${AC.fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA'}</span></span><div class="p34a-list">${rows}</div>
     ${lab('REGLER')}<div class="p34a-list">${rules}</div>${lab('PARAMETRE')}<div class="p34a-list">${par}</div>
     <span class="p34a-foot">${A ? 'Endringer for Chat, AI-søk og Glimt lagres for deg. Resten er serverstandard for alle brukere.' : 'Du kan velge egne modeller for Chat, AI-søk og Glimt. Resten styres av administrator.'} Selvtesten kjøres etter endringer.</span>`;
@@ -338,6 +451,7 @@ let budT = null;
 export function inputAi(e, t) {
   const k = t?.dataset?.aiin; if (!k) return false;
   if (k === 'q') { AC.q = t.value; clearTimeout(budT); budT = setTimeout(() => get('lib', `/ai/library?q=${encodeURIComponent(AC.q.trim())}&cat=${AC.cat === 'alle' ? '' : AC.cat}`, true, 0).then(draw), 350); draw(); return true; }
+  if (k === 'recq') { RC9.q = t.value; return true; } // prompt 39
   if (k === 'key') { AC.kf[`${t.dataset.p}.${t.dataset.k}`] = t.value; if (e.type === 'input' && !document.querySelector(`[data-ai="ksave"][data-p="${t.dataset.p}"]`)) draw(); return true; }
   if (k === 'bud') {
     const v = +t.value, lbl = document.getElementById('p34a-budv'); if (lbl) lbl.textContent = v ? `${nb(v)} kr / mnd` : 'Ingen grense';
@@ -349,6 +463,7 @@ export function inputAi(e, t) {
 export async function submitAi(e, t) {
   const f = t?.closest?.('[data-aif]'); if (!f) return false;
   e.preventDefault();
+  if (f.dataset.aif === 'recask') { recAsk(); return true; } // prompt 39
   if (f.dataset.aif === 'pull') { const q = AC.q.trim(); const hit = (AC.lib?.items ?? []).filter((l) => l.id.includes(q.toLowerCase())); if (hit.length === 1) pull(hit[0].id); else if (/^[a-z0-9][a-z0-9._/-]*(:[a-z0-9._-]+)?$/i.test(q)) pull(q); }
   return true;
 }
@@ -365,6 +480,11 @@ export async function bindAi(e, t) {
     case 'mkdef': await act(() => hlApi('/ai/models/default', { method: 'PUT', json: { model: id } }), `${id} er standard i Chat`); await Promise.all([get('md', '/ai/models', true), get('rt', '/ai/routing', true)]); draw(); return true;
     case 'mdel': if (AC.mdel !== id) { AC.mdel = id; haptic('err'); draw(); return true; } AC.mdel = null; await act(() => hlApi(`/ai/models/${encodeURIComponent(id)}`, { method: 'DELETE' }), `${id} er slettet`); await Promise.all([get('md', '/ai/models', true), get('rt', '/ai/routing', true)]); draw(); return true;
     case 'pull': pull(id); return true;
+    case 'recuse': { const T = (AC.rt?.tasks ?? []).find((y) => y.id === x.dataset.k); await routingPut({ tasks: { [x.dataset.k]: { model: id } }, ...(admin() && !T?.personal ? { scope: 'server' } : {}) }); flash(`${id} brukes nå til ${T?.name ?? x.dataset.k}`, 'ok'); return true; }
+    case 'recuseall': { const X = recItems().filter((y) => y.installed && !y.inUse); await routingPut({ tasks: Object.fromEntries(X.map((y) => [y.task, { model: (AC.md?.installed ?? []).find((z) => baseId(z.id) === baseId(y.model))?.id ?? y.model }])), scope: 'server' }); flash(`✦ ${X.length} anbefalinger er tatt i bruk`, 'ok'); return true; }
+    case 'recpullall': pullAll(); return true;
+    case 'glgo': await glGo(); return true;
+    case 'glundo': { const U = RC9.undo; RC9.undo = null; clearTimeout(RC9.undoT); if (U) await routingPut({ tasks: Object.fromEntries(U.map((y) => [y.k, { model: y.prev }])), scope: 'server' }); flash('Angret', 'ok'); return true; }
     case 'pullx': { const P = AC.pulls[id]; if (P) P.ctrl.abort(); delete AC.pulls[id]; await act(() => hlApi(`/ai/models/pulls/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch((er) => { if (er.status !== 404) throw er; })); haptic('tap'); await get('md', '/ai/models', true); draw(); return true; }
     case 'cat': AC.cat = x.dataset.k; haptic('tab'); draw(); await get('lib', `/ai/library?q=${encodeURIComponent(AC.q.trim())}&cat=${AC.cat === 'alle' ? '' : AC.cat}`, true, 0); draw(); return true;
     case 'cloud': await act(async () => { const r = await hlApi('/ai/cloud', { method: 'PUT', json: { id, on: x.dataset.on !== '1' } }); if (AC.md && r?.cloud) AC.md.cloud = r.cloud; }); haptic('tab'); await get('md', '/ai/models', true); draw(); return true;

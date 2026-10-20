@@ -1,6 +1,7 @@
 // Prompt 23 (mobil-PWA): sveip tilbake med forrige side montert bak, scrollposisjon per rute, Kvitteringer i Papir,
 // Finn-annonsen i appen, AI-tidsgrenser, Integrasjoner (Home Assistant) og ikoner på fanene i Nyhetsleser.
 // Fasit: design/Mobil Papir App.dc.html, Nyhetsleser.dc.html og prompts/prompt-23-pakke/*.
+import * as P39 from './mobile-p39.js'; // prompt 39: «✦ På nytt» med fremdrift
 import * as P24 from './mobile-p24.js';
 import { S, api, hlApi, esc, n0, n2, dd, today, parseAmount, loadReceipts, loadBoot } from './core.js';
 import { m, draw, flash, loadJobs, ACTIVE_JOBS, retryUpload } from './mobile.js';
@@ -230,13 +231,13 @@ export function kvView() {
   const cats = (S.boot?.categories ?? []).filter((c) => c.kind !== 'income' && c.kind !== 'transfer');
   const row = (r, i, booked) => {
     const op = !booked && KV.open === r.id, e = KV.e[r.id] ?? { n: r.merchant ?? '', v: r.total != null ? n2(r.total) : '', cat: r.categoryId ?? null };
-    const meta = booked ? `${dd(r.date)} · ${esc(r.category ?? 'Ukategorisert')}` : r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.provider ?? 'Manuell')}${conf(r) ? ` · ${conf(r)}` : ''}` : `<span style="color:var(--pp-lab)">Kunne ikke leses · fyll ut selv</span>`;
-    const head = `${rcLogo(r)}<span class="p23-rt"><b>${esc(r.merchant || 'Ny kvittering')}</b><span>${meta}</span></span><span class="p23-rv">${r.total != null ? kr2(r.total) : '–'}</span>`;
+    const meta = !booked && P39.reMeta(r.id) ? P39.reMeta(r.id) /* prompt 39: ✦ Analyserer på nytt … 42 % */ : booked ? `${dd(r.date)} · ${esc(r.category ?? 'Ukategorisert')}` : r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.provider ?? 'Manuell')}${conf(r) ? ` · ${conf(r)}` : ''}` : `<span style="color:var(--pp-lab)">Kunne ikke leses · fyll ut selv</span>`;
+    const head = `${rcLogo(r)}<span class="p23-rt"><b class="${P39.hlOf(r.id, 'merchant')}">${esc(r.merchant || 'Ny kvittering')}</b><span class="${P39.hlOf(r.id, 'date')}${P39.hlOf(r.id, 'cat')}">${meta}</span></span><span class="p23-rv${P39.hlOf(r.id, 'total')}">${r.total != null ? kr2(r.total) : '–'}</span>`;
     if (booked) return `<div class="p23-rrow" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}">${head}<button class="p23-undo" data-p23="rcundo" data-id="${esc(r.id)}" aria-label="Angre" title="Tilbake til gjennomgang">↺</button></div>`;
-    return `<div style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><button class="p23-rrow p23-rbtn" data-p23="rcopen" data-id="${esc(r.id)}" aria-expanded="${op}">${head}</button>
+    return `<div data-p39re="${esc(r.id)}" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><button class="p23-rrow p23-rbtn" data-p23="rcopen" data-id="${esc(r.id)}" aria-expanded="${op}">${head}</button>${P39.reLine(r.id)}
       ${op ? `<div class="p23-red"><div class="p23-red2"><input class="p23-in" id="p23-rn-${esc(r.id)}" data-p23in="rcn" data-id="${esc(r.id)}" value="${esc(e.n)}" aria-label="Butikk" autocomplete="off"><input class="p23-in mono" id="p23-rv-${esc(r.id)}" data-p23in="rcv" data-id="${esc(r.id)}" value="${esc(e.v)}" inputmode="decimal" aria-label="Beløp"></div>
         <div class="p23-cats">${cats.map((c) => `<button class="p23-cat" data-p23="rccat" data-id="${esc(r.id)}" data-c="${c.id}" aria-pressed="${+e.cat === c.id}">${esc(c.name)}</button>`).join('')}</div>
-        <div class="p23-racts"><button class="p23-ok" data-p23="rcok" data-id="${esc(r.id)}" ${KV.busy === r.id ? 'disabled' : ''}>${KV.busy === r.id ? 'Bokfører …' : '✓ Godkjenn og bokfør'}</button><button class="p23-re" data-p23="rcre" data-id="${esc(r.id)}">✦ På nytt</button><button class="p23-del" data-p23="rcdel" data-id="${esc(r.id)}" aria-label="${KV.del === r.id ? 'Trykk igjen for å slette' : 'Slett'}">${KV.del === r.id ? 'Slett?' : '🗑'}</button></div></div>` : ''}</div>`;
+        <div class="p23-racts"><button class="p23-ok" data-p23="rcok" data-id="${esc(r.id)}" ${KV.busy === r.id ? 'disabled' : ''}>${KV.busy === r.id ? 'Bokfører …' : '✓ Godkjenn og bokfør'}</button>${P39.reBtn(r.id) /* prompt 39: fremdrift */}<button class="p23-del" data-p23="rcdel" data-id="${esc(r.id)}" aria-label="${KV.del === r.id ? 'Trykk igjen for å slette' : 'Slett'}">${KV.del === r.id ? 'Slett?' : '🗑'}</button></div>${P39.rePanel(r.id)}</div>` : ''}</div>`;
   };
   return `<div class="p23-kv">
     <button class="p23-cam" data-p23="cam"><span class="p23-camic">${SVG('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 24)}</span><span class="p23-rt"><b style="font-size:17px;font-weight:700">Ta bilde av kvittering</b><span style="font-size:13px">Bakkamera · ✦ ${esc(S.boot?.settings?.provider === 'ollama' ? 'Ollama' : 'Gemini')} leser beløp og butikk</span></span></button>
@@ -275,6 +276,7 @@ async function kvBind(e, t, x) {
   if (k === 'rccat') { const r = (S.receipts ?? []).find((y) => y.id === id); KV.e[id] = { n: r?.merchant ?? '', v: r?.total != null ? n2(r.total) : '', ...(KV.e[id] ?? {}), cat: +x.dataset.c }; haptic('tab'); draw(); return true; }
   if (k === 'rcok') { syncInputs(id); await rcBook(id); return true; }
   if (k === 'rcre') {
+    P39.rcRe(id); return true; // Prompt 39: fremdrift i raden i stedet for side-om-side-dialogen
     try { const mod = await import('./reanalyze.js'); await mod.openReanalyze(id, { engine: 'gemini', onDone: async () => { await Promise.all([loadReceipts().catch(() => {}), loadJobs().catch(() => {})]); draw(); } }); }
     catch { try { await api(`/receipts/${id}/reprocess`, { method: 'POST' }); await loadJobs(); flash('✦ Analyseres på nytt'); } catch (err) { flash(err.message); } }
     return true;

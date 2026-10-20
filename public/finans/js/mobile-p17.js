@@ -12,6 +12,7 @@ import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobil
 import { listShareLine } from './mobile-p21.js';
 import { currentUser } from './mobile-upq.js';
 import * as P25 from './mobile-p25.js';
+let P24N = null; import('./mobile-p24.js').then((x) => { P24N = x; }).catch(() => {}); // prompt 39: Appprofil-raden (lat, endrer ikke importrekkefølgen)
 import { updAdmin, updSummary } from './mobile-upd.js';
 
 const LS = 'fh_p17';
@@ -25,8 +26,9 @@ const VERSION = '2.6';
 export const appName = () => (String(L.name ?? '').trim() || 'Homelab');
 /** Leser appName/appIcon fra /api/me/layout (per bruker, går foran serverens felles navn). */
 export function takeApp(r) { if (!r) return; if (typeof r.appName === 'string' && r.appName.trim()) { L.name = r.appName.trim().slice(0, 20); L.own = 1; } if (['hus', 'monogram', 'rom'].includes(r.appIcon)) { L.icon = r.appIcon; L.ownIc = 1; } keep(); applyIcon(); }
-export const appIcon = () => (['hus', 'monogram', 'rom'].includes(L.icon) ? L.icon : 'hus');
-const ICONS = [['hus', 'Huset med stativ'], ['monogram', 'Papir-monogram'], ['rom', 'Fire rom']];
+export const appIcon = () => (['hus', 'monogram', 'rom'].includes(L.icon) && (L.ownIc || L.icon !== 'hus') ? L.icon : 'monogram');
+// Prompt 39: Papir-monogram (H· på rødt med brettet hjørne) er standard. Brukere som har valgt selv, beholder valget.
+export const ICONS = [['monogram', 'Papir-monogram'], ['hus', 'Huset med stativ'], ['rom', 'Fire rom']];
 let appT = 0;
 export async function appLoad(force = false) {
   if (!force && Date.now() - appT < 5 * 60000) return;
@@ -54,7 +56,7 @@ export function iconSvg(k = appIcon(), v = 'std', tint = null) {
   if (v === 'tint' && tint) { c.ink = tint; c.house = tint; }
   const letter = esc((appName().replace(/[^A-Za-zÆØÅæøå0-9]/g, '').charAt(0) || 'H').toUpperCase());
   const body = k === 'monogram'
-    ? `<path d="M1024 760 760 1024H1024z" fill="${c.corner}"/><text x="500" y="690" text-anchor="middle" font-family="Newsreader,Georgia,serif" font-size="560" font-weight="500" fill="${c.ink}">${letter}</text><circle cx="742" cy="350" r="34" fill="${c.ink}"/>`
+    ? `<path d="M790 1024V790H1024z" fill="rgba(255,255,255,.16)"/><path d="M1024 790V1024H790z" fill="${c.corner}"/><text x="500" y="690" text-anchor="middle" font-family="Newsreader,Georgia,serif" font-size="560" font-weight="500" fill="${c.ink}">${letter}</text><circle cx="742" cy="350" r="34" fill="${c.ink}"/>`
     : k === 'rom'
       ? `<path d="M512 196 820 452V828H204V452z" fill="${c.house}"/><rect x="276" y="500" width="216" height="140" rx="18" fill="${c.acc}"/>${[[532, 500, 140], [276, 672, 104], [532, 672, 104]].map(([x, y, h]) => `<rect x="${x}" y="${y}" width="216" height="${h}" rx="18" fill="${c.room}"/>`).join('')}`
       : `<path d="M232 470 512 236 792 470" fill="none" stroke="${c.ink}" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"/><rect x="312" y="480" width="400" height="300" rx="28" fill="${c.ink}"/>${[526, 604, 682].map((y) => `<rect x="352" y="${y}" width="320" height="56" rx="12" fill="${c.bg}"/>`).join('')}<circle cx="628" cy="554" r="14" fill="${c.acc}"/>`;
@@ -71,9 +73,13 @@ export function applyIcon() {
   const svg = iconSvg(appIcon(), 'std'), url = svgUrl(svg);
   const set = (rel, href, type) => { let l = document.querySelector(`link[rel="${rel}"]`); if (!l) { l = document.createElement('link'); l.rel = rel; document.head.appendChild(l); } l.href = href; if (type) l.type = type; };
   set('icon', url, 'image/svg+xml');
+  // Prompt 39: standardikonet (Papir-monogram med H) bruker de ferdige filene fra /icons/ når de finnes.
+  if (appIcon() === 'monogram' && appName().charAt(0).toUpperCase() === 'H') {
+    const t = new Image(); t.onload = () => set('apple-touch-icon', '/icons/app-icon-180.png'); t.src = '/icons/app-icon-180.png';
+  }
   try {
     const img = new Image();
-    img.onload = () => { const cv = document.createElement('canvas'); cv.width = cv.height = 180; cv.getContext('2d').drawImage(img, 0, 0, 180, 180); try { set('apple-touch-icon', cv.toDataURL('image/png')); } catch {} };
+    img.onload = () => { if (appIcon() === 'monogram' && document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href') === '/icons/app-icon-180.png') return; const cv = document.createElement('canvas'); cv.width = cv.height = 180; cv.getContext('2d').drawImage(img, 0, 0, 180, 180); try { set('apple-touch-icon', cv.toDataURL('image/png')); } catch {} };
     img.src = url;
   } catch {}
 }
@@ -140,13 +146,11 @@ export function p17SetMain(T = {}) {
     ${grp('FINANS', [row('#/aictl/fin', 'AI og tolkning', canSrv() ? [ENG[st.provider] ?? 'Ollama', st.groqKeySet ? 'Groq' : '', st.roboflowKeySet ? 'Roboflow' : '', st.geminiKeySet && st.provider !== 'gemini' ? 'Gemini' : ''].filter(Boolean).join(' · ') : ADMIN_NOTE, '', 'ai', 'fai'),
       row('#/set/kat', 'Kategorier og budsjett', `${(S.boot?.categories ?? []).length} kategorier`, '', 'cat', 'kat'), row('#/set/regel', 'Regler', `${(S.boot?.rules ?? []).length} regler`, '', 'rule', 'regel'),
       row('#/set/bank', 'Bankimport', 'DNB · CSV · ✦ AI', '', 'bank', 'bank'), row('#/set/t212', 'Aksjer · Trading 212', t212, '', 'aks', 't212'), row('#/set/fanelinje', 'Fanelinje og Mer i Finans', `${fk} faner`, '', 'list', 'fanelinje'), row('#/sub', 'Subscription OS', 'Abonnementer og AI-sparing', '', 'sub', 'sub')])}
-    ${grp(appName().toUpperCase(), [row('', 'Navn på appen', '', appName(), 'home', 'appnavn', 'data-p17="nm"'), row('', 'App-ikon', '', ICONS.find(([k]) => k === appIcon())?.[1] ?? '', 'img', 'appikon', 'data-p17="ic"'),
-      // Prompt 25: Fanelinje-stil. Trykk bytter mellom Tekst, Bare ikoner og Ikoner + navn på valgt (lagres i navStyle).
-      row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'),
-      row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav'), row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
+    ${grp(appName().toUpperCase(), [row('#/set/tilpass', 'Tilpass', 'Navn, ikon, tema, farger, bakgrunn og fanelinje', '', 'look', 'tilpass'), /* prompt 39: Navn, App-ikon, Fanelinje-stil og Fanelinje i Hjem ligger i Tilpass */
+      row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
     ${grp('GLIMT', [row('#/glimt', 'Glimt', 'Figur, brief, stemme og venner', '', 'ai', 'glimt')])}
-    ${grp('APP', [row('#/set/look', 'Utseende og fanelinje', 'Papir · bakgrunn · ikonfarger', '', 'look', 'look'), row('#/aictl', 'AI og modeller', 'Modeller, jobber, forbruk og nøkler', '', 'ai', 'aictl'), /* prompt 34: AI-kontroll */ row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/kal', 'Kalendere', 'Google Kalender · Home Assistant', '', 'users', 'kal'), row('#/set/integ', 'Integrasjoner', 'Home Assistant, Kalendere, Entur, Bring og flere', '', 'home', 'integ'),
-      row('#/set/widgets', 'Widgets', 'Slik legger du til widget · iPhone, Samsung, Android', '', 'list', 'widgets'), row('#/set/kalapp', 'Kalender-appen', 'Egen app med samme konto · IPA og APK', '', 'down', 'kalapp')])}
+    ${grp('APP', [/* prompt 39: «Utseende og fanelinje» er flyttet til Tilpass */row('#/aictl', 'AI og modeller', 'Modeller, jobber, forbruk og nøkler', '', 'ai', 'aictl'), /* prompt 34: AI-kontroll */ row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/kal', 'Kalendere', 'Google Kalender · Home Assistant', '', 'users', 'kal'), row('#/set/integ', 'Integrasjoner', 'Home Assistant, Kalendere, Entur, Bring og flere', '', 'home', 'integ'),
+      row('#/set/widgets', 'Widgets', 'Slik legger du til widget · iPhone, Samsung, Android', '', 'list', 'widgets'), row('#/set/kalapp', 'Kalender-appen', 'Egen app med samme konto · IPA og APK', '', 'down', 'kalapp'), row('#/set/appprofil', 'Appprofil', (P24N?.profName() ?? ''), '', 'users', 'appprofil') /* prompt 39 */])}
     ${'' /* Prompt 38: Logg ut er flyttet til Konto → Økt */}
     <span class="p17-ver">${esc(appName())} ${VERSION} · Papir</span>`;
 }
@@ -233,7 +237,7 @@ export function p17Varsler(trkRows = '') {
   const tg = (attr, n, s, on) => `<button class="opt-row" ${attr} role="switch" aria-checked="${!!on}"><span class="m-grow"><b style="font-weight:500">${esc(n)}</b>${s ? `<br><span style="font-size:13px;opacity:.65">${esc(s)}</span>` : ''}</span><span class="sw" aria-hidden="true" aria-checked="${!!on}"></span></button>`;
   const permTxt = perm === 'granted' ? 'Tillatt' : perm === 'denied' ? 'Blokkert i nettleseren' : perm === 'unsupported' ? 'Ikke støttet' : 'Ikke spurt ennå';
   return `<div class="list">${tg('data-p17="non"', 'Varsler', 'Hovedbryter for alle varsler', d.on !== false)}
-      ${d.on !== false ? P31.varslerRows(tg) : ''}
+      ${d.on !== false ? P31.varslerRows(tg) + P30.updNoteRow(tg) /* prompt 39 */ : ''}
       ${tg('data-p17="nquiet"', 'Stille timer', `${d.quietFrom}–${d.quietTo} · ingen lyd eller vibrasjon`, d.quietOn !== false)}
       ${d.quietOn !== false ? `<div class="opt-row"><span class="m-grow pp-mut">Fra og til</span><input class="sinp p17-time" type="time" data-p17in="qf" value="${esc(d.quietFrom)}" aria-label="Stille fra"><span class="pp-mut">–</span><input class="sinp p17-time" type="time" data-p17in="qt" value="${esc(d.quietTo)}" aria-label="Stille til"></div>` : ''}
       <button class="opt-row" data-p17="nperm"><span class="m-grow"><b style="font-weight:500">Tillatelse på enheten</b><br><span style="font-size:13px;opacity:.65">${esc(permTxt)}</span></span><span class="sval">${perm === 'default' ? 'Spør ›' : ''}</span></button>
@@ -557,6 +561,7 @@ let rtT = null;
 export function onRealtime(d) {
   if (d.type === 'calendar-quick') { P29.onQuickRealtime(d); return; } // Prompt 29: rask time ferdig/feilet (31: steg og felt)
   if (d.type === 'assist') { P31.onAssistRealtime(d); return; }
+  if (/^(receipt-job|reanalyze|job)/.test(String(d.type))) { import('./mobile-p39.js').then((x) => x.onRt39(d)).catch(() => {}); } // Prompt 39: fremdrift for «✦ På nytt»
   if (d.type === 'meal:changed' || d.type === 'meal') { import('./mobile-p36.js').then((x) => x.onMeal(d)).catch(() => {}); return; } // Prompt 36: matplanen er felles, oppdater uten refresh // Prompt 31: Glimt-jobber (svarboble, Chat)
   clearTimeout(rtT);
   rtT = setTimeout(async () => {

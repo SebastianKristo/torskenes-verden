@@ -19,6 +19,7 @@ import * as P31 from './mobile-p31.js';
 import { isAdmin } from './mobile-p29.js';
 import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål-kortet i briefen
 import * as P38 from './mobile-p38.js';
+import * as P39 from './mobile-p39.js'; // prompt 39: Forslag fra Glimt
 import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers i briefen
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -51,7 +52,7 @@ export const hostFor = (sel = cfg().char) => { const s = IDS.includes(sel) ? sel
    2. Innstillingene (felles for ⚙ i briefen og Innstillinger → Glimt)
    ===================================================================== */
 const DEF = {
-  char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true,
+  char: 'glimt', friends: true, brief: true, briefGlimt: true, /* prompt 39: Glimt i briefen */ readAloud: false, guide: true, notify: true,
   briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
   tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' }, engines: null, chars: null,
 };
@@ -335,18 +336,20 @@ export function briefView() {
     <span class="p34-foot">${esc(b.foot || `Laget av Glimt ${b.at} · Vær: MET / Open-Meteo · Nyheter: ${srcs}`)}</span>
     ${B5.err ? `<span class="p34-foot err">${esc(B5.err)}</span>` : ''}${TT.err ? `<span class="p34-foot err">${esc(TT.err)}</span>` : ''}
   </div>
-  <div class="p34-guide p35-guide">${bub ? `<div class="p34-gb" role="status" aria-live="polite"><span class="p35-who" style="color:${NC[ch] ?? '#ffc7b8'}">${esc(WHO[ch] ?? 'GLIMT')}</span><span>${esc(cur[1])}</span><span class="p34-gbb">${st > 0 && st < G.length - 1 ? `<button type="button" data-p35="gskip">${c.tts.lang === 'en' ? 'Skip' : 'Hopp over'}</button>` : ''}<button type="button" class="ink" data-p35="gnext">${esc(cur[2])}</button></span></div>` : ''}
-    <button type="button" class="p34-gf p35-gf" data-p35="gtap" aria-label="${esc(FIGS.find(([k]) => k === ch)?.[1] ?? 'Glimt')} – trykk for en runde"><span class="${pop && !reduce() ? 'p35-pop' : ''}">${fig(ch, 82, bub ? 'talk' : sleepy() ? 'sov' : 'idle')}</span></button></div>
+  ${figOn() ? `<div class="p34-guide p35-guide">${bub ? `<div class="p34-gb" role="status" aria-live="polite"><span class="p35-who" style="color:${NC[ch] ?? '#ffc7b8'}">${esc(WHO[ch] ?? 'GLIMT')}</span><span>${esc(cur[1])}</span><span class="p34-gbb">${st > 0 && st < G.length - 1 ? `<button type="button" data-p35="gskip">${c.tts.lang === 'en' ? 'Skip' : 'Hopp over'}</button>` : ''}<button type="button" class="ink" data-p35="gnext">${esc(cur[2])}</button></span></div>` : ''}
+    <button type="button" class="p34-gf p35-gf" data-p35="gtap" aria-label="${esc(FIGS.find(([k]) => k === ch)?.[1] ?? 'Glimt')} – trykk for en runde"><span class="${pop && !reduce() ? 'p35-pop' : ''}">${fig(ch, 82, bub ? 'talk' : sleepy() ? 'sov' : 'idle')}</span></button></div>` : '' /* prompt 39: Glimt i briefen av */}
   ${B5.sheet ? `<div class="p35-shb" data-p35="cfgclose"></div><div class="p35-sh" role="dialog" aria-modal="true" aria-label="Glimt-brief"><span class="p35-grab" aria-hidden="true"></span><div class="p35-shh"><b>Glimt-brief</b><button type="button" class="p34-done" data-p35="cfgclose">Ferdig</button></div>${cfgBody(true)}</div>` : ''}`;
 }
 /** Hjem-kortet (widget h12): blått kort med oppsummering, chips og vertsfiguren. Skjules når Glimt-brief er av. */
+/** Prompt 39 (claude-code-brief-glimt-av.md): «Glimt i briefen» av → ingen figur, bobler eller guide-runde. */
+export const figOn = () => cfg().briefGlimt !== false;
 export function briefCard() {
   if (cfg().brief === false) return '';
   if (!B5.d && !B5.busy) briefLoad().then(draw).catch(() => {});
   const b = brief(), nx = b.ev[0];
   const chips = [b.wx.now != null ? `${b.wx.now}° ${b.wx.cond || ''}`.trim() : null, nx ? `${nx.title} ${P34.evStart(nx)}` : 'Fri', b.trials[0] ? `${b.trials[0].service} · ${b.trials[0].daysLeft} d` : null, b.news.length ? `${b.news.length} nyheter` : null].filter(Boolean).slice(0, 3);
   return `<a class="p34-bc" href="#/brief" aria-label="Åpne ${esc(b.title)}"><span class="p34-bct"><span class="p34-bck">${esc(b.title.toUpperCase())} · GLIMT</span><span class="p34-bcs">${esc(b.summary)}</span>
-    <span class="p34-chips">${chips.map((x) => `<span>${esc(x)}</span>`).join('')}</span></span><span class="p35-bcf">${fig(hostFor(), 56, 'idle')}</span></a>`;
+    <span class="p34-chips">${chips.map((x) => `<span>${esc(x)}</span>`).join('')}</span></span>${figOn() ? `<span class="p35-bcf">${fig(hostFor(), 56, 'idle')}</span>` : ''}</a>`;
 }
 export function briefEnter(prev) {
   // Prompt 37: tilbake fra Vær (åpnet fra Vær-kortet) → samme brief, ingen ny guide-runde.
@@ -355,7 +358,7 @@ export function briefEnter(prev) {
   B5.step = 0; B5.said = -1; B5.sheet = false; B5.lastCh = null;
   clearTimeout(B5.tour);
   // «Vis meg rundt automatisk»: guide-runden starter når briefen åpnes.
-  if (cfg().guide !== false) B5.tour = setTimeout(() => { if (m.screen === 'brief' && B5.step === 0 && !B5.sheet) gStep(1); }, 900);
+  if (cfg().guide !== false && figOn()) B5.tour = setTimeout(() => { if (m.screen === 'brief' && B5.step === 0 && !B5.sheet) gStep(1); }, 900);
 }
 export function briefLeave() { clearTimeout(B5.tour); stopTalk(false); B5.step = 0; B5.sheet = false; }
 function scrollToGb(k) {
@@ -377,7 +380,7 @@ function gStep(n) {
    6. Innstillinger → Glimt (og ⚙-arket i briefen)
    ===================================================================== */
 const BRIEFS = [['morning', 'Morgenbrief', 'Vær, dagen og første avtale'], ['day', 'Dagsbrief', 'Resten av dagen og nyheter'], ['evening', 'Kveldsbrief', 'I morgen, vær og det du ikke rakk'], ['night', 'Nattbrief', 'Kort oppsummering før du legger deg']];
-const MAIN = [['brief', 'Glimt-brief', 'Lag briefer gjennom dagen'], ['readAloud', 'Les opp', 'Glimt og vennene leser briefen høyt'], ['guide', 'Vis meg rundt automatisk', 'Starter guide-runden når briefen åpnes'], ['friends', 'Venner av Glimt', 'Sky, Dråpe, Ugle og Gris tar over når temaet passer'], ['notify', 'Varsel når briefen er klar', 'Push til mobilen på klokkeslettet']];
+const MAIN = [['brief', 'Glimt-brief', 'Lag briefer gjennom dagen'], ['briefGlimt', 'Glimt i briefen', 'Vis Glimt-figuren og vennene i briefen, på Hjem-kortet og i widgets'], ['readAloud', 'Les opp', 'Glimt og vennene leser briefen høyt'], ['guide', 'Vis meg rundt automatisk', 'Starter guide-runden når briefen åpnes'], ['friends', 'Venner av Glimt', 'Sky, Dråpe, Ugle og Gris tar over når temaet passer'], ['notify', 'Varsel når briefen er klar', 'Push til mobilen på klokkeslettet']];
 function engState(id) {
   const E = (cfg().engines ?? []).find((x) => x.id === id || (id === 'elevenlabs' && x.id === 'eleven'));
   return E ?? null;
@@ -390,7 +393,7 @@ function cfgBody(sheet = false) {
       <button type="button" class="p35-save" data-p35="keysave" data-k="${esc(E[0])}">Lagre nøkkel på serveren</button>`
     : `<span class="p35-note">${es ? (es.ready ? '✓ Klar · nøkkelen er satt opp på serveren' : 'Mangler nøkkel · settes av administrator') : 'Nøkkelen settes av administrator (AI-kontroll → API og nøkler)'}</span>`) : '';
   const seg = (L, cur, k) => `<div class="p35-seg">${L.map(([v, n]) => `<button type="button" data-p35="${k}" data-v="${v}" aria-pressed="${cur === v}">${esc(n)}</button>`).join('')}</div>`;
-  return `<div class="p35-list">${MAIN.map(([k, n, s]) => `<button type="button" class="p35-row" data-p35="tog" data-k="${k}" role="switch" aria-checked="${c[k] !== false}"><span class="p35-rt"><b>${esc(n)}</b><span>${esc(s)}</span></span>${sw(c[k] !== false)}</button>`).join('')}</div>
+  return `<div class="p35-list">${MAIN.map(([k, n, s]) => `<button type="button" class="p35-row${k === 'friends' && c.briefGlimt === false ? ' p39-dim' : ''}" data-p35="tog" data-k="${k}" role="switch" aria-checked="${c[k] !== false}"><span class="p35-rt"><b>${esc(n)}</b><span>${esc(s)}</span></span>${sw(c[k] !== false)}</button>`).join('')}</div>
     <span class="p35-lab" data-hl="gl-brief">BRIEFER GJENNOM DAGEN</span>
     <div class="p35-list${c.brief === false ? ' dim' : ''}">${BRIEFS.map(([k, n, s]) => { const B = c.briefs[k] ?? DEF.briefs[k]; return `<div class="p35-row"><button type="button" class="p35-rt" data-p35="btog" data-k="${k}"><b>${esc(n)}</b><span>${esc(s)}</span></button><input type="time" data-p35in="bt" data-k="${k}" value="${esc(B.at)}" aria-label="Klokkeslett for ${esc(n)}"><button type="button" class="p35-swb" data-p35="btog" data-k="${k}" role="switch" aria-checked="${!!B.on}" aria-label="${esc(n)}">${sw(!!B.on)}</button></div>`; }).join('')}</div>
     <span class="p35-lab">STEMMEMOTOR</span>
@@ -410,7 +413,7 @@ export function glimtView() {
     <span class="p35-lab">GLIMT-FIGUR</span>
     <div class="p35-figs" data-hl="gl-fig">${FIGS.map(([k, n]) => `<button type="button" class="p35-fg${k === 'natt' ? ' dark' : ''}" data-p35="char" data-v="${k}" aria-pressed="${sel === k}"><span class="p35-fgi">${fig(k, 54, sel === k ? 'glad' : 'idle')}</span><b>${esc(n)}</b></button>`).join('')}</div>
     <span class="p35-note">Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Er «Glimt» valgt, blir verten Glimt Natt mellom 21 og 06. Vennene (Sky, Dråpe, Ugle, Gris …) tar over når temaet passer, om det er slått på under.</span>
-    ${cfgBody(false)}${P38.cardsCfg()}${P37B.bibleSettings()}</div>`;
+    ${cfgBody(false)}${P38.cardsCfg()}${P37B.bibleSettings()}${P39.tipsCfg() /* prompt 39 */}</div>`;
 }
 
 /* =====================================================================

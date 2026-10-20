@@ -177,7 +177,8 @@ export function dragMove(e) {
   const el = find(); if (!el) { dr = null; return true; }
   dr.el = el; dr.moved = true; dr.x = e.clientX; dr.y = e.clientY;
   const H = window.innerHeight, y = e.clientY;
-  asV = y < 40 ? -Math.min(12, Math.ceil((40 - y) / 3)) : y > H - 40 ? Math.min(12, Math.ceil((y - (H - 40)) / 3)) : 0;
+  // Prompt 39: auto-scroll innenfor 80 px fra toppen/bunnen, 9 px per frame.
+  asV = y < 80 ? -9 : y > H - 80 ? 9 : 0;
   if (asV && !asRaf) asRaf = requestAnimationFrame(autoScroll);
   const now = Date.now();
   if (now - swAt >= 140) {
@@ -205,7 +206,7 @@ export function dragEnd(e) {
   return true;
 }
 // Mens noe dras, skal ikke siden scrolle (touch-action ble bestemt før det lange trykket).
-document.addEventListener('touchmove', (e) => { if (dr && e.cancelable) e.preventDefault(); }, { passive: false });
+document.addEventListener('touchmove', (e) => { if (dr && e.cancelable) e.preventDefault(); }, { passive: false, capture: true }); // prompt 39: capture
 
 /* ---------- Huskeliste: eier, «Delt med …» og «Del liste» ---------- */
 

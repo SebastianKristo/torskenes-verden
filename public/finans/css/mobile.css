@@ -5319,3 +5319,135 @@ html.p38-reload body{opacity:0;transition:opacity .3s}
 .m .p38-aie b{font:500 20px Newsreader,serif}.m .p38-aie span{font-size:13.5px;color:var(--pp-mut);text-wrap:pretty}
 .m .p38-aie .p34-ink{text-decoration:none;display:inline-flex;align-items:center;margin-top:4px}
 .m .p38-dgk{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== Prompt 39 (PWA39) ===== */
+/* Sveip bort: etikettene byttes med opacity (ingen tekstbytte midt i gesten) */
+.m .p39-swl{display:grid}.m .p39-swl>b{grid-area:1/1;transition:opacity .15s;opacity:0}.m .p39-swl>b[data-sw-idle]{opacity:1}
+.m .p36-bs .p36-bsr,.m .p37-bsw .p37-bsr{background:#1b1a17;transition:background .18s ease}
+.m .p36-bsc,.m .p37-bh{will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+/* Hjem · wiggle: vanlig sveip scroller siden også i redigering (draget starter etter 170 ms hold) */
+.m .pp-ed.on,.m .pp-ed.on.p28-wig{touch-action:pan-y}
+.m .pp-ed.p21-drag{touch-action:none;z-index:30}
+/* Redigeringsark: fast i bunnen over alt, siden låst, vuggingen pauset, Skann/fanelinje/piller skjult */
+html.p39-sh,html.p39-sh body{overflow:hidden;overscroll-behavior:none}
+html.p39-sh .m .pp-nav,html.p39-sh .m .pp-fab,html.p39-sh .m .p28-pills,html.p39-sh .m .p28-edw,html.p39-sh .m .navbar,html.p39-sh .m .fab,html.p39-sh .m .tabbar{visibility:hidden!important}
+html.p39-sh .m .p28-wig,html.p39-sh .m .pp-ed.on{animation-play-state:paused!important}
+html.p39-sh .m .sheet-bg,html.p39-sh .m .p37-scrim,html.p39-sh .m .p28-scrim{position:fixed!important;inset:0!important;background:rgba(0,0,0,.4)!important}
+html.p39-sh .m .pp-sheet,html.p39-sh .m .p37-sheet,html.p39-sh .m .p28-sheet{position:fixed!important;left:0!important;right:0!important;bottom:0!important;top:auto!important;width:100%;margin:0 auto!important;border-radius:26px 26px 0 0!important;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)!important;max-height:86dvh;overflow-y:auto;overscroll-behavior:contain;box-sizing:border-box;animation:p39up .32s cubic-bezier(.2,.8,.2,1) both}
+@media (min-width:700px){html.p39-sh .m .pp-sheet,html.p39-sh .m .p37-sheet,html.p39-sh .m .p28-sheet{max-width:560px}}
+@keyframes p39up{from{transform:translate3d(0,100%,0)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){html.p39-sh .m .pp-sheet,html.p39-sh .m .p37-sheet,html.p39-sh .m .p28-sheet{animation:none}}
+/* Bibel: ingen fanelinje/Skann, innholdet starter 16 px under toppbildet, 14 px mellom kortene */
+.m.papir.ph.p39-bib .m-scroll{margin-top:0}
+.m.papir.p39-bib .p37-bp{padding-top:16px;gap:14px}
+.m.papir.p39-bib .p37-bp>*{margin-top:0!important;margin-bottom:0!important;position:relative;z-index:auto}
+.m.papir.p39-bib .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 28px)!important}
+.m.papir.p39-bib .p37-stk{border-radius:24px}
+/* Innstillinger: «Glimt i briefen» av → Venner av Glimt gråes ut */
+.m .p35-row.p39-dim{opacity:.45}
+
+/* Yr mot Storm 2a: himmel, glasskort, duell, enighet, Glimt, dag for dag, wiggle */
+.p39-cmp{position:fixed;inset:0;z-index:120;background:linear-gradient(180deg,#3a5a80 0%,#22395a 45%,#16243a 100%);color:#fff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',system-ui,sans-serif}
+.p39-cmsc{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.p39-cmsc::-webkit-scrollbar{display:none}
+.p39-cmin{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 28px);display:flex;flex-direction:column;gap:12px;box-sizing:border-box}
+.p39-cmh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:0 4px 4px}
+.p39-cmh>span{display:flex;flex-direction:column;gap:2px;min-width:0}.p39-cmh b{font-size:28px;font-weight:700;letter-spacing:-.01em}.p39-cmh>span>span{font-size:13.5px;opacity:.75}
+.p39-done{flex:none;white-space:nowrap;min-width:76px;height:34px;padding:0 15px;border-radius:17px;border:0;background:rgba(255,255,255,.2);color:#fff;font:700 14px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;cursor:pointer;transition:background .2s,color .2s}
+.p39-done.on{background:#fff;color:#22395a}
+.p39-edh{font-size:12.5px;opacity:.8;text-align:center;padding:0 4px}
+.p39-blks{display:flex;flex-direction:column;gap:12px}
+/* Innpakningen er en kolonne (align-items: stretch), så alle kort fyller full bredde (størrelsesfiksen) */
+.p39-blk{position:relative;display:flex;flex-direction:column;align-items:stretch;min-width:0;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:pan-y;border-radius:24px}
+.p39-bi{display:flex;flex-direction:column;align-items:stretch;gap:12px;min-width:0;width:100%}
+.p39-blk.p39-wig{animation:p39wa .3s ease-in-out infinite}.p39-blk.p39-wig.odd{animation-name:p39wb}
+.p39-blk.p39-wig .p39-bi{pointer-events:none}
+.p39-blk.p39-lift{animation:none!important;z-index:5;box-shadow:0 18px 40px -12px rgba(0,0,0,.55);touch-action:none}
+@keyframes p39wa{0%,100%{transform:rotate(-.5deg)}50%{transform:rotate(.5deg)}}@keyframes p39wb{0%,100%{transform:rotate(.5deg)}50%{transform:rotate(-.5deg)}}
+@media (prefers-reduced-motion:reduce){.p39-blk.p39-wig{animation:none}}
+.p39-rm{position:absolute;left:-7px;top:-7px;z-index:3;width:26px;height:26px;border-radius:13px;border:0;background:#0f1b2b;color:#fff;font:700 17px/1 -apple-system,system-ui,sans-serif;display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.p39-g{border-radius:22px;background:rgba(255,255,255,.1);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);border:1px solid rgba(255,255,255,.08);box-sizing:border-box;min-width:0}
+.p39-duel{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);border-radius:26px;overflow:hidden}
+.p39-dy{padding:18px 18px 16px;display:flex;flex-direction:column;gap:6px;background:linear-gradient(180deg,rgba(127,214,245,.18),transparent 75%);min-width:0}
+.p39-dy.r{align-items:flex-end;text-align:right;background:linear-gradient(180deg,rgba(255,178,122,.18),transparent 75%)}
+.p39-dy b{font-size:56px;font-weight:300;line-height:1;letter-spacing:-.03em}.p39-dy>span:last-child{font-size:13px;opacity:.8;white-space:nowrap}
+.p39-dk{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.1em}.p39-dk.yr{color:#9fe3ff}.p39-dk.st{color:#ffc79e}
+.p39-dk i{width:20px;height:20px;border-radius:10px;display:grid;place-items:center;font-size:10px;font-weight:800;letter-spacing:0;font-style:normal}.p39-dk.yr i{background:#00b9f1;color:#fff}.p39-dk.st i{background:#2a1636;color:#ff8a3d;font-size:11px}
+.p39-dm{display:flex;align-items:center;justify-content:center;width:0;position:relative}.p39-dm>span{position:absolute;top:14px;bottom:14px;width:1px;background:rgba(255,255,255,.16)}
+.p39-dm em{position:relative;padding:5px 9px;border-radius:12px;background:#2c4869;border:1px solid rgba(255,255,255,.14);font-size:12px;font-weight:800;white-space:nowrap;font-style:normal}
+.p39-ag{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.p39-agh{display:flex;align-items:baseline;gap:10px}.p39-agh b{font-size:34px;font-weight:300;line-height:1;letter-spacing:-.02em}.p39-agh span{font-size:14px;opacity:.85}
+.p39-dots{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}.p39-dots>span{display:flex;flex-direction:column;align-items:center;gap:6px}
+.p39-dots i{width:26px;height:26px;border-radius:13px;box-sizing:border-box;display:grid;place-items:center;font-size:12px;font-weight:800;font-style:normal}
+.p39-dots i.ok{background:#fff;border:1.5px solid #fff;color:#22395a}.p39-dots i.no{background:transparent;border:1.5px solid #ffb3a6;color:#ffb3a6}
+.p39-dots small{font-size:10.5px;font-weight:700;opacity:.7}
+.p39-gl{display:flex;gap:10px;padding:14px 16px;font-size:14px;line-height:1.5}
+.p39-ring{flex:none;width:22px;height:22px;border-radius:11px;background:conic-gradient(#b23a2a,#e8794a,#f2c14e,#3fbf9a,#4f8fd6,#7a5ad6,#b23a2a);display:grid;place-items:center}
+.p39-ring>span{width:15px;height:15px;border-radius:8px;background:#fffdf8;display:grid;place-items:center;color:#e0553d;font-size:10px;line-height:1}
+.p39-ring.sm{width:16px;height:16px;border-radius:8px}.p39-ring.sm>span{width:10px;height:10px;border-radius:5px}
+.p39-tabs{display:flex;padding:3px;border-radius:14px}
+.p39-tabs button{flex:1;height:34px;border:0;border-radius:11px;background:transparent;color:rgba(255,255,255,.7);font:600 13.5px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;cursor:pointer;transition:background .2s}
+.p39-tabs button[aria-pressed=true]{background:rgba(255,255,255,.22);color:#fff}
+.p39-list{padding:4px 14px}
+.p39-lh,.p39-lb{display:grid;grid-template-columns:44px 50px minmax(0,1fr) 50px 12px;gap:8px;align-items:center}
+.p39-lh{padding:10px 0 6px;font-size:10.5px;font-weight:800;letter-spacing:.1em;opacity:.7}.p39-lh .yr{text-align:right;color:#9fe3ff}.p39-lh .st{color:#ffc79e}.p39-lh .mid{display:flex;justify-content:space-between;white-space:nowrap;gap:6px}
+.p39-lr{border-top:1px solid rgba(255,255,255,.1)}
+.p39-lb{width:100%;min-height:56px;padding:6px 0 0;box-sizing:border-box;border:0;background:transparent;color:#fff;cursor:pointer;text-align:left;font-family:inherit}
+.p39-lb b{font-size:15px;font-weight:600}.p39-lb .n{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}.p39-lb .n.l{text-align:left}
+.p39-bar{position:relative;height:22px}.p39-bar>i{position:absolute;left:0;right:0;top:10px;height:2px;border-radius:1px;background:rgba(0,0,0,.2)}.p39-bar>em{position:absolute;left:50%;top:4px;width:1px;height:14px;background:rgba(255,255,255,.3)}
+.p39-bar>s{position:absolute;top:6px;height:10px;border-radius:5px;text-decoration:none;transition:left .35s cubic-bezier(.3,.8,.3,1),width .35s cubic-bezier(.3,.8,.3,1)}
+.p39-bar>u{position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;white-space:nowrap;text-decoration:none}
+.p39-chv{font-size:14px;opacity:.6;transition:transform .25s}
+.p39-lx{display:flex;flex-direction:column;gap:8px;padding:2px 0 14px}.p39-lx>span{font-size:12.5px;font-weight:700}
+.p39-lx>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}.p39-lx>div>span{display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:14px;min-width:0}
+.p39-lx .yr{background:rgba(127,214,245,.14)}.p39-lx .st{background:rgba(255,178,122,.14)}.p39-lx small{font-size:10.5px;font-weight:800;letter-spacing:.1em}.p39-lx .yr small{color:#9fe3ff}.p39-lx .st small{color:#ffc79e}
+.p39-lx b{font-size:20px;font-weight:500}.p39-lx>div>span>span{font-size:12.5px;opacity:.8}
+.p39-ch{padding:14px 14px 10px;display:flex;flex-direction:column;gap:8px}.p39-ch svg{width:100%;height:auto;display:block}
+.p39-chh{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.1em}.p39-chh>span:first-child{opacity:.65}
+.p39-chh>span+span{display:flex;align-items:center;gap:5px;font-size:12px;letter-spacing:0}.p39-chh i{width:12px;height:3px;border-radius:2px;margin-left:7px}.p39-chh i.b{height:8px;background:rgba(255,255,255,.22)}
+.p39-rn{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.p39-rg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;height:92px}.p39-rg>div{display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end}
+.p39-rg>div>span{display:flex;gap:3px;align-items:flex-end;height:64px}.p39-rg i{width:9px;border-radius:4px 4px 2px 2px}.p39-rg small{font-size:11px;font-weight:700;opacity:.7}
+.p39-add{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:22px;border:1.5px dashed rgba(255,255,255,.3)}.p39-add>span{font-size:11px;font-weight:700;letter-spacing:.1em;opacity:.7}
+.p39-add button{display:flex;align-items:center;gap:10px;min-height:44px;border:0;background:transparent;color:#fff;padding:0;cursor:pointer;text-align:left;font:600 15px -apple-system,BlinkMacSystemFont,system-ui,sans-serif}
+.p39-add i{flex:none;width:26px;height:26px;border-radius:13px;background:#6fdc8c;color:#0f1b2b;display:grid;place-items:center;font-size:17px;font-weight:800;font-style:normal}
+.p39-src{font-size:11.5px;opacity:.55;line-height:1.45;padding:0 4px}
+
+/* Glimt · ukas vær */
+.m .p39-wk{grid-column:1/-1;padding:14px 16px 16px;display:flex;flex-direction:column;gap:14px}
+.m .p39-wkh{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.m .p39-wkt{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;letter-spacing:.08em;opacity:.8}
+.m .p39-wkp{display:flex;gap:4px;padding:3px;border-radius:999px;background:rgba(0,0,0,.18)}
+.m .p39-wkp button{height:28px;padding:0 11px;border-radius:14px;border:0;background:transparent;color:#fff;font:700 12.5px -apple-system,BlinkMacSystemFont,system-ui,sans-serif;cursor:pointer;transition:background .2s}
+.m .p39-wkp button[aria-pressed=true]{background:rgba(255,255,255,.9);color:#1b2a40}
+.m .p39-wkb{display:flex;gap:12px;align-items:flex-start}.m .p39-wkf{flex:none;width:58px;height:62px;display:grid;place-items:center}
+.m .p39-wkx{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}.m .p39-wkx b{font-size:13px;font-weight:700;opacity:.75}.m .p39-wkx>span{font-size:15.5px;line-height:1.45}
+.m .p39-wks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.m .p39-wks>div{border-radius:16px;background:rgba(255,255,255,.08);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.m .p39-wks small{font-size:11px;font-weight:800;letter-spacing:.08em;opacity:.65}.m .p39-wks b{font-size:20px;font-weight:600;white-space:nowrap}.m .p39-wks span{font-size:11.5px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .p39-wkr{display:flex;flex-direction:column}.m .p39-wkr>div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid rgba(255,255,255,.12)}
+.m .p39-wkr span{font-size:14px;opacity:.75}.m .p39-wkr b{font-size:14px;font-weight:600;text-align:right}
+
+/* Kvitteringer: «✦ På nytt» med fremdrift */
+.m .p39-rl{display:block;height:4px;border-radius:2px;background:var(--pp-line);overflow:hidden;margin:-4px 0 12px 56px}
+.m .p39-rl>i,.m .p39-rpl>i{display:block;height:100%;border-radius:inherit;background:var(--pp-lab);transition:width .35s ease}
+.m .p23-re[disabled]{opacity:1;font-variant-numeric:tabular-nums;min-width:96px}
+.m .p39-rp{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:14px;background:var(--pp-bg);margin-top:8px}
+.m .p39-rph{display:flex;justify-content:space-between;align-items:baseline;gap:10px}.m .p39-rph b{font-size:13.5px}.m .p39-rph span{font:600 12.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--pp-lab)}
+.m .p39-rpl{display:block;height:6px;border-radius:3px;background:var(--pp-line);overflow:hidden}
+.m .p39-rps{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--pp-mut)}.m .p39-rps>span{display:flex;gap:8px;align-items:center}.m .p39-rps i{width:14px;text-align:center;font-style:normal;font-weight:800}
+.m .p39-rps>span.ok{color:var(--pp-pos)}.m .p39-rps>span.on{color:var(--pp-ink);font-weight:600}
+.m .p39-rpx,.m .p39-rpb button{align-self:flex-start;height:30px;padding:0;border:0;background:transparent;color:var(--pp-lab);cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
+.m .p39-rp.err b{color:var(--pp-lab);font-size:13.5px}.m .p39-rpb{display:flex;gap:16px}
+.m .p39-hl{background:color-mix(in oklab,#f2c14e 45%,transparent);border-radius:6px;transition:background 1s}
+
+/* AI-kontroll: ✦ GLIMT ANBEFALER og «La Glimt velge modeller» */
+.m .p39-rr{display:flex;align-items:center;gap:10px;padding:12px 14px}
+.m .p39-rrh{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.m .p39-rrh b{font-size:14.5px}.m .p39-rrw{display:block;font-size:12.5px;color:var(--pp-mut);line-height:1.4;margin-top:3px}
+.m .p39-rr .m-grow{min-width:0}.m .p39-rr button{flex:none;white-space:nowrap}
+.m .p39-recb{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.m .p39-ask{margin-top:8px}.m .p39-ask>span{color:var(--pp-lab);font-weight:800}
+.m .p39-recans{display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.45}.m .p39-recans button{align-self:flex-start}
+.m .p39-glp{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;gap:10px;margin-bottom:10px}.m .p39-glp .m-grow{display:flex;flex-direction:column;gap:2px;min-width:0}.m .p39-glp b{font-size:15px}.m .p39-glp .m-grow>span{font-size:12.5px;color:var(--pp-mut);line-height:1.4}
+.m .p39-glb{flex:none;height:36px;padding:0 16px;border-radius:18px;border:0;background:var(--pp-ink);color:var(--pp-bg);font:700 13.5px Manrope,system-ui,sans-serif;cursor:pointer}
+.m .p39-glb.ok{background:color-mix(in oklab,var(--pp-pos) 12%,var(--pp-card));color:var(--pp-pos);border:1px solid color-mix(in oklab,var(--pp-pos) 35%,transparent);cursor:default}

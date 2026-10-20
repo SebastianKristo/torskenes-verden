@@ -14,7 +14,8 @@ import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
 import * as P23 from './mobile-p23.js';
 import * as P24 from './mobile-p24.js';
 import * as P26 from './mobile-p26.js';
-import { row, grp } from './mobile-p17.js';
+import { row, grp, appName, appIcon, ICONS } from './mobile-p17.js';
+import * as P25 from './mobile-p25.js'; // prompt 39: Fanelinje-stil i Tilpass
 import { haSection } from './mobile-p22.js';
 import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-p17.js';
 import * as P27 from './mobile-p27.js';
@@ -66,7 +67,7 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering', sysbk: 'Backup', widgets: 'Widgets', kalapp: 'Kalender-appen' };
+const PAGES = { tilpass: 'Tilpass', appprofil: 'Appprofil', integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering', sysbk: 'Backup', widgets: 'Widgets', kalapp: 'Kalender-appen' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.provider === 'groq' ? 'groq' : st.fallback ? 'both' : 'ollama'; };
 
@@ -106,6 +107,21 @@ function main() {
 }
 
 const PAGE = {
+  // Prompt 39 (claude-code-innst-tilpass-side.md): alt med utseende og farger samlet. Samme valg og lagringsnøkler som før.
+  tilpass: () => {
+    const md = pref('paperMode'), r = (k, n, s2) => `<button class="opt-row p17-row" data-sact="ppmode" data-v="${k}"><span class="m-grow p17-rt"><b>${n}</b><small>${s2}</small></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:700' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
+    const st = { hl: 'homelab', hjem: 'fin-hjem', liste: 'fin-liste', budsjett: 'fin-budsjett' }[startScr()] ?? 'homelab';
+    return `${grp('IDENTITET', [row('', 'Navn på appen', '', appName(), 'home', 'appnavn', 'data-p17="nm"'), row('', 'App-ikon', '', ICONS.find(([k]) => k === appIcon())?.[1] ?? '', 'img', 'appikon', 'data-p17="ic"')])}
+      ${grp('FANELINJE', [row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'), row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav')])}
+      <span class="pp-lab p17-gl" data-hl="theme">TEMA</span><div class="list p17-list">${[r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk'),
+        `<button class="opt-row p17-row" data-sact="design" data-v="klassisk"><span class="m-grow p17-rt"><b>Klassisk (Liquid Glass / Material You)</b><small>Bytt tilbake til det forrige mobildesignet</small></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:700">Bytt ›</span></button>`].join('')}</div>
+      <span class="pp-lab p17-gl">IKONFARGER</span>${iconThemeRow()}
+      ${grp('BAKGRUNN', [row('#/set/bakgrunn', 'Bakgrunn på Hjem', 'Toppbilde, vær, planeter eller eget bilde', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', 'bakgrunn')])}
+      ${G('Forside', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Finans · Hjem'], ['fin-liste', 'Finans · Liste'], ['fin-budsjett', 'Finans · Budsjett']], st)], st === 'homelab' ? 'Appen åpner på Homelab.' : 'Appen åpner i Finans, og hjem-knappen går til Finans.')}
+      <span class="pp-lab p17-gl">FANELINJE · FLERE VALG</span>${P32.secNavSettings()}`;
+  },
+  // Prompt 39 (claude-code-innst-appprofil-underside.md): PROFIL-gruppen er flyttet hit fra toppen av Innstillinger.
+  appprofil: () => `${P24.profGroup(row, grp, 'VELG PROFIL')}<div class="snote">En profil bestemmer hvilke faner og sider appen viser og hvor den åpner. Dataene dine endres ikke.</div>`,
   // Prompt 26: gruppert liste som på web og egen side per integrasjon (#/set/integ/<id>). Eldre server: forrige side.
   integ: (th, sub) => P26.integPage26(P23.integPage(haSection()), sub),
   kal: () => P26.kalSetPage(),

@@ -42,10 +42,15 @@ export function briefCard(inner, editing = false) {
   if (!inner) return '';
   if (briefHidden() && !editing) return '';
   if (editing) return inner;
-  const hint = BS.hint && !reduce();
-  return `<div class="p36-bs${hint ? ' hint' : ''}" data-p36bs>
-    <div class="p36-bsr" aria-hidden="true"><span class="p36-bsi">${svg(CK, 15, 2.8)}</span><span class="p36-bst"><b>${hint ? 'Sveip → for å skjule' : 'Sveip for å skjule'}</b><span>Kommer tilbake med ${esc(nextBrief())}</span></span></div>
+  // Prompt 39 (claude-code-sveip-bort-smooth.md): ingen hint-animasjon. Etikettene byttes med opacity (mobile-p39.js driver sveipet).
+  return `<div class="p36-bs" data-p36bs>
+    <div class="p36-bsr" data-sw-rev aria-hidden="true"><span class="p36-bsi" data-sw-ic>${svg(CK, 15, 2.8)}</span><span class="p36-bst"><span class="p39-swl"><b data-sw-idle>Sveip for å skjule</b><b data-sw-armed>Slipp for å skjule</b><b data-sw-done>Brief skjult</b></span><span>Kommer tilbake med ${esc(nextBrief())}</span></span></div>
     <div class="p36-bsc" data-p36bsc>${inner}</div></div>`;
+}
+/** Prompt 39: sveipet er fullført og kortet har kollapset (mobile-p39.js). Skjult til neste brief + toast med Angre. */
+export function briefCommit() {
+  lsSet(HIDE, bsKey()); BS.ph = ''; BS.toast = true; draw();
+  clearTimeout(BS.toT); BS.toT = setTimeout(() => { BS.toast = false; draw(); }, 4500);
 }
 const bsEls = () => { const w = document.querySelector('#app [data-p36bs]'); return w ? { w, c: w.querySelector('[data-p36bsc]'), r: w.querySelector('.p36-bsr'), b: w.querySelector('.p36-bst b'), i: w.querySelector('.p36-bsi') } : null; };
 function bsPaint(dx, W) {
@@ -506,6 +511,7 @@ const LU = {
 };
 // [mønster, ikon, rød?] – første treff vinner. Tittelen er teksten før undertekst/verdi.
 const RULES = [
+  [/vis svaret i appen/i, 'bellring'], [/^appprofil/i, 'users'], [/^tilpass/i, 'palette'], // prompt 39
   [/^logg ut|logg ut overalt/i, 'logout', 1], [/^(slett|fjern|tilbakestill|nullstill)/i, 'trash', 1], [/start på nytt|restart/i, 'power', 1],
   [/siste backup/i, 'checkc'], [/ta backup nå|^start\b/i, 'play'], [/automatisk backup/i, 'calclock'], [/hvor ofte|tidsplan|frekvens/i, 'repeat'], [/^behold/i, 'archive'], [/backup feiler|varsle meg når/i, 'bellring'],
   [/nettverksdisk|smb|share|mål\b|lagres på/i, 'server'], [/hva tas med|moduler/i, 'checks'], [/gjenopprett/i, 'rotate'], [/krypter|gjenopprettingsnøkkel/i, 'lockk'], [/kopi til sky|sky\b/i, 'cloud'], [/last ned/i, 'download'],
@@ -671,12 +677,11 @@ export function boot36() {
   if (booted) return; booted = true;
   // Klikk etter et sveip åpner ikke briefen (click capture). Klikk etter hold på temperaturen åpner ikke Vær.
   document.addEventListener('click', (e) => {
-    if (BS.moved && Date.now() - BS.moved < 400 && e.target.closest?.('[data-p36bs]')) { e.preventDefault(); e.stopPropagation(); }
     if (TP.until > Date.now() && e.target.closest?.('[data-p36temp]')) { e.preventDefault(); e.stopPropagation(); }
   }, true);
-  document.addEventListener('pointerdown', (e) => { bsDown(e); tempDown(e); cropDown(e); }, true);
-  document.addEventListener('pointermove', (e) => { bsMove(e); tempMove(e); cropMove(e); }, { capture: true, passive: false });
-  const up = (e) => { bsUp(e); if (e.type === 'pointercancel') tempCancel(); else tempUp(e); cropDrag = null; };
+  document.addEventListener('pointerdown', (e) => { tempDown(e); cropDown(e); }, true); // prompt 39: sveip bort brief ligger i mobile-p39.js
+  document.addEventListener('pointermove', (e) => { tempMove(e); cropMove(e); }, { capture: true, passive: false });
+  const up = (e) => { if (e.type === 'pointercancel') tempCancel(); else tempUp(e); cropDrag = null; };
   document.addEventListener('pointerup', up, true); document.addEventListener('pointercancel', up, true);
   document.addEventListener('contextmenu', (e) => { if (e.target.closest?.('[data-p36temp], [data-p36bsc]')) e.preventDefault(); }, true);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) healthProbe(); });
@@ -691,7 +696,7 @@ export function layer36() {
   return toast + (m.screen === 'set' ? cropSheet() : '');
 }
 export function afterDraw36() {
-  if (m.screen === 'hl' && BS.lastScr !== 'hl') bsVisit();
+  // Prompt 39: ingen automatisk sveipe-hint (bsVisit er ikke i bruk lenger).
   BS.lastScr = m.screen;
   try { iconize(); } catch {}
 }

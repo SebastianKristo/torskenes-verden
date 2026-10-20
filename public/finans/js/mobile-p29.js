@@ -24,7 +24,7 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
    1. Hjem: søkefelt med søkemotor
    ===================================================================== */
 const ENG = { ai: ['Glimt', 'Spør om været, eller skriv «time hos …»', 'Svarer her og legger til timer'], google: ['Google', 'Søk på Google', 'Åpner google.com'], ddg: ['DuckDuckGo', 'Søk med DuckDuckGo', 'Åpner duckduckgo.com'] };
-const GLOGO = P31.GLOGO; // Prompt 31: logoene ligger i mobile-p31.js (ekte Google-G og DuckDuckGo-and)
+const GLOGO = (s) => P31.GLOGO(s); // prompt 39: lat (importrekkefølgen kan gi TDZ) // Prompt 31: logoene ligger i mobile-p31.js (ekte Google-G og DuckDuckGo-and)
 // Prompt 31: Glimt-merket (Klar; Tenker mens svaret hentes) i stedet for ✦, ekte logoer for Google og DuckDuckGo.
 const engIcon = (k, big) => (k === 'google' ? GLOGO(big ? 22 : 20) : k === 'ddg' ? P31.DLOGO(big ? 22 : 20) : P31.glimt(big ? 24 : 24, !big && P31.G.ans?.busy ? 'think' : 'ready', 'p31-eng'));
 

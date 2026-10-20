@@ -274,7 +274,7 @@ export const ANCHORS = {
   upd: { href: '#/nordlys', sel: '.n31-go, [data-p30="upopen"], [data-p30="upbig"]', tip: '✦ Trykk her for å oppdatere' },
   chk: { href: '#/nordlys', sel: '.n31-chk, [data-p30="upchk"]' },
   pw: { href: '#/nordlys', sel: '[data-p30="uptog"][data-k="require_password"]' },
-  theme: { href: '#/set/look', sel: '[data-sact="ppmode"]' },
+  theme: { href: '#/set/tilpass', sel: '[data-sact="ppmode"]' }, // prompt 39: Tilpass
   bg: { href: '#/set/bakgrunn', sel: '.m-scroll .opt-row, .m-scroll .pp-card' },
   push: { href: '#/set/varsler', sel: '[data-p31="push"], [data-p31="pushon"], [data-p17="non"]' },
   quiet: { href: '#/set/varsler', sel: '[data-p17="nquiet"]' },

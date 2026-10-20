@@ -35,6 +35,8 @@ const PROF_DEF = {
 };
 const PROF_N = [['standard', 'Standard', 'Hjem, Finans, Mat og Mer · vanlige Finans-faner'], ['finans_boliger', 'Finans + Boliger', 'Åpner i Boliger · Boliger, Søk, Liste, Oversikt, Kvitteringer · Hjem under Mer'], ['boliger', 'Boliger-profil', 'Bare Finans og Domener, med Boliger først']];
 let PROFS = PROF_DEF, profT = 0, applying = false;
+/** Prompt 39: navnet på valgt profil (undertekst på raden Appprofil). */
+export const profName = () => (profile() === 'custom' ? 'Egendefinert' : PROF_N.find(([k]) => k === profile())?.[1] ?? 'Standard');
 export const profile = () => (['standard', 'finans_boliger', 'boliger', 'custom'].includes(L.profile) ? L.profile : 'standard');
 // Rute fra profilen → skjerm i appen. «hjem» er Hjem-forsiden (hl), «finans» er Finans-oversikten.
 const SCR = { hjem: 'hl', finans: 'hjem', 'finans/boliger': 'dir', boliger: 'dir', 'finans/oversikt': 'hjem', 'finans/liste': 'liste', mat: 'mat' };
@@ -94,12 +96,12 @@ export function markCustom(patch = {}) {
   keep();
   hlApi('/me/layout', { method: 'PUT', json: { profile: 'custom', homeNav: L.homeNav, finNav: L.finNav, startRoute: L.startRoute } }).catch(() => {});
 }
-function profGroup(row, grp) {
+export function profGroup(row, grp, title = 'PROFIL') {
   if (!profT) profLoad().catch(() => {});
   const cur = profile();
   const rows = PROF_N.map(([k, n, s]) => `<button class="opt-row p17-row p24-prow" data-p24="prof" data-k="${k}" aria-pressed="${cur === k}"><span class="m-grow p17-rt"><b>${esc(n)}</b><small>${esc(s)}</small></span><span class="sval" style="opacity:1;font-weight:700;color:${cur === k ? 'var(--pp-pos)' : 'var(--pp-mut)'}">${cur === k ? '✓ Valgt' : 'Velg'}</span></button>`);
   if (cur === 'custom') rows.push('<div class="opt-row p17-row"><span class="m-grow p17-rt"><b>Egendefinert</b><small>Egne endringer i fanene etter et profilvalg</small></span><span class="sval" style="opacity:1;font-weight:700;color:var(--pp-pos)">✓ Valgt</span></div>');
-  return grp('PROFIL', rows);
+  return grp(title, rows);
 }
 
 /* =====================================================================
@@ -111,7 +113,8 @@ export const SS = { q: '', ai: false, ans: '', ids: null, busy: false };
 /** Prompt 35: valgte Google-kalendere for Bursdager (flere), med calendarId som reserve. */
 const gSel = (G) => { const L = Array.isArray(G?.calendarIds) ? G.calendarIds : Array.isArray(G?.cals) ? G.cals : G?.calendarId ? [G.calendarId] : []; return L.filter(Boolean); };
 const IDX = [
-  ['prof-std', 'Standard', 'Profil', '#/set', 'profil oppsett vanlig'], ['prof-fin', 'Finans + Boliger', 'Profil', '#/set', 'profil boliger finans start'], ['prof-bol', 'Boliger-profil', 'Profil', '#/set', 'profil boliger'],
+  // Prompt 39: profilene ligger på undersiden App → Appprofil (#/set/appprofil).
+  ['appprofil', 'Appprofil', 'App', '#/set/appprofil', 'profil profiler oppsett boliger finans standard'], ['prof-std', 'Standard', 'App · Appprofil', '#/set/appprofil', 'profil oppsett vanlig'], ['prof-fin', 'Finans + Boliger', 'App · Appprofil', '#/set/appprofil', 'profil boliger finans start oppsett'], ['prof-bol', 'Boliger-profil', 'App · Appprofil', '#/set/appprofil', 'profil boliger oppsett'],
   ['konto', 'Kontoer og brukere', 'Konto', '#/set/konto', 'bruker logg inn konto'], ['sik', 'Sikkerhet', 'Konto', '#/set/sik', 'passord 2fa totrinn tofaktor lås face id fingeravtrykk økter', '2fa'], ['tok', 'API-tokens', 'Konto', '#/set/tok', 'token nøkkel langtidstoken'], ['sysbk', 'Backup', 'Konto', '#/set/sysbk', 'backup sikkerhetskopi gjenopprett hele systemet kryptering sky', 'bk-now'], ['bk-auto', 'Automatisk backup', 'Konto · Backup', '#/set/sysbk', 'automatisk backup tidsplan natt', 'bk-auto'],
   ['profil', 'Profilbilde og navn', 'Konto', '#/set/profil', 'avatar bilde profil'],
   ['nordlys', 'Nordlys OS', 'Programvare', '#/nordlys', 'programvare system nordlys os'], // prompt 32: eneste sted å oppdatere
@@ -125,9 +128,11 @@ const IDX = [
   ['gl-voice', 'Stemme og opplesning', 'Glimt', '#/glimt', 'stemme stemmer opplesning les opp tts openai elevenlabs azure nora henrik lys tempo språk engelsk', 'gl-voice'],
   ['fai', 'AI og tolkning', 'Finans', '#/aictl/fin', 'ai gemini groq ollama roboflow kvittering ocr finans'], ['kat', 'Kategorier og budsjett', 'Finans', '#/set/kat', 'kategori budsjett'], ['regel', 'Regler', 'Finans', '#/set/regel', 'regel automatisk'],
   ['bank', 'Bankimport', 'Finans', '#/set/bank', 'bank dnb csv import'], ['t212', 'Aksjer · Trading 212', 'Finans', '#/set/t212', 'aksje trading212 t212 fond'], ['fanelinje', 'Fanelinje og Mer i Finans', 'Finans', '#/set/fanelinje', 'fane faner navigasjon'], ['sub', 'Subscription OS', 'Finans', '#/sub', 'abonnement'],
-  ['appnavn', 'Navn på appen', 'Homelab', 'nm', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab', 'ic', 'ikon logo app'], ['hjemnav', 'Fanelinje i Hjem', 'Homelab', '#/set/fanelinje', 'fane faner hjem navigasjon'], ['navstil', 'Fanelinje-stil', 'Homelab', 'ns', 'fane fanelinje stil ikoner tekst navn navigasjon'],
+  // Prompt 39: alt med utseende og farger ligger i Homelab → Tilpass (#/set/tilpass).
+  ['tilpass', 'Tilpass', 'Homelab', '#/set/tilpass', 'tilpass utseende tema farge farger ikon navn fanelinje bakgrunn customize mørk lys papir', 'theme'],
+  ['appnavn', 'Navn på appen', 'Homelab · Tilpass', '#/set/tilpass', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab · Tilpass', '#/set/tilpass', 'ikon logo app'], ['hjemnav', 'Fanelinje i Hjem', 'Homelab · Tilpass', '#/set/fanelinje', 'fane faner hjem navigasjon'], ['navstil', 'Fanelinje-stil', 'Homelab · Tilpass', '#/set/tilpass', 'fane fanelinje stil ikoner tekst navn navigasjon'],
   ['mod', 'Moduler', 'Homelab', '#/set/mod', 'modul widget sporing domener mat'], ['rss', 'Nyhetsleser', 'Homelab', '#/nyheter', 'rss nyheter kilder ikon'],
-  ['look', 'Utseende og fanelinje', 'App', '#/set/look', 'tema mørk lys farge papir utseende ikonfarger', 'theme'], ['bakgrunn', 'Bakgrunn på Hjem', 'App · Utseende', '#/set/bakgrunn', 'bakgrunn bilde planeter vær oslo', 'bg'],
+  ['look', 'Tema og farger', 'Homelab · Tilpass', '#/set/tilpass', 'tema mørk lys farge farger papir utseende ikonfarger aksent', 'theme'], ['bakgrunn', 'Bakgrunn på Hjem', 'Homelab · Tilpass', '#/set/bakgrunn', 'bakgrunn bilde planeter vær oslo', 'bg'],
   ['haptic', 'Haptikk', 'App · Varsler og haptikk', '#/set/hap', 'haptikk vibrasjon vibrer', 'haptic'], ['varsler', 'Varsler og haptikk', 'App', '#/set/varsler', 'varsel push lyd bursdager', 'push'], ['quiet', 'Stille timer', 'App · Varsler', '#/set/varsler', 'stille timer natt lyd', 'quiet'], ['kal', 'Kalendere', 'App', '#/set/kal', 'kalender google home assistant ha ical canvas skole timeplan synk'], ['integ', 'Integrasjoner', 'App', '#/set/integ', 'integrasjon nøkkel api'],
   ['bd', 'Bursdager', 'Mer', '#/bd', 'bursdag'], ['kalside', 'Kalender', 'Mer', '#/kal', 'timeplan prøver frister skole uke måned agenda'],
 ];
@@ -193,7 +198,7 @@ async function aiSearch() {
 }
 /** Toppen av Innstillinger i Papir: søk, ✦ AI og PROFIL. Ved søk vises bare treffene. */
 export function setTop(row, grp, rest) {
-  return `${SS.q.trim() ? '' : P30.updBanner('set')}${searchBar()}${SS.q.trim() ? searchResults() : profGroup(row, grp) + rest}`; // prompt 30: oppdateringsbanner øverst
+  return `${SS.q.trim() ? '' : P30.updBanner('set')}${searchBar()}${SS.q.trim() ? searchResults() : rest /* prompt 39: PROFIL er flyttet til App → Appprofil */}`; // prompt 30: oppdateringsbanner øverst
 }
 
 /* =====================================================================

@@ -113,7 +113,12 @@ export function bibleHome(editing = false) {
   const v = verse(per(), 0);
   const card = `<div class="p37-bh" data-p37bvc role="button" tabindex="0" aria-label="Dagens bibelvers: ${esc(v.ref)}"><div class="p37-bhh"><span>DAGENS BIBELVERS</span><span>${esc(v.ref)}</span></div><span class="p37-bht">«${esc(v.text)}»</span></div>`;
   if (editing) return card;
-  return `<div class="p37-bsw" data-p37bv><div class="p37-bsr" aria-hidden="true"><b>✓ <span>Sveip for å skjule</span></b><small>Nederst i briefen resten av dagen</small></div>${card}</div>`;
+  // Prompt 39: etikettene byttes med opacity, sveipet drives av mobile-p39.js (ingen tegning midt i gesten).
+  return `<div class="p37-bsw" data-p37bv><div class="p37-bsr" data-sw-rev aria-hidden="true"><span class="p39-swl"><b data-sw-idle>✓ Sveip for å skjule</b><b data-sw-armed>✓ Slipp for å skjule</b><b data-sw-done>✓ Flyttet til briefen</b></span><small>Nederst i briefen resten av dagen</small></div>${card}</div>`;
+}
+/** Prompt 39: sveipet er fullført (mobile-p39.js) – verset ligger nederst i briefen resten av dagen. */
+export function bibleCommit() {
+  lsSet('bibel_home', { d: todayIso(), read: true, gone: true, s: sess() }); BB.ph = ''; draw(); flash('Verset ligger nederst i briefen resten av dagen');
 }
 // Lesetid: synlig ≥ 60 % i 4 s + 45 ms per tegn (maks 14 s), appen i forgrunnen.
 let io = null, ioEl = null;
@@ -462,10 +467,7 @@ let booted = false, hidAt = 0;
 export function boot37b() {
   if (booted) return; booted = true;
   sess();
-  document.addEventListener('pointerdown', bvDown, true);
-  document.addEventListener('pointermove', bvMove, { capture: true, passive: false });
-  document.addEventListener('pointerup', bvUp, true); document.addEventListener('pointercancel', bvUp, true);
-  document.addEventListener('click', (e) => { if (BB.moved && Date.now() - BB.moved < 450 && e.target.closest?.('[data-p37bv]')) { e.preventDefault(); e.stopPropagation(); } }, true);
+  // Prompt 39: sveip bort Hjem-kortet ligger i mobile-p39.js (felles motor med brief-kortet).
   // Ny økt når appen kommer tilbake fra bakgrunnen etter mer enn 5 minutter.
   document.addEventListener('visibilitychange', () => { if (document.hidden) hidAt = Date.now(); else if (hidAt && Date.now() - hidAt > 5 * 60e3) { ssSet(SESS, String(Date.now())); draw(); } });
 }

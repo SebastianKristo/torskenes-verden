@@ -6,7 +6,8 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { hlData } from './mobile-hl.js';
-import { cmpView, CMP, cmpLoad } from './mobile-p17.js';
+import { CMP, cmpLoad } from './mobile-p17.js';
+import * as P39 from './mobile-p39.js'; // prompt 39: Yr mot Storm 2a med wiggle og Glimt · ukas vær
 import { WX2, normCmp, pentAt, cmpCard, bottomBtns, mapView, placesSheet, metricSheet, fxKind, fxAfterDraw, wx22Bind } from './mobile-wx22.js';
 import * as P25 from './mobile-p25.js';
 import { haptic } from './mobile-haptics.js';
@@ -205,8 +206,9 @@ export function wxView() {
       ${cmpCard(C2, D, { IC, ICC, kindOf, busy: CMP.busy, err: CMP.err })}
       ${wind}${moon}
       <div class="vx-grid">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div></div>
+      ${P39.wkCard(D, WX.place)}
       <a class="vx-yr" href="${esc(D.yrUrl || 'https://www.yr.no/nb')}" target="_blank" rel="noopener">${esc(D.credit || `Data: ${D.fallback || D.source === 'met' ? 'MET Norge' : 'Open-Meteo'}`)} · Se også yr.no ↗</a>
-    </div>${places}${WX.sh != null ? sheet(D) : ''}${metricSheet(D)}${cmpView(WX.place, city)}</div>`;
+    </div>${places}${WX.sh != null ? sheet(D) : ''}${metricSheet(D)}${P39.cmpView39(WX.place, city)}</div>`;
 }
 /* ---------- Prompt 32: Forhold-moduser for nedbør og vind ---------- */
 const f1 = (v) => String(Math.round((+v || 0) * 10) / 10).replace('.', ',');
