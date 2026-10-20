@@ -119,10 +119,10 @@ const KC={time:['Timeplan','var(--k-ink)'],prove:['Prøver og frister','#b23a2a'
 const pad=n=>String(n).padStart(2,'0'),key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),mm=s=>{const [a,b]=s.split(':');return +a*60+ +b},add=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x},d0=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate());
 const isoW=d=>{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const dn=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-dn);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7)};
 const LD=()=>{try{return JSON.parse(localStorage.getItem('kal_v1')||'null')||{}}catch(e){return{}}};
-const CALS=[['tt','Timeplan','#2b5d8a','Skolens iCal · Vg3'],['ex','Prøver og frister','#b23a2a','Skolens iCal'],['skole','Skole','#a8661a','Skolens iCal'],['priv','Privat','#6b4fa0','Google · sebastian@kristo.no'],['fam','Familie','#d08a1e','Google · delt med familien'],['bd','Bursdager','#3f7a6e','Bursdager-modulen']];
-const CALC=Object.fromEntries(CALS.map(c=>[c[0],c[2]])),CALN=Object.fromEntries(CALS.map(c=>[c[0],c[1]])),CALSRC=Object.fromEntries(CALS.map(c=>[c[0],c[3]]));
-const KCAL={time:'tt',prove:'ex',innl:'ex',fam:'skole',fri:'skole',bd:'bd'};
-const GEV=[['w1','19:00','20:30','Fotballtrening','Bislett stadion','priv','Ta med leggskinn'],['2026-10-19','16:30','17:00','Hente pakke','Kiwi Pilestredet','priv','PostNord · hentekode 4821'],['2026-10-20','17:30','18:30','Tannlege','Colosseum Majorstuen','priv',''],['2026-10-22','18:00','19:00','SATS','SATS Bislett','priv',''],['2026-10-24','','','Hytta','Hytta','fam','Til og med søndag','2026-10-26'],['2026-10-25','15:00','17:00','Middag hos mormor','Ullevål hageby','fam',''],['2026-11-01','12:00','14:00','Bursdagsselskap for Pål','Hjemme','fam','']];
+const CALS=[['priv','Personlig','#b23a2a','Google · sebastian@kristo.no'],['bd','Bursdager','#8a3fa0','Google · Kontakter'],['skole','Skole','#2f7a4f','iCal-URL · tp.uio.no'],['hd','Helligdager','#7d776b','Innebygd · Norge']];
+const CALC=Object.fromEntries(CALS.map(c=>[c[0],c[2]])),CALN=Object.fromEntries(CALS.map(c=>[c[0],c[1]])),CALSRC=Object.fromEntries(CALS.map(c=>[c[0],c[3]]));[['tt','skole'],['ex','skole'],['fam','priv']].forEach(([x,y])=>{CALC[x]=CALC[y];CALN[x]=CALN[y];CALSRC[x]=CALSRC[y]});
+const KCAL={time:'skole',prove:'skole',innl:'skole',fam:'skole',fri:'skole',bd:'bd'};
+const GEV=[['w1','19:00','20:30','Fotballtrening','Bislett stadion','priv','Ta med leggskinn'],['2026-10-19','16:30','17:00','Hente pakke','Kiwi Pilestredet','priv','PostNord · hentekode 4821'],['2026-10-20','17:30','18:30','Tannlege','Colosseum Majorstuen','priv',''],['2026-10-22','18:00','19:00','SATS','SATS Bislett','priv',''],['2026-10-24','','','Hytta','Hytta','priv','Til og med søndag','2026-10-26'],['2026-10-25','15:00','17:00','Middag hos mormor','Ullevål hageby','priv',''],['2026-11-01','12:00','14:00','Bursdagsselskap for Pål','Hjemme','priv','']];
 const TERM=['2026-08-17','2026-12-18'];
 const VIEWS=[['dag','Dag','M5 4h14v16H5zM5 9h14','D'],['3d','3 dager','M3 5h18v15H3zM9 5v15M15 5v15','3'],['uke','Uke','M3 5h18v15H3zM3 10h18M7.5 5v15M12 5v15M16.5 5v15','W'],['mnd','Måned','M3 5h18v15H3zM3 10h18M3 15h18M9 5v15M15 5v15','M'],['liste','Liste','M4 6h16M4 12h16M4 18h10','L']];
 const noUrl=t=>String(t||'').replace(/\s*https?:\/\/\S+/g,'').trim();
@@ -163,7 +163,7 @@ class Component extends DCLogic {
   componentWillUnmount(){window.removeEventListener('keydown',this._key);clearInterval(this._tick)}
   bdays(){try{const v=JSON.parse(localStorage.getItem('bd_v1')||'null');return(v&&v.people)||[{n:'Ingrid',d:'11-02'},{n:'Pål',d:'10-24'},{n:'Kari',d:'10-29'},{n:'Emma',d:'10-21'},{n:'Rune',d:'11-17'},{n:'Jonas',d:'12-05'}]}catch(e){return[]}}
   evOn(d){const s=this.state,k=key(d),wd=d.getDay(),ex=EX.filter(x=>x[0]===k),fri=ex.some(x=>x[5]==='fri'),md=k.slice(5),inT=k>=TERM[0]&&k<=TERM[1];
-    let L=(!fri&&inT&&TT[wd]?TT[wd]:[]).map(([st,e,t,r,n])=>({id:k+'|'+st+'|'+t,k,s:st,e,t,r,n:n||'',kind:'time',subj:t,cal:'tt'}));
+    let L=(!fri&&inT&&TT[wd]?TT[wd]:[]).map(([st,e,t,r,n])=>({id:k+'|'+st+'|'+t,k,s:st,e,t,r,n:n||'',kind:'time',subj:t,cal:'skole'}));
     ex.forEach(x=>{if(x[1]){const a=mm(x[1]),b=mm(x[2]);L=L.filter(l=>mm(l.e)<=a||mm(l.s)>=b)}});
     ex.forEach(x=>L.push({id:k+'|'+(x[1]||'all')+'|'+x[3],k,s:x[1],e:x[2],t:x[3],r:x[4],n:x[6],kind:x[5],subj:x[7],cal:KCAL[x[5]]}));
     this.bdays().filter(p=>p.d===md).forEach(p=>L.push({id:k+'|bd|'+p.n,k,s:'',e:'',t:p.n+' har bursdag',r:'',n:'',kind:'bd',subj:'',cal:'bd'}));
@@ -196,7 +196,7 @@ qaRun(txt){const id='q'+Date.now(),jobs=[...(this.state.qaJobs||[]),{id,txt}];th
     const apply=(r,src)=>{const t=txt.toLowerCase(),o={},got=[];if(r.t){o.t=r.t;got.push('tittel')}if(r.k){o.k=r.k;got.push('dato')}if(r.all){o.all=true}else if(r.s){o.s=r.s;o.e=r.e||hm(mm(r.s)+60);o.all=false;got.push('tid')}if(r.r){o.r=r.r;got.push('sted')}
       const rp=/hver dag|daglig/.test(t)?'day':/hver uke|ukentlig|hver (mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag)/.test(t)?'week':/hver måned|månedlig/.test(t)?'month':null;if(rp){o.rep=rp;got.push('gjentakelse')}
       const rm=/dagen før/.test(t)?1440:/(1|en) time før|times? før/.test(t)?60:/15 min/.test(t)?15:/10 min/.test(t)?10:/ingen varsel|ikke varsle/.test(t)?-1:null;if(rm!=null){o.rem=rm;got.push('varsel')}
-      if(/familie|famil|barna|mamma|pappa/.test(t)){o.cal='fam';got.push('kalender')}
+      if(/familie|famil|barna|mamma|pappa/.test(t)){o.cal='priv';got.push('kalender')}
       const note=txt.length>60&&!F.n?txt:F.n;setF({...o,n:note,aiS:{done:true,note:'Fylte ut '+(got.length>2?got.slice(0,-1).join(', ')+' og '+got[got.length-1]:got.join(' og '))+(src?' · '+src:'')}})};
     const run=()=>{if(busy||!txt.trim())return;const r=QP(txt,d0(new Date()));if(r.ok){setF({aiS:{busy:true}});setTimeout(()=>apply(r,''),500);return}
       const ask=window.claude&&window.claude.complete;if(!ask){apply({t:r.t,s:r.s,e:r.e,r:r.r},'');setF({aiS:{err:'Fant ikke dato. Velg dato under.'}});return}
@@ -275,7 +275,7 @@ qaRun(txt){const id='q'+Date.now(),jobs=[...(this.state.qaJobs||[]),{id,txt}];th
     const F=s.form;let fm={open:false};if(F){const setF=o=>this.setState({form:{...F,...o,err:''}}),chip=(on,c)=>({bg:on?'var(--k-ink)':'transparent',fg:on?'var(--k-bg)':'var(--k-ink)',bd:on?'var(--k-ink)':'var(--k-line)',c});
       fm={open:true,h:F.id?'Rediger hendelse':'Ny hendelse',t:F.t,onT:e=>setF({t:e.target.value}),k:F.k,onK:e=>setF({k:e.target.value}),s:F.s,onS:e=>{const v=e.target.value;const d=mm(F.e)-mm(F.s);setF({s:v,e:v&&d>0?hm(Math.min(mm(v)+d,23*60+59)):F.e})},e:F.e,onE:e=>setF({e:e.target.value}),r:F.r||'',onR:e=>setF({r:e.target.value}),
         timed:!F.all,togAll:()=>setF({all:!F.all}),allTr:F.all?'var(--k-ink)':'var(--k-line)',allJ:F.all?'flex-end':'flex-start',
-        cals:CALS.filter(c=>c[0]==='priv'||c[0]==='fam').map(([k,n,c])=>({n,...chip(F.cal===k,c),go:()=>setF({cal:k})})),
+        cals:CALS.filter(c=>c[0]==='priv'||c[0]==='skole').map(([k,n,c])=>({n,...chip(F.cal===k,c),go:()=>setF({cal:k})})),
         reps:[['none','Ingen'],['day','Hver dag'],['week','Hver uke'],['month','Hver måned']].map(([k,n])=>({n,...chip((F.rep||'none')===k),go:()=>setF({rep:k})})),
         rems:[[-1,'Ingen'],[10,'10 min'],[15,'15 min'],[60,'1 time'],[1440,'Dagen før']].map(([k,n])=>({n,...chip(F.rem===k),go:()=>setF({rem:k})})),hasErr:!!F.err,err:F.err,
         ...this.fmAi(F,setF),

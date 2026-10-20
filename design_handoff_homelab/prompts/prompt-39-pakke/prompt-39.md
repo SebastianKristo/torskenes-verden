@@ -1,0 +1,75 @@
+# Prompt 39
+
+Startet: 2026-10-20
+
+## Ønsker
+- 2026-10-20: «glimt bør kunne svare på slike ting den burd ekunne korkarlt at det var fysikk og hva fysikk er d» (skjermbilde: «hva slags timer har jeg i dag» → «hva slags fag er det» ga hjelpetekst + «tidsavbrudd etter 12 s»)
+- 2026-10-20: «nei mac kalender appen skal ikke se ut som web kalener, web kalender skal se nøyaktig lik ut som mac kalender. dette er mac kalender. du husker vel hvordan den ser ut» (skjermbilde av Mac-kalenderen, Uke-visning)
+- 2026-10-20: «feil med toppen og mellomrom» (skjermbilde: Bibel-siden på iPhone, rekke-kort overlapper hero, kortene ligger inntil hverandre)
+- 2026-10-20: «fjern scan og navbar fra bibel side»
+- 2026-10-20: «her feks jeg syns ai glimt har vært bra i det siste men den har ikke vært noe særlig god på å finne hva som blie kjøpt og hva som stod på kvitteringen.» (skjermbilde: Akademika 135 kr, kvittering viser bare total)
+- 2026-10-20: «animasjon og handlingen med å sweipe bort ting som brief og bibelvers re litt hakkete og flikrete spesielt på andoroid, bevegelsen skal være smohood og elegant»
+- 2026-10-20: «la ai bli bedre på å vise hvilke modelerer som skal lastets ned og hva de kan brukes til, bruk kansje til og med glimt til å bestemme hvilke model som er best til hva.»
+- 2026-10-20: «lag en penere og mer moderne elegangt samenlignigs menye meellom yr og storm gi et par forskjellige design»
+- 2026-10-20: «på stomr og yr. ta bakgrunnen fra 1b men oppseett fra 1a og 1c. også kan vis et ai spørsmål til glimt blir fullført i bakgrunnen, nå sendes det varsel det er riktig, la meg slå av varselet som dukker opp inni appen og la logoen ikonet på varselet feks til glimt la det være et varsel med ikon logoen til gllimt»
+- 2026-10-20: «feks i innstlinger på web når jeg går inn i ai og vlegler annen tid før glimt sender meg til chat, så blir jeg send i bunnen av siden, jeg vil ikke bli sendt til toppen eller bunnen i slike sitausjoner»
+- 2026-10-20: «bra side med yr og storm la meg wiggle redigere i siden slik som i hjem.»
+- 2026-10-20: «feil med wiggle redigering i hjem, får ikke scrollet ned eller opp. også feil rundt redigers kort flyter på en måte som ikke ser bra ut på mobil» (skjermbilder: Velg stopp-arket svever, innhold synlig under)
+- 2026-10-20: «kansje legg til i bunnen av vær popupen legg til glimt vær personligheer som har en samendraf av ukas vær og samenligning av forrige uke og noe mer som er passende. og i størrelsene er feil i yr vs storm»
+- 2026-10-20: «varsllings lyd er veldig høy og ekkel på android.»
+- 2026-10-20: «jeg ser ikke profilbildet i android appen»
+- 2026-10-20: «disse kan legges lengre ned i innstlinger i en egen side.» (skjermbilde: PROFIL-gruppen øverst i Innstillinger)
+- 2026-10-20: «kansje lag en customize siden som har alt med utsende og farger og sånt» (skjermbilde: HOMELAB-gruppen med navn, ikon og fanelinje)
+- 2026-10-20: «det skulle ikk være noe nov bar eller scan i bibel side.» (skjermbilde: fanelinje og Skann vises på Bibel)
+- 2026-10-20: «den kan ligge under varsler. og bruk dette som standard ikon når man later ned appen» (skjermbilder: «Varsle om nye versjoner»-raden og H·-ikonet)
+- 2026-10-20: «la meg slå av glimt i now brief»
+- 2026-10-20: «jeg ser ikkke hvile model som er valgt i chat på android»
+- 2026-10-20: «i gjøremål foreslår glimt at jeg skal lage pakkeliste for en person har bursdag, slike forsalg er ikke nødvendig»
+- 2026-10-20: «i kvitteringer i finans mobil til gjenomgang når jeg trykker på ai på nytt, jeg vil se prosensesn dens.»
+- 2026-10-20: «når den scanner kvittering og ikke finner en passende kategori lag en kategori med passende navn»
+- 2026-10-20: «sweipe bort now brief den viser animajson at jeg skal sweipe den bort en gang i blant, ikke gjør det.»
+- 2026-10-20: «er det lagt inn i ai meny at glimt kan fylle ut valg av aier til forskjellige ting»
+- 2026-10-20: «få lagt til i domener at jeg kan hente inn domener og statesitkk fra google search console ved sidan cloduflare»
+- 2026-10-20: «ai delen har mer plass rundt i kortet fyll det opp. og ordne la glimt velge modeller knappen sine farger. og gi under api og  nøkler  gi ai tjenestene sine egene logoer,» (skjermbilde: AI i Innstillinger web)
+- 2026-10-20: «for google search console først må jeg kunne legge de til å sette de opp i domenere i innstlinger. hvis gode instrukersr for det bak et ?»
+- 2026-10-20: «få tilpasset huskeliste for web versjonen kom opp med et par design» (skjermbilde: Huskeliste på web i én smal kolonne)
+- 2026-10-20: «velg  1a og 1b som en tilegs view. det ble veldig mange kalendere kalender appen, egentlig har jeg jo bare min personelige som jeg skal kunne velge fra google, en bursdags kalender jeg skal kunne velge fra google og en skolealender som jeg imporerter med url, og helidager. lag også da i mobil appen en bedre måte å lege til og redigere eksisterende kalendere. i web og mac app kansje gi meg en google kalender velg hvilke kalender som er hva.»
+- 2026-10-20: «huskeliste web velg  1a og 1b som en tilegs view.» · «jer ser det ikke i wewb» (skjermbilde: web viser fortsatt én smal kolonne) → bygget inn i `Huskeliste.dc.html` mode="web"
+- 2026-10-20: «samme med endringer i kalender jeg ser ikke de i web eller i ios app» → fire kalendere bygget inn i `Kalender.dc.html` og `Kalender App.dc.html`
+- 2026-10-20: «her er designet for kaleder for web, web skal se helt likt ut som mac appen» (skjermbilde: Mac-kalenderen, Uke) → claude-code-kalender-web-lik-mac.md oppdatert
+
+## Tilhørende filer
+- claude-code-glimt-oppfolging-fag.md
+- claude-code-kalender-web-lik-mac.md (erstatter claude-code-kalender-mac-lik-web.md)
+- vedlegg/mac-kalender-fasit.png
+- claude-code-bibel-topp-mellomrom.md
+- vedlegg/bibel-mellomrom-feil.png
+- claude-code-glimt-kvittering-lesing.md (+ claude-code-kvittering-highlight.md, claude-code-ai-maskin-mac-mini.md som referanse)
+- vedlegg/kvittering-akademika.png
+- claude-code-sveip-bort-smooth.md (+ design/swipe-dismiss.js, design/Mobil Papir App.dc.html, design/Bibelvers.dc.html)
+- claude-code-ai-glimt-anbefaler-modeller.md (+ design/AI Kontroll.dc.html)
+- design/Yr mot Storm Design.dc.html (3 retninger for sammenligningsmenyen, ikke valgt ennå)
+- design/Yr mot Storm Design.dc.html → 2a (bakgrunn 1b + oppsett 1a/1c)
+- claude-code-glimt-varsel-ikon.md (+ vedlegg/glimt-varsel.png, glimt-varsel-rund.png, glimt-badge.png, design/Mobil Papir App.dc.html)
+- claude-code-scroll-stabil-innstillinger.md
+- claude-code-vaer-yr-storm-2a-rediger.md (+ design/Yr mot Storm Design.dc.html → 2a)
+- claude-code-hjem-wiggle-scroll-ark.md (+ vedlegg/hjem-wiggle-ark-mobil.png, hjem-wiggle-ark-web.png)
+- claude-code-vaer-glimt-ukas-vaer.md (+ design/Vaer.dc.html, design/glimt-figurer.js, vedlegg/yr-storm-storrelser.png)
+- claude-code-varsellyd-myk-android.md (+ design/Mobil Papir App.dc.html)
+- claude-code-android-profilbilde.md (+ claude-code-konto-profilbilde.md som referanse)
+- claude-code-innst-appprofil-underside.md (+ vedlegg/innst-profil.png, design/Mobil Papir App.dc.html)
+- claude-code-innst-tilpass-side.md (+ vedlegg/innst-homelab-gruppe.png)
+- claude-code-varsler-versjon-app-ikon.md (+ vedlegg/app-icon-*.png, varsle-nye-versjoner.png, app-ikon-standard.png)
+- claude-code-brief-glimt-av.md (+ design/Glimt Brief.dc.html)
+- claude-code-android-chat-modell.md (+ design/Mobil Papir App.dc.html)
+- claude-code-gjoremal-glimt-forslag.md
+- claude-code-kvittering-pa-nytt-fremdrift.md (+ design/Mobil Papir App.dc.html)
+- claude-code-kvittering-ny-kategori.md
+- claude-code-sveip-bort-smooth.md (oppdatert: ingen sveipe-hint)
+- claude-code-ai-glimt-anbefaler-modeller.md (oppdatert: «La Glimt velge» i Valg) + design/AI Kontroll.dc.html
+- claude-code-domener-search-console.md (oppdatert: hent domener) + design/Homelab Domener Papir.dc.html
+- claude-code-innst-ai-web-fyll-logoer.md (+ vedlegg/innst-ai-web.png, design/AI Kontroll.dc.html, design/Innstillinger Web.dc.html)
+- claude-code-domener-search-console.md (oppdatert: oppsett + ?-guide i Innstillinger)
+- design/Huskeliste Web Design.dc.html (1a sidemeny + detaljer · 1b tavle · 1c uke · valgt: 2a = 1a med 1b som visning)
+- claude-code-huskeliste-web.md (+ vedlegg/huskeliste-web-na.png)
+- claude-code-kalendere-fire-google.md (+ design/Kalendere Oppsett.dc.html)
