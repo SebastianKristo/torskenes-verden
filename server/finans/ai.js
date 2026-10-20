@@ -8,6 +8,7 @@ import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
 // Prompt 34: finans-oppgavene → oppgavene i AI-kontroll-rutingen.
 const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok' };
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
+import { RULES39, normalizeLines39, extras39, verify39 } from './receipts39.js'; // prompt 39: varelinjer og sumkontroll
 
 export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON etter skjemaet.
 - Beløp i kroner som tall med punktum som desimalskille (386.50).
@@ -16,7 +17,8 @@ export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON
 - Foreslå kategori fra listen: ${cats.join(', ')}.
 - Sett confidence (0–1) per felt (merchant, date, total). Gjett ikke: ukjent felt = null.
 - Ta aldri med fullt kortnummer, bare de fire siste sifrene i card_last4.
-- lines: hver varelinje med description, amount og bbox = [x, y, bredde, høyde] i prosent (0–100) av bildet, målt fra øvre venstre hjørne, rundt hele linjen (tekst og pris). bbox = null hvis du ikke ser bildet eller er usikker.`;
+- lines: hver varelinje med description, amount og bbox = [x, y, bredde, høyde] i prosent (0–100) av bildet, målt fra øvre venstre hjørne, rundt hele linjen (tekst og pris). bbox = null hvis du ikke ser bildet eller er usikker.
+- lines har også name, nameRaw, qty, unitPrice, discount og vatRate. discounts = [{text, amount}], pant = pantebeløp.${RULES39}${cats?.feedback ? `\n\nTILBAKEMELDING: ${cats.feedback}` : ''}`;
 
 const num = { type: 'number', nullable: true };
 const str = { type: 'string', nullable: true };
@@ -27,7 +29,9 @@ export const SCHEMA = {
     merchant: str, org_number: str, date: str, total: num, currency: { type: 'string' },
     vat: { type: 'array', items: { type: 'object', properties: { rate: { type: 'integer' }, amount: { type: 'number' } }, required: ['rate', 'amount'] } },
     // Prompt 30: bbox per linje i prosent av bildet ([x, y, w, h]) for markering av søketreff i kvitteringen.
-    lines: { type: 'array', items: { type: 'object', properties: { description: { type: 'string' }, quantity: num, amount: { type: 'number' }, bbox: { type: 'array', items: { type: 'number' }, nullable: true } }, required: ['description', 'amount'] } },
+    lines: { type: 'array', items: { type: 'object', properties: { description: { type: 'string' }, name: str, nameRaw: str, quantity: num, qty: num, unitPrice: num, discount: num, vatRate: num, amount: { type: 'number' }, bbox: { type: 'array', items: { type: 'number' }, nullable: true } }, required: ['description', 'amount'] } },
+    // Prompt 39: rabatter, pant, kvitteringsnummer og klokkeslett.
+    discounts: { type: 'array', items: { type: 'object', properties: { text: { type: 'string' }, amount: { type: 'number' } }, required: ['text', 'amount'] } }, pant: num, receipt_no: str, time: str,
     payment_method: str, card_last4: str, suggested_category: str,
     confidence: { type: 'object', properties: { merchant: { type: 'number' }, date: { type: 'number' }, total: { type: 'number' } } },
   },
@@ -70,6 +74,9 @@ export function validate(x) {
     suggested_category: typeof x.suggested_category === 'string' ? x.suggested_category.slice(0, 60) : null,
     confidence: {},
   };
+  // Prompt 39: name/nameRaw/qty/unitPrice/discount/vatRate per linje + discounts, pant, receipt_no, time.
+  out.lines = normalizeLines39(x, out.lines);
+  Object.assign(out, extras39(x));
   for (const k of ['merchant', 'date', 'total']) {
     const v = +(x.confidence?.[k]);
     out.confidence[k] = Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
@@ -437,7 +444,7 @@ export async function extract(image, mime, cats, force, { log = () => {}, status
           lastErr = new Error('Lav sikkerhet'); lastErr.partial = { provider: p, model: modelOf(p, st), data, seconds: (Date.now() - t0) / 1000 };
           break;
         }
-        return done(await lowConfCheck({ provider: p, model: modelOf(p, st), data, seconds: (Date.now() - t0) / 1000 }, image, mime, st, log));
+        return done(await lowConfCheck(await sumRetry39({ provider: p, model: modelOf(p, st), data, seconds: (Date.now() - t0) / 1000 }, p, st, image, mime, cats, log, mode), image, mime, st, log));
       } catch (e) {
         lastErr = e;
         logAi({ task: 'receipts', engine: p, model: modelOf(p, st), promptLen: image.length, ms: Date.now() - t0, status: e.timeout ? 'tidsavbrudd' : 'feil', error: e.message, timeoutEngine: e.timeout ? p : null });
@@ -479,6 +486,24 @@ export async function extract(image, mime, cats, force, { log = () => {}, status
   if (errors.length > 1) throw Object.assign(new Error(errors.join(' · ')), { timeoutEngine: timedOut?.engine ?? null });
   if (lastErr && timedOut) lastErr.timeoutEngine = timedOut.engine;
   throw lastErr ?? new Error('Ingen AI-motor tilgjengelig');
+}
+
+// Prompt 39: sumkontroll. Summerer ikke linjene til totalen (±1 kr), leses kvitteringen én gang til med tilbakemelding.
+// Feiler den igjen, beholdes det beste svaret med status «usikker».
+async function sumRetry39(res, p, st, image, mime, cats, log, mode) {
+  let v = verify39(res.data);
+  res.data.verify = v; res.data.status = v.status;
+  if (v.ok || !res.data.lines?.length || res.data.total == null || cats?.feedback) return res;
+  log('kontroll', `${v.text} · leser på nytt med tilbakemelding`);
+  try {
+    const fb = Object.assign([...cats], { feedback: v.feedback });
+    const raw = await runEngine(p, st, (ms, key) => PROVIDERS[p](image, mime, fb, st, ms, key), { status: () => {}, onTimeout: mode, task: 'receipts' });
+    const data = validate(raw), v2 = verify39(data);
+    if (v2.ok || Math.abs(v2.diff ?? 1e9) < Math.abs(v.diff ?? 1e9)) { data.verify = v2; data.status = v2.status; data.retried = true; log('kontroll', v2.text); return { ...res, data }; }
+    log('kontroll', `fortsatt usikker: ${v2.text}`);
+  } catch (e) { log('kontroll', `nytt forsøk feilet: ${e.message}`); }
+  res.data.retried = true;
+  return res;
 }
 
 /** Les en kvittering med lokal OCR (Tesseract) direkte, f.eks. på eldre kvitteringer som AI ikke klarte. */

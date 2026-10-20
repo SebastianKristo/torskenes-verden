@@ -92,9 +92,9 @@ export async function schoolPart(u, today = osloDate(), now = Date.now()) {
   try { events = (await withTimeout(eventsFor(u, today, addDays(today, 7)), 4000, { events: [] })).events ?? []; } catch { events = []; }
   const items = events.filter((e) => !isTrial(e) && e.date >= today && e.date <= addDays(today, 7)).map((e) => {
     const t = String(e.title ?? '');
-    const prove = e.type === 'prove' || e.kind === 'prove' || e.kind === 'eksamen' || (e.appCalendar === 'studie' && /prøve|eksamen|tentamen|quiz/i.test(t));
+    const prove = e.type === 'prove' || e.kind === 'prove' || e.kind === 'eksamen' || ((e.appCalendar === 'studie' || e.appCalendar === 'skole') && /prøve|eksamen|tentamen|quiz/i.test(t));
     const frist = !prove && (e.type === 'innl' || e.kind === 'frist' || /^frist\b|innlevering|oblig/i.test(t));
-    const mote = !prove && !frist && e.appCalendar === 'jobb' && (e.important || e.flag || e.prio > 0 || /viktig|presentasjon|kvartal|møte/i.test(t));
+    const mote = !prove && !frist && (e.appCalendar === 'jobb' || e.appKind === 'jobb') && (e.important || e.flag || e.prio > 0 || /viktig|presentasjon|kvartal|møte/i.test(t));
     if (!prove && !frist && !mote) return null;
     if (!e.allDay && e.start && Date.parse(e.end ?? e.start) < now) return null;
     let color = e.appColor ?? e.color ?? '#2b5d8a';

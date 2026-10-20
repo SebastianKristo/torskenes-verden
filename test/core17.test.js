@@ -153,7 +153,7 @@ test('Varsler: valg per bruker, validering, egen lyd og innebygde lyder', async 
   const g = await call('/api/me/notify');
   assert.equal(g.body.on, true);
   assert.equal(g.body.quietFrom, '22:00');
-  assert.equal(g.body.sounds.length, 7);
+  assert.equal(g.body.sounds.length, 8); // prompt 39: + draape
   const p = await call('/api/me/notify', 'PUT', { on: false, quietFrom: '23:30', sound: 'pling', volume: 40, groups: { pakker: false } });
   assert.equal(p.status, 200);
   assert.deepEqual([p.body.on, p.body.quietFrom, p.body.sound, p.body.volume, p.body.groups.pakker, p.body.groups.finans], [false, '23:30', 'pling', 40, false, true]);
@@ -172,7 +172,7 @@ test('Varsler: valg per bruker, validering, egen lyd og innebygde lyder', async 
   assert.equal((await call('/api/me/notify/sound', 'POST', fd2, { authorization: H.authorization })).status, 400);
   const rm = await call('/api/me/notify/sound', 'DELETE');
   assert.equal(rm.body.customSound, null);
-  assert.equal(rm.body.sound, 'klokke');
+  assert.equal(rm.body.sound, 'draape'); // prompt 39: ny standardlyd
   const pub = await app.request('/assets/sounds/klokke.wav');
   assert.equal(pub.status, 200);
 });

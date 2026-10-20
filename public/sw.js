@@ -34,7 +34,7 @@ self.addEventListener('push', (e) => {
   try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data ? e.data.text() : '' }; }
   const title = d.title || 'Glimt';
   const opts = {
-    body: String(d.body || '').replace(/\*\*/g, ''), tag: d.tag || undefined, renotify: !!d.tag, icon: '/assets/icons/icon-192.png', badge: '/assets/icons/icon-192.png',
+    body: String(d.body || '').replace(/\*\*/g, ''), tag: d.tag || undefined, renotify: !!d.tag, icon: d.icon || '/assets/icons/icon-192.png', badge: d.badge || '/assets/icons/icon-192.png', // prompt 39: Glimt-logo på AI-svar
     data: { url: d.url || '/#/dash', category: d.category || '', id: d.id ?? null, actions: d.actions || null },
     actions: Array.isArray(d.actions) ? d.actions.slice(0, 2).map((a) => ({ action: a.action || a.id, title: a.title })) : [],
   };

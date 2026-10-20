@@ -46,6 +46,7 @@ import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi, trackingKeysApi, kal37Api } from './api37.js'; // prompt 37 (SERVER37)
 import { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler, brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
+import { cals39Api, googleMap39Api, rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -135,6 +136,8 @@ app.post('/finans/share', async (c) => {
 app.use('/assets/*', async (c, next) => { await next(); if (c.res.ok) c.header('Cache-Control', 'no-cache'); });
 // Prompt 30: Yr- og Storm-logoene ligger i public/assets/brands/ (samme sti som URL-en, /assets/brands/yr.png).
 app.use('/assets/brands/*', serveStatic({ root: './public' }));
+// Prompt 39: filer som ligger i public/assets/ (glimt-varsel.png, glimt-badge.png …) først, så resten av public/ som før.
+app.use('/assets/*', serveStatic({ root: './public' }));
 app.use('/assets/*', serveStatic({ root: './public', rewriteRequestPath: (p) => p.replace(/^\/assets/, '') }));
 app.use('/vendor/satellite/*', serveStatic({ root: './node_modules/satellite.js/dist', rewriteRequestPath: (p) => p.replace(/^\/vendor\/satellite/, '') }));
 app.get('/manifest.webmanifest', async (c) => c.body(await page('manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
@@ -656,6 +659,8 @@ app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kale
 // Prompt 33 (SERVER33): Kalender-appen – kalendere (visning, farger, egne), vær 16 dager, appCalendar på hendelser, widgets.
 app.route('/api/kalender/ha', kal35HaApi); // prompt 35
 app.route('/api/kalender', kal37Api); // prompt 37: /subjects (fagfarger) og /geo (adresse + kart)
+app.route('/api/kalender/calendars', cals39Api); // prompt 39: fire kalendere, opprydding/angre, nye felt (før kalender33)
+app.route('/api/kalender/google', googleMap39Api); // prompt 39: GET/PUT /mapping
 app.route('/api/kalender/calendars', kalCalendarsApi);
 app.route('/api/kalender/weather', kalWeatherApi);
 app.use('/api/kalender/events', kalEventsMw);
@@ -675,12 +680,14 @@ app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname
 app.get('/api/system/changelog', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/changelog'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); }); // prompt 36
 app.route('/api/glimt/memory', glimtMemoryApi); // prompt 33: GET/POST/DELETE, POST /:id/apply (sesjon eller app-token, per bruker)
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
+app.route('/api/ai', rec39Api); // prompt 39: ✦ Glimt anbefaler modeller
 app.route('/api/ai', aiApi); // prompt 34: AI-kontroll
 app.route('/api/brief', brief38Api); // prompt 38: nye kort (pakker, familie, skole og jobb, bursdager, nordlys) + POST /api/brief/gift
 app.route('/api/brief', briefApi); // prompt 34: Glimt-brief
 app.route('/api/glimt/settings', glimtSettingsApi); // prompt 35
 app.route('/api/tts', ttsApi); // prompt 35
 app.route('/api/img', imgApi); // prompt 35
+app.route('/api/weather/week-summary', week39Api); // prompt 39: Glimt · ukas vær
 app.route('/api/weather/place', weather35Api); // prompt 35
 app.route('/api/glimt', glimtApi); // prompt 34: POST /api/glimt {prompt, tool:'calendar'} (etter /api/glimt/memory)
 app.route('/api/assist', assistApi); // prompt 31: Glimt-ruteren (sesjon eller app-token, per bruker)

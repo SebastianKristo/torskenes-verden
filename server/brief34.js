@@ -256,6 +256,10 @@ export async function buildBrief(u, { kind = null, t = Date.now(), llm = false }
   b.guide = guideOf(b, { host: b.host, friends: gs.friends });
   b.enabled = gs.brief;
   b.readAloud = gs.readAloud;
+  // Prompt 39: «Glimt i briefen» av → ingen figur, ingen snakkebobler og ingen guide-runde (innholdet og Les opp er uendret).
+  b.briefGlimt = gs.briefGlimt !== false;
+  b.showFigure = b.briefGlimt;
+  if (!b.briefGlimt) { b.figure = { ...b.figure, hidden: true }; b.guide = []; b.autoGuide = false; }
   const gen = cached?.at ?? t;
   b.footer = `Laget av Glimt ${HM(new Date(gen).toISOString())} · Vær: ${weather?.credit ?? '–'} · Nyheter: ${[...new Set(news.map((x) => x.source).filter(Boolean))].join(', ') || '–'}`;
   b.generatedAt = new Date(gen).toISOString();

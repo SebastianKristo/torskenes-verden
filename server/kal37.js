@@ -41,7 +41,7 @@ export function fagKey(title, subject = null) {
   if (subject) return String(subject).trim().split(/\s+/)[0].slice(0, 40) || null;
   return null;
 }
-const isStudy = (e) => e.appCalendar === 'studie' || ['timeplan', 'prover', 'skole'].includes(e.calendar) || ['time', 'prove', 'innl'].includes(e.type);
+const isStudy = (e) => e.appCalendar === 'studie' || e.appCalendar === 'skole' || ['timeplan', 'prover', 'skole'].includes(e.calendar) || ['time', 'prove', 'innl'].includes(e.type);
 /** Fast farge for faget hos brukeren (layout.subjectColors overstyrer). */
 export function subjectColor(user, key) {
   const own = layoutOf(user)?.subjectColors?.[key];

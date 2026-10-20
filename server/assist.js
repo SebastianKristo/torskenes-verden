@@ -73,6 +73,7 @@ import { aliasesOf, aliasPrompt, parseMemoryIntent, learnFromAssist, typeOfWord,
 import { parseTrial, serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../public/js/trial-parse.js';
 import * as integrations from './integrations.js';
 import { calendarAnswer } from './kalender33.js'; // prompt 33: source:'calendar'
+import { fagAnswer, rememberCtx } from './glimt39-fag.js'; // prompt 39: oppfølging og fag
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { extractPlace, placeWeather, PlaceNotFound } from './weather35.js'; // prompt 35: været for et sted
 import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from './ai-run.js';
@@ -335,6 +336,7 @@ async function toolCalendarDay(user, text, today) {
     : `${label} har du ${n} ${n === 1 ? 'ting' : 'ting'} i kalenderen. Første er **${first.title}${first.allDay ? '' : ` kl. ${hmOf(first.start)}`}**.`;
   const x = new Date(date + 'T00:00:00Z');
   const card = { k: 'calendar', date, wd: WEEKDAYS[x.getUTCDay()].slice(0, 3).toUpperCase(), n: x.getUTCDate(), t: label, sub: `${longDate(date)} · ${n} ${n === 1 ? 'hendelse' : 'hendelser'}`, items: list.slice(0, 8).map(calItem) };
+  rememberCtx(user, text, list); // prompt 39: oppfølging («hva slags fag er det»)
   return { text: t, source: 'Kalender', tool: 'Kalender', card };
 }
 
@@ -533,18 +535,22 @@ function withDateContext(text, today) {
 }
 
 const TITLES = { 'sun.daylight': 'Regner på sola', 'calendar.free_slots': 'Finner ledig tid', 'calendar.search': 'Leter i kalenderen', 'calendar.summary': 'Oppsummerer', 'calendar.create': 'Legger til i kalenderen', 'weather.daily': 'Sjekker været', 'calendar.ask': 'Glimt tenker', weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
-  'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'family.where': 'Ser i Familie', 'calendar.school': 'Ser i Studie', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
-const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender' };
+  'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'family.where': 'Ser i Familie', 'calendar.school': 'Ser i Studie', 'calendar.fag': 'Slår opp faget', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
+const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender', 'calendar.fag': 'Kalender' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
 export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null } = {}) {
   const t0 = Date.now();
-  const intent = detectIntent(text, today);
+  let intent = detectIntent(text, today);
+  // Prompt 39: «hva slags timer har jeg i dag», «hva er fysikk» og oppfølging («hva slags fag er det») med forrige svar.
+  const f39 = await fagAnswer(user, text, { today, followNeedsCtx: true }).catch(() => null);
+  if (f39) intent = 'calendar.fag';
   onStep(1, intent);
   let r;
   try {
     const nv = intent === 'nav' ? navTarget(text) : null;
-    r = intent === 'family.where' ? await whereAnswer(user, text)
+    r = f39 ? { text: f39.text, source: 'Kalender', tool: 'Kalender', engine: f39.engine === 'ollama' ? 'ollama' : 'tool', events: f39.events, subjects: f39.subjects }
+      : intent === 'family.where' ? await whereAnswer(user, text)
       : intent === 'calendar.school' ? await toolSchoolTest(user, today)
       : nv ? { text: `Åpner **${nv.label}**.`, source: 'Snarvei', nav: { target: nv.target, label: nv.label, web: nv.web, deepLink: `finanshub://${nv.target}`, delayMs: 450 } }
       : intent === 'sun.daylight' ? await toolSun(user, text, today)
@@ -564,10 +570,11 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
     r = { text: `Fikk ikke hentet ${TOOL_OF[intent]?.toLowerCase() ?? 'svaret'} akkurat nå. **Prøv igjen** om litt.`, source: 'Glimt', tool: TOOL_OF[intent], error: String(e?.message ?? e).slice(0, 200) };
   }
   onStep(2, intent);
+  if (Array.isArray(r.events) && r.events.length) rememberCtx(user, text, r.events);
   const kc = classifyLocal(text, intent);
   const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, kind: kc.kind, surface: kc.kind === 'action' ? 'pill' : 'inline', ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
     model: r.model ?? 'Glimt · verktøy', engine: r.engine ?? (intent === 'llm' ? 'none' : 'tool') };
-  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound', 'person', 'events']) if (r[k] !== undefined) out[k] = r[k];
+  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound', 'person', 'events', 'subjects']) if (r[k] !== undefined) out[k] = r[k];
   if (r.nav) { out.target = r.nav.target; out.nav = r.nav; }
   out.chatContext = { q: text, intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: r.text, ...(r.card ? { card: r.card } : {}), ...(r.tool ? { tool: r.tool } : {}) }] };
   return out;
@@ -577,8 +584,8 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
 
 export function assistSettings(user) {
   const s = kv.get(user, 'assist', {}) ?? {};
-  let n; try { n = notifyOf(user); } catch { n = { ai_bg_notify: true }; }
-  return { ai_bg_notify: n.ai_bg_notify !== false, cloud: s.cloud === true };
+  let n; try { n = notifyOf(user); } catch { n = { ai_bg_notify: true, n_ai_in: true }; }
+  return { ai_bg_notify: n.ai_bg_notify !== false, n_ai_in: n.n_ai_in !== false, cloud: s.cloud === true }; // prompt 39: n_ai_in
 }
 
 /* ---------------- Chat ---------------- */
@@ -696,9 +703,10 @@ api.get('/settings', (c) => c.json(assistSettings(c.get('user'))));
 api.put('/settings', async (c) => {
   const u = c.get('user'), b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet {ai_bg_notify, cloud}' }, 400);
-  for (const k of Object.keys(b)) { if (!['ai_bg_notify', 'cloud'].includes(k)) return c.json({ error: `Ukjent nøkkel ${k}` }, 400); if (typeof b[k] !== 'boolean') return c.json({ error: `${k} må være true eller false` }, 400); }
+  for (const k of Object.keys(b)) { if (!['ai_bg_notify', 'n_ai_in', 'cloud'].includes(k)) return c.json({ error: `Ukjent nøkkel ${k}` }, 400); if (typeof b[k] !== 'boolean') return c.json({ error: `${k} må være true eller false` }, 400); }
   if ('cloud' in b) kv.set(u, 'assist', { ...(kv.get(u, 'assist', {}) ?? {}), cloud: b.cloud });
   if ('ai_bg_notify' in b) kv.set(u, 'notify', { ...(kv.get(u, 'notify', {}) ?? {}), ai_bg_notify: b.ai_bg_notify });
+  if ('n_ai_in' in b) kv.set(u, 'notify', { ...(kv.get(u, 'notify', {}) ?? {}), n_ai_in: b.n_ai_in });
   return c.json(assistSettings(u));
 });
 

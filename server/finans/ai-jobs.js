@@ -17,7 +17,8 @@ export function jobView(j) {
   const now = j.finishedAt ?? Date.now();
   const elapsedS = j.engineAt ? secs(now - j.engineAt) : secs(now - j.startedAt);
   let text;
-  if (j.status === 'running') text = j.engine ? `✦ ${providerName(j.engine)} tenker … ${elapsedS} s av ${j.limitS} s` : '✦ Søker …';
+  if (j.status === 'running' && j.progress?.msg) text = j.progress.msg;
+  else if (j.status === 'running') text = j.engine ? `✦ ${providerName(j.engine)} tenker … ${elapsedS} s av ${j.limitS} s` : '✦ Søker …';
   else if (j.status === 'done') text = '✦ Ferdig';
   else if (j.status === 'cancelled') text = 'Avbrutt';
   else text = j.error ?? 'AI-søket feilet';
@@ -25,6 +26,8 @@ export function jobView(j) {
     id: j.id, jobId: j.id, kind: j.kind, status: j.status, engine: j.engine, engineName: j.engine ? providerName(j.engine) : null,
     elapsedS, totalS: secs(now - j.startedAt), limitS: j.limitS, text, notice: j.notice ?? null,
     ...(j.status === 'done' ? { result: j.result } : {}), ...(j.status === 'error' ? { error: j.error } : {}),
+    // Prompt 39: fremdrift for «✦ På nytt» (kvitteringer): {step:'upload'|'ocr'|'llm'|'verify'|'done'|'error', pct, msg}.
+    ...(j.progress ? { step: j.progress.step, pct: j.progress.pct, msg: j.progress.msg, ...(j.progress.receiptId ? { receiptId: j.progress.receiptId } : {}) } : {}),
   };
 }
 
@@ -52,8 +55,9 @@ export function startJob(uid, kind, run) {
   jobs.set(j.id, j);
   const onEngine = (engine, limitS) => { Object.assign(j, { engine, limitS, engineAt: Date.now() }); emit(j); };
   const status = (text) => { j.notice = String(text ?? '').slice(0, 300) || null; emit(j); };
+  const progress = (p) => { j.progress = { ...(j.progress ?? {}), ...p }; emit(j); };
   const promise = Promise.resolve()
-    .then(() => run({ signal: j.ctrl.signal, onEngine, status }))
+    .then(() => run({ signal: j.ctrl.signal, onEngine, status, progress, job: j }))
     .then((result) => finish(j, { status: 'done', result }), (e) => {
       if (j.ctrl.signal.aborted || e?.cancelled) return finish(j, { status: 'cancelled' });
       console.error('[ai-jobb]', e);

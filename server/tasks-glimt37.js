@@ -145,6 +145,23 @@ export const PACK_TPL = {
   bursdag: ['Gave', 'Kort', 'Gavepapir', 'Kake', 'Lys', 'Ballonger'],
   eksamen: ['Studentkort', 'Kalkulator', 'Blyanter og viskelær', 'Vannflaske', 'Matpakke', 'Klokke'],
 };
+// Prompt 39: pakkeliste foreslås bare for reise/hytte: ≥ 2 dager eller reiseord, ikke hjemme, om 1–14 dager.
+// Aldri for bursdager, jubileer/merkedager, timer (lege, frisør, tannlege), skole, prøver, frister, møter, middager eller abonnementer.
+const TRAVEL39 = /hytt|hafjell|fjell|\btur\b|reis|ferie|\bfly\b|flyreise|\btog\b|hotell|camping|\bleir|gardermoen|torp|weekend i/;
+const NEVER39 = /bursdag|fødselsdag|jubileum|jubilé|merkedag|bryllupsdag|\blege|frisør|tannlege|tannpleier|fysio|time hos|forelesning|\bskole|prøve|eksamen|tentamen|frist|innlevering|møte|middag|abonnement|prøveperiode|\bvakt\b|trening/;
+export function packEligible39(e, t0, { home = /\boslo\b|hjemme/ } = {}) {
+  if (!e) return false;
+  const t = norm(`${e.title ?? ''} ${e.room ?? ''} ${e.place ?? ''}`);
+  if (e.appCalendar === 'bursdager' || e.calendar === 'bursdager' || e.type === 'bursdag' || e.kind === 'bursdag' || e.kind === 'trial' || e.source === 'trials' || e.source === 'helligdager') return false;
+  if (['time', 'prove', 'innl'].includes(e.type) || ['skole', 'studie', 'helligdager'].includes(e.appCalendar)) return false;
+  if (NEVER39.test(t)) return false;
+  const days = e.allDay && e.end && e.date ? Math.round((Date.parse(`${e.end}T00:00:00Z`) - Date.parse(`${e.date}T00:00:00Z`)) / 86400_000) : Math.max(1, Math.ceil((Date.parse(e.end) - Date.parse(e.start)) / 86400_000) || 1);
+  if (!(days >= 2 || TRAVEL39.test(t))) return false;
+  const loc = norm(`${e.room ?? ''} ${e.place ?? ''}`);
+  if (loc && home.test(loc) && !TRAVEL39.test(t)) return false;
+  const inDays = Math.round((Date.parse(`${e.date}T00:00:00Z`) - Date.parse(`${t0}T00:00:00Z`)) / 86400_000);
+  return inDays >= 1 && inDays <= 14;
+}
 const kindOfEvent = (e) => { if (e.kind === 'trial' || e.source === 'trials' || /prøveperiode|-prøven|prøve slutter/i.test(String(e.title ?? ''))) return null; const t = norm(`${e.title} ${e.room ?? ''} ${e.place ?? ''}`); return /hytt|hafjell|fjell/.test(t) ? 'hytte' : /fly|reis|ferie|tur\b|gardermoen/.test(t) ? 'reise' : /bursdag/.test(t) || e.appCalendar === 'bursdager' ? 'bursdag' : /eksamen|prøve|tentamen/.test(t) ? 'eksamen' : null; };
 
 /* ---------------- Montering ---------------- */
@@ -282,13 +299,15 @@ export function mountGlimt37(api, T) {
       const { eventsFor } = await import('./calendar.js');
       const { runAsUser } = await import('./settings.js');
       const { events } = await runAsUser(u, () => eventsFor(u, t0, addDays(t0, 30)));
-      const list = events.filter((e) => (eventId ? e.id === eventId : kindOfEvent(e)) && e.date >= t0).sort((a, b) => a.date.localeCompare(b.date));
+      const list = events.filter((e) => (eventId ? e.id === eventId : packEligible39(e, t0) && ['hytte', 'reise'].includes(kindOfEvent(e) ?? 'reise')) && e.date >= t0).sort((a, b) => a.date.localeCompare(b.date));
       return list[0] ?? null;
     } catch { return null; }
   }
   async function packlist(u, t0, eventId) {
     const e = await nextTripEvent(u, t0, eventId);
-    const kind = e ? kindOfEvent(e) ?? 'reise' : 'hytte';
+    // Prompt 39: aldri pakkeliste for bursdager (gave hører hjemme i Bursdager-modulen).
+    if (e && (e.appCalendar === 'bursdager' || e.type === 'bursdag' || kindOfEvent(e) === 'bursdag')) return { kind: 'action', intent: 'tasks.packlist', text: `Ingen pakkeliste for ${e.title}. Pakkelister lager jeg bare for reiser og hytteturer.`, items: [], undo: null, skipped: 'bursdag', event: { id: e.id, title: e.title, date: e.date } };
+    const kind = e ? (['hytte', 'reise'].includes(kindOfEvent(e)) ? kindOfEvent(e) : 'reise') : 'hytte';
     const target = kind === 'hytte' ? listByWord(u, 'Hytta') ?? listRow(defaultList(u)) : listRow(defaultList(u));
     const due = e ? addDays(e.date, -1) : null;
     const items = PACK_TPL[kind];
@@ -415,18 +434,33 @@ export function mountGlimt37(api, T) {
     if (handel && /^handel/i.test(handel.name) && openRows(u, handel.id).length && !(kv.get(u, 'tasks37_store', {}) ?? {})[handel.id] && !dismissed.has(`store:${handel.id}`)) {
       cards.push({ key: `store:${handel.id}`, kind: 'store', text: 'Påminn meg ved butikken', list: { id: handel.id, name: handel.name }, actions: [{ action: 'store', label: 'Slå på' }] });
     }
-    const e = await nextTripEvent(u, t0);
+    const tipOff = kv.get(u, 'huske_tip_off', {}) ?? {};
+    const e = tipOff.pack ? null : await nextTripEvent(u, t0);
     if (e && !dismissed.has(`packlist:${e.id}`)) {
       const inDays = daysBetween(t0, e.date), k = kindOfEvent(e);
       cards.push({ key: `packlist:${e.id}`, kind: 'packlist', event: { id: e.id, title: e.title, date: e.date, inDays }, text: `${e.title} om ${inDays} ${inDays === 1 ? 'dag' : 'dager'}: ${k === 'hytte' ? 'Lage pakkeliste og huske brøyting?' : 'Lage pakkeliste?'}`,
-        actions: [{ action: 'packlist', label: 'Lag pakkeliste', eventId: e.id }, { action: 'dismiss', label: 'Ikke nå' }] });
+        actions: [{ action: 'packlist', label: 'Lag pakkeliste', eventId: e.id }, { action: 'dismiss', label: 'Ikke nå' }, { action: 'tipoff', label: 'Ikke foreslå slike', type: 'pack' }] });
     }
     return c.json({ cards });
+  });
+  // Prompt 39: «Forslag fra Glimt» hver for seg (pack = pakkelister, dup = like gjøremål, overdue = forfalte, store = stedspåminnelse).
+  // GET /api/tasks/glimt/tips → {pack, dup, overdue, store} (true = på) · PUT {pack?:bool, …} → samme. «Ikke foreslå slike» = PUT {pack:false}.
+  const TIP_KEYS = ['pack', 'dup', 'overdue', 'store'];
+  const tipsOut = (u) => { const off = kv.get(u, 'huske_tip_off', {}) ?? {}; return Object.fromEntries(TIP_KEYS.map((k) => [k, !off[k]])); };
+  api.get('/glimt/tips', (c) => c.json(tipsOut(c.get('user'))));
+  api.put('/glimt/tips', async (c) => {
+    const u = c.get('user'), b = await c.req.json().catch(() => null);
+    if (!b || typeof b !== 'object') return c.json({ error: 'Forventet {pack?, dup?, overdue?, store?}' }, 400);
+    const off = { ...(kv.get(u, 'huske_tip_off', {}) ?? {}) };
+    for (const [k, v] of Object.entries(b)) { if (!TIP_KEYS.includes(k)) return c.json({ error: `Ukjent forslagstype ${k}` }, 400); if (typeof v !== 'boolean') return c.json({ error: `${k} må være true eller false` }, 400); off[k] = !v; }
+    kv.set(u, 'huske_tip_off', off);
+    return c.json(tipsOut(u));
   });
   api.post('/glimt/cards/dismiss', async (c) => {
     const u = c.get('user'), b = await c.req.json().catch(() => ({}));
     const key = String(b.key ?? '').slice(0, 200);
-    if (!key) return c.json({ error: 'Mangler key' }, 400);
+    if (TIP_KEYS.includes(b.off ?? b.type)) kv.set(u, 'huske_tip_off', { ...(kv.get(u, 'huske_tip_off', {}) ?? {}), [b.off ?? b.type]: true }); // prompt 39: «Ikke foreslå slike»
+    if (!key) return TIP_KEYS.includes(b.off ?? b.type) ? c.json({ ok: true, tips: tipsOut(u) }) : c.json({ error: 'Mangler key' }, 400);
     kv.set(u, 'tasks37_cards_dismissed', [...new Set([...(kv.get(u, 'tasks37_cards_dismissed', []) ?? []), key])].slice(-300));
     return c.json({ ok: true });
   });

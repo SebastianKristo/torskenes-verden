@@ -22,9 +22,11 @@ import { settings as fhSettings } from './finans/db.js';
 import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
 import { run as aiRun } from './ai-run.js';
 import { parseDay } from './parse-day35.js'; // prompt 35
+import { fagAnswer, rememberCtx, FAG_LLM_MS } from './glimt39-fag.js'; // prompt 39: oppfølging, fag og 45 s
 
 const MOCK = process.env.MOCK_DATA === '1';
-const LLM_MS = 12_000;
+// Prompt 39: 12 s var for lite for en lokal modell som lastes fra disk. Første token innen 12 s, totalt 45 s (FAG_LLM_MS).
+const LLM_MS = 45_000;
 const WD = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
 const MON = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -53,7 +55,8 @@ async function ollama(prompt, user, json = false) {
   if (llmImpl) return llmImpl(prompt, user);
   if (MOCK && !process.env.OLLAMA_URL) return null;
   // Prompt 34: ruten «Glimt · kalender» (ai.run) – validert modell, reserve og tydelig feil (AiRunError) i stedet for stille null.
-  const out = await aiRun('glimt', { user, prompt, json, temperature: 0, numPredict: json ? 200 : 160, title: json ? 'Glimt · beskriv hendelse' : 'Glimt · kalenderspørsmål' });
+  const out = await aiRun('glimt', { user, prompt, json, temperature: 0, numPredict: json ? 200 : 160, timeoutMs: LLM_MS, title: json ? 'Glimt · beskriv hendelse' : 'Glimt · kalenderspørsmål',
+    ...(json ? {} : { system: 'Du er Glimt, kalender-assistent. Svar kort på norsk. Du kan forklare fag og begreper generelt, ikke bare kalenderdata. Oppfølgingsspørsmål viser til forrige svar.' }) });
   return out.text;
 }
 
@@ -214,9 +217,14 @@ export function localAnswer(q, events, today = osloTodayISO(), nm = nowMin()) {
 
 export async function askCalendar(user, q, today = osloTodayISO()) {
   const { events } = await eventsFor(user, addDays(today, -365), addDays(today, 180));
+  // Prompt 39: fag og oppfølging («hva slags fag er det») før de vanlige reglene.
+  const f39 = await fagAnswer(user, q, { today, load: async (a, b) => events.filter((e) => e.date >= a && e.date <= b) }).catch(() => null);
+  if (f39) { rememberCtx(user, q, f39.events); return { text: f39.text.replace(/\*\*/g, ''), kind: f39.kind, engine: f39.engine, items: f39.events, subjects: f39.subjects }; }
   const loc = localAnswer(q, events, today);
-  if (loc) return loc;
+  if (loc) { rememberCtx(user, q, loc.items ?? []); return loc; }
   const ctx = [];
+  const prev = (await import('./glimt39-fag.js')).recallCtx(user);
+  if (prev?.events?.length) ctx.push(`Forrige svar gjaldt: ${prev.events.map((e) => `${e.date} ${e.title}`).join('; ')} (spørsmål: ${prev.q})`);
   for (let i = 0; i < 14; i++) { const d = addDays(today, i); dayList(events, d).sort(sortEv).forEach((e) => ctx.push(`${dLong(d)} ${hmOf(e) ? `${hmOf(e)}–${endHm(e)}` : 'hele dagen'} ${e.title}${e.room ? ` (${noUrl(e.room)})` : ''}`)); }
   try {
     const t = await ollama(`Du er Glimt. Svar på norsk i maks to setninger, KUN ut fra kalenderen under. I dag er ${dLong(today)}.\nKalender (neste 14 dager):\n${ctx.join('\n') || '(tom)'}\n\nSpørsmål: ${q}`, user);
@@ -227,6 +235,8 @@ export async function askCalendar(user, q, today = osloTodayISO()) {
       return { text, kind: 'llm', engine: 'ollama', items: hit.slice(0, 6) };
     }
   } catch (e) {
+    // Prompt 39: tidsavbrudd gir en vennlig reserve uten rød feil.
+    if (e?.timeout || /tidsgrensen|i tide|timeout/i.test(String(e?.message ?? ''))) return { text: 'Glimt brukte litt for lang tid på dette. Prøv igjen om litt, eller still spørsmålet i Chat for et lengre svar.', kind: 'timeout', engine: 'none', items: [], timeout: true };
     // Prompt 34: vis feilen i stedet for «fant ikke noe svar».
     if (e?.name === 'AiRunError') return { text: e.message, kind: 'error', engine: 'none', items: [], error: e.message, fix: e.fix ?? null };
   }

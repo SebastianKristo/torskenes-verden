@@ -89,6 +89,7 @@ import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from '
 import { googleKalApi, googleCalendarsOf, isGoogleCalId, patchGoogleCal, removeGoogleCal } from './kalender36g.js'; // prompt 36b: Google-kalendere
 import { extractPlace, placeWeather } from './weather35.js'; // prompt 35: været for et sted
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from './finans/routes.js';
+import { fagAnswer, rememberCtx } from './glimt39-fag.js'; // prompt 39: oppfølging og fag
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -122,7 +123,9 @@ export function relDay(date, today) {
 
 /* ═══════════════════════ Kalendere ═══════════════════════ */
 
-export const APP_CALENDARS = [
+// Prompt 39: standard er bare fire kalendere (Personlig · Bursdager · Skole · Helligdager). De seks fra prompt 33 (LEGACY_CALENDARS)
+// gjelder bare etter «Angre» på oppryddingen (kal39.js). Gamle id-er (jobb/familie/helse → personlig, studie → skole) godtas fortsatt.
+export const LEGACY_CALENDARS = [
   { id: 'personlig', key: 'p', name: 'Personlig', color: '#b23a2a', textColor: '#8a2a1d', lightColor: '#f29a8a', backend: 'privat', sources: ['privat', 'trials'] },
   { id: 'jobb', key: 'j', name: 'Jobb', color: '#2b5d8a', textColor: '#1f4568', lightColor: '#9cc2ee', backend: 'privat', sources: [] },
   { id: 'studie', key: 's', name: 'Studie', color: '#2f7a4f', textColor: '#235c3b', lightColor: '#8fd4a8', backend: 'privat', sources: ['timeplan', 'prover', 'skole'] },
@@ -130,7 +133,25 @@ export const APP_CALENDARS = [
   { id: 'helse', key: 'h', name: 'Helse', color: '#3d7f8a', textColor: '#2a5c64', lightColor: '#8fcdd6', backend: 'privat', sources: [] },
   { id: 'bursdager', key: 'b', name: 'Bursdager', color: '#8a3fa0', textColor: '#6a2f7c', lightColor: '#d6a8e6', backend: 'privat', sources: ['bursdager'] },
 ];
-const BUILTIN = new Map(APP_CALENDARS.map((c) => [c.id, c]));
+export const APP_CALENDARS = [
+  { id: 'personlig', key: 'p', name: 'Personlig', color: '#b23a2a', textColor: '#8a2a1d', lightColor: '#f29a8a', backend: 'privat', sources: ['privat', 'trials', 'familie'] },
+  { id: 'bursdager', key: 'b', name: 'Bursdager', color: '#8a3fa0', textColor: '#6a2f7c', lightColor: '#d6a8e6', backend: 'privat', sources: ['bursdager'] },
+  { id: 'skole', key: 's', name: 'Skole', color: '#2f7a4f', textColor: '#235c3b', lightColor: '#8fd4a8', backend: 'privat', sources: ['timeplan', 'prover', 'skole'] },
+  { id: 'helligdager', key: 'h', name: 'Helligdager', color: '#a39d90', textColor: '#757065', lightColor: '#cfcac0', backend: 'privat', sources: ['helligdager'], readOnly: true },
+];
+export const LEGACY_ALIAS = { jobb: 'personlig', familie: 'personlig', helse: 'personlig', studie: 'skole' };
+// Prompt 39: kal39.js setter krokene (modus, sammenslåtte kalendere, ny form på radene). Standard: fire kalendere uten kroker.
+let H39 = { mode: () => 'four', merged: () => null, shape: (u, c) => c, ensure: () => {}, extra: () => ({}) };
+export const _setKal39 = (h) => { H39 = { ...H39, ...h }; };
+const isFour = (user) => H39.mode(user) !== 'legacy';
+/** Prompt 39: gammel eller sammenslått id → kalenderen den hører til nå (fire-modus). */
+export function resolveCalendar(user, id) {
+  if (!id || !isFour(user)) return id;
+  if (LEGACY_ALIAS[id]) return LEGACY_ALIAS[id];
+  return H39.merged(user, id) ?? id;
+}
+const BUILTIN = new Map([...LEGACY_CALENDARS, ...APP_CALENDARS].map((c) => [c.id, c]));
+const builtinsOf = (user) => (isFour(user) ? APP_CALENDARS : LEGACY_CALENDARS);
 const CUSTOM_ID = /^c-[0-9a-f]{10}$/;
 const MAX_CUSTOM = 20;
 const PREF_DEFAULTS = { defaultCalendar: 'personlig', defaultReminder: '1h', weekNumbers: true, weather: true, theme: 'system',
@@ -146,11 +167,13 @@ const prefsOf = (s) => ({ ...PREF_DEFAULTS, ...s.prefs });
 /** Kalenderne for user (uten antall). */
 export function appCalendarsOf(user) {
   const s = store(user);
-  const out = APP_CALENDARS.map((c) => { const o = s.builtin[c.id] ?? {}; const color = o.color ?? c.color; return { ...c, name: o.name ?? c.name, color, ...(o.color ? shades(o.color) : {}), visible: o.visible !== false, hidMenu: !!o.hidMenu, builtin: true, writable: true, source: 'builtin', badge: null }; });
+  const four = isFour(user);
+  const out = builtinsOf(user).map((c) => { const o = s.builtin[c.id] ?? {}; const color = o.color ?? c.color; return { ...c, name: o.name ?? c.name, color, ...(o.color ? shades(o.color) : {}), visible: o.visible !== false, hidMenu: !!o.hidMenu, builtin: true, writable: !c.readOnly, source: 'builtin', badge: null }; });
   for (const c of s.custom) out.push({ id: c.id, key: c.id, name: c.name, color: c.color, ...shades(c.color), backend: 'privat', sources: [], visible: c.visible !== false, hidMenu: !!c.hidMenu, builtin: false, writable: true, source: 'own', badge: null });
   out.push(...extCalendarsOf(user)); // prompt 35: iCal-abonnement og Home Assistant (writable:false)
   out.push(...googleCalendarsOf(user)); // prompt 36b: andre Google-kalendere (writable:false i appen)
-  return out;
+  // Prompt 39: sammenslåtte kalendere (Jobb, «Studie 40», skolens iCal …) vises ikke som egne rader; hendelsene ligger i målet.
+  return (four ? out.filter((c) => c.builtin || !H39.merged(user, c.id)) : out).map((c) => H39.shape(user, c));
 }
 
 const RE_GUESS = [
@@ -167,9 +190,11 @@ export function guessCalendar(text) {
 }
 /** Nøkkelen en hendelse huskes på: lokale id-er uten forekomst (~dato), andre uten dato/tid til slutt. */
 export const eventKey = (id) => { const s = String(id ?? ''); return s.startsWith('loc-') ? s.split('~')[0] : s.replace(/-\d{8}(T\d{4})?$/, ''); };
-function defaultCalendar(e) {
+function defaultCalendar(e, four = false) {
   if (e.type === 'bursdag' || e.calendar === 'bursdager') return 'bursdager';
-  if (e.calendar === 'timeplan' || e.calendar === 'prover' || e.calendar === 'skole') return 'studie';
+  if (e.source === 'helligdager' || e.calendar === 'helligdager') return four ? 'helligdager' : 'personlig';
+  if (e.calendar === 'timeplan' || e.calendar === 'prover' || e.calendar === 'skole') return four ? 'skole' : 'studie';
+  if (four) return 'personlig';
   if (e.calendar === 'familie') return 'familie';
   if (e.source === 'trials') return 'personlig';
   return guessCalendar(`${e.title ?? ''} ${e.room ?? ''}`) ?? 'personlig';
@@ -179,11 +204,16 @@ function decorate(user, events) {
   if (!events.length) return events;
   const cals = new Map(appCalendarsOf(user).map((c) => [c.id, c]));
   const map = evMap(user);
+  const four = isFour(user);
   for (const e of events) {
     const want = map[eventKey(e.id)];
-    const id = e.extCalendar && cals.has(e.extCalendar) ? e.extCalendar : want && cals.has(want) ? want : defaultCalendar(e);
+    let id = e.extCalendar && (cals.has(e.extCalendar) || (four && H39.merged(user, e.extCalendar))) ? e.extCalendar : want ? want : defaultCalendar(e, four);
+    if (four) id = resolveCalendar(user, id);
+    if (!cals.has(id)) id = defaultCalendar(e, four);
     e.appCalendar = id;
     e.appColor = cals.get(id)?.color ?? BUILTIN.get('personlig').color;
+    // Prompt 39: hva slags hendelse det er (jobb, helse, familie …) selv om alt ligger i Personlig.
+    if (four && !e.appKind) { const g = e.type === 'bursdag' ? 'bursdager' : guessCalendar(`${e.title ?? ''} ${e.room ?? ''}`); if (g) e.appKind = g; }
   }
   return events;
 }
@@ -192,16 +222,17 @@ setEventDecorator(decorate);
 function setEventCalendar(user, id, cal) {
   const map = evMap(user);
   const k = eventKey(id);
-  if (cal) map[k] = cal; else delete map[k];
+  if (cal) map[k] = resolveCalendar(user, cal); else delete map[k];
   const keys = Object.keys(map);
   if (keys.length > 5000) for (const x of keys.slice(0, keys.length - 5000)) delete map[x];
   kv.set(user, 'kal33_evcal', map);
 }
-const validCalendar = (user, id) => typeof id === 'string' && appCalendarsOf(user).some((c) => c.id === id && c.writable);
-const backendOf = (user, id) => appCalendarsOf(user).find((c) => c.id === id)?.backend ?? 'privat';
+const validCalendar = (user, id) => typeof id === 'string' && appCalendarsOf(user).some((c) => c.id === resolveCalendar(user, id) && c.writable);
+const backendOf = (user, id) => appCalendarsOf(user).find((c) => c.id === resolveCalendar(user, id))?.backend ?? 'privat';
 const changed = (user, action, id) => { try { broadcast('kalender', { action, ...(id ? { id } : {}) }, [user]); } catch { /* sanntid er best effort */ } };
 
 export async function calendarsOut(user, today = osloTodayISO()) {
+  try { H39.ensure(user); } catch (e) { console.warn('[kalender39] opprydding:', e.message); } // prompt 39: 12 → 4 (én gang, kan angres)
   const list = appCalendarsOf(user);
   const counts = new Map();
   try {
@@ -209,7 +240,8 @@ export async function calendarsOut(user, today = osloTodayISO()) {
     for (const e of events) counts.set(e.appCalendar, (counts.get(e.appCalendar) ?? 0) + 1);
   } catch (e) { console.warn('[kalender33] antall:', e.message); }
   const s = store(user);
-  return { calendars: list.map((c) => ({ ...c, count: counts.get(c.id) ?? 0 })), defaultCalendar: prefsOf(s).defaultCalendar, prefs: prefsOf(s) };
+  const prefs = { ...prefsOf(s), defaultCalendar: resolveCalendar(user, prefsOf(s).defaultCalendar) };
+  return { calendars: list.map((c) => ({ ...c, count: counts.get(c.id) ?? 0 })), defaultCalendar: prefs.defaultCalendar, prefs, ...H39.extra(user) };
 }
 
 const bad = (c, error, status = 400) => c.json({ error }, status);
@@ -629,7 +661,14 @@ export async function calendarAnswer(user, text, { today = osloTodayISO(), now =
   const place = placeOf(user).name;
   const step = (labels, intent) => onStep(1, intent, labels);
   let r;
-  if (/ledig|fri tid|finn tid|når kan jeg|har jeg tid|ledige tider/.test(ql)) {
+  // Prompt 39: «hva slags timer har jeg i dag» → fagene, «hva slags fag er det» → faget fra forrige svar + forklaring.
+  const f39 = await fagAnswer(user, text, { today, load }).catch((e) => { console.warn('[glimt39] fag:', e.message); return null; });
+  if (f39) {
+    const labels = f39.kind === 'lessons' ? [`Leser timeplanen`, 'Finner fagene'] : f39.followUp ? ['Husker forrige svar', 'Slår opp faget'] : ['Slår opp faget', 'Finner neste time'];
+    step(labels, 'calendar.fag');
+    decorate(user, f39.events);
+    r = { intent: 'calendar.fag', tools: ['calendar.search'], steps: labels, events: f39.events, text: f39.text, engine: f39.engine === 'ollama' ? 'ollama' : 'tool', subjects: f39.subjects };
+  } else if (/ledig|fri tid|finn tid|når kan jeg|har jeg tid|ledige tider/.test(ql)) {
     const d = dayOfQuestion(text, today) ?? addDays(today, 1);
     const labels = [`Leser ${relDay(d, today)} i kalenderen`, 'Finner hull på minst 45 min', 'Foreslår tider'];
     step(labels, 'calendar.free_slots');
@@ -754,8 +793,9 @@ export async function calendarAnswer(user, text, { today = osloTodayISO(), now =
       text: a.kind === 'none' ? 'Jeg kan svare på ting som «Hva skjer i morgen?», «Når er neste frisørtime?» og «Finn ledig tid fredag», eller legge inn hendelser du skriver eller limer inn.' : a.text };
   }
   onStep(2, r.intent, r.steps);
+  rememberCtx(user, text, r.events ?? []); // prompt 39: samtalehukommelse (10 min)
   const out = { text: r.text, bold: boldOf(r.text), steps: r.steps, events: r.events ?? [], slots: r.slots ?? [], ...(r.created ? { created: r.created } : {}), ...(r.summary ? { summary: r.summary } : {}),
-    ...(r.weather ? { weather: r.weather } : {}), ...(r.place ? { place: r.place, open: r.open } : {}), ...(r.reconnect ? { reconnect: true } : {}), ...(r.error ? { error: r.error, fix: r.fix, actions: r.actions } : {}), intent: r.intent, tools: r.tools, source: 'Kalender', tool: 'Kalender',
+    ...(r.weather ? { weather: r.weather } : {}), ...(r.place ? { place: r.place, open: r.open } : {}), ...(r.reconnect ? { reconnect: true } : {}), ...(r.subjects ? { subjects: r.subjects } : {}), ...(r.error ? { error: r.error, fix: r.fix, actions: r.actions } : {}), intent: r.intent, tools: r.tools, source: 'Kalender', tool: 'Kalender',
     model: r.engine === 'ollama' ? 'Glimt · lokal' : 'Glimt · kalender', engine: r.engine ?? 'tool', ms: Date.now() - t0, deepLink: 'kalender://liste' };
   out.chatContext = { q: text, intent: out.intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: out.text, tool: 'Kalender' }] };
   return out;

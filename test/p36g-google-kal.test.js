@@ -32,6 +32,7 @@ test('Google: velg hovedkalender og vis flere Google-kalendere som egne kalender
   assert.equal(r.body.connected, false);
   assert.equal((await A('/api/kalender/calendars/google', 'PUT', { main: 'primary' })).status, 409);
 
+  await A('/api/kalender/calendars'); // prompt 39: oppryddingen (12 → 4) skjer første gang; Google-kalendere som vises etterpå, er egne
   // Koble til (mock-Google).
   r = await A('/api/birthdays/google/start', 'POST', { return: '/innstillinger' });
   assert.equal(r.status, 200, r.text);
@@ -61,7 +62,7 @@ test('Google: velg hovedkalender og vis flere Google-kalendere som egne kalender
   const cal = r.body.calendars.find((x) => x.id === shown.appId);
   assert.ok(cal, 'Google-kalenderen står i kalenderlista');
   assert.equal(cal.source, 'google');
-  assert.equal(cal.badge, 'Google');
+  assert.equal(cal.badge, 'GOOGLE'); // prompt 39
 
   r = await A(`/api/kalender/calendars/${shown.appId}`, 'PATCH', { color: '#2f7a4f', hidMenu: true });
   assert.equal(r.status, 200, r.text);

@@ -18,12 +18,16 @@ import { vapidPublicKey, sendPush, validEndpoint } from './webpush.js';
 const SOUNDS_DIR = join(config.dataDir, 'sounds');
 await mkdir(SOUNDS_DIR, { recursive: true });
 
-export const BUILTIN_SOUNDS = [['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp']];
+export const BUILTIN_SOUNDS = [['draape', 'Dråpe'], ['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp']];
 const SOUND_IDS = [...BUILTIN_SOUNDS.map(([id]) => id), 'egen', 'stille'];
 const GROUPS = ['pakker', 'finans', 'familie', 'reise', 'haptikk', 'birthdays'];
 // Visningsnavn i Innstillinger → Varsler. Prompt 24: «Bursdager» (påminnelse kl. 09:00, N dager før).
 export const GROUP_LABELS = { pakker: 'Pakker', finans: 'Finans', familie: 'Familie', reise: 'Reise', haptikk: 'Haptikk', birthdays: 'Bursdager' };
-const DEFAULT_NOTIFY = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'klokke', volume: 70, groups: Object.fromEntries(GROUPS.map((g) => [g, true])), ai_bg_notify: true };
+// Prompt 39: myk standardlyd «draape» (Dråpe) med volum 50 (den gamle «klokke» var høy og skarp på Android).
+const DEFAULT_NOTIFY = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'draape', volume: 50, groups: Object.fromEntries(GROUPS.map((g) => [g, true])), ai_bg_notify: true, n_ai_in: true };
+// Prompt 39: Glimt-varselet (AI-svar i bakgrunnen) har Glimt-logoen og tittelen «Glimt».
+export const GLIMT_ICON = '/assets/glimt-varsel.png', GLIMT_ICON_ROUND = '/assets/glimt-varsel-rund.png', GLIMT_BADGE = '/assets/glimt-badge.png';
+const glimtIcons = (category) => (category === 'ai' ? { icon: GLIMT_ICON, badge: GLIMT_BADGE, largeIcon: GLIMT_ICON_ROUND, color: '#E0553D', channel: 'glimt_ai' } : {});
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export function notifyOf(id) {
@@ -39,6 +43,9 @@ export function notifyOf(id) {
     groups: Object.fromEntries(GROUPS.map((g) => [g, typeof s.groups?.[g] === 'boolean' ? s.groups[g] : true])),
     // Prompt 31: «AI-svar i bakgrunnen» (på). Følger hovedbryteren «Varsler».
     ai_bg_notify: typeof s.ai_bg_notify === 'boolean' ? s.ai_bg_notify : DEFAULT_NOTIFY.ai_bg_notify,
+    // Prompt 39: «Vis svaret i appen også» (banner «Glimt svarte mens du var borte» når man kommer tilbake). Av = bare chatten og systemvarselet.
+    n_ai_in: typeof s.n_ai_in === 'boolean' ? s.n_ai_in : DEFAULT_NOTIFY.n_ai_in,
+    glimtIcon: { icon: GLIMT_ICON, round: GLIMT_ICON_ROUND, badge: GLIMT_BADGE, title: 'Glimt', channel: 'glimt_ai', color: '#E0553D' },
     groupList: GROUPS.map((id) => ({ id, label: GROUP_LABELS[id] })),
     customSound: custom ? { name: custom.name, type: custom.type, size: custom.size, url: `/api/me/notify/sound?v=${custom.v}` } : null,
     sounds: [...BUILTIN_SOUNDS.map(([id, name]) => ({ id, name, url: `/assets/sounds/${id}.wav` })), { id: 'egen', name: 'Egen lyd', url: custom ? `/api/me/notify/sound?v=${custom.v}` : null }, { id: 'stille', name: 'Stille', url: null }],
@@ -47,7 +54,7 @@ export function notifyOf(id) {
 
 /* ---------------- Appnavn og ikon ---------------- */
 
-const APP_ICONS = ['hus', 'monogram', 'rom'];
+const APP_ICONS = ['hus', 'monogram', 'rom', 'hus-gammel']; // prompt 39: hus-gammel = «Huset med stativ» (det gamle standardikonet)
 export function appMeta() {
   const a = kv.get(OWNER, 'app_meta', {}) ?? {};
   return { name: typeof a.name === 'string' && a.name.trim() ? a.name : 'Homelab', icon: APP_ICONS.includes(a.icon) ? a.icon : 'hus', icons: APP_ICONS,
@@ -71,7 +78,7 @@ api.get('/me/notify', anyAuth, (c) => c.json(notifyOf(c.get('user'))));
 api.put('/me/notify', anyAuth, async (c) => {
   const id = c.get('user'), b = await c.req.json().catch(() => ({})), cur = kv.get(id, 'notify', {}) ?? {};
   const next = { ...cur };
-  for (const k of ['on', 'quietOn', 'ai_bg_notify']) if (k in b) { if (typeof b[k] !== 'boolean') return bad(c, `${k} må være true/false`); next[k] = b[k]; }
+  for (const k of ['on', 'quietOn', 'ai_bg_notify', 'n_ai_in']) if (k in b) { if (typeof b[k] !== 'boolean') return bad(c, `${k} må være true/false`); next[k] = b[k]; }
   for (const k of ['quietFrom', 'quietTo']) if (k in b) { if (!TIME.test(b[k])) return bad(c, `${k} må være TT:MM`); next[k] = b[k]; }
   if ('sound' in b) {
     if (!SOUND_IDS.includes(b.sound)) return bad(c, 'Ukjent lyd');
@@ -195,7 +202,11 @@ const clip = (v, n) => String(v ?? '').replace(/\*\*/g, '').replace(/\s+/g, ' ')
 export async function notifyUser(user, { title, body = '', url = null, tag = null, category = 'system', data = null } = {}, { now = Date.now(), realtime: sendRealtime = true } = {}) {
   if (!user || !title) return { id: null, realtime: 0, pushed: 0, skipped: 'mangler' };
   let n; try { n = notifyOf(user); } catch { n = { ...DEFAULT_NOTIFY }; }
-  const item = { title: clip(title, 120), body: clip(body, 600), url: url ? String(url).slice(0, 500) : null, tag: tag ? String(tag).slice(0, 80) : null, category: String(category ?? 'system').slice(0, 30), data: data ?? null };
+  const cat = String(category ?? 'system').slice(0, 30);
+  // Prompt 39: AI-svar → tittel «Glimt», Glimt-logo (ikon/badge) og inApp = «Vis svaret i appen også» (n_ai_in).
+  const glimt = cat === 'ai' || data?.kind === 'receipt.reanalyzed';
+  const item = { title: clip(cat === 'ai' ? 'Glimt' : title, 120), body: clip(body, 600), url: url ? String(url).slice(0, 500) : null, tag: tag ? String(tag).slice(0, 80) : null, category: cat,
+    data: data || glimt ? { ...(data ?? {}), ...(glimt ? { ...glimtIcons('ai'), inApp: n.n_ai_in !== false } : {}) } : null, ...(glimt ? { icon: GLIMT_ICON, badge: GLIMT_BADGE } : {}) };
   const group = GROUP_OF[item.category];
   const off = !n.on ? 'varsler av' : item.category === 'ai' && n.ai_bg_notify === false ? 'AI-svar i bakgrunnen av' : group && n.groups?.[group] === false ? `${group} av` : null;
   let id = null;
@@ -221,7 +232,7 @@ export async function notifyUser(user, { title, body = '', url = null, tag = nul
   return { id, realtime, pushed, ...(subs.length ? {} : { skipped: 'ingen abonnement' }) };
 }
 
-const pendingOut = (r) => ({ id: r.id, ts: r.ts, title: r.title, body: r.body, url: r.url, tag: r.tag, category: r.category, data: r.data ? JSON.parse(r.data) : null });
+const pendingOut = (r) => { const data = r.data ? JSON.parse(r.data) : null; return { id: r.id, ts: r.ts, title: r.title, body: r.body, url: r.url, tag: r.tag, category: r.category, data, ...(r.category === 'ai' || data?.icon ? { icon: data?.icon ?? GLIMT_ICON, badge: data?.badge ?? GLIMT_BADGE } : {}) }; };
 export const pendingFor = (user, since = 0, limit = 50) => db.prepare('SELECT * FROM notify_queue WHERE user_id=? AND id>? ORDER BY id LIMIT ?').all(user, since, limit).map(pendingOut);
 
 const B64U = /^[A-Za-z0-9_-]+=*$/;

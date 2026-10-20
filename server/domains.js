@@ -13,7 +13,7 @@ import * as fh from './finans/routes.js';
 import { guard, MOCK, readJson, str } from './homeos-common.js';
 
 const CF = 'https://api.cloudflare.com/client/v4';
-const SOURCES = ['cloudflare', 'tunnel', 'plausible', 'umami', 'uptime'];
+const SOURCES = ['cloudflare', 'tunnel', 'plausible', 'umami', 'uptime', 'gsc']; // prompt 39: gsc = Google Search Console (ingen token, bruker Google-tilkoblingen)
 const RANGES = { '1h': 1, '24h': 24, today: 0, '7d': 168, '30d': 720, '90d': 2160, '1y': 8760 };
 const NEEDS_TOKEN = new Set(['plausible', 'umami']);
 
@@ -46,7 +46,7 @@ function dec(b64) {
 
 const q = (sql) => db.prepare(sql);
 const listRows = () => q('SELECT * FROM hl_domains ORDER BY id').all();
-const pub = (r) => ({ id: r.id, name: r.name, source: r.source, url: r.url || undefined, hasToken: !!r.token_enc, mock: MOCK && !r.token_enc && r.source !== 'uptime' && !cfg('cf_token') });
+const pub = (r) => ({ id: r.id, name: r.name, source: r.source, url: r.url || undefined, hasToken: !!r.token_enc, mock: MOCK && !r.token_enc && r.source !== 'uptime' && r.source !== 'gsc' && !cfg('cf_token'), ...(r.source === 'gsc' ? { sourceLabel: 'Google Search Console', needsCloudflare: ['trafikk', 'dns', 'sikkerhet'] } : {}) });
 // Cloudflare-domener uten eget token bruker standard-tokenet fra Integrasjoner → Cloudflare.
 const tokenFor = (r) => dec(r.token_enc) || (r.source === 'cloudflare' || r.source === 'tunnel' ? cfg('cf_token') : '');
 
@@ -444,7 +444,7 @@ function mockLive(r) {
 
 /* ---------- Samlet ---------- */
 
-const usesMock = (r) => MOCK && !tokenFor(r) && r.source !== 'uptime';
+const usesMock = (r) => MOCK && !tokenFor(r) && r.source !== 'uptime' && r.source !== 'gsc';
 
 async function analytics(r, range) {
   if (usesMock(r)) return mockLoad(r, range);
@@ -768,3 +768,36 @@ export async function summaryFacts(sel) {
   }));
 }
 export const domainNames = () => listRows().map((r) => r.name);
+
+/* ---------- Prompt 39: hent domener fra Cloudflare og Google Search Console ---------- */
+const DOMAIN_RE = /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+/** Legger til et domene (kilde 'gsc' eller 'cloudflare') uten token. → {row, added} */
+export function addDomain39(name, source, by = 'import') {
+  const n = String(name ?? '').toLowerCase().trim();
+  if (!DOMAIN_RE.test(n)) return { error: `Ugyldig domene: ${name}` };
+  if (!SOURCES.includes(source)) return { error: 'Ukjent statistikkilde' };
+  const ex = q('SELECT * FROM hl_domains WHERE name=?').get(n);
+  if (ex) return { row: pub(ex), added: false };
+  const info = q('INSERT INTO hl_domains(name,source,url,token_enc,added_by,created) VALUES(?,?,?,?,?,?)').run(n, source, '', null, by, Date.now());
+  return { row: pub(q('SELECT * FROM hl_domains WHERE id=?').get(info.lastInsertRowid)), added: true };
+}
+/** Cloudflare-sonene standard-tokenet ser. → {connected, zones:[{name, plan, status, id}], error?} */
+export async function cloudflareZones39() {
+  const token = cfg('cf_token');
+  if (!token) return MOCK ? { connected: true, mock: true, zones: [...new Set([...domainNames().map((d) => d.split('.').slice(-2).join('.')), 'torskenes.no'])].map((name, i) => ({ id: `mock${i}`, name, plan: i ? 'Free' : 'Pro', status: 'active' })) } : { connected: false, zones: [] };
+  try {
+    const d = await cfTry('/zones?per_page=50', token);
+    return { connected: true, zones: (d.result ?? []).map((z) => ({ id: z.id, name: z.name, plan: z.plan?.name ?? null, status: z.status })) };
+  } catch (e) { return { connected: true, zones: [], error: e.message }; }
+}
+/** Lager TXT-posten for Google-bekreftelse i Cloudflare-sonen. → {created, recordId, zone} */
+export async function cloudflareTxt39(domain, content) {
+  const token = cfg('cf_token');
+  if (!token) { if (MOCK) return { created: true, recordId: 'mock-txt', zone: domain.split('.').slice(-2).join('.'), mock: true }; throw Object.assign(new Error('Mangler Cloudflare-token med DNS:Edit (Integrasjoner → Cloudflare)'), { status: 409 }); }
+  const z = await zoneFor(domain, token);
+  const existing = (await cfTry(`/zones/${z.id}/dns_records?type=TXT&name=${encodeURIComponent(domain)}&per_page=50`, token)).result ?? [];
+  const hit = existing.find((r) => String(r.content).replace(/^"|"$/g, '') === content);
+  if (hit) return { created: false, recordId: hit.id, zone: z.name };
+  const d = await cfTry(`/zones/${z.id}/dns_records`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'TXT', name: domain, content, ttl: 1, comment: 'Google Search Console (Homelab)' }) });
+  return { created: true, recordId: d.result?.id ?? null, zone: z.name };
+}

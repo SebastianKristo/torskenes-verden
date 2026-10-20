@@ -309,7 +309,7 @@ test('LLM: lokal modell med systemprompten; sky (Gemini) bare med samtykke og ut
   assert.equal(r.body.followUp, 'chat');
   assert.match(r.body.text, /Fortsett i Chat/);
   assert.equal(r.body.engine, 'none');
-  assert.deepEqual((await A('/api/assist/settings', 'PUT', { cloud: true })).body, { ai_bg_notify: true, cloud: true });
+  assert.deepEqual((await A('/api/assist/settings', 'PUT', { cloud: true })).body, { ai_bg_notify: true, n_ai_in: true, cloud: true }); // prompt 39: + n_ai_in
   assert.equal((await A('/api/assist/settings', 'PUT', { cloud: 'ja' })).status, 400);
   calls.length = 0;
   r = await A('/api/assist', 'POST', { q: 'hvem skrev Peer Gynt?' });

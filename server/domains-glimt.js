@@ -35,7 +35,7 @@ import { sessionUser, userInfo, isAdmin, listUsers } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { settings as fhSettings } from './finans/db.js';
 import { notifyUser } from './notify.js';
-import { summaryFacts, domainNames, domainsOverview, PER_RANGE } from './domains.js';
+import { summaryFacts, domainNames, domainsOverview, PER_RANGE, addDomain39, cloudflareZones39, cloudflareTxt39 } from './domains.js';
 import { run as aiRun } from './ai-run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -461,6 +461,111 @@ export async function summaryNow(u, d, { wait = false, graceMs = 250 } = {}) {
   return { domain: d, label, date: osloDate(), createdAt: new Date().toISOString(), manual: false, daily: false, ai: false, model: 'Glimt · regler', head: loc.head,
     pts: loc.pts.map((p) => ({ t: p.t, tone: COLOR[p.tone] ? p.tone : 'info', color: COLOR[p.tone] ?? COLOR.info })), meta: `Glimt leser statistikken … · ${label}`, pending: true };
 }
+/* ---------------- Prompt 39: eiendommer, hent domener og «Legg inn for meg» ---------------- */
+// GET /api/domains/gsc/sites → {connected, configured, email, scope, count, sites:[{domain, siteUrls:['sc-domain:x','https://x/'], permission:'eier'|'full'|'begrenset',
+//        permissionLevel, state:'bruk'|'i-bruk'|'legg-til', added, selected}], error?}   (sc-domain: og https:// slått sammen til ett domene)
+//   Ikke koblet: {connected:false, configured, scope, connectUrl:'/api/gsc/auth', steps:[…]}
+// GET /api/domains/import → {gsc:{connected, items:[{name, permission, added}]}, cloudflare:{connected, items:[{name, plan, status, added}]}, newInAccount:[navn]}
+// POST /api/domains/import {source:'gsc'|'cloudflare', domains:[navn]|'all'} → {ok, added:[navn], existing:[navn], errors:[{name, error}]}
+//   Domene fra GSC får kilde 'gsc' (sourceLabel «Google Search Console»), og eiendommen velges automatisk for Google Søk.
+// POST /api/domains/:domain/gsc/verify → {ok, domain, state:'verified'|'pending'|'error', verified, txt:{name, content, created, zone}, message}
+//   Token fra Site Verification API (DNS_TXT), TXT-posten lages i Cloudflare (krever DNS:Edit), så webResource.insert (prøver 3 ganger).
+export const GSC_STEPS39 = [
+  { n: 1, t: 'Åpne Search Console og logg inn', url: 'https://search.google.com/search-console' },
+  { n: 2, t: 'Legg til eiendom → «Domene»' },
+  { n: 3, t: 'Bekreft med DNS: TXT-post i Cloudflare, eller «Legg inn for meg» hvis tokenet har DNS:Edit' },
+  { n: 4, t: 'Trykk «Bekreft» (minutter til 24 t, TXT-posten må bli liggende)' },
+  { n: 5, t: 'Koble til Homelab (godta «Se Search Console-data»)' },
+  { n: 6, t: 'Velg domenene (16 måneder hentes)' },
+];
+const PERM = { siteOwner: 'eier', siteFullUser: 'full', siteRestrictedUser: 'begrenset' };
+const domainOfSite = (u) => String(u).replace(/^sc-domain:/, '').replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/^www\./, '').toLowerCase();
+async function sitesMerged(u) {
+  const { list } = await loadSites(u);
+  const have = new Set(domainNames()), sel = conf(u).sites ?? {};
+  const by = new Map();
+  for (const s of list) {
+    const d = domainOfSite(s.siteUrl);
+    const cur = by.get(d) ?? { domain: d, siteUrls: [], permissionLevel: s.permissionLevel };
+    cur.siteUrls.push(s.siteUrl);
+    if (s.permissionLevel === 'siteOwner') cur.permissionLevel = 'siteOwner';
+    by.set(d, cur);
+  }
+  return [...by.values()].sort((a, b) => a.domain.localeCompare(b.domain)).map((x) => {
+    const added = have.has(x.domain), selected = sel[x.domain] ?? null;
+    return { ...x, siteUrls: x.siteUrls.sort((a, b) => (a.startsWith('sc-domain:') ? -1 : b.startsWith('sc-domain:') ? 1 : 0)), permission: PERM[x.permissionLevel] ?? 'begrenset', added, selected, state: added ? (selected ? 'i-bruk' : 'bruk') : 'legg-til' };
+  });
+}
+domainGlimtApi.get('/gsc/sites', adminGuard, async (c) => {
+  const u = c.get('user'), x = conf(u);
+  const configured = !!googleClient().id || mockGsc();
+  if (!x.refresh) return c.json({ connected: false, configured, scope: 'webmasters.readonly', connectUrl: '/api/gsc/auth', steps: GSC_STEPS39, sites: [], count: 0 });
+  try { const sites = await sitesMerged(u); return c.json({ connected: true, configured, email: x.email ?? null, scope: 'webmasters.readonly', count: sites.length, sites, label: `${sites.length} ${sites.length === 1 ? 'eiendom' : 'eiendommer'} · kun lesetilgang` }); }
+  catch (e) { return c.json({ connected: false, reconnect: true, configured, error: e.message, sites: [], count: 0 }); }
+});
+domainGlimtApi.get('/import', adminGuard, async (c) => {
+  const u = c.get('user'), have = new Set(domainNames());
+  let gsc = { connected: false, items: [] };
+  if (conf(u).refresh) { try { gsc = { connected: true, items: (await sitesMerged(u)).map((s) => ({ name: s.domain, permission: s.permission, siteUrls: s.siteUrls, added: s.added })) }; } catch (e) { gsc = { connected: false, reconnect: true, error: e.message, items: [] }; } }
+  const cf = await cloudflareZones39();
+  const cloudflare = { connected: cf.connected, ...(cf.error ? { error: cf.error } : {}), items: cf.zones.map((z) => ({ name: z.name, plan: z.plan, status: z.status, added: have.has(z.name) })) };
+  const seen = kv.get(u, 'dom39_seen', []) ?? [];
+  const all = [...new Set([...gsc.items, ...cloudflare.items].map((x) => x.name))];
+  const newInAccount = Array.isArray(seen) && seen.length ? all.filter((n) => !seen.includes(n) && !have.has(n)) : [];
+  kv.set(u, 'dom39_seen', all);
+  return c.json({ title: 'HENT DOMENER · Fra Cloudflare og Google Search Console', gsc, cloudflare, newInAccount });
+});
+domainGlimtApi.post('/import', adminGuard, async (c) => {
+  const u = c.get('user'), b = await c.req.json().catch(() => null);
+  const source = b?.source === 'cloudflare' ? 'cloudflare' : b?.source === 'gsc' ? 'gsc' : null;
+  if (!source) return c.json({ error: 'source må være gsc eller cloudflare' }, 400);
+  let names = b.domains;
+  if (names === 'all') {
+    names = source === 'gsc' ? (conf(u).refresh ? (await sitesMerged(u).catch(() => [])).filter((s) => !s.added).map((s) => s.domain) : []) : (await cloudflareZones39()).zones.map((z) => z.name);
+  }
+  if (!Array.isArray(names) || !names.length || names.length > 100) return c.json({ error: 'Velg minst ett domene' }, 400);
+  const added = [], existing = [], errors = [];
+  const sites = source === 'gsc' ? await sitesMerged(u).catch(() => []) : [];
+  for (const n of names) {
+    const r = addDomain39(n, source, `import:${source}`);
+    if (r.error) { errors.push({ name: n, error: r.error }); continue; }
+    (r.added ? added : existing).push(r.row.name);
+    if (source === 'gsc') { const s = sites.find((x) => x.domain === r.row.name); if (s && !conf(u).sites?.[r.row.name]) { setConf(u, { sites: { ...(conf(u).sites ?? {}), [r.row.name]: s.siteUrls[0] } }); syncGsc(u, r.row.name, { full: true }).catch((e) => console.warn('[gsc]', e.message)); } }
+  }
+  return c.json({ ok: !errors.length, added, existing, errors }, added.length ? 201 : 200);
+});
+const G_SV = 'https://www.googleapis.com/siteVerification/v1';
+domainGlimtApi.post('/:domain/gsc/verify', adminGuard, async (c) => {
+  const u = c.get('user'), d = normDomain(c.req.param('domain'));
+  if (d === '*' || !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d)) return c.json({ error: 'Ugyldig domene' }, 400);
+  if (!connected(u)) return c.json({ error: 'Koble til Google Search Console først', state: 'error' }, 409);
+  const site = { type: 'INET_DOMAIN', identifier: d };
+  try {
+    let content;
+    if (mockGsc()) content = `google-site-verification=mock-${createHash('sha1').update(d).digest('hex').slice(0, 20)}`;
+    else {
+      const tok = await accessToken(u);
+      const r = await fetchG(`${G_SV}/token`, { method: 'POST', headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }, body: JSON.stringify({ site, verificationMethod: 'DNS_TXT' }) });
+      const j = await r.json().catch(() => ({}));
+      if (r.status === 403 || r.status === 401) return c.json({ ok: false, domain: d, state: 'error', needsScope: true, error: 'Google-tilkoblingen mangler tilgang til Site Verification. Legg inn TXT-posten selv (se ?-guiden), eller koble til på nytt.' }, 409);
+      if (!r.ok || !j.token) return c.json({ ok: false, domain: d, state: 'error', error: j.error?.message ?? `Google svarte ${r.status}` }, 502);
+      content = j.token;
+    }
+    const txt = await cloudflareTxt39(d, content);
+    let verified = false, msg = '';
+    for (let i = 0; i < 3 && !verified; i++) {
+      if (mockGsc()) { verified = true; break; }
+      const tok = await accessToken(u);
+      const r = await fetchG(`${G_SV}/webResource?verificationMethod=DNS_TXT`, { method: 'POST', headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }, body: JSON.stringify({ site }) });
+      if (r.ok) verified = true;
+      else { msg = (await r.json().catch(() => ({}))).error?.message ?? `Google svarte ${r.status}`; await new Promise((res) => setTimeout(res, 2000)); }
+    }
+    if (verified) loadSites(u).catch(() => {});
+    return c.json({ ok: true, domain: d, verified, state: verified ? 'verified' : 'pending', txt: { name: d, content, created: txt.created, zone: txt.zone },
+      message: verified ? `✓ ${d} er bekreftet i Search Console` : `TXT-posten er lagt inn. Google har ikke sett den ennå (${msg || 'kan ta fra minutter til 24 t'}). Prøv «Bekreft» igjen senere.` });
+  } catch (e) { return c.json({ ok: false, domain: d, state: 'error', error: e.message }, e.status === 409 ? 409 : 502); }
+});
+
 domainGlimtApi.get('/:domain/summary', adminGuard, async (c) => {
   const u = c.get('user'), d = normDomain(c.req.param('domain'));
   if (!known(d)) return c.json({ error: 'Fant ikke domenet' }, 404);
@@ -481,6 +586,13 @@ domainGlimtApi.get('/overview', adminGuard, async (c) => {
   if (!o) return c.json({ error: 'Fant ikke domenet' }, 404);
   let gsc = null;
   if (d !== '*') { try { const v = gscView(u, d, 28); gsc = v.connected && !v.loading ? v : { connected: !!v.connected, loading: !!v.loading, needsSite: !!v.needsSite }; } catch { gsc = null; } }
+  else if (connected(u)) {
+    // Prompt 39: Google Søk for alle domener (sum av klikk og visninger siste 28 dager per domene med valgt eiendom).
+    try {
+      const per = Object.keys(conf(u).sites ?? {}).map((x) => { const v = gscView(u, x, 28); return v.connected && v.kpi ? { domain: x, clicks: v.kpi.clicks.value, impressions: v.kpi.impressions.value, clicksChangePct: v.kpi.clicks.changePct } : null; }).filter(Boolean);
+      gsc = { connected: true, all: true, period: 28, clicks: per.reduce((a, x) => a + (x.clicks ?? 0), 0), impressions: per.reduce((a, x) => a + (x.impressions ?? 0), 0), perDomain: per };
+    } catch { gsc = { connected: true, all: true, perDomain: [] }; }
+  }
   const row = q('SELECT * FROM domain_summary WHERE user_id=? AND domain=? AND date=?').get(u, d, osloDate());
   // Prompt 38: ?all=1 → også hvert domene (byDomain) i samme svar, så alt er lastet når Domener åpnes. Glimt lages aldri her.
   let byDomain;

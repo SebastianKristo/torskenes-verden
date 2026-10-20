@@ -151,13 +151,13 @@ test('brukervalg: AI-svar i bakgrunnen av → ingen push/kø for kategori ai; ho
   await A('/api/me/notify', 'PUT', { ai_bg_notify: true, on: false });
   assert.equal((await nt.notifyUser(SEB, { title: 'Prøve', category: 'abonnement' })).skipped, 'varsler av');
   await A('/api/me/notify', 'PUT', { on: true });
-  assert.deepEqual((await A('/api/assist/settings')).body, { ai_bg_notify: true, cloud: false });
+  assert.deepEqual((await A('/api/assist/settings')).body, { ai_bg_notify: true, n_ai_in: true, cloud: false }); // prompt 39: + n_ai_in
 });
 
 test('GET /api/notify/pending: per bruker, since-markør, nyeste etter', async () => {
   const all = (await A('/api/notify/pending')).body;
   assert.ok(all.items.length >= 4);
-  assert.deepEqual(Object.keys(all.items[0]).sort(), ['body', 'category', 'data', 'id', 'tag', 'title', 'ts', 'url']);
+  assert.deepEqual(Object.keys(all.items[0]).sort(), ['badge', 'body', 'category', 'data', 'icon', 'id', 'tag', 'title', 'ts', 'url']); // prompt 39: Glimt-ikon på AI-varsler
   assert.equal(all.cursor, all.items.at(-1).id);
   const since = all.items[1].id;
   const r = (await A(`/api/notify/pending?since=${since}`)).body;

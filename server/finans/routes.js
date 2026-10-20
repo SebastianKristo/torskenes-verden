@@ -38,6 +38,7 @@ import { findLogo } from './logo-lookup.js';
 import { storeLines, receiptLines, matchLines, annotateSearch } from './highlight30.js';
 import { shareableUsers, logEntryChange, entryHistory } from './boliger30.js';
 import { broadcast } from '../realtime.js';
+import { classify39, verify39, createAiCategory, categoryOut39, confirmOnBook39, nameSim, stepsOut39 } from './receipts39.js'; // prompt 39: kategori, sumkontroll, «✦ På nytt» med fremdrift
 import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } from '../ai-run.js'; // prompt 34: AI-kontroll → Jobber
 import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
@@ -216,8 +217,14 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     file: r.file ? `/finans/api/receipts/${r.id}/file` : null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null,
     extraction: ex, match: match ? txOut(match, cats, accs) : null, created: r.created, name: r.name ?? null,
     lines: receiptLines(r), hasBoxes: receiptLines(r).some((l) => l.bbox),
+    // Prompt 39: kategorivalget og sumkontrollen («✦ Glimt leste 3 varer · sum stemmer» / «Usikker · linjene summerer 120 av 135 kr»).
+    categoryInfo: ex?.cat39 ? { category: ex.cat39.category, isNew: !!ex.cat39.isNew, confidence: ex.cat39.confidence, reason: ex.cat39.reason ?? null, ...(ex.cat39.suggestNew ? { suggestNew: ex.cat39.suggestNew } : {}),
+      newCategory: ex.cat39.isNew ? (() => { const c = cats.get(r.category_id); return c && c.source === 'ai' ? { id: c.id, name: c.name, confirmed: !!c.confirmed } : null; })() : null } : null,
+    aiCategory: ex?.cat39 ? { category: ex.cat39.category, isNew: !!ex.cat39.isNew, confidence: ex.cat39.confidence, reason: ex.cat39.reason ?? null } : null,
+    verify: ex ? (ex.verify ? { ok: ex.verify.ok, status: ex.verify.status, text: ex.verify.text, sum: ex.verify.sum, total: ex.verify.total, diff: ex.verify.diff, lines: ex.verify.lines } : (ex.lines ? (({ feedback, ...v }) => v)(verify39(ex)) : null)) : null,
+    payment: ex?.payment_method ?? null, discounts: ex?.discounts ?? [], pant: ex?.pant ?? 0, vat: ex?.vat ?? [], receiptNo: ex?.receipt_no ?? null, time: ex?.time ?? null,
     aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? `${providerName(st.provider)} leser kvitteringen …` : null), aiLong: r.ai_long ?? null,
-    ...reanalyzeInfo(r, st), log: scanLogOf(r), timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
+    ...reanalyzeInfo(r, st), ...(reanalyzeJobOf(r) ? { reanalyzeJob: reanalyzeJobOf(r) } : {}), log: scanLogOf(r), timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
     domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
 }
 
@@ -341,8 +348,12 @@ async function processReceipt(r, id, force) {
       log('lest-ut', `${providerName(res.provider)} · ${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} % · ${res.seconds?.toFixed?.(1) ?? '?'} s`);
       const totalOre = d.total != null ? Math.round(d.total * 100) : null;
       const st = settings();
-      // Regler går foran AI-forslaget.
-      const catId = (st.autoCat && ruleFor(d.merchant)) || catIdByName(d.suggested_category) || r.category_id;
+      // Regler går foran AI-forslaget. Prompt 39: ellers velger (eller lager) Glimt kategorien (isNew, confidence, reason).
+      const rule = st.autoCat && ruleFor(d.merchant);
+      const k39 = rule ? null : (() => { try { return classify39(me(), d); } catch (e) { console.warn('[finans39] kategori:', e.message); return null; } })();
+      if (k39) d.cat39 = k39;
+      if (!d.verify) { d.verify = verify39(d); d.status = d.verify.status; }
+      const catId = rule || k39?.categoryId || catIdByName(d.suggested_category) || r.category_id;
       const acc = d.card_last4 ? q('SELECT id FROM fh_accounts WHERE last4=? AND user_id=?').get(d.card_last4, me())?.id : null;
       const match = findMatch(totalOre, d.date, d.card_last4);
       q(`UPDATE fh_receipts SET status='needs_review', provider=?, model=?, seconds=?, extraction=?, merchant=?, date=?, total=?, category_id=?,
@@ -559,7 +570,7 @@ api.get('/bootstrap', R, (c) => {
   const month = curMonth();
   return c.json({
     settings: settingsOut(c), month, period: period(month), profiles: PROFILES, user: st.name, restricted: false, canEditServer: a.admin,
-    categories: cats.map((x) => ({ id: x.id, name: x.name, color: x.color, kind: x.kind })),
+    categories: cats.map(categoryOut39), // prompt 39: + source ('user'|'ai'), confirmed, icon
     accounts: accs.map((a) => ({ id: a.id, name: a.name, bank: a.bank, type: a.type, last4: a.last4, note: a.note, openingBalance: a.opening_balance / 100, balance: a.balance / 100 })),
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id WHERE r.user_id=? ORDER BY priority, id').all(u).map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
     goals: q('SELECT * FROM fh_goals WHERE user_id=? ORDER BY id').all(u).map(({ user_id, ...g }) => ({ ...g, saved: g.saved / 100, target: g.target / 100 })),
@@ -1030,6 +1041,7 @@ api.post('/receipts/:id/book', W, async (c) => {
       if (word && word.length >= 3 && validId('fh_categories', r.category_id, u) && !q('SELECT 1 FROM fh_rules WHERE pattern=? AND user_id=?').get(word + '*', u)) q('INSERT INTO fh_rules(pattern,category_id,priority,user_id) VALUES(?,?,50,?)').run(word + '*', r.category_id, u);
     }
   })();
+  try { const rule = confirmOnBook39(u, origSelect.get(r.id)); if (rule) scanLog(r.id, 'regel', `✦ ${rule.pattern} → ${rule.category}`); } catch (e) { console.warn('[finans39] godkjenning:', e.message); } // prompt 39
   return c.json(receiptOut(origSelect.get(r.id)));
 });
 
@@ -1103,35 +1115,122 @@ api.post('/receipts/:id/reread', W, async (c) => {
 // side om side med det forrige; brukeren velger hvilket som beholdes (POST …/reanalyze/apply).
 const readOut = (o) => ({ merchant: o.merchant ?? null, date: o.date ?? null, total: o.total ?? null, items: (o.lines ?? []).map((l) => ({ description: l.description, amount: l.amount, quantity: l.quantity ?? null })),
   confidence: o.confidence ?? null, engine: o.engine ?? null, model: o.model ?? null, category: o.category ?? null, error: o.error ?? null });
+// Prompt 39: «✦ På nytt» med fremdrift. Samme lesing som før, men som jobb (ai-jobs.js) med steg og prosent:
+//   {step:'upload'|'ocr'|'llm'|'verify'|'done'|'error', pct, msg, steps:[{k, label, state}]} på GET /finans/api/jobs/:id,
+//   SSE /finans/api/jobs/:id/events og realtime «job» {channel:'job:<id>', jobId, kind:'reanalyze', receiptId, step, pct, msg}.
+//   Uten async: venter og svarer som før {previous, result, candidateId} + jobId, confidence, verify.
+//   async:true (eller progress:true, Prefer: respond-async, ?async=1): 202 {jobId, receiptId, statusUrl, eventsUrl, channel} med en gang.
+//     Når jobben er ferdig, tas resultatet i bruk (apply:false lar det ligge som kandidat), og job.result har i tillegg
+//     {applied, changed:['merchant','total','date','category'], receipt}. Varsel «Kvitteringen fra … er lest på nytt» (Glimt) når appen er i bakgrunnen.
+//   DELETE /finans/api/jobs/:id avbryter: «Avbrutt · ingenting ble endret».
+const reanalyzing = new Map(); // kvittering-id → jobb-id
+export const reanalyzeJobOf = (r) => { const id = reanalyzing.get(r.id); const j = id ? getJob(r.user_id ?? OWNER, id) : null; return j && j.status === 'running' ? { jobId: j.id, step: j.progress?.step ?? 'upload', pct: j.progress?.pct ?? 0, msg: j.progress?.msg ?? null } : null; };
+async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {} } = {}) {
+  const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
+  const log = (step, detail) => scanLog(r.id, step, detail);
+  let at = 'upload', pct = 0;
+  const P = (step, p, msg) => { at = step; pct = Math.max(pct, p); progress({ step, pct, msg, receiptId: r.id, steps: stepsOut39(step, label, step === 'error') }); };
+  P('upload', 5, 'Laster opp bildet');
+  log('reanalyse', `${label}, originalfilen`);
+  let ex = null; try { ex = JSON.parse(r.extraction ?? 'null'); } catch { /* ugyldig */ }
+  const previous = readOut({ merchant: r.merchant, date: r.date, total: r.total != null ? r.total / 100 : null, lines: ex?.lines, confidence: r.confidence,
+    engine: r.provider ? providerName(r.provider) : null, model: r.model, category: catById(u).get(r.category_id)?.name, error: r.error });
+  let res;
+  try {
+    const img = await readFile(join(DIR, r.file));
+    P('upload', 15, 'Laster opp bildet');
+    P('ocr', 25, 'Leser teksten (OCR)');
+    const cats = q("SELECT name FROM fh_categories WHERE kind='expense' AND user_id=? ORDER BY sort").all(u).map((x) => x.name);
+    const logp = (step, detail) => { log(step, detail); if (step === 'ai') P('llm', 45, `✦ ${label} tolker butikk, linjer og beløp`); else if (step === 'kontroll') P('verify', 80, String(detail)); };
+    if (engine === 'tesseract') P('ocr', 40, 'Leser teksten (OCR)');
+    else P('llm', 40, `✦ ${label} tolker butikk, linjer og beløp`);
+    res = engine === 'tesseract' ? await extractOcr(img, r.mime)
+      : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, r.mime, cats, 'gemini', { log: logp });
+  } catch (e) {
+    log('feil', `${label}: ${e.message}`);
+    P('error', pct, `✕ ${label} svarte ikke`);
+    return { error: `${label} kunne ikke lese kvitteringen: ${e.message}`, status: e.missing ? 501 : 502 };
+  }
+  if (signal?.aborted) return { cancelled: true };
+  P('verify', 90, 'Sjekker sum og dato');
+  const d = res.data;
+  if (!d.verify) { d.verify = verify39(d); d.status = d.verify.status; }
+  const candidateId = randomUUID();
+  q('UPDATE fh_receipts SET candidate=? WHERE id=?').run(JSON.stringify({ id: candidateId, at: Date.now(), provider: res.provider === 'tekst' ? 'gemini' : res.provider, model: res.model, seconds: res.seconds, data: d }), r.id);
+  log('reanalyse-ferdig', `${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} %`);
+  const confidence = Math.min(d.confidence.total, d.confidence.merchant || 1);
+  return { previous, result: readOut({ ...d, confidence, engine: label, model: res.model, category: d.suggested_category }), candidateId, confidence, verify: (({ feedback, ...v }) => v)(d.verify) };
+}
 api.post('/receipts/:id/reanalyze', W, async (c) => {
   const r = rcGet(c);
   if (!r) return c.notFound();
   if (['booked', 'rejected'].includes(r.status)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
   if (r.status === 'pending' || r.status === 'processing') return bad(c, 'Kvitteringen leses fortsatt');
-  const engine = (await c.req.json().catch(() => ({}))).engine === 'tesseract' ? 'tesseract' : 'gemini';
+  const b = await c.req.json().catch(() => ({}));
+  const engine = b.engine === 'tesseract' ? 'tesseract' : 'gemini';
   const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
   if (engine === 'gemini' && !hasGemini()) return bad(c, 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.');
   if (engine === 'tesseract' && r.mime === 'text/plain') return bad(c, 'Lokal OCR leser bare bilder og PDF, ikke e-posttekst');
-  const log = (step, detail) => scanLog(r.id, step, detail);
-  log('reanalyse', `${label}, originalfilen`);
-  let ex = null; try { ex = JSON.parse(r.extraction ?? 'null'); } catch { /* ugyldig */ }
-  const previous = readOut({ merchant: r.merchant, date: r.date, total: r.total != null ? r.total / 100 : null, lines: ex?.lines, confidence: r.confidence,
-    engine: r.provider ? providerName(r.provider) : null, model: r.model, category: catById().get(r.category_id)?.name, error: r.error });
-  let res;
-  try {
-    const img = await readFile(join(DIR, r.file));
-    const cats = q("SELECT name FROM fh_categories WHERE kind='expense' AND user_id=? ORDER BY sort").all(c.get('user')).map((x) => x.name);
-    res = engine === 'tesseract' ? await extractOcr(img, r.mime)
-      : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, r.mime, cats, 'gemini', { log });
-  } catch (e) {
-    log('feil', `${label}: ${e.message}`);
-    return bad(c, `${label} kunne ikke lese kvitteringen: ${e.message}`, e.missing ? 501 : 502);
+  const u = c.get('user');
+  const bg = b.async === true || b.progress === true || /respond-async/i.test(c.req.header('prefer') ?? '') || c.req.query('async') === '1';
+  if (bg && reanalyzing.has(r.id) && getJob(u, reanalyzing.get(r.id))?.status === 'running') return c.json({ jobId: reanalyzing.get(r.id), receiptId: r.id, running: true, statusUrl: `/finans/api/jobs/${reanalyzing.get(r.id)}`, eventsUrl: `/finans/api/jobs/${reanalyzing.get(r.id)}/events`, channel: `job:${reanalyzing.get(r.id)}` }, 202);
+  let errStatus = 502;
+  const { job, promise } = startJob(u, 'reanalyze', async (ctx) => {
+    const progress = (p) => { ctx.progress(p); try { broadcast('job', { channel: `job:${ctx.job.id}`, jobId: ctx.job.id, kind: 'reanalyze', ...p }, [u]); broadcast('receipt-job', { jobId: ctx.job.id, receiptId: r.id, step: p.step, pct: p.pct, msg: p.msg }, [u]); } catch { /* sanntid er best effort */ } };
+    const out = await reanalyzeRun(r, u, engine, { signal: ctx.signal, progress });
+    if (out.cancelled || ctx.signal.aborted) { progress({ step: 'error', pct: 0, msg: 'Avbrutt · ingenting ble endret' }); throw Object.assign(new Error('Avbrutt'), { cancelled: true }); }
+    if (out.error) { errStatus = out.status ?? 502; throw new Error(out.error); }
+    const pctTxt = Math.round((out.confidence ?? 0) * 100);
+    if (bg && b.apply !== false) {
+      const before = origSelect.get(r.id);
+      const cand = JSON.parse(before.candidate ?? 'null');
+      if (cand && !['booked', 'rejected'].includes(before.status)) {
+        await applyCandidate(before, cand);
+        scanLog(r.id, 'reanalyse-valgt', `${label}-resultatet tatt i bruk (✦ På nytt)`);
+        const after = origSelect.get(r.id);
+        out.changed = [['merchant', 'merchant'], ['total', 'total'], ['date', 'date'], ['category', 'category_id']].filter(([, k]) => before[k] !== after[k]).map(([n]) => n);
+        out.applied = true;
+        out.receipt = receiptOut(after);
+      }
+    }
+    progress({ step: 'done', pct: 100, msg: `✦ Analysert på nytt · ${pctTxt} % sikker` });
+    if (bg) {
+      import('../notify.js').then(({ notifyUser }) => notifyUser(u, { title: 'Glimt', body: `Kvitteringen fra ${out.result?.merchant ?? r.merchant ?? 'butikken'} er lest på nytt · ${pctTxt} % sikker`, url: '/finans/#/kv', tag: `reanalyze-${r.id}`, category: 'finans',
+        data: { kind: 'receipt.reanalyzed', receiptId: r.id, jobId: ctx.job.id, deepLink: 'finanshub://finans/kvitteringer', icon: '/assets/glimt-varsel.png', badge: '/assets/glimt-badge.png' } }, { realtime: false })).catch(() => {});
+    }
+    return out;
+  });
+  if (bg) {
+    reanalyzing.set(r.id, job.id);
+    promise.finally(() => { if (reanalyzing.get(r.id) === job.id) reanalyzing.delete(r.id); });
+    return c.json({ jobId: job.id, receiptId: r.id, statusUrl: `/finans/api/jobs/${job.id}`, eventsUrl: `/finans/api/jobs/${job.id}/events`, channel: `job:${job.id}`, steps: stepsOut39('upload', label) }, 202);
   }
-  const d = res.data;
-  const candidateId = randomUUID();
-  q('UPDATE fh_receipts SET candidate=? WHERE id=?').run(JSON.stringify({ id: candidateId, at: Date.now(), provider: res.provider === 'tekst' ? 'gemini' : res.provider, model: res.model, seconds: res.seconds, data: d }), r.id);
-  log('reanalyse-ferdig', `${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} %`);
-  return c.json({ previous, result: readOut({ ...d, confidence: Math.min(d.confidence.total, d.confidence.merchant || 1), engine: label, model: res.model, category: d.suggested_category }), candidateId });
+  const j = await promise;
+  if (j.status !== 'done') return bad(c, j.error ?? 'Avbrutt', j.status === 'cancelled' ? 409 : errStatus);
+  const { confidence, ...out } = j.result;
+  return c.json({ ...out, jobId: j.id });
+});
+// Prompt 39 (PWA): GET /finans/api/receipts/reanalyze/:jobId → {jobId, receiptId, status, step, pct, msg, steps, result?} · DELETE samme = Avbryt.
+api.get('/receipts/reanalyze/:jobId', R, (c) => { const j = getJob(c.get('user'), c.req.param('jobId')); return j && j.kind === 'reanalyze' ? c.json({ ...jobView(j), steps: j.progress?.steps ?? null }) : bad(c, 'Fant ikke jobben', 404); });
+api.delete('/receipts/reanalyze/:jobId', W, (c) => {
+  const j = getJob(c.get('user'), c.req.param('jobId'));
+  if (!j || j.kind !== 'reanalyze') return bad(c, 'Fant ikke jobben', 404);
+  const v = cancelJob(c.get('user'), j.id);
+  const rid = j.progress?.receiptId;
+  if (rid && v.status === 'cancelled') { q('UPDATE fh_receipts SET candidate=NULL WHERE id=?').run(rid); if (reanalyzing.get(rid) === j.id) reanalyzing.delete(rid); }
+  try { broadcast('receipt-job', { jobId: j.id, receiptId: rid ?? null, step: 'error', pct: 0, msg: 'Avbrutt · ingenting ble endret' }, [c.get('user')]); } catch { /* */ }
+  return c.json({ ok: true, jobId: j.id, status: v.status, step: 'error', msg: 'Avbrutt · ingenting ble endret' });
+});
+// Prompt 39 (iOS/PWA): Avbryt «✦ På nytt» → {ok, jobId, status:'cancelled', step:'error', msg:'Avbrutt · ingenting ble endret'}
+api.post('/receipts/:id/reanalyze/:jobId/cancel', W, (c) => {
+  const r = rcGet(c);
+  if (!r) return c.notFound();
+  const v = cancelJob(c.get('user'), c.req.param('jobId'));
+  if (!v) return bad(c, 'Fant ikke jobben', 404);
+  if (reanalyzing.get(r.id) === c.req.param('jobId')) reanalyzing.delete(r.id);
+  if (v.status === 'cancelled') q('UPDATE fh_receipts SET candidate=NULL WHERE id=?').run(r.id);
+  try { broadcast('job', { channel: `job:${v.id}`, jobId: v.id, kind: 'reanalyze', receiptId: r.id, step: 'error', pct: 0, msg: 'Avbrutt · ingenting ble endret' }, [c.get('user')]); } catch { /* */ }
+  return c.json({ ok: true, jobId: v.id, status: v.status, step: 'error', msg: 'Avbrutt · ingenting ble endret' });
 });
 api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
   const r = rcGet(c);
@@ -1155,7 +1254,11 @@ async function applyCandidate(r, cand) {
   {
     const d = cand.data, st = settings();
     const totalOre = d.total != null ? Math.round(d.total * 100) : null;
-    const catId = (st.autoCat && ruleFor(d.merchant)) || catIdByName(d.suggested_category) || r.category_id;
+    const rule = st.autoCat && ruleFor(d.merchant, r.user_id ?? me());
+    const k39 = rule ? null : (() => { try { return classify39(r.user_id ?? me(), d); } catch { return null; } })(); // prompt 39
+    if (k39) d.cat39 = k39;
+    if (!d.verify) { d.verify = verify39(d); d.status = d.verify.status; }
+    const catId = rule || k39?.categoryId || catIdByName(d.suggested_category) || r.category_id;
     const acc = d.card_last4 ? q('SELECT id FROM fh_accounts WHERE last4=? AND user_id=?').get(d.card_last4, r.user_id ?? me())?.id : null;
     const tm = String(r.target ?? '').match(/^tx:(\d+)$/);
     const match = tm ? { id: +tm[1] } : findMatch(totalOre, d.date, d.card_last4, r.user_id ?? me());
@@ -1310,14 +1413,22 @@ api.patch('/goals/:id', W, async (c) => {
 api.delete('/goals/:id', W, (c) => { q('DELETE FROM fh_goals WHERE id=? AND user_id=?').run(+c.req.param('id'), c.get('user')); return ok(c); });
 
 const KINDS = ['expense', 'income', 'transfer'];
+// Prompt 39: {name, color?, icon?, kind?, source?:'user'|'ai', example_tx?} → {id, category:{id, name, color, kind, source, confirmed, icon}, existing?}
+// source:'ai' lager en ubekreftet AI-kategori; finnes en med likt navn (likhet ≥ 0,85, «Skole» = «Skole og studier»), gis den (existing:true).
 api.post('/categories', W, async (c) => {
   const b = await c.req.json();
   const name = str(b.name, 40);
   if (!name) return bad(c, 'Navn må fylles ut');
   const u = c.get('user');
+  if (b.source === 'ai') {
+    const k = createAiCategory(u, { name, color: hex(b.color), icon: typeof b.icon === 'string' ? b.icon.slice(0, 30) : null, reason: str(b.reason, 80) || null, exampleTx: b.example_tx ?? b.exampleTx ?? null });
+    const row = q('SELECT * FROM fh_categories WHERE id=?').get(k.id);
+    return c.json({ id: row.id, category: categoryOut39(row), ...(k.existing ? { existing: true } : {}) }, k.existing ? 200 : 201);
+  }
   if (q('SELECT 1 FROM fh_categories WHERE lower(name)=lower(?) AND user_id=?').get(name, u)) return bad(c, 'Kategorien finnes allerede');
-  const r = q('INSERT INTO fh_categories(name,color,kind,sort,user_id) VALUES(?,?,?,(SELECT COALESCE(MAX(sort),0)+1 FROM fh_categories WHERE user_id=?),?) RETURNING id').get(name, hex(b.color) ?? '#8FD3FF', KINDS.includes(b.kind) ? b.kind : 'expense', u, u);
-  return c.json({ id: r.id });
+  const r = q("INSERT INTO fh_categories(name,color,kind,sort,user_id,source,confirmed,icon,created) VALUES(?,?,?,(SELECT COALESCE(MAX(sort),0)+1 FROM fh_categories WHERE user_id=?),?,'user',1,?,?) RETURNING id")
+    .get(name, hex(b.color) ?? '#8FD3FF', KINDS.includes(b.kind) ? b.kind : 'expense', u, u, typeof b.icon === 'string' ? b.icon.slice(0, 30) : null, Date.now());
+  return c.json({ id: r.id, category: categoryOut39(q('SELECT * FROM fh_categories WHERE id=?').get(r.id)) });
 });
 api.patch('/categories/:id', W, async (c) => {
   const cur = own('fh_categories', +c.req.param('id'));
@@ -1326,6 +1437,9 @@ api.patch('/categories/:id', W, async (c) => {
   const name = b.name !== undefined ? str(b.name, 40) || cur.name : cur.name;
   if (name !== cur.name && q('SELECT 1 FROM fh_categories WHERE lower(name)=lower(?) AND id<>? AND user_id=?').get(name, cur.id, cur.user_id)) return bad(c, 'Navnet er i bruk');
   q('UPDATE fh_categories SET name=?, color=?, kind=? WHERE id=?').run(name, hex(b.color) ?? cur.color, KINDS.includes(b.kind) ? b.kind : cur.kind, cur.id);
+  // Prompt 39: ikon og «gjør permanent» (confirmed) for AI-kategorier; å gi nytt navn bekrefter også.
+  if (typeof b.icon === 'string') q('UPDATE fh_categories SET icon=? WHERE id=?').run(b.icon.slice(0, 30), cur.id);
+  if (b.confirmed === true || (cur.source === 'ai' && name !== cur.name)) q('UPDATE fh_categories SET confirmed=1 WHERE id=?').run(cur.id);
   return ok(c);
 });
 api.delete('/categories/:id', W, (c) => { q('DELETE FROM fh_categories WHERE id=? AND user_id=?').run(+c.req.param('id'), c.get('user')); return ok(c); });

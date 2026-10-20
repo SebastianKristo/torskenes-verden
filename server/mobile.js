@@ -10,7 +10,8 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import os from 'node:os';
 import { config } from './config.js';
-import { kv, OWNER } from './db.js';
+import { kv, OWNER, db as hlDb } from './db.js';
+import { broadcast as rtBroadcast } from './realtime.js';
 import { aiJson } from './homeos-common.js';
 import { sessionUser, userInfo, serverName, isAdmin, installKind } from './auth.js';
 import { packagesFor } from './tracking.js';
@@ -98,6 +99,9 @@ const LAYOUT = {
 };
 // Enkle verdier (prompt 13): tema for FinansHub desktop, kompakt sidemeny, Homelab-tema, mobildesign, papirmodus og fotovindu.
 const SCALAR = {
+  // Prompt 39: oppsettet av Yr mot Storm (2a, wiggle-redigering: rekkefølge, skjulte kort, størrelser) – fritt objekt ≤ 4 kB, eller en design-id.
+  vs_cmp_layout: (v) => (typeof v === 'string' && /^[\w-]{1,40}$/.test(v)) || (v && typeof v === 'object' && JSON.stringify(v).length <= 4000),
+  vaer_glimt_p: (v) => ['sky', 'ugle', 'spire'].includes(v), // prompt 39: valgt figur i «Glimt · ukas vær»
   design: (v) => ['v2', 'lys', 'mork', 'glod'].includes(v),
   compactNav: (v) => typeof v === 'boolean',
   hlTheme: (v) => ['cur', '2c'].includes(v),
@@ -404,6 +408,18 @@ async function saveAvatar(id, b) {
   await mkdir(AVATARS, { recursive: true });
   await writeFile(avatarFile(id), b);
   kv.set(id, 'avatar_v', createHash('sha256').update(b).digest('hex').slice(0, 12));
+  avatarChanged(id);
+}
+// Prompt 39: sanntid «me» / «profile» til brukeren og «avatar» til alle innloggede, så klientene henter det nye bildet med en gang.
+export function avatarChanged(id) {
+  try {
+    const v = kv.get(id, 'avatar_v', null);
+    const url = v ? `/api/me/avatar?v=${v}` : null;
+    rtBroadcast('me', { action: 'avatar', userId: id, avatarUrl: url, v }, [id]);
+    rtBroadcast('profile', { action: 'avatar', userId: id, avatarUrl: url, v }, [id]);
+    const all = hlDb.prepare('SELECT id FROM users').pluck().all();
+    rtBroadcast('avatar', { userId: id, v, url: v ? `/api/users/${id}/avatar?v=${v}` : null, avatarUrl: url }, all);
+  } catch { /* sanntid er best effort */ }
 }
 api.put('/me/avatar', authOrToken, bodyLimit({ maxSize: 2 * 1024 * 1024 + 64 * 1024, onError: (c) => c.json({ error: 'Bildet er for stort (maks 2 MB)' }, 413) }), async (c) => {
   const ct = c.req.header('content-type') ?? '';
@@ -427,6 +443,7 @@ api.delete('/me/avatar', authOrToken, async (c) => {
   const id = c.get('user');
   await removeAvatar(id);
   kv.del(id, 'avatar_v');
+  avatarChanged(id);
   return c.json({ ...meOut(id), ok: true, url: null });
 });
 // Andre brukeres bilder (brukerlisten, delte mapper, Familie, Huskeliste). Bare for innloggede; profilbildet er en del av

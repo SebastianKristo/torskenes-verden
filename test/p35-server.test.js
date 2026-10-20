@@ -125,7 +125,7 @@ test('Glimt-innstillinger: standard, delvis PUT per bruker, validering, alias /a
   const r = await A('/api/glimt/settings');
   assert.equal(r.status, 200);
   const { engines, chars, voices, rates, host, cards, auroraNotify, ...plain } = r.body; // prompt 38: cards/auroraNotify testes i p38
-  assert.deepEqual(plain, { char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true,
+  assert.deepEqual(plain, { char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true, briefGlimt: true, // prompt 39: + briefGlimt
     briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
     tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' } });
   assert.equal(chars.length, 13);
@@ -416,10 +416,10 @@ test('Kalender: iCal-abonnement (webcal, ETag/304), HA-kalendere (admin, farger)
     assert.equal((await A(`/api/kalender/calendars/${cal.id}`, 'PATCH', { hidMenu: 'ja' })).status, 400);
     const list = await A('/api/kalender/calendars');
     const row = list.body.calendars.find((c) => c.id === cal.id);
-    assert.deepEqual([row.source, row.badge, row.hidMenu, row.color], ['ical', 'Abonnement', true, '#5b4fc4']);
+    assert.deepEqual([row.source, row.kind, row.badge, row.hidMenu, row.color], ['url', 'ical', 'URL', true, '#5b4fc4']); // prompt 39: ny form (source/badge), kind = gammel kilde
     const pers = list.body.calendars.find((c) => c.id === 'personlig');
-    assert.deepEqual([pers.source, pers.badge, pers.hidMenu], ['builtin', null, false]);
-    assert.equal((await A('/api/kalender/calendars/jobb', 'PATCH', { hidMenu: true })).body.calendar.hidMenu, true);
+    assert.deepEqual([pers.source, pers.kind, pers.badge, pers.hidMenu], ['google', 'builtin', 'GOOGLE', false]); // prompt 39: Personlig kommer fra Google
+    assert.equal((await A('/api/kalender/calendars/skole', 'PATCH', { hidMenu: true })).body.calendar.hidMenu, true); // prompt 39: Jobb er slått inn i Personlig
     // Kan ikke legge nye hendelser i et abonnement.
     assert.equal((await A('/api/kalender/events', 'POST', { title: 'X', date: '2026-10-22', appCalendar: cal.id })).status, 400);
     // Kari ser ikke Sebastians abonnement.

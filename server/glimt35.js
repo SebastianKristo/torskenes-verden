@@ -90,7 +90,7 @@ const AZ_STYLE = { natt: 'whispering', ugle: 'calm', sky: 'cheerful', drape: 'ch
 /* ═══════════════════════ Innstillinger ═══════════════════════ */
 
 const KINDS = ['morning', 'day', 'evening', 'night'];
-const DEFAULTS = () => ({ char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true,
+const DEFAULTS = () => ({ char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true, briefGlimt: true, // prompt 39: Glimt-figuren i Now Brief av/på
   briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
   tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' } });
 const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -99,7 +99,7 @@ const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
 export function glimtSettingsOf(u) {
   const d = DEFAULTS(), old = kv.get(u, 'brief_settings', null) ?? {}, s = kv.get(u, 'glimt35_settings', null) ?? {};
   const out = { ...d, ...(typeof old.notify === 'boolean' ? { notify: old.notify } : {}), ...(typeof old.guide === 'boolean' ? { guide: old.guide } : {}) };
-  for (const k of ['char', 'friends', 'brief', 'readAloud', 'guide', 'notify']) if (s[k] !== undefined) out[k] = s[k];
+  for (const k of ['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefGlimt']) if (s[k] !== undefined) out[k] = s[k];
   out.briefs = Object.fromEntries(KINDS.map((k) => [k, { ...d.briefs[k], ...(s.briefs?.[k] ?? {}) }]));
   out.tts = { ...d.tts, ...(s.tts ?? {}) };
   return out;
@@ -108,12 +108,12 @@ export function glimtSettingsOf(u) {
 export function cleanGlimtPatch(b, cur) {
   const errors = [], next = JSON.parse(JSON.stringify(cur));
   if (!b || typeof b !== 'object' || Array.isArray(b)) return { next, errors: ['Forventet et objekt'] };
-  const known = new Set(['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefs', 'tts', 'engines', 'chars', 'voices', 'rates', 'host', 'cards', 'auroraNotify']);
+  const known = new Set(['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefGlimt', 'briefs', 'tts', 'engines', 'chars', 'voices', 'rates', 'host', 'cards', 'auroraNotify']);
   if (b.cards !== undefined) { const r = cleanCards(b.cards); errors.push(...r.errors); if (!r.errors.length) next.cards = r.cards; } // prompt 38
   if (b.auroraNotify !== undefined) { if (typeof b.auroraNotify !== 'boolean') errors.push('auroraNotify må være true eller false'); else next.auroraNotify = b.auroraNotify; }
   for (const k of Object.keys(b)) if (!known.has(k)) errors.push(`Ukjent nøkkel ${k}`);
   if (b.char !== undefined) { if (!CHAR_IDS.has(b.char)) errors.push(`Ukjent figur ${b.char}`); else next.char = b.char; }
-  for (const k of ['friends', 'brief', 'readAloud', 'guide', 'notify']) if (b[k] !== undefined) { if (typeof b[k] !== 'boolean') errors.push(`${k} må være true eller false`); else next[k] = b[k]; }
+  for (const k of ['friends', 'brief', 'readAloud', 'guide', 'notify', 'briefGlimt']) if (b[k] !== undefined) { if (typeof b[k] !== 'boolean') errors.push(`${k} må være true eller false`); else next[k] = b[k]; }
   if (b.briefs !== undefined) {
     if (!b.briefs || typeof b.briefs !== 'object') errors.push('briefs må være et objekt');
     else for (const [k, v] of Object.entries(b.briefs)) {
@@ -136,8 +136,8 @@ export function cleanGlimtPatch(b, cur) {
   return { next, errors };
 }
 export function saveGlimtSettings(u, next) {
-  const { char, friends, brief, readAloud, guide, notify, briefs, tts } = next;
-  kv.set(u, 'glimt35_settings', { char, friends, brief, readAloud, guide, notify, briefs, tts });
+  const { char, friends, brief, readAloud, guide, notify, briefs, tts, briefGlimt } = next;
+  kv.set(u, 'glimt35_settings', { char, friends, brief, readAloud, guide, notify, briefs, tts, briefGlimt: briefGlimt !== false });
   if (Array.isArray(next.cards)) saveCards(u, next.cards); // prompt 38
   if (typeof next.auroraNotify === 'boolean') setAuroraNotify(u, next.auroraNotify);
   // Eldre lesere (brief34, appene før 35) leser brief_settings.

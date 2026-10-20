@@ -97,15 +97,15 @@ test('companion: aldri bredere scope eller lengre levetid enn tokenet som ber om
 
 /* ---------------- 2. Kalendere ---------------- */
 
-test('kalendere: seks innebygde med farge, synlighet og antall; egne kan lages, endres og slettes', async () => {
+test('kalendere: (prompt 39) fire innebygde med farge, synlighet og antall; egne kan lages, endres og slettes', async () => {
   const r = await T('/api/kalender/calendars');
   assert.equal(r.status, 200);
-  assert.deepEqual(r.body.calendars.slice(0, 6).map((c) => c.id), ['personlig', 'jobb', 'studie', 'familie', 'helse', 'bursdager']);
+  assert.deepEqual(r.body.calendars.slice(0, 4).map((c) => c.id), ['personlig', 'bursdager', 'skole', 'helligdager']); // prompt 39: fire kalendere
   const p = r.body.calendars[0];
   assert.equal(p.color, '#b23a2a');
   assert.equal(p.visible, true);
   assert.equal(typeof p.count, 'number');
-  assert.ok(r.body.calendars.find((c) => c.id === 'studie').count > 0, 'skolens timeplan (mock) mappes til Studie');
+  assert.ok(r.body.calendars.find((c) => c.id === 'skole').count > 0, 'skolens timeplan (mock) mappes til Skole');
   // Egen kalender.
   const n = await T('/api/kalender/calendars', 'POST', { name: 'Korps', color: '#123abc' });
   assert.equal(n.status, 201);
@@ -114,8 +114,9 @@ test('kalendere: seks innebygde med farge, synlighet og antall; egne kan lages, 
   assert.equal((await T('/api/kalender/calendars', 'POST', { name: 'X', color: 'rød' })).status, 400);
   const id = n.body.calendar.id;
   assert.equal((await T(`/api/kalender/calendars/${id}`, 'PATCH', { color: '#00ff00', visible: false })).body.calendar.visible, false);
-  assert.equal((await T('/api/kalender/calendars/helse', 'PATCH', { visible: false })).body.calendar.visible, false);
-  assert.equal((await T('/api/kalender/calendars/helse', 'DELETE')).status, 403);
+  assert.equal((await T('/api/kalender/calendars/skole', 'PATCH', { visible: false })).body.calendar.visible, false);
+  await T('/api/kalender/calendars/skole', 'PATCH', { visible: true });
+  assert.equal((await T('/api/kalender/calendars/skole', 'DELETE')).status, 403);
   // Hendelse i den egne kalenderen, flytting og sletting av kalenderen.
   const date = addDaysISO(TODAY, 3);
   const ev = await T('/api/kalender/events', 'POST', { title: 'Korpsøving', allDay: false, date, start: '18:00', end: '20:00', appCalendar: id });
@@ -128,18 +129,18 @@ test('kalendere: seks innebygde med farge, synlighet og antall; egne kan lages, 
   // Bare flytting (også mulig for skolens hendelser).
   const mv = await T(`/api/kalender/events/${encodeURIComponent(ev.body.event.id)}`, 'PATCH', { appCalendar: 'jobb' });
   assert.equal(mv.status, 200);
-  assert.equal(mv.body.event.appCalendar, 'jobb');
-  assert.equal(mv.body.event.appColor, '#2b5d8a');
+  assert.equal(mv.body.event.appCalendar, 'personlig', 'prompt 39: Jobb er slått inn i Personlig');
+  assert.equal(mv.body.event.appColor, '#b23a2a');
   const school = list.body.events.find((e) => e.calendar === 'timeplan');
   if (school) {
-    assert.equal(school.appCalendar, 'studie');
+    assert.equal(school.appCalendar, 'skole');
     assert.equal((await T(`/api/kalender/events/${encodeURIComponent(school.id)}`, 'PATCH', { appCalendar: 'personlig' })).body.event.appCalendar, 'personlig');
   }
   assert.equal((await T(`/api/kalender/events/${encodeURIComponent(ev.body.event.id)}`, 'PATCH', { appCalendar: 'finnes-ikke' })).status, 400);
   assert.equal((await T(`/api/kalender/calendars/${id}`, 'DELETE')).status, 200);
   assert.ok(!(await T('/api/kalender/calendars')).body.calendars.some((c) => c.id === id));
   // Kari ser ikke Sebastians egne kalendere.
-  assert.equal((await K('/api/kalender/calendars')).body.calendars.length, 6);
+  assert.equal((await K('/api/kalender/calendars')).body.calendars.length, 4);
   // Standardvalg.
   assert.equal((await T('/api/kalender/calendars/prefs', 'PUT', { defaultCalendar: 'jobb', theme: 'dark' })).body.prefs.theme, 'dark');
   assert.equal((await T('/api/kalender/calendars/prefs', 'PUT', { theme: 'blå' })).status, 400);
@@ -246,11 +247,12 @@ test('assist source:calendar: ledig tid, neste, oppsummering, vær, bursdag og o
   const c = await ask('legg til tannlege fredag kl 9');
   assert.equal(c.intent, 'calendar.create');
   assert.ok(c.created?.event?.id);
-  assert.equal(c.created.event.appCalendar, 'helse');
+  assert.equal(c.created.event.appCalendar, 'personlig'); // prompt 39: Helse er slått inn i Personlig
+  assert.equal(c.created.event.appKind, 'helse');
   assert.equal(c.created.event.title, 'Tannlege');
   assert.match(c.created.event.start, /T0[78]:00:00/);
   assert.equal(c.created.undo.method, 'DELETE');
-  assert.match(c.text, /Helse/);
+  assert.match(c.text, /Personlig/); // prompt 39
   const und = await T(c.created.undo.url, 'DELETE');
   assert.equal(und.status, 200);
 
