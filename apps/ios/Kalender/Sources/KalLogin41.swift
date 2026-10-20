@@ -133,7 +133,7 @@ final class KalLogin41Model {
             let cands: [String] = KalAuth41.candidates()
             let base: String = await KalAuth41.firstReachable(Array(cands.prefix(3))) ?? KalAuth41.defaultBase
             let p: KalPending41 = KalAuth41.begin(base: base)
-            if let u = KalAuth41.webURL(p, base: base) { UIApplication.shared.open(u) }
+            if let u = KalAuth41.webURL(p, base: base) { _ = await UIApplication.shared.open(u) }
             try? await Task.sleep(nanoseconds: 180_000_000_000)
             if self.phase == "wait" && self.waitId == id && self.step < 2 {
                 self.fail("Fikk ikke svar fra godkjenningen. Prøv igjen.", server: false)
