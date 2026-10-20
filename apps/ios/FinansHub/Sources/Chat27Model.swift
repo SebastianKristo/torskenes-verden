@@ -61,6 +61,8 @@ struct ChatMsg27: Identifiable, Hashable {
     var images: [String] = []
     /// Prompt 31: kortet fra Glimt (vær, kalender …) som JSON, tomt = uten kort (Chat31Cards.swift).
     var card31: String = ""
+    /// Prompt 41: fakta Glimt hentet før svaret (meta.facts), vist som små kort (Chat41Facts.swift).
+    var facts41: [ChatFact41] = []
 }
 
 struct ChatSettings27: Hashable {
@@ -425,6 +427,10 @@ final class ChatStore27 {
                 msg.card31 = String(data: cj, encoding: .utf8) ?? ""
             }
             if let tool = JS.str(m, "tool"), msg.used.isEmpty { msg.used = [tool] }
+            // Prompt 41: brukte kilder og faktakort ligger i meta.
+            let meta41: [String: Any]? = JS.dict(m, "meta")
+            if msg.used.isEmpty { msg.used = JS.strings(meta41, "used") }
+            msg.facts41 = ChatFact41.parse41(JS.list(meta41, "facts"))
             if let tps = JS.num(m, "tokensPerSec") {
                 msg.stats = ChatStore27.stats(tps: tps, ms: JS.num(m, "ms") ?? 0, stopped: false)
             }
@@ -794,6 +800,7 @@ final class ChatStore27 {
             a.model = streamModel
             a.stats = ChatStore27.stats(tps: tps, ms: ms, stopped: stopped)
             a.used = used
+            a.facts41 = ChatFact41.parse41(JS.list(doneStats, "facts"))
             msgs.append(a)
         }
         busy = false

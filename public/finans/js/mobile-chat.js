@@ -107,8 +107,16 @@ export function openScanChat(ref = {}) {
 function normMsg(x) {
   if (x.r) return x;
   // Prompt 31: Glimt-kort (vær, kalender …) lagres i meldingen (card) og vises igjen i historikken.
-  return { r: x.role === 'user' ? 'u' : 'a', t: x.content ?? x.text ?? '', m: x.model ?? '', tool: [].concat(x.used ?? x.tool ?? []), st: x.st ?? statLine(x), att: x.att ?? (x.files ?? []).map((f) => f.name ?? f), card: x.card ?? null };
+  return { r: x.role === 'user' ? 'u' : 'a', t: x.content ?? x.text ?? '', m: x.model ?? '', tool: [].concat(x.used ?? x.meta?.used ?? x.tool ?? []), st: x.st ?? statLine(x), att: x.att ?? (x.files ?? []).map((f) => f.name ?? f), card: x.card ?? null, facts: x.facts ?? x.meta?.facts ?? null };
 }
+// Prompt 41: små faktakort under Glimt-svaret (meta.facts): «VÆR · NEW YORK · NESTE TIME / vind 6 m/s, kast 9 m/s / Open-Meteo».
+const F41 = { weather: 'Vær', time: 'Tid', sun: 'Sol' };
+function facts41(list) {
+  const L = Array.isArray(list) ? list.filter((f) => f && f.label) : [];
+  if (!L.length) return '';
+  return `<div class="ch41-facts" role="list" aria-label="Fakta Glimt hentet">${L.map((f) => `<div class="ch41-fact${f.error ? ' err' : ''}" role="listitem"><span class="ch41-fh">${esc([F41[f.tool] ?? f.tool, f.place, f.error ? '' : f.when].filter(Boolean).join(' · '))}</span><span class="ch41-fv">${esc(f.label)}</span>${f.source ? `<span class="ch41-fs">${esc(f.source)}</span>` : ''}</div>`).join('')}</div>`;
+}
+const noFactTools41 = (tool, facts) => (Array.isArray(facts) && facts.length ? (tool ?? []).filter((n) => !/^(Vær|Tid|Sol) · /.test(n)) : tool ?? []);
 const statLine = (x) => (x.tokensPerSec ? `${Math.round(x.tokensPerSec)} tok/s · ${(x.ms / 1000).toFixed(1).replace('.', ',')} s` : '');
 export async function chatLoad(force = false) {
   if (!force && C.list && Date.now() - C.t < 20000) return;
@@ -218,7 +226,7 @@ const toApi = (x) => ({ role: x.r === 'u' ? 'user' : 'assistant', content: x.t, 
 async function run(o = {}) {
   const cur = C.cur; if (!cur) return;
   const t0 = performance.now(), model = cur.model || curModel();
-  C.busy = true; C.stream = ''; C.used = []; C.bottom = true; C.ed = null; draw();
+  C.busy = true; C.stream = ''; C.used = []; C.facts41 = null; C.bottom = true; C.ed = null; draw();
   const files = cur.messages.flatMap((x) => x.files ?? []);
   const body = { chatId: cur.id && !String(cur.id).startsWith('l') ? cur.id : undefined, model, messages: cur.messages.map(toApi), settings: cur.settings, webSearch: C.web, myData: o.myData ?? (C.data && dataOK()), files, ...(o.editFrom != null ? { editFrom: o.editFrom } : {}), ...(o.confirmCloud ? { confirmCloud: true } : {}), ...(o.withoutMyData ? { withoutMyData: true } : {}) };
   const ctrl = new AbortController(); C.ctrl = ctrl;
@@ -248,6 +256,7 @@ async function run(o = {}) {
         for (const ln of raw.split('\n')) { if (ln.startsWith('event:')) ev = ln.slice(6).trim(); else if (ln.startsWith('data:')) data += ln.slice(5).trim(); }
         let d = {}; try { d = data ? JSON.parse(data) : {}; } catch { d = { text: data }; }
         if (ev === 'meta') { if (d.chatId) cur.id = d.chatId; if (d.used) C.used = d.used; }
+        else if (ev === 'facts') { C.facts41 = d.facts ?? null; draw(); } // prompt 41
         else if (ev === 'delta') { full += d.text ?? ''; C.stream = full; paintStream(); }
         else if (ev === 'done') stats = d;
         else if (ev === 'error') err = d.error || 'Ukjent feil';
@@ -257,7 +266,8 @@ async function run(o = {}) {
   C.ctrl = null; C.busy = false; C.stream = '';
   const sec = (performance.now() - t0) / 1000;
   const toks = stats?.tokensPerSec ?? Math.max(1, Math.round(full.length / 4 / Math.max(0.5, sec)));
-  if (full || stopped) cur.messages.push({ r: 'a', t: full + (stopped ? ' …' : ''), m: model, tool: stats?.used ?? C.used ?? [], st: `${stopped ? 'Stoppet · ' : ''}${Math.round(toks)} tok/s · ${((stats?.ms ?? sec * 1000) / 1000).toFixed(1).replace('.', ',')} s` });
+  const facts = stats?.facts ?? C.facts41 ?? null; C.facts41 = null;
+  if (full || stopped) cur.messages.push({ r: 'a', t: full + (stopped ? ' …' : ''), m: model, tool: stats?.used ?? C.used ?? [], ...(facts?.length ? { facts } : {}), st: `${stopped ? 'Stoppet · ' : ''}${Math.round(toks)} tok/s · ${((stats?.ms ?? sec * 1000) / 1000).toFixed(1).replace('.', ',')} s` });
   if (err) cur.messages.push({ r: 'a', t: err, m: model, tool: [], st: 'Feil', err: true });
   if (stopped) haptic('tap'); else if (!err) haptic('ok');
   commit(cur);
@@ -408,8 +418,8 @@ function msgView(x, i, lastA) {
       ${ed ? `<div class="ch27-edit"><textarea id="ch27-ed" rows="3">${esc(C.ed.v)}</textarea><div><button data-c27="edx">Avbryt</button><button class="ink" data-c27="eds" data-i="${i}">Lagre og send</button></div></div>`
         : `<div class="ch27-ub">${esc(x.t)}</div><div class="ch27-acts r"><button data-c27="edit" data-i="${i}">Rediger</button><button data-c27="copy" data-i="${i}">${C.cop === key ? 'Kopiert' : 'Kopier'}</button></div>`}</div>`;
   }
-  return `<div class="ch27-a"><div class="ch27-ah"><span>✦ ${esc((x.m === 'glimt' ? 'Glimt' : x.m ? mLbl(x.m) : 'Glimt').toUpperCase())}</span>${(x.tool ?? []).map((n) => `<em>Brukte ${esc(n)}</em>`).join('')}</div>
-    <div class="ch27-md${x.err ? ' err' : ''}">${md(x.t)}</div>${x.card ? `<div class="p31-chc">${P31.cardHtml(x.card)}</div>` : ''}
+  return `<div class="ch27-a"><div class="ch27-ah"><span>✦ ${esc((x.m === 'glimt' ? 'Glimt' : x.m ? mLbl(x.m) : 'Glimt').toUpperCase())}</span>${noFactTools41(x.tool, x.facts).map((n) => `<em>Brukte ${esc(n)}</em>`).join('')}</div>
+    <div class="ch27-md${x.err ? ' err' : ''}">${md(x.t)}</div>${facts41(x.facts)}${x.card ? `<div class="p31-chc">${P31.cardHtml(x.card)}</div>` : ''}
     <div class="ch27-acts"><button data-c27="copy" data-i="${i}">${svg(IC.copy, 15)}${C.cop === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !C.busy ? `<button data-c27="regen" data-i="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}<button data-c27="speak" data-i="${i}">${svg(IC.spk, 15)}${C.spk === key ? 'Stopp' : 'Les høyt'}</button><span class="ch27-st">${esc(x.st || '')}</span></div></div>`;
 }
 const chip = (on) => (on ? ' on' : '');
@@ -485,7 +495,7 @@ export function chatView() {
   const body = C.cur && C.cur.messages === null ? '<div class="m-spin"></div>' : empty ? `<div class="ch27-empty"><div><span class="ch27-ml">${esc((sky ? `${M.name} · ${M.size || M.provider}` : `${M.id} · lokalt på hjemmeserveren`).toUpperCase())}</span><span class="ch27-hi">Hva kan jeg hjelpe med?</span></div>
       <div class="ch27-chips sc">${PERS.map(([k, n]) => `<button class="ch27-pc${chip(((C.cur?.settings ?? L.def ?? DEF).persona || 'std') === k)}" data-c27="per" data-k="${k}">${n}</button>`).join('')}</div>
       <div class="ch27-sug">${SUGG.map(([t, s2, x], i) => `<button data-c27="sugg" data-i="${i}"><b>${esc(t)}</b>${s2 ? `<span>${esc(s2)}</span>` : ''}</button>`).join('')}</div></div>`
-    : `${msgs.map((x, i) => msgView(x, i, lastA)).join('')}${C.busy ? `<div class="ch27-a"><div class="ch27-ah p31-cha"><span id="ch27-gl">${P31.glimt(22, C.stream ? 'answer' : 'think')}</span><span id="ch27-ghl">${esc((C.g31 ? 'Glimt' : mLbl(model)).toUpperCase())}${C.stream ? '' : ' · TENKER'}</span>${(C.used ?? []).map((n) => `<em>${C.g31 ? '' : 'Leser '}${esc(n)}</em>`).join('')}</div>${C.stream ? '' : '<span class="m-sr" id="ch27-think">Glimt tenker …</span>'}<div class="ch27-md" id="ch27-stream">${md(C.stream)}</div></div>` : ''}`;
+    : `${msgs.map((x, i) => msgView(x, i, lastA)).join('')}${C.busy ? `<div class="ch27-a"><div class="ch27-ah p31-cha"><span id="ch27-gl">${P31.glimt(22, C.stream ? 'answer' : 'think')}</span><span id="ch27-ghl">${esc((C.g31 ? 'Glimt' : mLbl(model)).toUpperCase())}${C.stream ? '' : ' · TENKER'}</span>${(C.used ?? []).map((n) => `<em>${C.g31 ? '' : 'Leser '}${esc(n)}</em>`).join('')}</div>${C.stream ? '' : '<span class="m-sr" id="ch27-think">Glimt tenker …</span>'}<div class="ch27-md" id="ch27-stream">${md(C.stream)}</div>${facts41(C.facts41)}</div>` : ''}`;
   const rows = Math.min(6, Math.max(1, C.inp.split('\n').length));
   return `<div class="ch27 ${th}${w ? ' wide' : ''}" data-c27root>
     ${w ? side(false) : ''}

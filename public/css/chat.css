@@ -183,3 +183,12 @@ html[data-hl="2c"] body[data-route="chat"] #chat{margin-top:-56px;z-index:2}
   .ch-msgs{padding:8px 14px 20px}
   .ch-eh b{font-size:28px}
 }
+
+/* Prompt 41: faktakort under Glimt-svaret (meta.facts) */
+.ch41-facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.ch41-fact{flex:1 1 210px;max-width:100%;min-width:0;display:flex;flex-direction:column;gap:2px;padding:8px 11px;border:1px solid var(--cl);border-radius:12px;background:var(--cc)}
+.ch41-fh{font:600 10px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.1em;text-transform:uppercase;color:var(--ca);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch41-fv{font-size:13.5px;font-weight:600;line-height:1.35;color:var(--ci)}
+.ch41-fs{font:500 10px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.04em;color:var(--cm)}
+.ch41-fact.err{border-style:dashed}
+.ch41-fact.err .ch41-fv{font-weight:500;color:var(--cm)}

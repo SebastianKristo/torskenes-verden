@@ -81,6 +81,7 @@ import { isSunQuestion, daylight } from './sun36.js'; // prompt 36: dagslys loka
 import { whereIntent, whereAnswer } from './where37.js'; // prompt 37: «hvor er Ingrid?»
 import { parseIntent37, schoolTestAnswer } from './kal37.js'; // prompt 37: skoleprøve ≠ prøveperiode
 import { bareDay37 } from './kalender33.js'; // prompt 37: «i morgen?»
+import { needsChatTools } from './chat-tools41.js'; // prompt 41: sammensatte faktaspørsmål går til chatten
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -728,6 +729,9 @@ api.post('/', async (c) => {
   const chatId = typeof b.chatId === 'string' && b.chatId.length <= 80 ? b.chatId : null;
   // Chat strømmer vanlige spørsmål selv fra valgt modell; Glimt svarer bare når et verktøy passer (unngår to LLM-kall).
   if (source === 'chat' && detectIntent(text, osloTodayISO()) === 'llm') return c.json({ intent: 'chat', followUp: 'chat', text: '', source: 'Glimt' });
+  // Prompt 41: sammensatte faktaspørsmål («været i Oslo i morgen og vinden i New York neste time», klokka i Tokyo) besvares i
+  // chatten, der verktøylaget (server/chat-tools41.js) henter alle delene før modellen svarer.
+  if (source === 'chat' && needsChatTools(text)) return c.json({ intent: 'chat', followUp: 'chat', text: '', source: 'Glimt', tools41: true });
   if (q("SELECT count(*) FROM assist_jobs WHERE user_id=? AND state IN ('queued','running')").pluck().get(user) >= 5) return c.json({ error: 'Glimt jobber allerede med flere spørsmål. Vent litt.' }, 429);
   const id = 'a' + randomBytes(6).toString('hex'), now = Date.now();
   q('INSERT INTO assist_jobs(id, user_id, state, q, source, chat_id, title, model, steps, created, updated, direct) VALUES(?,?,?,?,?,?,?,?,?,?,?,1)')

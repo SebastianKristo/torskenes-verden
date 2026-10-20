@@ -12,7 +12,8 @@
 //   GET    /chats?q=                  → {pinned:[], folders:[{id,name,open,chats:[]}], chats:[]}
 //   GET/PATCH/DELETE /chats/:id, GET /chats/:id/export (Markdown), POST /chats/:id/share → {url}
 //   POST /folders {name}, PATCH/DELETE /folders/:id
-//   POST   /send                      → SSE meta {chatId} · delta {text} · done {tokensPerSec, ms, used} · error {error}; 409 {needsConfirm}
+//   POST   /send                      → SSE meta {chatId} · facts {facts, used}? · delta {text} · done {tokensPerSec, ms, used, facts?} · error {error}; 409 {needsConfirm}
+//                                       (prompt 41: vær/tid/sol hentes før modellen, se server/chat-tools41.js; meta.facts lagres i svaret)
 //   POST   /files (multipart file)    → {id,name,size};  GET /knowledge → [{id,name,size,source,type}]
 //   GET    /mydata                    → {finans, kalender, huske};  GET/PATCH /settings
 //   POST   /transcribe (multipart)    → {text} via Open WebUI; 501 uten
@@ -39,6 +40,7 @@ import { finansSummary } from './finans/summary.js';
 import { nextTasks } from './tasks.js';
 import { chatBody, ollamaPost, thinkFilter } from './ollama-opts.js';
 import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './chat-scans.js';
+import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './chat-tools41.js'; // prompt 41: Glimt henter fakta
 
 const q = (sql) => db.prepare(sql);
 const FILES = resolve(config.dataDir, 'chat', 'files');
@@ -370,15 +372,16 @@ async function geminiStream(model, sys, msgs, s, { onDelta, signal, webSearch })
     return { tokens, usedWeb };
   } finally { g.done(); }
 }
-function mockAnswer(text, data) {
+function mockAnswer(text, data, facts = null) {
   const t = String(text ?? '').toLowerCase();
+  if (facts?.length) return factsAnswer(facts); // prompt 41: svar på alle delene ut fra faktaene
   if (data && /mat|brukte|penger|kr|finans|økonomi/.test(t)) return `Ut fra Finans-dataene dine: ${data.finans.split('. ').slice(0, 2).join('. ')}. Vil du at jeg setter opp et forslag til matbudsjett for neste måned?`;
   if (/hei|hallo/.test(t)) return 'Hei! Jeg er Homelab-assistenten. Jeg kan hjelpe med økonomi, kalender, huskelisten eller oppsett av serveren. Hva lurer du på?';
   return 'Her er et kort svar: Docker Compose samler tjenestene dine i én fil, så du kan starte alt med `docker compose up -d`. '
     + 'Legg Ollama og Open WebUI på samme nettverk, og bruk et volum for modellene, så slipper du å laste dem ned på nytt. Si fra hvis du vil ha et eksempel.';
 }
-async function mockStream(text, data, { onDelta, signal }) {
-  const words = mockAnswer(text, data).split(/(?<=\s)/);
+async function mockStream(text, data, { onDelta, signal, facts = null }) {
+  const words = mockAnswer(text, data, facts).split(/(?<=\s)/);
   for (const w of words) { if (signal.aborted) throw Object.assign(new Error('Avbrutt'), { cancelled: true }); await onDelta(w); await sleep(_chatTest.mockDelayMs); }
   return { tokens: { count: words.length, perSec: null } };
 }
@@ -386,7 +389,7 @@ async function mockStream(text, data, { onDelta, signal }) {
 /** Kjører modellen: Open WebUI først når den er satt opp (og modellen kommer derfra), ellers direkte. */
 async function runEngine(m, ctx) {
   const { sys, msgs, s, webSearch, files, onDelta, signal, gotText } = ctx;
-  if (isMock()) return { ...(await mockStream(msgs.at(-1)?.content, ctx.data, { onDelta, signal })), engine: 'mock' };
+  if (isMock()) return { ...(await mockStream(msgs.at(-1)?.content, ctx.data, { onDelta, signal, facts: ctx.facts })), engine: 'mock' };
   const o = owui();
   if (o && (m.via === 'openwebui' || !/^(gemini|groq):/.test(m.id))) {
     try {
@@ -696,17 +699,30 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
     const t0 = Date.now();
     const onDelta = async (d) => { if (!d) return; first ??= Date.now(); text += d; if (!sse.aborted) await sse.writeSSE({ event: 'delta', data: JSON.stringify({ text: d }) }); };
     await sse.writeSSE({ event: 'meta', data: JSON.stringify({ chatId, model: m.id, modelName: m.name, kind: m.kind, title: chat.title }) });
+    // Prompt 41: Glimt henter fakta (vær, tid, sol) før modellen svarer. Feil her stopper aldri svaret.
+    let facts = [], factUsed = [], sysAll = sys;
+    if (!b.noTools && hasFactWords(history.at(-1)?.content)) {
+      try {
+        const g = await gatherFacts(history.at(-1).content, { user: u, localOnly: m.kind !== 'sky', signal: ctrl.signal });
+        facts = g.facts; factUsed = g.used;
+        if (facts.length) {
+          sysAll = `${sys}\n\n${factsPrompt(facts)}`;
+          if (!sse.aborted) await sse.writeSSE({ event: 'facts', data: JSON.stringify({ facts, used: factUsed }) });
+        }
+      } catch (e) { console.warn('[chat] fakta (prompt 41):', e.message); }
+    }
+    const metaFacts = facts.length ? { facts } : {};
     try {
-      const r = await runEngine(m, { sys, msgs: history, s, webSearch: !!b.webSearch, files: owuiFiles, onDelta, signal: ctrl.signal, data, gotText: () => !!text });
+      const r = await runEngine(m, { sys: sysAll, msgs: history, s, webSearch: !!b.webSearch, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
       const ms = Date.now() - t0;
       const genS = Math.max(0.001, (Date.now() - (first ?? t0)) / 1000);
       const tokensPerSec = Math.round((r.tokens?.perSec ?? (r.tokens?.count ?? Math.ceil(text.length / 4)) / genS) * 10) / 10;
-      const allUsed = [...used, ...(b.webSearch && (r.usedWeb || r.engine === 'openwebui') ? ['Nettsøk'] : [])];
-      saveMsgs(text, { model: m.id, tokensPerSec, ms, used: allUsed });
-      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine }) });
+      const allUsed = [...factUsed, ...used, ...(b.webSearch && (r.usedWeb || r.engine === 'openwebui') ? ['Nettsøk'] : [])];
+      saveMsgs(text, { model: m.id, tokensPerSec, ms, used: allUsed, ...metaFacts });
+      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, ...metaFacts }) });
     } catch (e) {
-      if (ctrl.signal.aborted || e.cancelled) { if (text) saveMsgs(text, { model: m.id, stopped: true, used }); return; }
-      if (text) saveMsgs(text, { model: m.id, error: e.message, used });
+      if (ctrl.signal.aborted || e.cancelled) { if (text) saveMsgs(text, { model: m.id, stopped: true, used: [...factUsed, ...used], ...metaFacts }); return; }
+      if (text) saveMsgs(text, { model: m.id, error: e.message, used: [...factUsed, ...used], ...metaFacts });
       await sse.writeSSE({ event: 'error', data: JSON.stringify({ error: e.message, chatId }) });
     }
   });

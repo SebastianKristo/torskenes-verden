@@ -180,8 +180,10 @@ struct Chat27Answer: View {
     var body: some View {
         let last: Bool = s.msgs.lastIndex(where: { $0.role == "assistant" }) == index
         VStack(alignment: .leading, spacing: 10) {
-            Chat27AnswerHead(title: headName, tools: m.used, prefix: "Brukte", c: c)
+            Chat27AnswerHead(title: headName, tools: ChatFact41.usedWithout41(m.used, m.facts41), prefix: "Brukte", c: c)
             Chat27Blocks(text: m.content, c: c)
+            // Prompt 41: faktakort (vær, tid, sol) under svaret.
+            if !m.facts41.isEmpty { Chat41FactsView(facts: m.facts41, c: c) }
             // Prompt 31: kortet fra Glimt (vær, kalender, avganger …), lagret i meldingen (Chat31Cards.swift).
             if !m.card31.isEmpty { Chat31Card(json: m.card31, c: c) }
             Flow(spacing: 2) {

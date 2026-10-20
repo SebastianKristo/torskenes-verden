@@ -5707,3 +5707,10 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .h40-wt{font:500 30px/1.15 Newsreader,Georgia,serif}.m .h40-ws{font-size:14.5px;color:var(--h40-mut);line-height:1.45}
 .m .h40-v.alarm .h40-wt{font-family:Manrope,system-ui,sans-serif;font-weight:800}
 @media (prefers-reduced-motion:reduce){.m .h40-glow{box-shadow:none}}
+/* Prompt 41: faktakort under Glimt-svaret (meta.facts) */
+.m .ch41-facts{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.m .ch41-fact{display:flex;flex-direction:column;gap:2px;padding:9px 12px;border:1px solid var(--cl);border-radius:12px;background:var(--cc);min-width:0}
+.m .ch41-fh{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ca);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m .ch41-fv{font-size:14px;font-weight:600;line-height:1.35;color:var(--ci)}
+.m .ch41-fs{font:500 10px 'IBM Plex Mono',monospace;letter-spacing:.04em;color:var(--cm)}
+.m .ch41-fact.err{border-style:dashed}.m .ch41-fact.err .ch41-fv{font-weight:500;color:var(--cm)}

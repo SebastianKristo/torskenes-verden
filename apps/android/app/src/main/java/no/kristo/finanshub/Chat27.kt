@@ -60,6 +60,8 @@ data class ChatMsg27(
     val model: String? = null, val used: List<String> = emptyList(), val stats: String? = null,
     /** Prompt 31: kortet fra Glimt (JSON {k, …}) og verktøyet («Vær», «Kalender» …). */
     val card: String? = null, val tool: String? = null,
+    /** Prompt 41: fakta Glimt hentet før svaret (meta.facts), vist som små kort. */
+    val facts: List<ChatFact41> = emptyList(),
 )
 
 data class ChatSet27(
@@ -225,7 +227,8 @@ fun parseChatMsg27(o: JSONObject): ChatMsg27? {
     val imgs = o.optJSONArray("images")?.length() ?: 0
     val card = (o.optJSONObject("card") ?: meta.optJSONObject("card"))?.toString()
     return ChatMsg27(if (role == "assistant") "assistant" else "user", content, att + (if (imgs > 0) List(imgs) { "Bilde ${it + 1}" } else emptyList()),
-        emptyList(), meta.optStr("model") ?: o.optStr("model"), used, stats, card, meta.optStr("tool") ?: o.optStr("tool"))
+        emptyList(), meta.optStr("model") ?: o.optStr("model"), used, stats, card, meta.optStr("tool") ?: o.optStr("tool"),
+        facts = parseFacts41(meta.optJSONArray("facts")))
 }
 
 fun chatStats27(tps: Double, ms: Double, stopped: Boolean): String {
@@ -769,6 +772,7 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
     val t0 = System.currentTimeMillis()
     s.job = viewModelScope.launch {
         var used: List<String> = s.streamTools
+        var facts41: List<ChatFact41> = emptyList()
         var tps = Double.NaN
         var ms = Double.NaN
         var err: String? = null
@@ -783,7 +787,9 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
                     "done" -> {
                         tps = d.optDouble("tokensPerSec", Double.NaN); ms = d.optDouble("ms", Double.NaN)
                         d.optJSONArray("used").strs27().takeIf { it.isNotEmpty() }?.let { used = it }
+                        facts41 = parseFacts41(d.optJSONArray("facts"))
                     }
+                    "facts" -> facts41 = parseFacts41(d.optJSONArray("facts"))
                     "error" -> err = d.optStr("error") ?: "Noe gikk galt"
                     else -> d.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("delta")?.optString("content", "")?.let { s.stream += it }
                 }
@@ -818,7 +824,7 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
             stopped -> "$full …"
             else -> full
         }
-        s.msgs = s.msgs + ChatMsg27("assistant", content, model = m.id, used = used, stats = chatStats27(tps, ms, stopped))
+        s.msgs = s.msgs + ChatMsg27("assistant", content, model = m.id, used = used, stats = chatStats27(tps, ms, stopped), facts = facts41)
         s.busy = false; s.stream = ""; s.streamTools = emptyList()
         if (err != null) Haptics.error()
         loadChats27()

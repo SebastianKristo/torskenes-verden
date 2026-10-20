@@ -12,6 +12,7 @@ import { lang, locale } from './i18n.js';
 import { glimt, glimtDots } from './glimt.js';
 import { assist, looksLikeTool } from './assist.js';
 import { cardHtml, bindCards } from './chat-cards.js';
+import { factsHtml41, usedWithoutFacts41 } from './chat-facts41.js'; // prompt 41: faktakort
 
 /* Prompt 31: Glimt i Chat (claude-code-chat-kort-vaer-kalender.md, claude-code-glimt-ai.md).
    - Avsender er Glimt-merket (22 px) + modellnavnet; mens svaret kommer: merket animert og tre prikker (ikke «Tenker …»).
@@ -228,13 +229,13 @@ function msgsHtml() {
       return `<div class="ch-u">${att.length ? `<div class="ch-atts">${att.map((n) => `<span data-no-i18n>${esc(n)}</span>`).join('')}</div>` : ''}<div class="ch-ub" data-no-i18n>${esc(m.content)}</div>
         <div class="ch-acts">${busyHere ? '' : `<button type="button" data-ch-edit="${i}">Rediger</button>`}<button type="button" data-ch-copy="${i}">${C.copied === key ? 'Kopiert' : 'Kopier'}</button></div></div>`;
     }
-    const meta = m.meta ?? {}, used = meta.used ?? [], tool = meta.tool ? [].concat(meta.tool) : [];
+    const meta = m.meta ?? {}, used = usedWithoutFacts41(meta.used, meta.facts), tool = meta.tool ? [].concat(meta.tool) : [];
     const sec = meta.ms ? `${(meta.ms / 1000).toFixed(1).replace('.', ',')} s` : '';
     const st = meta.glimt || tool.length ? [`Verktøy${sec ? ` · ${sec}` : ''}`, meta.source && meta.source !== 'Glimt' ? meta.source : ''].filter(Boolean).join(' · ')
       : [meta.stopped ? 'Stoppet' : '', meta.tokensPerSec ? `${String(meta.tokensPerSec).replace('.', ',')} tok/s` : '', sec].filter(Boolean).join(' · ');
     const who = meta.glimt ? 'GLIMT' : `GLIMT · ${mName(meta.model || C.chat?.model || '').toUpperCase()}`;
     return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-      <div class="ch-md" data-no-i18n>${md(m.content)}</div>${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}
+      <div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}
       <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
   }).join('') + (busyHere ? streamHtml() : '');
 }
@@ -243,7 +244,7 @@ function streamHtml() {
   // Prompt 31: Glimt-merket ved siden av modellnavnet: Tenker (før første ord), Svarer (mens teksten strømmer inn).
   const who = b.glimt ? 'GLIMT · TENKER' : `GLIMT · ${mName(b.model).toUpperCase()}`;
   return `<div class="ch-a" data-ch-stream><div class="ch-ah"><span class="ch-lab">${glimt(22, b.text ? 'svarer' : 'tenker')}${esc(who)}</span>${(b.reading ?? []).map((u) => `<span class="ch-used">Leser <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-    ${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}</div>`;
+    ${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}${factsHtml41(b.facts)}</div>`;
 }
 function emptyHtml() {
   const id = curModelId(), m = modelOf(id), P = curSet();
@@ -498,6 +499,7 @@ async function readSse(res, ctl) {
         if (!line.startsWith('data:')) { if (!line) ev = 'message'; continue; }
         let d; try { d = JSON.parse(line.slice(5).trim()); } catch { continue; }
         if (ev === 'meta') { chatId = d.chatId ?? chatId; if (!C.cur) { if (C.pendingLocal && chatId) { toolsRekey(C.pendingLocal, chatId); C.pendingLocal = null; } C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
+        else if (ev === 'facts') { C.busy.facts = d.facts ?? []; paintStream(); } // prompt 41: faktakort mens svaret kommer
         else if (ev === 'delta') { C.busy.text += d.text ?? ''; if (!raf) raf = requestAnimationFrame(flush); }
         else if (ev === 'done') done = d;
         else if (ev === 'error') { C.busy.error = d.error || 'Ukjent feil'; paintStream(); }

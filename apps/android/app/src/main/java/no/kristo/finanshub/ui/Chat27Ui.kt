@@ -398,9 +398,11 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                             Ch27Mono("GLIMT", v.acc)
                         } else Ch27Mono("✦ " + (msg.model?.let { s.modelLabel27(it) } ?: "").uppercase(), v.acc, modifier = Modifier.align(Alignment.CenterVertically))
                         msg.tool?.let { Ch27Chips(v, "⚙", listOf(it)) }
-                        Ch27Chips(v, "Brukte", msg.used)
+                        Ch27Chips(v, "Brukte", usedWithoutFacts41(msg.used, msg.facts))
                     }
                     Ch27Body(v, msg.content)
+                    // Prompt 41: faktakort (vær, tid, sol) under svaret.
+                    if (msg.facts.isNotEmpty()) ChatFacts41(v, msg.facts)
                     msg.card?.let { ChatCard31(vm, it, v) }
                     if (showModel) {
                         val mm = msg.model?.let { k -> s.models.firstOrNull { it.id == k } }
