@@ -15,6 +15,8 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Prompt 40: Hjemlys som Live Update (Android 16, «promoted ongoing»). -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
     <!-- Familie: helse fra Health Connect (bare lesing, bare det brukeren velger å dele). -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
@@ -622,6 +624,67 @@
         <receiver android:name=".widget.S37BibleReceiver" android:exported="true" android:enabled="true" android:label="Bibelvers · Samsung">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s37_bible" />
+        </receiver>
+        <!-- Prompt 40: flere låseskjerm-widgets (små 1 × 1 og brede 4 × 1, home_screen|keyguard), RemoteViews i widget/Lock40Widgets.kt.
+             Bibelvers-varianten er av til brukeren har modulen (Lock40.syncBible). -->
+        <receiver android:name=".widget.LockSmallVaer40" android:exported="true" android:enabled="true" android:label="Vær · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/locksmallvaer40" />
+        </receiver>
+        <receiver android:name=".widget.LockSmallHuske40" android:exported="true" android:enabled="true" android:label="Gjøremål · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/locksmallhuske40" />
+        </receiver>
+        <receiver android:name=".widget.LockSmallPakke40" android:exported="true" android:enabled="true" android:label="Pakker · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/locksmallpakke40" />
+        </receiver>
+        <receiver android:name=".widget.LockSmallBud40" android:exported="true" android:enabled="true" android:label="Budsjett · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/locksmallbud40" />
+        </receiver>
+        <receiver android:name=".widget.LockSmallRuter40" android:exported="true" android:enabled="true" android:label="Avgang · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/locksmallruter40" />
+        </receiver>
+        <receiver android:name=".widget.LockSmallTrial40" android:exported="true" android:enabled="true" android:label="Prøveperiode · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/locksmalltrial40" />
+        </receiver>
+        <receiver android:name=".widget.LockWideKal40" android:exported="true" android:enabled="true" android:label="Neste time · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/lockwidekal40" />
+        </receiver>
+        <receiver android:name=".widget.LockWideRuter40" android:exported="true" android:enabled="true" android:label="Avganger · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/lockwideruter40" />
+        </receiver>
+        <receiver android:name=".widget.LockWideHuske40" android:exported="true" android:enabled="true" android:label="Gjøremål · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/lockwidehuske40" />
+        </receiver>
+        <receiver android:name=".widget.LockWidePakke40" android:exported="true" android:enabled="true" android:label="Pakker · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/lockwidepakke40" />
+        </receiver>
+        <receiver android:name=".widget.LockWideBrief40" android:exported="true" android:enabled="true" android:label="Glimt brief · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/lockwidebrief40" />
+        </receiver>
+        <receiver android:name=".widget.LockWideBibel40" android:exported="true" android:enabled="false" android:label="Dagens bibelvers · låseskjerm">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/lockwidebibel40" />
+        </receiver>
+        <!-- Prompt 40: Hjemlys – Live Update (Android 16 promoted ongoing + ProgressStyle, ellers pågående varsel) som forgrunnstjeneste
+             type location mens Hjemlys er på, og knappene «+ 10 min» / «Jeg er hjemme» / «Alt OK» i varselet. -->
+        <service
+            android:name=".Hjemlys40Service"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+        <receiver android:name=".Hjemlys40Receiver" android:exported="false" />
+        <receiver android:name=".widget.HjemlysStart40Receiver" android:exported="true" android:label="Hjemlys">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_hjemlys40" />
         </receiver>
         <!-- Prompt 37: Viktige gjøremål (alarm), tidlige påminnelser og «Dagens vers er klart». -->
         <receiver android:name=".Task37Receiver" android:exported="false" />

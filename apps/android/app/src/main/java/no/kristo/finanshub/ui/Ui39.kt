@@ -228,7 +228,21 @@ internal fun SwipeDismiss39(
                             val rdx = ch.position.x - down.position.x
                             val rdy = ch.position.y - down.position.y
                             if (lock == null && (abs(rdx) > slop || abs(rdy) > slop)) lock = if (enabled && abs(rdx) > abs(rdy) * 1.15f && rdx > 0) 'x' else 'y'
-                            if (lock == 'y') { if (x.floatValue != 0f) springBack(0f); break }
+                            if (lock == 'y') {
+                                // Prompt 40 (claude-code-brief-sveip-og-wiggle-scroll.md): en bevegelse over 6 dp er aldri et trykk, uansett
+                                // hvor lenge fingeren holdes. Resten av berøringen følges; tok ikke listen (scroll) over, spises slippet
+                                // så kortets eget klikk (åpne briefen) ikke går gjennom. Scroll og fling påvirkes ikke.
+                                if (x.floatValue != 0f) springBack(0f)
+                                var took = false
+                                while (true) {
+                                    val fin = awaitPointerEvent(PointerEventPass.Final)
+                                    if (fin.changes.any { it.id == down.id && it.isConsumed }) took = true
+                                    val e = awaitPointerEvent(PointerEventPass.Initial)
+                                    val c2 = e.changes.firstOrNull { it.id == down.id } ?: break
+                                    if (!c2.pressed) { if (!took) c2.consume(); break }
+                                }
+                                break
+                            }
                             if (!ch.pressed) {
                                 if (lock == 'x') {
                                     ch.consume()
@@ -236,7 +250,7 @@ internal fun SwipeDismiss39(
                                     val v = vt.calculateVelocity().x / 1000f
                                     val cur = x.floatValue
                                     if (cur >= w[0] * .38f || (v > .55f && cur > 36f * dens)) dismiss(v) else springBack(v)
-                                } else if (lock == null && System.currentTimeMillis() - lastDrag[0] > 350) tapCb?.invoke()
+                                } else if (lock == null && (ch.position - down.position).getDistance() <= slop && System.currentTimeMillis() - lastDrag[0] > 350) tapCb?.invoke()
                                 break
                             }
                             if (lock == 'x') {

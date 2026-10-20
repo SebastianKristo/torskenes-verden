@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Prompt 26: Kalender 2 × 2 (Material You, ≈ 170 × 170 dp, radius 28). Kan gjøres større til 4 × 2 og 4 × 4. -->
+<!-- Prompt 40: previewLayout (forhåndsvisning med eksempeltekst i velgeren; Android 15+ får genererte forhåndsvisninger med ekte data, Preview40) og låseskjerm (keyguard). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_kal26_s_desc"
     android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/prev40_kal26_s"
     android:minWidth="110dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
@@ -11,4 +13,4 @@
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen|keyguard" />

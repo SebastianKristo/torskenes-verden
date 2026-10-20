@@ -118,9 +118,8 @@ private fun SheetTitle(t: String, onClose: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(44.dp))
         Text(t, fontSize = 18.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-        Box(Modifier.width(44.dp), contentAlignment = Alignment.CenterEnd) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(sheetLine).clickable(onClick = onClose), contentAlignment = Alignment.Center) { Text("×", fontSize = 18.sp) }
-        }
+        // Prompt 40: samme ✕ som Vær-hovedsiden (VaerCloseButton, ui/Ui40.kt), ikke egen liten «×».
+        Box(Modifier.width(44.dp), contentAlignment = Alignment.CenterEnd) { VaerCloseButton(onClick = onClose) }
     }
 }
 
@@ -573,7 +572,7 @@ internal fun PlacesSheet(vm: AppViewModel) {
     WxSheetShell({ close() }, z = 21f) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Steder", fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            WhitePill("Ferdig") { close() }
+            VaerCloseButton { close() } // prompt 40: ✕ i stedet for «Ferdig»
         }
         Row(Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF262A31)).padding(horizontal = 14.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -710,12 +709,11 @@ internal fun WxMap(w: WeatherFull?, close: () -> Unit) {
             modifier = Modifier.fillMaxSize(),
         )
         Row(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.height(40.dp).clip(CircleShape).background(Color(0xB30A1423)).clickable(onClick = close).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                Text("Ferdig", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            }
+            // Prompt 40: ✕ øverst til høyre (mørk glass over kartet) i stedet for «Ferdig».
+            Spacer(Modifier.width(42.dp))
             Text(w?.place ?: "", fontSize = 17.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = Modifier.weight(1f),
                 style = TextStyle(color = Color.White, shadow = androidx.compose.ui.graphics.Shadow(Color(0x99000000), Offset(0f, 2f), 16f)))
-            Spacer(Modifier.width(72.dp))
+            VaerCloseButton(dark = true, onClick = close)
         }
         Row(
             Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 22.dp).clip(CircleShape).background(Color(0xBF0A1423))

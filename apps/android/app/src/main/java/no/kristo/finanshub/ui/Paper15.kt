@@ -191,14 +191,18 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
                 if (dragging) follow()
             }
             .holdDrag37(sec.hold || edit,
-                onLong = { Haptics.tap(); vm.editPage = page; dragging = true; ty = 0f; st.startY = Float.NaN; st.swapAt = Float.NaN; st.swapT = 0L },
+                // Prompt 40: langt trykk utenfor redigering åpner bare redigeringsmodus (ingen kort dras før neste trykk).
+                onLong = { Haptics.tap(); val was = vm.editPage == page; vm.editPage = page; if (was) { dragging = true; ty = 0f; st.startY = Float.NaN; st.swapAt = Float.NaN; st.swapT = 0L } },
                 onDrag = { pt ->
                     if (st.startY.isNaN()) { st.startY = pt.y; st.startOuter = st.top() - st.applied }
                     st.lastY = pt.y; st.lastX = pt.x; follow()
                 },
                 onEnd = { dragging = false; ty = 0f; st.startY = Float.NaN; vm.wiggleEnd37(page) },
                 toRoot = { o -> st.coords?.takeIf { it.isAttached }?.localToRoot(o) ?: o },
-                holdMs = { if (vm.editPage == page) 170L else 500L }, // prompt 39: kort hold i redigering, ellers scroller sveipet siden
+                // Prompt 40: i redigering starter draget først når fingeren har holdt stille i 320 ms (< 6 dp); beveger den seg før, er det scroll.
+                holdMs = { if (vm.editPage == page) 320L else 500L },
+                startDrag = { vm.editPage == page },
+                slopDp = { if (vm.editPage == page) 6f else 8f },
             ),
     ) {
         content()
@@ -688,7 +692,7 @@ internal fun PaperFinSearch(vm: AppViewModel, navBottom: Dp) {
             // Prompt 27: ✕ til venstre (SearchField27) og forslag mens du skriver (Mod27B.finSug27).
             SearchField27(
                 q, { vm.finSearchQ = it; vm.b27.sugHidden = false; vm.finSug27(it) },
-                if (vm.finSearchAi) "Spør, f.eks. «hva brukte jeg på kaffe?»" else "Søk i transaksjoner og kvitteringer",
+                if (vm.finSearchAi) "Spør Glimt, f.eks. «hva brukte jeg på kaffe?»" else "Søk i transaksjoner og kvitteringer",
                 Modifier.fillMaxWidth().height(50.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.card).padding(start = 16.dp, end = 6.dp),
                 p.ink, p.mut, fontSize = 14.5.sp, fontWeight = FontWeight.Normal, cursor = p.lab, gap = 10.dp,
                 idle = { Text("⌕", color = p.mut, fontSize = 16.sp) },
@@ -701,7 +705,7 @@ internal fun PaperFinSearch(vm: AppViewModel, navBottom: Dp) {
                     Modifier.height(38.dp).clip(CircleShape).background(if (ai) p.lab else Color.Transparent).border(1.dp, if (ai) p.lab else p.line, CircleShape)
                         .clickable { vm.finSearchAi = !ai; Haptics.select(); vm.finSugClear27(hide = false); if (ai) vm.finSug27(q); if (q.isNotBlank()) vm.runFinSearch(ai = !ai) }.padding(horizontal = 14.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text("✦ AI", color = if (ai) p.onLab else p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                ) { Text("✦ Glimt", color = if (ai) p.onLab else p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) } // prompt 40: AI heter Glimt
             }
         }
         item { FinSuggest27(vm) }
@@ -718,16 +722,25 @@ internal fun PaperFinSearch(vm: AppViewModel, navBottom: Dp) {
         // Prompt 25: AI-søk som jobb viser «✦ Ollama tenker … N s av M s», fremdrift og Avbryt.
         if (vm.finSearchBusy && vm.p25.job != null) item { AiJobCard25(vm) }
         else if (vm.finSearchBusy) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+        // Prompt 40 (claude-code-finans-sok-glimt-kort.md): standardspørsmål (abonnementer …) og ✦ Glimt gir ryddige svar med kort.
+        val ask40 = vm.p40.ask?.takeIf { it.q == q.trim() }
+        if (r != null && q.isNotBlank() && !vm.finSearchBusy && (vm.finSearchAi || isStdAsk40(q))) item(key = "ask40") {
+            LaunchedEffect(q, r) { vm.ask40(q) }
+            if (ask40 != null) FinAsk40(vm, ask40)
+            else if (vm.p40.askBusy) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlimtFig35("glimt", 30.dp, "talk"); Text("Glimt tenker …", color = p.mut, fontSize = 13.sp)
+            }
+        }
         if (r != null && q.isNotBlank() && !vm.finSearchBusy) {
             val plain = r.mode == "plain" || r.plainFirst
-            if (vm.finSearchAi && r.answer.isNotBlank()) item {
+            if (vm.finSearchAi && r.answer.isNotBlank() && ask40 == null) item {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.ink).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PLabel("✦ Svar", p.bg.copy(alpha = .7f))
-                    PSerif(r.answer, 18.sp, p.bg)
+                    PLabel("✦ Glimt", p.bg.copy(alpha = .7f))
+                    PSerif(clean40(r.answer), 18.sp, p.bg)
                     Text(if (plain) "Fant vanlige treff først." else "✦ ${r.engine ?: "AI"} leste transaksjoner, kvitteringer og varelinjer.", color = p.bg.copy(alpha = .65f), fontSize = 12.sp)
                 }
             }
-            if (r.hits.isEmpty()) item { Text("Ingen treff på «$q».", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(6.dp)) }
+            if (r.hits.isEmpty()) { if (ask40 == null) item { Text("Ingen treff på «$q».", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(6.dp)) } }
             else {
                 item {
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
@@ -874,6 +887,9 @@ internal fun PaperTxDetail(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
                 if (rc.fileUrl != null) Text("Trykk for originalen", color = ink.copy(alpha = .55f), fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             }
         }
+        // Prompt 40: når kvitteringen ble lagt til, og «✦ La Glimt lese kvitteringen på nytt» (claude-code-finans-les-pa-nytt-rediger.md).
+        item(key = "added40r") { TxAdded40(vm, t.id, receipt = true) }
+        item(key = "reread40") { Reread40Section(vm, t, rc.id ?: t.receiptId) }
         }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
@@ -881,7 +897,9 @@ internal fun PaperTxDetail(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
                 PButton("Bankutskrift", Modifier.weight(1f), kind = "line", height = 46.dp) { vm.txBankSheet = true }
             }
         }
-        item { PButton("Rediger transaksjon", Modifier.fillMaxWidth(), kind = "line", height = 44.dp) { vm.editTx(t) } }
+        // Prompt 40: «Rediger alt» (alle felt og varelinjene) og «Lagt til …» nederst.
+        item { PButton("Rediger alt", Modifier.fillMaxWidth(), kind = "line", height = 44.dp) { vm.p40.editAll = t.id } }
+        item(key = "added40") { TxAdded40(vm, t.id) }
     }
     if (vm.txCatSheet) TxCategorySheet(vm, d)
     if (vm.txBankSheet && d != null) TxBankSheet(vm, d)

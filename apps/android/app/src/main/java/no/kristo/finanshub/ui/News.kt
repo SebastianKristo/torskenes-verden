@@ -82,12 +82,8 @@ internal fun NewsReader(vm: AppViewModel) {
                 if (d == null && vm.newsError == null) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
                 if (d != null) {
                     val lead = if (d.aiSummary) d.digest else d.items.firstOrNull()?.title
-                    if (!lead.isNullOrBlank()) item {
-                        Column(Modifier.padding(bottom = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (d.aiSummary && !d.digest.isNullOrBlank()) PLabel("✦ AI-sammendrag", p.lab)
-                            PSerif(lead, 19.sp, p.ink, italic = true, weight = FontWeight.Normal)
-                        }
-                    }
+                    // Prompt 40 (claude-code-nyheter-glimt-side.md): kortet åpner Glimt-siden med langt sammendrag, kilder og bilder.
+                    if (d.items.isNotEmpty() || !lead.isNullOrBlank()) item { NewsGlimtEntry40(vm, lead) }
                     if (d.items.isEmpty()) item { Text("Ingen saker i denne kategorien.", color = p.mut, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp)) }
                     items(d.items.size) { i ->
                         val x = d.items[i]

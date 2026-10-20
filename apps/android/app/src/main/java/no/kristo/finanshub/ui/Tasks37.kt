@@ -79,7 +79,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
             s.detail != null -> s.detail = null
             s.listSheet != null -> s.listSheet = null
             s.glimtOpen -> s.glimtOpen = false
-            else -> vm.closeTasks()
+            else -> vm.closeTasksHome40()
         }
     }
     val t = vm.tasks
@@ -105,9 +105,10 @@ internal fun TasksScreen37(vm: AppViewModel) {
     }
     val sheet = s.detail != null || s.listSheet != null || s.glimtOpen
     Box(Modifier.fillMaxSize().background(p.bg)) {
-        LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 60.dp + 18.dp + 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 60.dp + 18.dp + 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item { ModuleHero("To-do for hele familien", "Gjøremål", "‹ Mer") { vm.closeTasks() } }
+            // Prompt 40: tilbake går alltid til Hjem (åpnet fra Hjem-widgeten eller Mer → Gjøremål).
+            item { ModuleHero("To-do for hele familien", "Gjøremål", "‹ Hjem") { vm.closeTasksHome40() } }
             item {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     val open = (t?.items ?: emptyList()).filter { !it.done && it.id !in archIds }
@@ -281,6 +282,9 @@ private fun Row37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, users: L
                     if (t.rep != null) "↻" else null, if (t.urgent) "⏰" else null,
                     t.subs.takeIf { it.isNotEmpty() }?.let { s -> "${s.count { it.done }}/${s.size}" },
                     who, l?.name?.takeIf { vm.taskFilter == "alle" },
+                    // Prompt 40: sted (ikke butikkvarselet) og «etter «Lever pakken»» til det forrige punktet er huket av.
+                    t.place?.takeIf { it.isNotBlank() && it != "store" && it != "home" },
+                    afterLabel40(vm, t),
                 ) + t.tags.map { "#$it" }
                 if (meta.isNotEmpty()) Text(meta.joinToString(" · "), color = if (!t.done && t.due != null && t.due < today) p.lab else p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
@@ -292,12 +296,23 @@ private fun Row37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, users: L
     }
 }
 
+/** Prompt 40: avstanden fra bunnen til dokken: tastaturet + 8 dp, eller max(18 dp, navigasjonslinja + 8 dp). */
+@Composable
+private fun dockBottom40(): androidx.compose.ui.unit.Dp {
+    val d = androidx.compose.ui.platform.LocalDensity.current
+    val ime = with(d) { WindowInsets.ime.getBottom(d).toDp() }
+    val nav = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    return if (ime > nav + 1.dp) ime + 8.dp else maxOf(18.dp, nav + 8.dp)
+}
+
 /** «Ny oppgave …» (60 dp, radius 22) og den runde ✦-knappen (Glimt · skriv eller spør), over tastaturet. */
 @Composable
 private fun Dock37(title: String, setTitle: (String) -> Unit, focus: FocusRequester, modifier: Modifier, onEnter: () -> Unit, onGlimt: () -> Unit) {
     val p = PaperPal.current
     Row(
-        modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(start = 16.dp, end = 16.dp, bottom = 18.dp),
+        // Prompt 40 (claude-code-gjoremal-tastatur-tilbake.md): baren og ✦ ligger 8 dp over tastaturet når det er åpent (følger
+        // WindowInsets.ime, som glir sammen med tastaturet), ellers max(18 dp, navigasjonslinja + 8 dp). Lista bak står stille.
+        modifier.fillMaxWidth().padding(bottom = dockBottom40()).padding(start = 16.dp, end = 16.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Box(
@@ -375,6 +390,10 @@ private fun GlimtSheet37(vm: AppViewModel, lists: List<TaskList>) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SUGG37.forEach { sg -> PChip(sg, false) { vm.glimt37(sg) } }
             }
+            // Prompt 40: «Forstår hva du mener …» med Glimt-animasjonen mens Glimt deler opp setningen.
+            if (s.glimtBusy) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                GlimtFig35("glimt", 30.dp, "talk"); Text("Forstår hva du mener …", color = p.mut, fontSize = 13.5.sp)
+            }
             s.glimt?.let { g ->
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(buildAnnotatedString {
@@ -382,10 +401,18 @@ private fun GlimtSheet37(vm: AppViewModel, lists: List<TaskList>) {
                     }, color = p.ink, fontSize = 15.sp, lineHeight = 21.sp)
                     g.items.forEach { it0 ->
                         val ln = lists.firstOrNull { it.id == it0.list }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Box(Modifier.size(8.dp).clip(CircleShape).background(ln?.let { Color(it.color) } ?: p.mut))
-                            Text(it0.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(listOfNotNull(it0.due?.let { d -> dueLabel37(d) }, it0.time, ln?.name).joinToString(" · "), color = p.mut, fontSize = 12.sp, maxLines = 1)
+                        // Prompt 40 (claude-code-huskeliste-glimt-forstar.md): to linjer per punkt – tittel, og under: steg
+                        // (1 · først / 2 · etter «…»), liste, dato/tid, sted og @person.
+                        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(Modifier.padding(top = 6.dp).size(8.dp).clip(CircleShape).background(ln?.let { Color(it.color) } ?: p.mut))
+                            Column(Modifier.weight(1f)) {
+                                Text(it0.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                val multi = g.items.size > 1 && g.items.any { x -> x.step > 0 || x.after != null }
+                                val stepTxt = if (!multi) null else if (it0.after == null) "${it0.step.coerceAtLeast(1)} · først" else "${it0.step.coerceAtLeast(2)} · etter «${it0.after}»"
+                                val m2 = listOfNotNull(stepTxt, ln?.name, it0.due?.let { d -> dueLabel37(d) + (it0.time?.let { tm -> " kl. $tm" } ?: "") } ?: it0.time,
+                                    it0.place, it0.who?.let { w -> "@$w" }) + it0.tags.map { "#$it" }
+                                if (m2.isNotEmpty()) Text(m2.joinToString(" · "), color = p.mut, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {

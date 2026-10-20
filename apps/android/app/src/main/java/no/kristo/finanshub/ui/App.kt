@@ -183,6 +183,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.p34.aiOpen) AiControl34(vm)
     StartGate36(vm) // prompt 36: «Starter opp» mens serveren starter på nytt etter oppdateringen
     Global38(vm) // prompt 38: QR-innlogging på ny enhet (deep link) og Konto → ØKT
+    Global40(vm) // prompt 40: 2FA i appen, Nyheter-Glimt, Hjemlys og «Rediger alt»
 }
 
 @Composable

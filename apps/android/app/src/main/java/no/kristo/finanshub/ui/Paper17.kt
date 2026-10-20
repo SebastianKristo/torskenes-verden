@@ -967,6 +967,14 @@ internal fun glyphVector(g: String): ImageVector? = when (g) {
     // Prompt 32: Familie-linja (Soner, Helse) i «Rediger fanelinjen».
     "◌" -> Icons.Filled.TripOrigin
     "♡" -> Icons.Filled.FavoriteBorder
+    // Prompt 40: sidene fra Mer i fanelinja.
+    "☑" -> Icons.Filled.Checklist
+    "✿" -> Icons.Filled.Cake
+    "✧" -> Icons.Filled.Summarize
+    "≣" -> Icons.Filled.RssFeed
+    "✝" -> Icons.Filled.MenuBook
+    "≈" -> Icons.Filled.Waves
+    "⚙" -> Icons.Filled.Settings
     else -> null
 }
 

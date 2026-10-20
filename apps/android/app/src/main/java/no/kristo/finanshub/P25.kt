@@ -105,6 +105,7 @@ fun tabIconName25(glyph: String): String = when (glyph) {
     "▤" -> "newspaper"; "↗" -> "chart.line.uptrend.xyaxis"; "⌂" -> "house"; "↻" -> "repeat"; "♪" -> "music.note"; "⌕" -> "magnifyingglass"
     "⋯" -> "ellipsis"; "★" -> "star"; "♥" -> "heart"; "✉" -> "envelope"; "⚑" -> "flag"; "◆" -> "diamond"; "✓" -> "checklist"
     "⚡" -> "bolt"; "☘" -> "leaf"; "◘" -> "bag"; "▦" -> "calendar"; "✦" -> "sparkles"
+    "☑" -> "checklist"; "✿" -> "gift"; "✧" -> "sun.horizon"; "≣" -> "dot.radiowaves.up.forward"; "✝" -> "book"; "≈" -> "wave.3.right"; "⚙" -> "gearshape" // prompt 40
     else -> glyph
 }
 

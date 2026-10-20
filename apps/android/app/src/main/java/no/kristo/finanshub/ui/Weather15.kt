@@ -296,6 +296,9 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
 @Composable
 private fun TopBar(vm: AppViewModel, w: WeatherFull?, compact: Boolean) {
     val cOp by androidx.compose.animation.core.animateFloatAsState(if (compact) 1f else 0f, label = "wxTop")
+    // Prompt 40 (claude-code-vaer-topp-tekst.md): glass-stripe bak statuslinja og topplinja, tonet himmelfarge som fader ut nederst.
+    // Tones inn samtidig med bynavnet (samme opasitet) og er usynlig helt øverst, så kortene aldri havner oppå klokka.
+    WxTopGlass40(cOp)
     Row(Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
         // Prompt 32 (claude-code-vaer-lukk-x.md): ingen «‹ Hjem»; tom plass til venstre så bynavnet står midt, ✕ til høyre.
         Spacer(Modifier.width(42.dp))
@@ -305,7 +308,7 @@ private fun TopBar(vm: AppViewModel, w: WeatherFull?, compact: Boolean) {
                 Text("${wxR(w.current.temp)} | ${wxDesc(w.current.code)}", fontSize = 13.sp, modifier = Modifier.alpha(.9f), maxLines = 1)
             }
         }
-        WxClose32b { Haptics.back(); vm.weatherOpen = false } // prompt 34: Vær ✕ med lett haptikk
+        VaerCloseButton { Haptics.back(); vm.weatherOpen = false } // prompt 34: Vær ✕ med lett haptikk (prompt 40: felles VaerCloseButton)
     }
 }
 

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: beskrivelsene til låseskjerm-widgetene i velgeren. -->
+<resources>
+    <string name="locksmallvaer40_desc">Temperatur der du er</string>
+    <string name="locksmallhuske40_desc">Antall gjøremål i dag</string>
+    <string name="locksmallpakke40_desc">Pakker som kan hentes</string>
+    <string name="locksmallbud40_desc">Hvor mye av budsjettet som er brukt</string>
+    <string name="locksmallruter40_desc">Minutter til neste avgang</string>
+    <string name="locksmalltrial40_desc">Dager til prøven koster penger</string>
+    <string name="lockwidekal40_desc">Neste hendelse fra Kalender</string>
+    <string name="lockwideruter40_desc">Sanntid fra stoppet ditt</string>
+    <string name="lockwidehuske40_desc">Det du må gjøre i dag</string>
+    <string name="lockwidepakke40_desc">Sendinger på vei</string>
+    <string name="lockwidebrief40_desc">Dagen din på én linje</string>
+    <string name="lockwidebibel40_desc">Morgen- og kveldsvers</string>
+    <string name="widget_hjemlys40_desc">Start Hjemlys med ett trykk, eller si fra at du er hjemme</string>
+</resources>

@@ -431,6 +431,8 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                 if (f == null && vm.familyError == null) Fam22Text("Henter familien …", 13.sp, p.mut, modifier = Modifier.padding(horizontal = 4.dp))
                 when (tab) {
                     "kart" -> {
+                        // Prompt 40: Hjemlys – status for husstanden og enkel start (ui/Ui40.kt).
+                        HjemlysCard40(vm)
                         val sel = members.firstOrNull { it.userId == selId }
                         if (cardOpen && sel != null) Fam22PersonCard(vm, sel, sel.userId == meId, colorOf(sel), photos[sel.userId], zones,
                             onPhoto = { pickFor(sel.userId) }, onClose = { cardOpen = false },

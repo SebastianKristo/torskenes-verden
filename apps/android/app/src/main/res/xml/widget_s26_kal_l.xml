@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Prompt 26: Samsung One UI-størrelse. Det synlige kortet er 296 × 330 dp (radius 20); låst til 4×4. -->
+<!-- Prompt 40: previewLayout (forhåndsvisning med eksempeltekst i velgeren; Android 15+ får genererte forhåndsvisninger med ekte data, Preview40). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_s26_kal_l_desc"
     android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/prev40_s26_kal_l"
     android:minWidth="296dp"
     android:minHeight="330dp"
     android:maxResizeWidth="296dp"

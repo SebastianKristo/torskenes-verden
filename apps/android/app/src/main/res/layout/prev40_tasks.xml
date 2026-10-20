@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: forhåndsvisning i widgetvelgeren for widget_tasks (ekte layout med eksempeltekst) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+    android:padding="16dp" android:background="@drawable/prev40_card_m">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_lock40_huske" android:tint="@color/prev40_acc_m" android:importantForAccessibility="no" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Gjøremål · i dag" android:textColor="@color/prev40_acc_m" android:textSize="12sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:layout_marginStart="6dp" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="bottom" android:layout_marginTop="6dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="3" android:textColor="@color/prev40_ink_m" android:textSize="40sp" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="igjen" android:textColor="@color/prev40_ink_m" android:textSize="14sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:layout_marginStart="6dp" android:layout_marginBottom="6dp" />
+    </LinearLayout>
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1 er forfalt" android:textColor="@color/prev40_mut_m" android:textSize="12.5sp" android:maxLines="2" android:ellipsize="end" android:layout_marginTop="2dp" />
+    
+</LinearLayout>

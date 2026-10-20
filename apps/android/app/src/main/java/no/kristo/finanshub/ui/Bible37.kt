@@ -48,6 +48,12 @@ import kotlinx.coroutines.launch
 import no.kristo.finanshub.*
 import java.time.LocalDate
 import kotlin.math.abs
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.zIndex
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.ui.graphics.asImageBitmap
 
 /*
  * Prompt 37 (ANDROID37): dagens bibelvers (claude-code-bibelvers.md, Bibelvers.dc.html) – bare for brukere med modulen (standard sebastian).
@@ -88,7 +94,8 @@ internal fun BriefBible37(vm: AppViewModel, period: String) {
     LaunchedEffect(copied) { if (copied) { delay(1600); copied = false } }
     Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(l.bg).drawBehind {
         drawCircle(l.glow, radius = 70.dp.toPx(), center = Offset(size.width - 40.dp.toPx(), 40.dp.toPx()))
-    }.clickable(role = Role.Button, onClickLabel = "Les verset") { vm.p37.bibleSheet = true }.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 16.dp)) {
+    // Prompt 40 (claude-code-brief-bibel-trykk.md): trykk på kortet lukker briefen og åpner Bibel-siden (Kopier og ↻ gjør bare sitt).
+    }.clickable(role = Role.Button, onClickLabel = "Åpne Bibel") { Haptics.tap(); vm.p34.briefOpen = false; vm.p37.biblePage = true }.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -212,19 +219,14 @@ internal fun BiblePage37(vm: AppViewModel) {
     var copied by remember { mutableStateOf(false) }
     LaunchedEffect(copied) { if (copied) { delay(1600); copied = false } }
     Box(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 30.dp),
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
+            // Prompt 40 (claude-code-bibel-kort-opp-i-hero.md): toppbilde som de andre sidene; rekke-kortet går 36 dp opp i bildet.
+            BibleHero40(vm) { s.biblePage = false }
+        Column(Modifier.fillMaxWidth().zIndex(2f).offset(y = (-BIBLE_OVERLAP40)).padding(start = 16.dp, end = 16.dp, bottom = 30.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.height(34.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button) { s.biblePage = false }.padding(start = 10.dp, end = 14.dp),
-                    contentAlignment = Alignment.Center) { Text("‹ Tilbake", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
-                Spacer(Modifier.weight(1f))
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                PSerif("Rekke, leseplan og lagrede vers", 15.sp, p.mut, italic = true, weight = FontWeight.Normal)
-                PSerif("Bibel", 40.sp)
-            }
-            // Rekke-kortet (indigo, gyllen glød).
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(NIGHT_PAGE37).drawBehind {
+            // Rekke-kortet (indigo, gyllen glød). Alle fire hjørner runde (24), skygge 0 14 30 −12 så det løfter seg fra bildet.
+            Box(Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black.copy(alpha = .35f), spotColor = Color.Black.copy(alpha = .35f))
+                .clip(RoundedCornerShape(24.dp)).background(NIGHT_PAGE37).drawBehind {
                 drawCircle(Brush.radialGradient(listOf(Color(0x59FFC878), Color.Transparent), center = Offset(size.width - 20.dp.toPx(), 20.dp.toPx()), radius = 100.dp.toPx()),
                     radius = 100.dp.toPx(), center = Offset(size.width - 20.dp.toPx(), 20.dp.toPx()))
             }.padding(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 16.dp)) {
@@ -350,6 +352,40 @@ internal fun BiblePage37(vm: AppViewModel) {
                 PToggle("Daglig påminnelse", if (s.remind) "Kl. 07:00 · «Dagens vers er klart»" else "Av", s.remind) { on -> vm.putBibleSet37 { it.copy(notify = on) } }
             }
             Text("Tekst: Bibelen 1930 (fri bruk). «Les ›» åpner kapitlet på bibel.no.", color = p.mut, fontSize = 11.5.sp, modifier = Modifier.padding(horizontal = 6.dp))
+        }
+        }
+    }
+}
+
+/** Prompt 40: hvor langt rekke-kortet går opp i toppbildet (litt mer enn søkefeltet på de andre sidene, 23 dp). */
+private val BIBLE_OVERLAP40 = 36.dp
+
+/**
+ * Toppbildet på Bibel-siden: samme foto/gradient som de andre sidene, «‹ Tilbake», undertittel og «Bibel» med minst 12 dp luft
+ * over kortet, og fotokreditten høyrejustert på én linje over kortet (bottom = overlapp + 10 dp), aldri bak det.
+ */
+@Composable
+private fun BibleHero40(vm: AppViewModel, back: () -> Unit) {
+    val top = androidx.compose.foundation.layout.WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val bmp = if (vm.photoKind == "cur" || vm.photoKind == "none") null else vm.photo
+    Box(Modifier.fillMaxWidth().height(186.dp + top + BIBLE_OVERLAP40).background(Brush.verticalGradient(*HERO_FALLBACK))) {
+        if (bmp != null) {
+            androidx.compose.foundation.Image(bmp.asImageBitmap(), null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.matchParentSize())
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = .28f), .4f to Color.Transparent, 1f to Color.Black.copy(alpha = .5f))))
+        }
+        Column(Modifier.fillMaxSize().padding(top = top + 8.dp, start = 22.dp, end = 22.dp, bottom = BIBLE_OVERLAP40 + 12.dp + 16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(role = Role.Button, onClickLabel = "Tilbake") { back() }.padding(start = 10.dp, end = 14.dp),
+                    contentAlignment = Alignment.Center) { Text("‹ Tilbake", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }
+                Spacer(Modifier.weight(1f))
+            }
+            Spacer(Modifier.weight(1f))
+            PSerif("Rekke, leseplan og lagrede vers", 15.sp, Color.White.copy(alpha = .9f), italic = true, weight = FontWeight.Normal, maxLines = 1)
+            PSerif("Bibel", 38.sp, Color.White, maxLines = 1)
+        }
+        if (bmp != null) vm.photoCredit?.let { c ->
+            Text(c, color = Color.White.copy(alpha = .75f), fontSize = 10.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                modifier = Modifier.align(Alignment.BottomEnd).fillMaxWidth().padding(start = 22.dp, end = 18.dp, bottom = BIBLE_OVERLAP40 + 10.dp))
         }
     }
 }

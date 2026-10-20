@@ -81,7 +81,7 @@ object Fig35 {
 
 /** Figuren i appen. size = bredden (høyden er Fig35.h(id) × size). still = stillbilde (f.eks. i lister). */
 @Composable
-internal fun GlimtFig35(id: String, size: Dp, mood: String = "idle", modifier: Modifier = Modifier, still: Boolean = false) {
+internal fun GlimtFig35(id: String, size: Dp, mood: String = "idle", modifier: Modifier = Modifier, still: Boolean = false, noJul: Boolean = false) {
     val reduce = reduceMotion31() || still
     val clock = remember { mutableFloatStateOf(0f) }
     if (!reduce) LaunchedEffect(Unit) {
@@ -92,7 +92,7 @@ internal fun GlimtFig35(id: String, size: Dp, mood: String = "idle", modifier: M
     val fid = Fig35.norm(id)
     val md = Fig35.mood(mood)
     Canvas(modifier.size(size, size * Fig35.h(fid)).semantics { contentDescription = Fig35.name(fid) }) {
-        drawFig35(fid, this.size.width, md, if (reduce) 0f else clock.floatValue, !reduce, tm)
+        drawFig35(fid, this.size.width, md, if (reduce) 0f else clock.floatValue, !reduce, tm, noJul)
     }
 }
 
@@ -107,13 +107,15 @@ private val bmpCache35 = HashMap<String, android.graphics.Bitmap>()
 fun fig35Bitmap(id: String, px: Int, mood: String = "idle", t: Float? = null): android.graphics.Bitmap {
     val fid = Fig35.norm(id)
     val md = Fig35.mood(mood)
-    val key = "$fid|$px|$md|${t ?: -1f}"
+    // Prompt 40: julemodus gir lue/hatt over hodet (mer luft øverst) og egen nøkkel i bufferen.
+    val jul = no.kristo.finanshub.Jul40.phase
+    val key = "$fid|$px|$md|${t ?: -1f}|${jul ?: ""}"
     synchronized(bmpCache35) { bmpCache35[key]?.let { return it } }
     val S = px.toFloat()
-    val padX = S * .16f
-    val padTop = S * .26f
+    val padX = S * (if (jul != null) .24f else .16f)
+    val padTop = S * (if (jul != null) .5f else .26f)
     val w = (S + padX * 2).toInt()
-    val h = (S * Fig35.h(fid) + padTop + S * .08f).toInt()
+    val h = (S * Fig35.h(fid) + padTop + S * (if (jul != null) .24f else .08f)).toInt()
     val img = ImageBitmap(w, h)
     val canvas = androidx.compose.ui.graphics.Canvas(img)
     CanvasDrawScope().draw(Density(px / 96f), LayoutDirection.Ltr, canvas, Size(w.toFloat(), h.toFloat())) {
@@ -347,7 +349,7 @@ private fun DrawScope.face35(ox: Float, oy: Float, W: Float, H: Float, S: Float,
 /* ---------------- Figurene ---------------- */
 
 /** Tegner figuren med øvre venstre hjørne i (0, 0); S = bredden. */
-internal fun DrawScope.drawFig35(id: String, S: Float, mood: String, t: Float, anim: Boolean, tm: TextMeasurer?) {
+internal fun DrawScope.drawFig35(id: String, S: Float, mood: String, t: Float, anim: Boolean, tm: TextMeasurer?, noJul: Boolean = false) {
     val a = Anim35(t, anim)
     val hf = Fig35.h(id)
     val k = (S / (76f * density)).coerceIn(.35f, 1.4f)
@@ -532,6 +534,9 @@ internal fun DrawScope.drawFig35(id: String, S: Float, mood: String, t: Float, a
                 zz35(S, mood, Color(0xFF7A5AD6), a)
             }
         }
+        // Prompt 40 (claude-code-glimt-jul.md): figurbiblioteket legger selv på antrekket når julemodus er aktiv (alle steder
+        // som tegner Glimt: brief, chat, varsler, søk, widgets). Unntak: noJul (figurvelgeren).
+        if (!noJul) no.kristo.finanshub.Jul40.phase?.let { drawJul40(S, S * hf, it, t, anim) }
     }
 }
 

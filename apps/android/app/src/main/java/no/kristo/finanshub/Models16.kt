@@ -26,6 +26,15 @@ val MAIN_TABS: List<TabItem> = listOf(
     TabItem("abonnementer", "Abonnementer", "↻"),
     TabItem("media", "Media", "♪"),
     TabItem("chat", "Chat", "✦"),
+    // Prompt 40 (claude-code-fanelinje-alle-sider.md): alt fra Mer kan legges i fanelinja (samme nøkler som HNAV_ALL i fasiten).
+    TabItem("huske", "Gjøremål", "☑"),
+    TabItem("kalender", "Kalender", "▦"),
+    TabItem("bursdag", "Bursdager", "✿"),
+    TabItem("brief", "Now Brief", "✧"),
+    TabItem("rss", "Nyhetsleser", "≣"),
+    TabItem("bibel", "Bibel", "✝"),
+    TabItem("nordlys", "Nordlys", "≈"),
+    TabItem("innst", "Innstillinger", "⚙"),
     TabItem("sok", "Søk", "⌕"),
     TabItem("mer", "Mer", "⋯"),
 )

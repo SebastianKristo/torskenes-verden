@@ -67,6 +67,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 runCatching { fetchBrief34(ctx, Api(base, acc.token), acc.id); Brief34Widgets.redraw(ctx) }
                 // Prompt 37: bibelvers-widgetene (bare med modulen; ellers slås mottakerne av).
                 runCatching { fetchBible37(ctx, Api(base, acc.token), acc.id, acc.username) }
+                // Prompt 40: Hjemlys – varsler om husstanden og egen økt også når appen er lukket (404 = eldre server).
+                runCatching { no.kristo.finanshub.pollHjemlys40(ctx, Api(base, acc.token)) }
                 return Result.success()
             } catch (e: ApiException) {
                 err = e.message
@@ -123,5 +125,9 @@ object WidgetSync {
         runCatching { Trials32bWidgets.redraw(ctx) }
         runCatching { Brief34Widgets.redraw(ctx) }
         runCatching { Bible37Widgets.redraw(ctx) }
+        // Prompt 40: låseskjerm-widgetene (RemoteViews) og genererte forhåndsvisninger i widgetvelgeren (Android 15+).
+        runCatching { Lock40.syncBible(ctx); Lock40.redraw(ctx) }
+        runCatching { Preview40.publish(ctx) }
+        runCatching { HjemlysWidget40.redraw(ctx) }
     }
 }

@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: knappen i Hjemlys-widgeten. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle"><solid android:color="#FFB23A2A" /><corners android:radius="20dp" /></shape>

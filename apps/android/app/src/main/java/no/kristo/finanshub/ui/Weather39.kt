@@ -63,6 +63,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -186,21 +188,23 @@ internal fun CmpSheet39(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
             Modifier.widthIn(max = 760.dp).fillMaxWidth().fillMaxHeight()
                 .onGloballyPositioned { c -> viewTop = c.positionInRoot().y; viewH = c.size.height.toFloat() }
                 .verticalScroll(scroll).navigationBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, top = top + 20.dp, bottom = 28.dp),
+                .padding(start = 16.dp, end = 16.dp, top = top + 12.dp, bottom = 28.dp), // prompt 40: tittelen rett under statuslinja
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Tittelraden og kildeteksten er faste.
-            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.Top) {
+            Row(Modifier.fillMaxWidth().padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Yr mot Storm", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                     Text(listOfNotNull(w.place, w.updatedAt?.let { u -> wxLdt(u)?.let { "oppdatert %02d:%02d".format(it.hour, it.minute) } }).joinToString(" · "),
                         color = Color.White.copy(alpha = .75f), fontSize = 13.5.sp)
                 }
-                Box(
-                    Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(if (edit) Color.White else Color.White.copy(alpha = .2f))
-                        .clickable(role = Role.Button) { Haptics.select(); if (edit) edit = false else close() }.padding(horizontal = 15.dp),
+                // Prompt 40 (claude-code-vaer-lukk-x.md): samme ✕ som på Vær-hovedsiden; «Ferdig» (hvit pille, 42 dp) bare mens man redigerer.
+                if (edit) Box(
+                    Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(Color.White)
+                        .clickable(role = Role.Button) { Haptics.select(); edit = false }.padding(horizontal = 18.dp),
                     contentAlignment = Alignment.Center,
-                ) { Text("Ferdig", color = if (edit) Color(0xFF22395A) else Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                ) { Text("Ferdig", color = Color(0xFF22395A), fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+                else VaerCloseButton { close() }
             }
             if (edit) Text("Dra kortene for å flytte · − for å skjule", color = Color.White.copy(alpha = .8f), fontSize = 12.5.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             if (vm.wxCmp22Busy) Text("Henter Storm-data …", fontSize = 13.sp, color = Color.White.copy(alpha = .7f))
@@ -322,7 +326,8 @@ private fun Hero39(t: CmpD39?) {
             Text("${mm39(t.yP)} mm · ${ms39(t.yW)}", color = Color.White.copy(alpha = .8f), fontSize = 13.sp, maxLines = 1)
         }
         val d = if (t.sH != null && t.yH != null) (t.sH - t.yH).roundToInt() else null
-        Text(d?.let { (if (it > 0) "+" else "") + "$it°" } ?: "–", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1,
+        // Prompt 40: ingen fortegn, bare forskjellen («Δ 3°» / «likt»); hvem som er varmest vises med fargen/siden.
+        Text(d?.let { if (it == 0) "likt" else "Δ ${abs(it)}°" } ?: "–", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1,
             modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(Color(0xFF2C4869)).border(1.dp, Color.White.copy(alpha = .14f), RoundedCornerShape(12.dp)).padding(9.dp, 5.dp))
         Column(Modifier.weight(1f).background(Brush.verticalGradient(listOf(SKY_S39.copy(alpha = .18f), Color.Transparent))).padding(12.dp, 18.dp, 18.dp, 16.dp),
             horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -393,9 +398,11 @@ private fun List39(days: List<CmpD39>) {
                 Text("YR", color = Color(0xFF9FE3FF), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, textAlign = TextAlign.End, modifier = Modifier.width(54.dp))
                 // Størrelsesfiksen: «← Yr» og «Storm →» får hele bredden, aldri presset sammen.
                 Row(Modifier.weight(1f)) {
-                    Text("← Yr", color = Color.White.copy(alpha = .7f), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                    // Prompt 40: «← Yr varmere · Storm varmere →» (nedbør og vind: «← Yr mer» / «Storm mer →»).
+                    val w40 = if (tab == "t") "varmere" else "mer"
+                    Text("← Yr $w40", color = Color(0xFF9FE3FF).copy(alpha = .85f), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false)
                     Spacer(Modifier.weight(1f))
-                    Text("Storm →", color = Color.White.copy(alpha = .7f), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                    Text("Storm $w40 →", color = Color(0xFFFFC79E).copy(alpha = .85f), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false)
                 }
                 Text("STORM", color = Color(0xFFFFC79E), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.width(54.dp))
                 Spacer(Modifier.width(12.dp))
@@ -445,7 +452,12 @@ private data class Quint39(val a: String, val b: String, val c: Double, val d: D
 private fun DevBar39(df: Double, scale: Double, u: String, modifier: Modifier) {
     val yr = df > 0
     val f = (abs(df) / scale).coerceAtMost(1.0).toFloat() * .5f
-    val label = if (abs(df) < .05) "" else (if (df > 0) "+" else "−") + (if (u == "°") "${abs(df.roundToInt())}" else mm39(abs(df))) + u
+    // Prompt 40: avviket uten fortegn i fargen til den som er høyest; avrundet til 0 → ingen etikett (aldri «−0°»).
+    val label = when {
+        u == "°" -> abs(df).roundToInt().let { if (it == 0) "" else "$it°" }
+        abs(df) < .05 -> ""
+        else -> mm39(abs(df)) + u
+    }
     Box(modifier.height(30.dp)) {
         if (label.isNotEmpty()) Text(label, color = if (yr) Color(0xFF9FE3FF) else Color(0xFFFFC79E), fontSize = 10.5.sp, fontWeight = FontWeight.ExtraBold,
             maxLines = 1, modifier = Modifier.align(Alignment.TopCenter))
@@ -562,12 +574,11 @@ internal fun WeekGlimt39(vm: AppViewModel, w: WeatherFull) {
                     .clickable(role = Role.RadioButton) {
                         Haptics.select(); char = id
                         vm.launch39 { runCatching { vm.api39 { hlPut("/weather/week-summary", JSONObject().put("char", id)) } } }
-                    }.padding(6.dp, 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    GlimtFig35(id, 26.dp, if (on) "glad" else "idle", still = !on)
-                    Column {
-                        Text(n, color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                        Text(desc, color = Color.White.copy(alpha = .7f), fontSize = 10.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                    }.height(32.dp).padding(horizontal = 6.dp).semantics { contentDescription = "$n · $desc" },
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally)) {
+                    // Prompt 40 (claude-code-vaer-topp-tekst.md): tre like brede knapper på egen rad, 32 dp høye, uten «…».
+                    GlimtFig35(id, 20.dp, if (on) "glad" else "idle", still = !on)
+                    Text(n, color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                 }
             }
         }
@@ -577,7 +588,7 @@ internal fun WeekGlimt39(vm: AppViewModel, w: WeatherFull) {
                 Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(Color.White.copy(alpha = .08f)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(l, color = Color.White.copy(alpha = .65f), fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                     Text(v, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                    Text(s, color = Color.White.copy(alpha = .7f), fontSize = 11.sp, maxLines = 2)
+                    Text(s, color = Color.White.copy(alpha = .7f), fontSize = 11.sp, lineHeight = 14.3.sp) // prompt 40: får gå over to linjer
                 }
             }
         }

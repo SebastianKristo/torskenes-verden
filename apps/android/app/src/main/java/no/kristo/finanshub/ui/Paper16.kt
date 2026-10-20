@@ -194,7 +194,7 @@ internal fun TabBarEditor(vm: AppViewModel) {
     val mer = vm.tabBarItems().firstOrNull { it.id == "mer" } ?: MAIN_TABS.first { it.id == "mer" }
     fun cur() = vm.tabBarItems().filter { it.id != "mer" }.map { NavEd32b(it.id, it.label, it.icon) }
     NavEditor32b(
-        vm, "Hjem", cur(), MAIN_TABS.filter { it.id != "mer" }.map { NavEd32b(it.id, it.label, it.icon) }, 5, mer = true, icons = TAB_ICONS,
+        vm, "Hjem", cur(), MAIN_TABS.filter { it.id != "mer" && (it.id != "bibel" || vm.bibleAllowed37()) }.map { NavEd32b(it.id, it.label, it.icon) }, 5, mer = true, icons = TAB_ICONS,
         onSave = { l -> vm.saveTabBar(l.map { TabItem(it.key, it.label, it.icon) } + mer) },
         onReset = { vm.resetTabBar(); cur() },
         onClose = { vm.tabEdit = false },

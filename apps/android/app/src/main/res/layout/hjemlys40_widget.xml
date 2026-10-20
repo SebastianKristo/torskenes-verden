@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: Hjemlys «Start for meg» på Hjem. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/hl40_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+    android:padding="16dp" android:background="@drawable/prev40_card_m">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_hjemlys40" android:tint="#FFF2A93B" android:importantForAccessibility="no" />
+        <TextView android:id="@+id/hl40_title" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:text="Hjemlys" android:textColor="@color/prev40_ink_m" android:textSize="18sp" android:textStyle="bold" android:maxLines="1" />
+    </LinearLayout>
+    <TextView android:id="@+id/hl40_sub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Si fra til familien når du er hjemme" android:textColor="@color/prev40_mut_m" android:textSize="12.5sp" android:maxLines="2" android:ellipsize="end" />
+    <TextView android:id="@+id/hl40_btn" android:layout_width="match_parent" android:layout_height="40dp" android:layout_marginTop="10dp" android:gravity="center" android:text="Start for meg" android:textColor="#FFFFFFFF" android:textSize="14sp" android:textStyle="bold" android:background="@drawable/hl40_btn" />
+</LinearLayout>

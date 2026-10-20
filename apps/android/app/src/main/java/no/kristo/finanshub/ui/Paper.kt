@@ -429,6 +429,8 @@ internal fun PaperApp(
             Global37(vm)
             // Prompt 38: QR-innlogging på ny enhet, Konto → ØKT, forhåndshenting av Domener.
             Global38(vm)
+            // Prompt 40: 2FA i appen, Nyheter-Glimt, Hjemlys-start og «Rediger alt» (ui/Ui40.kt).
+            Global40(vm)
         }
       }
     }
@@ -675,7 +677,7 @@ private fun ScanQueue(vm: AppViewModel) {
 private val HOME_SECS = listOf(
     PSec("h12", "Glimt-brief", full = true), // Prompt 34: øverst, over widgetene (kan flyttes og skjules i wiggle-modus)
     PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("h11", "Prøveperioder"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
-    PSec("h8", "Gjøremål"), PSec("h6", "Posisjon"), PSec("h7", "Bolig"),
+    PSec("h8", "Gjøremål"), PSec("h6", "Posisjon"), PSec("h40", "Hjemlys"), PSec("h7", "Bolig"), // prompt 40: Hjemlys
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
 )
 
@@ -703,7 +705,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
         // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (admin; ✕ skjuler «Tilgjengelig» i 24 t).
         if (vm.editPage != "hjem" && upd30Show(vm, home = true)) item(key = "upd30", span = { GridItemSpan(maxLineSpan) }) { UpdateBanner30(vm, home = true) }
         if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
-        pageGridSecs(vm, "hjem", secs37, wide, skip = { k -> (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) }) { k ->
+        pageGridSecs(vm, "hjem", secs37, wide, skip = { k -> (k == "h40" && vm.p40.hlMissing) || (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) }) { k ->
             when (k) {
                 "h12" -> SwipeBrief36(vm) { HomeBrief34(vm) } // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt). Prompt 36: sveip mot høyre skjuler til neste brief
                 "h13" -> BibleHome37(vm) // Prompt 37: dagens bibelvers (ui/Bible37.kt)
@@ -748,6 +750,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 "h10" -> HomeKalCard26(vm)
                 "h11" -> HomeTrials32b(vm) // Prompt 32: prøveperioder (ui/Ui32b.kt)
                 "h6" -> HomePositionCard(vm)
+                "h40" -> HjemlysCard40(vm, compact = true) // prompt 40: Hjemlys (ui/Ui40.kt)
                 "h7" -> HomeBoligCard(vm)
                 "h5" -> PaperNewsCard(vm)
                 "h4" -> if (!h?.shortcuts.isNullOrEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1043,9 +1046,9 @@ private fun PaperSettings(vm: AppViewModel, navBottom: Dp) {
         item {
             PCard {
                 PRow(vm.displayName.ifBlank { "Konto" }, (vm.me?.role ?: vm.account?.role ?: "").ifBlank { "Konto" }, "Kontoer ›", serif = false) { vm.menuOpen = true }
-                PRow("Totrinnsbekreftelse", "Autentiseringsapp", if (vm.me?.totp == true) "På" else "Av", if (vm.me?.totp == true) p.pos else p.mut, serif = false, top = true) {
-                    vm.settingsPage = "security"; vm.openFromMer(Screen.Settings)
-                }
+                // Prompt 40: oppsettet skjer i appen (ui/Ui40.kt TwoFa40Screen), ikke i nettleseren.
+                PRow("Totrinnsbekreftelse", if (vm.me?.totp == true) "På · autentiseringsapp" else "Av · sett opp i appen på 1 minutt", if (vm.me?.totp == true) "Endre ›" else "Sett opp ›",
+                    if (vm.me?.totp == true) p.pos else p.lab, serif = false, top = true) { vm.openTf40() }
                 PRow("Haptisk tilbakemelding", "Ved trykk og skann", "›", serif = false, top = true) { vm.settingsPage = "haptics"; vm.openFromMer(Screen.Settings) }
                 PRow("Alle innstillinger", "Sikkerhet, skanning, varsler, server og data", "›", serif = false, top = true) { vm.settingsPage = null; vm.openFromMer(Screen.Settings) }
             }

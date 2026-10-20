@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: bred låseskjerm-widget 4 × 1 – forhåndsvisning. Ingen knapper som krever opplåsing. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal"
+    android:gravity="center_vertical" android:background="@drawable/lock40_bg_wide" android:paddingStart="16dp" android:paddingEnd="16dp">
+    <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_lock40_brief" android:importantForAccessibility="no" />
+    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="12dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Glimt: 6° og skyet" android:textColor="#FFFFFFFF" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Matte 10:15 · 3 gjøremål · pakke klar" android:textColor="#CCFFFFFF" android:textSize="12.5sp" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+</LinearLayout>

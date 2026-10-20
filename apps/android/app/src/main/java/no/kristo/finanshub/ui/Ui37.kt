@@ -72,10 +72,15 @@ internal fun Modifier.holdDrag37(
     /** Prompt 39: i redigeringsmodus starter draget etter 170 ms (flytter fingeren seg før det, er det scroll). Leses ved hver
      *  ny berøring (ikke nøkkel i pointerInput, ellers ville draget som starter redigeringen blitt avbrutt). */
     holdMs: () -> Long = { 500L },
+    /** Prompt 40: false → det lange trykket åpner bare redigeringsmodus; resten av berøringen er scroll (ingen dra). */
+    startDrag: () -> Boolean = { true },
+    /** Prompt 40: avstand før ventende dra avbrytes (6 dp i redigering, ellers 8 dp). */
+    slopDp: () -> Float = { 8f },
 ): Modifier = if (!enabled) this else this.pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        val slop = 8.dp.toPx()
+        val slop = slopDp().dp.toPx()
+        val drag = startDrag()
         var moved = false
         val released = withTimeoutOrNull(holdMs()) {
             while (true) {
@@ -88,6 +93,18 @@ internal fun Modifier.holdDrag37(
         }
         if (released != null || moved) return@awaitEachGesture
         onLong()
+        if (!drag) {
+            // Bare redigeringsmodus: fingeren kan scrolle videre. Slippes den uten å flytte seg, spises slippet så kortets
+            // klikk (åpne siden) ikke går gjennom etter det lange trykket.
+            var far = false
+            while (true) {
+                val ev = awaitPointerEvent(PointerEventPass.Initial)
+                val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                if ((ch.position - down.position).getDistance() > slop) far = true
+                if (!ch.pressed) { if (!far) ch.consume(); break }
+            }
+            return@awaitEachGesture
+        }
         try {
             while (true) {
                 val ev = awaitPointerEvent(PointerEventPass.Initial)

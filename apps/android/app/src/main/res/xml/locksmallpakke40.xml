@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: låseskjerm-widget «Pakker» (liten 1 × 1). Samme data som startskjermen; trykk ber om opplåsing. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/locksmallpakke40_desc"
+    android:initialLayout="@layout/lock40_small"
+    android:previewLayout="@layout/lock40_prev_s_pakke"
+    android:minWidth="57dp"
+    android:minHeight="57dp"
+    android:minResizeWidth="57dp"
+    android:minResizeHeight="40dp"
+    android:targetCellWidth="1"
+    android:targetCellHeight="1"
+    android:resizeMode="none"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="keyguard|home_screen" />

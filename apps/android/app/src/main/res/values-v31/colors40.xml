@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: Material You: følger bakgrunnsbildet (system_accent1_*) -->
+<resources>
+    <color name="prev40_bg_m">@android:color/system_accent1_50</color>
+    <color name="prev40_ink_m">@android:color/system_accent1_900</color>
+    <color name="prev40_mut_m">@android:color/system_neutral2_600</color>
+    <color name="prev40_acc_m">@android:color/system_accent1_600</color>
+    <color name="prev40_bg_s">#F2FFFFFF</color>
+    <color name="prev40_ink_s">#FF111111</color>
+    <color name="prev40_mut_s">#FF6E6E73</color>
+    <color name="prev40_acc_s">#FF3E91FF</color>
+</resources>

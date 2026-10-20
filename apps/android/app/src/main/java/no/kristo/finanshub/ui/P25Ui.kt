@@ -73,6 +73,8 @@ internal fun MerIcon25(vm: AppViewModel, i: Int, key: String) {
     val p = PaperPal.current
     val pal = iconPalette(vm.iconTheme)
     val c = Color(pal[((i % pal.size) + pal.size) % pal.size])
+    // Prompt 40: Økonomi-ikon 3c (hvit lommebok med budsjettring på #1B2A40) for Finans.
+    if (key == "finans") { Okonomi40Icon(40.dp, 12.dp); return }
     Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(p.bg), contentAlignment = Alignment.Center) {
         WxIcon(MER_PATHS25[key] ?: "M12 12h.01", c, 21.dp, stroke = 1.9f)
     }

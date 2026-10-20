@@ -20,6 +20,8 @@ data class TaskItem(
     /** Prompt 37 (Gjøremål): detaljarket – notater, tid, viktig (alarm), gjenta, tidlig påminnelse, prioritet 0–3, flagg, tagger, deloppgaver og sted. */
     val notes: String? = null, val time: String? = null, val urgent: Boolean = false, val rep: String? = null, val early: String? = null,
     val prio: Int = 0, val flag: Boolean = false, val tags: List<String> = emptyList(), val subs: List<TaskSub37> = emptyList(), val place: String? = null,
+    /** Prompt 40 (Gjøremål-Glimt): punktet skal gjøres etter punktet med denne id-en (after_id). */
+    val after: String? = null,
 )
 data class TaskMember(val id: String, val name: String, val color: Long? = null, val role: String? = null)
 data class TasksData(val lists: List<TaskList>, val items: List<TaskItem>, val members: List<TaskMember>)
@@ -41,7 +43,8 @@ fun parseTasks(s: String): TasksData {
             notes = t.optStr("notes"), time = t.optStr("time")?.take(5) ?: t.optStr("due")?.takeIf { it.length >= 16 }?.substring(11, 16),
             urgent = t.optBoolean("urgent", false), rep = t.optStr("rep")?.takeIf { it != "none" && it != "never" && it != "aldri" }, early = t.optStr("early")?.takeIf { it != "none" },
             prio = prio37(t.opt("prio")), flag = t.optBoolean("flag", false), tags = strs37(t.optJSONArray("tags")), subs = subs37(t.optJSONArray("subs")),
-            place = t.optStr("place"),
+            place = t.optStr("place") ?: t.optJSONObject("place")?.optStr("name"),
+            after = t.optStr("after") ?: t.optStr("afterId") ?: t.optStr("after_id"),
         )
     }
     val ma = o.optJSONArray("members") ?: JSONArray()

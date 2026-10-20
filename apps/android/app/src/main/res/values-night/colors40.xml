@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: forhåndsvisningene (mørk) -->
+<resources>
+    <color name="prev40_bg_m">#FF2A2821</color>
+    <color name="prev40_ink_m">#FFECE7DC</color>
+    <color name="prev40_mut_m">#FFA39D90</color>
+    <color name="prev40_acc_m">#FFF08A76</color>
+    <color name="prev40_bg_s">#E6252528</color>
+    <color name="prev40_ink_s">#FFF5F5F7</color>
+    <color name="prev40_mut_s">#FFA1A1A6</color>
+    <color name="prev40_acc_s">#FF5AA2FF</color>
+</resources>

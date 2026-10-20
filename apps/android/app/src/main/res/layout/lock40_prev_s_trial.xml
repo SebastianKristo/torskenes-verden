@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: liten låseskjerm-widget 1 × 1 (rund) – forhåndsvisning. Monokrom hvit tekst og ikon. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:background="@drawable/lock40_bg_round" android:padding="4dp">
+    <ImageView android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:importantForAccessibility="no" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center">
+        <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_lock40_trial" android:importantForAccessibility="no" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="3d" android:textColor="#FFFFFFFF" android:textSize="17sp" android:textStyle="bold" android:maxLines="1" />
+    </LinearLayout>
+</FrameLayout>

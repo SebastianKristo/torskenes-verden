@@ -109,7 +109,11 @@ internal fun subMembers37(a: JSONArray?): List<SubMember37> = objs34(a).mapNotNu
 
 /* ======================= Glimt i Gjøremål ======================= */
 
-data class GItem37(val id: String?, val title: String, val list: String?, val due: String?, val time: String?, val note: String?)
+data class GItem37(
+    val id: String?, val title: String, val list: String?, val due: String?, val time: String?, val note: String?,
+    /** Prompt 40: steg i rekkefølgen (1 = først), tittelen på punktet det kommer etter, sted, @person og tagger. */
+    val step: Int = 0, val after: String? = null, val place: String? = null, val who: String? = null, val tags: List<String> = emptyList(),
+)
 data class TaskGlimt37(val kind: String, val text: String, val items: List<GItem37>, val undo: String?, val local: Boolean = false, val localIds: List<String> = emptyList())
 
 data class Profile37(
@@ -618,9 +622,7 @@ fun AppViewModel.glimt37(q0: String) {
                 if (e.status == 404 || e.status == 405) null else throw e
             }
             s.glimt = if (r != null) TaskGlimt37(
-                r.s37("kind") ?: "add", r.s37("text") ?: "", objs34(r.optJSONArray("items")).map { x ->
-                    GItem37(x.s37("id"), x.s37("title") ?: x.s37("n") ?: "", x.s37("list") ?: x.s37("l"), x.s37("due"), x.s37("time"), x.s37("note") ?: x.s37("text"))
-                }, r.optJSONObject("undo")?.s37("token"),
+                r.s37("kind") ?: "add", r.s37("text") ?: "", glimtItems40(objs34(r.optJSONArray("items"))), r.optJSONObject("undo")?.s37("token"),
             ) else localGlimt37(q, list)
             s.glimtImage = null
             refreshTasks37()
@@ -684,6 +686,8 @@ private suspend fun AppViewModel.localGlimt37(q: String, list: String?): TaskGli
         }
         return TaskGlimt37("question", text, sel.take(8).map { GItem37(it.id, it.title, it.list, it.due, it.time, null) }, null, local = true)
     }
+    // Prompt 40: flere handlinger i én setning («… men først må jeg levere pakken») → flere punkter i riktig rekkefølge.
+    localMulti40(q, list, lists, t?.members ?: emptyList())?.let { return it }
     val many = splitLines37(q)
     val parsed = many?.map { line -> parseGlimt37(line, lists, t?.members ?: emptyList()).first() } ?: parseGlimt37(q, lists, t?.members ?: emptyList())
     val ids = ArrayList<String>()

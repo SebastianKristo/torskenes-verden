@@ -382,7 +382,12 @@ private fun BriefNews35(vm: AppViewModel, b: Brief34, on: Boolean) {
         Modifier.fillMaxWidth().ring34(on, 24.dp).clip(RoundedCornerShape(24.dp)).background(p.card).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text("Nyheter", color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 22.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Nyheter", color = p.ink, fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = 22.sp, modifier = Modifier.weight(1f))
+            // Prompt 40: lukker briefen og åpner Nyhetsleseren rett på Glimt-siden.
+            Text("✦ Glimt-sammendrag ›", color = RED35, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickable(role = Role.Button) { vm.stopSay35(); vm.p34.briefOpen = false; vm.openNewsGlimt40() }.padding(8.dp, 4.dp))
+        }
         if (b.news.isEmpty()) Text("Ingen saker ennå. Legg til kilder i Nyhetsleser.", color = p.mut, fontSize = 13.5.sp)
         val top = b.news.firstOrNull()
         if (top != null) Column(Modifier.fillMaxWidth().clickable(role = Role.Button, enabled = top.url != null) { top.url?.let { vm.stopSay35(); openLink(ctx, it) } },
@@ -516,7 +521,7 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
                                 Column(Modifier.weight(1f).clip(RoundedCornerShape(18.dp)).background(if (night) INK35 else p.card).border(2.dp, if (on) RED35 else Color.Transparent, RoundedCornerShape(18.dp))
                                     .clickable(role = Role.RadioButton, onClickLabel = "Velg ${Fig35.name(id)}") { vm.setChar35(id) }.padding(top = 12.dp, bottom = 10.dp, start = 6.dp, end = 6.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Box(Modifier.height(66.dp), contentAlignment = Alignment.Center) { GlimtFig35(id, 50.dp, if (on) "glad" else "idle") }
+                                    Box(Modifier.height(66.dp), contentAlignment = Alignment.Center) { GlimtFig35(id, 50.dp, if (on) "glad" else "idle", noJul = true) } // prompt 40: figurvelgeren uten antrekk
                                     Text(Fig35.name(id), color = if (night) Color(0xFFF3EFE6) else p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
                                 }
                             }
@@ -528,6 +533,8 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
             Text("Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle, Gris …) tar over når temaet passer, om det er slått på under. Er «Glimt» valgt, blir verten Glimt Natt mellom 21 og 06.",
                 color = p.mut, fontSize = 12.5.sp, lineHeight = 17.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
+        // Prompt 40 (claude-code-glimt-jul.md): Julemodus rett under figurvalget og teksten om vennene, før Glimt-brief-bryteren.
+        Jul40Card(vm)
         PCard {
             PToggle("Glimt-brief", "Lag briefer gjennom dagen", set.brief) { v -> vm.setGlimt35(JSONObject().put("brief", v)) { it.copy(brief = v) } }
             // Prompt 39: slå av Glimt (figuren) i Now Brief.

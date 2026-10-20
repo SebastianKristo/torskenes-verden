@@ -708,6 +708,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "kalender", "calendar" -> kalLink26(uri)
             "avganger", "ruter" -> { go(Screen.Homelab); openRuter() }
             "familie", "family" -> openFamily()
+            // Prompt 40: Hjemlys (varselet «Ja, start», Hjem-widgeten «Start for meg»): finanshub://hjemlys[/start?eta=…|/home]
+            "hjemlys" -> hjemlysLink40(uri)
             "finn" -> go(Screen.Finn)
             "boliger" -> open(Screen.Folders)
             "search" -> go(Screen.Search)
@@ -2934,6 +2936,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "abonnementer" -> { paperPage = null; openFromMer(Screen.Sub) }
             "media" -> openPaperPage("media")
             "chat" -> openChat()
+            // Prompt 40: sidene fra Mer. Now Brief og Nyhetsleser er ark/overlegg og åpnes som ark; resten navigeres til.
+            "huske", "kalender", "bursdag", "brief", "rss", "bibel", "nordlys", "innst" -> mainTab40(id)
             else -> paperTab("hjem")
         }
         Haptics.select()
@@ -3482,6 +3486,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             // Prompt 39: nytt profilbilde (eller navn) fra web/iPhone vises med en gang.
             "me", "me:changed", "avatar", "profile" -> refreshMe39(force = true)
             "job" -> onJob39(msg) // prompt 39: «✦ På nytt» på kvitteringer (steg og prosent)
+            // Prompt 40: Hjemlys (husstanden) og julemodus/Glimt-innstillinger fra en annen enhet.
+            "hjemlys" -> onHjemlys40(msg)
+            "glimt:settings", "glimt-settings" -> runCatching { applyJul40(msg) }
         }
     }
     fun startRealtime() { if (loggedIn && !locked) realtime.start(base.ifBlank { account?.server ?: "" }, account?.token) }
@@ -3693,6 +3700,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal val token39: String? get() = account?.token
     internal fun setAvatar39(b: Bitmap?) { avatar = b }
 
+    /* ---------- Prompt 40 (ANDROID40): fanelinje, Gjøremål-Glimt, 2FA i appen, Finans, Nyheter-Glimt, julemodus, Hjemlys (P40.kt, Hjemlys40.kt, ui/Ui40.kt) ---------- */
+    val p40 = P40State()
+    internal suspend fun <T> api40(f: suspend Api.() -> T): T = api.f()
+    internal fun launch40(block: suspend () -> Unit) = launch(block)
+    internal val appCtx40: Context get() = appCtx
+    internal suspend fun reloadMe40() = runCatching { loadMe() }
+    internal suspend fun loadTxDetail40(id: Int) = loadTxDetail(id)
+    internal suspend fun refreshFinance40() { runCatching { loadTx() }; runCatching { loadHome() } }
+    internal suspend fun loadSubs40() = loadSubs()
+    internal suspend fun loadNews40() = loadNews().join()
+
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.
     init {
@@ -3710,6 +3728,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         loadLocalLayout16()
         refreshPending()
         watchNetwork()
+        // Prompt 40: julemodus (lokalt valg) før første figur tegnes.
+        runCatching { Jul40.ensure(appCtx) }
         if (loggedIn) refresh()
     }
 

@@ -243,13 +243,10 @@ internal fun SecurityPage(vm: AppViewModel, onPrivacyChanged: () -> Unit) = Page
     }
     Section("Tofaktor (2FA)") {
         Group {
-            Info("Status", when (vm.me?.totp) { true -> "På · TOTP"; false -> "Av"; null -> "Ukjent" })
-            Row(Modifier.fillMaxWidth().hl34(vm, "2fa", 0.dp).clickable { uri.openUri(homelab(vm)) }.padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically) { // prompt 34: mål «2fa»
-                Text(if (vm.me?.totp == true) "Slå av 2FA" else "Sett opp 2FA", Modifier.weight(1f), color = C.primary)
-                Icon(Icons.Filled.OpenInBrowser, null, tint = C.text2)
-            }
+            // Prompt 40 (claude-code-2fa-i-appen.md): hele oppsettet skjer i appen (ui/Ui40.kt), aldri i nettleseren.
+            Box(Modifier.fillMaxWidth().hl34(vm, "2fa", 0.dp)) { TfRow40(vm) } // prompt 34: mål «2fa»
         }
-        Note("Oppsett med QR-kode og gjenopprettingskoder gjøres i Homelab → Innstillinger → Innlogging. Bruk en autentiseringsapp som 1Password, Aegis eller Google Authenticator.")
+        Note("Autentiseringsappen på denne telefonen (Google Authenticator, 1Password, Aegis …) åpnes med ett trykk. Reservekodene får du til slutt.")
     }
     Section("Pålitelige enheter") {
         Group {
@@ -405,6 +402,15 @@ private fun LookPage(vm: AppViewModel) = Pages {
             }
         }
         Note("Gjelder Samsung-widgetene (Søk, Klokke, Vær, Pakker, Skann, Budsjett, Aksjer, Middag, FinansHub, Domener og Finn). Material You-widgetene følger fargene fra bakgrunnsbildet.")
+    }
+    // Prompt 40 (claude-code-widgets-android-samsung-preview-las.md): låseskjerm-widgetene (små 1 × 1 og brede 4 × 1).
+    Section("Widgets · låseskjerm") {
+        val ctx = LocalContext.current
+        var hide by remember { mutableStateOf(no.kristo.finanshub.widget.Lock40.hide(ctx)) }
+        Group {
+            Toggle("Skjul beløp og navn på låseskjermen", "Budsjett og Pakker viser «•••» til telefonen er låst opp", hide) { hide = it; no.kristo.finanshub.widget.Lock40.setHide(ctx, it) }
+        }
+        Note("Små: Vær, Gjøremål, Pakker, Budsjett, Avgang og Prøveperiode. Brede: Neste time, Avganger, Gjøremål, Pakker, Glimt brief og Dagens bibelvers. Legg dem til fra låseskjermen (Pixel: sveip fra høyre kant · Samsung: hold inne på låseskjermen → Widgets).")
     }
     Note("Fargebakgrunn (lysflekker bak glasset) finnes i iPhone-appen.")
 }

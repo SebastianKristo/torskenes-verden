@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 40: forhåndsvisningene (lys, før Android 12) -->
+<resources>
+    <color name="prev40_bg_m">#FFF4EEE4</color>
+    <color name="prev40_ink_m">#FF1B1A17</color>
+    <color name="prev40_mut_m">#FF6B665C</color>
+    <color name="prev40_acc_m">#FFB23A2A</color>
+    <color name="prev40_bg_s">#F2FFFFFF</color>
+    <color name="prev40_ink_s">#FF111111</color>
+    <color name="prev40_mut_s">#FF6E6E73</color>
+    <color name="prev40_acc_s">#FF3E91FF</color>
+</resources>
