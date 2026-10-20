@@ -128,7 +128,7 @@ final class Fin40Reread {
         }
     }
 
-    static func money(_ v: Double?) -> String {
+    nonisolated static func money(_ v: Double?) -> String {
         guard let v else { return "–" }
         let f: NumberFormatter = NumberFormatter()
         f.locale = Locale(identifier: "nb_NO")
@@ -138,7 +138,7 @@ final class Fin40Reread {
         return (f.string(from: NSNumber(value: abs(v))) ?? "\(v)") + " kr"
     }
 
-    static func diff(_ a: ReadResult, _ b: ReadResult) -> [Fin40Change] {
+    nonisolated static func diff(_ a: ReadResult, _ b: ReadResult) -> [Fin40Change] {
         var out: [Fin40Change] = []
         if !b.merchant.isEmpty && a.merchant != b.merchant { out.append(Fin40Change(field: "Butikk", old: a.merchant, new: b.merchant)) }
         if !b.date.isEmpty && a.date.prefix(10) != b.date.prefix(10) { out.append(Fin40Change(field: "Dato", old: String(a.date.prefix(10)), new: String(b.date.prefix(10)))) }
@@ -414,7 +414,7 @@ struct Fin40EditSheet: View {
         lines.compactMap { (l: Fin40Line) -> Double? in Fin40EditSheet.num(l.price) }.reduce(0, +)
     }
 
-    static func num(_ s: String) -> Double? {
+    nonisolated static func num(_ s: String) -> Double? {
         Double(s.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "\u{00a0}", with: "").replacingOccurrences(of: ",", with: "."))
     }
 

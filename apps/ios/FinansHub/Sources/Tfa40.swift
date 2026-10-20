@@ -177,7 +177,7 @@ final class Tfa40Model {
         }
     }
 
-    static func otpauthURL(secret: String, account: String, issuer: String) -> String {
+    nonisolated static func otpauthURL(secret: String, account: String, issuer: String) -> String {
         let s: String = secret.replacingOccurrences(of: " ", with: "")
         let iss: String = issuer.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? issuer
         let acc: String = account.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? account
@@ -245,7 +245,7 @@ final class Tfa40Model {
         }
     }
 
-    static func codesFrom(_ o: [String: Any]) -> [String] {
+    nonisolated static func codesFrom(_ o: [String: Any]) -> [String] {
         let raw: [Any] = (o["backupCodes"] as? [Any]) ?? (o["recoveryCodes"] as? [Any]) ?? (o["codes"] as? [Any]) ?? []
         return raw.compactMap { $0 as? String }
     }

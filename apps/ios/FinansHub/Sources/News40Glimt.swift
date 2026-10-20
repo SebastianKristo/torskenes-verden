@@ -120,14 +120,14 @@ final class News40Model {
         return Swift.min(30, list.map(\.count).reduce(0, +))
     }
 
-    static func parseSources(_ raw: [[String: Any]]) -> [News40Source] {
+    nonisolated static func parseSources(_ raw: [[String: Any]]) -> [News40Source] {
         raw.map { (x: [String: Any]) -> News40Source in
             News40Source(id: JS.str(x, "id") ?? JS.str(x, "name") ?? "", name: JS.str(x, "name") ?? "", count: JS.int(x, "count") ?? 0, on: JS.bool(x, "on") ?? true)
         }
         .filter { !$0.id.isEmpty }
     }
 
-    static func parse(_ o: [String: Any]) -> News40Digest {
+    nonisolated static func parse(_ o: [String: Any]) -> News40Digest {
         var g: News40Digest = News40Digest()
         g.title = JS.str(o, "title") ?? "Dette skjer i dag"
         g.lead = Fin40Ask.clean(JS.str(o, "lead") ?? JS.str(o, "ingress") ?? "")

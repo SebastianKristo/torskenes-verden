@@ -77,14 +77,14 @@ final class Fin40Ask {
     var busy: Bool = false
 
     /// Standardspørsmål som alltid gir kort (også uten ✦ Glimt).
-    static func standard(_ q: String) -> Bool {
+    nonisolated static func standard(_ q: String) -> Bool {
         let l: String = q.lowercased()
         let words: [String] = ["abonnement", "abo", "faste trekk", "hva betaler jeg for", "hvor mye brukte jeg", "faste utgifter", "budsjett", "kontoer"]
         return words.contains(where: { l.contains($0) })
     }
 
     /// Fjerner markdown og kildemarkører ([n], **, __, #).
-    static func clean(_ s: String) -> String {
+    nonisolated static func clean(_ s: String) -> String {
         var t: String = s.replacingOccurrences(of: "**", with: "").replacingOccurrences(of: "__", with: "").replacingOccurrences(of: "`", with: "")
         t = t.replacingOccurrences(of: "\\[[0-9, ]+\\]", with: "", options: .regularExpression)
         t = t.replacingOccurrences(of: "(?m)^#+ ", with: "", options: .regularExpression)
@@ -126,7 +126,7 @@ final class Fin40Ask {
     }
 
     /// PER MÅNED · PER ÅR · NESTE TREKK fra kortene (abonnementer).
-    static func kpis(_ cards: [Fin40Card], total: Double?) -> [Fin40Kpi] {
+    nonisolated static func kpis(_ cards: [Fin40Card], total: Double?) -> [Fin40Kpi] {
         let subs: [Fin40Card] = cards.filter { $0.kind == "sub" }
         if subs.isEmpty { return [] }
         let month: Double = total ?? subs.map(\.monthly).reduce(0, +)
