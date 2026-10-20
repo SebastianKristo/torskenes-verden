@@ -19,7 +19,7 @@ import { sessionUser } from '../auth.js';
 import { bearerOk } from './routes.js';
 import { subscriptionSources, subIntent } from './subs-ask32.js';
 import { plainSearch } from './search.js';
-import { addedOf40, markCreated40, historyOf40, recordChange40, tagsOf40 } from './added40.js';
+import { addedOf40, markCreated40, historyOf40, recordChange40, tagsOf40, applyRereadTx40 } from './added40.js';
 import { osloTodayISO } from '../../public/js/quick-time.js';
 
 const q = (sql) => db.prepare(sql);
@@ -277,24 +277,11 @@ finans40Api.post('/transactions/:id{[0-9]+}/reread/apply', async (c) => {
   const b = await c.req.json().catch(() => ({})) ?? {};
   let cand = null; try { cand = JSON.parse(r?.candidate ?? 'null'); } catch { cand = null; }
   if (!r || !cand || cand.id !== b.candidateId) return c.json({ error: 'Resultatet er utløpt. Les på nytt.' }, 409);
-  let changes = [];
-  if (b.keep === 'old') q('UPDATE fh_receipts SET candidate=NULL WHERE id=?').run(r.id);
-  else {
-    const d = cand.data ?? {};
-    const before = linesOfReceipt(r);
-    if (!r.extraction_orig40 && r.extraction) q('UPDATE fh_receipts SET extraction_orig40=? WHERE id=?').run(r.extraction, r.id);
-    const totalOre = d.total != null ? Math.round(Math.abs(d.total) * 100) : null;
-    q('UPDATE fh_receipts SET extraction=?, merchant=COALESCE(?, merchant), date=COALESCE(?, date), total=COALESCE(?, total), provider=COALESCE(?, provider), model=COALESCE(?, model), candidate=NULL, updated_at=?, updated_by=? WHERE id=?')
-      .run(JSON.stringify(d), d.merchant ?? null, d.date ?? null, totalOre, cand.provider ?? null, cand.model ?? null, Date.now(), u, r.id);
-    const isDate = /^\d{4}-\d{2}-\d{2}$/.test(String(d.date ?? ''));
-    q('UPDATE fh_transactions SET merchant=COALESCE(?, merchant), date=?, amount=? WHERE id=?')
-      .run(d.merchant ?? null, isDate ? d.date : t.date, totalOre != null ? (t.amount < 0 ? -totalOre : totalOre) : t.amount, id);
-    const lines = linesOfReceipt(receiptOfTx(id, u));
-    changes = recordChange40(id, u, t, txRow(id, u), JSON.stringify(lines) !== JSON.stringify(before) ? [{ field: 'lines', label: 'varelinjer (lest på nytt)', old: before.length, new: lines.length }] : []);
-  }
+  const keepOld = b.keep === 'old' || b.keepNew === false;
+  const changes = keepOld ? (q('UPDATE fh_receipts SET candidate=NULL WHERE id=?').run(r.id), []) : applyRereadTx40(u, t, r, cand);
   const { default: fin } = await import('./routes.js');
   const fresh = await fin.request(`/transactions/${id}`, { headers: { cookie: c.req.header('cookie') ?? '', authorization: c.req.header('authorization') ?? '' } }, c.env);
-  return c.json({ ...(await fresh.json()), history: historyOf40(id), changes, kept: b.keep === 'old' ? 'old' : 'new' });
+  return c.json({ ...(await fresh.json()), history: historyOf40(id), changes, kept: keepOld ? 'old' : 'new' });
 });
 
 // POST /transactions/:id/reset → varelinjene slik Glimt leste dem.

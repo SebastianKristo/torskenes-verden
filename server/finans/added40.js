@@ -88,3 +88,24 @@ export function recordChange40(txId, user, before, after, extra = []) {
   return changes;
 }
 export const tagsOf40 = (row) => { try { const v = JSON.parse(row?.tags ?? '[]'); return Array.isArray(v) ? v.map(String) : []; } catch { return []; } };
+
+const linesOf = (r) => { try { return (JSON.parse(r?.extraction ?? 'null')?.lines ?? []).map((l) => ({ description: l.description, amount: l.amount })); } catch { return []; } };
+/**
+ * «Bruk endringene» etter «Les på nytt» på en bokført transaksjon (kandidat fra reanalyze med apply:false).
+ * Kvitteringen får den nye lesingen (den gamle huskes i extraction_orig40 for «Tilbakestill»), transaksjonen får butikk, dato og beløp
+ * (fortegnet beholdes), og endringen står i historikken. Status (booked) og koblingen beholdes. → endringene
+ */
+export function applyRereadTx40(u, t, r, cand) {
+  const d = cand?.data ?? {};
+  const before = linesOf(r);
+  if (!r.extraction_orig40 && r.extraction) db.prepare('UPDATE fh_receipts SET extraction_orig40=? WHERE id=?').run(r.extraction, r.id);
+  const totalOre = d.total != null ? Math.round(Math.abs(d.total) * 100) : null;
+  db.prepare('UPDATE fh_receipts SET extraction=?, merchant=COALESCE(?, merchant), date=COALESCE(?, date), total=COALESCE(?, total), provider=COALESCE(?, provider), model=COALESCE(?, model), candidate=NULL, updated_at=?, updated_by=? WHERE id=?')
+    .run(JSON.stringify(d), d.merchant ?? null, d.date ?? null, totalOre, cand.provider ?? null, cand.model ?? null, Date.now(), u, r.id);
+  const isDate = /^\d{4}-\d{2}-\d{2}$/.test(String(d.date ?? ''));
+  db.prepare('UPDATE fh_transactions SET merchant=COALESCE(?, merchant), date=?, amount=? WHERE id=?')
+    .run(d.merchant ?? null, isDate ? d.date : t.date, totalOre != null ? (t.amount < 0 ? -totalOre : totalOre) : t.amount, t.id);
+  const after = db.prepare('SELECT * FROM fh_transactions WHERE id=?').get(t.id);
+  const lines = linesOf(db.prepare('SELECT extraction FROM fh_receipts WHERE id=?').get(r.id));
+  return recordChange40(t.id, u, t, after, JSON.stringify(lines) !== JSON.stringify(before) ? [{ field: 'lines', label: 'varelinjer (lest på nytt)', old: before.length, new: lines.length }] : []);
+}

@@ -1,5 +1,5 @@
 // FinansHub-API: /finans/api/*. Tilgang med innlogget sesjon (nettleser) eller API-token med finans-scope (mobil/snarvei).
-import { addedOf40, tagsOf40 } from './added40.js'; // prompt 40
+import { addedOf40, tagsOf40, applyRereadTx40 } from './added40.js'; // prompt 40
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
@@ -1242,7 +1242,13 @@ api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   let cand = null; try { cand = JSON.parse(r.candidate ?? 'null'); } catch { /* ugyldig */ }
   if (!cand || cand.id !== b.candidateId) return bad(c, 'Resultatet er utløpt. Analyser på nytt.');
-  if (b.keep === 'new') {
+  const keepNew = b.keep === 'new' || b.keepNew === true; // prompt 40: keepNew:true|false eller keep:'new'|'old'
+  // Prompt 40: bokført kvittering med gyldig kandidat (Les på nytt, apply:false) → transaksjonen oppdateres (fortegn, historikk, Tilbakestill).
+  const tx40 = keepNew && r.status === 'booked' && r.transaction_id ? q('SELECT * FROM fh_transactions WHERE id=? AND user_id=?').get(r.transaction_id, r.user_id ?? c.get('user')) : null;
+  if (tx40) {
+    applyRereadTx40(c.get('user'), tx40, r, cand);
+    scanLog(r.id, 'reanalyse-valgt', `${cand.provider === 'tesseract' ? 'Lokal OCR' : 'Gemini'}-resultatet beholdes (bokført transaksjon oppdatert)`);
+  } else if (keepNew) {
     if (['booked', 'rejected'].includes(r.status)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
     await applyCandidate(r, cand);
     scanLog(r.id, 'reanalyse-valgt', `${cand.provider === 'tesseract' ? 'Lokal OCR' : 'Gemini'}-resultatet beholdes`);

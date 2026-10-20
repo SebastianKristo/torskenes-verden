@@ -182,6 +182,24 @@ test('Finans: PATCH godtar alle felt (dato, beløp, motpart, kategori som navn, 
   assert.equal(ap.status, 200, ap.text);
   assert.deepEqual([ap.body.merchant, ap.body.date, ap.body.amount, ap.body.kept], ['Rema 1000 Bislett', '2026-10-17', -400, 'new']);
   assert.ok(ap.body.changes.some((x) => x.field === 'lines'));
+  // Den gamle ruten POST /receipts/:id/reanalyze/apply (som appene bruker) godtar også en bokført kvittering med gyldig kandidat.
+  const setCand = (id, data) => fhDb.prepare('UPDATE fh_receipts SET candidate=? WHERE id=?').run(JSON.stringify({ id, at: Date.now(), provider: 'gemini', model: 'g', data }), 'rc40b');
+  const hBefore = (await A(`/finans/api/transactions/${t.id}`)).body.history.length;
+  setCand('cand41', { merchant: 'Rema 1000 Torshov', date: '2026-10-16', total: 412.5, lines: [{ description: 'Ost', amount: 400 }, { description: 'Pose', amount: 12.5 }] });
+  const old1 = await A('/finans/api/receipts/rc40b/reanalyze/apply', 'POST', { candidateId: 'cand41', keepNew: true });
+  assert.equal(old1.status, 200, old1.text);
+  assert.equal(old1.body.status, 'booked', 'kvitteringen er fortsatt bokført');
+  const tx1 = (await A(`/finans/api/transactions/${t.id}`)).body;
+  assert.deepEqual([tx1.merchant, tx1.date, tx1.amount], ['Rema 1000 Torshov', '2026-10-16', -412.5], 'fortegnet beholdes');
+  assert.equal(tx1.history.length, hBefore + 1);
+  assert.equal(tx1.canReset, true, 'Tilbakestill er mulig');
+  setCand('cand42', { merchant: 'Annet', date: '2026-10-01', total: 1 });
+  const old2 = await A('/finans/api/receipts/rc40b/reanalyze/apply', 'POST', { candidateId: 'cand42', keep: 'old' });
+  assert.equal(old2.status, 200);
+  assert.equal((await A(`/finans/api/transactions/${t.id}`)).body.merchant, 'Rema 1000 Torshov', 'keep:old endrer ingenting');
+  setCand('cand43', { merchant: 'Kiwi', date: '2026-10-15', total: 50 });
+  assert.equal((await A('/finans/api/receipts/rc40b/reanalyze/apply', 'POST', { candidateId: 'cand43', keep: 'new' })).status, 200);
+  assert.equal((await A(`/finans/api/transactions/${t.id}`)).body.amount, -50);
   // Andre brukere ser den ikke; ukjent kategori avvises.
   assert.equal((await I(`/finans/api/transactions/${t.id}`, 'PATCH', { note: 'x' })).status, 404);
   assert.equal((await A(`/finans/api/transactions/${t.id}`, 'PATCH', { category: 'Finnes ikke' })).status, 400);
