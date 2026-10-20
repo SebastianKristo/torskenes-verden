@@ -35,6 +35,18 @@ class P39State {
     /** Chat: standardmodellen fra rutingen (id, sky) – vises før modellisten er hentet. */
     var chatRoute by mutableStateOf<Pair<String, Boolean>?>(null)
     internal var chatRouteAt = 0L
+    /** Kvitteringer: «✦ På nytt» med fremdrift, per kvittering-id. */
+    var re by mutableStateOf<Map<String, Re39>>(emptyMap())
+    /** Kvitteringer som nettopp ble lest på nytt og fikk endrede felt (gul markering i 2 s). */
+    var reFlash by mutableStateOf<Map<String, Long>>(emptyMap())
+    /** AI-kontroll: «✦ Glimt anbefaler» (GET /api/ai/recommend?full=1). */
+    var rec by mutableStateOf<Rec39?>(null)
+    var recMissing by mutableStateOf(false)
+    internal var recAt = 0L
+    var recAsk by mutableStateOf("")
+    var recAnswer by mutableStateOf<RecAnswer39?>(null)
+    var recBusy by mutableStateOf(false)
+    var recUndo by mutableStateOf<String?>(null)
 }
 
 /* ======================= Varsellyd ======================= */
@@ -263,5 +275,243 @@ fun android.app.Activity.preferHighRefresh39() {
         val cur = d.mode
         val best = d.supportedModes.filter { it.physicalWidth == cur.physicalWidth && it.physicalHeight == cur.physicalHeight }.maxByOrNull { it.refreshRate } ?: return
         if (best.modeId != cur.modeId) window.attributes = window.attributes.apply { preferredDisplayModeId = best.modeId }
+    }
+}
+
+/* ======================= Kvitteringer: «✦ På nytt» med fremdrift ======================= */
+
+/** Jobben for én kvittering: steg (upload | ocr | llm | verify | done | error), prosent og tekst. */
+data class Re39(
+    val jobId: String?, val step: String, val pct: Int, val msg: String?, val engine: String,
+    val error: Boolean = false, val done: Boolean = false, val cancelled: Boolean = false,
+) {
+    val running: Boolean get() = !error && !done
+}
+
+/** Stegene i panelet (claude-code-kvittering-pa-nytt-fremdrift.md). */
+val RE_STEPS39 = listOf("upload" to "Laster opp bildet", "ocr" to "Leser teksten (OCR)", "llm" to "✦ {motor} tolker butikk, linjer og beløp", "verify" to "Sjekker sum og dato")
+
+private fun AppViewModel.setRe39(id: String, f: (Re39?) -> Re39?) {
+    val n = f(p39.re[id])
+    p39.re = if (n == null) p39.re - id else p39.re + (id to n)
+}
+
+/**
+ * POST /finans/api/receipts/:id/reanalyze {engine, async:true} → {jobId}; fremdriften kommer som «job» i sanntid og fra
+ * GET /finans/api/jobs/:id (hvert sekund). Eldre server: svarer synkront ({candidateId, result}) – da tas resultatet i bruk
+ * direkte. Mangler endepunktet (404): kvitteringen legges i køen som før (reprocess).
+ */
+fun AppViewModel.reanalyze39(id: String, engine: String = "gemini") {
+    if (p39.re[id]?.running == true) return
+    val label = if (engine == "tesseract") "Lokal OCR" else "Gemini"
+    Haptics.tap()
+    setRe39(id) { Re39(null, "upload", 2, "Laster opp bildet", label) }
+    launch39 {
+        val raw = try {
+            api39 { request("POST", "/receipts/$id/reanalyze", JSONObject().put("engine", engine).put("async", true), read = 120_000) }
+        } catch (e: ApiException) {
+            if (e.status == 404) {
+                setRe39(id) { null }
+                runCatching { api39 { post("/receipts/$id/reprocess?provider=gemini") } }
+                message = "✦ Leses på nytt med Gemini"
+                runCatching { loadReceipts(); loadJobs() }
+            } else setRe39(id) { (it ?: Re39(null, "upload", 0, null, label)).copy(step = "error", error = true, msg = e.message ?: "✕ $label svarte ikke") }
+            return@launch39
+        }
+        val o = runCatching { JSONObject(raw) }.getOrNull() ?: JSONObject()
+        // Synkront svar (server uten async): ta i bruk det nye resultatet.
+        o.optStr("candidateId")?.let { cand ->
+            runCatching { api39 { post("/receipts/$id/reanalyze/apply", JSONObject().put("candidateId", cand).put("keep", "new")) } }
+            val conf = o.optJSONObject("result")?.optDouble("confidence", Double.NaN) ?: Double.NaN
+            finishRe39(id, conf, emptyList())
+            return@launch39
+        }
+        val job = o.optStr("jobId") ?: run { setRe39(id) { it?.copy(step = "error", error = true, msg = "✕ $label svarte ikke") }; return@launch39 }
+        setRe39(id) { (it ?: Re39(job, "upload", 5, null, label)).copy(jobId = job, pct = maxOf(it?.pct ?: 0, 5)) }
+        var misses = 0
+        while (true) {
+            kotlinx.coroutines.delay(1000)
+            val cur = p39.re[id] ?: return@launch39
+            if (cur.jobId != job || !cur.running) return@launch39
+            val j = runCatching { JSONObject(api39 { get("/jobs/$job") }) }.getOrNull()
+            if (j == null) { if (++misses > 90) { setRe39(id) { it?.copy(step = "error", error = true, msg = "✕ Fikk ikke svar fra serveren") }; return@launch39 }; continue }
+            misses = 0
+            if (jobUpdate39(id, j)) return@launch39
+        }
+    }
+}
+
+/** Oppdaterer fra jobben (GET /jobs/:id). true = ferdig (bra eller feil). */
+private suspend fun AppViewModel.jobUpdate39(id: String, j: JSONObject): Boolean {
+    val status = j.optStr("status") ?: "running"
+    val step = j.optStr("step")
+    val pct = if (j.has("pct")) j.optInt("pct") else null
+    when {
+        status == "done" || step == "done" -> {
+            val r = j.optJSONObject("result")
+            if (r != null && !r.optBoolean("applied", false)) r.optStr("candidateId")?.let { cand ->
+                runCatching { api39 { post("/receipts/$id/reanalyze/apply", JSONObject().put("candidateId", cand).put("keep", "new")) } }
+            }
+            val ch = r?.optJSONArray("changed")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
+            finishRe39(id, r?.optDouble("confidence", Double.NaN) ?: Double.NaN, ch)
+            return true
+        }
+        status == "cancelled" -> { cancelledRe39(id); return true }
+        status == "error" || step == "error" -> {
+            setRe39(id) { it?.copy(step = "error", error = true, msg = j.optStr("msg") ?: j.optStr("error") ?: "✕ ${it.engine} svarte ikke") }
+            return true
+        }
+        else -> setRe39(id) { it?.copy(step = step ?: it.step, pct = maxOf(it.pct, pct ?: it.pct), msg = j.optStr("msg") ?: it.msg) }
+    }
+    return false
+}
+
+/** Sanntid «job» {jobId, kind:'reanalyze', receiptId, step, pct, msg}: fremdriften vises med en gang (pollingen tar slutten). */
+fun AppViewModel.onJob39(msg: JSONObject) {
+    if ((msg.optStr("kind") ?: "reanalyze") != "reanalyze") return
+    val id = msg.optStr("receiptId") ?: p39.re.entries.firstOrNull { it.value.jobId == msg.optStr("jobId") }?.key ?: return
+    val cur = p39.re[id] ?: return
+    if (!cur.running) return
+    val step = msg.optStr("step") ?: return
+    if (step == "done" || step == "error") return
+    setRe39(id) { it?.copy(step = step, pct = maxOf(it.pct, msg.optInt("pct", it.pct)), msg = msg.optStr("msg") ?: it.msg) }
+}
+
+private suspend fun AppViewModel.finishRe39(id: String, conf: Double, changed: List<String>) {
+    val pct = if (conf.isNaN()) null else Math.round(if (conf <= 1.0) conf * 100 else conf).toInt()
+    setRe39(id) { (it ?: Re39(null, "done", 100, null, "Gemini")).copy(step = "done", pct = 100, done = true, msg = "✦ Analysert på nytt") }
+    Haptics.success()
+    message = "✦ Analysert på nytt" + (pct?.let { " · $it % sikker" } ?: "")
+    // Raden markeres i 2 s (endrede felt: ${changed.joinToString()}; eldre server sier ikke hvilke).
+    p39.reFlash = p39.reFlash + (id to System.currentTimeMillis())
+    runCatching { loadReceipts(); loadJobs() }
+    kotlinx.coroutines.delay(2200)
+    if (p39.re[id]?.done == true) setRe39(id) { null }
+    p39.reFlash = p39.reFlash - id
+}
+
+private suspend fun AppViewModel.cancelledRe39(id: String) {
+    setRe39(id) { it?.copy(step = "error", error = true, cancelled = true, msg = "Avbrutt · ingenting ble endret") }
+    kotlinx.coroutines.delay(3000)
+    if (p39.re[id]?.cancelled == true) setRe39(id) { null }
+}
+
+/** Avbryt: POST …/reanalyze/:jobId/cancel (eldre: DELETE /jobs/:id). */
+fun AppViewModel.cancelRe39(id: String) {
+    val job = p39.re[id]?.jobId
+    Haptics.select()
+    launch39 {
+        if (job != null) {
+            val ok = runCatching { api39 { post("/receipts/$id/reanalyze/$job/cancel") } }.isSuccess
+            if (!ok) runCatching { api39 { delete("/jobs/$job") } }
+        }
+        cancelledRe39(id)
+    }
+}
+
+/* ======================= AI-kontroll: Glimt anbefaler modeller ======================= */
+
+data class RecItem39(
+    val task: String, val taskName: String, val model: String, val why: String, val alt: String?, val fit: String,
+    val installed: Boolean, val inUse: Boolean, val sizeGb: Double?,
+)
+data class Rec39(
+    val title: String, val items: List<RecItem39>, val missing: List<Pair<String, Double?>>, val missingGb: Double?,
+    val planText: String?, val planDone: Boolean, val planFill: Int,
+    /** modell → (brukes til, førstevalg for) */
+    val byModel: Map<String, Pair<List<String>, List<String>>>,
+)
+data class RecAnswer39(val text: String, val label: String?, val kind: String?, val model: String?, val tasks: List<String>)
+
+private fun JSONObject.strs39(k: String): List<String> = optJSONArray(k)?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()
+
+private fun recItem39(o: JSONObject) = RecItem39(
+    o.optString("task"), o.optStr("taskName") ?: o.optString("task"), o.optString("model"), o.optStr("why") ?: "", o.optStr("alt"),
+    o.optStr("fit") ?: "PASSER", o.optBoolean("installed"), o.optBoolean("inUse"), if (o.has("sizeGb") && !o.isNull("sizeGb")) o.optDouble("sizeGb") else null,
+)
+
+internal fun parseRec39(raw: String): Rec39? = runCatching {
+    val t = raw.trim()
+    if (t.startsWith("[")) {
+        val a = org.json.JSONArray(t)
+        val items = (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map(::recItem39)
+        val miss = items.filter { !it.installed }.distinctBy { it.model }.map { it.model to it.sizeGb }
+        return@runCatching Rec39("✦ GLIMT ANBEFALER", items, miss, miss.sumOf { it.second ?: 0.0 }, null, items.all { it.inUse }, items.count { it.installed && !it.inUse }, emptyMap())
+    }
+    val o = JSONObject(t)
+    val a = o.optJSONArray("items") ?: org.json.JSONArray()
+    val items = (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map(::recItem39)
+    val ma = o.optJSONArray("missing")
+    val miss = ma?.let { m -> (0 until m.length()).mapNotNull { m.optJSONObject(it) }.map { it.optString("model") to (if (it.has("sizeGb")) it.optDouble("sizeGb") else null) } }
+        ?: items.filter { !it.installed }.distinctBy { it.model }.map { it.model to it.sizeGb }
+    val plan = o.optJSONObject("plan")
+    val bm = o.optJSONObject("byModel")
+    val by = HashMap<String, Pair<List<String>, List<String>>>()
+    bm?.keys()?.forEach { k -> bm.optJSONObject(k)?.let { x -> by[k] = x.strs39("usedFor") to x.strs39("firstFor") } }
+    Rec39(o.optStr("title") ?: "✦ GLIMT ANBEFALER", items, miss, if (o.has("missingGb")) o.optDouble("missingGb") else miss.sumOf { it.second ?: 0.0 },
+        plan?.optStr("text"), plan?.optBoolean("done", false) ?: false, plan?.optInt("fill", 0) ?: 0, by)
+}.getOrNull()
+
+fun AppViewModel.loadRec39(force: Boolean = false) {
+    val s = p39
+    if (!force && System.currentTimeMillis() - s.recAt < 30_000L && s.rec != null) return
+    s.recAt = System.currentTimeMillis()
+    launch39 {
+        try {
+            s.rec = parseRec39(api39 { hlGet("/ai/recommend?full=1", timeout = 20_000) })
+            s.recMissing = false
+        } catch (e: ApiException) { if (e.status == 404) s.recMissing = true }
+    }
+}
+
+/** «Spør Glimt»: POST /api/ai/recommend/ask {q} → tekst og knapp (Last ned / Bruk). */
+fun AppViewModel.askRec39() {
+    val s = p39
+    val q = s.recAsk.trim()
+    if (q.isEmpty() || s.recBusy) return
+    s.recBusy = true
+    launch39 {
+        try {
+            val o = JSONObject(api39 { hlPost("/ai/recommend/ask", JSONObject().put("q", q)) })
+            val act = o.optJSONObject("action")
+            s.recAnswer = RecAnswer39(o.optStr("text") ?: "Glimt fant ingen anbefaling.", act?.optStr("label"), act?.optStr("kind"), act?.optStr("model"), act?.strs39("tasks") ?: o.strs39("tasks"))
+        } catch (e: ApiException) {
+            s.recAnswer = RecAnswer39(if (e.status == 404) "Serveren har ikke Glimt-anbefalinger ennå." else (e.message ?: "Glimt svarte ikke."), null, null, null, emptyList())
+        } finally { s.recBusy = false }
+    }
+}
+
+/**
+ * «Bruk» (én oppgave), «Bruk alle anbefalinger» og «La Glimt velge modeller → Fyll ut» (Valg): POST /api/ai/recommend/apply
+ * {tasks?} (bare admin). Setter hovedmodellen til beste installerte; reserven røres ikke. Angre i 5 s.
+ */
+fun AppViewModel.applyRec39(tasks: List<String>? = null) {
+    if (!userIsAdmin) { aiToast34("Bare administrator kan endre AI-valgene"); return }
+    launch39 {
+        try {
+            val body = JSONObject().apply { if (tasks != null) put("tasks", org.json.JSONArray(tasks)) }
+            val o = JSONObject(api39 { hlPost("/ai/recommend/apply", body) })
+            val n = o.optJSONArray("changed")?.length() ?: 0
+            p39.recUndo = o.optJSONObject("undo")?.optStr("token")
+            Haptics.success()
+            aiToast34(o.optStr("text") ?: if (n > 0) "✦ Glimt fylte ut $n valg" else "✓ Alt følger allerede anbefalingen")
+            loadAiRouting34()
+            loadRec39(force = true)
+            val tok = p39.recUndo
+            if (tok != null) { kotlinx.coroutines.delay(5000); if (p39.recUndo == tok) p39.recUndo = null }
+        } catch (e: ApiException) {
+            aiToast34(if (e.status == 404) "Serveren har ikke «La Glimt velge» ennå" else if (e.status == 403) "Bare administrator kan endre AI-valgene" else (e.message ?: "Fikk ikke fylt ut"))
+        }
+    }
+}
+
+fun AppViewModel.undoRec39() {
+    val tok = p39.recUndo ?: return
+    p39.recUndo = null
+    launch39 {
+        runCatching { api39 { hlPost("/ai/recommend/apply/undo", JSONObject().put("token", tok)) } }
+        aiToast34("Angret")
+        loadAiRouting34()
+        loadRec39(force = true)
     }
 }

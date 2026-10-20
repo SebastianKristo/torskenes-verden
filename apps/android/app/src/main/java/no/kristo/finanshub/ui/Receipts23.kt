@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import no.kristo.finanshub.reanalyze39
 import no.kristo.finanshub.AppViewModel
 import no.kristo.finanshub.Haptics
 import no.kristo.finanshub.Receipt
@@ -226,7 +227,13 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
                         Column {
                             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                             val open = st.open == r.id
-                            RcRow(vm, r, meta = rcMeta(r, booked = false), onClick = { st.open = if (open) null else r.id; Haptics.select() })
+                            // Prompt 39: «✦ Analyserer på nytt … 42 %», tynn rød linje og gul markering når den er ferdig.
+                            val re = vm.p39.re[r.id]
+                            Box(Modifier.fillMaxWidth().background(if (r.id in vm.p39.reFlash) Color(0x33E8B931) else Color.Transparent)) {
+                                RcRow(vm, r, meta = if (re?.running == true && !open) "✦ Analyserer på nytt … ${re.pct} %" else rcMeta(r, booked = false),
+                                    onClick = { st.open = if (open) null else r.id; Haptics.select() })
+                            }
+                            if (re?.running == true && !open) ReLine39(re.pct)
                             if (open) RcEditor(vm, r, cats)
                         }
                     }
@@ -347,14 +354,17 @@ private fun RcEditor(vm: AppViewModel, r: Receipt, cats: List<no.kristo.finanshu
                 Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.ink).clickable(enabled = !busy) { vm.approve23(r) },
                 contentAlignment = Alignment.Center,
             ) { Text(if (busy) "Bokfører …" else "✓ Godkjenn og bokfør", color = p.bg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1) }
+            // Prompt 39: «✦ På nytt» med fremdrift (reanalyze async), knappen viser «✦ 42 %» mens den jobber.
+            val re = vm.p39.re[r.id]
             Box(
-                Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).border(1.dp, p.line, RoundedCornerShape(21.dp)).clickable { vm.reread23(r.id) }.padding(horizontal = 14.dp),
+                Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).border(1.dp, p.line, RoundedCornerShape(21.dp)).clickable(enabled = re?.running != true) { vm.reanalyze39(r.id) }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("✦ På nytt", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
+            ) { Text(if (re?.running == true) "✦ ${re.pct} %" else "✦ På nytt", color = if (re?.running == true) p.mut else p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
             Box(
                 Modifier.size(42.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Slett") { vm.delete23(r.id) },
                 contentAlignment = Alignment.Center,
             ) { Text("🗑", color = p.lab, fontSize = 16.sp) }
         }
+        vm.p39.re[r.id]?.let { ReProgress39(vm, r.id, it) } // prompt 39: fremdriftspanelet
     }
 }

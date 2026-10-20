@@ -69,12 +69,15 @@ internal fun Modifier.holdDrag37(
     onDrag: (Offset) -> Unit,
     onEnd: () -> Unit,
     toRoot: (Offset) -> Offset,
+    /** Prompt 39: i redigeringsmodus starter draget etter 170 ms (flytter fingeren seg før det, er det scroll). Leses ved hver
+     *  ny berøring (ikke nøkkel i pointerInput, ellers ville draget som starter redigeringen blitt avbrutt). */
+    holdMs: () -> Long = { 500L },
 ): Modifier = if (!enabled) this else this.pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
         val slop = 8.dp.toPx()
         var moved = false
-        val released = withTimeoutOrNull(500L) {
+        val released = withTimeoutOrNull(holdMs()) {
             while (true) {
                 val ev = awaitPointerEvent(PointerEventPass.Initial)
                 val ch = ev.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull true

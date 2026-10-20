@@ -342,6 +342,7 @@ private fun AcModels34(vm: AppViewModel, T: AcT34) {
             }
         }
     }
+    AcRecommend39(vm, T) // prompt 39: ✦ Glimt anbefaler (ui/AiRec39.kt)
     AcHead34(T, "LAST NED FRA OLLAMA")
     AcCard34(T) {
         val q = s.aiQ.trim().lowercase()
@@ -381,6 +382,7 @@ private fun AcModels34(vm: AppViewModel, T: AcT34) {
                         Text(fit, color = fc, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp, modifier = Modifier.clip(CircleShape).background(fc.copy(alpha = .16f)).padding(horizontal = 6.dp, vertical = 1.dp))
                     }
                     Text(l.desc + " · " + nb34(l.gb) + " GB", color = T.mut, fontSize = 12.sp, maxLines = 2)
+                    RecUse39(vm, T, l.id) // prompt 39: «Brukes til» og «✦ Glimt anbefaler til …»
                 }
                 AcPill34(T, if (has) "Installert" else if (pulling) "Laster …" else "Last ned", enabled = !has && !pulling) { vm.pullModel34(l.id) }
             }
@@ -425,6 +427,7 @@ private fun AcRouting34(vm: AppViewModel, T: AcT34) {
     val cloud = s.aiCloud.filter { it.on }.map { it.id to "${it.id} · ${it.provider}" }
     val all = s.aiRtModels.ifEmpty { local + cloud }
     val fin = s.aiRules["finLocal"] == true
+    AcGlimtFill39(vm, T) // prompt 39: «✦ La Glimt velge modeller» øverst i Valg
     // Prompt 38: Finans-oppgavene har egen liste med 4 rader og tom tilstand (ui/Ui38.kt); her står resten.
     AiFinRouting38(vm, T)
     AcHead34(T, "HVILKEN MODELL GJØR HVA")

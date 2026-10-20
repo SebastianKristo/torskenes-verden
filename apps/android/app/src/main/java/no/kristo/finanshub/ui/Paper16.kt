@@ -136,13 +136,14 @@ internal fun SetRow(vm: AppViewModel, i: Int, icon: ImageVector, title: String, 
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp) {
+internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp, head: (androidx.compose.foundation.lazy.LazyListScope.() -> Unit)? = null) {
     // Innstillinger → Utseende og fanelinje: tema, ikonfarger, bakgrunn på Hjem og fanelinjen.
     val p = PaperPal.current
     val own = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::uploadPhoto) }
     LaunchedEffect(Unit) { vm.loadPhotoThumbs() }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        item { PLabel("Utseende", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
+        head?.invoke(this) // Prompt 39: Tilpass – IDENTITET og FANELINJE øverst (ui/Settings39.kt)
+        item { PLabel(if (head != null) "Tema" else "Utseende", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
             PCard(Modifier.hl34(vm, "theme")) { // prompt 34: mål «theme»
                 val sel = "✓"
@@ -172,7 +173,7 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp) {
         }
         item { PLabel("Bakgrunn på Hjem", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item { Box(Modifier.hl34(vm, "bg")) { PaperBgSettings(vm) { own.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } } } // prompt 34: mål «bg»
-        item { PLabel("Fanelinje", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
+        item { PLabel(if (head != null) "Fanelinje · flere valg" else "Fanelinje", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
             PCard {
                 SetRow(vm, 1, Icons.Filled.ViewWeek, "Rediger fanelinjen", "Fjern faner, gi nytt navn og bytt ikon. Du kan også holde inne på linjen.", "›") { vm.tabEdit = true }

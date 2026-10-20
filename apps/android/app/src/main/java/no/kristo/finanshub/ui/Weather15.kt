@@ -271,6 +271,7 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                     item { TileRow({ FeelTile(w, it) { open("feel") } }, { YdTile(w, it) { open("yd") } }) }
                     item { TileRow({ RainTile(w, it) { open("rain") } }, { VisTile(w, it) { open("vis") } }) }
                     item { TileRow({ HumTile(w, it) { open("hum") } }, { PresTile(w, it) { open("pres") } }) }
+                    item { WeekGlimt39(vm, w) } // prompt 39: Glimt · ukas vær
                     item {
                         val ctx = LocalContext.current
                         Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = 12.5.sp, textDecoration = TextDecoration.Underline,
@@ -286,7 +287,7 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
         if (d != null && w != null) ForholdSheet(w, d, { vm.weatherSheetDay = it }) { vm.weatherSheetDay = null }
         val k = ms
         if (k != null && w != null) MetricSheet(w, k, msDay, { msDay = it }) { ms = null }
-        if (cmpOpen && w != null) CmpSheet(vm, w) { cmpOpen = false }
+        if (cmpOpen && w != null) CmpSheet39(vm, w) { cmpOpen = false } // prompt 39: Yr mot Storm 2a med wiggle (ui/Weather39.kt)
         if (vm.wxPlacesSheet) PlacesSheet(vm)
         if (mapOpen) WxMap(w) { mapOpen = false }
     } }
@@ -839,6 +840,7 @@ private fun WideWeather25(
                     TileRow3({ HumTile(w, it) { open("hum") } }, { PresTile(w, it) { open("pres") } }, null)
                 }
             }
+            WeekGlimt39(vm, w) // prompt 39: Glimt · ukas vær
             val ctx = LocalContext.current
             Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = 12.5.sp, textDecoration = TextDecoration.Underline,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().alpha(.85f).clickable { openLink(ctx, w.yrUrl ?: "https://www.yr.no/") }.padding(top = 4.dp))

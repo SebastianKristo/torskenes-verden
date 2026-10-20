@@ -351,14 +351,14 @@ internal fun Programvare30(vm: AppViewModel) {
             if (avail) p.lab else p.pos, serif = false,
         ) { vm.openNordlys31() }
         PToggle("Automatiske oppdateringer", "Installeres om natten kl. 03:30, etter backup", u.autoUpdate, top = true) { vm.setUpdSetting30("auto_update", it) }
-        PToggle("Varsle om nye versjoner", "Banner på Hjem og push", u.notifyUpdates, top = true) { vm.setUpdSetting30("notify_updates", it) }
+        // Prompt 39: «Varsle om nye versjoner» ligger nå under Innstillinger → Varsler (UpdNotifyToggle39).
     }
 }
 
 /** Fargene på ikonene i Innstillinger, samme som web (Innstillinger Web.dc.html). Null = fargetemaet. */
 internal fun setColor30(title: String): Long? = when (title) {
     "Kontoer og brukere", "Konto" -> 0xFF2B5D8A
-    "Utseende og fanelinje", "Utseende" -> 0xFF7A5AD6
+    "Utseende og fanelinje", "Utseende", "Tilpass" -> 0xFF7A5AD6 // prompt 39: Tilpass
     "Moduler", "Startside" -> 0xFF3F7A6E
     "Domener" -> 0xFFC0562A
     "Varsler og haptikk", "Varsler", "Logg ut" -> 0xFFB23A2A

@@ -326,3 +326,70 @@ internal fun VolumeChips39(vm: AppViewModel, n: NotifyPrefs) {
         Text(Sound39.DAMP_NOTE, color = p.mut, fontSize = 11.5.sp)
     }
 }
+
+/* ======================= Kvitteringer: «✦ På nytt» med fremdrift ======================= */
+
+private const val RED39 = 0xFFB23A2A
+private const val OK39 = 0xFF2F7A4F
+
+/** Tynn rød linje under en lukket rad mens den leses på nytt. */
+@Composable
+internal fun ReLine39(pct: Int) {
+    val p = PaperPal.current
+    Box(Modifier.fillMaxWidth().height(2.dp).background(p.line)) {
+        Box(Modifier.fillMaxWidth((pct.coerceIn(0, 100) / 100f).coerceAtLeast(.02f)).height(2.dp).background(Color(RED39)))
+    }
+}
+
+/**
+ * Panelet under knappene: nåværende steg (fet) + prosent (mono, rød), linje 6 dp og steglisten (✓ ferdig · • pågår · · venter).
+ * Feil: rødt «✕ Gemini svarte ikke» med «Prøv igjen» og «Bruk lokal OCR». Avbryt mens den jobber.
+ */
+@Composable
+internal fun ReProgress39(vm: AppViewModel, id: String, re: Re39) {
+    val p = PaperPal.current
+    val idx = RE_STEPS39.indexOfFirst { it.first == re.step }.let { if (re.done) RE_STEPS39.size else it }
+    val label = { s: String -> s.replace("{motor}", re.engine) }
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val now = when {
+                re.cancelled -> re.msg ?: "Avbrutt · ingenting ble endret"
+                re.error -> re.msg?.let { if (it.startsWith("✕")) it else "✕ $it" } ?: "✕ ${re.engine} svarte ikke"
+                re.done -> re.msg ?: "✦ Analysert på nytt"
+                else -> re.msg ?: RE_STEPS39.getOrNull(idx)?.second?.let(label) ?: "Starter …"
+            }
+            Text(now, color = if (re.error && !re.cancelled) Color(RED39) else p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
+                maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (!re.error) Text("${re.pct} %", color = Color(RED39), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        }
+        if (!re.error) Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.line)) {
+            Box(Modifier.fillMaxWidth((re.pct.coerceIn(0, 100) / 100f).coerceAtLeast(.02f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(RED39)))
+        }
+        if (!re.cancelled) RE_STEPS39.forEachIndexed { i, (_, t) ->
+            val st = when { i < idx -> "done"; i == idx && re.error -> "err"; i == idx -> "on"; else -> "wait" }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(when (st) { "done" -> "✓"; "on" -> "•"; "err" -> "✕"; else -> "·" }, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                    color = when (st) { "done" -> Color(OK39); "err" -> Color(RED39); "on" -> p.ink; else -> p.mut }, modifier = Modifier.widthIn(min = 12.dp))
+                Text(label(t), color = if (st == "wait") p.mut else p.ink, fontFamily = PaperFonts.sans, fontSize = 12.5.sp,
+                    fontWeight = if (st == "on") FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (re.running) ReBtn39("Avbryt", false) { vm.cancelRe39(id) }
+            if (re.error && !re.cancelled) {
+                ReBtn39("Prøv igjen", true) { vm.reanalyze39(id) }
+                ReBtn39("Bruk lokal OCR", false) { vm.reanalyze39(id, "tesseract") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReBtn39(t: String, primary: Boolean, onClick: () -> Unit) {
+    val p = PaperPal.current
+    Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(if (primary) p.ink else Color.Transparent).border(1.dp, if (primary) p.ink else p.line, RoundedCornerShape(17.dp))
+        .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+        Text(t, color = if (primary) p.bg else p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+    }
+}

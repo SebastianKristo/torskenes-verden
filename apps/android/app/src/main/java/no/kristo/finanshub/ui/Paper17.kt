@@ -57,7 +57,7 @@ import java.time.LocalDate
 internal val PAPER_SET_TITLES = mapOf(
     "accounts" to "Kontoer og brukere", "security" to "Sikkerhet", "tokens" to "API-tokens", "ai" to "AI og tolkning",
     "cats" to "Kategorier og budsjett", "rules" to "Regler", "stocks" to "Aksjer · Trading 212", "fin" to "Fanelinje og Mer i Finans",
-    "modules" to "Moduler", "look" to "Utseende og fanelinje", "notify" to "Varsler og haptikk", "haptics" to "Haptikk",
+    "modules" to "Moduler", "look" to "Tilpass", "tilpass" to "Tilpass", "profil" to "Appprofil", "notify" to "Varsler og haptikk", "haptics" to "Haptikk",
     "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner", "kal" to "Kalendere",
     "update" to "Oppdatering", "sysbackup" to "Backup",
 )
@@ -74,7 +74,13 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
         when (sub) { "tokens" -> vm.loadTokens(); "notify" -> vm.loadNotify(); null -> { vm.loadAppInfo(); if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadBk29(); vm.loadUpd30(); vm.loadUpdSettings30() } } }
     }
     // Utseende: tema, ikonfarger, bakgrunn og fanelinje (egen liste fra prompt 16).
-    if (sub == "look") { SetIcons36(sub) { PaperSettings16(vm, navBottom) }; return }
+    // Prompt 39: «Tilpass» samler navn, ikon, fanelinje, tema og bakgrunn. Gamle lenker til «look» havner også her.
+    if (sub == "look" || sub == "tilpass") {
+        SetIcons36("look") { PaperSettings16(vm, navBottom) { tilpassHead39(vm) } }
+        if (vm.appNameEdit) AppNameSheet24(vm)
+        if (vm.appIconEdit) AppIconSheet24(vm)
+        return
+    }
     // Prompt 25: «Ta meg dit →» scroller først til gruppen (så raden komponeres), deretter fram til raden (hl25).
     val list = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(vm.p25.hlSeq, sub) { vm.p25.hlIndex?.let { runCatching { list.animateScrollToItem(it) } } }
@@ -92,6 +98,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             }
             "modules" -> item { ModulesSub(vm) }
             "notify" -> item { NotifySub(vm) }
+            "profil" -> profilPage39(vm) // Prompt 39: Appprofil som egen underside
             "accounts" -> item { AccountsPage(vm) }
             "security" -> item { SecurityPage(vm, onPrivacyChanged) }
             "tokens" -> item { TokensPage(vm) }
@@ -143,7 +150,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
             }
         }
     }
-    profileGroup24(vm)
+    // Prompt 39: PROFIL-gruppen er flyttet til «Appprofil» nederst i APP.
     group("Konto") { i ->
         SetRow(vm, i(), Icons.Filled.People, "Kontoer og brukere", "Bytt konto, legg til og logg ut") { vm.settingsPage = "accounts" }
         SetRow(vm, i(), Icons.Filled.Lock, "Sikkerhet", if (vm.me?.totp == true) "2FA på" else "2FA av", top = true) { vm.settingsPage = "security" }
@@ -161,11 +168,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         SetRow(vm, i(), Icons.Filled.Autorenew, "Subscription OS", "Abonnementer og AI-sparing", top = true) { vm.openFromMer(Screen.Sub) }
     }
     group(vm.appName) { i ->
-        SetRow(vm, i(), Icons.Filled.Edit, "Navn på appen", vm.appName, "Endre ›") { vm.appNameEdit = true }
-        SetRow(vm, i(), Icons.Filled.Image, "App-ikon", APP_ICONS.firstOrNull { it.first == vm.appInfo.icon }?.second ?: "Homelab H· (standard)", "Endre ›", top = true) { vm.appIconEdit = true }
-        // Prompt 25: Fanelinje-stil (Tekst / Bare ikoner / Ikoner + navn på valgt). Trykk bytter til neste, lagres i layout.navStyle.
-        SetRow(vm, i(), Icons.Filled.ViewWeek, "Fanelinje-stil", navStyleSub25(), navStyleName25() + " ›", top = true) { vm.setNavStyle25(nextNavStyle25()) }
-        SetRow(vm, i(), Icons.Filled.ViewWeek, "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", top = true) { vm.tabEdit = true }
+        // Prompt 39: navn, ikon, fanelinje, tema og bakgrunn ligger i «Tilpass».
+        SetRow(vm, i(), Icons.Filled.Palette, "Tilpass", "Navn, ikon, tema, farger, bakgrunn og fanelinje", "›") { vm.settingsPage = "tilpass" }
         SetRow(vm, i(), Icons.Filled.Dashboard, "Moduler", "Familie, Gjøremål, Avganger, Vær", top = true) { vm.settingsPage = "modules" }
         SetRow(vm, i(), Icons.Filled.Newspaper, "Nyhetsleser", "Kilder og AI", top = true) { vm.openNews(settings = true) }
     }
@@ -173,11 +177,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     group("Glimt") { _ -> GlimtSettingsRow35(vm) }
     group("App") { i ->
         AiSettingsRow34(vm, i()) // Prompt 34: AI og modeller → AI-kontroll i fullskjerm (ui/AiCtl34.kt)
-        SetRow(vm, i(), Icons.Filled.Palette, "Utseende og fanelinje", "Papir ${when (vm.paperMode) { "mork" -> "mørk"; "lys" -> "lys"; else -> "· følger systemet" }} · bakgrunn · ikonfarger", top = true) { vm.settingsPage = "look" }
         SetRow(vm, i(), Icons.Filled.Notifications, "Varsler og haptikk", "Lyd, stille timer og test", top = true) { vm.settingsPage = "notify" }
         SetRow(vm, i(), Icons.Filled.CalendarMonth, "Kalendere", "Google Kalender · Home Assistant · Skole-iCal", top = true) { vm.openKalSettings26(null) }
         SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", if (vm.userIsAdmin) "Home Assistant, Kalendere, Entur, Bring og flere" else "Kalendere, Trading 212, Bring, e-post og flere", top = true) { vm.settingsPage = "integ" }
         SetRow(vm, i(), Icons.Filled.MonitorHeart, "Helse og posisjon", "Health Connect, typer og posisjonsdeling", top = true) { vm.settingsPage = "healthpos" }
+        SetRow(vm, i(), Icons.Filled.People, "Appprofil", profileName39(vm), "›", top = true) { vm.settingsPage = "profil" } // prompt 39
         SetRow(vm, i(), Icons.Filled.DocumentScanner, "Skanning", "Kamera, beskjæring og opplasting", top = true) { vm.settingsPage = "scan" }
         SetRow(vm, i(), Icons.Filled.Dns, "Server og synk", "Lokal og ekstern adresse", top = true) { vm.settingsPage = "server" }
         SetRow(vm, i(), Icons.Filled.Backup, "Backup og data", "Nedlasting og lagring", top = true) { vm.settingsPage = "backup" }
@@ -251,6 +255,7 @@ private fun NotifySub(vm: AppViewModel) {
             // Prompt 31: svar fra Glimt som varsel når appen er i bakgrunnen (ai_bg_notify).
             AiBgToggle31(vm)
             AiInToggle39(vm) // prompt 39: «Vis svaret i appen også» (n_ai_in)
+            UpdNotifyToggle39(vm) // prompt 39: «Varsle om nye versjoner» flyttet hit fra PROGRAMVARE
             if (n.quiet) Row(Modifier.fillMaxWidth().padding(14.dp, 4.dp, 14.dp, 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TimeChips("Fra", n.quietFrom, listOf("21:00", "22:00", "23:00")) { vm.saveNotify(n.copy(quietFrom = it)) }
                 TimeChips("Til", n.quietTo, listOf("06:00", "07:00", "08:00")) { vm.saveNotify(n.copy(quietTo = it)) }

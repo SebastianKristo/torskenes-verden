@@ -158,7 +158,9 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
     val idx by rememberUpdatedState(index)
     val cnt by rememberUpdatedState(count)
     // Prompt 28: samme vugging som iOS (±0,45°, 0,6 s, annenhver i motfase).
-    val angle = wobbleAngle(edit && !dragging, index, 0.45f)
+    // Prompt 39: vuggingen stopper mens et redigeringsark (Velg stopp, Pakker) er åpent.
+    val sheet39 = vm.b27.homeSheet || vm.p37.h2Menu
+    val angle = wobbleAngle(edit && !dragging && !sheet39, index, 0.45f)
     val dens = androidx.compose.ui.platform.LocalDensity.current.density
     val bkey = "$page|${sec.key}"
     // Prompt 37 (krasjfiksen, claude-code-wiggle-krasj-ios.md A): bytt bare når fingeren står i midtre 30 % av nabokortet og maks hver 140 ms;
@@ -167,7 +169,7 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
         val outer = st.top() - st.applied
         if (st.startY.isNaN()) return
         ty = st.startOuter + (st.lastY - st.startY) - outer
-        vm.wiggleEdge37(st.lastY, 40f * dens)
+        vm.wiggleEdge37(st.lastY, 80f * dens) // prompt 39: auto-scroll innenfor 80 dp fra kanten
         val now = android.os.SystemClock.uptimeMillis()
         if (outer == st.swapAt && now - st.swapT < 400) return
         val dir = vm.wiggleHit37(page, vm.pageVisible37(page, keys), sec.key, Offset(st.lastX, st.lastY))
@@ -196,6 +198,7 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
                 },
                 onEnd = { dragging = false; ty = 0f; st.startY = Float.NaN; vm.wiggleEnd37(page) },
                 toRoot = { o -> st.coords?.takeIf { it.isAttached }?.localToRoot(o) ?: o },
+                holdMs = { if (vm.editPage == page) 170L else 500L }, // prompt 39: kort hold i redigering, ellers scroller sveipet siden
             ),
     ) {
         content()

@@ -45,7 +45,9 @@ import no.kristo.finanshub.*
 /* ---------------- Indeksen ---------------- */
 
 private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
-    vm.b24.profiles.forEach { add(SetItem24("profile:${it.key}", it.name, "Profil", it.sub, null)) }
+    // Prompt 39: profilene ligger på undersiden «Appprofil» (APP-gruppen).
+    add(SetItem24("profil", "Appprofil", "App", "Standard, Finans + Boliger eller Boliger-profil", "profil", "profil boliger oppsett"))
+    vm.b24.profiles.forEach { add(SetItem24("profile:${it.key}", it.name, "App → Appprofil", it.sub, null, "profil oppsett")) }
     add(SetItem24("accounts", "Kontoer og brukere", "Konto", "Bytt konto, legg til og logg ut", "accounts", "bruker brukere"))
     add(SetItem24("security", "Sikkerhet", "Konto", "Totrinnsbekreftelse, passord, fingeravtrykk og aktive økter", "security", "2fa passord face logg"))
     if (vm.userIsAdmin) add(SetItem24("sysbackup", "Backup", "Konto", "Backup av hele systemet: automatisk, hva som tas med, sky og gjenoppretting", "sysbackup", "backup sikkerhetskopi gjenopprett restore"))
@@ -63,7 +65,7 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("tabedit", "Fanelinje i Hjem", vm.appName, "Fjern, flytt, gi nytt navn og ikon", null, "fane faner"))
     add(SetItem24("modules", "Moduler", vm.appName, "Familie, Gjøremål, Avganger, Vær", "modules", "widget modul"))
     add(SetItem24("news", "Nyhetsleser", vm.appName, "Kilder og AI", null, "nyheter rss"))
-    add(SetItem24("look", "Utseende og fanelinje", "App", "Tema (lys og mørk), bakgrunn og ikonfarger", "look", "tema mørk lys farge bakgrunn"))
+    add(SetItem24("look", "Tilpass", vm.appName, "Navn, ikon, tema, farger, bakgrunn og fanelinje", "tilpass", "tema mørk lys farge farger ikon navn fanelinje bakgrunn tilpass utseende"))
     add(SetItem24("notify", "Varsler og haptikk", "App", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))
     add(SetItem24("kal", "Kalendere", "App", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "kal", "kalender google ha skole canvas ical timeplan bursdag"))
     add(SetItem24("integ", "Integrasjoner", "App", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring, IMAP og flere", "integ", "integrasjon"))
@@ -149,18 +151,19 @@ private fun open24(vm: AppViewModel, it: SetItem24) {
     // Prompt 34: mål med egen kontroll (Oppdater nå, Tema, Haptikk …) åpnes og markeres med rød ring.
     if (ANCHORS34.any { a -> a.id == it.id } && vm.goAnchor34(it.id)) return
     when {
-        it.id.startsWith("profile:") -> main(it.id, 3)
+        it.id.startsWith("profile:") -> { vm.settingsPage = "profil"; vm.highlight25(it.id, 1) } // prompt 39: egen underside
         // Prompt 26: hver integrasjon har egen side (Kalendere for skole, Google og HA).
         it.id.startsWith("integ:") -> vm.openInteg26(it.id.removePrefix("integ:"))
         it.id == "kal" -> vm.openKalSettings26(null)
         it.id == "nordlys" -> vm.openNordlys31()
-        it.id == "import" -> main(rowKey25("Bankimport"), 7)
-        it.id == "sub" -> main(rowKey25("Subscription OS"), 7)
-        it.id == "appname" -> main(rowKey25("Navn på appen"), 9)
-        it.id == "appicon" -> main(rowKey25("App-ikon"), 9)
-        it.id == "navstyle" -> main(rowKey25("Fanelinje-stil"), 9)
-        it.id == "tabedit" -> main(rowKey25("Fanelinje i Hjem"), 9)
-        it.id == "news" -> main(rowKey25("Nyhetsleser"), 9)
+        // Prompt 39: PROFIL er borte fra hovedsiden (to plasser færre), og navn/ikon/fanelinje ligger i Tilpass.
+        it.id == "import" -> main(rowKey25("Bankimport"), 5)
+        it.id == "sub" -> main(rowKey25("Subscription OS"), 5)
+        it.id == "appname" || it.id == "appicon" || it.id == "navstyle" || it.id == "tabedit" -> {
+            vm.settingsPage = "tilpass"
+            vm.highlight25(rowKey25(when (it.id) { "appname" -> "Navn på appen"; "appicon" -> "App-ikon"; "navstyle" -> "Fanelinje-stil"; else -> "Fanelinje i Hjem" }), 1)
+        }
+        it.id == "news" -> main(rowKey25("Nyhetsleser"), 7)
         it.page != null -> { vm.settingsPage = it.page; vm.highlight25("page:${it.page}", 0) }
     }
 }

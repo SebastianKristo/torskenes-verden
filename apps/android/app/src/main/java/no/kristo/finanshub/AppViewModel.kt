@@ -3481,6 +3481,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "meal:changed", "meal" -> onMealChanged36(msg)
             // Prompt 39: nytt profilbilde (eller navn) fra web/iPhone vises med en gang.
             "me", "me:changed", "avatar", "profile" -> refreshMe39(force = true)
+            "job" -> onJob39(msg) // prompt 39: «✦ På nytt» på kvitteringer (steg og prosent)
         }
     }
     fun startRealtime() { if (loggedIn && !locked) realtime.start(base.ifBlank { account?.server ?: "" }, account?.token) }

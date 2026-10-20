@@ -386,7 +386,11 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                             Ch27Act(v, null, if (s.copied == key) "Kopiert" else "Kopier") { clip.setText(AnnotatedString(msg.content)); vm.chatCopied27(key) }
                         }
                     }
-                } else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                } else {
+                  // Prompt 39: hold inne på svaret → modellen nederst («Gemma 4 · 1,2 s · lokal»).
+                  var showModel by remember { mutableStateOf(false) }
+                  Column(Modifier.fillMaxWidth().pointerInput(Unit) { detectTapGestures(onLongPress = { Haptics.select(); showModel = !showModel }) },
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         // Prompt 31: verktøysvar fra Glimt har merket (Ferdig) og verktøy-chip («Vær», «Kalender» …).
                         if (msg.tool != null || msg.model == "Glimt") Row(Modifier.align(Alignment.CenterVertically), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -398,6 +402,13 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                     }
                     Ch27Body(v, msg.content)
                     msg.card?.let { ChatCard31(vm, it, v) }
+                    if (showModel) {
+                        val mm = msg.model?.let { k -> s.models.firstOrNull { it.id == k } }
+                        val where = when { msg.model == "Glimt" || msg.tool != null -> "Glimt"; mm?.sky == true -> "sky"; mm != null -> "lokal"; else -> null }
+                        Text(listOfNotNull(msg.model?.let { s.modelLabel27(it) } ?: "Ukjent modell", msg.stats?.takeIf { it.isNotBlank() }, where).joinToString(" · "),
+                            color = v.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp,
+                            modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(v.card).padding(horizontal = 10.dp, vertical = 5.dp))
+                    }
                     FlowRow(Modifier.offset(x = (-8).dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Ch27Act(v, ChIc27.COPY, if (s.copied == key) "Kopiert" else "Kopier") { clip.setText(AnnotatedString(msg.content)); vm.chatCopied27(key) }
                         if (i == lastA && !s.busy) Ch27Act(v, ChIc27.REGEN, "Nytt svar") { vm.regenChat27() }
@@ -406,6 +417,7 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                             Text(it, color = v.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 11.sp, modifier = Modifier.align(Alignment.CenterVertically).padding(start = 6.dp))
                         }
                     }
+                  }
                 }
             }
         }
