@@ -532,7 +532,7 @@ internal fun LookExtras42(vm: AppViewModel) {
 internal fun PostNordLogo42(size: Int, white: Boolean = true) {
     val shape = RoundedCornerShape((size * 14f / 52f).dp)
     Box(Modifier.size(size.dp).clip(shape).background(if (white) Color.White else Color.Transparent), contentAlignment = Alignment.Center) {
-        Image(painterResource(R.drawable.carrier_postnord), "PostNord", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding((size * .12f).dp))
+        Image(painterResource(no.kristo.finanshub.R.drawable.carrier_postnord), "PostNord", contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize().padding((size * .12f).dp))
     }
 }
 
