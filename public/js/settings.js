@@ -12,6 +12,7 @@ import { toggleHeadEdit, resetHead, setHeadLock, setHeadAlign, headAlign, saveUi
 import { loginView, loadLogin, loginClick, loginSubmit, loginChange, loginData, roleName } from './settings-login.js';
 import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, domainCount, domainsEsc } from './settings-domains.js';
 import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from './settings-notify.js';
+import { loadFam42, fam42View, fam42Click, fam42Change } from './settings-familie42.js'; // prompt 42: Familie → Helse (Familie)
 import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
 import { loadInteg, integRows, integSub, integClick, integChange, integCount } from './settings-integ.js';
 import { myProfile, profilesLoaded, hasProfiles, loadProfiles } from './onboard37.js'; // prompt 37: profil i husstanden
@@ -84,6 +85,7 @@ const TABS = [
   ['dom', 'Domener', 'Domener, statistikkilder og verdenskart.', 'Generelt', P.map],
   ['varsel', 'Varsler', 'Lyd, stille timer, grupper og test.', 'Generelt', P.bell],
   ['app', 'App', 'Navn på appen, app-ikon, widgets og Kalender-appen.', 'Generelt', P.app],
+  ['familie', 'Familie', 'Helsekilder: Apple Health, Health Connect og Home Assistant.', 'Generelt', P.users], // prompt 42
   ['glimt', 'Glimt', 'Figur, brief, stemme og venner.', 'Glimt', P.star],
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
@@ -94,10 +96,10 @@ const TABS = [
 ];
 const tabsFor = () => TABS.filter((t) => !t[5] || isAdmin());
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt' };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie' };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
-  tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app' };
+  tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app', hahealth: 'familie' };
 const subTab = (sub) => SUB_TAB[sub] ?? (sub?.startsWith('cfg:') || sub?.startsWith('i24:') || sub?.startsWith('trk37:') ? 'int' : sub?.startsWith('user:') ? 'users' : null);
 const tabOf = (k) => TABS.find(([id]) => id === k) ?? TABS[0];
 
@@ -565,7 +567,7 @@ const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [gro
   row({ t: 'Glimt-brief', s: 'Morgen-, dags-, kvelds- og nattbrief med klokkeslett', go: 'glimt', btn: 'Åpne', k: 'brief morgenbrief kveldsbrief varsel guide venner' }),
   row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure' }),
 ])] });
-const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView({ ...H, sub }), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H) };
+const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView({ ...H, sub }), familie: () => fam42View(H, sub), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H) };
 function searchView() {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean), out = [];
   const saved = sub; sub = null;
@@ -751,6 +753,7 @@ function enter() {
   if (tab === 'dom' || q) loadDomains(reload);
   if (tab === 'varsel' || q) loadNotify(reload);
   if (tab === 'app' || q) loadApp(reload);
+  if (tab === 'familie' || q) loadFam42(reload);
   if (tab === 'ai' || q) loadAi(reload, tab === 'ai');
   if (tab === 'system' || q) loadSystem(reload);
   if (tab === 'backup' || q) loadBackup(reload);
@@ -864,6 +867,7 @@ export function bindSettings() {
     if (await loginClick(e)) return;
     if (await domainsClick(e)) return;
     if (await notifyClick(e)) return;
+    if (tab === 'familie' && await fam42Click(e, render)) return;
     if (await appClick(e)) return;
     if (await systemClick(e)) return;
     if (await backupClick(e)) return;
@@ -1038,6 +1042,7 @@ export function bindSettings() {
     if (await loginChange(e)) return;
     if (domainsChange(e)) return;
     if (await notifyChange(e)) return;
+    if (tab === 'familie' && fam42Change(e)) return;
     if (t.matches('[data-news-speed]')) { saveUi({ newsSpeed: +t.value }); return; }
     if (t.matches('[data-tab-label]')) { await saveLabels(t.dataset.tabLabel, t.value); return; }
     if (kalChange(e, render)) return;

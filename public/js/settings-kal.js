@@ -7,6 +7,7 @@ import { integById } from './settings-integ.js';
 import { mountBdCalendars, bdCalSummary } from './birthdays.js';
 import { ensureKal, subjectColors, setSubjectColor, webLayout, setWebLayout } from './kalender.js';
 import { cals as kalCals, st39, loadCals, patchCal, SWATCHES } from './kal39.js';
+import { NOTIFY, abNotify, setAbNotify } from './kal42.js'; // prompt 42
 
 const CFG_GROUP = 'Kalender / timeplan';
 
@@ -76,11 +77,19 @@ function fourBox() {
     <div class="sg-note">Personlig og Bursdager kommer fra Google, Skole fra en iCal-adresse, Helligdager er innebygd. Egne kalendere lages fra Kalender → + Legg til kalender.</div></section>`;
 }
 
+// Prompt 42: varsler for kalenderen Abonnementer (Av / Dagen før / Prøveperioder og årlige; standard: prøveperioder og årlige).
+function subsBox() {
+  const c = kalCals().find((x) => x.id === 'abonnementer'), v = abNotify(c);
+  return `<section class="sg"><h3 class="sg-t">Abonnementer · varsler</h3><div class="sg-box"><div class="sg-row kal42-row"><span class="sg-txt"><b>Trekk fra Finans → Abonnementer</b><span>Vanlige trekk varsles ikke som standard. Prøveperioder varsles 2 dager og 1 dag før, årlige fornyelser 7 dager før.</span></span></div>
+    <div class="kal42-seg" role="group" aria-label="Varsler for abonnementer">${NOTIFY.map(([k, n]) => `<button type="button" data-kal42-notify="${k}" aria-pressed="${v === k}">${esc(n)}</button>`).join('')}</div></div>
+    <div class="sg-note">Abonnementer er en innebygd kalender. Trekkene endres i Finans → Abonnementer og kan ikke redigeres i Kalender.</div></section>`;
+}
+
 /** Siden. search er radene innstillingssøket leter i. */
 export function kalView({ row, note, cfg }) {
   const s = bdCalSummary();
   return {
-    html: `${fourBox()}${layoutBox()}${schoolForm(cfg, note)}
+    html: `${fourBox()}${subsBox()}${layoutBox()}${schoolForm(cfg, note)}
       <section class="sg"><h3 class="sg-t">Google Kalender og Home Assistant</h3><div data-mount-host></div>
         <div class="sg-note">Bursdager og hendelser fra Google Kalender vises i Kalender og Bursdager. Home Assistant kan importere og synke bursdager to veier.</div></section>
       ${colorsBox()}`,
@@ -98,6 +107,8 @@ export function kalView({ row, note, cfg }) {
 }
 
 export function kalClick(e, rerender) {
+  const an = e.target.closest('[data-kal42-notify]');
+  if (an) { e.preventDefault(); const c = kalCals().find((x) => x.id === 'abonnementer'); if (c) c.notify = an.dataset.kal42Notify; setAbNotify(an.dataset.kal42Notify, c?.srvId ?? 'abonnementer'); rerender(); return true; }
   const nu = e.target.closest('[data-kal-newurl]');
   if (nu) { e.preventDefault(); const inp = nu.parentElement.querySelector('input'); nu.hidden = true; if (inp) { inp.hidden = false; inp.focus(); } return true; }
   const op = e.target.closest('[data-kal40-open]');

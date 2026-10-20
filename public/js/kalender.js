@@ -23,6 +23,7 @@ import { glimt } from './glimt.js';
 import { LEARN_TYPES, typeName, addMemory, applyMemory, nameOfEvent, loadMemory, dinOf } from './glimt-memory.js'; // prompt 33
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import * as k38 from './kal38.js'; // prompt 38: zoom, Glimt-assistenten, kart, ark/tastatur, app-modus (Mac)
+import * as k42 from './kal42.js'; // prompt 42: Abonnementer (trekkdatoer fra Finans)
 import * as k39 from './kal39.js'; // prompt 39: hele oppsettet er en kopi av Kalender.app for Mac (fire kalendere)
 /** Prompt 31 (Kalender.dc.html): «Pilestredet park 35 U2005 https://link.mazemap.com/…» → «Pilestredet park 35 U2005». */
 export const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
@@ -160,7 +161,9 @@ function normalize(r) {
     if (Number.isNaN(+st)) continue;
     // Egne hendelser (Google / lokale i Privat og Familie) er «g», uansett hvilken type serveren gjetter.
     const own = x.source === 'google' || x.source === 'local' || x.calendar === 'privat' || x.calendar === 'familie';
-    const kind = own ? 'g' : TYPES.includes(x.type) ? x.type : x.type === 'bd' ? 'bursdag' : 'time';
+    // Prompt 42: trekk fra Finans → Abonnementer er egne heldagshendelser (kind 'ab'), aldri timer eller prøver.
+    const isAb = k42.isSubEvent(x);
+    const kind = isAb ? 'ab' : own ? 'g' : TYPES.includes(x.type) ? x.type : x.type === 'bd' ? 'bursdag' : 'time';
     const cal = calOf(x, kind);
     const base = { id: String(x.id ?? `${x.start}|${x.title}`), oid: String(x.id ?? ''), kind, cal, t: String(x.title ?? ''), short: x.short || '', subj: x.subject || (kind === 'time' ? String(x.title ?? '') : ''),
       // Prompt 31: URL-er (f.eks. mazemap-lenker fra timeplan-importen) fjernes fra stedsteksten i alle korte visninger;
@@ -170,8 +173,8 @@ function normalize(r) {
       // Prompt 38: adresse og kart (kal37: address, map:{lat, lon, url, appleUrl, googleUrl, label}) og serverens kind (trial ≠ prøve).
       addr: x.address || '', gmap: x.map && typeof x.map === 'object' ? x.map : null, k37: x.kind || '',
       // Prompt 39: én av de fire kalenderne (Personlig · Bursdager · Skole · Helligdager) eller en egen, og fagets tekstfarger.
-      ac: k39.cal4({ ...x, cal, kind }), stx: x.subjectTextColor || '', slt: x.subjectLightColor || '' };
-    if (x.allDay) {
+      ac: k39.cal4({ ...x, cal, kind }), stx: x.subjectTextColor || '', slt: x.subjectLightColor || '', ...(isAb ? { ab: k42.subFields(x), editable: false, all: true } : {}) };
+    if (x.allDay || isAb) {
       // Heldagshendelser over flere dager: én oppføring per dag (slutt er eksklusiv).
       let d = d0(st), n = 0;
       const last = en > st ? add(d0(new Date(en - 1)), 0) : d;
@@ -224,7 +227,7 @@ async function fetchKal(from, to) {
   const tt = d0(new Date());
   from ??= key(add(tt, -42)); to ??= key(add(tt, 120));
   try {
-    const [r] = await Promise.all([api(`/kalender?from=${from}&to=${to}`), k39.loadCals()]);
+    const [r] = await Promise.all([api(`/kalender?from=${from}&to=${to}`).then((x) => k42.addSubs(x, from, to)), k39.loadCals()]);
     k39.localColors();
     K.data = normalize(r);
     K.range = { from, to };
@@ -314,6 +317,7 @@ const remOf = (e) => K.rem[e.id] ?? K.rem[e.oid] ?? (e.srvRem && e.srvRem !== 'n
 function detailSheet() {
   const e = K.sel && findEv(K.sel);
   if (!e) return '';
+  if (e.kind === 'ab') return k42.subSheet(e, { longDate, fromKey }); // prompt 42
   const sd = fromKey(e.k), R = remOf(e), cal = calById(e.ac);
   const rows = [e.r && ['Sted', e.r, 1], e.teacher && ['Lærer', e.teacher, 1], ['Kalender', cal.name], e.kind !== 'time' && e.subj && ['Fag', e.subj, 1], e.n && ['Merknad', e.n, 1],
     e.rep && e.rep !== 'none' && ['Gjentas', { daily: 'Hver dag', weekly: 'Hver uke', monthly: 'Hver måned', rec: 'Ja' }[e.rep] ?? e.rep]].filter(Boolean);

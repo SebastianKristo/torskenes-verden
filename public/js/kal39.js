@@ -6,6 +6,7 @@
 // Data, ark (detaljer, ny/rediger, søk, ✦ Skriv time) og Glimt-panelet ligger fortsatt i kalender.js / kal38.js.
 import { themeBtn } from './kal-theme40.js';
 import { esc, isMobile } from './util.js';
+import { AB_CAL, groupSubs, chipInner, listRow, bindLogos } from './kal42.js'; // prompt 42: Abonnementer
 
 let C = null;
 /** kalender.js: { K, evOn, key, add, d0, mm, fromKey, curD, paint, setView, openForm, openGlimt, findEv } */
@@ -41,12 +42,14 @@ export const CAL4 = [
   { id: 'bursdager', key: 'b', name: 'Bursdager', color: '#8a3fa0', source: 'google', badge: 'GOOGLE', sourceLabel: 'Google Kontakter' },
   { id: 'skole', key: 's', name: 'Skole', color: '#2f7a4f', source: 'url', badge: 'URL', sourceLabel: 'iCal' },
   { id: 'helligdager', key: 'h', name: 'Helligdager', color: '#a39d90', source: 'builtin', badge: 'INNEBYGD', sourceLabel: 'Norge' },
+  AB_CAL, // prompt 42: trekkdatoene fra Finans → Abonnementer (innebygd, kan skjules)
 ];
 // Gamle kalender-id-er (prompt 27/33/35) → de fire. Serverens migrering (SERVER39) gjør det samme med selve hendelsene.
 const ALIAS = { p: 'personlig', personlig: 'personlig', privat: 'personlig', jobb: 'personlig', j: 'personlig', familie: 'personlig', f: 'personlig', helse: 'personlig', trials: 'personlig', google: 'personlig', local: 'personlig',
   b: 'bursdager', bursdager: 'bursdager', birthdays: 'bursdager', bursdag: 'bursdager',
   s: 'skole', skole: 'skole', studie: 'skole', study: 'skole', timeplan: 'skole', prover: 'skole', canvas: 'skole', ical: 'skole',
-  h: 'helligdager', helligdager: 'helligdager', holidays: 'helligdager' };
+  h: 'helligdager', helligdager: 'helligdager', holidays: 'helligdager',
+  ab: 'abonnementer', abonnementer: 'abonnementer', subscriptions: 'abonnementer', abonnement: 'abonnementer', finans: 'abonnementer' };
 
 const S = { cals: null, srv: false, prefs: {}, migration: null, editing: false, pick: '', showHidden: false };
 export const st39 = S;
@@ -81,6 +84,7 @@ export function cal4(x) {
   const ids = [x.appCalendar, x.calendar, x.cal, x.source].map((v) => (v == null ? '' : String(v)));
   for (const v of ids) if (v && cals().some((c) => c.own && c.id === v)) return v;
   for (const v of ids) { const a = ALIAS[v.toLowerCase()]; if (a) return a; }
+  if (x.kind === 'ab') return 'abonnementer';
   if (x.type === 'bursdag' || x.type === 'bd' || x.kind === 'bursdag') return 'bursdager';
   if (['time', 'prove', 'innl', 'skole', 'fri'].includes(x.type ?? x.kind)) return 'skole';
   return 'personlig';
@@ -356,7 +360,9 @@ function lanes(list) {
   return out;
 }
 export const hourH = (V = C.K.view) => (isMobile() ? (V === 'uke' ? 44 : 52) : V === 'uke' ? 48 : V === '3d' ? 56 : 64);
-const chip = (e) => (timed(e)
+const chip = (e) => (e.kind === 'ab' || e.kind === 'abg'
+  ? `<button type="button" class="k39-chip all k42-chip"${e.kind === 'ab' ? ` data-k-sel="${esc(e.id)}"` : ''} style="${tStyle(e.kind === 'abg' ? e.items[0] : e)}" title="${esc(e.kind === 'abg' ? e.items.map((x) => x.t).join('\n') : e.t)}">${chipInner(e)}</button>`
+  : timed(e)
   ? `<button type="button" class="k39-chip" data-k-sel="${esc(e.id)}" style="${tStyle(e)}" title="${esc(e.t)}"><i></i><span class="k39-chip-t">${esc(e.s)}</span><span class="k39-chip-n" data-no-i18n>${esc(e.t)}</span></button>`
   : `<button type="button" class="k39-chip all" data-k-sel="${esc(e.id)}" style="${tStyle(e)}" title="${esc(e.t)}"><span class="k39-chip-n" data-no-i18n>${esc((e.kind === 'innl' ? 'Frist ' : '') + e.t)}</span></button>`);
 
@@ -369,7 +375,7 @@ function gridView() {
     const w = wx(x.k), cls = x.today ? ' today' : x.d.getDay() === 0 ? ' sun' : '';
     return `<button type="button" class="k39-ghc${cls}" data-k39-zin="${x.k}" title="${esc(cap(fd(x.d)))}"><span class="k39-ghw">${WDS[x.d.getDay()].toUpperCase()}</span><b>${x.d.getDate()}</b>${w ? `<span class="k39-ghx">${wxIcon(w.kind, 13)}<span>${w.hi}°</span></span>` : ''}</button>`;
   }).join('')}</div>`;
-  const all = hasAll ? `<div class="k39-ga"><span class="k39-gal">HELE<br>DAGEN</span>${days.map((x) => `<div class="k39-gac">${x.all.map(chip).join('')}</div>`).join('')}</div>` : '';
+  const all = hasAll ? `<div class="k39-ga"><span class="k39-gal">HELE<br>DAGEN</span>${days.map((x) => `<div class="k39-gac">${groupSubs(x.all).map(chip).join('')}</div>`).join('')}</div>` : '';
   let hours = '';
   for (let h = 0; h < 24; h++) hours += `<span style="height:${H}px">${h ? `${pad(h)}:00` : ''}</span>`;
   const cols = days.map((x) => `<div class="k39-gc${x.today ? ' today' : ''}" data-k-tap="${x.k}">${lanes(x.L).map((p) => {
@@ -400,7 +406,7 @@ function monthView() {
     for (let i = 0; i < 7; i++) {
       const d = C.add(ws, i), k = C.key(d), L = C.evOn(d), today = k === tk, inM = d.getMonth() === first.getMonth(), w = wx(k);
       const cls = today ? ' today' : !inM ? ' out' : d.getDay() === 0 ? ' sun' : '';
-      cells += `<div class="k39-moc${cls}" data-k39-mday="${k}" role="button" tabindex="-1" aria-label="${esc(cap(fd(d)))}"><div class="k39-mot"><b>${d.getDate()}</b><span class="k39-sp"></span>${w ? `${wxIcon(w.kind, 12)}<span class="k39-mow">${w.hi}°</span>` : ''}</div><div class="k39-mol">${L.map(chip).join('')}</div></div>`;
+      cells += `<div class="k39-moc${cls}" data-k39-mday="${k}" role="button" tabindex="-1" aria-label="${esc(cap(fd(d)))}"><div class="k39-mot"><b>${d.getDate()}</b><span class="k39-sp"></span>${w ? `${wxIcon(w.kind, 12)}<span class="k39-mow">${w.hi}°</span>` : ''}</div><div class="k39-mol">${groupSubs(L).map(chip).join('')}</div></div>`;
     }
     rows += `<div class="k39-mor">${showWk ? `<button type="button" class="k39-mowkn" data-k-wk="${C.key(ws)}" title="Uke ${weekNo(ws)}">${weekNo(ws)}</button>` : ''}${cells}</div>`;
   }
@@ -442,6 +448,7 @@ function listView() {
     const name = k === tk ? 'I dag' : k === tomorrow ? 'I morgen' : cap(WD[d.getDay()]), w = wx(k);
     html += `<div class="k39-ld"><div class="k39-ldh"><b${k === tk ? ' class="acc"' : ''}>${name}</b><span>${d.getDate()}. ${MONTHS[d.getMonth()]}</span>${w ? `<span class="k39-ldw">${wxIcon(w.kind, 12)}${w.lo}–${w.hi}°</span>` : ''}</div>
       <div class="k39-ldl">${L.length ? L.map((e) => {
+        if (e.kind === 'ab') return listRow(e, tStyle(e));
         const c = calById(e.ac), sub = e.r ? `${e.r} · ${c.name}` : c.name;
         const tag = e.kind === 'innl' ? 'FRIST' : e.ac === 'bursdager' ? 'BURSDAG' : e.ac === 'helligdager' ? 'FRIDAG' : '';
         return `<button type="button" class="k39-lr" data-k-sel="${esc(e.id)}" style="${tStyle(e)}"><span class="k39-lrt">${timed(e) ? esc(`${e.s}–${e.e}`) : e.kind === 'innl' && e.e ? `Frist ${esc(e.e)}` : 'Hele dagen'}</span><i></i><span class="k39-lrm"><b data-no-i18n>${esc(e.t)}</b><span data-no-i18n>${esc(sub)}</span></span>${tag ? `<span class="k39-tag${tag === 'FRIST' ? ' red' : ''}">${tag}</span>` : ''}</button>`;
@@ -452,6 +459,7 @@ function listView() {
 
 export function view() {
   loadWx();
+  bindLogos();
   const V = C.K.view;
   return V === 'ar' ? yearView() : V === 'mnd' ? monthView() : V === 'liste' ? listView() : gridView();
 }

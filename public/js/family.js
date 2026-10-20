@@ -1,29 +1,28 @@
 // Familie og kart (prompt 16): alle på serveren på et OpenStreetMap-kart (Leaflet fra egen server), med spor,
 // sensorer, soner (trykk på kartet), varsler per person, hendelser og helse. Personvern håndheves på serveren;
 // her vises bare det den gir oss. Nettleseren kan dele egen posisjon mens siden er åpen.
-import { hjemlysHtml, bindHjemlys } from './hjemlys40.js';
-import { hl41Html, bindHl41 } from './hjemlys41.js'; // prompt 41: Familie → Hjemlys med «Si fra»
+import { bindHjemlys, loadHjemlys, hjemlysState } from './hjemlys40.js';
+import { hl41Html, bindHl41, hl41Busy } from './hjemlys41.js'; // prompt 41: Familie → Hjemlys med «Si fra» (prompt 42: heter «Vel fremme»)
+import { ZIC42, ICON_KEYS42, IFY42, matchLocal42, searchIconify42, recentIcons42, rememberIcon42 } from './icons42.js'; // prompt 42: ikonsøk
 import { api, esc, initials, hm, nb } from './util.js';
 import { onLive, liveOn } from './realtime.js';
 
-const S = { tab: 'kart', d: null, sel: null, track: [], err: null, zoneDraft: null, zEdit: null, picking: false, sharingHere: false, watch: null, lastSent: 0 };
-let map = null, L = null, layers = null, pollT = null, evSince = Date.now(), unLive = null;
+const S = { tab: 'kart', d: null, sel: null, track: [], err: null, zoneDraft: null, zEdit: null, picking: false, sharingHere: false, watch: null, lastSent: 0,
+  // Prompt 42: ikonsøket (felles for «Ny sone» og redigering) og sonen kartet skal sentreres på når man kommer fra Soner.
+  icQ: '', icAll: false, ify: { q: '', busy: false, res: [], en: '', err: '' }, focusZone: null };
+let map = null, L = null, layers = null, pollT = null, evSince = Date.now(), unLive = null, hlBound = false;
 
 const ACT = { still: 'I ro', walking: 'Går', running: 'Løper', cycling: 'Sykler', driving: 'Kjører' };
 const SHARE = { on: 'Deler', paused: 'Pauset', off: 'Av' };
 // Prompt 22 (fasit Familie.dc.html): 10 forhåndsvalgte sonefarger + fri farge, og 13 soneikoner (SVG-banene fra designet).
 const COLORS = ['#b23a2a', '#d9662a', '#d9a400', '#2f7a4f', '#2e6f75', '#2b5d8a', '#5b4bb5', '#7a3b6b', '#c2417a', '#5c5850'];
-const ZIC = {
-  home: ['Hjem', 'M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6'], work: ['Jobb', 'M4 8h16v11H4zM9 8V5h6v3M4 13h16'],
-  school: ['Skole', 'M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5'], heart: ['Familie', 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z'],
-  cabin: ['Hytte', 'M3 20h18M5 20V11l7-6 7 6v9M10 20v-5h4v5'], gym: ['Trening', 'M6 8v8M18 8v8M3 10v4M21 10v4M6 12h12'],
-  shop: ['Butikk', 'M5 8h14l-1 12H6zM9 8a3 3 0 0 1 6 0'], ball: ['Sport', 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3.5 9h17M3.5 15h17M12 3c-3 3-3 15 0 18M12 3c3 3 3 15 0 18'],
-  coffee: ['Kafé', 'M5 9h11v5a5 5 0 0 1-5 5H10a5 5 0 0 1-5-5zM16 10h2a2 2 0 0 1 0 4h-2M8 3v3M11 3v3'], tree: ['Natur', 'M12 3l6 9h-4l4 6H6l4-6H6zM12 18v3'],
-  plane: ['Reise', 'M2 13l20-8-6 16-3-7-7-1z'], star: ['Favoritt', 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z'],
-  pin: ['Sted', 'M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'],
-};
-const zIc = (z) => (ZIC[z?.icon] ? z.icon : { Hjem: 'home', Jobb: 'work', Skole: 'school', Mormor: 'heart', Hytta: 'cabin', Hytte: 'cabin' }[String(z?.name ?? '').trim()] ?? 'pin');
-const icSvg = (k, size = 18, sw = 2) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ZIC[k]?.[1] ?? ZIC.pin[1]}"/></svg>`;
+// Prompt 42: de 49 ikonene fra fasiten (icons42.js); de 13 første er de gamle (prompt 22) med samme nøkler i appene.
+const ZIC = ZIC42;
+const zIc = (z) => (IFY42.test(z?.icon ?? '') ? z.icon : ZIC[z?.icon] ? z.icon : { Hjem: 'home', Jobb: 'work', Skole: 'school', Mormor: 'heart', Hytta: 'cabin', Hytte: 'cabin' }[String(z?.name ?? '').trim()] ?? 'pin');
+const pSvg = (d, size = 18, sw = 2) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${esc(d)}"/></svg>`;
+/** Sonens ikon: Iconify-ikon (icon:'ify:…' + icp) eller et innebygd. Mangler path-data, vises nålen. */
+const zPath = (z) => { const k = zIc(z); return IFY42.test(k) ? (z.icp || ZIC.pin[1]) : (ZIC[k] ?? ZIC.pin)[1]; };
+const zSvg = (z, size = 18, sw = 2) => pSvg(zPath(z), size, sw);
 const HEX = /^#[0-9a-f]{6}$/i;
 const PCOL = ['#b23a2a', '#2b5d8a', '#2f6b45', '#a8661a', '#7a3b6b'];
 const host = () => document.getElementById('fam');
@@ -128,7 +127,7 @@ function drawMap() {
   for (const z of S.d.zones) {
     const zc = HEX.test(z.color ?? '') ? z.color : COLORS[0];
     L.circle([z.lat, z.lon], { radius: z.radius, color: zc, weight: 2, fillColor: zc, fillOpacity: 0.13, interactive: false }).addTo(layers.zones);
-    L.marker([z.lat, z.lon], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'fam-zic-wrap', html: `<span class="fam-zic" style="background:${esc(zc)}">${icSvg(zIc(z), 15, 2.2)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] }) }).addTo(layers.zones);
+    L.marker([z.lat, z.lon], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'fam-zic-wrap', html: `<span class="fam-zic" style="background:${esc(zc)}">${zSvg(z, 15, 2.2)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] }) }).addTo(layers.zones);
     L.marker([z.lat - z.radius / 111_320, z.lon], { interactive: false, keyboard: false, icon: L.divIcon({ className: 'fam-zlab-wrap', html: `<span class="fam-zlab">${esc(z.name)}</span>`, iconSize: [0, 0], iconAnchor: [0, -12] }) }).addTo(layers.zones);
   }
   // Spor (siste posisjoner) i personfargen, 55 % opasitet.
@@ -150,7 +149,7 @@ function drawMap() {
   if (S.zoneDraft && S.zoneDraft.lat != null) {
     const z = S.zoneDraft;
     L.circle([z.lat, z.lon], { radius: z.radius, color: z.color, weight: 2, dashArray: '6 6', fillColor: z.color, fillOpacity: 0.18 }).addTo(layers.draft);
-    L.marker([z.lat, z.lon], { interactive: false, icon: L.divIcon({ className: 'fam-zic-wrap', html: `<span class="fam-zic" style="background:${esc(z.color)}">${icSvg(z.icon ?? zIc(z), 15, 2.2)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] }) }).addTo(layers.draft);
+    L.marker([z.lat, z.lon], { interactive: false, icon: L.divIcon({ className: 'fam-zic-wrap', html: `<span class="fam-zic" style="background:${esc(z.color)}">${zSvg(z, 15, 2.2)}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] }) }).addTo(layers.draft);
   }
 }
 
@@ -266,13 +265,27 @@ function personCard() {
   </section>`;
 }
 
+// Prompt 42 (claude-code-helse-fra-home-assistant.md): kilden under navnet («Fra Home Assistant · OnePlus 12 · oppdatert 2 min siden»),
+// «Begrenset på iPhone …» og «Ingen data fra … siden 14:20». Tåler at serveren ikke sender feltene.
+function srcLine(h) {
+  if (!h) return '';
+  const s = String(h.sourceLabel ?? h.source ?? ''), dev = h.sourceDevice?.name ?? h.sourceDevice ?? h.device ?? '';
+  let label = '';
+  if (/^ha(:|$)/i.test(s) || h.sourceKind === 'ha') label = `Fra Home Assistant${dev ? ` · ${dev}` : ''}`;
+  else if (/apple|healthkit/i.test(s)) label = 'Fra Apple Health';
+  else if (/connect|android/i.test(s)) label = 'Fra Health Connect';
+  else if (s && !/^[a-z]+:/.test(s)) label = s;
+  const bits = [label && `${label} · oppdatert ${ago(h.updatedAt)}`, h.limited ? 'Begrenset på iPhone: bare skritt, etasjer og aktivitet fra HA. Puls og søvn krever Homelab-appen (Apple Health).' : '', h.stale || h.warning || ''].filter(Boolean);
+  return bits.length ? `<div class="fam-hsrc">${bits.map((b, i) => `<span class="${i ? 'fam-hwarn' : ''}">${esc(b)}</span>`).join('')}</div>` : '';
+}
+
 function healthCard() {
   const m = person(S.sel), h = m?.health;
   if (!m) return '';
   const t = h?.today ?? {};
   const tile = (k, v, u) => (v == null ? '' : `<div class="fam-ht"><span>${k}</span><b>${v}</b><i>${u}</i></div>`);
   const week = h?.week ?? [], max = Math.max(1, ...week.map((d) => d.steps ?? 0));
-  return `<section class="card fam-card"><div class="fam-h"><span class="fam-k">Helse</span><span class="fam-sub">${esc(m.name)}${h ? ` · ${ago(h.updatedAt)}` : ''}</span></div>
+  return `<section class="card fam-card"><div class="fam-h"><span class="fam-k">Helse</span><span class="fam-sub">${esc(m.name)}${h ? ` · ${ago(h.updatedAt)}` : ''}</span></div>${srcLine(h)}
     ${h ? `<div class="fam-htiles">${tile('Skritt', t.steps != null ? nb(t.steps) : null, 'i dag')}${tile('Hvilepuls', t.restingHr != null ? Math.round(t.restingHr) : null, 'slag/min')}${tile('Puls', t.hr != null ? Math.round(t.hr) : null, 'slag/min')}${tile('Søvn', t.sleepMin != null ? `${Math.floor(t.sleepMin / 60)} t ${t.sleepMin % 60}` : null, 'min')}${tile('Aktive kalorier', t.activeKcal != null ? nb(t.activeKcal) : null, 'kcal')}</div>
       ${week.some((d) => d.steps != null) ? `<div class="fam-week">${week.map((d) => `<div class="fam-wd"><i style="height:${Math.round(((d.steps ?? 0) / max) * 100)}%"></i><span>${new Date(d.date + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'narrow' })}</span></div>`).join('')}</div><div class="fam-sub">Skritt siste 7 dager</div>` : ''}`
       : `<div class="fam-empty">${m.self ? 'Helsedata sendes fra FinansHub-appen på telefonen (Apple Helse eller Health Connect). Nettleseren kan ikke lese helsedata.' : `${esc(m.name)} deler ikke helsedata.`}</div>`}
@@ -285,7 +298,8 @@ function healthAll() {
   const cards = list.map((m) => { S.sel = m.userId; return healthCard(); }).join('') + (list.some((m) => !m.self) ? '' : '<section class="card fam-card"><div class="fam-empty fam-none"><b>Ingen deler helse med deg ennå</b>Helsedeling er av som standard.</div></section>');
   S.sel = keep;
   return `<div class="fam-hgrid">${cards}</div>
-    <div class="fam-note">Apple Health og Health Connect kan bare leses av appen på telefonen. Homelab-appen sender et sammendrag hit hvert 15. minutt, og bare det personen har valgt å dele.</div>`;
+    <div class="fam-note">Apple Health og Health Connect kan bare leses av appen på telefonen. Homelab-appen sender et sammendrag hit hvert 15. minutt, og bare det personen har valgt å dele.
+      Helsekildene (også Home Assistant) velges i <button type="button" class="fam-link" data-fam-act="hsettings">Innstillinger → Familie ›</button></div>`;
 }
 
 // Prompt 32 (Familie.dc.html, web): «FAMILIEN · N personer» over et kort med rader (bilde med statusprikk, navn, sted, batteri, sist oppdatert).
@@ -307,8 +321,56 @@ function peopleCard() {
 }
 
 // Ikonrutenett og farger (10 forhåndsvalgte + fri fargevelger med hex), felles for «Ny sone» og redigering.
-function iconGrid(cur, attr) {
-  return `<div class="fam-icons" role="radiogroup" aria-label="Ikon">${Object.entries(ZIC).map(([k, [n]]) => `<button type="button" role="radio" class="fam-ic${cur === k ? ' on' : ''}" aria-checked="${cur === k}" ${attr}="${k}" aria-label="${n}" title="${n}">${icSvg(k, 19, 1.9)}</button>`).join('')}</div>`;
+// Prompt 42 (claude-code-familie-soner-uten-kart.md, fasit Familie.dc.html → icS/zn.icons/zn.ext): søkefelt, 18 vanlige ikoner + «Vis alle»,
+// «N treff» / «Ingen ikoner heter …» og treff fra Lucide og Tabler (Iconify) under. Sist brukte ikoner først. attr = data-attributtet knappene får.
+function iconPicker(z, attr) {
+  return `<div class="fam-icpick" data-fam-icpick="${esc(attr)}">
+    <label class="fam-icq"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"/></svg><input type="search" value="${esc(S.icQ)}" placeholder="Søk i ikoner, f.eks. båt, kirke, ski …" autocomplete="off" spellcheck="false" data-fam-icq aria-label="Søk i ikoner"></label>
+    <div data-fam-icres>${iconResults(z, attr)}</div></div>`;
+}
+function iconResults(z, attr) {
+  const cur = zIc(z), q = S.icQ.trim(), hits = matchLocal42(q);
+  let keys;
+  if (q) keys = hits;
+  else {
+    const rec = recentIcons42().map((x) => x.k).filter((k) => ZIC[k]);
+    const base = [...new Set([...rec, ...ICON_KEYS42])];
+    keys = S.icAll ? base : [...new Set([...base.slice(0, 18), ...(ZIC[cur] ? [cur] : [])])];
+  }
+  const btn = (k, n, d, on) => `<button type="button" role="radio" class="fam-ic${on ? ' on' : ''}" aria-checked="${on}" ${attr}="${esc(k)}"${d ? ` data-icp="${esc(d)}"` : ''} aria-label="${esc(n)}" title="${esc(n)}">${pSvg(d || ZIC[k][1], 19, 1.9)}</button>`;
+  // Valgt Iconify-ikon (eller sist brukte fra Iconify) vises først, så det kan velges igjen uten nett.
+  const ifyCur = IFY42.test(cur) && z?.icp ? [{ k: cur, p: z.icp }] : [];
+  const ifyRec = q ? [] : [...ifyCur, ...recentIcons42().filter((x) => IFY42.test(x.k) && x.p && x.k !== cur)].slice(0, 6);
+  const grid = `<div class="fam-icons" role="radiogroup" aria-label="Ikon">${ifyRec.map((x) => btn(x.k, x.k.split(':').slice(1).join(' · '), x.p, x.k === cur)).join('')}${keys.map((k) => btn(k, ZIC[k][0], '', k === cur)).join('')}</div>`;
+  const info = q ? (hits.length ? `${hits.length} treff` : `Ingen ikoner heter «${esc(q)}»`) : `${ICON_KEYS42.length} ikoner`;
+  const more = q ? '' : `<button type="button" class="fam-link" data-fam-icall>${S.icAll ? 'Vis færre' : 'Vis alle'}</button>`;
+  const F = S.ify, ext = q.length > 1 ? `<div class="fam-icext"><span class="fam-sub">${F.busy ? 'Søker i Lucide og Tabler (7 500+ ikoner) …' : F.err ? esc(F.err) : F.res.length ? `${F.res.length} fra Lucide og Tabler · søkte «${esc(F.en)}»` : F.q === q ? 'Ingen treff i Lucide og Tabler' : ''}</span>
+    ${F.res.length && F.q === q ? `<div class="fam-icons" role="radiogroup" aria-label="Ikoner fra Lucide og Tabler">${F.res.map((r) => btn(r.k, `${r.n} · ${r.set}`, r.p, r.k === cur)).join('')}</div>` : ''}</div>` : '';
+  return `${grid}<div class="fam-icinfo"><span class="fam-sub">${info}</span>${more}</div>${ext}`;
+}
+let ifyT = 0, ifyN = 0;
+function iconSearch(v) {
+  S.icQ = v;
+  clearTimeout(ifyT);
+  const q = v.trim();
+  if (q.length < 2) { S.ify = { q: '', busy: false, res: [], en: '', err: '' }; return paintIcons(); }
+  S.ify = { ...S.ify, busy: true, err: '' };
+  paintIcons();
+  ifyT = setTimeout(async () => {
+    const n = ++ifyN;
+    try { const r = await searchIconify42(q); if (n !== ifyN) return; S.ify = { q, busy: false, res: r.res, en: r.en, err: '' }; }
+    catch { if (n !== ifyN) return; S.ify = { q, busy: false, res: [], en: q, err: 'Fikk ikke kontakt med Lucide og Tabler. Bruk de innebygde ikonene.' }; }
+    paintIcons();
+  }, 350);
+}
+/** Tegner bare resultatene i ikonvelgeren (søkefeltet beholder fokus og markør). */
+function paintIcons() {
+  host()?.querySelectorAll('[data-fam-icpick]').forEach((el) => {
+    const attr = el.dataset.famIcpick, id = (attr.match(/data-id="([^"]+)"/) ?? [])[1];
+    const z = id ? zoneById(id) : S.zoneDraft;
+    const r = el.querySelector('[data-fam-icres]');
+    if (r && z) r.innerHTML = iconResults(z, attr);
+  });
 }
 function colorRow(cur, attr, pickAttr) {
   const custom = !COLORS.includes(String(cur).toLowerCase());
@@ -323,12 +385,12 @@ function zonesCard() {
   const card = (x) => {
     const mine = myZone(x), ed = S.zEdit === x.id, zc = HEX.test(x.color ?? '') ? x.color : COLORS[0], who = here(x);
     return `<section class="card fam-card fam-zcard">
-      <div class="fam-zrow"><button type="button" class="fam-zbig" style="background:${esc(zc)}" data-fam-zshow="${x.id}" aria-label="Vis ${esc(x.name)} på kartet">${icSvg(zIc(x), 21, 2)}</button>
+      <div class="fam-zrow"><button type="button" class="fam-zbig" style="background:${esc(zc)}" data-fam-zshow="${x.id}" aria-label="Vis ${esc(x.name)} på kartet">${zSvg(x, 21, 2)}</button>
         <span class="fam-pmain"><b>${esc(x.name)}</b><span class="fam-sub">${rTxt(x.radius)} · ${who.length ? `${esc(who.join(', '))} er der nå` : 'ingen der nå'}${mine ? '' : ` · fra ${esc(person(x.createdBy)?.name ?? 'familien')}`}</span></span>
         ${mine ? `<button type="button" class="fam-rb${ed ? ' on' : ''}" data-fam-zedit="${x.id}" aria-label="Rediger sone" aria-expanded="${ed}">✎</button><button type="button" class="fam-rm" data-fam-zrm="${x.id}" aria-label="Slett sone">−</button>` : ''}</div>
       ${ed ? `<div class="fam-zed">
         <input class="fam-inp" data-fam-ze="name" data-id="${x.id}" value="${esc(x.name)}" maxlength="60" aria-label="Navn">
-        ${iconGrid(zIc(x), `data-id="${x.id}" data-fam-zeic`)}
+        ${iconPicker(x, `data-id="${x.id}" data-fam-zeic`)}
         ${colorRow(zc, `data-id="${x.id}" data-fam-zecol`, `data-id="${x.id}" data-fam-ze="color"`)}
         <div class="fam-rl"><span>Radius</span><b class="mono" data-fam-zerv="${x.id}">${rTxt(x.radius)}</b></div>
         <input type="range" min="50" max="2000" step="25" value="${Math.min(2000, Math.max(50, x.radius))}" data-fam-ze="radius" data-id="${x.id}" style="accent-color:${esc(zc)}" aria-label="Radius">
@@ -377,12 +439,13 @@ function privacyCard() {
 function zoneSheet() {
   const z = S.zoneDraft;
   if (!z) return '';
-  return `<div class="fam-sheet" role="dialog" aria-label="Ny sone">
+  // Prompt 42: skjemaet står øverst i Soner-lista (fasit zn.draft), mens kartet vises midlertidig ved siden av.
+  return `<div class="fam-sheet side" role="dialog" aria-label="Ny sone">
     <div class="fam-h"><b class="fam-st-t">Ny sone</b><button type="button" class="fam-x" data-fam-act="zclose" aria-label="Avbryt">×</button></div>
     <input class="fam-inp" data-fam-z="name" value="${esc(z.name)}" placeholder="Navn, f.eks. Trening" maxlength="60" aria-label="Navn">
     <div class="fam-rl"><span>Radius</span><b class="mono" data-fam-rv>${rTxt(z.radius)}</b></div>
     <input type="range" min="50" max="2000" step="25" value="${z.radius}" data-fam-z="radius" aria-label="Radius" style="accent-color:${esc(z.color)}">
-    <span class="fam-lab">Ikon</span>${iconGrid(z.icon ?? zIc(z), 'data-fam-zic')}
+    <span class="fam-lab">Ikon</span>${iconPicker(z, 'data-fam-zic')}
     <span class="fam-lab">Farge</span>${colorRow(z.color, 'data-fam-col', 'data-fam-z="color"')}
     <label class="fam-sw"><input type="checkbox" data-fam-z="shared" ${z.shared ? 'checked' : ''}><span>Del med familien</span></label>
     <div class="fam-sheetbtns"><button type="button" class="fam-btn" data-fam-act="zclose">Avbryt</button><button type="button" class="fam-btn pri" data-fam-act="zsave">Lagre sone</button></div>
@@ -390,8 +453,24 @@ function zoneSheet() {
 }
 
 function tabs() {
-  return `<div class="fam-tabs"><div class="fam-tpill" role="tablist">${[['kart', 'Kart'], ['soner', 'Soner'], ['helse', 'Helse'], ['hjemlys', 'Hjemlys']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-fam-tab="${k}">${n}</button>`).join('')}</div>
+  return `<div class="fam-tabs"><div class="fam-tpill" role="tablist">${[['kart', 'Kart'], ['soner', 'Soner'], ['helse', 'Helse'], ['hjemlys', 'Vel fremme']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-fam-tab="${k}">${n}</button>`).join('')}</div>
     <span class="fam-live"><i class="${liveOn() ? 'on' : ''}"></i>${liveOn() ? `Sanntid · ${S.sharingHere ? 'din posisjon deles herfra' : 'oppdatert nå'}` : 'Oppdateres hvert 20. sekund'}</span></div>`;
+}
+
+// Prompt 42 (claude-code-familie-fjern-hjemlys-kort.md): ingen Vel fremme-kort over kartet. Pågår en økt, vises en liten statuslinje
+// («Vel fremme på · Ingrid er på vei · 12 min»); trykk åpner fanen Vel fremme. Ingen start-knapp på Kart.
+function velLine() {
+  const d = hjemlysState()?.d;
+  if (!d) return '';
+  const mins = (iso) => Math.round((Date.parse(iso) - Date.now()) / 60000);
+  const first = (n) => String(n ?? '').split(' ')[0];
+  const others = (d.household ?? []).filter((p) => !p.self && (p.state === 'onTheWay' || p.state === 'late')).sort((a, b) => (b.state === 'late') - (a.state === 'late'));
+  const bits = [];
+  if (d.mine && (d.mine.state === 'onTheWay' || d.mine.state === 'late')) { const m = mins(d.mine.eta); bits.push(d.mine.state === 'late' ? 'du er sen' : `du er på vei${m > 0 ? ` · ${m} min` : ''}`); }
+  for (const p of others.slice(0, 2)) { const m = mins(p.eta); bits.push(p.state === 'late' ? `${first(p.name)} er ${p.lateMinutes ?? Math.max(0, -m)} min forsinket` : `${first(p.name)} er på vei${m > 0 ? ` · ${m} min` : ''}`); }
+  if (!bits.length) return '';
+  const late = others.some((p) => p.state === 'late') || d.mine?.state === 'late';
+  return `<button type="button" class="fam-vfline${late ? ' late' : ''}" data-fam-tab="hjemlys"><span class="hl40-glow" aria-hidden="true"></span><span class="fam-vft"><b>Vel fremme på</b> · ${esc(bits.join(' · '))}${others.length > 2 ? ` · +${others.length - 2}` : ''}</span><span aria-hidden="true">›</span></button>`;
 }
 
 function body() {
@@ -399,18 +478,25 @@ function body() {
   if (!S.d) return '<div class="card fam-card"><div class="fam-empty">Laster …</div></div>';
   if (S.tab === 'helse') return tabs() + healthAll() + privacyCard();
   if (S.tab === 'hjemlys') return tabs() + hl41Html(S.d, paint);
+  // Prompt 42 (claude-code-familie-soner-uten-kart.md): Soner viser bare lista. «+ Ny sone på kartet» viser kartet midlertidig
+  // i plasseringsmodus; når sonen er lagret eller avbrutt, skjules det igjen.
+  const placing = S.tab === 'soner' && (S.picking || !!S.zoneDraft);
+  if (S.tab === 'soner' && !placing) {
+    return `${tabs()}<div class="fam-sonly"><button type="button" class="fam-tb pri fam-snadd" data-fam-act="pick">+ Ny sone på kartet</button>${zonesCard()}</div>`;
+  }
   // Verktøyraden ligger over kartet (prompt 22): «+ Ny sone på kartet» til venstre, «Vis alle» og ↻ til høyre.
-  const tools = `<div class="fam-tools"><button type="button" class="fam-tb pri" data-fam-act="pick" aria-pressed="${S.picking}">${S.picking ? 'Avbryt plassering' : '+ Ny sone på kartet'}</button><span class="fam-sp"></span>
+  // Prompt 42: på Kart åpner «+ Ny sone på kartet» Soner i plasseringsmodus (skjemaet ligger der).
+  const tools = `<div class="fam-tools"><button type="button" class="fam-tb pri" data-fam-act="pick" aria-pressed="${S.picking}">${S.picking ? 'Avbryt plassering' : S.zoneDraft ? 'Avbryt ny sone' : '+ Ny sone på kartet'}</button><span class="fam-sp"></span>
     <button type="button" class="fam-tb" data-fam-act="fit">Vis alle</button><button type="button" class="fam-tb rnd" data-fam-act="refresh" aria-label="Oppdater posisjoner" title="Oppdater posisjoner"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button></div>`;
-  const mapCard = `<div class="fam-mapcol">${tools}<section class="card fam-mapcard"><div id="fam-map" class="fam-map${S.picking ? ' picking' : ''}"></div>
+  const mapCard = `<div class="fam-mapcol">${S.tab === 'kart' ? velLine() : ''}${tools}<section class="card fam-mapcard"><div id="fam-map" class="fam-map${S.picking ? ' picking' : ''}"></div>
     ${S.picking ? '<div class="fam-hint">Trykk på kartet der sonen skal være</div>' : ''}
     <div class="fam-zoom"><button type="button" data-fam-act="zin" aria-label="Zoom inn">+</button><button type="button" data-fam-act="zout" aria-label="Zoom ut">−</button><button type="button" data-fam-act="fit" aria-label="Vis alle">◎</button></div>
     <div class="fam-livepill"><i class="${liveOn() ? 'on' : ''}"></i>${liveOn() ? 'Sanntid · oppdatert nå' : 'Hvert 20. sekund'}</div>
-    ${zoneSheet()}</section></div>`;
+    </section></div>`;
   // Prompt 32: to kolonner på web – kartet (blir stående) til venstre, sidepanelet (320–400 px) til høyre i rekkefølgen
   // valgt person · Familien · Hendelser · Min deling. Under 900 px: én kolonne (kart øverst).
   const side = S.tab === 'soner'
-    ? `<div class="fam-side">${zonesCard()}</div>`
+    ? `<div class="fam-side">${zoneSheet()}${S.zoneDraft ? '' : zonesCard()}</div>`
     : `<div class="fam-side">${personCard()}${peopleCard()}${eventsCard()}${privacyCard()}</div>`;
   return `${tabs()}<div class="fam-grid">${mapCard}${side}</div>`;
 }
@@ -418,8 +504,6 @@ function body() {
 function paint() {
   const h = host();
   if (!h) return;
-  const top41 = document.querySelector('.fam-top + [data-hl40-slot]');
-  if (top41) top41.hidden = S.tab === 'hjemlys';
   // Kartet beholdes mellom oppdateringer; bare kortene rundt tegnes på nytt.
   const mapEl = document.getElementById('fam-map');
   if (mapEl && S.d) {
@@ -433,6 +517,12 @@ function paint() {
   }
   if (L) setupMap();
   drawMap();
+  // «Vis på kart» fra Soner: Kart-fanen sentrert på sonen.
+  if (S.focusZone != null && map) {
+    const z = zoneById(S.focusZone);
+    S.focusZone = null;
+    if (z) { map.invalidateSize(); map.setView([z.lat, z.lon], z.radius > 600 ? 14 : 15); }
+  }
 }
 
 let toastT = null;
@@ -516,7 +606,8 @@ function bind(h) {
   h.addEventListener('click', async (e) => {
     const t = e.target.closest('button');
     if (!t) return;
-    if (t.dataset.famTab) { S.tab = t.dataset.famTab; if (S.tab !== 'soner') S.picking = false; return paint(); }
+    if (t.dataset.famTab) { S.tab = t.dataset.famTab; if (S.tab !== 'soner') { S.picking = false; S.zoneDraft = null; } if (S.tab === 'hjemlys') loadHjemlys(true); return paint(); }
+    if (t.dataset.famIcall !== undefined) { S.icAll = !S.icAll; return paintIcons(); }
     if (t.dataset.famSel) return select(t.dataset.famSel);
     if (t.dataset.famSrc !== undefined) {
       try { await api('/family/me/source', { method: 'PUT', json: { deviceId: t.dataset.famSrc || null } }); toast(t.dataset.famSrc ? 'Kilden er valgt' : 'Automatisk valg av enhet'); }
@@ -526,10 +617,10 @@ function bind(h) {
     if (t.dataset.famPref) return savePref({ [t.dataset.famPref]: t.dataset.v });
     if (t.dataset.famHealth) { const cur = S.d.me.shareHealth ?? {}; return savePref({ shareHealth: { [t.dataset.famHealth]: !cur[t.dataset.famHealth] } }); }
     if (t.dataset.famCol) { S.zoneDraft.color = t.dataset.famCol; return paint(); }
-    if (t.dataset.famZic) { S.zoneDraft.icon = t.dataset.famZic; return paint(); }
-    if (t.dataset.famZshow) { const z = zoneById(t.dataset.famZshow); if (z && map) map.setView([z.lat, z.lon], 15); return; }
-    if (t.dataset.famZedit) { const z = zoneById(t.dataset.famZedit); S.zEdit = S.zEdit === z?.id ? null : z?.id ?? null; if (S.zEdit != null && map) map.setView([z.lat, z.lon], 15); return paint(); }
-    if (t.dataset.famZeic) return patchZone(t.dataset.id, { icon: t.dataset.famZeic }, true);
+    if (t.dataset.famZic) { S.zoneDraft.icon = t.dataset.famZic; S.zoneDraft.icp = t.dataset.icp || null; rememberIcon42(t.dataset.famZic, t.dataset.icp); drawMap(); return paintIcons(); }
+    if (t.dataset.famZshow) { S.tab = 'kart'; S.focusZone = t.dataset.famZshow; S.picking = false; S.zoneDraft = null; S.zEdit = null; return paint(); }
+    if (t.dataset.famZedit) { const z = zoneById(t.dataset.famZedit); S.zEdit = S.zEdit === z?.id ? null : z?.id ?? null; S.icQ = ''; S.ify = { q: '', busy: false, res: [], en: '', err: '' }; return paint(); }
+    if (t.dataset.famZeic) { rememberIcon42(t.dataset.famZeic, t.dataset.icp); return patchZone(t.dataset.id, IFY42.test(t.dataset.famZeic) ? { icon: t.dataset.famZeic, icp: t.dataset.icp } : { icon: t.dataset.famZeic }, true); }
     if (t.dataset.famZecol) return patchZone(t.dataset.id, { color: t.dataset.famZecol }, true);
     if (t.dataset.famZrm) {
       const z = zoneById(t.dataset.famZrm);
@@ -549,9 +640,15 @@ function bind(h) {
       return paint();
     }
     switch (t.dataset.famAct) {
-      case 'pick': S.picking = !S.picking; S.zoneDraft = null; return paint();
+      case 'pick': {
+        const was = S.picking || !!S.zoneDraft;
+        S.picking = !was; S.zoneDraft = null; S.icQ = ''; S.ify = { q: '', busy: false, res: [], en: '', err: '' };
+        if (S.picking) S.tab = 'soner';
+        return paint();
+      }
       case 'fit': return map && fitAll();
       case 'refresh': t.classList.add('spin'); await load(); setTimeout(() => t.classList.remove('spin'), 500); return;
+      case 'hsettings': return import('./settings.js').then((m) => m.openSettings('familie')).catch(() => {});
       case 'zin': return map?.zoomIn();
       case 'zout': return map?.zoomOut();
       case 'unsel': S.sel = null; S.track = []; paint(); return drawMap();
@@ -561,9 +658,9 @@ function bind(h) {
         catch (er) { toast(er.status === 403 ? 'Slå på deling av din posisjon for å spille av lyd hos andre' : /404|finnes ikke|Not Found/i.test(er.message) ? 'Serveren støtter ikke «Spill av lyd» ennå' : er.message); }
         return;
       }
-      case 'zclose': S.zoneDraft = null; return paint();
+      case 'zclose': S.zoneDraft = null; S.picking = false; return paint();
       case 'zsave': {
-        const z = S.zoneDraft, payload = { name: z.name.trim(), lat: z.lat, lon: z.lon, radius: +z.radius, color: z.color, icon: z.icon ?? zIc(z), shared: !!z.shared };
+        const z = S.zoneDraft, payload = { name: z.name.trim(), lat: z.lat, lon: z.lon, radius: +z.radius, color: z.color, icon: z.icon ?? zIc(z), ...(IFY42.test(z.icon ?? '') ? { icp: z.icp } : {}), shared: !!z.shared };
         if (!payload.name) return toast('Gi sonen et navn');
         try { await api('/family/zones', { method: 'POST', json: payload }); } catch (er) { return toast(er.message); }
         S.zoneDraft = null; toast('Sonen er lagret'); return load();
@@ -571,6 +668,7 @@ function bind(h) {
     }
   });
   h.addEventListener('input', (e) => {
+    if (e.target.matches('[data-fam-icq]')) { const v = e.target.value; h.querySelectorAll('[data-fam-icq]').forEach((x) => { if (x !== e.target) x.value = v; }); return iconSearch(v); }
     const ke = e.target.dataset.famZe;
     if (ke) {
       const id = e.target.dataset.id, v = ke === 'radius' ? +e.target.value : e.target.value;
@@ -605,10 +703,17 @@ function bind(h) {
 export function render() {
   bindHjemlys(); // prompt 40: Hjemlys øverst på Familie-siden
   bindHl41();
-  if (/[?&]tab=hjemlys\b/.test(location.hash)) S.tab = 'hjemlys';
+  if (/[?&]tab=(hjemlys|velfremme)\b/.test(location.hash)) S.tab = 'hjemlys';
   // Prompt 37: «Vis på kart ›» fra «Hvor er Ingrid?» åpner #/familie?person=<userId> med personen valgt.
   const pq = new URLSearchParams(location.hash.split('?')[1] ?? '').get('person');
   if (pq) { S.tab = 'kart'; S.sel = pq; S.track = []; }
+  if (!hlBound) {
+    hlBound = true;
+    document.addEventListener('hl40:update', () => {
+      if (!host() || !S.d || document.activeElement?.closest?.('#fam input, #fam textarea')) return;
+      if ((S.tab === 'hjemlys' && !hl41Busy()) || (S.tab === 'kart' && !S.zoneDraft)) paint();
+    });
+  }
   setTimeout(async () => {
     const h = host();
     if (!h) return;
@@ -627,6 +732,8 @@ export function render() {
     try { L = await loadLeaflet(); } catch (e) { S.err = e.message; }
     await load();
   });
+  // Prompt 42: Vel fremme-kortet over kartet er fjernet (claude-code-familie-fjern-hjemlys-kort.md). Data hentes likevel for statuslinja.
+  loadHjemlys(); // tegner på nytt via «hl40:update»
   return `<div class="fam-top"><div class="os-title">Famil<b>ie</b></div><div class="fam-sub">Posisjon, soner og helse fra dem som deler med deg. Deling er av som standard.</div></div>
-    <div data-hl40-slot="page">${hjemlysHtml({ page: true })}</div><div id="fam" class="fam">${body()}</div><div id="fam-toast" class="fam-toast" role="status" aria-live="polite" hidden></div>`;
+    <div id="fam" class="fam">${body()}</div><div id="fam-toast" class="fam-toast" role="status" aria-live="polite" hidden></div>`;
 }

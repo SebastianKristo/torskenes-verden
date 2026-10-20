@@ -7,19 +7,25 @@
 //      POST /api/hjemlys/start {eta, mode, waitMin, recipients, destination:{name, lat, lon, kind:'home'|'place'}, share}
 // Personvern: bare beskjeden og stedet du valgte sendes til personene du valgte. Du selv er aldri i mottakerlista.
 // Lokal tilstand i localStorage «hjemlys_v1» (siste mottakere per hendelse, sendt-kortet) så det overlever omstart.
+// Prompt 42 (claude-code-vel-fremme.md, fasit Familie.dc.html → isHjl/hl.others/hl.sugOn): fanen heter «Vel fremme».
+// Start: tittel med lys-prikken, «Hva vil du si fra om?» (fire valg), AKTIVE I FAMILIEN (én rad per person med aktiv økt eller
+// beskjed: forsinket først, så på vei, så sjekket inn; trykk åpner økta med Ring, Send melding og Avslutt for dem for admin)
+// og Glimt-forslaget («Ja, start» / «Ikke nå»). På web står valgene til venstre og familien + Glimt til høyre (under 900 px: én kolonne).
 import { api, esc } from './util.js';
+import { store } from './store.js';
 import { stableColor, twoLetters } from './poscard.js';
-import { hjemlysHtml, loadHjemlys } from './hjemlys40.js';
+import { loadHjemlys, hjemlysState, mineHtml42 } from './hjemlys40.js';
 
 const KINDS = {
-  home: { t: 'På vei hjem', s: 'Si fra når jeg er hjemme', dark: true },
-  checkin: { t: 'Sjekket inn', s: 'Jeg er fremme' },
-  soon: { t: 'Drar snart', s: '15 min · 30 min · 1 t' },
-  now: { t: 'Drar nå', s: 'Hjem, annet sted eller ikke oppgi' },
+  home: { t: 'På vei hjem', s: 'Tid, fremdrift og varsel hvis du er sen', i: '⌂', dark: true },
+  checkin: { t: 'Sjekket inn', s: 'Jeg er fremme', i: '✓', c: 'var(--f-pos)' },
+  soon: { t: 'Drar snart', s: 'Om 15 min, 30 min eller 1 t', i: '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5H12z" fill="currentColor"/></svg>', c: '#9a5a10' }, // ◔
+  now: { t: 'Drar nå', s: 'Med eller uten mål', i: '→', c: '#2b5d8a' },
 };
 const API_KIND = { checkin: 'checkin', soon: 'leaving_soon', now: 'leaving_now' };
 const V = { step: 'start', kind: null, to: null, q: '', filt: 'hus', remember: true, place: '', note: '', soon: 30, dest: 'home', destName: '', wait: 15, share: { pos: true, bat: true, with: true }, route: undefined, pick: 0, busy: false, err: '', sent: null };
 let fam = null, repaint = () => {};
+const fam41 = () => fam;
 
 const LS = 'hjemlys_v1';
 const ls = () => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } };
@@ -51,11 +57,75 @@ function defaultTo(kind) {
 }
 
 /* ---------- Visning ---------- */
+/* ---------- Prompt 42: Aktive i familien ---------- */
+const first = (n) => String(n ?? '').split(' ')[0] || 'Noen';
+const isAdmin = () => store.me?.me?.role === 'admin';
+/** Én rad per person: forsinket (0) · på vei (1) · sjekket inn / drar snart (2) · vel fremme (3). Prikk: rød, grønn, gul, grå. */
+function activeRows() {
+  const d = hjemlysState()?.d;
+  if (!d) return [];
+  const rows = [], now = Date.now();
+  const fam = (id) => (fam41()?.members ?? []).find((m) => m.userId === id);
+  for (const p of d.household ?? []) {
+    if (p.self || !p.userId) continue;
+    const base = { userId: p.userId, name: p.name, avatar: p.avatar ?? fam(p.userId)?.photoUrl ?? fam(p.userId)?.avatarUrl, phone: p.phone, sessionId: p.sessionId, p };
+    if (p.state === 'late') rows.push({ ...base, rank: 0, dot: '#e5483b', t: `${first(p.name)} er ${p.lateMinutes ?? Math.max(0, Math.round((now - Date.parse(p.eta)) / 60000))} min forsinket`, s: 'Trykk for siste posisjon og ring' });
+    else if (p.state === 'onTheWay') rows.push({ ...base, rank: 1, dot: '#3fbf7a', t: `${first(p.name)} er på vei hjem`, s: `Hjemme ca. ${hm(p.eta)} · i rute` });
+    else if (p.state === 'home' && p.since && now - Date.parse(p.since) < 3 * 3600_000) rows.push({ ...base, rank: 3, dot: '#9a9488', t: `${first(p.name)} er vel fremme ${hm(p.since)}`, s: 'Delingen er stoppet' });
+  }
+  for (const n of d.notices?.received ?? []) {
+    if (!n?.userId || (n.expiresAt && Date.parse(n.expiresAt) < now)) continue;
+    const at = n.createdAt ? hm(n.createdAt) : '', pl = n.place ? String(n.place) : '';
+    const base = { userId: n.userId, name: n.name, avatar: fam(n.userId)?.photoUrl ?? fam(n.userId)?.avatarUrl, phone: (d.household ?? []).find((x) => x.userId === n.userId)?.phone, n };
+    if (n.kind === 'checkin') rows.push({ ...base, rank: 2, dot: '#f2c14e', t: `${first(n.name)} sjekket inn`, s: [pl, at].filter(Boolean).join(' · ') });
+    else if (n.kind === 'leaving_soon') rows.push({ ...base, rank: 2, dot: '#f2c14e', t: `${first(n.name)} drar snart`, s: [n.leaveAt || n.eta ? `ca. ${hm(n.leaveAt ?? n.eta)}` : '', pl].filter(Boolean).join(' · ') || at });
+    else if (n.kind === 'leaving_now') rows.push({ ...base, rank: 1, dot: '#3fbf7a', t: `${first(n.name)} drar nå`, s: [n.destination?.name ? `til ${n.destination.name}` : '', n.eta ? `fremme ca. ${hm(n.eta)}` : '', pl].filter(Boolean).join(' · ') || at });
+    else if (n.kind === 'arrived') rows.push({ ...base, rank: 3, dot: '#9a9488', t: `${first(n.name)} er vel fremme ${at}`.trim(), s: pl });
+  }
+  const best = new Map();
+  for (const r of rows) { const o = best.get(r.userId); if (!o || r.rank < o.rank) best.set(r.userId, r); }
+  return [...best.values()].sort((a, b) => a.rank - b.rank || String(a.name).localeCompare(String(b.name), 'nb'));
+}
+function personPanel(r) {
+  const p = r.p ?? {}, sh = p.share ?? {}, m = (fam41()?.members ?? []).find((x) => x.userId === r.userId);
+  const facts = [
+    ['Siste posisjon', [sh.place ?? sh.pos?.label ?? (m?.last?.place ? `I ${m.last.place}` : ''), sh.pos?.at ? hm(sh.pos.at) : ''].filter(Boolean).join(' · ')],
+    ['Ruten', sh.route?.label ?? sh.routeLabel ?? ''],
+    ['Batteri · dekning', [sh.battery != null ? `${Math.round(sh.battery <= 1 ? sh.battery * 100 : sh.battery)} %` : m?.last?.battery != null ? `${Math.round(m.last.battery)} %` : '', sh.signal ?? ''].filter(Boolean).join(' · ')],
+    ['Var med', (sh.with ?? []).map((w) => w.name ?? w).join(', ') + (sh.event ? ` · ${sh.event}` : '')],
+    ['Forventet', p.eta && p.state !== 'home' ? hm(p.eta) : ''],
+  ].filter(([, v]) => v && String(v).trim());
+  const tel = r.phone ? String(r.phone).replace(/[^\d+]/g, '') : '';
+  const map = sh.pos?.lat != null ? `https://www.openstreetmap.org/?mlat=${sh.pos.lat}&mlon=${sh.pos.lon}#map=16/${sh.pos.lat}/${sh.pos.lon}` : '';
+  const canEnd = isAdmin() && r.sessionId && (p.state === 'onTheWay' || p.state === 'late');
+  return `<div class="hl42-panel">
+    ${facts.length ? `<div class="hl42-facts">${facts.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>` : `<span class="hl41-mut">${p.state === 'late' ? 'Venter på delingsdata …' : 'Posisjon deles bare hvis de blir sene.'}</span>`}
+    <div class="hl42-btns">${map ? `<a class="hl41-b" href="${esc(map)}" target="_blank" rel="noopener">Åpne kart</a>` : `<a class="hl41-b" href="#/familie?person=${encodeURIComponent(r.userId)}">Vis på kartet</a>`}
+      ${tel ? `<a class="hl41-b ink" href="tel:${esc(tel)}">Ring ${esc(first(r.name))}</a><a class="hl41-b" href="sms:${esc(tel)}">Send melding</a>` : '<span class="hl41-mut">Ingen telefonnummer lagt inn for Vel fremme.</span>'}
+      ${canEnd ? `<button type="button" class="hl41-b danger" data-hl41="endfor" data-id="${esc(r.sessionId)}">Avslutt for dem</button>` : ''}</div>
+    ${V.endErr ? `<span class="hl41-err" role="alert">${esc(V.endErr)}</span>` : ''}</div>`;
+}
+function activeHtml() {
+  const L = activeRows(), st = hjemlysState();
+  const body = L.length ? L.map((r, i) => `<div class="hl42-row${V.open === r.userId ? ' open' : ''}"><button type="button" class="hl42-rb" data-hl41="open" data-id="${esc(r.userId)}" aria-expanded="${V.open === r.userId}">${av(r, 34)}<span class="hl41-tx"><b>${esc(r.t)}</b><span>${esc(r.s || '')}</span></span><i class="hl42-dot" style="background:${r.dot}" aria-hidden="true"></i></button>${V.open === r.userId ? personPanel(r) : ''}</div>${i < L.length - 1 ? '' : ''}`).join('')
+    : `<div class="hl42-none">${st?.missing ? 'Serveren har ikke Vel fremme ennå.' : st?.d ? 'Ingen i familien er på vei eller har sjekket inn nå.' : 'Henter …'}</div>`;
+  return `<span class="hl41-k">AKTIVE I FAMILIEN</span><div class="hl42-act">${body}</div>`;
+}
+/** Glimt-forslaget (GET /api/hjemlys/suggest): spørsmål fra kalender og posisjon. Knappene håndteres av hjemlys40.js (data-hl40). */
+function glimtHtml() {
+  const st = hjemlysState(), g = st?.sug;
+  let off = false; try { off = sessionStorage.getItem('hl40_sug_off') === '1'; } catch { /* */ }
+  if (!g?.suggest || off || st?.d?.mine) return '';
+  const line = [g.leg ?? g.route?.label, g.eta ? `hjemme ca. ${hm(g.eta)}` : ''].filter(Boolean).join(' · ');
+  return `<div class="hl42-glimt"><div class="hl42-gh"><span class="hl42-gi" aria-hidden="true">✦</span><b>Glimt</b><span class="hl41-sp"></span><span>nå</span></div>
+    <b class="hl42-gt">${esc(g.text || g.reason || 'Skal jeg si fra til familien når du er hjemme?')}</b>${line ? `<span class="hl41-mut">${esc(line)}</span>` : ''}
+    <div class="hl42-gb"><button type="button" class="hl41-b ink" data-hl40="sugyes">Ja, start</button><button type="button" class="hl41-b" data-hl40="sugno">Ikke nå</button></div></div>`;
+}
 function startHtml() {
-  const g = Object.entries(KINDS).map(([k, x]) => `<button type="button" class="hl41-ch${x.dark ? ' dark' : ''}" data-hl41="kind" data-k="${k}">${k === 'home' ? GLOW : `<span class="hl41-ic">${k === 'checkin' ? '✓' : k === 'soon' ? '◷' : '→'}</span>`}<b>${esc(x.t)}</b><span>${esc(x.s)}</span></button>`).join('');
-  const sent = V.sent ? sentHtml() : '';
-  return `${sent}<div class="hl41-grid">${g}</div>
-    <div class="hl41-sec"><span class="hl41-k">AKTIVE I FAMILIEN</span><div class="hl41-act" data-hl40-slot="page">${hjemlysHtml({ page: true })}</div></div>`;
+  const g = Object.entries(KINDS).map(([k, x]) => `<button type="button" class="hl41-ch hl42-ch${x.dark ? ' dark' : ''}" data-hl41="kind" data-k="${k}">${k === 'home' ? GLOW : `<span class="hl42-ic" style="color:${x.c}">${x.i}</span>`}<b>${esc(x.t)}</b><span>${esc(x.s)}</span></button>`).join('');
+  const sent = V.sent ? sentHtml() : '', mine = mineHtml42();
+  return `<div class="hl42-cols"><div class="hl42-main">${sent}${mine ? `<div data-hl42-mine>${mine}</div>` : ''}<span class="hl42-q">Hva vil du si fra om?</span><div class="hl41-grid">${g}</div></div>
+    <div class="hl42-aside">${activeHtml()}${glimtHtml()}<span class="hl41-mut hl42-foot">Ingenting deles før du er sen. Posisjon og rute slettes etter 24 timer.</span></div></div>`;
 }
 function whoHtml() {
   const L = people(), q = V.q.trim().toLowerCase(), recent = ls().recent ?? [];
@@ -119,7 +189,7 @@ export function hl41Html(famData, rp) {
   loadRec();
   if (!V.to) V.to = [];
   const body = V.step === 'who' ? whoHtml() : V.step === 'ready' ? readyHtml() : startHtml();
-  return `<section class="hl41" data-hl41-root><div class="hl41-top">${GLOW}<span class="hl41-tx"><b>Hjemlys</b><span>Et lite lys som står på til du er hjemme. Si fra hvor som helst.</span></span></div>${body}</section>`;
+  return `<section class="hl41 hl42" data-hl41-root><div class="hl41-top hl42-top">${GLOW}<b class="hl42-title">Vel fremme</b></div>${body}</section>`;
 }
 
 async function go() {
@@ -178,6 +248,12 @@ export function bindHl41() {
     else if (a === 'wait') V.wait = +b.dataset.v;
     else if (a === 'share') V.share[b.dataset.v] = !V.share[b.dataset.v];
     else if (a === 'go') return go();
+    else if (a === 'open') { V.open = V.open === b.dataset.id ? null : b.dataset.id; V.endErr = ''; }
+    else if (a === 'endfor') {
+      if (!confirm('Avslutte Vel fremme for dem? De og mottakerne får beskjed.')) return;
+      try { await api(`/hjemlys/${encodeURIComponent(b.dataset.id)}/end`, { method: 'POST', json: { by: 'admin' } }); V.open = null; V.endErr = ''; loadHjemlys(true); }
+      catch (er) { V.endErr = er.status === 403 || er.status === 404 ? 'Serveren lar ikke admin avslutte andres økt ennå.' : er.message; }
+    }
     else if (a === 'dismiss') { V.sent = null; lsSet({ sent: null }); }
     else if (a === 'plus15' && V.sent) {
       const eta = new Date((Date.parse(V.sent.eta ?? '') || Date.now()) + 15 * 60_000);

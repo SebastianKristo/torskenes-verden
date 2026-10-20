@@ -131,7 +131,6 @@ function bindShell() {
     if (act === 'settings') { e.preventDefault(); openSettings('konto'); }
     if (act === 'lock') await logout();
     if (act === 'integrations') { e.preventDefault(); openSettings('int'); }
-    if (act === 'hl-theme') await setHlTheme(is2c() ? 'cur' : '2c');
     if (act === 'lang') { await setLang(lang() === 'en' ? 'nb' : 'en'); langLabel(); }
     if (act === 'layout') openSettings('top');
     if (act === 'news-speed') openSettings('top', 'speed');

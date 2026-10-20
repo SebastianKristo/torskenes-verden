@@ -6,10 +6,11 @@
 import { api, esc, haptic } from './util.js';
 import { store } from './store.js';
 import { lang } from './i18n.js';
-import { is2c } from './hltheme.js';
 import { roleName } from './settings-login.js';
 
-export const PM_KEYS = ['innstillinger', 'tema', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'widgets', 'cv', 'las']; // prompt 36: «Rediger widgets»
+// Prompt 42 (claude-code-slett-gamle-design.md): «Bytt til nåværende tema» er fjernet fra menyen (fasit meVals uten «theme»).
+// Temaet velges fortsatt i Innstillinger → Utseende. Lagrede menyer med «tema» renses av clean().
+export const PM_KEYS = ['innstillinger', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'widgets', 'cv', 'las']; // prompt 36: «Rediger widgets»
 const DEF = () => ({ order: [...PM_KEYS], hidden: ['sokebar', 'nyhetslinje', 'las'] });
 const LS = 'hl_profile_menu';
 const IC = {
@@ -21,10 +22,9 @@ const IC = {
 };
 const COL = { innstillinger: '#6b6558', tema: '#7a5ad6', sprak: '#2b5d8a', sokebar: '#7a3b6b', nyhetslinje: '#c0562a', tilpass: '#3f7a6e', widgets: '#b23a2a', cv: '#a8661a', las: '#1f6f78', out: '#b23a2a' };
 // Handlingene finnes fra før i app.js (data-act); CV er en lenke.
-const ACT = { innstillinger: 'settings', tema: 'hl-theme', sprak: 'lang', sokebar: 'toggle-search', nyhetslinje: 'toggle-news', tilpass: 'layout', widgets: 'dash-edit', las: 'lock' };
+const ACT = { innstillinger: 'settings', sprak: 'lang', sokebar: 'toggle-search', nyhetslinje: 'toggle-news', tilpass: 'layout', widgets: 'dash-edit', las: 'lock' };
 function label(k) {
   if (k === 'innstillinger') return 'Innstillinger';
-  if (k === 'tema') return is2c() ? 'Bytt til nåværende tema' : 'Bytt til Vindu og papir';
   if (k === 'sprak') return lang() === 'en' ? 'Language: English → Norsk' : 'Språk: Norsk → English';
   if (k === 'sokebar') return store.me?.hideSearch ? 'Vis søkebar' : 'Skjul søkebar';
   if (k === 'nyhetslinje') return store.me?.hideNews ? 'Vis nyhetslinje' : 'Skjul nyhetslinje';

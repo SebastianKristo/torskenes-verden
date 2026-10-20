@@ -1,3 +1,4 @@
+// Prompt 42: brukertekstene heter nå «Vel fremme» (claude-code-vel-fremme.md); interne nøkler (hjemlys) står.
 // Prompt 40 (claude-code-hjemlys.md): Hjemlys – «Et lite lys som står på til du er hjemme.» Web: Familie-kortet på Hjem
 // (fasit Hjemme trygt Varianter.dc.html → «Felles · Web · Familie-widgeten på Hjem») og Familie-siden.
 // Flyten er valgt (tillegg i CONTRACT40): alle tre – 1a startark/aktiv økt på dagtid, 1b Glimt-forslaget, 1c nattmodus.
@@ -37,6 +38,10 @@ export async function loadHjemlys(force = false) {
   return H.loading;
 }
 const active = (st) => st === 'onTheWay' || st === 'late';
+/** Prompt 42: tilstanden (GET /api/hjemlys: mine, household, notices; forslaget) for Familie → Vel fremme og statuslinja over kartet. */
+export const hjemlysState = () => H;
+/** Prompt 42: din egen økt som kort (samme som i Familie-kortet). */
+export const mineHtml42 = () => (H.d?.mine ? mineRow(H.d.mine, true) : '');
 
 /* ---------------- Visning ----------------
    Tillegg i kontrakten (2026-10-20): alle tre variantene er deler av samme funksjon.
@@ -81,7 +86,7 @@ function lateView(p) {
   const first = String(p.name ?? '').split(' ')[0];
   const rows = [['Siste posisjon', [s.place ?? s.pos?.label, s.pos?.at ? hm(s.pos.at) : ''].filter(Boolean).join(' · ')], ['Ruten', s.route?.label ?? s.routeLabel ?? ''], ['Batteri · dekning', [s.battery != null ? `${Math.round(s.battery <= 1 ? s.battery * 100 : s.battery)} %` : '', s.signal ?? ''].filter(Boolean).join(' · ')], ['Sist låst opp', s.unlockedAt ? hm(s.unlockedAt) : ''], ['Var med', (s.with ?? []).map((w) => w.name ?? w).join(', ') + (s.event ? ` · ${s.event}` : '')]].filter(([, v]) => v && v.trim());
   const map = s.mapUrl ?? (s.pos?.lat != null ? `https://www.openstreetmap.org/?mlat=${s.pos.lat}&mlon=${s.pos.lon}#map=16/${s.pos.lat}/${s.pos.lon}` : '');
-  return `<div class="hl40-late${N ? ' alarm' : ''}">${N ? '<span class="hl40-k n">KRITISK · HJEMLYS</span>' : ''}<b class="hl40-lt">${N ? `${esc(first)} er ${over} min forsinket` : `${esc(first)} er ikke hjemme ennå`}</b>
+  return `<div class="hl40-late${N ? ' alarm' : ''}">${N ? '<span class="hl40-k n">KRITISK · VEL FREMME</span>' : ''}<b class="hl40-lt">${N ? `${esc(first)} er ${over} min forsinket` : `${esc(first)} er ikke hjemme ennå`}</b>
     <span class="hl40-ls">Ventet ${esc(hm(p.eta))} · ${over} min over${s.okAskedAt ? ` · svarte ikke på «Alt OK?» kl. ${esc(hm(s.okAskedAt))}` : ''}</span>
     ${rows.length ? `<div class="hl40-facts col">${rows.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>` : '<span class="hl40-ls">Venter på delingsdata …</span>'}
     <span class="hl40-acts">${s.phone ? `<a class="hl40-b ink" href="tel:${esc(s.phone)}">Ring ${esc(first)}</a>` : ''}${map ? `<a class="hl40-b" href="${esc(map)}" target="_blank" rel="noopener">Åpne kart</a>` : `<a class="hl40-b" href="#/familie?person=${encodeURIComponent(p.userId ?? '')}">Åpne kart</a>`}${N ? '<a class="hl40-b" href="tel:112">Ring 112</a>' : ''}</span></div>`;
@@ -103,11 +108,12 @@ export function hjemlysHtml({ page = false } = {}) {
   // 1b: Glimt foreslår (kalenderhendelse som slutter sent, etter 22, nattbuss) – ett trykk starter.
   const sg = H.sug;
   const sug = !m && sg?.suggest && !sugOff() ? `<div class="hl40-sug"><span class="hl40-sk">✦ GLIMT · NÅ</span><span class="hl40-st">${esc(sg.text || sg.reason || 'Sent ute i kveld? Skal jeg si fra til familien når du er hjemme?')}</span>${sg.eta ? `<span class="hl40-ls">${esc([sg.leg, `hjemme ca. ${hm(sg.eta)}`].filter(Boolean).join(' · '))}</span>` : ''}<span class="hl40-acts"><button type="button" class="hl40-b ink" data-hl40="sugyes">Ja, start</button><button type="button" class="hl40-b" data-hl40="sugno">Ikke nå</button></span></div>` : '';
-  const start = m ? '' : `<button type="button" class="hl40-start" data-hl40="start">${GLOW}<span class="hl40-tx"><b>Hjemlys</b><span>Si fra til familien når du er hjemme</span></span><span class="hl40-go">Start ›</span></button>`;
-  return `<div class="hl40${page ? ' page' : ''}" data-hl40-box><span class="hl40-k">HJEMLYS</span>${rows}${sug}${start}${H.err ? `<span class="hl40-err">${esc(H.err)}</span>` : ''}</div>`;
+  const start = m ? '' : `<button type="button" class="hl40-start" data-hl40="start">${GLOW}<span class="hl40-tx"><b>Vel fremme</b><span>Si fra til familien når du er hjemme</span></span><span class="hl40-go">Start ›</span></button>`;
+  return `<div class="hl40${page ? ' page' : ''}" data-hl40-box><span class="hl40-k">VEL FREMME</span>${rows}${sug}${start}${H.err ? `<span class="hl40-err">${esc(H.err)}</span>` : ''}</div>`;
 }
 function paintAll() {
   document.querySelectorAll('[data-hl40-slot]').forEach((el) => { el.innerHTML = hjemlysHtml({ page: el.dataset.hl40Slot === 'page' }); });
+  document.dispatchEvent(new Event('hl40:update')); // prompt 42: Familie → Vel fremme og statuslinja over kartet tegnes selv
 }
 // Nedtellingen i nattmodus tikker hvert sekund (bare teksten).
 setInterval(() => { const m = H.d?.mine; if (!m?.eta || m.state !== 'onTheWay' || document.hidden) return; document.querySelectorAll('[data-hl40-cd]').forEach((el) => { el.textContent = mmss(m.eta); }); }, 1000);
@@ -127,8 +133,8 @@ async function sheet(prefEta) {
   const draw = () => {
     const R = st.route, opts = R?.options ?? [], eta = etaNow();
     const modes = opts.length ? `<div class="hl40-modes" role="radiogroup" aria-label="Reisemåte">${opts.map((o, i) => `<button type="button" role="radio" aria-checked="${i === st.pick && !st.eta}" data-hl40-m="${i}"><span>${MODE_IC[o.mode] ?? '•'} ${esc(o.label ?? o.mode)}</span><b>ca. ${esc(hm(o.eta))}</b>${i === st.pick && !st.eta ? '<i>✓</i>' : ''}</button>`).join('')}</div>` : '';
-    ov.innerHTML = `<form class="hl40-sh" role="dialog" aria-modal="true" aria-label="Start Hjemlys">
-      <div class="hl40-shh">${GLOW}<span class="hl40-tx"><span class="hl40-k${N ? ' n' : ''}">${N ? 'HJEMLYS · NATT' : 'SI FRA NÅR JEG ER HJEMME'}</span><b>${esc(R?.to?.name ?? R?.home ?? 'Hjem')}</b><span>${R?.from ? `Fra ${esc(R.from.name)} · ${String(R.from.km ?? '').replace('.', ',')} km` : 'Et lite lys som står på til du er hjemme'}</span></span><button type="button" class="hl40-x" data-hl40-x aria-label="Lukk">✕</button></div>
+    ov.innerHTML = `<form class="hl40-sh" role="dialog" aria-modal="true" aria-label="Start Vel fremme">
+      <div class="hl40-shh">${GLOW}<span class="hl40-tx"><span class="hl40-k${N ? ' n' : ''}">${N ? 'VEL FREMME · NATT' : 'SI FRA NÅR JEG ER HJEMME'}</span><b>${esc(R?.to?.name ?? R?.home ?? 'Hjem')}</b><span>${R?.from ? `Fra ${esc(R.from.name)} · ${String(R.from.km ?? '').replace('.', ',')} km` : 'Et lite lys som står på til du er hjemme'}</span></span><button type="button" class="hl40-x" data-hl40-x aria-label="Lukk">✕</button></div>
       ${R?.mapUrl || R?.geometry ? `<div class="hl40-map" aria-hidden="true">${R.mapUrl ? `<img src="${esc(R.mapUrl)}" alt="">` : '<span>⌂ KART</span>'}</div>` : ''}
       ${R === null ? '<span class="hl40-ls">Finner ruten hjem …</span>' : modes}
       <label class="hl40-f"><span>${opts.length ? 'Eller velg tid selv' : 'Forventet hjemme'}</span><input type="time" name="eta" value="${val(eta)}" required></label>
@@ -157,7 +163,7 @@ async function sheet(prefEta) {
     e.preventDefault();
     const o = !st.eta ? st.route?.options?.[st.pick] : null, err = ov.querySelector('.hl40-err');
     try { await startSession({ eta: etaNow().toISOString(), mode: o?.mode ?? 'manual', waitMin: st.wait }); close(); }
-    catch (er) { err.hidden = false; err.textContent = er.status === 404 ? 'Serveren har ikke Hjemlys ennå.' : er.message; }
+    catch (er) { err.hidden = false; err.textContent = er.status === 404 ? 'Serveren har ikke Vel fremme ennå.' : er.message; }
   });
   setTimeout(() => ov.querySelector('[type=submit]')?.focus(), 30);
 }
@@ -196,7 +202,7 @@ export function bindHjemlys() {
     if (a === 'start') return sheet(b.dataset.eta || null);
     if (a === 'sugno') { try { sessionStorage.setItem('hl40_sug_off', '1'); } catch { /* */ } return paintAll(); }
     if (a === 'sugyes') { const g = H.sug ?? {}; if (!g.eta) return sheet(null); return startSession({ eta: g.eta, mode: 'glimt', waitMin: 15, ...(g.recipients ? { recipients: g.recipients.map((x) => x.userId ?? x) } : {}) }).catch((er) => { H.err = er.message; paintAll(); }); }
-    if (a === 'end' && !confirm('Avslutte Hjemlys? Familien får ikke beskjed om at du er hjemme.')) return;
+    if (a === 'end' && !confirm('Avslutte Vel fremme? Familien får ikke beskjed om at du er hjemme.')) return;
     act(a, b.dataset.v);
   }, true);
 }
