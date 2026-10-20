@@ -295,6 +295,8 @@ struct PaperShell: View {
         .brief34Host(p)
         // Prompt 35: Innstillinger → GLIMT → Glimt i fullskjerm (Glimt35Settings.swift).
         .glimt35Host(p)
+        // Prompt 40: Hjemlys – start (1a/1c), mottakerskjerm når noen er sen, og Glimt-samtalen (1b).
+        .hjemlys40Host(p)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)

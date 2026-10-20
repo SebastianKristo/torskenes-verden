@@ -16,7 +16,7 @@ struct PaperHome: View {
             // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). Update30.swift.
             Update30Banner(home: true)
             // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
-            PaperCardStack(page: "hjem", cards: homeCards, fullWidth: ["h1", "h5", "h12", "h13"], twoColumns: true)
+            PaperCardStack(page: "hjem", cards: homeCards, fullWidth: ["h1", "h5", "h12", "h13", "h14"], twoColumns: true)
             if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
         }
         .update30Sheet()
@@ -50,6 +50,11 @@ struct PaperHome: View {
         if Bible37Model.shared.enabled {
             let i: Int = (out.firstIndex { $0.key == "h12" } ?? -1) + 1
             out.insert(PaperCardDef(key: "h13", label: "Bibelvers", view: AnyView(Bible37HomeCard())), at: i)
+        }
+        // Prompt 40: Hjemlys-kortet på Hjem (status for husstanden, Glimt-forslag og start), bare når serveren har Hjemlys.
+        if Hjemlys40Model.shared.supported {
+            let i: Int = (out.firstIndex(where: { $0.key == "h13" }) ?? out.firstIndex(where: { $0.key == "h12" }) ?? -1) + 1
+            out.insert(PaperCardDef(key: "h14", label: "Hjemlys", view: AnyView(Hjemlys40HomeCard())), at: i)
         }
         return out
     }

@@ -7,8 +7,8 @@ import ActivityKit
 
 /* ---------------- Prompt 40: Hjemlys i appen – Familie-kortet, enkel start og Live Activity ----------------
    prompts/prompt-40-pakke/claude-code-hjemlys.md, fasit design/Hjemme trygt Varianter.dc.html (2a + «Felles»).
-   Flyten 1a/1b/1c er IKKE valgt ennå: her er bare en enkel, nøytral start (ark: forventet tid, mottakere = husstanden,
-   ventetid 5/15/30) som lett kan byttes ut (Hjemlys40StartSheet).
+   Prompt 40 (tillegg): flyten er valgt – alle tre: 1a (dag, kart og rute), 1b (Glimt foreslår, samtale og logg) og 1c (nattmodus
+   med nedtelling). Startsiden og den aktive økta ligger i Hjemlys40Flow.swift, 1b i Hjemlys40Glimt.swift.
    API (SERVER40, klienten tåler 404 – da vises ikke kortet):
      GET  /api/hjemlys → {mine|null, household:[{userId, name, avatar, state, eta, since}]}
      POST /api/hjemlys/start {eta, mode, waitMin, recipients?} → {session}
@@ -96,7 +96,17 @@ struct Hjemlys40Member: Identifiable, Hashable {
         state = JS.str(o, "state") ?? ""
         eta = Hjemlys40Session.date(o["eta"])
         since = Hjemlys40Session.date(o["since"])
+        sessionId = JS.str(o, "sessionId") ?? ""
+        lateMinutes = JS.int(o, "lateMinutes") ?? 0
+        phone = JS.str(o, "phone") ?? ""
+        if let sh = o["share"] as? [String: Any] { share = Hjemlys40Share(sh) }
     }
+
+    /// Prompt 40 (1a/1c): økta, minutter over, telefon og delingsdata (bare når personen er sen og du er mottaker).
+    var sessionId: String = ""
+    var lateMinutes: Int = 0
+    var phone: String = ""
+    var share: Hjemlys40Share? = nil
 
     var active: Bool { state == "onTheWay" || state == "late" }
 
@@ -124,6 +134,12 @@ final class Hjemlys40Model {
     var suggest: Bool = false
     var suggestReason: String = ""
     var suggestEta: Date? = nil
+    /// Prompt 40 (1b): Glimt-teksten («Kinoen er ferdig. Skal jeg si fra til Rune og Cybele …?») og mottakerne.
+    var suggestText: String = ""
+    var suggestRecipients: [String] = []
+    /// Prompt 40 (1a/1c): personen i husstanden som er sen (rød mottakerskjerm).
+    var alertMember: Hjemlys40Member? = nil
+    @ObservationIgnored private var alerted: Set<String> = []
     var busy: Bool = false
     var err: String = ""
     var startOpen: Bool = false
@@ -159,6 +175,15 @@ final class Hjemlys40Model {
             let hh: [Any] = (o["household"] as? [Any]) ?? []
             household = hh.compactMap { $0 as? [String: Any] }.map { (x: [String: Any]) -> Hjemlys40Member in Hjemlys40Member(x) }
             loaded = true
+            Hjemlys40Widget.save(mine: mine, household: household)
+            // Prompt 40: noen i husstanden er sen (og du er mottaker) → mottakerskjermen kommer opp én gang per økt.
+            if let late = household.first(where: { $0.state == "late" && $0.share != nil }), !alerted.contains(late.sessionId + late.id) {
+                alerted.insert(late.sessionId + late.id)
+                alertMember = late
+            }
+            if let a = alertMember, let now = household.first(where: { $0.id == a.id }) {
+                alertMember = now.state == "late" ? now : nil
+            }
             await syncActivity()
             if let m = mine, m.active { Hjemlys40Location.shared.start(store, sessionId: m.id) } else { Hjemlys40Location.shared.stop() }
             watchPushToStart(store)
@@ -178,20 +203,44 @@ final class Hjemlys40Model {
         suggest = JS.bool(o, "suggest") ?? false
         suggestReason = JS.str(o, "reason") ?? ""
         suggestEta = Hjemlys40Session.date(o["eta"])
+        suggestText = JS.str(o, "text") ?? ""
+        let rec: [Any] = (o["recipients"] as? [Any]) ?? []
+        suggestRecipients = rec.compactMap { (x: Any) -> String? in (x as? String) ?? JS.str(x as? [String: Any], "name") }
+        if Hjemlys40Glimt.dismissedToday { suggest = false }
+        if suggest { Hjemlys40Glimt.notify(self) }
+    }
+
+    /// «Kinoen er ferdig. Skal jeg si fra til Rune og Cybele når du er hjemme?»
+    var suggestLine: String {
+        if !suggestText.isEmpty { return Fin40Ask.clean(suggestText) }
+        let who: String = Hjemlys40Model.names(suggestRecipients.isEmpty ? household.map(\.name) : suggestRecipients)
+        let lead: String = suggestReason.isEmpty ? "Det er sent." : suggestReason + "."
+        return lead + " Skal jeg si fra til " + (who.isEmpty ? "husstanden" : who) + " når du er hjemme?"
+    }
+
+    /// «Rune og Cybele» (fornavn).
+    nonisolated static func names(_ list: [String]) -> String {
+        let short: [String] = list.prefix(3).map { String($0.split(separator: " ").first ?? Substring($0)) }
+        if short.count <= 1 { return short.first ?? "" }
+        return short.dropLast().joined(separator: ", ") + " og " + (short.last ?? "")
     }
 
     /* ---------- Handlinger ---------- */
 
-    func start(_ store: Store, eta: Date, waitMin: Int) {
+    /// mode: walk | transit | bike | car (serveren), leg = «Trikk 19 + gå».
+    func start(_ store: Store, eta: Date, waitMin: Int, mode: String = "walk", leg: String = "") {
         busy = true
         err = ""
         Haptic30.double()
         let f: ISO8601DateFormatter = ISO8601DateFormatter()
-        let body: [String: Any] = ["eta": f.string(from: eta), "mode": "simple", "waitMin": waitMin]
+        var body: [String: Any] = ["eta": f.string(from: eta), "mode": mode, "waitMin": waitMin]
+        if !leg.isEmpty { body["leg"] = leg }
+        if let c = Hjemlys40Route.shared.here { body["pos"] = ["lat": c.latitude, "lon": c.longitude] }
+        let payload: [String: Any] = body
         Task {
             defer { self.busy = false }
             do {
-                let d: Data = try await store.api.callAt("/api", "POST", "/hjemlys/start", json: body, timeout: 20)
+                let d: Data = try await store.api.callAt("/api", "POST", "/hjemlys/start", json: payload, timeout: 20)
                 let o: [String: Any] = JS.obj(d)
                 let so: [String: Any] = (o["session"] as? [String: Any]) ?? o
                 var s: Hjemlys40Session = Hjemlys40Session(so)
@@ -273,7 +322,7 @@ final class Hjemlys40Model {
         }
     }
 
-    static func enc(_ id: String) -> String {
+    nonisolated static func enc(_ id: String) -> String {
         id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id
     }
 
@@ -455,7 +504,8 @@ struct Hjemlys40Card: View {
                 VStack(alignment: .leading, spacing: 12) {
                     head
                     if let s = m.mine, s.active || s.state == "home" {
-                        Hjemlys40Mine(s: s)
+                        // Prompt 40: 1a på dagtid, 1c (nedtellingsring) om natta / i mørkt tema (Hjemlys40Flow.swift).
+                        Hjemlys40Active(s: s)
                     } else {
                         if m.suggest { Hjemlys40Suggest() }
                         Button { Haptic30.light(); m.startOpen = true } label: {
@@ -469,17 +519,17 @@ struct Hjemlys40Card: View {
                     let others: [Hjemlys40Member] = m.household.filter { $0.active || $0.state == "home" }
                     if !others.isEmpty {
                         VStack(spacing: 0) {
-                            ForEach(others) { (h: Hjemlys40Member) in Hjemlys40MemberRow(h: h) }
+                            ForEach(others) { (h: Hjemlys40Member) in
+                                Hjemlys40MemberRow(h: h)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { if h.state == "late" { m.alertMember = h } }
+                            }
                         }
                     }
                 }
                 .padding(16)
                 .background(p.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .sheet(isPresented: Binding<Bool>(get: { m.startOpen }, set: { (v: Bool) in m.startOpen = v })) {
-                    Hjemlys40StartSheet()
-                        .environment(\.paper, p)
-                        .presentationDetents([.medium, .large])
-                }
+                // Prompt 40: startsiden, mottakerskjermen og Glimt-samtalen ligger i Hjemlys40Host (PaperShell).
             }
         }
         .task { await m.load(store) }
@@ -589,17 +639,27 @@ struct Hjemlys40Pill: View {
     }
 }
 
-/// «✦ Glimt foreslår …» (kalenderhendelse som slutter sent, etter 22, nattbuss).
+/// Prompt 40 (1b): «✦ Glimt · nå» – forslaget med «Ja, start» / «Ikke nå» (samme som varselet).
 struct Hjemlys40Suggest: View {
+    @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @MainActor private var m: Hjemlys40Model { Hjemlys40Model.shared }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Text("✦").font(PF.ui(15, .bold)).foregroundStyle(Color(hex: "#e0553d"))
-            Text(m.suggestReason.isEmpty ? "Glimt foreslår Hjemlys for turen hjem i kveld." : "Glimt: " + m.suggestReason)
-                .font(PF.ui(13.5)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Text("✦ Glimt").font(PF.ui(13, .bold)).foregroundStyle(p.ink)
+                Spacer()
+                Text("nå").font(PF.ui(11.5)).foregroundStyle(p.mut)
+            }
+            Text(m.suggestLine).font(PF.ui(14)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
+            if let e = m.suggestEta {
+                Text("Hjemme ca. " + Hjemlys40Look.clock(e)).font(PF.ui(12.5)).foregroundStyle(p.mut)
+            }
+            HStack(spacing: 8) {
+                Hjemlys40Pill(title: "Ja, start", dark: true) { Hjemlys40Glimt.accept(store) }
+                Hjemlys40Pill(title: "Ikke nå", dark: false) { Hjemlys40Glimt.dismiss() }
+            }
         }
         .padding(12)
         .background(p.bg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -635,87 +695,6 @@ struct Hjemlys40MemberRow: View {
         case "home": return Hjemlys40Look.gold
         default: return Hjemlys40Look.green
         }
-    }
-}
-
-/* ---------- Enkel start (nøytral, byttes ut når flyten 1a/1b/1c er valgt) ---------- */
-
-struct Hjemlys40StartSheet: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    @MainActor private var m: Hjemlys40Model { Hjemlys40Model.shared }
-    @State private var eta: Date = Hjemlys40Time.rounded(Date().addingTimeInterval(30 * 60))
-    @State private var wait: Int = 15
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Button("Avbryt") { m.startOpen = false }.font(PF.ui(15, .semibold)).foregroundStyle(p.mut)
-                    Spacer()
-                    Text("Hjemlys").font(PF.ui(16, .bold)).foregroundStyle(p.ink)
-                    Spacer()
-                    Color.clear.frame(width: 52, height: 1)
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("NÅR ER DU HJEMME?").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab)
-                    DatePicker("Forventet tid", selection: $eta, in: Date()..., displayedComponents: [.hourAndMinute])
-                        .datePickerStyle(.compact)
-                        .font(PF.ui(15))
-                    HStack(spacing: 6) {
-                        ForEach([15, 30, 45, 60], id: \.self) { (n: Int) in
-                            Button { eta = Date().addingTimeInterval(Double(n) * 60) } label: {
-                                Text("om \(n) min").font(PF.ui(12.5, .bold)).foregroundStyle(p.ink)
-                                    .padding(.horizontal, 10).frame(height: 30)
-                                    .background(p.card, in: Capsule())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("FÅR BESKJED").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab)
-                    Text(recipients).font(PF.ui(14.5)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("VENT FØR FAMILIEN VARSLES").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab)
-                    Picker("Ventetid", selection: $wait) {
-                        Text("5 min").tag(5)
-                        Text("15 min").tag(15)
-                        Text("30 min").tag(30)
-                    }
-                    .pickerStyle(.segmented)
-                    Text("Passerer tiden, spør Hjemlys «Alt OK?». Svarer du ikke innen ventetiden, får familien beskjed med siste posisjon, batteri og dekning. Ingenting deles før det.")
-                        .font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
-                }
-                if !m.err.isEmpty {
-                    Text(m.err).font(PF.ui(13, .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
-                }
-                Button { m.start(store, eta: eta, waitMin: wait) } label: {
-                    HStack(spacing: 8) {
-                        if m.busy { ProgressView().tint(p.bg) }
-                        Text("Start Hjemlys").font(PF.ui(16, .bold))
-                    }
-                    .foregroundStyle(p.bg)
-                    .frame(maxWidth: .infinity).frame(height: 52)
-                    .background(p.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .disabled(m.busy)
-            }
-            .padding(20)
-        }
-        .background(p.bg.ignoresSafeArea())
-        .onAppear {
-            // Glimt-forslaget har gjerne en tid (f.eks. når kinoen slutter + reisetid).
-            if let s = m.suggestEta, s > Date() { eta = Hjemlys40Time.rounded(s) }
-        }
-    }
-
-    private var recipients: String {
-        let names: [String] = FamilyModel.shared.members.filter { $0.id != FamilyModel.shared.meId }.map(\.name)
-        if names.isEmpty { return "Alle i husstanden" }
-        return "Alle i husstanden: " + names.joined(separator: ", ")
     }
 }
 

@@ -16,11 +16,13 @@ struct FinansHubWidgetBundle: WidgetBundle {
     }
 }
 
-/// Gruppe 3: Live Activities (1 av maks 10).
+/// Gruppe 3: Hjemlys (2 av maks 10).
 struct FinansHubWidgetsC: WidgetBundle {
     var body: some Widget {
         // Prompt 40: Hjemlys – Dynamic Island, låseskjerm og StandBy (HjemlysLive40.swift).
         HjemlysLive40()
+        // Prompt 40 (Felles): Hjem-widgeten med «Start for meg» (HjemlysWidget40.swift).
+        HjemlysWidget40()
     }
 }
 

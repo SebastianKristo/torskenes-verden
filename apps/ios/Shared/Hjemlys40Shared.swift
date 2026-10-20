@@ -296,3 +296,135 @@ enum Hjemlys40Intents {
     /// Appen henter Hjemlys på nytt når en knapp er brukt.
     static let changed: Notification.Name = Notification.Name("no.kristo.finanshub.hjemlys40")
 }
+
+/* ---------- Prompt 40 «Felles»: Hjem-widgeten («Start for meg») ---------- */
+
+/// Det widgeten trenger, lagt i App Group av appen (w.hjemlys40) og oppdatert av widgeten selv fra GET /api/hjemlys.
+struct Hjemlys40CacheMember: Hashable {
+    var name: String
+    var state: String
+    var eta: Double
+}
+
+struct Hjemlys40Cache: Hashable {
+    var mineId: String = ""
+    var mineState: String = ""
+    var mineEta: Double = 0
+    var mineStart: Double = 0
+    var household: [Hjemlys40CacheMember] = []
+    var recipients: String = "Husstanden følger med"
+    var at: Double = 0
+
+    static let key: String = "w.hjemlys40"
+
+    var mineActive: Bool { mineState == "onTheWay" || mineState == "late" }
+
+    var json: [String: Any] {
+        let hh: [[String: Any]] = household.map { (m: Hjemlys40CacheMember) -> [String: Any] in ["name": m.name, "state": m.state, "eta": m.eta] }
+        return ["mineId": mineId, "mineState": mineState, "mineEta": mineEta, "mineStart": mineStart, "household": hh, "recipients": recipients, "at": at]
+    }
+
+    static func from(_ o: [String: Any]) -> Hjemlys40Cache {
+        var c: Hjemlys40Cache = Hjemlys40Cache()
+        c.mineId = (o["mineId"] as? String) ?? ""
+        c.mineState = (o["mineState"] as? String) ?? ""
+        c.mineEta = (o["mineEta"] as? NSNumber)?.doubleValue ?? 0
+        c.mineStart = (o["mineStart"] as? NSNumber)?.doubleValue ?? 0
+        c.recipients = (o["recipients"] as? String) ?? "Husstanden følger med"
+        c.at = (o["at"] as? NSNumber)?.doubleValue ?? 0
+        let hh: [[String: Any]] = ((o["household"] as? [Any]) ?? []).compactMap { $0 as? [String: Any] }
+        c.household = hh.map { (x: [String: Any]) -> Hjemlys40CacheMember in
+            Hjemlys40CacheMember(name: (x["name"] as? String) ?? "", state: (x["state"] as? String) ?? "", eta: (x["eta"] as? NSNumber)?.doubleValue ?? 0)
+        }
+        return c
+    }
+
+    static var cached: Hjemlys40Cache {
+        guard let d = WidgetShared.defaults.data(forKey: key), let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return Hjemlys40Cache() }
+        return from(o)
+    }
+
+    static func write(_ c: Hjemlys40Cache) {
+        if let d = try? JSONSerialization.data(withJSONObject: c.json) { WidgetShared.defaults.set(d, forKey: key) }
+    }
+
+    /// Fra GET /api/hjemlys (samme form som appen leser).
+    static func parse(_ d: Data) -> Hjemlys40Cache? {
+        guard let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else { return nil }
+        var c: Hjemlys40Cache = Hjemlys40Cache()
+        c.at = Date().timeIntervalSince1970
+        if let m = o["mine"] as? [String: Any] {
+            c.mineId = (m["id"] as? String) ?? ""
+            c.mineState = (m["state"] as? String) ?? ""
+            c.mineEta = Hjemlys40Look.unix(m["eta"]) ?? 0
+            c.mineStart = Hjemlys40Look.unix(m["startedAt"]) ?? 0
+        }
+        let hh: [[String: Any]] = ((o["household"] as? [Any]) ?? []).compactMap { $0 as? [String: Any] }
+        c.household = hh.map { (x: [String: Any]) -> Hjemlys40CacheMember in
+            Hjemlys40CacheMember(name: (x["name"] as? String) ?? "", state: (x["state"] as? String) ?? "", eta: Hjemlys40Look.unix(x["eta"]) ?? 0)
+        }
+        let first: [String] = c.household.prefix(3).map { (m: Hjemlys40CacheMember) -> String in String(m.name.split(separator: " ").first ?? "") }
+        if first.count == 1 { c.recipients = first[0] + " følger med" }
+        if first.count > 1 { c.recipients = first.dropLast().joined(separator: ", ") + " og " + (first.last ?? "") + " følger med" }
+        return c
+    }
+}
+
+extension Hjemlys40Look {
+    /// ISO-tid, Unix-sekunder eller millisekunder → Unix-sekunder.
+    static func unix(_ v: Any?) -> Double? {
+        if let n = v as? NSNumber {
+            let d: Double = n.doubleValue
+            if d <= 0 { return nil }
+            return d > 100_000_000_000 ? d / 1000 : d
+        }
+        guard let s = v as? String, !s.isEmpty else { return nil }
+        let f: ISO8601DateFormatter = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: s) { return d.timeIntervalSince1970 }
+        f.formatOptions = [.withInternetDateTime]
+        return f.date(from: s)?.timeIntervalSince1970
+    }
+}
+
+/// «Start for meg» fra Hjem-widgeten (og Siri/Snarveier): starter Hjemlys med Glimts forslag til tid (ellers om 30 min)
+/// og Live Activity, uten å åpne appen (LiveActivityIntent kjører i appens prosess).
+struct Hjemlys40StartIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "Start Hjemlys"
+    static var description: IntentDescription = IntentDescription("Si fra til husstanden når du er hjemme.")
+
+    init() {}
+
+    func perform() async throws -> some IntentResult {
+        var eta: Double = Date().timeIntervalSince1970 + 30 * 60
+        if let d = await Hjemlys40Net.call("GET", "/hjemlys/suggest", nil),
+           let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any],
+           let e = Hjemlys40Look.unix(o["eta"]), e > Date().timeIntervalSince1970 + 120 {
+            eta = e
+        }
+        let iso: String = ISO8601DateFormatter().string(from: Date(timeIntervalSince1970: eta))
+        guard let d = await Hjemlys40Net.call("POST", "/hjemlys/start", ["eta": iso, "mode": "walk", "waitMin": 15]),
+              let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] else {
+            return .result()
+        }
+        let s: [String: Any] = (o["session"] as? [String: Any]) ?? o
+        let id: String = (s["id"] as? String) ?? ""
+        let realEta: Double = Hjemlys40Look.unix(s["eta"]) ?? eta
+        #if canImport(ActivityKit)
+        if !id.isEmpty && ActivityAuthorizationInfo().areActivitiesEnabled && Hjemlys40Activity.find(id) == nil {
+            let attr: Hjemlys40Attributes = Hjemlys40Attributes(sessionId: id, name: (s["name"] as? String) ?? "", recipients: Hjemlys40Cache.cached.recipients)
+            let st: Hjemlys40Attributes.ContentState = Hjemlys40Attributes.ContentState(eta: realEta, progress: 0, leg: (s["leg"] as? String) ?? "",
+                                                                                        state: "onTheWay", lateMinutes: 0, homeAt: 0, from: "")
+            _ = try? Activity<Hjemlys40Attributes>.request(attributes: attr, content: Hjemlys40Activity.content(st), pushType: nil)
+        }
+        #endif
+        var c: Hjemlys40Cache = Hjemlys40Cache.cached
+        c.mineId = id
+        c.mineState = "onTheWay"
+        c.mineEta = realEta
+        c.mineStart = Date().timeIntervalSince1970
+        Hjemlys40Cache.write(c)
+        NotificationCenter.default.post(name: Hjemlys40Intents.changed, object: nil)
+        return .result()
+    }
+}
