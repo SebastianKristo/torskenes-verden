@@ -415,6 +415,7 @@ fun AppViewModel.onForeground31() {
         val b = s.away ?: sp.getString("away", null) ?: return@launch31
         s.away = null
         sp.edit().remove("away").apply()
+        if (!p39.aiIn) return@launch31 // prompt 39: «Vis svaret i appen også» av – svaret ligger bare i chatten og varselet
         s.banner = "Glimt svarte mens du var borte" to b
         s.bannerSeq++
         delay(4200)

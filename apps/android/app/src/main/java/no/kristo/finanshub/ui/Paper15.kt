@@ -1,5 +1,8 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.layout.Box
+
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -287,7 +290,13 @@ internal fun LazyGridScope.pageGridSecs(vm: AppViewModel, page: String, secs: Li
     if (edit) item(key = "edit-$page", span = { GridItemSpan(maxLineSpan) }) { WiggleSpace30(true, extra = (-10).dp) }
     vis.forEachIndexed { i, k ->
         val s = secs.first { it.key == k }
-        item(key = "sec-$page-$k", span = { GridItemSpan(if (!wide || s.full) maxLineSpan else 1) }) { EditWrap(vm, page, s, keys, i, vis.size) { body(k) } }
+        item(key = "sec-$page-$k", span = { GridItemSpan(if (!wide || s.full) maxLineSpan else 1) }) {
+            // Prompt 39: når et kort sveipes bort og fjernes, glir kortene under opp (også mellomrommet) i stedet for å hoppe.
+            // Bare rett etter et sveip (Swipe39.active, 1,5 s), ikke i wiggle-modus eller når data lastes inn.
+            Box(if (edit || !Swipe39.active) Modifier else Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = spring(dampingRatio = 1f, stiffness = 500f))) {
+                EditWrap(vm, page, s, keys, i, vis.size) { body(k) }
+            }
+        }
     }
     if (!edit) item(key = "hint-$page", span = { GridItemSpan(maxLineSpan) }) { EditHint() }
 }

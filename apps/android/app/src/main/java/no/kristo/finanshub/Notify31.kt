@@ -91,13 +91,8 @@ object Notify31 {
         return true
     }
 
-    private fun channel(ctx: Context): String {
-        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(CH) == null) nm.createNotificationChannel(
-            NotificationChannel(CH, "Glimt og påminnelser", NotificationManager.IMPORTANCE_HIGH).apply { description = "Svar fra Glimt, prøveperioder og oppdateringer" },
-        )
-        return CH
-    }
+    /** Prompt 39: den gamle kanalen «glimt31» (IMPORTANCE_HIGH, telefonens standardlyd) er erstattet av Sound39.glimtChannel. */
+    @Suppress("unused") private fun channel(ctx: Context): String = Sound39.glimtChannel(ctx, remind = true)
 
     private fun openIntent(ctx: Context, link: String?, code: Int): PendingIntent {
         val i = if (link != null && link.startsWith("finanshub://")) Intent(Intent.ACTION_VIEW, Uri.parse(link)).setPackage(ctx.packageName)
@@ -110,18 +105,34 @@ object Notify31 {
     fun post(ctx: Context, title: String, body: String, tag: String, link: String?, category: String = "ai", actions: List<Notification.Action> = emptyList()) {
         if (!allowed(ctx) || !on(ctx, category)) return
         val id = tag.hashCode()
-        val b = Notification.Builder(ctx, channel(ctx))
-        b.setSmallIcon(no.kristo.finanshub.R.drawable.ic_launcher_monochrome)
-        b.setContentTitle(title).setContentText(body)
-            .setStyle(Notification.BigTextStyle().bigText(body))
+        // Prompt 39: Glimt-svar på egen kanal «glimt_ai» (myk dråpe, IMPORTANCE_DEFAULT – før IMPORTANCE_HIGH med telefonens
+        // standardlyd), tittel «Glimt», Glimt-logoen som stort ikon, hvit ring + stjerne i statuslinjen og farge #E0553D.
+        val ai = category == "ai"
+        val b = Notification.Builder(ctx, Sound39.glimtChannel(ctx, remind = !ai))
+        b.setSmallIcon(if (ai) no.kristo.finanshub.R.drawable.ic_glimt39_badge else no.kristo.finanshub.R.drawable.ic_launcher_monochrome)
+        b.setContentTitle(if (ai) "Glimt" else title).setContentText(body)
             .setAutoCancel(true)
             .setContentIntent(openIntent(ctx, link, id))
             .setGroup(if (category == "trial") "trials31" else "glimt31")
-        if (category == "ai") b.setCategory(Notification.CATEGORY_MESSAGE)
+        if (ai) {
+            b.setCategory(Notification.CATEGORY_MESSAGE).setColor(0xFFE0553D.toInt())
+            val logo = glimtLogo39(ctx)
+            if (logo != null) b.setLargeIcon(logo)
+            if (Build.VERSION.SDK_INT >= 28) {
+                val me = android.app.Person.Builder().setName("Du").build()
+                val glimt = android.app.Person.Builder().setName("Glimt").setKey("glimt").setBot(true)
+                    .apply { if (logo != null) setIcon(android.graphics.drawable.Icon.createWithBitmap(logo)) }.build()
+                b.setStyle(Notification.MessagingStyle(me).addMessage(body, System.currentTimeMillis(), glimt))
+            } else b.setStyle(Notification.BigTextStyle().bigText(body))
+        } else b.setStyle(Notification.BigTextStyle().bigText(body))
         actions.forEach { b.addAction(it) }
         try { (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(id, b.build()) } catch (_: SecurityException) {}
         markSeen(ctx, tag)
     }
+
+    /** Glimt-logoen (regnbuering med rød stjerne, res/drawable-nodpi/glimt39_varsel_rund.png). */
+    private fun glimtLogo39(ctx: Context): android.graphics.Bitmap? =
+        runCatching { android.graphics.BitmapFactory.decodeResource(ctx.resources, no.kristo.finanshub.R.drawable.glimt39_varsel_rund) }.getOrNull()
 
     fun cancel(ctx: Context, tag: String) = runCatching { (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(tag.hashCode()) }
 

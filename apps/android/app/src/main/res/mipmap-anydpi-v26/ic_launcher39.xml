@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 39: nytt standard app-ikon (adaptivt, fra maskable-ikonet), med monokromt lag. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_app39_bg" />
+    <foreground android:drawable="@drawable/ic_app39_fg" />
+    <monochrome android:drawable="@drawable/ic_app39_mono" />
+</adaptive-icon>

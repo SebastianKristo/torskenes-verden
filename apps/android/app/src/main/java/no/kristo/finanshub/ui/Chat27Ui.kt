@@ -261,16 +261,12 @@ private fun Ch27Main(vm: AppViewModel, v: ChatV27, wide: Boolean, modifier: Modi
                 Box(Modifier.size(44.dp).clip(CircleShape).press24 { vm.closeChatAll27() }.ch27Label("Tilbake"), contentAlignment = Alignment.Center) { Text("‹", color = v.ink, fontSize = 28.sp) }
                 Ch27IconBtn(ChIc27.MENU, v, "Historikk") { s.drawer = true }
             }
-            Row(Modifier.weight(1f, fill = false).height(40.dp).clip(CircleShape).press24 { s.sheet = "model" }.padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(m?.label ?: if (s.unavailable) "Ikke satt opp" else "Velg modell", color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 16.sp,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                if (m != null) Ch27Badge(m.sky)
-                Text("▼", color = v.mut, fontSize = 11.sp)
-            }
-            Spacer(Modifier.weight(1f))
+            // Prompt 39 (claude-code-android-chat-modell.md): før delte modellknappen (weight 1, fill = false) og Spaceren (weight 1)
+            // restplassen likt, så på 360 dp fikk knappen ~80 dp, og etter merket og ▼ ble navnet presset til 0 («…»). Nå fyller en
+            // boks all restplass, knappen er minst 112 dp, og navnet vises med en gang (rutingen) mens listen hentes.
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) { ChatModelPill39(vm, v) }
             Ch27IconBtn(ChIc27.PARAMS, v, "Samtaleinnstillinger") { s.sheet = "params" }
-            if (!wide) Ch27IconBtn(ChIc27.NEW, v, "Ny chat") { vm.newChat27() }
+            if (!wide && LocalContext.current.resources.configuration.screenWidthDp >= 340) Ch27IconBtn(ChIc27.NEW, v, "Ny chat") { vm.newChat27() }
         }
         Ch27Messages(vm, v, m, Modifier.weight(1f).fillMaxWidth())
         Ch27Composer(vm, v, m)
@@ -537,11 +533,7 @@ private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
             }
             if (s.toast.isNotEmpty()) Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp).clip(CircleShape).background(v.ink).padding(14.dp, 9.dp)) {
                 Text(s.toast, color = v.bg, fontFamily = v.sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2)
-            } else if (m?.sky == true) Text(
-                // Prompt 28: ingen tekst for lokale modeller; bare sky-linjen.
-                "Sky-modell: meldingen sendes til ${if (m.provider == "groq") "Groq" else "Google"}.",
-                color = v.mut, fontFamily = v.sans, fontSize = 11.5.sp, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp),
-            )
+            } else ChatAnswersWith39(vm, v, m, Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp)) // prompt 39: «Svarer med … · lokal»
         }
     }
 }

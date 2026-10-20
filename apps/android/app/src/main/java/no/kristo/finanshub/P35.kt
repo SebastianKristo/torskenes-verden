@@ -51,8 +51,10 @@ data class GlimtSet35(
     val briefs: Map<String, GlimtBrief35> = BRIEFS35_DEFAULT,
     val engine: String = "openai", val voice: String = "nora", val rate: String = "normal", val lang: String = "no",
     val engines: List<GlimtEngine35> = emptyList(), val chars: List<Pair<String, String>> = emptyList(),
+    /** Prompt 39 (claude-code-brief-glimt-av.md): Glimt-figuren og vennene i briefen, på Hjem-kortet og i widgets (briefGlimt). */
+    val briefGlimt: Boolean = true,
 ) {
-    fun toJson(): JSONObject = JSONObject().put("char", char).put("friends", friends).put("brief", brief).put("readAloud", readAloud).put("guide", guide).put("notify", notify)
+    fun toJson(): JSONObject = JSONObject().put("char", char).put("friends", friends).put("brief", brief).put("readAloud", readAloud).put("guide", guide).put("notify", notify).put("briefGlimt", briefGlimt)
         .put("briefs", JSONObject().apply { briefs.forEach { (k, v) -> put(k, JSONObject().put("on", v.on).put("at", v.at)) } })
         .put("tts", JSONObject().put("engine", engine).put("voice", voice).put("rate", rate).put("lang", lang))
 }
@@ -97,6 +99,7 @@ fun parseGlimtSet35(raw: String, prev: GlimtSet35 = GlimtSet35()): GlimtSet35 {
         (s35(tts, "engine") ?: s35(o, "engine", "eng") ?: prev.engine).let { if (it == "eleven") "elevenlabs" else it },
         s35(tts, "voice") ?: s35(o, "voiceId") ?: prev.voice, s35(tts, "rate") ?: prev.rate, s35(tts, "lang") ?: s35(o, "lang") ?: prev.lang,
         engines.ifEmpty { prev.engines }, chars.ifEmpty { prev.chars },
+        b35(o, "briefGlimt", b35(o.optJSONObject("glimt_brief_cfg"), "fig", b35(o, "fig", prev.briefGlimt))),
     )
 }
 

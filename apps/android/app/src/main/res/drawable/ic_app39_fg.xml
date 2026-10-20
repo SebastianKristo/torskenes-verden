@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 39: nytt standardikon «H·» fra vedlegg/app-icon-maskable-512.png. Maskable-sonen (80 %) legges i Androids
+     trygge sone (66 av 108 dp): bildet skaleres til 82,5 dp med 12,75 dp innrykk, og bakgrunnen har samme farge. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/app39_maskable"
+    android:inset="11.8%" />

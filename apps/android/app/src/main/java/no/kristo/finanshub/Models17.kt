@@ -104,7 +104,7 @@ private fun parseHex(s: String?): Long? {
 
 data class NotifyPrefs(
     val on: Boolean = true, val quietFrom: String = "22:00", val quietTo: String = "07:00", val quiet: Boolean = true,
-    val sound: String = "klokke", val volume: Int = 80, val groups: Map<String, Boolean> = NOTIFY_GROUPS.associate { it.first to true },
+    val sound: String = "draape", val volume: Int = 50, val groups: Map<String, Boolean> = NOTIFY_GROUPS.associate { it.first to true },
     val customSound: Boolean = false,
 ) {
     fun toJson(): JSONObject = JSONObject().put("on", on).put("quietOn", quiet).put("quietFrom", quietFrom).put("quietTo", quietTo)
@@ -115,9 +115,9 @@ data class NotifyPrefs(
 val NOTIFY_GROUPS = listOf(
     "pakker" to "Pakker", "finans" to "Finans og hjem", "familie" to "Familie", "reise" to "Reise og vær", "haptikk" to "Haptikk",
 )
-/** Varsellydene: fem innebygde (res/raw/varsel_<id>.wav), egen lyd og stille. */
+/** Varsellydene: seks innebygde (prompt 39: «Dråpe (myk)» er standard, res/raw/glimt_draape.ogg og varsel_<id>.wav), egen lyd og stille. */
 val NOTIFY_SOUNDS = listOf(
-    "klokke" to "Klokke", "pling" to "Pling", "papir" to "Papir", "dobbel" to "Dobbel", "dyp" to "Dyp", "egen" to "Egen lyd", "stille" to "Stille",
+    "draape" to "Dråpe (myk)", "klokke" to "Klokke", "pling" to "Pling", "papir" to "Papir", "dobbel" to "Dobbel", "dyp" to "Dyp", "egen" to "Egen lyd", "stille" to "Stille",
 )
 
 fun parseNotifyPrefs(s: String): NotifyPrefs {
@@ -126,8 +126,8 @@ fun parseNotifyPrefs(s: String): NotifyPrefs {
     return NotifyPrefs(
         on = o.optBoolean("on", true),
         quietFrom = o.optStr("quietFrom") ?: "22:00", quietTo = o.optStr("quietTo") ?: "07:00", quiet = o.optBoolean("quietOn", true),
-        sound = o.optStr("sound")?.takeIf { k -> NOTIFY_SOUNDS.any { it.first == k } } ?: "klokke",
-        volume = o.optInt("volume", 80).coerceIn(0, 100),
+        sound = o.optStr("sound")?.takeIf { k -> NOTIFY_SOUNDS.any { it.first == k } } ?: "draape",
+        volume = o.optInt("volume", 50).coerceIn(0, 100),
         groups = NOTIFY_GROUPS.associate { (k, _) -> k to (g?.optBoolean(k, true) ?: true) },
         customSound = o.optBoolean("customSound", false) || o.optStr("customSoundUrl") != null,
     )
@@ -139,7 +139,7 @@ data class AppInfo(val name: String, val icon: String)
 
 /** Ikonene i Innstillinger → App-ikon: nøkkel (serveren), navn og alias i manifestet. */
 val APP_ICONS = listOf(
-    Triple("hus", "Huset med stativ", "IconHus"),
+    Triple("hus", "Homelab H· (standard)", "IconHus"), // prompt 39: nytt standardikon fra app-icon-maskable-512.png
     Triple("monogram", "Papir-monogram", "IconMonogram"),
     Triple("rom", "Fire rom", "IconRom"),
 )

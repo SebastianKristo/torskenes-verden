@@ -150,83 +150,14 @@ internal fun BibleHome37(vm: AppViewModel) {
 }
 
 /**
- * Sveip mot høyre (samme gest og animasjon som brief-kortet): retningslås 1,2×, terskel 38 % (eller rask flikk), grønt felt med ✓,
- * kortet flyr ut, høyden kollapser og haptikk. Trykk uten dra kaller onTap (klikk rett etter sveip ignoreres).
+ * Sveip mot høyre (samme gest og animasjon som brief-kortet). Prompt 39: SwipeDismiss39 (ui/Ui39.kt) – myk, uten
+ * rekomponering under draget, fartsstyrt utflyging og kollaps med målt høyde. Trykk uten dra kaller onTap
+ * (klikk < 350 ms etter et sveip ignoreres). title(ferdig, over terskel) gir etikettene.
  */
 @Composable
 internal fun SwipeAway37(enabled: Boolean, title: (Boolean, Boolean) -> String, sub: String, radius: Int, onGone: () -> Unit, onTap: () -> Unit, content: @Composable () -> Unit) {
-    var gone by remember { mutableStateOf(false) }
-    var phase by remember { mutableStateOf(false) }
-    var w by remember { mutableFloatStateOf(1f) }
-    val off = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val pr = (off.value / (w * .38f)).coerceIn(0f, 1f)
-    AnimatedVisibility(!gone, exit = shrinkVertically(tween(340)) + fadeOut(tween(250))) {
-        Box(Modifier.fillMaxWidth().onSizeChanged { w = it.width.toFloat().coerceAtLeast(1f) }) {
-            val ok = pr >= 1f || phase
-            if (off.value > 4f || phase) Row(
-                Modifier.matchParentSize().graphicsLayer { alpha = if (phase) 1f else (.35f + pr).coerceAtMost(1f) }.clip(RoundedCornerShape(radius.dp))
-                    .background(if (ok) Color(0xFF2F7A4F) else Color(0xFF1B1A17)).padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                val ic by animateFloatAsState(if (ok) 1.15f else .7f + pr * .3f, spring(.45f, 600f), label = "sw37")
-                Box(Modifier.size(30.dp).graphicsLayer { scaleX = ic; scaleY = ic }.clip(CircleShape).background(Color.White.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
-                    WxIcon("M5 12.5l4.5 4.5L19 7.5", Color(0xFFF3EFE6), 15.dp, stroke = 2.8f)
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text("✓ " + title(phase, pr >= 1f), color = Color(0xFFF3EFE6), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text(sub, color = Color(0xFFF3EFE6).copy(alpha = .7f), fontFamily = PaperFonts.sans, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Box(
-                Modifier.fillMaxWidth()
-                    .graphicsLayer { translationX = off.value; rotationZ = if (phase) 6f * (off.value / (w * 1.15f)).coerceIn(0f, 1f) else off.value / w * 4f }
-                    .pointerInput(enabled) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                            if (phase) return@awaitEachGesture
-                            var lock: Char? = null
-                            val t0 = System.currentTimeMillis()
-                            var passed = false
-                            val slop = 8.dp.toPx()
-                            while (true) {
-                                val ev = awaitPointerEvent(PointerEventPass.Initial)
-                                val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
-                                val dx = ch.position.x - down.position.x
-                                val dy = ch.position.y - down.position.y
-                                if (lock == null && (abs(dx) > slop || abs(dy) > slop)) lock = if (enabled && abs(dx) > abs(dy) * 1.2f && dx > 0) 'x' else 'y'
-                                if (!ch.pressed) {
-                                    if (lock == 'x') {
-                                        ch.consume()
-                                        val v = off.value
-                                        val vel = v / (System.currentTimeMillis() - t0).coerceAtLeast(1)
-                                        if (v >= w * .38f || (v > 60f && vel > .6f)) {
-                                            Haptics.tap(); scope.launch { delay(30); Haptics.select() }
-                                            phase = true
-                                            scope.launch {
-                                                off.animateTo(w * 1.15f, tween(320))
-                                                delay(160)
-                                                gone = true
-                                                delay(380)
-                                                onGone()
-                                            }
-                                        } else scope.launch { off.animateTo(0f, spring(.55f, 380f)) }
-                                    } else if (lock == null && !ch.isConsumed) onTap()
-                                    break
-                                }
-                                if (lock == 'y') break
-                                if (lock == 'x') {
-                                    ch.consume()
-                                    val v = dx.coerceAtLeast(0f)
-                                    if (!passed && v >= w * .38f) { passed = true; Haptics.select() } else if (v < w * .38f) passed = false
-                                    scope.launch { off.snapTo(v) }
-                                }
-                            }
-                        }
-                    },
-            ) { content() }
-        }
-    }
+    SwipeDismiss39(enabled = enabled, radius = radius.dp, idle = "✓ " + title(false, false), armed = "✓ " + title(false, true), done = "✓ " + title(true, false),
+        sub = sub, onGone = onGone, onTap = onTap) { content() }
 }
 
 /* ======================= Arket: hele verset med sammenheng ======================= */

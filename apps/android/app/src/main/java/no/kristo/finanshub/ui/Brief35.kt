@@ -99,7 +99,8 @@ internal fun BriefPage35(vm: AppViewModel) {
         vm.loadBible37()
         if (vm.p31.trials.isEmpty()) vm.loadTrials31()
         // Guide-runden starter automatisk første gang briefen åpnes («Vis meg rundt automatisk»).
-        if (g.set.guide && !vm.tourWasSeen34()) { delay(900); if (s.tour == 0) { s.tour = 1; vm.tourSeen34() } }
+        // Prompt 39: ikke når Glimt er slått av i briefen.
+        if (g.set.guide && g.set.briefGlimt && !vm.tourWasSeen34()) { delay(900); if (s.tour == 0) { s.tour = 1; vm.tourSeen34() } }
     }
     val b = s.brief
     val set = g.set
@@ -166,8 +167,8 @@ internal fun BriefPage35(vm: AppViewModel) {
                 color = p.mut, fontSize = 12.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
             b.note?.let { Text(it, color = p.mut, fontSize = 11.5.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) }
         }
-        // Figuren og boblen nederst til høyre.
-        Row(
+        // Figuren og boblen nederst til høyre. Prompt 39: ingen figur, bobler eller guide når «Glimt i briefen» er av.
+        if (set.briefGlimt) Row(
             Modifier.align(Alignment.BottomEnd).fillMaxWidth().navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = 28.dp),
             verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
         ) {
@@ -529,12 +530,19 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
         }
         PCard {
             PToggle("Glimt-brief", "Lag briefer gjennom dagen", set.brief) { v -> vm.setGlimt35(JSONObject().put("brief", v)) { it.copy(brief = v) } }
+            // Prompt 39: slå av Glimt (figuren) i Now Brief.
+            PToggle("Glimt i briefen", "Vis Glimt-figuren og vennene i briefen, på Hjem-kortet og i widgets", set.briefGlimt, top = true) { v ->
+                vm.setGlimt35(JSONObject().put("briefGlimt", v)) { it.copy(briefGlimt = v) }
+                runCatching { no.kristo.finanshub.widget.Brief34Store.redrawAsync(vm.appCtx35) }
+            }
             PToggle("Les opp", "Glimt og vennene leser briefen høyt", set.readAloud, top = true) { v ->
                 vm.setGlimt35(JSONObject().put("readAloud", v)) { it.copy(readAloud = v) }
                 if (v) vm.say35("Lyden er på. Jeg leser briefen for deg.", host, force = true) else vm.stopSay35()
             }
             PToggle("Vis meg rundt automatisk", "Starter guide-runden når briefen åpnes", set.guide, top = true) { v -> vm.setGlimt35(JSONObject().put("guide", v)) { it.copy(guide = v) } }
-            PToggle("Venner av Glimt", "Sky, Dråpe, Ugle og Gris tar over når temaet passer", set.friends, top = true) { v -> vm.setGlimt35(JSONObject().put("friends", v)) { it.copy(friends = v) } }
+            Box(Modifier.graphicsLayer { alpha = if (set.briefGlimt) 1f else .45f }) {
+                PToggle("Venner av Glimt", "Sky, Dråpe, Ugle og Gris tar over når temaet passer", set.friends, top = true) { v -> if (set.briefGlimt) vm.setGlimt35(JSONObject().put("friends", v)) { it.copy(friends = v) } }
+            }
             PToggle("Varsel når briefen er klar", "Push til mobilen på klokkeslettet", set.notify, top = true) { v -> vm.setGlimt35(JSONObject().put("notify", v)) { it.copy(notify = v) } }
         }
         Lab35("BRIEFER GJENNOM DAGEN")

@@ -27,6 +27,8 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        preferHighRefresh39() // prompt 39: myke sveip på 90/120 Hz-skjermer
+        runCatching { Sound39.migrate(this) } // prompt 39: gamle, høye varselkanaler byttes med de myke
         applySwitcherPrivacy()
         handleShare(intent)
         prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {

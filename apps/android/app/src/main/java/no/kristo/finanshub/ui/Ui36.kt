@@ -4,6 +4,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -78,100 +80,16 @@ import kotlin.math.abs
 private val EASE_OUT36 = CubicBezierEasing(.4f, 0f, .6f, 1f)
 
 /**
- * Brief-kortet på Hjem med sveip venstre → høyre: kortet følger fingeren (opptil 5° rotasjon), bak kommer et mørkt felt
- * («Sveip for å skjule» → grønt «Slipp for å skjule» over 38 % eller flikk > 0,6 px/ms etter 60 px). Slipp over terskel:
- * flyr ut (115 %, 7°), høyden kollapser og toasten «Brief skjult til …» med Angre vises. Hint de 2 første gangene.
+ * Brief-kortet på Hjem med sveip venstre → høyre. Prompt 39: selve gesten og animasjonen ligger i SwipeDismiss39 (ui/Ui39.kt,
+ * myk og uten rekomponering under draget), og hint-animasjonen («Sveip → for å skjule») er fjernet helt.
+ * Skjult: kortet kollapser; Angre i toasten viser det igjen (glir inn).
  */
 @Composable
 internal fun SwipeBrief36(vm: AppViewModel, content: @Composable () -> Unit) {
-    val s = vm.p36
     val hidden = vm.briefHiddenNow36()
-    var gone by remember { mutableStateOf(false) }
-    var phase by remember { mutableStateOf("") }
-    var w by remember { mutableFloatStateOf(1f) }
-    var hint by remember { mutableStateOf(false) }
-    val off = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val dens = androidx.compose.ui.platform.LocalDensity.current
-    LaunchedEffect(s.briefHidden) { if (s.briefHidden == null && gone) { gone = false; phase = ""; off.snapTo(0f) } }
-    // Hint: glir 72 dp og 40 dp til høyre og tilbake (bsNudge 2,4 s), stopper når man rører kortet.
-    LaunchedEffect(Unit) {
-        if (hidden || !vm.takeBriefHint36()) return@LaunchedEffect
-        delay(1200)
-        hint = true
-        val a = with(dens) { 72.dp.toPx() }; val b = with(dens) { 40.dp.toPx() }
-        off.animateTo(0f, keyframes { durationMillis = 2400; 0f at 0; a at 528; a at 960; 0f at 1248; b at 1536; b at 1776; 0f at 2064; 0f at 2400 })
-        hint = false
-    }
-    val p = (off.value / (w * .38f)).coerceIn(0f, 1f)
-    AnimatedVisibility(!(gone || hidden), exit = shrinkVertically(tween(340)) + fadeOut(tween(250))) {
-        Box(Modifier.fillMaxWidth().onSizeChanged { w = it.width.toFloat().coerceAtLeast(1f) }) {
-            val revAlpha = when { hint -> 1f; phase.isNotEmpty() -> 1f; off.value > 4f -> (.35f + p).coerceAtMost(1f); else -> 0f }
-            val ok = p >= 1f || phase.isNotEmpty()
-            if (revAlpha > 0f) Row(
-                Modifier.matchParentSize().graphicsLayer { alpha = revAlpha }.clip(RoundedCornerShape(24.dp)).background(if (ok) Color(0xFF2F7A4F) else Color(0xFF1B1A17)).padding(horizontal = 22.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                val ic by animateFloatAsState(if (ok) 1.15f else .7f + p * .3f, spring(.45f, 600f), label = "bsIc")
-                Box(Modifier.size(30.dp).graphicsLayer { scaleX = ic; scaleY = ic }.clip(CircleShape).background(Color.White.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
-                    WxIcon("M5 12.5l4.5 4.5L19 7.5", Color(0xFFF3EFE6), 15.dp, stroke = 2.8f)
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(when { phase.isNotEmpty() -> "Brief skjult"; p >= 1f -> "Slipp for å skjule"; hint -> "Sveip → for å skjule"; else -> "Sveip for å skjule" },
-                        color = Color(0xFFF3EFE6), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 14.5.sp)
-                    Text("Kommer tilbake med ${briefNext36()}", color = Color(0xFFF3EFE6).copy(alpha = .7f), fontFamily = PaperFonts.sans, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-            Box(
-                Modifier.fillMaxWidth()
-                    .graphicsLayer { translationX = off.value; rotationZ = if (phase.isNotEmpty()) 7f * (off.value / (w * 1.15f)).coerceIn(0f, 1f) else off.value / w * 5f }
-                    .pointerInput(Unit) {
-                        awaitEachGesture {
-                            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                            if (phase.isNotEmpty()) return@awaitEachGesture
-                            if (hint) { hint = false; scope.launch { off.stop(); off.snapTo(0f) } }
-                            var lock: Char? = null
-                            val t0 = System.currentTimeMillis()
-                            var passed = false
-                            val slop = 8.dp.toPx()
-                            while (true) {
-                                val ev = awaitPointerEvent(PointerEventPass.Initial)
-                                val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
-                                val dx = ch.position.x - down.position.x
-                                val dy = ch.position.y - down.position.y
-                                if (lock == null && (abs(dx) > slop || abs(dy) > slop)) lock = if (abs(dx) > abs(dy) * 1.2f && dx > 0) 'x' else 'y'
-                                if (!ch.pressed) {
-                                    if (lock == 'x') {
-                                        ch.consume()
-                                        val v = off.value
-                                        val vel = v / (System.currentTimeMillis() - t0).coerceAtLeast(1)
-                                        if (v >= w * .38f || (v > 60f && vel > .6f)) {
-                                            Haptics.tap(); scope.launch { delay(30); Haptics.select() }
-                                            phase = "out"
-                                            scope.launch {
-                                                off.animateTo(w * 1.15f, tween(340, easing = EASE_OUT36))
-                                                delay(180)
-                                                gone = true
-                                                delay(420)
-                                                vm.hideBrief36()
-                                                phase = ""
-                                            }
-                                        } else scope.launch { off.animateTo(0f, spring(.55f, 380f)) }
-                                    }
-                                    break
-                                }
-                                if (lock == 'y') break
-                                if (lock == 'x') {
-                                    ch.consume()
-                                    val v = dx.coerceAtLeast(0f)
-                                    if (!passed && v >= w * .38f) { passed = true; Haptics.select() } else if (v < w * .38f) passed = false
-                                    scope.launch { off.snapTo(v) }
-                                }
-                            }
-                        }
-                    },
-            ) { content() }
-        }
+    AnimatedVisibility(!hidden, enter = expandVertically(tween(300, easing = EASE_OUT36)) + fadeIn(tween(260)), exit = ExitTransition.None) {
+        SwipeDismiss39(enabled = true, radius = 24.dp, idle = "Sveip for å skjule", armed = "Slipp for å skjule", done = "Brief skjult",
+            sub = "Kommer tilbake med ${briefNext36()}", onGone = { vm.hideBrief36() }) { content() }
     }
 }
 

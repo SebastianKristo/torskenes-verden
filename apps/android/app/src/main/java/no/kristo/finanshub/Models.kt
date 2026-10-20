@@ -396,7 +396,8 @@ fun parseMe(s: String): Me {
     val o = JSONObject(s).let { it.optJSONObject("user") ?: it }
     return Me(o.optString("username"), o.optStr("name") ?: o.optStr("displayName") ?: o.optString("username"), o.optString("role", "bruker"),
         o.optBoolOrNull("totp") ?: o.optBoolOrNull("totpEnabled"), o.optStr("version"),
-        o.optStr("avatarUrl"), o.optStr("serverName"), o.optBoolean("isMainAdmin"))
+        // Prompt 39: avatar:{url, url192, hash} (signert URL) eller avatarUrl som før.
+        o.optJSONObject("avatar")?.optStr("url") ?: o.optStr("avatarUrl"), o.optStr("serverName"), o.optBoolean("isMainAdmin"))
 }
 
 fun parseMobileHome(s: String): MobileHome {

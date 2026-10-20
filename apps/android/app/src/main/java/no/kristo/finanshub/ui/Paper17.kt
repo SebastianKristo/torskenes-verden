@@ -162,7 +162,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     }
     group(vm.appName) { i ->
         SetRow(vm, i(), Icons.Filled.Edit, "Navn på appen", vm.appName, "Endre ›") { vm.appNameEdit = true }
-        SetRow(vm, i(), Icons.Filled.Image, "App-ikon", APP_ICONS.firstOrNull { it.first == vm.appInfo.icon }?.second ?: "Huset med stativ", "Endre ›", top = true) { vm.appIconEdit = true }
+        SetRow(vm, i(), Icons.Filled.Image, "App-ikon", APP_ICONS.firstOrNull { it.first == vm.appInfo.icon }?.second ?: "Homelab H· (standard)", "Endre ›", top = true) { vm.appIconEdit = true }
         // Prompt 25: Fanelinje-stil (Tekst / Bare ikoner / Ikoner + navn på valgt). Trykk bytter til neste, lagres i layout.navStyle.
         SetRow(vm, i(), Icons.Filled.ViewWeek, "Fanelinje-stil", navStyleSub25(), navStyleName25() + " ›", top = true) { vm.setNavStyle25(nextNavStyle25()) }
         SetRow(vm, i(), Icons.Filled.ViewWeek, "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", top = true) { vm.tabEdit = true }
@@ -250,6 +250,7 @@ private fun NotifySub(vm: AppViewModel) {
             Box(Modifier.hl34(vm, "quiet", 0.dp)) { PToggle("Stille timer", "${n.quietFrom}–${n.quietTo}: varsler kommer uten lyd", n.quiet, top = true) { vm.saveNotify(n.copy(quiet = it)) } }
             // Prompt 31: svar fra Glimt som varsel når appen er i bakgrunnen (ai_bg_notify).
             AiBgToggle31(vm)
+            AiInToggle39(vm) // prompt 39: «Vis svaret i appen også» (n_ai_in)
             if (n.quiet) Row(Modifier.fillMaxWidth().padding(14.dp, 4.dp, 14.dp, 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TimeChips("Fra", n.quietFrom, listOf("21:00", "22:00", "23:00")) { vm.saveNotify(n.copy(quietFrom = it)) }
                 TimeChips("Til", n.quietTo, listOf("06:00", "07:00", "08:00")) { vm.saveNotify(n.copy(quietTo = it)) }
@@ -290,13 +291,7 @@ private fun NotifySub(vm: AppViewModel) {
                 }
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-            Column(Modifier.padding(14.dp, 10.dp)) {
-                Text("Volum ${n.volume} %", color = p.ink, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
-                var vol by remember(n.volume) { mutableStateOf(n.volume.toFloat()) }
-                Slider(vol, { vol = it }, valueRange = 0f..100f, onValueChangeFinished = { vm.saveNotify(n.copy(volume = Math.round(vol))) },
-                    colors = SliderDefaults.colors(thumbColor = p.ink, activeTrackColor = p.ink, inactiveTrackColor = p.line))
-                Text("Innebygde lyder følger varselvolumet på telefonen. Egen lyd spilles med volumet her.", color = p.mut, fontSize = 11.5.sp)
-            }
+            VolumeChips39(vm, n) // prompt 39: 20 / 35 / 50 / 70 / 100 %, trykk spiller lyden, «dempet på Android»
             if (n.customSound) {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 PRow("Fjern egen lyd", null, "Fjern", p.lab, serif = false) { vm.deleteSound() }
@@ -392,6 +387,12 @@ private fun AppIconSheet(vm: AppViewModel) {
 /** Forhåndsvisning av app-ikonene (samme former som de adaptive ikonene i res/drawable). */
 @Composable
 internal fun AppIconPreview(key: String, appName: String, modifier: Modifier) {
+    // Prompt 39: standardikonet er nå «H·» fra app-icon-maskable-512.png (res/drawable-nodpi/app39_maskable.png).
+    if (key != "monogram" && key != "rom") {
+        androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(no.kristo.finanshub.R.drawable.app39_maskable), null,
+            modifier.clip(RoundedCornerShape(16.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        return
+    }
     Canvas(modifier.clip(RoundedCornerShape(16.dp))) {
         val u = size.minDimension / 1024f
         fun rr(x: Float, y: Float, w: Float, h: Float, r: Float, c: Color) =

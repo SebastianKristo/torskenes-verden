@@ -56,7 +56,7 @@ fun applyLauncher24(ctx: Context, alias: String): Boolean {
 fun pinNamedShortcut24(ctx: Context, name: String, icon: String): Boolean {
     val sm = ctx.getSystemService(ShortcutManager::class.java) ?: return false
     if (!sm.isRequestPinShortcutSupported) return false
-    val res = when (icon) { "monogram" -> no.kristo.finanshub.R.mipmap.ic_launcher_mono; "rom" -> no.kristo.finanshub.R.mipmap.ic_launcher_rom; else -> no.kristo.finanshub.R.mipmap.ic_launcher_hus }
+    val res = when (icon) { "monogram" -> no.kristo.finanshub.R.mipmap.ic_launcher_mono; "rom" -> no.kristo.finanshub.R.mipmap.ic_launcher_rom; else -> no.kristo.finanshub.R.mipmap.ic_launcher39 } // prompt 39: nytt standardikon
     val intent = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
     val info = ShortcutInfo.Builder(ctx, "named_" + name.lowercase().filter { it.isLetterOrDigit() }.ifBlank { "app" })
         .setShortLabel(name.take(20)).setLongLabel(name.take(20)).setIcon(Icon.createWithResource(ctx, res)).setIntent(intent).build()

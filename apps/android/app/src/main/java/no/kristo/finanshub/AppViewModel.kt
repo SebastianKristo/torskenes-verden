@@ -231,7 +231,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun onBackground() { backgroundAt = System.currentTimeMillis(); stopTrackingPoll(); onBackground31() }
     fun onForeground() {
         if (loggedIn) { startTrackingPoll(); viewModelScope.launch { loadReviewCount() } }
-        if (loggedIn) onForeground31()
+        if (loggedIn) { onForeground31(); refreshMe39(); loadAiIn39() } // prompt 39: nytt profilbilde fra web vises uten å logge ut
         val at = backgroundAt ?: return
         backgroundAt = null
         if (loggedIn && prefs.bool(AppPrefs.LOCK) && System.currentTimeMillis() - at >= prefs.int(AppPrefs.LOCK_AFTER, 0) * 60_000L) locked = true
@@ -549,9 +549,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         loadAvatar(m?.avatarUrl ?: mobileHome?.avatarUrl)
     }
 
-    private suspend fun loadAvatar(url: String?) {
-        avatar = if (url.isNullOrBlank()) null else image(url)
-    }
+    /** Prompt 39: signert/relativ URL, disk-cache, logg og reserve (P39.kt). */
+    private suspend fun loadAvatar(url: String?) = avatar39(url)
 
     private suspend fun loadFor(s: Screen) {
         moduleError = null
@@ -3286,14 +3285,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     fun loadNotify() = launch {
         val n = runCatching { parseNotifyPrefs(api.hlGet("/me/notify")) }.getOrNull()
-        if (n != null) { notifyPrefs = n; Notify.applyPrefs(appCtx, n) }
+        if (n != null) { val m = fixNotify39(n); notifyPrefs = m; Notify.applyPrefs(appCtx, m) }
         notifyLoaded = true
     }
     fun saveNotify(n: NotifyPrefs) {
+        val old = notifyPrefs
         notifyPrefs = n
         Notify.applyPrefs(appCtx, n)
         Haptics.select()
-        viewModelScope.launch { runCatching { api.hlPut("/me/notify", n.toJson()) } }
+        putNotify39(old, n) // prompt 39: «draape» lagres lokalt hvis serveren ikke kjenner den ennå
     }
     /** Egen varsellyd (MP3/WAV/M4A under 1 MB): lastes opp til serveren og lagres lokalt for varslene på denne telefonen. */
     fun uploadSound(uri: Uri) = launch {
@@ -3479,6 +3479,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "system-update-available", "system-update" -> onUpdEvent30()
             // Prompt 36: matplanen er felles – endringer fra andre i husstanden vises med en gang.
             "meal:changed", "meal" -> onMealChanged36(msg)
+            // Prompt 39: nytt profilbilde (eller navn) fra web/iPhone vises med en gang.
+            "me", "me:changed", "avatar", "profile" -> refreshMe39(force = true)
         }
     }
     fun startRealtime() { if (loggedIn && !locked) realtime.start(base.ifBlank { account?.server ?: "" }, account?.token) }
@@ -3680,6 +3682,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun <T> api38(f: suspend Api.() -> T): T = api.f()
     internal fun launch38(block: suspend () -> Unit) = launch(block)
     internal suspend fun loadDomains38() = loadDomains()
+
+    /* ---------- Prompt 39 (ANDROID39): myk varsellyd, profilbilde, valgt modell i Chat, sveip bort, Glimt-varsel (P39.kt, Sound39.kt, ui/Ui39.kt) ---------- */
+    val p39 = P39State()
+    internal suspend fun <T> api39(f: suspend Api.() -> T): T = api.f()
+    internal fun launch39(block: suspend () -> Unit) = launch(block)
+    internal val appCtx39: Context get() = appCtx
+    internal val base39: String get() = base
+    internal val token39: String? get() = account?.token
+    internal fun setAvatar39(b: Bitmap?) { avatar = b }
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

@@ -621,7 +621,7 @@ fun AppViewModel.askKal32b(q0: String) {
             KalAsk32b(q, false, if (e.status == 404) "Glimt kan ikke søke i kalenderen på denne serveren ennå. Oppdater Nordlys OS." else "Glimt svarte ikke: ${e.message}", emptyList(), false)
         } catch (e: Exception) { KalAsk32b(q, false, "Glimt svarte ikke nå. Prøv igjen.", emptyList(), false) }
         if (s.kAskSeq == seq) s.kAsk = r
-        if (inBackground29 && r.ok) runCatching { Notify31.post(appCtx29, "Glimt · Kalender", plain31(r.text), "kal-ask-$seq", "finanshub://kalender") }
+        if (inBackground29 && r.ok) runCatching { Notify31.post(appCtx29, "Glimt", plain31(r.text), "kal-ask-$seq", "finanshub://kalender") }
     }
 }
 

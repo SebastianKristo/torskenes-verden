@@ -46,8 +46,8 @@
     <!-- Klartekst og brukerinstallerte CA-er tillates via network_security_config (homelab på http://192.168.x.x). -->
     <application
         android:label="FinansHub"
-        android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:icon="@mipmap/ic_launcher39"
+        android:roundIcon="@mipmap/ic_launcher39_round"
         android:theme="@style/Theme.FinansHub"
         android:allowBackup="false"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -104,14 +104,14 @@
             </intent-filter>
         </activity>
 
-        <!-- App-ikon: «Huset med stativ» (standard), «Papir-monogram» og «Fire rom». Bare ett alias er slått på om gangen.
+        <!-- App-ikon: «Homelab H·» (standard fra prompt 39, før «Huset med stativ»), «Papir-monogram» og «Fire rom». Bare ett alias er slått på om gangen.
              Hvert ikon er adaptivt med eget monokromt lag (tematiske ikoner i Material You). -->
         <activity-alias
             android:name=".IconHus"
             android:enabled="true"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_hus"
-            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:icon="@mipmap/ic_launcher39"
+            android:roundIcon="@mipmap/ic_launcher39_round"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -150,8 +150,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="Homelab"
-            android:icon="@mipmap/ic_launcher_hus"
-            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:icon="@mipmap/ic_launcher39"
+            android:roundIcon="@mipmap/ic_launcher39_round"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -163,8 +163,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="Hjem"
-            android:icon="@mipmap/ic_launcher_hus"
-            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:icon="@mipmap/ic_launcher39"
+            android:roundIcon="@mipmap/ic_launcher39_round"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -176,8 +176,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="Familie"
-            android:icon="@mipmap/ic_launcher_hus"
-            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:icon="@mipmap/ic_launcher39"
+            android:roundIcon="@mipmap/ic_launcher39_round"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -189,8 +189,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="Finans"
-            android:icon="@mipmap/ic_launcher_hus"
-            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:icon="@mipmap/ic_launcher39"
+            android:roundIcon="@mipmap/ic_launcher39_round"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -202,8 +202,8 @@
             android:enabled="false"
             android:exported="true"
             android:label="Papir"
-            android:icon="@mipmap/ic_launcher_hus"
-            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:icon="@mipmap/ic_launcher39"
+            android:roundIcon="@mipmap/ic_launcher39_round"
             android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

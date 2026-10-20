@@ -334,8 +334,9 @@ internal fun Avatar(vm: AppViewModel, size: Int = 44) {
 internal fun AvatarImage(vm: AppViewModel, size: Int, bg: Color = C.container, fg: Color = C.onContainer) {
     val b = vm.avatar
     if (b != null) Image(b.asImageBitmap(), "Profilbilde", contentScale = ContentScale.Crop, modifier = Modifier.size(size.dp).clip(CircleShape))
-    else Box(Modifier.size(size.dp).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
-        Text(initial(vm.displayName.ifBlank { "•" }), color = fg, fontWeight = FontWeight.SemiBold, fontSize = (size * 0.38).sp)
+    // Prompt 39: uten bilde alltid initialer på #2B5D8A (som iPhone og web), aldri en tom sirkel.
+    else Box(Modifier.size(size.dp).clip(CircleShape).background(AV39_BG), contentAlignment = Alignment.Center) {
+        Text(initials39(vm.displayName), color = Color.White, fontWeight = FontWeight.Bold, fontSize = (size * 0.36).sp, maxLines = 1)
     }
 }
 

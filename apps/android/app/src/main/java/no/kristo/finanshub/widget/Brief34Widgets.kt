@@ -350,6 +350,8 @@ private fun figPose35(pose: Int): Pair<String, Float?> = when (pose) {
 @Composable
 private fun Fig35W(b: Brief34?, pose: Int, w: Dp, poke: Boolean = true) {
     val ctx = LocalContext.current
+    // Prompt 39: «Glimt i briefen» av → ingen figur i widgetene, teksten tar plassen.
+    if (no.kristo.finanshub.Glimt35Prefs.load(ctx)?.briefGlimt == false) return
     val id = figId35(ctx, b)
     val (mood, t) = figPose35(pose)
     val bmp = no.kristo.finanshub.ui.fig35Bitmap(id, 144, mood, t)

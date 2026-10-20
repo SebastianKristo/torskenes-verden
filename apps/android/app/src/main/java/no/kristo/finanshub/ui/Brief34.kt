@@ -178,7 +178,7 @@ internal fun HomeBrief34(vm: AppViewModel) {
                 }
             }
         }
-        GlimtFig35(b?.host ?: hostChar35(vm.p35.set.char), 56.dp) // prompt 35: verten (brukerens figur)
+        if (vm.p35.set.briefGlimt) GlimtFig35(b?.host ?: hostChar35(vm.p35.set.char), 56.dp) // prompt 35: verten; prompt 39: kan slås av
     }
 }
 
