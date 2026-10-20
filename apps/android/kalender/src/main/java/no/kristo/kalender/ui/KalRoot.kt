@@ -213,6 +213,8 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
         AnimatedVisibility(vm.setOn, enter = if (reduce) fadeIn() else slideInHorizontally(tween(280, easing = EASE)) { it }, exit = if (reduce) fadeOut() else slideOutHorizontally(tween(240, easing = EASE)) { it }) {
             SettingsPage35(vm)
         }
+        // Prompt 39: Kalendere (1a), Rediger (1b), Legg til (1c) og Google-velgeren over alt.
+        Kal39Layer(vm)
         if (vm.newCal) NewCalendarDialog(vm)
     }
 }

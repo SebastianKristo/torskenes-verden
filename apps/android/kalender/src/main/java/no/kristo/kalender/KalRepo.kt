@@ -37,7 +37,7 @@ object KalStore {
 
     private fun load(ctx: Context): KData = runCatching {
         val o = JSONObject(file(ctx).readText())
-        val cals = o.optJSONArray("cals")?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let(::calFrom) } }?.takeIf { it.isNotEmpty() } ?: KCALS
+        val cals = o.optJSONArray("cals")?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let(::calFrom) } }?.takeIf { it.isNotEmpty() }?.let { Kal39.normalize(it, null) } ?: Kal39.normalize(KCALS, null)
         val evs = o.optJSONArray("events")?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let(KEv::fromJson) } } ?: emptyList()
         val wx = HashMap<LocalDate, KWx>()
         o.optJSONObject("wx")?.let { w -> w.keys().forEach { k -> w.optJSONObject(k)?.let { x -> runCatching { wx[LocalDate.parse(k)] = KWx(x.optInt("c", 3), x.optInt("hi"), x.optInt("lo")) } } } }
@@ -64,11 +64,12 @@ object KalStore {
     private fun calTo(c: KCal) = JSONObject().put("id", c.id).put("n", c.n).put("c", hexOut(c.c)).put("tx", hexOut(c.tx)).put("lt", hexOut(c.lt))
         .put("writable", c.writable).put("vis", c.serverVisible).put("count", c.count ?: JSONObject.NULL).put("own", c.own).put("sid", c.serverId ?: JSONObject.NULL)
         .put("key", c.key ?: JSONObject.NULL).put("src", c.src ?: JSONObject.NULL).put("badge", c.badge ?: JSONObject.NULL).put("hm", c.hidMenu)
+        .put("p39", c.p39?.toJson() ?: JSONObject.NULL)
 
     private fun calFrom(o: JSONObject): KCal? = runCatching {
         KCal(o.getString("id"), o.getString("n"), hexIn(o.optString("c")) ?: 0xFF5C5850, hexIn(o.optString("tx")) ?: 0xFF3D3A33, hexIn(o.optString("lt")) ?: 0xFFD6CFC2,
             o.optBoolean("writable", true), o.optBoolean("vis", true), o.optIntOrNull("count"), o.optBoolean("own"), o.optStrOrNull("sid"),
-            o.optStrOrNull("key"), o.optStrOrNull("src"), o.optStrOrNull("badge"), o.optBoolean("hm", false))
+            o.optStrOrNull("key"), o.optStrOrNull("src"), o.optStrOrNull("badge"), o.optBoolean("hm", false), KInfo39.fromJson(o.optJSONObject("p39")))
     }.getOrNull()
 }
 
@@ -139,18 +140,21 @@ object KalRepo {
         var cals = prev.cals
         try {
             val raw = api.get("/api/kalender/calendars", timeout = 8_000)
-            val l = parseServerCalendars(raw)
+            // Prompt 39: fire kalendere (+ egne), uten duplikater; eldre servere slås sammen lokalt.
+            val l = Kal39.normalize(parseServerCalendars(raw), runCatching { JSONObject(raw) }.getOrNull())
             if (l.isNotEmpty()) { cals = l; serverCals = true }
             // Prompt 35: Innstillingene ligger i profilen (prefs). Første gang sendes telefonens valg dit i stedet.
             if (!Kal35Prefs.pushed(ctx)) Kal35Repo.pushAll(ctx, s)
             else Kal35Prefs.applyServer(ctx, runCatching { JSONObject(raw).optJSONObject("prefs") }.getOrNull())
         } catch (e: KalApiException) {
-            if (e.status == 404 || e.status == 405) { cals = KCALS; serverCals = false }
+            if (e.status == 404 || e.status == 405) { cals = Kal39.normalize(KCALS, null); serverCals = false }
             if (e.status == 401) return "Innloggingen er utløpt. Logg inn på nytt."
         }
         val calMap = cals.associateBy { it.id }
         val evs = try {
             parseServerEvents(api.get("/api/kalender?from=$from&to=$to", timeout = 15_000), calMap)
+                .map { if (calMap.containsKey(it.cal)) it else it.copy(cal = Kal39.resolve(it.cal, cals)) }
+                .let { Kal39.mergeHolidays(it, from, to) }
         } catch (e: KalApiException) {
             if (e.status == 401) return "Innloggingen er utløpt. Logg inn på nytt."
             if (e.status == 404) emptyList<KEv>() else return e.message ?: "Fikk ikke hentet kalenderen"

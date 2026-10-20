@@ -116,8 +116,9 @@ struct KalDrawer: View {
 
     private var addButton: some View {
         Button(action: {
-            KalHaptic.tap()
-            s.addCalTab = s.addCalTab == nil ? "ics" : nil
+            // Prompt 39: arket «Legg til kalender» (1c): Google · URL · Helligdager · egen.
+            s.addCalTab = nil
+            s.openAdd39()
         }) {
             Text("+ Legg til kalender").font(KalFont.ui(13.5, .bold)).foregroundStyle(t.ink)
                 .frame(maxWidth: .infinity).frame(height: 44)
@@ -190,7 +191,9 @@ struct KalCalRow35: View {
 
     private var sub: String {
         if !c.inMenu { return "Skjult fra menyen" }
-        return String(c.count) + " de neste 30 dagene"
+        // Prompt 39: kilden foran antallet («sebastian@kristo.no · 12 de neste 30 dagene»).
+        let src: String = c.p39?.sourceLabel ?? ""
+        return (src.isEmpty ? "" : src + " · ") + String(c.count) + " de neste 30 dagene"
     }
 
     private var main: some View {
@@ -199,7 +202,7 @@ struct KalCalRow35: View {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: 6) {
                         Text(c.name).font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink).lineLimit(1)
-                        if !c.badgeText.isEmpty {
+                        if !c.badgeText.isEmpty && c.p39?.sourceLabel == nil {
                             Text(c.badgeText).font(KalFont.mono(9.5)).foregroundStyle(t.mut)
                                 .padding(.horizontal, 6).padding(.vertical, 1)
                                 .background(Capsule().fill(t.chip))

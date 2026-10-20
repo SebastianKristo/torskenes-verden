@@ -99,6 +99,10 @@ struct KalRoot: View {
         .animation(sheetAnim, value: s.drawerOpen)
         .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.settingsOpen)
         .animation(.easeOut(duration: 0.2), value: s.searchOpen)
+        .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.cals39Open)
+        .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.cal39Edit)
+        .animation(sheetAnim, value: s.cal39AddOpen)
+        .animation(sheetAnim, value: s.gmap39Open)
         .animation(.easeOut(duration: 0.2), value: s.toast)
     }
 
@@ -243,6 +247,34 @@ struct KalRoot: View {
             KalSettings35View()
                 .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .trailing))
                 .zIndex(60)
+        }
+        // Prompt 39: Kalendere (1a) → Rediger (1b), Legg til (1c) og Google-velgeren (1d).
+        if s.cals39Open {
+            KalCals39View()
+                .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .trailing))
+                .zIndex(61)
+        }
+        if let id = s.cal39Edit, let c = s.cals.first(where: { (x: KalCal) -> Bool in x.id == id }) {
+            KalCalEdit39View(c: c)
+                .id(id)
+                .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .trailing))
+                .zIndex(62)
+        }
+        if s.cal39AddOpen {
+            KalDim { withAnimation(.easeOut(duration: 0.22)) { s.cal39AddOpen = false } }
+                .zIndex(63)
+            KalCalAdd39Sheet()
+                .ignoresSafeArea([.container, .keyboard], edges: .bottom)
+                .transition(sheetIn)
+                .zIndex(64)
+        }
+        if s.gmap39Open {
+            KalDim { withAnimation(.easeOut(duration: 0.22)) { s.gmap39Open = false } }
+                .zIndex(65)
+            KalGMap39Sheet()
+                .ignoresSafeArea(.container, edges: .bottom)
+                .transition(sheetIn)
+                .zIndex(66)
         }
     }
 }

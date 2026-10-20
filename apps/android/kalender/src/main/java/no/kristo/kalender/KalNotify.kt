@@ -83,7 +83,8 @@ object KalNotify {
         val app = ctx.applicationContext
         val am = app.getSystemService(AlarmManager::class.java) ?: return
         val evs = KalStore.current(app).withOverrides(app)
-        val hidden = hiddenAll35(app)
+        // Prompt 39: Rediger → Varsel av for en kalender gir ingen varsler derfra.
+        val hidden = hiddenAll35(app) + Kal39.notifyOff(KalStore.current(app).cals)
         val ps = plans(evs.filter { it.cal !in hidden }, LocalDateTime.now(OSLO), Kal35Prefs.notifyBirthdays(app), Kal35Prefs.notifyDeadlines(app))
         val sp = app.getSharedPreferences(PREF, Context.MODE_PRIVATE)
         val old = sp.getStringSet("keys", emptySet()) ?: emptySet()

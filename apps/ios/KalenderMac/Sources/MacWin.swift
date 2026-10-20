@@ -59,6 +59,8 @@ final class MacWin: ObservableObject {
     @Published var zoomInward: Bool = true
     /// Prompt 35: «+ Legg til kalender» (iCal / Home Assistant / Konto).
     @Published var addCalOpen: Bool = false
+    /// Prompt 39: «Hvilken kalender er hva?» (Google-velgeren, 1d).
+    @Published var gmap39Open: Bool = false
 
     init() {
         MacWin.all.append(self)

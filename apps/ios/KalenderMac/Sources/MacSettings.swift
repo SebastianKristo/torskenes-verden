@@ -49,9 +49,9 @@ struct MacSettingsView: View {
 
     private var general: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Prompt 38: samme kalender som Homelab på web (én kodebase). Av = den innebygde kalenderen (reserve).
-            Toggle("Vis web-kalenderen (samme som Homelab på web)", isOn: $store.useWeb38)
-            Text("Visninger, Glimt, søk og innstillinger kommer fra Homelab. ⌘, åpner innstillingene der – disse Mac-valgene ligger under ⌥⌘,.")
+            // Prompt 39: den innebygde kalenderen er standard. Web-visningen fra prompt 38 er beholdt som valg (av).
+            Toggle("Vis web-kalenderen i stedet (eksperimentelt)", isOn: $store.useWeb38)
+            Text("Av som standard: Mac-appen bruker sin egen kalender. På = visningene kommer fra Homelab på web.")
                 .font(MacFont.ui(11.5)).foregroundColor(t.mut2).fixedSize(horizontal: false, vertical: true)
             Toggle("Vis kalender i menylinjen", isOn: $store.menuBarOn)
             Picker("Menylinjen viser", selection: $store.menuBarMode) {

@@ -12,6 +12,8 @@ struct MacGoogle36Section: View {
     @State private var busy: Bool = false
     @State private var error: String = ""
     @State private var waitingLogin: Bool = false
+    /// Prompt 39: «Hvilken kalender er hva?»
+    @State private var map39: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -30,6 +32,7 @@ struct MacGoogle36Section: View {
         .background(RoundedRectangle(cornerRadius: 10).fill(t.card))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(t.line, lineWidth: 1))
         .onAppear { reload() }
+        .sheet(isPresented: $map39) { MacThemed { MacGoogleMap39Sheet(open: $map39) } }
     }
 
     @ViewBuilder private var content: some View {
@@ -78,6 +81,7 @@ struct MacGoogle36Section: View {
             if !g.error.isEmpty {
                 Text(g.error).font(MacFont.ui(12)).foregroundColor(t.acc).fixedSize(horizontal: false, vertical: true)
             }
+            Button("Hvilken kalender er hva? …") { map39 = true }
             MacLabel(text: "HOVEDKALENDER")
             ForEach(g.writable) { (c: KalGCal36) in
                 MacGoogleMainRow36(c: c, busy: busy) { setMain(c) }

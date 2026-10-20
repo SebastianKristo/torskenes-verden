@@ -263,7 +263,8 @@ enum KalCalAPI35 {
     /// nil = serveren har ikke endepunktet (faste kalendere lokalt).
     static func fetch() async -> KalCalsResult35? {
         guard let d = try? await KalNet.get("/api/kalender/calendars") else { return nil }
-        let list: [KalCal] = KalParse.calendars(d)
+        // Prompt 39: fire kalendere (+ egne), uten duplikater.
+        let list: [KalCal] = KalCals39.fromServer(KalParse.calendars(d))
         if list.isEmpty { return nil }
         var out: KalCalsResult35 = KalCalsResult35()
         out.cals = list

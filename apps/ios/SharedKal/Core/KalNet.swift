@@ -73,7 +73,7 @@ enum KalNet {
     static func calendars() async -> [KalCal]? {
         do {
             let d: Data = try await get("/api/kalender/calendars")
-            let list: [KalCal] = KalParse.calendars(d)
+            let list: [KalCal] = KalCals39.fromServer(KalParse.calendars(d))
             return list.isEmpty ? nil : list
         } catch {
             return nil
@@ -82,7 +82,8 @@ enum KalNet {
 
     static func events(from: String, to: String, calIds: Set<String>) async throws -> [KalEvent] {
         let d: Data = try await get("/api/kalender?from=" + from + "&to=" + to, timeout: 25)
-        return KalParse.events(d, calIds: calIds)
+        // Prompt 39: innebygde norske helligdager når serveren ikke har kalenderen Helligdager.
+        return KalHoliday39.merge(KalParse.events(d, calIds: calIds), from: from, to: to)
     }
 
     /// Vær per dag: serveren først, så Open-Meteo for Oslo (16 dager).

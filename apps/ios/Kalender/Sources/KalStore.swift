@@ -103,6 +103,11 @@ final class KalStore {
         didSet { UserDefaults.standard.set(nTv, forKey: "kal.nTv") }
     }
     var settingsOpen: Bool = false
+    /// Prompt 39: Innstillinger → Kalendere (1a), Rediger (1b, kalender-id), Legg til (1c) og Google-velgeren (1d).
+    var cals39Open: Bool = false
+    var cal39Edit: String? = nil
+    var cal39AddOpen: Bool = false
+    var gmap39Open: Bool = false
     /// «+ Legg til kalender»-panelet i sidemenyen: ics | ha | acc (nil = lukket).
     var addCalTab: String? = nil
     /// Zoom mellom visningene: punktet den nye visningen vokser fra, og retningen (inn = fra 0,55, ut = fra 1,6).
@@ -142,7 +147,7 @@ final class KalStore {
 
     init() {
         if let snap = KalNet.loadSnapshot() {
-            if !snap.cals.isEmpty { cals = snap.cals }
+            if !snap.cals.isEmpty { cals = KalCals39.normalize(snap.cals) }
             events = snap.events.filter { (e: KalEvent) -> Bool in !e.pending }
             var w: [String: KalWxDay] = [:]
             for d in snap.wx { w[d.day] = d }
@@ -211,6 +216,7 @@ final class KalStore {
             serverCals = true
             cals = res.cals
             applyServerPrefs(res.prefs)
+            announceMigration39()
         } else {
             serverCals = false
             mergeLocalCals()
@@ -269,7 +275,7 @@ final class KalStore {
         var list: [KalCal] = KalCals.defaults
         let extra: [KalCal] = KalStore.loadCals("kal.localCals")
         for c in extra where !list.contains(where: { (x: KalCal) -> Bool in x.id == c.id }) { list.append(c) }
-        cals = list
+        cals = KalCals39.normalize(list)
     }
 
     func applyCalOn() {
@@ -283,7 +289,11 @@ final class KalStore {
 
     /* ---------- Avledet ---------- */
 
-    func cal(_ id: String) -> KalCal? { cals.first { (c: KalCal) -> Bool in c.id == id } ?? cals.first }
+    func cal(_ id: String) -> KalCal? {
+        // Prompt 39: lagrede kortnøkler («p», «j») og sammenslåtte kalendere viser den nye av de fire.
+        let rid: String = KalCals39.resolveId(id, in: cals)
+        return cals.first { (c: KalCal) -> Bool in c.id == rid } ?? cals.first
+    }
 
     /// Prompt 35: kalendere som er skjult fra menyen forsvinner også fra visningene.
     private func isOn(_ id: String) -> Bool { cals.first { (c: KalCal) -> Bool in c.id == id }?.shown ?? true }
@@ -295,6 +305,7 @@ final class KalStore {
             if hiddenIds.contains(e.id) { continue }
             if let r = remOverride[e.id] { e.rem = r < 0 ? nil : r }
             if let c = calOverride[e.id] { e.cal = c }
+            e.cal = KalCals39.resolveId(e.cal, in: cals)
             if let s = srcOf[e.id], e.src.isEmpty { e.src = s }
             list.append(e)
         }
@@ -322,7 +333,8 @@ final class KalStore {
             let last: String = KalD.addKey(today, 30)
             cals[i].count = list.filter { (e: KalEvent) -> Bool in e.cal == id && e.day >= today && e.day <= last }.count
         }
-        KalNotify.reschedule(upcoming(limit: 200, includeHidden: false))
+        // Prompt 39: Rediger → Varsel av for en kalender gir ingen varsler derfra.
+        KalNotify.reschedule(KalCals39.notifiable(upcoming(limit: 200, includeHidden: false), cals))
     }
 
     func on(_ key: String) -> [KalEvent] { byDay[key] ?? [] }
@@ -539,6 +551,11 @@ final class KalStore {
     func undo(_ id: String) {
         KalHaptic.tap()
         if id.isEmpty { return }
+        // Prompt 39: «Angre» på «Vi ryddet kalenderne: 12 → 4».
+        if id == "mig39" {
+            Task { await self.undoMigration39() }
+            return
+        }
         if pending.contains(where: { (x: KalEvent) -> Bool in x.id == id }) {
             pending.removeAll { (x: KalEvent) -> Bool in x.id == id }
             savePending()

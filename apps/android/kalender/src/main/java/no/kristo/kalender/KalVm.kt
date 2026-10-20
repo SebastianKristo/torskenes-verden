@@ -112,6 +112,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     var ac by mutableStateOf<KAdd35?>(null)
     /** Prompt 36: Google-kortet i Konto-fanen (hovedkalender og flere Google-kalendere). */
     val g36 = no.kristo.kalender.ui.KGoogleUi36()
+    /** Prompt 39: Kalendere (1a), Rediger (1b), Legg til (1c) og Google-velgeren (1d). */
+    val k39 = no.kristo.kalender.ui.K39State(this)
     var colO by mutableStateOf(Kal35Prefs.colors(app))
     var hmO by mutableStateOf(Kal35Prefs.hidMenu(app))
     /** Zoom-animasjonen: retning (in/out), teller (ny animasjon) og punktet den vokser fra (andel av visningen). */
@@ -240,6 +242,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             reloadPrefs35()
             if (err?.contains("utløpt") == true) { KalAuth.clear(ctx); session = null; lErr = err }
             changed()
+            if (err == null) k39.announce() // Prompt 39: «Vi ryddet kalenderne: 12 → 4» (én gang, med Angre)
         }
     }
 

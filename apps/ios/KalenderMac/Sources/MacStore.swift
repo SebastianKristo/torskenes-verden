@@ -60,8 +60,9 @@ final class MacStore: ObservableObject {
     @Published var menuBarMode: String = UserDefaults.standard.string(forKey: "mac.mbMode") ?? "next" {
         didSet { UserDefaults.standard.set(menuBarMode, forKey: "mac.mbMode") }
     }
-    /// Prompt 38: hovedvinduet viser web-kalenderen (<server>/kalender?app=mac). Av = den innebygde kalenderen (reserve).
-    @Published var useWeb38: Bool = MacStore.boolPref("mac.web38", true) {
+    /// Prompt 38: hovedvinduet kunne vise web-kalenderen (<server>/kalender?app=mac).
+    /// Prompt 39: den innebygde (native) kalenderen er fasit igjen – web-visningen er bare et valg, av som standard.
+    @Published var useWeb38: Bool = MacStore.web39Pref() {
         didSet {
             MacStore.setPref("mac.web38", useWeb38)
             MacWeb38Model.prefChanged()
@@ -115,7 +116,7 @@ final class MacStore: ObservableObject {
         // Prompt 37: fagfargene synkes med profilen (PUT/GET /api/me/layout subjectColors).
         KalFag37.pushEnabled = true
         if let d = UserDefaults.standard.data(forKey: "mac.snapshot"), let snap = try? JSONDecoder().decode(KalSnapshot.self, from: d) {
-            if !snap.cals.isEmpty { cals = snap.cals }
+            if !snap.cals.isEmpty { cals = KalCals39.normalize(snap.cals) }
             events = snap.events.filter { (e: KalEvent) -> Bool in !e.pending }
             var w: [String: KalWxDay] = [:]
             for x in snap.wx { w[x.day] = x }
@@ -124,6 +125,17 @@ final class MacStore: ObservableObject {
         applyCalOn()
         // Ikke varsler/Dock her: de leser MacStore.shared, som ikke er ferdig laget ennå.
         rebuild(sideEffects: false)
+    }
+
+    /// Prompt 39: slår web-kalenderen av én gang for dem som hadde den lagret som på fra prompt 38. Etterpå gjelder brukerens valg.
+    static func web39Pref() -> Bool {
+        let d: UserDefaults = UserDefaults.standard
+        if !d.bool(forKey: "mac.web39migrated") {
+            d.set(true, forKey: "mac.web39migrated")
+            d.set(false, forKey: "mac.web38")
+            return false
+        }
+        return (d.object(forKey: "mac.web38") as? Bool) ?? false
     }
 
     static func boolPref(_ k: String, _ def: Bool) -> Bool { (UserDefaults.standard.object(forKey: k) as? Bool) ?? def }
@@ -174,6 +186,7 @@ final class MacStore: ObservableObject {
             serverCals = true
             cals = res.cals
             applyServerPrefs(res.prefs)
+            announceMigration39()
         } else {
             serverCals = false
             mergeLocalCals()
@@ -240,7 +253,7 @@ final class MacStore: ObservableObject {
         var list: [KalCal] = KalCals.defaults
         let extra: [KalCal] = MacStore.loadCals("mac.localCals")
         for c in extra where !list.contains(where: { (x: KalCal) -> Bool in x.id == c.id }) { list.append(c) }
-        cals = list
+        cals = KalCals39.normalize(list)
     }
 
     func applyCalOn() {
@@ -254,7 +267,11 @@ final class MacStore: ObservableObject {
 
     /* ---------- Avledet ---------- */
 
-    func cal(_ id: String) -> KalCal? { cals.first { (c: KalCal) -> Bool in c.id == id } ?? cals.first }
+    func cal(_ id: String) -> KalCal? {
+        // Prompt 39: lagrede kortnøkler («p», «j») og sammenslåtte kalendere viser den nye av de fire.
+        let rid: String = KalCals39.resolveId(id, in: cals)
+        return cals.first { (c: KalCal) -> Bool in c.id == rid } ?? cals.first
+    }
 
     /// Prompt 35: kalendere som er skjult fra menyen vises heller ikke.
     func isOn(_ id: String) -> Bool { cals.first { (c: KalCal) -> Bool in c.id == id }?.shown ?? true }
@@ -268,6 +285,7 @@ final class MacStore: ObservableObject {
             seen.insert(e.id)
             if let r = remOverride[e.id] { e.rem = r < 0 ? nil : r }
             if let c = calOverride[e.id] { e.cal = c }
+            e.cal = KalCals39.resolveId(e.cal, in: cals)
             if let s = srcOf[e.id], e.src.isEmpty { e.src = s }
             list.append(e)
         }
@@ -297,7 +315,8 @@ final class MacStore: ObservableObject {
             cals[i].count = list.filter { (e: KalEvent) -> Bool in e.cal == id && e.day >= today && e.day <= last }.count
         }
         if !sideEffects { return }
-        MacNotify.reschedule(upcoming(limit: 200))
+        // Prompt 39: Varsel av for en kalender gir ingen varsler derfra.
+        MacNotify.reschedule(KalCals39.notifiable(upcoming(limit: 200), cals))
         MacDock.refresh()
     }
 
@@ -458,6 +477,11 @@ final class MacStore: ObservableObject {
 
     func undo(_ id: String) {
         if id.isEmpty { return }
+        // Prompt 39: «Angre» på «Vi ryddet kalenderne: 12 → 4».
+        if id == "mig39" {
+            Task { await self.undoMigration39() }
+            return
+        }
         if pending.contains(where: { (x: KalEvent) -> Bool in x.id == id }) {
             pending.removeAll { (x: KalEvent) -> Bool in x.id == id }
             savePending()

@@ -44,7 +44,7 @@ struct MacRoot: View {
         ZStack {
             t.bg
             if store.loggedIn {
-                // Prompt 38: web-kalenderen er hovedvisningen; den innebygde kalenderen er reserve uten nett / eldre server.
+                // Prompt 39: den innebygde kalenderen er standard; web-kalenderen (prompt 38) bare når valget er slått på.
                 if store.useWeb38 && web.phase != .failed {
                     MacWeb38Host(model: web)
                 } else {
@@ -103,6 +103,7 @@ struct MacRoot: View {
         .overlay(alignment: .bottom) { toastView }
         .sheet(isPresented: $win.newCalOpen) { MacThemed { MacNewCalendarSheet(open: $win.newCalOpen) } }
         .sheet(isPresented: $win.addCalOpen) { MacThemed { MacAddCal35Sheet(open: $win.addCalOpen) } }
+        .sheet(isPresented: $win.gmap39Open) { MacThemed { MacGoogleMap39Sheet(open: $win.gmap39Open) } }
     }
 
     private var zoomTransition: AnyTransition {

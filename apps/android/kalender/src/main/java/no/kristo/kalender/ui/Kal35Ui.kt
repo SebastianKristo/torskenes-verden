@@ -184,7 +184,7 @@ fun Drawer(vm: KalVm) {
                 Box(
                     Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(22.dp)).drawBehind {
                         drawRoundRect(k.line, cornerRadius = CornerRadius(22.dp.toPx()), style = Stroke(1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))))
-                    }.tap("Legg til kalender") { vm.openAddCal() },
+                    }.tap("Legg til kalender") { vm.ac = null; vm.k39.openAdd() }, // Prompt 39: arket 1c
                     contentAlignment = Alignment.Center,
                 ) { Tx("+ Legg til kalender", man(13.5.sp, FontWeight.Bold, k.ink)) }
                 if (vm.ac != null) AddCalPanel35(vm)
@@ -365,6 +365,11 @@ fun SettingsPage35(vm: KalVm) {
             InkPill("Ferdig", { vm.closeSettings() })
         }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Prompt 39: Kalendere (1a) – fire kalendere, rediger og legg til.
+            Label("KALENDERE", Modifier.padding(top = 4.dp))
+            Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
+                LinkRow35("Kalendere", vm.cals.take(4).joinToString(", ") { it.n }) { vm.k39.open() }
+            }
             Label("GENERELT", Modifier.padding(top = 4.dp))
             Seg35("Uken starter", "", listOf("mon" to "Mandag", "sun" to "Søndag"), if (vm.sun) "sun" else "mon") { vm.setWeekStart(it == "sun") }
             Seg35("Åpne i", "Visningen appen starter i", listOf("mnd" to "Måned", "uke" to "Uke", "3d" to "3 dager", "dag" to "Dag", "liste" to "Liste"), vm.ov) { vm.setOpenView(it) }

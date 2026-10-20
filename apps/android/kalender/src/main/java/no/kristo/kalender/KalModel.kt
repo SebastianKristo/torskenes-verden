@@ -57,19 +57,19 @@ data class KCal(
     val id: String, val n: String, val c: Long, val tx: Long, val lt: Long, val writable: Boolean = true,
     val serverVisible: Boolean = true, val count: Int? = null, val own: Boolean = false, val serverId: String? = null,
     val key: String? = null, val src: String? = null, val badge: String? = null, val hidMenu: Boolean = false,
+    /** Prompt 39: kilde, merke, varsel, brief, URL … (fire kalendere). */
+    val p39: KInfo39? = null,
 ) {
     /** Kalendere man har lagt til selv (egne, iCal, Home Assistant, konto) kan fjernes med ×. */
     val removable: Boolean get() = own || (src != null && src != "builtin")
 }
 
-/** Fasitens seks kalendere (CALS). */
+/** Prompt 39: fasitens fire kalendere (CALS): Personlig · Bursdager · Skole · Helligdager. */
 val KCALS: List<KCal> = listOf(
     KCal("p", "Personlig", 0xFFB23A2A, 0xFF8A2A1D, 0xFFF29A8A),
-    KCal("j", "Jobb", 0xFF2B5D8A, 0xFF1F4568, 0xFF9CC2EE),
-    KCal("s", "Studie", 0xFF2F7A4F, 0xFF235C3B, 0xFF8FD4A8),
-    KCal("f", "Familie", 0xFFA8661A, 0xFF7A4A12, 0xFFECBB74),
-    KCal("h", "Helse", 0xFF3D7F8A, 0xFF2A5C64, 0xFF8FCDD6),
-    KCal("b", "Bursdager", 0xFF8A3FA0, 0xFF6A2F7C, 0xFFD6A8E6),
+    KCal("b", "Bursdager", 0xFF8A3FA0, 0xFF6A2F7C, 0xFFD6A8E6, writable = false),
+    KCal("s", "Skole", 0xFF2F7A4F, 0xFF235C3B, 0xFF8FD4A8),
+    KCal("h", "Helligdager", 0xFFA39D90, 0xFF5A554C, 0xFFC9C2B4, writable = false, src = "builtin"),
 )
 
 /** Eldre serverkalendere → appens visning (når /api/kalender/calendars mangler). */
@@ -77,13 +77,14 @@ fun mapLegacyCal(id: String?, type: String?, title: String): String {
     val c = id?.lowercase().orEmpty()
     val t = type?.lowercase().orEmpty()
     return when {
-        c in setOf("p", "j", "s", "f", "h", "b") -> c
+        // Prompt 39: fire kalendere – Jobb, Familie og Helse vises i Personlig (CNORM i fasiten).
+        c in setOf("p", "s", "h", "b") -> c
+        c in setOf("j", "f") -> "p"
         c == "personlig" -> "p"
+        c.contains("helligdag") || t == "helligdag" -> "h"
         c.contains("bursdag") || c == "birthdays" || t == "bursdag" || t == "birthday" -> "b"
         c in setOf("timeplan", "prover", "skole", "studie", "canvas") || t in setOf("time", "prove", "innl") -> "s"
-        c.contains("famil") -> "f"
-        c.contains("helse") || c.contains("health") -> "h"
-        c.contains("jobb") || c.contains("work") -> "j"
+        c.contains("famil") || c.contains("helse") || c.contains("health") || c.contains("jobb") || c.contains("work") -> "p"
         else -> guessCal(title.lowercase()).takeIf { it != "b" && it != "s" } ?: "p"
     }
 }
@@ -273,6 +274,7 @@ fun parseServerCalendars(raw: String): List<KCal> {
             writable = o.optBoolean("writable", o.optBoolean("editable", src == "builtin" || src == "own")), serverVisible = o.optBoolean("visible", o.optBoolean("enabled", true)),
             count = o.optIntOrNull("count") ?: o.optIntOrNull("next30"), own = o.optBoolean("own", o.optBoolean("local", !builtin && src == "own")), serverId = sid,
             key = key0 ?: base?.id, src = src, badge = badge, hidMenu = o.optBoolean("hidMenu", false),
+            p39 = KInfo39.fromServer(o),
         )
     }
     return out

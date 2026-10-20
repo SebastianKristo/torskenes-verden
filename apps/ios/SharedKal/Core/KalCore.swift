@@ -65,6 +65,8 @@ struct KalCal: Identifiable, Hashable, Codable {
     var badge: String? = nil
     /// Prompt 35: innebygd kalender (kan ikke fjernes).
     var builtin: Bool? = nil
+    /// Prompt 39: kilde, merke, varsel, brief, URL … (fire kalendere). nil i eldre buffere.
+    var p39: KalCalInfo39? = nil
 }
 
 /// Vær for én dag.
@@ -206,27 +208,24 @@ enum KalD {
 /* ---------- Kalendere og farger ---------- */
 
 enum KalCals {
-    /// Faste kalendere når serveren ikke har /api/kalender/calendars (404): samme som CALS i fasiten.
+    /// Faste kalendere når serveren ikke har /api/kalender/calendars (404).
+    /// Prompt 39: bare de fire (CALS i Kalender App.dc.html): Personlig · Bursdager · Skole · Helligdager.
     static let defaults: [KalCal] = [
         KalCal(id: "p", name: "Personlig", hex: "#b23a2a", lightHex: "#f29a8a", textHex: "#8a2a1d"),
-        KalCal(id: "j", name: "Jobb", hex: "#2b5d8a", lightHex: "#9cc2ee", textHex: "#1f4568"),
-        KalCal(id: "s", name: "Studie", hex: "#2f7a4f", lightHex: "#8fd4a8", textHex: "#235c3b"),
-        KalCal(id: "f", name: "Familie", hex: "#a8661a", lightHex: "#ecbb74", textHex: "#7a4a12"),
-        KalCal(id: "h", name: "Helse", hex: "#3d7f8a", lightHex: "#8fcdd6", textHex: "#2a5c64"),
         KalCal(id: "b", name: "Bursdager", hex: "#8a3fa0", lightHex: "#d6a8e6", textHex: "#6a2f7c", writable: false),
+        KalCal(id: "s", name: "Skole", hex: "#2f7a4f", lightHex: "#8fd4a8", textHex: "#235c3b"),
+        KalCals39.holidayCal(),
     ]
 
     /// Fargevalg for egne kalendere.
     static let palette: [String] = ["#b23a2a", "#2b5d8a", "#2f7a4f", "#a8661a", "#3d7f8a", "#8a3fa0", "#5b5f97", "#9a4a6b", "#4f6b2f", "#6b665c"]
 
     /// Ordene som gir hver av de faste kalenderne (guessCal i fasiten).
+    /// Prompt 39: bare fire kalendere – helse, jobb og familie havner i Personlig (CNORM i fasiten).
     static func guess(_ text: String) -> String {
         let s: String = text.lowercased()
-        if has(s, ["lege", "tannlege", "fysio", "trening", "sats", "helse", "vaksine", "psykolog"]) { return "h" }
         if has(s, ["forelesning", "eksamen", "frist", "oblig", "innlevering", "kollokvie", "studie"]) { return "s" }
-        if has(s, ["møte", "jobb", "kunde", "standup", "presentasjon"]) { return "j" }
         if s.contains("bursdag") || s.range(of: "\\d+\\s*år\\b", options: .regularExpression) != nil { return "b" }
-        if has(s, ["mormor", "morfar", "farmor", "farfar", "familie", "hytta", "foreldremøte", "fotball"]) { return "f" }
         return "p"
     }
 
@@ -235,15 +234,13 @@ enum KalCals {
         return false
     }
 
-    /// Når serveren ikke sender kalender-id-er for visningen: serverens kalendere → p/j/s/f/h/b.
+    /// Når serveren ikke sender kalender-id-er for visningen: serverens kalendere → p/s/b (prompt 39: fire kalendere).
     static func fallback(serverCal: String, type: String, title: String) -> String {
         let c: String = serverCal.lowercased()
         let t: String = type.lowercased()
         if c == "bursdager" || t == "bursdag" { return "b" }
         if c == "timeplan" || c == "prover" || c == "skole" || c == "canvas" || t == "time" || t == "prove" || t == "innl" { return "s" }
-        if c == "familie" { return "f" }
-        if c == "jobb" || c == "work" { return "j" }
-        if c == "helse" || c == "health" { return "h" }
+        if c == "helligdager" || t == "helligdag" { return "h" }
         let g: String = guess(title)
         return g == "b" ? "p" : g
     }
@@ -482,9 +479,14 @@ enum KalParse {
             if s != nil && e == nil { e = (s ?? 0) + 60 }
         }
         guard KalD.valid(day) else { return nil }
-        var cal: String = str(o, "cal")
+        // Prompt 39: appCalendar (serverens kalender i appen) først – før ble den oversett, og «timeplan» ga en ekstra Studie.
+        var cal: String = str(o, "appCalendar")
+        if cal.isEmpty || !calIds.contains(cal) {
+            let c2: String = str(o, "cal")
+            if !c2.isEmpty && (cal.isEmpty || calIds.contains(c2)) { cal = c2 }
+        }
         if cal.isEmpty { cal = serverCal }
-        if !calIds.contains(cal) { cal = KalCals.fallback(serverCal: serverCal, type: type, title: title) }
+        if !calIds.contains(cal) { cal = KalCals39.resolve(cal, calIds: calIds, serverCal: serverCal, type: type, title: title) }
         var kind: String = str(o, "kind")
         if kind.isEmpty {
             if type == "prove" || type == "innl" || title.lowercased().hasPrefix("frist") { kind = "frist" }
@@ -555,6 +557,7 @@ enum KalParse {
             let badge: String = str(o, "badge")
             c.badge = badge.isEmpty ? nil : badge
             c.builtin = bool(o, "builtin")
+            c.p39 = KalCals39.info(o)
             let lt: String = str(o, "lightColor")
             let tx: String = str(o, "textColor")
             if !lt.isEmpty && !tx.isEmpty && lt.lowercased() != hex.lowercased() {
@@ -565,6 +568,8 @@ enum KalParse {
             }
             out.append(c)
         }
+        // Prompt 39: migration-feltet. Sammenslåingen til fire skjer i KalCals39.fromServer (hele lista, ikke enkeltsvar).
+        KalCals39.readMigration(any)
         return out
     }
 

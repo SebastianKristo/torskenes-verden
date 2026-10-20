@@ -28,7 +28,11 @@ struct KalSettings35View: View {
             .padding(.bottom, 8)
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    KalLabel(text: "GENERELT")
+                    // Prompt 39: Kalendere (1a) – fire kalendere, rediger og legg til.
+                    KalLabel(text: "KALENDERE")
+                    KalLinkRow35(title: "Kalendere", sub: cals39Sub) { s.openCals39() }
+                        .overlay(alignment: .top) { Rectangle().fill(t.line2).frame(height: 1) }
+                    KalLabel(text: "GENERELT").padding(.top, 6)
                     general
                     KalLabel(text: "VISNING").padding(.top, 6)
                     display
@@ -77,6 +81,11 @@ struct KalSettings35View: View {
     private func close() {
         KalHaptic.tap()
         withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28)) { s.settingsOpen = false }
+    }
+
+    private var cals39Sub: String {
+        let n: [String] = s.cals.prefix(4).map { (c: KalCal) -> String in c.name }
+        return n.joined(separator: ", ")
     }
 
     private var footer: String {

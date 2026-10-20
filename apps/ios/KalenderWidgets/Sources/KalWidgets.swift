@@ -34,7 +34,7 @@ enum KalWData {
             x.loc = loc
             list.append(x)
         }
-        ev("1", "Tannlege", "h", 0, 915, 960, "Tannhelse Bislett")
+        ev("1", "Tannlege", "p", 0, 915, 960, "Tannhelse Bislett")
         ev("2", "Hent pakke", "p", 0, 1020, 1035, "Coop Mega")
         ev("3", "Kino · Dune 3", "p", 1, 1200, 1350, "Colosseum")
         ev("4", "Nina frisør", "p", 2, 870, 930, "Frisør Nina, Grünerløkka")

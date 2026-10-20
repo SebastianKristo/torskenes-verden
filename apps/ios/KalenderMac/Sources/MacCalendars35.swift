@@ -29,7 +29,7 @@ struct MacCalendars35: View {
             }
             .padding(.bottom, 4)
             ForEach(visible.uniqueIds()) { (c: KalCal) in
-                MacCalRow35(cal: c, editing: editing)
+                MacCalRow35(cal: c, editing: editing, relink: { win.gmap39Open = true })
             }
             let n: Int = store.hiddenFromMenu.count
             if n > 0 && !editing {
@@ -47,6 +47,26 @@ struct MacCalendars35: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 6)
+            // Prompt 39: Google-velgeren (1d).
+            Button(action: { win.gmap39Open = true }) {
+                Text("Hvilken Google-kalender er hva? ›").font(MacFont.ui(12, .bold)).foregroundColor(t.acc)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: 26)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 6)
+        }
+        .task { await firstGoogle39() }
+    }
+
+    /// Prompt 39: første gang Google er koblet til, åpnes «Hvilken kalender er hva?» én gang.
+    private func firstGoogle39() async {
+        if UserDefaults.standard.bool(forKey: "mac.gmap39seen") || !store.loggedIn || MacWin.all.first !== win { return }
+        let m: KalGMap39 = await KalGMapAPI39.fetch()
+        if m.connected && !m.legacy && !m.calendars.isEmpty {
+            UserDefaults.standard.set(true, forKey: "mac.gmap39seen")
+            win.gmap39Open = true
         }
     }
 }
@@ -56,6 +76,8 @@ struct MacCalRow35: View {
     @ObservedObject var store: MacStore = MacStore.shared
     let cal: KalCal
     let editing: Bool
+    /// Prompt 39: «Endre kobling …» for Google-kalenderne.
+    var relink: (() -> Void)? = nil
     @State private var hover: Bool = false
     @State private var picking: Bool = false
 
@@ -108,6 +130,9 @@ struct MacCalRow35: View {
         .contextMenu {
             Button(cal.inMenu ? "Skjul fra menyen" : "Vis i menyen") { store.setHidMenu(cal.id, cal.inMenu) }
             Button("Velg farge …") { picking = true }
+            if cal.p39?.badge == "GOOGLE", let relink {
+                Button("Endre kobling …") { relink() }
+            }
             if cal.removable {
                 Divider()
                 Button("Fjern «" + cal.name + "»") { store.removeCal(cal) }

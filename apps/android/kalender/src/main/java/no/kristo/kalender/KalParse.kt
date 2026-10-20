@@ -15,12 +15,10 @@ data class KParsed(val t: String, val cal: String, val d: LocalDate, val s: Int?
 }
 
 /** Kalenderen gjettes fra ord (lege → Helse, frist → Studie, møte → Jobb, mormor → Familie, bursdag → Bursdager). */
+/** Prompt 39: fire kalendere – helse, jobb og familie havner i Personlig (CNORM i fasiten). */
 fun guessCal(s: String): String = when {
-    Regex("(lege|tannlege|fysio|trening|sats|helse|vaksine|psykolog)").containsMatchIn(s) -> "h"
     Regex("(forelesning|eksamen|frist|oblig|innlevering|kollokvie|studie)").containsMatchIn(s) -> "s"
-    Regex("(møte|jobb|kunde|standup|presentasjon)").containsMatchIn(s) -> "j"
     Regex("(bursdag|\\d+\\s*år\\b)").containsMatchIn(s) -> "b"
-    Regex("(mormor|morfar|farmor|farfar|familie|hytta|foreldremøte|fotball)").containsMatchIn(s) -> "f"
     else -> "p"
 }
 
