@@ -65,7 +65,7 @@ function addPanel() {
   const f = u.finnAddF ?? {};
   return `<form class="card fh-add" data-fd-form="new"><div class="card-h"><h2>Legg til kjøp eller salg</h2><button type="button" class="x-btn sm" data-fd-add aria-label="Lukk">×</button></div>
     <div class="fh-seg" role="radiogroup" aria-label="Type">${[['bought', 'Kjøp'], ['sold', 'Salg']].map(([k, n]) => `<label><input type="radio" name="role" value="${k}"${(f.role ?? 'bought') === k ? ' checked' : ''}><span>${n}</span></label>`).join('')}</div>
-    <label class="fh-fl">Finn-lenke<input class="inp" name="adUrl" value="${esc(f.adUrl ?? '')}" placeholder="https://www.finn.no/recommerce/forsale/item/…" inputmode="url"><small>✦ AI henter tittel, pris, tekst og bilder fra annonsen</small></label>
+    <label class="fh-fl">Finn-lenke<input class="inp" name="adUrl" value="${esc(f.adUrl ?? '')}" placeholder="https://www.finn.no/recommerce/forsale/item/…" inputmode="url"><small>✦ Glimt henter tittel, pris, tekst og bilder fra annonsen</small></label>
     <div class="fh-g3"><label class="fh-fl">Tittel<input class="inp" name="item" value="${esc(f.item ?? '')}" placeholder="Hentes fra annonsen"></label><label class="fh-fl">Pris (kr)<input class="inp mono" name="amount" value="${esc(f.amount ?? '')}" inputmode="decimal" placeholder="0"></label><label class="fh-fl">${(f.role ?? 'bought') === 'sold' ? 'Kjøper' : 'Selger'}<input class="inp" name="counterpart" value="${esc(f.counterpart ?? '')}"></label></div>
     <div style="display:flex;gap:8px;align-items:center"><button class="btn pri" ${u.finnBusy === 'new' ? 'disabled' : ''}>${u.finnBusy === 'new' ? `${glimt(14, 'tenker')} Henter annonsen …` : 'Legg til'}</button><span class="note" style="font-size:12.5px">Du trenger enten en lenke eller tittel og pris.</span></div></form>`;
 }
@@ -133,13 +133,26 @@ function adModel(d) {
     attrs, emails: [...emails].sort((p, q) => String(p.date).localeCompare(String(q.date))), messages: x?.messages ?? d.messages ?? [], chatUrl: x?.chatUrl ?? d.chatUrl ?? a?.url ?? d.adUrl ?? null, hasApi: !!a };
 }
 
+// Prompt 42 (claude-code-finn-bilder.md): bare annonsens egne bilder. Reklame og bilder som går igjen i flere annonser
+// (f.eks. et stockbilde av en dame i alle annonser) tas bort her også, i tillegg til filteret på serveren. Største størrelse.
+const AD_RE = /\/ads\/|adnami|doubleclick|googlesyndication|cdn\.schibsted|banner|\/display\//i;
+function adImages(m, d) {
+  const mine = (m.images ?? []).map((src) => String(src).replace(/\/dynamic\/\d+w\//, '/dynamic/1280w/'));
+  const others = new Map();
+  for (const it of S.finn?.items ?? []) { if (it.id === d.id) continue; for (const src of it.ad?.images ?? []) others.set(String(src).replace(/\/dynamic\/\d+w\//, '/dynamic/1280w/'), true); }
+  return [...new Set(mine)].filter((src) => !AD_RE.test(src) && !others.has(src));
+}
 function carousel(m, d) {
-  const slides = m.images.length ? m.images.map((src, i) => `<div class="fa-sl" style="background-color:${FA_TINTS[i % 4]}"><img src="${esc(src)}" alt="Bilde ${i + 1} fra annonsen" loading="${i ? 'lazy' : 'eager'}"></div>`)
+  const imgs = adImages(m, d);
+  // Hele bildet vises alltid (contain), med det samme bildet uskarpt bak, så det ikke blir tomme kanter.
+  const slides = imgs.length ? imgs.map((src, i) => `<div class="fa-sl" style="background-color:${FA_TINTS[i % 4]}"><img class="fa-blur" src="${esc(src)}" alt="" aria-hidden="true" loading="${i ? 'lazy' : 'eager'}"><img class="fa-img" src="${esc(src)}" alt="Bilde ${i + 1} fra annonsen" loading="${i ? 'lazy' : 'eager'}" data-fa-lb="${i}"></div>`)
     : FA_TINTS.slice(0, 1).map((t) => `<div class="fa-sl" style="background-color:${t}"><span>${esc(initials(d.item))}</span></div>`);
   const n = slides.length, i = Math.min(u.finnAdI ?? 0, n - 1);
-  return `<div class="fa-car"><div class="fa-track" data-fa-track>${slides.join('')}</div>
+  const thumbs = imgs.length > 1 ? `<div class="fa-thumbs">${imgs.map((src, k) => `<button type="button" class="fa-th${k === i ? ' on' : ''}" data-fa-go="${k}" aria-label="Bilde ${k + 1}"><img src="${esc(src)}" alt="" loading="lazy"></button>`).join('')}</div>` : '';
+  const lb = u.finnLb != null && imgs[u.finnLb] ? `<div class="fa-lb" data-fa-lbx role="dialog" aria-modal="true" aria-label="Bilde ${u.finnLb + 1} av ${imgs.length}"><img src="${esc(imgs[u.finnLb])}" alt="Bilde ${u.finnLb + 1} fra annonsen">${imgs.length > 1 ? '<button class="fa-nav l" data-fa-lbnav="-1" aria-label="Forrige bilde">‹</button><button class="fa-nav r" data-fa-lbnav="1" aria-label="Neste bilde">›</button>' : ''}<button class="fa-lbc" data-fa-lbx aria-label="Lukk">×</button><span class="fa-cnt">${u.finnLb + 1} / ${imgs.length}</span></div>` : '';
+  return `<div class="fa-car"><div class="fa-stage"><div class="fa-track" data-fa-track>${slides.join('')}</div>
     ${n > 1 ? `<button class="fa-nav l" data-fa-nav="-1" aria-label="Forrige bilde">‹</button><button class="fa-nav r" data-fa-nav="1" aria-label="Neste bilde">›</button>` : ''}
-    <span class="fa-cnt" data-fa-cnt>${m.images.length ? `${i + 1} / ${n}` : 'Ingen bilder'}</span></div>`;
+    <span class="fa-cnt" data-fa-cnt>${imgs.length ? `${i + 1} / ${n}` : 'Ingen bilder'}</span></div>${thumbs}${lb}</div>`;
 }
 
 function adPanel(d) {
@@ -214,9 +227,9 @@ export function finnPage() {
     <div class="fh-segs">${segs}</div>
     ${groups || card('<div class="empty">Ingen handler her ennå.</div>')}
     ${placed ? '' : det}
-    <form class="mod-box" data-fd-form="paste"><b>Legg til fra e-post</b><span class="note" style="font-size:13px">Lim inn en e-post fra Finn (Trygg betaling, Fiks ferdig eller Tillit). AI trekker ut gjenstand, motpart, beløp og status, og matcher mot bankposten.</span>
+    <form class="mod-box" data-fd-form="paste"><b>Legg til fra e-post</b><span class="note" style="font-size:13px">Lim inn en e-post fra Finn (Trygg betaling, Fiks ferdig eller Tillit). Glimt trekker ut gjenstand, motpart, beløp og status, og matcher mot bankposten.</span>
       <textarea class="inp mod-ta" name="email" rows="5" placeholder="Lim inn e-posten her …" required></textarea><div><button class="btn pri">Les e-posten</button></div></form>
-    <div class="note" style="font-size:13px">Kilde: e-postkvitteringer fra Finn (Trygg betaling, Fiks ferdig-frakt, Tillit forsikring) leses av AI og matches mot bankposter. ${d.imap.configured ? `Proton Mail er koblet til${d.imap.finnFolder ? ` (mappen ${esc(d.imap.finnFolder)})` : ''}: nye Finn-e-poster blir handler, og e-poster fra FINN, Posten/Bring og Tillit kobles til riktig handel.` : 'Sett opp Proton Mail under Innstillinger → Import for automatisk henting. Tidligere Finn-e-poster og annonselenker importeres samme sted.'}</div>
+    <div class="note" style="font-size:13px">Kilde: e-postkvitteringer fra Finn (Trygg betaling, Fiks ferdig-frakt, Tillit forsikring) leses av Glimt og matches mot bankposter. ${d.imap.configured ? `Proton Mail er koblet til${d.imap.finnFolder ? ` (mappen ${esc(d.imap.finnFolder)})` : ''}: nye Finn-e-poster blir handler, og e-poster fra FINN, Posten/Bring og Tillit kobles til riktig handel.` : 'Sett opp Proton Mail under Innstillinger → Import for automatisk henting. Tidligere Finn-e-poster og annonselenker importeres samme sted.'}</div>
   </div>`;
 }
 
@@ -260,6 +273,10 @@ export function bindFinn(el) {
     if ((x = d('[data-fd-open]'))) { u.finnEdit = false; return open(+x.dataset.fdOpen); }
     if (d('[data-fd-close]')) { u.finnSel = null; S.finnDeal = null; return render(); }
     if ((x = d('[data-fd-stage]'))) { const n = +x.dataset.fdStage; S.finnDeal = await api(`/finn/${u.finnSel}`, { method: 'PATCH', json: { stage: n || null } }); S.finn = await api('/finn'); return render(); }
+    if ((x = d('[data-fa-lbnav]'))) { const n = el.querySelectorAll('[data-fa-track] .fa-sl').length; u.finnLb = (u.finnLb + +x.dataset.faLbnav + n) % n; return render(); }
+    if ((x = d('[data-fa-lbx]')) && (e.target === x || x.matches('button'))) { u.finnLb = null; return render(); }
+    if ((x = d('[data-fa-lb]'))) { u.finnLb = +x.dataset.faLb; return render(); }
+    if ((x = d('[data-fa-go]'))) { const tr = el.querySelector('[data-fa-track]'); tr?.scrollTo({ left: +x.dataset.faGo * tr.clientWidth, behavior: 'smooth' }); return; }
     if ((x = d('[data-fa-nav]'))) { const t = el.querySelector('[data-fa-track]'); t?.scrollBy({ left: +x.dataset.faNav * t.clientWidth, behavior: 'smooth' }); return; }
     if ((x = d('[data-fa-mail]')) && !d('[data-fd-rmmail]')) {
       const id = +x.dataset.faMail, ad = u.finnAd;
@@ -285,6 +302,13 @@ export function bindFinn(el) {
     if ((x = d('[data-fd-rmfile]'))) { S.finnDeal = await api(`/finn/${u.finnSel}/files/${x.dataset.fdRmfile}`, { method: 'DELETE' }); S.finn = await api('/finn'); return render(); }
   }));
   el.addEventListener('keydown', (e) => { if (u.page === 'finn' && (e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-fd-open],[data-fa-mail]')) { e.preventDefault(); e.target.click(); } });
+  // Fullskjermbildet: ← → bytter bilde, Esc lukker.
+  document.addEventListener('keydown', (e) => {
+    if (u.page !== 'finn' || u.finnLb == null) return;
+    const n = document.querySelectorAll('[data-fa-track] .fa-sl').length || 1;
+    if (e.key === 'Escape') { u.finnLb = null; render(); }
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { u.finnLb = (u.finnLb + (e.key === 'ArrowRight' ? 1 : -1) + n) % n; render(); }
+  });
   // Telleren «1 / 4» følger sveip og pilene uten å tegne siden på nytt.
   el.addEventListener('scroll', (e) => {
     const t = e.target;
@@ -294,6 +318,7 @@ export function bindFinn(el) {
     u.finnAdI = i;
     const c = el.querySelector('[data-fa-cnt]');
     if (c && n > 1) c.textContent = `${i + 1} / ${n}`;
+    el.querySelectorAll('.fa-th').forEach((b, k) => b.classList.toggle('on', k === i));
   }, true);
   el.addEventListener('input', (e) => {
     if (e.target.closest?.('[data-fa-send]')) u.finnMsg = e.target.value;

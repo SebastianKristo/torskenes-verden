@@ -1,4 +1,4 @@
-// Velger desktop eller mobil (iOS Liquid Glass / Android M3 Expressive / brettbar) ut fra skjerm og enhet.
+// Velger desktop eller mobil (PWA i Papir-design / brettbar) ut fra skjerm og enhet.
 import { S, onChange, loadBoot, loadAi, toast } from './core.js';
 import * as desktop from './desktop.js';
 import * as mobile from './mobile.js';

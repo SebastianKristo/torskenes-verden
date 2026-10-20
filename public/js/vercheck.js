@@ -40,9 +40,9 @@ const CSS = `.vb{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-
 .vb-t{flex:1;min-width:0}.vb-t i{font-style:normal;opacity:.6;margin:0 2px}
 .vb-b{flex:none;height:36px;padding:0 16px;border-radius:18px;border:0;background:#fff;color:#1b1a17;cursor:pointer;font:700 13.5px Manrope,Outfit,Geist,system-ui,sans-serif;white-space:nowrap}
 .vb-x{flex:none;width:30px;height:30px;padding:0;border-radius:15px;border:0;background:rgba(255,255,255,.14);color:inherit;cursor:pointer;display:grid;place-items:center}
-html[data-hl="cur"] .vb,html[data-theme="mork"] .vb,html[data-theme="glod"] .vb,html[data-theme="v2"]:not([data-v3]) .vb{background:#ece9e2;color:#11141b}
-html[data-hl="cur"] .vb-b,html[data-theme="mork"] .vb-b,html[data-theme="glod"] .vb-b,html[data-theme="v2"]:not([data-v3]) .vb-b{background:#11141b;color:#fff}
-html[data-hl="cur"] .vb-x,html[data-theme="mork"] .vb-x,html[data-theme="glod"] .vb-x,html[data-theme="v2"]:not([data-v3]) .vb-x{background:rgba(0,0,0,.08)}
+html[data-hl="cur"] .vb,html[data-theme="mork"] .vb,html[data-theme="glod"] .vb{background:#ece9e2;color:#11141b}
+html[data-hl="cur"] .vb-b,html[data-theme="mork"] .vb-b,html[data-theme="glod"] .vb-b{background:#11141b;color:#fff}
+html[data-hl="cur"] .vb-x,html[data-theme="mork"] .vb-x,html[data-theme="glod"] .vb-x{background:rgba(0,0,0,.08)}
 @keyframes vb-up{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
 @media (max-width:520px){.vb{left:12px;right:12px;transform:none;max-width:none;animation:none}}`;
 

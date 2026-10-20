@@ -2,6 +2,7 @@
 // med Skriv inn selv · Fra kvittering · Fra transaksjoner. Tallene kommer fra GET /subscriptions (byMonth, health,
 // savings, upcoming, thisMonth). Kvitteringer lastes opp med data-mrc="sub" (modules.js), resten håndteres her.
 import { S, api, esc, n0, render, toast, logo, parseAmount, sheetBtn } from './core.js';
+import { subLogo } from './fin42.js';
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 import { parseTrial, trialPreview, trialBadge, cancelUrlFor, REMIND_OPTIONS, longDay } from '/assets/js/trial-parse.js';
 import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
@@ -142,8 +143,9 @@ const CYC_M = { monthly: 1, yearly: 12, biennial: 24 };
 const ST = { active: ['Aktiv', 'ok'], low_use: ['⚠ Lite brukt', 'low'], price_up: ['▲ Pris økt', 'up'], cancelled: ['Sagt opp', 'off'] };
 const ST_RANK = { price_up: 0, low_use: 1, active: 2, cancelled: 3 };
 // Egen logo (opplastet eller ✦ funnet med AI) vises før domenelogoen.
-const lg = (s, size = 28) => (s?.logoUrl ? `<span class="m-logo so-ownlogo" style="width:${size}px;height:${size}px;border-radius:${size / 2}px;flex:none;background-image:url('${esc(s.logoUrl)}')"></span>`
-  : logo({ ...s, description: s.name ?? s.merchant, color: col(s.category) }, size, size / 2));
+// Prompt 42 (claude-code-abonnement-logoer-web.md): samme brikke som mobil – squircle, contain med 6 px luft, mørk
+// brikke for lyse logoer (Starlink), app-ikoner fyller brikken, forbokstav mens bildet lastes og ved feil.
+const lg = (s, size = 28) => subLogo({ ...s, name: s?.name ?? s?.merchant, color: col(s?.category) }, size);
 const dShort = (iso) => (iso ? `${+iso.slice(8, 10)}. ${MON_L[+iso.slice(5, 7) - 1].slice(0, 3)}` : '–');
 const dLong = (iso) => `${+iso.slice(8, 10)}. ${MON_L[+iso.slice(5, 7) - 1]}`;
 const ymOf = (iso) => iso.slice(0, 7);
@@ -168,7 +170,7 @@ function head() {
         <input type="file" accept="image/*" data-ssk hidden></label>
       <button data-sact="trial" role="menuitem"><span class="so-mi ai">◷</span><span><b>Gratis prøveperiode</b><small>✦ Få varsel før prøven går over til betalt</small></span></button>
       <button data-sact="manual" role="menuitem"><span class="so-mi">✎</span><span><b>Skriv inn selv</b><small>Tjeneste, beløp og trekkdag</small></span></button>
-      <label role="menuitem"><span class="so-mi">⎙</span><span><b>Fra kvittering</b><small>✦ AI leser bilde, PDF eller e-post</small></span>
+      <label role="menuitem"><span class="so-mi">⎙</span><span><b>Fra kvittering</b><small>✦ Glimt leser bilde, PDF eller e-post</small></span>
         <input type="file" multiple accept="image/*,application/pdf,.eml,message/rfc822,.txt,text/plain" data-mrc="sub" hidden></label>
       <button data-sact="cands" role="menuitem"><span class="so-mi">⇄</span><span><b>Fra transaksjoner</b><small>✦ Finn faste trekk i banken</small></span></button></div>` : ''}</div></div>`;
 }
@@ -245,9 +247,9 @@ function savingsCard(d) {
   const low = act.filter((s) => s.status === 'low_use').length, up = act.filter((s) => s.status === 'price_up').length;
   const n = d.savings.suggestions.length;
   const parts = [low ? `${low} abonnement${low === 1 ? '' : 'er'} å se på` : '', up ? (up === 1 ? 'én prisøkning' : `${up} prisøkninger`) : ''].filter(Boolean);
-  return `<section class="card so-sav"><span class="so-chip acc">✦ AI-SPARING</span>
+  return `<section class="card so-sav"><span class="so-chip acc">✦ GLIMT · SPARING</span>
     <h2 class="so-sav-h">${n ? `Spar ${kr(d.savings.monthly)} i måneden` : 'Ingenting å spare akkurat nå'}</h2>
-    <p>${n ? `AI fant ${parts.join(', og ')}.` : 'Alle abonnementene ser ut til å være i bruk, og ingen har økt prisen.'}</p>
+    <p>${n ? `Glimt fant ${parts.join(', og ')}.` : 'Alle abonnementene ser ut til å være i bruk, og ingen har økt prisen.'}</p>
     ${n ? `<div class="so-row"><button class="btn so-white" data-sact="review">Gå gjennom</button><span class="muted">${n} forslag</span></div>` : ''}</section>`;
 }
 
@@ -423,7 +425,7 @@ function editSheet(d) {
     <div class="se-h"><b>${e.id ? `Rediger ${esc(e.n)}` : 'Nytt abonnement'}</b>${sheetBtn('Lukk', 'data-sed="close"', 'sec')}</div>
     <div class="se-logorow">${logoBox}<div class="se-lc"><span class="se-l">Logo</span><div class="se-lb">
       <label class="btn sm">↑ Last opp<input type="file" accept="image/png,image/jpeg,image/webp" data-sed-file hidden></label>
-      <button type="button" class="btn sm" data-sed="ai" ${e.busy ? 'disabled' : ''}>${e.busy ? `${glimt(14, 'tenker')} Leter …` : '✦ Finn logo med AI'}</button>
+      <button type="button" class="btn sm" data-sed="ai" ${e.busy ? 'disabled' : ''}>${e.busy ? `${glimt(14, 'tenker')} Leter …` : '✦ Finn logo med Glimt'}</button>
       ${pv ? '<button type="button" class="btn sm ghost" data-sed="nologo">Fjern</button>' : ''}</div>
       ${e.aiPending ? '<small class="se-note">✦ Logoen hentes når abonnementet er lagret.</small>' : ''}</div></div>
     <div class="se-g2"><label>Navn<input class="inp" name="n" value="${esc(e.n)}" placeholder="F.eks. HBO Max" required></label><label>Pris (kr)<input class="inp mono" name="v" value="${esc(e.v)}" inputmode="decimal" placeholder="129" required></label></div>

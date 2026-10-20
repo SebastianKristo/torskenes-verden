@@ -2,7 +2,7 @@
 
 /* ---------- PC ---------- */
 /* Alle farger er temaets tokens (prompt 14): panelet setter tekstfargen selv og arver den aldri fra siden rundt,
-   så tittel og overskrifter er lesbare i v2, Lys hovedbok, Mørk hovedbok og Glød. */
+   så tittel og overskrifter er lesbare i Lys hovedbok, Mørk hovedbok og Glød. */
 .fd-row{cursor:pointer;transition:border-color .15s}
 .fd-row:hover{border-color:var(--line3)}
 .fd-row.fd-on{border-color:var(--acc)}
@@ -67,7 +67,6 @@ html[data-v3] .fh{--fh-act:var(--warn)}
 .fh-nb{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 html[data-v3] .fh-nb .btn.pri{background:var(--fh-act);color:var(--badge-ink)}
 .fh-kpi b{display:block;font-family:var(--font-d);font-weight:var(--dw,600);font-size:30px;margin-top:8px;color:var(--text);white-space:nowrap}.fh-kpi b.pos{color:var(--pos)}
-html:not([data-v3]) .fh-kpi b{font-family:var(--mono);font-size:24px}
 .fh-segs{display:flex;gap:6px;flex-wrap:wrap}
 .fh-segb{height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--text);font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px}
 .fh-segb span{opacity:.55}.fh-segb[aria-pressed=true]{background:var(--text);color:var(--bg);border-color:var(--text)}
@@ -240,11 +239,23 @@ html[data-v3] .fh-t{font-family:var(--font-d);font-weight:var(--dw,500);font-siz
 /* ---------- Annonsen i FinansHub (prompt 23, FinansHub v3 Temaer → Finn-handler) ---------- */
 .fa-wrap{display:flex;flex-direction:column;gap:14px}
 .fa{background:var(--pop);border:1px solid var(--line);border-radius:var(--r,18px);overflow:hidden;color:var(--text);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))}
-.fa-car{position:relative;aspect-ratio:4/3;background:#111;min-width:0}
+.fa-car{position:relative;background:#111;min-width:0;display:flex;flex-direction:column;align-self:stretch;min-height:420px}
+/* Prompt 42 (claude-code-finn-bilder.md): galleriet fyller hele høyden av kolonnen, hele bildet vises (contain) over en uskarp kopi. */
+.fa-stage{position:relative;flex:1;min-height:420px;overflow:hidden}
+.fa-sl{position:relative;overflow:hidden}
+.fa-sl .fa-blur{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(28px) brightness(.85);transform:scale(1.15)}
+.fa-sl .fa-img{position:relative;width:100%;height:100%;object-fit:contain;cursor:zoom-in}
+.fa-thumbs{display:flex;gap:8px;padding:10px;overflow-x:auto;background:#111;scrollbar-width:none}
+.fa-th{flex:none;width:64px;height:64px;border-radius:10px;border:0;padding:0;overflow:hidden;cursor:pointer;opacity:.7;background:#222}
+.fa-th img{width:100%;height:100%;object-fit:cover;display:block}.fa-th.on{opacity:1;box-shadow:0 0 0 2px #fff}
+.fa-lb{position:fixed;inset:0;z-index:90;background:rgba(10,10,10,.92);display:grid;place-items:center;cursor:zoom-out}
+.fa-lb img{max-width:94vw;max-height:90vh;object-fit:contain}
+.fa-lbc{position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:22px;border:0;background:#fff;color:#1c1b19;font-size:22px;cursor:pointer}
+@media (max-width:900px){.fa-car{min-height:0}.fa-stage{flex:none;aspect-ratio:4/3;min-height:0}}
 .fa-track{position:absolute;inset:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
 .fa-track::-webkit-scrollbar{display:none}
 .fa-sl{flex:none;width:100%;height:100%;scroll-snap-align:center;display:grid;place-items:center;color:rgba(255,255,255,.4);font-size:13px;font-weight:600}
-.fa-sl img{width:100%;height:100%;object-fit:cover;display:block}
+.fa-sl img{display:block}
 .fa-sl span{font-size:44px;font-weight:700;letter-spacing:-.02em}
 .fa-nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:20px;border:0;background:rgba(255,255,255,.9);color:#1c1b19;cursor:pointer;font-size:18px;display:grid;place-items:center}
 .fa-nav.l{left:12px}.fa-nav.r{right:12px}

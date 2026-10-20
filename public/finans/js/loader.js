@@ -8,14 +8,15 @@
   try { window.__fhBoot = fetch('/finans/api/bootstrap', { credentials: 'same-origin' }); window.__fhBoot.catch(function () {}); } catch (e) { window.__fhBoot = null; }
   var mobile = q.indexOf('desktop') < 0 && (matchMedia('(max-width: 899px)').matches || (matchMedia('(pointer: coarse)').matches && matchMedia('(max-width: 1100px)').matches));
   // Tema før første tegning (prompt 22): lokal cache fh_design, ellers «lys» (Lys hovedbok). index.html har lys fra start.
+  // Prompt 42: det gamle FinansHub v2-designet er slettet; «v2» i cachen blir Papir (lys).
   if (!mobile) {
     var d = 'lys';
-    try { var c = localStorage.getItem('fh_design'); if (c === 'v2' || c === 'lys' || c === 'mork' || c === 'glod') d = c; } catch (e) { /* privat modus */ }
+    try { var c = localStorage.getItem('fh_design'); if (c === 'lys' || c === 'mork' || c === 'glod') d = c; else if (c === 'v2') localStorage.setItem('fh_design', 'lys'); } catch (e) { /* privat modus */ }
     h.setAttribute('data-ui', 'desktop');
     h.setAttribute('data-theme', d);
-    if (d === 'v2') h.removeAttribute('data-v3'); else h.setAttribute('data-v3', '');
+    h.setAttribute('data-v3', '');
     var m = document.querySelector('meta[name=theme-color]');
-    if (m) m.setAttribute('content', { v2: '#0A0A0C', lys: '#f4f1ea', mork: '#121210', glod: '#16110e' }[d]);
+    if (m) m.setAttribute('content', { lys: '#f4f1ea', mork: '#121210', glod: '#16110e' }[d]);
   }
   if (mobile) return;
   var t = 'cur';

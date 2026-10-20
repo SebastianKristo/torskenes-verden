@@ -65,7 +65,7 @@ let toastTimer;
 export function toast(text) {
   let el = document.getElementById('toast');
   if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
-  const h = document.documentElement, dark = h.dataset.theme === 'mork' || h.dataset.theme === 'glod' || (h.dataset.theme === 'v2' && !h.hasAttribute('data-v3'));
+  const h = document.documentElement, dark = h.dataset.theme === 'mork' || h.dataset.theme === 'glod';
   Object.assign(el.style, { background: dark ? '#ece8df' : '#1b1a17', color: dark ? '#121210' : '#ffffff', padding: '11px 18px', borderRadius: '20px', maxWidth: '90vw', boxSizing: 'border-box', textAlign: 'center' });
   el.textContent = String(text ?? '') || 'Lagret'; el.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2200);

@@ -7,6 +7,7 @@
 //   {text, source, cards:[{kind:'sub'|'tx'|'receipt'|'budget'|'stat', …}], items, total?, open?} (tåler også
 //   {summary, kpis, items, action}). 404 → vanlig AI-søk som før.
 import { api, esc, n2 } from './core.js';
+import { thinkHtml as S42think, orb as S42orb } from './fin42.js'; // prompt 42: «Glimt tenkte i 0,12 s» + tankesteg
 
 /* ---------------- Lagt til ---------------- */
 
@@ -123,13 +124,18 @@ export async function askGlimt(q, signal) {
   let r;
   try { r = await api('/search/ask', { method: 'POST', json: { q }, signal }); }
   catch (e) { if (e.status === 404 || e.status === 405 || e.name === 'AbortError') return null; throw e; }
+  return glimtFrom(q, r);
+}
+/** Prompt 42: samme form for svar fra /search/ask og /search/ask/stream ({text, cards, hits, steps, ms, engine}). */
+export function glimtFrom(q, r) {
   if (!r) return null;
   const cards = Array.isArray(r.cards) ? r.cards : [];
+  if (!cards.length && Array.isArray(r.hits) && !Array.isArray(r.items)) r = { ...r, items: r.hits.map((h) => ({ ...h, kind: h.kind ?? (h.receiptId && !h.txId ? 'receipt' : 'tx'), id: h.id ?? h.txId ?? h.receiptId, name: h.name ?? h.merchant ?? h.description, note: h.note ?? [h.date, h.matchedText].filter(Boolean).join(' · ') })) };
   const kpis = (Array.isArray(r.kpis) ? r.kpis : cards.filter((c) => c.kind === 'stat')).map((k) => ({ label: k.label ?? k.l ?? '', value: k.value ?? k.v ?? '', sub: k.sub ?? k.s ?? '' }));
   const items = (cards.filter((c) => c.kind !== 'stat').length ? cards.filter((c) => c.kind !== 'stat') : Array.isArray(r.items) ? r.items : []).map((x) => ({ ...x, kind: x.kind ?? x.type ?? 'tx' }));
   const text = strip(r.text ?? r.summary ?? '');
   if (!text && !items.length) return null;
-  return { q, text, source: r.source ?? '', kpis: kpis.slice(0, 3), items, total: r.total ?? null, open: r.open ?? r.action ?? null, model: r.model ?? '' };
+  return { q, text, source: r.source ?? '', kpis: kpis.slice(0, 3), items, total: r.total ?? null, open: r.open ?? r.action ?? null, model: r.model ?? '', engine: r.engine ?? '', ms: r.ms ?? null };
 }
 const DAY = 86400000;
 function nextTxt(x) {
@@ -141,7 +147,7 @@ function nextTxt(x) {
 }
 const krTxt = (v) => (v == null || v === '' ? '' : typeof v === 'number' ? `${Number.isInteger(v) ? new Intl.NumberFormat('nb-NO').format(v) : n2(v)} kr` : esc(v));
 /** Kortet: kilde til høyre, kort oppsummering (serif), tre nøkkeltall, liste med kort, «Åpne … ›». */
-export function glimtCard(a, logo) {
+export function glimtCard(a, logo, think = null) {
   const src = a.source ? (/^fra |^leste /.test(a.source) ? a.source : `fra ${a.source}`) : 'leste transaksjoner og kvitteringer';
   const items = a.items.map((x) => {
     const n = nextTxt(x), amt = x.amount ?? x.price ?? null, cyc = x.cycle ?? x.per ?? '';
@@ -154,8 +160,10 @@ export function glimtCard(a, logo) {
   }).join('');
   const kp = a.kpis.length ? `<div class="f40-kpis">${a.kpis.map((k) => `<div><span>${esc(String(k.label).toUpperCase())}</span><b>${esc(typeof k.value === 'number' ? krTxt(k.value) : k.value)}</b>${k.sub ? `<em>${esc(k.sub)}</em>` : ''}</div>`).join('')}</div>` : '';
   const op = a.open ? `<a class="f40-open" href="${esc(a.open.target ?? a.open.url ?? a.open.href ?? '#/sub')}">${esc(a.open.label ?? 'Åpne Subscription OS')} ›</a>` : /subscription/i.test(a.source) ? '<a class="f40-open" href="#/sub">Åpne Subscription OS ›</a>' : '';
-  return `<section class="card f40-glimt" aria-live="polite"><div class="f40-gh"><span class="f40-gk">✦ GLIMT</span><span class="f40-gs" title="${esc(a.model || '')}">${esc(src)}</span><button class="x-btn" data-act="ai-close" aria-label="Lukk">×</button></div>
-    ${a.text ? `<p class="f40-gt">${esc(a.text)}</p>` : ''}${kp}${items ? `<div class="f40-glist">${items}</div>` : ''}${op}</section>`;
+  const ms = think?.ms ?? a.ms, eng = think?.engine ?? a.engine;
+  const tl = ms != null ? `<div class="t42-src">Fant ${a.items.length === 1 ? '1 treff' : `${a.items.length} treff`} på ${String((ms / 1000).toFixed(2)).replace('.', ',')} s · ${eng === 'ollama' ? `Glimt (Ollama${a.model ? `, ${esc(a.model)}` : ''})` : 'lokalt søk'}</div>` : '';
+  return `<section class="card f40-glimt" aria-live="polite"><div class="f40-gh"><span class="f40-gk" style="display:inline-flex;align-items:center;gap:8px">${S42orb(20)}GLIMT${eng && eng !== 'ollama' ? ' · LOKALT' : ''}</span><span class="f40-gs" title="${esc(a.model || '')}">${esc(src)}</span><button class="x-btn" data-act="ai-close" aria-label="Lukk">×</button></div>
+    ${a.text ? `<p class="f40-gt">${esc(a.text)}</p>` : ''}${tl}${think?.steps?.length ? `<div data-t42-wrap>${S42think(think)}</div>` : ''}${kp}${items ? `<div class="f40-glist">${items}</div>` : ''}${op}</section>`;
 }
 
 /* ---------------- CSS ---------------- */
