@@ -2,6 +2,40 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.36.0] – 20.10.2026 · prompt 41 – Hjemlys «Si fra», Min reise og Fold 1c
+- **Hjemlys «Si fra»:** gi beskjed fra hvor som helst, uten at det må være en tur hjem.
+  - Velg Sjekket inn, Drar snart eller Drar nå.
+  - Velg selv hvem som får beskjed. Kontakter uten app får en SMS-lenke, og du er aldri med i lista selv.
+  - Hjemlys har egen fane i Familie.
+  - Live Activity på iPhone er rettet: ingen firkant rundt gløden, riktige etiketter, og du står ikke som «følger med».
+- **Min reise (Sebastian):** faste ruter mellom skolen og Amagerveien via Holbergs plass eller Frydenlund, trikk til Majorstuen og buss 45 (helst) eller 46, med bytter og gangtid.
+  - Er trikken fra Frydenlund forsinket, viser den hvor lang tid det tar å gå til Majorstuen, og om du da rekker 45.
+  - Du kan legge inn flere skolesoner. Kortet dukker opp på Hjem når du forlater skolen, og kan sveipes bort.
+- **PostNord uten nøkkel:** sporing med bare sporingsnummeret, slik ha-postnord gjør. Alle transportører sjekkes oftere når pakken er ute for levering, ikke om natta, og ikke etter at den er levert.
+- **Glimt i Huskeliste:** lange beskjeder deles opp av Glimt i bakgrunnen. Den opprinnelige beskjeden ligger under «Laget med Glimt». Du kan legge inn slike beskjeder fra søket på Hjem.
+- **Chat:** «Mine data» er på som standard, og «✦ Auto» velger den beste modellen for hvert spørsmål.
+- **Vær:**
+  - Spørsmål om ukas vær går til Glimt med værdata for hele uka, i stedet for et ferdig kort som ikke svarte på spørsmålet.
+  - Du kan flytte og skjule kortene, og det er nytt skiføre-kort med smøringsforslag.
+- **Fold (1c):** stort Glimt-kort og fanene Nå, I dag, Hjemme og Økonomi. Rød Hjem-knapp i samme form som fanene.
+- **Oslo fra lufta:** frie Oslo-bilder fra Wikimedia Commons som skifter gjennom døgnet. Krediteringen er flyttet fra Hjem til Innstillinger → Bakgrunn.
+- **Bursdager:** jenka-tog med trompet og konfetti når noen har bursdag, egne bilder per person, og ingen fanelinje eller skanneknapp.
+- **17. mai:** figurene får flagg, og Hjem får eget design med program og «Hipp hipp hurra». Det kan slås av og på.
+- **Kalender-appen:**
+  - Du logger inn uten å oppgi serveradresse: «Fortsett som Sebastian», «Logg inn med Homelab-appen» (godkjenn med Face ID eller fingeravtrykk) eller brukernavn og passord. Utlogging i Homelab logger også ut Kalender.
+  - Bursdager har eget design.
+  - Widgets på Mac, Glimt-søk og «Send testvarsel».
+- **Innlogging uten serveradresse** også i Homelab. Lokal og ekstern adresse settes i Konto → Server.
+- **Rettet:**
+  - Scroll i redigering av Hjem på iPhone.
+  - Glimt-oppsummeringen av nyheter er ikke lenger bredere enn skjermen.
+  - Innstillinger på web hopper ikke til toppen.
+  - Fargefeil i «Hent domener».
+  - «Les på nytt» virker for alle kvitteringer, også bokførte, og bokførte kan åpnes.
+  - Klokkeslett i AI-jobber.
+  - Skanneknappen kan slås av på Hjem.
+  - Søkepillen kan dras ned for å åpne svaret i Chat.
+
 ## [4.35.0] – 20.10.2026 · Glimt henter fakta i chatten
 - **Sammensatte spørsmål i Glimt-chatten:** «hva er været i Oslo i morgen og hvordan er vindhastigheten i New York neste time» deles i deler. Glimt henter ekte data for hver del og svarer på alle i rekkefølge.
 - **Vær for hele verden:** temperatur, nedbør, vind med kast og retning, skydekke og UV. Data kommer fra MET for Norge og Open-Meteo for resten, og tidspunktet regnes i stedets egen tid.
