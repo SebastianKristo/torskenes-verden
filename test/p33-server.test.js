@@ -140,7 +140,7 @@ test('kalendere: (prompt 39) fire innebygde med farge, synlighet og antall; egne
   assert.equal((await T(`/api/kalender/calendars/${id}`, 'DELETE')).status, 200);
   assert.ok(!(await T('/api/kalender/calendars')).body.calendars.some((c) => c.id === id));
   // Kari ser ikke Sebastians egne kalendere.
-  assert.equal((await K('/api/kalender/calendars')).body.calendars.length, 4);
+  assert.equal((await K('/api/kalender/calendars')).body.calendars.filter((c) => !c.virtual).length, 4); // prompt 42: + virtuelle Abonnementer
   // Standardvalg.
   assert.equal((await T('/api/kalender/calendars/prefs', 'PUT', { defaultCalendar: 'jobb', theme: 'dark' })).body.prefs.theme, 'dark');
   assert.equal((await T('/api/kalender/calendars/prefs', 'PUT', { theme: 'blå' })).status, 400);

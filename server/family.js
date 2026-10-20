@@ -58,6 +58,13 @@ const ACTIVITIES = ['still', 'walking', 'running', 'cycling', 'driving'];
 const COLOR = /^#[0-9a-f]{6}$/i;
 // Soneikoner (claude-code-familie-design.md): nøkkel → SF Symbol / Material Symbol i appene.
 export const ZONE_ICONS = ['home', 'work', 'school', 'heart', 'cabin', 'gym', 'shop', 'ball', 'coffee', 'tree', 'plane', 'star', 'pin'];
+// Prompt 42 (WEB42, claude-code-familie-soner-uten-kart.md): 50 innebygde ikoner + Iconify-ikoner («ify:lucide:sailboat») med
+// path-data (icp), så sonen ser lik ut uten nett. Ukjente nøkler avvises fortsatt.
+const ZONE_ICONS42 = ['car', 'bus', 'train', 'bike', 'boat', 'hospital', 'doctor', 'pill', 'church', 'book', 'music', 'film', 'food', 'cart', 'fuel', 'bolt', 'paw', 'baby', 'swim', 'ski', 'tent', 'mountain', 'beach', 'sun', 'gift', 'cake', 'game', 'laptop', 'tool', 'key', 'bed', 'flag', 'bell', 'camera', 'anchor', 'leaf'];
+const IFY_ICON = /^ify:[a-z0-9-]{1,40}:[a-z0-9-]{1,80}$/;
+const ICON_PATH = /^[MmLlHhVvCcSsQqTtAaZz0-9 .,\-eE]{1,6000}$/;
+const zoneIconOk = (k) => ZONE_ICONS.includes(k) || ZONE_ICONS42.includes(k) || IFY_ICON.test(String(k ?? ''));
+if (!db.prepare('PRAGMA table_info(family_zone)').all().some((c) => c.name === 'icon_path')) db.exec('ALTER TABLE family_zone ADD COLUMN icon_path TEXT');
 /** Standardikon etter navn: Hjem → home, Jobb → work, Skole → school, Mormor → heart, ellers pin. */
 export function defaultZoneIcon(name) {
   const n = String(name ?? '').trim().toLowerCase();
@@ -185,7 +192,7 @@ const zonesFor = (viewer) => q('SELECT * FROM family_zone WHERE created_by=? OR 
 const zoneVisible = (z, viewer) => !!z && (z.created_by === viewer || !!z.shared);
 const zoneOut = (z, viewer) => {
   const n = q('SELECT target, enter, leave FROM family_notify WHERE zone_id=? AND viewer=?').all(z.id, viewer);
-  return { id: z.id, name: z.name, lat: z.lat, lon: z.lon, radius: z.radius, color: String(z.color).toLowerCase(), icon: ZONE_ICONS.includes(z.icon) ? z.icon : defaultZoneIcon(z.name), createdBy: z.created_by, mine: z.created_by === viewer, shared: !!z.shared,
+  return { id: z.id, name: z.name, lat: z.lat, lon: z.lon, radius: z.radius, color: String(z.color).toLowerCase(), icon: zoneIconOk(z.icon) ? z.icon : defaultZoneIcon(z.name), ...(IFY_ICON.test(String(z.icon ?? '')) && z.icon_path ? { icp: z.icon_path } : {}), createdBy: z.created_by, mine: z.created_by === viewer, shared: !!z.shared,
     notify: Object.fromEntries(n.map((x) => [x.target, { enter: !!x.enter, leave: !!x.leave }]).filter(([t]) => t === viewer || canSee(viewer, t))) };
 };
 // Deler personen posisjon med deg? «on» gjelder hele familien; en selv ser alltid seg selv.
@@ -610,8 +617,11 @@ function zoneInput(b, partial = false) {
   if (b.lon !== undefined || !partial) { const v = num(b.lon, -180, 180); if (v == null) return 'Ugyldig lengdegrad'; z.lon = v; }
   if (b.radius !== undefined || !partial) { const v = num(Number(b.radius ?? 150), 25, 20_000); if (v == null) return 'Radius må være mellom 25 m og 20 km'; z.radius = Math.round(v); }
   if (b.color !== undefined || !partial) { const v = String(b.color ?? '#b23a2a'); if (!COLOR.test(v)) return 'Ugyldig farge (bruk #rrggbb)'; z.color = v.toLowerCase(); }
-  if (b.icon !== undefined && b.icon !== null) { if (!ZONE_ICONS.includes(b.icon)) return `Ukjent ikon (bruk ${ZONE_ICONS.join(', ')})`; z.icon = b.icon; }
-  else if (!partial) z.icon = defaultZoneIcon(z.name);
+  if (b.icon !== undefined && b.icon !== null) {
+    if (!zoneIconOk(b.icon)) return `Ukjent ikon (bruk ${ZONE_ICONS.join(', ')} …)`;
+    z.icon = b.icon;
+    if (IFY_ICON.test(b.icon)) { if (typeof b.icp !== 'string' || !ICON_PATH.test(b.icp)) return 'Ikonet mangler path-data (icp)'; z.icon_path = b.icp; } else z.icon_path = null;
+  } else if (!partial) { z.icon = defaultZoneIcon(z.name); z.icon_path = null; }
   if (b.shared !== undefined || !partial) z.shared = b.shared === true || b.shared === 1 ? 1 : 0; // «Del med familien», av som standard
   return z;
 }
@@ -619,7 +629,7 @@ function zoneInput(b, partial = false) {
 api.post('/zones', async (c) => {
   const z = zoneInput(await body(c));
   if (typeof z === 'string') return bad(c, z);
-  const r = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared, icon) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *').get(z.name, z.lat, z.lon, z.radius, z.color, c.get('user'), Date.now(), z.shared, z.icon);
+  const r = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared, icon, icon_path) VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING *').get(z.name, z.lat, z.lon, z.radius, z.color, c.get('user'), Date.now(), z.shared, z.icon, z.icon_path ?? null);
   return c.json(zoneOut(r, c.get('user')), 201);
 });
 // Sonen må være synlig (ellers 404) og din egen for å endres eller slettes (ellers 403).
@@ -638,8 +648,8 @@ api.patch('/zones/:id', async (c) => {
   const n = { ...cur, ...z };
   // icon: null i PATCH = tilbake til standardikonet for navnet.
   const b0 = c.get('zoneBody') ?? {};
-  if (b0.icon === null) n.icon = defaultZoneIcon(n.name);
-  q('UPDATE family_zone SET name=?, lat=?, lon=?, radius=?, color=?, shared=?, icon=? WHERE id=?').run(n.name, n.lat, n.lon, n.radius, n.color, n.shared ? 1 : 0, ZONE_ICONS.includes(n.icon) ? n.icon : defaultZoneIcon(n.name), id);
+  if (b0.icon === null) { n.icon = defaultZoneIcon(n.name); n.icon_path = null; }
+  q('UPDATE family_zone SET name=?, lat=?, lon=?, radius=?, color=?, shared=?, icon=?, icon_path=? WHERE id=?').run(n.name, n.lat, n.lon, n.radius, n.color, n.shared ? 1 : 0, zoneIconOk(n.icon) ? n.icon : defaultZoneIcon(n.name), zoneIconOk(n.icon) ? n.icon_path ?? null : null, id);
   if (z.lat != null || z.lon != null || z.radius != null) q('DELETE FROM family_inside WHERE zone_id=?').run(id); // ny form: start på nytt
   // Ikke delt lenger: andres varsler for sonen fjernes.
   if (cur.shared && !n.shared) q('DELETE FROM family_notify WHERE zone_id=? AND viewer<>?').run(id, cur.created_by);

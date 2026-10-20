@@ -12,7 +12,9 @@ import { kv, OWNER } from './db.js';
 // [id, navn, initialer, farge, tekstfarge, formater, sporingslenke (nummeret legges til på slutten)]
 // Formatene er et utgangspunkt og må verifiseres. Rekkefølgen betyr noe: mest spesifikke først.
 export const CARRIERS = [
-  ['posten', 'Posten', 'P', '#E32D22', '#fff', [/^[A-Z]{2}\d{9}NO$/, /^(LP|LZ)\d{12,}$/], 'https://sporing.posten.no/sporing/'],
+  // Prompt 42: AliExpress/Cainiao først – LP… er AliExpress (ikke Posten), og AE…/CN…/kinesiske S10-numre (…CN).
+  ['aliexpress', 'AliExpress · Cainiao', 'AE', '#E62E04', '#fff', [/^LP\d{12,}$/, /^AEG?\d{10,}$/, /^CN[A-Z0-9]{10,}$/, /^[A-Z]{2}\d{9}CN$/], 'https://global.cainiao.com/detail.htm?mailNoList='],
+  ['posten', 'Posten', 'P', '#E32D22', '#fff', [/^[A-Z]{2}\d{9}NO$/, /^LZ\d{12,}$/], 'https://sporing.posten.no/sporing/'],
   ['bring', 'Bring', 'B', '#7BC144', '#0f2a05', [/^70\d{15}$/, /^3707\d{14}$/], 'https://tracking.bring.com/tracking/'],
   ['postnord', 'PostNord', 'PN', '#00A0D6', '#fff', [/^00370\d{15}$/, /^[A-Z]{2}\d{9}(SE|DK|FI)$/], 'https://www.postnord.no/pakkesporing/?shipmentId='],
   ['dhl', 'DHL', 'DHL', '#FFCC00', '#D40511', [/^JJD\d{10,}$/, /^(JVGL|GM)\w{8,}$/, /^\d{10}$/], 'https://www.dhl.com/no-no/home/sporing.html?tracking-id='],
@@ -27,7 +29,7 @@ export const CARRIERS = [
   ['other', 'Annen (17TRACK)', '17', '#3A4252', '#eef0f4', [], 'https://t.17track.net/no#nums='],
 ].map(([id, name, ini, color, fg, re, url]) => ({ id, name, ini, color, fg, re, url }));
 // Domenet brukes til logoen (logobiblioteket, ellers favicon via /finans/api/logo/<domene>). Listen er fra claude-code-pakke-logo.md.
-export const DOMAIN = { posten: 'posten.no', bring: 'bring.no', postnord: 'postnord.no', dhl: 'dhl.com', ups: 'ups.com', fedex: 'fedex.com', gls: 'gls-group.com',
+export const DOMAIN = { aliexpress: 'aliexpress.com', posten: 'posten.no', bring: 'bring.no', postnord: 'postnord.no', dhl: 'dhl.com', ups: 'ups.com', fedex: 'fedex.com', gls: 'gls-group.com',
   schenker: 'dbschenker.com', helthjem: 'helthjem.no', budbee: 'budbee.com', instabox: 'instabox.io', porterbuddy: 'porterbuddy.com', other: '17track.net' };
 // Logoene ligger lokalt i public/carriers (prompt 14): enkle merke-SVG-er i transportørens farger, offentlige under /assets/carriers/.
 // Klientene viser initialer på merkefargen hvis bildet ikke laster.
@@ -40,6 +42,13 @@ for (const c of CARRIERS) {
 }
 export const CARRIER = Object.fromEntries(CARRIERS.map((c) => [c.id, c]));
 
+/** Prompt 42: fraktselskap fra ParcelsApp/e-post → id: «POSTNORD», «PostNord AB», «postnord_no» → postnord. null = ukjent. */
+export function carrierId42(name) {
+  const k = String(name ?? '').toLowerCase().replace(/[_-](no|se|dk|fi)$/, '').replace(/\b(ab|as|asa|norge|norway|sverige|sweden|danmark|group|logistics)\b/g, '').replace(/[^a-z0-9]/g, '');
+  const alias = { postnord: 'postnord', posten: 'posten', postennorge: 'posten', bring: 'bring', dhl: 'dhl', dhlexpress: 'dhl', helthjem: 'helthjem', instabox: 'instabox', budbee: 'budbee', ups: 'ups', fedex: 'fedex',
+    gls: 'gls', dbschenker: 'schenker', schenker: 'schenker', porterbuddy: 'porterbuddy', aliexpress: 'aliexpress', cainiao: 'aliexpress', aliexpressstandardshipping: 'aliexpress' };
+  return alias[k] ?? (CARRIER[k] ? k : null);
+}
 export const normNo = (no) => String(no ?? '').replace(/[\s-]+/g, '').toUpperCase();
 export function detect(no) {
   const n = normNo(no);
@@ -50,7 +59,7 @@ export const trackUrl = (carrier, no) => (CARRIER[carrier] ?? CARRIER.other).url
 // Sporingsnumre i fritekst (e-post). Krever at teksten ligner en frakt-/ordrebekreftelse, og at nummeret
 // matcher et kjent format – ellers blir ordrenumre, telefonnumre og kontonumre plukket opp som sendinger.
 const SHIP_WORDS = /sporing|spor pakken|sendingsnummer|kollinummer|tracking|track(ing)? (number|id)|shipment|sendt|levering|pakke|parcel|forsendelse|hentested|delivery/i;
-const CANDIDATE = /\b(?:[A-Z]{2}\d{9}[A-Z]{2}|(?:LP|LZ)\d{12,}|70\d{15}|3707\d{14}|00370\d{15}|JJD\d{10,}|JVGL\w{8,}|1Z[0-9A-Z]{16}|HH\d{8,}|BB[A-Z0-9]{8,}|IB[A-Z0-9]{8,})\b/g;
+const CANDIDATE = /\b(?:[A-Z]{2}\d{9}[A-Z]{2}|(?:LP|LZ)\d{12,}|AEG?\d{10,}|CN[A-Z0-9]{10,}|70\d{15}|3707\d{14}|00370\d{15}|JJD\d{10,}|JVGL\w{8,}|1Z[0-9A-Z]{16}|HH\d{8,}|BB[A-Z0-9]{8,}|IB[A-Z0-9]{8,})\b/g;
 const LABELLED = /(?:sporingsnummer|sendingsnummer|kollinummer|tracking (?:number|id|no\.?)|sporings-?id)\s*[:#]?\s*([A-Z0-9][A-Z0-9 -]{7,30}[A-Z0-9])/gi;
 export function findTrackingNumbers(text) {
   const t = String(text ?? '');
@@ -176,7 +185,8 @@ export const PN_WEB_MS = 15 * 60_000;
 const pnWebCache = new Map(); // nummer → { at, value }
 const pnBlock = { until: 0, ms: 0 }; // backoff ved 401/403/429
 const pnHealth = { ok: null, lastOkAt: null, lastErrorAt: null, lastError: null, shapeOk: true, shapeErrorAt: null, notifiedAt: 0, calls: 0, blockedUntil: null };
-export const _clearPostnordWebCache = () => { pnWebCache.clear(); pnBlock.until = 0; pnBlock.ms = 0; };
+export const _clearPostnordWebCache = () => { pnWebCache.clear(); pnBlock.until = 0; pnBlock.ms = 0; pnVariantOk.clear(); pnFails.clear(); };
+const pnFails = new Map(); // prompt 42: nummer → antall mislykkede PostNord-forsøk på rad (reserve etter 2)
 const txt = (v) => (v == null ? '' : typeof v === 'string' ? v : typeof v === 'object' ? String(v.displayName ?? v.locationName ?? v.name ?? v.header ?? v.text ?? v.city ?? '') : String(v));
 let pnAdminNotify = null;
 /** Bare for tester/oppstart: (tekst) → varsler admin. */
@@ -194,41 +204,81 @@ function shapeChanged(why) {
 export const postnordHealth41 = () => ({ endpoint: POSTNORD_WEB_URL, unofficial: true, ...pnHealth, blockedUntil: pnBlock.until > Date.now() ? new Date(pnBlock.until).toISOString() : null,
   lastOkAt: pnHealth.lastOkAt ? new Date(pnHealth.lastOkAt).toISOString() : null, lastErrorAt: pnHealth.lastErrorAt ? new Date(pnHealth.lastErrorAt).toISOString() : null,
   shapeErrorAt: pnHealth.shapeErrorAt ? new Date(pnHealth.shapeErrorAt).toISOString() : null, text: pnBlock.until > Date.now() ? 'PostNord svarer ikke akkurat nå' : pnHealth.ok === false ? `Feil: ${pnHealth.lastError}` : 'OK · offentlig endepunkt' });
+/* Prompt 42: feilsøkingslogg per PostNord-kall (URL, headere, status, 500 tegn svar, variant, lag), bare for admin (GET /api/tracking/debug/:id). */
+const pnDebug = new Map(); // nummer → [kall]
+export function pnLog42(no, entry) {
+  const l = pnDebug.get(no) ?? [];
+  l.unshift({ at: new Date().toISOString(), ...entry });
+  pnDebug.set(no, l.slice(0, 30));
+  if (pnDebug.size > 300) pnDebug.delete(pnDebug.keys().next().value);
+}
+export const pnDebugOf42 = (no) => pnDebug.get(normNo(no)) ?? [];
+export const PN_HEADERS42 = { 'x-bap-key': POSTNORD_BAP_KEY, Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+  Origin: 'https://www.postnord.no', Referer: 'https://www.postnord.no/' };
+const pnVariantOk = new Map(); // nummer → varianten som virket sist
+/** Nummervarianter i rekkefølge: slik det står (locale en, som ha-postnord) → locale no → uten ledende 00 (SSCC 20 → 18 sifre) → som itemId → som shipmentId. */
+export function pnVariants42(no) {
+  const v = [{ label: 'slik det står · en', id: no, locale: 'en' }, { label: 'slik det står · no', id: no, locale: 'no' }];
+  if (/^00\d{18}$/.test(no)) v.push({ label: 'uten 00 · en', id: no.slice(2), locale: 'en' });
+  v.push({ label: 'itemId · en', id: no, locale: 'en', param: 'itemId' }, { label: 'shipmentId · en', id: no, locale: 'en', param: 'shipmentId' });
+  const ok = pnVariantOk.get(no);
+  return ok ? [v.find((x) => x.label === ok), ...v.filter((x) => x.label !== ok)].filter(Boolean) : v;
+}
+const pnUrl = (v) => `${POSTNORD_WEB_URL}?${v.param ?? 'id'}=${encodeURIComponent(v.id)}&locale=${v.locale}`;
 export async function postnordWeb(no) {
   const hit = pnWebCache.get(no);
   if (hit && Date.now() - hit.at < PN_WEB_MS) return hit.value;
-  if (pnBlock.until > Date.now()) throw new CarrierError('PostNord svarer ikke akkurat nå', 429);
-  pnHealth.calls++;
-  let res;
-  try {
-    res = await fetch(`${POSTNORD_WEB_URL}?id=${encodeURIComponent(no)}&locale=en`, {
-      headers: { 'x-bap-key': POSTNORD_BAP_KEY, Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (homelab-os)' }, signal: AbortSignal.timeout(TIMEOUT) });
-  } catch (e) { pnHealth.ok = false; pnHealth.lastError = e.message; pnHealth.lastErrorAt = Date.now(); throw new CarrierError(`PostNord (offentlig) svarte ikke: ${e.message}`); }
-  if ([401, 403, 429].includes(res.status)) {
-    pnBlock.ms = Math.min(6 * 3600_000, pnBlock.ms ? pnBlock.ms * 2 : 2 * PN_WEB_MS); pnBlock.until = Date.now() + pnBlock.ms;
-    pnHealth.ok = false; pnHealth.lastError = `HTTP ${res.status}`; pnHealth.lastErrorAt = Date.now();
-    throw new CarrierError('PostNord svarer ikke akkurat nå', res.status);
-  }
-  if (!res.ok) { pnHealth.ok = false; pnHealth.lastError = `HTTP ${res.status}`; pnHealth.lastErrorAt = Date.now(); throw new CarrierError(`PostNord (offentlig) svarte ${res.status}`, res.status === 404 ? 404 : res.status); }
-  let d;
-  try { d = JSON.parse(await res.text()); } catch { pnHealth.ok = false; pnHealth.lastError = 'ikke JSON'; pnHealth.lastErrorAt = Date.now(); shapeChanged('ikke JSON'); throw new CarrierError('PostNord (offentlig) svarte ikke med JSON'); }
-  pnBlock.ms = 0;
-  if (!d || typeof d !== 'object') { shapeChanged('ikke et JSON-objekt'); throw new CarrierError('PostNord (offentlig): uventet svar'); }
-  const env = d.TrackingInformationResponse;
-  if (!env && !Array.isArray(d.shipments) && !Array.isArray(d.items)) shapeChanged('mangler TrackingInformationResponse');
-  else pnHealth.shapeOk = true;
-  pnHealth.ok = true; pnHealth.lastOkAt = Date.now();
-  const list = env ? env.shipments : d.shipments;
-  if (env && (!Array.isArray(list) || !list.length)) {
-    // Ikke skannet ennå (eller ukjent nummer): vanlig tilstand, ingen feil.
-    const value = { status: 'unknown', canonical: 'unknown', notScanned: true, statusText: 'Ikke skannet ennå', rawStatus: null, eta: null, pickupPoint: null, pickup: null, events: [], via: 'postnord-web', source: 'postnord-web', unofficial: true };
+  if (pnBlock.until > Date.now()) { pnLog42(no, { layer: 'backend', error: 'venter (backoff etter 403/429)', variant: null }); throw new CarrierError('PostNord svarer ikke akkurat nå', 429); }
+  let empty = null, notFound = false;
+  for (const v of pnVariants42(no)) {
+    pnHealth.calls++;
+    const url = pnUrl(v), t0 = Date.now();
+    let res, body = '';
+    try {
+      res = await fetch(url, { headers: PN_HEADERS42, signal: AbortSignal.timeout(TIMEOUT) });
+      body = await res.text();
+    } catch (e) {
+      pnHealth.ok = false; pnHealth.lastError = e.message; pnHealth.lastErrorAt = Date.now();
+      pnLog42(no, { layer: 'PostNord', url, headers: { ...PN_HEADERS42 }, status: null, body: null, variant: v.label, ms: Date.now() - t0, error: e.message });
+      throw new CarrierError(`PostNord svarer ikke akkurat nå (${e.message})`, 503);
+    }
+    pnLog42(no, { layer: 'PostNord', url, headers: { ...PN_HEADERS42 }, status: res.status, body: body.slice(0, 500), variant: v.label, ms: Date.now() - t0 });
+    if ([401, 403, 429].includes(res.status)) {
+      pnBlock.ms = Math.min(6 * 3600_000, pnBlock.ms ? pnBlock.ms * 2 : 2 * PN_WEB_MS); pnBlock.until = Date.now() + pnBlock.ms;
+      pnHealth.ok = false; pnHealth.lastError = `HTTP ${res.status}`; pnHealth.lastErrorAt = Date.now();
+      throw new CarrierError('PostNord svarer ikke akkurat nå', res.status);
+    }
+    if (res.status === 404) { notFound = true; continue; }
+    if (!res.ok) { pnHealth.ok = false; pnHealth.lastError = `HTTP ${res.status}`; pnHealth.lastErrorAt = Date.now(); throw new CarrierError('PostNord svarer ikke akkurat nå', res.status >= 500 ? 503 : res.status); }
+    let d;
+    try { d = JSON.parse(body); } catch { pnHealth.ok = false; pnHealth.lastError = 'ikke JSON'; pnHealth.lastErrorAt = Date.now(); shapeChanged('ikke JSON'); throw new CarrierError('PostNord (offentlig) svarte ikke med JSON'); }
+    pnBlock.ms = 0;
+    if (!d || typeof d !== 'object') { shapeChanged('ikke et JSON-objekt'); throw new CarrierError('PostNord (offentlig): uventet svar'); }
+    const env = d.TrackingInformationResponse;
+    if (!env && !Array.isArray(d.shipments) && !Array.isArray(d.items)) shapeChanged('mangler TrackingInformationResponse');
+    else pnHealth.shapeOk = true;
+    pnHealth.ok = true; pnHealth.lastOkAt = Date.now();
+    const list = env ? env.shipments : d.shipments;
+    if (env && (!Array.isArray(list) || !list.length)) {
+      // Ikke skannet ennå (eller ukjent nummer): vanlig tilstand, ingen feil. Prøv neste variant først.
+      empty = { status: 'unknown', canonical: 'unknown', notScanned: true, statusText: 'Ikke skannet ennå', rawStatus: null, eta: null, pickupPoint: null, pickup: null, events: [], via: 'postnord-web', source: 'postnord-web', unofficial: true, variant: v.label };
+      continue;
+    }
+    const value = pnParse(d, list);
+    if (!value) { notFound = true; continue; }
+    value.variant = v.label;
+    pnVariantOk.set(no, v.label);
     pnWebCache.set(no, { at: Date.now(), value });
     return value;
   }
+  if (empty) { pnWebCache.set(no, { at: Date.now(), value: empty }); return empty; }
+  throw new CarrierError(notFound ? 'Fant ikke nummeret hos PostNord' : 'PostNord (offentlig) fant ikke sendingen', 404);
+}
+function pnParse(d, list) {
   const sh = list?.[0] ?? d;
   const items = Array.isArray(sh?.items) ? sh.items : [];
   const rawEvents = items.flatMap((it) => (Array.isArray(it?.events) ? it.events : []));
-  if (!items.length && !rawEvents.length && !sh.status) throw new CarrierError('PostNord (offentlig) fant ikke sendingen', 404);
+  if (!items.length && !rawEvents.length && !sh.status) return null;
   const dated = rawEvents.map((e) => ({ e, t: Date.parse(e.eventTime ?? e.timestamp ?? '') || 0 })).sort((a, b) => b.t - a.t);
   const events = dated.map(({ e }) => ev(e.eventTime ?? e.timestamp, txt(e.eventDescription ?? e.description ?? e.status), txt(e.location)));
   const code = sh.status ?? items[0]?.status ?? sh.statusText?.status ?? null;
@@ -247,10 +297,8 @@ export async function postnordWeb(no) {
   const eta = status !== 'delivered' && etaRaw && /^\d{4}-\d{2}-\d{2}/.test(String(etaRaw)) ? String(etaRaw).slice(0, 10) : null;
   const deadlineRaw = sh.returnDate ?? items[0]?.returnDate ?? dpObj?.lastPickupDate ?? null;
   const deadline = deadlineRaw && /^\d{4}-\d{2}-\d{2}/.test(String(deadlineRaw)) ? String(deadlineRaw).slice(0, 10) : null;
-  const value = { status, canonical: canonical41(status), rawStatus: head || (typeof code === 'string' ? code : null), eta, etaWindow: etaRaw ? { from: String(etaRaw), to: sh.estimatedTimeOfArrivalTo ?? null } : null,
+  return { status, canonical: canonical41(status), rawStatus: head || (typeof code === 'string' ? code : null), eta, etaWindow: etaRaw ? { from: String(etaRaw), to: sh.estimatedTimeOfArrivalTo ?? null } : null,
     pickupPoint: pp || null, pickup: status === 'ready_for_pickup' && pp ? { name: pp, deadline, ...(addr ? { address: addr } : {}) } : null, events, via: 'postnord-web', source: 'postnord-web', unofficial: true };
-  pnWebCache.set(no, { at: Date.now(), value });
-  return value;
 }
 
 // DHL Shipment Tracking – Unified (developer.dhl.com). Header DHL-API-Key.
@@ -342,9 +390,43 @@ async function parcelsapp(no, hint = null) {
     ...(shopRaw ? { shop: isDom ? '' : shopRaw.slice(0, 60), shopDomain: isDom ? shopRaw.toLowerCase().replace(/^www\./, '') : (String(sh.shop?.domain ?? '').toLowerCase() || '') } : {}) };
 }
 
-const CLIENT = { posten: bring, bring, postnord, dhl, ups };
+// Prompt 42: AliExpress / Cainiao – offentlig sporing uten innlogging (som HA_aliexpress_package_tracker_sensor), fra serveren, cache 30 min.
+export const CAINIAO_URL = 'https://global.cainiao.com/global/detail.json';
+const cnCache = new Map();
+export const _clearCainiaoCache = () => cnCache.clear();
+/** Cainiao-/AliExpress-tekst → våre 5 steg. */
+export function cainiaoStatus42(text) {
+  const t = String(text ?? '').toLowerCase();
+  if (/delivered|signed|levert/.test(t) && !/out for delivery|undelivered/.test(t)) return 'delivered';
+  if (/pickup point|ready for (collection|pickup)|arrived at (the )?pick|klar for henting|awaiting collection/.test(t)) return 'ready_for_pickup';
+  if (/out for delivery/.test(t)) return 'out_for_delivery';
+  if (/export|customs|in transit|departed|arrived at destination|destination country|import|transit|hub|sorting|linehaul|flight/.test(t)) return 'in_transit';
+  if (/accepted by carrier|picked up|received by|departed warehouse|left the warehouse|collected/.test(t)) return 'picked_up';
+  if (/order placed|waiting for pickup|seller shipped|shipping label|created|pre-advice|awaiting/.test(t)) return 'registered';
+  return 'unknown';
+}
+const LOCAL_NO = /\b([A-Z]{2}\d{9}NO|00370\d{15}|70\d{15}|3707\d{14}|[A-Z]{2}\d{9}(?:SE|DK|FI))\b/;
+async function cainiao(no) {
+  const hit = cnCache.get(no);
+  if (hit && Date.now() - hit.at < 30 * 60_000) return hit.value;
+  const d = await getJson(`${CAINIAO_URL}?mailNos=${encodeURIComponent(no)}&lang=en-US&language=en-US`, { headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (homelab-os)' } });
+  const m = Array.isArray(d?.module) ? d.module[0] : d?.data?.[0] ?? null;
+  if (!m) throw new CarrierError('Cainiao har ikke data for nummeret ennå', 404);
+  const list = m.detailList ?? m.details ?? m.section2?.detailList ?? [];
+  const events = list.map((e) => ev(e.time ?? e.timeStr ?? e.eventTime, e.standerdDesc ?? e.desc ?? e.description, e.group?.nodeDesc ?? e.location ?? ''));
+  if (!events.length && !m.statusDesc && !m.status) throw new CarrierError('Cainiao har ikke data for nummeret ennå', 404);
+  const local = list.map((e) => `${e.desc ?? ''} ${e.standerdDesc ?? ''}`.match(LOCAL_NO)?.[1]).find(Boolean) ?? m.destCpInfo?.mailNo ?? null;
+  const localNo = local && normNo(local) !== no ? normNo(local) : null;
+  const value = { status: cainiaoStatus42(m.statusDesc ?? m.status ?? events[0]?.status), rawStatus: m.statusDesc ?? null, eta: m.globalEtaInfo?.deliveryMinTime ? String(m.globalEtaInfo.deliveryMinTime).slice(0, 10) : null,
+    pickupPoint: null, events, via: 'cainiao', source: 'cainiao', ...(localNo ? { localNo, localCarrier: detect(localNo) } : {}) };
+  cnCache.set(no, { at: Date.now(), value });
+  return value;
+}
+
+const CLIENT = { posten: bring, bring, postnord, dhl, ups, aliexpress: cainiao };
 export const configured = {
   posten: () => !!(trkCfg('mybringUid') && trkCfg('mybringKey')), bring: () => !!(trkCfg('mybringUid') && trkCfg('mybringKey')),
+  aliexpress: () => true, // prompt 42: Cainiao krever ingen nøkkel
   postnord: () => !!trkCfg('postnordKey'), dhl: () => !!trkCfg('trk_dhl_key'), ups: () => !!(trkCfg('trk_ups_id') && trkCfg('trk_ups_secret')), other: () => !!trkCfg('trk_17_key'),
 };
 export const isConfigured = (carrier) => (configured[carrier] ?? configured.other)();
@@ -359,7 +441,8 @@ export function missingKeyText(carrier) {
 // (bare når allowParcelsapp er satt, dvs. når brukeren selv ber om status).
 // override (prompt 26): transportøren brukeren har valgt. «parcelsapp» går rett til ParcelsApp med hint (gjenkjent transportør);
 // et selskap med egen klient (Posten/Bring, PostNord, DHL, UPS) bruker sitt API først, ellers reservene med selskapet som hint.
-export async function fetchStatus(carrier, no, { allowParcelsapp = false, override = null, hint = null } = {}) {
+export async function fetchStatus(carrier, no, { allowParcelsapp: allow0 = false, override = null, hint = null } = {}) {
+  let allowParcelsapp = allow0;
   const n = normNo(no);
   if (override === 'parcelsapp') {
     if (!trkCfg('trk_parcelsapp_key')) throw new CarrierError('Mangler API-nøkkel for ParcelsApp');
@@ -367,18 +450,27 @@ export async function fetchStatus(carrier, no, { allowParcelsapp = false, overri
   }
   if (override && override !== carrier) carrier = override;
   const own = CLIENT[carrier];
-  let err = null;
+  let err = null, err404 = null;
   // Selskapets eget API først. Feiler det (ikke «fant ikke»), prøves reservene (prompt 22).
   if (own && isConfigured(carrier)) {
     try { return await own(n); } catch (e) { if (e.status === 404 || !(isConfigured('other') || (allowParcelsapp && trkCfg('trk_parcelsapp_key')))) throw e; err = e; }
   }
   // PostNord uten nøkkel: den offentlige sporingssiden (uoffisielt). Feil logges stille, og reservene prøves.
   if (carrier === 'postnord' && !isConfigured('postnord')) {
-    try { return await postnordWeb(n); } catch (e) { console.debug?.(`[sporing] postnord-web: ${e.message}`); err ??= e.status === 404 ? null : e; }
+    try { const r = await postnordWeb(n); pnFails.delete(n); return r; } catch (e) {
+      console.debug?.(`[sporing] postnord-web: ${e.message}`); err ??= e.status === 404 ? null : e; if (e.status === 404) err404 = e;
+      // Prompt 42: etter 2 mislykkede PostNord-forsøk prøves ParcelsApp (nøkkel/kvote) og 17TRACK automatisk, også i bakgrunnen.
+      const nf = (pnFails.get(n) ?? 0) + 1; pnFails.set(n, nf);
+      if (nf >= 2) allowParcelsapp = true;
+    }
   }
-  if (isConfigured('other')) { try { return await track17(n); } catch (e) { err ??= e; } }
+  if (allowParcelsapp && carrier === 'postnord' && trkCfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) {
+    try { return { ...(await parcelsapp(n, 'postnord')), viaLabel: 'via ParcelsApp' }; } catch (e) { err ??= e; }
+  }
+  if (isConfigured('other')) { try { const r = await track17(n); return carrier === 'postnord' ? { ...r, via: r.via ?? '17track', viaLabel: 'via 17TRACK' } : r; } catch (e) { err ??= e; } }
   if (allowParcelsapp && trkCfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) return parcelsapp(n, override ? carrier : hint ?? carrier);
   if (err) throw err;
+  if (err404) throw err404;
   throw new CarrierError(own ? `Mangler nøkkel for ${CARRIER[carrier]?.name ?? carrier}` : 'Ingen nøkkel for 17TRACK eller ParcelsApp (reserve)');
 }
 

@@ -156,8 +156,9 @@ const CUSTOM_ID = /^c-[0-9a-f]{10}$/;
 const MAX_CUSTOM = 20;
 const PREF_DEFAULTS = { defaultCalendar: 'personlig', defaultReminder: '1h', weekNumbers: true, weather: true, theme: 'system',
   // Prompt 35: Innstillinger nederst i sidemenyen.
-  weekStart: 'mon', openView: 'mnd', defaultDuration: 60, timelineStart: 'now', notifyBirthdays: true, notifyDeadlines: true, notifyBrief: true, travelTime: false };
-const PREF_ENUM = { weekStart: ['mon', 'sun'], openView: ['mnd', 'uke', '3d', 'dag', 'liste'], timelineStart: ['now', '06', '08'] };
+  weekStart: 'mon', openView: 'mnd', defaultDuration: 60, timelineStart: 'now', notifyBirthdays: true, notifyDeadlines: true, notifyBrief: true, travelTime: false,
+  notifySubscriptions: 'prove-arlige' }; // prompt 42: Abonnementer-kalenderen (av | dagen-for | prove-arlige)
+const PREF_ENUM = { weekStart: ['mon', 'sun'], openView: ['mnd', 'uke', '3d', 'dag', 'liste'], timelineStart: ['now', '06', '08'], notifySubscriptions: ['av', 'dagen-for', 'prove-arlige'] };
 
 const store = (user) => { const v = kv.get(user, 'kal33_cals', null); return v && typeof v === 'object' ? { builtin: v.builtin ?? {}, custom: Array.isArray(v.custom) ? v.custom : [], prefs: v.prefs ?? {} } : { builtin: {}, custom: [], prefs: {} }; };
 const saveStore = (user, s) => kv.set(user, 'kal33_cals', s);

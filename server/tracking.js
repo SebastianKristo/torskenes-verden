@@ -16,7 +16,7 @@ import { userGuard, readJson, bad, str, MOCK, aiJson } from './homeos-common.js'
 import * as mailMod from './finans/mail.js';
 import { scanShippingMails, mailConfig, mailText } from './finans/mail.js';
 import { stageOf } from './finans/finn-routes.js';
-import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage, FINAL, missingKeyText, canonical41 } from './tracking-carriers.js';
+import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage, FINAL, missingKeyText, canonical41, carrierId42 } from './tracking-carriers.js';
 import { broadcast } from './realtime.js';
 import { matchMerchant, itemForDomain, filePath as logoFile, isManual } from './logos/match.js';
 
@@ -58,7 +58,9 @@ if (!db.prepare('PRAGMA table_info(hl_shipments)').all().some((c) => c.name === 
 // Prompt 22: datoen på e-posten (gamle e-poster går rett i Arkiv), siste vellykkede oppslag og frist på hentestedet. Idempotent.
 // Prompt 26: carrier_override = transportøren brukeren har valgt (null = automatisk gjenkjent, som i carrier).
 // Prompt 41: raw_status = transportørens egen statustekst (PostNord statusText.header), not_scanned = «Ikke skannet ennå».
-for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['pickup_deadline', 'TEXT'], ['carrier_override', 'TEXT'], ['raw_status', 'TEXT'], ['not_scanned', 'INTEGER']]) {
+for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['pickup_deadline', 'TEXT'], ['carrier_override', 'TEXT'], ['raw_status', 'TEXT'], ['not_scanned', 'INTEGER'],
+  // Prompt 42: AliExpress (ordre, varer, e-post-UID, lokalt nummer hos norsk transportør) og kilden som sist ga data («via ParcelsApp»).
+  ['local_no', 'TEXT'], ['local_carrier', 'TEXT'], ['order_id', 'TEXT'], ['items', 'TEXT'], ['mail_uid', 'TEXT'], ['via', 'TEXT']]) {
   if (!db.prepare('PRAGMA table_info(hl_shipments)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE hl_shipments ADD COLUMN ${col} ${type}`);
 }
 
@@ -243,6 +245,14 @@ function timelineOf(r, labels, step, events) {
   });
 }
 
+/** Prompt 42: årsaken i stedet for «Kunne ikke oppdatere» (PostNord). */
+export function pnErrorText42(err, retry) {
+  const e = String(err ?? '');
+  if (/krever nøkkel|nøkkelen ble avvist|\b40[13]\b/i.test(e) && !/svarer ikke/i.test(e)) return 'PostNord krever nøkkel for dette oppslaget. Legg inn nøkkel under Integrasjoner eller bruk ParcelsApp.';
+  if (/fant ikke/i.test(e)) return 'Fant ikke nummeret hos PostNord. Sjekk nummeret eller velg en annen transportør.';
+  if (/ikke skannet/i.test(e)) return `Ikke skannet hos PostNord ennå.${retry ? ` Prøver igjen ${retry}.` : ''}`;
+  return `PostNord svarer ikke akkurat nå.${retry ? ` Prøver igjen ${retry}.` : ''}`;
+}
 function view(r0) {
   const r = { ...r0, carrier: carrierOf(r0) }; // logo, lenke og navn følger valgt transportør
   const c = CARRIER[r.carrier] ?? CARRIER.other;
@@ -257,7 +267,8 @@ function view(r0) {
   const step = stepOf(r.status);
   const next = nextCheckAt(r);
   // Feil fra API-et: «Kunne ikke oppdatere · prøver igjen 20:15». Uten et eneste vellykket oppslag er statusen ikke bekreftet.
-  const updateError = r.last_error ? { text: next ? `Kunne ikke oppdatere · prøver igjen ${hhmm(Math.max(next, now()))}` : 'Kunne ikke oppdatere', reason: r.last_error, retryAt: next ? new Date(Math.max(next, now())).toISOString() : null } : null;
+  const retry = next ? hhmm(Math.max(next, now())) : null;
+  const updateError = r.last_error ? { text: carrierOf(r0) === 'postnord' ? pnErrorText42(r.last_error, retry) : next ? `Kunne ikke oppdatere · prøver igjen ${retry}` : 'Kunne ikke oppdatere', reason: r.last_error, retryAt: next ? new Date(Math.max(next, now())).toISOString() : null } : null;
   return {
     id: r.id, trackingNo: r.tracking_no, carrier: r.carrier, ...carrierInfo(r0), carrierName: c.name, carrierIni: c.ini, carrierColor: c.color, carrierFg: c.fg, carrierLogo: c.manual ? logo.kind === 'carrier' ? logo.svg : logo.carrierLogo?.svg ?? null : c.logo,
     name: packageTitle(r), title: packageTitle(r), shop: r.shop, shopDomain: shopDomainFor(r.shop, r.shop_domain) || null, logo, source: r.source, sourceRef: r.source_ref, sourceNote: r.source_note,
@@ -268,7 +279,13 @@ function view(r0) {
     noEtaText: status === 'registered' && !r.eta ? 'Ingen leveringsdato ennå' : null,
     archived: !!r.archived, delayed: status === 'delayed', updatedAt: r.updated_at, checkedAt: r.checked_at, nextCheckAt: next ? new Date(next).toISOString() : null,
     rawStatus: r.raw_status ?? null, canonicalStatus: canonical41(status), notScanned: !!r.not_scanned, ...(r.not_scanned ? { notScannedText: 'Ikke skannet ennå' } : {}), // prompt 41
-    lastError: r.last_error, url: trackUrl(r.carrier, r.tracking_no), keyed: isConfigured(r.carrier), keyMissing: missingKeyText(r.carrier), events: events.map(({ ts, status: st, location }) => ({ ts, status: st, location })),
+    lastError: r.last_error, url: trackUrl(r.carrier, r.tracking_no), keyed: isConfigured(r.carrier), keyMissing: missingKeyText(r.carrier),
+    // Prompt 42: de interne linjene («Spores via …») vises ikke i hendelseslista (de ligger i «Detaljer for feilsøking»).
+    events: events.filter((e) => !/^Spores (nå )?via /.test(e.status)).map(({ ts, status: st, location }) => ({ ts, status: st, location })),
+    via: r.via ?? null, viaLabel: r.via === 'parcelsapp' ? 'via ParcelsApp' : r.via === '17track' ? 'via 17TRACK' : r.via === 'cainiao' ? 'via Cainiao' : r.via === 'postnord-web' ? 'via PostNord' : null,
+    ...(r.local_no ? { localNo: r.local_no, localCarrier: r.local_carrier, localCarrierName: CARRIER[r.local_carrier]?.name ?? null } : {}),
+    ...(r.carrier === 'aliexpress' || r.order_id ? { orderId: r.order_id ?? null, items: (() => { try { return JSON.parse(r.items ?? '[]'); } catch { return []; } })(),
+      orderUrl: r.order_id ? `https://www.aliexpress.com/p/order/detail.html?orderId=${r.order_id}` : null, cainiaoUrl: `https://global.cainiao.com/detail.htm?mailNoList=${encodeURIComponent(r.tracking_no)}` } : {}),
   };
 }
 const byId = (id) => q('SELECT * FROM hl_shipments WHERE id=?').get(id);
@@ -304,7 +321,7 @@ const mineById = (u, id) => q('SELECT * FROM hl_shipments WHERE id=? AND user_id
 export function upsertShipment({ user = OWNER, trackingNo, carrier, carrierOverride = null, name = '', shop = '', shopDomain = '', source = 'manual', sourceRef = null, sourceNote = '', direction = 'in', status, eta = null, pickupPoint = null, sourceDate = null }) {
   const no = normNo(trackingNo);
   if (no.length < 6 || no.length > 40) throw new Error('Ugyldig sporingsnummer');
-  const car = CARRIER[carrier] ? carrier : detect(no);
+  const car = CARRIER[carrier] ? carrier : carrierId42(carrier) ?? detect(no); // prompt 42: «POSTNORD», «PostNord AB» → postnord
   const ex = q('SELECT * FROM hl_shipments WHERE tracking_no=? AND user_id=?').get(no, user);
   if (ex) {
     q(`UPDATE hl_shipments SET name=CASE WHEN name='' THEN ? ELSE name END, shop=CASE WHEN shop='' THEN ? ELSE shop END,
@@ -343,6 +360,7 @@ function applyResult(r, res, { api = false } = {}) {
   q(`UPDATE hl_shipments SET status=?, eta=COALESCE(?, eta), pickup_point=COALESCE(?, pickup_point), pickup_deadline=COALESCE(?, pickup_deadline), last_error=NULL, checked_at=?,
       ok_at=CASE WHEN ? THEN ? ELSE ok_at END, updated_at=CASE WHEN status<>? THEN ? ELSE updated_at END WHERE id=?`)
     .run(status, res.eta ?? null, res.pickupPoint ?? res.pickup?.name ?? null, res.pickup?.deadline ?? null, now(), api ? 1 : 0, now(), status, now(), r.id);
+  if (res.via || res.localNo) q('UPDATE hl_shipments SET via=COALESCE(?, via), local_no=COALESCE(?, local_no), local_carrier=COALESCE(?, local_carrier) WHERE id=?').run(res.via ?? null, res.localNo ?? null, res.localCarrier ?? null, r.id); // prompt 42
   if ('rawStatus' in res || 'notScanned' in res) q('UPDATE hl_shipments SET raw_status=COALESCE(?, raw_status), not_scanned=? WHERE id=?').run(res.rawStatus ?? null, res.notScanned ? 1 : 0, r.id); // prompt 41
   pushChange41(r, status, res);
   archiveIfOld(byId(r.id));
@@ -371,7 +389,15 @@ async function refresh(r, { allowParcelsapp = false } = {}) {
   // ParcelsApp har bare 3 oppslag i måneden: valgt ParcelsApp spores når du selv ber om det (ny, «Spor via», «Oppdater»), ikke i bakgrunnen.
   if (o === 'parcelsapp' && !allowParcelsapp) { q('UPDATE hl_shipments SET checked_at=? WHERE id=?').run(now(), r.id); return false; }
   const opts = { allowParcelsapp, ...(o ? { override: o, hint: r.carrier } : {}) };
-  try { applyResult(r, await fetchStatus(carrierOf(r), r.tracking_no, opts), { api: true }); return true; }
+  try {
+    let res = await fetchStatus(carrierOf(r), r.tracking_no, opts);
+    // Prompt 42: AliExpress → norsk transportør. Når Cainiao har gitt et lokalt nummer, spores det videre der (hentested, «Klar for henting»).
+    const local = res.localNo ?? r.local_no;
+    if (carrierOf(r) === 'aliexpress' && local && !['delivered'].includes(res.status)) {
+      try { const lr = await fetchStatus(res.localCarrier ?? r.local_carrier ?? detect(local), local, { allowParcelsapp }); res = { ...lr, events: [...(lr.events ?? []), ...(res.events ?? [])], localNo: local, localCarrier: res.localCarrier ?? r.local_carrier ?? detect(local), via: lr.via ?? res.localCarrier }; } catch { /* Cainiao-statusen står */ }
+    }
+    applyResult(r, res, { api: true }); return true;
+  }
   catch (e) {
     // Ikke funnet hos transportøren etter 30 dager: regnes som levert og arkiveres (ikke aktiv «Registrert» for alltid).
     if (e.status === 404 && ageOf(r) > 30 * DAY_MS && !FINAL.includes(r.status)) {
@@ -463,6 +489,10 @@ async function scanMailFor(u) {
 
 // Én runde for én bruker: nye numre fra Finn og e-post, deretter status for aktive pakker som er «på tur».
 // Kjøres i brukerens kontekst, så transportørnøklene (cfg) er brukerens egne.
+let aliHook42 = null;
+/** Prompt 42: AliExpress-mappen skannes i samme runde (tracking42.js). */
+export const setAliHook42 = (fn) => { aliHook42 = fn; };
+export const trk42 = { refresh: (r, o) => refresh(r, o), byId: (id) => byId(id), view: (r) => view(r), addEvent: (...a) => addEvent(...a) };
 const running = new Map();
 function checkUser(u, { force = false } = {}) {
   if (running.has(u)) return running.get(u);
@@ -471,7 +501,10 @@ function checkUser(u, { force = false } = {}) {
     found += syncFinn(u);
     if (sources(u).email.on) {
       if (MOCK) found += mockMail(u);
-      else { mail = await scanMailFor(u).catch((e) => ({ ok: false, message: e.message })); found += mail?.found ?? 0; }
+      else {
+        mail = await scanMailFor(u).catch((e) => ({ ok: false, message: e.message })); found += mail?.found ?? 0;
+        if (aliHook42) { const a = await aliHook42(u).catch((e) => ({ ok: false, message: e.message })); found += a?.found ?? 0; } // prompt 42: mappen «AliExpress»
+      }
       setSource(u, 'email', { lastCheck: now(), ...(mail && !mail.ok ? { error: mail.message } : { error: null }) });
     }
     // Nye pakker (aldri sjekket) straks, ellers etter checkInterval (2 min slingringsmonn mot 15-minutters takten).

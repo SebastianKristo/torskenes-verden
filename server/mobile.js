@@ -144,6 +144,7 @@ const SCALAR = {
   appIcon: (v) => typeof v === 'string' && /^[\w.-]{1,40}$/.test(v),
   // Prompt 25: fanelinje-stil. text = navn på alle (ikon på valgt), icons = bare ikoner, icons_active_label = ikoner + navn på valgt.
   navStyle: (v) => NAV_STYLES.includes(v),
+  homeButton: (v) => ['standard', '1a', '1b', '1c', '1d'].includes(v), // prompt 42: Fanelinje → Hjem-knapp (synkes)
   appName: (v) => typeof v === 'string' && v.trim().length >= 1 && v.trim().length <= 20 && !/[<>\u0000-\u001f]/.test(v),
   // Prompt 26: Kalender per bruker. Kortrekkefølge og skjulte kort (rediger-modus), filtre, visning, påminnelser og fagfarger.
   // Kortene A–E som i designet (A Nå-kort, B Prøver og frister, C Kalendere-lenken, D Kalenderen, E Widgets).
@@ -820,12 +821,14 @@ export const designOf = (id) => {
   const l = layoutOf(id);
   const fresh = installKind() === 'papir';
   const trk = (l.trkOrder ?? []).filter((x) => TRK_CARDS.includes(x));
-  return { design: l.design ?? 'lys', compactNav: !!l.compactNav, hlTheme: l.hlTheme ?? (fresh ? '2c' : 'cur'), mobileDesign: l.mobileDesign ?? (fresh ? 'papir' : 'klassisk'),
+  // Prompt 42: de gamle designene er slettet – FinansHub v2 (design 'v2') blir Papir · lys, og «Klassisk» i appene blir Papir.
+  return { design: !l.design || l.design === 'v2' ? 'lys' : l.design, compactNav: !!l.compactNav, hlTheme: l.hlTheme ?? (fresh ? '2c' : 'cur'), mobileDesign: 'papir',
     paperMode: l.paperMode ?? 'auto', photo: l.photo ?? (fresh ? 'oslo' : 'cur'), onboarded: l.onboarded ?? !fresh, trkOrder: [...trk, ...TRK_CARDS.filter((x) => !trk.includes(x))],
     pages: l.pages ?? {}, finTabs: l.finTabs ?? FIN_TABS_DEFAULT, fourthTab: l.fourthTab ?? 'auto', fab: l.fab ?? 'float',
     tabBar: l.tabBar ?? null, tabBarDefault: TAB_BAR_DEFAULT, iconTheme: l.iconTheme ?? 'standard',
     bgType: l.bgType ?? l.photo ?? (fresh ? 'oslo' : 'cur'), bgPlanet: l.bgPlanet ?? 'auto', bgRotate: l.bgRotate ?? 'daily', bgBlur: l.bgBlur ?? 0, bgDim: l.bgDim ?? 0,
-    bgWifiOnly: !!l.bgWifiOnly, bgAnimate: l.bgAnimate ?? true, navStyle: NAV_STYLES.includes(l.navStyle) ? l.navStyle : 'text' };
+    bgWifiOnly: !!l.bgWifiOnly, bgAnimate: l.bgAnimate ?? true, navStyle: NAV_STYLES.includes(l.navStyle) ? l.navStyle : 'text',
+    homeButton: ['standard', '1a', '1b', '1c', '1d'].includes(l.homeButton) ? l.homeButton : 'standard' }; // prompt 42
 };
 
 const PHOTOS = join(config.dataDir, 'photo-window');

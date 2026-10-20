@@ -36,7 +36,7 @@ test('ny installasjon: Papir og onboarding; eksisterende beholder Nåværende og
   assert.deepEqual(g.trkOrder, ['add', 'shipments', 'notify', 'carriers']);
   kv.set(OWNER, 'install_kind', 'legacy');
   const d = designOf(OWNER);
-  assert.deepEqual([d.hlTheme, d.mobileDesign, d.onboarded, d.photo], ['cur', 'klassisk', true, 'cur']);
+  assert.deepEqual([d.hlTheme, d.mobileDesign, d.onboarded, d.photo], ['cur', 'papir', true, 'cur'] /* prompt 42: «Klassisk» er slettet og migreres til Papir */);
   kv.set(OWNER, 'install_kind', 'papir');
 });
 

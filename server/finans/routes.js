@@ -42,6 +42,7 @@ import { broadcast } from '../realtime.js';
 import { classify39, verify39, createAiCategory, categoryOut39, confirmOnBook39, nameSim, stepsOut39 } from './receipts39.js'; // prompt 39: kategori, sumkontroll, «✦ På nytt» med fremdrift
 import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } from '../ai-run.js'; // prompt 34: AI-kontroll → Jobber
 import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
+import { mailAddress42 } from './homes42.js'; // prompt 42
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -2004,7 +2005,7 @@ function folderOut(f, uid, full = false) {
     members: mem.map((m) => ({ id: m.id, userId: m.user_id, name: m.name, email: m.email, role: m.role, roleName: ROLES[m.role] ?? 'Kan redigere', you: m.user_id === uid, login: !!m.user_id })),
     total: entries.reduce((a, e) => a + e.amount, 0) / 100, yearTotal: yearTotal / 100, count: entries.length,
     budget: f.budget == null ? null : f.budget / 100, color: f.color ?? null, autoCat: f.auto_cat !== 0, notify: f.notify !== 0,
-    review: entries.filter((e) => e.status === 'review').length, ...backgroundOf(f) };
+    review: entries.filter((e) => e.status === 'review').length, ...backgroundOf(f), mailAddress: mailAddress42(f) }; // prompt 42: «Send fra e-post»
   if (!full) return out;
   out.canEdit = !!me && me.role !== 'viewer';
   out.isOwner = me?.role === 'owner';
@@ -2044,7 +2045,7 @@ function folderOut(f, uid, full = false) {
   const projects = q('SELECT * FROM fh_folder_projects WHERE folder_id=? ORDER BY id').all(f.id).map((p) => {
     const spent = entries.filter((e) => e.project_id === p.id).reduce((a, e) => a + e.amount, 0) / 100;
     const inst = q('SELECT * FROM fh_project_installments WHERE project_id=? ORDER BY sort, id').all(p.id);
-    return { id: p.id, name: p.name, vendor: p.vendor, category: p.category, color: colorOf(p.category) ?? FCAT[p.category] ?? '#FF7A3D', budget: p.budget / 100, spent, used: spent, paid: spent, remaining: p.budget / 100 - spent,
+    return { id: p.id, name: p.name, vendor: p.vendor, category: p.category, status: p.status ?? 'Pågår', ownColor: p.color ?? null, color: p.color ?? colorOf(p.category) ?? FCAT[p.category] ?? '#FF7A3D', budget: p.budget / 100, // prompt 42: status/farge spent, used: spent, paid: spent, remaining: p.budget / 100 - spent,
       installments: inst.map((x) => ({ id: x.id, label: x.label, due: x.due, amount: x.amount / 100, paid: !!x.paid_at, paidAt: x.paid_at })) };
   });
   out.projects = projects;
@@ -2752,3 +2753,6 @@ api.delete('/all', sessionOnly, async (c) => {
 });
 
 export default api;
+// Prompt 42 (SERVER42): transaksjonsformen og spørringen brukes av filteret i finans42.js.
+export const txOut42 = (t) => txOut(t);
+export const TX_SELECT42 = TX_SELECT;

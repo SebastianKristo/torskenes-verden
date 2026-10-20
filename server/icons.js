@@ -141,7 +141,8 @@ export async function suggestIcon(label, prefix = 'lucide') {
 const api = new Hono();
 api.use('*', (c, next) => authOrToken(c, next));
 const fail = (c, e) => c.json({ error: e.message ?? 'Feil' }, e.status ?? 500);
-const prefixOk = (p) => !p || (PREFIX_RE.test(p) && p.length <= 40);
+// Prompt 42: også flere sett samtidig («lucide,tabler»), som Iconify-API-et godtar.
+const prefixOk = (p) => !p || (p.length <= 80 && String(p).split(',').every((x) => PREFIX_RE.test(x) && x.length <= 40));
 
 api.get('/sets', (c) => c.json({ sets: SETS.map(([prefix, name]) => ({ prefix, name, color: COLOR_SETS.includes(prefix) })), colorSets: COLOR_SETS, defaults: ICON_DEFAULTS }, 200, { 'Cache-Control': 'private, max-age=3600' }));
 

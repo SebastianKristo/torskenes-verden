@@ -149,23 +149,30 @@ async function askAi(u, prompt, attempt) {
 }
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => { const t = setTimeout(() => rej(Object.assign(new Error('Tidsavbrudd'), { timeout: true })), ms); t.unref?.(); })]);
 /** → {items, engine:'glimt'|'lokal', engineLabel} */
+/** Prompt 42 (tasks-glimt42.js): liste-kontrakt {tasks:[…]}, ny prompt, lengdevakt og bedre lokal forhåndsdeling. */
+export const _hooks42 = { prompt: null, normalize: null, guard: null, local: null, log: null };
 export async function understand41(u, text, { lists = [], people = [], today = new Date().toISOString().slice(0, 10) } = {}) {
+  const log = { input_len: String(text ?? '').length, model: null, tasks_count: 0, parse_ok: false, path: 'local' };
+  const done = (r) => { log.tasks_count = r.items.length; if (r.engine === 'glimt') { log.path = 'ai'; log.model = r.engineLabel; } try { _hooks42.log?.(u, log); } catch { /* */ } return { ...r, log }; };
   if (needsAi41(text)) {
-    const prompt = prompt41(text, { lists, people: people.map((p) => p.first), today });
+    const prompt = _hooks42.prompt?.(text, { lists, people: people.map((p) => p.first), today }) ?? prompt41(text, { lists, people: people.map((p) => p.first), today });
     for (let attempt = 0; attempt <= AI_RETRIES41; attempt++) {
       try {
-        const j = await withTimeout(Promise.resolve(askAi(u, prompt, attempt)), (_ai41.ms ?? AI_MS41) + 2000);
+        let j = await withTimeout(Promise.resolve(askAi(u, attempt && _hooks42.prompt ? `${prompt}\nSvar kun med gyldig JSON.` : prompt, attempt)), (_ai41.ms ?? AI_MS41) + 2000);
+        if (_hooks42.normalize) j = _hooks42.normalize(j);
+        if (j) log.parse_ok = true;
+        if (_hooks42.guard && j && !_hooks42.guard(j)) continue; // lengdevakt: for lange titler / flere handlinger i én → nytt forsøk
         const ai = validateAi40(j, { lists, people });
         if (ai?.length) {
           const raw = Array.isArray(j.items) ? j.items : [];
           ai.forEach((x, i) => { const nt = raw[i]?.note; x.note = nt ? cap(String(nt).trim()).slice(0, 300) : null; x.n = fixWords(x.n); if (x.place) x.place = fixWords(String(x.place)); });
-          return { items: ai, engine: 'glimt', engineLabel: j._engine ?? 'Glimt AI' };
+          return done({ items: ai, engine: 'glimt', engineLabel: j._engine ?? 'Glimt AI' });
         }
       } catch { /* nytt forsøk */ }
     }
   }
-  const local = splitLocal41(text, today);
-  return { items: local, engine: 'lokal', engineLabel: 'Glimt · lokal (uten AI)' };
+  const local = _hooks42.local?.(text, today) ?? splitLocal41(text, today);
+  return done({ items: local, engine: 'lokal', engineLabel: 'Glimt · lokal (uten AI)' });
 }
 
 /* ---------------- Jobbene ---------------- */
@@ -181,7 +188,8 @@ function jobOut41(r) {
   if (!r) return null;
   const ids = parseJ(r.item_ids, []);
   const items = T ? ids.map((id) => T.byId(id)).filter(Boolean).map(T.itemOut) : [];
-  return { jobId: r.id, srcId: r.id, state: r.state, text: r.text, list: r.list ?? null, origin: r.origin, engine: r.engine ?? null, items, count: ids.length,
+  return { jobId: r.id, srcId: r.id, placeholderId: r.id, state: r.state, text: r.text, list: r.list ?? null, origin: r.origin, engine: r.engine ?? null, items, tasks: items, count: ids.length,
+    ...(r.state === 'done' && ids.length ? { undo: { token: r.id, method: 'POST', url: `/api/tasks/glimt/jobs/${r.id}/undo`, label: 'Angre' }, splitText: ids.length > 1 ? `Glimt delte beskjeden i ${ids.length} oppgaver` : null } : {}), // prompt 42
     ...(r.state === 'done' ? { message: doneText(ids.length, items) } : {}), ...(r.error ? { error: r.error } : {}), createdAt: iso(r.created_at), endedAt: iso(r.ended_at) };
 }
 const NUMW = ['null', 'ett', 'to', 'tre', 'fire', 'fem', 'seks', 'sju', 'åtte', 'ni', 'ti'];
@@ -292,6 +300,21 @@ export function mountGlimt41(api, helpers) {
     const u = c.get('user');
     const rows = q("SELECT * FROM huske_glimt_src WHERE user_id=? AND (state IN ('queued','running') OR id IN (SELECT id FROM huske_glimt_src WHERE user_id=? ORDER BY created_at DESC LIMIT 10)) ORDER BY created_at DESC").all(u, u);
     return c.json({ jobs: rows.map(jobOut41) });
+  });
+  // Prompt 42: én Angre for hele delingen – punktene jobben laget slettes, og én oppgave med originalteksten kommer tilbake.
+  api.post('/glimt/jobs/:id/undo', (c) => {
+    const u = c.get('user'), r = srcRow(c.req.param('id'));
+    if (!r || r.user_id !== u) return c.json({ error: 'Fant ikke jobben' }, 404);
+    if (r.state !== 'done') return c.json({ error: 'Glimt er ikke ferdig med beskjeden ennå' }, 409);
+    const ids = parseJ(r.item_ids, []);
+    let deleted = 0, listId = null;
+    for (const id of ids) { const t = byId(id); if (t && t.src_id === r.id) { listId ??= t.list_id ?? t.list ?? null; tq('DELETE FROM hl_tasks WHERE id=?').run(id); send(audienceOfTask(t), 'deleted', { id }); deleted++; } }
+    const row = add(u, { title: cap(r.text).slice(0, 200), list: r.list ?? listId ?? undefined });
+    const nr = byId(row.id);
+    send(audienceOfTask(nr), 'created', { item: itemOut(nr) });
+    q("UPDATE huske_glimt_src SET forgotten=1, state='undone' WHERE id=?").run(r.id);
+    emit(srcRow(r.id));
+    return c.json({ ok: true, deleted, restored: itemOut(nr), text: 'Angret · én oppgave med originalteksten' });
   });
   api.get('/glimt/jobs/:id', (c) => { const r = srcRow(c.req.param('id')); return r && r.user_id === c.get('user') ? c.json(jobOut41(r)) : c.json({ error: 'Fant ikke jobben' }, 404); });
   api.get('/glimt/sources', (c) => {

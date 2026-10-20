@@ -369,3 +369,5 @@ export function startMailWorker(deps) {
   }, 60_000);
   timer.unref?.();
 }
+// Prompt 42 (SERVER42): Sporing leser e-postmappen «AliExpress» med samme tilkobling (tracking42.js).
+export { cfgWith as mailCfg42, connect as mailConnect42 };

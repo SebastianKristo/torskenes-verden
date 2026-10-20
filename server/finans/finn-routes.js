@@ -4,6 +4,7 @@
 // - E-poster fra FINN, Posten/Bring, Tillit eller motparten kobles til handelen via Finn-koden, ordrenummer, sporingsnummer
 //   eller varenavnet (IMAP-arbeideren i mail.js kaller linkMail), og .eml kan legges ved manuelt.
 // - Stegene er faste: Betalt → Sendt → Mottatt → Godkjent ved kjøp, Solgt → Sendt → Levert → Utbetalt ved salg.
+import { adImages42, dropShared42, logFinn42, cleanStoredAds42 } from './finn42.js'; // prompt 42: riktige bilder per annonse
 import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile, unlink, rmdir } from 'node:fs/promises';
 import { join, resolve, extname } from 'node:path';
@@ -126,6 +127,7 @@ async function saveBuffer(f, buf, ext) {
   return rel;
 }
 const abs = (rel) => { const p = resolve(ROOT, rel); if (!p.startsWith(ROOT + '/')) throw new Error('Ugyldig sti'); return p; };
+if (process.env.NODE_ENV !== 'test') setTimeout(() => cleanStoredAds42(ROOT).then((r) => r.removed && console.log(`[finn] fjernet ${r.removed} felles bilder fra ${r.ads} annonser`)).catch(() => {}), 15_000).unref?.();
 
 /* ---------------- Annonsen (finn.no) ---------------- */
 
@@ -207,10 +209,9 @@ export function parseAdHtml(html, url) {
   for (const m of html.matchAll(/<dt[^>]*>([\s\S]{1,120}?)<\/dt>\s*<dd[^>]*>([\s\S]{1,400}?)<\/dd>/gi)) if (out.attrs.length < 20) attr(m[1].replace(/<[^>]+>/g, ' ').trim(), m[2]);
   out.attrs = out.attrs.slice(0, 20);
   if (out.price == null) { const t = textOf(html); out.price = num(t.match(/(?:pris|til salgs)\s*:?\s*([\d\s.]{3,})\s*kr/i)?.[1]); out.place ??= t.match(/(?:sted|område|lokasjon)\s*:?\s*([^\n]{3,60})/i)?.[1]?.trim() ?? null; }
-  // Samme bilde i flere størrelser: behold én per filnavn, største først (finncdn har størrelsen i stien).
-  const seen = new Map();
-  for (const src of out.images) { try { const u = new URL(src); if (!IMG_HOST.test(u.hostname)) continue; const key = u.pathname.split('/').pop(); const size = +(u.pathname.match(/\/(\d{3,4})(?:w|x\d+)?\//)?.[1] ?? 0); if (!seen.has(key) || seen.get(key).size < size) seen.set(key, { src: u.toString(), size }); } catch { /* ugyldig */ } }
-  out.images = [...seen.values()].map((x) => x.src).slice(0, 20);
+  // Prompt 42: bare bildene fra annonsen selv (__NEXT_DATA__ → JSON-LD → galleriet), største størrelse, uten reklame og og:image utenfor lista.
+  const ai42 = adImages42(html, out.code);
+  out.images = ai42.images; out.imageSource = ai42.source; out.imagesRejected = ai42.rejected;
   return out;
 }
 
@@ -288,6 +289,8 @@ export async function fetchAd(f, rawUrl) {
     ad = { title: ai?.title ?? parsed.title, price: ai?.price ?? parsed.price, place: ai?.place ?? parsed.place, description: ai?.description ?? parsed.description, code: parsed.code, attrs: parsed.attrs };
     if (!ad.title) throw Object.assign(new Error('Fant ikke annonsen på siden'), { status: 422 });
     ad.images = await downloadImages(f, parsed.images);
+    ad.images = await dropShared42(f, ad.images, ROOT); // prompt 42: bilder som går igjen i andre annonser vises ikke
+    logFinn42(parsed.code ?? f.finn_code, parsed.imageSource, ad.images.length, parsed.imagesRejected);
     lastFetch = Date.now(); // pausen regnes fra siste kall mot finn.no
   }
   const code = ad.code ?? url?.match(/(?:item\/|finnkode=)(\d{6,12})/)?.[1] ?? f.finn_code;

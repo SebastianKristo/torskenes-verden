@@ -632,7 +632,7 @@ function restoreDatabase(file) {
   db.pragma('foreign_keys = OFF');
   db.prepare('ATTACH DATABASE ? AS bk').run(file);
   try {
-    const tables = db.prepare("SELECT name FROM bk.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'fh\\_fts%' ESCAPE '\\'").pluck().all()
+    const tables = db.prepare("SELECT name FROM bk.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'fh\\_fts%' ESCAPE '\\' AND name NOT LIKE 'search\\_fts42%' ESCAPE '\\'").pluck().all() // prompt 42: FTS-indeksen bygges på nytt
       .filter((t) => !['sessions', 'devices'].includes(t));
     const mine = new Set(db.prepare("SELECT name FROM main.sqlite_master WHERE type='table'").pluck().all());
     db.transaction(() => {

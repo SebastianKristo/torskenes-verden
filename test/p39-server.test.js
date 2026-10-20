@@ -60,7 +60,7 @@ test('kalendere: standard bare fire (Personlig · Bursdager · Skole · Helligda
   const four = r.body.calendars.slice(0, 4);
   assert.deepEqual(four.map((c) => [c.id, c.key, c.color, c.source, c.badge]), [
     ['personlig', 'p', '#b23a2a', 'google', 'GOOGLE'], ['bursdager', 'b', '#8a3fa0', 'google', 'GOOGLE'], ['skole', 's', '#2f7a4f', 'url', 'URL'], ['helligdager', 'h', '#a39d90', 'builtin', 'INNEBYGD']]);
-  assert.equal(r.body.calendars.length, 4);
+  assert.equal(r.body.calendars.filter((c) => !c.virtual).length, 4); // prompt 42: + virtuelle Abonnementer
   const [p, b, s, h] = four;
   assert.equal(p.sourceLabel, 'Ikke koblet');
   assert.deepEqual([p.notify, b.notify, h.notify], [true, true, false]);
@@ -114,7 +114,7 @@ test('opprydding 12 → 4: egne duplikater og gamle id-er flyttes (ingenting sle
   kv.set(ingridId, 'kal33_evcal', { 'loc-a': 'jobb', 'loc-b': 'c-0123456789', 'loc-c': 'c-abcdefabcd', 'loc-d': 'helse', 'loc-e': 'c-1111111111' });
   const r = await I('/api/kalender/calendars');
   assert.equal(r.status, 200, r.text);
-  assert.deepEqual(r.body.calendars.map((c) => c.id), ['personlig', 'bursdager', 'skole', 'helligdager', 'c-abcdefabcd']);
+  assert.deepEqual(r.body.calendars.filter((c) => !c.virtual).map((c) => c.id), ['personlig', 'bursdager', 'skole', 'helligdager', 'c-abcdefabcd']);
   const m = r.body.migration;
   assert.deepEqual([m.done, m.from, m.to, m.moved], [true, 9, 5, 4]);
   assert.deepEqual(m.merged.map((x) => [x.name, x.into]), [['Studie 40', 'skole'], ['Personlig', 'personlig']]);
@@ -133,7 +133,7 @@ test('opprydding 12 → 4: egne duplikater og gamle id-er flyttes (ingenting sle
   assert.equal((await I('/api/kalender/calendars/migration/undo', 'POST')).status, 409);
   const again = await I('/api/kalender/calendars/migration', 'POST');
   assert.equal(again.body.migration.done, true);
-  assert.equal(again.body.calendars.length, 5);
+  assert.equal(again.body.calendars.filter((c) => !c.virtual).length, 5);
 });
 
 test('Google-velgeren «Hvilken kalender er hva?»: GET/PUT /api/kalender/google/mapping med forslag, forhåndsvisning og synk-jobb', async () => {
@@ -164,7 +164,7 @@ test('Google-velgeren «Hvilken kalender er hva?»: GET/PUT /api/kalender/google
   for (let i = 0; i < 50; i++) { const j = await A(`/api/kalender/google/mapping/jobs/${put.body.job.id}`); if (j.body.state !== 'running') { assert.equal(j.body.state, 'done', j.text); assert.equal(j.body.pct, 100); break; } await new Promise((res) => setTimeout(res, 20)); }
   const cals = (await A('/api/kalender/calendars')).body.calendars;
   assert.equal(cals.find((c) => c.id === 'personlig').sourceLabel, 'sebastian@gmail.com');
-  assert.equal(cals.length, 4, 'ingen Google-rader i lista');
+  assert.equal(cals.filter((c) => !c.virtual).length, 4, 'ingen Google-rader i lista');
   const put2 = await A('/api/kalender/google/mapping', 'PUT', { map: { [fam.googleId]: 'p' } });
   assert.equal(put2.status, 200);
   assert.ok(!(await A('/api/kalender/calendars')).body.calendars.some((c) => c.kind === 'google'), 'Familie er slått inn i Personlig');

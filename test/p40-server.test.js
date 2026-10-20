@@ -219,7 +219,7 @@ test('Finans → Søk: «Abonnementer» gir kort svar uten markdown, tre nøkkel
   assert.equal(r.status, 200, r.text);
   assert.equal(r.body.source, 'Subscription OS');
   assert.equal(r.body.sourceLabel, 'fra Subscription OS');
-  assert.equal(r.body.text, 'Du har tre abonnementer. Til sammen 428 kr i måneden. Neste trekk er TV 2 Play om 5 dager.');
+  assert.equal(r.body.text, 'Du har 3 aktive abonnementer, til sammen 428 kr i måneden. Dyrest: TV 2 Play 199 kr, Spotify 129 kr, iCloud 100 kr. Neste trekk: TV 2 Play 25. okt.'.replace('25. okt', `${+inDays(5).slice(8)}. ${['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'][+inDays(5).slice(5, 7) - 1]}`)); // prompt 42: ny tekst (claude-code-finans-glimt-abonnement.md)
   assert.ok(!/\*\*|\[\d\]/.test(r.body.text));
   assert.deepEqual(r.body.cards.filter((c) => c.kind === 'stat').map((c) => [c.label, c.value]), [['PER MÅNED', '428 kr'], ['PER ÅR', '5 136 kr'], ['NESTE TREKK', r.body.cards.find((c) => c.key === 'next').value]]);
   const subs = r.body.cards.filter((c) => c.kind === 'sub');
@@ -227,7 +227,7 @@ test('Finans → Søk: «Abonnementer» gir kort svar uten markdown, tre nøkkel
   assert.equal(subs[0].soon, true);
   assert.match(subs[0].nextLabel, /^Neste trekk \d+\. \w+ · om 5 dager$/);
   assert.equal(subs[2].perLabel, 'per år · 100/mnd');
-  assert.equal(r.body.open.label, 'Åpne Subscription OS ›');
+  assert.equal(r.body.open.label, 'Åpne abonnementer ›'); // prompt 42
   assert.equal(r.body.total, 428);
   const sp = await A('/finans/api/search/ask', 'POST', { q: 'hvor mye brukte jeg på Kiwi' });
   assert.equal(sp.status, 200);

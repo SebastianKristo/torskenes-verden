@@ -49,6 +49,7 @@ import { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, ass
 import { cals39Api, googleMap39Api, rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
 import { twofa40Api, finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, birthdays41Api, mai17Api, kalender41Api, mountAuth41, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
+import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -87,7 +88,8 @@ app.use('*', secureHeaders({
     fontSrc: ['https://fonts.gstatic.com'],
     // Plakater fra Sonarr/Radarr kommer fra varierende CDN-er (TheTVDB, TMDB, fanart.tv), så alle https-bilder tillates.
     imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
-    connectSrc: ["'self'"],
+    // Prompt 42: ikonsøket i Familie → Soner (web og PWA) søker i Lucide og Tabler via Iconify-API-et.
+    connectSrc: ["'self'", 'https://api.iconify.design'],
     frameAncestors: ["'none'"],
     // Værkartet på værsiden (prompt 22) er Windy-innbyggingen.
     frameSrc: ["'self'", 'https://embed.windy.com'],
@@ -136,6 +138,7 @@ app.get('/finans/', async (c) => (sessionUser(c) || (!needsSetup() && MOBILE_UA.
   ? html(c, await page('finans/index.html')) : c.redirect('/login?next=/finans/'));
 app.get('/finans/manifest.webmanifest', async (c) => c.body(await page('finans/manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
 app.get('/finans/sw.js', async (c) => c.body(await page('finans/sw.js'), 200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache' }));
+app.route('/finans/api', finans42Api); // prompt 42: Glimt-søk (SQL før LLM, tankesteg), filter, avanserte oppgaver + PDF, Boliger web, import til bolig, aksje-logoer
 app.route('/finans/api', finans40Api); // prompt 40: added, PATCH alt + historikk, Les på nytt, POST /search/ask (før routes.js)
 app.route('/finans/api', finansApi);
 // Del-mål for PWA-en: «Del → FinansHub» fra bilder-appen legger kvitteringen i køen.
@@ -632,6 +635,7 @@ authed.get('/space/gallery/:key', proxy((c) => {
 
 app.route('/api/ui', uiApi);
 app.route('/api/tracking', tracking41Api); // prompt 41: GET /postnord/health
+app.route('/api/tracking', tracking42Api); // prompt 42: /debug/:id (+ /test), /aliexpress (mappe, sjekk nå, e-post)
 app.route('/api/tracking/keys', trackingKeysApi); // prompt 37: husstandens sporingsnøkler (før /api/tracking/:id)
 app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn, e-post og manuelt
 app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
@@ -640,10 +644,16 @@ app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-s
 app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cachet på disk og ✦ AI-forslag
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
 app.route('/', tilesApi);
+app.route('/api/family/health/ha', health42Api); // prompt 42: helse fra Home Assistant
+app.use('/api/family/*', familyHealthMw42); // prompt 42: health.source/sourceDevice/limited/stale
 app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse
+app.route('/api/tasks', tasks42Api); // prompt 42: /glimt/log
 app.use('/api/tasks/:id{[0-9]+}', tasksAfter40); // prompt 40: «Nå kan du: …» når punktet før er gjort, placeName/after i PATCH
 app.use('/api/tasks', tasksCreate40); // prompt 40: POST /api/tasks godtar placeName og after
 app.route('/api/tasks', tasksApi); // Huskeliste (prompt 17): delt i familien, sanntid via /api/ws
+app.route('/api/hjemlys', hjemlys42Api); // prompt 42: admin kan avslutte andres Vel fremme-økt
+// Prompt 42: Hjemlys heter nå Vel fremme – /api/velfremme/* er et alias for /api/hjemlys/*.
+app.all('/api/velfremme/*', async (c) => { const u = new URL(c.req.url); u.pathname = u.pathname.replace(/^\/api\/velfremme/, '/api/hjemlys'); const m = c.req.method; return app.fetch(new Request(u, { method: m, headers: c.req.raw.headers, body: m === 'GET' || m === 'HEAD' ? undefined : await c.req.arrayBuffer() }), c.env); });
 app.use('/api/hjemlys', hjemlysGet41); // prompt 41: GET /api/hjemlys får notices
 app.route('/api/hjemlys', hjemlys41Api); // prompt 41: Si fra (notice/status), tur med valgfritt mål (før prompt 40)
 app.route('/api/hjemlys', hjemlys40Api); // prompt 40: Hjemlys (start, status, posisjon, ok/hjemme/avslutt, tokens, forslag)
@@ -666,6 +676,8 @@ const toFinansAny = async (c, path) => {
 };
 app.get('/api/homes/:id{[0-9]+}/shareable', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/shareable`));
 app.post('/api/homes/:id{[0-9]+}/members', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/members`));
+// Prompt 42: Boliger-forsiden (2a) også under /api/boliger/oversikt.
+app.get('/api/boliger/oversikt', (c) => toFinansAny(c, '/boliger/oversikt'));
 app.patch('/api/homes/:id{[0-9]+}/expenses/:eid{[0-9]+}', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/entries/${c.req.param('eid')}`));
 app.get('/api/homes/:id{[0-9]+}/expenses/:eid{[0-9]+}/history', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/entries/${c.req.param('eid')}/history`));
 app.post('/api/homes/:id{[0-9]+}/expenses', (c) => toFinans(c, (c.req.header('content-type') ?? '').startsWith('multipart/') ? `/folders/${c.req.param('id')}/receipts` : `/folders/${c.req.param('id')}/entries`));
@@ -690,6 +702,11 @@ app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kale
 // Prompt 33 (SERVER33): Kalender-appen – kalendere (visning, farger, egne), vær 16 dager, appCalendar på hendelser, widgets.
 app.route('/api/kalender/ha', kal35HaApi); // prompt 35
 app.route('/api/kalender', kal37Api); // prompt 37: /subjects (fagfarger) og /geo (adresse + kart)
+app.use('/api/kalender/calendars', abCalendarsMw42); // prompt 42: innebygd kalender «Abonnementer» (trekkdatoer)
+app.use('/api/kalender/calendars/*', abCalendarsMw42);
+app.route('/api/kalender/abonnementer', abApi42);
+app.get('/api/kalender/abonnementer.ics', authOrToken, abIcs42);
+app.route('/api/calendars', calendarsEvents42); // GET /api/calendars/events?cal=ab
 app.route('/api/kalender/calendars', cals39Api); // prompt 39: fire kalendere, opprydding/angre, nye felt (før kalender33)
 app.route('/api/kalender/google', googleMap39Api); // prompt 39: GET/PUT /mapping
 app.route('/api/kalender/calendars', kalCalendarsApi);
@@ -748,7 +765,7 @@ app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); }
 
 app.onError((err, c) => {
   console.error(err);

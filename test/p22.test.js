@@ -51,7 +51,7 @@ test('standardtema: design «lys» når ingenting er lagret; lagret valg overskr
   assert.equal((await A('/api/me/layout')).body.design, 'glod');
   assert.equal((await B('/api/me/layout')).body.design, 'lys', 'per bruker');
   await A('/api/me/layout', 'PUT', { design: 'v2' });
-  assert.equal((await A('/api/me/layout')).body.design, 'v2', '«Nåværende (FinansHub v2)» finnes fortsatt');
+  assert.equal((await A('/api/me/layout')).body.design, 'lys', 'prompt 42: FinansHub v2 er slettet og migreres til Papir · lys');
 });
 
 /* ---------------- 3. Sporing ---------------- */
