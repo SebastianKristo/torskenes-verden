@@ -1,6 +1,6 @@
 // «✦ Analyser på nytt med Gemini»: sender originalbildet til Gemini og viser resultatet side om side med det forrige.
 // Brukes av desktop (bekreftelsessiden og køen) og PWA-en. Brukeren velger hvilket resultat som beholdes.
-import { api, esc, n2, dd } from './core.js';
+import { api, esc, n2, dd, uploadReceipt } from './core.js';
 
 /** Knappene: «✦ Analyser på nytt med Gemini» (når det trengs) og «Les med lokal OCR» (Tesseract, uten AI).
  *  Gemini-knappen er deaktivert med årsak når Gemini ikke er satt opp. Tom streng når ingen trengs. */
@@ -21,7 +21,7 @@ export function bindReanalyze(root, onDone) {
     const b = e.target.closest?.('[data-reanalyze]');
     if (!b || b.disabled || b.getAttribute('aria-disabled') === 'true') return;
     e.preventDefault(); e.stopImmediatePropagation();
-    openReanalyze(b.dataset.reanalyze, { onDone, engine: b.dataset.engine === 'tesseract' ? 'tesseract' : 'gemini' });
+    openReanalyze(b.dataset.reanalyze, { onDone, engine: b.dataset.engine === 'tesseract' ? 'tesseract' : 'gemini', status: b.dataset.status ?? '' });
   });
 }
 
@@ -92,13 +92,16 @@ function diff40(a, b) {
 }
 
 /** Åpner dialogen og starter analysen. Returnerer et løfte med kvitteringen etter valget (eller null ved avbryt). */
-export function openReanalyze(id, { onDone, engine = 'gemini' } = {}) {
+export function openReanalyze(id, { onDone, engine = 'gemini', status = '' } = {}) {
+  // Prompt 41 (claude-code-finans-les-pa-nytt-alltid.md): lov for alle statuser. Ny lesing er bare et forslag (apply:false);
+  // ingenting endres før «Bruk endringene». Avvist kvittering: «Flytt til gjennomgang» tar forslaget i bruk og legger den i køen.
+  const rejected = status === 'rejected';
   const ocr = engine === 'tesseract', name = ocr ? 'Lokal OCR' : 'Gemini';
   // Prompt 40 (claude-code-finans-les-pa-nytt-rediger.md): «✦ La Glimt lese kvitteringen på nytt» – endringene vises som
   // «gammelt → nytt», og lagres bare når du trykker «Bruk endringene».
   const title = ocr ? 'Les med lokal OCR' : '✦ Glimt leser kvitteringen på nytt';
   const sub = ocr ? 'Originalbildet leses på serveren med Tesseract, uten AI og uten at noe sendes ut. Du velger selv hvilket resultat som beholdes.' : 'Glimt leser originalbildet i full oppløsning på nytt. Endringene lagres bare hvis du trykker «Bruk endringene».';
-  const loading = ocr ? 'Tesseract leser kvitteringen …' : 'Glimt leser kvitteringen på nytt … Sjekker butikk, dato, hver linje og at summen stemmer';
+  const loading = ocr ? 'Tesseract leser kvitteringen …' : '✦ Glimt analyserer på nytt … Laster opp → OCR → Gemini tolker → Sjekker sum og dato';
   if (!document.getElementById('ra-css')) { const s = document.createElement('style'); s.id = 'ra-css'; s.textContent = CSS; document.head.appendChild(s); }
   const ov = document.createElement('div');
   ov.className = 'ra-ov';
@@ -131,20 +134,31 @@ export function openReanalyze(id, { onDone, engine = 'gemini' } = {}) {
     body.innerHTML = `<div class="ra-load"><span class="ra-spin"></span>${esc(loading)}</div>`;
     act.innerHTML = '<button type="button" data-ra="cancel">Avbryt</button>';
     try {
-      data = await api(`/receipts/${encodeURIComponent(id)}/reanalyze`, { method: 'POST', json: { engine } });
+      data = await api(`/receipts/${encodeURIComponent(id)}/reanalyze`, { method: 'POST', json: { engine, apply: false } });
       const ch = diff40(data.previous ?? {}, data.result ?? {}), R = data.result ?? {};
       const items = R.items ?? [], sum = items.reduce((t, l) => t + (Number(l.amount) || 0), 0), sumOk = !items.length || R.total == null || Math.abs(sum - R.total) < 0.01;
       const sumNote = sumOk ? '' : `<div class="ra-err" style="margin-top:10px">Summen av linjene (${money(sum)}) stemmer ikke med totalen (${money(R.total)}). Bruk «Rediger alt» i transaksjonen for å rette.</div>`;
       if (!ch.length && !R.error) {
-        body.innerHTML = `<div class="ra-ok">Ingen endringer. Butikk, dato og alle ${items.length} linjer stemmer${R.total != null && sumOk ? `, og summen er ${money(R.total)}` : ''}.</div>${sumNote}`;
-        act.innerHTML = '<button type="button" class="pri" data-ra="old">OK</button>';
+        body.innerHTML = `<div class="ra-ok">✦ Glimt har analysert på nytt. Ingen endringer. Butikk, dato og alle ${items.length} linjer stemmer${R.total != null && sumOk ? `, og summen er ${money(R.total)}` : ''}.</div>${sumNote}`;
+        act.innerHTML = rejected ? '<button type="button" data-ra="old">Behold som avvist</button><button type="button" class="pri" data-ra="new">Flytt til gjennomgang</button>' : '<button type="button" class="pri" data-ra="old">OK</button>';
       } else {
         body.innerHTML = `${R.error ? `<div class="ra-err">${esc(R.error)}</div>` : `<div class="ra-sub" style="margin:0 0 8px">${ch.length} ${ch.length === 1 ? 'endring' : 'endringer'} funnet:</div><div class="ra-diff">${ch.map((c) => `<div><span>${esc(c.f)}</span><s>${esc(c.o)}</s><b>→ ${esc(c.n)}</b></div>`).join('')}</div>`}${sumNote}
           <details class="ra-more"><summary>Vis begge side om side</summary><div class="ra-cols">${column(data.previous, data.result, 'Forrige', false)}${column(data.result, data.previous, name, true)}</div></details>`;
-        act.innerHTML = `<button type="button" data-ra="old">Behold som før</button><button type="button" class="pri" data-ra="new"${R.error ? ' disabled' : ''}>Bruk endringene</button>`;
+        act.innerHTML = `<button type="button" data-ra="old">Behold som det er</button><button type="button" class="pri" data-ra="new"${R.error ? ' disabled' : ''}>${rejected ? 'Flytt til gjennomgang' : 'Bruk endringene'}</button>`;
       }
     } catch (err) {
-      body.innerHTML = `<div class="ra-err" style="padding:12px 0">${esc(err.message)}</div>`;
+      // Mangler originalbildet: egen tekst og opplasting, ikke en generisk feil.
+      if (/original|fant ikke (bildet|fila|filen)|mangler (bildet|fil)|no such file|ENOENT/i.test(err.message ?? '') || err.status === 410) {
+        body.innerHTML = '<div class="ra-err" style="padding:12px 0">Fant ikke originalbildet. Last det opp på nytt for å lese det.</div>';
+        act.innerHTML = '<button type="button" data-ra="cancel">Lukk</button><label class="pri ra-up" style="display:inline-flex;align-items:center;height:44px;padding:0 18px;border-radius:12px;background:#4F6BFF;color:#fff;font-weight:600;cursor:pointer">Last opp bildet<input type="file" accept="image/*,application/pdf" hidden data-ra-up></label>';
+        act.querySelector('[data-ra-up]')?.addEventListener('change', async (e) => {
+          const f = e.target.files?.[0]; if (!f) return;
+          try { await uploadReceipt(f); body.innerHTML = '<div class="ra-ok">Bildet er lastet opp og leses som en ny kvittering.</div>'; act.innerHTML = '<button type="button" class="pri" data-ra="cancel">OK</button>'; }
+          catch (e2) { body.insertAdjacentHTML('beforeend', `<div class="ra-err">${esc(e2.message)}</div>`); }
+        });
+        return;
+      }
+      body.innerHTML = `<div class="ra-err" style="padding:12px 0">${esc(err.message)}${err.status ? ` (HTTP ${err.status})` : ''}</div>`;
       act.innerHTML = '<button type="button" data-ra="cancel">Lukk</button><button type="button" class="pri" data-ra="retry">Prøv igjen</button>';
     } finally { busy = false; }
   }

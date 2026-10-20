@@ -5,6 +5,7 @@
 import { api, esc } from './util.js';
 import { clearBtn } from './searchfield.js';
 import { store, emit } from './store.js';
+import { partyHtml41, fanfare41, restartParty41, photoBlock41, photoAct41, loadPhotos41, loadFamily41 } from './birthdays41.js'; // prompt 41
 
 export const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 export const MS = MN.map((m) => m.slice(0, 3));
@@ -38,7 +39,8 @@ export const ini = (n) => String(n ?? '?').trim().split(/\s+/).map((w) => w[0] ?
 const dtx = (x) => `${WD[x.x.getDay()]} ${x.x.getDate()}. ${MN[x.x.getMonth()]}`;
 const relOf = (r) => (RELN[String(r ?? '').toLowerCase()] ? String(r).toLowerCase() : 'annet');
 /** Avatar: Familie-profilbilde hvis det finnes, ellers forbokstaver i farge etter «Hvem». */
-export const avatar = (x, cls = 'bd-av') => `<span class="${cls}" style="background:${RELC[relOf(x.relation)]}">${x.avatarUrl ? `<img src="${esc(x.avatarUrl)}" alt="" loading="lazy">` : esc(ini(x.name))}</span>`;
+// Prompt 41: personer uten bilde får et lite «+»-merke nede til høyre (bare i lista på Bursdager-siden).
+export const avatar = (x, cls = 'bd-av', plus = false) => `<span class="${cls}${plus && !x.avatarUrl ? ' bd41-plus' : ''}" style="background:${RELC[relOf(x.relation)]}">${x.avatarUrl ? `<img src="${esc(x.avatarUrl)}" alt="" loading="lazy">` : esc(ini(x.name))}</span>`;
 
 /* ---------------- Data ---------------- */
 
@@ -92,7 +94,9 @@ function hero(L) {
   const h = L[0];
   if (!h) return '';
   const same = L.filter((x) => x.days === h.days), nxt = L.filter((x) => x.days > h.days).slice(0, 2);
-  return `<button type="button" class="bd-hero" data-bd-sel="${esc(h.id)}">
+  const party = h.days === 0 && S.party41 !== false;
+  if (party) queueMicrotask(fanfare41);
+  return `<button type="button" class="bd-hero${party ? ' bd41-on' : ''}" data-bd-sel="${esc(h.id)}">${party ? partyHtml41() : ''}
     <span class="bd-hero-k"><span>${h.days === 0 ? 'BURSDAG I DAG' : 'NESTE BURSDAG'}</span><span>${same.length > 1 ? '' : SRC[h.source] ?? ''}</span></span>
     <span class="bd-hero-m"><span class="bd-grow"><b class="bd-hero-n">${esc(same.map((x) => x.name).join(' og '))}</b><span class="bd-hero-s">${esc((same.length === 1 && h.age != null ? `Fyller ${h.age} · ` : '') + dtx(h))}</span></span>
       <span class="bd-hero-r"><b>${h.days === 0 ? 'I dag' : h.days}</b><span>${h.days === 0 ? '' : h.days === 1 ? 'dag igjen' : 'dager igjen'}</span></span></span>
@@ -124,10 +128,10 @@ function row(x, i) {
   const op = String(S.sel) === String(x.id), rel = RELN[x.relation];
   const det = dtx(x).replace(/^./, (m) => m.toUpperCase()) + (x.year ? ` · født ${x.year}` : '') + ' · ' + (x.days === 0 ? 'har bursdag i dag' : `om ${x.days} dager`);
   return `<div class="bd-row${i ? ' bt' : ''}${op ? ' open' : ''}" data-bd-row="${esc(x.id)}">
-    <button type="button" class="bd-rb" data-bd-sel="${esc(x.id)}" aria-expanded="${op}">${avatar(x)}
+    <button type="button" class="bd-rb" data-bd-sel="${esc(x.id)}" aria-expanded="${op}">${avatar(x, 'bd-av', true)}
       <span class="bd-grow"><b class="bd-n">${esc(x.name)}</b><span class="bd-sub">${esc(`${x.x.getDate()}. ${MS[x.x.getMonth()]}${x.age != null ? ` · fyller ${x.age}` : ''} · ${rel}`)}</span></span>
       <span class="bd-rr"><b class="${x.days <= 7 ? 'soon' : ''}">${whenTxt(x.days)}</b><span>${SRC[x.source] ?? 'LOKAL'}</span></span></button>
-    ${op ? `<div class="bd-det"><span class="bd-dt">${esc(det)}</span><span class="bd-lbl">Påminnelse</span>
+    ${op ? `<div class="bd-det">${photoBlock41(x)}<span class="bd-dt">${esc(det)}</span><span class="bd-lbl">Påminnelse</span>
       <div class="bd-chips">${REMS.map(([v, n]) => chip(x.reminderDays === v, `data-bd-rem="${esc(x.id)}" data-v="${v ?? ''}"`, n, 'sm')).join('')}</div>
       <div class="bd-chips">${x.source === 'google' || x.googleUrl ? `<a class="bd-btn sm" href="${esc(/^https:\/\/[a-z.]*google\.com\//.test(x.googleUrl ?? '') ? x.googleUrl : 'https://calendar.google.com/')}" target="_blank" rel="noopener">Åpne i Google Kalender</a>` : ''}<button type="button" class="bd-btn sm" data-bd-edit="${esc(x.id)}">Rediger</button><button type="button" class="bd-btn sm red" data-bd-del="${esc(x.id)}">${S.delArm === x.id ? 'Trykk igjen for å slette' : 'Slett'}</button></div></div>` : ''}
   </div>`;
@@ -204,14 +208,13 @@ function body() {
   if (!S.d) return '<div class="bd-card bd-empty">Laster …</div>';
   const L = sorted(S.d.items);
   return `${S.toast ? `<div class="bd-toast" role="status">${esc(S.toast)}</div>` : ''}
-    <div class="bd-grid"><div class="bd-col">
+    <div class="bd-grid bd41-one"><div class="bd-col">
       ${hero(L)}
       <div class="bd-bar"><label class="bd-q${S.q ? ' has' : ''}" data-sf><span class="sf-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></span>${clearBtn()}<input name="bdq" value="${esc(S.q)}" placeholder="Søk etter navn" autocomplete="off" aria-label="Søk etter navn"></label><button type="button" class="bd-add" data-bd-act="add">${S.add ? 'Lukk' : '+ Legg til'}</button></div>
       ${form()}
       <div class="bd-lists">${list(L)}</div>
     </div>
-    <div class="bd-col"><span class="bd-gt">KALENDERE</span>${calendars()}
-    </div></div>`;
+    </div></div>`; // prompt 41: Kalendere ligger bare i Innstillinger → Kalendere
 }
 
 function calBody() {
@@ -369,13 +372,17 @@ function bind(h) {
     if (e.target.name === 'year') e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
   });
   h.addEventListener('submit', (e) => { if (e.target.closest('[data-bd-form]')) { e.preventDefault(); save(); } });
+  const ctx41 = { byId, reload: () => loadBirthdays().then(paint), flash, paint };
+  h.addEventListener('change', (e) => { photoAct41(e, ctx41); });
+  h.addEventListener('click', (e) => { if (e.target.closest?.('[data-bd41-rm],[data-bd41-del],[data-bd41-fam]')) { e.preventDefault(); e.stopPropagation(); photoAct41(e, ctx41); } }, true);
   h.addEventListener('click', (e) => {
     const t = e.target.closest('button');
     if (!t || !h.contains(t)) return;
     const d = t.dataset;
     from = h === calHost ? 'set' : 'page';
     if (d.bdAct) return act(d.bdAct);
-    if (d.bdSel) { const x = byId(d.bdSel); S.sel = !x || (String(S.sel) === String(x.id) && !t.classList.contains('bd-hero')) ? null : x.id; S.delArm = null; paint(); if (t.classList.contains('bd-hero')) h.querySelector(`[data-bd-row="${CSS.escape(d.bdSel)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+    if (d.bdSel && t.classList.contains('bd-hero')) restartParty41(h);
+    if (d.bdSel) { const x = byId(d.bdSel); if (x) { loadPhotos41(x.id, paint); loadFamily41(paint); } S.sel = !x || (String(S.sel) === String(x.id) && !t.classList.contains('bd-hero')) ? null : x.id; S.delArm = null; paint(); if (t.classList.contains('bd-hero')) h.querySelector(`[data-bd-row="${CSS.escape(d.bdSel)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
     if (d.bdF) { readForm(h); S.f[d.bdF] = d.bdF === 'reminderDays' ? remVal(d.v) : d.v; return paint(); }
     if (d.bdRem !== undefined) return patch(d.bdRem, { reminderDays: remVal(d.v) });
     if (d.bdEdit) { const x = byId(d.bdEdit); S.add = true; S.editId = x.id; S.f = { name: x.name, day: x.day, month: x.month, year: x.year ? String(x.year) : '', relation: x.relation, reminderDays: x.reminderDays, saveTo: x.source }; paint(); h.querySelector('[data-bd-form]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }

@@ -13,6 +13,7 @@ import { api, esc, sheetBtn, haptic } from './util.js';
 import { createWxFx, sunFrac } from './weather-fx.js';
 import { cmp39Html, bindCmp39, cmp39Reset } from './weather-cmp39.js'; // prompt 39: Yr mot Storm 2a + wiggle
 import { fig } from './glimt-figs.js'; // prompt 39: Glimt · ukas vær
+import { voAttr, voShown, glimtTop, skiCardHtml41, loadSki41, afterPaint41, editBtn41 } from './wx41.js'; // prompt 41: rediger kort + skiføre
 
 /* ---------------- Konstanter fra designet ---------------- */
 const IC = { sun: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', part: 'M8 4v1.5M3.5 9H5M4.8 5.8l1 1M11.2 5.8l-1 1M8 7a3 3 0 0 0-2.8 4M7 19h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.4 1.5A3.3 3.3 0 0 0 7 19z', cloud: 'M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z', rain: 'M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14zM8 17l-1 3M12 17l-1 3M16 17l-1 3', snow: 'M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14zM8 18h.01M12 20h.01M16 18h.01', fog: 'M4 10h16M6 14h12M4 18h16', storm: 'M7 13h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 13zM12 14l-2 4h3l-2 4' };
@@ -452,10 +453,13 @@ function dkHtml(d, P) {
   const C = d.current, D = d.daily, R = restParts(d), mine = P.id === 'pos' || P.mine;
   const kick = mine ? 'MIN POSISJON' : (P.region && P.region !== P.name ? P.region : P.country || 'Norge').toUpperCase();
   const arrow = mine ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 3L3 10.5l7.5 2.5L13 21z"/></svg>' : '';
-  const c = (cls, inner) => `<div class="wx36-c ${cls}">${inner}</div>`;
-  return `<div class="wx36-hero" style="opacity:${Math.max(0, 1 - S.sc / 220).toFixed(2)}"><span class="wx36-k">${arrow}${esc(kick)}</span><span class="wx36-city">${esc(P.name)}</span><span class="wx36-temp">${r0(C.temperature_2m)}</span><span class="wx36-desc">${esc(DESC(C.weather_code))}</span><span class="wx36-hl">H:${r0(D.temperature_2m_max[1])}  L:${r0(D.temperature_2m_min[1])}</span></div>
-    <div class="wx36-grid">${c('s5 forhold', forholdHtml(d))}${c('s2 r2 days', daysHtml(d))}${c('s2 map', mapCardHtml())}${c('s1', R.sun)}${c('s2', R.moon)}${c('s1', R.uv)}${c('s2', cmpCardHtml(d))}${c('s1', R.feel)}${c('s1', R.yd)}${c('s1', R.rain)}${c('s1', R.vis)}${c('s1', R.hum)}${c('s1', R.pres)}${c('s2', R.wind)}</div>
-    ${weekCardHtml(P)}
+  // Prompt 41: hvert kort har en nøkkel (rekkefølge via CSS order, skjult = ikke tegnet), og Skiføre øverst når det er snø.
+  const c = (cls, inner, k) => (k && !voShown(k) ? '' : `<div class="wx36-c ${cls}" ${k ? voAttr(k) : ''}>${inner}</div>`);
+  const ski = skiCardHtml41(), wk = voShown('glimt') ? weekCardHtml(P) : '';
+  return `${voShown('hero') ? '' : '<div hidden>'}<div class="wx36-hero" style="opacity:${Math.max(0, 1 - S.sc / 220).toFixed(2)}"><span class="wx36-k">${arrow}${esc(kick)}</span><span class="wx36-city">${esc(P.name)}</span><span class="wx36-temp">${r0(C.temperature_2m)}</span><span class="wx36-desc">${esc(DESC(C.weather_code))}</span><span class="wx36-hl">H:${r0(D.temperature_2m_max[1])}  L:${r0(D.temperature_2m_min[1])}</span></div>${voShown('hero') ? '' : '</div>'}
+    ${glimtTop() ? wk : ''}
+    <div class="wx36-grid">${ski ? c('s5 wx41-skic', ski, 'ski') : ''}${c('s5 forhold', forholdHtml(d), 'hour')}${c('s2 r2 days', daysHtml(d), 'days')}${c('s2 map', mapCardHtml(), 'days')}${c('s1', R.sun, 'moon')}${c('s2', R.moon, 'moon')}${c('s1', R.uv, 'tiles')}${c('s2', cmpCardHtml(d), 'cmp')}${c('s1', R.feel, 'tiles')}${c('s1', R.yd, 'tiles')}${c('s1', R.rain, 'tiles')}${c('s1', R.vis, 'tiles')}${c('s1', R.hum, 'tiles')}${c('s1', R.pres, 'tiles')}${c('s2', R.wind, 'wind')}</div>
+    ${glimtTop() ? '' : wk}${editBtn41()}
     <div class="wx36-foot"><b>Vær for ${esc(P.name)}</b><span class="wxp-sidesrc">${esc(S.src)}</span><a href="${esc(S.full?.yrUrl ?? 'https://www.yr.no/')}" target="_blank" rel="noopener">Se også yr.no ↗</a></div>`;
 }
 
@@ -464,7 +468,10 @@ function mainHtml() {
   if (!d) return `<div class="wxp-hero"><span class="wxp-city">${esc(P.name)}</span><span class="wxp-desc">${esc(S.src === 'Henter …' ? 'Henter været …' : 'Fikk ikke hentet været')}</span>${S.src === 'Henter …' ? '' : '<button class="wxp-pill" data-wx="retry">Prøv igjen</button>'}</div>`;
   const credit = `<a class="wxp-credit" href="${esc(S.full?.yrUrl ?? 'https://www.yr.no/')}" target="_blank" rel="noopener">${esc(S.full?.credit ?? 'Data: MET Norway')} · Se også yr.no ↗</a>`;
   if (isDk()) return dkHtml(d, P);
-  return `${heroHtml(d, P)}<div class="wxp-cols"><div class="wxp-col">${forholdHtml(d)}${daysHtml(d)}${cmpCardHtml(d)}</div><div class="wxp-col">${restHtml(d)}</div></div>${weekCardHtml(P)}${credit}`;
+  // Prompt 41: kortene i rekkefølgen fra «Rediger Vær» (én kolonne på smal skjerm), skjulte kort tegnes ikke.
+  const R = restParts(d), k = (key, inner) => (voShown(key) && inner ? `<div class="wx41-c" ${voAttr(key)}>${inner}</div>` : '');
+  const wk = voShown('glimt') ? weekCardHtml(P) : '';
+  return `${voShown('hero') ? heroHtml(d, P) : ''}${glimtTop() ? wk : ''}<div class="wx41-col">${k('ski', skiCardHtml41())}${k('hour', forholdHtml(d))}${k('days', daysHtml(d))}${k('cmp', cmpCardHtml(d))}${k('wind', R.wind)}${k('moon', R.moon)}${k('tiles', `<div class="wxp-tiles">${R.tiles.join('')}</div>`)}</div>${glimtTop() ? '' : wk}${editBtn41()}${credit}`;
 }
 
 /* ---------- Prompt 39: «Glimt · ukas vær» nederst (claude-code-vaer-glimt-ukas-vaer.md, GET /api/weather/week-summary) ---------- */
@@ -636,8 +643,10 @@ function paintMain() {
   const dk = isDk();
   r.classList.toggle('dk', dk);
   r.classList.toggle('dk36', dk);
+  loadSki41(S.full, () => paintMain());
   sc.querySelector('.wxp-inner').innerHTML = mainHtml();
   sc.scrollTop = top;
+  afterPaint41(r, () => paintMain());
   const side = r.querySelector('.wxp-side');
   if (side) side.innerHTML = dk ? sideHtml() : '';
   paintMap(r);

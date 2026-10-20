@@ -5,7 +5,7 @@
 // Opplesning: POST /api/tts {text, character, voice, rate, lang} → audio/mpeg. 503/404/feil → nettleserens stemme.
 import { api, esc } from './util.js';
 import { store } from './store.js';
-import { fig, FIGS, hostFor, setJul, julOn, julAuto, JUL_PHASES, julPhaseName } from './glimt-figs.js';
+import { fig, FIGS, hostFor, setJul, julOn, julAuto, JUL_PHASES, julPhaseName, setMai17, mai17Auto } from './glimt-figs.js';
 import { CARDS38, cardList38, toSrv38 } from './brief38.js'; // prompt 38: kortene i briefen (av/på og rekkefølge)
 
 export const DEF = {
@@ -41,7 +41,7 @@ export const gs = () => G.s ?? (G.s = merge(DEF, readLocal()));
 export function loadGlimt(redraw, force = false) {
   if (G.loading) return G.loading.then(() => redraw?.());
   if (G.loaded && !force) return Promise.resolve();
-  G.loading = api('/glimt/settings').then((r) => { G.s = merge(DEF, { ...readLocal(), ...(r ?? {}) }); G.legacy = false; G.err = ''; setJul({ jul: G.s.jul, julPhase: G.s.julPhase, julActive: r?.julActive ?? null }); })
+  G.loading = api('/glimt/settings').then((r) => { G.s = merge(DEF, { ...readLocal(), ...(r ?? {}) }); G.legacy = false; G.err = ''; setJul({ jul: G.s.jul, julPhase: G.s.julPhase, julActive: r?.julActive ?? null }); setMai17({ mai17: G.s.mai17 ?? 'auto', mai17Active: r?.mai17Active ?? null }); })
     .catch(async (e) => {
       if (e.status !== 404) G.err = e.message;
       // Eldre server: bare varsel og guide finnes i /api/brief/settings. Resten er en lokal kopi.
@@ -63,6 +63,7 @@ export function saveGlimt(patch) {
   if (patch.char && patch.char !== before) { try { window.dispatchEvent(new Event('glimt-char')); } catch { /* */ } }
   // Prompt 40: julemodus gjelder overalt med en gang (figurbiblioteket sender «glimt-jul»).
   if ('jul' in patch || 'julPhase' in patch) setJul({ jul: G.s.jul, julPhase: G.s.julPhase, julActive: null });
+  if ('mai17' in patch) { setMai17({ mai17: G.s.mai17, mai17Active: null }); document.dispatchEvent(new Event('hl:mai17')); } // prompt 41
   document.dispatchEvent(new CustomEvent('hl:glimt', { detail: patch }));
   // Bare feltene som er endret sendes (delvis PUT); briefs og tts sendes hele.
   for (const k of Object.keys(patch)) pendingKeys[k] = 1;
@@ -214,9 +215,17 @@ function julCard(s) {
     <div class="gs40-seg" role="group" aria-label="Julemodus">${seg('auto', 'Auto')}${seg('av', 'Av')}${seg('pa', 'På')}</div>
     ${m === 'pa' ? `<div class="gs40-ph" role="group" aria-label="Fase">${JUL_PHASES.map(([k, n]) => `<button type="button" data-gs-julp="${k}" aria-pressed="${ph === k}">${n}</button>`).join('')}</div>` : ''}
     <button type="button" class="gs-row gs40-sub" data-gs-tog="snow" role="switch" aria-checked="${s.snow !== false}"><span class="gs-ot"><b>Snø i Vær og brief</b><span class="gs-os">Når det snør eller er minus</span></span>${sw(s.snow !== false)}</button>
+    ${mai17Row41(s)}
     <div class="gs40-snd"><span class="gs-ot"><b>Julelyd på varsler</b><span class="gs-os">${s.julSound === 'bjelle' ? 'Myk bjelle (lav og kort)' : 'Av'}</span></span><div class="gs40-seg sm">${[['av', 'Av'], ['bjelle', 'Myk bjelle']].map(([k, n]) => `<button type="button" data-gs-julsnd="${k}" aria-pressed="${(s.julSound ?? 'av') === k}">${n}</button>`).join('')}</div></div></div>`;
 }
 
+/* Prompt 41 (claude-code-17-mai.md): Høytider → «17. mai» Automatisk 17. mai / Vis nå / Av. Av = vanlig Hjem og figurer uten flagg. */
+function mai17Row41(s) {
+  const m = s.mai17 ?? 'auto';
+  const note = m === 'auto' ? (mai17Auto() ? 'På nå · flagg på figurene til og med 17. mai' : 'Flagg på figurene 14.–17. mai, eget Hjem på selve dagen') : m === 'pa' ? 'Vises nå (forhåndsvisning)' : 'Av · vanlig Hjem og figurer uten flagg';
+  const seg = (k, n) => `<button type="button" data-gs-mai17="${k}" aria-pressed="${m === k}">${n}</button>`;
+  return `<div class="gs40-snd gs41-m17" data-hl="glimt-17mai"><span class="gs-ot"><b>17. mai</b><span class="gs-os">${esc(note)}</span></span><div class="gs40-seg sm" role="group" aria-label="17. mai">${seg('auto', 'Automatisk')}${seg('pa', 'Vis nå')}${seg('av', 'Av')}</div></div>`;
+}
 /** Hele innstillingssiden. figs: rutenett med figurene (Innstillinger → Glimt). */
 export function glimtSettingsHtml({ figs = false } = {}) {
   const s = gs(), sel = s.char;
@@ -257,6 +266,8 @@ export function glimtClick(e, redraw) {
   }
   const jm = t.closest('[data-gs-jul]');
   if (jm) { const k = jm.dataset.gsJul; saveGlimt(k === 'pa' ? { jul: k, julPhase: gs().julPhase ?? julAuto() ?? 'advent' } : { jul: k }); try { navigator.vibrate?.(8); } catch { /* */ } redraw(); return true; }
+  const m17 = t.closest('[data-gs-mai17]');
+  if (m17) { saveGlimt({ mai17: m17.dataset.gsMai17 }); try { navigator.vibrate?.(8); } catch { /* */ } redraw(); return true; }
   const jp = t.closest('[data-gs-julp]');
   if (jp) { saveGlimt({ jul: 'pa', julPhase: jp.dataset.gsJulp }); redraw(); return true; }
   const js = t.closest('[data-gs-julsnd]');

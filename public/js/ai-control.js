@@ -592,7 +592,40 @@ function rtRest(o, R, admin) {
   return `<div class="ac-sec">${lab('REGLER')}<div class="ac-card ac-list">${rules}</div></div><div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>`;
 }
 
+/* Prompt 41 (claude-code-ai-jobber-klokkeslett.md): tidskolonne per jobb. Serverens createdAt/startedAt/endedAt (eller
+   created_at/started_at/finished_at), i nettleserens tidssone. «… siden» oppdateres hvert minutt (jobbfanen tegnes på nytt). */
+const tms41 = (j, ...k) => { for (const x of k) { const v = Date.parse(j[x] ?? ''); if (v) return v; } return 0; };
+const hm41 = (t) => new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+function day41(t) {
+  const d = new Date(t), n = new Date(), y = new Date(n); y.setDate(n.getDate() - 1);
+  if (d.toDateString() === n.toDateString()) return hm41(t);
+  if (d.toDateString() === y.toDateString()) return `i går ${hm41(t)}`;
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${hm41(t)}`;
+}
+function ago41(t) {
+  const m = Math.floor((Date.now() - t) / 60000);
+  return m < 1 ? 'nå nettopp' : m < 60 ? `${m} min siden` : m < 24 * 60 ? `${Math.floor(m / 60)} t siden` : '';
+}
+const endOf41 = (j) => tms41(j, 'endedAt', 'finishedAt', 'ended_at', 'finished_at', 'at', 'updatedAt');
+function jobTime41(j) {
+  const r = j.status === 'run', qq = j.status === 'queue';
+  if (r) { const t = tms41(j, 'startedAt', 'started_at', 'createdAt', 'created_at'); return t ? `<span class="ac-jt41"><b>startet ${hm41(t)}</b></span>` : ''; }
+  if (qq) { if (j.when) return ''; const t = tms41(j, 'createdAt', 'created_at', 'queuedAt'); return t ? `<span class="ac-jt41"><b>lagt i kø ${hm41(t)}</b></span>` : ''; }
+  const t = endOf41(j);
+  if (!t) return j.timeLabel ? `<span class="ac-jt41"><b>${esc(j.timeLabel)}</b></span>` : '';
+  const a = ago41(t);
+  return `<span class="ac-jt41" title="${esc(new Date(t).toLocaleString('nb-NO'))}"><b>${esc(day41(t))}</b>${a ? `<i>${esc(a)}</i>` : ''}</span>`;
+}
+function groupTime41(jobs) {
+  const ts = jobs.map(endOf41).filter(Boolean).sort((a, b) => a - b);
+  if (!ts.length) return '';
+  const a = ts[0], b = ts.at(-1), same = new Date(a).toDateString() === new Date(b).toDateString();
+  const span = a === b ? day41(b) : same ? `${day41(a)}–${hm41(b)}` : `${day41(a)}–${day41(b)}`, ag = ago41(b);
+  return `<span class="ac-jt41" title="Siste feilet ${esc(new Date(b).toLocaleString('nb-NO'))}"><b>${esc(span)}</b>${ag ? `<i>siste ${esc(ag)}</i>` : ''}</span>`;
+}
+let jt41 = 0;
 function jobTab(o) {
+  if (!jt41) jt41 = setInterval(() => { if (document.querySelector('.ac-jt41')) redraw(); }, 60000);
   if (G.missing.jobs) return missingNote('Jobbloggen');
   const J = jobsF(o.scope === 'finans'), run = J.filter((j) => j.status === 'run'), q = J.filter((j) => j.status === 'queue'), done = J.filter((j) => j.status === 'ok' || j.status === 'fail' || j.status === 'cancel' || j.status === 'cancelled');
   const par = routingOf().params?.parallel ?? 2;
@@ -603,13 +636,13 @@ function jobTab(o) {
     const act = r || qq ? btn('Avbryt', `data-ac-jcancel="${esc(j.id)}"`, 'red') : bad && j.retryable !== false ? btn('Prøv igjen', `data-ac-jretry="${esc(j.id)}"`) : '';
     const full = (bad || skip) && j.error && j.error !== shortReason(j) ? `<details class="ac-jdet"><summary>Detaljer</summary><span>${esc(j.error)}</span></details>` : '';
     const pct = r && j.phase?.kind === 'load' && j.phase.totalGb ? Math.round(((j.phase.loadedGb ?? 0) / j.phase.totalGb) * 100) : j.progress ?? 0;
-    return `<div class="ac-job"><div class="ac-row"><span class="ac-ring ${r ? 'run' : qq ? 'queue' : ok ? 'ok' : skip ? 'queue' : 'bad'}">${ok ? '✓' : bad ? '!' : ''}</span><span class="ac-col ac-grow"><b class="ac-ell">${esc(j.title || j.taskName || j.task)}</b><span class="ac-ell${bad ? ' bad' : ''}">${esc(s)}</span>${full}</span>${act}</div>${r ? `<span class="ac-track sm"><i style="width:${pct}%;background:var(--acc)"></i></span>` : ''}</div>`;
+    return `<div class="ac-job"><div class="ac-row"><span class="ac-ring ${r ? 'run' : qq ? 'queue' : ok ? 'ok' : skip ? 'queue' : 'bad'}">${ok ? '✓' : bad ? '!' : ''}</span><span class="ac-col ac-grow"><b class="ac-ell">${esc(j.title || j.taskName || j.task)}</b><span class="ac-ell${bad ? ' bad' : ''}">${esc(s)}</span>${full}</span>${jobTime41(j)}${act}</div>${r ? `<span class="ac-track sm"><i style="width:${pct}%;background:var(--acc)"></i></span>` : ''}</div>`;
   };
   const fails = done.filter(isFail), rest = done.filter((j) => !isFail(j));
   const groups = failGroups(fails);
   const gRow = (g, i) => {
     const [one, many] = nounFor(g.jobs), open = !!G.gOpen?.[g.reason];
-    const head = `<div class="ac-job ac-jg"><div class="ac-row"><span class="ac-ring bad">!</span><button type="button" class="ac-col ac-grow ac-jgt" data-ac-gopen="${i}" aria-expanded="${open}"><b class="ac-ell">${g.count} ${g.count === 1 ? one : many} feilet · ${esc(String(g.short ?? '').replace(/^Tidsavbrudd · /, 'tidsavbrudd · ').toLowerCase().replace(/^ingen kontakt med ollama/, 'ingen kontakt med Ollama'))}</b><span class="ac-ell">${esc(g.jobs.slice(0, 4).map((j) => j.title || j.taskName || j.task).join(' · '))}${g.jobs.length > 4 ? ' …' : ''}</span></button><span class="ac-jgchev" aria-hidden="true">${open ? '⌃' : '⌄'}</span>${g.jobs.some((j) => j.retryable !== false) || !g.jobs.length ? btn(g.count > 1 ? 'Prøv alle igjen' : 'Prøv igjen', `data-ac-gretry="${i}"`) : ''}</div></div>`;
+    const head = `<div class="ac-job ac-jg"><div class="ac-row"><span class="ac-ring bad">!</span><button type="button" class="ac-col ac-grow ac-jgt" data-ac-gopen="${i}" aria-expanded="${open}"><b class="ac-ell">${g.count} ${g.count === 1 ? one : many} feilet · ${esc(String(g.short ?? '').replace(/^Tidsavbrudd · /, 'tidsavbrudd · ').toLowerCase().replace(/^ingen kontakt med ollama/, 'ingen kontakt med Ollama'))}</b><span class="ac-ell">${esc(g.jobs.slice(0, 4).map((j) => j.title || j.taskName || j.task).join(' · '))}${g.jobs.length > 4 ? ' …' : ''}</span></button>${groupTime41(g.jobs)}<span class="ac-jgchev" aria-hidden="true">${open ? '⌃' : '⌄'}</span>${g.jobs.some((j) => j.retryable !== false) || !g.jobs.length ? btn(g.count > 1 ? 'Prøv alle igjen' : 'Prøv igjen', `data-ac-gretry="${i}"`) : ''}</div></div>`;
     return head + (open ? `<div class="ac-jgk">${g.jobs.map(row).join('')}</div>` : '');
   };
   G.gList = groups;

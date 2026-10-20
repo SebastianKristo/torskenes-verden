@@ -289,19 +289,19 @@ export function openNews(opts = {}) {
     const secs = o && !o.none ? (o.sections ?? []).map((sc, i) => {
       const segs = segsOf(sc); segs.forEach((x) => (x.refs ?? []).forEach((n) => used.add(n)));
       const im = imgFor(sc, i), src = im ? refs.find((r) => r.n === im.ref)?.source ?? '' : '';
-      return `<section class="nw40-sec">${im ? `<figure><span class="nw40-img" style="aspect-ratio:${i ? '3/2' : '16/9'}"><img src="${esc(im.url)}" alt="${esc(im.alt ?? '')}" loading="lazy" referrerpolicy="no-referrer" data-nw-img></span><figcaption>Bilde fra saken [${esc(im.ref)}]${src ? ` · ${esc(src)}` : ''}</figcaption></figure>` : ''}
-        <b class="nw40-h">${esc(sc.h ?? sc.tittel ?? '')}</b><p>${segs.map((x) => `<span data-no-i18n>${esc(String(x.t ?? '').trim())}</span>${(x.refs ?? []).map((n) => `<button type="button" class="nw40-ref" data-gl="ref" data-v="${esc(n)}" aria-label="Kilde ${esc(n)}">${esc(n)}</button>`).join('')}`).join(' ')}</p></section>`;
+      return `<section class="nw40-sec">${im ? `<figure><span class="nw40-img" style="aspect-ratio:${i ? '3/2' : '16/9'}"><img src="${esc(im.url)}" alt="${esc(im.alt ?? '')}" loading="lazy" referrerpolicy="no-referrer" data-nw-img></span><figcaption>Bilde fra saken <button type="button" class="nw41-src" data-gl="ref" data-v="${esc(im.ref)}" aria-label="Kilde ${esc(im.ref)}">${esc(src || `Kilde ${im.ref}`)}</button></figcaption></figure>` : ''}
+        <b class="nw40-h">${esc(sc.h ?? sc.tittel ?? '')}</b><p>${segs.map((x) => `<span data-no-i18n>${esc(String(x.t ?? '').replace(/\s*\[(?:\d+(?:\s*,\s*\d+)*)\]\s*/g, ' ').replace(/^\s*\]\s*·?\s*/, '').trim())}</span>${(x.refs ?? []).map((n) => `<button type="button" class="nw40-ref" data-gl="ref" data-v="${esc(n)}" aria-label="Kilde ${esc(n)}">${esc(n)}</button>`).join('')}`).join(' ')}</p></section>`;
     }).join('') : '';
     const refList = refs.filter((r) => used.has(r.n) || o?.local);
     const meta = o && !o.none ? [new Date(o.updatedAt ?? Date.now()).toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }), `${refs.length} saker`, `${new Set(refs.map((r) => r.source)).size} kilder`, glP.len === 'kort' ? 'kort' : 'langt'].join(' · ') : 'Velg innholdet under «Innhold»';
     return `<div class="nw40-gl" role="document" aria-label="Glimt-sammendrag">
-      <div class="nw40-gh"><button type="button" class="nw40-pill" data-gl="close">‹ Nyheter</button><span class="nw-sp"></span><button type="button" class="nw40-pill" data-gl="speak"${o && !o.none ? '' : ' disabled'}>${g.speaking ? '■ Stopp' : '▶ Les opp'}</button><button type="button" class="nw40-pill ink${g.cfg ? ' on' : ''}" data-gl="cfg" aria-pressed="${!!g.cfg}">Innhold</button></div>
+      <div class="nw40-gh"><button type="button" class="nw40-pill" data-gl="close">‹ Nyheter</button><span class="nw-sp"></span><button type="button" class="nw40-pill" data-gl="speak"${o && !o.none ? '' : ' disabled'}>${g.speaking ? '■<span class="nw41-lt"> Stopp</span>' : '▶<span class="nw41-lt"> Les opp</span>'}</button><button type="button" class="nw40-pill ink${g.cfg ? ' on' : ''}" data-gl="cfg" aria-pressed="${!!g.cfg}">Innhold</button></div>
       <div class="nw40-gb"><div class="nw40-in">
         <div class="nw40-top"><span class="nw-lab">✦ GLIMT · NYHETSOPPSUMMERING</span><b class="nw40-t">${esc(title)}</b><span class="nw-m">${esc(meta)}</span></div>
         ${cfg}
         ${g.busy ? `<div class="nw40-busy"><span>✦ Glimt leser ${nSel} saker …</span><i style="width:92%"></i><i style="width:80%"></i><i class="big"></i><i style="width:88%"></i></div>` : ''}
         ${o?.none && !g.busy ? '<span class="nw-m">Ingen saker passer valgene. Slå på flere kilder eller temaer under «Innhold».</span>' : ''}
-        ${o && !o.none && !g.busy ? `<p class="nw40-ingr" data-no-i18n>${esc(o.lead ?? o.ingress ?? '')}</p>${secs}
+        ${o && !o.none && !g.busy ? `<p class="nw40-ingr" data-no-i18n>${esc(lead41(o.lead ?? o.ingress ?? ''))}</p>${secs}
           ${refList.length ? `<div class="nw40-refs"><span class="nw-lab">KILDER · ${refList.length}</span>${refList.map((r) => `<button type="button" class="nw40-rr" data-gl="ref" data-v="${esc(r.n)}"><span class="nw40-rn">[${esc(r.n)}]</span><span class="nw40-rt" style="background-color:#5c5850">${imgTag(r.image)}</span><span class="nw-tx"><span class="nw40-rtt" data-no-i18n>${esc(r.title)}</span><span class="nw-m"><span data-no-i18n>${esc(r.source ?? '')}</span>${r.time ? ` · ${esc(when(r.time))}` : ''}</span></span></button>`).join('')}</div>` : ''}
           <span class="nw40-foot">Laget av Glimt kl. ${esc(hm(o.updatedAt ?? new Date().toISOString()))} fra kildene du har valgt${o.local ? ' (lokalt sammendrag av titlene)' : ''}. Trykk på et tall for å lese saken.</span>` : ''}
       </div></div></div>`;
@@ -474,3 +474,15 @@ export function openNews(opts = {}) {
 }
 
 export const closeNews = () => open?.querySelector('[data-act="close"]')?.click();
+
+/* Prompt 41 (claude-code-nyhet-oppsummering-bredde.md): temaord med stor forbokstav der det er egennavn, listet naturlig
+   («Mest om norge og oslo og økonomi.» → «Mest om Norge, Oslo og økonomi.»). */
+const PROPER41 = ['norge', 'oslo', 'bergen', 'trondheim', 'stavanger', 'tromsø', 'sverige', 'danmark', 'finland', 'europa', 'usa', 'kina', 'russland', 'ukraina', 'israel', 'gaza', 'nato', 'eu', 'fn', 'stortinget', 'viken', 'akershus', 'toten', 'strømstad'];
+const UPPER41 = new Set(['usa', 'nato', 'eu', 'fn']);
+function lead41(t) {
+  return String(t ?? '').replace(/(Mest om )([^.!?]+)([.!?]?)/i, (_, pre, list, end) => {
+    const parts = list.split(/\s*,\s*|\s+og\s+/).map((w) => w.trim()).filter(Boolean).map((w) => (PROPER41.includes(w.toLowerCase()) ? (UPPER41.has(w.toLowerCase()) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1)) : w));
+    if (parts.length < 2) return pre + parts.join('') + end;
+    return `${pre}${parts.slice(0, -1).join(', ')} og ${parts.at(-1)}${end || '.'}`;
+  });
+}

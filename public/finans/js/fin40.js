@@ -110,7 +110,7 @@ export async function saveLines(save) {
 export const editorDirty = () => E.dirty;
 
 /** «✦ La Glimt lese kvitteringen på nytt» (full bredde, mørk). Bruker reanalyze-dialogen (data-reanalyze). */
-export const rereadBtn = (t) => (t?.receiptId ? `<button type="button" class="f40-reread" data-reanalyze="${esc(t.receiptId)}" data-f40-reread title="Les på nytt (R)">✦ La Glimt lese kvitteringen på nytt</button>` : '');
+export const rereadBtn = (t) => (t?.receiptId ? `<button type="button" class="f40-reread" data-reanalyze="${esc(t.receiptId)}" data-status="${t.receipt === 'booked' ? 'booked' : ''}" data-f40-reread title="Les på nytt (R)">✦ La Glimt lese kvitteringen på nytt</button>` : '');
 
 /* ---------------- Søk: Glimt-kort ---------------- */
 

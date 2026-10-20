@@ -130,27 +130,54 @@ if (typeof window !== 'undefined' && !window.__gfJul40) {
   window.addEventListener('storage', (ev) => { if (ev.key === 'glimt_jul' || ev.key === 'glimt_jul_p') { try { JS.mode = localStorage.getItem('glimt_jul') || 'auto'; JS.phase = PH[String(localStorage.getItem('glimt_jul_p') || '').toLowerCase()] ?? null; } catch { /* */ } window.dispatchEvent(new Event('glimt-jul')); } });
 }
 const px = (v) => `${Math.round(v * 10) / 10}px`;
-/** Antrekket tegnes over figuren og skaleres med størrelsen (fasit dress()). */
-function dress(html, S, ph) {
-  const P = { advent: { hat: 1, scarf: 1 }, jul: { hat: 1, scarf: 1, gift: 1 }, nyttar: { party: 1, spark: 1 }, vinter: { beanie: 1, scarf: 1, sc: '#b23a2a' } }[ph] ?? {};
+/** Antrekket tegnes over figuren og skaleres med størrelsen (fasit dress()).
+ *  Prompt 41: ankerpunkter per figur (glimt-figurer.js → AN): hT hatt-topp, hX hatt-senter, hS hattskala, sB skjerf-bunn,
+ *  sW skjerf-bredde, gB/gR gave. Runde figurer bruker standard. Fase «17mai»: sløyfe (samme anker som lua) og flagg som vaier. */
+const AN41 = { spire: { hT: -0.08, hX: 0.56, hS: 0.8, sB: -0.13, sW: 0.98, gB: -0.1, gR: -0.12 }, sky: { hT: -0.18, hX: 0.6, hS: 0.78, sB: 0.07, sW: 0.92, gB: 0.05, gR: -0.08 } };
+function dress(html, S, ph, id) {
+  const A = AN41[id] ?? {}, hT = A.hT ?? -0.44, hX = A.hX ?? 0.5, hS = A.hS ?? 1, sB = A.sB ?? -0.2, sW = A.sW ?? 1.05, gB = A.gB ?? -0.16, gR = A.gR ?? -0.2;
+  const P = { fest: { party: 1 }, '17mai': { flag: 1, bow: 1 }, advent: { hat: 1, scarf: 1 }, jul: { hat: 1, scarf: 1, gift: 1 }, nyttar: { party: 1, spark: 1 }, vinter: { beanie: 1, scarf: 1, sc: '#b23a2a' } }[ph] ?? {};
   const k = [];
-  if (P.scarf) k.push(`<svg class="gfj-sc" width="${px(S * 1.05)}" height="${px(S * 0.5)}" viewBox="0 0 105 50" style="position:absolute;left:50%;bottom:${px(-S * 0.2)};margin-left:${px(-S * 0.525)};overflow:visible;pointer-events:none"><path d="M8 10 Q52 26 97 10 L95 24 Q52 40 10 24 Z" fill="${P.sc || '#2f7a4f'}"/><path d="M22 16 l4 12 M40 20 l3 13 M58 20 l-1 13 M76 17 l-3 12" stroke="#f6f1e7" stroke-width="3"/><path d="M70 22 L80 48 L68 50 L62 26 Z" fill="${P.sc || '#2f7a4f'}"/></svg>`);
-  if (P.hat) k.push(`<svg class="gfj-hat" width="${px(S * 0.95)}" height="${px(S * 0.7)}" viewBox="0 0 95 70" style="position:absolute;left:50%;top:${px(-S * 0.44)};margin-left:${px(-S * 0.42)};transform:rotate(-14deg);overflow:visible;pointer-events:none"><path d="M14 56 Q40 4 74 8 Q86 10 88 20 Q70 18 66 56 Z" fill="#c8302a"/><circle cx="89" cy="22" r="8" fill="#fbf7ee"/><rect x="6" y="50" width="70" height="15" rx="7.5" fill="#fbf7ee"/></svg>`);
-  if (P.beanie) k.push(`<svg class="gfj-bn" width="${px(S * 0.9)}" height="${px(S * 0.6)}" viewBox="0 0 90 60" style="position:absolute;left:50%;top:${px(-S * 0.36)};margin-left:${px(-S * 0.45)};overflow:visible;pointer-events:none"><path d="M10 50 Q10 10 45 10 Q80 10 80 50 Z" fill="#3b6fb0"/><rect x="6" y="42" width="78" height="14" rx="6" fill="#2b5d8a"/><circle cx="45" cy="8" r="8" fill="#fbf7ee"/></svg>`);
+  if (P.scarf) k.push(`<svg class="gfj-sc" width="${px(S * sW)}" height="${px(S * 0.5 * sW / 1.05)}" viewBox="0 0 105 50" style="position:absolute;left:50%;bottom:${px(S * sB)};margin-left:${px(-S * sW / 2)};overflow:visible;pointer-events:none"><path d="M8 10 Q52 26 97 10 L95 24 Q52 40 10 24 Z" fill="${P.sc || '#2f7a4f'}"/><path d="M22 16 l4 12 M40 20 l3 13 M58 20 l-1 13 M76 17 l-3 12" stroke="#f6f1e7" stroke-width="3"/><path d="M70 22 L80 48 L68 50 L62 26 Z" fill="${P.sc || '#2f7a4f'}"/></svg>`);
+  if (P.hat) k.push(`<svg class="gfj-hat" width="${px(S * 0.95 * hS)}" height="${px(S * 0.7 * hS)}" viewBox="0 0 95 70" style="position:absolute;left:${hX * 100}%;top:${px(S * hT)};margin-left:${px(-S * 0.42 * hS)};transform:rotate(-14deg);overflow:visible;pointer-events:none"><path d="M14 56 Q40 4 74 8 Q86 10 88 20 Q70 18 66 56 Z" fill="#c8302a"/><circle cx="89" cy="22" r="8" fill="#fbf7ee"/><rect x="6" y="50" width="70" height="15" rx="7.5" fill="#fbf7ee"/></svg>`);
+  if (P.beanie) k.push(`<svg class="gfj-bn" width="${px(S * 0.9 * hS)}" height="${px(S * 0.6 * hS)}" viewBox="0 0 90 60" style="position:absolute;left:${hX * 100}%;top:${px(S * (hT + 0.08))};margin-left:${px(-S * 0.45 * hS)};overflow:visible;pointer-events:none"><path d="M10 50 Q10 10 45 10 Q80 10 80 50 Z" fill="#3b6fb0"/><rect x="6" y="42" width="78" height="14" rx="6" fill="#2b5d8a"/><circle cx="45" cy="8" r="8" fill="#fbf7ee"/></svg>`);
   if (P.party) k.push(`<svg class="gfj-pt" width="${px(S * 0.6)}" height="${px(S * 0.62)}" viewBox="0 0 60 62" style="position:absolute;left:50%;top:${px(-S * 0.48)};margin-left:${px(-S * 0.22)};transform:rotate(12deg);overflow:visible;pointer-events:none"><path d="M8 56 L30 4 L52 56 Z" fill="#1b1a17"/><path d="M14 42 L46 42 M19 30 L41 30 M24 18 L36 18" stroke="#f2c14e" stroke-width="3"/><circle cx="30" cy="4" r="5" fill="#f2c14e"/></svg>`);
   if (P.spark) k.push([[-0.18, 0.05, 0], [1.02, 0.12, 0.6], [0.92, -0.2, 1.1], [-0.08, -0.22, 1.6]].map(([x, y, dl]) => `<span class="gfj-spk" style="position:absolute;left:${px(S * x)};top:${px(S * y)};width:${px(Math.max(4, S * 0.1))};height:${px(Math.max(4, S * 0.1))};animation-delay:${dl}s"></span>`).join(''));
-  if (P.gift) k.push(`<span class="gfj-gift" style="position:absolute;right:${px(-S * 0.2)};bottom:${px(-S * 0.16)};width:${px(S * 0.34)};height:${px(S * 0.3)};border-radius:4px;background:#b23a2a;box-shadow:inset 0 0 0 2px #8a2a1d;transform:rotate(8deg);pointer-events:none"><span style="position:absolute;left:44%;top:0;bottom:0;width:12%;background:#f2c14e"></span><span style="position:absolute;top:40%;left:0;right:0;height:14%;background:#f2c14e"></span></span>`);
+  if (P.gift) k.push(`<span class="gfj-gift" style="position:absolute;right:${px(S * gR)};bottom:${px(S * gB)};width:${px(S * 0.34)};height:${px(S * 0.3)};border-radius:4px;background:#b23a2a;box-shadow:inset 0 0 0 2px #8a2a1d;transform:rotate(8deg);pointer-events:none"><span style="position:absolute;left:44%;top:0;bottom:0;width:12%;background:#f2c14e"></span><span style="position:absolute;top:40%;left:0;right:0;height:14%;background:#f2c14e"></span></span>`);
+  if (P.bow) k.push(`<svg class="gfj-bow" width="${px(S * 0.36)}" height="${px(S * 0.22)}" viewBox="0 0 36 22" style="position:absolute;left:${hX * 100}%;top:${px(S * (hT + 0.36))};margin-left:${px(S * 0.12)};transform:rotate(14deg);overflow:visible;pointer-events:none"><path d="M18 11 L2 2 L4 20 Z" fill="#c8302a"/><path d="M18 11 L34 2 L32 20 Z" fill="#c8302a"/><path d="M18 11 L2 2 L4 20 Z M18 11 L34 2 L32 20 Z" fill="none" stroke="#fbf7ee" stroke-width="1.6"/><circle cx="18" cy="11" r="3.5" fill="#1f2f6b"/></svg>`);
+  if (P.flag) k.push(`<span class="gfj-flag" style="position:absolute;right:${px(-S * 0.2)};bottom:${px(S * (sB + 0.16))};width:${px(S * 0.32)};height:${px(S * 0.46)};pointer-events:none;transform-origin:0% 100%;animation:gfSway 1.6s ease-in-out infinite"><span style="position:absolute;left:0;bottom:0;width:${px(S * 0.028)};height:${px(S * 0.46)};border-radius:2px;background:#8a6a3a"></span><svg width="${px(S * 0.3)}" height="${px(S * 0.22)}" viewBox="0 0 22 16" style="position:absolute;left:${px(S * 0.028)};top:0"><rect width="22" height="16" fill="#ba0c2f"/><rect x="6" width="4" height="16" fill="#fff"/><rect y="6" width="22" height="4" fill="#fff"/><rect x="7" width="2" height="16" fill="#00205b"/><rect y="7" width="22" height="2" fill="#00205b"/></svg></span>`);
   return `<span class="gfj gfj-${ph}" aria-hidden="true" style="position:relative;display:inline-block;line-height:0">${html}${k.join('')}</span>`;
 }
+
+/* ---------- Prompt 41 (claude-code-17-mai.md): fase «17mai» 14.–17. mai. /api/glimt/settings mai17:'auto'|'av'|'pa', mai17Active ---------- */
+const M17 = { mode: 'auto', active: null };
+try { const m = localStorage.getItem('glimt_17mai'); if (m === 'av' || m === 'pa' || m === 'auto') M17.mode = m; } catch { /* privat modus */ }
+export function mai17Auto(d = new Date()) { const { m, d: dd } = osloDate(d); return m === 4 && dd >= 14 && dd <= 17; }
+/** Er 17. mai-tilbehøret på nå? */
+export function mai17On(d = new Date()) {
+  if (M17.mode === 'av') return false;
+  if (M17.mode === 'pa') return true;
+  if (typeof M17.active === 'boolean') return M17.active;
+  return mai17Auto(d);
+}
+export function setMai17({ mai17, mai17Active } = {}) {
+  const before = mai17On();
+  if (mai17 === 'auto' || mai17 === 'av' || mai17 === 'pa') M17.mode = mai17;
+  if (mai17Active !== undefined) M17.active = typeof mai17Active === 'boolean' ? mai17Active : mai17Active && typeof mai17Active === 'object' && typeof mai17Active.on === 'boolean' ? mai17Active.on : null;
+  if (mai17Active && typeof mai17Active === 'object') M17.srv = mai17Active; else if (mai17Active === null) M17.srv = null;
+  try { localStorage.setItem('glimt_17mai', M17.mode); } catch { /* */ }
+  if (before !== mai17On()) { try { window.dispatchEvent(new Event('glimt-jul')); } catch { /* */ } }
+}
+export const mai17State = () => ({ ...M17, on: mai17On() });
 
 /** Glimt-figuren som HTML. Ukjent id → Glimt. opts.noJul: uten julantrekk (figurvelgeren, drakter med egen hatt). */
 export function fig(id, S = 76, mood = 'idle', opts = {}) {
   const m = MOOD[mood] ?? 'idle', k = FIG_IDS.includes(id) ? id : 'glimt';
   const html = figRaw(k, S, m).replace('<span ', `<span class="gf gf-${k} gf-${m}" aria-hidden="true" `);
-  const ph = opts?.noJul ? null : julOn();
-  return ph ? dress(html, S, ph) : html;
+  const ph = opts?.ph ?? (opts?.noJul ? null : julOn() ?? (mai17On() ? '17mai' : null));
+  return ph ? dress(html, S, ph, k) : html;
 }
 export function figNode(id, S, mood, opts) { const t = document.createElement('template'); t.innerHTML = fig(id, S, mood, opts); return t.content.firstElementChild; }
 /** Verten: brukerens figur, men «Glimt» blir Glimt Natt mellom 21 og 06. */
 export function hostFor(sel, d = new Date()) { const h = d.getHours(), s = FIG_IDS.includes(sel) ? sel : 'glimt'; return s === 'glimt' && (h >= 21 || h < 6) ? 'natt' : s; }
-if (typeof window !== 'undefined') window.GlimtFigs = { fig, figNode, FIGS, hostFor, WHO, NAME_COLOR, julOn, setJul };
+if (typeof window !== 'undefined') window.GlimtFigs = { fig, figNode, FIGS, hostFor, WHO, NAME_COLOR, julOn, setJul, mai17On, setMai17 };

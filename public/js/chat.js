@@ -59,7 +59,7 @@ const IC = {
 const svg = (d, s = 18, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
 const C = {
-  booted: false, missing: false, err: '', models: null, def: '', owui: false, set: { chat_my_data: false, chat_ask_cloud: true, chat_default_model: '', chat_theme: 'papir' },
+  booted: false, missing: false, err: '', models: null, def: '', owui: false, set: { chat_my_data: true, chat_ask_cloud: true, chat_default_model: '', chat_theme: 'papir' },
   list: null, q: '', qList: null, cur: null, chat: null, draftModel: '', draftSet: { ...DEF }, open: {},
   inp: '', att: [], web: false, data: false, busy: null, sheet: null, menuId: null, guard: null, rem: false, edit: null,
   copied: '', speak: '', rec: false, toast: '', pulls: {}, mdel: '', kb: null, drawer: false, delArm: false, rn: '', nf: '', pn: '', theme: 'papir',
@@ -103,11 +103,16 @@ async function boot() {
   if (l.def) C.draftSet = { ...DEF, ...l.def };
   const [m, s, list] = await Promise.allSettled([call('/models'), call('/settings'), call('/chats')]);
   if (m.status === 'rejected' && m.reason?.status === 404) { C.missing = true; paint(); return; }
-  if (m.status === 'fulfilled') { C.models = m.value.models ?? []; C.def = m.value.default ?? ''; C.owui = !!m.value.openwebui; } else { C.models = []; C.err = m.reason?.message ?? ''; }
+  if (m.status === 'fulfilled') { C.models = m.value.models ?? []; C.def = m.value.default ?? ''; C.owui = !!m.value.openwebui; C.auto = m.value.auto?.id ? m.value.auto : null; } else { C.models = []; C.err = m.reason?.message ?? ''; }
+  // Prompt 41 (claude-code-chat-auto-modell.md): «✦ Auto» øverst i velgeren når serveren har det. Auto er standard i nye samtaler,
+  // og eksisterende brukere flyttes til Auto én gang (autoMig).
+  if (C.auto) { C.models = [{ id: C.auto.id, name: C.auto.label || '✦ Auto', kind: 'auto', installed: true, picks: C.auto.picks ?? {} }, ...C.models.filter((x) => x.id !== C.auto.id)]; if (!autoMigDone()) { C.draftModel = C.auto.id; autoMigSet(); } }
   if (s.status === 'fulfilled') { C.set = { ...C.set, ...s.value }; if (!l.theme && s.value.chat_theme) C.theme = s.value.chat_theme === 'noytral' ? 'noytral' : 'papir'; }
   if (list.status === 'fulfilled') C.list = list.value; else C.list = { pinned: [], folders: [], chats: [] };
-  if (!C.draftModel || !C.models.some((x) => x.id === C.draftModel && x.installed)) C.draftModel = C.set.chat_default_model || C.def || C.models.find((x) => x.installed)?.id || '';
-  if (!C.set.chat_my_data) C.data = false;
+  if (!C.draftModel || !C.models.some((x) => x.id === C.draftModel && x.installed)) C.draftModel = (C.auto ? C.auto.id : '') || C.set.chat_default_model || C.def || C.models.find((x) => x.installed)?.id || '';
+  // Prompt 41 (claude-code-chat-mine-data-standard.md): «Mine data» er på som standard (innstillingen mangler = på), og brikken er på i hver ny samtale.
+  if (C.set.chat_my_data == null) C.set.chat_my_data = true;
+  C.data = !!C.set.chat_my_data && dataFor41(C.cur);
   if (pendingChat) { C.cur = pendingChat; pendingChat = null; watchHandoff(C.cur); }
   // Prompt 40: spørsmål fra «✦ AI» i søket: rett inn i en ny samtale (ikke forsiden eller forrige samtale først).
   if (pendingPrompt && C.models?.length) { const p = pendingPrompt; pendingPrompt = null; freshChat(); send(p); paint(); return; }
@@ -128,6 +133,7 @@ async function loadChat(id, repaint = true) {
   } else {
     try { C.chat = await call(`/chats/${encodeURIComponent(id)}`); C.cur = id; C.chat.messages = mergeTools(id, C.chat.messages ?? []); } catch { C.chat = null; C.cur = null; }
   }
+  if (C.cur && C.busy?.chatId !== C.cur) C.data = !!C.set.chat_my_data && dataFor41(C.cur);
   writeLocal();
   if (repaint) { paint(); toBottom(); }
 }
@@ -149,7 +155,7 @@ const modelOf = (id) => allModels().find((m) => m.id === id) ?? { id, name: id |
 const isGlimtModel = (id) => /^glimt\b/i.test(String(id ?? ''));
 const curModelId = () => (C.chat && C.chat.model && !isGlimtModel(C.chat.model) ? C.chat.model : C.draftModel);
 const isSky = (id) => modelOf(id).kind === 'sky';
-const mName = (id) => { if (isGlimtModel(id)) return 'Glimt'; const m = modelOf(id); return m.kind === 'sky' ? m.name : m.id; };
+const mName = (id) => { if (isGlimtModel(id)) return 'Glimt'; if (id === 'auto' || modelOf(id).kind === 'auto') return '✦ Auto'; const m = modelOf(id); return m.kind === 'sky' ? m.name : m.id; };
 const curSet = () => ({ ...DEF, ...(C.chat ? C.chat.settings : C.draftSet) });
 
 /* ---------------- Tekst ---------------- */
@@ -232,23 +238,31 @@ function msgsHtml() {
     const meta = m.meta ?? {}, used = usedWithoutFacts41(meta.used, meta.facts), tool = meta.tool ? [].concat(meta.tool) : [];
     const sec = meta.ms ? `${(meta.ms / 1000).toFixed(1).replace('.', ',')} s` : '';
     const st = meta.glimt || tool.length ? [`Verktøy${sec ? ` · ${sec}` : ''}`, meta.source && meta.source !== 'Glimt' ? meta.source : ''].filter(Boolean).join(' · ')
-      : [meta.stopped ? 'Stoppet' : '', meta.tokensPerSec ? `${String(meta.tokensPerSec).replace('.', ',')} tok/s` : '', sec].filter(Boolean).join(' · ');
-    const who = meta.glimt ? 'GLIMT' : `GLIMT · ${mName(meta.model || C.chat?.model || '').toUpperCase()}`;
+      : [meta.stopped ? 'Stoppet' : '', autoWhy41(meta), meta.tokensPerSec ? `${String(meta.tokensPerSec).replace('.', ',')} tok/s` : '', sec].filter(Boolean).join(' · ');
+    const who = meta.glimt ? 'GLIMT' : `GLIMT · ${(meta.auto?.modelName ?? mName(meta.auto?.model || meta.model || C.chat?.model || '')).toUpperCase()}`;
     return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
       <div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}
       <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
   }).join('') + (busyHere ? streamHtml() : '');
 }
+/** «✦ Kode · Qwen 3» når Auto valgte modellen (serveren sender auto/reason/task i meta). */
+function autoWhy41(meta) {
+  if (meta.auto?.label) return `${meta.auto.label}${meta.auto.fallback ? ' · reserve' : ''}`;
+  const a = meta.auto, why = (a && typeof a === 'object' ? a.reason ?? a.task : null) ?? meta.autoReason ?? meta.task ?? '';
+  if (!a && !meta.autoReason && !(C.chat?.model === 'auto' && meta.model && meta.model !== 'auto')) return '';
+  const used = (a && typeof a === 'object' ? a.model : null) ?? meta.model;
+  return `✦ ${[why ? String(why).replace(/^./, (c) => c.toUpperCase()) : 'Auto', used && used !== 'auto' ? modelOf(used).name || used : ''].filter(Boolean).join(' · ')}${a?.fallback || meta.fallback ? ' · reserve' : ''}`;
+}
 function streamHtml() {
   const b = C.busy;
   // Prompt 31: Glimt-merket ved siden av modellnavnet: Tenker (før første ord), Svarer (mens teksten strømmer inn).
-  const who = b.glimt ? 'GLIMT · TENKER' : `GLIMT · ${mName(b.model).toUpperCase()}`;
+  const who = b.glimt ? 'GLIMT · TENKER' : `GLIMT · ${(b.pickLabel || (b.picked ? `✦ ${mName(b.picked)}` : mName(b.model))).toUpperCase()}`;
   return `<div class="ch-a" data-ch-stream><div class="ch-ah"><span class="ch-lab">${glimt(22, b.text ? 'svarer' : 'tenker')}${esc(who)}</span>${(b.reading ?? []).map((u) => `<span class="ch-used">Leser <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
     ${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}${factsHtml41(b.facts)}</div>`;
 }
 function emptyHtml() {
   const id = curModelId(), m = modelOf(id), P = curSet();
-  return `<div class="ch-empty"><div class="ch-eh"><span class="ch-lab">${esc((m.kind === 'sky' ? `${m.name} · ${m.provider === 'groq' ? 'Groq' : 'Google'} · sky` : `${m.id} · lokalt på hjemmeserveren`).toUpperCase())}</span><b>Hva kan jeg hjelpe med?</b></div>
+  return `<div class="ch-empty"><div class="ch-eh"><span class="ch-lab">${esc((m.kind === 'auto' ? '✦ Auto · Glimt velger modell for hver melding' : m.kind === 'sky' ? `${m.name} · ${m.provider === 'groq' ? 'Groq' : 'Google'} · sky` : `${m.id} · lokalt på hjemmeserveren`).toUpperCase())}</span><b>Hva kan jeg hjelpe med?</b></div>
     <div class="ch-pers">${PERS.map(([k, n]) => `<button type="button" class="${P.persona === k ? 'on' : ''}" data-ch-per="${k}">${n}</button>`).join('')}</div>
     <div class="ch-sugg">${SUGG.map(([t, s], i) => `<button type="button" data-ch-sugg="${i}"><b>${esc(t)}</b>${s ? `<span>${esc(s)}</span>` : ''}</button>`).join('')}</div></div>`;
 }
@@ -257,7 +271,7 @@ function composerHtml() {
   const attH = C.att.length ? `<div class="ch-catt">${C.att.map((a, i) => `<span><i>${a.kind === 'img' ? '▣' : a.kind === 'doc' ? '#' : '⎙'}</i><span data-no-i18n>${esc(a.name)}</span>${a.up ? '<small>…</small>' : ''}<button type="button" data-ch-rmatt="${i}" aria-label="Fjern vedlegg">✕</button></span>`).join('')}</div>` : '';
   return `<div class="ch-comp">${C.toast ? `<div class="ch-toast" role="status">${esc(C.toast)}</div>` : ''}
     <div class="ch-box">${attH}
-      ${C.rec ? `<div class="ch-rec"><i></i><span class="ch-grow">Lytter … snakk nå</span><span class="ch-wave">${'<span></span>'.repeat(7)}</span></div>` : `<textarea data-ch-in rows="${Math.min(6, Math.max(1, C.inp.split('\n').length))}" placeholder="Spør ${esc(sky ? m.name : m.id)} …" enterkeyhint="send" aria-label="Melding">${esc(C.inp)}</textarea>`}
+      ${C.rec ? `<div class="ch-rec"><i></i><span class="ch-grow">Lytter … snakk nå</span><span class="ch-wave">${'<span></span>'.repeat(7)}</span></div>` : `<textarea data-ch-in rows="${Math.min(6, Math.max(1, C.inp.split('\n').length))}" placeholder="${m.kind === 'auto' ? 'Spør Glimt …' : `Spør ${esc(sky ? m.name : m.id)} …`}" enterkeyhint="send" aria-label="Melding">${esc(C.inp)}</textarea>`}
       <div class="ch-bar"><button type="button" class="ch-cb" data-ch-sheet="plus" aria-label="Legg ved">${svg(IC.plus, 18)}</button>
         <button type="button" class="ch-chip${C.web ? ' on' : ''}" data-ch-web aria-pressed="${C.web}">${svg(IC.web, 15)}Nettsøk</button>
         <button type="button" class="ch-chip${C.data && dataOK ? ' on' : ''}${dataOK ? '' : ' dim'}" data-ch-data aria-pressed="${C.data && dataOK}">${svg(IC.db, 15)}Mine data</button>
@@ -265,7 +279,7 @@ function composerHtml() {
         <button type="button" class="ch-mic${C.rec ? ' on' : ''}" data-ch-mic aria-label="${C.rec ? 'Stopp opptak' : 'Snakk'}">${svg(IC.mic, 19)}</button>
         ${busy ? '<button type="button" class="ch-send" data-ch-stop aria-label="Stopp"><span class="ch-sq-ic"></span></button>' : `<button type="button" class="ch-send${C.inp.trim() ? '' : ' dim'}" data-ch-send aria-label="Send">${svg(IC.up, 18, 2.6)}</button>`}
       </div></div>
-    <div class="ch-foot">${sky ? `Sky-modell: meldingen sendes til ${m.provider === 'groq' ? 'Groq' : 'Google'}.` : 'Kjører lokalt på hjemmeserveren. Ingenting sendes ut.'}</div></div>`;
+    <div class="ch-foot">${m.kind === 'auto' ? (C.data && C.set.chat_my_data ? 'Glimt velger modell for hver melding. Med Mine data holdes alt lokalt.' : 'Glimt velger beste modell for hver melding.') : sky ? `Sky-modell: meldingen sendes til ${m.provider === 'groq' ? 'Groq' : 'Google'}.` : 'Kjører lokalt på hjemmeserveren. Ingenting sendes ut.'}</div></div>`;
 }
 
 /* Prompt 34: AI-kontroll over Chat (Modeller → fanen Modeller, Samtaleinnstillinger → Full AI-kontroll → Valg). */
@@ -280,7 +294,8 @@ const sheetWrap = (inner, t, cls = '') => `<div class="ch-sheet-bg" data-ch-clos
 function modelSheet() {
   const id = curModelId(), row = (m) => `<button type="button" class="ch-mrow" data-ch-model="${esc(m.id)}"><span class="ch-grow"><b data-no-i18n>${esc(m.kind === 'sky' ? m.name : m.id)}</b><span>${esc([m.kind === 'sky' ? (m.provider === 'groq' ? 'Groq · sky' : 'Google · sky') : m.name, m.size, m.vision ? 'Tekst og bilde' : 'Tekst'].filter(Boolean).join(' · '))}</span></span><span class="ch-badge ${m.kind === 'sky' ? 'sky' : ''}">${m.kind === 'sky' ? 'SKY' : 'LOKAL'}</span><span class="ch-chk">${m.id === id ? '✓' : ''}</span></button>`;
   const loc = allModels().filter((m) => m.kind === 'lokal' && m.installed), sky = allModels().filter((m) => m.kind === 'sky');
-  return sheetWrap(`<div class="ch-gl">LOKALT · OLLAMA PÅ HJEMMESERVEREN</div><div class="ch-list">${loc.map(row).join('') || '<div class="ch-li-e">Ingen lokale modeller installert.</div>'}</div>
+  const auto = C.auto ? `<div class="ch-list"><button type="button" class="ch-mrow ch-auto41" data-ch-model="${esc(C.auto.id)}"><span class="ch-grow"><b>${esc(C.auto.label || '✦ Auto')}</b><span>Glimt velger beste modell for hver melding · lokalt når dine data er med</span></span><span class="ch-badge auto41">AUTO</span><span class="ch-chk">${id === C.auto.id ? '✓' : ''}</span></button></div>` : '';
+  return sheetWrap(`${auto}<div class="ch-gl">LOKALT · OLLAMA PÅ HJEMMESERVEREN</div><div class="ch-list">${loc.map(row).join('') || '<div class="ch-li-e">Ingen lokale modeller installert.</div>'}</div>
     <div class="ch-gl">SKY</div><div class="ch-list">${sky.map(row).join('') || '<div class="ch-li-e">Ingen sky-modeller. Legg inn Gemini- eller Groq-nøkkel under Innstillinger → AI.</div>'}</div>
     <span class="ch-hint">Sky-modeller merkes SKY. Før dine data eller vedlegg sendes dit, får du spørsmål om det.</span>
     <button type="button" class="ch-btn line" data-ch-sheet="mods">Administrer modeller ›</button>`, 'Velg modell');
@@ -351,7 +366,7 @@ function body() {
   const hasMsgs = (C.chat?.messages ?? []).some((x) => x.role !== 'system') || C.busy;
   return `${wide ? sideHtml(false) : ''}<div class="ch-main">
     <div class="ch-top">${wide ? '' : `<button type="button" class="ch-ib" data-ch-drawer aria-label="Historikk">${svg(IC.menu, 22)}</button>`}
-      <button type="button" class="ch-msel" data-ch-sheet="model"><b data-no-i18n>${esc(sky ? m.name : m.id || 'Velg modell')}</b><span class="ch-badge ${sky ? 'sky' : ''}">${sky ? 'SKY' : 'LOKAL'}</span><span class="ch-arr">▼</span></button>
+      <button type="button" class="ch-msel" data-ch-sheet="model"><b data-no-i18n>${esc(m.kind === 'auto' ? m.name : sky ? m.name : m.id || 'Velg modell')}</b><span class="ch-badge ${m.kind === 'auto' ? 'auto41' : sky ? 'sky' : ''}">${m.kind === 'auto' ? 'AUTO' : sky ? 'SKY' : 'LOKAL'}</span><span class="ch-arr">▼</span></button>
       <span class="ch-grow"></span>
       <button type="button" class="ch-ib" data-ch-sheet="params" aria-label="Samtaleinnstillinger" title="Samtaleinnstillinger">${svg(IC.gear, 20)}</button>${fsBtns()}
       ${wide ? '' : `<button type="button" class="ch-ib" data-ch-new aria-label="Ny chat">${svg(IC.newc, 20)}</button>`}</div>
@@ -389,8 +404,16 @@ function toast(t) { C.toast = t; paint(); clearTimeout(toastT); toastT = setTime
 /* ---------------- Sende ---------------- */
 
 const fileB64 = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).replace(/^data:[^,]+,/, '')); r.onerror = rej; r.readAsDataURL(f); });
+// Prompt 41: Mine data huskes per samtale (på i nye samtaler); Auto er standardmodell for nye samtaler.
+const DKEY41 = 'chat_data41', AKEY41 = 'chat_auto_mig41';
+function dataMap41() { try { return JSON.parse(localStorage.getItem(DKEY41) || '{}') || {}; } catch { return {}; } }
+function dataFor41(id) { if (!id) return true; const v = dataMap41()[id]; return v === undefined ? true : !!v; }
+function dataSave41(id, v) { if (!id) return; try { const m = dataMap41(); m[id] = !!v; const k = Object.keys(m); if (k.length > 300) delete m[k[0]]; localStorage.setItem(DKEY41, JSON.stringify(m)); } catch { /* privat modus */ } }
+function autoMigDone() { try { return localStorage.getItem(AKEY41) === '1'; } catch { return true; } }
+function autoMigSet() { try { localStorage.setItem(AKEY41, '1'); } catch { /* */ } }
+function fresh41() { C.data = !!C.set.chat_my_data; if (C.auto) C.draftModel = C.auto.id; }
 function newChat() {
-  C.cur = null; C.chat = null; C.inp = ''; C.att = []; C.edit = null; C.drawer = false; C.sheet = null;
+  C.cur = null; C.chat = null; C.inp = ''; C.att = []; C.edit = null; C.drawer = false; C.sheet = null; fresh41();
   writeLocal(); paint();
   host()?.querySelector('[data-ch-in]')?.focus();
 }
@@ -498,7 +521,7 @@ async function readSse(res, ctl) {
         if (line.startsWith('event:')) { ev = line.slice(6).trim(); continue; }
         if (!line.startsWith('data:')) { if (!line) ev = 'message'; continue; }
         let d; try { d = JSON.parse(line.slice(5).trim()); } catch { continue; }
-        if (ev === 'meta') { chatId = d.chatId ?? chatId; if (!C.cur) { if (C.pendingLocal && chatId) { toolsRekey(C.pendingLocal, chatId); C.pendingLocal = null; } C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
+        if (ev === 'meta') { if (C.busy && (d.auto?.model || d.picked)) { C.busy.picked = d.auto?.model ?? d.picked; C.busy.pickLabel = d.auto?.label ?? ''; paintStream(); } if (C.data && d.chatId) dataSave41(d.chatId, C.data); chatId = d.chatId ?? chatId; if (!C.cur) { if (C.pendingLocal && chatId) { toolsRekey(C.pendingLocal, chatId); C.pendingLocal = null; } C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
         else if (ev === 'facts') { C.busy.facts = d.facts ?? []; paintStream(); } // prompt 41: faktakort mens svaret kommer
         else if (ev === 'delta') { C.busy.text += d.text ?? ''; if (!raf) raf = requestAnimationFrame(flush); }
         else if (ev === 'done') done = d;
@@ -609,7 +632,9 @@ function setP(x) {
   if (C.chat?.id) { C.chat.settings = { ...curSet(), ...x }; patchChat(C.chat.id, { settings: x }); } else { C.draftSet = { ...C.draftSet, ...x }; writeLocal(); }
 }
 function pickModel(id) {
-  C.draftModel = id; writeLocal();
+  // Prompt 41: velger du en fast modell i en samtale, gjelder den for den samtalen (nye samtaler starter på Auto).
+  if (!C.chat?.id || !C.auto) C.draftModel = id;
+  writeLocal();
   if (C.chat?.id) { C.chat.model = id; patchChat(C.chat.id, { model: id }); }
   C.sheet = null; paint();
 }
@@ -740,7 +765,7 @@ function bind(h) {
     if ('chSend' in d) { send(C.inp); return; }
     if ('chStop' in d) { stop(); return; }
     if ('chWeb' in d) { C.web = !C.web; writeLocal(); paint(); return; }
-    if ('chData' in d) { if (!C.set.chat_my_data) { toast('Slått av i Innstillinger → AI → Chat'); return; } C.data = !C.data; writeLocal(); paint(); return; }
+    if ('chData' in d) { if (!C.set.chat_my_data) { toast('Slått av i Innstillinger → AI og tolkning'); return; } C.data = !C.data; dataSave41(C.cur, C.data); writeLocal(); paint(); return; }
     if ('chMic' in d) { mic(); return; }
     if (d.chRmatt) { C.att = C.att.filter((_, i) => i !== +d.chRmatt); paint(); return; }
     if (d.chKbsel) { const doc = C.kb?.find((x) => x.id === d.chKbsel); if (!doc) return; C.att = C.att.some((a) => a.id === doc.id) ? C.att.filter((a) => a.id !== doc.id) : [...C.att, { kind: 'doc', id: doc.id, name: doc.name }]; paint(); return; }
@@ -807,7 +832,7 @@ function watchHandoff(id, n = 0) {
 }
 /* Prompt 40 (claude-code-sok-ai-til-chat.md): «✦ AI» med tekst åpner selve samtalen med spørsmålet.
    Rekkefølge: stopp pågående svar (lagres som «Stoppet») → opprett ny samtale → send → naviger. Ingen timer imellom. */
-function freshChat() { sendGen++; C.cur = null; C.chat = null; C.inp = ''; C.att = []; C.edit = null; C.drawer = false; C.sheet = null; C.guard = null; writeLocal(); }
+function freshChat() { sendGen++; C.cur = null; C.chat = null; C.inp = ''; C.att = []; C.edit = null; C.drawer = false; C.sheet = null; C.guard = null; fresh41(); writeLocal(); }
 export async function openChat(prompt = '') {
   const p = String(prompt ?? '').trim();
   const go = () => { if (location.hash !== '#/chat') location.hash = '#/chat'; };

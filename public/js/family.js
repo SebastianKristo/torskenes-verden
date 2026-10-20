@@ -2,6 +2,7 @@
 // sensorer, soner (trykk på kartet), varsler per person, hendelser og helse. Personvern håndheves på serveren;
 // her vises bare det den gir oss. Nettleseren kan dele egen posisjon mens siden er åpen.
 import { hjemlysHtml, bindHjemlys } from './hjemlys40.js';
+import { hl41Html, bindHl41 } from './hjemlys41.js'; // prompt 41: Familie → Hjemlys med «Si fra»
 import { api, esc, initials, hm, nb } from './util.js';
 import { onLive, liveOn } from './realtime.js';
 
@@ -389,7 +390,7 @@ function zoneSheet() {
 }
 
 function tabs() {
-  return `<div class="fam-tabs"><div class="fam-tpill" role="tablist">${[['kart', 'Kart'], ['soner', 'Soner'], ['helse', 'Helse']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-fam-tab="${k}">${n}</button>`).join('')}</div>
+  return `<div class="fam-tabs"><div class="fam-tpill" role="tablist">${[['kart', 'Kart'], ['soner', 'Soner'], ['helse', 'Helse'], ['hjemlys', 'Hjemlys']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-fam-tab="${k}">${n}</button>`).join('')}</div>
     <span class="fam-live"><i class="${liveOn() ? 'on' : ''}"></i>${liveOn() ? `Sanntid · ${S.sharingHere ? 'din posisjon deles herfra' : 'oppdatert nå'}` : 'Oppdateres hvert 20. sekund'}</span></div>`;
 }
 
@@ -397,6 +398,7 @@ function body() {
   if (S.err && !S.d) return `<div class="card fam-card"><div class="fam-empty">Kunne ikke hente familien: ${esc(S.err)}</div></div>`;
   if (!S.d) return '<div class="card fam-card"><div class="fam-empty">Laster …</div></div>';
   if (S.tab === 'helse') return tabs() + healthAll() + privacyCard();
+  if (S.tab === 'hjemlys') return tabs() + hl41Html(S.d, paint);
   // Verktøyraden ligger over kartet (prompt 22): «+ Ny sone på kartet» til venstre, «Vis alle» og ↻ til høyre.
   const tools = `<div class="fam-tools"><button type="button" class="fam-tb pri" data-fam-act="pick" aria-pressed="${S.picking}">${S.picking ? 'Avbryt plassering' : '+ Ny sone på kartet'}</button><span class="fam-sp"></span>
     <button type="button" class="fam-tb" data-fam-act="fit">Vis alle</button><button type="button" class="fam-tb rnd" data-fam-act="refresh" aria-label="Oppdater posisjoner" title="Oppdater posisjoner"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button></div>`;
@@ -416,6 +418,8 @@ function body() {
 function paint() {
   const h = host();
   if (!h) return;
+  const top41 = document.querySelector('.fam-top + [data-hl40-slot]');
+  if (top41) top41.hidden = S.tab === 'hjemlys';
   // Kartet beholdes mellom oppdateringer; bare kortene rundt tegnes på nytt.
   const mapEl = document.getElementById('fam-map');
   if (mapEl && S.d) {
@@ -600,6 +604,8 @@ function bind(h) {
 
 export function render() {
   bindHjemlys(); // prompt 40: Hjemlys øverst på Familie-siden
+  bindHl41();
+  if (/[?&]tab=hjemlys\b/.test(location.hash)) S.tab = 'hjemlys';
   // Prompt 37: «Vis på kart ›» fra «Hvor er Ingrid?» åpner #/familie?person=<userId> med personen valgt.
   const pq = new URLSearchParams(location.hash.split('?')[1] ?? '').get('person');
   if (pq) { S.tab = 'kart'; S.sel = pq; S.track = []; }

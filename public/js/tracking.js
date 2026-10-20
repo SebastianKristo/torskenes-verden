@@ -12,7 +12,7 @@ const SEGS = ['Aktive', 'Klar for henting', 'Utgående', 'Levert', 'Arkiv'];
 const SEGS_2C = ['Aktive', 'Klar for henting', 'På vei', 'Registrert', 'Levert', 'Arkiv', 'Alle'];
 const segs = () => (is2c() ? SEGS_2C : SEGS);
 // Hva hver transportør trenger. 17TRACK er reserven for alle uten egen klient.
-const KEYS = [['posten', 'Posten og Bring', 'API-nøkkel fra Mybring (bruker-ID og nøkkel)'], ['postnord', 'PostNord', 'API-nøkkel fra PostNord Developer'], ['dhl', 'DHL', 'DHL Shipment Tracking API (Unified)'],
+const KEYS = [['posten', 'Posten og Bring', 'API-nøkkel fra Mybring (bruker-ID og nøkkel)'], ['postnord', 'PostNord', 'Uten konto og nøkkel · offentlig sporing (nøkkel valgfri)'], ['dhl', 'DHL', 'DHL Shipment Tracking API (Unified)'],
   ['ups', 'UPS', 'OAuth-klient fra UPS Developer'], ['other', '17TRACK', 'Reserve for FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox og andre']];
 // Prompt 26: overstyr sporingstjenesten (carrierOverride, null = auto) ved ny pakke og under «Spor via» på en pakke.
 const OVR = [['posten', 'Posten'], ['bring', 'Bring'], ['postnord', 'PostNord'], ['dhl', 'DHL'], ['helthjem', 'Helthjem'], ['ups', 'UPS'], ['budbee', 'Budbee'], ['instabox', 'Instabox'], ['parcelsapp', 'ParcelsApp']];
@@ -144,7 +144,7 @@ function body2c() {
   const rows = kilder
     .map(([a, n, sub, on]) => `<button class="trk-tog" ${a} aria-pressed="${on}"><span><b>${esc(n)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${sw(on)}</button>`).join('') + notifyLink();
   const conf = (id) => d.carriers.find((c) => c.id === id) ?? {};
-  const conns = KEYS.map(([id, n, sub]) => { const c = conf(id); return `<div class="trk-conn">${badge(c.color, c.fg, c.ini, 'md', c.logo)}<span><b>${esc(n)}</b><small>${esc(sub)}</small></span><em class="${c.configured ? 'ok' : 'miss'}">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</em></div>`; }).join('');
+  const conns = KEYS.map(([id, n, sub]) => { const c = conf(id); return `<div class="trk-conn">${badge(c.color, c.fg, c.ini, 'md', c.logo)}<span><b>${esc(n)}</b><small>${esc(sub)}</small></span><em class="${c.configured || id === 'postnord' ? 'ok' : 'miss'}">${c.configured ? 'Tilkoblet' : id === 'postnord' ? 'Uten nøkkel' : 'Mangler nøkkel'}</em></div>`; }).join('');
   const last = d.lastRun ? `Sist sjekket ${hm(new Date(d.lastRun))}` : 'Ikke sjekket ennå';
   return `<div class="p-trk-bar"><div class="p-trk-tabs" role="tablist">${tabs}</div>
       <div class="p-trk-add"><input name="trk-no" value="${esc(S.no)}" placeholder="Legg til sporingsnummer" autocomplete="off" spellcheck="false" aria-label="Sporingsnummer"><button class="trk-go" data-trk-add ${S.adding ? 'disabled' : ''}>${S.adding ? 'Sporer …' : 'Spor'}</button></div></div>
@@ -185,7 +185,7 @@ function body() {
   }).join('');
   const last = d.lastRun ? `Sist sjekket ${hm(new Date(d.lastRun))}` : 'Ikke sjekket ennå';
   const conf = (id) => d.carriers.find((c) => c.id === id) ?? {};
-  const conns = KEYS.map(([id, n, s]) => { const c = conf(id); return `<div class="trk-conn">${badge(c.color, c.fg, c.ini, 'md', c.logo)}<span><b>${esc(n)}</b><small>${esc(s)}</small></span><em class="${c.configured ? 'ok' : 'miss'}">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</em></div>`; }).join('');
+  const conns = KEYS.map(([id, n, s]) => { const c = conf(id); return `<div class="trk-conn">${badge(c.color, c.fg, c.ini, 'md', c.logo)}<span><b>${esc(n)}</b><small>${esc(s)}</small></span><em class="${c.configured || id === 'postnord' ? 'ok' : 'miss'}">${c.configured ? 'Tilkoblet' : id === 'postnord' ? 'Uten nøkkel' : 'Mangler nøkkel'}</em></div>`; }).join('');
   return `
   <div class="trk-box">
     <div class="trk-add">

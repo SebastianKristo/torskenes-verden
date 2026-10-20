@@ -8,7 +8,7 @@ import { api } from './util.js';
 export const BG_TYPES = [
   ['weather', 'Vær', 'Følger været ute, dag og natt'],
   ['planets', 'Planeter', 'Jorda, Månen, Jupiter, Mars og Saturn fra NASA'],
-  ['oslo', 'Oslo', 'Byen fra lufta'],
+  ['oslo', 'Oslo', 'Oslo fra lufta · skifter gjennom dagen'],
   ['custom', 'Eget bilde', 'Ditt opplastede bilde'],
   ['none', 'Ingen', 'Bare fargeovergang'],
 ];
@@ -68,7 +68,48 @@ function applyVars() {
 /* ---------- Henting ---------- */
 
 const cache = new Map(); // nøkkel → { at, r, url, failed, pending }
-const keyOf = (type) => `${type}|${type === 'planets' ? bg.planet : ''}`;
+const keyOf = (type) => `${type}|${type === 'planets' ? bg.planet : type === 'oslo' ? osloKey41() : ''}`;
+
+/* ---------- Prompt 41 (claude-code-bakgrunn-oslo-dognet.md): Oslo fra lufta, bilde etter tid på døgnet ----------
+   Frie Wikimedia Commons-bilder (Getty krever kjøpt lisens). Morgen/dag/kveld/natt fra lokal klokke, eller fra soloppgang og
+   solnedgang når Vær har dem (setSun41). Innenfor tidsrommet byttes bilde hver hele time (time % antall). Egne opplastede
+   Oslo-bilder (serveren) går foran. Kreditering vises i Innstillinger → Tilpass → Bakgrunn, ikke på Hjem. */
+export const OSLO41 = {
+  morgen: ['Oslo_sett_fra_Nesoddtangen,_2020.jpg', 'Oslo_from_east_IMG_7642_aerial.JPG', 'Oslo_S_aerial.jpg'],
+  dag: ['Oslo_Skyline,_drone.jpg', 'Rodeløkka_(7._september_2018).jpg', 'Holmenkollen_aerial.jpg', '2010-10-25_Oslo.jpg', 'Operahuset.jpg', 'Oslo_S_aerial.jpg'],
+  kveld: ['Bjørvika_-_Oslo,_Norway_2020-12-23.jpg', 'Oslo_sunset_-_33885192918.jpg', 'Oslo_view.jpg'],
+  natt: ['Oslo_at_night.jpg', 'Oslo_night_skyline_2011.jpg', 'Oslo_-_Bjørvika_-_2026.jpg'],
+};
+const COMMONS41 = 'https://commons.wikimedia.org/wiki/';
+export const osloUrl41 = (f, w = 2000) => `${COMMONS41}Special:FilePath/${encodeURIComponent(f)}?width=${w}`;
+let sun41 = null; // { rise: ms, set: ms } for i dag
+export function setSun41(rise, set) {
+  const r = Date.parse(rise), s = Date.parse(set);
+  sun41 = Number.isFinite(r) && Number.isFinite(s) ? { rise: r, set: s } : null;
+}
+/** Tidsrom for et tidspunkt: soloppgang−1 t til +3 t = morgen, solnedgang−2 t til +1 t = kveld, mørkt = natt. */
+export function osloSlot41(now = new Date()) {
+  const t = now.getTime(), H = 3600_000;
+  if (sun41 && new Date(sun41.rise).toDateString() === now.toDateString()) {
+    const { rise, set } = sun41;
+    if (t >= rise - H && t < rise + 3 * H) return 'morgen';
+    if (t >= set - 2 * H && t < set + H) return 'kveld';
+    if (t >= rise + 3 * H && t < set - 2 * H) return 'dag';
+    return 'natt';
+  }
+  const h = now.getHours();
+  return h >= 5 && h < 10 ? 'morgen' : h >= 10 && h < 16 ? 'dag' : h >= 16 && h < 20 ? 'kveld' : 'natt';
+}
+export function osloKey41(now = new Date()) { return `${osloSlot41(now)}${now.getHours()}`; }
+/** Bildelisten for et tidspunkt: tidsrommets bilder fra timens indeks, 1280 px som reserve, så dag-settet. */
+export function osloUrls41(now = new Date()) {
+  const slot = osloSlot41(now), L = OSLO41[slot], i = now.getHours() % L.length;
+  const order = [...L.slice(i), ...L.slice(0, i)], rest = slot === 'dag' ? [] : OSLO41.dag.filter((f) => !order.includes(f));
+  const files = [...order, ...rest], urls = [];
+  for (const f of files) urls.push(osloUrl41(f, 2000), osloUrl41(f, 1280));
+  return { slot, files, urls };
+}
+const osloFileOf41 = (url) => { const m = /Special:FilePath\/([^?]+)/.exec(url ?? ''); return m ? decodeURIComponent(m[1]) : null; };
 
 function norm(r, legacy) {
   if (!r) return null;
@@ -126,8 +167,15 @@ export async function resolveBg(type = bg.type, force = false) {
   ent.pending = (async () => {
     if (type !== 'none') {
       ent.r = await fetchBg(type);
-      const urls = [ent.r?.image_url, ...(ent.r?.fallbacks ?? [])].filter(Boolean);
+      let urls = [ent.r?.image_url, ...(ent.r?.fallbacks ?? [])].filter(Boolean);
+      // Oslo: egne opplastede bilder fra serveren først, ellers Commons-settet for tiden på døgnet (serverens bilder som siste reserve).
+      if (type === 'oslo' && !/eget bilde/i.test(ent.r?.credit?.source ?? '')) urls = [...osloUrls41().urls, ...urls];
       ent.url = urls.length ? await tryLoad(urls) : null;
+      const f41 = type === 'oslo' ? osloFileOf41(ent.url) : null;
+      if (f41) {
+        const title = f41.replace(/\.[a-z]+$/i, '').replace(/_/g, ' ');
+        ent.r = { ...(ent.r ?? {}), theme_hint: 'dark', credit: { text: `Foto: ${title} · Wikimedia Commons`, author: null, license: null, source: 'Wikimedia Commons', url: `${COMMONS41}File:${encodeURIComponent(f41)}` } };
+      }
       ent.failed = !ent.url && (urls.length > 0 || !ent.r);
     }
     ent.pending = null;
@@ -143,7 +191,8 @@ export const forgetBg = (type) => { for (const k of [...cache.keys()]) if (k.sta
 export function creditOf(ent) {
   const c = ent?.r?.credit;
   if (!c || ent.failed) return { text: '', url: null };
-  const text = c.text || [c.author, c.source].filter(Boolean).join(' · ');
+  // Prompt 41: «Foto: {forfatter} · {lisens} · Wikimedia Commons» når forfatter og lisens er kjent.
+  const text = c.author && c.license ? `Foto: ${[c.author, c.license, c.source || 'Wikimedia Commons'].filter(Boolean).join(' · ')}` : c.text || [c.author, c.source].filter(Boolean).join(' · ');
   return { text, url: c.url ?? null };
 }
 

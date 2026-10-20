@@ -14,6 +14,7 @@ import { api, esc, isMobile } from './util.js';
 import { onLive, liveOn } from './realtime.js';
 import { store } from './store.js';
 import { mountHa } from './tasks-ha.js';
+import { needsAi41, splitLocal41, startJob41, trackJob41, jobsHtml41, madeWithHtml41, originCard41, glimtSources41, srcItems41, clearDone41 } from './tasks41.js'; // prompt 41: Glimt deler opp i bakgrunnen
 import { parse as gParse, pasteLines, isAsk, ask as gAsk, splitSugg, guess, dupes, PACK, MAT_FALLBACK, isoDay } from './tasks37-glimt.js';
 import { colorFor } from './house37.js';
 
@@ -95,7 +96,7 @@ async function load() {
   if (S.cards !== false) loadCards();
 }
 // Felter serveren ikke lagrer ennå (eldre server) huskes i denne nettleseren, så detaljarket ikke mister dem ved omlasting.
-const EXTRA = ['time', 'urgent', 'rep', 'early', 'prio', 'flag', 'tags', 'subs', 'place'];
+const EXTRA = ['time', 'urgent', 'rep', 'early', 'prio', 'flag', 'tags', 'subs', 'place', 'origin']; // prompt 41: origin = «Laget med Glimt»
 const exKey = () => `tk37_extra_${myId() ?? 'x'}`;
 const localExtra = () => { try { return JSON.parse(localStorage.getItem(exKey()) ?? '{}'); } catch { return {}; } };
 function rememberExtra(t) { try { const m = localExtra(); m[t.id] = Object.fromEntries(EXTRA.filter((k) => t[k] !== undefined).map((k) => [k, t[k]])); localStorage.setItem(exKey(), JSON.stringify(m)); } catch { /* */ } }
@@ -136,7 +137,7 @@ let cardsFor = null;
 async function loadCards() {
   const k = S.cur;
   cardsFor = k;
-  try { const r = await api(`/tasks/glimt/cards${k !== 'alle' && k !== 'arkiv' ? `?list=${encodeURIComponent(k)}` : ''}`); if (cardsFor === k && Array.isArray(r?.cards)) { S.cards = r.cards; paint(); } }
+  try { const r = await api(`/tasks/glimt/cards${k !== 'alle' && k !== 'arkiv' && k !== 'glimt41' ? `?list=${encodeURIComponent(k)}` : ''}`); if (cardsFor === k && Array.isArray(r?.cards)) { S.cards = r.cards; paint(); } }
   catch (er) { if (er.status === 404 && k === 'alle') S.cards = false; }
 }
 function srvTips() {
@@ -221,7 +222,8 @@ function body() {
   const opt = (kind, v, n, on) => `<button type="button" class="tk-opt${on ? ' on' : ''}" data-tk-${kind}="${v ?? ''}" aria-pressed="${on}">${esc(n)}</button>`;
   const group = (title, cls, arr, act = '') => (arr.length ? `<section class="tk-group"><span class="tk-gh"><span class="tk-gt ${cls}">${title}</span>${act}</span><div class="card tk-card">${arr.map(row).join('')}</div></section>` : '');
   const actBtn = (k, n) => `<button type="button" class="tk-gbtn" data-tk-act="${k}"${S.busy ? ' disabled' : ''}>${n}</button>`;
-  const lists2 = `<div class="tk-lists">${chip('alle', 'Alle', 'var(--t-ink)')}${lists.map((l) => chip(l.id, l.name, l.color)).join('')}${chip('arkiv', 'Arkivert', 'var(--t-mut)')}<button type="button" class="tk-list tk-new" data-tk-act="newlist">+ Ny liste</button></div>`;
+  const lists2 = `<div class="tk-lists">${chip('alle', 'Alle', 'var(--t-ink)')}${lists.map((l) => chip(l.id, l.name, l.color)).join('')}${chip('arkiv', 'Arkivert', 'var(--t-mut)')}${mwChip41()}<button type="button" class="tk-list tk-new" data-tk-act="newlist">+ Ny liste</button></div>`;
+  if (S.cur === 'glimt41' && !wide()) return `${lists2}${jobsHtml41()}${madeWithHtml41([...items, ...S.arch], { listName: (t) => listOf(tList(t))?.name ?? '', title: tTitle })}`;
   if (ARC && wide()) return webBody(S.arch, curName);
   if (ARC) {
     return `${lists2}${group(`ARKIVERT · ${S.arch.length}`, 'mut', S.arch, actBtn('arch-clear', 'Tøm arkivet'))}
@@ -235,6 +237,7 @@ function body() {
   return `${lists2}
     ${infoCard(curL)}
     ${glimtCard()}
+    ${jobsHtml41()}
     ${tips(inL)}
     <form class="tk-add" data-tk-form><input name="title" value="${esc(S.nv)}" placeholder="Ny oppgave i ${esc(curName)}" autocomplete="off" maxlength="200" aria-label="Ny oppgave"><button type="submit" aria-label="Legg til"${S.busy ? ' disabled' : ''}>+</button></form>
     <div class="tk-opts">${[[0, 'I dag'], [1, 'I morgen'], [7, 'Neste uke'], [null, 'Uten dato']].map(([v, n]) => opt('due', v, n, S.nd === v)).join('')}<span class="tk-sep"></span>${who.map(([v, n]) => opt('who', v, n, S.nw === v)).join('')}</div>
@@ -261,6 +264,7 @@ function edSheet() {
     <div class="tk-sh"><button type="button" class="tk-round" data-tk-close aria-label="Lukk">✕</button><b>Detaljer</b><button type="button" class="tk-done" data-tk-close>Ferdig</button></div>
     <div class="tk-sc">
     <div class="tk-c"><input class="tk-ti" data-tk-f="title" value="${esc(tTitle(t))}" maxlength="200" aria-label="Tittel"><textarea class="tk-no" data-tk-f="notes" rows="3" placeholder="Notater og lenke" aria-label="Notater og lenke">${esc(notes)}</textarea>${/https?:\/\//.test(notes) ? `<div class="tk-links">${linkify(notes.match(/https?:\/\/\S+/g).join(' '))}</div>` : ''}</div>
+    ${originCard41(t)}
     <span class="tk-gt">DATO OG TID</span>
     <div class="tk-c">
       <div class="tk-r">${ib('#b23a2a', 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4')}<span class="tk-rl"><b>Dato</b>${t.due ? `<input type="date" class="tk-in" data-tk-f="due" value="${esc(t.due)}" aria-label="Dato">` : ''}</span>${sw(!!t.due, 'data-tk-sw="due"')}</div>
@@ -384,7 +388,7 @@ async function createItem(o) {
   return it;
 }
 // Nye oppgaver fra «Alle» havner i standardlisten (GET /api/tasks/settings → defaultList, ellers «Mine», ellers første liste).
-const defaultList = () => (S.cur !== 'alle' && S.cur !== 'arkiv' ? S.cur : (S.defList && listOf(S.defList) ? S.defList : null) ?? S.d.lists.find((l) => l.kind === 'mine' || /^mine$/i.test(l.name))?.id ?? S.d.lists[0]?.id ?? 'hjem');
+const defaultList = () => (S.cur !== 'alle' && S.cur !== 'arkiv' && S.cur !== 'glimt41' ? S.cur : (S.defList && listOf(S.defList) ? S.defList : null) ?? S.d.lists.find((l) => l.kind === 'mine' || /^mine$/i.test(l.name))?.id ?? S.d.lists[0]?.id ?? 'hjem');
 const listByKey = (k) => (k ? S.d.lists.find((l) => l.name.toLowerCase() === k || l.id === k) : null);
 
 let flashT = null;
@@ -404,6 +408,16 @@ function setAns(a) {
 async function glimtRun(q, { image = null } = {}) {
   q = String(q ?? '').trim();
   if (!q && !image) return;
+  // Prompt 41: lange beskjeder deles opp av AI i bakgrunnen. Feltet tømmes med en gang; en stiplet rad viser jobben.
+  if (!image && !isAsk(q) && needsAi41(q)) {
+    S.g.q = ''; S.g.ans = null;
+    try {
+      const r = await startJob41(q, { list: S.cur !== 'alle' && S.cur !== 'arkiv' && S.cur !== 'glimt41' ? S.cur : undefined, paint, load });
+      if (r.ok && !r.sync) return;
+      if (r.ok && r.sync) { const x = r.sync; setAns({ text: x.text ?? 'Ferdig.', items: (x.items ?? []).map(resItem), undo: x.undo?.token ? { token: x.undo.token } : null }); load(); return; }
+      return localSplit41(q);
+    } catch (er) { setAns({ text: `Glimt fikk ikke svar: ${er.message}`, items: [] }); return; }
+  }
   S.g.q = ''; S.g.busy = image ? 'Leser bildet …' : isAsk(q) ? 'Tenker …' : 'Glimt jobber …'; paint();
   try {
     const r = await api('/tasks/glimt', { method: 'POST', json: { q, list: S.cur !== 'alle' && S.cur !== 'arkiv' ? S.cur : undefined, image: image ?? undefined } });
@@ -418,7 +432,41 @@ async function glimtRun(q, { image = null } = {}) {
   if (image) return setAns({ text: 'Bildelesing krever Glimt på serveren. Skriv varene i stedet, eller lim inn en liste.', items: [] });
   try { await localGlimt(q); } catch (er) { setAns({ text: er.message, items: [] }); }
 }
+/** Lokal reserve for lange beskjeder (eldre server): ett punkt per handling, note på begrunnelsen, «Laget med Glimt» lokalt. */
+async function localSplit41(q) {
+  const P = splitLocal41(q), at = new Date().toISOString(), made = [];
+  for (const p of P) {
+    const g = guess(p.n, people()), l = listByKey(g.l) ?? listOf(defaultList());
+    const it = await createItem({ n: p.n, list: l?.id, notes: p.note || undefined, origin: { text: q, at, engine: 'lokal' } });
+    if (it && !it.origin) it.origin = { text: q, at, engine: 'lokal' };
+    made.push(it);
+  }
+  setAns({ text: `Glimt lagde ${made.length} punkter i riktig rekkefølge (uten AI).`, items: made.map(resItem), undo: { ids: made.map((x) => x.id) } });
+}
 const norm = (t) => ({ id: t.id, n: tTitle(t), l: tList(t), who: tWho(t), whoName: nameOf(tWho(t)), byName: nameOf(t.createdBy ?? t.by), due: t.due, done: t.done, doneAt: doneMs(t) });
+/* Prompt 41: «Laget med Glimt»-fanen. */
+const mwN41 = () => (S.d ? glimtSources41([...(S.d.items ?? []), ...(S.arch ?? [])]).length : 0);
+function mwChip41() { const n = mwN41(); return n ? `<button type="button" class="tk-list${S.cur === 'glimt41' ? ' on' : ''}" data-tk-list="glimt41" aria-pressed="${S.cur === 'glimt41'}"><span class="tk-dot tk41-red"></span>Laget med Glimt<span class="tk-n">${n}</span></button>` : ''; }
+async function act41(a, key) {
+  if (a === 'x') { clearDone41(); return paint(); }
+  if (a === 'see' || a === 'open') { clearDone41(); S.ed = null; paintSheets(); S.cur = 'glimt41'; return paint(); }
+  const all = [...S.d.items, ...S.arch], L = srcItems41(all, key);
+  if (!L.length) return;
+  if (a === 'forget') {
+    if (!confirm('Glemme beskjeden? Punktene blir liggende.')) return;
+    const ok = await api(`/tasks/glimt/sources/${encodeURIComponent(key)}`, { method: 'DELETE' }).then(() => true).catch(() => false);
+    if (!ok) await Promise.all(L.map((t) => api(`/tasks/${encodeURIComponent(t.id)}`, { method: 'PATCH', json: { origin: null } }).catch(() => null)));
+    for (const t of L) delete t.origin;
+    return paint();
+  }
+  if (a === 'redo') {
+    const text = L[0].origin.text, open = L.filter((t) => !t.done);
+    try { const r = await api(`/tasks/glimt/sources/${encodeURIComponent(key)}/redo`, { method: 'POST', json: {} }); if (r?.jobId) { S.d.items = S.d.items.filter((x) => !open.includes(x)); trackJob41(r.jobId, text, { paint, load }); return; } } catch (er) { if (er.status !== 404) { flash(er.message); return; } }
+    S.d.items = S.d.items.filter((x) => !open.includes(x)); paint();
+    await Promise.all(open.map((t) => api(`/tasks/${encodeURIComponent(t.id)}`, { method: 'DELETE' }).catch(() => null)));
+    return glimtRun(text);
+  }
+}
 async function localGlimt(q) {
   if (/matplan|middagene|ukas mat|handleliste fra mat/i.test(q)) return matplan();
   if (/hytt.*(pakke|pakkeliste)|pakkeliste/i.test(q)) return packList();
@@ -582,6 +630,7 @@ function bind(h) {
     if (t.dataset.tkGq) return glimtRun(t.dataset.tkGq);
     if (t.dataset.tkG === 'undo') return undo();
     if (t.dataset.tkG === 'clear') { S.g.ans = null; return paint(); }
+    if (t.dataset.tk41) return act41(t.dataset.tk41, t.dataset.k);
     if (t.dataset.tkCard) return cardAct(t.dataset.tkCard);
     if (t.dataset.tkTip) {
       const [k, arg] = t.dataset.tkTip.split(/:(.*)/s);
@@ -871,7 +920,7 @@ function twSide() {
   const ppl = people();
   return `<aside class="tw-side">${fs40() ? '' : '<div class="tw-brand"><b>Gjøremål</b><span>Hjem, handel og hytta</span></div>'}
     <nav class="tw-lists">${li('alle', 'Alle', 'var(--t-ink)', n('alle'))}<button type="button" class="tw-li${S.pf === 'me' && S.cur === 'alle' ? ' on' : ''}" data-tw-act="mine" title="Mine"><span class="tw-dot ring"></span><span class="tw-ln">Mine</span><span class="tw-k">${mine}</span></button>
-      ${lists.map((l) => li(l.id, l.name, l.color, n(l.id))).join('')}${li('arkiv', 'Arkiv', 'var(--t-mut)', n('arkiv'), `<span class="tw-ic">${ARCH_SVG}</span>`)}</nav>
+      ${lists.map((l) => li(l.id, l.name, l.color, n(l.id))).join('')}${li('arkiv', 'Arkiv', 'var(--t-mut)', n('arkiv'), `<span class="tw-ic">${ARCH_SVG}</span>`)}${mwN41() ? li('glimt41', 'Laget med Glimt', '#b23a2a', mwN41(), '<span class="tw-dot tk41-red"></span>') : ''}</nav>
     ${ppl.length ? `<span class="tw-lab">PERSONER</span><nav class="tw-lists">${ppl.map((p) => `<button type="button" class="tw-li${S.pf === p.id ? ' on' : ''}" data-tw-pf="${esc(p.id)}" title="${esc(p.name)}">${twPerson(p.id, 20)}<span class="tw-ln">${esc(p.id === myId() ? `${p.name} (meg)` : p.name)}</span><span class="tw-k">${items.filter((t) => !t.done && tWho(t) === p.id).length}</span></button>`).join('')}</nav>` : ''}
     <button type="button" class="tw-newl" data-tk-act="newlist">+ Ny liste</button>
     ${isAdmin() ? '<div class="tk-ha-slot"></div>' : ''}</aside>`;
@@ -901,6 +950,7 @@ function twAns() {
   return `<div class="tk-gans tw-ans" role="status"><div class="tk-gat">${spk(false)}<span>${esc(a.text)}</span></div><div class="tk-opts">${a.undo ? '<button type="button" class="tk-gbtn" data-tk-g="undo">Angre</button>' : ''}<button type="button" class="tk-gbtn" data-tk-g="clear">Lukk</button></div></div>`;
 }
 function webBody(inL0, curName) {
+  if (S.cur === 'glimt41') return `<div class="tw">${twSide()}<main class="tw-mid"><div class="tw-board-top">${twGlimt()}</div>${jobsHtml41()}<div class="tw-head"><div class="tw-ht"><span class="tw-dot big tk41-red"></span><h2>Laget med Glimt</h2></div></div>${madeWithHtml41([...S.d.items, ...S.arch], { listName: (t) => listOf(tList(t))?.name ?? '', title: tTitle })}</main><aside class="tw-right">${twSelPanel()}</aside></div>`;
   const ARC = S.cur === 'arkiv', curL = S.cur === 'alle' || ARC ? null : listOf(S.cur);
   const pf = S.pf === 'me' ? myId() : S.pf;
   const inL = pf ? inL0.filter((t) => tWho(t) === pf || (S.pf === 'me' && !tWho(t))) : inL0;
@@ -920,7 +970,7 @@ function webBody(inL0, curName) {
     return `<div class="tw tw-tavle">${twSide()}<main class="tw-mid wide">${main}</main></div>`;
   }
   const groups = twGroups(inL).map(([title, cls, arr]) => `<section class="tw-group"><span class="tk-gt ${cls}">${title} · ${arr.length}</span><div class="tw-card-l">${arr.map(twRow).join('')}</div></section>`).join('');
-  main = `<div class="tw-board-top">${twGlimt()}${twSwitch()}</div>${twAns()}${head}${add}${groups || `<div class="tk-empty">Ingen oppgaver i ${esc(curName)}.</div>`}
+  main = `<div class="tw-board-top">${twGlimt()}${twSwitch()}</div>${twAns()}${jobsHtml41()}${head}${add}${groups || `<div class="tk-empty">Ingen oppgaver i ${esc(curName)}.</div>`}
     ${ARC && S.arch.length ? '<button type="button" class="tk-gbtn" data-tk-act="arch-clear">Tøm arkivet</button>' : ''}
     <div class="tk-foot">${liveOn() ? '● Sanntid' : 'Oppdateres automatisk'} · ⌘K Glimt · N ny · L/T visning · ↑↓ velg · Mellomrom kryss av · E rediger · Delete arkiver</div>`;
   return `<div class="tw">${twSide()}<main class="tw-mid">${main}</main><aside class="tw-right">${twSelPanel()}<div class="tw-tips"><span class="tw-lab">✦ GLIMT</span>${tips(inL0) || '<p class="tw-none">Ingen forslag akkurat nå.</p>'}</div></aside></div>`;

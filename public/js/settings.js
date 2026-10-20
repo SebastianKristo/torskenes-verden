@@ -27,6 +27,7 @@ import { decorateRows } from './settings-icons36.js';
 import { kontoAvatar, avatarRow } from './avatar36.js'; // prompt 36: profilbilde i Konto // prompt 36: ikon på hver rad
 import { TAB_IC, icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor } from './settings-search.js';
 import { sheetBtn } from './util.js';
+import { loadServer41, serverGroup41 } from './settings-server41.js'; // prompt 41: Konto → Server (lokal/ekstern adresse)
 import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt35.js'; // prompt 35: GLIMT → Glimt
 
 const modal = () => document.getElementById('settings');
@@ -129,7 +130,7 @@ function loadSessions38() {
   api('/me/sessions').then((r) => { const n = Number.isFinite(r?.count) ? r.count : Array.isArray(r?.sessions) ? r.sessions.length : Array.isArray(r) ? r.length : null; if (n !== sessCount38) { sessCount38 = n; if (tab === 'konto' && !sub) render(); } }).catch(() => {});
 }
 function kontoView() {
-  if (!sub) loadSessions38();
+  if (!sub) { loadSessions38(); loadServer41(() => { if (!modal().hidden && tab === 'konto' && !sub) render(); }); }
   const d = loginData(), me = store.me.me ?? d?.me ?? {}, mu = d?.users?.find((u) => u.id === me.id) ?? me;
   const name = me.name || me.username || '';
   if (!sub) return { sub: [me.name || me.username, me.username ? '@' + me.username : ''].filter(Boolean).join(' · '), groups: [
@@ -146,7 +147,8 @@ function kontoView() {
       row({ t: 'Pålitelige enheter', s: d.devices.lan ? 'Du er på lokalt nett nå.' : 'Du er ikke på lokalt nett nå.', v: String(d.devices.devices.length), btn: 'Administrer', go: 'konto|devices' }),
       row({ t: 'Passord', k: 'bytt endre', s: 'Gjelder nettsiden og mobilappene.', v: '••••••••', go: 'konto|pw' }),
     ] : [row({ t: 'Laster …' })], 'Pålitelig enhet gjelder bare når siden åpnes fra en lokal adresse (192.168.x.x, 10.x.x.x, 172.16–31.x.x). Fra internett kreves alltid passord, og kode hvis totrinnsbekreftelse er på.'),
-    isAdmin() ? group('Server', [row({ t: 'Navn på serveren', s: 'Vises i menyen og i mobilappen.', v: store.me.serverName ?? '', go: 'konto|server' })]) : null,
+    isAdmin() ? group('Servernavn', [row({ t: 'Navn på serveren', s: 'Vises i menyen og i mobilappen.', v: store.me.serverName ?? '', go: 'konto|server' })]) : null,
+    serverGroup41(row, group),
     // Prompt 38: «Lås skjermen» og «Logg ut» er flyttet hit fra sidemenyen (web og mobil), + «Logg ut av alle enheter».
     group('Økt', [
       row({ t: 'Lås skjermen', k: 'lås låse skjerm pin', s: 'Låser med en gang. Passord (eller Face ID i appen) for å fortsette · Ctrl+Alt+L', btn: 'Lås', act: 'data-set-lock', ico: svg(P.lock, 16), ic: '#2b5d8a' }),
@@ -199,7 +201,7 @@ function bgView() {
   const chips = (attr, list, val) => `<div class="bg-chips">${list.map(([k, n]) => `<button type="button" class="chip" data-${attr}="${k}" aria-pressed="${val === k}">${esc(n)}</button>`).join('')}</div>`;
   const slider = (k, n, max, unit, v) => `<label class="sg-row bg-range"><span class="sg-txt"><b>${n}</b></span><input type="range" min="0" max="${max}" step="1" value="${v}" data-bgrange="${k}" aria-label="${n}"><span class="sg-v" data-bgrange-v="${k}">${v} ${unit}</span></label>`;
   const cr = cur === 'none' ? { text: '' } : creditOf(cachedBg(cur));
-  const credit = cr.text ? `Kreditering: ${cr.url ? `<a href="${esc(cr.url)}" target="_blank" rel="noopener noreferrer">${esc(cr.text)}</a>` : esc(cr.text)}` : '';
+  const credit = cr.text ? `${/^Foto:/.test(cr.text) ? '' : 'Foto: '}${cr.url ? `<a href="${esc(cr.url)}" target="_blank" rel="noopener noreferrer">${esc(cr.text)}</a>` : esc(cr.text)}` : '';
   const planet = cur === 'planets' ? box('Planet', `<div class="sg-row bg-sub">${chips('bgplanet', PLANETS, b.planet)}</div>
       ${b.planet === 'auto' ? `<div class="sg-row bg-sub"><span class="sg-txt"><b>Bytt</b></span>${chips('bgrotate', [['daily', 'Daglig'], ['hourly', 'Hver time']], b.rotate)}</div>` : ''}`,
     'Bilder fra NASA Image and Video Library (fritt til bruk).') : '';
@@ -209,12 +211,12 @@ function bgView() {
     'Oslo hentes fra Unsplash eller Pexels når en nøkkel er lagt inn under Integrasjoner → Bakgrunner, ellers fra egne og medfølgende bilder. Getty Images brukes ikke, siden bildene krever kjøpt lisens.');
   return { title: 'Bakgrunn', sub: hlTheme() === '2c' ? 'Fotovinduet øverst på alle sider. Valget deles med mobilappene.' : 'Bak Dashboard. Valget deles med fotovinduet og mobilappene.',
     html: `<div class="bg-cards">${BG_TYPES.map((t) => bgCard(t, cur)).join('')}</div>
+      ${credit ? `<div class="sg-note bg-credit41">${credit}</div>` : ''}
       ${bgMsg ? `<div class="sg-note green">${esc(bgMsg)}</div>` : ''}
       ${planet}
       ${box('Visning', `${slider('blur', 'Uskarphet', 20, 'px', b.blur)}${slider('dim', 'Mørklegging', 60, '%', b.dim)}
         ${row({ t: 'Animasjon', s: 'Diskret regn og snø når været tilsier det. Slås av når «Reduser bevegelse» er på.', tog: b.animate, act: 'data-bg-anim' }).html}`)}
-      ${own}
-      ${credit ? note(credit) : ''}` };
+      ${own}` };
 }
 const SRN = Object.fromEntries(SEARCH_STYLES);
 
@@ -601,6 +603,27 @@ function sideHtml() {
     </aside>`;
 }
 
+const NAV41 = { y: 0, x: 0, first: true };
+try { NAV41.y = Number(sessionStorage.getItem('innst_nav_y')) || 0; } catch { /* privat modus */ }
+function restoreNav41() {
+  const si = modal().querySelector('.set-side-in'), nav = si?.querySelector('.set-nav');
+  if (!si || !nav || nav.classList.contains('has-q')) return;
+  si.scrollTop = NAV41.y; nav.scrollLeft = NAV41.x;
+  si.addEventListener('scroll', () => { if (nav.classList.contains('has-q')) return; NAV41.y = si.scrollTop; try { sessionStorage.setItem('innst_nav_y', String(Math.round(si.scrollTop))); } catch { /* */ } }, { passive: true });
+  nav.addEventListener('scroll', () => { NAV41.x = nav.scrollLeft; }, { passive: true });
+  // Første visning: aktivt punkt synlig (som block: nearest), uten å flytte noe annet enn menyen.
+  if (NAV41.first) {
+    NAV41.first = false;
+    const a = nav.querySelector('.set-tab[aria-current=page]');
+    if (a) {
+      const r = a.getBoundingClientRect(), c = si.getBoundingClientRect();
+      if (si.scrollHeight > si.clientHeight + 1) { if (r.top < c.top) si.scrollTop += r.top - c.top - 8; else if (r.bottom > c.bottom) si.scrollTop += r.bottom - c.bottom + 8; }
+      const cn = nav.getBoundingClientRect();
+      if (nav.scrollWidth > nav.clientWidth + 1) { if (r.left < cn.left) nav.scrollLeft += r.left - cn.left - 8; else if (r.right > cn.right) nav.scrollLeft += r.right - cn.right + 8; }
+      NAV41.y = si.scrollTop; NAV41.x = nav.scrollLeft;
+    }
+  }
+}
 const subScroll = new Map(); // fane → scrollTop i listen før en underside ble åpnet
 function render() {
   if (!TABS.some(([k]) => k === tab)) tab = ALIAS[tab] ?? TABS[0][0];
@@ -626,6 +649,10 @@ function render() {
   // Prompt 39 (claude-code-scroll-stabil-innstillinger.md): samme side tegnes på nytt (lagring, bryter, verdi) → scrollen står stille.
   // Det monterte innholdet (AI-kontroll, Google/HA …) flyttes over til den nye siden i stedet for å tegnes tomt, og siden får
   // midlertidig minst samme høyde, så nettleseren ikke klemmer scrollen til toppen eller bunnen mens noe lastes.
+  // Prompt 41 (claude-code-innst-web-meny-scroll.md): sidemenyen står stille når du bytter seksjon. Hele vinduet tegnes på nytt,
+  // så menyens scroll (loddrett på bred skjerm, vannrett på smal) lagres før og settes tilbake etter. Under søk huskes posisjonen fra før.
+  const oldSide = modal().querySelector('.set-side-in');
+  if (oldSide && !oldSide.querySelector('.set-nav.has-q')) { NAV41.y = oldSide.scrollTop; NAV41.x = oldSide.querySelector('.set-nav')?.scrollLeft ?? NAV41.x; }
   const same = !!keep && body?.dataset.key === key, oldMount = same ? body.querySelector('[data-mail-host],[data-mount-host]') : null, oldH = same ? body.querySelector('.set-inner')?.offsetHeight ?? 0 : 0;
   modal().innerHTML = `<div class="set-box" role="dialog" aria-modal="true" aria-labelledby="set-title">${sideHtml()}
     <div class="set-main">${sheetBtn('Ferdig', 'data-close data-set-done', 'pri').replace('class="sbtn pri"', 'class="sbtn pri set-done"')}
@@ -638,6 +665,7 @@ function render() {
     if (oldMount && slot && v.mount && slot.className === oldMount.className) slot.replaceWith(oldMount);
     if (inner && oldH) { inner.style.minHeight = `${oldH}px`; clearTimeout(render.mh); render.mh = setTimeout(() => { const i = modal().querySelector('.set-inner'); if (i) i.style.minHeight = ''; }, 1500); }
   }
+  restoreNav41();
   modal().querySelector('.set-body').scrollTop = keep;
   if (keep) requestAnimationFrame(() => { const b = modal().querySelector('.set-body'); if (b && b.dataset.key === key && b.scrollTop < keep - 1) b.scrollTop = keep; });
   if (keepQ) { const nq = modal().querySelector('[data-setq]'); if (nq) { nq.replaceWith(keepQ); keepQ.focus({ preventScroll: true }); } }
@@ -741,6 +769,7 @@ export function openSettings(which = 'konto', subPage = null) {
   if (!TABS.some(([k]) => k === tab)) tab = 'konto';
   resetAsk();
   const wasOpen = !modal().hidden;
+  if (!wasOpen) NAV41.first = true;
   render(); modal().hidden = false; modal().querySelector('[data-close]').focus();
   document.body.classList.add('set-open');
   if (!wasOpen) pushUrl();

@@ -7,6 +7,7 @@ import { glimt, setGlimt } from './glimt.js';
 import { assist, boldHtml, wxRoute } from './assist.js';
 import { toast } from './toast.js';
 import { isQuestion } from './ask36.js';
+import { isHuske41, addFromSearch41 } from './tasks41.js'; // prompt 41: huskebeskjeder fra søket
 
 /* ---------- Popup ---------- */
 
@@ -116,6 +117,13 @@ function apptOf(v) {
   const p = preview(v);
   return p.ok && p.isAppointment ? p : null;
 }
+// Prompt 41: huskebeskjeder i søket → «Legg i Huskeliste» (Glimt deler opp i bakgrunnen, samme animasjon som rask time).
+function huskeOf(v) { const s = String(v ?? '').trim(); return s.length > 8 && !isUrl(s) && !apptOf(s) && isHuske41(s) ? s : null; }
+function addHuske(form, q) {
+  addFromSearch41(q);
+  form.q.value = ''; syncSearch(form.q); form.q.blur();
+  const d = form.querySelector('.sq-drop'); if (d) d.hidden = true;
+}
 function addAppt(form, q) {
   addQuick(q);
   form.q.value = ''; syncSearch(form.q); form.q.blur();
@@ -165,14 +173,16 @@ function drawDrop(form) {
   if (sq.sel >= sq.items.length) sq.sel = -1;
   const ai = sq.ai && sq.ai.q === v.trim() ? sq.ai : null;
   const err = lv && !sq.items.length && sq.suggErr ? sq.suggErr : '';
-  const ap = apptOf(v);
-  const open = document.activeElement === input && (sq.items.length > 0 || !lv || !!ai || !!err || !!ap);
+  const ap = apptOf(v), hu = huskeOf(v);
+  const open = document.activeElement === input && (sq.items.length > 0 || !lv || !!ai || !!err || !!ap || !!hu);
   drop.hidden = !open;
   input.setAttribute('aria-expanded', String(open));
   if (!open) return;
   if (ai) { drop.innerHTML = aiPanel(ai); return; }
   // Mørkt forslag øverst: kalender-ikon · «Nina frisør» · «fre 25. sep · 14:30» · Legg i kalender (↵ gjør det samme).
   const apH = ap ? `<div class="sq-appt" role="option" data-sq-appt aria-label="Legg i kalender: ${esc(ap.title)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v15H4zM4 10h16M9 3v4M15 3v4"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(ap.title)}</b><span>${esc(quickLabel(ap))}</span></span><span class="sq-appt-b">Legg i kalender</span></div>` : '';
+  const huH = hu ? `<div class="sq-appt sq-huske41" role="option" data-sq-huske aria-label="Legg i Huskeliste: ${esc(hu)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(hu.length > 70 ? `${hu.slice(0, 70)} …` : hu)}</b><span>Glimt deler opp i punkter</span></span><span class="sq-appt-b">Legg i Huskeliste</span></div>` : '';
+  if (huH) { drop.innerHTML = huH + (sq.items.length ? sq.items.slice(0, 4).map((x, i) => `<div class="sq-item" role="option" id="sq-${i}" aria-selected="${sq.sel === i}" data-sq-i="${i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.h ? HIC : SIC}"/></svg><span class="sq-t" data-no-i18n><b>${esc(x.t)}</b></span></div>`).join('') : ''); return; }
   if (err) { drop.innerHTML = apH + (apH ? '' : `<div class="sq-empty">Forslag utilgjengelig: ${esc(err)}</div>`); return; }
   const split = (t) => { const i = lv ? t.toLowerCase().indexOf(lv) : -1; return i === 0 ? `<span>${esc(t.slice(0, lv.length))}</span><b>${esc(t.slice(lv.length))}</b>` : `<b>${esc(t)}</b>`; };
   const off = sq.histOn === false || sq.save === false;
@@ -457,6 +467,7 @@ export function bindSearch() {
     // Timer gjenkjennes uansett søkemotor og legges til i bakgrunnen.
     if (GL.q) closeAns();
     if (!it && apptOf(q)) { addAppt(e.target, q.trim()); return; }
+    if (!it && huskeOf(q)) { addHuske(e.target, q.trim()); return; }
     if (aiOn()) askAi(e.target, q); else runSearch(q);
   });
   // Søkemotor-menyen.
@@ -553,6 +564,7 @@ export function bindSearch() {
     const f = formOf(e);
     if (!f || !e.target.closest('.sq-drop')) return;
     e.preventDefault();
+    if (e.target.closest('[data-sq-huske]')) return addHuske(f, f.q.value.trim());
     if (e.target.closest('[data-sq-appt]')) return addAppt(f, f.q.value.trim());
     const del = e.target.closest('[data-sq-del]');
     if (del) return removeHist(f, sq.items[+del.dataset.sqDel]);

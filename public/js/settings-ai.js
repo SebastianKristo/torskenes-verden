@@ -31,6 +31,7 @@ export async function loadAi(reload, force = false) {
   A.mem = g.status === 'fulfilled' ? g.value.items ?? [] : null; A.memErr = g.status === 'rejected' ? g.reason.message : '';
   A.chat = c.status === 'fulfilled' ? c.value : null; A.chatErr = c.status === 'rejected' ? c.reason.message : '';
   A.models = m.status === 'fulfilled' ? m.value.models ?? [] : [];
+  A.auto = m.status === 'fulfilled' && m.value.auto?.id ? m.value.auto : null; // prompt 41: «✦ Auto»
   A.priv = p.status === 'fulfilled' ? p.value : null; A.privErr = p.status === 'rejected' ? p.reason.message : '';
   A.audit = a.status === 'fulfilled' ? (Array.isArray(a.value) ? a.value : a.value.items ?? []) : null; A.auditErr = a.status === 'rejected' ? a.reason.message : '';
   A.owui = o.status === 'fulfilled' ? o.value : null;
@@ -57,9 +58,9 @@ export function aiView({ group, row, note }) {
   const ch = A.chat, pv = A.priv, groups = [];
   if (ch) {
     const opts = (A.models ?? []).filter((m) => m.installed);
-    const sel = `<label class="sg-field"><span>Standardmodell</span><select data-ai-def aria-label="Standardmodell"><option value="">Automatisk (siste brukte)</option>${opts.map((m) => `<option value="${esc(m.id)}"${ch.chat_default_model === m.id ? ' selected' : ''}>${esc(m.kind === 'sky' ? `${m.name} · sky` : `${m.id} · lokal`)}</option>`).join('')}</select></label>`;
+    const sel = `<label class="sg-field"><span>Standardmodell</span><select data-ai-def aria-label="Standardmodell">${A.auto ? `<option value="${esc(A.auto.id)}"${!ch.chat_default_model || ch.chat_default_model === A.auto.id ? ' selected' : ''}>${esc(A.auto.label || '✦ Auto')} · Glimt velger beste modell</option>` : '<option value="">Automatisk (siste brukte)</option>'}${opts.map((m) => `<option value="${esc(m.id)}"${ch.chat_default_model === m.id ? ' selected' : ''}>${esc(m.kind === 'sky' ? `${m.name} · sky` : `${m.id} · lokal`)}</option>`).join('')}</select></label>`;
     groups.push(group('Chat', [
-      row({ t: 'Chat kan lese mine data', s: 'Finans, Kalender og Gjøremål når «Mine data» er på', tog: !!ch.chat_my_data, act: 'data-ai-tog="chat_my_data"', k: 'chat mine data finans kalender huskeliste' }),
+      row({ t: 'La Chat lese mine data', s: 'På som standard. Finans, Kalender og Gjøremål sendes med når «Mine data» er på i samtalen. Lokale modeller får dataene uten spørsmål.', tog: ch.chat_my_data !== false, act: 'data-ai-tog="chat_my_data"', k: 'chat mine data finans kalender huskeliste' }),
       row({ t: 'Spør før sky-modeller får data', s: 'Gemini og Groq må godkjennes per samtale', tog: !!ch.chat_ask_cloud, act: 'data-ai-tog="chat_ask_cloud"', k: 'sky gemini groq personvern' }),
       { html: sel, q: 'standardmodell modell chat' },
       row({ t: 'Åpne chat', s: 'Historikk, modeller og kunnskapsbase', act: 'data-ai-open', btn: 'Åpne', k: 'chat' }),
@@ -141,7 +142,7 @@ export async function aiClick(e, rerender) {
   if (t.dataset.aiOpen !== undefined) { document.getElementById('settings').hidden = true; location.hash = '#/chat'; return true; }
   if (t.dataset.aiLog !== undefined) { A.showLog = !A.showLog; if (A.showLog) { try { const a = await fin('/ai-audit?limit=50'); A.audit = Array.isArray(a) ? a : a.items ?? []; } catch { /* beholder */ } } rerender(); return true; }
   const k = t.dataset.aiTog ?? t.dataset.aiPtog, chat = t.dataset.aiTog != null;
-  const obj = chat ? A.chat : A.priv, v = !obj[k];
+  const obj = chat ? A.chat : A.priv, v = chat && k === 'chat_my_data' ? obj[k] === false : !obj[k]; // prompt 41: mangler = på
   obj[k] = v; rerender();
   try {
     if (chat) A.chat = { ...A.chat, ...(await api('/chat/settings', { method: 'PATCH', json: { [k]: v } })) };
