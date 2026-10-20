@@ -213,6 +213,11 @@ enum MacLinks {
             let v: String? = items.first(where: { (i: URLQueryItem) -> Bool in i.name == k })?.value
             return (v ?? "").isEmpty ? nil : v
         }
+        // Prompt 41: kalender://auth?code=…&state=… (svaret fra Homelab / web-godkjenningen).
+        if host == "auth" {
+            MacLogin41Model.shared.handleRedirect(url)
+            return
+        }
         win.closeAll()
         switch host {
         case "dag", "day":

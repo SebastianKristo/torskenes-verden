@@ -52,7 +52,8 @@ struct MacRoot: View {
                     overlays
                 }
             } else {
-                MacLoginView()
+                // Prompt 41: innlogging uten serveradresse (Fortsett som · Homelab-appen/web · passord).
+                MacLogin41View()
             }
         }
         .background(MacWindowReader { (w: NSWindow) in attach(w) })

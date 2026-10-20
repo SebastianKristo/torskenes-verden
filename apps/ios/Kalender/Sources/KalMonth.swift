@@ -122,7 +122,7 @@ struct KalMonthChip: View {
 
     var body: some View {
         let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
-        Text(e.title).font(KalFont.ui(9.5, .bold)).lineLimit(1)
+        KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(9.5, .bold)).lineLimit(1)
             .foregroundStyle(t.calText(c))
             .padding(.horizontal, 4).padding(.vertical, 1)
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -193,12 +193,31 @@ final class KalStore {
     }
 
     func logout() {
+        // Prompt 41: trekk tilbake app-tokenet på serveren (best effort) og glem refresh-tokenet.
+        if let tok = KalGroup.token {
+            let bases: [String] = KalGroup.bases
+            Task.detached { _ = try? await KalNet.send("POST", "/finans/api/logout", json: [:], timeout: 8, bases: bases, token: tok) }
+        }
+        KalKeychain41.delete("refresh")
         KalGroup.clearSession()
         UserDefaults.standard.set(true, forKey: "kal.noAuto")
         loggedIn = false
         events = []
         rebuild()
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Prompt 41: tokenet er trukket tilbake (logget ut i Homelab). Ingen ny auto-innlogging med det gamle tokenet.
+    func logoutRevoked() {
+        UserDefaults.standard.set(true, forKey: "kal.noAuto")
+        KalKeychain41.delete("refresh")
+        KalGroup.clearSession()
+        loggedIn = false
+        events = []
+        rebuild()
+        WidgetCenter.shared.reloadAllTimelines()
+        KalLogin41Model.shared.phase = "start"
+        showToast("Du er logget ut i Homelab. Logg inn igjen.", undo: "")
     }
 
     /* ---------- Henting ---------- */
@@ -241,6 +260,10 @@ final class KalStore {
                 lastError = "Innloggingen er utløpt. Logg inn på nytt."
                 // Homelab-appen har laget et nytt token (f.eks. etter at det gamle ble trukket tilbake).
                 if let hl = KalGroup.homelabToken, hl != KalGroup.token, adoptHomelab() { return }
+                // Prompt 41: utlogging i Homelab tilbakekaller app-tokenene → tilbake til innloggingen.
+                lastError = ""
+                logoutRevoked()
+                return
             }
         } catch {
             lastError = error.localizedDescription

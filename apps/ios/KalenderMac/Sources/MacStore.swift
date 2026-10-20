@@ -164,6 +164,7 @@ final class MacStore: ObservableObject {
         events = []
         pending = []
         UserDefaults.standard.removeObject(forKey: "mac.snapshot")
+        MacWidgets41.clear()
         rebuild()
     }
 
@@ -578,6 +579,8 @@ final class MacStore: ObservableObject {
         s.wx = wx.values.sorted { (a: KalWxDay, b: KalWxDay) -> Bool in a.day < b.day }
         s.updated = Date().timeIntervalSince1970
         if let d = try? JSONEncoder().encode(s) { UserDefaults.standard.set(d, forKey: "mac.snapshot") }
+        // Prompt 41: widgetene på skrivebordet (App Group når appen er signert med Team ID).
+        MacWidgets41.publish(s)
     }
 
     private func savePending() {

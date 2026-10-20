@@ -34,6 +34,8 @@ struct KalApp: App {
                 s.bootstrap()
                 s.startPolling()
                 Task { await s.load(force: true) }
+                // Prompt 41: lokal eller ekstern adresse (Bytt automatisk), hentet fra Homelab-serveren.
+                if s.loggedIn { Task { await KalLogin41Model.syncServers() } }
             } else if p == .background {
                 s.stopPolling()
                 s.saveSnapshot()
@@ -89,7 +91,8 @@ struct KalRoot: View {
                 main
                 overlays
             } else {
-                KalLoginView()
+                // Prompt 41: innlogging uten serveradresse (Fortsett som · Logg inn med Homelab-appen · passord).
+                KalLogin41View()
             }
         }
         .tint(t.red)
@@ -104,6 +107,10 @@ struct KalRoot: View {
         .animation(sheetAnim, value: s.cal39AddOpen)
         .animation(sheetAnim, value: s.gmap39Open)
         .animation(.easeOut(duration: 0.2), value: s.toast)
+        // Prompt 41: testvarselet vises også som banner i appen.
+        .overlay(alignment: .top) {
+            if KalNotify41.shared.banner { KalTestBanner41() }
+        }
     }
 
     /// 0,3 s cubic-bezier(.2,.8,.2,1); med «Reduser bevegelse» bare en kort fade.

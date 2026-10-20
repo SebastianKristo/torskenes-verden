@@ -82,7 +82,7 @@ private fun EvChip(vm: KalVm, e: KEv, fs: Float, onClick: (() -> Unit)? = null) 
     Box(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(c.col.copy(alpha = if (e.kind == "frist") .38f else .133f))
             .then(if (onClick != null) Modifier.tap(e.t, onClick = onClick) else Modifier).padding(horizontal = 4.dp, vertical = 1.dp),
-    ) { Tx(e.t, man(fs.sp, FontWeight.Bold, c.fg(k), (fs * 1.4f).sp)) }
+    ) { Tx(no.kristo.kalender.Kal41.listTitle(e, c.n), man(fs.sp, FontWeight.Bold, c.fg(k), (fs * 1.4f).sp)) }
 }
 
 /* ---------------- Måned ---------------- */
@@ -257,7 +257,7 @@ fun GridView(vm: KalVm) {
                                     .tap(e.t) { vm.openEv(e) }.padding(horizontal = 5.dp, vertical = 3.dp),
                                 verticalArrangement = Arrangement.spacedBy(1.dp),
                             ) {
-                                Tx(e.t, man(fs.sp, FontWeight.Bold, c.fg(k), (fs * 1.25f).sp), maxLines = 3)
+                                Tx(no.kristo.kalender.Kal41.listTitle(e, c.n), man(fs.sp, FontWeight.Bold, c.fg(k), (fs * 1.25f).sp), maxLines = 3)
                                 if (hh >= 36.dp && N < 7) Tx(hm(s) + "–" + hm(en), mono(9.5.sp, c.fg(k).copy(alpha = .85f)))
                             }
                         }
@@ -327,7 +327,7 @@ fun EvRow(vm: KalVm, e: KEv, cont: Boolean = false, twoTimes: Boolean = true) {
         Box(Modifier.width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(c.col))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Tx(e.t, man(14.5.sp, FontWeight.Bold, k.ink), Modifier.weight(1f, fill = false))
+                Tx(no.kristo.kalender.Kal41.listTitle(e, c.n), man(14.5.sp, FontWeight.Bold, k.ink), Modifier.weight(1f, fill = false))
                 if (tag != null) Tag(tag, c.col.copy(alpha = .133f), c.fg(k))
             }
             Tx(listOfNotNull(e.loc, c.n).joinToString(" · "), man(12.5.sp, FontWeight.Medium, k.mut))
@@ -419,10 +419,14 @@ fun SearchView(vm: KalVm) {
             ) {
                 Svg(Ic.SEARCH, 16.dp, k.mut, 2.3f)
                 Box(Modifier.weight(1f)) {
-                    if (vm.q.isEmpty()) Tx("Søk i hendelser", man(16.sp, FontWeight.Medium, k.mut2))
+                    // Prompt 41: «Søk, eller spør Glimt» – Enter på en setning går til Glimt (Ollama).
+                    if (vm.q.isEmpty()) Tx("Søk, eller spør Glimt: «når er neste tannlege?»", man(16.sp, FontWeight.Medium, k.mut2))
                     BasicTextField(vm.q, { vm.q = it }, Modifier.fillMaxWidth().focusRequester(fr).semantics { contentDescription = "Søk i hendelser" },
-                        textStyle = man(16.sp, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red))
+                        textStyle = man(16.sp, FontWeight.Medium, k.ink), singleLine = true, cursorBrush = SolidColor(Red),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { vm.k41.aiSubmit(vm.q) }))
                 }
+                GlimtButton41(vm)
             }
             InkPill("Avbryt", { vm.closeSearch() }, h = 40.dp, padH = 16.dp)
         }
@@ -434,7 +438,9 @@ fun SearchView(vm: KalVm) {
         val sFocus = androidx.compose.ui.platform.LocalFocusManager.current
         val sKb = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
         LaunchedEffect(sList.isScrollInProgress) { if (sList.isScrollInProgress) { sFocus.clearFocus(); sKb?.hide() } }
+        LaunchedEffect(Unit) { vm.k41.aiReset() }
         LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp), state = sList) {
+            if (vm.k41.aiOn) item("ai41") { AiCard41(vm) }
             groups.forEach { (d, l) ->
                 item("g$d") {
                     val t = (if (d == T) "I DAG · " else if (d.isBefore(T)) "TIDLIGERE · " else "") +

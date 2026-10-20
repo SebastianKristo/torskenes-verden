@@ -11,6 +11,7 @@ import SwiftUI
 // kalender://ny?text=…             Glimt-feltet ferdig utfylt
 // kalender://glimt?q=…             Glimt-panelet med spørsmålet
 // kalender://login                 Homelab-appen har skrevet innloggingen til App Group
+// kalender://auth?code=…&state=…   Prompt 41: svaret fra Homelab etter «Logg inn med Homelab-appen»
 // https://kalender.kristo.no/d/2026-10-21 (Universal Link, krever associated domains) → samme som dag/
 
 @MainActor
@@ -28,6 +29,11 @@ enum KalLinks {
         func q(_ k: String) -> String? {
             let v: String? = items.first(where: { (i: URLQueryItem) -> Bool in i.name == k })?.value
             return (v ?? "").isEmpty ? nil : v
+        }
+        // Prompt 41: kalender://auth?code=…&state=… fra Homelab (PKCE). Håndteres før arkene lukkes.
+        if host == "auth" && scheme == "kalender" {
+            KalLogin41Model.shared.handleRedirect(url)
+            return
         }
         if q("from") == "homelab" { s.fromHomelab = true }
         s.searchOpen = false

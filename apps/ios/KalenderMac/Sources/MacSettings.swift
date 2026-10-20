@@ -163,7 +163,12 @@ struct MacSettingsView: View {
         VStack(alignment: .leading, spacing: 8) {
             if store.loggedIn {
                 Text("Logget inn som " + store.userName).font(MacFont.ui(13.5, .semibold)).foregroundColor(t.ink)
-                Text(MacSession.bases.first ?? "").font(MacFont.mono(11)).foregroundColor(t.mut)
+                // Prompt 41: Server (lesbar) – lokal og ekstern adresse hentes fra Homelab.
+                Text("Server: " + KalServer41.summary()).font(MacFont.ui(12)).foregroundColor(t.mut)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Endres i Homelab → Innstillinger → Konto → Server").font(MacFont.ui(11.5)).foregroundColor(t.mut2)
+                Text(KalGroup.linked ? "Widgets: legg dem til fra skrivebordet (Rediger widgets → Kalender)." : "Widgets på skrivebordet krever at appen er signert med Team ID (App Group).")
+                    .font(MacFont.ui(11.5)).foregroundColor(t.mut2).fixedSize(horizontal: false, vertical: true)
                 if let u = store.updated {
                     Text(syncText(u)).font(MacFont.ui(11.5)).foregroundColor(t.mut2)
                 }

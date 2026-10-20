@@ -403,6 +403,8 @@ fun SettingsPage35(vm: KalVm) {
             }
 
             Label("VARSLER", Modifier.padding(top = 4.dp))
+            // Prompt 41: «Send testvarsel» øverst (lang-trykk = push fra serveren).
+            TestRow41(vm)
             Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
                 OptRow("Bursdager", "Varsel kl. 09:00 samme dag", vm.nBd) { vm.setNotify("notifyBirthdays", !vm.nBd) }
                 OptRow("Studiefrister", "3 dager og 1 dag før", vm.nFr) { vm.setNotify("notifyDeadlines", !vm.nFr) }
@@ -412,6 +414,9 @@ fun SettingsPage35(vm: KalVm) {
 
             Label("GLIMT OG KONTO", Modifier.padding(top = 4.dp))
             Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
+                // Prompt 41: Server (lesbar, endres i Homelab) og Logg ut øverst.
+                LinkRow35("Server", no.kristo.kalender.Kal41.summary(vm.getApplication())) { Hap.tick(); vm.showToast("Endres i Homelab → Innstillinger → Konto → Server") }
+                LinkRow35("Logg ut", "Logg inn igjen med Homelab-appen") { Hap.tick(); vm.setOn = false; vm.logout() }
                 LinkRow35("Glimt", "Figur, stemme og briefer") { vm.openGlimtSettings() }
                 LinkRow35("Kontoer og synk", "Google, iCloud, Outlook, Home Assistant") { vm.openAccounts() }
                 LinkRow35("Widgets", "Slik legger du til på Hjem- og låseskjerm") { Hap.tick(); vm.showToast("Hold inne på Hjem-skjermen → Widgets → Kalender") }
@@ -427,7 +432,6 @@ fun SettingsPage35(vm: KalVm) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LinePill(if (vm.syncing) "Henter …" else "Oppdater", { Hap.tick(); vm.refresh() })
-                LinePill("Logg ut", { vm.setOn = false; vm.logout() })
             }
             Tx("Kalender 1.0 · synket med Homelab " + syncAgo35(vm.data.at), man(12.sp, FontWeight.Medium, k.mut2).copy(textAlign = TextAlign.Center), Modifier.fillMaxWidth().padding(top = 8.dp))
             Spacer(Modifier.height(30.dp).windowInsetsPadding(WindowInsets.navigationBars))

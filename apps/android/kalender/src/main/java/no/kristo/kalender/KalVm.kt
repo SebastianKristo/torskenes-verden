@@ -114,6 +114,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     val g36 = no.kristo.kalender.ui.KGoogleUi36()
     /** Prompt 39: Kalendere (1a), Rediger (1b), Legg til (1c) og Google-velgeren (1d). */
     val k39 = no.kristo.kalender.ui.K39State(this)
+    /** Prompt 41: innlogging uten adresse (Fortsett som / PKCE), bursdagskort, Glimt-søk og testvarsel (Kal41.kt). */
+    val k41 = K41State(this)
     var colO by mutableStateOf(Kal35Prefs.colors(app))
     var hmO by mutableStateOf(Kal35Prefs.hidMenu(app))
     /** Zoom-animasjonen: retning (in/out), teller (ny animasjon) og punktet den vokser fra (andel av visningen). */
@@ -205,6 +207,9 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Prompt 41: brukes av K41State etter Fortsett som / Homelab-appen / passord. */
+    fun signedIn41(s: KalSession) = signedIn(s)
+
     private fun signedIn(s: KalSession) {
         val prev = KalStore.current(ctx)
         if (prev.acct != null && prev.acct != s.acct) KalStore.clear(ctx)
@@ -219,6 +224,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         val s = session
         KalAuth.clear(ctx)
         KalStore.clear(ctx)
+        Kal41.forget(ctx)
+        k41.phase = "start"
         session = null
         cs = false
         // Tokenet fra Homelab trekkes tilbake på serveren (vises ellers i Innstillinger → Enheter til det slettes der).
@@ -866,6 +873,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
      * kalender://ny?text=… · https://kalender.kristo.no/d/2026-10-21. ?src=homelab (eller åpnet fra Homelab) viser «◀ Homelab».
      */
     fun applyLink(uri: Uri, fromHomelab: Boolean) {
+        // Prompt 41: kalender://auth?code=…&state=… fra Homelab (PKCE).
+        if (uri.scheme == "kalender" && (uri.host ?: "").lowercase() == "auth") { k41.handleRedirect(uri); return }
         if (fromHomelab || uri.getQueryParameter("src") == "homelab" || uri.getQueryParameter("from") == "homelab") back = true
         so = false; cs = false; nf = null; det = null
         val host = (uri.host ?: "").lowercase()

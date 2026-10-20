@@ -122,6 +122,8 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         if !s.loggedIn { return }
         if !MacLive.shared.connected { MacLive.shared.start() }
         Task { await s.load(force: true) }
+        // Prompt 41: lokal/ekstern adresse fra Homelab (ingen SwiftUI-tilstand endres her).
+        Task { await MacLogin41Model.syncServers() }
     }
 }
 

@@ -15,6 +15,8 @@ import Foundation
 
 enum KalGroup {
     static let baseGroup: String = "group.no.kristo.finanshub"
+    /// Prompt 41: Mac-appen og Mac-widgetene (med Team ID-prefiks).
+    static let macGroupSuffix: String = "group.no.kristo.kalender"
 
     /// Gruppen som virker på denne installasjonen (AltStore/SideStore kan gi den nytt navn via ALTAppGroups).
     static let group: String? = KalGroup.resolve()
@@ -29,9 +31,14 @@ enum KalGroup {
 
     private static func resolve() -> String? {
         #if os(macOS)
-        // Mac-appen har ingen App Group (tokenet ligger i Nøkkelringen). På macOS 15+ gir oppslag i andre apper sine
-        // gruppe-containere en systemdialog («… vil få tilgang til data fra andre apper») – derfor ingen gruppe her.
-        return nil
+        // Mac-appen har tokenet i Nøkkelringen. På macOS 15+ gir oppslag i gruppe-containere appen ikke er signert for en
+        // systemdialog («… vil få tilgang til data fra andre apper») – derfor ingen gruppe uten Team ID.
+        // Prompt 41: widgetene på Mac trenger App Group-en <TeamID>.group.no.kristo.kalender. Den brukes bare når appen er
+        // signert med et team (Info.plist KalTeam41 = $(DEVELOPMENT_TEAM)); ad hoc-bygg (CI) rører den aldri.
+        let team: String = ((Bundle.main.object(forInfoDictionaryKey: "KalTeam41") as? String) ?? "").trimmingCharacters(in: .whitespaces)
+        if team.isEmpty || team.contains("$") { return nil }
+        let g: String = team + "." + macGroupSuffix
+        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: g) != nil ? g : nil
         #else
         var cands: [String] = []
         var bundles: [Bundle] = [Bundle.main]

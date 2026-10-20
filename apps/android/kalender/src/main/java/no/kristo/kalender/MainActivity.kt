@@ -52,6 +52,8 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         vm.foreground = true
         vm.refresh()
+        // Prompt 41: lokal/ekstern adresse fra Homelab (Bytt automatisk).
+        if (vm.session != null) vm.k41.syncServers()
     }
 
     override fun onStop() {

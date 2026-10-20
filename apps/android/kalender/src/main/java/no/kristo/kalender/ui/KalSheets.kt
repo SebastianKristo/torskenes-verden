@@ -133,7 +133,8 @@ fun DetailSheet(vm: KalVm) {
             Tx(c.n, man(13.sp, FontWeight.Bold, c.fg(k)), Modifier.weight(1f))
             InkPill("Ferdig", { vm.closeDet() })
         }
-        Tx(e.t, news(28.sp, k.ink, 31.sp), maxLines = 4)
+        // Prompt 41: bursdager får eget kort (konfetti, avatar med festhatt, nedtelling, Gratuler · Gaveidé · Bursdager ›).
+        if (no.kristo.kalender.Kal41.isBirthday(e, c.n)) BdCard41(vm, e, c.col) else Tx(e.t, news(28.sp, k.ink, 31.sp), maxLines = 4)
         Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
             InfoRow("Når") {
                 Tx(longDate(e.d) + if (e.all) (if (e.days > 1) " · ${e.days} dager" else " · hele dagen") else " · " + hm(e.s ?: 0) + "–" + hm(e.e ?: 0),
@@ -161,6 +162,8 @@ fun DetailSheet(vm: KalVm) {
         if (e.editable || e.pending) Box(Modifier.height(44.dp).tap("Slett hendelse") { vm.delete(e) }, contentAlignment = Alignment.CenterStart) {
             Tx("Slett hendelse", man(14.sp, FontWeight.Bold, k.acc))
         }
+        if (no.kristo.kalender.Kal41.isBirthday(e, c.n) && no.kristo.kalender.Kal41.fromGoogle(e))
+            Tx("«Slett» fjerner bare bursdagen fra Kalender-visningen. Den ligger fortsatt i Google Kontakter.", man(12.sp, FontWeight.Medium, k.mut), maxLines = 3)
     }
 }
 

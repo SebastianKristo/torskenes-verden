@@ -111,7 +111,8 @@ fun KalRoot(vm: KalVm, onBackToHomelab: () -> Unit) {
     }
     CompositionLocalProvider(LocalK provides k) {
         Box(Modifier.fillMaxSize().background(k.bg)) {
-            if (vm.session == null) LoginScreen(vm) else KalApp(vm, onBackToHomelab)
+            // Prompt 41: innlogging uten serveradresse (Fortsett som · Logg inn med Homelab-appen · passord).
+            if (vm.session == null) LoginScreen41(vm) else KalApp(vm, onBackToHomelab)
             // Prompt 37: fagfarger synkes, og tastaturet lukkes når et hendelsesark åpnes.
             Kal37Effects(vm)
         }
@@ -215,6 +216,8 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
         }
         // Prompt 39: Kalendere (1a), Rediger (1b), Legg til (1c) og Google-velgeren over alt.
         Kal39Layer(vm)
+        // Prompt 41: testvarselet vises også som banner i appen.
+        TestBanner41(vm)
         if (vm.newCal) NewCalendarDialog(vm)
     }
 }

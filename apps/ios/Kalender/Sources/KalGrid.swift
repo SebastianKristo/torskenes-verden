@@ -167,7 +167,7 @@ struct KalAllDayChip: View {
     var body: some View {
         let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
         Button(action: { KalStore.shared.openDetail(e) }) {
-            Text(e.title).font(KalFont.ui(10, .bold)).lineLimit(1)
+            KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(10, .bold)).lineLimit(1)
                 .foregroundStyle(t.calText(c))
                 .padding(.horizontal, 5).padding(.vertical, 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -294,7 +294,7 @@ struct KalGridBlock: View {
         let fs: CGFloat = small ? 9.5 : (width > 200 ? 13 : 11)
         Button(action: { KalStore.shared.openDetail(e) }) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(e.title).font(KalFont.ui(fs, .bold)).foregroundStyle(t.calText(c)).lineLimit(nil)
+                KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(fs, .bold)).foregroundStyle(t.calText(c)).lineLimit(nil)
                 if showTime {
                     Text(KalD.hm(e.startMin) + "–" + KalD.hm(e.endMin)).font(KalFont.mono(9.5)).foregroundStyle(t.calText(c).opacity(0.85))
                 }

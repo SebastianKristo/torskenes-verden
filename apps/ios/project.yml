@@ -35,6 +35,10 @@ targets:
         com.apple.developer.healthkit.access: []
         # Prompt 20: HKObserverQuery + enableBackgroundDelivery (skritt og puls, hver time) krever denne på iOS 15+.
         com.apple.developer.healthkit.background-delivery: true
+        # Prompt 41: settes manuelt når appen signeres med egen Team ID (ikke her: CI signerer ad hoc, og AltStore/Sideloadly
+        # avviser ukjente/uutvidede verdier). Uten dem virker homelab://app-auth og App Group-reserven for «Fortsett som».
+        #   keychain-access-groups: [$(AppIdentifierPrefix)no.kristo.finanshub, $(AppIdentifierPrefix)no.kristo.shared]
+        #   com.apple.developer.associated-domains: [applinks:home.kristo.no]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub
@@ -98,11 +102,16 @@ targets:
         BGTaskSchedulerPermittedIdentifiers: [no.kristo.finanshub.health, no.kristo.finanshub.family, no.kristo.finanshub.notify]
         # Deep links fra widgetene: finanshub://<side>
         # Prompt 38: homelab://login?c=<sid>.<nonce> – QR-innlogging på ny enhet (QrLogin38.swift).
+        # Prompt 41: homelab://app-auth?client=kalender&redirect=kalender://auth&state=…&cc=… (AppAuth41.swift).
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.finanshub
             CFBundleURLSchemes: [finanshub, homelab]
         # Prompt 33: canOpenURL(kalender://) – åpne Kalender-appen når den er installert, ellers Homelabs egen kalender.
         LSApplicationQueriesSchemes: [kalender]
+        # Prompt 41: tilgangsgruppen for det delte enhets-tokenet (KalShared41, SharedKal/Group). Tom prefiks uten Team ID → ignoreres.
+        KalKeychainGroup41: $(AppIdentifierPrefix)no.kristo.shared
+        # Prompt 41: standardadressen appen leveres med (innlogging uten serverfelt, Server41.swift).
+        HomelabServer: https://home.kristo.no
 
   FinansHubWidgets:
     type: app-extension
@@ -152,6 +161,12 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.no.kristo.finanshub
+        # Prompt 41: «Fortsett som» via delt Nøkkelring krever ekte signering med Team ID (ikke i CI/sideloading).
+        # Slå på manuelt (samme gruppe i FinansHub):
+        # keychain-access-groups:
+        #   - $(AppIdentifierPrefix)no.kristo.kalender
+        #   - $(AppIdentifierPrefix)no.kristo.shared
+        # Uten dette brukes App Group-nøkkelen hl41.device (KalShared41) og egne URL-skjema (homelab:// ⇄ kalender://auth).
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender
@@ -179,11 +194,16 @@ targets:
           - Newsreader-Medium.ttf
           - Newsreader-Regular.ttf
         # kalender://, kalender://dag/2026-10-21, kalender://hendelse?id=…, kalender://liste, kalender://ny?text=…
+        # Prompt 41: kalender://auth?code=…&state=… (svaret fra Homelab etter «Logg inn med Homelab-appen»).
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.kalender
             CFBundleURLSchemes: [kalender]
-        # «Logg inn med Homelab-appen» (finanshub://kalender-login).
-        LSApplicationQueriesSchemes: [finanshub]
+        # «Logg inn med Homelab-appen» (finanshub://kalender-login, prompt 41: homelab://app-auth), Bursdager › (finanshub://bursdager),
+        # Gratuler via WhatsApp.
+        LSApplicationQueriesSchemes: [finanshub, homelab, whatsapp]
+        # Prompt 41: standardadressen (ingen serverfelt ved innlogging) og den delte Nøkkelring-gruppen for «Fortsett som».
+        KalDefaultServer41: "https://home.kristo.no"
+        KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
 
   KalenderWidgets:
     type: app-extension
@@ -225,7 +245,8 @@ targets:
 
   # Prompt 34: Kalender for Mac – egen macOS-app (no.kristo.kalender.mac, Kalender.app) med samme konto og backend som web og iPhone.
   # Gjenbruker SharedKal (modeller, nett, fonter) og den rene tolkeren KalQuick.swift fra iOS-appen. Universal (arm64 + x86_64), macOS 13+.
-  # Ingen widgets for macOS ennå (krever App Group med provisjoneringsprofil på macOS) og ingen Sparkle (ny avhengighet).
+  # Ingen Sparkle (ny avhengighet). Prompt 41: widgets (KalenderMacWidgets, macOS 14+) – data via App Group
+  # <TeamID>.group.no.kristo.kalender, som bare brukes når appen er signert med et team (Info-nøkkelen KalTeam41).
   KalenderMac:
     type: application
     platform: macOS
@@ -244,6 +265,9 @@ targets:
     # Prompt 38: hovedvinduet viser web-kalenderen (WKWebView mot <server>/kalender?app=mac).
     dependencies:
       - sdk: WebKit.framework
+      # Prompt 41: skrivebords-widgetene (samme kode som iOS) legges i Kalender.app/Contents/PlugIns.
+      - target: KalenderMacWidgets
+        embed: true
     entitlements:
       path: KalenderMac/KalenderMac.entitlements
       properties:
@@ -251,6 +275,12 @@ targets:
         com.apple.security.network.client: true
         # Arkiv → Importer .ics …
         com.apple.security.files.user-selected.read-only: true
+        # Prompt 41: delt med widgetene. Brukes bare når appen er signert med Team ID (ellers rører appen den ikke,
+        # så macOS 15 viser ingen dialog). keychain-access-groups for «Fortsett som» på Mac må settes manuelt (krever profil).
+        # Slås på manuelt sammen med DEVELOPMENT_TEAM: release/røyktest signerer ad hoc med denne fila, og et uutvidet
+        # Team-prefiks hører ikke hjemme der.
+        # com.apple.security.application-groups:
+        #   - $(TeamIdentifierPrefix)group.no.kristo.kalender
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.mac
@@ -286,6 +316,54 @@ targets:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         # kalender://dag/2026-10-21, kalender://hendelse?id=…, kalender://liste, kalender://ny?text=…, kalender://glimt?q=…
+        # Prompt 41: kalender://auth?code=…&state=… (innlogging med Homelab / web-godkjenning).
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.kalender.mac
             CFBundleURLSchemes: [kalender]
+        # Prompt 41: tom uten team → ingen App Group (widgetene viser «Krever signering med Team ID»).
+        KalTeam41: "$(DEVELOPMENT_TEAM)"
+        KalDefaultServer41: "https://home.kristo.no"
+        KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
+
+  # Prompt 41: Kalender-widgets på Mac (skrivebord og Varslingssenter, macOS 14+). Samme kode som iOS (KalenderWidgets/Sources,
+  # #if os(macOS) bare for størrelser/farger): liten, medium, stor og ekstra stor. Data fra App Group-en <TeamID>.group.no.kristo.kalender,
+  # som Mac-appen skriver når den er signert med et team; uten team viser widgetene «Krever signering med Team ID».
+  KalenderMacWidgets:
+    type: app-extension
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - KalenderWidgets/Sources
+      - SharedKal/Group
+      - SharedKal/Core
+      # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
+      - SharedKal/Fonts
+    entitlements:
+      path: KalenderMac/KalenderMacWidgets.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.application-groups:
+          - $(TeamIdentifierPrefix)group.no.kristo.kalender
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.mac.widgets
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        ARCHS: "$(ARCHS_STANDARD)"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Kalender
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_IDENTITY: "-"
+    info:
+      path: KalenderMac/KalenderMacWidgets-Info.plist
+      properties:
+        CFBundleDevelopmentRegion: nb
+        LSMinimumSystemVersion: "14.0"
+        ATSApplicationFontsPath: "."
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        KalTeam41: "$(DEVELOPMENT_TEAM)"

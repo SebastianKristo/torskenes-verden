@@ -158,7 +158,7 @@ struct KalEventRow: View {
                 RoundedRectangle(cornerRadius: 2).fill(t.calColor(c)).frame(width: 4)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text(e.title).font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink).lineLimit(1)
+                        KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink).lineLimit(1)
                         if !tag.isEmpty {
                             Text(tag).font(KalFont.mono(9.5)).tracking(0.6)
                                 .foregroundStyle(t.calText(c))
@@ -193,6 +193,7 @@ struct KalSearchGroup: Identifiable {
 struct KalSearchView: View {
     @Environment(\.kal) private var t
     @MainActor private var s: KalStore { KalStore.shared }
+    @MainActor private var ai: KalSearch41 { KalSearch41.shared }
     @FocusState private var focus: Bool
 
     private var groups: [KalSearchGroup] {
@@ -232,10 +233,25 @@ struct KalSearchView: View {
             HStack(spacing: 8) {
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .semibold)).foregroundStyle(t.mut)
-                    TextField("Søk i hendelser", text: Binding(get: { s.query }, set: { (v: String) in s.query = v }))
+                    // Prompt 41: «Søk, eller spør Glimt» + ✦ Glimt-knappen (Ollama på hjemmeserveren).
+                    TextField("Søk, eller spør Glimt: «når er neste tannlege?»", text: Binding(get: { s.query }, set: { (v: String) in s.query = v }))
                         .font(KalFont.ui(16, .medium)).foregroundStyle(t.ink)
                         .focused($focus)
                         .submitLabel(.search)
+                        .onSubmit { KalSearch41.shared.submit(s.query) }
+                    Button(action: {
+                        focus = false
+                        KalSearch41.shared.go(s.query)
+                    }) {
+                        Text("✦ Glimt").font(KalFont.ui(12.5, .heavy))
+                            .foregroundStyle(ai.on ? Color.white : t.ink)
+                            .padding(.horizontal, 11).frame(height: 32)
+                            .background(Capsule().fill(ai.on ? t.red : t.chip))
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.trailing, -8)
+                    .accessibilityLabel("Søk med Glimt")
                 }
                 .padding(.horizontal, 14)
                 .frame(height: 44)
@@ -259,6 +275,9 @@ struct KalSearchView: View {
             .scrollIndicators(.hidden)
             .padding(.bottom, 10)
             ScrollView {
+                if ai.on {
+                    KalAiCard41().padding(.horizontal, 14).padding(.bottom, 4)
+                }
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(g) { (grp: KalSearchGroup) in
                         Text(grp.title).font(KalFont.mono(10.5)).tracking(1.2).foregroundStyle(grp.today ? t.red : t.mut)
@@ -281,6 +300,7 @@ struct KalSearchView: View {
         }
         .background(t.bg)
         .onAppear {
+            KalSearch41.shared.reset()
             Task {
                 try? await Task.sleep(nanoseconds: 60_000_000)
                 focus = true

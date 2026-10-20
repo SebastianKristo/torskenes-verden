@@ -69,7 +69,12 @@ struct KalDetailSheet: View {
                 Spacer()
                 KalPill(title: "Ferdig") { close() }
             }
-            Text(e.title).font(KalFont.serif(28)).foregroundStyle(t.ink).fixedSize(horizontal: false, vertical: true)
+            // Prompt 41: bursdager får eget kort (konfetti, avatar med festhatt, nedtelling, Gratuler · Gaveidé · Bursdager ›).
+            if KalBd41.isBirthday(e, calName: c?.name ?? "") {
+                KalBdCard41(e: e, color: t.calColor(c))
+            } else {
+                Text(e.title).font(KalFont.serif(28)).foregroundStyle(t.ink).fixedSize(horizontal: false, vertical: true)
+            }
             rows
             KalFagPick37(e: e)
             if !e.allDay { reminders }
@@ -77,6 +82,10 @@ struct KalDetailSheet: View {
                 Text("Slett hendelse").font(KalFont.ui(14, .bold)).foregroundStyle(t.acc).frame(height: 44)
             }
             .buttonStyle(.plain)
+            if KalBd41.isBirthday(e, calName: c?.name ?? "") && KalBd41.fromGoogle(e) {
+                Text("«Slett» fjerner bare bursdagen fra Kalender-visningen. Den ligger fortsatt i Google Kontakter.")
+                    .font(KalFont.ui(12)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

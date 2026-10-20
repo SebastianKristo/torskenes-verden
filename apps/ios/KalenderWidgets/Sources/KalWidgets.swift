@@ -8,6 +8,9 @@ import WidgetKit
 // Trykk på en hendelse → kalender://hendelse?id=…, på dato/måned → kalender://dag/… . Data: App Group-bufferen (KalSnapshot)
 // som Kalender-appen skriver, og ellers henter widgeten selv med Kalender-appens token (KalGroup.token) hvert 15. minutt.
 
+// Prompt 41: samme fil bygges også for macOS (KalenderMacWidgets, macOS 14+ skrivebord og Varslingssenter).
+// #if os(macOS) bare for størrelser (ekstra stor), farger («apper foran» = accented/vibrant) og tekster; ingen låseskjerm på Mac.
+#if os(iOS)
 @main
 struct KalWidgetBundle: WidgetBundle {
     var body: some Widget {
@@ -15,6 +18,14 @@ struct KalWidgetBundle: WidgetBundle {
         KalLockWidget()
     }
 }
+#else
+@main
+struct KalWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        KalHomeWidget()
+    }
+}
+#endif
 
 struct KalWEntry: TimelineEntry {
     let date: Date
@@ -118,6 +129,12 @@ enum KalWData {
 
     static func dayURL(_ key: String) -> URL { URL(string: "kalender://dag/" + key) ?? URL(string: "kalender://")! }
     static let monthURL: URL = URL(string: "kalender://mnd")!
+    /// Prompt 41: kalender://mnd/2026-10 (samme lenker på iOS og Mac).
+    static func monthURL41(_ d: Date) -> URL {
+        URL(string: "kalender://mnd/" + String(KalD.year(d)) + "-" + KalD.pad(KalD.month(d)) + "?date=" + KalD.key(KalD.firstOfMonth(d))) ?? monthURL
+    }
+    /// Prompt 41: «Ny hendelse» i stor og ekstra stor åpner skrivefeltet i appen.
+    static let newURL: URL = URL(string: "kalender://ny")!
 
     /// Neste tidspunkt widgeten bør tegnes på nytt (slutten på neste hendelse eller midnatt).
     static func refreshDates(_ s: KalSnapshot, now: Date) -> [Date] {
@@ -191,23 +208,44 @@ struct KalHomeWidget: Widget {
         }
         .configurationDisplayName("Kalender")
         .description("Dato, vær og de neste hendelsene. Stor viser måneden.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .supportedFamilies(KalHomeWidget.families)
         .contentMarginsDisabled()
+    }
+}
+
+extension KalHomeWidget {
+    /// Prompt 41: ekstra stor bare på Mac (og iPad).
+    static var families: [WidgetFamily] {
+        #if os(macOS)
+        return [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge]
+        #else
+        return [.systemSmall, .systemMedium, .systemLarge]
+        #endif
     }
 }
 
 struct KalHomeWidgetView: View {
     @Environment(\.widgetFamily) private var family
     @Environment(\.colorScheme) private var scheme
+    /// Prompt 41: «apper foran» på Mac (og tonet Hjem-skjerm på iOS) = accented/vibrant → nedtonet bakgrunn.
+    @Environment(\.widgetRenderingMode) private var mode
     let entry: KalWEntry
 
+    private var tinted: Bool { mode != .fullColor }
     private var pal: KalWPal { scheme == .dark ? KalWPal.darkPal : KalWPal.light }
 
-    var body: some View {
-        content
-            .padding(16)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .containerBackground(for: .widget) { pal.bg }
+    @ViewBuilder var body: some View {
+        if tinted {
+            content
+                .padding(16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .containerBackground(.fill.tertiary, for: .widget)
+        } else {
+            content
+                .padding(16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .containerBackground(for: .widget) { pal.bg }
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -216,8 +254,10 @@ struct KalHomeWidgetView: View {
                 .widgetURL(URL(string: "kalender://"))
         } else {
             switch family {
+            case .systemExtraLarge:
+                KalWExtraLarge41(entry: entry, pal: pal).widgetURL(KalWData.monthURL41(entry.date))
             case .systemLarge:
-                KalWLarge(entry: entry, pal: pal).widgetURL(KalWData.monthURL)
+                KalWLarge(entry: entry, pal: pal).widgetURL(KalWData.monthURL41(entry.date))
             case .systemMedium:
                 KalWMedium(entry: entry, pal: pal).widgetURL(KalWData.dayURL(KalD.key(entry.date)))
             default:
@@ -240,7 +280,12 @@ struct KalWNotLinked: View {
             Text("KALENDER").font(.system(size: 10, weight: .heavy)).tracking(1).foregroundStyle(pal.acc)
             Spacer(minLength: 0)
             Text(KalGroup.linked ? "Åpne Kalender og logg inn" : "Widgeten når ikke appen").font(.system(size: 13, weight: .semibold)).foregroundStyle(pal.ink)
+            #if os(macOS)
+            Text(KalGroup.linked ? "Så vises hendelsene dine her." : "Krever signering med Team ID (App Group group.no.kristo.kalender).")
+                .font(.system(size: 11)).foregroundStyle(pal.mut)
+            #else
             Text(KalGroup.linked ? "Så vises hendelsene dine her." : "App Group mangler i signeringen.").font(.system(size: 11)).foregroundStyle(pal.mut)
+            #endif
         }
     }
 }
@@ -255,6 +300,7 @@ struct KalWDateBlock: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(KalD.weekdays[KalD.wd(date)].uppercased()).font(KalFont.monoW(10.5)).tracking(1.2).foregroundStyle(pal.acc).lineLimit(1)
             Text(String(KalD.dayOfMonth(date))).font(KalFont.serifW(big)).foregroundStyle(pal.ink).lineLimit(1)
+                .widgetAccentable()
         }
     }
 }
@@ -270,13 +316,13 @@ struct KalWSmall: View {
             Text(KalD.weekdays[KalD.wd(entry.date)].uppercased()).font(KalFont.monoW(10)).tracking(1.2).foregroundStyle(pal.acc)
             // Prompt 35: «UKE 43» rett til høyre for datoen (baseline-justert), mono 800, 11,5 pt, --ink2.
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(String(KalD.dayOfMonth(entry.date))).font(KalFont.serifW(40)).foregroundStyle(pal.ink)
+                Text(String(KalD.dayOfMonth(entry.date))).font(KalFont.serifW(40)).foregroundStyle(pal.ink).widgetAccentable()
                 Text("UKE " + String(KalWeek35.weekNo(KalWeek35.start(entry.date)))).font(KalFont.monoHeavyW(11.5)).tracking(0.7).foregroundStyle(pal.ink2)
                     .lineLimit(1).fixedSize()
             }
             Spacer(minLength: 0)
             HStack(alignment: .top, spacing: 7) {
-                RoundedRectangle(cornerRadius: 2).fill(n == nil ? pal.line : Color(kalHex: c?.hex ?? "#b23a2a")).frame(width: 4)
+                RoundedRectangle(cornerRadius: 2).fill(n == nil ? pal.line : Color(kalHex: c?.hex ?? "#b23a2a")).frame(width: 4).widgetAccentable()
                 VStack(alignment: .leading, spacing: 1) {
                     Text(n?.title ?? "Ingenting planlagt").font(KalFont.uiW(13, .bold)).foregroundStyle(pal.ink).lineLimit(2)
                     if let n {
@@ -339,9 +385,9 @@ struct KalWRow: View {
     var body: some View {
         let c: KalCal? = KalWData.evCal(snap, e)
         HStack(alignment: .top, spacing: 8) {
-            RoundedRectangle(cornerRadius: 2).fill(Color(kalHex: c?.hex ?? "#b23a2a")).frame(width: 4)
+            RoundedRectangle(cornerRadius: 2).fill(Color(kalHex: c?.hex ?? "#b23a2a")).frame(width: 4).widgetAccentable()
             VStack(alignment: .leading, spacing: 0) {
-                Text(e.title).font(KalFont.uiW(13, .bold)).foregroundStyle(pal.ink).lineLimit(1)
+                Text(KalBd41.listTitle(e, calName: c?.name ?? "")).font(KalFont.uiW(13, .bold)).foregroundStyle(pal.ink).lineLimit(1)
                 Text(KalWData.whenPrefix(e.day, now: now) + KalWData.timeText(e)).font(KalFont.monoW(11)).foregroundStyle(pal.mut).lineLimit(1)
             }
         }
@@ -358,9 +404,11 @@ struct KalWLarge: View {
         let up: [KalEvent] = Array(KalWData.upcoming(entry.snap, now: d).prefix(2))
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(KalD.cap(KalD.months[KalD.month(d) - 1])).font(KalFont.serifW(22)).foregroundStyle(pal.ink)
+                Text(KalD.cap(KalD.months[KalD.month(d) - 1])).font(KalFont.serifW(22)).foregroundStyle(pal.ink).widgetAccentable()
                 Spacer()
                 Text("UKE " + String(KalWeek35.weekNo(KalWeek35.start(d)))).font(KalFont.monoHeavyW(11.5)).tracking(1).foregroundStyle(pal.acc)
+                // Prompt 41: «Ny hendelse» åpner skrivefeltet i appen.
+                KalWNewButton41(pal: pal)
             }
             KalWMonthGrid(entry: entry, pal: pal)
             Spacer(minLength: 0)
@@ -447,6 +495,7 @@ struct KalWDayCell: View {
     }
 }
 
+#if os(iOS)
 /* ---------- Låseskjerm ---------- */
 
 struct KalLockWidget: Widget {
@@ -514,6 +563,8 @@ struct KalLockWidgetView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
+
+#endif
 
 /* ---------- Fonter (registrert via UIAppFonts i utvidelsen) ---------- */
 

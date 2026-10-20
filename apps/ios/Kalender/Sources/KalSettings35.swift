@@ -57,10 +57,12 @@ struct KalSettings35View: View {
                         }
                     }
                     KalLabel(text: "VARSLER").padding(.top, 6)
+                    // Prompt 41: «Send testvarsel» øverst (lang-trykk = push fra serveren).
+                    KalTestRow41()
                     notifications
                     KalLabel(text: "GLIMT OG KONTO").padding(.top, 6)
                     links
-                    KalLabel(text: "KONTO").padding(.top, 6)
+                    // Prompt 41: Server (lesbar) og Logg ut ligger nå øverst i GLIMT OG KONTO (fasitens linkRows).
                     account
                     Text(footer).font(KalFont.ui(12)).foregroundStyle(t.mut2)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -175,6 +177,14 @@ struct KalSettings35View: View {
 
     private var links: some View {
         VStack(spacing: 0) {
+            KalLinkRow35(title: "Server", sub: KalServer41.summary()) {
+                s.showToast("Endres i Homelab → Innstillinger → Konto → Server", undo: "")
+            }
+            KalLinkRow35(title: "Logg ut", sub: "Logg inn igjen med Homelab-appen") {
+                s.settingsOpen = false
+                s.drawerOpen = false
+                s.logout()
+            }
             KalLinkRow35(title: "Glimt", sub: "Figur, stemme og briefer") { s.openGlimtSettings() }
             KalLinkRow35(title: "Kontoer og synk", sub: "Google, iCloud, Outlook, Home Assistant") { s.openAccounts() }
             KalLinkRow35(title: "Widgets", sub: "Slik legger du til på Hjem- og låseskjerm") {
@@ -195,14 +205,7 @@ struct KalSettings35View: View {
             if !s.lastError.isEmpty {
                 Text(s.lastError).font(KalFont.ui(12.5)).foregroundStyle(t.acc).fixedSize(horizontal: false, vertical: true)
             }
-            HStack {
-                KalPill(title: "Oppdater", filled: false, height: 34) { Task { await s.load(force: true) } }
-                KalPill(title: "Logg ut", filled: false, height: 34) {
-                    s.settingsOpen = false
-                    s.drawerOpen = false
-                    s.logout()
-                }
-            }
+            KalPill(title: "Oppdater", filled: false, height: 34) { Task { await s.load(force: true) } }
         }
     }
 
