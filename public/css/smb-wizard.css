@@ -99,3 +99,27 @@ html.smbw-open,html.smbw-open body{overflow:hidden}
 .smbw-tools{flex-wrap:wrap}
 .smbw-mini.on{background:#1b1a17;color:#f3efe6}
 .smbw-chev .smbw-spin{width:14px;height:14px}
+
+/* Prompt 40 (claude-code-ai-jobber-og-smb-mappe.md): Papir-knapper (radius 999 for primær/sekundær, 12 for felt), NAS-/mappeikon
+   i 36 × 36-rute, adressen som brødsmuler i vanlig skrift (monospace bare i «Detaljer»), «Lagre likevel». */
+.smbw-btn{border-radius:999px}
+.smbw-mini{border-radius:999px}
+.smbw-pw .smbw-mini{border-radius:0 12px 12px 0;border-left:1px solid var(--w-rule)}
+.smbw-pw input{border-radius:12px 0 0 12px!important}
+.smbw-f input{border-radius:12px;border-bottom-color:var(--w-rule)}
+.smbw-f input:focus{box-shadow:0 0 0 2px var(--w-ink);border-color:var(--w-ink)}
+.smbw-ico{width:36px;height:36px;border-radius:10px;border:1px solid var(--w-rule);background:#fff;color:var(--w-ink);font-size:16px}
+.smbw-ico.sm{width:36px;height:36px}
+.smbw-sheet{border-radius:22px;overflow:hidden;border-color:var(--w-rule)}
+@media (max-width:640px){.smbw-sheet{border-radius:0}}
+.smbw-err,.smbw-warn,.smbw-res{border-radius:12px}
+.smbw-usehere{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 22px}
+.smbw-usehere small{font:500 13px var(--w-sans);opacity:.8;white-space:normal;overflow-wrap:anywhere}
+.smbw-sep{margin:0 6px;opacity:.6}
+.smbw-crumbtxt{font-weight:600}
+.smbw-det{font-size:12.5px;color:var(--w-ink2)}
+.smbw-det summary{cursor:pointer;width:max-content}
+.smbw-det .smbw-mono{display:block;margin-top:4px;font-size:12.5px!important;overflow-wrap:anywhere}
+.smbw-fr{display:flex;align-items:center;gap:14px}
+.smbw-cb{border-radius:7px}
+.smbw-big{border-radius:50%}

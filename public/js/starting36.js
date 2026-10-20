@@ -15,11 +15,13 @@ const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 async function probe() {
   try {
     const r = await fetch('/api/health', { cache: 'no-store', credentials: 'same-origin' });
+    // Prompt 40: 503 med X-Homelab-State: starting = serveren starter faktisk (proxyen/serveren sier det selv).
+    if (r.status === 503 && /starting/i.test(r.headers.get('x-homelab-state') ?? '')) return { down: true, starting: true };
     if (r.status === 502 || r.status === 503 || r.status === 504) return { down: true };
     const j = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => null) : null;
     // Eldre server (eller ikke innlogget): svarer den i det hele tatt, kjører den.
     if (!r.ok || !j || !('ready' in j)) return { up: true, ready: true };
-    return { up: true, ready: !!j.ready, steps: Array.isArray(j.steps) ? j.steps : null, ver: j.version ?? '' };
+    return { up: true, ready: !!j.ready, restarting: j.restarting === true, steps: Array.isArray(j.steps) ? j.steps : null, ver: j.version ?? '' };
   } catch { return { down: true }; }
 }
 
@@ -93,23 +95,64 @@ async function hardReload() {
 }
 async function poll() {
   const r = await probe();
-  if (r.up) { S.steps = r.steps ?? S.steps; if (r.ver) S.ver = r.ver; if (r.ready) { S.ready = true; paint(); clearInterval(S.tick); setTimeout(hardReload, 800); return; } }
+  if (r.up) { S.steps = r.steps ?? S.steps; if (r.ver) S.ver = r.ver; if (r.ready) { S.ready = true; clearUpdating(); paint(); clearInterval(S.tick); setTimeout(hardReload, 800); return; } }
   paint();
   S.timer = setTimeout(poll, 1500);
 }
 
+/* Prompt 40 (claude-code-starter-blink-ved-oppdater.md): siden blinket inn ved vanlig ⌘R/F5.
+   Den vises nå bare når (1) «Oppdater nå» har satt hl_updating i sessionStorage, (2) serveren sier at den starter
+   (503 + X-Homelab-State: starting, eller /api/health → {restarting:true}), eller (3) to helsesjekker på rad (minst 3 s
+   mellom) feiler etter at appen var lastet og koblet til. Tapt kontakt under lasting (første 5 s) og unload teller ikke,
+   og selv da ventes det 1,5 s – kommer serveren tilbake innen da, vises ingenting. */
+const W = { loadedAt: Date.now(), unloading: false, connected: false, pend: null };
+const updating = () => { try { return JSON.parse(sessionStorage.getItem('hl_updating') || 'null'); } catch { return null; } };
+/** Kalles av «Oppdater nå» (sysupdate.js): neste tap av kontakt er en ekte restart. */
+export function markUpdating(version) { try { sessionStorage.setItem('hl_updating', JSON.stringify({ at: Date.now(), version: version ?? null })); } catch { /* privat modus */ } }
+const clearUpdating = () => { try { sessionStorage.removeItem('hl_updating'); } catch { /* */ } };
+function showSoon() {
+  if (S.on || W.pend || W.unloading) return;
+  W.pend = setTimeout(async () => {
+    W.pend = null;
+    if (W.unloading || S.on) return;
+    const r = await probe();
+    if (W.unloading) return;
+    // Svarer serveren igjen (og starter ikke), var det bare et hikke.
+    if (r.up && r.ready !== false && !r.restarting && !updating()) return;
+    const u = updating(); if (u?.version) S.ver = u.version;
+    show();
+  }, 1500);
+}
+
 /** Overvåker kontakten med serveren (hvert 20. s mens fanen er synlig, og med en gang når nettleseren er online igjen). */
 export function watchServer() {
+  const off = () => { W.unloading = true; clearTimeout(W.pend); W.pend = null; };
+  window.addEventListener('pagehide', off);
+  window.addEventListener('beforeunload', off);
+  window.addEventListener('pageshow', (e) => { if (e.persisted) { W.unloading = false; W.loadedAt = Date.now(); } });
+  // Kom vi tilbake etter «Oppdater nå» og serveren er klar, er oppdateringen ferdig.
+  let last = 0;
   const check = async () => {
-    if (S.on || document.hidden) return;
+    if (S.on || document.hidden || W.unloading) return;
     const r = await probe();
-    if (r.down) { S.fails++; if (S.fails >= 2) show(); else setTimeout(check, 3000); }
-    else { S.fails = 0; if (r.up && r.ready === false) show(); }
+    if (W.unloading) return;
+    if (r.starting || (r.up && r.restarting)) { showSoon(); return; }
+    if (r.down) {
+      // De første 5 s etter lasting regnes ikke som «mistet kontakt», og bare etter at appen har vært koblet til.
+      if (Date.now() - W.loadedAt < 5000 || !W.connected) { if (updating()) showSoon(); return; }
+      S.fails++;
+      if (S.fails >= 2 && Date.now() - last >= 3000) showSoon(); else { last = Date.now(); setTimeout(check, 3000); }
+      return;
+    }
+    S.fails = 0; W.connected = true;
+    if (r.up && r.ready && updating()) clearUpdating();
+    if (r.up && r.ready === false && updating()) showSoon();
   };
+  setTimeout(check, 5000);
   setInterval(check, 20_000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
   window.addEventListener('online', check);
-  // Oppdateringen er kommet til «Starter serveren på nytt»: vis siden med en gang (sysupdate.js sender hl:restarting).
-  document.addEventListener('hl:restarting', show);
+  // Oppdateringen er kommet til «Starter serveren på nytt»: vis siden (etter 1,5 s). sysupdate.js sender hl:restarting.
+  document.addEventListener('hl:restarting', () => { if (!updating()) markUpdating(); showSoon(); });
 }
 export const showStarting = show;

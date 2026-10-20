@@ -5,7 +5,7 @@
 // Opplesning: POST /api/tts {text, character, voice, rate, lang} → audio/mpeg. 503/404/feil → nettleserens stemme.
 import { api, esc } from './util.js';
 import { store } from './store.js';
-import { fig, FIGS, hostFor } from './glimt-figs.js';
+import { fig, FIGS, hostFor, setJul, julOn, julAuto, JUL_PHASES, julPhaseName } from './glimt-figs.js';
 import { CARDS38, cardList38, toSrv38 } from './brief38.js'; // prompt 38: kortene i briefen (av/på og rekkefølge)
 
 export const DEF = {
@@ -14,6 +14,7 @@ export const DEF = {
   briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
   tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' },
   engines: null, chars: null,
+  jul: 'auto', julPhase: null, snow: true, julSound: 'av', // prompt 40: julemodus (per bruker, synkes)
 };
 const LS = 'glimt_settings35';
 const G = { s: null, loaded: false, loading: null, err: '', legacy: false, keyMsg: {}, keyBusy: '' };
@@ -40,7 +41,7 @@ export const gs = () => G.s ?? (G.s = merge(DEF, readLocal()));
 export function loadGlimt(redraw, force = false) {
   if (G.loading) return G.loading.then(() => redraw?.());
   if (G.loaded && !force) return Promise.resolve();
-  G.loading = api('/glimt/settings').then((r) => { G.s = merge(DEF, r ?? {}); G.legacy = false; G.err = ''; })
+  G.loading = api('/glimt/settings').then((r) => { G.s = merge(DEF, { ...readLocal(), ...(r ?? {}) }); G.legacy = false; G.err = ''; setJul({ jul: G.s.jul, julPhase: G.s.julPhase, julActive: r?.julActive ?? null }); })
     .catch(async (e) => {
       if (e.status !== 404) G.err = e.message;
       // Eldre server: bare varsel og guide finnes i /api/brief/settings. Resten er en lokal kopi.
@@ -60,6 +61,8 @@ export function saveGlimt(patch) {
   G.s = merge(gs(), patch);
   writeLocal(G.s);
   if (patch.char && patch.char !== before) { try { window.dispatchEvent(new Event('glimt-char')); } catch { /* */ } }
+  // Prompt 40: julemodus gjelder overalt med en gang (figurbiblioteket sender «glimt-jul»).
+  if ('jul' in patch || 'julPhase' in patch) setJul({ jul: G.s.jul, julPhase: G.s.julPhase, julActive: null });
   document.dispatchEvent(new CustomEvent('hl:glimt', { detail: patch }));
   // Bare feltene som er endret sendes (delvis PUT); briefs og tts sendes hele.
   for (const k of Object.keys(patch)) pendingKeys[k] = 1;
@@ -201,13 +204,26 @@ function keyBlock(s) {
     ${msg ? `<span class="gs-msg${msg.ok ? ' ok' : ''}">${esc(msg.text)}</span>` : ''}</form>`;
 }
 
+/* Prompt 40 (claude-code-glimt-jul.md → Innstillinger → Glimt): kort med rød lue-ikonrute, «Julemodus», status, segment
+   Auto · Av · På, fasevalg når På er valgt, og snø i Vær og brief + julelyd på varsler. */
+function julCard(s) {
+  const m = s.jul ?? 'auto', on = julOn(), ph = s.julPhase ?? on ?? 'advent';
+  const note = m === 'auto' ? (julAuto() ? 'På nå · slås av 13. januar' : 'Slås på 1. desember') : m === 'av' ? 'Av hele året' : `På · ${julPhaseName(ph) || 'Advent'}`;
+  const seg = (k, n) => `<button type="button" data-gs-jul="${k}" aria-pressed="${m === k}">${n}</button>`;
+  return `<div class="gs40-jul" data-hl="glimt-jul"><div class="gs40-jh"><span class="gs40-ji" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18 Q9 5 18 5 Q20 6 20 8 Q16 8 15 18 Z"/><path d="M3 18h14"/><circle cx="20" cy="8" r="1.6"/></svg></span><span class="gs-ot"><b>Julemodus</b><span class="gs-os">${esc(note)}</span></span></div>
+    <div class="gs40-seg" role="group" aria-label="Julemodus">${seg('auto', 'Auto')}${seg('av', 'Av')}${seg('pa', 'På')}</div>
+    ${m === 'pa' ? `<div class="gs40-ph" role="group" aria-label="Fase">${JUL_PHASES.map(([k, n]) => `<button type="button" data-gs-julp="${k}" aria-pressed="${ph === k}">${n}</button>`).join('')}</div>` : ''}
+    <button type="button" class="gs-row gs40-sub" data-gs-tog="snow" role="switch" aria-checked="${s.snow !== false}"><span class="gs-ot"><b>Snø i Vær og brief</b><span class="gs-os">Når det snør eller er minus</span></span>${sw(s.snow !== false)}</button>
+    <div class="gs40-snd"><span class="gs-ot"><b>Julelyd på varsler</b><span class="gs-os">${s.julSound === 'bjelle' ? 'Myk bjelle (lav og kort)' : 'Av'}</span></span><div class="gs40-seg sm">${[['av', 'Av'], ['bjelle', 'Myk bjelle']].map(([k, n]) => `<button type="button" data-gs-julsnd="${k}" aria-pressed="${(s.julSound ?? 'av') === k}">${n}</button>`).join('')}</div></div></div>`;
+}
+
 /** Hele innstillingssiden. figs: rutenett med figurene (Innstillinger → Glimt). */
 export function glimtSettingsHtml({ figs = false } = {}) {
   const s = gs(), sel = s.char;
   const grid = figs ? `<span class="gs-h">GLIMT-FIGUR</span>
-    <div class="gs-figs" data-hl="glimt-fig">${FIGS.map((f) => { const on = sel === f.id; return `<button type="button" class="gs-fig${f.id === 'natt' ? ' dark' : ''}" data-gs-char="${f.id}" aria-pressed="${on}" aria-label="${esc(f.name)}"><span class="gs-fi">${fig(f.id, 54, on ? 'glad' : 'idle')}</span><b>${esc(f.name)}</b></button>`; }).join('')}</div>
+    <div class="gs-figs" data-hl="glimt-fig">${FIGS.map((f) => { const on = sel === f.id; return `<button type="button" class="gs-fig${f.id === 'natt' ? ' dark' : ''}" data-gs-char="${f.id}" aria-pressed="${on}" aria-label="${esc(f.name)}"><span class="gs-fi">${fig(f.id, 54, on ? 'glad' : 'idle', { noJul: true })}</span><b>${esc(f.name)}</b></button>`; }).join('')}</div>
     <p class="gs-note">Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle …) tar over når temaet passer, om det er slått på under.${sel === 'glimt' ? ' Mellom 21 og 06 blir Glimt automatisk Glimt Natt.' : ''}</p>` : '';
-  return `<div class="gs" data-gs>${grid}
+  return `<div class="gs" data-gs>${grid}${julCard(s)}
     <div class="gs-list" data-hl="glimt">${MAIN.map(([k, n, d]) => `<button type="button" class="gs-row${k === 'friends' && s.briefGlimt === false ? ' gs-dim' : ''}" data-gs-tog="${k}" role="switch" aria-checked="${!!s[k]}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span>${sw(!!s[k])}</button>`).join('')}</div>
     <span class="gs-h">BRIEFER GJENNOM DAGEN</span>
     <div class="gs-list">${BR.map(([k, n, d]) => { const B = s.briefs[k]; return `<div class="gs-row gs-br${s.brief ? '' : ' off'}"><button type="button" class="gs-brt" data-gs-brief="${k}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span></button><input type="time" value="${esc(B.at)}" data-gs-at="${k}" aria-label="Klokkeslett for ${esc(n)}"><button type="button" class="gs-swb" data-gs-brief="${k}" role="switch" aria-checked="${!!B.on}" aria-label="${esc(n)}">${sw(!!B.on)}</button></div>`; }).join('')}</div>
@@ -239,6 +255,12 @@ export function glimtClick(e, redraw) {
     say(k === 'gris' ? 'Nøff! Nå er jeg din Glimt.' : 'Hei! Nå er jeg din Glimt.', hostFor(k), { force: gs().readAloud });
     return true;
   }
+  const jm = t.closest('[data-gs-jul]');
+  if (jm) { const k = jm.dataset.gsJul; saveGlimt(k === 'pa' ? { jul: k, julPhase: gs().julPhase ?? julAuto() ?? 'advent' } : { jul: k }); try { navigator.vibrate?.(8); } catch { /* */ } redraw(); return true; }
+  const jp = t.closest('[data-gs-julp]');
+  if (jp) { saveGlimt({ jul: 'pa', julPhase: jp.dataset.gsJulp }); redraw(); return true; }
+  const js = t.closest('[data-gs-julsnd]');
+  if (js) { saveGlimt({ julSound: js.dataset.gsJulsnd }); if (js.dataset.gsJulsnd === 'bjelle') bell40(); redraw(); return true; }
   const tg = t.closest('[data-gs-tog]');
   if (tg) { const k = tg.dataset.gsTog; saveGlimt({ [k]: !gs()[k] }); if (k === 'briefGlimt') { try { localStorage.setItem('glimt_brief_fig', gs().briefGlimt ? '1' : '0'); } catch { /* */ } document.dispatchEvent(new Event('glimt-cfg')); } if (k === 'readAloud' && !gs().readAloud) stopSpeak(); redraw(); return true; }
   const br = t.closest('[data-gs-brief]');
@@ -259,6 +281,14 @@ export function glimtClick(e, redraw) {
   const ra = t.closest('[data-gs-rate]');
   if (ra) { saveGlimt({ tts: { rate: ra.dataset.gsRate } }); redraw(); return true; }
   return false;
+}
+/** Myk bjelle (lav og kort) – forhåndslytt når den velges. */
+function bell40() {
+  try {
+    const C = new (window.AudioContext || window.webkitAudioContext)(), t = C.currentTime;
+    for (const [f, d] of [[1318.5, 0], [1760, 0.09]]) { const o = C.createOscillator(), g = C.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.08, t + d + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.6); o.connect(g).connect(C.destination); o.start(t + d); o.stop(t + d + 0.65); }
+    setTimeout(() => C.close?.(), 900);
+  } catch { /* ingen lyd */ }
 }
 export function glimtChange(e) {
   const at = e.target.closest?.('[data-gs-at]');

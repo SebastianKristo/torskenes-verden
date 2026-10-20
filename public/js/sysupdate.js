@@ -93,6 +93,8 @@ export async function startUpdate(password = U.pw, opt = {}) {
     U.sheet = false; U.pw = ''; U.backup = r?.backup ?? null;
     U.d = { ...(U.d ?? {}), status: { ...(U.d?.status ?? {}), id: r?.id, state: 'downloading', step: 'downloading', error: null, startedAt: new Date().toISOString(), finishedAt: null } };
     U.starting = false; emit();
+    // Prompt 40: oppstartssiden vises bare etter en ekte oppdatering (starting36.js leser flagget).
+    try { sessionStorage.setItem('hl_updating', JSON.stringify({ at: Date.now(), version: U.d?.latest?.version ?? null })); } catch { /* privat modus */ }
     watch();
     return true;
   } catch (e) {

@@ -6,7 +6,7 @@ import { store } from './store.js';
 import { integById } from './settings-integ.js';
 import { mountBdCalendars, bdCalSummary } from './birthdays.js';
 import { ensureKal, subjectColors, setSubjectColor, webLayout, setWebLayout } from './kalender.js';
-import { cals as kalCals, st39, loadCals } from './kal39.js';
+import { cals as kalCals, st39, loadCals, patchCal, SWATCHES } from './kal39.js';
 
 const CFG_GROUP = 'Kalender / timeplan';
 
@@ -14,9 +14,11 @@ function fieldHtml(f, ro, i24) {
   const secret = i24 ? f.type === 'secret' : f.secret, saved = i24 ? f.saved : f.set;
   const type = secret ? 'password' : 'url';
   const val = secret && i24 ? '' : f.value ?? '';
-  const ph = secret ? (saved ? '•••••••• lagret' : 'ikke satt') : f.placeholder ?? '';
+  const ph = secret ? (saved ? 'Lim inn ny adresse' : 'ikke satt') : f.placeholder ?? '';
   const clear = saved && secret && !ro ? (i24 ? `<button type="button" class="sg-link red" data-i24-clear="${esc(f.key)}">Fjern</button>` : `<button type="button" class="sg-link red" data-clear-secret="${esc(f.key)}">Fjern</button>`) : '';
-  return `<label class="sg-field"><span>${esc(f.label)}</span><input name="${esc(f.key)}" type="${type}" value="${esc(val)}" placeholder="${esc(ph)}" autocomplete="off" spellcheck="false"${ro ? ' readonly' : ''}>${clear}</label>${f.help ? `<div class="sg-fhelp">${esc(f.help)}</div>` : ''}`;
+  // Prompt 40: lagret adresse vises som «Lagret ✓» (dempet), ikke «••••• lagret» i monospace. Klikk lar deg lime inn ny.
+  const savedLbl = saved && secret && !ro ? `<button type="button" class="sg-saved40" data-kal-newurl="${esc(f.key)}" title="Lim inn ny adresse">Lagret ✓</button>` : '';
+  return `<label class="sg-field sg-field40${f.help ? ' has-help' : ''}"><span>${esc(f.label)}</span>${savedLbl}<input name="${esc(f.key)}" type="${type}" value="${esc(val)}" placeholder="${esc(ph)}" autocomplete="off" spellcheck="false"${ro ? ' readonly' : ''}${savedLbl ? ' hidden' : ''}>${clear}</label>${f.help ? `<div class="sg-fhelp sg-fhelp40">${esc(f.help)}</div>` : ''}`;
 }
 
 /** Skole og Canvas: integrasjonen «calendars» hvis serveren har den, ellers config-gruppen. */
@@ -45,18 +47,32 @@ function colorsBox() {
 
 /** Prompt 29: Kalender på web med toppmeny eller i fullskjerm (calendar_web_layout). */
 function layoutBox() {
-  const v = webLayout(), seg = (k, n) => `<button type="button" class="kal-seg-b" data-kal-layout="${k}" aria-pressed="${v === k}">${n}</button>`;
+  const v = webLayout(), seg = (k, n) => `<button type="button" class="kal-seg-b kal-seg40-b" data-kal-layout="${k}" aria-pressed="${v === k}">${n}</button>`;
   return `<section class="sg"><h3 class="sg-t">Kalender på web</h3><div class="sg-box"><div class="sg-row"><span class="sg-txt"><b>Visning</b><span>${v === 'full' ? 'Kalenderen dekker hele vinduet uten Homelab-menyen. ✕ eller Esc lukker.' : 'Homelab-menyen øverst, kalenderen fyller resten.'}</span></span>
-    <span class="kal-seg" role="group" aria-label="Visning">${seg('menu', 'Med toppmeny')}${seg('full', 'Fullskjerm')}</span></div></div>
+    <span class="kal-seg kal-seg40" role="group" aria-label="Visning">${seg('menu', 'Med toppmeny')}${seg('full', 'Fullskjerm')}</span></div></div>
     <div class="sg-note">Valget huskes for deg og brukes neste gang Kalender åpnes. I fullskjerm lukker ✕ eller Esc kalenderen.</div></section>`;
 }
 
 /** Prompt 39: de fire kalenderne (Personlig · Bursdager · Skole · Helligdager) og «Hvilken kalender er hva?» (1d). */
+// Prompt 40 (claude-code-innst-kalendere-rart.md): fast 12 × 12-prikk med kalenderens farge (fallback samme som Kalender-appen),
+// «1 kilde ›» i stedet for et uklart tall, og raden åpner kalenderens innstillinger (farge, navn, vis/skjul, kilde).
+const DOT40 = { personlig: '#B23A2A', bursdager: '#8A3FA0', skole: '#2F7A4F', helligdager: '#A8661A' };
+const colOf = (c) => (/^#[0-9a-f]{3,8}$/i.test(String(c.color ?? '')) ? c.color : DOT40[c.id] ?? '#7a7468');
+let openCal40 = '';
+function calEdit40(c) {
+  const src = c.badge === 'GOOGLE' || c.source === 'google' ? `Google${c.sourceLabel && c.sourceLabel !== 'Google' ? ` · ${c.sourceLabel}` : ''}` : c.badge === 'URL' || c.source === 'url' ? `iCal-adresse${c.sourceLabel && c.sourceLabel !== 'iCal' ? ` · ${c.sourceLabel}` : ''}` : c.own ? 'Egen kalender' : 'Innebygd · Norge';
+  return `<div class="kal40-ed" data-kal40-ed="${esc(c.id)}">
+    <label class="kal40-f"><span>Navn</span><input value="${esc(c.name)}" data-kal40-name="${esc(c.id)}" aria-label="Navn på kalenderen" maxlength="40"></label>
+    <div class="kal40-f"><span>Farge</span><span class="kal40-sw">${SWATCHES.map((x) => `<button type="button" style="background:${x}" data-kal40-col="${x}" data-id="${esc(c.id)}" aria-label="Farge ${x}" aria-pressed="${String(colOf(c)).toLowerCase() === x}"></button>`).join('')}</span></div>
+    <label class="kal40-f"><span>Vis i Kalender</span><input type="checkbox" class="kal40-tg" data-kal40-vis="${esc(c.id)}"${c.visible === false ? '' : ' checked'}></label>
+    <div class="kal40-f"><span>Kilde</span><b>${esc(src)}</b></div></div>`;
+}
 function fourBox() {
   if (!st39.cals) loadCals().then(() => document.dispatchEvent(new Event('hl:kal39')));
-  const rows = kalCals().map((c) => `<div class="sg-row kal-sc"><span class="kal-sc-dot" style="background:${esc(c.color)}"></span><span class="sg-txt"><b>${esc(c.name)}</b><span>${esc([c.badge === 'GOOGLE' || c.source === 'google' ? 'Google' : c.badge === 'URL' || c.source === 'url' ? 'URL (iCal)' : c.own ? 'Egen' : 'Innebygd', c.sourceLabel && c.sourceLabel !== 'Google' ? c.sourceLabel : ''].filter(Boolean).join(' · '))}</span></span>${c.count ? `<span class="sg-v">${c.count}</span>` : ''}</div>`).join('');
+  const rows = kalCals().map((c) => { const n = Array.isArray(c.sources) ? c.sources.length || 1 : 1, on = openCal40 === c.id;
+    return `<button type="button" class="sg-row kal-sc kal40-row" data-kal40-open="${esc(c.id)}" aria-expanded="${on}"><span class="kal-sc-dot kal40-dot" style="background:${esc(colOf(c))}"></span><span class="sg-txt"><b>${esc(c.name)}</b><span>${esc([c.badge === 'GOOGLE' || c.source === 'google' ? 'Google' : c.badge === 'URL' || c.source === 'url' ? 'URL (iCal)' : c.own ? 'Egen' : 'Innebygd', c.sourceLabel && c.sourceLabel !== 'Google' ? c.sourceLabel : ''].filter(Boolean).join(' · '))}</span></span><span class="kal40-n">${n} ${n === 1 ? 'kilde' : 'kilder'} ${on ? '⌄' : '›'}</span></button>${on ? calEdit40(c) : ''}`; }).join('');
   return `<section class="sg"><h3 class="sg-t">Kalendere i appen</h3><div class="sg-box">${rows}
-    <div class="sg-row"><span class="sg-txt"><b>Hvilken kalender er hva?</b><span>Velg hvilke Google-kalendere som er Personlig og Bursdager</span></span><button type="button" class="sg-btn2" data-kal-gpick>Velg ›</button></div></div>
+    <div class="sg-row"><span class="sg-txt"><b>Hvilken kalender er hva?</b><span>Velg hvilke Google-kalendere som er Personlig og Bursdager</span></span><button type="button" class="sg-btn2 sg-btn40" data-kal-gpick>Velg ›</button></div></div>
     <div class="sg-note">Personlig og Bursdager kommer fra Google, Skole fra en iCal-adresse, Helligdager er innebygd. Egne kalendere lages fra Kalender → + Legg til kalender.</div></section>`;
 }
 
@@ -82,6 +98,12 @@ export function kalView({ row, note, cfg }) {
 }
 
 export function kalClick(e, rerender) {
+  const nu = e.target.closest('[data-kal-newurl]');
+  if (nu) { e.preventDefault(); const inp = nu.parentElement.querySelector('input'); nu.hidden = true; if (inp) { inp.hidden = false; inp.focus(); } return true; }
+  const op = e.target.closest('[data-kal40-open]');
+  if (op) { e.preventDefault(); openCal40 = openCal40 === op.dataset.kal40Open ? '' : op.dataset.kal40Open; rerender(); return true; }
+  const cb = e.target.closest('[data-kal40-col]');
+  if (cb) { e.preventDefault(); patchCal(cb.dataset.id, { color: cb.dataset.kal40Col }); document.dispatchEvent(new Event('hl:kal39')); rerender(); return true; }
   if (e.target.closest('[data-kal-gpick]')) { e.preventDefault(); import('./kal-google39.js').then((m) => m.openGooglePicker({ onSaved: () => { ensureKal(true); loadCals().then(rerender); } })); return true; }
   const lb = e.target.closest('[data-kal-layout]');
   if (lb) { e.preventDefault(); setWebLayout(lb.dataset.kalLayout).then(rerender); return true; }
@@ -93,6 +115,8 @@ export function kalClick(e, rerender) {
 }
 export function kalChange(e, rerender) {
   const t = e.target;
+  if (t.matches?.('[data-kal40-vis]')) { patchCal(t.dataset.kal40Vis, { visible: t.checked }); document.dispatchEvent(new Event('hl:kal39')); return true; }
+  if (t.matches?.('[data-kal40-name]')) { const v = t.value.trim(); if (v) { patchCal(t.dataset.kal40Name, { name: v }); document.dispatchEvent(new Event('hl:kal39')); rerender(); } return true; }
   // Skole/Canvas lagres av settings-integ.js; kalenderen hentes på nytt etterpå.
   if (t.closest?.('[data-i24="calendars"]')) { setTimeout(() => ensureKal(true), 1500); return false; }
   if (!t.matches?.('[data-kal-subj]')) return false;

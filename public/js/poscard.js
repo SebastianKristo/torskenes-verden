@@ -3,6 +3,7 @@
 // Data fra /api/family/positions. Eldre server uten endepunktet: bygges fra /api/family.
 import { api, esc, hm } from './util.js';
 import { store, widget, refresh, on, emit } from './store.js';
+import { hjemlysHtml, bindHjemlys } from './hjemlys40.js';
 
 const PALETTE = ['#b23a2a', '#2f5d8a', '#2f7a4f', '#c98a1b', '#6b4fa0', '#a03c8a', '#1f7a7a', '#8a5a2b'];
 const STALE_MS = 15 * 60_000, MAX = 4;
@@ -84,7 +85,8 @@ function body() {
 }
 
 // Hele kortet er en lenke til Familie (kartfanen er standard der).
-const wrap = () => `<a class="pos-card" href="#/familie" aria-label="Posisjon · familie – åpne kartet">${body()}</a>`;
+// Prompt 40: Hjemlys under (utenfor lenken, så knappene ikke åpner Familie). Tom når serveren ikke har Hjemlys.
+const wrap = () => { bindHjemlys(); return `<a class="pos-card" href="#/familie" aria-label="Posisjon · familie – åpne kartet">${body()}</a><div data-hl40-slot="card">${hjemlysHtml()}</div>`; };
 widget('d_pos', { cls: 'card pos-host', render: wrap });
 widget('p_pos', { cls: 'p-sec pos-host', render: wrap });
 on('positions', () => refresh('d_pos', 'p_pos'));

@@ -52,7 +52,7 @@ export function openNews(opts = {}) {
   const root = document.documentElement;
   const paper = root.dataset.hlTheme === '2c' || document.body.classList.contains('theme-2c');
   const theme = opts.theme ?? (paper ? (matchMedia('(prefers-color-scheme: dark)').matches && root.dataset.paperMode !== 'lys' ? 'paperDark' : 'paper') : 'web');
-  const st = { cat: opts.cat ?? 'siste', data: null, error: '', set: false, nf: '', busy: false, adding: false, addError: '', ip: null, icAll: false, icErr: '', art: null };
+  const st = { cat: opts.cat ?? 'siste', data: null, error: '', set: false, nf: '', busy: false, adding: false, addError: '', ip: null, icAll: false, icErr: '', art: null, gl: opts.glimt ? { open: true, cfg: false, busy: true, out: null, err: '' } : null };
   const artCache = new Map();
   bindSearchFields();
 
@@ -72,7 +72,7 @@ export function openNews(opts = {}) {
     open = null;
     opts.onClose?.();
   };
-  const onKey = (e) => { if (e.key === 'Escape') { if (e.defaultPrevented) return; if (st.ip) { st.ip = null; render(); } else if (st.set) { st.set = false; render(); } else if (st.art) { st.art = null; render(); } else close(); } };
+  const onKey = (e) => { if (e.key === 'Escape') { if (e.defaultPrevented) return; if (st.ip) { st.ip = null; render(); } else if (st.set) { st.set = false; render(); } else if (st.art) { st.art = null; render(); } else if (st.gl?.cfg) { st.gl.cfg = false; render(); } else if (st.gl?.open) { glClose(); } else close(); } };
   document.addEventListener('keydown', onKey);
 
   // Bare svaret på siste forespørsel brukes, så et tregt førstekall ikke overskriver en kategori som er valgt etterpå.
@@ -86,6 +86,7 @@ export function openNews(opts = {}) {
     st.error = error;
     if (data) { st.data = data; preloadIcons(icIds(data)); }
     render();
+    if (data && st.gl?.open && !st.gl.out && !st.gl.started) { st.gl.started = true; glRun(); }
   }
 
   /* ---------- Ikoner på fanene (prompt 23) ---------- */
@@ -172,13 +173,148 @@ export function openNews(opts = {}) {
       </div></div></div>`;
   }
 
+  /* ---------- Prompt 40: Glimt-siden (claude-code-nyheter-glimt-side.md, fasit Nyhetsleser.dc.html → gl) ----------
+     POST /api/news/glimt {sources, ids, length, topics, period} → {title, lead, sections:[{h, text, refs}], refs:[{n, title, source, url,
+     image, time}], images:[{url, ref, alt}], sources, updatedAt}. Feiler det (eller 404): lokalt sammendrag av titlene per tema. */
+  const GL_KEY = 'hl_rss_glimt', TOPICS = [['norge', 'Norge'], ['verden', 'Verden'], ['okonomi', 'Økonomi'], ['sport', 'Sport'], ['teknologi', 'Teknologi'], ['kultur', 'Kultur']];
+  const PERIODS = [['dag', 'I dag'], ['24t', '24 t'], ['uke', 'Uke']], LENS = [['kort', 'Kort'], ['lang', 'Lang']];
+  const glP = (() => { try { const v = JSON.parse(localStorage.getItem(GL_KEY) || 'null'); if (v && typeof v === 'object') return { src: v.src ?? null, top: v.top ?? null, per: v.per ?? 'dag', len: v.len ?? 'lang' }; } catch { /* */ } return { src: null, top: null, per: 'dag', len: 'lang' }; })();
+  const saveGlP = () => { try { localStorage.setItem(GL_KEY, JSON.stringify(glP)); } catch { /* privat modus */ } api('/rss/settings', { method: 'PUT', json: { newsGlimt: glP } }).catch(() => {}); };
+  const glFeeds = () => (st.data?.feeds ?? []).filter((f) => f.enabled !== false);
+  function glArts() {
+    const now = Date.now(), lim = glP.per === 'uke' ? 7 * 864e5 : 864e5, d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    const srcOn = glP.src ?? glFeeds().map((f) => f.name), topOn = glP.top ?? TOPICS.map((x) => x[0]);
+    return ((st.cat === 'siste' ? null : st.glItems) ?? st.data?.items ?? []).filter((x) => {
+      const t = Date.parse(x.published ?? '') || now;
+      if (glP.per === 'dag' ? t < +d0 : now - t > lim) return false;
+      return srcOn.includes(x.feed) && (topOn.includes(x.category) || !TOPICS.some((tp) => tp[0] === x.category));
+    }).slice(0, 30);
+  }
+  function glLocal(A) {
+    const by = {};
+    A.forEach((a, i) => { (by[a.category] ??= []).push({ ...a, n: i + 1 }); });
+    const lim = glP.len === 'kort' ? 2 : 6, pre = ['', 'I tillegg: ', 'Også verdt å merke seg: ', 'Samtidig: '];
+    const H = { norge: 'Norge og Oslo', okonomi: 'Økonomi', verden: 'Verden', sport: 'Sport', teknologi: 'Teknologi', kultur: 'Kultur' };
+    const srcs = [...new Set(A.map((a) => a.feed))];
+    const list = srcs.length > 1 ? `${srcs.slice(0, -1).join(', ')} og ${srcs.at(-1)}` : srcs[0] ?? '';
+    return { local: true, title: glP.per === 'uke' ? 'Uka i nyheter' : glP.per === '24t' ? 'Siste døgn' : 'Dette skjer i dag',
+      lead: `Glimt har lest ${A.length} saker fra ${list}. Det viktigste: ${A[0] ? A[0].title.charAt(0).toLowerCase() + A[0].title.slice(1) : ''}.`,
+      sections: ['norge', 'okonomi', 'verden', 'sport', 'teknologi', 'kultur', ...Object.keys(by).filter((k) => !H[k])].filter((k) => by[k]).map((k) => ({ h: H[k] ?? CAT_NAME[k] ?? k, segs: by[k].slice(0, lim).map((a, j) => ({ t: `${pre[j % 4]}${a.title.replace(/[.!?]$/, '')}.`, refs: [a.n] })), img: by[k].find((a) => a.image)?.n ?? null })),
+      refs: A.map((a, i) => ({ n: i + 1, title: a.title, source: a.feed, url: a.url, image: a.image, time: a.published })), updatedAt: new Date().toISOString() };
+  }
+  // Teksten fra serveren kan ha [n] inne i setningene: de blir brikker. Ellers kommer refs til slutt i avsnittet.
+  const segsOf = (sec) => {
+    if (Array.isArray(sec.segs)) return sec.segs;
+    if (Array.isArray(sec.avsnitt)) return sec.avsnitt.map((a) => ({ t: a.tekst ?? a.text ?? '', refs: a.ref ?? a.refs ?? [] }));
+    const txt = String(sec.text ?? ''), parts = [], re = /\s*\[(\d+(?:\s*,\s*\d+)*)\]/g;
+    let last = 0, m;
+    while ((m = re.exec(txt))) { parts.push({ t: txt.slice(last, m.index), refs: m[1].split(/\s*,\s*/).map(Number) }); last = re.lastIndex; }
+    if (last < txt.length) parts.push({ t: txt.slice(last), refs: parts.length ? [] : sec.refs ?? [] });
+    else if (!parts.length) parts.push({ t: txt, refs: sec.refs ?? [] });
+    return parts;
+  };
+  async function glRun() {
+    const g = st.gl;
+    if (!g || !st.data) return; // kjøres når nyhetene er hentet (load)
+    g.started = true;
+    if (st.cat !== 'siste' && !st.glItems) { try { st.glItems = (await api('/rss?cat=siste&limit=60')).items ?? []; } catch { st.glItems = []; } }
+    const A = glArts();
+    g.busy = true; g.cfg = false; g.err = ''; g.n = A.length; render();
+    const key = JSON.stringify(glP) + A.length; g.key = key;
+    if (!A.length && st.data) { g.busy = false; g.out = { none: true }; return render(); }
+    let out = null;
+    try {
+      const srcIds = glP.src ? glFeeds().filter((f) => glP.src.includes(f.name)).map((f) => f.id) : undefined;
+      const r = await api('/news/glimt', { method: 'POST', json: { sources: srcIds, ids: A.map((a) => a.id).filter(Boolean), length: glP.len, topics: glP.top ?? undefined, period: glP.per } });
+      if (r && Array.isArray(r.sections) && r.sections.length) out = r;
+    } catch { /* 404 eller feil: lokalt */ }
+    if (st.gl !== g || g.key !== key) return;
+    g.busy = false; g.out = out ?? glLocal(A); render();
+  }
+  function glOpen() { st.gl = { open: true, cfg: false, busy: true, out: null, err: '' }; render(); glRun(); }
+  function glClose() { try { speechSynthesis.cancel(); } catch { /* */ } st.gl = null; render(); }
+  function glSpeak() {
+    const g = st.gl, o = g?.out;
+    if (!o || o.none) return;
+    try {
+      if (g.speaking) { speechSynthesis.cancel(); g.speaking = false; return render(); }
+      const txt = [o.title, o.lead, ...(o.sections ?? []).map((sc) => `${sc.h}. ${segsOf(sc).map((x) => x.t).join(' ')}`)].join(' \n');
+      const u = new SpeechSynthesisUtterance(txt); u.lang = 'nb-NO'; u.rate = 1;
+      const v = speechSynthesis.getVoices().find((x) => /^(nb|no)/i.test(x.lang)); if (v) u.voice = v;
+      u.onend = () => { if (st.gl === g) { g.speaking = false; render(); } };
+      speechSynthesis.speak(u); g.speaking = true; render();
+    } catch { /* ingen talesyntese */ }
+  }
+  async function glClick(e) {
+    const b = e.target.closest?.('[data-gl]');
+    const open0 = e.target.closest?.('[data-act="gl-open"]');
+    if (open0) { e.preventDefault(); glOpen(); return true; }
+    if (!b) return false;
+    e.preventDefault();
+    const a = b.dataset.gl, v = b.dataset.v;
+    if (a === 'close') glClose();
+    else if (a === 'speak') glSpeak();
+    else if (a === 'cfg') { st.gl.cfg = !st.gl.cfg; render(); }
+    else if (a === 'src') { const all = glFeeds().map((f) => f.name), cur = glP.src ?? all; glP.src = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]; if (glP.src.length === all.length) glP.src = null; saveGlP(); render(); }
+    else if (a === 'top') { const all = TOPICS.map((x) => x[0]), cur = glP.top ?? all; glP.top = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]; if (glP.top.length === all.length) glP.top = null; saveGlP(); render(); }
+    else if (a === 'per') { glP.per = v; saveGlP(); render(); }
+    else if (a === 'len') { glP.len = v; saveGlP(); render(); }
+    else if (a === 'run') glRun();
+    else if (a === 'ref') {
+      const r = (st.gl.out?.refs ?? []).find((x) => String(x.n) === String(v));
+      if (!r) return true;
+      const x = (st.data?.items ?? []).find((y) => y.url === r.url || String(y.id) === String(r.id)) ?? { title: r.title, url: r.url, feed: r.source, image: r.image, published: r.time, color: '#5c5850' };
+      openArt(x);
+    }
+    return true;
+  }
+  function glView() {
+    const g = st.gl;
+    if (!g?.open) return '';
+    const o = g.out, A = g.busy || g.cfg ? glArts() : null, nSel = A ? A.length : g.n ?? 0;
+    const chip = (on, attrs, inner) => `<button type="button" class="nw40-chip${on ? ' on' : ''}" ${attrs} aria-pressed="${on}">${inner}</button>`;
+    const seg = (list, cur, k) => `<div class="nw40-seg">${list.map(([id, n]) => `<button type="button" class="${cur === id ? 'on' : ''}" data-gl="${k}" data-v="${id}" aria-pressed="${cur === id}">${n}</button>`).join('')}</div>`;
+    const srcOn = glP.src ?? glFeeds().map((f) => f.name), topOn = glP.top ?? TOPICS.map((x) => x[0]);
+    const cfg = g.cfg ? `<div class="nw40-cfg"><span class="nw-lab nw40-mut">KILDER</span><div class="nw40-chips">${glFeeds().map((f) => chip(srcOn.includes(f.name), `data-gl="src" data-v="${esc(f.name)}"`, `<i style="background:${esc(f.color || '#8f897c')}"></i>${esc(f.name)}`)).join('') || '<span class="nw-m">Ingen kilder.</span>'}</div>
+      <span class="nw-lab nw40-mut">TEMAER</span><div class="nw40-chips">${TOPICS.map(([id, n]) => chip(topOn.includes(id), `data-gl="top" data-v="${id}"`, n)).join('')}</div>
+      <div class="nw40-two"><div><span class="nw-lab nw40-mut">PERIODE</span>${seg(PERIODS, glP.per, 'per')}</div><div><span class="nw-lab nw40-mut">LENGDE</span>${seg(LENS, glP.len, 'len')}</div></div>
+      <button type="button" class="nw40-run" data-gl="run">✦ Lag sammendrag (${nSel} saker)</button></div>` : '';
+    const title = o?.title || (glP.per === 'uke' ? 'Uka i nyheter' : glP.per === '24t' ? 'Siste døgn' : 'Dette skjer i dag');
+    const refs = o?.refs ?? [], used = new Set();
+    const imgFor = (sc, i) => {
+      if (glP.len === 'kort' && i > 2) return null;
+      const im = (o.images ?? []).find((x) => (sc.refs ?? segsOf(sc).flatMap((s2) => s2.refs)).includes(x.ref)) ?? (sc.img ? { url: refs.find((r) => r.n === sc.img)?.image, ref: sc.img } : null) ?? (sc.bilde ? { url: refs.find((r) => r.n === sc.bilde)?.image, ref: sc.bilde } : null);
+      return im?.url ? im : null;
+    };
+    const secs = o && !o.none ? (o.sections ?? []).map((sc, i) => {
+      const segs = segsOf(sc); segs.forEach((x) => (x.refs ?? []).forEach((n) => used.add(n)));
+      const im = imgFor(sc, i), src = im ? refs.find((r) => r.n === im.ref)?.source ?? '' : '';
+      return `<section class="nw40-sec">${im ? `<figure><span class="nw40-img" style="aspect-ratio:${i ? '3/2' : '16/9'}"><img src="${esc(im.url)}" alt="${esc(im.alt ?? '')}" loading="lazy" referrerpolicy="no-referrer" data-nw-img></span><figcaption>Bilde fra saken [${esc(im.ref)}]${src ? ` · ${esc(src)}` : ''}</figcaption></figure>` : ''}
+        <b class="nw40-h">${esc(sc.h ?? sc.tittel ?? '')}</b><p>${segs.map((x) => `<span data-no-i18n>${esc(String(x.t ?? '').trim())}</span>${(x.refs ?? []).map((n) => `<button type="button" class="nw40-ref" data-gl="ref" data-v="${esc(n)}" aria-label="Kilde ${esc(n)}">${esc(n)}</button>`).join('')}`).join(' ')}</p></section>`;
+    }).join('') : '';
+    const refList = refs.filter((r) => used.has(r.n) || o?.local);
+    const meta = o && !o.none ? [new Date(o.updatedAt ?? Date.now()).toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }), `${refs.length} saker`, `${new Set(refs.map((r) => r.source)).size} kilder`, glP.len === 'kort' ? 'kort' : 'langt'].join(' · ') : 'Velg innholdet under «Innhold»';
+    return `<div class="nw40-gl" role="document" aria-label="Glimt-sammendrag">
+      <div class="nw40-gh"><button type="button" class="nw40-pill" data-gl="close">‹ Nyheter</button><span class="nw-sp"></span><button type="button" class="nw40-pill" data-gl="speak"${o && !o.none ? '' : ' disabled'}>${g.speaking ? '■ Stopp' : '▶ Les opp'}</button><button type="button" class="nw40-pill ink${g.cfg ? ' on' : ''}" data-gl="cfg" aria-pressed="${!!g.cfg}">Innhold</button></div>
+      <div class="nw40-gb"><div class="nw40-in">
+        <div class="nw40-top"><span class="nw-lab">✦ GLIMT · NYHETSOPPSUMMERING</span><b class="nw40-t">${esc(title)}</b><span class="nw-m">${esc(meta)}</span></div>
+        ${cfg}
+        ${g.busy ? `<div class="nw40-busy"><span>✦ Glimt leser ${nSel} saker …</span><i style="width:92%"></i><i style="width:80%"></i><i class="big"></i><i style="width:88%"></i></div>` : ''}
+        ${o?.none && !g.busy ? '<span class="nw-m">Ingen saker passer valgene. Slå på flere kilder eller temaer under «Innhold».</span>' : ''}
+        ${o && !o.none && !g.busy ? `<p class="nw40-ingr" data-no-i18n>${esc(o.lead ?? o.ingress ?? '')}</p>${secs}
+          ${refList.length ? `<div class="nw40-refs"><span class="nw-lab">KILDER · ${refList.length}</span>${refList.map((r) => `<button type="button" class="nw40-rr" data-gl="ref" data-v="${esc(r.n)}"><span class="nw40-rn">[${esc(r.n)}]</span><span class="nw40-rt" style="background-color:#5c5850">${imgTag(r.image)}</span><span class="nw-tx"><span class="nw40-rtt" data-no-i18n>${esc(r.title)}</span><span class="nw-m"><span data-no-i18n>${esc(r.source ?? '')}</span>${r.time ? ` · ${esc(when(r.time))}` : ''}</span></span></button>`).join('')}</div>` : ''}
+          <span class="nw40-foot">Laget av Glimt kl. ${esc(hm(o.updatedAt ?? new Date().toISOString()))} fra kildene du har valgt${o.local ? ' (lokalt sammendrag av titlene)' : ''}. Trykk på et tall for å lese saken.</span>` : ''}
+      </div></div></div>`;
+  }
+
   function body() {
     const d = st.data;
     if (st.error) return `<div class="nw-empty">${esc(st.error)} <button class="nw-pill" data-act="retry">Prøv igjen</button></div>`;
     if (!d) return '<div class="nw-empty">Henter nyheter …</div>';
     const items = d.items ?? [];
     const lead = d.settings?.aiSummary && d.digest?.text && st.cat === 'siste' ? d.digest.text : (items[0]?.title ?? 'Ingen saker i denne kategorien.');
-    const leadHtml = `<div class="nw-lead">${d.settings?.aiSummary && d.digest?.text && st.cat === 'siste' ? '<span class="nw-lab">✦ AI-SAMMENDRAG</span>' : ''}<div class="nw-leadt">${esc(lead)}</div></div>`;
+    // Prompt 40: det øverste kortet «✦ GLIMT · SAMMENDRAG» er trykkbart og åpner Glimt-siden (langt sammendrag med kilder og bilder).
+    const leadHtml = `<button type="button" class="nw-lead nw40-lead" data-act="gl-open"><span class="nw40-lh"><span class="nw-lab">✦ GLIMT · SAMMENDRAG</span><span class="nw-m">${items.length ? `${items.length} saker` : ''}</span></span><span class="nw-leadt">${esc(lead)}</span><span class="nw40-more">Les hele sammendraget med kilder og bilder ›</span></button>`;
     if (!items.length) return leadHtml + (d.feeds?.length ? '' : '<div class="nw-empty">Ingen kilder. Legg til en RSS- eller Atom-adresse under tannhjulet.</div>');
     if (st.cat === 'siste') {
       const groups = (d.categories ?? []).slice(1).map((c) => ({ c, items: items.filter((x) => x.category === c.id) })).filter((g) => g.items.length);
@@ -242,6 +378,7 @@ export function openNews(opts = {}) {
     const d = st.data;
     const keepArt = el.querySelector('.nw-art-body')?.scrollTop ?? 0, keepScroll = el.querySelector('.nw-body')?.scrollTop ?? 0, keepSheet = el.querySelector('.nw-sheet')?.scrollTop ?? 0, keepIp = el.querySelector('.nw-ipg')?.scrollTop ?? 0;
     const focus = document.activeElement?.name === 'ipq' ? document.activeElement.selectionStart : null;
+    const keepGl = el.querySelector('.nw40-gb')?.scrollTop ?? 0;
     el.innerHTML = `<div class="nw-card">
       <div class="nw-head"><div class="nw-hl">
         <button class="nw-back" data-act="close">${opts.backLabel ?? '‹ Tilbake'}</button>
@@ -249,7 +386,8 @@ export function openNews(opts = {}) {
         <div class="nw-hr"><button class="nw-ic" data-act="refresh" aria-label="Oppdater" title="Oppdater" ${st.busy ? 'disabled' : ''}>↻</button><button class="nw-ic" data-act="set-open" aria-label="Kilder og AI" title="Kilder og AI">${gear}</button></div></div>
       <nav class="nw-tabs">${cats().map((c) => `<button data-cat="${c.id}" class="${c.id === st.cat ? 'on' : ''}">${icState().icOn ? iconHtml(icOf(c.id), 16) : ''}${esc(c.name)}</button>`).join('')}</nav>
       <div class="nw-body">${body()}</div>
-      ${artView()}${st.set ? sheet() : ''}${picker()}</div>`;
+      ${glView()}${artView()}${st.set ? sheet() : ''}${picker()}</div>`;
+    const gb = el.querySelector('.nw40-gb'); if (gb) gb.scrollTop = keepGl;
     const b = el.querySelector('.nw-body');
     if (b) b.scrollTop = keepScroll;
     const sh = el.querySelector('.nw-sheet'); if (sh) sh.scrollTop = keepSheet;
@@ -259,6 +397,7 @@ export function openNews(opts = {}) {
   }
 
   el.addEventListener('click', async (e) => {
+    if (await glClick(e)) return;
     const t = e.target.closest('[data-act],[data-cat],[data-tog],[data-cyc],[data-del],[data-ic-row],[data-ip-lib],[data-ip-pick],[data-art]');
     if (!t) { if (backdropClick(e, el)) close(); return; }
     if (t.dataset.act === 'set-close' && e.target.closest('[data-stop]') && !e.target.closest('.nw-done')) return;

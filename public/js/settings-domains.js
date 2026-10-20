@@ -60,11 +60,11 @@ function gscHtml() {
   let box;
   if (!G) box = `<div class="sg-row"><span class="sg-txt"><span>${S.gscErr ? esc(S.gscErr) : 'Henter …'}</span></span></div>`;
   else if (G.missing) box = '<div class="sg-row"><span class="sg-txt"><b>Ikke tilgjengelig ennå</b><span>Serveren har ikke Search Console-oppsettet. Oppdater Homelab.</span></span></div>';
-  else if (!G.connected) box = `<div class="sg-row"><span class="sg-txt"><b>Klikk, visninger og søkeord fra Google</b><span>${G.configured === false ? 'Google-appen er ikke satt opp på serveren (Integrasjoner → Google).' : 'Kun lesetilgang · webmasters.readonly'}</span></span><button type="button" class="sg-btn2 gsc39-g" data-dom-gscconnect>${GLOGO}Koble til med Google</button></div>`;
+  else if (!G.connected) box = `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>Klikk, visninger og søkeord fra Google</b><span>${G.configured === false ? 'Google-appen er ikke satt opp på serveren (Integrasjoner → Google).' : 'Kun lesetilgang · webmasters.readonly'}</span></span><button type="button" class="sg-btn2 gsc39-g" data-dom-gscconnect>${GLOGO}Koble til med Google</button></div>`;
   else {
-    const rows = (G.sites ?? []).map((x) => `<div class="sg-row"><span class="sg-txt"><b class="mono">${esc(x.domain)}</b><span>${esc([x.permission, (x.siteUrls ?? []).join(' · ')].filter(Boolean).join(' · '))}</span></span>
+    const rows = (G.sites ?? []).map((x) => `<div class="sg-row">${domIc40('other', x.domain, x.favicon || x.icon || '')}<span class="sg-txt"><b class="mono">${esc(x.domain)}</b><span>${esc([x.permission, (x.siteUrls ?? []).join(' · ')].filter(Boolean).join(' · '))}</span></span>
       ${x.state === 'i-bruk' ? '<span class="gsc39-on">✓ I bruk</span>' : x.state === 'bruk' ? `<button type="button" class="sg-btn2" data-dom-gscuse="${esc(x.domain)}" data-site="${esc(x.siteUrls?.[0] ?? '')}"${S.gscBusy === x.domain ? ' disabled' : ''}>Bruk</button>` : `<button type="button" class="sg-btn2" data-dom-gscadd="${esc(x.domain)}"${S.gscBusy === x.domain ? ' disabled' : ''}>${S.gscBusy === x.domain ? 'Legger til …' : '+ Legg til'}</button>`}</div>`).join('');
-    box = `<div class="sg-row"><span class="sg-txt"><b>${esc(G.email || 'Google-kontoen')}</b><span>${G.count ?? (G.sites ?? []).length} ${(G.count ?? (G.sites ?? []).length) === 1 ? 'eiendom' : 'eiendommer'} · kun lesetilgang</span></span><button type="button" class="sg-pill danger" data-dom-gscoff>Koble fra</button></div>${rows || '<div class="sg-row"><span class="sg-txt"><span>Ingen eiendommer i kontoen. Trykk ? for hvordan du legger til en.</span></span></div>'}`;
+    box = `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>${esc(G.email || 'Google-kontoen')}</b><span>${G.count ?? (G.sites ?? []).length} ${(G.count ?? (G.sites ?? []).length) === 1 ? 'eiendom' : 'eiendommer'} · kun lesetilgang</span></span><button type="button" class="sg-pill danger" data-dom-gscoff>Koble fra</button></div>${rows || '<div class="sg-row"><span class="sg-txt"><span>Ingen eiendommer i kontoen. Trykk ? for hvordan du legger til en.</span></span></div>'}`;
   }
   return `<section class="sg"><div class="sg-t gsc39-t">Google Search Console${q}</div><div class="sg-box">${box}</div>${G?.error ? `<div class="sg-note red">${esc(G.error)}</div>` : ''}</section>${importHtml()}`;
 }
@@ -73,8 +73,8 @@ function importHtml() {
   const I = S.imp;
   if (!I) return '';
   const tab = S.impTab, src = tab === 'gsc' ? I.gsc : I.cloudflare, items = src?.items ?? [], left = items.filter((x) => !x.added);
-  const rows = !src?.connected ? `<div class="sg-row"><span class="sg-txt"><span>${tab === 'gsc' ? 'Koble til Google Search Console over for å hente eiendommene.' : 'Legg inn et Cloudflare-token (Integrasjoner → Cloudflare) for å hente sonene.'}</span></span></div>`
-    : items.map((x) => `<div class="sg-row"><span class="sg-txt"><b class="mono">${esc(x.name)}</b><span>${esc(tab === 'gsc' ? x.permission ?? '' : [x.plan, x.status].filter(Boolean).join(' · '))}${(I.newInAccount ?? []).includes(x.name) && !x.added ? ' · nytt i kontoen' : ''}</span></span>${x.added ? '<span class="gsc39-on">✓ Lagt til</span>' : `<button type="button" class="sg-btn2" data-dom-imp="${esc(x.name)}">+ Legg til</button>`}</div>`).join('') || '<div class="sg-row"><span class="sg-txt"><span>Ingen domener funnet.</span></span></div>';
+  const rows = !src?.connected ? `<div class="sg-row">${domIc40(tab === 'gsc' ? 'gsc' : 'cf')}<span class="sg-txt"><span>${tab === 'gsc' ? 'Koble til Google Search Console over for å hente eiendommene.' : 'Legg inn et Cloudflare-token (Integrasjoner → Cloudflare) for å hente sonene.'}</span></span></div>`
+    : items.map((x) => `<div class="sg-row">${domIc40('other', x.name)}<span class="sg-txt"><b class="mono">${esc(x.name)}</b><span>${esc(tab === 'gsc' ? x.permission ?? '' : [x.plan, x.status].filter(Boolean).join(' · '))}${(I.newInAccount ?? []).includes(x.name) && !x.added ? ' · nytt i kontoen' : ''}</span></span>${x.added ? '<span class="gsc39-on">✓ Lagt til</span>' : `<button type="button" class="sg-btn2" data-dom-imp="${esc(x.name)}">+ Legg til</button>`}</div>`).join('') || '<div class="sg-row"><span class="sg-txt"><span>Ingen domener funnet.</span></span></div>';
   return `<section class="sg"><div class="sg-t">Hent domener · fra Cloudflare og Google Search Console</div>
     <div class="gsc39-tabs" role="tablist"><button type="button" role="tab" aria-selected="${tab === 'gsc'}" class="${tab === 'gsc' ? 'on' : ''}" data-dom-imptab="gsc">Search Console</button><button type="button" role="tab" aria-selected="${tab === 'cf'}" class="${tab === 'cf' ? 'on' : ''}" data-dom-imptab="cf">Cloudflare</button></div>
     <div class="sg-box">${rows}</div>${src?.connected && left.length > 1 ? `<div class="sg-acts"><button type="button" class="sg-btn" data-dom-impall>Legg til alle ${left.length}</button></div>` : ''}</section>`;
@@ -129,12 +129,26 @@ export async function loadDomains(onChange) {
 
 const admin = () => store.me.me?.role === 'admin';
 
+/* Prompt 40 (claude-code-domener-ikon-farge.md): fast 36 × 36-rute (flex:none) etter kilde, aldri en mørk tema-variabel.
+   Cloudflare: skyen på lys oransje. Search Console: Google-«G» på hvitt med kant. Annet: forbokstav på #E9E2D3. */
+const CF40 = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path fill="#f6821f" d="M16.5 15.5l.3-1a2.2 2.2 0 0 0-.2-2 2 2 0 0 0-1.5-.8l-8.3-.1a.2.2 0 0 1-.1-.3.2.2 0 0 1 .2-.1l8.4-.1a3 3 0 0 0 2.5-1.9l.5-1.3v-.2a5.5 5.5 0 0 0-10.5-.6 2.5 2.5 0 0 0-3.9 2.6A3.5 3.5 0 0 0 .5 15.4c0 .1.1.2.2.2h15.6c.1 0 .2 0 .2-.1z"/><path fill="#fbad41" d="M19.3 9.7h-.2l-.1.3-.4 1.2a2.2 2.2 0 0 0 .2 2 2 2 0 0 0 1.5.8l1.8.1a.2.2 0 0 1 .1.3.2.2 0 0 1-.2.1l-1.8.1a3 3 0 0 0-2.5 1.9l-.1.4c0 .1 0 .2.1.2h6.1c.1 0 .2 0 .2-.1a4.5 4.5 0 0 0-4.7-7.3z"/></svg>';
+const G40 = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.9-3c-1.1.7-2.4 1.2-4 1.2-3.1 0-5.7-2.1-6.6-4.9h-4v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.4 14.4a7.2 7.2 0 0 1 0-4.8V6.5h-4a12 12 0 0 0 0 11z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.4 6.5l4 3.1C6.3 6.9 8.9 4.8 12 4.8z"/></svg>';
+const hasGsc = (d) => !!(d.gsc || d.gscSite || d.searchConsole || (Array.isArray(d.sources) && d.sources.includes('gsc')));
+function domIc40(kind, name = '', fav = '') {
+  const ini = esc(String(name).replace(/^www\./, '').slice(0, 1).toUpperCase() || '?');
+  if (kind === 'cf') return `<span class="sg-ic40 cf" title="Cloudflare">${CF40}</span>`;
+  if (kind === 'gsc') return `<span class="sg-ic40 g" title="Google Search Console">${G40}</span>`;
+  if (fav) return `<span class="sg-ic40 fav"><img src="${esc(fav)}" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(document.createTextNode('${ini}'))"></span>`;
+  return `<span class="sg-ic40">${ini}</span>`;
+}
+const srcKind = (src) => (src === 'cloudflare' || src === 'tunnel' ? 'cf' : src === 'gsc' ? 'gsc' : 'other');
+
 export function domainsPane() {
   if (S.err && !S.list) return `<div class="err">${esc(S.err)}</div>`;
   if (!S.list) return '<div class="skeleton" style="min-height:160px"></div>';
   const f = S.form;
-  const rows = S.list.map((d) => `<div class="sg-row"><span class="sg-ic" style="background:#1d2738;color:var(--blue)">${esc(d.name[0].toUpperCase())}</span>
-      <span class="sg-txt"><b class="mono">${esc(d.name)}</b><span>${esc(SRC[d.source] ?? d.source)}${d.hasToken ? ' · eget token' : ''}${d.mock ? ' · demodata' : ''}</span></span>
+  const rows = S.list.map((d) => `<div class="sg-row">${domIc40(srcKind(d.source), d.name)}
+      <span class="sg-txt"><b class="mono">${esc(d.name)}</b><span>${esc(SRC[d.source] ?? d.source)}${srcKind(d.source) === 'cf' && hasGsc(d) ? ' · Search Console' : ''}${d.hasToken ? ' · eget token' : ''}${d.mock ? ' · demodata' : ''}</span></span>
       ${admin() ? `<button class="sg-pill danger" data-dom-del="${d.id}" data-name="${esc(d.name)}">Fjern</button>` : ''}</div>`).join('')
     || '<div class="sg-row"><span class="sg-txt"><span>Ingen domener ennå.</span></span></div>';
   const form = admin() ? `<form class="sg" data-dom-form>

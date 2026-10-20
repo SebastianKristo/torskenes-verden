@@ -48,6 +48,11 @@ const CSS = `
 .ra-act button{height:44px;padding:0 18px;border-radius:12px;border:1px solid var(--line2,#2A2A31);background:var(--inner,#1B1B20);color:inherit;font:inherit;font-weight:600;cursor:pointer}
 .ra-act button.pri{background:#4F6BFF;border-color:#4F6BFF;color:#fff}
 .ra-act button:disabled{opacity:.5;cursor:default}
+.ra-diff{display:flex;flex-direction:column;border:1px solid var(--line,#24242A);border-radius:14px;overflow:hidden}
+.ra-diff>div{display:grid;grid-template-columns:90px minmax(0,1fr) minmax(0,1fr);gap:10px;padding:9px 12px;border-bottom:1px solid var(--line,#24242A);font-size:13.5px}
+.ra-diff>div:last-child{border-bottom:0}.ra-diff span{color:var(--muted,#8C8C96)}.ra-diff s{color:var(--muted,#8C8C96);overflow-wrap:anywhere}.ra-diff b{font-weight:600;color:#FFD27A;overflow-wrap:anywhere}
+.ra-ok{padding:14px;border-radius:14px;background:rgba(61,214,140,.1);color:var(--pos,#3DD68C);font-weight:600}
+.ra-more{margin-top:12px;font-size:13px}.ra-more summary{cursor:pointer;color:var(--muted,#8C8C96);margin-bottom:10px}
 .ra-load{display:flex;align-items:center;gap:12px;padding:28px 4px;color:var(--text2,#B9B9C2)}
 .ra-spin{width:22px;height:22px;border-radius:50%;border:2.5px solid #4F6BFF44;border-top-color:#4F6BFF;animation:ra-s .8s linear infinite}
 @keyframes ra-s{to{transform:rotate(360deg)}}`;
@@ -71,12 +76,29 @@ function column(x, other, title, isNew) {
   </div>`;
 }
 
+/** Endringer felt for felt og linje for linje (butikk, dato, beløp, kategori, linjer). */
+function diff40(a, b) {
+  const out = [], ds = (d) => (d ? `${dd(d)}.${d.slice(0, 4)}` : '–');
+  const f = (n, x, y) => { if (String(x ?? '') !== String(y ?? '')) out.push({ f: n, o: x ?? '–', n: y ?? '–' }); };
+  f('Butikk', a.merchant, b.merchant); f('Dato', ds(a.date), ds(b.date)); f('Beløp', money(a.total), money(b.total)); if (b.category) f('Kategori', a.category, b.category);
+  const A = a.items ?? [], B = b.items ?? [], n = Math.max(A.length, B.length);
+  for (let i = 0; i < n; i++) {
+    const x = A[i], y = B[i];
+    const t = (l) => (l ? `${l.description || '–'} ${money(l.amount)}` : '–');
+    if (!x || !y || x.description !== y.description || Math.abs((x.amount ?? 0) - (y.amount ?? 0)) > 0.005) out.push({ f: `Linje ${i + 1}`, o: t(x), n: y ? t(y) : '(fjernet)' });
+  }
+  const va = JSON.stringify(a.vat ?? null), vb = JSON.stringify(b.vat ?? null); if (b.vat && va !== vb) out.push({ f: 'MVA', o: (a.vat ?? []).map((v) => `${v.rate} %: ${money(v.amount)}`).join(', ') || '–', n: (b.vat ?? []).map((v) => `${v.rate} %: ${money(v.amount)}`).join(', ') });
+  return out;
+}
+
 /** Åpner dialogen og starter analysen. Returnerer et løfte med kvitteringen etter valget (eller null ved avbryt). */
 export function openReanalyze(id, { onDone, engine = 'gemini' } = {}) {
   const ocr = engine === 'tesseract', name = ocr ? 'Lokal OCR' : 'Gemini';
-  const title = ocr ? 'Les med lokal OCR' : '✦ Analyser på nytt med Gemini';
-  const sub = ocr ? 'Originalbildet leses på serveren med Tesseract, uten AI og uten at noe sendes ut. Du velger selv hvilket resultat som beholdes.' : 'Originalbildet sendes til Gemini. Du velger selv hvilket resultat som beholdes.';
-  const loading = ocr ? 'Tesseract leser kvitteringen …' : 'Gemini leser kvitteringen …';
+  // Prompt 40 (claude-code-finans-les-pa-nytt-rediger.md): «✦ La Glimt lese kvitteringen på nytt» – endringene vises som
+  // «gammelt → nytt», og lagres bare når du trykker «Bruk endringene».
+  const title = ocr ? 'Les med lokal OCR' : '✦ Glimt leser kvitteringen på nytt';
+  const sub = ocr ? 'Originalbildet leses på serveren med Tesseract, uten AI og uten at noe sendes ut. Du velger selv hvilket resultat som beholdes.' : 'Glimt leser originalbildet i full oppløsning på nytt. Endringene lagres bare hvis du trykker «Bruk endringene».';
+  const loading = ocr ? 'Tesseract leser kvitteringen …' : 'Glimt leser kvitteringen på nytt … Sjekker butikk, dato, hver linje og at summen stemmer';
   if (!document.getElementById('ra-css')) { const s = document.createElement('style'); s.id = 'ra-css'; s.textContent = CSS; document.head.appendChild(s); }
   const ov = document.createElement('div');
   ov.className = 'ra-ov';
@@ -110,8 +132,17 @@ export function openReanalyze(id, { onDone, engine = 'gemini' } = {}) {
     act.innerHTML = '<button type="button" data-ra="cancel">Avbryt</button>';
     try {
       data = await api(`/receipts/${encodeURIComponent(id)}/reanalyze`, { method: 'POST', json: { engine } });
-      body.innerHTML = `<div class="ra-cols">${column(data.previous, data.result, 'Forrige', false)}${column(data.result, data.previous, name, true)}</div>`;
-      act.innerHTML = `<button type="button" data-ra="old">Behold forrige</button><button type="button" class="pri" data-ra="new">Bruk ${ocr ? 'OCR' : 'Gemini'}-resultatet</button>`;
+      const ch = diff40(data.previous ?? {}, data.result ?? {}), R = data.result ?? {};
+      const items = R.items ?? [], sum = items.reduce((t, l) => t + (Number(l.amount) || 0), 0), sumOk = !items.length || R.total == null || Math.abs(sum - R.total) < 0.01;
+      const sumNote = sumOk ? '' : `<div class="ra-err" style="margin-top:10px">Summen av linjene (${money(sum)}) stemmer ikke med totalen (${money(R.total)}). Bruk «Rediger alt» i transaksjonen for å rette.</div>`;
+      if (!ch.length && !R.error) {
+        body.innerHTML = `<div class="ra-ok">Ingen endringer. Butikk, dato og alle ${items.length} linjer stemmer${R.total != null && sumOk ? `, og summen er ${money(R.total)}` : ''}.</div>${sumNote}`;
+        act.innerHTML = '<button type="button" class="pri" data-ra="old">OK</button>';
+      } else {
+        body.innerHTML = `${R.error ? `<div class="ra-err">${esc(R.error)}</div>` : `<div class="ra-sub" style="margin:0 0 8px">${ch.length} ${ch.length === 1 ? 'endring' : 'endringer'} funnet:</div><div class="ra-diff">${ch.map((c) => `<div><span>${esc(c.f)}</span><s>${esc(c.o)}</s><b>→ ${esc(c.n)}</b></div>`).join('')}</div>`}${sumNote}
+          <details class="ra-more"><summary>Vis begge side om side</summary><div class="ra-cols">${column(data.previous, data.result, 'Forrige', false)}${column(data.result, data.previous, name, true)}</div></details>`;
+        act.innerHTML = `<button type="button" data-ra="old">Behold som før</button><button type="button" class="pri" data-ra="new"${R.error ? ' disabled' : ''}>Bruk endringene</button>`;
+      }
     } catch (err) {
       body.innerHTML = `<div class="ra-err" style="padding:12px 0">${esc(err.message)}</div>`;
       act.innerHTML = '<button type="button" data-ra="cancel">Lukk</button><button type="button" class="pri" data-ra="retry">Prøv igjen</button>';

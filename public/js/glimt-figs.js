@@ -85,12 +85,72 @@ export const FIG_IDS = FIGS.map((f) => f.id);
 export const WHO = { gris: 'GRIS', glimt: 'GLIMT', natt: 'GLIMT', sky: 'SKY', drape: 'DRÅPE', ugle: 'UGLE', stjerne: 'STJERNE', spire: 'SPIRE', halo: 'GLIMT', boble: 'GLIMT', antenne: 'GLIMT', bane: 'GLIMT', pastell: 'GLIMT' };
 export const NAME_COLOR = { gris: '#f6b3c1', glimt: '#ffc7b8', natt: '#ffe7a8', sky: '#bcd7ef', drape: '#9fd0f2', ugle: '#e8c49a', stjerne: '#ffb38a', spire: '#9fd8a8', halo: '#ffc7b8', boble: '#c3b4ef', antenne: '#ffc7b8', bane: '#f2c14e', pastell: '#f4a6a0' };
 
-/** Glimt-figuren som HTML. Ukjent id → Glimt. */
-export function fig(id, S = 76, mood = 'idle') {
-  const m = MOOD[mood] ?? 'idle', k = FIG_IDS.includes(id) ? id : 'glimt';
-  return figRaw(k, S, m).replace('<span ', `<span class="gf gf-${k} gf-${m}" aria-hidden="true" `);
+/* ---------- Prompt 40: julemodus (claude-code-glimt-jul.md, fasit glimt-figurer.js → julOn/dress) ----------
+   Figurbiblioteket legger selv på antrekket når julemodus er aktiv, så alle steder som tegner Glimt (Hjem-briefen, brief-siden,
+   chat, widgets, varsler, søk, oppstartssiden) får lue og skjerf uten egen kode. Unntak: fig(id, S, mood, {noJul:true}).
+   Valget: 'auto' (1. des–13. jan, Europe/Oslo) | 'av' | 'pa' + fase. Synkes via /api/glimt/settings (glimt35.js → setJul);
+   lokal kopi i localStorage glimt_jul / glimt_jul_p (samme nøkler som fasiten). Endring → window-hendelsen «glimt-jul». */
+const PH = { advent: 'advent', jul: 'jul', nyttar: 'nyttar', 'nyttår': 'nyttar', vinter: 'vinter' };
+const PH_NAME = { advent: 'Advent', jul: 'Jul', nyttar: 'Nyttår', vinter: 'Vinter' };
+export const JUL_PHASES = Object.entries(PH_NAME);
+const JS = { mode: 'auto', phase: null, active: null };
+try { const m = localStorage.getItem('glimt_jul'); if (m === 'av' || m === 'pa' || m === 'auto') JS.mode = m; JS.phase = PH[String(localStorage.getItem('glimt_jul_p') || '').toLowerCase()] ?? null; } catch { /* privat modus */ }
+function osloDate(d = new Date()) {
+  try { const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo', year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(d).map((x) => [x.type, +x.value])); return { m: p.month - 1, d: p.day }; }
+  catch { return { m: d.getMonth(), d: d.getDate() }; }
 }
-export function figNode(id, S, mood) { const t = document.createElement('template'); t.innerHTML = fig(id, S, mood); return t.content.firstElementChild; }
+/** Fasen etter dato (1. des–13. jan), ellers null. */
+export function julAuto(d = new Date()) {
+  const { m, d: dd } = osloDate(d);
+  if (m === 11) return dd <= 23 ? 'advent' : dd <= 30 ? 'jul' : 'nyttar';
+  if (m === 0) return dd === 1 ? 'nyttar' : dd <= 13 ? 'vinter' : null;
+  return null;
+}
+/** Aktiv fase ('advent' | 'jul' | 'nyttar' | 'vinter') eller null. */
+export function julOn() {
+  if (JS.mode === 'av') return null;
+  if (JS.mode === 'pa') return JS.phase ?? 'advent';
+  if (JS.active && typeof JS.active === 'object' && 'on' in JS.active) return JS.active.on ? PH[String(JS.active.phase ?? '').toLowerCase()] ?? julAuto() ?? 'advent' : null;
+  return julAuto();
+}
+export const julState = () => ({ ...JS, on: julOn() });
+export const julPhaseName = (p) => PH_NAME[p] ?? '';
+/** Fra serveren (eller valget i Innstillinger): {jul, julPhase, julActive}. Sender «glimt-jul» når noe er endret. */
+export function setJul({ jul, julPhase, julActive } = {}, { emit = true } = {}) {
+  const before = julOn() + JS.mode + JS.phase;
+  if (jul === 'auto' || jul === 'av' || jul === 'pa') JS.mode = jul;
+  if (julPhase !== undefined) JS.phase = PH[String(julPhase ?? '').toLowerCase()] ?? null;
+  if (julActive !== undefined) JS.active = julActive;
+  try { localStorage.setItem('glimt_jul', JS.mode); if (JS.phase) localStorage.setItem('glimt_jul_p', PH_NAME[JS.phase]); } catch { /* */ }
+  if (emit && before !== julOn() + JS.mode + JS.phase) { try { window.dispatchEvent(new Event('glimt-jul')); } catch { /* */ } }
+}
+if (typeof window !== 'undefined' && !window.__gfJul40) {
+  window.__gfJul40 = 1;
+  // Andre faner: samme valg (localStorage) → tegn på nytt.
+  window.addEventListener('storage', (ev) => { if (ev.key === 'glimt_jul' || ev.key === 'glimt_jul_p') { try { JS.mode = localStorage.getItem('glimt_jul') || 'auto'; JS.phase = PH[String(localStorage.getItem('glimt_jul_p') || '').toLowerCase()] ?? null; } catch { /* */ } window.dispatchEvent(new Event('glimt-jul')); } });
+}
+const px = (v) => `${Math.round(v * 10) / 10}px`;
+/** Antrekket tegnes over figuren og skaleres med størrelsen (fasit dress()). */
+function dress(html, S, ph) {
+  const P = { advent: { hat: 1, scarf: 1 }, jul: { hat: 1, scarf: 1, gift: 1 }, nyttar: { party: 1, spark: 1 }, vinter: { beanie: 1, scarf: 1, sc: '#b23a2a' } }[ph] ?? {};
+  const k = [];
+  if (P.scarf) k.push(`<svg class="gfj-sc" width="${px(S * 1.05)}" height="${px(S * 0.5)}" viewBox="0 0 105 50" style="position:absolute;left:50%;bottom:${px(-S * 0.2)};margin-left:${px(-S * 0.525)};overflow:visible;pointer-events:none"><path d="M8 10 Q52 26 97 10 L95 24 Q52 40 10 24 Z" fill="${P.sc || '#2f7a4f'}"/><path d="M22 16 l4 12 M40 20 l3 13 M58 20 l-1 13 M76 17 l-3 12" stroke="#f6f1e7" stroke-width="3"/><path d="M70 22 L80 48 L68 50 L62 26 Z" fill="${P.sc || '#2f7a4f'}"/></svg>`);
+  if (P.hat) k.push(`<svg class="gfj-hat" width="${px(S * 0.95)}" height="${px(S * 0.7)}" viewBox="0 0 95 70" style="position:absolute;left:50%;top:${px(-S * 0.44)};margin-left:${px(-S * 0.42)};transform:rotate(-14deg);overflow:visible;pointer-events:none"><path d="M14 56 Q40 4 74 8 Q86 10 88 20 Q70 18 66 56 Z" fill="#c8302a"/><circle cx="89" cy="22" r="8" fill="#fbf7ee"/><rect x="6" y="50" width="70" height="15" rx="7.5" fill="#fbf7ee"/></svg>`);
+  if (P.beanie) k.push(`<svg class="gfj-bn" width="${px(S * 0.9)}" height="${px(S * 0.6)}" viewBox="0 0 90 60" style="position:absolute;left:50%;top:${px(-S * 0.36)};margin-left:${px(-S * 0.45)};overflow:visible;pointer-events:none"><path d="M10 50 Q10 10 45 10 Q80 10 80 50 Z" fill="#3b6fb0"/><rect x="6" y="42" width="78" height="14" rx="6" fill="#2b5d8a"/><circle cx="45" cy="8" r="8" fill="#fbf7ee"/></svg>`);
+  if (P.party) k.push(`<svg class="gfj-pt" width="${px(S * 0.6)}" height="${px(S * 0.62)}" viewBox="0 0 60 62" style="position:absolute;left:50%;top:${px(-S * 0.48)};margin-left:${px(-S * 0.22)};transform:rotate(12deg);overflow:visible;pointer-events:none"><path d="M8 56 L30 4 L52 56 Z" fill="#1b1a17"/><path d="M14 42 L46 42 M19 30 L41 30 M24 18 L36 18" stroke="#f2c14e" stroke-width="3"/><circle cx="30" cy="4" r="5" fill="#f2c14e"/></svg>`);
+  if (P.spark) k.push([[-0.18, 0.05, 0], [1.02, 0.12, 0.6], [0.92, -0.2, 1.1], [-0.08, -0.22, 1.6]].map(([x, y, dl]) => `<span class="gfj-spk" style="position:absolute;left:${px(S * x)};top:${px(S * y)};width:${px(Math.max(4, S * 0.1))};height:${px(Math.max(4, S * 0.1))};animation-delay:${dl}s"></span>`).join(''));
+  if (P.gift) k.push(`<span class="gfj-gift" style="position:absolute;right:${px(-S * 0.2)};bottom:${px(-S * 0.16)};width:${px(S * 0.34)};height:${px(S * 0.3)};border-radius:4px;background:#b23a2a;box-shadow:inset 0 0 0 2px #8a2a1d;transform:rotate(8deg);pointer-events:none"><span style="position:absolute;left:44%;top:0;bottom:0;width:12%;background:#f2c14e"></span><span style="position:absolute;top:40%;left:0;right:0;height:14%;background:#f2c14e"></span></span>`);
+  return `<span class="gfj gfj-${ph}" aria-hidden="true" style="position:relative;display:inline-block;line-height:0">${html}${k.join('')}</span>`;
+}
+
+/** Glimt-figuren som HTML. Ukjent id → Glimt. opts.noJul: uten julantrekk (figurvelgeren, drakter med egen hatt). */
+export function fig(id, S = 76, mood = 'idle', opts = {}) {
+  const m = MOOD[mood] ?? 'idle', k = FIG_IDS.includes(id) ? id : 'glimt';
+  const html = figRaw(k, S, m).replace('<span ', `<span class="gf gf-${k} gf-${m}" aria-hidden="true" `);
+  const ph = opts?.noJul ? null : julOn();
+  return ph ? dress(html, S, ph) : html;
+}
+export function figNode(id, S, mood, opts) { const t = document.createElement('template'); t.innerHTML = fig(id, S, mood, opts); return t.content.firstElementChild; }
 /** Verten: brukerens figur, men «Glimt» blir Glimt Natt mellom 21 og 06. */
 export function hostFor(sel, d = new Date()) { const h = d.getHours(), s = FIG_IDS.includes(sel) ? sel : 'glimt'; return s === 'glimt' && (h >= 21 || h < 6) ? 'natt' : s; }
-if (typeof window !== 'undefined') window.GlimtFigs = { fig, figNode, FIGS, hostFor, WHO, NAME_COLOR };
+if (typeof window !== 'undefined') window.GlimtFigs = { fig, figNode, FIGS, hostFor, WHO, NAME_COLOR, julOn, setJul };

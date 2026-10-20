@@ -108,6 +108,8 @@ async function boot() {
   if (!C.draftModel || !C.models.some((x) => x.id === C.draftModel && x.installed)) C.draftModel = C.set.chat_default_model || C.def || C.models.find((x) => x.installed)?.id || '';
   if (!C.set.chat_my_data) C.data = false;
   if (pendingChat) { C.cur = pendingChat; pendingChat = null; watchHandoff(C.cur); }
+  // Prompt 40: spørsmål fra «✦ AI» i søket: rett inn i en ny samtale (ikke forsiden eller forrige samtale først).
+  if (pendingPrompt && C.models?.length) { const p = pendingPrompt; pendingPrompt = null; freshChat(); send(p); paint(); return; }
   if (C.cur) await loadChat(C.cur, false);
   paint();
   if (pendingPrompt) { const p = pendingPrompt; pendingPrompt = null; newChat(); send(p); }
@@ -393,7 +395,14 @@ function newChat() {
 }
 
 /** Sender teksten som ny melding i samtalen (eller starter en ny). opt: {confirm, withoutData, remember, editFrom, history} */
-async function send(text, opt = {}) {
+// Prompt 40: sendingen som pågår (promise), så «✦ AI» i søket kan stoppe den og vente til den er ryddet før ny samtale.
+let flight = null, sendGen = 0;
+function send(text, opt = {}) {
+  const p = sendInner(text, opt);
+  flight = p; p.finally(() => { if (flight === p) flight = null; }).catch(() => {});
+  return p;
+}
+async function sendInner(text, opt = {}) {
   const t = String(text ?? '').trim();
   if (C.busy) return;
   if (!t && opt.editFrom == null) return;
@@ -430,7 +439,8 @@ async function send(text, opt = {}) {
   if (!res.ok) {
     const d = await res.json().catch(() => ({}));
     C.busy = null; C.chat = before.chat; C.inp = t; C.att = before.att;
-    if (res.status === 409 && d.needsConfirm) { C.guard = { model: d.model || mName(model), leaves: d.leaves ?? [], hasData: !!payload.myData, text: t, opt }; C.rem = false; C.sheet = 'guard'; paint(); return; }
+    // Prompt 40: ny samtale (✦ AI i søket): personvernvalget vises inne i samtalen, med spørsmålet over.
+    if (res.status === 409 && d.needsConfirm) { const fresh = !before.chat && opt.editFrom == null; if (fresh) { C.chat = shown; C.inp = ''; } C.guard = { model: d.model || mName(model), leaves: d.leaves ?? [], hasData: !!payload.myData, text: t, opt, fresh }; C.rem = false; C.sheet = 'guard'; paint(); return; }
     if (res.status === 404 && !d.error) { C.missing = true; paint(); return; }
     toast(d.error || `Feil ${res.status}`); return;
   }
@@ -473,8 +483,8 @@ async function sendTool(t) {
 }
 
 async function readSse(res, ctl) {
-  const rd = res.body.getReader(), dec = new TextDecoder();
-  let buf = '', ev = 'message', chatId = C.cur, done = null, raf = 0;
+  const rd = res.body.getReader(), dec = new TextDecoder(), gen = sendGen, model0 = C.busy?.model;
+  let buf = '', ev = 'message', chatId = C.cur, done = null, raf = 0, stopped = null;
   const flush = () => { raf = 0; paintStream(); };
   try {
     for (;;) {
@@ -493,10 +503,14 @@ async function readSse(res, ctl) {
         else if (ev === 'error') { C.busy.error = d.error || 'Ukjent feil'; paintStream(); }
       }
     }
-  } catch (e) { if (e.name !== 'AbortError') C.busy && (C.busy.error = e.message); }
+  } catch (e) { if (e.name !== 'AbortError') C.busy && (C.busy.error = e.message); else stopped = C.busy?.text ?? ''; }
   const err = C.busy?.error;
   C.busy = null;
+  // Prompt 40: en ny samtale er startet mens denne strømmet (✦ AI i søket): ikke ta over den nye samtalen.
+  if (gen !== sendGen) { refreshList(); return; }
   if (chatId) { C.cur = chatId; await loadChat(chatId, false); }
+  // Stoppet: det som er kommet lagres (merket «Stoppet») hvis serveren ikke har tatt vare på det.
+  if (stopped && C.chat && C.chat.messages?.at(-1)?.role !== 'assistant') C.chat.messages = [...C.chat.messages, { role: 'assistant', content: stopped, meta: { stopped: true, model: model0 } }];
   if (err && C.chat && !(C.chat.messages ?? []).some((m) => m.role === 'assistant' && m === C.chat.messages.at(-1))) C.chat.messages = [...C.chat.messages, { role: 'assistant', content: '', meta: { error: err, model: curModelId() } }];
   void done; void ctl;
   paint(); toBottom(); refreshList();
@@ -695,12 +709,12 @@ function bind(h) {
   });
   h.addEventListener('click', (e) => {
     const tg = e.target;
-    if (tg.matches('.ch-sheet-bg')) { C.sheet = null; C.guard = null; C.delArm = false; paint(); return; }
+    if (tg.matches('.ch-sheet-bg')) { if (C.guard?.fresh) { C.inp = C.guard.text; C.chat = null; } C.sheet = null; C.guard = null; C.delArm = false; paint(); return; }
     if (tg.closest('[data-ch-drawer-close]')) { C.drawer = false; paint(); return; }
     const b = tg.closest('button,[data-ch-open]');
     if (!b || !h.contains(b)) return;
     const d = b.dataset;
-    if ('chClose' in d) { C.sheet = null; C.guard = null; C.delArm = false; paint(); return; }
+    if ('chClose' in d) { if (C.guard?.fresh) { C.inp = C.guard.text; C.chat = null; } C.sheet = null; C.guard = null; C.delArm = false; paint(); return; }
     if (d.chMenu) { e.stopPropagation(); C.menuId = d.chMenu; C.rn = ''; C.delArm = false; C.sheet = 'menu'; paint(); return; }
     if (d.chOpen) { C.drawer = false; C.edit = null; loadChat(d.chOpen); return; }
     if ('chNew' in d) return newChat();
@@ -750,6 +764,7 @@ function bind(h) {
     if (d.chG) {
       const g = C.guard; if (!g) return;
       C.inp = g.text;
+      if (g.fresh) C.chat = null; // spørsmålet sendes nå på ordentlig (ikke to ganger)
       if (d.chG === 'send') send(g.text, { ...g.opt, confirm: true, remember: C.rem });
       else if (d.chG === 'nodata') send(g.text, { ...g.opt, confirm: true, withoutData: true, remember: C.rem });
       else { const loc = allModels().find((m) => m.kind === 'lokal' && m.installed); if (loc) { pickModel(loc.id); C.guard = null; send(g.text, g.opt); } }
@@ -788,11 +803,20 @@ function watchHandoff(id, n = 0) {
     watchHandoff(id, n + 1);
   }, 2000);
 }
-export function openChat(prompt = '') {
+/* Prompt 40 (claude-code-sok-ai-til-chat.md): «✦ AI» med tekst åpner selve samtalen med spørsmålet.
+   Rekkefølge: stopp pågående svar (lagres som «Stoppet») → opprett ny samtale → send → naviger. Ingen timer imellom. */
+function freshChat() { sendGen++; C.cur = null; C.chat = null; C.inp = ''; C.att = []; C.edit = null; C.drawer = false; C.sheet = null; C.guard = null; writeLocal(); }
+export async function openChat(prompt = '') {
   const p = String(prompt ?? '').trim();
-  if (p) pendingPrompt = p;
-  if (location.hash !== '#/chat') location.hash = '#/chat';
-  else if (p && C.booted && C.models) { pendingPrompt = null; newChat(); send(p); }
+  const go = () => { if (location.hash !== '#/chat') location.hash = '#/chat'; };
+  if (!p) { go(); return; }
+  if (C.busy) { const f = flight; stop(); try { await f; } catch { /* avbrutt */ } }
+  if (!C.booted || !C.models) { pendingPrompt = p; go(); if (C.booted && host()) paint(); return; }
+  pendingPrompt = null;
+  freshChat();
+  send(p); // viser spørsmålet med en gang (optimistisk) og starter svaret
+  go();
+  if (host()) paint();
 }
 
 export function render() {
@@ -803,7 +827,7 @@ export function render() {
     applyChFull();
     if (!C.booted) boot();
     else if (pendingChat) { usePendingChat(); refreshList(); }
-    else { paint(); refreshList(); if (pendingPrompt && C.models) { const p = pendingPrompt; pendingPrompt = null; newChat(); send(p); } }
+    else { if (pendingPrompt && C.models) { const p = pendingPrompt; pendingPrompt = null; freshChat(); send(p); } paint(); refreshList(); }
     void locale;
   });
   document.body.classList.add('chat-fs');
@@ -822,6 +846,6 @@ window.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !host() || !(C.sheet || C.drawer || C.edit)) return;
   if (e.target?.closest?.('[data-sf]') && e.target.value) return; // søkefeltet tømmes først
   e.preventDefault();
-  if (C.sheet || C.drawer) { C.sheet = null; C.drawer = false; C.guard = null; C.delArm = false; } else C.edit = null;
+  if (C.sheet || C.drawer) { if (C.guard?.fresh) { C.inp = C.guard.text; C.chat = null; } C.sheet = null; C.drawer = false; C.guard = null; C.delArm = false; } else C.edit = null;
   paint();
 });

@@ -19,11 +19,15 @@ const rowH = (cols) => (cols >= 12 ? 56 : cols >= 8 ? 64 : 72);
 
 // Widgetene per tema: [id, navn, standardbredde (av 12), standardkolonne (x av 12), hvilke profil-id-er som skjuler den].
 const SETS = {
+  // Prompt 40: standardplassene som i dag (claude-code-hjem-web-widgets-2c.md → Plassering, 3 kolonner, 7 rader).
   '2c': [
-    ['p_school', 'I dag på skolen', 4, 0], ['d_cal', 'Skolekalender', 4, 0, ['d_cal']],
-    ['p_trips', 'Avganger', 4, 4], ['p_kal', 'Kalender', 4, 4, ['d_kal']], ['p_energy', 'Energi', 4, 4, ['d_energy']], ['p_wx', 'Vær', 4, 4], ['p_pk', 'Pakker', 4, 4],
-    ['p_pos', 'Posisjon · familie', 4, 8, ['d_pos']], ['p_bday', 'Bursdager', 4, 8, ['d_bday']], ['p_play', 'Spilles nå', 4, 8], ['p_money', 'Penger', 4, 8, ['d_trading', 'd_eco'], true], ['p_links', 'Snarveier', 4, 8, ['d_links']],
-    ['d_upcoming', 'Kommer ut', 4, 0, ['d_upcoming']], ['d_media', 'Media', 4, 4, ['d_media']], ['d_media_hist', 'Mediehistorikk', 8, 0, ['d_media_hist']], ['d_trading', 'Trading 212', 4, 8, ['d_trading']], ['d_eco', 'Økonomi', 4, 8, ['d_eco']],
+    ['p_school', 'I dag på skolen', 4, 0], ['p_trips', 'Avganger', 4, 4], ['p_pos', 'Posisjon · familie', 4, 8, ['d_pos']],
+    ['d_cal', 'Skolekalender', 4, 0, ['d_cal']], ['p_kal', 'Kalender', 4, 4, ['d_kal']], ['p_bday', 'Bursdager', 4, 8, ['d_bday']],
+    ['p_energy', 'Energi', 4, 4, ['d_energy']], ['p_play', 'Spilles nå', 4, 8],
+    ['d_upcoming', 'Kommer ut', 4, 0, ['d_upcoming']], ['p_links', 'Snarveier', 4, 4, ['d_links']], ['p_money', 'Penger', 4, 8, ['d_trading', 'd_eco'], true],
+    ['d_media_hist', 'Mediehistorikk', 12, 0, ['d_media_hist']],
+    ['p_wx', 'Vær', 4, 0], ['d_trading', 'Trading 212', 4, 4, ['d_trading']], ['d_media', 'Media', 4, 8, ['d_media']],
+    ['p_pk', 'Pakker', 4, 0], ['d_eco', 'Økonomi', 4, 4, ['d_eco']],
   ],
   cur: [
     ['d_cal', 'Skolekalender', 4, 0, ['d_cal']], ['d_agenda', 'Agenda', 4, 4, ['d_agenda']], ['d_trading', 'Trading 212', 4, 8, ['d_trading']], ['d_energy', 'Energi', 4, 0, ['d_energy']],
@@ -55,7 +59,7 @@ function defaults(cols) {
   const colY = {};
   for (const [id, , w0, x0] of SETS[theme()]) {
     const w = Math.max(Math.min(2, cols), Math.min(cols, Math.round((w0 * cols) / 12))), x = Math.max(0, Math.min(cols - w, Math.round((x0 * cols) / 12)));
-    const y = colY[x] ?? 0;
+    let y = 0; for (let k = x; k < x + w; k++) y = Math.max(y, colY[k] ?? 0); // brede widgets under alle spaltene de dekker
     out.push({ id, x, y, w, h: 4, auto: true, hidden: false });
     for (let k = x; k < x + w; k++) colY[k] = Math.max(colY[k] ?? 0, y + 4);
   }
@@ -133,12 +137,15 @@ const viewLay = () => {
 };
 
 /* ---------------- Tegning ---------------- */
+// Prompt 40 (claude-code-hjem-web-widgets-2c.md): hver widget er et eget kort (web40.css). Helfargede kort: skole, neste time,
+// vær, penger (dg40-s), media og mediehistorikk (dg40-m, mørk med Plex-gul etikett). Resten er lyse kort med farget ikon.
+const K40 = { p_school: 'dg40-s', d_agenda: 'dg40-s', p_kal: 'dg40-s', d_kal: 'dg40-s', p_money: 'dg40-s', p_wx: 'dg40-s dg40-w', p_play: 'dg40-s dg40-m', d_media: 'dg40-s dg40-m', d_media_hist: 'dg40-s dg40-m' };
 /** Kalles fra dash.js: `bodies` er {id: html}. Gir rutenettet (desktop/nettbrett). */
 export function gridHtml(bodies) {
   if (!S.lay || S.th !== theme()) { if (S.edit) endEdit(); S.th = theme(); S.srvAt = 0; loadLocal(); }
   const cols = viewCols(), rh = rowH(cols), lay = viewLay();
-  const cells = lay.filter((i) => !i.hidden && bodies[i.id] != null).map((i) => `<div class="dg36-it${is2c() ? ' p-col' : ''}${i.auto ? '' : ' dg36-fix'}" data-dg="${esc(i.id)}" style="grid-column:${i.x + 1} / span ${i.w};grid-row:${i.y + 1} / span ${i.h}"><div class="dg36-wig">${bodies[i.id]}</div></div>`).join('');
-  return `<div class="dg36${S.edit ? ' dg36-edit' : ''}${is2c() ? ' dg36-paper' : ''}" id="dg36" style="--dgc:${cols};--dgr:${rh}px;--dgg:${GAP}px">${cells}</div>`;
+  const cells = lay.filter((i) => !i.hidden && bodies[i.id] != null).map((i) => `<div class="dg36-it${is2c() ? ' p-col' : ''}${i.auto ? '' : ' dg36-fix'}${K40[i.id] ? ` ${K40[i.id]}` : ''}" data-dg="${esc(i.id)}" style="grid-column:${i.x + 1} / span ${i.w};grid-row:${i.y + 1} / span ${i.h}"><div class="dg36-wig">${bodies[i.id]}</div></div>`).join('');
+  return `<div class="dg36 dg40${S.edit ? ' dg36-edit' : ''}${is2c() ? ' dg36-paper' : ''}" id="dg36" style="--dgc:${cols};--dgr:${rh}px;--dgg:${GAP}px">${cells}</div>`;
 }
 
 let ro = null, mountedEl = null;

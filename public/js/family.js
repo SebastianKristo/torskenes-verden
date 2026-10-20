@@ -1,6 +1,7 @@
 // Familie og kart (prompt 16): alle på serveren på et OpenStreetMap-kart (Leaflet fra egen server), med spor,
 // sensorer, soner (trykk på kartet), varsler per person, hendelser og helse. Personvern håndheves på serveren;
 // her vises bare det den gir oss. Nettleseren kan dele egen posisjon mens siden er åpen.
+import { hjemlysHtml, bindHjemlys } from './hjemlys40.js';
 import { api, esc, initials, hm, nb } from './util.js';
 import { onLive, liveOn } from './realtime.js';
 
@@ -598,6 +599,7 @@ function bind(h) {
 }
 
 export function render() {
+  bindHjemlys(); // prompt 40: Hjemlys øverst på Familie-siden
   // Prompt 37: «Vis på kart ›» fra «Hvor er Ingrid?» åpner #/familie?person=<userId> med personen valgt.
   const pq = new URLSearchParams(location.hash.split('?')[1] ?? '').get('person');
   if (pq) { S.tab = 'kart'; S.sel = pq; S.track = []; }
@@ -620,5 +622,5 @@ export function render() {
     await load();
   });
   return `<div class="fam-top"><div class="os-title">Famil<b>ie</b></div><div class="fam-sub">Posisjon, soner og helse fra dem som deler med deg. Deling er av som standard.</div></div>
-    <div id="fam" class="fam">${body()}</div><div id="fam-toast" class="fam-toast" role="status" aria-live="polite" hidden></div>`;
+    <div data-hl40-slot="page">${hjemlysHtml({ page: true })}</div><div id="fam" class="fam">${body()}</div><div id="fam-toast" class="fam-toast" role="status" aria-live="polite" hidden></div>`;
 }

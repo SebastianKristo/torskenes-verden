@@ -4,6 +4,7 @@
 // Bare fire kalendere (claude-code-kalendere-fire-google.md): Personlig · Bursdager · Skole · Helligdager + brukerens egne.
 // Gamle Jobb/Familie/Helse/Privat-hendelser vises i Personlig, Timeplan/Prøver/Studie i Skole (til serveren har migrert).
 // Data, ark (detaljer, ny/rediger, søk, ✦ Skriv time) og Glimt-panelet ligger fortsatt i kalender.js / kal38.js.
+import { themeBtn } from './kal-theme40.js';
 import { esc, isMobile } from './util.js';
 
 let C = null;
@@ -230,7 +231,7 @@ export function toolbar(app) {
     <span class="k39-sp"></span>
     <span class="k39-navs"><button type="button" class="k39-ib bd" data-k-nav="-1" aria-label="Forrige" title="Forrige (←)">${IC.left}</button><button type="button" class="k39-ib bd" data-k-nav="1" aria-label="Neste" title="Neste (→)">${IC.right}</button></span>
     <div class="k39-tabs" role="tablist">${VIEWS.map(([k, n, h]) => `<button type="button" role="tab" aria-selected="${V === k}" class="${V === k ? 'on' : ''}" data-k-view="${k}" title="${n} (${h})">${n}</button>`).join('')}</div>
-    <button type="button" class="k39-ib" data-k-search aria-label="Søk" title="Søk (/)">${IC.search}</button>
+    ${app ? '' : themeBtn()}<button type="button" class="k39-ib" data-k-search aria-label="Søk" title="Søk (/)">${IC.search}</button>
     <button type="button" class="k39-today" data-k-today aria-label="I dag" title="I dag (T)">${IC.cal}<span>${today.getDate()}</span>${isToday ? '' : '<i></i>'}</button>
     <button type="button" class="k39-quick" data-k-qa title="Skriv en hendelse med vanlige ord – Glimt fyller ut"><span class="k39-lg">✦ Skriv time</span><span class="k39-sm">✦</span></button>
     <button type="button" class="k39-new" data-k-new title="Ny hendelse (N)"><span class="k39-lg">+ Ny hendelse</span><span class="k39-sm">+</span></button>

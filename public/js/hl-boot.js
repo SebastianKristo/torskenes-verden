@@ -18,6 +18,8 @@
       if (tc) tc.setAttribute('content', dk ? '#161513' : '#f3efe6');
     }
   } catch (e) { /* eldre nettleser */ }
+  // Prompt 40: Kalender på web lys/mørk/auto (kal-theme40.js) – leses før første render så det ikke blinker.
+  try { var kt = localStorage.getItem('kal_theme'); if ((kt === 'lys' || kt === 'mork') && !document.documentElement.hasAttribute('data-kal-app')) document.documentElement.setAttribute('data-kal-theme', kt); } catch (e) { /* privat modus */ }
   document.documentElement.setAttribute('data-hl', t);
   document.documentElement.setAttribute('data-hl-theme', t);
   if (t === '2c') {

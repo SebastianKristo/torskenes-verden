@@ -132,7 +132,7 @@ function finRows() {
   return FIN4.map(([id, n, d, m0, f0]) => { const t = byId.get(id) ?? {}, r = R[t.id ?? id] ?? R[id] ?? {}; return { id: t.id ?? id, n: t.name ?? n, d: t.desc ?? d, model: r.model ?? t.model ?? '', fallback: r.fallback ?? t.fallback ?? '', def: m0, defF: f0, options: Array.isArray(t.options) ? t.options : null, warning: t.warning ?? '' }; });
 }
 const loadKeys = () => get('keys', '/keys', (d) => d.providers ?? d);
-const loadJobs = () => get('jobs', '/jobs?limit=60', (d) => { if (typeof d?.paused === 'boolean') G.paused = d.paused; return Array.isArray(d) ? d : d.running || d.queued || d.recent ? [...(d.running ?? []), ...(d.queued ?? []), ...(d.recent ?? [])] : d.jobs ?? d.items ?? []; });
+const loadJobs = () => get('jobs', '/jobs?limit=60', (d) => { if (typeof d?.paused === 'boolean') G.paused = d.paused; G.jobGroups = Array.isArray(d?.groups) ? d.groups : null; G.unseenFailed = Number.isFinite(d?.unseenFailed) ? d.unseenFailed : null; return Array.isArray(d) ? d : d.running || d.queued || d.recent ? [...(d.running ?? []), ...(d.queued ?? []), ...(d.recent ?? [])] : d.jobs ?? d.items ?? []; });
 const loadUsage = () => get('usage', `/usage?days=${G.per}`);
 const loadTokens = () => get('tokens', '/tokens', (d) => (Array.isArray(d) ? d : d.tokens ?? d.items ?? []));
 function loadLib(q = '') {
@@ -274,6 +274,67 @@ async function saveKey(p, field, value) {
   if (!v && field !== 'url') return;
   try { const d = await call(`/keys/${p}`, { method: 'PUT', json: { [field]: v } }); if (d?.providers) G.keys = d.providers; toast('Lagret'); vibe(); G.test[p] = null; loadKeys(); loadStatus(true); selftest(true); }
   catch (e) { toast(`Kunne ikke lagre: ${e.message}`); }
+}
+
+/* Prompt 40 (claude-code-ai-jobber-og-smb-mappe.md): feil med samme årsak grupperes («8 selvtester feilet · tidsavbrudd 15 s»
+   med pil og «Prøv alle igjen»), kort feiltekst på én linje (hele meldingen i detaljer), faser på kjører-raden
+   (phase:{kind:'load'|'think'|'answer', loadedGb, totalGb, chars}), og tallet på fanen teller bare nye feil siden sist. */
+const SEEN_KEY = 'ai_jobs_seen40';
+const seenAt = () => { try { return +localStorage.getItem(SEEN_KEY) || 0; } catch { return 0; } };
+const jobTime = (j) => Date.parse(j.finishedAt ?? j.endedAt ?? j.at ?? j.updatedAt ?? j.createdAt ?? '') || 0;
+const isFail = (j) => j.status === 'fail';
+function unseenFails(J) {
+  if (G.unseenFailed != null && !G.seenLocal) return G.unseenFailed;
+  const t = seenAt();
+  return J.filter((j) => isFail(j) && jobTime(j) > t).length;
+}
+let seenPost = 0;
+function markJobsSeen() {
+  try { localStorage.setItem(SEEN_KEY, String(Date.now())); } catch { /* privat modus */ }
+  G.seenLocal = true;
+  if (Date.now() - seenPost < 5000) return;
+  seenPost = Date.now();
+  call('/jobs/seen', { method: 'POST', json: {} }).then(() => { G.unseenFailed = 0; G.seenLocal = false; }).catch(() => { /* eldre server: bare lokalt */ });
+}
+/** Kort årsak på én linje (serverens short/reason, ellers tolket fra feilmeldingen). */
+function shortReason(j) {
+  if (j.short) return j.short;
+  const e = String(j.error ?? j.reason ?? ''), n = e.match(/(\d+)\s*s\b/)?.[1];
+  if (/hoppet over|for lite minne|not enough memory|insufficient memory|out of memory/i.test(e)) return /hoppet/i.test(e) ? e.replace(/^.*?(Hoppet over)/i, '$1') : 'For lite minne';
+  if (/ingen kontakt|får ikke kontakt|econnrefused|fetch failed|connect|unreachable|enotfound/i.test(e)) return 'Ingen kontakt med Ollama';
+  if (/ble ikke lastet|lastet ikke|load(ing)? (timeout|timed out)|laster modellen/i.test(e)) return `Tidsavbrudd · lastet ikke inn${n ? ` på ${n} s` : ''}`;
+  if (/svarte ikke|timeout|timed out|tidsavbrudd/i.test(e)) return `Tidsavbrudd · svarte ikke${n ? ` på ${n} s` : ''}`;
+  if (j.status === 'cancel' || j.status === 'cancelled') return 'Avbrutt';
+  return e.split(/[.:\n]/)[0].slice(0, 80) || 'Feilet';
+}
+const groupKey = (j) => shortReason(j);
+function failGroups(fails) {
+  if (G.jobGroups?.length) {
+    const byId = new Map(fails.map((j) => [String(j.id), j]));
+    return G.jobGroups.map((g) => ({ reason: g.reason ?? g.short, short: g.short ?? g.reason, count: g.count ?? (g.ids ?? []).length, ids: (g.ids ?? []).map(String), jobs: (g.ids ?? []).map((id) => byId.get(String(id))).filter(Boolean) }))
+      .filter((g) => g.count > 0);
+  }
+  const m = new Map();
+  for (const j of fails) { const k = groupKey(j); if (!m.has(k)) m.set(k, { reason: k, short: k, ids: [], jobs: [] }); const g = m.get(k); g.ids.push(String(j.id)); g.jobs.push(j); }
+  return [...m.values()].map((g) => ({ ...g, count: g.ids.length }));
+}
+const nounFor = (jobs) => (jobs.length && jobs.every((j) => /selvtest|selftest/i.test(`${j.task ?? ''} ${j.title ?? ''} ${j.kind ?? ''}`)) ? ['selvtest', 'selvtester'] : ['jobb', 'jobber']);
+const gb = (v) => (v == null ? '?' : String(Math.round(v * 10) / 10).replace('.', ','));
+function phaseText(j) {
+  const ph = j.phase;
+  if (!ph?.kind) return '';
+  if (ph.kind === 'load') return `Laster modellen fra disk${ph.totalGb ? ` · ${gb(ph.loadedGb ?? 0)} av ${gb(ph.totalGb)} GB` : ' …'}`;
+  if (ph.kind === 'think') return 'Tenker …';
+  if (ph.kind === 'answer') return `Svarer${ph.chars != null ? ` · ${nb(ph.chars)} tegn` : ' …'}`;
+  return '';
+}
+async function retryJobs(ids, group) {
+  try { await call('/jobs/retry', { method: 'POST', json: group ? { group, ids } : { ids } }); vibe(); toast(`Prøver ${ids.length} på nytt`); }
+  catch (e) {
+    if (e.status !== 404) { toast(e.message); }
+    else { for (const id of ids) await call(`/jobs/${encodeURIComponent(id)}/retry`, { method: 'POST' }).catch(() => {}); toast(`Prøver ${ids.length} på nytt`); }
+  }
+  loadJobs();
 }
 
 async function jobAct(id, act) {
@@ -536,15 +597,27 @@ function jobTab(o) {
   const J = jobsF(o.scope === 'finans'), run = J.filter((j) => j.status === 'run'), q = J.filter((j) => j.status === 'queue'), done = J.filter((j) => j.status === 'ok' || j.status === 'fail' || j.status === 'cancel' || j.status === 'cancelled');
   const par = routingOf().params?.parallel ?? 2;
   const row = (j) => {
-    const r = j.status === 'run', qq = j.status === 'queue', ok = j.status === 'ok', bad = j.status === 'fail' || j.status === 'cancel' || j.status === 'cancelled';
-    const tokn = (j.tokens?.in ?? 0) + (j.tokens?.out ?? 0);
-    const s = [j.model, r ? `${Math.floor(j.progress ?? 0)} %${j.step ? ` · ${j.step}` : ''}` : '', qq ? (j.when ? j.when : 'venter') : '', j.ms != null && !r ? ms2(j.ms) : '', tokn ? `${nb(tokn)} tok` : '', j.costKr ? krs(j.costKr) : '', j.fallbackFrom ? `reserve for ${j.fallbackFrom}` : '', j.error ?? ''].filter(Boolean).join(' · ');
+    const r = j.status === 'run', qq = j.status === 'queue', ok = j.status === 'ok', bad = j.status === 'fail' || j.status === 'cancel' || j.status === 'cancelled', skip = j.status === 'skip' || j.skipped;
+    const tokn = (j.tokens?.in ?? 0) + (j.tokens?.out ?? 0), ph = r ? phaseText(j) : '';
+    const s = [j.model, r ? (ph || `${Math.floor(j.progress ?? 0)} %${j.step ? ` · ${j.step}` : ''}`) : '', qq ? (j.when ? j.when : 'venter') : '', j.ms != null && !r ? ms2(j.ms) : '', tokn ? `${nb(tokn)} tok` : '', j.costKr ? krs(j.costKr) : '', j.fallbackFrom ? `reserve for ${j.fallbackFrom}` : '', bad || skip ? shortReason(j) : ''].filter(Boolean).join(' · ');
     const act = r || qq ? btn('Avbryt', `data-ac-jcancel="${esc(j.id)}"`, 'red') : bad && j.retryable !== false ? btn('Prøv igjen', `data-ac-jretry="${esc(j.id)}"`) : '';
-    return `<div class="ac-job"><div class="ac-row"><span class="ac-ring ${r ? 'run' : qq ? 'queue' : ok ? 'ok' : 'bad'}">${ok ? '✓' : bad ? '!' : ''}</span><span class="ac-col ac-grow"><b class="ac-ell">${esc(j.title || j.taskName || j.task)}</b><span class="ac-ell${bad ? ' bad' : ''}">${esc(s)}</span></span>${act}</div>${r ? `<span class="ac-track sm"><i style="width:${j.progress ?? 0}%;background:var(--acc)"></i></span>` : ''}</div>`;
+    const full = (bad || skip) && j.error && j.error !== shortReason(j) ? `<details class="ac-jdet"><summary>Detaljer</summary><span>${esc(j.error)}</span></details>` : '';
+    const pct = r && j.phase?.kind === 'load' && j.phase.totalGb ? Math.round(((j.phase.loadedGb ?? 0) / j.phase.totalGb) * 100) : j.progress ?? 0;
+    return `<div class="ac-job"><div class="ac-row"><span class="ac-ring ${r ? 'run' : qq ? 'queue' : ok ? 'ok' : skip ? 'queue' : 'bad'}">${ok ? '✓' : bad ? '!' : ''}</span><span class="ac-col ac-grow"><b class="ac-ell">${esc(j.title || j.taskName || j.task)}</b><span class="ac-ell${bad ? ' bad' : ''}">${esc(s)}</span>${full}</span>${act}</div>${r ? `<span class="ac-track sm"><i style="width:${pct}%;background:var(--acc)"></i></span>` : ''}</div>`;
   };
-  const G2 = [['KJØRER', run], ['I KØ', q], ['SISTE', done.slice(0, 40)]].filter((g) => g[1].length);
-  return `<div class="ac-row ac-sb ac-wrap"><span class="ac-mut">${run.length} kjører · ${q.length} i kø · maks ${par} samtidig${G.paused ? ' · køen er pauset' : ''}</span><span class="ac-row">${btn(G.paused ? 'Fortsett kø' : 'Pause kø', 'data-ac-pause')}${btn('Tøm historikk', 'data-ac-jclear')}</span></div>
-    ${G2.map(([h, L]) => `<div class="ac-sec">${lab(h)}<div class="ac-card ac-list">${L.map(row).join('')}</div></div>`).join('') || `<div class="ac-card"><span class="ac-mut">${G.jobs ? 'Ingen AI-jobber ennå. Chat, kvitteringer, kategorisering, AI-søk og Glimt logges her.' : G.err.jobs ? esc(G.err.jobs) : 'Laster …'}</span></div>`}`;
+  const fails = done.filter(isFail), rest = done.filter((j) => !isFail(j));
+  const groups = failGroups(fails);
+  const gRow = (g, i) => {
+    const [one, many] = nounFor(g.jobs), open = !!G.gOpen?.[g.reason];
+    const head = `<div class="ac-job ac-jg"><div class="ac-row"><span class="ac-ring bad">!</span><button type="button" class="ac-col ac-grow ac-jgt" data-ac-gopen="${i}" aria-expanded="${open}"><b class="ac-ell">${g.count} ${g.count === 1 ? one : many} feilet · ${esc(String(g.short ?? '').replace(/^Tidsavbrudd · /, 'tidsavbrudd · ').toLowerCase().replace(/^ingen kontakt med ollama/, 'ingen kontakt med Ollama'))}</b><span class="ac-ell">${esc(g.jobs.slice(0, 4).map((j) => j.title || j.taskName || j.task).join(' · '))}${g.jobs.length > 4 ? ' …' : ''}</span></button><span class="ac-jgchev" aria-hidden="true">${open ? '⌃' : '⌄'}</span>${g.jobs.some((j) => j.retryable !== false) || !g.jobs.length ? btn(g.count > 1 ? 'Prøv alle igjen' : 'Prøv igjen', `data-ac-gretry="${i}"`) : ''}</div></div>`;
+    return head + (open ? `<div class="ac-jgk">${g.jobs.map(row).join('')}</div>` : '');
+  };
+  G.gList = groups;
+  const ollamaDown = groups.find((g) => /ingen kontakt/i.test(g.short ?? ''));
+  const G2 = [['KJØRER', run.map(row)], ['I KØ', q.map(row)], ['FEILET', groups.map(gRow)], ['SISTE', rest.slice(0, 40).map(row)]].filter((g) => g[1].length);
+  return `<div class="ac-row ac-sb ac-wrap"><span class="ac-mut">${run.length} kjører · ${q.length} i kø · ${par > 1 ? `maks ${par} samtidig` : 'én om gangen'} · selvtester én modell om gangen${G.paused ? ' · køen er pauset' : ''}</span><span class="ac-row">${btn(G.paused ? 'Fortsett kø' : 'Pause kø', 'data-ac-pause')}${btn('Tøm historikk', 'data-ac-jclear')}</span></div>
+    ${ollamaDown ? `<div class="ac-card ac-jwarn"><span class="ac-col ac-grow"><b>Får ikke kontakt med Ollama</b><span class="ac-mut">${esc(ollamaDown.jobs[0]?.error ?? 'Sjekk adressen under API og nøkler.')}</span></span>${btn('Test tilkobling', 'data-ac-tab="api"')}</div>` : ''}
+    ${G2.map(([h, L]) => `<div class="ac-sec">${lab(h)}<div class="ac-card ac-list">${L.join('')}</div></div>`).join('') || `<div class="ac-card"><span class="ac-mut">${G.jobs ? 'Ingen AI-jobber ennå. Chat, kvitteringer, kategorisering, AI-søk og Glimt logges her.' : G.err.jobs ? esc(G.err.jobs) : 'Laster …'}</span></div>`}`;
 }
 
 function useTab(o) {
@@ -598,7 +671,9 @@ function apiTab(o) {
 function html(p) {
   const o = p.o, fin = o.scope === 'finans', T = THEMES[o.theme] ?? THEMES.papir, tabs = tabsFor(o), web = o.variant !== 'mobile';
   if (!tabs.some(([k]) => k === p.tab)) p.tab = tabs[0][0];
-  const J = jobsF(fin), runN = J.filter((j) => j.status === 'run').length, failN = J.filter((j) => j.status === 'fail').length, I = installed();
+  const J = jobsF(fin), runN = J.filter((j) => j.status === 'run').length, I = installed();
+  if (p.tab === 'job' && G.jobs) markJobsSeen();
+  const failN = p.tab === 'job' ? 0 : unseenFails(J); // prompt 40: bare nye feil siden du så fanen
   const status = `${fin ? 'Kvitteringer, kategorier og spørsmål' : `${I.length} lokale modeller · ${cloud().filter((c) => c.on).length} i skyen`} · ${runN ? `${runN} jobb${runN > 1 ? 'er' : ''} kjører` : 'ingen jobber kjører'}`;
   const body = { ov: ovTab, mod: modTab, rt: rtTab, job: jobTab, use: useTab, api: apiTab }[p.tab](o);
   p.status = status; // prompt 39: innebygd på web vises statuslinjen i Innstillinger-toppen (o.onStatus)
@@ -677,6 +752,8 @@ function bind(el) {
     if ('acJclear' in d) { try { await call('/jobs', { method: 'DELETE' }); vibe(); } catch (err) { toast(err.message); } loadJobs(); return; }
     if (d.acJcancel) return jobAct(d.acJcancel, 'cancel');
     if (d.acJretry) return jobAct(d.acJretry, 'retry');
+    if (d.acGopen != null) { const g = G.gList?.[+d.acGopen]; if (g) { G.gOpen = { ...(G.gOpen ?? {}), [g.reason]: !G.gOpen?.[g.reason] }; vibe(); redraw(); } return; }
+    if (d.acGretry != null) { const g = G.gList?.[+d.acGretry]; if (g) return retryJobs(g.ids, G.jobGroups?.length ? g.reason : undefined); return; }
     if (d.acTest) return testKey(d.acTest);
     if (d.acEye) { G.eye[d.acEye] = !G.eye[d.acEye]; redraw(); return; }
     if ('acNewtok' in d) { try { const r = await call('/tokens', { method: 'POST', json: { name: 'Ny nøkkel' } }); G.fresh = r.token ?? r.key ?? null; vibe(); } catch (err) { toast(err.message); } loadTokens(); return; }

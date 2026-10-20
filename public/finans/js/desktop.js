@@ -11,6 +11,7 @@ import { bindSuggest } from './fsuggest.js';
 import { linesOf, matchLines, markText, hlBanner, hlList, hlImage, hlFocus } from './rc-hl.js';
 import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, finnImportBox, loadImpTpl, aksSettings, loadStocksSettings } from './modules.js';
 import { glimt } from '/assets/js/glimt.js'; // prompt 31: Glimt-merket når AI jobber
+import { addedLine, linesEditor, bindEditor, rereadBtn, askGlimt, glimtCard, isStandardQ, saveLines, editorDirty } from './fin40.js'; // prompt 40
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'AI-søk'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
@@ -63,12 +64,13 @@ function sideNav() {
 function aiPanel() {
   const a = u.ai;
   if (!a) return '';
+  if (a.glimt && !a.busy) return glimtCard(a.glimt, logo); // prompt 40: ryddig svar med kort
   // Prompt 30: treffet tar med seg søkeordet (matchedText fra serveren, ellers spørsmålet), så kvitteringslinjen markeres.
   const hlOf = (h) => (h.lineIndex?.length || h.matchedText ? ` data-hl="${esc(h.matchedText || a.q || '')}"` : '');
   const hits = (a.hits ?? []).map((h) => `<button class="ai-hit" ${h.txId ? `data-open-tx="${h.txId}"` : h.receiptId ? `data-open-rc="${esc(h.receiptId)}"` : ''}${hlOf(h)}><span class="dot" style="background:${esc(h.color ?? '#A0A0AA')}"></span>
     <span class="grow"><span style="font-weight:500">${esc(h.description)}</span> <span class="note" style="font-size:12.5px">· ${dd(h.date)} · ${esc(h.source)}</span><span class="ai-why">${esc(h.reason ?? '')}</span></span>
     <span class="mono" style="white-space:nowrap">${h.amount != null ? sgn(h.amount) + ' kr' : '–'}</span></button>`).join('');
-  return `<section class="card ai-panel"><div class="card-h" style="align-items:flex-start"><div style="min-width:0"><div class="ai-k">✦ AI-SØK · ${esc(a.engine ?? (S.boot.settings.provider === 'ollama' ? 'Ollama' : 'Gemini'))}</div>${a.q ? `<div class="ai-q">${esc(a.q)}</div>` : '<div class="ai-q">Spør om økonomien din på vanlig norsk</div>'}</div><button class="x-btn" data-act="ai-close" aria-label="Lukk">×</button></div>
+  return `<section class="card ai-panel"><div class="card-h" style="align-items:flex-start"><div style="min-width:0"><div class="ai-k">✦ GLIMT</div>${a.q ? `<div class="ai-q">${esc(a.q)}</div>` : '<div class="ai-q">Spør om økonomien din på vanlig norsk</div>'}</div><button class="x-btn" data-act="ai-close" aria-label="Lukk">×</button></div>
     ${a.busy ? aiProgress(a) : ''}
     ${a.aiUnavailable ? `<div class="ai-note">${esc(a.notice ?? 'AI-motoren svarer ikke, så dette er vanlig søk.')}</div>` : ''}
     ${a.plainFirst ? `<div class="ai-note ai-plain">${esc(a.notice)} <button class="btn sm ghost" data-act="ai-force">✦ Spør AI likevel</button></div>` : ''}
@@ -199,7 +201,7 @@ function shell(content) {
     <header class="head">
       <div style="display:flex;gap:14px;align-items:flex-start"><button class="side-tog" data-act="compact-nav" aria-label="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" title="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" aria-pressed="${compactNav()}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button><div><div class="crumb"><span>FinansHub</span><span>›</span><b>${esc(pageName(u.page))}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(String(me.name ?? '').split(/\s+/)[0] || '@' + (me.username ?? ''))}` : esc(pageName(u.page))}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div></div>
       <div class="head-r">
-        ${`<form class="search${aiMode ? ' ai' : ''}${(aiMode ? u.aiDraft : u.q) ? ' has' : ''}" data-form="gsearch" data-sf role="search">${aiMode ? '<span class="ai-star">✦</span>' : `<span class="sf-ic">${icon('search', 17, 'var(--muted)')}</span>`}${clearBtn()}<input name="q" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
+        ${`<form class="search${aiMode ? ' ai' : ''}${(aiMode ? u.aiDraft : u.q) ? ' has' : ''}" data-form="gsearch" data-sf role="search">${aiMode ? '<span class="ai-star">✦</span>' : `<span class="sf-ic">${icon('search', 17, 'var(--muted)')}</span>`}${clearBtn()}<input name="q" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør Glimt, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør Glimt om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Spør Glimt om transaksjoner og kvitteringer">✦ Glimt</button></form>
         <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>`}
         <a class="me" href="#/inn" title="${esc(me.name ?? '')}" aria-label="Innstillinger for ${esc(me.name ?? 'deg')}"><div class="av">${me.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : esc(ini(me.name ?? me.username))}</div></a>
         <a class="close" href="/#/dash" aria-label="Tilbake til Hjem" title="Tilbake til Hjem">×</a>
@@ -366,11 +368,15 @@ function transactions() {
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato<input class="inp" type="date" data-tx-field="date" value="${sel.date}"></label><label class="f" style="flex:1">Konto<select class="inp" data-tx-field="accountId">${accOpts(sel.accountId, '–')}</select></label></div>
     <label class="f">Bolig<select class="inp" data-tx-field="folderId">${opt('', 'Ingen', sel.folderId)}${(S.txFolders ?? []).map((f) => opt(f.id, f.name, sel.folderId)).join('')}</select></label>
     <label class="f">Notat<input class="inp" data-tx-field="note" value="${esc(sel.note ?? '')}" placeholder="Legg til notat"></label>
+    ${linesEditor(sel)}
+    ${rereadBtn(sel)}
     <div class="box"><span class="muted">Kvittering</span>${sel.receiptId ? `<a href="#/kv" data-open-rc="${sel.receiptId}"${hlQ() ? ` data-hl="${esc(hlQ())}"` : ''}>${sel.receipt === 'booked' ? 'Vedlagt – vis' : 'Til gjennomgang →'}</a>` : `<label class="link-btn" style="cursor:pointer">Legg ved kvittering<input type="file" accept="image/*,application/pdf" data-attach-rc="${sel.id}" hidden></label>`}</div>
     <div class="orig-links"><button class="orig-link" data-orig="receipt">${icon('kv', 16, 'var(--muted)')}<span class="grow">Original kvittering</span><span class="note">${sel.receiptId ? (sel.receipt === 'booked' ? 'Vedlagt' : 'Til gjennomgang') : 'Ingen'}</span><span class="muted">›</span></button>
       <button class="orig-link" data-orig="bank">${icon('konto', 16, 'var(--muted)')}<span class="grow">Original banktransaksjon</span><span class="note">${sel.hasBankRow ? 'Fra banken' : sel.source === 'receipt' ? 'Fra kvittering' : 'Lagt inn manuelt'}</span><span class="muted">›</span></button></div>
     <div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" data-act="make-rule">Lag regel</button><button class="btn danger" style="flex:1" data-act="del-tx">Slett</button></div>
-    ${u.msg.rule ? `<div class="ok-msg">${esc(u.msg.rule)}</div>` : ''}`, 'detail') : '';
+    ${u.msg.rule ? `<div class="ok-msg">${esc(u.msg.rule)}</div>` : ''}
+    ${addedLine(sel)}
+    <div class="note" style="font-size:11.5px;text-align:center">E rediger · R les på nytt · ⌘S lagre · Esc lukk</div>`, 'detail') : '';
   return `<div style="display:flex;flex-direction:column;gap:16px">
     <div class="filters">
       <form class="search${u.q ? ' has' : ''}" data-form="txsearch" data-sf role="search"><span class="sf-ic">${icon('search', 17, 'var(--muted)')}</span>${clearBtn()}<input name="q" value="${esc(u.q)}" placeholder="Søk etter butikk eller beskrivelse" aria-label="Søk" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></form>
@@ -452,6 +458,7 @@ function confirmPanel(R) {
         <div class="match ${R.match ? '' : 'none'}">${icon('link', 18, R.match ? 'var(--pos)' : 'var(--muted)')}<div><div style="font-weight:600;color:${R.match ? 'var(--pos)' : 'var(--text)'}">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch ennå'}</div><div class="sub">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</div></div></div>
       </div></div>
     ${log}
+    ${addedLine(R)}
     <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
       ${done ? `<button class="btn ghost" data-act="rc-delete">Slett kvittering</button>${R.file ? `<a class="btn" href="${R.file}" target="_blank">Åpne original ↗</a>` : ''}`
         : `${R.file && !(other === 'gemini' && R.canReanalyze) ? `<button class="btn ghost" style="height:48px" data-act="rc-reprocess" data-prov="${other}">Les på nytt med ${other === 'gemini' ? 'Gemini' : 'Ollama'}</button>` : ''}${R.canOcr && !(R.canReanalyze || R.reanalyzeReason) ? `<button class="btn ghost" style="height:48px" data-reanalyze="${esc(R.id)}" data-engine="tesseract" title="Leser bildet lokalt med Tesseract, uten AI">Les med lokal OCR</button>` : ''}<button class="btn ghost" style="height:48px" data-act="rc-reject">Avvis</button><button class="btn pri" style="height:48px;padding:0 28px" data-act="rc-book">Bokfør</button>`}
@@ -1022,6 +1029,10 @@ async function askAi(text, force = false) {
   const tick = setInterval(() => { if (run !== aiRun || !u.ai?.busy) return clearInterval(tick); paintAiJob(); }, 1000);
   const live = () => run === aiRun && !ctl.signal.aborted;
   try {
+    // Prompt 40: Glimt svarer først med strukturert svar og kort (POST /search/ask). 404 eller ingen kort → AI-søket som før.
+    const g = force ? null : await askGlimt(qText, ctl.signal).catch(() => null);
+    if (!live()) return;
+    if (g) { u.ai = { q: qText, busy: false, glimt: g, suggestions: u.ai?.suggestions }; return; }
     let r = await api('/search/ai?async=1', { method: 'POST', headers: { Prefer: 'respond-async' }, json: { q: qText, ...(force ? { force: true } : {}) }, signal: ctl.signal });
     if (r?.jobId && !r.answer && !r.hits) {
       u.ai.jobId = r.jobId;
@@ -1111,6 +1122,40 @@ export function bind() {
   bindModules(el);
   loadLogoRegistry().then((changed) => { if (changed) render(); });
   bindReanalyze(el, (r) => { u.selRc = r.id; refreshAll().then(() => toast('Kvitteringen er oppdatert')); });
+  // Prompt 40: varelinjer i «Rediger alt», hurtigtaster (E rediger · R les på nytt · ⌘S lagre · Esc avbryt) og høyreklikk i lista.
+  const selTx = () => S.tx?.items.find((y) => y.id === u.sel) ?? null;
+  bindEditor(el, { getTx: selTx, save: (body) => patchTx(u.sel, body), rerender: render });
+  document.addEventListener('keydown', async (e) => {
+    if (u.page !== 'tx' || !selTx() || u.add) return;
+    const typing = /INPUT|TEXTAREA|SELECT/.test(e.target?.tagName ?? '');
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (document.activeElement?.blur) document.activeElement.blur(); if (await saveLines((body) => patchTx(u.sel, body))) toast('Lagret'); return; }
+    if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 'e' || e.key === 'E') { e.preventDefault(); const i = el.querySelector('[data-tx-field="description"]'); i?.focus(); i?.select?.(); return; }
+    if ((e.key === 'r' || e.key === 'R') && selTx().receiptId) { e.preventDefault(); el.querySelector('[data-f40-reread]')?.click(); return; }
+    if (e.key === 'Escape' && !editorDirty() && !document.querySelector('.ra-ov,.f40-ctx')) { u.sel = null; render(); }
+  });
+  el.addEventListener('contextmenu', (e) => {
+    const tr = e.target.closest?.('tr[data-open-tx]');
+    if (!tr) return;
+    e.preventDefault();
+    const id = +tr.dataset.openTx || tr.dataset.openTx, t = S.tx?.items.find((y) => String(y.id) === String(id));
+    document.querySelector('.f40-ctx')?.remove();
+    const m = document.createElement('div');
+    m.className = 'f40-ctx'; m.setAttribute('role', 'menu');
+    m.style.cssText = `position:fixed;z-index:9000;left:${Math.min(e.clientX, innerWidth - 240)}px;top:${Math.min(e.clientY, innerHeight - 120)}px`;
+    m.innerHTML = `<button type="button" role="menuitem" data-c="edit">Rediger alt</button>${t?.receiptId ? `<button type="button" role="menuitem" data-c="reread">✦ La Glimt lese kvitteringen på nytt</button>` : ''}<button type="button" role="menuitem" data-c="open">Åpne</button>`;
+    document.body.appendChild(m);
+    const off = (ev) => { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('pointerdown', off, true); } };
+    document.addEventListener('pointerdown', off, true);
+    m.addEventListener('click', async (ev) => {
+      const c = ev.target.closest('[data-c]')?.dataset.c; if (!c) return;
+      m.remove(); document.removeEventListener('pointerdown', off, true);
+      u.sel = t?.id ?? id; render();
+      await new Promise((r) => setTimeout(r, 30));
+      if (c === 'edit') { const i = el.querySelector('[data-tx-field="description"]'); i?.focus(); i?.select?.(); }
+      if (c === 'reread') el.querySelector('[data-f40-reread]')?.click();
+    });
+  });
   el.addEventListener('click', busyWrap(async (e) => {
     const t = e.target;
     const d = (sel) => t.closest(sel);
@@ -1300,6 +1345,8 @@ export function bind() {
     switch (f.dataset.form) {
       case 'aipage': u.aiPageDraft = ''; if (!String(v.aiq ?? '').trim()) return; return askAi(v.aiq);
       case 'gsearch': if (u.aiMode) return askAi(v.q);
+        // Prompt 40: standardspørsmål («abonnementer», «faste trekk» …) gir Glimt-kort også uten ✦ Glimt slått på.
+        if (isStandardQ(v.q)) { u.q = ''; return askAi(v.q); }
       // fallthrough
       case 'txsearch': u.q = v.q; u.sel = null; u.hl = null; u.hlOff = false; if (u.page !== 'tx') { location.hash = '#/tx'; return; } await loadTx(); return render();
       case 'tx': {

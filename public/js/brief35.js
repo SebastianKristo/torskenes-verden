@@ -219,7 +219,7 @@ function panelHtml() {
       ${v.tr.map((t) => { const c = t.daysLeft <= 2 ? '#b23a2a' : t.daysLeft <= 7 ? '#a8661a' : '#1b1a17', pc = Math.min(100, Math.max(6, Math.round((t.progress ?? 0.5) * (t.progress > 1 ? 1 : 100)))); return `<div class="gb-tr"><span class="gb-trl">${t.logo ? `<img src="${esc(t.logo)}" alt="" loading="lazy" data-gb-img>` : ''}<i>${esc(String(t.service ?? '?').slice(0, 1))}</i></span><span class="gb-trm"><b>${esc(t.service)}</b><span>Prøve · avslutt før ${esc(t.endsLabel ?? '')}${t.priceLabel ? ` · deretter ${esc(t.priceLabel)}` : ''}</span><span class="gb-bar"><span style="width:${pc}%;background:${c}"></span></span></span><span class="gb-trd"><b style="color:${c}">${t.daysLeft}</b><span>${t.daysLeft === 1 ? 'dag igjen' : 'dager igjen'}</span></span></div>`; }).join('')}
       <div class="gb-trb"><button type="button" class="gs-pill dark" data-gb-trdone="${esc(T1.id)}">✓ Jeg har avsluttet ${esc(T1.service)}</button>${T1.cancelUrl ? `<a class="gs-pill" href="${esc(T1.cancelUrl)}" target="_blank" rel="noopener">Avslutt nå ↗</a>` : ''}<a class="gs-pill" href="/finans/#/sub">Åpne Abonnement ›</a></div></section>` : '';
   const top = v.news[0];
-  const nyh = v.news.length ? `<section data-gb="nyh" class="gb-box${ring('nyh')}"><b class="gb-bt">Nyheter</b>
+  const nyh = v.news.length ? `<section data-gb="nyh" class="gb-box${ring('nyh')}"><span class="gb40-nh"><b class="gb-bt">Nyheter</b><button type="button" class="gb40-gl" data-gb40-glimt>✦ Glimt-sammendrag ›</button></span>
       <a class="gb-top" href="${esc(top.u)}" target="_blank" rel="noopener"><span class="gb-img16">${imgTag(top.img)}</span><span class="gb-src"><span class="red">${esc(top.s)}</span><span>${esc(top.tm)}</span></span><b>${esc(top.t)}</b>${top.d ? `<span class="gb-lead">${esc(top.d)}</span>` : ''}</a>
       ${v.news.slice(1).map((n) => `<a class="gb-nw" href="${esc(n.u)}" target="_blank" rel="noopener"><span class="gb-th">${imgTag(n.img)}</span><span class="gb-nwm"><span class="gb-src"><span class="red">${esc(n.s)}</span><span>${esc(n.tm)}</span></span><span class="gb-nwt">${esc(n.t)}</span></span></a>`).join('')}</section>` : '';
   const mins = new Date(v.d.generatedAt ?? Date.now());
@@ -264,6 +264,8 @@ function bindPanel(el) {
     const t = e.target;
     if (P.cfg && t.closest('.gb-sheet') && glimtClick(e, () => { P.sheetTop = el.querySelector('.gb-sheet')?.scrollTop ?? 0; paintPanel(); paintCards(); })) return;
     if (t.closest('[data-gb-close]')) { try { navigator.vibrate?.(8); } catch { /* */ } closeBrief(); return; }
+    // Prompt 40: «✦ Glimt-sammendrag ›» lukker briefen og åpner Nyhetsleseren rett på Glimt-siden.
+    if (t.closest('[data-gb40-glimt]')) { e.preventDefault?.(); closeBrief(); import('./news.js').then((m) => m.openNews({ glimt: true })).catch(() => {}); return; }
     if (t.closest('[data-gb-cfgclose]')) { P.cfg = false; P.sheetTop = 0; paintPanel(); return; }
     if (t.closest('[data-gb-cfg]')) { P.cfg = true; P.sheetTop = 0; paintPanel(); loadGlimt(() => { if (P.cfg) paintPanel(); }, true); return; }
     if (t.closest('[data-gb-retry]')) { loadBrief(true); paintPanel(); return; }
@@ -398,6 +400,8 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-gb-open]')) { e.preventDefault(); try { navigator.vibrate?.(8); } catch { /* */ } openBrief({ tapped: true }); }
 });
 window.addEventListener('glimt-char', () => { paintCards(); if (P.open) { P.lastCh = null; paintPanel(); } });
+// Prompt 40: julemodus slått av/på → figurene tegnes på nytt med en gang.
+window.addEventListener('glimt-jul', () => { paintCards(); if (P.open) { P.lastCh = null; paintPanel(); } });
 document.addEventListener('hl:glimt', (e) => {
   const d = e.detail ?? {};
   if ('brief' in d) paintCards();

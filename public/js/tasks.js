@@ -10,7 +10,7 @@
 //    POST /api/tasks/glimt {q, list?, image?} → {kind, text, items, undo:{token}}; 404 → lokal tolker (tasks37-glimt.js).
 //  - Glimt-kort i listen: like oppgaver (Slå sammen), forfalte (Flytt til i morgen / Arkiver), butikk, hytte fra kalenderen.
 // Data fra /api/tasks; endringer fra andre kommer i sanntid over /api/ws (type 'tasks' / 'todo:changed'), ellers hvert 30. s.
-import { api, esc } from './util.js';
+import { api, esc, isMobile } from './util.js';
 import { onLive, liveOn } from './realtime.js';
 import { store } from './store.js';
 import { mountHa } from './tasks-ha.js';
@@ -745,7 +745,21 @@ document.addEventListener('keydown', (e) => {
   if (S.lsv) S.lsv = null; else S.ed = null;
   paintSheets();
 }, true);
-window.addEventListener('hashchange', () => { if (layer && !/^#\/huskeliste/.test(location.hash)) { S.ed = null; S.lsv = null; paintSheets(); } });
+window.addEventListener('hashchange', () => { if (layer && !/^#\/(huskeliste|gjoremal)/.test(location.hash)) { S.ed = null; S.lsv = null; paintSheets(); } });
+/* Prompt 40 (claude-code-gjoremal-web-fullskjerm.md): Gjøremål åpnes alltid i fullskjerm på web (position:fixed; inset:0),
+   uten Homelab-toppmeny, skybilde eller nyhetslinje. Egen topplinje: «‹ Hjem», kicker + tittel, ✕. «‹ Hjem», ✕ og Esc
+   går til Dashboard (Esc lukker først et åpent felt eller detaljark). Mobil (smal skjerm) beholder sin egen visning. */
+const fs40 = () => !isMobile();
+const closeFs40 = () => { location.hash = '#/dash'; };
+window.addEventListener('hashchange', () => setTimeout(() => { if (!host()) document.body.classList.remove('tk-fs40'); }));
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !host() || !fs40() || layer || e.defaultPrevented) return;
+  if (document.querySelector('#settings:not([hidden]),#popup:not([hidden]),.ai-ov,.gl-ans')) return;
+  const t = e.target;
+  if (t?.matches?.('input,textarea,select,[contenteditable="true"]')) { if (t.value) { t.value = ''; t.dispatchEvent(new Event('input', { bubbles: true })); } t.blur(); return; }
+  e.preventDefault(); closeFs40();
+});
+document.addEventListener('click', (e) => { if (e.target.closest?.('[data-tk40-close]')) { e.preventDefault(); closeFs40(); } });
 
 export function render() {
   setTimeout(() => {
@@ -783,6 +797,11 @@ export function render() {
     }, 30_000);
   });
   bindWide();
+  if (fs40()) {
+    document.body.classList.add('tk-fs40');
+    return `<div class="tk40-fs" role="region" aria-label="Gjøremål"><div class="tk40-bar"><button type="button" class="tk40-home" data-tk40-close>‹ Hjem</button><span class="tk40-tt"><span>To-do for hele familien</span><b>Gjøremål</b></span><span class="tk40-sp"></span><button type="button" class="tk40-x" data-tk40-close aria-label="Lukk Gjøremål" title="Lukk (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div class="tk40-sc"><div id="tasks" class="tk">${body()}</div></div></div>`;
+  }
+  document.body.classList.remove('tk-fs40');
   return `<div class="tk-top"><div class="os-title">Gjøre<b>mål</b></div><div class="tk-sub">To-do for hele familien · dine lister og lister som er delt med deg</div></div><div id="tasks" class="tk">${body()}</div>`;
 }
 
@@ -850,7 +869,7 @@ function twSide() {
   const mine = items.filter((t) => !t.done && (tWho(t) === myId() || (!tWho(t) && myId()))).length;
   const li = (id, name, color, cnt, ic = '') => `<button type="button" class="tw-li${S.cur === id ? ' on' : ''}" data-tk-list="${esc(id)}" aria-pressed="${S.cur === id}" title="${esc(name)}">${ic || `<span class="tw-dot" style="background:${esc(color)}"></span>`}<span class="tw-ln">${esc(name)}</span><span class="tw-k">${cnt}</span></button>`;
   const ppl = people();
-  return `<aside class="tw-side"><div class="tw-brand"><b>Gjøremål</b><span>Hjem, handel og hytta</span></div>
+  return `<aside class="tw-side">${fs40() ? '' : '<div class="tw-brand"><b>Gjøremål</b><span>Hjem, handel og hytta</span></div>'}
     <nav class="tw-lists">${li('alle', 'Alle', 'var(--t-ink)', n('alle'))}<button type="button" class="tw-li${S.pf === 'me' && S.cur === 'alle' ? ' on' : ''}" data-tw-act="mine" title="Mine"><span class="tw-dot ring"></span><span class="tw-ln">Mine</span><span class="tw-k">${mine}</span></button>
       ${lists.map((l) => li(l.id, l.name, l.color, n(l.id))).join('')}${li('arkiv', 'Arkiv', 'var(--t-mut)', n('arkiv'), `<span class="tw-ic">${ARCH_SVG}</span>`)}</nav>
     ${ppl.length ? `<span class="tw-lab">PERSONER</span><nav class="tw-lists">${ppl.map((p) => `<button type="button" class="tw-li${S.pf === p.id ? ' on' : ''}" data-tw-pf="${esc(p.id)}" title="${esc(p.name)}">${twPerson(p.id, 20)}<span class="tw-ln">${esc(p.id === myId() ? `${p.name} (meg)` : p.name)}</span><span class="tw-k">${items.filter((t) => !t.done && tWho(t) === p.id).length}</span></button>`).join('')}</nav>` : ''}

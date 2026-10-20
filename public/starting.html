@@ -136,6 +136,8 @@ a{color:var(--peach)}a:hover{color:#fff}
   var t0 = Date.now(), done = false, C = 2 * Math.PI * 92;
   var shortV = function (v) { return String(v || '').split('.').slice(0, 2).join('.'); };
   if (q.get('v')) $('ver').textContent = shortV(q.get('v'));
+  // Prompt 40: versjonen fra oppdateringen som pågår («Oppdater nå» lagrer den i sessionStorage), ikke hardkodet.
+  else { try { var hu = JSON.parse(sessionStorage.getItem('hl_updating') || 'null'); if (hu && hu.version) $('ver').textContent = shortV(hu.version); } catch (e) {} }
   $('bar').setAttribute('stroke-dasharray', C);
   var OK = '<svg class="okc" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#2f7d4f"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };

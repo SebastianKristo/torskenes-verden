@@ -33,9 +33,10 @@ import { mountDash, startEdit } from './dash-edit36.js';
 import { initWeb36 } from './web36.js';
 import { initWeb37 } from './web37.js';
 import { initWeb38 } from './web38.js';
+import { initWeb40 } from './web40.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
-const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 const KAL_APP = !!document.documentElement.dataset.kalApp;
 const scrollMem = scrollMemory();
@@ -65,14 +66,17 @@ function renderRoute() {
   const tk = document.getElementById('ticker');
   if (tk && view.contains(tk)) document.querySelector('header.top').after(tk);
   // Værsiden er en egen fullskjermside (systemfont, animert himmel) uten fotovindu.
-  view.innerHTML = (is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' ? pwHeader(route) : '') + ROUTES[route](); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
+  // Prompt 40: Gjøremål er fullskjerm på web (som Chat), uten fotovindu og toppmeny.
+  const fsTasks = (route === 'huskeliste' || route === 'gjoremal') && !isMobile();
+  document.body.classList.toggle('tk-fs40', fsTasks);
+  view.innerHTML = (is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' && !fsTasks ? pwHeader(route) : '') + ROUTES[route](); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
   placeTicker();
   paintPhoto();
   mountAll(view);
   setupDnd(view);
   if (route === 'dash') { mountDash(view); if (isEditingPending) { isEditingPending = false; requestAnimationFrame(() => startEdit()); } }
   // Rom er en underside av «Mer» på mobil.
-  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'domener', 'bursdager', 'kalender'].includes(route) ? 'mer' : route;
+  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   setTitle();
   // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
@@ -80,7 +84,7 @@ function renderRoute() {
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
-const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
+const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', gjoremal: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
 function setTitle() { document.title = KAL_APP ? 'Kalender' : TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.
@@ -148,6 +152,8 @@ function bindShell() {
   document.addEventListener('hl:lang', () => { route = null; renderRoute(); weatherPill(); langLabel(); renderTicker(); });
   document.addEventListener('hl:name', renderRoute); // nytt navn i hilsenen med en gang
   document.addEventListener('hl:dash36', () => { if (route === 'dash') { route = null; renderRoute(); } }); // prompt 36: widget lagt til igjen
+  // Prompt 40: julemodus endret (figurbiblioteket) → siden tegnes på nytt, så Glimt får lua med en gang. Ikke i Chat (strømmer).
+  window.addEventListener('glimt-jul', () => { if (route !== 'chat') { route = null; renderRoute(); } });
   document.addEventListener('hl:app', () => { setTitle(); applyHlTheme(); }); // nytt appnavn eller ikon
   window.addEventListener('resize', () => { if (isMobile() !== wasMobile) { wasMobile = isMobile(); renderRoute(); weatherPill(); } });
 }
@@ -172,6 +178,7 @@ async function main() {
   initWeb36();
   if (!KAL_APP) initWeb37(); // onboarding og Vær-tilbake hører ikke hjemme i Mac-appen
   initWeb38();
+  initWeb40();
   bindSearch();
   setupDnd(document.querySelector('header'));
   study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);
