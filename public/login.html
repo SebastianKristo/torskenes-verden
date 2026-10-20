@@ -23,6 +23,8 @@
     <div class="gate-hero-t"><span class="gate-kick" id="g-kick"></span><h1 id="g-title"></h1></div>
   </div>
   <div class="gate-side">
+    <!-- Prompt 38: «Logg inn med QR-kode» fra en mobil som allerede er logget inn (fasit «Logg inn QR.dc.html»). -->
+    <section class="gate-qr" id="g-qr" aria-live="polite" hidden></section>
     <form id="gate" class="gate-form" novalidate>
       <div class="gate-bars" data-show="onb" hidden><span></span><span></span><span></span><span></span></div>
       <span class="gate-lab" id="g-lab">LOGG INN</span>
@@ -40,6 +42,7 @@
 
       <div class="gate-fields" data-show="2fa" hidden>
         <label class="gate-l" for="f-code" id="f-code-l">Kode fra autentiseringsappen</label>
+        <div class="gate-otp" id="g-otp" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
         <input id="f-code" name="code" class="gate-in gate-code" inputmode="numeric" autocomplete="one-time-code" placeholder="123 456">
         <button type="button" class="gate-link" id="g-recovery">Mistet telefonen? Bruk en gjenopprettingskode</button>
       </div>
@@ -68,6 +71,7 @@
 
       <span class="gate-err" id="g-err" role="alert" hidden></span>
       <button type="submit" class="gate-btn" id="g-btn">Logg inn</button>
+      <button type="button" class="gate-link gate-toqr" id="g-toqr" hidden>Logg inn med QR-kode fra mobilen</button>
       <div class="gate-foot">
         <button type="button" class="gate-back" id="g-back" hidden>← Tilbake</button>
         <span class="gate-grow"></span>

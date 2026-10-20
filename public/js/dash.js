@@ -10,7 +10,7 @@ import { pkgLogo, pkgTitle, moreText } from './pkglogo.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
 import { is2c, pwImg } from './hltheme.js'; // prompt 36: ingen kreditlinje over bildet (vises bare i Innstillinger → Bakgrunn)
 import { updBanner } from './upd-banner.js';
-import { briefCardSlot } from './brief35.js';
+import { briefCardSlot, briefGlassSlot } from './brief35.js';
 import { gridHtml } from './dash-edit36.js'; // prompt 36: rutenett med wiggle-redigering // prompt 35: Glimt-brief-kortet under søkefeltet
 // Prompt 31: URL-er i stedsteksten vises ikke (lenken brukes som kart-lenke i stedet).
 const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
@@ -412,9 +412,10 @@ widget('p_links', { cls: 'p-sec', render() {
 
 function photoWindow(n) {
   const w = store.data.weather;
-  return `<section class="pw pw-dash">${pwImg()}
+  // Prompt 38 (Hjem web 1c): automatisk høyde, Glimt-briefen som glasspanel under hilsenen, temperaturen til høyre.
+  return `<section class="pw pw-dash pw38">${pwImg()}
     <div class="pw-bottom">
-      <div><div class="pw-date" id="date">${pdate(n)}</div><div class="pw-hello"><span id="greet">${greeting(n.getHours())}</span>, ${esc(store.me.user)}</div></div>
+      <div class="pw38-l"><div class="pw-date" id="date">${pdate(n)}</div><div class="pw-hello"><span id="greet">${greeting(n.getHours())}</span>, ${esc(store.me.user)}</div>${briefGlassSlot()}</div>
       <a class="pw-wx" data-wxtap href="${esc(w?.lat != null ? `https://www.yr.no/nb/v%C3%A6rvarsel/daglig-tabell/${w.lat},${w.lon}` : 'https://www.yr.no')}" target="_blank" rel="noopener" title="Trykk: Vær · Hold inne: åpne Yr"><div class="pw-temp" id="pw-temp">${w ? `${w.temp}°` : '–°'}</div><div class="pw-cond"><span id="pw-cond">${w ? esc(w.text) : ''}</span><span id="pw-sep">${w ? ' · ' : ''}</span><span id="clock-hm">${p2(n.getHours())}:${p2(n.getMinutes())}</span> ›</div></a>
     </div>
     <button type="button" class="pw-fail" hidden>Fikk ikke lastet bildet · trykk for å prøve igjen</button></section>`;
@@ -435,9 +436,9 @@ function gridCur() {
 function render2c(n, cardH) {
   return `<div class="p-dash">${photoWindow(n)}
     <div class="p-paper">
-      <div class="p-search">${store.me.hideSearch ? '' : renderSearch()}</div>${briefCardSlot()}
+      <div class="p-search p38-search">${store.me.hideSearch ? '' : renderSearch()}</div>
+      <div id="p-ticker-slot" class="p38-tick"></div>
       ${updBanner('dash')}
-      <div id="p-ticker-slot"></div>
       ${!isMobile() ? grid2c() : `<div class="p-cols">
         <div class="p-col">${card('p_school')}${hiddenWidgets().has('d_cal') ? '' : card('d_cal')}</div>
         <div class="p-col">${lab('AVGANGER')}<div id="trips" class="p-trips">${renderTrips()}</div>${hiddenWidgets().has('d_kal') ? '' : card('p_kal')}${hiddenWidgets().has('d_energy') ? '' : card('p_energy')}${card('p_wx')}${card('p_pk')}</div>

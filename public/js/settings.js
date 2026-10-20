@@ -54,7 +54,7 @@ export const svg = (d, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 
  * Returnerer { html, q } der q er teksten søket i innstillingene leter i.
  */
 export function row(o) {
-  const icon = o.logo !== undefined ? logoImg(o.logo, o.ini ?? o.t, 'sg-lg')
+  const icon = o.ico ? `<span class="sg-av sg-ico38" style="background:${o.ic ?? '#2b5d8a'}" aria-hidden="true">${o.ico}</span>` : o.logo !== undefined ? logoImg(o.logo, o.ini ?? o.t, 'sg-lg')
     : o.img ? `<span class="sg-av"><img src="${esc(o.img)}" alt=""></span>`
       : o.ini ? `<span class="sg-av" style="background:${o.ic ?? '#2a3346'}">${esc(o.ini)}</span>` : '';
   const txt = `<span class="sg-txt"><b${o.tc ? ` style="color:${o.tc}"` : ''}>${esc(o.t)}</b>${o.s ? `<span>${esc(o.s)}</span>` : ''}</span>`;
@@ -121,7 +121,15 @@ function profileRow37() {
   const p = myProfile();
   return row({ t: 'Profil i husstanden', k: 'profil koble husstand onboarding', s: p ? 'Posisjon, delte lister, abonnementer og kalendere følger profilen.' : 'Koble brukeren til personen din i husstanden.', v: p ? p.name : 'Ikke koblet', vc: p ? undefined : '#f3b54a', btn: p ? 'Bytt' : 'Koble', act: 'data-onb37' });
 }
+/* Prompt 38: antall økter (GET /api/me/sessions → {count} eller {sessions:[…]}); eldre server (404) = uten antall. */
+let sessCount38 = null, sessAt38 = 0;
+function loadSessions38() {
+  if (Date.now() - sessAt38 < 30_000) return;
+  sessAt38 = Date.now();
+  api('/me/sessions').then((r) => { const n = Number.isFinite(r?.count) ? r.count : Array.isArray(r?.sessions) ? r.sessions.length : Array.isArray(r) ? r.length : null; if (n !== sessCount38) { sessCount38 = n; if (tab === 'konto' && !sub) render(); } }).catch(() => {});
+}
 function kontoView() {
+  if (!sub) loadSessions38();
   const d = loginData(), me = store.me.me ?? d?.me ?? {}, mu = d?.users?.find((u) => u.id === me.id) ?? me;
   const name = me.name || me.username || '';
   if (!sub) return { sub: [me.name || me.username, me.username ? '@' + me.username : ''].filter(Boolean).join(' · '), groups: [
@@ -139,8 +147,12 @@ function kontoView() {
       row({ t: 'Passord', k: 'bytt endre', s: 'Gjelder nettsiden og mobilappene.', v: '••••••••', go: 'konto|pw' }),
     ] : [row({ t: 'Laster …' })], 'Pålitelig enhet gjelder bare når siden åpnes fra en lokal adresse (192.168.x.x, 10.x.x.x, 172.16–31.x.x). Fra internett kreves alltid passord, og kode hvis totrinnsbekreftelse er på.'),
     isAdmin() ? group('Server', [row({ t: 'Navn på serveren', s: 'Vises i menyen og i mobilappen.', v: store.me.serverName ?? '', go: 'konto|server' })]) : null,
-    // På mobil er sidemenyens bunn skjult, så låsing og utlogging ligger også her.
-    { ...group('Økt', [row({ t: 'Lås skjermen', s: 'Krever passord neste gang.', btn: 'Lås', act: 'data-set-lock' }), row({ t: 'Logg ut', tc: '#f59a8f', s: 'Glemmer også denne enheten.', btn: 'Logg ut', act: 'data-set-logout' })]), cls: 'mob-only' },
+    // Prompt 38: «Lås skjermen» og «Logg ut» er flyttet hit fra sidemenyen (web og mobil), + «Logg ut av alle enheter».
+    group('Økt', [
+      row({ t: 'Lås skjermen', k: 'lås låse skjerm pin', s: 'Låser med en gang. Passord (eller Face ID i appen) for å fortsette · Ctrl+Alt+L', btn: 'Lås', act: 'data-set-lock', ico: svg(P.lock, 16), ic: '#2b5d8a' }),
+      row({ t: 'Logg ut', k: 'logg ut sign out', tc: '#e0675a', s: 'Logger ut av Homelab på denne enheten og glemmer den.', btn: 'Logg ut', act: 'data-set-logout', ico: svg(P.out, 16), ic: '#b23a2a' }),
+      row({ t: 'Logg ut av alle enheter', k: 'alle økter enheter logg ut overalt', s: sessCount38 == null ? 'Ugyldiggjør alle økter. Krever passordet.' : `${sessCount38} ${sessCount38 === 1 ? 'økt' : 'økter'} er logget inn nå. Krever passordet.`, btn: 'Logg ut alle', act: 'data-set-logoutall', ico: svg('M3 12h4M17 12h4M12 3v4M12 17v4M8 8l8 8M16 8l-8 8', 16), ic: '#7a3b6b' }),
+    ]),
   ].filter(Boolean) };
   return d ? loginView(sub, go) : { html: '<div class="skeleton" style="min-height:200px;border-radius:18px"></div>' };
 }
@@ -585,10 +597,7 @@ function sideHtml() {
         return `<button type="button" class="set-tab" data-tab="${k}" aria-current="${on ? 'page' : 'false'}">${icBox(k)}<span>${esc(n)}</span>${badge}</button>`;
       }).join('')}</div>`).join('')}</nav>
     </div>
-    <div class="set-foot">
-      <button type="button" class="set-tab" data-set-lock>${svg(P.lock)}<span>Lås skjermen</span></button>
-      <button type="button" class="set-tab red" data-set-logout>${svg(P.out)}<span>Logg ut</span></button>
-    </div></aside>`;
+    </aside>`;
 }
 
 const subScroll = new Map(); // fane → scrollTop i listen før en underside ble åpnet
@@ -805,7 +814,8 @@ export function bindSettings() {
     if (e.target.closest('[data-back]')) { sub = null; render(); return; }
     if (e.target.closest('[data-setq-clear]')) { q = ''; render(); m.querySelector('[data-setq]')?.focus(); return; }
     if (e.target.closest('[data-set-lock]')) return signOut(false);
-    if (e.target.closest('[data-set-logout]')) { if (confirm('Logge ut? Denne enheten må da logge inn med passord igjen.')) signOut(true); return; }
+    if (e.target.closest('[data-set-logout]')) { if (confirm('Logge ut av Homelab på denne enheten?')) signOut(true); return; }
+    if (e.target.closest('[data-set-logoutall]')) { import('./web38.js').then((m) => m.logoutAll()); return; }
     if (e.target.closest('[data-open-fh-mail]')) { location.href = '/finans/?desktop=1#/inn'; return; }
     if (e.target.closest('[data-hp-edit]')) { closeSettings(); toggleHeadEdit(true); return; }
     if (e.target.closest('[data-gs-ai]')) return go('ai');

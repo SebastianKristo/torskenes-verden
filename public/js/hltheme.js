@@ -25,7 +25,7 @@ export function applyHlTheme() {
     l.rel = 'stylesheet'; l.href = FONTS; l.dataset.hlFonts = '';
     document.head.appendChild(l);
   }
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === '2c' ? '#f3efe6' : '#07080b');
+  if (!root.dataset.kalApp) document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === '2c' ? '#f3efe6' : '#07080b');
   // Logoen er «OS» i dagens tema og navnet på serveren (Homelab) i Vindu og papir.
   const logo = document.querySelector('header.top .logo');
   if (logo) {
@@ -40,7 +40,8 @@ export function applyHlTheme() {
 /** Henter valget fra serveren. Tåler at serveren ikke kjenner feltet ennå (da gjelder localStorage). */
 export async function loadHlTheme() {
   const l = await api('/me/layout').catch(() => null);
-  if (l && (l.hlTheme === '2c' || l.hlTheme === 'cur') && l.hlTheme !== theme) { theme = l.hlTheme; remember(theme); }
+  // Prompt 38: Kalender.app for Mac (html[data-kal-app]) bruker alltid papirtemaet (lyst/mørkt fra systemet).
+  if (l && !document.documentElement.dataset.kalApp && (l.hlTheme === '2c' || l.hlTheme === 'cur') && l.hlTheme !== theme) { theme = l.hlTheme; remember(theme); }
   if (l) setBgFromLayout(l);
   applyHlTheme();
   return theme;

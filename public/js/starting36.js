@@ -48,12 +48,35 @@ function html() {
     <div class="ns36-foot"><span>${S.ready ? 'Laster inn siden …' : `Siden lastes inn automatisk når serveren svarer · ${el} s`}</span>${!S.ready && el > 180 ? '<span>Det tar lengre tid enn vanlig.</span>' : ''}${!S.ready && el > 40 ? '<a href="" data-ns-reload>Last inn på nytt nå</a>' : ''}</div>
   </div>`;
 }
-function paint() { const o = document.getElementById('ns36'); if (o) o.innerHTML = html(); }
+/* Prompt 38 (FEIL: siden flimrer inn og ut): bakgrunnen og figuren bygges én gang (figuren memo per humør), og bare
+   ringen, prosenten, stegene og bunnteksten oppdateres. Ingen innerHTML på hele overlegget hvert sekund. */
+const memo = { key: '', steps: '', head: '', foot: '' };
+function paint() {
+  const o = document.getElementById('ns36');
+  if (!o) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = html();
+  const fresh = tmp.querySelector('.ns36-in');
+  if (!o.firstChild) { o.replaceChildren(...tmp.childNodes); Object.assign(memo, { key: figKey(fresh), steps: fresh.querySelector('.ns36-steps').innerHTML, head: fresh.querySelector('.ns36-t').innerHTML, foot: fresh.querySelector('.ns36-foot').innerHTML }); return; }
+  const cur = o.querySelector('.ns36-in');
+  const k = figKey(fresh);
+  if (k !== memo.key) { cur.querySelector('.ns36-hero').replaceWith(fresh.querySelector('.ns36-hero')); memo.key = k; }
+  else {
+    const a = cur.querySelector('.ns36-ring circle:last-child'), b = fresh.querySelector('.ns36-ring circle:last-child');
+    if (a && b && a.getAttribute('stroke-dashoffset') !== b.getAttribute('stroke-dashoffset')) a.setAttribute('stroke-dashoffset', b.getAttribute('stroke-dashoffset'));
+    const pa = cur.querySelector('.ns36-pct'), pb = fresh.querySelector('.ns36-pct'); if (pa && pb && pa.textContent !== pb.textContent) pa.textContent = pb.textContent;
+  }
+  for (const [sel, key] of [['.ns36-t', 'head'], ['.ns36-steps', 'steps'], ['.ns36-foot', 'foot']]) {
+    const h = fresh.querySelector(sel).innerHTML;
+    if (h !== memo[key]) { cur.querySelector(sel).innerHTML = h; memo[key] = h; }
+  }
+}
+const figKey = (el) => `${el.querySelector('.ns36-fig')?.className}|${el.querySelector('.ns36-fig')?.innerHTML.length}|${el.querySelectorAll('.ns36-z').length}`;
 
 function show() {
   if (S.on) return;
   S.on = true; S.t0 = Date.now(); S.ready = false; S.steps = null;
   const o = document.createElement('div');
+  memo.key = ''; memo.steps = ''; memo.head = ''; memo.foot = '';
   o.id = 'ns36'; o.className = 'ns36'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'Serveren starter opp');
   document.body.appendChild(o);
   o.addEventListener('click', (e) => { if (e.target.closest('[data-ns-reload]')) { e.preventDefault(); location.reload(); } });
@@ -63,7 +86,10 @@ function show() {
 }
 async function hardReload() {
   try { const r = await navigator.serviceWorker?.getRegistration?.(); r?.waiting?.postMessage?.({ type: 'SKIP_WAITING' }); await r?.update?.(); } catch { /* */ }
-  location.reload();
+  // Prompt 38: fade ut 0,3 s før reload, mot samme mørke bakgrunn (ingen hvit blink). Siden står til reload (ingen restart).
+  document.documentElement.style.background = '#101a2e';
+  document.getElementById('ns36')?.classList.add('out');
+  setTimeout(() => location.reload(), 300);
 }
 async function poll() {
   const r = await probe();

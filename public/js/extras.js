@@ -1,5 +1,5 @@
 // Søkebar, nyhetslinje og popup.
-import { esc, hm, api, backdropClick } from './util.js';
+import { esc, hm, api, backdropClick, haptic } from './util.js';
 import { store, on, emit } from './store.js';
 import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
 import { addQuick, preview, quickLabel } from './kal-quick.js';
@@ -294,7 +294,8 @@ function ansHtml() {
     // Prompt 34: feil vises tydelig («Glimt fikk ikke svar fra {modell}: {feil}») med Prøv igjen og Åpne AI-kontroll.
     : GL.err || !GL.ans?.text ? `<span class="gl-txt gl-err" data-no-i18n>${esc(GL.err || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.model || GL.ans?.source || 'Glimt')}</span><button type="button" class="gl-chat" data-gl-retry>Prøv igjen</button><button type="button" class="gl-chat" data-gl-aictl>Åpne AI-kontroll ›</button></div>`
     : `<span class="gl-txt" data-no-i18n>${boldHtml(GL.ans.text)}</span>${GL.ans.notice ? `<span class="gl-note" data-no-i18n>${esc(GL.ans.notice)}</span>` : ''}<div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.open?.route === 'vaer' ? `<button type="button" class="gl-chat" data-gl-wx>${GL.ans.open.name ? `Åpne Vær for ${esc(GL.ans.open.name)}` : 'Åpne Vær'} ›</button>` : ''}${GL.ans?.open?.route === 'familie' ? '<button type="button" class="gl-chat" data-gl-fam>Vis på kart ›</button>' : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}</div>`;
-  return `<div class="gl-ans" data-gl-ans role="status" aria-live="polite" title="Trykk for å lukke">${body}</div>`;
+  // Prompt 38: lukkes med ✕, sveip opp eller trykk utenfor (laget under fanger trykket); trykk i boblen lukker ikke.
+  return `<div class="gl-ans" data-gl-ans role="status" aria-live="polite"><button type="button" class="gl-x" data-gl-x aria-label="Lukk svaret" title="Lukk (Esc)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>${body}<span class="gl-grab" aria-hidden="true"></span></div>`;
 }
 // Boblen ligger i et eget lag på <body> (over nyhetslinjen og kortene), plassert rett under søkefeltet som ble brukt.
 let ansForm = null;
@@ -309,11 +310,48 @@ function placeAns() {
   el.style.left = `${r.left + window.scrollX + (r.width - w) / 2}px`;
   el.style.top = `${r.bottom + window.scrollY + 10}px`;
 }
+/* Prompt 38: usynlig lag under boblen. Trykk (eller rull/touchmove) der lukker boblen og når ikke kortet under. */
+function scrim(on) {
+  let s = document.getElementById('gl-scrim');
+  if (!on) { s?.remove(); return; }
+  if (s) return;
+  s = document.createElement('div'); s.id = 'gl-scrim'; s.className = 'gl-scrim'; s.setAttribute('aria-hidden', 'true');
+  const shut = (e) => { e.preventDefault(); e.stopPropagation(); haptic(6); closeAns(); };
+  s.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); });
+  s.addEventListener('click', shut);
+  s.addEventListener('wheel', (e) => { closeAns(); e.stopPropagation(); }, { passive: true });
+  s.addEventListener('touchmove', (e) => { closeAns(); e.stopPropagation(); }, { passive: true });
+  document.body.appendChild(s);
+}
+/** Sveip opp på boblen (> 40 px) lukker med glid og fade; under terskelen spretter den tilbake. */
+function bindSwipe(el) {
+  if (el.dataset.glSw) return;
+  el.dataset.glSw = '1';
+  let st = null;
+  el.addEventListener('pointerdown', (e) => { if (e.button || e.target.closest('button, a') || getSelection()?.toString()) { st = null; return; } st = { y: e.clientY, x: e.clientX, id: e.pointerId, dy: 0 }; });
+  el.addEventListener('pointermove', (e) => {
+    if (!st || e.pointerId !== st.id) return;
+    st.dy = Math.min(0, e.clientY - st.y);
+    if (Math.abs(e.clientX - st.x) > 30 && st.dy > -10) { st = null; el.style.transform = ''; return; }
+    if (st.dy < -6) { const a = el.querySelector('.gl-ans'); if (a) { a.style.transition = 'none'; a.style.transform = `translateY(${st.dy}px)`; a.style.opacity = String(Math.max(0.3, 1 + st.dy / 160)); } }
+  });
+  const end = () => {
+    if (!st) return;
+    const dy = st.dy, a = el.querySelector('.gl-ans'); st = null;
+    if (!a) return;
+    if (dy < -40) { a.style.transition = 'transform .2s ease, opacity .2s ease'; a.style.transform = 'translateY(-60px)'; a.style.opacity = '0'; haptic(6); setTimeout(closeAns, 190); return; }
+    a.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .2s'; a.style.transform = ''; a.style.opacity = '';
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
 function paintAns() {
   let el = document.getElementById('gl-layer');
   const h = ansHtml();
+  scrim(!!h);
   if (!h) { el?.remove(); return; }
   if (!el) { el = document.createElement('div'); el.id = 'gl-layer'; el.className = 'gl-layer'; document.body.appendChild(el); }
+  bindSwipe(el);
   el.innerHTML = h;
   placeAns();
   clearInterval(placeT); placeT = setInterval(() => { if (!document.getElementById('gl-layer')) { clearInterval(placeT); placeT = 0; return; } placeAns(); }, 400);
@@ -442,8 +480,9 @@ export function bindSearch() {
   // Svarboblen: «Fortsett i Chat ›» åpner en ny samtale med spørsmålet; trykk ellers på boblen lukker den.
   document.addEventListener('click', (e) => {
     const b = e.target.closest?.('[data-gl-ans]');
-    if (!b) { if (GL.q && !GL.busy && !e.target.closest?.('[data-search],#aij-layer')) closeAns(); return; }
+    if (!b) return; // trykk utenfor håndteres av laget under boblen (gl-scrim)
     e.preventDefault(); e.stopPropagation();
+    if (e.target.closest('[data-gl-x]')) { haptic(6); closeAns(); return; }
     // Prompt 33: «Endre tittel på N avtaler?» etter «husk at Påhåret er frisøren min».
     if (e.target.closest('[data-gl-apply]')) {
       const ap = GL.ans?.apply;
@@ -462,7 +501,7 @@ export function bindSearch() {
     if (GL.ans?.open?.route === 'vaer' && !GL.busy && !e.target.closest('button:not([data-gl-wx])')) { const o = GL.ans.open; closeAns(); location.hash = wxRoute(o); return; }
     if (e.target.closest('[data-gl-retry]')) { const q = GL.q, f = ansForm; askGlimt(q, f); return; }
     if (e.target.closest('[data-gl-aictl]')) { closeAns(); import('./ai-control.js').then((m) => { m.openAiControl({ tab: 'ov', theme: document.documentElement.dataset.hlTheme === '2c' ? 'papir' : 'mork', admin: store.me?.me?.role === 'admin' }); m.runSelftest(); }).catch(() => {}); return; }
-    closeAns();
+    // Prompt 38: trykk ellers i boblen lukker den ikke (tekst kan markeres og leses).
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && GL.q && !document.getElementById('sq-eng-menu')) closeAns(); });
   window.addEventListener('hashchange', () => { if (GL.q && !GL.busy) closeAns(); });
@@ -535,8 +574,27 @@ export function bindSearch() {
 /* ---------- Nyhetslinje ---------- */
 
 // Hastighet 1–10: én runde tar 350 s / hastighet (standard 5 → 70 s).
+/* Prompt 38 (Hjem web 1c): i Vindu og papir ruller nyhetslinjen med ≈ 7 s per sak (min. 30 s) delt på farten.
+   Fartknappen ⏱ går 1 → 2 → 0,5 → 0 (stopp) → 1, lagres i hl_tick_sp. */
+const TICK_SP = [1, 2, 0.5, 0];
+export const tickSpeed = () => { try { const v = parseFloat(localStorage.getItem('hl_tick_sp') ?? '1'); return TICK_SP.includes(v) ? v : 1; } catch { return 1; } };
+const paper = () => document.documentElement.dataset.hl === '2c';
+export function cycleTick() {
+  const i = TICK_SP.indexOf(tickSpeed()), v = TICK_SP[(i + 1) % TICK_SP.length];
+  try { localStorage.setItem('hl_tick_sp', String(v)); } catch { /* */ }
+  applyTicker();
+}
 export function applyTicker() {
   const el = document.getElementById('ticker'), u = store.me.ui ?? {};
+  if (paper()) {
+    const n = Math.max(1, store.data.news?.items?.length ?? 6), sp = tickSpeed();
+    el.style.setProperty('--news-dur', `${Math.round(Math.max(30, 7 * n) / (sp || 1))}s`);
+    el.classList.toggle('t38-stop', sp === 0);
+    const b = el.querySelector('[data-tick-sp]');
+    if (b) { b.querySelector('.mono').textContent = sp === 0 ? 'Stopp' : `${String(sp).replace('.', ',')}×`; b.setAttribute('aria-label', `Fart på nyhetslinjen: ${sp === 0 ? 'stoppet' : `${String(sp).replace('.', ',')}×`}. Trykk for å endre`); }
+    el.classList.toggle('no-pause', false);
+    return;
+  }
   el.style.setProperty('--news-dur', Math.round(350 / (u.newsSpeed ?? 5)) + 's');
   el.classList.toggle('no-pause', u.newsPause === false);
   const sp = el.querySelector('.ticker-speed .mono');
@@ -551,8 +609,12 @@ export function renderTicker() {
   if (el.hidden) return;
   const list = items.map((n) => `<a href="${esc(n.url)}" target="_blank" rel="noopener"><span class="ticker-src" style="background:${esc(n.color)}">${esc(n.src)}</span><span data-no-i18n>${esc(n.title)}</span><span class="mono muted" style="font-size:12px">${hm(new Date(n.date))}</span></a>`).join('');
   // Listen dupliseres så rullingen går sømløst; kopien skjules for skjermlesere.
-  el.innerHTML = `<div class="ticker-label">SISTE NYTT</div><div class="ticker-view"><div class="ticker-track">${list}<span style="display:contents" aria-hidden="true">${list.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div>
-    <button class="ticker-speed" data-act="news-speed" title="Hastighet på nyhetsbaren" aria-label="Hastighet på nyhetsbaren"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0"/></svg><span class="mono">${store.me.ui?.newsSpeed ?? 5}</span></button>`;
+  const spBtn = paper()
+    ? `<button type="button" class="ticker-speed t38-sp" data-tick-sp title="Fart: 1× → 2× → 0,5× → stopp"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></svg><span class="mono"></span></button>`
+    : `<button class="ticker-speed" data-act="news-speed" title="Hastighet på nyhetsbaren" aria-label="Hastighet på nyhetsbaren"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0"/></svg><span class="mono">${store.me.ui?.newsSpeed ?? 5}</span></button>`;
+  el.innerHTML = `<div class="ticker-label" role="button" tabindex="0">SISTE NYTT</div><div class="ticker-view"><div class="ticker-track">${list}<span style="display:contents" aria-hidden="true">${list.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div>
+    ${spBtn}`;
+  applyTicker();
 }
 
 export function menuLabels() {

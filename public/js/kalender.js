@@ -22,6 +22,7 @@ import { addQuick, preview, quickLabel, setQuickHooks } from './kal-quick.js';
 import { glimt } from './glimt.js';
 import { LEARN_TYPES, typeName, addMemory, applyMemory, nameOfEvent, loadMemory, dinOf } from './glimt-memory.js'; // prompt 33
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
+import * as k38 from './kal38.js'; // prompt 38: År, zoom, Glimt-feltet og -assistenten, kart, ark/tastatur, app-modus (Mac)
 /** Prompt 31 (Kalender.dc.html): «Pilestredet park 35 U2005 https://link.mazemap.com/…» → «Pilestredet park 35 U2005». */
 export const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
 const urlIn = (t) => String(t ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
@@ -47,15 +48,16 @@ const SHORT = { 'Matematikk R2': 'Matte R2', 'Matematikk R1': 'Matte R1', 'Matem
 const REMS = [['none', 'Ingen'], ['15m', '15 min før'], ['1h', '1 time før'], ['day', 'Dagen før']];
 const REPS = [['none', 'Ingen'], ['daily', 'Hver dag'], ['weekly', 'Hver uke'], ['monthly', 'Hver måned']];
 // Visningene: [lokal id, navn, hurtigtast, serverens kalView]
-const VIEWS = [['dag', 'Dag', 'D', 'dag'], ['3d', '3 dager', '3', '3dager'], ['uke', 'Uke', 'W', 'uke'], ['mnd', 'Måned', 'M', 'maaned'], ['liste', 'Liste', 'L', 'liste']];
-const VIEW_LOC = { dag: 'dag', '3dager': '3d', '3d': '3d', uke: 'uke', maaned: 'mnd', mnd: 'mnd', liste: 'liste', agenda: 'liste' };
+// Prompt 38: samme rekkefølge som iPhone- og Mac-appen (År/Mnd/Uke/3 d/Dag/Liste). År lagres bare i nettleseren.
+const VIEWS = [['ar', 'År', 'Y', null], ['mnd', 'Måned', 'M', 'maaned'], ['uke', 'Uke', 'W', 'uke'], ['3d', '3 dager', '3', '3dager'], ['dag', 'Dag', 'D', 'dag'], ['liste', 'Liste', 'L', 'liste']];
+const VIEW_LOC = { dag: 'dag', '3dager': '3d', '3d': '3d', uke: 'uke', maaned: 'mnd', mnd: 'mnd', liste: 'liste', agenda: 'liste', ar: 'ar', aar: 'ar' };
 const VIEW_SRV = Object.fromEntries(VIEWS.map((v) => [v[0], v[3]]));
 const LKEY = 'hl_kal_v1';
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 
 const K = { data: null, err: '', loading: null, at: 0, fallback: false, prefs: false, range: null,
   view: 'uke', cur: null, filt: {}, rem: {}, subjC: {}, sel: null, form: null, srch: null, miniOff: 0, mini: false, delArm: false, toast: '', busy: false,
-  full: false, drawer: false, qa: null };
+  full: true, drawer: false, qa: null }; // prompt 38: fullskjerm er standard (som Mac-vinduet); «Med toppmeny» er et valg
 const QA_CHIPS = ['Frisør', 'Lege', 'Tannlege', 'Fysio'];
 // Smalt vindu (under 820 px, men ikke mobil): sidepanelet blir en skuff.
 const narrow = () => !isMobile() && matchMedia('(max-width: 819px)').matches;
@@ -87,10 +89,15 @@ export const semester = (d = new Date()) => `Skole · ${d.getMonth() >= 6 ? 'hø
 /* ---------------- Innstillinger per bruker ---------------- */
 
 function readLocal() { try { return JSON.parse(localStorage.getItem(LKEY) || 'null') ?? {}; } catch { return {}; } }
-function writeLocal() { try { localStorage.setItem(LKEY, JSON.stringify({ view: K.view, filt: K.filt, rem: K.rem, subjC: K.subjC, full: K.full })); } catch { /* privat modus */ } }
+function writeLocal() { try { localStorage.setItem(LKEY, JSON.stringify({ view: K.view, filt: K.filt, rem: K.rem, subjC: K.subjC, full: K.full })); localStorage.setItem('hl_kal_full', K.full ? '1' : '0'); } catch { /* privat modus */ } }
 function applyPrefs(p) {
   if (p.view && VIEW_LOC[p.view]) K.view = VIEW_LOC[p.view];
-  if (p.full === 'full' || p.full === 'menu') K.full = p.full === 'full'; else if (typeof p.full === 'boolean') K.full = p.full;
+  // Prompt 38: fullskjerm er standard. «Med toppmeny» gjelder bare når den er valgt her (hl_kal_full = '0', som i designet);
+  // serverens gamle standard «menu» overstyrer ikke lenger.
+  if (p.full === 'full' || p.full === true) K.full = true;
+  let lf = null; try { lf = localStorage.getItem('hl_kal_full'); } catch { /* */ }
+  if (lf === '0') K.full = false; else if (lf === '1') K.full = true;
+  if (k38.appMode()) K.full = true; // Mac-appen: alltid hele vinduet
   if (p.filt && typeof p.filt === 'object') K.filt = p.filt;
   if (p.rem && typeof p.rem === 'object') K.rem = p.rem;
   if (p.subjC && typeof p.subjC === 'object') K.subjC = p.subjC;
@@ -108,6 +115,7 @@ async function loadPrefs() {
 /** Lagrer ett felt i /api/me/layout. En eldre server (ukjent nøkkel) avviser det; da gjelder bare nettleseren. */
 function savePref(field, value) {
   writeLocal();
+  if (value == null && field === 'kalView') return; // År finnes ikke på serveren ennå
   api('/me/layout', { method: 'PUT', json: { [field]: value } }).catch(() => {});
 }
 export const subjectColors = () => K.subjC;
@@ -162,7 +170,9 @@ function normalize(r) {
       // Prompt 31: URL-er (f.eks. mazemap-lenker fra timeplan-importen) fjernes fra stedsteksten i alle korte visninger;
       // lenken vises som «Åpne kart ↗» i detaljarket. rRaw beholdes til redigering.
       r: noUrl(x.room || x.location || ''), rRaw: x.room || x.location || '', rUrl: urlIn(x.room || x.location || ''), teacher: x.teacher || '', n: x.note || '', c: x.color || '', sc: x.subjectColor || '', sk: x.subjectKey || '', src: x.source || '', url: x.url || '', map: x.mazemap || '',
-      editable: !!x.editable, rep: x.repeat || (x.recurrence ? 'rec' : ''), recurrence: x.recurrence || null, srvRem: x.reminder || '', all: !!x.allDay, startRaw: x.start, endRaw: x.end };
+      editable: !!x.editable, rep: x.repeat || (x.recurrence ? 'rec' : ''), recurrence: x.recurrence || null, srvRem: x.reminder || '', all: !!x.allDay, startRaw: x.start, endRaw: x.end,
+      // Prompt 38: adresse og kart (kal37: address, map:{lat, lon, url, appleUrl, googleUrl, label}) og serverens kind (trial ≠ prøve).
+      addr: x.address || '', gmap: x.map && typeof x.map === 'object' ? x.map : null, k37: x.kind || '' };
     if (x.allDay) {
       // Heldagshendelser over flere dager: én oppføring per dag (slutt er eksklusiv).
       let d = d0(st), n = 0;
@@ -407,8 +417,10 @@ function detailSheet() {
   const map = e.rUrl || e.map || (e.r && /^[A-Z]{1,2}-?\d|aula|hall|gym|bibl|rom\b|sal\b/i.test(e.r) && e.kind !== 'bursdag' ? `https://use.mazemap.com/#v=1&search=${encodeURIComponent(e.r)}` : '');
   const src = e.editable ? `Lagret i Google Kalender (${cal.name}).` : cal.src ? `Fra ${cal.src}. Endres i kilden.` : '';
   return `<div class="k2-sheet-bg" data-k-close><div class="k2-sheet" role="dialog" aria-modal="true" aria-label="${esc(e.t)}" style="--c:${esc(col(e))}">
+    <span class="k2-grip k38-grip" aria-hidden="true"></span>
     <div class="k2-det-h"><span class="k2-strip"></span><div class="k2-grow"><span class="k2-lab">${esc(kk)}</span><b data-no-i18n>${esc(e.t)}</b><span>${esc(`${longDate(sd)} · `)}${esc(tmOf(e))}</span></div><button type="button" class="k2-x" data-k-close aria-label="Lukk">✕</button></div>
     <div class="k2-rows">${rows.map(([a, b, u]) => `<div><span>${esc(a)}</span><b${u ? ' data-no-i18n' : ''}>${esc(b)}</b></div>`).join('')}</div>
+    ${k38.detailMap(e)}
     <span class="k2-lab">VARSEL</span><div class="k2-chips">${REMS.map(([v, n]) => `<button type="button" class="k2-chip${R === v ? ' on' : ''}" data-k-rem="${v}" aria-pressed="${R === v}">${n}</button>`).join('')}</div>
     ${src ? `<span class="k2-src">${esc(src)}</span>` : ''}
     ${e.editable ? '<button type="button" class="k2-link k2-learn" data-k-learn>Lær Glimt hva dette er…</button>' : ''}
@@ -481,6 +493,7 @@ function formSheet() {
   const chip = (on, attr, n, c) => `<button type="button" class="k2-chip${on ? ' on' : ''}" ${attr} aria-pressed="${on}">${c ? `<i style="background:${esc(c)}"></i>` : ''}${esc(n)}</button>`;
   const wcals = calList().filter((c) => c.writable !== false && (c.id === 'privat' || c.id === 'familie'));
   return `<div class="k2-sheet-bg" data-k-fclose><div class="k2-sheet" role="dialog" aria-modal="true" aria-label="${F.id ? 'Rediger hendelse' : 'Ny hendelse'}">
+    <span class="k2-grip k38-grip" aria-hidden="true"></span>
     <div class="k2-det-h"><b class="k2-grow k2-fh">${F.id ? 'Rediger hendelse' : 'Ny hendelse'}</b><button type="button" class="k2-x" data-k-fclose aria-label="Lukk">✕</button></div>
     ${fmAiHtml(F)}
     <form class="k2-form" data-k-form>
@@ -835,6 +848,7 @@ function markHi() {
 
 function titleOf(vis) {
   const a = vis.st, b = vis.end;
+  if (K.view === 'ar') return { t: String(a.getFullYear()), y: '' };
   if (K.view === 'mnd' || K.view === 'liste' || a.getMonth() === b.getMonth()) return { t: capf(monthName(a.getMonth())), y: String(a.getFullYear()) };
   return { t: `${capf(monthName(a.getMonth(), 'short').replace('.', ''))}–${monthName(b.getMonth(), 'short').replace('.', '')}`, y: String(b.getFullYear()) };
 }
@@ -843,21 +857,21 @@ function body() {
   if (K.err && !K.data) return `<div class="k2-msg">Kunne ikke hente kalenderen: ${esc(K.err)}<br><button type="button" class="k2-b line" data-k-retry>Prøv igjen</button></div>`;
   if (!K.data) return '<div class="k2-msg">Laster kalenderen …</div>';
   const now = new Date(), today = d0(now), mob = isMobile(), V = K.view;
-  const vis = V === 'mnd' ? monthView(today) : V === 'liste' ? listView(today) : gridView(now, today);
+  const vis = V === 'ar' ? k38.yearView(today) : V === 'mnd' ? monthView(today) : V === 'liste' ? listView(today) : gridView(now, today);
   ensureRange(key(add(vis.st, -7)), key(add(vis.end, 7)));
   const nx = nextModel(now, today), tt = titleOf(vis), nar = narrow();
   const tabs = `<div class="k2-tabs" role="tablist">${VIEWS.map(([k, n, kk]) => `<button type="button" role="tab" aria-selected="${V === k}" class="${V === k ? 'on' : ''}" data-k-view="${k}" title="Hurtigtast ${kk}">${n}</button>`).join('')}</div>`;
   const FULL_IC = K.full ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', fullL = K.full ? 'Vis med toppmeny' : 'Fullskjerm';
   const top = `<div class="k2-top">
     ${nar ? `<button type="button" class="k2-ic k2-drw" data-k-drawer aria-label="Minikalender og kalendere" aria-expanded="${K.drawer}" title="Minikalender og kalendere"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3.5v4M16 3.5v4M9 10v10"/></svg></button>` : ''}
-    <button type="button" class="k2-title" data-k-titl aria-expanded="${K.mini}"><span data-no-i18n>${esc(tt.t)}</span><span class="k2-year">${esc(tt.y)}</span>${mob ? `<span class="k2-arr">${K.mini ? '▲' : '▼'}</span>` : ''}</button>
+    <button type="button" class="k2-title" data-k-titl aria-expanded="${K.mini}"${mob ? '' : ` title="${K.view === 'ar' ? 'År' : 'Zoom ut'}"`}><span data-no-i18n>${esc(tt.t)}</span><span class="k2-year">${esc(tt.y)}</span>${mob ? `<span class="k2-arr">${K.mini ? '▲' : '▼'}</span>` : ''}</button>
     <span class="k2-sp"></span>
     ${mob || nar ? '' : `<div class="k2-nav"><button type="button" class="k2-circ" data-k-nav="-1" aria-label="Forrige">‹</button><button type="button" class="k2-circ" data-k-nav="1" aria-label="Neste">›</button></div>${tabs}`}
     <button type="button" class="k2-ic" data-k-search aria-label="Søk i kalenderen" title="Søk ( / )"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
     <button type="button" class="k2-ic k2-today" data-k-today aria-label="I dag" title="I dag (T)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3.5v4M16 3.5v4"/></svg><span>${today.getDate()}</span></button>
     <button type="button" class="k2-qbtn" data-k-qa title="Skriv time med AI">${mob ? '✦' : '✦ Skriv time'}</button>
     <button type="button" class="k2-new" data-k-new title="Ny hendelse (N)">${mob ? '+' : '<span class="k2-lg">+ Ny hendelse</span><span class="k2-sm">+ Ny</span>'}</button>
-    ${mob ? '' : `<button type="button" class="k2-sq" data-k-full aria-label="${fullL}" title="${fullL}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${FULL_IC}"/></svg></button>
+    ${mob || k38.appMode() ? '' : `<button type="button" class="k2-sq" data-k-full aria-label="${fullL}" title="${fullL}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${FULL_IC}"/></svg></button>
     <button type="button" class="k2-sq ink" data-k-closecal aria-label="Lukk kalenderen" title="Lukk${K.full ? ' (Esc)' : ''}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`}
   </div>${mob || nar ? `<div class="k2-mtabs"><div class="k2-nav"><button type="button" class="k2-circ" data-k-nav="-1" aria-label="Forrige">‹</button><button type="button" class="k2-circ" data-k-nav="1" aria-label="Neste">›</button></div>${tabs}</div>` : ''}`;
   const drop = mob && K.mini ? `<div class="k2-drop">${miniCal(today, vis)}<div class="k2-cchips">${calFilters(true)}</div></div>` : '';
@@ -868,9 +882,9 @@ function body() {
       <span class="k2-now-t"><b data-no-i18n>${esc(nx.t)}</b>${nx.pl ? `<span class="k2-now-pl" data-no-i18n>${esc(nx.pl)}</span>` : ''}</span></span>
     ${nx.wB ? `<span class="k2-now-r"><b>${esc(nx.wB)}</b><span>${esc(nx.wS)}</span></span>` : ''}
     ${nx.prog ? `<span class="k2-now-p" aria-hidden="true"><i style="width:${nx.pct}%"></i></span>` : ''}</button>`;
-  const side = mob ? '' : `${nar && K.drawer ? '<div class="k2-drw-bg" data-k-drawer></div>' : ''}<aside class="k2-side${nar ? ` drawer${K.drawer ? ' open' : ''}` : ''}">${miniCal(today, vis)}<div class="k2-cals"><span class="k2-lab">KALENDERE</span>${calFilters()}<button type="button" class="k2-b line sm" data-k-set>Farger, iCal og Home Assistant ›</button></div>
-    <span class="k2-keys">Hurtigtaster: ← → bla · T i dag · D dag · W uke · M måned · L liste · N ny · / søk</span>${K.fallback ? '<span class="k2-keys">Eldre server: bare skolens iCal og Bursdager.</span>' : ''}</aside>`;
-  return `${K.toast ? `<div class="k2-toast" role="status">${esc(K.toast)}</div>` : ''}${top}${drop}${strip}<div class="k2-main">${side}<div class="k2-view" data-k-swipe>${vis.html}</div></div>${detailSheet()}${formSheet()}${searchSheet()}${qaSheet()}${learnSheet()}`;
+  const side = mob ? '' : `${nar && K.drawer ? '<div class="k2-drw-bg" data-k-drawer></div>' : ''}<aside class="k2-side${nar ? ` drawer${K.drawer ? ' open' : ''}` : ''}">${miniCal(today, vis)}<div class="k2-cals"><span class="k2-lab">KALENDERE</span>${calFilters()}<button type="button" class="k2-b line sm" data-k-set>Farger, iCal og Home Assistant ›</button>${k38.appMode() ? '<button type="button" class="k2-b line sm" data-k38-macset>Mac-innstillinger …</button>' : ''}</div>
+    <span class="k2-keys">Hurtigtaster: ← → bla · T i dag · Y år · M måned · W uke · D dag · L liste · N ny · / søk · ⌘/Ctrl + rull: zoom</span>${K.fallback ? '<span class="k2-keys">Eldre server: bare skolens iCal og Bursdager.</span>' : ''}</aside>`;
+  return `${K.toast ? `<div class="k2-toast" role="status">${esc(K.toast)}</div>` : ''}${top}${drop}${strip}<div class="k2-main">${side}<div class="k38-vw"><div class="k2-view k38-v-${V}" data-k-swipe>${vis.html}</div>${k38.glimtBar()}</div></div>${k38.glimtPanel()}${k38.gotoSheet(today)}${detailSheet()}${formSheet()}${searchSheet()}${qaSheet()}${learnSheet()}`;
 }
 
 function scrollGrid(h) {
@@ -890,9 +904,18 @@ function paint() {
   const sc = h.querySelector('[data-k-scroll]'), y = sc?.scrollTop ?? 0, lst = h.querySelector('[data-k-list]')?.scrollTop ?? 0;
   const ae = document.activeElement, focusQ = ae?.matches?.('[data-k-q]'), selS = focusQ ? ae.selectionStart : 0;
   const focusQa = ae?.matches?.('[data-k-qtxt]'), selQa = focusQa ? ae.selectionStart : 0;
+  // Prompt 38: Glimt-feltet og -panelet beholder fokus og markør gjennom en ny tegning.
+  const focusBar = ae?.matches?.('[data-k38-bar]'), selBar = focusBar ? ae.selectionStart : 0, focusGq = ae?.matches?.('[data-k38-gq]'), selGq = focusGq ? ae.selectionStart : 0;
+  const glb = h.querySelector('[data-k38-glb]')?.scrollTop ?? null;
   applyFull();
+  h.classList.toggle('k38-nowk', !!K.noWeeks); h.classList.toggle('k38-noside', !!K.noSide);
   h.innerHTML = body();
   fitHeight();
+  k38.applyZoom(h);
+  if (focusBar || k38.G.focusBar) { const q = h.querySelector('[data-k38-bar]'); if (q) { q.focus({ preventScroll: true }); const n = focusBar ? selBar : q.value.length; try { q.setSelectionRange(n, n); } catch { /* */ } } k38.G.focusBar = false; }
+  if (focusGq || k38.G.focusGq) { const q = h.querySelector('[data-k38-gq]'); if (q) { q.focus({ preventScroll: true }); const n = focusGq ? selGq : q.value.length; try { q.setSelectionRange(n, n); } catch { /* */ } } k38.G.focusGq = false; }
+  const glb2 = h.querySelector('[data-k38-glb]'); if (glb2) glb2.scrollTop = glb == null ? glb2.scrollHeight : glb;
+  k38.noteView(K.view, h.querySelector('.k2-title')?.textContent?.trim() ?? '');
   const sc2 = h.querySelector('[data-k-scroll]');
   if (sc2 && gridKey === `${K.view}|${K.cur ?? ''}|${isMobile()}`) sc2.scrollTop = y; else scrollGrid(h);
   const l2 = h.querySelector('[data-k-list]'); if (l2 && lst) l2.scrollTop = lst;
@@ -916,6 +939,7 @@ function fitHeight() {
   h.style.setProperty('--k2-top', `${top}px`);
 }
 function closeCal() {
+  if (k38.appMode()) return; // Mac-appen: vinduet lukkes med den røde knappen, ikke her
   closeSheets(); K.drawer = false;
   document.body.classList.remove('kal-fs');
   location.hash = '#/dash';
@@ -924,11 +948,13 @@ function flash(tx) { K.toast = tx; paint(); clearTimeout(toastT); toastT = setTi
 
 function shift(dir) {
   const c = curD();
-  const n = K.view === 'mnd' ? new Date(c.getFullYear(), c.getMonth() + dir, 1, 12) : add(c, dir * ({ dag: 1, '3d': 3, uke: 7, liste: 14 }[K.view] ?? 1));
+  const n = K.view === 'ar' ? new Date(c.getFullYear() + dir, c.getMonth(), 1, 12) : K.view === 'mnd' ? new Date(c.getFullYear(), c.getMonth() + dir, 1, 12) : add(c, dir * ({ dag: 1, '3d': 3, uke: 7, liste: 14 }[K.view] ?? 1));
   K.cur = key(n); K.sel = null; K.miniOff = 0; paint();
 }
-function setView(v, cur) {
-  if (!VIEW_SRV[v]) return;
+function setView(v, cur, ev, dir) {
+  if (!(v in VIEW_SRV)) return;
+  // Prompt 38: zoom-overgang fra pekeren (inn = mer detaljer, ut = oversikt), som i iPhone-appen.
+  if (v !== K.view || dir) k38.markZoom(dir || k38.zoomDir(K.view, v), ev);
   // Bytter man visning selv mens adressen er en dag, blir adressen #/kalender igjen.
   if (v !== 'dag' && DAY_RE.test(location.hash)) { dayBack = null; try { history.replaceState(history.state, '', '#/kalender'); } catch { /* */ } }
   K.view = v; K.sel = null; K.mini = false; K.miniOff = 0;
@@ -945,7 +971,7 @@ function openDay(k) {
   if (K.view === 'dag' && DAY_RE.test(location.hash)) { try { history.replaceState(history.state, '', `#/kalender/dag/${k}`); } catch { /* */ } setView('dag', k); return; }
   dayBack = { v: K.view, c: K.cur };
   try { history.pushState({ kalDay: k }, '', `#/kalender/dag/${k}`); } catch { /* */ }
-  setView('dag', k);
+  setView('dag', k, openDay.ev, 'in');
 }
 /** Leser adressen: #/kalender/dag/<dato> → Dag; tilbake til #/kalender etter et dag-klikk → forrige visning. */
 function applyHash() {
@@ -986,7 +1012,7 @@ function readForm(f) {
 async function call(path, method, json) {
   const r = await fetch('/api' + path, { method, headers: json ? { 'Content-Type': 'application/json' } : {}, body: json ? JSON.stringify(json) : undefined });
   const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => ({})) : {};
-  if (r.status === 401) location.href = '/login';
+  if (r.status === 401) { if (!k38.appMode() || !k38.toNative({ type: 'logout' })) location.href = '/login'; }
   return { ok: r.ok, status: r.status, d };
 }
 async function saveForm(f) {
@@ -1008,6 +1034,7 @@ async function saveForm(f) {
     const id = r.d?.id ?? r.d?.event?.id;
     if (F.rem && id) { K.rem = { ...K.rem, [id]: F.rem }; savePref('kalReminders', { [id]: F.rem }); }
     K.form = null; K.cur = F.k;
+    k38.noteChanged(F.id ? 'updated' : 'created');
     flash(F.id ? 'Hendelsen er oppdatert' : 'Hendelsen er lagret');
     // Prompt 33: ny tittel på en rask time → foreslå å huske avsenderen (lagres bare hvis brukeren trykker Husk).
     const sg = r.d?.suggestMemory;
@@ -1021,12 +1048,13 @@ async function delEvent(e) {
   const r = await call(`/kalender/events/${encodeURIComponent(e.oid || e.id)}`, 'DELETE').catch((x) => ({ ok: false, d: { error: x.message } }));
   if (!r.ok) { K.err2 = r.d?.error || 'Kunne ikke slette hendelsen.'; return paint(); }
   K.sel = null; K.err2 = '';
+  k38.noteChanged('deleted');
   flash('Hendelsen er slettet');
   ensureKal(true);
 }
 async function copyEvent(e) {
   const r = await call(`/kalender/events/${encodeURIComponent(e.oid || e.id)}/copy`, 'POST', { calendar: 'privat' }).catch(() => ({ ok: false, status: 0, d: {} }));
-  if (r.ok) { K.sel = null; flash('Kopiert til Privat'); ensureKal(true); return; }
+  if (r.ok) { K.sel = null; k38.noteChanged('created'); flash('Kopiert til Privat'); ensureKal(true); return; }
   if (r.status === 409 || r.d?.reconnect) { K.err2 = r.d?.error || 'Google Kalender må kobles til på nytt for å kunne skrive.'; return paint(); }
   // Eldre server: åpne skjemaet ferdig utfylt.
   openForm({ t: e.t, k: e.k, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: !e.s, cal: 'privat', r: e.rRaw ?? e.r, n: e.n });
@@ -1071,18 +1099,36 @@ function bind(h) {
   h.dataset.kBound = '1';
   // Sveip bytter periode (mobil).
   let sw = null;
-  h.addEventListener('touchstart', (e) => { sw = e.target.closest('[data-k-swipe]') && e.touches.length === 1 && K.view !== 'liste' ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });
+  h.addEventListener('touchstart', (e) => {
+    if (k38.touchStart(e)) { sw = null; return; } // prompt 38: to fingre = zoom
+    sw = e.target.closest('[data-k-swipe]') && e.touches.length === 1 && K.view !== 'liste' ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  }, { passive: true });
+  h.addEventListener('touchmove', k38.touchMove, { passive: true });
+  h.addEventListener('wheel', k38.onWheel, { passive: false });
+  k38.bindSheetDrag(h, () => { if (!closeSheets()) k38.closeGlimt(); });
+  h.addEventListener('focusin', (e) => { if (e.target.matches?.('[data-k38-bar]') && !k38.G.sug) { k38.G.sug = true; k38.paintBar(h); } });
+  h.addEventListener('focusout', (e) => { if (e.target.matches?.('[data-k38-bar]')) setTimeout(() => { if (!h.contains(document.activeElement) || !document.activeElement?.closest?.('[data-k38-gbar]')) { k38.G.sug = false; k38.paintBar(host()); } }, 160); });
   h.addEventListener('touchend', (e) => {
+    if (k38.touchEnd()) { sw = null; return; }
     if (!sw) return;
     const dx = e.changedTouches[0].clientX - sw.x, dy = e.changedTouches[0].clientY - sw.y; sw = null;
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45) shift(dx < 0 ? 1 : -1);
   });
   h.addEventListener('input', (e) => {
+    if (e.target.matches('[data-k38-bar]')) { k38.G.bar = e.target.value; k38.paintBar(h); return; }
+    if (e.target.matches('[data-k38-gq]')) { k38.G.gq = e.target.value; return; }
     if (e.target.matches('[data-k-q]')) runSearch(e.target.value);
     if (e.target.matches('[data-k-ai]') && K.form) { K.form.ai = e.target.value; if (K.form.aiS && !K.form.aiS.busy) K.form.aiS = {}; const b = host()?.querySelector('[data-k-airun]'); if (b) { const on = !!e.target.value.trim(); b.classList.toggle('on', on); if (on) b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true'); } }
     if (e.target.matches('[data-k-qtxt]') && K.qa) { K.qa.txt = e.target.value; K.qa.err = ''; clearTimeout(qaT); qaT = setTimeout(paintQa, 120); }
   });
   h.addEventListener('keydown', (e) => {
+    // Prompt 38: Enter i Glimt-feltet legger til hendelsen eller spør Glimt; Esc tømmer og forlater feltet.
+    if (e.target.matches?.('[data-k38-bar]') && !e.isComposing && e.keyCode !== 229) {
+      if (e.key === 'Enter') { e.preventDefault(); k38.G.bar = e.target.value; k38.G.focusBar = true; k38.submitBar(e.shiftKey ? 'ask' : ''); return; }
+      if (e.key === 'Escape' && k38.G.open) { e.preventDefault(); e.stopPropagation(); k38.closeGlimt(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); k38.G.bar = ''; k38.G.sug = false; e.target.value = ''; k38.paintBar(h); e.target.blur(); return; }
+    }
+    if (e.target.matches?.('[data-k38-gq]') && e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); k38.closeGlimt(); return; }
     if (e.target.matches?.('[data-k-qtxt]') && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submitQa(); }
     if (e.target.matches?.('[data-k-ai]') && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); runFmAi(); }
     // Prompt 34: Enter i søkefeltet spør Glimt (eller åpner markert rad), Esc lukker. Ikke via <form onsubmit>.
@@ -1105,6 +1151,8 @@ function bind(h) {
     }
   });
   h.addEventListener('submit', (e) => {
+    if (e.target.closest('[data-k38-gtform]')) { e.preventDefault(); const v = e.target.querySelector('input')?.value; k38.G.goto = false; if (/^\d{4}-\d{2}-\d{2}$/.test(v ?? '')) { K.cur = v; gridKey = ''; if (K.view === 'liste') K.view = 'dag'; } paint(); return; }
+    if (e.target.closest('[data-k38-gform]')) { e.preventDefault(); const v = e.target.querySelector('[data-k38-gq]')?.value ?? k38.G.gq; k38.G.focusGq = true; k38.send(v); return; }
     if (e.target.closest('[data-k-qform]')) { e.preventDefault(); submitQa(); return; }
     if (e.target.closest('[data-k-srform]')) {
       e.preventDefault();
@@ -1122,9 +1170,20 @@ function bind(h) {
     if (bg && tg === bg) { closeSheets(); return; }
     if (tg.classList?.contains('k3-sr-bg')) { closeSheets(); return; }
     if (tg.closest('.k2-drw-bg')) { K.drawer = false; paint(); return; }
+    if (tg.closest('[data-k38-gclose]')) { k38.closeGlimt(); return; }
+    if (tg.closest('[data-k38-gtclose]') && (tg.matches('.k2-sheet-bg') || tg.closest('button'))) { k38.G.goto = false; paint(); return; }
+    if (tg.closest('[data-k38-macset]')) { k38.toNative({ type: 'macSettings' }); return; }
     const b = tg.closest('button,[data-k-tap]');
     if (!b || !h.contains(b)) return;
     const d = b.dataset;
+    // Prompt 38: Glimt-feltet, -panelet, År og zoom.
+    if ('k38Gopen' in d) return k38.openGlimt();
+    if ('k38Bsend' in d) { const v = host()?.querySelector('[data-k38-bar]')?.value ?? k38.G.bar; k38.G.bar = v; return k38.submitBar('ask'); }
+    if ('k38Badd' in d) { const v = host()?.querySelector('[data-k38-bar]')?.value ?? k38.G.bar; k38.G.bar = v; return k38.submitBar(); }
+    if (d.k38Sug) { k38.G.bar = ''; k38.G.sug = false; return k38.send(k38.SUG[+d.k38Sug]); }
+    if (d.k38Slot) { const [k, a, z] = d.k38Slot.split('|'); k38.closeGlimt(); return openForm({ k, s: hmM(+a), e: hmM(+z) }); }
+    if (d.kMo) return setView('mnd', d.kMo, e, 'in');
+    if ('kTitl' in d && !isMobile()) { const z = k38.TITLE_OUT[K.view]; if (z && z !== K.view) setView(z, undefined, e, 'out'); return; }
     if ('kLclose' in d) { K.learn = null; paint(); return; }
     if ('kClose' in d || 'kSclose' in d || 'kFclose' in d || 'kQclose' in d) { closeSheets(); return; }
     if ('kLearn' in d) { const ev = findEv(K.sel); if (ev) { K.sel = null; openLearn(ev); } return; }
@@ -1142,7 +1201,7 @@ function bind(h) {
     // Prompt 35: farger, vis/skjul, skjul fra menyen, + iCal og + Home Assistant (kal-manage35.js).
     if ('kSet' in d) { import('./kal-manage35.js').then((m) => m.openCalManager({ onChange: () => ensureKal(true).then(paint) })).catch(() => openSettings('kal')); return; }
     if ('kReconnect' in d) { K.form = null; paint(); openSettings('kal'); return; }
-    if (d.kView) return setView(d.kView);
+    if (d.kView) return setView(d.kView, d.kView === 'liste' ? key(d0(new Date())) : undefined, e);
     if (d.kNav) return shift(+d.kNav);
     if ('kToday' in d) return goToday();
     if ('kNew' in d) return openForm();
@@ -1158,11 +1217,11 @@ function bind(h) {
     // Minikalender: på web → Dag. Mobil (nedtrekk): Dag/3 dager/Uke beholdes og hopper til datoen; fra Måned/Liste → Dag.
     if (d.kGo) {
       K.mini = false; K.drawer = false; K.miniOff = 0;
-      if (!isMobile() || K.view === 'mnd' || K.view === 'liste') return openDay(d.kGo);
+      if (!isMobile() || K.view === 'mnd' || K.view === 'liste' || K.view === 'ar') { openDay.ev = e; const r = openDay(d.kGo); openDay.ev = null; return r; }
       haptic(8); K.cur = d.kGo; return paint();
     }
     if (d.kCal) { K.filt = { ...K.filt, [d.kCal]: !shownCal(d.kCal) }; savePref('kalFilters', K.filt); return paint(); }
-    if (d.kDay) return openDay(d.kDay);
+    if (d.kDay) { openDay.ev = e; const r = openDay(d.kDay); openDay.ev = null; return r; }
     if (d.kSel) {
       K.sel = d.kSel; K.delArm = false; K.err2 = '';
       // Prompt 33: «sist viste hendelse» for Glimt («det var frisør»). Svaret trengs ikke.
@@ -1188,7 +1247,9 @@ function bind(h) {
 }
 function readFormSafe() { const f = host()?.querySelector('[data-k-form]'); if (f && K.form) readForm(f); }
 function closeSheets() {
-  if (!K.sel && !K.form && !K.srch && !K.mini && !K.qa && !K.drawer && !K.learn) return false;
+  // Prompt 38: arkene ligger over Glimt-panelet; Esc lukker arket først, så panelet.
+  if (k38.G.goto) { k38.G.goto = false; paint(); return true; }
+  if (!K.sel && !K.form && !K.srch && !K.mini && !K.qa && !K.drawer && !K.learn) return k38.closeGlimt();
   K.sel = null; K.form = null; K.srch = null; K.mini = false; K.qa = null; K.drawer = false; K.delArm = false; K.err2 = ''; K.learn = null;
   clearTimeout(sTimer); sCtl?.abort();
   paint();
@@ -1201,6 +1262,7 @@ function bindKeys() {
   window.addEventListener('keydown', (e) => {
     if (!host() || e.defaultPrevented) return;
     // Cmd/Ctrl+K åpner søket (også fra et felt).
+    if (k38.appMode() && e.metaKey) return; // Mac-appen sender ⌘-snarveiene selv (kalApp.cmd)
     if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k' && !(document.getElementById('settings') && !document.getElementById('settings').hidden)) { e.preventDefault(); if (!K.srch) openSearch(); else host()?.querySelector('[data-k-q]')?.focus(); return; }
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (document.getElementById('settings') && !document.getElementById('settings').hidden) return;
@@ -1208,13 +1270,13 @@ function bindKeys() {
     if (e.key === 'Escape') {
       if (/INPUT|TEXTAREA|SELECT/.test(tag) && e.target.value && e.target.closest('[data-sf]')) return;
       if (closeSheets()) { e.preventDefault(); return; }
-      // Esc i fullskjerm = ✕ (lukker kalenderen og går til Dashboard).
-      if (K.full && !isMobile()) { e.preventDefault(); closeCal(); }
+      // Esc i fullskjerm = ✕ (lukker kalenderen og går til Dashboard). Ikke i Mac-appen.
+      if (K.full && !isMobile() && !k38.appMode()) { e.preventDefault(); closeCal(); }
       return;
     }
     if (/INPUT|TEXTAREA|SELECT/.test(tag) || e.target?.isContentEditable) return;
-    if (K.form || K.srch || K.sel || K.qa) return;
-    const k = e.key.toLowerCase(), V = { d: 'dag', 3: '3d', w: 'uke', m: 'mnd', l: 'liste' };
+    if (K.form || K.srch || K.sel || K.qa || k38.G.open) return;
+    const k = e.key.toLowerCase(), V = { d: 'dag', 3: '3d', w: 'uke', m: 'mnd', l: 'liste', y: 'ar', å: 'ar' };
     if (e.key === 'ArrowLeft') shift(-1);
     else if (e.key === 'ArrowRight') shift(1);
     else if (k === 't') goToday();
@@ -1239,14 +1301,56 @@ function startTick() {
     const h = host(), w = document.querySelector('[data-w="d_kal"],[data-w="p_kal"]');
     if (!h && !w) return;
     if (Date.now() - K.at > 10 * 60_000) ensureKal();
-    if (h && !K.form && !K.srch && !K.qa) paint();
+    const typing = document.activeElement?.matches?.('[data-k38-bar],[data-k38-gq]');
+    if (h && !K.form && !K.srch && !K.qa && !k38.G.open && !typing) paint();
     refresh('d_kal', 'p_kal');
   }, 30_000);
 }
 
+/* Prompt 38: kontekst til kal38.js og window.kalApp for Mac-appen (⌘N, ⌘T, ⌘1–5, ⌘F, ⌘,). */
+k38.initKal38({ K, evOn, col, short, key, add, d0, mm, hmM, fromKey, curD, calById, noUrl, longDate: dLong,
+  paint: () => paint(), openDay, setView, openForm, askServer,
+  ensureNow: async () => { const td = d0(new Date()); ensureRange(key(add(td, -31)), key(add(td, 121))); if (K.loading) await K.loading.catch(() => {}); } });
+const APP_VIEWS = { 1: 'dag', 2: 'uke', 3: 'mnd', 4: 'ar', 5: 'liste', aar: 'ar', 'år': 'ar', maaned: 'mnd', maned: 'mnd', '3dager': '3d', agenda: 'liste' };
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+/** Mac-appen (KAL38): kalApp.cmd('new' | 'new:YYYY-MM-DD' | 'today' | 'search' | 'settings' | 'view:dag|3d|uke|mnd|ar|liste' | 'prev' | 'next'
+ *  | 'date:YYYY-MM-DD' | 'event:<id>' | 'glimt' | 'glimt:<spørsmål>' | 'sidebar' | 'goto' | 'newcal' | 'weeks:1|0' | 'close' | 'refresh'). */
+function appCmd(c) {
+  if (!host()) { location.hash = '#/kalender'; setTimeout(() => appCmd(c), 150); return true; }
+  const i = c.indexOf(':'), a = i < 0 ? c : c.slice(0, i), b = i < 0 ? '' : c.slice(i + 1);
+  switch (a) {
+    case 'new': closeSheets(); k38.closeGlimt(); openForm(ISO.test(b) ? { k: b } : {}); return true;
+    case 'today': closeSheets(); goToday(); return true;
+    case 'view': { const v = APP_VIEWS[b] ?? b; if (!(v in VIEW_SRV)) return false; closeSheets(); setView(v, v === 'liste' ? key(d0(new Date())) : undefined); return true; }
+    case 'date': case 'goto': {
+      if (ISO.test(b)) { closeSheets(); K.cur = b; K.sel = null; gridKey = ''; if (K.view === 'liste') K.view = 'dag'; paint(); return true; }
+      closeSheets(); k38.G.goto = true; paint(); setTimeout(() => host()?.querySelector('[data-k38-gtform] input')?.focus(), 30); return true;
+    }
+    case 'event': {
+      const e = findEv(b) ?? [...(K.data?.byId.values() ?? [])].find((x) => x.oid === b);
+      if (!e) { ensureKal(true).then(() => { const x = findEv(b) ?? [...(K.data?.byId.values() ?? [])].find((y) => y.oid === b); if (x) { K.cur = x.k; K.sel = x.id; gridKey = ''; paint(); } }); return true; }
+      closeSheets(); K.cur = e.k; K.sel = e.id; gridKey = ''; paint(); return true;
+    }
+    case 'search': if (!K.srch) openSearch(); else host()?.querySelector('[data-k-q]')?.focus(); return true;
+    case 'settings': closeSheets(); openSettings('kal'); return true;
+    case 'glimt': closeSheets(); k38.openGlimt(b || undefined); return true;
+    case 'sidebar': K.noSide = !K.noSide; try { localStorage.setItem('kal_side38', K.noSide ? '0' : '1'); } catch { /* */ } paint(); return true;
+    case 'weeks': K.noWeeks = b === '0' ? true : b === '1' ? false : !K.noWeeks; try { localStorage.setItem('kal_weeks38', K.noWeeks ? '0' : '1'); } catch { /* */ } paint(); return true;
+    case 'newcal': closeSheets(); import('./kal-manage35.js').then((m) => m.openCalManager({ onChange: () => ensureKal(true).then(paint) })).catch(() => openSettings('kal')); return true;
+    case 'prev': shift(-1); return true;
+    case 'next': shift(1); return true;
+    case 'refresh': ensureKal(true); return true;
+    case 'close': return closeSheets() || true;
+    default: return false;
+  }
+}
+try { K.noSide = localStorage.getItem('kal_side38') === '0'; K.noWeeks = localStorage.getItem('kal_weeks38') === '0'; } catch { /* */ }
+if (k38.appMode()) { k38.installApi(appCmd); k38.bindScheme(() => paint()); }
+
 export function render() {
   loadFonts();
   bindKeys();
+  k38.bindKeyboard();
   gridKey = '';
   K.drawer = false;
   setTimeout(() => {
@@ -1266,7 +1370,7 @@ export function render() {
     ensureKal();
     startTick();
   });
-  return `<div id="kal" class="kal k2${K.full && !isMobile() ? ' k2-fs' : ''}">${body()}</div>`;
+  return `<div id="kal" class="kal k2${K.full && !isMobile() ? ' k2-fs' : ''}${K.noWeeks ? ' k38-nowk' : ''}${K.noSide ? ' k38-noside' : ''}">${body()}</div>`;
 }
 // Ut av Kalender: fullskjerm-låsen på siden fjernes.
 window.addEventListener('hashchange', () => { if (!/^#\/kalender/.test(location.hash)) document.body.classList.remove('kal-fs'); });
@@ -1274,7 +1378,7 @@ window.addEventListener('hashchange', () => { if (!/^#\/kalender/.test(location.
 setQuickHooks({
   show: (k) => { K.cur = k; K.sel = null; gridKey = ''; if (K.view === 'liste') K.view = 'dag'; if (document.body.dataset.route !== 'kalender') location.hash = '#/kalender'; else paint(); },
   fail: failForm,
-  changed: () => { K.at = 0; ensureKal(true); },
+  changed: () => { K.at = 0; k38.noteChanged('quick'); ensureKal(true); },
 });
 
 on('kalender', () => { paint(); refresh('d_kal', 'p_kal'); });

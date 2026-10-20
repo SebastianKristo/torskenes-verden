@@ -35,7 +35,12 @@ export async function api(path, opts = {}) {
     delete init.json;
   }
   const res = await fetch('/api' + path, init);
-  if (res.status === 401 && !path.startsWith('/login') && !path.startsWith('/cv')) { location.href = '/login'; throw new Error('Ikke innlogget'); }
+  if (res.status === 401 && !path.startsWith('/login') && !path.startsWith('/cv')) {
+    // Prompt 38: i Kalender.app for Mac viser appen sin egen innlogging (melding logout); ellers /login.
+    const mac = document.documentElement.dataset.kalApp && (window.webkit?.messageHandlers?.kalMac ?? null);
+    if (mac) { try { mac.postMessage({ type: 'logout' }); } catch { /* */ } } else location.href = '/login';
+    throw new Error('Ikke innlogget');
+  }
   const data = res.headers.get('content-type')?.includes('json') ? await res.json() : await res.text();
   if (!res.ok) throw Object.assign(new Error(data?.error || `Feil ${res.status}`), { status: res.status });
   return data;

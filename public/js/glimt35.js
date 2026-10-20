@@ -6,6 +6,7 @@
 import { api, esc } from './util.js';
 import { store } from './store.js';
 import { fig, FIGS, hostFor } from './glimt-figs.js';
+import { CARDS38, cardList38, toSrv38 } from './brief38.js'; // prompt 38: kortene i briefen (av/på og rekkefølge)
 
 export const DEF = {
   char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true,
@@ -208,6 +209,9 @@ export function glimtSettingsHtml({ figs = false } = {}) {
     <div class="gs-list" data-hl="glimt">${MAIN.map(([k, n, d]) => `<button type="button" class="gs-row" data-gs-tog="${k}" role="switch" aria-checked="${!!s[k]}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span>${sw(!!s[k])}</button>`).join('')}</div>
     <span class="gs-h">BRIEFER GJENNOM DAGEN</span>
     <div class="gs-list">${BR.map(([k, n, d]) => { const B = s.briefs[k]; return `<div class="gs-row gs-br${s.brief ? '' : ' off'}"><button type="button" class="gs-brt" data-gs-brief="${k}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span></button><input type="time" value="${esc(B.at)}" data-gs-at="${k}" aria-label="Klokkeslett for ${esc(n)}"><button type="button" class="gs-swb" data-gs-brief="${k}" role="switch" aria-checked="${!!B.on}" aria-label="${esc(n)}">${sw(!!B.on)}</button></div>`; }).join('')}</div>
+    <span class="gs-h">KORT I BRIEFEN</span>
+    <div class="gs-list gs38-cards">${cardList38(s).map((c, i, L) => { const n = CARDS38.find((x) => x[0] === c.id)?.[1] ?? c.id; return `<div class="gs-row gs38-card${c.on ? '' : ' off'}"><span class="gs-ot"><b>${esc(n)}</b></span><span class="gs38-mv"><button type="button" data-gs-cmv="${c.id}:-1" aria-label="Flytt ${esc(n)} opp"${i ? '' : ' disabled'}>↑</button><button type="button" data-gs-cmv="${c.id}:1" aria-label="Flytt ${esc(n)} ned"${i < L.length - 1 ? '' : ' disabled'}>↓</button></span><button type="button" class="gs-swb" data-gs-ctog="${c.id}" role="switch" aria-checked="${c.on}" aria-label="${esc(n)}">${sw(c.on)}</button></div>`; }).join('')}</div>
+    <p class="gs-note">Glimt leser kortene opp i denne rekkefølgen. Pakker, Familie og Nordlys vises bare når det er noe å vise.</p>
     <span class="gs-h">STEMMEMOTOR</span>
     <div class="gs-opts" data-hl="glimt-voice">${engineRows(s)}</div>
     ${keyBlock(s)}
@@ -237,6 +241,11 @@ export function glimtClick(e, redraw) {
   if (tg) { const k = tg.dataset.gsTog; saveGlimt({ [k]: !gs()[k] }); if (k === 'readAloud' && !gs().readAloud) stopSpeak(); redraw(); return true; }
   const br = t.closest('[data-gs-brief]');
   if (br) { const k = br.dataset.gsBrief, B = gs().briefs[k]; saveGlimt({ briefs: { [k]: { ...B, on: !B.on } } }); redraw(); return true; }
+  // Prompt 38: kortene i briefen.
+  const ct = t.closest('[data-gs-ctog]');
+  if (ct) { const L = cardList38(gs()).map((c) => (c.id === ct.dataset.gsCtog ? { ...c, on: !c.on } : c)); saveGlimt({ cards: toSrv38(L) }); redraw(); return true; }
+  const cm = t.closest('[data-gs-cmv]');
+  if (cm) { const [id, d] = cm.dataset.gsCmv.split(':'), L = cardList38(gs()), i = L.findIndex((c) => c.id === id), j = i + +d; if (i >= 0 && j >= 0 && j < L.length) { [L[i], L[j]] = [L[j], L[i]]; saveGlimt({ cards: toSrv38(L) }); redraw(); } return true; }
   const en = t.closest('[data-gs-engine]');
   if (en) { saveGlimt({ tts: { engine: en.dataset.gsEngine } }); redraw(); return true; }
   const tr = t.closest('[data-gs-try]');

@@ -32,10 +32,12 @@ import { startVersionCheck } from './vercheck.js';
 import { mountDash, startEdit } from './dash-edit36.js';
 import { initWeb36 } from './web36.js';
 import { initWeb37 } from './web37.js';
+import { initWeb38 } from './web38.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
 const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
+const KAL_APP = !!document.documentElement.dataset.kalApp;
 const scrollMem = scrollMemory();
 let route = null, wasMobile = isMobile(), isEditingPending = false;
 
@@ -45,6 +47,8 @@ function current() {
   // Økonomi er nå FinansHub, en egen fullskjerm-app.
   if (r === 'okonomi') { location.replace('/finans/'); return 'dash'; }
   if (r === 'mer' && !isMobile()) return 'nettverk';
+  // Prompt 38: Kalender.app for Mac (/kalender?app=mac) viser bare kalenderen.
+  if (KAL_APP) return 'kalender';
   return ROUTES[r] ? r : 'dash';
 }
 
@@ -77,7 +81,7 @@ function renderRoute() {
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
 const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
-function setTitle() { document.title = TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
+function setTitle() { document.title = KAL_APP ? 'Kalender' : TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.
 function placeTicker() {
@@ -163,10 +167,11 @@ async function main() {
   bindShell();
   bindPhoto();
   bindSettings();
-  loadUpdBanner(); // prompt 30: oppdateringsbanner (bare admin)
+  if (!KAL_APP) loadUpdBanner(); // prompt 30: oppdateringsbanner (bare admin)
   bindPopup();
   initWeb36();
-  initWeb37();
+  if (!KAL_APP) initWeb37(); // onboarding og Vær-tilbake hører ikke hjemme i Mac-appen
+  initWeb38();
   bindSearch();
   setupDnd(document.querySelector('header'));
   study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);

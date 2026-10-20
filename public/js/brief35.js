@@ -8,6 +8,8 @@
 import { api, esc, p2 } from './util.js';
 import { fig, hostFor, WHO, NAME_COLOR } from './glimt-figs.js';
 import { gs, loadGlimt, saveGlimt, say, stopSpeak, onSpeak, tts, replayAfterTap, voiceName, glimtSettingsHtml, glimtClick, glimtChange, glimtSubmit } from './glimt35.js';
+import { outfit } from './glimt-outfits36.js'; // prompt 38: Glimt i prestedrakt ved bibelvers
+import { briefCards38, cardOrder38, giftAdd38 } from './brief38.js'; // prompt 38: Pakker, Familie, Skole og jobb, Bursdager, Nordlys
 
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 /** Papir-fontene (Newsreader, Manrope, IBM Plex Mono) lastes også i det mørke temaet, for kortet og panelet. */
@@ -123,8 +125,24 @@ function cardHtml() {
   if (v.tr.length && !chips.some((c) => /prøve/i.test(c))) chips.push(`${v.tr[0].service} · ${v.tr[0].daysLeft} d igjen`);
   return `<button type="button" class="gb-card" data-gb-open aria-label="Åpne ${esc(v.title)}"><span class="gb-cl"><span class="gb-ck">${esc(kick)} · GLIMT</span><span class="gb-cs">${esc(v.summary)}</span><span class="gb-cc">${chips.slice(0, 4).map((c) => `<span>${esc(c)}</span>`).join('')}</span></span><span class="gb-cf">${fig(v.host, 56, 'idle')}</span></button>`;
 }
+/* Prompt 38 (Hjem web 1c, claude-code-hjem-web-topp-1c.md): briefen som glasspanel i helten under hilsenen.
+   Glimt-figur 44 px, «KVELDSBRIEF · GLIMT» + «Åpne ›», oppsummering (Newsreader 18/1.42, maks 3 linjer) og chips. */
+export function briefGlassSlot() {
+  loadGlimt();
+  if (!gs().brief) return '';
+  ensureFonts();
+  queueMicrotask(() => { loadBrief(); paintCards(); });
+  return `<div class="gb38-gslot" data-gb-card="glass">${glassHtml()}</div>`;
+}
+function glassHtml() {
+  if (!B.data) return B.err ? '' : '<div class="gb38-glass gb38-skel" aria-hidden="true"><span></span><span></span></div>';
+  const v = view(), kick = v.title.toUpperCase();
+  const chips = v.chips.length ? v.chips : [v.wx ? `${v.wx.t} ${v.wx.txt}` : null, v.nx ? `${v.nx.title} ${v.nx.time ?? ''}` : 'Fri', v.news.length ? `${Math.min(7, v.news.length)} nyheter` : null].filter(Boolean);
+  if (v.tr.length && !chips.some((c) => /prøve/i.test(c))) chips.push(`${v.tr[0].service}-prøve ${v.tr[0].daysLeft} dager igjen`);
+  return `<button type="button" class="gb38-glass" data-gb-open aria-label="Åpne ${esc(v.title)}"><span class="gb38-gf">${fig(v.host, 44, 'idle')}</span><span class="gb38-gm"><span class="gb38-gk"><span>${esc(kick)} · GLIMT</span><span class="gb38-go">Åpne ›</span></span><span class="gb38-gs">${esc(v.summary)}</span><span class="gb38-gc">${chips.slice(0, 4).map((c) => `<span>${esc(c)}</span>`).join('')}</span></span></button>`;
+}
 function paintCards() {
-  document.querySelectorAll('[data-gb-card]').forEach((el) => { el.hidden = !gs().brief || (!B.data && !!B.err); el.innerHTML = cardHtml(); });
+  document.querySelectorAll('[data-gb-card]').forEach((el) => { el.hidden = !gs().brief || (!B.data && !!B.err); el.innerHTML = el.dataset.gbCard === 'glass' ? glassHtml() : cardHtml(); });
 }
 
 /* ---------- Panelet ---------- */
@@ -206,8 +224,8 @@ function panelHtml() {
   return `${headHtml(v.title)}
     <div class="gb-sc"><div class="gb-pad">
       <div class="gb-spkw">${spkHtml()}</div>
-      <div class="gb-title"><b>${esc(v.title)}</b><span>${esc(v.summary)}</span></div>
-      ${vaer}${bibleHtml('top')}${todosHtml(v)}${kal}${abo}${nyh}${bibleHtml('bottom')}
+      <div class="gb-title gb38-sum"><span>${esc(v.summary)}</span></div>
+      ${cardOrder38({ cards: gs().cards ?? B.data?.cards }, { vaer, bibel: bibleHtml('top'), huske: todosHtml(v), kal, abo, ...briefCards38(B.data), nyh })}${bibleHtml('bottom')}
       <span class="gb-foot">${esc(foot)}</span>
     </div></div>
     <div class="gb-guide">${bub}<button type="button" class="gb-figbtn" data-gb-fig aria-label="${bubble ? 'Avslutt guide-runden' : 'Start guide-runden med Glimt'}">${pop ? `<span class="gf-pop">${fig(ch, 82, mood)}</span>` : fig(ch, 82, mood)}</button></div>
@@ -220,12 +238,8 @@ function spkHtml() {
   return '';
 }
 function headHtml(title) {
-  const s = gs(), on = s.readAloud;
-  // Prompt 37: etiketten «GLIMT · KVELDSBRIEF» er fjernet (dobbelt med den store tittelen). Knappene står høyrejustert.
-  return `<div class="gb-head" aria-label="${esc(title)}"><span class="gb-hb">
-    <button type="button" class="gb-ib${on ? ' on' : ''}" data-gb-voice aria-label="${on ? 'Slå av opplesning' : 'Slå på opplesning'}" title="${on ? 'Slå av opplesning' : 'Slå på opplesning'}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="${on ? 'M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11' : 'M16 9l5 6M21 9l-5 6'}"/></svg></button>
-    <button type="button" class="gb-ib" data-gb-cfg aria-label="Brief-innstillinger" title="Brief-innstillinger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
-    <button type="button" class="gb-done" data-gb-close>Ferdig</button></span></div>`;
+  // Prompt 38: 🔇 og ⚙ er fjernet (opplesning og brief-valg ligger i Innstillinger → Glimt). Tittelen og Ferdig på samme linje.
+  return `<div class="gb-head gb38-head" aria-label="${esc(title)}"><b class="gb38-ht">${esc(title)}</b><button type="button" class="gb-done" data-gb-close>Ferdig</button></div>`;
 }
 const imgTag = (u) => (u && /^(https?:\/\/|\/)/.test(u) ? `<img src="${esc(u)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-gb-img>` : '');
 
@@ -264,6 +278,11 @@ function bindPanel(el) {
     const tk = t.closest('[data-gb37-tick]');
     if (tk) { tickTodo(tk.dataset.gb37Tick); return; }
     if (t.closest('[data-gb37-todos]')) { closeBrief(); location.hash = '#/huskeliste'; return; }
+    // Prompt 38: nye kort.
+    const g38 = t.closest('[data-gb38-go]');
+    if (g38) { closeBrief(); location.hash = g38.dataset.gb38Go; return; }
+    const gift = t.closest('[data-gb38-gift]');
+    if (gift) { giftAdd38(gift.dataset.gb38Gift, gift.dataset.gb38Date, gift); return; }
     if (t.closest('[data-gb="vaer"]') && !t.closest('a,button')) { openVaer(); return; }
     const ev = t.closest('[data-gb-ev]');
     if (ev) { const d = ev.dataset.gbEv; closeBrief(); location.hash = d ? `#/kalender/dag/${d}` : '#/kalender'; return; }
@@ -326,7 +345,7 @@ function bibleHtml(pos) {
   const m = (v.period ?? per) === 'morning';
   const date = new Date(v.date ? `${v.date}T12:00` : Date.now()).toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' });
   const txt = String(v.text).replace(/^[«"]|[»"]$/g, '');
-  return `<section data-gb="bibel" class="gb37-bv ${m ? 'm' : 'k'}"><span class="gb37-glow" aria-hidden="true"></span>
+  return `<section data-gb="bibel" class="gb37-bv gb38-hasfig ${m ? 'm' : 'k'}"><span class="gb37-glow" aria-hidden="true"></span><span class="gb38-pfig">${outfit('prest', 46, { mood: tts.speaking ? 'talk' : 'idle' })}</span>
     <span class="gb37-bh"><span>${esc(v.kicker ?? `${m ? 'MORGENVERS' : 'KVELDSVERS'} · GLIMT`)}</span><span>${esc(date.replace(/^./, (c) => c.toUpperCase()))}</span></span>
     <p class="gb37-vt">«${esc(txt)}»</p><b class="gb37-ref">${esc(v.ref ?? '')}</b>
     <span class="gb37-bb"><button type="button" data-gb37-copy>${Date.now() - BV.copied < 1600 ? 'Kopiert' : 'Kopier'}</button><button type="button" data-gb37-next aria-label="Nytt vers" title="Nytt vers">↻</button></span></section>`;

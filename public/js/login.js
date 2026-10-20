@@ -7,6 +7,7 @@
 import { loadAppIdentity } from './appicon.js';
 import { initI18n, setLang, lang } from './i18n.js';
 import { noteUser } from './usercache.js';
+import { initQr, showQr } from './login-qr38.js'; // prompt 38: QR-innlogging fra mobilen
 
 const $ = (id) => document.getElementById(id);
 const form = $('gate');
@@ -31,6 +32,7 @@ const st = {
   bg: BGO.some((b) => b[0] === lsGet(BG_KEY)) ? lsGet(BG_KEY) : 'oslo',
   userEdited: false,
   app: 'Homelab',
+  qr: false, // prompt 38: serveren har QR-innlogging
 };
 
 // Brukernavn foreslås fra navnet: små bokstaver, æ→ae, ø→o, å→a, bare a–z og 0–9.
@@ -65,6 +67,7 @@ function render(focus = true) {
   $('g-btn').textContent = btn;
   $('g-back').hidden = !(onb && S > 0) && st.mode !== '2fa';
   $('g-foot').textContent = onb ? 'Alt kan endres senere i Innstillinger.' : location.host;
+  $('g-toqr').hidden = !(st.qr && st.mode === 'login');
 
   // Toppbildet: kicker og tittel som i fasiten.
   const name = form.adminName.value.trim();
@@ -87,6 +90,8 @@ function render(focus = true) {
     c.placeholder = st.recovery ? 'xxxx-xxxx' : '123 456';
     $('f-code-l').textContent = st.recovery ? 'Gjenopprettingskode' : 'Kode fra autentiseringsappen';
     $('g-recovery').textContent = st.recovery ? 'Bruk koden fra autentiseringsappen' : 'Mistet telefonen? Bruk en gjenopprettingskode';
+    $('g-otp').hidden = st.recovery;
+    paintOtp();
   }
   if (!focus) return;
   const f = show.login ? (form.username.value ? form.password : form.username) : show['2fa'] ? form.code
@@ -139,7 +144,9 @@ async function verify() {
   if (ok) return done(data.user);
   if (data.expired) { form.password.value = ''; go({ mode: 'login', ticket: null }); return fail(data.error || 'Innloggingen tok for lang tid. Prøv igjen.'); }
   fail(data.error || 'Feil kode. Prøv igjen.');
-  form.code.select();
+  const ob = $('g-otp'); ob.classList.remove('shake'); void ob.offsetWidth; ob.classList.add('shake');
+  form.code.value = ''; paintOtp(true);
+  form.code.focus();
 }
 
 /* ---------- Onboarding ---------- */
@@ -205,10 +212,16 @@ $('g-bgs').addEventListener('click', (e) => {
   st.bg = b.dataset.bg; clearErr(); render(false);
   $('g-bgs').querySelector(`[data-bg="${st.bg}"]`)?.focus({ preventScroll: true });
 });
+// Prompt 38: seks sifferbokser over feltet (samme som QR-innloggingen).
+function paintOtp(bad = false) {
+  const v = form.code.value;
+  $('g-otp').querySelectorAll('span').forEach((s, i) => { s.textContent = v[i] ?? ''; s.className = bad ? 'bad' : v.length === i ? 'on' : ''; });
+}
 form.code.addEventListener('input', () => {
   if (st.recovery) return;
   const v = form.code.value.replace(/[^0-9]/g, '').slice(0, 6);
   if (v !== form.code.value) form.code.value = v;
+  paintOtp();
   if (v.length === 6) form.requestSubmit(); // sender automatisk ved seks sifre
 });
 form.adminName.addEventListener('input', () => { clearErr(); if (st.mode === 'onboarding') render(false); });
@@ -221,9 +234,18 @@ for (const el of form.querySelectorAll('input')) if (el !== form.adminName) el.a
 form.srv.value = location.origin;
 render();
 initI18n();
-fetch('/api/setup/status').then((r) => r.json()).then((s) => {
-  if (s.needsSetup) go({ mode: 'onboarding', step: 0 });
-}).catch(() => {});
+// Prompt 38: QR-koden vises først (passord er et valg). Skjemaet skjules til vi vet om serveren kan QR-innlogging,
+// så det ikke blinker; senest etter 2,5 s vises det uansett.
+const showForm = (show) => { form.hidden = !show; if (show) render(); };
+form.hidden = true;
+const formT = setTimeout(() => { if (form.hidden && !$('g-qr').innerHTML) showForm(true); }, 2500);
+$('g-toqr').addEventListener('click', () => showQr());
+fetch('/api/setup/status').then((r) => r.json()).then(async (s) => {
+  if (s.needsSetup) { clearTimeout(formT); showForm(true); go({ mode: 'onboarding', step: 0 }); return; }
+  st.qr = await initQr({ done, form: showForm, app: () => st.app, noQr: () => { st.qr = false; render(false); } });
+  clearTimeout(formT);
+  if (!st.qr) showForm(true); else render(false);
+}).catch(() => { clearTimeout(formT); showForm(true); });
 
 // Appnavnet (Innstillinger → App) i merket og fanetittelen, og ikonet som favicon.
 loadAppIdentity().then(({ name }) => {

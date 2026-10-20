@@ -67,6 +67,10 @@ export async function prefetchDomains() {
   try {
     if (!S.list || Date.now() - (AT.get('list') ?? 0) > 60_000) { S.list = await D('/domains'); AT.set('list', Date.now()); writeCache(); }
     await Promise.all((S.list ?? []).map((x) => fetchOne(x.name)));
+    // Prompt 38: alt er lastet før Domener åpnes – også kartet (verdenskartet) og Glimt-oppsummeringen (aldri blokkerende).
+    import('./worldmap.js').then((m) => m.preloadMap?.()).catch(() => {});
+    const sel = (() => { try { return sessionStorage.getItem('hl_dom_sel'); } catch { return null; } })() ?? ((S.list ?? []).length > 1 ? '*' : S.list?.[0]?.name ?? '*');
+    if (!SUM.get(sel)?.data && !SUM.get(sel)?.busy) setTimeout(() => sumLoad(sel).catch(() => {}), 200);
   } catch { /* prøves igjen når siden åpnes */ }
 }
 async function loadAll(force) {

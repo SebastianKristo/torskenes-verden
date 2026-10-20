@@ -25,7 +25,17 @@ function snekker(S, mood) {
   const chips = [0, 1, 2].map((i) => `<span class="go36-chip" style="right:${-S * (0.55 + i * 0.05)}px;background:${i === 1 ? '#f2c14e' : '#c8925a'};--cx:${8 + i * 7}px;--cy:${-10 - i * 5}px;animation-delay:${(i * 0.05).toFixed(2)}s"></span>`).join('');
   return `<span class="go36 go36-cp" style="position:relative;display:inline-block;width:${S}px">${fig(who(), S, mood)}${belt}${hat}${ham}${chips}</span>`;
 }
+/* Prompt 38: prestedrakt (fasit Bibelvers.dc.html → priest(S)): lys kjortel/alb med rød stola (gullstripe), brunt belte,
+   liten mørk bibel med gyllent ✝ og en svak, pulserende gylden glorie. Dupper rolig (3 s); «Reduser bevegelse» = stille. */
+function prest(S, mood) {
+  const halo = `<span class="go38-halo" style="position:absolute;left:50%;top:${-S * 0.2}px;width:${S * 0.78}px;height:${S * 0.22}px;margin-left:${-S * 0.39}px;border-radius:50%;border:${Math.max(1.5, S * 0.05)}px solid #f2c14e;box-shadow:0 0 ${S * 0.18}px rgba(242,193,78,.75);pointer-events:none"></span>`;
+  const robe = `<svg width="${S * 1.16}" height="${S * 0.62}" viewBox="0 0 116 62" style="position:absolute;left:50%;bottom:${-S * 0.34}px;margin-left:${-S * 0.58}px;overflow:visible"><path d="M18 8 Q58 22 98 8 L110 58 Q58 66 6 58 Z" fill="#f6f1e7" stroke="#c9bfa9" stroke-width="1.6"/><path d="M44 12 L40 60 L50 60 L54 16 Z" fill="#b23a2a"/><path d="M72 12 L76 60 L66 60 L62 16 Z" fill="#b23a2a"/><path d="M42 34 h8 M66 34 h8" stroke="#f2c14e" stroke-width="2"/><path d="M24 40 Q58 48 92 40" stroke="#a8661a" stroke-width="3" fill="none"/></svg>`;
+  const book = `<span style="position:absolute;right:${-S * 0.16}px;bottom:${-S * 0.2}px;width:${S * 0.36}px;height:${S * 0.28}px;border-radius:3px;background:#3b2a1a;box-shadow:inset 0 0 0 2px #6b4a2a;display:grid;place-items:center;transform:rotate(-10deg)"><span style="color:#f2c14e;font-size:${S * 0.16}px;font-weight:800;line-height:1">✝</span></span>`;
+  return `<span class="go36 go38-pr" aria-hidden="true" style="position:relative;display:inline-block;width:${S}px;height:${S}px;margin-bottom:${S * 0.3}px">${halo}${fig(who(), S, mood)}${robe}${book}</span>`;
+}
+/** kind: 'sherlock' | 'snekker' | 'prest' (prompt 38, bibelvers i briefen). */
 export function outfit(kind, S = 36, opts = {}) {
+  if (kind === 'prest') return prest(S, opts.mood ?? 'idle');
   return kind === 'sherlock' ? sherlock(S, opts.mood ?? 'talk') : snekker(S, opts.mood ?? 'idle');
 }
 

@@ -62,3 +62,40 @@ body{font-family:var(--g-sans);color:var(--g-ink);-webkit-font-smoothing:antiali
 .gate-langs{display:flex;gap:6px;margin-bottom:6px}
 .gate-langs button{flex:1;height:44px;border-radius:14px;border:1px solid var(--g-rule);background:var(--g-field);color:var(--g-ink);cursor:pointer;font:700 14px Manrope,system-ui,sans-serif}
 .gate-langs button[aria-checked=true]{background:var(--g-ink);border-color:var(--g-ink);color:var(--g-page)}
+
+/* Prompt 38: QR-innlogging (fasit «Logg inn QR.dc.html») og sifferboksene for totrinnsbekreftelse. */
+@keyframes gqIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes gqPop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.1)}100%{transform:none;opacity:1}}
+@keyframes gqShake{0%,100%{transform:none}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+.gate-qr{width:100%;max-width:440px;display:flex;flex-direction:column;gap:12px;animation:gqIn .3s ease both}
+.gq-main{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding-top:6px}
+.gq-box{position:relative;width:228px;height:228px;padding:14px;border-radius:22px;background:#fff;box-shadow:0 10px 26px -14px rgba(0,0,0,.3)}
+.gq-box svg{display:block;width:200px;height:200px;transition:opacity .3s,filter .3s}
+.gq-box.dim svg{opacity:.18;filter:blur(2px)}
+.gq-logo{position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:11px;background:#fff;display:grid;place-items:center;box-shadow:0 0 0 3px #fff}
+.gq-logo span{width:32px;height:32px;border-radius:9px;background:conic-gradient(from 0deg,#b23a2a,#e8794a,#7a5ad6,#3fbf9a,#b23a2a);display:grid;place-items:center;color:#fff;font:800 15px var(--g-sans)}
+.gq-scan{position:absolute;inset:0;border-radius:22px;background:rgba(243,239,230,.86);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px;text-align:center}
+.gq-scan b{font-size:14.5px}
+.gq-scan>span{font-size:12.5px;color:var(--g-ink2)}
+.gq-scan .gq-match{margin-top:4px;padding:4px 14px;border-radius:12px;background:var(--g-ink);color:var(--g-page);font:600 26px var(--g-mono);letter-spacing:.12em}
+.gq-scan .gq-mt{font-size:11.5px}
+.gq-av{flex:none;border-radius:50%;background:#2b5d8a;color:#fff;font-weight:800;display:grid;place-items:center;object-fit:cover;animation:gqPop .4s cubic-bezier(.3,1.5,.5,1) both}
+.gq-ttl{font:600 12px var(--g-mono);color:var(--g-ink2)}
+.gq-help{font-size:13.5px;color:#3d3a33;max-width:320px;line-height:1.5;text-wrap:pretty}
+.gq-pw{align-self:center}
+.gq-t{font:500 26px/1.15 var(--g-serif)}
+.gq-otp{max-width:340px;align-self:center;width:100%}
+.gq-otp .gate-code{letter-spacing:.3em}
+.gq-end{min-height:300px;justify-content:center}
+.gq-ok,.gq-no{width:72px;height:72px;border-radius:36px;background:#2f7a4f;color:#fff;font:800 32px var(--g-sans);display:grid;place-items:center;animation:gqPop .45s cubic-bezier(.3,1.5,.5,1) both}
+.gq-no{background:var(--g-acc)}
+.gq-new{align-self:stretch}
+.gate-toqr{align-self:center;margin-top:2px}
+.gate-otp{display:flex;gap:8px;justify-content:center}
+.gate-otp span{width:42px;height:52px;border-radius:12px;border:2px solid var(--g-rule);background:#fffdf8;display:grid;place-items:center;font:600 22px var(--g-mono);color:var(--g-ink)}
+.gate-otp span.on{border-color:var(--g-ink)}
+.gate-otp span.bad{border-color:var(--g-acc)}
+.gate-otp.shake{animation:gqShake .4s ease}
+@media (max-width:380px){.gate-otp span{width:36px;height:46px;font-size:19px}.gate-otp{gap:6px}}
+@media (prefers-reduced-motion: reduce){.gate-qr,.gq-av,.gq-ok,.gq-no,.gate-otp.shake{animation:none}}
+.gq-otp .gate-code::placeholder{letter-spacing:.04em;font:500 15px var(--g-sans)}

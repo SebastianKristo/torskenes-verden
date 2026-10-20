@@ -121,7 +121,16 @@ function normRouting(d) {
   if (Array.isArray(r.tasks)) return { ...r, taskList: r.tasks, tasks: Object.fromEntries(r.tasks.map((t) => [t.id, { model: t.model ?? '', fallback: t.fallback ?? '' }])) };
   return r;
 }
-const loadRouting = () => get('routing', '/routing', (d) => { const r = normRouting(d); if (typeof r?.admin === 'boolean') G.admin = r.admin; return r; });
+const loadRouting = () => { get('finRouting', '/routing?scope=finans', normRouting); return get('routing', '/routing', (d) => { const r = normRouting(d); if (typeof r?.admin === 'boolean') G.admin = r.admin; return r; }); };
+/* Prompt 38 (claude-code-ai-kontroll-modellvalg-fiks.md): Finans har alltid fire rader, med standard og reserve fra spec. */
+const FIN4 = [['rc', 'Kvitteringer (bilde)', 'Leser butikk, beløp og varelinjer', 'qwen2.5vl:7b', 'gemini-2.5-flash'], ['kat', 'Kategorisering', 'Foreslår kategori for transaksjoner', 'llama3.2:3b', 'llama-3.3-70b-versatile'],
+  ['fsok', 'Finans · spør', '«Har jeg et musikkabonnement?»', 'gemma4:latest', 'gemini-2.5-flash'], ['bar', 'Strekkoder og pakkelapper', 'Bildefelt fra kamera', 'roboflow/kvittering/1', 'qwen2.5vl:7b']];
+const FIN_ALIAS = { kvittering: 'rc', kvitteringer: 'rc', receipts: 'rc', categorize: 'kat', kategorisering: 'kat', finans_sok: 'fsok', ask: 'fsok', barcode: 'bar', strekkode: 'bar' };
+function finRows() {
+  const F = G.finRouting?.taskList ?? (G.routing?.taskList ?? []), byId = new Map(F.map((t) => [FIN_ALIAS[t.id] ?? t.id, t]));
+  const R = { ...(G.routing?.tasks ?? {}), ...(G.finRouting?.tasks ?? {}) };
+  return FIN4.map(([id, n, d, m0, f0]) => { const t = byId.get(id) ?? {}, r = R[t.id ?? id] ?? R[id] ?? {}; return { id: t.id ?? id, n: t.name ?? n, d: t.desc ?? d, model: r.model ?? t.model ?? '', fallback: r.fallback ?? t.fallback ?? '', def: m0, defF: f0, options: Array.isArray(t.options) ? t.options : null, warning: t.warning ?? '' }; });
+}
 const loadKeys = () => get('keys', '/keys', (d) => d.providers ?? d);
 const loadJobs = () => get('jobs', '/jobs?limit=60', (d) => { if (typeof d?.paused === 'boolean') G.paused = d.paused; return Array.isArray(d) ? d : d.running || d.queued || d.recent ? [...(d.running ?? []), ...(d.queued ?? []), ...(d.recent ?? [])] : d.jobs ?? d.items ?? []; });
 const loadUsage = () => get('usage', `/usage?days=${G.per}`);
@@ -152,16 +161,34 @@ function cloud() {
   const on = routingOf().cloudOn ?? {};
   return (L?.length ? L : CLOUD0).map((m) => ({ id: m.id ?? m.name, provider: m.provider, desc: m.desc ?? m.description ?? '', vision: !!m.vision, on: m.on != null ? !!m.on : on[m.id ?? m.name] != null ? !!on[m.id ?? m.name] : true, key: m.available ?? m.hasKey ?? null }));
 }
+/* Prompt 38 (claude-code-ai-maskin-mac-mini.md): AI-maskinen er en Mac mini M4 med 16 GB samlet minne og 2 TB ekstern disk.
+   server.hw:{model, chip, memGb, gpuBudgetGb, disk:{name, totalGb, freeGb, external, mounted}, source} kommer fra Ollama-verten.
+   Eldre server uten hw: standardmaskinen (samme standard som serveren), aldri RTX 2080. */
+const HW0 = { model: 'Mac mini M4', chip: 'Apple M4', memGb: 16, gpuBudgetGb: 10.7, disk: { name: 'Ekstern disk', totalGb: 2000, external: true, mounted: true } };
 function gpu() {
-  const S = G.status ?? {}, M = G.models ?? {}, g = S.server?.gpu ?? S.gpu ?? M.gpu ?? {};
-  const vram = g.vramGb ?? g.totalGb ?? null, used = S.server?.vramUsedGb ?? g.usedGb ?? installed().filter((m) => m.loaded).reduce((a, m) => a + (m.vramGb ?? m.gb ?? 0), 0);
-  const disk = S.disk ?? S.server?.disk ?? {};
-  return { name: g.name ? `${g.name}${vram ? ` · ${nb(vram)} GB` : ''}` : '', vram, used, diskUsed: S.server?.diskGb ?? disk.usedGb ?? installed().reduce((a, m) => a + (m.gb ?? 0), 0), diskTot: disk.totalGb ?? null };
+  const S = G.status ?? {}, M = G.models ?? {}, hw = S.server?.hw ?? S.hw ?? M.hw ?? null, g = S.server?.gpu ?? S.gpu ?? M.gpu ?? {};
+  const H = hw ?? (g.name && !/rtx|geforce|nvidia/i.test(g.name) ? null : HW0);
+  const used = S.server?.vramUsedGb ?? g.usedGb ?? installed().filter((m) => m.loaded).reduce((a, m) => a + (m.vramGb ?? m.gb ?? 0), 0);
+  const diskUsedM = installed().reduce((a, m) => a + (m.gb ?? 0), 0);
+  if (H) {
+    const mem = +H.memGb || 16, bud = +H.gpuBudgetGb || Math.round(mem * 2 / 3 * 10) / 10, D = H.disk ?? {}, tb = +D.totalGb || 0;
+    const dn = tb ? `${tb >= 1000 ? `${nb(tb / 1000, tb % 1000 ? 1 : 0)} TB` : `${nb(tb)} GB`} ${D.external ? 'ekstern disk' : 'disk'}` : '';
+    return { hw: true, name: [H.model || 'Mac', mem ? `${nb(mem)} GB samlet minne` : '', dn].filter(Boolean).join(' · '), chip: H.chip ?? '', vram: bud, used, mem,
+      diskUsed: D.totalGb != null && D.freeGb != null ? Math.max(diskUsedM, D.totalGb - D.freeGb) : diskUsedM, diskTot: D.totalGb ?? null, diskName: D.name ?? '', external: !!D.external, mounted: D.mounted !== false, source: H.source ?? (hw ? '' : 'standard') };
+  }
+  const vram = g.vramGb ?? g.totalGb ?? null, disk = S.disk ?? S.server?.disk ?? {};
+  return { name: g.name ? `${g.name}${vram ? ` · ${nb(vram)} GB` : ''}` : '', vram, used, diskUsed: S.server?.diskGb ?? disk.usedGb ?? diskUsedM, diskTot: disk.totalGb ?? null, mounted: true };
 }
+/* Anbefalte innstillinger for maskinen (status.recommend:[{key, text, env?}]); standardlisten når serveren ikke sender dem. */
+const REC0 = [['loaded', 'Én stor modell lastet om gangen', 'OLLAMA_MAX_LOADED_MODELS=1'], ['parallel', 'Én forespørsel om gangen per modell', 'OLLAMA_NUM_PARALLEL=1'],
+  ['kv', 'KV-cache i q8_0 sparer minne', 'OLLAMA_KV_CACHE_TYPE=q8_0'], ['flash', 'Flash attention', 'OLLAMA_FLASH_ATTENTION=1'],
+  ['keep', 'Hold de mest brukte modellene lastet i 30 min (trege lastetider fra HDD)', 'OLLAMA_KEEP_ALIVE=30m'], ['models', 'Modellene på den eksterne disken', 'OLLAMA_MODELS=/Volumes/<disk>/ollama'],
+  ['pmset', 'Mac-en skal ikke sove (ellers spinner HDD-en ned)', 'sudo pmset -a sleep 0 disksleep 0']].map(([key, text, env]) => ({ key, text, env }));
 const provs = () => G.status?.providers ?? [];
 const prov = (id) => provs().find((p) => p.id === id);
 const stColor = (s) => (s === 'ok' ? 'var(--ok)' : s === 'degraded' ? 'var(--warn)' : 'var(--line)');
-const fitOf = (gb) => { const v = gpu().vram || 8; return gb == null ? '' : gb <= v * 0.94 ? 'PASSER' : gb <= v * 2.6 ? 'DELVIS CPU' : 'FOR STOR'; };
+// Prompt 38: av GPU-budsjettet (10,7 GB på Mac mini M4 16 GB): PASSER ≤ 8 GB, TRANGT ≤ 10,5 GB (én om gangen), FOR STOR > 10,5 GB.
+const fitOf = (gb) => { const g = gpu(), v = g.vram || 10.7, k = v / 10.7; if (gb == null) return ''; if (!g.hw && g.vram) return gb <= v * 0.94 ? 'PASSER' : gb <= v * 2.6 ? 'DELVIS CPU' : 'FOR STOR'; return gb <= 8 * k ? 'PASSER' : gb <= 10.5 * k ? 'TRANGT' : 'FOR STOR'; };
 const jobsF = (fin) => (G.jobs ?? []).filter((j) => !fin || ['rc', 'kat', 'fsok', 'bar'].includes(j.task));
 
 /* ---------------- Handlinger ---------------- */
@@ -276,19 +303,27 @@ function selftestCard(o) {
   return `<div class="ac-card ac-self${bad ? ' isbad' : ''}"><div class="ac-row"><span class="ac-col ac-grow"><b class="ac-h3">${esc(h)}</b><span class="ac-mut">${S?.err ? esc(S.err) : 'Sender en liten prompt gjennom hver funksjon (chat, AI-søk, Glimt, kvitteringer …) og sjekker at modellen faktisk svarer, ikke bare at serveren kan nås.'}</span></span>${btn(S && !S.done ? 'Tester …' : 'Kjør selvtest', 'data-ac-self', 'ink')}</div>${rows ? `<div class="ac-strows">${rows}</div>` : ''}</div>`;
 }
 
+function recCard() {
+  const S = G.status ?? {}, L = Array.isArray(S.recommend) ? S.recommend : Array.isArray(S.server?.recommend) ? S.server.recommend : REC0;
+  if (!L.length) return '';
+  return `<div class="ac-sec">${lab('ANBEFALT FOR DENNE MASKINEN')}<div class="ac-card ac-list">${L.map((r) => `<div class="ac-li ac-rec"><span class="ac-col ac-grow"><b>${esc(r.text ?? r.key)}</b>${r.env ? `<code class="ac-mono ac-env">${esc(r.env)}</code>` : ''}</span></div>`).join('')}
+    <details class="ac-li ac-adv"><summary><b>Avansert: mer minne til GPU-en</b></summary><span class="ac-mut">Kan økes med <code class="ac-mono">sudo sysctl iogpu.wired_limit_mb=12288</code>. Gir mindre minne til macOS og serveren, og kan gjøre maskinen ustabil. Nullstilles ved omstart.</span></details></div></div>`;
+}
 function ovTab(o) {
   if (G.missing.status) return missingNote('AI-kontroll') + selftestCard(o);
   const I = installed(), J = G.jobs ?? [], run = J.filter((j) => j.status === 'run').length, q = J.filter((j) => j.status === 'queue').length, fail = J.filter((j) => j.status === 'fail').length;
   const U = G.usage?.totals, B = G.usage?.budget ?? G.status?.budget, g = gpu(), loaded = I.filter((m) => m.loaded);
   const kpi = [['KJØRER NÅ', String(run), `${q} i kø${fail ? ` · ${fail} feilet` : ''}`, 'job', fail], ['LASTET I VRAM', String(loaded.length), loaded.map((m) => m.id.split(':')[0]).join(', ') || 'ingen', 'mod'],
     ['TOKENS 30 D', U ? tk(U.tokIn + U.tokOut) : '–', U?.localShare != null ? `${U.localShare} % lokalt, gratis` : 'ingen data ennå', 'use'], ['SKY-KOSTNAD', U ? krs(U.costKr) : '–', B?.monthlyKr ? `av ${nb(B.monthlyKr)} kr budsjett` : 'ingen grense', 'use']];
-  const bars = [['VRAM i bruk', g.vram ? `${nb(g.used, 1)} / ${nb(g.vram)} GB` : `${nb(g.used, 1)} GB`, g.vram ? Math.min(100, (g.used / g.vram) * 100) : 0, g.vram && g.used > g.vram * 0.9 ? 'var(--warn)' : 'var(--ok)'],
-    ['Modeller på disk', g.diskTot ? `${nb(g.diskUsed, 1)} / ${nb(g.diskTot)} GB` : `${nb(g.diskUsed, 1)} GB`, g.diskTot ? (g.diskUsed / g.diskTot) * 100 : 0, 'var(--ink)'],
+  const bars = [[g.hw ? 'Minne til modeller (GPU)' : 'VRAM i bruk', g.vram ? `${nb(g.used, 1)} / ${nb(g.vram, g.hw ? 1 : 0)} GB` : `${nb(g.used, 1)} GB`, g.vram ? Math.min(100, (g.used / g.vram) * 100) : 0, g.vram && g.used > (g.hw ? 9.5 * (g.vram / 10.7) : g.vram * 0.9) ? 'var(--warn)' : 'var(--ok)'],
+    [g.hw && g.external ? 'Modeller på ekstern disk' : 'Modeller på disk', g.diskTot ? `${nb(g.diskUsed, 1)} / ${nb(g.diskTot)} GB` : `${nb(g.diskUsed, 1)} GB`, g.diskTot ? (g.diskUsed / g.diskTot) * 100 : 0, 'var(--ink)'],
     ['Sky-budsjett denne måneden', B?.monthlyKr ? `${krs(B.monthCostKr)} / ${nb(B.monthlyKr)} kr` : `${krs(B?.monthCostKr ?? 0)} · ingen grense`, B?.monthlyKr ? Math.min(100, (B.monthCostKr / B.monthlyKr) * 100) : 0, 'var(--acc)']];
   const P = provs();
   return `${selftestCard(o)}
     <div class="ac-kpis">${kpi.map(([l, v, s, t, bad]) => `<button type="button" class="ac-kpi" data-ac-tab="${t}"><span class="ac-lab">${l}</span><b>${esc(v)}</b><span class="${bad ? 'bad' : ''}">${esc(s)}</span></button>`).join('')}</div>
-    ${card(`<span class="ac-row ac-sb"><b class="ac-h3">Hjemmeserver</b><span class="ac-mono">${esc(g.name || (G.status ? '' : 'Laster …'))}</span></span>${bars.map(([l, v, w, c]) => `<div class="ac-bar"><span class="ac-row ac-sb"><span class="ac-mut">${l}</span><b class="ac-mono">${esc(v)}</b></span><span class="ac-track"><i style="width:${w}%;background:${c}"></i></span></div>`).join('')}`, 'ac-gap')}
+    ${card(`<span class="ac-row ac-sb"><b class="ac-h3">${g.hw ? 'AI-maskin' : 'Hjemmeserver'}</b><span class="ac-mono">${esc(g.name || (G.status ? '' : 'Laster …'))}</span></span>${g.hw && !g.mounted ? '<span class="ac-warn">Ekstern disk mangler · Ollama finner ikke modellene</span>' : ''}${bars.map(([l, v, w, c]) => `<div class="ac-bar"><span class="ac-row ac-sb"><span class="ac-mut">${l}</span><b class="ac-mono">${esc(v)}</b></span><span class="ac-track"><i style="width:${w}%;background:${c}"></i></span></div>`).join('')}
+      ${g.hw ? `<span class="ac-mut ac-hwn">Apple Silicon gir GPU-en ca. ⅔ av samlet minne (${nb(g.vram, 1)} av ${nb(g.mem)} GB); resten trengs til macOS og serveren.${g.source === 'standard' ? ' Standardverdier – serveren har ikke meldt maskinen ennå.' : ''}</span>` : ''}`, 'ac-gap')}
+    ${g.hw ? recCard() : ''}
     <div class="ac-card ac-list">${P.length ? P.map((p) => `<button type="button" class="ac-li" data-ac-tab="api"><span class="ac-dot" style="background:${stColor(p.state)}"></span><span class="ac-col ac-grow"><b>${esc(p.name)}${p.label ? ` · <span style="color:${p.state === 'off' ? 'var(--mut)' : stColor(p.state)}">${esc(p.label)}</span>` : ''}</b><span>${esc([p.url?.replace(/^https?:\/\//, ''), p.keyTail ? `Nøkkel ••••${p.keyTail}` : '', p.model, p.state !== 'ok' ? p.error : ''].filter(Boolean).join(' · '))}</span></span><span class="ac-mono">${p.ms != null ? ms2(p.ms) : '–'}</span></button>`).join('') : `<div class="ac-li"><span class="ac-mut">${G.status ? 'Ingen leverandører.' : G.err.status ? esc(G.err.status) : 'Sjekker leverandørene (ekte mini-generering) …'}</span></div>`}</div>`;
 }
 
@@ -308,8 +343,8 @@ function modTab(o) {
   const pulls = Object.entries(G.pulls).map(([id, p]) => `<div class="ac-card ac-pull"><span class="ac-row ac-sb"><b class="ac-mono">${esc(id)}</b><span class="ac-mono ac-mut">${Math.floor(p.p)} %</span></span><span class="ac-track"><i class="ac-stripe" style="width:${Math.max(2, p.p)}%"></i></span><span class="ac-row ac-sb ac-mut"><span>${p.err ? esc(p.err) : p.tot ? `${nb(p.got / 1e9, 1)} av ${nb(p.tot / 1e9, 1)} GB · ${nb(p.mbs)} MB/s` : esc(p.st)}</span><button type="button" class="ac-tx red" data-ac-pstop="${esc(id)}">Avbryt</button></span></div>`).join('');
   const lib = (G.lib ?? LIB0).filter((l) => (G.cat === 'alle' || l.k === G.cat) && (!q || `${l.id} ${l.d}`.toLowerCase().includes(q)));
   const libH = lib.map((l) => {
-    const has = l.inst || I.some((m) => m.id === l.id || m.id === `${l.id}:latest`), pl = !!G.pulls[l.id], fit = l.fit ?? fitOf(l.gb), fc = fit === 'PASSER' ? 'ok' : fit === 'FOR STOR' ? 'bad' : 'warn';
-    return `<div class="ac-lrow"><span class="ac-col"><span class="ac-row"><b class="ac-mono ac-ell">${esc(l.id)}</b>${fit ? `<span class="ac-fit ${fc}">${fit}</span>` : ''}</span><span class="ac-mut ac-ell">${esc([l.d, l.gb != null ? gbs(l.gb) : ''].filter(Boolean).join(' · '))}</span></span>${btn(has ? 'Installert' : pl ? 'Laster …' : 'Last ned', `data-ac-pull="${esc(l.id)}"${has || pl || !admin ? ' disabled' : ''}`)}</div>`;
+    const has = l.inst || I.some((m) => m.id === l.id || m.id === `${l.id}:latest`), pl = !!G.pulls[l.id], fit = l.fit ?? fitOf(l.gb), fc = fit === 'PASSER' ? 'ok' : fit === 'FOR STOR' ? 'bad' : 'warn', fitT = fit === 'TRANGT' ? 'Bare én om gangen' : fit === 'FOR STOR' ? 'Bruk sky' : '';
+    return `<div class="ac-lrow"><span class="ac-col"><span class="ac-row"><b class="ac-mono ac-ell">${esc(l.id)}</b>${fit ? `<span class="ac-fit ${fc}"${fitT ? ` title="${fitT}"` : ''}>${fit}</span>` : ''}</span><span class="ac-mut ac-ell">${esc([l.d, l.gb != null ? gbs(l.gb) : ''].filter(Boolean).join(' · '))}</span></span>${btn(has ? 'Installert' : pl ? 'Laster …' : 'Last ned', `data-ac-pull="${esc(l.id)}"${has || pl || !admin ? ' disabled' : ''}`)}</div>`;
   }).join('') || '<div class="ac-lrow"><span class="ac-mut">Ingen treff. Skriv hele modellnavnet og trykk Enter for å laste ned.</span></div>';
   const cl = cloud();
   return `${G.legacy ? missingNote('Full modellstyring (laste inn/ut, slette, standard)') : ''}<div class="ac-sec"><span class="ac-row ac-sb">${lab(`INSTALLERT LOKALT · ${I.length}`)}<span class="ac-mono ac-mut">${gbs(I.reduce((a, m) => a + (m.gb ?? 0), 0))} på disk</span></span><div class="ac-card ac-list">${instH}</div></div>
@@ -329,7 +364,9 @@ function rtTab(o) {
   if (G.missing.routing) return missingNote('Ruting per oppgave');
   const fin = o.scope === 'finans', R = routingOf(), all = allModelOpts(), web = o.variant !== 'mobile', admin = G.admin;
   const warns = Object.fromEntries([...(G.status?.routes ?? []).filter((x) => x.warning || x.state === 'degraded').map((x) => [x.task, x.warning || x.error]), ...(G.routing?.taskList ?? []).filter((t) => t.warning).map((t) => [t.id, t.warning])]);
-  const rows = tasksOf().filter((t) => !fin || t[3]).map(([k, n, s, isFin, personal], i) => {
+  // Prompt 38: finans-radene kommer fra FIN4 + /api/ai/routing?scope=finans (filteret på t[3] ga et tomt kort når serveren sendte en liste uten fin).
+  if (fin) return finRt(o) + rtRest(o, R, admin);
+  const rows = tasksOf().map(([k, n, s, isFin, personal], i) => {
     const r = R.tasks?.[k] ?? {}, v = r.model ?? '', fb = r.fallback ?? '', can = admin || personal;
     const mv = all.find((m) => m.v === v), fbm = all.find((m) => m.v === fb), isCloudSel = (mv && !mv.loc) || (fbm && !fbm.loc);
     const opt = (L, cur) => [{ v: '', n: 'Automatisk' }, ...(cur && !L.some((m) => m.v === cur) ? [{ v: cur, n: `${cur} · finnes ikke` }] : []), ...L].map((m) => `<option value="${esc(m.v)}"${m.v === cur ? ' selected' : ''}>${esc(m.n)}</option>`).join('');
@@ -350,6 +387,39 @@ function rtTab(o) {
   return `<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
     <div class="ac-sec">${lab('REGLER')}<div class="ac-card ac-list">${rules}</div></div>
     <div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>`;
+}
+/** Finans: fire rader (Kvitteringer, Kategorisering, Finans · spør, Strekkoder og pakkelapper), MODELL og RESERVE med LOKAL/SKY,
+ *  rød advarsel når «Finansdata forlater aldri huset» er på og en sky-modell er valgt, og tom tilstand uten modeller. */
+function finRt(o) {
+  const R = routingOf(), web = o.variant !== 'mobile', admin = G.admin, all = allModelOpts(), finLocal = !!(G.finRouting?.rules?.finLocal ?? R.rules?.finLocal);
+  const rows = finRows();
+  const anyOpts = all.length || rows.some((r) => r.options?.length);
+  if (!anyOpts && (G.models || G.missing.models)) {
+    return `<div class="ac-sec">${lab('HVILKEN MODELL GJØR HVA I FINANS')}<div class="ac-card ac-empty"><b class="ac-h3">Ingen modeller ennå</b><span class="ac-mut">Installer en lokal modell (for eksempel qwen2.5vl:7b for kvitteringer) eller koble til en sky-modell.</span>${btn('Installer modell ›', 'data-ac-instmod', 'ink')}</div></div>`;
+  }
+  const html = rows.map((r, i) => {
+    const L = r.options?.length ? r.options.map((x) => ({ v: x.id ?? x.value ?? x.model, n: x.label ?? x.id, loc: x.local !== false })) : all;
+    const tag = (m) => `${m.n.replace(/ · (lokal|ollama|gemini|groq|openai|anthropic|sky)$/i, '')} · ${m.loc ? 'LOKAL' : 'SKY'}`;
+    const opt = (cur, none) => [{ v: '', n: none, raw: true }, ...(cur && !L.some((m) => m.v === cur) ? [{ v: cur, n: `${cur} · finnes ikke`, raw: true }] : []), ...L].map((m) => `<option value="${esc(m.v)}"${m.v === cur ? ' selected' : ''}>${esc(m.raw ? m.n : tag(m))}</option>`).join('');
+    const mv = L.find((m) => m.v === r.model), fv = L.find((m) => m.v === r.fallback);
+    const cloudSel = (mv && !mv.loc) || (!r.model && false);
+    const warn = finLocal && cloudSel ? 'Finansdata forlater aldri huset er på, men modellen er i skyen. Bytt til en lokal modell.'
+      : finLocal && fv && !fv.loc ? 'Reserven er i skyen og brukes ikke mens «Finansdata forlater aldri huset» er på.'
+        : r.model && (G.models || r.options) && !mv ? `Modellen «${r.model}» finnes ikke · bytt` : r.warning;
+    return `<div class="ac-rt${web ? ' web' : ''} ac-rt38"${i ? '' : ' style="border-top:0"'}><span class="ac-col"><b>${esc(r.n)}</b><span>${esc(r.d)}</span>${!r.model ? `<span class="ac-mono ac-mut ac-def">Standard: ${esc(r.def)} · reserve ${esc(r.defF)}</span>` : ''}</span>
+      <div class="ac-sels"><label class="ac-sel"><span>MODELL</span><select data-ac-rt="${esc(r.id)}" data-f="model"${admin ? '' : ' disabled'}>${opt(r.model, `Standard (${r.def})`)}</select></label>
+      <label class="ac-sel"><span>RESERVE</span><select data-ac-rt="${esc(r.id)}" data-f="fallback"${admin ? '' : ' disabled'}>${opt(r.fallback, `Standard (${r.defF})`)}</select></label></div>
+      ${warn ? `<span class="ac-warn">${esc(warn)}</span>` : ''}</div>`;
+  }).join('');
+  return `<div class="ac-sec">${lab('HVILKEN MODELL GJØR HVA I FINANS')}<div class="ac-card ac-list">${html}</div>${admin ? '' : '<div class="ac-note">Modellene i Finans bestemmes av administrator.</div>'}</div>`;
+}
+function rtRest(o, R, admin) {
+  const rules = [['finLocal', 'Finansdata forlater aldri huset', 'Kvitteringer og transaksjoner bare til lokale modeller'], ['localFirst', 'Lokalt først', 'Prøv hjemmeserveren før skyen']]
+    .map(([k, n, s]) => `<button type="button" class="ac-li" data-ac-rule="${k}" role="switch" aria-checked="${!!R.rules?.[k]}"${admin ? '' : ' disabled'}><span class="ac-col ac-grow"><b>${n}</b><span>${s}</span></span>${sw(!!R.rules?.[k])}</button>`).join('');
+  const P = R.params ?? {};
+  const par = [['minConf', 'Minste sikkerhet før «Sjekk»', 'Lavere enn dette havner i Til godkjenning', CONF], ['parallel', 'Samtidige kvitteringer', 'Standard 1 på Mac mini (maks 2 med 7B)', PAR]]
+    .map(([k, n, s, opts]) => { const cur = opts.find((x) => String(x[0]) === String(P[k])); return `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>${n}</b><span>${s}</span></span><b class="ac-mono">${esc(cur?.[1] ?? P[k] ?? '–')}</b></span><div class="ac-seg">${opts.map(([v, l]) => `<button type="button" class="${String(P[k]) === String(v) ? 'on' : ''}" data-ac-par="${k}" data-v="${esc(JSON.stringify(v))}"${admin ? '' : ' disabled'}>${l}</button>`).join('')}</div></div>`; }).join('');
+  return `<div class="ac-sec">${lab('REGLER')}<div class="ac-card ac-list">${rules}</div></div><div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>`;
 }
 
 function jobTab(o) {
@@ -469,6 +539,7 @@ function bind(el) {
     const d = b.dataset;
     if ('acClose' in d) { vibe(); p.o.onClose?.(); return; }
     if (d.acTab) { vibe(); p.tab = d.acTab; p.o.onTab?.(p.tab); enterTab(p); paint(p); const m = el.querySelector('[data-ac-main]'); if (m) m.scrollTop = 0; return; }
+    if ('acInstmod' in d) { vibe(); if (tabsFor(p.o).some(([k]) => k === 'mod')) { p.tab = 'mod'; p.o.onTab?.(p.tab); enterTab(p); paint(p); } else openAiControl({ ...p.o, scope: 'alle', tab: 'mod' }); return; }
     if ('acSelf' in d) return selftest(false);
     if (d.acPull) return pull(d.acPull);
     if (d.acPstop) { const id = d.acPstop; G.pulls[id]?.ctl.abort(); delete G.pulls[id]; vibe(); redraw(); call(`/models/pulls/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {}); return; }
@@ -496,7 +567,7 @@ function bind(el) {
   });
   el.addEventListener('change', (e) => {
     const t = e.target;
-    if (t.matches('[data-ac-rt]')) { vibe(); return saveRouting({ tasks: { [t.dataset.acRt]: { [t.dataset.f]: t.value } } }); }
+    if (t.matches('[data-ac-rt]')) { vibe(); return saveRouting({ tasks: { [t.dataset.acRt]: { [t.dataset.f]: t.value } } }).then(() => { G.at.finRouting = 0; get('finRouting', '/routing?scope=finans', normRouting); }); }
     if (t.matches('[data-ac-bud]')) return saveRouting({ budget: { monthlyKr: +t.value } });
     if (t.matches('[data-ac-key]')) return saveKey(t.dataset.acKey, t.dataset.f, t.value);
   });

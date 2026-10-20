@@ -173,3 +173,20 @@
 .set-aictl{margin:0 0 26px;min-height:200px}
 .set-aimore{margin:6px 0 10px}
 .fh-aictl>.ac{border-radius:20px;overflow:hidden}
+
+/* Prompt 38: AI-maskinen (Mac mini M4), anbefalinger og Finans-modellvalg med fire rader og tom tilstand. */
+.ac-sels{display:contents}
+.ac-rt38 .ac-def{font-size:11px;margin-top:2px}
+.ac-rt38 .ac-warn{grid-column:1/-1;color:var(--bad);font-weight:700}
+.ac-empty{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:16px}
+.ac-hwn{display:block;font-size:12px;line-height:1.45}
+.ac-rec{align-items:flex-start}
+.ac-rec .ac-col{gap:4px}
+.ac-env{display:inline-block;align-self:flex-start;padding:2px 8px;border-radius:6px;background:var(--fld);font-size:11.5px;color:var(--ink);overflow-wrap:anywhere}
+.ac-adv{display:block;cursor:pointer}
+.ac-adv summary{list-style:none;cursor:pointer}
+.ac-adv summary::-webkit-details-marker{display:none}
+.ac-adv summary::after{content:' ›';color:var(--mut)}
+.ac-adv[open] summary::after{content:' ⌄'}
+.ac-adv .ac-mut{display:block;margin-top:6px;font-size:12.5px;line-height:1.5}
+.ac-adv code{padding:1px 6px;border-radius:5px;background:var(--fld)}
