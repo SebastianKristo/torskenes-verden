@@ -54,8 +54,9 @@ val INTEG26_META: Map<String, IntegMeta26> = mapOf(
     "mybring" to IntegMeta26("Transport og pakker", "B", 0xFF7BC144, "Sporing hos Posten og Bring", listOf(
         "Lag nøkkel" to "Logg inn på mybring.com → Innstillinger → API. Opprett en nøkkel og kopier den.",
         "Bruker" to "API-brukeren er e-posten du logger inn med.")),
-    "postnord" to IntegMeta26("Transport og pakker", "PN", 0xFF00A0D6, "Sporing hos PostNord", listOf(
-        "Registrer deg" to "Gratis på developer.postnord.com. Lag en app og kopier API-nøkkelen.")),
+    "postnord" to IntegMeta26("Transport og pakker", "PN", 0xFF00A0D6, "Sporing uten konto og uten nøkkel", listOf(
+        "Ingen nøkkel trengs" to "PostNord-pakker (SE/DK/NO/FI) spores bare med sporingsnummeret via PostNords offentlige sporingsside. Pakker som ikke er skannet ennå står som «Ikke skannet ennå».",
+        "Egen nøkkel (valgfri)" to "Har du en nøkkel fra developer.postnord.com, brukes det offisielle API-et først.")),
     "parcelsapp" to IntegMeta26("Transport og pakker", "PA", 0xFF4B5BD6, "Reserve for alle transportører", listOf(
         "Hent nøkkel" to "parcelsapp.com → API → Dashboard. Gratisnivået holder for vanlig bruk.")),
     "t212" to IntegMeta26("Økonomi", "T", 0xFF13A37F, "Aksjer og kontoer", listOf(

@@ -35,7 +35,8 @@ internal fun LazyListScope.tilpassHead39(vm: AppViewModel) {
     item { PLabel("Fanelinje", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
     item {
         PCard {
-            SetRow(vm, 2, Icons.Filled.ViewWeek, "Fanelinje-stil", navStyleSub25(), navStyleName25() + " ›") { vm.setNavStyle25(nextNavStyle25()) }
+            ScanHomeRow41(vm) // Prompt 41: «Skanneknapp på Hjem» øverst i FANELINJE
+            SetRow(vm, 2, Icons.Filled.ViewWeek, "Fanelinje-stil", navStyleSub25(), navStyleName25() + " ›", top = true) { vm.setNavStyle25(nextNavStyle25()) }
             SetRow(vm, 3, Icons.Filled.ViewWeek, "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", top = true) { vm.tabEdit = true }
         }
     }

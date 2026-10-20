@@ -164,8 +164,7 @@ internal fun BirthdaysScreen24(vm: AppViewModel) {
                     }
                 }
             }
-            // Prompt 26: kalenderoppsettet ligger i Innstillinger → Kalendere. Her er bare lenkeraden.
-            item { Column(Modifier.padding(horizontal = 16.dp)) { BdCalLink26(vm) } }
+            // Prompt 41: Kalendere vises ikke lenger her (oppsettet ligger bare i Innstillinger → Kalendere).
             item {
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     BdLabel("WIDGETS PÅ TELEFONEN")
@@ -213,6 +212,8 @@ private fun BdHero(vm: AppViewModel, all: List<Bd24>) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(fg.copy(alpha = .28f)))
             Text("Deretter: " + nxt.joinToString(" · ") { "${it.name} ${it.next.dayOfMonth}. ${BD_MS[it.next.monthValue - 1]}" }, color = fg.copy(alpha = .92f), fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
         }
+        // Prompt 41: jenka-toget med Glimt, trompet og konfetti inne i toppkortet når noen har bursdag i dag (ui/Ui41.kt).
+        if (h.daysLeft == 0) Jenka41()
     }
 }
 
@@ -347,7 +348,7 @@ private fun BdRow(vm: AppViewModel, b: Bd24, top: Boolean) {
             Modifier.fillMaxWidth().heightIn(min = 60.dp).press24 { Haptics.select(); s.sel = if (open) null else b.id; s.delArm = null }.padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            BdAvatar(vm, b, 42)
+            Box { BdAvatar(vm, b, 42); if (b.avatarUrl.isNullOrBlank()) BdPlus41(42) } // Prompt 41: «+» uten bilde
             Column(Modifier.weight(1f)) {
                 Text(b.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(b.short + (b.age?.let { " · fyller $it" } ?: "") + " · " + b.relLabel, color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -358,6 +359,7 @@ private fun BdRow(vm: AppViewModel, b: Bd24, top: Boolean) {
             }
         }
         if (open) Column(Modifier.fillMaxWidth().padding(start = 54.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            BdPhotoActions41(vm, b) // Prompt 41: last opp / bytt / fjern bilde
             val det = bdLong(b.next).replaceFirstChar { it.uppercase() } + (b.year?.let { " · født $it" } ?: "") + " · " + if (b.daysLeft == 0) "har bursdag i dag" else "om ${b.daysLeft} dager"
             Text(det, color = p.ink, fontSize = 13.5.sp)
             Text("Påminnelse", color = p.mut, fontSize = 12.5.sp)

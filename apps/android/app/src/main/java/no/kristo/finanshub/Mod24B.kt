@@ -133,7 +133,8 @@ val INTEG24_FALLBACK: List<Integ24> = listOf(
     Triple("imap", "Kvitteringer på e-post (IMAP)", listOf(Triple("host", "IMAP-server", "text"), Triple("user", "Brukernavn", "text"), Triple("pass", "App-passord", "secret"))),
     Triple("entur", "Entur / Ruter", listOf(Triple("client", "ET-Client-Name", "text"))),
     Triple("mybring", "Mybring (Posten / Bring)", listOf(Triple("user", "API-bruker (e-post)", "text"), Triple("key", "API-nøkkel", "secret"), Triple("cust", "Kundenummer", "text"))),
-    Triple("postnord", "PostNord", listOf(Triple("key", "API-nøkkel", "secret"))),
+    // Prompt 41: PostNord spores uten konto og uten nøkkel (offentlig Track & Trace som ha-postnord); nøkkelen er valgfri.
+    Triple("postnord", "PostNord", listOf(Triple("key", "API-nøkkel (valgfri)", "secret"))),
     Triple("parcelsapp", "ParcelsApp (reserve)", listOf(Triple("key", "API-nøkkel", "secret"))),
     Triple("cloudflare", "Cloudflare (domener)", listOf(Triple("token", "API-token", "secret"), Triple("account", "Konto-ID", "text"))),
     Triple("finn", "Finn.no", listOf(Triple("mail", "Varsel-e-post", "text"))),

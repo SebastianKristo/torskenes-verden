@@ -535,6 +535,7 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
         }
         // Prompt 40 (claude-code-glimt-jul.md): Julemodus rett under figurvalget og teksten om vennene, før Glimt-brief-bryteren.
         Jul40Card(vm)
+        Mai41Card(vm) // Prompt 41: Høytider → 17. mai
         PCard {
             PToggle("Glimt-brief", "Lag briefer gjennom dagen", set.brief) { v -> vm.setGlimt35(JSONObject().put("brief", v)) { it.copy(brief = v) } }
             // Prompt 39: slå av Glimt (figuren) i Now Brief.

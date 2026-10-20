@@ -249,7 +249,9 @@ data class AiModel34(val id: String, val desc: String, val gb: Double?, val quan
 data class AiCloud34(val id: String, val provider: String, val desc: String, val on: Boolean)
 data class AiPull34(val id: String, val pct: Int, val done: Double?, val total: Double?, val mbs: Double?, val status: String)
 data class AiTask34(val key: String, val name: String, val sub: String, val model: String, val fallback: String, val fin: Boolean, val warning: String?)
-data class AiJob34(val id: String, val title: String, val model: String, val st: String, val pct: Int, val dur: String?, val tok: String?, val err: String?, val whenT: String?, val fin: Boolean)
+data class AiJob34(val id: String, val title: String, val model: String, val st: String, val pct: Int, val dur: String?, val tok: String?, val err: String?, val whenT: String?, val fin: Boolean,
+    /** Prompt 41: serverens tidsstempler (createdAt/startedAt/endedAt) og ferdig etikett (timeLabel) for tidskolonnen i Jobber. */
+    val createdAt: String? = null, val startedAt: String? = null, val endedAt: String? = null, val timeLabel: String? = null)
 data class AiFeat34(val name: String, val kr: Double, val tokens: Long, val sub: String, val count: Int?)
 data class AiUsage34(val tokIn: Long, val tokOut: Long, val cost: Double, val costBy: Map<String, Double>, val localPct: Int?, val avgMs: Long?, val days: List<Pair<Long, Long>>, val feats: List<AiFeat34>,
     val budget: Double, val used: Double, val forecast: Double?, val hardStop: Boolean, val warn80: Boolean)
@@ -896,7 +898,8 @@ private fun parseJob34(o: JSONObject): AiJob34? {
     val tokS = s34(o, "tokS") ?: tok?.let { t -> String.format(java.util.Locale("nb", "NO"), "%,d tok", t).replace(',', ' ') + (cost?.takeIf { it > 0 }?.let { " · " + String.format(java.util.Locale("nb", "NO"), "%.2f kr", it) } ?: "") }
     return AiJob34(id, s34(o, "title", "t", "name", "label") ?: (s34(o, "task", "kind") ?: "Jobb"), s34(o, "model", "m") ?: "", st,
         (n34(o, "progress", "p", "pct") ?: 0.0).toInt().coerceIn(0, 100), s34(o, "dur") ?: ms?.let { String.format(java.util.Locale("nb", "NO"), "%.1f s", it / 1000.0) },
-        tokS, s34(o, "error", "err")?.takeIf { st == "fail" || st == "queue" }, s34(o, "when", "scheduled", "at"), b34(o, "fin", "finance") ?: (s34(o, "kind", "task") in setOf("rc", "receipt", "kat", "categorize", "fsok", "bar", "label")))
+        tokS, s34(o, "error", "err")?.takeIf { st == "fail" || st == "queue" }, s34(o, "when", "scheduled", "at"), b34(o, "fin", "finance") ?: (s34(o, "kind", "task") in setOf("rc", "receipt", "kat", "categorize", "fsok", "bar", "label")),
+        s34(o, "createdAt", "created_at", "queuedAt"), s34(o, "startedAt", "started_at"), s34(o, "endedAt", "ended_at", "finishedAt", "finished_at"), s34(o, "timeLabel"))
 }
 
 /** {running, queued, recent, paused} (SERVER34) eller {jobs|items:[…]}. */

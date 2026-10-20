@@ -230,7 +230,7 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
                             // Prompt 39: «✦ Analyserer på nytt … 42 %», tynn rød linje og gul markering når den er ferdig.
                             val re = vm.p39.re[r.id]
                             Box(Modifier.fillMaxWidth().background(if (r.id in vm.p39.reFlash) Color(0x33E8B931) else Color.Transparent)) {
-                                RcRow(vm, r, meta = if (re?.running == true && !open) "✦ Analyserer på nytt … ${re.pct} %" else rcMeta(r, booked = false),
+                                RcRow(vm, r, meta = if (re?.running == true && !open) "✦ Glimt analyserer på nytt … ${re.pct} %" else rcMeta(r, booked = false),
                                     onClick = { st.open = if (open) null else r.id; Haptics.select() })
                             }
                             if (re?.running == true && !open) ReLine39(re.pct)
@@ -247,12 +247,17 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
                     booked.forEachIndexed { i, r ->
                         Column {
                             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                            RcRow(vm, r, meta = rcMeta(r, booked = true), onClick = null) {
+                            // Prompt 41: bokførte rader kan åpnes (bilde, navn, beløp, kategori, Lagre / ↺) og leses på nytt med Glimt.
+                            val openB = st.open == r.id
+                            val reB = vm.p39.re[r.id]
+                            RcRow(vm, r, meta = if (reB?.running == true) "✦ Glimt analyserer på nytt … ${reB.pct} %" else rcMeta(r, booked = true), onClick = { st.open = if (openB) null else r.id; Haptics.select() }) {
                                 Box(
-                                    Modifier.size(30.dp).clip(CircleShape).clickable(onClickLabel = "Tilbake til gjennomgang") { vm.undo23(r) },
+                                    Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).border(1.dp, p.line, RoundedCornerShape(15.dp))
+                                        .clickable(enabled = reB?.running != true, onClickLabel = "Les på nytt med Glimt") { vm.reanalyze39(r.id) }.padding(horizontal = 10.dp),
                                     contentAlignment = Alignment.Center,
-                                ) { Text("↺", color = p.mut, fontSize = 15.sp) }
+                                ) { Text(if (reB?.running == true) "✦ ${reB.pct} %" else "✦ På nytt", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
                             }
+                            if (openB) BookedEditor41(vm, r, cats)
                         }
                     }
                 }

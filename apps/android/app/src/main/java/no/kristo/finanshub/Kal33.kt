@@ -101,7 +101,7 @@ class KalenderLoginProvider33 : ContentProvider() {
     override fun onCreate(): Boolean = true
 
     override fun call(method: String, arg: String?, extras: Bundle?): Bundle? {
-        if (method != "companion") return null
+        if (method != "companion" && method != "continue41" && method != "exchange41") return null
         val ctx = context ?: return null
         // call() har ingen automatisk tillatelsessjekk (bare query/insert/…): sjekk signature-tillatelsen selv.
         if (ctx.checkCallingPermission(PERM) != PackageManager.PERMISSION_GRANTED) throw SecurityException("Mangler $PERM")
@@ -110,7 +110,28 @@ class KalenderLoginProvider33 : ContentProvider() {
         val store = runCatching { AccountStore(ctx) }.getOrNull() ?: return Bundle().apply { putString("error", "Fikk ikke lest kontoen i Homelab-appen.") }
         val list = runCatching { store.load() }.getOrDefault(emptyList())
         val acc = list.firstOrNull { it.id == store.active() } ?: list.firstOrNull()
-            ?: return Bundle().apply { putString("error", "Logg inn i Homelab-appen først.") }
+            ?: return Bundle().apply { putString("error", if (method == "continue41") "not_logged_in" else "Logg inn i Homelab-appen først.") }
+        // Prompt 41 («Fortsett som …» uten app-bytte):
+        //  continue41 → {name, username, server, local, external, device_token?} – hvem som er innlogget og adressene (Kalender spør aldri om adresse).
+        //    device_token er kortlivet og engangs (POST /api/auth/device-token, 15 min); Kalender bytter det selv på
+        //    POST /api/auth/device-exchange {device_token, app:"kalender"} og får egen token. Homelab-økta forlater aldri appen.
+        //  exchange41 → {server, token, refresh?, username, name} – Homelab gjør hele byttet selv.
+        if (method == "continue41") {
+            val dt = runBlocking { withTimeoutOrNull(10_000) { deviceToken41(acc) } }
+            return Bundle().apply {
+                putString("name", acc.name); putString("username", acc.username)
+                putString("server", acc.external.ifBlank { acc.server }); putString("local", acc.local); putString("external", acc.external.ifBlank { acc.server })
+                dt?.let { putString("device_token", it) }
+            }
+        }
+        if (method == "exchange41") {
+            val r = runBlocking { withTimeoutOrNull(15_000) { deviceExchange41(acc) } }
+            return Bundle().apply {
+                if (r == null) putString("error", "Homelab-serveren svarte ikke. Prøv igjen, eller logg inn med brukernavn og passord.")
+                else { putString("server", acc.external.ifBlank { acc.server }); putString("local", acc.local); putString("token", r.first); r.second?.let { putString("refresh", it) }
+                    putString("username", acc.username); putString("name", acc.name) }
+            }
+        }
         val device = (arg ?: "Kalender (Android · ${Build.MANUFACTURER} ${Build.MODEL})").take(60)
         val token = runBlocking { withTimeoutOrNull(15_000) { companionToken(acc, device) } }
         return Bundle().apply {
@@ -122,6 +143,33 @@ class KalenderLoginProvider33 : ContentProvider() {
                 putString("name", acc.name)
             }
         }
+    }
+
+    /** Prompt 41: POST /api/auth/device-token {app:"kalender"} → {device_token} (engangs, 15 min). null = eldre server / ingen kontakt. */
+    private suspend fun deviceToken41(acc: UserAccount): String? {
+        for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
+            try {
+                val o = JSONObject(Api(base, acc.token).request("POST", "/auth/device-token", JSONObject().put("app", "kalender"), prefix = Api.HOMELAB, timeout = 4_000))
+                return o.optString("device_token").takeIf { it.isNotBlank() }
+            } catch (e: ApiException) { if (e.status in 400..499) return null } catch (_: Exception) { }
+        }
+        return null
+    }
+
+    /** Prompt 41: device-token → POST /api/auth/device-exchange {device_token, app:"kalender", device} → {token, refresh?}. Eldre server: companion-tokenet. */
+    private suspend fun deviceExchange41(acc: UserAccount): Pair<String, String?>? {
+        val device = "Kalender (Android · ${Build.MANUFACTURER} ${Build.MODEL})".take(60)
+        for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
+            try {
+                val dt = JSONObject(Api(base, acc.token).request("POST", "/auth/device-token", JSONObject().put("app", "kalender"), prefix = Api.HOMELAB)).optString("device_token")
+                if (dt.isBlank()) continue
+                val o = JSONObject(Api(base, null).request("POST", "/auth/device-exchange", JSONObject().put("device_token", dt).put("app", "kalender").put("device", device), prefix = Api.HOMELAB))
+                o.optString("token").takeIf { it.isNotBlank() }?.let { return it to o.optString("refresh").takeIf { r -> r.isNotBlank() } }
+            } catch (e: ApiException) {
+                if (e.status == 404 || e.status == 405) return companionToken(acc, device)?.let { it to null }
+            } catch (_: Exception) { }
+        }
+        return null
     }
 
     /** Eget token for Kalender (samme bruker). Prøver de andre adressene til kontoen hvis den første ikke svarer. */

@@ -701,20 +701,29 @@ internal fun PaperTrackSettings(vm: AppViewModel) {
 @Composable
 internal fun PaperLogin(vm: AppViewModel) {
     val p = PaperPal.current
-    var server by remember { mutableStateOf(if (vm.addingAccount) "" else vm.server) }
+    // Prompt 41: ingen SERVER-felt. Appen kjenner adressen (https://home.kristo.no, eller sist brukte); lokal adresse oppdages
+    // etter innlogging (/api/discovery) og endres i Innstillinger → Konto → Server. Feltet vises bare via «Endre serveradresse».
+    var server by remember { mutableStateOf(vm.server.ifBlank { DEFAULT_SERVER41 }) }
+    var showServer by remember { mutableStateOf(false) }
+    val noContact = vm.p41.loginNoContact
     var user by remember { mutableStateOf("") }
     var pw by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
     var trust by remember { mutableStateOf(true) }
     val snack = remember { SnackbarHostState() }
-    LaunchedEffect(vm.message) { vm.message?.let { snack.showSnackbar(it); vm.message = null } }
+    LaunchedEffect(vm.message) { vm.message?.let { m ->
+        val net = m.startsWith("Fant ikke serveren") || m.startsWith("Fikk ikke kontakt") || m.startsWith("Serveren svarte ikke") || m.startsWith("HTTPS-feil") || m.startsWith("Uventet svar")
+        if (net && !showServer) { vm.p41.loginNoContact = true; vm.message = null } else { snack.showSnackbar(m); vm.message = null }
+    } }
     val pend = vm.pending
     Box(Modifier.fillMaxSize().background(p.bg)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding()) {
             GateHero(if (pend != null) "Homelab · ${pend.server.substringAfter("://")}" else "Homelab", if (pend != null) "Totrinns-\nbekreftelse" else "${greetingFor()},\nvelkommen hjem")
             Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().padding(26.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 if (pend == null) {
-                    PField("Server", server, { server = it }, placeholder = "home.dittdomene.no", keyboard = ServerKeyboard)
+                    if (noContact && !showServer) LoginNoContact41(onRetry = { vm.p41.loginNoContact = false; if (pw.isNotBlank() && !vm.busy) vm.login(server, user, pw) },
+                        onEdit = { vm.p41.loginNoContact = false; showServer = true })
+                    if (showServer) PField("Serveradresse", server, { server = it }, placeholder = DEFAULT_SERVER41, keyboard = ServerKeyboard)
                     PField("Brukernavn", user, { user = it }, keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, imeAction = ImeAction.Next))
                     PField("Passord", pw, { pw = it }, password = true, keyboard = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go),
                         onDone = { if (server.isNotBlank() && pw.isNotBlank()) vm.login(server, user, pw) })

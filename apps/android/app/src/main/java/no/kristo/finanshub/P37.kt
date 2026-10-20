@@ -618,9 +618,12 @@ fun AppViewModel.glimt37(q0: String) {
             val body = JSONObject().put("q", q)
             list?.let { body.put("list", it) }
             s.glimtImage?.let { body.put("image", "data:image/jpeg;base64," + Base64.encodeToString(it, Base64.NO_WRAP)) }
+            // Prompt 41: lange beskjeder deles opp med Glimt i bakgrunnen (P41.kt → glimtAsync41).
+            if (s.glimtImage == null && needsAi41(q)) body.put("async", true)
             val r = try { JSONObject(api37 { request("POST", "/tasks/glimt", body, prefix = Api.HOMELAB, read = 60_000) }) } catch (e: ApiException) {
                 if (e.status == 404 || e.status == 405) null else throw e
             }
+            if (r != null && r.s37("jobId") != null) { glimtAsync41(r, q); refreshTasks37(); return@launch37 }
             s.glimt = if (r != null) TaskGlimt37(
                 r.s37("kind") ?: "add", r.s37("text") ?: "", glimtItems40(objs34(r.optJSONArray("items"))), r.optJSONObject("undo")?.s37("token"),
             ) else localGlimt37(q, list)

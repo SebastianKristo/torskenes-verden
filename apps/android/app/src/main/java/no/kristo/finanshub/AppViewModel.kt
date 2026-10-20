@@ -686,6 +686,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun deepLink(uri: Uri) {
         // Prompt 38: homelab://login?c=… / https://<vert>/l/… (QR-innlogging på ny enhet).
         if (qrLink38(uri)) return
+        // Prompt 41: homelab://app-auth / https://<vert>/app-auth (Kalender ber Homelab om å godkjenne innloggingen).
+        if (appAuthLink41(uri)) return
         if (uri.scheme != "finanshub" || !loggedIn) return
         menuOpen = false
         when (uri.host ?: "") {
@@ -1766,6 +1768,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun loadPhotoNow() {
         val kind = photoKind
         if (kind == "cur" || kind == "none") { photo = null; photoGradient = emptyList(); photoCredit = null; photoError = null; bgInfo = null; return }
+        // Prompt 41: Oslo fra lufta (Wikimedia Commons) etter tid på døgnet, nytt bilde hver hele time (P41.kt). Feiler alle: serverens bakgrunn.
+        if (kind == "oslo") oslo41()?.let { (bmp, credit) ->
+            bgInfo = null; photoGradient = emptyList(); photoCredit = credit; photo = bmp
+            photoThumbs = photoThumbs + (kind to bmp); photoFailed = photoFailed - kind; photoError = null
+            return
+        }
         // Prompt 19: felles bakgrunnstjeneste. Eldre servere uten /api/background faller tilbake til /api/photo-window.
         val bg = backgroundFor(kind)
         if (bg != null) {
@@ -3710,6 +3718,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun refreshFinance40() { runCatching { loadTx() }; runCatching { loadHome() } }
     internal suspend fun loadSubs40() = loadSubs()
     internal suspend fun loadNews40() = loadNews().join()
+
+    /* ---------- Prompt 41 (ANDROID41): Fold 1c, skanneknapp på Hjem, server uten adressefelt, Kalender-innlogging, Oslo-bakgrunn, Si fra, Min reise (P41.kt, ui/Ui41.kt, ui/Fold41.kt) ---------- */
+    val p41 = P41State()
+    internal suspend fun <T> api41(f: suspend Api.() -> T): T = api.f()
+    internal fun launch41(block: suspend () -> Unit) = launch(block)
+    internal suspend fun bgImage41(url: String): Bitmap? = bgImage(url)
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

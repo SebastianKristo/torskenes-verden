@@ -370,7 +370,7 @@ internal fun ReProgress39(vm: AppViewModel, id: String, re: Re39) {
             val now = when {
                 re.cancelled -> re.msg ?: "Avbrutt · ingenting ble endret"
                 re.error -> re.msg?.let { if (it.startsWith("✕")) it else "✕ $it" } ?: "✕ ${re.engine} svarte ikke"
-                re.done -> re.msg ?: "✦ Analysert på nytt"
+                re.done -> re.msg ?: "✦ Glimt har analysert på nytt"
                 else -> re.msg ?: RE_STEPS39.getOrNull(idx)?.second?.let(label) ?: "Starter …"
             }
             Text(now, color = if (re.error && !re.cancelled) Color(RED39) else p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,

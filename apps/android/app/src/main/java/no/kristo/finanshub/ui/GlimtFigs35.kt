@@ -537,6 +537,7 @@ internal fun DrawScope.drawFig35(id: String, S: Float, mood: String, t: Float, a
         // Prompt 40 (claude-code-glimt-jul.md): figurbiblioteket legger selv på antrekket når julemodus er aktiv (alle steder
         // som tegner Glimt: brief, chat, varsler, søk, widgets). Unntak: noJul (figurvelgeren).
         if (!noJul) no.kristo.finanshub.Jul40.phase?.let { drawJul40(S, S * hf, it, t, anim) }
+            ?: run { if (no.kristo.finanshub.Mai41.on) drawMai41(S, S * hf, t, anim) } // Prompt 41: sløyfe + flagg 14.–17. mai
     }
 }
 

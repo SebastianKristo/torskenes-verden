@@ -379,9 +379,9 @@ fun AppViewModel.onJob39(msg: JSONObject) {
 
 private suspend fun AppViewModel.finishRe39(id: String, conf: Double, changed: List<String>) {
     val pct = if (conf.isNaN()) null else Math.round(if (conf <= 1.0) conf * 100 else conf).toInt()
-    setRe39(id) { (it ?: Re39(null, "done", 100, null, "Gemini")).copy(step = "done", pct = 100, done = true, msg = "✦ Analysert på nytt") }
+    setRe39(id) { (it ?: Re39(null, "done", 100, null, "Gemini")).copy(step = "done", pct = 100, done = true, msg = "✦ Glimt har analysert på nytt") }
     Haptics.success()
-    message = "✦ Analysert på nytt" + (pct?.let { " · $it % sikker" } ?: "")
+    message = "✦ Glimt har analysert på nytt" + (pct?.let { " · $it % sikker" } ?: "")
     // Raden markeres i 2 s (endrede felt: ${changed.joinToString()}; eldre server sier ikke hvilke).
     p39.reFlash = p39.reFlash + (id to System.currentTimeMillis())
     runCatching { loadReceipts(); loadJobs() }

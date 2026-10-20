@@ -517,8 +517,11 @@ class Hjemlys40Service : Service() {
         return START_STICKY
     }
 
-    private fun recipients(s: HlSession40): String = s.recipients.map { firstName37(it) }.let { l ->
-        when (l.size) { 0 -> "Husstanden"; 1 -> l[0]; else -> l.dropLast(1).joinToString(", ") + " og " + l.last() }
+    // Prompt 41 (Live Update-fiks 4): du selv er aldri blant «følger med»; 3+: «Rune, Cybele og 1 til».
+    private fun recipients(s: HlSession40): String {
+        val me = runCatching { AccountStore(this).let { st -> st.load().let { l -> l.firstOrNull { it.id == st.active() } ?: l.firstOrNull() } } }.getOrNull()
+        val l = s.recipients.filter { n -> n != s.userId && (me == null || (!n.equals(me.name, true) && !n.equals(me.username, true) && !n.equals(firstName37(me.name), true))) }.map { firstName37(it) }
+        return when (l.size) { 0 -> "Husstanden"; 1 -> l[0]; 2 -> l[0] + " og " + l[1]; else -> l[0] + ", " + l[1] + " og ${l.size - 2} til" }
     }
 
     /** Hvert minutt: ny tekst («7 min»), og status fra serveren (sen/hjemme). */

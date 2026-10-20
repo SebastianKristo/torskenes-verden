@@ -173,10 +173,12 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp, head: (androidx.co
         }
         item { PLabel("Bakgrunn på Hjem", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item { Box(Modifier.hl34(vm, "bg")) { PaperBgSettings(vm) { own.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } } } // prompt 34: mål «bg»
+        item { Column(verticalArrangement = Arrangement.spacedBy(2.dp)) { BgCredit41(vm) } } // Prompt 41: kreditering for valgt bakgrunn (ikke på Hjem)
         item { PLabel(if (head != null) "Fanelinje · flere valg" else "Fanelinje", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
             PCard {
-                SetRow(vm, 1, Icons.Filled.ViewWeek, "Rediger fanelinjen", "Fjern faner, gi nytt navn og bytt ikon. Du kan også holde inne på linjen.", "›") { vm.tabEdit = true }
+                ScanHomeRow41(vm) // Prompt 41
+                SetRow(vm, 1, Icons.Filled.ViewWeek, "Rediger fanelinjen", "Fjern faner, gi nytt navn og bytt ikon. Du kan også holde inne på linjen.", "›", top = true) { vm.tabEdit = true }
             }
         }
         item { SecNavSettings32b(vm) } // Prompt 32: FANELINJE · ANDRE SIDER (Domener, Abonnement, Familie)

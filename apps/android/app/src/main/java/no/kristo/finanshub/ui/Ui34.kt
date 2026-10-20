@@ -121,7 +121,7 @@ internal fun RcAiSection34(vm: AppViewModel) {
     LaunchedEffect(vm.base, vm.jobs.size, vm.uploading) { vm.loadRcAi34() }
     if (l.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("✦ ANALYSERES AV AI · ${l.size}", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp,
+        Text("✦ ANALYSERES AV GLIMT · ${l.size}", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp,
             modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         l.forEach { r -> RcAiCard34(vm, r) }
     }

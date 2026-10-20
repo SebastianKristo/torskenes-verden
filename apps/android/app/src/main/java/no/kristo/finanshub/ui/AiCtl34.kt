@@ -523,6 +523,7 @@ private fun AcJobs34(vm: AppViewModel, T: AcT34) {
                         Text(sub, color = if (j.st == "fail") T.bad else T.mut, fontSize = 12.sp, lineHeight = 16.sp)
                         if (j.st == "run") AcBar34(T, j.pct / 100f, T.acc, 4.dp)
                     }
+                    JobTime41(j, T.ink, T.mut) // Prompt 41: klokkeslett (startet / lagt i kø / ferdig + «… siden»)
                     if (j.st != "done") AcPill34(T, if (j.st == "fail") "Prøv igjen" else "Avbryt", color = if (j.st == "fail") T.ink else T.bad) { vm.jobAction34(j) }
                 }
             }

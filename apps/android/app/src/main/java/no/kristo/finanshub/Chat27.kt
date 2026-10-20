@@ -138,7 +138,7 @@ class Chat27State {
     var input by mutableStateOf("")
     var att by mutableStateOf<List<ChatAtt27>>(emptyList())
     var web by mutableStateOf(false)
-    var data by mutableStateOf(false)
+    var data by mutableStateOf(true)
     var drawer by mutableStateOf(false)
     /** Åpent ark: model | params | menu | guard | plus | kb | mods */
     var sheet by mutableStateOf<String?>(null)
@@ -162,7 +162,8 @@ class Chat27State {
     var kb by mutableStateOf<List<ChatDoc27>?>(null)
     var folderOpen by mutableStateOf<Map<String, Boolean>>(emptyMap())
     /* Brukerinnstillinger (CHAT i Innstillinger → AI og tolkning). */
-    var myDataOn by mutableStateOf(false)
+    // Prompt 41: «Mine data» er på som standard (chat_my_data = true når verdien mangler).
+    var myDataOn by mutableStateOf(true)
     var askCloud by mutableStateOf(true)
     var theme by mutableStateOf("papir")
     var cfgLoaded by mutableStateOf(false)
@@ -334,7 +335,7 @@ fun AppViewModel.loadChatCfg27() {
         val raw = runCatching { api27 { hlGet("/chat/settings") } }.getOrNull() ?: return@launch27
         val vals = HashMap<String, Any?>()
         runCatching { JSONObject(raw).let { o -> listOf("chat_my_data", "chat_ask_cloud", "chat_default_model", "chat_theme").forEach { k -> if (o.has(k)) vals[k] = o.opt(k) } } }
-        s.myDataOn = cfgBool27(vals["chat_my_data"], false)
+        s.myDataOn = cfgBool27(vals["chat_my_data"], true)
         s.askCloud = cfgBool27(vals["chat_ask_cloud"], true)
         (vals["chat_theme"] as? String)?.takeIf { it == "papir" || it == "noytral" }?.let { s.theme = it }
         (vals["chat_default_model"] as? String)?.takeIf { it.isNotBlank() }?.let { if (s.defModel == null) s.defModel = it }
@@ -363,6 +364,8 @@ fun AppViewModel.loadChatModels27() {
             val arr = if (t.startsWith("[")) JSONArray(t) else JSONObject(t).let { it.optJSONArray("models") ?: JSONArray() }
             s.models = arr.objs27().mapNotNull(::parseChatModel27)
             if (!t.startsWith("[")) JSONObject(t).optStr("default")?.let { s.defModel = it }
+            // Prompt 41: «✦ Auto» øverst og som standard (én gangs flytting, autoMig41), før reserven under.
+            if (!t.startsWith("[")) chatAuto41(JSONObject(t))
             if (s.defModel == null || s.models.none { it.id == s.defModel }) s.defModel = s.firstLocal27()?.id ?: s.models.firstOrNull()?.id ?: s.defModel
             s.unavailable = false; s.error = null
             s.pending?.let { p -> s.pending = null; if (s.input.trim() == p) sendChat27(p) }
@@ -473,6 +476,7 @@ fun AppViewModel.newChat27() {
     val s = chat27
     stopChat27(silent = true)
     s.curId = null; s.msgs = emptyList(); s.title = ""; s.model = s.defModel; s.settings = s.defSettings
+    s.data = s.myDataOn // Prompt 41: «Mine data» på i hver nye samtale
     s.att = emptyList(); s.input = ""; s.editIdx = null; s.drawer = false; s.guard = null
 }
 

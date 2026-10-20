@@ -27,6 +27,8 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -115,18 +117,31 @@ internal fun PaperRail25(vm: AppViewModel, bar: String, float: Boolean, modifier
     }
 }
 
-/** Rund rød Hjem-knapp (lab, ikon onLab 24, skygge 0 8 20 −8 / 50 %), 8 over første fane. Går rett til Hjem. */
+/**
+ * Prompt 41 (claude-code-fold-hjem-knapp.md): rød Hjem-knapp med samme form som den aktive fanen («Oversikt»):
+ * full bredde i linja, 58 høy, radius 18, ikon 20 over «Hjem» (samme skrift som fanene), lab / onLab, skygge som før,
+ * 8 luft ned til første fane og trykkeffekt 0,96 som fanene. TalkBack: «Til Hjem».
+ */
 @Composable
 private fun RedHome25(vm: AppViewModel) {
     val p = PaperPal.current
-    Box(Modifier.padding(bottom = 8.dp)) {
-        Box(
-            Modifier.size(60.dp).shadow(12.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .5f), spotColor = Color.Black.copy(alpha = .5f))
-                .clip(CircleShape).background(p.lab)
-                .clickable(role = Role.Button, onClickLabel = "Til Hjem") { Haptics.select(); vm.settingsPage = null; vm.paperTab("hjem") }
-                .semantics { contentDescription = "Til Hjem" },
-            contentAlignment = Alignment.Center,
-        ) { WxIcon(P25_HOUSE, p.onLab, 24.dp, stroke = 2.2f) }
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by src.collectIsPressedAsState()
+    val sc by animateFloatAsState(if (pressed) .96f else 1f, tween(120), label = "home41")
+    val shape = RoundedCornerShape(18.dp)
+    Box(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Column(
+            Modifier.fillMaxWidth().height(58.dp).graphicsLayer { scaleX = sc; scaleY = sc }
+                .shadow(12.dp, shape, ambientColor = Color.Black.copy(alpha = .5f), spotColor = Color.Black.copy(alpha = .5f))
+                .clip(shape).background(p.lab)
+                .clickable(interactionSource = src, indication = null, role = Role.Button, onClickLabel = "Til Hjem") { Haptics.select(); vm.settingsPage = null; vm.paperTab("hjem") }
+                .semantics(mergeDescendants = true) { contentDescription = "Til Hjem" }
+                .padding(horizontal = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+        ) {
+            WxIcon(P25_HOUSE, p.onLab, 20.dp, stroke = 2.2f)
+            Text("Hjem", color = p.onLab, style = TAB_TEXT24.copy(fontSize = 11.5.sp, lineHeight = 13.sp), maxLines = 1)
+        }
     }
 }
 

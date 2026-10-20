@@ -777,6 +777,7 @@ fun AppViewModel.applyJul40(o: JSONObject) {
     if (s.has("snow")) s.optBoolean("snow").let { if (it != Jul40.snow) { Jul40.snow = it; ch = true } }
     s.s37("julSound")?.let { if (it != Jul40.sound) { Jul40.sound = it; ch = true } }
     if (ch) { Jul40.store(appCtx40); redrawWidgets40() }
+    runCatching { Mai41.apply(s, appCtx40) } // Prompt 41: 17. mai (Høytider)
 }
 
 fun AppViewModel.setJul40(mode: String? = null, phase: String? = null, snow: Boolean? = null, sound: String? = null) {

@@ -82,6 +82,20 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="home.kristo.no" android:pathPrefix="/l/" />
             </intent-filter>
+            <!-- Prompt 41: Kalender ber Homelab godkjenne innloggingen (PKCE). Egen URL-skjema virker uten signering/App Links;
+                 https://home.kristo.no/app-auth brukes når assetlinks.json (ANDROID_CERT_SHA256) er satt på serveren. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="homelab" android:host="app-auth" />
+            </intent-filter>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="home.kristo.no" android:pathPrefix="/app-auth" />
+            </intent-filter>
             <!-- «Del → FinansHub» fra Galleri: kvitteringen lastes opp direkte. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

@@ -222,7 +222,7 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
     if (vm.accounts.size > 1) OutlinedButton(onClick = { vm.logoutOthers() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Logg ut andre kontoer") }
     Note("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.")
     // Prompt 38: ENHETER (Logg inn på ny enhet) og ØKT (Lås skjermen, Logg ut, Logg ut av alle enheter) nederst på Konto.
-    if (Tone.paper) Session38(vm)
+    if (Tone.paper) { Server41(vm); Session38(vm) } // Prompt 41: Konto → SERVER (lokal, ekstern, bytt automatisk)
 }
 
 @Composable

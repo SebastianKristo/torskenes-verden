@@ -111,6 +111,7 @@ internal fun RuterScreen24(vm: AppViewModel) {
             item {
                 Column(Modifier.fillMaxWidth().offset(y = (-34).dp).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     if (!vm.stopEdit) StopPills24(vm, sel?.id) else MyStops24(vm)
+                    MinReise41(vm, home = false) // Prompt 41: MIN REISE · SEBASTIAN over transportfilteret (bare med forhåndsruter)
                     when {
                         vm.stopsError != null -> Text(vm.stopsError ?: "", color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp))
                         sel == null -> Text("Legg til en holdeplass med «+ Stopp».", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 4.dp))

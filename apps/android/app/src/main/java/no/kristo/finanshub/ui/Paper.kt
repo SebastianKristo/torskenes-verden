@@ -318,7 +318,8 @@ internal fun PaperApp(
       Nav23Back(vm, nav, backEnabled, p.bg, preview = !backLocal, onBack = onBack) {
         Box(Modifier.fillMaxSize().background(p.bg)) {
             Column(Modifier.fillMaxSize()) {
-                Hero(vm, home, wide) { vm.photoMenu = !vm.photoMenu; if (vm.photoMenu) vm.loadPhotoThumbs() }
+                // Prompt 41: Fold 1c – toppbildet skjules på Hjem (bildet ligger i det store Glimt-kortet, ui/Fold41.kt).
+                if (!(wide && home)) Hero(vm, home, wide) { vm.photoMenu = !vm.photoMenu; if (vm.photoMenu) vm.loadPhotoThumbs() }
                 // Innholdet ligger 23 dp opp i fotovinduet. Så snart man scroller, klippes det ved headerens nederste kant.
                 Box(
                     // Prompt 34 (claude-code-innhold-under-navbar.md): før var boksen bare flyttet 23 dp opp (offset), så de nederste 23 dp
@@ -333,7 +334,7 @@ internal fun PaperApp(
                     // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
                     // Dra for å oppdatere: fra toppen når siden står øverst (ca. 70 dp), så hentes siden på nytt.
                     PullToRefreshBox(isRefreshing = vm.pullRefreshing, onRefresh = { vm.pullRefresh() }, modifier = Modifier.fillMaxHeight()) {
-                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide) 10_000.dp else if (home) 960.dp else 720.dp)) { key(pageKey, vm.b26.topSeq) { holder.SaveableStateProvider(scrollKey) {
+                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide || home) 10_000.dp else 720.dp)) { key(pageKey, vm.b26.topSeq) { holder.SaveableStateProvider(scrollKey) {
                         when {
                             vm.original != null -> PaneBox(navBottom) { OriginalScreen(vm) }
                             vm.editing != null -> PaneBox(navBottom) { TxEditScreen(vm, vm.editing!!, scan) }
@@ -431,6 +432,8 @@ internal fun PaperApp(
             Global38(vm)
             // Prompt 40: 2FA i appen, Nyheter-Glimt, Hjemlys-start og «Rediger alt» (ui/Ui40.kt).
             Global40(vm)
+            // Prompt 41: Kalender-innlogging, Konto → Server, Si fra, Min reise-toast, Oslo-bakgrunn hver time (ui/Ui41.kt).
+            Global41(vm)
         }
       }
     }
@@ -541,7 +544,7 @@ private fun photoSub(vm: AppViewModel, k: String): String = when {
     k == "cur" -> "Mørk gradient"
     k == "none" -> "Bare gradient, ingen bilder"
     k in vm.photoFailed -> "Fikk ikke lastet bildet · trykk for å prøve igjen"
-    k == "oslo" -> "Bilde av Oslo"
+    k == "oslo" -> "Oslo fra lufta · skifter gjennom dagen" // prompt 41
     k == "weather" -> "Følger været nå"
     k == "planets" -> if (vm.bgRotate == "hourly") "Ny planet hver time (NASA)" else "Ny planet hver dag (NASA)"
     else -> "Ditt eget bilde"
@@ -696,16 +699,33 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     if (vm.p30.upd.pwFor != null) UpdPwSheet30(vm)
     val grid37 = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     WiggleScroll37(vm, grid37)
-    val secs37 = if (vm.bibleAllowed37()) HOME_SECS37 else HOME_SECS
+    val secsAll = if (vm.bibleAllowed37()) HOME_SECS37 else HOME_SECS
+    // Prompt 41: Fold 1c – høyre halvdel viser bare kortene i valgt fane (Søk og Brief ligger i hovedkortet), én kolonne.
+    val fold = wide
+    val secs37 = if (fold) foldKeys41(vm.p41.foldTab).mapNotNull { k -> secsAll.firstOrNull { it.key == k } } else secsAll
+    val tripHome = vm.tripOnHome41()
+    if (fold) FoldHome41(vm) { m -> HomeGrid41(vm, m.foldSwipe41(vm), grid37, PaddingValues(0.dp, 0.dp, 0.dp, 24.dp + navBottom), 1, secs37, false, tripHome && vm.p41.foldTab == "na", navBottom) }
+    else HomeGrid41(vm, Modifier.fillMaxSize(), grid37, PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), 1, secs37, false, tripHome, navBottom)
+}
+
+/** Prompt 41: selve kortlista på Hjem (telefon, og høyre halvdel på Fold). */
+@Composable
+private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose.foundation.lazy.grid.LazyGridState, pad: PaddingValues, cols: Int, secs37: List<PSec>, wide: Boolean, trip: Boolean, navBottom: Dp) {
+    val p = PaperPal.current
+    val ctx = LocalContext.current
+    val h = vm.mobileHome
     LazyVerticalGrid(
-        GridCells.Fixed(if (wide) 2 else 1), Modifier.fillMaxSize().gridBounds37(vm), state = grid37, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
+        GridCells.Fixed(cols), mod.gridBounds37(vm), state = grid37, contentPadding = pad,
         verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // Prompt 41: Min reise (bare når «forlot skolen» er aktiv), over Ruter-kortet eller i stedet for det.
+        if (trip && vm.editPage != "hjem") item(key = "trip41", span = { GridItemSpan(maxLineSpan) }) { MinReise41(vm, home = true) }
         vm.homeError?.let { e -> item(span = { GridItemSpan(maxLineSpan) }) { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(4.dp)) } }
         // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (admin; ✕ skjuler «Tilgjengelig» i 24 t).
         if (vm.editPage != "hjem" && upd30Show(vm, home = true)) item(key = "upd30", span = { GridItemSpan(maxLineSpan) }) { UpdateBanner30(vm, home = true) }
         if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
-        pageGridSecs(vm, "hjem", secs37, wide, skip = { k -> (k == "h40" && vm.p40.hlMissing) || (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) }) { k ->
+        pageGridSecs(vm, "hjem", secs37, wide, skip = { k -> (k == "h40" && vm.p40.hlMissing) || (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) ||
+            (k == "h3" && trip && vm.p41.homeCard == "instead") }) { k ->
             when (k) {
                 "h12" -> SwipeBrief36(vm) { HomeBrief34(vm) } // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt). Prompt 36: sveip mot høyre skjuler til neste brief
                 "h13" -> BibleHome37(vm) // Prompt 37: dagens bibelvers (ui/Bible37.kt)

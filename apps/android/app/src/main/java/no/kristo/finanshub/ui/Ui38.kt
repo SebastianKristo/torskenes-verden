@@ -192,42 +192,58 @@ internal fun AnsScrim38(vm: AppViewModel) {
  * tilbake), lite håndtak nederst. Posisjonen meldes til AnsScrim38, og nullstilles når boblen forsvinner.
  */
 @Composable
-internal fun AnsBox38(vm: AppViewModel, content: @Composable () -> Unit) {
+internal fun AnsBox38(vm: AppViewModel, onPull41: (() -> Unit)? = null, content: @Composable () -> Unit) {
     var drag by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
     val limit = with(LocalDensity.current) { 40.dp.toPx() }
+    // Prompt 41 (claude-code-sok-pille-dra-til-chat.md): dra ned = åpne i Chat. Terskel 70 dp, motstand 0,4 etter terskelen,
+    // pillen flytter seg 0,35 × dra og bunnen vokser 0,65 × dra; håndtaket blir bredere (34 → 80) og lysere, lett haptikk ved terskelen.
+    val open41 = with(LocalDensity.current) { 70.dp.toPx() }
+    val dens41 = LocalDensity.current.density
+    val pull41 = if (onPull41 != null && drag > 0f) (if (drag <= open41) drag else open41 + (drag - open41) * .4f) else 0f
+    var armed41 by remember { mutableStateOf(false) }
+    LaunchedEffect(pull41 >= open41) { if ((pull41 >= open41) != armed41) { armed41 = pull41 >= open41; Haptics.tap() } }
     DisposableEffect(Unit) { onDispose { vm.p38.ansRect = null } }
     val close: () -> Unit = { Haptics.dismiss(); vm.closeAns31() }
     Box(
         Modifier.fillMaxWidth()
             .onGloballyPositioned { vm.p38.ansRect = it.boundsInRoot() }
-            .graphicsLayer { translationY = drag; alpha = (1f + drag / (limit * 3f)).coerceIn(0f, 1f) }
+            .graphicsLayer { translationY = if (onPull41 != null && drag > 0f) pull41 * .35f else drag; alpha = (1f + minOf(drag, 0f) / (limit * 3f)).coerceIn(0f, 1f) }
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragEnd = {
                         scope.launch {
-                            if (-drag > limit) {
+                            if (onPull41 != null && drag > 0f && (if (drag <= open41) drag else open41 + (drag - open41) * .4f) >= open41) {
+                                Haptics.select(); armed41 = false; drag = 0f; onPull41()
+                            } else if (-drag > limit) {
                                 animate(drag, -size.height.toFloat() * .6f, animationSpec = tween(170)) { v, _ -> drag = v }
                                 close()
                                 drag = 0f
-                            } else animate(drag, 0f, animationSpec = spring(dampingRatio = .6f)) { v, _ -> drag = v }
+                            } else animate(drag, 0f, animationSpec = if (drag > 0f && onPull41 != null) tween(250, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, .8f, .2f, 1f)) else spring(dampingRatio = .6f)) { v, _ -> drag = v }
                         }
                     },
                     onDragCancel = { scope.launch { animate(drag, 0f, animationSpec = spring()) { v, _ -> drag = v } } },
                 ) { ch, amt ->
                     ch.consume()
                     val n = drag + amt
-                    drag = if (n > 0f) minOf(n * .5f, limit * .3f) else n
+                    drag = if (n > 0f) (if (onPull41 != null) n else minOf(n * .5f, limit * .3f)) else n
                 }
             },
     ) {
-        content()
+        Column {
+            content()
+            if (pull41 > 0f) Box(Modifier.fillMaxWidth().height((pull41 * .65f / dens41).dp), contentAlignment = Alignment.Center) {
+                Text(if (pull41 >= open41) "Slipp for å åpne i Chat" else "Dra ned for å åpne i Chat", color = Color.White.copy(alpha = (pull41 / open41).coerceIn(0f, 1f) * .85f),
+                    fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1)
+            }
+        }
         Box(
             Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = 10.dp).size(30.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f))
                 .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk svaret") { close() },
             contentAlignment = Alignment.Center,
         ) { Text("✕", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp).size(36.dp, 4.dp).clip(CircleShape).background(Color.White.copy(alpha = .28f)))
+        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp).size((36f + 44f * (pull41 / open41).coerceIn(0f, 1f)).dp, 4.dp).clip(CircleShape)
+            .background(Color.White.copy(alpha = if (pull41 >= open41) .6f else .28f)))
     }
 }
 

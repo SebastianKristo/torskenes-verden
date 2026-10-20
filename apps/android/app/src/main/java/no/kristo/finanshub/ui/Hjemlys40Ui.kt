@@ -106,8 +106,9 @@ internal fun HjemlysPage40(vm: AppViewModel) {
             when {
                 late != null -> LateView40(vm, late, night)
                 mine != null -> ActiveView40(vm, mine, night)
-                night -> StartNight40(vm)
-                else -> StartDay40(vm)
+                // Prompt 41: «Si fra» (Sjekket inn · Drar snart · Drar nå) over start av turen (ui/Ui41.kt).
+                night -> { SiFra41(vm, true); StartNight40(vm) }
+                else -> { SiFra41(vm, false); StartDay40(vm) }
             }
         }
     }
