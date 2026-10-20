@@ -350,7 +350,11 @@ export function assetLinksHandler(c) {
   return c.body(JSON.stringify(body), 200, WK_HEADERS);
 }
 export function appleAssociationHandler(c) {
-  const ids = String(process.env.APPLE_APP_ID ?? '').split(',').map((s) => s.trim()).filter((s) => /^[A-Z0-9]{10}\.[\w.-]+$/.test(s));
+  // Prompt 41: APPLE_TEAM_ID gir appene no.kristo.finanshub (Homelab, fanger /app-auth) og no.kristo.kalender (delt innlogging / webcredentials).
+  const team = /^[A-Z0-9]{10}$/.test(process.env.APPLE_TEAM_ID ?? '') ? process.env.APPLE_TEAM_ID : null;
+  const ids = [...new Set([...String(process.env.APPLE_APP_ID ?? '').split(',').map((s) => s.trim()), ...(team ? [`${team}.no.kristo.finanshub`] : [])].filter((s) => /^[A-Z0-9]{10}\.[\w.-]+$/.test(s)))];
   if (!ids.length) return c.body(JSON.stringify({ error: 'Ikke satt opp' }), 404, WK_HEADERS);
-  return c.body(JSON.stringify({ applinks: { apps: [], details: ids.map((appID) => ({ appID, appIDs: [appID], paths: ['/l/*'], components: [{ '/': '/l/*' }] })) } }), 200, WK_HEADERS);
+  const paths = ['/l/*', '/app-auth', '/app-auth/*'];
+  const web = [...ids, ...(team ? [`${team}.no.kristo.kalender`, `${team}.no.kristo.kalender.mac`] : [])];
+  return c.body(JSON.stringify({ applinks: { apps: [], details: ids.map((appID) => ({ appID, appIDs: [appID], paths, components: paths.map((p) => ({ '/': p })) })) }, webcredentials: { apps: web } }), 200, WK_HEADERS);
 }

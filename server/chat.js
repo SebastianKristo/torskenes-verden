@@ -41,6 +41,8 @@ import { nextTasks } from './tasks.js';
 import { chatBody, ollamaPost, thinkFilter } from './ollama-opts.js';
 import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './chat-scans.js';
 import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './chat-tools41.js'; // prompt 41: Glimt henter fakta
+import { AUTO_ID, pickAuto41, autoEntry41, recordAuto41, feedbackAuto41, autoSummary41 } from './chat41.js'; // prompt 41: «✦ Auto»
+import { weekFact41, isWeekWeather41 } from './weather41.js'; // prompt 41: ukesvær til modellen
 
 const q = (sql) => db.prepare(sql);
 const FILES = resolve(config.dataDir, 'chat', 'files');
@@ -446,7 +448,8 @@ const bad = (c, error, code = 400) => c.json({ error }, code);
 
 api.get('/models', async (c) => {
   const models = await listModels();
-  return c.json({ models, default: await defaultModel(c.get('user')), openwebui: !!owui(), mock: isMock() || undefined });
+  // Prompt 41: auto = «✦ Auto» (øverst i velgeren), preferred = 'auto' for nye samtaler. default er fortsatt en ekte modell (eldre klienter).
+  return c.json({ models, default: await defaultModel(c.get('user')), preferred: AUTO_ID, auto: autoEntry41(models, c.get('user')), openwebui: !!owui(), mock: isMock() || undefined });
 });
 // Hent en modell fra ollama.com med fremdrift (SSE). Via Open WebUI når den er satt opp, ellers direkte til Ollama.
 api.post('/models/pull', adminOnly, async (c) => {
@@ -571,6 +574,13 @@ api.patch('/settings', async (c) => {
 });
 
 api.get('/mydata', async (c) => c.json(await myData(c.get('user'))));
+// Prompt 41: «✦ Auto» – hva Glimt bruker nå, og tilbakemelding på siste Auto-svar (Prøv igjen / byttet modell / 👍 👎).
+api.get('/auto', async (c) => c.json(autoSummary41(c.get('user'), await listModels())));
+api.post('/chats/:id/feedback', async (c) => {
+  const b = await c.req.json().catch(() => ({})) ?? {};
+  if (!chatRow(c.get('user'), c.req.param('id'))) return c.json({ error: 'Fant ikke samtalen' }, 404);
+  return c.json({ ok: feedbackAuto41(c.get('user'), c.req.param('id'), { retry: !!b.retry, switched: !!b.switched, vote: b.vote }) });
+});
 
 // Vedlegg: lagres hos oss (per bruker); tekst leses ut lokalt. Med Open WebUI lastes filen også opp dit (RAG).
 const TEXTY = /^(text\/|application\/(json|xml|csv|x-yaml|yaml|javascript|x-sh))/;
@@ -643,13 +653,20 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
   if (!incoming?.length) return bad(c, 'Mangler meldinger');
   let chat = b.chatId ? chatRow(u, b.chatId) : null;
   if (b.chatId && !chat) return c.json({ error: 'Fant ikke samtalen' }, 404);
-  const modelId = String(b.model || chat?.model || (await defaultModel(u)) || '').slice(0, 120);
-  if (!modelId) return bad(c, 'Ingen modell er tilgjengelig. Installer en Ollama-modell eller legg inn en Gemini-/Groq-nøkkel.');
-  const m = await modelFor(modelId);
+  const wantModel = String(b.model || chat?.model || (await defaultModel(u)) || '').slice(0, 120);
+  if (!wantModel) return bad(c, 'Ingen modell er tilgjengelig. Installer en Ollama-modell eller legg inn en Gemini-/Groq-nøkkel.');
   const s = cleanSettings({ ...parse(chat?.settings ?? '{}', {}), ...(b.settings && typeof b.settings === 'object' ? b.settings : {}) });
   const wantData = !!b.myData && !b.withoutMyData && userBool(u, 'chat_my_data');
   const files = (Array.isArray(b.files) ? b.files : []).slice(0, 10).map((id) => String(id)).map((id) => (id.startsWith('kb:') ? { kb: id.slice(3), name: 'Kunnskapsbase' } : q('SELECT * FROM hl_chat_files WHERE id=? AND user_id=?').get(id, u))).filter(Boolean);
   const imgCount = incoming.reduce((n, x) => n + (x.images?.length ?? 0), 0);
+  // Prompt 41: «✦ Auto» – Glimt velger modell for denne meldingen (samtalen står fortsatt på Auto).
+  let auto = null;
+  if (wantModel === AUTO_ID) {
+    auto = pickAuto41(await listModels(), { text: incoming.at(-1)?.content ?? '', images: imgCount, files, wantData, user: u });
+    if (!auto) return bad(c, 'Ingen modell er tilgjengelig. Installer en Ollama-modell eller legg inn en Gemini-/Groq-nøkkel.');
+  }
+  const modelId = auto ? auto.model : wantModel;
+  const m = await modelFor(modelId);
 
   // Historikk: lagret samtale (kuttet ved editFrom) + nye meldinger. Sender klienten hele historikken, brukes den.
   let base = chat ? parse(chat.messages, []) : [];
@@ -679,16 +696,16 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
     const id = randomUUID();
     const first = history.find((x) => x.role === 'user')?.content ?? 'Ny samtale';
     const title = first.replace(/\s+/g, ' ').trim().slice(0, 60) || 'Ny samtale';
-    q('INSERT INTO hl_chats(id,user_id,title,model,settings,messages,created,updated) VALUES(?,?,?,?,?,?,?,?)').run(id, u, title, m.id, JSON.stringify(s), JSON.stringify(history.map((x) => ({ ...x, ts: now }))), now, now);
+    q('INSERT INTO hl_chats(id,user_id,title,model,settings,messages,created,updated) VALUES(?,?,?,?,?,?,?,?)').run(id, u, title, auto ? AUTO_ID : m.id, JSON.stringify(s), JSON.stringify(history.map((x) => ({ ...x, ts: now }))), now, now);
     chat = chatRow(u, id);
   }
-  kv.set(u, 'chat_last_model', m.id);
+  kv.set(u, 'chat_last_model', auto ? AUTO_ID : m.id);
   if (m.kind === 'sky') audit(m.provider === 'openwebui' ? 'openwebui' : m.provider, 'chat', { modell: m.name, meldinger: history.length, mineData: data ? Object.keys(data) : [], vedlegg: files.map((f) => f.name), bilder: imgCount, nettsok: !!b.webSearch }, u);
   const chatId = chat.id;
   const saveMsgs = (answer, meta) => {
     const stored = history.map((x) => ({ ...x, ts: x.ts ?? now }));
     if (answer) stored.push({ role: 'assistant', content: answer, ts: Date.now(), meta });
-    q('UPDATE hl_chats SET messages=?, model=?, settings=?, updated=? WHERE id=? AND user_id=?').run(JSON.stringify(stored), m.id, JSON.stringify(s), Date.now(), chatId, u);
+    q('UPDATE hl_chats SET messages=?, model=?, settings=?, updated=? WHERE id=? AND user_id=?').run(JSON.stringify(stored), auto ? AUTO_ID : m.id, JSON.stringify(s), Date.now(), chatId, u);
   };
   saveMsgs(null);
 
@@ -698,7 +715,8 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
     let text = '', first = null;
     const t0 = Date.now();
     const onDelta = async (d) => { if (!d) return; first ??= Date.now(); text += d; if (!sse.aborted) await sse.writeSSE({ event: 'delta', data: JSON.stringify({ text: d }) }); };
-    await sse.writeSSE({ event: 'meta', data: JSON.stringify({ chatId, model: m.id, modelName: m.name, kind: m.kind, title: chat.title }) });
+    const autoMeta = auto ? { auto: { model: auto.model, modelName: auto.modelName, kind: auto.kind, label: auto.label, reason: auto.reason, candidates: auto.candidates } } : {};
+    await sse.writeSSE({ event: 'meta', data: JSON.stringify({ chatId, model: m.id, modelName: m.name, kind: m.kind, title: chat.title, ...autoMeta }) });
     // Prompt 41: Glimt henter fakta (vær, tid, sol) før modellen svarer. Feil her stopper aldri svaret.
     let facts = [], factUsed = [], sysAll = sys;
     if (!b.noTools && hasFactWords(history.at(-1)?.content)) {
@@ -711,15 +729,33 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
         }
       } catch (e) { console.warn('[chat] fakta (prompt 41):', e.message); }
     }
+    // Prompt 41: værspørsmål om uka (beste dag, mest regn …) får 7 dager med data, så modellen svarer på det som ble spurt (ikke en mal).
+    if (!b.noTools && isWeekWeather41(history.at(-1)?.content)) {
+      try {
+        const wf = await weekFact41(u, history.at(-1).content);
+        if (wf) { facts = [...facts, wf]; factUsed = [...new Set([...factUsed, 'Vær · 7 dager'])]; sysAll = `${sysAll}\n\n${wf.prompt}`; if (!sse.aborted) await sse.writeSSE({ event: 'facts', data: JSON.stringify({ facts, used: factUsed }) }); }
+      } catch (e) { console.warn('[chat] ukesvær (prompt 41):', e.message); }
+    }
     const metaFacts = facts.length ? { facts } : {};
     try {
-      const r = await runEngine(m, { sys: sysAll, msgs: history, s, webSearch: !!b.webSearch, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+      let r, used41 = m;
+      try { r = await runEngine(m, { sys: sysAll, msgs: history, s, webSearch: !!b.webSearch, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text }); }
+      catch (e) {
+        // Prompt 41: Auto – svarer ikke valgt modell (og ingenting er strømmet), prøv neste beste og si det i svaret.
+        const next = auto && !text && !ctrl.signal.aborted ? auto.candidates.find((id) => id !== m.id) : null;
+        if (!next) throw e;
+        used41 = await modelFor(next);
+        auto.fallbackFrom = m.id; auto.model = used41.id; auto.modelName = used41.name; auto.label = `${auto.label.split(' · ')[0]} · ${used41.name}`; auto.reason = `${m.name} svarte ikke · bruker ${used41.name}`;
+        r = await runEngine(used41, { sys: sysAll, msgs: history, s, webSearch: !!b.webSearch, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+      }
       const ms = Date.now() - t0;
       const genS = Math.max(0.001, (Date.now() - (first ?? t0)) / 1000);
       const tokensPerSec = Math.round((r.tokens?.perSec ?? (r.tokens?.count ?? Math.ceil(text.length / 4)) / genS) * 10) / 10;
       const allUsed = [...factUsed, ...used, ...(b.webSearch && (r.usedWeb || r.engine === 'openwebui') ? ['Nettsøk'] : [])];
-      saveMsgs(text, { model: m.id, tokensPerSec, ms, used: allUsed, ...metaFacts });
-      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, ...metaFacts }) });
+      const autoDone = auto ? { auto: { model: used41.id, modelName: used41.name, kind: auto.kind, label: `${auto.label} · ${String(tokensPerSec).replace('.', ',')} tok/s · ${String(Math.round(ms / 100) / 10).replace('.', ',')} s`, reason: auto.reason, ...(auto.fallbackFrom ? { fallbackFrom: auto.fallbackFrom } : {}) } } : {};
+      if (auto) recordAuto41(u, { model: used41.id, kind: auto.kind, ttftMs: first ? first - t0 : null, tps: tokensPerSec, chatId });
+      saveMsgs(text, { model: used41.id, tokensPerSec, ms, used: allUsed, ...metaFacts, ...autoDone });
+      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, ...metaFacts, ...autoDone }) });
     } catch (e) {
       if (ctrl.signal.aborted || e.cancelled) { if (text) saveMsgs(text, { model: m.id, stopped: true, used: [...factUsed, ...used], ...metaFacts }); return; }
       if (text) saveMsgs(text, { model: m.id, error: e.message, used: [...factUsed, ...used], ...metaFacts });

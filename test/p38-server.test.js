@@ -554,6 +554,6 @@ test('/.well-known: assetlinks.json ([] uten fingeravtrykk) og apple-app-site-as
     assert.match(r.headers.get('content-type'), /application\/json/);
     const d = (await r.json()).applinks.details[0];
     assert.equal(d.appID, 'ABCDE12345.no.kristo.finanshub');
-    assert.deepEqual(d.paths, ['/l/*']);
+    assert.deepEqual(d.paths, ['/l/*', '/app-auth', '/app-auth/*']); // prompt 41: + /app-auth (Kalender-innlogging)
   } finally { delete process.env.ANDROID_CERT_SHA256; delete process.env.APPLE_APP_ID; }
 });

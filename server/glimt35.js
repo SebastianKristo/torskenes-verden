@@ -34,6 +34,7 @@ import { broadcast } from './realtime.js';
 import * as ai from './ai-run.js';
 import { cardsOf, cleanCards, saveCards, auroraNotifyOf, setAuroraNotify } from './cards38.js'; // prompt 38: kortene i Now Brief
 import { julActive, cleanJul, JUL_DEFAULTS } from './jul40.js'; // prompt 40: julemodus
+import { mai17Active, cleanMai17, MAI17_DEFAULTS } from './mai17-41.js'; // prompt 41: 17. mai
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 
@@ -93,14 +94,14 @@ const AZ_STYLE = { natt: 'whispering', ugle: 'calm', sky: 'cheerful', drape: 'ch
 const KINDS = ['morning', 'day', 'evening', 'night'];
 const DEFAULTS = () => ({ char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true, briefGlimt: true, // prompt 39: Glimt-figuren i Now Brief av/på
   briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
-  tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' }, ...JUL_DEFAULTS });
+  tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' }, ...JUL_DEFAULTS, ...MAI17_DEFAULTS });
 const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Brukerens Glimt-innstillinger (standard + eldre brief_settings + lagret). */
 export function glimtSettingsOf(u) {
   const d = DEFAULTS(), old = kv.get(u, 'brief_settings', null) ?? {}, s = kv.get(u, 'glimt35_settings', null) ?? {};
   const out = { ...d, ...(typeof old.notify === 'boolean' ? { notify: old.notify } : {}), ...(typeof old.guide === 'boolean' ? { guide: old.guide } : {}) };
-  for (const k of ['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefGlimt', 'jul', 'julPhase', 'snow', 'julSound']) if (s[k] !== undefined) out[k] = s[k];
+  for (const k of ['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefGlimt', 'jul', 'julPhase', 'snow', 'julSound', 'mai17']) if (s[k] !== undefined) out[k] = s[k];
   out.briefs = Object.fromEntries(KINDS.map((k) => [k, { ...d.briefs[k], ...(s.briefs?.[k] ?? {}) }]));
   out.tts = { ...d.tts, ...(s.tts ?? {}) };
   return out;
@@ -109,8 +110,9 @@ export function glimtSettingsOf(u) {
 export function cleanGlimtPatch(b, cur) {
   const errors = [], next = JSON.parse(JSON.stringify(cur));
   if (!b || typeof b !== 'object' || Array.isArray(b)) return { next, errors: ['Forventet et objekt'] };
-  const known = new Set(['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefGlimt', 'briefs', 'tts', 'engines', 'chars', 'voices', 'rates', 'host', 'cards', 'auroraNotify', 'jul', 'julPhase', 'snow', 'julSound', 'julActive']);
+  const known = new Set(['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefGlimt', 'briefs', 'tts', 'engines', 'chars', 'voices', 'rates', 'host', 'cards', 'auroraNotify', 'jul', 'julPhase', 'snow', 'julSound', 'julActive', 'mai17', 'mai17Active']);
   { const j = cleanJul(b); errors.push(...j.errors); Object.assign(next, j.patch); } // prompt 40
+  { const j = cleanMai17(b); errors.push(...j.errors); Object.assign(next, j.patch); } // prompt 41
   if (b.cards !== undefined) { const r = cleanCards(b.cards); errors.push(...r.errors); if (!r.errors.length) next.cards = r.cards; } // prompt 38
   if (b.auroraNotify !== undefined) { if (typeof b.auroraNotify !== 'boolean') errors.push('auroraNotify må være true eller false'); else next.auroraNotify = b.auroraNotify; }
   for (const k of Object.keys(b)) if (!known.has(k)) errors.push(`Ukjent nøkkel ${k}`);
@@ -138,8 +140,8 @@ export function cleanGlimtPatch(b, cur) {
   return { next, errors };
 }
 export function saveGlimtSettings(u, next) {
-  const { char, friends, brief, readAloud, guide, notify, briefs, tts, briefGlimt, jul, julPhase, snow, julSound } = next;
-  kv.set(u, 'glimt35_settings', { char, friends, brief, readAloud, guide, notify, briefs, tts, briefGlimt: briefGlimt !== false, jul, julPhase: julPhase ?? null, snow: snow !== false, julSound }); // prompt 40: jul*
+  const { char, friends, brief, readAloud, guide, notify, briefs, tts, briefGlimt, jul, julPhase, snow, julSound, mai17 } = next;
+  kv.set(u, 'glimt35_settings', { char, friends, brief, readAloud, guide, notify, briefs, tts, briefGlimt: briefGlimt !== false, jul, julPhase: julPhase ?? null, snow: snow !== false, julSound, mai17: mai17 ?? 'auto' }); // prompt 40: jul* · prompt 41: mai17
   if (Array.isArray(next.cards)) saveCards(u, next.cards); // prompt 38
   if (typeof next.auroraNotify === 'boolean') setAuroraNotify(u, next.auroraNotify);
   // Eldre lesere (brief34, appene før 35) leser brief_settings.
@@ -168,7 +170,7 @@ export function enginesOut(u) {
 }
 export function settingsOut(u) {
   const s = glimtSettingsOf(u);
-  return { ...s, julActive: julActive(s), cards: cardsOf(u), auroraNotify: auroraNotifyOf(u), engines: enginesOut(u), chars: CHARS, voices: VOICES.map(({ id, name, desc }) => ({ id, name, desc })), rates: RATES, host: hostOf(u) };
+  return { ...s, julActive: julActive(s), mai17Active: mai17Active(s, Date.now(), u), cards: cardsOf(u), auroraNotify: auroraNotifyOf(u), engines: enginesOut(u), chars: CHARS, voices: VOICES.map(({ id, name, desc }) => ({ id, name, desc })), rates: RATES, host: hostOf(u) };
 }
 
 export const settingsApi = new Hono();

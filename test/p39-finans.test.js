@@ -161,7 +161,7 @@ test('«✦ På nytt» som jobb: 202 {jobId}, fremdrift upload→llm→verify→
   }
   assert.equal(j.status, 'done', JSON.stringify(j));
   assert.deepEqual([j.step, j.pct], ['done', 100]);
-  assert.match(j.msg, /^✦ Analysert på nytt · 96 % sikker$/);
+  assert.match(j.msg, /^✦ Glimt har analysert på nytt · 96 % sikker$/); // prompt 41: «Glimt» i teksten
   assert.ok(seen.has('llm'), [...seen].join());
   assert.equal(j.result.applied, true);
   assert.ok(j.result.changed.includes('merchant') && j.result.changed.includes('total'));

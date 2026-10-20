@@ -157,7 +157,7 @@ export const SCHEMA = [
   ]],
   // Prompt 27: personlige valg for Chat og for logo-oppslag (Innstillinger → AI og tolkning → CHAT / PERSONVERN OG LOGOER).
   ['Chat', { id: 'chat', scope: 'personal', domain: 'openwebui.com', category: 'AI', help: 'Dine valg for Chat. «Mine data» gir modellen et kort sammendrag fra Finans, Kalender og Huskeliste.' }, [
-    ['chat_my_data', 'Chat kan lese mine data', '0', false, 'bool'],
+    ['chat_my_data', 'Chat kan lese mine data', '1', false, 'bool'], // prompt 41: på som standard (av med vilje beholdes)
     ['chat_ask_cloud', 'Spør før sky-modeller får data', '1', false, 'bool'],
     ['chat_default_model', 'Standardmodell', ''],
     ['chat_theme', 'Tema (papir eller noytral)', 'papir'],
@@ -202,7 +202,7 @@ export const PERSONAL_KEYS = new Set([...FIELDS.values()].filter((f) => f.person
 export const isPersonalKey = (k) => PERSONAL_KEYS.has(LEGACY[k] ?? k);
 // Ufarlige standarder for andre enn eieren (ingen adresser, nøkler eller e-post fra eierens miljø).
 const SAFE_DEF = { t212_env: 'live', sonarr_days: '14', radarr_days: '14', imapPort: '143', imapSecurity: 'starttls', imapFolder: 'Folders/Kvitteringer', imapDoneFolder: 'Folders/Kvitteringer/Lest',
-  chat_my_data: '0', chat_ask_cloud: '1', chat_theme: 'papir', logo_local_receipts: '1', logo_gemini: '1', logo_verify: '1', ai_think: '0' };
+  chat_my_data: '1', chat_ask_cloud: '1', chat_theme: 'papir', logo_local_receipts: '1', logo_gemini: '1', logo_verify: '1', ai_think: '0' };
 const defFor = (user, f) => (user === OWNER ? f.def ?? '' : SAFE_DEF[f.key] ?? '');
 
 // FinansHub krypterer sine hemmeligheter med «enc:» (finans/db.js). Kopierte verdier derfra åpnes her med samme nøkkel.

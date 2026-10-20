@@ -174,7 +174,7 @@ test('Finans: PATCH godtar alle felt (dato, beløp, motpart, kategori som navn, 
   // «Les på nytt» på bokført kvittering: reanalyze med apply:false avvises ikke lenger som «allerede bokført».
   const ra = await A('/finans/api/receipts/rc40b/reanalyze', 'POST', { apply: false });
   assert.doesNotMatch(ra.body.error ?? '', /allerede bokført/);
-  assert.match((await A('/finans/api/receipts/rc40b/reanalyze', 'POST', {})).body.error, /allerede bokført/);
+  assert.doesNotMatch((await A('/finans/api/receipts/rc40b/reanalyze', 'POST', {})).body.error ?? '', /allerede bokført/); // prompt 41: lov for alle statuser (bare forslag)
   // «Bruk endringene»: kandidaten tas i bruk på kvitteringen og transaksjonen (fortegnet beholdes), med historikk.
   fhDb.prepare('UPDATE fh_receipts SET candidate=? WHERE id=?').run(JSON.stringify({ id: 'cand40', at: Date.now(), provider: 'gemini', model: 'g', data: { merchant: 'Rema 1000 Bislett', date: '2026-10-17', total: 400, lines: [{ description: 'Ost', amount: 400 }] } }), 'rc40b');
   assert.equal((await A(`/finans/api/transactions/${t.id}/reread/apply`, 'POST', { candidateId: 'feil' })).status, 409);

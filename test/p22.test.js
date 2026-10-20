@@ -156,10 +156,10 @@ test('API-feil: updateError {text, retryAt}, «Registrert» ikke bekreftet', asy
   assert.equal(s.statusUnverified, true);
 });
 
-test('sjekkeplan: 30 min for aktive, 6 t for «Registrert» > 3 dager, stopp ved Levert/Returnert', () => {
+test('sjekkeplan: 45 min for aktive (prompt 41: dynamisk polling), 6 t for «Registrert» > 3 dager, stopp ved Levert/Returnert', () => {
   const now = Date.now();
-  assert.equal(trk.checkInterval({ status: 'in_transit', created_at: now }), 30 * 60_000);
-  assert.equal(trk.checkInterval({ status: 'registered', created_at: now - 86400_000 }), 30 * 60_000);
+  assert.equal(trk.checkInterval({ status: 'in_transit', created_at: now }), 45 * 60_000);
+  assert.equal(trk.checkInterval({ status: 'registered', created_at: now - 86400_000 }), 45 * 60_000);
   assert.equal(trk.checkInterval({ status: 'registered', created_at: now - 4 * 86400_000 }), 6 * 3600_000);
   assert.equal(trk.checkInterval({ status: 'delivered' }), null);
   assert.equal(trk.checkInterval({ status: 'returned' }), null);

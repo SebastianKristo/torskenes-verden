@@ -48,6 +48,7 @@ import { profilesApi, bibleApi, trackingKeysApi, kal37Api } from './api37.js'; /
 import { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler, brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
 import { cals39Api, googleMap39Api, rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
 import { twofa40Api, finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
+import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, birthdays41Api, mai17Api, kalender41Api, mountAuth41, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -98,6 +99,10 @@ app.use('*', secureHeaders({
 
 // Prompt 32: cache-fiks (HTML/sw.js/manifest no-cache, /api no-store, ?v=<build> på JS/CSS, GET /version.json).
 installCacheBust(app);
+// Prompt 41: /api/discovery, /api/me/server, Kalender-innlogging (device-token/-exchange, app-code, token, /app-auth) og utlogging som
+// tilbakekaller Kalender-tokenene (må stå før /api/logout og /finans/api).
+mountAuth41(app);
+app.get('/hl/:token', hlPage41); // prompt 41: Hjemlys-statusside for kontakter uten Papir (24 t)
 
 /* ---------------- Sider ---------------- */
 
@@ -626,6 +631,7 @@ authed.get('/space/gallery/:key', proxy((c) => {
 }));
 
 app.route('/api/ui', uiApi);
+app.route('/api/tracking', tracking41Api); // prompt 41: GET /postnord/health
 app.route('/api/tracking/keys', trackingKeysApi); // prompt 37: husstandens sporingsnøkler (før /api/tracking/:id)
 app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn, e-post og manuelt
 app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
@@ -638,6 +644,8 @@ app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, s
 app.use('/api/tasks/:id{[0-9]+}', tasksAfter40); // prompt 40: «Nå kan du: …» når punktet før er gjort, placeName/after i PATCH
 app.use('/api/tasks', tasksCreate40); // prompt 40: POST /api/tasks godtar placeName og after
 app.route('/api/tasks', tasksApi); // Huskeliste (prompt 17): delt i familien, sanntid via /api/ws
+app.use('/api/hjemlys', hjemlysGet41); // prompt 41: GET /api/hjemlys får notices
+app.route('/api/hjemlys', hjemlys41Api); // prompt 41: Si fra (notice/status), tur med valgfritt mål (før prompt 40)
 app.route('/api/hjemlys', hjemlys40Api); // prompt 40: Hjemlys (start, status, posisjon, ok/hjemme/avslutt, tokens, forslag)
 app.route('/api/news', news40Api); // prompt 40: Nyheter · Glimt-siden
 app.route('/api/app/pages', pages40Api); // prompt 40: alle sider i Mer (fanelinja), før /api/app
@@ -664,6 +672,7 @@ app.post('/api/homes/:id{[0-9]+}/expenses', (c) => toFinans(c, (c.req.header('co
 app.route('/api/background', backgroundApi); // Bakgrunner (prompt 19): Vær, Planeter, Oslo, eget bilde
 // Prompt 24: Bursdager (per bruker, Google Kalender og Home Assistant), widget-svaret, alle integrasjoner (bare admin),
 // ✦ AI-søk i innstillingene og domene-pillen på Boliger (bare admin, cache 5 min). Sesjon eller app-token.
+app.route('/api/birthdays', birthdays41Api); // prompt 41: bilder av personer
 app.route('/api/birthdays', birthdaysApi);
 app.get('/api/widgets/birthdays', authOrToken, (c) => c.json(birthdaysWidget(c.get('user'))));
 app.route('/api/space', spaceApi); // prompt 32: /tle?group=, /apod?days=7, /mars (før authed sine /space-ruter)
@@ -672,6 +681,9 @@ app.route('/api/widgets/trials', trialWidgetsApi); // prompt 32: prøveperiode-w
 app.route('/api/integrations', integrationsApi);
 app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste under norsk navn
 // Prompt 26: Kalender (skolens iCal, Canvas, Bursdager og Google) og kompakt widget-svar. Sesjon eller app-token, per bruker.
+app.route('/api', kalender41Api); // prompt 41: /kalender/glimt/search, /calendar/ask, /kalender/notify/test, /push/test
+app.route('/api/ruter', ruter41Api); // prompt 41: Min reise, skolesoner, «forlot skolen»
+app.route('/api/huske', huske41Api); // prompt 41: POST /glimt-jobs
 app.route('/api/kalender/describe', calendarDescribeApi); // prompt 32: «Beskriv med Glimt» (før /api/kalender)
 app.use('/api/kalender/search', calendarSearchAi); // prompt 32: ?ai=1 → Glimt-svar, ellers det vanlige søket
 app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kalender
@@ -702,9 +714,11 @@ app.route('/api/glimt/memory', glimtMemoryApi); // prompt 33: GET/POST/DELETE, P
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
 app.route('/api/ai', rec39Api); // prompt 39: ✦ Glimt anbefaler modeller
 app.route('/api/ai', aiApi); // prompt 34: AI-kontroll
-app.use('/api/brief', briefJul40); // prompt 40: brief.jul i julemodus
+app.use('/api/brief', briefJul40);
+app.use('/api/brief', brief41); // prompt 41: ski, mai17, minReise // prompt 40: brief.jul i julemodus
 app.route('/api/brief', brief38Api); // prompt 38: nye kort (pakker, familie, skole og jobb, bursdager, nordlys) + POST /api/brief/gift
 app.route('/api/brief', briefApi); // prompt 34: Glimt-brief
+app.route('/api/glimt/mai17', mai17Api); // prompt 41: 17. mai (program, design-bryter, hurra)
 app.route('/api/glimt/settings', glimtSettingsApi); // prompt 35
 app.route('/api/tts', ttsApi); // prompt 35
 app.route('/api/img', imgApi); // prompt 35
@@ -723,6 +737,8 @@ app.post('/api/domains/token/verify', async (c) => { const u = new URL(c.req.url
 app.get('/api/domener/sammendrag', authOrToken, domainPill);
 app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt) og /:domain/gsc (Google Search Console), bare admin
 app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
+app.use('/api/weather/full', weatherFull41); // prompt 41: ski
+app.route('/api/weather', weather41Api); // prompt 41: GET/PUT /layout (Rediger Vær)
 app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
 app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding

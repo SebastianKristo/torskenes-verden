@@ -10,12 +10,13 @@
 import { Hono } from 'hono';
 import { db, kv, OWNER } from './db.js';
 import { runAsUser } from './settings.js';
+import { config } from './config.js'; // prompt 41: fast forskyvning per installasjon
 import { sessionUser } from './auth.js';
 import { userGuard, readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
 import * as mailMod from './finans/mail.js';
 import { scanShippingMails, mailConfig, mailText } from './finans/mail.js';
 import { stageOf } from './finans/finn-routes.js';
-import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage, FINAL, missingKeyText } from './tracking-carriers.js';
+import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage, FINAL, missingKeyText, canonical41 } from './tracking-carriers.js';
 import { broadcast } from './realtime.js';
 import { matchMerchant, itemForDomain, filePath as logoFile, isManual } from './logos/match.js';
 
@@ -56,7 +57,8 @@ CREATE INDEX IF NOT EXISTS hl_shipment_events_s ON hl_shipment_events(shipment_i
 if (!db.prepare('PRAGMA table_info(hl_shipments)').all().some((c) => c.name === 'shop_domain')) db.exec("ALTER TABLE hl_shipments ADD COLUMN shop_domain TEXT NOT NULL DEFAULT ''");
 // Prompt 22: datoen på e-posten (gamle e-poster går rett i Arkiv), siste vellykkede oppslag og frist på hentestedet. Idempotent.
 // Prompt 26: carrier_override = transportøren brukeren har valgt (null = automatisk gjenkjent, som i carrier).
-for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['pickup_deadline', 'TEXT'], ['carrier_override', 'TEXT']]) {
+// Prompt 41: raw_status = transportørens egen statustekst (PostNord statusText.header), not_scanned = «Ikke skannet ennå».
+for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['pickup_deadline', 'TEXT'], ['carrier_override', 'TEXT'], ['raw_status', 'TEXT'], ['not_scanned', 'INTEGER']]) {
   if (!db.prepare('PRAGMA table_info(hl_shipments)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE hl_shipments ADD COLUMN ${col} ${type}`);
 }
 
@@ -109,16 +111,36 @@ export function carrierInfo(r) {
 const overrideVal = (v) => (v === null || v === '' || v === 'auto' ? null : typeof v === 'string' && OVERRIDES.includes(v.toLowerCase()) ? v.toLowerCase() : undefined);
 const ACTIVE = ['registered', 'picked_up', 'in_transit', 'ready_for_pickup', 'out_for_delivery', 'delayed', 'unknown'];
 const DAY_MS = 86400_000;
-// Hvor ofte statusen sjekkes (prompt 22). null = aldri mer (Levert/Returnert).
+// Hvor ofte statusen sjekkes. null = aldri mer (Levert/Returnert).
+// Prompt 41 (dynamisk polling som ha-postnord, for alle transportører): hvert 15. min når pakken er ute for levering (fra 1 t før
+// forventet levering, eller uten forventet tid), ellers hvert 45. min; «Registrert» > 3 dager hver 6. time. Ingen bakgrunnskall 00–06
+// (bare én runde rett etter midnatt), se checkUser. En fast liten forskyvning per installasjon (0–6 min) legges på i nextCheckAt.
+export const HOT_MS = 15 * 60_000, MID_MS = 45 * 60_000;
 export function checkInterval(r, t = Date.now()) {
   if (FINAL.includes(r.status)) return null;
   if (r.status === 'registered' && t - (r.created_at ?? t) > 3 * DAY_MS) return 6 * 3600_000;
-  return 30 * 60_000;
+  if (r.status === 'out_for_delivery') {
+    const eta = r.eta && /^\d{4}-\d{2}-\d{2}T/.test(r.eta) ? Date.parse(r.eta) : null;
+    if (!eta || t >= eta - 3600_000) return HOT_MS;
+  }
+  return MID_MS;
 }
+/** Fast forskyvning per installasjon (0–6 min), så ikke alle spør transportørene samtidig. */
+export const stagger41 = () => { const s = String(config.dataDir ?? ''); let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return (h % 7) * 60_000; };
 export function nextCheckAt(r, t = Date.now()) {
   const iv = checkInterval(r, t);
   if (iv == null || r.archived) return null;
-  return r.checked_at ? r.checked_at + iv : t;
+  return r.checked_at ? r.checked_at + iv + stagger41() : t;
+}
+const osloHour41 = (t = now()) => +new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+const osloDay41 = (t = now()) => new Date(t).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+/** Stille vindu 00–06: false bortsett fra én runde etter midnatt (ankeret). Kl. 06 går det som vanlig igjen. */
+export function pollAllowed41(u, t = now()) {
+  if (osloHour41(t) >= 6) return true;
+  const day = osloDay41(t);
+  if (kv.get(u, 'trk41_anchor', null) === day) return false;
+  kv.set(u, 'trk41_anchor', day);
+  return true;
 }
 const PREF_DEFAULT = { found: true, out: true, pickup: true, delivered: true, delayed: false };
 // Varselvalgene er per bruker (prompt 14, ISO2: ingen arv fra hovedadmin).
@@ -245,10 +267,35 @@ function view(r0) {
     lastEvent: lastEventOf(events), updateError, statusUnverified: !!r.last_error && !r.ok_at && r.source !== 'finn',
     noEtaText: status === 'registered' && !r.eta ? 'Ingen leveringsdato ennå' : null,
     archived: !!r.archived, delayed: status === 'delayed', updatedAt: r.updated_at, checkedAt: r.checked_at, nextCheckAt: next ? new Date(next).toISOString() : null,
+    rawStatus: r.raw_status ?? null, canonicalStatus: canonical41(status), notScanned: !!r.not_scanned, ...(r.not_scanned ? { notScannedText: 'Ikke skannet ennå' } : {}), // prompt 41
     lastError: r.last_error, url: trackUrl(r.carrier, r.tracking_no), keyed: isConfigured(r.carrier), keyMissing: missingKeyText(r.carrier), events: events.map(({ ts, status: st, location }) => ({ ts, status: st, location })),
   };
 }
 const byId = (id) => q('SELECT * FROM hl_shipments WHERE id=?').get(id);
+/* ---------------- Prompt 41: push ved endring ---------------- */
+// Hendelser (som ha-postnord): parcel_registered, status_changed {old, new}, delivered, delivery_time_changed. Ingen hendelser ved første
+// oppdatering av en pakke etter oppstart. Push (Varsler → Pakker) for delivered, at_pickup_point (ready_for_pickup) og delivery_time_changed,
+// og sanntid «tracking:event» {kind, shipmentId, old?, new?, eta?}. Glimt-briefen leser statusen som før.
+const seen41 = new Set();
+export const _resetSeen41 = () => seen41.clear();
+function pushChange41(r, status, res) {
+  const first = !seen41.has(r.id);
+  seen41.add(r.id);
+  if (first || !r.user_id) return;
+  const name = r.name || r.tracking_no;
+  const evs = [];
+  if (status !== r.status) evs.push({ kind: r.status === 'unknown' && r.not_scanned ? 'parcel_registered' : 'status_changed', old: r.status, new: status });
+  if (status !== r.status && status === 'delivered') evs.push({ kind: 'delivered' });
+  if (res.eta && r.eta && res.eta !== r.eta && !FINAL.includes(status)) evs.push({ kind: 'delivery_time_changed', old: r.eta, new: res.eta });
+  if (!evs.length) return;
+  for (const e of evs) { try { broadcast('tracking:event', { ...e, shipmentId: r.id, trackingNo: r.tracking_no }, [r.user_id]); } catch { /* */ } }
+  const p = prefs(r.user_id);
+  const msg = status !== r.status && status === 'delivered' && p.delivered ? `Levert: ${name}`
+    : status !== r.status && status === 'ready_for_pickup' && p.pickup ? `Klar for henting${res.pickupPoint || r.pickup_point ? ` hos ${res.pickupPoint || r.pickup_point}` : ''}: ${name}`
+      : status !== r.status && status === 'out_for_delivery' && p.out ? `Ute for levering: ${name}`
+        : evs.some((e) => e.kind === 'delivery_time_changed') && p.out ? `Ny leveringstid for ${name}: ${String(res.eta).slice(0, 10).split('-').reverse().slice(0, 2).join('.')}` : null;
+  if (msg) import('./notify.js').then(({ notifyUser }) => notifyUser(r.user_id, { title: 'Sporing', body: msg, url: '/#/sporing', tag: `pakke-${r.id}`, category: 'pakker', data: { kind: `tracking.${evs.at(-1).kind}`, shipmentId: r.id } })).catch(() => {});
+}
 // Brukerens egen sending (andres gir undefined, som en ukjent id).
 const mineById = (u, id) => q('SELECT * FROM hl_shipments WHERE id=? AND user_id=?').get(id, u);
 
@@ -296,6 +343,8 @@ function applyResult(r, res, { api = false } = {}) {
   q(`UPDATE hl_shipments SET status=?, eta=COALESCE(?, eta), pickup_point=COALESCE(?, pickup_point), pickup_deadline=COALESCE(?, pickup_deadline), last_error=NULL, checked_at=?,
       ok_at=CASE WHEN ? THEN ? ELSE ok_at END, updated_at=CASE WHEN status<>? THEN ? ELSE updated_at END WHERE id=?`)
     .run(status, res.eta ?? null, res.pickupPoint ?? res.pickup?.name ?? null, res.pickup?.deadline ?? null, now(), api ? 1 : 0, now(), status, now(), r.id);
+  if ('rawStatus' in res || 'notScanned' in res) q('UPDATE hl_shipments SET raw_status=COALESCE(?, raw_status), not_scanned=? WHERE id=?').run(res.rawStatus ?? null, res.notScanned ? 1 : 0, r.id); // prompt 41
+  pushChange41(r, status, res);
   archiveIfOld(byId(r.id));
   if (status !== r.status) {
     const name = r.name || r.tracking_no;
@@ -426,7 +475,9 @@ function checkUser(u, { force = false } = {}) {
       setSource(u, 'email', { lastCheck: now(), ...(mail && !mail.ok ? { error: mail.message } : { error: null }) });
     }
     // Nye pakker (aldri sjekket) straks, ellers etter checkInterval (2 min slingringsmonn mot 15-minutters takten).
-    const due = q(`SELECT * FROM hl_shipments WHERE user_id=? AND archived=0 AND status IN (${ACTIVE.map(() => '?').join(',')}) ORDER BY checked_at IS NOT NULL, checked_at`).all(u, ...ACTIVE)
+    // Prompt 41: ingen bakgrunnskall 00–06 (bare én runde rett etter midnatt).
+    const allowed = force || pollAllowed41(u);
+    const due = !allowed ? [] : q(`SELECT * FROM hl_shipments WHERE user_id=? AND archived=0 AND status IN (${ACTIVE.map(() => '?').join(',')}) ORDER BY checked_at IS NOT NULL, checked_at`).all(u, ...ACTIVE)
       .filter((r) => force || !r.checked_at || nextCheckAt(r) - 2 * 60_000 <= now());
     let updated = 0;
     for (const r of due.slice(0, 40)) if (await refresh(r)) updated++;

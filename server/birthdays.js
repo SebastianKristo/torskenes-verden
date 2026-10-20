@@ -26,6 +26,7 @@ import { bearerOk } from './finans/routes.js';
 import { seal, unseal } from './finans/db.js';
 import { broadcast } from './realtime.js';
 import { notifyOf } from './notify.js';
+import { photoUrl41 } from './birthdays41.js'; // prompt 41: bilder av personer
 
 const MOCK = process.env.MOCK_DATA === '1';
 const q = (sql) => db.prepare(sql);
@@ -153,7 +154,7 @@ export function itemOut(r, today = osloDate()) {
     weekday: weekday(nextDate), dateText: `${r.day}. ${MONTHS[r.month - 1]}`, dateLong: `${weekday(nextDate)} ${r.day}. ${MONTHS_LONG[r.month - 1]}`,
     relation: rel, relationLabel: RELATION_LABEL[rel], color: RELATION_COLOR[rel], initials: initials(r.name),
     reminderDays: r.reminder_days ?? null, remindAt, source: SOURCES.includes(r.source) ? r.source : 'local',
-    personId: person ? r.person_id : null, avatarUrl: person?.avatarUrl ?? null,
+    personId: person ? r.person_id : null, photoUrl: photoUrl41(r.id), avatarUrl: photoUrl41(r.id) ?? person?.avatarUrl ?? null, familyAvatarUrl: person?.avatarUrl ?? null, // prompt 41: eget bilde foran
     googleEventId: r.google_event_id ?? null, googleUrl: googleUrl(r), haUid: r.ha_uid ?? null,
     created: r.created, updated: r.updated,
   };

@@ -45,7 +45,7 @@ test('statuskoder kartlegges til stegene', () => {
 
 test('uten nøkkel: status fra postnord.no (uoffisielt), med header x-bap-key og cache i 30 min', async () => {
   C._clearPostnordWebCache();
-  const f = withFetch((url) => (url.includes('trackingweb/shipmentInformation') ? json(WEB) : null));
+  const f = withFetch((url) => (url.includes('recipientview') ? json(WEB) : null));
   try {
     const r = await C.fetchStatus('postnord', NO);
     assert.equal(r.status, 'ready_for_pickup');
@@ -58,7 +58,7 @@ test('uten nøkkel: status fra postnord.no (uoffisielt), med header x-bap-key og
     assert.equal(r.events[0].status, 'Sendingen er klar til henting', 'nyeste først');
     assert.equal(r.events[1].location, 'Oslo');
     assert.equal(f.calls[0].init.headers['x-bap-key'], 'web-ncp');
-    assert.match(f.calls[0].url, new RegExp(`shipmentId=${NO}&locale=no`));
+    assert.match(f.calls[0].url, new RegExp(`recipientview\\?id=${NO}&locale=en`));
     await C.fetchStatus('postnord', NO);
     assert.equal(f.calls.length, 1, 'høyst ett oppslag per sending hver 30. minutt');
   } finally { f.restore(); }
@@ -70,7 +70,7 @@ test('endepunktet svarer HTML eller 403: stille videre til ParcelsApp', async ()
     C._clearPostnordWebCache();
     kv.del(OWNER, 'parcelsapp_usage');
     const f = withFetch((url, init) => {
-      if (url.includes('trackingweb')) return bad();
+      if (url.includes('recipientview')) return bad();
       if (url.startsWith('https://parcelsapp.com') && init.method === 'POST') return json({ done: true, shipments: [{ status: 'delivered', states: [{ date: '2026-10-18T10:00:00Z', status: 'Delivered', location: 'Oslo' }] }] });
       return null;
     });
@@ -78,12 +78,12 @@ test('endepunktet svarer HTML eller 403: stille videre til ParcelsApp', async ()
       const r = await C.fetchStatus('postnord', NO, { allowParcelsapp: true });
       assert.equal(r.via, 'parcelsapp');
       assert.equal(r.status, 'delivered');
-      assert.ok(f.calls.some((c) => c.url.includes('trackingweb')), 'prøvde postnord.no først');
+      assert.ok(f.calls.some((c) => c.url.includes('recipientview')), 'prøvde postnord.no først');
     } finally { f.restore(); }
   }
   // Uten ParcelsApp-tillatelse (bakgrunnsjobben) feiler det uten å kaste noe uventet.
   C._clearPostnordWebCache();
-  const f = withFetch((url) => (url.includes('trackingweb') ? new Response('nei', { status: 403 }) : null));
+  const f = withFetch((url) => (url.includes('recipientview') ? new Response('nei', { status: 403 }) : null));
   try { await assert.rejects(C.fetchStatus('postnord', NO)); } finally { f.restore(); }
   updateConfig({ trk_parcelsapp_key: null }, OWNER);
 });
@@ -95,6 +95,6 @@ test('med nøkkel brukes det offisielle API-et, ikke nettsiden', async () => {
   try {
     const r = await C.fetchStatus('postnord', NO);
     assert.equal(r.status, 'delivered');
-    assert.ok(!f.calls.some((c) => c.url.includes('trackingweb')));
+    assert.ok(!f.calls.some((c) => c.url.includes('recipientview')));
   } finally { f.restore(); updateConfig({ postnordKey: null }, OWNER); }
 });

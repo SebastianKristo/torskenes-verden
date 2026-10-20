@@ -65,6 +65,14 @@ export function homeOf(user) {
   } catch { return null; }
 }
 const household = (u) => listUsers().map((x) => x.id).filter((id) => id !== u);
+// Prompt 41: målet kan være et annet sted enn hjemmet (dest_* på økta, hjemlys41.js). → {lat, lon, radius, name, kind}|null
+for (const [col, def] of [['dest_name', 'TEXT'], ['dest_lat', 'REAL'], ['dest_lon', 'REAL'], ['dest_kind', 'TEXT']]) if (!db.prepare('PRAGMA table_info(hjemlys_sessions)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE hjemlys_sessions ADD COLUMN ${col} ${def}`);
+export function targetOf40(s) {
+  if (s?.dest_lat != null && s?.dest_lon != null) return { lat: s.dest_lat, lon: s.dest_lon, radius: HOME_RADIUS_M, name: s.dest_name ?? 'Målet', kind: s.dest_kind ?? 'place' };
+  const h = homeOf(s.user_id);
+  return h ? { ...h, kind: 'home' } : null;
+}
+const isPlaceTrip = (s) => s?.dest_kind === 'place';
 
 let calImpl = null;
 /** Bare for tester: (user, fromDate, toDate) → [hendelse]. */
@@ -86,7 +94,7 @@ async function withWhom(user, startedAt) {
 }
 
 function progressOf(s, now = Date.now()) {
-  const home = homeOf(s.user_id);
+  const home = targetOf40(s); // prompt 41: målet (hjem eller annet sted)
   if (home && s.start_lat != null && s.last_lat != null) {
     const total = distM({ lat: s.start_lat, lon: s.start_lon }, home), left = distM({ lat: s.last_lat, lon: s.last_lon }, home);
     if (total > 100) return Math.max(0, Math.min(1, Math.round((1 - left / total) * 100) / 100));
@@ -112,6 +120,7 @@ export async function sessionOut40(s, { now = Date.now() } = {}) {
     startedAt: new Date(s.started_at).toISOString(), waitMin: s.wait_min, mode: s.mode ?? null, progress: progressOf(s, now), leg: s.leg ?? null,
     lateMinutes: late ? Math.max(0, Math.round((now - s.eta) / 60_000)) : 0, okAt: s.ok_at ? new Date(s.ok_at).toISOString() : null,
     recipients: parse(s.recipients, []).map((id) => ({ userId: id, name: first(id) })),
+    destination: s.dest_kind || s.dest_lat != null ? { name: s.dest_name ?? (s.dest_kind === 'home' ? 'Hjem' : 'Målet'), kind: s.dest_kind ?? 'place', lat: s.dest_lat ?? null, lon: s.dest_lon ?? null } : { name: 'Hjem', kind: 'home', lat: null, lon: null }, // prompt 41
     ...(s.home_at ? { homeAt: new Date(s.home_at).toISOString(), homeLabel: `${first(s.user_id)} er hjemme ${hhmm(s.home_at)}` } : {}),
     ...(s.ended_at ? { endedAt: new Date(s.ended_at).toISOString() } : {}), ...(late ? { share: await shareOf(s) } : {}), live: liveState40(s, now) };
 }
@@ -184,7 +193,8 @@ export async function start40(u, b = {}, now = Date.now()) {
 async function goHome(s, now = Date.now(), why = 'manual') {
   const n = touch(s.id, { state: 'home', home_at: now, ended_at: now });
   await emit(n, 'home');
-  for (const r of parse(s.recipients, [])) { try { await notifyUser(r, { title: 'Hjemlys', body: `${first(s.user_id)} er hjemme ${hhmm(now)}`, url: '/#/familie', category: 'familie', tag: `hjemlys-${s.id}`, data: { kind: 'hjemlys.home', sessionId: s.id, why } }); } catch { /* */ } }
+  if (!isPlaceTrip(s)) { try { (await import('./ruter41.js')).arrivedHome41(s.user_id, now); } catch { /* Min reise er valgfri */ } } // prompt 41: Min reise forsvinner når du er hjemme
+  for (const r of parse(s.recipients, [])) { try { await notifyUser(r, { title: 'Hjemlys', body: isPlaceTrip(s) ? `${first(s.user_id)} er fremme · ${s.dest_name ?? 'målet'} ${hhmm(now)}` : `${first(s.user_id)} er hjemme ${hhmm(now)}`, url: '/#/familie', category: 'familie', tag: `hjemlys-${s.id}`, data: { kind: 'hjemlys.home', sessionId: s.id, why } }); } catch { /* */ } }
   return n;
 }
 export async function patch40(s, b = {}, now = Date.now()) {
@@ -196,7 +206,7 @@ export async function patch40(s, b = {}, now = Date.now()) {
   if (b.signal !== undefined) set.signal = String(b.signal).slice(0, 20);
   if (b.unlockedAt !== undefined) { const t = Date.parse(b.unlockedAt); if (Number.isFinite(t)) set.unlocked_at = t; }
   if (b.leg !== undefined) set.leg = b.leg ? String(b.leg).slice(0, 60) : null;
-  let home = b.wifiHome === true;
+  let home = (b.wifiHome === true && !isPlaceTrip(s)) || b.arrived === true; // prompt 41: hjemme-Wi-Fi bare når målet er hjem, arrived = «Jeg er fremme»
   if (b.pos && Number.isFinite(+b.pos.lat) && Number.isFinite(+b.pos.lon)) {
     const p = { lat: +b.pos.lat, lon: +b.pos.lon, acc: Number(b.pos.acc) || null };
     const last = s.last_lat != null ? { lat: s.last_lat, lon: s.last_lon } : null;
@@ -206,7 +216,7 @@ export async function patch40(s, b = {}, now = Date.now()) {
       q('INSERT INTO hjemlys_pos(session_id, ts, lat, lon, acc) VALUES(?,?,?,?,?)').run(s.id, now, p.lat, p.lon, p.acc);
       stored.pos = true;
     }
-    const h = homeOf(s.user_id);
+    const h = targetOf40(s); // prompt 41: geofence 60 m rundt målet
     if (h && distM(p, h) <= HOME_RADIUS_M) home = true;
   }
   let n = Object.keys(set).length ? touch(s.id, set) : s;

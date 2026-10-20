@@ -154,14 +154,17 @@ test('fortsettelse og Rediger (editFrom) bygger på lagret historikk', async () 
 test('sky-modell: 409 needsConfirm bare når mine data/vedlegg er med, og «Ikke spør igjen» lagres på samtalen', async () => {
   const today = new Date().toLocaleDateString('sv-SE');
   assert.equal((await S('/finans/api/transactions', 'POST', { date: today, amount: -245.5, description: 'Kiwi Majorstuen' })).status, 200);
-  // Mine data av i innstillingene → ingenting forlater serveren, ingen spørsmål.
+  // Mine data av i innstillingene → ingenting forlater serveren, ingen spørsmål. (Prompt 41: på som standard, så slås av først.)
+  assert.equal((await S('/api/chat/settings')).body.chat_my_data, true, 'prompt 41: på som standard');
+  assert.equal((await S('/api/chat/settings', 'PATCH', { chat_my_data: false })).body.chat_my_data, false);
   calls.length = 0;
   let r = await S('/api/chat/send', 'POST', { model: 'gemini:gemini-2.5-flash', myData: true, messages: [{ role: 'user', content: 'Hva brukte jeg mest på?' }] });
   assert.equal(r.status, 200, r.text);
   assert.doesNotMatch(JSON.stringify(calls.find((x) => x.url.includes('generativelanguage')).body), /Finans siste/);
   // Slå på «Chat kan lese mine data» (personlig) → nå spørres det før sky.
   assert.equal((await S('/api/chat/settings', 'PATCH', { chat_my_data: true })).body.chat_my_data, true);
-  assert.equal((await K('/api/chat/settings')).body.chat_my_data, false, 'per bruker');
+  assert.equal((await K('/api/chat/settings', 'PATCH', { chat_my_data: false })).body.chat_my_data, false);
+  assert.equal((await S('/api/chat/settings')).body.chat_my_data, true, 'per bruker');
   r = await S('/api/chat/send', 'POST', { model: 'gemini:gemini-2.5-flash', myData: true, messages: [{ role: 'user', content: 'Hva brukte jeg mest på?' }] });
   assert.equal(r.status, 409);
   assert.equal(r.body.needsConfirm, true);

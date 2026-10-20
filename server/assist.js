@@ -82,6 +82,8 @@ import { whereIntent, whereAnswer } from './where37.js'; // prompt 37: «hvor er
 import { parseIntent37, schoolTestAnswer } from './kal37.js'; // prompt 37: skoleprøve ≠ prøveperiode
 import { bareDay37 } from './kalender33.js'; // prompt 37: «i morgen?»
 import { needsChatTools } from './chat-tools41.js'; // prompt 41: sammensatte faktaspørsmål går til chatten
+import { isWeekWeather41, weekAnswer41 } from './weather41.js'; // prompt 41: ukesvær med Ollama og 7 dager data
+import { isHuskeMessage41, startJob41 } from './tasks-glimt41.js'; // prompt 41: huskebeskjeder fra søkefeltet → Glimt i bakgrunnen
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -192,7 +194,7 @@ export function questionGuard(text) {
   return { kind: null, sure: false, reason: null };
 }
 export const isQuestion = (text) => questionGuard(text).kind === 'question';
-const ACTION_INTENTS = new Set(['appointment.create', 'trial.create', 'memory.add']);
+const ACTION_INTENTS = new Set(['appointment.create', 'trial.create', 'memory.add', 'tasks.glimt']); // prompt 41: huskebeskjed = handling (pillen)
 /** kind for et svar/intent: lokale regler først, så intensjonen. sure:false betyr at en kort LLM-klassifisering kan avgjøre. */
 export function classifyLocal(text, intent = detectIntent(text)) {
   const g = questionGuard(text);
@@ -238,6 +240,8 @@ export function detectIntent(text, today = osloTodayISO()) {
   const pq = parseQuick(text, today);
   // Prompt 36: spørsmålsvakt – et spørsmål med dato er aldri en avtale («hvor mange timer med dagslys er det den 29.06.2027»).
   if (pq.isAppointment && pq.ok && pq.date && !asked) return 'appointment.create';
+  if (isWeekWeather41(text)) return 'weather'; // prompt 41: «hvilken dag er best for å sykle …» uten værord
+  if (!asked && !pq.isAppointment && isHuskeMessage41(text)) return 'tasks.glimt'; // prompt 41: «husk …», «vi må huske å …»
   if (RE.weather.test(n)) return 'weather';
   if (RE.finance.test(n)) return 'finance.spent';
   if (RE.tasks.test(n)) return 'tasks';
@@ -535,9 +539,9 @@ function withDateContext(text, today) {
   return d?.date ? `${text}\n(Dato i spørsmålet: ${d.date}, ${d.label}. I dag er ${today}.)` : text;
 }
 
-const TITLES = { 'sun.daylight': 'Regner på sola', 'calendar.free_slots': 'Finner ledig tid', 'calendar.search': 'Leter i kalenderen', 'calendar.summary': 'Oppsummerer', 'calendar.create': 'Legger til i kalenderen', 'weather.daily': 'Sjekker været', 'calendar.ask': 'Glimt tenker', weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
+const TITLES = { 'tasks.glimt': 'Legger til i Huskeliste', 'weather.week': 'Leser værdata for uken', 'sun.daylight': 'Regner på sola', 'calendar.free_slots': 'Finner ledig tid', 'calendar.search': 'Leter i kalenderen', 'calendar.summary': 'Oppsummerer', 'calendar.create': 'Legger til i kalenderen', 'weather.daily': 'Sjekker været', 'calendar.ask': 'Glimt tenker', weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
   'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'family.where': 'Ser i Familie', 'calendar.school': 'Ser i Studie', 'calendar.fag': 'Slår opp faget', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
-const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender', 'calendar.fag': 'Kalender' };
+const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender', 'calendar.fag': 'Kalender', 'tasks.glimt': 'Huskeliste', 'weather.week': 'Vær' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
 export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null } = {}) {
@@ -555,7 +559,8 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
       : intent === 'calendar.school' ? await toolSchoolTest(user, today)
       : nv ? { text: `Åpner **${nv.label}**.`, source: 'Snarvei', nav: { target: nv.target, label: nv.label, web: nv.web, deepLink: `finanshub://${nv.target}`, delayMs: 450 } }
       : intent === 'sun.daylight' ? await toolSun(user, text, today)
-      : intent === 'weather' ? await toolWeather(user, text)
+      : intent === 'weather' ? (isWeekWeather41(text) ? await weekAnswer41(user, text) : await toolWeather(user, text)) // prompt 41
+      : intent === 'tasks.glimt' ? huskeGlimt41(user, text)
       : intent === 'calendar.day' ? await toolCalendarDay(user, text, today)
         : intent === 'calendar.next' ? await toolCalendarNext(user, text, today)
           : intent === 'departures' ? await toolDepartures(user, text)
@@ -575,10 +580,20 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   const kc = classifyLocal(text, intent);
   const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, kind: kc.kind, surface: kc.kind === 'action' ? 'pill' : 'inline', ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
     model: r.model ?? 'Glimt · verktøy', engine: r.engine ?? (intent === 'llm' ? 'none' : 'tool') };
-  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound', 'person', 'events', 'subjects']) if (r[k] !== undefined) out[k] = r[k];
+  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound', 'person', 'events', 'subjects', 'huske', 'week', 'noAi', 'steps41']) if (r[k] !== undefined) out[k] = r[k];
+  if (r.intent && r.intent !== intent) out.intent = r.intent; // prompt 41: weather.week
   if (r.nav) { out.target = r.nav.target; out.nav = r.nav; }
   out.chatContext = { q: text, intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: r.text, ...(r.card ? { card: r.card } : {}), ...(r.tool ? { tool: r.tool } : {}) }] };
   return out;
+}
+
+/** Prompt 41: huskebeskjed fra søkefeltet → samme bakgrunnsjobb som Huskeliste (POST /api/tasks/glimt async), origin home_search. */
+function huskeGlimt41(user, text) {
+  const q0 = text.replace(/^(?:legg (?:til )?i huskelist(?:a|en)|legg til i gjøremål|ny oppgave|nytt gjøremål)\s*:?\s*/i, '').trim() || text;
+  const j = startJob41(user, q0, { origin: 'home_search' });
+  return { text: 'Glimt deler opp beskjeden i **punkter i Huskeliste** …', source: 'Huskeliste', tool: 'Huskeliste', engine: 'tool',
+    huske: { jobId: j.jobId, placeholder: j.placeholder, title: 'Legger til i Huskeliste', steps: ['Leser beskjeden', 'Deler opp i punkter', 'Finner rekkefølge og steder', 'Lagrer i Huskeliste'],
+      fields: [{ k: 'Beskjed', v: q0 }, { k: 'Liste', v: 'Huskeliste' }, { k: 'Original', v: text }], done: '✓ Glimt lagde {n} punkter i Huskeliste', background: '✦ Glimt deler opp i bakgrunnen …' } };
 }
 
 /* ---------------- Brukervalg ---------------- */

@@ -26,6 +26,7 @@ import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
 import { initHa, mountHa, onLocal as haLocal, haInfo } from './tasks-ha.js';
 import { mountGlimt37 } from './tasks-glimt37.js'; // prompt 37: Glimt i Gjøremål
+import { mountGlimt41, origin41 } from './tasks-glimt41.js'; // prompt 41: Glimt deler opp i bakgrunnen, «Laget med Glimt»
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_task_lists (
@@ -200,7 +201,7 @@ const itemOut = (r) => {
     note: r.note, notes: r.note, done: !!r.done, doneAt: r.done_at ?? null, archived: !!r.archived_at, arch: !!r.archived_at, archivedAt: r.archived_at ?? null,
     urgent: !!r.urgent, rep: r.rep ?? 'none', early: r.early ?? 'none', prio: r.prio ?? 0, flag: !!r.flag, tags, subs, subsDone: subs.filter((x) => x.done).length,
     place: r.place ?? null, glimt: !!r.glimt, doneBy: r.done_by ?? null, createdBy: r.created_by ?? null, by: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, ...haInfo(r),
-    ...extraOut40(r) }; // prompt 40: placeName, after, mentions
+    ...extraOut40(r), ...origin41(r) }; // prompt 40: placeName, after, mentions · prompt 41: origin {id, text, at, engine}
 };
 const lists = (uid) => listsOf(uid).map((l) => listOut(l, uid));
 // Personer man kan dele med og tildele til: id, navn og profilbilde (brukernavn bare for administratorer).
@@ -446,6 +447,7 @@ api.put('/settings', async (c) => {
 });
 
 /* Prompt 37: Glimt i Gjøremål (POST /glimt, /glimt/undo, GET /glimt/cards, POST /:id/split, POST /:id/suggest, …) */
+mountGlimt41(api, { q, listRow, canSeeList, listsOf, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, today }); // prompt 41: før prompt 37-rutene
 mountGlimt37(api, { q, db, listRow, canSeeList, canSeeTask, listsOf, lists, listOut, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, mineOf, VISIBLE, today, haLocal, parseArr, members });
 
 /* Lister */

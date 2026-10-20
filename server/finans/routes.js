@@ -234,6 +234,12 @@ function receiptOut(r, cats = catById(), accs = accById()) {
 // «✦ Analyser på nytt med Gemini»: når lesingen feilet, var usikker (under minConf) eller Ollama var usikker.
 // Krever Gemini-nøkkel; ellers sier reanalyzeReason hva som mangler.
 function reanalyzeInfo(r, st = settings()) {
+  // Prompt 41: «Les på nytt med Glimt» er lov for alle statuser (også bokført/avvist) – det lager bare et forslag.
+  const re41 = !r.file ? { canReread: false, rereadReason: 'Fant ikke originalbildet. Last det opp på nytt for å lese det.' } : ['pending', 'processing'].includes(r.status) ? { canReread: false }
+    : hasGemini() ? { canReread: true } : { canReread: false, rereadReason: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å lese på nytt.' };
+  return { ...reanalyzeInfo0(r, st), ...re41 };
+}
+function reanalyzeInfo0(r, st) {
   if (!r.file || ['booked', 'rejected', 'pending', 'processing'].includes(r.status)) return { canReanalyze: false, canOcr: false };
   // Lokal OCR kan alltid prøves på bilder (også når AI-svaret var bra, f.eks. for å sammenligne).
   const ocr = { canOcr: r.mime !== 'text/plain' };
@@ -1069,6 +1075,15 @@ api.post('/receipts/:id/unbook', W, (c) => {
 });
 
 api.post('/receipts/:id/reject', W, (c) => { const r = rcGet(c); if (r) q("UPDATE fh_receipts SET status='rejected' WHERE id=?").run(r.id); return ok(c); });
+// Prompt 41: «Flytt til gjennomgang» for en avvist kvittering (bildet beholdes alltid). → kvitteringen
+api.post('/receipts/:id/review', W, (c) => {
+  const r = rcGet(c);
+  if (!r) return c.notFound();
+  if (r.status !== 'rejected') return bad(c, 'Bare avviste kvitteringer kan flyttes til gjennomgang');
+  q("UPDATE fh_receipts SET status='needs_review' WHERE id=?").run(r.id);
+  scanLog(r.id, 'til-gjennomgang', 'Flyttet fra avvist til gjennomgang');
+  return c.json(receiptOut(origSelect.get(r.id)));
+});
 
 api.post('/receipts/:id/reprocess', W, (c) => {
   const r = rcGet(c);
@@ -1139,6 +1154,9 @@ async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {} }
   const previous = readOut({ merchant: r.merchant, date: r.date, total: r.total != null ? r.total / 100 : null, lines: ex?.lines, confidence: r.confidence,
     engine: r.provider ? providerName(r.provider) : null, model: r.model, category: catById(u).get(r.category_id)?.name, error: r.error });
   let res;
+  // Prompt 41: mangler originalen, si det konkret (ikke en generisk feil).
+  if (!r.file) { P('error', pct, '✕ Fant ikke originalbildet'); return { error: 'Fant ikke originalbildet. Last det opp på nytt for å lese det.', status: 404, missingOriginal: true }; }
+  try { await readFile(join(DIR, r.file)); } catch (e) { if (e.code === 'ENOENT') { P('error', pct, '✕ Fant ikke originalbildet'); return { error: 'Fant ikke originalbildet. Last det opp på nytt for å lese det.', status: 404, missingOriginal: true }; } }
   try {
     const img = await readFile(join(DIR, r.file));
     P('upload', 15, 'Laster opp bildet');
@@ -1160,6 +1178,7 @@ async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {} }
   if (!d.verify) { d.verify = verify39(d); d.status = d.verify.status; }
   const candidateId = randomUUID();
   q('UPDATE fh_receipts SET candidate=? WHERE id=?').run(JSON.stringify({ id: candidateId, at: Date.now(), provider: res.provider === 'tekst' ? 'gemini' : res.provider, model: res.model, seconds: res.seconds, data: d }), r.id);
+  saveRead41(r.id, { engine: res.provider === 'tekst' ? 'gemini' : res.provider, model: res.model, data: d, candidateId }); // prompt 41: receipt_reads (forslaget)
   log('reanalyse-ferdig', `${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} %`);
   const confidence = Math.min(d.confidence.total, d.confidence.merchant || 1);
   return { previous, result: readOut({ ...d, confidence, engine: label, model: res.model, category: d.suggested_category }), candidateId, confidence, verify: (({ feedback, ...v }) => v)(d.verify) };
@@ -1168,8 +1187,8 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
   const r = rcGet(c);
   if (!r) return c.notFound();
   const b = await c.req.json().catch(() => ({}));
-  // Prompt 40: «Les på nytt» på en bokført transaksjon er lov med apply:false (bare kandidat; tas i bruk via /transactions/:id/reread/apply).
-  if (r.status === 'rejected' || (r.status === 'booked' && b.apply !== false)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
+  // Prompt 41: lov for alle statuser. Bokført og avvist får alltid bare et forslag (apply:false) – ingenting endres før «Bruk endringene».
+  if (['booked', 'rejected'].includes(r.status)) b.apply = false;
   if (r.status === 'pending' || r.status === 'processing') return bad(c, 'Kvitteringen leses fortsatt');
   const engine = b.engine === 'tesseract' ? 'tesseract' : 'gemini';
   const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
@@ -1197,7 +1216,7 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
         out.receipt = receiptOut(after);
       }
     }
-    progress({ step: 'done', pct: 100, msg: `✦ Analysert på nytt · ${pctTxt} % sikker` });
+    progress({ step: 'done', pct: 100, msg: `✦ Glimt har analysert på nytt · ${pctTxt} % sikker` });
     if (bg) {
       import('../notify.js').then(({ notifyUser }) => notifyUser(u, { title: 'Glimt', body: `Kvitteringen fra ${out.result?.merchant ?? r.merchant ?? 'butikken'} er lest på nytt · ${pctTxt} % sikker`, url: '/finans/#/kv', tag: `reanalyze-${r.id}`, category: 'finans',
         data: { kind: 'receipt.reanalyzed', receiptId: r.id, jobId: ctx.job.id, deepLink: 'finanshub://finans/kvitteringer', icon: '/assets/glimt-varsel.png', badge: '/assets/glimt-badge.png' } }, { realtime: false })).catch(() => {});
@@ -1212,7 +1231,7 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
   const j = await promise;
   if (j.status !== 'done') return bad(c, j.error ?? 'Avbrutt', j.status === 'cancelled' ? 409 : errStatus);
   const { confidence, ...out } = j.result;
-  return c.json({ ...out, jobId: j.id });
+  return c.json({ ...out, jobId: j.id, status: r.status, ...(r.status === 'rejected' ? { offer: 'review', offerText: 'Flytt til gjennomgang' } : {}), ...(r.status === 'booked' ? { offer: 'apply', offerText: 'Bruk endringene' } : {}) });
 });
 // Prompt 39 (PWA): GET /finans/api/receipts/reanalyze/:jobId → {jobId, receiptId, status, step, pct, msg, steps, result?} · DELETE samme = Avbryt.
 api.get('/receipts/reanalyze/:jobId', R, (c) => { const j = getJob(c.get('user'), c.req.param('jobId')); return j && j.kind === 'reanalyze' ? c.json({ ...jobView(j), steps: j.progress?.steps ?? null }) : bad(c, 'Fant ikke jobben', 404); });
@@ -1249,7 +1268,8 @@ api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
     applyRereadTx40(c.get('user'), tx40, r, cand);
     scanLog(r.id, 'reanalyse-valgt', `${cand.provider === 'tesseract' ? 'Lokal OCR' : 'Gemini'}-resultatet beholdes (bokført transaksjon oppdatert)`);
   } else if (keepNew) {
-    if (['booked', 'rejected'].includes(r.status)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
+    // Prompt 41: avvist + «Flytt til gjennomgang» → resultatet tas i bruk og status blir til gjennomgang. Bokført uten transaksjon endres ikke.
+    if (r.status === 'booked') return bad(c, 'Kvitteringen er bokført uten transaksjon – endre den fra transaksjonen');
     await applyCandidate(r, cand);
     scanLog(r.id, 'reanalyse-valgt', `${cand.provider === 'tesseract' ? 'Lokal OCR' : 'Gemini'}-resultatet beholdes`);
   } else {
@@ -1257,6 +1277,26 @@ api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
     scanLog(r.id, 'reanalyse-valgt', 'forrige resultat beholdes');
   }
   return c.json(receiptOut(origSelect.get(r.id)));
+});
+
+// Prompt 41: «✦ Les på nytt med Glimt» for alle statuser = POST /receipts/:id/reanalyze (bokført/avvist: alltid apply:false) eller
+// POST /transactions/:id/reread (p40.js). /receipts/:id/reread over er fortsatt «les posisjoner» (prompt 30).
+// Prompt 41: receipt_reads – hver ny lesing lagres som forslag (receipt_id, engine, read_at, fields_json, lines_json, confidence). GET /receipts/:id/reads.
+q(`CREATE TABLE IF NOT EXISTS receipt_reads (id INTEGER PRIMARY KEY AUTOINCREMENT, receipt_id TEXT NOT NULL, engine TEXT, model TEXT, read_at INTEGER NOT NULL, fields_json TEXT, lines_json TEXT, confidence REAL, candidate_id TEXT)`).run();
+q('CREATE INDEX IF NOT EXISTS receipt_reads_r ON receipt_reads(receipt_id, read_at)').run();
+function saveRead41(receiptId, { engine, model, data, candidateId }) {
+  try {
+    const d = data ?? {};
+    q('INSERT INTO receipt_reads(receipt_id, engine, model, read_at, fields_json, lines_json, confidence, candidate_id) VALUES(?,?,?,?,?,?,?,?)').run(receiptId, engine ?? null, model ?? null, Date.now(),
+      JSON.stringify({ merchant: d.merchant ?? null, date: d.date ?? null, total: d.total ?? null, category: d.suggested_category ?? null }), JSON.stringify(d.lines ?? d.items ?? []), d.confidence?.total ?? null, candidateId);
+    q('DELETE FROM receipt_reads WHERE receipt_id=? AND id NOT IN (SELECT id FROM receipt_reads WHERE receipt_id=? ORDER BY read_at DESC LIMIT 20)').run(receiptId, receiptId);
+  } catch (e) { console.warn('[finans] receipt_reads:', e.message); }
+}
+api.get('/receipts/:id/reads', R, (c) => {
+  const r = rcGet(c);
+  if (!r) return c.notFound();
+  const pj = (s) => { try { return JSON.parse(s); } catch { return null; } };
+  return c.json({ reads: q('SELECT * FROM receipt_reads WHERE receipt_id=? ORDER BY read_at DESC').all(r.id).map((x) => ({ id: x.id, engine: x.engine, model: x.model, readAt: new Date(x.read_at).toISOString(), fields: pj(x.fields_json), lines: pj(x.lines_json) ?? [], confidence: x.confidence, candidateId: x.candidate_id })) });
 });
 
 // Tar et lest resultat i bruk på kvitteringen: felt, kategori, bankmatch og sammendrag. Status blir alltid «til gjennomgang».

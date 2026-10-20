@@ -30,6 +30,7 @@ import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
 import { ollamaPost, shortBody, ollamaContent, stripThink, SHORT_NUM_CTX } from './ollama-opts.js';
 import { broadcast } from './realtime.js';
 import { envHw } from './aihw38.js';
+import { jobTimes41, groupTimes41 } from './ai41.js'; // prompt 41: klokkeslett i Jobber
 
 /* ---------------- Oppgaver ---------------- */
 
@@ -326,7 +327,8 @@ export const jobOut = (r) => ({
   status: r.status, progress: r.progress ?? (r.status === 'ok' ? 100 : 0), step: r.step ?? null, partial: parseJ(r.partial, null),
   phase: r.status === 'run' ? parseJ(r.phase, null) : null, runAt: r.run_at ? new Date(r.run_at).toISOString() : null,
   ...(r.status === 'fail' || r.status === 'skip' ? (({ reason, short }) => ({ reason, short }))(failReason(r.error)) : {}),
-  startedAt: new Date(r.ts).toISOString(), ms: r.ms ?? null, tokens: { in: r.tok_in ?? 0, out: r.tok_out ?? 0 }, costKr: r.cost_kr ?? 0,
+  // prompt 41: createdAt, startedAt (når den faktisk startet), endedAt, timeLabel, timeAgo (jobTimes41)
+  startedAt: new Date(r.ts).toISOString(), ...jobTimes41(r), ms: r.ms ?? null, tokens: { in: r.tok_in ?? 0, out: r.tok_out ?? 0 }, costKr: r.cost_kr ?? 0,
   error: r.error ?? null, fallbackFrom: r.fallback_from ?? null, ref: r.ref ?? null, retryable: !!live.get(r.id)?.retry,
   cancellable: r.status === 'run' || r.status === 'queue',
   ...(/^receipt:/.test(r.ref ?? '') ? { receiptId: r.ref.slice(8), file: String(r.title ?? '').replace(/^Kvittering · /, ''), thumb: `/finans/api/receipts/${encodeURIComponent(r.ref.slice(8))}/thumb` } : {}),
@@ -377,10 +379,10 @@ export function jobGroups(rows) {
     if (j.status !== 'fail' && j.status !== 'skip') continue;
     const fr = j.status === 'skip' ? { reason: 'memory', short: 'Hoppet over · for lite minne' } : failReason(j.error);
     const cur = g.get(fr.reason) ?? { reason: fr.reason, short: fr.short, count: 0, ids: [], selftest: 0 };
-    cur.count++; cur.ids.push(j.id); if (/^Selvtest · /.test(j.title ?? '')) cur.selftest++;
+    cur.count++; cur.ids.push(j.id); (cur.jobs ??= []).push(j); if (/^Selvtest · /.test(j.title ?? '')) cur.selftest++;
     g.set(fr.reason, cur);
   }
-  return [...g.values()].map((x) => ({ ...x, selftest: x.selftest === x.count,
+  return [...g.values()].map(({ jobs, ...x }) => ({ ...x, ...groupTimes41(jobs ?? []), selftest: x.selftest === x.count, // prompt 41: timeRange «16:02–17:20», lastAt
     label: `${x.count} ${x.selftest === x.count ? (x.count === 1 ? 'selvtest' : 'selvtester') : x.count === 1 ? 'jobb' : 'jobber'} feilet · ${x.short.charAt(0).toLowerCase()}${x.short.slice(1)}` }))
     .sort((a, b) => b.count - a.count);
 }
