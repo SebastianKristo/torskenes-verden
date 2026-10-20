@@ -2,6 +2,20 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.33.0] – 20.10.2026 · prompt 39 – fire kalendere, web lik Mac og myk lyd
+- **Kalender på web ser nå ut som Mac-appen:** samme toppfelt, Neste-kort, sidemeny med minikalender, KALENDERE og «Glimt · dagen din», uke-rutenett, Måned, År og Liste, og mørkt tema. Mac-appen viser igjen sin egen kalender (web-kalenderen kan slås på som eksperiment).
+- **Fire kalendere:** Personlig (Google), Bursdager (Google), Skole (iCal-adresse) og Helligdager (innebygd, Norge). De gamle kalenderne ryddes inn i disse én gang – ingen hendelser slettes, og du kan angre i 30 dager. Ny Kalendere-liste, Rediger og Legg til på iPhone og Android, og «Hvilken kalender er hva?» for Google på web og Mac.
+- **Glimt følger opp:** etter «hva slags timer har jeg i dag» kan du spørre «hva slags fag er det», og Glimt husker samtalen i 10 minutter. Lengre tenketid før tidsavbrudd, og vennlig svar når det tar for lang tid.
+- **Kvitteringer:** bedre lesing av varelinjer, rabatter og pant, kontroll av summen, ny kategori når ingen passer, og «AI på nytt» med fremdrift og Avbryt.
+- **Glimt anbefaler modeller** for Mac mini-maskinen, med «La Glimt velge» (kan angres) og «Spør Glimt». AI-innstillingene på web har fylte kort og logoer for tjenestene.
+- **Gjøremål på web:** sidemeny, liste og detaljer, og en tavlevisning. Glimt foreslår ikke pakkeliste for bursdager – bare for reiser og hytte.
+- **Vær:** Yr mot Storm i nytt oppsett med wiggle-redigering, og Glimt oppsummerer ukas vær sammenlignet med forrige uke.
+- **Glimt-varsler** har Glimt-ikonet og tittelen «Glimt», og en ny bryter «Vis svaret i appen også». Glimt kan slås av i Now Brief.
+- **Android:** myk standard varsellyd («Dråpe», 50 %) og ingen lyd på lydløs, profilbildet vises, valgt modell vises i Chat, og sveip bort er mykt.
+- **Mobil:** sveip bort uten hint-animasjon, Hjem i redigering scroller og arket ligger fast, Bibel-siden uten fanelinje og Skann, Profil som egen side, ny «Tilpass»-side, og «Varsle om nye versjoner» under Varsler.
+- **Domener:** koble til Google Search Console i Innstillinger → Domener (med ?-guide) og hent domener derfra.
+- **Nytt app-ikon:** H-monogram på rødt. Det gamle husikonet kan velges i Innstillinger.
+
 ## [4.32.0] – 20.10.2026 · prompt 38 – QR-innlogging, Kalender for Mac lik web og Mac mini
 - **Logg inn med QR-kode:** innloggingssiden (web, Kalender på Mac og iPad) viser en QR-kode. Skann med en mobil som er logget inn, sjekk den 2-sifrede matchkoden og godkjenn med Face ID / fingeravtrykk. Med 2FA på skriver du koden på den nye enheten. Koden inneholder aldri passord eller token og gjelder i 60 s.
 - **Kalender for Mac = web-kalenderen:** Mac-appen viser nå samme kalender som web (i appen), med native menylinje-kalender, dato på Dock-ikonet, varsler og ⌘-snarveier. Uten nett vises den gamle Mac-kalenderen som reserve.
