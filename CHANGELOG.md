@@ -2,6 +2,17 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.32.0] – 20.10.2026 · prompt 38 – QR-innlogging, Kalender for Mac lik web og Mac mini
+- **Logg inn med QR-kode:** innloggingssiden (web, Kalender på Mac og iPad) viser en QR-kode. Skann med en mobil som er logget inn, sjekk den 2-sifrede matchkoden og godkjenn med Face ID / fingeravtrykk. Med 2FA på skriver du koden på den nye enheten. Koden inneholder aldri passord eller token og gjelder i 60 s.
+- **Kalender for Mac = web-kalenderen:** Mac-appen viser nå samme kalender som web (i appen), med native menylinje-kalender, dato på Dock-ikonet, varsler og ⌘-snarveier. Uten nett vises den gamle Mac-kalenderen som reserve.
+- **Kalender på web** åpner i fullskjerm og har fått iPhone-appens funksjoner: Glimt-feltet og -assistenten («i morgen», skoleprøver, ledig tid), År-visning, zoom med Ctrl/⌘ + hjul eller klyp, adresse og kart på hendelser.
+- **Hjem på web (oppsett 1c):** Glimt-briefen som glasspanel under hilsenen, søket over hele bredden og rullende nyheter med fartsknapp.
+- **AI-svaret på Hjem** lukkes med ✕, sveip opp eller trykk utenfor – uten at kortet under åpnes.
+- **Now Brief:** nye kort for Pakker, Familie, Skole og jobb, Bursdager (+ gave i Gjøremål) og Nordlys i natt (varsel kl. 20 ved Kp ≥ 4 og lite skyer). Velg og sorter kortene i Innstillinger → Glimt. 🔇 og ⚙ er fjernet, og tittelen står på linje med Ferdig. Glimt i prestedrakt ved bibelverset.
+- **AI-maskinen er Mac mini M4:** 16 GB samlet minne (≈ 10,7 GB til modeller) og 2 TB ekstern disk, modellene merkes PASSER / TRANGT / FOR STOR, anbefalte Ollama-innstillinger, varsel når disken mangler og «Laster modellen fra disk …» første gang. Modellvalget i Finans viser alltid fire rader.
+- **Konto → Økt:** Lås skjermen, Logg ut og Logg ut av alle enheter (flyttet fra sidemenyen).
+- **Ellers:** Domener lastes ferdig ved åpning og har Glimt-knapp på mobil, tilbake fra Abonnementer går til riktig Mer, og oppstartssiden flimrer ikke lenger.
+
 ## [4.31.0] – 20.10.2026 · prompt 37 – Gjøremål, bibelvers og husstanden
 - **iOS-krasj i wiggle-modus rettet:** dra-forhåndsvisningen ble tegnet uten appens data, og appen stoppet når man begynte å flytte et kort. Ny dra-funksjon som bytter bare i midtre del av målkortet (maks hver 140 ms) og lagrer ved slipp. Samme opprydding på Android og web-appen.
 - **Gjøremål** (nytt navn på Huskeliste): uten navbar og alltid i Mer, detaljark (dato, tid, viktig, gjenta, tidlig påminnelse, liste, ansvarlig, prioritet, flagg, tagger, deloppgaver), **private lister per bruker og delte lister**, og Glimt bak ✦-knappen (tekst → oppgave, lim inn/bilde, matplan → handel, del opp, slå sammen, rydd forfalte, pakkeliste, spørsmål). Viktige oppgaver ringer som alarm på Android.
