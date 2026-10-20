@@ -38,7 +38,7 @@ final class MacLogin41Model: ObservableObject {
         phase = "wait"
         step = 3
         error = ""
-        Task {
+        Task { @MainActor in
             do {
                 let s: KalSession41 = try await KalAuth41.deviceExchange(d)
                 finish(s)
@@ -57,7 +57,7 @@ final class MacLogin41Model: ObservableObject {
         waitId += 1
         let id: Int = waitId
         let list: [String] = cands()
-        Task {
+        Task { @MainActor in
             let base: String = await KalAuth41.firstReachable(Array(list.prefix(3))) ?? (list.first ?? KalAuth41.defaultBase)
             if self.waitId != id { return }
             let p: KalPending41 = KalAuth41.begin(base: base)
@@ -72,7 +72,7 @@ final class MacLogin41Model: ObservableObject {
                 self.fail("Fant ikke Homelab. Logg inn med brukernavn og passord.", server: true)
             }
         }
-        Task {
+        Task { @MainActor in
             try? await Task.sleep(nanoseconds: 180_000_000_000)
             if self.phase == "wait" && self.waitId == id && self.step < 2 {
                 self.fail("Homelab svarte ikke. Sjekk at Homelab er innlogget, og prøv igjen.", server: false)
@@ -95,7 +95,7 @@ final class MacLogin41Model: ObservableObject {
         guard let code = q("code"), let state = q("state") else { return }
         phase = "wait"
         step = 2
-        Task {
+        Task { @MainActor in
             do {
                 let s: KalSession41 = try await KalAuth41.exchange(code: code, state: state, server: q("server") ?? q("base"))
                 self.step = 3
@@ -124,7 +124,7 @@ final class MacLogin41Model: ObservableObject {
         error = ""
         offerServer = false
         let list: [String] = cands()
-        Task {
+        Task { @MainActor in
             guard let base = await KalAuth41.firstReachable(list) else {
                 busy = false
                 error = "Får ikke kontakt med Homelab."

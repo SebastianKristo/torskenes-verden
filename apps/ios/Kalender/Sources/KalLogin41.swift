@@ -47,7 +47,7 @@ final class KalLogin41Model {
         phase = "wait"
         step = 3
         error = ""
-        Task {
+        Task { @MainActor in
             if let d = KalShared41.device() {
                 do {
                     let s: KalSession41 = try await KalAuth41.deviceExchange(d)
@@ -81,13 +81,13 @@ final class KalLogin41Model {
         phase = "wait"
         waitId += 1
         let id: Int = waitId
-        Task {
+        Task { @MainActor in
             let cands: [String] = KalAuth41.candidates()
             let base: String = await KalAuth41.firstReachable(Array(cands.prefix(3))) ?? (cands.first ?? KalAuth41.defaultBase)
             let p: KalPending41 = KalAuth41.begin(base: base)
             open(p, base: base, id: id)
         }
-        Task {
+        Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(KalAuth41.timeout * 1_000_000_000))
             if self.phase == "wait" && self.waitId == id && self.step < 2 {
                 self.fail("Homelab svarte ikke. Sjekk at Homelab er innlogget, og prøv igjen.", server: false)
@@ -129,7 +129,7 @@ final class KalLogin41Model {
         phase = "wait"
         step = 1
         error = ""
-        Task {
+        Task { @MainActor in
             let cands: [String] = KalAuth41.candidates()
             let base: String = await KalAuth41.firstReachable(Array(cands.prefix(3))) ?? KalAuth41.defaultBase
             let p: KalPending41 = KalAuth41.begin(base: base)
@@ -159,7 +159,7 @@ final class KalLogin41Model {
         phase = "wait"
         step = 2
         error = ""
-        Task {
+        Task { @MainActor in
             do {
                 let s: KalSession41 = try await KalAuth41.exchange(code: code, state: state, server: q("server") ?? q("base"))
                 self.step = 3
@@ -198,7 +198,7 @@ final class KalLogin41Model {
         offerServer = false
         let p: String = pass
         let c: String = code
-        Task {
+        Task { @MainActor in
             guard let base = await KalAuth41.firstReachable(KalAuth41.candidates()) else {
                 busy = false
                 error = "Får ikke kontakt med Homelab."
@@ -581,7 +581,7 @@ struct KalServer41Sheet: View {
             return
         }
         testText = "Tester …"
-        Task {
+        Task { @MainActor in
             let t0: Date = Date()
             let ok: Bool = await KalAuth41.reachable(s, timeout: 6)
             let ms: Int = Int(Date().timeIntervalSince(t0) * 1000)
