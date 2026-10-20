@@ -2,6 +2,12 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.35.0] – 20.10.2026 · Glimt henter fakta i chatten
+- **Sammensatte spørsmål i Glimt-chatten:** «hva er været i Oslo i morgen og hvordan er vindhastigheten i New York neste time» deles i deler. Glimt henter ekte data for hver del og svarer på alle i rekkefølge.
+- **Vær for hele verden:** temperatur, nedbør, vind med kast og retning, skydekke og UV. Data kommer fra MET for Norge og Open-Meteo for resten, og tidspunktet regnes i stedets egen tid.
+- **Lokal tid og sol:** «hva er klokka i Tokyo», og soloppgang, solnedgang og dagslys for sted og dato.
+- **Faktakort under svaret** viser hva Glimt hentet og hvor dataene kommer fra (web, mobil, iPhone og Android). Et ukjent sted stopper ikke resten av svaret.
+
 ## [4.34.0] – 20.10.2026 · prompt 40 – Hjemlys, julemodus og Hjem 2c
 - **Hjemlys (nytt):** «Et lite lys som står på til du er hjemme.» Start på vei hjem, så får husstanden beskjed hvis du ikke er hjemme i tide. Ingenting deles før du er sen, og ruten slettes etter 24 t.
   - Dagtid: kart med ruten hjem og reisemåter med ankomsttid.
