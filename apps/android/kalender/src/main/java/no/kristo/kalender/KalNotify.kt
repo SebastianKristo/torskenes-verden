@@ -50,12 +50,17 @@ object KalNotify {
     /** Ett varsel: id (unik per hendelse og type), tidspunkt og innhold. */
     private data class Plan(val key: String, val at: LocalDateTime, val ev: KEv, val kind: String)
 
-    private fun plans(evs: List<KEv>, now: LocalDateTime, bd: Boolean = true, fr: Boolean = true): List<Plan> {
+    private fun plans(evs: List<KEv>, now: LocalDateTime, bd: Boolean = true, fr: Boolean = true, abDays: (KEv) -> List<Int> = { emptyList() }): List<Plan> {
         val out = ArrayList<Plan>()
         val until = now.plusDays(14)
         evs.forEach { e ->
             if (e.pending && e.id.startsWith("x")) return@forEach
             val start = e.d.atTime(e.s?.let { LocalTime.of(it / 60 % 24, it % 60) } ?: LocalTime.of(9, 0))
+            // Prompt 42: trekk fra Abonnementer (Innstillinger → Varsler → Abonnementer) – kl. 09:00 N dager før.
+            if (e.ab != null) {
+                abDays(e).forEach { n -> out += Plan("ab$n|${e.id}", e.d.minusDays(n.toLong()).atTime(9, 0), e, "ab$n") }
+                return@forEach
+            }
             when {
                 e.kind == "bursdag" || (e.cal == "b" && e.all) -> if (bd) out += Plan("b|${e.id}|${e.d}", e.d.atTime(9, 0), e, "bursdag")
                 e.kind == "frist" -> {
@@ -85,7 +90,7 @@ object KalNotify {
         val evs = KalStore.current(app).withOverrides(app)
         // Prompt 39: Rediger → Varsel av for en kalender gir ingen varsler derfra.
         val hidden = hiddenAll35(app) + Kal39.notifyOff(KalStore.current(app).cals)
-        val ps = plans(evs.filter { it.cal !in hidden }, LocalDateTime.now(OSLO), Kal35Prefs.notifyBirthdays(app), Kal35Prefs.notifyDeadlines(app))
+        val ps = plans(evs.filter { it.cal !in hidden }, LocalDateTime.now(OSLO), Kal35Prefs.notifyBirthdays(app), Kal35Prefs.notifyDeadlines(app)) { Ab42.notifyDays(app, it) }
         val sp = app.getSharedPreferences(PREF, Context.MODE_PRIVATE)
         val old = sp.getStringSet("keys", emptySet()) ?: emptySet()
         val now = ps.map { it.key }.toSet()
@@ -129,12 +134,15 @@ object KalNotify {
         if (!canPost(ctx)) return
         channels(ctx)
         val time = if (e.all) "Hele dagen" else hm(e.s ?: 0) + "–" + hm(e.e ?: ((e.s ?: 0) + 60))
-        val title = when (kind) {
+        val title = when {
+            kind.startsWith("ab") -> Ab42.short(e)
+            else -> when (kind) {
             "bursdag" -> "🎂 " + e.t
             "frist3", "frist1" -> "Frist " + inText(e, kind) + ": " + e.t.replace(Regex("^Frist: "), "")
             else -> e.t
-        }
-        val body = listOfNotNull(if (kind == "rem") (if (snoozed) "om 10 min" else inText(e, kind)) else null, time, e.loc).joinToString(" · ")
+        } }
+        val body = if (kind.startsWith("ab")) Ab42.notifyText(e, kind.removePrefix("ab").toIntOrNull() ?: 1)
+            else listOfNotNull(if (kind == "rem") (if (snoozed) "om 10 min" else inText(e, kind)) else null, time, e.loc).joinToString(" · ")
         val id = rc(key)
         val b = NotificationCompat.Builder(ctx, CH_EVENTS)
             .setSmallIcon(no.kristo.kalender.R.drawable.ic_kal_notif)

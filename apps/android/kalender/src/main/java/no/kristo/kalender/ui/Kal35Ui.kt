@@ -408,6 +408,15 @@ fun SettingsPage35(vm: KalVm) {
             Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
                 OptRow("Bursdager", "Varsel kl. 09:00 samme dag", vm.nBd) { vm.setNotify("notifyBirthdays", !vm.nBd) }
                 OptRow("Studiefrister", "3 dager og 1 dag før", vm.nFr) { vm.setNotify("notifyDeadlines", !vm.nFr) }
+                // Prompt 42: trekk fra Finans → Abonnementer (standard: prøveperioder 2 d og 1 d før, årlige 7 d før).
+                val app42 = vm.getApplication<android.app.Application>()
+                Box(Modifier.padding(vertical = 10.dp)) {
+                    Seg35("Abonnementer", "Trekk fra Finans", listOf("off" to "Av", "day" to "Dagen før", "special" to "Prøve og årlige"), no.kristo.kalender.Ab42.mode(app42)) {
+                        Hap.tick()
+                        no.kristo.kalender.Ab42.setMode(app42, it)
+                        runCatching { no.kristo.kalender.KalNotify.reschedule(app42) }
+                    }
+                }
                 OptRow("Glimt-brief", "Morgen og kveld (velg i Glimt)", vm.nBr) { vm.setNotify("notifyBrief", !vm.nBr) }
                 OptRow("Reisetid", "Varsle når du må dra, basert på sted", vm.nTv) { vm.setNotify("travelTime", !vm.nTv) }
             }

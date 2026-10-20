@@ -57,6 +57,11 @@ enum KalNotify {
         let frOn: Bool = (UserDefaults.standard.object(forKey: "kal.nFr") as? Bool) ?? true
         for e in events {
             if e.cont { continue }
+            // Prompt 42: trekk fra Abonnementer har egne regler (Innstillinger → Varsler → Abonnementer).
+            if e.ab42 != nil {
+                out.append(contentsOf: KalAbNotify42.plans(e, now: now))
+                continue
+            }
             if e.kind == "bursdag" || e.cal == "b" {
                 if !bdOn { continue }
                 let at: Date = KalD.at(e.day, 9 * 60)

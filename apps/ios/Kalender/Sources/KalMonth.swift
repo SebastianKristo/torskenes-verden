@@ -77,7 +77,8 @@ struct KalMonthDay: View {
 
     var body: some View {
         let k: String = KalD.key(day)
-        let list: [KalEvent] = s.on(k)
+        // Prompt 42: tre eller flere trekk samme dag blir én chip «3 trekk · 627 kr».
+        let list: [KalEvent] = KalAb42.collapse(s.on(k))
         let inMonth: Bool = KalD.month(day) == month
         let today: Bool = k == KalD.todayKey()
         let mx: Int = 3
@@ -112,6 +113,9 @@ struct KalMonthDay: View {
         }
         .buttonStyle(.plain)
         .clipped()
+        // Prompt 42 (iPad): hover med pekeplate, og tekst/e-post/SMS sluppet på dagen tolkes av Glimt til en hendelse den dagen.
+        .hoverEffect(.highlight)
+        .dropDestination(for: String.self) { (items: [String], _: CGPoint) -> Bool in KalPad42Drop.drop(items, day: k) }
         .accessibilityLabel(KalD.fd(day) + ", " + String(list.count) + " hendelser")
     }
 }
@@ -122,7 +126,15 @@ struct KalMonthChip: View {
 
     var body: some View {
         let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
-        KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(9.5, .bold)).lineLimit(1)
+        HStack(spacing: 3) {
+            // Prompt 42: trekk fra Abonnementer – logo (12 pt) + navn.
+            if KalAb42.isSub(e) && (e.ab42?.sum ?? 0) == 0 {
+                KalAbLogo42(e: e, size: 12)
+                Text(KalAb42.short(e)).font(KalFont.ui(9.5, .bold)).lineLimit(1)
+            } else {
+                KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(9.5, .bold)).lineLimit(1)
+            }
+        }
             .foregroundStyle(t.calText(c))
             .padding(.horizontal, 4).padding(.vertical, 1)
             .frame(maxWidth: .infinity, alignment: .leading)

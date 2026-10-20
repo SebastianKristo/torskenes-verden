@@ -253,6 +253,8 @@ final class KalStore {
             for e in list where !cals.contains(where: { (c: KalCal) -> Bool in c.id == e.cal }) {
                 if let d = KalCals.defaults.first(where: { (c: KalCal) -> Bool in c.id == e.cal }) { cals.append(d) }
             }
+            // Prompt 42: trekk fra Abonnementer uten kalenderen i lista (eldre server) får den lokalt.
+            KalAb42.ensureCal(&cals, events: list)
             applyCalOn()
         } catch let e as KalNetError {
             lastError = e.message
@@ -690,6 +692,8 @@ final class KalStore {
             let when: String = b.day == tk ? "i dag" : b.day == tmr ? "i morgen" : KalD.dl(KalD.date(b.day)).lowercased()
             t += " " + b.title + " " + when + "."
         }
+        // Prompt 42: «… og 3 trekk på til sammen 627 kr» (Abonnementer, også når kalenderen er skjult).
+        t += KalAb42.weekLine(upcoming(limit: 300, includeHidden: true), from: tk, to: KalD.addKey(KalD.key(KalWeek35.start(KalD.today())), 6))
         return t
     }
 

@@ -13,7 +13,9 @@ data class KSlot(val d: LocalDate, val s: Int, val e: Int)
 /** steps = tenker-stegene, cards = hendelseskort, slots = ledige tider, create = hendelse som skal legges inn (kan angres). */
 data class KAns(val steps: List<String>, val txt: String, val cards: List<KEv> = emptyList(), val slots: List<KSlot> = emptyList(), val create: KEv? = null)
 
-class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, private val wx: Map<LocalDate, KWx>, private val defRem: Int?) {
+class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, private val wx: Map<LocalDate, KWx>, private val defRem: Int?,
+             /** Prompt 42: alle hendelser (også skjulte kalendere) – Glimt svarer om abonnementer selv når kalenderen er av. */
+             private val everything: List<KEv> = all, private val sun: Boolean = false) {
     private val T = today()
     private val nm = nowMin()
     private fun calName(c: String) = cals[c]?.n ?: KCALS.firstOrNull { it.id == c }?.n ?: "Personlig"
@@ -41,6 +43,8 @@ class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, pr
     fun ask(q: String): KAns? {
         // Prompt 35 (FEIL: svarte for i dag): normaliser først – små bokstaver, uten ? ! . , : ; « » ", ett mellomrom, polstret.
         val ql = norm35(q)
+        // Prompt 42: abonnementer og trekk – hurtigvei uten LLM.
+        Ab42.answer(ql, everything, T, sun)?.let { return it }
         if (Regex("ledig|fri tid|finn tid|når kan jeg|har jeg tid").containsMatchIn(ql)) {
             val d = dayOf(ql) ?: T.plusDays(1)
             val ev = on(d).filter { !it.all }
@@ -151,5 +155,7 @@ fun daySummary(all: List<KEv>, wx: Map<LocalDate, KWx>): String {
     if (w != null) { val k = wkd(w.c); sb.append(" ").append(WTXT[k]).append(", ").append(w.lo).append("–").append(w.hi).append("°").append(if (k == "regn") ", ta med paraply." else ".") }
     if (nf != null) sb.append(" Frist: ").append(nf.t.replace(Regex("^Frist: "), "")).append(" ").append(if (nf.d == tmr) "i morgen" else dl(nf.d).lowercase()).append(".")
     if (nb != null && !nb.d.isAfter(T.plusDays(7))) sb.append(" ").append(nb.t).append(" ").append(when (nb.d) { T -> "i dag"; tmr -> "i morgen"; else -> dl(nb.d).lowercase() }).append(".")
+    // Prompt 42: «… Denne uka: 3 trekk på til sammen 627 kr.»
+    sb.append(Ab42.weekLine(all, T, mon(T).plusDays(6)))
     return sb.toString()
 }

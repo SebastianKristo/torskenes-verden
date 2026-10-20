@@ -161,6 +161,8 @@ struct KalSettings35View: View {
                 s.rebuild()
                 s.savePrefs(["notifyDeadlines": s.nFr])
             }
+            // Prompt 42: trekk fra Finans → Abonnementer (Av · Dagen før · Prøveperioder og årlige).
+            KalAbNotifyRow42()
             KalOptionRow(title: "Glimt-brief", sub: "Morgen og kveld (velg i Glimt)", on: s.nBrief) {
                 s.nBrief.toggle()
                 s.savePrefs(["notifyBrief": s.nBrief])

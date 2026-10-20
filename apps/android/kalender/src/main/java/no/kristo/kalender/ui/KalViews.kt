@@ -82,7 +82,13 @@ private fun EvChip(vm: KalVm, e: KEv, fs: Float, onClick: (() -> Unit)? = null) 
     Box(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(c.col.copy(alpha = if (e.kind == "frist") .38f else .133f))
             .then(if (onClick != null) Modifier.tap(e.t, onClick = onClick) else Modifier).padding(horizontal = 4.dp, vertical = 1.dp),
-    ) { Tx(no.kristo.kalender.Kal41.listTitle(e, c.n), man(fs.sp, FontWeight.Bold, c.fg(k), (fs * 1.4f).sp)) }
+    ) {
+        // Prompt 42: trekk fra Abonnementer – logo (12 dp) + navn; sammendraget «3 trekk · 627 kr» uten logo.
+        if (e.ab != null && e.ab.sum == 0) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            AbLogo42(vm, e, 12.dp)
+            Tx(no.kristo.kalender.Ab42.short(e), man(fs.sp, FontWeight.Bold, c.fg(k), (fs * 1.4f).sp))
+        } else Tx(no.kristo.kalender.Kal41.listTitle(e, c.n), man(fs.sp, FontWeight.Bold, c.fg(k), (fs * 1.4f).sp))
+    }
 }
 
 /* ---------------- Måned ---------------- */
@@ -113,7 +119,8 @@ fun MonthView(vm: KalVm) {
                 if (vm.sw) Box(Modifier.width(26.dp).padding(top = 6.dp), contentAlignment = Alignment.TopCenter) { Tx("${no.kristo.kalender.wkNo35(d0, sun)}", monoX(12.5.sp, k.ink)) }
                 for (i in 0 until 7) {
                     val d = d0.plusDays(i.toLong())
-                    val L = by[d].orEmpty()
+                    // Prompt 42: tre eller flere trekk samme dag blir én chip «3 trekk · 627 kr».
+                    val L = no.kristo.kalender.Ab42.collapse(by[d].orEmpty())
                     val inM = d.monthValue == A.monthValue
                     val td = d == T
                     val cut = if (L.size > mx) mx - 1 else mx
@@ -325,6 +332,8 @@ fun EvRow(vm: KalVm, e: KEv, cont: Boolean = false, twoTimes: Boolean = true) {
             if (twoTimes) Tx(if (e.all) "dagen" else hm(e.e ?: 0), mono(11.5.sp, k.mut2))
         }
         Box(Modifier.width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(c.col))
+        // Prompt 42: trekk fra Abonnementer – logo, navn, merke TREKK / PRØVE / ÅRLIG og beløp høyrejustert.
+        if (e.ab != null) AbRowBody42(vm, e, Modifier.weight(1f)) else
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Tx(no.kristo.kalender.Kal41.listTitle(e, c.n), man(14.5.sp, FontWeight.Bold, k.ink), Modifier.weight(1f, fill = false))

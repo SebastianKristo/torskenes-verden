@@ -167,13 +167,23 @@ struct KalAllDayChip: View {
     var body: some View {
         let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
         Button(action: { KalStore.shared.openDetail(e) }) {
-            KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(10, .bold)).lineLimit(1)
+            HStack(spacing: 3) {
+                // Prompt 42: trekk fra Abonnementer med logo.
+                if KalAb42.isSub(e) {
+                    KalAbLogo42(e: e, size: 12)
+                    Text(KalAb42.short(e) + (KalAb42.amountText(e).isEmpty ? "" : " · " + KalAb42.amountText(e))).font(KalFont.ui(10, .bold)).lineLimit(1)
+                } else {
+                    KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(10, .bold)).lineLimit(1)
+                }
+            }
                 .foregroundStyle(t.calText(c))
                 .padding(.horizontal, 5).padding(.vertical, 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: 5).fill(t.calTint(c, e.kind == "frist" ? 0.38 : 0.13)))
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
+        .contextMenu { KalEventMenu42(e: e) }
         .accessibilityLabel(e.title + ", hele dagen")
     }
 }
@@ -256,6 +266,8 @@ struct KalGridColumn: View {
         .frame(height: hourH * 24)
         .background(today && wide ? t.red.opacity(0.035) : Color.clear)
         .overlay(alignment: .leading) { Rectangle().fill(t.line2).frame(width: 1) }
+        // Prompt 42: slipp tekst fra en annen app på dagen → Glimt lager hendelsen der.
+        .dropDestination(for: String.self) { (items: [String], _: CGPoint) -> Bool in KalPad42Drop.drop(items, day: k) }
     }
 }
 
@@ -307,6 +319,9 @@ struct KalGridBlock: View {
             .clipShape(RoundedRectangle(cornerRadius: 7))
         }
         .buttonStyle(.plain)
+        // Prompt 42 (iPad): hover med pekeplate/mus, lang-trykk/høyreklikk gir Rediger · Dupliser · Farge for fag · Slett.
+        .hoverEffect(.highlight)
+        .contextMenu { KalEventMenu42(e: e) }
         .offset(x: x, y: y)
         .accessibilityLabel(e.title + ", " + KalD.hm(e.startMin) + " til " + KalD.hm(e.endMin))
     }

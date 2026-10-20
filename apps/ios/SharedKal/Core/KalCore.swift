@@ -38,6 +38,8 @@ struct KalEvent: Identifiable, Hashable, Codable {
     var address: String? = nil
     var lat: Double? = nil
     var lon: Double? = nil
+    /// Prompt 42: trekk fra Abonnementer (Finans). nil for alle andre hendelser.
+    var ab42: KalAb42Info? = nil
 
     var allDay: Bool { s == nil }
     var startMin: Int { s ?? 0 }
@@ -509,6 +511,8 @@ enum KalParse {
         ev.serverCal = serverCal
         ev.note = str(o, "note")
         KalEv37.decorate(&ev, o)
+        // Prompt 42: Abonnementer (trekkdatoer fra Finans): beløp, konto, logo, merke TREKK / PRØVE / ÅRLIG.
+        KalAb42.decorate(&ev, o)
         return ev
     }
 

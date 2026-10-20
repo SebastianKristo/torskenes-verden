@@ -82,7 +82,11 @@ struct KalSchemeReader: View {
 struct KalRoot: View {
     @Environment(\.kal) private var t
     @Environment(\.accessibilityReduceMotion) private var reduce
+    /// Prompt 42: iPad – bred layout når vinduet er regular (fullskjerm, Split View 1/2 og 2/3), ellers iPhone-layouten.
+    @Environment(\.horizontalSizeClass) private var hsc
     @MainActor private var s: KalStore { KalStore.shared }
+
+    private var pad: Bool { hsc == .regular && KalPad42Model.isPad }
 
     var body: some View {
         ZStack {
@@ -96,6 +100,11 @@ struct KalRoot: View {
             }
         }
         .tint(t.red)
+        // Prompt 42: arkene legges i midten på iPad (bred layout), tastatursnarveiene finnes i begge layoutene.
+        .environment(\.kalPad42, pad)
+        .background { if s.loggedIn { KalPad42Keys() } }
+        .animation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.3), value: KalPad42Model.shared.sideOpen)
+        .animation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.3), value: KalPad42Model.shared.overlayOpen)
         .animation(sheetAnim, value: s.glimtOpen)
         .animation(sheetAnim, value: s.detId)
         .animation(sheetAnim, value: s.newForm != nil)
@@ -119,14 +128,29 @@ struct KalRoot: View {
         return Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.32)
     }
 
-    private var main: some View {
-        // Prompt 35 (tastatur): toppfeltet og skrivefeltet har fast høyde og prioritet; bare visningen krymper når tastaturet kommer.
-        // Uten minHeight 0 kunne innholdet ikke krympe, VStack-en ble høyere enn skjermen og toppen havnet under statuslinjen
-        // mens skrivefeltet havnet bak tastaturet.
-        VStack(spacing: 0) {
-            KalHeader()
-                .fixedSize(horizontal: false, vertical: true)
-                .layoutPriority(2)
+    @ViewBuilder private var main: some View {
+        if pad {
+            KalPad42Main { stage }
+        } else {
+            // Prompt 35 (tastatur): toppfeltet og skrivefeltet har fast høyde og prioritet; bare visningen krymper når tastaturet kommer.
+            // Uten minHeight 0 kunne innholdet ikke krympe, VStack-en ble høyere enn skjermen og toppen havnet under statuslinjen
+            // mens skrivefeltet havnet bak tastaturet.
+            VStack(spacing: 0) {
+                KalHeader()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(2)
+                stage
+                    .frame(minHeight: 0, maxHeight: .infinity)
+                    .layoutPriority(0)
+                KalComposer()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(2)
+            }
+        }
+    }
+
+    /// Visningen med zoom, sveip, klyp og toast (felles for iPhone- og iPad-layouten).
+    private var stage: some View {
             ZStack(alignment: .bottom) {
                 // Prompt 35: zoom mellom visningene – den nye visningen vokser fra trykk-/klypepunktet. «Uken starter» bygger alt på nytt.
                 ZStack {
@@ -147,12 +171,6 @@ struct KalRoot: View {
                         .transition(.opacity.combined(with: .offset(y: 10)))
                 }
             }
-            .frame(minHeight: 0, maxHeight: .infinity)
-            .layoutPriority(0)
-            KalComposer()
-                .fixedSize(horizontal: false, vertical: true)
-                .layoutPriority(2)
-        }
     }
 
     @ViewBuilder private var content: some View {
@@ -199,7 +217,10 @@ struct KalRoot: View {
             let dy: CGFloat = v.translation.height
             if v.startLocation.x < 28 && dx > 50 && abs(dx) > abs(dy) {
                 KalHaptic.tap()
-                withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.3)) { s.drawerOpen = true }
+                // Prompt 42: på iPad glir sidepanelet inn i stedet for sidemenyen.
+                withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.3)) {
+                    if pad { KalPad42Model.shared.overlayOpen = true } else { s.drawerOpen = true }
+                }
                 return
             }
             if s.view == "liste" { return }
@@ -220,6 +241,7 @@ struct KalRoot: View {
             KalDim { withAnimation(.easeOut(duration: 0.25)) { KalGlimtModel.shared.finishAll(); s.glimtOpen = false } }
                 .zIndex(45)
             KalGlimtPanel()
+                .frame(maxWidth: pad ? 680 : .infinity)
                 .ignoresSafeArea(.container, edges: .bottom)
                 .transition(sheetIn)
                 .zIndex(46)
@@ -252,17 +274,20 @@ struct KalRoot: View {
         // Prompt 35: Innstillinger glir inn fra høyre over hele skjermen (0,28 s).
         if s.settingsOpen {
             KalSettings35View()
+                .modifier(KalPadSide42(pad: pad))
                 .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .trailing))
                 .zIndex(60)
         }
         // Prompt 39: Kalendere (1a) → Rediger (1b), Legg til (1c) og Google-velgeren (1d).
         if s.cals39Open {
             KalCals39View()
+                .modifier(KalPadSide42(pad: pad))
                 .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .trailing))
                 .zIndex(61)
         }
         if let id = s.cal39Edit, let c = s.cals.first(where: { (x: KalCal) -> Bool in x.id == id }) {
             KalCalEdit39View(c: c)
+                .modifier(KalPadSide42(pad: pad))
                 .id(id)
                 .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .trailing))
                 .zIndex(62)
@@ -271,6 +296,7 @@ struct KalRoot: View {
             KalDim { withAnimation(.easeOut(duration: 0.22)) { s.cal39AddOpen = false } }
                 .zIndex(63)
             KalCalAdd39Sheet()
+                .frame(maxWidth: pad ? 620 : .infinity)
                 .ignoresSafeArea([.container, .keyboard], edges: .bottom)
                 .transition(sheetIn)
                 .zIndex(64)
@@ -279,6 +305,7 @@ struct KalRoot: View {
             KalDim { withAnimation(.easeOut(duration: 0.22)) { s.gmap39Open = false } }
                 .zIndex(65)
             KalGMap39Sheet()
+                .frame(maxWidth: pad ? 620 : .infinity)
                 .ignoresSafeArea(.container, edges: .bottom)
                 .transition(sheetIn)
                 .zIndex(66)
@@ -330,5 +357,22 @@ struct KalToastView: View {
         .frame(minHeight: 44)
         .background(Capsule().fill(t.ink))
         .shadow(color: Color.black.opacity(0.25), radius: 15, y: 12)
+    }
+}
+
+/// Prompt 42: Innstillinger og Kalendere glir inn fra høyre som et panel (maks 480 pt) på iPad, ikke over hele skjermen.
+struct KalPadSide42: ViewModifier {
+    let pad: Bool
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if pad {
+            content
+                .frame(width: 480)
+                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, bottomLeadingRadius: 24))
+                .shadow(color: Color.black.opacity(0.18), radius: 20, x: -12)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        } else {
+            content
+        }
     }
 }

@@ -87,7 +87,8 @@ struct MacMonthCell: View {
 
     var body: some View {
         let k: String = KalD.key(day)
-        let list: [KalEvent] = store.on(k)
+        // Prompt 42: tre eller flere trekk samme dag blir én chip «3 trekk · 627 kr».
+        let list: [KalEvent] = KalAb42.collapse(store.on(k))
         let today: Bool = k == KalD.todayKey()
         let inMonth: Bool = KalD.month(day) == month
         GeometryReader { (g: GeometryProxy) in
@@ -95,7 +96,9 @@ struct MacMonthCell: View {
             VStack(alignment: .leading, spacing: 2) {
                 top(k, today: today, inMonth: inMonth)
                 ForEach(Array(list.prefix(maxChips))) { (e: KalEvent) in
-                    MacMonthChip(e: e) { win.openDetail(e) }
+                    MacMonthChip(e: e) {
+                        if (e.ab42?.sum ?? 0) > 0 { win.zoomTo("dag", day: k, origin: origin, inward: true) } else { win.openDetail(e) }
+                    }
                 }
                 if list.count > maxChips {
                     Text("+" + String(list.count - maxChips)).font(MacFont.ui(10.5, .bold)).foregroundColor(t.mut).padding(.leading, 4)
@@ -153,7 +156,11 @@ struct MacMonthChip: View {
         let c: KalCal? = KalFag37.tint(MacStore.shared.cal(e.cal), e)
         Button(action: action) {
             HStack(spacing: 4) {
-                if e.allDay {
+                if KalAb42.isSub(e) && (e.ab42?.sum ?? 0) == 0 {
+                    // Prompt 42: trekk fra Abonnementer – logo + navn.
+                    MacAbLogo42(e: e, size: 12)
+                    Text(KalAb42.short(e)).font(MacFont.ui(11, .bold)).foregroundColor(t.calText(c)).lineLimit(1)
+                } else if e.allDay {
                     MacBdText41.title(e, calName: c?.name ?? "").font(MacFont.ui(11, .bold)).foregroundColor(t.calText(c)).lineLimit(1)
                 } else {
                     Circle().fill(t.calColor(c)).frame(width: 6, height: 6)
@@ -309,11 +316,22 @@ struct MacListRow: View {
             HStack(spacing: 12) {
                 Text(time).font(MacFont.mono(11.5)).foregroundColor(t.mut).frame(width: 96, alignment: .leading)
                 RoundedRectangle(cornerRadius: 2).fill(t.calColor(c)).frame(width: 4, height: 30)
+                if KalAb42.isSub(e) { MacAbLogo42(e: e, size: 22) }
                 VStack(alignment: .leading, spacing: 1) {
-                    MacBdText41.title(e, calName: c?.name ?? "").font(MacFont.ui(14, .bold)).foregroundColor(t.ink).lineLimit(1)
-                    Text(sub).font(MacFont.ui(12)).foregroundColor(t.mut).lineLimit(1)
+                    if KalAb42.isSub(e) {
+                        Text(KalAb42.short(e)).font(MacFont.ui(14, .bold)).foregroundColor(t.ink).lineLimit(1)
+                    } else {
+                        MacBdText41.title(e, calName: c?.name ?? "").font(MacFont.ui(14, .bold)).foregroundColor(t.ink).lineLimit(1)
+                    }
+                    Text(KalAb42.isSub(e) ? ([e.ab42?.account ?? "", c?.name ?? ""].filter { (x: String) -> Bool in !x.isEmpty }.joined(separator: " · ")) : sub)
+                        .font(MacFont.ui(12)).foregroundColor(t.mut).lineLimit(1)
                 }
                 Spacer(minLength: 6)
+                // Prompt 42: beløp (Plex Mono) og merke TREKK / PRØVE / ÅRLIG.
+                if KalAb42.isSub(e) {
+                    Text(KalAb42.amountText(e)).font(MacFont.mono(12.5)).foregroundColor(t.ink)
+                    MacAbBadge42(e: e)
+                }
                 tag
             }
             .padding(.horizontal, 8)
@@ -326,6 +344,7 @@ struct MacListRow: View {
     }
 
     private var tagText: String {
+        if KalAb42.isSub(e) { return "" }
         if e.cont { return "FORTS." }
         if e.kind == "frist" { return "FRIST" }
         if e.kind == "bursdag" || e.cal == "b" { return "BURSDAG" }

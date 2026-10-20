@@ -60,6 +60,8 @@ enum MacAsk {
         let up: [KalEvent] = st.upcoming(limit: 300).filter { (e: KalEvent) -> Bool in !e.cont }
 
         if KalRx.test("ledig|fri tid|finn tid|når kan jeg|har jeg tid|opptatt", ql) { return free(ql, tk: tk, nm: nm) }
+        // Prompt 42: abonnementer og trekk – hurtigvei uten LLM.
+        if let ab = MacAbAsk42.answer(ql) { return ab }
         if ql.contains("bursdag") { return birthdays(up) }
         // Prompt 37: intensjon før tekstsøk – «Neste prøve på skolen» er en skoleprøve i Studie, aldri «Viaplay-prøven slutter».
         if let sa = KalSchool37.answer(ql, up: up, cal: { (id: String) -> KalCal? in st.cal(id) }, rel: { (k: String) -> String in rel(k) }, tk: tk) {

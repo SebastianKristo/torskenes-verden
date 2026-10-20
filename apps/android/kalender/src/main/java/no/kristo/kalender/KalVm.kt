@@ -524,7 +524,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         gm += m
         gq = ""
         glOpen = true
-        val local = KalAsk(visible, calMap, if (swx) data.wx else emptyMap(), drem).ask(qq)
+        val local = KalAsk(visible, calMap, if (swx) data.wx else emptyMap(), drem, all, sun).ask(qq)
         glJob = viewModelScope.launch {
             if (local != null) {
                 m.steps = local.steps

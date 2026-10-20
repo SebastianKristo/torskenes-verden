@@ -158,17 +158,27 @@ struct KalEventRow: View {
                 RoundedRectangle(cornerRadius: 2).fill(t.calColor(c)).frame(width: 4)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink).lineLimit(1)
-                        if !tag.isEmpty {
+                        // Prompt 42: trekk fra Abonnementer – logo, navn og merke TREKK / PRØVE / ÅRLIG.
+                        if KalAb42.isSub(e) {
+                            KalAbLogo42(e: e, size: 18)
+                            Text(KalAb42.short(e)).font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink).lineLimit(1)
+                            KalAbBadge42(e: e)
+                        } else {
+                            KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink).lineLimit(1)
+                        }
+                        if !tag.isEmpty && !KalAb42.isSub(e) {
                             Text(tag).font(KalFont.mono(9.5)).tracking(0.6)
                                 .foregroundStyle(t.calText(c))
                                 .padding(.horizontal, 6).padding(.vertical, 1)
                                 .background(Capsule().fill(t.calTint(c, 0.13)))
                         }
                     }
-                    Text(sub).font(KalFont.ui(12.5)).foregroundStyle(t.mut).lineLimit(1)
+                    Text(KalAb42.isSub(e) ? KalAbRow42.sub(e, c) : sub).font(KalFont.ui(12.5)).foregroundStyle(t.mut).lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                if KalAb42.isSub(e) {
+                    Text(KalAb42.amountText(e)).font(KalFont.mono(13)).foregroundStyle(t.ink).lineLimit(1).fixedSize()
+                }
             }
             .padding(.vertical, 9).padding(.horizontal, 2)
             .frame(minHeight: 44)
@@ -176,7 +186,18 @@ struct KalEventRow: View {
             .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
+        .contextMenu { KalEventMenu42(e: e) }
         .accessibilityLabel(e.title + ", " + (e.allDay ? "hele dagen" : KalD.hm(e.startMin)))
+    }
+}
+
+/// Prompt 42: undertekst på trekk-rader («Trekkes fra Felles konto · Abonnementer»).
+enum KalAbRow42 {
+    static func sub(_ e: KalEvent, _ c: KalCal?) -> String {
+        let a: String = e.ab42?.account ?? ""
+        let cancelled: String = e.ab42?.cancelled ?? ""
+        return [cancelled.isEmpty ? a : cancelled, c?.name ?? ""].filter { (x: String) -> Bool in !x.isEmpty }.joined(separator: " · ")
     }
 }
 

@@ -133,6 +133,8 @@ fun DetailSheet(vm: KalVm) {
             Tx(c.n, man(13.sp, FontWeight.Bold, c.fg(k)), Modifier.weight(1f))
             InkPill("Ferdig", { vm.closeDet() })
         }
+        // Prompt 42: trekk fra Abonnementer – eget innhold, ikke redigerbart (Endres i Finans → Abonnementer).
+        if (e.ab != null) { AbDetail42(vm, e); return@SheetFrame }
         // Prompt 41: bursdager får eget kort (konfetti, avatar med festhatt, nedtelling, Gratuler · Gaveidé · Bursdager ›).
         if (no.kristo.kalender.Kal41.isBirthday(e, c.n)) BdCard41(vm, e, c.col) else Tx(e.t, news(28.sp, k.ink, 31.sp), maxLines = 4)
         Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {

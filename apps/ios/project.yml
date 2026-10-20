@@ -170,7 +170,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender
-        TARGETED_DEVICE_FAMILY: "1"
+        # Prompt 42: én universal-app (iPhone + iPad), ikke «Designed for iPhone». Alle retninger og multitasking på iPad
+        # (Split View, Slide Over, Stage Manager) – derfor ingen UIRequiresFullScreen. iPhone er fortsatt bare stående.
+        TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
@@ -178,6 +180,7 @@ targets:
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Kalender kobler til Homelab-serveren din på lokalt nett."
     info:
       path: Kalender/Info.plist
@@ -221,7 +224,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.widgets
-        TARGETED_DEVICE_FAMILY: "1"
+        # Prompt 42: widgetene også på iPad (liten, medium, stor og ekstra stor).
+        TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Kalender
         SKIP_INSTALL: YES

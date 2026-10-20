@@ -9,6 +9,8 @@ import UIKit
 /// Felles ramme for arkene: avrundet topp, grep-linje, glir opp nederfra.
 struct KalSheetFrame<Content: View>: View {
     @Environment(\.kal) private var t
+    /// Prompt 42: bred iPad-layout – arket ligger i midten (formSheet-stil, maks 560 pt), ikke nederfra.
+    @Environment(\.kalPad42) private var pad
     var maxFraction: CGFloat = 0.9
     /// Prompt 37 (Ny hendelse): arket går helt ned bak tastaturet (krymper ikke). Innholdet får selv
     /// padding = tastatur + 16, og en flate i arkets farge ligger under, så dimmingen aldri synes i tastaturhjørnene.
@@ -16,6 +18,29 @@ struct KalSheetFrame<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
+        if pad { padBody } else { phoneBody }
+    }
+
+    private var padBody: some View {
+        GeometryReader { (geo: GeometryProxy) in
+            let kb: CGFloat = KalKb37.shared.height > 40 ? KalKb37.shared.height : 0
+            let avail: CGFloat = Swift.max(240, geo.size.height - kb)
+            VStack(alignment: .leading, spacing: 12) {
+                content()
+            }
+            .padding(.horizontal, 22)
+            .padding(.top, 18)
+            .padding(.bottom, 14)
+            .frame(width: Swift.min(560, geo.size.width - 40), alignment: .leading)
+            .frame(maxHeight: behindKeyboard ? Swift.min(640, avail - 40) : avail * 0.86, alignment: .top)
+            .background(t.card)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: Color.black.opacity(0.2), radius: 30, y: 14)
+            .frame(width: geo.size.width, height: avail)
+        }
+    }
+
+    private var phoneBody: some View {
         GeometryReader { (geo: GeometryProxy) in
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
@@ -69,6 +94,17 @@ struct KalDetailSheet: View {
                 Spacer()
                 KalPill(title: "Ferdig") { close() }
             }
+            // Prompt 42: trekk fra Abonnementer – egne felt, ikke redigerbare her (Endres i Finans → Abonnementer).
+            if KalAb42.isSub(e) {
+                KalAbDetail42(e: e)
+            } else {
+                normalBody(c)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private func normalBody(_ c: KalCal?) -> some View {
             // Prompt 41: bursdager får eget kort (konfetti, avatar med festhatt, nedtelling, Gratuler · Gaveidé · Bursdager ›).
             if KalBd41.isBirthday(e, calName: c?.name ?? "") {
                 KalBdCard41(e: e, color: t.calColor(c))
@@ -86,8 +122,6 @@ struct KalDetailSheet: View {
                 Text("«Slett» fjerner bare bursdagen fra Kalender-visningen. Den ligger fortsatt i Google Kontakter.")
                     .font(KalFont.ui(12)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func close() {
@@ -184,6 +218,7 @@ struct KalInfoRow: View {
 
 struct KalNewSheet: View {
     @Environment(\.kal) private var t
+    @Environment(\.kalPad42) private var pad
     @MainActor private var s: KalStore { KalStore.shared }
     @State private var f: KalNewForm
     @FocusState private var titleFocus: Bool
@@ -196,6 +231,8 @@ struct KalNewSheet: View {
 
     /// Prompt 37: padding nederst = tastatur + 16 (34 uten tastatur), så innholdet kan scrolles over tastaturet.
     private var kbPad: CGFloat {
+        // Prompt 42: på iPad ligger arket i midten over tastaturet (ingen ekstra padding).
+        if pad { return 20 }
         let k: CGFloat = KalKb37.shared.height
         return k > 40 ? k + 16 : 34
     }

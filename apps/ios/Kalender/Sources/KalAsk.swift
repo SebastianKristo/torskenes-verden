@@ -59,6 +59,13 @@ enum KalAsk {
         let up: [KalEvent] = st.upcoming(limit: 300).filter { (e: KalEvent) -> Bool in !e.cont }
 
         if KalRx.test("ledig|fri tid|finn tid|når kan jeg|har jeg tid", ql) { return free(ql, tk: tk, nm: nm) }
+        // Prompt 42: abonnementer og trekk – hurtigvei uten LLM (også når kalenderen Abonnementer er skjult).
+        if let ab = KalAb42.answer(ql, events: st.upcoming(limit: 400, includeHidden: true), today: tk) {
+            var a: KalAnswer = KalAnswer(steps: ab.steps)
+            a.text = ab.text
+            a.cards = ab.cards
+            return a
+        }
         if ql.contains("bursdag") {
             let list: [KalEvent] = Array(up.filter { (e: KalEvent) -> Bool in e.kind == "bursdag" || e.cal == "b" }.prefix(3))
             var a: KalAnswer = KalAnswer(steps: ["Ser i Bursdager"])

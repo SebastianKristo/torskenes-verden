@@ -241,6 +241,12 @@ enum KalCals39 {
             default: i.sourceLabel = "Egen kalender"
             }
         }
+        // Prompt 42: Abonnementer (trekkdatoer fra Finans) – innebygd, kilde «Finans».
+        if KalAb42.isAbCal(x) {
+            if i.sourceLabel == "Egen kalender" { i.sourceLabel = "Finans · trekkdatoer" }
+            if i.badge.isEmpty || i.badge == "EGEN" { i.badge = "INNEBYGD" }
+            x.writable = false
+        }
         x.p39 = i
         return x
     }

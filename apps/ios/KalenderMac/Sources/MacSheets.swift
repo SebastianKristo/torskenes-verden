@@ -35,7 +35,7 @@ struct MacDetailSheet: View {
                     RoundedRectangle(cornerRadius: 3).fill(t.calColor(c)).frame(width: 6, height: 54)
                     VStack(alignment: .leading, spacing: 4) {
                         MacLabel(text: (c?.name ?? "Kalender").uppercased(), color: t.calText(c))
-                        if !KalBd41.isBirthday(e, calName: c?.name ?? "") {
+                        if !KalBd41.isBirthday(e, calName: c?.name ?? "") && !KalAb42.isSub(e) {
                             Text(e.title).font(MacFont.serif(28)).foregroundColor(t.ink).fixedSize(horizontal: false, vertical: true)
                         }
                     }
@@ -43,6 +43,17 @@ struct MacDetailSheet: View {
                     MacPill(title: "Ferdig") { win.detId = nil }
                         .keyboardShortcut(.cancelAction)
                 }
+                // Prompt 42: trekk fra Abonnementer – eget innhold, ikke redigerbart (Endres i Finans → Abonnementer).
+                if KalAb42.isSub(e) {
+                    MacAbDetail42(e: e)
+                } else {
+                    normal(c)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private func normal(_ c: KalCal?) -> some View {
                 // Prompt 41: bursdager får eget kort (konfetti, avatar med festhatt, nedtelling, Gratuler · Gaveidé · Bursdager ›).
                 if KalBd41.isBirthday(e, calName: c?.name ?? "") {
                     MacBdCard41(e: e, color: t.calColor(c))
@@ -60,8 +71,6 @@ struct MacDetailSheet: View {
                     Text("«Slett» fjerner bare bursdagen fra Kalender. Den ligger fortsatt i Google Kontakter.")
                         .font(MacFont.ui(11.5)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
                 }
-            }
-        }
     }
 
     private func whenText() -> String {

@@ -214,13 +214,9 @@ struct KalHomeWidget: Widget {
 }
 
 extension KalHomeWidget {
-    /// Prompt 41: ekstra stor bare på Mac (og iPad).
+    /// Prompt 41: ekstra stor på Mac. Prompt 42: og på iPad-hjemskjermen (systemExtraLarge finnes bare på iPad, iPhone ignorerer den).
     static var families: [WidgetFamily] {
-        #if os(macOS)
         return [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge]
-        #else
-        return [.systemSmall, .systemMedium, .systemLarge]
-        #endif
     }
 }
 

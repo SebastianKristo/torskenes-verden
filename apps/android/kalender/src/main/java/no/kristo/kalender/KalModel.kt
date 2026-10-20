@@ -23,6 +23,8 @@ data class KEv(
     val editable: Boolean = true, val color: Long? = null, val pending: Boolean = false, val note: String? = null,
     /** Prompt 37: fagfargen fra serveren (subjectColor), full adresse og koordinater (Glimt-lagte: address + map {lat, lon}). */
     val subjectHex: Long? = null, val address: String? = null, val lat: Double? = null, val lon: Double? = null,
+    /** Prompt 42: trekk fra Abonnementer (Finans): beløp, konto, logo, merke TREKK / PRØVE / ÅRLIG. null for alle andre. */
+    val ab: KAb42? = null,
 ) {
     val all: Boolean get() = s == null
     val key: String get() = d.toString()
@@ -32,7 +34,7 @@ data class KEv(
         .put("rem", rem ?: JSONObject.NULL).put("kind", kind ?: JSONObject.NULL).put("src", src ?: JSONObject.NULL)
         .put("editable", editable).put("color", color?.let(::hexOut) ?: JSONObject.NULL).put("pending", pending).put("note", note ?: JSONObject.NULL)
         .put("subjectColor", subjectHex?.let(::hexOut) ?: JSONObject.NULL).put("address", address ?: JSONObject.NULL)
-        .put("lat", lat ?: JSONObject.NULL).put("lon", lon ?: JSONObject.NULL)
+        .put("lat", lat ?: JSONObject.NULL).put("lon", lon ?: JSONObject.NULL).put("ab42", ab?.toJson() ?: JSONObject.NULL)
 
     companion object {
         /** Eget lagret format (cache, utboks). */
@@ -43,6 +45,7 @@ data class KEv(
                 o.optStrOrNull("kind"), o.optStrOrNull("src"), o.optBoolean("editable", true), hexIn(o.optStrOrNull("color")),
                 o.optBoolean("pending", false), o.optStrOrNull("note"),
                 hexIn(o.optStrOrNull("subjectColor")), o.optStrOrNull("address"), optD37(o, "lat"), optD37(o, "lon"),
+                ab = KAb42.fromJson(o.optJSONObject("ab42")),
             )
         }.getOrNull()
     }
@@ -233,11 +236,15 @@ fun parseServerEvent(o: JSONObject, cals: Map<String, KCal>): KEv? {
     // Prompt 37: prøveperioder fra Subscription OS er aldri skoleprøver; fagfarge, adresse og kart fra serveren.
     val trial = o.optStrOrNull("source")?.lowercase() == "trials" || rawCal?.lowercase() == "trials" || type == "trial"
     val geo = geoOf37(o)
+    // Prompt 42: trekk fra Abonnementer (kind trekk/trial, subId, amount, account, logo …) – aldri redigerbare i Kalender.
+    val ab = Ab42.parse(o, title, rawCal)
     return KEv(
         id = o.str("id") ?: "${st.first}|${s ?: "all"}|$title", t = title, cal = cal, d = st.first, s = s, e = e, days = days,
-        loc = loc, rem = if (s == null) null else remFromServer(o), kind = if (trial) "trial" else kind, src = src,
-        editable = editable, color = hexIn(o.str("calendarColor", "color")), note = o.str("note", "description"),
+        loc = loc, rem = if (s == null) null else remFromServer(o),
+        kind = if (ab != null) (if (ab.badge == "PRØVE") "trial" else "trekk") else if (trial) "trial" else kind, src = src,
+        editable = editable && ab == null, color = hexIn(o.str("calendarColor", "color")), note = o.str("note", "description"),
         subjectHex = hexIn(o.optStrOrNull("subjectColor")), address = o.optStrOrNull("address"), lat = geo?.first, lon = geo?.second,
+        ab = ab,
     )
 }
 
