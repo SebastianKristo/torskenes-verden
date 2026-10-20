@@ -26,6 +26,9 @@ import { randomBytes } from 'node:crypto';
 import { kv } from './db.js';
 import { userInfo, listUsers } from './auth.js';
 import { parseDay } from './parse-day35.js';
+import { multiAdd40 } from './tasks-glimt40.js'; // prompt 40
+/** Bare for tester: bytt ut Glimt-kallet i prompt 40-oppdelingen ((prompt) → {items}). */
+export const _ai40 = { impl: null };
 
 const MOCK = process.env.MOCK_DATA === '1';
 const UNDO_MS = 30_000;
@@ -338,7 +341,7 @@ export function mountGlimt37(api, T) {
   }
 
   /* ---- vanlig tekst (punkt 1) og lim inn (punkt 2) ---- */
-  function addFromText(u, text, listId, t0) {
+  async function addFromText(u, text, listId, t0) {
     const given = listId ? listRow(listId) : null;
     if (given && !canSeeList(given, u)) return { error: 'Fant ikke listen', status: 404 };
     const lines = String(text).includes('\n') ? pastedLines(text) : null;
@@ -357,6 +360,9 @@ export function mountGlimt37(api, T) {
       rows = db.transaction(() => shop.map((n) => add(u, { title: n, list: target?.id })))();
       return { kind: 'add', intent: 'tasks.shopping', text: `La ${shop.map((x) => x.toLowerCase()).join(', ').replace(/, ([^,]*)$/, ' og $1')} i ${target?.name ?? 'listen'}.`, items: rows.map(itemOut), undo: mkUndo(u, [{ created: rows.map((r) => r.id) }]) };
     }
+    // Prompt 40: flere handlinger («… men først må jeg levere pakken») eller en nevnt person → Glimt deler opp (tasks-glimt40.js).
+    const multi = await multiAdd40({ add, listRow, listByWord, canSeeList, defaultList, mkUndo, itemOut, byId, visibleLists, aiImpl: _ai40.impl }, u, text, listId, t0, { people: ppl });
+    if (multi) return multi;
     const p = parseTask37(text, t0, { people: ppl });
     if (!p.title) return { kind: 'question', intent: 'tasks.unknown', text: 'Hva skal jeg legge til?', items: [] };
     const target = pick(p.listHint);
@@ -388,11 +394,11 @@ export function mountGlimt37(api, T) {
       else if (act === 'matplan' || (!act && /matplan|ukas middag|middagene/.test(n) && /handel|handlelist|handlelapp|handleliste/.test(n))) r = await matplan(u, t0);
       else if (!text.trim()) return c.json({ error: 'Skriv noe til Glimt' }, 400);
       else if (isQ(text) && !text.includes('\n')) r = { kind: 'question', ...answerQuestion(u, text, t0) };
-      else r = addFromText(u, text, b.list ?? null, t0);
+      else r = await addFromText(u, text, b.list ?? null, t0);
     } catch (e) { return c.json({ error: e.message }, 400); }
     if (r.error) return c.json({ error: r.error }, r.status ?? 400);
     return c.json({ kind: r.kind ?? 'action', intent: r.intent, text: r.text, items: r.items ?? [], undo: r.undo ?? null, source: 'Glimt · Gjøremål',
-      ...['skipped', 'example', 'event', 'notification', 'followUp', 'parsed'].reduce((o, k) => (r[k] !== undefined ? { ...o, [k]: r[k] } : o), {}) });
+      ...['skipped', 'example', 'event', 'notification', 'followUp', 'parsed', 'engine'].reduce((o, k) => (r[k] !== undefined ? { ...o, [k]: r[k] } : o), {}) });
   });
 
   api.post('/glimt/undo', async (c) => {

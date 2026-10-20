@@ -308,18 +308,35 @@ async function finansRouting(u, out) {
 
 /* ---------------- Jobber ---------------- */
 
+/** Prompt 40: jobblisten + grupperte feil (groups), «nye feil siden sist» (unseenFailed), tidsgrensene og køen. */
+function jobs40(u, o) {
+  const l = ai.jobList(u, o);
+  const r = ai.routing(OWNER).params;
+  return { ...l, groups: ai.jobGroups(l.recent), unseenFailed: ai.unseenFailed(u),
+    timeouts: { loadTimeout: r.loadTimeout ?? 180, responseTimeout: r.responseTimeout ?? 60, responseTimeoutImage: r.responseTimeoutImage ?? 120 }, queue: ai.queueState() };
+}
 api.get('/jobs', (c) => {
   const u = c.get('user');
   const o = { limit: c.req.query('limit') ?? 50, kind: c.req.query('kind') || null, task: c.req.query('task') || null };
-  if (!wantsSse(c)) return c.json(ai.jobList(u, o), 200, { 'Cache-Control': 'no-store' });
+  if (!wantsSse(c)) return c.json(jobs40(u, o), 200, { 'Cache-Control': 'no-store' });
   return streamSSE(c, async (s) => {
-    await s.writeSSE({ event: 'jobs', data: JSON.stringify(ai.jobList(u, o)) });
+    await s.writeSSE({ event: 'jobs', data: JSON.stringify(jobs40(u, o)) });
     await new Promise((resolve) => {
       const off = ai.subscribeJobs(u, (j) => { if (!o.task || j.task === ai.taskId(o.task)) s.writeSSE({ event: 'job', data: JSON.stringify(j) }).catch(() => {}); }, o.kind);
       const ping = setInterval(() => s.writeSSE({ event: 'ping', data: '{}' }).catch(() => {}), 25_000);
       s.onAbort(() => { off(); clearInterval(ping); resolve(); });
     });
   });
+});
+// Prompt 40: POST /jobs/seen → {ok, seenAt, unseenFailed:0} (tallet på Jobber-fanen teller bare nye feil siden sist).
+api.post('/jobs/seen', (c) => c.json(ai.markJobsSeen(c.get('user'))));
+// Prompt 40: POST /jobs/retry {ids:[…]} | {group:'response_timeout:15'} → {ok, started:[{id, task?}], skipped:[{id, reason}]} (én om gangen, nye tidsgrenser).
+api.post('/jobs/retry', async (c) => {
+  const b = await c.req.json().catch(() => ({})) ?? {};
+  if (!Array.isArray(b.ids) && typeof b.group !== 'string') return bad(c, 'Send {ids:[…]} eller {group}');
+  const { done, ...r } = ai.jobsRetry(c.get('user'), { ids: b.ids, group: b.group ?? null });
+  if (b.wait === true) await done;
+  return c.json(r);
 });
 api.post('/jobs/:id/cancel', (c) => { const r = ai.jobCancel(c.req.param('id'), c.get('user')); return r ? c.json(r, r.ok ? 200 : 409) : bad(c, 'Fant ikke jobben', 404); });
 api.post('/jobs/:id/retry', async (c) => { const r = await ai.jobRetry(c.req.param('id'), c.get('user')); return r ? c.json(r) : bad(c, 'Jobben kan ikke prøves igjen (for gammel eller laget av en annen modul)', 409); });
@@ -418,7 +435,7 @@ api.post('/selftest', async (c) => {
   if (/application\/json/.test(c.req.header('accept') ?? '') && !wantsSse(c)) return c.json(await ai.selftest({ user: u }));
   return streamSSE(c, async (s) => {
     const r = await ai.selftest({ user: u, onResult: (x) => { s.writeSSE({ event: 'result', data: JSON.stringify(x) }).catch(() => {}); } });
-    await s.writeSSE({ event: 'done', data: JSON.stringify({ ok: r.ok, failed: r.failed, total: r.total }) });
+    await s.writeSSE({ event: 'done', data: JSON.stringify({ ok: r.ok, failed: r.failed, skipped: r.skipped, total: r.total, health: r.health, groups: r.groups }) });
   });
 });
 

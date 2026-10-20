@@ -35,7 +35,7 @@ import settingsAsk30Api from './settings-ask30.js';
 import calendarApi, { widgetApi as calendarWidgetApi } from './calendar.js';
 import chatApi from './chat.js'; // prompt 27 (SERVER-B): Chat
 import appUpdateApi from './app-update.js'; // prompt 32: Android-appen oppdaterer seg selv (GitHub-release via serveren)
-import systemUpdateApi, { startUpdateScheduler } from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
+import systemUpdateApi, { startUpdateScheduler, updateNow } from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
 import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'; // prompt 29: systembackup (bare admin)
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
 import calendarQuickApi from './calendar-quick.js'; // prompt 29: Kalender → rask time (AI-jobbkø)
@@ -47,6 +47,7 @@ import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi, trackingKeysApi, kal37Api } from './api37.js'; // prompt 37 (SERVER37)
 import { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler, brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
 import { cals39Api, googleMap39Api, rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
+import { twofa40Api, finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -101,6 +102,11 @@ installCacheBust(app);
 /* ---------------- Sider ---------------- */
 
 const page = (name) => readFile(join(PUBLIC, name), 'utf8');
+/** Prompt 40: {…boot, restarting, updating, state:'starting'|'updating'|'ready', updatingTo?} – klienten viser «Starter opp» bare når restarting er true. */
+function health40(b) {
+  const u = updateNow();
+  return { ...b, restarting: !b.ready || u.updating, updating: u.updating, state: !b.ready ? 'starting' : u.updating ? 'updating' : 'ready', ...(u.updating && u.version ? { updatingTo: u.version } : {}) };
+}
 const html = (c, body) => c.html(body, 200, { 'Cache-Control': 'no-store' });
 
 app.get('/', async (c) => sessionUser(c) ? html(c, await page('app.html')) : c.redirect('/login'));
@@ -109,6 +115,7 @@ app.get('/login', async (c) => sessionUser(c) ? c.redirect('/') : html(c, await 
 app.get('/cv', async (c) => html(c, await page('cv.html')));
 // Prompt 33: /chat åpnes direkte (alltid fullskjerm) – webappen ruter med hash.
 app.get('/chat', (c) => c.redirect(sessionUser(c) ? '/#/chat' : '/login'));
+app.get('/gjoremal', (c) => c.redirect(sessionUser(c) ? '/#/gjoremal' : '/login?next=/gjoremal')); // prompt 40: Gjøremål i fullskjerm
 // Prompt 38 (WEB38): /kalender åpner Kalender i fullskjerm. /kalender?app=mac er siden Kalender.app for Mac laster i sin
 // WKWebView (samme bundel som web, uten Homelab-menyen; hl-boot.js setter html[data-kal-app]).
 app.get('/kalender', async (c) => {
@@ -124,6 +131,7 @@ app.get('/finans/', async (c) => (sessionUser(c) || (!needsSetup() && MOBILE_UA.
   ? html(c, await page('finans/index.html')) : c.redirect('/login?next=/finans/'));
 app.get('/finans/manifest.webmanifest', async (c) => c.body(await page('finans/manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
 app.get('/finans/sw.js', async (c) => c.body(await page('finans/sw.js'), 200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache' }));
+app.route('/finans/api', finans40Api); // prompt 40: added, PATCH alt + historikk, Les på nytt, POST /search/ask (før routes.js)
 app.route('/finans/api', finansApi);
 // Del-mål for PWA-en: «Del → FinansHub» fra bilder-appen legger kvitteringen i køen.
 app.post('/finans/share', async (c) => {
@@ -146,12 +154,17 @@ app.get('/healthz', (c) => c.text('ok'));
 // Prompt 36: GET /api/health → {ready, version, steps:[{id, label, status, ms}], startedAt, uptimeMs} uten innlogging (oppstartssiden).
 // Innlogget (og ?boot=1 ikke satt) svarer den som før med tjenestestatusen, og oppstartsfeltene flettes inn.
 app.get('/api/health', async (c, next) => {
-  const b = bootState();
+  // Prompt 40: restarting:true bare når serveren faktisk starter (ikke klar) eller en oppdatering pågår – aldri ved vanlig sideoppdatering.
+  // ?boot=1 (starting.html) beholder den gamle formen; markøren står da i X-Homelab-State.
+  const b0 = bootState(), b = health40(b0);
   const authd = !!(c.req.header('authorization') || sessionUser(c));
-  if (c.req.query('boot') === '1' || !b.ready || !authd) return c.json(b, 200, { 'Cache-Control': 'no-store' });
+  if (c.req.query('boot') === '1') return c.json(b0, 200, { 'Cache-Control': 'no-store', 'X-Homelab-State': b.state });
+  // Prompt 40: 503 + X-Homelab-State: starting mens serveren starter (ikke klar); ellers 200.
+  if (!b.ready) return c.json(b, 503, { 'Cache-Control': 'no-store', 'X-Homelab-State': b.state, 'Retry-After': '2' });
+  if (!authd) return c.json(b, 200, { 'Cache-Control': 'no-store', 'X-Homelab-State': b.state });
   await next();
   if (c.res.status !== 200) { c.res = c.json(b, 200, { 'Cache-Control': 'no-store' }); return; }
-  try { const j = await c.res.clone().json(); c.res = c.json({ ...j, ...b }, 200, { 'Cache-Control': 'no-store' }); } catch { /* lar svaret stå */ }
+  try { const j = await c.res.clone().json(); c.res = c.json({ ...j, ...b }, 200, { 'Cache-Control': 'no-store', 'X-Homelab-State': b.state }); } catch { /* lar svaret stå */ }
 });
 
 /* ---------------- Innlogging ---------------- */
@@ -187,6 +200,7 @@ const totpStep = async (c) => {
 };
 app.post('/api/auth/totp', totpStep);
 app.post('/api/auth/2fa', totpStep); // prompt 25: samme steg under navnet i designet
+app.route('/api/auth/2fa', twofa40Api); // prompt 40: 2FA-oppsett i appen (status, setup, enable, disable, backup/regenerate)
 // Prompt 31: bekreft passordet på nytt → kortlivet engangstoken (5 min, bundet til brukeren) for biometri-flyten i appene.
 app.post('/api/auth/reauth', authOrToken, reauthHandler);
 // Prompt 38: QR-innlogging (/api/auth/qr*), app-økt for Kalender på Mac, logg ut av alle enheter, GET /api/me/sessions og /l/:code.
@@ -621,7 +635,12 @@ app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cach
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
 app.route('/', tilesApi);
 app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse
+app.use('/api/tasks/:id{[0-9]+}', tasksAfter40); // prompt 40: «Nå kan du: …» når punktet før er gjort, placeName/after i PATCH
+app.use('/api/tasks', tasksCreate40); // prompt 40: POST /api/tasks godtar placeName og after
 app.route('/api/tasks', tasksApi); // Huskeliste (prompt 17): delt i familien, sanntid via /api/ws
+app.route('/api/hjemlys', hjemlys40Api); // prompt 40: Hjemlys (start, status, posisjon, ok/hjemme/avslutt, tokens, forslag)
+app.route('/api/news', news40Api); // prompt 40: Nyheter · Glimt-siden
+app.route('/api/app/pages', pages40Api); // prompt 40: alle sider i Mer (fanelinja), før /api/app
 app.route('/api/app/android', appUpdateApi); // prompt 32: /latest og /apk/:version, sesjon eller app-token, alle brukere
 app.route('/api', notifyApi); // Varsler (/api/me/notify) og appnavn (/api/app) (prompt 17)
 // Boliger (prompt 17): skann rett inn i en bolig. Alias for FinansHub-rutene, samme tilgang (sesjon eller token).
@@ -678,10 +697,12 @@ app.route('/api/system/update', systemUpdateApi); // bare admin; start/rollback 
 // Prompt 30: kort versjonssvar for oppdateringsbanneret (samme tilgang som /api/system/update).
 app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/version'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); });
 app.get('/api/system/changelog', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/changelog'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); }); // prompt 36
+app.route('/api/glimt/news-digest', newsDigestApi); // prompt 40: samme som POST /api/news/glimt
 app.route('/api/glimt/memory', glimtMemoryApi); // prompt 33: GET/POST/DELETE, POST /:id/apply (sesjon eller app-token, per bruker)
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
 app.route('/api/ai', rec39Api); // prompt 39: ✦ Glimt anbefaler modeller
 app.route('/api/ai', aiApi); // prompt 34: AI-kontroll
+app.use('/api/brief', briefJul40); // prompt 40: brief.jul i julemodus
 app.route('/api/brief', brief38Api); // prompt 38: nye kort (pakker, familie, skole og jobb, bursdager, nordlys) + POST /api/brief/gift
 app.route('/api/brief', briefApi); // prompt 34: Glimt-brief
 app.route('/api/glimt/settings', glimtSettingsApi); // prompt 35
@@ -711,7 +732,7 @@ app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); }
 
 app.onError((err, c) => {
   console.error(err);

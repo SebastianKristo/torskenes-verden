@@ -36,7 +36,7 @@ import { config } from './config.js';
 import { sessionUser, isAdmin, clientIp, isLan } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { saveSettings, setSecret, settings as fhSettings } from './finans/db.js';
-import { smbRun, smbCmdError, smbErrorText, smbConfig, parseSmbLs, localArg, SMB_SEG, SMB_SHARE, SMB_HOST, normShare } from './finans/backup.js';
+import { smbRun, smbCmdError, smbErrorText, smbConfig, parseSmbLs, localArg, SMB_SEG, SMB_SHARE, SMB_HOST, normShare, smbNameError } from './finans/backup.js';
 import { streamSSE } from 'hono/streaming';
 import { setSmbTarget, smbTarget } from './system-backup.js';
 import { MOCK_NAS } from './smb-mock.js';
@@ -50,16 +50,20 @@ const bad = (message, status = 400) => Object.assign(new Error(message), { statu
 const isPrivate4 = (ip) => /^\d+\.\d+\.\d+\.\d+$/.test(ip) && !/^127\./.test(ip) && isLan(ip);
 const OK_IP = (ip) => isLan(ip) || /^169\.254\./.test(ip);
 
-/** Mappesti relativ til sharen: '' eller 'a/b/c'. Hvert ledd må passe SMB_SEG. */
+// Prompt 40: feil med type, så veiviseren viser riktig melding (ikke nettverkstips ved et ugyldig navn): {kind:'name', char?}.
+const nameBad = (e) => Object.assign(new Error(e.message), { status: 400, kind: 'name', ...(e.char ? { char: e.char } : {}), ...(e.rule ? { rule: e.rule } : {}) });
+/** Mappesti relativ til sharen: '' eller 'a/b/c'. Hvert ledd valideres etter SMB-reglene (smbNameError). Skråstrek = skille. */
 export function cleanPath(p) {
   if (p === undefined || p === null || p === '' || p === '/') return '';
-  if (typeof p !== 'string' || p.length > 600) throw bad('Ugyldig mappe');
+  if (typeof p !== 'string' || p.length > 1000) throw Object.assign(bad('Ugyldig mappe'), { kind: 'name' });
   const segs = p.replace(/\\/g, '/').split('/').filter((x) => x !== '');
-  if (segs.length > 24 || !segs.every((s) => SMB_SEG.test(s))) throw bad('Ugyldig mappenavn. Bruk bokstaver, tall, mellomrom og . _ - ( ) + , = @ # ~ !');
+  if (segs.length > 24) throw Object.assign(bad('Ugyldig mappe (for mange nivåer)'), { kind: 'name' });
+  for (const seg of segs) { const e = smbNameError(seg); if (e) throw nameBad(e); }
   return segs.join('/');
 }
 export function cleanName(n) {
-  if (typeof n !== 'string' || !SMB_SEG.test(n)) throw bad('Ugyldig mappenavn. Bruk bokstaver, tall, mellomrom og . _ - ( ) + , = @ # ~ ! (ikke / \\ " \' ; eller ..)');
+  const e = smbNameError(typeof n === 'string' ? n : '');
+  if (e || typeof n !== 'string') throw nameBad(e ?? { message: 'Mappenavnet kan ikke være tomt' });
   return n;
 }
 export function cleanHost(h) {
@@ -76,7 +80,7 @@ const textField = (v, max, label) => {
 export function cleanTarget(b, { share = false } = {}) {
   const o = { host: cleanHost(b.host) };
   o.user = textField(b.user, 128, 'brukernavn').trim();
-  o.password = textField(b.password, 256, 'passord');
+  o.password = textField(b.password ?? b.pass, 256, 'passord'); // prompt 40: pass = password
   o.domain = textField(b.domain, 64, 'domene').trim();
   if (o.domain && !/^[\w.\-]+$/.test(o.domain)) throw bad('Ugyldig domene (arbeidsgruppe)');
   if (o.user && /["]/.test(o.user)) throw bad('Ugyldig brukernavn');
@@ -307,7 +311,7 @@ export function foldersDetail(out, { showHidden = false } = {}) {
     if (nfc !== r.name) f.display = nfc;
     if (hidden) f.hidden = true;
     if (r.link) f.link = true;
-    if (!SMB_SEG.test(r.name)) { f.unsupported = true; f.reason = 'Navnet har tegn Homelab ikke kan bruke i SMB-kommandoer (" \' ; ` $ * ? eller lignende). Gi mappen et nytt navn på NAS-en.'; }
+    if (!SMB_SEG.test(r.name)) { f.unsupported = true; f.reason = smbNameError(r.name)?.message ?? 'Navnet har tegn Homelab ikke kan bruke i SMB-kommandoer. Gi mappen et nytt navn på NAS-en.'; }
     folders.push(f);
   }
   folders.sort((x, y) => (x.display ?? x.name).localeCompare(y.display ?? y.name, 'nb', { numeric: true }));
@@ -395,7 +399,7 @@ export async function writeTest(t) {
     try { await inShare(t, { cmd: `put "${localArg(local)}" "${remote}"`, timeout: 60_000 }); }
     catch (e) {
       const code = statusOf(e) ?? (e.kind === 'access' ? 'STATUS_ACCESS_DENIED' : null);
-      if (e.kind === 'access') return { ok: true, writable: false, code, message: `✗ Ingen skrivetilgang: ${code} · Koblet til ${label}, men brukeren har ikke skrivetilgang her. Gi brukeren ${t.user || 'gjest'} lese- og skrivetilgang til mappen i NAS-ens innstillinger, eller velg en annen mappe.` };
+      if (e.kind === 'access') return { ok: true, writable: false, code, kind: 'access', message: `✗ Ingen skrivetilgang: ${code} · Brukeren ${t.user || 'gjest'} har ikke skrivetilgang til mappen${t.path ? ` «${t.path.split('/').at(-1)}»` : ''} i ${t.share}. Gi brukeren ${t.user || 'gjest'} lese- og skrivetilgang til mappen i NAS-ens innstillinger, eller velg en annen mappe.` };
       if (e.kind === 'full') return { ok: true, writable: false, code, message: `✗ ${e.message}${code ? ` (${code})` : ''}` };
       throw e;
     }
@@ -406,7 +410,7 @@ export async function writeTest(t) {
     let left = '';
     try { await inShare(t, { cmd: `del "${remote}"` }); } catch { left = ` Testfila ${remote} ble liggende igjen – slett den gjerne.`; }
     return { ok: true, writable: true, readBack, mbps, message: `✓ Kan skrive · ${String(mbps).replace('.', ',')} MB/s. Skrev og slettet en testfil i ${label}${readBack ? ' (lest tilbake og kontrollert)' : ''}.${readBack === false ? ' Obs: fila som ble lest tilbake var ikke lik.' : ''}${left}` };
-  } catch (e) { const code = statusOf(e); return { ok: false, writable: false, code, message: `✗ ${e.message}${code ? ` (${code})` : ''}` }; }
+  } catch (e) { const code = statusOf(e); const k = kind40(e, t); return { ok: false, writable: false, code, ...k, message: `✗ ${e.message}${code ? ` (${code})` : ''}` }; }
   finally { rmSync(local, { force: true }); rmSync(back, { force: true }); }
 }
 
@@ -438,9 +442,29 @@ api.use('*', async (c, next) => {
   await next();
 });
 const body = async (c) => { const b = await c.req.json().catch(() => null); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };
+/**
+ * Prompt 40: feiltype for veiviseren {error, kind:'name'|'notfound'|'access'|'connect'|'auth'|…, char?, detail?, canCreate?}.
+ * host/proto → connect (nettverkstipsene), share → notfound. «Fant ikke mappen «[05] Backup» i Skogen» når stien ikke finnes.
+ */
+export function kind40(e, t = {}) {
+  const k = e?.kind ?? null;
+  const map = { host: 'connect', proto: 'connect', share: 'notfound' };
+  const kind = map[k] ?? k;
+  const out = { ...(kind ? { kind } : {}), ...(map[k] ? { detail: k } : {}), ...(e?.char ? { char: e.char } : {}), ...(e?.rule ? { rule: e.rule } : {}) };
+  const last = String(t.path ?? '').split('/').filter(Boolean).at(-1);
+  if (k === 'notfound' && last) Object.assign(out, { error: `Fant ikke mappen «${last}» i ${t.share}`, canCreate: true, create: { share: t.share, path: t.path.split('/').slice(0, -1).join('/'), name: last } });
+  if (k === 'share' && t.share) Object.assign(out, { error: `Fant ikke den delte mappen «${t.share}» på ${t.host}` });
+  if (k === 'access') Object.assign(out, { error: `Brukeren ${t.user || 'gjest'} har ikke ${t.path !== undefined ? 'skrivetilgang til mappen' : 'tilgang'}${last ? ` «${last}»` : ''}` });
+  return out;
+}
 const run = (fn) => async (c) => {
-  try { return c.json(await fn(await body(c), c)); }
-  catch (e) { return c.json({ error: String(e.message ?? e).slice(0, 400), ...(e.kind ? { kind: e.kind } : {}) }, e.status ?? 500); }
+  const b = await body(c);
+  try { return c.json(await fn(b, c)); }
+  catch (e) {
+    let t = {}; try { t = { host: b.host, share: b.share, path: typeof b.path === 'string' ? cleanPath(b.path) : '', user: b.user }; } catch { /* */ }
+    const k = kind40(e, t);
+    return c.json({ error: String(k.error ?? e.message ?? e).slice(0, 400), ...k, ...(k.error ? { message: String(e.message ?? '').slice(0, 300) } : {}) }, e.status ?? 500);
+  }
 };
 
 const hintsOf = (b) => ({ lanIp: typeof b.lanIp === 'string' ? b.lanIp.slice(0, 45) : null, subnet: typeof b.subnet === 'string' ? b.subnet.slice(0, 45) : null });
@@ -464,6 +488,7 @@ api.post('/probe', run(async (b) => {
   const ok = await NET.probe(ip ?? host, 445, 1500);
   return ok ? { ok: true, host, ip: ip ?? null } : { ok: false, host, ip: ip ?? null, message: `Fant ikke SMB på ${host} (port 445). Sjekk adressen, at NAS-en er på, og at SMB (fildeling for Windows) er slått på.` };
 }));
+// Prompt 40: {host, user, pass} (pass = password) → {shares:[{name, comment}], protocol} (NetShareEnum via smbclient -L).
 api.post('/shares', run(async (b) => { const t = cleanTarget(b); await checkHost(t.host); return listShares(t); }));
 api.post('/browse', run(async (b) => { const t = cleanTarget(b, { share: true }); await checkHost(t.host); return browse(t, { showHidden: b.showHidden === true }); }));
 // Prompt 34: POST /list {…, share | manual, path, showHidden?} → {path, share, folders:[{name, display?, type:'dir', locked?, code?, reason?, hidden?, link?, unsupported?}],

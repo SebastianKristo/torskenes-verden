@@ -314,7 +314,23 @@ export async function buildArchive(c, phrase) {
 const PROTO = { '3.1.1': 'SMB3_11', '3.0': 'SMB3_00', '2.1': 'SMB2_10', SMB3: 'SMB3_00', SMB2: 'SMB2_02' };
 /** Ett mappenavn (eller share-navn) som trygt kan stå i anførselstegn i smbclient -c. Avvis heller enn å escape. */
 // Prompt 34: \p{M} (kombinerende tegn) er med, så navn lagret i NFD (macOS: «å» = a + ◌̊) ikke avvises og forsvinner fra listen.
-export const SMB_SEG = /^(?![.]+$)(?! )(?!.* $)[\p{L}\p{M}\p{N} ._\-()+,=@#~!]{1,120}$/u;
+// Prompt 40: etter SMB-reglene (Windows/Synology/TrueNAS): bare \ / : * ? " < > | og kontrolltegn er forbudt, og navnet kan ikke slutte
+// på mellomrom eller punktum. Alt annet er lov, også [ ] { } & ' $ æ ø å («[05] Backup» ble avvist av den gamle hvitelisten – det
+// var den egentlige feilen). I tillegg ; fordi smbclient deler -c på ; (stier går som én argv-verdi i --directory, aldri gjennom skall/glob).
+export const SMB_SEG = /^(?![.]+$)(?!.*[ .]$)[^\\/:*?"<>|;\u0000-\u001f\u007f]{1,255}$/u;
+/** Prompt 40: hvorfor et mappenavn ikke kan brukes. → null (ok) | {kind:'name', char?, message} */
+export function smbNameError(seg) {
+  const v = String(seg ?? '');
+  if (!v) return { kind: 'name', message: 'Mappenavnet kan ikke være tomt' };
+  if (/^[.]+$/.test(v)) return { kind: 'name', char: v, message: `Mappenavnet kan ikke være «${v}»` };
+  const bad = v.match(/[\\/:*?"<>|]/);
+  if (bad) return { kind: 'name', char: bad[0], message: `Mappenavnet kan ikke inneholde ${bad[0]}`, rule: 'Mappenavnet kan ikke inneholde \\ / : * ? " < > |' };
+  if (/[\u0000-\u001f\u007f]/.test(v)) return { kind: 'name', message: 'Mappenavnet kan ikke inneholde kontrolltegn' };
+  if (/[ .]$/.test(v)) return { kind: 'name', char: v.slice(-1), message: 'Mappenavnet kan ikke slutte på mellomrom eller punktum' };
+  if (v.includes(';')) return { kind: 'name', char: ';', message: 'Homelab kan ikke bruke ; i mappenavn (smbclient). Gi mappen et annet navn på NAS-en.' };
+  if (v.length > 255) return { kind: 'name', message: 'Mappenavnet er for langt (maks 255 tegn)' };
+  return null;
+}
 /** Navn på en share: som SMB_SEG, men skjulte shares (backup$) er lov (prompt 34). */
 export const SMB_SHARE = /^(?![.]+$)(?! )(?!.* $)[\p{L}\p{M}\p{N} ._\-()+,=@#~!]{1,80}\$?$/u;
 /** Vertsnavn eller IPv4-adresse. */

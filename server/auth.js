@@ -187,10 +187,10 @@ export function checkSecondFactor(id, code) {
 }
 
 // Steg 1: ny hemmelighet lagres kryptert som «ventende» i 10 min til brukeren har bekreftet en kode.
-export function startTotpSetup(id) {
+export function startTotpSetup(id, { issuer } = {}) { // prompt 40: issuer ('Nordlys OS' i appene)
   const u = userRow(id);
   if (!u) throw httpError('Fant ikke brukeren', 404);
-  const secret = newSecret(), b32 = base32Encode(secret), url = otpauthUrl(u.username, b32);
+  const secret = newSecret(), b32 = base32Encode(secret), url = otpauthUrl(u.username, b32, issuer);
   kv.set(id, 'totp_pending', { enc: encryptSecret(secret), exp: Date.now() + 10 * 60_000 });
   return { otpauthUrl: url, secret: b32.replace(/(.{4})/g, '$1 ').trim(), qrSvg: qrSvg(url) };
 }

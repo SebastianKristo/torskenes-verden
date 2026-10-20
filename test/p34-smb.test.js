@@ -55,7 +55,7 @@ test('ls-parser: små attributter (Dr = junction/ZFS-datasett), datoer med ekstr
   assert.equal(d.folders.find((f) => f.name === 'Junction').link, true);
   assert.deepEqual(d.filtered, [{ name: '@eaDir', attrs: 'D', why: 'systemmappe' }]);
   assert.ok(fb.SMB_SEG.test('Backup på NAS'.normalize('NFD')), 'NFD avvises ikke');
-  assert.ok(fb.SMB_SHARE.test('backup$') && !fb.SMB_SEG.test('backup$'));
+  assert.ok(fb.SMB_SHARE.test('backup$') && fb.SMB_SEG.test('backup$'), 'prompt 40: $ er lov i mappenavn etter SMB-reglene');
 });
 
 test('mappelisting: «backup» (Dr) vises, «Privat» med lås og årsak, systemmapper filtrert, skjulte med Vis skjulte, rå liste logges', async () => {

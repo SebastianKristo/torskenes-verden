@@ -86,7 +86,7 @@ async function glimtWhy(items, hw, installedIds) {
   try {
     if (llmImpl) why = await llmImpl(items);
     else if (!MOCK()) {
-      const out = await ai.run('glimt', { json: true, temperature: 0.2, numPredict: 500, timeoutMs: 30_000, title: 'Glimt · anbefaler modeller', background: true,
+      const out = await ai.run('glimt', { json: true, temperature: 0.2, numPredict: 500, phased: true, title: 'Glimt · anbefaler modeller', background: true,
         prompt: `Skriv én kort norsk setning per oppgave om hvorfor modellen er best på ${hw.model} (${hw.memGb} GB). Svar KUN med JSON {"<task>":"setning"}.\n${items.map((x) => `${x.task} (${x.taskName}): ${x.model} (${gb(x.sizeGb)} GB, ${x.fit}) – alternativ ${x.alt ?? 'ingen'}`).join('\n')}` });
       why = out.data && typeof out.data === 'object' ? out.data : JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? 'null');
     }

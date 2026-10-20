@@ -102,13 +102,14 @@ test('norske feilmeldinger for vanlige smbclient-feil', () => {
 /* ---------------- Sanering ---------------- */
 
 test('sanering: navn og stier med injeksjonsforsøk avvises (ingen escaping)', () => {
-  for (const bad of ['..', '.', 'a"b', "a'b", 'a;b', 'a/b', 'a\\b', 'x\ny', 'x\0', ' foran', 'bak ', '', 'a|b', 'a`b', 'a$b', 'a*b', 'a?b', 'a<b', 'a:b', 'x'.repeat(121)]) {
-    assert.throws(() => sbr.cleanName(bad), /Ugyldig/, JSON.stringify(bad));
+  // Prompt 40: SMB-reglene – bare \ / : * ? " < > |, kontrolltegn, slutt på mellomrom/punktum (og ; for smbclient -c) avvises.
+  for (const bad of ['..', '.', 'a"b', 'a;b', 'a/b', 'a\\b', 'x\ny', 'x\0', 'bak ', 'bak.', '', 'a|b', 'a*b', 'a?b', 'a<b', 'a:b', 'x'.repeat(256)]) {
+    assert.throws(() => sbr.cleanName(bad), /Ugyldig|kan ikke|for langt/, JSON.stringify(bad));
   }
-  for (const ok of ['homelab', 'Time Machine', 'Bilder (2025)', 'æøå ÆØÅ', 'a.b-c_d', 'backup+2', '#1', '...a']) assert.equal(sbr.cleanName(ok), ok);
+  for (const ok of ['homelab', 'Time Machine', 'Bilder (2025)', 'æøå ÆØÅ', 'a.b-c_d', 'backup+2', '#1', '...a', "a'b", 'a$b', 'a`b', '[05] Backup', 'Bilder & video', '{x}']) assert.equal(sbr.cleanName(ok), ok);
   assert.equal(sbr.cleanPath('/a/b/'), 'a/b');
   assert.equal(sbr.cleanPath(''), '');
-  for (const bad of ['../etc', 'a/../b', 'a/"x', 'a;ls', 'a/b\n', 'x/.']) assert.throws(() => sbr.cleanPath(bad), /Ugyldig/, bad);
+  for (const bad of ['../etc', 'a/../b', 'a/"x', 'a;ls', 'a/b\n', 'x/.']) assert.throws(() => sbr.cleanPath(bad), /Ugyldig|kan ikke/, bad);
   for (const bad of ['nas;ls', 'nas local', '"nas"', '-L', 'nas$', '']) assert.throws(() => sbr.cleanHost(bad), /IP-adressen/, bad);
   assert.equal(sbr.cleanHost('\\\\NAS.local\\backup'), 'nas.local');
   assert.equal(sbr.cleanHost('smb://192.168.1.20/backup'), '192.168.1.20');

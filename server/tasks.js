@@ -18,6 +18,7 @@
 //     early: none|5m|15m|30m|1h|1d|2d|1w · prio 0–3 · place: store|home|leave|work|cabin|null
 //   Sanntid: {type:'todo:changed', action, …} i tillegg til {type:'tasks', …} (bare til dem med tilgang).
 //   Glimt (11 funksjoner): se tasks-glimt37.js.
+import { extraOut40 } from './tasks-glimt40.js'; // prompt 40
 import { Hono } from 'hono';
 import { db, kv, OWNER } from './db.js';
 import { userInfo, listUsers, sessionUser, isAdmin } from './auth.js';
@@ -198,7 +199,8 @@ const itemOut = (r) => {
   return { id: r.id, title: r.title, n: r.title, list: r.list || null, l: r.list || null, due: r.due ?? null, time: r.time ?? null, assignee: r.assignee ?? null, who: r.assignee ?? null,
     note: r.note, notes: r.note, done: !!r.done, doneAt: r.done_at ?? null, archived: !!r.archived_at, arch: !!r.archived_at, archivedAt: r.archived_at ?? null,
     urgent: !!r.urgent, rep: r.rep ?? 'none', early: r.early ?? 'none', prio: r.prio ?? 0, flag: !!r.flag, tags, subs, subsDone: subs.filter((x) => x.done).length,
-    place: r.place ?? null, glimt: !!r.glimt, doneBy: r.done_by ?? null, createdBy: r.created_by ?? null, by: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, ...haInfo(r) };
+    place: r.place ?? null, glimt: !!r.glimt, doneBy: r.done_by ?? null, createdBy: r.created_by ?? null, by: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, ...haInfo(r),
+    ...extraOut40(r) }; // prompt 40: placeName, after, mentions
 };
 const lists = (uid) => listsOf(uid).map((l) => listOut(l, uid));
 // Personer man kan dele med og tildele til: id, navn og profilbilde (brukernavn bare for administratorer).

@@ -182,6 +182,8 @@ function pendingRequest(status) {
   return !!r?.id && r.id !== status.id && Date.now() - Number(r.at || 0) < 2 * 60_000;
 }
 const isRunning = (status = readStatus()) => RUNNING.has(status.state) || pendingRequest(status);
+/** Prompt 40: pågår en ekte oppdatering/omstart nå? → {updating, state, version} (for /api/health · restarting). */
+export function updateNow() { try { const st = readStatus(); return { updating: isRunning(st), state: st.state, version: st.version ?? null }; } catch { return { updating: false, state: 'idle', version: null }; } }
 // Prompt 36: logg over kjøringer (for TIDLIGERE VERSJONER: installert/feilet). Skrives når serveren ser en ferdig jobb.
 export const updateRuns = () => { const v = kv.get(OWNER, 'update_runs', []); return Array.isArray(v) ? v : []; };
 function recordRun(status) {

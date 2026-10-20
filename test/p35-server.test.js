@@ -124,7 +124,7 @@ test('Vær for sted: extractPlace, GET /api/weather/place (200/404 med forslag) 
 test('Glimt-innstillinger: standard, delvis PUT per bruker, validering, alias /api/brief/settings', async () => {
   const r = await A('/api/glimt/settings');
   assert.equal(r.status, 200);
-  const { engines, chars, voices, rates, host, cards, auroraNotify, ...plain } = r.body; // prompt 38: cards/auroraNotify testes i p38
+  const { engines, chars, voices, rates, host, cards, auroraNotify, jul, julPhase, snow, julSound, julActive, ...plain } = r.body; // prompt 38: cards/auroraNotify testes i p38; prompt 40: jul* testes i p40
   assert.deepEqual(plain, { char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true, briefGlimt: true, // prompt 39: + briefGlimt
     briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
     tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' } });

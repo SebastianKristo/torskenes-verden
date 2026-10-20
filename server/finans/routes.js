@@ -1,4 +1,5 @@
 // FinansHub-API: /finans/api/*. Tilgang med innlogget sesjon (nettleser) eller API-token med finans-scope (mobil/snarvei).
+import { addedOf40, tagsOf40 } from './added40.js'; // prompt 40
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
@@ -115,7 +116,8 @@ function txOut(t, cats = catById(), accs = accById()) {
   return { id: t.id, date: t.date, amount: t.amount / 100, description: t.description, merchant: t.merchant, note: t.note, source: t.source,
     categoryId: t.category_id, category: cat?.name ?? 'Ukategorisert', color: cat?.color ?? '#A0A0AA', kind: cat?.kind ?? 'expense',
     accountId: t.account_id, account: acc?.name ?? '–', receipt: t.receipt_status ?? null, receiptId: t.receipt_id ?? null,
-    type: t.amount > 0 ? 'income' : 'expense', folderId: t.folder_id ?? null, hasBankRow: !!t.raw_bank_row, ...aiOf(t, cat?.name) };
+    type: t.amount > 0 ? 'income' : 'expense', folderId: t.folder_id ?? null, hasBankRow: !!t.raw_bank_row, ...aiOf(t, cat?.name),
+    tags: tagsOf40(t), added: addedOf40(t, 'tx') }; // prompt 40: «Lagt til …» og tagger
 }
 // ✦-felt: AI-tekst hvis den finnes, ellers heuristikk. Varelinjer fra koblet kvittering.
 function aiOf(t, category) {
@@ -225,6 +227,7 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     payment: ex?.payment_method ?? null, discounts: ex?.discounts ?? [], pant: ex?.pant ?? 0, vat: ex?.vat ?? [], receiptNo: ex?.receipt_no ?? null, time: ex?.time ?? null,
     aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? `${providerName(st.provider)} leser kvitteringen …` : null), aiLong: r.ai_long ?? null,
     ...reanalyzeInfo(r, st), ...(reanalyzeJobOf(r) ? { reanalyzeJob: reanalyzeJobOf(r) } : {}), log: scanLogOf(r), timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
+    added: addedOf40(r, 'receipt'), // prompt 40: «Lagt til … · skannet kvittering · Sebastian»
     domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
 }
 
@@ -1164,9 +1167,10 @@ async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {} }
 api.post('/receipts/:id/reanalyze', W, async (c) => {
   const r = rcGet(c);
   if (!r) return c.notFound();
-  if (['booked', 'rejected'].includes(r.status)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
-  if (r.status === 'pending' || r.status === 'processing') return bad(c, 'Kvitteringen leses fortsatt');
   const b = await c.req.json().catch(() => ({}));
+  // Prompt 40: «Les på nytt» på en bokført transaksjon er lov med apply:false (bare kandidat; tas i bruk via /transactions/:id/reread/apply).
+  if (r.status === 'rejected' || (r.status === 'booked' && b.apply !== false)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
+  if (r.status === 'pending' || r.status === 'processing') return bad(c, 'Kvitteringen leses fortsatt');
   const engine = b.engine === 'tesseract' ? 'tesseract' : 'gemini';
   const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
   if (engine === 'gemini' && !hasGemini()) return bad(c, 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.');
