@@ -662,7 +662,14 @@ struct WxCompareSheet22: View {
     @Environment(\.wxInPanel25) private var inPanel
     let w: WeatherFull
 
+    /// Prompt 39: «Yr mot Storm» er nå 2a (duell på himmel) med wiggle-redigering (WxCmp39.swift). Den gamle visningen er beholdt som `legacy`.
     var body: some View {
+        WxCmp39Page(w: w, topPad: inPanel ? 14 : 48) {
+            if inPanel { WxPanel25.shared.close() } else { dismiss() }
+        }
+    }
+
+    private var legacy: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .center, spacing: 10) {

@@ -16,13 +16,16 @@ struct BibleTone37 {
     var glow: Color { morning ? Color(red: 1, green: 0.78, blue: 0.47).opacity(0.55) : Color(red: 1, green: 0.9, blue: 0.66).opacity(0.25) }
 
     func background(_ radius: CGFloat) -> some View {
-        ZStack(alignment: .topTrailing) {
-            LinearGradient(colors: [from, to], startPoint: .topLeading, endPoint: .bottomTrailing)
-            RadialGradient(colors: [glow, .clear], center: .center, startRadius: 0, endRadius: 110)
-                .frame(width: 220, height: 220)
-                .offset(x: 70, y: -90)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        // Prompt 39: gløden ligger i et overlay, så den faste 220 × 220-rammen aldri gjør bakgrunnen større enn kortet
+        // (før stakk bakgrunnen ut over og under lave kort: overlapp med hero og ingen luft mellom kortene).
+        LinearGradient(colors: [from, to], startPoint: .topLeading, endPoint: .bottomTrailing)
+            .overlay(alignment: .topTrailing) {
+                RadialGradient(colors: [glow, .clear], center: .center, startRadius: 0, endRadius: 110)
+                    .frame(width: 220, height: 220)
+                    .offset(x: 70, y: -90)
+                    .allowsHitTesting(false)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
     }
 }
 
@@ -111,6 +114,7 @@ struct Swipe37Card<C: View>: View {
     @State private var over: Bool = false
     @State private var width: CGFloat = 360
     @State private var movedAt: Date = .distantPast
+    @State private var lastVel: CGFloat = 0
 
     var body: some View {
         let prog: CGFloat = Swift.min(1, dx / Swift.max(1, width * 0.38))
@@ -147,11 +151,14 @@ struct Swipe37Card<C: View>: View {
                 }
                 if lock != 1 { return }
                 movedAt = Date()
-                let nv: CGFloat = Swift.max(0, tx)
+                // Prompt 39: gummistrikk mot venstre og ingen implisitt animasjon under drag.
+                let nv: CGFloat = Swipe39.rubber(tx)
                 let isOver: Bool = nv >= width * 0.38
                 if isOver && !over { Haptics.shared.select() }
                 over = isOver
-                dx = nv
+                var tr: Transaction = Transaction()
+                tr.disablesAnimations = true
+                withTransaction(tr) { dx = nv }
             }
             .onEnded { (v: DragGesture.Value) in
                 let wasX: Bool = lock == 1
@@ -159,10 +166,11 @@ struct Swipe37Card<C: View>: View {
                 if !wasX || out { return }
                 movedAt = Date()
                 let vel: CGFloat = v.velocity.width
-                if dx >= width * 0.38 || (dx > 60 && vel > 600) {
+                lastVel = vel
+                if Swipe39.passes(dx: dx, width: width, velocity: vel) {
                     dismiss()
                 } else {
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.62)) { dx = 0 }
+                    withAnimation(Swipe39.springBack) { dx = 0 }
                     over = false
                 }
             }
@@ -170,13 +178,21 @@ struct Swipe37Card<C: View>: View {
 
     private func dismiss() {
         Haptic30.double()
-        withAnimation(.easeIn(duration: reduce ? 0.2 : 0.34)) { out = true }
+        // Prompt 39: fly ut etter farten, hold 260 ms så «Flyttet til briefen» rekker å vises, så kollaps mykt.
+        let d: Double = reduce ? 0.2 : Swipe39.flyDuration(dx: dx, width: width, velocity: lastVel)
+        withAnimation(Swipe39.flyCurve(d)) { out = true }
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 480_000_000)
-            onDismiss()
-            dx = 0
-            out = false
-            over = false
+            try? await Task.sleep(nanoseconds: UInt64((d + 0.26) * 1_000_000_000))
+            withAnimation(.smooth(duration: 0.3)) { onDismiss() }
+            // Nullstill først etter kollapsen, så kortet aldri blinker tilbake.
+            try? await Task.sleep(nanoseconds: 340_000_000)
+            var tr: Transaction = Transaction()
+            tr.disablesAnimations = true
+            withTransaction(tr) {
+                dx = 0
+                out = false
+                over = false
+            }
         }
     }
 }

@@ -217,6 +217,8 @@ final class AiJobs31 {
 
     /// «Glimt svarte mens du var borte» (4 s).
     func showAway(_ title: String, _ body: String) {
+        // Prompt 39: «Vis svaret i appen også» av → ingen banner (svaret ligger i chatten og i systemvarselet).
+        if !NotifyModel.shared.aiIn { return }
         away = (title, body)
         awayTick += 1
         awayTask?.cancel()

@@ -67,8 +67,11 @@ struct Brief34HomeCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 // Prompt 35: verten (brukerens figur, Glimt Natt 21–06).
-                Glimt35Live(id: Glimt35Model.shared.cfg.host, size: 56, mood: Glimt35Char.sleeping() ? .sover : .idle)
-                    .frame(width: 64)
+                // Prompt 39: «Glimt i briefen» av → teksten fyller hele bredden.
+                if Glimt35Model.shared.cfg.briefGlimt {
+                    Glimt35Live(id: Glimt35Model.shared.cfg.host, size: 56, mood: Glimt35Char.sleeping() ? .sover : .idle)
+                        .frame(width: 64)
+                }
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)

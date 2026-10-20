@@ -94,6 +94,10 @@ struct Glimt35Cfg: Hashable {
     var readAloud: Bool = false
     var guide: Bool = true
     var notify: Bool = true
+    /// Prompt 39: «Glimt i briefen» (briefGlimt): figuren og vennene i briefen, på Hjem-kortet og i widgets.
+    var briefGlimt: Bool = true
+    /// Prompt 39: serveren sendte briefGlimt (eldre server uten feltet skal ikke overskrive valget lokalt).
+    var briefGlimtSet: Bool = false
     var morning: Glimt35Slot = Glimt35Slot(on: true, at: "06:45")
     var day: Glimt35Slot = Glimt35Slot(on: false, at: "12:00")
     var evening: Glimt35Slot = Glimt35Slot(on: true, at: "18:00")
@@ -160,6 +164,8 @@ struct Glimt35Cfg: Hashable {
         c.readAloud = b(o, "readAloud", b(o, "voice", false))
         c.guide = b(o, "guide", b(o, "auto", true))
         c.notify = b(o, "notify", b(o, "notif", true))
+        c.briefGlimtSet = o["briefGlimt"] != nil || o["fig"] != nil
+        c.briefGlimt = b(o, "briefGlimt", b(o, "fig", true))
         let br: [String: Any] = (o["briefs"] as? [String: Any]) ?? [:]
         let keys: [(String, String)] = [("morning", "morgen"), ("day", "dag"), ("evening", "kveld"), ("night", "natt")]
         for (k, alt) in keys {
@@ -192,7 +198,7 @@ struct Glimt35Cfg: Hashable {
         }
         let tts: [String: Any] = ["engine": engine, "voice": voice, "rate": rate, "lang": lang]
         let out: [String: Any] = ["char": char, "friends": friends, "brief": brief, "readAloud": readAloud, "guide": guide, "notify": notify,
-                                  "briefs": br, "tts": tts]
+                                  "briefGlimt": briefGlimt, "briefs": br, "tts": tts]
         return out
     }
 

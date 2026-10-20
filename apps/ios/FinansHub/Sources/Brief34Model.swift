@@ -190,7 +190,7 @@ final class Brief34Model {
     /// Første gang briefen åpnes (og automatisk runde er på): runden starter etter 0,9 s.
     func autoStart() async {
         let key: String = "brief34_tour_seen"
-        guard autoTour, !UserDefaults.standard.bool(forKey: key) else { return }
+        guard autoTour, Glimt35Model.shared.cfg.briefGlimt, !UserDefaults.standard.bool(forKey: key) else { return }
         try? await Task.sleep(nanoseconds: 900_000_000)
         if Task.isCancelled || !open { return }
         UserDefaults.standard.set(true, forKey: key)

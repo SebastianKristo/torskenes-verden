@@ -235,7 +235,8 @@ struct Cal27FormSheet: View {
                 VStack(alignment: .leading, spacing: 12) {
                 label("KALENDER")
                 Flow(spacing: 6) {
-                    ForEach(m.calendars.filter { $0.id == "privat" || $0.id == "familie" }) { c in
+                    // Prompt 39: alle kalendere det kan skrives til (med fire kalendere: Personlig og egne).
+                    ForEach(m.calendars.filter { $0.writable || $0.id == "privat" }) { c in
                         Cal27Choice(name: c.name, on: f.calendar == c.id, dot: c.color) { f.calendar = c.id }
                     }
                 }

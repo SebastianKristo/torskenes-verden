@@ -754,11 +754,7 @@ struct Update30Software: View {
                                symbol: "externaldrive.badge.timemachine", tint: Set30Colors.backup, on: m.autoUpdate) { v in
                     m.setSetting("auto_update", v, store)
                 }
-                Rectangle().fill(p.line).frame(height: 1)
-                Update30Toggle(name: "Varsle om nye versjoner", sub: "Banner på Hjem og push",
-                               symbol: "bell", tint: Set30Colors.notify, on: m.notifyUpdates) { v in
-                    m.setSetting("notify_updates", v, store)
-                }
+                // Prompt 39: «Varsle om nye versjoner» er flyttet til Innstillinger → Varsler og haptikk → VARSLER.
             }
             .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }

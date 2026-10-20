@@ -488,6 +488,8 @@ struct Receipts23ReviewRow: View {
     @State private var cat: Int? = nil
 
     private var isOpen: Bool { model.open == r.id }
+    @MainActor private var rean: Rean39Model { Rean39Model.shared }
+    private func hl(_ f: String) -> Bool { rean.changed[r.id]?.contains(f) == true }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -496,7 +498,11 @@ struct Receipts23ReviewRow: View {
                 Haptics.shared.select()
                 withAnimation(.easeOut(duration: 0.18)) { model.open = isOpen ? nil : r.id }
             } label: {
-                Receipts23Line(r: r, meta: Receipts23Line.meta(r)).padding(.vertical, 12).contentShape(Rectangle())
+                // Prompt 39: «✦ Analyserer på nytt … 42 %» og en tynn rød linje mens analysen pågår (Receipt39.swift).
+                Receipts23Line(r: r, meta: Rc39.meta(r)).padding(.vertical, 12).contentShape(Rectangle())
+                    .overlay(alignment: .bottom) {
+                        if !isOpen, let j = rean.jobs[r.id], j.step != "error" { Rean39Line(pct: j.pct) }
+                    }
             }
             .buttonStyle(.plain)
             if isOpen { editor.padding(.bottom, 14) }
@@ -514,34 +520,57 @@ struct Receipts23ReviewRow: View {
     private var editor: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                field(TextField("Butikk", text: $name).font(PF.ui(14, .semibold)))
-                field(TextField("0,00", text: $amount).font(PF.mono(14)).multilineTextAlignment(.trailing).keyboardType(.decimalPad))
+                field(TextField("Butikk", text: $name).font(PF.ui(14, .semibold)), hl: hl("name"))
+                field(TextField("0,00", text: $amount).font(PF.mono(14)).multilineTextAlignment(.trailing).keyboardType(.decimalPad), hl: hl("amount"))
                     .frame(width: 120)
             }
             Receipts23CategoryChips(selected: $cat)
+                .background(hl("category") ? Rc39.highlight.opacity(0.7) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            // Prompt 39: AI-ens begrunnelse for kategorien («Bokhandel · pensum»).
+            if let why = r.aiCategory?.reason, !why.isEmpty {
+                Text("✦ " + why).font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(2)
+            }
             HStack(spacing: 8) {
                 Button { Task { await model.approve(r, name: name, amount: amount, category: cat, store) } } label: {
                     Text("✓ Godkjenn og bokfør").font(PF.ui(14, .bold)).foregroundStyle(p.bg)
                         .frame(maxWidth: .infinity, minHeight: 42).background(p.ink, in: Capsule())
                 }
                 .buttonStyle(.plain)
-                Button { Haptics.shared.tap(); Task { await model.reprocess(r.id, store) } } label: {
-                    Text("✦ På nytt").font(PF.ui(13, .bold)).foregroundStyle(p.lab).padding(.horizontal, 14)
+                // Prompt 39: «✦ På nytt» viser fremdriften («✦ 42 %») og panelet under knappene (Receipt39.swift).
+                Button { Rean39Model.shared.start(r, model, store) } label: {
+                    Text(reanLabel).font(PF.ui(13, .bold)).foregroundStyle(p.lab).padding(.horizontal, 14)
                         .frame(minHeight: 42).overlay(Capsule().stroke(p.line, lineWidth: 1))
+                        .monospacedDigit()
                 }
                 .buttonStyle(.plain)
+                .disabled(reanBusy)
                 Button { Haptics.shared.warning(); Task { await model.delete(r.id, store) } } label: {
                     Text("🗑").font(.system(size: 16)).frame(width: 42, height: 42).overlay(Circle().stroke(p.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Slett")
             }
+            if let j = rean.jobs[r.id] {
+                Rean39Panel(r: r, model: model, job: j)
+            }
         }
+        .animation(.easeOut(duration: 0.2), value: rean.jobs[r.id] != nil)
     }
 
-    private func field<V: View>(_ v: V) -> some View {
+    private var reanBusy: Bool {
+        guard let j = rean.jobs[r.id] else { return false }
+        return j.step != "error"
+    }
+
+    private var reanLabel: String {
+        guard let j = rean.jobs[r.id], j.step != "error" else { return "✦ På nytt" }
+        return "✦ \(j.pct) %"
+    }
+
+    private func field<V: View>(_ v: V, hl: Bool = false) -> some View {
         v.foregroundStyle(p.ink).padding(.horizontal, 12).frame(height: 42)
-            .background(p.bg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(hl ? Rc39.highlight : p.bg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .animation(.easeOut(duration: 0.4), value: hl)
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(p.line, lineWidth: 1))
     }
 }
@@ -553,13 +582,16 @@ struct Receipts23CategoryChips: View {
     @Binding var selected: Int?
 
     var body: some View {
-        let cats: [Category] = (store.boot?.categories ?? []).filter { $0.kind != "income" }
+        // Prompt 39: nye AI-kategorier (source 'ai', ikke godkjent ennå) står først med ✦ foran, før «Annet».
+        let all: [Category] = (store.boot?.categories ?? []).filter { $0.kind != "income" }
+        let fresh: [Category] = all.filter { $0.source == "ai" && $0.confirmed != true }
+        let cats: [Category] = fresh + all.filter { !($0.source == "ai" && $0.confirmed != true) }
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(cats) { c in
                     let on: Bool = selected == c.id
                     Button { Haptics.shared.select(); selected = c.id } label: {
-                        Text(c.name).font(PF.ui(12.5, .semibold)).foregroundStyle(on ? p.bg : p.ink).lineLimit(1)
+                        Text((c.source == "ai" && c.confirmed != true ? "✦ " : "") + c.name).font(PF.ui(12.5, .semibold)).foregroundStyle(on ? p.bg : p.ink).lineLimit(1)
                             .padding(.horizontal, 12).frame(height: 32)
                             .background(on ? p.ink : Color.clear, in: Capsule())
                             .overlay(Capsule().stroke(on ? p.ink : p.line, lineWidth: 1))

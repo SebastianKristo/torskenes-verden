@@ -169,9 +169,11 @@ enum Cal26 {
         switch raw.lowercased() {
         case "tt", "timeplan", "time": return "timeplan"
         case "ex", "prover", "prøver", "prove": return "prover"
-        case "priv", "privat", "private", "google": return "privat"
+        // Prompt 39: fire kalendere (p Personlig, b Bursdager, s Skole, h Helligdager) – Personlig er den gamle «privat».
+        case "p", "personlig", "priv", "privat", "private", "google": return "privat"
         case "fam", "familie", "family": return "familie"
-        case "bd", "bursdager", "bursdag", "birthdays": return "bursdager"
+        case "b", "bd", "bursdager", "bursdag", "birthdays": return "bursdager"
+        case "h", "helligdager", "helligdag", "holidays": return "helligdager"
         default: return "skole"
         }
     }

@@ -12,7 +12,8 @@ struct Bible37Page: View {
     @MainActor private var m: Bible37Model { Bible37Model.shared }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        // Prompt 39: 14 pt mellom alle kort, og første kort starter 16 pt under hero (siden overlapper hero med 23 pt).
+        VStack(alignment: .leading, spacing: 14) {
             if m.enabled {
                 Bible37StreakCard()
                 Bible37TodayCard()
@@ -27,6 +28,7 @@ struct Bible37Page: View {
                 }
             }
         }
+        .padding(.top, 39)
         .task { await m.load(store) }
     }
 }

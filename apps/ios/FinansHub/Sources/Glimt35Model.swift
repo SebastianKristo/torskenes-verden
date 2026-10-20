@@ -70,6 +70,8 @@ final class Glimt35Model {
         var next: Glimt35Cfg = c
         // Motorene kommer bare fra GET; behold dem når PUT-svaret ikke har dem.
         if next.engines.isEmpty { next.engines = cfg.engines }
+        // Prompt 39: eldre server uten briefGlimt: behold valget på enheten.
+        if !next.briefGlimtSet { next.briefGlimt = cfg.briefGlimt }
         cfg = next
         persist()
     }
@@ -114,6 +116,7 @@ final class Glimt35Model {
             case "brief": c.brief = v
             case "readAloud": c.readAloud = v
             case "guide": c.guide = v
+            case "briefGlimt": c.briefGlimt = v
             default: c.notify = v
             }
         }

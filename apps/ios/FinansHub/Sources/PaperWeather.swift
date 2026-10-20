@@ -386,6 +386,8 @@ struct PaperWeatherView: View {
         WxWindCard22(w: w).onTapGesture { open("wind") }
         WxMoonCard22(w: w).onTapGesture { open("moon") }
         WxTileGrid22(w: w) { k in open(k) }
+        // Prompt 39: Glimt-personlighetene oppsummerer ukas vær og sammenligner med forrige uke (WxWeek39.swift).
+        WxWeek39Card(w: w)
         Button { store.openLink(w.yrUrl) } label: {
             Text("Data: MET Norge · Se også yr.no ↗").font(.system(size: 12.5)).underline().opacity(0.85).padding(.top, 4)
         }

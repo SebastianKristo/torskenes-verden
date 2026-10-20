@@ -31,6 +31,8 @@ struct AiCtl34ModelsTab: View {
                     }
                 }
             }
+            // Prompt 39: Glimt anbefaler modeller per oppgave (AiRec39.swift), over «Last ned fra Ollama».
+            AiRec39Card()
             AiLibrary34()
             AiCloudList34()
         }
@@ -265,6 +267,8 @@ struct AiLibRow34: View {
                         AiFit34(fit: fit)
                     }
                     Text(l.line).font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(2)
+                    // Prompt 39: «Brukes til: …» og «✦ Glimt anbefaler til …».
+                    AiRec39LibTags(model: l.id)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 if admin {
@@ -323,6 +327,8 @@ struct AiCtl34RoutingTab: View {
     var body: some View {
         let list: [AiRoute34] = m.routes.filter { !m.fin || $0.fin }
         VStack(alignment: .leading, spacing: 14) {
+            // Prompt 39: «✦ La Glimt velge modeller» øverst i Valg (og AI-valg i Finans), AiRec39.swift.
+            AiRec39FillCard()
             AiCard34(title: m.fin ? "HVILKEN MODELL GJØR HVA I FINANS" : "HVILKEN MODELL GJØR HVA") {
                 // Prompt 38: aldri et tomt kort – «Ingen modeller ennå» + Installer modell › når ingenting er installert/tilkoblet.
                 if m.choices.isEmpty && !m.busy {

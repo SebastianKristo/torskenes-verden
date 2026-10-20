@@ -17,6 +17,10 @@ struct Category: Decodable, Identifiable, Hashable {
     let name: String
     let color: String
     let kind: String
+    /// Prompt 39: 'user' | 'ai' – AI lager ny kategori når ingen passer (claude-code-kvittering-ny-kategori.md).
+    var source: String? = nil
+    /// Prompt 39: en AI-kategori blir permanent når en kvittering med den godkjennes.
+    var confirmed: Bool? = nil
 }
 
 struct Account: Decodable, Identifiable, Hashable {
@@ -92,6 +96,8 @@ struct Receipt: Decodable, Identifiable, Hashable {
     var canReanalyze: Bool? = nil
     var reanalyzeReason: String? = nil
     var engine: String? = nil
+    /// Prompt 39: kategori-tolkningen fra lesingen ({category, isNew, confidence, reason}), Receipt39.swift.
+    var aiCategory: Rc39Cat? = nil
 }
 
 struct Budget: Decodable, Identifiable, Hashable {

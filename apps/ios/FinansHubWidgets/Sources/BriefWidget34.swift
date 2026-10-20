@@ -105,12 +105,15 @@ struct BriefGlimt34: View {
     var body: some View {
         let cfg: Glimt35Cfg = Glimt35Cfg.cached ?? Glimt35Cfg()
         let fig: String = Brief34.themeFig35(e.brief, cfg)
-        Button(intent: GlimtPoke34Intent()) {
-            Glimt35Fig(id: fig, size: size, mood: BriefGlimt34.mood35(e.mood), t: e.phase, still: e.mood == .idle && e.phase == 0)
-                .frame(width: size, height: size * Glimt35Fig.heightFactor(fig), alignment: .topLeading)
+        // Prompt 39: «Glimt i briefen» av → ingen figur i widgetene (teksten tar plassen).
+        if cfg.briefGlimt {
+            Button(intent: GlimtPoke34Intent()) {
+                Glimt35Fig(id: fig, size: size, mood: BriefGlimt34.mood35(e.mood), t: e.phase, still: e.mood == .idle && e.phase == 0)
+                    .frame(width: size, height: size * Glimt35Fig.heightFactor(fig), alignment: .topLeading)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Hils på " + Glimt35Char.get(fig).name)
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Hils på " + Glimt35Char.get(fig).name)
     }
 
     /// Prompt 34-posituren → humøret til Glimt-familien (vinke = glad hopp).
@@ -465,9 +468,14 @@ struct BriefCircle34: View {
         let fig: String = Brief34.themeFig35(b, cfg)
         ZStack {
             AccessoryWidgetBackground()
-            Glimt35Fig(id: fig, size: 34, still: true)
-                .frame(width: 34, height: 34 * Glimt35Fig.heightFactor(fig), alignment: .topLeading)
-                .offset(y: -1)
+            if cfg.briefGlimt {
+                Glimt35Fig(id: fig, size: 34, still: true)
+                    .frame(width: 34, height: 34 * Glimt35Fig.heightFactor(fig), alignment: .topLeading)
+                    .offset(y: -1)
+            } else {
+                // Prompt 39: uten figur viser den runde widgeten temperaturen.
+                Text(b.temp.isEmpty ? "–" : b.temp).font(.system(size: 15, weight: .semibold)).minimumScaleFactor(0.6)
+            }
         }
         .accessibilityLabel(b.kick + (b.temp.isEmpty ? "" : ", " + b.temp))
     }

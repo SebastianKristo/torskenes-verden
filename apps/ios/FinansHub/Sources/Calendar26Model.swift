@@ -18,9 +18,10 @@ final class Cal26Model {
     nonisolated static let cardKeys: [String] = ["A", "B", "C", "D", "E"]
     nonisolated static let cardNames: [String: String] = ["A": "Nå-kort", "B": "Prøver og frister", "C": "Kalendere", "D": "Kalender", "E": "Widgets"]
     /// Prompt 27: kalenderne i Kalender v2 (Privat og Familie er Google). Av/på lagres i kalFilters.
-    nonisolated static let filterKeys: [String] = ["timeplan", "prover", "skole", "privat", "familie", "bursdager"]
+    // Prompt 39: fire kalendere – Personlig (gamle «privat»), Bursdager, Skole og Helligdager. De gamle nøklene beholdes for eldre data.
+    nonisolated static let filterKeys: [String] = ["timeplan", "prover", "skole", "privat", "familie", "bursdager", "helligdager"]
     nonisolated static let filterNames: [String: String] = ["timeplan": "Timeplan", "prover": "Prøver og frister", "bursdager": "Bursdager", "skole": "Skole",
-                                                            "privat": "Privat", "familie": "Familie"]
+                                                            "privat": "Personlig", "familie": "Familie", "helligdager": "Helligdager"]
 
     var events: [CalEvent26] = []
     var subjects: [String: String] = [:]

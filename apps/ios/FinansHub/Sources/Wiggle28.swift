@@ -17,6 +17,8 @@ final class Edit28 {
     var ruterOpen: Bool = false
     /// Prompt 37: panelet «Sporing» på Pakker-kortet (Pkg37.swift).
     var pkgOpen: Bool = false
+    /// Prompt 39: et av redigeringsarkene er åpent (vugging stopper, pillene skjules).
+    var anySheet39: Bool { addOpen || ruterOpen || pkgOpen }
     /// Økes av «↺ Tilbakestill» i Finans → Mer; rutenettet lytter.
     var resetTick: Int = 0
     /// Etikettene til kortene på hver side (settes av PaperCardStack), til «Legg til widget».
@@ -48,7 +50,8 @@ struct Edit28Pills: View {
     @MainActor private var e: Edit28 { Edit28.shared }
 
     var body: some View {
-        if let page = store.paperEditPage, Edit28.pages.contains(page) {
+        // Prompt 39: pillene skjules mens et redigeringsark er åpent.
+        if let page = store.paperEditPage, Edit28.pages.contains(page), !e.anySheet39 {
             HStack(spacing: 10) {
                 left(page)
                 Spacer(minLength: 8)
@@ -273,8 +276,10 @@ struct Edit28Layer: ViewModifier {
             .overlay(alignment: .top) { Edit28Pills() }
             .animation(.easeOut(duration: 0.2), value: store.paperEditPage)
             .sheet(isPresented: Binding<Bool>(get: { e.addOpen }, set: { e.addOpen = $0 })) {
+                // Prompt 39: arkene i redigering ligger helt i bunnen i full bredde (iOS 26 lar delvise ark sveve med
+                // innhold synlig under), med dempet bakgrunn og egen scroll inni.
                 Edit28AddSheet().environment(\.paper, p)
-                    .presentationDetents([.medium])
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                     .sheetEdge30(p.bg)
             }
@@ -286,7 +291,7 @@ struct Edit28Layer: ViewModifier {
             }
             .sheet(isPresented: Binding<Bool>(get: { e.ruterOpen }, set: { e.ruterOpen = $0 })) {
                 RuterPick27Sheet(close: { e.ruterOpen = false }).environment(\.paper, p)
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                     .sheetEdge30(p.bg)
             }

@@ -150,9 +150,12 @@ struct Brief35Page: View {
                 }
             }
             // Figuren og boblen ligger i et eget lag utenfor scroll-innholdet, med fast bredde.
-            Brief35GuideView(steps: steps, idx: idx, target: target)
-                .padding(.horizontal, 16).padding(.bottom, 20)
-                .frame(width: geo.size.width, alignment: .bottomTrailing)
+            // Prompt 39: «Glimt i briefen» av → ingen figur, ingen snakkebobler og ingen guide-runde.
+            if g.cfg.briefGlimt {
+                Brief35GuideView(steps: steps, idx: idx, target: target)
+                    .padding(.horizontal, 16).padding(.bottom, 20)
+                    .frame(width: geo.size.width, alignment: .bottomTrailing)
+            }
             // Prompt 38: korte beskjeder (f.eks. «Kjøp gave til … ligger i Gjøremål»).
             Glimt35Flash().frame(width: geo.size.width).padding(.bottom, 120)
         }

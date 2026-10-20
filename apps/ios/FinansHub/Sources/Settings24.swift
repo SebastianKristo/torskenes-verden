@@ -71,10 +71,12 @@ final class Set24Model {
         add("navn", "Navn på appen", AppMeta.shared.name, AppMeta.shared.name, "naming")
         add("ikon", "App-ikon", AppMeta.shared.iconName, AppMeta.shared.name, "icon")
         add("tabbar", "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon", AppMeta.shared.name, "tabbar")
-        add("navstil", "Fanelinje-stil", "Tekst, bare ikoner eller ikoner + navn på valgt", AppMeta.shared.name, "innst")
+        add("navstil", "Fanelinje-stil", "Tekst, bare ikoner eller ikoner + navn på valgt", "Tilpass", "innst-tilpass")
         add("hl", "Moduler", "Sporing, Domener, Mat, Familie, Avganger og Vær", AppMeta.shared.name, "innst-hl")
         add("news", "Nyhetsleser", "Kilder, AI og ikoner på fanene", AppMeta.shared.name, "news")
-        add("ut", "Utseende og fanelinje", "Tema (Papir lys / mørk), bakgrunn og fanelinje", "App", "innst-ut")
+        // Prompt 39: «tema», «farge», «ikon», «navn», «fanelinje», «bakgrunn», «tilpass» og «utseende» → Tilpass.
+        add("ut", "Tilpass", "Utseende: navn, ikon, tema, farger, bakgrunn og fanelinje", AppMeta.shared.name, "innst-tilpass")
+        add("appprofil", "Appprofil", "Profil og oppsett: Standard, Finans + Boliger, Boliger-profil", "App", "innst-appprofil")
         add("varsler", "Varsler og haptikk", "Lyd, stille timer, grupper og Bursdager", "App", "innst-varsler")
         add("haptikk", "Haptikk", "Vibrasjon og styrke", "Varsler og haptikk", "innst-haptikk")
         add("trk", "Pakkevarsler", "Sporing og kvitteringer", "Varsler og haptikk", "innst-trk")
@@ -324,7 +326,8 @@ struct Set24Results: View {
         case "innst-ai": return "sparkles"
         case "innst-sik": return "lock"
         case "innst-varsler", "innst-haptikk", "innst-trk": return "bell"
-        case "innst-ut": return "paintpalette"
+        case "innst-ut", "innst-tilpass": return "paintpalette"
+        case "innst-appprofil": return "person.2"
         case "innst-helse", "innst-fam": return "heart.text.square"
         default: return "gearshape"
         }

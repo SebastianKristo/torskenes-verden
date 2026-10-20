@@ -18,19 +18,20 @@ final class AppMeta {
     var name: String = UserDefaults.standard.string(forKey: "fh_app_name") ?? "Homelab" {
         didSet { UserDefaults.standard.set(name, forKey: "fh_app_name") }
     }
-    var icon: String = UserDefaults.standard.string(forKey: "fh_app_icon") ?? "hus" {
+    var icon: String = UserDefaults.standard.string(forKey: "fh_app_icon") ?? "monogram" {
         didSet { UserDefaults.standard.set(icon, forKey: "fh_app_icon") }
     }
 
     /// (id, navn, forhåndsvisning i asset-katalogen, alternativt ikon i iOS).
     static let icons: [(String, String, String, String?)] = [
-        ("hus", "Huset med stativ", "IconPreviewHus", nil),
-        ("monogram", "Papir-monogram", "IconPreviewMonogram", "AppIcon-Monogram"),
+        // Prompt 39: «Papir-monogram» er nytt standardikon (AppIcon); «Huset med stativ» er alternativt.
+        ("monogram", "Papir-monogram", "IconPreviewMonogram", nil),
+        ("hus", "Huset med stativ", "IconPreviewHus", "AppIcon-Hus"),
         ("rom", "Fire rom", "IconPreviewRom", "AppIcon-Rom"),
     ]
     static let suggestions = ["Homelab", "Torskenes Verden"]
 
-    var iconName: String { AppMeta.icons.first { $0.0 == icon }?.1 ?? "Huset med stativ" }
+    var iconName: String { AppMeta.icons.first { $0.0 == icon }?.1 ?? "Papir-monogram" }
 
     func load(_ store: Store) async {
         guard let d = try? await store.api.callAt("/api", "GET", "/app", timeout: 10) else { return }
@@ -102,6 +103,8 @@ final class NotifyModel {
     var hasCustom = false
     /// Prompt 31: «AI-svar i bakgrunnen» (ai_bg_notify, på som standard).
     var aiBg = true
+    /// Prompt 39: «Vis svaret i appen også» (n_ai_in, på som standard): banneret «Glimt svarte mens du var borte».
+    var aiIn = true
     var authorized: UNAuthorizationStatus = .notDetermined
     var loaded = false
     private var player: AVAudioPlayer?
@@ -131,11 +134,12 @@ final class NotifyModel {
         if let g = JS.dict(o, "groups") { for (k, v) in g { if let b = v as? Bool { groups[k] = b } } }
         if let v = JS.bool(o, "customSound") { hasCustom = v }
         if let v = JS.bool(o, "ai_bg_notify") { aiBg = v }
+        if let v = JS.bool(o, "n_ai_in") { aiIn = v }
     }
 
     private var body: [String: Any] {
         ["on": on, "quietOn": quietOn, "quietFrom": quietFrom, "quietTo": quietTo, "sound": sound, "volume": Int(volume), "groups": groups,
-         "ai_bg_notify": aiBg]
+         "ai_bg_notify": aiBg, "n_ai_in": aiIn]
     }
 
     func load(_ store: Store) async {
@@ -334,8 +338,16 @@ struct PaperNotifySettings: View {
                     sep
                     // Prompt 31: Glimt-svar som varsel når appen er lukket (Assist31.swift / Notify31.swift).
                     if n.on {
-                        toggleRow("AI-svar i bakgrunnen", "Får du svar mens du er ute av appen, kommer det som varsel", n.aiBg) { n.aiBg = $0; n.save(store) }
+                        toggleRow("AI-svar i bakgrunnen", "Får du svar mens du er ute av appen, kommer det som varsel fra Glimt", n.aiBg) { n.aiBg = $0; n.save(store) }
                         sep
+                        // Prompt 39: banneret i appen kan slås av (n_ai_in). Svaret ligger uansett i chatten.
+                        toggleRow("Vis svaret i appen også", "Banner øverst når du kommer tilbake til appen", n.aiIn) { n.aiIn = $0; n.save(store) }
+                        sep
+                        // Prompt 39: flyttet hit fra PROGRAMVARE (samme nøkkel, notify_updates / upd_note).
+                        if Update28Model.isAdmin(store) {
+                            toggleRow("Varsle om nye versjoner", "Nordlys OS · banner på Hjem og push", Update30Model.shared.notifyUpdates) { Update30Model.shared.setSetting("notify_updates", $0, store) }
+                            sep
+                        }
                     }
                     toggleRow("Stille timer", "\(n.quietFrom)–\(n.quietTo): ingen lyd", n.quietOn) { n.quietOn = $0; n.save(store) }
                     if n.quietOn { quietRow; sep }
@@ -576,7 +588,10 @@ final class Realtime: NSObject {
         case "assist": Assist31.shared.realtime(JS.dict(o, "data") ?? o, store)
         // Prompt 36: felles matplan endret av noen i husstanden (Mat36.swift).
         case "meal:changed", "meal": Mat36.changed(JS.dict(o, "data") ?? o, store)
-        default: break
+        default:
+            // Prompt 39: fremdrift for «✦ På nytt» på kvitteringer ({jobId, step, pct, msg}), samme kanal som køen (Receipt39.swift).
+            let d39: [String: Any] = JS.dict(o, "data") ?? o
+            if JS.str(d39, "step") != nil { Rean39Model.shared.realtime(d39, store) }
         }
     }
 }
@@ -618,8 +633,7 @@ struct PaperSettings17: View {
             // Prompt 30: oppdateringsbanneret øverst i Innstillinger (kan ikke skjules her).
             Update30Banner(home: false).padding(.top, 8)
             profileCard
-            // Prompt 24: PROFIL – Standard · Finans + Boliger · Boliger-profil (Profiles24.swift).
-            group("Profil", 4, store.prof24Rows(p))
+            // Prompt 39: PROFIL-gruppen er flyttet til egen side «Appprofil» nederst i APP (Settings39.swift).
             group("Konto", 0, kontoRows29)
             group("Finans", 3, [
                 // Prompt 34: AI i Finans er AI-kontroll med scope finans (AI-valg, Tilkoblinger, Jobber, Forbruk).
@@ -632,10 +646,8 @@ struct PaperSettings17: View {
                 PaperLinkRow(name: "Subscription OS", sub: "Abonnementer og AI-sparing", icon: "repeat") { store.paperFinGo("abo") },
             ])
             group(AppMeta.shared.name, 1, [
-                PaperLinkRow(name: "Navn på appen", sub: AppMeta.shared.name, value: "Endre ›", icon: "character.cursor.ibeam") { naming = true },
-                PaperLinkRow(name: "App-ikon", sub: AppMeta.shared.iconName, value: "Endre ›", icon: "app.badge") { picking = true },
-                PaperLinkRow(name: "Fanelinje-stil", sub: NavStyle25.sub(store.navStyle25), value: NavStyle25.name(store.navStyle25) + " ›", icon: "rectangle.split.3x1") { store.cycleNavStyle25() },
-                PaperLinkRow(name: "Fanelinje i Hjem", sub: "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", icon: "dock.rectangle") { store.tabBarEditing = true },
+                // Prompt 39: navn, ikon, tema, farger, bakgrunn og fanelinje ligger samlet i «Tilpass» (Settings39.swift).
+                PaperLinkRow(name: "Tilpass", sub: "Navn, ikon, tema, farger, bakgrunn og fanelinje", icon: "paintpalette") { store.paperGo("innst-tilpass") },
                 PaperLinkRow(name: "Moduler", sub: "Sporing, Domener, Mat, Familie, Avganger og Vær", icon: "square.grid.2x2") { store.paperGo("innst-hl") },
                 PaperLinkRow(name: "Nyhetsleser", sub: "Kilder og AI", icon: "newspaper") { store.openNews() },
             ])
@@ -644,13 +656,14 @@ struct PaperSettings17: View {
                 PaperLinkRow(name: "Glimt", sub: "Figur, brief, stemme og venner", icon: "sparkle", tint30: Color(hex: "#b23a2a")) { Glimt35Model.shared.showPage = true },
             ])
             group("App", 2, [
-                PaperLinkRow(name: "Utseende og fanelinje", sub: themeSub, icon: "paintpalette") { store.paperGo("innst-ut") },
                 // Prompt 34: APP → AI og modeller (AI-kontroll i fullskjerm).
                 PaperLinkRow(name: "AI og modeller", sub: "Modeller, jobber, forbruk og nøkler", icon: "cpu") { AiCtl34.shared.show("ov") },
                 PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
                 PaperLinkRow(name: "Kalendere", sub: "Google Kalender · Home Assistant · Skole-iCal", icon: "calendar") { Int26Nav.openKal(from: nil, store) },
                 PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Kalendere, Entur, Bring og flere", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
                 PaperLinkRow(name: "Helse og posisjon", sub: HealthSync.shared.master ? "Apple Health er på · posisjon og bakgrunn" : "Apple Health er av · posisjon og bakgrunn", icon: "heart.text.square") { store.paperGo("innst-helse") },
+                // Prompt 39: egen underside for profilene (Standard / Finans + Boliger / Boliger-profil).
+                PaperLinkRow(name: "Appprofil", sub: store.appProfileName39, icon: "person.2") { store.paperGo("innst-appprofil") },
                 PaperLinkRow(name: "Avansert", sub: "Skanning, widgets, server og data", icon: "gearshape.2") { store.paperGo("innst-avansert") },
             ])
             // Prompt 28: oppdatering av hele systemet (bare admin; startes i nettleseren). Update28.swift.
@@ -1238,7 +1251,7 @@ struct AppIconSheet: View {
                                 .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(ic.1).font(PF.ui(15.5, .semibold)).foregroundStyle(p.ink)
-                                Text(ic.0 == "hus" ? "Standard" : "Alternativt ikon").font(PF.ui(12.5)).foregroundStyle(p.mut)
+                                Text(ic.0 == "monogram" ? "Standard" : "Alternativt ikon").font(PF.ui(12.5)).foregroundStyle(p.mut)
                             }
                             Spacer()
                             if AppMeta.shared.icon == ic.0 { Text("✓").font(PF.ui(16, .bold)).foregroundStyle(p.pos) }

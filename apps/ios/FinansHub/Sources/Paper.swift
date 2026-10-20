@@ -165,7 +165,7 @@ struct PaperShell: View {
             // Prompt 24: Ruter-visningen er fullskjerm uten fanelinje og skann-knapp.
             // Prompt 32: Innstillinger og undersidene har heller ingen fanelinje eller skann-knapp (Settings32.swift).
             // Prompt 37: Gjøremål har heller ingen fanelinje (tilbake med ‹ Mer eller kantsveip), Tasks37Model.swift.
-            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27 && !store.inSettings32b && !store.inTasks37
+            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27 && !store.inSettings32b && !store.inTasks37 && !store.inBible39
             // Prompt 23: ingen skann-knapp på Aksjer.
             let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
@@ -823,7 +823,7 @@ struct PaperPage: View {
                         .padding(.leading, wide ? 108 : 0)
                         // Prompt 32: Innstillinger har ingen fanelinje eller skann-knapp: 28 pt + safe area nederst.
                         // Prompt 37: Gjøremål – plass til feltet nederst (60 + bunnmarg + 16).
-                        .padding(.bottom, store.inSettings32b ? 28 : (store.inTasks37 && !wide ? 124 : (store.fabMode == "float" && !wide ? 112 : 20)))
+                        .padding(.bottom, store.inSettings32b ? 28 : store.inBible39 ? 24 : (store.inTasks37 && !wide ? 124 : (store.fabMode == "float" && !wide ? 112 : 20)))
                 }
             }
             .coordinateSpace(name: "ppage")
@@ -902,7 +902,9 @@ struct PaperPage: View {
         case "familie": FamilyView()
         case "avg": PaperDepartures()
         case "profil": PaperProfile()
-        case "innst-ut": PaperLookSettings()
+        // Prompt 39: «Utseende» er en del av «Tilpass»; gamle lenker til innst-ut havner der (Settings39.swift).
+        case "innst-ut", "innst-tilpass": Tilpass39Page()
+        case "innst-appprofil": AppProfile39Page()
         case "innst-fam": FamilySettingsView()
         case "innst-helse": HealthPosSettings20()
         case let t where t.hasPrefix("innst-"): PaperSettingsSub(key: String(t.dropFirst(6)))

@@ -107,17 +107,21 @@ final class Cal27Model {
         let list: [[String: Any]] = JS.list(o, "calendars")
         if list.isEmpty { return }
         var out: [Cal27Calendar] = []
+        // Prompt 39: ny modell med fire kalendere ({key, badge, sourceLabel}) – listen fra serveren er hele sannheten.
+        let four39: Bool = list.contains(where: { (c: [String: Any]) -> Bool in JS.str(c, "key") != nil || JS.str(c, "badge") != nil })
         for c in list {
-            guard let raw = JS.str(c, "id") else { continue }
+            guard let raw = JS.str(c, "key") ?? JS.str(c, "id") else { continue }
             let id: String = Cal26.normCal(raw)
             let def: Cal27Calendar? = Cal27Calendar.defaults.first(where: { $0.id == id })
             let name: String = JS.str(c, "name") ?? def?.name ?? raw
             let color: String = JS.str(c, "color") ?? def?.color ?? "#7a7468"
-            let w: Bool = JS.bool(c, "writable") ?? def?.writable ?? false
-            let src: String = JS.str(c, "source") ?? def?.source ?? ""
+            let w: Bool = JS.bool(c, "writable") ?? (four39 ? (id == "privat" || JS.str(c, "source") == "own") : (def?.writable ?? false))
+            let src: String = JS.str(c, "sourceLabel") ?? JS.str(c, "source") ?? def?.source ?? ""
             if !out.contains(where: { $0.id == id }) { out.append(Cal27Calendar(id: id, name: name, color: color, writable: w, source: src)) }
         }
-        for d in Cal27Calendar.defaults where !out.contains(where: { $0.id == d.id }) { out.append(d) }
+        if !four39 {
+            for d in Cal27Calendar.defaults where !out.contains(where: { $0.id == d.id }) { out.append(d) }
+        }
         calendars = out
     }
 

@@ -202,7 +202,9 @@ struct Drag37Shield: View {
     var body: some View {
         Color.white.opacity(0.001)
             .contentShape(Rectangle())
-            .gesture(reorder)
+            // Prompt 39: samtidig gest, så vanlig sveip opp/ned scroller siden også i redigering. Kortet løftes først etter
+            // 0,17 s hold uten å flytte fingeren mer enn 8 pt (da har scrollen ikke startet, og scrollDisabled stanser den).
+            .simultaneousGesture(reorder)
             .onChange(of: pressing) { _, on in
                 // Avbrutt gest (ark, varsel, app i bakgrunnen): onEnded kommer ikke, men GestureState nullstilles.
                 if !on && Drag37.shared.isDragging(page, key) { Drag37.shared.end(store) }
@@ -211,7 +213,7 @@ struct Drag37Shield: View {
     }
 
     private var reorder: some Gesture {
-        LongPressGesture(minimumDuration: 0.18, maximumDistance: 12)
+        LongPressGesture(minimumDuration: 0.17, maximumDistance: 8)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Drag37.space(page))))
             .updating($pressing) { (v: SequenceGesture<LongPressGesture, DragGesture>.Value, st: inout Bool, _: inout Transaction) in
                 if case .second(true, _) = v { st = true }

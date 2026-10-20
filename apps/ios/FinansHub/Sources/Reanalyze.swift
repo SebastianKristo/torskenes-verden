@@ -51,9 +51,13 @@ extension Store {
 
     /// Sender originalbildet til Gemini på nytt (POST /receipts/:id/reanalyze) og gir begge resultatene.
     func reanalyze(_ id: String) async throws -> ReanalyzeResult {
-        let d = try await api.callAt("/finans/api", "POST", "/receipts/\(id)/reanalyze", json: ["engine": "gemini"], timeout: 120)
+        // Prompt 39: async:false = gammel synkron sammenligning (Til gjennomgang bruker jobben med fremdrift, Receipt39.swift).
+        let d = try await api.callAt("/finans/api", "POST", "/receipts/\(id)/reanalyze", json: ["engine": "gemini", "async": false], timeout: 120)
         let o = JS.obj(d)
         if let e = JS.str(o, "error") { throw APIError(message: e, status: 0) }
+        if JS.str(o, "candidateId") == nil, JS.str(o, "jobId") != nil {
+            throw APIError(message: "Analyserer i bakgrunnen – se Kvitteringer → Til gjennomgang", status: 0)
+        }
         return ReanalyzeResult(receiptId: id, candidateId: JS.str(o, "candidateId") ?? "",
                                previous: ReadResult(JS.dict(o, "previous")), result: ReadResult(JS.dict(o, "result")))
     }

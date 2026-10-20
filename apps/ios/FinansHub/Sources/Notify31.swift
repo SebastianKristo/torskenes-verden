@@ -71,7 +71,9 @@ enum Notify31 {
         c.categoryIdentifier = aiCategory
         c.threadIdentifier = chatId.isEmpty ? "glimt" : chatId
         c.userInfo = ["go": go, "chatId": chatId]
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: c, trigger: nil)) { (_: Error?) in }
+        // Prompt 39: Glimt-logoen på varselet (Communication Notification når det er slått på, ellers vedlegg). GlimtNotify39.swift.
+        let out: UNNotificationContent = GlimtNotify39.decorate(c, chatId: chatId)
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: out, trigger: nil)) { (_: Error?) in }
     }
 
     nonisolated static func markDelivered(_ id: String) {
@@ -144,7 +146,13 @@ enum Notify31 {
         }
         if let tag = JS.str(it, "tag") { c.threadIdentifier = tag }
         c.userInfo = info
-        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "pending-" + id, content: c, trigger: nil)) { (_: Error?) in }
+        // Prompt 39: AI-svar har tittelen «Glimt» og Glimt-logoen (GlimtNotify39.swift).
+        var out: UNNotificationContent = c
+        if cat.hasPrefix("ai") || cat.hasPrefix("receipt") || cat.hasPrefix("kvitt") {
+            if cat.hasPrefix("ai") { c.title = "Glimt" }
+            out = GlimtNotify39.decorate(c, chatId: (info["chatId"] as? String) ?? "")
+        }
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "pending-" + id, content: out, trigger: nil)) { (_: Error?) in }
     }
 
     /* ---------- Trykk og handlinger ---------- */

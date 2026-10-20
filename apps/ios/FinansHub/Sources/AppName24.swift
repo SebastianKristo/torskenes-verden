@@ -53,7 +53,7 @@ extension AppMeta {
         }
     }
 
-    var iconPreview24: String { AppMeta.icons.first { $0.0 == icon }?.2 ?? "IconPreviewHus" }
+    var iconPreview24: String { AppMeta.icons.first { $0.0 == icon }?.2 ?? "IconPreviewMonogram" }
 }
 
 /// Innstillinger → Navn på appen: tekstfelt (maks 20 tegn), forhåndsvisning slik det ser ut på hjemskjermen,

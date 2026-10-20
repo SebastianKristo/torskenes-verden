@@ -34,6 +34,8 @@ struct FinansHubApp: App {
                     if let u = a.webpageURL { _ = Qr38Model.shared.handle(u, store) }
                 }
                 .task {
+                    // Prompt 39: nytt standard app-ikon – valget i appen følger ikonet iOS viser (Settings39.swift).
+                    Task { await AppMeta.sync39() }
                     if store.locked { store.unlock() }
                     if store.loggedIn { try? await store.reload() }
                     if store.loggedIn { await familyWake() }

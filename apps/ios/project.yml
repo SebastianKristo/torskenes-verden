@@ -41,8 +41,10 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        # Innstillinger → App-ikon: «Papir-monogram» og «Fire rom» (hver med lys, mørk og tonet variant).
-        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-Monogram AppIcon-Rom"
+        # Innstillinger → App-ikon. Prompt 39: standard (AppIcon) = «Papir-monogram» (vedlegg/app-icon-1024.png);
+        # «Huset med stativ» (det gamle standardikonet) og «Fire rom» er alternative (hver med lys, mørk og tonet variant).
+        # AppIcon-Monogram beholdes så enheter som har det valgt fra før, ikke mister ikonet.
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-Hus AppIcon-Rom AppIcon-Monogram"
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
         INFOPLIST_KEY_CFBundleDisplayName: FinansHub
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
@@ -70,6 +72,8 @@ targets:
         # «Last ned» lagrer kvitteringer i appens mappe, som vises i Filer → På min iPhone → FinansHub.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
+        # Prompt 39: 120 Hz på ProMotion-skjermer (myke sveip og animasjoner).
+        CADisableMinimumFrameDurationOnPhone: true
         # Fontene i Papir og Mat (OFL, Google Fonts): Newsreader, Manrope, IBM Plex Mono, Instrument Serif og Bricolage Grotesque.
         UIAppFonts:
           - BricolageGrotesque-ExtraBold.ttf

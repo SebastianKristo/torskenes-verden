@@ -415,6 +415,8 @@ struct PaperEditableCard<C: View>: View {
         let dragging: Bool = editing && Drag37.shared.isDragging(page, key)
         let dy: CGFloat = dragging ? Drag37.shared.offsetY : 0
         let dim: Bool = editing && Pkg37.dimmed(page, key, store)
+        // Prompt 39: mens et redigeringsark er åpent står kortene stille og «Rediger widget» skjules.
+        let sheet39: Bool = Edit28.shared.anySheet39
         content()
             .disabled(editing)
             .allowsHitTesting(!editing)
@@ -429,7 +431,7 @@ struct PaperEditableCard<C: View>: View {
             }
             .overlay {
                 // Prompt 28: «✎ Rediger widget» midt på kort med innstillinger.
-                if editing && !dragging && Edit28.settingsCards.contains(key) && page == "hjem" {
+                if editing && !dragging && !sheet39 && Edit28.settingsCards.contains(key) && page == "hjem" {
                     VStack(spacing: 6) {
                         Edit28WidgetPill { Edit28.shared.editWidget(key, store) }
                         if dim { Pkg37HiddenBadge() }
@@ -447,7 +449,7 @@ struct PaperEditableCard<C: View>: View {
                 // Sporing: midlertidig ▲ ▼ i Papir-stil til dra er på plass.
                 if editing && page == "sporing" { controls.offset(x: 4, y: -8) }
             }
-            .rotationEffect(.degrees(editing && !dragging ? (wig ? a : -a) * sign : 0))
+            .rotationEffect(.degrees(editing && !dragging && !sheet39 ? (wig ? a : -a) * sign : 0))
             // Prompt 37: kortet som dras følger fingeren (uten animasjon), litt større og med skygge, over de andre.
             .scaleEffect(dragging ? 1.03 : 1)
             .shadow(color: .black.opacity(dragging ? 0.3 : 0), radius: dragging ? 16 : 0, y: dragging ? 10 : 0)
@@ -462,6 +464,7 @@ struct PaperEditableCard<C: View>: View {
                 startWiggle(on)
             }
             .onChange(of: dragging) { _, d in if !d && editing { startWiggle(true) } }
+            .onChange(of: sheet39) { _, open in if editing { startWiggle(!open) } }
             .onAppear { startWiggle(editing) }
     }
 

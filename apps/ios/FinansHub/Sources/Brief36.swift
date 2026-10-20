@@ -88,7 +88,7 @@ final class Brief36Model {
     func hide() {
         let k: String = Brief36Model.periodKey()
         UserDefaults.standard.set(k, forKey: Brief36Model.hideKey)
-        withAnimation(.easeInOut(duration: 0.34)) { hiddenKey = k }
+        withAnimation(.smooth(duration: 0.3)) { hiddenKey = k }
         toast = true
         toastTask?.cancel()
         toastTask = Task { @MainActor in
@@ -129,7 +129,7 @@ struct Brief36SwipeCard: View {
             if !m.hiddenNow {
                 Brief36Swiper()
                     .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .top)),
-                                            removal: .opacity))
+                                            removal: .move(edge: .trailing).combined(with: .opacity)))
             }
             if m.toast {
                 Brief36Toast()
@@ -149,6 +149,7 @@ struct Brief36Swiper: View {
     @State private var width: CGFloat = 360
     @State private var hint: Bool = false
     @State private var over: Bool = false
+    @State private var lastVel: CGFloat = 0
 
     var body: some View {
         let p: CGFloat = Swift.min(1, dx / Swift.max(1, width * 0.38))
@@ -167,11 +168,7 @@ struct Brief36Swiper: View {
             }
         }
         .simultaneousGesture(drag)
-        .task {
-            if !m.takeHint() { return }
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
-            await nudge()
-        }
+        // Prompt 39: ingen automatisk sveipe-hint (kortet som dyttet seg mot høyre) – aldri, heller ikke ved første oppstart.
         .accessibilityAction(named: "Skjul briefen til neste brief") { dismiss() }
     }
 
@@ -187,21 +184,25 @@ struct Brief36Swiper: View {
                 }
                 if lock != 1 { return }
                 dragging = true
-                let nv: CGFloat = Swift.max(0, tx)
+                // Prompt 39: gummistrikk mot venstre, ingen implisitt animasjon under drag (følger fingeren 1:1).
+                let nv: CGFloat = Swipe39.rubber(tx)
                 let isOver: Bool = nv >= width * 0.38
                 if isOver && !over { Haptics.shared.select() }
                 over = isOver
-                dx = nv
+                var tr: Transaction = Transaction()
+                tr.disablesAnimations = true
+                withTransaction(tr) { dx = nv }
             }
             .onEnded { (v: DragGesture.Value) in
                 let wasX: Bool = lock == 1
                 lock = 0
                 if !wasX || out { dragging = false; return }
                 let vel: CGFloat = v.velocity.width
-                if dx >= width * 0.38 || (dx > 60 && vel > 600) {
+                lastVel = vel
+                if Swipe39.passes(dx: dx, width: width, velocity: vel) {
                     dismiss()
                 } else {
-                    withAnimation(.spring(response: 0.38, dampingFraction: 0.62)) { dx = 0 }
+                    withAnimation(Swipe39.springBack) { dx = 0 }
                     over = false
                     Task { @MainActor in
                         try? await Task.sleep(nanoseconds: 80_000_000)
@@ -213,9 +214,11 @@ struct Brief36Swiper: View {
 
     private func dismiss() {
         Haptic30.double()
-        withAnimation(.easeIn(duration: reduce ? 0.2 : 0.34)) { out = true }
+        // Prompt 39: fly ut fra nåværende posisjon, varighet etter farten (0,17–0,32 s), hold 260 ms, kollaps mykt.
+        let d: Double = reduce ? 0.2 : Swipe39.flyDuration(dx: dx, width: width, velocity: lastVel)
+        withAnimation(Swipe39.flyCurve(d)) { out = true }
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 420_000_000)
+            try? await Task.sleep(nanoseconds: UInt64((d + 0.26) * 1_000_000_000))
             Brief36Model.shared.hide()
             dragging = false
         }
@@ -224,20 +227,6 @@ struct Brief36Swiper: View {
     private func stopHint() {
         hint = false
         withAnimation(.easeOut(duration: 0.15)) { dx = 0 }
-    }
-
-    /// bsNudge: 72 px til høyre og tilbake, så 40 px og tilbake (2,4 s). Stopper når kortet røres.
-    private func nudge() async {
-        if reduce { return }
-        hint = true
-        let moves: [(CGFloat, UInt64)] = [(72, 520), (72, 430), (0, 290), (40, 290), (40, 240), (0, 290)]
-        for mv in moves {
-            if !hint { return }
-            withAnimation(.timingCurve(0.3, 0.7, 0.3, 1, duration: Double(mv.1) / 1000)) { dx = mv.0 }
-            try? await Task.sleep(nanoseconds: mv.1 * 1_000_000)
-        }
-        try? await Task.sleep(nanoseconds: 300_000_000)
-        withAnimation(.easeOut(duration: 0.25)) { hint = false }
     }
 }
 

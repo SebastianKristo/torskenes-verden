@@ -379,7 +379,7 @@ final class Bible37Model {
 
     /// Sveipet bort: skjult på Hjem resten av dagen, nederst i briefen.
     func setHomeGone() {
-        withAnimation(.easeInOut(duration: 0.34)) {
+        withAnimation(.smooth(duration: 0.3)) {
             homeDate = today
             homeRead = true
             homeGone = true

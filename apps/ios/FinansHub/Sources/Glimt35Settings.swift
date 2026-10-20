@@ -207,9 +207,13 @@ struct Glimt35Toggles: View {
         let c: Glimt35Cfg = m.cfg
         VStack(spacing: 0) {
             row("brief", "Glimt-brief", "Lag briefer gjennom dagen", c.brief)
+            // Prompt 39: Glimt (figuren) i briefen kan slås av. Venner av Glimt gråes ut når den er av.
+            row("briefGlimt", "Glimt i briefen", "Vis Glimt-figuren og vennene i briefen, på Hjem-kortet og i widgets", c.briefGlimt)
             row("readAloud", "Les opp", "Glimt og vennene leser briefen høyt", c.readAloud)
             row("guide", "Vis meg rundt automatisk", "Starter guide-runden når briefen åpnes", c.guide)
             row("friends", "Venner av Glimt", "Sky, Dråpe og Ugle tar over når temaet passer", c.friends)
+                .opacity(c.briefGlimt ? 1 : 0.45)
+                .disabled(!c.briefGlimt)
             row("notify", "Varsel når briefen er klar", "Push til mobilen på klokkeslettet", c.notify)
         }
         .overlay(alignment: .top) { Rectangle().fill(Brief34C.line).frame(height: 1) }
