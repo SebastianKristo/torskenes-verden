@@ -138,21 +138,27 @@ struct Swipe37Card<C: View>: View {
                 if Date().timeIntervalSince(movedAt) < 0.5 || out || Swipe40Gate.moved { return }
                 onTap()
             }
-            .simultaneousGesture(drag)
+            // Prompt 42: bare vannrette drag fanges; loddrett drag scroller Hjem (Swipe42.swift).
+            .hSwipe42(drag, changed: { (t: CGSize) in changed(t, forceX: true) }, ended: { (vel: CGFloat) in ended(vel) })
             .onChange(of: touching) { (_: Bool, on: Bool) in if !on { Swipe40Gate.ended() } }
             .accessibilityAction(named: "Skjul resten av dagen") { dismiss() }
     }
 
     private var drag: some Gesture {
-        DragGesture(minimumDistance: 6, coordinateSpace: .local)
+        DragGesture(minimumDistance: 12, coordinateSpace: .local)
             .updating($touching) { (_: DragGesture.Value, st: inout Bool, _: inout Transaction) in st = true }
-            .onChanged { (v: DragGesture.Value) in
-                Swipe40Gate.track(v.translation)
+            .onChanged { (v: DragGesture.Value) in changed(v.translation, forceX: false) }
+            .onEnded { (v: DragGesture.Value) in ended(v.velocity.width) }
+    }
+
+    /// forceX: UIKit-pannen (iOS 18+) starter bare ved vannrett drag, så retningen er allerede låst.
+    private func changed(_ t: CGSize, forceX: Bool) {
+                Swipe40Gate.track(t)
                 if out { return }
-                let tx: CGFloat = v.translation.width
-                let ty: CGFloat = v.translation.height
-                if lock == 0 && (abs(tx) > 8 || abs(ty) > 8) {
-                    lock = (abs(tx) > abs(ty) * 1.2 && tx > 0) ? 1 : 2
+                let tx: CGFloat = t.width
+                let ty: CGFloat = t.height
+                if lock == 0 && (forceX || abs(tx) > 8 || abs(ty) > 8) {
+                    lock = (forceX || (abs(tx) > abs(ty) * 1.15 && tx > 0)) ? 1 : 2
                 }
                 if lock != 1 { return }
                 movedAt = Date()
@@ -164,14 +170,14 @@ struct Swipe37Card<C: View>: View {
                 var tr: Transaction = Transaction()
                 tr.disablesAnimations = true
                 withTransaction(tr) { dx = nv }
-            }
-            .onEnded { (v: DragGesture.Value) in
+    }
+
+    private func ended(_ vel: CGFloat) {
                 Swipe40Gate.ended()
                 let wasX: Bool = lock == 1
                 lock = 0
                 if !wasX || out { return }
                 movedAt = Date()
-                let vel: CGFloat = v.velocity.width
                 lastVel = vel
                 if Swipe39.passes(dx: dx, width: width, velocity: vel) {
                     dismiss()
@@ -179,7 +185,6 @@ struct Swipe37Card<C: View>: View {
                     withAnimation(Swipe39.springBack) { dx = 0 }
                     over = false
                 }
-            }
     }
 
     private func dismiss() {
@@ -238,57 +243,90 @@ struct Bible37Sheet: View {
     @Environment(\.paper) private var p
     @MainActor private var m: Bible37Model { Bible37Model.shared }
     @State private var copied: Bool = false
+    /// Prompt 42: lange kontekstvers vises med maks 3 linjer før og etter, med «Vis mer».
+    @State private var more: Bool = false
 
+    // Prompt 42 (claude-code-bibel-ark-knapp-alltid.md): fast topp (tittel + Ferdig), innhold som scroller, og fast bunn med
+    // «Åpne Bibel-siden ›» som alltid ligger over hjemstreken, uansett tekstlengde, Dynamic Type eller skjermstørrelse.
     var body: some View {
         let v: Verse37 = m.current
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 10) {
-                    Text("Dagens bibelvers").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
-                    Spacer(minLength: 4)
-                    SheetButton30(kind: .primary, title: "Ferdig") { m.sheetOpen = false }
-                }
-                if !v.before.isEmpty {
-                    Text(v.before.joined(separator: " ")).font(PF.serif(16)).foregroundStyle(p.mut).lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Text("«" + v.text + "»").font(PF.italic(23)).foregroundStyle(p.ink).lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(v.ref + " · Bibelen 1930").font(PF.ui(13.5, .bold)).foregroundStyle(p.ink)
-                if !v.after.isEmpty {
-                    Text(v.after.joined(separator: " ")).font(PF.serif(16)).foregroundStyle(p.mut).lineSpacing(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                HStack(spacing: 10) {
-                    ShareLink(item: v.copyText) {
-                        Text("Del").font(PF.ui(13.5, .bold)).foregroundStyle(p.ink)
-                            .padding(.horizontal, 18).frame(height: 40)
-                            .background(p.card, in: Capsule())
-                            .overlay(Capsule().stroke(p.line, lineWidth: 1))
-                    }
-                    Button { copy(v) } label: {
-                        Text(copied ? "Kopiert" : "Kopier").font(PF.ui(13.5, .bold)).foregroundStyle(p.ink)
-                            .padding(.horizontal, 18).frame(height: 40)
-                            .background(p.card, in: Capsule())
-                            .overlay(Capsule().stroke(p.line, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                    Spacer(minLength: 0)
-                }
-                Button {
-                    m.sheetOpen = false
-                    store.paperGo("bibel")
-                } label: {
-                    Text("Åpne Bibel-siden ›").font(PF.ui(14, .bold)).foregroundStyle(p.bg)
-                        .frame(maxWidth: .infinity).frame(height: 46)
-                        .background(p.ink, in: Capsule())
-                }
-                .buttonStyle(.plain)
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Text("Dagens bibelvers").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
+                Spacer(minLength: 4)
+                SheetButton30(kind: .primary, title: "Ferdig") { m.sheetOpen = false }
             }
-            .padding(.horizontal, 18).padding(.top, 22).padding(.bottom, 24)
+            .padding(.horizontal, 18).padding(.top, 22).padding(.bottom, 12)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if !v.before.isEmpty { context(v.before) }
+                    Text("«" + v.text + "»").font(PF.italic(23)).foregroundStyle(p.ink).lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(v.ref + " · Bibelen 1930").font(PF.ui(13.5, .bold)).foregroundStyle(p.ink)
+                    if !v.after.isEmpty { context(v.after) }
+                    if long(v) {
+                        Button { withAnimation(.easeOut(duration: 0.2)) { more.toggle() } } label: {
+                            Text(more ? "Vis mindre" : "Vis mer").font(PF.ui(13, .bold)).foregroundStyle(p.lab)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    HStack(spacing: 10) {
+                        ShareLink(item: v.copyText) {
+                            Text("Del").font(PF.ui(13.5, .bold)).foregroundStyle(p.ink)
+                                .padding(.horizontal, 18).frame(height: 40)
+                                .background(p.card, in: Capsule())
+                                .overlay(Capsule().stroke(p.line, lineWidth: 1))
+                        }
+                        Button { copy(v) } label: {
+                            Text(copied ? "Kopiert" : "Kopier").font(PF.ui(13.5, .bold)).foregroundStyle(p.ink)
+                                .padding(.horizontal, 18).frame(height: 40)
+                                .background(p.card, in: Capsule())
+                                .overlay(Capsule().stroke(p.line, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                        Spacer(minLength: 0)
+                    }
+                }
+                .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .safeAreaInset(edge: .bottom, spacing: 0) { openButton }
         }
         .background(p.bg.ignoresSafeArea())
         .environment(\.colorScheme, p.dark ? .dark : .light)
+    }
+
+    /// Fast bunn: full bredde, 56 pt, mørk pille med hvit tekst (Manrope 700 18), svak skygge over.
+    private var openButton: some View {
+        Button {
+            Haptics.shared.tap()
+            m.sheetOpen = false
+            store.paperGo("bibel")
+        } label: {
+            Text("Åpne Bibel-siden ›").font(PF.ui(18, .bold)).foregroundStyle(Color.white)
+                .lineLimit(1).minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity).frame(height: 56)
+                .background(Color(hex: "#1b1a17"), in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 12)
+        .background {
+            p.bg
+                .shadow(color: Color(hex: "#1b1a17").opacity(0.18), radius: 8, y: -6)
+                .ignoresSafeArea(edges: .bottom)
+        }
+    }
+
+    private func context(_ lines: [String]) -> some View {
+        Text(lines.joined(separator: " ")).font(PF.serif(16)).foregroundStyle(p.mut).lineSpacing(3)
+            .lineLimit(more ? nil : 3)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func long(_ v: Verse37) -> Bool {
+        v.before.joined(separator: " ").count > 150 || v.after.joined(separator: " ").count > 150
     }
 
     private func copy(_ v: Verse37) {
@@ -307,7 +345,7 @@ extension View {
     func bible37Sheet(_ p: PaperPalette) -> some View {
         sheet(isPresented: Binding<Bool>(get: { Bible37Model.shared.sheetOpen }, set: { (v: Bool) in Bible37Model.shared.sheetOpen = v })) {
             Bible37Sheet().environment(\.paper, p)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
                 .sheetEdge30(p.bg)
         }

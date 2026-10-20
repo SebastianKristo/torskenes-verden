@@ -311,7 +311,8 @@ struct Brief38CarrierLogo: View {
     let carrier: String
 
     var body: some View {
-        let key: String = carrier.lowercased().replacingOccurrences(of: " ", with: "")
+        // Prompt 42: normalisert transportør-id (Carrier42.swift), så «PostNord AB» også får logoen.
+        let key: String = Carrier42.id(carrier)
         if let img = UIImage(named: "Carrier-" + key) {
             Image(uiImage: img).resizable().scaledToFill()
                 .frame(width: 36, height: 36)

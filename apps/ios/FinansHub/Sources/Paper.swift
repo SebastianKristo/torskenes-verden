@@ -165,9 +165,9 @@ struct PaperShell: View {
             // Prompt 24: Ruter-visningen er fullskjerm uten fanelinje og skann-knapp.
             // Prompt 32: Innstillinger og undersidene har heller ingen fanelinje eller skann-knapp (Settings32.swift).
             // Prompt 37: Gjøremål har heller ingen fanelinje (tilbake med ‹ Mer eller kantsveip), Tasks37Model.swift.
-            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27 && !store.inSettings32b && !store.inTasks37 && !store.inBible39
-                // Prompt 41: Bursdager har heller ingen fanelinje eller skanneknapp (Birthdays41.swift).
-                && !store.inBirthdays41
+            // Prompt 41: Bursdager har heller ingen fanelinje eller skanneknapp (Birthdays41.swift).
+            // Prompt 42: samme regel brukes av Hjem-knappen (NavHome42.swift), så den ligger i Store.nav42BarShown.
+            let showBar = store.nav42BarShown
             // Prompt 23: ingen skann-knapp på Aksjer.
             let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
@@ -190,6 +190,10 @@ struct PaperShell: View {
                 } else if showBar {
                     // ZStack-en slutter ved safe area-bunnen, så linja flyttes ned dit den skal stå:
                     // max(12, inset − 8) pt over skjermkanten.
+                    // Prompt 42: 1d – rutenettet med Hjem og modulene over fanelinja (NavHome42.swift).
+                    if NavHome42.shared.modPick && NavHome42.shared.value == "1d" {
+                        NavModGrid42().offset(y: shift)
+                    }
                     PaperTabBar(scan: scan, rail: false)
                         .offset(y: shift)
                 }
@@ -264,6 +268,14 @@ struct PaperShell: View {
                 .sheetEdge30(p.bg)
         }
         // Prompt 32: samme Papir-ark (Ferdig-pille, ingen Avbryt) for Hjem, Finans, Domener, Abonnement og Familie (Nav32.swift).
+        // Prompt 42: Innstillinger → Tilpass → Fanelinje → Hjem-knapp (NavHome42.swift).
+        .sheet(isPresented: Binding(get: { NavHome42.shared.picking }, set: { NavHome42.shared.picking = $0 })) {
+            NavHomeSheet42()
+                .environment(\.paper, p)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
+                .sheetEdge30(p.bg)
+        }
         .sheet(isPresented: Binding(get: { store.tabBarEditing }, set: { store.tabBarEditing = $0 })) {
             HomeTabEditor32b()
                 .environment(\.paper, p)
@@ -420,8 +432,9 @@ struct PaperTabBar: View {
         if store.paperInDomains { return Nav32b.shared.tabs("dom") }
         // Subscription OS: Hjem, Innsikt og Historikk i linja (med den røde +-sirkelen).
         if store.paperTab == "abo" { return Nav32b.shared.tabs("abo") }
-        // Prompt 21: Familie har Kart, Soner og Helse i linja (som Subscription OS), pluss Mer (ikke redigerbar, alltid sist).
-        if store.paperTab == "familie" { return Nav32b.shared.tabs("kart") + [("mer", "Mer", "⋯")] }
+        // Prompt 21: Familie har Kart, Soner og Helse i linja (som Subscription OS).
+        // Prompt 42: Kart · Soner · Helse · Vel fremme, uten «⋯ Mer» (tilbake med «‹ Hjem» øverst eller Hjem-knappen).
+        if store.paperTab == "familie" { return Nav32b.shared.tabs("kart") }
         var t: [(String, String, String)] = []
         if store.paperInFinance {
             for f in store.finNavItems { t.append((f.page, f.name, f.icon)) }
@@ -429,7 +442,10 @@ struct PaperTabBar: View {
             t.append(("fmer", "Mer", "⋯"))
             return t
         }
-        return store.mainTabs(floating: floating, onHome: store.paperTab == "hjem" && store.paperClassic == nil)
+        let main: [(String, String, String)] = store.mainTabs(floating: floating, onHome: store.paperTab == "hjem" && store.paperClassic == nil)
+        // Prompt 42: med Hjem-knapp (1a/1b/1c) tas Hjem-fanen ut av lista (NavHome42.swift).
+        if !rail && NavHome42.shared.dropsHomeTab { return main.filter { $0.0 != "hjem" } }
+        return main
     }
 
     private var current: String {
@@ -456,37 +472,50 @@ struct PaperTabBar: View {
             PaperRail(tabs: tabs, current: cur, showPlus: !floating, tapTab: { id, on in tapTab(id, on: on) }, plusTap: plusTap, plusHold: plusHold,
                       style: store.navStyle25, showHome: !store.paperIsHome25, goHome: { store.paperGoHome25() })
         } else {
-            HStack(spacing: 2) {
-                ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2, on: cur == t.0) }
-                if (!floating && store.paperTab != "familie" && !store.nav23NoScan) || store.paperTab == "abo" {
-                    PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold, glyph: store.paperInDomains ? "✦" : "+")
-                        .padding(.leading, 4)
+            // Prompt 42: Hjem-knappen etter valget i Tilpass → Fanelinje → Hjem-knapp (NavHome42.swift).
+            let nh: String = NavHome42.shared.value
+            let list: [(String, String, String)] = tabs
+            let mid: Int = list.count / 2
+            HStack(spacing: 12) {
+                if nh == "1a" { NavHomeRound42() }
+                HStack(spacing: 2) {
+                    if nh == "1b" { NavHomeFirst42() }
+                    if nh == "1d" { NavModSlot42() }
+                    ForEach(Array(list.enumerated()), id: \.offset) { i, t in
+                        if nh == "1c" && i == mid { NavHomeMid42() }
+                        tab(t.0, t.1, t.2, on: cur == t.0)
+                    }
+                    if nh == "1c" && list.isEmpty { NavHomeMid42() }
+                    if (!floating && store.paperTab != "familie" && !store.nav23NoScan) || store.paperTab == "abo" {
+                        PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold, glyph: store.paperInDomains ? "✦" : "+")
+                            .padding(.leading, 4)
+                    }
                 }
+                .padding(.horizontal, 8)
+                .frame(height: 62)
+                .background(p.nav, in: Capsule())
+                .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
+                    // Prompt 26: Finans har egen editor (FinNav26.swift). Klikket når fingeren slippes slukes én gang.
+                    if store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" {
+                        Nav26.shared.markHold()
+                        Haptics.shared.tick()
+                        FinNav26.shared.editing = true
+                        return
+                    }
+                    // Prompt 32: egne fanelinjer (Domener, Abonnement, Familie) får samme ark.
+                    if let sec = Nav32b.sec(store) {
+                        Nav26.shared.markHold()
+                        Haptics.shared.tick()
+                        Nav32b.shared.editing = sec
+                        return
+                    }
+                    guard editable else { return }
+                    Nav26.shared.markHold()
+                    Haptics.shared.tick()
+                    store.tabBarEditing = true
+                })
             }
-            .padding(.horizontal, 8)
-            .frame(height: 62)
-            .background(p.nav, in: Capsule())
-            .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
-            .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
-                // Prompt 26: Finans har egen editor (FinNav26.swift). Klikket når fingeren slippes slukes én gang.
-                if store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" {
-                    Nav26.shared.markHold()
-                    Haptics.shared.tick()
-                    FinNav26.shared.editing = true
-                    return
-                }
-                // Prompt 32: egne fanelinjer (Domener, Abonnement, Familie) får samme ark.
-                if let sec = Nav32b.sec(store) {
-                    Nav26.shared.markHold()
-                    Haptics.shared.tick()
-                    Nav32b.shared.editing = sec
-                    return
-                }
-                guard editable else { return }
-                Nav26.shared.markHold()
-                Haptics.shared.tick()
-                store.tabBarEditing = true
-            })
             .padding(.horizontal, 12)
         }
     }
@@ -898,7 +927,7 @@ struct PaperPage: View {
         case "fsok": PaperFinSearch()
         case "ftx": PaperTxDetailView()
         case "abo": PaperSubs()
-        case "mat": MatView(pal: MatPal.paper(p), paperMode: true)
+        case "mat": MatView(pal: MatPal.paper(p))
         case "sporing": PaperTracking()
         case "mer": PaperMore28()
         case "bursdag": BirthdaysPage24()
@@ -919,6 +948,8 @@ struct PaperPage: View {
         case "innst-appprofil": AppProfile39Page()
         case "innst-fam": FamilySettingsView()
         case "innst-helse": HealthPosSettings20()
+        // Prompt 42: Innstillinger → Helse (Familie) → Home Assistant · Mobilapp (Health42.swift).
+        case "innst-hahelse": HaHealthPage42()
         case let t where t.hasPrefix("innst-"): PaperSettingsSub(key: String(t.dropFirst(6)))
         default: PaperHome()
         }
@@ -1016,7 +1047,7 @@ struct PaperHero: View {
         HStack(spacing: 8) {
             if home {
                 Text(AppMeta.shared.name).font(PF.serif(22, medium: true)).foregroundStyle(store.heroInk).lineLimit(1).minimumScaleFactor(0.7).shadow(color: .black.opacity(store.heroInk == .white ? 0.4 : 0), radius: 6)
-            } else if store.prof24IsRoot || (wide && store.prof24UpLabel == "Hjem") {
+            } else if store.prof24IsRoot || (wide && store.prof24UpLabel == "Hjem") || store.nav42HideUp(wide: wide) {
                 // Prompt 24: rotsidene i Finans + Boliger har ingen tilbakeknapp; profilbildet står fortsatt til høyre.
                 // Prompt 25: på bred skjerm går den røde Hjem-knappen i sidelinja hjem, så «‹ Hjem» skjules.
                 Color.clear.frame(width: 1, height: 34)

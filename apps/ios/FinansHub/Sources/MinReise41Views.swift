@@ -101,16 +101,25 @@ struct MinReise41RuterCard: View {
         Group {
             if m.enabled {
                 VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .firstTextBaseline) {
-                        PLabel(text: "Min reise · " + firstName)
-                        Spacer()
+                    // Prompt 42 (claude-code-ruter-snu-knapp.md): etikett + tittel til venstre, «⇄ Snu» (36 pt, padding 13, Manrope 700
+                    // 12,5) til høyre, vertikalt sentrert mot hele blokken. Treffflaten er minst 44 × 44 uten å endre det synlige.
+                    HStack(alignment: .center, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            PLabel(text: "Min reise · " + firstName)
+                            Text(m.title).font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
+                        }
+                        Spacer(minLength: 0)
                         Button { m.flip(store) } label: {
-                            Text("⇄ Snu").font(PF.ui(12.5, .bold)).foregroundStyle(p.ink).padding(.horizontal, 10).frame(height: 28)
+                            Text("⇄ Snu").font(PF.ui(12.5, .bold)).foregroundStyle(p.ink).lineLimit(1)
+                                .padding(.horizontal, 13).frame(height: 36)
                                 .overlay(Capsule().stroke(p.line, lineWidth: 1))
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .fixedSize()
+                        .accessibilityLabel("Snu reisen")
                     }
-                    Text(m.title).font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
                     if let a = m.alert { MinReise41AlertBox(a: a) }
                     if m.busy && m.options.isEmpty {
                         Text("Henter rutene fra Entur …").font(PF.ui(13)).foregroundStyle(p.mut)
@@ -347,7 +356,7 @@ struct MinReise41ZoneSheet: View {
                 Spacer()
                 Button("Avbryt") { dismiss() }.font(PF.ui(14, .semibold)).foregroundStyle(p.mut)
             }
-            Text("Trykk på kartet der sonen skal være. Alle skolesoner teller som «Skole» i rutene og i Hjemlys.")
+            Text("Trykk på kartet der sonen skal være. Alle skolesoner teller som «Skole» i rutene og i Vel fremme.")
                 .font(PF.ui(13)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
             MapReader { (proxy: MapProxy) in
                 Map(position: $cam) {

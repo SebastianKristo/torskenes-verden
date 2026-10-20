@@ -223,13 +223,19 @@ struct RuterView24: View {
 
 struct RuterHero24: View {
     @Environment(Store.self) private var store
+    @Environment(\.horizontalSizeClass) private var hSize42
     @MainActor private var m: RuterModel { RuterModel.shared }
     let sub: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
-                pill("‹ \(store.paperUpLabel)", leading: 10) { store.paperUp() }
+                // Prompt 42: med Hjem-knapp i fanelinja (1a–1d) skjules «‹ Hjem» på toppsiden (NavHome42.swift).
+                if store.nav42HideUp(wide: hSize42 == .regular) {
+                    Color.clear.frame(width: 1, height: 34)
+                } else {
+                    pill("‹ \(store.paperUpLabel)", leading: 10) { store.paperUp() }
+                }
                 Spacer()
                 pill("↻ " + clock, leading: 12) { Task { await m.refresh(store) } }
                     .accessibilityLabel("Oppdater")

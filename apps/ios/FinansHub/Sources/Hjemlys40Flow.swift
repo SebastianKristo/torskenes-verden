@@ -272,7 +272,7 @@ struct Hjemlys40StartPage: View {
         HStack {
             Button("Avbryt") { m.startOpen = false }.font(PF.ui(15, .semibold)).foregroundStyle(night ? Hjemlys40Night.mut : p.mut)
             Spacer()
-            Text("Hjemlys").font(PF.ui(16, .bold)).foregroundStyle(night ? Hjemlys40Night.ink : p.ink)
+            Text("Vel fremme").font(PF.ui(16, .bold)).foregroundStyle(night ? Hjemlys40Night.ink : p.ink)
             Spacer()
             Color.clear.frame(width: 52, height: 1)
         }
@@ -815,7 +815,7 @@ struct Hjemlys40HomeCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Hjemlys40Dot(size: 16, state: m.mine?.state ?? "onTheWay")
-                Text("HJEMLYS").font(PF.mono(10.5)).tracking(1.3).foregroundStyle(p.lab)
+                Text("VEL FREMME").font(PF.mono(10.5)).tracking(1.3).foregroundStyle(p.lab)
                 Spacer()
                 Button { store.paperGo("familie") } label: {
                     Text("Familie ›").font(PF.ui(12.5, .semibold)).foregroundStyle(p.mut)
@@ -830,7 +830,7 @@ struct Hjemlys40HomeCard: View {
                 Hjemlys40Suggest()
             } else {
                 Button { Haptic30.light(); store.paperGo("familie"); FamilyModel.shared.tab = "hjemlys" } label: {
-                    Text("Start Hjemlys").font(PF.ui(14.5, .bold)).foregroundStyle(p.bg)
+                    Text("Start Vel fremme").font(PF.ui(14.5, .bold)).foregroundStyle(p.bg)
                         .frame(maxWidth: .infinity).frame(height: 44)
                         .background(p.ink, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }

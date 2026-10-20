@@ -126,7 +126,10 @@ final class Tasks41Glimt {
                     let st: String = (JS.str(o, "state") ?? JS.str(o, "status") ?? "").lowercased()
                     if st == "done" || st == "ok" || st == "finished" {
                         await TasksModel.shared.load(store)
-                        finish(id, JS.int(o, "count") ?? JS.list(o, "items").count, store)
+                        // Prompt 42: lengdevakt – ett for langt punkt erstattes med den lokale oppdelingen (Tasks42Split.swift).
+                        let n0: Int = JS.int(o, "count") ?? JS.list(o, "tasks").count
+                        let n: Int = await guard42(text, store)
+                        finish(id, n > 0 ? n : (n0 > 0 ? n0 : JS.list(o, "items").count), store)
                         return
                     }
                     if st == "error" || st == "failed" { fail(id); return }
@@ -137,7 +140,7 @@ final class Tasks41Glimt {
             }
             await TasksModel.shared.load(store)
             let made: Int = TasksModel.shared.items.filter { $0.origin41?.text == text }.count
-            if made > 0 { finish(id, made, store); return }
+            if made > 0 { finish(id, await guard42(text, store), store); return }
         }
         await TasksModel.shared.load(store)
         let made: Int = TasksModel.shared.items.filter { $0.origin41?.text == text }.count
@@ -167,7 +170,7 @@ final class Tasks41Glimt {
         if UIApplication.shared.applicationState != .active {
             LocalNotify.post("Glimt", text, id: "tasks41-" + id, group: "huske")
         } else if !store.inTasks37 {
-            store.flash("✓ " + text.replacingOccurrences(of: "i riktig rekkefølge", with: "i Huskeliste"))
+            store.flash("✓ " + text)
         }
         bannerTask?.cancel()
         bannerTask = Task { @MainActor in
@@ -196,8 +199,9 @@ final class Tasks41Glimt {
         withAnimation(.easeOut(duration: 0.2)) { banner = nil }
     }
 
+    /// Prompt 42: «Glimt delte beskjeden i 2 oppgaver».
     nonisolated static func doneText(_ n: Int) -> String {
-        n == 1 ? "Glimt lagde 1 punkt" : "Glimt lagde \(n) punkter i riktig rekkefølge"
+        n == 1 ? "Glimt lagde 1 oppgave" : "Glimt delte beskjeden i \(n) oppgaver"
     }
 
     /// Ingen nett / eldre server: lokal oppdeling, og punktene legges inn som vanlig.
@@ -213,11 +217,14 @@ final class Tasks41Glimt {
             _ = try? await store.api.callAt("/api", "POST", "/tasks", json: body)
         }
         await m.load(store)
+        Tasks42Split.logLine(inputLen: text.count, model: "lokal", count: items.count, parseOk: true, path: "local")
         finish(id, items.count, store)
     }
 
-    /// Lokal reserve: Task40Split + «før vi skal», «hvor vi må», og «siden/fordi» som note på punktet før.
+    /// Lokal reserve. Prompt 42: Tasks42Split (gjentatt stedsnavn, «og så», «og husk», fyllord, notat og frist-tekst).
     nonisolated static func localItems(_ text: String) -> [Task40Item] {
+        let n42: [Task40Item] = Tasks42Split.items(text)
+        if !n42.isEmpty { return n42 }
         var t: String = text
         for (a, b) in [(" før vi skal ", ". "), (" før jeg skal ", ". "), (" hvor vi må ", ". Deretter "), (" hvor jeg må ", ". Deretter ")] {
             t = t.replacingOccurrences(of: a, with: b, options: .caseInsensitive)
@@ -304,6 +311,7 @@ final class Tasks41Glimt {
 
 /// Øverst i lista: stiplede rader for jobber som pågår, og ferdig-raden («Se / ✕»).
 struct Tasks41PendingRows: View {
+    @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @MainActor private var g: Tasks41Glimt { Tasks41Glimt.shared }
 
@@ -333,10 +341,15 @@ struct Tasks41PendingRows: View {
                 HStack(spacing: 10) {
                     Text("✓ " + Tasks41Glimt.doneText(b.count)).font(PF.ui(13.5, .semibold)).foregroundStyle(p.ink).lineLimit(2)
                     Spacer(minLength: 4)
+                    // Prompt 42: én Angre slår sammen igjen; Endre åpner «Laget med Glimt».
+                    if b.count > 1 && !b.text.isEmpty {
+                        Button { g.undo42(b.text, store) } label: { Text("Angre").font(PF.ui(13.5, .bold)).foregroundStyle(p.ink) }
+                            .buttonStyle(.plain)
+                    }
                     Button {
                         g.dismissBanner()
                         TaskDock22.shared.cur = Tasks41Glimt.madeId
-                    } label: { Text("Se").font(PF.ui(13.5, .bold)).foregroundStyle(p.lab) }
+                    } label: { Text(b.count > 1 ? "Endre" : "Se").font(PF.ui(13.5, .bold)).foregroundStyle(p.lab) }
                     .buttonStyle(.plain)
                     Button { g.dismissBanner() } label: { Text("✕").font(PF.ui(13, .bold)).foregroundStyle(p.mut) }.buttonStyle(.plain)
                 }

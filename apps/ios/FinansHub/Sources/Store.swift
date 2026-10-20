@@ -100,17 +100,6 @@ struct PendingLogin { let server: String; let username: String; let password: St
 
 struct DomainToday { let name: String; let visitors: Double }
 
-/// Designstil per enhet: «ios» (Liquid Glass) eller «material» (Android-utseende, Material 3). Leses av byggeklossene (glass(), Backdrop).
-enum DesignStyle {
-    /// Brukerens valg i Klassisk (iOS-glass eller Material).
-    static var materialChoice = UserDefaults.standard.string(forKey: "fh_design") == "material"
-    /// Material-farger brukes aldri inne i Papir; der gjelder Papir-paletten på alle skjermer.
-    static var material: Bool {
-        get { PaperSkin.palette == nil && materialChoice }
-        set { materialChoice = newValue }
-    }
-}
-
 @MainActor
 @Observable
 final class Store {
@@ -156,10 +145,6 @@ final class Store {
     var uploading = 0
     var menuOpen = false
     var settingsPage: String?
-    /// Fanelinja krymper til en sirkel når man scroller ned (iOS 18+).
-    var barMini = false
-    /// iPhone (kompakt bredde): toppraden med «‹ Homelab» brukes bare her.
-    var compact = true
     /// «Administrer domener» (arket bak tannhjulet i Domener).
     var domainManager = false
     /// Matplan: valgt dag (indeks 0–6), nil = i dag. «Se hele uka» viser hele uka og alle retter.
@@ -171,8 +156,6 @@ final class Store {
     var mobileHome: MobileHome?
     var homeError: String?
     private(set) var layout: HomeLayout = .standard
-    var editHome = false
-    var gallery = false
     var history: [String] = []
     var suggestions: [String] = []
     var todayMeal: String?
@@ -259,11 +242,6 @@ final class Store {
 
     /* ---------- Papir, nyhetsleser, fotovindu og Mat (prompt 13) ---------- */
 
-    /// klassisk | papir. Lagres per bruker på serveren (layout.mobileDesign) og lokalt.
-    /// Ny installasjon (ingen kontoer i nøkkelringen): Papir er standard.
-    var mobileDesign = UserDefaults.standard.string(forKey: "fh_mobile_design") ?? (Store.freshInstall ? "papir" : "klassisk") {
-        didSet { UserDefaults.standard.set(mobileDesign, forKey: "fh_mobile_design") }
-    }
     /// auto | lys | mork
     var paperMode = UserDefaults.standard.string(forKey: "fh_paper_mode") ?? "auto" {
         didSet { UserDefaults.standard.set(paperMode, forKey: "fh_paper_mode") }
@@ -410,8 +388,6 @@ final class Store {
 
     /* ---------- Valg (UserDefaults) ---------- */
 
-    /// Fargeflekker bak glasset.
-    var colorBg = UserDefaults.standard.object(forKey: "fh_ios_bg") as? Bool ?? true { didSet { UserDefaults.standard.set(colorBg, forKey: "fh_ios_bg") } }
     var lockEnabled = UserDefaults.standard.bool(forKey: "fh_lock") { didSet { UserDefaults.standard.set(lockEnabled, forKey: "fh_lock") } }
     var lockAfter = UserDefaults.standard.integer(forKey: "fh_lock_after") { didSet { UserDefaults.standard.set(lockAfter, forKey: "fh_lock_after") } }
     var hideSwitcher = UserDefaults.standard.bool(forKey: "fh_hide_switcher") { didSet { UserDefaults.standard.set(hideSwitcher, forKey: "fh_hide_switcher") } }
@@ -423,10 +399,6 @@ final class Store {
             var l = layout; l.start = Store.startKey(startPage)
             if l != layout { saveLayout(l) }
         }
-    }
-    /// ios | material (per enhet)
-    var designStyle = UserDefaults.standard.string(forKey: "fh_design") ?? "ios" {
-        didSet { UserDefaults.standard.set(designStyle, forKey: "fh_design"); DesignStyle.material = designStyle == "material" }
     }
     /// ai | plain
     var searchMode = UserDefaults.standard.string(forKey: "fh_search_mode") ?? "ai" { didSet { UserDefaults.standard.set(searchMode, forKey: "fh_search_mode") } }
@@ -633,7 +605,6 @@ final class Store {
         mobileHome = nil; homeError = nil; history = []; suggestions = []; todayMeal = nil; domainToday = nil; avatar = nil
         ai = nil; aiHistory = []; aiNote = nil; suggestGroups = []; editing = nil; original = nil; detail = nil; detailTx = nil; matDay = nil
         recurring = nil; stocks = nil; report = nil; importResult = nil; importFiles = []; importText = ""
-        editHome = false
         logos = [:]
     }
 
@@ -758,9 +729,7 @@ final class Store {
         tab = t
         module = nil
         menuOpen = false
-        editHome = false
         detail = nil
-        barMini = false
         run { try await self.loadTab(t) }
     }
 
@@ -770,8 +739,6 @@ final class Store {
         menuOpen = false
         if m != module { selectedTx = nil; detail = nil; editing = nil; original = nil }
         module = m
-        barMini = false
-        if m != .homelab { editHome = false }
         if m != .folders { folder = nil }
         if m != .tracking { trkSel = nil }
         if m != .stocks { stockScreen = "ov"; stockSel = nil }
@@ -798,7 +765,6 @@ final class Store {
         if original != nil { original = nil; return }
         if editing != nil { editing = nil; return }
         if detail != nil { detail = nil; detailTx = nil; return }
-        if editHome { editHome = false; return }
         if module == .settings, settingsPage != nil { settingsPage = nil; return }
         if module == .folders, folder != nil { folder = nil; return }
         if module == .tracking, trkSel != nil { trkSel = nil; return }
@@ -823,68 +789,12 @@ final class Store {
     /// Finans som startside: appen åpner der, og Homelab ligger bak profilbildet.
     var financeStart: Bool { startPage != "homelab" }
     var startTab: Tab { startPage == "list" ? .list : startPage == "budget" ? .budget : .home }
-    var startLabel: String { financeStart ? "Finans" : "Homelab" }
     func goStart() { if financeStart { go(startTab) } else { open(.homelab) } }
-
-    /// «‹ Homelab» / «‹ Finans» øverst (med profilbildet til høyre på samme rad). nil = ingen topprad.
-    var topRowTitle: String? {
-        guard compact, mobileDesign != "papir", editing == nil, detail == nil, original == nil, !editHome else { return nil }
-        if let m = module {
-            switch m {
-            case .domains, .mat: return startLabel
-            case .homelab, .tracking: return financeStart ? "Finans" : nil
-            default: return nil
-            }
-        }
-        // Finn åpnet fra Mer (uten egen fane) har egen tilbakeknapp.
-        if tab == .finn && (finnSel != nil || !finTabs.contains(.finn)) { return nil }
-        return financeStart || selectedTx != nil ? nil : "Homelab"
-    }
-    /// Sveip fra venstre kant går tilbake overalt der det finnes en tilbakepil (ikke på startsiden).
-    var canSwipeBack: Bool {
-        if original != nil || editing != nil || detail != nil || editHome { return true }
-        if let m = module { return m != .homelab || financeStart }
-        if selectedTx != nil || finnSel != nil || !finTabs.contains(tab) { return true }
-        return !financeStart
-    }
-
-    /// «Knapp i linjen»: Homelab-/Finans-knappen ligger i fanelinja i stedet for pilen øverst.
-    var homeInBar: Bool { false }
-
-    /// Finans-fanene i systemets fanelinje på iPhone: høyst fire, fordi Skann ligger i søkeplassen til høyre.
-    /// Søk faller ut først (det finnes også under Mer), og Oversikt og Mer blir alltid med.
-    var barFinTabs: [Tab] {
-        var t = finTabs
-        let max = homeInBar && !financeStart ? 3 : 4
-        if t.count > max, let i = t.firstIndex(of: .search) { t.remove(at: i) }
-        while t.count > max, let i = t.lastIndex(where: { $0 != .more && $0 != .home }) { t.remove(at: i) }
-        return t
-    }
-    /// Fanen som er markert: sider under Mer, og faner som ikke får plass, markerer Mer.
-    func barTab(_ tabs: [Tab]) -> Tab { module?.isFinance == true || !tabs.contains(tab) ? .more : tab }
 
     func tabName(_ t: Tab) -> String { layout.names["fin." + t.key] ?? t.rawValue }
     func hlName(_ h: HlTab) -> String { layout.names["hl." + h.rawValue] ?? h.label }
-    /// Nytt navn på en fane (tomt = standardnavnet). key: «hl.dom», «fin.bud» …
-    func rename(_ key: String, _ name: String) {
-        var l = layout
-        let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if n.isEmpty { l.names[key] = nil } else { l.names[key] = String(n.prefix(30)) }
-        saveLayout(l)
-    }
     func setBackStyle(_ b: String) { var l = layout; l.backStyle = b; saveLayout(l) }
     func setMatTheme(_ t: String) { var l = layout; l.matTheme = t; saveLayout(l) }
-
-    /// Homelab-fane: Homelab, Finans (Oversikt), Domener eller Matplan.
-    func goHl(_ h: HlTab) {
-        switch h {
-        case .hl: open(.homelab)
-        case .home: go(Tab.home)
-        case .dom: open(.domains)
-        case .mat: open(.mat)
-        case .trk: open(.tracking)
-        }
-    }
 
     func loadTx() async throws {
         var q: [String] = []
@@ -992,30 +902,8 @@ final class Store {
         Task { _ = try? await self.api.callAt("/api", "PUT", "/me/layout", json: body) }
     }
 
-    func setHidden(_ id: String, _ hidden: Bool) { var l = layout; l.hide[id] = hidden; saveLayout(l) }
-
-    /// Flytter en widget eller fane ett hakk opp (-1) eller ned (+1). list: sec | hlTabs | finTabs.
-    func move(_ list: String, _ id: String, _ dir: Int) {
-        var l = layout
-        func mv(_ a: inout [String]) {
-            guard let i = a.firstIndex(of: id) else { return }
-            let j = i + dir
-            guard j >= 0, j < a.count else { return }
-            a.swapAt(i, j)
-        }
-        switch list {
-        case "sec": mv(&l.sec)
-        case "hlTabs": mv(&l.hlTabs)
-        default: mv(&l.finTabs)
-        }
-        saveLayout(l)
-    }
-
-    func resetLayout() { saveLayout(.standard) }
-
     /// Synlige faner (faste kan ikke skjules).
     var finTabs: [Tab] { layout.finTabs.filter { HomeLayout.fixedFin.contains($0) || layout.visible($0) }.compactMap(Tab.from(key:)) }
-    var hlTabs: [HlTab] { layout.hlTabs.filter { HomeLayout.fixedHl.contains($0) || layout.visible($0) }.compactMap { HlTab(rawValue: $0) } }
 
     /// Google-forslag mens man skriver (150 ms debounce, via serveren).
     func suggest(_ q: String) {
@@ -1041,12 +929,6 @@ final class Store {
         if !t.contains(" "), t.range(of: #"^[\w-]+(\.[\w-]+)+(:\d+)?(/\S*)?$"#, options: .regularExpression) != nil { return URL(string: "https://" + t) }
         let enc = t.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? t
         return URL(string: "https://www.google.com/search?q=" + enc)
-    }
-
-    func removeHistory(_ q: String) {
-        history.removeAll { $0 == q }
-        let enc = q.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? q
-        Task { _ = try? await self.api.callAt("/api", "DELETE", "/search/history/\(enc)") }
     }
 
     func clearHistory() {
@@ -1304,7 +1186,7 @@ final class Store {
         if module == .folders || paperTab == "boliger", editing == nil, let bolig = uploadFolder ?? folder?.id { uploadToFolder(bolig, files); return }
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         // Prompt 23: i Papir havner kvitteringen i KØ på Kvitteringer-siden (Receipts23.swift).
-        if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if paper { if paperTab != "kvitt" { paperGo("kvitt") } } else if module != .upload { openSub(.upload) }
+        if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if paperTab != "kvitt" { paperGo("kvitt") }
         guard canUpload else {
             for f in files { enqueuePending(f, folder: nil, error: "Venter på Wi-Fi") }
             flash("\(files.count) kvittering(er) venter på Wi-Fi")

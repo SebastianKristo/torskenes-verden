@@ -142,7 +142,7 @@ struct Hjemlys40IslandTitle: View {
         if st.kind == "soon" { return "Drar snart" }
         if st.state == "late" { return "\(st.lateMinutes) min over" }
         if st.state == "home" { return st.dest == "Hjem" || st.dest.isEmpty ? "Hjemme ✓" : "Fremme ✓" }
-        return "Hjemlys"
+        return "Vel fremme"
     }
 }
 
@@ -388,9 +388,9 @@ struct Hjemlys40LockView: View {
         if st.kind == "checkin" { return "Inne · " + Hjemlys40Look.clock(st.homeDate ?? Date()) + (st.dest.isEmpty || st.dest == "Hjem" ? "" : " · " + st.dest) }
         if st.kind == "soon" { return "Drar om ca. " + Hjemlys40Look.mins(Hjemlys40Look.minutesLeft(st.eta)) + " · " + Hjemlys40Look.clock(st.etaDate) }
         switch st.state {
-        case "late": return "Hjemlys · \(st.lateMinutes) min over"
+        case "late": return "Vel fremme · \(st.lateMinutes) min over"
         case "home": return (st.dest.isEmpty || st.dest == "Hjem" ? "Hjemme " : "Fremme ") + Hjemlys40Look.clock(st.homeDate ?? Date()) + " ✓"
-        default: return st.dest.isEmpty || st.dest == "Hjem" ? "Hjemlys · på vei hjem" : "Hjemlys · på vei til " + st.dest
+        default: return st.dest.isEmpty || st.dest == "Hjem" ? "Vel fremme · på vei hjem" : "Vel fremme · på vei til " + st.dest
         }
     }
 
@@ -432,7 +432,7 @@ struct Hjemlys40Small: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 2) {
                 Hjemlys41Glow(size: 10, state: st.state)
-                Text("Hjemlys").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.white.opacity(0.75))
+                Text("Vel fremme").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.white.opacity(0.75))
             }
             Group {
                 if st.state == "late" {

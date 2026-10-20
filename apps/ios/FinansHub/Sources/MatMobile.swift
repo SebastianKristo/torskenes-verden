@@ -5,17 +5,11 @@ import UIKit
 
 /* ---------------- Mat (tidligere Matplan): design 2a fra «Mat Varianter» ---------------- */
 
-/// Fargene og fontene i Mat. «2a» er den mørke, varme kokeboka (klassisk app). «Papir» følger Papir-temaet.
+/// Fargene og fontene i Mat. Følger Papir-temaet (prompt 42: den mørke 2a-paletten fra det klassiske designet er slettet).
 struct MatPal {
     let dark: Bool
     let bg, card, field, text, sub, muted, line, accent, accentInk, lime, limeInk, cream, creamInk, chip, chipInk: Color
     let paperFonts: Bool
-
-    /// Mørk varm grunn #15140F, kort #1D1C16, kanter #2E2C24, limegrønn dag #D4F25A og aksent #FF8A4C.
-    static let twoA = MatPal(dark: true, bg: Color(hex: "#15140F"), card: Color(hex: "#1D1C16"), field: Color(hex: "#15140F"), text: Color(hex: "#F2EEE4"),
-                             sub: Color(hex: "#C9C3B5"), muted: Color(hex: "#9A9588"), line: Color(hex: "#2E2C24"), accent: Color(hex: "#FF8A4C"),
-                             accentInk: Color(hex: "#2A1004"), lime: Color(hex: "#D4F25A"), limeInk: Color(hex: "#141A06"), cream: Color(hex: "#F2EEE4"),
-                             creamInk: Color(hex: "#15140F"), chip: Color(hex: "#3A2A1A"), chipInk: Color(hex: "#FFB27F"), paperFonts: false)
 
     static func paper(_ p: PaperPalette) -> MatPal {
         MatPal(dark: p.dark, bg: p.bg, card: p.card, field: p.bg, text: p.ink, sub: p.ink.opacity(0.75), muted: p.mut, line: p.line, accent: p.lab,
@@ -24,7 +18,8 @@ struct MatPal {
     }
 
     /// Instrument Serif i 2a, Newsreader i Papir.
-    func serif(_ size: CGFloat) -> Font { paperFonts ? PF.serif(size, medium: true) : .custom("InstrumentSerif-Regular", size: size) }
+    // Prompt 42: Instrument Serif hørte til den mørke 2a-paletten (slettet); Mat bruker Papir-serifen.
+    func serif(_ size: CGFloat) -> Font { PF.serif(size, medium: true) }
     func mono(_ size: CGFloat) -> Font { PF.mono(size) }
     func ui(_ size: CGFloat, _ w: Font.Weight = .regular) -> Font { PF.ui(size, w) }
     /// Dagens rett: Bricolage Grotesque ExtraBold.
@@ -34,33 +29,12 @@ struct MatPal {
 private let shortDay = ["MAN", "TIR", "ONS", "TOR", "FRE", "LØR", "SØN"]
 private let longDay = ["Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag"]
 private let monthShort = ["jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "des"]
-private let monthLong = ["JANUAR", "FEBRUAR", "MARS", "APRIL", "MAI", "JUNI", "JULI", "AUGUST", "SEPTEMBER", "OKTOBER", "NOVEMBER", "DESEMBER"]
 
-private func dayNum(_ iso: String) -> Int { Int(iso.suffix(2)) ?? 0 }
-private func monthIdx(_ iso: String) -> Int { (Int(iso.dropFirst(5).prefix(2)) ?? 1) - 1 }
-
-/// Den klassiske appen: Mat som egen flate i 2a-designet.
-struct MatSurface: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        ScrollView {
-            MatView(pal: .twoA, paperMode: false)
-                .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 40)
-        }
-        .background(MatPal.twoA.bg.ignoresSafeArea())
-        .environment(\.colorScheme, .dark)
-        .refreshable { try? await store.loadWeek(); await store.loadMatExtras() }
-        .sheet(isPresented: Binding(get: { store.dishSel != nil }, set: { if !$0 { store.dishSel = nil } })) {
-            if let id = store.dishSel { DishDetailView(id: id, pal: .twoA).presentationBackground(MatPal.twoA.bg) }
-        }
-    }
-}
 
 /// Uka, dagens rett med steg, mapper, oppskrifter, skanning, import og handleliste.
 struct MatView: View {
     @Environment(Store.self) private var store
     let pal: MatPal
-    let paperMode: Bool
     @State private var step = 0
     @State private var newFolder = false
     @State private var folderName = ""
@@ -74,28 +48,14 @@ struct MatView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if !paperMode { header }
             if let e = store.moduleError { Text(e).font(pal.ui(13)).foregroundStyle(pal.accent) }
-            if paperMode {
-                // Papir: Dagens middag, Ukeplan, Mapper og Skann og import kan flyttes og skjules (hold inne).
+            // Papir: Dagens middag, Ukeplan, Mapper og Skann og import kan flyttes og skjules (hold inne).
                 PaperCardStack(page: "mat", cards: [
                     PaperCardDef(key: "m1", label: "Dagens middag", view: AnyView(todaySection)),
                     PaperCardDef(key: "m2", label: "Ukeplan", view: AnyView(weekSection)),
                     PaperCardDef(key: "m3", label: "Mapper", view: AnyView(VStack(alignment: .leading, spacing: 12) { folders; recipes })),
                     PaperCardDef(key: "m4", label: "Skann og import", view: AnyView(VStack(alignment: .leading, spacing: 12) { actions; jobs })),
                 ])
-            } else {
-                if let w = store.week, !w.days.isEmpty {
-                    todayCard(w)
-                    weekList(w)
-                } else if store.moduleError == nil {
-                    ProgressView().frame(maxWidth: .infinity).padding(40)
-                }
-                folders
-                actions
-                jobs
-                recipes
-            }
             shopping
             Button { store.matFull = true } label: {
                 Text("Hele uka med kokk, kost og faste dager ›").font(pal.ui(13.5, .semibold)).foregroundStyle(pal.muted).frame(maxWidth: .infinity, minHeight: 40)
@@ -165,30 +125,6 @@ struct MatView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(weekLabel).font(pal.mono(11.5)).tracking(1.4).foregroundStyle(pal.muted).lineLimit(1)
-                    Text("Mat").font(pal.serif(56)).foregroundStyle(pal.text)
-                }
-                Spacer()
-                if store.topRowTitle == nil { Avatar() }
-            }
-            HStack(spacing: 8) {
-                Button { store.planWeek() } label: {
-                    Text("✦ Lag ny uke").font(pal.ui(14, .semibold)).foregroundStyle(pal.creamInk).padding(.horizontal, 16).frame(height: 44)
-                        .background(pal.cream, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                scanMenu {
-                    Text("+ Skann eller importer").font(pal.ui(14, .semibold)).foregroundStyle(pal.accentInk).padding(.horizontal, 16).frame(height: 44)
-                        .background(pal.accent, in: Capsule())
-                }
-            }
-        }
-    }
-
     private func scanMenu<L: View>(@ViewBuilder _ label: () -> L) -> some View {
         Menu {
             Button { camera = true } label: { Label("Skann oppskrift med kamera", systemImage: "camera") }
@@ -196,13 +132,6 @@ struct MatView: View {
             Button { files = true } label: { Label("Velg fil (PDF eller bilde)", systemImage: "doc") }
             Button { store.matImport = true } label: { Label("Importer fra nettside", systemImage: "link") }
         } label: { label() }
-    }
-
-    private var weekLabel: String {
-        guard let w = store.week, let s = w.start ?? w.days.first?.date else { return "MAT" }
-        let e = w.end ?? w.days.last?.date ?? s
-        let n = w.week.map { "UKE \($0) · " } ?? ""
-        return n + "\(dayNum(s)).–\(dayNum(e)). \(monthLong[monthIdx(e) % 12])"
     }
 
     /* ---------- Dagens rett ---------- */

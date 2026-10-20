@@ -208,7 +208,6 @@ struct PaperOnboardingView: View {
         PLabel(text: "Velg design")
         optionRow("Papir · lys", "Lyst papir, avisspalter og svart fanelinje.", [Color(hex: "#5d7690"), Color(hex: "#f3efe6")], design == "lys", p) { design = "lys" }
         optionRow("Papir · mørk", "Kveldspapir med lys fanelinje.", [Color(hex: "#2a3440"), Color(hex: "#14130f")], design == "mork", p) { design = "mork" }
-        optionRow("Klassisk", "Liquid Glass på iPhone.", [Color(hex: "#3b6fd6"), Color(hex: "#6b3fb5")], design == "klassisk", p) { design = "klassisk" }
     }
 
     @ViewBuilder private func backgrounds(_ p: PaperPalette) -> some View {
@@ -284,7 +283,7 @@ struct PaperOnboardingView: View {
         if bio { store.lockEnabled = true }
         if push { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in } }
         if cam { AVCaptureDevice.requestAccess(for: .video) { _ in } }
-        if design == "klassisk" { store.setMobileDesign("klassisk") } else { store.setPaperMode(design) }
+        store.setPaperMode(design)
         store.finishOnboarding()
     }
 

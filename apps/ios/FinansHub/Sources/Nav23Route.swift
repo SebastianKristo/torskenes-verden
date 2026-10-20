@@ -7,7 +7,7 @@ extension Store {
     /// Sveip tilbake og scrollposisjonen bruker den til å kjenne igjen sider (Nav23Swipe.swift).
     var nav23Key: String {
         var k: [String] = []
-        k.append(paper ? "p:" + paperTab : "k:" + tab.key)
+        k.append("p:" + paperTab)
         k.append(module?.rawValue ?? "-")
         k.append(paperFin?.key ?? "-")
         k.append(settingsPage ?? "-")
@@ -25,7 +25,6 @@ extension Store {
         k.append(detail != nil ? "d" : "-")
         k.append(editing != nil ? "e" : "-")
         k.append(original != nil ? "o" : "-")
-        k.append(editHome ? "h" : "-")
         return k.joined(separator: "|")
     }
 

@@ -8,13 +8,13 @@ struct DomainsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Tannhjulet ligger i fanelinja (iPhone); på iPad og i Material-utseendet står det her.
+                // Tannhjulet står her (Papir-skallet har ikke tannhjul i fanelinja på iPad).
                 // Domenevelgeren (bare ikonet) og Oppdater står ved siden av profilbildet.
                 ModuleHeader(title: "Domener", trailing: {
                     picker
                     Button { store.reloadDomain() } label: { Image(systemName: "arrow.clockwise").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20).foregroundStyle(Color.domPink)
                         .accessibilityLabel("Oppdater")
-                    if hSize == .regular || DesignStyle.material {
+                    if hSize == .regular {
                         Button { store.domainManager = true } label: { Image(systemName: "gearshape").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20)
                             .accessibilityLabel("Administrer domener")
                     }

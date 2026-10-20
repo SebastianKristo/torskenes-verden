@@ -185,7 +185,6 @@ struct FinnView: View {
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
         .scrollDismissesKeyboard(.interactively)
-        .tracksScroll(store)
         .refreshable { try? await store.loadFinn() }
     }
 }

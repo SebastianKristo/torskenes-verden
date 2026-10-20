@@ -49,7 +49,7 @@ final class Search32b {
     /// (rute, navn i boblen). Rekkefølgen betyr noe: første treff vinner.
     static let nav: [([String], String, String)] = [
         // Prompt 41: «sjekk inn», «drar snart», «drar nå», «fest», «hjemlys» → Familie → Hjemlys.
-        (["sjekk inn", "drar snart", "drar nå", "fest", "hjemlys"], "hjemlys41", "Hjemlys"),
+        (["sjekk inn", "drar snart", "drar nå", "fest", "hjemlys", "vel fremme", "check in"], "hjemlys41", "Vel fremme"),
         (["oppdater", "nordlys", "versjon", "update"], "nordlys", "Nordlys OS · oppdatering"),
         (["kalender", "timeplan"], "kalender", "Kalender"),
         (["vær", "vaer", "værside", "yr"], "vaer", "Vær"),

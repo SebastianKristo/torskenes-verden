@@ -57,7 +57,7 @@ struct PaperHome: View {
         // Prompt 40: Hjemlys-kortet på Hjem (status for husstanden, Glimt-forslag og start), bare når serveren har Hjemlys.
         if Hjemlys40Model.shared.supported {
             let i: Int = (out.firstIndex(where: { $0.key == "h13" }) ?? out.firstIndex(where: { $0.key == "h12" }) ?? -1) + 1
-            out.insert(PaperCardDef(key: "h14", label: "Hjemlys", view: AnyView(Hjemlys40HomeCard())), at: i)
+            out.insert(PaperCardDef(key: "h14", label: "Vel fremme", view: AnyView(Hjemlys40HomeCard())), at: i)
         }
         return out
     }

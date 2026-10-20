@@ -169,24 +169,30 @@ struct Brief36Swiper: View {
                     .onChange(of: g.size.width) { (_: CGFloat, w: CGFloat) in width = w }
             }
         }
-        .simultaneousGesture(drag)
+        // Prompt 42: bare vannrette drag fanges; loddrett drag scroller Hjem (Swipe42.swift).
+        .hSwipe42(drag, changed: { (t: CGSize) in changed(t, forceX: true) }, ended: { (vel: CGFloat) in ended(vel) })
         .onChange(of: touching) { (_: Bool, on: Bool) in if !on { Swipe40Gate.ended() } }
         // Prompt 39: ingen automatisk sveipe-hint (kortet som dyttet seg mot høyre) – aldri, heller ikke ved første oppstart.
         .accessibilityAction(named: "Skjul briefen til neste brief") { dismiss() }
     }
 
     private var drag: some Gesture {
-        // Prompt 40: 6 pt (samme terskel som trykk/bevegelse); all bevegelse merkes i Swipe40Gate.
-        DragGesture(minimumDistance: 6, coordinateSpace: .local)
+        // Prompt 40/42: all bevegelse merkes i Swipe40Gate. iOS 17 (reserve): 12 pt før retningen låses (claude-code-bibelvers-scroll-fiks.md).
+        DragGesture(minimumDistance: 12, coordinateSpace: .local)
             .updating($touching) { (_: DragGesture.Value, st: inout Bool, _: inout Transaction) in st = true }
-            .onChanged { (v: DragGesture.Value) in
-                Swipe40Gate.track(v.translation)
+            .onChanged { (v: DragGesture.Value) in changed(v.translation, forceX: false) }
+            .onEnded { (v: DragGesture.Value) in ended(v.velocity.width) }
+    }
+
+    /// forceX: UIKit-pannen (iOS 18+) starter bare ved vannrett drag, så retningen er allerede låst.
+    private func changed(_ t: CGSize, forceX: Bool) {
+                Swipe40Gate.track(t)
                 if out { return }
                 if hint { stopHint() }
-                let tx: CGFloat = v.translation.width
-                let ty: CGFloat = v.translation.height
-                if lock == 0 && (abs(tx) > 8 || abs(ty) > 8) {
-                    lock = (abs(tx) > abs(ty) * 1.2 && tx > 0) ? 1 : 2
+                let tx: CGFloat = t.width
+                let ty: CGFloat = t.height
+                if lock == 0 && (forceX || abs(tx) > 8 || abs(ty) > 8) {
+                    lock = (forceX || (abs(tx) > abs(ty) * 1.15 && tx > 0)) ? 1 : 2
                 }
                 if lock != 1 { return }
                 dragging = true
@@ -198,13 +204,13 @@ struct Brief36Swiper: View {
                 var tr: Transaction = Transaction()
                 tr.disablesAnimations = true
                 withTransaction(tr) { dx = nv }
-            }
-            .onEnded { (v: DragGesture.Value) in
+    }
+
+    private func ended(_ vel: CGFloat) {
                 Swipe40Gate.ended()
                 let wasX: Bool = lock == 1
                 lock = 0
                 if !wasX || out { dragging = false; return }
-                let vel: CGFloat = v.velocity.width
                 lastVel = vel
                 if Swipe39.passes(dx: dx, width: width, velocity: vel) {
                     dismiss()
@@ -216,7 +222,6 @@ struct Brief36Swiper: View {
                         dragging = false
                     }
                 }
-            }
     }
 
     private func dismiss() {

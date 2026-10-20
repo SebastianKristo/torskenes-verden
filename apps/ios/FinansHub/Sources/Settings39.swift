@@ -57,6 +57,8 @@ struct Tilpass39Page: View {
         [
             PaperLinkRow(name: "Fanelinje-stil", sub: NavStyle25.sub(store.navStyle25), value: NavStyle25.name(store.navStyle25) + " ›", icon: "rectangle.split.3x1") { store.cycleNavStyle25() },
             PaperLinkRow(name: "Fanelinje i Hjem", sub: "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", icon: "dock.rectangle") { store.tabBarEditing = true },
+            // Prompt 42: Hjem-knapp (Standard / 1a–1d) med forhåndsvisning (NavHome42.swift).
+            PaperLinkRow(name: "Hjem-knapp", sub: NavHome42.name(NavHome42.shared.value) + " · velg og se forhåndsvisning", value: "Velg ›", icon: "house") { NavHome42.shared.picking = true },
         ]
     }
 }

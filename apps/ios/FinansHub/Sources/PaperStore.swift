@@ -5,13 +5,12 @@ import UIKit
 /* ---------------- Papir, nyhetsleser, fotovindu og Mat: data (prompt 13) ---------------- */
 
 extension Store {
-    var paper: Bool { mobileDesign == "papir" }
-
     /* ---------- Oppsett per bruker (/api/me/layout) ---------- */
 
-    /// mobileDesign, paperMode og photo fra serveren. Lokalt valg brukes til serveren har svart.
+    /// paperMode og photo fra serveren. Lokalt valg brukes til serveren har svart.
+    /// Prompt 42: mobileDesign = «klassisk» fra serveren flyttes til Papir (Design42.swift).
     func applyPaperLayout(_ o: [String: Any]) {
-        if let v = JS.str(o, "mobileDesign"), ["klassisk", "papir"].contains(v), v != mobileDesign { mobileDesign = v }
+        if JS.str(o, "mobileDesign") == "klassisk" { migrateClassic42(server: true) }
         if let v = JS.str(o, "paperMode"), ["auto", "lys", "mork"].contains(v), v != paperMode { paperMode = v }
         if let v = JS.str(o, "photo"), ["cur", "oslo", "weather", "planets", "custom"].contains(v), v != photo {
             photo = v
@@ -25,6 +24,7 @@ extension Store {
         applyPaper16(o)
         applyPaper19(o)
         applyPaper22(o)
+        NavHome42.shared.apply(o)
         FinTileOrder20.apply(o)
         FinHidden30.shared.apply(o)
         Prof24.shared.apply(o, self)
@@ -63,13 +63,6 @@ extension Store {
 
     func savePaperLayout(_ body: [String: Any]) {
         Task { _ = try? await self.api.callAt("/api", "PUT", "/me/layout", json: body) }
-    }
-
-    func setMobileDesign(_ v: String) {
-        mobileDesign = v
-        if v == "papir" { paperTab = "hjem"; paperFin = nil; paperTrackFull = false; open(.homelab) }
-        savePaperLayout(["mobileDesign": v])
-        Haptics.shared.select()
     }
 
     func setPaperMode(_ v: String) {
@@ -211,7 +204,7 @@ extension Store {
 
     /// Det som er åpent inne på en side (detalj, skjema, valgt rad) lukkes først av den vanlige tilbakefunksjonen.
     var paperInner: Bool {
-        if original != nil || editing != nil || detail != nil || editHome { return true }
+        if original != nil || editing != nil || detail != nil { return true }
         if module == .settings, settingsPage != nil { return true }
         if module == .folders, folder != nil { return true }
         if module == .tracking, trkSel != nil { return true }

@@ -241,7 +241,7 @@ struct PaperFamilyCard: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            PLabel(text: Hjemlys41PosRow.any(Hjemlys40Model.shared) ? "Posisjon · Familie · Hjemlys" : "Posisjon · Familie")
+            PLabel(text: Hjemlys41PosRow.any(Hjemlys40Model.shared) ? "Posisjon · Familie · Vel fremme" : "Posisjon · Familie")
             Spacer()
             Text("kart ›").font(PF.ui(12)).foregroundStyle(p.mut)
         }

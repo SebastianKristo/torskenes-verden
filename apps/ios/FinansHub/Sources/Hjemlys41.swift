@@ -84,7 +84,7 @@ final class Hjemlys41 {
         ("naa", "→", "Drar nå", "Med eller uten mål"),
     ]
 
-    var kindName: String { Hjemlys41.kinds.first(where: { $0.0 == kind })?.2 ?? "Hjemlys" }
+    var kindName: String { Hjemlys41.kinds.first(where: { $0.0 == kind })?.2 ?? "Vel fremme" }
 
     /// Tur med mål (fremdrift, «Alt OK?», forsinkelsesregler).
     var isTrip: Bool { kind == "hjem" || (kind == "naa" && dest != "ingen") }
@@ -474,7 +474,7 @@ final class Hjemlys41 {
 
     static func scheduleAsk(_ at: Date, id: String) {
         let c: UNMutableNotificationContent = UNMutableNotificationContent()
-        c.title = "Hjemlys"
+        c.title = "Vel fremme"
         c.body = "Drar du nå?"
         c.categoryIdentifier = askCategory
         c.userInfo = ["laId": id]

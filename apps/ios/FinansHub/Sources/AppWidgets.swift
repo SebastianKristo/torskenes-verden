@@ -39,32 +39,16 @@ extension Store {
         // Prompt 33: kalender-login fra Kalender-appen, og widget-lenkene videre til Kalender-appen når den er installert.
         if page == "kalender-login" { KalCompanion33.loginLink(self); return }
         // Prompt 34: finanshub://brief (Glimt-brief-widgetene) åpner briefen i fullskjerm.
-        if page == "brief" { if paper { paperGo("hjem") }; Brief34Model.shared.show(); return }
+        if page == "brief" { paperGo("hjem"); Brief34Model.shared.show(); return }
         // Prompt 37: bibelvers-widgetene (finanshub://bibel) åpner Bibel-siden.
-        if page == "bibel" || page == "bible" { if paper { paperGo("bibel") } else { goStart() }; return }
+        if page == "bibel" || page == "bible" { paperGo("bibel"); return }
         // Prompt 35: fra Kalender-appen – finanshub://glimt (Innstillinger → Glimt) og finanshub://integrasjoner.
-        if page == "glimt" { if paper { paperGo("hjem") }; Glimt35Model.shared.showPage = true; return }
-        if page == "integrasjoner" || page == "integrations" { if paper { paperGo("innst-integ") } else { goStart() }; return }
+        if page == "glimt" { paperGo("hjem"); Glimt35Model.shared.showPage = true; return }
+        if page == "integrasjoner" || page == "integrations" { paperGo("innst-integ"); return }
         if (page == "kalender" || page == "calendar") && KalLink33.forward(url) { return }
         if page == "kalender" || page == "calendar" { Cal26Model.shared.openLink(url, self); return }
-        if paper { paperDeepLink(page, sub); return }
-        switch page {
-        case "homelab", "weather", "vaer": open(.homelab)
-        case "tracking", "packages", "sporing": open(.tracking)
-        case "budget", "budsjett": go(.budget)
-        case "home", "finance", "finans": go(.home)
-        case "list", "liste": go(.list)
-        case "receipts", "review", "kvitteringer": open(.upload)
-        case "subs", "nextcharge", "abonnement": open(.sub)
-        case "stocks", "aksjer": open(.stocks)
-        case "domains", "domener": open(.domains)
-        case "mat", "matplan": open(.mat)
-        case "finn": go(.finn)
-        case "boliger", "folders": open(.folders)
-        case "scan", "skann": pendingScan = sub == "files" ? "files" : "camera"
-        case "news", "nyheter", "rss": openNews()
-        default: goStart()
-        }
+        // Prompt 42: bare Papir (de klassiske dyplenkene er slettet).
+        paperDeepLink(page, sub)
     }
 
     /// Samme dyplenker i Papir: fanene og sidene i Papir-skallet.

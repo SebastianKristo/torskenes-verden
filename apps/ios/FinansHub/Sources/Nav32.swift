@@ -37,8 +37,8 @@ final class Nav32b {
                                                      PaperTabItem(id: "hist", label: "Historikk", icon: "clock")]),
         "kart": Sec32bDef(title: "FAMILIE", all: [PaperTabItem(id: "kart", label: "Kart", icon: "◎"), PaperTabItem(id: "soner", label: "Soner", icon: "◌"),
                                                   PaperTabItem(id: "helse", label: "Helse", icon: "♡"),
-                                                  // Prompt 41: Hjemlys som egen fane i Familie (Hjemlys41Views.swift).
-                                                  PaperTabItem(id: "hjemlys", label: "Hjemlys", icon: "☼")]),
+                                                  // Prompt 41: Hjemlys som egen fane i Familie (Hjemlys41Views.swift). Prompt 42: heter Vel fremme.
+                                                  PaperTabItem(id: "hjemlys", label: "Vel fremme", icon: "☼")]),
     ]
 
     static let icons: [String] = ["⌂", "kr", "◐", "▣", "◎", "◍", "⚡", "▤", "◔", "↺", "↻", "◌", "♡", "◉", "★", "●", "◆", "♪", "✉", "⚑", "≡", "⇄", "☼", "✦",
@@ -67,7 +67,9 @@ final class Nav32b {
         for o in raw {
             let key: String = (o["k"] as? String) ?? ""
             guard let d = def.all.first(where: { $0.id == key }), !out.contains(where: { $0.id == key }) else { continue }
-            let n: String = (o["n"] as? String) ?? ""
+            // Prompt 42: Hjemlys heter nå Vel fremme – et lagret standardnavn «Hjemlys» vises med det nye navnet.
+            let n0: String = (o["n"] as? String) ?? ""
+            let n: String = n0 == "Hjemlys" ? "" : n0
             let ic: String = (o["ic"] as? String) ?? ""
             out.append(PaperTabItem(id: key, label: n.isEmpty ? d.label : n, icon: ic.isEmpty ? d.icon : ic))
         }
@@ -178,6 +180,8 @@ struct TabEditor32b: View {
                 NavStylePicker25(items: rows, showMore: hasMore, hidePlus41: kicker.hasPrefix("HJEM") && !Scan41.shared.onHome).padding(.top, 6)
                 // Prompt 41: «Skanneknapp på Hjem» under stilvalgene (samme innstilling som i Tilpass → Fanelinje).
                 if kicker.hasPrefix("HJEM") { Scan41Row() }
+                // Prompt 42: HJEM-KNAPP · FORHÅNDSVISNING (samme innstilling som Tilpass → Fanelinje → Hjem-knapp).
+                if hasMore { NavHomePicker42().padding(.top, 6) }
                 TabEditorAdds32b(rows: $rows, all: all, max: max)
                 PLineButton(title: "Tilbakestill til standard", height: 44, full: true) {
                     rows = defaults

@@ -660,6 +660,8 @@ struct PaperSettings17: View {
             group("Glimt", 5, [
                 PaperLinkRow(name: "Glimt", sub: "Figur, brief, stemme og venner", icon: "sparkle", tint30: Color(hex: "#b23a2a")) { Glimt35Model.shared.showPage = true },
             ])
+            // Prompt 42: HELSE (FAMILIE) – Apple Health, Health Connect, Home Assistant · Mobilapp og hva som deles (Health42.swift).
+            group("Helse (Familie)", 4, Health42.rows(store, p))
             group("App", 2, [
                 // Prompt 34: APP → AI og modeller (AI-kontroll i fullskjerm).
                 PaperLinkRow(name: "AI og modeller", sub: "Modeller, jobber, forbruk og nøkler", icon: "cpu") { AiCtl34.shared.show("ov") },

@@ -214,7 +214,7 @@ struct Hjemlys40ChatSheet: View {
             HStack(spacing: 10) {
                 Hjemlys40Dot(size: 22, state: m.mine?.state ?? "onTheWay")
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("✦ Hjemlys").font(PF.ui(15, .bold)).foregroundStyle(p.ink)
+                    Text("✦ Vel fremme").font(PF.ui(15, .bold)).foregroundStyle(p.ink)
                     Text("Glimt følger med").font(PF.ui(12)).foregroundStyle(p.mut)
                 }
                 Spacer()

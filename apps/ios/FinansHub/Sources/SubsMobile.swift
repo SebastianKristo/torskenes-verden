@@ -292,7 +292,6 @@ struct SubsMobileView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .tracksScroll(store)
         .refreshable { await store.reloadModule() }
         .sheet(isPresented: $adding) {
             SubAddSheet().presentationDetents([.medium, .large]).skinSheetBackground()
@@ -308,9 +307,9 @@ struct SubsMobileView: View {
                 let on = store.subTab == k
                 Button { Haptics.shared.select(); store.subTab = k } label: {
                     HStack(spacing: 6) { Image(systemName: icon).font(.system(size: 13, weight: .semibold)); Text(n).font(.subheadline.weight(.semibold)) }
-                        .foregroundStyle(on ? (DesignStyle.material ? M3.onPrimary : Color.black) : Color.skinFg.opacity(0.7))
+                        .foregroundStyle(on ? (PaperSkin.palette?.bg ?? Color.black) : Color.skinFg.opacity(0.7))
                         .frame(maxWidth: .infinity, minHeight: 38)
-                        .background(on ? (DesignStyle.material ? M3.primary : Color.skinFg) : Color.clear, in: Capsule())
+                        .background(on ? Color.skinFg : Color.clear, in: Capsule())
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)

@@ -525,7 +525,6 @@ struct TrackingView: View {
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
         .scrollDismissesKeyboard(.interactively)
-        .tracksScroll(store)
         .refreshable { await store.reloadModule() }
         .onAppear { LocalNotify.ask() }
     }
@@ -871,49 +870,5 @@ struct TrackingView: View {
             }
         }
         .padding(16).glass(24)
-    }
-}
-
-/// «Pakker» i karusellen på Homelab-hjem: de 2 viktigste. Trykk åpner Sporing.
-struct PackagesCard: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        let items = store.homePackages ?? store.tracking?.top(2) ?? []
-        Button { Haptics.shared.tap(); store.goHl(.trk) } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: "shippingbox.fill").foregroundStyle(Color.accentLight)
-                    Text("Pakker").font(.headline)
-                    if let n = store.tracking?.activeCount, n > 0 { Text("\(n)").font(.caption.weight(.bold)).foregroundStyle(Color.ink).padding(.horizontal, 7).padding(.vertical, 2).background(Color.accent, in: Capsule()) }
-                    Spacer()
-                }
-                if items.isEmpty {
-                    Spacer(minLength: 0)
-                    Text("Ingen pakker på vei.").font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.65)).frame(maxWidth: .infinity)
-                    Spacer(minLength: 0)
-                } else {
-                    ForEach(items.prefix(2)) { s in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(spacing: 10) {
-                                CarrierBadge(ini: s.carrierIni, color: s.carrierColor, fg: s.carrierFg, size: 34, carrier: s.carrier)
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(s.name).fontWeight(.semibold).lineLimit(1)
-                                    Text(s.statusText + (s.etaText.isEmpty ? "" : " · \(s.etaText)")).font(.caption).foregroundStyle(s.ready ? Color.accentLight : Color.skinFg.opacity(0.65)).lineLimit(1)
-                                }
-                                Spacer(minLength: 0)
-                            }
-                            StepBar(step: s.step, color: s.done ? .positive : .accent)
-                        }
-                        .padding(10).background(Color.skinFg.opacity(0.06), in: RoundedRectangle(cornerRadius: 18))
-                    }
-                    Spacer(minLength: 0)
-                }
-                HStack { Spacer(); Text("Åpne sporing ›").font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight) }
-            }
-            .foregroundStyle(Color.skinFg)
-            .padding(18).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).glass(28)
-            .contentShape(RoundedRectangle(cornerRadius: 28))
-        }
-        .buttonStyle(.plain)
     }
 }

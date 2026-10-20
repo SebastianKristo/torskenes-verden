@@ -4,7 +4,7 @@ import AppIntents
 
 /* ---------------- Prompt 40 (tillegg) «Felles»: Hjem-widgeten for Hjemlys med «Start for meg» ----------------
    Fasit: design/Hjemme trygt Varianter.dc.html → Felles (Hjem-widget). Liten og medium på hjemskjermen + låseskjerm (rektangel/rund).
-   Viser egen økt («På vei · 8 min» med fremdrift), ellers hvem i husstanden som har Hjemlys på, og knappen «Start for meg»
+   Viser egen økt («På vei · 8 min» med fremdrift), ellers hvem i husstanden som har Vel fremme på, og knappen «Start for meg»
    (Hjemlys40StartIntent: LiveActivityIntent, starter Hjemlys og Live Activity uten å åpne appen). Data: App Group (w.hjemlys40,
    skrevet av appen) og GET /api/hjemlys med appens token. Ingen posisjon vises noen gang i widgeten. */
 
@@ -54,7 +54,7 @@ struct HjemlysWidget40: Widget {
                 .containerBackground(for: .widget) { Hjemlys40WidgetBg() }
                 .widgetURL(URL(string: "finanshub://hjemlys"))
         }
-        .configurationDisplayName("Hjemlys")
+        .configurationDisplayName("Vel fremme")
         .description("Si fra når du er hjemme – og se hvem i husstanden som er på vei.")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular, .accessoryCircular])
     }
@@ -131,7 +131,7 @@ struct Hjemlys40WidgetSmall: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Hjemlys40Dot(size: 16, state: c.mineActive ? c.mineState : "onTheWay")
-                Text("Hjemlys").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.white)
+                Text("Vel fremme").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.white)
             }
             Spacer(minLength: 0)
             if c.mineActive || c.mineState == "home" {
@@ -168,7 +168,7 @@ struct Hjemlys40WidgetMedium: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("HUSSTANDEN").font(.system(size: 10, weight: .heavy)).tracking(1).foregroundStyle(Color.white.opacity(0.6))
                 if c.household.isEmpty {
-                    Text("Ingen har Hjemlys på").font(.system(size: 12)).foregroundStyle(Color.white.opacity(0.7))
+                    Text("Ingen har Vel fremme på").font(.system(size: 12)).foregroundStyle(Color.white.opacity(0.7))
                 }
                 ForEach(Array(c.household.prefix(4).enumerated()), id: \.offset) { _, m in
                     HStack(spacing: 6) {
@@ -198,7 +198,7 @@ struct Hjemlys40WidgetRect: View {
     var body: some View {
         let c: Hjemlys40Cache = e.c
         VStack(alignment: .leading, spacing: 2) {
-            Text("Hjemlys").font(.system(size: 13, weight: .bold))
+            Text("Vel fremme").font(.system(size: 13, weight: .bold))
             if c.mineActive || c.mineState == "home" {
                 Text(Hjemlys40WidgetText.mine(c, e.date)).font(.system(size: 15, weight: .semibold)).lineLimit(1)
             } else if let m = c.household.first(where: { $0.state == "onTheWay" || $0.state == "late" }) {

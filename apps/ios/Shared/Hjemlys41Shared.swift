@@ -72,7 +72,7 @@ enum Hjemlys41Text {
 
 /// «+ 15 min» på «Drar snart».
 struct Hjemlys41SoonPlusIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Hjemlys: drar senere"
+    static var title: LocalizedStringResource = "Vel fremme: drar senere"
     static var description: IntentDescription = IntentDescription("Flytter tiden du drar 15 minutter frem og sier fra.")
 
     @Parameter(title: "Økt")
@@ -110,7 +110,7 @@ struct Hjemlys41SoonPlusIntent: LiveActivityIntent {
 
 /// «Drar nå» på «Drar snart»: én beskjed (uten mål), Live Activity forsvinner.
 struct Hjemlys41LeaveNowIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Hjemlys: drar nå"
+    static var title: LocalizedStringResource = "Vel fremme: drar nå"
     static var description: IntentDescription = IntentDescription("Sier fra at du drar nå.")
 
     @Parameter(title: "Økt")

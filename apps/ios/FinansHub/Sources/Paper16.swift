@@ -252,6 +252,7 @@ extension Store {
         case "innst-tab": return "Fanelinje"
         case "innst-fam": return "Familie og helse"
         case "innst-helse": return "Helse og posisjon"
+        case "innst-hahelse": return "Home Assistant"
         // Prompt 37: modulen heter Gjøremål (intern nøkkel er fortsatt «huske»).
         case "huske": return "Gjøremål"
         case "bibel": return "Bibel"
@@ -274,6 +275,7 @@ extension Store {
         case "innst-tab": return "Faner, navn og ikoner"
         case "innst-fam": return "Deling, personvern og Apple Helse"
         case "innst-helse": return "Apple Health, datatyper og posisjon"
+        case "innst-hahelse": return "Helse fra Mobilapp-integrasjonen"
         case "huske": return "To-do for hele familien"
         case "bibel": return "Dagens vers, rekke og leseplan"
         case "kalender": return Cal26Model.shared.kicker
@@ -511,7 +513,6 @@ struct PaperLookSettings: View {
                 PaperLinkRow(name: "Papir · lys", sub: "Lyst papir og svart fanelinje", value: store.paperMode == "lys" ? "✓" : "", valueColor: p.pos, icon: "sun.max") { store.setPaperMode("lys") },
                 PaperLinkRow(name: "Papir · mørk", sub: "Kveldspapir og lys fanelinje", value: store.paperMode == "mork" ? "✓" : "", valueColor: p.pos, icon: "moon") { store.setPaperMode("mork") },
                 PaperLinkRow(name: "Følg systemet", sub: "Lys om dagen, mørk i mørk modus", value: store.paperMode == "auto" ? "✓" : "", valueColor: p.pos, icon: "circle.lefthalf.filled") { store.setPaperMode("auto") },
-                PaperLinkRow(name: "Klassisk", sub: "Bytt tilbake til det forrige designet", value: "Bytt ›", valueColor: p.lab, icon: "sparkles") { store.setMobileDesign("klassisk") },
             ])
             PLabel(text: "Bakgrunn på Hjem").padding(.leading, 4).padding(.top, 14)
             bgGrid
@@ -630,10 +631,11 @@ struct CarrierMark: View {
     var size: CGFloat = 42
     var radius: CGFloat = 12
 
-    static func known(_ c: String) -> Bool { logo(c.lowercased()) != nil || ["dhl", "posten", "postnord", "helthjem", "bring"].contains(c.lowercased()) }
+    static func known(_ c: String) -> Bool { logo(c) != nil || ["dhl", "posten", "postnord", "helthjem", "bring"].contains(Carrier42.id(c)) }
 
     var body: some View {
-        let c = carrier.lowercased()
+        // Prompt 42: «PostNord AB», «POSTNORD», «postnord_no» … → postnord (Carrier42.swift).
+        let c = Carrier42.id(carrier)
         ZStack {
             if let img = CarrierMark.logo(c) {
                 // Logoen fra serveren (public/carriers/*.svg), lagt inn i appen som bilde.
@@ -651,10 +653,9 @@ struct CarrierMark: View {
     /// Ekte logo i asset-katalogen (Carrier-<id>), ellers nil og bokstav-merket brukes.
     static func logo(_ c: String) -> UIImage? {
         let id: String
-        switch c {
+        switch Carrier42.id(c) {
         case "17track", "track17", "parcelsapp", "": id = "other"
-        case "db", "dbschenker": id = "schenker"
-        default: id = c
+        case let x: id = x
         }
         return UIImage(named: "Carrier-" + id)
     }
@@ -682,7 +683,8 @@ struct CarrierMark: View {
         case "bring":
             Text("bring").font(.system(size: size * 0.26, weight: .heavy)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.5)
         default:
-            Text(String(carrier.prefix(2)).uppercased()).font(.system(size: size * 0.36, weight: .heavy)).foregroundStyle(.white)
+            Text(Carrier42.initials(carrier)).font(.system(size: size * 0.36, weight: .heavy)).foregroundStyle(.white)
+                .lineLimit(1).minimumScaleFactor(0.6)
         }
     }
 

@@ -389,32 +389,15 @@ private struct LookPage: View {
         @Bindable var s = store
         VStack(spacing: 12) {
             Group {
-                SectionLabel(text: "Mobildesign")
+                SectionLabel(text: "Tema")
                 Card {
-                    Choice(label: "Klassisk", sub: "Liquid Glass eller Material, som før", on: !store.paper) { store.setMobileDesign("klassisk") }
+                    Choice(label: "Papir · lys", sub: "Lyst papir og svart fanelinje", on: store.paperMode == "lys") { store.setPaperMode("lys") }
                     Sep()
-                    Choice(label: "Papir", sub: "Fotovindu, papir og avisspalter. Hjem, Finans, Mat, Sporing og Mer", on: store.paper) { store.setMobileDesign("papir") }
-                }
-                if store.paper {
-                    Card {
-                        Choice(label: "Papir · følg systemet", on: store.paperMode == "auto") { store.setPaperMode("auto") }
-                        Sep()
-                        Choice(label: "Papir · lys", on: store.paperMode == "lys") { store.setPaperMode("lys") }
-                        Sep()
-                        Choice(label: "Papir · mørk", on: store.paperMode == "mork") { store.setPaperMode("mork") }
-                    }
+                    Choice(label: "Papir · mørk", sub: "Kveldspapir og lys fanelinje", on: store.paperMode == "mork") { store.setPaperMode("mork") }
+                    Sep()
+                    Choice(label: "Følg systemet", sub: "Lys om dagen, mørk i mørk modus", on: store.paperMode == "auto") { store.setPaperMode("auto") }
                 }
                 Note(text: "Lagres på kontoen din, så valget følger deg til andre enheter.")
-            }
-            Group {
-                SectionLabel(text: "Designstil")
-                Card {
-                    Choice(label: "iOS · Liquid Glass", sub: "Glassflater og systemets fanelinje", on: store.designStyle == "ios") { store.designStyle = "ios" }
-                    Sep()
-                    Choice(label: "Android · Material 3", sub: "Tonale flater, navigasjonslinje med pille og Skann-knapp", on: store.designStyle == "material") { store.designStyle = "material" }
-                }
-                Note(text: "Gjelder bare denne enheten. Data, kontoer og innstillinger er de samme.")
-                if store.designStyle == "ios" { Card { Switch(label: "Fargebakgrunn", sub: "Fargede lysflekker bak glassflatene", on: $s.colorBg) } }
             }
             Group {
                 SectionLabel(text: "Oppstart")
@@ -427,37 +410,7 @@ private struct LookPage: View {
                 Note(text: store.financeStart ? "Appen åpner i Finans. Hjem-knappen går til Finans, og Homelab og de andre modulene ligger bak profilbildet." : "Appen åpner på Homelab.")
                 // Tilbake til startsiden går alltid med pila øverst til venstre («Knapp i linjen» er fjernet).
             }
-            NavigationBarPrefs()
-            Group {
-                Card { Switch(label: "Skjul beløp til jeg trykker", sub: "Beløp vises som prikker til du trykker på saldoen eller øyet", on: $s.hideAmounts) }
-                SectionLabel(text: "Forsiden")
-                Card {
-                    link("Rediger forsiden") { store.open(.homelab); store.editHome = true }
-                    Sep()
-                    link("Tilbakestill forsiden") { store.resetLayout(); store.flash("Forsiden er tilbakestilt") }
-                }
-            }
-        }
-    }
-}
-
-/// Utseende → Navigasjonslinje: endre navn, rekkefølge og skjul faner i Homelab og Finans.
-private struct NavigationBarPrefs: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        VStack(spacing: 12) {
-            SectionLabel(text: "Navigasjonslinje")
-            Text("Endre navn, rekkefølge og skjul faner. Et tomt felt gir standardnavnet.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
-                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6)
-            SectionLabel(text: "Homelab")
-            NavEditor(list: "hlTabs", ids: store.layout.hlTabs, fixed: HomeLayout.fixedHl, prefix: "hl.",
-                      label: { HlTab(rawValue: $0)?.label ?? $0 }, icon: { HlTab(rawValue: $0)?.icon ?? "square" })
-            SectionLabel(text: "Finans")
-            NavEditor(list: "finTabs", ids: store.layout.finTabs, fixed: HomeLayout.fixedFin, prefix: "fin.",
-                      label: { Tab.from(key: $0)?.rawValue ?? $0 }, icon: { Tab.from(key: $0)?.icon ?? "square" })
-            if store.designStyle == "ios" {
-                Note(text: "På iPhone får fanelinja plass til fire faner pluss Skann. Er alle fem synlige, flyttes Søk til Mer.")
-            }
+            Card { Switch(label: "Skjul beløp til jeg trykker", sub: "Beløp vises som prikker til du trykker på saldoen eller øyet", on: $s.hideAmounts) }
         }
     }
 }

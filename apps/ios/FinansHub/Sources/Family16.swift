@@ -126,6 +126,8 @@ struct FamZone: Identifiable, Hashable {
         color = JS.str(o, "color") ?? "#b23a2a"
         let zid: String = id
         let zname: String = name
+        // Prompt 42: Iconify-ikoner kommer med path-data (icp), som lagres lokalt så ikonet vises uten nett.
+        if let ic = JS.str(o, "icon"), let icp = JS.str(o, "icp"), ic.hasPrefix("ify:") { Icons42.store(ic, icp) }
         icon = Fam22Icons.valid(JS.str(o, "icon")) ?? Fam22Local.icon(zid) ?? Fam22Icons.defaultFor(zname)
         var n: [String: [Bool]] = [:]
         if let d = o["notify"] as? [String: Any] {
@@ -570,22 +572,36 @@ struct FamilyView: View {
     var body: some View {
         VStack(spacing: 14) {
             if let e = m.error { errorCard(e) }
-            // Prompt 40: Hjemlys (status for husstanden + enkel start), Hjemlys40.swift.
-            if tab != "helse" && tab != "hjemlys" { Hjemlys40Card() }
-            if tab != "helse" && tab != "hjemlys" { mapSection }
+            // Prompt 42: ingen Vel fremme-kort (tidligere Hjemlys) øverst på Kart – bare en liten statuslinje mens en økt pågår
+            // (Family42.swift). Vel fremme startes fra fanen Vel fremme.
+            if tab == "kart" { VelFremmeStatus42() }
+            // Prompt 42: kartet og verktøyraden bare på Kart. Soner viser kartet midlertidig mens en ny sone plasseres/redigeres.
+            if tab == "kart" { mapSection }
+            if tab == "soner" {
+                ZonesAddRow42(placing: m.placing22, start: startZone, cancel: cancelZone)
+                if m.placing22 || m.draft22 != nil { zoneMap }
+            }
             switch tab {
             // Prompt 41: Familie → Hjemlys – start, si fra, velg personer, klar, aktiv og sendt (Hjemlys41Views.swift).
+            // Prompt 42: heter Vel fremme.
             case "hjemlys":
                 Hjemlys41Tab()
             case "soner":
-                Fam22ZonesTab { z in ctl.focusZone(z.coord, radius: z.radius) }
+                // Prompt 42: «Vis på kart» åpner Kart-fanen sentrert på sonen.
+                Fam22ZonesTab { z in
+                    m.tab = "kart"
+                    ctl.focusZone(z.coord, radius: z.radius)
+                }
             case "helse":
                 Fam22HealthTab()
             default:
                 kartTab
             }
         }
+        // Prompt 42: bare Kart-fanen har verktøyraden delvis over toppbildet; de andre fanene starter 16 pt under bildet.
+        .padding(.top, tab == "kart" ? 0 : 39)
         .task { await refreshLoop() }
+        .task { await Hjemlys40Model.shared.load(store) }
     }
 
     private func errorCard(_ e: String) -> some View {
@@ -651,6 +667,24 @@ struct FamilyView: View {
             guard coords.count > 1 else { return nil }
             return Fam22Trail(id: mem.id, color: Fam22Fmt.color(mem), coords: coords)
         }
+    }
+
+    /// Prompt 42: kartet i Soner (plasseringsmodus) uten verktøyraden «Vis alle / ↻».
+    @ViewBuilder private var zoneMap: some View {
+        Fam22MapCard(zones: mapZones, pins: mapPins, trails: [], placing: m.placing22, liveOn: liveOn, liveText: liveText,
+                     ctl: ctl, fit: fitAll, onPin: { id in pick(id) }, onPlace: { c in place(c) })
+    }
+
+    private func startZone() {
+        Haptics.shared.select()
+        m.draft22 = nil
+        m.placing22 = true
+    }
+
+    private func cancelZone() {
+        Haptics.shared.select()
+        m.placing22 = false
+        m.draft22 = nil
     }
 
     private func togglePlacing() {

@@ -33,6 +33,8 @@ struct Hjemlys41Tab: View {
                 default: Hjemlys41Start()
                 }
             }
+            // Prompt 42: «Aktive i familien» og Glimt-forslaget under valgene (Family42.swift).
+            VelFremmeCards42()
             Text("Ingenting deles før du er sen. Posisjon og rute slettes etter 24 timer.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
         }
@@ -56,7 +58,7 @@ struct Hjemlys41Head: View {
         HStack(spacing: 6) {
             Hjemlys41Glow(size: 18, state: m.mine?.state ?? "onTheWay")
             VStack(alignment: .leading, spacing: 1) {
-                Text("HJEMLYS").font(PF.mono(10.5)).tracking(1.3).foregroundStyle(p.lab)
+                Text("VEL FREMME").font(PF.mono(10.5)).tracking(1.3).foregroundStyle(p.lab)
                 Text("Et lite lys som står på til du er hjemme.").font(PF.ui(12.5)).foregroundStyle(p.mut)
             }
             Spacer(minLength: 0)
@@ -453,7 +455,7 @@ struct Hjemlys41LockPreview: View {
                 HStack(spacing: 4) {
                     Hjemlys41Glow(size: 24, state: s.state)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Hjemlys").font(.system(size: 14, weight: .bold)).foregroundStyle(Color.white)
+                        Text("Vel fremme").font(.system(size: 14, weight: .bold)).foregroundStyle(Color.white)
                         Text(m.recipientsText).font(.system(size: 11.5)).foregroundStyle(Color.white.opacity(0.75)).lineLimit(1)
                     }
                     Spacer(minLength: 4)

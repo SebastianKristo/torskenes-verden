@@ -211,7 +211,7 @@ enum Hjemlys40Activity {
 
 /// «+ 10 min» (og «+ 15 min» når du er sen).
 struct Hjemlys40PlusIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Hjemlys: mer tid"
+    static var title: LocalizedStringResource = "Vel fremme: mer tid"
     static var description: IntentDescription = IntentDescription("Gir deg mer tid før familien får beskjed.")
 
     @Parameter(title: "Økt")
@@ -249,8 +249,8 @@ struct Hjemlys40PlusIntent: LiveActivityIntent {
 
 /// «Jeg er hjemme».
 struct Hjemlys40HomeIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Hjemlys: jeg er hjemme"
-    static var description: IntentDescription = IntentDescription("Sier fra til familien at du er hjemme, og avslutter Hjemlys.")
+    static var title: LocalizedStringResource = "Vel fremme: jeg er hjemme"
+    static var description: IntentDescription = IntentDescription("Sier fra til familien at du er hjemme, og avslutter Vel fremme.")
 
     @Parameter(title: "Økt")
     var sessionId: String
@@ -275,7 +275,7 @@ struct Hjemlys40HomeIntent: LiveActivityIntent {
 
 /// «Alt OK» (svar på «Alt OK?» når tiden er passert).
 struct Hjemlys40OkIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Hjemlys: alt OK"
+    static var title: LocalizedStringResource = "Vel fremme: alt OK"
     static var description: IntentDescription = IntentDescription("Sier fra at alt er i orden.")
 
     @Parameter(title: "Økt")
@@ -401,7 +401,7 @@ extension Hjemlys40Look {
 /// «Start for meg» fra Hjem-widgeten (og Siri/Snarveier): starter Hjemlys med Glimts forslag til tid (ellers om 30 min)
 /// og Live Activity, uten å åpne appen (LiveActivityIntent kjører i appens prosess).
 struct Hjemlys40StartIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "Start Hjemlys"
+    static var title: LocalizedStringResource = "Start Vel fremme"
     static var description: IntentDescription = IntentDescription("Si fra til husstanden når du er hjemme.")
 
     init() {}

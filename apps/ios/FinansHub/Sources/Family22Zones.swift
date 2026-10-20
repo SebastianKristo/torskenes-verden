@@ -10,7 +10,9 @@ extension FamilyModel {
         if let i = zones.firstIndex(where: { $0.id == z.id }) { zones[i] = z }
         Fam22Local.setIcon(z.id, z.icon)
         let e: String = z.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? z.id
-        let body: [String: Any] = ["name": z.name, "lat": z.lat, "lon": z.lon, "radius": z.radius, "color": z.color, "icon": z.icon, "shared": z.shared]
+        var body: [String: Any] = ["name": z.name, "lat": z.lat, "lon": z.lon, "radius": z.radius, "color": z.color, "icon": z.icon, "shared": z.shared]
+        // Prompt 42: Iconify-ikon sendes med path-data (icp).
+        if z.icon.hasPrefix("ify:"), let icp = Icons42.path(z.icon) { body["icp"] = icp }
         zoneSave22[z.id]?.cancel()
         zoneSave22[z.id] = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 350_000_000)
@@ -26,7 +28,8 @@ extension FamilyModel {
     func createZone22(_ d: Fam22Draft, _ store: Store) {
         let name: String = d.name.trimmingCharacters(in: .whitespaces).isEmpty ? "Sone \(zones.count + 1)" : d.name.trimmingCharacters(in: .whitespaces)
         let icon: String = Fam22Icons.valid(d.icon) ?? Fam22Icons.defaultFor(name)
-        let body: [String: Any] = ["name": name, "lat": d.lat, "lon": d.lon, "radius": d.radius, "color": d.color, "icon": icon, "shared": d.shared]
+        var body: [String: Any] = ["name": name, "lat": d.lat, "lon": d.lon, "radius": d.radius, "color": d.color, "icon": icon, "shared": d.shared]
+        if icon.hasPrefix("ify:"), let icp = Icons42.path(icon) { body["icp"] = icp }
         draft22 = nil
         Task { @MainActor in
             do {
@@ -43,40 +46,7 @@ extension FamilyModel {
     }
 }
 
-/// Ikonrutenettet (13 ikoner). Valgt ikon: fylt i sonefargen med hvitt ikon.
-struct Fam22IconGrid: View {
-    @Environment(\.paper) private var p
-    let selected: String
-    let color: String
-    let cell: CGFloat
-    let glyph: CGFloat
-    let pick: (String) -> Void
-
-    var body: some View {
-        let t: Fam22Tok = Fam22Tok.of(p)
-        let cols: [GridItem] = [GridItem(.adaptive(minimum: cell), spacing: 6)]
-        LazyVGrid(columns: cols, spacing: 6) {
-            ForEach(Fam22Icons.keys, id: \.self) { k in
-                cellView(t, k)
-            }
-        }
-    }
-
-    private func cellView(_ t: Fam22Tok, _ k: String) -> some View {
-        let on: Bool = k == selected
-        let c: Color = Color(hex: color)
-        return Button { pick(k) } label: {
-            Fam22Glyph(d: Fam22Icons.d(k), size: glyph, stroke: 1.9, color: on ? Color.white : t.ink)
-                .frame(maxWidth: .infinity)
-                .frame(height: cell)
-                .background(RoundedRectangle(cornerRadius: 12).fill(on ? c : Color.clear))
-                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(on ? c : t.line, lineWidth: 2))
-                .contentShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Fam22Icons.name(k))
-    }
-}
+/// Prompt 42: ikonrutenettet er erstattet av IconPicker42 (søk, 50 innebygde og Lucide/Tabler via Iconify, Icons42.swift).
 
 /// 10 farger + regnbuerunding (fri fargevelger) og hex-koden.
 struct Fam22ColorRow: View {
@@ -228,7 +198,7 @@ struct Fam22DraftCard: View {
                 Slider(value: Binding<Double>(get: { m.draft22?.radius ?? 200 }, set: { m.draft22?.radius = $0 }), in: 50...2000, step: 25)
                     .tint(Fam22Tok.light.lab)
                 Text("Ikon").font(PF.ui(13)).foregroundStyle(t.mut)
-                Fam22IconGrid(selected: d.iconKey, color: d.color, cell: 40, glyph: 20) { k in m.draft22?.icon = k }
+                IconPicker42(selected: d.iconKey, color: d.color, cell: 40, glyph: 20) { k in m.draft22?.icon = k }
                 Text("Farge").font(PF.ui(13)).foregroundStyle(t.mut)
                 Fam22ColorRow(color: d.color, size: 32) { c in m.draft22?.color = c }
                 Fam22ZoneShare(on: d.shared) { m.draft22?.shared.toggle() }
@@ -341,7 +311,7 @@ struct Fam22ZoneCard: View {
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(t.line, lineWidth: 1))
                 .submitLabel(.done)
                 .onSubmit { saveName() }
-            Fam22IconGrid(selected: zone.icon, color: zone.color, cell: 38, glyph: 19) { k in
+            IconPicker42(selected: zone.icon, color: zone.color, cell: 38, glyph: 19) { k in
                 var z: FamZone = zone
                 z.icon = k
                 m.updateZone22(z, store)

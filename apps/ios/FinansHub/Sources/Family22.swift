@@ -43,9 +43,13 @@ struct Fam22Label: View {
 /* ---------- Ikonene (SVG-banene fra designet, 24 × 24) ---------- */
 
 enum Fam22Icons {
-    static let keys: [String] = ["home", "work", "school", "heart", "cabin", "gym", "shop", "ball", "coffee", "tree", "plane", "star", "pin"]
+    static let base: [String] = ["home", "work", "school", "heart", "cabin", "gym", "shop", "ball", "coffee", "tree", "plane", "star", "pin"]
+    /// Prompt 42: de 13 fra før + 36 nye innebygde (samme nøkler som serveren, Icons42.swift).
+    static let keys: [String] = base + Icons42.extraKeys
 
     static func name(_ k: String) -> String {
+        if let x = Icons42.extra[k] { return x.0 }
+        if k.hasPrefix("ify:") { return Icons42.ifyName(k) }
         switch k {
         case "home": return "Hjem"
         case "work": return "Jobb"
@@ -64,6 +68,8 @@ enum Fam22Icons {
     }
 
     static func d(_ k: String) -> String {
+        if let x = Icons42.extra[k] { return x.1 }
+        if k.hasPrefix("ify:"), let p = Icons42.path(k) { return p }
         switch k {
         case "home": return "M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"
         case "work": return "M4 8h16v11H4zM9 8V5h6v3M4 13h16"
@@ -96,8 +102,11 @@ enum Fam22Icons {
     }
 
     static func valid(_ k: String?) -> String? {
-        guard let k, keys.contains(k) else { return nil }
-        return k
+        guard let k else { return nil }
+        if keys.contains(k) { return k }
+        // Prompt 42: Iconify-ikon («ify:lucide:sailboat») med lagret path-data.
+        if k.hasPrefix("ify:"), Icons42.path(k) != nil { return k }
+        return nil
     }
 
     /// De 10 forhåndsvalgte fargene (ZPAL) og fargene nye soner får etter tur (ZC).
@@ -105,19 +114,22 @@ enum Fam22Icons {
     static let draftColors: [String] = ["#b23a2a", "#2b5d8a", "#2f6b45", "#a8661a", "#7a3b6b"]
 }
 
-/// Enkel SVG-baneleser (M L H V C A Z, store og små bokstaver) for ikonene over.
+/// Enkel SVG-baneleser (M L H V C S Q T A Z, store og små bokstaver) for ikonene over. Prompt 42: S, Q og T for Lucide/Tabler-ikoner.
 struct Fam22PathParser {
     private var toks: [String] = []
     private var i: Int = 0
     private var path: Path = Path()
     private var cur: CGPoint = .zero
     private var start: CGPoint = .zero
+    /// Siste kontrollpunkt for S (etter C/S) og T (etter Q/T).
+    private var lastC: CGPoint? = nil
+    private var lastQ: CGPoint? = nil
 
     init(_ d: String) { toks = Fam22PathParser.tokenize(d) }
 
     static func isCmd(_ s: String) -> Bool {
         guard s.count == 1 else { return false }
-        return "MmLlHhVvCcAaZz".contains(s)
+        return "MmLlHhVvCcSsQqTtAaZz".contains(s)
     }
 
     static func tokenize(_ d: String) -> [String] {
@@ -172,6 +184,9 @@ struct Fam22PathParser {
                 }
             }
             if i >= toks.count || Fam22PathParser.isCmd(toks[i]) { continue }
+            let keepC: CGPoint? = lastC, keepQ: CGPoint? = lastQ
+            lastC = nil
+            lastQ = nil
             switch cmd {
             case "M", "m":
                 let x: CGFloat = n(), y: CGFloat = n()
@@ -203,6 +218,31 @@ struct Fam22PathParser {
                 let pt: CGPoint = rel ? CGPoint(x: cur.x + x, y: cur.y + y) : CGPoint(x: x, y: y)
                 path.addCurve(to: pt, control1: c1, control2: c2)
                 cur = pt
+                lastC = c2
+            case "S", "s":
+                let x2: CGFloat = n(), y2: CGFloat = n(), x: CGFloat = n(), y: CGFloat = n()
+                let rel: Bool = cmd == "s"
+                let c1: CGPoint = keepC.map { CGPoint(x: 2 * cur.x - $0.x, y: 2 * cur.y - $0.y) } ?? cur
+                let c2: CGPoint = rel ? CGPoint(x: cur.x + x2, y: cur.y + y2) : CGPoint(x: x2, y: y2)
+                let pt: CGPoint = rel ? CGPoint(x: cur.x + x, y: cur.y + y) : CGPoint(x: x, y: y)
+                path.addCurve(to: pt, control1: c1, control2: c2)
+                cur = pt
+                lastC = c2
+            case "Q", "q":
+                let x1: CGFloat = n(), y1: CGFloat = n(), x: CGFloat = n(), y: CGFloat = n()
+                let rel: Bool = cmd == "q"
+                let c: CGPoint = rel ? CGPoint(x: cur.x + x1, y: cur.y + y1) : CGPoint(x: x1, y: y1)
+                let pt: CGPoint = rel ? CGPoint(x: cur.x + x, y: cur.y + y) : CGPoint(x: x, y: y)
+                path.addQuadCurve(to: pt, control: c)
+                cur = pt
+                lastQ = c
+            case "T", "t":
+                let x: CGFloat = n(), y: CGFloat = n()
+                let c: CGPoint = keepQ.map { CGPoint(x: 2 * cur.x - $0.x, y: 2 * cur.y - $0.y) } ?? cur
+                let pt: CGPoint = cmd == "t" ? CGPoint(x: cur.x + x, y: cur.y + y) : CGPoint(x: x, y: y)
+                path.addQuadCurve(to: pt, control: c)
+                cur = pt
+                lastQ = c
             case "A", "a":
                 let rx: CGFloat = n(), ry: CGFloat = n(), rot: CGFloat = n(), large: CGFloat = n(), sweep: CGFloat = n(), x: CGFloat = n(), y: CGFloat = n()
                 let pt: CGPoint = cmd == "a" ? CGPoint(x: cur.x + x, y: cur.y + y) : CGPoint(x: x, y: y)

@@ -5,7 +5,7 @@ import SwiftUI
 // aldri hvit tekst på lys rosa (glass med aksent-tint). Mørk-aksenten (#f08a76) kommer bare fra mørk palett.
 
 /// Primærknapp: Papir → lab-bakgrunn, onLab-tekst, trykket brightness .92; deaktivert → line-bakgrunn og mut-tekst.
-/// Klassisk/Material → glass med aksent som før.
+/// Uten Papir-palett (skjer ikke i appen lenger) → kortflate med aksent.
 struct Primary28Style: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
     var radius: CGFloat = 22

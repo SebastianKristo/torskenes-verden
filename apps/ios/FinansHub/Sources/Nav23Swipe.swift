@@ -51,8 +51,7 @@ struct EdgeSwipeBack: ViewModifier {
 
     /// Papirfargen (aldri svart) når det ikke finnes noe bilde av forrige side.
     private var backdrop: Color {
-        if store.paper { return PaperPalette.of(store.paperMode, system: paperSystemScheme(.active)).bg }
-        return Color(hex: "#14130f")
+        PaperPalette.of(store.paperMode, system: paperSystemScheme(.active)).bg
     }
 
     /// Skygge på venstre kant av siden som dras (0 0 24 pt rgba(0,0,0,.25)).

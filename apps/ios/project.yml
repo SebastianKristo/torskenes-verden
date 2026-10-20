@@ -82,12 +82,12 @@ targets:
         # Prompt 40: Hjemlys som Live Activity (Dynamic Island, låseskjerm, StandBy) med hyppige oppdateringer underveis.
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: true
-        # Fontene i Papir og Mat (OFL, Google Fonts): Newsreader, Manrope, IBM Plex Mono, Instrument Serif og Bricolage Grotesque.
+        # Fontene i Papir og Mat (OFL, Google Fonts): Newsreader, Manrope, IBM Plex Mono og Bricolage Grotesque.
+        # Prompt 42: Instrument Serif (bare brukt av det klassiske Mat-designet 2a) er fjernet.
         UIAppFonts:
           - BricolageGrotesque-ExtraBold.ttf
           - IBMPlexMono-Medium.ttf
           - IBMPlexMono-SemiBold.ttf
-          - InstrumentSerif-Regular.ttf
           - Manrope-Bold.ttf
           - Manrope-ExtraBold.ttf
           - Manrope-Medium.ttf

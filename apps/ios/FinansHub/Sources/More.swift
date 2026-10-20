@@ -178,7 +178,6 @@ struct MoreView: View {
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
         .scrollDismissesKeyboard(.interactively)
-        .tracksScroll(store)
         .refreshable { try? await store.reload() }
     }
 
@@ -280,7 +279,6 @@ struct SearchView: View {
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
         .scrollDismissesKeyboard(.interactively)
-        .tracksScroll(store)
         .onAppear {
             if q.isEmpty { q = store.aiQuery }
             Task { try? await Task.sleep(for: .milliseconds(350)); focused = true }
@@ -375,7 +373,6 @@ struct FastView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .tracksScroll(store)
         .refreshable { await store.reloadModule() }
     }
 
@@ -426,7 +423,6 @@ struct AccountsView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .tracksScroll(store)
         .refreshable { await store.reloadModule() }
     }
 
@@ -471,7 +467,6 @@ struct StocksView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .tracksScroll(store)
         .refreshable { await store.reloadModule() }
     }
 
@@ -578,7 +573,6 @@ struct ReportsView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .tracksScroll(store)
         .refreshable { await store.reloadModule() }
     }
 

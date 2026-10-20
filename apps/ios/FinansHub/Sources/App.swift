@@ -40,6 +40,8 @@ struct FinansHubApp: App {
                     }
                 }
                 .task {
+                    // Prompt 42: Klassisk (Liquid Glass / Material) er slettet – flytt til Papir (Design42.swift).
+                    store.migrateClassic42(server: false)
                     // Prompt 39: nytt standard app-ikon – valget i appen følger ikonet iOS viser (Settings39.swift).
                     Task { await AppMeta.sync39() }
                     if store.locked { store.unlock() }

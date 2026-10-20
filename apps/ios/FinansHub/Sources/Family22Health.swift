@@ -3,49 +3,6 @@ import UIKit
 
 /* ---------------- Prompt 22: Helse-fanen (kilder og ett kort per person) ---------------- */
 
-/// Kildene øverst: Apple Health ♥ og Health Connect ✚, kant i `pos` når koblet til.
-struct Fam22HealthSources: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    @MainActor private var m: FamilyModel { FamilyModel.shared }
-    @MainActor private var h: HealthSync { HealthSync.shared }
-
-    var body: some View {
-        let t: Fam22Tok = Fam22Tok.of(p)
-        HStack(alignment: .top, spacing: 8) {
-            card(t, "Apple Health", "♥", Color(hex: "#e0245e"), appleOn, "iPhone") { store.paperGo("innst-helse") }
-            card(t, "Health Connect", "✚", Color(hex: "#3b6fd6"), hcOn, "Android") {
-                store.flash(hcOn ? "Health Connect styres i Homelab-appen på Android" : "Åpne Homelab-appen på Android for å godkjenne Health Connect")
-            }
-        }
-    }
-
-    private var appleOn: Bool { h.master && h.share.values.contains(true) }
-
-    private var hcOn: Bool {
-        m.members.contains { mem in mem.health != nil && Fam22HealthSrc.isAndroid(mem) }
-    }
-
-    private func card(_ t: Fam22Tok, _ n: String, _ ic: String, _ c: Color, _ on: Bool, _ dev: String, _ act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(ic).font(.system(size: 18)).foregroundStyle(Color.white)
-                    .frame(width: 36, height: 36)
-                    .background(RoundedRectangle(cornerRadius: 11).fill(c))
-                Text(n).font(PF.ui(14, .bold)).foregroundStyle(t.ink).lineLimit(1)
-                Text(on ? "Koblet til via appen · " + dev : "Ikke koblet til · trykk for å koble").font(PF.ui(12)).foregroundStyle(on ? t.pos : t.mut)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 20).fill(t.card))
-            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(on ? t.pos : t.line, lineWidth: 1.5))
-            .contentShape(RoundedRectangle(cornerRadius: 20))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 enum Fam22HealthSrc {
     static func isAndroid(_ mem: FamMember) -> Bool {
         let d: String = (mem.last?.device ?? "").lowercased()
@@ -165,7 +122,7 @@ struct Fam22HealthTab: View {
     var body: some View {
         let t: Fam22Tok = Fam22Tok.of(p)
         VStack(spacing: 14) {
-            Fam22HealthSources()
+            // Prompt 42: Apple Health / Health Connect-kortene er flyttet til Innstillinger → Helse (Familie) (Health42.swift).
             if HealthNoData20.shouldShow(m) { HealthNoData20() }
             if !m.loaded && m.members.isEmpty {
                 Text("Henter …").font(PF.ui(13.5)).foregroundStyle(t.mut)
@@ -175,7 +132,7 @@ struct Fam22HealthTab: View {
             ForEach(m.members) { mem in
                 Fam22HealthCard(mem: mem, isMe: mem.id == m.meId)
             }
-            Text("Apple Health og Health Connect kan bare leses av appen på telefonen. Homelab-appen sender et sammendrag hit hvert 15. minutt, og bare det personen har valgt å dele.")
+            Text("Kildene (Apple Health, Health Connect og Home Assistant) velges i Innstillinger → Helse (Familie). Bare det personen har valgt å dele, vises her.")
                 .font(PF.ui(12)).foregroundStyle(t.mut).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 4)
                 .frame(maxWidth: .infinity, alignment: .leading)

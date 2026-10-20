@@ -344,7 +344,7 @@ final class Cal26Model {
         if Quick29Model.shared.openLink(url, store) { return }
         let parts: [String] = url.pathComponents.filter { $0 != "/" }
         if let id = parts.first, !id.isEmpty { pendingOpen = id.removingPercentEncoding ?? id }
-        if store.paper { store.paperGo("kalender") }
+        store.paperGo("kalender")
         applyPending()
     }
 

@@ -120,15 +120,10 @@ private let ranges: [(String, String, Int)] = [("1D", "I dag", 2), ("1U", "1 uke
 private func krs(_ v: Double) -> String { "\(neg0(v)) kr" }
 private func chg(_ v: Double) -> String { "\(v < 0 ? "−" : "+")\(pct(abs(v)))" }
 
-/// Farger som følger appens tema: iOS (mørkt glass, hvite piller, dempede pasteller) eller Material You.
+/// Farger på Aksjer-sidene (dempede pasteller, piller i tekstfargen).
 private struct StockTheme {
     let up: Color, down: Color, upBg: Color, downBg: Color, blue: Color, blueBg: Color, pill: Color, onPill: Color, tints: [Color]
     static var current: StockTheme {
-        if DesignStyle.material {
-            return StockTheme(up: Color(hex: "#9FE3C6"), down: Color(hex: "#FF8A80"), upBg: Color(hex: "#1F3A2F"), downBg: Color(hex: "#FF8A80").opacity(0.16),
-                              blue: Color(hex: "#FFDBC8"), blueBg: Color(hex: "#3D332C"), pill: M3.primary, onPill: M3.onPrimary,
-                              tints: ["#1F3A2F", "#3A2F33", "#763300", "#31281F", "#5D4033", "#3D332C"].map { Color(hex: $0) })
-        }
         return StockTheme(up: Color(hex: "#7BE3A0"), down: Color(hex: "#FF8A80"), upBg: Color(hex: "#7BE3A0").opacity(0.16), downBg: Color(hex: "#FF8A80").opacity(0.16),
                           blue: Color(hex: "#A9C3FF"), blueBg: Color(hex: "#8FB3FF").opacity(0.18), pill: .white, onPill: .black,
                           tints: [Color(hex: "#7BE3A0").opacity(0.22), Color(hex: "#BEAAFF").opacity(0.24), Color(hex: "#FFBE78").opacity(0.22),
@@ -230,7 +225,6 @@ struct StocksMobileView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .tracksScroll(store)
         .refreshable { await store.reloadModule() }
     }
 
@@ -517,7 +511,6 @@ struct StocksMobileView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 130)
         }
-        .tracksScroll(store)
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 10) {
                 tradeButton("Selg", p, buy: false, th, big: true)
@@ -561,7 +554,6 @@ struct StocksMobileView: View {
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
         .scrollDismissesKeyboard(.interactively)
-        .tracksScroll(store)
     }
 
     private func dayName(_ d: String) -> String {

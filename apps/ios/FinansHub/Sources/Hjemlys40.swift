@@ -254,7 +254,7 @@ final class Hjemlys40Model {
                 let o: [String: Any] = JS.obj(d)
                 let so: [String: Any] = (o["session"] as? [String: Any]) ?? o
                 var s: Hjemlys40Session = Hjemlys40Session(so)
-                if s.id.isEmpty { self.err = "Serveren startet ikke Hjemlys. Prøv igjen."; return }
+                if s.id.isEmpty { self.err = "Serveren startet ikke Vel fremme. Prøv igjen."; return }
                 if JS.str(so, "eta") == nil && (so["eta"] as? NSNumber) == nil { s.eta = eta }
                 // Prompt 41: mål, startsted og etappe er kjent før Live Activity startes (aldri «Start» / tom tid).
                 if let d = extra["destination"] as? [String: Any], so["destination"] == nil {
@@ -269,9 +269,9 @@ final class Hjemlys40Model {
                 self.suggest = false
                 await self.startActivity(s, store)
                 Hjemlys40Location.shared.start(store, sessionId: s.id)
-                store.flash("Hjemlys er på · husstanden ser at du er på vei")
+                store.flash("Vel fremme er på · husstanden ser at du er på vei")
             } catch let e as APIError {
-                self.err = e.status == 404 ? "Serveren støtter ikke Hjemlys ennå. Oppdater Homelab." : e.message
+                self.err = e.status == 404 ? "Serveren støtter ikke Vel fremme ennå. Oppdater Homelab." : e.message
             } catch {
                 self.err = error.localizedDescription
             }
@@ -521,63 +521,7 @@ final class Hjemlys40Location: NSObject, CLLocationManagerDelegate {
 }
 
 /* ---------- Familie-kortet ---------- */
-
-/// Øverst i Familie: egen økt (tid, fremdrift, knapper) eller «Start Hjemlys», Glimt-forslag og status for husstanden.
-struct Hjemlys40Card: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    @MainActor private var m: Hjemlys40Model { Hjemlys40Model.shared }
-
-    var body: some View {
-        Group {
-            if m.supported {
-                VStack(alignment: .leading, spacing: 12) {
-                    head
-                    if let s = m.mine, s.active || s.state == "home" {
-                        // Prompt 40: 1a på dagtid, 1c (nedtellingsring) om natta / i mørkt tema (Hjemlys40Flow.swift).
-                        Hjemlys40Active(s: s)
-                    } else {
-                        if m.suggest { Hjemlys40Suggest() }
-                        // Prompt 41: hele flyten (si fra, velg personer, klar) ligger i fanen Familie → Hjemlys.
-                        Button { Haptic30.light(); withAnimation(.easeOut(duration: 0.2)) { FamilyModel.shared.tab = "hjemlys" } } label: {
-                            Text("Start Hjemlys · si fra").font(PF.ui(15, .bold)).foregroundStyle(p.bg)
-                                .frame(maxWidth: .infinity).frame(height: 48)
-                                .background(p.ink, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    let others: [Hjemlys40Member] = m.household.filter { $0.active || $0.state == "home" }
-                    if !others.isEmpty {
-                        VStack(spacing: 0) {
-                            ForEach(others) { (h: Hjemlys40Member) in
-                                Hjemlys40MemberRow(h: h)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { if h.state == "late" { m.alertMember = h } }
-                            }
-                        }
-                    }
-                }
-                .padding(16)
-                .background(p.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                // Prompt 40: startsiden, mottakerskjermen og Glimt-samtalen ligger i Hjemlys40Host (PaperShell).
-            }
-        }
-        .task { await m.load(store) }
-    }
-
-    private var head: some View {
-        HStack(spacing: 10) {
-            Hjemlys40Dot(size: 22, state: m.mine?.state ?? "onTheWay")
-            VStack(alignment: .leading, spacing: 1) {
-                Text("HJEMLYS").font(PF.mono(10.5)).tracking(1.3).foregroundStyle(p.lab)
-                Text("Et lite lys som står på til du er hjemme.").font(PF.ui(12.5)).foregroundStyle(p.mut)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-        }
-    }
-}
+// Prompt 42: kortet øverst i Familie → Kart er fjernet (claude-code-familie-fjern-hjemlys-kort.md). Status: VelFremmeStatus42.
 
 /// Egen aktive økt.
 struct Hjemlys40Mine: View {
@@ -645,7 +589,7 @@ struct Hjemlys40Mine: View {
                 Hjemlys40Pill(title: "Jeg er hjemme", dark: true) { m.home(store) }
             }
             Button { m.end(store) } label: {
-                Text("Avslutt Hjemlys").font(PF.ui(13, .semibold)).foregroundStyle(p.mut).frame(height: 32)
+                Text("Avslutt Vel fremme").font(PF.ui(13, .semibold)).foregroundStyle(p.mut).frame(height: 32)
             }
             .buttonStyle(.plain)
         }

@@ -39,31 +39,29 @@ struct CarrierLogo22: View {
     @State private var img: UIImage? = nil
 
     var body: some View {
+        // Prompt 42: logoen som er pakket med appen først (Carrier42.swift), så logobiblioteket, så «PN»-flis.
+        let bundled: UIImage? = Carrier42.image(s.carrier) ?? Carrier42.image(s.carrierName)
         ZStack {
-            if let img {
+            if let i = bundled ?? img {
                 RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color.white)
-                Image(uiImage: img).resizable().scaledToFit().padding(size * 0.14)
+                Image(uiImage: i).resizable().scaledToFit().padding(bundled != nil ? 0 : size * 0.12)
             } else {
                 RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color(hex: s.carrierColor))
-                Text(s.carrierName).font(.system(size: size * (s.carrierName.count > 6 ? 0.2 : 0.24), weight: .heavy))
-                    .foregroundStyle(Color(hex: s.carrierFg)).lineLimit(1).minimumScaleFactor(0.4).padding(.horizontal, size * 0.08)
+                Text(Carrier42.initials(s.carrierName)).font(.system(size: size * 0.32, weight: .heavy))
+                    .foregroundStyle(Color(hex: s.carrierFg)).lineLimit(1).minimumScaleFactor(0.5).padding(.horizontal, size * 0.08)
             }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .accessibilityLabel(s.carrierName)
         .task(id: s.carrier) {
+            if bundled != nil { return }
             let id: String = CarrierLogo22.registryId(s.carrier)
             img = await LogoRegistry20.shared.manualImage(id: id, api: store.api)
         }
     }
 
-    static func registryId(_ c: String) -> String {
-        switch c.lowercased() {
-        case "db", "dbschenker": return "schenker"
-        default: return c.lowercased()
-        }
-    }
+    static func registryId(_ c: String) -> String { Carrier42.id(c) }
 }
 
 /// Status, forventet levering, siste hendelse, feil og tidslinjen med fem steg (Registrert · Hentet · I transport · Hentested · Levert).

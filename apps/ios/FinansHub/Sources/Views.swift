@@ -2,50 +2,21 @@ import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
 
-/* ---------------- Liquid Glass ---------------- */
+/* ---------------- Flater (prompt 42: Liquid Glass er slettet, alt tegnes på Papir) ---------------- */
 
 extension View {
-    /// iOS 26 Liquid Glass når tilgjengelig, ellers uskarpt materiale med lys kant (samme uttrykk som designet 1a).
+    /// Kortflaten i appen: Papir-kort (hvitt, mørkt i mørk modus) med valgfri tint. Navnet er beholdt fra før.
     @ViewBuilder func glass(_ radius: CGFloat = 24, tint: Color? = nil) -> some View {
         if let p = PaperSkin.palette { paperSurface(p, radius, tint: tint) }
-        else if DesignStyle.material { materialSurface(radius, tint: tint) } else { glassIOS(radius, tint: tint) }
-    }
-
-    /// Material 3: tonal flate (kort #261E19), tint som containerfarge.
-    func materialSurface(_ radius: CGFloat, tint: Color?) -> some View {
-        self.background(tint.map { $0.opacity(0.85) } ?? M3.card, in: RoundedRectangle(cornerRadius: Swift.min(radius, 28)))
-    }
-
-    @ViewBuilder private func glassIOS(_ radius: CGFloat, tint: Color?) -> some View {
-        #if compiler(>=6.2)
-        if #available(iOS 26.0, *) {
-            self.glassEffect(tint.map { Glass.regular.tint($0) } ?? .regular, in: .rect(cornerRadius: radius))
-        } else {
-            fallbackGlass(radius, tint: tint)
-        }
-        #else
-        fallbackGlass(radius, tint: tint)
-        #endif
-    }
-
-    func fallbackGlass(_ radius: CGFloat, tint: Color?) -> some View {
-        self.background((tint ?? .white).opacity(tint == nil ? 0.08 : 0.55), in: RoundedRectangle(cornerRadius: radius))
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius))
-            .overlay(RoundedRectangle(cornerRadius: radius).stroke(Color.skinFg.opacity(0.2), lineWidth: 1))
+        else { self.background((tint ?? Color.skinFg).opacity(0.1), in: RoundedRectangle(cornerRadius: Swift.min(radius, 22), style: .continuous)) }
     }
 }
 
-/// Bakgrunn med fargeflekker bak glasset.
+/// Bakgrunnen bak skjermene: papirfargen.
 struct Backdrop: View {
-    @Environment(Store.self) private var store
     var body: some View {
         ZStack {
-            if let p = PaperSkin.palette { p.bg } else { Color(hex: DesignStyle.material ? "#19120E" : "#07070A") }
-            if store.colorBg && !DesignStyle.material && PaperSkin.palette == nil {
-            Circle().fill(Color.accent).frame(width: 300).blur(radius: 90).opacity(0.55).offset(x: -140, y: -220)
-            Circle().fill(Color(hex: "#4D6BFF")).frame(width: 260).blur(radius: 90).opacity(0.45).offset(x: 150, y: 80)
-            Circle().fill(Color(hex: "#C24E17")).frame(width: 220).blur(radius: 80).opacity(0.4).offset(x: -40, y: 360)
-            }
+            if let p = PaperSkin.palette { p.bg } else { Color(hex: "#f4f1ea") }
         }
         .ignoresSafeArea()
     }
@@ -238,7 +209,6 @@ struct HomeView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .tracksScroll(store)
         .refreshable { try? await store.reload() }
     }
 }
@@ -287,7 +257,6 @@ struct ListView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .tracksScroll(store)
         .refreshable { try? await store.loadTx() }
     }
 }
@@ -342,7 +311,6 @@ struct BudgetView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
-        .tracksScroll(store)
         .refreshable { try? await store.reload() }
     }
     private func stat(_ k: String, _ v: String) -> some View {
@@ -354,28 +322,6 @@ struct BudgetView: View {
         if let m = b.topMerchant { c.append("Mest: \(m)") }
         if let p = b.prevUsed, p > 0 { let d = Int((b.used - p) / p * 100); c.append((d > 0 ? "↑ \(d)" : "↓ \(-d)") + " % mot forrige mnd") }
         return c
-    }
-}
-
-struct BudgetDetail: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        if let s = store.summary, let b = s.budgets.first(where: { $0.categoryId == store.selectedBudget }) ?? s.budgets.first(where: { $0.budget > 0 }) {
-            let items = (store.txs ?? []).filter { $0.categoryId == b.categoryId && $0.date >= s.from && $0.date < s.to }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(b.category).font(.title.weight(.bold))
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Brukt av \(n0(b.budget)) kr").foregroundStyle(Color.skinFg.opacity(0.7))
-                        Text("\(n0(b.used)) kr").font(.system(size: 36, weight: .semibold, design: .monospaced))
-                        Text(b.used > b.budget ? "Over budsjett med \(n0(b.used - b.budget)) kr." : "\(n0(b.budget - b.used)) kr igjen denne måneden.").foregroundStyle(Color.skinFg.opacity(0.75))
-                    }
-                    .padding(20).frame(maxWidth: .infinity, alignment: .leading).glass(28)
-                    if !items.isEmpty { SectionLabel(text: "Transaksjoner"); TxList(items: items) }
-                }
-                .padding(20)
-            }
-        } else { Empty(text: "Velg en kategori.") }
     }
 }
 
