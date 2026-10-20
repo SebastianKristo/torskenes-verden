@@ -93,7 +93,8 @@ struct WxPlacesSheet22: View {
         HStack {
             Text("Steder").font(.system(size: 24, weight: .bold))
             Spacer()
-            SheetButton30(kind: .primary, title: "Ferdig", dark: true) { dismiss() }
+            // Prompt 40: ✕ som på hovedsiden i Vær.
+            VaerCloseButton { dismiss() }
                 .buttonStyle(.borderless)
         }
         .plainRow22()
@@ -199,17 +200,12 @@ struct WxMapView22: View {
             WxWebView22(url: url).ignoresSafeArea()
             VStack {
                 HStack {
-                    Button { dismiss() } label: {
-                        Text("Ferdig").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white)
-                            .padding(.horizontal, 16).frame(height: 40)
-                            .background(.ultraThinMaterial, in: Capsule())
-                            .background(Color(hex: "#0a1423").opacity(0.7), in: Capsule())
-                    }
-                    .buttonStyle(.plain)
+                    // Prompt 40: ✕ øverst til høyre (mørk glass over kartet), bynavnet midt på.
+                    Color.clear.frame(width: 44, height: 1)
                     Spacer()
                     Text(name).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white).shadow(color: .black.opacity(0.6), radius: 4, y: 1)
                     Spacer()
-                    Color.clear.frame(width: 72, height: 1)
+                    VaerCloseButton(dark: true) { dismiss() }
                 }
                 .padding(.horizontal, 16).padding(.top, 8)
                 Spacer()

@@ -545,11 +545,19 @@ struct Glimt35Fig: View {
     var mood: Glimt35Mood = .idle
     var t: Double = 0
     var still: Bool = false
+    /// Prompt 40: ingen julepynt (figurvelgeren). Samme som `.glimt40NoJul()` rundt figuren.
+    var noJul: Bool = false
 
     var body: some View {
         let a: G35T = G35T(t: t, still: still)
+        let hf: CGFloat = Glimt35Fig.heightFactor(id)
+        // Prompt 40: figurbiblioteket legger selv på juleantrekket når julemodus er aktiv (Glimt40Jul.swift).
         figure(a)
-            .modifier(G35Wrap(S: size, hf: Glimt35Fig.heightFactor(id), mood: mood, a: a))
+            .frame(width: size, height: size * hf, alignment: .topLeading)
+            .overlay(alignment: .topLeading) {
+                if !noJul { Glimt40DressAuto(S: size, H: size * hf, t: t, still: still) }
+            }
+            .modifier(G35Wrap(S: size, hf: hf, mood: mood, a: a))
             .accessibilityLabel(Glimt35Char.get(id).name)
     }
 

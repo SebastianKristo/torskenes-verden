@@ -570,6 +570,8 @@ struct FamilyView: View {
     var body: some View {
         VStack(spacing: 14) {
             if let e = m.error { errorCard(e) }
+            // Prompt 40: Hjemlys (status for husstanden + enkel start), Hjemlys40.swift.
+            if tab != "helse" { Hjemlys40Card() }
             if tab != "helse" { mapSection }
             switch tab {
             case "soner":

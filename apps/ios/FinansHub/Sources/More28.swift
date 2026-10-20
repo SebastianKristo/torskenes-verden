@@ -348,13 +348,18 @@ struct More28RowView: View {
         }
     }
 
-    private var icon: some View {
-        Image(systemName: r.icon).font(.system(size: 19, weight: .medium))
-            .foregroundStyle(PaperIconTheme.color(store.iconTheme, index))
-            .frame(width: 40, height: 40)
-            .background(p.bg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .opacity(hiddenRow ? 0.5 : 1)
-            .accessibilityHidden(true)
+    @ViewBuilder private var icon: some View {
+        // Prompt 40: Finans/Økonomi har eget ikon (3c, Okonomi40Icon.swift).
+        if r.id == "finans" {
+            Okonomi40Icon(size: 40).opacity(hiddenRow ? 0.5 : 1)
+        } else {
+            Image(systemName: r.icon).font(.system(size: 19, weight: .medium))
+                .foregroundStyle(PaperIconTheme.color(store.iconTheme, index))
+                .frame(width: 40, height: 40)
+                .background(p.bg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .opacity(hiddenRow ? 0.5 : 1)
+                .accessibilityHidden(true)
+        }
     }
 
     @ViewBuilder private var leading: some View {

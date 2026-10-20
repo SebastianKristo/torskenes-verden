@@ -124,6 +124,8 @@ struct Glimt35SettingsContent: View {
             Glimt35FigGrid()
             Text("Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle …) tar over når temaet passer, om det er slått på under.")
                 .font(PF.ui(12.5)).foregroundStyle(Brief34C.mut).fixedSize(horizontal: false, vertical: true)
+            // Prompt 40: Julemodus rett under figurvalget og teksten om vennene, før Glimt-brief-bryteren (Glimt40Settings.swift).
+            Glimt40JulCard()
             Glimt35Toggles()
             Glimt35Label(text: "BRIEFER GJENNOM DAGEN").padding(.top, 4)
             Glimt35Briefs()
@@ -182,7 +184,9 @@ struct Glimt35FigCell: View {
     var body: some View {
         Button(action: act) {
             VStack(spacing: 6) {
+                // Prompt 40: figurvelgeren viser figurene uten julepynt (noJul).
                 Glimt35Live(id: c.id, size: 50, mood: on ? .glad : .idle)
+                    .glimt40NoJul()
                     .frame(height: 62)
                 Text(c.name).font(PF.ui(12.5, .bold)).foregroundStyle(Brief34C.ink).lineLimit(1)
             }

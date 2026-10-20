@@ -130,6 +130,10 @@ struct Brief35Page: View {
             LinearGradient(stops: [.init(color: Brief34C.rgb(0xe6ecef), location: 0), .init(color: Brief34C.paper, location: 0.46)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
+            // Prompt 40: snøfall i julemodus når det snør eller er minus (blåhvite fnugg mot den lyse bakgrunnen).
+            if Glimt40Weather.briefSnowy(b) {
+                Glimt40Snow(count: 14, color: Brief34C.rgb(0x9fb6cc)).ignoresSafeArea()
+            }
             ScrollViewReader { (proxy: ScrollViewProxy) in
                 ScrollView(.vertical, showsIndicators: false) {
                     // Prompt 36: fast bredde – innholdet er låst til skjermbredden, så siden aldri kan dras sideveis.
@@ -211,6 +215,8 @@ struct Brief35Content: View {
                     Text(m.error).font(PF.ui(12.5, .semibold)).foregroundStyle(Brief34C.red)
                 }
             }
+            // Prompt 40: julemodus – nedtelling til julaften og «Dagens luke» (Glimt40Settings.swift).
+            Brief40JulCard()
             // Prompt 36: ringen følger kortets hjørner nøyaktig (Brief36Ring) og settes på selve kortet.
             // Prompt 37: hele Vær-kortet åpner Vær over briefen (Brief37.swift); ✕ går tilbake hit.
             Brief37WeatherButton(b: b).brief36Ring(target == "vaer").id("gb35-vaer")
@@ -540,7 +546,16 @@ struct Brief35NewsCard: View {
     var body: some View {
         let list: [Brief35News] = items
         VStack(alignment: .leading, spacing: 6) {
-            Text("Nyheter").font(PF.serif(22, medium: true)).foregroundStyle(Brief34C.ink)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Nyheter").font(PF.serif(22, medium: true)).foregroundStyle(Brief34C.ink)
+                Spacer(minLength: 6)
+                // Prompt 40: lukker briefen og åpner Nyhetsleseren rett på Glimt-siden (News40Glimt.swift).
+                Button { News40Model.shared.openFromBrief(store) } label: {
+                    Text("✦ Glimt-sammendrag ›").font(PF.ui(12.5, .bold)).foregroundStyle(Brief34C.red)
+                        .frame(height: 30).contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
             if list.isEmpty {
                 Text("Ingen nyheter fra Nyhetsleser ennå.").font(PF.ui(13)).foregroundStyle(Brief34C.mut).padding(.vertical, 6)
             }

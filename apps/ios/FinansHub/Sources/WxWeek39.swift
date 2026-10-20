@@ -210,8 +210,9 @@ struct WxWeek39Card: View {
         }
     }
 
+    /// Prompt 40: tittelen alene på raden, personlighetsvelgeren på egen rad under (full bredde, tre like knapper, 32 pt).
     private var header: some View {
-        HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 ZStack {
                     Circle().fill(AngularGradient(colors: [Color(hex: "#b23a2a"), Color(hex: "#e8794a"), Color(hex: "#f2c14e"), Color(hex: "#3fbf9a"),
@@ -221,18 +222,19 @@ struct WxWeek39Card: View {
                 .frame(width: 16, height: 16)
                 Text("GLIMT · UKAS VÆR").font(.system(size: 12, weight: .heavy)).tracking(1).opacity(0.8).lineLimit(1)
             }
-            Spacer(minLength: 4)
             HStack(spacing: 4) {
                 ForEach(WxWeek39Model.persons, id: \.0) { (p: (String, String, String)) in
                     Button { m.pick(p.0, store) } label: {
-                        Text(p.1).font(.system(size: 12.5, weight: .bold))
+                        Text(p.1).font(.system(size: 13, weight: .bold))
                             .foregroundStyle(m.person == p.0 ? Color(hex: "#1b2a40") : Color.white)
-                            .padding(.horizontal, 11).frame(height: 28)
+                            .frame(maxWidth: .infinity).frame(height: 32)
                             .background(m.person == p.0 ? Color.white.opacity(0.9) : Color.clear, in: Capsule())
+                            .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
                 }
             }
+            .frame(maxWidth: .infinity)
             .padding(3)
             .background(Color.black.opacity(0.18), in: Capsule())
             .animation(.easeOut(duration: 0.2), value: m.person)
@@ -243,7 +245,8 @@ struct WxWeek39Card: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(s.0).font(.system(size: 11, weight: .heavy)).tracking(0.9).opacity(0.65)
             Text(s.1).font(.system(size: 20, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.7)
-            Text(s.2).font(.system(size: 11.5)).opacity(0.7).lineLimit(1)
+            // Prompt 40: undertekstene får gå over to linjer i stedet for å kuttes.
+            Text(s.2).font(.system(size: 11.5)).opacity(0.7).lineLimit(2).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 12).padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)

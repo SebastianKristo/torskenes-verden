@@ -45,6 +45,13 @@ struct NewsReaderView: View {
                 // Prompt 30: kantsveip lukker artikkelen.
                 .edgeSwipeClose30 { article27 = nil }
         }
+        // Prompt 40: Glimt-siden over Nyhetsleseren («‹ Nyheter» går tilbake hit).
+        .fullScreenCover(isPresented: Binding<Bool>(get: { News40Model.shared.open }, set: { (v: Bool) in News40Model.shared.open = v })) {
+            News40Page()
+                .environment(\.paper, p)
+                .environment(store)
+                .edgeSwipeClose30 { News40Model.shared.open = false }
+        }
         .task { if store.news == nil { await store.loadNews() } }
         .task { await NewsIcons23.shared.preload(store) }
     }
@@ -101,10 +108,14 @@ struct NewsReaderView: View {
         let text = d.aiSummary && !d.digest.isEmpty ? d.digest : (d.items.first?.title ?? "")
         if !text.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
-                if d.aiSummary && !d.digest.isEmpty { PLabel(text: "✦ AI-sammendrag") }
+                if d.aiSummary && !d.digest.isEmpty { PLabel(text: "✦ Glimt · sammendrag") }
                 Text(text).font(PF.italic(19)).foregroundStyle(p.ink).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+                // Prompt 40: egen Glimt-side med langt sammendrag, kilder og bilder (News40Glimt.swift).
+                News40Entry()
             }
             .padding(.bottom, 14)
+            .contentShape(Rectangle())
+            .onTapGesture { Haptic30.light(); News40Model.shared.show(store) }
         }
     }
 

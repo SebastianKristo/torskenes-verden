@@ -115,6 +115,7 @@ struct Swipe37Card<C: View>: View {
     @State private var width: CGFloat = 360
     @State private var movedAt: Date = .distantPast
     @State private var lastVel: CGFloat = 0
+    @GestureState private var touching: Bool = false
 
     var body: some View {
         let prog: CGFloat = Swift.min(1, dx / Swift.max(1, width * 0.38))
@@ -133,16 +134,20 @@ struct Swipe37Card<C: View>: View {
             }
             .onTapGesture {
                 // Klikk rett etter et sveip ignoreres.
-                if Date().timeIntervalSince(movedAt) < 0.5 || out { return }
+                // Prompt 40: også når fingeren holdt stille før slipp eller sveipet ble låst som vertikalt.
+                if Date().timeIntervalSince(movedAt) < 0.5 || out || Swipe40Gate.moved { return }
                 onTap()
             }
             .simultaneousGesture(drag)
+            .onChange(of: touching) { (_: Bool, on: Bool) in if !on { Swipe40Gate.ended() } }
             .accessibilityAction(named: "Skjul resten av dagen") { dismiss() }
     }
 
     private var drag: some Gesture {
-        DragGesture(minimumDistance: 10, coordinateSpace: .local)
+        DragGesture(minimumDistance: 6, coordinateSpace: .local)
+            .updating($touching) { (_: DragGesture.Value, st: inout Bool, _: inout Transaction) in st = true }
             .onChanged { (v: DragGesture.Value) in
+                Swipe40Gate.track(v.translation)
                 if out { return }
                 let tx: CGFloat = v.translation.width
                 let ty: CGFloat = v.translation.height
@@ -161,6 +166,7 @@ struct Swipe37Card<C: View>: View {
                 withTransaction(tr) { dx = nv }
             }
             .onEnded { (v: DragGesture.Value) in
+                Swipe40Gate.ended()
                 let wasX: Bool = lock == 1
                 lock = 0
                 if !wasX || out { return }
@@ -353,7 +359,17 @@ struct Bible37BriefCard: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(t.background(24))
+        // Prompt 40: trykk på kortet lukker briefen og åpner Bibel-siden (Kopier og ↻ gjør bare sitt eget).
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .onTapGesture { openBible() }
+        .accessibilityAction(named: "Åpne Bibel") { openBible() }
         .task { await m.load(store) }
+    }
+
+    private func openBible() {
+        Haptic30.light()
+        Brief34Model.shared.close()
+        store.paperGo("bibel")
     }
 
     private func copy(_ v: Verse37) {

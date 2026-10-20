@@ -72,6 +72,13 @@ final class Glimt35Model {
         if next.engines.isEmpty { next.engines = cfg.engines }
         // Prompt 39: eldre server uten briefGlimt: behold valget på enheten.
         if !next.briefGlimtSet { next.briefGlimt = cfg.briefGlimt }
+        // Prompt 40: eldre server uten julemodus: behold valget på enheten.
+        if !next.julSet {
+            next.jul = cfg.jul
+            next.julPhase = cfg.julPhase
+            next.snow = cfg.snow
+            next.julSound = cfg.julSound
+        }
         cfg = next
         persist()
     }
@@ -79,7 +86,12 @@ final class Glimt35Model {
     private func persist() {
         Glimt35Cfg.store(cfg)
         Brief34Model.shared.autoTour = cfg.guide
-        WidgetCenter.shared.reloadTimelines(ofKind: Brief34.widgetKind)
+        // Prompt 40: julemodus til App Group + NotificationCenter (alle åpne figurer) + alle widgets på hjemskjermen.
+        if Glimt40Jul.save(mode: cfg.jul, phase: cfg.julPhase, snow: cfg.snow, sound: cfg.julSound) {
+            WidgetCenter.shared.reloadAllTimelines()
+        } else {
+            WidgetCenter.shared.reloadTimelines(ofKind: Brief34.widgetKind)
+        }
     }
 
     /// Endrer lokalt med en gang og sender bare det som er endret (PUT er delvis).

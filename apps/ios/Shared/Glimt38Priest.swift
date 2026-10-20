@@ -73,7 +73,7 @@ struct G38Priest<Fig: View>: View {
         let pulse: Double = G36Anim.kf(haloP, [(0, 0), (0.5, 1), (1, 0)])
         ZStack(alignment: .topLeading) {
             G38Halo(S: S, pulse: pulse).offset(x: S * 0.5 - S * 0.39, y: -S * 0.2)
-            body0().frame(width: S, height: S, alignment: .topLeading)
+            body0().frame(width: S, height: S, alignment: .topLeading).glimt40NoJul()
             G38Robe(S: S).offset(x: S * 0.5 - S * 0.58, y: S + S * 0.34 - S * 0.62)
             G38Bible(S: S).offset(x: S + S * 0.16 - S * 0.36, y: S + S * 0.2 - S * 0.28)
         }

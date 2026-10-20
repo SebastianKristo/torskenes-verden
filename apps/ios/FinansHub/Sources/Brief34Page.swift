@@ -22,6 +22,8 @@ struct Glimt34Live: View {
                 Glimt34Figure(size: size, mood: mood, lean: lean, t: ctx.date.timeIntervalSinceReferenceDate)
             }
             .frame(width: size, height: size * 1.12)
+            // Prompt 40: juleantrekket også på den eldre figuren.
+            .overlay(alignment: .topLeading) { Glimt40DressAuto(S: size, H: size * 1.12) }
             .animation(.easeInOut(duration: 0.4), value: lean)
         }
     }
@@ -56,7 +58,8 @@ struct Brief34HomeCard: View {
 
     var body: some View {
         let b: Brief34 = m.brief ?? Brief34()
-        Button { m.show() } label: {
+        // Prompt 40: et avbrutt sveip (over 6 pt bevegelse) åpner ikke briefen (Swipe40Gate i Swipe39.swift).
+        Button { if !Swipe40Gate.moved { m.show() } } label: {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(b.kick.uppercased() + " · GLIMT").font(PF.mono(10.5)).tracking(1.4).foregroundStyle(Brief34C.peach)

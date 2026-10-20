@@ -299,12 +299,9 @@ private struct SecurityPage: View {
             }
             Card { Switch(label: "Skjul beløp i appveksleren", sub: "Uskarpt bilde i oversikten over åpne apper", on: $s.hideSwitcher, icon: "eye.slash") }
             SectionLabel(text: "Tofaktor (2FA)")
-            Card {
-                Row(label: "Status", value: store.me?.twoFactor == true ? "På · TOTP" : store.me?.twoFactor == false ? "Av" : "Ukjent", icon: "key")
-                Sep()
-                link(store.me?.twoFactor == true ? "Slå av 2FA" : "Sett opp 2FA") { if let u = URL(string: store.base + "/") { openURL(u) } }
-            }
-            Note(text: "Oppsett med QR-kode og gjenopprettingskoder gjøres i Homelab → Innstillinger → Innlogging. Bruk en autentiseringsapp som 1Password, Aegis eller Google Authenticator.")
+            // Prompt 40: hele oppsettet skjer i appen (Tfa40.swift), aldri i Safari.
+            Card { Tfa40Row() }
+            Note(text: "Bruk Passord-appen (iOS 17+), 1Password, Aegis eller Google Authenticator på denne telefonen. Du får reservekoder til slutt.")
             SectionLabel(text: "Pålitelige enheter")
             Card {
                 Row(label: "Denne enheten", value: UIDevice.current.name, icon: "laptopcomputer.and.iphone")
@@ -313,6 +310,7 @@ private struct SecurityPage: View {
             }
             Note(text: "Appen bruker et eget token. Fra internett kreves alltid passord, og 2FA hvis det er på.")
         }
+        .tfa40Host()
     }
 }
 

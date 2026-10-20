@@ -115,6 +115,7 @@ extension AppMeta {
         switch app.alternateIconName ?? "" {
         case "AppIcon-Hus": id = "hus"
         case "AppIcon-Rom": id = "rom"
+        case "AppIcon-Okonomi": id = "okonomi"
         default: id = "monogram"
         }
         if AppMeta.shared.icon != id { AppMeta.shared.icon = id }

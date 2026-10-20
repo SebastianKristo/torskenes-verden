@@ -614,7 +614,9 @@ extension Store {
         case "kvitt": return finNav.contains("kvitteringer") ? "Hjem" : "Mer"
         case "boliger": return folder != nil ? "Boliger" : (finNav.contains("boliger") ? "Hjem" : "Mer")
         case "profil": return "Alle innstillinger"
-        case "huske", "bursdag", "kalender", "bibel": return "Mer"
+        // Prompt 40: «‹ Hjem» fra Gjøremål uansett hvor den ble åpnet fra.
+        case "huske": return "Hjem"
+        case "bursdag", "kalender", "bibel": return "Mer"
         default:
             // Prompt 26: «‹ Integrasjoner» fra en integrasjonsside, «‹ Bursdager» fra Kalendere åpnet der.
             if let l = nav26UpLabel { return l }

@@ -31,9 +31,12 @@ struct PaperTxData {
     var bankMessage = ""
     var booked = ""
     var valueDate = ""
+    /// Prompt 40: «Lagt til …» / «Sist endret …» og notatet (Fin40.swift).
+    var fin40: Fin40Meta = Fin40Meta()
 
     init(_ o: [String: Any], failed: Bool = false) {
         self.failed = failed
+        fin40 = Fin40Meta(o)
         id = JS.int(o, "id") ?? 0
         merchant = JS.str(o, "merchant") ?? JS.str(o, "description") ?? ""
         category = JS.str(o, "category") ?? ""
@@ -89,6 +92,7 @@ struct PaperTxDetailView: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @State private var catSheet = false
+    @State private var editAll40 = false
 
     var body: some View {
         VStack(spacing: 10) {
@@ -107,15 +111,28 @@ struct PaperTxDetailView: View {
                         // Prompt 30: gult banner, bildet med markerte felt og «Les kvitteringen på nytt».
                         hl30Top(d)
                         receipt(d)
+                        // Prompt 40: ✦ La Glimt lese kvitteringen på nytt (Fin40.swift).
+                        if !d.receiptId.isEmpty { Fin40RereadButton(d: d) }
                     } else { attach }
                     HStack(spacing: 8) {
+                        // Prompt 40: «Rediger alt» – dato, beløp, kategori, konto, notat og varelinjer.
+                        PLineButton(title: "Rediger alt", height: 46, full: true) { editAll40 = true }
                         PLineButton(title: "Endre kategori", height: 46, full: true) { catSheet = true }
-                        PLineButton(title: "Bankutskrift", height: 46, full: true) { store.openOriginal(d.id, "bank") }
                     }
+                    PLineButton(title: "Bankutskrift", height: 46, full: true) { store.openOriginal(d.id, "bank") }
                     if !d.bankText.isEmpty || !d.bankMessage.isEmpty { bank(d) }
+                    // Prompt 40: når og hvordan den ble lagt til, og sist endret.
+                    Fin40AddedLine(meta: d.fin40)
                 }
             } else {
                 ProgressView().padding(40)
+            }
+        }
+        .sheet(isPresented: $editAll40) {
+            if let d = store.txDetail {
+                Fin40EditSheet(d: d) { editAll40 = false }
+                    .environment(\.paper, p)
+                    .presentationDetents([.large])
             }
         }
         .sheet(isPresented: $catSheet) {
@@ -337,6 +354,15 @@ struct PaperFinSearch: View {
             if store.aiBusy { AiJobProgress25() }
             if let n = store.aiNote, !store.aiBusy, n.contains("avbrutt") { Text(n).font(PF.ui(12.5)).foregroundStyle(p.mut) }
             if q.trimmingCharacters(in: .whitespaces).isEmpty && store.ai == nil && !store.aiBusy { suggestions }
+            // Prompt 40: Glimt svarer med oppsummering, nøkkeltall og kort (Fin40Ask.swift).
+            if Fin40Ask.shared.busy && !store.aiBusy {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text("✦ Glimt leser …").font(PF.ui(13.5)).foregroundStyle(p.mut)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if let g = Fin40Ask.shared.answer, g.q == store.aiQuery || store.aiQuery.isEmpty { Fin40AnswerCard(a: g) }
             if let a = store.ai, !store.aiBusy { results(a) }
         }
         .onAppear {
@@ -374,12 +400,13 @@ struct PaperFinSearch: View {
         store.ai = nil
         store.aiNote = nil
         store.aiQuery = ""
+        Fin40Ask.shared.clear()
     }
 
     private var field: some View {
         HStack(spacing: 8) {
             // Prompt 27: ✕ til venstre (SearchField27).
-            SearchField27(text: $q, placeholder: aiOn ? "Spør om økonomien din" : "Søk i navn, kategori og varelinjer", font: PF.ui(14.5),
+            SearchField27(text: $q, placeholder: aiOn ? "Spør Glimt, f.eks. «abonnementer»" : "Søk i navn, kategori og varelinjer", font: PF.ui(14.5),
                           focus: $focused, onClear: { clear27() }, onSubmit: { lastPicked27 = q; sug.close(suppress: true); go(q) }, lead: {
                 Text("⌕").font(PF.ui(17)).foregroundStyle(p.mut)
             })
@@ -390,13 +417,13 @@ struct PaperFinSearch: View {
                 UserDefaults.standard.set(aiOn, forKey: "fh_psearch_ai")
                 if aiOn { sug.close(suppress: false) } else { sug.update(q, aiOn: false, store) }
             } label: {
-                Text("✦ AI").font(PF.ui(13, .bold)).foregroundStyle(aiOn ? p.bg : p.mut).padding(.horizontal, 14).frame(height: 38)
+                Text("✦ Glimt").font(PF.ui(13, .bold)).foregroundStyle(aiOn ? p.bg : p.mut).padding(.horizontal, 14).frame(height: 38)
                     .background(aiOn ? p.ink : Color.clear, in: Capsule())
                     .overlay(Capsule().stroke(aiOn ? p.ink : p.line, lineWidth: 1))
             }
             .buttonStyle(.plain)
             .padding(.trailing, 6)
-            .accessibilityLabel(aiOn ? "AI er på" : "AI er av")
+            .accessibilityLabel(aiOn ? "Glimt er på" : "Glimt er av")
         }
         .frame(height: 50)
         .background(p.card, in: Capsule())
@@ -413,11 +440,12 @@ struct PaperFinSearch: View {
 
     @ViewBuilder private func results(_ a: AiAnswer) -> some View {
         let hits = (a.hits ?? []).filter { $0.txId != nil || $0.description != nil }
-        if aiOn, a.mode != "plain", let t = a.text, !t.isEmpty {
+        let glimt40: Bool = Fin40Ask.shared.answer != nil
+        if aiOn, a.mode != "plain", let t = a.text, !t.isEmpty, !glimt40 {
             VStack(alignment: .leading, spacing: 6) {
-                PLabel(text: "✦ AI-svar")
-                Text(t).font(PF.serif(18)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
-                if let e = a.engine { Text(e).font(PF.ui(11.5)).foregroundStyle(p.mut) }
+                PLabel(text: "✦ Glimt")
+                // Prompt 40: aldri rå markdown eller kildemarkører; modellnavnet vises ikke i kortet.
+                Text(Fin40Ask.clean(t)).font(PF.serif(18)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 16).padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -425,8 +453,10 @@ struct PaperFinSearch: View {
             .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(p.lab, lineWidth: 1.5))
         }
         if let n = store.aiNote { Text(n).font(PF.ui(12.5)).foregroundStyle(p.mut).frame(maxWidth: .infinity, alignment: .leading) }
-        if hits.isEmpty {
-            Text(aiOn ? "Ingen treff." : "Ingen treff. Slå på ✦ AI for å søke i innholdet i kvitteringene.").font(PF.ui(14)).foregroundStyle(p.mut)
+        if hits.isEmpty && glimt40 {
+            EmptyView()
+        } else if hits.isEmpty {
+            Text(aiOn ? "Ingen treff." : "Ingen treff. Slå på ✦ Glimt for å søke i innholdet i kvitteringene.").font(PF.ui(14)).foregroundStyle(p.mut)
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 12).padding(.horizontal, 4)
         } else {
             PSection(title: "\(hits.count) treff", trailing: "sum " + pkr(hits.compactMap(\.amount).reduce(0, +)))
@@ -471,6 +501,8 @@ struct PaperFinSearch: View {
         guard !t.isEmpty else { return }
         focused = false
         Haptics.shared.tap()
+        // Prompt 40: Glimt-kort for standardspørsmål (abonnementer, forbruk, faste utgifter) – også uten ✦ Glimt på.
+        if aiOn || Fin40Ask.standard(t) { Fin40Ask.shared.ask(t, store) } else { Fin40Ask.shared.clear() }
         if aiOn {
             store.ask(t)
         } else {

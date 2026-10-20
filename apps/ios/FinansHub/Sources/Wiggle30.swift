@@ -200,11 +200,16 @@ struct Mer30Card: View {
 
     private var row: some View {
         HStack(spacing: 12) {
-            Image(systemName: r.icon).font(.system(size: 19, weight: .medium))
-                .foregroundStyle(PaperIconTheme.color(store.iconTheme, index))
-                .frame(width: 40, height: 40)
-                .background(p.bg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .accessibilityHidden(true)
+            if r.id == "finans" {
+                // Prompt 40: Økonomi-ikonet 3c.
+                Okonomi40Icon(size: 40)
+            } else {
+                Image(systemName: r.icon).font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(PaperIconTheme.color(store.iconTheme, index))
+                    .frame(width: 40, height: 40)
+                    .background(p.bg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .accessibilityHidden(true)
+            }
             VStack(alignment: .leading, spacing: 1) {
                 Text(r.name).font(PF.serif(19, medium: true)).foregroundStyle(p.ink).lineLimit(1)
                 Text(r.sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)

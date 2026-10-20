@@ -167,6 +167,8 @@ extension Store {
             return
         }
         if paperInner || paperFin != nil || (paperClassic != nil && !paperInDomains) { paperBack(); return }
+        // Prompt 40: Gjøremål går alltid tilbake til Hjem (også åpnet fra Mer), historikken nullstilles.
+        if paperTab == "huske" { paperGo("hjem"); return }
         // Domener går alltid hjem, også når siden ble åpnet fra Mer (prompt 24: Boliger i Finans + Boliger).
         if paperInDomains { prof24GoRoot(); return }
         if paperTab == "ftx" { paperGo("fliste"); return }
@@ -233,6 +235,8 @@ extension Store {
         if let t = nav26BackTarget() { paperGo(t); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
         if paperTab == "kalender" || paperTab == "chat" { Nav27.back(self); return }
+        // Prompt 40: sveip fra venstre kant i Gjøremål går også til Hjem.
+        if paperTab == "huske" && paperClassic == nil && paperFin == nil { paperGo("hjem"); return }
         if paperTab == "huske" || paperTab == "bursdag" || paperTab == "kalender" { paperGo("mer"); return }
         if nav23SubOfFinMore { paperGo("fmer"); return }
         if paperFin != nil { paperFin = nil; go(.home); return }

@@ -18,12 +18,8 @@ struct WxSheetFrame22<C: View>: View {
                     Text(title).font(.system(size: 18, weight: .bold)).frame(maxWidth: .infinity)
                     HStack {
                         Spacer()
-                        Button { if inPanel { WxPanel25.shared.close() } else { dismiss() } } label: {
-                            Text("×").font(.system(size: 18)).foregroundStyle(.white)
-                                .frame(width: 40, height: 40).background(Color(hex: "#2a2d34"), in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Lukk")
+                        // Prompt 40: samme ✕ som hovedsiden i Vær (Vaer40.swift).
+                        VaerCloseButton { if inPanel { WxPanel25.shared.close() } else { dismiss() } }
                     }
                 }
                 content()
@@ -664,7 +660,7 @@ struct WxCompareSheet22: View {
 
     /// Prompt 39: «Yr mot Storm» er nå 2a (duell på himmel) med wiggle-redigering (WxCmp39.swift). Den gamle visningen er beholdt som `legacy`.
     var body: some View {
-        WxCmp39Page(w: w, topPad: inPanel ? 14 : 48) {
+        WxCmp39Page(w: w, topPad: inPanel ? 14 : 12) {
             if inPanel { WxPanel25.shared.close() } else { dismiss() }
         }
     }
@@ -679,7 +675,8 @@ struct WxCompareSheet22: View {
                     }
                     Spacer()
                     // Prompt 30: felles Ferdig-pille (hvit på mørk flate), lett haptikk ved lukking.
-                    SheetButton30(kind: .primary, title: "Ferdig", dark: true) {
+                    // Prompt 40: ✕ i stedet for «Ferdig» (samme knapp som hovedsiden i Vær).
+                    VaerCloseButton {
                         if inPanel { WxPanel25.shared.close() } else { dismiss() }
                     }
                 }

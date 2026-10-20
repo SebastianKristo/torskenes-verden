@@ -211,6 +211,11 @@ struct PaperShell: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, kb28 ? 8 : (g.safeAreaInsets.bottom < 10 ? 18 : 8))
+                    // Prompt 40: baren og ✦ løftes rett over tastaturet (8 pt luft) med samme måling som Chat (Kb32b),
+                    // og glir opp/ned sammen med tastaturet. Lista bak blir stående.
+                    .keyboardLift32b(gap: 8)
+                    .ignoresSafeArea(.keyboard)
+                    .animation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.24), value: Kb32b.shared.frame)
                     .transition(.opacity)
                 }
             }
@@ -845,12 +850,13 @@ struct PaperPage: View {
             .mask(
                 VStack(spacing: 0) {
                     // Prompt 32: i redigeringsmodus klippes innholdet under ＋ / ✓, så kortene aldri glir bak knappene.
-                    Color.clear.frame(height: scrolled ? (Wiggle30.topPad(store) > 0 ? Wiggle30.clipEdit : 23) : 0)
+                    Color.clear.frame(height: scrolled ? (Wiggle30.topPad(store) > 0 ? Wiggle30.clipEdit : (store.inBible39 ? 36 : 23)) : 0)
                     // Prompt 34: masken går langt under rammen, så kortene synes bak fanelinjen og hjemstreken.
                     Color.black.padding(.bottom, -400)
                 }
             )
-            .padding(.top, -23)
+            // Prompt 40: Bibel-siden går 36 pt opp i bakgrunnen (de andre sidene 23 pt). Kortet har egen skygge og runde hjørner.
+            .padding(.top, store.inBible39 ? -36 : -23)
             // Prompt 28: pillene i redigeringsmodus ligger over listen, utenfor scroll-innholdet (Wiggle28.swift).
             .edit28Layer(p)
             .overlay(alignment: .top) { Mer30Pills() }
@@ -954,7 +960,8 @@ struct PaperHero: View {
             .padding(.leading, wide ? 130 : 22)
             .padding(.trailing, 22)
             .padding(.top, topInset + 10)
-            .padding(.bottom, home ? 36 : 34)
+            // Prompt 40: på Bibel overlapper første kort hero med 36 pt, så tittelen flyttes like mye opp (minst 12 pt luft).
+            .padding(.bottom, home ? 36 : (store.inBible39 ? 47 : 34))
         }
         .frame(height: (home ? (wide ? 230 : 172) : 154) + topInset)
         .overlay(alignment: .bottomTrailing) {
@@ -965,7 +972,8 @@ struct PaperHero: View {
                     .frame(maxWidth: g.size.width * 0.6, alignment: .trailing)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
             }
-            .padding(.trailing, 14).padding(.bottom, 23)
+            // Prompt 40: på Bibel står kreditten over kortet (overlapp 36 + 10 pt).
+            .padding(.trailing, 14).padding(.bottom, store.inBible39 ? 46 : 23)
         }
         .clipped()
     }

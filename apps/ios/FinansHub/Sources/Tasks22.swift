@@ -24,6 +24,11 @@ final class TaskDock22 {
             focusTick += 1
             return
         }
+        // Prompt 40: en setning med flere handlinger («… men først må jeg levere pakken») går til Glimt, som deler den opp.
+        if Task40Split.isMulti(t) {
+            Tasks37Glimt.shared.open(store)
+            return
+        }
         let m: TasksModel = TasksModel.shared
         // Prompt 32: i Arkivert legges nye oppgaver i første liste.
         let list: String = (cur == "alle" || cur == Tasks32b.archId) ? (m.lists.first?.id ?? "hjem") : cur

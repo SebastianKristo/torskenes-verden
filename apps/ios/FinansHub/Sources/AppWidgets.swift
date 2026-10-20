@@ -70,6 +70,8 @@ extension Store {
         case "bursdager", "bursdag", "birthdays": paperGo("bursdag")
         case "avganger", "ruter", "avg": paperGo("avg")
         case "familie", "family", "posisjon": paperGo("familie")
+        // Prompt 40: Live Activity / Hjemlys-varsel → Familie (Hjemlys-kortet øverst).
+        case "hjemlys": paperGo("familie"); Task { await Hjemlys40Model.shared.load(self) }
         case "tracking", "packages", "sporing": paperGo("sporing")
         case "mat", "matplan": paperGo("mat")
         case "home", "finance", "finans": paperGo("finans")

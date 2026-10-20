@@ -28,6 +28,8 @@ final class AppMeta {
         ("monogram", "Papir-monogram", "IconPreviewMonogram", nil),
         ("hus", "Huset med stativ", "IconPreviewHus", "AppIcon-Hus"),
         ("rom", "Fire rom", "IconPreviewRom", "AppIcon-Rom"),
+        // Prompt 40: Økonomi-ikonet 3c (hvit lommebok med budsjettring på mørk blå #1B2A40).
+        ("okonomi", "Økonomi · lommebok", "IconPreviewOkonomi", "AppIcon-Okonomi"),
     ]
     static let suggestions = ["Homelab", "Torskenes Verden"]
 
@@ -570,6 +572,9 @@ final class Realtime: NSObject {
         guard let store else { return }
         switch JS.str(o, "type") ?? "" {
         case "tasks": Task { await TasksModel.shared.load(store) }
+        // Prompt 40: Hjemlys (husstanden, sen/hjemme) og Glimt-innstillinger (julemodus fra en annen enhet).
+        case "hjemlys": Task { await Hjemlys40Model.shared.load(store) }
+        case "glimt:settings", "glimt-settings": Task { await Glimt35Model.shared.load(store) }
         case "family":
             if JS.str(o, "kind") == "ping" {
                 // Noen i familien ber telefonen spille lyd («Finn telefonen»).

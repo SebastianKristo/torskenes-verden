@@ -313,21 +313,20 @@ struct WxCmp39Page: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Yr mot Storm").font(.system(size: 28, weight: .bold))
                 Text(w.placeName).font(.system(size: 13.5)).opacity(0.75)
             }
             Spacer(minLength: 6)
-            Button {
-                if L.editing { L.done(store) } else { close() }
-            } label: {
-                Text("Ferdig").font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(L.editing ? Color(hex: "#22395a") : Color.white)
-                    .padding(.horizontal, 15).frame(height: 34)
-                    .background(L.editing ? Color.white : Color.white.opacity(0.2), in: Capsule())
+            // Prompt 40: ✕ som i Vær; «Ferdig» (hvit pille, 42 pt) bare mens kortene redigeres.
+            Group {
+                if L.editing {
+                    VaerDoneButton40 { L.done(store) }
+                } else {
+                    VaerCloseButton { close() }
+                }
             }
-            .buttonStyle(.plain)
             .animation(.easeOut(duration: 0.2), value: L.editing)
         }
         .padding(.horizontal, 4).padding(.bottom, 4)
@@ -486,8 +485,9 @@ struct WxCmp39Hero: View {
 
     private func diffText(_ t: WxCmp39Day?) -> String {
         guard let t else { return "–" }
-        let d: Int = Int((t.sH - t.yH).rounded())
-        return (d > 0 ? "+" : "") + String(d) + "°"
+        // Prompt 40: ingen fortegn, bare forskjellen («Δ 3°»); like → «likt». Fargen/siden viser hvem som er varmest.
+        let d: Int = abs(Int((t.sH - t.yH).rounded()))
+        return d == 0 ? "likt" : "Δ " + String(d) + "°"
     }
 
     private func side(_ name: String, _ big: String, _ sub: String, yr: Bool) -> some View {
@@ -575,7 +575,7 @@ struct WxCmp39List: View {
             .padding(3)
             .wxGlass39(14)
             VStack(spacing: 0) {
-                WxCmp39ListHead()
+                WxCmp39ListHead(tab: tab)
                 ForEach(days) { (d: WxCmp39Day) in
                     WxCmp39Row(d: d, tab: tab, open: open == d.id) {
                         Haptics.shared.select()
@@ -604,16 +604,19 @@ struct WxCmp39List: View {
     }
 }
 
-/// Overskriften: YR · ← Yr  Storm → · STORM (full bredde, ingenting presses sammen).
+/// Overskriften: YR · ← Yr varmere · Storm varmere → · STORM (prompt 40; nedbør: «← Yr mer» / «Storm mer →»).
 struct WxCmp39ListHead: View {
+    var tab: String = "t"
+
     var body: some View {
+        let word: String = tab == "t" ? "varmere" : "mer"
         HStack(spacing: 8) {
             Color.clear.frame(width: 44, height: 1)
             Text("YR").foregroundStyle(WxCmp39.yrT).frame(width: 50, alignment: .trailing)
             HStack(spacing: 4) {
-                Text("← Yr")
+                Text("← Yr " + word).minimumScaleFactor(0.75)
                 Spacer(minLength: 4)
-                Text("Storm →")
+                Text("Storm " + word + " →").minimumScaleFactor(0.75)
             }
             .frame(maxWidth: .infinity)
             Text("STORM").foregroundStyle(WxCmp39.stT).frame(width: 50, alignment: .leading)
@@ -694,7 +697,7 @@ struct WxCmp39Bar: View {
                 Rectangle().fill(Color.white.opacity(0.3)).frame(width: 1, height: 14).offset(x: W / 2, y: 4)
                 Capsule().fill(yrSide ? WxCmp39.yrC : WxCmp39.stC).frame(width: w, height: 10)
                     .offset(x: yrSide ? W / 2 - w : W / 2, y: 6)
-                if abs(df) > 0.04 {
+                if !label.isEmpty {
                     Text(label).font(.system(size: 10.5, weight: .heavy)).foregroundStyle(yrSide ? WxCmp39.yrT : WxCmp39.stT)
                         .lineLimit(1).fixedSize()
                         .frame(width: W, alignment: .center)
@@ -707,9 +710,14 @@ struct WxCmp39Bar: View {
     }
 
     private var label: String {
+        // Prompt 40: bare avviket («3°») i fargen til den som er høyest; avrundet til 0 → ingen etikett (aldri «−0°»).
         let a: Double = abs(df)
-        let v: String = unit == "°" ? String(Int(a.rounded())) : WxCmp39.mm(a)
-        return (df > 0 ? "+" : "−") + v + unit
+        if unit == "°" {
+            let n: Int = Int(a.rounded())
+            return n == 0 ? "" : String(n) + unit
+        }
+        let v: String = WxCmp39.mm(a)
+        return v == "0" || v == "0,0" ? "" : v + unit
     }
 }
 

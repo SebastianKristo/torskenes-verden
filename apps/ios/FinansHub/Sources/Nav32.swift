@@ -380,7 +380,7 @@ struct HomeTabEditor32b: View {
     @Environment(Store.self) private var store
 
     var body: some View {
-        TabEditor32b(kicker: "HJEM · FANELINJE", max: 5, hasMore: true, all: PaperTabItem.all, defaults: PaperTabItem.defaults,
+        TabEditor32b(kicker: "HJEM · FANELINJE", max: 5, hasMore: true, all: PaperTabItem.selectable, defaults: PaperTabItem.defaults,
                      icons: PaperTabItem.icons, initial: store.mainTabItems,
                      save: { (rows: [PaperTabItem]) in store.setTabBar(rows) },
                      reset: { store.resetTabBar() })

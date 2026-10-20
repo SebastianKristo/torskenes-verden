@@ -111,6 +111,13 @@ struct Glimt35Cfg: Hashable {
     /// no | en
     var lang: String = "no"
     var engines: [Glimt35Engine] = []
+    /// Prompt 40: julemodus auto | av | pa, fasen ved På (advent | jul | nyttar | vinter), snø i Vær/brief og julelyd (av | bjelle).
+    var jul: String = "auto"
+    var julPhase: String = "advent"
+    var snow: Bool = true
+    var julSound: String = "av"
+    /// Serveren sendte jul (eldre server uten feltet skal ikke overskrive valget lokalt).
+    var julSet: Bool = false
 
     var host: String { Glimt35Char.host(char) }
 
@@ -180,6 +187,14 @@ struct Glimt35Cfg: Hashable {
         c.voice = s(tts, "voice", "nora")
         c.rate = s(tts, "rate", "normal")
         c.lang = s(tts, "lang", "no")
+        // Prompt 40: julemodus (glimt_jul / glimt_jul_p på web).
+        c.julSet = o["jul"] != nil
+        let jm: String = s(o, "jul", "auto").lowercased()
+        c.jul = ["auto", "av", "pa"].contains(jm) ? jm : (jm == "på" ? "pa" : "auto")
+        c.julPhase = Glimt40JulPhase.from(o["julPhase"] as? String)?.rawValue ?? "advent"
+        c.snow = b(o, "snow", true)
+        let js: String = s(o, "julSound", "av")
+        c.julSound = js == "bjelle" ? "bjelle" : "av"
         let eng: [[String: Any]] = ((o["engines"] as? [Any]) ?? []).compactMap { $0 as? [String: Any] }
         c.engines = eng.map { (x: [String: Any]) -> Glimt35Engine in
             Glimt35Engine(id: s(x, "id", ""), name: s(x, "name", s(x, "id", "")), ready: b(x, "ready", false), keySet: b(x, "keySet", false),
@@ -198,7 +213,8 @@ struct Glimt35Cfg: Hashable {
         }
         let tts: [String: Any] = ["engine": engine, "voice": voice, "rate": rate, "lang": lang]
         let out: [String: Any] = ["char": char, "friends": friends, "brief": brief, "readAloud": readAloud, "guide": guide, "notify": notify,
-                                  "briefGlimt": briefGlimt, "briefs": br, "tts": tts]
+                                  "briefGlimt": briefGlimt, "briefs": br, "tts": tts,
+                                  "jul": jul, "julPhase": julPhase, "snow": snow, "julSound": julSound]
         return out
     }
 

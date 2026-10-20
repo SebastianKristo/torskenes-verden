@@ -303,6 +303,8 @@ struct PaperWeatherView: View {
                 // Prompt 28: ny himmel og væranimasjon (Weather28Fx.swift / Weather28Sim.swift).
                 WxSky28(code: code, night: night).ignoresSafeArea()
                 fx(w, code: code, night: night)
+                // Prompt 40: snøfall i julemodus når det snør eller er minus («Snø i Vær og brief»).
+                if Glimt40Weather.snowy(code: code, temp: w?.temp ?? 5) { Glimt40Snow(count: 22).ignoresSafeArea() }
                 if isWide, let w {
                     WxWide25(w: w, width: g.size.width, mode: $mode, open: { k in open(k) }, openDay: { i in openDay(i) },
                              compare: { openCompare() }, fullMap: { map = true })

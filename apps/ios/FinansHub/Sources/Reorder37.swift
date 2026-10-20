@@ -213,7 +213,8 @@ struct Drag37Shield: View {
     }
 
     private var reorder: some Gesture {
-        LongPressGesture(minimumDuration: 0.17, maximumDistance: 8)
+        // Prompt 40: dra starter først når fingeren har holdt stille i 0,32 s (< 6 pt). Beveger den seg før det, er det scroll.
+        LongPressGesture(minimumDuration: 0.32, maximumDistance: 6)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Drag37.space(page))))
             .updating($pressing) { (v: SequenceGesture<LongPressGesture, DragGesture>.Value, st: inout Bool, _: inout Transaction) in
                 if case .second(true, _) = v { st = true }

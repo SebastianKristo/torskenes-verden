@@ -28,7 +28,8 @@ struct Bible37Page: View {
                 }
             }
         }
-        .padding(.top, 39)
+        // Prompt 40: første kort («1 dag på rad») ligger oppe i skybildet: hele overlappet (36 pt) styres av PaperPage.
+        .padding(.top, 0)
         .task { await m.load(store) }
     }
 }
@@ -60,6 +61,8 @@ struct Bible37StreakCard: View {
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(t.background(24))
+        // Prompt 40: løfter seg fra hero-bildet, alle fire hjørner runde.
+        .shadow(color: Color.black.opacity(0.35), radius: 15, y: 14)
     }
 }
 

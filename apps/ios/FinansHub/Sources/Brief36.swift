@@ -150,6 +150,8 @@ struct Brief36Swiper: View {
     @State private var hint: Bool = false
     @State private var over: Bool = false
     @State private var lastVel: CGFloat = 0
+    /// Prompt 40: nullstilles også når gesten avbrytes (scroll tar over), så `Swipe40Gate` alltid slippes.
+    @GestureState private var touching: Bool = false
 
     var body: some View {
         let p: CGFloat = Swift.min(1, dx / Swift.max(1, width * 0.38))
@@ -168,13 +170,17 @@ struct Brief36Swiper: View {
             }
         }
         .simultaneousGesture(drag)
+        .onChange(of: touching) { (_: Bool, on: Bool) in if !on { Swipe40Gate.ended() } }
         // Prompt 39: ingen automatisk sveipe-hint (kortet som dyttet seg mot høyre) – aldri, heller ikke ved første oppstart.
         .accessibilityAction(named: "Skjul briefen til neste brief") { dismiss() }
     }
 
     private var drag: some Gesture {
-        DragGesture(minimumDistance: 10, coordinateSpace: .local)
+        // Prompt 40: 6 pt (samme terskel som trykk/bevegelse); all bevegelse merkes i Swipe40Gate.
+        DragGesture(minimumDistance: 6, coordinateSpace: .local)
+            .updating($touching) { (_: DragGesture.Value, st: inout Bool, _: inout Transaction) in st = true }
             .onChanged { (v: DragGesture.Value) in
+                Swipe40Gate.track(v.translation)
                 if out { return }
                 if hint { stopHint() }
                 let tx: CGFloat = v.translation.width
@@ -194,6 +200,7 @@ struct Brief36Swiper: View {
                 withTransaction(tr) { dx = nv }
             }
             .onEnded { (v: DragGesture.Value) in
+                Swipe40Gate.ended()
                 let wasX: Bool = lock == 1
                 lock = 0
                 if !wasX || out { dragging = false; return }

@@ -28,7 +28,21 @@ struct PaperTabItem: Codable, Hashable, Identifiable {
         PaperTabItem(id: "fsok", label: "Søk", icon: "magnifyingglass"),
         // Prompt 27: Chat som valgbar fane (Chat27Page.swift).
         PaperTabItem(id: "chat", label: "Chat", icon: "bubble.left.and.bubble.right"),
+        // Prompt 40: alt fra Mer kan legges i fanelinja (claude-code-fanelinje-alle-sider.md), samme ikon som i Mer.
+        PaperTabItem(id: "huske", label: "Gjøremål", icon: "checklist"),
+        PaperTabItem(id: "kalender", label: "Kalender", icon: "calendar"),
+        PaperTabItem(id: "bursdag", label: "Bursdager", icon: "gift"),
+        PaperTabItem(id: "brief", label: "Now Brief", icon: "sparkles"),
+        PaperTabItem(id: "rss", label: "Nyhetsleser", icon: "dot.radiowaves.up.forward"),
+        PaperTabItem(id: "bibel", label: "Bibel", icon: "book"),
+        PaperTabItem(id: "nordlys", label: "Nordlys", icon: "sparkle"),
+        PaperTabItem(id: "innst", label: "Innstillinger", icon: "gearshape"),
     ]
+
+    /// Prompt 40: det som kan velges under «Legg til» (Bibel bare for brukere med modulen).
+    @MainActor static var selectable: [PaperTabItem] {
+        all.filter { (t: PaperTabItem) -> Bool in t.id != "bibel" || Bible37Model.shared.enabled }
+    }
 
     /// Fane-id-ene på serveren (layout.tabBar) er litt annerledes enn i appen.
     static func serverId(_ id: String) -> String {
@@ -213,6 +227,11 @@ extension Store {
         switch id {
         case "vaer": openWeather()
         case "nyheter": openNews()
+        // Prompt 40: ark/overlegg åpnes som ark, resten navigeres til.
+        case "rss": openNews()
+        case "brief": Brief34Model.shared.show()
+        case "nordlys": System31Model.shared.show()
+        case "chat": openChat()
         case "aksjer", "boliger": paperFinGo(id)
         case "domener": paperOpenDomains(from: "hjem")
         default: paperGo(id)
@@ -305,7 +324,7 @@ struct PaperTabBarEditor: View {
                     .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     // Prompt 25: STIL med stor forhåndsvisning av din egen fanelinje (NavStyle25.swift).
                     NavStylePicker25(items: items).padding(.top, 6)
-                    let unused = PaperTabItem.all.filter { a in !items.contains { $0.id == a.id } }
+                    let unused = PaperTabItem.selectable.filter { a in !items.contains { $0.id == a.id } }
                     if !unused.isEmpty {
                         PLabel(text: "Legg til")
                         VStack(spacing: 0) {

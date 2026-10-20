@@ -15,6 +15,8 @@ struct Task37GlimtResult: Equatable {
     var items: [String] = []
     var undo: String = ""
     var localIds: [String] = []
+    /// Prompt 40: punktene med steg, liste, dato/tid, sted og person (Tasks40Glimt.swift).
+    var rich: [Task40Item] = []
 }
 
 @MainActor
@@ -85,6 +87,7 @@ final class Tasks37Glimt {
             if !n.isEmpty { r.items.append(n) }
         }
         if r.items.isEmpty { r.items = JS.strings(o, "items") }
+        r.rich = Tasks37Glimt.rich(o)
         r.undo = JS.str(JS.dict(o, "undo"), "token") ?? JS.str(o, "undoToken") ?? ""
         return r
     }
@@ -140,6 +143,10 @@ final class Tasks37Glimt {
         let lines: [String] = text.components(separatedBy: .newlines)
             .map { Tasks37Glimt.clean($0) }
             .filter { !$0.isEmpty }
+        // Prompt 40: setninger med flere handlinger deles opp i punkter i riktig rekkefølge (gLocal).
+        if lines.count <= 1 && Task40Split.isMulti(text) {
+            return await localMulti(text, listId, store)
+        }
         if lines.count > 1 {
             titles = lines
         } else if low.hasPrefix("kjøp ") || low.hasPrefix("handle ") {
@@ -165,6 +172,35 @@ final class Tasks37Glimt {
         let n: Int = titles.count
         var r = Task37GlimtResult(kind: "add", text: "La til \(n) " + (n == 1 ? "oppgave" : "oppgaver") + " i " + name + ".", items: titles)
         r.localIds = newIds
+        return r
+    }
+
+    /// Prompt 40: legger inn punktene fra den lokale tolkeren (rekkefølge, sted og tagger).
+    private func localMulti(_ text: String, _ listId: String, _ store: Store) async -> Task37GlimtResult {
+        let m: TasksModel = TasksModel.shared
+        let items: [Task40Item] = Task40Split.split(text)
+        let before: Set<String> = Set(m.items.map(\.id))
+        var prevId: String = ""
+        for it in items {
+            var body: [String: Any] = ["title": it.title, "list": listId]
+            if !it.place.isEmpty { body["place"] = it.place }
+            if !it.tags.isEmpty { body["tags"] = it.tags }
+            if !prevId.isEmpty { body["after"] = prevId }
+            if let d = try? await store.api.callAt("/api", "POST", "/tasks", json: body) {
+                let o: [String: Any] = JS.obj(d)
+                prevId = JS.str(o, "id") ?? JS.str(JS.dict(o, "item"), "id") ?? ""
+            }
+        }
+        await m.load(store)
+        var named: [Task40Item] = items
+        let list: String = m.listName(listId)
+        for i in named.indices { named[i].list = list }
+        let trip: String = items.first(where: { !$0.place.isEmpty })?.place ?? ""
+        let n: Int = items.count
+        var r = Task37GlimtResult(kind: "add", text: "Lagde \(n) punkter" + (trip.isEmpty ? "" : " for " + trip) + ", i riktig rekkefølge.",
+                                  items: items.map(\.title))
+        r.rich = named
+        r.localIds = m.items.map(\.id).filter { !before.contains($0) }
         return r
     }
 
@@ -227,7 +263,7 @@ struct Task37GlimtSheet: View {
             if g.busy {
                 HStack(spacing: 10) {
                     ProgressView()
-                    Text("Glimt tenker …").font(PF.ui(14)).foregroundStyle(p.mut)
+                    Text("Forstår hva du mener …").font(PF.ui(14)).foregroundStyle(p.mut)
                 }
             }
             if let r = g.result { answer(r) }
@@ -289,10 +325,17 @@ struct Task37GlimtSheet: View {
     private func answer(_ r: Task37GlimtResult) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(r.text).font(PF.ui(15)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
-            ForEach(Array(r.items.prefix(8).enumerated()), id: \.offset) { _, it in
-                HStack(spacing: 8) {
-                    Text("✦").font(PF.ui(11, .bold)).foregroundStyle(p.lab)
-                    Text(it).font(PF.ui(14)).foregroundStyle(p.ink).lineLimit(2)
+            if r.rich.count > 1 || r.rich.contains(where: { !$0.place.isEmpty || !$0.who.isEmpty || !$0.date.isEmpty }) {
+                // Prompt 40: to linjer per punkt (tittel + steg, liste, dato/tid, sted, @person).
+                ForEach(Array(r.rich.prefix(8).enumerated()), id: \.offset) { _, it in
+                    Task40ItemRow(it: it, total: r.rich.count)
+                }
+            } else {
+                ForEach(Array(r.items.prefix(8).enumerated()), id: \.offset) { _, it in
+                    HStack(spacing: 8) {
+                        Text("✦").font(PF.ui(11, .bold)).foregroundStyle(p.lab)
+                        Text(it).font(PF.ui(14)).foregroundStyle(p.ink).lineLimit(2)
+                    }
                 }
             }
             if (r.kind == "add" || r.kind == "action") && g.undoLeft > 0 {

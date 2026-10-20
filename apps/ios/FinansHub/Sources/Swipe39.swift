@@ -30,3 +30,32 @@ enum Swipe39 {
     /// cubic-bezier(.2,.6,.3,1)
     static func flyCurve(_ d: Double) -> Animation { .timingCurve(0.2, 0.6, 0.3, 1, duration: d) }
 }
+
+/* ---------------- Prompt 40: avbrutt sveip skal ikke åpne briefen ----------------
+   claude-code-brief-sveip-og-wiggle-scroll.md (fasit design/swipe-dismiss.js, `moved`-flagget).
+   Er total bevegelse fra fingeren traff kortet over 6 pt i noen retning, er det en bevegelse og ikke et trykk – uansett hvor lenge
+   man holdt eller om sveipet ble låst som vertikalt. Flagget nullstilles kort tid etter at fingeren slippes (og ved neste trykk). */
+@MainActor
+enum Swipe40Gate {
+    static var moved: Bool = false
+    private static var resetTask: Task<Void, Never>? = nil
+
+    /// Kalles fra sveip-gesten med total forflytning.
+    static func track(_ t: CGSize) {
+        if abs(t.width) > 6 || abs(t.height) > 6 {
+            moved = true
+            resetTask?.cancel()
+            resetTask = nil
+        }
+    }
+
+    /// Fingeren er sluppet (eller gesten avbrutt): trykket som eventuelt kommer nå, stoppes fortsatt.
+    static func ended() {
+        resetTask?.cancel()
+        resetTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            if Task.isCancelled { return }
+            Swipe40Gate.moved = false
+        }
+    }
+}

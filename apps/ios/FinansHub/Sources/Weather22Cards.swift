@@ -50,20 +50,12 @@ struct WxTopBar22: View {
             .animation(.easeOut(duration: 0.2), value: scrolled)
             Spacer(minLength: 4)
             // ✕ Lukk: rund 42 pt glass, hvitt kryss 17 pt, lett haptikk. Kilden står nå under H/L (WxHeader22).
-            Button {
-                Haptic30.light()
-                store.weatherOpen = false
-            } label: {
-                Image(systemName: "xmark").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
-                    .frame(width: 42, height: 42)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .background(Color.white.opacity(0.22), in: Circle())
-                    .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Lukk")
+            // Prompt 40: felles VaerCloseButton (Vaer40.swift), samme i alle ark.
+            VaerCloseButton { store.weatherOpen = false }
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 8)
+        // Prompt 40: glass-stripe bak statuslinja og topplinja når man har scrollet (samme opasitet som bynavnet).
+        .background { Vaer40TopGlass(visible: scrolled) }
     }
 
     private var centerLine: String {
