@@ -7,15 +7,15 @@
     o=o||{};
     const th=o.threshold||.38,wrap=o.wrap||card.parentElement,rev=wrap&&wrap.querySelector('[data-sw-rev]'),q=s=>rev&&rev.querySelector(s);
     const lIdle=q('[data-sw-idle]'),lArm=q('[data-sw-armed]'),lDone=q('[data-sw-done]'),ic=q('[data-sw-ic]');
-    let x0=null,y0=0,lock=null,dx=0,W=360,raf=0,hist=[],armed=false,busy=false,cap=false,mvT=0,pid=null;
+    let x0=null,y0=0,lock=null,dx=0,W=360,raf=0,hist=[],armed=false,busy=false,cap=false,mvT=0,pid=null,sx=0,sy=0,moved=false;
     card.style.willChange='transform';card.style.backfaceVisibility='hidden';
     const lbl=w=>{[[lIdle,'i'],[lArm,'a'],[lDone,'d']].forEach(([el,k])=>{if(el)el.style.opacity=k===w?'1':'0'})};
     const paint=()=>{raf=0;const p=Math.min(1,Math.max(0,dx)/(W*th));card.style.transform='translate3d('+dx.toFixed(1)+'px,0,0) rotate('+(dx/W*4).toFixed(2)+'deg)';
       if(rev){rev.style.opacity=dx>2?String(Math.min(1,.35+p*.65)):'0'}if(ic)ic.style.transform='scale('+(armed?1.15:.7+p*.3).toFixed(3)+')'};
     const arm=a=>{if(a===armed)return;armed=a;if(a)vib(10);if(rev)rev.style.background=a?(o.armedBg||'#2f7a4f'):(o.idleBg||'#1b1a17');lbl(a?'a':'i')};
     const stopAnims=()=>{card.getAnimations&&card.getAnimations().forEach(a=>{if(a.id==='sw')a.cancel()})};
-    const down=e=>{if(busy||(e.pointerType==='mouse'&&e.button!==0))return;stopAnims();x0=e.clientX;y0=e.clientY;lock=null;cap=false;pid=e.pointerId;W=card.offsetWidth||360;hist=[[e.timeStamp,0]];dx=0;o.onStart&&o.onStart()};
-    const move=e=>{if(x0==null||e.pointerId!==pid)return;const ddx=e.clientX-x0,ddy=e.clientY-y0;
+    const down=e=>{if(busy||(e.pointerType==='mouse'&&e.button!==0))return;stopAnims();x0=e.clientX;y0=e.clientY;sx=e.clientX;sy=e.clientY;moved=false;lock=null;cap=false;pid=e.pointerId;W=card.offsetWidth||360;hist=[[e.timeStamp,0]];dx=0;o.onStart&&o.onStart()};
+    const move=e=>{if(e.pointerId===pid&&!moved&&(Math.abs(e.clientX-sx)>6||Math.abs(e.clientY-sy)>6))moved=true;if(x0==null||e.pointerId!==pid)return;const ddx=e.clientX-x0,ddy=e.clientY-y0;
       if(lock==null&&(Math.abs(ddx)>6||Math.abs(ddy)>6))lock=Math.abs(ddx)>Math.abs(ddy)*1.15&&ddx>0?'x':'y';
       if(lock==='y'){x0=null;return}if(lock!=='x')return;
       if(!cap){cap=true;try{card.setPointerCapture(pid)}catch(_){}card.style.transition='none';card.style.animation='none';if(rev)rev.style.transition='background .18s ease';lbl('i')}
@@ -36,9 +36,9 @@
     const up=e=>{if(x0==null||(e&&e.pointerId!==pid))return;x0=null;if(raf){cancelAnimationFrame(raf);paint()}if(lock!=='x')return;
       const a=hist[0],b=hist[hist.length-1],v=b&&a&&b[0]>a[0]?(b[1]-a[1])/(b[0]-a[0]):0;
       if(e&&e.type!=='pointercancel'&&(dx>=W*th||(v>.55&&dx>36)))commit(v);else settle()};
-    const clk=e=>{if(Date.now()-mvT<350){e.stopPropagation();e.preventDefault()}};
-    card.addEventListener('pointerdown',down);card.addEventListener('pointermove',move,{passive:false});card.addEventListener('pointerup',up);card.addEventListener('pointercancel',up);card.addEventListener('lostpointercapture',up);card.addEventListener('click',clk,true);
-    return()=>{card.removeEventListener('pointerdown',down);card.removeEventListener('pointermove',move);card.removeEventListener('pointerup',up);card.removeEventListener('pointercancel',up);card.removeEventListener('lostpointercapture',up);card.removeEventListener('click',clk,true);if(raf)cancelAnimationFrame(raf)};
+    const clk=e=>{if(moved||Date.now()-mvT<350){moved=false;e.stopPropagation();e.preventDefault()}};
+    card.addEventListener('pointerdown',down);card.addEventListener('pointermove',move,{passive:false});const gmv=e=>{if(e.pointerId===pid&&!moved&&(Math.abs(e.clientX-sx)>6||Math.abs(e.clientY-sy)>6))moved=true};window.addEventListener('pointermove',gmv,{passive:true});card.addEventListener('pointerup',up);card.addEventListener('pointercancel',up);card.addEventListener('lostpointercapture',up);card.addEventListener('click',clk,true);
+    return()=>{card.removeEventListener('pointerdown',down);card.removeEventListener('pointermove',move);card.removeEventListener('pointerup',up);card.removeEventListener('pointercancel',up);card.removeEventListener('lostpointercapture',up);card.removeEventListener('click',clk,true);window.removeEventListener('pointermove',gmv);if(raf)cancelAnimationFrame(raf)};
   }
   window.SwipeDismiss={attach};
 })();

@@ -14,7 +14,7 @@
 <script src="./swipe-dismiss.js"></script>
 </helmet>
 
-<sc-if value="{{ isBrief }}" hint-placeholder-val="{{ false }}"><div data-gb="bibel" style="border-radius:24px;background:{{ v.bg }};color:{{ v.fg }};padding:20px 20px 16px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden">
+<sc-if value="{{ isBrief }}" hint-placeholder-val="{{ false }}"><div data-gb="bibel" onClick="{{ openP }}" role="button" style="cursor:pointer;border-radius:24px;background:{{ v.bg }};color:{{ v.fg }};padding:20px 20px 16px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden">
 <div style="position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:50%;background:{{ v.glow }};pointer-events:none"></div>
 <div style="position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:10px"><span style="display:flex;flex-direction:column;gap:4px"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:{{ v.lab }}">{{ v.kick }}</span><span style="font:600 11px 'IBM Plex Mono',monospace;color:{{ v.mut }}">{{ v.date }}</span></span><span style="flex:none;padding:8px 6px 0 0">{{ fig }}</span></div>
 <span style="position:relative;font:italic 400 22px/1.38 Newsreader,serif;text-wrap:pretty">«{{ v.t }}»</span>
@@ -108,7 +108,7 @@ class Component extends DCLogic{
       saved:saved.map(x=>({...x,rm:()=>set({saved:saved.filter(y=>y.ref!==x.ref)})})),savedN:String(saved.length),noSaved:!saved.length,
       rem:{sub:S.rem?'Kl. 07:00 · «Dagens vers er klart»':'Av',bg:S.rem?'#2f7a4f':'var(--line,#ddd5c5)',l:S.rem?'21px':'3px',tgl:()=>set({rem:!S.rem})}}}
   priest(S,mood){const e=React.createElement;if(!this._GF&&window.GlimtFigMake)this._GF=window.GlimtFigMake(React);const F=this._GF;
-    const body=F?F('glimt',S,mood||'idle'):e('span',{style:{display:'block',width:S,height:S,borderRadius:'50%',background:'conic-gradient(#b23a2a,#e8794a,#f2c14e,#3fbf9a,#7a5ad6,#b23a2a)'}});
+    const body=F?F('glimt',S,mood||'idle',{noJul:true}):e('span',{style:{display:'block',width:S,height:S,borderRadius:'50%',background:'conic-gradient(#b23a2a,#e8794a,#f2c14e,#3fbf9a,#7a5ad6,#b23a2a)'}});
     const halo=e('span',{key:'h',style:{position:'absolute',left:'50%',top:-S*.2,width:S*.78,height:S*.22,marginLeft:-S*.39,borderRadius:'50%',border:(S*.05)+'px solid #f2c14e',boxShadow:'0 0 '+(S*.18)+'px rgba(242,193,78,.75)',animation:'bvHalo 2.8s ease-in-out infinite',pointerEvents:'none'}});
     const robe=e('svg',{key:'r',width:S*1.16,height:S*.62,viewBox:'0 0 116 62',style:{position:'absolute',left:'50%',bottom:-S*.34,marginLeft:-S*.58,overflow:'visible'}},
       e('path',{d:'M18 8 Q58 22 98 8 L110 58 Q58 66 6 58 Z',fill:'#f6f1e7',stroke:'#c9bfa9',strokeWidth:1.6}),
@@ -125,8 +125,8 @@ class Component extends DCLogic{
     const hh=hiddenHome(),place=p.place||'top',date=WD[d.getDay()]+' '+d.getDate()+'. '+MS[d.getMonth()],v=this.look(per,date),who=String(p.user||(()=>{try{return localStorage.getItem('hl_user')||'sebastian'}catch(e){return'sebastian'}})()).toLowerCase(),allowed=mode==='overview'||(p.allowed||['sebastian']).includes(who),show=allowed&&(mode!=='brief'||(place==='bottom'?hh:(!hh&&(p.always||h<11||h>=17))));
     return{fig:this.priest(mode==='page'?72:46,'idle'),...(mode==='page'&&allowed?this.pageVals(v,date):{}),isPage:mode==='page'&&allowed,pb:p.bottomPad||'24px',isBrief:mode==='brief'&&show,isHome:mode==='home'&&allowed&&!hh,sw:{ref:this.swRef()},isOverview:mode==='overview',v,s:{t:v.t,ref:v.ref,date:d.getDate()+'. '+MS[d.getMonth()].slice(0,3)},ev:this.look('k',date),
       briefPair:[this.look('m',date),this.look('k',date)],copyL:this.state.copied?'Kopiert':'Kopier',
-      copy:()=>{try{navigator.clipboard&&navigator.clipboard.writeText('«'+v.t+'» '+v.ref)}catch(e){}this.setState({copied:true});clearTimeout(this._c);this._c=setTimeout(()=>this.setState({copied:false}),1600)},
-      next:()=>{try{navigator.vibrate&&navigator.vibrate(6)}catch(e){}this.setState(s=>({off:s.off+1}))}}}
+      openP:()=>{if(this.props.onOpen){try{navigator.vibrate&&navigator.vibrate(8)}catch(e){}this.props.onOpen()}},copy:e=>{if(e&&e.stopPropagation)e.stopPropagation();try{navigator.clipboard&&navigator.clipboard.writeText('«'+v.t+'» '+v.ref)}catch(e){}this.setState({copied:true});clearTimeout(this._c);this._c=setTimeout(()=>this.setState({copied:false}),1600)},
+      next:e=>{if(e&&e.stopPropagation)e.stopPropagation();try{navigator.vibrate&&navigator.vibrate(6)}catch(e){}this.setState(s=>({off:s.off+1}))}}}
 }
 </script>
 </body>

@@ -1,0 +1,79 @@
+# Prompt 40
+
+Startet: 2026-10-20
+
+## Ønsker
+- 2026-10-20: gi kalender på web light og dark mode
+- 2026-10-20: som her når søkefelt ai sender meg til chat sender den meg ikke inn i medlingen i chat med spørsmålet bare til chat forside
+- 2026-10-20: i now brief la meg trykke på bibel kort å åpne bibel siden
+- 2026-10-20: «i huskeliste et sånt spørsmål bør glimt kunne skjønne hva jeg spør om å lage punkter får det med riktig koontekst og dato tid og plasering og link til bruker hvis en person er nevn.» (skjermbilde: «Jeg må huske å ta med noen pakker og møbeler til Strømstad men først må jeg levere pakken» ble lagt inn som ett punkt)
+- 2026-10-20: «når jeg bare tar vanelig punkt å legge til burde baren være over tastatruet. og når man har åpnet gjøremål enten fra hjem eller fra mer gå alltid tilbake til hjem» (skjermbilder: Gjøremål med tastatur over «Ny oppgave …»-baren, og «‹ Mer»-knappen)
+- 2026-10-20: «i finans hvis i bunnen av en kvittering eller trankasjon når den ble lagt til.»
+- 2026-10-20: «når jeg spør om sånne standard ting bør den gi ryddig svar og kort av innholdet. gi også ai navnet glimt der» (skjermbilde: Finans → Søk «Abonnementer» ga en lang tekstblokk med **markdown** og «Ingen treff.»)
+- 2026-10-20: «burde gå litt opp i bakgrunnen.» (skjermbilder: Bibel-siden, rekke-kortet «1 dag på rad» starter under hero med luft over)
+- 2026-10-20: «tekst kommer ikke helt fram og feil i toppen» (skjermbilder: Vær-popupen scrollet under statuslinja med kuttet «Sky / U… / S…» og «mot forrige…», Yr mot Storm med stor luft i toppen, og fasit for toppkortet)
+- 2026-10-20: «Når jeg legger til widgets på android og samsung vil jeg ha preview av widget. jeg vil også ha flere widgets for lås skjerm på samsung og android.»
+- 2026-10-20: «i vær yr mot storm legg til x som i været og i alle popups i vær gi samme x like stor som i hovedside i vær»
+- 2026-10-20: «I brief for nyheter la meg åpne en egen ai glimt side i nyhetssiden som viser en lang samendrag med referanser og bilder fra annonser, la meg velge innholdet den skal ta fra.»
+- 2026-10-20: «litt rar farge feil ved seach console og cloudflare» (skjermbilde: Innstillinger → Domener, ikonene ved arildkristo.com og kristo.no er smale mørke striper med blå bokstav)
+- 2026-10-20: «her og rarr» (skjermbilder: Innstillinger → Kalendere på web, kalenderradene uten fargeprikk, «Velg ›→», segmentkontrollen «Med toppmeny | Fullskjerm» med firkantede hjørner)
+- 2026-10-20: «ser ut til mye feil her, for også feil med valg av mappe i backup smb» (skjermbilder: AI → Jobber med 38 feilede selvtester «svarte ikke innen 15 s», og Nettverksdisk steg 5 «Ugyldig mappenavn» for smb://10.69.1.126/Skogen/[05] Backup)
+- 2026-10-20: «når jeg trykker oppdater får jeg denne i et sekund får snekker glimt starter» (skjermbilde: «STARTER OPP · NordlysOS 4.29»-siden vises ved vanlig sideoppdatering)
+- 2026-10-20: «kom opp med et par nye design for hjem og widgets oppset og design på den,» (skjermbilde: dagens Hjem på web)
+- 2026-10-20: «dette er for web versjonen»
+- 2026-10-20: «for d in /Volumes/Kalender*; do hdiutil detach "$d"; done» (skjermbilde: Gjøremål på web)
+- 2026-10-20: «ny widgets det er vaglt omeråde jeg tenkte på alt over er greit og skal ikke endres. jeg liker funksjonalitetien bare at de er såpass like at det er vanskelig å skille mellom ville også likt mer farge.» (skjermbilder: Hjem på web, widgetområdet markert)
+- 2026-10-20: «Gjøremål skal ha full skjerm i web» (skjermbilde: Gjøremål under hero og toppmeny)
+- 2026-10-20: «er det mulig å bygge inn en sånn funkjson i familie» (skjermbilde: iPhone «Check In» i Meldinger, som referanse for funksjon)
+- 2026-10-20: svar på skjema for «Hjemme trygt»: avsluttes når jeg er hjemme · alle i husstanden begge veier · deler siste posisjon, rute, batteri og dekning, siste opplåsing, hvem jeg var med (kalender) · Glimt foreslår: ja · iPhone, Android, web, klokke, Hjem-widget og låseskjerm · 2–3 varianter
+- 2026-10-20: «jeg velger valg 2c i hjem web varianter for hjem i web»
+- 2026-10-20: «for den hjemme trygt, funksjonen gi støtet for live action og live activitites på iphone og android. gi også funkjsonen et passende men stilig navn.»
+- 2026-10-20: «også fra 1 december til 13 januar gi glimt en julepersonlighet. lag ogs et nytt ikon for økonomi siden.» (skjermbilde: dagens Økonomi-ikon, oransje med hus og søyler)
+- 2026-10-20: «la meg også skru på julemodeus for glimt manuelt for ikoner for økonomi lag en kobo av 2b og 2c»
+- 2026-10-20: «vis jeg prøver å sweipe bort brief litt grann men gjør det ikke likevald så åpner brief seg. og får fortsatt ikke scrollet med fingeren i wiggle redigeirn av hjem på mobil.»
+- 2026-10-20: «lag 3a av ikon for økonomi bare gi den fargen fra 3b. jeg ser heller ikke toggle for julemodus for glimt i glimt innstligner.» (skjermbilde: Glimt-innstillinger i appen, figurvalg)
+- 2026-10-20: «i liste i finasn mobil og web la meg få glimt til å gå over kvitteringen på nytt. la meg også rediger all infoen i trnaskjoner som dato og slikt.»
+- 2026-10-20: «jeg slo på julemodus for glimt men glimt er ikke julemodus» (skjermbilde: Hjem på mobil, Glimt uten lue i dagsbriefen)
+- 2026-10-20: «når jeg skulle sette opp 2fa på mobilen ble jeg sendt inn i web versjonen på mobil, jeg vil kunne sette opp fra appen.»
+- 2026-10-20: «jeg vil kunne velge hvilkesom helst fra mer menyen i navbarem» (skjermbilde: Rediger fanelinjen, «Legg til» mangler mange sider)
+
+## Tilhørende filer
+- `claude-code-kalender-web-tema.md`
+- `Kalender.dc.html`
+- `claude-code-sok-ai-til-chat.md`
+- `claude-code-brief-bibel-trykk.md`
+- `claude-code-huskeliste-glimt-forstar.md`
+- `vedlegg/huskeliste-glimt-strømstad.png`
+- `claude-code-gjoremal-tastatur-tilbake.md`
+- `claude-code-finans-lagt-til.md`
+- `claude-code-finans-sok-glimt-kort.md`
+- `vedlegg/finans-sok-abonnementer.png`
+- `claude-code-bibel-kort-opp-i-hero.md`
+- `vedlegg/bibel-rekke-under-hero.png`
+- `claude-code-vaer-topp-tekst.md`
+- `vedlegg/vaer-topp-tekst-kuttet.png`, `vedlegg/yr-mot-storm-topp.png`, `vedlegg/yr-mot-storm-fasit-topp.png`
+- `claude-code-widgets-android-samsung-preview-las.md`
+- `Widgets Android Samsung.dc.html`
+- `claude-code-vaer-lukk-x.md`
+- `claude-code-nyheter-glimt-side.md`
+- `claude-code-domener-ikon-farge.md`
+- `vedlegg/domener-ikon-feil.png`
+- `claude-code-innst-kalendere-rart.md`
+- `vedlegg/innst-kalendere-rart.png`, `vedlegg/innst-kalendere-segment.png`
+- `claude-code-ai-jobber-og-smb-mappe.md`
+- `vedlegg/ai-jobber-selvtest-feil.png`, `vedlegg/smb-mappe-feil.png`
+- `claude-code-starter-blink-ved-oppdater.md`
+- `vedlegg/nordlys-starter-blink.png`
+- `Hjem Web Varianter.dc.html` (runde 2: 2a Farget topplinje · 2b Tonede kort · 2c Helfarge på de viktigste, bare widgetområdet · runde 1: 1a–1c)
+- `vedlegg/hjem-web-i-dag.png`
+- `claude-code-gjoremal-web-fullskjerm.md`
+- `Hjemme trygt Varianter.dc.html` (Hjemlys · 2a iPhone Live Activity · 2b Android Live Update · 1a–1c flyt, ikke valgt ennå)
+- `claude-code-hjemlys.md`
+- `claude-code-hjem-web-widgets-2c.md` (+ `Hjem Web Varianter.dc.html` 2c som fasit)
+- `Glimt Jul og Okonomi-ikon.dc.html` (1a faser, 1b i appen med Auto/Av/På · ikon 3c = 3a i 3b-farge, 3a/3b kombo, 2a–2c)
+- `claude-code-glimt-jul.md`
+- `vedlegg/okonomi-ikon-i-dag.png`
+- `claude-code-brief-sveip-og-wiggle-scroll.md` (+ `swipe-dismiss.js`)
+- `claude-code-finans-les-pa-nytt-rediger.md`
+- `claude-code-2fa-i-appen.md`
+- `claude-code-fanelinje-alle-sider.md`
