@@ -207,7 +207,7 @@ extension Store {
             self.busy = true
             defer { self.busy = false }
             _ = try await self.api.upload("/subscriptions/receipts", parts: [API.Part(name: "file", filename: name, mime: mime, data: data)])
-            self.flash("✦ AI leser kvitteringen. Abonnementet dukker opp om litt.")
+            self.flash("✦ Glimt leser kvitteringen. Abonnementet dukker opp om litt.")
             for _ in 0..<4 {
                 try? await Task.sleep(for: .seconds(5))
                 try? await self.loadSubs()
@@ -638,7 +638,7 @@ struct SubAddSheet: View {
                 }
             }
             Divider().overlay(Color.skinFg.opacity(0.12))
-            option("doc.viewfinder", "Fra kvittering", "✦ AI leser bilde eller PDF og fyller inn") { mode = "receipt" }
+            option("doc.viewfinder", "Fra kvittering", "✦ Glimt leser bilde eller PDF og fyller inn") { mode = "receipt" }
             Divider().overlay(Color.skinFg.opacity(0.12))
             option("arrow.triangle.2.circlepath", "Fra transaksjoner", "✦ Faste trekk sett minst 3 ganger, ikke registrert") { mode = "tx"; store.loadSubCandidates() }
         }
@@ -690,7 +690,7 @@ struct SubAddSheet: View {
 
     private var receipt: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("✦ AI leser kvitteringen eller fakturaen, finner tjeneste, beløp, syklus og trekkdag, og lager abonnementet. E-poster i kvitteringsmappen i Proton Mail leses automatisk.")
+            Text("✦ Glimt leser kvitteringen eller fakturaen, finner tjeneste, beløp, syklus og trekkdag, og lager abonnementet. E-poster i kvitteringsmappen i Proton Mail leses automatisk.")
                 .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
             PhotosPicker(selection: $photo, matching: .images) {
                 Label("Velg bilde", systemImage: "photo").fontWeight(.semibold).frame(maxWidth: .infinity, minHeight: 50).contentShape(Capsule())

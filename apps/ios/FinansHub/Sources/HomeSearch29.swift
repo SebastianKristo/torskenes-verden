@@ -110,6 +110,11 @@ final class Search29Model {
             Quick29Model.shared.submit(t, store)
             return
         }
+        // Prompt 41: huskebeskjeder («vi må huske å …») går til Huskeliste via Glimt (Tasks41Glimt.swift).
+        if !question36 && Tasks41Glimt.isHuske(t) {
+            Tasks41Glimt.shared.fromHome(t, store)
+            return
+        }
         switch engine {
         case "google":
             store.openURL(store.googleURL(t))
@@ -143,6 +148,10 @@ struct HomeSearch29: View {
             card
             if let a = m.appt, !q.trimmingCharacters(in: .whitespaces).isEmpty {
                 HomeSearch29Appt(appt: a) { submit() }
+                    .transition(.opacity)
+            } else if Tasks41Glimt.isHuske(q) {
+                // Prompt 41: «Legg i Huskeliste» (Glimt deler opp i punkter).
+                HomeSearch41Huske(text: q.trimmingCharacters(in: .whitespacesAndNewlines)) { submit() }
                     .transition(.opacity)
             }
             if Assist31.shared.homeOpen {

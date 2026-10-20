@@ -238,7 +238,7 @@ final class Rean39Model {
         var c: Double = now?.confidence ?? 0
         if c <= 1 { c *= 100 }
         let sure: String = c > 0 ? " · \(Int(c.rounded())) % sikker" : ""
-        store.flash("✦ Analysert på nytt" + sure)
+        store.flash("✦ Glimt har analysert på nytt" + sure)
         if UIApplication.shared.applicationState != .active {
             let shop: String = now?.merchant ?? before[id]?.merchant ?? ""
             LocalNotify.post("Glimt", shop.isEmpty ? "Kvitteringen er lest på nytt" : "Kvitteringen fra \(shop) er lest på nytt", id: "rean-" + id, group: "finans")
@@ -338,7 +338,7 @@ struct Rean39Panel: View {
     private var title: String {
         let i: Int = Rean39Model.stepIndex(job.step)
         if i >= 0 && i < Rean39Model.steps.count { return Rean39Model.steps[i].1 }
-        return job.msg.isEmpty ? "Analyserer på nytt" : job.msg
+        return job.msg.isEmpty ? "Glimt analyserer på nytt" : job.msg
     }
 
     /// 0 = venter, 1 = pågår, 2 = ferdig, 3 = feil.
@@ -406,7 +406,7 @@ enum Rc39 {
     @MainActor static func meta(_ r: Receipt) -> String {
         if let j = Rean39Model.shared.jobs[r.id] {
             if j.step == "error" { return "✕ " + (j.msg.isEmpty ? "Gemini svarte ikke" : j.msg) }
-            return "✦ Analyserer på nytt … \(j.pct) %"
+            return "✦ Glimt analyserer på nytt … \(j.pct) %"
         }
         var s: String = Receipts23Line.meta(r)
         if let c = r.aiCategory, c.isNew == true, let n = c.category, !n.isEmpty { s += " · ✦ ny kategori «\(n)»" }

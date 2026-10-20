@@ -23,7 +23,7 @@ struct ChatLLM27: Identifiable, Hashable {
 
     var sky: Bool { kind == "sky" }
     /// Lokale modeller vises med id (llama3.1:8b), sky-modeller med navn (Gemini 2.5 Flash).
-    var label: String { sky ? name : id }
+    var label: String { sky || kind == "auto" ? name : id }
 }
 
 struct ChatSummary27: Identifiable, Hashable {
@@ -193,7 +193,8 @@ final class ChatStore27 {
     var input: String = ""
     var attach: [ChatAttach27] = []
     var webOn: Bool = false
-    var dataOn: Bool = false
+    /// Prompt 41: «Mine data» er på i hver nye samtale (kan slås av per samtale).
+    var dataOn: Bool = true
     var editIndex: Int? = nil
     var editText: String = ""
 
@@ -224,8 +225,8 @@ final class ChatStore27 {
     var copied: String? = nil
 
     /* ---------- Brukerinnstillinger ---------- */
-    /// chat_my_data (av som standard) og chat_ask_cloud (på).
-    var myDataAllowed: Bool = false
+    /// chat_my_data (prompt 41: PÅ som standard når verdien mangler) og chat_ask_cloud (på).
+    var myDataAllowed: Bool = true
     var askCloud: Bool = true
     var defaultModel: String = ""
 
@@ -246,6 +247,8 @@ final class ChatStore27 {
     @ObservationIgnored private var paramsTask: Task<Void, Never>? = nil
     @ObservationIgnored private var searchTask: Task<Void, Never>? = nil
     @ObservationIgnored private var streamModel: String = ""
+    /// Prompt 41: hva Auto velger per oppgavetype ({text, vision, long}).
+    var autoPicks: [String: Any] = [:]
 
     private var themeKey: String { AcctScope.key("fh_chat27_theme") }
     private var modelKey: String { AcctScope.key("fh_chat27_model") }
@@ -256,7 +259,9 @@ final class ChatStore27 {
         models.first(where: { $0.id == model }) ?? ChatLLM27(id: model, name: model, kind: "lokal", provider: "ollama", size: "", vision: false, installed: true)
     }
 
-    var localModels: [ChatLLM27] { models.filter { !$0.sky && $0.installed } }
+    var localModels: [ChatLLM27] { models.filter { !$0.sky && $0.installed && $0.kind != "auto" } }
+    /// Prompt 41: «✦ Auto» (nil = serveren har ikke Auto).
+    var autoModel: ChatLLM27? { models.first { $0.kind == "auto" } }
     var skyModels: [ChatLLM27] { models.filter { $0.sky } }
 
     /// Innstillingene som gjelder nå (samtalen, eller nye samtaler).
@@ -297,7 +302,7 @@ final class ChatStore27 {
     func loadUserSettings(_ store: Store) async {
         guard let d = try? await store.api.call("GET", "/bootstrap") else { return }
         let s: [String: Any] = JS.dict(JS.obj(d), "settings") ?? [:]
-        myDataAllowed = JS.bool(s, "chat_my_data") ?? false
+        myDataAllowed = JS.bool(s, "chat_my_data") ?? true
         askCloud = JS.bool(s, "chat_ask_cloud") ?? true
         defaultModel = JS.str(s, "chat_default_model") ?? ""
         if let t = JS.str(s, "chat_theme"), t == "papir" || t == "noytral" { theme = t }
@@ -321,6 +326,22 @@ final class ChatStore27 {
                 guard let id = JS.str(o, "id") ?? JS.str(o, "name") else { return nil }
                 return ChatLLM27(id: id, name: JS.str(o, "name") ?? id, kind: JS.str(o, "kind") ?? "lokal", provider: JS.str(o, "provider") ?? "ollama",
                                  size: JS.str(o, "size") ?? "", vision: JS.bool(o, "vision") ?? false, installed: JS.bool(o, "installed") ?? true)
+            }
+            // Prompt 41: «✦ Auto» – Glimt velger beste installerte/sky-modell per melding (GET /api/chat/models → auto).
+            if let o = any as? [String: Any], let a = JS.dict(o, "auto") {
+                let aid: String = JS.str(a, "id") ?? "auto"
+                models.removeAll { $0.id == aid }
+                models.insert(ChatLLM27(id: aid, name: JS.str(a, "label") ?? "✦ Auto", kind: "auto", provider: "glimt", size: "", vision: true, installed: true), at: 0)
+                autoPicks = JS.dict(a, "picks") ?? [:]
+                // Én gang: eksisterende brukere flyttes til Auto (autoMig). Senere fast valg gjelder.
+                let migKey: String = AcctScope.key("fh_chat41_automig")
+                if !UserDefaults.standard.bool(forKey: migKey) {
+                    UserDefaults.standard.set(true, forKey: migKey)
+                    model = aid
+                    defaultModel = aid
+                    UserDefaults.standard.set(aid, forKey: modelKey)
+                }
+                if defaultModel.isEmpty || defaultModel == "auto" { def = aid }
             }
             if model.isEmpty || !models.contains(where: { $0.id == model }) {
                 let pref: String = !defaultModel.isEmpty ? defaultModel : def
@@ -449,6 +470,9 @@ final class ChatStore27 {
         editIndex = nil
         drawer = false
         settings = defaults
+        // Prompt 41: «Mine data» på i hver nye samtale, og Auto (eller valgt standard) for nye samtaler.
+        dataOn = myDataAllowed
+        if !defaultModel.isEmpty && models.contains(where: { $0.id == defaultModel }) { model = defaultModel }
         Haptics.shared.select()
     }
 

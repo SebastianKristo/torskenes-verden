@@ -36,7 +36,9 @@ final class Nav32b {
         "abo": Sec32bDef(title: "ABONNEMENT", all: [PaperTabItem(id: "home", label: "Hjem", icon: "house"), PaperTabItem(id: "ins", label: "Innsikt", icon: "chart.bar"),
                                                      PaperTabItem(id: "hist", label: "Historikk", icon: "clock")]),
         "kart": Sec32bDef(title: "FAMILIE", all: [PaperTabItem(id: "kart", label: "Kart", icon: "◎"), PaperTabItem(id: "soner", label: "Soner", icon: "◌"),
-                                                  PaperTabItem(id: "helse", label: "Helse", icon: "♡")]),
+                                                  PaperTabItem(id: "helse", label: "Helse", icon: "♡"),
+                                                  // Prompt 41: Hjemlys som egen fane i Familie (Hjemlys41Views.swift).
+                                                  PaperTabItem(id: "hjemlys", label: "Hjemlys", icon: "☼")]),
     ]
 
     static let icons: [String] = ["⌂", "kr", "◐", "▣", "◎", "◍", "⚡", "▤", "◔", "↺", "↻", "◌", "♡", "◉", "★", "●", "◆", "♪", "✉", "⚑", "≡", "⇄", "☼", "✦",
@@ -173,7 +175,9 @@ struct TabEditor32b: View {
                 TabEditorHead32b(kicker: kicker) { dismiss() }
                 Text(countText).font(PF.ui(12.5)).foregroundStyle(p.mut)
                 TabEditorRows32b(rows: $rows, iconFor: $iconFor, all: all, icons: icons, max: max)
-                NavStylePicker25(items: rows, showMore: hasMore).padding(.top, 6)
+                NavStylePicker25(items: rows, showMore: hasMore, hidePlus41: kicker.hasPrefix("HJEM") && !Scan41.shared.onHome).padding(.top, 6)
+                // Prompt 41: «Skanneknapp på Hjem» under stilvalgene (samme innstilling som i Tilpass → Fanelinje).
+                if kicker.hasPrefix("HJEM") { Scan41Row() }
                 TabEditorAdds32b(rows: $rows, all: all, max: max)
                 PLineButton(title: "Tilbakestill til standard", height: 44, full: true) {
                     rows = defaults

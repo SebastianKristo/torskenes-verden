@@ -322,6 +322,8 @@ extension Store {
         if kind == "cur" { photoWindow = nil; photoImage = nil; bgInfo = nil; return }
         // Bildet fra forrige gang vises med en gang.
         if let cached = Store.cachedBg(kind) { photoImage = cached }
+        // Prompt 41: Oslo = frie Commons-bilder fra lufta som skifter gjennom dagen (Bg41Oslo.swift), med mindre serveren har egne.
+        if kind == "oslo", await Oslo41.shared.load(self) { return }
         // Ny bakgrunnstjeneste (prompt 19). Eldre servere: /api/photo-window under.
         if await loadBackground(kind) { return }
         guard let d = try? await api.callAt("/api", "GET", "/photo-window?kind=\(kind)") else {

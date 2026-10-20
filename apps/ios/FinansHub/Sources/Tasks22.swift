@@ -24,6 +24,12 @@ final class TaskDock22 {
             focusTick += 1
             return
         }
+        // Prompt 41: lange beskjeder deles opp av Glimt (AI) i bakgrunnen – feltet tømmes med en gang (Tasks41Glimt.swift).
+        if Tasks41Glimt.wantsAI(t) {
+            text = ""
+            Tasks41Glimt.shared.start(t, store, origin: "huske", list: cur)
+            return
+        }
         // Prompt 40: en setning med flere handlinger («… men først må jeg levere pakken») går til Glimt, som deler den opp.
         if Task40Split.isMulti(t) {
             Tasks37Glimt.shared.open(store)

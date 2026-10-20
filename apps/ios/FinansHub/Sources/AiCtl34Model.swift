@@ -81,6 +81,13 @@ struct AiJob34: Identifiable, Hashable {
     var meta: String
     var err: String
     var fin: Bool
+    /// Prompt 41: tidsstemplene fra serveren (createdAt/startedAt/endedAt) og ev. ferdig etikett (timeLabel).
+    var created: Date? = nil
+    var started: Date? = nil
+    var ended: Date? = nil
+    var timeLabel: String = ""
+    /// Sammenslåtte feil: første og siste tidspunkt («16:02–17:20»).
+    var firstAt: Date? = nil
 }
 
 struct AiFeat34: Identifiable, Hashable {
@@ -726,7 +733,10 @@ final class AiCtl34 {
         let fin: Bool = JS.bool(j, "fin") ?? (finKinds.contains(kind) || finKinds.contains(task))
         return AiJob34(id: id, title: JS.str(j, "title") ?? JS.str(j, "t") ?? kind, model: JS.str(j, "model") ?? JS.str(j, "m") ?? "",
                        st: st, pct: JS.num(j, "progress") ?? JS.num(j, "p") ?? 0, meta: meta.joined(separator: " · "),
-                       err: JS.str(j, "error") ?? JS.str(j, "err") ?? "", fin: fin)
+                       err: JS.str(j, "error") ?? JS.str(j, "err") ?? "", fin: fin,
+                       created: JS.date(j["createdAt"] ?? j["created_at"]), started: JS.date(j["startedAt"] ?? j["started_at"]),
+                       ended: JS.date(j["endedAt"] ?? j["finishedAt"] ?? j["finished_at"] ?? j["ended_at"]),
+                       timeLabel: JS.str(j, "timeLabel") ?? "", firstAt: JS.date(j["firstAt"] ?? j["first_at"]))
     }
 
     func jobAction(_ j: AiJob34, _ store: Store) {

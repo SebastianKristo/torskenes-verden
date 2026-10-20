@@ -15,6 +15,8 @@ struct PaperHome: View {
         VStack(spacing: 10) {
             // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). Update30.swift.
             Update30Banner(home: true)
+            // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (Mai17Home41.swift).
+            Mai17Home41()
             // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
             PaperCardStack(page: "hjem", cards: homeCards, fullWidth: ["h1", "h5", "h12", "h13", "h14"], twoColumns: true)
             if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
@@ -35,7 +37,8 @@ struct PaperHome: View {
                 PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { HomeSearch29(); minis })),
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
                 // Prompt 27: «Velg stopp» og én gruppe per stopp (RuterHome27.swift).
-                PaperCardDef(key: "h3", label: "Avganger", view: AnyView(RuterHomeCard27())),
+                // Prompt 41: Min reise over (eller i stedet for) Avganger når du har forlatt skolen (MinReise41Views.swift).
+                PaperCardDef(key: "h3", label: "Avganger", view: AnyView(MinReise41HomeSlot())),
                 // Prompt 32: Prøveperioder under Avganger (Trials32App.swift). Flyttes og skjules i wiggle-modus.
                 PaperCardDef(key: "h11", label: "Prøveperioder", view: AnyView(Trial32bHomeCard())),
                 // Prompt 26: KALENDER etter Avganger (med lagret oppsett legger pageCards den nederst).

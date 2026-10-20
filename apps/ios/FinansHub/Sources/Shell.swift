@@ -839,14 +839,16 @@ struct LoginView: View {
                 } else {
                     Text(store.addingAccount ? "Legg til konto" : "FinansHub").font(.system(size: 34, weight: .bold))
                     Text("Logg inn på homelab-serveren din med brukernavn og passord. Appen får bare tilgang til økonomidelen.").foregroundStyle(Color.skinFg.opacity(0.7))
-                    TextField("192.168.1.20:8080 eller os.dittdomene.no", text: $server).textContentType(.URL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        .padding(.horizontal, 18).frame(height: 54).glass(27)
+                    // Prompt 41: ingen serverfelt (Server41.swift velger adressen).
                     TextField("Brukernavn", text: $username).textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
                         .padding(.horizontal, 18).frame(height: 54).glass(27)
                     SecureField("Passord", text: $password).textContentType(.password).submitLabel(.go).onSubmit(submit)
                         .padding(.horizontal, 18).frame(height: 54).glass(27)
                     Button(action: submit) { Text(store.busy ? "Logger inn …" : "Logg inn").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 54) }
-                        .buttonStyle(.plain).glass(27, tint: .accent).disabled(server.isEmpty || password.isEmpty || store.busy)
+                        .buttonStyle(.plain).glass(27, tint: .accent).disabled(username.isEmpty || password.isEmpty || store.busy)
+                    if Server41.shared.unreachable {
+                        Text("Får ikke kontakt med Homelab. Prøv igjen om litt.").font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight)
+                    }
                     Text("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.55))
                 }
             }
@@ -855,7 +857,7 @@ struct LoginView: View {
         }
         .onAppear { if !store.addingAccount { server = store.server } }
     }
-    private func submit() { store.login(server: server, username: username, password: password) }
+    private func submit() { store.login41(username: username, password: password) }
 }
 
 struct LockView: View {

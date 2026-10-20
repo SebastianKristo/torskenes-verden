@@ -566,6 +566,9 @@ final class Store {
             self.addingAccount = false
             self.switchTo(acc.id)
             self.flash("Logget inn som \(r.name)")
+            // Prompt 41: lær lokal og ekstern adresse fra serveren (/api/discovery, /api/me/server).
+            Server41.shared.unreachable = false
+            Task { await Server41.shared.learn(self) }
         }
     }
 

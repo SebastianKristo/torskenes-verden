@@ -215,12 +215,18 @@ struct PaperFamilyCard: View {
     var body: some View {
         Button { store.paperGo("familie") } label: { content }
             .buttonStyle(.plain)
-            .task { await m.load(store) }
+            .task {
+                await m.load(store)
+                // Prompt 41: Hjemlys-raden i kortet.
+                if !Hjemlys40Model.shared.loaded { await Hjemlys40Model.shared.load(store) }
+            }
     }
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
+            // Prompt 41: aktiv Hjemlys øverst i kortet (Hjemlys41Views.swift).
+            if Hjemlys41PosRow.any(Hjemlys40Model.shared) { Hjemlys41PosRow() }
             if m.people.isEmpty {
                 Text(m.loaded ? "Ingen i familien ennå." : "Henter familien …").font(PF.ui(14)).foregroundStyle(p.mut)
             } else {
@@ -235,7 +241,7 @@ struct PaperFamilyCard: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            PLabel(text: "Posisjon · Familie")
+            PLabel(text: Hjemlys41PosRow.any(Hjemlys40Model.shared) ? "Posisjon · Familie · Hjemlys" : "Posisjon · Familie")
             Spacer()
             Text("kart ›").font(PF.ui(12)).foregroundStyle(p.mut)
         }

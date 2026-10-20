@@ -48,6 +48,13 @@ final class Tasks37Glimt {
     func run(_ store: Store, image: Data? = nil) {
         let text: String = q.trimmingCharacters(in: .whitespacesAndNewlines)
         if text.isEmpty && image == nil { return }
+        // Prompt 41: lange beskjeder går til Glimt i bakgrunnen; arket lukkes med en gang (Tasks41Glimt.swift).
+        if image == nil && Tasks41Glimt.wantsAI(text) {
+            q = ""
+            Tasks37UI.shared.glimtOpen = false
+            Tasks41Glimt.shared.start(text, store, origin: "huske", list: TaskDock22.shared.cur)
+            return
+        }
         busy = true
         result = nil
         let cur: String = TaskDock22.shared.cur

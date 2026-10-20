@@ -23,15 +23,21 @@ struct FinansHubApp: App {
             RootView()
                 // Prompt 38: fullskjermen «Logg inn på ny enhet» (må ligge innenfor .environment(store)).
                 .qr38Host()
+                // Prompt 41: «Logge inn i Kalender?» (homelab://app-auth og universal link /app-auth), AppAuth41.swift.
+                .appAuth41Host()
                 .environment(store)
                 // Prompt 38: homelab://login?c=… (QR-innlogging på ny enhet, QrLogin38.swift) før de vanlige dyplenkene.
                 .onOpenURL { (u: URL) in
+                    if AppAuth41.shared.handle(u, store) { return }
                     if Qr38Model.shared.handle(u, store) { return }
                     store.openDeepLink(u)
                 }
                 // Universal link https://<server>/l/<kode> (krever Associated Domains når det er satt opp).
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { (a: NSUserActivity) in
-                    if let u = a.webpageURL { _ = Qr38Model.shared.handle(u, store) }
+                    if let u = a.webpageURL {
+                        if AppAuth41.shared.handle(u, store) { return }
+                        _ = Qr38Model.shared.handle(u, store)
+                    }
                 }
                 .task {
                     // Prompt 39: nytt standard app-ikon – valget i appen følger ikonet iOS viser (Settings39.swift).

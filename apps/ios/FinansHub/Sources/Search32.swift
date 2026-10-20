@@ -48,6 +48,8 @@ final class Search32b {
 
     /// (rute, navn i boblen). Rekkefølgen betyr noe: første treff vinner.
     static let nav: [([String], String, String)] = [
+        // Prompt 41: «sjekk inn», «drar snart», «drar nå», «fest», «hjemlys» → Familie → Hjemlys.
+        (["sjekk inn", "drar snart", "drar nå", "fest", "hjemlys"], "hjemlys41", "Hjemlys"),
         (["oppdater", "nordlys", "versjon", "update"], "nordlys", "Nordlys OS · oppdatering"),
         (["kalender", "timeplan"], "kalender", "Kalender"),
         (["vær", "vaer", "værside", "yr"], "vaer", "Vær"),
@@ -94,6 +96,7 @@ final class Search32b {
         case "budsjett": store.paperGo("fmer"); store.paperOpenFin(.budget)
         case "domener": store.paperOpenDomains(from: "hjem")
         case "chat": store.openChat()
+        case "hjemlys41": store.paperGo("familie"); FamilyModel.shared.tab = "hjemlys"
         default: store.paperGo(route)
         }
     }

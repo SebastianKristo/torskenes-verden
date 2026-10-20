@@ -23,6 +23,9 @@ struct Birthday24: Identifiable, Hashable {
     /// local, google eller ha.
     var source: String
     var avatarUrl: String
+    /// Prompt 41: koblet til en person i Familie («Bruk bildet fra Familie»), og eget opplastet bilde.
+    var personId: String = ""
+    var photoUrl: String = ""
 
     init?(_ o: [String: Any]) {
         guard let w = BirthdayShared24.item(o) else { return nil }
@@ -37,6 +40,9 @@ struct Birthday24: Identifiable, Hashable {
         relation = w.relation.lowercased()
         source = w.source.lowercased()
         avatarUrl = w.avatarUrl
+        personId = JS.str(o, "personId") ?? JS.str(o, "person_id") ?? ""
+        photoUrl = JS.str(o, "photoUrl") ?? ""
+        if avatarUrl.isEmpty && !photoUrl.isEmpty { avatarUrl = photoUrl }
         if o["reminderDays"] is NSNull {
             reminderDays = nil
         } else {

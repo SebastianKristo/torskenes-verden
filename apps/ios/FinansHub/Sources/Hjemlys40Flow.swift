@@ -829,7 +829,7 @@ struct Hjemlys40HomeCard: View {
             } else if m.suggest {
                 Hjemlys40Suggest()
             } else {
-                Button { Haptic30.light(); m.startOpen = true } label: {
+                Button { Haptic30.light(); store.paperGo("familie"); FamilyModel.shared.tab = "hjemlys" } label: {
                     Text("Start Hjemlys").font(PF.ui(14.5, .bold)).foregroundStyle(p.bg)
                         .frame(maxWidth: .infinity).frame(height: 44)
                         .background(p.ink, in: RoundedRectangle(cornerRadius: 14, style: .continuous))

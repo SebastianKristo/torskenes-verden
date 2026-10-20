@@ -65,6 +65,8 @@ struct AiJobRow34: View {
                     if j.st == "run" { AiStriped34(frac: j.pct / 100).padding(.top, 3) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                // Prompt 41: klokkeslett til høyre (startet / lagt i kø / sluttet + «4 min siden»), oppdateres hvert minutt.
+                AiJobTime41(j: j)
                 if j.st != "done" {
                     AiMini34(title: j.st == "fail" ? "Prøv igjen" : "Avbryt", color: j.st == "fail" ? p.ink : p.lab) { m.jobAction(j, store) }
                 }
@@ -400,5 +402,76 @@ struct AiTokenRow34: View {
             }
             .padding(.vertical, 11)
         }
+    }
+}
+
+
+/* ---------- Prompt 41: klokkeslett i Jobber ---------- */
+// Spesifikasjon: prompts/prompt-41-pakke/claude-code-ai-jobber-klokkeslett.md. Fasit: AI Kontroll.dc.html → Jobber.
+
+struct AiJobTime41: View {
+    @Environment(\.paper) private var p
+    let j: AiJob34
+
+    var body: some View {
+        TimelineView(.everyMinute) { (ctx: TimelineViewDefaultContext) in
+            VStack(alignment: .trailing, spacing: 1) {
+                let lines: (String, String) = AiJobTime41.text(j, now: ctx.date)
+                if !lines.0.isEmpty {
+                    Text(lines.0).font(PF.mono(11.5)).foregroundStyle(p.ink).lineLimit(1)
+                }
+                if !lines.1.isEmpty {
+                    Text(lines.1).font(PF.mono(10.5)).foregroundStyle(p.mut).lineLimit(1)
+                }
+            }
+            .fixedSize()
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    /// (hovedlinje, undertekst): «startet 17:31» · «lagt i kø 17:33» · «17:29» + «4 min siden» · «i går 21:14» · «16:02–17:20».
+    static func text(_ j: AiJob34, now: Date) -> (String, String) {
+        if !j.timeLabel.isEmpty && j.st != "done" && j.st != "fail" { return (j.timeLabel, "") }
+        switch j.st {
+        case "run":
+            guard let s = j.started ?? j.created else { return (j.timeLabel, "") }
+            return ("startet " + clock(s, now), "")
+        case "queue":
+            guard let c = j.created else { return (j.timeLabel, "") }
+            return ("lagt i kø " + clock(c, now), "")
+        default:
+            guard let e = j.ended ?? j.started ?? j.created else { return (j.timeLabel, "") }
+            if let f = j.firstAt, f < e.addingTimeInterval(-60) {
+                return (hm(f) + "–" + hm(e), ago(e, now))
+            }
+            return (clock(e, now), ago(e, now))
+        }
+    }
+
+    static func hm(_ d: Date) -> String {
+        let f: DateFormatter = DateFormatter()
+        f.locale = Locale(identifier: "nb_NO")
+        f.dateFormat = "HH:mm"
+        return f.string(from: d)
+    }
+
+    /// I dag «17:29», i går «i går 21:14», ellers «18.10 21:14».
+    static func clock(_ d: Date, _ now: Date) -> String {
+        let cal: Calendar = Calendar.current
+        if cal.isDate(d, inSameDayAs: now) { return hm(d) }
+        if let y = cal.date(byAdding: .day, value: -1, to: now), cal.isDate(d, inSameDayAs: y) { return "i går " + hm(d) }
+        let f: DateFormatter = DateFormatter()
+        f.locale = Locale(identifier: "nb_NO")
+        f.dateFormat = "dd.MM HH:mm"
+        return f.string(from: d)
+    }
+
+    /// «nå» · «4 min siden» · «2 t siden» (bare i dag).
+    static func ago(_ d: Date, _ now: Date) -> String {
+        if !Calendar.current.isDate(d, inSameDayAs: now) { return "" }
+        let m: Int = Int(now.timeIntervalSince(d) / 60)
+        if m < 1 { return "nå" }
+        if m < 60 { return String(m) + " min siden" }
+        return String(m / 60) + " t siden"
     }
 }

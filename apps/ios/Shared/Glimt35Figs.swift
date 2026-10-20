@@ -555,7 +555,7 @@ struct Glimt35Fig: View {
         figure(a)
             .frame(width: size, height: size * hf, alignment: .topLeading)
             .overlay(alignment: .topLeading) {
-                if !noJul { Glimt40DressAuto(S: size, H: size * hf, t: t, still: still) }
+                if !noJul { Glimt40DressAuto(S: size, H: size * hf, t: t, still: still, id: id) }
             }
             .modifier(G35Wrap(S: size, hf: hf, mood: mood, a: a))
             .accessibilityLabel(Glimt35Char.get(id).name)

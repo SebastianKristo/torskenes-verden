@@ -209,7 +209,7 @@ struct Receipts34AiSection: View {
         if !list.isEmpty {
             HStack(spacing: 8) {
                 Glimt31Mark(size: 16, state: .thinking)
-                PLabel(text: "Analyseres av AI · " + String(list.count))
+                PLabel(text: "Analyseres av Glimt · " + String(list.count))
             }
             .padding(.top, 6).padding(.horizontal, 4)
             VStack(spacing: 10) {

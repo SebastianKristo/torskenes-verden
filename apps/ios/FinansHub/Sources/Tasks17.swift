@@ -54,6 +54,8 @@ struct TaskItem17: Identifiable, Hashable {
     var by: String = ""
     var place: String = ""
     var doneAt: Date? = nil
+    /// Prompt 41: beskjeden punktet ble laget fra («Laget med Glimt», Tasks41Glimt.swift).
+    var origin41: TaskOrigin41? = nil
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
         title = JS.str(o, "title") ?? JS.str(o, "n") ?? ""
@@ -63,6 +65,7 @@ struct TaskItem17: Identifiable, Hashable {
         note = JS.str(o, "note") ?? JS.str(o, "notes") ?? ""
         done = JS.bool(o, "done") ?? false
         Tasks37.fill(&self, o)
+        origin41 = TaskOrigin41(JS.dict(o, "origin"))
     }
 }
 
@@ -218,9 +221,14 @@ struct PaperTasksView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             listChips
+            // Prompt 41: Glimt deler opp i bakgrunnen (stiplede rader) og ferdig-raden (Tasks41Glimt.swift).
+            Tasks41PendingRows()
             // Prompt 32: Arkivert (Tasks32.swift) – egen liste, uten «Ny oppgave».
             if cur == Tasks32b.archId {
                 Tasks32bArchiveView()
+            } else if cur == Tasks41Glimt.madeId {
+                // Prompt 41: «Laget med Glimt».
+                Tasks41MadeView()
             } else {
             // Prompt 37: infokort for valgt liste (privat/delt + Del/Administrer), Tasks37Lists.swift.
             if let l = m.lists.first(where: { $0.id == cur }) { Task37ListInfo(list: l) }
@@ -319,6 +327,8 @@ struct PaperTasksView: View {
                     Tasks37UI.shared.listEdit = nil
                     Tasks37UI.shared.listSheet = true
                 }
+                // Prompt 41: «Laget med Glimt · N» (bare når det finnes beskjeder).
+                Tasks41MadeChip()
                 // Prompt 32: «Arkivert · N» sist i listevelgeren.
                 Tasks32bChip(on: cur == Tasks32b.archId) { cur = Tasks32b.archId; Haptics.shared.select() }
             }

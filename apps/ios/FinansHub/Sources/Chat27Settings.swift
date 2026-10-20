@@ -22,7 +22,7 @@ struct Chat27SettingsGroup: View {
             PLabel(text: "Chat").padding(.leading, 4).padding(.top, 14)
             PCard(padding: 0) {
                 VStack(spacing: 0) {
-                    toggle("Chat kan lese mine data", "Finans, Kalender og Huskeliste når «Mine data» er på", "chat_my_data", false)
+                    toggle("Chat kan lese mine data", "Finans, Kalender og Huskeliste når «Mine data» er på · på som standard", "chat_my_data", true)
                     Rectangle().fill(p.line).frame(height: 1)
                     toggle("Spør før sky-modeller får data", "Gemini og Groq må godkjennes per samtale", "chat_ask_cloud", true)
                     Rectangle().fill(p.line).frame(height: 1)

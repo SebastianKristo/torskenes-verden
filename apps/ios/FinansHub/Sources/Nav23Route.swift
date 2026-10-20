@@ -42,7 +42,7 @@ extension Store {
 
 extension Store {
     /// Aksjer: ingen skann-knapp (FAB eller + i linja).
-    var nav23NoScan: Bool { paperTab == "aksjer" || paperClassic == .stocks || (paperTab == "mer" && paperClassic == nil && paperFin == nil) }
+    var nav23NoScan: Bool { paperTab == "aksjer" || paperClassic == .stocks || (paperTab == "mer" && paperClassic == nil && paperFin == nil) || scanHiddenOnHome41 }
 
     /// Aksjer, Boliger og Kvitteringer åpnet fra Finans → Mer (ikke egen fane): sveip og ‹ går til Finans → Mer.
     var nav23SubOfFinMore: Bool {

@@ -46,11 +46,24 @@ final class Drag37 {
     @ObservationIgnored private var lastScroll: Date = .distantPast
     @ObservationIgnored private var dirty: Bool = false
     @ObservationIgnored private var gen: UIImpactFeedbackGenerator? = nil
+    /// Prompt 41: når stabelen sist flyttet seg i scroll-flaten (vanlig scroll), og toppen + tiden da fingeren kom ned.
+    /// Den ekte årsaken til at sveip flyttet kort i wiggle-modus: LongPressGesture måler bevegelse i kortets eget
+    /// koordinatrom. Når ScrollView ruller, følger kortet fingeren, så fingeren «står stille» i forhold til kortet og
+    /// trykket ble godkjent etter 0,32 s midt i en vanlig scroll. Da ble kortet løftet, scroll slått av, og kortene gled
+    /// oppå hverandre. Nå godkjennes løftet bare hvis stabelen ikke har flyttet seg siden fingeren kom ned.
+    @ObservationIgnored var lastScrollAt: Date = .distantPast
+    @ObservationIgnored private var downAt: Date = .distantPast
+    @ObservationIgnored private var downTop: CGFloat = 0
+    @ObservationIgnored private var downKey: String = ""
+    /// Kortet der denne berøringen ble avvist (scroll) – resten av gesten ignoreres.
+    @ObservationIgnored var rejected: String? = nil
+    @ObservationIgnored private var rejectedAt: Date = .distantPast
 
     static let spacing: CGFloat = 10
     static let swapEvery: TimeInterval = 0.14
     static let band: CGFloat = 0.15
-    static let edge: CGFloat = 40
+    /// Prompt 41: autoscroll når kortet er innen 80 pt fra topp/bunn.
+    static let edge: CGFloat = 80
     /// Logg for wiggle-flytting (Konsoll: kategori «wiggle»), så en eventuell ny feil kan spores.
     static let log: Logger = Logger(subsystem: "no.kristo.finanshub", category: "wiggle")
 
@@ -86,14 +99,56 @@ final class Drag37 {
         Drag37.log.debug("løft \(key, privacy: .public) på \(page, privacy: .public)")
     }
 
+    /// Prompt 41: fingeren kom ned på et kort (første fase av gesten).
+    func touchDown(_ page: String, _ key: String) {
+        if self.key != nil { return }
+        downAt = Date()
+        downTop = stackTop[page] ?? 0
+        downKey = key
+        rejected = nil
+    }
+
+    /// Prompt 41: stabelen flyttet seg (scroll). Kalles fra Drag37StackTop når ingen kort dras.
+    func scrolled(_ page: String, _ y: CGFloat) {
+        let old: CGFloat = stackTop[page] ?? y
+        stackTop[page] = y
+        if key == nil && abs(old - y) > 0.5 { lastScrollAt = Date() }
+    }
+
+    /// Prompt 41: true når berøringen var et ekte hold (siden har stått stille siden fingeren kom ned).
+    private func mayLift(_ page: String, _ key: String) -> Bool {
+        if rejected == key {
+            // En avbrutt gest (scroll tok over) melder ikke alltid slutt: glem avvisningen etter 1,5 s.
+            if Date().timeIntervalSince(rejectedAt) < 1.5 { return false }
+            rejected = nil
+        }
+        let top: CGFloat = stackTop[page] ?? 0
+        let still: Bool
+        if downKey == key {
+            still = abs(top - downTop) < 3 && lastScrollAt < downAt.addingTimeInterval(0.05)
+        } else {
+            // Reserve hvis første fase ikke ble meldt: ingen scroll de siste 0,4 s (et hold er minst 0,3 s stille).
+            still = Date().timeIntervalSince(lastScrollAt) > 0.4
+        }
+        if !still {
+            rejected = key
+            rejectedAt = Date()
+            Drag37.log.debug("avvist løft av \(key, privacy: .public): siden scroller")
+        }
+        return still
+    }
+
     /// Det lange trykket er gjenkjent: kortet løftes.
     func lift(_ page: String, _ key: String, _ visible: [String], _ keys: [String]) {
-        if self.key == nil { begin(page, key, visible, keys) }
+        if self.key == nil && mayLift(page, key) { begin(page, key, visible, keys) }
     }
 
     /// Et nytt punkt fra gesten. `location` og `dy` er i stabelens koordinatrom.
     func move(_ page: String, _ key: String, _ visible: [String], _ keys: [String], _ location: CGPoint, _ dy: CGFloat) {
-        if self.key == nil { begin(page, key, visible, keys) }
+        if self.key == nil {
+            guard mayLift(page, key) else { return }
+            begin(page, key, visible, keys)
+        }
         guard self.key == key, self.page == page else { return }
         offsetY = dy - shift
         swapIfNeeded(page, key, dy)
@@ -156,6 +211,8 @@ final class Drag37 {
 
     /// Slipp (eller avbrutt gest): lagre én gang hvis rekkefølgen er endret.
     func end(_ store: Store) {
+        rejected = nil
+        downKey = ""
         guard key != nil else { return }
         let pg: String = page ?? ""
         let order: [String] = live ?? []
@@ -214,7 +271,8 @@ struct Drag37Shield: View {
 
     private var reorder: some Gesture {
         // Prompt 40: dra starter først når fingeren har holdt stille i 0,32 s (< 6 pt). Beveger den seg før det, er det scroll.
-        LongPressGesture(minimumDuration: 0.32, maximumDistance: 6)
+        // Prompt 41: 0,3 s hold, > 8 pt bevegelse avbryter. I tillegg avvises løftet hvis siden har scrollet (Drag37.mayLift).
+        LongPressGesture(minimumDuration: 0.3, maximumDistance: 8)
             .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named(Drag37.space(page))))
             .updating($pressing) { (v: SequenceGesture<LongPressGesture, DragGesture>.Value, st: inout Bool, _: inout Transaction) in
                 if case .second(true, _) = v { st = true }
@@ -224,6 +282,10 @@ struct Drag37Shield: View {
     }
 
     private func changed(_ v: SequenceGesture<LongPressGesture, DragGesture>.Value) {
+        if case .first(true) = v {
+            Drag37.shared.touchDown(page, key)
+            return
+        }
         guard case .second(true, let dv) = v else { return }
         // Holdt lenge nok: løft kortet med en gang (scroll slås av før fingeren beveger seg).
         guard let d = dv else {
@@ -259,7 +321,7 @@ struct Drag37StackTop: View {
             let y: CGFloat = g.frame(in: .named("ppage")).minY
             Color.clear
                 .onAppear { Drag37.shared.stackTop[page] = y }
-                .onChange(of: y) { _, ny in Drag37.shared.stackTop[page] = ny }
+                .onChange(of: y) { _, ny in Drag37.shared.scrolled(page, ny) }
         }
     }
 }

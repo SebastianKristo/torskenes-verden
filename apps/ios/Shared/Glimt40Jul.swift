@@ -14,7 +14,8 @@ import Foundation
    WidgetCenter.reloadAllTimelines(). Delt mellom appen og widgetene (Shared): bare SwiftUI/Foundation. */
 
 enum Glimt40JulPhase: String, CaseIterable {
-    case advent, jul, nyttar, vinter
+    /// Prompt 41: mai17 = 17. mai (sløyfe + norsk flagg), styres av /api/glimt/settings mai17 (auto | av | pa), ikke av julemodus.
+    case advent, jul, nyttar, vinter, mai17
 
     var label: String {
         switch self {
@@ -22,13 +23,18 @@ enum Glimt40JulPhase: String, CaseIterable {
         case .jul: return "Jul"
         case .nyttar: return "Nyttår"
         case .vinter: return "Vinter"
+        case .mai17: return "17. mai"
         }
     }
 
-    /// Godtar både serverens nøkler (advent/jul/nyttar/vinter) og visningsnavnene (Advent/Nyttår …).
+    /// Julefasene (velgeren under Julemodus viser bare disse).
+    static var jule: [Glimt40JulPhase] { [.advent, .jul, .nyttar, .vinter] }
+
+    /// Godtar både serverens nøkler (advent/jul/nyttar/vinter/17mai) og visningsnavnene (Advent/Nyttår …).
     static func from(_ s: String?) -> Glimt40JulPhase? {
         guard let s else { return nil }
-        let k: String = s.lowercased().replacingOccurrences(of: "å", with: "a")
+        let k: String = s.lowercased().replacingOccurrences(of: "å", with: "a").replacingOccurrences(of: ".", with: "").replacingOccurrences(of: " ", with: "")
+        if k == "17mai" || k == "mai17" { return .mai17 }
         return Glimt40JulPhase(rawValue: k)
     }
 }
@@ -38,6 +44,8 @@ enum Glimt40Jul {
     static let phaseKey: String = "w.glimt40.julP"
     static let snowKey: String = "w.glimt40.snow"
     static let soundKey: String = "w.glimt40.julSound"
+    /// Prompt 41: 17. mai (auto = 14.–17. mai for figurene, av, pa = alltid).
+    static let mai17Key: String = "w.glimt41.mai17"
     /// Sendes når julemodus endres (appen og widget-utvidelsen i hver sin prosess).
     static let changed: Notification.Name = Notification.Name("no.kristo.finanshub.glimt40.jul")
 
@@ -78,9 +86,36 @@ enum Glimt40Jul {
     static var snow: Bool { (WidgetShared.defaults.object(forKey: snowKey) as? Bool) ?? true }
     static var sound: String { WidgetShared.defaults.string(forKey: soundKey) ?? "av" }
 
-    /// Fasen akkurat nå, fra valget i App Group.
+    /// Fasen akkurat nå, fra valget i App Group. Prompt 41: utenfor julemodus gir 17. mai-valget flagg og sløyfe.
     static func current(_ d: Date = Date()) -> Glimt40JulPhase? {
-        phase(mode: mode, manual: manualPhase, date: d)
+        if let j = phase(mode: mode, manual: manualPhase, date: d) { return j }
+        return mai17Phase(d)
+    }
+
+    static var mai17Mode: String { WidgetShared.defaults.string(forKey: mai17Key) ?? "auto" }
+
+    /// 14.–17. mai (auto), alltid (pa) eller aldri (av).
+    static func mai17Phase(_ d: Date = Date()) -> Glimt40JulPhase? {
+        switch mai17Mode {
+        case "av": return nil
+        case "pa": return .mai17
+        default:
+            let c: Calendar = oslo
+            return c.component(.month, from: d) == 5 && (14...17).contains(c.component(.day, from: d)) ? .mai17 : nil
+        }
+    }
+
+    /// Selve 17. mai (Hjem-designet vises bare på dagen, eller når «Vis nå» er valgt).
+    static func isMay17(_ d: Date = Date()) -> Bool {
+        let c: Calendar = oslo
+        return c.component(.month, from: d) == 5 && c.component(.day, from: d) == 17
+    }
+
+    static func saveMai17(_ m: String) {
+        let d: UserDefaults = WidgetShared.defaults
+        if d.string(forKey: mai17Key) == m { return }
+        d.set(m, forKey: mai17Key)
+        NotificationCenter.default.post(name: changed, object: nil)
     }
 
     /// Lagrer valget lokalt og varsler alle åpne figurer. Returnerer true når noe faktisk ble endret.
@@ -186,10 +221,32 @@ struct Glimt40DressAuto: View {
     let H: CGFloat
     var t: Double = 0
     var still: Bool = false
+    /// Prompt 41: figuren (ankerpunkter per figur).
+    var id: String = ""
 
     var body: some View {
         if !noJul, let ph = Glimt40JulLive.shared.phase() {
-            Glimt40Dress(S: S, H: H, phase: ph, t: t, still: still)
+            Glimt40Dress(S: S, H: H, phase: ph, t: t, still: still, id: id)
+        }
+    }
+}
+
+/// Prompt 41: ankerpunkter per figur fra dress(…, id) i glimt-figurer.js (andeler av S). hT hatt-topp, hX hatt-senter,
+/// hS hattskala, sB skjerf-bunn, sW skjerf-bredde, gB/gR gave. Runde figurer bruker standarden.
+struct Glimt41Anchor {
+    var hT: CGFloat = -0.44
+    var hX: CGFloat = 0.5
+    var hS: CGFloat = 1
+    var sB: CGFloat = -0.2
+    var sW: CGFloat = 1.05
+    var gB: CGFloat = -0.16
+    var gR: CGFloat = -0.2
+
+    static func of(_ id: String) -> Glimt41Anchor {
+        switch id {
+        case "spire": return Glimt41Anchor(hT: -0.08, hX: 0.56, hS: 0.8, sB: -0.13, sW: 0.98, gB: -0.1, gR: -0.12)
+        case "sky": return Glimt41Anchor(hT: -0.18, hX: 0.6, hS: 0.78, sB: 0.07, sW: 0.92, gB: 0.05, gR: -0.08)
+        default: return Glimt41Anchor()
         }
     }
 }
@@ -201,23 +258,30 @@ struct Glimt40Dress: View {
     let phase: Glimt40JulPhase
     var t: Double = 0
     var still: Bool = false
+    var id: String = ""
 
     var body: some View {
+        // Prompt 41: plassering per figur (Sky: lua på høyre «bule», skjerfet rundt nedre del, gaven inntil).
+        let a: Glimt41Anchor = Glimt41Anchor.of(id)
+        let scarfH: CGFloat = S * 0.5 * a.sW / 1.05
         ZStack(alignment: .topLeading) {
-            if phase != .nyttar {
-                Glimt40Scarf(S: S, color: phase == .vinter ? G35.c(0xb23a2a) : G35.c(0x2f7a4f))
-                    .offset(x: S * 0.5 - S * 0.525, y: H + S * 0.2 - S * 0.5)
+            if phase != .nyttar && phase != .mai17 {
+                Glimt40Scarf(S: S, color: phase == .vinter ? G35.c(0xb23a2a) : G35.c(0x2f7a4f), width: S * a.sW)
+                    .offset(x: S * 0.5 - S * a.sW / 2, y: H - S * a.sB - scarfH)
             }
             switch phase {
             case .advent, .jul:
-                Glimt40Hat(S: S).offset(x: S * 0.5 - S * 0.42, y: -S * 0.44)
+                Glimt40Hat(S: S * a.hS).offset(x: S * a.hX - S * 0.42 * a.hS, y: S * a.hT)
             case .vinter:
-                Glimt40Beanie(S: S).offset(x: S * 0.5 - S * 0.45, y: -S * 0.36)
+                Glimt40Beanie(S: S * a.hS).offset(x: S * a.hX - S * 0.45 * a.hS, y: S * (a.hT + 0.08))
             case .nyttar:
                 Glimt40Party(S: S, t: t, still: still).offset(x: S * 0.5 - S * 0.22, y: -S * 0.48)
+            case .mai17:
+                Glimt41Bow(S: S).offset(x: S * a.hX + S * 0.12, y: S * (a.hT + 0.36))
+                Glimt41Flag(S: S, t: t, still: still).offset(x: S + S * 0.2 - S * 0.32, y: H - S * (a.sB + 0.16) - S * 0.46)
             }
             if phase == .jul {
-                Glimt40Gift(S: S).offset(x: S + S * 0.2 - S * 0.34, y: H + S * 0.16 - S * 0.3)
+                Glimt40Gift(S: S).offset(x: S - S * a.gR - S * 0.34, y: H - S * a.gB - S * 0.3)
             }
         }
         .frame(width: S, height: H, alignment: .topLeading)
@@ -230,9 +294,11 @@ struct Glimt40Dress: View {
 struct Glimt40Scarf: View {
     let S: CGFloat
     let color: Color
+    /// Prompt 41: bredden fra ankerpunktene (S·sW). nil = S·1,05.
+    var width: CGFloat? = nil
 
     var body: some View {
-        let w: CGFloat = S * 1.05
+        let w: CGFloat = width ?? S * 1.05
         let k: CGFloat = w / 105
         let vb: CGSize = CGSize(width: 105, height: 50)
         let cream: Color = G35.c(0xf6f1e7)
@@ -242,7 +308,7 @@ struct Glimt40Scarf: View {
             G36Part(shape: G36Svg(d: "M70 22 L80 48 L68 50 L62 26 Z", vb: vb), fill: color, k: k)
             G36Part(shape: G36Svg(d: "M66 36 h10 M64 44 h10", vb: vb), stroke: cream, lw: 2.5, k: k)
         }
-        .frame(width: w, height: S * 0.5, alignment: .topLeading)
+        .frame(width: w, height: w * 50 / 105, alignment: .topLeading)
     }
 }
 
@@ -367,5 +433,57 @@ struct Glimt40Snow: View {
             .allowsHitTesting(false)
             .accessibilityHidden(true)
         }
+    }
+}
+
+
+/* ---------- Prompt 41: 17. mai – sløyfe og norsk flagg (fase «17mai» i glimt-figurer.js, ingen bunad) ---------- */
+
+/// Rød sløyfe med hvit kant og blå knute (viewBox 36×22), rotert 14°. Bredde S·0,36, høyde S·0,22.
+struct Glimt41Bow: View {
+    let S: CGFloat
+
+    var body: some View {
+        let w: CGFloat = S * 0.36
+        let k: CGFloat = w / 36
+        let vb: CGSize = CGSize(width: 36, height: 22)
+        ZStack(alignment: .topLeading) {
+            G36Part(shape: G36Svg(d: "M18 11 L2 2 L4 20 Z M18 11 L34 2 L32 20 Z", vb: vb), fill: G35.c(0xc8302a), k: k)
+            G36Part(shape: G36Svg(d: "M18 11 L2 2 L4 20 Z M18 11 L34 2 L32 20 Z", vb: vb), stroke: G35.c(0xfbf7ee), lw: 1.6, k: k)
+            G36Part(shape: G36Svg(vb: vb, rect: CGRect(x: 14.5, y: 7.5, width: 7, height: 7), rx: 3.5), fill: G35.c(0x1f2f6b), k: k)
+        }
+        .frame(width: w, height: S * 0.22, alignment: .topLeading)
+        .rotationEffect(.degrees(14))
+        .shadow(color: Color.black.opacity(0.2), radius: 1, y: 1)
+    }
+}
+
+/// Norsk flagg på pinne som vaier (gfSway 1,6 s, ±6° rundt foten). Farger #BA0C2F / hvit / #00205B, proporsjoner 22:16, kors 4/2.
+struct Glimt41Flag: View {
+    let S: CGFloat
+    var t: Double = 0
+    var still: Bool = false
+
+    var body: some View {
+        let fw: CGFloat = S * 0.3
+        let fh: CGFloat = S * 0.22
+        let k: CGFloat = fw / 22
+        let ang: Double = still ? 0 : sin(t * 2 * Double.pi / 1.6) * 6
+        ZStack(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 2).fill(G35.c(0x8a6a3a)).frame(width: S * 0.028, height: S * 0.46).offset(y: 0)
+            ZStack(alignment: .topLeading) {
+                Rectangle().fill(G35.c(0xba0c2f)).frame(width: fw, height: fh)
+                Rectangle().fill(Color.white).frame(width: 4 * k, height: fh).offset(x: 6 * k)
+                Rectangle().fill(Color.white).frame(width: fw, height: 4 * k).offset(y: 6 * k)
+                Rectangle().fill(G35.c(0x00205b)).frame(width: 2 * k, height: fh).offset(x: 7 * k)
+                Rectangle().fill(G35.c(0x00205b)).frame(width: fw, height: 2 * k).offset(y: 7 * k)
+            }
+            .frame(width: fw, height: fh, alignment: .topLeading)
+            .offset(x: S * 0.028)
+        }
+        .frame(width: S * 0.32, height: S * 0.46, alignment: .topLeading)
+        .rotationEffect(.degrees(ang), anchor: .bottomLeading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }

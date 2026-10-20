@@ -171,7 +171,12 @@ final class Assist31 {
     }
 
     /// «Fortsett i Chat ›»: ny samtale med spørsmålet.
+    /// Prompt 41: «Fortsett i Chat ›» bruker samme animasjon som å dra pillen ned (Search41Pull.swift).
     func continueInChat(_ store: Store) {
+        if Assist38.shared.rect.width > 0 && store.paperTab == "hjem" {
+            Pull41.shared.open(store, reduce: UIAccessibility.isReduceMotionEnabled)
+            return
+        }
         let q: String = homeQ
         closeHome()
         store.openChat(prompt: q)
@@ -367,7 +372,8 @@ struct Assist31Bubble: View {
                 }
             }
         }
-        .padding(.leading, 18).padding(.trailing, 40).padding(.top, 16).padding(.bottom, 18)
+        // Prompt 41: pillen strekker seg når den dras ned (bunnmarg + 0,65 × dra), Search41Pull.swift.
+        .padding(.leading, 18).padding(.trailing, 40).padding(.top, 16).padding(.bottom, 18 + Pull41.shared.pull * 0.65)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
@@ -380,8 +386,8 @@ struct Assist31Bubble: View {
         // (trykk utenfor fanges av Assist38Catcher, så kortet under ikke åpnes). Assist38.swift.
         .overlay(alignment: .topTrailing) { Assist38CloseButton().padding(.top, 2).padding(.trailing, 2) }
         .overlay(alignment: .bottom) {
-            Capsule().fill(Color.white.opacity(0.25)).frame(width: 34, height: 4).padding(.bottom, 5)
-                .allowsHitTesting(false)
+            // Prompt 41: håndtaket blir bredere (34 → 80 pt) og «Dra ned / Slipp for å åpne i Chat» tones inn.
+            Pull41Hint()
         }
         .environment(\.colorScheme, .dark)
         .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))

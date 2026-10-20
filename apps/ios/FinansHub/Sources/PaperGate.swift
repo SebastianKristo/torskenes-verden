@@ -77,6 +77,7 @@ struct PaperLoginView: View {
         .environment(\.paper, p)
         .environment(\.colorScheme, p.dark ? .dark : .light)
         .onAppear { if !store.addingAccount { server = store.server } }
+        .server41Host(p)
     }
 
     private var host: String {
@@ -85,20 +86,27 @@ struct PaperLoginView: View {
     }
 
     @ViewBuilder private func form(_ p: PaperPalette) -> some View {
-        GateField(label: "Server") {
-            TextField("home.dittdomene.no", text: $server).textContentType(.URL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-        }
+        // Prompt 41: ingen SERVER-felt. Adressen er kjent (standard, sist brukt eller lært fra serveren), Server41.swift.
         GateField(label: "Brukernavn") {
             TextField("Brukernavn", text: $username).textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
         }
         GateField(label: "Passord") {
             SecureField("Passord", text: $password).textContentType(.password).submitLabel(.go).onSubmit(submit)
         }
-        PInkButton(title: store.busy ? "Logger inn …" : "Logg inn", height: 54, full: true, act: submit)
-            .disabled(server.isEmpty || password.isEmpty || store.busy)
-            .opacity(server.isEmpty || password.isEmpty ? 0.5 : 1)
+        if Server41.shared.unreachable {
+            Server41LoginError(retry: submit)
+        }
+        PInkButton(title: store.busy || Server41.shared.probing ? "Logger inn …" : "Logg inn", height: 54, full: true, act: submit)
+            .disabled(username.isEmpty || password.isEmpty || store.busy || Server41.shared.probing)
+            .opacity(username.isEmpty || password.isEmpty ? 0.5 : 1)
         if store.addingAccount {
             PLineButton(title: "Avbryt", height: 48, full: true) { store.addingAccount = false }
+            // Prompt 41: en annen server kan velges her (ellers brukes standard/kjente adresser).
+            Button { Server41.shared.editKind = "login" } label: {
+                Text(Server41.shared.manual.isEmpty ? "Annen server …" : "Server: " + Server41.shared.manual.replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "http://", with: ""))
+                    .font(PF.ui(13, .semibold)).foregroundStyle(p.mut).underline()
+            }
+            .buttonStyle(.plain)
         }
         Text("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.").font(PF.ui(12.5)).foregroundStyle(p.mut)
     }
@@ -131,7 +139,7 @@ struct PaperLoginView: View {
         Text("Har du mistet telefonen, kan du bruke en gjenopprettingskode.").font(PF.ui(12.5)).foregroundStyle(p.mut)
     }
 
-    private func submit() { store.login(server: server, username: username, password: password) }
+    private func submit() { store.login41(username: username, password: password) }
 }
 
 /// Første gang etter innlogging: 1) design, 2) bakgrunn på Hjem, 3) varsler og tilgang. Alt kan endres senere.

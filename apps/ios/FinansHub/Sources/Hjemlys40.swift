@@ -32,6 +32,9 @@ struct Hjemlys40Session: Hashable {
     var lateMinutes: Int = 0
     var recipients: [String] = []
     var homeAt: Date? = nil
+    /// Prompt 41: målet (Hjem eller et annet sted) og startstedet.
+    var dest: String = "Hjem"
+    var from: String = ""
 
     var active: Bool { state == "onTheWay" || state == "late" }
 
@@ -55,6 +58,11 @@ struct Hjemlys40Session: Hashable {
             return nil
         }
         homeAt = Hjemlys40Session.date(o["homeAt"]) ?? Hjemlys40Session.date(o["endedAt"])
+        if let d = o["destination"] as? [String: Any] {
+            let n: String = JS.str(d, "name") ?? ""
+            dest = (JS.str(d, "kind") ?? "home") == "home" || n.isEmpty ? "Hjem" : n
+        }
+        from = JS.str(o, "from") ?? JS.str(JS.dict(o, "fromPlace"), "name") ?? ""
     }
 
     /// ISO-tid, Unix-sekunder eller millisekunder.
@@ -228,7 +236,8 @@ final class Hjemlys40Model {
     /* ---------- Handlinger ---------- */
 
     /// mode: walk | transit | bike | car (serveren), leg = «Trikk 19 + gå».
-    func start(_ store: Store, eta: Date, waitMin: Int, mode: String = "walk", leg: String = "") {
+    /// Prompt 41: `extra` = destination {name, lat, lon, kind} og recipients [userId] fra «Si fra»-flyten (Hjemlys41.swift).
+    func start(_ store: Store, eta: Date, waitMin: Int, mode: String = "walk", leg: String = "", extra: [String: Any] = [:]) {
         busy = true
         err = ""
         Haptic30.double()
@@ -236,6 +245,7 @@ final class Hjemlys40Model {
         var body: [String: Any] = ["eta": f.string(from: eta), "mode": mode, "waitMin": waitMin]
         if !leg.isEmpty { body["leg"] = leg }
         if let c = Hjemlys40Route.shared.here { body["pos"] = ["lat": c.latitude, "lon": c.longitude] }
+        for (k, v) in extra { body[k] = v }
         let payload: [String: Any] = body
         Task {
             defer { self.busy = false }
@@ -246,6 +256,14 @@ final class Hjemlys40Model {
                 var s: Hjemlys40Session = Hjemlys40Session(so)
                 if s.id.isEmpty { self.err = "Serveren startet ikke Hjemlys. Prøv igjen."; return }
                 if JS.str(so, "eta") == nil && (so["eta"] as? NSNumber) == nil { s.eta = eta }
+                // Prompt 41: mål, startsted og etappe er kjent før Live Activity startes (aldri «Start» / tom tid).
+                if let d = extra["destination"] as? [String: Any], so["destination"] == nil {
+                    let n: String = (d["name"] as? String) ?? ""
+                    s.dest = ((d["kind"] as? String) ?? "home") == "home" || n.isEmpty ? "Hjem" : n
+                }
+                if s.from.isEmpty { s.from = Hjemlys40Route.shared.fromName }
+                if s.leg.isEmpty { s.leg = leg }
+                if let names = extra["recipientNames"] as? [String], s.recipients.isEmpty { s.recipients = names }
                 self.mine = s
                 self.startOpen = false
                 self.suggest = false
@@ -327,12 +345,22 @@ final class Hjemlys40Model {
     }
 
     /// «Rune og Cybele følger med» / «Husstanden følger med».
+    /// Prompt 41: du selv er aldri med («Sebastian, Cybele og Rune følger med» var feil). Ved 3+: «Rune, Cybele og 1 til».
     var recipientsText: String {
-        let names: [String] = (mine?.recipients.isEmpty == false ? mine?.recipients : nil) ?? household.filter { $0.id != "" }.map(\.name)
-        let short: [String] = names.prefix(3).map { String($0.split(separator: " ").first ?? Substring($0)) }
-        if short.isEmpty { return "Husstanden følger med" }
-        if short.count == 1 { return short[0] + " følger med" }
-        return short.dropLast().joined(separator: ", ") + " og " + (short.last ?? "") + " følger med"
+        let names: [String] = (mine?.recipients.isEmpty == false ? mine?.recipients : nil) ?? household.filter { $0.id != "" && !isMe($0) }.map(\.name)
+        return Hjemlys41Text.following(Hjemlys41Text.withoutMe(names, me: meNames))
+    }
+
+    /// Navnene som betyr «deg» (visningsnavn, kontonavn og brukernavn).
+    var meNames: [String] {
+        guard let st = storeRef else { return [] }
+        return [st.displayName, st.account?.name ?? "", st.account?.username ?? ""].filter { !$0.isEmpty }
+    }
+
+    func isMe(_ h: Hjemlys40Member) -> Bool {
+        let meId: String = FamilyModel.shared.meId
+        if !meId.isEmpty && h.id == meId { return true }
+        return Hjemlys41Text.withoutMe([h.name], me: meNames).isEmpty
     }
 
     /* ---------- Live Activity ---------- */
@@ -357,8 +385,10 @@ final class Hjemlys40Model {
 
     #if canImport(ActivityKit)
     private func state(_ s: Hjemlys40Session) -> Hjemlys40Attributes.ContentState {
+        // Prompt 41: startsted («Majorstuen»), etappe («Trikk 19 · Bogstadveien») og mål i stedet for «Start» / «Kollektiv + gå».
         Hjemlys40Attributes.ContentState(eta: s.eta.timeIntervalSince1970, progress: s.progressNow, leg: s.leg, state: s.state,
-                                         lateMinutes: s.lateMinutes, homeAt: s.homeAt?.timeIntervalSince1970 ?? 0, from: "")
+                                         lateMinutes: s.lateMinutes, homeAt: s.homeAt?.timeIntervalSince1970 ?? 0,
+                                         from: s.from.isEmpty ? Hjemlys40Route.shared.fromName : s.from, kind: "trip", dest: s.dest)
     }
 
     private func watchToken(_ a: Activity<Hjemlys40Attributes>, _ id: String, _ store: Store) {
@@ -508,8 +538,9 @@ struct Hjemlys40Card: View {
                         Hjemlys40Active(s: s)
                     } else {
                         if m.suggest { Hjemlys40Suggest() }
-                        Button { Haptic30.light(); m.startOpen = true } label: {
-                            Text("Start Hjemlys").font(PF.ui(15, .bold)).foregroundStyle(p.bg)
+                        // Prompt 41: hele flyten (si fra, velg personer, klar) ligger i fanen Familie → Hjemlys.
+                        Button { Haptic30.light(); withAnimation(.easeOut(duration: 0.2)) { FamilyModel.shared.tab = "hjemlys" } } label: {
+                            Text("Start Hjemlys · si fra").font(PF.ui(15, .bold)).foregroundStyle(p.bg)
                                 .frame(maxWidth: .infinity).frame(height: 48)
                                 .background(p.ink, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))

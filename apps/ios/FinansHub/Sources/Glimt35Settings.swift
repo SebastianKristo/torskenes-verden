@@ -126,6 +126,8 @@ struct Glimt35SettingsContent: View {
                 .font(PF.ui(12.5)).foregroundStyle(Brief34C.mut).fixedSize(horizontal: false, vertical: true)
             // Prompt 40: Julemodus rett under figurvalget og teksten om vennene, før Glimt-brief-bryteren (Glimt40Settings.swift).
             Glimt40JulCard()
+            // Prompt 41: Høytider → 17. mai (Automatisk / Vis nå / Av).
+            Mai17Settings41()
             Glimt35Toggles()
             Glimt35Label(text: "BRIEFER GJENNOM DAGEN").padding(.top, 4)
             Glimt35Briefs()

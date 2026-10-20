@@ -28,9 +28,15 @@ struct Tilpass39Page: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Set39Group(title: "Identitet", offset: 1, rows: identityRows)
-            Set39Group(title: "Fanelinje", offset: 2, rows: tabRows)
+            // Prompt 41: «Skanneknapp på Hjem» øverst i FANELINJE.
+            PLabel(text: "Fanelinje").padding(.top, 12).padding(.leading, 4)
+            Scan41Row().padding(.bottom, 6)
+            Set39Group(title: "", offset: 2, rows: tabRows)
             // Tema, bakgrunn, ikonfarger og resten av fanelinje-valgene, flyttet uendret fra «Utseende».
             PaperLookSettings().padding(.top, 8)
+            // Prompt 41: HØYTIDER (17. mai-design), samme valg som i Innstillinger → Glimt.
+            PLabel(text: "Høytider").padding(.top, 14).padding(.leading, 4)
+            Mai17Settings41().padding(.top, 6)
         }
         .sheet(isPresented: $naming) {
             AppName24Sheet { naming = false }.environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)

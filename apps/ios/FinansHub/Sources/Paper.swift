@@ -166,6 +166,8 @@ struct PaperShell: View {
             // Prompt 32: Innstillinger og undersidene har heller ingen fanelinje eller skann-knapp (Settings32.swift).
             // Prompt 37: Gjøremål har heller ingen fanelinje (tilbake med ‹ Mer eller kantsveip), Tasks37Model.swift.
             let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27 && !store.inSettings32b && !store.inTasks37 && !store.inBible39
+                // Prompt 41: Bursdager har heller ingen fanelinje eller skanneknapp (Birthdays41.swift).
+                && !store.inBirthdays41
             // Prompt 23: ingen skann-knapp på Aksjer.
             let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
@@ -242,6 +244,8 @@ struct PaperShell: View {
             }
             // Prompt 38: usynlig lag som lukker AI-svarboblen ved trykk utenfor og fanger trykket (Assist38.swift).
             .overlay { Assist38Catcher() }
+            // Prompt 41: svar-pillen vokser til fullskjerm og blir Chat (Search41Pull.swift).
+            .overlay { Pull41Overlay() }
             .environment(\.paperWide, wide)
         }
         .environment(\.paper, p)
@@ -830,7 +834,7 @@ struct PaperPage: View {
                         .padding(.leading, wide ? 108 : 0)
                         // Prompt 32: Innstillinger har ingen fanelinje eller skann-knapp: 28 pt + safe area nederst.
                         // Prompt 37: Gjøremål – plass til feltet nederst (60 + bunnmarg + 16).
-                        .padding(.bottom, store.inSettings32b ? 28 : store.inBible39 ? 24 : (store.inTasks37 && !wide ? 124 : (store.fabMode == "float" && !wide ? 112 : 20)))
+                        .padding(.bottom, store.inSettings32b ? 28 : (store.inBible39 || store.inBirthdays41) ? 24 : (store.inTasks37 && !wide ? 124 : (store.fabMode == "float" && !wide ? 112 : 20)))
                 }
             }
             .coordinateSpace(name: "ppage")
@@ -966,17 +970,7 @@ struct PaperHero: View {
             .padding(.bottom, home ? 36 : (store.inBible39 ? 47 : 34))
         }
         .frame(height: (home ? (wide ? 230 : 172) : 154) + topInset)
-        .overlay(alignment: .bottomTrailing) {
-            // Prompt 28: kreditering for bildet (NASA, Unsplash/Pexels) nederst til høyre, én linje, maks 60 % bredde,
-            // så den aldri overlapper undertittelen.
-            GeometryReader { g in
-                BgCredit()
-                    .frame(maxWidth: g.size.width * 0.6, alignment: .trailing)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-            }
-            // Prompt 40: på Bibel står kreditten over kortet (overlapp 36 + 10 pt).
-            .padding(.trailing, 14).padding(.bottom, store.inBible39 ? 46 : 23)
-        }
+        // Prompt 41: ingen bildekreditering på Hjem (flyttet til Innstillinger → Tilpass → Bakgrunn, Bg41Oslo.swift).
         .clipped()
     }
 
@@ -993,6 +987,9 @@ struct PaperHero: View {
         } else if let img = store.photoImage, store.photo != "cur" {
             // Bildet med uskarphet, mørklegging, dempede farger, papirtekstur og ev. regn/snø (Background19.swift).
             BgPhotoLayer(image: img)
+                // Prompt 41: nytt bilde (Oslo hver time) tones inn over 600 ms.
+                .id(ObjectIdentifier(img))
+                .transition(.opacity)
         } else {
             LinearGradient(colors: gradientColors, startPoint: UnitPoint(x: 0.42, y: 0), endPoint: UnitPoint(x: 0.58, y: 1))
         }

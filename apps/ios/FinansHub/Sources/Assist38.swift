@@ -81,9 +81,13 @@ struct Assist38CloseButton: View {
 
 /// Sveip opp for å lukke, og rammen til hullet i laget.
 struct Assist38Swipe: ViewModifier {
+    @Environment(Store.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduce
     @State private var dy: CGFloat = 0
 
     func body(content: Content) -> some View {
+        // Prompt 41: ned = åpne i Chat (Search41Pull.swift): pillen flyttes 0,35 × dra og strekker seg (bunnmargen i Assist31Bubble).
+        let down: CGFloat = Pull41.shared.pull * 0.35
         content
             .background {
                 GeometryReader { (g: GeometryProxy) in
@@ -92,15 +96,29 @@ struct Assist38Swipe: ViewModifier {
                         .onChange(of: g.frame(in: .global)) { (_: CGRect, r: CGRect) in Assist38.shared.rect = r }
                 }
             }
-            .offset(y: dy)
+            .offset(y: dy + down)
             .opacity(Double(1 + Swift.max(-1, dy / 160)))
             .gesture(
                 DragGesture(minimumDistance: 12)
                     .onChanged { (v: DragGesture.Value) in
                         let t: CGFloat = v.translation.height
-                        dy = t < 0 ? t : t * 0.2
+                        if t < 0 {
+                            dy = t
+                            if Pull41.shared.pull > 0 { Pull41.shared.changed(0) }
+                        } else {
+                            dy = 0
+                            var tr: Transaction = Transaction()
+                            tr.disablesAnimations = true
+                            withTransaction(tr) { Pull41.shared.changed(t) }
+                        }
                     }
                     .onEnded { (v: DragGesture.Value) in
+                        if Pull41.shared.over {
+                            Pull41.shared.open(store, reduce: reduce)
+                            dy = 0
+                            return
+                        }
+                        if Pull41.shared.pull > 0 { Pull41.shared.cancel() }
                         if v.translation.height < -40 {
                             withAnimation(.easeOut(duration: 0.18)) { dy = -140 }
                             Task { @MainActor in

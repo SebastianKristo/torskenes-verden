@@ -784,7 +784,10 @@ struct PaperSettingsSub: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             switch key {
-            case "konto": SettingsSubpage(page: "accounts")
+            case "konto":
+                // Prompt 41: SERVER (lokal, ekstern, bytt automatisk) øverst i Konto (Server41.swift).
+                Server41Group()
+                SettingsSubpage(page: "accounts")
             case "sik": SettingsSubpage(page: "security")
             case "api": SettingsSubpage(page: "tokens")
             case "ai": PaperAiSettings()
@@ -812,7 +815,10 @@ struct PaperSettingsSub: View {
             default: SettingsSubpage(page: key)
             }
         }
+        .server41Host(p41)
     }
+
+    @Environment(\.paper) private var p41
 
     static let titles: [String: (String, String)] = [
         "konto": ("Kontoer og brukere", "Profil, brukere og kontoer"),

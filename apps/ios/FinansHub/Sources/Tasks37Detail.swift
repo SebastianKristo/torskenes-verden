@@ -34,6 +34,8 @@ struct Task37DetailSheet: View {
                 Task37Label(text: "Dato og tid")
                 dateCard
                 repeatCard
+                // Prompt 41: «LAGET MED GLIMT · ORIGINAL BESKJED «…»» over Organisering.
+                Tasks41OriginCard(t: t, close: close)
                 Task37Label(text: "Organisering")
                 orgCard
                 tagsCard

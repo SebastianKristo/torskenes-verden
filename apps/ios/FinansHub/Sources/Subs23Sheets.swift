@@ -430,7 +430,7 @@ struct SubAdd23Sheet: View {
 
     private func receipt(_ t: SubTok23) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("✦ AI leser bilde, PDF eller e-post og lager abonnementet.").font(PF.ui(13)).foregroundStyle(t.mut)
+            Text("✦ Glimt leser bilde, PDF eller e-post og lager abonnementet.").font(PF.ui(13)).foregroundStyle(t.mut)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 PhotosPicker(selection: $photo, matching: .images) {

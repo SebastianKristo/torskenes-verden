@@ -163,7 +163,7 @@ struct Chat27TopBar: View {
             Button { s.sheet = "model" } label: {
                 HStack(spacing: 8) {
                     Text(s.model.isEmpty ? "Velg modell" : m.label).font(c.ui(15, .bold)).foregroundStyle(c.ink).lineLimit(1)
-                    Chat27Badge(sky: m.sky)
+                    Chat27Badge(sky: m.sky, auto: m.kind == "auto")
                     Text("▼").font(c.ui(11)).foregroundStyle(c.mut)
                 }
                 .padding(.horizontal, 12).frame(height: 40)
@@ -192,11 +192,13 @@ struct Chat27TopBar: View {
 /// LOKAL (grønn) eller SKY (rød).
 struct Chat27Badge: View {
     let sky: Bool
+    /// Prompt 41: «✦ Auto» får lilla AUTO-merke.
+    var auto: Bool = false
 
     var body: some View {
-        Text(sky ? "SKY" : "LOKAL").font(PF.mono(9.5)).tracking(0.8).foregroundStyle(Color.white)
+        Text(auto ? "AUTO" : (sky ? "SKY" : "LOKAL")).font(PF.mono(9.5)).tracking(0.8).foregroundStyle(Color.white)
             .padding(.horizontal, 7).padding(.vertical, 3)
-            .background(Color(hex: sky ? "#b23a2a" : "#2f7a4f"), in: Capsule())
+            .background(Color(hex: auto ? "#7a5ad6" : (sky ? "#b23a2a" : "#2f7a4f")), in: Capsule())
     }
 }
 

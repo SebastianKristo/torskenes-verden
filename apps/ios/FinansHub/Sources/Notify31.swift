@@ -38,7 +38,8 @@ enum Notify31 {
         let trial = UNNotificationCategory(identifier: trialCategory, actions: [cancel, keep, snooze], intentIdentifiers: [], options: [])
         let ai = UNNotificationCategory(identifier: aiCategory, actions: [], intentIdentifiers: [], options: [])
         // Prompt 40 (1b): Glimt foreslår Hjemlys – «Ja, start» / «Ikke nå» (Hjemlys40Glimt.swift).
-        UNUserNotificationCenter.current().setNotificationCategories([trial, ai, Hjemlys40Glimt.makeCategory()])
+        // Prompt 41: «Drar du nå?» (Ja / + 15 min) for Hjemlys «Drar snart» (Hjemlys41.swift).
+        UNUserNotificationCenter.current().setNotificationCategories([trial, ai, Hjemlys40Glimt.makeCategory(), Hjemlys41.makeCategory()])
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: nil) { (task: BGTask) in
             Notify31.schedule()
             let work = Task { @MainActor in
@@ -162,6 +163,7 @@ enum Notify31 {
     /// Fra NotifyDelegate (Haptics.swift).
     nonisolated static func handle(_ response: UNNotificationResponse) {
         if Hjemlys40Glimt.handle(response) { return }
+        if Hjemlys41.handle(response) { return }
         let info: [AnyHashable: Any] = response.notification.request.content.userInfo
         let action: String = response.actionIdentifier
         let go: String = (info["go"] as? String) ?? ""

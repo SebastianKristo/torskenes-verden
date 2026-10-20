@@ -9,8 +9,12 @@ extension Store {
         guard let a = account else {
             if WidgetShared.token != nil { WidgetShared.clear(); WidgetCenter.shared.reloadAllTimelines() }
             KalCompanion33.clear()
+            // Prompt 41: «Fortsett som» i Kalender forsvinner ved utlogging.
+            KalShared41.clear()
             return
         }
+        // Prompt 41: delt enhets-token for «Fortsett som» i Kalender (AppAuth41.swift).
+        AppAuth41.shareDevice(self)
         // Prompt 33: eget app-token for Kalender-appen i App Group-en (KalLink33.swift).
         KalCompanion33.sync(self)
         let changed = WidgetShared.token != a.token || WidgetShared.bases.first != (base.isEmpty ? a.server : base)

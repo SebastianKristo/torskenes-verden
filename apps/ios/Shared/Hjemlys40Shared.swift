@@ -119,8 +119,13 @@ struct Hjemlys40Attributes: ActivityAttributes {
         var lateMinutes: Int
         var homeAt: Double
         var from: String
+        /// Prompt 41: trip (tur med mål) | checkin («Inne · 19:42») | soon («Drar om ca. 30 min · 23:04»).
+        var kind: String
+        /// Prompt 41: målet («Hjem», «Bursdag hos Mari») – etiketten til høyre under fremdriften.
+        var dest: String
 
-        init(eta: Double, progress: Double, leg: String, state: String, lateMinutes: Int, homeAt: Double, from: String) {
+        init(eta: Double, progress: Double, leg: String, state: String, lateMinutes: Int, homeAt: Double, from: String,
+             kind: String = "trip", dest: String = "Hjem") {
             self.eta = eta
             self.progress = progress
             self.leg = leg
@@ -128,10 +133,12 @@ struct Hjemlys40Attributes: ActivityAttributes {
             self.lateMinutes = lateMinutes
             self.homeAt = homeAt
             self.from = from
+            self.kind = kind
+            self.dest = dest
         }
 
         enum CodingKeys: String, CodingKey {
-            case eta, progress, leg, state, lateMinutes, homeAt, from
+            case eta, progress, leg, state, lateMinutes, homeAt, from, kind, dest
         }
 
         /// Tolerant mot push fra serveren: alle felt er valgfrie, eta kan være sekunder eller millisekunder.
@@ -146,6 +153,8 @@ struct Hjemlys40Attributes: ActivityAttributes {
             let rawHome: Double = (try? c.decodeIfPresent(Double.self, forKey: .homeAt)) ?? 0
             homeAt = rawHome > 100_000_000_000 ? rawHome / 1000 : rawHome
             from = (try? c.decodeIfPresent(String.self, forKey: .from)) ?? ""
+            kind = (try? c.decodeIfPresent(String.self, forKey: .kind)) ?? "trip"
+            dest = (try? c.decodeIfPresent(String.self, forKey: .dest)) ?? "Hjem"
         }
 
         var etaDate: Date { Date(timeIntervalSince1970: eta) }
@@ -154,8 +163,10 @@ struct Hjemlys40Attributes: ActivityAttributes {
 
     var sessionId: String
     var name: String
-    /// «Rune og Cybele følger med» / «Husstanden følger med».
+    /// «Rune og Cybele følger med» / «Husstanden følger med». Prompt 41: aldri deg selv.
     var recipients: String
+    /// Prompt 41: mottakernes bruker-id-er (for «+ 15 min» / «Drar nå» på «Drar snart» uten å åpne appen).
+    var to: [String]? = nil
 }
 
 @available(iOS 16.2, *)

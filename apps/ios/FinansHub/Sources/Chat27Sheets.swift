@@ -122,6 +122,29 @@ struct Chat27ModelSheet: View {
 
     var body: some View {
         Chat27Head(title: "Velg modell", c: c)
+        // Prompt 41: «✦ Auto» øverst – Glimt velger beste modell for hver melding (standard).
+        if let a = s.autoModel {
+            Button { s.select(a, store) } label: {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 8) {
+                            Text(a.name).font(c.ui(15, .bold)).foregroundStyle(c.ink).lineLimit(1)
+                            Text("AUTO").font(PF.mono(9.5)).tracking(0.8).foregroundStyle(Color.white)
+                                .padding(.horizontal, 7).padding(.vertical, 3)
+                                .background(Color(hex: "#7a5ad6"), in: Capsule())
+                        }
+                        Text("Glimt velger beste modell for hver melding · lokalt når dine data er med").font(c.ui(12.5)).foregroundStyle(c.mut)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 4)
+                    if a.id == s.model { Text("✓").font(c.ui(16, .bold)).foregroundStyle(c.ink) }
+                }
+                .padding(.vertical, 11).padding(.horizontal, 14)
+                .background(c.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
         Chat27Label(text: "LOKALT · OLLAMA PÅ HJEMMESERVEREN", c: c)
         card(s.localModels, empty: "Ingen lokale modeller er installert.")
         Chat27Label(text: "SKY", c: c)

@@ -130,10 +130,11 @@ final class News40Model {
     nonisolated static func parse(_ o: [String: Any]) -> News40Digest {
         var g: News40Digest = News40Digest()
         g.title = JS.str(o, "title") ?? "Dette skjer i dag"
-        g.lead = Fin40Ask.clean(JS.str(o, "lead") ?? JS.str(o, "ingress") ?? "")
+        g.lead = News41Clean.text(Fin40Ask.clean(JS.str(o, "lead") ?? JS.str(o, "ingress") ?? ""))
         g.sections = JS.list(o, "sections").map { (s: [String: Any]) -> News40Section in
             let refs: [Int] = ((s["refs"] as? [Any]) ?? []).compactMap { ($0 as? NSNumber)?.intValue }
-            return News40Section(h: JS.str(s, "h") ?? JS.str(s, "title") ?? "", text: Fin40Ask.clean(JS.str(s, "text") ?? ""), refs: refs)
+            // Prompt 41: ingen rå «[9]» i teksten (News41Clean.swift).
+            return News40Section(h: JS.str(s, "h") ?? JS.str(s, "title") ?? "", text: News41Clean.text(Fin40Ask.clean(JS.str(s, "text") ?? "")), refs: refs)
         }
         g.refs = JS.list(o, "refs").map { (r: [String: Any]) -> News40Ref in
             News40Ref(n: JS.int(r, "n") ?? 0, title: JS.str(r, "title") ?? "", source: JS.str(r, "source") ?? "", url: JS.str(r, "url") ?? "",
@@ -204,8 +205,11 @@ struct News40Page: View {
                     }
                     if let g = m.digest { News40Body(g: g) }
                 }
-                .padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 40)
+                // Prompt 41: innholdet holder seg innenfor skjermen (ingen sidelengs scroll), 20 pt marg.
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20).padding(.top, 10).padding(.bottom, 40)
             }
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             .refreshable { await m.load(store) }
         }
         .background(p.bg.ignoresSafeArea())
@@ -223,15 +227,11 @@ struct News40Page: View {
             }
             .buttonStyle(.plain)
             Spacer()
-            Button {
-                if Glimt35Voice.shared.speaking != nil { Glimt35Voice.shared.stop() } else {
-                    Glimt35Voice.shared.say(m.speech, char: Glimt35Model.shared.cfg.host, store, force: true)
-                }
-            } label: {
-                Text(Glimt35Voice.shared.speaking != nil ? "■ Stopp" : "▶ Les opp").font(PF.ui(13, .bold)).foregroundStyle(p.ink)
-                    .padding(.horizontal, 14).frame(height: 36).background(p.card, in: Capsule())
+            // Prompt 41: på smal skjerm krymper «Les opp» til bare ikon, så alle tre knappene får plass på én linje.
+            ViewThatFits(in: .horizontal) {
+                readButton(full: true)
+                readButton(full: false)
             }
-            .buttonStyle(.plain)
             Button { m.contentOpen = true } label: {
                 Text("Innhold").font(PF.ui(13, .bold)).foregroundStyle(p.bg)
                     .padding(.horizontal, 14).frame(height: 36).background(p.ink, in: Capsule())
@@ -239,6 +239,21 @@ struct News40Page: View {
             .buttonStyle(.plain)
         }
         .padding(.horizontal, 18).padding(.top, 14).padding(.bottom, 8)
+    }
+
+    private func readButton(full: Bool) -> some View {
+        let speaking: Bool = Glimt35Voice.shared.speaking != nil
+        return Button {
+            if speaking { Glimt35Voice.shared.stop() } else {
+                Glimt35Voice.shared.say(m.speech, char: Glimt35Model.shared.cfg.host, store, force: true)
+            }
+        } label: {
+            Text(full ? (speaking ? "■ Stopp" : "▶ Les opp") : (speaking ? "■" : "▶")).font(PF.ui(13, .bold)).foregroundStyle(p.ink)
+                .lineLimit(1)
+                .padding(.horizontal, full ? 14 : 12).frame(height: 36).background(p.card, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(speaking ? "Stopp opplesning" : "Les opp")
     }
 }
 
@@ -253,7 +268,7 @@ struct News40Body: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("✦ GLIMT · NYHETSOPPSUMMERING").font(PF.mono(10.5)).tracking(1.3).foregroundStyle(p.lab)
                 Text(g.title).font(PF.serif(32, medium: true)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
-                Text(meta).font(PF.ui(12.5)).foregroundStyle(p.mut)
+                Text(meta).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
             }
             if !g.lead.isEmpty {
                 Text(g.lead).font(PF.italic(19)).foregroundStyle(p.ink).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
@@ -287,7 +302,7 @@ struct News40Body: View {
     private var foot: String {
         let f: DateFormatter = DateFormatter()
         f.dateFormat = "HH:mm"
-        return "Laget av Glimt kl. " + f.string(from: g.updatedAt ?? Date()) + " fra kildene du har valgt. Trykk på et tall for å lese saken."
+        return "Laget av Glimt kl. " + f.string(from: g.updatedAt ?? Date()) + " fra kildene du har valgt. Trykk på en kilde for å lese saken."
     }
 }
 
@@ -304,25 +319,34 @@ struct News40SectionView: View {
             if !s.h.isEmpty { Text(s.h).font(PF.serif(22, medium: true)).foregroundStyle(p.ink) }
             Text(s.text).font(PF.ui(15)).foregroundStyle(p.ink).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
             if !s.refs.isEmpty {
-                HStack(spacing: 6) {
+                // Prompt 41: kildene som små piller («VG», «NRK») som bryter over flere linjer – aldri bredere enn skjermen.
+                Flow(spacing: 6) {
                     ForEach(s.refs, id: \.self) { (n: Int) in
                         Button { openRef(n) } label: {
-                            Text("[\(n)]").font(PF.mono(12)).foregroundStyle(p.lab)
-                                .padding(.horizontal, 7).frame(height: 24)
-                                .background(p.card, in: Capsule())
+                            HStack(spacing: 3) {
+                                Text(pillName(n)).font(PF.ui(11.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
+                                Text("\(n)").font(PF.mono(9)).foregroundStyle(p.lab).baselineOffset(4)
+                            }
+                            .padding(.horizontal, 9).frame(height: 24)
+                            .background(p.card, in: Capsule())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Kilde \(n)")
+                        .accessibilityLabel("Kilde \(n): " + pillName(n))
                     }
                 }
             }
             if showImage, let n = s.refs.first(where: { g.images[$0] != nil }), let raw = g.images[n], let u = URL(string: raw) {
                 VStack(alignment: .leading, spacing: 4) {
-                    AsyncImage(url: u) { (img: Image) in img.resizable().scaledToFill() } placeholder: { p.card }
+                    // Prompt 41: bildet fyller en flate med fast forhold (Color.clear) og klippes – et fylt bilde kan ikke
+                    // lenger gjøre siden bredere enn skjermen.
+                    Color.clear
                         .aspectRatio(index == 0 ? 16.0 / 9.0 : 3.0 / 2.0, contentMode: .fit)
                         .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    Text("Bilde fra saken [\(n)]" + source(n)).font(PF.ui(11.5)).foregroundStyle(p.mut)
+                        .overlay {
+                            AsyncImage(url: u) { (img: Image) in img.resizable().scaledToFill() } placeholder: { p.card }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Text("Bilde fra saken" + source(n)).font(PF.ui(11.5)).foregroundStyle(p.mut)
                 }
             }
         }
@@ -334,6 +358,11 @@ struct News40SectionView: View {
     private func source(_ n: Int) -> String {
         let s: String = g.refs.first(where: { $0.n == n })?.source ?? ""
         return s.isEmpty ? "" : " · " + s
+    }
+
+    private func pillName(_ n: Int) -> String {
+        let src: String = g.refs.first(where: { $0.n == n })?.source ?? ""
+        return src.isEmpty ? "Sak" : src
     }
 
     private func openRef(_ n: Int) {
@@ -352,7 +381,7 @@ struct News40RefRow: View {
     var body: some View {
         Button { store.openLink(r.url) } label: {
             HStack(spacing: 10) {
-                Text("[\(r.n)]").font(PF.mono(12)).foregroundStyle(p.lab).frame(width: 30, alignment: .leading)
+                Text("\(r.n)").font(PF.mono(12)).foregroundStyle(p.lab).frame(width: 22, alignment: .leading)
                 ZStack {
                     RoundedRectangle(cornerRadius: 8, style: .continuous).fill(p.card)
                     if let s = image, let u = URL(string: s) {
@@ -363,6 +392,7 @@ struct News40RefRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(r.title).font(PF.ui(13.5, .semibold)).foregroundStyle(p.ink).lineLimit(2).multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text([r.source, r.time].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(11.5)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 0)

@@ -35,8 +35,8 @@ struct BirthdaysPage24: View {
                 HStack(spacing: 8) { ProgressView(); Text("Henter bursdager …").font(PF.ui(13)).foregroundStyle(p.mut) }.padding(.horizontal, 4)
             }
             ForEach(groups, id: \.title) { g in group(g) }
-            // Prompt 26: kalenderoppsettet ligger i Innstillinger → Kalendere. Her er bare lenkeraden.
-            BirthdayCalLink26()
+            // Prompt 41: kalendere er fjernet fra Bursdager-siden (oppsettet ligger bare i Innstillinger → Kalendere).
+            Bday41PartySetting().padding(.top, 4)
         }
         .padding(.top, 2)
         .animation(.easeOut(duration: 0.2), value: adding)
@@ -223,12 +223,26 @@ struct BirthdayHero24: View {
             }
             .foregroundStyle(.white)
             .padding(18)
+            // Prompt 41: plass til jenka-toget nederst når feiringen vises.
+            .padding(.bottom, party ? 60 : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(hex: "#b23a2a"), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .background {
+                // Prompt 41: konfetti og jenka-tog bak teksten, i det røde kortet (Birthdays41.swift).
+                ZStack {
+                    Color(hex: "#b23a2a")
+                    if party {
+                        LinearGradient(colors: [Color.clear, Color.black.opacity(0.14)], startPoint: UnitPoint(x: 0.5, y: 0.55), endPoint: .bottom)
+                        Bday41Party()
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            }
             .shadow(color: .black.opacity(0.4), radius: 10, y: 10)
         }
         .buttonStyle(.plain)
     }
+
+    private var party: Bool { Bday41.shared.showParty(first.daysLeft == 0) }
 
     private func sub(_ same: [Birthday24]) -> String {
         let d: String = first.longDate
@@ -254,6 +268,8 @@ struct BirthdayRow24: View {
             Button(action: tap) {
                 HStack(spacing: 12) {
                     BirthdayAvatar24(b: b, size: 42)
+                        // Prompt 41: «+» på personer uten bilde.
+                        .overlay(alignment: .bottomTrailing) { if b.avatarUrl.isEmpty { Bday41PlusBadge().offset(x: 3, y: 3) } }
                     VStack(alignment: .leading, spacing: 1) {
                         Text(b.name).font(PF.ui(15, .bold)).foregroundStyle(p.ink).lineLimit(1)
                         Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
@@ -290,6 +306,8 @@ struct BirthdayRow24: View {
 
     private var details: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Prompt 41: last opp, bytt eller fjern bilde øverst i detaljene.
+            Bday41PhotoRow(b: b)
             Text(detailText).font(PF.ui(13.5)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
             Text("Påminnelse").font(PF.ui(12.5)).foregroundStyle(p.mut)
             BdChipRow24(options: BdOptions24.reminders, selected: String(b.reminderDays ?? -1), height: 30) { v in

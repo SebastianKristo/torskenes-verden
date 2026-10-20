@@ -119,7 +119,7 @@ struct Glimt40PhaseChips: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            ForEach(Glimt40JulPhase.allCases, id: \.rawValue) { (ph: Glimt40JulPhase) in
+            ForEach(Glimt40JulPhase.jule, id: \.rawValue) { (ph: Glimt40JulPhase) in
                 let on: Bool = ph.rawValue == selected
                 Button { pick(ph.rawValue) } label: {
                     Text(ph.label).font(PF.ui(12.5, .bold))

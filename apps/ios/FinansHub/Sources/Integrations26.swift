@@ -65,7 +65,7 @@ struct Int26Meta {
         case "google": return Int26Meta(category: "Informasjon", badge: "31", color: "#4285F4", desc: "Google Kalender for Bursdager og Kalender")
         case "entur": return Int26Meta(category: "Transport og pakker", badge: "R", color: "#d0605a", desc: "Sanntid for avganger")
         case "mybring": return Int26Meta(category: "Transport og pakker", badge: "B", color: "#7BC144", desc: "Sporing hos Posten og Bring")
-        case "postnord": return Int26Meta(category: "Transport og pakker", badge: "PN", color: "#00A0D6", desc: "Sporing hos PostNord")
+        case "postnord": return Int26Meta(category: "Transport og pakker", badge: "PN", color: "#00A0D6", desc: "Sporing uten konto og uten nøkkel")
         case "parcelsapp": return Int26Meta(category: "Transport og pakker", badge: "PA", color: "#4B5BD6", desc: "Reserve for alle transportører")
         case "t212": return Int26Meta(category: "Økonomi", badge: "T", color: "#13a37f", desc: "Aksjer og kontoer")
         case "bank": return Int26Meta(category: "Økonomi", badge: "BK", color: "#2b5d8a", desc: "Banker og filimport")
@@ -363,6 +363,8 @@ struct Int26Detail: View {
 
     @ViewBuilder private func content(_ it: Int24Item) -> some View {
         Int26Head(item: it)
+        // Prompt 41: PostNord uten konto og uten nøkkel (Track41PostNord.swift).
+        if it.id == "postnord" { Track41PostNordCard().padding(.top, 10) }
         if !it.fields.isEmpty {
             PLabel(text: "Oppsett").padding(.leading, 4).padding(.top, 14)
             Int26Fields(item: it)

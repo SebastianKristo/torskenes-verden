@@ -236,7 +236,10 @@ extension Store {
         do {
             let q = weatherPlaceObj?.query ?? "place=\(weatherPlace)"
             let d = try await api.callAt("/api", "GET", "/weather/full?\(q)&source=met&compare=1", timeout: 20)
-            var w: WeatherFull = WeatherFull(JS.obj(d))
+            let raw41: [String: Any] = JS.obj(d)
+            var w: WeatherFull = WeatherFull(raw41)
+            // Prompt 41: Skiføre (bare når serveren sender det, dvs. snø ≥ 15 cm og ikke slått av).
+            Vaer41.shared.skiData = Ski41(JS.dict(raw41, "ski"))
             w.loadedAt = Date()
             weatherFull = w
             if w.compare == nil { await loadWeatherCompare22(w.placeId) }
@@ -353,6 +356,11 @@ struct PaperWeatherView: View {
         .task {
             await store.loadWeatherFull()
             await store.loadWeatherPlaces()
+            await Vaer41.shared.load(store)
+        }
+        // Prompt 41: «Rediger Vær» (rekkefølge, vis/skjul, Glimt øverst/nederst, Skiføre av/på).
+        .sheet(isPresented: Binding<Bool>(get: { Vaer41.shared.sheet }, set: { (v: Bool) in if !v { Vaer41.shared.done(store) } })) {
+            Vaer41Sheet().presentationDetents([.medium, .large]).presentationBackground(Color(hex: "#17191e"))
         }
     }
 
@@ -375,27 +383,41 @@ struct PaperWeatherView: View {
         .coordinateSpace(name: "wxscroll")
         .onPreferenceChange(PaperScrollKey.self) { v in
             let s: CGFloat = Swift.max(0, -v)
+            if abs(s - scroll) > 2 { Vaer41.shared.lastScroll = Date() }
             if abs(s - scroll) > 8 { scroll = s }
         }
         .refreshable { await store.loadWeatherFull(force: true) }
     }
 
     @ViewBuilder private func content(_ w: WeatherFull) -> some View {
-        WxHeader22(w: w).opacity(Double(Swift.max(0, 1 - scroll / 220)))
-        WxHourCard22(w: w, mode: $mode) { openDay(0) }
-        WxDaysCard22(w: w, mode: mode) { i in openDay(i) }
-        WxCompareCard22(w: w) { openCompare() }
-        WxWindCard22(w: w).onTapGesture { open("wind") }
-        WxMoonCard22(w: w).onTapGesture { open("moon") }
-        WxTileGrid22(w: w) { k in open(k) }
-        // Prompt 39: Glimt-personlighetene oppsummerer ukas vær og sammenligner med forrige uke (WxWeek39.swift).
-        WxWeek39Card(w: w)
+        // Prompt 41: kortene i brukerens rekkefølge, skjulte kort borte, og Skiføre når det er snø (Vaer41.swift).
+        // Hold inne et kort (0,6 s) eller «Rediger kort» nederst for å redigere. Scroll virker hele tiden.
+        ForEach(Array(Vaer41.shared.visible.enumerated()), id: \.element) { (pair: (offset: Int, element: String)) in
+            card41(pair.element, w).vaer41Wiggle(pair.offset)
+        }
+        Vaer41EditButton().padding(.top, 6)
         Button { store.openLink(w.yrUrl) } label: {
             Text("Data: MET Norge · Se også yr.no ↗").font(.system(size: 12.5)).underline().opacity(0.85).padding(.top, 4)
         }
         .buttonStyle(.plain)
         if w.mock {
             Text("Eksempeldata – serveren fikk ikke kontakt med MET.").font(.system(size: 11.5)).opacity(0.7)
+        }
+    }
+
+    @ViewBuilder private func card41(_ k: String, _ w: WeatherFull) -> some View {
+        switch k {
+        case "na": WxHeader22(w: w).opacity(Double(Swift.max(0, 1 - scroll / 220)))
+        case "ski": if let s = Vaer41.shared.skiData { Vaer41SkiCard(s: s) }
+        case "timer": WxHourCard22(w: w, mode: $mode) { openDay(0) }
+        case "dager10": WxDaysCard22(w: w, mode: mode) { i in openDay(i) }
+        case "yrstorm": WxCompareCard22(w: w) { openCompare() }
+        case "vind": WxWindCard22(w: w).onTapGesture { open("wind") }
+        case "mane": WxMoonCard22(w: w).onTapGesture { open("moon") }
+        case "detaljer": WxTileGrid22(w: w) { k in open(k) }
+        // Prompt 39: Glimt-personlighetene oppsummerer ukas vær og sammenligner med forrige uke (WxWeek39.swift).
+        case "glimtuka": WxWeek39Card(w: w)
+        default: EmptyView()
         }
     }
 

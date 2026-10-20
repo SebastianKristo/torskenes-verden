@@ -362,9 +362,8 @@ struct BgTuning: View {
                     Text("Regn og snø når det er vær for det").font(PF.ui(12)).foregroundStyle(p.mut)
                 }
             }
-            if let c = store.bgInfo?.creditText, !c.isEmpty {
-                Text(c).font(PF.ui(12)).foregroundStyle(p.mut)
-            }
+            // Prompt 41: kreditering for bakgrunnsbildet (lenke til filsiden). Vises bare her, ikke på Hjem.
+            Bg41CreditLine()
         }
         .tint(p.pos)
         .padding(14)

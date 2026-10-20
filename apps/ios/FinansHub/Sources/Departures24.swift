@@ -100,6 +100,8 @@ struct RuterView24: View {
             Text(e.contains("finnes ikke") ? e : "Fikk ikke kontakt med Entur. Trykk ↻ for å prøve igjen.")
                 .font(PF.ui(13)).foregroundStyle(p.lab).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true)
         }
+        // Prompt 41: MIN REISE · SEBASTIAN over transportfilteret (bare for brukere med forhåndsruter), MinReise41Views.swift.
+        MinReise41RuterCard()
         if m.current == nil {
             emptyCard
         } else {

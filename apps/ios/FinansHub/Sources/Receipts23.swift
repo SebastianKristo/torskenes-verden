@@ -97,7 +97,7 @@ final class Receipts23Model {
         do {
             try await store.api.call("POST", "/receipts/\(id)/reprocess")
             seenActive.insert(id)
-            store.flash("✦ Analyserer på nytt")
+            store.flash("✦ Glimt analyserer på nytt")
         } catch { store.message = error.localizedDescription }
         await load(store)
     }
@@ -396,20 +396,9 @@ struct Receipts23BookedSection: View {
         if !model.booked.isEmpty {
             Receipts23Label(text: "Bokført · \(model.booked.count)")
             Receipts23Card {
+                // Prompt 41: bokførte rader kan åpnes (bilde, navn, beløp, kategori, Lagre / Til gjennomgang) og leses på nytt.
                 ForEach(Array(model.booked.enumerated()), id: \.element.id) { i, r in
-                    VStack(spacing: 0) {
-                        if i > 0 { Receipts23Divider() }
-                        HStack(spacing: 12) {
-                            Receipts23Line(r: r, meta: ddmm(r.date) + " · " + Receipts23Line.category(store, r.categoryId))
-                            Button { Haptics.shared.tap(); Task { await model.unbook(r.id, store) } } label: {
-                                Text("↺").font(PF.ui(16, .semibold)).foregroundStyle(p.mut).frame(width: 30, height: 30)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel("Angre")
-                            .accessibilityHint("Tilbake til gjennomgang")
-                        }
-                        .padding(.vertical, 12)
-                    }
+                    Receipts41BookedRow(model: model, r: r, first: i == 0)
                 }
             }
         }
@@ -442,7 +431,7 @@ struct Receipts23Line: View {
     static func meta(_ r: Receipt) -> String {
         var c: Double = r.confidence ?? 0
         if c <= 1 { c *= 100 }
-        let motor: String = r.provider ?? r.engine ?? "AI"
+        let motor: String = r.provider ?? r.engine ?? "Glimt"
         return ddmm(r.date) + " · " + motor + " · \(Int(c.rounded())) % sikker"
     }
 }

@@ -87,6 +87,8 @@ final class Glimt35Model {
         Glimt35Cfg.store(cfg)
         Brief34Model.shared.autoTour = cfg.guide
         // Prompt 40: julemodus til App Group + NotificationCenter (alle åpne figurer) + alle widgets på hjemskjermen.
+        // Prompt 41: 17. mai-valget (flagg på figurene) i samme App Group.
+        Glimt40Jul.saveMai17(cfg.mai17)
         if Glimt40Jul.save(mode: cfg.jul, phase: cfg.julPhase, snow: cfg.snow, sound: cfg.julSound) {
             WidgetCenter.shared.reloadAllTimelines()
         } else {

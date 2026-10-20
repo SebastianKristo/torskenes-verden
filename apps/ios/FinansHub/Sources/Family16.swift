@@ -571,9 +571,12 @@ struct FamilyView: View {
         VStack(spacing: 14) {
             if let e = m.error { errorCard(e) }
             // Prompt 40: Hjemlys (status for husstanden + enkel start), Hjemlys40.swift.
-            if tab != "helse" { Hjemlys40Card() }
-            if tab != "helse" { mapSection }
+            if tab != "helse" && tab != "hjemlys" { Hjemlys40Card() }
+            if tab != "helse" && tab != "hjemlys" { mapSection }
             switch tab {
+            // Prompt 41: Familie → Hjemlys – start, si fra, velg personer, klar, aktiv og sendt (Hjemlys41Views.swift).
+            case "hjemlys":
+                Hjemlys41Tab()
             case "soner":
                 Fam22ZonesTab { z in ctl.focusZone(z.coord, radius: z.radius) }
             case "helse":

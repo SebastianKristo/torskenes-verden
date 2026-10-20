@@ -116,6 +116,8 @@ struct Glimt35Cfg: Hashable {
     var julPhase: String = "advent"
     var snow: Bool = true
     var julSound: String = "av"
+    /// Prompt 41: 17. mai auto | av | pa (pa = «Vis nå»). Figurene får flagg 14.–17. mai, Hjem eget design på dagen.
+    var mai17: String = "auto"
     /// Serveren sendte jul (eldre server uten feltet skal ikke overskrive valget lokalt).
     var julSet: Bool = false
 
@@ -195,6 +197,8 @@ struct Glimt35Cfg: Hashable {
         c.snow = b(o, "snow", true)
         let js: String = s(o, "julSound", "av")
         c.julSound = js == "bjelle" ? "bjelle" : "av"
+        let m17: String = s(o, "mai17", "auto").lowercased()
+        c.mai17 = ["auto", "av", "pa"].contains(m17) ? m17 : "auto"
         let eng: [[String: Any]] = ((o["engines"] as? [Any]) ?? []).compactMap { $0 as? [String: Any] }
         c.engines = eng.map { (x: [String: Any]) -> Glimt35Engine in
             Glimt35Engine(id: s(x, "id", ""), name: s(x, "name", s(x, "id", "")), ready: b(x, "ready", false), keySet: b(x, "keySet", false),
@@ -214,7 +218,7 @@ struct Glimt35Cfg: Hashable {
         let tts: [String: Any] = ["engine": engine, "voice": voice, "rate": rate, "lang": lang]
         let out: [String: Any] = ["char": char, "friends": friends, "brief": brief, "readAloud": readAloud, "guide": guide, "notify": notify,
                                   "briefGlimt": briefGlimt, "briefs": br, "tts": tts,
-                                  "jul": jul, "julPhase": julPhase, "snow": snow, "julSound": julSound]
+                                  "jul": jul, "julPhase": julPhase, "snow": snow, "julSound": julSound, "mai17": mai17]
         return out
     }
 

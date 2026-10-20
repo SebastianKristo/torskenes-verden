@@ -143,7 +143,7 @@ struct PaperBoligDetail: View {
     private var upload: some View {
         VStack(alignment: .leading, spacing: 10) {
             PLabel(text: "Legg til kvittering")
-            Text("✦ AI leser kvitteringen og velger kategori og underkategori i \(f.name).").font(PF.ui(12.5)).foregroundStyle(p.mut)
+            Text("✦ Glimt leser kvitteringen og velger kategori og underkategori i \(f.name).").font(PF.ui(12.5)).foregroundStyle(p.mut)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 Button { store.uploadFolder = f.id; store.paperScanOpen = true } label: { pill("camera", "Skann") }.buttonStyle(.plain)

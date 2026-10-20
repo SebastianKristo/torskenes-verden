@@ -402,6 +402,7 @@ struct PaperEditableCard<C: View>: View {
     var vis: [String] = []
     @ViewBuilder let content: () -> C
     @State private var wig = false
+    @State private var tiny41: Bool = false
 
     /// Prompt 37: egen gest i stedet for `.draggable` (forhåndsvisningen uten miljø krasjet appen). Reorder37.swift.
     private var dragShield: some View {
@@ -431,16 +432,29 @@ struct PaperEditableCard<C: View>: View {
             }
             .overlay {
                 // Prompt 28: «✎ Rediger widget» midt på kort med innstillinger.
-                if editing && !dragging && !sheet39 && Edit28.settingsCards.contains(key) && page == "hjem" {
-                    VStack(spacing: 6) {
-                        Edit28WidgetPill { Edit28.shared.editWidget(key, store) }
-                        if dim { Pkg37HiddenBadge() }
-                    }
+                // Prompt 41: én pille midt på kortet. «Skjult når ingen pakker» ligger nederst til høyre (ikke under pillen),
+                // så pillen ikke vokser ut av et lavt kort og legger seg oppå pillen til neste kort.
+                if editing && !dragging && !sheet39 && !tiny41 && Edit28.settingsCards.contains(key) && page == "hjem" {
+                    Edit28WidgetPill { Edit28.shared.editWidget(key, store) }
                 }
             }
+            .overlay(alignment: .bottomTrailing) {
+                if editing && !dragging && !sheet39 && dim && page == "hjem" {
+                    Pkg37HiddenBadge().scaleEffect(0.9).padding(.trailing, 8).padding(.bottom, 6)
+                }
+            }
+            .background(
+                // Prompt 41: kort uten innhold (f.eks. sveipet bort) har høyde 0 – da vises ingen merker midt på siden.
+                GeometryReader { (g: GeometryProxy) in
+                    let t: Bool = g.size.height < 4
+                    Color.clear
+                        .onAppear { if tiny41 != t { tiny41 = t } }
+                        .onChange(of: t) { _, nt in tiny41 = nt }
+                }
+            )
             .overlay(alignment: .topLeading) {
                 // Prompt 28: minus-sirkel i Papir-stil øverst til venstre, 9 pt utenfor kanten (ikke på Sporing).
-                if editing && page != "sporing" {
+                if editing && page != "sporing" && !tiny41 {
                     Edit28Minus(label: "Skjul kortet") { store.setPaperCardHidden(page, key, true, keys) }
                         .offset(x: -9, y: -9)
                 }

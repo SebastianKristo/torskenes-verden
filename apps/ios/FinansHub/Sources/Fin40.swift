@@ -122,8 +122,11 @@ final class Fin40Reread {
                 let r: ReanalyzeResult = try await store.reanalyze(d.receiptId)
                 self.result = r
                 self.changes = Fin40Reread.diff(r.previous, r.result)
+            } catch let e as APIError {
+                // Prompt 41: ny lesing er lov for alle statuser; mangler originalen, si det konkret.
+                self.err = e.status == 404 ? "Fant ikke originalbildet. Last det opp på nytt for å lese det." : e.message
             } catch {
-                self.err = (error as? APIError)?.message ?? error.localizedDescription
+                self.err = error.localizedDescription
             }
         }
     }

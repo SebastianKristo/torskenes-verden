@@ -21,6 +21,8 @@ struct Task40Item: Hashable {
     var after: String = ""
     var tags: [String] = []
     var step: Int = 0
+    /// Prompt 41: begrunnelse («siden …») som note på punktet den gjelder.
+    var note: String = ""
 
     static func parse(_ o: [String: Any], _ i: Int) -> Task40Item? {
         let n: String = JS.str(o, "n") ?? JS.str(o, "title") ?? JS.str(o, "text") ?? ""
@@ -33,6 +35,7 @@ struct Task40Item: Hashable {
         if let w = o["who"] as? [String: Any] { it.who = JS.str(w, "name") ?? "" } else { it.who = JS.str(o, "who") ?? "" }
         it.after = JS.str(o, "afterTitle") ?? JS.str(o, "after") ?? ""
         it.tags = JS.strings(o, "tags")
+        it.note = JS.str(o, "note") ?? ""
         it.step = i + 1
         return it
     }

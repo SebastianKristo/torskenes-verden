@@ -172,6 +172,8 @@ struct NavStylePicker25: View {
     let items: [PaperTabItem]
     /// Prompt 32: sidene med egen fanelinje (Domener, Abonnement, Familie) har ingen Mer-fane, og forhåndsvisningen ingen ⋯.
     var showMore: Bool = true
+    /// Prompt 41: Hjem med skanneknappen slått av – ingen «+» i forhåndsvisningen.
+    var hidePlus41: Bool = false
 
     private var tabs: [(String, String, String)] {
         var out: [(String, String, String)] = items.prefix(5).map { (it: PaperTabItem) -> (String, String, String) in (it.id, it.label, it.icon) }
@@ -192,7 +194,7 @@ struct NavStylePicker25: View {
     private var bigPreview: some View {
         ZStack {
             LinearGradient(colors: [Color(hex: "#4a5a6a"), Color(hex: "#2a3440"), Color(hex: "#1d242c")], startPoint: .top, endPoint: .bottom)
-            NavPreview25(tabs: tabs, style: store.navStyle25, plus: store.fabMode != "float")
+            NavPreview25(tabs: tabs, style: store.navStyle25, plus: store.fabMode != "float" && !hidePlus41)
                 .padding(.horizontal, 10)
         }
         .frame(height: 110)
