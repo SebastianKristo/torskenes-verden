@@ -130,6 +130,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
             cur?.let { l -> item { ListInfo37(vm, l, users) } }
             // Prompt 41: «Glimt deler opp beskjeden …» (bakgrunnsjobber) og «✓ Glimt lagde N punkter».
             if (vm.p41.glimtJobs.isNotEmpty() || vm.p41.glimtDone != null) item { Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { GlimtJobs41(vm) } }
+            item { Box(Modifier.padding(horizontal = 16.dp)) { SourcesEntry41(vm) } } // «✦ Laget med Glimt» (vises bare med minst én beskjed)
             vm.tasksError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) } }
             if (t == null && vm.tasksError == null) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
             // Glimt-kortene fra serveren (like, forfalte, butikk, pakkeliste fra kalenderen); eldre server: like og forfalte lokalt.

@@ -60,10 +60,13 @@ internal fun BoxScope.BgLayer(vm: AppViewModel, bmp: Bitmap?) {
     val light = bmp != null && vm.bgInfo?.themeHint == "light"
     if (bmp != null) {
         val blur = vm.bgBlur
-        Image(
-            bmp.asImageBitmap(), null, contentScale = ContentScale.Crop, colorFilter = PAPER_SATURATION,
-            modifier = Modifier.matchParentSize().then(if (blur > 0) Modifier.blur(blur.dp) else Modifier),
-        )
+        // Prompt 41: nytt bilde (Oslo hver hele time, eller ny bakgrunn) krysstones på 600 ms; det gamle står til det nye er lastet.
+        androidx.compose.animation.Crossfade(bmp, Modifier.matchParentSize(), androidx.compose.animation.core.tween(600), label = "bg41") { b ->
+            Image(
+                b.asImageBitmap(), null, contentScale = ContentScale.Crop, colorFilter = PAPER_SATURATION,
+                modifier = Modifier.fillMaxSize().then(if (blur > 0) Modifier.blur(blur.dp) else Modifier),
+            )
+        }
         val dim = vm.bgDim
         if (dim > 0) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = dim / 100f)))
     }

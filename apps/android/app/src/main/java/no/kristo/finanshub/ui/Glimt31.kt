@@ -356,7 +356,7 @@ internal fun HomeAnswer31(vm: AppViewModel) {
     val light = Color(0xFFF6F2EA)
     // Prompt 38: trykk i boblen lukker den ikke lenger. ✕, sveip opp (> 40 dp) eller trykk utenfor (AnsScrim38) lukker (ui/Ui38.kt).
     // Prompt 41: dra pillen ned → åpne i Chat med spørsmålet (samme som «Fortsett i Chat ›»).
-    AnsBox38(vm, onPull41 = { val q = a.q; vm.closeAns31(); vm.openChat(q) }) {
+    AnsBox38(vm, onPull41 = { vm.growToChat41(a.q) }) {
     Column(
         Modifier.fillMaxWidth().shadow(22.dp, RoundedCornerShape(26.dp), ambientColor = Color.Black.copy(alpha = .6f), spotColor = Color.Black.copy(alpha = .6f))
             .clip(RoundedCornerShape(26.dp)).background(Color(0xF0161412)).border(1.dp, Color.White.copy(alpha = .1f), RoundedCornerShape(26.dp))
@@ -391,7 +391,7 @@ internal fun HomeAnswer31(vm: AppViewModel) {
                     fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Box(
                     Modifier.height(32.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f))
-                        .clickable(role = Role.Button) { Haptics.select(); val q = a.q; vm.closeAns31(); vm.openChat(q) }.padding(horizontal = 14.dp),
+                        .clickable(role = Role.Button) { Haptics.select(); vm.growToChat41(a.q) }.padding(horizontal = 14.dp), // prompt 41: samme animasjon
                     contentAlignment = Alignment.Center,
                 ) { Text("Fortsett i Chat ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
             }

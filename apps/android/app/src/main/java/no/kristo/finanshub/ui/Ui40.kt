@@ -129,22 +129,25 @@ private fun DrawScope.svg40(d: String, x: Float, y: Float, w: Float, h: Float, v
  * Antrekket fra glimt-figurer.js (dress): Advent = rød nisselue + grønt skjerf, Jul = lue + skjerf + gave, Nyttår = svart festhatt
  * med gull, Vinter = blå strikkelue + rødt skjerf. S = figurens bredde, H = høyden. Vugger rolig (3 s); «Reduser bevegelse» = stille.
  */
-internal fun DrawScope.drawJul40(S: Float, H: Float, phase: String, t: Float, anim: Boolean) {
+internal fun DrawScope.drawJul40(S: Float, H: Float, phase: String, t: Float, anim: Boolean, id: String = "") {
     val sway = if (anim) (sin(2 * PI * (t % 3f) / 3f).toFloat() * 3f) else 0f
+    // Prompt 41: ankerpunkter per figur (hT hatt-topp, hX hatt-senter, hS hattskala, sB skjerf-bunn, sW skjerf-bredde, gB/gR gave).
+    val an = figAnchor41(id)
+    val hT = an.hT; val hX = an.hX; val hS = an.hS; val sB = an.sB; val sW = an.sW; val gB = an.gB; val gR = an.gR
     val scarf = phase == "advent" || phase == "jul" || phase == "vinter"
     val sc = if (phase == "vinter") Color(0xFFB23A2A) else Color(0xFF2F7A4F)
     if (scarf) {
         // bottom −S·0,2: toppen ligger på H − S·0,5 + S·0,2.
-        val w = S * 1.05f; val h = S * .5f
-        val x = S / 2 - w / 2; val y = H - h + S * .2f
+        val w = S * sW; val h = S * .5f * sW / 1.05f
+        val x = S / 2 - w / 2; val y = H - S * sB - h
         svg40("M8 10 Q52 26 97 10 L95 24 Q52 40 10 24 Z", x, y, w, h, 105f, 50f, fill = sc)
         svg40("M22 16 l4 12 M40 20 l3 13 M58 20 l-1 13 M76 17 l-3 12", x, y, w, h, 105f, 50f, stroke = Color(0xFFF6F1E7), sw = 3f)
         svg40("M70 22 L80 48 L68 50 L62 26 Z", x, y, w, h, 105f, 50f, fill = sc)
     }
     when (phase) {
         "advent", "jul" -> {
-            val w = S * .95f; val h = S * .7f
-            val x = S / 2 - S * .42f; val y = -S * .44f
+            val w = S * .95f * hS; val h = S * .7f * hS
+            val x = S * hX - S * .42f * hS; val y = S * hT
             rotate(-14f + sway, Offset(x + w / 2, y + h / 2)) {
                 svg40("M14 56 Q40 4 74 8 Q86 10 88 20 Q70 18 66 56 Z", x, y, w, h, 95f, 70f, fill = Color(0xFFC8302A))
                 drawCircle(Color(0xFFFBF7EE), 8f * w / 95f, Offset(x + 89f * w / 95f, y + 22f * h / 70f))
@@ -153,8 +156,8 @@ internal fun DrawScope.drawJul40(S: Float, H: Float, phase: String, t: Float, an
             }
         }
         "vinter" -> {
-            val w = S * .9f; val h = S * .6f
-            val x = S / 2 - S * .45f; val y = -S * .36f
+            val w = S * .9f * hS; val h = S * .6f * hS
+            val x = S * hX - S * .45f * hS; val y = S * (hT + .08f)
             rotate(sway * .6f, Offset(x + w / 2, y + h)) {
                 svg40("M10 50 Q10 10 45 10 Q80 10 80 50 Z", x, y, w, h, 90f, 60f, fill = Color(0xFF3B6FB0))
                 drawRoundRect(Color(0xFF2B5D8A), Offset(x + 6f * w / 90f, y + 42f * h / 60f), Size(78f * w / 90f, 14f * h / 60f), androidx.compose.ui.geometry.CornerRadius(6f * w / 90f))
@@ -178,7 +181,7 @@ internal fun DrawScope.drawJul40(S: Float, H: Float, phase: String, t: Float, an
     }
     if (phase == "jul") {
         val w = S * .34f; val h = S * .3f
-        val x = S - w + S * .2f; val y = H - h + S * .16f
+        val x = S - S * gR - w; val y = H - S * gB - h
         rotate(8f, Offset(x + w / 2, y + h / 2)) {
             drawRoundRect(Color(0xFFB23A2A), Offset(x, y), Size(w, h), androidx.compose.ui.geometry.CornerRadius(4f * density))
             drawRect(Color(0xFFF2C14E), Offset(x + w * .44f, y), Size(w * .12f, h))

@@ -159,6 +159,8 @@ internal fun BriefPage35(vm: AppViewModel) {
             // Prompt 37: Gjøremål · 3 gjøremål i dag (forfalt + i dag), avkrysning i briefen.
             BriefTodos37(vm)
             if (trials.isNotEmpty()) Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["abo"] = it.positionInParent().y }) { BriefTrials35(vm, trials, ring("abo")) }
+            // Prompt 41: Skiføre · NORDMARKA i briefen når skikortet er relevant (og «Skiføre» ikke er slått av i Rediger Vær).
+            if (b?.skiText != null && vm.vaerLay41().ski) BriefSki41(b.skiText, b.skiItems)
             // Prompt 38: Pakker, Familie, Skole og jobb, Bursdager og Nordlys i natt (etter Abonnementer, før Nyheter).
             BriefCards38(vm, kind)
             Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["nyh"] = it.positionInParent().y }) { BriefNews35(vm, b, ring("nyh")) }

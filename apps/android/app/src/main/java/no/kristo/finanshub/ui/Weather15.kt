@@ -260,18 +260,33 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                         vm.weatherError?.let { Text(it, textAlign = TextAlign.Center) } ?: CircularProgressIndicator(color = Color.White)
                     }
                 } else {
-                    item { Header(w, Modifier.alpha((1f - sc / 220f).coerceIn(0f, 1f))) }
-                    // Prompt 32: Forhold-modusene bytter både timeraden og dagslisten (ui/Weather32b.kt).
-                    item { HourCard32b(vm, w) { vm.weatherSheetDay = 0 } }
-                    item { DaysCard32b(vm, w, { DaysCard(w) { vm.weatherSheetDay = it } }) { vm.weatherSheetDay = it } }
-                    item { CmpCard(vm, w) { cmpOpen = true } }
-                    item { WindCard(w) { open("wind") } }
-                    item { MoonCard { open("moon") } }
-                    item { TileRow({ SunTile(w, it) { open("sun") } }, { UvTile(w, it) { open("uv") } }) }
-                    item { TileRow({ FeelTile(w, it) { open("feel") } }, { YdTile(w, it) { open("yd") } }) }
-                    item { TileRow({ RainTile(w, it) { open("rain") } }, { VisTile(w, it) { open("vis") } }) }
-                    item { TileRow({ HumTile(w, it) { open("hum") } }, { PresTile(w, it) { open("pres") } }) }
-                    item { WeekGlimt39(vm, w) } // prompt 39: Glimt · ukas vær
+                    // Prompt 41 (claude-code-vaer-rediger-ski-julfigur.md): kortene i brukerens rekkefølge (vaer_layout), skjulte tas ut,
+                    // Skiføre bare med snø ≥ 15 cm og «Skiføre» på. Hold inne 0,6 s eller «Rediger kort» → vugging og arket «Rediger Vær».
+                    val lay = vm.vaerLay41()
+                    lay.ord.filter { it !in lay.hid && (it != "ski" || vm.skiShow41()) }.forEachIndexed { i, k ->
+                        item(key = "vo41-$k") {
+                            VaerWrap41(vm, i) {
+                                when (k) {
+                                    "hero" -> Header(w, Modifier.alpha((1f - sc / 220f).coerceIn(0f, 1f)))
+                                    "ski" -> SkiCard41(vm)
+                                    // Prompt 32: Forhold-modusene bytter både timeraden og dagslisten (ui/Weather32b.kt).
+                                    "hour" -> HourCard32b(vm, w) { vm.weatherSheetDay = 0 }
+                                    "days" -> DaysCard32b(vm, w, { DaysCard(w) { vm.weatherSheetDay = it } }) { vm.weatherSheetDay = it }
+                                    "cmp" -> CmpCard(vm, w) { cmpOpen = true }
+                                    "wind" -> WindCard(w) { open("wind") }
+                                    "moon" -> MoonCard { open("moon") }
+                                    "tiles" -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        TileRow({ SunTile(w, it) { open("sun") } }, { UvTile(w, it) { open("uv") } })
+                                        TileRow({ FeelTile(w, it) { open("feel") } }, { YdTile(w, it) { open("yd") } })
+                                        TileRow({ RainTile(w, it) { open("rain") } }, { VisTile(w, it) { open("vis") } })
+                                        TileRow({ HumTile(w, it) { open("hum") } }, { PresTile(w, it) { open("pres") } })
+                                    }
+                                    "glimt" -> WeekGlimt39(vm, w) // prompt 39: Glimt · ukas vær
+                                }
+                            }
+                        }
+                    }
+                    item { VaerEditButton41(vm) }
                     item {
                         val ctx = LocalContext.current
                         Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = 12.5.sp, textDecoration = TextDecoration.Underline,
@@ -290,6 +305,7 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
         if (cmpOpen && w != null) CmpSheet39(vm, w) { cmpOpen = false } // prompt 39: Yr mot Storm 2a med wiggle (ui/Weather39.kt)
         if (vm.wxPlacesSheet) PlacesSheet(vm)
         if (mapOpen) WxMap(w) { mapOpen = false }
+        if (vm.p41.vaerEdit) VaerEditSheet41(vm) // prompt 41: «Rediger Vær»
     } }
 }
 

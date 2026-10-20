@@ -718,6 +718,8 @@ private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose
         GridCells.Fixed(cols), mod.gridBounds37(vm), state = grid37, contentPadding = pad,
         verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        // Prompt 41: 17. mai-Hjem (bare på dagen / «Vis nå», bak bryteren «17. mai-design») øverst.
+        if (vm.maiHome41() && vm.editPage != "hjem") item(key = "mai41", span = { GridItemSpan(maxLineSpan) }) { Mai17Home41(vm) }
         // Prompt 41: Min reise (bare når «forlot skolen» er aktiv), over Ruter-kortet eller i stedet for det.
         if (trip && vm.editPage != "hjem") item(key = "trip41", span = { GridItemSpan(maxLineSpan) }) { MinReise41(vm, home = true) }
         vm.homeError?.let { e -> item(span = { GridItemSpan(maxLineSpan) }) { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(4.dp)) } }

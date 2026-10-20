@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import no.kristo.finanshub.DEFAULT_SERVER41
 import no.kristo.finanshub.AppViewModel
 
 /** Adressefelt: URL-tastatur uten stor forbokstav eller autokorrektur (ødelegger adressen). */
@@ -36,12 +37,17 @@ private val UserKeyboard = KeyboardOptions(capitalization = KeyboardCapitalizati
  */
 @Composable
 internal fun LoginScreen(vm: AppViewModel) {
-    var server by remember { mutableStateOf(if (vm.addingAccount) "" else vm.server) }
+    // Prompt 41: ingen serverfelt som standard (https://home.kristo.no eller sist brukte). Vises bare via «Endre serveradresse».
+    var server by remember { mutableStateOf(vm.server.ifBlank { DEFAULT_SERVER41 }) }
+    var showServer by remember { mutableStateOf(false) }
     var user by remember { mutableStateOf("") }
     var pw by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
     val snack = remember { SnackbarHostState() }
-    LaunchedEffect(vm.message) { vm.message?.let { snack.showSnackbar(it); vm.message = null } }
+    LaunchedEffect(vm.message) { vm.message?.let { m ->
+        val net = m.startsWith("Fant ikke serveren") || m.startsWith("Fikk ikke kontakt") || m.startsWith("Serveren svarte ikke") || m.startsWith("HTTPS-feil") || m.startsWith("Uventet svar")
+        if (net && !showServer) { vm.p41.loginNoContact = true; vm.message = null } else { snack.showSnackbar(m); vm.message = null }
+    } }
     val p = vm.pending
     Scaffold(containerColor = C.bg, snackbarHost = { SnackbarHost(snack) }) { pad ->
         Box(Modifier.fillMaxSize().padding(pad), contentAlignment = Alignment.Center) {
@@ -57,9 +63,15 @@ internal fun LoginScreen(vm: AppViewModel) {
                 if (p == null) {
                     Text(if (vm.addingAccount) "Legg til konto" else "FinansHub", style = MaterialTheme.typography.displaySmall)
                     Text("Logg inn på homelab-serveren din med brukernavn og passord. Appen får bare tilgang til økonomidelen.", color = C.text2)
-                    OutlinedTextField(server, { server = it }, label = { Text("Serveradresse") }, placeholder = { Text("192.168.1.20:8080") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = ServerKeyboard, shape = RoundedCornerShape(16.dp),
-                        supportingText = { Text("F.eks. 192.168.1.20:8080 (http) eller os.dittdomene.no (https)") })
+                    if (vm.p41.loginNoContact && !showServer) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(C.surface1).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Får ikke kontakt med Homelab", fontWeight = FontWeight.Bold)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { vm.p41.loginNoContact = false; if (pw.isNotBlank()) vm.login(server, user, pw) }) { Text("Prøv igjen", color = C.primary) }
+                            TextButton(onClick = { vm.p41.loginNoContact = false; showServer = true }) { Text("Endre serveradresse") }
+                        }
+                    }
+                    if (showServer) OutlinedTextField(server, { server = it }, label = { Text("Serveradresse") }, placeholder = { Text(DEFAULT_SERVER41) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = ServerKeyboard, shape = RoundedCornerShape(16.dp))
                     OutlinedTextField(user, { user = it }, label = { Text("Brukernavn") }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = UserKeyboard, shape = RoundedCornerShape(16.dp))
                     OutlinedTextField(pw, { pw = it }, label = { Text("Passord") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { vm.login(server, user, pw) }), shape = RoundedCornerShape(16.dp))

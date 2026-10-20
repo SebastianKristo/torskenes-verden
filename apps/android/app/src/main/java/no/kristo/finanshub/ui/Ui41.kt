@@ -67,6 +67,7 @@ internal fun Global41(vm: AppViewModel) {
         vm.appAuthAfterLogin41()
         vm.loadServer41()
         vm.loadJourney41()
+        vm.loadZones41() // skolesonene registreres som geofence (Live41.kt)
     }
     // Oslo-bakgrunnen: sjekk hvert minutt om timen/tidsrommet er endret; Min reise: sanntid hvert 30. s mens kortet vises.
     LaunchedEffect(Unit) { while (true) { delay(60_000); vm.osloTick41(); if (s.journey != null) vm.loadJourney41() } }
@@ -75,6 +76,9 @@ internal fun Global41(vm: AppViewModel) {
     s.srvSheet?.let { ServerSheet41(vm, it) }
     s.sfKind?.let { SiFraSheet41(vm, it) }
     TripToast41(vm)
+    PillGrow41(vm)
+    Confetti41(vm)
+    if (s.srcOpen) SourcesSheet41(vm)
 }
 
 private tailrec fun Context.activity41(): FragmentActivity? = when (this) {
@@ -442,6 +446,7 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
             }
         }
         if (!home) {
+            Zones41(vm) // skolesoner (chips, «+ Sone», siste kan ikke slettes)
             PLabel("På Hjem når du forlater skolen", p.mut)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("over" to "Over Ruter-kortet", "instead" to "I stedet", "off" to "Av").forEach { (k, n) -> Pill41(n, s.homeCard == k) { vm.setHomeCard41(k) } }
@@ -483,6 +488,7 @@ internal fun GlimtJobs41(vm: AppViewModel) {
     s.glimtDone?.let { d ->
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(d, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
+            Text("Se", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { vm.loadSources41(); s.srcOpen = true }.padding(6.dp))
             Text("✕", color = p.mut, modifier = Modifier.clickable { s.glimtDone = null }.padding(6.dp))
         }
     }
@@ -535,7 +541,19 @@ internal fun BookedEditor41(vm: AppViewModel, r: Receipt, cats: List<Category>) 
                         if (name.isNotBlank() && name != r.merchant) body.put("merchant", name.trim())
                         amount.replace(" ", "").replace(',', '.').toDoubleOrNull()?.takeIf { it != r.total }?.let { body.put("total", it) }
                         if (cat != r.categoryId) body.put("categoryId", cat ?: JSONObject.NULL)
-                        if (body.length() > 0) { vm.api41 { patch("/receipts/${r.id}", body) }; vm.message = "Endringen er lagret og logget" } else vm.message = "Ingen endringer"
+                        if (body.length() > 0) {
+                            vm.api41 { patch("/receipts/${r.id}", body) }
+                            // Koblet til en bokført transaksjon: oppdater den også (PATCH /finans/api/transactions/:id).
+                            r.match?.let { tx ->
+                                val tb = JSONObject()
+                                if (body.has("merchant")) tb.put("merchant", name.trim()).put("counterparty", name.trim())
+                                if (body.has("total")) tb.put("amount", kotlin.math.abs(body.getDouble("total"))).put("type", if (tx.amount > 0) "income" else "expense")
+                                if (body.has("categoryId")) tb.put("categoryId", cat ?: JSONObject.NULL)
+                                vm.api41 { patch("/transactions/${tx.id}", tb) }
+                            }
+                            vm.message = "Endringen er lagret og logget"
+                            vm.refreshFinance40()
+                        } else vm.message = "Ingen endringer"
                         vm.loadBooked23()
                     } catch (e: Exception) { vm.message = e.message ?: "Fikk ikke lagret" } finally { busy = false }
                 }
@@ -590,27 +608,41 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.flag41(x: Float, y:
     drawRect(FLAG_B41, androidx.compose.ui.geometry.Offset(x, y + 7 * u), androidx.compose.ui.geometry.Size(w, 2 * u))
 }
 
-/** Rød sløyfe med hvit kant og blå knute på hodet, og flagg på pinne til høyre som vaier (1,6 s). Samme plassering som lua. */
-internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawMai41(S: Float, H: Float, t: Float, anim: Boolean) {
+/** Ankerpunkter for tilbehør per figur (glimt-figurer.js → dress AN). Runde figurer bruker standard. */
+internal class FigAnchor41(val hT: Float = -.44f, val hX: Float = .5f, val hS: Float = 1f, val sB: Float = -.2f, val sW: Float = 1.05f, val gB: Float = -.16f, val gR: Float = -.2f)
+private val ANCHORS41 = mapOf(
+    "spire" to FigAnchor41(hT = -.08f, hX = .56f, hS = .8f, sB = -.13f, sW = .98f, gB = -.1f, gR = -.12f),
+    "sky" to FigAnchor41(hT = -.18f, hX = .6f, hS = .78f, sB = .07f, sW = .92f, gB = .05f, gR = -.08f),
+)
+private val ANCHOR_DEF41 = FigAnchor41()
+internal fun figAnchor41(id: String): FigAnchor41 = ANCHORS41[id] ?: ANCHOR_DEF41
+
+/**
+ * 17. mai (glimt-figurer.js): rød sløyfe med hvit kant og blå knute (left hX, top S·(hT+0,36), +S·0,12, rotert 14°) og flagg på pinne
+ * til høyre (right −S·0,2, bottom S·(sB+0,16), 0,32 × 0,46) som vaier (gfSway 1,6 s, origo nede til venstre).
+ */
+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawMai41(S: Float, H: Float, t: Float, anim: Boolean, id: String = "") {
+    val an = figAnchor41(id)
     val sway = if (anim) (kotlin.math.sin(2 * Math.PI * (t % 1.6f) / 1.6f).toFloat() * 6f) else 0f
-    // Sløyfe
-    val cx = S * .5f; val cy = -S * .02f; val bw = S * .2f; val bh = S * .14f
-    listOf(-1f, 1f).forEach { d ->
-        val path = androidx.compose.ui.graphics.Path().apply {
-            moveTo(cx, cy); lineTo(cx + d * bw, cy - bh); lineTo(cx + d * bw, cy + bh); close()
+    // Sløyfe (viewBox 36 × 22)
+    val bw = S * .36f; val bh = S * .22f
+    val bx = S * an.hX + S * .12f; val by = S * (an.hT + .36f)
+    rotate(14f, androidx.compose.ui.geometry.Offset(bx + bw / 2, by + bh / 2)) {
+        val u = bw / 36f; val v = bh / 22f
+        fun pt(x: Float, y: Float) = androidx.compose.ui.geometry.Offset(bx + x * u, by + y * v)
+        listOf(listOf(18f to 11f, 2f to 2f, 4f to 20f), listOf(18f to 11f, 34f to 2f, 32f to 20f)).forEach { tri ->
+            val path = androidx.compose.ui.graphics.Path().apply { tri.forEachIndexed { k, (x, y) -> val o = pt(x, y); if (k == 0) moveTo(o.x, o.y) else lineTo(o.x, o.y) }; close() }
+            drawPath(path, Color(0xFFC8302A))
+            drawPath(path, Color(0xFFFBF7EE), style = androidx.compose.ui.graphics.drawscope.Stroke(1.6f * u))
         }
-        drawPath(path, Color.White)
-        val inner = androidx.compose.ui.graphics.Path().apply {
-            moveTo(cx + d * bw * .12f, cy); lineTo(cx + d * bw * .9f, cy - bh * .72f); lineTo(cx + d * bw * .9f, cy + bh * .72f); close()
-        }
-        drawPath(inner, FLAG_R41)
+        drawCircle(Color(0xFF1F2F6B), 3.5f * u, pt(18f, 11f))
     }
-    drawCircle(FLAG_B41, S * .045f, androidx.compose.ui.geometry.Offset(cx, cy))
     // Flagg på pinne
-    val px = S * 1.02f; val py = H * .05f; val len = S * .78f
-    rotate(sway, androidx.compose.ui.geometry.Offset(px, py + len)) {
-        drawLine(Color(0xFF8A6A48), androidx.compose.ui.geometry.Offset(px, py), androidx.compose.ui.geometry.Offset(px, py + len), strokeWidth = S * .035f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
-        flag41(px, py, S * .42f)
+    val fw = S * .32f; val fh = S * .46f
+    val fx = S + S * .2f - fw; val fy = H - S * (an.sB + .16f) - fh
+    rotate(sway, androidx.compose.ui.geometry.Offset(fx, fy + fh)) {
+        drawRoundRect(Color(0xFF8A6A3A), androidx.compose.ui.geometry.Offset(fx, fy), androidx.compose.ui.geometry.Size(S * .028f, fh), androidx.compose.ui.geometry.CornerRadius(2 * density))
+        flag41(fx + S * .028f, fy, S * .3f)
     }
 }
 
@@ -680,6 +712,13 @@ internal fun Jenka41(modifier: Modifier = Modifier) {
             val tilt = if (reduce) 0f else kotlin.math.sin((t - i * .12f) * Math.PI.toFloat() / .42f) * 6f
             Box(Modifier.offset(x = x.dp, y = (74f - sz - 4f - hop).dp).graphicsLayer21(tilt)) {
                 GlimtFig35(id, sz.dp, "happy", still = true, noJul = true)
+                // Festhatt (svart med gule striper og dusk), skrått på hodet – også i julemodus.
+                androidx.compose.foundation.Canvas(Modifier.size((sz * .42f).dp, (sz * .44f).dp).offset(x = (sz * .34f).dp, y = (-sz * .3f).dp).graphicsLayer21(14f)) {
+                    val w = size.width; val h = size.height
+                    drawPath(androidx.compose.ui.graphics.Path().apply { moveTo(w * .1f, h * .92f); lineTo(w * .5f, h * .12f); lineTo(w * .9f, h * .92f); close() }, Color(0xFF1B1A17))
+                    listOf(.42f to .58f, .62f to .78f).forEach { (a1, _) -> drawLine(Color(0xFFF2C14E), androidx.compose.ui.geometry.Offset(w * (.5f - (a1 - .1f) * .5f), h * a1 + h * .1f), androidx.compose.ui.geometry.Offset(w * (.5f + (a1 - .1f) * .5f), h * a1 + h * .1f), strokeWidth = h * .07f) }
+                    drawCircle(Color(0xFFF2C14E), w * .11f, androidx.compose.ui.geometry.Offset(w * .5f, h * .1f))
+                }
                 if (i == 0) Text("🎺", fontSize = 16.sp, modifier = Modifier.offset(x = (sz - 6).dp, y = (sz * .45f).dp))
             }
         }
@@ -692,3 +731,53 @@ internal fun Jenka41(modifier: Modifier = Modifier) {
 }
 
 private fun Modifier.graphicsLayer21(rot: Float): Modifier = this.then(Modifier.graphicsLayer { rotationZ = rot })
+
+/* ======================= Søkepillen vokser inn i Chat ======================= */
+
+/** Starter animasjonen fra pillens ramme (p38.ansRect). Uten ramme: rett til Chat. */
+internal fun AppViewModel.growToChat41(q: String) {
+    val r = p38.ansRect
+    if (r == null) { openChatWith41(q); return }
+    p41.grow = r to q
+}
+
+/**
+ * Pillen vokser fra sin egen ramme til fullskjerm på 0,4 s (hjørner 26 → 0, mørk glass → appens bakgrunn). Pilleinnholdet tones ut
+ * på 0,15 s, Chat-innholdet (Glimt-tittel, spørsmålet som din boble, «skriver»-prikker) tones inn etter 0,12 s. Ved 0,4 s: ekte Chat.
+ * Redusert bevegelse: 0,2 s krysstoning.
+ */
+@Composable
+internal fun PillGrow41(vm: AppViewModel) {
+    val g = vm.p41.grow ?: return
+    val p = PaperPal.current
+    val reduce = reduceMotion31()
+    val t = remember(g) { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(g) {
+        t.animateTo(1f, tween(if (reduce) 200 else 400, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, .8f, .2f, 1f)))
+        vm.openChatWith41(g.second)
+        delay(80)
+        vm.p41.grow = null
+    }
+    val dens = androidx.compose.ui.platform.LocalDensity.current.density
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val W = constraints.maxWidth.toFloat(); val H = constraints.maxHeight.toFloat()
+        val k = if (reduce) 1f else t.value
+        val r = g.first
+        val l = r.left * (1 - k); val tp = r.top * (1 - k); val w = r.width + (W - r.width) * k; val h = r.height + (H - r.height) * k
+        val bg = androidx.compose.ui.graphics.lerp(Color(0xF0161412), p.bg, k)
+        Box(Modifier.offset(x = (l / dens).dp, y = (tp / dens).dp).size((w / dens).dp, (h / dens).dp)
+            .graphicsLayer { alpha = if (reduce) t.value else 1f }
+            .clip(RoundedCornerShape((26f * (1 - k)).dp)).background(bg)) {
+            Text("Åpner i Chat …", color = Color.White.copy(alpha = (1f - t.value / .375f).coerceIn(0f, 1f)), fontWeight = FontWeight.SemiBold, fontSize = 15.sp,
+                modifier = Modifier.padding(18.dp))
+            val inA = ((t.value - .3f) / .7f).coerceIn(0f, 1f)
+            Column(Modifier.fillMaxSize().statusBarsPadding().padding(18.dp).graphicsLayer { alpha = inA }, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("✦ Glimt", color = p.ink, fontFamily = PaperFonts.serif, fontSize = 22.sp)
+                Box(Modifier.align(Alignment.End).clip(RoundedCornerShape(18.dp)).background(p.ink).padding(14.dp, 10.dp)) {
+                    Text(g.second, color = p.bg, fontSize = 15.sp)
+                }
+                Text("• • •", color = p.mut, fontSize = 18.sp)
+            }
+        }
+    }
+}

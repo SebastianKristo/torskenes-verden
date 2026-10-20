@@ -703,6 +703,10 @@
         <!-- Prompt 37: Viktige gjøremål (alarm), tidlige påminnelser og «Dagens vers er klart». -->
         <receiver android:name=".Task37Receiver" android:exported="false" />
 
+        <!-- Prompt 41: knappene i Live Update (Drar snart, Min reise) og geofence for skolesonene (LocationManager.addProximityAlert). -->
+        <receiver android:name=".Live41Receiver" android:exported="false" />
+        <receiver android:name=".SchoolZone41Receiver" android:exported="false" />
+
         <!-- Prompt 33: server-adresse og et eget token til Kalender-appen (call «companion»). -->
         <provider
             android:name=".KalenderLoginProvider33"

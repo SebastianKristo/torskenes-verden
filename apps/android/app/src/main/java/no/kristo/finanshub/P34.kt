@@ -119,6 +119,8 @@ data class Brief34(
     val generatedAt: String?, val local: Boolean, val mood: String? = null, val note: String? = null,
     /** Prompt 35: prøver som slutter innen 7 dager, guide-runden fra serveren og verten (figur-id). */
     val trials: List<BriefTrial35> = emptyList(), val guide: List<Guide35> = emptyList(), val host: String? = null,
+    /** Prompt 41: brief.ski {text, chip:'Ski: blå', …} når skiføret er relevant (snø ≥ 15 cm og «Skiføre» på). */
+    val skiText: String? = null, val skiChip: String? = null, val skiItems: List<String> = emptyList(),
 ) {
     val next: BriefEv34? get() = events.firstOrNull()
     /** «8° lettskyet · Tannlege 15:15 · 3 nyheter». */
@@ -126,6 +128,7 @@ data class Brief34(
         wx?.let { w -> (w.now?.let { "$it° " } ?: "") + w.cond },
         next?.let { e -> e.title + (e.start?.let { " $it" } ?: "") } ?: "Fri",
         if (news.isNotEmpty()) "${news.size} nyheter" else null,
+        skiChip,
     )
     /** «NESTE OM 40 MIN» / «NESTE I MORGEN 06:15» / «FRI». */
     fun nextLabel(today: LocalDate = LocalDate.now(OSLO34), nowMin: Int = LocalTime.now(OSLO34).let { it.hour * 60 + it.minute }): String {
@@ -225,7 +228,9 @@ fun parseBrief34(raw: String, kind: String): Brief34? {
     }
     return Brief34(k, s34(o, "title") ?: briefTitle34(k), summary, parseBriefWx34(o.optJSONObject("weather") ?: o.optJSONObject("wx")), evs.take(3), news.take(7),
         s34(o, "generatedAt", "madeAt", "generated")?.let { clock34(it) }, false, s34(o.optJSONObject("figure"), "mood") ?: s34(o, "mood", "state"), s34(o, "note", "warning"),
-        parseTrials35(o.optJSONArray("trials")), parseGuide35(o.optJSONArray("guide")), s34(o, "host"))
+        parseTrials35(o.optJSONArray("trials")), parseGuide35(o.optJSONArray("guide")), s34(o, "host"),
+        o.optJSONObject("ski")?.let { s34(it, "text") }, o.optJSONObject("ski")?.let { s34(it, "chip") },
+        o.optJSONObject("ski")?.let { sk -> (sk.optJSONArray("chips") ?: sk.optJSONArray("items"))?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { s34(it, "label", "text") } ?: a.optString(i).takeIf { it.isNotBlank() } } } } ?: emptyList())
 }
 
 /** Prototypens mal: «God kveld, Sebastian. Lettskyet og 8° i Oslo, regn fra ca. 20. Neste er Tannlege kl. 15:15. Ta med paraply.» */

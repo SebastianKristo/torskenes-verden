@@ -89,7 +89,39 @@ class P41State {
     /* Gjøremål-Glimt i bakgrunnen */
     var glimtJobs by mutableStateOf<List<GJob41>>(emptyList())
     var glimtDone by mutableStateOf<String?>(null)
+
+    /* Søkepillen vokser inn i Chat: rammen den starter fra og spørsmålet. */
+    var grow by mutableStateOf<Pair<androidx.compose.ui.geometry.Rect, String>?>(null)
+
+    /* Vær: rediger kort og skiføre */
+    var vaerEdit by mutableStateOf(false)
+    var vaerLay by mutableStateOf<VaerLay41?>(null)
+    var ski by mutableStateOf<Ski41?>(null)
+    internal var skiAt = 0L
+
+    /* 17. mai-Hjem: bryteren gjelder bare i dag (nullstilles 18. mai), «Hipp hipp hurra»-teller */
+    var maiDesign by mutableStateOf(true)
+    var hurra by mutableStateOf(0)
+    var confetti by mutableStateOf(0L)
+    var mai by mutableStateOf<MaiData41?>(null)
+
+    /* Gjøremål: «Laget med Glimt» */
+    var srcOpen by mutableStateOf(false)
+    var sources by mutableStateOf<List<GSrc41>?>(null)
+    var srcMissing by mutableStateOf(false)
+
+    /* Skolesoner */
+    var zones by mutableStateOf<List<Zone41>?>(null)
+    var zoneAdd by mutableStateOf(false)
+    var zoneErr by mutableStateOf<String?>(null)
 }
+
+data class MaiItem41(val time: String, val title: String, val past: Boolean, val next: Boolean, val kind: String)
+data class MaiData41(val dateLabel: String?, val greeting: String?, val program: List<MaiItem41>, val briefText: String?, val briefItems: List<String>)
+data class VaerLay41(val ord: List<String>, val hid: Set<String>, val ski: Boolean)
+data class Ski41(val depth: Double, val fresh: Double, val t: Double, val rh: Double, val thaw: Boolean, val at: Long) { val has: Boolean get() = depth >= .15 }
+data class GSrc41(val id: String, val text: String, val createdAt: String?, val engine: String?, val by: String?, val count: Int, val deleted: Int, val items: List<Pair<String, Boolean>>)
+data class Zone41(val id: String, val name: String, val lat: Double, val lon: Double, val radius: Int, val label: String)
 
 data class Srv41(val local: String, val external: String, val auto: Boolean)
 data class AppAuth41(val client: String, val redirect: String, val state: String, val cc: String, val ccMethod: String, val appName: String)
@@ -444,6 +476,8 @@ fun AppViewModel.loadSfPeople41() {
 fun AppViewModel.plusNotice41(min: Int = 15) {
     val id = p41.sfNoticeId ?: return
     Haptics.select()
+    val sp = appCtx40.getSharedPreferences("live41", Context.MODE_PRIVATE)
+    Live41.soon(appCtx40, maxOf(sp.getLong("soonAt", System.currentTimeMillis()), System.currentTimeMillis()) + min * 60_000L, id)
     launch41 { runCatching { api41 { request("PATCH", "/hjemlys/notice/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("plus", min), prefix = Api.HOMELAB) } } }
 }
 
@@ -451,6 +485,7 @@ fun AppViewModel.plusNotice41(min: Int = 15) {
 fun AppViewModel.nowNotice41() {
     val id = p41.sfNoticeId ?: return
     Haptics.select()
+    Live41.endSoon(appCtx40)
     launch41 {
         runCatching { api41 { hlPost("/hjemlys/notice/" + URLEncoder.encode(id, "UTF-8") + "/now") } }
         p41.sfSent = "«${firstName37(displayName)} drar nå» er sendt."
@@ -496,7 +531,12 @@ fun AppViewModel.sendNotice41(kind: String, place: String?, leaveMin: Int?, to: 
                 else -> "«$first drar nå" + (place?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: "") + "» er sendt til $who."
             }
             Haptics.success()
-            if (kind == "leaving_soon" && leaveMin != null) Notify.post(appCtx40, "Drar om ca. $leaveMin min", "Glimt minner deg på det når det er tid.", "hl41-soon", "hjemlys")
+            // Live Update: Drar snart (med «+ 15 min» / «Drar nå» og «Drar du nå?» ved tiden), Sjekket inn («● Inne 19:42», 15 min).
+            when (kind) {
+                "leaving_soon" -> if (leaveMin != null) Live41.soon(appCtx40, System.currentTimeMillis() + leaveMin * 60_000L, s.sfNoticeId)
+                "checkin" -> Live41.checkedIn(appCtx40, place)
+                "leaving_now", "arrived" -> Live41.endSoon(appCtx40)
+            }
             loadHjemlys40(force = true)
             if (kind == "leaving_now" && dest != null && dest != "none") { s.sfKind = null; s.sfSent = null; p40.hlSheet = true }
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
@@ -562,8 +602,12 @@ fun AppViewModel.loadJourney41() {
         (j.s37("homeCard") ?: o.s37("homeCard") ?: o.optJSONObject("settings")?.s37("homeCard"))?.takeIf { it in setOf("over", "instead", "off") }?.let { s.homeCard = it; prefs41().edit().putString("rt_home_card", it).apply() }
         val exp = j.s37("expiresAt") ?: at?.let { epoch41(it) }?.let { Instant.ofEpochMilli(it + 90 * 60_000L).toString() }
         val alive = at != null && active && (epoch41(exp) ?: Long.MAX_VALUE) > System.currentTimeMillis()
+        val was = s.journey?.leftAt
         s.journey = if (alive) Journey41(at!!, exp) else null
         if (alive) { s.tripDir = "toHome"; loadTrip41() }
+        // Live Update for Min reise: ny tur → vis; utløpt/hjemme → fjern.
+        if (alive && was != at && s.rtHide != at) s.trip?.let { Live41.trip(appCtx40, it, epoch41(exp)) }
+        if (!alive && was != null) Live41.endTrip(appCtx40)
     }
 }
 
@@ -578,6 +622,7 @@ fun AppViewModel.hideTrip41() {
     p41.rtHide = j.leftAt
     prefs41().edit().putString("papir_rt_hide", j.leftAt).apply()
     p41.rtToast = true
+    Live41.endTrip(appCtx40)
     launch41 { runCatching { api41 { hlPost("/ruter/journey/hide") } }; delay(4_500); p41.rtToast = false }
 }
 
@@ -641,6 +686,7 @@ fun AppViewModel.glimtAsync41(r: JSONObject, q: String) {
             }
         }
         s.glimtJobs = s.glimtJobs.filter { it.id != id }
+        loadSources41()
         if (s.glimtDone == null) s.glimtDone = "✦ Glimt er ferdig med beskjeden"
         if (done) Haptics.success()
         if (inBackground29) Notify.post(appCtx40, "Glimt", s.glimtDone ?: "", "glimt41-$id", "tasks")
@@ -723,4 +769,276 @@ fun AppViewModel.setMai41(m: String) {
     Haptics.select()
     redrawWidgets40()
     launch41 { runCatching { api41 { hlPut("/glimt/settings", JSONObject().put("mai17", m)) } } }
+}
+
+/* ======================= Søkepillen → Chat ======================= */
+
+/**
+ * Åpner Chat (ny samtale) med spørsmålet allerede sendt. Er svaret i pillen ferdig, brukes det (spørres ikke på nytt);
+ * er det på vei, venter Chat på det samme svaret («Glimt skriver …»). Bare hvis pillen lukkes før svaret kommer, spør Chat selv.
+ */
+fun AppViewModel.openChatWith41(q: String) {
+    val a = p31.ans
+    openChat27("")
+    newChat27()
+    val s = chat27
+    s.title = q.take(48)
+    val me = ChatMsg27("user", q)
+    if (a != null && a.q == q && !a.busy && a.text.isNotBlank()) {
+        s.msgs = listOf(me, ChatMsg27("assistant", a.text, model = a.source.ifBlank { "Glimt" }))
+        closeAns31(); return
+    }
+    if (a != null && a.q == q && a.busy) {
+        s.msgs = listOf(me, ChatMsg27("assistant", "✦ Glimt skriver …"))
+        launch41 {
+            repeat(180) {
+                delay(500)
+                val n = p31.ans
+                if (n == null || n.q != q) return@repeat
+                if (!n.busy) {
+                    if (s.msgs.size == 2 && s.msgs[0].content == q) s.msgs = listOf(me, ChatMsg27("assistant", n.text, model = n.source.ifBlank { "Glimt" }))
+                    closeAns31(); return@launch41
+                }
+            }
+            closeAns31()
+            if (s.msgs.size == 2 && s.msgs[0].content == q) { s.msgs = emptyList(); sendChat27(q) }
+        }
+        return
+    }
+    closeAns31()
+    sendChat27(q)
+}
+
+/* ======================= Vær: rediger kort og skiføre ======================= */
+
+val VAER_KEYS41 = listOf("hero", "ski", "hour", "days", "cmp", "wind", "moon", "tiles", "glimt")
+val VAER_NAMES41 = mapOf("hero" to ("Nå" to "Temperatur og sted"), "ski" to ("Skiføre" to "Glimt anbefaler smøring · vises når det er snø"),
+    "hour" to ("Time for time" to ""), "days" to ("10 dager" to ""), "cmp" to ("Yr mot Storm" to ""), "wind" to ("Vind" to ""), "moon" to ("Måne" to ""),
+    "tiles" to ("Detaljer" to "Sol, UV, følt, nedbør, sikt, fuktighet, trykk"), "glimt" to ("Glimt · uka" to "Ukas vær mot forrige uke"))
+
+/** vaer_layout (per bruker, lagret på enheten): rekkefølge, skjulte og «Skiføre» av/på. */
+fun AppViewModel.vaerLay41(): VaerLay41 {
+    p41.vaerLay?.let { return it }
+    val raw = prefs41().getString("vaer_layout_" + (account?.id ?: ""), null)
+    val o = raw?.let { runCatching { JSONObject(it) }.getOrNull() }
+    val ord0 = o?.optJSONArray("ord")?.let { a -> (0 until a.length()).map { a.optString(it) } }?.filter { it in VAER_KEYS41 } ?: emptyList()
+    val l = VaerLay41(ord0 + VAER_KEYS41.filter { it !in ord0 }, o?.optJSONArray("hid")?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() } ?: emptySet(), o?.optBoolean("ski", true) ?: true)
+    p41.vaerLay = l
+    return l
+}
+
+fun AppViewModel.setVaerLay41(l: VaerLay41) {
+    p41.vaerLay = l
+    prefs41().edit().putString("vaer_layout_" + (account?.id ?: ""), JSONObject().put("ord", JSONArray(l.ord)).put("hid", JSONArray(l.hid.toList())).put("ski", l.ski).toString()).apply()
+}
+
+fun AppViewModel.skiShow41(): Boolean { loadSki41(); return vaerLay41().ski && p41.ski?.has == true }
+
+/** Open-Meteo for Nordmarka (59.99, 10.67): snødybde, snøfall siste 3 dager, temperatur, fukt og maks-temp (tining). Hver 30. min. */
+fun AppViewModel.loadSki41() {
+    val s = p41
+    if (System.currentTimeMillis() - s.skiAt < 30 * 60_000L) return
+    s.skiAt = System.currentTimeMillis()
+    launch41 {
+        runCatching {
+            val body = withContext(Dispatchers.IO) {
+                val c = java.net.URL("https://api.open-meteo.com/v1/forecast?latitude=59.99&longitude=10.67&current=temperature_2m,relative_humidity_2m,snow_depth&daily=snowfall_sum,temperature_2m_max,temperature_2m_min&past_days=3&forecast_days=1&timezone=auto").openConnection() as java.net.HttpURLConnection
+                c.connectTimeout = 6000; c.readTimeout = 8000
+                try { c.inputStream.bufferedReader().use { it.readText() } } finally { c.disconnect() }
+            }
+            val o = JSONObject(body); val cur = o.getJSONObject("current"); val d = o.getJSONObject("daily")
+            val sf = d.optJSONArray("snowfall_sum"); val mx = d.optJSONArray("temperature_2m_max")
+            val fresh = (0 until minOf(4, sf?.length() ?: 0)).sumOf { sf!!.optDouble(it, 0.0).let { v -> if (v.isNaN()) 0.0 else v } }
+            val max = (0 until minOf(4, mx?.length() ?: 0)).maxOfOrNull { mx!!.optDouble(it, 0.0) } ?: 0.0
+            s.ski = Ski41(cur.optDouble("snow_depth", 0.0), fresh, cur.optDouble("temperature_2m", -4.0), cur.optDouble("relative_humidity_2m", 0.0), max > .5, System.currentTimeMillis())
+        }
+    }
+}
+
+/** Reglene for feste og glid (reserve når Glimt ikke skriver teksten): (feste, smøring, forklaring, glid). */
+fun skiAdvice41(x: Ski41): List<String> {
+    val t = x.t; val fresh = x.fresh; val icy = (fresh < 1) && x.thaw
+    val (kick, wax, txt) = when {
+        icy -> Triple("Blå klister", "Blå klister · skareføre", "Snøen har tint og frosset igjen. Bruk blå klister i festesonen, varm det inn og la det kjølne før du går.")
+        t <= -10 -> Triple("Grønn (V20)", "Grønn voks · kaldt og tørt", "Kald og tørr snø. Tynne lag grønn voks, kork godt. Gir godt feste og fin glid.")
+        t <= -3 -> { val k = if (fresh >= 2) "Blå (V30)" else "Blå ekstra (V40)"
+            Triple(k, k + " · " + if (fresh >= 2) "nysnø" else "fint føre",
+                if (fresh >= 2) "Nysnø i marka (${Math.round(fresh)} cm siste dager). Blå voks i 3–4 tynne lag gir feste uten at det ises." else "Stabilt vinterføre. Blå ekstra holder godt; legg på et ekstra lag hvis du glipper i motbakkene.") }
+        t <= 0 -> Triple("Fiolett (V45)", "Fiolett · rundt null", "Rundt null grader og fuktig. Fiolett voks, og ha rød i lomma hvis sola kommer fram. Se opp for ising i skyggen.")
+        else -> Triple("Rød (V55) / universalklister", "Rød voks eller klister · vått føre", "Plussgrader og våt snø. Rød voks på ny snø, universalklister hvis snøen er grovkornet. Felleski er et godt valg i dag.")
+    }
+    val glide = if (t <= -8) "Kald (blå)" else if (t <= -2) "Universal (fiolett)" else "Varm (gul/rød)"
+    return listOf(kick, wax, txt, glide)
+}
+
+/* ======================= 17. mai-Hjem ======================= */
+
+/** Festdesignet på Hjem gjelder bare selve dagen (eller «Vis nå»). Bryteren nullstilles 18. mai. */
+fun AppViewModel.maiHome41(): Boolean {
+    Mai41.ensure(appCtx40)
+    val d = java.time.ZonedDateTime.now(ZoneId.of("Europe/Oslo")).toLocalDate()
+    val today = (d.monthValue == 5 && d.dayOfMonth == 17)
+    return Mai41.mode != "av" && (today || Mai41.mode == "pa")
+}
+
+/** Bryterens verdi for i dag (lokalt speil; nullstilles neste dag). Kalles fra LaunchedEffect, ikke under tegning. */
+fun AppViewModel.initMaiDesign41() {
+    val sp = prefs41()
+    val d = LocalDate.now().toString()
+    if (sp.getString("mai_design_day", null) != d) { sp.edit().remove("mai_design_day").remove("mai_design").apply(); p41.maiDesign = true }
+    else p41.maiDesign = sp.getBoolean("mai_design", true)
+    loadMai41()
+}
+
+fun AppViewModel.setMaiDesign41(on: Boolean) {
+    p41.maiDesign = on; Haptics.select()
+    prefs41().edit().putBoolean("mai_design", on).putString("mai_design_day", LocalDate.now().toString()).apply()
+    launch41 { runCatching { api41 { hlPut("/glimt/mai17/design", JSONObject().put("on", on)) } } }
+}
+
+/** GET /api/glimt/mai17 → dato, hilsen, program, brief og hurra-telleren. */
+fun AppViewModel.loadMai41() {
+    launch41 {
+        val o = runCatching { JSONObject(api41 { hlGet("/glimt/mai17", timeout = 8_000) }) }.getOrNull() ?: return@launch41
+        val prog = objs34(o.optJSONArray("program")).map { MaiItem41(it.s37("time") ?: "", it.s37("title") ?: "", it.optBoolean("past"), it.optBoolean("next"), it.s37("kind") ?: "city") }
+        val b = o.optJSONObject("brief")
+        p41.mai = MaiData41(o.s37("dateLabel"), o.s37("greeting"), prog, b?.s37("text"), objs34(b?.optJSONArray("items")).mapNotNull { it.s37("text") ?: it.s37("title") } +
+            (b?.optJSONArray("items")?.let { a -> (0 until a.length()).mapNotNull { a.opt(it) as? String } } ?: emptyList()))
+        o.optJSONObject("hurra")?.let { h -> p41.hurra = h.optInt("count", p41.hurra) }
+        if (o.has("design")) p41.maiDesign = o.optBoolean("design", p41.maiDesign)
+    }
+}
+
+/** «Hipp hipp hurra!»: konfetti + haptikk og «Hipp hipp hurra fra Sebastian!» til familien (POST /api/glimt/mai17/hurra). */
+fun AppViewModel.hurra41() {
+    val s = p41
+    s.hurra++; s.confetti = System.currentTimeMillis()
+    Haptics.success()
+    launch41 {
+        runCatching { JSONObject(api41 { hlPost("/glimt/mai17/hurra") }) }.getOrNull()?.let { s.hurra = it.optInt("count", s.hurra) }
+    }
+}
+
+/* ======================= Gjøremål: «Laget med Glimt» ======================= */
+
+fun AppViewModel.loadSources41() {
+    val s = p41
+    launch41 {
+        try {
+            val o = JSONObject(api41 { hlGet("/tasks/glimt/sources") })
+            s.sources = objs34(o.optJSONArray("sources")).mapNotNull { x ->
+                val id = x.s37("id") ?: return@mapNotNull null
+                GSrc41(id, x.s37("text") ?: "", x.s37("createdAt"), x.s37("engineLabel") ?: x.s37("engine"), x.optJSONObject("by")?.s37("name"),
+                    x.optInt("count", 0), x.optInt("deleted", 0), objs34(x.optJSONArray("items")).map { (it.s37("title") ?: it.s37("text") ?: "") to it.optBoolean("done", false) })
+            }
+            s.srcMissing = false
+        } catch (e: ApiException) { if (e.status == 404 || e.status == 405) { s.srcMissing = true; s.sources = emptyList() } } catch (_: Exception) { }
+    }
+}
+
+fun AppViewModel.redoSource41(id: String, text: String) {
+    launch41 {
+        runCatching {
+            val r = JSONObject(api41 { hlPost("/tasks/glimt/sources/" + URLEncoder.encode(id, "UTF-8") + "/redo") })
+            glimtAsync41(r, text)
+        }.onFailure { message = it.message ?: "Fikk ikke delt opp på nytt" }
+        loadSources41()
+    }
+}
+
+fun AppViewModel.forgetSource41(id: String) {
+    launch41 {
+        runCatching { api41 { hlDelete("/tasks/glimt/sources/" + URLEncoder.encode(id, "UTF-8")) } }
+        p41.sources = p41.sources?.filter { it.id != id }
+        message = "Beskjeden er glemt · punktene ligger fortsatt i lista"
+    }
+}
+
+/** Fra søkefeltet på Hjem: huskebeskjeder (starter med «husk / påminn meg / legg til i huskeliste / ny oppgave», eller ≥ 6 ord med må/skal/huske og vi/jeg/meg/oss). */
+fun isHuske41(q: String): Boolean {
+    val t = q.trim(); val l = t.lowercase()
+    if (t.endsWith("?")) return false
+    if (Regex("^(husk|påminn meg|minn meg på|legg til i huskeliste|ny oppgave)\\b").containsMatchIn(l)) return true
+    val words = t.split(Regex("\\s+")).count { it.isNotBlank() }
+    return words >= 6 && Regex("\\b(må|skal|huske)\\b").containsMatchIn(l) && Regex("\\b(vi|jeg|meg|oss)\\b").containsMatchIn(l)
+}
+
+/** POST /api/huske/glimt-jobs {text, origin:"home_search"} → bakgrunnsjobb; samme rad og «Laget med Glimt» som fra Gjøremål. */
+fun AppViewModel.huskeFromHome41(q: String, onJob: (Boolean) -> Unit) {
+    launch41 {
+        val r = try { JSONObject(api41 { hlPost("/huske/glimt-jobs", JSONObject().put("text", q).put("origin", "home_search")) }) } catch (e: ApiException) {
+            if (e.status == 404 || e.status == 405) runCatching { JSONObject(api41 { request("POST", "/tasks/glimt", JSONObject().put("q", q).put("async", true).put("origin", "home_search"), prefix = Api.HOMELAB, read = 60_000) }) }.getOrNull() else null
+        } catch (_: Exception) { null }
+        if (r == null) { onJob(false); return@launch41 }
+        if (r.s37("jobId") == null) r.s37("job_id")?.let { r.put("jobId", it) }
+        if (r.s37("jobId") != null) { glimtAsync41(r, q); onJob(true) } else { refreshTasks37(); onJob(true) }
+    }
+}
+
+/* ======================= Skolesoner og «forlot skolen» ======================= */
+
+fun AppViewModel.loadZones41() {
+    val s = p41
+    launch41 {
+        runCatching {
+            val o = JSONObject(api41 { hlGet("/ruter/school-zones") })
+            s.zones = objs34(o.optJSONArray("zones")).mapNotNull { z ->
+                val id = z.s37("id") ?: return@mapNotNull null
+                Zone41(id, z.s37("name") ?: "Skole", z.optDouble("lat"), z.optDouble("lon"), z.optInt("radius_m", 150), z.s37("label") ?: "${z.s37("name") ?: "Skole"} ${z.optInt("radius_m", 150)} m")
+            }
+            SchoolZones41.save(appCtx40, s.zones ?: emptyList(), base39, token39)
+        }
+    }
+}
+
+fun AppViewModel.addZone41(name: String, lat: Double, lon: Double, radius: Int) {
+    val s = p41
+    if (radius !in 50..300) { s.zoneErr = "Radius må være 50–300 m"; return }
+    launch41 {
+        try {
+            api41 { hlPost("/ruter/school-zones", JSONObject().put("name", name.ifBlank { "Skole" }).put("lat", lat).put("lon", lon).put("radius_m", radius)) }
+            s.zoneAdd = false; s.zoneErr = null
+            loadZones41()
+        } catch (e: Exception) { s.zoneErr = e.message ?: "Fikk ikke lagret sonen" }
+    }
+}
+
+fun AppViewModel.deleteZone41(z: Zone41) {
+    val s = p41
+    if ((s.zones?.size ?: 0) <= 1) { message = "Den siste skolesonen kan ikke slettes"; return }
+    launch41 {
+        runCatching { api41 { hlDelete("/ruter/school-zones/" + URLEncoder.encode(z.id, "UTF-8")) } }.onFailure { message = it.message }
+        loadZones41()
+    }
+}
+
+/** Huskebeskjed fra Hjem-søk: samme Glimt-animasjon som for avtaler (AI-toasten med stjerne), så bakgrunnsjobben. */
+private val HUSKE_STEPS41 = listOf("Leser beskjeden", "Deler opp i punkter", "Finner rekkefølge og steder", "Lagrer i Huskeliste")
+
+fun AppViewModel.huskeHome41(text: String) {
+    val q = text.trim()
+    if (q.isEmpty()) return
+    Haptics.tap()
+    val id = "huske41-" + System.currentTimeMillis()
+    val t0 = System.currentTimeMillis()
+    val list = "Huskeliste"
+    fun job(cur: Int, state: String, fields: List<Pair<String, String>>) = AiJob31(id, "huske", "Legger til i Huskeliste", "Glimt", q,
+        HUSKE_STEPS41.mapIndexed { i, l -> AiStep31(l, if (i < cur || state == "done") "done" else if (i == cur) "active" else "pending") }, fields, ((cur + 1) * 100 / HUSKE_STEPS41.size).coerceAtMost(95), state, t0)
+    val baseFields = listOf("Beskjed" to q.take(60), "Liste" to list, "Original" to "lagres i «Laget med Glimt»")
+    fun put(j: AiJob31) { p31.jobs = p31.jobs.filter { it.id != id } + j }
+    put(job(0, "running", baseFields))
+    var started = false
+    huskeFromHome41(q) { ok -> started = ok }
+    launch41 {
+        for (i in 1 until HUSKE_STEPS41.size) { delay(650); put(job(i, "running", baseFields)) }
+        delay(650)
+        val before = p41.glimtJobs.any { it.text == q }
+        p31.jobs = p31.jobs.filter { it.id != id }
+        p31.toastMsg = when {
+            !started && !before -> "Fikk ikke lagt beskjeden i Huskeliste"
+            p41.glimtJobs.any { it.text == q } -> "✦ Glimt deler opp i bakgrunnen …"
+            else -> p41.glimtDone ?: "✓ Glimt la beskjeden i Huskeliste"
+        }
+        p31.toastSeq++
+    }
 }
