@@ -71,6 +71,8 @@ struct MacSearchView: View {
     @Environment(\.mk) private var t
     @ObservedObject var win: MacWin
     @StateObject private var m: MacSearchModel = MacSearchModel()
+    /// Prompt 41: «✦ Glimt» – søk med Ollama på hjemmeserveren (lokal reserve «UTEN AI»).
+    @StateObject private var ai: MacAi41 = MacAi41()
     @ObservedObject var store: MacStore = MacStore.shared
     @FocusState private var focused: Bool
 
@@ -81,6 +83,7 @@ struct MacSearchView: View {
             Rectangle().fill(t.line2).frame(height: 1)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if ai.on { MacAiCard41(ai: ai) { (e: KalEvent) in open(e) } }
                     if m.answer != nil || m.busy { MacSearchAnswer(m: m, win: win) }
                     if m.query.trimmingCharacters(in: .whitespaces).isEmpty && m.cal == nil {
                         suggestions
@@ -104,18 +107,20 @@ struct MacSearchView: View {
         HStack(spacing: 8) {
             HStack(spacing: 10) {
                 MacSearchMark(busy: m.busy || m.cloud)
-                TextField("Søk, eller spør: «når er neste frisørtime?»", text: $m.query)
+                TextField("Søk, eller spør Glimt: «når er neste tannlege?»", text: $m.query)
                     .textFieldStyle(.plain)
                     .font(MacFont.ui(15, .medium))
                     .foregroundColor(t.ink)
                     .focused($focused)
-                    .onSubmit { m.ask() }
-                Button(action: { m.ask() }) {
-                    Text("✦ Spør").font(MacFont.ui(12.5, .bold)).foregroundColor(t.bg)
+                    .onSubmit { submit() }
+                // Prompt 41: «✦ Glimt» (rød når aktiv) – AI-søk med Ollama.
+                Button(action: { ai.go(m.query) }) {
+                    Text("✦ Glimt").font(MacFont.ui(12.5, .heavy)).foregroundColor(ai.on ? Color.white : t.ink)
                         .padding(.horizontal, 12).frame(height: 30)
-                        .background(Capsule().fill(t.ink))
+                        .background(Capsule().fill(ai.on ? Color(kalHex: "#b23a2a") : t.chip))
                 }
                 .buttonStyle(.plain)
+                .help("Søk med Glimt (Ollama)")
             }
             .padding(.leading, 12).padding(.trailing, 6)
             .frame(height: 46)
@@ -180,6 +185,16 @@ struct MacSearchView: View {
                     }
                 }
             }
+        }
+    }
+
+    /// Enter: en setning med mellomrom går til Glimt (Ollama); «legg til …» og enkeltord som før.
+    private func submit() {
+        let q: String = m.query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if q.contains(" ") && !q.lowercased().hasPrefix("legg til") {
+            ai.go(q)
+        } else {
+            m.ask()
         }
     }
 
@@ -255,7 +270,7 @@ struct MacSearchRow: View {
             HStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 2).fill(t.calColor(c)).frame(width: 4, height: 28)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(e.title).font(MacFont.ui(13.5, .bold)).foregroundColor(t.ink).lineLimit(1)
+                    MacBdText41.title(e, calName: c?.name ?? "").font(MacFont.ui(13.5, .bold)).foregroundColor(t.ink).lineLimit(1)
                     Text(sub).font(MacFont.ui(11.5)).foregroundColor(t.mut).lineLimit(1)
                 }
                 Spacer()

@@ -262,7 +262,8 @@ targets:
       - path: Kalender/Sources/KalQuick.swift
       # Prompt 37: adresse og kart (geokoding + kartvisning) deles med iPhone-appen.
       - path: Kalender/Sources/KalGeo37.swift
-    # Prompt 38: hovedvinduet viser web-kalenderen (WKWebView mot <server>/kalender?app=mac).
+    # Hovedvinduet er native SwiftUI (fasit siden prompt 39). Web-kalenderen fra prompt 38 (WKWebView mot <server>/kalender?app=mac)
+    # finnes bare som valg (useWeb38, av som standard) – derfor WebKit.
     dependencies:
       - sdk: WebKit.framework
       # Prompt 41: skrivebords-widgetene (samme kode som iOS) legges i Kalender.app/Contents/PlugIns.

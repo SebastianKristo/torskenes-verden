@@ -185,7 +185,7 @@ struct MacMenuRow: View {
             HStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 2).fill(t.calColor(c)).frame(width: 4, height: 30)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(e.title).font(MacFont.ui(13.5, .bold)).foregroundColor(t.ink).lineLimit(1)
+                    MacBdText41.title(e, calName: c?.name ?? "").font(MacFont.ui(13.5, .bold)).foregroundColor(t.ink).lineLimit(1)
                     if !e.loc.isEmpty { Text(e.loc).font(MacFont.ui(11.5)).foregroundColor(t.mut).lineLimit(1) }
                 }
                 Spacer(minLength: 6)

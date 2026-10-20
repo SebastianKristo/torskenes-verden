@@ -154,11 +154,11 @@ struct MacMonthChip: View {
         Button(action: action) {
             HStack(spacing: 4) {
                 if e.allDay {
-                    Text(e.title).font(MacFont.ui(11, .bold)).foregroundColor(t.calText(c)).lineLimit(1)
+                    MacBdText41.title(e, calName: c?.name ?? "").font(MacFont.ui(11, .bold)).foregroundColor(t.calText(c)).lineLimit(1)
                 } else {
                     Circle().fill(t.calColor(c)).frame(width: 6, height: 6)
                     Text(KalD.hm(e.startMin)).font(MacFont.mono(9.5)).foregroundColor(t.mut)
-                    Text(e.title).font(MacFont.ui(11, .semibold)).foregroundColor(t.ink).lineLimit(1)
+                    MacBdText41.title(e, calName: c?.name ?? "").font(MacFont.ui(11, .semibold)).foregroundColor(t.ink).lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
@@ -310,7 +310,7 @@ struct MacListRow: View {
                 Text(time).font(MacFont.mono(11.5)).foregroundColor(t.mut).frame(width: 96, alignment: .leading)
                 RoundedRectangle(cornerRadius: 2).fill(t.calColor(c)).frame(width: 4, height: 30)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(e.title).font(MacFont.ui(14, .bold)).foregroundColor(t.ink).lineLimit(1)
+                    MacBdText41.title(e, calName: c?.name ?? "").font(MacFont.ui(14, .bold)).foregroundColor(t.ink).lineLimit(1)
                     Text(sub).font(MacFont.ui(12)).foregroundColor(t.mut).lineLimit(1)
                 }
                 Spacer(minLength: 6)

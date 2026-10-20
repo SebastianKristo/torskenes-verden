@@ -254,7 +254,7 @@ struct MacGridColumn: View {
         let x: CGFloat = 2 + lw * CGFloat(l.lane)
         return Button(action: { win.openDetail(e) }) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(e.title).font(MacFont.ui(11.5, .bold)).foregroundColor(t.calText(c)).lineLimit(h > 34 ? 2 : 1)
+                MacBdText41.title(e, calName: c?.name ?? "").font(MacFont.ui(11.5, .bold)).foregroundColor(t.calText(c)).lineLimit(h > 34 ? 2 : 1)
                 if h > 30 {
                     Text(KalD.hm(e.startMin) + "–" + KalD.hm(e.endMin)).font(MacFont.mono(9.5)).foregroundColor(t.calText(c).opacity(0.8))
                 }

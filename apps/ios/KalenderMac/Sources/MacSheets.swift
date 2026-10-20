@@ -35,11 +35,17 @@ struct MacDetailSheet: View {
                     RoundedRectangle(cornerRadius: 3).fill(t.calColor(c)).frame(width: 6, height: 54)
                     VStack(alignment: .leading, spacing: 4) {
                         MacLabel(text: (c?.name ?? "Kalender").uppercased(), color: t.calText(c))
-                        Text(e.title).font(MacFont.serif(28)).foregroundColor(t.ink).fixedSize(horizontal: false, vertical: true)
+                        if !KalBd41.isBirthday(e, calName: c?.name ?? "") {
+                            Text(e.title).font(MacFont.serif(28)).foregroundColor(t.ink).fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                     Spacer(minLength: 6)
                     MacPill(title: "Ferdig") { win.detId = nil }
                         .keyboardShortcut(.cancelAction)
+                }
+                // Prompt 41: bursdager får eget kort (konfetti, avatar med festhatt, nedtelling, Gratuler · Gaveidé · Bursdager ›).
+                if KalBd41.isBirthday(e, calName: c?.name ?? "") {
+                    MacBdCard41(e: e, color: t.calColor(c))
                 }
                 rows(c)
                 // Prompt 37: kart med adresse og fagfarge.
@@ -50,6 +56,10 @@ struct MacDetailSheet: View {
                     Text("Lagt til av Glimt «" + e.src + "»").font(MacFont.ui(12.5)).foregroundColor(t.mut)
                 }
                 actions
+                if KalBd41.isBirthday(e, calName: c?.name ?? "") && KalBd41.fromGoogle(e) {
+                    Text("«Slett» fjerner bare bursdagen fra Kalender. Den ligger fortsatt i Google Kontakter.")
+                        .font(MacFont.ui(11.5)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
     }
