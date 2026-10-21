@@ -67,7 +67,7 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { tilpass: 'Tilpass', appprofil: 'Appprofil', integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering', sysbk: 'Backup', widgets: 'Widgets', kalapp: 'Kalender-appen' };
+const PAGES = { tilpass: 'Tilpass', appprofil: 'Appprofil', integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering', sysbk: 'Backup', widgets: 'Widgets', kalapp: 'Kalender-appen', huske: 'Gjøremål', logger: 'Logger' }; // prompt 44: Gjøremål (HA-synk) og Logger
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.provider === 'groq' ? 'groq' : st.fallback ? 'both' : 'ollama'; };
 
@@ -137,11 +137,14 @@ const PAGE = {
       ${G('', [nav('konto', 'Kontoer og brukere', '', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', me.totp ? '2FA på' : '', 'shield', '#34C759')])}
       ${G('', [P38.qrRow()])}${P38.oktGroup(G) /* prompt 38: ØKT */}`;
   },
+  huske: () => globalThis.P44?.huskeSet?.() ?? '<div class="m-spin"></div>', // prompt 44: Innstillinger → Gjøremål
+  logger: () => globalThis.P44?.loggerSet?.() ?? '<div class="m-spin"></div>', // prompt 44: Homelab → Logger
   bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er ekte Oslo-bilder fra lufta (Wikimedia Commons) som skifter gjennom døgnet. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
   fanelinje: () => `<div class="sec">Hovedlinja</div>${tabEditor()}<div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>`,
   konto: () => `${P36.kontoTop() /* prompt 36: profilbildet øverst, miniatyr i raden, Last opp nytt · Ta bilde · Fjern */}
     ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],
     'Nettappen er logget inn med én konto om gangen. Flere kontoer i samme app, og raskt bytte ved å holde inne profilbildet, finnes i iOS- og Android-appene.')}
+    ${globalThis.P44?.kontoGroups?.() ?? '' /* prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER */}
     ${globalThis.P41?.serverGroup?.() ?? '' /* prompt 41: SERVER · lokal og ekstern adresse */}
     ${G('Brukere', [link('Administrer brukere', '/', 'Homelab → Innstillinger → Innlogging')], 'Nye brukere opprettes av admin i Homelab. Hver bruker har egne tokens og varsler.')}
     ${G('', [P38.qrRow()])}${P38.oktGroup(G) /* prompt 38: ØKT – Lås skjermen, Logg ut, Logg ut av alle enheter */}`,

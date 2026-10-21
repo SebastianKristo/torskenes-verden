@@ -401,6 +401,7 @@ export function sysView() {
     <div class="n31-card"><div class="n31-row"><span class="m-grow"><b>Programvareversjon</b><span class="p30-mono">${esc(verLine)}</span></span><span class="n31-inst${fresh ? ' ok' : ''}">${esc(inst)}</span></div>
       ${adm && UP.cfg && typeof UP.cfg === 'object' ? `<button type="button" class="n31-row n31-tg" data-p30="uptog" data-k="require_password" role="switch" aria-checked="${req}"><span class="m-grow"><b>Krev passord for å oppdatere</b><span>${req ? 'Passord kreves før oppdateringen starter' : 'Av · admin kan oppdatere med ett trykk'}</span></span><span class="sw" aria-hidden="true" aria-checked="${req}"></span></button>` : ''}</div>
     <span class="n31-note">Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.</span>
+    ${globalThis.P44?.versionsSection?.() ?? '' /* prompt 44: TIDLIGERE VERSJONER (under «Krev passord», over endringsloggen) */}
     <div class="n31-new"><b class="n31-tag">Dette er Nordlys ${esc(short(nv))}. ${esc(V.tagline || 'Lys i mørket, kjørt hjemme.')}</b>
       ${notes.length ? `<span class="n31-lab">NYTT I ${esc(nv)}${date ? ` · ${esc(date)}` : ''}</span><ul>${notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
       ${P36.histSection(nv)}

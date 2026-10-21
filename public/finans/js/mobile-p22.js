@@ -401,7 +401,7 @@ export function haSection() {
     <span class="pp-mut" style="font-size:12px;line-height:1.45;padding:0 4px">Trykk på en liste for å velge hvilken HA-liste den skal kobles til. Endringer i appen og i Home Assistant (også fra Assist og stemmestyring) synkes begge veier.</span></div>`;
 }
 function haSheet() {
-  if (HA.pick == null || !(m.screen === 'huske' || (m.screen === 'set' && String(m.sub).startsWith('integ')))) return '';
+  if (HA.pick == null || !(m.screen === 'huske' || (m.screen === 'set' && (String(m.sub).startsWith('integ') || m.sub === 'huske')))) return ''; // prompt 44: også Innstillinger → Gjøremål
   const l = (HK.d?.lists ?? []).find((x) => String(x.id) === String(HA.pick)), cur = (HA.d?.maps ?? []).find((x) => String(x.listId) === String(HA.pick))?.entityId ?? null;
   const ents = HA.d?.entities ?? [];
   return `<div class="sheet-bg" data-h22="pickx"></div><div class="pp-sheet" role="dialog" aria-label="Koble ${esc(l?.name ?? '')}"><span class="pp-grab"></span><div class="pp-sh">Koble «${esc(l?.name ?? '')}»</div>

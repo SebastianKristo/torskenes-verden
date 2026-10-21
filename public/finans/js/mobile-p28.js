@@ -185,6 +185,11 @@ let booted = false;
 export function boot28() { if (booted) return; booted = true; kbBoot(); addEventListener('resize', pillsPlace); }
 export function leave28(next) { if (next !== 'mer') { MER.edit = false; MER.add = false; MER.drag = null; } }
 export const merEditing = () => MER.edit;
+// Prompt 44 (Mer ny, mobile-p44.js): samme lagring (papir_mer / /api/prefs/mer), skjulte speiles i papir_mer_hid.
+export function merSplit(rows) { merLoad(); return apply(rows); }
+function hidSave() { try { localStorage.setItem('papir_mer_hid', JSON.stringify(MER.p?.h ?? [])); } catch {} merSave(); }
+export function merHide(k) { if (k === 'set') return; const P = MER.p ?? lsGet() ?? { o: [], h: [] }; MER.p = { o: P.o ?? [], h: [...new Set([...(P.h ?? []), k])] }; hidSave(); }
+export function merShowAll() { const P = MER.p ?? lsGet() ?? { o: [], h: [] }; MER.p = { o: P.o ?? [], h: [] }; hidSave(); }
 export const down28 = (e) => merDown(e);
 export const move28 = (e) => merMove(e);
 export const up28 = (e) => merUp(e);

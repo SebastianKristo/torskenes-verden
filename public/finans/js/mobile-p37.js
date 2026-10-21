@@ -34,7 +34,7 @@ const meId = () => String(m.me?.id ?? '');
    ===================================================================== */
 // Felt en eldre server ikke lagrer (tid, viktig, gjenta, tagger …) huskes på enheten til serveren kan dem.
 const XK = 'p37_task_extra';
-const EXTRA = ['time', 'urgent', 'rep', 'early', 'prio', 'flag', 'tags', 'subs', 'place', 'placeName', 'after', 'mentions'];
+const EXTRA = ['time', 'urgent', 'rep', 'early', 'prio', 'flag', 'tags', 'subs', 'place', 'placeName', 'after', 'mentions', 'dl', 'pl', 'geo']; // prompt 44: frist (dl), sted (pl) og koordinater (geo)
 let XT = lsGet(XK, {}) || {};
 const dueOf = (v) => (v == null || v === '' ? null : typeof v === 'number' ? iso(new Date(v)) : String(v).slice(0, 10));
 export function T(x) {
@@ -45,6 +45,7 @@ export function T(x) {
     time: pick('time', null), urgent: !!pick('urgent', false), rep: pick('rep', 'aldri') || 'aldri', early: pick('early', 'ingen') || 'ingen',
     prio: +pick('prio', 0) || 0, flag: !!pick('flag', false), tags: Array.isArray(pick('tags', [])) ? pick('tags', []) : [], subs: Array.isArray(pick('subs', [])) ? pick('subs', []) : [],
     place: pick('place', '') || '', placeName: pick('placeName', x.place_name ?? '') || '', after: pick('after', x.afterId ?? x.after_id ?? null), who: x.who ?? x.assignee ?? null, by: x.by ?? x.createdBy ?? null, done: !!x.done, doneAt: x.doneAt ?? null,
+    dl: pick('dl', x.deadline ?? null) || null, pl: pick('pl', x.location ?? '') || '', geo: pick('geo', null), // prompt 44
   };
 }
 const items = () => (HK.d?.items ?? []).map(T);
@@ -135,7 +136,7 @@ async function tick(id) {
    Tilstand og hjelpere for visning
    ===================================================================== */
 export const G7 = { ed: null, ls: null, gl: false, gq: '', gBusy: '', gAns: null, tagV: '', subV: '', split: false, geoArm: !!lsGet('p37_geo', false), geoShow: false, geoT: null, undoT: null };
-export const sheetOpen = () => m.screen === 'huske' && !!(G7.ed || G7.ls || G7.gl);
+export const sheetOpen = () => m.screen === 'huske' && !!(G7.ed || G7.ls || G7.gl || globalThis.P44?.vwOn?.()); // prompt 44: infosiden skjuler også skrivefeltet og ✦
 const t0 = () => dayIso(0);
 function dueLbl(due) {
   if (!due) return ['', ''];
@@ -151,7 +152,7 @@ function row(x, i, all) {
   return `<div class="p37-tr${x.done ? ' done' : ''}${i ? '' : ' first'}"><button type="button" class="p37-ck" data-p37="tick" data-id="${esc(x.id)}" style="--c:${esc(l.color)}" aria-label="${x.done ? 'Angre' : 'Fullfør'} ${esc(x.title)}">${x.done ? '✓' : ''}</button>
     <button type="button" class="p37-tt" data-p37="open" data-id="${esc(x.id)}"><span class="p37-tn">${x.flag ? '<span class="p37-flag" aria-label="Flagget">⚑</span>' : ''}${x.prio ? `<span class="p37-pr">${PR[x.prio]}</span>` : ''}<b>${esc(x.title)}</b></span>${meta ? `<small class="${!x.done && dc === 'lab' ? 'lab' : ''}">${esc(meta)}</small>` : ''}</button>
     ${x.done && !ar ? `<button type="button" class="p37-ib" data-p17="tarch" data-id="${esc(x.id)}" aria-label="Arkiver ${esc(x.title)}">${svg('M3 5h18v4H3zM5 9v10h14V9M10 13h4', 16, 2)}</button>` : ''}${ar ? `<button type="button" class="p37-rs" data-p17="trest" data-id="${esc(x.id)}">↺ Gjenopprett</button>` : ''}
-    <button type="button" class="p37-ib x" data-p37="rm" data-id="${esc(x.id)}" aria-label="Slett ${esc(x.title)}">×</button></div>`;
+    ${globalThis.P44?.subBtn?.(x) ?? ''}<button type="button" class="p37-ib x" data-p37="rm" data-id="${esc(x.id)}" aria-label="Slett ${esc(x.title)}">×</button></div>${globalThis.P44?.subRows?.(x, l) ?? ''}`; // prompt 44: ↳+ og deloppgaver i lista
 }
 
 /* ---------- Glimt-tips i listen ---------- */
@@ -271,7 +272,7 @@ export function huskeView37() {
     ${HK.err ? `<div class="p37-card p37-mut">${esc(HK.err)}</div>` : ''}
     ${groups.map(([t, c, a, an, ak]) => `<div class="p37-gh"><span class="${c}">${t}</span>${an ? `<button type="button" data-p17="${ak}">${an}</button>` : ''}</div><div class="p37-card p37-rows">${a.map((x, i) => row(x, i, all || AR)).join('')}</div>`).join('')
       || `<div class="p37-empty">${AR ? 'Ingenting i arkivet. Fullførte oppgaver arkiveres automatisk etter 7 dager.' : `Ingen oppgaver i ${esc(curN)}.`}</div>`}
-    ${P22.haSection()}
+    ${globalThis.P44?.haRow ? globalThis.P44.haRow() : P22.haSection() /* prompt 44: raden som åpner Innstillinger → Gjøremål */}
     ${HK.local ? '<span class="p37-foot">Lagres på denne enheten til serveren har Gjøremål.</span>' : '<span class="p37-foot">Gjøremål er private for deg. Delte lister ser alle som er med i listen.</span>'}</div>`;
 }
 const SPARK = (S = 22, busy = false) => `<span class="p37-spk${busy ? ' busy' : ''}" style="width:${S}px;height:${S}px"><i></i><b style="font-size:${Math.round(S * 0.5)}px">✦</b></span>`;
@@ -616,7 +617,7 @@ export async function bind37(e, t) {
   const E = byId(G7.ed);
   switch (a) {
     case 'tick': await tick(id); return true;
-    case 'open': try { document.activeElement?.blur?.(); } catch {} G7.ed = id; G7.tagV = ''; G7.subV = ''; haptic('tap'); draw(); return true;
+    case 'open': if (globalThis.P44?.vwOpen) { globalThis.P44.vwOpen(id); return true; } try { document.activeElement?.blur?.(); } catch {} G7.ed = id; // prompt 44: infosiden G7.tagV = ''; G7.subV = ''; haptic('tap'); draw(); return true;
     case 'rm': await delTask(id); draw(); return true;
     case 'list': {
       const k = x.dataset.k;

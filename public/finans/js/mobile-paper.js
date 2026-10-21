@@ -151,7 +151,7 @@ const PAGE = {
   dom: ['Domener', 'Trafikk, besøk og oppetid'], 'dom/pub': ['Publikum', 'Kart, land og enheter'], 'dom/ytl': ['Ytelse', 'Statuskoder, fart og sikkerhet'], 'dom/inf': ['Infrastruktur', 'Oppetid, DNS og domeneinfo'], 'dom/admin': ['Domener', 'Legg til og fjern'],
   aks: ['Aksjer', 'Trading 212'], sub: ['Abonnementer', 'Subscription OS'], dir: ['Boliger', 'Utgifter, prosjekter og kvitteringer'], finn: ['Finn', 'Kjøp og salg'],
   avg: ['Avganger', 'Ruter · sanntid fra Entur'], fam: ['Familie', 'Posisjon, soner og helse'], huske: ['Gjøremål', 'To-do for hele familien'], bibel: ['Bibel', 'Dagens vers og leseplan'],
-  bd: ['Bursdager', 'Familie og venner'], kal: ['Kalender', 'Skole og familie'], kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
+  bd: ['Bursdager', 'Familie og venner'], studie: ['Studie', 'Vitnemål, karakterer og bevis'], avspilling: ['Avspilling', 'Plex · Jellyfin'] /* prompt 44 */, kal: ['Kalender', 'Skole og familie'], kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
   skann: ['Kvittering', 'Bekreft'], opp: ['Kø', 'Kvitteringer'], hl: ['', ''],
 };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -171,7 +171,7 @@ function parentOf(scr) {
   return r[0] === 'hl' && scr !== 'hl' ? ['dir', 'Boliger'] : r;
 }
 function parentOf0(scr) {
-  if (scr === 'bd' || scr === 'kal' || scr === 'bibel') return ['mer', 'Mer'];
+  if (scr === 'bd' || scr === 'kal' || scr === 'bibel' || scr === 'studie' || scr === 'avspilling') return ['mer', 'Mer']; // prompt 44: Studie
   if (m.detail && ['liste', 'sok', 'hjem'].includes(scr)) return ['txback', NAMES[scr]];
   if (scr === 'finn' && m.sub) return ['finn', 'Finn'];
   if (scr === 'set' && /^integ\/./.test(m.sub ?? '')) return ['set/integ', 'Integrasjoner'];
@@ -456,11 +456,11 @@ export function paperMer() {
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
   const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Now Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
      ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
-    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
+    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['studie', 'Studie', 'Vitnemål, karakterer og snitt med Glimt'], ['avspilling', 'Avspilling', 'Plex og Jellyfin · spilles nå og historikk'] /* prompt 44 */, ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     ; // prompt 40 (claude-code-fanelinje-alle-sider.md): faner i fanelinja vises fortsatt i Mer
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
   // Prompt 28: hold inne for å flytte og skjule (lagres per konto), Subscription OS etter Finans.
-  return P28.merView(rows);
+  return globalThis.P44?.merNew ? globalThis.P44.merNew(rows) : P28.merView(rows); // prompt 44: Mer ny (mobile-p44.js)
 }
 
 /* ---------- Media (Plex og Jellyfin) ---------- */

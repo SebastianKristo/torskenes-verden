@@ -142,6 +142,7 @@ export function p17SetMain(T = {}) {
   const t212 = st.t212Set ? 'Tilkoblet' : 'Ikke satt opp';
   return `${prof}
     ${P30.progGroup(grp, row)}
+    ${globalThis.P44?.homelabGroup?.() ?? '' /* prompt 44: HOMELAB → Logger */}
     ${grp('KONTO', [row('#/set/konto', 'Kontoer og brukere', '', '', 'users', 'konto'), row('#/set/sik', 'Sikkerhet', me.totp ? '2FA på' : '2FA av', '', 'shield', 'sik'), row('#/set/tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', '', 'key', 'tok'), P29.isAdmin() ? row('#/set/sysbk', 'Backup', P29.bkSummary(), '', 'backup', 'sysbk') : ''])}
     ${grp('FINANS', [row('#/aictl/fin', 'AI og tolkning', canSrv() ? [ENG[st.provider] ?? 'Ollama', st.groqKeySet ? 'Groq' : '', st.roboflowKeySet ? 'Roboflow' : '', st.geminiKeySet && st.provider !== 'gemini' ? 'Gemini' : ''].filter(Boolean).join(' · ') : ADMIN_NOTE, '', 'ai', 'fai'),
       row('#/set/kat', 'Kategorier og budsjett', `${(S.boot?.categories ?? []).length} kategorier`, '', 'cat', 'kat'), row('#/set/regel', 'Regler', `${(S.boot?.rules ?? []).length} regler`, '', 'rule', 'regel'),
@@ -150,7 +151,7 @@ export function p17SetMain(T = {}) {
       row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
     ${grp('GLIMT', [row('#/glimt', 'Glimt', 'Figur, brief, stemme og venner', '', 'ai', 'glimt')])}
     ${globalThis.P42?.healthGroup?.(grp, row) ?? '' /* prompt 42: HELSE (FAMILIE) – flyttet fra Familie → Helse */}
-    ${grp('APP', [/* prompt 39: «Utseende og fanelinje» er flyttet til Tilpass */row('#/aictl', 'AI og modeller', 'Modeller, jobber, forbruk og nøkler', '', 'ai', 'aictl'), /* prompt 34: AI-kontroll */ row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/kal', 'Kalendere', 'Google Kalender · Home Assistant', '', 'users', 'kal'), row('#/set/integ', 'Integrasjoner', 'Home Assistant, Media, Entur, Bring og 17 til', '', 'home', 'integ'),
+    ${grp('APP', [/* prompt 39: «Utseende og fanelinje» er flyttet til Tilpass */row('#/aictl', 'AI og modeller', 'Modeller, jobber, forbruk og nøkler', '', 'ai', 'aictl'), /* prompt 34: AI-kontroll */ row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/kal', 'Kalendere', 'Google Kalender · Home Assistant', '', 'users', 'kal'), globalThis.P44?.setRowHuske?.() ?? '' /* prompt 44: Gjøremål */, row('#/set/integ', 'Integrasjoner', 'Home Assistant, Media, Entur, Bring og 17 til', '', 'home', 'integ'),
       row('#/set/widgets', 'Widgets', 'Media, Avganger, Kalender og 3 til', '', 'list', 'widgets'), row('#/set/kalapp', 'Kalender-appen', 'Egen app med samme konto · IPA og APK', '', 'down', 'kalapp'), row('#/set/appprofil', 'Appprofil', (P24N?.profName() ?? ''), '', 'users', 'appprofil') /* prompt 39 */])}
     ${'' /* Prompt 38: Logg ut er flyttet til Konto → Økt */}
     <span class="p17-ver">${esc(appName())} ${VERSION} · Papir</span>`;

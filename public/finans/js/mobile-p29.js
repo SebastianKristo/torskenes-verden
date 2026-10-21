@@ -41,7 +41,7 @@ function apptOf(q) {
   if (t.length <= 4) return null;
   // Prompt 36: spørsmålsvakt før avtaletolkning («hvor mange timer med dagslys er det 29.06.2027?» er et spørsmål).
   if (P36.isQ(t)) return null;
-  const r = parseQuick(t, todayKey());
+  const r0 = parseQuick(t, todayKey()), r = globalThis.P44?.fixQuick ? globalThis.P44.fixQuick(t, r0) : r0; // prompt 44: tittel etter dato/tid, 1630, kl 16
   if (!(r.ok && r.isAppointment)) return null;
   // Intensjonsordet må være et helt ord: «timer», «timeplan» og «sommertid» teller ikke som «time».
   if (/time/i.test(t) && !P36.hasApptWord(t) && !/(frisør|lege|tannlege|møte|trening|kl\.?\s*\d|\d{1,2}[.:]\d{2})/i.test(t)) return null;
