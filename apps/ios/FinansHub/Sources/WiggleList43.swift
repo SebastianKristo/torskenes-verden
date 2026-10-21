@@ -68,19 +68,23 @@ enum Wiggle43 {
     }
 }
 
-/// Hold 0,5 s på et kort (utenfor redigering) slår på redigering. Samtidig gest, så ScrollView fortsatt scroller.
-/// I redigering er gesten maskert bort (`including: .subviews`), så den ikke konkurrerer med systemets løft.
+/// Hold 0,5 s på et kort (utenfor redigering) slår på redigering.
+/// 4.39.3: nøyaktig samme gest som i 4.37 (der Hjem scrollet): bare `.onEnded`, ingen `.onChanged` og ingen `including:`.
+/// Med `.onChanged` ble holdet «aktivt» i det fingeren traff kortet, og på iOS 18+ stoppet det ScrollView-pannen, så Hjem,
+/// Finans og Mer ikke kunne scrolles. I redigering legges ingen hold-gest på (systemets dra-og-slipp tar holdet).
 struct Wiggle43Hold: ViewModifier {
     let editing: Bool
     let enter: () -> Void
 
-    func body(content: Content) -> some View {
-        content.simultaneousGesture(
-            LongPressGesture(minimumDuration: Wiggle43.hold, maximumDistance: 8)
-                .onChanged { (_: Bool) in Wiggle43.log.debug("longPress.began") }
-                .onEnded { (_: Bool) in if !editing { enter() } },
-            including: editing ? .subviews : .all
-        )
+    @ViewBuilder func body(content: Content) -> some View {
+        if editing {
+            content
+        } else {
+            content.simultaneousGesture(LongPressGesture(minimumDuration: Wiggle43.hold, maximumDistance: 8).onEnded { (_: Bool) in
+                Wiggle43.log.debug("longPress.ended")
+                enter()
+            })
+        }
     }
 }
 
