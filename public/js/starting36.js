@@ -4,25 +4,51 @@
 // {ready, version, steps:[{id, label, status:'wait'|'run'|'ok', ms}]}. Ingen svar = første steg er aktivt.
 // Når ready: «KLAR» i 0,8 s og så hard reload (service worker skipWaiting + location.reload()).
 // Den statiske public/starting.html (SERVER36) er den samme siden for proxyen (502/503) mens appen er nede.
+// Prompt 44 (FEIL: oppdateringen hoppet mellom Dashboard og oppstartsskjermen): /api/health sa restarting:true under hele
+// nedlastingen/byggingen (updating), og oppstartsskjermen gikk ut med en gang serveren (den GAMLE versjonen) svarte ready
+// → reload → vist igjen ved neste sjekk. Nå er det en tilstandsmaskin: idle → downloading → installing → restarting → done.
+//   - Vises bare når serveren/updateren sier restarting (eller 503 «starting»), eller etter 3 feilede helsesjekker på rad
+//     over minst 6 s. Én feil gjør ingenting. Under nedlasting/installasjon blir man på siden (bare kortet viser fremdrift).
+//   - Når den først vises, går den aldri tilbake. Den forlates bare når /api/ready (ellers /api/health) svarer ok to ganger
+//     på rad og versjonen er den nye. Da én location.replace(?v=<to>) via upd44.js (koordinert mellom faner).
 import { fig, hostFor } from './glimt-figs.js';
 import { gs } from './glimt35.js';
+import { reloadOnce, sameVer, afterReload } from './upd44.js';
 
 const STEPS = [['db', 'Starter databasen'], ['migrate', 'Kjører migrasjoner'], ['api', 'Starter web og API'], ['ai', 'Vekker Glimt og AI-modellene'], ['integrations', 'Kobler til integrasjoner']];
 const LINES = ['Serveren starter på nytt etter oppdateringen. Glimt sover litt …', 'Glimt våkner og sjekker at alt er på plass.', 'Nesten klar. Glimt varmer opp modellene.', 'Alt kjører! Laster inn Homelab …'];
-const S = { on: false, t0: 0, steps: null, ready: false, ver: '', fails: 0, timer: null, tick: null };
+const S = { on: false, t0: 0, steps: null, ready: false, ver: '', to: null, okRun: 0, timer: null, tick: null };
 const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 async function probe() {
   try {
     const r = await fetch('/api/health', { cache: 'no-store', credentials: 'same-origin' });
-    // Prompt 40: 503 med X-Homelab-State: starting = serveren starter faktisk (proxyen/serveren sier det selv).
-    if (r.status === 503 && /starting/i.test(r.headers.get('x-homelab-state') ?? '')) return { down: true, starting: true };
-    if (r.status === 502 || r.status === 503 || r.status === 504) return { down: true };
     const j = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => null) : null;
+    // 503 med X-Homelab-State: starting = serveren starter faktisk (proxyen/serveren sier det selv).
+    if (r.status === 503 && /starting/i.test(r.headers.get('x-homelab-state') ?? '')) return { down: true, starting: true, steps: Array.isArray(j?.steps) ? j.steps : null };
+    if (r.status === 502 || r.status === 503 || r.status === 504) return { down: true };
     // Eldre server (eller ikke innlogget): svarer den i det hele tatt, kjører den.
     if (!r.ok || !j || !('ready' in j)) return { up: true, ready: true };
-    return { up: true, ready: !!j.ready, restarting: j.restarting === true, steps: Array.isArray(j.steps) ? j.steps : null, ver: j.version ?? '' };
+    // Prompt 44: bare phase/state «restarting» betyr omstart. Eldre server (uten phase) satte restarting:true også under
+    // nedlasting (state: 'updating') – det teller ikke.
+    const phase = j.phase ?? (j.state === 'updating' ? 'installing' : j.restarting ? 'restarting' : 'idle');
+    const restarting = phase === 'restarting' || j.state === 'restarting' || j.state === 'starting';
+    return { up: true, ready: !!j.ready, restarting, phase, updating: j.updating === true, steps: Array.isArray(j.steps) ? j.steps : null, ver: j.version ?? '', to: j.updatingTo ?? null };
   } catch { return { down: true }; }
+}
+/** /api/ready (SERVER44) → {ok, version} og /api/health må begge si klar (og ikke «restarting»). /api/ready 404 → bare helsa. */
+async function readyProbe() {
+  let rd = null;
+  try {
+    const r = await fetch('/api/ready', { cache: 'no-store', credentials: 'same-origin' });
+    if (r.status !== 404) {
+      const j = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => null) : null;
+      rd = { ok: r.ok && (!j || j.ok === true || j.ready === true || j.status === 'ok'), ver: j?.version ?? '' };
+    }
+  } catch { return { ok: false }; }
+  const h = await probe();
+  const ok = (!rd || rd.ok) && h.up && h.ready && !h.restarting;
+  return { ok, ver: rd?.ver || h.ver || '', steps: h.steps, updating: h.updating };
 }
 
 function stepsNow() {
@@ -35,7 +61,8 @@ function html() {
   const L = stepsNow(), done = L.filter((x) => x.st === 'ok').length, i = L.findIndex((x) => x.st !== 'ok');
   const phase = S.ready ? 3 : i < 2 && i >= 0 ? 0 : i < 4 && i >= 0 ? 1 : 2;
   const mood = phase === 0 ? 'sov' : phase === 3 ? 'talk' : 'idle';
-  const pct = S.ready ? 100 : Math.round((done / L.length) * 100), R = 92, C = 2 * Math.PI * R;
+  // KLAR / 100 % bare når den nye versjonen svarer; mens vi venter maks 95 %.
+  const pct = S.ready ? 100 : Math.min(95, Math.round((done / L.length) * 100)), R = 92, C = 2 * Math.PI * R;
   let who = 'glimt'; try { who = hostFor(gs().char); } catch { /* */ }
   const el = Math.floor((Date.now() - S.t0) / 1000), ver = String(S.ver || '').split('.').slice(0, 2).join('.');
   const ic = (st) => (st === 'ok' ? '<svg class="ns36-ok" width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#2f7d4f"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : st === 'run' ? '<span class="ns36-spin"></span>' : '<span class="ns36-wait"></span>');
@@ -45,7 +72,7 @@ function html() {
       <span class="ns36-orb" aria-hidden="true"><i style="background:#ffd9c2;transform:rotate(0deg) translateY(-104px)"></i><i style="background:#3fbf9a;transform:rotate(120deg) translateY(-104px)"></i><i style="background:#a78bfa;transform:rotate(240deg) translateY(-104px)"></i></span>
       <span class="ns36-fig${phase === 0 ? '' : ' fl'}">${fig(who, 128, mood)}</span>${phase === 0 ? [0, 1, 2].map((k) => `<span class="ns36-z" style="font-size:${14 + k * 4}px;animation-delay:${k * 0.8}s">z</span>`).join('') : ''}
       <span class="ns36-pct">${pct} %</span></span>
-    <div class="ns36-t"><span class="ns36-k">${S.ready ? 'KLAR' : 'STARTER OPP'}</span><b>Nordlys<span>OS</span>${ver ? ` <em>${esc(ver)}</em>` : ''}</b><span class="ns36-line" role="status">${LINES[phase]}</span></div>
+    <div class="ns36-t"><span class="ns36-k">${S.ready ? 'KLAR' : S.to ? 'STARTER PÅ NYTT' : 'STARTER OPP'}</span><b>Nordlys<span>OS</span>${ver ? ` <em>${esc(ver)}</em>` : ''}</b><span class="ns36-line" role="status">${S.ready ? LINES[3] : S.to && done >= L.length ? 'Starter på nytt …' : LINES[phase]}</span></div>
     <div class="ns36-steps">${L.map((x) => `<div class="ns36-st${x.st === 'wait' ? ' w' : ''}"><span class="ns36-ic">${ic(x.st)}</span><span class="ns36-n">${esc(x.n)}</span><span class="ns36-ms">${x.st === 'ok' && x.ms ? `${(x.ms / 1000).toFixed(1).replace('.', ',')} s` : x.st === 'run' ? '…' : ''}</span></div>`).join('')}</div>
     <div class="ns36-foot"><span>${S.ready ? 'Laster inn siden …' : `Siden lastes inn automatisk når serveren svarer · ${el} s`}</span>${!S.ready && el > 180 ? '<span>Det tar lengre tid enn vanlig.</span>' : ''}${!S.ready && el > 40 ? '<a href="" data-ns-reload>Last inn på nytt nå</a>' : ''}</div>
   </div>`;
@@ -76,7 +103,9 @@ const figKey = (el) => `${el.querySelector('.ns36-fig')?.className}|${el.querySe
 
 function show() {
   if (S.on) return;
-  S.on = true; S.t0 = Date.now(); S.ready = false; S.steps = null;
+  S.on = true; S.t0 = Date.now(); S.ready = false; S.steps = null; S.okRun = 0;
+  const u = updating(); if (u?.version) S.to = u.version;
+  if (S.to) S.ver = S.to;
   const o = document.createElement('div');
   memo.key = ''; memo.steps = ''; memo.head = ''; memo.foot = '';
   o.id = 'ns36'; o.className = 'ns36'; o.setAttribute('role', 'dialog'); o.setAttribute('aria-label', 'Serveren starter opp');
@@ -86,73 +115,74 @@ function show() {
   S.tick = setInterval(paint, 1000);
   clearTimeout(S.timer); poll();
 }
-async function hardReload() {
+async function swSkip() {
   try { const r = await navigator.serviceWorker?.getRegistration?.(); r?.waiting?.postMessage?.({ type: 'SKIP_WAITING' }); await r?.update?.(); } catch { /* */ }
+}
+function finish() {
+  S.ready = true; clearUpdating(); paint(); clearInterval(S.tick);
   // Prompt 38: fade ut 0,3 s før reload, mot samme mørke bakgrunn (ingen hvit blink). Siden står til reload (ingen restart).
-  document.documentElement.style.background = '#101a2e';
-  document.getElementById('ns36')?.classList.add('out');
-  setTimeout(() => location.reload(), 300);
+  setTimeout(() => {
+    reloadOnce(S.to || S.ver, { before: async () => { await swSkip(); document.documentElement.style.background = '#101a2e'; document.getElementById('ns36')?.classList.add('out'); await new Promise((r) => setTimeout(r, 300)); } });
+  }, 800);
 }
 async function poll() {
-  const r = await probe();
-  if (r.up) { S.steps = r.steps ?? S.steps; if (r.ver) S.ver = r.ver; if (r.ready) { S.ready = true; clearUpdating(); paint(); clearInterval(S.tick); setTimeout(hardReload, 800); return; } }
+  const r = await readyProbe();
+  const fresh = r.ok && (!S.to || !r.ver || sameVer(r.ver, S.to));
+  // Stegene fra den gamle versjonen (som fortsatt svarer før den stoppes) vises ikke som «ferdig».
+  if (r.steps && (!S.to || !r.ver || sameVer(r.ver, S.to))) S.steps = r.steps;
+  // Ny versjon svarer ikke, men oppdateringen er over (feilet/rullet tilbake): etter 45 s godtas den som svarer.
+  const ended = r.ok && S.to && !fresh && r.updating === false && Date.now() - S.t0 > 45_000;
+  if (fresh || ended) { S.okRun++; if (r.ver && fresh) S.ver = r.ver; } else S.okRun = 0;
+  if (S.okRun >= 2) { finish(); return; }
   paint();
   S.timer = setTimeout(poll, 1500);
 }
 
-/* Prompt 40 (claude-code-starter-blink-ved-oppdater.md): siden blinket inn ved vanlig ⌘R/F5.
-   Den vises nå bare når (1) «Oppdater nå» har satt hl_updating i sessionStorage, (2) serveren sier at den starter
-   (503 + X-Homelab-State: starting, eller /api/health → {restarting:true}), eller (3) to helsesjekker på rad (minst 3 s
-   mellom) feiler etter at appen var lastet og koblet til. Tapt kontakt under lasting (første 5 s) og unload teller ikke,
-   og selv da ventes det 1,5 s – kommer serveren tilbake innen da, vises ingenting. */
-const W = { loadedAt: Date.now(), unloading: false, connected: false, pend: null };
+/* Prompt 40/44: når vises oppstartsskjermen?
+   (1) serveren sier at den starter på nytt (503 + X-Homelab-State: starting, eller /api/health phase/state «restarting»),
+   (2) updateren sier «restarting» (sysupdate.js → hl:restarting), eller
+   (3) helsesjekken feiler 3 ganger på rad over minst 6 s etter at appen var lastet og koblet til (hysterese).
+   Tapt kontakt under lasting (første 5 s) og unload teller ikke. Under nedlasting/installasjon vises den aldri. */
+const W = { loadedAt: Date.now(), unloading: false, connected: false, firstFail: 0, fails: 0, chk: null };
 const updating = () => { try { return JSON.parse(sessionStorage.getItem('hl_updating') || 'null'); } catch { return null; } };
-/** Kalles av «Oppdater nå» (sysupdate.js): neste tap av kontakt er en ekte restart. */
+/** Kalles av «Oppdater nå» (sysupdate.js): husker hvilken versjon vi oppdaterer til. */
 export function markUpdating(version) { try { sessionStorage.setItem('hl_updating', JSON.stringify({ at: Date.now(), version: version ?? null })); } catch { /* privat modus */ } }
 const clearUpdating = () => { try { sessionStorage.removeItem('hl_updating'); } catch { /* */ } };
-function showSoon() {
-  if (S.on || W.pend || W.unloading) return;
-  W.pend = setTimeout(async () => {
-    W.pend = null;
-    if (W.unloading || S.on) return;
-    const r = await probe();
-    if (W.unloading) return;
-    // Svarer serveren igjen (og starter ikke), var det bare et hikke.
-    if (r.up && r.ready !== false && !r.restarting && !updating()) return;
-    const u = updating(); if (u?.version) S.ver = u.version;
-    show();
-  }, 1500);
+function showNow(to) {
+  if (S.on || W.unloading) return;
+  if (to) S.to = to;
+  show();
 }
 
 /** Overvåker kontakten med serveren (hvert 20. s mens fanen er synlig, og med en gang når nettleseren er online igjen). */
 export function watchServer() {
-  const off = () => { W.unloading = true; clearTimeout(W.pend); W.pend = null; };
+  afterReload();
+  const off = () => { W.unloading = true; clearTimeout(W.chk); };
   window.addEventListener('pagehide', off);
   window.addEventListener('beforeunload', off);
   window.addEventListener('pageshow', (e) => { if (e.persisted) { W.unloading = false; W.loadedAt = Date.now(); } });
-  // Kom vi tilbake etter «Oppdater nå» og serveren er klar, er oppdateringen ferdig.
-  let last = 0;
   const check = async () => {
+    clearTimeout(W.chk);
     if (S.on || document.hidden || W.unloading) return;
     const r = await probe();
-    if (W.unloading) return;
-    if (r.starting || (r.up && r.restarting)) { showSoon(); return; }
+    if (W.unloading || S.on) return;
+    if (r.starting || (r.up && r.restarting)) { showNow(r.to); return; }
     if (r.down) {
       // De første 5 s etter lasting regnes ikke som «mistet kontakt», og bare etter at appen har vært koblet til.
-      if (Date.now() - W.loadedAt < 5000 || !W.connected) { if (updating()) showSoon(); return; }
-      S.fails++;
-      if (S.fails >= 2 && Date.now() - last >= 3000) showSoon(); else { last = Date.now(); setTimeout(check, 3000); }
+      if (Date.now() - W.loadedAt < 5000 || !W.connected) return;
+      W.fails++; if (!W.firstFail) W.firstFail = Date.now();
+      if (W.fails >= 3 && Date.now() - W.firstFail >= 6000) { showNow(); return; }
+      W.chk = setTimeout(check, 2500);
       return;
     }
-    S.fails = 0; W.connected = true;
-    if (r.up && r.ready && updating()) clearUpdating();
-    if (r.up && r.ready === false && updating()) showSoon();
+    W.fails = 0; W.firstFail = 0; W.connected = true;
+    if (r.up && r.ready && !r.updating && updating() && Date.now() - (updating().at || 0) > 15 * 60_000) clearUpdating();
   };
   setTimeout(check, 5000);
   setInterval(check, 20_000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
   window.addEventListener('online', check);
-  // Oppdateringen er kommet til «Starter serveren på nytt»: vis siden (etter 1,5 s). sysupdate.js sender hl:restarting.
-  document.addEventListener('hl:restarting', () => { if (!updating()) markUpdating(); showSoon(); });
+  // Updateren er kommet til «Starter på nytt» (sysupdate.js sender hl:restarting med versjonen i detail).
+  document.addEventListener('hl:restarting', (e) => { const to = e.detail?.to ?? updating()?.version ?? null; if (to) markUpdating(to); showNow(to); });
 }
 export const showStarting = show;

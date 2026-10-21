@@ -5,6 +5,12 @@
 // Svarformene står ved hver rute i server/media43.js. 404 (eldre server) og «ikke satt opp» gir tomtilstander, ingen feil.
 import { esc } from './util.js';
 import { orb43 } from './orb43.js';
+import { mountPlayback } from './playback44.js'; // prompt 44: fanen Avspilling (Plex/Jellyfin)
+import { glimtSource } from './glimt-input44.js'; // prompt 44: forslag i Glimt-feltet (Tab)
+// Prompt 44 (claude-code-media-arr.md, -interaktivt-sok-504.md, -avspilling-plex-jellyfin.md, web):
+// søk i biblioteket, plakater i 2:3 (Kommer snart som liggende rader), Kommer snart Uke · Liste, banner med fanart i serie/film,
+// last ned på nytt / slett fil, felles servervalg («Hjemme/Hytta», ?server= på alle kall), frem/tilbake i nettleseren
+// (#/media/sonarr/s/<id>/sok …), fanen Avspilling, og interaktivt søk som jobb med status per indekser (cache 10 min).
 
 if (!document.querySelector('link[data-m43-css]')) {
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '/assets/css/media43.css'; l.dataset.m43Css = ''; document.head.appendChild(l);
@@ -15,19 +21,24 @@ if (!document.querySelector('link[data-hl-fonts],link[data-m43-fonts]')) {
   document.head.appendChild(f);
 }
 
-const TABS = [['kom', 'Kommer snart'], ['son', 'Sonarr'], ['rad', 'Radarr'], ['qb', 'qBittorrent'], ['pro', 'Prowlarr']];
+const TABS = [['kom', 'Kommer snart'], ['son', 'Sonarr'], ['rad', 'Radarr'], ['qb', 'qBittorrent'], ['pro', 'Prowlarr'], ['av', 'Avspilling']];
+const lsg = (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, lss = (k, v) => { try { localStorage.setItem(k, v); } catch { /* */ } };
 const M = {
   tab: 'kom', det: null, srch: null, libF: 'all', seg: 'all', fq: 'all', open: {}, grab: {}, busy: {}, toast: '', sh: null,
   add: null, act: null, edit: null, mag: null, ix: null, gq: '', gl: null, missing: false, restricted: '',
   up: null, ser: null, mov: null, tor: null, idx: null, disk: null, prof: null, status: null, prefs: null, access: null, detail: null, rel: null, files: null, idxT: {},
   err: {},
+  libQ: '', komv: lsg('media_komv', 'uke') === 'liste' ? 'liste' : 'uke', site: lsg('media_site', '') || null, servers: null, srvOpen: false, job: null, undo: null,
 };
+const relCache = new Map(); // prompt 44: interaktivt søk caches i 10 min per episode/film
 let root = null, pollT = 0, toastT = 0, magT = 0, lookT = 0, schT = 0, wasNarrow = null;
 const narrow = () => innerWidth < 900;
 
 /* ---------------- Data ---------------- */
 
 async function mapi(path, { method = 'GET', json, quiet } = {}) {
+  // Prompt 44: felles servervalg – ?server=<id> på alle Media-kall (ikke på selve serverlista).
+  if (M.site && !/^\/servers(\/|\?|$)/.test(path)) path += `${path.includes('?') ? '&' : '?'}server=${encodeURIComponent(M.site)}`;
   const r = await fetch(`/api/media${path}`, { method, credentials: 'same-origin', cache: 'no-store', headers: json !== undefined ? { 'Content-Type': 'application/json' } : {}, body: json !== undefined ? JSON.stringify(json) : undefined });
   if (r.status === 401) { location.href = '/login'; throw new Error('Logg inn på nytt'); }
   const j = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => ({})) : {};
@@ -48,8 +59,21 @@ const loadIdx = () => get('idx', '/indexers');
 const loadDisk = () => get('disk', '/rootfolders');
 const loadProf = () => (M.prof && !M.prof.error ? Promise.resolve() : get('prof', '/qualityprofiles'));
 const loadStatus = () => get('status', '/status', () => { if (M.status?.settings) M.prefs = M.status.settings; });
+function loadServers() {
+  if (M.servers) return;
+  M.servers = [];
+  fetch('/api/media/servers?status=1', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => {
+    const L = Array.isArray(j) ? j : j?.servers ?? j?.items ?? null;
+    if (!Array.isArray(L)) return;
+    M.servers = L.filter((x) => x && x.id != null);
+    const sel = M.servers.find((x) => x.selected); if (sel) M.site = String(sel.id);
+    if (!M.site || !M.servers.some((x) => String(x.id) === String(M.site))) { const d = M.servers.find((x) => x.default) ?? M.servers[0]; M.site = d ? String(d.id) : null; }
+    paintTop();
+  }).catch(() => {});
+}
 function enterTab() {
   if (M.missing || M.restricted) return;
+  loadServers();
   if (M.tab === 'kom') { loadUp(); }
   if (M.tab === 'son' && !M.det && !M.srch) loadSer();
   if (M.tab === 'rad' && !M.det && !M.srch) loadMov();
@@ -62,12 +86,60 @@ async function loadDetail() {
   try { M.detail = await mapi(d.k === 's' ? `/series/${d.id}` : `/movies/${d.id}`); } catch (e) { M.detail = { error: e.message }; }
   paint();
 }
-async function loadRel() {
+// Prompt 44 (claude-code-media-interaktivt-sok-504.md): søket kjøres som jobb på serveren. POST /release/search → {jobId},
+// så status per indekser (SSE …/events, ellers GET …/:jobId hvert 1,5 s) med delvise treff. Eldre server: GET /release med
+// ett nytt forsøk ved 502/503/504 etter 2 s. Resultatet caches i 10 min per episode/film («Hentet for 2 min siden · Søk igjen»).
+const relKey = (s) => (s.k === 'm' ? `m:${s.id}` : s.episodeId ? `e:${s.episodeId}` : `s:${s.id}:${s.season}`);
+async function loadRel(force = false) {
   const s = M.srch; if (!s) return;
-  M.rel = null; paint();
-  const q = s.k === 'm' ? `movieId=${s.id}` : s.episodeId ? `episodeId=${s.episodeId}` : `seriesId=${s.id}&seasonNumber=${s.season}`;
-  try { M.rel = await mapi(`/release?${q}`); } catch (e) { M.rel = { error: e.message }; }
-  paint();
+  const key = `${M.site ?? ''}|${relKey(s)}`, c = relCache.get(key);
+  if (!force && c && Date.now() - c.at < 10 * 60_000) { M.rel = { ...c.data, cachedAt: c.at }; M.job = null; return paint(); }
+  M.rel = null; M.job?.es?.close?.(); M.job = { t0: Date.now(), state: 'start', indexers: [], items: [] }; paint();
+  const body = s.k === 'm' ? { movieId: s.id } : s.episodeId ? { episodeId: s.episodeId } : { seriesId: s.id, seasonNumber: s.season };
+  if (s.re) body.redownload = true;
+  if (force) body.force = true;
+  let jobId = null;
+  try { const r = await mapi('/release/search', { method: 'POST', json: body }); jobId = r.jobId ?? r.id ?? null; if (!jobId && r.items) { done(r); return; } if (jobId && r.cached) { try { const j0 = await mapi(`/release/search/${encodeURIComponent(jobId)}`); if (j0?.state === 'done' && j0.result) { done({ ...j0.result, indexers: j0.indexers }); return; } } catch { /* vanlig flyt */ } } }
+  catch (e) { if (e.status !== 404 && e.status !== 405) { M.job = null; M.rel = { error: e.message }; return paint(); } }
+  if (!jobId) return legacy();
+  const job = M.job; job.id = jobId;
+  const apply = (j) => {
+    if (M.job !== job) return;
+    job.indexers = (j.indexers ?? job.indexers).map(ixN); job.state = j.state ?? job.state;
+    if (Array.isArray(j.partial) && j.partial.length) job.items = j.partial; else if (Array.isArray(j.items) || Array.isArray(j.releases)) job.items = j.items ?? j.releases;
+    if (j.context) job.context = j.context;
+    if (j.state === 'done' || j.done) return done(j.result ? { ...j.result, indexers: j.indexers } : j);
+    if (j.state === 'failed' || j.state === 'error') { M.job = null; M.rel = { error: j.error || 'Søket feilet.', allFailed: true }; return paint(); }
+    paintMain();
+  };
+  const ixN = (x) => ({ ...x, state: x.state === 'done' ? 'ok' : x.state === 'failed' ? 'fail' : x.state === 'running' || x.state === 'pending' || x.state === 'start' ? 'run' : x.state });
+  const poll = async () => { while (M.job === job) { await new Promise((ok) => setTimeout(ok, 1500)); if (M.job !== job) return; try { apply(await mapi(`/release/search/${encodeURIComponent(jobId)}`)); } catch (e) { if (e.status === 404) { M.job = null; return legacy(); } } } };
+  try {
+    const es = new EventSource(`/api/media/release/search/${encodeURIComponent(jobId)}/events${M.site ? `?server=${encodeURIComponent(M.site)}` : ''}`, { withCredentials: true });
+    job.es = es; let got = false;
+    const on = (ev) => { got = true; let j; try { j = JSON.parse(ev.data); } catch { return; } const t = ev.type;
+      if (t === 'indexer.start' || t === 'indexer.done' || t === 'indexer.fail') { const L = job.indexers.filter((x) => x.name !== j.name); job.indexers = [...L, { ...j, state: t === 'indexer.start' ? 'run' : t === 'indexer.done' ? 'ok' : 'fail' }]; if (Array.isArray(j.items)) job.items = [...job.items, ...j.items]; paintMain(); return; }
+      if (t === 'done') { es.close(); return done(j.result ? { ...j.result, indexers: job.indexers } : { ...j, items: j.items ?? j.releases }); }
+      if (t === 'failed') { es.close(); if (M.job !== job) return; M.job = null; M.rel = { error: j.error || 'Søket feilet.', allFailed: !!j.allFailed }; return paint(); }
+      if (t === 'partial') { if (Array.isArray(j.items)) job.items = j.items; job.partialCount = j.count; paintMain(); return; }
+      apply(j); };
+    ['message', 'snapshot', 'status', 'partial', 'failed', 'indexer.start', 'indexer.done', 'indexer.fail', 'done'].forEach((t) => es.addEventListener(t, on));
+    es.onerror = () => { es.close(); if (!got && M.job === job) poll(); };
+  } catch { poll(); }
+  function done(j) {
+    const d = { ...j, items: j.items ?? j.releases ?? [], indexers: (j.indexers ?? job?.indexers ?? []).map((x) => ({ ...x, state: x.state === 'done' ? 'ok' : x.state === 'failed' ? 'fail' : x.state })) };
+    const fails = d.indexers.filter((x) => x.state === 'fail' || x.error), all = d.indexers.length && fails.length === d.indexers.length && !d.items.length;
+    if (all) { M.job = null; M.rel = { error: 'Ingen indeksere svarte. Sjekk Prowlarr → Helse.', allFailed: true }; return paint(); }
+    relCache.set(key, { at: Date.now(), data: d }); M.job = null; M.rel = d; paint();
+  }
+  async function legacy() {
+    M.job = { t0: Date.now(), state: 'legacy', indexers: [], items: [] }; paintMain();
+    const q = s.k === 'm' ? `movieId=${s.id}` : s.episodeId ? `episodeId=${s.episodeId}` : `seriesId=${s.id}&seasonNumber=${s.season}`;
+    for (let i = 0; i < 2; i++) {
+      try { const r = await mapi(`/release?${q}`); M.job = null; done(r); return; }
+      catch (e) { if (i === 0 && [502, 503, 504].includes(e.status)) { await new Promise((ok) => setTimeout(ok, 2000)); continue; } M.job = null; M.rel = { error: e.status === 504 ? 'Indekserne brukte for lang tid (504). Prøv igjen.' : e.message }; return paint(); }
+    }
+  }
 }
 function poll() {
   clearTimeout(pollT);
@@ -86,6 +158,9 @@ function poll() {
 
 const SC = { ok: 'ok', dl: 'bad', miss: 'warn', stall: 'warn', pause: 'mut', wait: 'mut', ann: 'mut', off: 'mut', seed: 'ok', meta: 'mut', queued: 'mut', check: 'mut', error: 'bad' };
 const tone = (st) => `t-${SC[st] ?? 'mut'}`;
+/** Prompt 44: plakat alltid i 2:3 (aspect-ratio), med statusprikk. */
+const poster = (x, cls) => `<span class="${cls}" style="background-color:${esc(x?.color || '#3c4a5c')}${x?.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"><span class="m43-dot ${tone(x?.status)}"></span></span>`;
+const norm44 = (t) => String(t ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9æøå]+/g, '');
 const art = (x, cls = 'm43-art') => `<div class="${cls}" style="background-color:${esc(x?.color || '#3c4a5c')}${x?.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"></div>`;
 const pill = (on) => (on ? ' on' : '');
 const chip = (n, on, attr) => `<button type="button" class="m43-chip${pill(on)}" ${attr}>${esc(n)}</button>`;
@@ -100,6 +175,7 @@ const ic = {
   search: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"/></svg>',
   list: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
   mark: (on, n = 18) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4-6 4z"/></svg>`,
+  re: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg>',
   magnet: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4v7a6 6 0 0 0 12 0V4M6 4h4v7a2 2 0 0 0 4 0V4h4M6 8h4M14 8h4"/></svg>',
 };
 function toast(t) { clearTimeout(toastT); M.toast = t; paintToast(); toastT = setTimeout(() => { M.toast = ''; paintToast(); }, 3600); }
@@ -117,11 +193,21 @@ function topHtml() {
   const tabs = TABS.map(([k, n]) => `<button type="button" class="m43-tab${pill(M.tab === k)}" data-m43-tab="${k}" aria-current="${M.tab === k ? 'page' : 'false'}">${n}</button>`).join('');
   return `<div class="m43-top"><div class="m43-tl">
     <b class="m43-h">Media</b>
-    <div class="m43-tabs" role="tablist" aria-label="Media">${tabs}</div>
+    <div class="m43-tabs" role="tablist" aria-label="Media">${tabs}</div>${srvHtml()}
     <form class="m43-gl" data-m43-glf role="search"><span class="m43-glo">${orb43(20, M.gl?.busy ? 'busy' : '')}</span><input name="gq" value="${esc(M.gq)}" placeholder="Spør Glimt: «legg til Severance i 4K»" aria-label="Spør Glimt" autocomplete="off"></form>
     <button type="button" class="m43-ib" data-m43="set" aria-label="Innstillinger for Media" title="Innstillinger for Media">${ic.set}</button>
     <button type="button" class="m43-ib ink" data-m43="close" aria-label="Lukk Media" title="Lukk (Esc)">${ic.x}</button>
   </div></div>`;
+}
+/* Prompt 44: felles servervalg (Hjemme/Hytta) ved fanene for Sonarr, Radarr, qBittorrent og Prowlarr. */
+const SVC = { son: ['sonarr', 'Sonarr'], rad: ['radarr', 'Radarr'], qb: ['qbit', 'qBittorrent'], pro: ['prowlarr', 'Prowlarr'] };
+function srvHtml() {
+  const L = M.servers, sv = SVC[M.tab];
+  if (!sv || !L?.length) return '';
+  const cur = L.find((x) => String(x.id) === String(M.site)) ?? L[0];
+  const st = (x) => { const c = x?.[sv[0]] ?? x?.[sv[0] === 'qbit' ? 'qbittorrent' : sv[0]]; const v0 = typeof c === 'object' && c ? c : {}, v = { ...v0, ...(typeof v0.status === 'object' && v0.status ? v0.status : {}) }; if (v0.configured === false) return { url: '', t: 'Ikke satt opp', c: 'mut' }; const ms = +v.ms || 0; const ok = v.ok ?? v.connected ?? (typeof v0.status === 'string' ? v0.status === 'ok' : null); return { url: v.url ?? '', t: ok === false ? 'Svarer ikke' : ms > 1500 ? `Treg · ${(ms / 1000).toFixed(1).replace('.', ',')} s` : ok ? 'Tilkoblet' : c ? 'Ukjent' : 'Ikke satt opp', c: ok === false || !c ? 'bad' : ms > 1500 ? 'warn' : ok ? 'ok' : 'mut' }; };
+  const s0 = st(cur);
+  return `<div class="m44-srv"><button type="button" class="m44-sb" data-m44="srv" aria-expanded="${M.srvOpen}" aria-haspopup="menu"><span class="m43-dot t-${s0.c}"></span>${esc(sv[1])} · ${esc(cur.name ?? cur.id)} <span aria-hidden="true">▾</span></button>${M.srvOpen ? `<div class="m44-sm" role="menu"><span class="m43-lab">VELG SERVER · GJELDER SONARR, RADARR, QBITTORRENT OG PROWLARR</span>${L.map((x) => { const t = st(x), on = String(x.id) === String(cur.id); return `<button type="button" role="menuitemradio" aria-checked="${on}" class="m44-si${on ? ' on' : ''}" data-m44-site="${esc(x.id)}"><span class="m43-dot t-${t.c}"></span><span class="m43-col grow mw0"><b>${esc(x.name ?? x.id)}</b><span class="mono m43-sm t-mut ell">${esc(t.url || '–')}</span></span><span class="m43-sm t-${t.c}">${esc(t.t)}</span><b class="acc">${on ? '✓' : ''}</b></button>`; }).join('')}<button type="button" class="m44-sadd" data-m43="integ">+ Legg til ${esc(sv[1])}-server</button></div>` : ''}</div>`;
 }
 function glHtml() {
   const g = M.gl; if (!g) return '';
@@ -188,13 +274,20 @@ function komHtml() {
     return `<button type="button" class="m43-ki" ${go}><div class="m43-kp" style="background-color:${esc(x.color || '#3c4a5c')}${x.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"><b>${esc(x.title)}</b><span class="m43-dot ${tone(x.status)}"></span></div>
       <span class="m43-ke"><b>${esc(x.code)}</b> <span class="t-mut">${esc(x.time ?? '')}</span></span><b class="m43-s ${tone(x.status)}">${esc(x.statusText ?? '')}</b></button>`;
   };
-  const head = `<div class="m43-row sb xwrap"><b class="m43-h1">Kommer snart</b><div class="m43-row g16"><span class="t-mut">${esc(rangeTxt(U.from, U.to))}</span>${goCal}</div></div>`;
+  const vsw = `<div class="m44-seg" role="tablist" aria-label="Visning">${[['uke', 'Uke'], ['liste', 'Liste']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${M.komv === k}" class="${M.komv === k ? 'on' : ''}" data-m44-komv="${k}">${n}</button>`).join('')}</div>`;
+  const head = `<div class="m43-row sb xwrap"><b class="m43-h1">Kommer snart</b><div class="m43-row g16 xwrap">${narrow() ? '' : vsw}<span class="t-mut">${esc(rangeTxt(U.from, U.to))}</span>${goCal}</div></div>`;
+  // Prompt 44: plakaten beholder 2:3 (64 × 96) og beskjæres ikke; kortet er en liggende rad.
+  const row = (x) => `<button type="button" class="m44-kr" data-m43-open="${x.kind === 'movie' ? 'm' : 's'}:${x.kind === 'movie' ? x.movieId : x.seriesId}">${poster(x, 'm44-kpo')}<div class="m43-col grow mw0 g3"><b class="m44-kt">${esc(x.title)}</b><span class="m43-sm t-mut ell">${esc([x.code, x.time].filter(Boolean).join(' · '))}</span><b class="m43-s ${tone(x.status)}">${esc(x.statusText ?? '')}</b></div></button>`;
+  const pill2 = (x) => `<span class="m44-sp ${tone(x.status)}">${esc(x.status === 'ok' && x.player ? `${x.statusText} · ▶ ${x.player}` : x.statusText ?? '')}</span>`;
   let body;
   if (narrow()) {
     const L = days.filter((d) => d.items?.length);
     body = L.length ? L.map((d) => `<div class="m43-col g8"><div class="m43-kdh"><span class="m43-lab acc">${esc(d.label)}</span><b>${esc(d.title)}</b></div>${d.items.map((x) => item(x, true)).join('')}</div>`).join('') : '<div class="m43-empty"><span>Ingenting kommer de neste 7 dagene.</span></div>';
+  } else if (M.komv === 'liste') {
+    const L = days.filter((d) => d.items?.length);
+    body = L.length ? `<div class="m44-kl">${L.map((d) => `<section class="m44-kls"><div class="m44-klh"><span class="m43-lab acc">${esc(d.label)}</span><b>${esc(d.title)}</b></div>${d.items.map((x) => `<button type="button" class="m44-klr" data-m43-open="${x.kind === 'movie' ? 'm' : 's'}:${x.kind === 'movie' ? x.movieId : x.seriesId}">${poster(x, 'm44-lpo')}<div class="m43-col grow mw0 g3"><b class="m44-klt">${esc(x.title)}</b><span class="t-mut m43-sm ell">${esc(x.kind === 'movie' ? `Film · ${x.episodeTitle || 'Digital utgivelse'}` : [x.code, x.episodeTitle].filter(Boolean).join(' · '))}</span></div><span class="mono m44-klm">${esc(x.time ?? '')}</span><span class="mono t-mut m44-klm wide">${esc(x.profile ?? x.quality ?? '')}</span>${pill2(x)}</button>`).join('')}</section>`).join('')}</div>` : '<div class="m43-empty"><span>Ingenting kommer de neste 7 dagene.</span></div>';
   } else {
-    body = `<div class="m43-week">${days.map((d) => `<div class="m43-day"><div class="m43-dh${d.today ? ' today' : d.items?.length ? ' has' : ''}"><b>${esc(d.short)}</b><span class="mono">${esc(d.countText ?? '')}</span></div>${(d.items ?? []).map((x) => item(x)).join('') || '<span class="t-mut m43-sm">Ingenting</span>'}</div>`).join('')}</div>`;
+    body = `<div class="m43-week">${days.map((d) => `<div class="m43-day"><div class="m43-dh${d.today ? ' today' : d.items?.length ? ' has' : ''}"><b>${esc(d.short)}</b><span class="mono">${esc(d.countText ?? '')}</span></div>${(d.items ?? []).map(row).join('') || '<span class="t-mut m43-sm">Ingenting</span>'}</div>`).join('')}</div>`;
   }
   const act = (U.downloading ?? []);
   const strip = act.length ? `<div class="m43-strip"><button type="button" class="m43-sgo" data-m43-tab="qb">Lastes ned ›</button>${act.map((t) => `<div class="m43-sit">${art(t, 'm43-art xs')}<div class="m43-col grow g5"><span class="ell b7">${esc(`${t.title}${t.code ? ` · ${t.code}` : ''} · ${t.statusText ?? ''}`)}</span><div class="m43-sbar"><i style="width:${Math.max(0, Math.min(100, t.progress ?? 0))}%"></i></div></div></div>`).join('')}<button type="button" class="m43-btn inv" data-m43="pauseall">${M.tor?.allPausedLabel ?? (U.allPaused ? 'Fortsett alt' : 'Pause alt')}</button></div>` : '';
@@ -211,7 +304,7 @@ function libHtml(k) {
   const items = D.items ?? [];
   const fx = k === 's' ? { all: () => true, missing: (x) => x.episodes?.missing > 0, continuing: (x) => x.status === 'continuing', ended: (x) => x.status === 'ended' } : { all: () => true, has: (x) => x.hasFile, missing: (x) => !x.hasFile && x.status !== 'ann', announced: (x) => x.status === 'ann' };
   const filters = D.filters ?? Object.keys(fx).map((id) => ({ id, label: id, count: items.filter(fx[id]).length }));
-  const L = items.filter(fx[M.libF] ?? fx.all);
+  const q = norm44(M.libQ), L = items.filter(fx[M.libF] ?? fx.all).filter((x) => !q || norm44(`${x.title} ${x.network ?? ''} ${x.year ?? ''} ${x.studio ?? ''}`).includes(q) || norm44(x.title).includes(q));
   const card = (x) => {
     let line, lc, dot;
     if (k === 's') { const miss = x.episodes?.missing ?? 0; line = miss ? `${miss} mangler` : x.status === 'ended' ? 'Komplett · avsluttet' : x.nextText ?? 'Komplett'; lc = miss ? 't-warn' : 't-mut'; dot = miss ? 'warn' : x.status === 'ended' ? 'mut' : 'ok'; }
@@ -220,22 +313,40 @@ function libHtml(k) {
     return `<button type="button" class="m43-lc" data-m43-open="${k}:${x.id}"><div class="m43-lp" style="background-color:${esc(x.color || '#3c4a5c')}${x.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"><b>${esc(x.title)}</b><span class="m43-dot t-${dot}"></span></div><span class="m43-lm ell">${esc(meta)}</span><b class="m43-s ${lc}">${esc(line)}</b></button>`;
   };
   return `<div class="m43-row sb xwrap"><div class="m43-row g10 base"><b class="m43-h1">${k === 's' ? 'Serier' : 'Filmer'}</b><span class="t-mut">${nb(items.length)} ${k === 's' ? 'serier' : 'filmer'}</span></div><button type="button" class="m43-btn ink" data-m43="add">${k === 's' ? '+ Legg til serie' : '+ Legg til film'}</button></div>
-    <div class="m43-chips">${filters.map((f) => chip(`${f.label} ${f.count ?? ''}`.trim(), M.libF === f.id, `data-m43-libf="${esc(f.id)}"`)).join('')}</div>
-    <div class="m43-grid">${L.map(card).join('') || '<span class="t-mut">Ingenting her.</span>'}</div>`;
+    <div class="m44-lf"><label class="m44-lq">${ic.search}<input name="lq" value="${esc(M.libQ)}" placeholder="Søk i ${nb(items.length)} ${k === 's' ? 'serier' : 'filmer'}" autocomplete="off" spellcheck="false" aria-label="Søk i biblioteket" data-glimt="off">${M.libQ ? `<button type="button" class="m43-ib ghost sm" data-m44="lqx" aria-label="Tøm søket">${ic.x}</button>` : '<span class="m44-kbd" aria-hidden="true">/</span>'}</label>
+    <div class="m43-chips">${filters.map((f) => chip(`${f.label} ${f.count ?? ''}`.trim(), M.libF === f.id, `data-m43-libf="${esc(f.id)}"`)).join('')}</div></div>
+    ${L.length ? `<div class="m43-grid">${L.map(card).join('')}</div>` : M.libQ.trim() ? `<div class="m43-empty"><span>Ingen ${k === 's' ? 'serier' : 'filmer'} i biblioteket som heter «${esc(M.libQ.trim())}».</span><button type="button" class="m43-btn ink" data-m44="lqadd">Søk etter «${esc(M.libQ.trim())}» for å legge til</button></div>` : '<span class="t-mut">Ingenting her.</span>'}`;
 }
 
 /* ---------------- Serie- og filmside ---------------- */
+/** Prompt 44: banner med fanart (uskarp), mørk gradient, plakat 2:3, tittel, ←/→ i biblioteket, fakta og info-brikker. */
+function banner(d, x) {
+  const s = d.k === 's', lib = (s ? M.ser : M.mov)?.items ?? [], i = lib.findIndex((y) => String(y.id) === String(x.id));
+  const nav = lib.length > 1 && i >= 0 ? `<div class="m44-bn"><button type="button" class="m44-bnb" data-m44-step="-1" aria-label="Forrige i biblioteket">←</button><button type="button" class="m44-bnb" data-m44-step="1" aria-label="Neste i biblioteket">→</button></div>` : '';
+  const genres = Array.isArray(x.genres) ? x.genres.slice(0, 2).join(', ') : x.genre ?? '';
+  const yrs = s ? (x.year ? `${x.year}${x.status === 'ended' ? (x.endYear ? `–${x.endYear}` : '') : '–'}` : '') : x.year ?? '';
+  const runtime = x.runtime ? `${x.runtime} min` : x.runtimeText ?? '';
+  const aired = (x.seasons ?? []).reduce((a, se) => a + se.episodes.filter((e) => e.aired).length, 0), got = (x.seasons ?? []).reduce((a, se) => a + (se.have ?? 0), 0);
+  const have = s ? (x.seasons ? (aired ? `${got} av ${aired} episoder · ${x.missingCount ? `${x.missingCount} mangler` : 'komplett'}` : 'Ikke sendt ennå') : x.episodesText ?? '') : x.hasFile ? `Lastet ned${x.file?.quality ? ` · ${x.file.quality}` : ''}` : x.statusText ?? '';
+  const facts = [runtime, genres, yrs].filter(Boolean).map((t) => `<span>${esc(t)}</span>`).join('<i>·</i>') + (have ? `<i>·</i><span class="${(s ? x.missingCount || !aired : !x.hasFile) ? 'warn' : 'ok'}">${esc(have)}</span>` : '');
+  const chips = [['MAPPE', x.path], ['STR.', x.sizeText], ['PROFIL', x.profile, 'prof'], [null, x.monitored ? 'Overvåket' : 'Ikke overvåket', s ? 'mon' : 'mmon'], s ? [null, x.statusLabel ?? (x.status === 'ended' ? 'Avsluttet' : 'Fortsetter')] : null, ['SPRÅK', x.language ?? x.originalLanguage], [s ? 'KANAL' : 'STUDIO', s ? x.network : x.studio]].filter((c) => c && c[1]);
+  const bg = x.fanart ? `background-image:url('${esc(x.fanart)}')` : x.poster ? `background-image:url('${esc(x.poster)}')` : '';
+  return `<section class="m44-ban${x.fanart ? '' : ' nofan'}"><div class="m44-bbg" style="${bg}"></div><div class="m44-bgr"></div>
+    <div class="m44-bin">${poster(x, 'm44-bpo')}<div class="m43-col grow mw0 g8"><div class="m43-row sb xtop"><span class="m44-bk">${s ? 'SONARR · SERIE' : 'RADARR · FILM'}</span>${nav}</div><b class="m44-bt">${esc(x.title)}</b><div class="m44-bf">${facts}</div>
+      <div class="m44-bc">${chips.map(([l, v, f]) => f ? `<button type="button" class="m44-gc" data-m43-edit="${f}">${l ? `<span>${esc(l)}</span>` : ''}<b>${esc(v)}</b></button>` : `<span class="m44-gc">${l ? `<span>${esc(l)}</span>` : ''}<b class="mono">${esc(v)}</b></span>`).join('')}</div></div></div>
+    ${x.overview && !/^\S.*\(\d{4}\) ·/.test(x.overview) ? `<p class="m44-bo">${esc(x.overview)}</p>` : ''}<span class="m44-bm">Metadata fra ${s ? 'TheTVDB' : 'TMDb'}</span></section>`;
+}
 
 function detHtml() {
   const d = M.det, x = M.detail, back = `<button type="button" class="m43-back" data-m43="detback">‹ ${d.k === 's' ? 'Serier' : 'Filmer'}</button>`;
   if (!x) return back + skel(300);
   if (x.error) return back + errBox(x.error);
   const chips = (L) => `<div class="m43-row xwrap g8">${L.map(([l, v, f]) => `<button type="button" class="m43-dchip" data-m43-edit="${f}"><span class="m43-lab">${esc(l)}</span><b>${esc(v)} ›</b></button>`).join('')}</div>`;
-  const head = `<div class="m43-dh2">${art(x, 'm43-art dp')}<div class="m43-col grow g6"><span class="m43-lab acc">${d.k === 's' ? 'SONARR · SERIE' : 'RADARR · FILM'}</span><b class="m43-dt">${esc(x.title)}</b><span class="t-mut m43-15">${esc(x.subtitle ?? '')}</span>`;
+  const head = banner(d, x) + `<div class="m43-dh2 m44-dh">${'<div class="m43-col grow g6">'}<span class="t-mut m43-15">${esc(x.subtitle ?? '')}</span>`;
   if (d.k === 'm') {
     const st = x.status === 'ann' ? x.note || 'Annonsert' : x.statusText;
     const file = x.file ? `${x.file.quality ?? ''} · ${x.file.sizeText ?? ''} · ${x.file.path ?? x.path ?? ''}` : `Ingen fil ennå · lagres i ${x.path ?? x.rootFolder ?? '/data/media/film'}`;
-    const acts = [x.hasFile && x.play ? `<a class="m43-btn ink" href="${esc(x.play.url)}" target="_blank" rel="noopener">${esc(x.play.label)}</a>` : '', `<button type="button" class="m43-btn ${x.hasFile ? 'line' : 'ink'}" data-m43="mauto"${M.busy.mauto ? ' disabled' : ''}>${M.busy.mauto ? 'Søker …' : 'Automatisk søk'}</button>`, '<button type="button" class="m43-btn line" data-m43="minter">Interaktivt søk</button>'].join('');
+    const acts = [x.hasFile && x.play ? `<a class="m43-btn ink" href="${esc(x.play.url)}" target="_blank" rel="noopener">${esc(x.play.label)}</a>` : '', `<button type="button" class="m43-btn ${x.hasFile ? 'line' : 'ink'}" data-m43="mauto"${M.busy.mauto ? ' disabled' : ''}>${M.busy.mauto ? 'Søker …' : 'Automatisk søk'}</button>`, x.hasFile ? '<button type="button" class="m43-btn line" data-m44="mre">⟳ Last ned på nytt</button>' : '<button type="button" class="m43-btn line" data-m43="minter">Interaktivt søk</button>', x.hasFile ? '<button type="button" class="m43-btn line red-t" data-m44="mdel">Slett fil</button>' : ''].join('');
     return `${back}${head}<b class="m43-s ${tone(x.status)} m43-14">${esc(st ?? '')}</b></div></div>
       ${chips([['PROFIL', x.profile ?? '–', 'prof'], ['LAST NED NÅR DEN ER', x.availabilityLabel ?? '–', 'av'], ['OVERVÅKET', x.monitored ? 'Ja' : 'Nei', 'mmon']])}
       <div class="m43-row xwrap g8">${acts}</div>
@@ -253,10 +364,11 @@ function detHtml() {
       return `<div class="m43-ep"><button type="button" class="m43-ib ghost mk" data-m43-epmon="${e.id}" aria-label="Overvåk episoden" aria-pressed="${e.monitored}">${ic.mark(e.monitored, 16)}</button><span class="m43-ec mono">${esc(e.e)}</span>
         <div class="m43-col grow"><b class="ell">${esc(e.title)}</b><span class="m43-sm ${n ? tone(e.status) : 't-mut'}">${esc(n ? `${air} · ${e.statusText}` : air)}</span></div>
         ${!n ? `<span class="m43-stc ${tone(e.status)}">${esc(e.statusText ?? '')}</span>` : ''}
-        ${e.canSearch ? `<button type="button" class="m43-ib line" data-m43-epauto="${e.id}" aria-label="Automatisk søk" title="Automatisk søk"${M.busy[`ep${e.id}`] ? ' disabled' : ''}>${ic.search}</button><button type="button" class="m43-ib ink" data-m43-epint="${e.id}" aria-label="Interaktivt søk" title="Interaktivt søk">${ic.list}</button>` : ''}</div>`;
+        ${e.canSearch ? `<button type="button" class="m43-ib line" data-m43-epauto="${e.id}" aria-label="Automatisk søk" title="Automatisk søk"${M.busy[`ep${e.id}`] ? ' disabled' : ''}>${ic.search}</button><button type="button" class="m43-ib ink" data-m43-epint="${e.id}" aria-label="Interaktivt søk" title="Interaktivt søk">${ic.list}</button>` : ''}
+        ${e.hasFile ? `<button type="button" class="m43-ib line" data-m44-epre="${e.id}" aria-label="Last ned ${esc(e.e)} på nytt" title="Last ned på nytt (interaktivt søk)">${ic.re}</button><button type="button" class="m43-ib line red-t" data-m44-epdel="${e.id}" aria-label="Slett filen til ${esc(e.e)}" title="Slett filen">${ic.trash}</button>` : ''}</div>`;
     }).join('') : '';
     return `<div class="m43-se"><div class="m43-seh"><button type="button" class="m43-ib ghost mk" data-m43-semon="${se.number}" aria-label="Overvåk sesongen" aria-pressed="${se.monitored}">${ic.mark(se.monitored)}</button><button type="button" class="m43-set" data-m43-setog="${se.number}" aria-expanded="${open}"><b>${esc(se.label)}</b><span class="${se.missing ? 't-warn' : 't-mut'}">${esc(sub)}</span></button>
-      ${se.canSearch ? `<button type="button" class="m43-btn sm line" data-m43-sesearch="${se.number}">Søk sesong</button>` : ''}<span class="m43-chev">${open ? '▴' : '▾'}</span></div>${eps}</div>`;
+      ${se.canSearch ? `<button type="button" class="m43-btn sm line" data-m43-sesearch="${se.number}">Søk sesong</button>` : ''}${se.have > 0 ? `<button type="button" class="m43-btn sm line" data-m44-sere="${se.number}" title="Last ned sesongen på nytt (sesongpakke)">⟳ Sesong</button><button type="button" class="m43-btn sm line red-t" data-m44-sedel="${se.number}" title="Slett alle filer i sesongen">Slett filer</button>` : ''}<span class="m43-chev">${open ? '▴' : '▾'}</span></div>${eps}</div>`;
   }).join('');
   return `${back}${head}<b class="m43-s ${miss ? 't-warn' : 't-ok'} m43-14">${esc(epTxt)}</b></div></div>
     ${chips([['PROFIL', x.profile ?? '–', 'prof'], ['OVERVÅKING', x.monitorLabel ?? monLbl(x.monitor), 'mon'], ['SERIETYPE', x.seriesTypeLabel ?? 'Standard', 'typ']])}
@@ -273,8 +385,8 @@ const profsOf = (k) => (M.prof?.[k === 's' ? 'sonarr' : 'radarr'] ?? []).map((p)
 
 function srchHtml() {
   const s = M.srch, R = M.rel, back = `<button type="button" class="m43-back" data-m43="srback">‹ ${esc(s.backL ?? 'Tilbake')}</button>`;
-  if (!R) return `${back}<div class="m43-card m43-gs">Søker i indekserne via Prowlarr …</div>`;
-  if (R.error) return back + errBox(R.error);
+  if (!R) return back + jobHtml();
+  if (R.error) return back + (R.allFailed ? `<div class="m43-empty err"><b>${esc(R.error)}</b><div class="m43-row g8"><button type="button" class="m43-btn ink" data-m44="relagain">Prøv igjen</button><button type="button" class="m43-btn line" data-m43-tab="pro">Åpne Prowlarr</button></div></div>` : `<div class="m43-empty err"><b>Fikk ikke hentet data</b><span>${esc(R.error)}</span><button type="button" class="m43-btn line" data-m44="relagain">Prøv igjen</button></div>`);
   const c = R.context ?? {};
   let rows = R.items ?? [];
   if (M.fq === '1080p') rows = rows.filter((r) => r.resolution === 1080);
@@ -288,8 +400,20 @@ function srchHtml() {
     ? `<div class="m43-col">${rows.map((r) => `<div class="m43-rr"><div class="m43-col grow g7"><span class="m43-rel">${esc(r.shortTitle ?? r.title)}</span><div class="m43-row xwrap g5x"><span class="m43-q">${esc(r.quality)}</span><b>${esc(r.sizeText)}</b><b class="${seedC(r)}">▲ ${esc(r.peersText ?? `${nb(r.seeders)} / ${nb(r.leechers)}`)}</b><span class="t-mut">${esc(r.indexer)}</span></div><span class="m43-sm t-mut">${esc(r.langText ?? '')}</span>${r.best ? '<b class="m43-sm t-ok">Best treff for profilen</b>' : ''}${rej(r)}</div>${gb(r)}</div>`).join('')}</div>`
     : `<div class="m43-tbl"><div class="m43-tr th"><span>UTGIVELSE</span><span>KVALITET</span><span>STØRRELSE</span><span>SEEDERE / PEERS</span><span>INDEKSER</span><span>SPRÅK</span><span></span></div>${rows.map((r) => `<div class="m43-tr"><div class="m43-col g3"><span class="m43-rel">${esc(r.title)}</span>${r.best ? '<b class="m43-sm t-ok">Best treff for profilen</b>' : ''}${rej(r)}</div><span><span class="m43-q">${esc(r.quality)}</span></span><b>${esc(r.sizeText)}</b><b class="${seedC(r)}">▲ ${esc(r.peersText ?? `${nb(r.seeders)} / ${nb(r.leechers)}`)}</b><span class="t-mut">${esc(r.indexer)}</span><span class="t-mut m43-sm">${esc(r.langText ?? '')}</span>${gb(r)}</div>`).join('')}</div>`;
   return `${back}<div class="m43-dh2">${art(c, 'm43-art sp')}<div class="m43-col grow g4"><span class="m43-lab acc">INTERAKTIVT SØK</span><b class="m43-srt">${esc(c.header ?? c.title ?? '')}</b><span class="t-mut">${esc([c.sub, R.text].filter(Boolean).join(' · '))}</span></div></div>
+    ${R.cachedAt ? `<div class="m43-row g8 m43-sm t-mut">Hentet for ${Math.max(1, Math.round((Date.now() - R.cachedAt) / 60000))} min siden · <button type="button" class="m44-lk" data-m44="relagain">Søk igjen</button></div>` : ''}
+    ${(R.indexers ?? []).some((x) => x.state === 'fail' || x.error) ? `<div class="m43-sm t-warn b7">${esc(R.indexers.filter((x) => x.state === 'fail' || x.error).map((x) => `${x.name} svarte ikke`).join(' · '))}</div>` : ''}
     <div class="m43-chips">${(R.filters ?? []).map((f) => chip(f.id === 'all' ? `${f.label} ${f.count}` : f.label, M.fq === f.id, `data-m43-fq="${esc(f.id)}"`)).join('')}</div>
     ${rows.length ? table : '<span class="t-mut">Ingen treff med dette filteret.</span>'}`;
+}
+
+/** Søket pågår: «Søker i 8 indeksere … 23 s», én rad per indekser, treffene som har kommet, og Avbryt. */
+function jobHtml() {
+  const J = M.job; if (!J) return '<div class="m43-card m43-gs">Søker …</div>';
+  const sec = Math.round((Date.now() - J.t0) / 1000), I = J.indexers ?? [];
+  const n = I.length;
+  const ir = I.map((x) => `<div class="m44-ir"><span class="${x.state === 'ok' ? 't-ok' : x.state === 'fail' ? 't-bad' : 't-mut'}">${x.state === 'ok' ? '✓' : x.state === 'fail' ? '✕' : '⟳'}</span><b>${esc(x.name ?? '')}</b><span class="m43-sm t-mut">${x.state === 'ok' ? `${nb(x.count ?? 0)} treff · ${((+x.ms || 0) / 1000).toFixed(1).replace('.', ',')} s` : x.state === 'fail' ? esc(x.error || 'tidsavbrudd') : 'søker …'}</span></div>`).join('');
+  const part = (J.items ?? []).slice(0, 8).map((r) => `<div class="m44-pr"><span class="m43-rel ell">${esc(r.title ?? '')}</span><span class="m43-q">${esc(r.quality ?? '')}</span><b>${esc(r.sizeText ?? '')}</b></div>`).join('');
+  return `<div class="m43-card m43-col g8 m44-job" role="status"><div class="m43-row sb"><b>${J.state === 'legacy' ? 'Søker i indekserne via Sonarr/Radarr' : n ? `Søker i ${n} indeksere` : 'Starter søket'} … ${sec} s</b><button type="button" class="m43-btn sm line" data-m44="relstop">Avbryt</button></div>${ir}${part ? `<span class="m43-lab">TREFF SÅ LANGT · ${J.partialCount ?? (J.items ?? []).length}</span>${part}` : ''}${J.state === 'legacy' ? '<span class="m43-sm t-mut">Det kan ta opptil 3 minutter når mange indeksere svarer sakte.</span>' : ''}</div>`;
 }
 
 /* ---------------- qBittorrent ---------------- */
@@ -444,8 +568,10 @@ function mainHtml() {
   if (M.tab === 'son') return libHtml('s');
   if (M.tab === 'rad') return libHtml('m');
   if (M.tab === 'qb') return qbHtml();
+  if (M.tab === 'av') return '<div data-pb44-slot></div>';
   return proHtml();
 }
+let pbHost = null;
 const keepFocus = (el, fn) => {
   const a = document.activeElement, n = el.contains(a) ? a.getAttribute('name') : null, pos = n ? a.selectionStart : 0;
   fn();
@@ -454,7 +580,9 @@ const keepFocus = (el, fn) => {
 function paintMain() {
   const c = root?.querySelector('[data-m43-main]'); if (!c) return;
   const y = c.scrollTop;
-  c.innerHTML = `<div class="m43-in-w">${mainHtml()}</div>`;
+  keepFocus(c, () => { c.innerHTML = `<div class="m43-in-w">${mainHtml()}</div>`; });
+  const slot = c.querySelector('[data-pb44-slot]');
+  if (slot) { if (!pbHost) pbHost = document.createElement('div'); slot.replaceWith(pbHost); mountPlayback(pbHost); }
   c.scrollTop = y;
 }
 function paintTop() { const t = root?.querySelector('[data-m43-top]'); if (t) keepFocus(t, () => { t.innerHTML = topHtml(); }); }
@@ -466,12 +594,56 @@ function paintSheet() {
   const n = s.querySelector('.m43-sh'); if (n) n.scrollTop = sc;
   document.body.classList.toggle('m43-modal', !!M.sh);
 }
-function paintToast() { const t = root?.querySelector('[data-m43-toast]'); if (t) t.innerHTML = M.toast ? `<div class="m43-toast" role="status">${esc(M.toast)}</div>` : ''; }
+function paintToast() { const t = root?.querySelector('[data-m43-toast]'); if (t) t.innerHTML = M.undo ? `<div class="m43-toast" role="status"><span>${esc(M.undo.text)}</span><button type="button" class="m44-undo" data-m44="undo">Angre</button></div>` : M.toast ? `<div class="m43-toast" role="status">${esc(M.toast)}</div>` : ''; }
 function paint() { if (!root?.isConnected) return; paintTop(); paintGl(); paintMain(); paintSheet(); paintToast(); }
 
 /* ---------------- Handlinger ---------------- */
 
-function openDet(k, id) { M.tab = k === 's' ? 'son' : 'rad'; M.det = { k, id: +id }; M.srch = null; M.libF = 'all'; loadProf(); loadDetail(); paint(); root?.querySelector('[data-m43-main]')?.scrollTo(0, 0); }
+function openDet(k, id, fromHist) { M.tab = k === 's' ? 'son' : 'rad'; M.det = { k, id: +id }; M.srch = null; M.libF = 'all'; loadProf(); loadDetail(); if (!(k === 's' ? M.ser : M.mov)) (k === 's' ? loadSer : loadMov)(); paint(); root?.querySelector('[data-m43-main]')?.scrollTo(0, 0); if (!fromHist) nav(); }
+
+/* ---------------- Prompt 44: frem og tilbake i nettleseren ----------------
+   #/media/<fane>[/s|m/<id>[/sok[/<episodeId>|/sesong-<n>]]]. Hver navigasjon er et steg i historikken (pushState); popstate
+   (musens sideknapper, ⌘[ ⌘], Alt+←/→, nettleserknappene) går mellom stegene. Ark og menyer lukkes. */
+const TAB_SLUG = { kom: 'kommer', son: 'sonarr', rad: 'radarr', qb: 'qbittorrent', pro: 'prowlarr', av: 'avspilling' };
+const SLUG_TAB = { kommer: 'kom', kom: 'kom', sonarr: 'son', son: 'son', radarr: 'rad', rad: 'rad', qbittorrent: 'qb', qb: 'qb', prowlarr: 'pro', pro: 'pro', avspilling: 'av', av: 'av' };
+function hashNow() {
+  let h = `#/media/${TAB_SLUG[M.tab] ?? 'kommer'}`;
+  if (M.det) h += `/${M.det.k}/${M.det.id}`;
+  if (M.srch) { if (!M.det) h += `/${M.srch.k}/${M.srch.id}`; h += '/sok'; if (M.srch.episodeId) h += `/${M.srch.episodeId}`; else if (M.srch.season != null) h += `/sesong-${M.srch.season}`; if (M.srch.re) h += '?re=1'; }
+  return h;
+}
+let depth = 0;
+function nav(replace = false) {
+  const h = hashNow();
+  if (location.hash === h) return;
+  try { if (replace || !/^#\/media/.test(location.hash)) history.replaceState({ m44: depth }, '', h); else { depth++; history.pushState({ m44: depth }, '', h); } } catch { /* */ }
+}
+/** Leser adressen og viser riktig visning (oppstart, oppfrisking og popstate). */
+function applyHash() {
+  const [path, qs] = location.hash.replace(/^#\/?/, '').split('?'), seg = path.split('/');
+  if (seg[0] !== 'media') return false;
+  const tab = SLUG_TAB[seg[1] ?? ''];
+  if (!tab && seg[1]) return false;
+  M.sh = null; M.srvOpen = false; M.add = null;
+  M.tab = tab ?? M.tab ?? 'kom';
+  const k = seg[2] === 's' || seg[2] === 'm' ? seg[2] : null, id = k ? +seg[3] : null;
+  const wasDet = M.det ? `${M.det.k}:${M.det.id}` : '';
+  M.det = k && id ? { k, id } : null;
+  if (M.det && wasDet !== `${k}:${id}`) { loadProf(); loadDetail(); }
+  if (k && id && seg[4] === 'sok') {
+    const ep = seg[5] && /^\d+$/.test(seg[5]) ? +seg[5] : null, se = seg[5]?.startsWith('sesong-') ? +seg[5].slice(7) : null;
+    const was = M.srch ? relKey(M.srch) : '';
+    M.srch = { k, id, ...(ep ? { episodeId: ep } : {}), ...(se != null ? { season: se } : {}), re: /(^|&)re=1/.test(qs ?? ''), backL: M.detail?.title ?? 'Tilbake' };
+    if (was !== relKey(M.srch)) { M.fq = 'all'; loadRel(); }
+  } else { M.srch = null; M.job = null; }
+  if (!M.det && !M.srch) enterTab();
+  return true;
+}
+/** app.js spør før den tegner siden på nytt ved hashchange: Media styrer sin egen adresse. */
+export const ownsHash = () => !!root?.isConnected && /^#\/media(\/|$|\?)/.test(location.hash);
+addEventListener('popstate', () => { if (!root?.isConnected || !/^#\/media/.test(location.hash)) return; if (typeof history.state?.m44 === 'number') depth = history.state.m44; applyHash(); poll(); paint(); });
+/** «‹ Serier», tilbake fra søk og ✕: history.back() når forrige steg er i Media, ellers vanlig navigasjon. */
+function back(fallback) { if (depth > 0 && typeof history.state?.m44 === 'number') { history.back(); return; } fallback(); nav(true); }
 async function cmd(body, key, okMsg) {
   M.busy[key] = true; paint();
   try { const r = await mapi('/command', { method: 'POST', json: body }); toast(okMsg ?? r.message ?? 'Søk startet'); } catch (e) { toast(e.message); }
@@ -559,8 +731,46 @@ async function setPref(k, v) {
   paintSheet();
 }
 function closeSheet() { M.sh = null; M.add = null; M.mag = null; M.ix = null; M.files = null; paint(); }
-function close() { location.hash = '#/dash'; }
+function close() { if (depth > 0 && typeof history.state?.m44 === 'number') { const n = depth; depth = 0; history.go(-n); setTimeout(() => { if (/^#\/media/.test(location.hash)) location.hash = '#/dash'; }, 120); return; } location.hash = '#/dash'; }
 async function openIntegrations() { try { const m = await import('./settings.js'); closeSheet(); m.openSettings('int'); } catch { location.hash = '#/innstillinger/integrasjoner'; } }
+
+/* ---------------- Prompt 44: handlinger ---------------- */
+async function act44(b, d) {
+  const a = d.m44;
+  if (d.m44Komv) { M.komv = d.m44Komv; lss('media_komv', M.komv); paintMain(); return true; }
+  if (d.m44Site) { M.site = d.m44Site; lss('media_site', M.site); mapi('/servers/select', { method: 'PUT', json: { id: M.site } }).catch(() => {}); M.srvOpen = false; M.up = M.ser = M.mov = M.tor = M.idx = M.disk = M.prof = null; M.det = null; M.srch = null; relCache.clear(); const n = M.servers?.find((x) => String(x.id) === String(M.site))?.name; toast(`Bruker ${n ?? 'serveren'} for Sonarr, Radarr, qBittorrent og Prowlarr`); enterTab(); paint(); nav(true); return true; }
+  if (d.m44Step) { const L = (M.det?.k === 's' ? M.ser : M.mov)?.items ?? [], i = L.findIndex((y) => String(y.id) === String(M.det?.id)); const n = L[(i + +d.m44Step + L.length) % L.length]; if (n) openDet(M.det.k, n.id); return true; }
+  if (d.m44Epre) { M.srch = { k: 's', id: M.detail.id, episodeId: +d.m44Epre, re: true, backL: M.detail.title }; M.fq = 'all'; loadRel(); nav(); paintMain(); return true; }
+  if (d.m44Sere) { M.srch = { k: 's', id: M.detail.id, season: +d.m44Sere, re: true, backL: M.detail.title }; M.fq = 'all'; loadRel(); nav(); paintMain(); return true; }
+  if (d.m44Epdel) { const ep = M.detail?.seasons?.flatMap((x) => x.episodes).find((x) => String(x.id) === d.m44Epdel); if (ep) await delFiles([ep], `${ep.code ?? ep.e} · ${ep.title}`); return true; }
+  if (d.m44Sedel) { const se = M.detail?.seasons?.find((x) => String(x.number) === d.m44Sedel); const L = (se?.episodes ?? []).filter((x) => x.hasFile); if (L.length) await delFiles(L, `${L.length} filer i ${se.label}`); return true; }
+  if (!a) return false;
+  if (a === 'srv') { M.srvOpen = !M.srvOpen; paintTop(); return true; }
+  if (a === 'lqx') { M.libQ = ''; paintMain(); root?.querySelector('[name="lq"]')?.focus(); return true; }
+  if (a === 'lqadd') { const k = M.tab === 'rad' ? 'm' : 's', q = M.libQ.trim(); M.sh = 'add'; M.add = { k, q, list: null, sel: null, prof: k === 's' ? M.prof?.defaults?.sonarr ?? 'HD-1080p' : M.prof?.defaults?.radarr ?? 'Ultra-HD', mon: 'all', typ: 'standard', av: 'released', go: true }; loadProf(); paintSheet(); lookup(); return true; }
+  if (a === 'mre') { M.srch = { k: 'm', id: M.detail.id, re: true, backL: M.detail.title }; M.fq = 'all'; loadRel(); nav(); paintMain(); return true; }
+  if (a === 'mdel') {
+    const x = M.detail; if (!x || !confirm(`Slette filen til «${x.title}»?\nFilmen slutter å overvåkes, så den ikke lastes ned igjen med en gang.`)) return true;
+    try { const r = await mapi(`/movies/${x.id}/file`, { method: 'DELETE' }); undoToast(r?.message ?? `Filen til «${x.title}» er slettet`, () => (r?.undo?.path ? mapi(r.undo.path.replace(/^\/api\/media/, ''), { method: r.undo.method ?? 'PUT', json: r.undo.body ?? { monitored: true } }) : mapi(`/movies/${x.id}`, { method: 'PUT', json: { monitored: true } }))); M.mov = null; loadDetail(); }
+    catch (e) { toast(e.status === 404 ? 'Serveren kan ikke slette filer ennå.' : e.status === 403 ? 'Bare admin kan slette filer.' : e.message); }
+    return true;
+  }
+  if (a === 'relagain') { loadRel(true); return true; }
+  if (a === 'relstop') { M.job?.es?.close?.(); const id = M.job?.id; M.job = null; if (id) mapi(`/release/search/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {}); M.rel = { error: 'Søket ble avbrutt.' }; paintMain(); return true; }
+  if (a === 'undo') { const f = M.undo?.fn; M.undo = null; clearTimeout(undoT); paintToast(); if (f) { try { await f(); toast('Angret · overvåkes igjen'); loadDetail(); } catch (e) { toast(e.message); } } return true; }
+  return false;
+}
+let undoT = 0;
+/** Toast med «Angre» i 5 s. */
+function undoToast(text, fn) { clearTimeout(toastT); clearTimeout(undoT); M.toast = ''; M.undo = { text, fn }; paintToast(); undoT = setTimeout(() => { M.undo = null; paintToast(); }, 5000); }
+async function delFiles(eps, label) {
+  if (!confirm(`Slette ${label}?\nOvervåkingen slås av, så de ikke lastes ned igjen med en gang.`)) return;
+  try {
+    for (const ep of eps) await mapi(`/episodes/${ep.id}/file`, { method: 'DELETE' }); // slår også av overvåkingen (SERVER44)
+    undoToast(`Slettet ${label}`, async () => { for (const ep of eps) await mapi(`/episodes/${ep.id}`, { method: 'PUT', json: { monitored: true } }); });
+    M.ser = null; loadDetail();
+  } catch (e) { toast(e.status === 404 ? 'Serveren kan ikke slette filer ennå.' : e.status === 403 ? 'Bare admin kan slette filer.' : e.message); }
+}
 
 /* ---------------- Hendelser ---------------- */
 
@@ -571,7 +781,8 @@ function bind(r) {
     const b = t.closest('button,a[data-m43]');
     if (!b || b.disabled) return;
     const d = b.dataset;
-    if (d.m43Tab) { M.tab = d.m43Tab; M.det = null; M.srch = null; M.libF = 'all'; enterTab(); poll(); paint(); r.querySelector('[data-m43-main]')?.scrollTo(0, 0); return; }
+    if (d.m43Tab) { M.tab = d.m43Tab; M.det = null; M.srch = null; M.job = null; M.libF = 'all'; M.srvOpen = false; enterTab(); poll(); paint(); r.querySelector('[data-m43-main]')?.scrollTo(0, 0); nav(); return; }
+    if (await act44(b, d)) return; // prompt 44
     if (d.m43Open) { const [k, id] = d.m43Open.split(':'); return openDet(k, id); }
     if (d.m43Libf) { M.libF = d.m43Libf; return paintMain(); }
     if (d.m43Seg) { M.seg = d.m43Seg; return paintMain(); }
@@ -586,7 +797,7 @@ function bind(r) {
     if (d.m43Epmon) { const ep = M.detail.seasons.flatMap((x) => x.episodes).find((x) => String(x.id) === d.m43Epmon); try { await mapi(`/episodes/${ep.id}`, { method: 'PUT', json: { monitored: !ep.monitored } }); ep.monitored = !ep.monitored; } catch (er) { toast(er.message); } return paintMain(); }
     if (d.m43Sesearch) return cmd({ name: 'SeasonSearch', seriesId: M.detail.id, seasonNumber: +d.m43Sesearch }, `se${d.m43Sesearch}`, `Søker etter sesong ${d.m43Sesearch} …`);
     if (d.m43Epauto) return cmd({ name: 'EpisodeSearch', episodeIds: [+d.m43Epauto] }, `ep${d.m43Epauto}`);
-    if (d.m43Epint) { const ep = M.detail.seasons.flatMap((x) => x.episodes).find((x) => String(x.id) === d.m43Epint); M.srch = { k: 's', id: M.detail.id, episodeId: ep.id, backL: M.detail.title }; M.fq = 'all'; loadRel(); return paintMain(); }
+    if (d.m43Epint) { const ep = M.detail.seasons.flatMap((x) => x.episodes).find((x) => String(x.id) === d.m43Epint); M.srch = { k: 's', id: M.detail.id, episodeId: ep.id, backL: M.detail.title }; M.fq = 'all'; loadRel(); nav(); return paintMain(); }
     if (d.m43Ttog) { const x = (M.tor?.items ?? []).find((y) => y.hash === d.m43Ttog); return tor(d.m43Ttog, x?.status === 'pause' ? 'resume' : 'pause'); }
     if (d.m43Tmore) { M.sh = 'act'; M.act = d.m43Tmore; M.files = null; paintSheet(); try { M.files = await mapi(`/torrents/${d.m43Tmore}/files`); } catch (er) { M.files = { error: er.message }; } return paintSheet(); }
     if (d.m43Tdel) { M.sh = 'del'; M.act = d.m43Tdel; return paintSheet(); }
@@ -620,11 +831,11 @@ function bind(r) {
     if (a === 'cal') { const on = (M.prefs ?? M.status?.settings ?? {}).calendar !== false; if (!on) return toast('Slå på «Vis i Kalender» i innstillingene for Media'); location.hash = '#/kalender'; return; }
     if (a === 'pauseall') return allToggle();
     if (a === 'alt') { try { const tr = await mapi('/altSpeed', { method: 'POST', json: { on: !M.tor?.transfer?.altSpeed } }); if (M.tor) M.tor.transfer = tr; toast(tr.altSpeed ? `Alt-hastighet på${tr.altLimitText ? ` · ${tr.altLimitText}` : ''}` : 'Alt-hastighet av'); } catch (er) { toast(er.message); } return paintMain(); }
-    if (a === 'detback') { M.det = null; M.detail = null; enterTab(); return paint(); }
-    if (a === 'srback') { M.srch = null; M.rel = null; return paint(); }
+    if (a === 'detback') return back(() => { M.det = null; M.detail = null; enterTab(); paint(); });
+    if (a === 'srback') return back(() => { M.srch = null; M.rel = null; M.job = null; paint(); });
     if (a === 'sall') { const ids = (M.detail?.seasons ?? []).flatMap((s) => s.episodes).filter((x) => x.canSearch).map((x) => x.id); if (ids.length) return cmd({ name: 'EpisodeSearch', episodeIds: ids }, 'sall', `Søker etter ${ids.length} manglende episoder …`); return; }
     if (a === 'mauto') return cmd({ name: 'MoviesSearch', movieIds: [M.detail.id] }, 'mauto');
-    if (a === 'minter') { M.srch = { k: 'm', id: M.detail.id, backL: M.detail.title }; M.fq = 'all'; loadRel(); return paintMain(); }
+    if (a === 'minter') { M.srch = { k: 'm', id: M.detail.id, backL: M.detail.title }; M.fq = 'all'; loadRel(); nav(); return paintMain(); }
     if (a === 'add') { const k = M.tab === 'rad' ? 'm' : 's'; M.sh = 'add'; M.add = { k, q: '', list: null, sel: null, prof: k === 's' ? M.prof?.defaults?.sonarr ?? 'HD-1080p' : M.prof?.defaults?.radarr ?? 'Ultra-HD', mon: 'all', typ: 'standard', av: 'released', go: true }; Promise.resolve(loadProf()).then(() => { if (M.add && !M.add.sel) { const dflt = k === 's' ? M.prof?.defaults?.sonarr : M.prof?.defaults?.radarr; if (dflt) M.add.prof = dflt; } }); paintSheet(); root.querySelector('[name="aq"]')?.focus(); return; }
     if (a === 'ago') { M.add.go = !M.add.go; return paintSheet(); }
     if (a === 'aback') { M.add.sel = null; return paintSheet(); }
@@ -643,6 +854,7 @@ function bind(r) {
   r.addEventListener('input', (e) => {
     const n = e.target.name;
     if (n === 'gq') M.gq = e.target.value;
+    if (n === 'lq') { M.libQ = e.target.value; paintMain(); }
     if (n === 'aq' && M.add) { M.add.q = e.target.value; clearTimeout(lookT); lookT = setTimeout(lookup, 300); }
     if (n === 'mq' && M.mag) { M.mag.q = e.target.value; M.mag.err = ''; clearTimeout(magT); magT = setTimeout(magCheck, 250); }
     if (n === 'iq' && M.ix) { M.ix.q = e.target.value; clearTimeout(schT); schT = setTimeout(ixSchema, 300); }
@@ -652,12 +864,16 @@ function bind(r) {
 }
 let keyBound = false;
 function onKey(e) {
-    if (e.key !== 'Escape' || !root?.isConnected || document.querySelector('#settings:not([hidden]),.ac-ov')) return;
+    // Prompt 44: «/» setter fokus i søket i biblioteket (Serier/Filmer).
+    if (e.key === '/' && root?.isConnected && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName ?? '') && !M.sh) { const i = root.querySelector('[name="lq"]'); if (i) { e.preventDefault(); i.focus(); return; } }
+    if (e.key !== 'Escape' || !root?.isConnected || document.querySelector('#settings:not([hidden]),.ac-ov,.gi44-list:not([hidden])')) return;
     e.preventDefault(); e.stopPropagation();
+    if (M.srvOpen) { M.srvOpen = false; return paintTop(); }
+    if (document.activeElement?.name === 'lq' && M.libQ) { M.libQ = ''; return paintMain(); }
     if (M.sh) return closeSheet();
     if (M.gl) { M.gl = null; return paint(); }
-    if (M.srch) { M.srch = null; return paint(); }
-    if (M.det) { M.det = null; enterTab(); return paint(); }
+    if (M.srch) return back(() => { M.srch = null; M.job = null; paint(); });
+    if (M.det) return back(() => { M.det = null; enterTab(); paint(); });
     close();
 }
 
@@ -665,9 +881,9 @@ function onKey(e) {
 
 function applyTheme() {
   if (!root) return;
-  let mode = ''; try { mode = localStorage.getItem('kal_hl_mode') || ''; } catch { /* */ }
-  const hl = document.documentElement.dataset.hl;
-  const dark = hl !== '2c' || mode === 'mork' || (mode !== 'lys' && matchMedia('(prefers-color-scheme: dark)').matches);
+  // Prompt 44: følger web-modusen (Innstillinger → Utseende → Lys og mørk). «Nåværende» er alltid mørk.
+  const hl = document.documentElement.dataset.hl, dm = document.documentElement.getAttribute('data-mode');
+  const dark = hl !== '2c' || dm === 'dark';
   root.classList.toggle('dk', dark);
 }
 let themeBound = false;
@@ -677,23 +893,31 @@ export function render() {
     if (!r || r.dataset.bound) return;
     r.dataset.bound = '1'; root = r;
     applyTheme();
-    if (!themeBound) { themeBound = true; try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme); } catch { /* */ } addEventListener('storage', (e) => { if (e.key === 'kal_hl_mode') applyTheme(); }); document.addEventListener('hl:theme', applyTheme); }
+    if (!themeBound) { themeBound = true; addEventListener('papir-web-mode', applyTheme); document.addEventListener('hl:theme', applyTheme); }
     bind(r);
     wasNarrow = narrow();
     const onRz = () => { if (!root?.isConnected) { removeEventListener('resize', onRz); return; } if (narrow() !== wasNarrow) { wasNarrow = narrow(); paintMain(); } };
     addEventListener('resize', onRz);
     // #/media?tab=qb, ?magnet=… (registerProtocolHandler) eller ?open=sonarr:12
     const q = new URLSearchParams(location.hash.split('?')[1] ?? '');
-    const tab = { kom: 'kom', sonarr: 'son', son: 'son', radarr: 'rad', rad: 'rad', qbittorrent: 'qb', qb: 'qb', prowlarr: 'pro', pro: 'pro' }[q.get('tab') ?? ''];
+    const tab = SLUG_TAB[q.get('tab') ?? ''];
     if (tab) M.tab = tab;
-    M.det = null; M.srch = null;
-    const op = q.get('open'); if (op) { const [svc, id] = op.split(':'); if (id) { openDet(svc === 'radarr' || svc === 'm' ? 'm' : 's', id); } }
+    // Prompt 44: adressen bestemmer visningen (#/media/sonarr/s/12/sok …), også ved oppfrisking og direkte lenke.
+    if (!applyHash()) { M.det = null; M.srch = null; }
+    const op = q.get('open'); if (op) { const [svc, id] = op.split(':'); if (id) { openDet(svc === 'radarr' || svc === 'm' ? 'm' : 's', id, true); nav(true); } }
     const mg = q.get('magnet'); if (mg) { M.tab = 'qb'; M.sh = 'mag'; M.mag = { q: decodeURIComponent(mg), cat: '', paused: false, sequential: false, firstLast: false, check: null, err: '' }; setTimeout(magCheck, 50); }
     M.missing = false; M.restricted = '';
     mapi('/status').then((s) => { M.status = s; M.prefs = s.settings ?? null; }).catch(() => {}).finally(() => paint());
-    enterTab(); poll(); paint();
+    enterTab(); poll(); paint(); nav(true);
     if (!r.contains(document.activeElement)) r.focus({ preventScroll: true });
   });
   return `<div id="m43" class="m43" tabindex="-1" aria-label="Media"><div data-m43-top></div><div data-m43-gl></div><div class="m43-main" data-m43-main></div><div data-m43-toast></div><div data-m43-sh></div></div>`;
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden && root?.isConnected) { enterTab(); poll(); } });
+
+// Prompt 44 (claude-code-web-tab-godta-forslag.md): forslag i Glimt-feltet fra biblioteket.
+glimtSource('media', () => {
+  const T = [...(M.ser?.items ?? []), ...(M.mov?.items ?? [])].map((x) => x.title).filter(Boolean).slice(0, 60);
+  const U = (M.up?.items ?? []).map((x) => x.title).filter(Boolean);
+  return [...T.flatMap((t) => [`finn ${t}`, `hvor langt har ${t} kommet`, `last ned ${t} på nytt`]), ...U.map((t) => `når kommer ${t}`)];
+});

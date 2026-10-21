@@ -31,6 +31,7 @@ import { TAB_IC, icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, ro
 import { sheetBtn } from './util.js';
 import { loadServer41, serverGroup41 } from './settings-server41.js'; // prompt 41: Konto → Server (lokal/ekstern adresse)
 import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt35.js'; // prompt 35: GLIMT → Glimt
+import { TABS44, modeGroup44, loggerView44, huskeView44, usersGroups44, click44 } from './settings44.js'; // prompt 44
 
 const modal = () => document.getElementById('settings');
 
@@ -90,14 +91,16 @@ const TABS = [
   ['glimt', 'Glimt', 'Figur, brief, stemme og venner.', 'Glimt', P.star],
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
+  TABS44[0], // prompt 44: Gjøremål (synk med Home Assistant)
   ['ai', 'AI', 'Modeller, jobber, forbruk og nøkler.', 'Tilkoblinger', P.ai],
   ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
   ['system', 'System', 'Oppdater serveren til nyeste versjon.', 'Server', P.sys, true],
   ['backup', 'Backup', 'Backup av hele systemet: automatisk, hva som tas med, hvor og gjenoppretting.', 'Server', P.backup, true],
+  TABS44[1], // prompt 44: Logger
 ];
 const tabsFor = () => TABS.filter((t) => !t[5] || isAdmin());
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie' };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske' };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app', hahealth: 'familie' };
@@ -171,7 +174,7 @@ function usersView() {
     ...d.users.map((u) => row({ t: u.name || u.username, img: u.id === meId ? store.me.me?.avatarUrl ?? u.avatarUrl : u.avatarUrl, ini: initials(u.name || u.username), ic: u.id === meId ? '#3b6fd6' : '#2a3346',
       s: `@${u.username} · ${roleName(u.role)}${u.isMainAdmin || u.id === 'owner' ? ' · hovedadmin' : ''}${u.totp ? ' · 2FA på' : ''}`, k: 'bruker 2FA rolle', btn: 'Administrer', go: `users|user:${u.id}` })),
     admin ? row({ t: 'Ny bruker', s: 'Brukernavn, passord og rolle.', btn: 'Legg til', go: 'users|add' }) : null,
-  ], admin ? 'Admin kan legge til og fjerne brukere. Bruker ser dashbordet og styrer egen totrinnsbekreftelse.' : 'Brukere legges til av administrator. Du styrer egen totrinnsbekreftelse.')] };
+  ], admin ? 'Admin kan legge til og fjerne brukere. Bruker ser dashbordet og styrer egen totrinnsbekreftelse.' : 'Brukere legges til av administrator. Du styrer egen totrinnsbekreftelse.'), ...usersGroups44(H, d.users, () => { if (!modal().hidden && tab === 'users' && !sub) render(); })] }; // prompt 44: eier og logg inn som
 }
 
 /* ---------- Utseende ---------- */
@@ -235,6 +238,7 @@ function lookView() {
   const s = store.me, sq = searchState();
   if (!sub) return { groups: [
     { ...group('Tema', [{ html: themeCards(), q: `tema ${THEMES.map((t) => t[1]).join(' ')} papir vindu` }], 'Byttet skjer med en gang og lagres på brukeren din. Alt virker likt i begge temaene.'), cls: 'sg-theme' },
+    modeGroup44(H), // prompt 44: LYS OG MØRK
     group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Dashboard.' : 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[bgState().type] ?? 'Oslo', k: 'vær planeter jorda månen jupiter mars saturn oslo uskarphet mørklegging', go: 'look|bg' })]),
     group('Søkebar', [
       row({ t: 'Vis søkebar', s: 'Kan dras mellom avgangene og klokka.', tog: !s.hideSearch, act: 'data-toggle="search"' }),
@@ -573,7 +577,7 @@ const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [gro
   row({ t: 'Glimt-brief', s: 'Morgen-, dags-, kvelds- og nattbrief med klokkeslett', go: 'glimt', btn: 'Åpne', k: 'brief morgenbrief kveldsbrief varsel guide venner' }),
   row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure' }),
 ])] });
-const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView({ ...H, sub }), familie: () => fam42View(H, sub), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H) };
+const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView({ ...H, sub }), familie: () => fam42View(H, sub), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H), logger: () => loggerView44(H), huske: () => huskeView44(H) };
 function searchView() {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean), out = [];
   const saved = sub; sub = null;
@@ -647,7 +651,7 @@ function render() {
   let v;
   try { v = q.trim() && !sub ? searchView() : VIEWS[tab](); }
   catch (e) { console.error(e); v = { html: `<div class="err">Noe gikk galt på denne siden: ${esc(e.message)}. Prøv en annen side eller last inn på nytt.</div>` }; }
-  const content = (v.pre ?? '') + (v.groups ? v.groups.map(groupHtml).join('') : v.html) + (v.extra ?? '');
+  const content = (v.pre ?? '') + (v.groups ? v.groups.filter(Boolean).map(groupHtml).join('') : v.html) + (v.extra ?? '');
   // Fokus i et tekstfelt beholdes når siden tegnes på nytt (f.eks. etter automatisk lagring eller mens man søker).
   const act = document.activeElement, fk = modal().contains(act) && act.name ? [act.closest('form')?.dataset.group ?? '', act.name, act.selectionStart] : null;
   // Søkefeltet beholdes som samme element (ikke tegnet på nytt), så skriving, markør og tastaturforslag (IME) ikke avbrytes.
@@ -867,6 +871,7 @@ export function bindSettings() {
     if (e.target.closest('[data-open-fh-mail]')) { location.href = '/finans/?desktop=1#/inn'; return; }
     if (e.target.closest('[data-hp-edit]')) { closeSettings(); toggleHeadEdit(true); return; }
     if (e.target.closest('[data-gs-ai]')) return go('ai');
+    if (await click44(e, render)) return; // prompt 44
     if (tab === 'glimt' && !q.trim() && glimtClick(e, render)) return;
     const g = e.target.closest('[data-go]');
     if (g) return go(g.dataset.go);

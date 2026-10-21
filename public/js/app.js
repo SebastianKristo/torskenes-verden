@@ -37,8 +37,10 @@ import { initWeb38 } from './web38.js';
 import { initWeb40 } from './web40.js';
 import { initWeb41, after41 } from './web41.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
+import { initWeb44, after44 } from './web44.js'; // prompt 44: lys/mørk, GlimtInput, logg inn som, sidetillegg
+import * as study44 from './study44.js'; // prompt 44: nytt Studie-design
 
-const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study44.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 const KAL_APP = !!document.documentElement.dataset.kalApp;
 const scrollMem = scrollMemory();
@@ -78,6 +80,7 @@ function renderRoute() {
   setupDnd(view);
   if (route === 'dash') { mountDash(view); if (isEditingPending) { isEditingPending = false; requestAnimationFrame(() => startEdit()); } }
   after41(route, view); // prompt 41: 17. mai på Hjem
+  after44(route, view); // prompt 44
   // Rom er en underside av «Mer» på mobil.
   const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -148,7 +151,8 @@ function bindShell() {
     }
   });
   // Innstillinger legger #/innstillinger/<fane> i adressen (og fjerner den igjen) uten at siden under skal tegnes på nytt.
-  window.addEventListener('hashchange', () => { if (!settingsOwnsHash()) renderRoute(); });
+  // Prompt 44: Media styrer sin egen adresse (#/media/sonarr/s/12 …, frem/tilbake), så siden tegnes ikke på nytt for den.
+  window.addEventListener('hashchange', () => { if (!settingsOwnsHash() && !(route === 'media' && current() === 'media' && media43.ownsHash?.())) renderRoute(); });
   document.addEventListener('hl:theme', () => { route = null; renderRoute(); weatherPill(); });
   // Nytt språk: tegn visningen på nytt (tekster fra t() og Intl-datoer).
   document.addEventListener('hl:lang', () => { route = null; renderRoute(); weatherPill(); langLabel(); renderTicker(); });
@@ -161,7 +165,7 @@ function bindShell() {
 }
 
 async function main() {
-  const [me, ui] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults()), loadHlTheme(), loadAppIdentity()]);
+  const [me, ui, , , lay44] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults()), loadHlTheme(), loadAppIdentity(), api('/me/layout').catch(() => null)]);
   store.me = me;
   noteUser(me?.me?.id); // kontobytte: tøm den forrige brukerens cacher
   store.me.ui = { ...uiDefaults(), ...ui };
@@ -182,6 +186,7 @@ async function main() {
   initWeb38();
   initWeb40();
   initWeb41();
+  initWeb44(lay44);
   bindSearch();
   setupDnd(document.querySelector('header'));
   study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);

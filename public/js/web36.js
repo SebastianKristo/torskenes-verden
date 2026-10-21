@@ -41,8 +41,9 @@ export function initWeb36() {
   bindWxTap();
   prefetchDomains();
   import('./starting36.js').then((m) => m.watchServer()).catch(() => {});
-  // Oppdateringen er på «Starter serveren på nytt»: oppstartssiden vises med en gang.
-  Promise.all([import('./sysupdate.js'), import('./upd-banner.js')]).then(([su, ub]) => {
-    su.onUpdate?.(() => { try { if (su.running?.() && ub.progress?.().key === 'restart') document.dispatchEvent(new Event('hl:restarting')); } catch { /* */ } });
+  // Prompt 44: oppstartssiden vises bare når updateren selv sier «restarting» (ikke ved én feilet statusforespørsel,
+  // ikke ut fra fremdriftssteget). Fremdriften 0–99 % vises bare i kortet «Oppdaterer Nordlys OS».
+  import('./sysupdate.js').then((su) => {
+    su.onUpdate?.((U) => { try { if (su.state?.() === 'restarting') document.dispatchEvent(new CustomEvent('hl:restarting', { detail: { to: U?.d?.status?.version ?? U?.d?.latest?.version ?? null } })); } catch { /* */ } });
   }).catch(() => {});
 }

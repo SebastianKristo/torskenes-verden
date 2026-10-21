@@ -8,7 +8,8 @@ export function kalTheme() { try { const v = localStorage.getItem(KEY); return O
 // Prompt 43 (claude-code-kalender-web-lukk-tema.md): «følger» betyr Homelab-temaet først (paperMode «lys»/«mork» i
 // /api/me/layout, samme valg som Papir-appen), ellers systemet (prefers-color-scheme). Lytter på begge og bytter med en gang.
 const HL = 'kal_hl_mode';
-const hlMode = () => { try { const v = localStorage.getItem(HL); return v === 'lys' || v === 'mork' ? v : ''; } catch { return ''; } };
+// Prompt 44: web-modusen (html[data-mode], Innstillinger → Utseende → Lys og mørk) gjelder først.
+const hlMode = () => { const dm = document.documentElement.getAttribute('data-mode'); if (dm === 'dark' || dm === 'light') return dm === 'dark' ? 'mork' : 'lys'; try { const v = localStorage.getItem(HL); return v === 'lys' || v === 'mork' ? v : ''; } catch { return ''; } };
 export function applyKalTheme(v = kalTheme()) {
   const h = document.documentElement;
   if (h.hasAttribute('data-kal-app')) return; // Kalender.app for Mac følger systemet
@@ -56,6 +57,7 @@ document.addEventListener('click', (e) => {
   document.querySelector('[data-k40-theme]')?.focus();
 });
 applyKalTheme();
+window.addEventListener('papir-web-mode', () => applyKalTheme());
 if (!document.documentElement.hasAttribute('data-kal-app') && !/^\/(login|app-auth)/.test(location.pathname)) {
   syncHlMode(true);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) syncHlMode(); });

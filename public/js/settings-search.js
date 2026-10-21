@@ -24,6 +24,8 @@ export const TAB_IC = {
   glimt: ['#b23a2a', 'M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z'],
   familie: ['#2f7a4f', 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z'], // prompt 42
   backup: ['#2f6b45', 'M12 3a9 9 0 1 1-8.5 6M3 4v5h5M12 8v4l3 2'],
+  logger: ['#3d4a5c', 'M4 5h16v14H4zM7 9l3 3-3 3M12 15h5'], // prompt 44
+  huske: ['#a0671a', 'M5 6h2M5 12h2M5 18h2M10 6h9M10 12h9M10 18h9'], // prompt 44
 };
 export const icBox = (k, size = 30, icon = 16) => {
   const [c, d] = TAB_IC[k] ?? TAB_IC.app;
@@ -59,6 +61,12 @@ const LOCAL = [
   ['upd', 'Oppdater Homelab', 'System → Oppdater nå', 'system', 'oppdater oppdatere update nordlys installer', 'upd'],
   ['chk', 'Se etter oppdatering', 'System → Se etter oppdatering', 'system', 'oppdatering versjon sjekk ny build programvare', 'chk'],
   ['pw', 'Krev passord for å oppdatere', 'System → Krev passord', 'system', 'krev passord oppdater sikkerhet', 'pw'],
+  ['logg44', 'Logger', 'Server → Logger', 'logger', 'logg logger log docker feil feilsøking container'],
+  ['rb44', 'Tidligere versjoner', 'System → Tidligere versjoner', 'system', 'tilbake rull tilbake rollback tidligere versjon installer eldre'],
+  ['lm44', 'Lys og mørk', 'Utseende → Lys og mørk', 'look', 'lys mørk mørkt dark light system følg systemet'],
+  ['hk44', 'Synk med Home Assistant', 'Gjøremål → Synk', 'huske', 'gjøremål huskeliste synk home assistant todo'],
+  ['ow44', 'Overfør eierskap', 'Brukere → Server · eier', 'users', 'eier overfør eierskap owner'],
+  ['as44', 'Logg inn som', 'Brukere → Familie · logg inn som', 'users', 'logg inn som impersonering rediger oppsett familie'],
   ['backup', 'Automatisk backup', 'Backup → Automatisk', 'backup', 'backup sikkerhetskopi automatisk gjenopprett nas smb', 'bk-auto'],
   // Prompt 35: GLIMT → Glimt (figur, brief, stemme og venner).
   ['glimt', 'Glimt', 'Glimt', 'glimt', 'glimt brief morgenbrief kveldsbrief dagsbrief nattbrief venner guide', 'glimt'],

@@ -14,6 +14,7 @@ import { store } from './store.js';
 import { U, UPD_CMD, onUpdate, loadUpdate, checkUpdate, openSheet, startUpdate, toggleLog, copyCmd, running, state, verTxt, ms, shortSha } from './sysupdate.js';
 import { progress, ackDone, doneRecent } from './upd-banner.js';
 import { carpOnBar, sherlockFly, setSherlockText } from './glimt-outfits36.js'; // prompt 36: Sherlock- og snekker-Glimt
+import { versionsHtml44 } from './settings44.js'; // prompt 44: TIDLIGERE VERSJONER (tilbakerulling)
 
 let rerender = () => {}, subscribed = false;
 const admin = () => store.me?.me?.role === 'admin';
@@ -60,7 +61,7 @@ function heroHtml(ph, d) {
   const inst = d?.installed ?? {}, lat = d?.latest ?? {};
   const shown = ph === 'avail' || ph === 'setup' || ph === 'run' || ph === 'checking' && d?.updateAvailable ? lat.version || inst.version : inst.version || lat.version;
   const big = majMin(shown) || '–';
-  const stTxt = { loading: 'Henter versjon …', error: 'Fikk ikke kontakt med oppdateringen', run: U.reloading ? 'Ny versjon svarer …' : 'Oppdaterer …', checking: 'Ser etter oppdatering …', fail: 'Oppdateringen feilet', done: 'Oppdatert', avail: 'Oppdatering tilgjengelig', setup: 'Oppdatering tilgjengelig', fresh: 'Du har siste versjon' }[ph];
+  const stTxt = { loading: 'Henter versjon …', error: 'Fikk ikke kontakt med oppdateringen', run: U.reloading ? 'Ny versjon svarer …' : U.rollTo || d?.status?.action === 'rollback' ? `Går tilbake til ${U.rollTo ?? d?.status?.version ?? ''}` : 'Oppdaterer …', checking: 'Ser etter oppdatering …', fail: 'Oppdateringen feilet', done: 'Oppdatert', avail: 'Oppdatering tilgjengelig', setup: 'Oppdatering tilgjengelig', fresh: 'Du har siste versjon' }[ph];
   let prog = '';
   if (ph === 'run') {
     const p = progress();
@@ -101,7 +102,7 @@ function verHtml(ph, d, h) {
   const pw = requirePw();
   return `<section class="ny-sec"><div class="ny-row"><span class="ny-rt"><b>Programvareversjon</b><span class="ny-mono" data-no-i18n>${esc(line)}</span></span><span class="ny-inst${up ? '' : ' ok'}">${esc(right)}</span></div>
     ${h.row({ t: 'Krev passord for å oppdatere', k: 'passord oppdatering sikkerhet', s: pw ? 'Passord kreves før oppdateringen starter' : 'Av · admin kan oppdatere med ett trykk', tog: pw, act: 'data-upd-set="require_password"', disabled: !SET.loaded }).html}
-    <span class="ny-note">Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.</span>${SET.err ? `<span class="ny-note red">${esc(SET.err)}</span>` : ''}</section>`;
+    <span class="ny-note">Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.</span>${SET.err ? `<span class="ny-note red">${esc(SET.err)}</span>` : ''}</section>${versionsHtml44(rerender)}`;
 }
 
 function notesHtml(ph, d) {

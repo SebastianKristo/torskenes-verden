@@ -25,6 +25,7 @@ import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import * as k38 from './kal38.js'; // prompt 38: zoom, Glimt-assistenten, kart, ark/tastatur, app-modus (Mac)
 import * as k42 from './kal42.js'; // prompt 42: Abonnementer (trekkdatoer fra Finans)
 import * as k39 from './kal39.js'; // prompt 39: hele oppsettet er en kopi av Kalender.app for Mac (fire kalendere)
+import * as k44 from './kal44.js'; // prompt 44: deltakere, adresse med forslag, Media-status, I dag-ikon
 /** Prompt 31 (Kalender.dc.html): «Pilestredet park 35 U2005 https://link.mazemap.com/…» → «Pilestredet park 35 U2005». */
 export const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
 const urlIn = (t) => String(t ?? '').match(/https?:\/\/\S+/)?.[0] ?? '';
@@ -172,6 +173,10 @@ function normalize(r) {
       editable: !!x.editable, rep: x.repeat || (x.recurrence ? 'rec' : ''), recurrence: x.recurrence || null, srvRem: x.reminder || '', all: !!x.allDay, startRaw: x.start, endRaw: x.end,
       // Prompt 38: adresse og kart (kal37: address, map:{lat, lon, url, appleUrl, googleUrl, label}) og serverens kind (trial ≠ prøve).
       addr: x.address || '', gmap: x.map && typeof x.map === 'object' ? x.map : null, k37: x.kind || '',
+      // Prompt 44: koordinater for stedet, deltakere og Media-status (kalenderen «Media»).
+      geo: x.geo && Number.isFinite(+x.geo.lat) ? { lat: +x.geo.lat, lon: +x.geo.lon } : Number.isFinite(+x.lat) && x.lat !== null && x.lat !== '' ? { lat: +x.lat, lon: +x.lon } : null,
+      att: Array.isArray(x.attendees) ? x.attendees : [],
+      med: x.source === 'media' || x.calendar === 'media' ? { status: x.status ?? '', statusText: x.statusText ?? '', progress: x.progress ?? null, code: x.code ?? '', ep: x.episodeTitle ?? '', href: (() => { const m = String(x.deepLink ?? '').match(/media\/(sonarr|radarr)\/(\w+)/); return m ? `#/media?open=${m[1]}:${m[2]}` : '#/media'; })() } : null,
       // Prompt 39: én av de fire kalenderne (Personlig · Bursdager · Skole · Helligdager) eller en egen, og fagets tekstfarger.
       ac: k39.cal4({ ...x, cal, kind }), stx: x.subjectTextColor || '', slt: x.subjectLightColor || '', ...(isAb ? { ab: k42.subFields(x), editable: false, all: true } : {}) };
     if (x.allDay || isAb) {
@@ -329,6 +334,7 @@ function detailSheet() {
     <div class="k2-det-h"><span class="k2-strip"></span><div class="k2-grow"><span class="k2-lab">${esc(kk)}</span><b data-no-i18n>${esc(e.t)}</b><span>${esc(`${longDate(sd)} · `)}${esc(tmOf(e))}</span></div><button type="button" class="k2-x" data-k-close aria-label="Lukk">✕</button></div>
     <div class="k2-rows">${rows.map(([a, b, u]) => `<div><span>${esc(a)}</span><b${u ? ' data-no-i18n' : ''}>${esc(b)}</b></div>`).join('')}</div>
     ${k38.detailMap(e)}
+    ${k44.detailExtra(e)}
     <span class="k2-lab">VARSEL</span><div class="k2-chips">${REMS.map(([v, n]) => `<button type="button" class="k2-chip${R === v ? ' on' : ''}" data-k-rem="${v}" aria-pressed="${R === v}">${n}</button>`).join('')}</div>
     ${src ? `<span class="k2-src">${esc(src)}</span>` : ''}
     ${e.editable ? '<button type="button" class="k2-link k2-learn" data-k-learn>Lær Glimt hva dette er…</button>' : ''}
@@ -413,7 +419,7 @@ function formSheet() {
         ${F.all ? `<label><span>Til og med</span><input type="date" name="endDate" value="${esc(F.endDate || F.k)}"></label>`
     : `<label><span>Fra</span><input type="time" name="start" step="300" value="${esc(F.s)}"></label><label><span>Til</span><input type="time" name="end" step="300" value="${esc(F.e)}"></label>`}
       </div>
-      <input class="k2-in" name="location" value="${esc(F.r)}" placeholder="Sted" autocomplete="off">
+      <input class="k2-in" name="location" value="${esc(F.r)}" placeholder="Sted eller adresse" autocomplete="off" aria-label="Sted eller adresse">
       <span class="k2-lab">KALENDER</span><div class="k2-chips">${wcals.map((c) => chip(F.cal === c.id, `data-k-fcal="${esc(c.id)}"`, c.name, c.color)).join('')}</div>
       <span class="k2-lab">GJENTA</span><div class="k2-chips">${REPS.map(([v, n]) => chip(F.rep === v, `data-k-frep="${v}"`, n)).join('')}</div>
       <span class="k2-lab">VARSEL</span><div class="k2-chips">${REMS.map(([v, n]) => chip(F.rem === v, `data-k-frem="${v}"`, n)).join('')}</div>
@@ -792,6 +798,7 @@ function paint() {
   fitHeight();
   k39.fitMonth(h);
   k38.applyZoom(h);
+  k44.afterPaint(h); // prompt 44
   if (focusBar || k38.G.focusBar) { const q = h.querySelector('[data-k38-bar]'); if (q) { q.focus({ preventScroll: true }); const n = focusBar ? selBar : q.value.length; try { q.setSelectionRange(n, n); } catch { /* */ } } k38.G.focusBar = false; }
   if (focusGq || k38.G.focusGq) { const q = h.querySelector('[data-k38-gq]'); if (q) { q.focus({ preventScroll: true }); const n = focusGq ? selGq : q.value.length; try { q.setSelectionRange(n, n); } catch { /* */ } } k38.G.focusGq = false; }
   const glb2 = h.querySelector('[data-k38-glb]'); if (glb2) glb2.scrollTop = glb == null ? glb2.scrollHeight : glb;
@@ -880,13 +887,14 @@ function formFromEvent(e) {
   let endDate = '';
   if (allD && e.endRaw && /^\d{4}-\d{2}-\d{2}$/.test(e.endRaw)) endDate = key(add(fromKey(e.endRaw), -1));
   const k0 = e.startRaw && /^\d{4}-\d{2}-\d{2}/.test(e.startRaw) ? (allD ? String(e.startRaw).slice(0, 10) : key(new Date(e.startRaw))) : e.k;
-  return { id: e.oid || e.id, t: e.t, k: k0, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: allD, endDate, cal: k39.calById(e.ac).own ? e.ac : 'privat', r: e.rRaw ?? e.r, rep: ['daily', 'weekly', 'monthly'].includes(e.rep) ? e.rep : 'none', rem: remOf(e), n: e.n, err: '' };
+  return { id: e.oid || e.id, t: e.t, k: k0, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: allD, endDate, cal: k39.calById(e.ac).own ? e.ac : 'privat', r: e.rRaw ?? e.r, rep: ['daily', 'weekly', 'monthly'].includes(e.rep) ? e.rep : 'none', rem: remOf(e), n: e.n, err: '', geo: e.geo ?? null, geoLabel: e.geo ? e.rRaw ?? e.r : '' };
 }
 function readForm(f) {
   const F = K.form, fd = new FormData(f);
   F.t = String(fd.get('title') ?? '').trim(); F.k = String(fd.get('date') ?? '');
   if (F.all) F.endDate = String(fd.get('endDate') ?? F.k); else { F.s = String(fd.get('start') ?? F.s); F.e = String(fd.get('end') ?? F.e); }
   F.r = String(fd.get('location') ?? '').trim(); F.n = String(fd.get('note') ?? '').trim();
+  if (F.geo && F.r !== (F.geoLabel ?? '')) F.geo = null; // prompt 44: fri tekst uten koordinater
 }
 /** Svar med feilkode og JSON-kropp (api() i util.js gir bare meldingen). */
 async function call(path, method, json) {
@@ -902,7 +910,7 @@ async function saveForm(f) {
   if (!F.k) { F.err = 'Velg dato.'; return paint(); }
   if (!F.all && (!F.s || !F.e || mm(F.e) <= mm(F.s))) { F.err = 'Slutt må være etter start.'; return paint(); }
   if (F.all && F.endDate && F.endDate < F.k) { F.err = 'Sluttdato må være samme dag eller senere.'; return paint(); }
-  const body2 = { title: F.t, allDay: !!F.all, date: F.k, start: F.all ? '' : F.s, end: F.all ? '' : F.e, ...(F.all && F.endDate && F.endDate !== F.k ? { endDate: F.endDate } : {}), location: F.r, calendar: /^c-/.test(F.cal) || k39.calById(F.cal).own ? 'privat' : F.cal, appCalendar: F.cal === 'privat' ? 'personlig' : F.cal, repeat: F.rep, reminder: F.rem, note: F.n };
+  const body2 = { title: F.t, allDay: !!F.all, date: F.k, start: F.all ? '' : F.s, end: F.all ? '' : F.e, ...(F.all && F.endDate && F.endDate !== F.k ? { endDate: F.endDate } : {}), location: F.r, calendar: /^c-/.test(F.cal) || k39.calById(F.cal).own ? 'privat' : F.cal, appCalendar: F.cal === 'privat' ? 'personlig' : F.cal, repeat: F.rep, reminder: F.rem, note: F.n, ...(F.geo ? { geo: F.geo } : F.id ? { geo: null } : {}) };
   K.busy = true; F.err = ''; F.reconnect = false; paint();
   try {
     const r = await call(F.id ? `/kalender/events/${encodeURIComponent(F.id)}` : '/kalender/events', F.id ? 'PATCH' : 'POST', body2);
@@ -997,6 +1005,7 @@ function bind(h) {
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45) shift(dx < 0 ? 1 : -1);
   });
   h.addEventListener('input', (e) => {
+    if (k44.input44(e)) return; // prompt 44
     if (e.target.matches('[data-k38-bar]')) { k38.G.bar = e.target.value; k38.paintBar(h); return; }
     if (e.target.matches('[data-k38-gq]')) { k38.G.gq = e.target.value; return; }
     if (e.target.matches('[data-k-q]')) runSearch(e.target.value);
@@ -1033,6 +1042,7 @@ function bind(h) {
     }
   });
   h.addEventListener('submit', (e) => {
+    if (e.target.matches('[data-k44-mail]')) { k44.submit44(e, K.sel && findEv(K.sel)); return; } // prompt 44
     if (e.target.closest('[data-k38-gtform]')) { e.preventDefault(); const v = e.target.querySelector('input')?.value; k38.G.goto = false; if (/^\d{4}-\d{2}-\d{2}$/.test(v ?? '')) { K.cur = v; gridKey = ''; if (K.view === 'liste') K.view = 'dag'; } paint(); return; }
     if (e.target.closest('[data-k38-gform]')) { e.preventDefault(); const v = e.target.querySelector('[data-k38-gq]')?.value ?? k38.G.gq; k38.G.focusGq = true; k38.send(v); return; }
     if (e.target.closest('[data-k-qform]')) { e.preventDefault(); submitQa(); return; }
@@ -1047,6 +1057,7 @@ function bind(h) {
   });
   h.addEventListener('click', (e) => {
     const tg = e.target;
+    if (tg.closest?.('[data-k44-att]')) { k44.click44(e, K.sel && findEv(K.sel)); return; } // prompt 44: deltakere
     // Klikk på bakgrunnen lukker arkene (ikke klikk inne i arket).
     const bg = tg.closest('.k2-sheet-bg');
     if (bg && tg === bg) { closeSheets(); return; }
@@ -1187,6 +1198,8 @@ function startTick() {
 k38.initKal38({ K, evOn, col, short, key, add, d0, mm, hmM, fromKey, curD, calById, noUrl, longDate: dLong,
   paint: () => paint(), openDay, setView, openForm, askServer,
   ensureNow: async () => { const td = d0(new Date()); ensureRange(key(add(td, -31)), key(add(td, 121))); if (K.loading) await K.loading.catch(() => {}); } });
+k44.initKal44({ K, paint: () => paint(), ensureKal, flash: (t) => flash(t), host: () => host() });
+k44.scheduleMidnight(() => { if (host()) paint(); });
 k39.initKal39({ K, evOn, key, add, d0, mm, fromKey, curD, findEv, narrow, savePref, paint: () => paint(), setView, openForm,
   openGlimt: () => k38.openGlimt(), resetScroll: () => { gridKey = ''; }, reload: () => ensureKal(true) });
 const APP_VIEWS = { 1: 'dag', 2: 'uke', 3: 'mnd', 4: 'ar', 5: 'liste', aar: 'ar', 'år': 'ar', maaned: 'mnd', maned: 'mnd', '3dager': '3d', agenda: 'liste' };

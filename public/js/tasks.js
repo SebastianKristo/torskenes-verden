@@ -17,6 +17,7 @@ import { mountHa } from './tasks-ha.js';
 import { needsAi41, splitLocal41, startJob41, trackJob41, jobsHtml41, madeWithHtml41, originCard41, glimtSources41, srcItems41, clearDone41 } from './tasks41.js'; // prompt 41: Glimt deler opp i bakgrunnen
 import { parse as gParse, pasteLines, isAsk, ask as gAsk, splitSugg, guess, dupes, PACK, MAT_FALLBACK, isoDay } from './tasks37-glimt.js';
 import { colorFor } from './house37.js';
+import { setup44, subBtn, subRows, haRow, openPanel, bind44, refresh44 } from './tasks44.js'; // prompt 44: deloppgaver i lista, panel fra høyre, synk-rad
 
 const S = { d: null, err: null, cur: 'alle', nv: '', nd: 0, nw: null, busy: false, arch: [], ed: null, lsv: null, g: { q: '', busy: '', ans: null }, tagIn: '', subIn: '' };
 // Prompt 32: Arkivert (archived_at på serveren, ellers lokalt per bruker). Fullførte oppgaver arkiveres automatisk etter 7 dager.
@@ -96,7 +97,7 @@ async function load() {
   if (S.cards !== false) loadCards();
 }
 // Felter serveren ikke lagrer ennå (eldre server) huskes i denne nettleseren, så detaljarket ikke mister dem ved omlasting.
-const EXTRA = ['time', 'urgent', 'rep', 'early', 'prio', 'flag', 'tags', 'subs', 'place', 'origin']; // prompt 41: origin = «Laget med Glimt»
+const EXTRA = ['time', 'urgent', 'rep', 'early', 'prio', 'flag', 'tags', 'subs', 'place', 'origin', 'dl', 'pl', 'geo', 'wait']; // prompt 44: frist, sted (+ koordinater), venter på // prompt 41: origin = «Laget med Glimt»
 const exKey = () => `tk37_extra_${myId() ?? 'x'}`;
 const localExtra = () => { try { return JSON.parse(localStorage.getItem(exKey()) ?? '{}'); } catch { return {}; } };
 function rememberExtra(t) { try { const m = localExtra(); m[t.id] = Object.fromEntries(EXTRA.filter((k) => t[k] !== undefined).map((k) => [k, t[k]])); localStorage.setItem(exKey(), JSON.stringify(m)); } catch { /* */ } }
@@ -200,8 +201,8 @@ function row(t, i) {
     <button type="button" class="tk-chk" style="--c:${esc(c)}" data-tk-tick="${esc(t.id)}" aria-label="${t.done ? 'Marker som ikke gjort' : 'Fullfør'}" aria-pressed="${t.done}">${t.done ? '✓' : ''}</button>
     <button type="button" class="tk-main tk-open" data-tk-ed="${esc(t.id)}" aria-label="Detaljer for ${esc(tTitle(t))}"><span class="tk-n">${pre}${esc(tTitle(t))}</span>${meta ? `<span class="tk-meta ${t.done ? '' : dc}">${esc(meta)}</span>` : ''}</button>
     ${S.cur === 'arkiv' ? `<button type="button" class="tk-restore" data-tk-restore="${esc(t.id)}">↺ Gjenopprett</button>` : t.done ? `<button type="button" class="tk-x tk-arc" data-tk-arch="${esc(t.id)}" aria-label="Arkiver ${esc(tTitle(t))}" title="Arkiver">${ARCH_SVG}</button>` : ''}
-    <button type="button" class="tk-x" data-tk-del="${esc(t.id)}" aria-label="${S.cur === 'arkiv' ? 'Slett for godt' : 'Slett'} ${esc(tTitle(t))}">×</button>
-  </div>`;
+    ${S.cur === 'arkiv' || t.done ? '' : subBtn(t)}<button type="button" class="tk-x" data-tk-del="${esc(t.id)}" aria-label="${S.cur === 'arkiv' ? 'Slett for godt' : 'Slett'} ${esc(tTitle(t))}">×</button>
+  </div>${S.cur === 'arkiv' ? '' : subRows(t)}`;
 }
 
 function body() {
@@ -243,7 +244,7 @@ function body() {
     <div class="tk-opts">${[[0, 'I dag'], [1, 'I morgen'], [7, 'Neste uke'], [null, 'Uten dato']].map(([v, n]) => opt('due', v, n, S.nd === v)).join('')}<span class="tk-sep"></span>${who.map(([v, n]) => opt('who', v, n, S.nw === v)).join('')}</div>
     ${group('I DAG OG FORFALT', 'late', od)}${group('SENERE', 'mut', later)}${group('FERDIG', 'pos', done, actBtn('arch-all', 'Arkiver alle'))}
     ${inL.length ? '' : `<div class="tk-empty">Ingen oppgaver i ${esc(curName)}.</div>`}
-    ${isAdmin() ? '<div class="tk-ha-slot"></div>' : ''}
+    ${isAdmin() ? haRow() : ''}
     <div class="tk-foot">${liveOn() ? '● Sanntid' : 'Oppdateres automatisk'} · Dine lister er private. Delte lister ser alle medlemmene. Trykk på en oppgave for detaljer.</div>`;
 }
 
@@ -340,12 +341,15 @@ function paint() {
   const h = host();
   if (!h) { if (layer) { S.ed = null; S.lsv = null; paintSheets(); } return; }
   const act = document.activeElement, focusAdd = act?.closest?.('[data-tk-form]') && act.name === 'title', focusG = act?.closest?.('[data-tk-gform]');
+  const focusSub = act?.name === 'tk44sub' ? act.closest('[data-tk44-addform]')?.dataset.tk44Addform : null; // prompt 44
   if (haEl && h.contains(haEl)) haEl.remove();
   h.innerHTML = body();
   placeHa(h);
   if (focusAdd) { const i = h.querySelector('[data-tk-form] input'); i?.focus(); i?.setSelectionRange(i.value.length, i.value.length); }
   if (focusG && !S.g.busy) { const i = h.querySelector('[data-tk-gform] input'); i?.focus(); }
+  if (focusSub) { const i = h.querySelector(`[data-tk44-addform="${CSS.escape(focusSub)}"] input`); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   paintSheets();
+  refresh44();
 }
 
 /* ---------- Lagring ---------- */
@@ -622,7 +626,7 @@ function bind(h) {
       if (S.cur === id && id !== 'alle' && id !== 'arkiv') return openList(id); // trykk på aktiv chip åpner listearket
       S.cur = id; if (S.cards !== false) { S.cards = null; loadCards(); } return paint();
     }
-    if (t.dataset.twSel) { S.sel = t.dataset.twSel; if (innerWidth < 1000) { S.ed = t.dataset.twSel; S.tagIn = ''; S.subIn = ''; paintSheets(); } return paint(); }
+    if (t.dataset.twSel) { S.sel = t.dataset.twSel; if (innerWidth < 1000) { S.ed = t.dataset.twSel; S.tagIn = ''; S.subIn = ''; paintSheets(); } else openPanel(t.dataset.twSel); return paint(); } // prompt 44: panel fra høyre
     if (t.dataset.twView) { S.view = t.dataset.twView; try { localStorage.setItem('huske_web_view', S.view); } catch { /* */ } return paint(); }
     if (t.dataset.twPf !== undefined) { S.pf = t.dataset.twPf || null; return paint(); }
     if (t.dataset.twAct) return webAct(t.dataset.twAct, t.dataset.twId);
@@ -811,6 +815,7 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('click', (e) => { if (e.target.closest?.('[data-tk40-close]')) { e.preventDefault(); closeFs40(); } });
 
 export function render() {
+  bind44();
   setTimeout(() => {
     const h = host();
     if (!h) return;
@@ -909,8 +914,8 @@ function twRow(t) {
     <button type="button" class="tk-chk" style="--c:${esc(c)}" data-tk-tick="${esc(t.id)}" aria-label="${t.done ? 'Marker som ikke gjort' : 'Fullfør'}" aria-pressed="${t.done}">${t.done ? '✓' : ''}</button>
     <button type="button" class="tw-rm" data-tw-sel="${esc(t.id)}"><span class="tw-rn">${t.flag ? '<span class="tk-flag">⚑</span>' : ''}${t.prio ? `<span class="tk-prio">${'!'.repeat(Math.min(3, +t.prio))}</span>` : ''}${esc(tTitle(t))}</span>${meta ? `<span class="tw-rmeta ${t.done ? '' : dc}">${esc(meta)}</span>` : ''}</button>
     ${S.cur === 'alle' && l ? `<span class="tw-lb" style="--c:${esc(l.color)}">${esc(l.name)}</span>` : ''}${twPerson(tWho(t))}
-    ${S.cur === 'arkiv' ? `<button type="button" class="tk-restore" data-tk-restore="${esc(t.id)}">↺</button>` : ''}
-  </div>`;
+    ${S.cur === 'arkiv' ? `<button type="button" class="tk-restore" data-tk-restore="${esc(t.id)}">↺</button>` : t.done ? '' : subBtn(t)}
+  </div>${S.cur === 'arkiv' ? '' : subRows(t)}`;
 }
 function twSide() {
   const items = S.d.items ?? [], lists = S.d.lists ?? [];
@@ -923,7 +928,7 @@ function twSide() {
       ${lists.map((l) => li(l.id, l.name, l.color, n(l.id))).join('')}${li('arkiv', 'Arkiv', 'var(--t-mut)', n('arkiv'), `<span class="tw-ic">${ARCH_SVG}</span>`)}${mwN41() ? li('glimt41', 'Laget med Glimt', '#b23a2a', mwN41(), '<span class="tw-dot tk41-red"></span>') : ''}</nav>
     ${ppl.length ? `<span class="tw-lab">PERSONER</span><nav class="tw-lists">${ppl.map((p) => `<button type="button" class="tw-li${S.pf === p.id ? ' on' : ''}" data-tw-pf="${esc(p.id)}" title="${esc(p.name)}">${twPerson(p.id, 20)}<span class="tw-ln">${esc(p.id === myId() ? `${p.name} (meg)` : p.name)}</span><span class="tw-k">${items.filter((t) => !t.done && tWho(t) === p.id).length}</span></button>`).join('')}</nav>` : ''}
     <button type="button" class="tw-newl" data-tk-act="newlist">+ Ny liste</button>
-    ${isAdmin() ? '<div class="tk-ha-slot"></div>' : ''}</aside>`;
+    ${isAdmin() ? haRow() : ''}</aside>`;
 }
 function twSelPanel() {
   const t = S.sel != null && (S.d.items.find((x) => String(x.id) === String(S.sel)) ?? S.arch.find((x) => String(x.id) === String(S.sel)));
@@ -1005,3 +1010,6 @@ function bindBoard(h) {
     await patchItem(t, ch); paint();
   });
 }
+
+// Prompt 44: kontekst for tasks44.js (deloppgaver i lista og panelet fra høyre).
+setup44({ S, patchItem, tick, del, paint, createItem, flash, colorOf, listOf, tList, tTitle, tNotes, tWho, nameOf, people, REP, EARLY, PRIO, PLACE, today, openEd: (id) => { S.ed = id; S.tagIn = ''; S.subIn = ''; paintSheets(); } });

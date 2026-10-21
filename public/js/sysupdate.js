@@ -3,6 +3,8 @@
 // - 404 (eldre server uten API-et) → «ikke tilgjengelig». available:false → updater-containeren kjører ikke.
 // - Under en jobb hentes status hvert 2. s. Når serveren er nede (restart), pinges /healthz hvert 3. s; når den
 //   svarer og jobben er ferdig (eller ny versjon er installert), lastes siden på nytt.
+import { reloadOnce } from './upd44.js';
+
 const BASE = '/api/system/update';
 export const UPD_CMD = 'bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/deploy/proxmox/update.sh)"';
 export const STEPS = [['downloading', 'Laster ned'], ['building', 'Bygger'], ['restarting', 'Starter på nytt'], ['done', 'Ferdig']];
@@ -129,7 +131,7 @@ export async function copyCmd() {
 
 let timer = null;
 const sleep = (ms) => new Promise((r) => { timer = setTimeout(r, ms); });
-let watching = false;
+let watching = false, fails = 0, failSince = 0;
 async function healthy() {
   try { const r = await fetch('/healthz', { cache: 'no-store' }); return r.ok; } catch { return false; }
 }
@@ -154,13 +156,18 @@ export async function watch() {
       const d = await req('');
       U.d = d; U.st = 'ok';
       if (U.logOpen && d.log) U.log = Array.isArray(d.log) ? d.log.join('\n') : d.log;
-      if (finished()) { U.waiting = false; U.reloading = true; emit(); watching = false; setTimeout(() => location.reload(), 800); return; }
-      U.waiting = false;
+      // Prompt 44: én innlasting (upd44.js), koordinert med oppstartsskjermen og andre faner.
+      if (finished()) { U.waiting = false; U.reloading = true; emit(); watching = false; const to = U.d?.installed?.version ?? U.d?.latest?.version ?? null; setTimeout(() => reloadOnce(to), 800); return; }
+      U.waiting = false; fails = 0; failSince = 0;
       if (!RUNNING.includes(state())) { watching = false; emit(); return; }
       emit();
     } catch (e) {
-      // Nettverksfeil eller 502/503 fra proxyen mens jobben pågår: serveren starter på nytt.
-      if (!U.waiting && (!e.status || e.status >= 500)) { U.waiting = true; U.waitSince = Date.now(); }
+      // Nettverksfeil eller 502/503 fra proxyen mens jobben pågår. Prompt 44: én feil (502 mens bildet hentes) betyr
+      // ingenting; «venter på serveren» først etter 3 feil på rad over minst 6 s, eller når updateren sa «restarting».
+      if (!U.waiting && (!e.status || e.status >= 500)) {
+        fails++; failSince ||= Date.now();
+        if (state() === 'restarting' || (fails >= 3 && Date.now() - failSince >= 6000)) { U.waiting = true; U.waitSince = Date.now(); }
+      }
       else if (e.status === 401) { watching = false; location.reload(); return; } // økten ble borte: logg inn på nytt
       emit();
     }

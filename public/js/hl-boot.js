@@ -20,6 +20,13 @@
   } catch (e) { /* eldre nettleser */ }
   // Prompt 40: Kalender på web lys/mørk/auto (kal-theme40.js) – leses før første render så det ikke blinker.
   try { var kt = localStorage.getItem('kal_theme'); if (kt !== 'lys' && kt !== 'mork') kt = localStorage.getItem('kal_hl_mode'); /* prompt 43: «følger» = Homelab-temaet */ if ((kt === 'lys' || kt === 'mork') && !document.documentElement.hasAttribute('data-kal-app')) document.documentElement.setAttribute('data-kal-theme', kt); } catch (e) { /* privat modus */ }
+  // Prompt 44 (claude-code-web-lys-mork-modus.md): Lys (standard) · Mørk · Følg systemet. Settes før første tegning,
+  // så siden ikke blinker hvit. web44.js henter valget fra brukeren (web_theme) og lytter på systemet etterpå.
+  try {
+    var wm = localStorage.getItem('papir_web_mode'); if (wm !== 'dark' && wm !== 'system') wm = 'light';
+    var dm = wm === 'dark' || (wm === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    if (!document.documentElement.hasAttribute('data-kal-app')) { document.documentElement.setAttribute('data-mode', dm); document.documentElement.setAttribute('data-web-mode', wm); }
+  } catch (e) { /* privat modus */ }
   document.documentElement.setAttribute('data-hl', t);
   document.documentElement.setAttribute('data-hl-theme', t);
   if (t === '2c') {
@@ -29,6 +36,39 @@
     l.setAttribute('data-hl-fonts', '');
     document.head.appendChild(l);
     var m = document.querySelector('meta[name="theme-color"]');
-    if (m && !document.documentElement.hasAttribute('data-kal-app')) m.setAttribute('content', '#f3efe6');
+    if (m && !document.documentElement.hasAttribute('data-kal-app')) m.setAttribute('content', document.documentElement.getAttribute('data-mode') === 'dark' ? '#16140f' : '#f3efe6');
   }
+})();
+
+// Prompt 44 (as44.js): «Logg inn som X». Mens X-tokenet finnes, legges det på alle egne API-kall (før appen starter),
+// og endringer (PUT/POST/PATCH/DELETE) telles for stripa. 401 på tokenet = utløpt → as44.js går ut.
+(function () {
+  var a = null;
+  try { a = JSON.parse(sessionStorage.getItem('hl_as44') || 'null'); } catch (e) { /* privat modus */ }
+  if (!a || !window.fetch) return;
+  var f0 = window.fetch.bind(window);
+  window.__hlFetch0 = f0;
+  var api = /^\/(api|finans\/api|home\/api|mat\/api|domains\/api)(\/|$)/;
+  window.fetch = function (input, init) {
+    try {
+      var url = typeof input === 'string' ? input : input && input.url ? input.url : String(input);
+      var u = new URL(url, location.href);
+      if (u.origin === location.origin && api.test(u.pathname) && !/^\/api\/admin\/impersonate/.test(u.pathname)) {
+        init = Object.assign({}, init || {});
+        var h = new Headers(init.headers || (typeof input !== 'string' && input.headers) || {});
+        // Web (SERVER44 web:true): informasjonskapselen hl_imp gjør jobben; tokenet legges bare på når den mangler.
+        if (a.token && !a.cookie && !h.has('Authorization')) h.set('Authorization', 'Bearer ' + a.token);
+        init.headers = h;
+        var m = String(init.method || (typeof input !== 'string' && input.method) || 'GET').toUpperCase();
+        return f0(input, init).then(function (r) {
+          if (r.status === 401) window.dispatchEvent(new Event('hl-as44-expired'));
+          else if (r.ok && m !== 'GET' && m !== 'HEAD' && !/\/(presence|heartbeat|ping|webpush|assist|chat|glimt|search)/.test(u.pathname)) {
+            try { var s = JSON.parse(sessionStorage.getItem('hl_as44') || 'null'); if (s) { s.n = (s.n || 0) + 1; sessionStorage.setItem('hl_as44', JSON.stringify(s)); window.dispatchEvent(new Event('hl-as44-change')); } } catch (e) { /* */ }
+          }
+          return r;
+        });
+      }
+    } catch (e) { /* vanlig kall */ }
+    return f0(input, init);
+  };
 })();

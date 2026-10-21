@@ -94,7 +94,8 @@ export function updBanner(where = 'dash') {
     btns = `<div class="ub-btns"><button type="button" class="ub-b pri" data-ub="start" ${B.busy ? 'disabled' : ''}>${B.busy ? 'Starter …' : 'Oppdater nå'}</button><button type="button" class="ub-b" data-ub="notes" aria-expanded="${B.notesOpen}">${B.notesOpen ? 'Skjul' : 'Hva er nytt'}</button></div>`;
   } else if (ph === 'run') {
     const p = progress();
-    t = B.rolling ? `Gjenoppretter ${cur}` : 'Oppdaterer Nordlys OS'; sub = U.reloading ? 'Ny versjon svarer. Laster siden på nytt …' : 'Du kan bruke appen mens den oppdateres.';
+    const rb44 = U.rollTo || (s.action === 'rollback' && s.version ? s.version : null); // prompt 44: tilbakerulling
+    t = rb44 ? `Går tilbake til ${rb44}` : B.rolling ? `Gjenoppretter ${cur}` : 'Oppdaterer Nordlys OS'; sub = U.reloading ? 'Ny versjon svarer. Laster siden på nytt …' : 'Du kan bruke appen mens den oppdateres.';
     body = `<div class="ub-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><span class="ub-bar cp36-host">${carpOnBar(p.pct, 30)}<span style="width:${p.pct}%"></span></span><span class="ub-st"><span>${esc(p.txt)}</span><span class="ub-pct">${p.pct} %</span></span></div>`;
     cls = ' run';
   } else if (ph === 'done') {

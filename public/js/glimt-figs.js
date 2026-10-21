@@ -134,6 +134,12 @@ const px = (v) => `${Math.round(v * 10) / 10}px`;
  *  Prompt 41: ankerpunkter per figur (glimt-figurer.js → AN): hT hatt-topp, hX hatt-senter, hS hattskala, sB skjerf-bunn,
  *  sW skjerf-bredde, gB/gR gave. Runde figurer bruker standard. Fase «17mai»: sløyfe (samme anker som lua) og flagg som vaier. */
 const AN41 = { spire: { hT: -0.08, hX: 0.56, hS: 0.8, sB: -0.13, sW: 0.98, gB: -0.1, gR: -0.12 }, sky: { hT: -0.18, hX: 0.6, hS: 0.78, sB: 0.07, sW: 0.92, gB: 0.05, gR: -0.08 } };
+/** Prompt 44: tar animasjonen av figurens ytterste element (animation:none der) og gir den tilbake, så en beholder med pynt kan bevege seg likt. */
+export function liftAnim(html) {
+  let an = '';
+  const out = String(html).replace(/^(<span\b[^>]*?style="[^"]*?)animation:\s*([^;"]+)/, (m0, pre, a) => { an = a.trim(); return `${pre}animation:none`; });
+  return { an, html: an ? out : html };
+}
 function dress(html, S, ph, id) {
   const A = AN41[id] ?? {}, hT = A.hT ?? -0.44, hX = A.hX ?? 0.5, hS = A.hS ?? 1, sB = A.sB ?? -0.2, sW = A.sW ?? 1.05, gB = A.gB ?? -0.16, gR = A.gR ?? -0.2;
   const P = { fest: { party: 1 }, '17mai': { flag: 1, bow: 1 }, advent: { hat: 1, scarf: 1 }, jul: { hat: 1, scarf: 1, gift: 1 }, nyttar: { party: 1, spark: 1 }, vinter: { beanie: 1, scarf: 1, sc: '#b23a2a' } }[ph] ?? {};
@@ -146,7 +152,10 @@ function dress(html, S, ph, id) {
   if (P.gift) k.push(`<span class="gfj-gift" style="position:absolute;right:${px(S * gR)};bottom:${px(S * gB)};width:${px(S * 0.34)};height:${px(S * 0.3)};border-radius:4px;background:#b23a2a;box-shadow:inset 0 0 0 2px #8a2a1d;transform:rotate(8deg);pointer-events:none"><span style="position:absolute;left:44%;top:0;bottom:0;width:12%;background:#f2c14e"></span><span style="position:absolute;top:40%;left:0;right:0;height:14%;background:#f2c14e"></span></span>`);
   if (P.bow) k.push(`<svg class="gfj-bow" width="${px(S * 0.36)}" height="${px(S * 0.22)}" viewBox="0 0 36 22" style="position:absolute;left:${hX * 100}%;top:${px(S * (hT + 0.36))};margin-left:${px(S * 0.12)};transform:rotate(14deg);overflow:visible;pointer-events:none"><path d="M18 11 L2 2 L4 20 Z" fill="#c8302a"/><path d="M18 11 L34 2 L32 20 Z" fill="#c8302a"/><path d="M18 11 L2 2 L4 20 Z M18 11 L34 2 L32 20 Z" fill="none" stroke="#fbf7ee" stroke-width="1.6"/><circle cx="18" cy="11" r="3.5" fill="#1f2f6b"/></svg>`);
   if (P.flag) k.push(`<span class="gfj-flag" style="position:absolute;right:${px(-S * 0.2)};bottom:${px(S * (sB + 0.16))};width:${px(S * 0.32)};height:${px(S * 0.46)};pointer-events:none;transform-origin:0% 100%;animation:gfSway 1.6s ease-in-out infinite"><span style="position:absolute;left:0;bottom:0;width:${px(S * 0.028)};height:${px(S * 0.46)};border-radius:2px;background:#8a6a3a"></span><svg width="${px(S * 0.3)}" height="${px(S * 0.22)}" viewBox="0 0 22 16" style="position:absolute;left:${px(S * 0.028)};top:0"><rect width="22" height="16" fill="#ba0c2f"/><rect x="6" width="4" height="16" fill="#fff"/><rect y="6" width="22" height="4" fill="#fff"/><rect x="7" width="2" height="16" fill="#00205b"/><rect y="7" width="22" height="2" fill="#00205b"/></svg></span>`);
-  return `<span class="gfj gfj-${ph}" aria-hidden="true" style="position:relative;display:inline-block;line-height:0">${html}${k.join('')}</span>`;
+  // Prompt 44 (claude-code-glimt-pynt-folger-figuren.md): hoppet/vuggingen (gfBob/gfHop/gfSq) flyttes fra figuren til den
+  // felles beholderen, så lue, skjerf, gave, sløyfe og flagg følger figuren. Figuren selv får animation:none.
+  const { an, html: fig0 } = liftAnim(html);
+  return `<span class="gfj gfj-${ph}" aria-hidden="true" style="position:relative;display:inline-block;line-height:0;transform-origin:50% 100%${an ? `;animation:${an}` : ''}">${an ? fig0 : html}${k.join('')}</span>`;
 }
 
 /* ---------- Prompt 41 (claude-code-17-mai.md): fase «17mai» 14.–17. mai. /api/glimt/settings mai17:'auto'|'av'|'pa', mai17Active ---------- */

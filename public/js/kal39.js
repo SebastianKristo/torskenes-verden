@@ -8,6 +8,7 @@ import { themeBtn } from './kal-theme40.js';
 import { orb43 } from './orb43.js'; // prompt 43: Glimt-orben på «Skriv time» og «Dagen din»
 import { esc, isMobile } from './util.js';
 import { AB_CAL, groupSubs, chipInner, bindLogos, krTxt, badge as abBadge, logo as abLogo } from './kal42.js'; // prompt 42: Abonnementer
+import { todayIcon } from './kal44.js'; // prompt 44: nytt I dag-ikon
 
 let C = null;
 /** kalender.js: { K, evOn, key, add, d0, mm, fromKey, curD, paint, setView, openForm, openGlimt, findEv } */
@@ -70,7 +71,11 @@ export async function loadCals() {
       return s ? { ...d, ...s, id: d.id, srvId: s.id } : { ...d };
     });
     // Egne kalendere (ikke de gamle innebygde Jobb/Familie/Helse eller iCal-duplikater av skolen).
+    // Prompt 44 (claude-code-kalender-media-kalender.md): «Media» (Sonarr · Radarr) er innebygd men skal stå i lista med av/på.
+    const med = list.find((c) => c.id === 'media');
+    if (med) out.push({ ...med, id: 'media', srvId: 'media', color: !med.color || med.color === '#5a4a6b' ? '#a0671a' : med.color, badge: 'MEDIA', sourceLabel: 'Sonarr · Radarr · utgivelser', media: true, count: undefined });
     for (const c of list) {
+      if (c.id === 'media') continue;
       if (out.some((x) => x.srvId === c.id || x.id === c.id) || ALIAS[c.id]) continue;
       const own = c.source === 'own' || /^c-/.test(c.id);
       if (own || (four && c.source !== 'builtin')) out.push({ ...c, own: true });
@@ -84,6 +89,7 @@ export const cals = () => S.cals ?? CAL4;
 export function cal4(x) {
   const ids = [x.appCalendar, x.calendar, x.cal, x.source].map((v) => (v == null ? '' : String(v)));
   for (const v of ids) if (v && cals().some((c) => c.own && c.id === v)) return v;
+  if (ids.includes('media') && cals().some((c) => c.id === 'media')) return 'media'; // prompt 44
   for (const v of ids) { const a = ALIAS[v.toLowerCase()]; if (a) return a; }
   if (x.kind === 'ab') return 'abonnementer';
   if (x.type === 'bursdag' || x.type === 'bd' || x.kind === 'bursdag') return 'bursdager';
@@ -238,7 +244,7 @@ export function toolbar(app) {
     <span class="k39-navs"><button type="button" class="k39-ib bd" data-k-nav="-1" aria-label="Forrige" title="Forrige (←)">${IC.left}</button><button type="button" class="k39-ib bd" data-k-nav="1" aria-label="Neste" title="Neste (→)">${IC.right}</button></span>
     <div class="k39-tabs" role="tablist">${VIEWS.map(([k, n, h]) => `<button type="button" role="tab" aria-selected="${V === k}" class="${V === k ? 'on' : ''}" data-k-view="${k}" title="${n} (${h})">${n}</button>`).join('')}</div>
     ${app ? '' : themeBtn()}<button type="button" class="k39-ib" data-k-search aria-label="Søk" title="Søk (/)">${IC.search}</button>
-    <button type="button" class="k39-today" data-k-today aria-label="I dag" title="I dag (T)">${IC.cal}<span>${today.getDate()}</span>${isToday ? '' : '<i></i>'}</button>
+    <button type="button" class="k39-today k44-td" data-k-today aria-label="I dag" title="I dag (T)">${todayIcon(today.getDate())}${isToday ? '' : '<i></i>'}</button>
     <button type="button" class="k39-quick k43-quick" data-k-qa title="Skriv en hendelse med vanlige ord – Glimt fyller ut">${orb43(20)}<span class="k39-lg">Skriv time</span></button>
     <button type="button" class="k39-new k43-new" data-k-new title="Ny hendelse (N)"><span class="k39-lg">+ Ny hendelse</span><span class="k39-sm">+</span></button>
     ${close}
@@ -308,7 +314,7 @@ function counts() {
   for (let i = 0; i < 30; i++) for (const e of C.evOn(C.add(t0, i), true)) m[e.ac] = (m[e.ac] ?? 0) + 1;
   return m;
 }
-const BADGE = { GOOGLE: 'Google', URL: 'URL', google: 'Google', url: 'URL', ical: 'URL', Abonnement: 'URL', HA: 'HA', ha: 'HA' };
+const BADGE = { GOOGLE: 'Google', URL: 'URL', google: 'Google', url: 'URL', ical: 'URL', Abonnement: 'URL', HA: 'HA', ha: 'HA', MEDIA: 'Media' };
 function calRows() {
   const cnt = counts(), list = cals().filter((c) => S.editing || S.showHidden || inMenu(c));
   const rows = list.map((c) => {
@@ -316,7 +322,7 @@ function calRows() {
     const pick = S.pick === c.id ? `<div class="k39-sw" role="dialog" aria-label="Velg farge">${SWATCHES.map((h) => `<button type="button" class="${h === t.c ? 'on' : ''}" style="--c:${h}" data-k39-col="${c.id}|${h}" aria-label="${h}"></button>`).join('')}</div>` : '';
     return `<div class="k39-cr${inMenu(c) ? '' : ' hid'}" style="--c:${t.c}">
       <button type="button" class="k39-dot" data-k39-pick="${esc(c.id)}" aria-label="Velg farge for ${esc(c.name)}" title="Velg farge"><i></i></button>
-      <button type="button" class="k39-cb${on ? ' on' : ''}" data-k39-cal="${esc(c.id)}" role="checkbox" aria-checked="${on}"><span class="k39-chk">${on ? '✓' : ''}</span><span class="k39-cn" data-no-i18n>${esc(c.name)}</span>${badge ? `<span class="k39-bdg">${esc(badge)}</span>` : ''}<span class="k39-sp"></span>${!S.editing && n > 0 ? `<span class="k39-cnt">${n}</span>` : ''}</button>
+      <button type="button" class="k39-cb${on ? ' on' : ''}" data-k39-cal="${esc(c.id)}" role="checkbox" aria-checked="${on}"><span class="k39-chk">${on ? '✓' : ''}</span><span class="k39-cn" data-no-i18n>${esc(c.name)}${c.media ? `<small class="k44-csub">${esc(c.sourceLabel)}</small>` : ''}</span>${badge && !c.media ? `<span class="k39-bdg">${esc(badge)}</span>` : ''}<span class="k39-sp"></span>${!S.editing && n > 0 ? `<span class="k39-cnt">${n}</span>` : ''}</button>
       ${S.editing ? `<button type="button" class="k39-hb" data-k39-hid="${esc(c.id)}" title="${inMenu(c) ? 'Skjul fra menyen' : 'Vis i menyen'}">${inMenu(c) ? 'Skjul' : 'Vis'}</button>${c.own ? `<button type="button" class="k39-rm" data-k39-rm="${esc(c.id)}" title="Fjern kalenderen">×</button>` : ''}` : ''}${pick}</div>`;
   }).join('');
   const nh = cals().filter((c) => !inMenu(c)).length;
@@ -506,14 +512,20 @@ export function bind39(h) {
     if (d.k39Go) { K.cur = d.k39Go; K.sel = null; K.drawer = false; K.miniOff = 0; C.resetScroll(); C.paint(); return; }
     if (d.k39Cur) { K.cur = d.k39Cur; C.resetScroll(); }
   }, true);
-  // Dobbeltklikk i en tom time (eller en dag i Måned) = ny hendelse der (MacGridColumn / MacMonthCell).
-  h.addEventListener('dblclick', (e) => {
+  // Prompt 44 (claude-code-kalender-hold-dag-ny.md): vanlig klikk på tom plass i Dag / 3 d / Uke = ny hendelse der, avrundet
+  // ned til halvtimen (21:10 → 21:00–22:00). Ikke rett etter et sveip eller når teksten markeres.
+  let downAt = null;
+  h.addEventListener('pointerdown', (e) => { downAt = e.target.closest?.('[data-k-tap]') ? { x: e.clientX, y: e.clientY, t: Date.now() } : null; });
+  h.addEventListener('click', (e) => {
     const c = e.target.closest('[data-k-tap]');
-    if (c && e.target === c) {
-      const r = c.getBoundingClientRect(), m = Math.max(0, Math.min(23 * 60, Math.floor((e.clientY - r.top) / hourH() * 2) * 30));
-      C.openForm({ k: c.dataset.kTap, s: hmM(m), e: hmM(Math.min(m + 60, 23 * 60 + 59)) });
-      return;
-    }
+    if (!c || e.target !== c || e.detail > 1) return;
+    if (downAt && (Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 10 || Date.now() - downAt.t > 900)) return;
+    if (String(getSelection?.() ?? '')) return;
+    const r = c.getBoundingClientRect(), m = Math.max(0, Math.min(23 * 60 + 30, Math.floor((e.clientY - r.top) / hourH() * 2) * 30));
+    C.openForm({ k: c.dataset.kTap, s: hmM(m), e: hmM(Math.min(m + 60, 23 * 60 + 59)) });
+  });
+  // Dobbeltklikk på en dag i Måned = ny hendelse der (MacMonthCell).
+  h.addEventListener('dblclick', (e) => {
     const day = e.target.closest('[data-k39-mday]');
     if (day && !e.target.closest('[data-k-sel]')) C.openForm({ k: day.dataset.k39Mday });
   });
