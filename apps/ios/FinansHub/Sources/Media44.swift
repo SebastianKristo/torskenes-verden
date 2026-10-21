@@ -5,7 +5,7 @@ import UIKit
  Fasit: claude-code-media-arr.md («Flere servere per tjeneste», felles valg «Hjemme»/«Hytta») og
  claude-code-media-mobil-ikke-innlogget.md. Serveren (SERVER44, server/media44.js):
    GET /api/media/servers[?status=1] → [{id, name, color, default, builtin, selected, sonarr|radarr|qbit|prowlarr:{configured, status?}}]
-   PUT /api/media/servers/select {id} (lagres per bruker) · ?server=<id> på alle /api/media/*-kall.
+   PUT /api/media/servers/select {id} (lagres per bruker) · ?server=<id> på alle /api/media/…-kall.
    GET /api/integrations/status → {items:[{service, name, site, configured, connected, state, lastOk, error, fallback?}], site, sites}
  – Én kilde: Media leser samme status som Innstillinger (backend). Ingen lokal «innlogget»-flagg; gamle nøkler slettes én gang.
  – Mangler valgt sted en tjeneste: standard (Hjemme) brukes, og en liten brikke sier «Hytta mangler qBittorrent».
