@@ -186,7 +186,8 @@ internal fun GuideCard26(guide: List<Pair<String, String>>) {
                     }
                     Column(Modifier.weight(1f)) {
                         if (t.isNotBlank()) Text(t, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
-                        if (d.isNotBlank()) Text(d, color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
+                        // Prompt 43: teksten (med kodelinjer) kan merkes og kopieres.
+                        if (d.isNotBlank()) androidx.compose.foundation.text.selection.SelectionContainer { Text(d, color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp) }
                     }
                 }
             }

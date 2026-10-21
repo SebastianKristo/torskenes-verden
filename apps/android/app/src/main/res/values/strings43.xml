@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Prompt 43: Media-widgetene -->
+    <string name="widget_media43_s_desc">Media: fart og øverste nedlasting</string>
+    <string name="widget_media43_m_desc">Media: nedlastinger med Pause alt</string>
+    <string name="widget_media43_l_desc">Media: nedlastinger og det som kommer denne uka</string>
+</resources>

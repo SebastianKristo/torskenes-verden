@@ -39,6 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -523,26 +524,26 @@ private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
                     BasicTextField(s.input, { s.input = it }, textStyle = TextStyle(color = v.ink, fontSize = 16.sp, lineHeight = 23.sp, fontFamily = v.sans),
                         cursorBrush = SolidColor(v.ink), maxLines = 6, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default), modifier = Modifier.fillMaxWidth())
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Prompt 43 (claude-code-chat-send-knapp-tom.md): 4 dp luft til høyre / 2 dp under, så knappen og kanten står inne i kortet.
+                Row(Modifier.fillMaxWidth().padding(end = 4.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Box(Modifier.size(38.dp).clip(CircleShape).border(1.dp, v.line, CircleShape).press24 { s.sheet = "plus" }.ch27Label("Legg ved"), contentAlignment = Alignment.Center) {
                         WxIcon(ChIc27.PLUS, v.ink, 18.dp, stroke = 2.2f)
                     }
+                    // «Nettsøk» og «Mine data» krymper (ellipse) på smale skjermer i stedet for å skyve mikrofon og Send ut.
+                    Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Ch27Toggle(v, ChIc27.WEB, "Nettsøk", s.web) { s.web = !s.web; Haptics.select() }
                     Ch27Toggle(v, ChIc27.DATA, "Mine data", s.data && s.myDataOn) {
                         if (!s.myDataOn) vm.chatToast27("Slått av i Innstillinger → AI og tolkning") else { s.data = !s.data; Haptics.select() }
                     }
-                    Spacer(Modifier.weight(1f))
-                    Box(Modifier.size(40.dp).clip(CircleShape).background(if (s.rec) CH27_SKY else Color.Transparent).press24 {
+                    }
+                    Box(Modifier.size(38.dp).clip(CircleShape).background(if (s.rec) CH27_SKY else Color.Transparent).press24 {
                         if (s.rec) vm.micChat27(ctx)
                         else if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.micChat27(ctx)
                         else askMic.launch(Manifest.permission.RECORD_AUDIO)
                     }.ch27Label("Snakk"), contentAlignment = Alignment.Center) { WxIcon(ChIc27.MIC, if (s.rec) Color.White else v.ink, 20.dp, stroke = 1.9f) }
-                    if (s.busy) Box(Modifier.size(40.dp).clip(CircleShape).background(v.ink).press24 { vm.stopChat27() }.ch27Label("Stopp"), contentAlignment = Alignment.Center) {
+                    if (s.busy) Box(Modifier.size(38.dp).clip(CircleShape).background(v.ink).press24 { vm.stopChat27() }.ch27Label("Stopp"), contentAlignment = Alignment.Center) {
                         Box(Modifier.size(13.dp).clip(RoundedCornerShape(3.dp)).background(v.bg))
-                    } else Box(Modifier.size(40.dp).clip(CircleShape).background(v.ink).alpha(if (s.input.isNotBlank()) 1f else .35f)
-                        .press24 { s.voice?.stop(); vm.sendChat27(s.input) }.ch27Label("Send"), contentAlignment = Alignment.Center) {
-                        WxIcon(ChIc27.SEND, v.bg, 19.dp, stroke = 2.2f)
-                    }
+                    } else SendBtn43(v, s.input.isNotBlank()) { s.voice?.stop(); vm.sendChat27(s.input) }
                 }
             }
             if (s.toast.isNotEmpty()) Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp).clip(CircleShape).background(v.ink).padding(14.dp, 9.dp)) {
@@ -553,11 +554,11 @@ private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
 }
 
 @Composable
-private fun Ch27Toggle(v: ChatV27, ic: String, label: String, on: Boolean, onClick: () -> Unit) {
-    Row(Modifier.height(38.dp).clip(CircleShape).border(1.dp, if (on) v.ink else v.line, CircleShape).background(if (on) v.ink else Color.Transparent).press24(onClick = onClick).padding(horizontal = 11.dp),
+private fun Ch27Toggle(v: ChatV27, ic: String, label: String, on: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Row(modifier.widthIn(min = 38.dp).height(38.dp).clip(CircleShape).border(1.dp, if (on) v.ink else v.line, CircleShape).background(if (on) v.ink else Color.Transparent).press24(onClick = onClick).padding(horizontal = 11.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         WxIcon(ic, if (on) v.bg else v.ink, 15.dp, stroke = 1.9f)
-        Text(label, color = if (on) v.bg else v.ink, fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)
+        Text(label, color = if (on) v.bg else v.ink, fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -576,3 +577,19 @@ private fun Ch27Wave(rms: Float) {
 
 /* Brukes av Hjem og Mer (rad «Chat»). */
 internal const val CHAT27_MER_ICON = "M4 5h16v11H9l-5 4zM9 10.5h6"
+
+/**
+ * Prompt 43 (claude-code-chat-send-knapp-tom.md): Send-knappen. Tom: lys flate (line 70 % + card 30 %), pil i mut, 1,5 dp innvendig
+ * kant i line, ikke trykkbar. Med tekst: ink med bg-pil. 150 ms overgang, ingen opasitet på hele knappen.
+ */
+@Composable
+private fun SendBtn43(v: ChatV27, on: Boolean, onSend: () -> Unit) {
+    val empty = androidx.compose.ui.graphics.lerp(v.card, v.line, .7f)
+    val bg by androidx.compose.animation.animateColorAsState(if (on) v.ink else empty, tween(150), label = "sendBg")
+    val fg by androidx.compose.animation.animateColorAsState(if (on) v.bg else v.mut, tween(150), label = "sendFg")
+    Box(
+        Modifier.size(38.dp).clip(CircleShape).background(bg).then(if (on) Modifier else Modifier.border(1.5.dp, v.line, CircleShape))
+            .then(if (on) Modifier.press24 { onSend() } else Modifier.semantics { disabled() }).ch27Label("Send"),
+        contentAlignment = Alignment.Center,
+    ) { WxIcon(ChIc27.SEND, fg, 19.dp, stroke = 2.2f) }
+}

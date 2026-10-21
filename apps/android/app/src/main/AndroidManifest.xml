@@ -96,6 +96,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="home.kristo.no" android:pathPrefix="/app-auth" />
             </intent-filter>
+            <!-- Prompt 43: magnet:-lenker åpner Media → qBittorrent → «Legg til magnet-lenke» ferdig utfylt. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="magnet" />
+            </intent-filter>
             <!-- «Del → FinansHub» fra Galleri: kvitteringen lastes opp direkte. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -587,6 +594,19 @@
         <receiver android:name=".widget.TrialsReceiver32bS" android:exported="true" android:enabled="true" android:label="Prøveperioder">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_trials32b_s" />
+        </receiver>
+        <!-- Prompt 43: Media-widgetene (Material You; One UI-stil på Samsung i samme mottaker). -->
+        <receiver android:name=".widget.MediaSmallReceiver" android:exported="true" android:enabled="true" android:label="Media 2×2">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_media43_s" />
+        </receiver>
+        <receiver android:name=".widget.MediaMediumReceiver" android:exported="true" android:enabled="true" android:label="Media 4×2">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_media43_m" />
+        </receiver>
+        <receiver android:name=".widget.MediaLargeReceiver" android:exported="true" android:enabled="true" android:label="Media 4×3">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_media43_l" />
         </receiver>
         <receiver android:name=".widget.TrialsReceiver32bM" android:exported="true" android:enabled="true" android:label="Prøveperioder 4×2">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>

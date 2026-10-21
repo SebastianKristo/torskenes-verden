@@ -60,7 +60,8 @@ internal class AcT34(val bg: Color, val card: Color, val fld: Color, val line: C
 private val PAPIR34 = AcT34(Color(0xFFF3EFE6), Color(0xFFFFFDF8), Color(0xFFECE6DA), Color(0xFFDDD5C5), Color(0xFF1B1A17), Color(0xFF6B665C), Color(0xFFB23A2A), Color(0xFF2F7A4F), Color(0xFFA8661A), Color(0xFFB23A2A))
 private val MORK34 = AcT34(Color(0xFF161513), Color(0xFF211F1B), Color(0xFF2B2824), Color(0xFF3B3731), Color(0xFFEFE9DE), Color(0xFFA49D91), Color(0xFFEC7A64), Color(0xFF6FC28F), Color(0xFFE0A85A), Color(0xFFEC7A64))
 
-private val TABS34 = listOf("ov" to "Oversikt", "mod" to "Modeller", "rt" to "Valg", "job" to "Jobber", "use" to "Forbruk", "api" to "API og nøkler")
+// Prompt 43: «Importer» (minne og samtaler fra Claude, ui/Import43.kt).
+private val TABS34 = listOf("ov" to "Oversikt", "mod" to "Modeller", "rt" to "Valg", "job" to "Jobber", "use" to "Forbruk", "api" to "API og nøkler", "imp" to "Importer")
 
 private fun nb34(v: Double, d: Int = 1): String = String.format(java.util.Locale("nb", "NO"), "%.${d}f", v)
 private fun kr34(v: Double): String = String.format(java.util.Locale("nb", "NO"), "%.2f kr", v)
@@ -110,6 +111,7 @@ internal fun AiControl34(vm: AppViewModel) {
                     "rt" -> AcRouting34(vm, T)
                     "job" -> AcJobs34(vm, T)
                     "use" -> AcUsage34(vm, T)
+                    "imp" -> ClaudeImport43(vm)
                     else -> AcApi34(vm, T)
                 }
             }

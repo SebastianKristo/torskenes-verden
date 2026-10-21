@@ -36,7 +36,8 @@ class B26State {
 /* ---------- Integrasjoner: metadata ---------- */
 
 /** Kategoriene i listen, i rekkefølge (som på web). */
-val INTEG26_CATS = listOf("Smarthjem", "Transport og pakker", "Økonomi", "AI", "Informasjon", "Annet")
+// Prompt 43: MEDIA-gruppen (Sonarr, Radarr, qBittorrent, Prowlarr, Jellyfin, Plex) etter Smarthjem.
+val INTEG26_CATS = listOf("Smarthjem", "Media", "Transport og pakker", "Økonomi", "AI", "Informasjon", "Annet")
 
 data class IntegMeta26(val category: String, val badge: String, val color: Long, val description: String, val guide: List<Pair<String, String>> = emptyList())
 
@@ -77,10 +78,45 @@ val INTEG26_META: Map<String, IntegMeta26> = mapOf(
     "map" to IntegMeta26("Informasjon", "◎", 0xFF3F7A6E, "Kartverket og MapTiler"),
     "icons" to IntegMeta26("Annet", "✦", 0xFF5B6478, "Iconify via Homelab-cache"),
     "photos" to IntegMeta26("Annet", "U", 0xFF3A4252, "Bakgrunner fra Unsplash og Pexels"),
-    "plex" to IntegMeta26("Annet", "PX", 0xFFE5A00D, "Filmer og serier"),
-    "jellyfin" to IntegMeta26("Annet", "JF", 0xFF7B4FD0, "Filmer og serier"),
-    "sonarr" to IntegMeta26("Annet", "SO", 0xFF2F9FD8, "Serier på vei"),
-    "radarr" to IntegMeta26("Annet", "RA", 0xFFE0B300, "Filmer på vei"),
+    // Prompt 43 (claude-code-integrasjoner-media.md): MEDIA med steg-for-steg-oppsett (serverens steg brukes når de finnes).
+    "sonarr" to IntegMeta26("Media", "SO", 0xFF2F9FD8, "Serier: legg til, overvåk og søk", listOf(
+        "Finn API-nøkkelen" to "Sonarr → Settings → General → Security → API Key.",
+        "Adresse og port" to "Port 8989, med URL Base hvis satt:\nhttp://192.168.1.20:8989/sonarr",
+        "Samme mapper i alle containerne" to "Hardlinks krever samme rot:\nvolumes:\n  - /srv/data:/data\n→ /data/downloads, /data/media/tv, /data/media/film",
+        "Rotmappe" to "Settings → Media Management → Root Folders → /data/media/tv",
+        "Koble til qBittorrent" to "Download Clients → qBittorrent, port 8080, kategori tv-sonarr.",
+        "Standard kvalitetsprofil" to "Brukes når du legger til fra Media eller Glimt (4K → Ultra-HD).",
+        "Webhook" to "Connect → Webhook (On Grab, On Import, On Upgrade, On Health Issue):\nhttps://home.kristo.no/api/media/hook/sonarr")),
+    "radarr" to IntegMeta26("Media", "RA", 0xFFE0B300, "Filmer: legg til, overvåk og søk", listOf(
+        "Finn API-nøkkelen" to "Radarr → Settings → General → Security → API Key.",
+        "Adresse og port" to "Port 7878, f.eks. http://192.168.1.20:7878",
+        "Rotmappe" to "Settings → Media Management → Root Folders → /data/media/film",
+        "Koble til qBittorrent" to "Download Clients → qBittorrent, port 8080, kategori radarr.",
+        "Minimum Availability" to "Announced (Annonsert), In Cinemas (På kino) eller Released (Utgitt digitalt).",
+        "Webhook" to "Connect → Webhook:\nhttps://home.kristo.no/api/media/hook/radarr")),
+    "qbittorrent" to IntegMeta26("Media", "qB", 0xFF2F6DB5, "Nedlastinger: pause, kø og filer", listOf(
+        "Slå på Web UI" to "Verktøy → Innstillinger → Web UI, port 8080. Docker: midlertidig passord med\ndocker logs qbittorrent | grep -i password",
+        "Eget brukernavn og passord" to "Bytt til et eget brukernavn og et sterkt passord.",
+        "Bare fra Homelab" to "Tillat bare Homelab-serverens IP. Ikke åpne Web UI mot internett.",
+        "Kategorier" to "tv-sonarr → /data/downloads/tv\nradarr → /data/downloads/film",
+        "Varsel når ferdig" to "«Kjør eksternt program når torrent er ferdig»:\ncurl -s -X POST https://home.kristo.no/api/media/hook/qbit -d \"hash=%I&name=%N\"",
+        "Alt-hastighet" to "Fart → Alternative fartsgrenser (f.eks. 5 MB/s ned).")),
+    "prowlarr" to IntegMeta26("Media", "PR", 0xFFE66000, "Indeksere for Sonarr og Radarr", listOf(
+        "Finn API-nøkkelen" to "Prowlarr → Settings → General → Security → API Key.",
+        "Apper" to "Settings → Apps → Sonarr og Radarr med Full Sync:\nhttp://prowlarr:9696 · http://sonarr:8989 · http://radarr:7878",
+        "Legg til indeksere" to "Fra Media → Prowlarr → + Legg til indekser, eller i Prowlarr.",
+        "FlareSolverr (valgfri)" to "docker run -d --name flaresolverr -p 8191:8191 ghcr.io/flaresolverr/flaresolverr\nGi indekserne taggen flaresolverr.",
+        "Webhook" to "Settings → Connect → Webhook:\nhttps://home.kristo.no/api/media/hook/prowlarr")),
+    "jellyfin" to IntegMeta26("Media", "JF", 0xFF7B4FD0, "Spill av filmer og serier", listOf(
+        "API-nøkkel" to "Dashbord → API-nøkler → + «Homelab».",
+        "Bibliotek" to "Legg bibliotekene på /data/media/tv og /data/media/film.",
+        "Oppdater etter import" to "Sonarr/Radarr → Connect → Emby/Jellyfin.",
+        "Spill av med" to "Velg Jellyfin under Media → ⚙ → Spill av med.")),
+    "plex" to IntegMeta26("Media", "PX", 0xFFE5A00D, "Spill av filmer og serier", listOf(
+        "Plex-token" to "Åpne et element i Plex → ⋯ → Vis XML. Token står i adressen etter X-Plex-Token=",
+        "Bibliotek" to "Samme mapper: /data/media/tv og /data/media/film.",
+        "Oppdater etter import" to "Sonarr/Radarr → Connect → Plex Media Server.",
+        "Spill av med" to "Velg Plex under Media → ⚙ → Spill av med.")),
     "google" to IntegMeta26("Informasjon", "G", 0xFF4285F4, "Google-klient for Bursdager og Kalender"),
     "calendar" to IntegMeta26("Informasjon", "31", 0xFF4285F4, "Skolekalender (iCal)"),
 )
@@ -107,9 +143,11 @@ private fun color26(s: String?): Long? = s?.trim()?.removePrefix("#")?.let { h -
 
 /** Metadata for en integrasjon: serverens verdier, ellers reservene over. */
 fun integMeta26(i: Integ24): IntegMeta26 {
-    val d = INTEG26_META[i.id]
-    val cat = i.category?.takeIf { it in INTEG26_CATS } ?: d?.category ?: when (i.group) {
-        "Hjem" -> "Smarthjem"; "Sporing", "Reise" -> "Transport og pakker"; "Finans" -> "Økonomi"; "AI" -> "AI"; "Generelt", "Nettverk", "Skole" -> "Informasjon"; else -> "Annet"
+    val d = INTEG26_META[i.id] ?: INTEG26_META[if (i.id == "qbit") "qbittorrent" else ""] // prompt 43: qbit = qbittorrent
+    // Prompt 43: Media-tjenestene står alltid i MEDIA (serveren sender fortsatt «Annet» som kategori, men group «Media»).
+    val cat = (if (i.group == "Media" || i.id in setOf("sonarr", "radarr", "qbittorrent", "qbit", "prowlarr", "jellyfin", "plex")) "Media" else null)
+        ?: i.category?.takeIf { it in INTEG26_CATS } ?: d?.category ?: when (i.group) {
+        "Hjem" -> "Smarthjem"; "Media", "MEDIA" -> "Media"; "Sporing", "Reise" -> "Transport og pakker"; "Finans" -> "Økonomi"; "AI" -> "AI"; "Generelt", "Nettverk", "Skole" -> "Informasjon"; else -> "Annet"
     }
     return IntegMeta26(
         cat, i.badge ?: d?.badge ?: i.name.take(2).uppercase(), color26(i.color) ?: d?.color ?: 0xFF5B6478,

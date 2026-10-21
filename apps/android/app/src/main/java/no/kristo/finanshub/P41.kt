@@ -159,7 +159,7 @@ fun AppViewModel.setFoldTab41(k: String) { p41.foldTab = k; Haptics.select(); pr
 val FOLD_TABS41: List<Pair<String, String>> = listOf("na" to "Nå", "idag" to "I dag", "hjemme" to "Hjemme", "okonomi" to "Økonomi")
 fun foldKeys41(tab: String): List<String> = when (tab) {
     "idag" -> listOf("h10", "h9", "h11", "h8", "h13")
-    "hjemme" -> listOf("h7", "h2", "h4", "h6")
+    "hjemme" -> listOf("h7", "h2", "h43", "h4", "h6") // prompt 43: Media (h43) etter Pakker
     "okonomi" -> listOf("hm", "h11", "h2")
     else -> listOf("h3", "h8", "h6", "h40", "h5")
 }
@@ -814,6 +814,12 @@ fun AppViewModel.setMai41(m: String) {
  * Åpner Chat (ny samtale) med spørsmålet allerede sendt. Er svaret i pillen ferdig, brukes det (spørres ikke på nytt);
  * er det på vei, venter Chat på det samme svaret («Glimt skriver …»). Bare hvis pillen lukkes før svaret kommer, spør Chat selv.
  */
+/** Prompt 43 (claude-code-sok-ai-svarboble.md): samme svar i Chat med kilden under («Kilde: MET Norway»), ikke for Glimt/System-AI. */
+private fun src43(source: String): String {
+    val s = source.trim()
+    return if (s.isBlank() || s.equals("Glimt", true) || s.equals("System-AI", true)) "" else "\n\n_Kilde: ${s}_"
+}
+
 fun AppViewModel.openChatWith41(q: String) {
     val a = p31.ans
     openChat27("")
@@ -822,7 +828,7 @@ fun AppViewModel.openChatWith41(q: String) {
     s.title = q.take(48)
     val me = ChatMsg27("user", q)
     if (a != null && a.q == q && !a.busy && a.text.isNotBlank()) {
-        s.msgs = listOf(me, ChatMsg27("assistant", a.text, model = a.source.ifBlank { "Glimt" }))
+        s.msgs = listOf(me, ChatMsg27("assistant", a.text + src43(a.source), model = a.source.ifBlank { "Glimt" }))
         closeAns31(); return
     }
     if (a != null && a.q == q && a.busy) {
@@ -833,7 +839,7 @@ fun AppViewModel.openChatWith41(q: String) {
                 val n = p31.ans
                 if (n == null || n.q != q) return@repeat
                 if (!n.busy) {
-                    if (s.msgs.size == 2 && s.msgs[0].content == q) s.msgs = listOf(me, ChatMsg27("assistant", n.text, model = n.source.ifBlank { "Glimt" }))
+                    if (s.msgs.size == 2 && s.msgs[0].content == q) s.msgs = listOf(me, ChatMsg27("assistant", n.text + src43(n.source), model = n.source.ifBlank { "Glimt" }))
                     closeAns31(); return@launch41
                 }
             }

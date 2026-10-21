@@ -158,12 +158,12 @@ private fun DrawScope.drawGlimt34(S: Float, mood: String, spin: Float, blink: Fl
 /* ---------------- Hjem-kortet (h12) ---------------- */
 
 @Composable
-internal fun HomeBrief34(vm: AppViewModel) {
+internal fun HomeBrief34(vm: AppViewModel, modifier: Modifier = Modifier) { // prompt 43: modifier (Fold: min. 148 dp høy)
     val b = vm.p34.brief
     LaunchedEffect(vm.base, vm.account?.id) { vm.loadGlimt35(); vm.loadBrief34() }
     val kind = b?.kind ?: briefKind34()
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(BLUE34, Color(0xFF2E5A7F))))
+        modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Brush.linearGradient(listOf(BLUE34, Color(0xFF2E5A7F))))
             .clickable(role = Role.Button, onClickLabel = "Åpne briefen") { vm.openBrief34() }.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

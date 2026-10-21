@@ -701,11 +701,8 @@ internal fun PaperFinSearch(vm: AppViewModel, navBottom: Dp) {
                 focusRequester = focus,
             ) {
                 val ai = vm.finSearchAi
-                Box(
-                    Modifier.height(38.dp).clip(CircleShape).background(if (ai) p.lab else Color.Transparent).border(1.dp, if (ai) p.lab else p.line, CircleShape)
-                        .clickable { vm.finSearchAi = !ai; Haptics.select(); vm.finSugClear27(hide = false); if (ai) vm.finSug27(q); if (q.isNotBlank()) vm.runFinSearch(ai = !ai) }.padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center,
-                ) { Text("✦ Glimt", color = if (ai) p.onLab else p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) } // prompt 40: AI heter Glimt
+                // Prompt 43 (claude-code-finans-sok-glimt-knapp.md): [orb] Glimt – på: rød fylt, av: rød kant/tekst og 12 % rød bakgrunn.
+                GlimtPill43(on = ai, busy = vm.finSearchBusy || vm.p40.askBusy, height = 36.dp) { vm.finSearchAi = !ai; Haptics.select(); vm.finSugClear27(hide = false); if (ai) vm.finSug27(q); if (q.isNotBlank()) vm.runFinSearch(ai = !ai) }
             }
         }
         item { FinSuggest27(vm) }

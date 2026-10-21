@@ -692,9 +692,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "nordlys", "system" -> openNordlys31()
             // Prompt 34: Glimt-brief-widgetene (finanshub://brief) og «Åpne AI-kontroll» (finanshub://ai/<fane>).
             "brief" -> { go(Screen.Homelab); openBrief34() }
+            // Prompt 43: Media-widgetene (finanshub://media/qbit|snart) og Widgets-galleriet (finanshub://widgets).
+            "media" -> { p43.tab = uri.path?.trim('/')?.takeIf { it in setOf("snart", "sonarr", "radarr", "qbit", "prowlarr") } ?: "snart"; openMedia43() }
+            "widgets" -> p43.galleryOpen = true
             // Prompt 37: bibelvers-widgetene og påminnelsen åpner Bibel-siden (bare med modulen).
             "bibel", "bible" -> { go(Screen.Homelab); loadBible37(); p37.biblePage = true }
-            "ai" -> openAiCtl34(uri.path?.trim('/')?.takeIf { it in setOf("ov", "mod", "rt", "job", "use", "api") } ?: "ov")
+            "ai" -> openAiCtl34(uri.path?.trim('/')?.takeIf { it in setOf("ov", "mod", "rt", "job", "use", "api", "imp") } ?: "ov")
             "scan" -> { open(Screen.Scan); pendingScan = when (uri.path?.trim('/')) { "camera" -> "camera"; "files" -> "files"; else -> null } }
             // Prompt 35: Kalender-appen åpner finanshub://settings/glimt og finanshub://settings/kalendere.
             "settings", "innstillinger" -> settingsLink35(uri.path?.trim('/').orEmpty())
@@ -1567,6 +1570,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Fra Mer: en side (Screen) eller en Papir-side («media», «set»). */
     fun openFromMer(s: Screen) { go(s); paperFromMer = true }
     fun openPaperPage(p: String) {
+        if (p == "media") { openMedia43(); return } // prompt 43: Media (Sonarr/Radarr/qBittorrent/Prowlarr) i fullskjerm
         paperPage = p
         if (p == "set") settingsPage = null
         if (p == "media") loadMedia()
@@ -1989,7 +1993,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Fra Finans → Mer: siden åpnes inne i Finans, og tilbake går til Mer. */
     fun openFromFinMer(s: Screen) { go(s); paperFin = true; paperFromFinMer = true }
-    fun openFinMerPage(p: String) { paperPage = p; paperFin = true; if (p == "media") loadMedia() }
+    fun openFinMerPage(p: String) { if (p == "media") { openMedia43(); return }; paperPage = p; paperFin = true }
 
     /** Domener i Papir: en av de fire seksjonene. */
     fun domainSection(k: String) { domSection = k; Haptics.select() }
@@ -3588,6 +3592,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun <T> api41(f: suspend Api.() -> T): T = api.f()
     internal fun launch41(block: suspend () -> Unit) = launch(block)
     internal suspend fun bgImage41(url: String): Bitmap? = bgImage(url)
+
+    /* ---------- Prompt 43 (ANDROID43): Media (Sonarr/Radarr/qBittorrent/Prowlarr), Claude-import, widget-galleri (P43.kt og ui-filene med 43) ---------- */
+    val p43 = P43State()
+    internal suspend fun <T> api43(f: suspend Api.() -> T): T = api.f()
+    internal fun launch43(block: suspend () -> Unit) = launch(block)
+    internal val appCtx43: Context get() = appCtx
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

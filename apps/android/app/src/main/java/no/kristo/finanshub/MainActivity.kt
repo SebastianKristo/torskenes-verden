@@ -50,8 +50,11 @@ class MainActivity : FragmentActivity() {
         // Familie: deling i bakgrunnen og helsesammendraget fortsetter etter omstart av appen.
         runCatching { no.kristo.finanshub.family.FamilyService.sync(this) }
         if (no.kristo.finanshub.family.FamilyPrefs.health(this).isNotEmpty()) runCatching { no.kristo.finanshub.family.HealthSync.schedule(this) }
-        intent?.data?.let(vm::deepLink)
+        intent?.data?.let(::openData43)
     }
+
+    /** Prompt 43: magnet:-lenker går til Media; alt annet som før. */
+    private fun openData43(u: Uri) { if (u.scheme == "magnet") vm.openMagnet43(u.toString()) else vm.deepLink(u) }
 
     override fun onResume() {
         super.onResume()
@@ -76,7 +79,7 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleShare(intent)
-        intent.data?.let(vm::deepLink)
+        intent.data?.let(::openData43)
     }
 
     /** «Skjul beløp i appveksleren»: blankt bilde i oversikten over åpne apper. */

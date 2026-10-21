@@ -201,6 +201,7 @@ internal fun PaperFinMore(vm: AppViewModel, navBottom: Dp) {
 
 /* ---------------- Finans → Liste ---------------- */
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class) // prompt 43: stickyHeader per måned
 @Composable
 internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
     val p = PaperPal.current
@@ -230,11 +231,8 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), modifier = Modifier.weight(1f),
                     decorationBox = { inner -> Box { if (q.isEmpty()) Text("Søk i butikk, kategori eller varer", color = p.mut, fontSize = 14.5.sp); inner() } },
                 )
-                // ✦ AI: spørsmålet går til AI-søket.
-                Box(
-                    Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable { if (q.isNotBlank()) { vm.go(Screen.Search); vm.paperFin = true; vm.ask(q) } else vm.go(Screen.Search) }.padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center,
-                ) { Text("✦ AI", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
+                // Prompt 43 (claude-code-finans-sok-glimt-knapp.md): rød [orb] Glimt-pille i stedet for «✦ AI». Åpner Søk med Glimt og teksten.
+                GlimtPill43(on = true) { if (q.isNotBlank()) { vm.go(Screen.Search); vm.paperFin = true; vm.ask(q) } else vm.go(Screen.Search) }
             }
         }
         item {
@@ -242,17 +240,14 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
                 (listOf("Alle", "Til gjennomgang") + cats).forEach { c -> PChip(c, cat == c) { cat = c } }
             }
         }
-        item {
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
-                PLabel((if (cat == "Alle") "Alle" else cat) + " · " + list.size, modifier = Modifier.weight(1f))
-                Text("Netto ${signed(sum)} kr", color = if (sum >= 0) p.pos else p.ink, fontFamily = PaperFonts.mono, fontSize = 12.sp)
-            }
-            Box(Modifier.fillMaxWidth().padding(top = 6.dp).height(2.dp).background(p.ink))
-        }
         if (vm.txs == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
         else if (list.isEmpty()) item { Text("Ingen transaksjoner passer søket.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(8.dp)) }
-        items(list.size) { i ->
-            val t = list[i]
+        // Prompt 43 (claude-code-finans-liste-maned-topp.md): gruppert per måned med rød mono-etikett, «Netto …» og 2 dp strek i ink (sticky).
+        val months43 = list.groupBy { it.date.take(7) }.entries.sortedByDescending { it.key }
+        months43.forEachIndexed { mi, (ym, txs) ->
+        stickyHeader(key = "m43-$ym") { MonthHead43(ym, cat, txs.size, txs.sumOf { it.amount }, top = if (mi == 0) 4.dp else 14.dp) }
+        items(txs.size, key = { i -> "t43-" + txs[i].id }) { i ->
+            val t = txs[i]
             val rc = when (t.receipt) { "booked" -> "kvittering"; null -> "ingen kvittering"; else -> "til gjennomgang" }
             Column {
                 Row(Modifier.fillMaxWidth().clickable { vm.openTxHl30(t.id, q) }.padding(2.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -265,6 +260,7 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
                 }
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             }
+        }
         }
     }
 }

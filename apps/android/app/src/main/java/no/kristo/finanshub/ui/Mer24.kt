@@ -120,13 +120,13 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
         row("huske", "Gjøremål", "To-do for hele familien") { vm.openTasks() }
         if (vm.bibleAllowed37()) row("bibel", "Bibel", "Dagens vers, rekke og leseplan") { vm.p37.biblePage = true }
         if ("familie" !in inBar) row("kart", "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() }
-        if ("media" !in inBar) row("media", "Media", "Spilles nå og historikk") { vm.openPaperPage("media") }
+        if ("media" !in inBar) row("media", "Media", "Sonarr, Radarr, qBittorrent og Prowlarr") { vm.openMedia43() } // prompt 43
         if ("finans" !in inBar) row("finans", "Finans", "Oversikt, liste, Finn og mer") { vm.paperTab("fin") }
         row("abo", "Subscription OS", "Abonnementer og faste trekk") { vm.openSubFromMer38() }
         if ("nyheter" !in inBar) row("rss", "Nyhetsleser", "RSS med AI-sammendrag") { vm.openNews() }
         row("innst", "Innstillinger", "Tema, bakgrunn og konto") { vm.openPaperPage("set") }
     }
     // Prompt 37: én gangs migrering – Gjøremål var skjult i Mer-oppsettet; vis den (brukeren kan skjule den igjen selv).
-    androidx.compose.runtime.LaunchedEffect(vm.account?.id) { vm.loadBible37(); kotlinx.coroutines.delay(2500); vm.merHuske37() }
+    androidx.compose.runtime.LaunchedEffect(vm.account?.id) { vm.loadBible37(); kotlinx.coroutines.delay(2500); vm.merHuske37(); vm.mediaMigrate43() } // prompt 43: papir_mer_media_v2
     MerList28(vm, rows, navBottom, barSpace)
 }

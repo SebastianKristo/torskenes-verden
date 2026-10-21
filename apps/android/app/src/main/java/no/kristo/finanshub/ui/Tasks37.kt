@@ -104,23 +104,50 @@ internal fun TasksScreen37(vm: AppViewModel) {
         if (title.isNotBlank()) { vm.addTask(title, target, null, null); title = "" }
     }
     val sheet = s.detail != null || s.listSheet != null || s.glimtOpen
-    Box(Modifier.fillMaxSize().background(p.bg)) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 60.dp + 18.dp + 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
-            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Prompt 40: tilbake går alltid til Hjem (åpnet fra Hjem-widgeten eller Mer → Gjøremål).
-            item { ModuleHero("To-do for hele familien", "Gjøremål", "‹ Hjem") { vm.closeTasksHome40() } }
-            item {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+    // Prompt 43 (claude-code-stor-skjerm-alle-sider.md 1c): pillene brukes både som rad (telefon) og som listekolonne (Fold/nettbrett).
+    val chips43: @Composable () -> Unit = {
                     val open = (t?.items ?: emptyList()).filter { !it.done && it.id !in archIds }
-                    TaskListChip("Alle", null, !arch && vm.taskFilter == "alle", open.size) { vm.p32b.taskArch = false; vm.taskFilter = "alle" }
-                    lists.forEach { l ->
-                        val on = !arch && vm.taskFilter == l.id
-                        ListChip37(l, on, open.count { it.list == l.id }, users) {
-                            if (on) { Haptics.select(); s.listSheet = l.id } else { vm.p32b.taskArch = false; vm.taskFilter = l.id }
+                    // Prompt 43 (claude-code-gjoremal-faner-rekkefolge.md): valgt rekkefølge, «Laget med Glimt» i raden og «+ Ny liste» alltid sist.
+                    TaskOrder43.ensure(vm)
+                    val hold = { TaskOrder43.sheet = true }
+                    TaskOrder43.sorted(lists.map { "l:" + it.id }).forEach { key ->
+                        when (key) {
+                            "alle" -> TaskListChip("Alle", null, !arch && vm.taskFilter == "alle", open.size, onHold = hold) { vm.p32b.taskArch = false; vm.taskFilter = "alle" }
+                            "arch" -> TaskListChip("Arkivert", null, arch, vm.p32b.archived?.size ?: 0, onHold = hold) { Haptics.select(); vm.p32b.taskArch = true; vm.p32b.archClearArm = false; vm.loadArchived32b() }
+                            "glimt" -> GlimtSourcesChip43(vm, hold)
+                            else -> lists.firstOrNull { "l:" + it.id == key }?.let { l ->
+                                val on = !arch && vm.taskFilter == l.id
+                                ListChip37(l, on, open.count { it.list == l.id }, users, hold) {
+                                    if (on) { Haptics.select(); s.listSheet = l.id } else { vm.p32b.taskArch = false; vm.taskFilter = l.id }
+                                }
+                            }
                         }
                     }
-                    TaskListChip("Arkivert", null, arch, vm.p32b.archived?.size ?: 0) { Haptics.select(); vm.p32b.taskArch = true; vm.p32b.archClearArm = false; vm.loadArchived32b() }
-                    NewListChip37 { Haptics.select(); s.listSheet = "new" }
+                    NewListChip43 { Haptics.select(); s.listSheet = "new" }
+    }
+    BoxWithConstraints(Modifier.fillMaxSize().background(p.bg)) {
+    val split43 = maxWidth >= 600.dp && maxWidth >= maxHeight * 0.9f
+    val narrowWide43 = maxWidth >= 600.dp && !split43
+    val listW43 = if (maxWidth >= 1000.dp) 250.dp else 210.dp
+    Row(Modifier.fillMaxSize()) {
+    // 1c: lister i egen kolonne (210 på Fold, 250 på bredere skjerm), «+ Ny liste» sist; oppgavene til høyre.
+    if (split43) Column(Modifier.width(listW43).fillMaxHeight().background(p.card).statusBarsPadding().verticalScroll(rememberScrollState())
+        .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("‹ Hjem", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { vm.closeTasksHome40() }.wrapContentHeight())
+        PSerif("To-do for hele familien", 13.sp, p.mut, italic = true, weight = FontWeight.Normal, maxLines = 2)
+        PSerif("Gjøremål", 28.sp, maxLines = 1)
+        PLabel("Lister", modifier = Modifier.padding(top = 6.dp))
+        chips43()
+    }
+    if (split43) Box(Modifier.width(1.dp).fillMaxHeight().background(p.line))
+    Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
+        LazyColumn(Modifier.fillMaxHeight().then(if (narrowWide43) Modifier.widthIn(max = 720.dp).fillMaxWidth() else Modifier.fillMaxWidth()).then(if (split43) Modifier.statusBarsPadding() else Modifier), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 60.dp + 18.dp + 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+            verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Prompt 40: tilbake går alltid til Hjem (åpnet fra Hjem-widgeten eller Mer → Gjøremål).
+            if (!split43) item { ModuleHero("To-do for hele familien", "Gjøremål", "‹ Hjem") { vm.closeTasksHome40() } }
+            if (!split43) item {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    chips43()
                 }
             }
             if (arch) {
@@ -130,7 +157,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
             cur?.let { l -> item { ListInfo37(vm, l, users) } }
             // Prompt 41: «Glimt deler opp beskjeden …» (bakgrunnsjobber) og «✓ Glimt lagde N punkter».
             if (vm.p41.glimtJobs.isNotEmpty() || vm.p41.glimtDone != null) item { Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { GlimtJobs41(vm) } }
-            item { Box(Modifier.padding(horizontal = 16.dp)) { SourcesEntry41(vm) } } // «✦ Laget med Glimt» (vises bare med minst én beskjed)
+            // Prompt 43: «Laget med Glimt» ligger nå som pille i raden over (GlimtSourcesChip43).
             vm.tasksError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) } }
             if (t == null && vm.tasksError == null) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
             // Glimt-kortene fra serveren (like, forfalte, butikk, pakkeliste fra kalenderen); eldre server: like og forfalte lokalt.
@@ -163,21 +190,25 @@ internal fun TasksScreen37(vm: AppViewModel) {
             if (vm.userIsAdmin && vm.tasksHa != null) item { TasksHaSection(vm, lists) }
         }
         // Dokken (felt + ✦) skjules i Arkivert og mens et ark er åpent.
-        if (!arch && !sheet) Dock37(title, { title = it }, focus, Modifier.align(Alignment.BottomCenter), onEnter = { add() }) {
+        if (!arch && !sheet) Dock37(title, { title = it }, focus, Modifier.align(Alignment.BottomCenter).then(if (narrowWide43) Modifier.widthIn(max = 720.dp) else Modifier), onEnter = { add() }) {
             if (title.isBlank()) { s.glimt = null; s.glimtOpen = true } else { val q = title; title = ""; vm.glimt37(q) }
         }
+    }
+    }
     }
     s.detail?.let { id -> (t?.items ?: emptyList()).firstOrNull { it.id == id }?.let { DetailSheet37(vm, it, lists, users, today) } ?: run { s.detail = null } }
     s.listSheet?.let { id -> ListSheet37(vm, if (id == "new") null else lists.firstOrNull { it.id == id }, users) }
     if (s.glimtOpen) GlimtSheet37(vm, lists)
+    if (TaskOrder43.sheet) TabOrderSheet43(vm, listOf(Triple("alle", "Alle", PaperPal.current.ink)) + lists.map { Triple("l:" + it.id, it.name, Color(it.color)) } +
+        listOf(Triple("arch", "Arkivert", PaperPal.current.mut), Triple("glimt", "Laget med Glimt", PaperPal.current.lab)), lists.map { "l:" + it.id })
 }
 
 /** Liste-chip: fargeprikk, navn, opptil 3 avatarer for delte lister, antall åpne. */
 @Composable
-private fun ListChip37(l: TaskList, on: Boolean, count: Int, users: List<TaskMember>, onClick: () -> Unit) {
+private fun ListChip37(l: TaskList, on: Boolean, count: Int, users: List<TaskMember>, onHold: () -> Unit = {}, onClick: () -> Unit) {
     val p = PaperPal.current
     Row(
-        Modifier.height(38.dp).clip(CircleShape).background(if (on) p.ink else p.card).clickable(onClickLabel = if (on) "Administrer ${l.name}" else l.name) { Haptics.select(); onClick() }
+        Modifier.height(38.dp).clip(CircleShape).background(if (on) p.ink else p.card).pressOrHold43(if (on) "Administrer ${l.name}" else l.name, { Haptics.select(); onClick() }, onHold)
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

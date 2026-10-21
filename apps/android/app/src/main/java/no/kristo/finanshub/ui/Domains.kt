@@ -510,6 +510,8 @@ internal fun PaperDomTop(vm: AppViewModel) {
                         contentAlignment = Alignment.Center) { Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
                 }
             }
+            // Prompt 43 (claude-code-domener-glimt-i-kortet.md): Glimt-raden nederst i kortet (orben, ikke figuren), følger perioden.
+            if (!vm.p38.domSumOpen) DomGlimtRow43(vm)
         }
     }
 }

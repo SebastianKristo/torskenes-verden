@@ -51,11 +51,12 @@ internal fun TaskChip(text: String, on: Boolean, onClick: () -> Unit) {
 
 /** Listevelgeren: 38 dp, fargeprikk (ikke på «Alle») og antall åpne. */
 @Composable
-internal fun TaskListChip(text: String, color: Long?, on: Boolean, count: Int, onClick: () -> Unit) {
+internal fun TaskListChip(text: String, color: Long?, on: Boolean, count: Int, onHold: (() -> Unit)? = null, onClick: () -> Unit) {
     val p = PaperPal.current
     Row(
         Modifier.height(38.dp).clip(CircleShape).background(if (on) p.ink else p.card).border(1.dp, if (on) p.ink else Color.Transparent, CircleShape)
-            .clickable { Haptics.select(); onClick() }.padding(horizontal = 14.dp),
+            // Prompt 43: hold inne → «Rekkefølge på lister» (ui/Tasks43.kt).
+            .then(if (onHold != null) Modifier.pressOrHold43(text, { Haptics.select(); onClick() }, onHold) else Modifier.clickable { Haptics.select(); onClick() }).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (color != null) Box(Modifier.size(9.dp).clip(CircleShape).background(Color(color)))

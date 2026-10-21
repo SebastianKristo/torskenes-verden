@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 43: forhåndsvisning i widgetgalleriet for Media (s) med eksempeldata (One UI krever previewLayout). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"
+    android:padding="16dp" android:background="@drawable/prev40_card_m">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="MEDIA" android:textColor="@color/prev40_acc_m" android:textSize="13sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12,4 MB/s" android:textColor="@color/prev40_ink_m" android:textSize="15sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:layout_marginTop="8dp" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Only Murders S05E09 · 64 %" android:textColor="@color/prev40_mut_m" android:textSize="12.5sp" android:maxLines="2" android:ellipsize="end" android:layout_marginTop="6dp" />
+</LinearLayout>

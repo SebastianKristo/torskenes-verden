@@ -47,6 +47,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         Trials32bStore.useAccount(ctx, acc.id)
         Brief34Store.useAccount(ctx, acc.id)
         Bible37Store.useAccount(ctx, acc.id)
+        Media43Store.useAccount(ctx, acc.id)
         var err: String? = null
         for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
             try {
@@ -67,6 +68,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 runCatching { fetchBrief34(ctx, Api(base, acc.token), acc.id); Brief34Widgets.redraw(ctx) }
                 // Prompt 37: bibelvers-widgetene (bare med modulen; ellers slås mottakerne av).
                 runCatching { fetchBible37(ctx, Api(base, acc.token), acc.id, acc.username) }
+                // Prompt 43: Media-widgetene (/api/widgets/media; 404 = eldre server).
+                runCatching { fetchMedia43(ctx, Api(base, acc.token), acc.id); Media43Widgets.redraw(ctx) }
                 // Prompt 40: Hjemlys – varsler om husstanden og egen økt også når appen er lukket (404 = eldre server).
                 runCatching { no.kristo.finanshub.pollHjemlys40(ctx, Api(base, acc.token)) }
                 return Result.success()
@@ -129,5 +132,6 @@ object WidgetSync {
         runCatching { Lock40.syncBible(ctx); Lock40.redraw(ctx) }
         runCatching { Preview40.publish(ctx) }
         runCatching { HjemlysWidget40.redraw(ctx) }
+        runCatching { Media43Widgets.redraw(ctx) } // prompt 43
     }
 }
