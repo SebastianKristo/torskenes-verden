@@ -317,6 +317,8 @@ struct PaperShell: View {
         .media43Host(p)
         // Prompt 43: Innstillinger → Widgets (galleriet), Widgets43.swift.
         .widgets43Host(p)
+        // Prompt 44: Logger (Innstillinger → Server), Studie → Dokumenter og «Logget inn som X · Gå ut» (Logs44/Study44/Konto44.swift).
+        .hosts44(p)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)
@@ -934,7 +936,8 @@ struct PaperPage: View {
         case "abo": PaperSubs()
         case "mat": MatView(pal: MatPal.paper(p))
         case "sporing": PaperTracking()
-        case "mer": PaperMore28()
+        // Prompt 44: Mer med levende kort, Store · Lave og wiggle uten «Rediger» (More44.swift).
+        case "mer": PaperMore44()
         case "bursdag": BirthdaysPage24()
         case "kalender": Cal26Page()
         case "innst": PaperSettings17()

@@ -56,6 +56,9 @@ struct TaskItem17: Identifiable, Hashable {
     var doneAt: Date? = nil
     /// Prompt 41: beskjeden punktet ble laget fra («Laget med Glimt», Tasks41Glimt.swift).
     var origin41: TaskOrigin41? = nil
+    /// Prompt 44: frist (siste dag, `dl`) og stedets koordinater (`geo` = [lat, lon]), se Tasks44Info.swift.
+    var dl44: Date? = nil
+    var geo44: [Double] = []
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
         title = JS.str(o, "title") ?? JS.str(o, "n") ?? ""
@@ -271,7 +274,8 @@ struct PaperTasksView: View {
                 }
                 .buttonStyle(.plain).padding(.leading, 4)
             }
-            TaskHASection22()
+            // Prompt 44: synken er flyttet til Innstillinger → Gjøremål; her står bare en rad som åpner den (Tasks44Subs.swift).
+            Tasks44SyncRow()
             Text("Widgeten «Gjøremål» på hjemskjermen viser de tre neste oppgavene, og du kan krysse av rett i den.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 4).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
             }
@@ -304,6 +308,8 @@ struct PaperTasksView: View {
                 .presentationDragIndicator(.visible)
                 .sheetEdge30(p.bg)
         }
+        // Prompt 44: infosiden i fullskjerm og «Fullfør «X» også?» (Tasks44Subs.swift).
+        .tasks44Host(p)
         .sheet(isPresented: Binding<Bool>(get: { Tasks37UI.shared.glimtOpen }, set: { Tasks37UI.shared.glimtOpen = $0 })) {
             Task37GlimtSheet()
                 .environment(\.paper, p)
@@ -470,6 +476,8 @@ struct PaperTasksView: View {
             ForEach(Array(list.enumerated()), id: \.element.id) { i, t in
                 if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
                 row(t)
+                // Prompt 44: deloppgaver innrykket under oppgaven og feltet fra ↳+ (Tasks44Subs.swift).
+                Tasks44SubList(t: t)
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 2)
@@ -493,7 +501,8 @@ struct PaperTasksView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(t.done ? "Marker som ikke ferdig" : "Fullfør")
-            Button { Tasks37UI.shared.detail = t } label: {
+            // Prompt 44: trykk åpner infosiden (helside) på telefon; iPad (1a) viser oppgaven i høyre kolonne som før.
+            Button { if split43 { Tasks37UI.shared.detail = t } else { Tasks44UI.shared.open(t) } } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     // Prompt 37: ⚑ og ! / !! / !!! foran tittelen.
                     Task37Row.title(t, p).lineLimit(2)
@@ -503,6 +512,8 @@ struct PaperTasksView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            // Prompt 44: ↳+ legger til deloppgave rett i lista.
+            if !t.done { Tasks44SubButton(t: t) }
             // Prompt 32: arkivikon på fullførte oppgaver.
             if t.done { Tasks32bArchiveButton(t: t) }
         }

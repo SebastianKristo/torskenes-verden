@@ -318,10 +318,12 @@ struct Glimt34Figure: View {
     var lean: Double = 0
     var t: Double = 0
     var still: Bool = false
+    /// Prompt 44: beholderen (Glimt44Brief34Stack) står for svevet, så pynten følger figuren.
+    var carried44: Bool = false
 
     var body: some View {
         let s: CGFloat = size
-        let bob: CGFloat = still ? 0 : CGFloat(-2.5 + 2.5 * cos(t * 2 * .pi / 2.6))
+        let bob: CGFloat = (still || carried44) ? 0 : CGFloat(-2.5 + 2.5 * cos(t * 2 * .pi / 2.6))
         ZStack(alignment: .topLeading) {
             Glimt34Arm(size: s, left: true, angle: armAngle)
             Glimt34Arm(size: s, left: false, angle: 12)

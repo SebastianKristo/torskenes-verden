@@ -559,6 +559,19 @@ final class Store {
         refresh()
     }
 
+    /// Prompt 44: «Logg inn som X» – en midlertidig konto med X sitt kortlevde token. Admin-kontoen (og tokenet) blir liggende
+    /// urørt i nøkkelringen, så «Gå ut» bare forkaster X-tokenet og bytter tilbake (Konto44.swift).
+    func beginImpersonation44(_ acc: LoginAccount) {
+        accounts = accounts.filter { $0.id != acc.id } + [acc]
+        switchTo(acc.id)
+    }
+
+    /// Prompt 44: «Gå ut» – fjerner den midlertidige kontoen og bytter tilbake til admin.
+    func endImpersonation44(_ tempId: String, back adminId: String) {
+        accounts.removeAll { $0.id == tempId }
+        if accounts.contains(where: { $0.id == adminId }) { switchTo(adminId) } else if let f = accounts.first { switchTo(f.id) } else { saveAccounts() }
+    }
+
     func logout(_ id: String? = nil) {
         guard let a = accounts.first(where: { $0.id == (id ?? activeId) }) else { return }
         run {

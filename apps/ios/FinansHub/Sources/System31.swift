@@ -146,9 +146,11 @@ struct System31Page: View {
                         .font(PF.ui(12)).foregroundStyle(p.mut).lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 4)
+                    // Prompt 44: TIDLIGERE VERSJONER med Installer (rull tilbake), rett under «Krev …» og over NYTT I (Versions44.swift).
+                    Versions44Section()
                     System31Notes()
-                    // Prompt 36: TIDLIGERE VERSJONER (System36.swift).
-                    System36History()
+                    // Prompt 36: endringshistorikken vises når serveren ikke har versjonslista fra updateren (eldre server).
+                    if Versions44.shared.loaded && !Versions44.shared.available { System36History() }
                     // Prompt 32: versjonsinfo og handlinger fra den gamle «Oppdatering»-siden (Settings32.swift).
                     System32bInstalled()
                 }

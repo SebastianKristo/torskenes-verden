@@ -414,10 +414,12 @@ struct Media43SearchSheet: View {
     @Environment(\.paper) private var p
     @MainActor private var m: Media43 { Media43.shared }
     let target: Media43SearchTarget
-    @State private var rows: [Media43Release] = []
-    @State private var loading: Bool = true
-    @State private var err: String = ""
-    @State private var meta: String = ""
+    /// Prompt 44: søket kjører som jobb på serveren med status per indekser (Media44Search.swift).
+    @State private var job: Media44Job = Media44Job()
+    private var rows: [Media43Release] { job.rows }
+    private var loading: Bool { job.running }
+    private var err: String { job.allFailed ? "" : job.error }
+    private var meta: String { job.meta }
     @State private var filter: String = "Alle"
     @State private var sent: Set<String> = []
 
@@ -444,9 +446,9 @@ struct Media43SearchSheet: View {
                         }
                     }
                 }
-                if loading { HStack(spacing: 8) { ProgressView(); Text("Søker i indekserne …").font(PF.ui(13)).foregroundStyle(p.mut) } }
-                if !err.isEmpty { Text(err).font(PF.ui(13)).foregroundStyle(p.lab) }
-                if !loading && err.isEmpty && list.isEmpty { Text("Ingen treff.").font(PF.ui(13.5)).foregroundStyle(p.mut) }
+                // Prompt 44: status per indekser, Avbryt, «Hentet for … · Søk igjen» og feilkort bare når alle feilet.
+                Media44SearchStatus(job: job, empty: list.isEmpty, again: again, cancel: { job.cancel(store) },
+                                    prowlarr: { m.searchFor = nil; m.tab = "prowlarr" })
                 VStack(spacing: 0) {
                     ForEach(Array(list.enumerated()), id: \.element.id) { (pair: (offset: Int, element: Media43Release)) in
                         if pair.offset > 0 { Rectangle().fill(p.line).frame(height: 1) }
@@ -507,8 +509,9 @@ struct Media43SearchSheet: View {
                         .background(done ? Color(hex: "#2f6b4a") : p.ink, in: Circle())
                 }
                 .buttonStyle(.plain)
-                .disabled(done)
-                .accessibilityLabel(done ? "Sendt" : "Last ned")
+                .disabled(done || r.partial)
+                .opacity(r.partial ? 0.4 : 1)
+                .accessibilityLabel(done ? "Sendt" : (r.partial ? "Venter på at søket blir ferdig" : "Last ned"))
             }
             if !r.languages.isEmpty || !r.age.isEmpty {
                 Text([r.languages, r.age].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(11.5)).foregroundStyle(p.mut).lineLimit(1)
@@ -525,42 +528,11 @@ struct Media43SearchSheet: View {
         return s
     }
 
-    private func load() async {
-        loading = true
-        err = ""
-        let t0: Date = Date()
-        var q: String
-        switch target.kind {
-        case "movie": q = "movieId=\(target.movieId)"
-        case "season": q = "seriesId=\(target.seriesId)&seasonNumber=\(target.season)"
-        default: q = "episodeId=\(target.episodeId)"
-        }
-        let svc: String = target.kind == "movie" ? "radarr" : "sonarr"
-        do {
-            let d: Data = try await m.fetch(store, ["/media/\(svc)/release?" + q, "/media/release?service=\(svc)&" + q], timeout: 90)
-            let o: [String: Any] = JS.obj(d)
-            rows = Media43.rows(d, ["releases"]).map { (r: [String: Any]) -> Media43Release in
-                var x: Media43Release = Media43Release(guid: JS.str(r, "guid") ?? UUID().uuidString)
-                x.indexerId = JS.int(r, "indexerId") ?? 0
-                x.title = JS.str(r, "title") ?? ""
-                x.quality = JS.str(JS.dict(JS.dict(r, "quality"), "quality"), "name") ?? JS.str(r, "quality") ?? ""
-                x.size = JS.num(r, "size") ?? 0
-                x.seeders = JS.int(r, "seeders") ?? 0
-                x.peers = JS.int(r, "leechers") ?? JS.int(r, "peers") ?? 0
-                x.indexer = JS.str(r, "indexer") ?? ""
-                let langs: [String] = JS.strings(r, "languages")
-                x.languages = langs.isEmpty ? (JS.str(r, "language") ?? "") : langs.joined(separator: ", ")
-                if let a = JS.num(r, "ageHours") { x.age = a < 48 ? "\(Int(a)) t" : "\(Int(a / 24)) d" } else if let a = JS.int(r, "age") { x.age = "\(a) d" }
-                x.rejected = JS.strings(r, "rejections")
-                x.best = JS.bool(r, "best") ?? false
-                return x
-            }
-            let ms: Int = JS.int(o, "ms") ?? Int(Date().timeIntervalSince(t0) * 1000)
-            let ix: Int = JS.int(o, "indexers") ?? Set(rows.map(\.indexer)).count
-            meta = "\(rows.count) treff fra \(ix) indeksere · " + Media43Page.ms(ms)
-        } catch { err = m.errorText(error) }
-        loading = false
+    private func load(force: Bool = false) async {
+        await job.run(target, store, force: force)
     }
+
+    private func again() { Task { await load(force: true) } }
 
     private func download(_ r: Media43Release) {
         Haptics.shared.tap()

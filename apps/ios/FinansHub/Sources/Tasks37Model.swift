@@ -12,6 +12,8 @@ import WidgetKit
 struct TaskSub37: Hashable {
     var n: String
     var done: Bool
+    /// Prompt 44: id per deloppgave (subs:[{id,n,done}]). Tom fra eldre servere; lages når den lagres.
+    var id: String = ""
 }
 
 enum Tasks37 {
@@ -46,9 +48,12 @@ enum Tasks37 {
         for s in JS.list(o, "subs") {
             let n: String = JS.str(s, "n") ?? JS.str(s, "title") ?? ""
             if n.isEmpty { continue }
-            subs.append(TaskSub37(n: n, done: JS.bool(s, "done") ?? false))
+            subs.append(TaskSub37(n: n, done: JS.bool(s, "done") ?? false, id: JS.str(s, "id") ?? ""))
         }
         t.subs = subs
+        // Prompt 44: frist (dl) er et eget felt fra dato/tid (due, time), og sted kan ha koordinater (geo).
+        t.dl44 = JS.str(o, "dl").flatMap { parseDay($0) }
+        if let g = JS.dict(o, "geo"), let la = JS.num(g, "lat"), let lo = JS.num(g, "lon") { t.geo44 = [la, lo] }
         t.by = JS.str(o, "by") ?? JS.str(o, "createdBy") ?? ""
         t.place = JS.str(o, "place") ?? ""
         t.doneAt = JS.date(o["doneAt"])
@@ -62,8 +67,10 @@ enum Tasks37 {
         if let d = t.due { b["due"] = JS.fmt(d, "yyyy-MM-dd") } else { b["due"] = NSNull() }
         if let a = t.assignee, !a.isEmpty { b["assignee"] = a; b["who"] = a } else { b["assignee"] = NSNull(); b["who"] = NSNull() }
         var subs: [[String: Any]] = []
-        for s in t.subs { subs.append(["n": s.n, "done": s.done]) }
+        for s in t.subs { subs.append(["id": s.id.isEmpty ? Tasks44.newId() : s.id, "n": s.n, "done": s.done]) }
         b["subs"] = subs
+        if let d = t.dl44 { b["dl"] = JS.fmt(d, "yyyy-MM-dd") } else { b["dl"] = NSNull() }
+        if t.geo44.count == 2 { b["geo"] = ["lat": t.geo44[0], "lon": t.geo44[1]] } else { b["geo"] = NSNull() }
         return b
     }
 
@@ -84,7 +91,8 @@ final class Tasks37UI {
     /// Glimt-kort som er lukket («Ikke nå»), per økt.
     var dismissed: Set<String> = []
 
-    var anySheet: Bool { detail != nil || listSheet || glimtOpen }
+    /// Prompt 44: infosiden skjuler også «Ny oppgave …» og Glimt-knappen.
+    var anySheet: Bool { detail != nil || listSheet || glimtOpen || Tasks44UI.shared.info != nil }
 }
 
 extension TasksModel {

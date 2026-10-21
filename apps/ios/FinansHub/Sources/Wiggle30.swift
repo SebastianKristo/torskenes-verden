@@ -23,7 +23,7 @@ enum Wiggle30 {
     /// Luften over innholdet når en wiggle-verktøylinje vises på siden.
     static func topPad(_ store: Store) -> CGFloat {
         if let e = store.paperEditPage, Edit28.pages.contains(e) { return pad }
-        if store.paperTab == "mer" && Mer28.shared.editing { return pad }
+        // Prompt 44: Mer har Ferdig og Store · Lave i overskriftsraden (More44.swift), ingen piller over lista.
         return 0
     }
 }
@@ -114,7 +114,8 @@ struct Mer30Pills: View {
     @MainActor private var s: Mer30 { Mer30.shared }
 
     var body: some View {
-        if store.paperTab == "mer" && m.editing {
+        // Prompt 44: Mer har egen «Ferdig» i overskriftsraden (More44.swift); pillene vises ikke lenger der.
+        if store.paperTab == "mer-28" && m.editing {
             HStack(spacing: 10) {
                 Edit28Pill(kind: .add, text: s.hiddenCount > 0 ? "\(s.hiddenCount)" : "") {
                     Haptics.shared.tap()

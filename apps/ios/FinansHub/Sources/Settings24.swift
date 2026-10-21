@@ -93,6 +93,14 @@ final class Set24Model {
         add("om", "Om appen", "Versjon og lisenser", "Avansert", "innst-om")
         // Prompt 32: «oppdatering», «versjon», «update» treffer Nordlys OS (innst-oppdatering sendes dit, PaperStore.paperGo).
         if Update28Model.isAdmin(store) { add("oppdatering", "Nordlys OS", "Oppdatering, versjon og update", "Programvare", "innst-oppdatering") }
+        // Prompt 44: «logg», «docker», «feil» → Logger; Gjøremål-synk; Tidligere versjoner; Logg inn som / Overfør eier.
+        if Update28Model.isAdmin(store) {
+            add("logger44", "Logger", "Docker-logger, logg, feil og feilsøking", "Server", "logs44")
+            add("versjoner44", "Tidligere versjoner", "Rull tilbake, installer en eldre versjon", "System", "innst-oppdatering")
+            add("loggInnSom44", "Logg inn som", "Rediger oppsettet til et familiemedlem", "Kontoer og brukere", "innst-konto")
+        }
+        add("huske44", "Gjøremål", "Synk med Home Assistant", "App", "innst-huske")
+        add("eier44", "Overfør eierskap", "Eier av serveren", "Kontoer og brukere", "innst-konto")
         // Prompt 34: handlinger med mål-id (Oppdater nå, Se etter oppdatering, Krev passord) og AI-kontroll (Settings34.swift).
         out += Set24Model.items34(store)
         let integ: [Int24Item] = Int24Model.shared.items
@@ -220,6 +228,7 @@ final class Set24Model {
         case "abo": store.paperFinGo("abo")
         case "naming", "icon": break
         case "innst-kal": Int26Nav.openKal(from: nil, store)
+        case "logs44": Logs44.shared.show()
         default: store.paperGo(r)
         }
         // Prompt 25: samme fremheving som «Ta meg dit →» (raden fremheves hvis den står på siden).

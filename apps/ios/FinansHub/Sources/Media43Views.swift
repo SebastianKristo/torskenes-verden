@@ -133,6 +133,8 @@ struct Media43Page: View {
             }
             .background(p.bg.ignoresSafeArea())
             .overlay(alignment: .bottom) { toast }
+            // Prompt 44: «Slettet … · Angre» (5 s) etter Slett fil.
+            .overlay(alignment: .bottom) { Media44UndoBar() }
             // Ark: på stor skjerm vises serie/film i høyre kolonne, ellers som ark.
             .sheet(item: Binding<Media43Title?>(get: { wide ? nil : m.selected }, set: { (v: Media43Title?) in if v == nil { m.selected = nil } })) { (t: Media43Title) in
                 ScrollView { Media43Detail(t: t, column: false).padding(16) }
@@ -142,6 +144,9 @@ struct Media43Page: View {
                     .presentationDragIndicator(.visible)
             }
             .media43Sheets(p)
+            .sheet(isPresented: Binding<Bool>(get: { Media44.shared.pickerOpen }, set: { Media44.shared.pickerOpen = $0 })) {
+                Media44SiteSheet(tab: m.tab).sheet43(p, store)
+            }
         }
         .task {
             await m.loadAll(store)
@@ -210,7 +215,10 @@ struct Media43Page: View {
     }
 
     @ViewBuilder private func tabBody(_ wide: Bool) -> some View {
+        // Prompt 44: felles servervalg øverst i Sonarr/Radarr/qBittorrent/Prowlarr (skjult i Kommer snart og Avspilling).
+        Media44SiteRow(tab: m.tab)
         switch m.tab {
+        case "avspilling": Playback44View()
         case "sonarr": Media43Library(kind: "series", wide: wide)
         case "radarr": Media43Library(kind: "movie", wide: wide)
         case "qbit": Media43Qbit()
@@ -400,12 +408,21 @@ struct Media43Library: View {
 
     var body: some View {
         let all: [Media43Title] = kind == "series" ? m.series : m.movies
-        let list: [Media43Title] = all.filter { match($0) && (q.isEmpty || $0.title.localizedCaseInsensitiveContains(q)) }
+        // Prompt 44: søk på tittel, kanal/nettverk og år, uten forskjell på store bokstaver, aksenter og tegn («9-1-1» = «911»).
+        let list: [Media43Title] = all.filter { match($0) && Media44Lib.hit($0, q) }
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass").font(.system(size: 13)).foregroundStyle(p.mut)
-                    TextField(kind == "series" ? "Søk i serier" : "Søk i filmer", text: $q).font(PF.ui(14.5)).foregroundStyle(p.ink)
+                    TextField(Media44Lib.placeholder(kind, all.count), text: $q).font(PF.ui(14.5)).foregroundStyle(p.ink)
+                        .autocorrectionDisabled()
+                    if !q.isEmpty {
+                        Button { q = "" } label: {
+                            Image(systemName: "xmark.circle.fill").font(.system(size: 15)).foregroundStyle(p.mut).frame(width: 30, height: 30)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Tøm søket")
+                    }
                 }
                 .padding(.horizontal, 14).frame(height: 44)
                 .background(p.card, in: Capsule())
@@ -431,6 +448,7 @@ struct Media43Library: View {
                 Text(m.missingServer ? "Media er ikke satt opp på serveren ennå." : (kind == "series" ? "Ingen serier ennå." : "Ingen filmer ennå."))
                     .font(PF.ui(14)).foregroundStyle(p.mut).padding(.vertical, 16)
             }
+            if !q.isEmpty && list.isEmpty && !all.isEmpty { Media44LibNoHit(kind: kind, q: q) }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: wide ? (m.selected == nil ? 6 : 4) : 3), spacing: 12) {
                 ForEach(list) { (t: Media43Title) in
                     Button { m.select(t, store) } label: {
@@ -498,30 +516,13 @@ struct Media43Detail: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 14) {
-                Media43Poster(url: t.poster, title: t.title, width: 92, height: 138, radius: 14)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(t.title).font(PF.serif(26, medium: true)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
-                    Text([t.year > 0 ? String(t.year) : "", t.network, statusName].filter { !$0.isEmpty }.joined(separator: " · "))
-                        .font(PF.ui(12.5)).foregroundStyle(p.mut)
-                    if t.kind == "series" && t.total > 0 {
-                        Text("\(t.have) av \(t.total) episoder" + (t.missing > 0 ? " · \(t.missing) mangler" : ""))
-                            .font(PF.ui(12.5, .semibold)).foregroundStyle(t.missing > 0 ? Color(hex: "#a0671a") : Color(hex: "#2f6b4a"))
-                    }
-                }
-                Spacer(minLength: 0)
-                if column {
-                    Button { m.selected = nil } label: {
-                        Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).foregroundStyle(p.mut)
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Lukk")
-                }
-            }
+            // Prompt 44: banner med fanart, plakat 2:3, ←/→, fakta, info-brikker og handling (Media44Banner.swift).
+            Media44Banner(t: t, column: column)
             chips
             buttons
             if t.kind == "movie" { fileBox }
+            // Prompt 44: ⟳ Last ned på nytt (interaktivt søk) og Slett fil for film med fil.
+            if t.kind == "movie" && t.hasFile { Media44MovieFileActions(t: t, profile: profiles.first(where: { $0.id == t.profileId })?.name ?? "") }
             if t.kind == "series" { seasons }
             Button(role: .destructive) { confirmDelete = true } label: {
                 Text(t.kind == "series" ? "Slett serien" : "Slett filmen").font(PF.ui(13.5, .semibold)).foregroundStyle(p.lab)
@@ -713,7 +714,9 @@ struct Media43Detail: View {
                     }
                 }
                 Spacer(minLength: 4)
-                if !needs { Media43Status(status: status) }
+                if !needs && !e.hasFile { Media43Status(status: status) }
+                // Prompt 44: episode med fil – ⟳ Last ned på nytt og Slett (Media44Banner.swift).
+                if e.hasFile { Media44EpisodeFileActions(t: t, e: e, profile: profiles.first(where: { $0.id == t.profileId })?.name ?? "") }
             }
             if needs {
                 HStack(spacing: 8) {

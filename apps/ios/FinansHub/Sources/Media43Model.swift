@@ -46,6 +46,13 @@ struct Media43Title: Identifiable, Hashable {
     var tmdbId: Int = 0
     var exists: Bool = true
     var playUrl: String = ""
+    /// Prompt 44: banneret (fanart 16:9, spilletid, sjanger, språk) og filmfilen (Slett fil / Last ned på nytt).
+    var fanart: String = ""
+    var runtime: Int = 0
+    var genres: [String] = []
+    var language: String = ""
+    var fileId: Int = 0
+    var endYear: Int = 0
     var missing: Int { Swift.max(0, total - have) }
 }
 
@@ -58,6 +65,9 @@ struct Media43Episode: Identifiable, Hashable {
     var hasFile: Bool = false
     var monitored: Bool = true
     var status: String = ""
+    /// Prompt 44: episodefilen (Slett / Last ned på nytt).
+    var fileId: Int = 0
+    var fileQuality: String = ""
 }
 
 struct Media43Release: Identifiable, Hashable {
@@ -74,6 +84,8 @@ struct Media43Release: Identifiable, Hashable {
     var age: String = ""
     var rejected: [String] = []
     var best: Bool = false
+    /// Prompt 44: delvis treff fra en indekser mens søket pågår (kan ikke sendes før Sonarr/Radarr er ferdig).
+    var partial: Bool = false
 }
 
 struct Media43Torrent: Identifiable, Hashable {
@@ -226,7 +238,8 @@ final class Media43 {
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
     @ObservationIgnored private var toastTask: Task<Void, Never>? = nil
 
-    static let tabs: [(String, String)] = [("kommer", "Kommer snart"), ("sonarr", "Sonarr"), ("radarr", "Radarr"), ("qbit", "qBittorrent"), ("prowlarr", "Prowlarr")]
+    /// Prompt 44: «Avspilling» (Plex/Jellyfin, Playback44.swift) etter Prowlarr.
+    static let tabs: [(String, String)] = [("kommer", "Kommer snart"), ("sonarr", "Sonarr"), ("radarr", "Radarr"), ("qbit", "qBittorrent"), ("prowlarr", "Prowlarr"), ("avspilling", "Avspilling")]
 
     /// Modulen «media»: false når serveren svarer 403 (ingen tilgang) eller ikke har Media (404). Lagres lokalt.
     var allowed: Bool = UserDefaults.standard.object(forKey: "media43_allowed") as? Bool ?? true {
@@ -281,7 +294,9 @@ final class Media43 {
     /// Prøver stiene i rekkefølge; 404 = neste. Kaster siste feil.
     func fetch(_ store: Store, _ paths: [String], method: String = "GET", json: [String: Any]? = nil, timeout: TimeInterval = 20) async throws -> Data {
         var last: Error = APIError(message: "Serveren har ikke Media ennå.", status: 404)
-        for p in paths {
+        for p0 in paths {
+            // Prompt 44: felles servervalg (?server=<sted>), med fallback til standard når stedet mangler tjenesten (Media44.swift).
+            let p: String = Media44.shared.withSite(p0)
             do {
                 let d: Data = try await store.api.callAt("/api", method, p, json: json, timeout: timeout)
                 missingServer = false
@@ -316,14 +331,8 @@ final class Media43 {
         }
     }
 
-    func errorText(_ e: Error) -> String {
-        if let a = e as? APIError {
-            if a.status == 404 { return "Serveren har ikke Media ennå (oppdater Homelab)." }
-            if a.status == 403 { return "Du har ikke tilgang til Media. Be en administrator om modulen «media»." }
-            return a.message
-        }
-        return e.localizedDescription
-    }
+    /// Prompt 44: «Utlogget fra Homelab» / «Svarer ikke» / «Ikke satt opp» – aldri «ikke logget inn» når backend er treg.
+    func errorText(_ e: Error) -> String { Media44.errorText(e) }
 
     /* ---------- Last inn ---------- */
 
@@ -331,6 +340,9 @@ final class Media43 {
         loading = true
         error = ""
         defer { loading = false }
+        // Prompt 44: gamle lokale flagg bort, og stedene (Hjemme/Hytta) før første kall.
+        Media44.shared.migrate()
+        if Media44.shared.sites.isEmpty { await Media44.shared.load(store) }
         await loadStatus(store)
         await loadUpcoming(store)
         await loadTorrents(store)
@@ -349,11 +361,15 @@ final class Media43 {
         case "radarr": await loadMovies(store); await loadOptions(store)
         case "qbit": await loadTorrents(store); await loadOptions(store)
         case "prowlarr": await loadIndexers(store)
+        case "avspilling": await Playback44.shared.load(store)
         default: break
         }
     }
 
     func loadStatus(_ store: Store) async {
+        // Prompt 44: én kilde – samme status som Innstillinger (GET /api/integrations/status). Eldre server: /media/status.
+        let shared: [Media43Service] = await Media44.shared.statusFromIntegrations(store)
+        if !shared.isEmpty { services = shared; return }
         guard let d = try? await fetch(store, ["/media/status"]) else { return }
         let o: [String: Any] = JS.obj(d)
         var out: [Media43Service] = []
@@ -409,6 +425,15 @@ final class Media43 {
         return it
     }
 
+    /// Prompt 44: images[coverType=<type>] (fanart 16:9 til banneret), eller feltet med samme navn fra serveren.
+    nonisolated static func cover(_ r: [String: Any]?, _ type: String) -> String {
+        if let p = JS.str(r, type) ?? JS.str(r, type + "Url") { return p }
+        for im in JS.list(r, "images") where (JS.str(im, "coverType") ?? "") == type {
+            return JS.str(im, "remoteUrl") ?? JS.str(im, "url") ?? ""
+        }
+        return ""
+    }
+
     /// images[coverType=poster].remoteUrl (eller poster/posterUrl fra serveren).
     nonisolated static func poster(_ r: [String: Any]?) -> String {
         if let p = JS.str(r, "poster") ?? JS.str(r, "posterUrl") ?? JS.str(r, "remotePoster") { return p }
@@ -444,6 +469,13 @@ final class Media43 {
         t.tmdbId = JS.int(r, "tmdbId") ?? 0
         t.exists = (JS.int(r, "id") ?? 0) > 0 || (JS.bool(r, "exists") ?? false)
         t.playUrl = JS.str(r, "playUrl") ?? JS.str(r, "jellyfinUrl") ?? JS.str(r, "plexUrl") ?? ""
+        // Prompt 44: fanart til banneret og fakta (spilletid, sjanger, språk), og filmfilens id.
+        t.fanart = Media43.cover(r, "fanart")
+        t.runtime = JS.int(r, "runtime") ?? 0
+        t.genres = JS.strings(r, "genres")
+        t.language = JS.str(JS.dict(r, "originalLanguage"), "name") ?? JS.str(r, "language") ?? ""
+        t.fileId = JS.int(mf, "id") ?? JS.int(r, "movieFileId") ?? 0
+        t.endYear = JS.int(r, "endYear") ?? 0
         return t
     }
 
@@ -554,13 +586,25 @@ final class Media43 {
                 if self.selected?.id == t.id { self.selected = nt }
             }
             let eps: [[String: Any]] = JS.list(o, "episodes").isEmpty ? JS.list(full, "episodes") : JS.list(o, "episodes")
-            self.episodes = eps.map { (e: [String: Any]) -> Media43Episode in
-                Media43Episode(id: JS.int(e, "id") ?? 0, season: JS.int(e, "seasonNumber") ?? JS.int(e, "season") ?? 0,
-                               number: JS.int(e, "episodeNumber") ?? JS.int(e, "number") ?? 0, title: JS.str(e, "title") ?? "",
-                               air: JS.date(e["airDateUtc"] ?? e["airDate"]), hasFile: JS.bool(e, "hasFile") ?? false,
-                               monitored: JS.bool(e, "monitored") ?? true, status: (JS.str(e, "status") ?? "").lowercased())
-            }
+            self.episodes = eps.map { (e: [String: Any]) -> Media43Episode in Media43.episode(e) }
         }
+    }
+
+    /// Én episode fra Sonarr (delt opp i små uttrykk for typesjekkeren i Xcode 16).
+    nonisolated static func episode(_ e: [String: Any]) -> Media43Episode {
+        let ef: [String: Any]? = JS.dict(e, "episodeFile")
+        var x: Media43Episode = Media43Episode(id: JS.int(e, "id") ?? 0, season: JS.int(e, "seasonNumber") ?? JS.int(e, "season") ?? 0,
+                                               number: JS.int(e, "episodeNumber") ?? JS.int(e, "number") ?? 0)
+        x.title = JS.str(e, "title") ?? ""
+        x.air = JS.date(e["airDateUtc"] ?? e["airDate"])
+        x.hasFile = JS.bool(e, "hasFile") ?? false
+        x.monitored = JS.bool(e, "monitored") ?? true
+        x.status = (JS.str(e, "status") ?? "").lowercased()
+        let fid: Int? = JS.int(e, "episodeFileId")
+        x.fileId = fid ?? JS.int(ef, "id") ?? 0
+        let q: [String: Any]? = JS.dict(JS.dict(ef, "quality"), "quality")
+        x.fileQuality = JS.str(q, "name") ?? JS.str(e, "quality") ?? ""
+        return x
     }
 
     /// Lagrer endring på serie/film (profil, overvåking, type, minimumAvailability) med PUT.

@@ -19,13 +19,30 @@ struct Glimt34Live: View {
             Glimt34Figure(size: size, mood: mood, lean: lean, t: 0, still: true)
         } else {
             TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
-                Glimt34Figure(size: size, mood: mood, lean: lean, t: ctx.date.timeIntervalSinceReferenceDate)
+                Glimt44Brief34Stack(size: size, mood: mood, lean: lean, t: ctx.date.timeIntervalSinceReferenceDate)
             }
             .frame(width: size, height: size * 1.12)
-            // Prompt 40: juleantrekket også på den eldre figuren.
-            .overlay(alignment: .topLeading) { Glimt40DressAuto(S: size, H: size * 1.12) }
             .animation(.easeInOut(duration: 0.4), value: lean)
         }
+    }
+}
+
+/// Prompt 44: figuren og juleantrekket i én beholder. Svevet og lenet ligger på beholderen, så lue og skjerf følger med.
+struct Glimt44Brief34Stack: View {
+    let size: CGFloat
+    let mood: Glimt34Mood
+    let lean: Double
+    let t: Double
+
+    var body: some View {
+        let bob: CGFloat = CGFloat(-2.5 + 2.5 * cos(t * 2 * .pi / 2.6))
+        ZStack(alignment: .topLeading) {
+            Glimt34Figure(size: size, mood: mood, lean: 0, t: t, carried44: true)
+            Glimt40DressAuto(S: size, H: size * 1.12, t: t)
+        }
+        .frame(width: size, height: size * 1.12, alignment: .topLeading)
+        .rotationEffect(.degrees(lean))
+        .offset(y: bob)
     }
 }
 

@@ -289,6 +289,23 @@ final class Update30Model {
         }
     }
 
+    /// Prompt 44: tilbakerulling til en tidligere versjon startet av Versions44 (POST /api/update/rollback): samme fremdrift
+    /// og oppstartsskjerm som «Oppdater nå».
+    func beginExternal44(_ id: String, target: String, _ store: Store) {
+        jobId = id
+        fromVersion = current
+        rollbackTarget44 = target
+        error = ""
+        pct = 0
+        steps = Update30Model.defaultSteps()
+        showNotes = false
+        withAnimation(.easeOut(duration: 0.2)) { phase = .run }
+        startPolling(store)
+    }
+
+    /// Prompt 44: «Går tilbake til 4.37» mens tilbakerullingen pågår (tom ellers).
+    var rollbackTarget44: String = ""
+
     /// Prompt 31: tomme punkter («Kalender:» uten innhold) hoppes over.
     nonisolated static func cleanNotes(_ list: [String]) -> [String] {
         list.compactMap { (raw: String) -> String? in

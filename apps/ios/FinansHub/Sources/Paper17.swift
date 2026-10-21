@@ -667,6 +667,8 @@ struct PaperSettings17: View {
                 PaperLinkRow(name: "AI og modeller", sub: "Modeller, jobber, forbruk og nøkler", icon: "cpu") { AiCtl34.shared.show("ov") },
                 PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
                 PaperLinkRow(name: "Kalendere", sub: "Google Kalender · Home Assistant · Skole-iCal", icon: "calendar") { Int26Nav.openKal(from: nil, store) },
+                // Prompt 44: Innstillinger → Gjøremål (synk med Home Assistant), flyttet fra Gjøremål-siden (Tasks44Subs.swift).
+                PaperLinkRow(name: "Gjøremål", sub: "Synk med Home Assistant · på/av", icon: "checklist") { store.paperGo("innst-huske") },
                 // Prompt 43: Widgets-galleriet (Widgets43.swift).
                 PaperLinkRow(name: "Widgets", sub: "Media, Avganger, Kalender og 3 til", icon: "square.grid.2x2") { Widgets43.shared.open = true },
                 PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Media, Entur, Bring og 17 til", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
@@ -677,6 +679,8 @@ struct PaperSettings17: View {
             ])
             // Prompt 28: oppdatering av hele systemet (bare admin; startes i nettleseren). Update28.swift.
             if Update28Model.isAdmin(store) {
+                // Prompt 44: SERVER → Logger (Docker-logger, feil og feilsøking) for admin (Logs44.swift).
+                group("Server", 6, logRows44)
                 // Prompt 30: PROGRAMVARE (Oppdater ›, automatiske oppdateringer, varsle om nye versjoner). Update30.swift.
                 Update30Software()
                 AppUpd32Row(label: false) // prompt 32: appens versjon og «Last ned IPA» (AppUpdate32.swift)
@@ -688,6 +692,11 @@ struct PaperSettings17: View {
             // Prompt 38: «Logg ut» (og Lås skjermen) står nå under ØKT nederst på Konto-siden (Konto38.swift).
             Text("\(AppMeta.shared.name) · versjon \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")")
                 .font(PF.mono(10.5, bold: false)).foregroundStyle(p.mut).frame(maxWidth: .infinity).padding(.top, 14)
+    }
+
+    /// Prompt 44: Innstillinger → Server → Logger.
+    private var logRows44: [PaperLinkRow] {
+        [PaperLinkRow(name: "Logger", sub: "Docker-logger, feil og feilsøking", icon: "doc.text.magnifyingglass") { Logs44.shared.show() }]
     }
 
     /// Prompt 29: Backup (hele systemet) under Konto for admin (Backup29Page.swift).
@@ -792,6 +801,8 @@ struct PaperSettingsSub: View {
                 // Prompt 41: SERVER (lokal, ekstern, bytt automatisk) øverst i Konto (Server41.swift).
                 Server41Group()
                 SettingsSubpage(page: "accounts")
+                // Prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER (Konto44.swift).
+                Konto44Sections()
             case "sik": SettingsSubpage(page: "security")
             case "api": SettingsSubpage(page: "tokens")
             case "ai": PaperAiSettings()
@@ -816,6 +827,8 @@ struct PaperSettingsSub: View {
             case "om": SettingsSubpage(page: "about")
             case "oppdatering": Update28Page()
             case "sysbackup": Backup29Page()
+            // Prompt 44: Innstillinger → Gjøremål (synk med Home Assistant).
+            case "huske": Tasks44SyncPage()
             default: SettingsSubpage(page: key)
             }
         }
@@ -847,6 +860,7 @@ struct PaperSettingsSub: View {
         "om": ("Om appen", "Versjon og lisenser"),
         "oppdatering": ("Oppdatering", "Versjon og oppdatering av serveren"),
         "sysbackup": ("Backup", "Hele systemet · automatisk og gjenoppretting"),
+        "huske": ("Gjøremål", "Synk med Home Assistant"),
     ]
 }
 

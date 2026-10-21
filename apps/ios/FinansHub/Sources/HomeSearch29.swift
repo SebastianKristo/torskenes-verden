@@ -75,8 +75,10 @@ final class Search29Model {
         parseTask = Task {
             try? await Task.sleep(nanoseconds: 250_000_000)
             if Task.isCancelled { return }
-            let pv: Quick29Preview? = await Quick29Model.shared.parse(t, store)
+            let pv0: Quick29Preview? = await Quick29Model.shared.parse(t, store)
             if Task.isCancelled { return }
+            // Prompt 44: lokal tolking først (dato og tid), tittelen er resten av teksten (Time44Parse.swift).
+            let pv: Quick29Preview? = Time44.merge(pv0, t)
             self.appt = Search29Model.isAppt(pv) ? pv : nil
         }
     }
@@ -103,7 +105,7 @@ final class Search29Model {
         var isTime: Bool = appt != nil && !question36
         if !isTime && !question36 && t.count > 4 {
             let pv: Quick29Preview? = await Quick29Model.shared.parse(t, store)
-            isTime = Search29Model.isAppt(pv)
+            isTime = Search29Model.isAppt(Time44.merge(pv, t))
         }
         appt = nil
         if isTime {

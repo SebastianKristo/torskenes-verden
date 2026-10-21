@@ -279,13 +279,16 @@ struct G36Sherlock<Fig: View>: View {
         ZStack(alignment: .topLeading) {
             G36SherlockCape(S: S).offset(x: S * 0.5 - S * 0.6, y: h + S * 0.12 - S * 0.5)
             // Prompt 40: egen drakt, så ingen julepynt oppå.
-            body0().frame(width: S, height: h, alignment: .topLeading).glimt40NoJul()
+            // Prompt 44: drakten bærer figuren, så lue, glass og kappe følger bevegelsen (Glimt44Carry.swift).
+            body0().frame(width: S, height: h, alignment: .topLeading).glimt40NoJul().glimt44Carried()
             G36SherlockHat(S: S).offset(x: S * 0.5 - S * 0.525, y: -S * 0.36)
             G36Glass(S: S)
                 .rotationEffect(.degrees(scan), anchor: UnitPoint(x: 0.15, y: 0.85))
                 .offset(x: S + S * 0.62 - S * 0.7 - 4 * lift, y: S * 0.28 - 6 * lift)
         }
         .frame(width: S, height: h, alignment: .topLeading)
+        // Prompt 44: svevet (gfBob 2,6 s) ligger på hele drakten, ikke bare på figuren.
+        .modifier(G35Wrap(S: S, hf: 1.1, mood: .idle, a: G35T(t: t, still: still)))
     }
 }
 
@@ -365,7 +368,8 @@ struct G36Carpenter<Fig: View>: View {
         let ham: Double = G36Anim.kf(p, [(0, -55), (0.55, -55), (0.82, 18), (1, -55)])
         let bob: Double = G36Anim.kf(p, [(0, 0), (0.7, 0), (0.82, 1), (1, 0)])
         ZStack(alignment: .topLeading) {
-            body0().frame(width: S, height: h, alignment: .topLeading).glimt40NoJul()
+            // Prompt 44: drakten bærer figuren, så lue, glass og kappe følger bevegelsen (Glimt44Carry.swift).
+            body0().frame(width: S, height: h, alignment: .topLeading).glimt40NoJul().glimt44Carried()
             G36Belt(S: S).offset(x: S * 0.5 - S * 0.51, y: h - S * 0.1 - S * 0.34)
             G36Helmet(S: S).offset(x: S * 0.5 - S * 0.475, y: -S * 0.24)
             G36Hammer(S: S)

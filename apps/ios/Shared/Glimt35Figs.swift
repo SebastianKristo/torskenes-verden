@@ -547,17 +547,21 @@ struct Glimt35Fig: View {
     var still: Bool = false
     /// Prompt 40: ingen julepynt (figurvelgeren). Samme som `.glimt40NoJul()` rundt figuren.
     var noJul: Bool = false
+    /// Prompt 44: figuren ligger i en drakt/beholder som står for bevegelsen (Glimt44Carry.swift).
+    @Environment(\.glimt44Carried) private var carried44
 
     var body: some View {
         let a: G35T = G35T(t: t, still: still)
         let hf: CGFloat = Glimt35Fig.heightFactor(id)
+        // Prompt 44: inni en drakt beveger figuren seg ikke selv (fjes, blunk og ring går som før), så pynten følger med.
+        let wrapT: G35T = carried44 ? G35T(t: t, still: true) : a
         // Prompt 40: figurbiblioteket legger selv på juleantrekket når julemodus er aktiv (Glimt40Jul.swift).
         figure(a)
             .frame(width: size, height: size * hf, alignment: .topLeading)
             .overlay(alignment: .topLeading) {
                 if !noJul { Glimt40DressAuto(S: size, H: size * hf, t: t, still: still, id: id) }
             }
-            .modifier(G35Wrap(S: size, hf: hf, mood: mood, a: a))
+            .modifier(G35Wrap(S: size, hf: hf, mood: mood, a: wrapT))
             .accessibilityLabel(Glimt35Char.get(id).name)
     }
 

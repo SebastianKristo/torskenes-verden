@@ -148,7 +148,8 @@ final class Quick29Model {
             if Task.isCancelled { return }
             let pv: Quick29Preview? = await self.parse(t, store)
             if Task.isCancelled { return }
-            self.preview = pv
+            // Prompt 44: lokal tolking av dato/tid og tittel som rest (Time44Parse.swift).
+            self.preview = Time44.merge(pv, t)
         }
     }
 
@@ -202,7 +203,12 @@ final class Quick29Model {
         Haptics.shared.tap()
         Task {
             do {
-                let d: Data = try await store.api.callAt("/api", "POST", "/kalender/quick", json: ["text": t], timeout: 20)
+                // Prompt 44: den lokale tolkningen (dato, tid og tittel) som fasit for serveren/Ollama (Time44Parse.swift).
+                var body: [String: Any] = ["text": t]
+                if let lp = Time44.preview(t) {
+                    body["local"] = ["title": lp.title, "date": lp.date, "start": lp.start, "end": lp.end]
+                }
+                let d: Data = try await store.api.callAt("/api", "POST", "/kalender/quick", json: body, timeout: 20)
                 let o: [String: Any] = JS.obj(d)
                 let id: String = JS.str(o, "jobId") ?? JS.str(o, "id") ?? ""
                 self.pending.removeAll { $0 == tmp }
@@ -214,7 +220,7 @@ final class Quick29Model {
                 self.pending.removeAll { $0 == tmp }
                 AiJobs31.shared.end(tmp)
                 if e.status == 404 || e.status == 405 {
-                    self.openForm(Quick29Preview(), text: t, error: "Serveren kan ikke legge til timer i bakgrunnen ennå. Fyll ut og lagre.", store)
+                    self.openForm(Time44.preview(t) ?? Quick29Preview(), text: t, error: "Serveren kan ikke legge til timer i bakgrunnen ennå. Sjekk og lagre.", store)
                 } else {
                     store.flash("Kunne ikke legge til timen: " + e.message)
                 }

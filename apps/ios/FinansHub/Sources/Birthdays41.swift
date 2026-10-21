@@ -242,7 +242,8 @@ struct Bday41Dancer: View {
         let hop: CGFloat = still ? 0 : CGFloat(abs(sin(phase * Double.pi))) * size * 0.16
         let tilt: Double = still ? 0 : sin(phase * 2 * Double.pi) * 6
         ZStack(alignment: .topLeading) {
-            Glimt35Fig(id: id, size: size, mood: .idle, t: Swift.max(0, t), still: still, noJul: true)
+            // Prompt 44: jenka-hoppet bærer både figuren og lua (figuren svever ikke for seg selv).
+            Glimt35Fig(id: id, size: size, mood: .idle, t: Swift.max(0, t), still: still, noJul: true).glimt44Carried()
             Glimt40Party(S: size, t: Swift.max(0, t), still: still).offset(x: size * 0.5 - size * 0.22, y: -size * 0.48)
             if trumpet {
                 Bday41Trumpet(size: size, t: t, still: still).offset(x: size * 0.82, y: size * 0.52)
