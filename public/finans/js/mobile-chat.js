@@ -516,7 +516,7 @@ export function chatView() {
       ${C.att.length ? `<div class="ch27-attl">${C.att.map((a, i) => `<span><em>${a.kind === 'img' ? '▣' : a.kind === 'doc' ? '#' : '⎙'}</em><span class="m-ell">${esc(a.name)}</span><button data-c27="arm" data-i="${i}" aria-label="Fjern vedlegg">✕</button></span>`).join('')}</div>` : ''}
       ${C.rec ? `<div class="ch27-rec"><i></i><span class="m-grow">Lytter … snakk nå</span><span class="ch27-wave">${'<b></b>'.repeat(7)}</span></div>` : `<textarea id="ch27-in" rows="${rows}" placeholder="Spør ${esc(M.kind === 'auto' ? 'Glimt' : sky ? M.name : M.id)} …" enterkeyhint="send" aria-label="Melding">${esc(C.inp)}</textarea>`}
       <div class="ch27-tools"><button class="ch27-plus" data-c27="plus" aria-label="Legg ved">${svg(IC.plus, 18, 2.2)}</button><button class="ch27-tg${chip(C.web)}" data-c27="web" aria-pressed="${C.web}">${svg(IC.web, 15)}Nettsøk</button><button class="ch27-tg${chip(dOn)}" data-c27="data" aria-pressed="${dOn}">${svg(IC.db, 15)}Mine data</button><span class="m-grow"></span>
-        <button class="ch27-mic${C.rec ? ' on' : ''}" data-c27="mic" aria-label="Snakk">${svg(IC.mic, 19)}</button>${C.busy ? '<button class="ch27-send" data-c27="stop" aria-label="Stopp"><i class="sq"></i></button>' : `<button class="ch27-send${C.inp.trim() ? '' : ' dim'}" data-c27="send" aria-label="Send" id="ch27-send">${svg(IC.up, 18, 2.6)}</button>`}</div></div>
+        <button class="ch27-mic${C.rec ? ' on' : ''}" data-c27="mic" aria-label="Snakk">${svg(IC.mic, 19)}</button>${C.busy ? '<button class="ch27-send" data-c27="stop" aria-label="Stopp"><i class="sq"></i></button>' : `<button class="ch27-send${C.inp.trim() || C.att.length ? '' : ' dim'}" data-c27="send" aria-label="Send" id="ch27-send"${C.inp.trim() || C.att.length ? '' : ' disabled aria-disabled="true"'}>${svg(IC.up, 18, 2.6)}</button>`}</div></div>
       ${sky ? `<div class="ch27-foot">Sky-modell: meldingen sendes til ${M.provider === 'groq' || /groq/i.test(model) ? 'Groq' : 'Google'}.</div>` : ''}</div></div>
     ${!w && C.drawer ? `<div class="ch27-dbg" data-c27="drawerx"></div>${side(true)}` : ''}
     ${sheets()}</div>`;
@@ -550,11 +550,13 @@ export function openChat(prompt = '') {
   if (p) { const go = () => (C.list ? send(p) : chatLoad().then(() => send(p))); setTimeout(go, 60); }
 }
 /** Prompt 41: åpner Chat med spørsmålet og svaret fra søkepillen (ikke spør på nytt når svaret er ferdig). */
-export function openChatWith(q, answer, src = 'glimt') {
+export function openChatWith(q, answer, src = 'glimt', srcLabel = '') {
+  // Prompt 43 (claude-code-sok-ai-svarboble.md): samme svar som i boblen, med kilden («Kilde: MET Norway»). Ingen ny forespørsel.
+  const lab = String(srcLabel ?? '').replace(/^✦\s*/, '').trim(), st = lab && !/^(glimt|system-ai)$/i.test(lab) ? `Kilde: ${lab}` : 'Fra søket på Hjem';
   if (m.screen !== 'chat') C.from = m.screen;
   C.inp = ''; C.att = []; C.sh = null; C.drawer = false; C.data = true;
   if (location.hash !== '#/chat') location.hash = '#/chat';
-  const go = () => { C.cur = { id: null, title: q.length > 42 ? `${q.slice(0, 40)} …` : q, model: curModel(), pinned: false, folderId: null, up: nowMs(), settings: { ...DEF, ...(L.def ?? {}) }, messages: [{ r: 'u', t: q }, { r: 'a', t: String(answer ?? ''), m: src, tool: [], st: 'Fra søket på Hjem' }] }; commit(C.cur); };
+  const go = () => { C.cur = { id: null, title: q.length > 42 ? `${q.slice(0, 40)} …` : q, model: curModel(), pinned: false, folderId: null, up: nowMs(), settings: { ...DEF, ...(L.def ?? {}) }, messages: [{ r: 'u', t: q }, { r: 'a', t: String(answer ?? ''), m: src, tool: [], st }] }; commit(C.cur); };
   setTimeout(() => (C.list ? go() : chatLoad().then(go).catch(go)), 60);
 }
 /** Prompt 32: åpner en Chat-tråd som en Glimt-jobb ble flyttet til (POST /api/assist/:id/handoff → {chatId}). */
@@ -572,7 +574,7 @@ export function chatInput(e, t) {
   if (m.screen !== 'chat') return false;
   if (t.id === 'ch27-in') {
     C.inp = t.value; t.rows = Math.min(6, Math.max(1, t.value.split('\n').length));
-    document.getElementById('ch27-send')?.classList.toggle('dim', !t.value.trim()); return true;
+    { const sb = document.getElementById('ch27-send'), on = !!t.value.trim() || C.att.length > 0; if (sb) { sb.classList.toggle('dim', !on); sb.disabled = !on; if (on) sb.removeAttribute('aria-disabled'); else sb.setAttribute('aria-disabled', 'true'); } } return true; // prompt 43: tom = lys knapp, ikke trykkbar
   }
   if (t.id === 'ch27-hq') { C.q = t.value; const h = document.getElementById('ch27-hist'); if (h) h.innerHTML = groups() || '<div class="ch27-none">Ingen samtaler ennå.</div>'; return true; }
   if (t.id === 'ch27-ed') { if (C.ed) C.ed.v = t.value; return true; }

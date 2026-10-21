@@ -2,6 +2,7 @@
 // Finans-fanelinja og Mer-rutenettet, Finans → Søk med ✦ AI, transaksjonsdetaljer med original kvittering,
 // kvitteringsbanneret, Finn «På vei» og arket «Ny sending» i Sporing. Valgene lagres per bruker i /api/me/layout.
 import * as P30B from './mobile-p30b.js';
+import { glimtOrb } from './mobile-orb43.js'; // prompt 43
 import { S, api, esc, n0, ini, hlApi, dd, cats, uploadReceipt } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -64,7 +65,7 @@ export const fourth = () => { if (!domOk()) return 'spor'; const f = fourthPref(
 /* ---------- Tilpass hver side: hold inne → vugging, ▲ ▼ og − ---------- */
 
 const PG = {
-  hl: [['h12', 'Glimt-brief'], ['h13', 'Dagens bibelvers'], ['h1', 'Søk'], ['h2', 'Pakker'], ['h15', 'Min reise'], ['h3', 'Avganger'], ['h11', 'Prøveperioder'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Gjøremål'], ['h9', 'Bursdager'], ['h14', 'Vel fremme']],
+  hl: [['h12', 'Glimt-brief'], ['h13', 'Dagens bibelvers'], ['h1', 'Søk'], ['h2', 'Pakker'], ['h16', 'Media'], ['h15', 'Min reise'], ['h3', 'Avganger'], ['h11', 'Prøveperioder'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Gjøremål'], ['h9', 'Bursdager'], ['h14', 'Vel fremme']],
   hjem: [['f1', 'Saldo'], ['f2', 'Kvitteringer'], ['f3', 'Siste transaksjoner'], ['f4', 'Budsjett']],
   mat: [['m1', 'Dagens middag'], ['m2', 'Ukeplan'], ['m3', 'Mapper'], ['m4', 'Skann og import']],
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
@@ -332,7 +333,7 @@ export function paperSearch() {
   const sugg = ['abonnementer', 'rema', 'spotify', 'hvor mye brukte jeg på mat?', 'strøm i oktober'];
   const G = r?.glimt;
   return `<form class="pp-search pp-fsq" data-ppfs role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="pp-fsq" name="q" type="search" value="${esc(FS.q)}" enterkeyhint="search" placeholder="${FS.ai ? 'Spør Glimt, f.eks. «hva brukte jeg på kaffe?»' : 'Søk i transaksjoner og kvitteringer'}" aria-label="Søk i Finans" autocomplete="off">
-      <button type="button" class="pp-aitog${FS.ai ? ' on' : ''}" data-ppfsk="ai" aria-pressed="${FS.ai}">✦ Glimt</button></form>${P27.sugBox(FS)}
+      <button type="button" class="pp-aitog p43-gtog${FS.ai ? ' on' : ''}" data-ppfsk="ai" aria-pressed="${FS.ai}">${glimtOrb(20, `chip${FS.busy && FS.ai ? ' busy' : ''}`)}Glimt</button></form>${P27.sugBox(FS)}
     ${!q && !r ? `<div class="pp-col" style="gap:8px"><span class="pp-lab" style="padding:4px 2px 0">PRØV</span><div class="pp-chips pp-wrap">${sugg.map((n) => `<button class="pp-fchip" data-ppfsk="sugg" data-q="${esc(n)}">${esc(n)}</button>`).join('')}</div>
       <span class="pp-mut" style="line-height:1.45;padding:2px">Enkle ord som «rema» eller «spotify» søkes vanlig først. Med ✦ Glimt kan du spørre fritt, og Glimt leser også varelinjene i kvitteringene.</span></div>` : ''}
     ${FS.busy ? (P25.JOB.cur ? P25.jobCard() : '<div class="m-spin"></div>') : ''}${FS.err ? `<div class="pp-card pp-mut">${esc(FS.err)}</div>` : ''}
@@ -528,6 +529,9 @@ export function navSetBind(e, t) {
   else if (k === 'finreset') save15({ finTabs: [...FT_DEF] });
   haptic('tab'); draw(); return true;
 }
+
+/** Prompt 43: Glimt-pillen i Finans → Liste åpner Søk med Glimt på og det som står i feltet. */
+export async function fsGlimt(q) { FS.ai = true; FS.q = String(q ?? '').trim(); FS.r = null; if (location.hash !== '#/sok') location.hash = '#/sok'; if (FS.q) await fsRun(true); else { draw(); setTimeout(() => document.getElementById('pp-fsq')?.focus(), 80); } }
 
 /* ---------- Søk i Finans: hendelser ---------- */
 

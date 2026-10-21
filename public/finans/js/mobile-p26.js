@@ -21,7 +21,7 @@ const keep = () => { try { localStorage.setItem(LS, JSON.stringify(L)); } catch 
    1. Integrasjoner: gruppert liste (#/set/integ) og egen side (#/set/integ/<id>)
    ===================================================================== */
 
-const CATS = ['Smarthjem', 'Transport og pakker', 'Økonomi', 'AI', 'Informasjon', 'Annet'];
+const CATS = ['Smarthjem', 'Media', 'Transport og pakker', 'Økonomi', 'AI', 'Informasjon', 'Annet']; // prompt 43: MEDIA-gruppen
 // Reserve når serveren ikke sender category/badge/color/description/guide ennå (samme tekster som designet og web).
 const META = {
   ha: ['Smarthjem', 'HA', '#18bcf2', 'Lokal server og to-do-lister', [['Lag et token', 'Åpne profilen din i Home Assistant. Nederst: Langtidstokener → Opprett token. Kopier det med en gang, det vises bare én gang.'], ['Lim inn adresse og token', 'Adressen er den du åpner Home Assistant med, f.eks. https://home.kristo.no:8123.']]],
@@ -42,18 +42,57 @@ const META = {
   map: ['Informasjon', '◎', '#3f7a6e', 'Kartverket, MapTiler og Stadia', null],
   icons: ['Annet', '✦', '#5b6478', 'Iconify via Homelab-cache', null],
   photos: ['Annet', '▣', '#6b5a3a', 'Bakgrunnsbilder fra Unsplash og Pexels', null],
-  plex: ['Annet', 'PX', '#e5a00d', 'Spilles nå og historikk', null], jellyfin: ['Annet', 'JF', '#7b4fd6', 'Spilles nå og historikk', null],
-  sonarr: ['Annet', 'SO', '#2f9fd6', 'Serier som kommer', null], radarr: ['Annet', 'RA', '#d8a21a', 'Filmer som kommer', null],
+  // Prompt 43 (claude-code-integrasjoner-media.md): MEDIA-gruppen med steg-for-steg-oppsett. Kodeblokkene kan kopieres med ett trykk.
+  sonarr: ['Media', 'So', '#2f9fd8', 'Serier · søk og nedlasting', [
+    { t: 'Finn API-nøkkelen', s: 'Åpne Sonarr i nettleseren → Settings → General → Security. Kopier «API Key» og lim den inn her.' },
+    { t: 'Adresse og port', s: 'Bruk adressen til serveren med port 8989. Har du satt URL Base under Settings → General → Host, skal den med på slutten.', code: 'http://192.168.1.20:8989/sonarr' },
+    { t: 'Samme mapper i alle containerne', s: 'Gi Sonarr, Radarr, qBittorrent og Jellyfin/Plex samme overordnede volum. Da flyttes ferdige filer med hardlink i stedet for å kopieres, og du bruker ikke dobbel plass.', code: 'volumes:\n  - /srv/data:/data\n# /data/downloads  /data/media/tv  /data/media/film' },
+    { t: 'Rotmappe', s: 'Settings → Media Management → Root Folders → + → /data/media/tv. Skriv den samme her.' },
+    { t: 'Koble til qBittorrent', s: 'Settings → Download Clients → + → qBittorrent. Vert qbittorrent (eller IP), port 8080, brukernavn og passord fra qBittorrent. Kategori: tv-sonarr.' },
+    { t: 'Standard kvalitetsprofil', s: 'Settings → Profiles. Profilen du skriver her brukes når du legger til serier fra Media eller Glimt (4K i Glimt gir Ultra-HD).' },
+    { t: 'Varsler til appen', s: 'Settings → Connect → + → Webhook. Huk av On Grab, On Import, On Upgrade og On Health Issue.', code: 'https://home.kristo.no/api/media/hook/sonarr' }]],
+  radarr: ['Media', 'Ra', '#d39b12', 'Filmer · søk og nedlasting', [
+    { t: 'Finn API-nøkkelen', s: 'Åpne Radarr → Settings → General → Security. Kopier «API Key».' },
+    { t: 'Adresse og port', s: 'Port 7878. Legg til URL Base hvis du har satt en.', code: 'http://192.168.1.20:7878' },
+    { t: 'Rotmappe', s: 'Settings → Media Management → Root Folders → + → /data/media/film. Samme volum som Sonarr og qBittorrent.' },
+    { t: 'Koble til qBittorrent', s: 'Settings → Download Clients → + → qBittorrent. Port 8080, samme bruker som over. Kategori: radarr.' },
+    { t: 'Når filmer lastes ned', s: 'Minimum Availability bestemmer når Radarr begynner å lete: Announced, In Cinemas eller Released. «Utgitt digitalt» i Media er Released.' },
+    { t: 'Varsler til appen', s: 'Settings → Connect → + → Webhook med On Grab, On Import, On Upgrade og On Health Issue.', code: 'https://home.kristo.no/api/media/hook/radarr' }]],
+  qbittorrent: ['Media', 'qB', '#2f67ba', 'Nedlastinger, kø og fartsgrense', [
+    { t: 'Slå på Web UI', s: 'qBittorrent → Verktøy → Innstillinger → Web UI → huk av «Web User Interface», port 8080. I Docker-imaget linuxserver/qbittorrent er det på fra start, og loggen viser et midlertidig passord første gang.', code: 'docker logs qbittorrent | grep -i password' },
+    { t: 'Eget brukernavn og passord', s: 'Under Autentisering: bytt brukernavn og sett et sterkt passord. Skriv de samme her.' },
+    { t: 'Tillat bare Homelab-serveren', s: 'Har du «Bypass authentication for clients in whitelisted IP subnets» på, legg bare inn serverens IP. Ikke åpne Web UI mot internett; appen går via home.kristo.no.' },
+    { t: 'Kategorier og mapper', s: 'Høyreklikk i Kategorier → Legg til: tv-sonarr → /data/downloads/tv og radarr → /data/downloads/film. Magnet-lenker du legger til selv kan få en av disse eller ingen.' },
+    { t: 'Varsel når en nedlasting er ferdig', s: 'Innstillinger → Nedlastinger → «Kjør eksternt program når torrent er ferdig»:', code: 'curl -s -X POST https://home.kristo.no/api/media/hook/qbit -d "hash=%I&name=%N"' },
+    { t: 'Alt-hastighet', s: 'Innstillinger → Fart → Alternative fartsgrenser, f.eks. 5 MB/s ned og 1 MB/s opp. Knappen i Media slår den av og på.' }]],
+  prowlarr: ['Media', 'Pr', '#c0562a', 'Indeksere for Sonarr og Radarr', [
+    { t: 'Finn API-nøkkelen', s: 'Settings → General → Security → API Key.' },
+    { t: 'Koble til Sonarr og Radarr', s: 'Settings → Apps → + → Sonarr. Fyll inn adressene containerne når hverandre på og API-nøkkelen fra Sonarr. Synk-nivå: Full Sync. Gjør det samme for Radarr.', code: 'Prowlarr Server: http://prowlarr:9696\nSonarr Server:   http://sonarr:8989\nRadarr Server:   http://radarr:7878' },
+    { t: 'Legg til indeksere', s: 'Media → Prowlarr → «+ Legg til indekser», eller Indexers → Add Indexer i Prowlarr. De synkes til Sonarr og Radarr av seg selv.' },
+    { t: 'Indeksere bak Cloudflare', s: 'Kjør FlareSolverr og legg den til under Settings → Indexers → + → FlareSolverr med taggen flaresolverr. Sett samme tagg på indekseren som blir stoppet.', code: 'docker run -d --name flaresolverr -p 8191:8191 ghcr.io/flaresolverr/flaresolverr' },
+    { t: 'Varsler', s: 'Settings → Notifications → + → Webhook, On Health Issue.', code: 'https://home.kristo.no/api/media/hook/prowlarr' }]],
+  jellyfin: ['Media', 'Je', '#8a5ad6', 'Spill av og oppdater biblioteket', [
+    { t: 'Lag API-nøkkel', s: 'Dashbord → Avansert → API-nøkler → +. Kall den Homelab.' },
+    { t: 'Bibliotek', s: 'Bibliotekene må peke på /data/media/tv og /data/media/film, de samme mappene som Sonarr og Radarr.' },
+    { t: 'Oppdater når noe er nytt', s: 'Sonarr og Radarr → Settings → Connect → + → Emby / Jellyfin. Samme adresse og API-nøkkel.' },
+    { t: 'Spill av fra Media', s: 'Velg Jellyfin under Media → ⚙ → Spill av med. «▶ Spill av» åpner riktig episode eller film.' }]],
+  plex: ['Media', 'Px', '#c98a10', 'Spill av og oppdater biblioteket', [
+    { t: 'Finn Plex-token', s: 'Åpne en film i Plex Web → ⋯ → Hent info → Vis XML. Tokenet står etter X-Plex-Token= i adressefeltet.' },
+    { t: 'Bibliotek', s: 'Pek bibliotekene på /data/media/tv og /data/media/film.' },
+    { t: 'Oppdater når noe er nytt', s: 'Sonarr og Radarr → Settings → Connect → + → Plex Media Server, logg inn med Plex-kontoen.' },
+    { t: 'Spill av fra Media', s: 'Velg Plex under Media → ⚙ → Spill av med.' }]],
 };
+META.qbit = META.qbittorrent;
 // Integrasjoner med egen side i appen (som i designet: Kalendere, Trading 212, Bankimport og Gemini).
 const OWN = { calendars: '#/set/kal', t212: '#/set/t212', bank: '#/set/bank', ai: '#/set/fai' };
-const meta = (g) => { const d = META[g.id] ?? []; return { cat: CATS.includes(g.category) ? g.category : d[0] ?? 'Annet', badge: g.badge ?? d[1] ?? String(g.name ?? '?').slice(0, 2), color: g.color ?? d[2] ?? '#5b6478', desc: g.description ?? d[3] ?? g.group ?? '', guide: Array.isArray(g.guide) ? g.guide : d[4] ?? null }; };
+const catOf = (c) => (c ? CATS.find((x) => x.toLowerCase() === String(c).toLowerCase()) : null);
+const meta = (g) => { const d = META[g.id] ?? []; return { cat: (/^media$/i.test(g.group ?? '') ? 'Media' : null) ?? catOf(g.category) ?? catOf(g.group) ?? d[0] ?? 'Annet', badge: g.badge ?? d[1] ?? String(g.name ?? '?').slice(0, 2), color: g.color ?? d[2] ?? '#5b6478', desc: g.description ?? d[3] ?? g.group ?? '', guide: Array.isArray(g.guide) && g.guide.length ? g.guide : Array.isArray(g.steps) && g.steps.length ? g.steps : d[4] ?? null }; };
 const okOf = (g) => g.status === 'ok' || g.statusText === 'Tilkoblet';
 const stText = (g) => g.statusText ?? (g.status === 'ok' ? 'Tilkoblet' : g.status === 'error' ? 'Feil' : (g.fields ?? []).some((f) => f.required && !f.saved && !f.value) ? 'Mangler API-nøkkel' : 'Ikke satt opp');
 const badge = (b, c) => `<span class="p26-bd" style="background:${esc(c)}">${esc(b)}</span>`;
 // Prompt 32 (claude-code-integrasjoner-logoer.md): tjenestens ekte logo i en hvit rute (34×34, radius 10), hentet én gang og
 // cachet på Homelab (/finans/api/logo/<domene>). Bokstavmerket ligger under til logoen er lastet, og blir stående hvis den feiler.
-const ILOGO = { ha: 'home-assistant.io', calendars: 'calendar.google.com', calendar: 'calendar.google.com', google: 'calendar.google.com', entur: 'entur.no', mybring: 'bring.no', bring: 'bring.no', postnord: 'postnord.no', parcelsapp: 'parcelsapp.com', t212: 'trading212.com', imap: 'proton.me', email: 'proton.me', finn: 'finn.no', ai: 'gemini.google.com', gemini: 'gemini.google.com', cloudflare: 'cloudflare.com', met: '@yr', map: 'kartverket.no', icons: 'iconify.design', plex: 'plex.tv', jellyfin: 'jellyfin.org', sonarr: 'sonarr.tv', radarr: 'radarr.video' };
+const ILOGO = { ha: 'home-assistant.io', calendars: 'calendar.google.com', calendar: 'calendar.google.com', google: 'calendar.google.com', entur: 'entur.no', mybring: 'bring.no', bring: 'bring.no', postnord: 'postnord.no', parcelsapp: 'parcelsapp.com', t212: 'trading212.com', imap: 'proton.me', email: 'proton.me', finn: 'finn.no', ai: 'gemini.google.com', gemini: 'gemini.google.com', cloudflare: 'cloudflare.com', met: '@yr', map: 'kartverket.no', icons: 'iconify.design', plex: 'plex.tv', jellyfin: 'jellyfin.org', sonarr: 'sonarr.tv', radarr: 'radarr.video', qbittorrent: 'qbittorrent.org', qbit: 'qbittorrent.org', prowlarr: 'prowlarr.com' };
 const ibadge = (id, b, c) => {
   const d = ILOGO[id];
   if (!d) return badge(b, c);
@@ -66,7 +105,8 @@ const row = (attrs, inner) => `<${attrs.startsWith('href') ? `a class="p26-r" ${
 
 function integList() {
   const L0 = (IG.list ?? []).filter((g) => !g.hidden);
-  const groups = CATS.map((c) => [c, L0.filter((g) => meta(g).cat === c)]).filter(([, x]) => x.length);
+  const MO = ['sonarr', 'radarr', 'qbittorrent', 'qbit', 'prowlarr', 'jellyfin', 'plex']; // prompt 43: MEDIA i fast rekkefølge
+  const groups = CATS.map((c) => [c, L0.filter((g) => meta(g).cat === c).sort((a, b) => (c === 'Media' ? (MO.indexOf(a.id) + 1 || 99) - (MO.indexOf(b.id) + 1 || 99) : 0))]).filter(([, x]) => x.length);
   return groups.map(([c, list]) => `${lbl(c.toUpperCase())}<div class="p26-card">${list.map((g) => {
     const M = meta(g), own = OWN[g.id], ok = okOf(g);
     const st = g.id === 'calendars' ? calStatus(g) : [stText(g), ok];
@@ -89,7 +129,7 @@ function fieldRows(g) {
         ${set ? `<button type="button" class="p26-clr" data-p24="igdel" data-id="${esc(g.id)}" data-key="${esc(f.key)}">Fjern verdi</button>` : ''}</form>` : ''}`;
   }).join('');
 }
-const guideRows = (G) => G.map((x, i) => { const [t, s] = Array.isArray(x) ? x : typeof x === 'object' ? [x.title ?? x.t ?? '', x.text ?? x.body ?? x.s ?? ''] : ['', String(x)]; const code = typeof x === 'object' && !Array.isArray(x) ? x.code : null; return `<div class="p26-r st">${badge(String(x?.n ?? i + 1), 'var(--pp-ink)').replace('p26-bd', 'p26-bd num')}<span class="m-grow p26-rt">${t ? `<b>${esc(t)}</b>` : ''}${s ? `<span>${esc(s)}</span>` : ''}${code ? `<code class="p26-code">${esc(code)}</code>` : ''}</span></div>`; }).join('');
+const guideRows = (G) => G.map((x, i) => { const [t, s] = Array.isArray(x) ? x : typeof x === 'object' ? [x.title ?? x.t ?? '', x.text ?? x.body ?? x.s ?? ''] : ['', String(x)]; const code = typeof x === 'object' && !Array.isArray(x) ? x.code : Array.isArray(x) ? x[2] : null; return `<div class="p26-r st">${badge(String(x?.n ?? i + 1), 'var(--pp-ink)').replace('p26-bd', 'p26-bd num')}<span class="m-grow p26-rt">${t ? `<b>${esc(t)}</b>` : ''}${s ? `<span>${esc(s)}</span>` : ''}${code ? `<code class="p26-code p43-copy" role="button" tabindex="0" data-p43copy title="Trykk for å kopiere">${esc(code)}</code>` : ''}</span></div>`; }).join(''); // prompt 43: kodeblokker kan kopieres
 const IG26 = { arm: null };
 function integOne(id) {
   const g = (IG.list ?? []).find((x) => x.id === id);
@@ -99,7 +139,7 @@ function integOne(id) {
     ${(g.fields ?? []).length ? `${lbl('OPPSETT')}<div class="p26-card">${fieldRows(g)}</div>` : ''}
     ${g.id === 'calendars' || g.id === 'calendar' ? `<div class="p26-card">${row('href="#/set/kal"', `<span class="m-grow p26-rt"><b>Google Kalender og Home Assistant</b><span>Logg inn, velg kalender og synk</span></span><span class="p26-v mut">Kalendere</span><span class="p26-ch">›</span>`)}</div>` : ''}
     ${g.id === 'ha' ? haSection() : ''}
-    ${M.guide?.length ? `${lbl('SLIK GJØR DU')}<div class="p26-card">${guideRows(M.guide)}</div>` : ''}
+    ${M.guide?.length ? `${lbl(M.cat === 'Media' ? 'SLIK SETTER DU DET OPP' : 'SLIK GJØR DU')}<div class="p26-card">${guideRows(M.guide)}</div>` : ''}
     <div class="p26-card">${g.canTest !== false ? `<button class="p26-r" data-p24="igtest" data-id="${esc(g.id)}"><span class="m-grow p26-rt"><b>Test tilkobling</b>${t ? `<span class="${/^✕/.test(t) ? 'lab' : 'pos'}">${esc(t)}</span>` : ''}</span></button>` : ''}
       <button class="p26-r" data-p26="igclr" data-id="${esc(g.id)}" ${any ? '' : 'disabled'}><span class="m-grow p26-rt"><b class="${IG26.arm === g.id ? 'lab' : ''}">${IG26.arm === g.id ? 'Trykk igjen for å fjerne alle verdier' : 'Fjern alle verdier'}</b></span></button></div>
     <span class="p26-note">Hemmelige verdier lagres kryptert på serveren og vises bare som «•••• lagret».${g.scope === 'server' ? ' Denne integrasjonen er felles for alle brukere.' : ' Bare du ser og bruker disse verdiene.'}</span>`;

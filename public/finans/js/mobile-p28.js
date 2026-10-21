@@ -27,10 +27,15 @@ async function merLoad() {
   // Prompt 37: Gjøremål skal synes i Mer. Én gangs migrering fjerner «huske» fra skjult-listen (papir_mer_huske_v1).
   let mig = false;
   try { if (!localStorage.getItem('papir_mer_huske_v1')) { localStorage.setItem('papir_mer_huske_v1', '1'); mig = true; if (MER.p.h?.includes('huske')) { MER.p.h = MER.p.h.filter((k) => k !== 'huske'); lsSet(MER.p); } } } catch {}
+  // Prompt 43 (claude-code-media-arr.md): den nye Media-siden erstatter «Spilles nå». Var den gamle skjult, vises Media
+  // én gang og legges øverst i Mer (papir_mer_media_v2), ellers finner man ikke den nye siden.
+  let migM = false;
+  const media43 = (P) => { if (!P) return P; const h = (P.h ?? []).filter((k) => k !== 'media'), o = ['media', ...(P.o ?? []).filter((k) => k !== 'media')]; return { ...P, h, o }; };
+  try { if (!localStorage.getItem('papir_mer_media_v2')) { localStorage.setItem('papir_mer_media_v2', '1'); migM = true; MER.p = media43(MER.p); lsSet(MER.p); } } catch {}
   try {
     const r = await hlApi('/prefs/mer');
     MER.server = true;
-    if ((r?.o?.length || r?.h?.length)) { MER.p = toLocal(r); if (mig && MER.p.h.includes('huske')) { MER.p.h = MER.p.h.filter((k) => k !== 'huske'); merSave(); } lsSet(MER.p); }
+    if ((r?.o?.length || r?.h?.length)) { MER.p = toLocal(r); if (mig && MER.p.h.includes('huske')) { MER.p.h = MER.p.h.filter((k) => k !== 'huske'); merSave(); } if (migM) { MER.p = media43(MER.p); merSave(); } lsSet(MER.p); }
     else if (MER.p.o.length || MER.p.h.length) merSave(); // første gang: lokal rekkefølge flyttes til kontoen
     if (m.screen === 'mer' && !MER.drag) draw();
   } catch { MER.server = false; }

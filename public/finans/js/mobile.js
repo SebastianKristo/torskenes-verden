@@ -48,6 +48,7 @@ import * as P39 from './mobile-p39.js'; // prompt 39: sveip bort myk, Bibel uten
 let P40 = null; // prompt 40: mobile-p40.js (dynamisk import i bind())
 let P41 = null; // prompt 41: mobile-p41.js (dynamisk import i bind(); TDZ i sykliske importer)
 let P42 = null; // prompt 42: mobile-p42.js (dynamisk import i bind())
+let P43 = null; // prompt 43: mobile-p43.js (+ mobile-p43m.js for Media), dynamisk import i bind()
 import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
 import * as P35 from './mobile-p35.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
@@ -402,7 +403,7 @@ export function draw() {
     : scr === 'hjem' && plain ? paperFin() : scr === 'mer' ? paperMer()
     : scr === 'bd' ? P24.bdView() : scr === 'kal' ? KAL.kalView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? P23.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
   const main = scr === 'aictl' ? P34AI.aiView() : scr === 'brief' ? P35.briefView() : scr === 'glimt' ? P35.glimtView() : scr === 'nordlys' ? P30.sysView() : scr === 'chat' ? CHAT.chatView() : scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'bibel' ? P37B.bibleView() : scr === 'huske' ? (pp ? P37.huskeView37() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Gjøremål</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
-    : scr === 'kal' && !pp ? KAL.kalView() : scr === 'media' ? (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()
+    : scr === 'kal' && !pp ? KAL.kalView() : scr === 'media' ? (P43?.media?.() ? P43.media().mediaView43() : (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()) // prompt 43: Sonarr, Radarr, qBittorrent og Prowlarr
     : ppMain ?? (scr === 'set' ? settingsView(th, m.sub)
     : scr === 'hl' ? hlView(th)
     : scr === 'spor' ? trkView(th)
@@ -414,7 +415,7 @@ export function draw() {
     : !fin || FINMODS.includes(scr) ? modView(scr, th, m.sub)
     : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th));
   // Prompt 24: Ruter-visningen (Avganger) er et fullskjerm-overlegg uten fanelinje og skanneknapp, med eget toppbilde.
-  const rv = pp && scr === 'avg', fsx = scr === 'chat' || scr === 'kal' || scr === 'nordlys' || scr === 'aictl' || scr === 'brief' || scr === 'glimt'; // Prompt 27: Chat og Kalender i fullskjerm (31: System-siden uten bunnmeny og skann)
+  const rv = pp && scr === 'avg', fsx = scr === 'chat' || scr === 'kal' || scr === 'nordlys' || scr === 'aictl' || scr === 'brief' || scr === 'glimt' || (scr === 'media' && !!P43?.media?.()); // prompt 43: Media i fullskjerm med «‹ Tilbake» // Prompt 27: Chat og Kalender i fullskjerm (31: System-siden uten bunnmeny og skann)
   const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr) && scr !== 'vaer', hero = pp && scr !== 'nyheter' && scr !== 'vaer' && !fad && !rv && !fsx && !fold41;
   const nonav = scr === 'set' || scr === 'bibel' || scr === 'bd'; // Prompt 41: Bursdager uten fanelinje og Skann // Prompt 39: Bibel uten fanelinje og Skann (HIDE_CHROME) // Prompt 32: Innstillinger og undersidene uten bunnmeny og skann-knapp
   const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv || fsx || (pp && nonav) ? '' : scr === 'huske' ? P37.huskeBottom() : (P42 ? P42.nav42(P25.nav25(paperNav(scr), scr), scr) : P25.nav25(paperNav(scr), scr)); // prompt 42: Hjem-knapp (Standard/1a–1d)
@@ -422,7 +423,7 @@ export function draw() {
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${scr === 'bibel' ? ' p39-bib' : ''}${scr === 'nordlys' ? ' n31-pg' : ''}${scr === 'aictl' ? ' p34-aipg' : ''}${scr === 'brief' ? ' p34-brpg' : ''}${scr === 'glimt' ? ' p35-glpg' : ''}${pp && scr === 'set' ? ' p32-nonav' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${fold41 ? ' p41-fold' : ''}${scr === 'bd' ? ' p41-bdpg' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P37.layer37()}${P37B.layer37b(P37B.H2.pk ?? 0)}${P38.layer38()}${P39.layer39()}${P40 ? P40.layer40() : ''}${P41 ? P41.layer41() : ''}${P42 ? P42.layer42() : ''}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P37.layer37()}${P37B.layer37b(P37B.H2.pk ?? 0)}${P38.layer38()}${P39.layer39()}${P40 ? P40.layer40() : ''}${P41 ? P41.layer41() : ''}${P42 ? P42.layer42() : ''}${P43 ? P43.layer43() + (P43.media()?.layer43m() ?? '') : ''}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -430,7 +431,7 @@ export function draw() {
   if (fad) P23.finnAdAfterDraw();
   P23.arrive(vk, vkChanged);
   P25.afterDraw();
-  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39(); P40?.afterDraw40(); P41?.afterDraw41(); P42?.afterDraw42();
+  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39(); P40?.afterDraw40(); P41?.afterDraw41(); P42?.afterDraw42(); P43?.afterDraw43();
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -473,7 +474,7 @@ async function load() {
     else if (scr === 'hl') jobs.push(hlLoad());
     else if (scr === 'spor') jobs.push(trkLoad().then(() => trkWatch()));
     else if (scr === 'mat') jobs.push(matLoad());
-    else if (scr === 'media') jobs.push(mediaLoad());
+    else if (scr === 'media') jobs.push(P43?.media?.() ? P43.media().mediaLoad43() : mediaLoad()); // prompt 43
     else if (scr === 'nyheter') jobs.push(newsLoad());
     else if (scr === 'vaer') jobs.push(wxLoad());
     else if (scr === 'avg') jobs.push(avgLoad());
@@ -530,6 +531,7 @@ export function route() {
   if (P38.route38(location.hash)) return route(); // Prompt 38: #/l/<sid>.<nonce> fra kameraet → godkjenn-arket
   // Prompt 24: Google-innloggingen kommer tilbake til #/bd?ok=1&google=ok (eller ?error=…).
   const [path, qs] = location.hash.replace(/^#\/?/, '').split('?'), parts = path.split('/');
+  if (qs && path === 'media' && /(^|&)magnet=/.test(qs)) { try { globalThis.__p43mag = decodeURIComponent(qs.replace(/^.*?(?:^|&)magnet=/, '')); } catch { globalThis.__p43mag = qs.replace(/^.*?magnet=/, ''); } } // prompt 43: magnet-lenke → Media
   if (qs) { history.replaceState(null, '', `#/${path}`); if (/google=ok/.test(qs)) setTimeout(() => flash('Koblet til Google Kalender ✓'), 300); else if (/google=error/.test(qs)) setTimeout(() => flash(`Google: ${decodeURIComponent((qs.match(/error=([^&]*)/) ?? [])[1] ?? 'innloggingen feilet')}`), 300); }
   // Prompt 32: «Oppdatering»-siden er slått sammen med Nordlys OS (gamle lenker #/set/oppd, #/update).
   if ((parts[0] === 'set' && parts[1] === 'oppd') || parts[0] === 'update' || parts[0] === 'oppdatering') { history.replaceState(null, '', '#/nordlys'); parts.length = 0; parts.push('nordlys'); }
@@ -761,6 +763,8 @@ export function bind() {
   import('./mobile-p41.js').then((x) => { P41 = x; x.boot41(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p41', err));
   // Prompt 42: Hjem-knapp i fanelinja, Vel fremme, ikonsøk, PostNord-logo, Gjøremål-Glimt del opp (lat, som 40 og 41).
   import('./mobile-p42.js').then((x) => { P42 = x; x.boot42(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p42', err));
+  // Prompt 43: Media, Hjem-widget Media, Widgets-siden, rekkefølge på lister, Claude-import, stor skjerm (lat, som 40–42).
+  import('./mobile-p43.js').then((x) => { P43 = x; x.boot43(); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch((err) => console.warn('mobile-p43', err));
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
     takeDesign(r); P37B.takeWopt(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); P32.take32(r); takeApp(r); P39.take39(r);
@@ -798,6 +802,7 @@ export function bind() {
     let x;
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
+    if (P43 && await P43.bind43(e, t)) return; // Prompt 43
     if (m.screen === 'aictl' && await P34AI.bindAi(e, t)) return; // Prompt 34: AI-kontroll
     if (await P38.bind38(e, t)) return; // Prompt 38: ØKT, QR-innlogging, brief-kort, Glimt i Domener
     if (P42 && await P42.bind42(e, t)) return; // Prompt 42
@@ -893,9 +898,10 @@ export function bind() {
     }
     if (act === 'logout') { await logout(); }
   }));
-  el.addEventListener('input', (e) => { if (P42?.input42?.(e, e.target)) return; if (P41?.input41?.(e, e.target)) return; if (P37.input37(e, e.target) || P37B.input37b(e, e.target)) return; if (P36.input36(e, e.target)) return; if (P35.input35(e, e.target)) return; if (P34AI.inputAi(e, e.target)) return; if (P32.input32(e, e.target)) return; if (P31.input31(e, e.target)) return; if (P30.input30(e, e.target)) return; if (P30B.input30b(e, e.target)) return; if (P29.input29(e, e.target)) return; if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { if (P43?.input43?.(e, e.target)) return; if (P42?.input42?.(e, e.target)) return; if (P41?.input41?.(e, e.target)) return; if (P37.input37(e, e.target) || P37B.input37b(e, e.target)) return; if (P36.input36(e, e.target)) return; if (P35.input35(e, e.target)) return; if (P34AI.inputAi(e, e.target)) return; if (P32.input32(e, e.target)) return; if (P31.input31(e, e.target)) return; if (P30.input30(e, e.target)) return; if (P30B.input30b(e, e.target)) return; if (P29.input29(e, e.target)) return; if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
+    if (P43 && await P43.change43(e, t)) return; // Prompt 43: Claude-eksporten
     if (P41 && await P41.change41(e, t)) return; // Prompt 41: bilder i Bursdager
     if (t.matches?.('[data-p37img]')) { await P37.bind37(e, t); return; } // Prompt 37: bilde av handlelapp til Glimt
     if (P37.input37(e, t) || P37B.input37b(e, t)) return; // Prompt 37
@@ -927,6 +933,7 @@ export function bind() {
     await settingsBind(e, t);
   }));
   el.addEventListener('submit', safe(async (e) => {
+    if (P43 && await P43.submit43(e, e.target)) return; // Prompt 43
     if (P41 && await P41.submit41(e, e.target)) return; // Prompt 41
     if (await P38.submit38(e, e.target)) return; // Prompt 38
     if (await P37.submit37(e, e.target) || await P37B.submit37b(e, e.target)) return; // Prompt 37

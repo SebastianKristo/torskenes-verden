@@ -616,7 +616,9 @@ export async function bind31(e, t) {
       catch (err) { flash(err.message); }
       return true;
     }
-    case 'anschat': { const q = G.ans?.q; G.ans = null; draw(); const CHAT = await import('./mobile-chat.js'); CHAT.openChat(q ?? ''); return true; }
+    case 'anschat': { // prompt 43: «Fortsett i Chat ›» gjør det samme som å dra ned (samme svar, ingen ny forespørsel)
+      const A = G.ans; if (globalThis.P41?.pillToChat && A) { globalThis.P41.pillToChat(x.closest('.p31-ans'), A); return true; }
+      const q = A?.q; G.ans = null; draw(); const CHAT = await import('./mobile-chat.js'); CHAT.openChat(q ?? ''); return true; }
     case 'away': { const B = G.banner; G.banner = null; draw(); if (B?.url && location.hash !== B.url) location.hash = B.url; return true; }
     case 'go': {
       const h = x.dataset.href, dt = x.dataset.date;

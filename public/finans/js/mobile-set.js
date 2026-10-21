@@ -124,7 +124,7 @@ const PAGE = {
   // Prompt 26: gruppert liste som på web og egen side per integrasjon (#/set/integ/<id>). Eldre server: forrige side.
   integ: (th, sub) => P26.integPage26(P23.integPage(haSection()), sub),
   kal: () => P26.kalSetPage(),
-  widgets: () => P33.widgetsPage(), // Prompt 33: Slik legger du til widget
+  widgets: () => globalThis.P43?.widgetGallery?.() ?? P33.widgetsPage(), // Prompt 43: Widgets-siden med alle widgetene (33: Slik legger du til widget)
   kalapp: () => P33.kalAppPage(), // Prompt 33: Kalender-appen (IPA/APK)
   sysbk: () => P29.backupPage(), // Prompt 29: backup av hele systemet (bare admin)
   oppd: () => updPage(G), // Prompt 28: oppdater hele systemet (bare admin) // Prompt 26: Innstillinger → Kalendere (Skole-iCal, Canvas, Google Kalender og Home Assistant)

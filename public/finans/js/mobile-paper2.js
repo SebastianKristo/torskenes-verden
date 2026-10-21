@@ -2,7 +2,8 @@
 // rediger/legg til, og Sporing med faner, «Varsler og kilder» og omorganisering med langt trykk.
 // Data fra de samme API-ene som Klassisk (/finans/api/transactions, /finans/api/finn, /api/tracking).
 import * as P37B from './mobile-p37b.js'; // prompt 37: husstandens sporingsnøkler (maskert) og kvote
-import { S, api, esc, n0, ini, today, hlApi } from './core.js';
+import { S, api, esc, n0, n2, ini, today, hlApi } from './core.js';
+import { glimtOrb } from './mobile-orb43.js'; // prompt 43
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { pkgLogo, pkgTitle } from './mobile-p21.js';
@@ -29,11 +30,18 @@ export function paperList() {
   const sum = L.reduce((a, t) => a + (t.amount ?? 0), 0);
   const month = (S.summary?.month ? new Date(S.summary.month + '-15') : new Date()).toLocaleDateString('nb-NO', { month: 'long' }).toUpperCase();
   const rc = (t) => (t.receipt === 'needs_review' ? ['Til gjennomgang', 'pp-lab-c'] : t.receiptId ? ['Vedlagt', 'pp-mut'] : ['ingen kvittering', 'pp-mut']);
-  return `<form class="pp-search" data-msearch role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="m-txq" name="q" type="search" value="${esc(q)}" enterkeyhint="search" placeholder="Søk i transaksjoner og kvitteringer" aria-label="Søk i transaksjoner" autocomplete="off"><a class="pp-ai" href="#/sok" aria-label="Spør AI">✦ AI</a></form>
+  void sum; void month;
+  // Prompt 43 (claude-code-finans-liste-maned-topp.md): gruppert per måned med rød mono-etikett, «Netto …» og 2 pt strek i ink.
+  const txRow = (t) => { const [rt, rcls] = rc(t); return `<button class="pp-tx" data-tx="${t.id}">${ppTi(t, ini(t.merchant || t.description), t.color)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(t.merchant || t.description)}</b><span class="pp-mut">${esc(t.category ?? '')} · ${esc(t.date === today() ? 'I dag' : ddmm(t.date))} · <span class="${rcls}">${rt}</span></span></span><span class="pp-serif ${t.amount > 0 ? 'pp-pos' : ''}">${t.amount < 0 ? '−' : '+'}${n0(t.amount)}</span></button>`; };
+  const groups = [];
+  for (const t of L) { const k = String(t.date ?? '').slice(0, 7) || '—'; let g = groups.at(-1); if (!g || g.k !== k) { g = groups.find((x) => x.k === k); if (!g) { g = { k, L: [] }; groups.push(g); } } g.L.push(t); }
+  const mName = (k, short) => { const [y, mo] = k.split('-').map(Number); if (!y || !mo) return ''; const d = new Date(y, mo - 1, 15); return (short ? d.toLocaleDateString('nb-NO', { month: 'short' }).replace('.', '') : d.toLocaleDateString('nb-NO', { month: 'long' })).toUpperCase(); };
+  const head = (g) => { const net = g.L.reduce((a, t) => a + (Number(t.amount) || 0), 0), lbl = PL.cat === 'Alle' ? `${mName(g.k)} · ${g.L.length}` : `${PL.cat.toUpperCase()} · ${mName(g.k, true)} · ${g.L.length}`;
+    return `<div class="p43-mh"><span class="p43-mhl">${esc(lbl)}</span><span class="p43-mhn">Netto ${net < 0 ? '−' : '+'}${n2(Math.abs(net))} kr</span></div>`; };
+  return `<form class="pp-search" data-msearch role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="m-txq" name="q" type="search" value="${esc(q)}" enterkeyhint="search" placeholder="Søk i transaksjoner og kvitteringer" aria-label="Søk i transaksjoner" autocomplete="off"><button type="button" class="p43-gpill" data-p43="lglimt" aria-label="Spør Glimt i Finans → Søk">${glimtOrb(20, 'chip')}Glimt</button></form>
     <div class="pp-chips">${cats.map((n) => `<button class="pp-fchip" data-ppl="cat" data-k="${esc(n)}" aria-pressed="${PL.cat === n}">${esc(n)}</button>`).join('')}</div>
-    ${lab(`${PL.cat === 'Alle' ? month : PL.cat.toUpperCase()} · ${L.length}`, `Netto ${sum < 0 ? '−' : '+'}${n0(sum)} kr`)}
-    ${items === null ? '<div class="m-spin"></div>' : `<div class="pp-rows">${L.map((t) => { const [rt, rcls] = rc(t); return `<button class="pp-tx" data-tx="${t.id}">${ppTi(t, ini(t.merchant || t.description), t.color)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(t.merchant || t.description)}</b><span class="pp-mut">${esc(t.category ?? '')} · ${esc(t.date === today() ? 'I dag' : ddmm(t.date))} · <span class="${rcls}">${rt}</span></span></span><span class="pp-serif ${t.amount > 0 ? 'pp-pos' : ''}">${t.amount < 0 ? '−' : '+'}${n0(t.amount)}</span></button>`; }).join('')}</div>
-    ${L.length ? '' : '<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen treff. ✦ Prøv å spørre AI, for eksempel «hvor mye brukte jeg på mat i september».</div>'}`}`;
+    ${items === null ? '<div class="m-spin"></div>' : groups.map((g) => `<section class="p43-mg">${head(g)}<div class="pp-rows">${g.L.map(txRow).join('')}</div></section>`).join('')}
+    ${items === null || L.length ? '' : `${head({ k: S.summary?.month ?? '', L: [] })}<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen treff. Trykk Glimt og spør fritt, for eksempel «hvor mye brukte jeg på mat i september».</div>`}`;
 }
 
 /* ---------- Finans → Mer ---------- */

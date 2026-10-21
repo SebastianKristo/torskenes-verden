@@ -11,7 +11,7 @@ export const AC = {
   tab: null, fin: false, from: 'set', st: null, md: null, lib: null, rt: null, jobs: null, use: null, keys: null, toks: null,
   err: {}, miss: false, q: '', cat: 'alle', per: '30', eye: {}, test: {}, kf: {}, fresh: null, sel: null, pulls: {}, mdel: null, t: {}, busy: {},
 };
-const TABS = [['ov', 'Oversikt'], ['mod', 'Modeller'], ['rt', 'Valg'], ['job', 'Jobber'], ['use', 'Forbruk'], ['api', 'API og nøkler']];
+const TABS = [['ov', 'Oversikt'], ['mod', 'Modeller'], ['rt', 'Valg'], ['job', 'Jobber'], ['use', 'Forbruk'], ['api', 'API og nøkler'], ['imp', 'Importer']]; // prompt 43: Importer fra Claude
 const TABS_FIN = [['rt', 'AI-valg'], ['api', 'Tilkoblinger'], ['job', 'Jobber'], ['use', 'Forbruk']];
 const tabs = () => (AC.fin ? TABS_FIN : TABS);
 const admin = () => AC.rt?.admin ?? (m.me?.role ? m.me.role === 'admin' : false);
@@ -102,7 +102,7 @@ function head() {
 }
 export function aiView() {
   const t = curTab();
-  const body = { ov, mod, rt, job, use, api }[t]();
+  const body = { ov, mod, rt, job, use, api, imp: () => globalThis.P43?.claudeImport?.() ?? '<div class="m-spin"></div>' }[t]();
   const err = Object.entries(AC.err).filter(([k]) => (NEED[t] ?? []).includes(k)).map(([, v]) => v);
   return `<div class="p34a" data-tab="${t}">${head()}<div class="p34a-body">${err.length ? `<div class="p34a-err">${esc([...new Set(err)].join(' · '))}</div>` : ''}${body}</div></div>`;
 }

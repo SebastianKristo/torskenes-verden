@@ -208,11 +208,36 @@ async function calLoad() {
 /* =====================================================================
    Siden
    ===================================================================== */
+/* Prompt 43 (claude-code-gjoremal-faner-rekkefolge.md): rekkefølgen på pillene lagres per bruker (huske_tab_order, og
+   PUT /api/tasks/lists/order når serveren har det). «+ Ny liste» er ikke med i sorteringen og ligger alltid sist. */
+const TAB_LS = 'huske_tab_order';
+export function tabOrder() {
+  const srv = HK.d?.tabOrder ?? HK.d?.listOrder ?? HK.d?.order;
+  try { const v = JSON.parse(localStorage.getItem(TAB_LS) || 'null'); if (Array.isArray(v) && v.length) return v.map(String); } catch {}
+  return Array.isArray(srv) ? srv.map(String) : [];
+}
+export function setTabOrder(keys, push = true) {
+  const v = keys == null ? null : keys.map(String);
+  try { if (v) localStorage.setItem(TAB_LS, JSON.stringify(v)); else localStorage.removeItem(TAB_LS); } catch {}
+  if (HK.d) HK.d.tabOrder = v ?? undefined;
+  if (push) hlApi('/tasks/lists/order', { method: 'PUT', json: v ? { ids: v.map((k) => (k === 'arkiv' ? 'arkivert' : k)) } : { reset: true } }).catch(() => {}); // eldre server: 404 → bare på enheten
+}
+/** Alle pillene (uten «+ Ny liste») i valgt rekkefølge: [{k, n, c, cnt, l, glimt}]. Standard: Alle, egne lister, Arkivert, Laget med Glimt. */
+export function tabEntries(GL = globalThis.P41?.glimtSrc?.(visible().map((x) => x.raw ?? x)) ?? []) {
+  const live = visible().filter((x) => !isArch(x.raw)), L = lists();
+  const base = [{ k: 'alle', n: 'Alle', c: '', cnt: live.filter((x) => !x.done).length },
+    ...L.map((l) => ({ k: l.id, n: l.name, c: l.color, cnt: live.filter((x) => !x.done && String(x.list) === l.id).length, l })),
+    { k: 'arkiv', n: 'Arkivert', c: '', cnt: archOf37().length },
+    ...(GL.length ? [{ k: 'glimt', n: 'Laget med Glimt', c: '', cnt: GL.length, glimt: true }] : [])];
+  const ord = tabOrder(), pos = (e, i) => { const j = ord.indexOf(e.k); return j >= 0 ? j : 1000 + i; };
+  return base.map((e, i) => ({ e, p: pos(e, i) })).sort((a, b) => a.p - b.p).map((x) => x.e);
+}
 function listChips(L, GL) {
-  const live = visible().filter((x) => !isArch(x.raw));
-  const chip = (k, n, c, cnt, l) => { const on = String(HK.cur) === k; return `<button type="button" class="p37-lc${on ? ' on' : ''}" data-p37="list" data-k="${esc(k)}" aria-pressed="${on}">${c ? `<i style="background:${esc(c)}"></i>` : ''}${esc(n)}${l?.shared ? avs(l.members) : ''}<span>${cnt}</span></button>`; };
-  const gl = GL.length ? `<button type="button" class="p37-lc p41-glc${HK.cur === 'glimt' ? ' on' : ''}" data-p37="list" data-k="glimt" aria-pressed="${HK.cur === 'glimt'}"><i class="p41-gdot"></i>Laget med Glimt<span>${GL.length}</span></button>` : '';
-  return `<div class="p37-chips" role="tablist">${chip('alle', 'Alle', '', live.filter((x) => !x.done).length)}${L.map((l) => chip(l.id, l.name, l.color, live.filter((x) => !x.done && String(x.list) === l.id).length, l)).join('')}${gl}${chip('arkiv', 'Arkivert', '', archOf37().length)}<button type="button" class="p37-lc new" data-p37="newlist">+ Ny liste</button></div>`;
+  void L;
+  const chip = (e) => { const on = String(HK.cur) === e.k;
+    if (e.glimt) return `<button type="button" class="p37-lc p41-glc${on ? ' on' : ''}" data-p37="list" data-k="glimt" aria-pressed="${on}"><i class="p41-gdot"></i>Laget med Glimt<span>${e.cnt}</span></button>`;
+    return `<button type="button" class="p37-lc${on ? ' on' : ''}" data-p37="list" data-k="${esc(e.k)}" aria-pressed="${on}">${e.c ? `<i style="background:${esc(e.c)}"></i>` : ''}${esc(e.n)}${e.l?.shared ? avs(e.l.members) : ''}<span>${e.cnt}</span></button>`; };
+  return `<div class="p37-chips" role="tablist" aria-label="Lister (hold inne for å endre rekkefølgen)">${tabEntries(GL).map(chip).join('')}<button type="button" class="p37-lc new p43-newl" data-p37="newlist">+ Ny liste</button></div>`;
 }
 export function huskeView37() {
   if (!HK.d) return '<div class="m-spin"></div>';

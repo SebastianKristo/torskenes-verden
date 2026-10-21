@@ -128,7 +128,7 @@ const greetOf = () => { const h = new Date().getHours(); return h < 5 ? 'God nat
 export async function pillToChat(el, A) {
   const q = A?.q ?? '', ready = A && !A.busy && A.text && !A.err;
   const CHAT = await import('./mobile-chat.js');
-  const open = () => { P31.G.ans = null; P31.G.aid++; if (ready) CHAT.openChatWith(q, A.text, 'glimt'); else CHAT.openChat(q); };
+  const open = () => { P31.G.ans = null; P31.G.aid++; if (ready) CHAT.openChatWith(q, A.text, 'glimt', A.src ?? ''); else CHAT.openChat(q); };
   const host = document.querySelector('#app .m');
   if (!el || !host || reduce()) {
     const ov = host ? Object.assign(document.createElement('div'), { className: 'p41-flip fade' }) : null;

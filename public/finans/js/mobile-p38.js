@@ -14,6 +14,7 @@ import * as P35 from './mobile-p35.js';
 import { TR } from './mobile-track.js';
 import { BD } from './mobile-p24.js';
 import { logout } from './mobile-p21.js';
+import { glimtOrb } from './mobile-orb43.js'; // prompt 43
 
 const svg = (d, s = 16, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const QR_IC = 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM14 18h2M18 14h2';
@@ -386,11 +387,19 @@ export async function domSumLoad(d, make = false) {
 /** Kortet øverst på Domener → Oversikt. sel = valgt domene (eller «*»). */
 export function domGlimt(sel) {
   const k = sumKey(sel), S = DG.d[k], busy = DG.busy === k;
-  if (!DG.open) return `<div class="p38-dgc"><button type="button" class="p38-dgo" data-p38="dgopen"><span>GLIMT</span>${S ? 'Dagens oppsummering er klar ›' : 'Vis oppsummering av siste døgn'}</button></div>`;
+  if (!DG.open) return ''; // prompt 43: den frittstående pillen er erstattet av Glimt-raden nederst i domenekortet (domGlimtRow)
   const pts = Array.isArray(S?.pts) ? S.pts : [];
   return `<section class="pp-card p38-dg" aria-live="polite"><div class="p38-dgh"><span class="p38-dgm">${P35.fig('glimt', 34, busy ? 'talk' : 'idle')}</span><span class="m-grow"><span class="p38-dgk">GLIMT · OPPSUMMERING</span><span class="p38-dgt">${esc(S?.meta ?? (k === '*' ? 'Alle domener' : k))}</span></span>
       <button type="button" class="p38-dgb" data-p38="dgnew" ${busy ? 'disabled' : ''}>${svg('M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7', 14, 2.4)}${busy ? 'Lager …' : 'Lag ny'}</button><button type="button" class="p38-dgx" data-p38="dgclose" aria-label="Skjul oppsummering">${svg('M6 15l6-6 6 6', 14, 2.6)}</button></div>
     ${busy && !S ? '<div class="p38-sk"><i style="width:80%"></i><i></i><i style="width:60%"></i></div>' : S ? `<b class="p38-dghd">${esc(S.head ?? '')}</b><div class="p38-dgp">${pts.map((p) => `<span><i style="background:${esc(p.color ?? '#8f897c')}"></i>${esc(p.t ?? p)}</span>`).join('')}</div>` : `<span class="pp-mut">${esc(DG.err || 'Ingen oppsummering ennå.')}</span>`}</section>`;
+}
+/** Prompt 43 (claude-code-domener-glimt-i-kortet.md): Glimt-raden nederst i domenekortet, med Glimt-orben (ikke figuren).
+ *  Teksten følger valgt periode. Skjules mens oppsummeringen er åpen. */
+const PERL = { '1h': ['SISTE TIME', 'siste time'], '24h': ['SISTE DØGN', 'siste døgn'], '7d': ['SISTE 7 DAGER', 'siste 7 dager'], '30d': ['SISTE 30 DAGER', 'siste 30 dager'] };
+export function domGlimtRow(sel, per) {
+  if (DG.open && (!m.sub || m.sub === 'ov')) return '';
+  const [K, l] = PERL[per] ?? PERL['24h'], ready = !!DG.d[sumKey(sel)];
+  return `<button type="button" class="p43-dgr" data-p38="domg" aria-label="Glimt: oppsummering av ${l}">${glimtOrb(30)}<span class="m-grow"><span class="p43-dgk">GLIMT · ${K}</span><b>Oppsummering av ${l}</b></span><span class="p43-dgch" aria-hidden="true">›</span>${ready ? '<i class="p43-dgdot" aria-hidden="true"></i>' : ''}</button>`;
 }
 /** ✦-knappen: åpne Oversikt, åpne oppsummeringen (lag den om dagens mangler) og rull til toppen. */
 export function domGlimtGo(sel) {

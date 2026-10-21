@@ -385,6 +385,7 @@ export function homeBlocks() {
     h6: posCard(), h7: bolWidget(), h8: P37.todoWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(), // Prompt 32: Prøveperioder
     h12: P36.briefCard(P35.briefCard(), edOn('hl')), h13: P37B.bibleHome(edOn('hl')), h14: globalThis.P40?.hjemlysHome?.(edOn('hl')) ?? '', // Prompt 40: Vel fremme // Prompt 37: Dagens bibelvers (bare med modulen) // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
     h15: globalThis.P41?.tripHome?.(edOn('hl')) ?? '', // Prompt 41: Min reise · forlot skolen (bare når relevant)
+    h16: globalThis.P43?.mediaHome?.(edOn('hl')) ?? '', // Prompt 43: Media · lastes ned og kommer (h12 er Glimt-brief)
   };
   // Prompt 41: «I stedet» skjuler Avganger mens reisen er aktiv.
   if (B.h15 && globalThis.P41?.tripInstead?.()) B.h3 = '';
@@ -420,13 +421,30 @@ export function paperFin() {
   const tx = (FX.recent ?? s.recent ?? []).slice(0, 15);
   // Kortene kan flyttes og skjules med hold inne: Saldo, Kvitteringer (f2), Siste transaksjoner (de 15 siste) og Budsjett.
   return edBlocks('hjem', {
-    f1: `<div class="pp-card pp-saldo"><span class="pp-lab">SALDO · ALLE KONTOER</span><b class="pp-serif pp-huge" data-mact="reveal">${pref('hideAmt') && !m.reveal ? '••••' : `${bal < 0 ? '−' : ''}${n0(bal)} kr`}</b>
-      <div class="pp-kpi"><div><span>Inn</span><b class="pp-pos">${n0(s.inn ?? 0)}</b></div><div><span>Brukt</span><b>${n0(s.budgetUsed ?? 0)}</b></div><div><span>Igjen</span><b>${n0(s.left ?? 0)}</b></div></div></div>`,
+    f1: salCard43(s, bal),
     f2: rcBanner(),
     f3: `${lab(`SISTE TRANSAKSJONER · ${tx.length}`, '<a href="#/liste">Vis alle ›</a>')}
       <div class="pp-rows">${tx.map((t) => `<button class="pp-tx" data-tx="${t.id}">${ppTi(t, ini(t.merchant || t.description), t.color)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(t.merchant || t.description)}</b><span class="pp-mut">${esc(t.category ?? '')} · ${esc(t.date === today() ? 'I dag' : t.date?.slice(8, 10) + '.' + t.date?.slice(5, 7))}</span></span><span class="pp-serif ${t.amount > 0 ? 'pp-pos' : ''}">${t.amount < 0 ? '−' : '+'}${n0(t.amount)}</span></button>`).join('') || '<div class="pp-mut">Ingen transaksjoner ennå.</div>'}</div>`,
     f4: bud.length ? `${lab(`BUDSJETT · ${month}`, `${n0(s.budgetUsed)} av ${n0(s.budgetTotal)}`)}<div class="pp-rows">${bud.map((b) => { const p = Math.round((b.used / b.budget) * 100); return `<a class="pp-bud" href="#/budsjett"><span>${esc(b.category)}</span><span class="pp-bar"><i style="width:${Math.min(100, p)}%;background:${p > 90 ? 'var(--pp-lab)' : 'var(--pp-ink)'}"></i></span><span class="pp-mut">${p} %</span></a>`; }).join('')}</div>` : '',
   });
+}
+
+/** Prompt 43 (claude-code-finans-saldokort.md, fasit 4b i Papir-farger): bare saldo og «Brukt i <måned>» med månedsring.
+ *  Hele kortet åpner Kontoer. Skjulte beløp: første trykk viser dem. */
+function salCard43(s, bal) {
+  const now = new Date(), mon = s.month ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const cur = mon === `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [yy, mm] = mon.split('-').map(Number), dim = s.daysInMonth ?? new Date(yy, mm, 0).getDate();
+  const day = Math.min(dim, s.day ?? (cur ? now.getDate() : dim)), pc = Math.round((day / dim) * 100);
+  const spent = Math.abs(Number(s.spentMonth ?? s.ut ?? s.budgetUsed ?? 0));
+  const mn = new Date(yy, mm - 1, 15).toLocaleDateString('nb-NO', { month: 'long' });
+  const hid = pref('hideAmt') && !m.reveal, amt = (v) => (hid ? '••••' : `${v < 0 ? '−' : ''}${n0(Math.abs(v))}`);
+  const tag = hid ? 'div' : 'a';
+  return `<${tag} class="pp-card p43-sal" ${hid ? 'role="button" tabindex="0" data-mact="reveal" aria-label="Saldo alle kontoer (trykk for å vise beløp)"' : 'href="#/konto" aria-label="Saldo alle kontoer – åpne Kontoer"'}>
+    <span class="p43-salh"><span class="pp-lab">SALDO · ALLE KONTOER</span><span class="p43-salgo" aria-hidden="true">›</span></span>
+    <b class="p43-salv">${amt(bal)} <span>kr</span></b>
+    <span class="p43-salm"><span class="p43-ring" style="background:conic-gradient(var(--pp-lab) 0 ${pc}%, color-mix(in srgb,var(--pp-line) 80%,transparent) ${pc}% 100%)"><span>${day}.</span></span>
+      <span class="m-grow"><span class="p43-salt">Brukt i ${esc(mn)} · dag ${day} av ${dim}</span><b>${amt(spent)} kr</b></span></span></${tag}>`;
 }
 
 /* ---------- Mer ---------- */
@@ -438,7 +456,7 @@ export function paperMer() {
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
   const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Now Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
      ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
-    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
+    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     ; // prompt 40 (claude-code-fanelinje-alle-sider.md): faner i fanelinja vises fortsatt i Mer
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
   // Prompt 28: hold inne for å flytte og skjule (lagres per konto), Subscription OS etter Finans.

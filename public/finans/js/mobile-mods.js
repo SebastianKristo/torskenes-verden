@@ -239,7 +239,7 @@ function domTop() {
   const list = dm.list ?? [], pills = [{ n: 'Alle domener', k: '*', sub: 'Samlet' }, ...list.map((d) => ({ n: d.name, k: d.name, sub: DSRC[d.source] ?? d.source ?? 'Cloudflare' }))];
   return `<div class="pp-card pp-domtop"><div class="pp-row"><span class="pp-lab">DOMENE</span><span class="pp-mut">${list.length} domene${list.length === 1 ? '' : 'r'} · <button class="pp-link" data-dom="refresh">Oppdater</button> · <a class="pp-link" href="#/dom/admin">Rediger</a></span></div>
     <div class="pp-dompills" role="tablist">${pills.map((p) => `<button role="tab" data-dom="sel" data-name="${esc(p.k)}" aria-selected="${dm.sel === p.k}"><span><i style="background:${p.k === '*' ? 'var(--pp-lab)' : 'var(--pp-pos)'}"></i>${esc(p.sub)}</span><b>${esc(p.n)}</b></button>`).join('')}<span class="pp-pend"></span></div>
-    <div class="pp-domper" role="group" aria-label="Periode">${DPER.map(([k, n]) => `<button data-dom="per" data-v="${k}" aria-pressed="${dm.per === k}">${n}</button>`).join('')}</div></div>`;
+    <div class="pp-domper" role="group" aria-label="Periode">${DPER.map(([k, n]) => `<button data-dom="per" data-v="${k}" aria-pressed="${dm.per === k}">${n}</button>`).join('')}</div>${P38.domGlimtRow?.(dm.sel, dm.per) ?? ''}</div>`;
 }
 function domAll() {
   const rows = (dm.list ?? []).map((d) => ({ d, a: dm.data[`${d.name}|${dm.per}`] }));
