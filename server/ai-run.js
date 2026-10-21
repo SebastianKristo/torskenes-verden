@@ -24,6 +24,7 @@
 //    params:{keepAlive:'5m'|'30m'|-1|0, numCtx:8192|32768|131072, temperature:0.7, parallel:1–4, minConf:70–95,
 //            prompt 43: ollamaConcurrency:1–4, modelKeepAlive:{'qwen3:8b':'15m', …}, loadTimeout (kald modell, 90 s), firstTokenTimeout (30 s),
 //            idleTimeout (30 s tekst), idleTimeoutImage (60 s bilde)},
+// Prompt 44: alle AI-kall går gjennom server/ai-gate.js (to backends: Ollama direkte og Open WebUI; ai_backend velger).
 // Prompt 43: alle Ollama-kall går gjennom server/ollama-gate.js (kø, gruppering per modell, keep_alive per modell, strømming og
 // to tidsgrenser, nye forsøk). Her er det ingen egen kø lenger.
 //    budget:{monthlyKr:0 (= ingen grense), hardStop:true, warn80:true}, cloudOn:{'gemini-2.5-flash':true, …}, migratedAt}
@@ -32,7 +33,7 @@ import { db, kv, OWNER } from './db.js';
 import { settings as fhSettings, secret, me } from './finans/db.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
 import { shortBody, stripThink, SHORT_NUM_CTX } from './ollama-opts.js';
-import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError } from './ollama-gate.js';
+import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError, maskSecrets, backendConfig, owuiConf, testOpenWebuiModels } from './ai-gate.js';
 import { broadcast } from './realtime.js';
 import { envHw } from './aihw38.js';
 import { jobTimes41, groupTimes41 } from './ai41.js'; // prompt 41: klokkeslett i Jobber
@@ -294,17 +295,25 @@ export async function ollamaInventory({ force = false } = {}) {
   if (MOCK()) return { ok: true, err: null, url: 'mock', mock: true, models: [{ name: 'qwen3:8b', kind: 'tekst', sizeGb: 5.2, quant: 'Q4_K_M', params: '8.2B', family: 'qwen3' }, { name: 'qwen2.5vl:7b', kind: 'bilde', sizeGb: 6, quant: 'Q4_K_M', params: '8.3B', family: 'qwen25vl' }, { name: 'nomic-embed-text:latest', kind: 'embedding', sizeGb: 0.3, quant: 'F16', params: '137M', family: 'nomic-bert' }] };
   const url = ollamaBase();
   if (!force && inv.url === url && Date.now() - inv.at < 60_000) return inv;
-  Object.assign(inv, { at: Date.now(), url });
-  if (!url) return Object.assign(inv, { ok: false, err: 'Ollama-adressen er ikke satt (AI → API og nøkler)', models: [] });
+  Object.assign(inv, { at: Date.now(), url, via: 'ollama' });
+  const viaOwui = async (why) => {
+    // Prompt 44: uten (eller uten kontakt med) Ollama direkte, men med Open WebUI: modellisten fra Open WebUI /api/models.
+    if (!owuiConf()) return Object.assign(inv, { ok: false, err: why, models: [] });
+    const t = await testOpenWebuiModels({ fetch: F, timeoutMs: 5000 });
+    if (!t.ok) return Object.assign(inv, { ok: false, err: `${why} · ${t.error}`, models: [] });
+    inv.models = (t.list ?? []).filter((m) => m.ollama).map((m) => ({ name: m.id, kind: modelKind(m.id), sizeGb: m.size ? Math.round(m.size / 1e8) / 10 : null, quant: null, params: null, family: null, modified: null }));
+    return Object.assign(inv, { ok: true, err: null, via: 'openwebui' });
+  };
+  if (!url) return viaOwui('Ollama-adressen er ikke satt (AI → API og nøkler)');
   try {
     const r = await F(`${url}/api/tags`, { signal: AbortSignal.timeout(4000) });
-    if (!r.ok) return Object.assign(inv, { ok: false, err: `Ollama svarte ${r.status} på /api/tags`, models: [] });
+    if (!r.ok) return viaOwui(`Ollama svarte ${r.status} på /api/tags`);
     const j = await r.json();
     inv.models = (j.models ?? []).map((m) => ({ name: m.name ?? m.model, kind: modelKind(m.name ?? m.model, m.details), sizeGb: m.size ? Math.round(m.size / 1e8) / 10 : null,
       quant: m.details?.quantization_level ?? null, params: m.details?.parameter_size ?? null, family: m.details?.family ?? null, modified: m.modified_at ?? null })).filter((m) => m.name);
     return Object.assign(inv, { ok: true, err: null });
   } catch (e) {
-    return Object.assign(inv, { ok: false, err: `Ollama kan ikke nås på ${url} (${e.cause?.code || e.name || e.message})`, models: [] });
+    return viaOwui(`Ollama kan ikke nås på ${url} (${e.cause?.code || e.name || e.message})`);
   }
 }
 const cloudKey = (p) => (p === 'gemini' ? hasGemini() : p === 'groq' ? !!secret('groqKey') : p === 'openrouter' ? !!secret('openrouterKey') : p === 'roboflow' ? !!secret('roboflowKey') : false);
@@ -345,6 +354,10 @@ for (const [col, def] of [['phase', 'TEXT'], ['run_at', 'INTEGER']]) if (!db.pre
 for (const [col, def] of [['queue_ms', 'INTEGER'], ['load_ms', 'INTEGER'], ['gen_ms', 'INTEGER'], ['attempts', 'INTEGER'], ['err_kind', 'TEXT']]) {
   try { db.exec(`ALTER TABLE ai_runs ADD COLUMN ${col} ${def}`); } catch { /* finnes allerede */ }
 }
+// Prompt 44: backend (openwebui/ollama) og hvorfor, rutingsvalget (tools) og nettsøket (søkeord, antall treff, kilde). Additivt.
+for (const [col, def] of [['backend', 'TEXT'], ['backend_note', 'TEXT'], ['tools', 'TEXT'], ['web_query', 'TEXT'], ['web_hits', 'INTEGER'], ['web_provider', 'TEXT']]) {
+  try { db.exec(`ALTER TABLE ai_runs ADD COLUMN ${col} ${def}`); } catch { /* finnes allerede */ }
+}
 // Jobber som kjørte da serveren stoppet, er ikke ferdige.
 db.prepare("UPDATE ai_runs SET status='fail', error=COALESCE(error,'Avbrutt av omstart') WHERE status IN ('run','queue')").run();
 const live = new Map(); // id → {ctrl, user, retry?}
@@ -358,6 +371,9 @@ export const jobOut = (r) => ({
   ...(r.status === 'fail' || r.status === 'skip' || r.status === 'cancelled' ? (({ reason, short }) => ({ reason, short }))(failReason(r.error, r.err_kind)) : {}),
   // prompt 43: tidene fra Ollama-gaten og antall forsøk
   timing: { queueMs: r.queue_ms ?? null, loadMs: r.load_ms ?? null, genMs: r.gen_ms ?? null, totalMs: r.ms ?? null }, attempts: r.attempts ?? null, errKind: r.err_kind ?? null,
+  // prompt 44: backend, rutingsvalget og nettsøket
+  backend: r.backend ?? null, backendNote: r.backend_note ?? null, tools: r.tools ? String(r.tools).split(',').filter(Boolean) : [],
+  web: r.web_query ? { query: r.web_query, hits: r.web_hits ?? 0, provider: r.web_provider ?? null } : null,
   // prompt 41: createdAt, startedAt (når den faktisk startet), endedAt, timeLabel, timeAgo (jobTimes41)
   startedAt: new Date(r.ts).toISOString(), ...jobTimes41(r), ms: r.ms ?? null, tokens: { in: r.tok_in ?? 0, out: r.tok_out ?? 0 }, costKr: r.cost_kr ?? 0,
   error: r.error ?? null, fallbackFrom: r.fallback_from ?? null, ref: r.ref ?? null, retryable: !!live.get(r.id)?.retry,
@@ -387,7 +403,11 @@ export function jobUpdate(id, p = {}) {
   const cols = { status: p.status, progress: p.progress, step: p.step, partial: p.partial !== undefined ? JSON.stringify(p.partial) : undefined, model: p.model, provider: p.provider,
     phase: p.phase !== undefined ? (p.phase ? JSON.stringify(p.phase) : null) : undefined, run_at: p.runAt,
     ms: p.ms, tok_in: p.tokIn, tok_out: p.tokOut, cost_kr: p.costKr, error: p.error !== undefined ? (p.error ? String(p.error).slice(0, 500) : null) : undefined, fallback_from: p.fallbackFrom, title: p.title,
-    queue_ms: p.queueMs, load_ms: p.loadMs, gen_ms: p.genMs, attempts: p.attempts, err_kind: p.errKind };
+    queue_ms: p.queueMs, load_ms: p.loadMs, gen_ms: p.genMs, attempts: p.attempts, err_kind: p.errKind,
+    backend: p.backend, backend_note: p.backendNote, tools: Array.isArray(p.tools) ? p.tools.join(',').slice(0, 200) : p.tools,
+    web_query: p.web?.query !== undefined ? String(p.web.query ?? '').slice(0, 300) : undefined, web_hits: p.web ? (p.web.hits ?? 0) : undefined, web_provider: p.web ? (p.web.provider ?? null) : undefined };
+  if (cols.error) cols.error = maskSecrets(cols.error); // prompt 44: API-nøkler havner aldri i jobbloggen
+  if (cols.step) cols.step = maskSecrets(cols.step);
   const ks = Object.keys(cols).filter((k) => cols[k] !== undefined);
   if (!ks.length) return;
   db.prepare(`UPDATE ai_runs SET ${ks.map((k) => `${k}=?`).join(',')}, updated=? WHERE id=?`).run(...ks.map((k) => cols[k]), Date.now(), id);
@@ -474,7 +494,7 @@ export const setQueuePaused = (v) => setGatePaused(v);
 export class AiRunError extends Error {
   constructor(message, extra = {}) { super(message); this.name = 'AiRunError'; Object.assign(this, extra); }
 }
-const shortErr = (e) => String(e?.message ?? e ?? 'ukjent feil').replace(/\s+/g, ' ').trim().slice(0, 220);
+const shortErr = (e) => maskSecrets(String(e?.message ?? e ?? 'ukjent feil').replace(/\s+/g, ' ').trim()).slice(0, 220);
 /**
  * Prompt 40/43: årsaken til en feil, til gruppering i Jobber. → {reason, short}
  *   reason: 'load_timeout:<s>' | 'idle_timeout:<s>' | 'response_timeout:<s>' | 'unloaded' | 'http:<status>' | 'memory' | 'nocontact'
@@ -493,8 +513,9 @@ export function failReason(error, kind = null) {
   if ((x = m.match(/svarte ikke (?:innen|på) (\d+) s/i))) return { reason: `response_timeout:${x[1]}`, short: `Tidsavbrudd · svarte ikke på ${x[1]} s` };
   if (/svarte ikke innen tidsgrensen|tidsfristen/i.test(m)) return { reason: 'response_timeout', short: 'Tidsavbrudd · svarte ikke i tide' };
   if (kind === 'memory' || /for lite minne|out of memory|more system memory/i.test(m)) return { reason: 'memory', short: 'For lite minne' };
+  if (/Open WebUI kan ikke nås|Open WebUI er ikke satt opp/i.test(m)) return { reason: 'nocontact_owui', short: 'Ingen kontakt med Open WebUI' };
   if (/kontakt med Ollama|Ollama kan ikke nås|ECONNREFUSED|EHOSTUNREACH|ENOTFOUND|adressen er ikke satt/i.test(m)) return { reason: 'nocontact', short: 'Ingen kontakt med Ollama' };
-  if ((x = m.match(/Ollama HTTP (\d{3}):?\s*(.*)$/i))) return { reason: `http:${x[1]}`, short: `Ollama HTTP ${x[1]}${x[2] ? `: ${x[2].slice(0, 70)}` : ''}` };
+  if ((x = m.match(/(Ollama|Open WebUI) HTTP (\d{3}):?\s*(.*)$/i))) return { reason: `http:${x[1] === 'Ollama' ? '' : 'owui:'}${x[2]}`, short: `${x[1]} HTTP ${x[2]}${x[3] ? `: ${x[3].slice(0, 70)}` : ''}` };
   if (/finnes ikke|not found|ingen .*modell/i.test(m)) return { reason: 'model', short: 'Modellen finnes ikke' };
   if (/\b40[13]\b|nøkkel|api key/i.test(m)) return { reason: 'key', short: 'Feil eller manglende nøkkel' };
   if (/avbrutt av omstart/i.test(m)) return { reason: 'restart', short: 'Avbrutt av omstart' };
@@ -538,15 +559,17 @@ const parseJsonText = (t) => {
  */
 async function callOllama(model, o, signal, r, ctx = {}) {
   const base = ollamaBase();
-  if (!base) throw new Error('Ollama-adressen er ikke satt');
+  if (!base && backendConfig().effective !== 'openwebui') throw new Error('Ollama-adressen er ikke satt');
   const msgs = [];
   const sys = typeof o.system === 'function' ? o.system('ollama') : o.system;
   if (sys) msgs.push({ role: 'system', content: sys });
   msgs.push({ role: 'user', content: String(o.prompt ?? ''), ...(o.images?.length ? { images: o.images.map(b64) } : {}) });
   const t = taskId(o.task);
-  const options = { temperature: o.temperature ?? r.params.temperature, num_ctx: t === 'chat' ? r.params.numCtx : Math.min(r.params.numCtx || SHORT_NUM_CTX, SHORT_NUM_CTX) };
+  // Prompt 44: o.numCtx (f.eks. 8192 for svar med søkeresultater) overstyrer det korte vinduet.
+  const options = { temperature: o.temperature ?? r.params.temperature, num_ctx: o.numCtx ?? (t === 'chat' ? r.params.numCtx : Math.min(r.params.numCtx || SHORT_NUM_CTX, SHORT_NUM_CTX)) };
   if (o.numPredict) options.num_predict = o.numPredict;
   const body = shortBody({ model, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: r.rules.think ? true : undefined });
+  if (o.numCtx) body.options.num_ctx = o.numCtx;
   const lim = timeoutsOf(r, { images: !!o.images?.length });
   const jobId = ctx.jobId;
   let lastUpd = 0, loadIv = null, t0Load = 0;
@@ -564,7 +587,7 @@ async function callOllama(model, o, signal, r, ctx = {}) {
     const out = await gateChat({ model, body, base, fetch: F, signal, priority: o.background ? 'background' : 'interactive', short: true, allowThink: !('think' in body), image: !!o.images?.length,
       loadMs: lim.loadMs, warmMs: lim.firstMs, idleMs: lim.idleMs, deadlineMs: o.timeoutMs ?? null, retryTimeouts: ctx.last !== false, label: o.title ?? taskName(t),
       onQueue: ctx.onQueue, onStart: ctx.onStart, onPhase, onRetry: jobId ? ({ attempt, waitMs }) => jobUpdate(jobId, { step: `Nytt forsøk ${attempt + 1} om ${Math.round(waitMs / 1000)} s …`, attempts: attempt }) : null });
-    if (jobId) { const n = out.text.length; jobUpdate(jobId, { phase: { kind: 'answer', chars: n }, step: `Svarer · ${n} tegn` }); }
+    if (jobId) { const n = out.text.length; jobUpdate(jobId, { phase: { kind: 'answer', chars: n }, step: `Svarer · ${n} tegn`, backend: out.telemetry.backend, backendNote: out.telemetry.backendNote ?? null }); }
     return { text: out.text, tin: out.telemetry.tokIn, tout: out.telemetry.tokOut, telemetry: out.telemetry };
   } catch (e) {
     if (e?.status === 404) invalidateInventory();
@@ -770,6 +793,7 @@ export async function run(task, o = {}) {
   const jobId = jobStart({ user, task: tid, kind: o.kind ?? 'ai', title: o.title ?? taskName(tid), model: first?.id ?? null, provider: first?.provider ?? null, ref: o.ref ?? null, ctrl,
     retry: o.noRetry ? null : () => run(task, { ...o, noRetry: true }).catch((e) => ({ jobId: e.jobId })) });
   { const l = live.get(jobId); if (l) l.gate = true; } // prompt 43: gaten har egne tidsgrenser, vakthunden lar jobben være
+  if (o.tools || o.web) jobUpdate(jobId, { ...(o.tools ? { tools: o.tools } : {}), ...(o.web ? { web: o.web } : {}) }); // prompt 44: rutingsvalg og nettsøk
   let t0 = Date.now();
   const errors = [];
   if (!res.list.length) {
@@ -785,7 +809,7 @@ export async function run(task, o = {}) {
   const r = routing(user);
   const phased = !!o.phased;
   let memSkip = null, lastTele = null;
-  const timing = (tl) => (tl ? { queueMs: tl.queueMs, loadMs: tl.loadMs, genMs: tl.genMs, attempts: tl.attempts } : {});
+  const timing = (tl) => (tl ? { queueMs: tl.queueMs, loadMs: tl.loadMs, genMs: tl.genMs, attempts: tl.attempts, ...(tl.backend ? { backend: tl.backend, backendNote: tl.backendNote ?? null } : {}) } : {});
   try {
     for (let i = 0; i < res.list.length; i++) {
       const c = res.list[i], last = i === res.list.length - 1;
@@ -958,6 +982,8 @@ const selftestTitle = (t) => `Selvtest · ${t.name}`;
 export async function ollamaHealth() {
   if (MOCK()) return { ok: true, url: 'mock', mock: true };
   const url = ollamaBase();
+  // Prompt 44: bare Open WebUI (ingen Ollama-adresse): helsesjekken er Open WebUI /api/models.
+  if (!url && owuiConf()) { const t = await testOpenWebuiModels({ fetch: F }); invalidateInventory(); return t.ok ? { ok: true, url: owuiConf().url, via: 'openwebui', models: t.models.length } : { ok: false, url: owuiConf().url, error: `Får ikke kontakt med Open WebUI: ${t.error}` }; }
   if (!url) return { ok: false, url: null, error: 'Ollama-adressen er ikke satt (AI → API og nøkler)' };
   let version = null;
   try { const r = await F(`${url}/api/version`, { signal: AbortSignal.timeout(4000) }); if (r.ok) version = (await r.json().catch(() => ({}))).version ?? null; else throw new Error(`HTTP ${r.status}`); }

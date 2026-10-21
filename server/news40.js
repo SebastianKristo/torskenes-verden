@@ -102,7 +102,7 @@ export async function newsGlimt40(user, sel = {}, { now = Date.now() } = {}) {
     try {
       const j = llmImpl ? await llmImpl(prompt, items) : process.env.MOCK_DATA === '1' && !process.env.OLLAMA_URL ? null
         // Prompt 43: samme utvalg samtidig (to faner, widget + app) gir ett kall til Ollama.
-        : await (await import('./ollama-gate.js')).once(`news40|${key}`, async () => (await (await import('./ai-run.js')).run('brief', { user, prompt, json: true, temperature: 0.2, numPredict: o.length === 'lang' ? 1400 : 700, title: 'Glimt · nyhetssammendrag', phased: true, background: true })).data);
+        : await (await import('./ai-gate.js')).once(`news40|${key}`, async () => (await (await import('./ai-run.js')).run('brief', { user, prompt, json: true, temperature: 0.2, numPredict: o.length === 'lang' ? 1400 : 700, title: 'Glimt · nyhetssammendrag', phased: true, background: true })).data);
       d = fromAi40(j, items.length);
       if (d) engine = 'glimt';
     } catch { d = null; }

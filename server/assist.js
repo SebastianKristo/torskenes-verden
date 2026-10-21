@@ -77,7 +77,10 @@ import { fagAnswer, rememberCtx } from './glimt39-fag.js'; // prompt 39: oppføl
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { extractPlace, placeWeather, PlaceNotFound } from './weather35.js'; // prompt 35: været for et sted
 import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from './ai-run.js';
-import { once } from './ollama-gate.js'; // prompt 43: single-flight
+import { once } from './ai-gate.js'; // prompt 43: single-flight
+import { routeTools, osloNowLine } from './tool-router44.js'; // prompt 44: ruting før modellen (Glimt-søk på Hjem)
+import { webSearch, webPrompt, webMeta, webFact, PROVIDER_NAME } from './web-search.js'; // prompt 44: eget nettsøk
+import { powerFact } from './power-price.js'; // prompt 44: strømpris
 import { isSunQuestion, daylight } from './sun36.js'; // prompt 36: dagslys lokalt
 import { whereIntent, whereAnswer } from './where37.js'; // prompt 37: «hvor er Ingrid?»
 import { parseIntent37, schoolTestAnswer } from './kal37.js'; // prompt 37: skoleprøve ≠ prøveperiode
@@ -486,13 +489,17 @@ async function toolMemory(user, text, ctx) {
 export function localSystem(user) {
   let a = '';
   try { a = aliasPrompt(aliasesOf(user)); } catch { /* */ }
-  return a ? `${SYSTEM}\n${a}` : SYSTEM;
+  const base = `${SYSTEM}\n${osloNowLine()}.`; // prompt 44: dato og klokkeslett i Oslo
+  return a ? `${base}\n${a}` : base;
 }
+const cloudSystem = () => `${SYSTEM}\n${osloNowLine()}.`;
 const short = (t) => { const s = String(t).replace(/\s+/g, ' ').trim(); const parts = s.match(/[^.!?]+[.!?]+/g); return (parts && parts.length > 2 ? parts.slice(0, 2).join('') : s).slice(0, 600).trim(); };
 const withTimeout = (p, ms = LLM_MS) => Promise.race([p, new Promise((_, rej) => { const t = setTimeout(() => rej(Object.assign(new Error('Svarte ikke i tide'), { timeout: true })), ms); t.unref?.(); })]);
 
-async function toolLlm(user, text) {
+async function toolLlm(user, text, web = null) {
   if (llmImpl) return toolLlmTest(user, text);
+  // Prompt 44: med søketreff svarer modellen ut fra treffene (num_ctx 8192); uten modell (MOCK) svarer vi med første treff.
+  if (web?.hits?.length && MOCK && !process.env.OLLAMA_URL) { const f = webFact(web); return { text: f.text, source: `Nettsøk · ${f.source}`, engine: 'mock', model: 'Glimt · lokal' }; }
   if (MOCK && !process.env.OLLAMA_URL) return { text: `Dette er et eksempelsvar fra **Glimt** på «${text.slice(0, 80)}». Med Ollama svarer den lokale modellen her.`, source: 'Glimt', engine: 'mock', model: 'Glimt · lokal' };
   // Prompt 34: alt går gjennom ai.run('sok') – ruting, validering mot /api/tags, 20 s → reserve, jobblogg. Feil vises i svaret.
   const route = aiRouting(user).tasks.sok;
@@ -500,11 +507,13 @@ async function toolLlm(user, text) {
   const localOnly = hasUserData(text) || (!assistSettings(user).cloud && !explicitCloud);
   try {
     // Prompt 43: samme spørsmål fra samme bruker samtidig (dobbeltklikk, app + widget) gir ett kall.
-    const out = await once(`assist|${user}|${localOnly ? 1 : 0}|${text}`, () => aiRun('sok', { user, prompt: text, system: (p) => (p === 'ollama' ? localSystem(user) : SYSTEM), numPredict: 160, temperature: 0.3, localOnly, title: `AI-søk · «${text.slice(0, 60)}»` }));
+    const wp = web?.hits?.length ? `\n\n${webPrompt(web)}` : '';
+    const out = await once(`assist|${user}|${localOnly ? 1 : 0}|${text}|${web?.hits?.length ?? 0}`, () => aiRun('sok', { user, prompt: text, system: (p) => (p === 'ollama' ? localSystem(user) : cloudSystem()) + wp, numPredict: 160, temperature: 0.3, localOnly,
+      title: `AI-søk · «${text.slice(0, 60)}»`, ...(wp ? { numCtx: 8192, tools: ['web'], web: { query: web.query, hits: web.hits.length, provider: web.provider } } : {}) }));
     const t = short(out.text);
     if (out.provider !== 'ollama') { try { const { audit } = await import('./finans/ai-audit.js'); audit(out.provider, 'assist', { spørsmål: text }, user); } catch { /* logg er best effort */ } }
     const cloud = out.provider !== 'ollama';
-    return { text: t, source: cloud ? `Glimt · ${providerLabel(out.provider)}` : 'Glimt', engine: out.provider, model: cloud ? `Glimt · ${providerLabel(out.provider)} (sky)` : 'Glimt · lokal', modelId: out.model,
+    return { text: t, source: web?.hits?.length ? `Nettsøk · ${web.hits[0].source || PROVIDER_NAME[web.provider]}` : cloud ? `Glimt · ${providerLabel(out.provider)}` : 'Glimt', engine: out.provider, model: cloud ? `Glimt · ${providerLabel(out.provider)} (sky)` : 'Glimt · lokal', modelId: out.model,
       ...(out.warnings.length ? { warning: out.warnings.join(' · ') } : {}), ...(out.notice ? { notice: out.notice } : {}), aiJobId: out.jobId };
   } catch (e) {
     const msg = e instanceof AiRunError ? e.message : `Glimt fikk ikke svar: ${String(e?.message ?? e).slice(0, 200)}`;
@@ -572,7 +581,7 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
                   : intent === 'trial.create' ? toolTrial(user, text, today)
                     : intent === 'appointment.create' ? toolAppointment(user, text, today)
                       : intent === 'memory.add' ? await toolMemory(user, text, ctx)
-                        : await toolLlm(user, withDateContext(text, today));
+                        : await routedLlm(user, text, today);
   } catch (e) {
     console.warn('[glimt]', intent, e?.message ?? e);
     r = { text: `Fikk ikke hentet ${TOOL_OF[intent]?.toLowerCase() ?? 'svaret'} akkurat nå. **Prøv igjen** om litt.`, source: 'Glimt', tool: TOOL_OF[intent], error: String(e?.message ?? e).slice(0, 200) };
@@ -582,11 +591,29 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   const kc = classifyLocal(text, intent);
   const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, kind: kc.kind, surface: kc.kind === 'action' ? 'pill' : 'inline', ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
     model: r.model ?? 'Glimt · verktøy', engine: r.engine ?? (intent === 'llm' ? 'none' : 'tool') };
-  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound', 'person', 'events', 'subjects', 'huske', 'week', 'noAi', 'steps41']) if (r[k] !== undefined) out[k] = r[k];
+  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound', 'person', 'events', 'subjects', 'huske', 'week', 'noAi', 'steps41',
+    'web', 'facts', 'used', 'routeTools']) if (r[k] !== undefined) out[k] = r[k]; // prompt 44: web, facts, used, routeTools
   if (r.intent && r.intent !== intent) out.intent = r.intent; // prompt 41: weather.week
   if (r.nav) { out.target = r.nav.target; out.nav = r.nav; }
   out.chatContext = { q: text, intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: r.text, ...(r.card ? { card: r.card } : {}), ...(r.tool ? { tool: r.tool } : {}) }] };
   return out;
+}
+
+/**
+ * Prompt 44: fritekst (intent llm) går gjennom rutingen først. power → strømprisen direkte (verktøy, ingen modell);
+ * web → eget nettsøk, og modellen svarer ut fra treffene. «Nettsøk» og meta.web bare når søket ga treff.
+ */
+async function routedLlm(user, text, today) {
+  // Bare den lokale regelen her: Glimt-søket skal svare raskt (1,2 s før 202), og hovedmodellen kalles uansett etterpå.
+  const route = await routeTools(text, { user, useLlm: false, localOnly: true }).catch(() => ({ tools: ['none'], query: '' }));
+  if (route.tools.includes('power')) {
+    const f = await powerFact(text);
+    if (!f.error) return { text: f.text.replace(/: snitt ([\d,]+ øre\/kWh)/, ': snitt **$1**'), source: `Strømpris · ${f.source}`, tool: 'Strømpris', engine: 'tool', facts: [f], routeTools: route.tools };
+  }
+  let web = null;
+  if (route.tools.includes('web')) { try { web = await webSearch(route.query || text); } catch { web = null; } }
+  const r = await toolLlm(user, withDateContext(text, today), web);
+  return { ...r, routeTools: route.tools, ...(web?.hits?.length ? { web: webMeta(web), facts: [webFact(web)], used: ['Nettsøk'] } : {}) };
 }
 
 /** Prompt 41: huskebeskjed fra søkefeltet → samme bakgrunnsjobb som Huskeliste (POST /api/tasks/glimt async), origin home_search. */

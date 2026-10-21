@@ -15,7 +15,7 @@ export const SIM_MODELS = {
 
 export function createOllamaSim({ base = 'http://ollama.sim:11434', models = SIM_MODELS, scale = 0.01, gpuGb = 11.8, tokenMs = 4, thinkTokens = 40 } = {}) {
   const sim = {
-    base, models, scale, tokenMs, thinkTokens,
+    base, models, scale, tokenMs, thinkTokens, answer: null,
     loaded: new Map(), // modell → {expiresAt}
     active: new Map(), // modell → antall strømmer som pågår
     log: [], // {path, model, body, at, end, aborted, error}
@@ -94,7 +94,9 @@ export function createOllamaSim({ base = 'http://ollama.sim:11434', models = SIM
       const budget = body.options?.num_predict ?? 64;
       const thinks = m.thinks && body.think !== false;
       const think = thinks ? sim.thinkTokens : 0;
-      const text = body.format ? '{"ok":true}' : /Svar bare: ok/.test(JSON.stringify(body.messages ?? body.prompt ?? '')) ? 'ok' : `Svar fra ${model} med noen ord.`;
+      // Prompt 44: sim.answer(body, path) kan gi et eget svar (f.eks. ut fra søkeresultatene i systemprompten).
+      const custom = typeof sim.answer === 'function' ? sim.answer(body, path) : null;
+      const text = custom ?? (body.format ? '{"ok":true}' : /Svar bare: ok/.test(JSON.stringify(body.messages ?? body.prompt ?? '')) ? 'ok' : `Svar fra ${model} med noen ord.`);
       const parts = loadOnly ? [] : (text.match(/.{1,3}/g) ?? ['ok']);
       entry.think = thinks;
       const stream = new ReadableStream({

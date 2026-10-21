@@ -155,6 +155,14 @@ export const SCHEMA = [
     ['openwebui_url', 'Adresse', e('OPENWEBUI_URL')],
     ['openwebui_key', 'API-nøkkel', e('OPENWEBUI_KEY'), true],
   ]],
+  // Prompt 44: hvilken backend AI-kallene bruker (tom = Open WebUI når adresse og nøkkel er satt, ellers Ollama) og Glimts eget nettsøk.
+  ['AI-backend og nettsøk', { id: 'aibackend', domain: 'openwebui.com', category: 'AI', help: 'Backend for AI-kallene (Open WebUI eller Ollama direkte) og kildene for Glimts nettsøk: Open WebUI, SearXNG, Brave Search og DuckDuckGo, i rekkefølgen under.' }, [
+    ['ai_backend', 'Backend (openwebui eller ollama, tom = automatisk)', e('AI_BACKEND')],
+    ['web_order', 'Rekkefølge for nettsøk', e('WEB_SEARCH_ORDER', 'openwebui,searxng,brave,ddg')],
+    ['searxng_url', 'SearXNG-adresse', e('SEARXNG_URL')],
+    ['brave_key', 'Brave Search API-nøkkel', e('BRAVE_API_KEY'), true],
+    ['web_ddg', 'DuckDuckGo som reserve (uten nøkkel)', '1', false, 'bool'],
+  ]],
   // Prompt 27: personlige valg for Chat og for logo-oppslag (Innstillinger → AI og tolkning → CHAT / PERSONVERN OG LOGOER).
   ['Chat', { id: 'chat', scope: 'personal', domain: 'openwebui.com', category: 'AI', help: 'Dine valg for Chat. «Mine data» gir modellen et kort sammendrag fra Finans, Kalender og Huskeliste.' }, [
     ['chat_my_data', 'Chat kan lese mine data', '1', false, 'bool'], // prompt 41: på som standard (av med vilje beholdes)
@@ -347,6 +355,8 @@ const VALID = {
   googleClientId: (v) => /^[\w.-]{8,200}$/.test(v),
   chat_theme: (v) => /^(papir|noytral|nøytral)$/i.test(v),
   chat_default_model: (v) => /^[\w.:\/@+-]{1,120}$/.test(v),
+  ai_backend: (v) => /^(openwebui|ollama|auto)$/i.test(v), // prompt 44
+  web_order: (v) => String(v).split(',').map((x) => x.trim()).filter(Boolean).every((x) => /^(openwebui|searxng|brave|ddg)$/.test(x)),
 };
 // Prompt 27: av/på-felt (type 'bool') godtar 1/0, true/false, on/off og lagres som '1' eller '0'.
 for (const f of FIELDS.values()) if (f.type === 'bool') VALID[f.key] = (v) => /^(0|1|true|false|on|off|ja|nei|yes|no)$/i.test(v);

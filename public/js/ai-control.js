@@ -13,6 +13,8 @@
 //   GET  /api/ai/usage?days=       → {totals, byDay, byProvider, byTask, budget}
 //   PUT  /api/ai/keys/:provider, POST /api/ai/keys/:provider/test, GET/POST/DELETE /api/ai/tokens
 //   POST /api/ai/selftest          → SSE per rute {task, model, ok, ms, error, fix}
+//   Prompt 44: GET/PUT /api/ai/backend (Open WebUI / Ollama, adresser, nettsøkkilder; nøkler bare som satt/ikke satt),
+//              POST /api/ai/backend/test {which}, DELETE /api/ai/backend/think-leak, POST /api/ai/websearch/test {q}
 // Nøkler, modeller og serverstandarden kan bare endres av admin; alle ser status, jobber og forbruk og kan velge egne
 // modeller for Chat, AI-søk, Glimt og brief.
 
@@ -266,6 +268,82 @@ async function modelAct(id, act) {
     vibe();
   } catch (e) { toast(e.message); }
   loadModels(); if (act === 'del') { loadRouting(); loadStatus(); }
+}
+
+/* ---------------- Prompt 44: backend (Open WebUI / Ollama) og nettsøk ---------------- */
+
+const loadBackend = () => get('backend', '/backend');
+async function saveBackend(patch, msg = 'Lagret') {
+  try { const d = await call('/backend', { method: 'PUT', json: patch }); G.backend = d; toast(msg); vibe(); loadStatus(true); }
+  catch (e) { toast(`Kunne ikke lagre: ${e.message}`); }
+  redraw();
+}
+async function testBackend(which) {
+  G.btest = { ...(G.btest ?? {}), [which]: { busy: true } }; vibe(); redraw();
+  try {
+    const d = await call('/backend/test', { method: 'POST', json: { which } });
+    G.btest[which] = d.ok ? { ok: `Svarer · ${ms2(d.ms ?? 0)}${d.version ? ` · versjon ${d.version}` : ''} · ${(d.models ?? []).length} modeller` } : { err: d.error || 'Svarte ikke' };
+  } catch (e) { G.btest[which] = { err: e.message }; }
+  redraw();
+}
+async function testWeb(q) {
+  q = String(q ?? '').trim();
+  if (!q) return;
+  G.wtest = { busy: true, q }; vibe(); redraw();
+  try { G.wtest = { q, r: await call('/websearch/test', { method: 'POST', json: { q } }) }; } catch (e) { G.wtest = { q, err: e.message }; }
+  redraw();
+}
+const BE_SEG = [['auto', 'Automatisk'], ['openwebui', 'Open WebUI'], ['ollama', 'Ollama']];
+const beSeg = (B, admin) => `<div class="ac-seg">${BE_SEG.map(([v, l]) => `<button type="button" class="${B.mode === v ? 'on' : ''}" data-ac-bemode="${v}"${admin ? '' : ' disabled'}>${l}</button>`).join('')}</div>`;
+const beName = (k) => (k === 'openwebui' ? 'Open WebUI' : 'Ollama direkte');
+/** Valg: hvilken backend AI-kallene bruker (kort). */
+function beMini(admin) {
+  const B = G.backend;
+  if (!B) return '';
+  return `<div class="ac-sec">${lab('BACKEND')}<div class="ac-card ac-list"><div class="ac-par" style="border-top:0"><span class="ac-row ac-sb"><span class="ac-col"><b>Hvor AI-kallene går</b><span>Automatisk = Open WebUI når adresse og nøkkel er satt, ellers Ollama direkte</span></span><b class="ac-mono">${esc(beName(B.effective))}</b></span>${beSeg(B, admin)}${B.note ? `<span class="ac-warn">${esc(B.note)}</span>` : ''}</div></div></div>`;
+}
+const fld44 = (attr, key, label, val, ph, admin, type = 'text') => `<label class="ac-fld"><span>${label}</span><span class="ac-in"><input type="${type}" ${attr}="${key}" value="${esc(val ?? '')}" placeholder="${esc(ph)}" autocomplete="off" spellcheck="false"${admin ? '' : ' disabled'}></span></label>`;
+/** API og nøkler: backend-valg, status med Test (ms), adressene, Open WebUI-nøkkel (bare satt/ikke satt + Endre). */
+function backendCard(admin) {
+  if (G.missing.backend) return '';
+  const B = G.backend;
+  if (!B) return `<div class="ac-card"><span class="ac-mut">${G.err.backend ? esc(G.err.backend) : 'Laster backend …'}</span></div>`;
+  const st = (k) => { const t = G.btest?.[k]; return t?.busy ? ['Tester …', 'var(--mut)'] : t?.ok ? [t.ok, 'var(--ok)'] : t?.err ? [t.err, 'var(--bad)'] : ['Ikke testet ennå', 'var(--mut)']; };
+  const row = (k, name, sub, fields) => { const [s2, c] = st(k); return `<div class="ac-be44"><div class="ac-row"><span class="ac-col ac-grow"><b>${name}${B.effective === k ? ' <i class="ac-tag44">I BRUK</i>' : ''}</b><span class="ac-mut">${sub}</span><span class="ac-stl" style="color:${c}"><i style="background:${c}"></i>${esc(s2)}</span></span>${btn(G.btest?.[k]?.busy ? 'Tester …' : 'Test', `data-ac-betest="${k}"`)}</div>${fields}</div>`; };
+  const keyF = G.eye.owuiKey ? fld44('data-ac-be', 'openwebuiKey', 'Ny API-nøkkel', '', 'sk-…', admin, 'password')
+    : `<div class="ac-row ac-sb ac-keyrow"><span class="ac-mut">API-nøkkel: <b>${B.openwebui.configured ? 'satt' : 'ikke satt'}</b></span>${admin ? btn('Endre', 'data-ac-bekey') : ''}</div>`;
+  const leaks = (B.thinkLeaks ?? []).length ? `<div class="ac-note">Open WebUI slo ikke av tenking for ${B.thinkLeaks.map((x) => `<b class="ac-mono">${esc(x.model)}</b>`).join(', ')}, så jobber med ${B.thinkLeaks.length === 1 ? 'den' : 'dem'} går direkte til Ollama. ${admin ? btn('Prøv Open WebUI igjen', 'data-ac-beleak') : ''}</div>` : '';
+  return `<div class="ac-sec">${lab('AI-BACKEND')}<div class="ac-card ac-gap">
+    <span class="ac-col"><b class="ac-h3">Hvor AI-kallene går</b><span class="ac-mut">Automatisk = Open WebUI når adresse og nøkkel er satt, ellers Ollama direkte. Embeddings og innlasting går alltid direkte til Ollama. Køen er felles.</span></span>
+    ${beSeg(B, admin)}${B.note ? `<span class="ac-warn">${esc(B.note)}</span>` : ''}
+    ${row('openwebui', 'Open WebUI', 'Test: /api/models med nøkkelen', fld44('data-ac-be', 'openwebuiUrl', 'Adresse', B.openwebui.url, 'http://192.168.1.30:8080', admin, 'url') + keyF)}
+    ${row('ollama', 'Ollama', 'Test: /api/version og /api/tags', fld44('data-ac-be', 'ollamaUrl', 'Adresse', B.ollama.url, 'http://192.168.1.30:11434', admin, 'url'))}
+    ${leaks}</div></div>`;
+}
+/** API og nøkler: nettsøkkildene (rekkefølge, SearXNG, Brave, DuckDuckGo) og «Test nettsøk». */
+function webCard(admin) {
+  const B = G.backend;
+  if (!B?.web) return '';
+  const W = B.web, names = Object.fromEntries((B.webProviders ?? []).map((x) => [x.id, x.name]));
+  const status = { openwebui: W.openwebui.configured ? 'Open WebUIs eget søk · satt opp' : 'ikke satt opp', searxng: W.searxng.url ? W.searxng.url.replace(/^https?:\/\//, '') : 'ingen adresse', brave: W.brave.configured ? 'nøkkel satt' : 'ingen nøkkel', ddg: W.ddg.on ? 'på · uten nøkkel, maks ett søk per 2 s' : 'av' };
+  const order = W.order.map((id, i) => `<div class="ac-row ac-ord44"><span class="ac-mono ac-mut">${i + 1}</span><span class="ac-col ac-grow"><b>${esc(names[id] ?? id)}</b><span class="ac-mut">${esc(status[id] ?? '')}</span></span>`
+    + `${id === 'ddg' ? `<button type="button" class="ac-swb" data-ac-wddg role="switch" aria-checked="${W.ddg.on}" aria-label="DuckDuckGo på/av"${admin ? '' : ' disabled'}>${sw(W.ddg.on)}</button>` : ''}`
+    + `${admin ? `<button type="button" class="ac-tx" data-ac-word="${id}" data-d="-1"${i ? '' : ' disabled'} aria-label="Flytt opp">↑</button><button type="button" class="ac-tx" data-ac-word="${id}" data-d="1"${i === W.order.length - 1 ? ' disabled' : ''} aria-label="Flytt ned">↓</button>` : ''}</div>`).join('');
+  const T = G.wtest;
+  const tried = (r) => (r.tried ?? []).map((t) => `${names[t.provider] ?? t.provider}: ${t.skip ?? t.error ?? (t.ok ? `${t.n} treff` : '0 treff')}`).join(' · ');
+  const res = !T ? '' : T.busy ? '<span class="ac-mut">Søker …</span>' : T.err ? `<span class="ac-warn">${esc(T.err)}</span>`
+    : T.r.hits.length ? `<span class="ac-mut">${T.r.hits.length} treff fra <b>${esc(T.r.providerName ?? T.r.provider)}</b> · ${ms2(T.r.ms ?? 0)}${T.r.cached ? ' · fra mellomlageret' : ''}</span>`
+      + T.r.hits.map((h, i) => `<div class="ac-hit44"><b>[${i + 1}] ${esc(h.title)}</b><span class="ac-mut">${esc([h.source, h.published].filter(Boolean).join(' · '))}</span><span>${esc(h.snippet)}</span>${h.url ? `<a href="${esc(h.url)}" target="_blank" rel="noopener">${esc(h.url)}</a>` : ''}</div>`).join('')
+      : `<span class="ac-warn">Ingen treff · ${esc(tried(T.r))}</span>`;
+  const braveF = G.eye.braveKey ? fld44('data-ac-wset', 'braveKey', 'Ny Brave Search API-nøkkel', '', 'BSA…', admin, 'password')
+    : `<div class="ac-row ac-sb ac-keyrow"><span class="ac-mut">Brave Search API-nøkkel: <b>${W.brave.configured ? 'satt' : 'ikke satt'}</b></span>${admin ? btn('Endre', 'data-ac-bravekey') : ''}</div>`;
+  return `<div class="ac-sec">${lab('NETTSØK I GLIMT')}<div class="ac-card ac-gap">
+    <span class="ac-mut">Kildene prøves i rekkefølge; feiler eller er en tom, prøves neste. 3–5 treff, mellomlagret i 10 min. «Nettsøk» vises bare når søket ga treff.</span>
+    <div class="ac-list ac-ords44">${order}</div>
+    ${fld44('data-ac-wset', 'searxngUrl', 'SearXNG-adresse', W.searxng.url, 'http://192.168.1.30:8888', admin, 'url')}
+    ${braveF}
+    <form class="ac-row ac-wt44" data-ac-wtestf><span class="ac-in ac-grow"><input type="search" data-ac-wtq value="${esc(T?.q ?? '')}" placeholder="Test nettsøk, f.eks. hvem er statsminister i England" autocomplete="off"></span>${btn(T?.busy ? 'Søker …' : 'Test nettsøk', 'data-ac-wtest', 'ink')}</form>
+    ${res}</div></div>`;
 }
 
 async function testKey(p) {
@@ -564,7 +642,7 @@ function rtTab(o) {
       ['loadTimeout', 'Tid til første token · kald modell', 'Når modellen må lastes fra disk (ekstern disk: 2–40 s)', LOADT], ['firstTokenTimeout', 'Tid til første token · lastet modell', 'Når modellen allerede er i minnet', FIRSTT],
       ['idleTimeout', 'Tid uten nye tokens · tekst', 'Stopper bare når svaret står stille, ikke mens det skrives', IDLET], ['idleTimeoutImage', 'Tid uten nye tokens · bilde', 'Bilder (kvitteringer, strekkoder) trenger mer tid', IDLEI]])
     .map(([k, n, s, opts]) => { const cur = opts.find((x) => String(x[0]) === String(P[k])); return `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>${n}</b><span>${s}</span></span><b class="ac-mono">${esc(cur?.[1] ?? P[k] ?? '–')}</b></span><div class="ac-seg">${opts.map(([v, l]) => `<button type="button" class="${String(P[k]) === String(v) ? 'on' : ''}" data-ac-par="${k}" data-v="${esc(JSON.stringify(v))}"${admin || k === 'temperature' ? '' : ' disabled'}>${l}</button>`).join('')}</div></div>`; }).join('');
-  return `${fin ? '' : glCard()}<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
+  return `${fin ? '' : glCard() + beMini(admin)}<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
     <div class="ac-sec">${lab('REGLER')}<div class="ac-card ac-list">${rules}</div></div>
     <div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>
     ${fin ? '' : mkaCard(P, admin)}`;
@@ -658,7 +736,10 @@ function jobTab(o) {
     const tokn = (j.tokens?.in ?? 0) + (j.tokens?.out ?? 0), ph = r ? phaseText(j) : '';
     // Prompt 43: køtid, lastetid og genereringstid fra Ollama-gaten, og antall forsøk.
     const T = j.timing ?? {}, tim = !r && !qq ? [T.queueMs > 500 ? `kø ${ms2(T.queueMs)}` : '', T.loadMs > 200 ? `lastet ${ms2(T.loadMs)}` : '', T.genMs ? `generert ${ms2(T.genMs)}` : '', j.attempts > 1 ? `${j.attempts} forsøk` : ''] : [];
-    const s = [j.model, r ? (ph || `${Math.floor(j.progress ?? 0)} %${j.step ? ` · ${j.step}` : ''}`) : '', qq ? (j.when ? j.when : j.step || 'venter') : '', j.ms != null && !r ? ms2(j.ms) : '', ...tim, tokn ? `${nb(tokn)} tok` : '', j.costKr ? krs(j.costKr) : '', j.fallbackFrom ? `reserve for ${j.fallbackFrom}` : '', bad || skip ? shortReason(j) : ''].filter(Boolean).join(' · ');
+    // Prompt 44: backend ved siden av modellen, rutingsvalget og nettsøket.
+    const be = j.backend ? (j.backendNote ? `${j.backendNote}` : j.backend === 'openwebui' ? 'via Open WebUI' : j.backend === 'ollama' ? 'Ollama direkte' : j.backend) : '';
+    const tl = (j.tools ?? []).filter((x) => x !== 'none'), wq = j.web ? `søk «${j.web.query}» · ${j.web.hits ? `${j.web.hits} treff${j.web.provider ? ` (${j.web.provider === 'openwebui' ? 'Open WebUI' : j.web.provider === 'ddg' ? 'DuckDuckGo' : j.web.provider === 'brave' ? 'Brave' : j.web.provider === 'searxng' ? 'SearXNG' : j.web.provider})` : ''}` : 'ingen treff'}` : '';
+    const s = [j.model, be, tl.length ? `verktøy: ${tl.join(', ')}` : '', wq, r ? (ph || `${Math.floor(j.progress ?? 0)} %${j.step ? ` · ${j.step}` : ''}`) : '', qq ? (j.when ? j.when : j.step || 'venter') : '', j.ms != null && !r ? ms2(j.ms) : '', ...tim, tokn ? `${nb(tokn)} tok` : '', j.costKr ? krs(j.costKr) : '', j.fallbackFrom ? `reserve for ${j.fallbackFrom}` : '', bad || skip ? shortReason(j) : ''].filter(Boolean).join(' · ');
     const act = r || qq ? btn('Avbryt', `data-ac-jcancel="${esc(j.id)}"`, 'red') : bad && j.retryable !== false ? btn('Prøv igjen', `data-ac-jretry="${esc(j.id)}"`) : '';
     const full = (bad || skip) && j.error && j.error !== shortReason(j) ? `<details class="ac-jdet"><summary>Detaljer</summary><span>${esc(j.error)}</span></details>` : '';
     const pct = r && j.phase?.kind === 'load' && j.phase.totalGb ? Math.round(((j.phase.loadedGb ?? 0) / j.phase.totalGb) * 100) : j.progress ?? 0;
@@ -723,7 +804,7 @@ function apiTab(o) {
   const toks = fin ? '' : `<div class="ac-card ac-gap"><span class="ac-row ac-sb"><span class="ac-col"><b class="ac-h3">Glimt-API for egne skript</b><span class="ac-mono ac-mut">POST ${esc(location.origin)}/api/glimt</span></span>${btn('+ Ny nøkkel', 'data-ac-newtok', 'ink')}</span>
     ${G.fresh ? `<div class="ac-fresh"><span>Kopier nå. Nøkkelen vises bare én gang.</span><b class="ac-mono">${esc(G.fresh)}</b></div>` : ''}
     ${G.missing.tokens ? '<span class="ac-mut">Serveren har ikke personlige Glimt-nøkler ennå.</span>' : (G.tokens ?? []).map((t) => `<div class="ac-tok"><span class="ac-col ac-grow"><b>${esc(t.name ?? 'Nøkkel')}</b><span class="ac-mono ac-mut">hl_••••${esc(t.tail ?? t.last4 ?? '')} · opprettet ${esc(t.createdAt ?? t.created ? new Date(t.createdAt ?? t.created).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }) : '–')} · ${t.lastUsed ? `brukt ${ago(t.lastUsed)}` : 'aldri brukt'}</span></span><button type="button" class="ac-tx red" data-ac-deltok="${esc(t.id)}">Trekk tilbake</button></div>`).join('') || '<span class="ac-mut">Ingen nøkler ennå.</span>'}</div>`;
-  return `${admin ? '' : '<div class="ac-note">Bare administrator kan endre adresser og nøkler. Du ser status og kan teste.</div>'}${cards}${toks}
+  return `${admin ? '' : '<div class="ac-note">Bare administrator kan endre adresser og nøkler. Du ser status og kan teste.</div>'}${fin ? '' : backendCard(admin) + webCard(admin)}${cards}${toks}
     <span class="ac-mut ac-small">Nøklene lagres kryptert på serveren og sendes aldri tilbake til nettleseren eller appen. Feltene viser bare de siste fire tegnene.</span>`;
 }
 
@@ -769,10 +850,10 @@ function enterTab(p) {
   const t = p.tab;
   if (t === 'ov') { loadStatus(); loadJobs(); loadUsage(); loadModels(); }
   if (t === 'mod') { loadModels(); loadRouting(); loadStatus(); loadRec(); if (G.libQ == null) loadLib(''); }
-  if (t === 'rt') { loadRouting(); loadModels(); loadStatus(); loadRec(); }
+  if (t === 'rt') { loadRouting(); loadModels(); loadStatus(); loadRec(); if (p.o.scope !== 'finans') loadBackend(); }
   if (t === 'job') { loadJobs(); loadRouting(); }
   if (t === 'use') { loadUsage(); loadRouting(); }
-  if (t === 'api') { loadStatus(); loadKeys(); if (p.o.scope !== 'finans') loadTokens(); }
+  if (t === 'api') { loadStatus(); loadKeys(); if (p.o.scope !== 'finans') { loadTokens(); loadBackend(); } }
 }
 
 let libT = 0;
@@ -815,16 +896,32 @@ function bind(el) {
     if (d.acGopen != null) { const g = G.gList?.[+d.acGopen]; if (g) { G.gOpen = { ...(G.gOpen ?? {}), [g.reason]: !G.gOpen?.[g.reason] }; vibe(); redraw(); } return; }
     if (d.acGretry != null) { const g = G.gList?.[+d.acGretry]; if (g) return retryJobs(g.ids, G.jobGroups?.length ? g.reason : undefined); return; }
     if (d.acTest) return testKey(d.acTest);
+    // Prompt 44: backend og nettsøk
+    if (d.acBemode) return saveBackend({ mode: d.acBemode }, `Backend: ${BE_SEG.find((x) => x[0] === d.acBemode)?.[1] ?? d.acBemode}`);
+    if (d.acBetest) return testBackend(d.acBetest);
+    if ('acBekey' in d) { G.eye.owuiKey = true; redraw(); el.querySelector('[data-ac-be="openwebuiKey"]')?.focus(); return; }
+    if ('acBravekey' in d) { G.eye.braveKey = true; redraw(); el.querySelector('[data-ac-wset="braveKey"]')?.focus(); return; }
+    if ('acBeleak' in d) { try { G.backend = await call('/backend/think-leak', { method: 'DELETE' }); toast('Prøver Open WebUI igjen'); vibe(); } catch (err) { toast(err.message); } redraw(); return; }
+    if (d.acWord) { const o2 = [...(G.backend?.web?.order ?? [])], i = o2.indexOf(d.acWord), k = i + +d.d; if (i < 0 || k < 0 || k >= o2.length) return; [o2[i], o2[k]] = [o2[k], o2[i]]; return saveBackend({ web: { order: o2 } }, 'Rekkefølgen er lagret'); }
+    if ('acWddg' in d) return saveBackend({ web: { ddg: !G.backend?.web?.ddg?.on } });
+    if ('acWtest' in d) return testWeb(el.querySelector('[data-ac-wtq]')?.value);
     if (d.acEye) { G.eye[d.acEye] = !G.eye[d.acEye]; redraw(); return; }
     if ('acNewtok' in d) { try { const r = await call('/tokens', { method: 'POST', json: { name: 'Ny nøkkel' } }); G.fresh = r.token ?? r.key ?? null; vibe(); } catch (err) { toast(err.message); } loadTokens(); return; }
     if (d.acDeltok) { if (!confirm('Trekke tilbake nøkkelen? Skript som bruker den slutter å virke.')) return; try { await call(`/tokens/${encodeURIComponent(d.acDeltok)}`, { method: 'DELETE' }); vibe(); } catch (err) { toast(err.message); } loadTokens(); }
   });
-  el.addEventListener('submit', (e) => { const f = e.target.closest?.('[data-ac-askf]'); if (!f) return; e.preventDefault(); recAsk(f.querySelector('[data-ac-ask]')?.value); });
+  el.addEventListener('submit', (e) => {
+    const w = e.target.closest?.('[data-ac-wtestf]'); // prompt 44: Test nettsøk
+    if (w) { e.preventDefault(); testWeb(w.querySelector('[data-ac-wtq]')?.value); return; }
+    const f = e.target.closest?.('[data-ac-askf]'); if (!f) return; e.preventDefault(); recAsk(f.querySelector('[data-ac-ask]')?.value);
+  });
   el.addEventListener('change', (e) => {
     const t = e.target;
     if (t.matches('[data-ac-rt]')) { vibe(); return saveRouting({ tasks: { [t.dataset.acRt]: { [t.dataset.f]: t.value } } }).then(() => { G.at.finRouting = 0; get('finRouting', '/routing?scope=finans', normRouting); }); }
     if (t.matches('[data-ac-bud]')) return saveRouting({ budget: { monthlyKr: +t.value } });
     if (t.matches('[data-ac-key]')) return saveKey(t.dataset.acKey, t.dataset.f, t.value);
+    // Prompt 44: adresser og nøkler for backend og nettsøk (tomt nøkkelfelt = behold)
+    if (t.matches('[data-ac-be]')) { const k = t.dataset.acBe, v = t.value.trim(); if (k === 'openwebuiKey') { if (!v) return; G.eye.owuiKey = false; } return saveBackend({ [k]: v }); }
+    if (t.matches('[data-ac-wset]')) { const k = t.dataset.acWset, v = t.value.trim(); if (k === 'braveKey') { if (!v) return; G.eye.braveKey = false; } return saveBackend({ web: { [k]: v } }); }
   });
   el.addEventListener('input', (e) => {
     const t = e.target;
@@ -838,7 +935,7 @@ function bind(el) {
       const q = t.value.trim().toLowerCase(), L = (G.lib ?? LIB0).filter((l) => l.id.includes(q));
       if (L.length === 1) pull(L[0].id); else if (/^[a-z0-9._/-]+(:[a-z0-9._-]+)?$/i.test(q)) pull(q);
     }
-    if (t.matches?.('[data-ac-key]') && e.key === 'Enter') { e.preventDefault(); t.blur(); }
+    if (t.matches?.('[data-ac-key],[data-ac-be],[data-ac-wset]') && e.key === 'Enter') { e.preventDefault(); t.blur(); }
   });
 }
 

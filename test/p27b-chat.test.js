@@ -275,7 +275,8 @@ test('med Open WebUI: modeller, strøm og tale går via proxyen; nede → Ollama
   assert.equal(evs.filter((e) => e.event === 'delta').map((e) => e.data.text).join(''), 'Svar fra Open WebUI.');
   const done = evs.find((e) => e.event === 'done').data;
   assert.equal(done.tokensPerSec, 42.5);
-  assert.ok(done.used.includes('Nettsøk'));
+  // Prompt 44: «Nettsøk» i used bare når søket faktisk ga treff (her: ingen treff, ingen kilder fra Open WebUI).
+  assert.ok(!done.used.includes('Nettsøk'));
   const c = calls.find((x) => x.url === 'http://owui.test/api/chat/completions');
   assert.equal(c.headers.Authorization, 'Bearer sk-owui');
   assert.equal(c.body.stream, true);

@@ -220,3 +220,16 @@
 .ac-logo b{font:800 15px Manrope,sans-serif}
 .ac-logo.sm{width:24px;height:24px;border-radius:7px}
 .ac-logo.sm svg{width:16px;height:16px}
+/* Prompt 44: AI-backend (Open WebUI / Ollama) og nettsøk i API og nøkler */
+.ac-be44{display:flex;flex-direction:column;gap:8px;padding:12px 0 2px;border-top:1px solid var(--line)}
+.ac-tag44{font-style:normal;font:800 10px Manrope,system-ui,sans-serif;letter-spacing:.06em;color:var(--ok);border:1px solid currentColor;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:2px}
+.ac-keyrow{gap:10px;min-height:34px}
+.ac-ords44{border:1px solid var(--line);border-radius:14px;padding:2px 10px}
+.ac-ord44{gap:10px;padding:8px 0;border-top:1px solid var(--line);min-width:0}
+.ac-ord44:first-child{border-top:0}
+.ac-ord44 .ac-tx{min-width:34px;height:32px;padding:0 8px}
+.ac-swb{border:0;background:transparent;padding:4px;cursor:pointer}
+.ac-wt44{gap:8px;flex-wrap:wrap}
+.ac-wt44 .ac-in{min-width:0;flex:1 1 220px}
+.ac-hit44{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;background:var(--fld);font-size:12.5px;line-height:1.45;min-width:0;overflow-wrap:anywhere}
+.ac-hit44 a{color:var(--acc);font-size:11.5px;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -23,7 +23,7 @@ import { sniffMime } from './finans/scan.js';
 import { readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
 import { ollamaContent, shortBody } from './ollama-opts.js';
-import { gatePost } from './ollama-gate.js'; // prompt 43
+import { gatePost } from './ai-gate.js'; // prompt 43
 
 const ROOT = resolve(config.dataDir, 'mat');
 const rid = () => randomBytes(6).toString('hex');

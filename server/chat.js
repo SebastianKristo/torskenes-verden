@@ -39,11 +39,16 @@ import { audit } from './finans/ai-audit.js';
 import { finansSummary } from './finans/summary.js';
 import { nextTasks } from './tasks.js';
 import { chatBody, thinkFilter } from './ollama-opts.js';
-import { gateChat, GateError } from './ollama-gate.js'; // prompt 43: alle Ollama-kall via gaten
+import { gateChat, GateError } from './ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './chat-scans.js';
 import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './chat-tools41.js'; // prompt 41: Glimt henter fakta
 import { AUTO_ID, pickAuto41, autoEntry41, recordAuto41, feedbackAuto41, autoSummary41 } from './chat41.js'; // prompt 41: «✦ Auto»
 import { weekFact41, isWeekWeather41 } from './weather41.js'; // prompt 41: ukesvær til modellen
+import { routeTools, routeTextOf, pickData, osloNowLine } from './tool-router44.js'; // prompt 44: ruting før hovedmodellen
+import { webSearch, webPrompt, webMeta, webFact } from './web-search.js'; // prompt 44: eget nettsøk
+import { powerFact, powerPrompt } from './power-price.js'; // prompt 44: strømpris
+import { backendConfig, maskSecrets } from './ai-gate.js';
+import { jobStart, jobUpdate, jobEnd } from './ai-run.js'; // prompt 44: Chat i jobbloggen (backend, verktøy, nettsøk)
 
 const q = (sql) => db.prepare(sql);
 const FILES = resolve(config.dataDir, 'chat', 'files');
@@ -246,7 +251,8 @@ function langOf(u) {
 }
 function systemPrompt(u, s, { data = null, fileTexts = [] } = {}) {
   const lang = langOf(u);
-  const parts = [PERSONAS[s.persona] ?? PERSONAS.standard, lang === 'en' ? 'Answer in English.' : 'Svar på norsk bokmål.', `I dag er ${osloDate()}.`];
+  // Prompt 44: dato og klokkeslett i Oslo i alle svar («Nå: tirsdag 21. oktober 2026 kl. 10.42 (Europe/Oslo)»).
+  const parts = [PERSONAS[s.persona] ?? PERSONAS.standard, lang === 'en' ? 'Answer in English.' : 'Svar på norsk bokmål.', `${osloNowLine()}.`];
   if (s.system) parts.push(s.system);
   if (data) parts.push(`Brukerens egne data (sammendrag, bruk bare når det er relevant, ikke finn på tall):\n${Object.values(data).join('\n')}`);
   for (const f of fileTexts) parts.push(`Vedlegg «${f.name}»:\n${f.text}`);
@@ -322,35 +328,39 @@ async function openaiStream(name, url, headers, body, { onDelta, signal, idleMs 
     return { tokens, usedWeb };
   } finally { g.done(); }
 }
-// Prompt 43: direkte Ollama-strøm via Ollama-gaten (interaktiv prioritet, kø, keep_alive per modell, tid til første token og tid
-// uten nye tokens). Bitene sendes videre til klienten mens de kommer. Open WebUI-veien er uendret.
-async function ollamaStream(model, sys, msgs, s, { onDelta, signal }) {
+// Prompt 43/44: Ollama og Open WebUI via gaten (interaktiv prioritet, kø, keep_alive per modell, tid til første token og tid uten
+// nye tokens). Bitene sendes videre til klienten mens de kommer. backend: 'ollama' (direkte) | undefined (gaten velger:
+// Open WebUI, eller Ollama direkte når Open WebUI ikke slo av tenkingen for modellen) | 'openwebui' (sky-modeller via Open WebUI,
+// utenom køen). owuiExtra: files (kunnskapsbase) og features (Open WebUIs eget nettsøk) – bare til Open WebUI.
+async function gateStream(model, sys, msgs, s, { onDelta, signal, backend, owuiExtra = null, noQueue = false, name = 'Ollama' }) {
   let tokens = null;
   const tf = thinkFilter(); // <think>…</think> i selve teksten (eldre maler) vises aldri; message.thinking sendes ikke videre
   const idle = aiTimeoutsOf().ollama * 1000;
   const body = chatBody({ model, options: { temperature: s.temperature, top_p: s.topP, num_ctx: s.numCtx },
     messages: [{ role: 'system', content: sys }, ...msgs.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}) }))] }, s.think);
   try {
-    await gateChat({ model, body, base: ollamaBase(), fetch: F, signal, priority: 'interactive', short: false, allowThink: !!s.think, image: msgs.some((m) => m.images?.length),
-      warmMs: idle, idleMs: idle, label: 'Chat',
+    const out = await gateChat({ model, body, base: ollamaBase(), fetch: F, signal, priority: 'interactive', short: false, allowThink: !!s.think, image: msgs.some((m) => m.images?.length),
+      warmMs: idle, idleMs: idle, label: 'Chat', ...(backend ? { backend } : {}), ...(owuiExtra ? { owuiExtra } : {}), ...(noQueue ? { noQueue: true } : {}),
       onChunk: async (j) => {
         if (j.message?.content) { const d = tf.push(j.message.content); if (d) await onDelta(d); }
         if (j.done && j.eval_count) tokens = { count: j.eval_count, perSec: j.eval_duration ? j.eval_count / (j.eval_duration / 1e9) : null };
       } });
     const rest = tf.end();
     if (rest) await onDelta(rest);
-    return { tokens };
+    return { tokens, telemetry: out.telemetry, usedWeb: !!out.usedWeb };
   } catch (e) {
     if (e instanceof GateError) {
+      const who = e.backendName ?? name;
       if (e.kind === 'cancelled' || signal?.aborted) throw Object.assign(new Error('Avbrutt'), { cancelled: true });
-      if (e.kind === 'load_timeout' || e.kind === 'idle_timeout') throw Object.assign(new Error('Ollama svarte ikke innen tidsfristen'), { timeout: true, net: true });
-      if (e.kind === 'nocontact') throw Object.assign(new Error(`Ollama kan ikke nås (${e.code || e.message})`), { net: true });
-      if ((e.kind === 'http' || e.kind === 'memory') && e.status) throw Object.assign(new Error(`Ollama svarte ${e.status}${e.ollamaError ? `: ${String(e.ollamaError).slice(0, 200)}` : ''}`), { status: e.status });
-      throw Object.assign(new Error(`Ollama: ${e.ollamaError ?? e.message}`), { engine: true });
+      if (e.kind === 'load_timeout' || e.kind === 'idle_timeout') throw Object.assign(new Error(`${who} svarte ikke innen tidsfristen`), { timeout: true, net: true, telemetry: e.telemetry });
+      if (e.kind === 'nocontact') throw Object.assign(new Error(maskSecrets(`${who} kan ikke nås (${e.code || e.message})`)), { net: true, telemetry: e.telemetry });
+      if ((e.kind === 'http' || e.kind === 'memory') && e.status) throw Object.assign(new Error(maskSecrets(`${who} svarte ${e.status}${e.ollamaError ? `: ${String(e.ollamaError).slice(0, 200)}` : ''}`)), { status: e.status, telemetry: e.telemetry });
+      throw Object.assign(new Error(maskSecrets(`${who}: ${e.ollamaError ?? e.message}`)), { engine: true, telemetry: e.telemetry });
     }
     throw e;
   }
 }
+const ollamaStream = (model, sys, msgs, s, o) => gateStream(model, sys, msgs, s, { ...o, backend: 'ollama', name: 'Ollama' });
 async function geminiStream(model, sys, msgs, s, { onDelta, signal, webSearch }) {
   const g = idleGuard(aiTimeoutsOf().gemini * 1000, signal);
   let tokens = null, usedWeb = false;
@@ -397,16 +407,18 @@ async function runEngine(m, ctx) {
   const { sys, msgs, s, webSearch, files, onDelta, signal, gotText } = ctx;
   if (isMock()) return { ...(await mockStream(msgs.at(-1)?.content, ctx.data, { onDelta, signal, facts: ctx.facts })), engine: 'mock' };
   const o = owui();
-  if (o && (m.via === 'openwebui' || !/^(gemini|groq):/.test(m.id))) {
+  // Prompt 44: Open WebUI via gaten (samme kø som Ollama). ai_backend = 'ollama' → Ollama-modeller går direkte.
+  const viaOwui = o && (m.via === 'openwebui' || !/^(gemini|groq):/.test(m.id)) && (m.provider !== 'ollama' || backendConfig().effective === 'openwebui');
+  if (viaOwui) {
     try {
-      const body = { model: m.id, stream: true, messages: openaiMessages(sys, msgs), temperature: s.temperature, top_p: s.topP, params: { num_ctx: s.numCtx, temperature: s.temperature, top_p: s.topP },
-        ...(webSearch ? { features: { web_search: true } } : {}), ...(files.length ? { files } : {}), stream_options: { include_usage: true } };
-      const idle = aiTimeoutsOf()[m.provider === 'gemini' ? 'gemini' : m.provider === 'groq' ? 'groq' : 'ollama'] * 1000;
-      return { ...(await openaiStream('Open WebUI', `${o.url}/api/chat/completions`, owuiHeaders(o), body, { onDelta, signal, idleMs: idle })), engine: 'openwebui', usedWeb: webSearch };
+      const owuiExtra = { ...(webSearch ? { features: { web_search: true } } : {}), ...(files.length ? { files } : {}) };
+      const local = m.provider === 'ollama';
+      const r = await gateStream(m.id, sys, msgs, s, { onDelta, signal, ...(local ? {} : { backend: 'openwebui', noQueue: true }), owuiExtra, name: 'Open WebUI' });
+      return { ...r, engine: r.telemetry?.backend === 'ollama' ? 'ollama' : 'openwebui' };
     } catch (e) {
       // Open WebUI nede (og ingenting er strømmet ennå): prøv motoren direkte.
       if (!e.net || e.timeout || gotText() || signal.aborted) throw e;
-      console.warn('[chat] Open WebUI svarte ikke, bruker motoren direkte:', e.message);
+      console.warn('[chat] Open WebUI svarte ikke, bruker motoren direkte:', maskSecrets(e.message));
     }
   }
   if (m.provider === 'gemini') return { ...(await geminiStream(m.id.replace(/^gemini:/, ''), sys, msgs, s, { onDelta, signal, webSearch })), engine: 'gemini' };
@@ -689,7 +701,10 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
   }
   if (b.confirmCloud && b.settings?.skipCloudAsk) s.skipCloudAsk = true;
 
-  const data = wantData ? await myData(u) : null;
+  // Prompt 44: rutingen før hovedmodellen. Bare delene av «Mine data» rutingen valgte legges ved (ikke Finans, Kalender og
+  // Huskeliste på «hvem er statsminister i England»). «Nettsøk»-knappen (b.webSearch) tvinger web.
+  const route = b.noTools ? { tools: ['none'], query: '', via: 'av', ms: 0 } : await routeTools(routeTextOf(history), { user: u, forceWeb: !!b.webSearch, localOnly: m.kind !== 'sky', useLlm: !isMock() }).catch(() => ({ tools: ['none'], query: '', via: 'feil', ms: 0 }));
+  const data = wantData ? (b.noTools ? await myData(u) : pickData(await myData(u), route.tools)) : null; // noTools: uten ruting, som før
   const fileTexts = files.filter((f) => f.text).map((f) => ({ name: f.name, text: f.text.slice(0, 20_000) }));
   const owuiFiles = files.map((f) => (f.kb ? { type: 'collection', id: f.kb } : f.owui_id ? { type: 'file', id: f.owui_id } : null)).filter(Boolean);
   const sys = systemPrompt(u, s, { data, fileTexts: owui() ? files.filter((f) => f.text && !f.owui_id).map((f) => ({ name: f.name, text: f.text.slice(0, 20_000) })) : fileTexts });
@@ -740,27 +755,59 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
         if (wf) { facts = [...facts, wf]; factUsed = [...new Set([...factUsed, 'Vær · 7 dager'])]; sysAll = `${sysAll}\n\n${wf.prompt}`; if (!sse.aborted) await sse.writeSSE({ event: 'facts', data: JSON.stringify({ facts, used: factUsed }) }); }
       } catch (e) { console.warn('[chat] ukesvær (prompt 41):', e.message); }
     }
-    const metaFacts = facts.length ? { facts } : {};
+    // Prompt 44: strømpris (power) og eget nettsøk (web). «Nettsøk» i used og meta.web bare når søket faktisk ga treff.
+    let web = null;
+    if (route.tools.includes('power')) {
+      try {
+        const pf = await powerFact(history.at(-1).content);
+        facts = [...facts, pf]; sysAll = `${sysAll}\n\n${powerPrompt(pf)}`;
+        if (!pf.error) factUsed = [...new Set([...factUsed, `Strømpris · ${pf.zone}`])];
+        if (!sse.aborted) await sse.writeSSE({ event: 'facts', data: JSON.stringify({ facts, used: factUsed }) });
+      } catch (e) { console.warn('[chat] strømpris (prompt 44):', e.message); }
+    }
+    if (route.tools.includes('web')) {
+      try {
+        web = await webSearch(route.query || history.at(-1).content, { signal: ctrl.signal });
+        if (web.hits.length) {
+          facts = [...facts, webFact(web)]; factUsed = [...new Set([...factUsed, 'Nettsøk'])];
+          sysAll = `${sysAll}\n\n${webPrompt(web)}`;
+          s.numCtx = Math.max(s.numCtx, 8192); // søkejobber: num_ctx minst 8192
+          if (!sse.aborted) await sse.writeSSE({ event: 'facts', data: JSON.stringify({ facts, used: factUsed, web: webMeta(web) }) });
+        }
+      } catch (e) { console.warn('[chat] nettsøk (prompt 44):', e.message); }
+    }
+    const webHits = !!web?.hits?.length;
+    const metaFacts = { ...(facts.length ? { facts } : {}), ...(webHits ? { web: webMeta(web) } : {}) };
+    // Prompt 44: Chat i jobbloggen med backend, rutingsvalget og nettsøket.
+    const jobId = jobStart({ user: u, task: 'chat', kind: 'ai', title: `Chat · «${String(history.at(-1)?.content ?? '').replace(/\s+/g, ' ').slice(0, 60)}»`, model: m.id, provider: m.provider === 'openwebui' ? 'openwebui' : m.provider });
+    jobUpdate(jobId, { tools: route.tools, step: `Ruting (${route.via}): ${route.tools.join(', ')}`, ...(web ? { web: { query: web.query, hits: web.hits.length, provider: web.provider } } : {}) });
     try {
       let r, used41 = m;
-      try { r = await runEngine(m, { sys: sysAll, msgs: history, s, webSearch: !!b.webSearch, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text }); }
+      // Open WebUIs eget nettsøk (features.web_search) bare når vårt eget søk ikke ga treff.
+      const owuiWeb = !!b.webSearch && !webHits;
+      try { r = await runEngine(m, { sys: sysAll, msgs: history, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text }); }
       catch (e) {
         // Prompt 41: Auto – svarer ikke valgt modell (og ingenting er strømmet), prøv neste beste og si det i svaret.
         const next = auto && !text && !ctrl.signal.aborted ? auto.candidates.find((id) => id !== m.id) : null;
         if (!next) throw e;
         used41 = await modelFor(next);
         auto.fallbackFrom = m.id; auto.model = used41.id; auto.modelName = used41.name; auto.label = `${auto.label.split(' · ')[0]} · ${used41.name}`; auto.reason = `${m.name} svarte ikke · bruker ${used41.name}`;
-        r = await runEngine(used41, { sys: sysAll, msgs: history, s, webSearch: !!b.webSearch, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+        r = await runEngine(used41, { sys: sysAll, msgs: history, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
       }
       const ms = Date.now() - t0;
       const genS = Math.max(0.001, (Date.now() - (first ?? t0)) / 1000);
       const tokensPerSec = Math.round((r.tokens?.perSec ?? (r.tokens?.count ?? Math.ceil(text.length / 4)) / genS) * 10) / 10;
-      const allUsed = [...factUsed, ...used, ...(b.webSearch && (r.usedWeb || r.engine === 'openwebui') ? ['Nettsøk'] : [])];
+      const allUsed = [...new Set([...factUsed, ...used, ...(r.usedWeb ? ['Nettsøk'] : [])])]; // usedWeb: Open WebUI sendte kilder (sources)
       const autoDone = auto ? { auto: { model: used41.id, modelName: used41.name, kind: auto.kind, label: `${auto.label} · ${String(tokensPerSec).replace('.', ',')} tok/s · ${String(Math.round(ms / 100) / 10).replace('.', ',')} s`, reason: auto.reason, ...(auto.fallbackFrom ? { fallbackFrom: auto.fallbackFrom } : {}) } } : {};
       if (auto) recordAuto41(u, { model: used41.id, kind: auto.kind, ttftMs: first ? first - t0 : null, tps: tokensPerSec, chatId });
       saveMsgs(text, { model: used41.id, tokensPerSec, ms, used: allUsed, ...metaFacts, ...autoDone });
-      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, ...metaFacts, ...autoDone }) });
+      const tl = r.telemetry;
+      jobEnd(jobId, { model: used41.id, ms, step: null, ...(tl ? { backend: tl.backend, backendNote: tl.backendNote ?? null, queueMs: tl.queueMs, loadMs: tl.loadMs, genMs: tl.genMs, attempts: tl.attempts, tokIn: tl.tokIn, tokOut: tl.tokOut } : { backend: r.engine }) });
+      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, tools: route.tools, ...(tl?.backend ? { backend: tl.backend } : {}), ...metaFacts, ...autoDone }) });
     } catch (e) {
+      const tl = e.telemetry;
+      jobUpdate(jobId, { status: ctrl.signal.aborted || e.cancelled ? 'cancelled' : 'fail', error: ctrl.signal.aborted || e.cancelled ? 'Avbrutt av bruker' : e.message, ms: Date.now() - t0, step: null,
+        ...(tl ? { backend: tl.backend, backendNote: tl.backendNote ?? null, queueMs: tl.queueMs, loadMs: tl.loadMs, attempts: tl.attempts } : {}) });
       if (ctrl.signal.aborted || e.cancelled) { if (text) saveMsgs(text, { model: m.id, stopped: true, used: [...factUsed, ...used], ...metaFacts }); return; }
       if (text) saveMsgs(text, { model: m.id, error: e.message, used: [...factUsed, ...used], ...metaFacts });
       await sse.writeSSE({ event: 'error', data: JSON.stringify({ error: e.message, chatId }) });

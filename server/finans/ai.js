@@ -4,7 +4,7 @@ import { settings, secret, db, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini, usableKeys } from './gemini-keys.js';
 import { cleanBbox } from './bbox30.js';
 import { shortBody } from '../ollama-opts.js';
-import { gateChat } from '../ollama-gate.js'; // prompt 43: alle Ollama-kall via gaten
+import { gateChat } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
 // Prompt 34: finans-oppgavene → oppgavene i AI-kontroll-rutingen.
 const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok' };

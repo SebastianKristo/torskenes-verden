@@ -19,7 +19,7 @@ import { cached } from './cache.js';
 import { PLACES, wmoText } from './weather-full.js';
 import { geocode } from './weather35.js';
 import { run as aiRun } from './ai-run.js';
-import { once } from './ollama-gate.js'; // prompt 43
+import { once } from './ai-gate.js'; // prompt 43
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const CHARS39 = [

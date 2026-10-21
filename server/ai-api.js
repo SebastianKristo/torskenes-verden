@@ -42,7 +42,9 @@ import { db, OWNER } from './db.js';
 import { settings as fhSettings, saveSettings, secret, setSecret, secretSource } from './finans/db.js';
 import { geminiKeys } from './finans/gemini-keys.js';
 import * as ai from './ai-run.js';
-import { gateLoad, gateUnload, loadedModels, gateState, keepAliveFor, GateError } from './ollama-gate.js'; // prompt 43: alle Ollama-kall via gaten
+import { gateLoad, gateUnload, loadedModels, gateState, keepAliveFor, GateError, backendConfig, thinkLeaks, clearThinkLeak, testOpenWebuiModels, maskSecrets } from './ai-gate.js'; // prompt 43/44: alle AI-kall via gaten
+import { updateConfig } from './settings.js';
+import { webSearch, webSettings, clearWebCache, PROVIDERS as WEB_PROVIDERS, PROVIDER_NAME as WEB_NAME } from './web-search.js'; // prompt 44
 import { getAzureRegion, setAzureRegion } from './glimt35.js'; // prompt 35: Azure-region for TTS
 import { hostHw, envHw, hwOut, fit38, recommendFor, SUGGESTED_MODELS, TIMEOUTS, FIT_LABEL } from './aihw38.js'; // prompt 38: Mac mini M4
 
@@ -413,6 +415,63 @@ api.post('/keys/:provider/test', async (c) => {
   const x = st.providers.find((v) => v.id === p);
   if (!x) return bad(c, 'Ukjent leverandør', 404);
   return c.json({ ok: x.state === 'ok', state: x.state, label: x.label, ms: x.ms, model: x.model, error: x.error });
+});
+
+/* ---------------- Prompt 44: backend (Open WebUI / Ollama) og nettsøk ---------------- */
+// GET  /backend → {mode:'auto'|'openwebui'|'ollama', effective, note, openwebui:{url, configured}, ollama:{url}, thinkLeaks:[{model, at}],
+//                  web:{order, openwebui:{configured}, searxng:{url}, brave:{configured}, ddg:{on}}, providers:[{id, name}]}  (aldri nøkler)
+// PUT  /backend {mode?, openwebuiUrl?, openwebuiKey?, ollamaUrl?, web?:{order?, searxngUrl?, braveKey?, ddg?}} (admin) → samme som GET
+// POST /backend/test {which:'openwebui'|'ollama'} → {ok, ms, models?, version?, error?}  (Open WebUI: /api/models · Ollama: /api/version og /api/tags)
+// DELETE /backend/think-leak[?model=] (admin) → glem «Open WebUI slo ikke av tenking»
+// POST /websearch/test {q} → {query, hits:[{title, url, snippet, source, published?}], provider, providerName, tried:[…], ms}
+function backendOut() {
+  const c = backendConfig();
+  return { ...c, thinkLeaks: Object.entries(thinkLeaks()).map(([model, v]) => ({ model, at: v?.at ? new Date(v.at).toISOString() : null })), web: webSettings(),
+    webProviders: WEB_PROVIDERS.map((id) => ({ id, name: WEB_NAME[id] })) };
+}
+// Serveroppsettet (adresser, kilder) er bare for admin; andre ser bare hvilken backend som brukes.
+api.get('/backend', (c) => {
+  const o = backendOut();
+  if (isAdmin(c.get('user'))) return c.json(o, 200, { 'Cache-Control': 'no-store' });
+  return c.json({ mode: o.mode, effective: o.effective, openwebui: { configured: o.openwebui.configured }, ollama: { configured: !!o.ollama.url }, note: o.note, admin: false }, 200, { 'Cache-Control': 'no-store' });
+});
+api.put('/backend', adminOnly, async (c) => {
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object') return bad(c, 'Forventet {mode?, openwebuiUrl?, openwebuiKey?, ollamaUrl?, web?}');
+  const ch = {};
+  if (b.mode !== undefined) { const m = String(b.mode ?? '').toLowerCase(); if (!['auto', 'openwebui', 'ollama', ''].includes(m)) return bad(c, 'Backend må være openwebui, ollama eller auto'); ch.ai_backend = m === 'auto' || !m ? null : m; }
+  if (b.openwebuiUrl !== undefined) { const u = String(b.openwebuiUrl ?? '').trim().replace(/\/+$/, ''); if (u && !/^https?:\/\/[^\s]+$/.test(u)) return bad(c, 'Skriv adressen som http://192.168.1.30:8080'); ch.openwebui_url = u || null; }
+  if (b.openwebuiKey !== undefined) { const k = String(b.openwebuiKey ?? '').trim(); if (k && (k.length < 8 || k.length > 400 || /\s/.test(k))) return bad(c, 'Nøkkelen ser ikke riktig ut'); ch.openwebui_key = k || null; }
+  const w = b.web && typeof b.web === 'object' ? b.web : {};
+  if (w.order !== undefined) { const o = (Array.isArray(w.order) ? w.order : String(w.order).split(',')).map((x) => String(x).trim()).filter(Boolean); if (!o.length || o.some((x) => !WEB_PROVIDERS.includes(x))) return bad(c, `Rekkefølgen kan bare ha ${WEB_PROVIDERS.join(', ')}`); ch.web_order = [...new Set(o)].join(','); }
+  if (w.searxngUrl !== undefined) { const u = String(w.searxngUrl ?? '').trim().replace(/\/+$/, ''); if (u && !/^https?:\/\/[^\s]+$/.test(u)) return bad(c, 'Skriv SearXNG-adressen som http://192.168.1.30:8888'); ch.searxng_url = u || null; }
+  if (w.braveKey !== undefined) { const k = String(w.braveKey ?? '').trim(); if (k && (k.length < 8 || /\s/.test(k))) return bad(c, 'Brave-nøkkelen ser ikke riktig ut'); ch.brave_key = k || null; }
+  if (w.ddg !== undefined) ch.web_ddg = w.ddg ? '1' : '0';
+  try { if (Object.keys(ch).length) updateConfig(ch, OWNER); } catch (e) { return bad(c, maskSecrets(e.message), e.status ?? 400); }
+  if (b.ollamaUrl !== undefined) { const u = String(b.ollamaUrl ?? '').trim(); if (u && !/^https?:\/\/[^\s/]+(?::\d+)?\/?$/.test(u)) return bad(c, 'Skriv adressen som http://192.168.1.30:11434'); saveSettings({ ollamaUrl: u.replace(/\/+$/, '') }, OWNER); }
+  clearWebCache(); ai.invalidateInventory(); ai.invalidateStatus();
+  return c.json(backendOut());
+});
+api.post('/backend/test', adminOnly, async (c) => {
+  const b = await c.req.json().catch(() => ({})) ?? {};
+  if (b.which === 'openwebui') { const t = await testOpenWebuiModels({ fetch: F }); return c.json({ which: 'openwebui', ok: t.ok, ms: t.ms, models: t.models, error: t.error ?? null }); }
+  if (b.which !== 'ollama') return bad(c, 'which må være openwebui eller ollama');
+  if (!base()) return c.json({ which: 'ollama', ok: false, ms: 0, error: 'Ollama-adressen er ikke satt' });
+  const t0 = Date.now();
+  try {
+    const v = await ollamaJson('/api/version');
+    const tg = await ollamaJson('/api/tags');
+    return c.json({ which: 'ollama', ok: true, ms: Date.now() - t0, version: v.version ?? null, models: (tg.models ?? []).map((m) => m.name ?? m.model) });
+  } catch (e) { return c.json({ which: 'ollama', ok: false, ms: Date.now() - t0, error: e.message }); }
+});
+api.delete('/backend/think-leak', adminOnly, (c) => { clearThinkLeak(c.req.query('model') || null); return c.json(backendOut()); });
+api.post('/websearch/test', async (c) => {
+  const b = await c.req.json().catch(() => ({})) ?? {};
+  const q = String(b.q ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 200);
+  if (!q) return bad(c, 'Skriv et søk');
+  clearWebCache();
+  const r = await webSearch(q);
+  return c.json(r);
 });
 
 /* ---------------- Glimt-API-nøkler (personlige) ---------------- */

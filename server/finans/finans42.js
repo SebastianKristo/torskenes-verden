@@ -26,7 +26,7 @@ import { mountHomes42, homeSearch42, homesOf42 } from './homes42.js';
 import { logo as faviconLogo, validDomain } from './enrich.js';
 import { itemForDomain, filePath as logoFile } from '../logos/match.js';
 import { readFile } from 'node:fs/promises';
-import { gateLoad } from '../ollama-gate.js'; // prompt 43
+import { gateLoad } from '../ai-gate.js'; // prompt 43
 import { modelFor } from '../ai-run.js';
 
 const q = (sql) => db.prepare(sql);

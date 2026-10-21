@@ -44,7 +44,7 @@ import { newsFor } from './rss.js';
 import { packagesFor } from './tracking.js';
 import { notifyUser } from './notify.js';
 import { run as aiRun } from './ai-run.js';
-import { once, inFlight } from './ollama-gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
+import { once, inFlight } from './ai-gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
 import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, hostOf, charName, proxied, engineReady, speak } from './glimt35.js'; // prompt 35
 import { trialCompact } from './trial-widgets.js'; // prompt 35: prøveperioder i briefen
 import { todosForBrief } from './tasks-glimt37.js'; // prompt 37: Gjøremål-kortet
