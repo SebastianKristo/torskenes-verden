@@ -178,7 +178,7 @@ const seriesStats = (st, s) => {
   const nums = [...new Set(eps.map((e) => e.seasonNumber))].sort((a, b) => a - b);
   return { ...s, statistics: { ...stat(eps, aired), seasonCount: nums.length }, seasons: nums.map((n) => ({ seasonNumber: n, monitored: eps.filter((e) => e.seasonNumber === n).some((e) => e.monitored), statistics: stat(eps.filter((e) => e.seasonNumber === n), aired.filter((e) => e.seasonNumber === n)) })) };
 };
-const movieOut = (m) => ({ ...m, isAvailable: m.status !== 'announced' });
+const movieOut = (m) => ({ ...m, isAvailable: m.status !== 'announced', ...(m.movieFile ? { movieFile: { id: m.id * 10, ...m.movieFile } } : {}) });
 const qState = (t) => (/paused|stopped/.test(t.state) ? 'paused' : t.state === 'stalledDL' ? 'warning' : t.progress >= 1 ? 'completed' : 'downloading');
 function queueFor(st, svc) {
   return st.torrents.filter((t) => (svc === 'sonarr' ? t._link?.episodeIds : t._link?.movieId) && t.progress < 1).flatMap((t) => {
@@ -272,6 +272,14 @@ async function sonarrRadarr(svc, method, path, q, init) {
     const em = P.match(/^\/episode\/(\d+)$/);
     if (em && method === 'GET') { const e = st.episodes.find((x) => x.id === +em[1]); return e ? json({ ...e }) : json({ message: 'NotFound' }, 404); }
     if (P === '/episode/monitor' && method === 'PUT') { for (const e of st.episodes) if ((b?.episodeIds ?? []).includes(e.id)) e.monitored = !!b.monitored; return json([]); }
+    // Prompt 44: slett episodefil (Sonarr) – filen fjernes, episoden mangler igjen.
+    const ef = P.match(/^\/episodefile\/(\d+)$/);
+    if (ef && method === 'DELETE') {
+      const e = st.episodes.find((x) => x.hasFile && (x.episodeFileId === +ef[1] || x.id === +ef[1]));
+      if (!e) return json({ message: 'NotFound' }, 404);
+      e.hasFile = false; e.episodeFileId = 0; delete e.episodeFile; st.log.push({ op: 'deleteEpisodeFile', id: +ef[1], episodeId: e.id });
+      return json({});
+    }
     if (P === '/release' && method === 'GET') {
       const epId = +q.get('episodeId') || null, sid = +q.get('seriesId') || null, season = q.has('seasonNumber') ? +q.get('seasonNumber') : null;
       const e = epId ? st.episodes.find((x) => x.id === epId) : null;
@@ -306,6 +314,13 @@ async function sonarrRadarr(svc, method, path, q, init) {
       if (method === 'GET') return json(movieOut(mv));
       if (method === 'PUT') { for (const k of ['qualityProfileId', 'monitored', 'minimumAvailability', 'rootFolderPath', 'path']) if (b?.[k] !== undefined) mv[k] = b[k]; return json(movieOut(mv), 202); }
       if (method === 'DELETE') { st.movies = st.movies.filter((x) => x.id !== mv.id); st.log.push({ op: 'deleteMovie', id: mv.id, deleteFiles: q.get('deleteFiles') === 'true' }); return json({}); }
+    }
+    const mf = P.match(/^\/moviefile\/(\d+)$/);
+    if (mf && method === 'DELETE') {
+      const mv = st.movies.find((x) => x.hasFile && (x.id * 10 === +mf[1] || x.movieFile?.id === +mf[1]));
+      if (!mv) return json({ message: 'NotFound' }, 404);
+      mv.hasFile = false; mv.sizeOnDisk = 0; delete mv.movieFile; st.log.push({ op: 'deleteMovieFile', id: +mf[1], movieId: mv.id });
+      return json({});
     }
     if (P === '/release' && method === 'GET') {
       const mv = st.movies.find((x) => x.id === +q.get('movieId'));
@@ -415,6 +430,16 @@ async function prowlarr(method, path, q, init) {
   if (P === '/health') return json(st.indexers.filter((x) => x._fail).map((x) => ({ source: 'IndexerStatusCheck', type: 'warning', message: `Indekser utilgjengelig på grunn av feil: ${x.name}` })));
   if (P === '/applications') return json([{ id: 1, name: 'Sonarr', implementation: 'Sonarr', syncLevel: 'fullSync' }, { id: 2, name: 'Radarr', implementation: 'Radarr', syncLevel: 'fullSync' }]);
   if (P === '/command' && method === 'POST') return json({ id: st.nextId.cmd++, name: b.name, status: 'queued' }, 201);
+  // Prompt 44: søk per indekser (interaktivt søk som jobb). Indekseren som feiler, svarer 500 etter en stund; de andre gir sine treff.
+  if (P === '/search' && method === 'GET') {
+    const ids = q.getAll('indexerIds').map(Number);
+    const x = st.indexers.find((i) => ids.includes(i.id));
+    if (x?._fail) return json({ message: `${x.name}: Tidsavbrudd` }, 500);
+    const term = String(q.get('query') ?? '');
+    const rows = REL.filter((r) => !x || r[7] === x.name).map(([tail, qn, res, gbT, , sd, l, ix, langs, subs]) => ({ guid: `mock-px-${sha1(term + tail).slice(0, 16)}`, indexerId: x?.id ?? 99, indexer: ix,
+      title: term.replace(/\s+/g, '.') + tail, size: Math.round(gbT * GB), seeders: sd, leechers: l, protocol: 'torrent', publishDate: new Date().toISOString(), languages: langs.map((name) => ({ name })), subtitles: subs, quality: { quality: { name: qn, resolution: res } } }));
+    return json(rows);
+  }
   if (P === '/indexer/schema') {
     return json(CATALOG.map(([name, privacy, language, cats, auth, protocol = 'torrent']) => ({ implementation: protocol === 'usenet' ? 'Newznab' : 'Cardigann', definitionName: name.toLowerCase().replace(/[^a-z0-9]/g, ''), name, privacy, protocol, language,
       description: cats, capabilities: { categories: cats.split(/,\s*/).map((c) => ({ name: c })) }, fields: [{ name: 'definitionFile', value: name.toLowerCase().replace(/[^a-z0-9]/g, ''), hidden: 'hidden' },

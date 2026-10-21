@@ -168,7 +168,7 @@ test('Gjøremål: «Mine» per bruker, felter fra detaljarket, gjentagelse lager
   assert.equal(r.status, 201, r.text);
   const it = r.body.item;
   assert.equal(it.l, mine.id, 'standardlisten er «Mine»');
-  assert.deepEqual([it.n, it.title, it.notes, it.time, it.urgent, it.rep, it.early, it.prio, it.flag, it.tags, it.subs, it.place, it.by, it.arch],
+  assert.deepEqual([it.n, it.title, it.notes, it.time, it.urgent, it.rep, it.early, it.prio, it.flag, it.tags, it.subs.map(({ n, done }) => ({ n, done })), it.place, it.by, it.arch], // prompt 44: subs har også id
     ['Kanseller Overleaf', 'Kanseller Overleaf', 'https://overleaf.com', '09:00', true, 'monthly', '1d', 3, true, ['abo', 'jobb'], [{ n: 'Logg inn', done: false }, { n: 'Si opp', done: true }], 'work', sebId, false]);
   assert.equal((await A('/api/tasks', 'POST', { n: 'x', rep: 'sometimes' })).status, 400);
   assert.equal((await A('/api/tasks', 'POST', { n: 'x', time: '25:00' })).status, 400);

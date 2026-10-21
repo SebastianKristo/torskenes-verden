@@ -128,6 +128,14 @@ export const INTEGRATIONS = [
     F('t212Secret', 'Secret', 'secret', mirrored('t212_secret', 't212Secret', true)),
     F('t212Env', 'Miljø (live eller demo)', 'text', mirrored('t212_env', 't212Env', false, (v) => { const e = oneOf(['live', 'demo'])(v); if (!e) throw new Error('Miljø må være live eller demo'); return e; })),
   ] },
+  // Prompt 44: SMTP for invitasjoner fra Kalender (sendes fra brukerens egen adresse).
+  { id: 'smtp', name: 'E-post (SMTP)', group: 'E-post', scope: P, test: async (u) => (await import('./kal44.js')).testSmtp44(u), fields: [
+    F('smtp_host', 'SMTP-server', 'text', mine('smtp_host'), { required: true, help: 'For eksempel smtp.gmail.com' }),
+    F('smtp_port', 'Port', 'text', mine('smtp_port'), { help: '587 (STARTTLS) eller 465 (TLS)' }),
+    F('smtp_user', 'Brukernavn', 'text', mine('smtp_user'), { required: true, help: 'Vanligvis e-postadressen' }),
+    F('smtp_pass', 'App-passord', 'secret', mine('smtp_pass', true), { required: true, help: 'Gmail: Google-konto → Sikkerhet → App-passord' }),
+    F('smtp_from', 'Avsender', 'text', mine('smtp_from'), { help: 'Sebastian <sebastian@kristo.no>' }),
+  ] },
   { id: 'bank', name: 'Bank og import', group: 'Finans', scope: P, test: null, fields: [
     F('csvProfile', `CSV-profil (${PROFILES.join(', ')})`, 'text', fhUserSetting('csvProfile', oneOf(PROFILES)), { help: 'Brukes når en bankfil er tvetydig. Kolonnene finnes ellers automatisk.' }),
   ] },
@@ -239,6 +247,7 @@ const META = {
   radarr: ['Annet', 'R', '#e0a325', 'Filmer', 'radarr'],
   qbittorrent: ['Annet', 'qB', '#2f67ba', 'Nedlastinger', 'qbittorrent'],
   prowlarr: ['Annet', 'P', '#e66000', 'Indeksere', 'prowlarr'],
+  smtp: ['Annet', '@', '#2b5d8a', 'Invitasjoner fra din egen e-post', 'smtp'],
   icons: ['Annet', '✦', '#5b6478', 'Iconify via Homelab-cache', null],
   photos: ['Annet', 'U', '#3a3a3a', 'Bakgrunner fra Unsplash og Pexels', 'backgrounds'],
 };

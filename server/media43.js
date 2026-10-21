@@ -8,8 +8,9 @@
 // Ruter under /api/media (svarformene står i rapporten for prompt 43 og i kommentarene ved hver rute).
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { kv, OWNER } from './db.js';
-import { userCfg } from './settings.js';
+import { userCfg, userCfgSet } from './settings.js';
 import { authOrToken } from './mobile.js';
 import { isAdmin, listUsers, userInfo, isLan } from './auth.js';
 import { notifyUser } from './notify.js';
@@ -30,14 +31,50 @@ export const SERVICES43 = {
   jellyfin: { name: 'Jellyfin', url: 'jf_url', key: 'jf_key', user: 'jf_user', missing: 'API-nøkkel', port: 8096 },
   plex: { name: 'Plex', url: 'plex_url', key: 'plex_token', missing: 'Plex-token', port: 32400 },
 };
-const val = (k, vals) => String((vals && k in vals ? vals[k] : userCfg(OWNER, k)) ?? '').trim();
-/** Oppsettet for en tjeneste. vals = egne verdier (Test tilkobling før lagring); ellers serverens (eierens) verdier. */
+const val = (k, vals, who = OWNER) => String((vals && k in vals ? vals[k] : userCfg(who, k)) ?? '').trim();
+/* Prompt 44 (SERVER44) – den ekte årsaken til «ikke logget inn» i Media på mobil: Sonarr, Radarr, Plex og Jellyfin er «personlige»
+   integrasjoner (ISO2). Innstillinger → Integrasjoner viser verdiene til den som er innlogget (lagret per bruker), mens Media leste
+   bare eierens (OWNER). Har en annen administrator lagt inn nøklene, eller er man innlogget med en annen konto på mobilen enn på
+   web, sa Innstillinger «Koblet til» mens Media sa «Ikke satt opp». Nå er det én kilde for alle med tilgang: serverens oppsett =
+   eierens verdier, ellers første administrator som har lagt inn adresse + nøkkel for tjenesten (source:'admin'). */
+const ADMIN_SRC_TTL = 30_000;
+let adminSrc = { at: 0, map: new Map() };
+/** Hvem sitt oppsett Media bruker for tjenesten: OWNER, ellers første admin med adresse + nøkkel. → {user, source:'owner'|'admin'} */
+export function mediaSource43(id) {
+  const d = SERVICES43[id];
+  if (val(d.url) && val(d.key)) return { user: OWNER, source: 'owner' };
+  if (!d || !['sonarr', 'radarr', 'jellyfin', 'plex'].includes(id)) return { user: OWNER, source: 'owner' };
+  if (Date.now() - adminSrc.at > ADMIN_SRC_TTL) adminSrc = { at: Date.now(), map: new Map() };
+  if (!adminSrc.map.has(id)) {
+    const u = listUsers().find((x) => x.role === 'admin' && x.id !== OWNER && val(d.url, null, x.id) && val(d.key, null, x.id) && userCfgSet(x.id, d.key));
+    adminSrc.map.set(id, u?.id ?? null);
+  }
+  const u = adminSrc.map.get(id);
+  return u ? { user: u, source: 'admin' } : { user: OWNER, source: 'owner' };
+}
+export const _resetMediaSource43 = () => { adminSrc = { at: 0, map: new Map() }; };
+/* Prompt 44: steder («Hjemme», «Hytta») med hver sin Sonarr/Radarr/qBittorrent/Prowlarr. Valget gjelder hele forespørselen
+   (?server= eller brukerens lagrede valg), satt av media44.js med runMediaSite43(). Standardstedet er oppsettet over. */
+const siteCtx = new AsyncLocalStorage();
+export const runMediaSite43 = (site, fn) => siteCtx.run({ site: site || null }, fn);
+export const mediaSite43 = () => siteCtx.getStore()?.site ?? null;
+let siteConf = null;
+/** media44.js: (siteId, serviceId) → {url, key, user} | null for et annet sted enn standard. */
+export const _setSiteConf43 = (fn) => { siteConf = fn; };
+/** Oppsettet for en tjeneste. vals = egne verdier (Test tilkobling før lagring); ellers stedet som er valgt, eller serverens oppsett. */
 export function svcConf43(id, vals = null) {
   const d = SERVICES43[id];
-  const url = val(d.url, vals).replace(/\/+$/, ''), key = val(d.key, vals), user = d.user ? val(d.user, vals) : '';
+  const site = vals ? null : mediaSite43();
+  if (site && siteConf) {
+    const sc = siteConf(site, id);
+    if (sc && sc.url && sc.key) return { id, name: d.name, url: String(sc.url).replace(/\/+$/, ''), key: sc.key, user: sc.user ?? '', configured: true, mock: false, on: true, site };
+  }
+  const src = vals ? { user: OWNER, source: 'owner' } : mediaSource43(id);
+  const url = val(d.url, vals, src.user).replace(/\/+$/, ''), key = val(d.key, vals, src.user), user = d.user ? val(d.user, vals, src.user) : '';
   const configured = !!(url && key);
-  if (!configured && MOCK() && !vals && ['sonarr', 'radarr', 'qbit', 'prowlarr'].includes(id)) return { id, name: d.name, url: `http://mock-${id}`, key: 'mock', user: 'admin', configured: false, mock: true, on: true };
-  return { id, name: d.name, url, key, user, configured, mock: false, on: configured };
+  const fb = site && siteConf ? { fallback: true, requestedSite: site } : {};
+  if (!configured && MOCK() && !vals && ['sonarr', 'radarr', 'qbit', 'prowlarr'].includes(id)) return { id, name: d.name, url: `http://mock-${id}`, key: 'mock', user: 'admin', configured: false, mock: true, on: true, ...fb };
+  return { id, name: d.name, url, key, user, configured, mock: false, on: configured, source: src.source, ...fb };
 }
 const extra = (k, d = '') => val(k) || d;
 
@@ -69,13 +106,13 @@ async function errorOf(c, r) {
 const notSetUp = (id) => new MediaError(`${SERVICES43[id].name} er ikke satt opp. Innstillinger → Integrasjoner → Media.`, 409, { service: id, configured: false });
 
 /** Sonarr/Radarr (v3) og Prowlarr (v1): JSON med X-Api-Key. */
-async function arr(id, method, path, { query, body, conf } = {}) {
+async function arr(id, method, path, { query, body, conf, timeout } = {}) {
   const c = conf ?? svcConf43(id);
   if (!c.on) throw notSetUp(id);
   const ver = id === 'prowlarr' ? 'v1' : 'v3';
   const qs = query ? `?${new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined && v !== null).map(([k, v]) => [k, String(v)]))}` : '';
   let r;
-  try { r = await rawFetch(`${c.url}/api/${ver}${path}${qs}`, { method, headers: { 'X-Api-Key': c.key, Accept: 'application/json', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) }, body: body !== undefined ? JSON.stringify(body) : undefined }); }
+  try { r = await rawFetch(`${c.url}/api/${ver}${path}${qs}`, { method, timeout, headers: { 'X-Api-Key': c.key, Accept: 'application/json', ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) }, body: body !== undefined ? JSON.stringify(body) : undefined }); }
   catch (e) { throw netError(c, e); }
   if (!r.ok) throw await errorOf(c, r);
   const t = await r.text();
@@ -123,7 +160,9 @@ async function qbVerb(v5, v4, hashes) {
 /* ---------------- Cache ---------------- */
 
 const store = new Map();
-async function cached(key, ttl, fn) {
+const siteKey = () => { const s = mediaSite43(); return s && siteConf?.(s, '*') ? s : ''; };
+async function cached(key0, ttl, fn) {
+  const key = `${siteKey()}|${key0}`;
   const hit = store.get(key);
   if (hit && hit.exp > Date.now()) return hit.v;
   if (hit?.p) return hit.p;
@@ -131,7 +170,7 @@ async function cached(key, ttl, fn) {
   store.set(key, { ...hit, p });
   return p;
 }
-export const clearMedia43 = (prefix = '') => { for (const k of [...store.keys()]) if (k.startsWith(prefix)) store.delete(k); };
+export const clearMedia43 = (prefix = '') => { for (const k of [...store.keys()]) if (k.slice(k.indexOf('|') + 1).startsWith(prefix)) store.delete(k); };
 
 /* ---------------- Formater (norsk) ---------------- */
 
@@ -164,6 +203,13 @@ function posterOf(svc, images, id) {
   const p = (images ?? []).find((i) => i.coverType === 'poster');
   if (p?.remoteUrl && /^https:\/\//.test(p.remoteUrl)) return p.remoteUrl;
   if (p?.url && /^\/MediaCover\//.test(p.url.replace(/^\/[^/]*(?=\/MediaCover)/, ''))) return `/api/media/cover?svc=${svc}&path=${encodeURIComponent(p.url.replace(/^.*(\/MediaCover\/)/, '$1').split('?')[0])}`;
+  return null;
+}
+/** Prompt 44: bredt bilde (16:9) for banner og hero. Sonarr/Radarr coverType fanart; ellers null (klienten bruker plakaten uskarpt). */
+function fanartOf(svc, images) {
+  const p = (images ?? []).find((i) => i.coverType === 'fanart');
+  if (p?.remoteUrl && /^https:\/\//.test(p.remoteUrl)) return p.remoteUrl;
+  if (p?.url && /\/MediaCover\//.test(p.url)) return `/api/media/cover?svc=${svc}&path=${encodeURIComponent(p.url.replace(/^.*(\/MediaCover\/)/, '$1').split('?')[0])}`;
   return null;
 }
 const artOf = (svc, id) => { const a = MOCK() && svcConf43(svc).mock ? mockArt43(svc, id) : null; return a?.color ?? colorFor(`${svc}${id}`); };
@@ -256,7 +302,7 @@ async function seriesOut(s) {
   const st = s.statistics ?? {};
   const have = st.episodeFileCount ?? 0, total = st.episodeCount ?? st.totalEpisodeCount ?? 0;
   return { id: s.id, kind: 'series', title: s.title, year: s.year ?? null, network: s.network ?? '', status: s.status === 'ended' ? 'ended' : 'continuing', statusLabel: s.status === 'ended' ? 'Avsluttet' : 'Fortsetter', overview: s.overview ?? '',
-    poster: posterOf('sonarr', s.images, s.id), color: artOf('sonarr', s.id), tvdbId: s.tvdbId ?? null, profileId: s.qualityProfileId ?? null, profile: await profName('sonarr', s.qualityProfileId),
+    poster: posterOf('sonarr', s.images, s.id), fanart: fanartOf('sonarr', s.images), color: artOf('sonarr', s.id), tvdbId: s.tvdbId ?? null, profileId: s.qualityProfileId ?? null, profile: await profName('sonarr', s.qualityProfileId),
     monitored: s.monitored !== false, monitor: s._monitor ?? null, seriesType: s.seriesType ?? 'standard', seriesTypeLabel: SERIES_TYPES43.find((x) => x[0] === s.seriesType)?.[1] ?? 'Standard', path: s.path ?? null, rootFolder: s.rootFolderPath ?? null,
     episodes: { have, total, missing: Math.max(0, total - have) }, episodesText: `${have} av ${total} episoder${total - have > 0 ? ` · ${total - have} mangler` : ''}`, sizeOnDisk: st.sizeOnDisk ?? 0, sizeText: st.sizeOnDisk ? sizeText43(st.sizeOnDisk) : '0 GB', seasonCount: st.seasonCount ?? s.seasons?.length ?? 0 };
 }
@@ -278,6 +324,7 @@ async function seriesDetail(id, u) {
       const aired = !!e.airDateUtc && Date.parse(e.airDateUtc) <= now;
       return { id: e.id, season: n, number: e.episodeNumber, code: epCode(n, e.episodeNumber), e: `E${pad(e.episodeNumber)}`, title: e.title ?? `Episode ${e.episodeNumber}`, airDate: e.airDate ?? null, airDateUtc: e.airDateUtc ?? null,
         airDateText: e.airDate ? dateText(e.airDate) : '', aired, hasFile: !!e.hasFile, monitored: !!e.monitored, ...stt, canSearch: ['miss', 'stall'].includes(stt.status),
+        episodeFileId: e.hasFile ? e.episodeFileId || null : null, canRedownload: !!e.hasFile, canDeleteFile: !!e.hasFile, // prompt 44: ⟳ Last ned på nytt / Slett
         ...(e.episodeFile ? { quality: e.episodeFile.quality?.quality?.name ?? null, size: e.episodeFile.size ?? null, sizeText: sizeText43(e.episodeFile.size) } : {}) };
     });
     const missing = list.filter((e) => e.status === 'miss' || e.status === 'stall').length;
@@ -291,7 +338,7 @@ async function lookupSeries(term) {
   const [res, lib] = await Promise.all([arr('sonarr', 'GET', '/series/lookup', { query: { term } }), seriesList().catch(() => [])]);
   return (res ?? []).slice(0, 25).map((x) => {
     const have = lib.find((s) => (x.tvdbId && s.tvdbId === x.tvdbId) || (x.id && s.id === x.id));
-    return { kind: 'series', tvdbId: x.tvdbId ?? null, title: x.title, year: x.year ?? null, network: x.network ?? '', overview: x.overview ?? '', poster: posterOf('sonarr', x.images, have?.id), color: have ? artOf('sonarr', have.id) : x._color ?? colorFor(x.title),
+    return { kind: 'series', tvdbId: x.tvdbId ?? null, title: x.title, year: x.year ?? null, network: x.network ?? '', overview: x.overview ?? '', poster: posterOf('sonarr', x.images, have?.id), fanart: fanartOf('sonarr', x.images), color: have ? artOf('sonarr', have.id) : x._color ?? colorFor(x.title),
       seasons: (x.seasons ?? []).filter((s) => s.seasonNumber > 0).length, exists: !!have, id: have?.id ?? null, existsLabel: have ? 'Finnes' : null };
   });
 }
@@ -342,7 +389,8 @@ async function updateSeries(id, b) {
 async function movieOut(m, q = null) {
   const f = m.movieFile;
   const d = m.digitalRelease?.slice(0, 10) ?? null;
-  return { id: m.id, kind: 'movie', title: m.title, year: m.year ?? null, overview: m.overview ?? '', poster: posterOf('radarr', m.images, m.id), color: artOf('radarr', m.id), tmdbId: m.tmdbId ?? null,
+  return { id: m.id, kind: 'movie', title: m.title, year: m.year ?? null, overview: m.overview ?? '', poster: posterOf('radarr', m.images, m.id), fanart: fanartOf('radarr', m.images), color: artOf('radarr', m.id), tmdbId: m.tmdbId ?? null,
+    movieFileId: f?.id ?? null, canRedownload: !!m.hasFile, canDeleteFile: !!m.hasFile, // prompt 44
     profileId: m.qualityProfileId ?? null, profile: await profName('radarr', m.qualityProfileId), monitored: m.monitored !== false, minimumAvailability: m.minimumAvailability ?? 'released',
     availabilityLabel: AVAILABILITY43.find((x) => x[0] === m.minimumAvailability)?.[1] ?? 'Utgitt digitalt', hasFile: !!m.hasFile, path: m.path ?? null, rootFolder: m.rootFolderPath ?? null,
     digitalRelease: d, inCinemas: m.inCinemas?.slice(0, 10) ?? null, physicalRelease: m.physicalRelease?.slice(0, 10) ?? null, note: (MOCK() && svcConf43('radarr').mock ? mockArt43('radarr', m.id)?.note : null) ?? (m.status === 'announced' && m.inCinemas ? `På kino ${dateText(m.inCinemas.slice(0, 10))}` : null),
@@ -361,7 +409,7 @@ async function lookupMovies(term) {
   const [res, lib] = await Promise.all([arr('radarr', 'GET', '/movie/lookup', { query: { term } }), movieList().catch(() => [])]);
   return (res ?? []).slice(0, 25).map((x) => {
     const have = lib.find((m) => (x.tmdbId && m.tmdbId === x.tmdbId) || (x.id && m.id === x.id));
-    return { kind: 'movie', tmdbId: x.tmdbId ?? null, title: x.title, year: x.year ?? null, overview: x.overview ?? '', poster: posterOf('radarr', x.images, have?.id), color: have ? artOf('radarr', have.id) : x._color ?? colorFor(x.title), exists: !!have, id: have?.id ?? null, existsLabel: have ? 'Finnes' : null };
+    return { kind: 'movie', tmdbId: x.tmdbId ?? null, title: x.title, year: x.year ?? null, overview: x.overview ?? '', poster: posterOf('radarr', x.images, have?.id), fanart: fanartOf('radarr', x.images), color: have ? artOf('radarr', have.id) : x._color ?? colorFor(x.title), exists: !!have, id: have?.id ?? null, existsLabel: have ? 'Finnes' : null };
   });
 }
 async function addMovie(b) {
@@ -426,15 +474,29 @@ export function rankReleases43(rows, profileRes = 1080) {
     seedTone: (r.seeders ?? 0) === 0 ? 'bad' : max && r.seeders >= max * 0.5 ? 'good' : max && r.seeders < max * 0.1 ? 'bad' : null }));
   return out.sort((a, b) => (b.best - a.best) || ((b.seeders ?? 0) - (a.seeders ?? 0)));
 }
-async function interactive(svc, query) {
+/** Prompt 44: Sonarr/Radarr spør ALLE indeksere i /release og svarer ofte først etter 30–120 s. Den faste grensen på 15 s i
+ *  rawFetch ga «svarte ikke i tide» → 504 (den ekte årsaken til «Feil 504» i interaktivt søk). /release får 180 s, og ett nytt
+ *  forsøk etter 2 s ved 502/503/504 fra tjenesten. Andre kall beholder den korte grensen. */
+export const RELEASE_TIMEOUT43 = 180_000;
+let releaseTimeout = RELEASE_TIMEOUT43;
+export const _setReleaseTimeout43 = (ms) => { releaseTimeout = ms ?? RELEASE_TIMEOUT43; };
+async function releaseRows(svc, query, signal) {
+  const go = () => arr(svc, 'GET', '/release', { query, timeout: releaseTimeout });
+  try { return await go(); } catch (e) {
+    if (signal?.aborted || ![502, 503, 504].includes(e.upstream) || e.status === 504) throw e;
+    await new Promise((r) => setTimeout(r, 2000));
+    return go();
+  }
+}
+export async function interactive(svc, query, { signal } = {}) {
   const t0 = Date.now();
   let ctx = {}, rows;
   if (svc === 'radarr') {
     const m = await arr('radarr', 'GET', `/movie/${query.movieId}`);
     const pn = await profName('radarr', m.qualityProfileId);
     ctx = { kind: 'movie', movieId: m.id, title: m.title, code: String(m.year ?? ''), titlePrefix: '', profile: pn, profileRes: resOfProfile(pn), poster: posterOf('radarr', m.images, m.id), color: artOf('radarr', m.id),
-      header: `${m.title}${m.year ? ` · ${m.year}` : ''}`, sub: `Profil ${pn ?? '–'}` };
-    rows = await arr('radarr', 'GET', '/release', { query: { movieId: m.id } });
+      header: `${m.title}${m.year ? ` · ${m.year}` : ''}`, sub: `Profil ${pn ?? '–'}`, fanart: fanartOf('radarr', m.images), hasFile: !!m.hasFile };
+    rows = await releaseRows('radarr', { movieId: m.id }, signal);
   } else {
     const e = query.episodeId ? await arr('sonarr', 'GET', `/episode/${+query.episodeId}`) : null;
     const sid = e?.seriesId ?? query.seriesId;
@@ -444,7 +506,7 @@ async function interactive(svc, query) {
     ctx = { kind: e ? 'episode' : 'season', seriesId: s?.id ?? null, episodeId: e?.id ?? null, seasonNumber: e?.seasonNumber ?? (query.seasonNumber != null ? +query.seasonNumber : null), title: s?.title ?? '', code,
       titlePrefix: s ? s.title.replace(/[':]/g, '').replace(/[^A-Za-z0-9]+/g, '.').replace(/\.$/, '') : '', profile: pn, profileRes: resOfProfile(pn), poster: s ? posterOf('sonarr', s.images, s.id) : null, color: s ? artOf('sonarr', s.id) : null,
       header: `${code}${e?.title ? ` · ${e.title}` : ''}`, sub: `Profil ${pn ?? '–'} · Overvåker ${monLabel(s?._monitor ?? 'all').toLowerCase()}` };
-    rows = await arr('sonarr', 'GET', '/release', { query: query.episodeId ? { episodeId: query.episodeId } : { seriesId: sid, seasonNumber: query.seasonNumber } });
+    rows = await releaseRows('sonarr', query.episodeId ? { episodeId: query.episodeId } : { seriesId: sid, seasonNumber: query.seasonNumber }, signal);
   }
   const items = rankReleases43((rows ?? []).map((r) => releaseOut(r, svc, ctx)), ctx.profileRes);
   const ms = Date.now() - t0;
@@ -489,13 +551,13 @@ export async function upcoming43(days = 7) {
     if (!d || d < today || d > last) continue;
     const s = e.series ?? {};
     items.push({ kind: 'episode', id: `ep-${e.id}`, episodeId: e.id, seriesId: e.seriesId, title: s.title ?? '', code: epCode(e.seasonNumber, e.episodeNumber), episodeTitle: e.title ?? '', date: d, time: e.airDateUtc ? osloHm(Date.parse(e.airDateUtc)) : '',
-      airUtc: e.airDateUtc ?? null, network: s.network ?? '', poster: posterOf('sonarr', s.images, e.seriesId), color: artOf('sonarr', e.seriesId), monitored: !!e.monitored, ...epState(e, q), open: { tab: 'sonarr', id: e.seriesId } });
+      airUtc: e.airDateUtc ?? null, network: s.network ?? '', poster: posterOf('sonarr', s.images, e.seriesId), fanart: fanartOf('sonarr', s.images), color: artOf('sonarr', e.seriesId), monitored: !!e.monitored, ...epState(e, q), open: { tab: 'sonarr', id: e.seriesId } });
   }
   for (const m of Array.isArray(mv) ? mv : []) {
     const cand = [['digitalRelease', 'Digital utgivelse'], ['inCinemas', 'På kino'], ['physicalRelease', 'Fysisk utgivelse']].map(([k, l]) => [m[k]?.slice(0, 10), l]).filter(([d]) => d && d >= today && d <= last);
     if (!cand.length) continue;
     const [d, label] = cand[0];
-    items.push({ kind: 'movie', id: `mv-${m.id}`, movieId: m.id, title: m.title, code: 'Film', episodeTitle: label, date: d, time: '', airUtc: null, network: '', poster: posterOf('radarr', m.images, m.id), color: artOf('radarr', m.id), monitored: m.monitored !== false,
+    items.push({ kind: 'movie', id: `mv-${m.id}`, movieId: m.id, title: m.title, code: 'Film', episodeTitle: label, date: d, time: '', airUtc: null, network: '', poster: posterOf('radarr', m.images, m.id), fanart: fanartOf('radarr', m.images), color: artOf('radarr', m.id), monitored: m.monitored !== false,
       ...movieState(m, q), open: { tab: 'radarr', id: m.id } });
   }
   items.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '99').localeCompare(b.time || '99') || a.title.localeCompare(b.title, 'nb'));
@@ -757,15 +819,23 @@ export async function mediaTest43(id, vals = null) {
     return { ok: false, ms: Date.now() - t0, message: e.message, code: e.code ?? (e.upstream === 401 ? '401' : null) };
   }
 }
+const LASTOK = 'media44_lastok';
+const lastOk43 = (sid, site) => (kv.get(OWNER, LASTOK, {}) ?? {})[`${site ?? 'hjemme'}:${sid}`] ?? null;
+function markOk43(sid, site) { const m = kv.get(OWNER, LASTOK, {}) ?? {}, k = `${site ?? 'hjemme'}:${sid}`, prev = m[k] ? Date.parse(m[k]) : 0; if (Date.now() - prev > 60_000) { m[k] = new Date().toISOString(); kv.set(OWNER, LASTOK, m); } }
 async function statusOut(u) {
   const ids = ['sonarr', 'radarr', 'qbit', 'prowlarr', 'jellyfin', 'plex'];
   const admin = isAdmin(u);
   const services = await Promise.all(ids.map(async (id) => {
     const c = svcConf43(id);
-    const base = { id: id === 'qbit' ? 'qbittorrent' : id, name: c.name, configured: c.configured, mock: c.mock || undefined, ...(admin && c.configured ? { url: c.url } : {}) };
-    if (!c.on) return { ...base, ok: false, version: null, ms: null, text: 'Ikke satt opp' };
+    // Prompt 44: samme felt som GET /api/integrations/status – {service, site, connected, lastOk, error, source} – så Media og
+    // Innstillinger viser det samme. state: 'ok' | 'missing' («Ikke satt opp») | 'down' («Svarer ikke»).
+    const sid = id === 'qbit' ? 'qbittorrent' : id;
+    const base = { id: sid, service: sid, name: c.name, configured: c.configured || !!c.mock, mock: c.mock || undefined, site: c.site ?? 'hjemme', source: 'server', configSource: c.mock ? 'mock' : c.site ? 'site' : c.source ?? 'owner', ...(c.fallback ? { fallback: true, requestedSite: c.requestedSite } : {}),
+      ...(admin && c.configured ? { url: c.url } : {}) };
+    if (!c.on) return { ...base, configured: false, ok: false, connected: false, state: 'missing', version: null, ms: null, lastOk: lastOk43(sid, c.site), text: 'Ikke satt opp', error: null };
     const t = await cached(`status:${id}:${c.url}:${c.key.length}`, 30_000, () => mediaTest43(id));
-    return { ...base, ok: t.ok, version: t.version ?? null, ms: t.ms ?? null, text: t.ok ? `v${t.version ?? '?'} · ${t.ms} ms` : t.message, ...(t.ok ? {} : { error: t.message }) };
+    if (t.ok) markOk43(sid, c.site);
+    return { ...base, ok: t.ok, connected: t.ok, state: t.ok ? 'ok' : 'down', version: t.version ?? null, ms: t.ms ?? null, lastOk: lastOk43(sid, c.site), text: t.ok ? `v${t.version ?? '?'} · ${t.ms} ms` : t.message, error: t.ok ? null : t.message };
   }));
   const p = prefsOf(u);
   return { services, mock: services.some((s) => s.mock), admin, canEdit: admin, settings: p, play: playOf('', u), setupRoute: 'innstillinger/integrasjoner#media',
@@ -1152,3 +1222,7 @@ media43Api.get('/cover', ...G, async (c) => {
   try { const r = await rawFetch(`${conf.url}${path}`, { headers: { 'X-Api-Key': conf.key } }); if (!r.ok) return c.body(null, 404); return new Response(r.body, { status: 200, headers: { 'Content-Type': r.headers.get('content-type') ?? 'image/jpeg', 'Cache-Control': 'private, max-age=86400' } }); }
   catch { return c.body(null, 502); }
 });
+
+// Prompt 44 (SERVER44): byggeklosser for media44.js (servere per sted, søk som jobb, slett fil, felles status).
+export { arr as arr43, qb as qb43, cached as cached43, indexersRaw as indexersRaw43, posterOf as posterOf43, fanartOf as fanartOf43, epCode as epCode43,
+  releaseOut as releaseOut43, statusOut as mediaStatusOut43, fail as mediaFail43, guard as mediaGuard43, admin as mediaAdmin43, jb as mediaBody43, nb1 as nb143 };

@@ -28,6 +28,7 @@ import { sessionUser, userInfo, serverName, currentSessionId } from './auth.js';
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from './finans/routes.js';
 import { companionsOf, deviceName } from './kalender33.js';
 import { buildInfo } from './cache-bust.js';
+import { issueRefresh44 } from './auth44.js'; // prompt 44: refresh-token (90 d glidende, 60 s grace)
 
 fhDb.exec(`CREATE TABLE IF NOT EXISTS fh_app_codes (code_hash TEXT PRIMARY KEY, kind TEXT NOT NULL, user_id TEXT NOT NULL, client TEXT NOT NULL, redirect TEXT, challenge TEXT, scopes TEXT NOT NULL,
   expires_tok INTEGER, parent TEXT, created INTEGER NOT NULL, exp INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0);`);
@@ -101,7 +102,8 @@ function issueCompanion41(user, app, device, scopes, expires, parent) {
   const t = issueToken(user, { name: `${CLIENTS[app]} (${device})`, scopes, expires });
   cq('INSERT INTO fh_companion_tokens(token_id,user_id,app,device,parent,created) VALUES(?,?,?,?,?,?)').run(t.fullId, user, app, device, parent, Date.now());
   const u = userInfo(user);
-  return { token: t.token, refresh: null, id: t.id, app, device, scopes: t.scopes, expires: t.expires, user: { id: u.id, username: u.username, name: u.name ?? u.displayName ?? null } };
+  const rf = issueRefresh44(user, app, device, t.fullId, scopes);
+  return { token: t.token, refresh: rf.refresh, refreshExpires: rf.refreshExpires, id: t.id, app, device, scopes: t.scopes, expires: t.expires, user: { id: u.id, username: u.username, name: u.name ?? u.displayName ?? null } };
 }
 /** Utlogging i Homelab: Kalender-tokenene som ble gitt fra denne Homelab-innloggingen (parent = tokenet/økta) tilbakekalles. parent:null = alle. → antall */
 export function revokeCompanions41(user, { parent = null } = {}) {

@@ -47,6 +47,11 @@ import { listUsers } from './auth.js';
 import { consumeReauth } from './reauth.js';
 import { notifyUser } from './notify.js';
 
+// Prompt 44: databaseskjemaet til denne versjonen (updateren leser linjen fra kildekoden og lagrer den i historikken).
+// Migreringene er additive, så eldre kode tåler en nyere database ned til DB_COMPAT_MIN. Øk DB_SCHEMA når en migrering
+// gjør at eldre versjoner IKKE kan bruke databasen, og sett DB_COMPAT_MIN til samme tall.
+export const DB_SCHEMA = 44;
+export const DB_COMPAT_MIN = 30;
 export const OS_NAME = 'Nordlys OS', OS_CODENAME = 'Nordlys', OS_TAGLINE = 'Lys i mørket, kjørt hjemme.';
 /** «4.22.0» → «Nordlys 4.22» */
 export const shortName = (v) => `${OS_CODENAME}${v ? ' ' + String(v).split('.').slice(0, 2).join('.') : ''}`;
@@ -183,7 +188,15 @@ function pendingRequest(status) {
 }
 const isRunning = (status = readStatus()) => RUNNING.has(status.state) || pendingRequest(status);
 /** Prompt 40: pågår en ekte oppdatering/omstart nå? → {updating, state, version} (for /api/health · restarting). */
-export function updateNow() { try { const st = readStatus(); return { updating: isRunning(st), state: st.state, version: st.version ?? null }; } catch { return { updating: false, state: 'idle', version: null }; } }
+// Prompt 44: phase (idle|downloading|installing|restarting|done|failed) – oppstartsskjermen skal BARE vises ved 'restarting'.
+const PHASE = { queued: 'downloading', downloading: 'downloading', building: 'installing', restarting: 'restarting', done: 'done', failed: 'failed', idle: 'idle' };
+export const phaseOf44 = (st, pending = false) => (pending ? 'downloading' : PHASE[st.state] ?? 'idle');
+export function updateNow() {
+  try {
+    const st = readStatus(), pending = pendingRequest(st), running = RUNNING.has(st.state) || pending;
+    return { updating: running, state: st.state, phase: running ? phaseOf44(st, pending) : 'idle', progress: progressOf(st, pending).pct, version: st.version ?? null, from: installed().version, to: st.version ?? null, action: st.action };
+  } catch { return { updating: false, state: 'idle', phase: 'idle', progress: 0, version: null }; }
+}
 // Prompt 36: logg over kjøringer (for TIDLIGERE VERSJONER: installert/feilet). Skrives når serveren ser en ferdig jobb.
 export const updateRuns = () => { const v = kv.get(OWNER, 'update_runs', []); return Array.isArray(v) ? v : []; };
 function recordRun(status) {
@@ -196,7 +209,9 @@ export function statusOut(status = readStatus()) {
   try { recordRun(status); } catch { /* logg er valgfri */ }
   const pending = pendingRequest(status);
   const req = pending ? readJson('request.json') : null;
-  return { ...status, ...(pending ? { state: 'queued', step: 'Venter på updateren', action: req?.action === 'rollback' ? 'rollback' : 'update', error: null } : {}), ...progressOf(status, pending), running: RUNNING.has(status.state) || pending };
+  const pr = progressOf(status, pending);
+  return { ...status, ...(pending ? { state: 'queued', step: 'Venter på updateren', action: req?.action === 'rollback' ? 'rollback' : 'update', error: null } : {}), ...pr, running: RUNNING.has(status.state) || pending,
+    phase: phaseOf44(status, pending), progress: pr.pct, from: installed().version, to: pending ? req?.target ?? null : status.version ?? null, ...(pending && req?.target ? { target: req.target } : {}) }; // prompt 44
 }
 
 // Updaterens historikk: bare versjonene leses (sha sendes aldri videre som instruks).
@@ -254,13 +269,26 @@ const getLatest = async (force) => (!force && latest && Date.now() - latest.at <
 
 /* ---------------- Backup ---------------- */
 
-export async function preUpdateBackup() {
+export async function preUpdateBackup(meta = {}) {
   mkdirSync(BACKUPS, { recursive: true });
   const name = `pre-update-${new Date().toISOString().replace(/[:.]/g, '-')}.db`;
   await db.backup(join(BACKUPS, name));
+  // Prompt 44: hvilken versjon backupen er tatt fra (updateren finner backupen for «Gjenopprett backup» med fromVersion).
   const old = readdirSync(BACKUPS).filter((f) => /^pre-update-[\w-]+\.db$/.test(f)).sort().reverse().slice(KEEP_BACKUPS);
   for (const f of old) { try { unlinkSync(join(BACKUPS, f)); } catch { /* prøver igjen neste gang */ } }
+  // Indeksen data/backups/update-backups.json: {items:[{name, fromVersion, dbSchema, at, action, target?}]} (bare filer som finnes).
+  try {
+    const keep = new Set(readdirSync(BACKUPS));
+    const items = [{ name, fromVersion: ownVersion(), dbSchema: DB_SCHEMA, at: Date.now(), ...meta }, ...backupIndex().filter((x) => x.name !== name)].filter((x) => keep.has(x.name)).slice(0, 20);
+    writeFileSync(join(BACKUPS, 'update-backups.json'), JSON.stringify({ items }), { mode: 0o644 });
+  } catch { /* valgfritt */ }
   return name;
+}
+/** Backupene med metadata (nyeste først): [{name, fromVersion, at}]. */
+const backupIndex = () => { try { const j = JSON.parse(readFileSync(join(BACKUPS, 'update-backups.json'), 'utf8')); return Array.isArray(j?.items) ? j.items.filter((x) => x && /^pre-update-[\w-]+\.db$/.test(String(x.name ?? ''))) : []; } catch { return []; } };
+export function backupList44() {
+  return backupIndex().filter((x) => existsSync(join(BACKUPS, x.name))).map((x) => ({ name: x.name, fromVersion: typeof x.fromVersion === 'string' ? x.fromVersion : null, at: Number(x.at) || null }))
+    .sort((a, b) => (b.at ?? 0) - (a.at ?? 0));
 }
 
 /* ---------------- Sanntid ---------------- */
@@ -325,7 +353,7 @@ async function overview(c, force) {
     canStart: !reason, reason, needsPassword: !!updateSettings().require_password,
     name: OS_NAME, codename: OS_CODENAME, tagline: OS_TAGLINE, settingsLog: updateAudit().slice(0, 10),
     rollback: { available: !!rb && available && !running && canWrite(c), version: rb?.version ?? null },
-    settings: updateSettings(),
+    settings: updateSettings(), pause: updatePause44(), versionsUrl: '/api/update/versions',
   });
 }
 
@@ -454,6 +482,26 @@ async function startJob(c, action) {
   }
   if (!updaterAvailable()) return c.json({ error: 'Oppdatering fra appen er ikke satt opp. Kjør update.sh én gang fra Proxmox for å slå det på.' }, 409);
   if (isRunning()) return c.json({ error: 'En oppdatering pågår allerede' }, 409);
+  // Prompt 44: {version, restoreBackup, pauseAutoDays} – versjonen MÅ finnes i updaterens egen liste (versions.json).
+  if (action === 'rollback' && b?.version !== undefined) {
+    const v = String(b.version ?? '').replace(/^v/, '');
+    if (!/^\d{1,4}\.\d{1,5}\.\d{1,6}$/.test(v)) return c.json({ error: 'Ugyldig versjon' }, 400);
+    const list = versions44();
+    const x = list.find((y) => y.version === v);
+    if (!x) return c.json({ error: `Versjon ${v} finnes ikke i listen over tidligere versjoner` }, 404);
+    if (x.current) return c.json({ error: `Du kjører allerede ${shortName(v)}` }, 409);
+    const restore = b.restoreBackup === true;
+    if (restore && !x.hasBackup) return c.json({ error: `Det finnes ingen backup fra før oppdateringen fra ${v}`, field: 'restoreBackup' }, 409);
+    if (!restore && !x.compatible) return c.json({ error: `${installed().version ?? 'Denne versjonen'} endret databasen. Du må gjenopprette backupen.`, field: 'restoreBackup', needsRestore: true }, 409);
+    const days = b.pauseAutoDays === undefined ? 7 : Math.max(0, Math.min(30, Math.round(Number(b.pauseAutoDays) || 0)));
+    const until = days ? Date.now() + days * 86400_000 : null;
+    kv.set(OWNER, 'update_pause', until ? { until, by: String(a.user), reason: `rollback til ${v}` } : null);
+    const r = await writeRequest(String(a.user), 'rollback', `${a.session ? 'økt' : 'app-token'} fra ${ip}`, { target: v, restoreBackup: restore });
+    if (r.error) return c.json({ error: r.error }, 500);
+    console.warn(`update.rollback from=${installed().version} to=${v} restore=${restore} by=${a.user} result=queued id=${r.id}`);
+    return c.json({ ok: true, id: r.id, backup: r.backup, target: { version: v }, restoreBackup: restore, pausedUntil: until ? new Date(until).toISOString() : null,
+      message: `Går tilbake til ${shortName(v)}${until ? ` · automatiske oppdateringer er av til ${new Date(until).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', timeZone: 'Europe/Oslo' })}` : ''}` });
+  }
   const target = action === 'rollback' ? rollbackTarget() : null;
   if (action === 'rollback' && !target) return c.json({ error: 'Fant ingen tidligere versjon å gå tilbake til' }, 409);
   const r = await writeRequest(String(a.user), action, `${a.session ? 'økt' : 'app-token'} fra ${ip}`);
@@ -461,14 +509,16 @@ async function startJob(c, action) {
   return c.json({ ok: true, id: r.id, backup: r.backup, ...(target ? { target: { version: target.version } } : {}) });
 }
 
-async function writeRequest(by, action, from) {
+async function writeRequest(by, action, from, extra = {}) {
   let backup;
-  try { backup = await preUpdateBackup(); } catch (e) {
+  try { backup = await preUpdateBackup({ action, ...(extra.target ? { target: extra.target } : {}) }); } catch (e) {
     console.error('[system-update] backup feilet:', e.message);
     return { error: `Kunne ikke ta backup av databasen, ${action === 'rollback' ? 'tilbakerullingen' : 'oppdateringen'} er ikke startet: ${e.message}` };
   }
   // Bare id, hvem, når (og action ved rollback). Alt annet i kroppen ignoreres.
-  const req = { id: randomUUID(), requestedBy: by.slice(0, 64), at: Date.now(), ...(action === 'rollback' ? { action: 'rollback' } : {}) };
+  // Prompt 44: ved rollback til en valgt versjon også target (semver fra updaterens egen liste) og restoreBackup (true/false).
+  const req = { id: randomUUID(), requestedBy: by.slice(0, 64), at: Date.now(), ...(action === 'rollback' ? { action: 'rollback' } : {}),
+    ...(action === 'rollback' && extra.target ? { target: extra.target, restoreBackup: !!extra.restoreBackup } : {}) };
   mkdirSync(UPD, { recursive: true });
   const tmp = join(UPD, `.request-${req.id}.tmp`);
   writeFileSync(tmp, JSON.stringify(req), { mode: 0o644 });
@@ -507,9 +557,11 @@ export async function checkAndNotify() {
 }
 
 /** Kalles hvert minutt. Kl. 03:30–03:40 (Oslo) med auto_update på: start en vanlig oppdatering. → id eller null. */
+export const updatePause44 = (t = Date.now()) => { const p = kv.get(OWNER, 'update_pause', null); return p && Number(p.until) > t ? p : null; };
 export async function autoUpdateTick(t = Date.now()) {
   const st = updateSettings();
   if (!st.auto_update) return null;
+  if (updatePause44(t)) return null; // prompt 44: satt på pause etter en tilbakerulling
   const o = osloParts(t);
   if (o.hh !== 3 || o.mm < 30 || o.mm >= 40) return null;
   if (kv.get(OWNER, 'update_auto_slot', null) === o.date) return null;
@@ -534,8 +586,42 @@ export function startUpdateScheduler() {
   for (const x of schedTimers) x.unref?.();
 }
 
+/* ---------------- Tidligere versjoner (prompt 44) ---------------- */
+
+/**
+ * Versjonslista kommer fra updateren (data/update/versions.json, skrevet bare av updateren: installerte + tagger den selv har lest).
+ * Serveren legger bare til notater (CHANGELOG), backup og kompatibilitet. → [{version, date, notes, hasBackup, backupAt, dbSchema,
+ * compatible, current, previous, installed, source}] (nyeste først, maks 10)
+ */
+export function versions44() {
+  const v = readJson('versions.json');
+  const inst = installed(), cur = inst.version;
+  let list = Array.isArray(v?.versions) ? v.versions.filter((x) => x && /^\d+\.\d+\.\d+$/.test(String(x.version ?? ''))) : [];
+  // Eldre updater uten versions.json: historikken (bare installerte).
+  if (!list.length) { const h = readJson('history.json'); list = (Array.isArray(h?.entries) ? h.entries : []).filter((x) => x && /^\d+\.\d+\.\d+$/.test(String(x.version ?? ''))).map((x) => ({ version: x.version, date: x.at ?? null, installed: true, dbSchema: x.dbSchema ?? null, source: 'installed' })); }
+  if (cur && !list.some((x) => x.version === cur)) list.unshift({ version: cur, date: inst.at, installed: true, dbSchema: DB_SCHEMA, source: 'installed' });
+  let sections = [];
+  try { sections = parseChangelog(readFileSync(CHANGELOG, 'utf8')); } catch { /* */ }
+  const remote = latest?.value?.sections ?? [];
+  const sec = (ver) => remote.find((x) => x.version === ver) ?? sections.find((x) => x.version === ver);
+  const backups = backupList44();
+  const h = readJson('history.json'), hist = Array.isArray(h?.entries) ? h.entries : [];
+  const prev = hist.find((x) => x?.version && x.version !== cur)?.version ?? null;
+  return list.sort((a, b) => compareVersions(b.version, a.version)).slice(0, 10).map((x) => {
+    const s = sec(x.version), b = backups.find((y) => y.fromVersion === x.version);
+    const dbSchema = Number.isFinite(+x.dbSchema) && x.dbSchema !== null ? +x.dbSchema : x.version === cur ? DB_SCHEMA : null;
+    const date = x.date ? new Date(Number(x.date) || Date.parse(x.date)).toISOString() : s?.date ?? null;
+    return { version: x.version, name: shortName(x.version), date, notes: notesClean(s?.items ?? []).slice(0, 1)[0] ?? s?.title ?? null, allNotes: notesClean(s?.items ?? []).slice(0, 12),
+      hasBackup: !!b, backupAt: b?.at ? new Date(b.at).toISOString() : null, dbSchema, compatible: dbSchema == null ? true : dbSchema >= DB_COMPAT_MIN,
+      current: x.version === cur, previous: x.version === prev, installed: !!x.installed, source: x.source ?? (x.installed ? 'installed' : 'release') };
+  });
+}
+
 /* ---------------- Ruter ---------------- */
 
+api.get('/versions', (c) => c.json(versions44(), 200, { 'Cache-Control': 'no-store' }));
+api.get('/pause', (c) => c.json({ pause: updatePause44() }));
+api.delete('/pause', (c) => { if (!canWrite(c)) return c.json({ error: 'Tokenet mangler tilgangen finance:write' }, 403); kv.set(OWNER, 'update_pause', null); return c.json({ ok: true, pause: null }); });
 api.get('/', (c) => overview(c, false));
 api.post('/check', (c) => overview(c, true));
 api.get('/log', (c) => c.text(readLog(0), 200, { 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' }));
@@ -564,6 +650,13 @@ api.put('/settings', async (c) => {
 });
 api.post('/start', (c) => startJob(c, 'update'));
 api.post('/rollback', (c) => startJob(c, 'rollback'));
+
+// Prompt 44: GET /api/version (uten innlogging) → {version, name, codename, api, dbSchema, features:[…]}. Appene skjuler det serveren ikke støtter.
+export const FEATURES44 = ['logs', 'containers', 'study.documents', 'study.overview', 'calendar.attendees', 'calendar.invite', 'users.directory', 'geo.address', 'tasks.subs', 'tasks.sync', 'tasks.deadline',
+  'media.servers', 'media.search.jobs', 'media.files.delete', 'media.library.search', 'media.fanart', 'integrations.status', 'playback', 'playback.plex.pin', 'impersonate', 'users.layout', 'server.owner', 'update.versions',
+  'update.rollback.target', 'web_theme', 'health.state'];
+export const versionApi44 = new Hono();
+versionApi44.get('/', (c) => c.json({ version: ownVersion(), name: OS_NAME, codename: OS_CODENAME, shortName: shortName(ownVersion()), api: 44, dbSchema: DB_SCHEMA, features: FEATURES44 }, 200, { 'Cache-Control': 'no-store' }));
 
 export const _paths = { UPD, BACKUPS };
 export const _hasRequest = () => existsSync(join(UPD, 'request.json'));

@@ -319,6 +319,10 @@ export function destroySession(c) {
 }
 
 export function sessionUser(c) {
+  // Prompt 44 (WEB44): «Logg inn som» på web – admin44.js har byttet forespørselen til X-tokenet (hl_imp) og fjernet admin-økten.
+  // Da er X «innlogget» også for rutene som ellers bare godtar økt (/api/state, /api/ui …).
+  const imp = c.get?.('impersonation');
+  if (imp?.target) return imp.target;
   const sid = getCookie(c, COOKIE);
   if (sid) {
     const row = db.prepare('SELECT s.user, s.expires FROM sessions s JOIN users u ON u.id=s.user WHERE s.id=?').get(sidKey(sid));

@@ -214,11 +214,13 @@ const fromHa = (h) => ({ title: String(h.summary ?? '').trim().slice(0, 200), do
 const fromTask = (t) => ({ title: t.title, done: !!t.done, due: t.due ?? null });
 const same = (a, b) => a.title === b.title && a.done === b.done && (a.due ?? null) === (b.due ?? null);
 function descOf(t) {
-  if (!t.assignee) return null;
-  const u = T.userInfo(t.assignee);
-  return u ? `Tildelt: ${u.displayName ?? u.name}` : null;
+  const u = t.assignee ? T.userInfo(t.assignee) : null;
+  // Prompt 44: HA To-do har ikke underpunkter, så deloppgavene sendes som linjer i beskrivelsen («☐ sovepose»).
+  let subs = []; try { subs = JSON.parse(t.subs ?? '[]'); } catch { subs = []; }
+  const lines = [u ? `Tildelt: ${u.displayName ?? u.name}` : null, ...(Array.isArray(subs) ? subs : []).filter((x) => x?.n).map((x) => `${x.done ? '☑' : '☐'} ${x.n}`)].filter(Boolean);
+  return lines.length ? lines.join('\n') : null;
 }
-const ours = (d) => !d || /^Tildelt: /.test(d); // beskrivelsen er vår (eller tom), så den kan overskrives
+const ours = (d) => !d || /^(Tildelt: |☐ |☑ )/.test(d); // beskrivelsen er vår (eller tom), så den kan overskrives
 
 /* ---------------- Synk av én entitet ---------------- */
 
@@ -555,6 +557,45 @@ export function mountHa(api) {
     if (!conf().enabled) return c.json({ ...(await out(c.get('user'))), error: 'Synk med Home Assistant er slått av' }, 409);
     const r = await syncAll();
     return c.json({ ...(await out(c.get('user'), true)), ok: r.ok });
+  });
+  // Prompt 44: Innstillinger → Gjøremål. Samme lagring som /ha (huske_ha + huske_ha_map), i formen fra designet.
+  //   GET /api/tasks/sync → {on, enabled, status, t, syncedAt, error, lists:[{id, name, color, entityId, entityName, connected}], map:{listId: entityId}, entities, queue, canEdit}
+  //   PUT /api/tasks/sync {on?, map?:{listId: entityId|null}} (admin) → samme · POST /api/tasks/sync/now (admin) → samme + ok
+  const syncOut = async (u, force = false) => {
+    const o = await out(u, force), all = q('SELECT * FROM hl_task_lists').all().filter((l) => T.canSeeList(l, u));
+    const ents = new Map((o.entities ?? []).map((e) => [e.entity_id, e.name]));
+    const lists = all.map((l) => { const m = o.maps.find((x) => x.listId === l.id); return { id: l.id, name: l.name, color: l.color ?? null, entityId: m?.entityId ?? null, entityName: m ? ents.get(m.entityId) ?? m.entityId : null, connected: !!m, text: m ? ents.get(m.entityId) ?? m.entityId : 'Ikke koblet' }; });
+    return { on: o.enabled, ...o, t: o.syncedAt, lists, map: Object.fromEntries(o.maps.map((m) => [m.listId, m.entityId])), connectedCount: o.maps.length, canEdit: T.isAdmin(u),
+      text: o.enabled ? `Synk med Home Assistant · ${o.syncedAt ? `synket ${new Date(o.syncedAt).toLocaleTimeString('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit' })}` : 'på'}` : 'Synk med Home Assistant · av' };
+  };
+  api.get('/sync', async (c) => c.json(await syncOut(c.get('user'))));
+  api.put('/sync', async (c) => {
+    const deny = admin(c); if (deny) return deny;
+    const u = c.get('user'), b = await body(c);
+    if (b.on !== undefined && typeof b.on !== 'boolean') return c.json({ error: 'on må være true eller false' }, 400);
+    if (b.map !== undefined && (!b.map || typeof b.map !== 'object' || Array.isArray(b.map))) return c.json({ error: 'map må være {listId: entityId|null}' }, 400);
+    for (const [listId, e] of Object.entries(b.map ?? {})) {
+      const l = T.listRow(listId);
+      if (!T.canSeeList(l, u)) return c.json({ error: `Fant ikke listen ${listId}` }, 404);
+      if (e !== null && e !== '' && !/^todo\.[a-z0-9_]{1,80}$/.test(String(e))) return c.json({ error: 'entityId må være en todo.*-entitet' }, 400);
+      const other = e ? mapOfEntity(e) : null;
+      if (other && other.list_id !== l.id) return c.json({ error: `${e} er allerede koblet til en annen liste` }, 409);
+      const cur = mapOfList(l.id);
+      db.transaction(() => {
+        if (cur && cur.entity_id !== e) { q('DELETE FROM huske_ha_map WHERE list_id=?').run(l.id); q('DELETE FROM huske_ha_seen WHERE entity_id=?').run(cur.entity_id); q('DELETE FROM huske_ha_queue WHERE entity_id=?').run(cur.entity_id); q('UPDATE hl_tasks SET ha_uid=NULL, ha_synced_at=NULL WHERE list=?').run(l.id); }
+        if (e && cur?.entity_id !== e) q('INSERT INTO huske_ha_map(list_id, entity_id, user_id, created) VALUES(?,?,?,?) ON CONFLICT(list_id) DO UPDATE SET entity_id=excluded.entity_id, user_id=excluded.user_id, created=excluded.created').run(l.id, e, u, Date.now());
+      })();
+      subscribed = null;
+    }
+    if (b.on !== undefined) { setConf({ enabled: b.on }); if (b.on) startHa(); else stopHa(); }
+    if (conf().enabled && (b.on || b.map)) await syncAll().catch(() => {});
+    return c.json(await syncOut(u, true));
+  });
+  api.post('/sync/now', async (c) => {
+    const deny = admin(c); if (deny) return deny;
+    if (!conf().enabled) return c.json({ ...(await syncOut(c.get('user'))), error: 'Synk med Home Assistant er slått av' }, 409);
+    const r = await syncAll();
+    return c.json({ ...(await syncOut(c.get('user'), true)), ok: r.ok });
   });
   api.post('/ha/create', async (c) => {
     const deny = admin(c); if (deny) return deny;

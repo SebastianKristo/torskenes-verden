@@ -20,6 +20,7 @@
 //   Glimt (11 funksjoner): se tasks-glimt37.js.
 import { extraOut40 } from './tasks-glimt40.js'; // prompt 40
 import { Hono } from 'hono';
+import { randomBytes } from 'node:crypto';
 import { db, kv, OWNER } from './db.js';
 import { userInfo, listUsers, sessionUser, isAdmin } from './auth.js';
 import { bearerOk } from './finans/routes.js';
@@ -96,6 +97,8 @@ const ARCHIVE_AFTER_MS = 7 * 86_400_000;
 for (const [col, def] of [['time', 'TEXT'], ['urgent', 'INTEGER NOT NULL DEFAULT 0'], ['rep', "TEXT NOT NULL DEFAULT 'none'"], ['early', "TEXT NOT NULL DEFAULT 'none'"],
   ['prio', 'INTEGER NOT NULL DEFAULT 0'], ['flag', 'INTEGER NOT NULL DEFAULT 0'], ['tags', "TEXT NOT NULL DEFAULT '[]'"], ['subs', "TEXT NOT NULL DEFAULT '[]'"],
   ['place', 'TEXT'], ['glimt', 'INTEGER NOT NULL DEFAULT 0'], ['done_by', 'TEXT']]) if (!hasCol('hl_tasks', col)) db.exec(`ALTER TABLE hl_tasks ADD COLUMN ${col} ${def}`);
+// Prompt 44: frist (dl, siste dag) er eget felt ved siden av dato/tid (due/time), og stedet kan ha koordinater (geo {lat, lon, label}).
+for (const [col, def] of [['dl', 'TEXT'], ['geo', 'TEXT']]) if (!hasCol('hl_tasks', col)) db.exec(`ALTER TABLE hl_tasks ADD COLUMN ${col} ${def}`);
 if (!hasCol('hl_task_lists', 'household')) db.exec('ALTER TABLE hl_task_lists ADD COLUMN household INTEGER NOT NULL DEFAULT 0');
 if (!hasCol('hl_task_lists', 'kind')) db.exec('ALTER TABLE hl_task_lists ADD COLUMN kind TEXT');
 // Engangsmigrering: husstandens felles lister fra før prompt 21 (Hjem, Handel, Hytta hos hovedadmin) blir delte lister med alle
@@ -196,10 +199,12 @@ const listOut = (r, uid) => {
 };
 const parseArr = (v) => { try { const a = JSON.parse(v ?? '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
 const itemOut = (r) => {
-  const tags = parseArr(r.tags).map(String), subs = parseArr(r.subs).map((x) => ({ n: String(x?.n ?? ''), done: !!x?.done }));
+  const tags = parseArr(r.tags).map(String), subs = parseArr(r.subs).map((x, i) => ({ id: String(x?.id ?? `s${i + 1}`), n: String(x?.n ?? ''), done: !!x?.done }));
+  let geo = null; try { geo = r.geo ? JSON.parse(r.geo) : null; } catch { geo = null; }
   return { id: r.id, title: r.title, n: r.title, list: r.list || null, l: r.list || null, due: r.due ?? null, time: r.time ?? null, assignee: r.assignee ?? null, who: r.assignee ?? null,
     note: r.note, notes: r.note, done: !!r.done, doneAt: r.done_at ?? null, archived: !!r.archived_at, arch: !!r.archived_at, archivedAt: r.archived_at ?? null,
     urgent: !!r.urgent, rep: r.rep ?? 'none', early: r.early ?? 'none', prio: r.prio ?? 0, flag: !!r.flag, tags, subs, subsDone: subs.filter((x) => x.done).length,
+    subsText: subs.length ? `${subs.filter((x) => x.done).length}/${subs.length}` : null, dl: r.dl ?? null, deadline: r.dl ?? null, dlOverdue: !!r.dl && !r.done && r.dl < today(), geo, // prompt 44
     place: r.place ?? null, glimt: !!r.glimt, doneBy: r.done_by ?? null, createdBy: r.created_by ?? null, by: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, ...haInfo(r),
     ...extraOut40(r), ...origin41(r) }; // prompt 40: placeName, after, mentions · prompt 41: origin {id, text, at, engine}
 };
@@ -262,7 +267,12 @@ function cleanTask(b0, partial, uid, listId) {
   }
   if ('subs' in b) {
     if (!Array.isArray(b.subs)) throw new Error('subs må være en liste');
-    out.subs = JSON.stringify(b.subs.slice(0, 50).map((x) => ({ n: str(typeof x === 'string' ? x : x?.n, 200), done: !!x?.done })).filter((x) => x.n));
+    out.subs = JSON.stringify(subsClean(b.subs));
+  }
+  if ('dl' in b || 'deadline' in b) { const v = b.dl !== undefined ? b.dl : b.deadline; if (v !== null && v !== '' && !DATE.test(String(v))) throw new Error('Frist må være YYYY-MM-DD'); out.dl = v || null; }
+  if ('geo' in b) {
+    if (b.geo === null) out.geo = null;
+    else { const lat = +b.geo?.lat, lon = +(b.geo?.lon ?? b.geo?.lng); if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new Error('geo må være {lat, lon}'); out.geo = JSON.stringify({ lat: Math.round(lat * 1e6) / 1e6, lon: Math.round(lon * 1e6) / 1e6, ...(b.geo.label ? { label: str(b.geo.label, 160) } : {}) }); }
   }
   if ('place' in b) { if (b.place && !PLACES.includes(b.place)) throw new Error(`Sted må være ${PLACES.join(', ')}`); out.place = b.place || null; }
   if ('glimt' in b) out.glimt = b.glimt ? 1 : 0;
@@ -271,6 +281,16 @@ function cleanTask(b0, partial, uid, listId) {
   return out;
 }
 
+/** Prompt 44: deloppgaver med stabile id-er ({id, n, done}); nye får en id. */
+function subsClean(list) {
+  const seen = new Set();
+  return list.slice(0, 50).map((x) => {
+    let id = typeof x === 'object' && x?.id ? String(x.id).replace(/[^\w-]/g, '').slice(0, 24) : '';
+    if (!id || seen.has(id)) id = `s${randomBytes(4).toString('hex')}`;
+    seen.add(id);
+    return { id, n: str(typeof x === 'string' ? x : x?.n, 200), done: !!x?.done };
+  }).filter((x) => x.n);
+}
 /** Neste dato for en gjentagende oppgave. */
 export function nextDue(due, rep) {
   if (!due || !rep || rep === 'none') return null;
@@ -369,10 +389,10 @@ api.post('/', async (c) => {
 /** Lager en oppgave (t fra cleanTask) for u, sender sanntid og synker til HA. → raden */
 export function insertTask(u, t) {
   const now = Date.now();
-  const r = q(`INSERT INTO hl_tasks(title, list, due, assignee, note, done, done_at, created_by, created_at, updated_at, time, urgent, rep, early, prio, flag, tags, subs, place, glimt)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`)
+  const r = q(`INSERT INTO hl_tasks(title, list, due, assignee, note, done, done_at, created_by, created_at, updated_at, time, urgent, rep, early, prio, flag, tags, subs, place, glimt, dl, geo)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`)
     .get(t.title, t.list ?? defaultList(u), t.due ?? null, t.assignee ?? null, t.note ?? '', t.done ?? 0, t.done ? now : null, u, now, now,
-      t.time ?? null, t.urgent ?? 0, t.rep ?? 'none', t.early ?? 'none', t.prio ?? 0, t.flag ?? 0, t.tags ?? '[]', t.subs ?? '[]', t.place ?? null, t.glimt ?? 0);
+      t.time ?? null, t.urgent ?? 0, t.rep ?? 'none', t.early ?? 'none', t.prio ?? 0, t.flag ?? 0, t.tags ?? '[]', t.subs ?? '[]', t.place ?? null, t.glimt ?? 0, t.dl ?? null, t.geo ?? null);
   send(audienceOfTask(r), 'created', { item: itemOut(r) });
   haLocal('created', null, r);
   return r;
@@ -386,6 +406,8 @@ api.patch('/:id{[0-9]+}', async (c) => {
   const before = audienceOfTask(cur);
   const arch = 'archived_at' in t ? t.archived_at : undefined;
   delete t.archived_at;
+  // Prompt 44: fullføres hovedoppgaven, krysses deloppgavene av også.
+  if (t.done === 1 && !cur.done && !('subs' in t) && parseArr(cur.subs).some((x) => !x?.done)) t.subs = JSON.stringify(subsClean(parseArr(cur.subs).map((x, i) => ({ id: x?.id ?? `s${i + 1}`, n: x?.n, done: true }))));
   const keys = Object.keys(t);
   if ('done' in t) { keys.push('done_at', 'done_by'); t.done_at = t.done ? (cur.done ? cur.done_at : Date.now()) : null; t.done_by = t.done ? (cur.done ? cur.done_by ?? null : u) : null; }
   if (keys.length) q(`UPDATE hl_tasks SET ${keys.map((k) => `${k}=?`).join(', ')}, updated_at=? WHERE id=?`).run(...keys.map((k) => t[k]), Date.now(), cur.id);
@@ -404,6 +426,48 @@ api.patch('/:id{[0-9]+}', async (c) => {
   // Prompt 32: arkivering/gjenoppretting (etter de andre feltene, så {archived:false, done:false} gir en åpen oppgave).
   if (arch !== undefined && (arch != null) !== (row.archived_at != null)) return c.json({ item: itemOut(archiveRow(row, arch != null)), ...(next ? { next } : {}) });
   return c.json({ item, ...(next ? { next } : {}) });
+});
+
+// Prompt 44: deloppgaver rett i lista (↳+). Samme tilgang, sanntid og HA-synk som PATCH.
+//   POST /api/tasks/:id/subs {n} → {item, sub} · PATCH /api/tasks/:id/subs/:sid {n?, done?} → {item, sub, allDone, askComplete}
+//   DELETE /api/tasks/:id/subs/:sid → {item}. Alle deloppgaver krysset av (og oppgaven ikke ferdig) → askComplete:true («Fullfør «X» også?»).
+const subsOf = (r) => parseArr(r.subs).map((x, i) => ({ id: String(x?.id ?? `s${i + 1}`), n: String(x?.n ?? ''), done: !!x?.done }));
+function saveSubs(cur, subs) {
+  q('UPDATE hl_tasks SET subs=?, updated_at=? WHERE id=?').run(JSON.stringify(subsClean(subs)), Date.now(), cur.id);
+  const row = byId(cur.id), item = itemOut(row);
+  send(audienceOfTask(row), 'updated', { item });
+  if (!row.archived_at) haLocal('updated', cur, row);
+  return { row, item };
+}
+api.post('/:id{[0-9]+}/subs', async (c) => {
+  const u = c.get('user'), cur = byId(+c.req.param('id'));
+  if (!cur || !canSeeTask(cur, u)) return bad(c, 'Fant ikke oppgaven', 404);
+  const b = await body(c), n = str(b?.n ?? b?.title ?? b?.text, 200);
+  if (!n) return bad(c, 'Skriv deloppgaven');
+  const subs = subsOf(cur);
+  if (subs.length >= 50) return bad(c, 'Maks 50 deloppgaver');
+  const sub = { id: `s${randomBytes(4).toString('hex')}`, n, done: false };
+  const { item } = saveSubs(cur, [...subs, sub]);
+  return c.json({ item, sub: item.subs.find((x) => x.id === sub.id) ?? sub }, 201);
+});
+api.patch('/:id{[0-9]+}/subs/:sid', async (c) => {
+  const u = c.get('user'), cur = byId(+c.req.param('id'));
+  if (!cur || !canSeeTask(cur, u)) return bad(c, 'Fant ikke oppgaven', 404);
+  const subs = subsOf(cur), i = subs.findIndex((x) => x.id === c.req.param('sid'));
+  if (i < 0) return bad(c, 'Fant ikke deloppgaven', 404);
+  const b = await body(c);
+  if ('n' in (b ?? {})) { const n = str(b.n, 200); if (!n) return bad(c, 'Skriv deloppgaven'); subs[i].n = n; }
+  if ('done' in (b ?? {})) subs[i].done = !!b.done;
+  const { row, item } = saveSubs(cur, subs);
+  const allDone = item.subs.length > 0 && item.subs.every((x) => x.done);
+  return c.json({ item, sub: item.subs[i], allDone, askComplete: allDone && !row.done, ...(allDone && !row.done ? { ask: `Fullfør «${row.title}» også?` } : {}) });
+});
+api.delete('/:id{[0-9]+}/subs/:sid', (c) => {
+  const u = c.get('user'), cur = byId(+c.req.param('id'));
+  if (!cur || !canSeeTask(cur, u)) return bad(c, 'Fant ikke oppgaven', 404);
+  const subs = subsOf(cur), next = subs.filter((x) => x.id !== c.req.param('sid'));
+  if (next.length === subs.length) return bad(c, 'Fant ikke deloppgaven', 404);
+  return c.json({ item: saveSubs(cur, next).item });
 });
 
 api.delete('/:id{[0-9]+}', (c) => {

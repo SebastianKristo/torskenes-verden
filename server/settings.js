@@ -187,6 +187,14 @@ export const SCHEMA = [
     ['chat_default_model', 'Standardmodell', ''],
     ['chat_theme', 'Tema (papir eller noytral)', 'papir'],
   ]],
+  // Prompt 44: e-post fra brukerens egen adresse (Kalender → Send invitasjon med .ics). Gmail: smtp.gmail.com, 587, app-passord.
+  ['E-post (SMTP)', { id: 'smtp', scope: 'personal', domain: 'gmail.com', category: 'Annet', help: 'Brukes når du sender invitasjoner fra Kalender. Gmail og iCloud: lag et app-passord. Port 587 (STARTTLS) eller 465 (TLS).' }, [
+    ['smtp_host', 'SMTP-server', ''],
+    ['smtp_port', 'Port', '587'],
+    ['smtp_user', 'Brukernavn (e-postadressen)', ''],
+    ['smtp_pass', 'App-passord', '', true],
+    ['smtp_from', 'Avsender (Navn <adresse>)', ''],
+  ]],
   ['Personvern og logoer', { id: 'privacy', scope: 'personal', domain: 'brreg.no', category: 'AI', help: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }, [
     ['logo_local_receipts', 'Les kvitteringer lokalt', '1', false, 'bool'],
     ['logo_gemini', 'Finn logo med Gemini', '1', false, 'bool'],

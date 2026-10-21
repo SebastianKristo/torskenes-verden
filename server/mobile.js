@@ -107,6 +107,7 @@ const SCALAR = {
   design: (v) => ['v2', 'lys', 'mork', 'glod'].includes(v),
   compactNav: (v) => typeof v === 'boolean',
   hlTheme: (v) => ['cur', '2c'].includes(v),
+  web_theme: (v) => ['light', 'dark', 'system'].includes(v), // prompt 44 (WEB44): lys/mørk/system på web
   mobileDesign: (v) => ['klassisk', 'papir'].includes(v),
   paperMode: (v) => ['auto', 'lys', 'mork'].includes(v),
   photo: (v) => PHOTO_KINDS.includes(v),

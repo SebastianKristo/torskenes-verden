@@ -157,9 +157,42 @@ export function quickLabel(r) {
   return WD_SHORT[d.getUTCDay()] + ' ' + d.getUTCDate() + '. ' + MN_SHORT[d.getUTCMonth()] + (r.start ? ' · ' + r.start : '');
 }
 
+// Prompt 44 (SERVER44): klokkeslett uten «kl.»: 1600/0930/kl1600 → 16:00/09:30, 16h/16t → 16:00, 16-17 → 16:00-17:00.
+// Tall etter et månedsnavn («3 nov 2026») og beløp («1600 kr») er ikke tid. Brukes på teksten før tolkningen under.
+const MON_BEFORE = /(jan|feb|mar|apr|mai|jun|jul|aug|sep|okt|nov|des)[a-zæøå]*\.?\s*$/i;
+export function normTimes44(s) {
+  let out = String(s ?? '');
+  out = out.replace(/(^|[\s(])(kl\.?\s*|klokka\s*)?([01]\d|2[0-3])([0-5]\d)(?=$|[\s,;!?)]|\.(?:\s|$))/gi, (m, pre, kl, h, mm, off, all) => {
+    if (!kl && MON_BEFORE.test(all.slice(0, off + pre.length))) return m;
+    if (/^\s*(kr|nok|,-|%|stk|m\b|km)/i.test(all.slice(off + m.length))) return m;
+    return `${pre}${kl ? `${kl.trim()} ` : ''}${h}:${mm}`;
+  });
+  out = out.replace(/(^|[\s(])(kl\.?\s*|klokka\s*)?(\d{1,2})\s*([ht])(?=$|[\s,.;!?)])/gi, (m, pre, kl, h, u, off, all) => {
+    const n = +h; if (n > 23 || (u.toLowerCase() === 't' && n < 6) || /\b(om|i|på|ca\.?)\s*$/i.test(all.slice(0, off + pre.length))) return m;
+    return `${pre}${kl ? `${kl.trim()} ` : ''}${String(n).padStart(2, '0')}:00`;
+  });
+  out = out.replace(/(^|\s)(\d{1,2})\s*(?:-|–)\s*(\d{1,2})(?=$|[\s,;!?)])/g, (m, pre, a, b) => (+a <= 23 && +b <= 23 && +a < +b ? `${pre}${a.padStart(2, '0')}:00-${b.padStart(2, '0')}:00` : m));
+  return out;
+}
+const LEAD44 = /^(?:legg til|sett opp|time|avtale|book|bestill|ny|lag)(?![a-zæøå])/i;
+/** Tittel = det som er igjen når dato, tid, «kl», ukedager, «i morgen» og innledningsord er fjernet (uansett hvor tittelen står). */
+export function restTitle44(raw) {
+  let t = ` ${String(raw ?? '')} `;
+  t = t.replace(/\b\d{1,2}[:.]\d{2}(?:\s*[-–]\s*\d{1,2}[:.]\d{2})?\b/g, ' ')
+    .replace(/(^|\s)\d{1,2}[./]\d{1,2}(?:[./]\d{2,4})?(?=[\s.,;!?]|$)/g, ' ')
+    .replace(/\b\d{1,2}\.?\s*(jan|feb|mar|apr|mai|jun|jul|aug|sep|okt|nov|des)[a-zæøå]*\.?(\s+\d{4})?/gi, ' ')
+    .replace(/(^|\s)(kl\.?|klokka)(?=\s|$)/gi, ' ')
+    .replace(/(^|\s)(i dag|i kveld|i morgen|i overmorgen|neste uke|på|den)(?=\s|$)/gi, ' ')
+    .replace(new RegExp(`(^|\\s)(${WDAYS.join('|')})(?=\\s|$|[.,])`, 'gi'), ' ')
+    .replace(/\s+/g, ' ').trim();
+  for (let i = 0; i < 3 && LEAD44.test(t); i++) t = t.replace(LEAD44, '').trim();
+  t = t.replace(/^[\s.,;:–-]+|[\s.,;:–-]+$/g, '').trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+}
+
 export function parseQuick(text, todayISO, memory) {
   const orig = String(text ?? '').replace(/\r\n?/g, '\n');
-  const raw = orig.replace(/\s+/g, ' ').trim();
+  const raw = normTimes44(orig.replace(/\s+/g, ' ').trim());
   const t = raw.toLowerCase();
   const today = todayOf(todayISO);
   const empty = { ok: false, why: 'Skriv hva timen gjelder.', title: '', date: null, start: null, end: null, place: null, type: 'annet', duration: 60, allDay: false, confidence: 0, isAppointment: false };
@@ -193,6 +226,11 @@ export function parseQuick(text, todayISO, memory) {
     if (canT || canD) amb.push([a, b, canT, canD]);
   }
   if (!s) { const k1 = t.match(/(?:kl\.?|klokka)\s*(\d{1,2})(?![.:\d])/); if (k1 && +k1[1] <= 23) s = pad(+k1[1]) + ':00'; }
+  // Prompt 44: bare «16» (frittstående tall 6–23) er tid når det ikke finnes annen tid («frisør 16» → 16:00).
+  if (!s) {
+    const b16 = [...t.matchAll(/(^|\s)(\d{1,2})(?=$|[\s,!?]|\.(?:\s|$))/g)].find((m) => +m[2] >= 6 && +m[2] <= 23 && !/\b(om|nr|rom|uke|i)\s*$/.test(t.slice(0, m.index + m[1].length)) && !/^\s*(dager|dag|døgn|timer|time|min|minutter|kr|stk|år|%|\.|personer|pers)\b/.test(t.slice(m.index + m[0].length)));
+    if (b16) { s = pad(+b16[2]) + ':00'; used.push(b16[0].trim()); }
+  }
   for (const [a, b, canT, canD] of amb) {
     if (!s && d && canT) s = pad(a) + ':' + pad(b);
     else if (!d && s && canD) d = [a, b - 1];
@@ -245,6 +283,8 @@ export function parseQuick(text, todayISO, memory) {
   } else if (kind) ti = kind[2];
   else ti = cleanText.replace(/^(legg til|lag|sett opp|book|bestill|ny)\s+/i, '').replace(/\b(time|avtale)\b/i, '').split(/(?:^|\s+)(?:kl\.?|klokka|den|i dag|i kveld|i morgen|i overmorgen|neste|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|\d)(?![a-zæøå])/i)[0].trim();
   ti = ti.replace(/^(legg til\s+)?(time|avtale)\s+/i, '').replace(/[\s,.:;–-]+$/, '').trim();
+  // Prompt 44: tittelen står etter dato og tid («time 12.5 16:30 kino dune.» → «Kino dune»).
+  if (!hos && !kind && (!ti || /^(time|avtale)$/i.test(ti)) && (LEAD44.test(raw) || /^\d/.test(raw))) { const rest = restTitle44(raw.replace(/(^|\s)\d{1,2}(?=\s|$)/g, (m) => (s && m.trim() === String(+s.slice(0, 2)) ? ' ' : m))); if (rest && !/^\d+$/.test(rest)) ti = rest; }
   if (!ti) ti = kind ? kind[2] : 'Avtale';
   ti = cap(ti.length > 48 ? ti.slice(0, 46) + '…' : ti);
   if (kind && !kind[0].test(ti.toLowerCase()) && !new RegExp(kind[2], 'i').test(ti) && !/frisør|lege|tannlege|dr\./i.test(ti)) ti = kind[2] + ' · ' + ti;

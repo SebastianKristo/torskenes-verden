@@ -122,7 +122,7 @@ test('«Fortsett som»: device-token (Homelab) → device-exchange (Kalender), e
   const ex = await req('/api/auth/device-exchange', { method: 'POST', body: { device_token: dt.body.device_token, app: 'kalender', device: 'Android' } });
   assert.equal(ex.status, 200, ex.text);
   assert.equal(ex.body.user.id, sebId);
-  assert.equal(ex.body.refresh, null);
+  assert.match(ex.body.refresh, /^hlr_/); // prompt 44: refresh-token (90 d glidende)
   assert.equal((await req('/api/auth/device-exchange', { method: 'POST', body: { device_token: dt.body.device_token, app: 'kalender' } })).status, 401, 'engangs');
   assert.ok((await A('/api/tokens/companion')).body.tokens.some((t) => t.app === 'kalender' && t.device === 'Android'));
 });

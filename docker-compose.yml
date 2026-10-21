@@ -34,6 +34,24 @@ services:
       COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-}
       TZ: Europe/Oslo
 
+  # Prompt 44: Innstillinger → Server → Logger (Docker-logger, start/stopp). Valgfritt. os får ALDRI selve socketen; proxyen gir bare
+  # containere, logger og start/stopp/omstart. Slå på: docker compose --profile logs up -d, og sett DOCKER_HOST=tcp://docker-socket-proxy:2375
+  # i .env (os leser den derfra). Uten dette viser Logger en tomtilstand med oppsettet.
+  docker-socket-proxy:
+    profiles: [logs]
+    image: tecnativa/docker-socket-proxy:0.2.0
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      INFO: 1
+      SYSTEM: 1
+      POST: 1
+      ALLOW_START: 1
+      ALLOW_STOP: 1
+      ALLOW_RESTARTS: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
   cloudflared:
     profiles: [tunnel]   # start med: docker compose --profile tunnel up -d
     image: cloudflare/cloudflared:2025.10.0

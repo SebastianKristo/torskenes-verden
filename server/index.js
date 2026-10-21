@@ -35,7 +35,7 @@ import settingsAsk30Api from './settings-ask30.js';
 import calendarApi, { widgetApi as calendarWidgetApi } from './calendar.js';
 import chatApi from './chat.js'; // prompt 27 (SERVER-B): Chat
 import appUpdateApi from './app-update.js'; // prompt 32: Android-appen oppdaterer seg selv (GitHub-release via serveren)
-import systemUpdateApi, { startUpdateScheduler, updateNow } from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
+import systemUpdateApi, { startUpdateScheduler, updateNow, versionApi44 } from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
 import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'; // prompt 29: systembackup (bare admin)
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
 import calendarQuickApi from './calendar-quick.js'; // prompt 29: Kalender → rask time (AI-jobbkø)
@@ -51,6 +51,15 @@ import { twofa40Api, finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages4
 import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, birthdays41Api, mai17Api, kalender41Api, mountAuth41, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
 import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
 import { media43Api, mediaCalendarsMw43, startMediaWatch43, widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, kalUpdate43Api, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
+// Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
+// Logg inn som / andres oppsett / overfør eier.
+import { media44Api, mediaSiteMw44, librarySearchMw44, legacyMedia44, integrationsStatusApi44 } from './media44.js';
+import { logs44Api, startLogs44 } from './logs44.js';
+import { impersonation44, admin44Api, layoutLockMw44, setMobileApi44 } from './admin44.js';
+import { kal44Api, kalEventsMw44, assistLocalMw44 } from './kal44.js';
+import { study44Api } from './study44.js';
+import { auth44Api } from './auth44.js';
+import { playback44Api, startPlayback44 } from './playback44.js';
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -102,9 +111,13 @@ app.use('*', secureHeaders({
 
 // Prompt 32: cache-fiks (HTML/sw.js/manifest no-cache, /api no-store, ?v=<build> på JS/CSS, GET /version.json).
 installCacheBust(app);
+// Prompt 44: «Logg inn som» – X-tokenet (eller hl_imp fra nettleseren) fornyes, sperrer og logg (før alle ruter).
+app.use('*', impersonation44(app));
+app.route('/api/version', versionApi44); // prompt 44: {version, features} uten innlogging
 // Prompt 41: /api/discovery, /api/me/server, Kalender-innlogging (device-token/-exchange, app-code, token, /app-auth) og utlogging som
 // tilbakekaller Kalender-tokenene (må stå før /api/logout og /finans/api).
 mountAuth41(app);
+app.route('/api', auth44Api); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
 app.get('/hl/:token', hlPage41); // prompt 41: Hjemlys-statusside for kontakter uten Papir (24 t)
 
 /* ---------------- Sider ---------------- */
@@ -113,7 +126,10 @@ const page = (name) => readFile(join(PUBLIC, name), 'utf8');
 /** Prompt 40: {…boot, restarting, updating, state:'starting'|'updating'|'ready', updatingTo?} – klienten viser «Starter opp» bare når restarting er true. */
 function health40(b) {
   const u = updateNow();
-  return { ...b, restarting: !b.ready || u.updating, updating: u.updating, state: !b.ready ? 'starting' : u.updating ? 'updating' : 'ready', ...(u.updating && u.version ? { updatingTo: u.version } : {}) };
+  // Prompt 44 (oppdatering hopper mellom skjermer): restarting bare når serveren ikke er klar eller updateren selv sier
+  // «restarting». Under nedlasting/bygging er updating:true, men restarting:false (web blir på siden sin).
+  const rs = !b.ready || u.state === 'restarting';
+  return { ...b, restarting: rs, updating: u.updating, phase: !b.ready ? 'restarting' : u.updating ? u.phase ?? u.state : 'idle', progress: u.updating ? u.progress ?? null : null, state: !b.ready ? 'starting' : u.state === 'restarting' ? 'restarting' : u.updating ? 'updating' : 'ready', ...(u.updating && u.version ? { updatingTo: u.version } : {}) };
 }
 const html = (c, body) => c.html(body, 200, { 'Cache-Control': 'no-store' });
 
@@ -619,9 +635,14 @@ authed.get('/upcoming', personal('upcoming', proxy(api.getUpcoming)));
 authed.get('/news', proxy(api.getNews));
 // Plex og Jellyfin: «Spilles nå» (30 s) og «Nylig lagt til» (10 min). Plakater hentes via serveren så tokenet aldri når nettleseren.
 // Hver bruker ser sin egen Plex/Jellyfin (ISO2).
-app.get('/api/media/now', authOrToken, personal('media', proxy(api.getMediaNow)));
-app.get('/api/media/recent', authOrToken, personal('media', proxy(api.getMediaRecent)));
-app.get('/api/media/history', authOrToken, personal('media', proxy(api.getMediaHistory)));
+// Prompt 44: valgt sted (?server= eller brukerens valg) for hele /api/media, søk i biblioteket, og serverens Plex/Jellyfin for alle med
+// tilgang som ikke har egne verdier (den ekte årsaken til «ikke logget inn» på mobil, se media44.js).
+app.use('/api/media/*', mediaSiteMw44);
+app.use('/api/media/series', librarySearchMw44);
+app.use('/api/media/movies', librarySearchMw44);
+app.get('/api/media/now', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaNow))));
+app.get('/api/media/recent', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaRecent))));
+app.get('/api/media/history', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaHistory))));
 app.get('/api/media/poster', authOrToken, async (c) => {
   try {
     const img = await api.getMediaPoster(c.req.query('src'), c.req.query('id'));
@@ -629,6 +650,8 @@ app.get('/api/media/poster', authOrToken, async (c) => {
     return c.body(img.body, 200, { 'Content-Type': /^image\//.test(img.type) ? img.type : 'image/jpeg', 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
   } catch (e) { console.warn('[media/poster]', e.message); return c.body(null, 502); }
 });
+app.route('/api/media', media44Api); // prompt 44: /servers, /release/search (jobb + SSE), /episodes/:id/file, /movies/:id/file
+app.route('/api/playback', playback44Api); // prompt 44: Avspilling (Plex/Jellyfin, PIN-flyt, historikk, statistikk)
 app.route('/api/media', media43Api); // prompt 43: Media (Sonarr, Radarr, qBittorrent, Prowlarr, Glimt, webhooks) – etter /now, /recent, /history og /poster
 authed.get('/space/tle', proxy(api.getTle));
 authed.get('/space/apod', proxy(api.getApod));
@@ -700,9 +723,12 @@ app.route('/api/rom', romApi); // prompt 32: Rom – APOD (7 dager), Mars-rovere
 app.route('/api/widgets', widgets43Api); // prompt 43: /media og /catalog
 app.route('/api/apps/kalender', kalUpdate43Api); // prompt 43: /latest?platform=mac|android&channel=stabil|beta (uinnlogget) og /:versjon/:fil
 app.route('/api/widgets/trials', trialWidgetsApi); // prompt 32: prøveperiode-widgets (GET kompakt, POST /:id «Avsluttet»)
+app.route('/api/integrations', integrationsStatusApi44); // prompt 44: GET /status (samme kilde som Media), før /:id
+app.route('/api/integrasjoner', integrationsStatusApi44);
 app.route('/api/integrations', integrationsApi);
 app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste under norsk navn
 // Prompt 26: Kalender (skolens iCal, Canvas, Bursdager og Google) og kompakt widget-svar. Sesjon eller app-token, per bruker.
+app.route('/api', kal44Api); // prompt 44: /kalender/events/:id/invite, /kalender/invites, /users/directory, /geo/address
 app.route('/api', kalender41Api); // prompt 41: /kalender/glimt/search, /calendar/ask, /kalender/notify/test, /push/test
 app.route('/api/ruter', ruter41Api); // prompt 41: Min reise, skolesoner, «forlot skolen»
 app.route('/api/huske', huske41Api); // prompt 41: POST /glimt-jobs
@@ -723,6 +749,8 @@ app.route('/api/kalender/calendars', cals39Api); // prompt 39: fire kalendere, o
 app.route('/api/kalender/google', googleMap39Api); // prompt 39: GET/PUT /mapping
 app.route('/api/kalender/calendars', kalCalendarsApi);
 app.route('/api/kalender/weather', kalWeatherApi);
+app.use('/api/kalender/events', kalEventsMw44); // prompt 44: attendees og geo, avlysning ved sletting
+app.use('/api/kalender/events/*', kalEventsMw44);
 app.use('/api/kalender/events', kalEventsMw);
 app.use('/api/kalender/events/*', kalEventsMw);
 app.use('/api/widgets/calendar', kalWidgetMw);
@@ -734,7 +762,9 @@ app.route('/api/settings', settingsSearchApi);
 app.route('/api/settings', settingsAsk30Api); // prompt 30: GET /index og POST /ask (✦ AI-søk med indeks fra serveren)
 app.route('/api/smb', smbBrowseApi); // prompt 30: bare admin; økt (JSON) eller admin-token med finance:write
 app.route('/api/backup', systemBackupApi); // prompt 29: bare admin; endringer krever økt eller admin-token, gjenoppretting passordet
-app.route('/api/system/update', systemUpdateApi); // bare admin; start/rollback krever passordet og økt eller admin-token (finance:write)
+app.route('/api/system/update', systemUpdateApi);
+app.route('/api/update', systemUpdateApi); // prompt 44: /api/update/versions, /api/update/rollback {version, restoreBackup, pauseAutoDays}, /api/update/status
+app.route('/api/system', logs44Api); // prompt 44: /api/system/containers, /api/system/logs (bare admin) // bare admin; start/rollback krever passordet og økt eller admin-token (finance:write)
 // Prompt 30: kort versjonssvar for oppdateringsbanneret (samme tilgang som /api/system/update).
 app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/version'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); });
 app.get('/api/system/changelog', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/changelog'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); }); // prompt 36
@@ -755,6 +785,7 @@ app.route('/api/img', imgApi); // prompt 35
 app.route('/api/weather/week-summary', week39Api); // prompt 39: Glimt · ukas vær
 app.route('/api/weather/place', weather35Api); // prompt 35
 app.route('/api/glimt', glimtApi); // prompt 34: POST /api/glimt {prompt, tool:'calendar'} (etter /api/glimt/memory)
+app.use('/api/assist', assistLocalMw44); // prompt 44: local (Glimt-tid) i svaret
 app.route('/api/assist', assistApi); // prompt 31: Glimt-ruteren (sesjon eller app-token, per bruker)
 app.route('/api/chat/import', claudeImport43Api); // prompt 43: importer fra Claude
 app.route('/api/chat', chatApi); // prompt 27: Chat (Open WebUI eller Ollama/Gemini/Groq direkte), sesjon eller app-token
@@ -777,13 +808,17 @@ app.route('/api/weather', weather41Api); // prompt 41: GET/PUT /layout (Rediger 
 app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
 app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
 app.route('/api', profilesApi); // prompt 37: profiler og onboarding
+app.route('/api', study44Api); // prompt 44: /study/documents, /study/overview
+app.route('/api', admin44Api); // prompt 44: /admin/impersonate, /users/:id/layout, /server/owner
+app.use('/api/me/layout', layoutLockMw44); // prompt 44: låst oppsett
+setMobileApi44(mobileApi);
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startLogs44(); startPlayback44(); }
 
 app.onError((err, c) => {
   console.error(err);
