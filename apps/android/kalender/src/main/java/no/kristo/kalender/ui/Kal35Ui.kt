@@ -232,7 +232,8 @@ private fun CalRow35(vm: KalVm, c: KCal, n: Int) {
                             Box(Modifier.clip(RoundedCornerShape(50)).background(k.chip).padding(horizontal = 6.dp, vertical = 1.dp)) { Tx(b, mono(9.5.sp, k.mut).copy(fontWeight = FontWeight.Bold)) }
                         }
                     }
-                    val pre = when (c.src) { "ha" -> "Home Assistant · "; "ical" -> "Abonnement · "; "google" -> "Google · "; "caldav" -> "iCloud · "; else -> "" }
+                    // Prompt 44: Media-kalenderen (Sonarr/Radarr) – «Media · N de neste 30 dagene».
+                    val pre = if (c.id == "media") "Media · " else when (c.src) { "ha" -> "Home Assistant · "; "ical" -> "Abonnement · "; "google" -> "Google · "; "caldav" -> "iCloud · "; else -> "" }
                     Tx(if (hm) "Skjult fra menyen" else "$pre$n de neste 30 dagene", man(12.sp, FontWeight.Medium, k.mut))
                 }
                 if (!ed) Toggle(on && !hm)

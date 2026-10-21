@@ -33,6 +33,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -127,7 +130,8 @@ fun MonthView(vm: KalVm) {
                     val wx = vm.wxOf(d)
                     Column(
                         Modifier.weight(1f).fillMaxHeight().alpha(if (inM) 1f else .38f).background(if (td) Red.copy(alpha = .06f) else Color.Transparent)
-                            .tap(longDate(d)) { vm.openDay(d) }.padding(start = 2.dp, end = 2.dp, top = 3.dp, bottom = 2.dp),
+                            // Prompt 44: trykk → uke (ikke rett etter et sveip), hold inne → «Ny hendelse» den dagen (lett vibrasjon).
+                            .dayGesture44(vm, d, longDate(d)).padding(start = 2.dp, end = 2.dp, top = 3.dp, bottom = 2.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 1.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
@@ -138,7 +142,8 @@ fun MonthView(vm: KalVm) {
                             }
                             if (wx != null && inM) WxIcon(wx, 12.dp)
                         }
-                        L.take(cut).forEach { (e, _) -> EvChip(vm, e, 9.5f) }
+                        // Prompt 44: trykk på en hendelse i måneden åpner detaljarket (ikke uke).
+                        L.take(cut).forEach { (e, _) -> EvChip(vm, e, 9.5f) { if (!vm.swRecent44) vm.openEv(e) } }
                         if (L.size > mx) Tx("+${L.size - cut}", man(9.5.sp, FontWeight.Bold, k.mut), Modifier.padding(horizontal = 4.dp))
                     }
                 }
@@ -246,7 +251,8 @@ fun GridView(vm: KalVm) {
                 days.forEach { d ->
                     val td = d == T
                     BoxWithConstraints(
-                        Modifier.weight(1f).fillMaxHeight().background(if (td && N > 1) Red.copy(alpha = .035f) else Color.Transparent).drawBehind {
+                        // Prompt 44: trykk på tom plass → ny hendelse på klokkeslettet, avrundet ned til halvtime (21:10 → 21:00).
+                        Modifier.weight(1f).fillMaxHeight().slotTap44(vm, d, H).background(if (td && N > 1) Red.copy(alpha = .035f) else Color.Transparent).drawBehind {
                             drawLine(k.line2, Offset(0f, 0f), Offset(0f, size.height), 1.dp.toPx())
                             val h = H.toPx()
                             var y = 0f
@@ -466,4 +472,41 @@ fun SearchView(vm: KalVm) {
             item("pad") { Spacer(Modifier.height(20.dp)) }
         }
     }
+}
+
+/* ---------------- Prompt 44: gester ---------------- */
+
+/** Dagcellen i måned: trykk åpner uke, hold inne (lang-trykk) åpner «Ny hendelse» med dagen valgt. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun Modifier.dayGesture44(vm: KalVm, d: LocalDate, label: String): Modifier {
+    val hf = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    return this.combinedClickable(interactionSource = src, indication = null, onClickLabel = label, onLongClickLabel = "Ny hendelse",
+        onLongClick = {
+            if (!vm.swRecent44) {
+                hf.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                vm.newOn44(d)
+                vm.swAt44 = System.currentTimeMillis()
+            }
+        },
+        onClick = { vm.openDay(d) })
+}
+
+/** Tidsrutenettet: trykk på tom plass → halvtime (ned), hold inne → nærmeste 15 min. Hendelsene tar sine egne trykk først. */
+private fun Modifier.slotTap44(vm: KalVm, d: LocalDate, hourH: Dp): Modifier = this.pointerInput(d, hourH) {
+    detectTapGestures(
+        onLongPress = { off ->
+            if (!vm.swRecent44) {
+                val min = ((off.y / hourH.toPx()) * 60f).toInt()
+                vm.newOn44(d, (((min + 7) / 15) * 15).coerceIn(0, 23 * 60 + 45))
+            }
+        },
+        onTap = { off ->
+            if (!vm.swRecent44) {
+                val min = ((off.y / hourH.toPx()) * 60f).toInt()
+                vm.newOn44(d, ((min / 30) * 30).coerceIn(0, 23 * 60 + 30))
+            }
+        },
+    )
 }

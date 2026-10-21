@@ -73,11 +73,32 @@ object Kal41 {
 
     data class Pending(val state: String, val verifier: String, val at: Long, val base: String)
 
+    /**
+     * Prompt 44: «Åpne Homelab igjen» lagde ny state hver gang – godkjente man forespørselen som allerede lå i Homelab, passet
+     * svaret ikke. Nå gjenbrukes en fersk forespørsel (< 5 min), og de tre siste huskes (svar på hvilken som helst godtas).
+     */
     fun begin(ctx: Context, base: String): Pending {
-        val p = Pending(random(18), random(32), System.currentTimeMillis(), base)
-        prefs(ctx).edit().putString("p_state", p.state).putString("p_verifier", p.verifier).putLong("p_at", p.at).putString("p_base", p.base).commit()
+        val now = System.currentTimeMillis()
+        val list = pendingList(ctx).filter { now - it.at < 900_000 }
+        list.lastOrNull()?.let { if (now - it.at < 300_000 && it.base == base) return it }
+        val p = Pending(random(18), random(32), now, base)
+        val keep = (list + p).takeLast(3)
+        val arr = JSONArray().apply { keep.forEach { put(JSONObject().put("s", it.state).put("v", it.verifier).put("at", it.at).put("b", it.base)) } }
+        prefs(ctx).edit().putString("p44", arr.toString()).putString("p_state", p.state).putString("p_verifier", p.verifier).putLong("p_at", p.at).putString("p_base", p.base).commit()
         return p
     }
+
+    fun pendingList(ctx: Context): List<Pending> {
+        val raw = prefs(ctx).getString("p44", null)
+        if (raw != null) runCatching {
+            val a = JSONArray(raw)
+            return (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { o -> Pending(o.getString("s"), o.getString("v"), o.optLong("at"), o.optString("b")) } }
+        }
+        return listOfNotNull(pending(ctx))
+    }
+
+    fun refreshToken(ctx: Context): String? = prefs(ctx).getString("refresh", null)
+    fun saveRefresh(ctx: Context, v: String) { prefs(ctx).edit().putString("refresh", v).apply() }
 
     fun pending(ctx: Context): Pending? {
         val p = prefs(ctx)
@@ -86,7 +107,7 @@ object Kal41 {
         return Pending(st, v, p.getLong("p_at", 0L), p.getString("p_base", "") ?: "")
     }
 
-    fun clearPending(ctx: Context) { prefs(ctx).edit().remove("p_state").remove("p_verifier").remove("p_at").remove("p_base").apply() }
+    fun clearPending(ctx: Context) { prefs(ctx).edit().remove("p_state").remove("p_verifier").remove("p_at").remove("p_base").remove("p44").apply() }
 
     fun query(p: Pending): String = "client=$CLIENT&redirect=" + Uri.encode(REDIRECT) + "&state=" + Uri.encode(p.state) +
         "&cc=" + Uri.encode(challenge(p.verifier)) + "&cc_method=S256"
@@ -141,11 +162,15 @@ object Kal41 {
 
     /** kalender://auth?code&state → tokens. */
     suspend fun exchange(ctx: Context, code: String, state: String, server: String?): KalSession {
-        val p = pending(ctx) ?: throw KalApiException("Innloggingen er utløpt. Prøv igjen.", -1)
-        if (p.state != state) throw KalApiException("Svaret fra Homelab passet ikke (state). Prøv igjen.", -1)
-        if (System.currentTimeMillis() - p.at > TIMEOUT_MS + 30_000) { clearPending(ctx); throw KalApiException("Homelab svarte ikke. Sjekk at Homelab er innlogget, og prøv igjen.", -1) }
+        val all = pendingList(ctx)
+        if (all.isEmpty()) throw KalApiException("Innloggingen er utløpt. Prøv igjen.", -1)
+        val p = all.lastOrNull { it.state == state } ?: throw KalApiException("Svaret fra Homelab passet ikke (state). Prøv igjen.", -1)
+        // Prompt 44: koden fra Homelab er selv gyldig i 60 s (serveren sjekker). Appens grense på 90 s fra trykket ga feil når man
+        // brukte lenger tid i Homelab (Face ID / innlogging der først). Nå: 15 min.
+        if (System.currentTimeMillis() - p.at > 900_000) { clearPending(ctx); throw KalApiException("Innloggingen er utløpt. Prøv igjen.", -1) }
         val bases = (listOfNotNull(server?.takeIf { it.startsWith("http") }, p.base.takeIf { it.isNotBlank() }) + candidates(ctx)).map { it.trimEnd('/') }.distinct().take(4)
-        val body = JSONObject().put("code", code).put("code_verifier", p.verifier).put("client", CLIENT).put("redirect", REDIRECT)
+        // Prompt 44: eget enhetsnavn – uten «device» ga serveren «iPhone», og innlogging her logget ut Kalender på iPhone/iPad.
+        val body = JSONObject().put("code", code).put("code_verifier", p.verifier).put("client", CLIENT).put("redirect", REDIRECT).put("device", Kal44.device(ctx))
         var last: KalApiException = KalApiException("Får ikke kontakt med Homelab.", 0)
         for (b in bases) {
             try {
@@ -380,6 +405,9 @@ class K41State(private val vm: KalVm) {
     var whoName by mutableStateOf<String?>(null)
     private var waitJob: Job? = null
     private var waitId = 0
+    /** Prompt 44: samme svar to ganger (onCreate + onNewIntent) skal ikke gi «koden er allerede brukt». */
+    private var lastCode44 = ""
+    private var returnJob44: Job? = null
 
     /* Bursdager, Glimt-søk og testvarsel */
     var people by mutableStateOf<List<Kal41.BdPerson>>(emptyList())
@@ -460,6 +488,10 @@ class K41State(private val vm: KalVm) {
         }
         val code = uri.getQueryParameter("code") ?: return
         val state = uri.getQueryParameter("state") ?: return
+        if (code == lastCode44) return
+        lastCode44 = code
+        returnJob44?.cancel()
+        vm.viewModelScope41 { Kal44.log(ctx, "auth.handoff.return") }
         phase = "wait"; step = 2; err = ""
         vm.viewModelScope41 {
             try {
@@ -512,7 +544,21 @@ class K41State(private val vm: KalVm) {
         vm.viewModelScope41 { Kal41.syncServers(ctx)?.let { vm.session = it } }
     }
 
-    private fun fail(msg: String, server: Boolean) { err = msg; offerServer = server; phase = "err" }
+    private fun fail(msg: String, server: Boolean) {
+        err = msg; offerServer = server; phase = "err"
+        android.util.Log.i("kal44", "auth.handoff.fail $msg")
+    }
+
+    /** Prompt 44: tilbake i Kalender mens den venter på Homelab – kommer det ikke svar innen 20 s: «Fikk ikke svar fra Homelab». */
+    fun returned44() {
+        if (phase != "wait" || step >= 2) return
+        val id = waitId
+        returnJob44?.cancel()
+        returnJob44 = vm.viewModelScope41 {
+            delay(20_000)
+            if (phase == "wait" && id == waitId && step < 2) fail("Fikk ikke svar fra Homelab. Prøv igjen, eller logg inn med passord.", false)
+        }
+    }
 
     fun syncServers() { vm.viewModelScope41 { Kal41.syncServers(ctx)?.let { vm.session = it } } }
 

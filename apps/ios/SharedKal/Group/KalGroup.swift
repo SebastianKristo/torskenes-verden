@@ -133,7 +133,14 @@ enum KalGroup {
     static func saveSession(bases: [String], token: String, user: String, via: String) {
         let d: UserDefaults = defaults
         let old: String = d.string(forKey: "kal.token") ?? ""
-        if old != token { d.removeObject(forKey: "kal.snapshot") }
+        // Prompt 44: bufferen tømmes bare når det er en annen konto. Før ble den tømt ved hvert nytt token (også samme konto),
+        // og kalenderen var tom til første synk var ferdig.
+        let oldUser: String = (d.string(forKey: "kal.user") ?? "").lowercased()
+        let newUser: String = user.lowercased()
+        if old != token && !old.isEmpty && !oldUser.isEmpty && !newUser.isEmpty && oldUser != newUser {
+            d.removeObject(forKey: "kal.snapshot")
+            d.set(true, forKey: "kal44.wipe")
+        }
         d.set(clean(bases), forKey: "kal.bases")
         d.set(clean(bases).first ?? "", forKey: "kal.server")
         d.set(token, forKey: "kal.token")

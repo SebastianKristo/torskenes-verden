@@ -87,17 +87,31 @@ struct KalMonthDay: View {
         // Prompt 42: tre eller flere trekk samme dag blir én chip «3 trekk · 627 kr».
         let list: [KalEvent] = KalAb42.collapse(s.on(k))
         let label: String = KalD.fd(day) + ", " + String(list.count) + " hendelser"
-        return Button(action: tap) { cell(list) }
-            .buttonStyle(.plain)
+        // Prompt 44: ikke en Button lenger (sveip ga også et trykk på dagen). Trykk → uke, hold inne → ny hendelse den dagen.
+        return cell(list)
+            .onTapGesture { tap() }
+            .onLongPressGesture(minimumDuration: 0.45, maximumDistance: 10) { hold() }
             .clipped()
             // Prompt 42 (iPad): hover med pekeplate, og tekst/e-post/SMS sluppet på dagen tolkes av Glimt til en hendelse den dagen.
             .hoverEffect(.highlight)
             .dropDestination(for: String.self) { (items: [String], _: CGPoint) -> Bool in KalPad42Drop.drop(items, day: k) }
             .accessibilityLabel(label)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(named: "Ny hendelse") { s.newOn44(day: k) }
+    }
+
+    /// Prompt 44: hold inne (0,45 s, lett vibrasjon) → «Ny hendelse» med dagen valgt. Ikke rett etter et sveip.
+    private func hold() {
+        if KalSwipe44.recent { return }
+        KalSwipe44.hold()
+        KalSwipe44.mark()
+        s.newOn44(day: key)
     }
 
     /// Prompt 35: trykk på en dag zoomer inn til Uke (uka med dagen), og den vokser fra dagen. Full skjerm (43): velg dagen.
     private func tap() {
+        // Prompt 44: trykket som kommer med et sveip (eller rett etter et langt trykk) åpner ikke uke.
+        if KalSwipe44.recent { return }
         let k: String = key
         if full43 {
             KalHaptic.tap()
@@ -171,6 +185,14 @@ struct KalMonthChip: View {
             .padding(.horizontal, 4).padding(.vertical, 1)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 4).fill(t.calTint(c, e.kind == "frist" ? 0.38 : 0.13)))
+            // Prompt 44: trykk på en hendelse i måneden åpner detaljarket (ikke uke).
+            .contentShape(Rectangle())
+            .onTapGesture { open() }
+    }
+
+    private func open() {
+        if KalSwipe44.recent { return }
+        KalStore.shared.openDetail(e)
     }
 }
 

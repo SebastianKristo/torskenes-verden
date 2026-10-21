@@ -88,7 +88,10 @@ enum KalCompanion33 {
         let api: API = store.api
         var token: String? = nil
         do {
-            let d: Data = try await api.callAt("/api", "POST", "/tokens/companion", json: ["app": "kalender", "device": "iPhone"], timeout: 15)
+            // Prompt 44 (KAL44): iPad fikk også «iPhone», og et nytt token for samme app + enhet trekker tilbake det gamle –
+            // Homelab på iPad logget dermed ut Kalender på iPhone.
+            let dev: String = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+            let d: Data = try await api.callAt("/api", "POST", "/tokens/companion", json: ["app": "kalender", "device": dev], timeout: 15)
             token = JS.str(JS.obj(d), "token")
         } catch let e as APIError {
             if e.status == 404 || e.status == 405 {

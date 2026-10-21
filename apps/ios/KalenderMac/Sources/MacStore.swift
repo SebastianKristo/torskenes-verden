@@ -251,11 +251,17 @@ final class MacStore: ObservableObject {
             // Prompt 42: trekk fra Abonnementer uten kalenderen i lista (eldre server) får den lokalt.
             KalAb42.ensureCal(&cals, events: list)
             applyCalOn()
+            KalMedia44.tint(&cals)
+            // Prompt 44: tegn med en gang – vær, kø og fagfarger kommer etterpå.
+            rebuild()
+            saveSnapshot()
         } catch let e as KalNetError {
-            lastError = e.status == 401 ? "Innloggingen er utløpt. Logg inn på nytt." : e.message
-            offline43 = e.status == 0
+            // Prompt 44: 401 er allerede forsøkt fornyet (KalAuthGate44). Bare et tilbakekalt token logger ut.
+            let revoked: Bool = e.status == 401 && e.revoked44
+            lastError = revoked ? "Innloggingen er utløpt. Logg inn på nytt." : (e.status == 401 ? "" : e.message)
+            offline43 = e.status == 0 || (e.status == 401 && !revoked)
             MacLog43.app.debug("Synk feilet: \(e.status, privacy: .public)")
-            if e.status == 401 { logout() }
+            if revoked { logout() }
         } catch {
             lastError = error.localizedDescription
             offline43 = true

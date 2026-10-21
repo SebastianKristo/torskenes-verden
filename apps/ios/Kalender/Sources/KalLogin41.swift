@@ -29,6 +29,9 @@ final class KalLogin41Model {
     /// Tilbud om å godkjenne i nettleseren (Homelab-appen mangler).
     var webOffer: Bool = false
     @ObservationIgnored private var waitId: Int = 0
+    /// Prompt 44: samme svar fra Homelab to ganger (onOpenURL + aktivering) skal ikke gi «koden er allerede brukt».
+    @ObservationIgnored private var lastCode44: String = ""
+    @ObservationIgnored private var returnId44: Int = 0
 
     /// «Fortsett som …»: enhets-token (delt Nøkkelring / App Group) eller det eldre companion-tokenet fra Homelab.
     var quickName: String? {
@@ -85,6 +88,7 @@ final class KalLogin41Model {
             let cands: [String] = KalAuth41.candidates()
             let base: String = await KalAuth41.firstReachable(Array(cands.prefix(3))) ?? (cands.first ?? KalAuth41.defaultBase)
             let p: KalPending41 = KalAuth41.begin(base: base)
+            KalLog44.send("auth.handoff.start", ["base": base])
             open(p, base: base, id: id)
         }
         Task { @MainActor in
@@ -156,6 +160,9 @@ final class KalLogin41Model {
             return
         }
         guard let code = q("code"), let state = q("state") else { return }
+        if code == lastCode44 { return }
+        lastCode44 = code
+        KalLog44.send("auth.handoff.return", [:])
         phase = "wait"
         step = 2
         error = ""
@@ -256,6 +263,7 @@ final class KalLogin41Model {
     }
 
     private func done(name: String) {
+        KalLog44.send("auth.handoff.ok", [:])
         KalHaptic.done()
         phase = "start"
         step = 0
@@ -268,6 +276,22 @@ final class KalLogin41Model {
         error = msg
         offerServer = server
         phase = "err"
+        KalLog44.send("auth.handoff.fail", ["reason": msg])
+    }
+
+    /// Prompt 44: tilbake i Kalender (aktiv) mens den venter på Homelab: kommer det ikke svar innen 20 s, vis
+    /// «Fikk ikke svar fra Homelab» med Prøv igjen og Logg inn med passord (i stedet for å vente i det uendelige).
+    func returned44() {
+        guard phase == "wait", step < 2 else { return }
+        returnId44 += 1
+        let id: Int = returnId44
+        let w: Int = waitId
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 20_000_000_000)
+            if self.returnId44 == id && self.waitId == w && self.phase == "wait" && self.step < 2 {
+                self.fail("Fikk ikke svar fra Homelab. Prøv igjen, eller logg inn med passord.", server: false)
+            }
+        }
     }
 
     /// Lokal og ekstern adresse fra serveren; rekkefølgen velges automatisk (lokal når den svarer < 300 ms).

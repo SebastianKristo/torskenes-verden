@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -154,11 +156,13 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
                     detectHorizontalDragGestures(
                         onDragStart = { x0 = it.x; acc = 0f },
                         onDragEnd = {
+                            // Prompt 44: trykk rett etter et sveip åpner ikke uke (KalVm.swRecent44).
+                            if (kotlin.math.abs(acc) > 12.dp.toPx()) vm.swAt44 = System.currentTimeMillis()
                             val edge = x0 < 28.dp.toPx()
                             if (edge && acc > 50.dp.toPx()) { no.kristo.kalender.Hap.tick(); vm.cs = true }
                             else if (vm.v != "liste" && kotlin.math.abs(acc) > 60.dp.toPx()) vm.step(if (acc < 0) 1 else -1)
                         },
-                        onHorizontalDrag = { ch, amt -> acc += amt; ch.consume() },
+                        onHorizontalDrag = { ch, amt -> acc += amt; ch.consume(); if (kotlin.math.abs(acc) > 12.dp.toPx()) vm.swAt44 = System.currentTimeMillis() },
                     )
                 },
             ) {
@@ -220,6 +224,8 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
         // Prompt 41: testvarselet vises også som banner i appen.
         TestBanner41(vm)
         if (vm.newCal) NewCalendarDialog(vm)
+        // Prompt 44: «Endret et annet sted» og «Bare denne / Denne og fremtidige / Alle».
+        Dialogs44(vm)
     }
 }
 
@@ -272,16 +278,32 @@ private fun TopBar(vm: KalVm, onBackToHomelab: () -> Unit) {
             Svg("M15 5l-7 7 7 7", 14.dp, Color(0xFF2B5D8A), 2.6f)
             Tx("Homelab", man(13.sp, FontWeight.SemiBold, Color(0xFF2B5D8A)))
         }
+        // Prompt 44: tittelen krymper aldri. Plassen hentes fra knappene: «I dag» blir kalender-ikonet med dagens tall, og er det
+        // fortsatt for trangt (smal telefon, Fold lukket, delt skjerm), legges tittelen på egen rad over knappene. Målt på faktisk bredde.
+        val tm = androidx.compose.ui.text.rememberTextMeasurer()
+        val titleW = with(LocalDensity.current) { tm.measure(hd.t, news(32.sp, k.ink, 33.sp)).size.width.toDp() }
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val btnW = (if (vm.v != "liste") 76.dp else 0.dp) + 38.dp + 40.dp
+        val pillW = if (hd.inT) 0.dp else 84.dp
+        val iconToday = !hd.inT && titleW + btnW + pillW + 4.dp > maxWidth
+        val ownRow = titleW + btnW + (if (hd.inT) 0.dp else 44.dp) + 4.dp > maxWidth
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (ownRow) Column(Modifier.tap("Zoom ut") { vm.titleTap() }.padding(start = 44.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Tx(hd.k, mono(10.5.sp, k.acc, .12f))
+            Text(hd.t, style = news(32.sp, k.ink, 33.sp), maxLines = 1, softWrap = false)
+        }
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Box(Modifier.align(Alignment.CenterVertically).padding(end = 0.dp)) { RoundBtn("Kalendere", no.kristo.kalender.ui.Ic.MENU, { no.kristo.kalender.Hap.tick(); vm.cs = true }, bg = Color.Transparent, icon = 20.dp, stroke = 2.2f) }
-            Column(Modifier.weight(1f).tap("Zoom ut") { vm.titleTap() }.padding(horizontal = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            if (!ownRow) Column(Modifier.wrapContentWidth().tap("Zoom ut") { vm.titleTap() }.padding(horizontal = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Tx(hd.k, mono(10.5.sp, k.acc, .12f))
-                Tx(hd.t, news(32.sp, k.ink, 33.sp))
+                Text(hd.t, style = news(32.sp, k.ink, 33.sp), maxLines = 1, softWrap = false)
             }
-            // Prompt 35 (FEIL: «I dag» viste «…»): knappegruppen krymper aldri (måles før tittelen, som får resten og ellipsis).
+            Spacer(Modifier.weight(1f))
+            // Prompt 35 (FEIL: «I dag» viste «…»): knappegruppen krymper aldri.
             // Rekkefølge: I dag · ‹ · › · søk. «I dag» er en pille (høyde 34, padding 0 13, radius 17) uten fast bredde.
             Row(Modifier.padding(bottom = 1.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (!hd.inT) Box(Modifier.height(44.dp).padding(end = 4.dp).tap("I dag") { vm.goToday() }, contentAlignment = Alignment.Center) {
+                if (!hd.inT && (iconToday || ownRow)) TodayBtn44 { vm.goToday() }
+                else if (!hd.inT) Box(Modifier.height(44.dp).padding(end = 4.dp).tap("I dag") { vm.goToday() }, contentAlignment = Alignment.Center) {
                     Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(k.ink).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
                         Text("I dag", style = man(12.5.sp, FontWeight.Bold, k.bg), maxLines = 1, softWrap = false)
                     }
@@ -292,6 +314,8 @@ private fun TopBar(vm: KalVm, onBackToHomelab: () -> Unit) {
                 }
                 RoundBtn("Søk", no.kristo.kalender.ui.Ic.SEARCH, { vm.openSearch() }, icon = 16.dp, stroke = 2.3f)
             }
+        }
+        }
         }
         // Visningsvelgeren (pille): År · Mnd · Uke · 3 d · Dag · Liste.
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(k.chip).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {

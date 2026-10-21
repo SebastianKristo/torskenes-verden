@@ -25,6 +25,8 @@ data class KEv(
     val subjectHex: Long? = null, val address: String? = null, val lat: Double? = null, val lon: Double? = null,
     /** Prompt 42: trekk fra Abonnementer (Finans): beløp, konto, logo, merke TREKK / PRØVE / ÅRLIG. null for alle andre. */
     val ab: KAb42? = null,
+    /** Prompt 44: Media-status, deltakere, gjentakelse og etag (Kal44.kt). null for de fleste. */
+    val x44: KX44? = null,
 ) {
     val all: Boolean get() = s == null
     val key: String get() = d.toString()
@@ -35,6 +37,7 @@ data class KEv(
         .put("editable", editable).put("color", color?.let(::hexOut) ?: JSONObject.NULL).put("pending", pending).put("note", note ?: JSONObject.NULL)
         .put("subjectColor", subjectHex?.let(::hexOut) ?: JSONObject.NULL).put("address", address ?: JSONObject.NULL)
         .put("lat", lat ?: JSONObject.NULL).put("lon", lon ?: JSONObject.NULL).put("ab42", ab?.toJson() ?: JSONObject.NULL)
+        .put("x44", x44?.toJson() ?: JSONObject.NULL)
 
     companion object {
         /** Eget lagret format (cache, utboks). */
@@ -46,6 +49,7 @@ data class KEv(
                 o.optBoolean("pending", false), o.optStrOrNull("note"),
                 hexIn(o.optStrOrNull("subjectColor")), o.optStrOrNull("address"), optD37(o, "lat"), optD37(o, "lon"),
                 ab = KAb42.fromJson(o.optJSONObject("ab42")),
+                x44 = KX44.fromJson(o.optJSONObject("x44")),
             )
         }.getOrNull()
     }
@@ -238,13 +242,18 @@ fun parseServerEvent(o: JSONObject, cals: Map<String, KCal>): KEv? {
     val geo = geoOf37(o)
     // Prompt 42: trekk fra Abonnementer (kind trekk/trial, subId, amount, account, logo …) – aldri redigerbare i Kalender.
     val ab = Ab42.parse(o, title, rawCal)
+    // Prompt 44: Media («▶ Slow Horses», notat «S06E03 · Dead Drop»), deltakere, gjentakelse og etag.
+    val x44 = KX44.parse(o, cal)
+    val title44 = if (x44?.media == true && !title.startsWith("▶")) "▶ " + (if (x44.code.isNotBlank()) title.substringBefore(" · " + x44.code) else title) else title
+    val note44 = o.str("note", "description") ?: if (x44?.media == true) listOf(x44.code, x44.episode).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { null } else null
     return KEv(
-        id = o.str("id") ?: "${st.first}|${s ?: "all"}|$title", t = title, cal = cal, d = st.first, s = s, e = e, days = days,
+        id = o.str("id") ?: "${st.first}|${s ?: "all"}|$title", t = title44, cal = cal, d = st.first, s = s, e = e, days = days,
         loc = loc, rem = if (s == null) null else remFromServer(o),
         kind = if (ab != null) (if (ab.badge == "PRØVE") "trial" else "trekk") else if (trial) "trial" else kind, src = src,
-        editable = editable && ab == null, color = hexIn(o.str("calendarColor", "color")), note = o.str("note", "description"),
-        subjectHex = hexIn(o.optStrOrNull("subjectColor")), address = o.optStrOrNull("address"), lat = geo?.first, lon = geo?.second,
-        ab = ab,
+        editable = editable && ab == null && x44?.media != true, color = hexIn(o.str("calendarColor", "color")), note = note44,
+        subjectHex = hexIn(o.optStrOrNull("subjectColor")), address = o.optStrOrNull("address"),
+        lat = geo?.first ?: o.optJSONObject("geo")?.let { g -> g.opt("lat") as? Double }, lon = geo?.second ?: o.optJSONObject("geo")?.let { g -> g.opt("lon") as? Double },
+        ab = ab, x44 = x44,
     )
 }
 
@@ -271,7 +280,8 @@ fun parseServerCalendars(raw: String): List<KCal> {
         val name = o.str("name", "n", "title") ?: sid
         val key0 = o.optStrOrNull("key")
         val base = KCALS.firstOrNull { it.id == sid || it.id == key0 || it.n.equals(name, true) || it.id == o.optStrOrNull("view") || it.n.equals(o.optStrOrNull("view") ?: "", true) }
-        val c = hexIn(o.str("color", "c")) ?: base?.c ?: 0xFF5C5850
+        // Prompt 44: Media i fasitens oker (#a0671a) når serveren sender standardfargen sin.
+        val c = (hexIn(o.str("color", "c")) ?: base?.c ?: 0xFF5C5850).let { if (sid == "media" && (it == 0xFF5A4A6B || o.optStrOrNull("color") == null)) 0xFFA0671A else it }
         // Prompt 35: kilde og merke (SERVER35). Uten feltene: egne kalendere = «own», resten innebygde.
         val builtin = o.optBoolean("builtin", base != null)
         val src = o.optStrOrNull("source")?.lowercase() ?: if (builtin) "builtin" else "own"

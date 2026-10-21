@@ -92,6 +92,8 @@ struct KalDetailSheet: View {
                     Text(c?.name ?? "").font(KalFont.ui(13, .bold)).foregroundStyle(t.calText(c))
                 }
                 Spacer()
+                // Prompt 44: Rediger ved siden av Ferdig (ikke for helligdager, trekk, Media og bursdager fra kontakter).
+                if s.canEdit44(e) { KalPill(title: "Rediger", filled: false) { s.edit44(e) } }
                 KalPill(title: "Ferdig") { close() }
             }
             // Prompt 42: trekk fra Abonnementer – egne felt, ikke redigerbare her (Endres i Finans → Abonnementer).
@@ -112,6 +114,9 @@ struct KalDetailSheet: View {
                 Text(e.title).font(KalFont.serif(28)).foregroundStyle(t.ink).fixedSize(horizontal: false, vertical: true)
             }
             rows
+            // Prompt 44: Media-utgivelse – status fra Media og «Åpne i Media».
+            if let m = e.media44 { KalMediaInfo44(e: e, m: m) }
+            if let att = e.att44, !att.isEmpty { KalAttList44(att: att) }
             KalFagPick37(e: e)
             if !e.allDay { reminders }
             Button(action: { s.delete(e) }) {
@@ -214,13 +219,14 @@ struct KalInfoRow: View {
     }
 }
 
-/* ---------- Ny hendelse ---------- */
+/* ---------- Ny hendelse / Rediger (prompt 44: delt opp i små visninger for typesjekkeren i Xcode 16) ---------- */
 
 struct KalNewSheet: View {
     @Environment(\.kal) private var t
     @Environment(\.kalPad42) private var pad
     @MainActor private var s: KalStore { KalStore.shared }
     @State private var f: KalNewForm
+    @State private var askScope: Bool = false
     @FocusState private var titleFocus: Bool
 
     init(form: KalNewForm) {
@@ -228,6 +234,8 @@ struct KalNewSheet: View {
     }
 
     private var ok: Bool { !f.title.trimmingCharacters(in: .whitespaces).isEmpty }
+    private var editing: Bool { f.editId != nil }
+    private var recurring: Bool { editing && (s.event(f.editId ?? "")?.rec44 ?? false) }
 
     /// Prompt 37: padding nederst = tastatur + 16 (34 uten tastatur), så innholdet kan scrolles over tastaturet.
     private var kbPad: CGFloat {
@@ -240,109 +248,187 @@ struct KalNewSheet: View {
     var body: some View {
         KalSheetFrame(behindKeyboard: true) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    top
-                    TextField("Tittel", text: $f.title)
-                        .font(KalFont.serif(24)).foregroundStyle(t.ink)
-                        .focused($titleFocus)
-                        .frame(height: 50)
-                        .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
-                    TextField("Sted", text: $f.loc)
-                        .font(KalFont.ui(16, .medium)).foregroundStyle(t.ink)
-                        .frame(height: 40)
-                        .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
-                    when
-                    KalLabel(text: "KALENDER")
-                    KalFlow(spacing: 6) {
-                        ForEach(s.cals.filter { (c: KalCal) -> Bool in c.writable }) { (c: KalCal) in
-                            KalChip(title: c.name, on: f.cal == c.id, dot: t.calColor(c)) { f.cal = c.id }
-                        }
-                    }
-                    if !f.allDay {
-                        KalLabel(text: "VARSEL")
-                        KalFlow(spacing: 6) {
-                            ForEach(0..<KalD.remOptions.count, id: \.self) { (i: Int) in
-                                let opt: (Int?, String) = KalD.remOptions[i]
-                                KalChip(title: opt.1, on: f.rem == opt.0) { f.rem = opt.0 }
-                            }
-                        }
-                    }
-                    Text("Tips: skriv heller i feltet nederst, f.eks. «frisør 14.30 25.10», så fyller Glimt ut alt.")
-                        .font(KalFont.ui(12.5)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.bottom, kbPad)
+                fields.padding(.bottom, kbPad)
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
         }
-        .onAppear {
-            KalKeyboard37.windowBg(UIColor(t.card))
-            Task {
-                try? await Task.sleep(nanoseconds: 80_000_000)
-                titleFocus = true
-            }
-        }
+        .onAppear { appear() }
         .onDisappear { KalKeyboard37.windowBg(nil) }
-        .onChange(of: f.start) { (old: Date, new: Date) in
-            // Flytt slutten med samme varighet.
-            let dur: TimeInterval = Swift.max(900, f.end.timeIntervalSince(old))
-            f.end = new.addingTimeInterval(dur)
+        .onChange(of: f.start) { (old: Date, new: Date) in moveEnd(old, new) }
+        .confirmationDialog("Gjentakende hendelse", isPresented: $askScope, titleVisibility: .visible) {
+            Button("Bare denne") { s.saveForm44(f, scope: "this") }
+            Button("Denne og fremtidige") { s.saveForm44(f, scope: "future") }
+            Button("Alle") { s.saveForm44(f, scope: "all") }
+            Button("Avbryt", role: .cancel) {}
         }
     }
 
-    private var top: some View {
+    private var fields: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            KalNewTop44(editing: editing, ok: ok, cancel: { cancel() }, save: { save() })
+            titleField
+            KalAddrField44(f: $f)
+            KalNewWhen44(f: $f)
+            KalNewCals44(cal: $f.cal)
+            if !f.allDay { KalNewRem44(rem: $f.rem) }
+            KalPeople44(att: $f.att)
+            if !editing { tip }
+        }
+    }
+
+    private var titleField: some View {
+        TextField("Tittel", text: $f.title)
+            .font(KalFont.serif(24)).foregroundStyle(t.ink)
+            .focused($titleFocus)
+            .frame(height: 50)
+            .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
+    }
+
+    private var tip: some View {
+        Text("Tips: skriv heller i feltet nederst, f.eks. «frisør 14.30 25.10», så fyller Glimt ut alt.")
+            .font(KalFont.ui(12.5)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func appear() {
+        KalKeyboard37.windowBg(UIColor(t.card))
+        Task {
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            titleFocus = true
+        }
+    }
+
+    /// Flytt slutten med samme varighet.
+    private func moveEnd(_ old: Date, _ new: Date) {
+        let dur: TimeInterval = Swift.max(900, f.end.timeIntervalSince(old))
+        f.end = new.addingTimeInterval(dur)
+    }
+
+    private func cancel() {
+        withAnimation(.easeOut(duration: 0.22)) {
+            let back: String? = f.editId
+            s.newForm = nil
+            // Rediger → Avbryt: tilbake til detaljarket.
+            if let back { s.detId = back }
+        }
+    }
+
+    private func save() {
+        if !ok { return }
+        if recurring {
+            askScope = true
+            return
+        }
+        s.saveForm44(f)
+    }
+}
+
+/// Avbryt · «Ny hendelse» / «Rediger» · Legg til / Lagre.
+struct KalNewTop44: View {
+    @Environment(\.kal) private var t
+    let editing: Bool
+    let ok: Bool
+    let cancel: () -> Void
+    let save: () -> Void
+
+    var body: some View {
         HStack {
-            KalPill(title: "Avbryt", filled: false) {
-                withAnimation(.easeOut(duration: 0.22)) { s.newForm = nil }
-            }
+            KalPill(title: "Avbryt", filled: false) { cancel() }
             Spacer()
-            Text("Ny hendelse").font(KalFont.serif(22)).foregroundStyle(t.ink)
+            Text(editing ? "Rediger" : "Ny hendelse").font(KalFont.serif(22)).foregroundStyle(t.ink)
             Spacer()
-            KalPill(title: "Legg til", enabled: ok) {
-                if ok { s.saveNew(f) }
-            }
+            KalPill(title: editing ? "Lagre" : "Legg til", enabled: ok) { save() }
         }
     }
+}
 
-    private var when: some View {
+struct KalNewWhen44: View {
+    @Environment(\.kal) private var t
+    @Binding var f: KalNewForm
+
+    var body: some View {
         VStack(spacing: 0) {
-            Button(action: {
-                KalHaptic.tap()
-                f.allDay.toggle()
-            }) {
-                HStack {
-                    Text("Hele dagen").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink)
-                    Spacer()
-                    KalToggle(on: f.allDay)
-                }
-                .padding(.vertical, 10)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            HStack {
-                Text("Dato").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink)
-                Spacer()
-                DatePicker("Dato", selection: $f.day, displayedComponents: .date)
-                    .labelsHidden()
-                    .environment(\.locale, Locale(identifier: "nb_NO"))
-            }
-            .padding(.vertical, 6)
-            if !f.allDay {
-                HStack {
-                    Text("Fra – til").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink)
-                    Spacer()
-                    DatePicker("Fra", selection: $f.start, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                        .environment(\.locale, Locale(identifier: "nb_NO"))
-                    Text("–").foregroundStyle(t.mut2)
-                    DatePicker("Til", selection: $f.end, displayedComponents: .hourAndMinute)
-                        .labelsHidden()
-                        .environment(\.locale, Locale(identifier: "nb_NO"))
-                }
-                .padding(.vertical, 6)
-            }
+            allDayRow
+            dateRow
+            if !f.allDay { timeRow }
         }
         .tint(t.red)
         .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
+    }
+
+    private var allDayRow: some View {
+        Button(action: {
+            KalHaptic.tap()
+            f.allDay.toggle()
+        }) {
+            HStack {
+                Text("Hele dagen").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink)
+                Spacer()
+                KalToggle(on: f.allDay)
+            }
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var dateRow: some View {
+        HStack {
+            Text("Dato").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink)
+            Spacer()
+            DatePicker("Dato", selection: $f.day, displayedComponents: .date)
+                .labelsHidden()
+                .environment(\.locale, Locale(identifier: "nb_NO"))
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var timeRow: some View {
+        HStack {
+            Text("Fra – til").font(KalFont.ui(14.5, .bold)).foregroundStyle(t.ink)
+            Spacer()
+            DatePicker("Fra", selection: $f.start, displayedComponents: .hourAndMinute)
+                .labelsHidden()
+                .environment(\.locale, Locale(identifier: "nb_NO"))
+            Text("–").foregroundStyle(t.mut2)
+            DatePicker("Til", selection: $f.end, displayedComponents: .hourAndMinute)
+                .labelsHidden()
+                .environment(\.locale, Locale(identifier: "nb_NO"))
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+struct KalNewCals44: View {
+    @Environment(\.kal) private var t
+    @MainActor private var s: KalStore { KalStore.shared }
+    @Binding var cal: String
+
+    private var list: [KalCal] { s.cals.filter { (c: KalCal) -> Bool in c.writable } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            KalLabel(text: "KALENDER")
+            KalFlow(spacing: 6) {
+                ForEach(list) { (c: KalCal) in
+                    KalChip(title: c.name, on: cal == c.id, dot: t.calColor(c)) { cal = c.id }
+                }
+            }
+        }
+    }
+}
+
+struct KalNewRem44: View {
+    @Binding var rem: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            KalLabel(text: "VARSEL")
+            KalFlow(spacing: 6) {
+                ForEach(0..<KalD.remOptions.count, id: \.self) { (i: Int) in
+                    KalChip(title: KalD.remOptions[i].1, on: rem == KalD.remOptions[i].0) { rem = KalD.remOptions[i].0 }
+                }
+            }
+        }
     }
 }

@@ -9,6 +9,8 @@ struct KalNetError: LocalizedError {
     let message: String
     /// Innloggingen krever 2FA-kode.
     var needsTotp: Bool = false
+    /// Prompt 44: serveren avviser tokenet også etter fornyelse (KalAuthGate44) – bare da logges man ut.
+    var revoked44: Bool = false
     var errorDescription: String? { message }
 }
 
@@ -25,17 +27,47 @@ enum KalNet {
 
     static func send(_ method: String, _ path: String, json: [String: Any]? = nil, timeout: TimeInterval = 20,
                      bases overrideBases: [String]? = nil, token overrideToken: String? = nil) async throws -> Data {
+        // Prompt 44: innloggingens egne kall (egne adresser/token) går rett til serveren. Vanlige kall som får 401 går via
+        // KalAuthGate44 (én fornyelse om gangen) og prøves én gang til – 401 alene logger aldri ut.
+        if overrideBases != nil || overrideToken != nil {
+            return try await sendOnce(method, path, json: json, timeout: timeout, bases: overrideBases, token: overrideToken)
+        }
+        let used: String = session().1 ?? ""
+        do {
+            return try await sendOnce(method, path, json: json, timeout: timeout, bases: nil, token: nil)
+        } catch let e as KalNetError {
+            if e.status != 401 || used.isEmpty { throw e }
+            let r: KalRecover44 = await KalAuthGate44.shared.recover(failedToken: used)
+            switch r {
+            case .renewed:
+                // Et nytt 401 her logger ikke ut: neste henting går via fornyelsen igjen, og bare den kan si «tilbakekalt».
+                return try await sendOnce(method, path, json: json, timeout: timeout, bases: nil, token: nil)
+            case .revoked:
+                var x: KalNetError = e
+                x.revoked44 = true
+                throw x
+            case .offline:
+                throw KalNetError(status: 0, message: "Fikk ikke kontakt med serveren")
+            }
+        }
+    }
+
+    private static func sendOnce(_ method: String, _ path: String, json: [String: Any]?, timeout: TimeInterval,
+                                 bases overrideBases: [String]?, token overrideToken: String?) async throws -> Data {
         let s: ([String], String?) = session()
-        let bases: [String] = overrideBases ?? s.0
+        let bases: [String] = KalNet44.order(overrideBases ?? s.0)
         let token: String? = overrideToken ?? s.1
         if bases.isEmpty { throw KalNetError(status: 0, message: "Ikke logget inn") }
         var lastError: KalNetError = KalNetError(status: 0, message: "Fikk ikke kontakt med serveren")
-        for base in bases {
+        let good: String = KalNet44.goodBase
+        for (i, base) in bases.enumerated() {
             let trimmed: String = base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             guard let url = URL(string: trimmed + path) else { continue }
             var r: URLRequest = URLRequest(url: url)
             r.httpMethod = method
-            r.timeoutInterval = timeout
+            // Prompt 44: en adresse som ikke har svart før får kort frist når det finnes flere å prøve.
+            let isLast: Bool = i == bases.count - 1
+            r.timeoutInterval = (isLast || base == good) ? timeout : Swift.min(timeout, 6)
             r.setValue("application/json", forHTTPHeaderField: "Accept")
             if let token, !token.isEmpty { r.setValue("Bearer " + token, forHTTPHeaderField: "Authorization") }
             if let json {
@@ -50,7 +82,10 @@ enum KalNet {
                 continue
             }
             let code: Int = (pair.1 as? HTTPURLResponse)?.statusCode ?? 0
-            if code >= 200 && code < 300 { return pair.0 }
+            if code >= 200 && code < 300 {
+                if overrideBases == nil { KalNet44.markGood(base) }
+                return pair.0
+            }
             let obj: [String: Any] = ((try? JSONSerialization.jsonObject(with: pair.0)) as? [String: Any]) ?? [:]
             let msg: String = (obj["error"] as? String) ?? ("Feil " + String(code))
             // Serveren svarte: ikke prøv neste adresse (samme server, samme svar).

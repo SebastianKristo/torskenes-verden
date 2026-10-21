@@ -22,6 +22,11 @@ struct KalNewForm: Equatable {
     var end: Date = Date()
     var cal: String = "p"
     var rem: Int? = 60
+    /// Prompt 44: Rediger (id-en til hendelsen som endres), koordinater fra adresseforslaget og deltakere.
+    var editId: String? = nil
+    var lat: Double? = nil
+    var lon: Double? = nil
+    var att: [KalAtt44] = []
 }
 
 @MainActor
@@ -84,7 +89,10 @@ final class KalStore {
     }
     /// Standard varighet i minutter (30 / 60 / 90 / 120) for rød +.
     var defDur: Int = (UserDefaults.standard.object(forKey: "kal.defDur") as? Int) ?? 60 {
-        didSet { UserDefaults.standard.set(defDur, forKey: "kal.defDur") }
+        didSet {
+            UserDefaults.standard.set(defDur, forKey: "kal.defDur")
+            KalQuick.defDur44 = defDur
+        }
     }
     /// Tidslinje starter: now | 06 | 08
     var tlStart: String = UserDefaults.standard.string(forKey: "kal.tlStart") ?? "now" {
@@ -132,10 +140,10 @@ final class KalStore {
     var fromHomelab: Bool = false
 
     /* ---------- Lokale tillegg (lagres på enheten) ---------- */
-    @ObservationIgnored private var pending: [KalEvent] = KalStore.loadList("kal.pending")
+    @ObservationIgnored var pending: [KalEvent] = KalStore.loadList("kal.pending")
     @ObservationIgnored private var hiddenIds: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "kal.del") ?? [])
-    @ObservationIgnored private var remOverride: [String: Int] = (UserDefaults.standard.dictionary(forKey: "kal.rem") as? [String: Int]) ?? [:]
-    @ObservationIgnored private var calOverride: [String: String] = (UserDefaults.standard.dictionary(forKey: "kal.calOf") as? [String: String]) ?? [:]
+    @ObservationIgnored var remOverride: [String: Int] = (UserDefaults.standard.dictionary(forKey: "kal.rem") as? [String: Int]) ?? [:]
+    @ObservationIgnored var calOverride: [String: String] = (UserDefaults.standard.dictionary(forKey: "kal.calOf") as? [String: String]) ?? [:]
     @ObservationIgnored private var srcOf: [String: String] = (UserDefaults.standard.dictionary(forKey: "kal.src") as? [String: String]) ?? [:]
     @ObservationIgnored private var calOn: [String: Bool] = (UserDefaults.standard.dictionary(forKey: "kal.calOn") as? [String: Bool]) ?? [:]
     @ObservationIgnored private var toastSeq: Int = 0
@@ -144,9 +152,24 @@ final class KalStore {
     @ObservationIgnored private var poll: Timer? = nil
     @ObservationIgnored private var loadedFrom: String = ""
     @ObservationIgnored private var loadedTo: String = ""
+    /// Prompt 44: bare én henting om gangen (oppstart, aktivering, lenker og 60 s-intervallet startet før hver sin).
+    @ObservationIgnored private var inflight44: Task<Void, Never>? = nil
+    @ObservationIgnored let started44: Date = Date()
+    @ObservationIgnored var firstFrame44: Bool = false
+    /// Prompt 44: «Oppdaterer …» ved tittelen mens den synker (aldri tom kalender eller spinner over rutenettet).
+    var syncing44: Bool = false
 
     init() {
-        if let snap = KalNet.loadSnapshot() {
+        KalQuick.defDur44 = (UserDefaults.standard.object(forKey: "kal.defDur") as? Int) ?? 60
+        // Prompt 44: den store bufferen (−3 … +12 mnd) først, ellers widget-bufferen.
+        if let f = KalCache44.load(user: KalGroup.user), !f.events.isEmpty {
+            if !f.cals.isEmpty { cals = KalCals39.normalize(f.cals) }
+            events = f.events
+            var w: [String: KalWxDay] = [:]
+            for d in f.wx { w[d.day] = d }
+            wx = w
+            updated = Date(timeIntervalSince1970: f.updated)
+        } else if let snap = KalNet.loadSnapshot() {
             if !snap.cals.isEmpty { cals = KalCals39.normalize(snap.cals) }
             events = snap.events.filter { (e: KalEvent) -> Bool in !e.pending }
             var w: [String: KalWxDay] = [:]
@@ -200,6 +223,7 @@ final class KalStore {
         }
         KalKeychain41.delete("refresh")
         KalGroup.clearSession()
+        KalCache44.clear()
         UserDefaults.standard.set(true, forKey: "kal.noAuto")
         loggedIn = false
         events = []
@@ -214,6 +238,7 @@ final class KalStore {
         UserDefaults.standard.set(true, forKey: "kal.noAuto")
         KalKeychain41.delete("refresh")
         KalGroup.clearSession()
+        KalCache44.clear()
         loggedIn = false
         events = []
         rebuild()
@@ -227,12 +252,37 @@ final class KalStore {
     /// Henter perioden rundt det man ser på (−6 uker … +16 uker), kalenderne og været.
     func load(force: Bool = false) async {
         guard loggedIn else { return }
+        // Prompt 44: en henting som allerede går, gir svaret til alle. Bare en ny periode (bladd langt) gir en til.
+        if let t = inflight44 {
+            await t.value
+            if !needsRange44() { return }
+        }
+        let t: Task<Void, Never> = Task { await self.load44(force: force) }
+        inflight44 = t
+        await t.value
+        if inflight44 == t { inflight44 = nil }
+    }
+
+    private func needsRange44() -> Bool {
+        let a: String = anchor < KalD.todayKey() ? anchor : KalD.todayKey()
+        let from: String = KalD.addKey(a, -42)
+        let to: String = KalD.addKey(anchor > KalD.todayKey() ? anchor : KalD.todayKey(), 112)
+        return loadedFrom.isEmpty || from < loadedFrom || to > loadedTo
+    }
+
+    private func load44(force: Bool) async {
+        guard loggedIn else { return }
+        let t0: Date = Date()
         let a: String = anchor < KalD.todayKey() ? anchor : KalD.todayKey()
         let from: String = KalD.addKey(a, -42)
         let to: String = KalD.addKey(anchor > KalD.todayKey() ? anchor : KalD.todayKey(), 112)
         if !force && from >= loadedFrom && to <= loadedTo && !loadedFrom.isEmpty { return }
         loading = true
-        defer { loading = false }
+        syncing44 = true
+        defer {
+            loading = false
+            syncing44 = false
+        }
         if let res = await KalCalAPI35.fetch() {
             serverCals = true
             cals = res.cals
@@ -243,6 +293,7 @@ final class KalStore {
             mergeLocalCals()
         }
         applyCalOn()
+        KalMedia44.tint(&cals)
         let ids: Set<String> = Set(cals.map { (c: KalCal) -> String in c.id })
         do {
             let list: [KalEvent] = try await KalNet.events(from: from, to: to, calIds: ids)
@@ -258,13 +309,20 @@ final class KalStore {
             // Prompt 42: trekk fra Abonnementer uten kalenderen i lista (eldre server) får den lokalt.
             KalAb42.ensureCal(&cals, events: list)
             applyCalOn()
+            // Prompt 44: tegn med en gang – vær, kø og fagfarger kommer etterpå.
+            rebuild()
+            saveSnapshot()
+            KalCache44.save(user: KalGroup.user, events: events, cals: cals, wx: Array(wx.values))
+            KalLog44.send("cal.syncDone", ["ms": String(Int(Date().timeIntervalSince(t0) * 1000)), "events": String(list.count)])
         } catch let e as KalNetError {
             lastError = e.message
             if e.status == 401 {
-                lastError = "Innloggingen er utløpt. Logg inn på nytt."
-                // Homelab-appen har laget et nytt token (f.eks. etter at det gamle ble trukket tilbake).
-                if let hl = KalGroup.homelabToken, hl != KalGroup.token, adoptHomelab() { return }
-                // Prompt 41: utlogging i Homelab tilbakekaller app-tokenene → tilbake til innloggingen.
+                // Prompt 44: KalNet har allerede prøvd å fornye (KalAuthGate44). Bare et tilbakekalt token logger ut –
+                // ellers beholdes innloggingen og den lagrede kalenderen (nytt forsøk ved neste henting).
+                if !e.revoked44 {
+                    lastError = ""
+                    return
+                }
                 lastError = ""
                 logoutRevoked()
                 return
@@ -282,6 +340,7 @@ final class KalStore {
         await KalFag37.pull()
         rebuild()
         saveSnapshot()
+        if lastError.isEmpty { KalCache44.save(user: KalGroup.user, events: events, cals: cals, wx: Array(wx.values)) }
     }
 
     /// Hver 60. sekund mens appen er åpen (endringer fra Homelab vises uten å dra ned).
@@ -444,7 +503,12 @@ final class KalStore {
         UserDefaults.standard.set(calOn, forKey: "kal.calOn")
         if let i = cals.firstIndex(where: { (c: KalCal) -> Bool in c.id == id }) { cals[i].on = on }
         if serverCals {
-            Task { _ = try? await KalNet.send("PATCH", "/api/kalender/calendars/" + KalNet.enc(id), json: ["visible": on]) }
+            // Prompt 44: Media-kalenderen henter utgivelsene bare når den er på (samme bryter som «Vis i Kalender» i Media).
+            let media: Bool = id == "media"
+            Task {
+                _ = try? await KalNet.send("PATCH", "/api/kalender/calendars/" + KalNet.enc(id), json: ["visible": on])
+                if media && on { await self.load(force: true) }
+            }
         }
         rebuild()
         saveSnapshot()
@@ -509,13 +573,16 @@ final class KalStore {
     }
 
     /// Sender en lokal hendelse til serveren. → serverens id, eller nil (beholdes lokalt og prøves igjen senere).
-    private func push(_ ev: KalEvent) async -> String? {
+    func push(_ ev: KalEvent) async -> String? {
         var body: [String: Any] = ["title": ev.title, "allDay": ev.allDay, "date": ev.day, "location": ev.loc,
                                    "calendar": serverCal(for: ev.cal), "reminder": KalStore.serverReminder(ev.rem),
                                    "remindMinutes": ev.rem ?? 0, "origin": ev.src.isEmpty ? "Kalender" : "Glimt · Kalender"]
         if let s = ev.s { body["start"] = KalD.hm(s) }
         if let e = ev.e { body["end"] = KalD.hm(Swift.min(e, 1439)) }
         if !ev.src.isEmpty { body["note"] = "Lagt til av Glimt: «" + ev.src + "»" }
+        // Prompt 44: koordinater fra adresseforslaget og deltakere.
+        if let la = ev.lat, let lo = ev.lon { body["geo"] = ["lat": la, "lon": lo] }
+        if let att = ev.att44, !att.isEmpty { body["attendees"] = att.map { (a: KalAtt44) -> [String: Any] in a.json } }
         var data: Data? = nil
         do {
             data = try await KalNet.send("POST", "/api/kalender/events", json: body)
@@ -536,6 +603,11 @@ final class KalStore {
         let made: KalEvent? = (obj["event"] as? [String: Any]).flatMap { (o: [String: Any]) -> KalEvent? in KalParse.event(o, calIds: ids) }
         let newId: String = made?.id ?? (obj["id"] as? String) ?? ""
         if newId.isEmpty { return nil }
+        // Prompt 44: invitasjonen (.ics fra brukerens egen e-post) sendes når hendelsen er lagret.
+        if let att = ev.att44, !att.isEmpty {
+            let id: String = newId
+            Task { _ = await KalEv44.invite(id, att) }
+        }
         pending.removeAll { (x: KalEvent) -> Bool in x.id == ev.id }
         savePending()
         calOverride[newId] = ev.cal
@@ -548,6 +620,11 @@ final class KalStore {
         UserDefaults.standard.set(remOverride, forKey: "kal.rem")
         if var m = made {
             m.cal = ev.cal
+            if m.att44 == nil { m.att44 = ev.att44 }
+            if m.lat == nil && ev.lat != nil {
+                m.lat = ev.lat
+                m.lon = ev.lon
+            }
             events.append(m)
         }
         if toast?.undoId == ev.id, let t = toast { toast = KalToast(id: t.id, text: t.text, undoId: newId) }
@@ -578,6 +655,11 @@ final class KalStore {
     func undo(_ id: String) {
         KalHaptic.tap()
         if id.isEmpty { return }
+        // Prompt 44: «Angre» etter Rediger → Lagre.
+        if id.hasPrefix("e44:") {
+            undoEdit44(String(id.dropFirst(4)))
+            return
+        }
         // Prompt 39: «Angre» på «Vi ryddet kalenderne: 12 → 4».
         if id == "mig39" {
             Task { await self.undoMigration39() }
@@ -656,7 +738,7 @@ final class KalStore {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    private func savePending() {
+    func savePending() {
         if let d = try? JSONEncoder().encode(pending) { UserDefaults.standard.set(d, forKey: "kal.pending") }
     }
 

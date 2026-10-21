@@ -40,6 +40,11 @@ struct KalEvent: Identifiable, Hashable, Codable {
     var lon: Double? = nil
     /// Prompt 42: trekk fra Abonnementer (Finans). nil for alle andre hendelser.
     var ab42: KalAb42Info? = nil
+    /// Prompt 44: Media-utgivelse (status fra Media, «Åpne i Media»), deltakere, gjentakelse og versjon (etag) for Rediger.
+    var media44: KalMedia44? = nil
+    var att44: [KalAtt44]? = nil
+    var rec44: Bool? = nil
+    var etag44: String? = nil
 
     var allDay: Bool { s == nil }
     var startMin: Int { s ?? 0 }
@@ -513,6 +518,8 @@ enum KalParse {
         KalEv37.decorate(&ev, o)
         // Prompt 42: Abonnementer (trekkdatoer fra Finans): beløp, konto, logo, merke TREKK / PRØVE / ÅRLIG.
         KalAb42.decorate(&ev, o)
+        // Prompt 44: Media-status, deltakere, gjentakelse og etag.
+        KalEv44.decorate(&ev, o)
         return ev
     }
 

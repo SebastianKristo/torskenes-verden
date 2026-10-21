@@ -131,6 +131,8 @@ fun DetailSheet(vm: KalVm) {
             Dot(c.col, 10.dp)
             Spacer(Modifier.width(6.dp))
             Tx(c.n, man(13.sp, FontWeight.Bold, c.fg(k)), Modifier.weight(1f))
+            // Prompt 44: Rediger ved siden av Ferdig (ikke helligdager, trekk, Media og bursdager fra kontakter).
+            if (vm.canEdit44(e)) { LinePill("Rediger", { vm.edit44(e) }); Spacer(Modifier.width(8.dp)) }
             InkPill("Ferdig", { vm.closeDet() })
         }
         // Prompt 42: trekk fra Abonnementer – eget innhold, ikke redigerbart (Endres i Finans → Abonnementer).
@@ -154,6 +156,9 @@ fun DetailSheet(vm: KalVm) {
             e.src?.let { InfoRow("Lagt til av Glimt") { Tx("«$it»", man(14.sp, FontWeight.Medium, k.mut).copy(fontStyle = FontStyle.Italic, textAlign = TextAlign.End), maxLines = 3) } }
             if (!e.editable) InfoRow("Kilde") { Tx("Skrivebeskyttet kalender", man(14.sp, FontWeight.Medium, k.mut)) }
         }
+        // Prompt 44: Media-utgivelse (status fra Media, «Åpne i Media») og deltakere.
+        if (e.x44?.media == true) MediaInfo44(e)
+        e.x44?.att?.let { AttList44(it) }
         FagPick37(vm, e)
         if (!e.all) {
             Label("VARSEL")
@@ -182,12 +187,14 @@ fun NewSheet(vm: KalVm) {
     val ok = f.t.isNotBlank()
     SheetFrame(behindIme = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            LinePill("Avbryt", { vm.closeNew() })
-            Tx("Ny hendelse", news(22.sp, k.ink).copy(textAlign = TextAlign.Center), Modifier.weight(1f))
-            InkPill("Legg til", { vm.saveNew() }, enabled = ok)
+            // Prompt 44: Rediger åpner samme ark med «Rediger» og «Lagre». Avbryt går tilbake til detaljarket.
+            LinePill("Avbryt", { val back = f.editId; vm.closeNew(); if (back != null) vm.det = back })
+            Tx(if (f.editId != null) "Rediger" else "Ny hendelse", news(22.sp, k.ink).copy(textAlign = TextAlign.Center), Modifier.weight(1f))
+            InkPill(if (f.editId != null) "Lagre" else "Legg til", { vm.saveForm44() }, enabled = ok)
         }
-        Field(f.t, { vm.nf = f.copy(t = it) }, "Tittel", news(24.sp, k.ink), 50, Modifier.focusRequester(fr))
-        Field(f.loc, { vm.nf = f.copy(loc = it) }, "Sted", man(16.sp, FontWeight.Medium, k.ink), 40)
+        Field(f.t, { vm.nf = vm.nf?.copy(t = it) }, "Tittel", news(24.sp, k.ink), 50, Modifier.focusRequester(fr))
+        // Prompt 44: «Sted eller adresse» med forslag (Kartverket).
+        AddrField44(vm, f)
         Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }) {
             Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).tap("Hele dagen", Role.Switch) { Hap.tick(); vm.nf = f.copy(all = !f.all) }.padding(vertical = 10.dp, horizontal = 2.dp),
                 verticalAlignment = Alignment.CenterVertically) {
@@ -217,7 +224,9 @@ fun NewSheet(vm: KalVm) {
                 KREMS.forEach { (r, n) -> Chip(n, f.rem == r, { Hap.tick(); vm.nf = f.copy(rem = r) }) }
             }
         }
-        Tx("Tips: skriv heller i feltet nederst, f.eks. «frisør 14.30 25.10», så fyller Glimt ut alt.", man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
+        // Prompt 44: DELTAKERE (brukere i appen og e-post til andre).
+        People44(vm, f)
+        if (f.editId == null) Tx("Tips: skriv heller i feltet nederst, f.eks. «frisør 14.30 25.10», så fyller Glimt ut alt.", man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
     }
 }
 

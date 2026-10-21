@@ -26,7 +26,9 @@ import java.time.LocalDate
  */
 
 /** Ny hendelse-arket. s/e i minutter. */
-data class KNewForm(val t: String = "", val loc: String = "", val d: LocalDate, val s: Int, val e: Int, val all: Boolean = false, val cal: String = "p", val rem: Int?)
+data class KNewForm(val t: String = "", val loc: String = "", val d: LocalDate, val s: Int, val e: Int, val all: Boolean = false, val cal: String = "p", val rem: Int?,
+    /** Prompt 44: Rediger (id-en som endres), koordinater fra adresseforslaget og deltakere. */
+    val editId: String? = null, val lat: Double? = null, val lon: Double? = null, val att: List<KAtt44> = emptyList())
 
 class KToast(val t: String, val undo: (() -> Unit)?)
 
@@ -252,6 +254,9 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             val err = runCatching { KalRepo.sync(ctx, s, from, to) }.getOrElse { it.message }
             syncing = false
             syncErr = err
+            // Prompt 44: fornyelsen (Kal44.recover) kan ha lagret et nytt token eller en annen adresse.
+            KalAuth.session(ctx)?.let { ns -> if (session != null && (ns.token != session?.token || ns.server != session?.server)) session = ns }
+            if (err == null) viewModelScope.launch { Kal44.log(ctx, "cal.syncDone", mapOf("ms" to KalRepo.lastSyncMs44.toString())) }
             reloadPrefs35()
             if (err?.contains("utløpt") == true) { KalAuth.clear(ctx); session = null; lErr = err }
             changed()
@@ -331,6 +336,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
 
     /** Trykk på en dag: Måned → Uke, Uke → 3 dager, 3 dager → Dag. */
     fun openDay(d: LocalDate) {
+        // Prompt 44: trykket som kom med et sveip åpner ikke uke.
+        if (swRecent44) return
         if (full43 && v == "mnd") { Hap.tick(); a = d; return }
         when (v) {
             "mnd" -> zoomTo("uke", d, "in")
@@ -372,6 +379,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 savedId = KalRepo.create(ctx, s, e).id
+                e.x44?.att?.takeIf { it.isNotEmpty() && savedId != tmpId }?.let { Kal44.invite(s, savedId, it) }
                 changed()
             } catch (x: KalApiException) {
                 Hap.error()
@@ -427,15 +435,115 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     /** Endrer man starttid, flyttes slutt med samme varighet. */
     fun nfStart(m: Int) { val f = nf ?: return; val dur = maxOf(15, f.e - f.s); nf = f.copy(s = m, e = minOf(1439, m + dur)) }
 
+    /* ---------- Prompt 44: hold inne / trykk for ny, Rediger, sveip ---------- */
+
+    /** Sist et sveip startet (> 12 dp) – trykk innen 450 ms etterpå åpner ikke uke/ark. */
+    var swAt44 = 0L
+    val swRecent44: Boolean get() = System.currentTimeMillis() - swAt44 < 450
+    /** Konflikt etter Lagre: «Endret et annet sted. Behold din eller deres?» (hendelses-id). */
+    var conflict44 by mutableStateOf<String?>(null)
+    /** Spør om gjentakende: «Bare denne / Denne og fremtidige / Alle». */
+    var askScope44 by mutableStateOf(false)
+    private val before44 = HashMap<String, KEv>()
+
+    /** Hold inne en dag (Måned) eller trykk på et tidspunkt (Uke · 3 d · Dag). */
+    fun newOn44(d: LocalDate, at: Int? = null) {
+        if (swRecent44) return
+        Hap.tick()
+        val st = Kal44.startFor(d, at)
+        nf = KNewForm(d = d, s = st, e = minOf(1439, st + dd), cal = writableDefault(), rem = drem)
+    }
+
+    fun canEdit44(e: KEv): Boolean = !Kal44.readOnly(e) && (e.editable || e.pending) && !no.kristo.kalender.Kal41.isBirthday(e, cal(e.cal).n)
+
+    /** Detaljarket → Rediger: samme ark som Ny hendelse, utfylt. */
+    fun edit44(e: KEv) {
+        Hap.tick()
+        val st = e.s ?: 9 * 60
+        det = null
+        nf = KNewForm(t = e.t, loc = e.address ?: e.loc ?: "", d = e.d, s = st, e = minOf(1439, e.e ?: (st + 60)), all = e.all, cal = e.cal,
+            rem = if (e.all) drem else e.rem, editId = e.id, lat = e.lat, lon = e.lon, att = e.x44?.att ?: emptyList())
+    }
+
+    /** «Lagre» (Rediger) eller «Legg til». scope for gjentakende: this | future | all. */
+    fun saveForm44(scope: String? = null) {
+        val f = nf ?: return
+        if (f.t.isBlank()) return
+        val id = f.editId
+        if (id == null) { saveNew(); return }
+        val old = find(id) ?: run { nf = null; return }
+        if (scope == null && old.x44?.rec == true) { askScope44 = true; return }
+        askScope44 = false
+        val S = f.s; val E = maxOf(S + 15, f.e)
+        val x = (old.x44 ?: KX44()).copy(att = f.att)
+        val ne = old.copy(t = f.t.trim(), loc = f.loc.trim().ifBlank { null }, address = if (f.lat != null) f.loc.trim() else null, lat = f.lat, lon = f.lon,
+            d = f.d, s = if (f.all) null else S, e = if (f.all) null else E, cal = f.cal, rem = if (f.all) null else f.rem, x44 = x)
+        before44[id] = old
+        replace44(ne)
+        nf = null
+        a = f.d
+        det = id
+        Hap.done()
+        val newAtt = f.att.filter { it !in (old.x44?.att ?: emptyList()) }
+        showToast("Lagret «${ne.t}»" + if (newAtt.isEmpty()) "" else " · invitasjon sendt til ${newAtt.size}") { undoEdit44(id) }
+        if (ne.pending) return
+        val s = session ?: return
+        viewModelScope.launch { patch44(s, ne, scope, force = false, invite = newAtt) }
+    }
+
+    private fun replace44(e: KEv) {
+        val d = KalStore.current(ctx)
+        KalStore.save(ctx, d.copy(events = d.events.map { if (it.id == e.id) e else it }))
+        changed()
+    }
+
+    private suspend fun patch44(s: KalSession, e: KEv, scope: String?, force: Boolean, invite: List<KAtt44>) {
+        val d = KalStore.current(ctx)
+        try {
+            val raw = s.api.patch("/api/kalender/events/" + URLEncoder.encode(e.id, "UTF-8"), Kal44.patchBody(e, KalRepo.writeCal(d, e.cal), scope, force))
+            runCatching { JSONObject(raw).optJSONObject("event")?.let { parseServerEvent(it, d.cals.associateBy { c -> c.id }) } }.getOrNull()?.let { m ->
+                if (m.id == e.id) replace44(m.copy(cal = e.cal, lat = m.lat ?: e.lat, lon = m.lon ?: e.lon, x44 = m.x44 ?: e.x44))
+            }
+            if (invite.isNotEmpty()) Kal44.invite(s, e.id, invite)
+        } catch (x: KalApiException) {
+            when {
+                x.status == 409 || x.status == 412 -> conflict44 = e.id
+                x.status == 0 -> {}
+                else -> { showToast(x.message ?: "Kunne ikke lagre"); refresh() }
+            }
+        }
+    }
+
+    /** «Behold din» lagrer på nytt uten versjonssjekk, «Bruk deres» henter på nytt. */
+    fun resolveConflict44(keepMine: Boolean) {
+        val id = conflict44 ?: return
+        conflict44 = null
+        Hap.tick()
+        if (!keepMine) { refresh(); return }
+        val s = session ?: return
+        val e = find(id) ?: return
+        viewModelScope.launch { patch44(s, e, null, force = true, invite = emptyList()) }
+    }
+
+    private fun undoEdit44(id: String) {
+        val old = before44.remove(id) ?: return
+        replace44(old)
+        if (old.pending) return
+        val s = session ?: return
+        viewModelScope.launch { patch44(s, old, null, force = true, invite = emptyList()) }
+    }
+
     fun saveNew() {
         val f = nf ?: return
         if (f.t.isBlank()) return
         val S = f.s; val E = maxOf(S + 15, f.e)
         val e = KEv("u" + System.currentTimeMillis(), f.t.trim(), f.cal, f.d, if (f.all) null else S, if (f.all) null else E,
-            loc = f.loc.trim().ifBlank { null }, rem = if (f.all) null else f.rem)
+            loc = f.loc.trim().ifBlank { null }, rem = if (f.all) null else f.rem,
+            // Prompt 44: koordinater fra adresseforslaget og deltakere (invitasjonen sendes når hendelsen er lagret).
+            address = if (f.lat != null) f.loc.trim() else null, lat = f.lat, lon = f.lon, x44 = if (f.att.isEmpty()) null else KX44(att = f.att))
         nf = null
         a = f.d
-        add(e, "La til «${e.t}» · " + dl(f.d) + (if (f.all) "" else " " + hm(S)))
+        add(e, "La til «${e.t}» · " + dl(f.d) + (if (f.all) "" else " " + hm(S)) + (if (f.att.isEmpty()) "" else " · invitasjon sendt til ${f.att.size}"))
     }
 
     /* ---------- Skrivefeltet (Glimt) ---------- */
@@ -443,7 +551,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     val preview: KParsed? get() {
         val t = ct.trim()
         if (t.length < 3 || isQ(t)) return null
-        return parseQuick(t, drem)
+        return parseQuick(t, drem, defDur = dd)
     }
     val isQuestion: Boolean get() = ct.trim().length >= 3 && isQ(ct)
 
@@ -452,7 +560,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         val t = ct.trim()
         if (t.length < 3) return
         if (isQ(t)) { ct = ""; glSend(t); return }
-        val p = parseQuick(t, drem)
+        val p = parseQuick(t, drem, defDur = dd)
         // En innlimt melding (SMS/e-post) uten sikkert klokkeslett: Glimt (LLM) i bakgrunnen.
         if (looksPasted(t) && p.s == null) { ct = ""; quick(t); return }
         ct = ""
@@ -505,7 +613,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     /** Lenker og deling: kalender://ny?text=… eller Del → Kalender. */
     fun incomingText(t: String) {
         if (t.isBlank()) { focusComposer++; return }
-        if (looksPasted(t) && parseQuick(t, drem).s == null) quick(t) else { ct = t; focusComposer++ }
+        if (looksPasted(t) && parseQuick(t, drem, defDur = dd).s == null) quick(t) else { ct = t; focusComposer++ }
     }
 
     /* ---------- Glimt-panelet ---------- */
@@ -686,7 +794,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         val on = c.id in hid
         hid = if (on) hid - c.id else hid + c.id
         KalPrefs.setHidden(ctx, hid)
-        session?.let { s -> viewModelScope.launch { KalRepo.setVisible(s, data, c, on) } }
+        // Prompt 44: Media-kalenderen henter utgivelsene bare når den er på (samme bryter som «Vis i Kalender» i Media).
+        session?.let { s -> viewModelScope.launch { KalRepo.setVisible(s, data, c, on); if (c.id == "media" && on) refresh() } }
         changed()
     }
 

@@ -256,7 +256,9 @@ struct KalGridColumn: View {
         let laid: [KalLaid] = KalLayout.lanes(s.on(k))
         GeometryReader { (geo: GeometryProxy) in
             ZStack(alignment: .topLeading) {
+                // Prompt 44: trykk på tom plass → ny hendelse på klokkeslettet (avrundet ned til halvtime).
                 KalHourLines(hourH: hourH)
+                    .modifier(KalSlotTap44(day: k, hourH: hourH))
                 ForEach(laid) { (l: KalLaid) in
                     KalGridBlock(l: l, width: geo.size.width, hourH: hourH, small: small)
                 }
@@ -304,7 +306,7 @@ struct KalGridBlock: View {
         let y: CGFloat = CGFloat(e.startMin) / 60 * hourH + 1
         let showTime: Bool = h >= 36 && !small
         let fs: CGFloat = small ? 9.5 : (width > 200 ? 13 : 11)
-        Button(action: { KalStore.shared.openDetail(e) }) {
+        Button(action: { if !KalSwipe44.recent { KalStore.shared.openDetail(e) } }) {
             VStack(alignment: .leading, spacing: 1) {
                 KalBdText41.title(e, calName: c?.name ?? "").font(KalFont.ui(fs, .bold)).foregroundStyle(t.calText(c)).lineLimit(nil)
                 if showTime {

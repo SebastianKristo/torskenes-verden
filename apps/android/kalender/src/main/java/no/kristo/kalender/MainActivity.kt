@@ -54,6 +54,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         vm.foreground = true
+        // Prompt 44: tilbake fra Homelab uten svar → feilmelding etter 20 s (med Prøv igjen og passord).
+        vm.k41.returned44()
         vm.refresh()
         // Prompt 41: lokal/ekstern adresse fra Homelab (Bytt automatisk).
         if (vm.session != null) vm.k41.syncServers()

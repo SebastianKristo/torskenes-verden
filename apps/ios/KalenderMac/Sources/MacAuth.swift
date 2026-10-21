@@ -103,7 +103,12 @@ enum MacSession {
         loadLock.lock()
         defer { loadLock.unlock() }
         if isLoaded { return token }
-        let t: String? = MacKeychain.read("token")
+        // Prompt 44: kopien i appens sandkasse først (ingen nøkkelring-dialog etter en oppdatering), så Nøkkelringen.
+        var t: String? = MacTokenFile44.read()
+        if t == nil {
+            t = MacKeychain.read("token")
+            if let k = t { MacTokenFile44.write(k) }
+        }
         lock.lock()
         if !loaded {
             cachedToken = t
@@ -124,6 +129,12 @@ enum MacSession {
 
     static func install() {
         KalNet.sessionProvider = { () -> ([String], String?) in (MacSession.bases, MacSession.tokenBlocking()) }
+        // Prompt 44: nytt token fra fornyelsen (KalAuthGate44) lagres her (adressen som virket først).
+        KalAuthGate44.saver = { (n: KalSession41) -> Void in
+            var b: [String] = [n.base]
+            for x in MacSession.bases where !b.contains(x) { b.append(x) }
+            MacSession.save(bases: b, token: n.token, user: n.user.isEmpty ? MacSession.user : n.user)
+        }
     }
 
     static func save(bases: [String], token: String, user: String) {
@@ -133,7 +144,10 @@ enum MacSession {
         lock.unlock()
         UserDefaults.standard.set(bases, forKey: "mac.bases")
         UserDefaults.standard.set(user, forKey: "mac.user")
-        keychainQueue.async { MacKeychain.write("token", token) }
+        keychainQueue.async {
+            MacKeychain.write("token", token)
+            MacTokenFile44.write(token)
+        }
     }
 
     /// Prompt 43: bare adressene (lokal/ekstern fra Homelab) – tokenet skrives ikke på nytt.
@@ -149,7 +163,41 @@ enum MacSession {
         lock.unlock()
         UserDefaults.standard.removeObject(forKey: "mac.bases")
         UserDefaults.standard.removeObject(forKey: "mac.user")
-        keychainQueue.async { MacKeychain.delete("token") }
+        keychainQueue.async {
+            MacKeychain.delete("token")
+            MacTokenFile44.clear()
+        }
+    }
+}
+
+/// Prompt 44: «jeg blir logget ut» på Mac – årsak: appen er ad hoc-signert, så hver oppdatering (MacUpdater43) har en ny
+/// signatur. Nøkkelringen spør da på nytt («Kalender vil bruke konfidensiell informasjon …»), og avvises/lukkes dialogen
+/// gir lesingen nil → «Logg inn på nytt». Kopien av tokenet ligger nå også i appens egen sandkasse-mappe
+/// (~/Library/Containers/no.kristo.kalender.mac/…/Application Support/Kalender/session44, tilgang 0600), som overlever
+/// oppdateringer. Bare app-tokenet (kan trekkes tilbake under Innstillinger → Enheter), aldri passordet.
+enum MacTokenFile44 {
+    private static var url: URL? {
+        guard let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return nil }
+        let d: URL = dir.appendingPathComponent("Kalender", isDirectory: true)
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        return d.appendingPathComponent("session44")
+    }
+
+    static func read() -> String? {
+        guard let u = url, let d = try? Data(contentsOf: u), let s = String(data: d, encoding: .utf8) else { return nil }
+        let t: String = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+
+    static func write(_ token: String) {
+        guard let u = url else { return }
+        try? Data(token.utf8).write(to: u, options: [.atomic])
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: u.path)
+    }
+
+    static func clear() {
+        guard let u = url else { return }
+        try? FileManager.default.removeItem(at: u)
     }
 }
 
@@ -187,9 +235,9 @@ enum MacAuth {
         let needsCode: Bool
     }
 
+    /// Prompt 44: eget, stabilt navn per installasjon (Host.current() kunne blokkere hovedtråden med navneoppslag).
     static func deviceName() -> String {
-        let host: String = Host.current().localizedName ?? "Mac"
-        return "Kalender (" + host + ")"
+        "Kalender (" + KalDev44.name + ")"
     }
 
     /// POST /finans/api/login {username, password, code?, device} → {token, user} (samme flyt som Homelab-appene).

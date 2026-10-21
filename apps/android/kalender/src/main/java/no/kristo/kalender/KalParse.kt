@@ -35,7 +35,8 @@ private val MX = listOf("jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", 
 private fun safeDate(y: Int, m: Int, d: Int): LocalDate? = runCatching { LocalDate.of(y, m, d) }.getOrNull()
 
 fun parseQuick(txt: String, defRem: Int?, T: LocalDate = today(), nm: Int = nowMin(), defDur: Int = 60): KParsed {
-    var s = " " + txt.lowercase().replace(Regex("\\s+"), " ") + " "
+    // Prompt 44: 1600, kl1600, 16h, 16-17 og «frisør 16» skrives om til 16:00 først (KalTime44).
+    var s = " " + KalTime44.normalize(txt).lowercase().replace(Regex("\\s+"), " ") + " "
     var date: LocalDate? = null
     var time: Int? = null
     var end: Int? = null
@@ -122,7 +123,7 @@ fun parseQuick(txt: String, defRem: Int?, T: LocalDate = today(), nm: Int = nowM
         }
     }
     val cal = guessCal(txt.lowercase())
-    var t = s.replace(Regex("^\\s*(legg\\s+(til|inn)|lag|ny|opprett|sett\\s+opp)\\s+"), " ")
+    var t = s.replace(Regex("^\\s*(legg\\s+(til|inn)|lag|ny|opprett|sett\\s+opp|book|booke)\\s+"), " ")
         .replace(Regex("^\\s*(en\\s+|et\\s+)?(time|avtale|hendelse)\\s+(hos|på|til|med)\\s+"), " ")
         .replace(Regex("^\\s*(en\\s+|et\\s+)?(time|avtale|hendelse)\\s+"), " ")
     repeat(3) {
@@ -136,7 +137,7 @@ fun parseQuick(txt: String, defRem: Int?, T: LocalDate = today(), nm: Int = nowM
     val tm = time
     val d = date ?: if (tm != null && tm <= nm) T.plusDays(1) else T
     val all = tm == null
-    val e = if (all) null else (end ?: (tm!! + (dur ?: defDur))).coerceAtMost(24 * 60 - 1)
+    val e = if (all) null else (end ?: (tm!! + (dur ?: KalTime44.typeDur(txt.lowercase()) ?: defDur))).coerceAtMost(24 * 60 - 1)
     val r = if (remSet) rem else if (all) null else defRem
     return KParsed(t, cal, d, tm, e, if (all) null else r, txt.trim())
 }

@@ -304,6 +304,8 @@ enum KalCals39 {
     static func notifiable(_ events: [KalEvent], _ cals: [KalCal]) -> [KalEvent] {
         var off: Set<String> = []
         for c in cals where c.p39?.notify == false { off.insert(c.id) }
+        // Prompt 44: Media-utgivelser varsler ikke som standard (kan slås på per kalender: notify true).
+        for c in cals where c.id == "media" && c.p39?.notify != true { off.insert(c.id) }
         if off.isEmpty { return events }
         return events.filter { (e: KalEvent) -> Bool in !off.contains(e.cal) }
     }

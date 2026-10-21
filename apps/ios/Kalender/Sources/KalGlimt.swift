@@ -189,7 +189,8 @@ enum KalGlimtServer {
         lastError = nil
         let d: Data
         do {
-            d = try await KalNet.send("POST", "/api/assist", json: ["q": q, "source": "calendar"], timeout: 30)
+            // Prompt 44: klokkeslett/dato tolket lokalt sendes med som fasit (Ollama skal bare finne tittel, sted og kalender).
+            d = try await KalNet.send("POST", "/api/assist", json: KalGlimtHint44.body(q), timeout: 30)
         } catch let e as KalNetError {
             lastError = e.status == 404 ? nil : errorText(e.message, model: nil)
             return nil
@@ -614,5 +615,20 @@ struct KalFlow: Layout {
             x += sz.width + spacing
             row = Swift.max(row, sz.height)
         }
+    }
+}
+
+/// Prompt 44: {q, source:'calendar', local:{date, start, end, title}} – local bare når teksten har tid eller dato.
+enum KalGlimtHint44 {
+    static func body(_ q: String) -> [String: Any] {
+        var b: [String: Any] = ["q": q, "source": "calendar"]
+        let n: String = KalTime44.normalize(q)
+        if KalQuick.isQuestion(q) && !KalTime44.hasTime(n) { return b }
+        let p: KalParsed = KalQuick.parse(q, defaultRem: nil)
+        var l: [String: Any] = ["date": p.day, "title": p.title]
+        if let st = p.s { l["start"] = KalD.hm(st) }
+        if let en = p.e { l["end"] = KalD.hm(en) }
+        b["local"] = l
+        return b
     }
 }

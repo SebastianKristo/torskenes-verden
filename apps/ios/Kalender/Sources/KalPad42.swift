@@ -85,7 +85,8 @@ struct KalPad42Main<Stage: View>: View {
                     Rectangle().fill(t.line).frame(width: 1)
                 }
                 VStack(spacing: 0) {
-                    KalPad42Toolbar(inline: canInline, width: geo.size.width - (inline ? sideW + 1 : 0) - (dayPane ? paneW + 1 : 0))
+                    // Prompt 44: tittelen krymper aldri – knappene gir plass etter bredden (KalTop44).
+                    KalTop44(inline: canInline, width: geo.size.width - (inline ? sideW + 1 : 0) - (dayPane ? paneW + 1 : 0))
                         .fixedSize(horizontal: false, vertical: true)
                         .layoutPriority(2)
                     KalPad42Next()

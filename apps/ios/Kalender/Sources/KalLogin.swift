@@ -41,7 +41,9 @@ enum KalAuth {
     }
 
     static func login(base: String, username: String, password: String, code: String) async throws -> Result {
-        var body: [String: Any] = ["password": password, "device": "Kalender (iPhone)", "deviceName": "Kalender (iPhone)"]
+        // Prompt 44: eget navn per enhet (iPad het også «Kalender (iPhone)»).
+        let dev: String = "Kalender (" + KalDev44.name + ")"
+        var body: [String: Any] = ["password": password, "device": dev, "deviceName": dev]
         let u: String = username.trimmingCharacters(in: .whitespaces)
         if !u.isEmpty { body["username"] = u }
         let c: String = code.trimmingCharacters(in: .whitespaces)

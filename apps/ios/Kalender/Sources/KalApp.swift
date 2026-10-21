@@ -12,6 +12,9 @@ struct KalApp: App {
     @Environment(\.scenePhase) private var phase
 
     init() {
+        KalCache44.launched = Date()
+        // Prompt 44: forhåndslasting i bakgrunnen (BGAppRefreshTask) må registreres før appen er ferdig startet.
+        KalBg44.register()
         KalNotify.setup()
         UNUserNotificationCenter.current().delegate = KalNotifyDelegate.shared
     }
@@ -31,6 +34,8 @@ struct KalApp: App {
         .onChange(of: phase) { (_: ScenePhase, p: ScenePhase) in
             let s: KalStore = KalStore.shared
             if p == .active {
+                // Prompt 44: tilbake fra Homelab uten svar → feilmelding etter 20 s.
+                KalLogin41Model.shared.returned44()
                 s.bootstrap()
                 s.startPolling()
                 Task { await s.load(force: true) }
@@ -39,6 +44,7 @@ struct KalApp: App {
             } else if p == .background {
                 s.stopPolling()
                 s.saveSnapshot()
+                KalBg44.schedule()
             }
         }
     }
@@ -109,6 +115,7 @@ struct KalRoot: View {
                 KalLogin41View()
             }
         }
+        .onAppear { firstFrame44() }
         .tint(t.red)
         // Prompt 42: arkene legges i midten på iPad (bred layout), tastatursnarveiene finnes i begge layoutene.
         .environment(\.kalPad42, pad)
@@ -130,6 +137,14 @@ struct KalRoot: View {
         .overlay(alignment: .top) {
             if KalNotify41.shared.banner { KalTestBanner41() }
         }
+    }
+
+    /// Prompt 44: «cal.firstFrame» – første bilde etter trykk på ikonet (mål: < 300 ms, bufferen tegnes uten nett).
+    private func firstFrame44() {
+        if s.firstFrame44 { return }
+        s.firstFrame44 = true
+        let ms: Int = Int(Date().timeIntervalSince(KalCache44.launched) * 1000)
+        KalLog44.send("cal.firstFrame", ["ms": String(ms), "events": String(s.events.count)])
     }
 
     /// 0,3 s cubic-bezier(.2,.8,.2,1); med «Reduser bevegelse» bare en kort fade.
@@ -236,7 +251,12 @@ struct KalRoot: View {
 
     /// Sveip inn fra venstre kant (de første 28 pt) åpner Kalendere; ellers bytter sveip venstre/høyre periode (ikke i Liste).
     private var swipe: some Gesture {
-        DragGesture(minimumDistance: 30).onEnded { (v: DragGesture.Value) in
+        // Prompt 44: merk sveipet så snart fingeren har flyttet seg > 12 pt (trykk rett etter ignoreres, KalSwipe44).
+        DragGesture(minimumDistance: 12).onChanged { (v: DragGesture.Value) in
+            if abs(v.translation.width) > 12 || abs(v.translation.height) > 12 { KalSwipe44.mark() }
+        }
+        .onEnded { (v: DragGesture.Value) in
+            if abs(v.translation.width) > 12 || abs(v.translation.height) > 12 { KalSwipe44.mark() }
             let dx: CGFloat = v.translation.width
             let dy: CGFloat = v.translation.height
             if v.startLocation.x < 28 && dx > 50 && abs(dx) > abs(dy) {
@@ -295,6 +315,13 @@ struct KalRoot: View {
                 .ignoresSafeArea(.container, edges: .all)
                 .transition(drawerIn)
                 .zIndex(52)
+        }
+        // Prompt 44: «Endret et annet sted. Behold din eller deres?» etter Lagre.
+        if KalEdit44Model.shared.conflict != nil {
+            KalDim { KalStore.shared.resolveConflict44(keepMine: false) }
+                .zIndex(67)
+            KalConflict44View()
+                .zIndex(68)
         }
         // Prompt 35: Innstillinger glir inn fra høyre over hele skjermen (0,28 s).
         if s.settingsOpen {

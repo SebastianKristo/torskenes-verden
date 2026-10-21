@@ -284,10 +284,8 @@ struct MacToolbar: View {
 
     private var todayButton: some View {
         Button(action: { win.goToday() }) {
-            ZStack {
-                Image(systemName: "calendar").font(.system(size: 19, weight: .regular)).foregroundColor(t.ink)
-                Text(String(KalD.dayOfMonth(Date()))).font(MacFont.ui(8.5, .heavy)).foregroundColor(t.ink).offset(y: 2.5)
-            }
+            // Prompt 44: tegnet ikon (ramme, rød stripe, tallet midtstilt under) – ikke tall lagt over SF Symbol «calendar».
+            MacTodayIcon44()
             .frame(width: 34, height: 34)
             .overlay(alignment: .topTrailing) {
                 if !win.isToday { Circle().fill(t.red).frame(width: 7, height: 7).offset(x: -3, y: 4) }

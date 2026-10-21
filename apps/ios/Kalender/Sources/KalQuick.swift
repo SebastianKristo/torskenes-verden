@@ -86,11 +86,18 @@ enum KalQuick {
         return date
     }
 
+    /// Prompt 44: standard varighet fra Innstillinger (rød + / Glimt uten slutt-tid). Settes av appen.
+    nonisolated(unsafe) static var defDur44: Int = 60
+    /// Prompt 44: kjente typer gir varighet («frisør» 45 min).
+    static let typeDur44: [(String, Int)] = [("frisør", 45), ("legetime", 30), ("lege", 30), ("fysio", 45), ("tannlege", 60), ("massasje", 60)]
+
     static func parse(_ txt: String, defaultRem: Int?, now: Date = Date()) -> KalParsed {
         let T: Date = KalD.cal.startOfDay(for: now)
         let nowMin: Int = KalD.minutes(now)
+        // Prompt 44: 1600, kl1600, 16h, 16-17 og «frisør 16» skrives om til 16:00 før tolkingen.
+        let txt44: String = KalTime44.normalize(txt)
         // Prompt 35: tegnsetting rundt dag-ord («i morgen?», «i morgen,») skal ikke hindre treff.
-        let cleaned: String = txt.replacingOccurrences(of: "[?!;«»\"“”]|,(?![0-9])", with: " ", options: .regularExpression)
+        let cleaned: String = txt44.replacingOccurrences(of: "[?!;«»\"“”]|,(?![0-9])", with: " ", options: .regularExpression)
         let lowered: String = cleaned.lowercased().replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         var s: String = " " + lowered + " "
         var date: Date? = nil
@@ -198,10 +205,12 @@ enum KalQuick {
             s = KalRx.cut(s, m.whole)
         }
         let cal: String = KalCals.guess(lowered)
-        let title: String = cleanTitle(s)
+        // Prompt 44: tittelen er det som er igjen, med store bokstaver fra teksten («Frisør Nina»).
+        let title: String = KalTime44.restore(cleanTitle(s), txt)
         let finalDate: Date
         if let date { finalDate = date } else if let time, time <= nowMin { finalDate = KalD.add(T, 1) } else { finalDate = T }
-        if let time, end == nil { end = time + (dur ?? 60) }
+        if dur == nil, let hit = typeDur44.first(where: { (x: (String, Int)) -> Bool in lowered.contains(x.0) }) { dur = hit.1 }
+        if let time, end == nil { end = time + (dur ?? defDur44) }
         if !remSet { rem = time == nil ? nil : defaultRem }
         if let tt = time, let ee = end, ee <= tt { end = Swift.min(1439, tt + 60) }
         return KalParsed(title: title, cal: cal, day: KalD.key(finalDate), s: time, e: time == nil ? nil : Swift.min(1439, end ?? 0), rem: rem,
@@ -211,7 +220,7 @@ enum KalQuick {
     /// Fjerner «legg til», «time hos» og løse småord.
     static func cleanTitle(_ raw: String) -> String {
         var t: String = raw
-        t = KalRx.replace("^\\s*(legg\\s+(til|inn)|lag|ny|opprett|sett\\s+opp)\\s+", t, with: " ")
+        t = KalRx.replace("^\\s*(legg\\s+(til|inn)|lag|ny|opprett|sett\\s+opp|book|booke)\\s+", t, with: " ")
         t = KalRx.replace("^\\s*(en\\s+|et\\s+)?(time|avtale|hendelse)\\s+(hos|på|til|med)\\s+", t, with: " ")
         t = KalRx.replace("^\\s*(en\\s+|et\\s+)?(time|avtale|hendelse)\\s+", t, with: " ")
         for _ in 0..<3 {

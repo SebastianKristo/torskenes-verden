@@ -210,6 +210,9 @@ targets:
         # Prompt 41: standardadressen (ingen serverfelt ved innlogging) og den delte Nøkkelring-gruppen for «Fortsett som».
         KalDefaultServer41: "https://home.kristo.no"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
+        # Prompt 44: forhåndslasting av kalenderen i bakgrunnen (BGAppRefreshTask, KalBg44.swift).
+        BGTaskSchedulerPermittedIdentifiers: [no.kristo.kalender.refresh44]
+        UIBackgroundModes: [fetch]
 
   KalenderWidgets:
     type: app-extension

@@ -59,7 +59,11 @@ struct KalHeader: View {
                 Button(action: { s.zoomOut() }) {
                     // Prompt 35: tittelen gir plass (min-width 0 + ellipsis), ikke knappene.
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(h.kicker).font(KalFont.mono(10.5)).tracking(1.3).foregroundStyle(t.acc).lineLimit(1)
+                        HStack(spacing: 8) {
+                            Text(h.kicker).font(KalFont.mono(10.5)).tracking(1.3).foregroundStyle(t.acc).lineLimit(1)
+                            // Prompt 44: «Oppdaterer …» mens den synker – den lagrede kalenderen vises imens.
+                            if s.syncing44 { KalSyncing44() }
+                        }
                         Text(h.title).font(KalFont.serif(32)).foregroundStyle(t.ink).lineLimit(1).minimumScaleFactor(0.7).truncationMode(.tail)
                     }
                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)

@@ -76,33 +76,61 @@ enum KalAuth41 {
     }
 
     /// Ny forespørsel: lagres i Nøkkelringen før Homelab åpnes.
+    /// Prompt 44: «Åpne Homelab igjen» lagde en ny state hver gang – godkjente man den første forespørselen som allerede
+    /// lå i Homelab, passet svaret ikke («state») og innloggingen feilet. Nå gjenbrukes en fersk forespørsel (< 5 min),
+    /// og de tre siste huskes, så svaret på hvilken som helst av dem godtas.
     static func begin(base: String) -> KalPending41 {
-        let p: KalPending41 = KalPending41(state: random(18), verifier: random(32), at: Date().timeIntervalSince1970, base: base)
-        if let d = try? JSONEncoder().encode(p) {
-            #if os(macOS)
-            // Prompt 43: på Mac i appens egne (sandkasse-)innstillinger – Nøkkelringen på hovedtråden kan vente på en dialog.
-            UserDefaults.standard.set(d, forKey: "kal43.pending")
-            #else
-            KalKeychain41.write("pending", d)
-            #endif
-        }
+        let now: Double = Date().timeIntervalSince1970
+        var list: [KalPending41] = pendingList().filter { (p: KalPending41) -> Bool in now - p.at < 900 }
+        if let last = list.last, now - last.at < 300, last.base == base { return last }
+        let p: KalPending41 = KalPending41(state: random(18), verifier: random(32), at: now, base: base)
+        list.append(p)
+        if list.count > 3 { list = Array(list.suffix(3)) }
+        savePending(list)
         return p
     }
 
-    static func pending() -> KalPending41? {
+    private static func savePending(_ list: [KalPending41]) {
+        guard let d = try? JSONEncoder().encode(list) else { return }
         #if os(macOS)
-        guard let d = UserDefaults.standard.data(forKey: "kal43.pending") else { return nil }
+        // Prompt 43: på Mac i appens egne (sandkasse-)innstillinger – Nøkkelringen på hovedtråden kan vente på en dialog.
+        UserDefaults.standard.set(d, forKey: "kal44.pending")
         #else
-        guard let d = KalKeychain41.read("pending") else { return nil }
+        KalKeychain41.write("pending44", d)
         #endif
-        return try? JSONDecoder().decode(KalPending41.self, from: d)
+    }
+
+    static func pendingList() -> [KalPending41] {
+        #if os(macOS)
+        let d: Data? = UserDefaults.standard.data(forKey: "kal44.pending")
+        #else
+        let d: Data? = KalKeychain41.read("pending44")
+        #endif
+        if let d, let list = try? JSONDecoder().decode([KalPending41].self, from: d) { return list }
+        // Eldre versjon (én forespørsel).
+        #if os(macOS)
+        guard let o = UserDefaults.standard.data(forKey: "kal43.pending") else { return [] }
+        #else
+        guard let o = KalKeychain41.read("pending") else { return [] }
+        #endif
+        if let one = try? JSONDecoder().decode(KalPending41.self, from: o) { return [one] }
+        return []
+    }
+
+    /// Den siste forespørselen (eller den som passer state).
+    static func pending(state: String? = nil) -> KalPending41? {
+        let list: [KalPending41] = pendingList()
+        if let state { return list.last { (p: KalPending41) -> Bool in p.state == state } }
+        return list.last
     }
 
     static func clearPending() {
         #if os(macOS)
         UserDefaults.standard.removeObject(forKey: "kal43.pending")
+        UserDefaults.standard.removeObject(forKey: "kal44.pending")
         #else
         KalKeychain41.delete("pending")
+        KalKeychain41.delete("pending44")
         #endif
     }
 
@@ -190,17 +218,20 @@ enum KalAuth41 {
 
     /// kalender://auth?code=…&state=… → tokens. Sjekker state mot Nøkkelringen.
     static func exchange(code: String, state: String, server: String?) async throws -> KalSession41 {
-        guard let p = pending() else { throw KalAuth41Error(message: "Innloggingen er utløpt. Prøv igjen.", status: -1) }
-        if p.state != state { throw KalAuth41Error(message: "Svaret fra Homelab passet ikke (state). Prøv igjen.", status: -1) }
-        if Date().timeIntervalSince1970 - p.at > timeout + 30 {
+        if pendingList().isEmpty { throw KalAuth41Error(message: "Innloggingen er utløpt. Prøv igjen.", status: -1) }
+        guard let p = pending(state: state) else { throw KalAuth41Error(message: "Svaret fra Homelab passet ikke (state). Prøv igjen.", status: -1) }
+        // Prompt 44: koden fra Homelab er selv gyldig i 60 s (serveren sjekker). Appens egen grense var 90 s fra man trykket
+        // – brukte man lenger tid i Homelab (Face ID, innlogging der først), feilet svaret. Nå: 15 min.
+        if Date().timeIntervalSince1970 - p.at > 900 {
             clearPending()
-            throw KalAuth41Error(message: "Homelab svarte ikke. Sjekk at Homelab er innlogget, og prøv igjen.", status: -1)
+            throw KalAuth41Error(message: "Innloggingen er utløpt. Prøv igjen.", status: -1)
         }
         var bases: [String] = []
         if let server, server.hasPrefix("http://") || server.hasPrefix("https://") { bases.append(trim(server)) }
         if !p.base.isEmpty && !bases.contains(p.base) { bases.append(p.base) }
         for b in candidates() where !bases.contains(b) { bases.append(b) }
-        let body: [String: Any] = ["code": code, "code_verifier": p.verifier, "client": client, "redirect": redirect]
+        // Prompt 44: eget enhetsnavn (ellers «iPhone» for alle, og innlogging på én enhet logget ut de andre).
+        let body: [String: Any] = ["code": code, "code_verifier": p.verifier, "client": client, "redirect": redirect, "device": KalDev44.name]
         var last: KalAuth41Error = KalAuth41Error(message: "Får ikke kontakt med Homelab", status: 0)
         for b in bases.prefix(4) {
             do {
@@ -224,7 +255,7 @@ enum KalAuth41 {
         var last: KalAuth41Error = KalAuth41Error(message: "Får ikke kontakt med Homelab", status: 0)
         for b in bases.prefix(4) {
             do {
-                let o: [String: Any] = try await post(b, "/api/auth/device-exchange", ["device_token": d.token, "app": client])
+                let o: [String: Any] = try await post(b, "/api/auth/device-exchange", ["device_token": d.token, "app": client, "device": KalDev44.name])
                 var s: KalSession41 = try session(o, base: b)
                 if s.user.isEmpty { s = KalSession41(token: s.token, refresh: s.refresh, user: d.display, base: b) }
                 return s

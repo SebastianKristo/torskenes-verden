@@ -211,7 +211,8 @@ object Kal39 {
         return id
     }
 
-    fun notifyOff(cals: List<KCal>): Set<String> = cals.filter { it.p39?.notify == false }.map { it.id }.toSet()
+    // Prompt 44: Media-utgivelser varsler ikke som standard (kan slås på per kalender: notify true).
+    fun notifyOff(cals: List<KCal>): Set<String> = cals.filter { it.p39?.notify == false || (it.id == "media" && it.p39?.notify != true) }.map { it.id }.toSet()
 
     /** Påskedag (gregoriansk, anonym algoritme). */
     fun easter(y: Int): LocalDate {

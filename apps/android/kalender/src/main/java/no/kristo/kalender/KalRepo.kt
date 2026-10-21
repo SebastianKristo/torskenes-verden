@@ -129,11 +129,26 @@ object KalRepo {
         .put("reminder", remToLegacy(e.rem)).put("remindMin", e.rem ?: JSONObject.NULL)
         .apply { e.src?.let { put("glimt", JSONObject().put("text", it)); put("origin", "Glimt · Kalender-appen") } }
         .put("source", "kalender-app")
+        // Prompt 44: koordinater fra adresseforslaget og deltakere.
+        .apply { if (e.lat != null && e.lon != null) put("geo", JSONObject().put("lat", e.lat).put("lon", e.lon)) }
+        .apply { e.x44?.att?.takeIf { it.isNotEmpty() }?.let { l -> put("attendees", org.json.JSONArray().apply { l.forEach { put(it.toJson()) } }) } }
 
     /** Henter alt for vinduet [from, to]. Returnerer en feilmelding (null = ok). */
-    suspend fun sync(ctx: Context, s: KalSession, from: LocalDate, to: LocalDate): String? {
+    /** Prompt 44: hvor lang tid siste synk brukte før hendelsene var tegnet (cal.syncDone). */
+    @Volatile var lastSyncMs44 = 0L
+
+    suspend fun sync(ctx: Context, s: KalSession, from: LocalDate, to: LocalDate, retry: Boolean = true): String? {
+        // Prompt 44: 401 → én fornyelse om gangen (Kal44.recover). Bare et tilbakekalt token gir «utløpt» (utlogging).
+        suspend fun on401(): String? {
+            val (r, ns) = Kal44.recover(ctx, s)
+            return when (r) {
+                Kal44.Rec.RENEWED -> if (retry && ns != null) sync(ctx, ns, from, to, retry = false) else null
+                Kal44.Rec.REVOKED -> "Innloggingen er utløpt. Logg inn på nytt."
+                Kal44.Rec.OFFLINE -> "Fikk ikke kontakt med Homelab. Viser lagret kalender."
+            }
+        }
+        val t0 = System.currentTimeMillis()
         val api = s.api
-        flush(ctx, s)
         val prev = KalStore.current(ctx).let { if (it.acct != null && it.acct != s.acct) KData() else it }
         // Kalenderne (SERVER33). 404 = eldre server: fasitens seks.
         var serverCals = prev.serverCals
@@ -148,7 +163,7 @@ object KalRepo {
             else Kal35Prefs.applyServer(ctx, runCatching { JSONObject(raw).optJSONObject("prefs") }.getOrNull())
         } catch (e: KalApiException) {
             if (e.status == 404 || e.status == 405) { cals = Kal39.normalize(KCALS, null); serverCals = false }
-            if (e.status == 401) return "Innloggingen er utløpt. Logg inn på nytt."
+            if (e.status == 401) return on401()
         }
         val calMap = cals.associateBy { it.id }
         val evs = try {
@@ -156,15 +171,19 @@ object KalRepo {
                 .map { if (calMap.containsKey(it.cal)) it else it.copy(cal = Kal39.resolve(it.cal, cals)) }
                 .let { Kal39.mergeHolidays(it, from, to) }
         } catch (e: KalApiException) {
-            if (e.status == 401) return "Innloggingen er utløpt. Logg inn på nytt."
+            if (e.status == 401) return on401()
             if (e.status == 404) emptyList<KEv>() else return e.message ?: "Fikk ikke hentet kalenderen"
         }
         // Lokale hendelser som venter i utboksen vises fortsatt.
         val pend = prev.events.filter { it.pending }
         val all = (evs + pend.filter { p -> evs.none { it.id == p.id } })
+        // Prompt 44: tegn med en gang (hendelsene), så utboksen og været – før ventet visningen på vær (opptil 8 s + Open-Meteo).
+        KalStore.save(ctx, KData(all, cals, prev.wx, System.currentTimeMillis(), serverCals, s.acct))
+        lastSyncMs44 = System.currentTimeMillis() - t0
+        runCatching { flush(ctx, s) }
         val wx = runCatching { weather(api, from) }.getOrNull()?.takeIf { it.isNotEmpty() } ?: prev.wx
-        val d = KData(all, cals, wx, System.currentTimeMillis(), serverCals, s.acct)
-        KalStore.save(ctx, d)
+        val cur = KalStore.current(ctx)
+        KalStore.save(ctx, cur.copy(wx = wx))
         return null
     }
 
@@ -189,7 +208,8 @@ object KalRepo {
         return try {
             val o = JSONObject(s.api.post("/api/kalender/events", eventBody(d, e)))
             val saved = (o.optJSONObject("event") ?: o).let { parseServerEvent(it, d.cals.associateBy { c -> c.id }) }
-                ?.let { it.copy(cal = if (it.cal == "p" && e.cal != "p" && !d.serverCals) e.cal else it.cal, src = it.src ?: e.src, rem = e.rem ?: it.rem) } ?: e
+                ?.let { it.copy(cal = if (it.cal == "p" && e.cal != "p" && !d.serverCals) e.cal else it.cal, src = it.src ?: e.src, rem = e.rem ?: it.rem,
+                    x44 = it.x44 ?: e.x44, lat = it.lat ?: e.lat, lon = it.lon ?: e.lon, address = it.address ?: e.address) } ?: e
             replace(ctx, tmp.id, saved)
             saved
         } catch (x: KalApiException) {
