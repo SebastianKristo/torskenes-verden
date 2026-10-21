@@ -400,21 +400,17 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
     val wobble = rememberInfiniteTransition(label = "merWob").animateFloat(-1f, 1f, infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w")
     val add30 = vm.p30.merAdd && hid.isNotEmpty()
     DisposableEffect(Unit) { onDispose { vm.p30.merAdd = false } }
-    Box(Modifier.fillMaxSize()) {
+    MerLoad44(vm) // prompt 44: data til de levende kortene
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val wide44 = maxWidth >= 600.dp
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, barSpace + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         if (!edit) {
-            item(key = "mer-card") {
-                PCard(shadow = true) {
-                    vis.forEachIndexed { i, r -> MerRowNormal28(vm, r, top = i > 0, onLong = { Haptics.tap(); s.merEdit = true }) }
-                }
-            }
-            item(key = "mer-hint") {
-                Text("Hold inne for å endre rekkefølgen eller skjule moduler.", color = p.mut, fontFamily = PaperFonts.sans, fontSize = 12.sp, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(4.dp, 2.dp))
-            }
+            // Prompt 44 (claude-code-mer-ny-design.md): søk, levende kort (Store) eller én liste (Lave), Innstillinger nederst (ui/Mer44.kt).
+            mer44(vm, vis, wide44, onLong = { Haptics.tap(); s.merEdit = true })
             return@LazyColumn
         }
         item(key = "mer-space") { WiggleSpace30(true, extra = (-10).dp) }
+        item(key = "mer-tsz") { MerSize44(vm) } // prompt 44: Store · Lave bare i wiggle-redigering
         itemsIndexed(visKeys, key = { _, k -> "mer-$k" }) { i, k ->
             val r = byKey[k] ?: return@itemsIndexed
             val on = drag == k
@@ -506,7 +502,7 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
 
 /** Vanlig rad: kort trykk åpner, hold inne 0,48 s (uten å flytte > 8 dp) → redigeringsmodus; slipp etter det åpner ikke. */
 @Composable
-private fun MerRowNormal28(vm: AppViewModel, r: MerItem28, top: Boolean, onLong: () -> Unit) {
+internal fun MerRowNormal28(vm: AppViewModel, r: MerItem28, top: Boolean, onLong: () -> Unit) {
     val p = PaperPal.current
     var pressed by remember { mutableStateOf(false) }
     val go by rememberUpdatedState(r.go)

@@ -77,6 +77,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
     BackHandler {
         when {
             s.detail != null -> s.detail = null
+            vm.p44.taskPage != null -> vm.p44.taskPage = null // prompt 44: infosiden
             s.listSheet != null -> s.listSheet = null
             s.glimtOpen -> s.glimtOpen = false
             else -> vm.closeTasksHome40()
@@ -103,7 +104,8 @@ internal fun TasksScreen37(vm: AppViewModel) {
     val add = {
         if (title.isNotBlank()) { vm.addTask(title, target, null, null); title = "" }
     }
-    val sheet = s.detail != null || s.listSheet != null || s.glimtOpen
+    // Prompt 44: infosiden skjuler også «Ny oppgave …» og Glimt-knappen.
+    val sheet = s.detail != null || s.listSheet != null || s.glimtOpen || vm.p44.taskPage != null
     // Prompt 43 (claude-code-stor-skjerm-alle-sider.md 1c): pillene brukes både som rad (telefon) og som listekolonne (Fold/nettbrett).
     val chips43: @Composable () -> Unit = {
                     val open = (t?.items ?: emptyList()).filter { !it.done && it.id !in archIds }
@@ -187,7 +189,8 @@ internal fun TasksScreen37(vm: AppViewModel) {
             group37(vm, "Senere", later, lists, users, today)
             group37(vm, "Ferdig", done.take(30), lists, users, today, archive = { ids -> vm.archiveDone32b(ids) })
             if (t != null && all.isEmpty()) item { Text("Ingen gjøremål her ennå. Skriv et nytt nederst, eller trykk ✦ og spør Glimt.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) }
-            if (vm.userIsAdmin && vm.tasksHa != null) item { TasksHaSection(vm, lists) }
+            // Prompt 44: synk-kortet ligger i Innstillinger → Gjøremål; her bare raden som åpner det.
+            if (vm.userIsAdmin && vm.tasksHa != null) item { HaRow44(vm) }
         }
         // Dokken (felt + ✦) skjules i Arkivert og mens et ark er åpent.
         if (!arch && !sheet) Dock37(title, { title = it }, focus, Modifier.align(Alignment.BottomCenter).then(if (narrowWide43) Modifier.widthIn(max = 720.dp) else Modifier), onEnter = { add() }) {
@@ -196,6 +199,8 @@ internal fun TasksScreen37(vm: AppViewModel) {
     }
     }
     }
+    if (vm.p44.taskPage != null) TaskPage44(vm) // prompt 44: infoside (Papir), over lista og dokken
+    AskDone44(vm)
     s.detail?.let { id -> (t?.items ?: emptyList()).firstOrNull { it.id == id }?.let { DetailSheet37(vm, it, lists, users, today) } ?: run { s.detail = null } }
     s.listSheet?.let { id -> ListSheet37(vm, if (id == "new") null else lists.firstOrNull { it.id == id }, users) }
     if (s.glimtOpen) GlimtSheet37(vm, lists)
@@ -304,7 +309,7 @@ private fun Row37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, users: L
                     .clickable(role = Role.Checkbox, onClickLabel = if (t.done) "Ikke ferdig" else "Ferdig") { vm.toggleTask37(t.id) },
                 contentAlignment = Alignment.Center,
             ) { if (t.done) Text("✓", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
-            Column(Modifier.weight(1f).clickable(onClickLabel = "Detaljer") { Haptics.select(); vm.p37.detail = t.id }) {
+            Column(Modifier.weight(1f).clickable(onClickLabel = "Detaljer") { Haptics.select(); vm.p44.taskPage = t.id }) { // prompt 44: infosiden
                 Text(buildAnnotatedString {
                     if (t.flag) withStyle(SpanStyle(color = ORANGE37)) { append("⚑ ") }
                     if (t.prio > 0) withStyle(SpanStyle(color = RED37, fontWeight = FontWeight.ExtraBold)) { append("!".repeat(t.prio) + " ") }
@@ -325,8 +330,9 @@ private fun Row37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, users: L
             if (t.done) {
                 ArchiveBtn32b { vm.archiveTask32b(t.id) }
                 Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.deleteTask37(t.id) }, contentAlignment = Alignment.Center) { Text("×", color = p.mut, fontSize = 20.sp) }
-            }
+            } else SubAddBtn44(vm, t) // prompt 44: ↳+ legg til deloppgave
         }
+        SubRows44(vm, t, l?.let { Color(it.color) } ?: p.mut) // prompt 44: deloppgaver innrykket under oppgaven
     }
 }
 

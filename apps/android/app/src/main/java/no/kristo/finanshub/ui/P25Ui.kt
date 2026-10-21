@@ -58,6 +58,7 @@ private val MER_PATHS25: Map<String, String> = mapOf(
     "sporing" to "M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10",
     "bursdag" to "M4 11h16v9H4zM2 7h20v4H2zM12 7v13M12 7c-1.5-3-5-3-5-1s3 1 5 1zM12 7c1.5-3 5-3 5-1s-3 1-5 1z",
     "kalender" to "M4 5h16v15H4zM4 10h16M8 3v4M16 3v4M8 14h2M12 14h2M16 14h.01M8 17h2",
+    "studie" to "M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5M22 9v6", // prompt 44: Studie (studenthatt)
     "chat" to "M4 5h16v11H9l-5 4zM9 10.5h6",
     "huske" to "M4 4h16v16H4zM8 12l3 3 5-6", // prompt 37: ☑ Gjøremål
     "bibel" to "M6 3h11a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM11 7v7M8.5 9.5h5", // prompt 37: Bibel

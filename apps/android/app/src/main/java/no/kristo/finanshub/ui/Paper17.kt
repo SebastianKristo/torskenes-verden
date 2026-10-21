@@ -60,6 +60,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "modules" to "Moduler", "look" to "Tilpass", "tilpass" to "Tilpass", "profil" to "Appprofil", "notify" to "Varsler og haptikk", "haptics" to "Haptikk",
     "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner", "kal" to "Kalendere",
     "update" to "Oppdatering", "sysbackup" to "Backup",
+    "huske" to "Gjøremål", // prompt 44: synk med Home Assistant
 )
 
 /**
@@ -107,6 +108,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             // Prompt 37: husstandens sporingsnøkler øverst (maskert, bare admin endrer).
             "integ" -> { item { TrkKeys37Section(vm) }; item { IntegList26(vm) } }
             "kal" -> item { KalSettings26(vm) }
+            "huske" -> item { TasksSyncPage44(vm) } // prompt 44: Innstillinger → Gjøremål
             "cats" -> item { CategoriesPage(vm) }
             "rules" -> item { RulesPage(vm) }
             "stocks" -> item { StocksPrefsPage(vm) }
@@ -179,6 +181,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         AiSettingsRow34(vm, i()) // Prompt 34: AI og modeller → AI-kontroll i fullskjerm (ui/AiCtl34.kt)
         SetRow(vm, i(), Icons.Filled.Notifications, "Varsler og haptikk", "Lyd, stille timer og test", top = true) { vm.settingsPage = "notify" }
         SetRow(vm, i(), Icons.Filled.CalendarMonth, "Kalendere", "Google Kalender · Home Assistant · Skole-iCal", top = true) { vm.openKalSettings26(null) }
+        // Prompt 44: Gjøremål (synk med Home Assistant) under Kalendere.
+        SetRow(vm, i(), Icons.Filled.Checklist, "Gjøremål", "Synk med Home Assistant · " + (if (vm.tasksHa?.enabled == true) "på" else "av"), top = true) { vm.settingsPage = "huske" }
         SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", if (vm.userIsAdmin) "Home Assistant, Media, Entur, Bring og flere" else "Kalendere, Trading 212, Bring, e-post og flere", top = true) { vm.settingsPage = "integ" }
         SetRow(vm, i(), Icons.Filled.Widgets, "Widgets", "Media, Avganger, Kalender og 3 til", top = true) { vm.p43.galleryOpen = true } // prompt 43
         SetRow(vm, i(), Icons.Filled.MonitorHeart, "Helse og posisjon", "Health Connect, typer og posisjonsdeling", top = true) { vm.settingsPage = "healthpos" }
@@ -195,6 +199,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         if (vm.userIsAdmin) {
             Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
             Programvare30(vm)
+            // Prompt 44: Logger (Docker-logger, feil og feilsøking), bare admin.
+            Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
+            SetRow(vm, i(), Icons.Filled.Dns, "Logger", "Docker-logger, feil og feilsøking") { vm.openLogs44() }
             // Prompt 32: «Oppdatering» er fjernet; Nordlys OS-raden over gjør det samme (claude-code-fjern-oppdatering-rad.md).
         }
     }

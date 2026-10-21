@@ -116,6 +116,7 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
         row("bursdag", "Bursdager", "Hvem har bursdag snart") { vm.openBirthdays24() }
         if ("chat" !in inBar) row("chat", "Chat", "Ollama lokalt, Gemini og Groq") { vm.openChat() }
         row("kalender", "Kalender", "Timeplan, prøver og frister") { vm.openKal26() }
+        row("studie", "Studie", "Dokumenter, vitnemål og karakterer") { vm.openStudy44() } // prompt 44
         // Prompt 37: Gjøremål (tidligere Huskeliste) og Bibel (bare for brukere med bibelvers-modulen).
         row("huske", "Gjøremål", "To-do for hele familien") { vm.openTasks() }
         if (vm.bibleAllowed37()) row("bibel", "Bibel", "Dagens vers, rekke og leseplan") { vm.p37.biblePage = true }

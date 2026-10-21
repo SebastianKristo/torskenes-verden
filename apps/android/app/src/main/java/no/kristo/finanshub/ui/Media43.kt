@@ -54,13 +54,13 @@ import org.json.JSONObject
  * Alle trykkflater minst 44 dp; haptikk ved Last ned, Pause og Slett (i P43.kt).
  */
 
-private val OK43 = Color(0xFF2F6B4A)
-private val WARN43 = Color(0xFFA0671A)
-private val RED43 = Color(0xFFB23A2A)
-private val MEDIA_TABS43 = listOf("snart" to "Kommer snart", "sonarr" to "Sonarr", "radarr" to "Radarr", "qbit" to "qBittorrent", "prowlarr" to "Prowlarr")
+internal val OK43 = Color(0xFF2F6B4A)
+internal val WARN43 = Color(0xFFA0671A)
+internal val RED43 = Color(0xFFB23A2A)
+private val MEDIA_TABS43 = listOf("snart" to "Kommer snart", "sonarr" to "Sonarr", "radarr" to "Radarr", "qbit" to "qBittorrent", "prowlarr" to "Prowlarr", "spill" to "Avspilling") // prompt 44: Avspilling etter Prowlarr
 
 @Composable
-private fun stColor43(k: String): Color = when (k) { "ok" -> OK43; "dl" -> RED43; "warn" -> WARN43; else -> PaperPal.current.mut }
+internal fun stColor43(k: String): Color = when (k) { "ok" -> OK43; "dl" -> RED43; "warn" -> WARN43; else -> PaperPal.current.mut }
 
 @Composable
 internal fun MediaScreen43(vm: AppViewModel) {
@@ -87,9 +87,11 @@ internal fun MediaScreen43(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MEDIA_TABS43.forEach { (k, n) -> Pill43(n, s.tab == k) { s.tab = k; s.detail = null; s.relFor = null } }
             }
+            ServerRow44(vm) // prompt 44: felles servervalg
             if (s.glimtOpen) MediaGlimt43(vm)
             if (s.missing) Note43("Media er ikke satt opp på serveren ennå. Oppdater Homelab og legg inn Sonarr, Radarr, qBittorrent og Prowlarr under Integrasjoner.")
-            s.error?.let { e -> Note43(e, red = true) { s.error = null } }
+            s.error?.let { e -> Note43(e, red = true) { s.error = null; vm.p44.errKind = null } }
+            ErrActions44(vm) // prompt 44: «Logg inn på nytt» / «Prøv igjen»
             Spacer(Modifier.height(10.dp))
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val pad = PaddingValues(16.dp, 4.dp, 16.dp, 28.dp + navB)
@@ -98,6 +100,7 @@ internal fun MediaScreen43(vm: AppViewModel) {
                     "sonarr" -> Library43(vm, "tv", pad, wide)
                     "radarr" -> Library43(vm, "film", pad, wide)
                     "qbit" -> Torrents43(vm, pad)
+                    "spill" -> Playback44(vm, pad) // prompt 44
                     else -> Prowlarr43(vm, pad)
                 }
                 // Detalj: fullskjerm på telefon, panel fra høyre (360) på stor skjerm.
@@ -114,6 +117,7 @@ internal fun MediaScreen43(vm: AppViewModel) {
                 Text(t, color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2)
             }
         }
+        Undo44(vm) // prompt 44: «Angre» etter Slett fil
     }
     if (s.add != null) AddSheet43(vm)
     s.torMenu?.let { h -> TorMenu43(vm, h) }
@@ -126,7 +130,7 @@ internal fun MediaScreen43(vm: AppViewModel) {
 /* ---------------- Små byggeklosser ---------------- */
 
 @Composable
-private fun Pill43(text: String, on: Boolean, count: Int? = null, onClick: () -> Unit) {
+internal fun Pill43(text: String, on: Boolean, count: Int? = null, onClick: () -> Unit) {
     val p = PaperPal.current
     Row(
         Modifier.heightIn(min = 44.dp).clickable(role = Role.Tab, onClickLabel = text) { Haptics.select(); onClick() }, verticalAlignment = Alignment.CenterVertically,
@@ -140,7 +144,7 @@ private fun Pill43(text: String, on: Boolean, count: Int? = null, onClick: () ->
 }
 
 @Composable
-private fun IconBtn43(icon: String, label: String, on: Boolean, onClick: () -> Unit) {
+internal fun IconBtn43(icon: String, label: String, on: Boolean, onClick: () -> Unit) {
     val p = PaperPal.current
     Box(Modifier.size(44.dp).clip(CircleShape).background(if (on) RED43 else p.card).border(1.dp, if (on) RED43 else p.line, CircleShape)
         .clickable(role = Role.Button, onClickLabel = label, onClick = onClick), contentAlignment = Alignment.Center) {
@@ -149,7 +153,7 @@ private fun IconBtn43(icon: String, label: String, on: Boolean, onClick: () -> U
 }
 
 @Composable
-private fun Btn43(text: String, dark: Boolean = false, color: Color? = null, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+internal fun Btn43(text: String, dark: Boolean = false, color: Color? = null, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
     val p = PaperPal.current
     val bg = color ?: if (dark) p.ink else Color.Transparent
     Box(modifier.heightIn(min = 44.dp).clip(CircleShape).background(bg).border(1.dp, if (color != null || dark) bg else p.line, CircleShape)
@@ -159,7 +163,7 @@ private fun Btn43(text: String, dark: Boolean = false, color: Color? = null, mod
 }
 
 @Composable
-private fun Note43(text: String, red: Boolean = false, onClose: (() -> Unit)? = null) {
+internal fun Note43(text: String, red: Boolean = false, onClose: (() -> Unit)? = null) {
     val p = PaperPal.current
     Row(Modifier.fillMaxWidth().padding(16.dp, 8.dp, 16.dp, 0.dp).clip(RoundedCornerShape(14.dp)).background(p.card).padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(text, color = if (red) RED43 else p.mut, fontSize = 13.sp, modifier = Modifier.weight(1f))
@@ -168,7 +172,7 @@ private fun Note43(text: String, red: Boolean = false, onClose: (() -> Unit)? = 
 }
 
 @Composable
-private fun Poster43(vm: AppViewModel, url: String?, color: Long?, title: String, w: Dp, h: Dp, modifier: Modifier = Modifier) {
+internal fun Poster43(vm: AppViewModel, url: String?, color: Long?, title: String, w: Dp, h: Dp, modifier: Modifier = Modifier) {
     var bmp by remember(url) { mutableStateOf<Bitmap?>(null) }
     LaunchedEffect(url) { if (!url.isNullOrBlank()) bmp = if (url.startsWith("/")) vm.image(url) else vm.bgImage41(url) }
     val shape = RoundedCornerShape(8.dp)
@@ -181,7 +185,7 @@ private fun Poster43(vm: AppViewModel, url: String?, color: Long?, title: String
 }
 
 @Composable
-private fun Field43(value: String, hint: String, password: Boolean = false, onDone: (() -> Unit)? = null, onChange: (String) -> Unit) {
+internal fun Field43(value: String, hint: String, password: Boolean = false, onDone: (() -> Unit)? = null, onChange: (String) -> Unit) {
     val p = PaperPal.current
     Box(Modifier.fillMaxWidth().heightIn(min = 50.dp).clip(RoundedCornerShape(14.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
         contentAlignment = Alignment.CenterStart) {
@@ -195,7 +199,7 @@ private fun Field43(value: String, hint: String, password: Boolean = false, onDo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun Sheet43(onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+internal fun Sheet43(onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val p = PaperPal.current
     ModalBottomSheet(onDismissRequest = onClose, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = p.bg, contentColor = p.ink,
         dragHandle = { BottomSheetDefaults.DragHandle(width = 36.dp, height = 5.dp, color = p.line) }) {
@@ -206,7 +210,7 @@ private fun Sheet43(onClose: () -> Unit, content: @Composable ColumnScope.() -> 
 }
 
 @Composable
-private fun Toggle43(title: String, sub: String?, on: Boolean, onChange: (Boolean) -> Unit) {
+internal fun Toggle43(title: String, sub: String?, on: Boolean, onChange: (Boolean) -> Unit) {
     val p = PaperPal.current
     Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onChange(!on) }, verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -300,17 +304,20 @@ private fun Library43(vm: AppViewModel, kind: String, pad: PaddingValues, wide: 
         else -> true
     }
     val f = if (filters.any { it.first == s.libFilter }) s.libFilter else "alle"
-    val list = all.orEmpty().filter { match(it, f) }
+    val q44 = vm.p44.libQ
+    val list = all.orEmpty().filter { match(it, f) && libMatch44(it, q44) } // prompt 44: søk i biblioteket
     LazyVerticalGrid(GridCells.Fixed(if (wide) 6 else 3), Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Btn43(if (kind == "tv") "+ Legg til serie" else "+ Legg til film", dark = true, modifier = Modifier.fillMaxWidth()) { s.add = kind; s.addQ = ""; s.addRes = null; s.addPick = null }
+                LibSearch44(vm, kind, all.orEmpty().size)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     filters.forEach { (k, n) -> Pill43(n, f == k, all.orEmpty().count { match(it, k) }) { s.libFilter = k } }
                 }
             }
         }
         if (all == null && !s.missing) item(span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+        if (all != null && list.isEmpty() && q44.isNotBlank()) item(span = { GridItemSpan(maxLineSpan) }) { LibNoHit44(vm, kind) }
         list.forEach { it ->
             item(key = "${kind}-${it.id}") {
                 Column(Modifier.clip(RoundedCornerShape(10.dp)).clickable { vm.openItem43(it) }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -343,18 +350,8 @@ private fun Detail43(vm: AppViewModel, d: MItem43, pad: PaddingValues) {
             Text("‹ ${if (d.kind == "tv") "Serier" else "Filmer"}", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
                 modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { s.detail = null; s.seasons = null }.wrapContentHeight())
         }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Poster43(vm, d.poster, d.color, d.title, 92.dp, 138.dp)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    PSerif(d.title, 24.sp, maxLines = 3)
-                    Text(listOfNotNull(d.year?.toString(), d.network, d.status?.let { if (d.ended) "Avsluttet" else if (d.kind == "tv") "Fortsetter" else status43(it).first }).joinToString(" · "),
-                        color = p.mut, fontSize = 12.5.sp)
-                    if (d.kind == "tv") Text("${d.have} av ${d.total} episoder" + if (d.missing > 0) " · ${d.missing} mangler" else "", color = if (d.missing > 0) WARN43 else p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    else Text(if (d.hasFile) "Lastet ned" else "Mangler", color = if (d.hasFile) OK43 else WARN43, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
+        // Prompt 44: banner med fanart, plakat 2:3, tittel, fakta og info-brikker.
+        item { Banner44(vm, d) }
         item {
             // Chips som åpner valgark (lagres med PUT).
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -391,6 +388,7 @@ private fun Detail43(vm: AppViewModel, d: MItem43, pad: PaddingValues) {
                 }
             }
         }
+        if (d.kind == "film" && d.hasFile) item { MovieFileBtns44(vm, d) } // prompt 44: last ned på nytt / slett fil
         if (d.kind == "film") d.fileLine?.takeIf { it.isNotBlank() }?.let { f -> item {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp)) { PLabel("Fil"); Text(f, color = p.ink, fontSize = 13.sp, fontFamily = PaperFonts.mono) }
         } }
@@ -442,6 +440,7 @@ private fun LazyListScope.seasons43(vm: AppViewModel, d: MItem43) {
                         Btn43("🔍 Automatisk søk") { vm.command43("sonarr", "EpisodeSearch", JSONObject().put("episodeIds", org.json.JSONArray().put(e.id)), "Søker etter E%02d …".format(e.n)) }
                         Btn43("Interaktivt søk", dark = true) { vm.openRelease43(d.title, "S%02dE%02d · %s".format(se.n, e.n, e.title), "episodeId=${e.id}") }
                     }
+                    if (e.hasFile) EpFileBtns44(vm, d, se, e) // prompt 44
                     Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 }
             }
@@ -468,10 +467,13 @@ private fun OptSheet43(vm: AppViewModel, o: String) {
                 if (s.services.isEmpty()) Text(if (s.missing) "Media er ikke på serveren ennå." else "Henter status …", color = p.mut, fontSize = 13.sp)
                 s.services.forEach { x ->
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).padding(14.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(9.dp).clip(CircleShape).background(if (!x.configured) p.line else if (x.ok) OK43 else RED43))
+                        // Prompt 44: samme status som Innstillinger → Integrasjoner (én kilde); «Ikke satt opp» bare når begge sier det.
+                        val integ = vm.integOk44(x.key)
+                        val conf = x.configured || integ == true
+                        Box(Modifier.size(9.dp).clip(CircleShape).background(if (!conf) p.line else if (x.ok || (!x.configured && integ == true)) OK43 else RED43))
                         Column(Modifier.weight(1f)) {
                             Text(x.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(if (!x.configured) "Ikke satt opp · Integrasjoner → MEDIA" else listOfNotNull(x.version?.let { "v$it" }, x.ms?.let { "$it ms" }, x.error).joinToString(" · "),
+                            Text(if (!conf) "Ikke satt opp · Integrasjoner → MEDIA" else if (!x.configured) "Koblet til (Integrasjoner)" else listOfNotNull(x.version?.let { "v$it" }, x.ms?.let { "$it ms" }, x.error?.let { "Svarer ikke: $it" }).joinToString(" · "),
                                 color = if (x.error != null) RED43 else p.mut, fontSize = 12.sp)
                         }
                     }
@@ -598,10 +600,11 @@ private fun Releases43(vm: AppViewModel, pad: PaddingValues, wide: Boolean) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("alle" to "Alle", "1080" to "1080p", "2160" to "2160p", "norsk" to "Norsk tekst", "seed" to "Flest seedere").forEach { (k, n) -> Pill43(n, s.relFilter == k) { s.relFilter = k } }
             }
+            RelStatus44(vm) // prompt 44: status per indekser, Avbryt, cache
             Box(Modifier.fillMaxWidth().height(2.dp).background(p.ink))
         }
-        if (s.relBusy) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
-        else if (list.isEmpty()) item { Text("Ingen utgivelser funnet.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp)) }
+        if (s.relBusy && list.isEmpty()) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+        else if (list.isEmpty() && !vm.p44.relFailAll) item { Text("Ingen utgivelser funnet.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp)) }
         list.forEach { r ->
             item(key = "r-" + r.guid + r.indexer) {
                 // Seedere: grønn ≥ 50 % av høyeste i søket, rød < 10 % (og alltid ved 0).

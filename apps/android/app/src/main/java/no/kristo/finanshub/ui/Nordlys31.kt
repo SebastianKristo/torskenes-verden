@@ -140,6 +140,8 @@ internal fun NordlysPage31(vm: AppViewModel) {
                 }
                 Text("Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.", color = p.mut, fontFamily = PaperFonts.sans,
                     fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
+                // Prompt 44 (claude-code-rull-tilbake-versjon.md): TIDLIGERE VERSJONER med Installer, under «Krev passord» og over endringsloggen.
+                if (vm.userIsAdmin) Rollback44(vm)
                 Column(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val big = bigVer31(nv)
                     PSerif("Dette er Nordlys $big. ${s.tagline}", 22.sp)

@@ -122,6 +122,12 @@ fun parseQuickLocal29(txt: String, today: LocalDate = LocalDate.now()): Quick29P
         m.groupValues[3].takeIf { it.isNotEmpty() }?.let { yr = it.toInt() }
         used.add(m.value)
     }
+    // Prompt 44 (claude-code-glimt-time-dato-tid-tittel.md): «1630», «0930», «kl1600» (4 siffer, 00:00–23:59) og «16h» / «16t».
+    if (s == null) Regex("(?<![\\p{L}\\d.:/])(?:kl\\.?\\s*|klokka\\s*)?([01]\\d|2[0-3])([0-5]\\d)(?![\\d.:/])").findAll(t)
+        .firstOrNull { m -> used.none { u -> u.contains(m.value.trim()) } }?.let { m -> s = m.groupValues[1] + ":" + m.groupValues[2]; used.add(m.value) }
+    if (s == null) Regex("(?<![\\p{L}\\d.:/])(\\d{1,2})\\s?[ht](?![\\p{L}\\d])").find(t)?.let { m ->
+        val h = m.groupValues[1].toInt(); if (h <= 23) { s = pad29(h) + ":00"; used.add(m.value) }
+    }
     val tok = Regex("(kl\\.?\\s*|klokka\\s*)?\\b(\\d{1,2})([.:/])(\\d{1,2})(?:[./](\\d{2,4}))?\\b").findAll(t)
         .filter { m -> used.none { u -> u.contains(m.value.trim()) } }.toList()
     val amb = ArrayList<Pair<Int, Int>>()
@@ -131,19 +137,27 @@ fun parseQuickLocal29(txt: String, today: LocalDate = LocalDate.now()): Quick29P
         val kl = m.groupValues[1].isNotEmpty()
         val col = m.groupValues[3] == ":"
         val y = m.groupValues[5]
-        if (y.isNotEmpty() && dm == null) { dm = a to b; yr = y.toInt().let { if (it < 100) 2000 + it else it }; continue }
+        if (y.isNotEmpty() && dm == null) { dm = a to b; yr = y.toInt().let { if (it < 100) 2000 + it else it }; used.add(m.value); continue }
         val canT = a <= 23 && b <= 59 && m.groupValues[4].length == 2
         val canD = a in 1..31 && b in 1..12
-        if ((kl || col) && canT && s == null) { s = pad29(a) + ":" + pad29(b); continue }
-        if (canT && !canD && s == null) { s = pad29(a) + ":" + pad29(b); continue }
-        if (canD && !canT && dm == null) { dm = a to b; continue }
-        if (canT || canD) amb.add(a to b)
+        if ((kl || col) && canT && s == null) { s = pad29(a) + ":" + pad29(b); used.add(m.value); continue }
+        if (canT && !canD && s == null) { s = pad29(a) + ":" + pad29(b); used.add(m.value); continue }
+        if (canD && !canT && dm == null) { dm = a to b; used.add(m.value); continue }
+        if (canT || canD) { amb.add(a to b); used.add(m.value) }
     }
-    if (s == null) Regex("(?:kl\\.?|klokka)\\s*(\\d{1,2})(?![.:\\d])").find(t)?.let { m -> val h = m.groupValues[1].toInt(); if (h <= 23) s = pad29(h) + ":00" }
+    if (s == null) Regex("(?:kl\\.?|klokka)\\s*(\\d{1,2})(?![.:\\d])").find(t)?.let { m -> val h = m.groupValues[1].toInt(); if (h <= 23) { s = pad29(h) + ":00"; used.add(m.value) } }
     for ((a, b) in amb) {
         if (s == null && dm != null) s = pad29(a) + ":" + pad29(b)
         else if (dm == null && s != null) dm = a to b
         else if (s == null && dm == null) s = pad29(a) + ":" + pad29(b)
+    }
+    // Prompt 44: bare «16» (frittstående tall 6–23) er klokkeslett når det ikke finnes annen tid («frisør 16» → 16:00).
+    if (s == null) {
+        var masked = t
+        used.forEach { u -> masked = masked.replaceFirst(u, " ".repeat(u.length)) }
+        Regex("(?<![\\p{L}\\d.:/,])(\\d{1,2})(?![\\d.:/]|\\s*(?:min|timer|time|t\\b|dager|dag|uker|uke|stk|kr|%|personer|pers))").find(masked)?.let { m ->
+            val h = m.groupValues[1].toInt(); if (h in 6..23) { s = pad29(h) + ":00"; used.add(m.value) }
+        }
     }
     var dt: LocalDate? = null
     val dmv = dm
@@ -171,14 +185,14 @@ fun parseQuickLocal29(txt: String, today: LocalDate = LocalDate.now()): Quick29P
     val dur = kind?.dur ?: 60
     var ti: String
     val hos = Regex(
-        "(?:time|avtale|konsultasjon|timebestilling)?\\s*hos\\s+(.+?)(?=\\s+(?:(?:kl\\.?|klokka|den|på|i\\s+(?:dag|morgen|overmorgen)|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|neste)\\b|\\d)|[,\\n]|(?<!\\b(?:[Dd]r|[Ss]t|[Nn]r|ca|[Tt]annl))\\.|$)",
+        "(?:time|avtale|konsultasjon|timebestilling)?\\s*hos\\s+(.+?)(?=\\s+(?:(?:kl\\.?|klokka|den|på|i\\s+(?:dag|morgen|overmorgen|kveld)|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|neste)\\b|\\d)|[,\\n]|(?<!\\b(?:[Dd]r|[Ss]t|[Nn]r|ca|[Tt]annl))\\.|$)",
         RegexOption.IGNORE_CASE,
     ).find(raw)
     ti = when {
         hos != null -> hos.groupValues[1].trim()
         kind != null -> kind.name
-        else -> raw.replace(Regex("^(legg til|lag|sett opp|book|ny)\\s+", RegexOption.IGNORE_CASE), "").replace(Regex("\\b(time|avtale)\\b", RegexOption.IGNORE_CASE), "")
-            .split(Regex("\\s+(?:kl\\.?|klokka|den|\\d)", RegexOption.IGNORE_CASE))[0].trim()
+        // Prompt 44: tittel = alt som er igjen når dato, tid, ukedager, «i morgen» og innledningsord er fjernet, uansett hvor tittelen står.
+        else -> rest29(raw, used)
     }
     ti = ti.replace(Regex("^(legg til\\s+)?(time|avtale)\\s+", RegexOption.IGNORE_CASE), "").trim()
     if (ti.isEmpty()) ti = kind?.name ?: "Avtale"
@@ -188,9 +202,26 @@ fun parseQuickLocal29(txt: String, today: LocalDate = LocalDate.now()): Quick29P
         ?: Regex("\\bpå\\s+([A-ZÆØÅ][^,\\n.;]{2,40})").find(raw))?.groupValues?.get(1)?.trim().orEmpty()
     if (s != null && e == null) e = hm29(mm29(s!!) + dur)
     val type = kind?.type ?: "annet"
+    // Prompt 44 (claude-code-kalender-glimt-klokkeslett.md): bare tid → i dag (i morgen hvis tiden er passert).
+    if (dt == null && s != null) dt = if (today == LocalDate.now() && mm29(s!!) <= java.time.LocalTime.now().let { it.hour * 60 + it.minute }) today.plusDays(1) else today
     if (dt == null) return Quick29Parse(false, QUICK29_NO_DATE, ti, null, s, e, loc, type, false)
     val appt = INTENT29.containsMatchIn(t) || kind != null
     return Quick29Parse(true, if (s == null) "Fant ikke klokkeslett, lagt inn som hele dagen." else "", ti, dt, s, if (s != null) e else null, loc, type, appt)
+}
+
+/** Prompt 44: teksten uten dato/tid-tokenene ([used]), ukedager, «i dag/i morgen», varighet/varsel og innledningsord. */
+internal fun rest29(raw: String, used: List<String>): String {
+    var r = " " + raw.replace(Regex("\\s+"), " ") + " "
+    val ic = RegexOption.IGNORE_CASE
+    used.sortedByDescending { it.length }.forEach { u -> if (u.isNotBlank()) r = r.replaceFirst(Regex(Regex.escape(u.trim()), ic), " ") }
+    listOf(
+        "varsle?\\s+.*?\\s+før", "\\bi\\s+\\d+\\s*(?:timer|time|t|min|minutter)\\b", "\\b\\d+\\s*min\\s+før\\b",
+        "(?<![\\p{L}])(?:på\\s+|neste\\s+|kommende\\s+)?(?:mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag)(?:\\s+neste\\s+uke)?(?![\\p{L}])",
+        "\\bi\\s+(?:overmorgen|morgen|dag|kveld)\\b", "\\bneste\\s+uke\\b", "\\b(?:kl\\.?|klokka)(?![\\p{L}])", "\\bden\\b",
+        "^\\s*(?:legg\\s+til|lag|sett\\s+opp|book|bestill|ny)\\s+", "\\b(?:timen|time|avtale)\\b", "\\s[-–]\\s",
+    ).forEach { r = r.replace(Regex(it, ic), " ") }
+    r = r.replace(Regex("\\s+"), " ").trim().trim('.', ',', ';', ':', '–', '-', ' ').trim()
+    return r
 }
 
 private fun JSONObject.str29(k: String): String? = if (isNull(k)) null else optString(k).takeIf { it.isNotBlank() && it != "null" }

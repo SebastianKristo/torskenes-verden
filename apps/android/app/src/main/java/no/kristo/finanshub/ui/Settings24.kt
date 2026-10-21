@@ -52,6 +52,11 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("security", "Sikkerhet", "Konto", "Totrinnsbekreftelse, passord, fingeravtrykk og aktive økter", "security", "2fa passord face logg"))
     if (vm.userIsAdmin) add(SetItem24("sysbackup", "Backup", "Konto", "Backup av hele systemet: automatisk, hva som tas med, sky og gjenoppretting", "sysbackup", "backup sikkerhetskopi gjenopprett restore"))
     add(SetItem24("tokens", "API-tokens", "Konto", "Snarveier og integrasjoner", "tokens", "token nøkkel"))
+    // Prompt 44: Logger (Docker), Gjøremål-synk, Logg inn som / Overfør eier, Tidligere versjoner.
+    if (vm.userIsAdmin) add(SetItem24("logger44", "Logger", "Server", "Docker-logger, feil og feilsøking", null, "logg logger docker feil feilsøking container"))
+    add(SetItem24("huske", "Gjøremål", "App", "Synk med Home Assistant", "huske", "gjøremål synk home assistant todo"))
+    if (vm.userIsAdmin) add(SetItem24("as44", "Logg inn som", "Konto → Kontoer og brukere", "Rediger oppsettet til et familiemedlem · overfør eierskap", "accounts", "logg inn som impersonering eier overfør familie oppsett"))
+    if (vm.userIsAdmin) add(SetItem24("rollback44", "Tidligere versjoner", "System", "Rull tilbake til en tidligere versjon", null, "rull tilbake rollback versjon nedgrader"))
     add(SetItem24("ai", "AI og tolkning", "Finans", "Gemini · Groq · Roboflow · Ollama · tidsgrenser", "ai", "gemini groq ollama roboflow ocr"))
     add(SetItem24("cats", "Kategorier og budsjett", "Finans", "Farger og typer", "cats", "budsjett kategori"))
     add(SetItem24("rules", "Regler", "Finans", "Automatisk kategorisering", "rules", "regel"))
@@ -156,6 +161,8 @@ private fun open24(vm: AppViewModel, it: SetItem24) {
         it.id.startsWith("integ:") -> vm.openInteg26(it.id.removePrefix("integ:"))
         it.id == "kal" -> vm.openKalSettings26(null)
         it.id == "nordlys" -> vm.openNordlys31()
+        it.id == "logger44" -> vm.openLogs44() // prompt 44
+        it.id == "rollback44" -> vm.openNordlys31() // prompt 44: TIDLIGERE VERSJONER ligger på System-siden
         // Prompt 39: PROFIL er borte fra hovedsiden (to plasser færre), og navn/ikon/fanelinje ligger i Tilpass.
         it.id == "import" -> main(rowKey25("Bankimport"), 5)
         it.id == "sub" -> main(rowKey25("Subscription OS"), 5)

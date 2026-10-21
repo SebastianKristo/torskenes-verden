@@ -102,6 +102,8 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
         colors = ButtonDefaults.buttonColors(containerColor = PaperPal.current.lab, contentColor = PaperPal.current.onLab)) { Icon(Icons.Filled.PersonAdd, null); Spacer(Modifier.width(8.dp)); Text("Legg til konto", fontWeight = FontWeight.Bold) }
     if (vm.accounts.size > 1) OutlinedButton(onClick = { vm.logoutOthers() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Logg ut andre kontoer") }
     Note("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.")
+    // Prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER (claude-code-rediger-andres-oppsett.md, claude-code-overfor-servereier.md).
+    Accounts44(vm)
     // Prompt 38: ENHETER (Logg inn på ny enhet) og ØKT (Lås skjermen, Logg ut, Logg ut av alle enheter) nederst på Konto.
     Server41(vm); Session38(vm) // Prompt 41: Konto → SERVER (lokal, ekstern, bytt automatisk)
 }

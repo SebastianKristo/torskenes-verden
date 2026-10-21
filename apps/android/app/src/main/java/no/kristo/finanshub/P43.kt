@@ -31,8 +31,10 @@ data class MItem43(
     val monitored: Boolean, val profileId: Int?, val profile: String?, val have: Int, val total: Int, val missing: Int,
     val poster: String?, val color: Long?, val exists: Boolean, val tvdbId: Int?, val tmdbId: Int?, val overview: String?,
     val hasFile: Boolean, val availability: String?, val seriesType: String?, val monitor: String?, val fileLine: String?, val playUrl: String?,
+    /** Prompt 44: filmfilens id (Slett fil) og fanart (banner). */
+    val fileId: Int? = null, val fanart: String? = null,
 )
-data class MEp43(val id: Int, val n: Int, val title: String, val air: String?, val hasFile: Boolean, val monitored: Boolean, val status: String)
+data class MEp43(val id: Int, val n: Int, val title: String, val air: String?, val hasFile: Boolean, val monitored: Boolean, val status: String, val fileId: Int? = null /* prompt 44 */)
 data class MSeason43(val n: Int, val monitored: Boolean, val eps: List<MEp43>)
 data class MRel43(
     val guid: String, val indexerId: Int?, val title: String, val quality: String, val size: Long, val seeders: Int, val peers: Int,
@@ -169,6 +171,8 @@ internal fun parseItem43(o: JSONObject, kind: String): MItem43 {
         o.b43(o.i43("id") != null && (o.i43("id") ?: 0) > 0, "exists", "added", "inLibrary"), o.i43("tvdbId"), o.i43("tmdbId"), o.s43("overview"),
         o.b43(false, "hasFile", "downloaded"), o.s43("minimumAvailability", "availability"), o.s43("seriesType", "type"), o.s43("monitor", "monitorNew"),
         fileLine, o.optJSONObject("play")?.s43("url") ?: o.s43("playUrl", "jellyfinUrl", "plexUrl"),
+        fileId = file?.i43("id") ?: o.i43("movieFileId", "fileId"),
+        fanart = o.s43("fanart", "fanartUrl", "banner") ?: objs34(o.optJSONArray("images")).firstOrNull { it.s37("coverType") == "fanart" }?.s43("remoteUrl", "url"),
     )
 }
 
@@ -178,7 +182,8 @@ private fun parseEp43(o: JSONObject): MEp43 {
     // SERVER43-koder: ok · dl · miss · stall · wait · off · ann · pause.
     val st = when (val c = o.s43("status")) { "ok" -> "downloaded"; "dl" -> "downloading"; "miss" -> "missing"; "stall" -> "stalled"; "wait", "ann" -> "upcoming"; "off" -> "unmonitored"; "pause" -> "paused"; null -> null; else -> c }
     return MEp43(o.i43("id") ?: 0, o.i43("number", "episodeNumber", "n", "episode") ?: 0, o.s43("title", "name") ?: "", air, has, o.b43(true, "monitored"),
-        st ?: if (has) "downloaded" else if (air == null || air > java.time.LocalDate.now().toString()) "upcoming" else "missing")
+        st ?: if (has) "downloaded" else if (air == null || air > java.time.LocalDate.now().toString()) "upcoming" else "missing",
+        o.i43("episodeFileId", "fileId") ?: o.optJSONObject("episodeFile")?.i43("id")?.takeIf { it > 0 })
 }
 
 internal fun size43(b: Long): String = when {
@@ -225,7 +230,8 @@ private suspend fun AppViewModel.get43(path: String): String? = try { api43 { hl
 
 private fun AppViewModel.run43(block: suspend () -> Unit) = launch43 {
     try { block() } catch (e: CancellationException) { throw e } catch (e: ApiException) {
-        p43.error = if (e.status == 403) "Du har ikke tilgang til Media. Be admin om modulen «media»." else e.message
+        // Prompt 44: «Utlogget fra Homelab» / «Svarer ikke» / ingen tilgang skilles (før ble TOKEN_REFUSED vist som «ikke tilgang»).
+        p43.error = mediaErr44(e)
     } catch (e: Exception) { p43.error = e.message ?: "Fikk ikke kontakt med Media" }
 }
 
@@ -247,12 +253,14 @@ fun AppViewModel.closeMedia43() {
 
 fun AppViewModel.loadMedia43() {
     loadStatus43()
+    loadServers44(); loadInteg44() // prompt 44: servervalg og samme status som Innstillinger
     when (p43.tab) {
         "snart" -> loadUpcoming43()
         "sonarr" -> loadLib43("tv")
         "radarr" -> loadLib43("film")
         "qbit" -> { loadTorrents43(); loadRoots43("sonarr"); loadRoots43("radarr") }
         "prowlarr" -> loadIndexers43()
+        "spill" -> loadPlayback44() // prompt 44: Avspilling
     }
 }
 
@@ -265,7 +273,9 @@ fun AppViewModel.loadStatus43() = run43 {
     }
     p43.services = list.map { x ->
         val k = x.s43("key", "id", "service") ?: ""
-        MSvc43(k, x.s43("name") ?: k.replaceFirstChar { it.uppercase() }, x.b43(false, "configured"), x.b43(false, "ok"), x.s43("version"), x.i43("ms"), x.s43("error"))
+        // Prompt 44: SERVER44 sender samme felt som /api/integrations/status ({service, connected, state, …}).
+        MSvc43(k, x.s43("name") ?: k.replaceFirstChar { it.uppercase() }, x.b43(false, "configured") || x.s43("state") == "ok" || x.s43("state") == "down",
+            x.b43(false, "ok", "connected"), x.s43("version"), x.i43("ms"), x.s43("error"))
     }
 }
 
@@ -363,28 +373,8 @@ fun AppViewModel.command43(app: String, name: String, extra: JSONObject, label: 
     p43.toast = label
 }
 
-fun AppViewModel.openRelease43(title: String, sub: String, query: String) {
-    val s = p43
-    s.relFor = Triple(title, sub, query); s.rel = null; s.relFilter = "alle"; s.relBusy = true
-    run43 {
-        try {
-            val t0 = System.currentTimeMillis()
-            val raw = api43 { hlGet("/media/release?$query", timeout = 60_000) }
-            val o = runCatching { JSONObject(raw) }.getOrNull()
-            val items = arr43(raw, "releases", "items").map { x ->
-                val q = x.optJSONObject("quality")?.optJSONObject("quality")?.s37("name") ?: x.s43("quality", "qualityName") ?: ""
-                MRel43(x.s43("guid") ?: x.s43("id") ?: "", x.i43("indexerId"), x.s43("shortTitle", "title", "name") ?: "", q, x.l43("size") ?: 0L,
-                    x.i43("seeders", "seeds") ?: 0, x.i43("leechers", "peers") ?: 0, x.s43("indexer") ?: "",
-                    x.strs43("languages").ifBlank { x.s43("language").orEmpty() }.let { l -> if (x.b43(false, "norwegian") && !l.contains("NO")) "$l NO".trim() else l },
-                    x.strs43("subtitles").ifBlank { x.s43("subs").orEmpty() }.let { t -> if (x.b43(false, "norwegian") && !t.contains("NO")) "NO $t".trim() else t },
-                    x.s43("ageText", "age")?.let { if (it.all(Char::isDigit)) "$it d" else it },
-                    (x.optJSONArray("rejections")?.let { a -> (0 until a.length()).map { a.optString(it) } } ?: emptyList()).filter { it.isNotBlank() },
-                    x.b43(false, "best", "bestForProfile"))
-            }
-            if (s.relFor?.third == query) s.rel = MRelRes43(items, o?.i43("tookMs", "ms", "took") ?: (System.currentTimeMillis() - t0).toInt(), o?.i43("indexersTotal", "indexers", "indexerCount"))
-        } finally { s.relBusy = false }
-    }
-}
+/** Prompt 44: søket kjøres som jobb med status per indekser (P44.kt → openRelease44). */
+fun AppViewModel.openRelease43(title: String, sub: String, query: String) = openRelease44(title, sub, query)
 
 fun AppViewModel.grab43(r: MRel43, app: String) = run43 {
     val o = runCatching { JSONObject(api43 { hlPost("/media/release", JSONObject().put("guid", r.guid).put("indexerId", r.indexerId ?: 0).put("service", app)) }) }.getOrNull()

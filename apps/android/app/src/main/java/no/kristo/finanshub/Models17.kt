@@ -22,6 +22,8 @@ data class TaskItem(
     val prio: Int = 0, val flag: Boolean = false, val tags: List<String> = emptyList(), val subs: List<TaskSub37> = emptyList(), val place: String? = null,
     /** Prompt 40 (Gjøremål-Glimt): punktet skal gjøres etter punktet med denne id-en (after_id). */
     val after: String? = null,
+    /** Prompt 44 (claude-code-gjoremal-infoside.md): frist (dl, siste dag) skilt fra dato/tid (due, time), og stedets koordinater (geo). */
+    val dl: String? = null, val geo: Pair<Double, Double>? = null,
 )
 data class TaskMember(val id: String, val name: String, val color: Long? = null, val role: String? = null)
 data class TasksData(val lists: List<TaskList>, val items: List<TaskItem>, val members: List<TaskMember>)
@@ -45,6 +47,8 @@ fun parseTasks(s: String): TasksData {
             prio = prio37(t.opt("prio")), flag = t.optBoolean("flag", false), tags = strs37(t.optJSONArray("tags")), subs = subs37(t.optJSONArray("subs")),
             place = t.optStr("place") ?: t.optJSONObject("place")?.optStr("name"),
             after = t.optStr("after") ?: t.optStr("afterId") ?: t.optStr("after_id"),
+            dl = (t.optStr("dl") ?: t.optStr("deadline"))?.take(10),
+            geo = (t.optJSONObject("geo") ?: t.optJSONObject("place"))?.let { g -> val la = g.optDouble("lat"); val lo = g.optDouble("lon", g.optDouble("lng")); if (la.isNaN() || lo.isNaN()) null else la to lo },
         )
     }
     val ma = o.optJSONArray("members") ?: JSONArray()

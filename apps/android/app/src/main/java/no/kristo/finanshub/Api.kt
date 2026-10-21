@@ -26,7 +26,14 @@ data class LoginResult(val token: String, val username: String, val name: String
  */
 class Api(private val baseUrl: String, private val token: String?) {
 
-    private fun url(path: String, prefix: String) = URL(baseUrl.trimEnd('/') + prefix + path)
+    private fun url(path: String, prefix: String) = URL(baseUrl.trimEnd('/') + prefix + media44(path, prefix))
+
+    /** Prompt 44: felles servervalg i Media (Hjemme/Hytta) – `?server=` på alle /api/media- og /api/playback-kall. */
+    private fun media44(path: String, prefix: String): String {
+        val srv = mediaServer44 ?: return path
+        if (prefix != HOMELAB || !path.startsWith("/media/") || path.startsWith("/media/servers") || path.contains("server=")) return path
+        return path + (if (path.contains('?')) "&" else "?") + "server=" + java.net.URLEncoder.encode(srv, "UTF-8")
+    }
 
     suspend fun request(method: String, path: String, json: JSONObject? = null, prefix: String = FINANS, timeout: Int = 10_000, read: Int = 30_000): String = withContext(Dispatchers.IO) {
         val conn = url(path, prefix).openConnection() as HttpURLConnection
@@ -145,6 +152,8 @@ class Api(private val baseUrl: String, private val token: String?) {
         const val HOMELAB = "/api"
         /** Begynnelsen på meldingen når en Homelab-rute ikke godtar app-tokenet. Vises ikke som melding. */
         const val TOKEN_REFUSED = "Ikke tilgang med app-token"
+        /** Prompt 44: valgt Media-server (id fra /api/media/servers), null = serverens standard. Settes av P44.kt. */
+        @Volatile var mediaServer44: String? = null
 
         /**
          * Bytter brukernavn + passord (+ 2FA-kode) mot et token med finans-tilgang.

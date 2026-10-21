@@ -3599,6 +3599,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal fun launch43(block: suspend () -> Unit) = launch(block)
     internal val appCtx43: Context get() = appCtx
 
+    /* ---------- Prompt 44 (ANDROID44): Media-status/servere/søk som jobb/Avspilling, deloppgaver og infoside, Logg inn som, overfør eier, tilbakerulling, Logger, Studie-dokumenter (P44.kt og ui-filene med 44) ---------- */
+    val p44 = P44State()
+    internal suspend fun <T> api44(f: suspend Api.() -> T): T = api.f()
+    internal fun launch44(block: suspend () -> Unit) = launch(block)
+    internal fun launchJob44(block: suspend () -> Unit): kotlinx.coroutines.Job = launch(block)
+    internal val appCtx44: Context get() = appCtx
+    /** «Logg inn som»: legger til/fjerner den midlertidige kontoen (as44:<id>) og bytter til [to]. Admin-kontoen røres ikke. */
+    internal fun swapAccount44(add: UserAccount?, dropId: String?, to: String) {
+        accounts = accounts.filter { it.id != dropId && it.id != add?.id } + listOfNotNull(add)
+        switchTo(to)
+    }
+
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.
     init {
@@ -3613,6 +3625,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         watchNetwork()
         // Prompt 40: julemodus (lokalt valg) før første figur tegnes.
         runCatching { Jul40.ensure(appCtx) }
+        // Prompt 44: pågående «Logg inn som» (stripa) eller avslutt den stille når tokenet har gått ut.
+        runCatching { restoreAs44() }
         if (loggedIn) refresh()
     }
 

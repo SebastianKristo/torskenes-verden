@@ -84,6 +84,9 @@ fun TaskItem.toJson37(): JSONObject = JSONObject().put("title", title).put("n", 
     .put("notes", notes ?: "").put("urgent", urgent).put("rep", rep ?: JSONObject.NULL).put("early", early ?: JSONObject.NULL).put("prio", prio).put("flag", flag)
     .put("tags", JSONArray(tags)).put("subs", JSONArray().apply { subs.forEach { put(JSONObject().put("n", it.n).put("done", it.done)) } })
     .put("place", place ?: JSONObject.NULL)
+    // Prompt 44: frist og stedets koordinater (pl + geo).
+    .put("dl", dl ?: JSONObject.NULL).put("pl", place ?: JSONObject.NULL)
+    .put("geo", geo?.let { JSONObject().put("lat", it.first).put("lon", it.second) } ?: JSONObject.NULL)
 
 /** Neste forekomst for en gjentagende oppgave. */
 fun nextDue37(due: String?, rep: String?): String? {
