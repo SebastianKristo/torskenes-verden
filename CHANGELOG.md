@@ -2,6 +2,9 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.39.1] – 21.10.2026 · scroll på Hjem (iPhone)
+- **Rettet:** Hjem i iPhone-appen kunne ikke scrolles i det hele tatt, mens trykk virket. Sveip-bort-gesten på Glimt-briefen, bibelverset og Min reise lå som en SwiftUI-gest som på iOS 18+ gjaldt hele siden og stoppet scrollen. Den er nå en vanlig UIKit-pan som bare tar vannrette sveip mot høyre som starter på kortet; loddrett drag går alltid til scrollen.
+
 ## [4.39.0] – 21.10.2026 · prompt 44 – Logger, Studie-dokumenter, Avspilling og Logg inn som
 - **Rettet:**
   - Media sa «ikke innlogget» på mobil selv om Integrasjoner sa «Koblet til». Media bruker nå serverens oppsett, og alle appene leser én felles status.
