@@ -112,8 +112,10 @@ export function afterPaint41(r, repaint) {
   let host = r.querySelector('.wx41-host');
   if (!host) { host = document.createElement('div'); host.className = 'wx41-host'; r.appendChild(host); }
   host.innerHTML = V.ed ? sheetHtml() : '';
-  if (r.dataset.vo41) return;
-  r.dataset.vo41 = '1';
+  // Prompt 43: vaktflagget må ikke hete data-vo41 – da treffer closest('[data-vo41]') i klikklytteren under selve #wxp,
+  // og stopPropagation() svelget alle klikk på Vær (stedskort, søk, modusknapper, kart, lukk).
+  if (r.dataset.vo41Bound) return;
+  r.dataset.vo41Bound = '1';
   let t = 0, x0 = 0, y0 = 0;
   r.addEventListener('pointerdown', (e) => {
     if (V.ed || e.button > 0 || e.target.closest('button,a,input,select,textarea,.wxp-layer,.wx41-host,iframe')) return;
@@ -128,7 +130,7 @@ export function afterPaint41(r, repaint) {
   r.addEventListener('contextmenu', (e) => { if (V.ed && e.target.closest('[data-vo41k]')) e.preventDefault(); });
   r.addEventListener('click', (e) => {
     const b = e.target.closest('[data-vo41]');
-    if (!b) return;
+    if (!b || b === r || !r.contains(b)) return;
     e.preventDefault(); e.stopPropagation();
     const a = b.dataset.vo41, k = b.dataset.k, v = voGet();
     if (a === 'start') { V.ed = true; return repaint(); }

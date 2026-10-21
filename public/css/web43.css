@@ -1,0 +1,138 @@
+/* Prompt 43 (WEB43): Glimt-orben, Kalender web (× til høyre, rød «+ Ny hendelse», orb på «Skriv time», Liste i full
+   bredde med kolonner, «Dagen din» bare i sidepanelet). Media, Integrasjoner, Widgets og Claude-import har egne filer. */
+
+/* ---------- Glimt-orben (orb43.js) ---------- */
+.w43-orb{--o:20px;position:relative;flex:none;display:inline-grid;place-items:center;width:var(--o);height:var(--o);border-radius:50%;
+  background:conic-gradient(from 0deg,#b23a2a,#e8794a,#f2c14e,#3fbf9a,#7a5ad6,#b23a2a);animation:w43spin 4s linear infinite}
+.w43-orbi{display:grid;place-items:center;width:calc(var(--o) - max(4px,var(--o) * .22));height:calc(var(--o) - max(4px,var(--o) * .22));border-radius:50%;background:#fbf6ea;animation:w43spin 4s linear infinite reverse}
+.w43-orbi svg{width:62%;height:62%;display:block}
+.w43-orb.busy,html.kq43-busy .k43-quick .w43-orb{animation-duration:1.1s}
+.w43-orb.busy .w43-orbi,html.kq43-busy .k43-quick .w43-orbi{animation-duration:1.1s}
+@keyframes w43spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.w43-orb,.w43-orbi{animation:none}}
+
+/* ---------- Kalender: topplinja ---------- */
+#kal.k39 .k43-quick{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px 0 10px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:700 13.5px/1 var(--ui)}
+#kal.k39 .k43-new{height:40px;padding:0 16px;border-radius:20px;border:0;background:var(--red,#b23a2a);color:#fff;font:700 13.5px/1 var(--ui)}
+#kal.k39 .k43-new:hover{background:color-mix(in srgb,var(--red,#b23a2a) 92%,#000)}
+#kal.k39 .k43-close{width:40px;height:40px;margin:0 0 0 -2px;border-radius:20px;background:var(--ink);color:var(--bg)}
+#kal.k39 .k43-close:hover{background:color-mix(in srgb,var(--ink) 88%,var(--bg))}
+#kal.k39 .k39-dc-h{gap:8px}
+@media (max-width:1240px){
+  #kal.k39 .k43-quick{width:40px;padding:0;justify-content:center}
+  #kal.k39 .k43-new{width:40px;padding:0;font-size:17px}
+}
+@media (max-width:819px){
+  #kal.k39 .k43-close{order:5}
+  #kal.k39 .k43-quick,#kal.k39 .k43-new,#kal.k39 .k43-close{width:36px;height:36px}
+}
+
+/* ---------- Kalender: Liste i full bredde ---------- */
+#kal.k39 .k43-lin{max-width:none;width:100%;margin:0;padding:14px clamp(16px,2.5vw,40px) 28px}
+/* «Dagen din» ligger i sidepanelet; i lista bare når sidepanelet ikke vises (skuff/skjult). */
+#kal.k39 .k39-main:has(.k39-side:not(.drawer)) .k43-ldc{display:none}
+.k43-lhd{display:none}
+.k43-lp,.k43-lc{display:none}
+.k43-lh{flex:1;min-width:0;display:flex;align-items:center;gap:12px}
+.k43-lh>i{flex:none;width:4px;height:30px;border-radius:2px;background:var(--c)}
+.k43-la{flex:none;display:flex;align-items:center;gap:10px}
+.k43-la:empty{display:none}
+.k43-lt img,.k43-lt .k42-logo{vertical-align:middle}
+@media (min-width:1100px){
+  #kal.k39 .k43-lhd{position:sticky;top:-14px;z-index:2;display:grid;grid-template-columns:170px 120px minmax(0,1.4fr) minmax(0,1fr) 110px 120px;gap:0 14px;
+    margin:0 0 4px;padding:10px 8px 8px 0;background:var(--bg);border-bottom:1.5px solid var(--ink);font:600 10.5px/1 var(--mono);letter-spacing:1.2px;color:var(--mut)}
+  #kal.k39 .k43-lhd span+span{padding-left:8px}
+  #kal.k39 .k43-lin .k39-lw{grid-column:1/-1}
+  #kal.k39 .k43-lin .k39-ld{display:grid;grid-template-columns:170px minmax(0,1fr);gap:0 14px;align-items:start}
+  #kal.k39 .k43-lin .k39-ldh{width:auto;position:sticky;top:22px;align-self:start;padding:5px 0}
+  #kal.k39 .k43-lr{display:grid;grid-template-columns:120px minmax(0,1.4fr) minmax(0,1fr) 110px 120px;gap:0 14px;align-items:center;min-height:42px}
+  #kal.k39 .k43-lr .k39-lrt{width:auto}
+  #kal.k39 .k43-lr .k43-sub{display:none}
+  #kal.k39 .k43-lp{display:block;min-width:0;font:400 13px/1.3 var(--ui);color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #kal.k39 .k43-lc{display:flex;align-items:center;gap:7px;min-width:0;font:600 12.5px/1.2 var(--ui);color:var(--ink2,var(--ink))}
+  #kal.k39 .k43-lc>i{flex:none;width:8px;height:8px;border-radius:50%}
+  #kal.k39 .k43-lc>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #kal.k39 .k43-la{justify-content:flex-end}
+  #kal.k39 .k43-la:empty{display:block}
+  #kal.k39 .k42-lr.k43-lr .k39-lrm{flex:1}
+}
+/* Fra 1700 px: to uker side om side. */
+@media (min-width:1700px){
+  #kal.k39 .k43-lws{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 44px;align-items:start}
+  #kal.k39 .k43-lhd{grid-template-columns:120px 104px minmax(0,1.4fr) minmax(0,1fr) 100px 110px;
+    background:linear-gradient(var(--bg),var(--bg)) padding-box;border-bottom:0;box-shadow:inset 0 -1.5px 0 var(--ink)}
+  #kal.k39 .k43-lhd{display:none}
+  #kal.k39 .k43-lwk>.k39-lw:first-child{padding-top:6px;border-bottom:1.5px solid var(--ink);padding-bottom:8px;margin-bottom:2px}
+  #kal.k39 .k43-lin .k39-ld{grid-template-columns:120px minmax(0,1fr)}
+  #kal.k39 .k43-lin .k39-ldh{top:0}
+  #kal.k39 .k43-lr{grid-template-columns:104px minmax(0,1.4fr) minmax(0,1fr) 100px 110px}
+}
+.k43-lh>i.k43-nob{display:none}
+@media (min-width:1100px){#kal.k39 .k43-lh>i.k43-nob{display:block;visibility:hidden}}
+
+/* ---------- Domener: Google Søk tom / bare dagsdata (claude-code-gsc-ingen-statistikk.md) ---------- */
+.dm43-gsc-meta{font-size:12px;color:var(--dm-mut);overflow-wrap:anywhere}
+.dm43-gsc-st{font:700 13px Manrope,Outfit,system-ui,sans-serif;color:var(--dm-pos,#2f6b4a)}
+.dm43-gsc-st.err{color:var(--dm-neg,#b23a2a)}
+.dm43-gsc-empty a.dm-gsc-cbtn{text-decoration:none}
+.dm43-gerr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.gsc43-test{display:flex;flex-direction:column;gap:4px;margin:0 0 10px;padding:10px 14px;border-radius:12px;background:color-mix(in srgb,#2f6b4a 10%,transparent);font:500 13px Manrope,Outfit,system-ui,sans-serif}
+.gsc43-test.bad{background:color-mix(in srgb,#b23a2a 10%,transparent)}
+.gsc43-test>b{color:#2f6b4a}
+.gsc43-test.bad>b{color:#b23a2a}
+.gsc43-test>span{display:flex;justify-content:space-between;gap:12px}
+.gsc43-test i{font-style:normal;opacity:.7}
+.gsc43-test .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere;text-align:right}
+
+/* ---------- Innstillinger → Integrasjoner → Media (settings-integ43.js) ---------- */
+.m43i-st{margin-left:auto;font-weight:700}
+.m43i-opt{font-style:normal;opacity:.6;font-weight:500}
+.m43i-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+.m43i-step{display:flex;gap:12px;align-items:flex-start}
+.m43i-step>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.m43i-step b{font-weight:700;font-size:14.5px}
+.m43i-step span{font-size:13.5px;line-height:1.5;opacity:.8}
+.m43i-n{flex:none;width:24px;height:24px;border-radius:12px;background:currentColor;display:grid;place-items:center}
+.m43i-n{background:#1b1a17;color:#f3efe6;font:700 12px Manrope,system-ui,sans-serif}
+html:not([data-hl="2c"]) .m43i-n{background:#eef0f4;color:#0c1119}
+.m43i-code{position:relative;margin-top:4px;border-radius:12px;background:#1b1a17;color:#efe9de}
+.m43i-code pre{margin:0;padding:12px 84px 12px 14px;font:500 12.5px/1.5 'IBM Plex Mono',ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.m43i-copy{position:absolute;top:8px;right:8px;height:30px;padding:0 12px;border-radius:15px;border:1px solid rgba(239,233,222,.3);background:transparent;color:#efe9de;font:700 12px Manrope,system-ui,sans-serif;cursor:pointer}
+.m43i-copy:hover{background:rgba(239,233,222,.12)}
+.m43i-how{margin-top:8px}
+.m43i-how .m43i-steps{padding:16px}
+
+/* ---------- Innstillinger → App → Widgets (widgets43.js, fasit Widget Galleri.dc.html) ---------- */
+.wg43{--k:#1b1a17;--b:#f3efe6;--cd:#fffdf8;--ln:#d8d1c2;--lb:#b23a2a;--mt:#6b665c;display:flex;flex-direction:column;gap:18px;margin:0 0 22px;color:var(--k);font-family:Manrope,system-ui,sans-serif}
+html:not([data-hl="2c"]) .wg43{--k:#eef0f4;--b:#0c1119;--cd:#141a26;--ln:#1f2736;--lb:#f59a8f;--mt:#8a93a6}
+.wg43-mut{font-size:13.5px;line-height:1.5;color:var(--mt)}
+.wg43-pf{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--cd);border:1px solid var(--ln);align-self:flex-start;max-width:100%}
+.wg43-pf button{height:36px;padding:0 16px;border-radius:999px;border:0;background:transparent;color:var(--k);font:700 13.5px Manrope,system-ui,sans-serif;cursor:pointer}
+.wg43-pf button.on{background:var(--k);color:var(--b)}
+.wg43-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.wg43-chips button{flex:none;height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--ln);background:var(--cd);color:var(--k);font:700 13px Manrope,system-ui,sans-serif;cursor:pointer}
+.wg43-chips button.on{background:var(--k);border-color:var(--k);color:var(--b)}
+.wg43-g{display:flex;flex-direction:column;gap:10px}
+.wg43-gh{display:flex;align-items:baseline;justify-content:space-between}
+.wg43-gt{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em;color:var(--lb)}
+.wg43-row{display:flex;gap:12px;overflow-x:auto;scrollbar-width:thin;padding:2px 2px 8px;margin:0 -2px}
+.wg43-c{flex:none;width:250px;display:flex;flex-direction:column;gap:8px}
+.wg43-c.sm{width:170px}
+.wg43-wall{height:160px;border-radius:18px;display:flex;align-items:center;justify-content:center;padding:10px}
+.wg43-pv{display:flex;flex-direction:column;overflow:hidden;box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}
+.wg43-k{flex:none;font:700 8.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.1em}
+.wg43-big{flex:none;font:500 17px/1.05 Newsreader,Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wg43-big.n{font:800 15px/1.05 Manrope,system-ui,sans-serif}
+.wg43-l{flex:none;font-size:9.5px;line-height:1.25;font-weight:600;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wg43-nm{display:flex;flex-direction:column;gap:1px}
+.wg43-nm b{font-size:14px}
+.wg43-nm span{font-size:12px;color:var(--mt)}
+.wg43-add{height:40px;border-radius:20px;border:0;background:var(--k);color:var(--b);font:700 13px Manrope,system-ui,sans-serif;cursor:pointer}
+.wg43-bg{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;padding:16px}
+.wg43-sh{width:min(480px,100%);max-height:86vh;overflow:auto;border-radius:24px;background:var(--b);color:var(--k);padding:22px;display:flex;flex-direction:column;gap:14px;box-shadow:0 14px 60px rgba(0,0,0,.3)}
+.wg43-sht{font:500 24px/1.15 Newsreader,Georgia,serif}
+.wg43-st{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.wg43-st li{display:flex;gap:12px;font-size:14.5px;line-height:1.5}
+.wg43-st li>span:first-child{flex:none;width:24px;height:24px;border-radius:12px;background:var(--k);color:var(--b);font:700 12px Manrope,system-ui,sans-serif;display:grid;place-items:center}
+.wg43-done{height:48px;border-radius:24px;border:0;background:var(--k);color:var(--b);font:800 15px Manrope,system-ui,sans-serif;cursor:pointer}
+@media (max-width:560px){.wg43-bg{align-items:flex-end;padding:0}.wg43-sh{width:100%;border-radius:24px 24px 0 0;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px))}}

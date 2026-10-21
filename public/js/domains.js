@@ -214,11 +214,62 @@ const chg = (cur, prev, lowerBetter = false) => {
 };
 const dmShort = (s) => { const x = new Date(String(s).length === 10 ? `${s}T12:00` : s); return Number.isNaN(+x) ? '' : `${x.getDate()}.${x.getMonth() + 1}.`; };
 const pathOf = (u) => { try { const x = new URL(u); return x.pathname + (x.search || ''); } catch { return String(u ?? ''); } };
+/* Prompt 43: koblet, men tomt → forklaring med årsak fra serveren (reason/emptyReason/state) + «Hent nå» og «Åpne i Search Console».
+   Serveren (SERVER43) kan svare {connected:true, empty:true, reason:'unverified'|'noaccess'|'scope'|'token'|'pending'|'nosource'|'noimpressions',
+   message?, site, permissionLevel, fetchedAt, dataTo}. Uten reason: ingen rader og ingen visninger = «ingen søkevisninger». */
+const GSC_WHY43 = {
+  unverified: ['Eiendommen er ikke bekreftet i Search Console', 'Google gir ingen tall før eiendommen er bekreftet. Bekreft den i Search Console (DNS TXT), og trykk Hent nå.'],
+  noaccess: ['Kontoen mangler tilgang til eiendommen', 'Google-kontoen må være eier, full bruker eller begrenset bruker på eiendommen i Search Console.'],
+  scope: ['Mangler lesetilgang', 'Tilkoblingen mangler webmasters.readonly. Koble til på nytt og godta «Se Search Console-data».'],
+  token: ['Innloggingen er utløpt', 'Homelab fikk ikke fornyet tilgangen hos Google. Koble til på nytt (da lagres en ny refresh-token).'],
+  pending: ['Venter på første henting', 'Dataene hentes nå eller ved neste nattlige henting (06:00). Google har 2–3 dagers forsinkelse.'],
+  nosource: ['Domenet er ikke koblet til Search Console', 'Kontoen er koblet, men dette domenet har ikke valgt eiendom ennå. Velg eiendom under Innstillinger → Domener → Google Search Console.'],
+  noimpressions: ['Ingen søkevisninger', 'Google har ikke vist domenet i søk i perioden. Nye eller små domener kan ha 0 visninger en stund.'],
+};
+function gscEmpty43(d) {
+  if (d.empty || d.reason || d.emptyReason) return true;
+  const rows = (d.series ?? d.daily ?? d.days ?? []).length, imp = d.kpi?.impressions?.value ?? d.kpi?.impressions ?? d.totals?.impressions;
+  return !rows && !(d.queries ?? []).length && !(+imp > 0);
+}
+function gscEmptyHtml43(name, d, head) {
+  const r = String(d.reason ?? d.emptyReason ?? d.state ?? '').toLowerCase();
+  const k = /unverif|ikke.?bekreft/.test(r) ? 'unverified' : /scope|403/.test(r) ? 'scope' : /token|refresh|401|expired/.test(r) ? 'token' : /access|perm|tilgang/.test(r) ? 'noaccess' : /pend|first|venter|loading/.test(r) ? 'pending' : /source|site|kilde/.test(r) ? 'nosource' : 'noimpressions';
+  const [t, tx0] = GSC_WHY43[k], days = { 7: '7 dagene', 28: '28 dagene', 90: '3 månedene' }[GSC.per] ?? `${GSC.per} dagene`;
+  const title = k === 'noimpressions' ? `Ingen søkevisninger de siste ${days}` : t;
+  const site = d.site ?? d.siteUrl ?? `sc-domain:${name}`, gUrl = `https://search.google.com/search-console/performance/search-analytics?resource_id=${encodeURIComponent(site)}`;
+  const fetched = d.fetchedAt ? new Date(d.fetchedAt) : null;
+  const meta = [site, d.permissionLevel ? `tilgang ${d.permissionLevel}` : '', fetched ? `sist hentet ${fetched.toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'ikke hentet ennå', d.dataTo ? `data til ${dmShort(d.dataTo)}` : ''].filter(Boolean).join(' · ');
+  const re = k === 'scope' || k === 'token';
+  const st = GSC.fetch43;
+  return `<div data-dm-gsc>${head(true)}<section class="dm-card dm-gsc-off dm43-gsc-empty">
+    <div class="dm-gsc-intro"><b class="dm-gsc-bt">${esc(title)}</b><span class="dm-gsc-tx">${esc(d.message || tx0)}</span></div>
+    <span class="dm43-gsc-meta mono" data-no-i18n>${esc(meta)}</span>
+    ${st ? `<span class="dm43-gsc-st${st.err ? ' err' : ''}">${esc(st.t)}</span>` : ''}
+    <div class="dm-gsc-cta">${re ? `<button type="button" class="dm-gsc-cbtn" data-dom-gconnect>${G_LOGO}Koble til på nytt</button>` : `<button type="button" class="dm-gsc-cbtn" data-dom43-gfetch${st?.busy ? ' disabled' : ''}>${st?.busy ? 'Henter …' : 'Hent nå'}</button>`}<a class="dm-gsc-cbtn" href="${esc(gUrl)}" target="_blank" rel="noopener">${G_LOGO}Åpne i Search Console</a>${k === 'nosource' ? '<button type="button" class="dm-gsc-cbtn" data-dom-manage>Velg eiendom</button>' : ''}</div></section></div>`;
+}
+/** «Hent nå»: POST /api/domains/:domain/gsc/refresh (SERVER43). Eldre server: GET med ?refresh=1. */
+async function gscFetch43(name) {
+  GSC.fetch43 = { busy: true, t: 'Henter fra Google …' }; paintGsc();
+  const t0 = performance.now();
+  try {
+    let r = await fetch(`/api/domains/${encodeURIComponent(name)}/gsc/refresh`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ period: GSC.per }) });
+    if (r.status === 404 || r.status === 405) r = await fetch(`/api/domains/${encodeURIComponent(name)}/gsc?period=${GSC.per}&refresh=1`, { credentials: 'same-origin', cache: 'no-store' });
+    const j = await r.json().catch(() => ({}));
+    const ms = Math.round(performance.now() - t0);
+    GSC.fetch43 = r.ok ? { t: `✓ Hentet ${j.rows != null ? `${j.rows} rader ` : ''}på ${ms.toLocaleString('nb-NO')} ms` } : { err: true, t: `${r.status} · ${j.error || 'Henting feilet'}` };
+  } catch (e) { GSC.fetch43 = { err: true, t: e.message }; }
+  [...GSC.data.keys()].filter((k) => k.startsWith(`${name}|`)).forEach((k) => GSC.data.delete(k));
+  await gscLoad(name, true);
+  setTimeout(() => { if (GSC.fetch43 && !GSC.fetch43.busy) { GSC.fetch43 = null; paintGsc(); } }, 6000);
+}
 function gscHtml(name) {
   const d = GSC.data.get(gKey(name));
   if (!d) setTimeout(() => gscLoad(name));
   const head = (on) => `<div class="dm-gsc-h"><div class="dm-gsc-t">${G_LOGO}<span>Google Søk</span></div>${on ? `<div class="dm-gsc-per">${[[7, '7 dager'], [28, '28 dager'], [90, '3 mnd']].map(([k, n]) => `<button type="button" data-dom-gper="${k}" aria-pressed="${GSC.per === k}">${n}</button>`).join('')}</div>` : ''}</div>`;
+  // Prompt 43 (claude-code-gsc-ingen-statistikk.md): GSC har bare dagsdata – 1t/24t skjuler delen (kan vises likevel).
+  if ((S.per === '1h' || S.per === '24h') && !GSC.show) return `<div data-dm-gsc>${head(false)}<section class="dm-card dm-gsc-off dm43-gsc-day"><span class="dm-gsc-tx">Search Console har bare dagsdata (2–3 dager forsinket fra Google). Velg 7d eller 30d, eller vis Google Søk for de siste 28 dagene.</span><div class="dm-gsc-cta"><button type="button" class="dm-gsc-cbtn" data-dom43-gshow>${G_LOGO}Vis Google Søk</button></div></section></div>`;
   if (!d || d.loading) return `<div data-dm-gsc>${head(false)}<div class="skeleton" style="min-height:160px;border-radius:24px"></div></div>`;
+  if (d.connected && !d.needsSite && gscEmpty43(d)) return gscEmptyHtml43(name, d, head);
   if (!d.connected) {
     const sites = null;
     if (sites) return `<div data-dm-gsc>${head(false)}<section class="dm-card dm-gsc-off"><b class="dm-gsc-bt">Velg eiendom</b><span class="dm-gsc-tx">Google-kontoen har flere eiendommer som passer ${esc(name)}.</span><div class="dm-gsc-sites">${sites.map((x) => `<button type="button" class="dm-gsc-cbtn" data-dom-gsite="${esc(x.siteUrl ?? x)}">${esc(x.siteUrl ?? x)}</button>`).join('')}</div></section></div>`;
@@ -247,7 +298,7 @@ function gscHtml(name) {
   const fetched = d.fetchedAt ? new Date(d.fetchedAt) : null, isToday = fetched && fetched.toDateString() === new Date().toDateString();
   const meta = d.footer || [`Koblet til som ${d.account ?? d.email ?? 'Google-konto'}`, d.site ?? `sc-domain:${name}`, fetched ? `sist hentet ${isToday ? 'i dag' : fetched.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })} ${fetched.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}` : '', d.dataTo ? `data til ${dmShort(d.dataTo)}` : ''].filter(Boolean).join(' · ');
   return `<div data-dm-gsc>${head(true)}
-    ${d.error ? `<div class="dm-card dm-warn">${esc(d.error)}</div>` : ''}
+    ${d.error ? `<div class="dm-card dm-warn dm43-gerr"><span>${esc(String(d.error).slice(0, 140))}</span><button type="button" class="dm-gsc-cbtn" data-dom-gconnect>${G_LOGO}Koble til på nytt</button></div>` : ''}
     <div class="dm-gsc-kpis">${kpi.map(([l, v, c, dl]) => `<div class="dm-card dm-gsc-kpi" style="border-top:3px solid ${c}"><span>${l}</span><b class="mono">${esc(v)}</b><small style="color:${dl.c}">${dl.d || '&nbsp;'}</small></div>`).join('')}</div>
     <section class="dm-card"><div class="dm-gsc-ch"><b class="dm-h">Klikk og visninger</b><span class="dm-gsc-lg"><span><i style="background:#3b6fb5"></i>Klikk</span><span><i style="background:#7a5ad6"></i>Visninger</span></span></div>
       ${daily.length > 1 ? `<svg viewBox="0 0 600 150" preserveAspectRatio="none" class="dm-gsc-svg"><path d="${path(im, 600, 150, Math.max(...im, 1) * 1.1)}" fill="none" stroke="#7a5ad6" stroke-width="2" vector-effect="non-scaling-stroke" opacity=".7"/><path d="${path(cl, 600, 150, Math.max(...cl, 1) * 1.1)}" fill="none" stroke="#3b6fb5" stroke-width="2.4" vector-effect="non-scaling-stroke"/></svg><div class="dm-gsc-x mono">${xs.map((t) => `<span>${t}</span>`).join('')}</div>` : '<div class="dm-empty">Ingen dagsdata ennå. Google har 2–3 dagers forsinkelse.</div>'}</section>
@@ -466,6 +517,8 @@ export function bind(view) {
     if (e.target.closest('[data-dom-sumrun]')) return sumLoad(S.sel, true);
     const gp = e.target.closest('[data-dom-gper]');
     if (gp) { GSC.per = +gp.dataset.domGper; paintGsc(); return gscLoad(S.sel); }
+    if (e.target.closest('[data-dom43-gshow]')) { GSC.show = true; return paintGsc(); }
+    if (e.target.closest('[data-dom43-gfetch]')) return gscFetch43(S.sel);
     if (e.target.closest('[data-dom-gconnect]')) { const cu = GSC.data.get(gKey(S.sel))?.connectUrl || '/api/gsc/auth'; location.href = `${cu}${cu.includes('?') ? '&' : '?'}return=${encodeURIComponent('/#/domener')}`; return; }
     const gs = e.target.closest('[data-dom-gsite]');
     if (gs) { await fetch('/api/gsc/site', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain: S.sel, siteUrl: gs.dataset.domGsite }) }).catch(() => {}); [...GSC.data.keys()].filter((k) => k.startsWith(`${S.sel}|`)).forEach((k) => GSC.data.delete(k)); paintGsc(); return gscLoad(S.sel); }

@@ -5,8 +5,9 @@
 // Gamle Jobb/Familie/Helse/Privat-hendelser vises i Personlig, Timeplan/Prøver/Studie i Skole (til serveren har migrert).
 // Data, ark (detaljer, ny/rediger, søk, ✦ Skriv time) og Glimt-panelet ligger fortsatt i kalender.js / kal38.js.
 import { themeBtn } from './kal-theme40.js';
+import { orb43 } from './orb43.js'; // prompt 43: Glimt-orben på «Skriv time» og «Dagen din»
 import { esc, isMobile } from './util.js';
-import { AB_CAL, groupSubs, chipInner, listRow, bindLogos } from './kal42.js'; // prompt 42: Abonnementer
+import { AB_CAL, groupSubs, chipInner, bindLogos, krTxt, badge as abBadge, logo as abLogo } from './kal42.js'; // prompt 42: Abonnementer
 
 let C = null;
 /** kalender.js: { K, evOn, key, add, d0, mm, fromKey, curD, paint, setView, openForm, openGlimt, findEv } */
@@ -228,17 +229,19 @@ export function titles() {
 const VIEWS = [['dag', 'Dag', 'D'], ['3d', '3 dager', '3'], ['uke', 'Uke', 'W'], ['mnd', 'Måned', 'M'], ['ar', 'År', 'Y'], ['liste', 'Liste', 'L']];
 export function toolbar(app) {
   const K = C.K, V = K.view, tt = titles(), today = new Date(), isToday = isTodayVisible();
-  const close = app ? '' : '<button type="button" class="k39-ib k39-close" data-k-closecal aria-label="Lukk kalenderen" title="Lukk (Esc)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
+  // Prompt 43: × står helt til høyre (etter «+ Ny hendelse»), rund 40 px i ink med bg-kryss.
+  const close = app ? '' : '<button type="button" class="k39-ib k39-close k43-close" data-k-closecal aria-label="Lukk kalenderen" title="Lukk kalenderen (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
   return `<div class="k39-tb">
-    ${close}<button type="button" class="k39-ib" data-k39-side aria-label="Vis/skjul sidemeny" title="Vis/skjul sidemeny">${IC.side}</button>
+    <button type="button" class="k39-ib" data-k39-side aria-label="Vis/skjul sidemeny" title="Vis/skjul sidemeny">${IC.side}</button>
     <button type="button" class="k39-title" data-k-titl title="Zoom ut"><span class="k39-tt" data-no-i18n>${esc(tt.t)}</span>${tt.s ? `<span class="k39-ts">${esc(tt.s)}</span>` : ''}</button>
     <span class="k39-sp"></span>
     <span class="k39-navs"><button type="button" class="k39-ib bd" data-k-nav="-1" aria-label="Forrige" title="Forrige (←)">${IC.left}</button><button type="button" class="k39-ib bd" data-k-nav="1" aria-label="Neste" title="Neste (→)">${IC.right}</button></span>
     <div class="k39-tabs" role="tablist">${VIEWS.map(([k, n, h]) => `<button type="button" role="tab" aria-selected="${V === k}" class="${V === k ? 'on' : ''}" data-k-view="${k}" title="${n} (${h})">${n}</button>`).join('')}</div>
     ${app ? '' : themeBtn()}<button type="button" class="k39-ib" data-k-search aria-label="Søk" title="Søk (/)">${IC.search}</button>
     <button type="button" class="k39-today" data-k-today aria-label="I dag" title="I dag (T)">${IC.cal}<span>${today.getDate()}</span>${isToday ? '' : '<i></i>'}</button>
-    <button type="button" class="k39-quick" data-k-qa title="Skriv en hendelse med vanlige ord – Glimt fyller ut"><span class="k39-lg">✦ Skriv time</span><span class="k39-sm">✦</span></button>
-    <button type="button" class="k39-new" data-k-new title="Ny hendelse (N)"><span class="k39-lg">+ Ny hendelse</span><span class="k39-sm">+</span></button>
+    <button type="button" class="k39-quick k43-quick" data-k-qa title="Skriv en hendelse med vanlige ord – Glimt fyller ut">${orb43(20)}<span class="k39-lg">Skriv time</span></button>
+    <button type="button" class="k39-new k43-new" data-k-new title="Ny hendelse (N)"><span class="k39-lg">+ Ny hendelse</span><span class="k39-sm">+</span></button>
+    ${close}
   </div>`;
 }
 function isTodayVisible() {
@@ -335,7 +338,7 @@ export function daySummary() {
   }
   return t;
 }
-export const dayCard = () => `<button type="button" class="k39-dc" data-k39-glimt><span class="k39-dc-h">${spark(16)}<span class="k39-lab acc">GLIMT · DAGEN DIN</span></span><span class="k39-dc-t" data-no-i18n>${esc(daySummary())}</span></button>`;
+export const dayCard = (cls = '') => `<button type="button" class="k39-dc${cls}" data-k39-glimt><span class="k39-dc-h">${orb43(20)}<span class="k39-lab acc">GLIMT · DAGEN DIN</span></span><span class="k39-dc-t" data-no-i18n>${esc(daySummary())}</span></button>`;
 
 export function sidebar(narrow) {
   const K = C.K, cur = C.curD(), m = new Date(cur.getFullYear(), cur.getMonth() + K.miniOff, 1, 12);
@@ -440,21 +443,33 @@ function yearView() {
 
 function listView() {
   const tk = C.key(C.d0(new Date())), A = C.key(C.curD()), s = A < tk ? A : tk, s0 = C.fromKey(s), tomorrow = C.key(C.add(C.d0(new Date()), 1));
-  let html = '';
+  // Prompt 43 (claude-code-kalender-web-liste-bredde.md): lista fyller hele flaten. Fra 1100 px er hver rad et rutenett
+  // Dag · Tid · Hendelse · Sted · Kalender · Beløp (web43.css); fra 1700 px står to uker side om side. Under 1100 px som før.
+  const weeks = [];
+  let cur = '';
   for (let i = 0; i < 42; i++) {
     const d = C.add(s0, i), k = C.key(d), L = C.evOn(d);
-    if (col(d) === 0 && k !== tk) html += `<div class="k39-lw">UKE ${weekNo(d)}</div>`;
+    if (col(d) === 0 && k !== tk) { if (cur) weeks.push(cur); cur = `<div class="k39-lw">UKE ${weekNo(d)}</div>`; }
     if (!L.length && k !== tk) continue;
     const name = k === tk ? 'I dag' : k === tomorrow ? 'I morgen' : cap(WD[d.getDay()]), w = wx(k);
-    html += `<div class="k39-ld"><div class="k39-ldh"><b${k === tk ? ' class="acc"' : ''}>${name}</b><span>${d.getDate()}. ${MONTHS[d.getMonth()]}</span>${w ? `<span class="k39-ldw">${wxIcon(w.kind, 12)}${w.lo}–${w.hi}°</span>` : ''}</div>
-      <div class="k39-ldl">${L.length ? L.map((e) => {
-        if (e.kind === 'ab') return listRow(e, tStyle(e));
-        const c = calById(e.ac), sub = e.r ? `${e.r} · ${c.name}` : c.name;
-        const tag = e.kind === 'innl' ? 'FRIST' : e.ac === 'bursdager' ? 'BURSDAG' : e.ac === 'helligdager' ? 'FRIDAG' : '';
-        return `<button type="button" class="k39-lr" data-k-sel="${esc(e.id)}" style="${tStyle(e)}"><span class="k39-lrt">${timed(e) ? esc(`${e.s}–${e.e}`) : e.kind === 'innl' && e.e ? `Frist ${esc(e.e)}` : 'Hele dagen'}</span><i></i><span class="k39-lrm"><b data-no-i18n>${esc(e.t)}</b><span data-no-i18n>${esc(sub)}</span></span>${tag ? `<span class="k39-tag${tag === 'FRIST' ? ' red' : ''}">${tag}</span>` : ''}</button>`;
-      }).join('') : '<span class="k39-none">Ingen hendelser</span>'}</div></div>`;
+    cur += `<div class="k39-ld"><div class="k39-ldh"><b${k === tk ? ' class="acc"' : ''}>${name}</b><span>${d.getDate()}. ${MONTHS[d.getMonth()]}</span>${w ? `<span class="k39-ldw">${wxIcon(w.kind, 12)}${w.lo}–${w.hi}°</span>` : ''}</div>
+      <div class="k39-ldl">${L.length ? L.map(listRow43).join('') : '<span class="k39-none">Ingen hendelser</span>'}</div></div>`;
   }
-  return { st: s0, end: C.add(s0, 41), html: `<div class="k39-li" data-k-list><div class="k39-lin">${dayCard()}${html}</div></div>` };
+  if (cur) weeks.push(cur);
+  const head = '<div class="k43-lhd" aria-hidden="true"><span>DAG</span><span>TID</span><span>HENDELSE</span><span>STED</span><span>KALENDER</span><span></span></div>';
+  return { st: s0, end: C.add(s0, 41), html: `<div class="k39-li" data-k-list><div class="k39-lin k43-lin">${dayCard(' k43-ldc')}${head}<div class="k43-lws">${weeks.map((x) => `<section class="k43-lwk">${x}</section>`).join('')}</div></div></div>` };
+}
+/** Én rad i Liste: tid, hendelse (fargestrek + tittel, sted/kalender under når det er smalt), sted, kalender, beløp/merke. */
+function listRow43(e) {
+  const c = calById(e.ac), st = tStyle(e);
+  if (e.kind === 'ab') {
+    const a = e.ab ?? {}, b = abBadge(e), amt = a.amount != null ? krTxt(a.amount) : a.varies ? 'varierer' : '';
+    return `<button type="button" class="k39-lr k42-lr k43-lr" data-k-sel="${esc(e.id)}" style="${st}"><span class="k39-lrt k43-lt">${abLogo(e, 22)}</span><span class="k43-lh"><i class="k43-nob"></i><span class="k39-lrm"><b data-no-i18n>${esc(a.name || e.t)}</b><span class="k43-sub">${esc(a.kind === 'trial' ? 'Prøveperioden slutter' : a.account || 'Abonnementer · Finans')}</span></span></span><span class="k43-lp" data-no-i18n>${esc(a.kind === 'trial' ? 'Prøveperioden slutter' : a.account || '')}</span><span class="k43-lc"><i style="background:${esc(c.color || '#3d7f8a')}"></i>${esc(c.name || 'Abonnementer')}</span><span class="k43-la"><span class="k42-amt">${esc(amt)}</span><span class="k39-tag${b === 'PRØVE' ? ' red' : ''}">${b}</span></span></button>`;
+  }
+  const sub = e.r ? `${e.r} · ${c.name}` : c.name;
+  const tag = e.kind === 'innl' ? 'FRIST' : e.ac === 'bursdager' ? 'BURSDAG' : e.ac === 'helligdager' ? 'FRIDAG' : '';
+  const tm = timed(e) ? esc(`${e.s}–${e.e}`) : e.kind === 'innl' && e.e ? `Frist ${esc(e.e)}` : 'Hele dagen';
+  return `<button type="button" class="k39-lr k43-lr" data-k-sel="${esc(e.id)}" style="${st}"><span class="k39-lrt k43-lt">${tm}</span><span class="k43-lh"><i></i><span class="k39-lrm"><b data-no-i18n>${esc(e.t)}</b><span class="k43-sub" data-no-i18n>${esc(sub)}</span></span></span><span class="k43-lp" data-no-i18n${e.r ? ` title="${esc(e.r)}"` : ''}>${esc(e.r || '')}</span><span class="k43-lc"><i style="background:${esc(c.color || 'var(--c)')}"></i><span data-no-i18n>${esc(c.name)}</span></span><span class="k43-la">${tag ? `<span class="k39-tag${tag === 'FRIST' ? ' red' : ''}">${tag}</span>` : ''}</span></button>`;
 }
 
 export function view() {

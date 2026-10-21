@@ -62,8 +62,12 @@ function gscHtml() {
   else if (G.missing) box = '<div class="sg-row"><span class="sg-txt"><b>Ikke tilgjengelig ennå</b><span>Serveren har ikke Search Console-oppsettet. Oppdater Homelab.</span></span></div>';
   else if (!G.connected) box = `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>Klikk, visninger og søkeord fra Google</b><span>${G.configured === false ? 'Google-appen er ikke satt opp på serveren (Integrasjoner → Google).' : 'Kun lesetilgang · webmasters.readonly'}</span></span><button type="button" class="sg-btn2 gsc39-g" data-dom-gscconnect>${GLOGO}Koble til med Google</button></div>`;
   else {
+    // Prompt 43: «Test» per eiendom → GET /api/domains/:domain/gsc/test {siteUrl, permissionLevel, scope, scopeOk, lastFetch, dataTo, rows28, ok, error}.
+    const testOut = (x) => { const T = S.gscTest; if (!T || T.domain !== x.domain || T.busy) return ''; if (T.err) return `<div class="sg-note red">${esc(T.err)}</div>`; const r = T.res ?? {};
+      const kv = [['Eiendom', r.siteUrl ?? r.site], ['Tilgang', r.permissionLevel ?? r.permission], ['Scope', r.scope != null ? `${r.scope}${r.scopeOk === false ? ' · mangler webmasters.readonly' : ''}` : null], ['Sist hentet', r.lastFetch ?? r.fetchedAt ? new Date(r.lastFetch ?? r.fetchedAt).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'aldri'], ['Data til', r.dataTo], ['Rader siste 28 dager', r.rows28 ?? r.rows]].filter(([, v]) => v != null && v !== '');
+      return `<div class="gsc43-test${r.ok === false ? ' bad' : ''}">${r.ok === false && (r.error || r.message) ? `<b>${esc(r.error || r.message)}</b>` : r.ok !== false ? '<b>✓ Tilkoblingen virker</b>' : ''}${kv.map(([k, v]) => `<span><i>${esc(k)}</i><span class="mono">${esc(String(v))}</span></span>`).join('')}</div>`; };
     const rows = (G.sites ?? []).map((x) => `<div class="sg-row">${domIc40('other', x.domain, x.favicon || x.icon || '')}<span class="sg-txt"><b class="mono">${esc(x.domain)}</b><span>${esc([x.permission, (x.siteUrls ?? []).join(' · ')].filter(Boolean).join(' · '))}</span></span>
-      ${x.state === 'i-bruk' ? '<span class="gsc39-on">✓ I bruk</span>' : x.state === 'bruk' ? `<button type="button" class="sg-btn2" data-dom-gscuse="${esc(x.domain)}" data-site="${esc(x.siteUrls?.[0] ?? '')}"${S.gscBusy === x.domain ? ' disabled' : ''}>Bruk</button>` : `<button type="button" class="sg-btn2" data-dom-gscadd="${esc(x.domain)}"${S.gscBusy === x.domain ? ' disabled' : ''}>${S.gscBusy === x.domain ? 'Legger til …' : '+ Legg til'}</button>`}</div>`).join('');
+      ${x.state === 'i-bruk' ? `<span class="gsc39-on">✓ I bruk</span><button type="button" class="sg-btn2" data-dom43-gtest="${esc(x.domain)}"${S.gscTest?.domain === x.domain && S.gscTest.busy ? ' disabled' : ''}>${S.gscTest?.domain === x.domain && S.gscTest.busy ? 'Tester …' : 'Test'}</button>` : x.state === 'bruk' ? `<button type="button" class="sg-btn2" data-dom-gscuse="${esc(x.domain)}" data-site="${esc(x.siteUrls?.[0] ?? '')}"${S.gscBusy === x.domain ? ' disabled' : ''}>Bruk</button>` : `<button type="button" class="sg-btn2" data-dom-gscadd="${esc(x.domain)}"${S.gscBusy === x.domain ? ' disabled' : ''}>${S.gscBusy === x.domain ? 'Legger til …' : '+ Legg til'}</button>`}</div>${testOut(x)}`).join('');
     box = `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>${esc(G.email || 'Google-kontoen')}</b><span>${G.count ?? (G.sites ?? []).length} ${(G.count ?? (G.sites ?? []).length) === 1 ? 'eiendom' : 'eiendommer'} · kun lesetilgang</span></span><button type="button" class="sg-pill danger" data-dom-gscoff>Koble fra</button></div>${rows || '<div class="sg-row"><span class="sg-txt"><span>Ingen eiendommer i kontoen. Trykk ? for hvordan du legger til en.</span></span></div>'}`;
   }
   return `<section class="sg"><div class="sg-t gsc39-t">Google Search Console${q}</div><div class="sg-box">${box}</div>${G?.error ? `<div class="sg-note red">${esc(G.error)}</div>` : ''}</section>${importHtml()}`;
@@ -172,6 +176,13 @@ export async function domainsClick(e) {
   if (e.target.closest('[data-dom-gscguide]')) { e.preventDefault(); S.guide = 'gsc'; rerender(); return true; }
   if (e.target.closest('[data-dom-gscconnect]')) { e.preventDefault(); location.href = `/api/gsc/auth?return=${encodeURIComponent('/#/innstillinger/domener')}`; return true; }
   if (e.target.closest('[data-dom-gscoff]')) { e.preventDefault(); if (!confirm('Koble fra Google Search Console? Tallene fra Google Søk slettes.')) return true; try { await api('/gsc', { method: 'DELETE' }); } catch (er) { S.gscErr = er.message; } await loadGsc(); return true; }
+  const gt = e.target.closest('[data-dom43-gtest]');
+  if (gt) {
+    e.preventDefault(); const domain = gt.dataset.dom43Gtest; S.gscTest = { domain, busy: true }; rerender();
+    try { S.gscTest = { domain, res: await api(`/domains/${encodeURIComponent(domain)}/gsc/test`) }; }
+    catch (er) { S.gscTest = { domain, err: er.status === 404 ? 'Serveren har ikke test for Search Console ennå.' : er.message }; }
+    rerender(); return true;
+  }
   const gu = e.target.closest('[data-dom-gscuse]');
   if (gu) { e.preventDefault(); S.gscBusy = gu.dataset.domGscuse; rerender(); try { await api('/gsc/site', { method: 'POST', json: { domain: gu.dataset.domGscuse, siteUrl: gu.dataset.site } }); changed(); } catch (er) { S.gscErr = er.message; } S.gscBusy = ''; await loadGsc(); return true; }
   const ga = e.target.closest('[data-dom-gscadd],[data-dom-imp]');

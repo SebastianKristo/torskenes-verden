@@ -6,6 +6,8 @@
 import { api, esc } from './util.js';
 
 let list = null, loading = false;
+// Prompt 43: Media-tjenestene har egen gruppe (settings-integ43.js).
+const MEDIA43 = new Set(['sonarr', 'radarr', 'qbittorrent', 'qbit', 'prowlarr', 'jellyfin', 'plex']);
 const msg = {}, test = {};
 const DOMAIN = { ha: 'home-assistant.io', homeassistant: 'home-assistant.io', google: 'calendar.google.com', gcal: 'calendar.google.com', ai: 'gemini.google.com', gemini: 'gemini.google.com', t212: 'trading212.com', trading212: 'trading212.com', bank: 'sparebank1.no', imap: 'proton.me', entur: 'entur.org', mybring: 'bring.no', bring: 'bring.no', postnord: 'postnord.no', parcelsapp: 'parcelsapp.com', cloudflare: 'cloudflare.com', finn: 'finn.no', met: 'yr.no', map: 'maptiler.com', kart: 'maptiler.com', icons: 'iconify.design', ikoner: 'iconify.design', unsplash: 'unsplash.com', pexels: 'pexels.com', photos: 'unsplash.com' };
 
@@ -24,7 +26,7 @@ export const integById = (id) => (Array.isArray(list) ? list.find((x) => String(
 function extra(cfg) {
   if (!Array.isArray(list) || !list.length) return [];
   const keys = new Set((cfg ?? []).flatMap((g) => g.fields.map((f) => f.key))), ids = new Set((cfg ?? []).map((g) => g.id).filter(Boolean));
-  return list.filter((it) => !it.hidden && !ids.has(it.id) && !(it.fields?.length && it.fields.every((f) => keys.has(f.key))));
+  return list.filter((it) => !it.hidden && !ids.has(it.id) && !MEDIA43.has(String(it.id).toLowerCase()) && String(it.group ?? '').toLowerCase() !== 'media' && !(it.fields?.length && it.fields.every((f) => keys.has(f.key))));
 }
 const statusTxt = (it) => {
   const t = test[it.id];

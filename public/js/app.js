@@ -21,6 +21,7 @@ import * as weatherPage from './weather-page.js';
 import * as birthdays from './birthdays.js';
 import * as kalender from './kalender.js';
 import * as chat from './chat.js';
+import * as media43 from './media43.js'; // prompt 43: Media (Sonarr, Radarr, qBittorrent, Prowlarr)
 import { initI18n, setLang, lang } from './i18n.js';
 import { loadUpdBanner } from './upd-banner.js';
 import { loadProfileMenu, renderProfileMenu, profileMenuClick, profileMenuClosed } from './profile-menu.js';
@@ -37,7 +38,7 @@ import { initWeb40 } from './web40.js';
 import { initWeb41, after41 } from './web41.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
-const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 const KAL_APP = !!document.documentElement.dataset.kalApp;
 const scrollMem = scrollMemory();
@@ -70,7 +71,7 @@ function renderRoute() {
   // Prompt 40: Gjøremål er fullskjerm på web (som Chat), uten fotovindu og toppmeny.
   const fsTasks = (route === 'huskeliste' || route === 'gjoremal') && !isMobile();
   document.body.classList.toggle('tk-fs40', fsTasks);
-  view.innerHTML = (is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' && !fsTasks ? pwHeader(route) : '') + ROUTES[route](); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
+  view.innerHTML = (is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' && route !== 'media' && !fsTasks ? pwHeader(route) : '') + ROUTES[route](); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
   placeTicker();
   paintPhoto();
   mountAll(view);
@@ -78,7 +79,7 @@ function renderRoute() {
   if (route === 'dash') { mountDash(view); if (isEditingPending) { isEditingPending = false; requestAnimationFrame(() => startEdit()); } }
   after41(route, view); // prompt 41: 17. mai på Hjem
   // Rom er en underside av «Mer» på mobil.
-  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender'].includes(route) ? 'mer' : route;
+  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   setTitle();
   // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
@@ -86,7 +87,7 @@ function renderRoute() {
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
-const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', gjoremal: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
+const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', gjoremal: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', media: 'Media', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
 function setTitle() { document.title = KAL_APP ? 'Kalender' : TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.

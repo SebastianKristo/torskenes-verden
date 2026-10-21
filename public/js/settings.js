@@ -15,6 +15,7 @@ import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from '
 import { loadFam42, fam42View, fam42Click, fam42Change } from './settings-familie42.js'; // prompt 42: Familie → Helse (Familie)
 import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
 import { loadInteg, integRows, integSub, integClick, integChange, integCount } from './settings-integ.js';
+import { mediaRows43, mediaNote43, isMedia43, cfgStatus43, cfgGuide43, mediaSub43, mediaClick43, mediaSubmit43 } from './settings-integ43.js'; // prompt 43: MEDIA-gruppen
 import { myProfile, profilesLoaded, hasProfiles, loadProfiles } from './onboard37.js'; // prompt 37: profil i husstanden
 import { loadTrackKeys, trackGroup, trackSub, trackClick, trackChange } from './settings-track37.js'; // prompt 37: delte sporingsnøkler
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
@@ -463,7 +464,9 @@ function intView() {
       return row({ t: m.name, s: m.s, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: t?.v ?? (warn ? v.slice(1) : v), vc: t?.vc ?? (warn ? '#f3b54a' : undefined), btn: 'Oppsett', go: g.name === 'Kalender / timeplan' ? 'kal' : 'int|cfg:' + g.name });
     };
     const mv = mailVal(), mailRow = row({ t: 'Proton Mail', s: 'Kvitteringer fra e-post via Bridge', logo: 'proton.me', v: mv.replace(/^!/, ''), vc: mv.startsWith('!') ? '#f3b54a' : undefined, btn: 'Oppsett', go: 'int|mail' });
-    const mineBy = byCat(cfg.filter(isPersonal)), srvBy = byCat(cfg.filter((g) => !isPersonal(g)));
+    // Prompt 43: Media-tjenestene (Sonarr, Radarr, qBittorrent, Prowlarr, Jellyfin, Plex) i egen gruppe «Media».
+    const mediaCfg = cfg.filter((g) => isMedia43(g) && (canEdit(g) || isAdmin())), notMedia = cfg.filter((g) => !isMedia43(g));
+    const mineBy = byCat(notMedia.filter(isPersonal)), srvBy = byCat(notMedia.filter((g) => !isPersonal(g)));
     const extraRows = (scope) => integRows(cfg, row, scope);
     const mineRows = [...[...mineBy.keys()].sort(catSort).flatMap((c) => mineBy.get(c).map(intRow)), mailRow, ...extraRows('personal')];
     const srvRows = isAdmin() ? [...[...srvBy.keys()].sort(catSort).flatMap((c) => srvBy.get(c).map(intRow)), ...extraRows('server')] : [];
@@ -471,12 +474,14 @@ function intView() {
       group('Tilkoblinger', [row({ t: run ? 'Tester …' : 'Test alle tilkoblinger', s: res.length ? `${ok} OK · ${bad} feilet` : 'Sjekker adresse, nøkkel og svar fra hver tjeneste.', btn: run ? 'Tester …' : 'Test alle', act: 'data-test-all', disabled: run })]),
       group('Dine integrasjoner', mineRows, 'Bare du ser og bruker disse verdiene. Hemmeligheter lagres kryptert på serveren og vises aldri igjen.'),
       trackGroup(row, group),
+      ((r) => (r.length ? group('Media', r, mediaNote43(isAdmin())) : null))(mediaRows43(mediaCfg, row, tests, isAdmin())),
       srvRows.length ? group('Server (administrator)', srvRows, 'Gjelder hele serveren. Tomme felt bruker verdien fra serverens miljøvariabler (.env).') : null,
     ].filter(Boolean) };
   }
   if (sub === 'mail') return { title: 'Proton Mail', sub: 'Integrasjoner · Kvitteringer fra e-post via Bridge', html: '<div data-mail-host></div>', mount: mountMail };
   if (sub.startsWith('trk37:')) { const v = trackSub(sub.slice(6), note); if (v) return v; sub = null; return intView(); }
   if (sub.startsWith('i24:')) { const v = integSub(sub.slice(4), note); if (v) return v; sub = null; return intView(); }
+  if (sub.startsWith('m43:')) { const v = mediaSub43(sub.slice(4), isAdmin()); if (v) return v; sub = null; return intView(); }
   const gname = sub.slice(4), g = cfg.find((x) => x.name === gname);
   if (!g) { sub = null; return intView(); }
   const m = metaOf(g), t = tests[g.name], msg = cfgMsg[g.name], ro = !canEdit(g);
@@ -484,13 +489,14 @@ function intView() {
     ? `<label class="sg-field area"><span>${esc(f.label)}</span><textarea name="${f.key}" rows="5" spellcheck="false"${ro ? ' readonly' : ''}>${esc(f.value)}</textarea></label>`
     : `<label class="sg-field"><span>${esc(f.label)}</span><input name="${f.key}" type="${f.type}" value="${esc(f.value)}" placeholder="${f.secret ? (f.set ? '•••••••• lagret' : 'ikke satt') : esc(f.placeholder ?? '')}" autocomplete="off" spellcheck="false"${ro ? ' readonly' : ''}>${f.secret && f.set && !ro ? `<button type="button" class="sg-link red" data-clear-secret="${f.key}">Fjern</button>` : ''}</label>`).join('');
   const res = t && t.st !== 'run' ? `<div class="sg-res"><i style="background:${t.st === 'ok' ? '#34c759' : '#f26b5e'}"></i><div><b>${t.st === 'ok' ? 'Tilkoblet' : 'Tilkoblingen feilet'}</b><span>${esc(t.msg)}</span></div><span class="mono">${when(t.at)}${t.ms ? ` · ${t.ms} ms` : ''}</span></div>` : '';
-  const head = `<div class="int-head">${logoImg(m.domain, m.name, 'sg-lg big')}<div><b>${esc(m.name)}</b><span>${esc(m.s)}</span></div></div>`;
+  const med = isMedia43(g), mst = med ? cfgStatus43(g, t) : null;
+  const head = `<div class="int-head">${logoImg(m.domain, m.name, 'sg-lg big')}<div><b>${esc(m.name)}</b><span>${esc(m.s)}</span></div>${mst ? `<span class="sg-v m43i-st" style="color:${mst[1]}">${esc(mst[0])}</span>` : ''}</div>`;
   // Prompt 22: Huskeliste ↔ HA To-do under Home Assistant (bare admin, samme innstillinger som på Huskeliste-siden).
   const haTodo = g.name === 'Home Assistant' && !ro ? '<section class="sg"><h3 class="sg-h">Gjøremål</h3><div data-mount-host></div></section>' : '';
   return { mount: haTodo ? mountHaTodo : undefined, title: m.name, sub: `Integrasjoner · ${m.s}`, html: `${head}<form class="sg" data-group="${esc(g.name)}"><h3 class="sg-t">Oppsett</h3><div class="sg-box">${fields}</div>
       ${NOTES[g.name] ? note(NOTES[g.name]) : typeof g.help === 'string' && g.help.trim() && !/```|\n\n/.test(g.help) ? note(esc(g.help)) : ''}</form>
-      ${ro ? note('Settes opp av administrator.') : `<div class="sg-acts"><button class="sg-btn pri" data-test="${esc(g.name)}"${t?.st === 'run' ? ' disabled' : ''}>${t?.st === 'run' ? 'Tester …' : 'Test tilkobling'}</button>
-        <span class="${msg ? (msg.ok ? 'green' : 'red') : 'muted'}" style="font-size:13px">${esc(msg?.text ?? 'Endringer lagres automatisk')}</span></div>`}${res}${haTodo}${guideHtml(g)}` };
+      ${ro ? note('Settes opp av administrator.') : `<div class="sg-acts">${med ? `<button type="button" class="sg-btn" data-m43-cfgsave="${esc(g.name)}">Lagre</button>` : ''}<button class="sg-btn pri" data-test="${esc(g.name)}"${t?.st === 'run' ? ' disabled' : ''}>${t?.st === 'run' ? 'Tester …' : 'Test tilkobling'}</button>
+        <span class="${msg ? (msg.ok ? 'green' : 'red') : 'muted'}" style="font-size:13px">${esc(msg?.text ?? 'Endringer lagres automatisk')}</span></div>`}${res}${haTodo}${med ? cfgGuide43(g) : guideHtml(g)}` };
 }
 
 /** Veiledning: serverens help (liste med [tittel, tekst, kode] eller tekst med ```kode```), ellers den innebygde. */
@@ -876,7 +882,10 @@ export function bindSettings() {
     if (await aiClick(e, render)) return;
     if (kalClick(e, render)) return;
     if (await integClick(e, render)) return;
+    if (await mediaClick43(e, render)) return;
     if (await trackClick(e, render)) return;
+    const cs43 = e.target.closest('[data-m43-cfgsave]');
+    if (cs43) { e.preventDefault(); const n = cs43.dataset.m43Cfgsave; document.activeElement?.blur?.(); await new Promise((r) => setTimeout(r, 30)); await saving; if (!cfgMsg[n] || cfgMsg[n].ok) cfgMsg[n] = { text: 'Lagret ✓', ok: true }; render(); return; }
     const tb = e.target.closest('[data-test]');
     if (tb) { e.preventDefault(); return runTest(tb.dataset.test); }
     if (e.target.closest('[data-test-all]')) { if (cfg) await Promise.all(cfg.filter(canEdit).map((x) => runTest(x.name))); return; }
@@ -981,6 +990,7 @@ export function bindSettings() {
   });
 
   m.addEventListener('submit', async (e) => {
+    if (mediaSubmit43(e, render)) return;
     if (await glimtSubmit(e, render)) return;
     if (await systemSubmit(e)) return;
     if (await backupSubmit(e)) return;

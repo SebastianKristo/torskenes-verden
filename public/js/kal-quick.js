@@ -178,6 +178,7 @@ function layer() {
 
 export function paint() {
   const el = layer(), n = busyN();
+  document.documentElement.classList.toggle('kq43-busy', n > 0); // prompt 43: orben på «Skriv time» roterer raskere mens Glimt tolker
   // Prompt 31: pillen «✦ Legger til …» er erstattet av Glimt-toasten (ai-jobs.js). Flere samtidige: teksten sier hvor mange.
   for (const j of Q.mine.values()) if (j.ai) aiUpdate(j.ai, { toast: n > 1 ? `Legger til ${n} timer …` : 'Legger til i kalenderen …' });
   const pill = '';

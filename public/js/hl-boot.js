@@ -19,7 +19,7 @@
     }
   } catch (e) { /* eldre nettleser */ }
   // Prompt 40: Kalender på web lys/mørk/auto (kal-theme40.js) – leses før første render så det ikke blinker.
-  try { var kt = localStorage.getItem('kal_theme'); if ((kt === 'lys' || kt === 'mork') && !document.documentElement.hasAttribute('data-kal-app')) document.documentElement.setAttribute('data-kal-theme', kt); } catch (e) { /* privat modus */ }
+  try { var kt = localStorage.getItem('kal_theme'); if (kt !== 'lys' && kt !== 'mork') kt = localStorage.getItem('kal_hl_mode'); /* prompt 43: «følger» = Homelab-temaet */ if ((kt === 'lys' || kt === 'mork') && !document.documentElement.hasAttribute('data-kal-app')) document.documentElement.setAttribute('data-kal-theme', kt); } catch (e) { /* privat modus */ }
   document.documentElement.setAttribute('data-hl', t);
   document.documentElement.setAttribute('data-hl-theme', t);
   if (t === '2c') {

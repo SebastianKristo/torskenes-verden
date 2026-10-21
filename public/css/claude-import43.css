@@ -1,0 +1,67 @@
+/* Prompt 43: Importer fra Claude (claude-import43.js). Bruker AI-kontrollens fargevariabler (--bg, --card, --line, --ink, --mut, --acc),
+   med Papir-fargene som reserve. Fasit: design/Claude Import.dc.html. */
+.ci43{--k:var(--ink,#1b1a17);--b:var(--bg,#f3efe6);--cd:var(--card,#fffdf8);--ln:var(--line,#d8d1c2);--lb:var(--acc,#b23a2a);--mt:var(--mut,#6b665c);--sf:color-mix(in srgb,var(--ln) 60%,transparent);
+  display:flex;flex-direction:column;gap:16px;width:100%;color:var(--k);font-family:Manrope,system-ui,sans-serif;box-sizing:border-box}
+.ci43 *{box-sizing:border-box}
+.ci43 button{font-family:inherit}
+.ci43-card{padding:16px;border-radius:20px;background:var(--cd);border:1px solid var(--ln)}
+.ci43-hd{display:flex;align-items:center;gap:14px}
+.ci43-logo{flex:none;width:44px;height:44px;border-radius:12px;background:#fff;border:1px solid var(--sf);display:grid;place-items:center}
+.ci43-col{display:flex;flex-direction:column;min-width:0}
+.ci43-row{display:flex;align-items:center;gap:8px;min-width:0}
+.ci43-wrap{flex-wrap:wrap}
+.ci43-sb{justify-content:space-between}
+.ci43-grow{flex:1;min-width:0}
+.ci43-g6{gap:6px}.ci43-g8{gap:8px}.ci43-g10{gap:10px}.ci43-g12{gap:12px}
+.ci43-h{font:500 22px/1.15 Newsreader,Georgia,serif}
+.ci43-mut{font-size:13.5px;line-height:1.5;color:var(--mt)}
+.ci43-sm{font-size:12.5px}
+.ci43-pad{padding:14px}
+.ci43-mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px}
+.ci43-ell{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ci43-lab{font:600 10.5px/1.2 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--mt)}
+.ci43-lab.acc{color:var(--lb);letter-spacing:.14em}
+.ci43-how{display:flex;flex-direction:column;gap:12px}
+.ci43-step{display:flex;gap:12px}
+.ci43-step b{font-size:14.5px}
+.ci43-n{flex:none;width:24px;height:24px;border-radius:12px;background:var(--k);color:var(--b);font:700 12px Manrope,sans-serif;display:grid;place-items:center}
+.ci43-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;padding:20px;border-radius:20px;border:2px dashed var(--ln);background:var(--cd);text-align:center;cursor:pointer}
+.ci43-drop b{font-size:16px}
+.ci43-drop.drag,.ci43-drop:hover{border-color:var(--k);background:color-mix(in srgb,var(--k) 6%,var(--cd))}
+.ci43-drop:focus-within{outline:2px solid color-mix(in srgb,var(--lb) 60%,transparent);outline-offset:2px}
+.ci43-err{font-size:14px;font-weight:700;color:#b23a2a}
+.ci43-ta,.ci43-in{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--ln);background:var(--cd);color:var(--k);font:500 14px/1.5 Manrope,sans-serif;outline:none;resize:vertical}
+.ci43-in{height:44px;padding:0 14px}
+.ci43-ta:focus,.ci43-in:focus{border-color:var(--k)}
+.ci43-btn{height:44px;padding:0 18px;border-radius:22px;border:1px solid transparent;background:transparent;color:var(--k);font:700 14px Manrope,sans-serif;cursor:pointer;white-space:nowrap}
+.ci43-btn.line{border-color:var(--ln)}
+.ci43-btn.ink{background:var(--k);color:var(--b);font-weight:800}
+.ci43-btn.ghost{color:var(--lb)}
+.ci43-btn.red{color:#b23a2a}
+.ci43-btn.sm{height:36px;padding:0 12px;font-size:13px;background:var(--cd);border-color:var(--ln)}
+.ci43-btn:disabled{opacity:.55;cursor:default}
+.ci43-btn.grow1{flex:1;height:48px;border-radius:24px}
+.ci43-btn.grow2{flex:2;height:48px;border-radius:24px;font-size:15px}
+.ci43-sr{display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--mt)}
+.ci43-steps{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--mt)}
+.ci43-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.ci43-stat{display:flex;flex-direction:column;gap:2px;padding:14px;border-radius:16px}
+.ci43-stat b{font:500 28px/1 Newsreader,Georgia,serif}
+.ci43-list{display:flex;flex-direction:column;border-radius:16px;background:var(--cd);border:1px solid var(--ln);overflow:hidden auto;max-height:340px;scrollbar-width:thin}
+.ci43-li{display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 14px;border:0;border-top:1px solid var(--sf);background:transparent;color:var(--k);cursor:pointer;text-align:left;font-size:14px;line-height:1.45}
+.ci43-li:first-child{border-top:0}
+.ci43-li.top{align-items:flex-start;padding:12px 14px}
+.ci43-li:hover{background:color-mix(in srgb,var(--k) 4%,transparent)}
+.ci43-opt{min-height:56px;padding:6px 16px}
+.ci43-opt b{font-size:15px}
+.ci43-ck{flex:none;width:22px;height:22px;border-radius:6px;border:1.5px solid var(--k);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--b)}
+.ci43-ck.on{background:var(--k)}
+.ci43-dup{flex:none;font-size:12px;font-weight:700;color:var(--mt)}
+.ci43-sw{flex:none;width:46px;height:28px;border-radius:14px;background:var(--ln);display:flex;align-items:center;padding:3px;justify-content:flex-start}
+.ci43-sw.on{background:#2f6b4a;justify-content:flex-end}
+.ci43-sw i{width:22px;height:22px;border-radius:11px;background:#fff}
+.ci43-bar{height:8px;border-radius:4px;background:var(--sf);overflow:hidden}
+.ci43-bar i{display:block;height:100%;background:var(--k);transition:width .2s}
+.ci43-done{padding:18px;background:color-mix(in srgb,#2f6b4a 10%,var(--cd));border-color:color-mix(in srgb,#2f6b4a 35%,transparent)}
+.ci43.mob .ci43-h{font-size:20px}
+.ci43.mob .ci43-btn.grow1,.ci43.mob .ci43-btn.grow2{height:50px}

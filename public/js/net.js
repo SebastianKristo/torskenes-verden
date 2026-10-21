@@ -1,7 +1,7 @@
 import { esc, isMobile } from './util.js';
 import { store, widget, card, refresh, errBox, on } from './store.js';
 import { tiles } from './dash.js';
-import { tabAllowed, tabLabel } from './profile.js';
+import { tabAllowed, tabLabel, hiddenTabs } from './profile.js';
 
 widget('n_lab', { render() {
   const h = store.data.health;
@@ -32,7 +32,7 @@ export function renderMore() {
   return `<div class="page-title">Snar<b>veier</b></div>
     <div class="grid" data-dnd="m_more">${card('m_links')}${card('n_lab')}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      ${['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'bursdager', 'kalender', 'domener'].filter((k) => tabAllowed(k)).map((k) => `<a class="btn-lg" href="#/${k}" style="justify-content:center;padding:14px">${esc(tabLabel(k))} ↗</a>`).join('')}
+      ${['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'media', 'huskeliste', 'bursdager', 'kalender', 'domener'].filter((k) => tabAllowed(k) && (k !== 'media' || !hiddenTabs().has('media'))).map((k) => `<a class="btn-lg" href="#/${k}" style="justify-content:center;padding:14px">${esc(tabLabel(k))} ↗</a>`).join('')}
       <a class="btn-lg" href="/cv" target="_blank" style="justify-content:center;padding:14px">CV ↗</a>
       <button class="btn-lg" data-act="settings" style="justify-content:center;padding:14px">Innstillinger</button>
     </div>`;

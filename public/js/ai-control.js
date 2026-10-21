@@ -35,7 +35,7 @@ const CLOUD0 = [['gemini-2.5-flash', 'gemini', 'Gemini · rask, leser bilder'], 
 const TASKS0 = [['chat', 'Chat', 'Standardmodell i nye samtaler', 0, 1], ['sok', 'AI-søk', 'Søkefeltet og spørsmål i hele appen', 0, 1], ['glimt', 'Glimt · kalender', 'Forstå hendelser og svare om kalenderen', 0, 1],
   ['brief', 'Glimt · brief', 'Morgen-, dags- og kveldsbrief', 0, 1], ['rc', 'Kvitteringer (bilde)', 'Leser butikk, beløp og varelinjer', 1, 0], ['kat', 'Kategorisering', 'Foreslår kategori for transaksjoner', 1, 0],
   ['fsok', 'Finans · spør', '«Har jeg et musikkabonnement?»', 1, 0], ['bar', 'Strekkoder og pakkelapper', 'Bildefelt fra kamera', 1, 0], ['dom', 'Domener · oppsummering', 'Daglig sammendrag', 0, 0], ['kb', 'Kunnskapsbase', 'Embeddings for dokumenter', 0, 0]];
-const IC = { ov: 'M3 12h4l3-8 4 16 3-8h4', mod: 'M5 5h14v14H5zM9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3', job: 'M4 6h16M4 12h10M4 18h7M18 15v6M15 18h6',
+const IC = { imp: 'M12 3v12M7 10l5 5 5-5M4 21h16', ov: 'M3 12h4l3-8 4 16 3-8h4', mod: 'M5 5h14v14H5zM9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3', job: 'M4 6h16M4 12h10M4 18h7M18 15v6M15 18h6',
   use: 'M4 20V10M10 20V4M16 20v-7M22 20H2', api: 'M15 7a4 4 0 1 1-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 1 15 7z', rt: 'M6 3v12M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9c0 6-12 3-12 9' };
 const KEEP = [['5m', '5 min'], ['30m', '30 min'], [-1, 'Alltid'], [0, 'Aldri']], CTX = [[8192, '8k'], [32768, '32k'], [131072, '128k']], TEMP = [[0.2, '0,2'], [0.7, '0,7'], [1, '1,0']], PAR = [[1, '1'], [2, '2'], [3, '3'], [4, '4']];
 const CONF = [[70, '70 %'], [80, '80 %'], [85, '85 %'], [90, '90 %'], [95, '95 %']];
@@ -429,7 +429,18 @@ async function jobAct(id, act) {
 
 /* ---------------- Visning ---------------- */
 
-function tabsFor(o) { return o.scope === 'finans' ? [['rt', 'AI-valg'], ['api', 'Tilkoblinger'], ['job', 'Jobber'], ['use', 'Forbruk']] : [['ov', 'Oversikt'], ['mod', 'Modeller'], ['rt', 'Valg'], ['job', 'Jobber'], ['use', 'Forbruk'], ['api', 'API og nøkler']]; }
+function tabsFor(o) { return o.scope === 'finans' ? [['rt', 'AI-valg'], ['api', 'Tilkoblinger'], ['job', 'Jobber'], ['use', 'Forbruk']] : [['ov', 'Oversikt'], ['mod', 'Modeller'], ['rt', 'Valg'], ['job', 'Jobber'], ['use', 'Forbruk'], ['api', 'API og nøkler'], ['imp', 'Importer']]; }
+// Prompt 43: «Importer» (minne og samtaler fra Claude) er en egen modul som lastes ved behov og beholder elementet sitt
+// mellom tegningene (fil, valg og fremdrift skal ikke nullstilles når jobblista oppdateres).
+let CI43 = null;
+const impTab = () => '<div class="ac-imp43" data-ac-imp43></div>';
+function mountImp43(p) {
+  const host = p.el.querySelector('[data-ac-imp43]');
+  if (!host) return;
+  const o = { variant: p.o.variant === 'mobile' ? 'mobile' : 'web', onOpenChat: p.o.onOpenChat ?? (() => { p.o.onClose?.(); location.hash = '#/chat'; }) };
+  if (CI43) { CI43.mountClaudeImport(host, o); return; }
+  import('/assets/js/claude-import43.js').then((m) => { CI43 = m; if (host.isConnected) m.mountClaudeImport(host, o); }).catch((e) => { host.textContent = `Fikk ikke lastet importen: ${e.message}`; });
+}
 const lab = (t) => `<span class="ac-lab">${t}</span>`;
 const card = (inner, cls = '') => `<div class="ac-card${cls ? ` ${cls}` : ''}">${inner}</div>`;
 const btn = (label, attrs, cls = 'line') => `<button type="button" class="ac-b ${cls}" ${attrs}>${label}</button>`;
@@ -815,7 +826,7 @@ function html(p) {
   if (p.tab === 'job' && G.jobs) markJobsSeen();
   const failN = p.tab === 'job' ? 0 : unseenFails(J); // prompt 40: bare nye feil siden du så fanen
   const status = `${fin ? 'Kvitteringer, kategorier og spørsmål' : `${I.length} lokale modeller · ${cloud().filter((c) => c.on).length} i skyen`} · ${runN ? `${runN} jobb${runN > 1 ? 'er' : ''} kjører` : 'ingen jobber kjører'}`;
-  const body = { ov: ovTab, mod: modTab, rt: rtTab, job: jobTab, use: useTab, api: apiTab }[p.tab](o);
+  const body = { ov: ovTab, mod: modTab, rt: rtTab, job: jobTab, use: useTab, api: apiTab, imp: impTab }[p.tab](o);
   p.status = status; // prompt 39: innebygd på web vises statuslinjen i Innstillinger-toppen (o.onStatus)
   const style = Object.entries(T).map(([k, v]) => `--${k}:${v}`).join(';');
   return `<div class="ac ${web ? 'web' : 'mob'} th-${esc(o.theme ?? 'papir')}${o.embedded ? ' emb' : ''}" style="${style}" data-ac-root>
@@ -833,7 +844,9 @@ function paint(p) {
   p.last = out;
   const ae = document.activeElement, inside = p.el.contains(ae), sel = inside && ae.matches?.('input') ? [ae.dataset.acKey ?? '', ae.dataset.f ?? '', ae.hasAttribute('data-ac-q'), ae.selectionStart, ae.value] : null;
   const sc = p.el.querySelector('[data-ac-main]')?.scrollTop ?? 0;
+  const ciEl = CI43?.claudeImportRoot()?.contains(ae) ? ae : null, ciPos = ciEl?.selectionStart ?? null;
   p.el.innerHTML = out;
+  if (p.tab === 'imp') { mountImp43(p); if (ciEl?.isConnected) { ciEl.focus({ preventScroll: true }); try { if (ciPos != null) ciEl.setSelectionRange(ciPos, ciPos); } catch { /* */ } } }
   const m = p.el.querySelector('[data-ac-main]'); if (m) m.scrollTop = sc;
   // Mobil: valgt fanepille synlig i raden (uten å rulle siden).
   const nav = p.el.querySelector('.ac-nav'), on = nav?.querySelector('.on');
