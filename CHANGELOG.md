@@ -2,6 +2,10 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.38.1] – 21.10.2026 · scroll på Hjem
+- **Rettet:** Hjem i iPhone-appen kunne ikke scrolles etter 4.38.0. Kortene er nå helt vanlige utenfor redigering, som i Subscription OS. Dra-og-slipp og vugging er bare på i redigeringsmodus. Det samme gjelder Finans, Mat og Sporing.
+- **Rettet:** Kalender for Mac bygger igjen på Xcode 16.
+
 ## [4.38.0] – 21.10.2026 · prompt 43 + AI-køen – Media, Open WebUI og nettsøk
 - **Media (nytt):** Sonarr, Radarr, qBittorrent og Prowlarr i én side på web og i appene, med Kommer snart, bibliotek og legg til serie/film (kvalitet, overvåking, type). I tillegg:
   - interaktivt søk med grønt/rødt for seedere
