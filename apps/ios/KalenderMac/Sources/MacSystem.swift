@@ -134,7 +134,8 @@ enum MacNotify {
     static let snoozeAction: String = "KAL_SNOOZE"
     static let routeAction: String = "KAL_ROUTE"
 
-    @MainActor private static var lastSignature: String = ""
+    // Prompt 43: første kall rydder alltid (også når lista er tom, f.eks. Varsler av).
+    @MainActor private static var lastSignature: String = "-"
     @MainActor private static var asked: Bool = false
 
     static func setup() {
@@ -287,14 +288,15 @@ final class MacNotifyDelegate: NSObject, UNUserNotificationCenterDelegate {
         let day: String = (info["day"] as? String) ?? ""
         let glimt: Bool = (info["glimt"] as? Bool) ?? false
         Task { @MainActor in
-            MacApp.showMain()
-            guard let w = MacWin.key else { return }
-            if glimt {
-                w.openGlimt(nil)
-                return
+            // Prompt 43: når vinduet er klart (også et nytt vindu), ikke MacWin.key rett etter åpning.
+            MacApp.showMain { (w: MacWin) in
+                if glimt {
+                    w.openGlimt(nil)
+                    return
+                }
+                if KalD.valid(day) { w.go(view: "dag", day: day) }
+                if let e = MacStore.shared.event(id) { w.openDetail(e) }
             }
-            if KalD.valid(day) { w.go(view: "dag", day: day) }
-            if let e = MacStore.shared.event(id) { w.openDetail(e) }
         }
         completionHandler()
     }

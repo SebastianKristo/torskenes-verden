@@ -1,5 +1,6 @@
 import SwiftUI
 import WidgetKit
+import os
 
 /* ---------------- Prompt 33: Kalender-widgets (WidgetKit) ---------------- */
 // Fasit: Kalender App.dc.html mode="home"|"lock" (platform ios) og Kalender App Oversikt.dc.html → «WIDGETS OG LÅSESKJERM».
@@ -57,12 +58,32 @@ enum KalWData {
         return snap
     }
 
+    /// Prompt 43: widgeten hang / viste bare plassholder. Tidslinjen ventet på nettet (kalendere, hendelser, vær – opptil
+    /// 15–25 s per kall og per adresse) hver gang bufferen var eldre enn 10 min, og WidgetKit gir opp lenge før det.
+    /// Nå: appen skriver bufferen og ber om ny tidslinje ved endring, så widgeten bruker bufferen (opptil 6 t gammel).
+    /// Bare når den mangler eller er eldre, hentes det selv – med tidsgrense 5 s, ellers forrige data.
+    static let maxAge43: Double = 6 * 3600
+
     static func load(force: Bool) async -> KalSnapshot {
         let cached: KalSnapshot? = KalNet.loadSnapshot()
         let age: Double = Date().timeIntervalSince1970 - (cached?.updated ?? 0)
-        if let c = cached, age < 600, !force { return c }
-        if let fresh = await KalNet.refreshSnapshot() { return fresh }
+        if let c = cached, age < maxAge43, !force { return c }
+        if let fresh = await fresh43(seconds: 5) { return fresh }
         return cached ?? KalSnapshot()
+    }
+
+    /// Henter selv, men gir opp etter `seconds` (nettkallene avbrytes).
+    static func fresh43(seconds: Double) async -> KalSnapshot? {
+        await withTaskGroup(of: KalSnapshot?.self) { g in
+            g.addTask { await KalNet.refreshSnapshot() }
+            g.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return nil
+            }
+            let first: KalSnapshot? = await g.next() ?? nil
+            g.cancelAll()
+            return first
+        }
     }
 
     static func upcoming(_ s: KalSnapshot, now: Date) -> [KalEvent] {
@@ -164,19 +185,51 @@ struct KalWProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<KalWEntry>) -> Void) {
+        // Prompt 43: completion kalles alltid – også om noe henger (reserve etter 8 s med bufferen).
+        let once: KalWOnce43 = KalWOnce43(completion)
+        Logger(subsystem: "no.kristo.kalender.widgets", category: "timeline").debug("getTimeline")
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 8) {
+            once.call(KalWProvider.timeline(KalNet.loadSnapshot() ?? KalSnapshot(), linked: KalGroup.token != nil))
+        }
         Task {
             // Prompt 35: «Uken starter» kan være endret i appen siden sist.
             KalWeek35.reload()
             let linked: Bool = KalGroup.token != nil
             let snap: KalSnapshot = linked ? await KalWData.load(force: false) : KalSnapshot()
-            let now: Date = Date()
-            var entries: [KalWEntry] = [KalWEntry(date: now, snap: snap, linked: linked)]
-            for d in KalWData.refreshDates(snap, now: now) {
-                entries.append(KalWEntry(date: d, snap: snap, linked: linked))
-            }
-            let next: Date = now.addingTimeInterval(15 * 60)
-            completion(Timeline(entries: entries, policy: .after(next)))
+            once.call(KalWProvider.timeline(snap, linked: linked))
         }
+    }
+
+    static func timeline(_ snap: KalSnapshot, linked: Bool) -> Timeline<KalWEntry> {
+        let now: Date = Date()
+        var entries: [KalWEntry] = [KalWEntry(date: now, snap: snap, linked: linked)]
+        for d in KalWData.refreshDates(snap, now: now) {
+            entries.append(KalWEntry(date: d, snap: snap, linked: linked))
+        }
+        let next: Date = now.addingTimeInterval(15 * 60)
+        return Timeline(entries: entries, policy: .after(next))
+    }
+}
+
+/// Prompt 43: kaller completion nøyaktig én gang (WidgetKit krever svar; to svar er en feil).
+final class KalWOnce43: @unchecked Sendable {
+    private let lock: NSLock = NSLock()
+    private var done: Bool = false
+    private let completion: (Timeline<KalWEntry>) -> Void
+
+    init(_ completion: @escaping (Timeline<KalWEntry>) -> Void) {
+        self.completion = completion
+    }
+
+    func call(_ t: Timeline<KalWEntry>) {
+        lock.lock()
+        if done {
+            lock.unlock()
+            return
+        }
+        done = true
+        lock.unlock()
+        completion(t)
     }
 }
 

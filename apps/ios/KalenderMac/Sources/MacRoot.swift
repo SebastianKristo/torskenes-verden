@@ -29,6 +29,12 @@ struct MacMainWindow: View {
                 MacApp.opener = openWindow
                 if win.web38 !== web { win.web38 = web }
                 if !MacWin.all.contains(where: { (x: MacWin) -> Bool in x === win }) { MacWin.all.append(win) }
+                // Prompt 43: menylinja/varselet ba om noe (åpne en hendelse, Glimt) før vinduet fantes.
+                if let p = MacApp.pending43 {
+                    MacApp.pending43 = nil
+                    let w: MacWin = win
+                    DispatchQueue.main.async { p(w) }
+                }
             }
             .onDisappear { win.forget() }
     }
@@ -81,6 +87,7 @@ struct MacRoot: View {
     private var main: some View {
         VStack(spacing: 0) {
             if store.useWeb38 && web.phase == .failed { MacWeb38Banner(model: web) }
+            MacOffline43()
             MacToolbar(win: win)
             MacNextBanner(win: win)
             Rectangle().fill(t.line).frame(height: 1)
@@ -292,25 +299,67 @@ struct MacToolbar: View {
         .accessibilityLabel("I dag")
     }
 
+    /// Prompt 43: Glimt-orben (samme som «GLIMT · DAGEN DIN», 20 pt, 8 pt luft) i stedet for «✦». Lys pille som før.
+    /// Orben roterer sakte, raskere mens skrivefeltet er åpent (Glimt tolker).
     private var quickButton: some View {
         Button(action: { win.quickOpen = true }) {
-            Text("✦ Skriv time").font(MacFont.ui(13, .bold)).foregroundColor(t.ink)
-                .padding(.horizontal, 13).frame(height: 32)
-                .background(Capsule().fill(t.card))
-                .overlay(Capsule().strokeBorder(t.line, lineWidth: 1))
+            HStack(spacing: 8) {
+                MacSpark(size: 20, fast: win.quickOpen)
+                Text("Skriv time").font(MacFont.ui(13, .bold)).foregroundColor(t.ink)
+            }
+            .padding(.leading, 8).padding(.trailing, 14).frame(height: 40)
+            .background(Capsule().fill(t.card))
+            .overlay(Capsule().strokeBorder(t.line, lineWidth: 1))
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .help("Skriv en hendelse med vanlige ord – Glimt fyller ut")
     }
 
     private var newButton: some View {
-        Button(action: { win.openNew() }) {
-            Text("+ Ny hendelse").font(MacFont.ui(13, .bold)).foregroundColor(t.bg)
-                .padding(.horizontal, 14).frame(height: 32)
-                .background(Capsule().fill(t.ink))
+        MacNewButton43 { win.openNew() }
+            .help("Ny hendelse (⌘N)")
+    }
+}
+
+/// Prompt 43: «+ Ny hendelse» i rødt (lab #b23a2a, mørkt tema #cf5540), hvit tekst, ingen kant, 40 pt høy, 16 pt sidepolstring.
+/// Hover: 8 % mørkere.
+struct MacNewButton43: View {
+    @Environment(\.mk) private var t
+    let action: () -> Void
+    @State private var hover: Bool = false
+
+    var body: some View {
+        let base: Color = t.dark ? Color(kalHex: "#cf5540") : Color(kalHex: "#b23a2a")
+        Button(action: action) {
+            Text("+ Ny hendelse").font(MacFont.ui(13, .bold)).foregroundColor(Color.white)
+                .padding(.horizontal, 16).frame(height: 40)
+                .background(Capsule().fill(base))
+                .overlay(Capsule().fill(Color.black.opacity(hover ? 0.08 : 0)))
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .help("Ny hendelse (⌘N)")
+        .onHover { (h: Bool) in hover = h }
+    }
+}
+
+/// Prompt 43: uten kontakt med serveren – lagret kalender vises, ingen frysing.
+struct MacOffline43: View {
+    @Environment(\.mk) private var t
+    @ObservedObject var store: MacStore = MacStore.shared
+
+    var body: some View {
+        if store.offline43 {
+            HStack(spacing: 8) {
+                Image(systemName: "wifi.slash").font(.system(size: 12, weight: .semibold)).foregroundColor(t.mut)
+                Text("Ikke tilkoblet " + store.host43 + " · viser lagret kalender").font(MacFont.ui(12.5, .semibold)).foregroundColor(t.ink2)
+                Spacer()
+                Button("Prøv igjen") { Task { await store.load(force: true) } }
+                    .buttonStyle(.plain).font(MacFont.ui(12, .bold)).foregroundColor(t.acc)
+            }
+            .padding(.horizontal, 16).frame(height: 30)
+            .background(t.chip)
+        }
     }
 }
 

@@ -78,16 +78,33 @@ enum KalAuth41 {
     /// Ny forespørsel: lagres i Nøkkelringen før Homelab åpnes.
     static func begin(base: String) -> KalPending41 {
         let p: KalPending41 = KalPending41(state: random(18), verifier: random(32), at: Date().timeIntervalSince1970, base: base)
-        if let d = try? JSONEncoder().encode(p) { KalKeychain41.write("pending", d) }
+        if let d = try? JSONEncoder().encode(p) {
+            #if os(macOS)
+            // Prompt 43: på Mac i appens egne (sandkasse-)innstillinger – Nøkkelringen på hovedtråden kan vente på en dialog.
+            UserDefaults.standard.set(d, forKey: "kal43.pending")
+            #else
+            KalKeychain41.write("pending", d)
+            #endif
+        }
         return p
     }
 
     static func pending() -> KalPending41? {
+        #if os(macOS)
+        guard let d = UserDefaults.standard.data(forKey: "kal43.pending") else { return nil }
+        #else
         guard let d = KalKeychain41.read("pending") else { return nil }
+        #endif
         return try? JSONDecoder().decode(KalPending41.self, from: d)
     }
 
-    static func clearPending() { KalKeychain41.delete("pending") }
+    static func clearPending() {
+        #if os(macOS)
+        UserDefaults.standard.removeObject(forKey: "kal43.pending")
+        #else
+        KalKeychain41.delete("pending")
+        #endif
+    }
 
     static func query(_ p: KalPending41) -> String {
         "client=" + client + "&redirect=" + enc(redirect) + "&state=" + enc(p.state) + "&cc=" + enc(challenge(p.verifier)) + "&cc_method=S256"

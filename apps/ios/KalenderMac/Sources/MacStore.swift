@@ -28,7 +28,8 @@ final class MacStore: ObservableObject {
     static let shared: MacStore = MacStore()
 
     /* ---------- Innlogging ---------- */
-    @Published var loggedIn: Bool = MacSession.token != nil
+    // Prompt 43: fra UserDefaults (adressene), ikke Nøkkelringen – tokenet leses i bakgrunnen (bootstrap43).
+    @Published var loggedIn: Bool = MacSession.hasLogin
     @Published var userName: String = MacSession.user
 
     /* ---------- Data ---------- */
@@ -38,6 +39,8 @@ final class MacStore: ObservableObject {
     @Published var wx: [String: KalWxDay] = [:]
     @Published var loading: Bool = false
     @Published var lastError: String = ""
+    /// Prompt 43: serveren svarer ikke – «Ikke tilkoblet home.kristo.no · viser lagret kalender».
+    @Published var offline43: Bool = false
     @Published var updated: Date? = nil
     @Published private(set) var byDay: [String: [KalEvent]] = [:]
     @Published private(set) var all: [KalEvent] = []
@@ -92,6 +95,15 @@ final class MacStore: ObservableObject {
         didSet { UserDefaults.standard.set(tlStart, forKey: "mac.tlStart") }
     }
     @Published var nBd: Bool = MacStore.boolPref("mac.nBd", true) { didSet { MacStore.setPref("mac.nBd", nBd) } }
+    /// Prompt 43: Innstillinger → Generelt → Varsler (av = ingen lokale varsler fra Kalender).
+    @Published var notify43: Bool = MacStore.boolPref("mac43.notify", true) {
+        didSet {
+            MacStore.setPref("mac43.notify", notify43)
+            rebuild()
+        }
+    }
+    /// Prompt 43: Innstillinger → Generelt → Glimt i menylinjen (skrivefeltet i menyen).
+    @Published var mbGlimt43: Bool = MacStore.boolPref("mac43.mbGlimt", true) { didSet { MacStore.setPref("mac43.mbGlimt", mbGlimt43) } }
     @Published var nFr: Bool = MacStore.boolPref("mac.nFr", true) { didSet { MacStore.setPref("mac.nFr", nFr) } }
     /// Lokale valg til serveren har bekreftet dem.
     var hidMenuLocal: [String: Bool] = (UserDefaults.standard.dictionary(forKey: "mac.hidMenu") as? [String: Bool]) ?? [:]
@@ -168,6 +180,32 @@ final class MacStore: ObservableObject {
         rebuild()
     }
 
+    /* ---------- Prompt 43: oppstart uten å blokkere hovedtråden ---------- */
+
+    /// Vinduet tegnes med bufferen (mac.snapshot) med en gang; tokenet leses fra Nøkkelringen i bakgrunnen, så synk.
+    func bootstrap43() async {
+        guard loggedIn else { return }
+        let tok: String? = await MacSession.load()
+        if tok == nil {
+            // Nøkkelringen er tom eller tilgangen ble avvist: logg inn på nytt (ingen frysing, ingen ny dialog).
+            if loggedIn && MacSession.token == nil {
+                loggedIn = false
+                lastError = "Logg inn på nytt."
+            }
+            return
+        }
+        MacLive.shared.start()
+        await load(force: true)
+        await MacLogin41Model.syncServers()
+    }
+
+    /// Vertsnavnet i «Ikke tilkoblet …».
+    var host43: String {
+        let b: String = MacSession.bases.first ?? "home.kristo.no"
+        guard let h = URL(string: b)?.host, !h.isEmpty else { return "home.kristo.no" }
+        return h
+    }
+
     /* ---------- Henting ---------- */
 
     /// Henter −8 … +26 uker rundt anchor (og i dag), kalenderne og været.
@@ -181,6 +219,10 @@ final class MacStore: ObservableObject {
         let to: String = KalD.addKey(hi, 182)
         if !force && !loadedFrom.isEmpty && from >= loadedFrom && to <= loadedTo { return }
         if loading && !force { return }
+        // Prompt 43: tokenet kan fortsatt leses i bakgrunnen (oppstart) – vent på det i stedet for å sende uten (401 → utlogging).
+        if MacSession.token == nil {
+            if await MacSession.load() == nil { return }
+        }
         loading = true
         defer { loading = false }
         if let res = await KalCalAPI35.fetch() {
@@ -200,7 +242,9 @@ final class MacStore: ObservableObject {
             loadedFrom = from
             loadedTo = to
             lastError = ""
+            offline43 = false
             updated = Date()
+            MacLog43.app.debug("Synk: \(list.count, privacy: .public) hendelser")
             for e in list where !cals.contains(where: { (c: KalCal) -> Bool in c.id == e.cal }) {
                 if let d = KalCals.defaults.first(where: { (c: KalCal) -> Bool in c.id == e.cal }) { cals.append(d) }
             }
@@ -209,9 +253,17 @@ final class MacStore: ObservableObject {
             applyCalOn()
         } catch let e as KalNetError {
             lastError = e.status == 401 ? "Innloggingen er utløpt. Logg inn på nytt." : e.message
+            offline43 = e.status == 0
+            MacLog43.app.debug("Synk feilet: \(e.status, privacy: .public)")
             if e.status == 401 { logout() }
         } catch {
             lastError = error.localizedDescription
+            offline43 = true
+        }
+        // Prompt 43: uten nett – vis lagret kalender, ikke vent på vær/kø (hver gir egne tidsavbrudd).
+        if offline43 {
+            rebuild()
+            return
         }
         // Logget ut underveis (401): ikke skriv bufferen eller send køen på nytt.
         if !loggedIn { return }
@@ -319,7 +371,7 @@ final class MacStore: ObservableObject {
         }
         if !sideEffects { return }
         // Prompt 39: Varsel av for en kalender gir ingen varsler derfra.
-        MacNotify.reschedule(KalCals39.notifiable(upcoming(limit: 200), cals))
+        MacNotify.reschedule(notify43 ? KalCals39.notifiable(upcoming(limit: 200), cals) : [])
         MacDock.refresh()
     }
 

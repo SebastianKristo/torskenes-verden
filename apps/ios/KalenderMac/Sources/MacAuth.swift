@@ -1,5 +1,11 @@
 import Foundation
 import Security
+import os
+
+/// Prompt 43: logglinjer for feilsøking av frysing: `log stream --level debug --predicate 'subsystem BEGINSWITH "no.kristo.kalender"'`.
+enum MacLog43 {
+    static let app: Logger = Logger(subsystem: "no.kristo.kalender.mac", category: "app")
+}
 
 /* ---------------- Prompt 34: Kalender for Mac – innlogging (Nøkkelringen) ---------------- */
 // Tokenet ligger i Nøkkelringen (kGenSecClassGenericPassword, service no.kristo.kalender.mac), adressene og navnet i UserDefaults.
@@ -50,49 +56,100 @@ enum MacKeychain {
 }
 
 /// Mac-innloggingen: token i Nøkkelringen, adresser og navn i UserDefaults.
+///
+/// Prompt 43 (Mac fryser ved oppstart): `token` leste Nøkkelringen synkront første gang den ble brukt – og første bruk var
+/// på hovedtråden (MacStore.shared → `loggedIn`, menylinje-etiketten). Appen er ad hoc-signert, så hver ny versjon har en ny
+/// signatur, og macOS spør da «Kalender vil bruke konfidensiell informasjon i nøkkelringen». Dialogen havner ofte bak
+/// vinduet, og `SecItemCopyMatching` venter på svaret: hovedtråden står, appen fryser. `save` (også fra syncServers ved
+/// hver aktivering) skrev Nøkkelringen på hovedtråden med samme effekt, og låsen rundt lesingen holdt hovedtråden fast mens
+/// en bakgrunnstråd ventet på dialogen.
+/// Nå: hovedtråden leser bare bufferen (aldri Nøkkelringen). Lesing skjer i bakgrunnen (`load()` ved oppstart, eller
+/// `tokenBlocking()` fra nettkall som allerede går utenfor hovedtråden). Skriving/sletting går i en egen seriell kø.
 enum MacSession {
     // Leses fra bakgrunnstråder (KalNet.send via sessionProvider) og skrives på hovedtråden: lås rundt bufferen,
-    // ellers datakappløp på String-en (sporadisk EXC_BAD_ACCESS).
+    // ellers datakappløp på String-en (sporadisk EXC_BAD_ACCESS). Låsen holdes bare et øyeblikk – aldri mens Nøkkelringen svarer.
     private static let lock: NSLock = NSLock()
+    /// Serialiserer selve Nøkkelring-lesingen (bare bakgrunnstråder venter på den).
+    private static let loadLock: NSLock = NSLock()
+    /// Skriving og sletting i Nøkkelringen, i rekkefølge, utenfor hovedtråden.
+    private static let keychainQueue: DispatchQueue = DispatchQueue(label: "no.kristo.kalender.mac.keychain43", qos: .utility)
     private static var cachedToken: String? = nil
     private static var loaded: Bool = false
 
+    /// Bufferen. Trygg på hovedtråden: rører aldri Nøkkelringen. nil til `load()` er ferdig (eller ikke innlogget).
     static var token: String? {
         lock.lock()
         defer { lock.unlock() }
-        if !loaded {
-            cachedToken = MacKeychain.read("token")
-            loaded = true
-        }
         let t: String = cachedToken ?? ""
         return t.isEmpty ? nil : t
     }
 
+    /// Er Nøkkelringen lest (eller tokenet satt av innloggingen)?
+    static var isLoaded: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return loaded
+    }
+
+    /// Prompt 43: «har en lagret innlogging» uten å røre Nøkkelringen (adressene lagres sammen med tokenet og slettes ved utlogging).
+    static var hasLogin: Bool { !bases.isEmpty }
+
     static var bases: [String] { UserDefaults.standard.stringArray(forKey: "mac.bases") ?? [] }
     static var user: String { UserDefaults.standard.string(forKey: "mac.user") ?? "" }
 
+    /// Leser Nøkkelringen på denne tråden hvis det ikke er gjort ennå. På hovedtråden: bare bufferen.
+    static func tokenBlocking() -> String? {
+        if Thread.isMainThread { return token }
+        loadLock.lock()
+        defer { loadLock.unlock() }
+        if isLoaded { return token }
+        let t: String? = MacKeychain.read("token")
+        lock.lock()
+        if !loaded {
+            cachedToken = t
+            loaded = true
+        }
+        lock.unlock()
+        return token
+    }
+
+    /// Leser tokenet i bakgrunnen (oppstart). Hovedtråden er fri mens en eventuell nøkkelring-dialog venter på svar.
+    static func load() async -> String? {
+        if isLoaded { return token }
+        MacLog43.app.debug("Nøkkelring: leser tokenet i bakgrunnen")
+        let t: String? = await Task.detached(priority: .userInitiated) { () -> String? in MacSession.tokenBlocking() }.value
+        MacLog43.app.debug("Nøkkelring: ferdig (\(t == nil ? "tomt" : "funnet", privacy: .public))")
+        return t
+    }
+
     static func install() {
-        KalNet.sessionProvider = { () -> ([String], String?) in (MacSession.bases, MacSession.token) }
+        KalNet.sessionProvider = { () -> ([String], String?) in (MacSession.bases, MacSession.tokenBlocking()) }
     }
 
     static func save(bases: [String], token: String, user: String) {
-        MacKeychain.write("token", token)
         lock.lock()
         cachedToken = token
         loaded = true
         lock.unlock()
         UserDefaults.standard.set(bases, forKey: "mac.bases")
         UserDefaults.standard.set(user, forKey: "mac.user")
+        keychainQueue.async { MacKeychain.write("token", token) }
+    }
+
+    /// Prompt 43: bare adressene (lokal/ekstern fra Homelab) – tokenet skrives ikke på nytt.
+    static func saveBases(_ bases: [String]) {
+        if bases.isEmpty { return }
+        UserDefaults.standard.set(bases, forKey: "mac.bases")
     }
 
     static func clear() {
-        MacKeychain.delete("token")
         lock.lock()
         cachedToken = nil
         loaded = true
         lock.unlock()
         UserDefaults.standard.removeObject(forKey: "mac.bases")
         UserDefaults.standard.removeObject(forKey: "mac.user")
+        keychainQueue.async { MacKeychain.delete("token") }
     }
 }
 

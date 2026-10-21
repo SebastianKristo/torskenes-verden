@@ -37,6 +37,13 @@ struct MacApp: App {
         .windowResizability(.contentSize)
         .defaultPosition(.center)
 
+        // Prompt 43: «Om Kalender» – eget lite vindu med versjon (ingen tilstand som observeres i scenen).
+        Window("Om Kalender", id: "om43") {
+            MacThemed { MacAbout43View() }
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
+
         MenuBarExtra(isInserted: menuBarBinding) {
             MacThemed { MacMenuBarPanel() }
         } label: {
@@ -59,19 +66,33 @@ struct MacApp: App {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    /// Viser hovedvinduet (åpner et nytt hvis alle er lukket).
-    @MainActor static func showMain() {
+    /// Prompt 43: handlingen som venter på at et nytt hovedvindu dukker opp (MacMainWindow.onAppear kjører den).
+    @MainActor static var pending43: ((MacWin) -> Void)? = nil
+
+    /// Viser hovedvinduet (åpner et nytt hvis alle er lukket). Prompt 43: `then` kjøres på vinduet når det er klart –
+    /// med en gang for et åpent vindu, ellers når det nye vinduet har dukket opp (ikke etter en fast pause).
+    @MainActor static func showMain(then: ((MacWin) -> Void)? = nil) {
         activate()
-        if let w = MacWin.all.first(where: { (x: MacWin) -> Bool in x.window != nil }), let nw = w.window {
+        let open: [MacWin] = MacWin.all.filter { (x: MacWin) -> Bool in x.window != nil }
+        if let w = open.first(where: { (x: MacWin) -> Bool in x.window?.isVisible ?? false }) ?? open.first, let nw = w.window {
             if nw.isMiniaturized { nw.deminiaturize(nil) }
             nw.makeKeyAndOrderFront(nil)
+            then?(w)
             return
         }
+        pending43 = then
         if let o = opener {
             o(id: "main")
             return
         }
         if let u = URL(string: "kalender://") { _ = NSWorkspace.shared.open(u) }
+    }
+
+    /// Prompt 43: Innstillinger-vinduet på en bestemt fane (gen | acc | upd).
+    @MainActor static func openPrefs43(_ tab: String, _ open: OpenWindowAction) {
+        MacPrefsTab43.shared.tab = tab
+        activate()
+        open(id: "innst")
     }
 
     /// System / Lys / Mørk.
@@ -90,7 +111,13 @@ struct MacApp: App {
 final class MacAppDelegate: NSObject, NSApplicationDelegate {
     private var lastActive: Date = Date.distantPast
 
+    /// Prompt 43: aktiveringsmodus én gang, før vinduet og menylinja lages (ikke byttet mens noe tegnes).
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        if NSApp.activationPolicy() != .regular { NSApp.setActivationPolicy(.regular) }
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        MacLog43.app.debug("Oppstart")
         MacSession.install()
         MacNotify.setup()
         UNUserNotificationCenter.current().delegate = MacNotifyDelegate.shared
@@ -100,10 +127,17 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         s.startTimers()
         s.rebuild()
         MacDock.refresh()
-        if s.loggedIn {
-            MacLive.shared.start()
-            Task { await s.load(force: true) }
-        }
+        // Prompt 43: applicationDidBecomeActive kommer rett etter – ikke start en ny henting der også.
+        lastActive = Date()
+        // Prompt 43: Nøkkelringen leses i bakgrunnen (bootstrap43), vinduet viser bufferen med en gang.
+        if s.loggedIn { Task { await s.bootstrap43() } }
+        // Prompt 43: automatisk sjekk etter oppdateringer (én gang om dagen, standard på).
+        Task { await MacUpdater43.shared.autoCheck() }
+    }
+
+    /// Prompt 43: «Last ned og installer i bakgrunnen» – en ferdig nedlastet versjon installeres når appen avslutter.
+    func applicationWillTerminate(_ notification: Notification) {
+        MacUpdater43.shared.installOnQuitIfReady()
     }
 
     /// Kjører videre i menylinjen når vinduet lukkes.
@@ -143,24 +177,32 @@ struct MacCommands: Commands {
     private var webMode: Bool { focus?.web ?? false }
 
     var body: some Commands {
+        // Prompt 43: app-menyen «Kalender»: Om Kalender (eget lite vindu) · Se etter oppdateringer … · Innstillinger … ⌘, ·
+        // Skjul ⌘H · Avslutt ⌘Q (de to siste er systemets egne).
         CommandGroup(replacing: .appInfo) {
             Button("Om Kalender") {
                 MacApp.activate()
-                NSApp.orderFrontStandardAboutPanel(options: [NSApplication.AboutPanelOptionKey.applicationName: "Kalender"])
+                openWindow(id: "om43")
+            }
+            Button("Se etter oppdateringer …") {
+                MacApp.openPrefs43("upd", openWindow)
+                Task { await MacUpdater43.shared.check() }
             }
         }
         CommandGroup(replacing: .appSettings) {
-            // Prompt 38: ⌘, åpner Innstillinger i web-kalenderen; Mac-valgene (menylinje, Dock, oppstart) ligger under ⌥⌘,.
+            // Prompt 43: ⌘, åpner Innstillinger-vinduet (Generelt · Kontoer · Oppdateringer). Web-kalenderens egne innstillinger
+            // (prompt 38) ligger under ⌥⌘, når web-visningen er på.
             Button("Innstillinger …") {
-                MacApp.activate()
-                if !(win?.web38Cmd("settings") ?? false) { openWindow(id: "innst") }
+                MacApp.openPrefs43("gen", openWindow)
             }
             .keyboardShortcut(",", modifiers: [.command])
-            Button("Mac-innstillinger …") {
-                MacApp.activate()
-                openWindow(id: "innst")
+            if webMode {
+                Button("Web-innstillinger …") {
+                    MacApp.activate()
+                    _ = win?.web38Cmd("settings")
+                }
+                .keyboardShortcut(",", modifiers: [.command, .option])
             }
-            .keyboardShortcut(",", modifiers: [.command, .option])
         }
         CommandGroup(replacing: .newItem) {
             Button("Ny hendelse") { win?.openNew() }
@@ -208,10 +250,6 @@ struct MacCommands: Commands {
         CommandGroup(replacing: .help) {
             Button("Kalender-hjelp") {
                 if let u = URL(string: "https://github.com/SebastianKristo/torskenes-verden/wiki") { _ = NSWorkspace.shared.open(u) }
-            }
-            Button("Se etter oppdateringer …") {
-                MacApp.activate()
-                openWindow(id: "innst")
             }
         }
     }

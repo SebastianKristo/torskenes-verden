@@ -205,6 +205,8 @@ final class KalStore {
         events = []
         rebuild()
         WidgetCenter.shared.reloadAllTimelines()
+        // Prompt 43: oppsettsteget (iPad) vises igjen etter neste innlogging.
+        KalWide43.shared.reset()
     }
 
     /// Prompt 41: tokenet er trukket tilbake (logget ut i Homelab). Ingen ny auto-innlogging med det gamle tokenet.

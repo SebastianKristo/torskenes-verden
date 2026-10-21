@@ -112,7 +112,8 @@ fun KalRoot(vm: KalVm, onBackToHomelab: () -> Unit) {
     CompositionLocalProvider(LocalK provides k) {
         Box(Modifier.fillMaxSize().background(k.bg)) {
             // Prompt 41: innlogging uten serveradresse (Fortsett som · Logg inn med Homelab-appen · passord).
-            if (vm.session == null) LoginScreen41(vm) else KalApp(vm, onBackToHomelab)
+            // Prompt 43: steg 2 av 2 (oppsett) og Telefon/Delt/Full skjerm når vinduet er minst 600 dp bredt.
+            if (vm.session == null) LoginScreen41(vm) else Wide43(vm) { KalApp(vm, onBackToHomelab) }
             // Prompt 37: fagfarger synkes, og tastaturet lukkes når et hendelsesark åpnes.
             Kal37Effects(vm)
         }

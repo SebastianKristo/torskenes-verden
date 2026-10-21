@@ -36,6 +36,9 @@ class MainActivity : ComponentActivity() {
         // Første gang: «Logg inn med Homelab-appen» automatisk hvis Homelab er installert og innlogget.
         if (vm.session == null) vm.loginHomelab(auto = true)
         KalSync.schedule(this)
+        // Prompt 43: se etter oppdateringer én gang om dagen (WorkManager), og «✓ oppdatert» etter en installasjon.
+        Kal43Upd.schedule(this)
+        Kal43Upd.afterStart(this)
         if (Build.VERSION.SDK_INT >= 33 && !KalNotify.canPost(this) && !KalPrefs.asked(this, "notif")) {
             KalPrefs.setAsked(this, "notif")
             runCatching { askNotif.launch(Manifest.permission.POST_NOTIFICATIONS) }

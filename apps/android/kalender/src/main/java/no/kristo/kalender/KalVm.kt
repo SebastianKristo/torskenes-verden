@@ -116,6 +116,10 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     val k39 = no.kristo.kalender.ui.K39State(this)
     /** Prompt 41: innlogging uten adresse (Fortsett som / PKCE), bursdagskort, Glimt-søk og testvarsel (Kal41.kt). */
     val k41 = K41State(this)
+    /** Prompt 43: oppsett på Fold/nettbrett (tlf | delt | full) og om steg 2 av 2 er vist (Kal43.kt). */
+    val k43 = K43State(app)
+    /** Prompt 43: «Full skjerm» med dagspanel – trykk på en dag i måneden bytter bare dag (Wide43 setter den). */
+    var full43 by mutableStateOf(false)
     var colO by mutableStateOf(Kal35Prefs.colors(app))
     var hmO by mutableStateOf(Kal35Prefs.hidMenu(app))
     /** Zoom-animasjonen: retning (in/out), teller (ny animasjon) og punktet den vokser fra (andel av visningen). */
@@ -226,6 +230,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         KalStore.clear(ctx)
         Kal41.forget(ctx)
         k41.phase = "start"
+        // Prompt 43: oppsettsteget vises igjen etter neste innlogging.
+        k43.reset()
         session = null
         cs = false
         // Tokenet fra Homelab trekkes tilbake på serveren (vises ellers i Innstillinger → Enheter til det slettes der).
@@ -325,6 +331,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
 
     /** Trykk på en dag: Måned → Uke, Uke → 3 dager, 3 dager → Dag. */
     fun openDay(d: LocalDate) {
+        if (full43 && v == "mnd") { Hap.tick(); a = d; return }
         when (v) {
             "mnd" -> zoomTo("uke", d, "in")
             "uke" -> zoomTo("3d", d, "in")
@@ -885,6 +892,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             uri.scheme == "https" -> { if (path.size >= 2 && path[0] == "d") date(path[1])?.let { v = "dag"; a = it } }
             host == "dag" -> { v = "dag"; a = date(path.firstOrNull()) ?: date(uri.getQueryParameter("date")) ?: T }
             host == "liste" -> { v = "liste"; a = T }
+            // Prompt 43: varselet «Kalender 1.1 er klar» → Programvareoppdatering.
+            host == "oppdatering" -> Kal43Upd.pageOpen = true
             host == "maned" || host == "mnd" -> { v = "mnd"; a = date(path.firstOrNull()) ?: T }
             host == "ny" -> incomingText(uri.getQueryParameter("text").orEmpty())
             host == "hendelse" -> {

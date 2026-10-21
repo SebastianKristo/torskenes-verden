@@ -92,8 +92,18 @@ struct KalRoot: View {
         ZStack {
             t.bg.ignoresSafeArea()
             if s.loggedIn {
-                main
-                overlays
+                // Prompt 43: steg 2 av 2 etter innlogging på bred skjerm (≥ 600 pt): velg oppsett. Én gang per enhet.
+                GeometryReader { (g: GeometryProxy) in
+                    if g.size.width >= 600 && !KalWide43.shared.done {
+                        KalLayoutStep43()
+                            .transition(.opacity)
+                    } else {
+                        ZStack {
+                            main
+                            overlays
+                        }
+                    }
+                }
             } else {
                 // Prompt 41: innlogging uten serveradresse (Fortsett som · Logg inn med Homelab-appen · passord).
                 KalLogin41View()
@@ -129,9 +139,23 @@ struct KalRoot: View {
     }
 
     @ViewBuilder private var main: some View {
-        if pad {
+        // Prompt 43: Innstillinger → Generelt → Oppsett på iPad og Fold (tlf | delt | full).
+        if pad && KalWide43.shared.mode == "full" {
+            KalPad42Main(full43: true) { stage }
+        } else if pad && KalWide43.shared.mode == "delt" {
             KalPad42Main { stage }
+        } else if pad {
+            // «Som på telefonen»: iPhone-layouten, sentrert med maks-bredde 700 pt.
+            phoneLayout
+                .frame(maxWidth: 700)
+                .frame(maxWidth: .infinity)
         } else {
+            phoneLayout
+        }
+    }
+
+    private var phoneLayout: some View {
+        Group {
             // Prompt 35 (tastatur): toppfeltet og skrivefeltet har fast høyde og prioritet; bare visningen krymper når tastaturet kommer.
             // Uten minHeight 0 kunne innholdet ikke krympe, VStack-en ble høyere enn skjermen og toppen havnet under statuslinjen
             // mens skrivefeltet havnet bak tastaturet.
@@ -219,7 +243,8 @@ struct KalRoot: View {
                 KalHaptic.tap()
                 // Prompt 42: på iPad glir sidepanelet inn i stedet for sidemenyen.
                 withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.3)) {
-                    if pad { KalPad42Model.shared.overlayOpen = true } else { s.drawerOpen = true }
+                    // Prompt 43: «Som på telefonen» på iPad har sidemenyen fra iPhone (ikke sidepanelet).
+                    if pad && KalWide43.shared.mode != "tlf" { KalPad42Model.shared.overlayOpen = true } else { s.drawerOpen = true }
                 }
                 return
             }

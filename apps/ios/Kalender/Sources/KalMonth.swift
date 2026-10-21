@@ -69,6 +69,8 @@ struct KalMonthWeek: View {
 
 struct KalMonthDay: View {
     @Environment(\.kal) private var t
+    /// Prompt 43: «Full skjerm» på iPad – trykk på en dag oppdaterer dagspanelet til høyre (ingen navigering).
+    @Environment(\.kalFull43) private var full43
     @MainActor private var s: KalStore { KalStore.shared }
     let day: Date
     let month: Int
@@ -85,13 +87,22 @@ struct KalMonthDay: View {
         let cut: Int = list.count > mx ? mx - 1 : mx
         let wx: KalWxDay? = inMonth ? s.weather(k) : nil
         // Prompt 35: trykk på en dag zoomer inn til Uke (uka med dagen), og den vokser fra dagen.
-        Button(action: { s.zoomTo("uke", day: k, origin: origin, inward: true) }) {
+        let picked: Bool = full43 && k == s.anchor && !today
+        Button(action: {
+            if full43 {
+                KalHaptic.tap()
+                if s.anchor != k { s.anchor = k }
+            } else {
+                s.zoomTo("uke", day: k, origin: origin, inward: true)
+            }
+        }) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 2) {
                     Text(String(KalD.dayOfMonth(day))).font(KalFont.ui(12, .bold))
                         .foregroundStyle(today ? Color.white : (sunday ? t.sunday : t.ink))
                         .frame(width: 22, height: 22)
                         .background(Circle().fill(today ? t.red : Color.clear))
+                        .overlay(Circle().strokeBorder(picked ? t.ink : Color.clear, lineWidth: 1.5))
                     Spacer(minLength: 0)
                     if let wx {
                         Image(systemName: KalWx.symbol(wx.kind)).font(.system(size: 10, weight: .semibold))

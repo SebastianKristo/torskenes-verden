@@ -64,6 +64,8 @@ struct KalPad42Main<Stage: View>: View {
     @Environment(\.kal) private var t
     @MainActor private var s: KalStore { KalStore.shared }
     @MainActor private var m: KalPad42Model { KalPad42Model.shared }
+    /// Prompt 43: «Full skjerm» – sidepanel 22 %, måned i midten og dagspanelet (28 %) til høyre.
+    var full43: Bool = false
     @ViewBuilder let stage: () -> Stage
 
     var body: some View {
@@ -71,15 +73,19 @@ struct KalPad42Main<Stage: View>: View {
             let landscape: Bool = geo.size.width > geo.size.height
             let canInline: Bool = landscape && geo.size.width >= 900
             let inline: Bool = canInline && m.sideOpen
+            // Prompt 43: dagspanelet bare i Måned (Uke/3 dager/Dag tar midten + høyre sammen) og når det er plass.
+            let dayPane: Bool = full43 && s.view == "mnd" && geo.size.width >= 900
+            let sideW: CGFloat = full43 ? Swift.max(250, geo.size.width * 0.22) : 272
+            let paneW: CGFloat = geo.size.width * 0.28
             HStack(spacing: 0) {
                 if inline {
                     KalPad42Sidebar(overlay: false)
-                        .frame(width: 272)
+                        .frame(width: sideW)
                         .transition(.move(edge: .leading).combined(with: .opacity))
                     Rectangle().fill(t.line).frame(width: 1)
                 }
                 VStack(spacing: 0) {
-                    KalPad42Toolbar(inline: canInline, width: geo.size.width - (inline ? 273 : 0))
+                    KalPad42Toolbar(inline: canInline, width: geo.size.width - (inline ? sideW + 1 : 0) - (dayPane ? paneW + 1 : 0))
                         .fixedSize(horizontal: false, vertical: true)
                         .layoutPriority(2)
                     KalPad42Next()
@@ -87,6 +93,7 @@ struct KalPad42Main<Stage: View>: View {
                     stage()
                         .frame(minHeight: 0, maxHeight: .infinity)
                         .layoutPriority(0)
+                        .environment(\.kalFull43, dayPane)
                     // Uten sidepanel: Glimt-feltet og rød + nederst (som på iPhone), over hjemstreken.
                     if !inline {
                         KalComposer()
@@ -97,6 +104,12 @@ struct KalPad42Main<Stage: View>: View {
                     }
                 }
                 .frame(minWidth: 0, maxWidth: .infinity)
+                if dayPane {
+                    Rectangle().fill(t.line).frame(width: 1)
+                    KalDayPane43()
+                        .frame(width: paneW)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
             }
             .overlay(alignment: .leading) {
                 if !inline && m.overlayOpen {

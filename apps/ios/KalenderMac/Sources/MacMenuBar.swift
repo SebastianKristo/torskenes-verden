@@ -65,34 +65,50 @@ struct MacMenuBarLabel: View {
     }
 }
 
+/// Prompt 43: menylinje-menyen virker (fasit: Kalender Mac.dc.html → menylinja).
+/// Før åpnet hvert klikk hovedvinduet etter en fast pause (150 ms) i stedet for å gjøre noe i menyen: datoene byttet ikke dag,
+/// og når vinduet var lukket (appen kjører videre i menylinja) kom det nye vinduet etter pausen, så handlingen traff ingenting.
+/// Menyen ble heller ikke lukket. Nå: datoene velger dagen her, radene lukker menyen og åpner hendelsen når vinduet er klart
+/// (MacApp.showMain(then:)), Glimt-feltet legger til på valgt dag og svarer på spørsmål i menyen.
+final class MacPanelRef43 {
+    weak var window: NSWindow? = nil
+}
+
+struct MacPanelRow43: Identifiable {
+    let e: KalEvent
+    let prefix: String
+    var id: String { prefix + e.id }
+}
+
 struct MacMenuBarPanel: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(\.mk) private var t
     @ObservedObject var store: MacStore = MacStore.shared
     @State private var text: String = ""
     @State private var month: Date = KalD.firstOfMonth(Date())
+    @State private var sel: String = KalD.todayKey()
+    @State private var note: String = ""
+    @State private var noteSeq: Int = 0
+    @State private var answer: String = ""
+    @State private var ref: MacPanelRef43 = MacPanelRef43()
+    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
-            MacMiniMonth(month: month, selected: "", compact: true,
-                         onPick: { (k: String) in open(day: k) },
-                         onWeek: { (k: String) in open(day: k, view: "uke") },
+            MacMiniMonth(month: month, selected: sel, compact: true,
+                         onPick: { (k: String) in pick(k) },
+                         onWeek: { (k: String) in pick(k) },
                          onMove: { (n: Int) in month = KalD.addMonths(month, n) })
             if store.loggedIn {
                 agenda
-                MacComposer(text: $text, compact: true, onAsk: { (q: String) in
-                    MacApp.showMain()
-                    Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 200_000_000)
-                        // Prompt 38: spørsmålet går til Glimt i web-kalenderen (eller det innebygde panelet).
-                        if let w = MacWin.key {
-                            w.openGlimt(q)
-                        } else {
-                            MacGlimtModel.shared.send(q)
-                        }
-                    }
-                }, onAdded: { (_: String) in })
+                if !answer.isEmpty { answerCard }
+                if store.mbGlimt43 { composer }
+                if !note.isEmpty {
+                    Text(note).font(MacFont.ui(12, .semibold)).foregroundColor(t.ink).lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .transition(.opacity)
+                }
             } else {
                 Text("Ikke logget inn.").font(MacFont.ui(13)).foregroundColor(t.mut)
             }
@@ -101,74 +117,210 @@ struct MacMenuBarPanel: View {
         .padding(14)
         .frame(width: 340)
         .background(t.glass)
+        .background(MacWindowReader { (w: NSWindow) in ref.window = w })
         .onAppear {
             MacApp.opener = openWindow
+            // Lukk og åpne → tilbake til i dag.
+            sel = KalD.todayKey()
             month = KalD.firstOfMonth(Date())
+            answer = ""
         }
+        .onExitCommand { close() }
     }
 
+    /* ---------- Topp: valgt dag og uke ---------- */
+
     private var header: some View {
-        let T: Date = Date()
-        let title: String = KalD.cap(KalD.weekdays[KalD.wd(T)]) + " " + String(KalD.dayOfMonth(T)) + ". " + KalD.months[KalD.month(T) - 1]
+        let D: Date = KalD.date(sel)
+        let title: String = KalD.cap(KalD.weekdays[KalD.wd(D)]) + " " + String(KalD.dayOfMonth(D)) + ". " + KalD.months[KalD.month(D) - 1]
         return HStack(alignment: .firstTextBaseline) {
             Text(title).font(MacFont.serif(22)).foregroundColor(t.ink)
             Spacer()
-            Text("UKE " + String(KalD.isoWeek(T))).font(MacFont.mono(10.5)).tracking(1.2).foregroundColor(t.red)
+            Text("UKE " + String(KalD.isoWeek(D))).font(MacFont.mono(10.5)).tracking(1.2).foregroundColor(t.red)
         }
     }
+
+    private func pick(_ k: String) {
+        sel = k
+        answer = ""
+        let m: Date = KalD.firstOfMonth(KalD.date(k))
+        if KalD.key(m) != KalD.key(month) { month = m }
+    }
+
+    /// «i dag», «i morgen», «fredag 24.»
+    private var selShort: String {
+        let tk: String = KalD.todayKey()
+        if sel == tk { return "i dag" }
+        if sel == KalD.addKey(tk, 1) { return "i morgen" }
+        let D: Date = KalD.date(sel)
+        return KalD.weekdays[KalD.wd(D)].lowercased() + " " + String(KalD.dayOfMonth(D)) + "."
+    }
+
+    /* ---------- Hendelsene den dagen ---------- */
 
     private var agenda: some View {
         let tk: String = KalD.todayKey()
-        let tm: String = KalD.addKey(tk, 1)
         let nm: Int = KalD.minutesNow()
-        let today: [KalEvent] = store.on(tk).filter { (e: KalEvent) -> Bool in e.allDay || e.endMin > nm }
-        let tomorrow: [KalEvent] = store.on(tm)
+        var rows: [MacPanelRow43] = []
+        if sel == tk {
+            for e in store.on(tk).uniqueIds() where e.allDay || e.endMin > nm { rows.append(MacPanelRow43(e: e, prefix: "")) }
+            if let f = store.on(KalD.addKey(tk, 1)).uniqueIds().first { rows.append(MacPanelRow43(e: f, prefix: "I morgen ")) }
+        } else {
+            for e in store.on(sel).uniqueIds() { rows.append(MacPanelRow43(e: e, prefix: "")) }
+        }
+        let shown: [MacPanelRow43] = Array(rows.prefix(7))
         return VStack(spacing: 0) {
             Rectangle().fill(t.line2).frame(height: 1)
-            if today.isEmpty && tomorrow.isEmpty {
-                Text("Ingenting i dag eller i morgen.").font(MacFont.ui(12.5)).foregroundColor(t.mut)
+            if shown.isEmpty {
+                Text("Ingen hendelser " + selShort + ".").font(MacFont.ui(12.5)).foregroundColor(t.mut)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
             }
-            ForEach(Array(today.uniqueIds().prefix(5))) { (e: KalEvent) in MacMenuRow(e: e, prefix: "") { open(event: e) } }
-            ForEach(Array(tomorrow.uniqueIds().prefix(3))) { (e: KalEvent) in MacMenuRow(e: e, prefix: "I morgen ") { open(event: e) } }
+            ForEach(shown) { (r: MacPanelRow43) in
+                MacMenuRow(e: r.e, prefix: r.prefix) { open(event: r.e) }
+            }
         }
     }
+
+    private var answerCard: some View {
+        HStack(alignment: .top, spacing: 8) {
+            MacSpark(size: 14)
+            Text(answer).font(MacFont.ui(12.5)).foregroundColor(t.ink).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Button(action: { askInWindow() }) {
+                Text("Mer ›").font(MacFont.ui(11.5, .bold)).foregroundColor(t.acc)
+            }
+            .buttonStyle(.plain)
+            .help("Åpne svaret i Glimt i Kalender-vinduet")
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 12).fill(t.card))
+    }
+
+    /* ---------- Glimt-feltet ---------- */
+
+    private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private var composer: some View {
+        HStack(spacing: 8) {
+            MacSpark(size: 16, fast: !trimmed.isEmpty)
+            TextField("Spør Glimt eller skriv en hendelse …", text: $text)
+                .textFieldStyle(.plain)
+                .font(MacFont.ui(13.5, .medium))
+                .foregroundColor(t.ink)
+                .focused($focused)
+                .onSubmit { submit() }
+            Button(action: { submit() }) {
+                Image(systemName: "plus").font(.system(size: 13, weight: .bold)).foregroundColor(Color.white)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(t.red))
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Legg til")
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 5)
+        .frame(height: 40)
+        .background(RoundedRectangle(cornerRadius: 20).fill(t.bg))
+        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(t.line, lineWidth: 1))
+        .contentShape(Rectangle())
+        // Samtidig med tekstfeltets eget klikk (tar ikke klikket fra feltet eller +-knappen).
+        .simultaneousGesture(TapGesture().onEnded { focusField() })
+    }
+
+    /// Tekstfeltet i menyen får fokus (panelet må være nøkkelvindu).
+    private func focusField() {
+        ref.window?.makeKey()
+        focused = true
+    }
+
+    private func submit() {
+        let q: String = trimmed
+        if q.isEmpty { return }
+        text = ""
+        if KalQuick.isQuestion(q) {
+            let a: MacAnswer = MacAsk.ask(q)
+            answer = a.text.isEmpty ? "Glimt fant ikke noe svar i kalenderen." : a.text
+            lastQuestion = q
+            return
+        }
+        var p: KalParsed = KalQuick.parse(q, defaultRem: store.defRem)
+        // Uten dag i teksten: valgt dag i menyen.
+        if KalDay35.parseDay(KalDay35.norm(q)) == nil && KalD.valid(sel) { p.day = sel }
+        let when: String = MacAsk.rel(p.day) + (p.s == nil ? "" : " " + KalD.hm(p.s ?? 0))
+        flash("✦ La til «" + p.title + "» " + when)
+        if p.day != sel { pick(p.day) }
+        Task { await MacStore.shared.add(p) }
+    }
+
+    @State private var lastQuestion: String = ""
+
+    private func askInWindow() {
+        let q: String = lastQuestion
+        close()
+        MacApp.showMain { (w: MacWin) in w.openGlimt(q) }
+    }
+
+    private func flash(_ s: String) {
+        noteSeq += 1
+        let id: Int = noteSeq
+        withAnimation(.easeOut(duration: 0.15)) { note = s }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_400_000_000)
+            if noteSeq == id { withAnimation(.easeOut(duration: 0.2)) { note = "" } }
+        }
+    }
+
+    /* ---------- Bunn ---------- */
 
     private var footer: some View {
-        HStack {
-            Button(action: { open(day: nil, view: nil) }) {
-                Text("Åpne Kalender  ⌘0").font(MacFont.ui(12)).foregroundColor(t.mut)
+        HStack(spacing: 4) {
+            MacPanelLink43(title: "Åpne Kalender  ⌘0") {
+                close()
+                MacApp.showMain()
             }
-            .buttonStyle(.plain)
             .keyboardShortcut("0", modifiers: [.command])
             Spacer()
-            Button(action: {
-                MacApp.activate()
-                openWindow(id: "innst")
-            }) {
-                Text("Innstillinger …  ⌘,").font(MacFont.ui(12)).foregroundColor(t.mut)
+            MacPanelLink43(title: "Innstillinger …  ⌘,") {
+                close()
+                MacApp.openPrefs43("gen", openWindow)
             }
-            .buttonStyle(.plain)
+            .keyboardShortcut(",", modifiers: [.command])
         }
     }
 
-    private func open(day: String?, view: String? = "dag") {
-        MacApp.showMain()
-        guard let day else { return }
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            MacWin.key?.go(view: view ?? "dag", day: day)
-        }
+    /* ---------- Handlinger ---------- */
+
+    /// Lukker menyen (MenuBarExtra-panelet).
+    private func close() {
+        ref.window?.close()
     }
 
     private func open(event e: KalEvent) {
-        MacApp.showMain()
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            guard let w = MacWin.key else { return }
+        close()
+        MacApp.showMain { (w: MacWin) in
             w.go(view: "dag", day: e.day)
             w.openDetail(e)
         }
+    }
+}
+
+/// Lenke-knapp nederst i menyen (hover-bakgrunn, hele flaten klikkbar).
+struct MacPanelLink43: View {
+    @Environment(\.mk) private var t
+    let title: String
+    let action: () -> Void
+    @State private var hover: Bool = false
+
+    var body: some View {
+        Button(action: action) {
+            Text(title).font(MacFont.ui(12)).foregroundColor(hover ? t.ink : t.mut)
+                .padding(.horizontal, 8).frame(height: 26)
+                .background(RoundedRectangle(cornerRadius: 7).fill(hover ? t.chip : Color.clear))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { (h: Bool) in hover = h }
     }
 }
 
@@ -177,6 +329,7 @@ struct MacMenuRow: View {
     let e: KalEvent
     let prefix: String
     let action: () -> Void
+    @State private var hover: Bool = false
 
     var body: some View {
         let c: KalCal? = KalFag37.tint(MacStore.shared.cal(e.cal), e)
@@ -192,10 +345,13 @@ struct MacMenuRow: View {
                 Text(prefix + time).font(MacFont.mono(11.5)).foregroundColor(t.mut).lineLimit(1)
             }
             .padding(.vertical, 7)
+            .padding(.horizontal, 6)
+            .background(RoundedRectangle(cornerRadius: 8).fill(hover ? t.chip : Color.clear))
             .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { (h: Bool) in hover = h }
     }
 }
 

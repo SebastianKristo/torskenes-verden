@@ -1,4 +1,7 @@
 import Foundation
+#if os(macOS)
+import Security
+#endif
 
 /* ---------------- Prompt 33: Kalender-appen ↔ Homelab-appen ↔ widgetene (App Group) ---------------- */
 // Denne fila er med i tre targets: FinansHub (Homelab-appen), Kalender og KalenderWidgets.
@@ -38,6 +41,10 @@ enum KalGroup {
         let team: String = ((Bundle.main.object(forInfoDictionaryKey: "KalTeam41") as? String) ?? "").trimmingCharacters(in: .whitespaces)
         if team.isEmpty || team.contains("$") { return nil }
         let g: String = team + "." + macGroupSuffix
+        // Prompt 43: bare når gruppen faktisk står i appens/widgetens rettigheter. Med Team ID men uten
+        // com.apple.security.application-groups (står kommentert ut i project.yml) gir containerURL likevel en sti på macOS,
+        // og første lesing av gruppen viser «… vil få tilgang til data fra andre apper» mens UserDefaults venter (frysing).
+        if !entitled43(g) { return nil }
         return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: g) != nil ? g : nil
         #else
         var cands: [String] = []
@@ -63,6 +70,16 @@ enum KalGroup {
         return nil
         #endif
     }
+
+    #if os(macOS)
+    /// Står App Group-en i rettighetene prosessen er signert med?
+    private static func entitled43(_ g: String) -> Bool {
+        guard let task = SecTaskCreateFromSelf(nil) else { return false }
+        let v: CFTypeRef? = SecTaskCopyValueForEntitlement(task, "com.apple.security.application-groups" as CFString, nil)
+        guard let list = v as? [String] else { return false }
+        return list.contains(g)
+    }
+    #endif
 
     /// Stabilt fingeravtrykk (FNV-1a), ikke selve tokenet.
     static func fingerprint(_ s: String) -> String {

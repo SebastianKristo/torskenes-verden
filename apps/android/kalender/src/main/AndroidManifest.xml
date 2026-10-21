@@ -12,6 +12,8 @@
     <!-- Varslene planlegges på nytt etter omstart. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Prompt 43: oppdatering fra appen (PackageInstaller-økt; systemet spør før installasjonen). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- «Logg inn med Homelab-appen»: Homelab gir server-adresse og et eget token via en ContentProvider som bare apper
          signert med samme nøkkel (signing/sideload.jks) får lov til å spørre. Tillatelsen defineres i begge appene,
@@ -79,6 +81,8 @@
 
         <!-- Varsler: alarmen, «Utsett 10 min» og omstart. Bare appen selv (og systemet ved omstart) sender hit. -->
         <receiver android:name=".KalAlarmReceiver" android:exported="false" />
+        <!-- Prompt 43: svar fra PackageInstaller (systemdialogen, ferdig eller feil). Bare systemet sender hit via PendingIntent. -->
+        <receiver android:name=".Kal43InstallReceiver" android:exported="false" />
         <receiver android:name=".KalBootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

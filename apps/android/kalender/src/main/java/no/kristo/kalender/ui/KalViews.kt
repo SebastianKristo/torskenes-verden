@@ -131,7 +131,9 @@ fun MonthView(vm: KalVm) {
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 1.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            Box(Modifier.size(22.dp).clip(CircleShape).background(if (td) Red else Color.Transparent), contentAlignment = Alignment.Center) {
+                            // Prompt 43: valgt dag i «Full skjerm» (dagspanelet til høyre) har svart ring.
+                            Box(Modifier.size(22.dp).clip(CircleShape).background(if (td) Red else Color.Transparent)
+                                .then(if (vm.full43 && d == A && !td) Modifier.border(1.5.dp, k.ink, CircleShape) else Modifier), contentAlignment = Alignment.Center) {
                                 Tx("${d.dayOfMonth}", man(12.sp, FontWeight.Bold, if (td) Color.White else if (d.jsDay == 0) k.sun else k.ink))
                             }
                             if (wx != null && inM) WxIcon(wx, 12.dp)

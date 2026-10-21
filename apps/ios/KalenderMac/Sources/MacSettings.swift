@@ -3,38 +3,119 @@ import AppKit
 
 /* ---------------- Prompt 34: Kalender for Mac – Innstillinger (⌘,) ---------------- */
 // Generelt: menylinje-kalender (av/på, bare ikon / dato / neste hendelse), Dock-merke, start ved innlogging, standardvarsel.
-// Utseende: System / Lys / Mørk. Visning: ukenummer og vær. Konto: innlogget som …, logg ut. Oppdatering: lenke til siste release
-// (ingen Sparkle – ingen nye avhengigheter).
+// Utseende: System / Lys / Mørk. Visning: ukenummer og vær. Konto: innlogget som …, logg ut.
+// Prompt 43: faner Generelt · Kontoer · Oppdateringer; oppdatering i appen (MacUpdater43.swift, ingen Sparkle).
 
+/// Prompt 43: Innstillinger-vinduet med fanene Generelt · Kontoer · Oppdateringer (Mac-stil, fasit Kalender Mac.dc.html).
+/// Kalender → Se etter oppdateringer … åpner fanen Oppdateringer (MacPrefsTab43).
 struct MacSettingsView: View {
     @Environment(\.mk) private var t
     @ObservedObject var store: MacStore = MacStore.shared
-    @StateObject private var upd: MacUpdate = MacUpdate.shared
-    @State private var loginItem: Bool = MacLogin.enabled
+    @ObservedObject var tab: MacPrefsTab43 = MacPrefsTab43.shared
+    @State private var loginItem: Bool = false
     @State private var loginError: String = ""
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                section("GENERELT") { general }
+        TabView(selection: $tab.tab) {
+            scroll {
+                section("GENERELT") { prefRows43 }
+                section("MENYLINJE OG DOCK") { general }
                 section("KALENDER") { calendarPrefs }
                 section("VARSLER") { notifyPrefs }
                 section("UTSEENDE") { appearance }
                 section("VISNING") { display }
                 // Prompt 37: Kalendere → Studie → Fag (egen farge per fag).
                 section("STUDIE · FAG") { MacFagSettings37() }
-                section("KONTO") { account }
-                section("KONTOER OG SYNK") { MacGoogle36Section() }
-                section("OPPDATERING") { update }
             }
-            .padding(24)
+            .tabItem { Label("Generelt", systemImage: "gearshape") }
+            .tag("gen")
+            scroll {
+                section("KONTOER") { accounts43 }
+                section("HOMELAB") { account }
+                section("KONTOER OG SYNK") { MacGoogle36Section() }
+            }
+            .tabItem { Label("Kontoer", systemImage: "at") }
+            .tag("acc")
+            scroll {
+                MacUpdate43View()
+            }
+            .tabItem { Label("Oppdateringer", systemImage: "arrow.triangle.2.circlepath") }
+            .tag("upd")
         }
-        .frame(width: 540, height: 680)
+        .frame(width: 560, height: 680)
         .background(t.bg)
         .onAppear {
+            // SMAppService-status leses når vinduet åpnes (ikke i init av visningen).
             loginItem = MacLogin.enabled
-            Task { await upd.check() }
         }
+    }
+
+    private func scroll<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) { content() }
+                .padding(24)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(t.bg)
+    }
+
+    /// Fasitens fire rader: neste hendelse i menylinjen · start ved innlogging · varsler · Glimt i menylinjen.
+    private var prefRows43: some View {
+        VStack(spacing: 0) {
+            MacToggleRow43(title: "Vis neste hendelse i menylinjen", sub: "«Tannlege 15:15» ved siden av klokka",
+                           on: Binding<Bool>(get: { store.menuBarMode == "next" }, set: { (v: Bool) in
+                               let m: String = v ? "next" : "date"
+                               if store.menuBarMode != m { store.menuBarMode = m }
+                           }))
+            MacToggleRow43(title: "Start ved innlogging", sub: "Kalender åpnes i bakgrunnen",
+                           on: Binding<Bool>(get: { loginItem }, set: { (v: Bool) in
+                               loginError = MacLogin.set(v)
+                               loginItem = MacLogin.enabled
+                           }))
+            MacToggleRow43(title: "Varsler", sub: "Påminnelser før hendelser, bursdager og frister",
+                           on: Binding<Bool>(get: { store.notify43 }, set: { (v: Bool) in
+                               if store.notify43 != v { store.notify43 = v }
+                           }))
+            MacToggleRow43(title: "Glimt i menylinjen", sub: "Skriv hendelser rett i menyen",
+                           on: Binding<Bool>(get: { store.mbGlimt43 }, set: { (v: Bool) in
+                               if store.mbGlimt43 != v { store.mbGlimt43 = v }
+                           }))
+            if !loginError.isEmpty {
+                Text(loginError).font(MacFont.ui(12)).foregroundColor(t.acc).padding(.horizontal, 16).padding(.bottom, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(-14)
+    }
+
+    /// Google, iCloud, Home Assistant og Homelab-serveren med status.
+    private var accounts43: some View {
+        let cals: [KalCal] = store.cals
+        func has(_ test: (KalCal) -> Bool) -> Bool { cals.contains(where: test) }
+        let google: Bool = has { (c: KalCal) -> Bool in (c.source ?? "") == "google" }
+        let icloud: Bool = has { (c: KalCal) -> Bool in (c.source ?? "") == "caldav" || c.name.lowercased().contains("icloud") }
+        let ha: Bool = has { (c: KalCal) -> Bool in (c.source ?? "") == "ha" }
+        let rows: [(String, String, String)] = [
+            ("Google", "#4285F4", google ? "Synket" : "Ikke koblet til"),
+            ("iCloud", "#6b665c", icloud ? "Synket" : "Ikke koblet til"),
+            ("Home Assistant", "#18bcf2", ha ? "Tilkoblet" : "Ikke koblet til"),
+            ("Homelab-server", "#b23a2a", !store.loggedIn ? "Ikke logget inn" : (store.offline43 ? "Ikke tilkoblet · " + store.host43 : store.host43)),
+        ]
+        return VStack(spacing: 0) {
+            ForEach(0..<rows.count, id: \.self) { (i: Int) in
+                let r: (String, String, String) = rows[i]
+                HStack(spacing: 10) {
+                    Circle().fill(Color(kalHex: r.1)).frame(width: 10, height: 10)
+                    Text(r.0).font(MacFont.ui(14, .bold)).foregroundColor(t.ink)
+                    Spacer()
+                    Text(r.2).font(MacFont.ui(13)).foregroundColor(t.mut)
+                }
+                .padding(.horizontal, 16)
+                .frame(minHeight: 48)
+                .overlay(alignment: .top) { Rectangle().fill(t.line2).frame(height: 1) }
+            }
+        }
+        .padding(-14)
     }
 
     private func section<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
@@ -62,11 +143,6 @@ struct MacSettingsView: View {
             .pickerStyle(.segmented)
             .disabled(!store.menuBarOn)
             Toggle("Antall hendelser i dag på Dock-ikonet", isOn: $store.dockBadge)
-            Toggle("Start Kalender ved innlogging", isOn: Binding<Bool>(get: { loginItem }, set: { (v: Bool) in
-                loginError = MacLogin.set(v)
-                loginItem = MacLogin.enabled
-            }))
-            if !loginError.isEmpty { Text(loginError).font(MacFont.ui(12)).foregroundColor(t.acc) }
             Picker("Standardvarsel for nye hendelser", selection: $store.defRemRaw) {
                 Text("Ingen").tag(-1)
                 Text("10 min før").tag(10)
@@ -187,80 +263,3 @@ struct MacSettingsView: View {
         let live: String = MacLive.shared.connected ? " · sanntid på" : " · sanntid av (henter hvert minutt)"
         return "Sist hentet " + KalD.hm(KalD.minutes(u)) + live
     }
-
-    private var updateLabel: String {
-        if upd.newer { return "Last ned Kalender " + upd.latest }
-        return "Åpne siste release"
-    }
-
-    private var update: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Denne versjonen: " + MacUpdate.current).font(MacFont.ui(13.5)).foregroundColor(t.ink)
-            Text(upd.status).font(MacFont.ui(12.5)).foregroundColor(upd.newer ? t.acc : t.mut)
-            HStack {
-                Button(updateLabel) { upd.openRelease() }
-                Button("Se etter oppdateringer") { Task { await upd.check() } }
-            }
-            Text("Last ned .dmg-en, åpne den og dra Kalender til Programmer. Første gang: høyreklikk på Kalender → Åpne (appen er ad hoc-signert).")
-                .font(MacFont.ui(11.5)).foregroundColor(t.mut2).fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-/// «Se etter oppdateringer»: GitHub releases/latest (offentlig API), ingen Sparkle.
-@MainActor
-final class MacUpdate: ObservableObject {
-    static let shared: MacUpdate = MacUpdate()
-    static let repo: String = "SebastianKristo/torskenes-verden"
-    static let releases: String = "https://github.com/SebastianKristo/torskenes-verden/releases/latest"
-
-    static var current: String {
-        (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "?"
-    }
-
-    @Published var latest: String = ""
-    @Published var newer: Bool = false
-    @Published var status: String = ""
-    private var dmgURL: String = ""
-    private var pageURL: String = MacUpdate.releases
-
-    func check() async {
-        status = "Ser etter oppdateringer …"
-        guard let url = URL(string: "https://api.github.com/repos/" + MacUpdate.repo + "/releases/latest") else { return }
-        var r: URLRequest = URLRequest(url: url)
-        r.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        r.timeoutInterval = 12
-        guard let pair = try? await URLSession.shared.data(for: r),
-              let o = (try? JSONSerialization.jsonObject(with: pair.0)) as? [String: Any] else {
-            status = "Fikk ikke kontakt med GitHub."
-            return
-        }
-        let tag: String = (o["tag_name"] as? String) ?? ""
-        latest = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
-        pageURL = (o["html_url"] as? String) ?? MacUpdate.releases
-        dmgURL = ""
-        for a in (o["assets"] as? [Any]) ?? [] {
-            guard let d = a as? [String: Any], let name = d["name"] as? String, name.hasSuffix(".dmg"), name.lowercased().contains("kalender") else { continue }
-            dmgURL = (d["browser_download_url"] as? String) ?? ""
-        }
-        newer = MacUpdate.isNewer(latest, than: MacUpdate.current)
-        status = newer ? "Kalender " + latest + " er tilgjengelig." : "Du har siste versjon."
-    }
-
-    func openRelease() {
-        let s: String = dmgURL.isEmpty ? pageURL : dmgURL
-        if let u = URL(string: s) { _ = NSWorkspace.shared.open(u) }
-    }
-
-    static func isNewer(_ a: String, than b: String) -> Bool {
-        let x: [Int] = a.split(separator: ".").map { (p: Substring) -> Int in Int(p) ?? 0 }
-        let y: [Int] = b.split(separator: ".").map { (p: Substring) -> Int in Int(p) ?? 0 }
-        let n: Int = Swift.max(x.count, y.count)
-        for i in 0..<n {
-            let p: Int = i < x.count ? x[i] : 0
-            let q: Int = i < y.count ? y[i] : 0
-            if p != q { return p > q }
-        }
-        return false
-    }
-}

@@ -375,6 +375,8 @@ fun SettingsPage35(vm: KalVm) {
             Seg35("Åpne i", "Visningen appen starter i", listOf("mnd" to "Måned", "uke" to "Uke", "3d" to "3 dager", "dag" to "Dag", "liste" to "Liste"), vm.ov) { vm.setOpenView(it) }
             Seg35("Standard varighet", "For nye hendelser med klokkeslett", listOf("30" to "30 min", "60" to "1 t", "90" to "1,5 t", "120" to "2 t"), vm.dd.toString()) { vm.setDefDur(it.toInt()) }
             Seg35("Tidslinje starter", "Uke, 3 dager og Dag", listOf("now" to "Nå", "06" to "06", "08" to "08"), vm.tl) { vm.setTlStart(it) }
+            // Prompt 43: per enhet (Fold, nettbrett ≥ 600 dp), ikke i profilen.
+            Seg35("Oppsett på iPad og Fold", "Når skjermen er bred", listOf("tlf" to "Telefon", "delt" to "Delt", "full" to "Full skjerm"), vm.k43.wideLay) { vm.k43.choose(it) }
 
             Label("VISNING", Modifier.padding(top = 4.dp))
             Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
@@ -429,6 +431,8 @@ fun SettingsPage35(vm: KalVm) {
                 LinkRow35("Glimt", "Figur, stemme og briefer") { vm.openGlimtSettings() }
                 LinkRow35("Kontoer og synk", "Google, iCloud, Outlook, Home Assistant") { vm.openAccounts() }
                 LinkRow35("Widgets", "Slik legger du til på Hjem- og låseskjerm") { Hap.tick(); vm.showToast("Hold inne på Hjem-skjermen → Widgets → Kalender") }
+                // Prompt 43: oppdater Kalender fra appen (APK fra GitHub-releasen via serveren, SHA-256 og samme signatur).
+                LinkRow35("Programvareoppdatering", updSub43(vm.getApplication())) { Hap.tick(); no.kristo.kalender.Kal43Upd.pageOpen = true }
                 LinkRow35("Om Kalender", "Versjon 1.0 · personvern") { Hap.tick(); vm.showToast("Kalender 1.0 · data ligger på hjemmeserveren din") }
             }
 

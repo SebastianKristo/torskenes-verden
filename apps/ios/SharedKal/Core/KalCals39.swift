@@ -88,6 +88,8 @@ enum KalCals39 {
         let src: String = (c.p39?.source.isEmpty == false ? c.p39?.source : c.source) ?? ""
         let n: String = c.name.lowercased()
         if src == "own" || src == "ha" || c.local { return "" }
+        // Prompt 43: Media-kalenderen (Sonarr/Radarr, kilde «media») er egen og kan slås av – aldri slått sammen med Personlig.
+        if src == "media" || c.id == "media" || c.id.hasPrefix("media") { return "" }
         if src == "google" {
             if n.contains("bursdag") || n.contains("birthday") { return "b" }
             if n.contains("helligdag") || n.contains("holiday") { return "h" }

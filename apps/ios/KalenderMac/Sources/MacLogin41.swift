@@ -21,6 +21,17 @@ final class MacLogin41Model: ObservableObject {
     @Published var serverOpen: Bool = false
     private var waitId: Int = 0
 
+    /// Prompt 43: leses fra bufferen (KalShared41 leser aldri Nøkkelringen på hovedtråden på Mac). `quickTick` tegner på nytt
+    /// når bakgrunnslesingen er ferdig.
+    @Published private(set) var quickTick: Int = 0
+
+    init() {
+        Task { @MainActor in
+            await KalShared41.preload43()
+            self.quickTick += 1
+        }
+    }
+
     var quickName: String? {
         guard let d = KalShared41.device() else { return nil }
         return d.display.isEmpty ? "Homelab-kontoen" : d.display
@@ -170,10 +181,11 @@ final class MacLogin41Model: ObservableObject {
         let ok: Bool = await KalServer41.refresh()
         if !ok { return }
         let ordered: [String] = await KalServer41.choose()
-        guard let tok = MacSession.token, !ordered.isEmpty else { return }
+        guard MacSession.token != nil, !ordered.isEmpty else { return }
         var bases: [String] = ordered
         for b in MacSession.bases where !bases.contains(b) { bases.append(b) }
-        if bases != MacSession.bases { MacSession.save(bases: bases, token: tok, user: MacSession.user) }
+        // Prompt 43: bare adressene. Før ble tokenet skrevet til Nøkkelringen på hovedtråden ved hver aktivering (frysing).
+        if bases != MacSession.bases { MacSession.saveBases(bases) }
     }
 }
 

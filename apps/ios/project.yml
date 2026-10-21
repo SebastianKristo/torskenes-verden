@@ -249,7 +249,8 @@ targets:
 
   # Prompt 34: Kalender for Mac – egen macOS-app (no.kristo.kalender.mac, Kalender.app) med samme konto og backend som web og iPhone.
   # Gjenbruker SharedKal (modeller, nett, fonter) og den rene tolkeren KalQuick.swift fra iOS-appen. Universal (arm64 + x86_64), macOS 13+.
-  # Ingen Sparkle (ny avhengighet). Prompt 41: widgets (KalenderMacWidgets, macOS 14+) – data via App Group
+  # Ingen Sparkle (ny avhengighet). Prompt 43: egen oppdaterer (MacUpdater43: /api/apps/kalender/latest, SHA-256, bytte-skript).
+  # Prompt 41: widgets (KalenderMacWidgets, macOS 14+) – data via App Group
   # <TeamID>.group.no.kristo.kalender, som bare brukes når appen er signert med et team (Info-nøkkelen KalTeam41).
   KalenderMac:
     type: application
@@ -280,6 +281,12 @@ targets:
         com.apple.security.network.client: true
         # Arkiv → Importer .ics …
         com.apple.security.files.user-selected.read-only: true
+        # Prompt 43: oppdatering fra appen (MacUpdater43, egen oppdaterer – ikke Sparkle): skriptet bytter Kalender.app i
+        # Programmer etter at appen har avsluttet, og DMG-en kan leses når Finder har montert den (reserven).
+        com.apple.security.temporary-exception.files.absolute-path.read-write:
+          - /Applications/
+        com.apple.security.temporary-exception.files.absolute-path.read-only:
+          - /Volumes/
         # Prompt 41: delt med widgetene. Brukes bare når appen er signert med Team ID (ellers rører appen den ikke,
         # så macOS 15 viser ingen dialog). keychain-access-groups for «Fortsett som» på Mac må settes manuelt (krever profil).
         # Slås på manuelt sammen med DEVELOPMENT_TEAM: release/røyktest signerer ad hoc med denne fila, og et uutvidet

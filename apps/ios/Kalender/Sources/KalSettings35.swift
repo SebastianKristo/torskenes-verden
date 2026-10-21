@@ -62,6 +62,8 @@ struct KalSettings35View: View {
                     notifications
                     KalLabel(text: "GLIMT OG KONTO").padding(.top, 6)
                     links
+                    // Prompt 43: iPhone og iPad oppdateres via TestFlight/IPA (bare info).
+                    KalUpdateInfo43()
                     // Prompt 41: Server (lesbar) og Logg ut ligger nå øverst i GLIMT OG KONTO (fasitens linkRows).
                     account
                     Text(footer).font(KalFont.ui(12)).foregroundStyle(t.mut2)
@@ -127,6 +129,8 @@ struct KalSettings35View: View {
                 s.tlStart = v
                 s.savePrefs(["timelineStart": v])
             }
+            // Prompt 43: per enhet (ikke i profilen) – bare på iPad (bred skjerm).
+            if KalPad42Model.isPad { KalWideSettings43() }
         }
         .overlay(alignment: .top) { Rectangle().fill(t.line2).frame(height: 1) }
     }

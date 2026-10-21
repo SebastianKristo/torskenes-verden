@@ -81,10 +81,41 @@ enum KalKeychain41 {
 /* ---------- Delt enhets-token (Homelab skriver, Kalender leser) ---------- */
 
 enum KalShared41 {
+    #if os(macOS)
+    /// Prompt 43: på Mac leses den delte Nøkkelringen bare i bakgrunnen (preload43) – en nøkkelring-dialog på hovedtråden
+    /// låser appen. Hovedtråden bruker det som ble lest.
+    private static let macLock: NSLock = NSLock()
+    private static var macCache: Data? = nil
+
+    /// Leser den delte Nøkkelringen utenfor hovedtråden og husker svaret.
+    static func preload43() async {
+        guard let g = KalKeychain41.sharedGroup else { return }
+        let d: Data? = await Task.detached(priority: .utility) { () -> Data? in
+            KalKeychain41.read("device", group: g, service: KalKeychain41.sharedService)
+        }.value
+        macLock.lock()
+        macCache = d
+        macLock.unlock()
+    }
+    #else
+    static func preload43() async {}
+    #endif
+
+    private static func sharedKeychainData() -> Data? {
+        guard let g = KalKeychain41.sharedGroup else { return nil }
+        #if os(macOS)
+        if Thread.isMainThread {
+            macLock.lock()
+            defer { macLock.unlock() }
+            return macCache
+        }
+        #endif
+        return KalKeychain41.read("device", group: g, service: KalKeychain41.sharedService)
+    }
+
     /// Leser enhets-tokenet: delt Nøkkelring først, så App Group-en.
     static func device() -> KalDevice41? {
-        if let g = KalKeychain41.sharedGroup,
-           let d = KalKeychain41.read("device", group: g, service: KalKeychain41.sharedService),
+        if let d = sharedKeychainData(),
            let v = try? JSONDecoder().decode(KalDevice41.self, from: d), v.valid {
             return v
         }
