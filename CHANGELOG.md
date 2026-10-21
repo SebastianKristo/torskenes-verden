@@ -2,6 +2,23 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.39.0] – 21.10.2026 · prompt 44 – Logger, Studie-dokumenter, Avspilling og Logg inn som
+- **Rettet:**
+  - Media sa «ikke innlogget» på mobil selv om Integrasjoner sa «Koblet til». Media bruker nå serverens oppsett, og alle appene leser én felles status.
+  - Interaktivt søk i Media ga 504. Søket har nå 180 s, kjører som jobb med status per indekser og delvise treff, og kan avbrytes.
+  - Oppdateringen hoppet mellom skjermer på web («4.37 · KLAR» mens kortet viste 55 %). Siden står stille under installeringen, oppstartsskjermen vises bare ved selve omstarten, og hver fane laster på nytt én gang.
+  - Kalender logget seg selv ut: alle enheter het «iPhone», så innlogging på én logget ut en annen. Hver installasjon har nå eget navn, og appen prøver å reparere innloggingen før den logger ut.
+  - Innlogging via Homelab virker ved kald start, og Kalender viser hendelsene med en gang i stedet for å vente på været.
+- **Server → Logger (bare admin):** containere med start/stopp, Docker-logger med filter, Live og nedlasting, feil gruppert og forklart av Glimt. Krever `docker compose --profile logs up -d`.
+- **Tidligere versjoner:** gå tilbake til en eldre versjon fra System, med eller uten backup og pause i 7 dager. Updateren godtar bare versjoner fra sin egen liste, og går tilbake automatisk om den nye ikke svarer.
+- **Logg inn som:** admin kan se appen som et familiemedlem i 30 min (logget), kopiere sitt oppsett, tilbakestille og låse. **Overfør eierskap** i to steg.
+- **Studie → Dokumenter:** last opp vitnemål eller karakterutskrift, Glimt leser emner, studiepoeng og snitt, og kan legge emnene inn i Studie.
+- **Avspilling:** Plex og Jellyfin – spilles nå, historikk, statistikk og «Logg inn med Plex».
+- **Media:** flere servere (Hjemme/Hytta), søk i biblioteket, banner med fanart, last ned på nytt og slett fil med Angre.
+- **Gjøremål:** deloppgaver rett i lista, infoside med frist, når og sted med kart.
+- **Kalender:** deltakere og invitasjoner, adresseforslag fra Kartverket, redigering med Angre og konfliktsjekk, nytt I dag-ikon, og bedre tidstolking («frisør 16»).
+- **Mer** i nytt design med levende kort, og **lys/mørk/følg systemet** på web.
+
 ## [4.38.1] – 21.10.2026 · scroll på Hjem
 - **Rettet:** Hjem i iPhone-appen kunne ikke scrolles etter 4.38.0. Kortene er nå helt vanlige utenfor redigering, som i Subscription OS. Dra-og-slipp og vugging er bare på i redigeringsmodus. Det samme gjelder Finans, Mat og Sporing.
 - **Rettet:** Kalender for Mac bygger igjen på Xcode 16.
