@@ -34,6 +34,8 @@ async function fakeFetch(url, init = {}) {
   if (u.endsWith('/api/tags')) return Response.json({ models: [{ name: 'qwen3:8b', size: 5.2e9, details: { families: ['qwen3'] } }, { name: OLD, size: 2e9, details: { families: ['llama'] } }] });
   if (u.endsWith('/api/chat')) {
     if (body.model === OLD && 'think' in body) return noThinkErr(OLD);
+    // Prompt 43: alle kall strømmer nå (via Ollama-gaten); kalender-Glimt får svaret som én NDJSON-linje.
+    if (JSON.stringify(body.messages ?? []).includes('kalenderhendelse')) return Response.json({ message: { role: 'assistant', content: `<think>først tenker jeg</think>${generateReply}`, thinking: 'tenking' }, done: true });
     if (body.stream) {
       const lines = [{ message: { content: '<think>la meg ' } }, { message: { content: 'tenke</think>Hei' } }, { message: { content: ' der.' } }, { done: true, eval_count: 4, eval_duration: 1e9 }];
       return new Response(streamOf(lines.map((l) => JSON.stringify(l) + '\n')), { status: 200 });
@@ -117,7 +119,7 @@ test('kort oppgave sender think:false og num_ctx, og fjerner <think> fra svaret'
   saveSettings({ ollamaModel: 'qwen3:8b', ollamaTextModel: 'qwen3:8b' });
   calls.length = 0;
   const r = await describe(OWNER, 'Tannlege med Ola');
-  const gen = calls.filter((c) => c.url.endsWith('/api/chat') && !c.body.stream);
+  const gen = calls.filter((c) => c.url.endsWith('/api/chat'));
   assert.equal(gen.length, 1);
   assert.equal(gen[0].body.think, false);
   assert.equal(gen[0].body.options.num_ctx, 4096);
@@ -131,7 +133,7 @@ test('kort oppgave: ai_think på → think sendes ikke', async () => {
   setUserCfg(OWNER, { ai_think: '1' });
   calls.length = 0;
   await describe(OWNER, 'Tannlege med Ola');
-  const gen = calls.find((c) => c.url.endsWith('/api/chat') && !c.body.stream);
+  const gen = calls.find((c) => c.url.endsWith('/api/chat'));
   assert.equal('think' in gen.body, false);
   assert.equal(gen.body.options.num_ctx, 4096);
   setUserCfg(OWNER, { ai_think: '0' });
@@ -142,7 +144,7 @@ test('kort oppgave med modell uten tenking: nytt forsøk uten think', async () =
   saveSettings({ ollamaTextModel: OLD });
   calls.length = 0;
   await describe(OWNER, 'Tannlege med Ola');
-  const gen = calls.filter((c) => c.url.endsWith('/api/chat') && !c.body.stream);
+  const gen = calls.filter((c) => c.url.endsWith('/api/chat'));
   assert.equal(gen.length, 2);
   assert.equal(gen[0].body.think, false);
   assert.equal('think' in gen[1].body, false);

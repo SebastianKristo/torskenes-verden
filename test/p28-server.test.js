@@ -84,9 +84,10 @@ test('skjermbilde: riktig Ollama-kall (vision-modell, ren base64, format json, n
   const chat = calls.find((x) => x.url.endsWith('/api/chat'));
   assert.equal(chat.url, 'http://ollama.test:11434/api/chat');
   assert.equal(chat.body.model, 'qwen2.5vl:7b');
-  assert.equal(chat.body.stream, false);
+  // Prompt 43: via Ollama-gaten – alltid strømming, og keep_alive per modell (qwen2.5vl:7b = 0 → kort keep_alive mens den er i bruk).
+  assert.equal(chat.body.stream, true);
   assert.equal(chat.body.format, 'json');
-  assert.equal(chat.body.keep_alive, '10m');
+  assert.equal(chat.body.keep_alive, '2m');
   assert.deepEqual(chat.body.options, { temperature: 0, num_ctx: 8192 });
   const img = chat.body.messages[0].images[0];
   assert.ok(!img.startsWith('data:'), 'uten data:-prefiks');

@@ -103,7 +103,7 @@ test('HTTP-serveren kutter ikke forespørsler under 180 s', () => {
   assert.equal(HTTP_TIMEOUTS.socketTimeout, 0);
 });
 
-test('Ollama = 60 s og et svar som tar 45 s: søket fullføres (stream: true, keep_alive 10m)', async () => {
+test('Ollama = 60 s og et svar som tar 45 s: søket fullføres (stream: true, keep_alive per modell)', async () => {
   setup(60);
   Object.assign(mock, { delayMs: 450, gapMs: 0, bodies: [] });
   const r = await A('/finans/api/search/ai', 'POST', Q);
@@ -113,7 +113,10 @@ test('Ollama = 60 s og et svar som tar 45 s: søket fullføres (stream: true, ke
   assert.equal(r.body.answer, 'Fant noe.'); // prompt 32: «[n]»-markører fjernes
   const chat = mock.bodies.at(-1);
   assert.equal(chat.stream, true);
-  assert.equal(chat.keep_alive, '10m');
+  // Prompt 43: keep_alive er per modell (Ollama-gaten); en modell med keep_alive 0 får en kort keep_alive mens den er i bruk.
+  const { keepAliveFor, SHORT_KEEP } = await import('../server/ollama-gate.js');
+  const k = keepAliveFor(chat.model);
+  assert.equal(chat.keep_alive, k === 0 ? SHORT_KEEP : k);
 });
 
 test('grensen gjelder tid uten nye tokens: 20 s-grense, tokens hvert 10. s i 60 s totalt', async () => {

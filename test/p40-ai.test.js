@@ -64,6 +64,8 @@ test.after(() => { globalThis.fetch = realFetch; });
 
 const { default: app } = await import('../server/index.js');
 const ai = await import('../server/ai-run.js');
+const gate = await import('../server/ollama-gate.js');
+gate._gateTest.backoffMs = [20, 80]; gate._gateTest.unloadGraceMs = 0; // prompt 43: kort backoff og ingen frist før utlasting i testene
 const { db, OWNER } = await import('../server/db.js');
 
 async function login(username, password) {
@@ -84,13 +86,14 @@ assert.equal((await A('/api/ai/routing', 'PUT', { tasks: Object.fromEntries(Obje
 const reset = () => { ol.loaded.clear(); ol.maxInflight = 0; ol.log.length = 0; ol.down = false; ai._warmModels.clear(); ai.invalidateInventory(); };
 beforeEach(() => { ai._aiRunTest.loadMs = 3000; ai._aiRunTest.respMs = 1000; ai._aiRunTest.statusMs = 300; });
 
-test('reproduksjon: slik selvtesten gikk før (alle samtidig, 15 s inkl. innlasting) feiler hver kalde rute', async () => {
+// Prompt 43: før gikk alle rutene samtidig (Promise.all) rett til Ollama, og alle de kalde feilet. Nå går de gjennom Ollama-gaten:
+// samme samtidige start, men aldri to kall til Ollama samtidig, og alle svarer (se også test/p43-ollama-gate.test.js).
+test('reproduksjon: alle rutene samtidig (slik selvtesten gikk før) – gaten sender én om gangen, og alle svarer', async () => {
   reset();
   const ids = ['chat', 'kat', 'rc', 'fsok'];
-  const res = await Promise.allSettled(ids.map((id) => ai.run(id, { user: OWNER, prompt: 'Svar bare: ok', numPredict: 3, timeoutMs: ai._aiRunTest.statusMs, noRetry: true, title: `Gammel selvtest · ${id}` })));
-  assert.ok(res.every((r) => r.status === 'rejected'), 'alle feiler');
-  for (const r of res) assert.match(r.reason.message, /svarte ikke innen 0 s/);
-  assert.ok(ol.maxInflight >= 3, 'flere modeller samtidig');
+  const res = await Promise.allSettled(ids.map((id) => ai.run(id, { user: OWNER, prompt: 'Svar bare: ok', numPredict: 3, noRetry: true, title: `Gammel selvtest · ${id}` })));
+  assert.ok(res.every((r) => r.status === 'fulfilled'), JSON.stringify(res.map((r) => r.reason?.message ?? 'ok')));
+  assert.equal(ol.maxInflight, 1, 'aldri to kall til Ollama samtidig');
 });
 
 test('fiks: helsesjekk, én modell om gangen gruppert per modell, oppvarming med egen grense – alle rutene svarer', async () => {
@@ -107,11 +110,11 @@ test('fiks: helsesjekk, én modell om gangen gruppert per modell, oppvarming med
   const chats = ol.log.filter((x) => x.path !== '/api/generate' || x.prompt === '').map((x) => x.model);
   const runs = chats.filter((m, i) => m !== chats[i - 1]);
   assert.deepEqual(runs, ['qwen3:8b', 'qwen2.5vl:7b', 'llama3.2:3b', 'bge-m3:latest'], JSON.stringify(chats));
-  // Oppvarming (prompt '' + keep_alive) før første svar på hver modell.
-  for (const m of ['qwen3:8b', 'llama3.2:3b', 'qwen2.5vl:7b', 'bge-m3:latest']) {
-    const first = ol.log.find((x) => x.model === m);
-    assert.deepEqual([first.path, first.prompt, first.keep], ['/api/generate', '', '30m'], m);
-  }
+  // Prompt 43: ingen egen oppvarming lenger (gaten gir kald modell egen grense til første token), og keep_alive er per modell:
+  // qwen3:8b 15m, llama3.2:3b 1h, qwen2.5vl:7b kort (2m) mens køen for den ikke er tom – så lastes den ut (keep_alive 0).
+  const keepOf = (m) => ol.log.find((x) => x.model === m && x.path !== '/api/generate')?.keep;
+  assert.deepEqual(['qwen3:8b', 'llama3.2:3b', 'qwen2.5vl:7b', 'bge-m3:latest'].map(keepOf), ['15m', '1h', '2m', '30m']);
+  assert.ok(ol.log.some((x) => x.model === 'qwen2.5vl:7b' && x.path === '/api/generate' && x.keep === 0), 'qwen2.5vl:7b lastet ut når køen var tom');
   assert.deepEqual(r.body.groups.map((g) => g.model), ['qwen3:8b', 'qwen2.5vl:7b', 'llama3.2:3b', 'zbar', 'bge-m3:latest']);
   // Kald start med innlasting (400 ms) lengre enn den gamle grensen (300 ms) – likevel OK, fordi svarklokka starter etter innlastingen.
   assert.ok(LOAD_MS > ai._aiRunTest.statusMs);
@@ -161,7 +164,7 @@ test('Jobber: feil gruppert på årsak, kort tekst, unseenFailed teller bare nye
   assert.ok(j.body.groups.some((x) => x.reason === 'nocontact' && x.short === 'Ingen kontakt med Ollama'));
   assert.equal(j.body.recent.find((x) => x.id === o).short, 'Ingen kontakt med Ollama');
   assert.ok(j.body.unseenFailed >= 4);
-  assert.deepEqual(j.body.timeouts, { loadTimeout: 180, responseTimeout: 60, responseTimeoutImage: 120 });
+  assert.deepEqual(j.body.timeouts, { loadTimeout: 90, responseTimeout: 60, responseTimeoutImage: 120, firstTokenTimeout: 30, idleTimeout: 30, idleTimeoutImage: 60 }); // prompt 43
   const s = await A('/api/ai/jobs/seen', 'POST', {});
   assert.equal(s.body.unseenFailed, 0);
   assert.equal((await A('/api/ai/jobs')).body.unseenFailed, 0);
@@ -198,15 +201,15 @@ test('faser i Kjører-raden: «Laster modellen fra disk · x av 5,2 GB» → «T
   await assert.rejects(ai.run('kat', { user: OWNER, prompt: 'hei', phased: true, noRetry: true }), (e) => /lastet ikke inn på 0 s/.test(e.message));
 });
 
-test('vakthund: en jobb som står på «Laster modellen fra disk» lenger enn loadTimeout avbrytes («Modellen ble ikke lastet (180 s)»)', () => {
+test('vakthund: en jobb som står på «Laster modellen fra disk» lenger enn loadTimeout avbrytes («Modellen ble ikke lastet (90 s)»)', () => {
   ai._aiRunTest.loadMs = null;
   const id = ai.jobStart({ user: OWNER, task: 'glimt', title: 'Glimt · anbefaler modeller' });
   ai.jobUpdate(id, { status: 'run', step: 'Laster modellen fra disk …', phase: { kind: 'load', loadedGb: 0, totalGb: 8.1 }, runAt: Date.now() - 200_000 });
   assert.deepEqual(ai.sweepHung(), [id]);
   const j = ai.jobGet(id, OWNER);
   assert.equal(j.status, 'fail');
-  assert.equal(j.error, 'Modellen ble ikke lastet (180 s)');
-  assert.equal(j.short, 'Tidsavbrudd · lastet ikke inn på 180 s');
+  assert.equal(j.error, 'Modellen ble ikke lastet (90 s)'); // prompt 43: standard loadTimeout 90 s
+  assert.equal(j.short, 'Tidsavbrudd · lastet ikke inn på 90 s');
   // Tidsgrensene kan endres (sekunder).
   assert.deepEqual(ai.cleanRouting({ params: { loadTimeout: 240, responseTimeout: 90, responseTimeoutImage: 150 } }).params.loadTimeout, 240);
   const errs = []; ai.cleanRouting({ params: { loadTimeout: 2 } }, undefined, errs);

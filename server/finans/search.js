@@ -4,7 +4,8 @@
 //    i grunnlaget gjør at svaret forkastes og det regelbaserte sammendraget brukes i stedet – modellen får ikke finne på tall.
 import { db, settings, secret, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini } from './gemini-keys.js';
-import { textJson, aiTimeoutsOf, AiCancelled, OLLAMA_KEEP_ALIVE } from './ai.js';
+import { textJson, aiTimeoutsOf, AiCancelled } from './ai.js';
+import { gateEmbed } from '../ollama-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { stripMarkers } from './subs-ask32.js';
 
 const q = (sql) => db.prepare(sql);
@@ -64,11 +65,16 @@ const embedModel = () => {
 };
 // Prompt 25: grensen for embeddings er motorens grense fra Innstillinger → AI → Tidsgrenser (ikke fast 30 s), lest ved hvert kall.
 const embedSignal = (kind, signal) => { const t = AbortSignal.timeout(aiTimeoutsOf()[kind] * 1000); return signal ? AbortSignal.any([t, signal]) : t; };
-async function embed(texts, m, signal = null) {
+async function embed(texts, m, signal = null, priority = 'interactive') {
   if (m.kind === 'ollama') {
-    const res = await fetch(`${settings().ollamaUrl.replace(/\/$/, '')}/api/embed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: embedSignal('ollama', signal), body: JSON.stringify({ model: m.model, input: texts, keep_alive: OLLAMA_KEEP_ALIVE }) });
-    if (!res.ok) throw new Error(`Ollama embed ${res.status}`);
-    return (await res.json()).embeddings;
+    // Prompt 43: via Ollama-gaten (kø, keep_alive per modell). Grensen er motorens grense fra Tidsgrenser (kald modell: loadTimeout).
+    try {
+      const out = await gateEmbed({ model: m.model, input: texts, base: settings().ollamaUrl.replace(/\/$/, ''), signal, priority, timeoutMs: aiTimeoutsOf().ollama * 1000, label: 'Finans · søkeindeks' });
+      return out.embeddings;
+    } catch (e) {
+      if (e?.kind === 'cancelled') throw e;
+      throw new Error(e?.kind === 'http' || e?.kind === 'memory' ? `Ollama embed ${e.status}` : `Ollama embed: ${e.message}`);
+    }
   }
   const res = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.model}:batchEmbedContents`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: embedSignal('gemini', signal),
@@ -91,7 +97,7 @@ function embedLater() {
       const todo = q("SELECT kind, ref, uid, text FROM fh_fts2 WHERE kind<>'line'").all().filter((d) => have.get(`${d.kind}/${d.ref}`) !== hashOf(d.text)).slice(0, 400);
       const put = q('INSERT OR REPLACE INTO fh_embed(kind, ref, model, hash, vec, user_id) VALUES(?,?,?,?,?,?)');
       for (let i = 0; i < todo.length; i += 32) {
-        const part = todo.slice(i, i + 32), vecs = await embed(part.map((d) => d.text), m);
+        const part = todo.slice(i, i + 32), vecs = await embed(part.map((d) => d.text), m, null, 'background');
         db.transaction(() => part.forEach((d, j) => vecs[j] && put.run(d.kind, d.ref, m.model, hashOf(d.text), toBlob(vecs[j]), d.uid)))();
       }
     } catch (e) { console.warn('[finans] embeddings:', e.message); }

@@ -26,6 +26,8 @@ import { mountHomes42, homeSearch42, homesOf42 } from './homes42.js';
 import { logo as faviconLogo, validDomain } from './enrich.js';
 import { itemForDomain, filePath as logoFile } from '../logos/match.js';
 import { readFile } from 'node:fs/promises';
+import { gateLoad } from '../ollama-gate.js'; // prompt 43
+import { modelFor } from '../ai-run.js';
 
 const q = (sql) => db.prepare(sql);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
@@ -131,9 +133,11 @@ finans42Api.post('/search/ask/stream', R, async (c) => streamAsk(c, await c.req.
 finans42Api.get('/search/log', R, (c) => c.json({ items: searchLog42(c.get('user')) }));
 finans42Api.post('/search/warm', R, async (c) => {
   const st = settings();
-  const model = st.ollamaTextModel || 'qwen2.5:3b';
+  // Prompt 43: modellen fra rutingen (Finans · spør), ikke en hardkodet standard; oppvarmingen går gjennom Ollama-gaten
+  // (keep_alive per modell, venter på tur, laster aldri ut en modell som er i bruk).
+  const model = await modelFor('fsok', 'ollama', st.ollamaTextModel || st.ollamaModel || '').catch(() => st.ollamaTextModel || st.ollamaModel || '');
   if (process.env.MOCK_DATA === '1' || process.env.NODE_ENV === 'test') return c.json({ ok: true, model, mock: true });
-  fetch(`${String(st.ollamaUrl).replace(/\/$/, '')}/api/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model, prompt: '', keep_alive: '30m' }), signal: AbortSignal.timeout(30_000) }).catch(() => {});
+  if (model) gateLoad(model, { base: String(st.ollamaUrl).replace(/\/$/, ''), priority: 'interactive', retries: 0, label: 'Finans · oppvarming' }).catch(() => {});
   return c.json({ ok: true, model });
 });
 

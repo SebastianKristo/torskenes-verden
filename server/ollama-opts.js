@@ -5,12 +5,31 @@
 // Reserve: modeller uten tenkestøtte kan svare 400 «… does not support thinking» når think er med. Da prøver vi én gang til
 // uten think, og husker modellen (i minnet, til omstart), så neste kall går rett uten think.
 //
+// Prompt 43: tenkemodeller (qwen3, deepseek-r1, gemma4, qwq m.fl., og modeller Ollama melder «thinking» for i capabilities)
+// får ALLTID think:false på korte kall. 400-minnet gjelder bare modeller som ikke er tenkemodeller: før kunne et 400-svar
+// som lignet få qwen3 husket som «uten think», og da tenkte den igjen på hvert kall (og brukte opp num_predict).
+//
 // Personlig innstilling ai_think (av som standard): når den er på, sendes think ikke for korte oppgaver (modellen bestemmer).
 // Chat har sin egen samtaleinnstilling (settings.think) og bruker chatThink().
 import { activeUser, userBool } from './settings.js';
 
 export const SHORT_NUM_CTX = 4096;
-const noThink = new Set(); // modellnavn som har svart «does not support thinking»
+const noThink = new Set(); // modellnavn som har svart «does not support thinking» (aldri tenkemodeller)
+const caps = new Map(); // modell → capabilities fra /api/show (når en modul har slått dem opp)
+
+/** Tenkemodeller etter navn. Bildemodellene qwen3-vl/qwen2.5vl regnes ikke med. */
+export const THINKING_RE = /(^|\/)(qwen3(?![-.]?vl)|qwq|deepseek-r1|deepseek-v3\.1|gemma4|magistral|phi4-reasoning|gpt-oss|cogito|exaone-deep|openthinker|smallthinker)|-thinking\b|:thinking\b/i;
+/** Husker capabilities fra /api/show (f.eks. ['completion','vision','thinking']). */
+export function noteCapabilities(model, list) { if (model && Array.isArray(list)) caps.set(model, list.map(String)); }
+/** Er modellen en tenkemodell? Navnet, eller «thinking» i capabilities når de er kjent. */
+export function isThinkingModel(model) {
+  const c = caps.get(model) ?? caps.get(`${model}:latest`) ?? caps.get(String(model).replace(/:latest$/, ''));
+  if (c?.includes('thinking')) return true;
+  return THINKING_RE.test(String(model ?? ''));
+}
+/** 400-minnet: bare for modeller som ikke er tenkemodeller. */
+export function rememberNoThink(model) { if (model && !isThinkingModel(model)) noThink.add(model); }
+export const hasNoThink = (model) => !isThinkingModel(model) && noThink.has(model);
 
 /** Ser 400-teksten ut som «modellen støtter ikke tenking»? */
 export const THINK_UNSUPPORTED = /does not support think|doesn'?t support think|not support(?:s|ed)? think|think(?:ing)? (?:is )?not supported|unknown field "?think|invalid .*think/i;
@@ -32,7 +51,7 @@ export function shortBody(body, { user, think } = {}) {
   const wants = think ?? userWantsThink(user);
   const out = { ...body, options: { num_ctx: SHORT_NUM_CTX, ...(body.options ?? {}) } };
   delete out.think;
-  if (!wants && !noThink.has(body.model)) out.think = false;
+  if (!wants && (isThinkingModel(body.model) || !noThink.has(body.model))) out.think = false;
   return out;
 }
 
@@ -40,7 +59,7 @@ export function shortBody(body, { user, think } = {}) {
 export function chatBody(body, on) {
   const out = { ...body };
   delete out.think;
-  if (!noThink.has(body.model)) out.think = !!on;
+  if (isThinkingModel(body.model) || !noThink.has(body.model)) out.think = !!on;
   return out;
 }
 
@@ -55,8 +74,8 @@ export async function ollamaPost(fetchFn, url, body, init = {}) {
   if (res.status !== 400 || !('think' in body)) return res;
   const text = await res.text().catch(() => '');
   if (!THINK_UNSUPPORTED.test(text)) return new Response(text, { status: res.status, statusText: res.statusText, headers: res.headers });
-  if (body.model) noThink.add(body.model);
-  console.warn(`[ollama] ${body.model} støtter ikke think, prøver uten`);
+  rememberNoThink(body.model); // tenkemodeller huskes ikke: neste kall sender think:false igjen
+  console.warn(`[ollama] ${body.model} støtter ikke think, prøver uten${isThinkingModel(body.model) ? ' (bare dette kallet)' : ''}`);
   const { think: _drop, ...rest } = body;
   return send(rest);
 }

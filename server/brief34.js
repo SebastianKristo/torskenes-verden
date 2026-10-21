@@ -44,6 +44,7 @@ import { newsFor } from './rss.js';
 import { packagesFor } from './tracking.js';
 import { notifyUser } from './notify.js';
 import { run as aiRun } from './ai-run.js';
+import { once, inFlight } from './ollama-gate.js'; // prompt 43: én LLM-oppsummering per bruker/brief/dato om gangen
 import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, hostOf, charName, proxied, engineReady, speak } from './glimt35.js'; // prompt 35
 import { trialCompact } from './trial-widgets.js'; // prompt 35: prøveperioder i briefen
 import { todosForBrief } from './tasks-glimt37.js'; // prompt 37: Gjøremål-kortet
@@ -247,7 +248,7 @@ export async function buildBrief(u, { kind = null, t = Date.now(), llm = false }
     b.trials[0] ? `${b.trials[0].service}-prøve ${b.trials[0].daysLabel}` : null].filter(Boolean);
   const cached = kv.get(u, cacheKey(k, now.date), null);
   let summary = cached?.summary ?? null, model = cached?.model ?? null;
-  if (!summary && llm) ({ summary, model } = await llmSummary(u, b));
+  if (!summary && llm) ({ summary, model } = await llmSummaryOnce(u, b));
   b.summary = summary || templateSummary(b);
   b.summarySource = summary ? 'glimt' : 'mal';
   b.model = summary ? model : null;
@@ -279,12 +280,21 @@ async function llmSummary(u, b) {
     return { summary: text, model: out.model ?? null };
   } catch (e) { console.warn('[brief]', e.message); return { summary: null, model: null }; }
 }
-const pendingLlm = new Set();
-function kickLlm(u, kind) {
-  const k = `${u}|${kind}|${osloParts().date}`;
-  if (pendingLlm.has(k) || kv.get(u, cacheKey(kind, osloParts().date), null)) return;
-  pendingLlm.add(k);
-  buildBrief(u, { kind, llm: true }).catch(() => {}).finally(() => pendingLlm.delete(k));
+// Prompt 43: single-flight. Briefen kunne startes tre ganger samtidig (runWindow, kickLlm og ?fresh=1), og pendingLlm dekket bare
+// kickLlm. Nå går alle tre veiene gjennom once('brief|bruker|kind|dato'): samme nøkkel mens den kjører gir samme promise.
+export const briefKey = (u, kind, date = osloParts().date) => `brief|${u}|${kind}|${date}`;
+function llmSummaryOnce(u, b) {
+  const date = osloParts().date;
+  return once(briefKey(u, b.kind, date), async () => {
+    const c = kv.get(u, cacheKey(b.kind, date), null); // ferdig i mellomtiden (en annen vei)
+    if (c?.summary) return { summary: c.summary, model: c.model ?? null };
+    return llmSummary(u, b);
+  });
+}
+/** Starter Glimt-oppsummeringen i bakgrunnen (én om gangen per bruker/brief/dato). → promise | null */
+export function kickLlm(u, kind) {
+  if (inFlight(briefKey(u, kind)) || kv.get(u, cacheKey(kind, osloParts().date), null)) return null;
+  return buildBrief(u, { kind, llm: true }).catch(() => {});
 }
 
 /** Kompakt form for widgets (iOS small/medium/large/låseskjerm, Android Glance, Samsung). */
@@ -337,7 +347,8 @@ api.get('/', async (c) => {
   const u = c.get('user'), kind = c.req.query('kind');
   if (kind && !TITLES[kind]) return c.json({ error: 'kind må være morning, day, evening eller night' }, 400);
   const b = await buildBrief(u, { kind });
-  if (b.summarySource === 'mal' || c.req.query('fresh') === '1') { if (c.req.query('fresh') === '1') kv.del(u, cacheKey(b.kind, osloParts().date)); kickLlm(u, b.kind); }
+  // Prompt 43: fresh=1 starter ikke en ny oppsummering mens en kjører (den som kjører, gir den nye teksten).
+  if (b.summarySource === 'mal' || c.req.query('fresh') === '1') { if (c.req.query('fresh') === '1' && !inFlight(briefKey(u, b.kind))) kv.del(u, cacheKey(b.kind, osloParts().date)); kickLlm(u, b.kind); }
   return c.json(b, 200, { 'Cache-Control': 'no-store' });
 });
 api.get('/widget', async (c) => {

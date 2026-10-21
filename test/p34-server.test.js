@@ -99,13 +99,14 @@ test('Glimt (AI-søk): modellen i innstillingene finnes ikke (404) → før: sti
   assert.match(r.body.warning, /Modellen «qwen2\.5vl:7b» finnes ikke på Ollama-serveren · bruker «qwen3:8b»/);
   const chat = ollama.calls.filter((c) => c.url.endsWith('/api/chat'));
   assert.equal(chat.length, 1, 'ingen kall til en modell som ikke finnes');
-  // Riktige felt til Ollama: /api/chat, stream:false, think:false, num_ctx som tall, keep_alive fra innstillingen.
+  // Riktige felt til Ollama: /api/chat, stream:true (prompt 43: alltid strømming via Ollama-gaten), think:false, num_ctx som tall,
+  // keep_alive per modell (prompt 43: qwen3:8b = 15m som standard).
   const b = chat[0].body;
-  assert.equal(b.stream, false);
+  assert.equal(b.stream, true);
   assert.equal(b.think, false);
   assert.equal(typeof b.options.num_ctx, 'number');
   assert.equal(typeof b.options.temperature, 'number');
-  assert.equal(b.keep_alive, '30m');
+  assert.equal(b.keep_alive, '15m');
   // Jobben står i jobbloggen med modell, tid og tokens.
   const jobs = (await A('/api/ai/jobs')).body;
   const j = jobs.recent.find((x) => x.id === r.body.aiJobId);
@@ -155,6 +156,8 @@ test('PUT /api/ai/routing: modell + reserve, keep_alive «alltid» → -1, konte
 
 test('treg modell: 20 s-grensen (her 400 ms) → reserven svarer, og jobben sier hvilken som feilet', async () => {
   ollama.slow.set('gemma4:12b', 1500);
+  // Prompt 43: falsk /api/ps er tom, så modellen regnes som kald → grensen er tid til første token for kald modell (loadTimeout).
+  ai._aiRunTest.loadMs = 400;
   const t0 = Date.now();
   const out = await ai.run('sok', { user: OWNER, prompt: 'hei' });
   assert.equal(out.model, 'qwen3:8b');
@@ -162,6 +165,7 @@ test('treg modell: 20 s-grensen (her 400 ms) → reserven svarer, og jobben sier
   assert.match(out.warnings.join(' '), /gemma4:12b svarte ikke \(svarte ikke innen 0 s\)|gemma4:12b svarte ikke/);
   assert.ok(Date.now() - t0 < 1400);
   ollama.slow.delete('gemma4:12b');
+  ai._aiRunTest.loadMs = null;
 });
 
 test('alt feiler: tydelig feil i svaret («Glimt fikk ikke svar fra {modell}: {feil}») med Prøv igjen / Åpne AI-kontroll, jobben står som Feilet', async () => {

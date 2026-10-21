@@ -19,6 +19,7 @@ import { cached } from './cache.js';
 import { PLACES, wmoText } from './weather-full.js';
 import { geocode } from './weather35.js';
 import { run as aiRun } from './ai-run.js';
+import { once } from './ollama-gate.js'; // prompt 43
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const CHARS39 = [
@@ -142,7 +143,7 @@ export async function weekSummary(u, { place = '', char = '' } = {}) {
     const facts = { sted: p.name, denneUka: { snitt: s.thisWeek.avgTemp, mm: s.thisWeek.precipMm, sol: s.thisWeek.sunHours, regndager: s.thisWeek.rainDays }, forrigeUke: { snitt: s.lastWeek.avgTemp, mm: s.lastWeek.precipMm, sol: s.lastWeek.sunHours },
       beste: s.highlights[0].text, paraply: s.highlights[1].text, klaer: s.highlights[2].text };
     const prompt = `Du er ${c.name}, ${c.desc}, en av Glimt-figurene. Skriv 2–3 korte setninger på norsk bokmål om ukas vær i den stemmen, med sammenligning mot forrige uke. Bruk bare fakta: ${JSON.stringify(facts)}`;
-    const t = llmImpl ? await llmImpl(prompt, ch) : MOCK() && !process.env.OLLAMA_URL ? null : (await aiRun('glimt', { user: u, prompt, temperature: 0.5, numPredict: 140, timeoutMs: 20_000, title: 'Glimt · ukas vær', background: true })).text;
+    const t = llmImpl ? await llmImpl(prompt, ch) : MOCK() && !process.env.OLLAMA_URL ? null : await once(`weather39|${u}|${p.name}|${ch}|${prompt.length}`, async () => (await aiRun('glimt', { user: u, prompt, temperature: 0.5, numPredict: 140, timeoutMs: 20_000, title: 'Glimt · ukas vær', background: true })).text); // prompt 43: single-flight
     const clean = String(t ?? '').replace(/\s+/g, ' ').trim();
     if (clean.length > 20) { s.text = clean.slice(0, 500); engine = 'glimt'; }
   } catch { /* lokal tekst */ }

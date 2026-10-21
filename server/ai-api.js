@@ -42,6 +42,7 @@ import { db, OWNER } from './db.js';
 import { settings as fhSettings, saveSettings, secret, setSecret, secretSource } from './finans/db.js';
 import { geminiKeys } from './finans/gemini-keys.js';
 import * as ai from './ai-run.js';
+import { gateLoad, gateUnload, loadedModels, gateState, keepAliveFor, GateError } from './ollama-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { getAzureRegion, setAzureRegion } from './glimt35.js'; // prompt 35: Azure-region for TTS
 import { hostHw, envHw, hwOut, fit38, recommendFor, SUGGESTED_MODELS, TIMEOUTS, FIT_LABEL } from './aihw38.js'; // prompt 38: Mac mini M4
 
@@ -70,8 +71,9 @@ async function ollamaJson(path, { method = 'GET', body, timeout = 5000 } = {}) {
   if (!r.ok) throw Object.assign(new Error(`Ollama svarte ${r.status}${j?.error ? `: ${j.error}` : ''}`), { status: r.status === 404 ? 404 : 502 });
   return j ?? {};
 }
+// Prompt 43: /api/ps via gaten (kort cache, samme som køen bruker for å se hva som er lastet).
 async function loaded() {
-  try { return (await ollamaJson('/api/ps', { timeout: 3000 })).models ?? []; } catch { return []; }
+  return (await loadedModels({ base: base(), fetch: F, force: true })) ?? [];
 }
 
 /* ---------------- Status ---------------- */
@@ -185,12 +187,16 @@ for (const act of ['load', 'unload']) {
   api.post(`/models/:id/${act}`, adminOnly, async (c) => {
     const id = decodeURIComponent(c.req.param('id'));
     if (!MODEL_RE.test(id)) return bad(c, 'Ugyldig modellnavn');
-    const keep = ai.routing(OWNER).params.keepAlive;
+    // Prompt 43: via Ollama-gaten. Last inn = modellens keep_alive (eller params.keepAlive når den er 0, så knappen virker);
+    // Last ut venter til ingen forespørsel mot modellen pågår (aldri midt i et svar).
+    const p = ai.routing(OWNER).params;
+    const keep = keepAliveFor(id, p);
     try {
-      await ollamaJson('/api/generate', { method: 'POST', body: { model: id, prompt: '', stream: false, keep_alive: act === 'unload' ? 0 : keep }, timeout: act === 'load' ? 120_000 : 15_000 });
+      if (act === 'load') await gateLoad(id, { base: base(), fetch: F, priority: 'interactive', keepAlive: keep === 0 ? p.keepAlive || '5m' : keep, loadMs: 120_000, retries: 0, label: 'Last inn' });
+      else await gateUnload(id, { base: base(), fetch: F });
       ai.invalidateStatus();
       return c.json({ ok: true, model: id, loaded: act === 'load' });
-    } catch (e) { return bad(c, e.message, e.status ?? 502); }
+    } catch (e) { return bad(c, e instanceof GateError ? `Ollama: ${e.message}` : e.message, e.status === 404 ? 404 : 502); }
   });
 }
 api.delete('/models/:id', adminOnly, async (c) => {
@@ -243,7 +249,7 @@ async function routingOut(u) {
   }
   const models = [...inv.models.map((m) => ({ id: m.name, provider: 'ollama', local: true, kind: m.kind })),
     ...ai.CLOUD_MODELS.filter((m) => r.cloudOn[m.id] !== false).map((m) => ({ id: m.id, provider: m.provider, local: false, kind: m.vision ? 'bilde' : 'tekst' }))];
-  return { tasks, rules: r.rules, params: r.params, budget: { ...r.budget, ...ai.budgetState(r) }, cloudOn: r.cloudOn, options: { keepAlive: ai.KEEP_ALIVE, numCtx: ai.NUM_CTX },
+  return { tasks, rules: r.rules, params: r.params, budget: { ...r.budget, ...ai.budgetState(r) }, cloudOn: r.cloudOn, options: { keepAlive: ai.KEEP_ALIVE, numCtx: ai.NUM_CTX, modelKeepAlive: ai.MODEL_KEEP_ALIVE }, // prompt 43: valgene per modell
     models, admin: isAdmin(u), ollama: { ok: inv.ok, error: inv.err }, warnings: tasks.filter((t) => t.warning).map((t) => `${t.name}: ${t.warning}`) };
 }
 api.get('/routing', async (c) => {
@@ -313,7 +319,9 @@ function jobs40(u, o) {
   const l = ai.jobList(u, o);
   const r = ai.routing(OWNER).params;
   return { ...l, groups: ai.jobGroups(l.recent), unseenFailed: ai.unseenFailed(u),
-    timeouts: { loadTimeout: r.loadTimeout ?? 180, responseTimeout: r.responseTimeout ?? 60, responseTimeoutImage: r.responseTimeoutImage ?? 120 }, queue: ai.queueState() };
+    timeouts: { loadTimeout: r.loadTimeout ?? 90, responseTimeout: r.responseTimeout ?? 60, responseTimeoutImage: r.responseTimeoutImage ?? 120,
+      firstTokenTimeout: r.firstTokenTimeout ?? 30, idleTimeout: r.idleTimeout ?? 30, idleTimeoutImage: r.idleTimeoutImage ?? 60 },
+    queue: ai.queueState(), gate: gateState() };
 }
 api.get('/jobs', (c) => {
   const u = c.get('user');
@@ -341,6 +349,8 @@ api.post('/jobs/retry', async (c) => {
 api.post('/jobs/:id/cancel', (c) => { const r = ai.jobCancel(c.req.param('id'), c.get('user')); return r ? c.json(r, r.ok ? 200 : 409) : bad(c, 'Fant ikke jobben', 404); });
 api.post('/jobs/:id/retry', async (c) => { const r = await ai.jobRetry(c.req.param('id'), c.get('user')); return r ? c.json(r) : bad(c, 'Jobben kan ikke prøves igjen (for gammel eller laget av en annen modul)', 409); });
 api.delete('/jobs', (c) => c.json({ ok: true, removed: ai.jobsClear(c.get('user')) }));
+// Prompt 43: GET /gate → {current, running:[], waiting:[{model, n, oldestMs}], loaded:[fra /api/ps], paused, hold, concurrency}
+api.get('/gate', async (c) => { await loadedModels({ base: base(), fetch: F }).catch(() => null); return c.json(gateState(), 200, { 'Cache-Control': 'no-store' }); });
 api.post('/queue/pause', adminOnly, async (c) => { const b = await c.req.json().catch(() => ({})); return c.json({ paused: ai.setQueuePaused(b?.paused !== false) }); });
 
 /* ---------------- Forbruk ---------------- */

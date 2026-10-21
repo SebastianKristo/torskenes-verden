@@ -37,6 +37,10 @@ const IC = { ov: 'M3 12h4l3-8 4 16 3-8h4', mod: 'M5 5h14v14H5zM9 9h6v6H9zM9 2v3M
   use: 'M4 20V10M10 20V4M16 20v-7M22 20H2', api: 'M15 7a4 4 0 1 1-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 1 15 7z', rt: 'M6 3v12M6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9c0 6-12 3-12 9' };
 const KEEP = [['5m', '5 min'], ['30m', '30 min'], [-1, 'Alltid'], [0, 'Aldri']], CTX = [[8192, '8k'], [32768, '32k'], [131072, '128k']], TEMP = [[0.2, '0,2'], [0.7, '0,7'], [1, '1,0']], PAR = [[1, '1'], [2, '2'], [3, '3'], [4, '4']];
 const CONF = [[70, '70 %'], [80, '80 %'], [85, '85 %'], [90, '90 %'], [95, '95 %']];
+// Prompt 43: Ollama-gaten – keep_alive per modell, samtidige forespørsler og de to tidsgrensene (sekunder).
+const MKEEP = [[null, 'Standard'], [0, '0'], ['5m', '5 min'], ['15m', '15 min'], ['30m', '30 min'], ['1h', '1 t'], [-1, 'Alltid']];
+const LOADT = [[30, '30 s'], [60, '60 s'], [90, '90 s'], [180, '180 s']], FIRSTT = [[15, '15 s'], [30, '30 s'], [60, '60 s']];
+const IDLET = [[15, '15 s'], [30, '30 s'], [60, '60 s'], [120, '120 s']], IDLEI = [[30, '30 s'], [60, '60 s'], [120, '120 s']];
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
@@ -197,6 +201,7 @@ async function saveRouting(patch, okMsg = '') {
   const prev = G.routing;
   const r = routingOf(), merge = { ...r, ...Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, typeof v === 'object' && v && !Array.isArray(v) ? { ...(r[k] ?? {}), ...v } : v])) };
   if (patch.tasks) merge.tasks = { ...(r.tasks ?? {}), ...Object.fromEntries(Object.entries(patch.tasks).map(([k, v]) => [k, { ...(r.tasks?.[k] ?? {}), ...v }])) };
+  if (patch.params?.modelKeepAlive) merge.params = { ...merge.params, modelKeepAlive: { ...(r.params?.modelKeepAlive ?? {}), ...patch.params.modelKeepAlive } }; // prompt 43
   G.routing = merge;
   redraw();
   try {
@@ -303,8 +308,10 @@ function shortReason(j) {
   if (/hoppet over|for lite minne|not enough memory|insufficient memory|out of memory/i.test(e)) return /hoppet/i.test(e) ? e.replace(/^.*?(Hoppet over)/i, '$1') : 'For lite minne';
   if (/ingen kontakt|får ikke kontakt|econnrefused|fetch failed|connect|unreachable|enotfound/i.test(e)) return 'Ingen kontakt med Ollama';
   if (/ble ikke lastet|lastet ikke|load(ing)? (timeout|timed out)|laster modellen/i.test(e)) return `Tidsavbrudd · lastet ikke inn${n ? ` på ${n} s` : ''}`;
+  if (/ingen nye tokens/i.test(e)) return `Tidsavbrudd · ingen nye tokens${n ? ` på ${n} s` : ''}`; // prompt 43
+  if (/lastet ut underveis/i.test(e)) return 'Modellen ble lastet ut underveis';
   if (/svarte ikke|timeout|timed out|tidsavbrudd/i.test(e)) return `Tidsavbrudd · svarte ikke${n ? ` på ${n} s` : ''}`;
-  if (j.status === 'cancel' || j.status === 'cancelled') return 'Avbrutt';
+  if (j.status === 'cancel' || j.status === 'cancelled') return 'Avbrutt av bruker';
   return e.split(/[.:\n]/)[0].slice(0, 80) || 'Feilet';
 }
 const groupKey = (j) => shortReason(j);
@@ -552,11 +559,28 @@ function rtTab(o) {
     .map(([k, n, s]) => `<button type="button" class="ac-li" data-ac-rule="${k}" role="switch" aria-checked="${!!R.rules?.[k]}"${admin || k === 'think' ? '' : ' disabled'}><span class="ac-col ac-grow"><b>${n}</b><span>${s}</span></span>${sw(!!R.rules?.[k])}</button>`).join('');
   const P = R.params ?? {};
   const par = (fin ? [['minConf', 'Minste sikkerhet før «Sjekk»', 'Lavere enn dette havner i Til godkjenning', CONF], ['parallel', 'Samtidige kvitteringer', 'Flere samtidig krever mer VRAM', PAR]]
-    : [['keepAlive', 'Hold modell lastet', 'Hvor lenge modellen blir i VRAM etter bruk (keep_alive)', KEEP], ['numCtx', 'Kontekst', 'Standard kontekstlengde (num_ctx)', CTX], ['temperature', 'Temperatur', 'Lav = presis, høy = kreativ', TEMP], ['parallel', 'Samtidige jobber', 'Maks jobber som kjører på serveren samtidig', PAR]])
+    : [['keepAlive', 'Hold modell lastet (standard)', 'For modeller uten eget valg under (keep_alive)', KEEP], ['numCtx', 'Kontekst', 'Standard kontekstlengde (num_ctx)', CTX], ['temperature', 'Temperatur', 'Lav = presis, høy = kreativ', TEMP],
+      ['ollamaConcurrency', 'Samtidige forespørsler til Ollama', 'Én om gangen passer OLLAMA_NUM_PARALLEL=1. Flere kjører bare samme modell samtidig.', PAR],
+      ['loadTimeout', 'Tid til første token · kald modell', 'Når modellen må lastes fra disk (ekstern disk: 2–40 s)', LOADT], ['firstTokenTimeout', 'Tid til første token · lastet modell', 'Når modellen allerede er i minnet', FIRSTT],
+      ['idleTimeout', 'Tid uten nye tokens · tekst', 'Stopper bare når svaret står stille, ikke mens det skrives', IDLET], ['idleTimeoutImage', 'Tid uten nye tokens · bilde', 'Bilder (kvitteringer, strekkoder) trenger mer tid', IDLEI]])
     .map(([k, n, s, opts]) => { const cur = opts.find((x) => String(x[0]) === String(P[k])); return `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>${n}</b><span>${s}</span></span><b class="ac-mono">${esc(cur?.[1] ?? P[k] ?? '–')}</b></span><div class="ac-seg">${opts.map(([v, l]) => `<button type="button" class="${String(P[k]) === String(v) ? 'on' : ''}" data-ac-par="${k}" data-v="${esc(JSON.stringify(v))}"${admin || k === 'temperature' ? '' : ' disabled'}>${l}</button>`).join('')}</div></div>`; }).join('');
   return `${fin ? '' : glCard()}<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
     <div class="ac-sec">${lab('REGLER')}<div class="ac-card ac-list">${rules}</div></div>
-    <div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>`;
+    <div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>
+    ${fin ? '' : mkaCard(P, admin)}`;
+}
+/** Prompt 43: keep_alive per installert modell. 0 = lastes ut når køen for modellen er tom; Standard = «Hold modell lastet» over. */
+function mkaCard(P, admin) {
+  const M = installed();
+  if (!M.length) return '';
+  const mk = P.modelKeepAlive ?? {};
+  const label = (v) => (MKEEP.find((x) => String(x[0]) === String(v))?.[1] ?? String(v));
+  const rows = M.map((m, i) => {
+    const has = Object.prototype.hasOwnProperty.call(mk, m.id) && mk[m.id] !== null, cur = has ? mk[m.id] : null;
+    return `<div class="ac-par ac-mka"${i ? '' : ' style="border-top:0"'}><span class="ac-row ac-sb"><span class="ac-col"><b class="ac-mono">${esc(m.id)}</b><span>${m.loaded ? 'Lastet nå' : 'Ikke lastet'}${m.gb ? ` · ${gb(m.gb)} GB` : ''}</span></span><b class="ac-mono">${esc(has ? label(cur) : `Standard (${label(P.keepAlive)})`)}</b></span>
+      <div class="ac-seg">${MKEEP.map(([v, l]) => `<button type="button" class="${String(cur) === String(v) ? 'on' : ''}" data-ac-mka="${esc(m.id)}" data-v="${esc(JSON.stringify(v))}"${admin ? '' : ' disabled'}>${l}</button>`).join('')}</div></div>`;
+  }).join('');
+  return `<div class="ac-sec">${lab('HOLD MODELLEN LASTET · PER MODELL')}<div class="ac-card ac-list">${rows}</div><div class="ac-note">0 = modellen lastes ut når det ikke står flere jobber for den i køen (aldri midt i et svar). Alltid = blir i minnet.</div></div>`;
 }
 /** Finans: fire rader (Kvitteringer, Kategorisering, Finans · spør, Strekkoder og pakkelapper), MODELL og RESERVE med LOKAL/SKY,
  *  rød advarsel når «Finansdata forlater aldri huset» er på og en sky-modell er valgt, og tom tilstand uten modeller. */
@@ -628,11 +652,13 @@ function jobTab(o) {
   if (!jt41) jt41 = setInterval(() => { if (document.querySelector('.ac-jt41')) redraw(); }, 60000);
   if (G.missing.jobs) return missingNote('Jobbloggen');
   const J = jobsF(o.scope === 'finans'), run = J.filter((j) => j.status === 'run'), q = J.filter((j) => j.status === 'queue'), done = J.filter((j) => j.status === 'ok' || j.status === 'fail' || j.status === 'cancel' || j.status === 'cancelled');
-  const par = routingOf().params?.parallel ?? 2;
+  const par = routingOf().params?.ollamaConcurrency ?? 1; // prompt 43: samtidige forespørsler til Ollama
   const row = (j) => {
     const r = j.status === 'run', qq = j.status === 'queue', ok = j.status === 'ok', bad = j.status === 'fail' || j.status === 'cancel' || j.status === 'cancelled', skip = j.status === 'skip' || j.skipped;
     const tokn = (j.tokens?.in ?? 0) + (j.tokens?.out ?? 0), ph = r ? phaseText(j) : '';
-    const s = [j.model, r ? (ph || `${Math.floor(j.progress ?? 0)} %${j.step ? ` · ${j.step}` : ''}`) : '', qq ? (j.when ? j.when : 'venter') : '', j.ms != null && !r ? ms2(j.ms) : '', tokn ? `${nb(tokn)} tok` : '', j.costKr ? krs(j.costKr) : '', j.fallbackFrom ? `reserve for ${j.fallbackFrom}` : '', bad || skip ? shortReason(j) : ''].filter(Boolean).join(' · ');
+    // Prompt 43: køtid, lastetid og genereringstid fra Ollama-gaten, og antall forsøk.
+    const T = j.timing ?? {}, tim = !r && !qq ? [T.queueMs > 500 ? `kø ${ms2(T.queueMs)}` : '', T.loadMs > 200 ? `lastet ${ms2(T.loadMs)}` : '', T.genMs ? `generert ${ms2(T.genMs)}` : '', j.attempts > 1 ? `${j.attempts} forsøk` : ''] : [];
+    const s = [j.model, r ? (ph || `${Math.floor(j.progress ?? 0)} %${j.step ? ` · ${j.step}` : ''}`) : '', qq ? (j.when ? j.when : j.step || 'venter') : '', j.ms != null && !r ? ms2(j.ms) : '', ...tim, tokn ? `${nb(tokn)} tok` : '', j.costKr ? krs(j.costKr) : '', j.fallbackFrom ? `reserve for ${j.fallbackFrom}` : '', bad || skip ? shortReason(j) : ''].filter(Boolean).join(' · ');
     const act = r || qq ? btn('Avbryt', `data-ac-jcancel="${esc(j.id)}"`, 'red') : bad && j.retryable !== false ? btn('Prøv igjen', `data-ac-jretry="${esc(j.id)}"`) : '';
     const full = (bad || skip) && j.error && j.error !== shortReason(j) ? `<details class="ac-jdet"><summary>Detaljer</summary><span>${esc(j.error)}</span></details>` : '';
     const pct = r && j.phase?.kind === 'load' && j.phase.totalGb ? Math.round(((j.phase.loadedGb ?? 0) / j.phase.totalGb) * 100) : j.progress ?? 0;
@@ -648,7 +674,7 @@ function jobTab(o) {
   G.gList = groups;
   const ollamaDown = groups.find((g) => /ingen kontakt/i.test(g.short ?? ''));
   const G2 = [['KJØRER', run.map(row)], ['I KØ', q.map(row)], ['FEILET', groups.map(gRow)], ['SISTE', rest.slice(0, 40).map(row)]].filter((g) => g[1].length);
-  return `<div class="ac-row ac-sb ac-wrap"><span class="ac-mut">${run.length} kjører · ${q.length} i kø · ${par > 1 ? `maks ${par} samtidig` : 'én om gangen'} · selvtester én modell om gangen${G.paused ? ' · køen er pauset' : ''}</span><span class="ac-row">${btn(G.paused ? 'Fortsett kø' : 'Pause kø', 'data-ac-pause')}${btn('Tøm historikk', 'data-ac-jclear')}</span></div>
+  return `<div class="ac-row ac-sb ac-wrap"><span class="ac-mut">${run.length} kjører · ${q.length} i kø · ${par > 1 ? `maks ${par} samtidig mot Ollama (samme modell)` : 'én om gangen mot Ollama'} · gruppert per modell${G.paused ? ' · køen er pauset' : ''}</span><span class="ac-row">${btn(G.paused ? 'Fortsett kø' : 'Pause kø', 'data-ac-pause')}${btn('Tøm historikk', 'data-ac-jclear')}</span></div>
     ${ollamaDown ? `<div class="ac-card ac-jwarn"><span class="ac-col ac-grow"><b>Får ikke kontakt med Ollama</b><span class="ac-mut">${esc(ollamaDown.jobs[0]?.error ?? 'Sjekk adressen under API og nøkler.')}</span></span>${btn('Test tilkobling', 'data-ac-tab="api"')}</div>` : ''}
     ${G2.map(([h, L]) => `<div class="ac-sec">${lab(h)}<div class="ac-card ac-list">${L.join('')}</div></div>`).join('') || `<div class="ac-card"><span class="ac-mut">${G.jobs ? 'Ingen AI-jobber ennå. Chat, kvitteringer, kategorisering, AI-søk og Glimt logges her.' : G.err.jobs ? esc(G.err.jobs) : 'Laster …'}</span></div>`}`;
 }
@@ -779,6 +805,7 @@ function bind(el) {
     }
     if (d.acRule) { vibe(); return saveRouting({ rules: { [d.acRule]: !routingOf().rules?.[d.acRule] } }); }
     if (d.acPar) { vibe(); let v; try { v = JSON.parse(d.v); } catch { v = d.v; } return saveRouting({ params: { [d.acPar]: v } }); }
+    if (d.acMka) { vibe(); let v; try { v = JSON.parse(d.v); } catch { v = d.v; } return saveRouting({ params: { modelKeepAlive: { [d.acMka]: v } } }); } // prompt 43
     if (d.acBudt) { vibe(); return saveRouting({ budget: { [d.acBudt]: !routingOf().budget?.[d.acBudt] } }); }
     if (d.acPer) { G.per = d.acPer; vibe(); G.usage = null; loadUsage(); redraw(); return; }
     if ('acPause' in d) { try { const r = await call('/queue/pause', { method: 'POST', json: { paused: !G.paused } }); G.paused = r.paused ?? !G.paused; vibe(); } catch (err) { toast(err.message); } redraw(); return; }

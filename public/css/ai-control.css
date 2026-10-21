@@ -113,6 +113,10 @@
 .ac-seg button{flex:1;min-width:0;height:30px;border:0;border-radius:999px;background:transparent;color:var(--mut);font:700 12px Manrope,system-ui,sans-serif;white-space:nowrap;padding:0 10px}
 .ac-seg.auto button{flex:none;height:32px;padding:0 14px;font-size:12.5px}
 .ac-seg button.on{background:var(--card);color:var(--ink)}
+/* Prompt 43: keep_alive per modell (sju valg) brytes over to linjer på smale skjermer */
+.ac-mka .ac-seg{flex-wrap:wrap;border-radius:16px}
+.ac-mka .ac-seg button{flex:1 0 auto;padding:0 8px}
+.ac-mka b.ac-mono{word-break:break-all}
 /* Jobber */
 .ac-job{display:flex;flex-direction:column;gap:7px;padding:12px 0}
 .ac-ring{flex:none;width:18px;height:18px;border-radius:9px;display:grid;place-items:center;color:#fff;font:800 10px Manrope,sans-serif}

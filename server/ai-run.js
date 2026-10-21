@@ -21,13 +21,18 @@
 //
 // Ruting (kv(OWNER,'ai_routing') = serverstandard av admin, kv(bruker,'ai_routing_user') = egne valg for chat/sok/glimt/brief):
 //   {tasks:{<id>:{model:'qwen3:8b'|''(auto), fallback:''}}, rules:{localFirst, finLocal, think},
-//    params:{keepAlive:'5m'|'30m'|-1|0, numCtx:8192|32768|131072, temperature:0.7, parallel:1–4, minConf:70–95},
+//    params:{keepAlive:'5m'|'30m'|-1|0, numCtx:8192|32768|131072, temperature:0.7, parallel:1–4, minConf:70–95,
+//            prompt 43: ollamaConcurrency:1–4, modelKeepAlive:{'qwen3:8b':'15m', …}, loadTimeout (kald modell, 90 s), firstTokenTimeout (30 s),
+//            idleTimeout (30 s tekst), idleTimeoutImage (60 s bilde)},
+// Prompt 43: alle Ollama-kall går gjennom server/ollama-gate.js (kø, gruppering per modell, keep_alive per modell, strømming og
+// to tidsgrenser, nye forsøk). Her er det ingen egen kø lenger.
 //    budget:{monthlyKr:0 (= ingen grense), hardStop:true, warn80:true}, cloudOn:{'gemini-2.5-flash':true, …}, migratedAt}
 import { randomUUID } from 'node:crypto';
 import { db, kv, OWNER } from './db.js';
 import { settings as fhSettings, secret, me } from './finans/db.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
-import { ollamaPost, shortBody, ollamaContent, stripThink, SHORT_NUM_CTX } from './ollama-opts.js';
+import { shortBody, stripThink, SHORT_NUM_CTX } from './ollama-opts.js';
+import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError } from './ollama-gate.js';
 import { broadcast } from './realtime.js';
 import { envHw } from './aihw38.js';
 import { jobTimes41, groupTimes41 } from './ai41.js'; // prompt 41: klokkeslett i Jobber
@@ -75,10 +80,14 @@ const MOCK = () => process.env.MOCK_DATA === '1' && !process.env.OLLAMA_URL;
 
 export const KEEP_ALIVE = ['5m', '30m', -1, 0];
 export const NUM_CTX = [4096, 8192, 32768, 131072];
+// Prompt 43: valgene for keep_alive per modell i AI-kontroll (0 = last ut når køen er tom, -1 = alltid).
+export const MODEL_KEEP_ALIVE = [0, '5m', '15m', '30m', '1h', -1];
 const DEFAULT_ROUTING = () => ({
   tasks: Object.fromEntries(AI_TASKS.map((t) => [t.id, { model: '', fallback: '' }])),
   rules: { localFirst: true, finLocal: false, think: false },
-  params: { keepAlive: '30m', numCtx: 8192, temperature: 0.7, parallel: 2, minConf: 85, loadTimeout: 180, responseTimeout: 60, responseTimeoutImage: 120 },
+  params: { keepAlive: '30m', numCtx: 8192, temperature: 0.7, parallel: 2, minConf: 85, loadTimeout: 90, responseTimeout: 60, responseTimeoutImage: 120,
+    // Prompt 43: Ollama-gaten
+    ollamaConcurrency: 1, modelKeepAlive: { ...DEFAULT_MODEL_KEEP_ALIVE }, firstTokenTimeout: 30, idleTimeout: 30, idleTimeoutImage: 60 },
   budget: { monthlyKr: 0, hardStop: true, warn80: true },
   cloudOn: {},
 });
@@ -125,10 +134,26 @@ export function cleanRouting(b, base = DEFAULT_ROUTING(), errors = []) {
   if (p.parallel !== undefined) { const v = Math.round(+p.parallel); if (!(v >= 1 && v <= 4)) errors.push('parallel må være 1–4'); else out.params.parallel = v; }
   if (p.minConf !== undefined) { const v = Math.round(+p.minConf); if (!(v >= 50 && v <= 99)) errors.push('minConf må være 50–99'); else out.params.minConf = v; }
   // Prompt 40: to tidsgrenser per kall (sekunder): innlasting fra disk og selve svaret (tekst / bilde).
-  for (const [k, lo, hi] of [['loadTimeout', 10, 900], ['responseTimeout', 5, 600], ['responseTimeoutImage', 5, 900]]) {
+  for (const [k, lo, hi] of [['loadTimeout', 10, 900], ['responseTimeout', 5, 600], ['responseTimeoutImage', 5, 900], ['firstTokenTimeout', 5, 600], ['idleTimeout', 5, 600], ['idleTimeoutImage', 5, 900]]) {
     if (p[k] === undefined) continue;
     const v = Math.round(+p[k]);
     if (!(v >= lo && v <= hi)) errors.push(`${k} må være ${lo}–${hi} sekunder`); else out.params[k] = v;
+  }
+  // Prompt 43: samtidige forespørsler til Ollama og keep_alive per modell ({modell: '15m' | 0 | -1 | null (= standard)}).
+  if (p.ollamaConcurrency !== undefined) { const v = Math.round(+p.ollamaConcurrency); if (!(v >= 1 && v <= 4)) errors.push('ollamaConcurrency må være 1–4'); else out.params.ollamaConcurrency = v; }
+  if (p.modelKeepAlive !== undefined) {
+    if (!p.modelKeepAlive || typeof p.modelKeepAlive !== 'object' || Array.isArray(p.modelKeepAlive)) errors.push('modelKeepAlive må være {modell: keep_alive}');
+    else {
+      const mk = { ...(out.params.modelKeepAlive ?? {}) };
+      for (const [m, v] of Object.entries(p.modelKeepAlive)) {
+        const id = cleanModelId(m);
+        if (!id) { errors.push(`Ugyldig modell i modelKeepAlive: ${m}`); continue; }
+        if (v === null || v === '' || v === 'standard') { mk[id] = null; continue; } // null = bruk params.keepAlive (huskes, så standardene ikke kommer tilbake)
+        const k = cleanKeepAlive(v);
+        if (k === null) errors.push(`keep_alive for ${id} må være 0, 5m, 15m, 30m, 1h eller alltid`); else mk[id] = k;
+      }
+      out.params.modelKeepAlive = mk;
+    }
   }
   const bu = b.budget ?? {};
   if (bu.monthlyKr !== undefined) { const v = Number(bu.monthlyKr); if (!Number.isFinite(v) || v < 0 || v > 100000) errors.push('monthlyKr må være 0 eller mer'); else out.budget.monthlyKr = Math.round(v); }
@@ -316,6 +341,10 @@ CREATE INDEX IF NOT EXISTS ai_runs_user_ts ON ai_runs(user_id, ts);
 CREATE INDEX IF NOT EXISTS ai_runs_ts ON ai_runs(ts);`);
 // Prompt 40: fase (load/think/answer) og når jobben faktisk begynte å kjøre (klokka starter da, ikke når den legges i kø).
 for (const [col, def] of [['phase', 'TEXT'], ['run_at', 'INTEGER']]) if (!db.prepare('PRAGMA table_info(ai_runs)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE ai_runs ADD COLUMN ${col} ${def}`);
+// Prompt 43: tider fra Ollama-gaten (køtid, lastetid, genereringstid), antall forsøk og feilklasse. Additivt; finnes de, hoppes det over.
+for (const [col, def] of [['queue_ms', 'INTEGER'], ['load_ms', 'INTEGER'], ['gen_ms', 'INTEGER'], ['attempts', 'INTEGER'], ['err_kind', 'TEXT']]) {
+  try { db.exec(`ALTER TABLE ai_runs ADD COLUMN ${col} ${def}`); } catch { /* finnes allerede */ }
+}
 // Jobber som kjørte da serveren stoppet, er ikke ferdige.
 db.prepare("UPDATE ai_runs SET status='fail', error=COALESCE(error,'Avbrutt av omstart') WHERE status IN ('run','queue')").run();
 const live = new Map(); // id → {ctrl, user, retry?}
@@ -326,7 +355,9 @@ export const jobOut = (r) => ({
   id: r.id, task: r.task, taskName: taskName(r.task), kind: r.kind ?? 'ai', title: r.title, model: r.model, provider: r.provider,
   status: r.status, progress: r.progress ?? (r.status === 'ok' ? 100 : 0), step: r.step ?? null, partial: parseJ(r.partial, null),
   phase: r.status === 'run' ? parseJ(r.phase, null) : null, runAt: r.run_at ? new Date(r.run_at).toISOString() : null,
-  ...(r.status === 'fail' || r.status === 'skip' ? (({ reason, short }) => ({ reason, short }))(failReason(r.error)) : {}),
+  ...(r.status === 'fail' || r.status === 'skip' || r.status === 'cancelled' ? (({ reason, short }) => ({ reason, short }))(failReason(r.error, r.err_kind)) : {}),
+  // prompt 43: tidene fra Ollama-gaten og antall forsøk
+  timing: { queueMs: r.queue_ms ?? null, loadMs: r.load_ms ?? null, genMs: r.gen_ms ?? null, totalMs: r.ms ?? null }, attempts: r.attempts ?? null, errKind: r.err_kind ?? null,
   // prompt 41: createdAt, startedAt (når den faktisk startet), endedAt, timeLabel, timeAgo (jobTimes41)
   startedAt: new Date(r.ts).toISOString(), ...jobTimes41(r), ms: r.ms ?? null, tokens: { in: r.tok_in ?? 0, out: r.tok_out ?? 0 }, costKr: r.cost_kr ?? 0,
   error: r.error ?? null, fallbackFrom: r.fallback_from ?? null, ref: r.ref ?? null, retryable: !!live.get(r.id)?.retry,
@@ -355,7 +386,8 @@ export function jobStart({ user = me(), task = 'sok', kind = 'ai', title = null,
 export function jobUpdate(id, p = {}) {
   const cols = { status: p.status, progress: p.progress, step: p.step, partial: p.partial !== undefined ? JSON.stringify(p.partial) : undefined, model: p.model, provider: p.provider,
     phase: p.phase !== undefined ? (p.phase ? JSON.stringify(p.phase) : null) : undefined, run_at: p.runAt,
-    ms: p.ms, tok_in: p.tokIn, tok_out: p.tokOut, cost_kr: p.costKr, error: p.error !== undefined ? (p.error ? String(p.error).slice(0, 500) : null) : undefined, fallback_from: p.fallbackFrom, title: p.title };
+    ms: p.ms, tok_in: p.tokIn, tok_out: p.tokOut, cost_kr: p.costKr, error: p.error !== undefined ? (p.error ? String(p.error).slice(0, 500) : null) : undefined, fallback_from: p.fallbackFrom, title: p.title,
+    queue_ms: p.queueMs, load_ms: p.loadMs, gen_ms: p.genMs, attempts: p.attempts, err_kind: p.errKind };
   const ks = Object.keys(cols).filter((k) => cols[k] !== undefined);
   if (!ks.length) return;
   db.prepare(`UPDATE ai_runs SET ${ks.map((k) => `${k}=?`).join(',')}, updated=? WHERE id=?`).run(...ks.map((k) => cols[k]), Date.now(), id);
@@ -369,7 +401,7 @@ export function jobList(user, { limit = 50, kind = null, task = null } = {}) {
   if (kind) { w.push('kind=?'); a.push(kind); }
   if (task) { w.push('task=?'); a.push(taskId(task)); }
   const rows = db.prepare(`SELECT * FROM ai_runs WHERE ${w.join(' AND ')} ORDER BY ts DESC LIMIT ?`).all(...a, Math.min(500, Math.max(1, +limit || 50))).map(jobOut);
-  return { running: rows.filter((j) => j.status === 'run'), queued: rows.filter((j) => j.status === 'queue'), recent: rows.filter((j) => !['run', 'queue'].includes(j.status)), paused: queue.paused };
+  return { running: rows.filter((j) => j.status === 'run'), queued: rows.filter((j) => j.status === 'queue'), recent: rows.filter((j) => !['run', 'queue'].includes(j.status)), paused: gatePaused() };
 }
 /* ---- Prompt 40: grupperte feil, «nye feil siden sist» og Prøv igjen ---- */
 /** Feilede jobber gruppert på samme årsak. → [{reason, short, count, ids, label, selftest}] (største først) */
@@ -377,7 +409,7 @@ export function jobGroups(rows) {
   const g = new Map();
   for (const j of rows) {
     if (j.status !== 'fail' && j.status !== 'skip') continue;
-    const fr = j.status === 'skip' ? { reason: 'memory', short: 'Hoppet over · for lite minne' } : failReason(j.error);
+    const fr = j.status === 'skip' ? { reason: 'memory', short: 'Hoppet over · for lite minne' } : failReason(j.error, j.errKind);
     const cur = g.get(fr.reason) ?? { reason: fr.reason, short: fr.short, count: 0, ids: [], selftest: 0 };
     cur.count++; cur.ids.push(j.id); (cur.jobs ??= []).push(j); if (/^Selvtest · /.test(j.title ?? '')) cur.selftest++;
     g.set(fr.reason, cur);
@@ -417,7 +449,7 @@ export function jobCancel(id, user) {
   if (!r) return null;
   if (!['run', 'queue'].includes(r.status)) return { ok: false, status: r.status };
   try { live.get(id)?.ctrl?.abort(new Error('Avbrutt')); } catch { /* */ }
-  jobUpdate(id, { status: 'cancelled', error: 'Avbrutt av brukeren' });
+  jobUpdate(id, { status: 'cancelled', error: 'Avbrutt av bruker', errKind: 'cancelled' });
   return { ok: true, status: 'cancelled' };
 }
 export async function jobRetry(id, user) {
@@ -428,24 +460,14 @@ export async function jobRetry(id, user) {
 }
 export const jobsClear = (user) => db.prepare("DELETE FROM ai_runs WHERE user_id=? AND status NOT IN ('run','queue')").run(user).changes;
 
-/* ---------------- Kø (Samtidige jobber) ---------------- */
+/* ---------------- Kø (Ollama-gaten) ---------------- */
 
-// Prompt 40: hold > 0 mens selvtesten kjører – da starter ingen nye bakgrunnsjobber (selvtesten skal ikke kjøre parallelt med andre jobber).
-const queue = { active: 0, waiting: [], paused: false, hold: 0 };
-export const queueState = () => ({ active: queue.active, waiting: queue.waiting.length, paused: queue.paused, hold: queue.hold });
-export function holdQueue() { queue.hold++; let done = false; return () => { if (done) return; done = true; queue.hold = Math.max(0, queue.hold - 1); pump(); }; }
-export function setQueuePaused(v) { queue.paused = !!v; pump(); return queue.paused; }
-function pump() {
-  const lim = serverRouting().params.parallel || 2;
-  while (!queue.paused && !queue.hold && queue.waiting.length && queue.active < lim) { const w = queue.waiting.shift(); queue.active++; w.go(); }
-}
-// Interaktive kall (Glimt, søk, selvtest) venter aldri i køen; bakgrunnsjobber (background:true) respekterer «Samtidige jobber» og pause.
-const slot = (background, onQueue) => new Promise((resolve) => {
-  const go = () => resolve(() => { queue.active = Math.max(0, queue.active - 1); pump(); });
-  if (!background || (!queue.paused && !queue.hold && queue.active < (serverRouting().params.parallel || 2))) { queue.active++; go(); return; }
-  onQueue?.();
-  queue.waiting.push({ go, background });
-});
+// Prompt 43: køen ligger i server/ollama-gate.js. Pause (bakgrunnsjobber) og hold (selvtesten: ingen nye bakgrunnsjobber
+// imens) virker der; interaktive kall går foran, men går også gjennom køen (ingen slipper forbi).
+configureGate({ params: () => serverRouting().params });
+export const queueState = () => { const g = gateState(); return { active: g.running.length, waiting: g.waiting.reduce((a, x) => a + x.n, 0), paused: g.paused, hold: g.hold, gate: g }; };
+export const holdQueue = () => holdGate();
+export const setQueuePaused = (v) => setGatePaused(v);
 
 /* ---------------- Feil ---------------- */
 
@@ -454,20 +476,28 @@ export class AiRunError extends Error {
 }
 const shortErr = (e) => String(e?.message ?? e ?? 'ukjent feil').replace(/\s+/g, ' ').trim().slice(0, 220);
 /**
- * Prompt 40: årsaken til en feil, til gruppering i Jobber. → {reason, short}
- *   reason: 'load_timeout:<s>' | 'response_timeout:<s>' | 'memory' | 'nocontact' | 'model' | 'key' | 'cancelled' | 'other'
- *   short:  «Tidsavbrudd · lastet ikke inn på 180 s» | «Tidsavbrudd · svarte ikke på 60 s» | «For lite minne» | «Ingen kontakt med Ollama» | …
+ * Prompt 40/43: årsaken til en feil, til gruppering i Jobber. → {reason, short}
+ *   reason: 'load_timeout:<s>' | 'idle_timeout:<s>' | 'response_timeout:<s>' | 'unloaded' | 'http:<status>' | 'memory' | 'nocontact'
+ *           | 'model' | 'key' | 'cancelled' | 'other'
+ *   short:  «Tidsavbrudd · lastet ikke inn på 90 s» | «Tidsavbrudd · ingen nye tokens på 30 s» | «Modellen ble lastet ut underveis»
+ *           | «Ollama HTTP 500: <melding>» | «For lite minne» | «Ingen kontakt med Ollama» | «Avbrutt av bruker» | …
+ *   kind: feilklassen fra Ollama-gaten (err_kind), når den er kjent.
  */
-export function failReason(error) {
+export function failReason(error, kind = null) {
   const m = String(error ?? '');
   let x;
+  if (kind === 'cancelled' || /avbrutt av bruker/i.test(m)) return { reason: 'cancelled', short: 'Avbrutt av bruker' };
   if ((x = m.match(/(?:lastet ikke inn på|ble ikke lastet \(?)\s*(\d+)\s*s/i))) return { reason: `load_timeout:${x[1]}`, short: `Tidsavbrudd · lastet ikke inn på ${x[1]} s` };
+  if ((x = m.match(/ingen nye tokens på (\d+) s/i))) return { reason: `idle_timeout:${x[1]}`, short: `Tidsavbrudd · ingen nye tokens på ${x[1]} s` };
+  if (kind === 'unloaded' || /lastet ut underveis/i.test(m)) return { reason: 'unloaded', short: 'Modellen ble lastet ut underveis' };
   if ((x = m.match(/svarte ikke (?:innen|på) (\d+) s/i))) return { reason: `response_timeout:${x[1]}`, short: `Tidsavbrudd · svarte ikke på ${x[1]} s` };
   if (/svarte ikke innen tidsgrensen|tidsfristen/i.test(m)) return { reason: 'response_timeout', short: 'Tidsavbrudd · svarte ikke i tide' };
-  if (/for lite minne/i.test(m)) return { reason: 'memory', short: 'For lite minne' };
+  if (kind === 'memory' || /for lite minne|out of memory|more system memory/i.test(m)) return { reason: 'memory', short: 'For lite minne' };
   if (/kontakt med Ollama|Ollama kan ikke nås|ECONNREFUSED|EHOSTUNREACH|ENOTFOUND|adressen er ikke satt/i.test(m)) return { reason: 'nocontact', short: 'Ingen kontakt med Ollama' };
+  if ((x = m.match(/Ollama HTTP (\d{3}):?\s*(.*)$/i))) return { reason: `http:${x[1]}`, short: `Ollama HTTP ${x[1]}${x[2] ? `: ${x[2].slice(0, 70)}` : ''}` };
   if (/finnes ikke|not found|ingen .*modell/i.test(m)) return { reason: 'model', short: 'Modellen finnes ikke' };
   if (/\b40[13]\b|nøkkel|api key/i.test(m)) return { reason: 'key', short: 'Feil eller manglende nøkkel' };
+  if (/avbrutt av omstart/i.test(m)) return { reason: 'restart', short: 'Avbrutt av omstart' };
   if (/avbrutt/i.test(m)) return { reason: 'cancelled', short: 'Avbrutt' };
   return { reason: 'other', short: m.replace(/^Glimt fikk ikke svar fra [^:]+: /, '').slice(0, 80) || 'Feil' };
 }
@@ -502,7 +532,11 @@ const parseJsonText = (t) => {
   throw new Error('svarte ikke med gyldig JSON');
 };
 
-async function callOllama(model, o, signal, r) {
+/**
+ * Prompt 43: Ollama via gaten (kø, strømming, to tidsgrenser, nye forsøk). ctx: {jobId, last, onQueue, onStart, sizeGb}.
+ * → {text, tin, tout, telemetry}. Kaster GateError (message er norsk: «lastet ikke inn på 90 s», «ingen nye tokens på 30 s» …).
+ */
+async function callOllama(model, o, signal, r, ctx = {}) {
   const base = ollamaBase();
   if (!base) throw new Error('Ollama-adressen er ikke satt');
   const msgs = [];
@@ -512,17 +546,30 @@ async function callOllama(model, o, signal, r) {
   const t = taskId(o.task);
   const options = { temperature: o.temperature ?? r.params.temperature, num_ctx: t === 'chat' ? r.params.numCtx : Math.min(r.params.numCtx || SHORT_NUM_CTX, SHORT_NUM_CTX) };
   if (o.numPredict) options.num_predict = o.numPredict;
-  const body = shortBody({ model, stream: false, keep_alive: r.params.keepAlive, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: r.rules.think ? true : undefined });
-  let res;
-  try { res = await ollamaPost(F, `${base}/api/chat`, body, { signal }); } catch (e) { throw netError('Ollama', e, base); }
-  if (!res.ok) {
-    const err = await httpError('Ollama', res);
-    if (res.status === 404) invalidateInventory();
-    throw err;
-  }
-  const j = await res.json();
-  if (j.error) throw new Error(String(j.error).slice(0, 200));
-  return { text: ollamaContent(j), tin: j.prompt_eval_count ?? 0, tout: j.eval_count ?? 0 };
+  const body = shortBody({ model, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: r.rules.think ? true : undefined });
+  const lim = timeoutsOf(r, { images: !!o.images?.length });
+  const jobId = ctx.jobId;
+  let lastUpd = 0, loadIv = null, t0Load = 0;
+  const rate = (Number(process.env.AI_LOAD_MBPS) > 0 ? Number(process.env.AI_LOAD_MBPS) : 150) / 1000;
+  const loadTick = () => jobUpdate(jobId, { step: 'Laster modellen fra disk …', phase: { kind: 'load', loadedGb: ctx.sizeGb ? Math.round(Math.min(ctx.sizeGb * 0.95, ((Date.now() - t0Load) / 1000) * rate) * 10) / 10 : null, totalGb: ctx.sizeGb ?? null, estimated: true } });
+  const onPhase = jobId ? (ph) => {
+    if (ph.kind === 'load') { t0Load = Date.now(); loadTick(); clearInterval(loadIv); loadIv = setInterval(loadTick, 1000); loadIv.unref?.(); return; }
+    if (loadIv) { clearInterval(loadIv); loadIv = null; }
+    const now = Date.now();
+    if (now - lastUpd < 400 && ph.chars) return;
+    lastUpd = now;
+    jobUpdate(jobId, ph.kind === 'answer' ? { phase: { kind: 'answer', chars: ph.chars }, step: `Svarer · ${ph.chars} tegn` } : { phase: { kind: 'think', chars: ph.chars ?? 0, ...(ctx.sizeGb ? { loadedGb: ctx.sizeGb, totalGb: ctx.sizeGb } : {}) }, step: 'Tenker …' });
+  } : null;
+  try {
+    const out = await gateChat({ model, body, base, fetch: F, signal, priority: o.background ? 'background' : 'interactive', short: true, allowThink: !('think' in body), image: !!o.images?.length,
+      loadMs: lim.loadMs, warmMs: lim.firstMs, idleMs: lim.idleMs, deadlineMs: o.timeoutMs ?? null, retryTimeouts: ctx.last !== false, label: o.title ?? taskName(t),
+      onQueue: ctx.onQueue, onStart: ctx.onStart, onPhase, onRetry: jobId ? ({ attempt, waitMs }) => jobUpdate(jobId, { step: `Nytt forsøk ${attempt + 1} om ${Math.round(waitMs / 1000)} s …`, attempts: attempt }) : null });
+    if (jobId) { const n = out.text.length; jobUpdate(jobId, { phase: { kind: 'answer', chars: n }, step: `Svarer · ${n} tegn` }); }
+    return { text: out.text, tin: out.telemetry.tokIn, tout: out.telemetry.tokOut, telemetry: out.telemetry };
+  } catch (e) {
+    if (e?.status === 404) invalidateInventory();
+    throw e;
+  } finally { if (loadIv) clearInterval(loadIv); }
 }
 async function callGemini(model, o, signal, r) {
   if (!hasGemini()) throw Object.assign(new Error('Gemini-nøkkel mangler'), { status: 401 });
@@ -559,107 +606,60 @@ async function callOpenAi(provider, model, o, signal, r) {
 }
 const CALL = { ollama: callOllama, gemini: callGemini, groq: (m, o, s, r) => callOpenAi('groq', m, o, s, r), openrouter: (m, o, s, r) => callOpenAi('openrouter', m, o, s, r) };
 
-/* ---------------- Prompt 40: innlasting og svar hver for seg ---------------- */
+/* ---------------- Prompt 40/43: innlasting og svar hver for seg ---------------- */
 //
-// HVORFOR (den ekte feilen bak «38 selvtester feilet · svarte ikke innen 15 s»):
-//   1. selftest() kjørte alle 10 rutene samtidig (Promise.all) med run(…, {timeoutMs: statusMs = 15 s}). 15 s var hele grensen,
-//      også for å laste modellen fra disk (gemma4:12b ≈ 8–10 GB fra ekstern HDD tar 20–90 s). Ingen kald modell kunne nå frem.
-//   2. Med 8 ulike modeller samtidig lastet Ollama ut og inn modeller hele tiden (OLLAMA_MAX_LOADED_MODELS=1 / 16 GB), så selv
-//      llama3.2:3b og bge-m3 ble kastet ut av minnet før de svarte.
-//   3. «Anbefaler modeller» (bakgrunnsjobb) sto i køen samtidig, og selvtesten tok plassene.
-//   Nå: helsesjekk først, én modell om gangen (gruppert per modell), minnesjekk, oppvarming med egen grense (loadTimeout, 180 s)
-//   og så svaret med egen grense (responseTimeout 60 s / responseTimeoutImage 120 s) som starter når modellen er lastet.
+// Prompt 40: selvtesten kjører én modell om gangen (gruppert per modell), med minnesjekk og egne grenser for innlasting og svar.
+// Prompt 43: grensene håndheves av Ollama-gaten for ALLE kall: tid til første token (kald modell: loadTimeout, standard 90 s;
+// varm: firstTokenTimeout, 30 s) og tid uten nye tokens (idleTimeout 30 s / idleTimeoutImage 60 s). Ingen modeller lastes ut
+// for å gi plass (det var det som avbrøt forespørsler som pågikk); Ollama bytter selv mellom forespørslene.
 
-/** Grensene (ms) fra rutingen. images → bildegrensen. */
+/** Grensene (ms) fra rutingen. images → bildegrensen. responseMs = idleMs (eldre navn). */
 export function timeoutsOf(r = serverRouting(), { images = false } = {}) {
   const p = r.params ?? {};
-  return { loadMs: _aiRunTest.loadMs ?? (p.loadTimeout ?? 180) * 1000, responseMs: _aiRunTest.respMs ?? ((images ? p.responseTimeoutImage ?? 120 : p.responseTimeout ?? 60) * 1000) };
+  const loadMs = _aiRunTest.loadMs ?? (p.loadTimeout ?? 90) * 1000;
+  const firstMs = _aiRunTest.respMs ?? (p.firstTokenTimeout ?? 30) * 1000;
+  const idleMs = _aiRunTest.respMs ?? ((images ? p.idleTimeoutImage ?? 60 : p.idleTimeout ?? 30) * 1000);
+  return { loadMs, firstMs, idleMs, responseMs: idleMs };
 }
 /** GPU-/minnebudsjettet for modeller (GB): AI_GPU_VRAM_GB, ellers maskinen (Mac mini M4 16 GB → 10,7 GB). */
 export const memBudgetGb = () => (Number(process.env.AI_GPU_VRAM_GB) > 0 ? Number(process.env.AI_GPU_VRAM_GB) : envHw().gpuBudgetGb);
 const gbText = (v) => String(Math.round(v * 10) / 10).replace('.', ',');
-async function ollamaPs(base) {
-  try { const r = await F(`${base}/api/ps`, { signal: AbortSignal.timeout(3000) }); if (!r.ok) return null; return (await r.json()).models ?? []; } catch { return null; }
+/** Minnesjekk: er modellen større enn hele budsjettet, hoppes den over (kaster {memory:true}). → sizeGb | null */
+async function memCheck(model) {
+  const invn = await ollamaInventory();
+  const sizeGb = invn.models.find((m) => sameModel(m.name, model))?.sizeGb ?? null;
+  if (sizeGb == null) return null;
+  const budget = memBudgetGb();
+  if (sizeGb > budget) {
+    const ps = await loadedModels({ base: ollamaBase(), fetch: F });
+    const others = (ps ?? []).filter((m) => !sameModel(m.name ?? m.model, model)).reduce((a, m) => a + (m.size_vram || m.size || 0) / 1e9, 0);
+    const free = Math.max(0, budget - others);
+    throw Object.assign(new Error(`Hoppet over · for lite minne (trenger ${gbText(sizeGb)} GB, ledig ${gbText(free)} GB)`), { memory: true, needGb: sizeGb, freeGb: free });
+  }
+  return sizeGb;
 }
 /**
- * Laster Ollama-modellen før svaret (POST /api/generate {prompt:'', keep_alive}). Fase {kind:'load', loadedGb, totalGb} skrives
- * på jobben mens den laster (anslag ut fra AI_LOAD_MBPS, standard 150 MB/s). → {loaded:true, ms, already?}
- * Kaster {memory:true} («Hoppet over · for lite minne (trenger 8,1 GB, ledig 5,2 GB)») eller {loadTimeout:true}.
+ * Laster Ollama-modellen (via gaten, med modellens keep_alive). Laster IKKE ut andre modeller. → {loaded:true, ms, already?}
+ * Kaster {memory:true} («Hoppet over · for lite minne …») eller {loadTimeout:true}.
  */
-export async function ensureLoaded(model, { jobId = null, loadMs = timeoutsOf().loadMs, signal = null, keepAlive = serverRouting().params.keepAlive } = {}) {
+export async function ensureLoaded(model, { jobId = null, loadMs = timeoutsOf().loadMs, signal = null, keepAlive, priority = 'interactive' } = {}) {
   if (MOCK()) return { loaded: true, ms: 0, mock: true };
   const base = ollamaBase();
   if (!base) throw Object.assign(new Error('Ollama-adressen er ikke satt'), { net: true });
-  const invn = await ollamaInventory();
-  const sizeGb = invn.models.find((m) => sameModel(m.name, model))?.sizeGb ?? null;
-  if (!isCold(model)) return { loaded: true, ms: 0, already: true };
-  const ps = await ollamaPs(base);
-  if (ps?.some((m) => sameModel(m.name ?? m.model, model))) { markWarm(model, keepAlive); return { loaded: true, ms: 0, already: true }; }
-  if (sizeGb != null) {
-    const budget = memBudgetGb();
-    const gbOf = (m) => (m.size_vram || m.size || 0) / 1e9;
-    const others = (ps ?? []).filter((m) => !sameModel(m.name ?? m.model, model));
-    let free = budget - others.reduce((a, m) => a + gbOf(m), 0);
-    if (sizeGb > budget) throw Object.assign(new Error(`Hoppet over · for lite minne (trenger ${gbText(sizeGb)} GB, ledig ${gbText(Math.max(0, free))} GB)`), { memory: true, needGb: sizeGb, freeGb: Math.max(0, free) });
-    if (sizeGb > free && others.length) {
-      // Ollama ville kastet dem ut uansett; gjør det før lasting, så innlastingen ikke henger.
-      for (const m of others) { try { await F(`${base}/api/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: m.name ?? m.model, prompt: '', keep_alive: 0, stream: false }), signal: AbortSignal.timeout(15_000) }); warmUntil.delete(m.name ?? m.model); } catch { /* best effort */ } }
-      free = budget;
-    }
-  }
-  const t0 = Date.now(), rate = (Number(process.env.AI_LOAD_MBPS) > 0 ? Number(process.env.AI_LOAD_MBPS) : 150) / 1000;
-  const tick = () => { if (jobId) jobUpdate(jobId, { step: 'Laster modellen fra disk …', phase: { kind: 'load', loadedGb: sizeGb ? Math.round(Math.min(sizeGb * 0.95, ((Date.now() - t0) / 1000) * rate) * 10) / 10 : null, totalGb: sizeGb, estimated: true } }); };
-  tick();
-  const iv = setInterval(tick, 1000); iv.unref?.();
-  const sig = AbortSignal.any([AbortSignal.timeout(loadMs), ...(signal ? [signal] : [])]);
+  const sizeGb = await memCheck(model);
+  if (jobId) jobUpdate(jobId, { step: 'Laster modellen fra disk …', phase: { kind: 'load', loadedGb: 0, totalGb: sizeGb } });
+  const t0 = Date.now();
   try {
-    const res = await F(`${base}/api/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model, prompt: '', keep_alive: keepAlive, stream: false }), signal: sig });
-    if (!res.ok) throw await httpError('Ollama', res);
-    await res.text().catch(() => '');
+    const r = await gateLoad(model, { base, fetch: F, signal, loadMs, priority, ...(keepAlive !== undefined ? { keepAlive } : {}) });
+    if (r.already) return { loaded: true, ms: 0, already: true };
+    markWarm(model, r.telemetry.keepAlive ?? serverRouting().params.keepAlive);
   } catch (e) {
-    if (signal?.aborted) throw Object.assign(new Error('avbrutt'), { cancelled: true });
-    if (e?.name === 'TimeoutError' || sig.aborted) throw Object.assign(new Error(`Modellen ble ikke lastet (${Math.round(loadMs / 1000)} s) · lastet ikke inn på ${Math.round(loadMs / 1000)} s`), { loadTimeout: true, timeout: true });
-    if (e?.status) throw e;
-    throw netError('Ollama', e, base);
-  } finally { clearInterval(iv); }
-  markWarm(model, keepAlive);
+    if (e?.kind === 'cancelled') throw Object.assign(new Error('avbrutt'), { cancelled: true });
+    if (e?.kind === 'load_timeout') throw Object.assign(new Error(`Modellen ble ikke lastet (${Math.round(loadMs / 1000)} s) · lastet ikke inn på ${Math.round(loadMs / 1000)} s`), { loadTimeout: true, timeout: true });
+    throw e;
+  }
   if (jobId) jobUpdate(jobId, { phase: { kind: 'think', loadedGb: sizeGb, totalGb: sizeGb, chars: 0 }, step: 'Tenker …' });
   return { loaded: true, ms: Date.now() - t0 };
-}
-/** /api/chat med stream:true: fase «Tenker …» (thinking) → «Svarer · 120 tegn» (content). Tåler et svar på én linje. */
-async function callOllamaStream(model, o, signal, r, jobId) {
-  const base = ollamaBase();
-  if (!base) throw new Error('Ollama-adressen er ikke satt');
-  const msgs = [];
-  const sys = typeof o.system === 'function' ? o.system('ollama') : o.system;
-  if (sys) msgs.push({ role: 'system', content: sys });
-  msgs.push({ role: 'user', content: String(o.prompt ?? ''), ...(o.images?.length ? { images: o.images.map(b64) } : {}) });
-  const options = { temperature: o.temperature ?? r.params.temperature, num_ctx: Math.min(r.params.numCtx || SHORT_NUM_CTX, SHORT_NUM_CTX), ...(o.numPredict ? { num_predict: o.numPredict } : {}) };
-  const body = shortBody({ model, stream: true, keep_alive: r.params.keepAlive, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: r.rules.think ? true : undefined });
-  let res;
-  try { res = await ollamaPost(F, `${base}/api/chat`, body, { signal }); } catch (e) { throw netError('Ollama', e, base); }
-  if (!res.ok) { const err = await httpError('Ollama', res); if (res.status === 404) invalidateInventory(); throw err; }
-  let text = '', think = '', tin = 0, tout = 0, last = 0, buf = '';
-  const onLine = (line) => {
-    if (!line.trim()) return;
-    let j; try { j = JSON.parse(line); } catch { return; }
-    if (j.error) throw new Error(String(j.error).slice(0, 200));
-    text += j.message?.content ?? j.response ?? '';
-    think += j.message?.thinking ?? j.thinking ?? '';
-    if (j.done) { tin = j.prompt_eval_count ?? tin; tout = j.eval_count ?? tout; }
-    const now = Date.now();
-    if (jobId && now - last > 400) { last = now; const shown = stripThink(text); jobUpdate(jobId, shown ? { phase: { kind: 'answer', chars: shown.length }, step: `Svarer · ${shown.length} tegn` } : { phase: { kind: 'think', chars: think.length }, step: 'Tenker …' }); }
-  };
-  try {
-    if (res.body?.getReader) {
-      const rd = res.body.getReader(), dec = new TextDecoder();
-      for (;;) { const { value, done } = await rd.read(); if (done) break; buf += dec.decode(value, { stream: true }); let i; while ((i = buf.indexOf('\n')) >= 0) { onLine(buf.slice(0, i)); buf = buf.slice(i + 1); } }
-    } else buf = await res.text();
-    if (buf) for (const l of buf.split('\n')) onLine(l);
-  } catch (e) { if (e?.name === 'TimeoutError' || e?.name === 'AbortError') throw netError('Ollama', e, base); throw e; }
-  const out = stripThink(text);
-  if (jobId) jobUpdate(jobId, { phase: { kind: 'answer', chars: out.length }, step: `Svarer · ${out.length} tegn` });
-  return { text: out, tin, tout };
 }
 
 /* ---------------- Oppløsning: rute → kandidater ---------------- */
@@ -769,6 +769,7 @@ export async function run(task, o = {}) {
   const first = res.list[0] ?? providerOf(res.route.model || '');
   const jobId = jobStart({ user, task: tid, kind: o.kind ?? 'ai', title: o.title ?? taskName(tid), model: first?.id ?? null, provider: first?.provider ?? null, ref: o.ref ?? null, ctrl,
     retry: o.noRetry ? null : () => run(task, { ...o, noRetry: true }).catch((e) => ({ jobId: e.jobId })) });
+  { const l = live.get(jobId); if (l) l.gate = true; } // prompt 43: gaten har egne tidsgrenser, vakthunden lar jobben være
   let t0 = Date.now();
   const errors = [];
   if (!res.list.length) {
@@ -777,87 +778,97 @@ export async function run(task, o = {}) {
     o.signal?.removeEventListener?.('abort', onUser);
     throw new AiRunError(msg, { code: 'no_model', task: tid, model: res.route.model || null, fix: fixOf({ message: res.reason }) ?? 'model', errors, jobId, warnings: res.warnings });
   }
-  const release = await slot(!!o.background, () => jobUpdate(jobId, { status: 'queue' }));
-  if (ctrl.signal.aborted) { release(); throw new AiRunError('Avbrutt', { cancelled: true, jobId, task: tid }); }
-  // Prompt 40: klokka starter når jobben faktisk kjører (ikke når den ble lagt i kø).
-  t0 = Date.now();
-  jobUpdate(jobId, { status: 'run', runAt: t0 });
+  // Prompt 40/43: klokka starter når jobben faktisk kjører (ikke når den står i Ollama-køen). Status «I kø» mens den venter.
+  let started = false;
+  const markRun = () => { if (started) return; started = true; t0 = Date.now(); jobUpdate(jobId, { status: 'run', runAt: t0 }); };
+  const onQueue = () => { if (!started) jobUpdate(jobId, { status: 'queue', step: 'Venter på Ollama …' }); };
   const r = routing(user);
   const phased = !!o.phased;
-  const lim40 = timeoutsOf(r, { images: !!o.images?.length });
-  let memSkip = null;
+  let memSkip = null, lastTele = null;
+  const timing = (tl) => (tl ? { queueMs: tl.queueMs, loadMs: tl.loadMs, genMs: tl.genMs, attempts: tl.attempts } : {});
   try {
     for (let i = 0; i < res.list.length; i++) {
       const c = res.list[i], last = i === res.list.length - 1;
-      const cold = c.provider === 'ollama' && !MOCK() && isCold(c.id);
-      const normalMs = last ? (_aiRunTest.lastMs ?? Math.max(_aiRunTest.attemptMs, (fhSettings(OWNER).aiTimeouts?.ollama ?? 45) * 1000)) : _aiRunTest.attemptMs;
-      // Prompt 40 (phased): først innlasting (loadTimeout), så svaret med egen grense som starter når modellen er lastet.
-      const limitMs = phased ? lim40.responseMs : o.timeoutMs ?? (cold ? Math.max(normalMs, _aiRunTest.attemptMs * 2) : normalMs);
-      let sig = null;
       const ta = Date.now();
-      jobUpdate(jobId, { model: c.id, provider: c.provider, ...(i ? { fallbackFrom: res.list[0].id } : {}), step: cold ? 'Laster modellen fra disk …' : `Spør ${c.id}`, phase: cold ? { kind: 'load', loadedGb: 0, totalGb: null } : { kind: 'think', chars: 0 } });
+      jobUpdate(jobId, { model: c.id, provider: c.provider, ...(i ? { fallbackFrom: res.list[0].id } : {}), step: c.provider === 'ollama' ? `Spør ${c.id}` : `Spør ${c.id}` });
+      let sig = null;
       try {
-        if (phased && c.provider === 'ollama' && !MOCK()) await ensureLoaded(c.id, { jobId, loadMs: lim40.loadMs, signal: ctrl.signal, keepAlive: r.params.keepAlive });
-        sig = AbortSignal.any([ctrl.signal, AbortSignal.timeout(limitMs)]);
-        const out = MOCK() && c.provider === 'ollama' ? { text: o.json || o.schema ? '{"ok":true}' : 'ok', tin: 4, tout: 1 }
-          : phased && c.provider === 'ollama' ? await callOllamaStream(c.id, opts, sig, r, jobId) : await CALL[c.provider](c.id, opts, sig, r);
+        let out;
+        if (MOCK() && c.provider === 'ollama') { markRun(); out = { text: o.json || o.schema ? '{"ok":true}' : 'ok', tin: 4, tout: 1 }; }
+        else if (c.provider === 'ollama') {
+          // Prompt 40: minnesjekk først (selvtest/phased). Prompt 43: resten (kø, innlasting, strømming, grenser) i gaten.
+          const sizeGb = phased ? await memCheck(c.id) : (await ollamaInventory()).models?.find((m) => sameModel(m.name, c.id))?.sizeGb ?? null;
+          out = await callOllama(c.id, opts, ctrl.signal, r, { jobId, last, onQueue, onStart: markRun, sizeGb });
+          lastTele = out.telemetry;
+        } else {
+          markRun();
+          // Skyen: én total grense som før (svarer på sekunder; ingen innlasting).
+          const normalMs = last ? (_aiRunTest.lastMs ?? Math.max(_aiRunTest.attemptMs, (fhSettings(OWNER).aiTimeouts?.ollama ?? 45) * 1000)) : _aiRunTest.attemptMs;
+          sig = AbortSignal.any([ctrl.signal, AbortSignal.timeout(o.timeoutMs ?? normalMs)]);
+          out = await CALL[c.provider](c.id, opts, sig, r);
+        }
         if (!String(out.text ?? '').trim()) throw new Error('tomt svar');
         if (c.provider === 'ollama') markWarm(c.id, r.params.keepAlive);
         const data = o.json || o.schema ? parseJsonText(out.text) : undefined;
         const ms = Date.now() - ta, cost = costKr(c.provider, c.id, out.tin, out.tout);
-        jobEnd(jobId, { ms: Date.now() - t0, tokIn: out.tin, tokOut: out.tout, costKr: cost, step: null, phase: null, error: errors.length ? errors.map((x) => `${x.model}: ${x.error}`).join(' · ').slice(0, 400) : null });
+        jobEnd(jobId, { ms: Date.now() - t0, tokIn: out.tin, tokOut: out.tout, costKr: cost, step: null, phase: null, ...timing(out.telemetry), errKind: null,
+          error: errors.length ? errors.map((x) => `${x.model}: ${x.error}`).join(' · ').slice(0, 400) : null });
         const warnings = [...res.warnings, ...errors.map((x) => `${x.model} svarte ikke (${x.error}) · brukte ${c.id}`)];
         if (warnings.length) console.warn(`[ai] ${tid}: ${warnings.join(' · ')}`);
         return { text: out.text, ...(data !== undefined ? { data } : {}), model: c.id, provider: c.provider, ms, tokens: { in: out.tin, out: out.tout }, costKr: cost, jobId,
+          ...(out.telemetry ? { timing: out.telemetry } : {}),
           ...(i || c.from !== 'model' ? { fallbackFrom: res.route.model || (i ? res.list[0].id : null) } : {}), warnings, notice: res.notices[0] ?? null };
       } catch (e) {
+        if (e?.telemetry) lastTele = e.telemetry;
         if (ctrl.signal.aborted) {
           const hung = live.get(jobId)?.hung; // prompt 40: avbrutt av vakthunden (hengende innlasting)
-          if (hung) { jobUpdate(jobId, { status: 'fail', error: hung, ms: Date.now() - t0, step: null, phase: null }); throw new AiRunError(hung, { code: 'failed', task: tid, model: c.id, fix: null, errors, jobId }); }
-          jobUpdate(jobId, { status: 'cancelled', error: 'Avbrutt', ms: Date.now() - t0 }); throw new AiRunError('Avbrutt', { cancelled: true, jobId, task: tid });
+          if (hung) { jobUpdate(jobId, { status: 'fail', error: hung, ms: Date.now() - t0, step: null, phase: null, errKind: 'load_timeout', ...timing(lastTele) }); throw new AiRunError(hung, { code: 'failed', task: tid, model: c.id, fix: null, errors, jobId }); }
+          jobUpdate(jobId, { status: 'cancelled', error: 'Avbrutt av bruker', errKind: 'cancelled', ms: started ? Date.now() - t0 : 0, step: null, phase: null, ...timing(lastTele) });
+          throw new AiRunError('Avbrutt', { cancelled: true, jobId, task: tid });
         }
-        const timedOut = e?.timeout || e?.name === 'TimeoutError' || (!!sig?.aborted && !ctrl.signal.aborted);
-        const err = e?.memory ? e.message : e?.loadTimeout ? `lastet ikke inn på ${Math.round(lim40.loadMs / 1000)} s` : timedOut ? (phased ? `svarte ikke på ${Math.round(limitMs / 1000)} s` : `svarte ikke innen ${Math.round(limitMs / 1000)} s`) : shortErr(e);
+        const timedOut = !(e instanceof GateError) && (e?.timeout || e?.name === 'TimeoutError' || (!!sig?.aborted && !ctrl.signal.aborted));
+        const err = e?.memory ? e.message : e instanceof GateError ? shortErr(e) : timedOut ? `svarte ikke innen ${Math.round((o.timeoutMs ?? _aiRunTest.attemptMs) / 1000)} s` : shortErr(e);
         if (e?.memory) memSkip = e;
-        errors.push({ model: c.id, provider: c.provider, error: err, status: e?.status ?? null, ...(e?.memory ? { memory: true } : {}) });
-        console.warn(`[ai] ${tid} ${c.provider}/${c.id} feilet etter ${Date.now() - ta} ms: ${err}${last ? '' : ' · prøver reserven'}`);
+        errors.push({ model: c.id, provider: c.provider, error: err, status: e?.status ?? null, kind: e?.kind ?? (e?.memory ? 'memory' : null), ...(e?.memory ? { memory: true } : {}) });
+        console.warn(`[ai] ${tid} ${c.provider}/${c.id} feilet etter ${Date.now() - ta} ms: ${err}${e?.telemetry?.attempts > 1 ? ` (${e.telemetry.attempts} forsøk)` : ''}${last ? '' : ' · prøver reserven'}`);
       }
     }
     const f = errors[0];
     const msg = `Glimt fikk ikke svar fra ${f.model}: ${f.error}${errors.length > 1 ? ` (reserven ${errors.slice(1).map((x) => `${x.model}: ${x.error}`).join(' · ')})` : ''}`;
     // Prompt 40: får ingen modell plass i minnet, er testen hoppet over (ikke et tidsavbrudd).
     const skipped = !!memSkip && errors.every((x) => x.memory);
-    jobUpdate(jobId, { status: skipped ? 'skip' : 'fail', error: skipped ? memSkip.message : msg, ms: Date.now() - t0, step: null, phase: null });
-    throw new AiRunError(skipped ? memSkip.message : msg, { code: skipped ? 'memory' : f.status === 404 ? 'model_not_found' : 'failed', task: tid, model: f.model, fix: fixOf({ message: f.error, status: f.status }) ?? (res.notices.length ? 'valg' : null), errors, jobId, warnings: res.warnings, ...(skipped ? { skipped: true, memory: true } : {}) });
+    jobUpdate(jobId, { status: skipped ? 'skip' : 'fail', error: skipped ? memSkip.message : msg, ms: started ? Date.now() - t0 : 0, step: null, phase: null, errKind: skipped ? 'memory' : f.kind ?? null, ...timing(lastTele) });
+    throw new AiRunError(skipped ? memSkip.message : msg, { code: skipped ? 'memory' : f.status === 404 ? 'model_not_found' : 'failed', task: tid, model: f.model, fix: fixOf({ message: f.error, status: f.status }) ?? (res.notices.length ? 'valg' : null), errors, jobId, warnings: res.warnings,
+      kind: f.kind ?? null, timing: lastTele, ...(skipped ? { skipped: true, memory: true } : {}) });
   } finally {
-    release();
     o.signal?.removeEventListener?.('abort', onUser);
   }
 }
 
-/** Embeddings (Kunnskapsbase): Ollama /api/embed med kb-ruten. → {model, vectors, ms} */
-export async function embed(texts, { user = me(), title = 'Kunnskapsbase · embeddings', phased = false } = {}) {
+/** Embeddings (Kunnskapsbase): Ollama /api/embed via gaten med kb-ruten. → {model, vectors, ms, timing} */
+export async function embed(texts, { user = me(), title = 'Kunnskapsbase · embeddings', phased = false, background = false } = {}) {
   const res = await resolveTask('kb', { user });
   const c = res.list.find((x) => x.provider === 'ollama');
   const jobId = jobStart({ user, task: 'kb', title, model: c?.id ?? null, provider: 'ollama' });
-  const t0 = Date.now();
+  let t0 = Date.now(), tele = null;
   if (!c) { const msg = `Glimt fikk ikke svar fra ${res.route.model || 'embedding-modellen'}: ${res.reason ?? 'ingen embedding-modell er installert'}`; jobUpdate(jobId, { status: 'fail', error: msg }); throw new AiRunError(msg, { fix: 'model', jobId, task: 'kb' }); }
   try {
     if (MOCK()) { jobEnd(jobId, { ms: 1 }); return { model: c.id, vectors: [].concat(texts).map(() => [0.1, 0.2, 0.3]), ms: 1 }; }
-    let r;
-    // Prompt 40: med phased lastes modellen først (egen grense), og svaret får responseTimeout.
-    const lim = timeoutsOf(routing(user));
-    if (phased) await ensureLoaded(c.id, { jobId, loadMs: lim.loadMs, keepAlive: routing(user).params.keepAlive });
-    try { r = await F(`${ollamaBase()}/api/embed`, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(phased ? lim.responseMs : _aiRunTest.statusMs), body: JSON.stringify({ model: c.id, input: [].concat(texts), keep_alive: routing(user).params.keepAlive }) }); }
-    catch (e) { throw netError('Ollama', e, ollamaBase()); }
-    if (!r.ok) throw await httpError('Ollama', r);
-    const j = await r.json();
-    jobEnd(jobId, { ms: Date.now() - t0, tokIn: j.prompt_eval_count ?? 0 });
-    return { model: c.id, vectors: j.embeddings ?? [], ms: Date.now() - t0 };
+    const r = routing(user);
+    const lim = timeoutsOf(r);
+    if (phased) await memCheck(c.id);
+    const out = await gateEmbed({ model: c.id, input: [].concat(texts), base: ollamaBase(), fetch: F, priority: background ? 'background' : 'interactive', loadMs: lim.loadMs,
+      timeoutMs: phased ? lim.idleMs * 2 : Math.max(_aiRunTest.statusMs, 15_000), label: title,
+      onQueue: () => jobUpdate(jobId, { status: 'queue' }), onStart: () => { t0 = Date.now(); jobUpdate(jobId, { status: 'run', runAt: t0 }); } });
+    tele = out.telemetry;
+    jobEnd(jobId, { ms: Date.now() - t0, tokIn: out.final?.prompt_eval_count ?? 0, queueMs: tele.queueMs, loadMs: tele.loadMs, genMs: tele.genMs, attempts: tele.attempts });
+    return { model: c.id, vectors: out.embeddings ?? [], ms: Date.now() - t0, timing: tele };
   } catch (e) {
-    const msg = e?.memory ? e.message : `Glimt fikk ikke svar fra ${c.id}: ${e?.loadTimeout ? `lastet ikke inn på ${Math.round(timeoutsOf(routing(user)).loadMs / 1000)} s` : (e?.timeout || e?.name === 'TimeoutError') ? `svarte ikke på ${Math.round((phased ? timeoutsOf(routing(user)).responseMs : _aiRunTest.statusMs) / 1000)} s` : shortErr(e)}`;
-    jobUpdate(jobId, { status: e?.memory ? 'skip' : 'fail', error: msg, ms: Date.now() - t0, phase: null });
-    throw new AiRunError(msg, { fix: fixOf(e), jobId, task: 'kb', model: c.id, ...(e?.memory ? { memory: true, skipped: true } : {}) });
+    tele = e?.telemetry ?? tele;
+    const msg = e?.memory ? e.message : `Glimt fikk ikke svar fra ${c.id}: ${shortErr(e)}`;
+    jobUpdate(jobId, { status: e?.memory ? 'skip' : e?.kind === 'cancelled' ? 'cancelled' : 'fail', error: msg, ms: Date.now() - t0, phase: null, errKind: e?.kind ?? null,
+      ...(tele ? { queueMs: tele.queueMs, loadMs: tele.loadMs, genMs: tele.genMs, attempts: tele.attempts } : {}) });
+    throw new AiRunError(msg, { fix: fixOf(e), jobId, task: 'kb', model: c.id, timing: tele, ...(e?.memory ? { memory: true, skipped: true } : {}) });
   }
 }
 
@@ -871,13 +882,14 @@ export async function miniGenerate(provider, model, { user = me(), image = false
   const t0 = Date.now();
   try {
     const r = routing(user);
-    const out = await CALL[provider](model, { task: 'sok', user, prompt: 'Svar bare: ok', numPredict: 3, temperature: 0, ...(image ? { images: [PIXEL] } : {}) },
-      AbortSignal.timeout(_aiRunTest.statusMs), r);
+    // Prompt 43: Ollama via gaten (interaktiv, kø, kald modell får loadTimeout); skyen med én kort grense.
+    const o = { task: 'sok', user, prompt: 'Svar bare: ok', numPredict: 3, temperature: 0, ...(image ? { images: [PIXEL] } : {}) };
+    const out = provider === 'ollama' ? await callOllama(model, o, null, r, { last: true }) : await CALL[provider](model, o, AbortSignal.timeout(_aiRunTest.statusMs), r);
     if (!String(out.text ?? '').trim()) throw new Error('tomt svar');
     return { ok: true, ms: Date.now() - t0 };
   } catch (e) {
-    const timedOut = e?.timeout || e?.name === 'TimeoutError';
-    return { ok: false, ms: Date.now() - t0, error: timedOut ? `svarte ikke innen ${Math.round(_aiRunTest.statusMs / 1000)} s` : shortErr(e), status: e?.status ?? null };
+    const timedOut = !(e instanceof GateError) && (e?.timeout || e?.name === 'TimeoutError');
+    return { ok: false, ms: Date.now() - t0, error: timedOut ? `svarte ikke innen ${Math.round(_aiRunTest.statusMs / 1000)} s` : shortErr(e), status: e?.status ?? null, kind: e?.kind ?? null };
   }
 }
 // 1×1 hvit PNG (selvtesten for bildeoppgaver).
@@ -959,7 +971,7 @@ export async function ollamaHealth() {
 async function selftestOne(id, user) {
   const t = TASK[id], t0 = Date.now();
   try {
-    if (id === 'kb') { const e = await embed('test', { user, title: selftestTitle(t), phased: true }); return { task: id, name: t.name, model: e.model, provider: 'ollama', ok: true, ms: Date.now() - t0, error: null, fix: null }; }
+    if (id === 'kb') { const e = await embed('test', { user, title: selftestTitle(t), phased: true }); return { task: id, name: t.name, model: e.model, provider: 'ollama', ok: true, ms: Date.now() - t0, error: null, fix: null, ...(e.timing ? { timing: e.timing, attempts: e.timing.attempts } : {}) }; }
     if (id === 'bar') {
       const route = routing(user).tasks.bar;
       if (providerOf(route.model).provider === 'roboflow' || !route.model) {
@@ -970,10 +982,11 @@ async function selftestOne(id, user) {
     const out = await run(id, { user, prompt: 'Svar bare: ok', numPredict: 3, temperature: 0, title: selftestTitle(t), phased: true,
       ...(t.kind === 'vision' ? { images: [PIXEL] } : {}) });
     return { task: id, name: t.name, model: out.model, provider: out.provider, ok: true, ms: Date.now() - t0, error: null, fix: out.fallbackFrom && out.warnings.length ? 'model' : null, jobId: out.jobId,
+      ...(out.timing ? { timing: out.timing, attempts: out.timing.attempts } : {}),
       ...(out.warnings.length ? { warning: out.warnings.join(' · ') } : {}), ...(out.fallbackFrom ? { fallbackFrom: out.fallbackFrom } : {}), ...(out.notice ? { notice: out.notice } : {}) };
   } catch (e) {
     const error = String(e.message ?? e).replace(/^Glimt fikk ikke svar fra [^:]+: /, '');
-    return { task: id, name: t.name, model: e.model ?? null, provider: null, ok: false, ms: Date.now() - t0, error, fix: e.fix ?? fixOf(e), jobId: e.jobId ?? null,
+    return { task: id, name: t.name, model: e.model ?? null, provider: null, ok: false, ms: Date.now() - t0, error, fix: e.fix ?? fixOf(e), jobId: e.jobId ?? null, ...(e.timing ? { timing: e.timing, attempts: e.timing.attempts } : {}),
       ...(e.skipped || e.memory ? { skipped: true, reason: 'memory' } : { reason: failReason(error).reason }), short: e.memory ? 'Hoppet over · for lite minne' : failReason(error).short };
   }
 }
@@ -1006,8 +1019,7 @@ export async function selftest({ user = me(), onResult = () => {}, tasks = null 
   }
   const release = holdQueue();
   try {
-    // Venter (maks 30 s) til jobbene som kjører allerede er ferdige, så selvtesten ikke deler minnet med dem.
-    for (let w = 0; queue.active > 0 && w < 60; w++) await new Promise((r) => setTimeout(r, 500));
+    // Prompt 43: ingen egen venting – gaten kjører aldri to modeller samtidig, og hold stopper nye bakgrunnsjobber.
     const order = [], groups = new Map();
     for (const p of plan) { const k = p.first ? `${p.first.provider}:${p.first.id}` : 'none'; if (!groups.has(k)) { groups.set(k, []); order.push(k); } groups.get(k).push(p); }
     for (const k of order) {
@@ -1040,6 +1052,7 @@ export function sweepHung(now = Date.now()) {
     if (now - (r.run_at ?? r.ts) <= lim + 5000) continue;
     const msg = `Modellen ble ikke lastet (${Math.round(lim / 1000)} s)`;
     const l = live.get(r.id);
+    if (l?.gate) continue; // prompt 43: kall via Ollama-gaten har egne grenser (første token / ingen nye tokens) og nye forsøk
     if (l?.ctrl) { l.hung = msg; try { l.ctrl.abort(new Error(msg)); } catch { /* */ } }
     else jobUpdate(r.id, { status: 'fail', error: msg, step: null, phase: null });
     out.push(r.id);

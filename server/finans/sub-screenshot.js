@@ -8,11 +8,12 @@
 //        sikkerhet:{felt:0–1}, check:[felt…], existingId?, approx?, engine, model}
 import { spawn } from 'node:child_process';
 import { db, me, settings } from './db.js';
-import { _aiTest, logAi, aiTimeoutsOf, OLLAMA_KEEP_ALIVE } from './ai.js';
+import { _aiTest, logAi, aiTimeoutsOf } from './ai.js';
 import { hasGemini, geminiFetch } from './gemini-keys.js';
 import { audit } from './ai-audit.js';
 import { ocrTools } from '../ocr-fallback.js';
-import { ollamaPost, shortBody, stripThink } from '../ollama-opts.js';
+import { shortBody, stripThink, noteCapabilities } from '../ollama-opts.js';
+import { gatePost } from '../ollama-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { routing as aiRouting, jobStart, jobEnd, jobUpdate } from '../ai-run.js';
 const OWNER_ID = 'owner';
 import { SUB_CATEGORIES, categoryFor } from './subs.js';
@@ -265,7 +266,7 @@ export async function pickVisionModel({ fresh = false } = {}) {
     let caps = null;
     try {
       const r = await ollamaJson('/api/show', { method: 'POST', body: { model: n, name: n } });
-      if (r.ok) { const d = await r.json().catch(() => ({})); if (Array.isArray(d.capabilities)) caps = d.capabilities; }
+      if (r.ok) { const d = await r.json().catch(() => ({})); if (Array.isArray(d.capabilities)) { caps = d.capabilities; noteCapabilities(n, caps); } } // prompt 43: «thinking» → think:false
     } catch (e) { if (e.code === 'ollama_down') throw e; }
     const ok = caps ? caps.includes('vision') : NAME_VISION.test(n); // eldre Ollama uten capabilities: navnet avgjør
     if (ok) { visionCache.set(b, { at: Date.now(), model: n }); return n; }
@@ -282,8 +283,10 @@ async function readOllama(img) {
   const t0 = Date.now();
   let res;
   try {
-    res = await ollamaPost(F, `${base()}/api/chat`, shortBody({ model, stream: false, format: 'json', keep_alive: OLLAMA_KEEP_ALIVE, options: { temperature: 0, num_ctx: 8192 },
-        messages: [{ role: 'user', content: PROMPT, images: [img.buf.toString('base64')] }] }), { signal: AbortSignal.timeout(scaleMs(OLLAMA_TIMEOUT_S * 1000)) });
+    // Prompt 43: via Ollama-gaten (kø, keep_alive per modell, strømming). Grensen er fortsatt en total grense (120 s).
+    const lim = scaleMs(OLLAMA_TIMEOUT_S * 1000);
+    res = await gatePost(F, `${base()}/api/chat`, shortBody({ model, format: 'json', options: { temperature: 0, num_ctx: 8192 },
+        messages: [{ role: 'user', content: PROMPT, images: [img.buf.toString('base64')] }] }), {}, { priority: 'interactive', image: true, loadMs: lim, warmMs: lim, idleMs: lim, deadlineMs: lim, retryTimeouts: false, label: 'Abonnement · skjermbilde' });
   } catch (e) {
     const ms = Date.now() - t0;
     const timeout = e.name === 'TimeoutError' || e.name === 'AbortError';

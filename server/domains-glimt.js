@@ -37,6 +37,7 @@ import { settings as fhSettings } from './finans/db.js';
 import { notifyUser } from './notify.js';
 import { summaryFacts, domainNames, domainsOverview, PER_RANGE, addDomain39, cloudflareZones39, cloudflareTxt39 } from './domains.js';
 import { run as aiRun } from './ai-run.js';
+import { once } from './ollama-gate.js'; // prompt 43: single-flight for oppsummeringen
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -117,7 +118,8 @@ async function ollamaJson(prompt, user) {
   if (sumLlm) return sumLlm(prompt, user);
   if (MOCK && !process.env.OLLAMA_URL) return null;
   // Prompt 34: ruten «Domener · oppsummering» via ai.run (validert modell, reserve, jobblogg).
-  return (await aiRun('dom', { user, prompt, json: true, temperature: 0.2, title: 'Domener · oppsummering', background: true })).text;
+  // Prompt 43: numPredict 300 (qwen3 får think:false i gaten og trenger ikke mer), og samme spørsmål samtidig gir ett kall.
+  return (await aiRun('dom', { user, prompt, json: true, temperature: 0.2, numPredict: 300, title: 'Domener · oppsummering', background: true })).text;
 }
 
 const normDomain = (d) => { const s = String(d ?? '').toLowerCase(); return s === '*' || s === 'alle' || s === 'all' ? '*' : s; };
@@ -138,7 +140,8 @@ export async function makeSummary(user, domain, { manual = false, now = Date.now
   let res = null, model = 'Glimt · regler';
   try {
     const facts = F.map((f) => ({ domene: f.name, foresporsler: Math.round(f.req), besokende: Math.round(f.vis), endringProsent: f.ch, trusler: Math.round(f.thr), cacheProsent: +Number(f.cache).toFixed(1), medianMs: f.ms, sertifikatDager: f.certD, fornyDager: f.expD }));
-    const txt = await ollamaJson(`Du er Glimt, AI-assistenten i Nordlys. Lag en kort oppsummering på norsk av siste døgn for ${isAll ? 'alle domenene' : 'domenet'}. Varsler først (sertifikat under 30 dager, fornyelse under 45 dager). Svar KUN med JSON {"head":"én setning, det viktigste","pts":[{"t":"kort setning","tone":"pos|neg|info|warn"}]} med 3–4 punkter. Ingen markdown. Data: ${JSON.stringify(facts)}${gsc ? ` Google Søk (7 d): ${JSON.stringify(gsc)}` : ''}`, user);
+    const ask = `Du er Glimt, AI-assistenten i Nordlys. Lag en kort oppsummering på norsk av siste døgn for ${isAll ? 'alle domenene' : 'domenet'}. Varsler først (sertifikat under 30 dager, fornyelse under 45 dager). Svar KUN med JSON {"head":"én setning, det viktigste","pts":[{"t":"kort setning","tone":"pos|neg|info|warn"}]} med 3–4 punkter. Ingen markdown. Data: ${JSON.stringify(facts)}${gsc ? ` Google Søk (7 d): ${JSON.stringify(gsc)}` : ''}`;
+    const txt = await once(`dom|${user}|${sel}|${osloDate(now)}|${ask.length}`, () => ollamaJson(ask, user));
     const m = txt && String(txt).match(/\{[\s\S]*\}/);
     const j = m ? JSON.parse(m[0]) : null;
     if (j && typeof j.head === 'string' && j.head.trim() && Array.isArray(j.pts) && j.pts.length) {

@@ -22,7 +22,8 @@ import { settings, secret } from './finans/db.js';
 import { sniffMime } from './finans/scan.js';
 import { readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
-import { ollamaContent, ollamaPost, shortBody } from './ollama-opts.js';
+import { ollamaContent, shortBody } from './ollama-opts.js';
+import { gatePost } from './ollama-gate.js'; // prompt 43
 
 const ROOT = resolve(config.dataDir, 'mat');
 const rid = () => randomBytes(6).toString('hex');
@@ -338,9 +339,10 @@ async function visionJson(buf, mime, prompt, schema) {
         return { provider: 'Gemini', data: JSON.parse(text) };
       }
       const lowerSchema = (s) => (Array.isArray(s) ? s.map(lowerSchema) : s && typeof s === 'object' ? Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined).map(([k, v]) => [k, k === 'type' ? String(v).toLowerCase() : lowerSchema(v)])) : s);
-      const res = await ollamaPost((u, i) => fetch(u, i), `${st.ollamaUrl.replace(/\/$/, '')}/api/chat`,
-        shortBody({ model: st.ollamaModel, stream: false, format: lowerSchema(schema), options: { temperature: 0.1 }, messages: [{ role: 'user', content: prompt, images: [buf.toString('base64')] }] }),
-        { signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT ?? 120) * 1000) });
+      // Prompt 43: via Ollama-gaten (kø, keep_alive per modell, strømming; grensen er en total grense som før).
+      const res = await gatePost((u, i) => fetch(u, i), `${st.ollamaUrl.replace(/\/$/, '')}/api/chat`,
+        shortBody({ model: st.ollamaModel, format: lowerSchema(schema), options: { temperature: 0.1 }, messages: [{ role: 'user', content: prompt, images: [buf.toString('base64')] }] }),
+        {}, { priority: 'interactive', image: true, deadlineMs: Number(process.env.OLLAMA_TIMEOUT ?? 120) * 1000, label: 'Mat · oppskrift fra bilde' });
       if (!res.ok) throw new Error(`Ollama svarte ${res.status}`);
       return { provider: 'Ollama', data: JSON.parse(ollamaContent(await res.json())) };
     } catch (e) {

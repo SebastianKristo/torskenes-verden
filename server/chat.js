@@ -33,12 +33,13 @@ import { isAdmin } from './auth.js';
 import { cfg, userCfg, userBool, setUserCfg } from './settings.js';
 import { settings, secret } from './finans/db.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
-import { aiTimeoutsOf, GEMINI_DEFAULT, GROQ_DEFAULT, GROQ_MODELS, GROQ_VISION_DEFAULT, OLLAMA_KEEP_ALIVE } from './finans/ai.js';
+import { aiTimeoutsOf, GEMINI_DEFAULT, GROQ_DEFAULT, GROQ_MODELS, GROQ_VISION_DEFAULT } from './finans/ai.js';
 import { CATALOG } from './finans/ollama-models.js';
 import { audit } from './finans/ai-audit.js';
 import { finansSummary } from './finans/summary.js';
 import { nextTasks } from './tasks.js';
-import { chatBody, ollamaPost, thinkFilter } from './ollama-opts.js';
+import { chatBody, thinkFilter } from './ollama-opts.js';
+import { gateChat, GateError } from './ollama-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './chat-scans.js';
 import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './chat-tools41.js'; // prompt 41: Glimt henter fakta
 import { AUTO_ID, pickAuto41, autoEntry41, recordAuto41, feedbackAuto41, autoSummary41 } from './chat41.js'; // prompt 41: «✦ Auto»
@@ -321,31 +322,34 @@ async function openaiStream(name, url, headers, body, { onDelta, signal, idleMs 
     return { tokens, usedWeb };
   } finally { g.done(); }
 }
+// Prompt 43: direkte Ollama-strøm via Ollama-gaten (interaktiv prioritet, kø, keep_alive per modell, tid til første token og tid
+// uten nye tokens). Bitene sendes videre til klienten mens de kommer. Open WebUI-veien er uendret.
 async function ollamaStream(model, sys, msgs, s, { onDelta, signal }) {
-  const g = idleGuard(aiTimeoutsOf().ollama * 1000, signal);
   let tokens = null;
   const tf = thinkFilter(); // <think>…</think> i selve teksten (eldre maler) vises aldri; message.thinking sendes ikke videre
+  const idle = aiTimeoutsOf().ollama * 1000;
+  const body = chatBody({ model, options: { temperature: s.temperature, top_p: s.topP, num_ctx: s.numCtx },
+    messages: [{ role: 'system', content: sys }, ...msgs.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}) }))] }, s.think);
   try {
-    let res;
-    try {
-      res = await ollamaPost(F, `${ollamaBase()}/api/chat`, chatBody({
-        model, stream: true, keep_alive: OLLAMA_KEEP_ALIVE, options: { temperature: s.temperature, top_p: s.topP, num_ctx: s.numCtx },
-        messages: [{ role: 'system', content: sys }, ...msgs.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}) }))] }, s.think), { signal: g.signal });
-    } catch (e) { throw engineError('Ollama', e, g); }
-    if (!res.ok) throw await httpError('Ollama', res);
-    try {
-      for await (const line of lines(res, g)) {
-        if (!line.trim()) continue;
-        let j; try { j = JSON.parse(line); } catch { continue; }
-        if (j.error) throw Object.assign(new Error(`Ollama: ${String(j.error).slice(0, 200)}`), { engine: true });
+    await gateChat({ model, body, base: ollamaBase(), fetch: F, signal, priority: 'interactive', short: false, allowThink: !!s.think, image: msgs.some((m) => m.images?.length),
+      warmMs: idle, idleMs: idle, label: 'Chat',
+      onChunk: async (j) => {
         if (j.message?.content) { const d = tf.push(j.message.content); if (d) await onDelta(d); }
         if (j.done && j.eval_count) tokens = { count: j.eval_count, perSec: j.eval_duration ? j.eval_count / (j.eval_duration / 1e9) : null };
-      }
-      const rest = tf.end();
-      if (rest) await onDelta(rest);
-    } catch (e) { if (e.engine) throw e; throw engineError('Ollama', e, g); }
+      } });
+    const rest = tf.end();
+    if (rest) await onDelta(rest);
     return { tokens };
-  } finally { g.done(); }
+  } catch (e) {
+    if (e instanceof GateError) {
+      if (e.kind === 'cancelled' || signal?.aborted) throw Object.assign(new Error('Avbrutt'), { cancelled: true });
+      if (e.kind === 'load_timeout' || e.kind === 'idle_timeout') throw Object.assign(new Error('Ollama svarte ikke innen tidsfristen'), { timeout: true, net: true });
+      if (e.kind === 'nocontact') throw Object.assign(new Error(`Ollama kan ikke nås (${e.code || e.message})`), { net: true });
+      if ((e.kind === 'http' || e.kind === 'memory') && e.status) throw Object.assign(new Error(`Ollama svarte ${e.status}${e.ollamaError ? `: ${String(e.ollamaError).slice(0, 200)}` : ''}`), { status: e.status });
+      throw Object.assign(new Error(`Ollama: ${e.ollamaError ?? e.message}`), { engine: true });
+    }
+    throw e;
+  }
 }
 async function geminiStream(model, sys, msgs, s, { onDelta, signal, webSearch }) {
   const g = idleGuard(aiTimeoutsOf().gemini * 1000, signal);

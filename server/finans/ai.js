@@ -3,7 +3,8 @@
 import { settings, secret, db, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini, usableKeys } from './gemini-keys.js';
 import { cleanBbox } from './bbox30.js';
-import { ollamaPost, shortBody, stripThink } from '../ollama-opts.js';
+import { shortBody } from '../ollama-opts.js';
+import { gateChat } from '../ollama-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
 // Prompt 34: finans-oppgavene → oppgavene i AI-kontroll-rutingen.
 const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok' };
@@ -271,56 +272,29 @@ async function ollamaReachable(base) {
 // uendelige stoppes etter OLLAMA_MAX_TOTAL (10 min).
 const OLLAMA_MAX_TOTAL = 10 * 60_000;
 export const OLLAMA_KEEP_ALIVE = '10m';
-async function ollamaChat(st, messages, schema, { timeout, temperature, model, signal = null }) {
+// Prompt 43: via Ollama-gaten (kø, gruppering per modell, keep_alive per modell, strømming). Tidsgrensen her er fortsatt «tid uten
+// nye tokens (første token inkludert)» fra Innstillinger → AI → Tidsgrenser; tidsavbrudd gir ikke nye forsøk i gaten (motorkjeden
+// har egen reserve), men «modellen ble lastet ut», 5xx og ECONNRESET prøves på nytt (maks 2).
+async function ollamaChat(st, messages, schema, { timeout, temperature, model, signal = null, priority = null }) {
   const useModel = model || st.ollamaModel;
   const base = st.ollamaUrl.replace(/\/$/, '');
   const probe = await ollamaReachable(base);
   if (!probe.ok) throw Object.assign(new Error(probe.err ?? `Ollama kan ikke nås på ${base}`), { noRetry: true, net: true });
-  const ctrl = new AbortController();
-  let idle = null, timedOut = false;
-  const arm = () => { clearTimeout(idle); idle = setTimeout(() => { timedOut = true; ctrl.abort(new DOMException('Ollama svarte ikke', 'TimeoutError')); }, timeout); };
-  const total = setTimeout(() => { timedOut = true; ctrl.abort(new DOMException('Ollama svarte ikke', 'TimeoutError')); }, Math.max(timeout, OLLAMA_MAX_TOTAL));
-  const onUser = () => ctrl.abort(signal.reason ?? cancelled());
   if (signal?.aborted) throw cancelled();
-  signal?.addEventListener('abort', onUser, { once: true });
-  const fail = (e) => {
-    if (signal?.aborted) return cancelled();
-    if (timedOut) return Object.assign(new Error('Ollama svarte ikke innen tidsfristen'), { noRetry: true, net: true, timeout: true });
-    return e;
-  };
-  arm();
+  const image = messages.some((m) => m.images?.length);
+  const body = shortBody({ model: useModel, format: forOllama(lowerTypes(schema)), options: { temperature }, messages });
   try {
-    let res;
-    try { res = await ollamaPost((u, i) => fetch(u, i), `${base}/api/chat`,
-      shortBody({ model: useModel, stream: true, keep_alive: OLLAMA_KEEP_ALIVE, format: forOllama(lowerTypes(schema)), options: { temperature }, messages }),
-      { signal: ctrl.signal }); } catch (e) { ollamaProbe.at = 0; throw fail(netErr('Ollama', base, e)); }
-    if (!res.ok) throw await httpErr('Ollama', res);
-    // NDJSON: én linje per bit, {"message":{"content":"…"},"done":false} … {"done":true}. Et vanlig JSON-svar (én linje) virker også.
-    let content = '', buf = '', err = null;
-    const take = (line) => {
-      if (!line.trim()) return;
-      let j; try { j = JSON.parse(line); } catch { return; }
-      if (j.error) err = Object.assign(new Error(`Ollama svarte: ${String(j.error).slice(0, 200)}`), { noRetry: true });
-      content += j.message?.content ?? j.response ?? '';
-    };
-    const dec = new TextDecoder();
-    try {
-      if (res.body?.getReader) {
-        const reader = res.body.getReader();
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          arm();
-          buf += dec.decode(value, { stream: true });
-          let nl;
-          while ((nl = buf.indexOf('\n')) >= 0) { take(buf.slice(0, nl)); buf = buf.slice(nl + 1); }
-        }
-      } else buf = await res.text();
-    } catch (e) { throw fail(netErr('Ollama', base, e)); }
-    take(buf + dec.decode());
-    if (err) throw err;
-    return { model: useModel, data: parseJson('Ollama', stripThink(content)) };
-  } finally { clearTimeout(idle); clearTimeout(total); signal?.removeEventListener('abort', onUser); }
+    const out = await gateChat({ model: useModel, body, base, signal, priority: priority ?? (image ? 'background' : 'interactive'), short: true, allowThink: !('think' in body), image,
+      loadMs: timeout, warmMs: timeout, idleMs: timeout, deadlineMs: Math.max(timeout, OLLAMA_MAX_TOTAL), retryTimeouts: false, label: image ? 'Finans · kvittering' : 'Finans · spør' });
+    return { model: useModel, data: parseJson('Ollama', out.text) };
+  } catch (e) {
+    if (signal?.aborted || e?.kind === 'cancelled') throw cancelled();
+    if (e?.timeout || e?.kind === 'load_timeout' || e?.kind === 'idle_timeout') throw Object.assign(new Error('Ollama svarte ikke innen tidsfristen'), { noRetry: true, net: true, timeout: true });
+    if (e?.kind === 'nocontact') { ollamaProbe.at = 0; throw Object.assign(new Error(e.message), { noRetry: true, net: true }); }
+    if (e?.kind === 'http' || e?.kind === 'memory') throw Object.assign(new Error(`Ollama svarte ${e.status}${e.ollamaError ? `: ${e.ollamaError}` : ''}`), { noRetry: e.status >= 400 && e.status < 500, status: e.status, detail: e.ollamaError ?? '' });
+    if (e?.kind === 'unloaded') throw Object.assign(new Error('Ollama svarte: modellen ble lastet ut underveis'), { noRetry: true });
+    throw e;
+  }
 }
 
 /* ---------------- Gemini ---------------- */

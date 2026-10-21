@@ -77,6 +77,7 @@ import { fagAnswer, rememberCtx } from './glimt39-fag.js'; // prompt 39: oppføl
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { extractPlace, placeWeather, PlaceNotFound } from './weather35.js'; // prompt 35: været for et sted
 import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from './ai-run.js';
+import { once } from './ollama-gate.js'; // prompt 43: single-flight
 import { isSunQuestion, daylight } from './sun36.js'; // prompt 36: dagslys lokalt
 import { whereIntent, whereAnswer } from './where37.js'; // prompt 37: «hvor er Ingrid?»
 import { parseIntent37, schoolTestAnswer } from './kal37.js'; // prompt 37: skoleprøve ≠ prøveperiode
@@ -498,7 +499,8 @@ async function toolLlm(user, text) {
   const explicitCloud = isCloud(providerOf(route.model).provider) || isCloud(providerOf(route.fallback).provider);
   const localOnly = hasUserData(text) || (!assistSettings(user).cloud && !explicitCloud);
   try {
-    const out = await aiRun('sok', { user, prompt: text, system: (p) => (p === 'ollama' ? localSystem(user) : SYSTEM), numPredict: 160, temperature: 0.3, localOnly, title: `AI-søk · «${text.slice(0, 60)}»` });
+    // Prompt 43: samme spørsmål fra samme bruker samtidig (dobbeltklikk, app + widget) gir ett kall.
+    const out = await once(`assist|${user}|${localOnly ? 1 : 0}|${text}`, () => aiRun('sok', { user, prompt: text, system: (p) => (p === 'ollama' ? localSystem(user) : SYSTEM), numPredict: 160, temperature: 0.3, localOnly, title: `AI-søk · «${text.slice(0, 60)}»` }));
     const t = short(out.text);
     if (out.provider !== 'ollama') { try { const { audit } = await import('./finans/ai-audit.js'); audit(out.provider, 'assist', { spørsmål: text }, user); } catch { /* logg er best effort */ } }
     const cloud = out.provider !== 'ollama';
