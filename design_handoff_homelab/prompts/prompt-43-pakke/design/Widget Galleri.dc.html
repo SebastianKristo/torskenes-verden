@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="--k:var(--ink,#1b1a17);--b:var(--bg,#f3efe6);--cd:var(--card,#fffdf8);--ln:var(--line,#d8d1c2);--lb:var(--lab,#b23a2a);--mt:var(--mut,#6b665c);--sf:color-mix(in srgb,var(--ln) 60%,transparent);position:relative;display:flex;flex-direction:column;gap:18px;color:var(--k);font-family:Manrope,system-ui,sans-serif;width:100%;box-sizing:border-box;padding-bottom:{{ bp }}">
+<span style="font-size:14px;line-height:1.5;color:var(--mt);text-wrap:pretty">{{ intro }}</span>
+<div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none"><sc-for list="{{ filt }}" as="f"><button onClick="{{ f.go }}" style="flex:none;height:38px;padding:0 14px;border-radius:999px;border:1px solid {{ f.bd }};background:{{ f.bg }};color:{{ f.fg }};font:700 13px Manrope,sans-serif;cursor:pointer">{{ f.n }}</button></sc-for></div>
+<sc-for list="{{ groups }}" as="g" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;align-items:baseline;justify-content:space-between"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:var(--lb)">{{ g.t }}</span><span style="font-size:12.5px;color:var(--mt)">{{ g.n }}</span></div>
+<div style="display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;padding:2px 2px 6px;margin:0 -2px"><sc-for list="{{ g.w }}" as="w"><div style="flex:none;width:{{ w.cw }};display:flex;flex-direction:column;gap:8px">
+<div style="height:150px;border-radius:18px;background:{{ g.wall }};display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box"><div style="width:{{ w.pw }};height:{{ w.ph }};border-radius:{{ w.pr }};background:{{ w.bg }};color:{{ w.fg }};padding:{{ w.pp }};box-sizing:border-box;display:flex;flex-direction:column;gap:{{ w.gp }};overflow:hidden;box-shadow:0 6px 16px -8px rgba(0,0,0,.4)"><span style="flex:none;font:700 8.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:{{ w.ac }}">{{ w.k }}</span><b style="flex:none;font:{{ w.bf }};line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.big }}</b><sc-for list="{{ w.lines }}" as="l"><span style="flex:none;font-size:9.5px;line-height:1.25;font-weight:600;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.t }}</span></sc-for></div></div>
+<div style="display:flex;flex-direction:column;gap:1px"><b style="font-size:14px">{{ w.n }}</b><span style="font-size:12px;color:var(--mt)">{{ w.sz }}</span></div>
+<button onClick="{{ w.add }}" style="height:40px;border-radius:20px;border:{{ w.abd }};background:{{ w.abg }};color:{{ w.afg }};font:700 13px Manrope,sans-serif;cursor:pointer">{{ w.addT }}</button>
+</div></sc-for></div>
+</div></sc-for>
+
+<sc-if value="{{ pinOn }}"><div onClick="{{ pinNo }}" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center"><div onClick="{{ stop }}" style="width:100%;max-width:440px;margin:0 12px 16px;border-radius:28px;background:#f4f1f8;color:#1c1b1f;padding:22px 22px 14px;display:flex;flex-direction:column;gap:14px;font-family:'Roboto Flex',Roboto,system-ui,sans-serif"><b style="font-size:20px;font-weight:500">Legg til på startskjermen?</b><div style="align-self:center;width:{{ pin.pw }};height:{{ pin.ph }};border-radius:{{ pin.pr }};background:{{ pin.bg }};color:{{ pin.fg }};padding:9px 10px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;overflow:hidden"><span style="font:700 8.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:{{ pin.ac }}">{{ pin.k }}</span><b style="font:{{ pin.bf }};line-height:1.05">{{ pin.big }}</b></div><span style="font-size:14px;color:#49454f">{{ pin.n }} · {{ pin.sz }} · Homelab</span><span style="font-size:13px;color:#49454f">Trykk og hold for å flytte den etterpå.</span><div style="display:flex;justify-content:flex-end;gap:8px"><button onClick="{{ pinNo }}" style="height:44px;padding:0 16px;border-radius:22px;border:0;background:transparent;color:#5b4ea8;font:600 15px 'Roboto Flex',Roboto,sans-serif;cursor:pointer">Avbryt</button><button onClick="{{ pinYes }}" style="height:44px;padding:0 18px;border-radius:22px;border:0;background:transparent;color:#5b4ea8;font:600 15px 'Roboto Flex',Roboto,sans-serif;cursor:pointer">Legg til</button></div></div></div></sc-if>
+
+<sc-if value="{{ howOn }}"><div onClick="{{ howNo }}" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.42);display:flex;align-items:flex-end"><div onClick="{{ stop }}" style="width:100%;box-sizing:border-box;background:var(--b);color:var(--k);border-radius:28px 28px 0 0;padding:10px 20px 34px;display:flex;flex-direction:column;gap:14px"><span style="align-self:center;width:36px;height:5px;border-radius:3px;background:var(--ln)"></span><b style="font:500 24px Newsreader,serif">Legg til «{{ how.n }}»</b><sc-for list="{{ howSteps }}" as="h"><div style="display:flex;gap:12px"><span style="flex:none;width:24px;height:24px;border-radius:12px;background:var(--k);color:var(--b);font:700 12px Manrope;display:grid;place-items:center">{{ h.i }}</span><span style="font-size:14.5px;line-height:1.5;text-wrap:pretty">{{ h.t }}</span></div></sc-for><span style="font-size:12.5px;color:var(--mt)">Apple lar ikke apper legge til widgets selv. Widgeten heter «{{ how.n }}» under Homelab i galleriet.</span><button onClick="{{ howNo }}" style="height:48px;border-radius:24px;border:0;background:var(--k);color:var(--b);font:800 15px Manrope,sans-serif;cursor:pointer">Ferdig</button></div></div></sc-if>
+
+<sc-if value="{{ toastOn }}"><div style="position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:61;padding:11px 18px;border-radius:16px;background:var(--k);color:var(--b);font-size:14px;font-weight:700;box-shadow:0 12px 30px rgba(0,0,0,.25);white-space:nowrap">{{ toast }}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:1100},&quot;platform&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ios&quot;,&quot;android&quot;],&quot;default&quot;:&quot;ios&quot;,&quot;tsType&quot;:&quot;'ios'|'android'&quot;},&quot;samsung&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;},&quot;bottomPad&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;20px&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+const SZ={s:['Liten','2 × 2',110,110,'20px'],m:['Medium','4 × 2',230,110,'20px'],l:['Stor','4 × 4',230,130,'20px'],lk:['Låseskjerm','rektangel',160,70,'14px']};
+const W=[
+ ['media','MEDIA','Media',[['s','MEDIA','↓ 18,4 MB/s',['3 aktive','Shrinking 64 %']],['m','LASTES NED','2 nedlastinger',['Shrinking · 64 %','Wicked · 22 %','Neste: Only Murders']],['l','MEDIA','↓ 18,4 MB/s',['Pause alt · 3 nedlastinger','Kommer: Only Murders, Hacks, Exit']],['lk','MEDIA','↓ 18,4 MB/s',['Shrinking 64 % · 1 min']]]],
+ ['avg','AVGANGER','Avganger',[['s','AMAGERVEIEN','17 · 2 min',['Grefsen st.']],['m','AMAGERVEIEN','17 · 2 min',['20 Galgeberg · 4 min','17 Grefsen · 12 min']],['l','AVGANGER','3 stopp',['Amagerveien · 2 min','Majorstuen · 5 min','Nationaltheatret · 9 min']],['lk','AVGANGER','17 · 2 min',['Grefsen st.']]]],
+ ['kal','KALENDER','Kalender',[['s','ONS 21','Tannlege',['15:15 · Bislett']],['m','I DAG','3 hendelser',['15:15 Tannlege','17:00 Hent pakke','I morgen: Kino']],['l','UKE 43','Oktober',['21 Tannlege · 22 Kino','24 Severance','27 Only Murders']],['lk','NESTE','Tannlege 15:15',['Tannhelse Bislett']]]],
+ ['trial','PRØVEPERIODER','Prøveperioder',[['s','PRØVE','Max · 3 d',['Sies opp 24. okt.']],['m','PRØVEPERIODER','2 går ut',['Max · 3 dager','Duolingo · 9 dager']]]],
+ ['pk','PAKKER','Pakker',[['s','PAKKER','2 på vei',['Posten i morgen']],['m','PAKKER','2 på vei',['iPhone 14 · i morgen','Zalando · mandag']]]],
+ ['gl','GLIMT','Glimt-brief',[['m','MORGENBRIEF','God morgen',['Regn og 8° · Tannlege 15:15']],['lk','GLIMT','8° regn',['Tannlege 15:15']]]]];
+class Component extends DCLogic {
+  state={f:'all',added:{},pin:null,how:null,toast:''};
+  toastShow(t){clearTimeout(this._tt);this.setState({toast:t});this._tt=setTimeout(()=>this.setState({toast:''}),2200)}
+  componentWillUnmount(){clearTimeout(this._tt)}
+  renderVals(){const s=this.state,p=this.props,and=p.platform==='android',sam=and&&p.samsung,set=o=>this.setState(o);
+    const look=and?(sam?{bg:'rgba(255,255,255,.96)',fg:'#111',ac:'#1f6fe5',wall:'linear-gradient(180deg,#5b7fa8,#1d2d45)'}:{bg:'#fbe9e1',fg:'#3a1d12',ac:'#8a4a32',wall:'linear-gradient(170deg,#c9805f,#7a3d2c)'}):{bg:'#fffdf8',fg:'#1b1a17',ac:'#b23a2a',wall:'linear-gradient(160deg,#5f7d97,#2c3d52)'};
+    const mk=(gid,n,[sz,k,big,lines])=>{const S=SZ[sz],key=gid+':'+sz,ad=!!s.added[key],lock=sz==='lk';const pw=S[2],ph=S[3];
+      const W0={n:n+' · '+S[0].toLowerCase(),sz:and&&!lock?S[1]:S[0],k,big,lines:lines.map(t=>({t})),pw:pw+'px',ph:(sz==='l'?140:ph)+'px',pr:S[4],bg:lock?'rgba(255,255,255,.2)':look.bg,fg:lock?'#fff':look.fg,ac:lock?'#fff':look.ac,bf:sz==='s'||sz==='lk'?'800 15px Manrope':'500 17px Newsreader,serif',cw:sz==='s'||sz==='lk'?'170px':'250px',pp:lock?'7px 10px':'9px 10px',gp:lock?'2px':'4px'};
+      return{...W0,addT:ad?'✓ Lagt til':and?'Legg til på startskjermen':'Slik legger du til',abd:ad?'1px solid #2f6b4a':'0',abg:ad?'transparent':'var(--k)',afg:ad?'#2f6b4a':'var(--b)',
+        add:()=>{if(ad)return;if(and)set({pin:{...W0,key}});else set({how:W0})}}};
+    const avail=W.map(([id,t,n,L])=>({id,t,n,L:L.filter(x=>and?x[0]!=='lk':true)}));
+    const F=[['all','Alle']].concat(avail.map(g=>[g.id,g.n]));
+    return{bp:p.bottomPad||'20px',intro:and?'Alle widgetene fra Homelab. Trykk «Legg til på startskjermen», så legger Android den rett inn. Hold inne på widgeten etterpå for å endre størrelse eller innhold.':'Alle widgetene fra Homelab. Hold inne på Hjem-skjermen og trykk + for å legge til. Låseskjerm-widgets legges til fra låseskjermen.',
+      filt:F.map(([k,n])=>{const on=s.f===k;return{n,bg:on?'var(--k)':'var(--cd)',fg:on?'var(--b)':'var(--k)',bd:on?'var(--k)':'var(--ln)',go:()=>set({f:k})}}),
+      groups:avail.filter(g=>s.f==='all'||s.f===g.id).map(g=>({t:g.t,n:g.L.length+' størrelser',wall:look.wall,w:g.L.map(x=>mk(g.id,g.n,x))})),
+      pinOn:!!s.pin,pin:s.pin||{},pinNo:()=>set({pin:null}),pinYes:()=>{const k=s.pin.key,n=s.pin.n;set({pin:null,added:{...s.added,[k]:true}});this.toastShow('Lagt til på startskjermen: '+n)},
+      howOn:!!s.how,how:s.how||{},howNo:()=>set({how:null}),stop:e=>e.stopPropagation(),
+      howSteps:(s.how&&s.how.sz==='Låseskjerm'?['Hold inne på låseskjermen og trykk Tilpass → Låseskjerm.','Trykk på feltet under klokka.','Velg Homelab og «'+(s.how.n||'')+'».']:['Hold inne på et tomt sted på Hjem-skjermen til ikonene vugger.','Trykk + oppe til venstre og søk etter «Homelab».','Velg «'+((s.how&&s.how.n)||'')+'», sveip til riktig størrelse og trykk «Legg til widget».']).map((t,i)=>({i:String(i+1),t})),
+      toastOn:!!s.toast,toast:s.toast}}
+}
+</script>
+</body>
+</html>

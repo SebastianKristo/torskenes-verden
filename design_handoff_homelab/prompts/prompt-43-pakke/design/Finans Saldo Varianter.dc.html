@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Manrope:wght@500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#e3ddd1;color:#1b1a17;font-family:Manrope,system-ui,sans-serif}a{color:#b23a2a}a:hover{color:#8a2a1d}</style>
+</helmet>
+<section style="padding:48px 56px 24px;display:flex;flex-direction:column;gap:26px">
+<div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a">RUNDE 3 · INNHOLDET FRA 3a</span><b style="font:500 36px/1.05 Newsreader,serif">Saldo og brukt, kulere og litt større</b></div>
+<div style="display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start">
+
+<div id="4a" style="display:flex;flex-direction:column;gap:12px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">4a</span><b style="font:700 16px Manrope">Kvittering</b></div>
+<div style="width:390px;border-radius:40px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);padding-bottom:22px">
+<div style="height:230px;background:linear-gradient(180deg,#8b9097,#5d636b);color:#fff;padding:96px 22px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:2px"><span style="font:italic 400 17px Newsreader,serif;opacity:.92">Oktober · 10 dager igjen</span><b style="font:500 42px/1 Newsreader,serif">Finans</b></div>
+<div style="margin:-40px 16px 0;position:relative;filter:drop-shadow(0 16px 22px rgba(0,0,0,.22))">
+<div style="height:12px;background:radial-gradient(circle at 8px 12px,transparent 6px,#fffdf8 6.5px) 0 0/16px 12px repeat-x"></div>
+<div style="background:#fffdf8;padding:12px 20px 20px;display:flex;flex-direction:column;gap:14px;border-radius:0 0 20px 20px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#2f6b4a">SALDO · ALLE KONTOER</span><span style="font:600 10.5px 'IBM Plex Mono',monospace;color:#a39d90">21.10 · 11:12</span></div>
+<b style="font:500 50px/1 Newsreader,serif;letter-spacing:-.015em">−42 119 <span style="font-size:30px">kr</span></b>
+<div style="height:0;border-top:1.5px dashed #d8d1c2"></div>
+<div style="display:flex;align-items:center;gap:14px"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#6b665c">BRUKT I OKTOBER</span><b style="font:500 28px/1.05 Newsreader,serif">340 kr</b></div><div style="flex:none;width:132px;height:40px;display:flex;align-items:flex-end;gap:2px"><sc-for list="{{ days }}" as="d"><span style="flex:1;height:{{ d.h }};border-radius:1.5px;background:{{ d.c }}"></span></sc-for></div></div>
+</div></div>
+</div>
+<span style="font-size:13.5px;line-height:1.5;color:#6b665c;text-wrap:pretty">Kortet ser ut som en kvittering som er revet av: takket kant øverst, dato og tid i mono, stiplet skille. Små søyler viser kjøpene per dag i oktober. Ca. 150 pt høyt.</span>
+</div>
+
+<div id="4b" style="display:flex;flex-direction:column;gap:12px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">4b</span><b style="font:700 16px Manrope">Mørkt glass</b></div>
+<div style="width:390px;border-radius:40px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);padding-bottom:22px">
+<div style="height:230px;background:linear-gradient(180deg,#8b9097,#5d636b);color:#fff;padding:96px 22px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:2px"><span style="font:italic 400 17px Newsreader,serif;opacity:.92">Oktober · 10 dager igjen</span><b style="font:500 42px/1 Newsreader,serif">Finans</b></div>
+<div style="margin:-56px 16px 0;position:relative;border-radius:26px;background:rgba(27,26,23,.82);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);color:#f3efe6;padding:20px;display:flex;flex-direction:column;gap:16px;box-shadow:0 20px 40px -20px rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,255,255,.08)">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#9fd3b0">SALDO · ALLE KONTOER</span><span style="width:30px;height:30px;border-radius:15px;background:rgba(243,239,230,.12);display:grid;place-items:center;font-size:14px">›</span></div>
+<b style="font:500 52px/1 Newsreader,serif;letter-spacing:-.015em">−42 119 <span style="font-size:30px;opacity:.7">kr</span></b>
+<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:18px;background:rgba(243,239,230,.08)">
+<div style="flex:none;width:46px;height:46px;border-radius:23px;background:conic-gradient(#e8794a 0 68%,rgba(243,239,230,.16) 68% 100%);display:grid;place-items:center"><span style="width:36px;height:36px;border-radius:18px;background:#26241f;display:grid;place-items:center;font:700 11px Manrope">21.</span></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:12.5px;opacity:.7">Brukt i oktober · dag 21 av 31</span><b style="font:500 26px/1.05 Newsreader,serif">340 kr</b></div>
+</div>
+</div>
+</div>
+<span style="font-size:13.5px;line-height:1.5;color:#6b665c;text-wrap:pretty">Mørkt glass som flyter over toppbildet. Saldoen står stort og lyst. Under: brukt i oktober med en ring som viser hvor langt måneden har kommet. Ca. 170 pt høyt.</span>
+</div>
+
+</div>
+</section>
+<section style="padding:24px 56px 24px;display:flex;flex-direction:column;gap:26px">
+<div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a">RUNDE 2 · KOMPAKT</span><b style="font:500 36px/1.05 Newsreader,serif">Lite kort, uten Inn og Igjen</b></div>
+<div style="display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start">
+
+<div id="3a" style="display:flex;flex-direction:column;gap:12px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">3a</span><b style="font:700 16px Manrope">Saldo og brukt på én linje</b></div>
+<div style="width:390px;border-radius:40px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);padding-bottom:18px">
+<div style="height:230px;background:linear-gradient(180deg,#8b9097,#5d636b);color:#fff;padding:96px 22px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:2px"><span style="font:italic 400 17px Newsreader,serif;opacity:.92">Oktober · 10 dager igjen</span><b style="font:500 42px/1 Newsreader,serif">Finans</b></div>
+<div style="margin:-34px 16px 0;position:relative;border-radius:24px;background:#fffdf8;padding:18px 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:14px;box-shadow:0 14px 30px -18px rgba(0,0,0,.35)">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#2f6b4a">SALDO · ALLE KONTOER</span><b style="font:500 38px/1 Newsreader,serif;white-space:nowrap">−42 119 kr</b></div>
+<div style="flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;padding-left:14px;border-left:1px solid #ece6da"><span style="font-size:12.5px;color:#6b665c">Brukt i oktober</span><b style="font:500 26px/1 Newsreader,serif">340 kr</b></div>
+</div>
+</div>
+<span style="font-size:13.5px;line-height:1.5;color:#6b665c;text-wrap:pretty">Ca. 90 pt høyt. Saldo til venstre, brukt denne måneden til høyre. Trykk på kortet åpner Kontoer.</span>
+</div>
+
+<div id="3b" style="display:flex;flex-direction:column;gap:12px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">3b</span><b style="font:700 16px Manrope">Saldo med kontostripe</b></div>
+<div style="width:390px;border-radius:40px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);padding-bottom:18px">
+<div style="height:230px;background:linear-gradient(180deg,#8b9097,#5d636b);color:#fff;padding:96px 22px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:2px"><span style="font:italic 400 17px Newsreader,serif;opacity:.92">Oktober · 10 dager igjen</span><b style="font:500 42px/1 Newsreader,serif">Finans</b></div>
+<div style="margin:-34px 16px 0;position:relative;border-radius:24px;background:#fffdf8;padding:18px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 14px 30px -18px rgba(0,0,0,.35)">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><b style="font:500 38px/1 Newsreader,serif;white-space:nowrap">−42 119 kr</b><span style="font-size:13px;color:#6b665c;white-space:nowrap">brukt 340 kr i okt.</span></div>
+<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px"><span style="flex:8420;background:#2f6b4a"></span><span style="flex:31200;background:#7fa98c"></span><span style="flex:81739;background:#b23a2a"></span></div>
+<div style="display:flex;gap:12px;font-size:12.5px;color:#6b665c;white-space:nowrap;overflow:hidden"><span><span style="color:#2f6b4a">●</span> Bruk 8 420</span><span><span style="color:#7fa98c">●</span> Spare 31 200</span><span><span style="color:#b23a2a">●</span> Kreditt −81 739</span></div>
+</div>
+</div>
+<span style="font-size:13.5px;line-height:1.5;color:#6b665c;text-wrap:pretty">Ca. 112 pt høyt. Stripen viser hvorfor saldoen er i minus. Ingen etikett øverst, tallet står alene.</span>
+</div>
+
+</div>
+</section>
+<section style="padding:24px 56px 64px;display:flex;flex-direction:column;gap:30px">
+<div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a">FINANS · OVERSIKT · SALDOKORTET</span><b style="font:500 44px/1.05 Newsreader,serif">Nytt saldokort</b><span style="font-size:16px;line-height:1.5;color:#3d3a33;text-wrap:pretty">Samme tall som i dag (saldo −42 119 kr, brukt 340 kr i oktober, ingen inntekt ennå, ikke noe budsjett). I dag viser kortet «Inn 0 · Igjen 0», som ser ut som feil. Alle tre viser i stedet hva som mangler og hva du kan gjøre.</span></div>
+<div style="display:flex;gap:36px;flex-wrap:wrap;align-items:flex-start">
+
+<div id="2a" style="display:flex;flex-direction:column;gap:12px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">2a</span><b style="font:700 16px Manrope">Saldo og kontoer</b></div>
+<div style="width:390px;border-radius:40px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45)">
+<div style="height:230px;background:linear-gradient(180deg,#8b9097,#5d636b);color:#fff;padding:96px 22px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:2px"><span style="font:italic 400 17px Newsreader,serif;opacity:.92">Oktober · 10 dager igjen</span><b style="font:500 42px/1 Newsreader,serif">Finans</b></div>
+<div style="margin:-34px 16px 0;position:relative;border-radius:26px;background:#fffdf8;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 14px 30px -18px rgba(0,0,0,.35)">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#2f6b4a">SALDO · 3 KONTOER</span><span style="font-size:12px;color:#8f897c">oppdatert 11:12</span></div>
+<b style="font:500 44px/1 Newsreader,serif;letter-spacing:-.01em">−42 119 kr</b>
+<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px"><span style="flex:8420;background:#2f6b4a"></span><span style="flex:31200;background:#7fa98c"></span><span style="flex:81739;background:#b23a2a"></span></div>
+<div style="display:flex;flex-direction:column"><sc-for list="{{ acc }}" as="a"><div style="display:flex;align-items:center;gap:10px;min-height:40px;border-top:1px solid #ece6da"><span style="flex:none;width:9px;height:9px;border-radius:5px;background:{{ a.c }}"></span><span style="flex:1;font-size:14.5px;font-weight:600">{{ a.n }}</span><b style="font:500 18px Newsreader,serif;color:{{ a.fc }}">{{ a.v }}</b></div></sc-for></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+<div style="padding:12px;border-radius:16px;background:#f3efe6;display:flex;flex-direction:column;gap:2px"><span style="font-size:12px;color:#6b665c">Brukt i oktober</span><b style="font:500 24px/1.1 Newsreader,serif">340 kr</b><span style="font-size:11.5px;color:#6b665c">3 kjøp · snitt 31 kr/dag</span></div>
+<div style="padding:12px;border-radius:16px;border:1.5px dashed #d8d1c2;display:flex;flex-direction:column;gap:4px;justify-content:center"><span style="font-size:12px;color:#6b665c">Ingen inntekt ennå</span><b style="font-size:13.5px">Lønn ventes 25.10 ›</b></div>
+</div>
+</div>
+</div>
+<span style="font-size:13.5px;line-height:1.5;color:#6b665c;text-wrap:pretty">Saldo forklares med kontoene (stripe + rader), så minus-tallet gir mening. Månedstall nederst; mangler inntekt, sier kortet det.</span>
+</div>
+
+<div id="2b" style="display:flex;flex-direction:column;gap:12px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">2b</span><b style="font:700 16px Manrope">Måneden først</b></div>
+<div style="width:390px;border-radius:40px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45)">
+<div style="height:230px;background:linear-gradient(180deg,#8b9097,#5d636b);color:#fff;padding:96px 22px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:2px"><span style="font:italic 400 17px Newsreader,serif;opacity:.92">Oktober · 10 dager igjen</span><b style="font:500 42px/1 Newsreader,serif">Finans</b></div>
+<div style="margin:-34px 16px 0;position:relative;border-radius:26px;background:#fffdf8;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 14px 30px -18px rgba(0,0,0,.35)">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">BRUKT I OKTOBER</span><span style="font-size:12px;color:#8f897c">21 av 31 dager</span></div>
+<div style="display:flex;align-items:baseline;gap:10px"><b style="font:500 48px/1 Newsreader,serif">340 kr</b><span style="font-size:13px;font-weight:700;color:#2f6b4a">−89 % mot sept.</span></div>
+<div style="display:flex;flex-direction:column;gap:6px"><div style="position:relative;height:56px;display:flex;align-items:flex-end;gap:3px"><sc-for list="{{ days }}" as="d"><span style="flex:1;height:{{ d.h }};border-radius:2px 2px 0 0;background:{{ d.c }}"></span></sc-for></div><div style="display:flex;justify-content:space-between;font:600 10px 'IBM Plex Mono',monospace;color:#8f897c"><span>1.</span><span>I DAG 21.</span><span>31.</span></div></div>
+<button style="display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:0 14px;border-radius:14px;border:1.5px dashed #d8d1c2;background:transparent;color:#1b1a17;font:700 14px Manrope;cursor:pointer;text-align:left"><span>Sett et budsjett for oktober</span><span style="color:#b23a2a">›</span></button>
+<div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #ece6da"><span style="font-size:13px;color:#6b665c">Saldo alle kontoer</span><b style="font:500 20px Newsreader,serif">−42 119 kr ›</b></div>
+</div>
+</div>
+<span style="font-size:13.5px;line-height:1.5;color:#6b665c;text-wrap:pretty">Det du bruker i måneden er hovedtallet, med søyler per dag. Uten budsjett vises en tydelig knapp i stedet for «Igjen 0». Saldoen ligger som en rad nederst.</span>
+</div>
+
+<div id="2c" style="display:flex;flex-direction:column;gap:12px;width:390px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">2c</span><b style="font:700 16px Manrope">Inn og ut</b></div>
+<div style="width:390px;border-radius:40px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45)">
+<div style="height:230px;background:linear-gradient(180deg,#8b9097,#5d636b);color:#fff;padding:96px 22px 0;box-sizing:border-box;display:flex;flex-direction:column;gap:2px"><span style="font:italic 400 17px Newsreader,serif;opacity:.92">Oktober · 10 dager igjen</span><b style="font:500 42px/1 Newsreader,serif">Finans</b></div>
+<div style="margin:-34px 16px 0;position:relative;border-radius:26px;background:#1b1a17;color:#f3efe6;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 14px 30px -18px rgba(0,0,0,.5)">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#e8a593">SALDO · ALLE KONTOER</span><span style="font-size:12px;opacity:.6">11:12</span></div>
+<b style="font:500 44px/1 Newsreader,serif">−42 119 kr</b>
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="opacity:.75">Inn i oktober</span><b>0 kr · lønn ventes 25.10</b></div><div style="height:8px;border-radius:4px;background:rgba(243,239,230,.14)"></div></div>
+<div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="opacity:.75">Ut i oktober</span><b>340 kr</b></div><div style="height:8px;border-radius:4px;background:rgba(243,239,230,.14);overflow:hidden"><div style="height:100%;width:4%;min-width:8px;background:#e8794a;border-radius:4px"></div></div></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-top:12px;border-top:1px solid rgba(243,239,230,.14)"><sc-for list="{{ mini }}" as="m"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11.5px;opacity:.65">{{ m.l }}</span><b style="font:500 18px Newsreader,serif;color:{{ m.c }}">{{ m.v }}</b></div></sc-for></div>
+</div>
+</div>
+<span style="font-size:13.5px;line-height:1.5;color:#6b665c;text-wrap:pretty">Mørkt kort som skiller seg fra lista under. Inn og ut som to linjer (tomme linjer får forklaring). Tre små tall nederst: snitt per dag, største post, faste trekk.</span>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals(){const sp={12:135,11:11,16:194};
+    return{acc:[['Brukskonto','8 420 kr','#2f6b4a','#1b1a17'],['Sparekonto','31 200 kr','#7fa98c','#1b1a17'],['Kredittkort','−81 739 kr','#b23a2a','#b23a2a']].map(([n,v,c,fc])=>({n,v,c,fc})),
+      days:Array.from({length:31},(_,i)=>{const d=i+1,v=sp[d]||0;return{h:d>21?'4px':v?Math.max(8,v/194*52)+'px':'3px',c:d>21?'#ece6da':v?'#1b1a17':'#d8d1c2'}}),
+      mini:[['Snitt per dag','16 kr','#f3efe6'],['Største','Biltema 194','#f3efe6'],['Faste trekk','1 735 kr','#e8a593']].map(([l,v,c])=>({l,v,c}))}}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Manrope:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600;700&amp;display=swap">
+<style>body{margin:0;background:#e3ddd1;color:#1b1a17;font-family:Manrope,system-ui,sans-serif}a{color:#b23a2a}a:hover{color:#8a2a1d}*{box-sizing:border-box}button{font-family:inherit}</style>
+</helmet>
+<section style="padding:48px 56px 40px;display:flex;flex-direction:column;gap:30px">
+<div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a">MEDIA · RUNDE 2 · KOMBINASJON</span><b style="font:500 44px/1.05 Newsreader,serif">1a + 1b</b><span style="font-size:16px;line-height:1.5;color:#3d3a33;text-wrap:pretty">Pille-faner fra <a href="#1b">1b</a> på web og mobil. Forsiden på mobil fra 1b. Interaktivt søk for en episode i stil med <a href="#1a">1a</a>, også på web.</span></div>
+<div id="2a" style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">2a</span><b style="font:700 17px Manrope">Plakatvegg med søkeliste</b></div>
+<div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+
+<div style="flex:none;width:1180px;height:780px;border-radius:20px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);display:flex;flex-direction:column">
+<div style="padding:26px 36px 0;display:flex;justify-content:space-between;align-items:center;gap:20px">
+<b style="font:500 32px/1 Newsreader,serif">Media</b>
+<div style="display:flex;gap:4px;padding:4px;border-radius:999px;background:#fff;border:1px solid #d8d1c2"><sc-for list="{{ tabsD }}" as="t"><span style="padding:9px 16px;border-radius:999px;background:{{ t.bg }};color:{{ t.fg }};font-size:14px;font-weight:700">{{ t.n }}</span></sc-for></div>
+<div style="width:300px;height:44px;border-radius:22px;background:#fff;border:1px solid #d8d1c2;display:flex;align-items:center;gap:10px;padding:0 16px;font-size:14px;color:#6b665c"><span style="color:#b23a2a;font-weight:800">✦</span>Spør Glimt</div>
+</div>
+<div style="padding:22px 36px 0;display:flex;justify-content:space-between;align-items:baseline"><b style="font:500 40px/1 Newsreader,serif">Kommer snart</b><span style="font-size:15px;color:#6b665c">21.–27. oktober · ‹ forrige uke · neste uke › · Vis i Kalender</span></div>
+<div style="padding:18px 36px 0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;flex:1;min-height:0;padding-bottom:16px;overflow:hidden">
+<sc-for list="{{ week }}" as="d" hint-placeholder-count="7"><div style="display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0;overflow-y:auto;scrollbar-width:none">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px;border-bottom:1.5px solid {{ d.bc }}"><b style="font-size:14px;color:{{ d.fc }}">{{ d.w }}</b><span style="font:600 10.5px 'IBM Plex Mono',monospace;color:#6b665c">{{ d.n }}</span></div>
+<sc-for list="{{ d.it }}" as="x"><div style="display:flex;flex-direction:column;gap:6px">
+<div style="position:relative;flex:none;height:118px;border-radius:10px;background:{{ x.c }};overflow:hidden;display:flex;align-items:flex-end;padding:10px"><b style="font:500 17px/1.1 Newsreader,serif;color:#fff;text-wrap:pretty">{{ x.t }}</b><span style="position:absolute;top:8px;left:8px;width:10px;height:10px;border-radius:5px;background:{{ x.dot }};box-shadow:0 0 0 2px rgba(255,255,255,.9)"></span></div>
+<span style="font-size:12.5px;font-weight:700">{{ x.e }} <span style="font-weight:500;color:#6b665c">{{ x.tm }}</span></span>
+<span style="font-size:12px;font-weight:700;color:{{ x.sC }}">{{ x.sT }}</span>
+</div></sc-for>
+<sc-if value="{{ d.empty }}"><span style="font-size:13px;color:#a39d90">Ingenting</span></sc-if>
+</div></sc-for>
+</div>
+<div style="margin:0 36px 26px;padding:14px 16px;border-radius:18px;background:#1b1a17;color:#f3efe6;display:flex;align-items:center;gap:20px">
+<b style="font:500 20px Newsreader,serif;flex:none">Lastes ned</b>
+<sc-for list="{{ miniD }}" as="r"><div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px"><div style="flex:none;width:26px;height:38px;border-radius:4px;background:{{ r.c }}"></div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px"><span style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nm }} · {{ r.short }}</span><div style="height:3px;border-radius:2px;background:rgba(243,239,230,.2);overflow:hidden"><div style="height:100%;width:{{ r.w }};background:#f3efe6"></div></div></div></div></sc-for>
+<button onClick="{{ pauseAllD }}" style="flex:none;height:38px;padding:0 16px;border-radius:19px;border:none;background:#f3efe6;color:#1b1a17;font-size:13px;font-weight:800;cursor:pointer">{{ pauseAllDT }}</button>
+</div>
+</div>
+
+<div style="flex:none;width:1180px;height:780px;border-radius:20px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);display:flex;flex-direction:column">
+<div style="padding:26px 36px 0;display:flex;justify-content:space-between;align-items:center;gap:20px">
+<b style="font:500 32px/1 Newsreader,serif">Media</b>
+<div style="display:flex;gap:4px;padding:4px;border-radius:999px;background:#fff;border:1px solid #d8d1c2"><sc-for list="{{ tabsDs }}" as="t"><span style="padding:9px 16px;border-radius:999px;background:{{ t.bg }};color:{{ t.fg }};font-size:14px;font-weight:700">{{ t.n }}</span></sc-for></div>
+<div style="width:300px;height:44px;border-radius:22px;background:#fff;border:1px solid #d8d1c2;display:flex;align-items:center;gap:10px;padding:0 16px;font-size:14px;color:#6b665c"><span style="color:#b23a2a;font-weight:800">✦</span>Spør Glimt</div>
+</div>
+<div style="padding:24px 36px 16px;display:flex;gap:22px;align-items:flex-end;border-bottom:1px solid #d8d1c2">
+<div style="flex:none;width:72px;height:106px;border-radius:8px;background:#6b3b2e"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px"><span style="font-size:15px;color:#b23a2a;font-weight:700">‹ Only Murders in the Building</span><b style="font:500 38px/1.05 Newsreader,serif">S05E09 · The Last Floor</b><span style="font-size:15px;color:#6b665c">Profil HD-1080p · Overvåker alle episoder · <a href="#2a" style="font-weight:700">Endre</a> · 5 treff fra 11 indeksere · 1,4 s</span></div>
+<div style="display:flex;gap:6px"><sc-for list="{{ fA }}" as="f"><span style="padding:8px 12px;border-radius:999px;background:{{ f.bg }};color:{{ f.c }};border:1px solid {{ f.bd }};font-size:13px;font-weight:700;white-space:nowrap">{{ f.n }}</span></sc-for></div>
+</div>
+<div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:0 36px 24px">
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 84px 110px 120px 210px 52px;gap:14px;padding:12px 0 8px;border-bottom:1.5px solid #1b1a17;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6b665c"><span>UTGIVELSE</span><span>KVALITET</span><span>STØRRELSE</span><span style="color:#1b1a17">S / P ▼</span><span>INDEKSER</span><span>SPRÅK</span><span></span></div>
+<sc-for list="{{ srD }}" as="r"><div style="display:grid;grid-template-columns:minmax(0,1fr) 120px 84px 110px 120px 210px 52px;gap:14px;align-items:center;padding:12px 0;border-bottom:1px solid #e4ddcf;font-size:14px">
+<span style="font:500 12.5px/1.35 'IBM Plex Mono',monospace;word-break:break-all">{{ r.rel }}</span>
+<span><span style="padding:3px 8px;border-radius:6px;background:#1b1a17;color:#f3efe6;font-size:12px;font-weight:700;white-space:nowrap">{{ r.q }}</span></span>
+<b>{{ r.sz }}</b>
+<b style="color:{{ r.sc }}">▲ {{ r.s }} / {{ r.l }}</b>
+<span style="color:#6b665c">{{ r.ix }}</span>
+<span style="font-size:13px;color:#6b665c">{{ r.lang }}</span>
+<button onClick="{{ r.grab }}" aria-label="Last ned" style="width:44px;height:44px;border-radius:22px;border:none;background:{{ r.gBg }};color:{{ r.gC }};display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800"><sc-if value="{{ r.ng }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg></sc-if><sc-if value="{{ r.g }}">✓</sc-if></button>
+</div></sc-for>
+</div>
+</div>
+
+<div style="display:flex;gap:28px;flex-wrap:wrap">
+<div style="flex:none;width:390px;height:820px;border-radius:52px;background:#1b1a17;padding:10px">
+<div style="width:100%;height:100%;border-radius:42px;overflow:hidden;background:#f3efe6;display:flex;flex-direction:column">
+<div style="height:46px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;font-size:15px;font-weight:700"><span>10:06</span><span>●●● ▮</span></div>
+<div style="padding:6px 20px 0;display:flex;justify-content:space-between;align-items:center"><b style="font:500 32px/1 Newsreader,serif">Media</b><span style="width:44px;height:44px;border-radius:22px;background:#fff;border:1px solid #d8d1c2;display:flex;align-items:center;justify-content:center;color:#b23a2a;font-weight:800">✦</span></div>
+<div style="display:flex;gap:6px;padding:12px 20px 0;overflow-x:auto;scrollbar-width:none;white-space:nowrap"><sc-for list="{{ tabsDm }}" as="t"><span style="padding:9px 14px;border-radius:999px;background:{{ t.bg }};color:{{ t.fg }};border:1px solid #d8d1c2;font-size:14px;font-weight:700">{{ t.n }}</span></sc-for></div>
+<div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:14px 20px 24px;display:flex;flex-direction:column;gap:12px">
+<div style="border-radius:20px;background:#1b1a17;color:#f3efe6;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font:500 30px/1 Newsreader,serif">{{ spD }}</b><span style="font:600 11px 'IBM Plex Mono',monospace;opacity:.8">3 AKTIVE · ↑ 1,2</span></div>
+<div style="display:flex;gap:8px"><button onClick="{{ pauseAllD }}" style="flex:1;height:44px;border-radius:22px;border:none;background:#f3efe6;color:#1b1a17;font-size:14px;font-weight:800;cursor:pointer">{{ pauseAllDT }}</button><button onClick="{{ altD }}" style="flex:1;height:44px;border-radius:22px;border:1.5px solid {{ altDBd }};background:{{ altDBg }};color:#f3efe6;font-size:14px;font-weight:800;cursor:pointer">Alt-hastighet</button></div>
+</div>
+<sc-for list="{{ torD }}" as="r"><div style="display:flex;gap:12px;padding:12px;border-radius:18px;background:#fffdf8;border:1px solid #d8d1c2">
+<div style="flex:none;width:58px;height:86px;border-radius:8px;background:{{ r.c }}"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="min-width:0;display:flex;flex-direction:column"><b style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nm }}</b><span style="font-size:12.5px;color:#6b665c">{{ r.ep }} · {{ r.q }} · {{ r.sz }}</span></div><b style="flex:none;font:500 26px/1 Newsreader,serif">{{ r.pt }}</b></div>
+<div style="height:5px;border-radius:3px;background:#e4ddcf;overflow:hidden"><div style="height:100%;width:{{ r.w }};background:{{ r.bc }}"></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;font-weight:700;color:{{ r.lc }}">{{ r.short }}</span><div style="display:flex;gap:6px"><button onClick="{{ r.tog }}" aria-label="Pause eller fortsett" style="width:44px;height:44px;border-radius:22px;border:1px solid #d8d1c2;background:#fff;color:#1b1a17;display:flex;align-items:center;justify-content:center;cursor:pointer"><sc-if value="{{ r.pz }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"></path></svg></sc-if><sc-if value="{{ r.npz }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5v14M15 5v14"></path></svg></sc-if></button><span style="width:44px;height:44px;border-radius:22px;border:1px solid #d8d1c2;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b23a2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></span></div></div>
+</div>
+</div></sc-for>
+</div>
+</div></div>
+
+<div style="flex:none;width:390px;height:820px;border-radius:52px;background:#1b1a17;padding:10px">
+<div style="width:100%;height:100%;border-radius:42px;overflow:hidden;background:#f3efe6;display:flex;flex-direction:column">
+<div style="height:46px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;font-size:15px;font-weight:700"><span>10:06</span><span>●●● ▮</span></div>
+<div style="padding:6px 20px 12px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #d8d1c2"><span style="font-size:15px;color:#b23a2a;font-weight:700">‹ Only Murders in the Building</span><b style="font:500 30px/1.05 Newsreader,serif">S05E09 · The Last Floor</b><span style="font-size:13.5px;color:#6b665c">Profil HD-1080p · Overvåker alle episoder · <a href="#2a" style="font-weight:700">Endre</a></span></div>
+<div style="display:flex;gap:6px;padding:12px 20px;overflow-x:auto;scrollbar-width:none;white-space:nowrap"><sc-for list="{{ fA }}" as="f"><span style="padding:8px 12px;border-radius:999px;background:{{ f.bg }};color:{{ f.c }};border:1px solid {{ f.bd }};font-size:13px;font-weight:700">{{ f.n }}</span></sc-for></div>
+<div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:0 20px 24px;display:flex;flex-direction:column">
+<sc-for list="{{ srD }}" as="r"><div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid #e4ddcf">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+<span style="font:500 11.5px/1.35 'IBM Plex Mono',monospace;word-break:break-all;color:#1b1a17">{{ r.rel }}</span>
+<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><span style="padding:3px 8px;border-radius:6px;background:#1b1a17;color:#f3efe6;font-size:12px;font-weight:700">{{ r.q }}</span><span style="font-size:13px;font-weight:700">{{ r.sz }}</span><span style="font-size:13px;font-weight:700;color:{{ r.sc }}">▲ {{ r.s }} / {{ r.l }}</span><span style="font-size:13px;color:#6b665c">{{ r.ix }}</span></div>
+<span style="font-size:12.5px;color:#6b665c">{{ r.lang }}</span>
+</div>
+<button onClick="{{ r.grab }}" aria-label="Last ned" style="flex:none;width:44px;height:44px;border-radius:22px;border:none;background:{{ r.gBg }};color:{{ r.gC }};display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800"><sc-if value="{{ r.ng }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg></sc-if><sc-if value="{{ r.g }}">✓</sc-if></button>
+</div></sc-for>
+</div>
+</div></div>
+</div>
+</div>
+</div>
+</section>
+<section style="padding:48px 56px 72px;display:flex;flex-direction:column;gap:30px">
+<div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a">MEDIA · RUNDE 1 · TRE RETNINGER</span><b style="font:500 44px/1.05 Newsreader,serif">Sonarr, Radarr, qBittorrent og Prowlarr</b><span style="font-size:16px;line-height:1.5;color:#3d3a33;text-wrap:pretty">Én fane per tjeneste, «Kommer snart» som startside. Hver retning viser web-start, nedlastinger på mobil og interaktivt søk på mobil. Pause, Pause alt, Alt-hastighet, Last ned og filvalg kan trykkes.</span></div>
+
+<div style="display:flex;flex-direction:column;gap:64px">
+
+<div id="1a" style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">1a</span><b style="font:700 17px Manrope">Avisspalte</b><span style="color:#6b665c;font-size:15px">Liste per dag, ord-faner med strek under, nedlastinger og helse i høyrespalten.</span></div>
+<div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+
+<div style="flex:none;width:1180px;height:780px;border-radius:20px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);display:flex;flex-direction:column">
+<div style="padding:34px 44px 0;display:flex;justify-content:space-between;align-items:flex-end;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a">MEDIA · UKE 43</span><b style="font:500 46px/1 Newsreader,serif">Kommer snart</b></div>
+<div style="display:flex;align-items:center;gap:10px"><div style="width:380px;height:46px;border-radius:23px;background:#fff;border:1px solid #d8d1c2;display:flex;align-items:center;gap:10px;padding:0 16px;font-size:15px;color:#6b665c"><span style="color:#b23a2a;font-weight:800">✦</span>Spør Glimt: «legg til Severance i 4K»</div><button style="height:46px;padding:0 18px;border-radius:23px;border:1px solid #d8d1c2;background:transparent;font-size:14px;font-weight:700;color:#1b1a17;cursor:pointer">Vis i Kalender</button></div>
+</div>
+<div style="padding:22px 44px 0;display:flex;gap:30px;border-bottom:1px solid #d8d1c2">
+<sc-for list="{{ tabsA }}" as="t"><div style="display:flex;align-items:baseline;gap:7px;padding-bottom:12px;border-bottom:{{ t.bd }};margin-bottom:-1px"><span style="font-size:17px;font-weight:{{ t.fw }}">{{ t.n }}</span><span style="font:600 11px 'IBM Plex Mono',monospace;color:#6b665c">{{ t.c }}</span></div></sc-for>
+</div>
+<div style="flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:36px;padding:24px 44px 28px;overflow:hidden">
+<div style="display:flex;flex-direction:column;gap:22px;overflow-y:auto;scrollbar-width:none;min-height:0">
+<sc-for list="{{ days }}" as="d" hint-placeholder-count="3"><div style="display:flex;flex-direction:column">
+<div style="display:flex;align-items:baseline;gap:12px;padding-bottom:8px;border-bottom:1.5px solid #1b1a17"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">{{ d.k }}</span><b style="font:500 22px Newsreader,serif">{{ d.d }}</b></div>
+<sc-for list="{{ d.it }}" as="x"><div style="display:flex;align-items:center;gap:16px;padding:10px 0;border-bottom:1px solid #e4ddcf">
+<div style="flex:none;width:40px;height:58px;border-radius:5px;background:{{ x.c }}"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font:500 20px/1.15 Newsreader,serif">{{ x.t }}</b><span style="font-size:14px;color:#6b665c">{{ x.e }} · {{ x.n }}</span></div>
+<span style="flex:none;font:600 13px 'IBM Plex Mono',monospace;color:#6b665c;width:48px">{{ x.tm }}</span>
+<span style="flex:none;font:600 12px 'IBM Plex Mono',monospace;color:#6b665c;width:120px">{{ x.q }}</span>
+<span style="flex:none;min-width:150px;display:flex;justify-content:flex-end"><span style="padding:5px 11px;border-radius:999px;background:{{ x.sBg }};color:{{ x.sC }};font-size:13px;font-weight:700">{{ x.sT }}</span></span>
+</div></sc-for>
+</div></sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="background:#fffdf8;border:1px solid #d8d1c2;border-radius:18px;padding:18px 18px 14px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font:500 22px Newsreader,serif">Lastes ned nå</b><span style="font:600 12px 'IBM Plex Mono',monospace;color:#6b665c">{{ spA }}</span></div>
+<sc-for list="{{ miniA }}" as="r"><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><b style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nm }} <span style="font-weight:500;color:#6b665c">{{ r.ep }}</span></b><span style="flex:none;font:600 12px 'IBM Plex Mono',monospace;color:{{ r.lc }}">{{ r.short }}</span></div><div style="height:4px;border-radius:2px;background:#e4ddcf;overflow:hidden"><div style="height:100%;width:{{ r.w }};background:{{ r.bc }}"></div></div></div></sc-for>
+<div style="display:flex;gap:8px;padding-top:4px"><button onClick="{{ pauseAllA }}" style="flex:1;height:40px;border-radius:20px;border:none;background:#1b1a17;color:#f3efe6;font-size:14px;font-weight:700;cursor:pointer">{{ pauseAllAT }}</button><button style="flex:1;height:40px;border-radius:20px;border:1px solid #d8d1c2;background:transparent;font-size:14px;font-weight:700;color:#1b1a17;cursor:pointer">Åpne qBittorrent</button></div>
+</div>
+<div style="background:#fffdf8;border:1px solid #d8d1c2;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px">
+<b style="font:500 22px Newsreader,serif">Helse</b>
+<div style="display:flex;justify-content:space-between;font-size:14px"><span>Prowlarr</span><b style="color:#8a5a10">11 av 12 indeksere svarer</b></div>
+<span style="font-size:13px;color:#6b665c">1337x: tidsavbrudd siden 08:40 · <a href="#1a" style="font-weight:700">Test igjen</a></span>
+<div style="height:1px;background:#e4ddcf"></div>
+<div style="display:flex;justify-content:space-between;font-size:14px"><span>Disk /media</span><b>6,2 av 12 TB</b></div>
+<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:#e4ddcf"><div style="width:32%;background:#1b1a17"></div><div style="width:20%;background:#b23a2a"></div></div>
+<span style="font-size:13px;color:#6b665c">Serier 3,8 TB · Filmer 2,4 TB · Ledig 5,8 TB</span>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;gap:28px;flex-wrap:wrap">
+<div style="flex:none;width:390px;height:820px;border-radius:52px;background:#1b1a17;padding:10px">
+<div style="width:100%;height:100%;border-radius:42px;overflow:hidden;background:#f3efe6;display:flex;flex-direction:column">
+<div style="height:46px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;font-size:15px;font-weight:700"><span>10:06</span><span>●●● ▮</span></div>
+<div style="padding:6px 20px 0;display:flex;flex-direction:column;gap:4px"><span style="font-size:15px;color:#b23a2a;font-weight:700">‹ Mer</span><b style="font:500 36px/1.05 Newsreader,serif">Media</b></div>
+<div style="display:flex;gap:20px;padding:12px 20px 0;border-bottom:1px solid #d8d1c2;overflow-x:auto;scrollbar-width:none;white-space:nowrap"><sc-for list="{{ tabsAm }}" as="t"><span style="padding-bottom:10px;border-bottom:{{ t.bd }};margin-bottom:-1px;font-size:15px;font-weight:{{ t.fw }}">{{ t.n }}</span></sc-for></div>
+<div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:16px 20px 24px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:flex-end"><div style="display:flex;flex-direction:column;gap:2px"><b style="font:500 28px/1 Newsreader,serif">{{ spA }}</b><span style="font:600 11px 'IBM Plex Mono',monospace;color:#6b665c">↑ 1,2 MB/s · 5 i køen</span></div><button onClick="{{ pauseAllA }}" style="height:44px;padding:0 16px;border-radius:22px;border:none;background:#1b1a17;color:#f3efe6;font-size:14px;font-weight:700;cursor:pointer">{{ pauseAllAT }}</button></div>
+<button onClick="{{ altA }}" style="display:flex;justify-content:space-between;align-items:center;height:48px;padding:0 14px;border-radius:14px;border:1px solid #d8d1c2;background:#fffdf8;color:#1b1a17;font-size:15px;font-weight:600;cursor:pointer"><span>Alt-hastighet (maks 5 MB/s)</span><span style="width:44px;height:26px;border-radius:13px;background:{{ altABg }};display:flex;align-items:center;padding:3px;justify-content:{{ altAJ }}"><span style="width:20px;height:20px;border-radius:10px;background:#fff"></span></span></button>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ torA }}" as="r"><div style="display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid #e4ddcf">
+<div style="display:flex;gap:12px;align-items:center"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><b style="font-size:15px">{{ r.nm }} <span style="font-weight:500;color:#6b665c">{{ r.ep }}</span></b><span style="font:500 11px 'IBM Plex Mono',monospace;color:{{ r.lc }}">{{ r.line }}</span></div>
+<button onClick="{{ r.tog }}" aria-label="Pause eller fortsett" style="flex:none;width:44px;height:44px;border-radius:22px;border:1px solid #d8d1c2;background:#fff;color:#1b1a17;display:flex;align-items:center;justify-content:center;cursor:pointer"><sc-if value="{{ r.pz }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"></path></svg></sc-if><sc-if value="{{ r.npz }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5v14M15 5v14"></path></svg></sc-if></button>
+<button onClick="{{ r.menu }}" aria-label="Flere valg" style="flex:none;width:44px;height:44px;border-radius:22px;border:1px solid #d8d1c2;background:#fff;color:#1b1a17;font-size:18px;font-weight:800;cursor:pointer">⋯</button></div>
+<div style="height:4px;border-radius:2px;background:#e4ddcf;overflow:hidden"><div style="height:100%;width:{{ r.w }};background:{{ r.bc }}"></div></div>
+<sc-if value="{{ r.open }}"><div style="display:flex;flex-wrap:wrap;gap:6px;padding-top:2px"><sc-for list="{{ actsA }}" as="a"><span style="padding:8px 12px;border-radius:999px;background:{{ a.bg }};color:{{ a.c }};font-size:13px;font-weight:700">{{ a.n }}</span></sc-for></div></sc-if>
+</div></sc-for>
+</div>
+</div>
+</div></div>
+
+<div style="flex:none;width:390px;height:820px;border-radius:52px;background:#1b1a17;padding:10px">
+<div style="width:100%;height:100%;border-radius:42px;overflow:hidden;background:#f3efe6;display:flex;flex-direction:column">
+<div style="height:46px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;font-size:15px;font-weight:700"><span>10:06</span><span>●●● ▮</span></div>
+<div style="padding:6px 20px 12px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid #d8d1c2"><span style="font-size:15px;color:#b23a2a;font-weight:700">‹ Only Murders in the Building</span><b style="font:500 30px/1.05 Newsreader,serif">S05E09 · The Last Floor</b><span style="font-size:13.5px;color:#6b665c">Profil HD-1080p · Overvåker alle episoder · <a href="#1a" style="font-weight:700">Endre</a></span></div>
+<div style="display:flex;gap:6px;padding:12px 20px;overflow-x:auto;scrollbar-width:none;white-space:nowrap"><sc-for list="{{ fA }}" as="f"><span style="padding:8px 12px;border-radius:999px;background:{{ f.bg }};color:{{ f.c }};border:1px solid {{ f.bd }};font-size:13px;font-weight:700">{{ f.n }}</span></sc-for></div>
+<div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:0 20px 24px;display:flex;flex-direction:column">
+<sc-for list="{{ srA }}" as="r"><div style="display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid #e4ddcf">
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:7px">
+<span style="font:500 11.5px/1.35 'IBM Plex Mono',monospace;word-break:break-all;color:#1b1a17">{{ r.rel }}</span>
+<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center"><span style="padding:3px 8px;border-radius:6px;background:#1b1a17;color:#f3efe6;font-size:12px;font-weight:700">{{ r.q }}</span><span style="font-size:13px;font-weight:700">{{ r.sz }}</span><span style="font-size:13px;font-weight:700;color:{{ r.sc }}">▲ {{ r.s }} / {{ r.l }}</span><span style="font-size:13px;color:#6b665c">{{ r.ix }}</span></div>
+<span style="font-size:12.5px;color:#6b665c">{{ r.lang }}</span>
+</div>
+<button onClick="{{ r.grab }}" aria-label="Last ned" style="flex:none;width:44px;height:44px;border-radius:22px;border:none;background:{{ r.gBg }};color:{{ r.gC }};display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800"><sc-if value="{{ r.ng }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg></sc-if><sc-if value="{{ r.g }}">✓</sc-if></button>
+</div></sc-for>
+</div>
+</div></div>
+</div>
+</div>
+</div>
+
+<div id="1b" style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">1b</span><b style="font:700 17px Manrope">Plakatvegg</b><span style="color:#6b665c;font-size:15px">Ukekalender med plakater, pille-faner, nedlastinger som kort med stor prosent.</span></div>
+<div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+
+<div style="flex:none;width:1180px;height:780px;border-radius:20px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);display:flex;flex-direction:column">
+<div style="padding:26px 36px 0;display:flex;justify-content:space-between;align-items:center;gap:20px">
+<b style="font:500 32px/1 Newsreader,serif">Media</b>
+<div style="display:flex;gap:4px;padding:4px;border-radius:999px;background:#fff;border:1px solid #d8d1c2"><sc-for list="{{ tabsB }}" as="t"><span style="padding:9px 16px;border-radius:999px;background:{{ t.bg }};color:{{ t.fg }};font-size:14px;font-weight:700">{{ t.n }}</span></sc-for></div>
+<div style="width:300px;height:44px;border-radius:22px;background:#fff;border:1px solid #d8d1c2;display:flex;align-items:center;gap:10px;padding:0 16px;font-size:14px;color:#6b665c"><span style="color:#b23a2a;font-weight:800">✦</span>Spør Glimt</div>
+</div>
+<div style="padding:22px 36px 0;display:flex;justify-content:space-between;align-items:baseline"><b style="font:500 40px/1 Newsreader,serif">Kommer snart</b><span style="font-size:15px;color:#6b665c">21.–27. oktober · ‹ forrige uke · neste uke ›</span></div>
+<div style="padding:18px 36px 0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:12px;flex:1;min-height:0;padding-bottom:16px;overflow:hidden">
+<sc-for list="{{ week }}" as="d" hint-placeholder-count="7"><div style="display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0;overflow-y:auto;scrollbar-width:none">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px;border-bottom:1.5px solid {{ d.bc }}"><b style="font-size:14px;color:{{ d.fc }}">{{ d.w }}</b><span style="font:600 10.5px 'IBM Plex Mono',monospace;color:#6b665c">{{ d.n }}</span></div>
+<sc-for list="{{ d.it }}" as="x"><div style="display:flex;flex-direction:column;gap:6px">
+<div style="position:relative;flex:none;height:118px;border-radius:10px;background:{{ x.c }};overflow:hidden;display:flex;align-items:flex-end;padding:10px"><b style="font:500 17px/1.1 Newsreader,serif;color:#fff;text-wrap:pretty">{{ x.t }}</b><span style="position:absolute;top:8px;left:8px;width:10px;height:10px;border-radius:5px;background:{{ x.dot }};box-shadow:0 0 0 2px rgba(255,255,255,.9)"></span></div>
+<span style="font-size:12.5px;font-weight:700">{{ x.e }} <span style="font-weight:500;color:#6b665c">{{ x.tm }}</span></span>
+<span style="font-size:12px;font-weight:700;color:{{ x.sC }}">{{ x.sT }}</span>
+</div></sc-for>
+<sc-if value="{{ d.empty }}"><span style="font-size:13px;color:#a39d90">Ingenting</span></sc-if>
+</div></sc-for>
+</div>
+<div style="margin:0 36px 26px;padding:14px 16px;border-radius:18px;background:#1b1a17;color:#f3efe6;display:flex;align-items:center;gap:20px">
+<b style="font:500 20px Newsreader,serif;flex:none">Lastes ned</b>
+<sc-for list="{{ miniB }}" as="r"><div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px"><div style="flex:none;width:26px;height:38px;border-radius:4px;background:{{ r.c }}"></div><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px"><span style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nm }} · {{ r.short }}</span><div style="height:3px;border-radius:2px;background:rgba(243,239,230,.2);overflow:hidden"><div style="height:100%;width:{{ r.w }};background:#f3efe6"></div></div></div></div></sc-for>
+<button onClick="{{ pauseAllB }}" style="flex:none;height:38px;padding:0 16px;border-radius:19px;border:none;background:#f3efe6;color:#1b1a17;font-size:13px;font-weight:800;cursor:pointer">{{ pauseAllBT }}</button>
+</div>
+</div>
+
+<div style="display:flex;gap:28px;flex-wrap:wrap">
+<div style="flex:none;width:390px;height:820px;border-radius:52px;background:#1b1a17;padding:10px">
+<div style="width:100%;height:100%;border-radius:42px;overflow:hidden;background:#f3efe6;display:flex;flex-direction:column">
+<div style="height:46px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;font-size:15px;font-weight:700"><span>10:06</span><span>●●● ▮</span></div>
+<div style="padding:6px 20px 0;display:flex;justify-content:space-between;align-items:center"><b style="font:500 32px/1 Newsreader,serif">Media</b><span style="width:44px;height:44px;border-radius:22px;background:#fff;border:1px solid #d8d1c2;display:flex;align-items:center;justify-content:center;color:#b23a2a;font-weight:800">✦</span></div>
+<div style="display:flex;gap:6px;padding:12px 20px 0;overflow-x:auto;scrollbar-width:none;white-space:nowrap"><sc-for list="{{ tabsBm }}" as="t"><span style="padding:9px 14px;border-radius:999px;background:{{ t.bg }};color:{{ t.fg }};border:1px solid #d8d1c2;font-size:14px;font-weight:700">{{ t.n }}</span></sc-for></div>
+<div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:14px 20px 24px;display:flex;flex-direction:column;gap:12px">
+<div style="border-radius:20px;background:#1b1a17;color:#f3efe6;padding:16px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font:500 30px/1 Newsreader,serif">{{ spB }}</b><span style="font:600 11px 'IBM Plex Mono',monospace;opacity:.8">3 AKTIVE · ↑ 1,2</span></div>
+<div style="display:flex;gap:8px"><button onClick="{{ pauseAllB }}" style="flex:1;height:44px;border-radius:22px;border:none;background:#f3efe6;color:#1b1a17;font-size:14px;font-weight:800;cursor:pointer">{{ pauseAllBT }}</button><button onClick="{{ altB }}" style="flex:1;height:44px;border-radius:22px;border:1.5px solid {{ altBBd }};background:{{ altBBg }};color:{{ altBFg }};font-size:14px;font-weight:800;cursor:pointer">Alt-hastighet</button></div>
+</div>
+<sc-for list="{{ torB }}" as="r"><div style="display:flex;gap:12px;padding:12px;border-radius:18px;background:#fffdf8;border:1px solid #d8d1c2">
+<div style="flex:none;width:58px;height:86px;border-radius:8px;background:{{ r.c }}"></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="min-width:0;display:flex;flex-direction:column"><b style="font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nm }}</b><span style="font-size:12.5px;color:#6b665c">{{ r.ep }} · {{ r.q }} · {{ r.sz }}</span></div><b style="flex:none;font:500 26px/1 Newsreader,serif">{{ r.pt }}</b></div>
+<div style="height:5px;border-radius:3px;background:#e4ddcf;overflow:hidden"><div style="height:100%;width:{{ r.w }};background:{{ r.bc }}"></div></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:12.5px;font-weight:700;color:{{ r.lc }}">{{ r.short }}</span><div style="display:flex;gap:6px"><button onClick="{{ r.tog }}" aria-label="Pause eller fortsett" style="width:44px;height:44px;border-radius:22px;border:1px solid #d8d1c2;background:#fff;color:#1b1a17;display:flex;align-items:center;justify-content:center;cursor:pointer"><sc-if value="{{ r.pz }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"></path></svg></sc-if><sc-if value="{{ r.npz }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 5v14M15 5v14"></path></svg></sc-if></button><span style="width:44px;height:44px;border-radius:22px;border:1px solid #d8d1c2;background:#fff;display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b23a2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"></path></svg></span></div></div>
+</div>
+</div></sc-for>
+</div>
+</div></div>
+
+<div style="flex:none;width:390px;height:820px;border-radius:52px;background:#1b1a17;padding:10px">
+<div style="width:100%;height:100%;border-radius:42px;overflow:hidden;background:#f3efe6;display:flex;flex-direction:column">
+<div style="position:relative;flex:none;height:230px;background:#6b3b2e;display:flex;flex-direction:column;justify-content:space-between;padding:52px 20px 16px;color:#fff">
+<span style="font-size:15px;font-weight:700">‹ Sonarr</span>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;opacity:.85">INTERAKTIVT SØK · S05E09</span><b style="font:500 30px/1.05 Newsreader,serif">Only Murders in the Building</b><span style="font-size:13.5px;opacity:.9">HD-1080p · Overvåker alle · Mangler</span></div>
+</div>
+<div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:14px 16px 24px;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ srB }}" as="r"><div style="border-radius:18px;background:#fffdf8;border:1.5px solid {{ r.bd }};padding:14px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><b style="font:500 22px/1 Newsreader,serif">{{ r.q }}</b><sc-if value="{{ r.best }}"><span style="font-size:12px;font-weight:800;color:#2f6b4a">Best treff</span></sc-if></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px">
+<div style="display:flex;flex-direction:column"><span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6b665c">STØRRELSE</span><b style="font-size:15px">{{ r.sz }}</b></div>
+<div style="display:flex;flex-direction:column"><span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6b665c">SEEDERE / PEERS</span><b style="font-size:15px;color:{{ r.sc }}">{{ r.s }} / {{ r.l }}</b></div>
+<div style="display:flex;flex-direction:column"><span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6b665c">INDEKSER</span><b style="font-size:15px">{{ r.ix }}</b></div>
+<div style="display:flex;flex-direction:column"><span style="font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6b665c">SPRÅK</span><b style="font-size:13px">{{ r.lang }}</b></div>
+</div>
+<button onClick="{{ r.grab }}" style="height:44px;border-radius:22px;border:none;background:{{ r.gBg }};color:{{ r.gC }};font-size:14px;font-weight:800;cursor:pointer">{{ r.gT }}</button>
+</div></sc-for>
+</div>
+</div></div>
+</div>
+</div>
+</div>
+
+<div id="1c" style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">1c</span><b style="font:700 17px Manrope">Kontrollrom</b><span style="color:#6b665c;font-size:15px">Tjenester i venstrekolonne med status, tett tabell, nedlastinger alltid synlige nederst.</span></div>
+<div style="display:flex;gap:32px;align-items:flex-start;flex-wrap:wrap">
+
+<div style="flex:none;width:1180px;height:780px;border-radius:20px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);display:flex">
+<div style="flex:none;width:236px;background:#fffdf8;border-right:1px solid #d8d1c2;padding:26px 14px 20px;display:flex;flex-direction:column;gap:4px">
+<b style="font:500 28px/1 Newsreader,serif;padding:0 10px 16px">Media</b>
+<sc-for list="{{ railC }}" as="t"><div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:{{ t.bg }};color:{{ t.fg }}"><span style="flex:none;width:8px;height:8px;border-radius:4px;background:{{ t.dot }}"></span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font-size:15px">{{ t.n }}</b><span style="font-size:12px;opacity:.75">{{ t.s }}</span></div></div></sc-for>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:column;gap:8px;padding:12px 10px 0;border-top:1px solid #e4ddcf">
+<span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#6b665c">DISK · 6,2 / 12 TB</span>
+<sc-for list="{{ diskC }}" as="k"><div style="display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="font-family:'IBM Plex Mono',monospace">{{ k.p }}</span><b>{{ k.v }}</b></div><div style="height:4px;border-radius:2px;background:#e4ddcf;overflow:hidden"><div style="height:100%;width:{{ k.w }};background:{{ k.c }}"></div></div></div></sc-for>
+</div>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column">
+<div style="padding:26px 32px 14px;display:flex;justify-content:space-between;align-items:center;gap:16px"><div style="flex:none;display:flex;align-items:baseline;gap:14px"><b style="font:500 36px/1 Newsreader,serif;white-space:nowrap">Kommer snart</b><span style="font-size:14px;color:#6b665c">7 denne uka · 1 mangler</span></div><div style="display:flex;gap:8px;align-items:center"><div style="display:flex;padding:3px;border-radius:12px;background:#fff;border:1px solid #d8d1c2"><span style="padding:7px 12px;border-radius:9px;background:#1b1a17;color:#f3efe6;font-size:13px;font-weight:700">Uke</span><span style="padding:7px 12px;font-size:13px;font-weight:700">Måned</span></div><div style="width:220px;height:40px;border-radius:12px;background:#fff;border:1px solid #d8d1c2;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:14px;color:#6b665c"><span style="color:#b23a2a;font-weight:800">✦</span>Spør Glimt</div></div></div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:0 32px">
+<div style="display:grid;grid-template-columns:110px minmax(0,1fr) 90px 90px 110px 150px;gap:12px;padding:0 0 8px;border-bottom:1.5px solid #1b1a17;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6b665c"><span>DAG</span><span>TITTEL</span><span>EPISODE</span><span>TJENESTE</span><span>PROFIL</span><span>STATUS</span></div>
+<sc-for list="{{ flatC }}" as="x"><div style="display:grid;grid-template-columns:110px minmax(0,1fr) 90px 90px 110px 150px;gap:12px;align-items:center;height:46px;border-bottom:1px solid #e4ddcf;font-size:14px"><span style="font:600 12px 'IBM Plex Mono',monospace;color:{{ x.dc }}">{{ x.w }} {{ x.tm }}</span><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ x.t }}</b><span style="font-family:'IBM Plex Mono',monospace;font-size:13px">{{ x.e }}</span><span style="color:#6b665c">{{ x.sv }}</span><span style="color:#6b665c">{{ x.q }}</span><span style="display:flex;align-items:center;gap:7px;font-weight:700;color:{{ x.sC }}"><span style="width:8px;height:8px;border-radius:4px;background:{{ x.sC }}"></span>{{ x.sT }}</span></div></sc-for>
+</div>
+<div style="flex:none;margin:0 20px 20px;border-radius:16px;background:#fffdf8;border:1px solid #d8d1c2;padding:12px 16px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:baseline;gap:12px"><b style="font-size:15px">qBittorrent</b><span style="font:600 12px 'IBM Plex Mono',monospace;color:#6b665c">{{ spC }} · ↑ 1,2 MB/s</span></div><div style="display:flex;gap:6px"><button onClick="{{ altC }}" style="height:34px;padding:0 12px;border-radius:10px;border:1px solid {{ altCBd }};background:{{ altCBg }};color:{{ altCFg }};font-size:13px;font-weight:700;cursor:pointer">Alt-hastighet</button><button onClick="{{ pauseAllC }}" style="height:34px;padding:0 12px;border-radius:10px;border:none;background:#1b1a17;color:#f3efe6;font-size:13px;font-weight:700;cursor:pointer">{{ pauseAllCT }}</button></div></div>
+<sc-for list="{{ miniC }}" as="r"><div style="display:grid;grid-template-columns:minmax(0,1fr) 160px 140px 36px;gap:12px;align-items:center;height:34px;font-size:13px"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.rel }}</span><div style="height:5px;border-radius:3px;background:#e4ddcf;overflow:hidden"><div style="height:100%;width:{{ r.w }};background:{{ r.bc }}"></div></div><span style="font-weight:700;color:{{ r.lc }}">{{ r.short }}</span><button onClick="{{ r.tog }}" aria-label="Pause eller fortsett" style="width:32px;height:32px;border-radius:8px;border:1px solid #d8d1c2;background:#fff;color:#1b1a17;display:flex;align-items:center;justify-content:center;cursor:pointer"><sc-if value="{{ r.pz }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"></path></svg></sc-if><sc-if value="{{ r.npz }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M9 5v14M15 5v14"></path></svg></sc-if></button></div></sc-for>
+</div>
+</div>
+</div>
+
+<div style="display:flex;gap:28px;flex-wrap:wrap">
+<div style="flex:none;width:390px;height:820px;border-radius:52px;background:#1b1a17;padding:10px">
+<div style="width:100%;height:100%;border-radius:42px;overflow:hidden;background:#f3efe6;display:flex;flex-direction:column">
+<div style="height:46px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;font-size:15px;font-weight:700"><span>10:06</span><span>●●● ▮</span></div>
+<div style="padding:6px 20px 0;display:flex;justify-content:space-between;align-items:flex-end"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;color:#b23a2a;font-weight:700">‹ Media</span><b style="font:500 30px/1 Newsreader,serif">qBittorrent</b></div><span style="font:600 12px 'IBM Plex Mono',monospace;color:#6b665c;padding-bottom:4px">{{ spC }}</span></div>
+<div style="display:flex;padding:12px 20px 0;gap:8px"><div style="flex:1;display:flex;padding:3px;border-radius:12px;background:#fff;border:1px solid #d8d1c2"><sc-for list="{{ segC }}" as="s"><span style="flex:1;text-align:center;padding:9px 0;border-radius:9px;background:{{ s.bg }};color:{{ s.fg }};font-size:13px;font-weight:700">{{ s.n }}</span></sc-for></div><button onClick="{{ pauseAllC }}" style="flex:none;height:44px;padding:0 12px;border-radius:12px;border:none;background:#1b1a17;color:#f3efe6;font-size:13px;font-weight:700;cursor:pointer">{{ pauseAllCT }}</button></div>
+<div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:10px 20px 24px;display:flex;flex-direction:column">
+<sc-for list="{{ torC }}" as="r"><div style="display:flex;flex-direction:column;border-bottom:1px solid #e4ddcf">
+<button onClick="{{ r.menu }}" style="display:flex;align-items:center;gap:10px;min-height:62px;padding:8px 0;border:none;background:transparent;color:#1b1a17;text-align:left;cursor:pointer"><span style="flex:none;width:10px;height:10px;border-radius:5px;background:{{ r.bc }}"></span><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.nm }} {{ r.ep }}</b><span style="font:500 11px 'IBM Plex Mono',monospace;color:{{ r.lc }}">{{ r.line }}</span></div><b style="flex:none;font:600 14px 'IBM Plex Mono',monospace">{{ r.pt }}</b></button>
+<sc-if value="{{ r.open }}"><div style="display:flex;flex-direction:column;gap:10px;padding:2px 0 14px 20px">
+<span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#6b665c">FILER · TRYKK FOR Å VELGE BORT</span>
+<sc-for list="{{ filesC }}" as="f"><button onClick="{{ f.tog }}" style="display:flex;align-items:center;gap:10px;min-height:44px;border:none;background:transparent;padding:0;color:#1b1a17;text-align:left;cursor:pointer"><span style="flex:none;width:22px;height:22px;border-radius:6px;border:1.5px solid #1b1a17;background:{{ f.bg }};color:#f3efe6;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ f.ch }}</span><span style="flex:1;min-width:0;font:500 12px 'IBM Plex Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:{{ f.op }}">{{ f.n }}</span><span style="flex:none;font-size:12.5px;color:#6b665c">{{ f.s }}</span></button></sc-for>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><button onClick="{{ r.tog }}" style="height:44px;border-radius:12px;border:none;background:#1b1a17;color:#f3efe6;font-size:13px;font-weight:700;cursor:pointer">{{ r.togT }}</button><sc-for list="{{ actsC }}" as="a"><span style="height:44px;border-radius:12px;border:1px solid {{ a.bd }};background:#fff;color:{{ a.c }};font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center">{{ a.n }}</span></sc-for></div>
+</div></sc-if>
+</div></sc-for>
+</div>
+</div></div>
+
+<div style="flex:none;width:390px;height:820px;border-radius:52px;background:#1b1a17;padding:10px">
+<div style="width:100%;height:100%;border-radius:42px;overflow:hidden;background:#f3efe6;display:flex;flex-direction:column">
+<div style="height:46px;display:flex;justify-content:space-between;align-items:center;padding:0 30px;font-size:15px;font-weight:700"><span>10:06</span><span>●●● ▮</span></div>
+<div style="padding:6px 20px 10px;display:flex;flex-direction:column;gap:2px"><span style="font-size:15px;color:#b23a2a;font-weight:700">‹ Only Murders in the Building</span><b style="font:500 28px/1.05 Newsreader,serif">Søk S05E09</b><span style="font-size:13px;color:#6b665c">5 treff fra 11 indeksere · 1,4 s</span></div>
+<div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 74px 44px;gap:8px;padding:8px 20px;border-top:1.5px solid #1b1a17;border-bottom:1px solid #d8d1c2;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#6b665c"><span>KVALITET · INDEKSER</span><span>STR.</span><span style="color:#1b1a17">S / P ▼</span><span></span></div>
+<div style="flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;padding:0 20px 24px">
+<sc-for list="{{ srC }}" as="r"><div style="display:grid;grid-template-columns:minmax(0,1fr) 62px 74px 44px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #e4ddcf">
+<div style="min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:14px">{{ r.q }}</b><span style="font-size:12px;color:#6b665c">{{ r.ix }} · {{ r.langS }}</span><span style="font:500 10.5px 'IBM Plex Mono',monospace;color:#8a8478;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.grp }}</span></div>
+<b style="font-size:13px">{{ r.sz }}</b>
+<b style="font:600 12.5px 'IBM Plex Mono',monospace;color:{{ r.sc }}">{{ r.s }}/{{ r.l }}</b>
+<button onClick="{{ r.grab }}" aria-label="Last ned" style="width:44px;height:44px;border-radius:12px;border:1px solid {{ r.gBd }};background:{{ r.gBg }};color:{{ r.gC }};display:flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800"><sc-if value="{{ r.ng }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg></sc-if><sc-if value="{{ r.g }}">✓</sc-if></button>
+</div></sc-for>
+</div>
+</div></div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const DAYS=[
+ {k:'I DAG',d:'Tirsdag 21. oktober',w:'Tir 21',it:[
+  {t:'Slow Horses',e:'S06E03',n:'Dead Drop',tm:'03:00',sv:'Sonarr',st:'ok',c:'#2e3b4a',q:'Ultra-HD'},
+  {t:'Shrinking',e:'S03E08',n:'Every Tuesday',tm:'09:00',sv:'Sonarr',st:'dl',p:64,c:'#3f5a4a',q:'HD-1080p'},
+  {t:'Only Murders in the Building',e:'S05E09',n:'The Last Floor',tm:'09:00',sv:'Sonarr',st:'miss',c:'#6b3b2e',q:'HD-1080p'}]},
+ {k:'I MORGEN',d:'Onsdag 22. oktober',w:'Ons 22',it:[
+  {t:'The Bear',e:'S05E01',n:'Prep',tm:'03:00',sv:'Sonarr',st:'wait',c:'#7a5a2a',q:'HD-1080p'},
+  {t:'Wicked: For Good',e:'Film',n:'Digital utgivelse',tm:'',sv:'Radarr',st:'dl',p:22,c:'#4a6b3a',q:'Ultra-HD'}]},
+ {k:'TORSDAG',d:'Torsdag 23. oktober',w:'Tor 23',it:[
+  {t:'Hacks',e:'S05E04',n:'Roast',tm:'03:00',sv:'Sonarr',st:'wait',c:'#5a4a6b',q:'HD-1080p'}]},
+ {k:'FREDAG',d:'Fredag 24. oktober',w:'Fre 24',it:[
+  {t:'Severance',e:'S03E01',n:'Sesongstart',tm:'03:00',sv:'Sonarr',st:'wait',c:'#3c4a5c',q:'Ultra-HD'},
+  {t:'Exit',e:'S04E01',n:'Sesongstart',tm:'06:00',sv:'Sonarr',st:'wait',c:'#2f2f36',q:'HD-1080p'}]}];
+const STS={ok:['Lastet ned · ▶ Jellyfin','#2f6b4a','#e3eee5','#2f6b4a'],dl:['Lastes ned','#b23a2a','#f6e3dc','#b23a2a'],miss:['Mangler · søker','#8a5a10','#f4e8cf','#c48a1a'],wait:['Venter','#6b665c','#ece6da','#a39d90']};
+const TOR=[
+ {nm:'Shrinking',ep:'S03E08',rel:'Shrinking.S03E08.1080p.ATVP.WEB-DL.DDP5.1.H.264-NTb',q:'1080p',sz:'2,1 GB',p:64,sp:'↓ 12,8 MB/s',eta:'1 min',st:'dl',c:'#3f5a4a'},
+ {nm:'Wicked: For Good',ep:'Film',rel:'Wicked.For.Good.2025.2160p.WEB-DL.DV.HDR.DDP5.1.Atmos-FLUX',q:'2160p',sz:'18,4 GB',p:22,sp:'↓ 5,6 MB/s',eta:'42 min',st:'dl',c:'#4a6b3a'},
+ {nm:'Only Murders in the Building',ep:'S05E09',rel:'Only.Murders.in.the.Building.S05E09.1080p.WEB.h264-ETHEL',q:'1080p',sz:'1,4 GB',p:3,st:'stall',c:'#6b3b2e'},
+ {nm:'The Bear',ep:'S04',rel:'The.Bear.S04.1080p.DSNP.WEB-DL.DDP5.1.H.264-NTb',q:'1080p',sz:'14,2 GB',p:48,st:'pause',c:'#7a5a2a'},
+ {nm:'Slow Horses',ep:'S06E03',rel:'Slow.Horses.S06E03.2160p.ATVP.WEB-DL.DDP5.1.HDR.H.265-NTb',q:'2160p',sz:'6,8 GB',p:100,st:'seed',c:'#2e3b4a'}];
+const SR=[
+ {rel:'S05E09.1080p.DSNP.WEB-DL.DDP5.1.H.264-NTb',grp:'NTb · DSNP',q:'1080p WEB-DL',sz:'2,4 GB',s:'1 204',l:'96',ix:'IPTorrents',lang:'Tale EN · Tekst NO SV DA EN',langS:'Tekst NO',best:true},
+ {rel:'S05E09.2160p.DSNP.WEB-DL.DDP5.1.HDR.H.265-NTb',grp:'NTb · HDR',q:'2160p WEB-DL',sz:'5,2 GB',s:'412',l:'38',ix:'TorrentLeech',lang:'Tale EN · Tekst NO EN',langS:'Tekst NO'},
+ {rel:'S05E09.NORDiC.1080p.WEB-DL.H.264-TWA',grp:'TWA · NORDiC',q:'1080p WEB-DL',sz:'2,6 GB',s:'58',l:'4',ix:'NorBits',lang:'Tale EN · Tekst NO SV DA FI',langS:'Tekst NO'},
+ {rel:'S05E09.720p.WEB.h264-ETHEL',grp:'ETHEL',q:'720p WEB',sz:'0,7 GB',s:'860',l:'40',ix:'TorrentDay',lang:'Tale EN · Tekst EN',langS:'Tekst EN'},
+ {rel:'S05E09.1080p.WEB.h264-ETHEL',grp:'ETHEL',q:'1080p WEB',sz:'1,4 GB',s:'0',l:'12',ix:'1337x',lang:'Tale EN',langS:'Ingen tekst',dead:true}];
+const FILES=[['The.Bear.S04E01.1080p.DSNP.WEB-DL.mkv','1,8 GB'],['The.Bear.S04E02.1080p.DSNP.WEB-DL.mkv','1,7 GB'],['The.Bear.S04E03.1080p.DSNP.WEB-DL.mkv','1,9 GB'],['Sample/the.bear.s04e01.sample.mkv','62 MB']];
+const SVC=['Kommer snart','Sonarr','Radarr','qBittorrent','Prowlarr'];
+class Component extends DCLogic {
+  state={pz:{},alt:{},open:{a:1,c:3},grab:{},files:[true,true,true,false]};
+  tor(dir){const s=this.state,isP=(i,r)=>s.pz[dir+i]??(r.st==='pause');
+    return TOR.map((r,i)=>{const pz=isP(i,r),st=r.st==='seed'?'seed':pz?'pause':r.st,alt=!!s.alt[dir];
+      const sp=r.st==='dl'&&alt?'↓ 2,5 MB/s':r.sp,eta=r.st==='dl'&&alt?(i===0?'4 min':'2 t'):r.eta;
+      const line=st==='dl'?`${r.p} % · ${sp} · ${eta} igjen`:st==='stall'?'Står fast · 0 seedere · søker ny':st==='pause'?`Pauset · ${r.p} % av ${r.sz}`:'Ferdig · deler ↑ 1,2 MB/s · ratio 0,4';
+      const short=st==='dl'?`${sp} · ${eta}`:st==='stall'?'Står fast':st==='pause'?'Pauset':'Deler';
+      const bc=st==='seed'?'#2f6b4a':st==='stall'?'#c48a1a':st==='pause'?'#a39d90':'#1b1a17',lc=st==='stall'?'#8a5a10':st==='seed'?'#2f6b4a':'#6b665c';
+      const open=s.open[dir]===i;
+      return{...r,pz:pz&&st!=='seed',npz:!pz&&st!=='seed',w:r.p+'%',pt:r.p+' %',line,short,bc,lc,open,togT:pz?'Fortsett':'Pause',
+        tog:()=>this.setState(o=>({pz:{...o.pz,[dir+i]:!pz}})),menu:()=>this.setState(o=>({open:{...o.open,[dir]:o.open[dir]===i?-1:i}}))}})}
+  pauseAll(dir){const all=TOR.every((r,i)=>r.st==='seed'||(this.state.pz[dir+i]??(r.st==='pause')));const pz={...this.state.pz};TOR.forEach((r,i)=>{pz[dir+i]=!all});this.setState({pz})}
+  allP(dir){return TOR.every((r,i)=>r.st==='seed'||(this.state.pz[dir+i]??(r.st==='pause')))}
+  sr(dir){const s=this.state;return SR.map((r,i)=>{const g=!!s.grab[dir+i];return{...r,g,ng:!g,sc:r.dead?'#b23a2a':'#1b1a17',bd:r.best?'#2f6b4a':'#d8d1c2',
+    gBg:g?'#2f6b4a':(dir==='c'?'#fff':'#1b1a17'),gC:g?'#fff':(dir==='c'?'#1b1a17':'#f3efe6'),gBd:g?'#2f6b4a':'#d8d1c2',gT:g?'Sendt til qBittorrent ✓':'Last ned',
+    grab:()=>this.setState(o=>({grab:{...o.grab,[dir+i]:!g}}))}})}
+  renderVals(){const s=this.state;
+    const sp=d=>{const a=this.allP(d);return a?'↓ 0 MB/s':s.alt[d]?'↓ 5,0 MB/s':'↓ 18,4 MB/s'};
+    const st=x=>{const m=STS[x.st];return{...x,sT:x.st==='dl'?`${m[0]} ${x.p} %`:m[0],sC:m[1],sBg:m[2],dot:m[3]}};
+    const days=DAYS.map(d=>({...d,it:d.it.map(st)}));
+    const wk=[...days.map((d,i)=>({w:d.w,n:d.it.length+' stk',it:d.it,empty:false,bc:i===0?'#b23a2a':'#1b1a17',fc:i===0?'#b23a2a':'#1b1a17'})),...['Lør 25','Søn 26','Man 27'].map(w=>({w,n:'',it:[],empty:true,bc:'#d8d1c2',fc:'#6b665c'}))];
+    const tabsU=(on,cnt)=>SVC.map((n,i)=>({n,c:cnt[i],on:i===on}));
+    const cnt=['7','48 serier','312 filmer','5','11/12'];
+    const tA=tabsU(0,cnt).map(t=>({...t,bd:t.on?'3px solid #1b1a17':'3px solid transparent',fw:t.on?800:500}));
+    const tAm=tabsU(3,cnt).map(t=>({...t,bd:t.on?'3px solid #1b1a17':'3px solid transparent',fw:t.on?800:500}));
+    const pill=on=>({bg:on?'#1b1a17':'transparent',fg:on?'#f3efe6':'#1b1a17'});
+    const altBtn=d=>{const on=!!s.alt[d];return{bd:on?'#b23a2a':'#d8d1c2',bg:on?'#b23a2a':'#fff',fg:on?'#fff':'#1b1a17'}};
+    const torA=this.tor('a'),torB=this.tor('b'),torC=this.tor('c');
+    const aB=altBtn('b'),aC=altBtn('c');
+    return{
+      days,week:wk,tabsA:tA,tabsAm:tAm,
+      tabsB:SVC.map((n,i)=>({n,...pill(i===0)})),tabsBm:SVC.map((n,i)=>({n,...pill(i===3)})),
+      spA:sp('a'),spB:sp('b'),spC:sp('c'),
+      miniA:torA.slice(0,3),miniB:torB.slice(0,3),miniC:torC.slice(0,4),torA,torB,torC,
+      pauseAllA:()=>this.pauseAll('a'),pauseAllB:()=>this.pauseAll('b'),pauseAllC:()=>this.pauseAll('c'),
+      pauseAllAT:this.allP('a')?'Fortsett alt':'Pause alt',pauseAllBT:this.allP('b')?'Fortsett alt':'Pause alt',pauseAllCT:this.allP('c')?'Fortsett alt':'Pause alt',
+      altA:()=>this.setState(o=>({alt:{...o.alt,a:!o.alt.a}})),altABg:s.alt.a?'#b23a2a':'#cfc8b9',altAJ:s.alt.a?'flex-end':'flex-start',
+      altB:()=>this.setState(o=>({alt:{...o.alt,b:!o.alt.b}})),altBBd:s.alt.b?'#f3efe6':'rgba(243,239,230,.4)',altBBg:s.alt.b?'#b23a2a':'transparent',altBFg:'#f3efe6',
+      altC:()=>this.setState(o=>({alt:{...o.alt,c:!o.alt.c}})),altCBd:aC.bd,altCBg:aC.bg,altCFg:aC.fg,
+      actsA:[['Opp i køen','#1b1a17','#ece6da'],['Ned i køen','#1b1a17','#ece6da'],['Filer','#1b1a17','#ece6da'],['Tving start','#1b1a17','#ece6da'],['Sjekk på nytt','#1b1a17','#ece6da'],['Slett …','#b23a2a','#f6e3dc']].map(([n,c,bg])=>({n,c,bg})),
+      actsC:[['Opp i køen','#1b1a17','#d8d1c2'],['Tving start','#1b1a17','#d8d1c2'],['Sjekk på nytt','#1b1a17','#d8d1c2'],['Slett (behold filer)','#b23a2a','#e8c4ba'],['Slett med filer','#b23a2a','#e8c4ba']].map(([n,c,bd])=>({n,c,bd})),
+      fA:[['Alle 5',1],['1080p',0],['2160p',0],['Norsk tekst',0],['Flest seedere',0]].map(([n,on])=>({n,bg:on?'#1b1a17':'#fff',c:on?'#f3efe6':'#1b1a17',bd:on?'#1b1a17':'#d8d1c2'})),
+      tabsD:SVC.map((n,i)=>({n,...pill(i===0)})),tabsDs:SVC.map((n,i)=>({n,...pill(i===1)})),tabsDm:SVC.map((n,i)=>({n,...pill(i===3)})),
+      torD:this.tor('d'),miniD:this.tor('d').slice(0,3),spD:sp('d'),srD:this.sr('d'),
+      pauseAllD:()=>this.pauseAll('d'),pauseAllDT:this.allP('d')?'Fortsett alt':'Pause alt',
+      altD:()=>this.setState(o=>({alt:{...o.alt,d:!o.alt.d}})),altDBd:s.alt.d?'#f3efe6':'rgba(243,239,230,.4)',altDBg:s.alt.d?'#b23a2a':'transparent',
+      srA:this.sr('a'),srB:this.sr('b'),srC:this.sr('c'),
+      railC:[['Kommer snart','7 denne uka','#b23a2a',1],['Sonarr','48 serier · 1 mangler','#c48a1a',0],['Radarr','312 filmer','#2f6b4a',0],['qBittorrent','5 · '+sp('c'),'#2f6b4a',0],['Prowlarr','11 av 12 svarer','#c48a1a',0]].map(([n,sub,dot,on])=>({n,s:sub,dot,bg:on?'#1b1a17':'transparent',fg:on?'#f3efe6':'#1b1a17'})),
+      diskC:[['/media/tv','3,8 TB','32%','#1b1a17'],['/media/film','2,4 TB','20%','#b23a2a'],['/downloads','0,3 TB','3%','#6b665c']].map(([p,v,w,c])=>({p,v,w,c})),
+      flatC:days.flatMap((d,di)=>d.it.map(x=>({...x,w:d.w,dc:di===0?'#b23a2a':'#6b665c',sT:x.st==='ok'?'Lastet ned':x.sT}))),
+      segC:[['Aktive 3',1],['Pauset 1',0],['Deler 1',0]].map(([n,on])=>({n,bg:on?'#1b1a17':'transparent',fg:on?'#f3efe6':'#1b1a17'})),
+      filesC:FILES.map(([n,sz],i)=>{const on=s.files[i];return{n,s:sz,ch:on?'✓':'',bg:on?'#1b1a17':'#fff',op:on?1:.45,tog:()=>this.setState(o=>{const f=[...o.files];f[i]=!f[i];return{files:f}})}})
+    }}
+}
+</script>
+</body>
+</html>

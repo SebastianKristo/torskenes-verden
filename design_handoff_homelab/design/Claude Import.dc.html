@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="--k:var(--ink,#1b1a17);--b:var(--bg,#f3efe6);--cd:var(--card,#fffdf8);--ln:var(--line,#d8d1c2);--lb:var(--lab,#b23a2a);--mt:var(--mut,#6b665c);--sf:color-mix(in srgb,var(--ln) 60%,transparent);display:flex;flex-direction:column;gap:16px;color:var(--k);font-family:Manrope,system-ui,sans-serif;box-sizing:border-box;width:100%">
+
+<div style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:20px;background:var(--cd);border:1px solid var(--ln)"><span style="flex:none;width:44px;height:44px;border-radius:12px;background:#fff;border:1px solid var(--sf);display:grid;place-items:center;overflow:hidden"><img src="https://www.google.com/s2/favicons?sz=128&amp;domain=claude.ai" alt="" width="26" height="26"></span><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font:500 22px/1.1 Newsreader,serif">Importer fra Claude</b><span style="font-size:13.5px;color:var(--mt);text-wrap:pretty">Samtaler havner i Chat i mappen «Claude». Minnet brukes av Chat og Glimt.</span></div></div>
+
+<sc-if value="{{ isStart }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:20px;background:var(--cd);border:1px solid var(--ln)">
+<span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:var(--lb)">SLIK EKSPORTERER DU FRA CLAUDE</span>
+<sc-for list="{{ how }}" as="h"><div style="display:flex;gap:12px"><span style="flex:none;width:24px;height:24px;border-radius:12px;background:var(--k);color:var(--b);font:700 12px Manrope;display:grid;place-items:center">{{ h.i }}</span><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:14.5px">{{ h.t }}</b><span style="font-size:14px;line-height:1.5;color:var(--mt);text-wrap:pretty">{{ h.d }}</span></div></div></sc-for>
+</div>
+<label onDragOver="{{ dragOver }}" onDragLeave="{{ dragLeave }}" onDrop="{{ drop }}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;padding:20px;border-radius:20px;border:2px dashed {{ dzBd }};background:{{ dzBg }};text-align:center;cursor:pointer">
+<input type="file" accept=".zip,.json,application/zip,application/json" onChange="{{ pick }}" style="display:none">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"></path></svg>
+<b style="font-size:16px">Slipp Claude-eksporten her</b>
+<span style="font-size:13.5px;color:var(--mt)">ZIP-fila fra e-posten, eller conversations.json · trykk for å velge</span>
+</label>
+<sc-if value="{{ errOn }}"><span style="font-size:14px;font-weight:700;color:#b23a2a">{{ err }}</span></sc-if>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--mt)">MINNE (VALGFRITT)</span><textarea value="{{ memTxt }}" onChange="{{ onMem }}" rows="4" placeholder="Lim inn teksten fra Claude → Innstillinger → Minne, ett punkt per linje" style="padding:12px 14px;border-radius:14px;border:1px solid var(--ln);background:var(--cd);font:500 14px/1.5 Manrope,sans-serif;color:var(--k);outline:none;resize:vertical;box-sizing:border-box;width:100%"></textarea><span style="font-size:12.5px;color:var(--mt)">Ligger minnet i ZIP-fila, hentes det automatisk.</span></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button onClick="{{ memOnly }}" style="height:44px;padding:0 18px;border-radius:22px;border:1px solid var(--ln);background:transparent;color:var(--k);font:700 14px Manrope,sans-serif;cursor:pointer">Importer bare minnet</button><button onClick="{{ demo }}" style="height:44px;padding:0 18px;border-radius:22px;border:none;background:transparent;color:var(--lb);font:700 14px Manrope,sans-serif;cursor:pointer">Prøv med en eksempel-eksport</button></div>
+</sc-if>
+
+<sc-if value="{{ isReading }}"><div style="display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:20px;background:var(--cd);border:1px solid var(--ln)"><sc-for list="{{ rsteps }}" as="g"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--mt)"><span>{{ g.n }}</span><span style="font-family:'IBM Plex Mono',monospace">{{ g.ms }}</span></div></sc-for><span style="font-size:14px;font-weight:700">Leser {{ fileName }} …</span></div></sc-if>
+
+<sc-if value="{{ isPreview }}">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px"><sc-for list="{{ stats }}" as="x"><div style="padding:14px;border-radius:16px;background:var(--cd);border:1px solid var(--ln);display:flex;flex-direction:column;gap:2px"><b style="font:500 28px/1 Newsreader,serif">{{ x.v }}</b><span style="font-size:13px;color:var(--mt)">{{ x.l }}</span></div></sc-for></div>
+<span style="font-size:13.5px;color:var(--mt)">{{ range }}</span>
+<sc-if value="{{ hasConv }}"><div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--mt)">SAMTALER · {{ selN }} VALGT</span><div style="display:flex;gap:6px"><button onClick="{{ selAll }}" style="height:36px;padding:0 12px;border-radius:18px;border:1px solid var(--ln);background:var(--cd);color:var(--k);font:700 13px Manrope,sans-serif;cursor:pointer">Alle</button><button onClick="{{ selNone }}" style="height:36px;padding:0 12px;border-radius:18px;border:1px solid var(--ln);background:var(--cd);color:var(--k);font:700 13px Manrope,sans-serif;cursor:pointer">Ingen</button></div></div>
+<input value="{{ q }}" onChange="{{ onQ }}" placeholder="Søk i titler" style="height:44px;padding:0 14px;border-radius:14px;border:1px solid var(--ln);background:var(--cd);font:500 14px Manrope,sans-serif;color:var(--k);outline:none;box-sizing:border-box;width:100%">
+<div style="display:flex;flex-direction:column;border-radius:16px;background:var(--cd);border:1px solid var(--ln);overflow:hidden;max-height:340px;overflow-y:auto;scrollbar-width:thin"><sc-for list="{{ conv }}" as="c"><button onClick="{{ c.tog }}" style="display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 14px;border:none;border-top:1px solid var(--sf);background:transparent;color:var(--k);cursor:pointer;text-align:left;font-family:inherit"><span style="flex:none;width:22px;height:22px;border-radius:6px;border:1.5px solid var(--k);background:{{ c.bg }};color:var(--b);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-sizing:border-box">{{ c.ch }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ c.t }}</b><span style="font-size:12.5px;color:var(--mt)">{{ c.sub }}</span></span><sc-if value="{{ c.dup }}"><span style="flex:none;font-size:12px;font-weight:700;color:var(--mt)">Importert før</span></sc-if></button></sc-for></div>
+<sc-if value="{{ more }}"><span style="font-size:12.5px;color:var(--mt)">{{ moreT }}</span></sc-if>
+</div></sc-if>
+<sc-if value="{{ hasMem }}"><div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--mt)">MINNE · {{ memSel }} AV {{ memN }} PUNKTER</span><div style="display:flex;flex-direction:column;border-radius:16px;background:var(--cd);border:1px solid var(--ln);overflow:hidden"><sc-for list="{{ mem }}" as="m"><button onClick="{{ m.tog }}" style="display:flex;align-items:flex-start;gap:12px;min-height:48px;padding:12px 14px;border:none;border-top:1px solid var(--sf);background:transparent;color:var(--k);cursor:pointer;text-align:left;font-family:inherit"><span style="flex:none;width:22px;height:22px;border-radius:6px;border:1.5px solid var(--k);background:{{ m.bg }};color:var(--b);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;box-sizing:border-box">{{ m.ch }}</span><span style="font-size:14px;line-height:1.45;text-wrap:pretty">{{ m.t }}</span></button></sc-for></div></div></sc-if>
+<div style="display:flex;flex-direction:column;border-radius:16px;background:var(--cd);border:1px solid var(--ln);overflow:hidden"><sc-for list="{{ opts }}" as="x"><button onClick="{{ x.tog }}" style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:56px;padding:6px 16px;border:none;border-top:1px solid var(--sf);background:transparent;color:var(--k);cursor:pointer;text-align:left;font-family:inherit"><span style="display:flex;flex-direction:column;gap:2px"><b style="font-size:15px">{{ x.n }}</b><span style="font-size:12.5px;color:var(--mt)">{{ x.sub }}</span></span><span style="flex:none;width:46px;height:28px;border-radius:14px;background:{{ x.bg }};display:flex;align-items:center;padding:3px;justify-content:{{ x.j }};box-sizing:border-box"><span style="width:22px;height:22px;border-radius:11px;background:#fff"></span></span></button></sc-for></div>
+<div style="display:flex;gap:8px"><button onClick="{{ reset }}" style="flex:1;height:48px;border-radius:24px;border:1px solid var(--ln);background:transparent;color:var(--k);font:700 15px Manrope,sans-serif;cursor:pointer">Avbryt</button><button onClick="{{ go }}" style="flex:2;height:48px;border-radius:24px;border:none;background:var(--k);color:var(--b);font:800 15px Manrope,sans-serif;cursor:pointer">{{ goT }}</button></div>
+</sc-if>
+
+<sc-if value="{{ isImporting }}"><div style="display:flex;flex-direction:column;gap:10px;padding:18px;border-radius:20px;background:var(--cd);border:1px solid var(--ln)"><div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font:500 22px Newsreader,serif">Importerer …</b><span style="font:600 13px 'IBM Plex Mono',monospace">{{ pT }}</span></div><div style="height:8px;border-radius:4px;background:var(--sf);overflow:hidden"><div style="height:100%;width:{{ pW }};background:var(--k)"></div></div><span style="font-size:13.5px;color:var(--mt)">{{ pSub }}</span></div></sc-if>
+
+<sc-if value="{{ isDone }}"><div style="display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:20px;background:color-mix(in srgb,#2f6b4a 10%,var(--cd));border:1px solid color-mix(in srgb,#2f6b4a 35%,transparent)"><b style="font:500 24px/1.15 Newsreader,serif">✓ {{ doneT }}</b><span style="font-size:14px;line-height:1.5;color:var(--mt);text-wrap:pretty">{{ doneSub }}</span><div style="display:flex;gap:8px;flex-wrap:wrap"><sc-if value="{{ canOpen }}"><button onClick="{{ openChat }}" style="height:44px;padding:0 20px;border-radius:22px;border:none;background:var(--k);color:var(--b);font:800 14px Manrope,sans-serif;cursor:pointer">Åpne Chat</button></sc-if><button onClick="{{ reset }}" style="height:44px;padding:0 18px;border-radius:22px;border:1px solid var(--ln);background:transparent;color:var(--k);font:700 14px Manrope,sans-serif;cursor:pointer">Importer mer</button><button onClick="{{ undo }}" style="height:44px;padding:0 18px;border-radius:22px;border:none;background:transparent;color:#b23a2a;font:700 14px Manrope,sans-serif;cursor:pointer">Angre importen</button></div></div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:640,&quot;height&quot;:900},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;web&quot;,&quot;mobile&quot;],&quot;default&quot;:&quot;web&quot;,&quot;tsType&quot;:&quot;'web'|'mobile'&quot;},&quot;onOpenChat&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const DEMO={conversations:[
+ {uuid:'d1',name:'Docker-compose for Sonarr og Radarr',created_at:'2026-09-02T18:10:00Z',updated_at:'2026-09-02T18:40:00Z',chat_messages:[{sender:'human',text:'Kan du lage en docker-compose med Sonarr, Radarr og qBittorrent med hardlinks?'},{sender:'assistant',text:'Ja. Gi alle tre samme volum, f.eks. /srv/data:/data, og bruk /data/downloads og /data/media. Her er fila …'}]},
+ {uuid:'d2',name:'Oppsigelsestid i husleiekontrakten',created_at:'2026-08-14T09:00:00Z',updated_at:'2026-08-14T09:12:00Z',chat_messages:[{sender:'human',text:'Hva er vanlig oppsigelsestid for leilighet i Norge?'},{sender:'assistant',text:'Etter husleieloven er den tre måneder hvis ikke annet er avtalt.'}]},
+ {uuid:'d3',name:'Middagsplan for uka',created_at:'2026-10-05T16:00:00Z',updated_at:'2026-10-05T16:20:00Z',chat_messages:[{sender:'human',text:'Lag middagsplan for fire, budsjett 1200 kr'},{sender:'assistant',text:'Mandag: kyllinggryte · Tirsdag: taco · …'}]},
+ {uuid:'d4',name:'Statistikk eksamen – hypotesetesting',created_at:'2026-10-11T19:00:00Z',updated_at:'2026-10-12T08:00:00Z',chat_messages:[{sender:'human',text:'Forklar p-verdi enkelt'},{sender:'assistant',text:'P-verdien er sannsynligheten for et resultat minst så ekstremt, gitt at nullhypotesen er sann.'},{sender:'human',text:'Og ensidig mot tosidig?'},{sender:'assistant',text:'Ensidig tester én retning …'}]},
+ {uuid:'d5',name:'Varmepumpe E5-feil',created_at:'2026-01-20T07:30:00Z',updated_at:'2026-01-20T07:45:00Z',chat_messages:[{sender:'human',text:'Varmepumpa viser E5'},{sender:'assistant',text:'E5 betyr ofte overspenning eller kommunikasjonsfeil mellom inne- og utedel.'}]},
+ {uuid:'d6',name:'Bursdagsgave til mamma',created_at:'2026-06-01T12:00:00Z',updated_at:'2026-06-01T12:05:00Z',chat_messages:[{sender:'human',text:'Gaveideer til mamma, 60 år, liker hage'},{sender:'assistant',text:'Et godt hagesett, et kurs i beskjæring, eller en tur til Hagelandet.'}]}],
+ projects:[{uuid:'p1',name:'Homelab'},{uuid:'p2',name:'Studie'}],
+ memory:['Heter Sebastian og bor i Oslo','Studerer og har statistikk-eksamen i desember','Har homelab på Mac mini med Docker, Sonarr, Radarr og qBittorrent','Har hytte og leilighet, følger utgifter i Boliger','Liker korte svar på norsk']};
+const pick=(o,re)=>Object.keys(o).find(k=>re.test(k));
+const msgText=m=>m.text||(Array.isArray(m.content)?m.content.filter(c=>c&&c.type==='text').map(c=>c.text).join('\n'):'')||'';
+const memFrom=v=>{const out=[];const walk=x=>{if(x==null)return;if(typeof x==='string'){x.split(/\n+/).map(l=>l.replace(/^\s*[-•*\d.)]+\s*/,'').trim()).filter(l=>l.length>3&&l.length<400).forEach(l=>out.push(l))}else if(Array.isArray(x))x.forEach(walk);else if(typeof x==='object')Object.values(x).forEach(walk)};walk(v);return[...new Set(out)]};
+const fmtD=d=>{const x=new Date(d);return isNaN(x)?'':x.toLocaleDateString('nb-NO',{day:'numeric',month:'short',year:'numeric'})};
+class Component extends DCLogic {
+  state={st:'start',err:'',memTxt:'',q:'',sel:{},msel:{},oChats:true,oMem:true,oSkip:true,drag:false};
+  async readZip(buf){const dv=new DataView(buf),u8=new Uint8Array(buf);let e=buf.byteLength-22;while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;if(e<0)throw new Error('Fila er ikke en gyldig ZIP.');
+    const n=dv.getUint16(e+10,true);let p=dv.getUint32(e+16,true);const out={},td=new TextDecoder();
+    for(let i=0;i<n;i++){const meth=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true),name=td.decode(u8.subarray(p+46,p+46+nl));p+=46+nl+xl+cl;
+      if(!/\.(json|txt|md)$/i.test(name))continue;const ds=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true),data=u8.subarray(ds,ds+csz);let txt;
+      if(meth===0)txt=td.decode(data);else if(meth===8){if(typeof DecompressionStream==='undefined')throw new Error('Nettleseren kan ikke pakke ut ZIP. Pakk ut selv og velg conversations.json.');txt=await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text()}else continue;
+      out[name.split('/').pop()]=txt}return out}
+  async load(file){const t0=performance.now(),steps=[];const step=n=>{steps.push([n,Math.round(performance.now()-t0)+' ms']);this.setState({rsteps:[...steps]})};
+    this.setState({st:'reading',fileName:file.name,err:'',rsteps:[]});
+    try{let files={};if(/\.zip$/i.test(file.name)||file.type.includes('zip')){files=await this.readZip(await file.arrayBuffer());step('Pakket ut '+Object.keys(files).length+' filer')}else{files[file.name]=await file.text();step('Leste '+file.name)}
+      const ck=pick(files,/^conversations\.json$/i)||pick(files,/conversation/i),pk=pick(files,/^projects\.json$/i),mk=pick(files,/memor/i);
+      if(!ck&&!mk)throw new Error('Fant ikke conversations.json i eksporten. Er det riktig fil fra Claude?');
+      const conv=ck?JSON.parse(files[ck]):[];if(!Array.isArray(conv))throw new Error('conversations.json har et ukjent format.');step('Fant '+conv.length+' samtaler');
+      let proj=[];try{proj=pk?JSON.parse(files[pk]):[]}catch(e){}
+      let mem=[];if(mk){try{mem=memFrom(JSON.parse(files[mk]))}catch(e){mem=memFrom(files[mk])}step('Fant '+mem.length+' minnepunkter')}
+      this.prep({conversations:conv,projects:proj,memory:mem})}catch(e){this.setState({st:'start',err:e.message||'Fikk ikke lest fila.'})}}
+  prep(D){const ex=this.existing(),conv=D.conversations.map(c=>({id:'cl_'+(c.uuid||c.id||Math.random().toString(36).slice(2)),t:c.name||c.title||'Uten tittel',cr:c.created_at,up:c.updated_at||c.created_at,msgs:(c.chat_messages||c.messages||[]).map(m=>({r:/human|user/i.test(m.sender||m.role)?'u':'a',t:msgText(m)})).filter(m=>m.t)})).filter(c=>c.msgs.length).sort((a,b)=>Date.parse(b.up)-Date.parse(a.up));
+    const memAll=[...new Set([...(D.memory||[]),...memFrom(this.state.memTxt)])],sel={},msel={};conv.forEach(c=>{sel[c.id]=!ex.has(c.id)});memAll.forEach((m,i)=>{msel[i]=true});
+    this.setState({st:'preview',D:{conv,proj:D.projects||[],mem:memAll},sel,msel,q:''})}
+  existing(){try{const D=JSON.parse(localStorage.getItem('papir_chat_v1')||'null');return new Set((D&&D.chats||[]).map(c=>c.id))}catch(e){return new Set()}}
+  run(){const s=this.state,D=s.D,todo=s.oChats?D.conv.filter(c=>s.sel[c.id]):[],mem=s.oMem?D.mem.filter((_,i)=>s.msel[i]):[];if(!todo.length&&!mem.length)return;
+    this.setState({st:'importing',pi:0,pn:todo.length});let CH=null;try{CH=JSON.parse(localStorage.getItem('papir_chat_v1')||'null')}catch(e){}
+    if(!CH||!CH.chats)CH={chats:[],folders:['Hytta','Homelab','Skole'],cur:null,th:'papir',model:'auto',autoMig:true,loc:['llama3.1:8b','gemma3:12b','qwen2.5vl:7b'],open:{},def:{per:'std',sys:'',temp:.7,topP:.9,ctx:8192}};
+    const have=new Set(CH.chats.map(c=>c.id)),added=[];let i=0,skip=0;
+    const tick=()=>{const end=Math.min(todo.length,i+25);for(;i<end;i++){const c=todo[i];if(have.has(c.id)){if(s.oSkip){skip++;continue}CH.chats=CH.chats.filter(x=>x.id!==c.id)}
+        CH.chats.push({id:c.id,t:c.t,pin:false,f:'Claude',m:'auto',per:'std',sys:'',temp:.7,topP:.9,ctx:8192,up:Date.parse(c.up)||Date.now(),imp:'claude',msgs:c.msgs.map(m=>m.r==='u'?{r:'u',t:m.t}:{r:'a',m:'auto',tool:[],t:m.t})});added.push(c.id)}
+      this.setState({pi:i});if(i<todo.length){setTimeout(tick,30);return}
+      if(added.length&&!(CH.folders||[]).includes('Claude'))CH.folders=['Claude',...(CH.folders||[])];
+      try{localStorage.setItem('papir_chat_v1',JSON.stringify(CH))}catch(e){}
+      let M=[];try{M=JSON.parse(localStorage.getItem('papir_ai_memory_v1')||'[]')}catch(e){}const mt=new Set(M.map(x=>x.t.toLowerCase())),madd=[];mem.forEach(t=>{if(!mt.has(t.toLowerCase())){const o={id:'m'+Date.now()+Math.random().toString(36).slice(2,6),t,src:'Claude',at:Date.now()};M.push(o);madd.push(o.id)}});
+      try{localStorage.setItem('papir_ai_memory_v1',JSON.stringify(M))}catch(e){}
+      try{window.dispatchEvent(new StorageEvent('storage',{key:'papir_chat_v1'}))}catch(e){}
+      this.setState({st:'done',res:{chats:added.length,skip,mem:madd.length},undoIds:{chats:added,mem:madd}})};
+    setTimeout(tick,60)}
+  undo(){const u=this.state.undoIds;if(!u)return;try{const CH=JSON.parse(localStorage.getItem('papir_chat_v1')||'null');if(CH){CH.chats=CH.chats.filter(c=>!u.chats.includes(c.id));if(!CH.chats.some(c=>c.f==='Claude'))CH.folders=(CH.folders||[]).filter(f=>f!=='Claude');localStorage.setItem('papir_chat_v1',JSON.stringify(CH))}
+      const M=JSON.parse(localStorage.getItem('papir_ai_memory_v1')||'[]').filter(x=>!u.mem.includes(x.id));localStorage.setItem('papir_ai_memory_v1',JSON.stringify(M));window.dispatchEvent(new StorageEvent('storage',{key:'papir_chat_v1'}))}catch(e){}
+    this.setState({st:'start',undoIds:null,res:null,D:null})}
+  renderVals(){const s=this.state,p=this.props,set=o=>this.setState(o),tg=on=>({bg:on?'#2f6b4a':'var(--ln)',j:on?'flex-end':'flex-start'}),D=s.D;
+    const v={isStart:s.st==='start',isReading:s.st==='reading',isPreview:s.st==='preview',isImporting:s.st==='importing',isDone:s.st==='done',errOn:!!s.err,err:s.err,fileName:s.fileName||'',rsteps:(s.rsteps||[]).map(([n,ms])=>({n:'✓ '+n,ms})),
+      how:[['Be om eksport','claude.ai → Innstillinger → Personvern → Eksporter data. På mobil: profilen → Innstillinger → Personvern.'],['Last ned ZIP-fila','Du får en e-post med lenke. Lenken virker i 24 timer. Fila heter noe som data-2026-10-21-….zip.'],['Slipp den her','Vi leser conversations.json (samtaler), projects.json (prosjekter) og minnet hvis det ligger med. Ingenting sendes ut av huset; alt lagres på hjemmeserveren.'],['Minne','Claude → Innstillinger → Minne → Vis og rediger. Kopier teksten og lim den inn under hvis den ikke er i ZIP-fila.']].map(([t,d],i)=>({i:String(i+1),t,d})),
+      dzBd:s.drag?'var(--k)':'var(--ln)',dzBg:s.drag?'color-mix(in srgb,var(--k) 6%,var(--cd))':'var(--cd)',
+      dragOver:e=>{e.preventDefault();if(!s.drag)set({drag:true})},dragLeave:()=>set({drag:false}),drop:e=>{e.preventDefault();set({drag:false});const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)this.load(f)},
+      pick:e=>{const f=e.target.files&&e.target.files[0];if(f)this.load(f);e.target.value=''},memTxt:s.memTxt,onMem:e=>set({memTxt:e.target.value}),
+      memOnly:()=>{const m=memFrom(s.memTxt);if(!m.length)return set({err:'Lim inn minnet først, ett punkt per linje.'});this.prep({conversations:[],projects:[],memory:m})},demo:()=>this.prep(DEMO),
+      reset:()=>set({st:'start',D:null,err:''}),undo:()=>this.undo(),canOpen:!!p.onOpenChat,openChat:()=>p.onOpenChat&&p.onOpenChat()};
+    if(D){const ex=this.existing(),qq=(s.q||'').toLowerCase(),L=D.conv.filter(c=>!qq||c.t.toLowerCase().includes(qq)),selN=D.conv.filter(c=>s.sel[c.id]).length,msgN=D.conv.reduce((a,c)=>a+c.msgs.length,0),memSel=D.mem.filter((_,i)=>s.msel[i]).length;
+      const dts=D.conv.map(c=>Date.parse(c.cr)).filter(x=>!isNaN(x)).sort();
+      Object.assign(v,{stats:[[D.conv.length,'samtaler'],[msgN,'meldinger'],[D.proj.length,'prosjekter'],[D.mem.length,'minnepunkter']].map(([x,l])=>({v:x.toLocaleString('nb-NO'),l})),
+        range:dts.length?'Fra '+fmtD(dts[0])+' til '+fmtD(dts[dts.length-1])+(D.proj.length?' · prosjekter: '+D.proj.map(x=>x.name).slice(0,4).join(', '):''):'Bare minne',
+        hasConv:D.conv.length>0,selN,q:s.q,onQ:e=>set({q:e.target.value}),
+        selAll:()=>{const o={};D.conv.forEach(c=>o[c.id]=true);set({sel:o})},selNone:()=>set({sel:{}}),
+        conv:L.slice(0,60).map(c=>{const on=!!s.sel[c.id];return{t:c.t,sub:fmtD(c.up)+' · '+c.msgs.length+' meldinger',ch:on?'✓':'',bg:on?'var(--k)':'transparent',dup:ex.has(c.id),tog:()=>set({sel:{...s.sel,[c.id]:!on}})}}),more:L.length>60,moreT:'Viser 60 av '+L.length+'. Søk for å finne flere; «Alle» velger alle '+D.conv.length+'.',
+        hasMem:D.mem.length>0,memN:D.mem.length,memSel,mem:D.mem.map((t,i)=>{const on=!!s.msel[i];return{t,ch:on?'✓':'',bg:on?'var(--k)':'transparent',tog:()=>set({msel:{...s.msel,[i]:!on}})}}),
+        opts:[['oChats','Importer samtaler','Til mappen «Claude» i Chat. Du kan fortsette dem med valgfri modell.',D.conv.length>0],['oMem','Importer minne','Chat og Glimt bruker punktene når du spør. Rediger i Chat → ⚙ → Minne.',D.mem.length>0],['oSkip','Hopp over det som er importert før','Ellers erstattes de med versjonen i eksporten.',D.conv.length>0]].filter(x=>x[3]).map(([k,n,sub])=>({n,sub,...tg(s[k]),tog:()=>set({[k]:!s[k]})})),
+        go:()=>this.run(),goT:'Importer '+[s.oChats&&selN?selN+' samtaler':'',s.oMem&&memSel?memSel+' minnepunkter':''].filter(Boolean).join(' og ')||'Importer'})}
+    if(s.st==='importing'){const n=s.pn||1;Object.assign(v,{pT:(s.pi||0)+' / '+(s.pn||0),pW:Math.round((s.pi||0)/n*100)+'%',pSub:'Lagrer samtaler på hjemmeserveren og bygger søkeindeks …'})}
+    if(s.st==='done'&&s.res){const r=s.res;Object.assign(v,{doneT:[r.chats?r.chats+' samtaler':'',r.mem?r.mem+' minnepunkter':''].filter(Boolean).join(' og ')+' importert',doneSub:(r.chats?'Samtalene ligger i mappen «Claude» i Chat. ':'')+(r.mem?'Minnet ligger under Chat → ⚙ → Minne. ':'')+(r.skip?r.skip+' var importert før og ble hoppet over.':'')})}
+    return v}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Manrope:wght@500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#e3ddd1;color:#1b1a17;font-family:Manrope,system-ui,sans-serif}a{color:#b23a2a}a:hover{color:#8a2a1d}</style>
+</helmet>
+<section style="padding:48px 56px 64px;display:flex;flex-direction:column;gap:30px">
+<div style="display:flex;flex-direction:column;gap:6px;max-width:960px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a">FOLD OG IPAD · ALLE SIDER</span><b style="font:500 44px/1.05 Newsreader,serif">Oppsett for stor skjerm</b><span style="font-size:16px;line-height:1.5;color:#3d3a33;text-wrap:pretty">I dag strekkes mobilsiden: én smal spalte midt på, tomt rundt, og skrivefeltet går over hele bredden. Nytt system: fast sidelinje til venstre, og hver side deles i 2–3 kolonner etter innhold. Gjøremål er tegnet fullt ut (1a). De andre sidene følger samme regler (1b).</span></div>
+
+<div id="1a" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">1a</span><b style="font:700 17px Manrope">Gjøremål · iPad liggende 1180 × 820</b><span style="color:#6b665c;font-size:15px">Lister · oppgaver · Glimt og detaljer</span></div>
+<div style="width:1180px;height:820px;border-radius:30px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);display:flex">
+<div style="flex:none;width:84px;background:#1b1a17;color:#f3efe6;display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 0"><sc-for list="{{ rail }}" as="r"><span style="width:64px;height:58px;border-radius:16px;background:{{ r.bg }};color:{{ r.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:700 11px Manrope"><span style="font-size:17px">{{ r.i }}</span>{{ r.n }}</span></sc-for></div>
+<div style="flex:none;width:250px;border-right:1px solid #d8d1c2;padding:26px 14px 18px;display:flex;flex-direction:column;gap:4px;box-sizing:border-box">
+<span style="font:italic 400 15px Newsreader,serif;color:#6b665c;padding:0 8px">To-do for hele familien</span><b style="font:500 34px/1.1 Newsreader,serif;padding:0 8px 14px">Gjøremål</b>
+<span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a;padding:0 8px 4px">LISTER</span>
+<sc-for list="{{ lists }}" as="l"><span style="display:flex;align-items:center;gap:10px;height:42px;padding:0 10px;border-radius:12px;background:{{ l.bg }};color:{{ l.fg }};font-size:14.5px;font-weight:700"><span style="width:9px;height:9px;border-radius:5px;background:{{ l.c }};display:{{ l.dot }}"></span><span style="flex:1">{{ l.n }}</span><span style="font:600 12px 'IBM Plex Mono',monospace;opacity:.7">{{ l.k }}</span></span></sc-for>
+<span style="margin-top:6px;height:42px;border-radius:12px;border:1.5px dashed #c9c1b1;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700">+ Ny liste</span>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+<div style="padding:26px 26px 10px;display:flex;justify-content:space-between;align-items:center;gap:10px"><div style="display:flex;gap:6px"><sc-for list="{{ when }}" as="w"><span style="height:34px;padding:0 13px;border-radius:999px;border:1px solid {{ w.bd }};background:{{ w.bg }};color:{{ w.fg }};display:flex;align-items:center;font-size:13px;font-weight:700">{{ w.n }}</span></sc-for></div><div style="display:flex;gap:4px"><sc-for list="{{ who }}" as="w"><span style="width:32px;height:32px;border-radius:16px;background:{{ w.c }};color:#fff;display:grid;place-items:center;font:800 12px Manrope;box-shadow:{{ w.sh }}">{{ w.i }}</span></sc-for></div></div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:4px 26px 90px;display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ secs }}" as="g"><div style="display:flex;flex-direction:column"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:{{ g.c }};padding-bottom:6px;border-bottom:2px solid #1b1a17">{{ g.h }}</span><sc-for list="{{ g.items }}" as="t"><div style="display:flex;align-items:center;gap:12px;min-height:52px;border-bottom:1px solid #e4ddcf;background:{{ t.bg }};margin:0 -10px;padding:0 10px;border-radius:{{ t.r }}"><span style="flex:none;width:22px;height:22px;border-radius:7px;border:2px solid {{ t.lc }}"></span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font-size:15px;font-weight:600">{{ t.n }}</b><span style="font-size:12.5px;color:{{ t.dc }}">{{ t.sub }}</span></div><sc-for list="{{ t.av }}" as="a"><span style="width:22px;height:22px;border-radius:11px;background:{{ a.c }};color:#fff;display:grid;place-items:center;font:800 10px Manrope;margin-left:-6px;box-shadow:0 0 0 2px #f3efe6">{{ a.i }}</span></sc-for></div></sc-for></div></sc-for>
+</div>
+<div style="position:absolute;left:26px;right:26px;bottom:20px;display:flex;gap:10px"><span style="flex:1;height:54px;border-radius:27px;background:#fff;box-shadow:0 12px 30px -14px rgba(0,0,0,.35);display:flex;align-items:center;padding:0 20px;font-size:15px;color:#8f897c">Ny oppgave i «Mine» … (Glimt deler opp lange beskjeder)</span><span style="flex:none;width:54px;height:54px;border-radius:27px;background:#b23a2a;color:#fff;display:grid;place-items:center;font-size:22px">✦</span></div>
+</div>
+<div style="flex:none;width:320px;border-left:1px solid #d8d1c2;padding:26px 18px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;background:#efe9de">
+<span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">GLIMT · 3 FORSLAG</span>
+<sc-for list="{{ tips }}" as="t"><div style="border-radius:18px;background:#fffdf8;padding:12px 14px;display:flex;flex-direction:column;gap:8px"><b style="font-size:14px;line-height:1.3">{{ t.t }}</b><span style="font-size:12.5px;color:#6b665c;line-height:1.4">{{ t.s }}</span><span style="align-self:flex-start;height:32px;padding:0 12px;border-radius:16px;background:#1b1a17;color:#f3efe6;display:flex;align-items:center;font-size:12.5px;font-weight:700">{{ t.b }}</span></div></sc-for>
+<span style="height:1px;background:#d8d1c2;margin:4px 0"></span>
+<span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#6b665c">VALGT OPPGAVE</span>
+<div style="border-radius:18px;background:#fffdf8;padding:14px;display:flex;flex-direction:column;gap:8px"><b style="font:500 20px/1.15 Newsreader,serif">Ta med tilhengeren hjem fra Strømstad</b><span style="font-size:13px;color:#6b665c">Mine · Frist før Strømstad-turen · Påminnelse 1 dag før</span><span style="font-size:12.5px;color:#b23a2a">✦ Laget med Glimt fra én beskjed</span></div>
+</div>
+</div>
+</div>
+
+<div id="1c" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">1c</span><b style="font:700 17px Manrope">Gjøremål · Galaxy Z Fold utbrettet 904 × 760 og halvbrettet</b><span style="color:#6b665c;font-size:15px">Smalere enn iPad: 2 kolonner, Glimt som stripe, valgt oppgave som panel</span></div>
+<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
+<div style="width:904px;height:760px;border-radius:26px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);display:flex;position:relative">
+<div style="flex:none;width:72px;background:#1b1a17;color:#f3efe6;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 0"><sc-for list="{{ rail }}" as="r"><span style="width:56px;height:54px;border-radius:15px;background:{{ r.bg }};color:{{ r.fg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:700 10px Manrope"><span style="font-size:16px">{{ r.i }}</span>{{ r.n }}</span></sc-for></div>
+<div style="flex:none;width:210px;border-right:1px solid #d8d1c2;padding:22px 12px 16px;display:flex;flex-direction:column;gap:3px;box-sizing:border-box">
+<b style="font:500 28px/1.1 Newsreader,serif;padding:0 8px 12px">Gjøremål</b>
+<sc-for list="{{ lists }}" as="l"><span style="display:flex;align-items:center;gap:9px;height:40px;padding:0 10px;border-radius:12px;background:{{ l.bg }};color:{{ l.fg }};font-size:14px;font-weight:700"><span style="width:8px;height:8px;border-radius:4px;background:{{ l.c }};display:{{ l.dot }}"></span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.n }}</span><span style="font:600 11.5px 'IBM Plex Mono',monospace;opacity:.7">{{ l.k }}</span></span></sc-for>
+<span style="margin-top:6px;height:40px;border-radius:12px;border:1.5px dashed #c9c1b1;display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:700">+ Ny liste</span>
+</div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;position:relative">
+<div style="padding:20px 20px 8px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;gap:8px;overflow:hidden"><sc-for list="{{ tips }}" as="t"><div style="flex:none;width:230px;border-radius:16px;background:#fffdf8;border:1px solid #e1d9c9;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><span style="font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">GLIMT</span><b style="font-size:13px;line-height:1.3">{{ t.t }}</b><span style="align-self:flex-start;height:28px;padding:0 10px;border-radius:14px;background:#1b1a17;color:#f3efe6;display:flex;align-items:center;font-size:12px;font-weight:700">{{ t.b }}</span></div></sc-for></div>
+<div style="display:flex;gap:6px"><sc-for list="{{ when }}" as="w"><span style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ w.bd }};background:{{ w.bg }};color:{{ w.fg }};display:flex;align-items:center;font-size:12.5px;font-weight:700">{{ w.n }}</span></sc-for></div>
+</div>
+<div style="flex:1;min-height:0;overflow:hidden;padding:4px 20px 86px;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ secs }}" as="g"><div style="display:flex;flex-direction:column"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:{{ g.c }};padding-bottom:6px;border-bottom:2px solid #1b1a17">{{ g.h }}</span><sc-for list="{{ g.items }}" as="t"><div style="display:flex;align-items:center;gap:12px;min-height:50px;border-bottom:1px solid #e4ddcf;background:{{ t.bg }};margin:0 -8px;padding:0 8px;border-radius:{{ t.r }}"><span style="flex:none;width:22px;height:22px;border-radius:7px;border:2px solid {{ t.lc }}"></span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.n }}</b><span style="font-size:12px;color:{{ t.dc }}">{{ t.sub }}</span></div></div></sc-for></div></sc-for>
+</div>
+<div style="position:absolute;left:20px;right:20px;bottom:18px;display:flex;gap:10px"><span style="flex:1;height:52px;border-radius:26px;background:#fff;box-shadow:0 12px 30px -14px rgba(0,0,0,.35);display:flex;align-items:center;padding:0 18px;font-size:14.5px;color:#8f897c">Ny oppgave …</span><span style="flex:none;width:52px;height:52px;border-radius:26px;background:#b23a2a;color:#fff;display:grid;place-items:center;font-size:21px">✦</span></div>
+<div style="position:absolute;top:12px;right:12px;bottom:12px;width:300px;border-radius:22px;background:#fffdf8;box-shadow:-16px 0 40px -20px rgba(0,0,0,.4);padding:18px;display:flex;flex-direction:column;gap:10px;box-sizing:border-box"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#6b665c">VALGT OPPGAVE</span><span style="width:32px;height:32px;border-radius:16px;background:#f3efe6;display:grid;place-items:center;font-size:13px">✕</span></div><b style="font:500 21px/1.15 Newsreader,serif">Ta med tilhengeren hjem fra Strømstad</b><span style="font-size:13px;color:#6b665c">Mine · Ons 22. okt · Påminnelse 1 dag før</span><span style="font-size:12.5px;color:#b23a2a">✦ Laget med Glimt fra én beskjed</span><span style="flex:1"></span><span style="height:44px;border-radius:22px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font-weight:700;font-size:14px">Ferdig</span></div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;width:300px"><div style="width:300px;height:420px;border-radius:22px;background:#1b1a17;padding:8px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px"><div style="flex:1;border-radius:14px;background:#f3efe6;padding:12px;display:flex;flex-direction:column;gap:8px;box-sizing:border-box"><b style="font:500 20px Newsreader,serif">Gjøremål</b><div style="display:flex;gap:5px;flex-wrap:wrap"><sc-for list="{{ lists }}" as="l"><span style="height:24px;padding:0 9px;border-radius:12px;background:{{ l.bg }};color:{{ l.fg }};border:1px solid #d8d1c2;font-size:10.5px;font-weight:700;display:flex;align-items:center">{{ l.n }}</span></sc-for></div><div style="border-radius:10px;background:#fffdf8;padding:8px;font-size:11px;font-weight:700">GLIMT · 3 forslag ›</div></div><span style="height:3px;border-radius:2px;background:#555"></span><div style="flex:1;border-radius:14px;background:#f3efe6;padding:12px;display:flex;flex-direction:column;gap:6px;box-sizing:border-box"><span style="font:600 9.5px 'IBM Plex Mono',monospace;color:#b23a2a;border-bottom:2px solid #1b1a17;padding-bottom:4px">I DAG OG FORFALT · 3</span><span style="height:26px;border-bottom:1px solid #e4ddcf;font-size:11.5px;font-weight:600">rema</span><span style="height:26px;border-bottom:1px solid #e4ddcf;font-size:11.5px;font-weight:600">Ta med pakken</span><span style="height:30px;border-radius:15px;background:#fff;margin-top:auto"></span></div></div><b style="font-size:14px">Halvbrettet (bordmodus)</b><span style="font-size:12.5px;line-height:1.45;color:#6b665c">Lister og Glimt over hengselen, oppgaver og skrivefelt under.</span></div>
+</div>
+<span style="font-size:13.5px;line-height:1.5;color:#6b665c;max-width:960px;text-wrap:pretty">Fold er nesten kvadratisk og smalere enn iPad. Derfor: sidelinje 72, lister 210, oppgavene fyller resten. Glimt-forslagene blir en sidelengs stripe øverst i oppgavene (ikke egen kolonne). Valgt oppgave åpnes som et panel fra høyre (300) over lista, og lukkes med ✕ eller sveip. Rotert til stående (smalere enn 0,9 × høyde): lister blir en pillerad øverst, som mobil men bredere.</span>
+</div>
+
+<div id="1b" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:center;gap:10px"><span style="font:700 12px 'IBM Plex Mono',monospace;background:#1b1a17;color:#f3efe6;padding:3px 8px;border-radius:6px">1b</span><b style="font:700 17px Manrope">Alle sider · samme system</b><span style="color:#6b665c;font-size:15px">Sidelinje 84 · kolonner per side</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,300px);gap:22px">
+<sc-for list="{{ pages }}" as="p"><div style="display:flex;flex-direction:column;gap:8px"><div style="height:200px;border-radius:16px;background:#f3efe6;box-shadow:0 14px 30px -18px rgba(27,26,23,.45);display:flex;gap:5px;padding:6px;box-sizing:border-box;overflow:hidden"><span style="flex:none;width:18px;border-radius:8px;background:#1b1a17"></span><sc-for list="{{ p.cols }}" as="c"><div style="flex:{{ c.f }};min-width:0;border-radius:9px;background:{{ c.bg }};color:{{ c.fg }};padding:7px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;font:700 10px Manrope"><span>{{ c.n }}</span><sc-for list="{{ c.l }}" as="x"><span style="height:{{ x.h }};border-radius:3px;background:{{ x.c }}"></span></sc-for></div></sc-for></div><b style="font-size:15px">{{ p.n }}</b><span style="font-size:12.5px;line-height:1.45;color:#6b665c;text-wrap:pretty">{{ p.d }}</span></div></sc-for>
+</div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals(){const AV={S:'#3b5d8a',I:'#b23a2a',P:'#2f6b4a',R:'#a8661a'};
+    const L=(n,k)=>Array.from({length:n},(_,i)=>({h:i===0?'10px':'6px',c:i===0?k||'#1b1a17':'#e1d9c9'}));
+    const col=(n,f,dark,rows,k)=>({n,f:String(f),bg:dark?'#1b1a17':'#fffdf8',fg:dark?'#f3efe6':'#1b1a17',l:L(rows||5,k)});
+    return{rail:[['⌂','Hjem',0],['kr','Finans',0],['☑','Gjøremål',1],['▦','Kalender',0],['✦','Chat',0],['⋯','Mer',0]].map(([i,n,on])=>({i,n,bg:on?'#f3efe6':'transparent',fg:on?'#1b1a17':'#f3efe6'})),
+      lists:[['Alle',10,'#1b1a17',1,0],['Mine',5,'#6f5ad6',0,1],['Jobb',2,'#2b5d8a',0,1],['Hjem',0,'#b23a2a',0,1],['Handel',3,'#2f6b4a',0,1],['Laget med Glimt',1,'#b23a2a',0,1],['Arkivert',4,'#8f897c',0,0]].map(([n,k,c,on,dot])=>({n,k:String(k),c,dot:dot?'block':'none',bg:on?'#1b1a17':'transparent',fg:on?'#f3efe6':'#1b1a17'})),
+      when:[['I dag',1],['I morgen',0],['Neste uke',0],['Uten dato',0]].map(([n,on])=>({n,bg:on?'#1b1a17':'#fff',fg:on?'#f3efe6':'#1b1a17',bd:on?'#1b1a17':'#d8d1c2'})),
+      who:[['S',1],['I',0],['P',0]].map(([i,on])=>({i,c:AV[i],sh:on?'0 0 0 2px #f3efe6,0 0 0 4px #1b1a17':'none'})),
+      secs:[{h:'I DAG OG FORFALT · 3',c:'#b23a2a',items:[['rema','Forfalt 2 d · Mine','#6f5ad6','#b23a2a',[],1],['Ta med pakken som skal sendes fra butikken','I dag · Mine · før Strømstad-turen','#6f5ad6','#b23a2a',[],0],['Kansellere Overleaf','Forfalt 1 d · Jobb','#2b5d8a','#b23a2a',['S'],0]]},{h:'I MORGEN · 2',c:'#1b1a17',items:[['Ta med tilhengeren hjem fra Strømstad','Ons 22. okt · Mine','#6f5ad6','#6b665c',[],0,1],['Handle til taco','Ons 22. okt · Handel','#2f6b4a','#6b665c',['S','I','P'],0]]},{h:'NESTE UKE · 2',c:'#1b1a17',items:[['Bytte dekk','Man 27. okt · Hjem','#b23a2a','#6b665c',['S','P'],0],['Oblig 45','Man 2. nov · Jobb','#2b5d8a','#6b665c',[],0]]}].map(g=>({...g,items:g.items.map(([n,sub,lc,dc,av,_,sel])=>({n,sub,lc,dc,bg:sel?'#e9e2d3':'transparent',r:sel?'10px':'0',av:av.map(i=>({i,c:AV[i]}))}))})),
+      tips:[['2× «Kansellere Overleaf» i Jobb','Glimt fant like gjøremål.','Slå sammen'],['2 gjøremål er forfalt','Flytt til i morgen, eller arkiver.','Flytt til i morgen'],['Påminn meg ved butikken','3 varer i Handel. Varsle ved Kiwi, Rema eller Coop.','Slå på']].map(([t,s,b])=>({t,s,b})),
+      pages:[
+        ['Hjem','Valgt 1c: stort Glimt-kort til venstre (vær, brief, søk), faner Nå · I dag · Hjemme · Økonomi til høyre.',[col('Glimt',1,1,4,'#e8794a'),col('Nå · I dag',1.2,0,6)]],
+        ['Finans','Saldokort og faste trekk øverst til venstre, Liste i midten, kategorier og Glimt til høyre. Trykk på en transaksjon åpner den i høyre kolonne.',[col('Saldo · trekk',.9,0,4,'#b23a2a'),col('Liste',1.4,0,7),col('Detalj',1,0,5)]],
+        ['Kalender','Som 1c i Kalender: minikalender og kalendere til venstre, måned i midten, dagen til høyre.',[col('Mini',.7,0,4),col('Måned',1.5,0,6,'#2b5d8a'),col('Dagen',1,0,5,'#b23a2a')]],
+        ['Chat','Samtaler og mapper til venstre (alltid synlig), samtalen til høyre. Skrivefeltet bare under samtalen.',[col('Samtaler',.8,0,7),col('Samtale',2,0,5,'#7a5ad6')]],
+        ['Media','Faner øverst, plakatvegg i 6 kolonner. Valgt serie/film åpnes i høyre kolonne i stedet for ny side.',[col('Plakater',2,0,6,'#6b3b2e'),col('Serie',1,0,5)]],
+        ['Familie','Kart over hele midten, personer og soner som liste til venstre, valgt person til høyre.',[col('Personer',.8,0,5),col('Kart',2,0,3,'#3f7a6e'),col('Person',.9,0,4)]],
+        ['Mer og menyer','Rutenett med 4 kolonner. Wiggle-redigering virker likt. Ark (sheets) blir sentrerte vinduer på 560 pt.',[col('Moduler',1,0,8)]],
+        ['Innstillinger','Meny til venstre (Konto, App, Integrasjoner …), innholdet til høyre. Ingen «‹ Tilbake» mellom nivå 1 og 2.',[col('Meny',.8,1,7),col('Innhold',2,0,6)]]
+      ].map(([n,d,cols])=>({n,d,cols}))}}
+}
+</script>
+</body>
+</html>
