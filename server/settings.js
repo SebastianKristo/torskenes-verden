@@ -158,6 +158,7 @@ export const SCHEMA = [
   // Prompt 44: hvilken backend AI-kallene bruker (tom = Open WebUI når adresse og nøkkel er satt, ellers Ollama) og Glimts eget nettsøk.
   ['AI-backend og nettsøk', { id: 'aibackend', domain: 'openwebui.com', category: 'AI', help: 'Backend for AI-kallene (Open WebUI eller Ollama direkte) og kildene for Glimts nettsøk: Open WebUI, SearXNG, Brave Search og DuckDuckGo, i rekkefølgen under.' }, [
     ['ai_backend', 'Backend (openwebui eller ollama, tom = automatisk)', e('AI_BACKEND')],
+    ['ai_think_direct', 'Tenkemodeller (qwen3 o.l.) direkte til Ollama (1 = på, standard; 0 = via Open WebUI)', e('AI_THINK_DIRECT')],
     ['web_order', 'Rekkefølge for nettsøk', e('WEB_SEARCH_ORDER', 'openwebui,searxng,brave,ddg')],
     ['searxng_url', 'SearXNG-adresse', e('SEARXNG_URL')],
     ['brave_key', 'Brave Search API-nøkkel', e('BRAVE_API_KEY'), true],
@@ -356,6 +357,7 @@ const VALID = {
   chat_theme: (v) => /^(papir|noytral|nøytral)$/i.test(v),
   chat_default_model: (v) => /^[\w.:\/@+-]{1,120}$/.test(v),
   ai_backend: (v) => /^(openwebui|ollama|auto)$/i.test(v), // prompt 44
+  ai_think_direct: (v) => /^[01]$/.test(v),
   web_order: (v) => String(v).split(',').map((x) => x.trim()).filter(Boolean).every((x) => /^(openwebui|searxng|brave|ddg)$/.test(x)),
 };
 // Prompt 27: av/på-felt (type 'bool') godtar 1/0, true/false, on/off og lagres som '1' eller '0'.

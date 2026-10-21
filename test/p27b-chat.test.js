@@ -146,7 +146,7 @@ test('fortsettelse og Rediger (editFrom) bygger på lagret historikk', async () 
   calls.length = 0;
   await S('/api/chat/send', 'POST', { chatId, model: 'qwen3:8b', editFrom: 0, messages: [{ role: 'user', content: 'Hei på nytt' }] });
   const m2 = calls.find((x) => x.url.endsWith('/api/chat')).body.messages;
-  assert.deepEqual(m2.slice(1).map((m) => m.content), ['Hei på nytt']);
+  assert.deepEqual(m2.slice(1).map((m) => m.content.replace(/ \/no_think$/, '')), ['Hei på nytt']); // qwen3 får «/no_think» (tenking av)
   const after = (await S(`/api/chat/chats/${chatId}`)).body.messages;
   assert.deepEqual(after.map((m) => m.role), ['user', 'assistant']);
 });
@@ -260,7 +260,7 @@ test('tale til tekst: 501 uten Open WebUI', async () => {
 test('med Open WebUI: modeller, strøm og tale går via proxyen; nede → Ollama direkte', async () => {
   // Bare admin kan sette serveroppsettet.
   assert.equal((await K('/api/config', 'PUT', { openwebui_url: 'http://owui.test' })).status, 403);
-  assert.equal((await S('/api/config', 'PUT', { openwebui_url: 'http://owui.test', openwebui_key: 'sk-owui' })).status, 200);
+  assert.equal((await S('/api/config', 'PUT', { openwebui_url: 'http://owui.test', openwebui_key: 'sk-owui', ai_think_direct: '0' })).status, 200);
   const integ = (await S('/api/integrations')).body;
   const ow = (Array.isArray(integ) ? integ : integ.items ?? []).find((x) => x.id === 'openwebui');
   assert.equal(ow?.scope, 'server');

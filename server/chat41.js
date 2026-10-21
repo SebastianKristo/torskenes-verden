@@ -17,7 +17,8 @@ CREATE INDEX IF NOT EXISTS chat_auto_stats_u ON chat_auto_stats(user_id, kind, t
 
 export const AUTO_ID = 'auto';
 export const KIND_LABEL = { text: 'Rask', vision: 'Bilde', long: 'Langt dokument', code: 'Kode', reason: 'Tenker', };
-const CODE_RE = /\b(kode|code|docker|compose|proxmox|home ?assistant|yaml|json|regex|bash|python|javascript|typescript|node|sql|kubernetes|nginx|traceback|stack ?trace|exception|error|feilmelding|kompiler|function|funksjon|script|skript|api)\b|```|\bat [\w.]+\(|\bE[A-Z]{3,}\b/i;
+const CODE_RE = /\b(kode|code|docker|compose|proxmox|home ?assistant|yaml|json|regex|bash|python|javascript|typescript|node|sql|kubernetes|nginx|traceback|stack ?trace|exception|error|feilmelding|kompiler|function|funksjon|script|skript|api)\b|```|\bat [\w.]+\(/i;
+const ERRCODE_RE = /\bE[A-Z]{3,}\b/; // ECONNREFUSED o.l. – med store bokstaver (ikke «England»)
 const REASON_RE = /\b(regn ut|beregn|hvorfor|forklar|sammenlign|planlegg|plan for|budsjett|analyser|vurder|fordeler og ulemper|resonner|bevis)\b/i;
 const IMAGE_RE = /\b(bilde|bildet|foto|kvittering|skjermbilde|screenshot)\b/i;
 const DOC_RE = /\.(pdf|docx?|odt|pptx?|xlsx?)$/i;
@@ -37,7 +38,7 @@ export function kindOf41(text, { images = 0, files = [], wantData = false } = {}
   if (images > 0 || (IMAGE_RE.test(t) && /\b(vedlagt|her er|se på|les)\b/i.test(t))) return 'vision';
   const docs = files.filter((f) => DOC_RE.test(String(f?.name ?? f ?? '')));
   if (docs.length && !wantData) return 'long';
-  if (CODE_RE.test(t)) return 'code';
+  if (CODE_RE.test(t) || ERRCODE_RE.test(t)) return 'code';
   if (REASON_RE.test(t) || t.length > 1200) return t.length > 6000 && !wantData ? 'long' : 'reason';
   return 'text';
 }

@@ -127,6 +127,7 @@ export function markThinkLeak(model, chars = 0) {
 }
 /** Glem merket (én modell, eller alle). */
 export function clearThinkLeak(model = null) { try { if (!model) kv.set(OWNER, LEAK_KEY, {}); else { const c = { ...thinkLeaks() }; delete c[model]; kv.set(OWNER, LEAK_KEY, c); } } catch { /* */ } }
+const THINK_DIRECT_NOTE = 'via Ollama direkte: tenkemodell uten tenking (think:false virker ikke gjennom Open WebUI)';
 const leakFor = (model) => { const l = thinkLeaks(); return Object.keys(l).some((k) => sameModel(k, model)); };
 /**
  * Hvilken backend et kall går til. o.backend vinner. Embeddings og innlasting går alltid til Ollama. En modell der Open WebUI
@@ -138,6 +139,9 @@ export function chooseBackend(o = {}) {
   const c = backendConfig();
   if (c.effective !== 'openwebui') return { backend: 'ollama', note: c.note };
   if (!o.allowThink && leakFor(o.model) && (o.base || c.ollama.url)) return { backend: 'ollama', note: THINK_NOTE };
+  // Open WebUI 0.12 sender ikke think:false videre og strømmer heller ikke tenkingen: qwen3 o.l. tenker i stillhet til tidsgrensen
+  // slår til (ingen tokens på 90 s). Tenkemodeller uten tenking går derfor alltid direkte til Ollama når adressen finnes.
+  if (!o.allowThink && cfgOf('ai_think_direct') !== '0' && isThinkingModel(o.model) && (o.base || c.ollama.url)) return { backend: 'ollama', note: THINK_DIRECT_NOTE };
   return { backend: 'openwebui', note: null };
 }
 /** Fjerner API-nøkler fra tekst (konfigurert Open WebUI-nøkkel, sk-…, Bearer …). */
@@ -372,6 +376,8 @@ async function attempt(o, job) {
   const thinking = isThinkingModel(o.model);
   if ((o.kind === 'chat' || o.kind === 'generate') && o.short !== false && thinking && !o.allowThink) body.think = false;
   if (!thinking && hasNoThink(o.model)) delete body.think;
+  // Qwen3 har en myk bryter i selve teksten: «/no_think» i siste brukermelding slår av tenkingen uansett backend.
+  if (body.think === false && /qwen3/i.test(String(o.model))) addNoThink(body);
   try { o.onStart?.({ cold, keepAlive, attempt: job.attemptNo }); } catch { /* */ }
   try { o.onPhase?.(cold ? { kind: 'load', cold: true } : { kind: 'think', chars: 0 }); } catch { /* */ }
   const ctrl = new AbortController();
@@ -434,6 +440,19 @@ async function attempt(o, job) {
     t: { loadMs: out.timing?.loadMs ?? 0, promptMs: out.timing?.promptMs ?? 0, genMs: out.timing?.genMs ?? 0, tokIn: out.usage?.tokIn ?? 0, tokOut: out.usage?.tokOut ?? 0,
       thinkChars, keepAlive, cold, firstTokenMs: firstAt ? firstAt - t0 : null, runMs: clock.now() - t0 },
   };
+}
+
+/** Legger «/no_think» på siste brukermelding (chat) eller prompten (generate), én gang. */
+function addNoThink(body) {
+  const tag = ' /no_think';
+  if (Array.isArray(body.messages)) {
+    for (let i = body.messages.length - 1; i >= 0; i--) {
+      const m = body.messages[i];
+      if (m?.role !== 'user') continue;
+      if (typeof m.content === 'string' && !m.content.includes('/no_think')) body.messages = body.messages.map((x, j) => (j === i ? { ...x, content: x.content + tag } : x));
+      break;
+    }
+  } else if (typeof body.prompt === 'string' && body.prompt && !body.prompt.includes('/no_think')) body.prompt += tag;
 }
 
 /* ---------------- Backends ---------------- */

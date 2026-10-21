@@ -449,7 +449,7 @@ async function sendInner(text, opt = {}) {
   const before = { chat: C.chat, inp: C.inp, att: C.att };
   C.chat = shown; C.inp = ''; C.att = []; C.edit = null; C.sheet = null; C.guard = null;
   const ctl = new AbortController();
-  C.busy = { chatId: C.cur, model, text: '', ctl, reading: [...(payload.myData ? ['Finans', 'Kalender', 'Huskeliste'] : []), ...files.length ? before.att.filter((a) => a.kind !== 'img').map((a) => a.name) : []] };
+  C.busy = { chatId: C.cur, model, text: '', ctl, reading: [...files.length ? before.att.filter((a) => a.kind !== 'img').map((a) => a.name) : []] };
   paint(); toBottom();
   let res;
   try {
@@ -522,7 +522,7 @@ async function readSse(res, ctl) {
         if (!line.startsWith('data:')) { if (!line) ev = 'message'; continue; }
         let d; try { d = JSON.parse(line.slice(5).trim()); } catch { continue; }
         if (ev === 'meta') { if (C.busy && (d.auto?.model || d.picked)) { C.busy.picked = d.auto?.model ?? d.picked; C.busy.pickLabel = d.auto?.label ?? ''; paintStream(); } if (C.data && d.chatId) dataSave41(d.chatId, C.data); chatId = d.chatId ?? chatId; if (!C.cur) { if (C.pendingLocal && chatId) { toolsRekey(C.pendingLocal, chatId); C.pendingLocal = null; } C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
-        else if (ev === 'facts') { C.busy.facts = d.facts ?? []; paintStream(); } // prompt 41: faktakort mens svaret kommer
+        else if (ev === 'facts') { C.busy.facts = d.facts ?? []; if (Array.isArray(d.used)) C.busy.reading = [...new Set([...(C.busy.reading ?? []), ...d.used])]; paintStream(); } // prompt 41: faktakort mens svaret kommer
         else if (ev === 'delta') { C.busy.text += d.text ?? ''; if (!raf) raf = requestAnimationFrame(flush); }
         else if (ev === 'done') done = d;
         else if (ev === 'error') { C.busy.error = d.error || 'Ukjent feil'; paintStream(); }

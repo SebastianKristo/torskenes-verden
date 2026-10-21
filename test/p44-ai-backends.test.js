@@ -89,7 +89,8 @@ const ROUTES = { chat: 'llama3.2:3b', sok: 'llama3.2:3b', glimt: 'llama3.2:3b', 
 assert.equal((await A('/api/ai/routing', 'PUT', { tasks: Object.fromEntries(Object.entries(ROUTES).map(([k, m]) => [k, { model: m, fallback: '' }])) })).status, 200);
 const BASE = 'http://ollama.sim:11434';
 const setBackend = async (mode) => { const r = await A('/api/ai/backend', 'PUT', { mode }); assert.equal(r.status, 200, r.text); assert.equal(r.body.effective, mode); return r.body; };
-beforeEach(() => {
+beforeEach(async () => {
+  await A('/api/config', 'PUT', { ai_think_direct: null });
   sim.reset(); owui.reset(); gate._resetGate(); opts._resetThinkMemory(); ai.invalidateInventory(); web.clearWebCache(); gate.clearThinkLeak();
   owui.forwardThink = true; owui.thinkTags = false; owui.key = KEY; owui.webHits = createOwuiSim().webHits;
   ai._aiRunTest.loadMs = 900; ai._aiRunTest.respMs = 300;
@@ -103,6 +104,8 @@ const NOW_RE = /Nå: (mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag) \d{1
 /* ---------------- 1. Begge backends i samme kø ---------------- */
 
 test('begge backends: kø per modell på tvers av backends (samme modellnavn = samme modell), aldri to modeller samtidig, ingen avbrudd', async () => {
+  // Her testes Open WebUI-veien for qwen3 (standard er at tenkemodeller går direkte til Ollama, ai_think_direct=1).
+  assert.equal((await A('/api/config', 'PUT', { ai_think_direct: '0' })).status, 200);
   const cfg = await setBackend('openwebui');
   assert.equal(cfg.openwebui.configured, true);
   assert.ok(!JSON.stringify(cfg).includes(KEY), 'nøkkelen sendes aldri til frontenden');
@@ -168,6 +171,8 @@ test('begge backends: kø per modell på tvers av backends (samme modellnavn = s
 /* ---------------- 2. Open WebUI slår ikke av tenking ---------------- */
 
 test('Open WebUI som IKKE videresender think: tenkingen måles, modellen merkes, og jobben går direkte til Ollama («via Ollama direkte …»)', async () => {
+  // Her testes Open WebUI-veien for qwen3 (standard er at tenkemodeller går direkte til Ollama, ai_think_direct=1).
+  assert.equal((await A('/api/config', 'PUT', { ai_think_direct: '0' })).status, 200);
   await setBackend('openwebui');
   owui.forwardThink = false; // qwen3 tenker, og tenkingen bruker opp num_predict
   const r = await ai.run('brief', { user: OWNER, prompt: 'Lag brief', numPredict: 20, noRetry: true });
@@ -391,4 +396,16 @@ test('Mine data: bare de delene rutingen valgte (Finans for forbruk, Kalender fo
   rt = await router.routeTools('Hei', { forceWeb: true });
   assert.deepEqual(rt.tools, ['web']);
   assert.equal(rt.via, 'tvunget');
+});
+
+test('tenkemodeller går direkte til Ollama som standard (Open WebUI sender ikke think:false videre), og qwen3 får /no_think', async () => {
+  await setBackend('openwebui');
+  const b = gate.chooseBackend({ kind: 'chat', model: 'qwen3:8b', base: BASE });
+  assert.equal(b.backend, 'ollama');
+  assert.match(b.note, /tenkemodell/);
+  assert.equal(gate.chooseBackend({ kind: 'chat', model: 'llama3.2:3b', base: BASE }).backend, 'openwebui');
+  assert.equal(gate.chooseBackend({ kind: 'chat', model: 'qwen3:8b', base: BASE, allowThink: true }).backend, 'openwebui');
+  const { kindOf41 } = await import('../server/chat41.js');
+  assert.equal(kindOf41('hvem er statsminister i England'), 'text', '«England» er ikke en feilkode');
+  assert.equal(kindOf41('docker gir ECONNREFUSED'), 'code');
 });
