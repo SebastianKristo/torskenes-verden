@@ -255,7 +255,9 @@ struct KalDayPane43: View {
         let list: [KalEvent] = s.on(k).uniqueIds()
         let allDay: [KalEvent] = list.filter { (e: KalEvent) -> Bool in e.allDay }
         let timed: [KalEvent] = list.filter { (e: KalEvent) -> Bool in !e.allDay }
-        let first: Int = Swift.max(0, Swift.min(timed.map { (e: KalEvent) -> Int in e.startMin / 60 }.min() ?? 7, 7))
+        let hours: [Int] = timed.map { (e: KalEvent) -> Int in e.startMin / 60 }
+        let earliest: Int = hours.min() ?? 7
+        let first: Int = Swift.max(0, Swift.min(earliest, 7))
         VStack(alignment: .leading, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(k == KalD.todayKey() ? "I DAG" : "UKE " + String(KalWeek35.weekNo(KalWeek35.start(D))))
@@ -286,8 +288,11 @@ struct KalDayPane43: View {
                         }
                     }
                     ForEach(timed) { (e: KalEvent) in
-                        let top: CGFloat = CGFloat(e.startMin - first * 60) / 60 * hourH + 6
-                        let h: CGFloat = Swift.max(22, CGFloat(Swift.max(15, e.endMin - e.startMin)) / 60 * hourH - 2)
+                        let startOff: Int = e.startMin - first * 60
+                        let top: CGFloat = CGFloat(startOff) / 60 * hourH + 6
+                        let durMin: Int = Swift.max(15, e.endMin - e.startMin)
+                        let rawH: CGFloat = CGFloat(durMin) / 60 * hourH - 2
+                        let h: CGFloat = Swift.max(22, rawH)
                         let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
                         Button(action: { s.openDetail(e) }) {
                             VStack(alignment: .leading, spacing: 1) {

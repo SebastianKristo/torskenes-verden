@@ -263,3 +263,4 @@ struct MacSettingsView: View {
         let live: String = MacLive.shared.connected ? " · sanntid på" : " · sanntid av (henter hvert minutt)"
         return "Sist hentet " + KalD.hm(KalD.minutes(u)) + live
     }
+}
