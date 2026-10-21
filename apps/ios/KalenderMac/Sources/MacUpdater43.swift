@@ -537,89 +537,113 @@ struct MacUpdate43View: View {
         .buttonStyle(.plain)
     }
 
+    // Én egen visning per tilstand: én stor switch var for tung for typesjekkeren i Xcode 16.
     @ViewBuilder private var stateCard: some View {
         switch u.phase {
-        case .idle:
-            card {
-                Text(u.lastText).font(MacFont.ui(14)).foregroundColor(t.mut)
-                dark("Se etter oppdateringer") { Task { await u.check() } }
+        case .idle: idleCard
+        case .check: checkCard
+        case .none: noneCard
+        case .avail: availCard
+        case .dl: dlCard
+        case .ready: readyCard
+        case .inst: instCard
+        case .done: doneCard
+        case .err: errCard
+        }
+    }
+
+    private var idleCard: some View {
+        card {
+            Text(u.lastText).font(MacFont.ui(14)).foregroundColor(t.mut)
+            dark("Se etter oppdateringer") { Task { await u.check() } }
+        }
+    }
+
+    private var checkCard: some View {
+        let text: String = "Ser etter oppdateringer på " + MacStore.shared.host43 + " …"
+        return card { Text(text).font(MacFont.ui(14, .bold)).foregroundColor(t.ink) }
+    }
+
+    private var noneCard: some View {
+        let sub: String = u.currentLabel + " er nyeste versjon."
+        return card {
+            Text("Kalender er oppdatert").font(MacFont.ui(15, .bold)).foregroundColor(t.ink)
+            Text(sub).font(MacFont.ui(14)).foregroundColor(t.mut)
+            light("Se etter på nytt", height: 36) { Task { await u.check() } }
+        }
+    }
+
+    private var availCard: some View {
+        let title: String = u.rel?.label ?? "Ny versjon"
+        let notes: [String] = u.rel?.notes ?? []
+        return card(border: t.ink) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title).font(MacFont.serif(22)).foregroundColor(t.ink)
+                Spacer()
+                Text(u.sizeText).font(MacFont.mono(12)).foregroundColor(t.mut)
             }
-        case .check:
-            card { Text("Ser etter oppdateringer på " + MacStore.shared.host43 + " …").font(MacFont.ui(14, .bold)).foregroundColor(t.ink) }
-        case .none:
-            card {
-                Text("Kalender er oppdatert").font(MacFont.ui(15, .bold)).foregroundColor(t.ink)
-                Text(u.currentLabel + " er nyeste versjon.").font(MacFont.ui(14)).foregroundColor(t.mut)
-                light("Se etter på nytt", height: 36) { Task { await u.check() } }
+            if !notes.isEmpty { MacUpdateNotes43(notes: notes) }
+            HStack(spacing: 8) {
+                dark("Last ned og installer") { u.download() }
+                light("Senere") { u.later() }
             }
-        case .avail:
-            card(border: t.ink) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(u.rel?.label ?? "Ny versjon").font(MacFont.serif(22)).foregroundColor(t.ink)
-                    Spacer()
-                    Text(u.sizeText).font(MacFont.mono(12)).foregroundColor(t.mut)
-                }
-                if !(u.rel?.notes.isEmpty ?? true) {
-                    Text("NYTT").font(MacFont.mono(10.5)).tracking(1.3).foregroundColor(t.red)
-                    ForEach(Array((u.rel?.notes ?? []).enumerated()), id: \.offset) { (pair: (offset: Int, element: String)) in
-                        HStack(alignment: .top, spacing: 10) {
-                            Text("•").foregroundColor(t.red)
-                            Text(pair.element).fixedSize(horizontal: false, vertical: true)
-                        }
-                        .font(MacFont.ui(14)).foregroundColor(t.ink)
-                    }
-                }
-                HStack(spacing: 8) {
-                    dark("Last ned og installer") { u.download() }
-                    light("Senere") { u.later() }
-                }
+        }
+    }
+
+    private var dlCard: some View {
+        let title: String = "Laster ned " + (u.rel?.version ?? "")
+        let pctText: String = String(Int(u.pct * 100)) + " %"
+        let sub: String = u.message.isEmpty ? u.dlSub : u.message
+        return card {
+            HStack {
+                Text(title).font(MacFont.ui(14, .bold)).foregroundColor(t.ink)
+                Spacer()
+                Text(pctText).font(MacFont.mono(13)).foregroundColor(t.ink)
             }
-        case .dl:
-            card {
-                HStack {
-                    Text("Laster ned " + (u.rel?.version ?? "")).font(MacFont.ui(14, .bold)).foregroundColor(t.ink)
-                    Spacer()
-                    Text(String(Int(u.pct * 100)) + " %").font(MacFont.mono(13)).foregroundColor(t.ink)
-                }
-                GeometryReader { (g: GeometryProxy) in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(t.line2)
-                        Capsule().fill(t.ink).frame(width: g.size.width * CGFloat(u.pct))
-                    }
-                }
-                .frame(height: 8)
-                Text(u.message.isEmpty ? u.dlSub : u.message).font(MacFont.ui(13)).foregroundColor(t.mut)
-                light("Avbryt", height: 40) { u.cancelDownload() }
-            }
-        case .ready:
-            card {
-                Text("Klar til å installere").font(MacFont.ui(15, .bold)).foregroundColor(t.ink)
-                Text("Signaturen er sjekket. Kalender lukkes, oppdateres og åpnes igjen der du var. Tar noen sekunder.")
-                    .font(MacFont.ui(14)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
-                Text("Kalender er ad hoc-signert: macOS kan spørre om du vil åpne den nye versjonen første gang. Velg Åpne (eller høyreklikk på Kalender → Åpne).")
-                    .font(MacFont.ui(12)).foregroundColor(t.mut2).fixedSize(horizontal: false, vertical: true)
-                dark("Installer og start på nytt") { u.install() }
-            }
-        case .inst:
-            card { Text("Installerer … Kalender starter på nytt").font(MacFont.ui(14, .bold)).foregroundColor(t.ink) }
-        case .done:
-            VStack(alignment: .leading, spacing: 6) {
-                Text("✓ Kalender er oppdatert til " + MacUpdater43.currentVersion + (MacUpdater43.currentBuild > 0 ? " (" + String(MacUpdater43.currentBuild) + ")" : ""))
-                    .font(MacFont.ui(15, .bold)).foregroundColor(green)
-                Text("Kalenderne, innstillingene og innloggingen er beholdt.").font(MacFont.ui(14)).foregroundColor(t.mut)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 18).fill(green.opacity(0.10)))
-            .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(green.opacity(0.35), lineWidth: 1))
-        case .err:
-            card {
-                Text(u.message.isEmpty ? "Noe gikk galt." : u.message).font(MacFont.ui(14, .bold)).foregroundColor(t.acc)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 8) {
-                    dark("Prøv igjen") { Task { await u.check() } }
-                    if u.noServer { light("Åpne siste release") { u.openReleasePage() } }
-                }
+            MacUpdateBar43(pct: u.pct)
+            Text(sub).font(MacFont.ui(13)).foregroundColor(t.mut)
+            light("Avbryt", height: 40) { u.cancelDownload() }
+        }
+    }
+
+    private var readyCard: some View {
+        card {
+            Text("Klar til å installere").font(MacFont.ui(15, .bold)).foregroundColor(t.ink)
+            Text("Signaturen er sjekket. Kalender lukkes, oppdateres og åpnes igjen der du var. Tar noen sekunder.")
+                .font(MacFont.ui(14)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
+            Text("Kalender er ad hoc-signert: macOS kan spørre om du vil åpne den nye versjonen første gang. Velg Åpne (eller høyreklikk på Kalender → Åpne).")
+                .font(MacFont.ui(12)).foregroundColor(t.mut2).fixedSize(horizontal: false, vertical: true)
+            dark("Installer og start på nytt") { u.install() }
+        }
+    }
+
+    private var instCard: some View {
+        card { Text("Installerer … Kalender starter på nytt").font(MacFont.ui(14, .bold)).foregroundColor(t.ink) }
+    }
+
+    private var doneCard: some View {
+        let build: Int = MacUpdater43.currentBuild
+        let suffix: String = build > 0 ? " (" + String(build) + ")" : ""
+        let title: String = "✓ Kalender er oppdatert til " + MacUpdater43.currentVersion + suffix
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(MacFont.ui(15, .bold)).foregroundColor(green)
+            Text("Kalenderne, innstillingene og innloggingen er beholdt.").font(MacFont.ui(14)).foregroundColor(t.mut)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 18).fill(green.opacity(0.10)))
+        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(green.opacity(0.35), lineWidth: 1))
+    }
+
+    private var errCard: some View {
+        let text: String = u.message.isEmpty ? "Noe gikk galt." : u.message
+        let noServer: Bool = u.noServer
+        return card {
+            Text(text).font(MacFont.ui(14, .bold)).foregroundColor(t.acc)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                dark("Prøv igjen") { Task { await u.check() } }
+                if noServer { light("Åpne siste release") { u.openReleasePage() } }
             }
         }
     }
@@ -646,6 +670,42 @@ struct MacUpdate43View: View {
         .background(RoundedRectangle(cornerRadius: 18).fill(t.card))
         .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(t.line, lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+/// «NYTT»-punktene i oppdateringskortet.
+struct MacUpdateNotes43: View {
+    @Environment(\.mk) private var t
+    let notes: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("NYTT").font(MacFont.mono(10.5)).tracking(1.3).foregroundColor(t.red)
+            ForEach(0..<notes.count, id: \.self) { (i: Int) in
+                HStack(alignment: .top, spacing: 10) {
+                    Text("•").foregroundColor(t.red)
+                    Text(notes[i]).fixedSize(horizontal: false, vertical: true)
+                }
+                .font(MacFont.ui(14)).foregroundColor(t.ink)
+            }
+        }
+    }
+}
+
+/// Fremdriftslinja mens oppdateringen lastes ned.
+struct MacUpdateBar43: View {
+    @Environment(\.mk) private var t
+    let pct: Double
+
+    var body: some View {
+        GeometryReader { (g: GeometryProxy) in
+            let w: CGFloat = g.size.width * CGFloat(pct)
+            ZStack(alignment: .leading) {
+                Capsule().fill(t.line2)
+                Capsule().fill(t.ink).frame(width: w)
+            }
+        }
+        .frame(height: 8)
     }
 }
 
