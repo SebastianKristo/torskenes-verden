@@ -249,85 +249,143 @@ struct KalDayPane43: View {
 
     private let hourH: CGFloat = 48
 
-    var body: some View {
-        let k: String = s.anchor
-        let D: Date = KalD.date(k)
-        let list: [KalEvent] = s.on(k).uniqueIds()
-        let allDay: [KalEvent] = list.filter { (e: KalEvent) -> Bool in e.allDay }
-        let timed: [KalEvent] = list.filter { (e: KalEvent) -> Bool in !e.allDay }
+    // Delt opp i små delvisninger: én stor body var for tung for typesjekkeren i Xcode 16.
+    private var key: String { s.anchor }
+    private var day: Date { KalD.date(key) }
+    private var list: [KalEvent] { s.on(key).uniqueIds() }
+    private var allDay: [KalEvent] { list.filter { (e: KalEvent) -> Bool in e.allDay } }
+    private var timed: [KalEvent] { list.filter { (e: KalEvent) -> Bool in !e.allDay } }
+    private var firstHour: Int {
         let hours: [Int] = timed.map { (e: KalEvent) -> Int in e.startMin / 60 }
         let earliest: Int = hours.min() ?? 7
-        let first: Int = Swift.max(0, Swift.min(earliest, 7))
+        return Swift.max(0, Swift.min(earliest, 7))
+    }
+    private var isToday: Bool { key == KalD.todayKey() }
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(k == KalD.todayKey() ? "I DAG" : "UKE " + String(KalWeek35.weekNo(KalWeek35.start(D))))
-                    .font(KalFont.mono(10.5)).tracking(1.3).foregroundStyle(t.acc)
-                Text(KalD.cap(KalD.fd(D))).font(KalFont.serif(24)).foregroundStyle(t.ink).lineLimit(1).minimumScaleFactor(0.7)
-            }
-            ForEach(allDay) { (e: KalEvent) in
-                Button(action: { s.openDetail(e) }) {
-                    Text(e.title).font(KalFont.ui(12.5, .bold)).foregroundStyle(t.calText(KalStore.shared.cal(e.cal))).lineLimit(1)
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(t.calColor(KalStore.shared.cal(e.cal)).opacity(0.16)))
-                }
-                .buttonStyle(.plain)
-            }
+            header
+            ForEach(allDay) { (e: KalEvent) in KalDayAllDay43(e: e) }
             if list.isEmpty {
                 Text("Ingen hendelser").font(KalFont.ui(13)).foregroundStyle(t.mut)
             }
-            ScrollView {
-                ZStack(alignment: .topLeading) {
-                    VStack(spacing: 0) {
-                        ForEach(first..<24, id: \.self) { (h: Int) in
-                            HStack(alignment: .top, spacing: 6) {
-                                Text(KalD.pad(h)).font(KalFont.mono(10)).foregroundStyle(t.mut2).frame(width: 22, alignment: .trailing)
-                                Rectangle().fill(t.line2).frame(height: 1).padding(.top, 6)
-                            }
-                            .frame(height: hourH, alignment: .top)
-                        }
-                    }
-                    ForEach(timed) { (e: KalEvent) in
-                        let startOff: Int = e.startMin - first * 60
-                        let top: CGFloat = CGFloat(startOff) / 60 * hourH + 6
-                        let durMin: Int = Swift.max(15, e.endMin - e.startMin)
-                        let rawH: CGFloat = CGFloat(durMin) / 60 * hourH - 2
-                        let h: CGFloat = Swift.max(22, rawH)
-                        let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
-                        Button(action: { s.openDetail(e) }) {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(e.title).font(KalFont.ui(12.5, .bold)).lineLimit(2)
-                                Text(KalD.hm(e.startMin) + "–" + KalD.hm(e.endMin) + (e.loc.isEmpty ? "" : " · " + e.loc))
-                                    .font(KalFont.ui(11)).lineLimit(1).opacity(0.8)
-                            }
-                            .foregroundStyle(t.calText(c))
-                            .padding(.horizontal, 7).padding(.vertical, 4)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(t.calColor(c).opacity(0.16)))
-                            .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 2).fill(t.calColor(c)).frame(width: 3) }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .frame(height: h)
-                        .padding(.leading, 30)
-                        .offset(y: top)
-                    }
-                }
-            }
-            .scrollIndicators(.hidden)
-            Button(action: { s.openNew(day: k) }) {
-                Text("+ Ny hendelse " + (k == KalD.todayKey() ? "i dag" : KalD.dl(D).lowercased()))
-                    .font(KalFont.ui(13.5, .bold)).foregroundStyle(Color.white)
-                    .frame(maxWidth: .infinity).frame(height: 40)
-                    .background(Capsule().fill(t.red))
-                    .contentShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            .hoverEffect(.highlight)
+            ScrollView { timeline }
+                .scrollIndicators(.hidden)
+            newButton
         }
         .padding(14)
         .frame(maxHeight: .infinity, alignment: .top)
         .background(t.bg)
+    }
+
+    private var header: some View {
+        let kicker: String = isToday ? "I DAG" : "UKE " + String(KalWeek35.weekNo(KalWeek35.start(day)))
+        let title: String = KalD.cap(KalD.fd(day))
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(kicker).font(KalFont.mono(10.5)).tracking(1.3).foregroundStyle(t.acc)
+            Text(title).font(KalFont.serif(24)).foregroundStyle(t.ink).lineLimit(1).minimumScaleFactor(0.7)
+        }
+    }
+
+    private var timeline: some View {
+        let first: Int = firstHour
+        return ZStack(alignment: .topLeading) {
+            KalDayHours43(first: first, hourH: hourH)
+            ForEach(timed) { (e: KalEvent) in KalDayBlock43(e: e, first: first, hourH: hourH) }
+        }
+    }
+
+    private var newButton: some View {
+        let label: String = "+ Ny hendelse " + (isToday ? "i dag" : KalD.dl(day).lowercased())
+        let k: String = key
+        return Button(action: { s.openNew(day: k) }) {
+            Text(label)
+                .font(KalFont.ui(13.5, .bold)).foregroundStyle(Color.white)
+                .frame(maxWidth: .infinity).frame(height: 40)
+                .background(Capsule().fill(t.red))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .hoverEffect(.highlight)
+    }
+}
+
+/// Heldagshendelse i dagspanelet.
+struct KalDayAllDay43: View {
+    @Environment(\.kal) private var t
+    let e: KalEvent
+
+    var body: some View {
+        let cal: KalCal? = KalStore.shared.cal(e.cal)
+        return Button(action: { KalStore.shared.openDetail(e) }) {
+            Text(e.title).font(KalFont.ui(12.5, .bold)).foregroundStyle(t.calText(cal)).lineLimit(1)
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 6).fill(t.calColor(cal).opacity(0.16)))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// Timelinjene (fra første time til 24).
+struct KalDayHours43: View {
+    @Environment(\.kal) private var t
+    let first: Int
+    let hourH: CGFloat
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(first..<24, id: \.self) { (h: Int) in
+                HStack(alignment: .top, spacing: 6) {
+                    Text(KalD.pad(h)).font(KalFont.mono(10)).foregroundStyle(t.mut2).frame(width: 22, alignment: .trailing)
+                    Rectangle().fill(t.line2).frame(height: 1).padding(.top, 6)
+                }
+                .frame(height: hourH, alignment: .top)
+            }
+        }
+    }
+}
+
+/// Én hendelse på tidslinjen.
+struct KalDayBlock43: View {
+    @Environment(\.kal) private var t
+    let e: KalEvent
+    let first: Int
+    let hourH: CGFloat
+
+    private var top: CGFloat {
+        let startOff: Int = e.startMin - first * 60
+        return CGFloat(startOff) / 60 * hourH + 6
+    }
+    private var height: CGFloat {
+        let durMin: Int = Swift.max(15, e.endMin - e.startMin)
+        let rawH: CGFloat = CGFloat(durMin) / 60 * hourH - 2
+        return Swift.max(22, rawH)
+    }
+    private var timeText: String {
+        let span: String = KalD.hm(e.startMin) + "–" + KalD.hm(e.endMin)
+        return e.loc.isEmpty ? span : span + " · " + e.loc
+    }
+
+    var body: some View {
+        let c: KalCal? = KalFag37.tint(KalStore.shared.cal(e.cal), e)
+        let fill: Color = t.calColor(c)
+        return Button(action: { KalStore.shared.openDetail(e) }) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(e.title).font(KalFont.ui(12.5, .bold)).lineLimit(2)
+                Text(timeText).font(KalFont.ui(11)).lineLimit(1).opacity(0.8)
+            }
+            .foregroundStyle(t.calText(c))
+            .padding(.horizontal, 7).padding(.vertical, 4)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(RoundedRectangle(cornerRadius: 8).fill(fill.opacity(0.16)))
+            .overlay(alignment: .leading) { RoundedRectangle(cornerRadius: 2).fill(fill).frame(width: 3) }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .frame(height: height)
+        .padding(.leading, 30)
+        .offset(y: top)
     }
 }
 
