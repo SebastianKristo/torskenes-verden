@@ -2,6 +2,43 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.38.0] – 21.10.2026 · prompt 43 + AI-køen – Media, Open WebUI og nettsøk
+- **Media (nytt):** Sonarr, Radarr, qBittorrent og Prowlarr i én side på web og i appene, med Kommer snart, bibliotek og legg til serie/film (kvalitet, overvåking, type). I tillegg:
+  - interaktivt søk med grønt/rødt for seedere
+  - nedlastinger med pause, kø, filer, slett og alt-hastighet
+  - egne magnet-lenker, og legg til og test indeksere
+  - Glimt («legg til Severance i 4K», «finn en episode av The Rookie under 500 MB»)
+  - varsler når noe er ferdig eller står fast, og en Media-kalender
+  Nøklene ligger på serveren, og bare admin setter dem opp under Integrasjoner → MEDIA (med oppsett steg for steg).
+- **Widgets:** Media-widgets på Hjem, iPhone, Android og Samsung, og et widgetgalleri i Innstillinger. På Android legger du dem til rett fra appen.
+- **AI går gjennom én kø:** én forespørsel om gangen gruppert per modell, så jobber ikke lenger blir «Avbrutt» når Ollama bytter modell. I tillegg:
+  - egen keep_alive per modell
+  - strømming med egne tidsgrenser
+  - ingen dobbeltstart (morgenbriefen startes én gang)
+  - maks 2 nye forsøk
+  - lastetid, genereringstid og årsak i Jobber
+- **Open WebUI som backend** for alle AI-kall, med Ollama direkte som alternativ (AI → API og nøkler). Tenkemodeller som qwen3 går direkte til Ollama med tenking av, fordi Open WebUI ikke sender det videre.
+- **Nettsøk i Glimt:** eget søk (Open WebUI-søk, SearXNG, Brave eller DuckDuckGo) med dato og klokkeslett, og svar fra treffene med kilde. Glimt velger selv verktøy før den svarer, og tar bare med relevante «Mine data». Strømpris for NO1–NO5.
+- **Claude-import:** importer samtaler og minne fra en Claude-eksport (AI-kontroll → Importer). Samtalene havner i mappen «Claude».
+- **Rettet:**
+  - Vær på web kan klikkes igjen.
+  - Kalender på Mac fryser ikke lenger (Nøkkelringen ble lest på hovedtråden), og menylinje-menyen virker.
+  - Wiggle-redigering virker på iPhone.
+  - Hjem deles riktig på utbrettet Fold.
+  - Search Console sier hvorfor statistikken mangler og kan hente på nytt.
+- **Kalender:**
+  - Oppdater appen fra selve appen på Mac og Android.
+  - Velg oppsett på iPad og Fold i onboarding.
+  - På web: × til høyre, «Tema: følger» virker, Liste i full bredde, rød «+ Ny hendelse» og Glimt-orben.
+- **Finans:** nytt saldokort, Liste gruppert per måned, og rød Glimt-knapp i Søk og Liste.
+- **Gjøremål:** «+ Ny liste» står alltid sist, og du kan endre rekkefølgen på listene.
+- **Domener:** Glimt-raden ligger i domenekortet.
+- **Chat:**
+  - Dra svaret i søket ned til Chat med samme svar.
+  - Bedre send-knapp.
+  - Auto velger ikke lenger «Kode» for spørsmål om England.
+- **Stor skjerm:** egne oppsett for Gjøremål, Media og Mer på iPad og Fold.
+
 ## [4.37.0] – 20.10.2026 · prompt 42 – Boliger på web, raskt Glimt-søk og Vel fremme
 - **Boliger på web (nytt design):**
   - Forsiden viser alle boligene på ett ark (2a). Inne i en bolig er det en kontobok (1b) med årsbokser øverst på alle fanene.
