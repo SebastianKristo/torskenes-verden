@@ -49,6 +49,7 @@ import { webSearch, webPrompt, webMeta, webFact } from './web-search.js'; // pro
 import { powerFact, powerPrompt } from './power-price.js'; // prompt 44: strømpris
 import { backendConfig, maskSecrets } from './ai-gate.js';
 import { jobStart, jobUpdate, jobEnd } from './ai-run.js'; // prompt 44: Chat i jobbloggen (backend, verktøy, nettsøk)
+import { memoryPrompt43 } from './ai-memory43.js'; // prompt 43: AI-minne i systemprompten
 
 const q = (sql) => db.prepare(sql);
 const FILES = resolve(config.dataDir, 'chat', 'files');
@@ -254,6 +255,8 @@ function systemPrompt(u, s, { data = null, fileTexts = [] } = {}) {
   // Prompt 44: dato og klokkeslett i Oslo i alle svar («Nå: tirsdag 21. oktober 2026 kl. 10.42 (Europe/Oslo)»).
   const parts = [PERSONAS[s.persona] ?? PERSONAS.standard, lang === 'en' ? 'Answer in English.' : 'Svar på norsk bokmål.', `${osloNowLine()}.`];
   if (s.system) parts.push(s.system);
+  const mem = memoryPrompt43(u); // prompt 43: AI-minnet (bl.a. importert fra Claude)
+  if (mem) parts.push(mem);
   if (data) parts.push(`Brukerens egne data (sammendrag, bruk bare når det er relevant, ikke finn på tall):\n${Object.values(data).join('\n')}`);
   for (const f of fileTexts) parts.push(`Vedlegg «${f.name}»:\n${f.text}`);
   return parts.join('\n\n');

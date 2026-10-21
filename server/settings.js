@@ -76,11 +76,15 @@ export const SCHEMA = [
     ['sonarr_url', 'URL', e('SONARR_URL', 'http://192.168.1.20:8989')],
     ['sonarr_key', 'API-nøkkel', e('SONARR_API_KEY'), true],
     ['sonarr_days', 'Dager frem', e('SONARR_DAYS', '14')],
+    ['sonarr_root', 'Rotmappe for serier', e('SONARR_ROOT', '/data/media/tv')], // prompt 43: Media
+    ['sonarr_profile', 'Standard kvalitetsprofil', e('SONARR_PROFILE', 'HD-1080p')],
   ]],
   ['Radarr', { id: 'radarr', scope: 'personal', domain: 'radarr.video', category: 'Media', help: 'API-nøkkelen finner du i Radarr under Settings → General → Security → API Key.' }, [
     ['radarr_url', 'URL', e('RADARR_URL', 'http://192.168.1.20:7878')],
     ['radarr_key', 'API-nøkkel', e('RADARR_API_KEY'), true],
     ['radarr_days', 'Dager frem', e('RADARR_DAYS', '14')],
+    ['radarr_root', 'Rotmappe for filmer', e('RADARR_ROOT', '/data/media/film')], // prompt 43: Media
+    ['radarr_profile', 'Standard kvalitetsprofil', e('RADARR_PROFILE', 'Ultra-HD')],
   ]],
   ['Plex', { id: 'plex', scope: 'personal', domain: 'plex.tv', category: 'Media', help: 'Plex må være tilgjengelig fra serveren som kjører dashbordet.', guide: [
     ['Finn adressen', 'Adressen er IP-en til serveren med port 32400, for eksempel http://192.168.1.20:32400. Du finner IP-en i Plex under Innstillinger → Fjerntilgang, eller i ruteren.'],
@@ -100,6 +104,18 @@ export const SCHEMA = [
     ['jf_url', 'URL', e('JELLYFIN_URL', 'http://192.168.1.20:8096')],
     ['jf_key', 'API-nøkkel', e('JELLYFIN_API_KEY'), true],
     ['jf_user', 'Brukernavn (for «Nylig lagt til»)', e('JELLYFIN_USER')],
+  ]],
+  // Prompt 43: Media. qBittorrent og Prowlarr er serveroppsett (bare admin); nøklene sendes aldri til klienten.
+  ['qBittorrent', { id: 'qbittorrent', domain: 'qbittorrent.org', category: 'Media', help: 'Web UI-adressen (port 8080), brukernavn og passord. Tillat bare Homelab-serverens IP, og ikke åpne Web UI mot internett.' }, [
+    ['qbit_url', 'Web UI-adresse', e('QBIT_URL', 'http://192.168.1.20:8080')],
+    ['qbit_user', 'Brukernavn', e('QBIT_USER', 'admin')],
+    ['qbit_pass', 'Passord', e('QBIT_PASSWORD'), true],
+    ['qbit_save', 'Standard lagringsmappe', e('QBIT_SAVE_PATH', '/data/downloads')],
+  ]],
+  ['Prowlarr', { id: 'prowlarr', domain: 'prowlarr.com', category: 'Media', help: 'API-nøkkelen finner du i Prowlarr under Settings → General → Security → API Key.' }, [
+    ['prowlarr_url', 'Adresse', e('PROWLARR_URL', 'http://192.168.1.20:9696')],
+    ['prowlarr_key', 'API-nøkkel', e('PROWLARR_API_KEY'), true],
+    ['flaresolverr_url', 'FlareSolverr (valgfri)', e('FLARESOLVERR_URL')],
   ]],
   ['Trading 212', { id: 't212', scope: 'personal', domain: 'trading212.com', category: 'Økonomi', help: 'Lag nøkkelen på app.trading212.com under Innstillinger → API, i samme konto og miljø (Live eller Demo). Gi bare lesetilgang.' }, [
     ['t212_key', 'API-nøkkel (Key ID)', e('TRADING212_API_KEY'), true],

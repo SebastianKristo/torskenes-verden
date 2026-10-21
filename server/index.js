@@ -50,6 +50,7 @@ import { cals39Api, googleMap39Api, rec39Api, week39Api } from './api39.js'; // 
 import { twofa40Api, finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
 import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, birthdays41Api, mai17Api, kalender41Api, mountAuth41, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
 import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
+import { media43Api, mediaCalendarsMw43, startMediaWatch43, widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, kalUpdate43Api, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -138,6 +139,9 @@ app.get('/finans/', async (c) => (sessionUser(c) || (!needsSetup() && MOBILE_UA.
   ? html(c, await page('finans/index.html')) : c.redirect('/login?next=/finans/'));
 app.get('/finans/manifest.webmanifest', async (c) => c.body(await page('finans/manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
 app.get('/finans/sw.js', async (c) => c.body(await page('finans/sw.js'), 200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache' }));
+app.use('/finans/api/summary', summaryMw43); // prompt 43: spentMonth, day, daysInMonth (saldokortet)
+app.use('/finans/api/transactions', transactionsMw43); // prompt 43: months:[{month, label, count, net}]
+app.route('/finans/api', finans43Api); // prompt 43: /overview, /transactions/months
 app.route('/finans/api', finans42Api); // prompt 42: Glimt-søk (SQL før LLM, tankesteg), filter, avanserte oppgaver + PDF, Boliger web, import til bolig, aksje-logoer
 app.route('/finans/api', finans40Api); // prompt 40: added, PATCH alt + historikk, Les på nytt, POST /search/ask (før routes.js)
 app.route('/finans/api', finansApi);
@@ -625,6 +629,7 @@ app.get('/api/media/poster', authOrToken, async (c) => {
     return c.body(img.body, 200, { 'Content-Type': /^image\//.test(img.type) ? img.type : 'image/jpeg', 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
   } catch (e) { console.warn('[media/poster]', e.message); return c.body(null, 502); }
 });
+app.route('/api/media', media43Api); // prompt 43: Media (Sonarr, Radarr, qBittorrent, Prowlarr, Glimt, webhooks) – etter /now, /recent, /history og /poster
 authed.get('/space/tle', proxy(api.getTle));
 authed.get('/space/apod', proxy(api.getApod));
 authed.get('/space/gallery/:key', proxy((c) => {
@@ -647,6 +652,9 @@ app.route('/', tilesApi);
 app.route('/api/family/health/ha', health42Api); // prompt 42: helse fra Home Assistant
 app.use('/api/family/*', familyHealthMw42); // prompt 42: health.source/sourceDevice/limited/stale
 app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse
+app.use('/api/tasks', tasksOrderMw43); // prompt 43: listOrder
+app.use('/api/tasks/lists', tasksOrderMw43);
+app.route('/api/tasks', tasks43Api); // prompt 43: GET/PUT /lists/order
 app.route('/api/tasks', tasks42Api); // prompt 42: /glimt/log
 app.use('/api/tasks/:id{[0-9]+}', tasksAfter40); // prompt 40: «Nå kan du: …» når punktet før er gjort, placeName/after i PATCH
 app.use('/api/tasks', tasksCreate40); // prompt 40: POST /api/tasks godtar placeName og after
@@ -689,6 +697,8 @@ app.route('/api/birthdays', birthdaysApi);
 app.get('/api/widgets/birthdays', authOrToken, (c) => c.json(birthdaysWidget(c.get('user'))));
 app.route('/api/space', spaceApi); // prompt 32: /tle?group=, /apod?days=7, /mars (før authed sine /space-ruter)
 app.route('/api/rom', romApi); // prompt 32: Rom – APOD (7 dager), Mars-rovere, satellitter (SGP4), NASA-nøkkel på serveren
+app.route('/api/widgets', widgets43Api); // prompt 43: /media og /catalog
+app.route('/api/apps/kalender', kalUpdate43Api); // prompt 43: /latest?platform=mac|android&channel=stabil|beta (uinnlogget) og /:versjon/:fil
 app.route('/api/widgets/trials', trialWidgetsApi); // prompt 32: prøveperiode-widgets (GET kompakt, POST /:id «Avsluttet»)
 app.route('/api/integrations', integrationsApi);
 app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste under norsk navn
@@ -702,6 +712,8 @@ app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kale
 // Prompt 33 (SERVER33): Kalender-appen – kalendere (visning, farger, egne), vær 16 dager, appCalendar på hendelser, widgets.
 app.route('/api/kalender/ha', kal35HaApi); // prompt 35
 app.route('/api/kalender', kal37Api); // prompt 37: /subjects (fagfarger) og /geo (adresse + kart)
+app.use('/api/kalender/calendars', mediaCalendarsMw43); // prompt 43: innebygd kalender «Media» (Sonarr/Radarr)
+app.use('/api/kalender/calendars/*', mediaCalendarsMw43);
 app.use('/api/kalender/calendars', abCalendarsMw42); // prompt 42: innebygd kalender «Abonnementer» (trekkdatoer)
 app.use('/api/kalender/calendars/*', abCalendarsMw42);
 app.route('/api/kalender/abonnementer', abApi42);
@@ -729,6 +741,7 @@ app.get('/api/system/changelog', (c) => { const u = new URL(c.req.url); u.pathna
 app.route('/api/glimt/news-digest', newsDigestApi); // prompt 40: samme som POST /api/news/glimt
 app.route('/api/glimt/memory', glimtMemoryApi); // prompt 33: GET/POST/DELETE, POST /:id/apply (sesjon eller app-token, per bruker)
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
+app.route('/api/ai/memory', aiMemory43Api); // prompt 43: AI-minne per bruker
 app.route('/api/ai', rec39Api); // prompt 39: ✦ Glimt anbefaler modeller
 app.route('/api/ai', aiApi); // prompt 34: AI-kontroll
 app.use('/api/brief', briefJul40);
@@ -743,6 +756,7 @@ app.route('/api/weather/week-summary', week39Api); // prompt 39: Glimt · ukas v
 app.route('/api/weather/place', weather35Api); // prompt 35
 app.route('/api/glimt', glimtApi); // prompt 34: POST /api/glimt {prompt, tool:'calendar'} (etter /api/glimt/memory)
 app.route('/api/assist', assistApi); // prompt 31: Glimt-ruteren (sesjon eller app-token, per bruker)
+app.route('/api/chat/import', claudeImport43Api); // prompt 43: importer fra Claude
 app.route('/api/chat', chatApi); // prompt 27: Chat (Open WebUI eller Ollama/Gemini/Groq direkte), sesjon eller app-token
 const domainPill = async (c) => {
   if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403);
@@ -752,7 +766,11 @@ app.get('/api/domains/summary', authOrToken, domainPill);
 // Prompt 30: Test token i Innstillinger → Domener (samme tilgang som /domains/api: bare admin).
 app.post('/api/domains/token/verify', async (c) => { const u = new URL(c.req.url); u.pathname = '/domains/api/token/verify'; return app.fetch(new Request(u, { method: 'POST', headers: c.req.raw.headers, body: await c.req.arrayBuffer() }), c.env); });
 app.get('/api/domener/sammendrag', authOrToken, domainPill);
+app.use('/api/domains/overview', gscOverviewMw43); // prompt 43: Google Søk uten tall → årsak
+app.use('/api/domains/:domain/gsc', gscViewMw43);
+app.route('/api/domains', gscDomains43Api); // prompt 43: /:domain/gsc/refresh (Hent nå) og /:domain/gsc/test
 app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt) og /:domain/gsc (Google Search Console), bare admin
+app.route('/api/gsc', gsc43Api); // prompt 43: /test (diagnose per eiendom)
 app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
 app.use('/api/weather/full', weatherFull41); // prompt 41: ski
 app.route('/api/weather', weather41Api); // prompt 41: GET/PUT /layout (Rediger Vær)
@@ -765,7 +783,7 @@ app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); }
 
 app.onError((err, c) => {
   console.error(err);

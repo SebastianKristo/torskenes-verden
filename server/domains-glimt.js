@@ -176,7 +176,7 @@ export async function dailySummaries(now = Date.now()) {
 const G_AUTH = 'https://accounts.google.com/o/oauth2/v2/auth';
 const G_TOKEN = 'https://oauth2.googleapis.com/token';
 const G_REVOKE = 'https://oauth2.googleapis.com/revoke';
-const G_WM = 'https://www.googleapis.com/webmasters/v3';
+const G_WM = 'https://searchconsole.googleapis.com/webmasters/v3'; // prompt 43: samme API, vertsnavnet Google dokumenterer for Search Console API
 const GSC_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly';
 const SCOPES = ['openid', 'email', GSC_SCOPE];
 // Samme Google-klient som Bursdager/Kalender (Innstillinger → Integrasjoner → Google). Egen omdirigering kan settes med gscRedirectUri.
@@ -275,12 +275,12 @@ async function fakeGoogle(url, init = {}) {
 }
 
 /* --- Henting og lagring --- */
-const LAG = 2; // GSC har 2–3 dagers forsinkelse
+const LAG = 3; // GSC har 2–3 dagers forsinkelse (prompt 43: endDate = i dag − 3, ellers blir de siste dagene tomme)
 async function fetchRange(user, domain, site, from, to) {
   const path = `/sites/${encodeURIComponent(site)}/searchAnalytics/query`;
-  const day = await wm(user, 'POST', path, { startDate: from, endDate: to, dimensions: ['date'], rowLimit: 25000, dataState: 'all' });
-  const qq = await wm(user, 'POST', path, { startDate: from, endDate: to, dimensions: ['date', 'query'], rowLimit: 25000, dataState: 'all' });
-  const pg = await wm(user, 'POST', path, { startDate: from, endDate: to, dimensions: ['date', 'page'], rowLimit: 25000, dataState: 'all' });
+  const day = await wm(user, 'POST', path, { startDate: from, endDate: to, dimensions: ['date'], type: 'web', rowLimit: 25000, dataState: 'all' });
+  const qq = await wm(user, 'POST', path, { startDate: from, endDate: to, dimensions: ['date', 'query'], type: 'web', rowLimit: 25000, dataState: 'all' });
+  const pg = await wm(user, 'POST', path, { startDate: from, endDate: to, dimensions: ['date', 'page'], type: 'web', rowLimit: 25000, dataState: 'all' });
   db.transaction(() => {
     for (const t of ['gsc_daily', 'gsc_query', 'gsc_page']) q(`DELETE FROM ${t} WHERE user_id=? AND domain=? AND date>=? AND date<=?`).run(user, domain, from, to);
     const d = q('INSERT OR REPLACE INTO gsc_daily VALUES(?,?,?,?,?,?,?)'), dq = q('INSERT OR REPLACE INTO gsc_query VALUES(?,?,?,?,?,?,?,?)'), dp = q('INSERT OR REPLACE INTO gsc_page VALUES(?,?,?,?,?,?,?,?)');
@@ -387,7 +387,7 @@ gscApi.get('/callback', async (c) => {
     const cur = conf(st.user);
     const refresh = j.refresh_token ? sealFor(st.user, j.refresh_token) : cur.refresh;
     if (!refresh) throw new Error('Google ga ikke noe refresh-token. Fjern tilgangen under myaccount.google.com og prøv igjen.');
-    setConf(st.user, { refresh, email, connectedAt: new Date().toISOString(), error: null });
+    setConf(st.user, { refresh, email, connectedAt: new Date().toISOString(), error: null, scope: j.scope ?? null }); // prompt 43: scope lagres for diagnosen
     accessCache.set(st.user, { token: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 });
     const { sites } = await loadSites(st.user).catch(() => ({ sites: {} }));
     for (const d of Object.keys(sites)) syncGsc(st.user, d).catch((e) => console.warn('[gsc]', e.message));
@@ -642,8 +642,13 @@ export function startDomainGlimtScheduler() {
   const done = new Set();
   timer = setInterval(() => {
     const hm = osloHm(), day = osloDate();
-    if (hm >= '06:00' && hm < '06:30' && !done.has(`gsc:${day}`)) { done.add(`gsc:${day}`); dailyGsc().catch((e) => console.warn('[gsc]', e.message)); }
+    // Prompt 43: hentejobben tar igjen en glemt morgen (serveren startet etter 06:30) – én gang per dag, husket i kv.
+    if (hm >= '06:00' && !done.has(`gsc:${day}`) && kv.get(OWNER_GSC43, 'gsc43_daily', null) !== day) { done.add(`gsc:${day}`); kv.set(OWNER_GSC43, 'gsc43_daily', day); dailyGsc().catch((e) => console.warn('[gsc]', e.message)); }
     if (hm >= '07:00' && hm < '07:30' && !done.has(`sum:${day}`)) { done.add(`sum:${day}`); dailySummaries().catch((e) => console.warn('[domener]', e.message)); }
   }, 60_000);
   timer.unref?.();
 }
+
+/* ---------------- Prompt 43: diagnose og «Hent nå» (gsc43.js) ---------------- */
+const OWNER_GSC43 = '__gsc43';
+export const _gsc43 = { conf, setConf, wm, accessToken, loadSites, connected, googleClient, mockGsc, fetchG, GSC_SCOPE, LAG, osloDate, addDays };

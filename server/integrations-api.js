@@ -32,6 +32,7 @@ import { testBackgrounds } from './background.js';
 import { iconSvg } from './icons.js';
 import { clearCache } from './cache.js';
 import { testOpenWebui } from './chat.js';
+import { mediaTest43, mediaHookPath43 } from './media43.js'; // prompt 43: Test tilkobling og webhook-token for MEDIA
 
 const MOCK = process.env.MOCK_DATA === '1';
 
@@ -97,13 +98,18 @@ export const INTEGRATIONS = [
     F('jf_key', 'API-nøkkel', 'secret', mine('jf_key', true), { required: true, help: 'Kontrollpanel → Avansert → API-nøkler' }),
     F('jf_user', 'Brukernavn (for «Nylig lagt til»)', 'text', mine('jf_user')),
   ] },
-  { id: 'sonarr', name: 'Sonarr', group: 'Media', scope: P, test: viaGroup('Sonarr'), fields: [
-    F('sonarr_url', 'Adresse', 'url', mine('sonarr_url'), { required: true }),
+  // Prompt 43: Sonarr og Radarr med rotmappe og standardprofil; testen svarer «✓ Sonarr v4 svarte på 142 ms».
+  { id: 'sonarr', name: 'Sonarr', group: 'Media', scope: P, test: mediaTestOf('sonarr', ['sonarr_url', 'sonarr_key']), fields: [
+    F('sonarr_url', 'Adresse', 'url', mine('sonarr_url'), { required: true, help: 'For eksempel http://home.kristo.no:8989' }),
     F('sonarr_key', 'API-nøkkel', 'secret', mine('sonarr_key', true), { required: true, help: 'Settings → General → Security → API Key' }),
+    F('sonarr_root', 'Rotmappe for serier', 'text', mine('sonarr_root'), { help: '/data/media/tv' }),
+    F('sonarr_profile', 'Standard kvalitetsprofil', 'text', mine('sonarr_profile'), { help: 'HD-1080p (4K fra Glimt → Ultra-HD)' }),
   ] },
-  { id: 'radarr', name: 'Radarr', group: 'Media', scope: P, test: viaGroup('Radarr'), fields: [
-    F('radarr_url', 'Adresse', 'url', mine('radarr_url'), { required: true }),
+  { id: 'radarr', name: 'Radarr', group: 'Media', scope: P, test: mediaTestOf('radarr', ['radarr_url', 'radarr_key']), fields: [
+    F('radarr_url', 'Adresse', 'url', mine('radarr_url'), { required: true, help: 'For eksempel http://home.kristo.no:7878' }),
     F('radarr_key', 'API-nøkkel', 'secret', mine('radarr_key', true), { required: true, help: 'Settings → General → Security → API Key' }),
+    F('radarr_root', 'Rotmappe for filmer', 'text', mine('radarr_root'), { help: '/data/media/film' }),
+    F('radarr_profile', 'Standard kvalitetsprofil', 'text', mine('radarr_profile'), { help: 'Ultra-HD' }),
   ] },
   // Prompt 26: Kalendere (Skole-iCal og Canvas-iCal, med Google Kalender og Home Assistant som lenker). Erstatter «calendar»,
   // som fortsatt svarer på /api/integrations/calendar og står i listen med hidden:true for eldre klienter.
@@ -147,6 +153,18 @@ export const INTEGRATIONS = [
     F('trk_parcelsapp_key', 'API-nøkkel', 'secret', mine('trk_parcelsapp_key', true), { required: true, help: 'Siste reserve. Gratisplanen har 3 oppslag i måneden.' }),
   ] },
   // Serveroppsett (bare admin)
+  // Prompt 43: qBittorrent og Prowlarr (MEDIA). Passord og nøkler lagres kryptert på serveren og brukes bare av /api/media.
+  { id: 'qbittorrent', name: 'qBittorrent', group: 'Media', scope: S, test: mediaTestOf('qbittorrent', ['qbit_url', 'qbit_pass', 'qbit_user']), fields: [
+    F('qbit_url', 'Web UI-adresse', 'url', cfgStore('qbit_url'), { required: true, help: 'For eksempel http://home.kristo.no:8080' }),
+    F('qbit_user', 'Brukernavn', 'text', cfgStore('qbit_user'), { required: true }),
+    F('qbit_pass', 'Passord', 'secret', cfgStore('qbit_pass', true), { required: true }),
+    F('qbit_save', 'Standard lagringsmappe', 'text', cfgStore('qbit_save'), { help: '/data/downloads' }),
+  ] },
+  { id: 'prowlarr', name: 'Prowlarr', group: 'Media', scope: S, test: mediaTestOf('prowlarr', ['prowlarr_url', 'prowlarr_key']), fields: [
+    F('prowlarr_url', 'Adresse', 'url', cfgStore('prowlarr_url'), { required: true, help: 'For eksempel http://home.kristo.no:9696' }),
+    F('prowlarr_key', 'API-nøkkel', 'secret', cfgStore('prowlarr_key', true), { required: true, help: 'Settings → General → Security → API Key' }),
+    F('flaresolverr_url', 'FlareSolverr (valgfri)', 'url', cfgStore('flaresolverr_url'), { help: 'http://home.kristo.no:8191' }),
+  ] },
   { id: 'ha', name: 'Home Assistant', group: 'Hjem', scope: S, test: viaGroup('Home Assistant'), fields: [
     F('ha_url', 'Adresse', 'url', cfgStore('ha_url'), { required: true, help: 'For eksempel http://192.168.1.20:8123' }),
     F('ha_token', 'Long-lived token', 'secret', cfgStore('ha_token', true), { required: true, help: 'Home Assistant → Profil → Sikkerhet → Long-lived access tokens' }),
@@ -219,6 +237,8 @@ const META = {
   jellyfin: ['Annet', 'J', '#7b4fd6', 'Mediaserver', 'jellyfin'],
   sonarr: ['Annet', 'S', '#2f8fd8', 'Serier', 'sonarr'],
   radarr: ['Annet', 'R', '#e0a325', 'Filmer', 'radarr'],
+  qbittorrent: ['Annet', 'qB', '#2f67ba', 'Nedlastinger', 'qbittorrent'],
+  prowlarr: ['Annet', 'P', '#e66000', 'Indeksere', 'prowlarr'],
   icons: ['Annet', '✦', '#5b6478', 'Iconify via Homelab-cache', null],
   photos: ['Annet', 'U', '#3a3a3a', 'Bakgrunner fra Unsplash og Pexels', 'backgrounds'],
 };
@@ -235,7 +255,64 @@ const OWN_GUIDE = {
   finn: [['Varsler', 'Lagre søk på Finn med varsel til e-posten, og la et filter flytte Finn-e-postene til en egen mappe.'], ['Mappen', 'Skriv navnet på mappen (samme e-postkonto som Kvitteringer).']],
   ai: [['Gemini', 'Gå til aistudio.google.com → Get API key og lag en nøkkel. Gratisnivået holder for vanlig bruk.'], ['Groq (valgfritt)', 'console.groq.com → API Keys.'], ['Ollama (valgfritt)', 'Adressen til din egen Ollama-server, for eksempel http://192.168.1.30:11434.']],
   icons: [['Ingen nøkkel', 'Ikonene hentes fra Iconify og lagres på serveren. Test henter ett ikon.']],
+  // Prompt 43: MEDIA-gruppen (claude-code-integrasjoner-media.md).
+  sonarr: [
+    ['Finn API-nøkkelen', 'I Sonarr: Settings → General → Security → API Key. Kopier nøkkelen.'],
+    ['Adresse og port', 'Sonarr svarer på port 8989. Har du satt URL Base, må den være med.', 'http://192.168.1.20:8989/sonarr'],
+    ['Samme mapper i alle containerne', 'Bruk én felles /data-mappe i Sonarr, Radarr og qBittorrent, så flyttingen blir en hardlink og ikke en kopi.', 'volumes:\n  - /srv/data:/data\n# /data/downloads · /data/media/tv · /data/media/film'],
+    ['Rotmappe', 'Settings → Media Management → Root Folders → legg til /data/media/tv.', '/data/media/tv'],
+    ['Koble til qBittorrent', 'Settings → Download Clients → + → qBittorrent, port 8080, kategori tv-sonarr.', 'tv-sonarr'],
+    ['Standard kvalitetsprofil', 'Brukes når du legger til fra Media eller Glimt. «4K» i Glimt velger Ultra-HD.', 'HD-1080p'],
+    ['Webhook', 'Settings → Connect → + → Webhook. Velg On Grab, On Import, On Upgrade og On Health Issue.', 'https://home.kristo.no/api/media/hook/sonarr'],
+  ],
+  radarr: [
+    ['Finn API-nøkkelen', 'I Radarr: Settings → General → Security → API Key.'],
+    ['Adresse og port', 'Radarr svarer på port 7878.', 'http://192.168.1.20:7878'],
+    ['Rotmappe', 'Settings → Media Management → Root Folders → /data/media/film.', '/data/media/film'],
+    ['Koble til qBittorrent', 'Settings → Download Clients → + → qBittorrent, port 8080, kategori radarr.', 'radarr'],
+    ['Minimum Availability', 'Announced = Annonsert, In Cinemas = På kino, Released = Utgitt digitalt. Standard i Media er Utgitt digitalt.'],
+    ['Webhook', 'Settings → Connect → + → Webhook (On Grab, On Import, On Upgrade, On Health Issue).', 'https://home.kristo.no/api/media/hook/radarr'],
+  ],
+  qbittorrent: [
+    ['Slå på Web UI', 'Verktøy → Innstillinger → Web UI, port 8080. I Docker står et midlertidig passord i loggen.', 'docker logs qbittorrent | grep -i password'],
+    ['Eget brukernavn og passord', 'Bytt til et eget brukernavn og et sterkt passord under Web UI → Autentisering.'],
+    ['Bare Homelab-serveren', 'Tillat bare Homelab-serverens IP, og ikke åpne Web UI mot internett.'],
+    ['Kategorier', 'Lag kategoriene tv-sonarr og radarr med hver sin mappe.', 'tv-sonarr → /data/downloads/tv\nradarr → /data/downloads/film'],
+    ['Varsel når ferdig', 'Innstillinger → Nedlastinger → «Kjør eksternt program når torrent er ferdig».', 'curl -s -X POST "https://home.kristo.no/api/media/hook/qbit" -d "hash=%I&name=%N"'],
+    ['Alt-hastighet', 'Innstillinger → Fart → Alternative fartsgrenser, for eksempel 5 MB/s ned. Slås av og på fra Media.'],
+  ],
+  prowlarr: [
+    ['Finn API-nøkkelen', 'I Prowlarr: Settings → General → Security → API Key.'],
+    ['Koble til Sonarr og Radarr', 'Settings → Apps → + → Sonarr og Radarr med Full Sync.', 'Prowlarr: http://prowlarr:9696\nSonarr:   http://sonarr:8989\nRadarr:   http://radarr:7878'],
+    ['Legg til indeksere', 'Fra Media → Prowlarr → + Legg til indekser, eller i Prowlarr under Indexers.'],
+    ['FlareSolverr (valgfritt)', 'Noen indeksere ligger bak Cloudflare. Start FlareSolverr og gi indekserne taggen flaresolverr.', 'docker run -d --name flaresolverr -p 8191:8191 ghcr.io/flaresolverr/flaresolverr'],
+    ['Webhook', 'Settings → Connect → + → Webhook (On Health Issue).', 'https://home.kristo.no/api/media/hook/prowlarr'],
+  ],
+  jellyfin: [
+    ['Finn adressen', 'Jellyfin svarer på port 8096.', 'http://192.168.1.20:8096'],
+    ['Lag en API-nøkkel', 'Dashbord → API-nøkler → + → gi den navnet Homelab.'],
+    ['Bibliotek', 'Lag bibliotek for serier på /data/media/tv og filmer på /data/media/film.'],
+    ['Koble Sonarr og Radarr', 'Settings → Connect → + → Emby / Jellyfin, så biblioteket oppdateres når noe er lastet ned.'],
+    ['Velg Jellyfin i Media', 'Media → ⚙ → Spill av med → Jellyfin.'],
+    ['Test', 'Trykk Test tilkobling. Testen henter servernavn, versjon, antall som spiller nå, og sjekker at brukeren finnes.'],
+  ],
+  plex: [
+    ['Finn adressen', 'Plex svarer på port 32400, for eksempel http://192.168.1.20:32400.'],
+    ['Finn X-Plex-Token', 'Åpne en film eller episode i Plex → ⋯ → Hent info → Vis XML. Adressen slutter med X-Plex-Token=…', 'http://192.168.1.20:32400/library/metadata/123?X-Plex-Token=AbCdEf123456'],
+    ['Bibliotek på samme mapper', 'Bruk /data/media/tv og /data/media/film, de samme mappene som Sonarr og Radarr.'],
+    ['Koble Sonarr og Radarr', 'Settings → Connect → + → Plex Media Server.'],
+    ['Velg Plex i Media', 'Media → ⚙ → Spill av med → Plex.'],
+  ],
 };
+// Prompt 43: Test tilkobling for MEDIA med brukerens/serverens lagrede verdier («✓ Sonarr v4 svarte på 142 ms», «Mangler API-nøkkel»).
+const STORE_OF = (id, k) => byId.get(id)?.fields.find((f) => f.key === k)?.store;
+function mediaTestOf(id, keys) {
+  return async (u) => {
+    const vals = Object.fromEntries(keys.map((k) => [k, String(STORE_OF(id, k)?.get(u) ?? '')]));
+    return mediaTest43(id, vals);
+  };
+}
+const MEDIA43 = new Set(['sonarr', 'radarr', 'qbittorrent', 'prowlarr', 'jellyfin', 'plex']);
 const GROUPS = new Map(SCHEMA.map(([name, meta]) => [meta.id, { name, ...meta }]));
 const stepsOf = (list) => list.map(([title, text, code], i) => ({ n: i + 1, title, text, ...(code ? { code } : {}) }));
 function guideOf(x) {
@@ -246,10 +323,12 @@ function guideOf(x) {
   if (g.guide?.length) return stepsOf(m[5] ? g.guide.filter(([t]) => m[5].includes(t)) : g.guide);
   return g.help ? stepsOf([['Slik gjør du', g.help]]) : [];
 }
-function metaOut(x, status) {
+function metaOut(x, status, fields = null) {
   const [category, badge, color, description] = META[x.id] ?? ['Annet', x.name.slice(0, 2).toUpperCase(), '#5b6478', ''];
-  const statusText = status === 'ok' ? 'Tilkoblet' : status === 'error' ? 'Tilkoblingen feilet' : x.id === 'calendars' || x.id === 'calendar' ? 'Mangler iCal-adresse' : 'Mangler API-nøkkel';
-  return { category, badge, color, description, statusText, guide: guideOf(x) };
+  // Prompt 43: MEDIA viser hvilket felt som mangler («Mangler api-nøkkel», «Mangler passord»).
+  const firstMissing = MEDIA43.has(x.id) && fields ? x.fields.find((f, i) => f.required && !fields[i]?.saved) : null;
+  const statusText = status === 'ok' ? 'Tilkoblet' : status === 'error' ? 'Tilkoblingen feilet' : firstMissing ? `Mangler ${firstMissing.label.replace(/ \(valgfri\)$/, '').toLowerCase()}` : x.id === 'calendars' || x.id === 'calendar' ? 'Mangler iCal-adresse' : 'Mangler API-nøkkel';
+  return { category, badge, color, description, statusText, guide: guideOf(x), ...(MEDIA43.has(x.id) ? { section: 'MEDIA' } : {}) };
 }
 /** 'personal' | 'server' for en integrasjon (id eller navn), null hvis ukjent. */
 export const integrationScope = (key) => { const k = String(key ?? '').trim().toLowerCase(); return INTEGRATIONS.find((i) => i.id === k || i.name.toLowerCase() === k)?.scope ?? null; };
@@ -310,7 +389,10 @@ export function integrationOut(x, u = OWNER) {
   const missing = x.fields.some((f, i) => f.required && !fields[i].saved) || (x.anyOf && !x.anyOf.some((k) => fields.find((f) => f.key === k)?.saved));
   const t = lastTests(testsOwner(x, u))[x.id];
   const status = missing ? 'missing' : t && t.ok === false ? 'error' : 'ok';
-  return { id: x.id, name: x.name, group: x.group, scope: x.scope, status, ...metaOut(x, status), fields, canTest: !!x.test, ...(t ? { lastTest: t } : {}), ...(status === 'error' ? { message: t.message } : {}),
+  const meta = metaOut(x, status, fields);
+  // Prompt 43: admin ser webhook-adressen med token (uten token godtas bare kall direkte fra LAN).
+  if (MEDIA43.has(x.id) && isAdmin(u)) meta.guide = meta.guide.map((g) => (g.code && /\/api\/media\/hook\/(sonarr|radarr|prowlarr|qbit)\b/.test(g.code) ? { ...g, code: g.code.replace(/\/api\/media\/hook\/(sonarr|radarr|prowlarr|qbit)\b/, (m, svc) => mediaHookPath43(svc)) } : g));
+  return { id: x.id, name: x.name, group: x.group, scope: x.scope, status, ...meta, fields, canTest: !!x.test, ...(t ? { lastTest: t } : {}), ...(status === 'error' ? { message: t.message } : {}),
     ...(x.hidden ? { hidden: true, replacedBy: x.replacedBy } : {}), ...(x.id === 'calendars' ? { links: calendarLinksOut(u) } : {}) };
 }
 // Kalendere: Google Kalender og Home Assistant er lenker til Innstillinger → Kalendere (oppsettet ligger under Bursdager-API-et).
