@@ -2,6 +2,9 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.39.2] – 21.10.2026 · scroll på iPhone
+- **Rettet:** 4.39.1 gjorde at ingen sider kunne scrolles på iPhone. Sveip-bort-gesten på briefen, bibelverset og Min reise er fjernet helt på iOS 18 og nyere, så ingen egen gest konkurrerer med scrollen. Kortene skjules i stedet med hold → «–».
+
 ## [4.39.1] – 21.10.2026 · scroll på Hjem (iPhone)
 - **Rettet:** Hjem i iPhone-appen kunne ikke scrolles i det hele tatt, mens trykk virket. Sveip-bort-gesten på Glimt-briefen, bibelverset og Min reise lå som en SwiftUI-gest som på iOS 18+ gjaldt hele siden og stoppet scrollen. Den er nå en vanlig UIKit-pan som bare tar vannrette sveip mot høyre som starter på kortet; loddrett drag går alltid til scrollen.
 
