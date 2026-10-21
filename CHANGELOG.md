@@ -2,6 +2,9 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.39.4] – 21.10.2026 · sveip bort kort igjen
+- **Tilbake:** sveip Glimt-briefen, bibelverset og Min reise bort mot høyre igjen, med samme gest som i 4.37 (der scrollen virket). Den var slått av i 4.39.2 mens scroll-feilen ble feilsøkt.
+
 ## [4.39.3] – 21.10.2026 · scroll på iPhone (den ekte årsaken)
 - **Rettet:** Hjem, Finans og Mer kunne ikke scrolles på iPhone siden 4.38. Hold-gesten som starter redigering hadde fått et ekstra «holdet har startet»-signal, og på iOS 18+ gjorde det at gesten tok berøringen før scrollen fikk den. Gesten er nå nøyaktig som i 4.37, der scrollen virket.
 
