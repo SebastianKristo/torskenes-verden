@@ -77,57 +77,78 @@ struct KalMonthDay: View {
     let sunday: Bool
     var origin: UnitPoint = .center
 
+    // Delt opp (Xcode 16 klarte ikke å typesjekke én stor body).
+    private var key: String { KalD.key(day) }
+    private var inMonth: Bool { KalD.month(day) == month }
+    private var today: Bool { key == KalD.todayKey() }
+
     var body: some View {
-        let k: String = KalD.key(day)
+        let k: String = key
         // Prompt 42: tre eller flere trekk samme dag blir én chip «3 trekk · 627 kr».
         let list: [KalEvent] = KalAb42.collapse(s.on(k))
-        let inMonth: Bool = KalD.month(day) == month
-        let today: Bool = k == KalD.todayKey()
+        let label: String = KalD.fd(day) + ", " + String(list.count) + " hendelser"
+        return Button(action: tap) { cell(list) }
+            .buttonStyle(.plain)
+            .clipped()
+            // Prompt 42 (iPad): hover med pekeplate, og tekst/e-post/SMS sluppet på dagen tolkes av Glimt til en hendelse den dagen.
+            .hoverEffect(.highlight)
+            .dropDestination(for: String.self) { (items: [String], _: CGPoint) -> Bool in KalPad42Drop.drop(items, day: k) }
+            .accessibilityLabel(label)
+    }
+
+    /// Prompt 35: trykk på en dag zoomer inn til Uke (uka med dagen), og den vokser fra dagen. Full skjerm (43): velg dagen.
+    private func tap() {
+        let k: String = key
+        if full43 {
+            KalHaptic.tap()
+            if s.anchor != k { s.anchor = k }
+        } else {
+            s.zoomTo("uke", day: k, origin: origin, inward: true)
+        }
+    }
+
+    private func cell(_ list: [KalEvent]) -> some View {
         let mx: Int = 3
         let cut: Int = list.count > mx ? mx - 1 : mx
-        let wx: KalWxDay? = inMonth ? s.weather(k) : nil
-        // Prompt 35: trykk på en dag zoomer inn til Uke (uka med dagen), og den vokser fra dagen.
-        let picked: Bool = full43 && k == s.anchor && !today
-        Button(action: {
-            if full43 {
-                KalHaptic.tap()
-                if s.anchor != k { s.anchor = k }
-            } else {
-                s.zoomTo("uke", day: k, origin: origin, inward: true)
+        let bg: Color = today ? t.red.opacity(0.06) : Color.clear
+        return VStack(alignment: .leading, spacing: 2) {
+            topRow
+            ForEach(list.prefix(cut)) { (e: KalEvent) in KalMonthChip(e: e) }
+            if list.count > mx {
+                Text("+" + String(list.count - cut)).font(KalFont.ui(9.5, .bold)).foregroundStyle(t.mut).padding(.horizontal, 4)
             }
-        }) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 2) {
-                    Text(String(KalD.dayOfMonth(day))).font(KalFont.ui(12, .bold))
-                        .foregroundStyle(today ? Color.white : (sunday ? t.sunday : t.ink))
-                        .frame(width: 22, height: 22)
-                        .background(Circle().fill(today ? t.red : Color.clear))
-                        .overlay(Circle().strokeBorder(picked ? t.ink : Color.clear, lineWidth: 1.5))
-                    Spacer(minLength: 0)
-                    if let wx {
-                        Image(systemName: KalWx.symbol(wx.kind)).font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(KalWx.color(wx.kind, mut: t.mut))
-                    }
-                }
-                .padding(.horizontal, 1)
-                ForEach(list.prefix(cut)) { (e: KalEvent) in KalMonthChip(e: e) }
-                if list.count > mx {
-                    Text("+" + String(list.count - cut)).font(KalFont.ui(9.5, .bold)).foregroundStyle(t.mut).padding(.horizontal, 4)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.top, 3).padding(.horizontal, 2).padding(.bottom, 2)
-            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
-            .background(today ? t.red.opacity(0.06) : Color.clear)
-            .opacity(inMonth ? 1 : 0.38)
-            .contentShape(Rectangle())
+            Spacer(minLength: 0)
         }
-        .buttonStyle(.plain)
-        .clipped()
-        // Prompt 42 (iPad): hover med pekeplate, og tekst/e-post/SMS sluppet på dagen tolkes av Glimt til en hendelse den dagen.
-        .hoverEffect(.highlight)
-        .dropDestination(for: String.self) { (items: [String], _: CGPoint) -> Bool in KalPad42Drop.drop(items, day: k) }
-        .accessibilityLabel(KalD.fd(day) + ", " + String(list.count) + " hendelser")
+        .padding(.top, 3).padding(.horizontal, 2).padding(.bottom, 2)
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
+        .background(bg)
+        .opacity(inMonth ? 1 : 0.38)
+        .contentShape(Rectangle())
+    }
+
+    private var topRow: some View {
+        let wx: KalWxDay? = inMonth ? s.weather(key) : nil
+        return HStack(spacing: 2) {
+            dayNumber
+            Spacer(minLength: 0)
+            if let wx {
+                Image(systemName: KalWx.symbol(wx.kind)).font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(KalWx.color(wx.kind, mut: t.mut))
+            }
+        }
+        .padding(.horizontal, 1)
+    }
+
+    private var dayNumber: some View {
+        let picked: Bool = full43 && key == s.anchor && !today
+        let fg: Color = today ? Color.white : (sunday ? t.sunday : t.ink)
+        let fill: Color = today ? t.red : Color.clear
+        let ring: Color = picked ? t.ink : Color.clear
+        return Text(String(KalD.dayOfMonth(day))).font(KalFont.ui(12, .bold))
+            .foregroundStyle(fg)
+            .frame(width: 22, height: 22)
+            .background(Circle().fill(fill))
+            .overlay(Circle().strokeBorder(ring, lineWidth: 1.5))
     }
 }
 
