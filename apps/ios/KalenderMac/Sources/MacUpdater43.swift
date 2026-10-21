@@ -678,11 +678,17 @@ struct MacToggleRow43: View {
 struct MacAbout43View: View {
     @Environment(\.mk) private var t
 
+    private var versionText: String {
+        let build: Int = MacUpdater43.currentBuild
+        let suffix: String = build > 0 ? " (" + String(build) + ")" : ""
+        return "Versjon " + MacUpdater43.currentVersion + suffix
+    }
+
     var body: some View {
         VStack(spacing: 8) {
             MacAppIcon(size: 84)
             Text("Kalender").font(MacFont.serif(26)).foregroundColor(t.ink)
-            Text("Versjon " + MacUpdater43.currentVersion + (MacUpdater43.currentBuild > 0 ? " (" + String(MacUpdater43.currentBuild) + ")" : ""))
+            Text(versionText)
                 .font(MacFont.mono(12)).foregroundColor(t.mut)
             Text("Data ligger på hjemmeserveren din").font(MacFont.ui(12.5)).foregroundColor(t.mut)
         }
