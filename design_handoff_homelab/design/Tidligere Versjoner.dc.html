@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500&amp;family=Manrope:wght@500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap"><style>body{margin:0;background:#e3ddd1}a{color:#b23a2a}a:hover{color:#8a2a1d}</style></helmet>
+<div style="display:flex;flex-wrap:wrap;gap:32px;padding:32px;justify-content:center;align-items:flex-start;font-family:Manrope,sans-serif;color:#1b1a17">
+
+<div style="flex:1 1 640px;max-width:820px;border-radius:24px;background:#f3efe6;padding:32px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px;position:relative;min-height:640px">
+<span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#6b665c">WEB · INNSTILLINGER → OPPDATERINGER</span>
+<div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:2px solid #1b1a17;padding-bottom:14px"><div style="display:flex;flex-direction:column;gap:4px"><b style="font:500 38px/1 Newsreader,serif">Oppdateringer</b><span style="font-size:14px;color:#6b665c">Du har <b style="color:#1b1a17">{{ cur }}</b> · installert {{ curAt }}</span></div><span style="font:600 11px 'IBM Plex Mono',monospace;color:{{ autoC }}">{{ autoT }}</span></div>
+<span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">TIDLIGERE VERSJONER</span>
+<div style="border-radius:20px;background:#fffdf8;border:1px solid #e1d9c9;overflow:hidden"><sc-for list="{{ vers }}" as="v"><div style="display:grid;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:14px;min-height:62px;padding:8px 18px;border-top:{{ v.bt }};background:{{ v.rowBg }}"><b style="font:600 14px 'IBM Plex Mono',monospace">{{ v.v }}</b><div style="min-width:0;display:flex;flex-direction:column;gap:3px"><div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px"><span style="font-size:12.5px;color:#6b665c">{{ v.d }}</span><sc-for list="{{ v.tags }}" as="g"><span style="height:20px;padding:0 7px;border-radius:10px;background:{{ g.bg }};color:{{ g.fg }};font:700 10.5px Manrope,sans-serif;display:flex;align-items:center;white-space:nowrap">{{ g.t }}</span></sc-for></div><span style="font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ v.n }}</span></div><sc-if value="{{ v.can }}"><button onClick="{{ v.go }}" style="height:36px;padding:0 16px;border-radius:18px;border:1px solid #d8d1c2;background:transparent;color:#1b1a17;font:700 13px Manrope,sans-serif;cursor:pointer;white-space:nowrap">Installer</button></sc-if><sc-if value="{{ v.isCur }}"><span style="font:700 12px Manrope,sans-serif;color:#2f6b4a;white-space:nowrap">Kjører nå</span></sc-if></div></sc-for></div>
+<span style="font-size:12.5px;color:#6b665c;text-wrap:pretty">Vi tar backup av databasen og innstillingene rett før hver oppdatering, og tar vare på de siste 10 versjonene.</span>
+
+<sc-if value="{{ dlg }}"><div onClick="{{ close }}" style="position:absolute;inset:0;border-radius:24px;background:rgba(27,26,23,.35)"></div><div style="position:absolute;left:50%;top:90px;transform:translateX(-50%);width:min(520px,calc(100% - 40px));border-radius:22px;background:#f3efe6;box-shadow:0 30px 60px -20px rgba(0,0,0,.45);padding:24px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<b style="font:500 28px/1.1 Newsreader,serif">Gå tilbake til {{ tv }}?</b>
+<sc-for list="{{ opts }}" as="o"><button onClick="{{ o.go }}" style="display:flex;align-items:flex-start;gap:12px;padding:14px;border-radius:14px;border:{{ o.bd }};background:{{ o.bg }};text-align:left;cursor:{{ o.cur }};font-family:inherit;color:inherit;opacity:{{ o.op }}"><span style="flex:none;margin-top:2px;width:18px;height:18px;border-radius:9px;border:2px solid #1b1a17;display:grid;place-items:center"><span style="width:8px;height:8px;border-radius:4px;background:{{ o.dot }}"></span></span><span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:14.5px">{{ o.t }}</b><span style="font-size:12.5px;line-height:1.4;color:{{ o.sc }};text-wrap:pretty">{{ o.s }}</span></span></button></sc-for>
+<button onClick="{{ togPause }}" style="display:flex;align-items:center;gap:10px;border:0;background:transparent;padding:0;cursor:pointer;font:600 13.5px Manrope,sans-serif;color:#1b1a17;text-align:left"><span style="width:20px;height:20px;border-radius:6px;border:2px solid #1b1a17;background:{{ pBg }};color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800">{{ pCk }}</span>Slå av automatiske oppdateringer i 7 dager</button>
+<div style="display:flex;gap:8px;justify-content:flex-end"><button onClick="{{ close }}" style="height:44px;padding:0 18px;border-radius:22px;border:1px solid #d8d1c2;background:transparent;font:700 14px Manrope,sans-serif;cursor:pointer;color:#1b1a17">Avbryt</button><button onClick="{{ run }}" style="height:44px;padding:0 20px;border-radius:22px;border:0;background:#b23a2a;color:#fff;font:800 14px Manrope,sans-serif;cursor:pointer">Installer {{ tv }}</button></div>
+<span style="font-size:12px;color:#6b665c;text-align:right">Krever passord eller Face ID · bare admin og eier</span>
+</div></sc-if>
+
+<sc-if value="{{ busy }}"><div style="position:absolute;left:32px;right:32px;bottom:28px;border-radius:18px;background:#fffdf8;border:1px solid #e1d9c9;padding:16px 18px;display:flex;flex-direction:column;gap:8px;box-shadow:0 14px 30px -16px rgba(0,0,0,.35)"><div style="display:flex;justify-content:space-between"><b style="font-size:14.5px">Går tilbake til {{ tv }}</b><span style="font:600 12px 'IBM Plex Mono',monospace">{{ pct }}</span></div><div style="height:6px;border-radius:3px;background:#ece6da;overflow:hidden"><div style="height:100%;width:{{ pct }};background:#b23a2a;transition:width .3s"></div></div><span style="font-size:12.5px;color:#6b665c">{{ step }}</span></div></sc-if>
+<sc-if value="{{ toast }}"><div style="position:absolute;left:32px;right:32px;bottom:28px;border-radius:16px;background:#1b1a17;color:#f3efe6;padding:12px 16px;display:flex;align-items:center;gap:12px"><span style="flex:1;font-size:13.5px">{{ toast }}</span><button onClick="{{ undo }}" style="border:0;background:transparent;color:#f0a493;font:800 13px Manrope,sans-serif;cursor:pointer;white-space:nowrap">Oppdater til 4.38 igjen</button></div></sc-if>
+</div>
+
+<div style="flex:none;width:390px;height:844px;border-radius:46px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px -30px rgba(27,26,23,.45);display:flex;flex-direction:column;position:relative">
+<div style="padding:58px 16px 10px;display:flex;flex-direction:column;gap:4px"><span style="color:#b23a2a;font:700 15px Manrope,sans-serif">‹ Innstillinger</span><b style="font:500 32px/1.05 Newsreader,serif">Oppdateringer</b><span style="font-size:13px;color:#6b665c">{{ cur }} · installert {{ curAt }}</span></div>
+<span style="padding:8px 16px 6px;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">TIDLIGERE VERSJONER</span>
+<div style="margin:0 12px;border-radius:20px;background:#fffdf8;overflow:hidden"><sc-for list="{{ versM }}" as="v"><button onClick="{{ v.go }}" style="width:100%;display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 14px;border:0;border-top:{{ v.bt }};background:transparent;text-align:left;cursor:pointer;font-family:inherit;color:inherit"><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><div style="display:flex;align-items:center;gap:6px"><b style="font:600 14px 'IBM Plex Mono',monospace">{{ v.v }}</b><sc-for list="{{ v.tags }}" as="g"><span style="height:18px;padding:0 6px;border-radius:9px;background:{{ g.bg }};color:{{ g.fg }};font:700 10px Manrope,sans-serif;display:flex;align-items:center">{{ g.t }}</span></sc-for></div><span style="font-size:12.5px;color:#6b665c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ v.d }} · {{ v.n }}</span></div><span style="flex:none;font:700 12.5px Manrope,sans-serif;color:{{ v.rc }}">{{ v.r }}</span></button></sc-for></div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const V=[['4.38','I dag 13:52','Media: servervelger, Avspilling-fanen og frem/tilbake i nettleseren',1,1],['4.37','21. okt','Gjøremål: deloppgaver og egen side per oppgave',1,1],['4.36','19. okt','Kalender: Media-kalender og invitasjoner på e-post',1,0],['4.35','17. okt','Studie: les vitnemål og karakterutskrift med Glimt',1,0],['4.34','14. okt','Finans: nytt saldokort',0,0],['4.33','10. okt','Ny oppstartsskjerm',0,0]];
+class Component extends DCLogic {
+  state={cur:'4.38',to:null,opt:'keep',pause:true,busy:false,pct:0,toast:null,auto:true};
+  componentWillUnmount(){clearInterval(this._iv)}
+  renderVals(){const s=this.state,set=o=>this.setState(o),ci=V.findIndex(v=>v[0]===s.cur),T=V.find(v=>v[0]===s.to),newerSchema=!!T&&V.findIndex(v=>v[0]===s.to)>ci&&s.to!=='4.37'&&s.to!=='4.36'?false:true;
+    const tags=(v,i)=>[...(i===ci+1?[{t:'Forrige',bg:'#ece6da',fg:'#1b1a17'}]:[]),...(v[3]?[{t:'Har backup',bg:'#e3eee5',fg:'#2f6b4a'}]:[])];
+    const pick=v=>()=>set({to:v,opt:'keep'}),keepOk=!(T&&T[4]===0&&ci===0&&T[0]!=='4.37');
+    return{cur:'Nordlys '+s.cur,curAt:s.cur==='4.38'?'i dag 13:52':'nå nettopp',autoT:s.auto?'AUTOMATISKE OPPDATERINGER · PÅ':'AUTOMATISKE OPPDATERINGER · AV TIL 28. OKT',autoC:s.auto?'#2f6b4a':'#a0671a',
+      vers:V.map((v,i)=>({v:v[0],d:v[1],n:v[2],tags:tags(v,i),can:v[0]!==s.cur,isCur:v[0]===s.cur,go:pick(v[0]),bt:i?'1px solid #ece6da':'0',rowBg:v[0]===s.cur?'#f7f3ea':'transparent'})),
+      versM:V.map((v,i)=>({v:v[0],d:v[1],n:v[2],tags:tags(v,i).slice(0,1),r:v[0]===s.cur?'Kjører':'Installer',rc:v[0]===s.cur?'#2f6b4a':'#b23a2a',go:v[0]===s.cur?()=>{}:pick(v[0]),bt:i?'1px solid #ece6da':'0'})),
+      dlg:!!T&&!s.busy,tv:T?T[0]:'',close:()=>set({to:null}),
+      opts:[['keep','Behold dataene mine','Bare programmet byttes. Gjøremål, hendelser og innstillinger blir som nå.',keepOk],['restore','Gjenopprett backup fra '+(T?T[1]:'')+' 13:50','Data tilbake til slik de var før oppdateringen. Endringer etter det forsvinner: 3 gjøremål og 1 hendelse.',!!(T&&T[3])]].map(([k,t,sb,ok])=>{const on=s.opt===k;return{t,s:ok?sb:(k==='keep'?'4.38 endret databasen. Du må gjenopprette backupen.':'Ingen backup for denne versjonen.'),sc:ok?'#6b665c':'#a0671a',bd:on?'2px solid #1b1a17':'1px solid #d8d1c2',bg:on?'#fffdf8':'transparent',dot:on?'#1b1a17':'transparent',op:ok?'1':'.55',cur:ok?'pointer':'not-allowed',go:()=>{if(ok)set({opt:k})}}}),
+      pBg:s.pause?'#1b1a17':'transparent',pCk:s.pause?'✓':'',togPause:()=>set({pause:!s.pause}),
+      run:()=>{const to=s.to;set({busy:true,pct:0});const steps=['Henter Nordlys '+to+' …',s.opt==='restore'?'Gjenoppretter backup …':'Sjekker databasen …','Bytter versjon …','Starter på nytt …','Sjekker at alt kjører …'];let p=0;clearInterval(this._iv);this._iv=setInterval(()=>{p+=10;if(p>=100){clearInterval(this._iv);this.setState({busy:false,cur:to,to:null,auto:!this.state.pause,toast:'Kjører Nordlys '+to+(this.state.pause?' · automatiske oppdateringer er av til 28. okt':'')});return}this.setState({pct:p,stepT:steps[Math.min(steps.length-1,Math.floor(p/20))]})},260)},
+      busy:s.busy,pct:s.pct+'%',step:s.stepT||'',toast:s.toast,undo:()=>set({toast:null,cur:'4.38',auto:true})}}
+}
+</script>
+</body>
+</html>

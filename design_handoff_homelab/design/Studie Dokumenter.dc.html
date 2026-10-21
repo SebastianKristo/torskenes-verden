@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Manrope:wght@500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap"><style>body{margin:0;background:#f3efe6}a{color:#b23a2a}a:hover{color:#8a2a1d}</style></helmet>
+<div style="max-width:{{ mw }};margin:0 auto;padding:{{ pd }};display:flex;flex-direction:column;gap:18px;color:#1b1a17;font-family:Manrope,system-ui,sans-serif;background:{{ bgc }};box-sizing:border-box;min-height:{{ mh }}">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font:italic 400 16px Newsreader,serif;color:#6b665c">Vitnemål, karakterer og bevis</span><b style="font:500 {{ hfs }}/1 Newsreader,serif">{{ ttl }}</b></div>
+
+<label onDragOver="{{ dOver }}" onDragLeave="{{ dLeave }}" onDrop="{{ drop }}" style="display:flex;align-items:center;gap:16px;padding:18px 20px;border-radius:22px;border:2px dashed {{ dzBd }};background:{{ dzBg }};cursor:pointer">
+<input type="file" accept=".pdf,image/*" multiple onChange="{{ pick }}" style="display:none">
+<span style="flex:none;width:44px;height:44px;border-radius:50%;background:conic-gradient(#b23a2a,#e8794a,#f2c14e,#3fbf9a,#7a5ad6,#b23a2a);display:grid;place-items:center"><span style="width:36px;height:36px;border-radius:50%;background:#fffdf8;display:grid;place-items:center;color:#b23a2a;font-size:15px">✦</span></span>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:16px">Last opp vitnemål, karakterutskrift eller attest</b><span style="font-size:13.5px;color:#6b665c">PDF eller bilde · Glimt leser fagene, karakterene og studiepoengene</span></div>
+<span style="flex:none;height:42px;padding:0 18px;border-radius:21px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:700 14px Manrope,sans-serif">Velg fil</span>
+</label>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ demos }}" as="d"><button onClick="{{ d.go }}" style="height:36px;padding:0 14px;border-radius:18px;border:1px solid #d8d1c2;background:#fff;cursor:pointer;font:600 13px Manrope,sans-serif">Prøv: {{ d.n }}</button></sc-for></div>
+
+<sc-if value="{{ busy }}"><div style="display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:18px;background:#fffdf8;border:1px solid #e4ddcf"><b style="font-size:15px">Glimt leser «{{ busyN }}» …</b><sc-for list="{{ steps }}" as="g"><div style="display:flex;justify-content:space-between;font-size:13.5px;color:#6b665c"><span>✓ {{ g.n }}</span><span style="font-family:'IBM Plex Mono',monospace">{{ g.ms }}</span></div></sc-for></div></sc-if>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px"><sc-for list="{{ stats }}" as="x"><div style="padding:14px;border-radius:16px;background:#fffdf8;border:1px solid #e4ddcf;display:flex;flex-direction:column;gap:2px"><b style="font:500 28px/1 Newsreader,serif">{{ x.v }}</b><span style="font-size:12.5px;color:#6b665c">{{ x.l }}</span></div></sc-for></div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px;align-items:start">
+<div style="display:flex;flex-direction:column"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a;padding-bottom:6px;border-bottom:2px solid #1b1a17">DOKUMENTER · {{ nDoc }}</span>
+<sc-for list="{{ docs }}" as="d"><button onClick="{{ d.go }}" style="display:flex;align-items:center;gap:12px;min-height:64px;padding:8px 8px;margin:0 -8px;border:0;border-bottom:1px solid #e4ddcf;border-radius:10px;background:{{ d.bg }};color:#1b1a17;cursor:pointer;text-align:left;font-family:inherit"><span style="flex:none;width:38px;height:48px;border-radius:6px;background:#fff;border:1px solid #d8d1c2;display:grid;place-items:center;font:700 9px 'IBM Plex Mono',monospace;color:#b23a2a">{{ d.ext }}</span><div style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font-size:14.5px">{{ d.t }}</b><span style="font-size:12.5px;color:#6b665c">{{ d.sub }}</span></div><span style="flex:none;font-size:12px;font-weight:700;color:#2f6b45;white-space:nowrap">{{ d.st }}</span></button></sc-for></div>
+
+<sc-if value="{{ hasSel }}"><div style="display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:22px;background:#fffdf8;border:1px solid #e4ddcf">
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">✦ GLIMT HAR LEST</span><b style="font:500 24px/1.15 Newsreader,serif">{{ sel.t }}</b><span style="font-size:13px;color:#6b665c">{{ sel.meta }}</span></div>
+<span style="font-size:14.5px;line-height:1.55;text-wrap:pretty">{{ sel.sum }}</span>
+<div style="display:flex;flex-direction:column"><div style="display:grid;grid-template-columns:70px minmax(0,1fr) 46px 52px;gap:10px;padding-bottom:6px;border-bottom:1.5px solid #1b1a17;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:#6b665c"><span>KODE</span><span>EMNE</span><span>SP</span><span>KAR.</span></div>
+<sc-for list="{{ sel.rows }}" as="r"><div style="display:grid;grid-template-columns:70px minmax(0,1fr) 46px 52px;gap:10px;align-items:center;min-height:38px;border-bottom:1px solid #ece6da;font-size:13.5px"><span style="font:600 12px 'IBM Plex Mono',monospace">{{ r.k }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.n }}</span><span style="font-family:'IBM Plex Mono',monospace">{{ r.sp }}</span><b style="justify-self:start;padding:2px 9px;border-radius:7px;background:{{ r.gb }};color:{{ r.gc }}">{{ r.g }}</b></div></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#6b665c">GLIMT FANT</span><sc-for list="{{ sel.ins }}" as="i"><div style="display:flex;gap:8px;font-size:13.5px;line-height:1.45"><span style="color:#b23a2a">•</span><span style="text-wrap:pretty">{{ i.t }}</span></div></sc-for></div>
+<form onSubmit="{{ ask }}" style="margin:0;display:flex;gap:8px;height:44px;padding:0 5px 0 14px;border-radius:22px;background:#f3efe6;border:1px solid #d8d1c2;align-items:center"><span style="color:#b23a2a">✦</span><input value="{{ aq }}" onChange="{{ onAq }}" placeholder="Spør om dokumentet, f.eks. «hva er snittet i matte?»" style="flex:1;min-width:0;border:0;outline:none;background:transparent;font:500 13.5px Manrope,sans-serif;color:#1b1a17"><button type="submit" style="height:34px;padding:0 14px;border-radius:17px;border:0;background:#b23a2a;color:#fff;font:700 13px Manrope,sans-serif;cursor:pointer">Spør</button></form>
+<sc-if value="{{ hasAns }}"><span style="font-size:14px;line-height:1.5;padding:10px 12px;border-radius:12px;background:#f3efe6">{{ ans }}</span></sc-if>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button onClick="{{ toKal }}" style="height:38px;padding:0 14px;border-radius:19px;border:1px solid #d8d1c2;background:#fff;cursor:pointer;font:700 13px Manrope,sans-serif">Legg emner i Studie</button><button onClick="{{ share }}" style="height:38px;padding:0 14px;border-radius:19px;border:1px solid #d8d1c2;background:#fff;cursor:pointer;font:700 13px Manrope,sans-serif">Del som PDF</button><button onClick="{{ del }}" style="height:38px;padding:0 14px;border-radius:19px;border:0;background:transparent;color:#b23a2a;cursor:pointer;font:700 13px Manrope,sans-serif">Slett</button></div>
+</div></sc-if>
+</div>
+<sc-if value="{{ toastOn }}"><div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);padding:11px 18px;border-radius:14px;background:#1b1a17;color:#f3efe6;font:700 13.5px Manrope,sans-serif">{{ toast }}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SEED=[{id:'vg',t:'Vitnemål videregående',src:'Persbråten vgs · 2022',ext:'PDF',kind:'vit',sum:'Studiespesialisering, realfag. Gjennomsnitt 4,8 (karakterpoeng 48,0 + 4 realfagspoeng). Bestått alle fag.',rows:[['MAT1017','Matematikk R2',null,'5'],['FYS1002','Fysikk 2',null,'5'],['KJE1002','Kjemi 2',null,'4'],['NOR1211','Norsk hovedmål',null,'4'],['ENG1007','Engelsk',null,'6']],ins:['Snitt 4,8 gir 52,0 poeng med realfagspoeng.','R2 og Fysikk 2 oppfyller kravet for ingeniørfag (TRE, MEK, ELI).']},
+ {id:'oslomet',t:'Karakterutskrift OsloMet',src:'Studentweb · hentet 14.10.2026',ext:'PDF',kind:'kar',sum:'Bachelor i ingeniørfag, 2. år. 57,5 av 180 studiepoeng så langt i utskriften. Snitt C (3,3). Ingen strøk.',rows:[['MEK1100','Mekanikk',10,'B'],['ELI1100','Elektroteknikk',10,'C'],['MAT1100','Matematikk 1',10,'C'],['TRE1100','Programmering',10,'A'],['FYS1100','Fysikk',10,'D'],['STA1100','Statistikk',7.5,'C']],ins:['90 sp tatt, 90 igjen. Ligger an til ferdig juni 2028.','Beste emne: Programmering (A). Svakest: Fysikk (D). Kan tas opp igjen høst 2027.','Snitt C holder for master ved OsloMet (krav C).']}];
+const GR={A:['#2f6b45','#e3eee5'],B:['#2f6b45','#e3eee5'],C:['#1b1a17','#ece6da'],D:['#a0671a','#f4e8cf'],E:['#b23a2a','#f6e3dc'],F:['#b23a2a','#f6e3dc'],'6':['#2f6b45','#e3eee5'],'5':['#2f6b45','#e3eee5'],'4':['#1b1a17','#ece6da'],'3':['#a0671a','#f4e8cf']};
+class Component extends DCLogic {
+  state={docs:SEED,sel:'oslomet',busy:null,steps:[],drag:false,aq:'',ans:'',toast:''};
+  toastShow(t){clearTimeout(this._tt);this.setState({toast:t});this._tt=setTimeout(()=>this.setState({toast:''}),2200)}
+  componentWillUnmount(){clearTimeout(this._tt);(this._ts||[]).forEach(clearTimeout)}
+  run(name,kind){const S=['Lastet opp og kryptert',kind==='img'?'Leste bildet (OCR)':'Leste PDF-teksten','Fant skole, dato og type dokument','Leste '+(kind==='att'?'attesten':'fag og karakterer'),'Regnet ut snitt og studiepoeng'];this._ts=[];let acc=0;this.setState({busy:name,steps:[]});
+    S.forEach((n,i)=>{acc+=260+Math.round(Math.random()*500);this._ts.push(setTimeout(()=>this.setState(s=>({steps:[...s.steps,{n,ms:acc+' ms'}]})),acc))});
+    this._ts.push(setTimeout(()=>{const id='d'+Date.now(),att=kind==='att';const d=att?{id,t:name.replace(/\.[a-z]+$/i,''),src:'Lastet opp i dag',ext:kind==='img'?'JPG':'PDF',kind:'att',sum:'Arbeidsattest fra Kiwi Bislett, deltid 2023–2026, butikkmedarbeider. Gode skussmål.',rows:[],ins:['Kan brukes som praksis i søknader.','Ingen karakterer i dokumentet.']}:{id,t:name.replace(/\.[a-z]+$/i,''),src:'Lastet opp i dag',ext:kind==='img'?'JPG':'PDF',kind:'kar',sum:'Karakterutskrift med 3 emner, 22,5 sp. Snitt B.',rows:[['MAT1200','Matematikk 2',7.5,'B'],['STA1200','Statistikk 2',7.5,'A'],['TRE1200','Algoritmer',7.5,'C']],ins:['Nye emner lagt til siden forrige utskrift: 3.','Snittet går opp fra C til B− totalt.']};this.setState(s=>({docs:[d,...s.docs],sel:id,busy:null}));this.toastShow('✦ Glimt leste «'+d.t+'»')},acc+300))}
+  renderVals(){const s=this.state,set=o=>this.setState(o),cur=s.docs.find(d=>d.id===s.sel);
+    const kar=s.docs.filter(d=>d.kind==='kar').flatMap(d=>d.rows.filter(r=>r[2]));const sp=kar.reduce((a,r)=>a+r[2],0),V={A:5,B:4,C:3,D:2,E:1},sn=kar.length?kar.reduce((a,r)=>a+(V[r[3]]||0)*r[2],0)/sp:0,L='EDCBA'[Math.max(0,Math.min(4,Math.round(sn)-1))]||'–';
+    const EM=!!this.props.embedded;return{mw:EM?'none':'1100px',pd:EM?'14px 0 24px':'28px clamp(16px,3vw,36px) 48px',bgc:EM?'transparent':'#f3efe6',mh:EM?'0':'100vh',hfs:EM?'30px':'40px',ttl:EM?'Dokumenter':'Studie · Dokumenter',dzBd:s.drag?'#1b1a17':'#c9c1b1',dzBg:s.drag?'#fffdf8':'transparent',dOver:e=>{e.preventDefault();if(!s.drag)set({drag:true})},dLeave:()=>set({drag:false}),
+      drop:e=>{e.preventDefault();set({drag:false});[...(e.dataTransfer.files||[])].forEach(f=>this.run(f.name,/image/.test(f.type)?'img':'pdf'))},pick:e=>{[...(e.target.files||[])].forEach(f=>this.run(f.name,/image/.test(f.type)?'img':'pdf'));e.target.value=''},
+      demos:[['Karakterutskrift høst 2026.pdf','pdf'],['Attest Kiwi.jpg','att']].map(([n,k])=>({n,go:()=>this.run(n,k==='att'?'att':k)})),
+      busy:!!s.busy,busyN:s.busy||'',steps:s.steps,
+      stats:[[String(sp).replace('.',','),'studiepoeng registrert'],[sn?L+' ('+sn.toFixed(1).replace('.',',')+')':'–','snitt høyere utdanning'],['4,8','snitt videregående'],[String(s.docs.length),'dokumenter']].map(([v,l])=>({v,l})),
+      nDoc:s.docs.length,docs:s.docs.map(d=>({t:d.t,ext:d.ext,sub:d.src+(d.rows.length?' · '+d.rows.length+' emner':''),st:'✦ Lest',bg:d.id===s.sel?'#ece6da':'transparent',go:()=>set({sel:d.id,ans:''})})),
+      hasSel:!!cur,sel:cur?{t:cur.t,meta:cur.src+' · '+cur.ext,sum:cur.sum,rows:cur.rows.map(([k,n,p,g])=>({k,n,sp:p==null?'–':String(p).replace('.',','),g,gc:(GR[g]||GR.C)[0],gb:(GR[g]||GR.C)[1]})),ins:cur.ins.map(t=>({t}))}:{},
+      aq:s.aq,onAq:e=>set({aq:e.target.value}),hasAns:!!s.ans,ans:s.ans,
+      ask:e=>{e.preventDefault();const q=s.aq.toLowerCase();if(!cur||!q.trim())return;let a='Fant ikke det i dokumentet.';const m=cur.rows.filter(r=>q.split(/\s+/).some(w=>w.length>2&&r[1].toLowerCase().includes(w)));if(m.length)a=m.map(r=>r[1]+': '+r[3]+(r[2]?' ('+r[2]+' sp)':'')).join(' · ');else if(/snitt/.test(q))a=cur.sum;else if(/strøk|stryk/.test(q))a=cur.rows.some(r=>r[3]==='F')?'Ja, strøk i '+cur.rows.filter(r=>r[3]==='F').map(r=>r[1]).join(', '):'Ingen strøk.';set({ans:'✦ '+a,aq:''})},
+      toKal:()=>this.toastShow('Emnene er lagt til i Studie og Kalender'),share:()=>this.toastShow('PDF med vannmerke «Kopi» klar til deling'),del:()=>{set({docs:s.docs.filter(d=>d.id!==s.sel),sel:null});this.toastShow('Dokumentet er slettet')},
+      toastOn:!!s.toast,toast:s.toast}}
+}
+</script>
+</body>
+</html>
