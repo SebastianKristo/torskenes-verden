@@ -84,6 +84,22 @@ struct Wiggle43Hold: ViewModifier {
     }
 }
 
+/// Slippflate for hele lista, bare aktiv i redigering.
+struct Wiggle43DropArea: ViewModifier {
+    let active: Bool
+    let drop: () -> Bool
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if active {
+            content.onDrop(of: [UTType.text], isTargeted: nil) { (_: [NSItemProvider]) -> Bool in
+                MainActor.assumeIsolated { drop() }
+            }
+        } else {
+            content
+        }
+    }
+}
+
 extension View {
     func wiggle43Hold(editing: Bool, enter: @escaping () -> Void) -> some View {
         modifier(Wiggle43Hold(editing: editing, enter: enter))
@@ -183,10 +199,8 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
                 }
             }
         }
-        // Slipp i mellomrommet mellom kortene teller også.
-        .onDrop(of: [UTType.text], isTargeted: nil) { (_: [NSItemProvider]) -> Bool in
-            MainActor.assumeIsolated { dropHere() }
-        }
+        // Slipp i mellomrommet mellom kortene teller også – bare i redigering (utenfor er lista helt vanlig, så siden scroller).
+        .modifier(Wiggle43DropArea(active: editing) { dropHere() })
         .onAppear { startWiggle(editing && !paused) }
         .onChange(of: editing) { (_: Bool, on: Bool) in
             if !on { finish() }
@@ -199,6 +213,15 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
     }
 
     @ViewBuilder private func cell(_ k: String, _ i: Int) -> some View {
+        if editing {
+            editCell(k, i)
+        } else {
+            // Som Subscription OS utenfor redigering: bare kortet og holdet (samtidig gest, så ScrollView scroller).
+            content(k).wiggle43Hold(editing: false) { enter() }
+        }
+    }
+
+    @ViewBuilder private func editCell(_ k: String, _ i: Int) -> some View {
         let a: Double = (reduceMotion || paused) ? 0 : Edit28.angle * Wiggle43.sign(i)
         let ink: Color = p.ink
         let card: Color = p.card
