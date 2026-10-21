@@ -30,6 +30,8 @@ struct FinansHubApp: App {
                 .onOpenURL { (u: URL) in
                     if AppAuth41.shared.handle(u, store) { return }
                     if Qr38Model.shared.handle(u, store) { return }
+                    // Prompt 43: magnet:-lenker og homelab://magnet?url=… åpner «Legg til magnet-lenke» i Media.
+                    if Media43.shared.handleURL(u, store) { return }
                     store.openDeepLink(u)
                 }
                 // Universal link https://<server>/l/<kode> (krever Associated Domains når det er satt opp).

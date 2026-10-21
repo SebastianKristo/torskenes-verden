@@ -70,6 +70,7 @@ struct AiCtl34TabBody: View {
         case "job": AiCtl34JobsTab()
         case "use": AiCtl34UsageTab()
         case "api": AiCtl34KeysTab()
+        case "imp": ClaudeImport43Tab()
         default: AiCtl34OverviewTab()
         }
     }

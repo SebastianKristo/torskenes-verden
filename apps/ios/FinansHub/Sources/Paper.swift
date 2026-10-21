@@ -227,9 +227,9 @@ struct PaperShell: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 if fab {
-                    // Prompt 38: i Domener er den runde knappen Glimt (✦), ikke Skann (Nav38.swift).
+                    // Prompt 43: i Domener ligger Glimt nå som en rad i domenekortet (Domains43.swift) – ingen rund knapp der.
                     Group {
-                        if store.paperInDomains { Dom38GlimtFab() } else { PaperFab(tap: fabTap, hold: fabHold) }
+                        if !store.paperInDomains { PaperFab(tap: fabTap, hold: fabHold) }
                     }
                         .padding(.trailing, wide ? 24 : 18)
                         .padding(.bottom, wide ? Swift.max(0, 24 - bottom) : 62 + 14)
@@ -313,6 +313,10 @@ struct PaperShell: View {
         .glimt35Host(p)
         // Prompt 40: Hjemlys – start (1a/1c), mottakerskjerm når noen er sen, og Glimt-samtalen (1b).
         .hjemlys40Host(p)
+        // Prompt 43: Media i fullskjerm (Mer → Media, Hjem-kortet, widgetene og magnet:-lenker), Media43Views.swift.
+        .media43Host(p)
+        // Prompt 43: Innstillinger → Widgets (galleriet), Widgets43.swift.
+        .widgets43Host(p)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)
@@ -841,7 +845,8 @@ struct PaperPage: View {
 
     var body: some View {
         let home = store.paperTab == "hjem"
-        let maxW: CGFloat = wide ? (home ? 960 : 720) : .infinity
+        // Prompt 43: Gjøremål på iPad bruker hele bredden (tre kolonner, Tasks43Wide.swift).
+        let maxW: CGFloat = wide ? (home ? 960 : (store.paperTab == "huske" || store.paperTab == "finans" ? 1500 : 720)) : .infinity
         VStack(spacing: 0) {
             PaperHero(home: home)
             // Prompt 25: ScrollViewReader for «Ta meg dit →» (Settings25.swift).

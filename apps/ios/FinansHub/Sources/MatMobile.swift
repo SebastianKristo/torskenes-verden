@@ -156,6 +156,8 @@ struct MatView: View {
                 Text("I DAG · \(longDay[ti % 7].uppercased())").font(pal.ui(12.5, .heavy))
                 Spacer()
                 Text(meta).font(pal.ui(12.5, .bold))
+                // Prompt 43: menyen er en knapp, ikke .contextMenu (den tok holdet før wiggle-redigeringen på iOS).
+                dayMenuButton(d, w, pal.limeInk)
             }
             Text(d.name ?? "Ingen rett ennå").font(pal.bold(34)).tracking(-0.8).lineLimit(3).minimumScaleFactor(0.7)
             Text(d.cook.map { "\($0) lager middag" } ?? "Ingen kokk valgt").font(pal.ui(14, .semibold))
@@ -183,7 +185,15 @@ struct MatView: View {
         .background(pal.lime, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .contentShape(Rectangle())
         .onTapGesture { if let dish { store.dishSel = dish.id.value } }
-        .contextMenu { dayMenu(d, w) }
+    }
+
+    /// Prompt 43: «⋯» med dagens valg (Foreslå en annen rett, fast dag, kokk).
+    private func dayMenuButton(_ d: MealDay, _ w: Week, _ color: Color) -> some View {
+        Menu { dayMenu(d, w) } label: {
+            Image(systemName: "ellipsis").font(.system(size: 15, weight: .bold)).foregroundStyle(color)
+                .frame(width: 32, height: 28).contentShape(Rectangle())
+        }
+        .accessibilityLabel("Valg for dagen")
     }
 
     private func todayMeta(_ dish: Dish?) -> String {
@@ -209,6 +219,7 @@ struct MatView: View {
             sectionHead("UKA", w.week.map { "Uke \($0)" } ?? "")
             ForEach(Array(w.days.enumerated()), id: \.offset) { i, d in
                 let dish = dishOf(d, w)
+                HStack(spacing: 0) {
                 Button { if let dish { store.dishSel = dish.id.value } } label: {
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
                         Text(shortDay[i % 7]).font(pal.mono(11)).foregroundStyle(i == ti ? pal.accent : pal.muted).frame(width: 34, alignment: .leading)
@@ -220,7 +231,9 @@ struct MatView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .contextMenu { dayMenu(d, w) }
+                // Prompt 43: ⋯ i stedet for .contextMenu (holdet skal starte wiggle-redigeringen).
+                dayMenuButton(d, w, pal.muted)
+                }
                 Rectangle().fill(pal.line).frame(height: 1)
             }
         }

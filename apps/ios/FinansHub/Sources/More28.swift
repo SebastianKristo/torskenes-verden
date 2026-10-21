@@ -42,6 +42,7 @@ final class Mer28 {
         loadedFor = acct
         readLocal()
         if migrate37() { save(store) }
+        if migrate43() { save(store) }
         guard let d = try? await store.api.callAt("/api", "GET", "/prefs/mer") else { return }
         let r: [String: Any] = JS.obj(d)
         let o: [String: Any] = JS.dict(r, "mer") ?? JS.dict(r, "prefs") ?? r
@@ -51,6 +52,14 @@ final class Mer28 {
         order = oo
         hidden = hh.filter { $0 != Mer28.locked }
         writeLocal()
+        // Prompt 43: samme engangs-migrering for Media når oppsettet kommer fra serveren.
+        if !UserDefaults.standard.bool(forKey: AcctScope.key("papir_mer_media_v2_srv")) {
+            UserDefaults.standard.set(true, forKey: AcctScope.key("papir_mer_media_v2_srv"))
+            hidden.removeAll { $0 == "media" }
+            order.removeAll { $0 == "media" }
+            order.insert("media", at: 0)
+            save(store)
+        }
         if hidden.contains("huske") && !UserDefaults.standard.bool(forKey: AcctScope.key("papir_mer_huske_v1_srv")) {
             UserDefaults.standard.set(true, forKey: AcctScope.key("papir_mer_huske_v1_srv"))
             hidden.removeAll { $0 == "huske" }
@@ -66,6 +75,18 @@ final class Mer28 {
         UserDefaults.standard.set(true, forKey: k)
         if !hidden.contains("huske") { return false }
         hidden.removeAll { $0 == "huske" }
+        return true
+    }
+
+    /// Prompt 43: den gamle Media-siden kan ha vært skjult (papir_mer.h inneholder «media»). Én gang (papir_mer_media_v2)
+    /// tas den ut av skjult-listen og legges øverst i Mer, ellers finner man ikke den nye Media-siden. true = endret.
+    private func migrate43() -> Bool {
+        let k: String = AcctScope.key("papir_mer_media_v2")
+        if UserDefaults.standard.bool(forKey: k) { return false }
+        UserDefaults.standard.set(true, forKey: k)
+        hidden.removeAll { $0 == "media" }
+        order.removeAll { $0 == "media" }
+        order.insert("media", at: 0)
         return true
     }
 
@@ -208,7 +229,11 @@ struct PaperMore28: View {
         }
         .onAppear { Mer30.shared.hiddenCount = cur.hidden.count }
         .onChange(of: cur.hidden.count) { _, n in Mer30.shared.hiddenCount = n }
-        .task(id: store.account?.id ?? "") { await m.load(store) }
+        .task(id: store.account?.id ?? "") {
+            await m.load(store)
+            // Prompt 43: Media i Mer bare med modulen (403/404 skjuler raden).
+            await Media43.shared.probe(store)
+        }
         .onDisappear { if m.editing { m.done(store) } }
     }
 
@@ -227,6 +252,11 @@ struct PaperMore28: View {
         }
         if !inBar.contains("domener") {
             out.append(More28Row(id: "domener", name: "Domener", sub: "Trafikk, besøk og oppetid", icon: "globe") { store.paperOpenDomains(from: "mer") })
+        }
+        // Prompt 43: Media (Sonarr, Radarr, qBittorrent og Prowlarr), fullskjerm (Media43Views.swift). Bare med modulen «media».
+        if Media43.shared.allowed {
+            let n: Int = Media43.shared.torrents.filter { !$0.done }.count
+            out.append(More28Row(id: "media", name: "Media", sub: n > 0 ? "\(n) lastes ned · Sonarr, Radarr og mer" : "Kommer snart, serier, filmer og nedlastinger", icon: "play.rectangle") { Media43.shared.show() })
         }
         out.append(More28Row(id: "chat", name: "Chat", sub: "Ollama lokalt, Gemini og Groq", icon: "bubble.left.and.bubble.right") { store.openChat() })
         out.append(More28Row(id: "kalender", name: "Kalender", sub: "Timeplan, prøver og frister", icon: "calendar") { store.paperGo("kalender") })

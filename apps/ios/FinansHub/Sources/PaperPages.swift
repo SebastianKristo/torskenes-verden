@@ -36,6 +36,8 @@ struct PaperHome: View {
                 // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch29.swift).
                 PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { HomeSearch29(); minis })),
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
+                // Prompt 43: Media (nedlastinger og det som kommer), Media43Home.swift. Nøkkelen h12 er Glimt-brief på iOS.
+                PaperCardDef(key: "h15", label: "Media", view: AnyView(Media43HomeCard())),
                 // Prompt 27: «Velg stopp» og én gruppe per stopp (RuterHome27.swift).
                 // Prompt 41: Min reise over (eller i stedet for) Avganger når du har forlatt skolen (MinReise41Views.swift).
                 PaperCardDef(key: "h3", label: "Avganger", view: AnyView(MinReise41HomeSlot())),
@@ -329,16 +331,27 @@ struct PaperFinance: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @Environment(\.scenePhase) private var phase
+    @Environment(\.paperWide) private var wide
+    @Environment(\.horizontalSizeClass) private var hsc43
 
     var body: some View {
+        // Prompt 43 (1b): på iPad står saldokortet og kortene til venstre og Liste med månedstopper til høyre.
+        HStack(alignment: .top, spacing: 0) {
         VStack(spacing: 10) {
             // Saldo, Kvitteringer (banneret), Siste transaksjoner og Budsjett kan flyttes og skjules (hold inne).
             PaperCardStack(page: "finans", cards: [
-                PaperCardDef(key: "f1", label: "Saldo", view: AnyView(saldo)),
+                // Prompt 43: nytt saldokort (4b i Papir-farger, Fin43.swift).
+                PaperCardDef(key: "f1", label: "Saldo", view: AnyView(Fin43Saldo())),
                 PaperCardDef(key: "f2", label: "Kvitteringer", view: AnyView(PaperReviewBanner())),
                 PaperCardDef(key: "f3", label: "Siste transaksjoner", view: AnyView(recentCard)),
                 PaperCardDef(key: "f4", label: "Budsjett", view: AnyView(budgetCard)),
             ])
+        }
+        .frame(maxWidth: wide && hsc43 == .regular ? 400 : .infinity)
+        if wide && hsc43 == .regular {
+            Rectangle().fill(p.line).frame(width: 1).padding(.horizontal, 16)
+            PaperFinList().frame(maxWidth: .infinity)
+        }
         }
         .task {
             await store.loadPaperFinance()

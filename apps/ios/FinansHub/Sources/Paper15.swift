@@ -85,7 +85,9 @@ extension Store {
 
     func enterPaperEdit(_ page: String) {
         guard paperEditPage != page else { return }
-        Haptics.shared.tick()
+        // Prompt 43: middels haptikk og logg (WiggleList43.swift).
+        Wiggle43.enterHaptic()
+        Wiggle43.log.debug("edit.enter \(page, privacy: .public)")
         // Prompt 21: klikket som kommer når fingeren slippes etter det lange trykket, skal ikke åpne siden.
         paperEditAt = Date()
         withAnimation(.easeOut(duration: 0.2)) { paperEditPage = page }
@@ -260,7 +262,8 @@ struct PaperCardDef: Identifiable {
     var id: String { key }
 }
 
-/// Kortene på en side i brukerens rekkefølge. Hold inne et kort (0,5 s) for å flytte (▲/▼) eller skjule (−) det.
+/// Kortene på en side i brukerens rekkefølge. Hold inne et kort (0,5 s) for å flytte eller skjule (−) det.
+/// Prompt 43: redigeringen går gjennom den felles WiggleReorderList (WiggleList43.swift) – samme oppførsel som Subscription OS.
 struct PaperCardStack: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
@@ -281,22 +284,22 @@ struct PaperCardStack: View {
         let keys = cards.map(\.key)
         let cur = store.pageCards(page, keys)
         let editing = store.paperEditPage == page
-        // Prompt 37: levende rekkefølge mens et kort dras (Reorder37.swift), og Pakker som skjules uten pakker (Pkg37.swift).
-        let order: [String] = editing ? (Drag37.shared.page == page ? (Drag37.shared.live ?? cur.visible) : cur.visible) : cur.visible
-        let shown: [String] = Pkg37.visible(page, order, editing, store)
+        // Prompt 37: Pakker som skjules uten pakker (Pkg37.swift).
+        let shown: [String] = Pkg37.visible(page, cur.visible, editing, store)
+        // Sporing: kortene kan ikke skjules (ingen minus).
+        let hideFn: ((String) -> Void)? = page == "sporing" ? nil : { (k: String) in store.setPaperCardHidden(page, k, true, keys) }
         VStack(spacing: 10) {
-            // Prompt 28: ingen mørk instruksjonslinje; pillene ＋ / ✓ flyter over listen (Wiggle28.swift). Plass til dem her.
-            // Prompt 30: plassen til pillene er nå 64 pt padding-top i PaperPage (Wiggle30.topPad).
+            // Prompt 30: plassen til pillene ＋ / ✓ er 64 pt padding-top i PaperPage (Wiggle30.topPad).
             if wide && twoColumns && !editing {
                 ForEach(segments(shown)) { seg in
                     if seg.full {
-                        ForEach(seg.keys, id: \.self) { k in cardView(k, shown, keys) }
+                        ForEach(seg.keys, id: \.self) { k in held(k, shown, keys) }
                     } else {
                         // To og to kort ved siden av hverandre, like høye (f.eks. Pakker og Avganger på Fold/iPad).
                         ForEach(pairs(seg.keys), id: \.self) { pair in
                             HStack(alignment: .top, spacing: 12) {
                                 ForEach(pair, id: \.self) { k in
-                                    cardView(k, shown, keys).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                    held(k, shown, keys).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                                 }
                                 if pair.count == 1 { Color.clear.frame(maxWidth: .infinity) }
                             }
@@ -305,18 +308,30 @@ struct PaperCardStack: View {
                     }
                 }
             } else {
-                ForEach(shown, id: \.self) { k in
-                    cardView(k, shown, keys)
-                        .id("card37-" + k)
-                        .zIndex(Drag37.shared.isDragging(page, k) ? 10 : 0)
-                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                }
+                WiggleReorderList(
+                    keys: shown,
+                    editing: editing,
+                    paused: Edit28.shared.anySheet39,
+                    label: { (k: String) in cardLabel(k) },
+                    hide: hideFn,
+                    enter: { store.enterPaperEdit(page) },
+                    commit: { (o: [String]) in store.commitPaperOrder37(page, o, keys) },
+                    content: { (k: String) in cardView(k, shown, keys) },
+                    accessory: { (k: String) in
+                        PaperEditAccessory43(page: page, key: k, index: shown.firstIndex(of: k) ?? 0, count: shown.count, keys: keys)
+                    }
+                )
             }
         }
-        .coordinateSpace(name: Drag37.space(page))
-        .background(Drag37StackTop(page: page))
         .animation(.easeOut(duration: 0.3), value: Pkg37.animKey(page, editing, store))
         .onAppear { Edit28.shared.labels[page] = cards.map { ($0.key, $0.label) } }
+    }
+
+    private func cardLabel(_ k: String) -> String { cards.first { $0.key == k }?.label ?? k }
+
+    /// Bred skjerm utenfor redigering: hold inne et kort for å starte redigering.
+    private func held(_ k: String, _ vis: [String], _ keys: [String]) -> some View {
+        cardView(k, vis, keys).wiggle43Hold(editing: false) { store.enterPaperEdit(page) }
     }
 
     private func pairs(_ keys: [String]) -> [[String]] {
@@ -341,8 +356,7 @@ struct PaperCardStack: View {
 
     @ViewBuilder private func cardView(_ k: String, _ vis: [String], _ keys: [String]) -> some View {
         if let c = cards.first(where: { $0.key == k }) {
-            let i = vis.firstIndex(of: k) ?? 0
-            PaperEditableCard(page: page, key: k, index: i, count: vis.count, keys: keys, vis: vis) { c.view }
+            PaperEditableCard(page: page, key: k) { c.view }
         }
     }
 }
@@ -389,105 +403,59 @@ struct PaperEditBar: View {
     private func label(_ k: String) -> String { cards.first { $0.key == k }?.label ?? k }
 }
 
-/// Ett kort: langt trykk gir redigeringsmodus med dempet vugging (±0,2°, 0,6 s), ▲, ▼ og −.
+/// Ett kort: innholdet er av i redigeringsmodus, og Pakker uten pakker vises dempet.
+/// Prompt 43: vugging, hold, minus og flytting ligger i WiggleReorderList (WiggleList43.swift), ikke per kort.
 struct PaperEditableCard<C: View>: View {
     @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
+    let page: String
+    let key: String
+    @ViewBuilder let content: () -> C
+
+    var body: some View {
+        let editing = store.paperEditPage == page
+        let dim: Bool = editing && Pkg37.dimmed(page, key, store)
+        content()
+            .disabled(editing)
+            // Prompt 37: Pakker med «vis bare når det er pakker» og 0 pakker vises dempet i redigeringsmodus.
+            .grayscale(dim ? 0.6 : 0)
+            .opacity(dim ? 0.65 : 1)
+    }
+}
+
+/// Tilbehøret over et kort i redigeringsmodus (over dra-laget, så knappene kan trykkes):
+/// «✎ Rediger widget», «Skjult når ingen pakker» og ▲ ▼ på Sporing.
+struct PaperEditAccessory43: View {
+    @Environment(Store.self) private var store
     let page: String
     let key: String
     let index: Int
     let count: Int
     let keys: [String]
-    /// Prompt 37: de synlige kortene i rekkefølge (til dra-gesten).
-    var vis: [String] = []
-    @ViewBuilder let content: () -> C
-    @State private var wig = false
-    @State private var tiny41: Bool = false
-
-    /// Prompt 37: egen gest i stedet for `.draggable` (forhåndsvisningen uten miljø krasjet appen). Reorder37.swift.
-    private var dragShield: some View {
-        Drag37Shield(page: page, key: key, visible: vis, keys: keys)
-    }
 
     var body: some View {
-        let editing = store.paperEditPage == page
-        let sign: Double = index % 2 == 0 ? 1 : -1
-        let a: Double = Edit28.angle
-        let dragging: Bool = editing && Drag37.shared.isDragging(page, key)
-        let dy: CGFloat = dragging ? Drag37.shared.offsetY : 0
-        let dim: Bool = editing && Pkg37.dimmed(page, key, store)
-        // Prompt 39: mens et redigeringsark er åpent står kortene stille og «Rediger widget» skjules.
+        // Prompt 39: mens et redigeringsark er åpent skjules «Rediger widget».
         let sheet39: Bool = Edit28.shared.anySheet39
-        content()
-            .disabled(editing)
-            .allowsHitTesting(!editing)
-            // Prompt 37: Pakker med «vis bare når det er pakker» og 0 pakker vises dempet i redigeringsmodus.
-            .grayscale(dim ? 0.6 : 0)
-            .opacity(dim ? 0.65 : 1)
-            .background(Drag37Frame(page: page, key: key))
-            .overlay {
-                // Prompt 21: i redigeringsmodus fanger et usynlig lag alle trykk (ingen lenker åpnes),
-                // og kortet kan dras til en ny plass. Kontrollene ligger over laget.
-                if editing { dragShield }
-            }
-            .overlay {
-                // Prompt 28: «✎ Rediger widget» midt på kort med innstillinger.
-                // Prompt 41: én pille midt på kortet. «Skjult når ingen pakker» ligger nederst til høyre (ikke under pillen),
-                // så pillen ikke vokser ut av et lavt kort og legger seg oppå pillen til neste kort.
-                if editing && !dragging && !sheet39 && !tiny41 && Edit28.settingsCards.contains(key) && page == "hjem" {
-                    Edit28WidgetPill { Edit28.shared.editWidget(key, store) }
+        let dim: Bool = Pkg37.dimmed(page, key, store)
+        GeometryReader { (g: GeometryProxy) in
+            // Prompt 41: kort uten innhold (f.eks. sveipet bort) har høyde 0 – da vises ingen merker midt på siden.
+            if g.size.height >= 4 {
+                ZStack {
+                    // Prompt 41: én pille midt på kortet; «Skjult når ingen pakker» nederst til høyre.
+                    if !sheet39 && Edit28.settingsCards.contains(key) && page == "hjem" {
+                        Edit28WidgetPill { Edit28.shared.editWidget(key, store) }
+                    }
+                    if !sheet39 && dim && page == "hjem" {
+                        Pkg37HiddenBadge().scaleEffect(0.9).padding(.trailing, 8).padding(.bottom, 6)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    }
+                    // Sporing: ▲ ▼ i Papir-stil i tillegg til dra (kortene der kan ikke skjules).
+                    if page == "sporing" {
+                        controls.offset(x: 4, y: -8)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                    }
                 }
+                .frame(width: g.size.width, height: g.size.height)
             }
-            .overlay(alignment: .bottomTrailing) {
-                if editing && !dragging && !sheet39 && dim && page == "hjem" {
-                    Pkg37HiddenBadge().scaleEffect(0.9).padding(.trailing, 8).padding(.bottom, 6)
-                }
-            }
-            .background(
-                // Prompt 41: kort uten innhold (f.eks. sveipet bort) har høyde 0 – da vises ingen merker midt på siden.
-                GeometryReader { (g: GeometryProxy) in
-                    let t: Bool = g.size.height < 4
-                    Color.clear
-                        .onAppear { if tiny41 != t { tiny41 = t } }
-                        .onChange(of: t) { _, nt in tiny41 = nt }
-                }
-            )
-            .overlay(alignment: .topLeading) {
-                // Prompt 28: minus-sirkel i Papir-stil øverst til venstre, 9 pt utenfor kanten (ikke på Sporing).
-                if editing && page != "sporing" && !tiny41 {
-                    Edit28Minus(label: "Skjul kortet") { store.setPaperCardHidden(page, key, true, keys) }
-                        .offset(x: -9, y: -9)
-                }
-            }
-            .overlay(alignment: .topTrailing) {
-                // Sporing: midlertidig ▲ ▼ i Papir-stil til dra er på plass.
-                if editing && page == "sporing" { controls.offset(x: 4, y: -8) }
-            }
-            .rotationEffect(.degrees(editing && !dragging && !sheet39 ? (wig ? a : -a) * sign : 0))
-            // Prompt 37: kortet som dras følger fingeren (uten animasjon), litt større og med skygge, over de andre.
-            .scaleEffect(dragging ? 1.03 : 1)
-            .shadow(color: .black.opacity(dragging ? 0.3 : 0), radius: dragging ? 16 : 0, y: dragging ? 10 : 0)
-            .offset(y: dy)
-            .transaction { (t: inout Transaction) in if dragging { t.animation = nil } }
-            .zIndex(dragging ? 10 : 0)
-            .simultaneousGesture(LongPressGesture(minimumDuration: 0.5, maximumDistance: 8).onEnded { _ in
-                if !editing { store.enterPaperEdit(page) }
-            })
-            .onChange(of: editing) { _, on in
-                if !on && Drag37.shared.page == page { Drag37.shared.end(store) }
-                startWiggle(on)
-            }
-            .onChange(of: dragging) { _, d in if !d && editing { startWiggle(true) } }
-            .onChange(of: sheet39) { _, open in if editing { startWiggle(!open) } }
-            .onAppear { startWiggle(editing) }
-    }
-
-    private func startWiggle(_ on: Bool) {
-        if on {
-            wig = false
-            withAnimation(.easeInOut(duration: Edit28.half).repeatForever(autoreverses: true)) { wig = true }
-        } else {
-            withAnimation(.easeOut(duration: 0.15)) { wig = false }
         }
     }
 
@@ -496,16 +464,6 @@ struct PaperEditableCard<C: View>: View {
             if index > 0 { Edit28Arrow(up: true) { store.movePaperCard(page, key, -1, keys) } }
             if index < count - 1 { Edit28Arrow(up: false) { store.movePaperCard(page, key, 1, keys) } }
         }
-    }
-
-    private func ctl(_ t: String, _ label: String, _ act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            Text(t).font(PF.ui(13, .bold)).foregroundStyle(p.bg).frame(width: 30, height: 30)
-                .background(p.ink, in: Circle())
-                .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(label)
     }
 }
 

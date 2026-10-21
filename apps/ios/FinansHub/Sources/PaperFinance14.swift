@@ -47,24 +47,29 @@ struct PaperFinList: View {
         VStack(spacing: 10) {
             search
             chips(all)
-            HStack {
-                PLabel(text: (cat == "Alle" ? monthName() : cat) + " · \(list.count)")
-                Spacer()
-                Text("Netto " + pkr(list.reduce(0) { $0 + $1.amount })).font(PF.ui(12.5, .semibold)).foregroundStyle(p.mut)
-            }
-            .padding(.horizontal, 2)
             if store.txs == nil { ProgressView().padding(30) }
             if store.txs != nil && list.isEmpty {
                 PCard { Text("Ingen transaksjoner i utvalget.").font(PF.ui(13.5)).foregroundStyle(p.mut) }
             }
-            VStack(spacing: 0) {
-                ForEach(Array(list.prefix(200).enumerated()), id: \.element.id) { i, t in
-                    if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
-                    row(t)
+            // Prompt 43: gruppert per måned med rød mono-etikett, netto og 2 pt strek (Fin43.swift). Overskriften står fast
+            // øverst mens du scroller i måneden. Med kategorifilter: «MAT OG DAGLIGVARER · OKT · 7».
+            LazyVStack(spacing: 14, pinnedViews: [.sectionHeaders]) {
+                ForEach(Fin43Month.groups(Array(list.prefix(400)))) { g in
+                    Section {
+                        VStack(spacing: 0) {
+                            ForEach(Array(g.txs.enumerated()), id: \.element.id) { i, t in
+                                if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
+                                row(t)
+                            }
+                        }
+                        .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                        .padding(.top, 6)
+                    } header: {
+                        Fin43MonthHead(title: (cat == "Alle" ? g.label : cat.uppercased() + " · " + g.short) + " · \(g.txs.count)", net: g.net)
+                    }
                 }
             }
-            .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
         .task { if store.txs == nil { try? await store.loadTx() } }
     }
@@ -76,17 +81,15 @@ struct PaperFinList: View {
             SearchField27(text: Binding(get: { store.query }, set: { store.query = $0 }), placeholder: "Søk i transaksjoner", font: PF.ui(14.5),
                           focus: $focused, onClear: { store.search() }, onSubmit: { store.search() })
                 .padding(.leading, 14)
-            Button {
+            // Prompt 43: rød pille [orb] Glimt i stedet for «✦ AI». Åpner Søk med Glimt på og teksten i feltet.
+            Glimt43Pill(on: true, height: 34) {
                 Haptics.shared.tap()
                 let q = store.query
+                UserDefaults.standard.set(true, forKey: "fh_psearch_ai")
                 guard !q.trimmingCharacters(in: .whitespaces).isEmpty else { store.paperGo("fsok"); return }
                 store.paperGo("fsok")
                 store.ask(q)
-            } label: {
-                Text("✦ AI").font(PF.ui(13, .bold)).foregroundStyle(p.bg).padding(.horizontal, 14).frame(height: 34)
-                    .background(p.ink, in: Capsule())
             }
-            .buttonStyle(.plain)
             .padding(.trailing, 5)
         }
         .frame(height: 44)

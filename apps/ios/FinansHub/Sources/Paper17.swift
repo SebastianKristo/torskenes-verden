@@ -667,7 +667,9 @@ struct PaperSettings17: View {
                 PaperLinkRow(name: "AI og modeller", sub: "Modeller, jobber, forbruk og nøkler", icon: "cpu") { AiCtl34.shared.show("ov") },
                 PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
                 PaperLinkRow(name: "Kalendere", sub: "Google Kalender · Home Assistant · Skole-iCal", icon: "calendar") { Int26Nav.openKal(from: nil, store) },
-                PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Kalendere, Entur, Bring og flere", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
+                // Prompt 43: Widgets-galleriet (Widgets43.swift).
+                PaperLinkRow(name: "Widgets", sub: "Media, Avganger, Kalender og 3 til", icon: "square.grid.2x2") { Widgets43.shared.open = true },
+                PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Media, Entur, Bring og 17 til", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
                 PaperLinkRow(name: "Helse og posisjon", sub: HealthSync.shared.master ? "Apple Health er på · posisjon og bakgrunn" : "Apple Health er av · posisjon og bakgrunn", icon: "heart.text.square") { store.paperGo("innst-helse") },
                 // Prompt 39: egen underside for profilene (Standard / Finans + Boliger / Boliger-profil).
                 PaperLinkRow(name: "Appprofil", sub: store.appProfileName39, icon: "person.2") { store.paperGo("innst-appprofil") },

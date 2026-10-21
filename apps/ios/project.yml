@@ -106,6 +106,9 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.finanshub
             CFBundleURLSchemes: [finanshub, homelab]
+          # Prompt 43: magnet:-lenker åpner «Legg til magnet-lenke» i Media (qBittorrent).
+          - CFBundleURLName: no.kristo.finanshub.magnet
+            CFBundleURLSchemes: [magnet]
         # Prompt 33: canOpenURL(kalender://) – åpne Kalender-appen når den er installert, ellers Homelabs egen kalender.
         LSApplicationQueriesSchemes: [kalender]
         # Prompt 41: tilgangsgruppen for det delte enhets-tokenet (KalShared41, SharedKal/Group). Tom prefiks uten Team ID → ignoreres.

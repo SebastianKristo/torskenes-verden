@@ -411,19 +411,14 @@ struct PaperFinSearch: View {
                 Text("⌕").font(PF.ui(17)).foregroundStyle(p.mut)
             })
             .padding(.leading, 16)
-            Button {
+            // Prompt 43: [orb] Glimt – rød fylt når på, rød kant når av (Fin43.swift). Orben går raskere mens Glimt svarer.
+            Glimt43Pill(on: aiOn, height: 38, busy: store.aiBusy || Fin40Ask.shared.busy) {
                 Haptics.shared.select()
                 aiOn.toggle()
                 UserDefaults.standard.set(aiOn, forKey: "fh_psearch_ai")
                 if aiOn { sug.close(suppress: false) } else { sug.update(q, aiOn: false, store) }
-            } label: {
-                Text("✦ Glimt").font(PF.ui(13, .bold)).foregroundStyle(aiOn ? p.bg : p.mut).padding(.horizontal, 14).frame(height: 38)
-                    .background(aiOn ? p.ink : Color.clear, in: Capsule())
-                    .overlay(Capsule().stroke(aiOn ? p.ink : p.line, lineWidth: 1))
             }
-            .buttonStyle(.plain)
             .padding(.trailing, 6)
-            .accessibilityLabel(aiOn ? "Glimt er på" : "Glimt er av")
         }
         .frame(height: 50)
         .background(p.card, in: Capsule())
@@ -561,7 +556,6 @@ struct PaperFinMoreGrid: View {
     /// Prompt 28: redigeringsmodus er store.paperEditPage == "fmer", så pillene «↺ Tilbakestill» og ✓ kan ligge over listen
     /// (Wiggle28.swift). Samme vugging som Hjem (±0,45°, 0,6 s, annenhver i motfase).
     private var editing: Bool { store.paperEditPage == "fmer" }
-    @State private var wiggle: Bool = false
     @State private var order: [String] = FinTileOrder20.load()
 
     private struct Tile: Identifiable {
@@ -577,9 +571,24 @@ struct PaperFinMoreGrid: View {
         let cols = wide ? 4 : 2
         VStack(alignment: .leading, spacing: 10) {
             // Prompt 30: plassen til pillene er nå 64 pt padding-top i PaperPage (Wiggle30.topPad).
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: cols), spacing: 10) {
-                ForEach(Array(visibleTiles.enumerated()), id: \.element.id) { i, t in cell(t, i) }
-            }
+            // Prompt 43: felles WiggleReorderList (WiggleList43.swift), samme oppførsel som Subscription OS.
+            let vis: [Tile] = visibleTiles
+            WiggleReorderList(
+                keys: vis.map(\.id),
+                editing: editing,
+                columns: cols,
+                label: { (id: String) in vis.first { $0.id == id }?.name ?? id },
+                enter: { startEditing() },
+                commit: { (o: [String]) in commitOrder(o) },
+                content: { (id: String) in
+                    if let t = vis.first(where: { $0.id == id }) { tile(t) }
+                },
+                accessory: { (id: String) in
+                    if let t = vis.first(where: { $0.id == id }) {
+                        badge30(t).offset(x: -9, y: -9).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    }
+                }
+            )
             // Prompt 30: skjulte sider under rutenettet når ＋ er trykket (55 % opasitet, hvitt ＋-merke).
             if editing && FinHidden30.shared.showHidden { hiddenSection(cols) }
         }
@@ -675,36 +684,25 @@ struct PaperFinMoreGrid: View {
         }
     }
 
-    @ViewBuilder private func cell(_ t: Tile, _ i: Int) -> some View {
-        let sign: Double = i % 2 == 0 ? 1 : -1
-        if editing {
-            tile(t)
-                .rotationEffect(.degrees((wiggle ? Edit28.angle : -Edit28.angle) * sign))
-                .animation(.easeInOut(duration: Edit28.half).repeatForever(autoreverses: true), value: wiggle)
-                .overlay(alignment: .topLeading) { badge30(t).offset(x: -9, y: -9) }
-                .draggable(t.id)
-                .dropDestination(for: String.self) { items, _ in
-                    drop(items.first, on: t.id)
-                    return true
-                }
-        } else {
-            tile(t)
-                .simultaneousGesture(LongPressGesture(minimumDuration: 0.45, maximumDistance: 8).onEnded { _ in startEditing() })
-        }
-    }
-
     private func startEditing() {
         guard !editing else { return }
         FinHidden30.shared.showHidden = false
         order = sortedTiles.map(\.id)
         store.enterPaperEdit("fmer")
-        DispatchQueue.main.async { wiggle = true }
     }
 
     /// Kalles når redigeringen avsluttes (✓ i pillen, ny side eller tilbake).
     private func stopEditing() {
-        wiggle = false
         FinTileOrder20.save(order, store)
+    }
+
+    /// Prompt 43: ny synlig rekkefølge etter slipp – skjulte fliser står der de sto, og lagres med en gang.
+    private func commitOrder(_ visible: [String]) {
+        let next: [String] = Wiggle43.merge(sortedTiles.map(\.id), visible: visible)
+        guard next != order else { return }
+        Haptics.shared.tick()
+        order = next
+        FinTileOrder20.save(next, store)
     }
 
     private func resetOrder() {

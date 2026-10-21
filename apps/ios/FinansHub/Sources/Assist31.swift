@@ -178,8 +178,10 @@ final class Assist31 {
             return
         }
         let q: String = homeQ
+        // Prompt 43: samme svar som i boblen (ingen ny forespørsel); tenker den fortsatt, sendes spørsmålet som før.
+        let answer: String = homeBusy ? "" : Pull41.chatText(homeAnswer)
         closeHome()
-        store.openChat(prompt: q)
+        store.openChat41(q, answer: answer)
     }
 
     /// Kjører spørsmålet gjennom Glimt-ruteren. nil = feil (eller avbrutt). page = siden som viser svaret selv.

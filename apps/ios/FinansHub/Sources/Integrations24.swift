@@ -75,7 +75,8 @@ struct Int24Item: Identifiable, Hashable {
         color = JS.str(o, "color") ?? ""
         desc = JS.str(o, "description") ?? JS.str(o, "desc") ?? ""
         statusText = JS.str(o, "statusText") ?? ""
-        guide = Int26Step.parse(o["guide"])
+        // Prompt 43: integrations.json kan sende stegene som `steps`.
+        guide = Int26Step.parse(o["guide"] ?? o["steps"])
         link = JS.str(o, "link") ?? ""
         hidden = JS.bool(o, "hidden") ?? false
         kalLinks = Int26Step.connectedLinks(JS.list(o, "links"))

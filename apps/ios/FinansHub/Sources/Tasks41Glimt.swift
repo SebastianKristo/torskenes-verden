@@ -371,7 +371,8 @@ struct Tasks41MadeChip: View {
         let n: Int = g.made(m).count
         if n > 0 {
             let on: Bool = TaskDock22.shared.cur == Tasks41Glimt.madeId
-            Button { Haptics.shared.select(); TaskDock22.shared.cur = Tasks41Glimt.madeId } label: {
+            // Prompt 43: et langt trykk (rekkefølge-arket) velger ikke lista.
+            Button { if Tasks43Tabs.shared.justHeld { return }; Haptics.shared.select(); TaskDock22.shared.cur = Tasks41Glimt.madeId } label: {
                 HStack(spacing: 6) {
                     Circle().fill(p.lab).frame(width: 7, height: 7)
                     Text("Laget med Glimt").font(PF.ui(13, .semibold)).foregroundStyle(on ? p.bg : p.ink)

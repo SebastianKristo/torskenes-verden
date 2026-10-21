@@ -36,6 +36,16 @@ final class Pull41 {
         }
     }
 
+    /// Prompt 43: svarteksten til Chat, med «Kilde: …» nederst når svaret har en kilde (f.eks. MET Norway).
+    nonisolated static func chatText(_ a: Assist31Answer?) -> String {
+        guard let a else { return "" }
+        let t: String = a.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty, !a.failed34 else { return "" }
+        let src: String = a.source.replacingOccurrences(of: "✦", with: "").trimmingCharacters(in: .whitespaces)
+        if src.isEmpty || t.contains("Kilde:") { return t }
+        return t + "\n\n_Kilde: " + src + "_"
+    }
+
     func cancel() {
         withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.25)) {
             pull = 0
@@ -47,7 +57,8 @@ final class Pull41 {
     func open(_ store: Store, reduce: Bool) {
         let a: Assist31 = Assist31.shared
         let q: String = a.homeQ
-        let answer: String = a.homeBusy ? "" : (a.homeAnswer?.text ?? "")
+        // Prompt 43: samme svar som i boblen (med fet tekst og kilde), ingen ny forespørsel. Tenker den fortsatt, sendes spørsmålet.
+        let answer: String = a.homeBusy ? "" : Pull41.chatText(a.homeAnswer)
         question = q
         from = Assist38.shared.rect
         opening = true

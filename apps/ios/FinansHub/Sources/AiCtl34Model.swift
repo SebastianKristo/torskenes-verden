@@ -209,7 +209,8 @@ final class AiCtl34 {
     /// Faner: Oversikt · Modeller · Valg · Jobber · Forbruk · API og nøkler (finans: AI-valg · Tilkoblinger · Jobber · Forbruk).
     var tabs: [(String, String)] {
         if fin { return [("rt", "AI-valg"), ("api", "Tilkoblinger"), ("job", "Jobber"), ("use", "Forbruk")] }
-        return [("ov", "Oversikt"), ("mod", "Modeller"), ("rt", "Valg"), ("job", "Jobber"), ("use", "Forbruk"), ("api", "API og nøkler")]
+        // Prompt 43: «Importer» – minne og samtaler fra Claude (ClaudeImport43.swift).
+        return [("ov", "Oversikt"), ("mod", "Modeller"), ("rt", "Valg"), ("job", "Jobber"), ("use", "Forbruk"), ("api", "API og nøkler"), ("imp", "Importer")]
     }
 
     /// Oppgavene (id, navn, beskrivelse, standard, reserve, finans) når serveren ikke sender egne navn.

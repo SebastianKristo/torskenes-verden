@@ -56,9 +56,11 @@ struct Int26Meta {
     let color: String
     let desc: String
 
-    static let categories: [String] = ["Smarthjem", "Transport og pakker", "Økonomi", "AI", "Informasjon", "Annet"]
+    // Prompt 43: MEDIA-gruppen (Integrations43.swift) rett etter Smarthjem.
+    static let categories: [String] = ["Smarthjem", "Media", "Transport og pakker", "Økonomi", "AI", "Informasjon", "Annet"]
 
     static func fallback(_ id: String) -> Int26Meta {
+        if let m = Int43Media.meta(id) { return m }
         switch id {
         case "ha": return Int26Meta(category: "Smarthjem", badge: "HA", color: "#18bcf2", desc: "Lokal server og to-do-lister")
         case "calendars", "calendar": return Int26Meta(category: "Informasjon", badge: "31", color: "#4285F4", desc: "Skole-iCal, Canvas, Google og Home Assistant")
@@ -373,9 +375,11 @@ struct Int26Detail: View {
             PLabel(text: "Synk med Home Assistant").padding(.leading, 4).padding(.top, 14)
             TaskHASection22()
         }
-        if !it.guide.isEmpty {
-            PLabel(text: "Slik gjør du").padding(.leading, 4).padding(.top, 14)
-            Int26Guide(steps: it.guide)
+        // Prompt 43: Media-tjenestene har steg-for-steg-oppsett også når serveren ikke sender dem (Integrations43.swift).
+        let guide43: [Int26Step] = it.guide.isEmpty ? Int43Media.steps(it.id) : it.guide
+        if !guide43.isEmpty {
+            PLabel(text: Int43Media.ids.contains(it.id) ? "Slik setter du det opp" : "Slik gjør du").padding(.leading, 4).padding(.top, 14)
+            Int26Guide(steps: guide43)
         }
         actions(it).padding(.top, 14)
     }
@@ -544,11 +548,8 @@ struct Int26Guide: View {
                     Text(st.text).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                 }
                 if !st.code.isEmpty {
-                    Text(st.code).font(PF.mono(11.5, bold: false)).foregroundStyle(p.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(p.bg, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .textSelection(.enabled)
+                    // Prompt 43: mørk kodeblokk som kopieres med ett trykk.
+                    Int43Code(code: st.code).padding(.top, 4)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

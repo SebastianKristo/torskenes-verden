@@ -337,23 +337,36 @@ struct Chat27Composer: View {
                     if s.busy {
                         Button { s.stop() } label: {
                             RoundedRectangle(cornerRadius: 3).fill(c.bg).frame(width: 12, height: 12)
-                                .frame(width: 40, height: 40)
+                                .frame(width: 38, height: 38)
                                 .background(c.ink, in: Circle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Stopp")
                     } else {
+                        // Prompt 43: tom melding = lys knapp med synlig pil og tynn kant (ikke 35 % opasitet); med tekst mørk som før.
                         Button { send() } label: {
-                            Image(systemName: "arrow.up").font(.system(size: 17, weight: .bold)).foregroundStyle(c.bg)
-                                .frame(width: 40, height: 40)
-                                .background(c.ink, in: Circle())
-                                .opacity(canSend ? 1 : 0.35)
+                            Image(systemName: "arrow.up").font(.system(size: 17, weight: .bold)).foregroundStyle(canSend ? c.bg : c.mut)
+                                .frame(width: 38, height: 38)
+                                .background {
+                                    if canSend {
+                                        Circle().fill(c.ink)
+                                    } else {
+                                        // line blandet med card (70/30).
+                                        ZStack { Circle().fill(c.card); Circle().fill(c.line.opacity(0.7)) }
+                                    }
+                                }
+                                .overlay { if !canSend { Circle().strokeBorder(c.line, lineWidth: 1.5) } }
+                                .contentShape(Circle())
+                                .animation(.easeOut(duration: 0.15), value: canSend)
                         }
                         .buttonStyle(.plain)
                         .disabled(!canSend)
                         .accessibilityLabel("Send")
+                        .accessibilityHint(canSend ? "" : "Skriv en melding først")
                     }
                 }
+                // Prompt 43: 4 pt luft til høyre og 2 pt under, så knappen og kanten står helt inne i kortet.
+                .padding(.trailing, 4).padding(.bottom, 2)
             }
             .padding(8)
             .background(c.card, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
@@ -415,7 +428,7 @@ struct Chat27Composer: View {
     private func round(_ icon: String, _ label: String, on: Bool, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
             Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(on ? Color.white : c.ink)
-                .frame(width: 40, height: 40)
+                .frame(width: 38, height: 38)
                 .background(on ? Color(hex: "#b23a2a") : Color.clear, in: Circle())
                 .contentShape(Circle())
         }
@@ -427,15 +440,17 @@ struct Chat27Composer: View {
         Button(action: act) {
             HStack(spacing: 5) {
                 Image(systemName: icon).font(.system(size: 12, weight: .semibold))
-                Text(label).font(c.ui(13, .semibold)).lineLimit(1)
+                Text(label).font(c.ui(13, .semibold)).lineLimit(1).minimumScaleFactor(0.8)
             }
             .foregroundStyle(on ? c.bg : c.ink)
-            .padding(.horizontal, 11).frame(height: 34)
+            // Prompt 43: pillene kan krympe på smale skjermer i stedet for å skyve knappene ut av kortet.
+            .padding(.horizontal, 11).frame(minWidth: 0).frame(height: 34)
             .background(on ? c.ink : Color.clear, in: Capsule())
             .overlay(Capsule().stroke(on ? c.ink : c.line, lineWidth: 1))
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .layoutPriority(-1)
         .accessibilityAddTraits(on ? .isSelected : [])
     }
 }

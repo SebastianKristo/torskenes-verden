@@ -217,10 +217,19 @@ struct PaperTasksView: View {
     }
     @FocusState private var focused: Bool
     @MainActor private var m: TasksModel { TasksModel.shared }
+    /// Prompt 43: iPad (bred + regular) → 1a med tre kolonner (Tasks43Wide.swift). Split View 1/3 faller tilbake til mobil.
+    @Environment(\.horizontalSizeClass) private var hsc43
+    private var split43: Bool { wide && hsc43 == .regular }
 
     var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+        if split43 {
+            Tasks43ListColumn()
+                .frame(width: 250)
+            Rectangle().fill(p.line).frame(width: 1).padding(.horizontal, 14)
+        }
         VStack(alignment: .leading, spacing: 12) {
-            listChips
+            if !split43 { listChips }
             // Prompt 41: Glimt deler opp i bakgrunnen (stiplede rader) og ferdig-raden (Tasks41Glimt.swift).
             Tasks41PendingRows()
             // Prompt 32: Arkivert (Tasks32.swift) – egen liste, uten «Ny oppgave».
@@ -235,8 +244,8 @@ struct PaperTasksView: View {
             // Prompt 22: på telefon ligger feltet fast over fanelinjen (TaskDockField22), ikke øverst.
             if wide { addField }
             options
-            // Prompt 37: Glimt-kortene (like oppgaver, forfalte), Tasks37Glimt.swift.
-            Task37GlimtCards(cur: cur)
+            // Prompt 37: Glimt-kortene (like oppgaver, forfalte), Tasks37Glimt.swift. Prompt 43: på iPad i høyre kolonne.
+            if !split43 { Task37GlimtCards(cur: cur) }
             if let e = m.error { PCard { Text(e).font(PF.ui(13)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true) } }
             ForEach(groups, id: \.0) { g in
                 HStack {
@@ -267,13 +276,21 @@ struct PaperTasksView: View {
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 4).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        if split43 {
+            Rectangle().fill(p.line).frame(width: 1).padding(.horizontal, 14)
+            Tasks43RightColumn(cur: cur)
+                .frame(width: 320)
+        }
+        }
         .task {
             await m.load(store)
             await Tasks32b.shared.load(store)
         }
         // Prompt 37: detaljarket, listearket og Glimt-arket er ark i appen (Tasks37*.swift). Mens et ark er åpent,
         // skjules det dokkede feltet og ✦-knappen (Tasks37UI.anySheet).
-        .sheet(item: Binding<TaskItem17?>(get: { Tasks37UI.shared.detail }, set: { Tasks37UI.shared.detail = $0 })) { (t: TaskItem17) in
+        // Prompt 43: på iPad (1a) vises valgt oppgave i høyre kolonne, ikke i et ark.
+        .sheet(item: Binding<TaskItem17?>(get: { split43 ? nil : Tasks37UI.shared.detail }, set: { Tasks37UI.shared.detail = $0 })) { (t: TaskItem17) in
             Task37DetailSheet(task: t) { Tasks37UI.shared.detail = nil }
                 .environment(\.paper, p)
                 .presentationDetents([.large])
@@ -317,21 +334,39 @@ struct PaperTasksView: View {
     private var listChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                chip("alle", "Alle", p.ink, m.openCount)
-                ForEach(m.lists) { l in
-                    chip37(l)
+                // Prompt 43: pillene i valgt rekkefølge (hold inne 0,45 s → «Rekkefølge på lister»), «+ Ny liste» alltid sist.
+                ForEach(Tasks43Tabs.shared.sorted(m), id: \.self) { k in
+                    tabChip43(k).tasks43Hold()
                 }
-                // Prompt 37: + Ny liste (stiplet).
-                Task37NewListChip {
+                Tasks43NewListChip {
                     Haptics.shared.tap()
                     Tasks37UI.shared.listEdit = nil
                     Tasks37UI.shared.listSheet = true
                 }
-                // Prompt 41: «Laget med Glimt · N» (bare når det finnes beskjeder).
-                Tasks41MadeChip()
-                // Prompt 32: «Arkivert · N» sist i listevelgeren.
-                Tasks32bChip(on: cur == Tasks32b.archId) { cur = Tasks32b.archId; Haptics.shared.select() }
             }
+        }
+        .sheet(isPresented: Binding<Bool>(get: { Tasks43Tabs.shared.sheet }, set: { Tasks43Tabs.shared.sheet = $0 })) {
+            Tasks43OrderSheet()
+                .environment(\.paper, p)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    @ViewBuilder private func tabChip43(_ k: String) -> some View {
+        if k == "alle" {
+            chip("alle", "Alle", p.ink, m.openCount)
+        } else if k == Tasks32b.archId {
+            // Prompt 32: «Arkivert · N».
+            Tasks32bChip(on: cur == Tasks32b.archId) {
+                if Tasks43Tabs.shared.justHeld { return }
+                cur = Tasks32b.archId; Haptics.shared.select()
+            }
+        } else if k == Tasks41Glimt.madeId {
+            // Prompt 41: «Laget med Glimt · N» (bare når det finnes beskjeder).
+            Tasks41MadeChip()
+        } else if let l = m.lists.first(where: { $0.id == k }) {
+            chip37(l)
         }
     }
 
@@ -341,6 +376,7 @@ struct PaperTasksView: View {
         let names: [String] = m.isPrivate37(l) ? [] : l.memberIds.map { (id: String) -> String in m.memberName(id) ?? "?" }
         let on: Bool = cur == l.id
         return Task37ListChip(name: l.name, color: Color(hex: l.color), count: n, avatars: names, on: on) {
+            if Tasks43Tabs.shared.justHeld { return }
             Haptics.shared.select()
             if on {
                 Tasks37UI.shared.listEdit = l
@@ -353,7 +389,7 @@ struct PaperTasksView: View {
 
     private func chip(_ id: String, _ name: String, _ c: Color, _ n: Int) -> some View {
         let on = cur == id
-        return Button { cur = id; Haptics.shared.select() } label: {
+        return Button { if Tasks43Tabs.shared.justHeld { return }; cur = id; Haptics.shared.select() } label: {
             HStack(spacing: 8) {
                 // Prompt 22: «Alle» har ingen fargeprikk.
                 if id != "alle" { Circle().fill(c).frame(width: 9, height: 9) }
