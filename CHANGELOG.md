@@ -2,6 +2,21 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.40.0] – 23.10.2026 · prompt 45 – Glimt forstår hva du mener, iPad/Fold-oppsett og Logger uten oppsett
+- **Glimt (ny motor for hele appen):** Hjem, Kalender, Gjøremål, Finans og Chat bruker samme motor. Modellen forstår hva du mener og velger verktøy, mens dato, klokkeslett og beløp kontrolleres av appen (12.10, «fredag klokka sju», «neste uke», månedsskifte og årsskifte). Glimt bekrefter først når avtalen eller oppgaven faktisk er lagret, spør når noe er uklart, ber om bekreftelse før sletting og lager ikke duplikater. «Flytt den til fredag» forstår hvilken avtale du mener. Finans-søk på butikk, beløp, periode, kategori og kvitteringslinjer. Personlighet i AI-kontroll: Av · Litt · Full rakker. Rotårsakene står i `docs/glimt-dataflyt.md`.
+- **iPad:** Hjem i nytt brettoppsett (Glimt-kort til venstre, faner til høyre), sidelinje med Hjem-knapp, skann og wiggle-knapper, Gjøremål og Familie i brettoppsett.
+- **Android Fold:** sidelinje med jevnere Hjem-animasjon, skann i navbaren, wiggle-knappene i navbaren, søk over tastaturet, Familie og Gjøremål i brettoppsett. **Rettet:** dra kort i wiggle-modus virket ikke på Android.
+- **Logger virker nå uten ekstra oppsett.** Homelab tar med Docker-tilgangen selv (låst proxy: bare lesing og start/stopp/omstart).
+- **Kalender for Mac fryser ikke** ved trykk på widgeten.
+- **Mer:** skjul eller gi nytt navn til tittelen, velg de fire store boksene. Finans → Mer i samme design.
+- **Media:** flere farger, rund tilbakeknapp, slett uovervåkede episoder (med Angre), avspilling-statistikk på mobil, innstillingene ligger i Innstillinger.
+- **Sonevarsler:** soneikon i varselet, slå av per person og per sone, vis eksempel.
+- **Studie:** vitnemål og karakterutskrift leses riktig (PDF-tekst, skannede sider, norske karakterskalaer), og originalen kan vises.
+- **AI-import:** Claude (rettet), ChatGPT og Gemini.
+- **Search Console:** viser den egentlige årsaken når statistikken mangler, og støtter servicekonto.
+- **Også:** Ruter viser 1, 2 eller 3 anbefalte reiser, Vær «Min posisjon», Helse fra Home Assistant viser bare telefonene, Gjøremål på web i fullskjerm uten ramme, nytt kalenderikon på Hjem, Innstillinger → Moduler, og «Glimt svarte mens du var borte» kommer bare som varsel når appen er lukket.
+- **Sveip bort** briefen, bibelverset og Min reise igjen (fra 4.39.4).
+
 ## [4.39.4] – 21.10.2026 · sveip bort kort igjen
 - **Tilbake:** sveip Glimt-briefen, bibelverset og Min reise bort mot høyre igjen, med samme gest som i 4.37 (der scrollen virket). Den var slått av i 4.39.2 mens scroll-feilen ble feilsøkt.
 
