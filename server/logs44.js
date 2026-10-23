@@ -23,7 +23,9 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { request as httpRequest } from 'node:http';
 import { createHash } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { config } from './config.js';
 import { sessionUser, isAdmin, listUsers } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { notifyUser } from './notify.js';
@@ -75,12 +77,29 @@ export function normalize44(msg) {
 /* ---------------- Docker-transport ---------------- */
 
 const SOCKET = () => process.env.DOCKER_SOCKET || '/var/run/docker.sock';
-function target() {
-  const h = String(process.env.DOCKER_HOST ?? '').trim();
-  if (/^tcp:\/\//i.test(h)) { const u = new URL(h.replace(/^tcp:/i, 'http:')); return { host: u.hostname, port: +u.port || 2375 }; }
-  if (/^unix:\/\//i.test(h)) return { socketPath: h.replace(/^unix:\/\//i, '') };
-  return existsSync(SOCKET()) ? { socketPath: SOCKET() } : null;
+// Prompt 45 (SERVER45): standard er proxyen i stacken, tcp://homelab-docker:2375 (claude-code-docker-logger-automatisk.md). Har updateren
+// gjenbrukt en proxy brukeren la inn selv, står navnet i data/update/docker.json (bare et validert vertsnavn leses). DOCKER_HOST i .env
+// overstyrer alt. Svarer ikke proxyen og socketen er montert direkte, brukes socketen (fallback).
+const PROXY_HOST = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/;
+let proxyFile = { at: 0, host: null };
+function updaterProxy() {
+  if (Date.now() - proxyFile.at < 10_000) return proxyFile.host;
+  let host = null;
+  try { const j = JSON.parse(readFileSync(join(resolve(config.dataDir), 'update', 'docker.json'), 'utf8')); const n = j?.state === 'done' ? String(j?.proxy?.name ?? '') : ''; host = PROXY_HOST.test(n) ? n : null; } catch { host = null; }
+  proxyFile = { at: Date.now(), host };
+  return host;
 }
+export const _resetDockerTarget45 = () => { proxyFile = { at: 0, host: null }; };
+export function dockerTarget45() {
+  const h = String(process.env.DOCKER_HOST ?? '').trim();
+  if (/^tcp:\/\//i.test(h)) { const u = new URL(h.replace(/^tcp:/i, 'http:')); return { host: u.hostname, port: +u.port || 2375, source: 'env' }; }
+  if (/^unix:\/\//i.test(h)) return { socketPath: h.replace(/^unix:\/\//i, ''), source: 'env' };
+  if (process.env.DOCKER_PROXY_DEFAULT === '0') return existsSync(SOCKET()) ? { socketPath: SOCKET(), source: 'socket' } : null;
+  const up = updaterProxy();
+  return { host: up ?? 'homelab-docker', port: 2375, source: up ? 'updater' : 'default', ...(existsSync(SOCKET()) ? { fallbackSocket: SOCKET() } : {}) };
+}
+function target() { const t = dockerTarget45(); if (!t) return null; const { source: _s, fallbackSocket: _f, ...r } = t; return t.fallbackSocket && socketPreferred > Date.now() ? { socketPath: t.fallbackSocket } : r; }
+let socketPreferred = 0; // proxyen svarte ikke → socketen i 5 min
 let fakeDocker = null;
 /** Bare for tester: bytt ut Docker-API-et ((method, path) → {status, body:Buffer|string|object} eller kast). */
 export const _setDocker44 = (fn) => { fakeDocker = fn; };
@@ -98,14 +117,20 @@ function dockerRaw(method, path, { timeout = 15_000, body } = {}) {
       res.on('end', () => resolve({ status: res.statusCode, buf: Buffer.concat(chunks) }));
     });
     req.on('timeout', () => req.destroy(new DockerError('Docker svarte ikke i tide', 504)));
-    req.on('error', (e) => reject(e instanceof DockerError ? e : new DockerError(e.code === 'ENOENT' || e.code === 'ECONNREFUSED' ? 'Fikk ikke kontakt med Docker (socketen mangler eller proxyen svarer ikke)' : `Docker: ${e.message}`, 503)));
+    req.on('error', (e) => {
+      // Prompt 45: proxyen finnes ikke (ennå) – prøv socketen hvis den er montert direkte.
+      const conn = ['ENOENT', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EHOSTUNREACH', 'ECONNRESET'].includes(e.code);
+      const fb = dockerTarget45()?.fallbackSocket;
+      if (conn && t.host && fb && socketPreferred <= Date.now()) { socketPreferred = Date.now() + 5 * 60_000; dockerRaw(method, path, { timeout, body }).then(resolve, reject); return; }
+      reject(e instanceof DockerError ? e : new DockerError(conn ? `Fikk ikke kontakt med Docker (${t.host ? `proxyen ${t.host}:${t.port} svarer ikke` : 'socketen mangler'})` : `Docker: ${e.message}`, 503));
+    });
     if (body) req.write(JSON.stringify(body));
     req.end();
   });
 }
 async function dockerJson(method, path, opts) {
   const r = await dockerRaw(method, path, opts);
-  if (r.status === 403) throw new DockerError('Docker-proxyen tillater ikke dette (sjekk CONTAINERS=1, POST=1 på docker-socket-proxy)', 403);
+  if (r.status === 403) throw new DockerError('Docker-proxyen tillater ikke dette (sjekk CONTAINERS=1 og ALLOW_START/ALLOW_STOP/ALLOW_RESTARTS på homelab-docker)', 403);
   if (r.status === 404) throw new DockerError('Fant ikke containeren', 404);
   if (r.status >= 400) { let m = r.buf.toString('utf8').slice(0, 200); try { m = JSON.parse(m).message ?? m; } catch { /* tekst */ } throw new DockerError(`Docker svarte ${r.status}: ${m}`, r.status === 409 ? 409 : 502); }
   const t = r.buf.toString('utf8');

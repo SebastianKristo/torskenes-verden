@@ -41,6 +41,7 @@ import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn ser
 import calendarQuickApi from './calendar-quick.js'; // prompt 29: Kalender → rask time (AI-jobbkø)
 import { reauthHandler } from './reauth.js'; // prompt 31: POST /api/auth/reauth
 import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (alias per bruker)
+import { agentApi45 } from './glimt45/api.js'; // prompt 45: Glimt-motoren
 import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
 import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
@@ -60,6 +61,7 @@ import { kal44Api, kalEventsMw44, assistLocalMw44 } from './kal44.js';
 import { study44Api } from './study44.js';
 import { auth44Api } from './auth44.js';
 import { playback44Api, startPlayback44 } from './playback44.js';
+import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -640,6 +642,7 @@ authed.get('/news', proxy(api.getNews));
 app.use('/api/media/*', mediaSiteMw44);
 app.use('/api/media/series', librarySearchMw44);
 app.use('/api/media/movies', librarySearchMw44);
+mountApi45(app); // prompt 45 (SERVER45): Docker-oppsett, Search Console, AI-import, Media/Avspilling, sonevarsler, HA-helse, Vær, Gjøremål, Innstillinger (etter mediaSiteMw44, før de eldre rutene)
 app.get('/api/media/now', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaNow))));
 app.get('/api/media/recent', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaRecent))));
 app.get('/api/media/history', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaHistory))));
@@ -784,6 +787,7 @@ app.route('/api/tts', ttsApi); // prompt 35
 app.route('/api/img', imgApi); // prompt 35
 app.route('/api/weather/week-summary', week39Api); // prompt 39: Glimt · ukas vær
 app.route('/api/weather/place', weather35Api); // prompt 35
+app.route('/api/glimt/agent', agentApi45); // prompt 45: Glimt-motoren (én inngang for alle Glimt-felt)
 app.route('/api/glimt', glimtApi); // prompt 34: POST /api/glimt {prompt, tool:'calendar'} (etter /api/glimt/memory)
 app.use('/api/assist', assistLocalMw44); // prompt 44: local (Glimt-tid) i svaret
 app.route('/api/assist', assistApi); // prompt 31: Glimt-ruteren (sesjon eller app-token, per bruker)

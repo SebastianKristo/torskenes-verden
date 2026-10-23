@@ -151,7 +151,7 @@ test('brukervalg: AI-svar i bakgrunnen av → ingen push/kø for kategori ai; ho
   await A('/api/me/notify', 'PUT', { ai_bg_notify: true, on: false });
   assert.equal((await nt.notifyUser(SEB, { title: 'Prøve', category: 'abonnement' })).skipped, 'varsler av');
   await A('/api/me/notify', 'PUT', { on: true });
-  assert.deepEqual((await A('/api/assist/settings')).body, { ai_bg_notify: true, n_ai_in: true, cloud: false }); // prompt 39: + n_ai_in
+  assert.deepEqual((await A('/api/assist/settings')).body, { ai_bg_notify: true, n_ai_in: false, cloud: false }); // prompt 39: + n_ai_in · prompt 45: utgått (alltid false, bare systemvarsel)
 });
 
 test('GET /api/notify/pending: per bruker, since-markør, nyeste etter', async () => {

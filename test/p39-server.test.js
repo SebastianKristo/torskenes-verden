@@ -250,7 +250,7 @@ test('AI: GET /api/ai/recommend (Mac mini M4 16 GB), ask, plan, apply + angre', 
 
 test('Glimt-varsel: n_ai_in (standard på), draape standardlyd, Glimt-ikon på AI-varsler, ikonfilene serveres', async () => {
   const n = await A('/api/me/notify');
-  assert.deepEqual([n.body.n_ai_in, n.body.sound, n.body.volume], [true, 'draape', 50]);
+  assert.deepEqual([n.body.n_ai_in, n.body.sound, n.body.volume], [false, 'draape', 50]); // prompt 45: n_ai_in utgått (bare systemvarsel)
   assert.equal(n.body.sounds[0].id, 'draape');
   assert.equal(n.body.glimtIcon.icon, '/assets/glimt-varsel.png');
   assert.equal((await A('/api/me/notify', 'PUT', { n_ai_in: false })).body.n_ai_in, false);

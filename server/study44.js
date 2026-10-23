@@ -26,6 +26,7 @@ import { config } from './config.js';
 import { db, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { ocrTools } from './ocr-fallback.js';
+import { extract45, parseCourses45, cleanAiCourses45, statusOf45, STUDY_SCHEMA45, pdfPages45, tool45 } from './study45.js'; // prompt 45: ekte vitnemål (se study45.js)
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const DIR = () => resolve(config.dataDir, 'study44');
@@ -74,6 +75,12 @@ let textImpl = null;
 export const _setStudyText44 = (fn) => { textImpl = fn; };
 async function extract(buf, mime, name) {
   if (textImpl) return { text: await textImpl(buf, mime), how: 'test' };
+  // Prompt 45: poppler/innebygd PDF-leser med ToUnicode, skannede sider som bilder, HEIC → JPG (study45.js). Demoteksten bare i MOCK uten verktøy.
+  try {
+    const r = await extract45(buf, mime, name);
+    if (MOCK() && !visionImpl && r.how === 'ocr' && !r.text.trim()) return { ...r, text: DEMO_TEXT };
+    return r;
+  } catch (e) { if (!MOCK() || e.status === 415) throw e; }
   if (/^text\//.test(mime) || /\.txt$/i.test(name)) return { text: buf.toString('utf8'), how: 'tekst' };
   if (mime === 'application/pdf') {
     try { const dir = await mkdtemp(join(tmpdir(), 'st44-')); try { await writeFile(join(dir, 'in.pdf'), buf); const t = await run('pdftotext', ['-layout', join(dir, 'in.pdf'), '-'], 30_000); if (t.trim()) return { text: t, how: 'pdf' }; } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); } } catch { /* ingen pdftotext */ }
@@ -168,6 +175,10 @@ function foundOf(d) {
   if (r2 && fys) f.push('R2 + Fysikk oppfyller kravet for ingeniørfag');
   return f.slice(0, 6);
 }
+let visionImpl = null;
+/** Bare for tester: (images, user) → {emner, institution, …}. */
+export const _setStudyVision45 = (fn) => { visionImpl = fn; };
+const vision = () => visionImpl ?? (MOCK() ? null : async (images, user) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('rc', { user, images, prompt: 'Dette er et norsk vitnemål eller en karakterutskrift. Les ALLE fag/emner med fagkode, navn, studiepoeng, karakter (A–F, 1–6, Bestått/Ikke bestått), semester, og for vitnemål standpunkt og eksamen. Svar KUN med JSON etter skjemaet. Ikke regn ut snitt, ikke finn på fag.', json: true, schema: STUDY_SCHEMA45, localOnly: true, numPredict: 1500, title: 'Glimt · les vitnemål (bilde)', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
 let aiImpl = null;
 export const _setStudyAi44 = (fn) => { aiImpl = fn; };
 const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('glimt', { user, prompt, json: true, localOnly: true, numPredict: 900, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
@@ -177,7 +188,20 @@ async function analyse(user, buf, mime, name) {
   steps.push({ key: 'upload', label: 'Lastet opp og kryptert', ms: 0, ok: true });
   const ex = await step('read', (r) => (r?.how === 'ocr' ? 'Leste bildet (OCR)' : r?.how === 'pdf' ? 'Leste PDF-teksten' : 'Leste teksten'), () => extract(buf, mime, name));
   const meta = await step('meta', 'Fant skole, dato og type', async () => metaOf(ex.text));
-  let emner = await step('courses', (r) => `Leste ${r?.length ?? 0} fag og karakterer`, async () => parseCourses44(ex.text));
+  // Prompt 45: begge tolkerne, den som finner flest fag vinner (parseCourses45 tåler FS-utskrifter og vgs-vitnemål).
+  let emner = await step('courses', (r) => `Leste ${r?.length ?? 0} fag og karakterer`, async () => { const a = parseCourses44(ex.text), b = parseCourses45(ex.text).map((e) => ({ ...e, tone: toneOf(e.karakter) })); return b.length >= a.length ? b : a; });
+  // Prompt 45: bilder/skannede sider → lokal visjonsmodell med JSON-skjema når OCR ikke ga fag.
+  if (!emner.length && ex.images?.length && vision()) {
+    const t0 = Date.now();
+    try {
+      const j = await vision()(ex.images.slice(0, 4), user);
+      emner = cleanAiCourses45(j?.emner).map((e) => ({ ...e, tone: toneOf(e.karakter) }));
+      for (const k of ['institution', 'student', 'program']) if (!meta[k] && j?.[k]) meta[k] = String(j[k]).slice(0, 90);
+      if (!meta.date && /^\d{4}-\d{2}-\d{2}$/.test(String(j?.date ?? ''))) meta.date = j.date;
+      steps.push({ key: 'vision', label: `Glimt leste bildet (${emner.length} fag)`, ms: Date.now() - t0, ok: true });
+      ex.how = 'vision';
+    } catch (e) { steps.push({ key: 'vision', label: 'Glimt kunne ikke lese bildet', ms: Date.now() - t0, ok: false, error: e.message }); console.warn(`[study] visjon feilet: ${e.message}`); }
+  }
   if (!emner.length && ai()) {
     try {
       const j = await ai()(`Les dette dokumentet (vitnemål eller karakterutskrift). Svar KUN med JSON {"emner":[{"kode":"","navn":"","sp":0,"karakter":"","semester":""}],"institution":"","student":""}. Ikke regn ut snitt.\n\n${ex.text.slice(0, 12000)}`, user);
@@ -194,11 +218,17 @@ async function analyse(user, buf, mime, name) {
   d.summary = `${meta.kindLabel}${meta.institution ? ` fra ${meta.institution}` : ''}${meta.date ? ` (${meta.date.split('-').reverse().join('.')})` : ''}: ${emner.length} ${emner.length === 1 ? 'emne' : 'emner'}${avg.sp ? `, ${String(avg.sp).replace('.', ',')} sp` : ''}${avg.snitt ? `, snitt ${avg.snitt.text}` : avg.snittVgs ? `, snitt ${avg.snittVgs.text}` : ''}.`;
   d.steps = steps;
   d.spText = avg.sp ? `${String(avg.sp).replace('.', ',')} sp` : null;
+  d.how = ex.how; d.notes = ex.notes ?? [];
+  Object.assign(d, statusOf45(d));
+  if (!emner.length) console.warn(`[study] fant ingen fag how=${ex.how} tekst=${(ex.text ?? '').length} tegn`);
   return { d, text: ex.text };
 }
 const docOut = (r, withText = false) => {
   const p = JSON.parse(r.parsed);
-  return { id: r.id, ...p, filename: r.filename, mime: r.mime, size: r.size, createdAt: new Date(r.created).toISOString(), updatedAt: new Date(r.updated).toISOString(), appliedAt: r.applied ? new Date(r.applied).toISOString() : null,
+  const st = p.status ? {} : statusOf45(p); // prompt 45: eldre dokumenter får status også
+  return { id: r.id, ...p, ...st, retry: { method: 'POST', path: `/api/study/documents/${r.id}/reanalyze` },
+    file: { url: `/api/study/documents/${r.id}/file`, download: `/api/study/documents/${r.id}/file?download=1`, thumb: `/api/study/documents/${r.id}/thumb`, kind: r.mime === 'application/pdf' ? 'pdf' : /^image\//.test(r.mime) ? 'image' : 'text', mime: r.mime },
+    filename: r.filename, mime: r.mime, size: r.size, createdAt: new Date(r.created).toISOString(), updatedAt: new Date(r.updated).toISOString(), appliedAt: r.applied ? new Date(r.applied).toISOString() : null,
     ...(withText && r.text_enc ? { text: dec(Buffer.from(r.text_enc, 'base64')).toString('utf8').slice(0, 20000) } : {}) };
 };
 const ofUser = (u, id) => q('SELECT * FROM study44_docs WHERE id=? AND user_id=?').get(+id, u);
@@ -332,7 +362,28 @@ for (const base of ['/study/documents', '/studie/docs']) {
   study44Api.get(`${base}/:id{[0-9]+}/file`, authOrToken, (c) => {
     const r = ofUser(c.get('user'), c.req.param('id'));
     if (!r || !existsSync(fileOf(c.get('user'), r.id))) return c.json({ error: 'Fant ikke dokumentet' }, 404);
-    return c.body(dec(readFileSync(fileOf(c.get('user'), r.id))), 200, { 'Content-Type': r.mime, 'Content-Disposition': `inline; filename="${r.filename.replace(/[^\w.\- æøåÆØÅ]/g, '_')}"`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
+    const fname = r.filename.replace(/[^\w.\- ]/g, '_');
+    return c.body(dec(readFileSync(fileOf(c.get('user'), r.id))), 200, { 'Content-Type': r.mime, 'Content-Disposition': `${c.req.query('download') === '1' ? 'attachment' : 'inline'}; filename="${fname}"; filename*=UTF-8''${encodeURIComponent(r.filename)}`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox", 'Cross-Origin-Resource-Policy': 'same-origin' });
+  });
+  // Prompt 45: miniatyr (bilde: originalen; PDF: side 1 som PNG) og «Prøv igjen» (hele kjeden på nytt fra originalfila).
+  study44Api.get(`${base}/:id{[0-9]+}/thumb`, authOrToken, async (c) => {
+    const r = ofUser(c.get('user'), c.req.param('id'));
+    if (!r || !existsSync(fileOf(c.get('user'), r.id))) return c.json({ error: 'Fant ikke dokumentet' }, 404);
+    const buf = dec(readFileSync(fileOf(c.get('user'), r.id)));
+    const h = { 'Cache-Control': 'private, max-age=300', 'X-Content-Type-Options': 'nosniff' };
+    if (/^image\/(jpeg|png|webp)$/.test(r.mime)) return c.body(buf, 200, { ...h, 'Content-Type': r.mime });
+    if (r.mime === 'application/pdf') { const [p] = await pdfPages45(buf, { max: 1, dpi: 60 }).catch(() => []); if (p) return c.body(p, 200, { ...h, 'Content-Type': 'image/png' }); }
+    return c.json({ error: 'Ingen miniatyr for denne filtypen' }, 404);
+  });
+  study44Api.post(`${base}/:id{[0-9]+}/reanalyze`, authOrToken, noImp, async (c) => {
+    const u = c.get('user'), r = ofUser(u, c.req.param('id'));
+    if (!r || !existsSync(fileOf(u, r.id))) return c.json({ error: 'Fant ikke dokumentet' }, 404);
+    try {
+      const { d, text } = await analyse(u, dec(readFileSync(fileOf(u, r.id))), r.mime, r.filename);
+      q('UPDATE study44_docs SET kind=?, text_enc=?, parsed=?, updated=? WHERE id=?').run(d.kind, enc(Buffer.from(text ?? '')).toString('base64'), JSON.stringify(d), Date.now(), r.id);
+      console.log(`study.reanalyze user=${u} id=${r.id} emner=${d.emner.length} how=${d.how}`);
+      return c.json({ doc: docOut(ofUser(u, r.id)) });
+    } catch (e) { console.warn(`[study] analyse feilet id=${r.id}: ${e.message}`); return fail(c, e); }
   });
   study44Api.delete(`${base}/:id{[0-9]+}`, authOrToken, noImp, (c) => {
     const r = ofUser(c.get('user'), c.req.param('id'));

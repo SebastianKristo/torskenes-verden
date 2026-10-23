@@ -225,13 +225,22 @@ function zoneEvents(user, p) {
 
 // Sanntid (WebSocket): de andre får vite at personen har flyttet seg (uten koordinater, de hentes med GET /api/family
 // og følger personvernet der). Hendelser går bare til seere som har varsel på for den sonen og personen.
+let zoneAlertHook = null;
+/** Prompt 45: (bruker, hendelse, sone, mottakere) → mottakere som faktisk skal varsles. */
+export const setZoneAlertHook45 = (fn) => { zoneAlertHook = fn; };
+export const family45 = { canSee: (v, id) => canSee(v, id), zonesFor: (v) => zonesFor(v), zoneOut: (z, v) => zoneOut(z, v), zoneById: (id) => q('SELECT * FROM family_zone WHERE id=?').get(id),
+  people: (v) => [...listUsers().filter((u) => u.id !== v && canSee(v, u.id)).map((u) => ({ id: u.id, name: u.displayName ?? u.name ?? u.username, color: colorOf(u.id), avatar: u.avatarUrl ?? null })),
+    ...(MOCK ? MOCKS.filter((m) => m.sharing === 'on').map((m) => ({ id: m.id, name: m.name, color: m.color, avatar: null })) : [])],
+  nameOf: (id) => userInfo(id)?.displayName ?? mockName(id) ?? id, defaultZoneIcon: (n) => defaultZoneIcon(n), seedMock: (v) => seedMock(v) };
 function notifyLive(user, events) {
   const others = listUsers().map((u) => u.id).filter((id) => id !== user && canSee(id, user));
   if (others.length) broadcast('family', { kind: 'location', userId: user }, others);
   for (const e of events) {
     const z = q('SELECT * FROM family_zone WHERE id=?').get(e.zoneId);
-    const viewers = q(`SELECT viewer FROM family_notify WHERE zone_id=? AND target=? AND viewer != ? AND ${e.kind === 'enter' ? 'enter' : 'leave'}=1`)
+    let viewers = q(`SELECT viewer FROM family_notify WHERE zone_id=? AND target=? AND viewer != ? AND ${e.kind === 'enter' ? 'enter' : 'leave'}=1`)
       .all(e.zoneId, user, user).map((r) => r.viewer).filter((v) => zoneVisible(z, v) && canSee(v, user));
+    // Prompt 45 (SERVER45): mottakerens egne sonevarsel-brytere (hovedbryter, per person, per sone) og systemvarsel med soneikon (zone45.js).
+    if (zoneAlertHook) { try { viewers = zoneAlertHook(user, e, z, viewers) ?? viewers; } catch (err) { console.warn('[family] sonevarsel:', err.message); } }
     if (viewers.length) broadcast('family', { kind: 'event', event: e }, viewers);
   }
 }

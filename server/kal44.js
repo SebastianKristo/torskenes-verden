@@ -325,6 +325,8 @@ export async function assistLocalMw44(c, next) {
     if (!pq.date && !pq.start) return;
     const j = await c.res.clone().json();
     if (!j || typeof j !== 'object' || Array.isArray(j) || j.local) return;
+    // Prompt 45: bare når svaret faktisk er en ny avtale (ikke på spørsmål som «hva har jeg i morgen?», og ikke når motoren har svart).
+    if (j.intent && !/^(appointment\.create|calendar\.create)$/.test(j.intent)) return;
     c.res = c.json({ ...j, local: { ok: !!pq.ok, title: pq.title, date: pq.date, start: pq.start, end: pq.end, allDay: !!pq.allDay, place: pq.place ?? null, type: pq.type, confidence: pq.confidence, engine: 'local' } }, c.res.status);
   } catch { /* lar svaret stå */ }
 }

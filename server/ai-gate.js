@@ -493,7 +493,8 @@ registerBackend('ollama', {
       if (kind === 'embed') { final = j; await onToken(null); return; }
       part.content += j.message?.content ?? j.response ?? '';
       part.thinking += j.message?.thinking ?? j.thinking ?? '';
-      if (j.message) message = { role: j.message.role ?? message?.role ?? 'assistant', ...(j.message.tool_calls ? { tool_calls: j.message.tool_calls } : {}) };
+      // Prompt 45: tool_calls kommer i én bit midt i strømmen – de beholdes når senere biter (done) ikke har dem.
+      if (j.message) message = { role: j.message.role ?? message?.role ?? 'assistant', ...(j.message.tool_calls ? { tool_calls: [...(message?.tool_calls ?? []), ...j.message.tool_calls] } : message?.tool_calls ? { tool_calls: message.tool_calls } : {}) };
       if (j.done) final = j;
       await onToken(j);
     };

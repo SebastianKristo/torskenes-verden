@@ -512,6 +512,8 @@ api.put('/settings', async (c) => {
 
 /* Prompt 37: Glimt i Gjøremål (POST /glimt, /glimt/undo, GET /glimt/cards, POST /:id/split, POST /:id/suggest, …) */
 mountGlimt41(api, { q, listRow, canSeeList, listsOf, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, today }); // prompt 41: før prompt 37-rutene
+// Prompt 45: Glimt-motoren får hjelperne (dynamisk import: unngår sirkulær import via calendar.js → mobile.js).
+import('./glimt45/tools.js').then((m) => m.setTaskHelpers45({ q, listRow, canSeeList, canSeeTask, listsOf, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, VISIBLE, haLocal })).catch((e) => console.warn('[glimt45] gjøremål:', e.message));
 mountGlimt37(api, { q, db, listRow, canSeeList, canSeeTask, listsOf, lists, listOut, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, mineOf, VISIBLE, today, haLocal, parseArr, members });
 
 /* Lister */

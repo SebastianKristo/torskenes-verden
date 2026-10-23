@@ -73,10 +73,28 @@ const RAW = [
   ['finans.bank', 'Bank og import', 'Finans → Bank og import', 'bank import csv dnb', 'Import av kontoutskrifter.', W('int'), M('bank')],
   ['finans.aksjer', 'Aksjer · Trading 212', 'Finans → Aksjer', 'aksje aksjer trading212 t212 fond', 'Kobling til Trading 212.', W('int'), M('t212')],
   ['nyheter', 'Nyhetsleser', 'Nyhetsleser', 'rss nyheter kilder nyhetsleser', 'Kilder, kategorier og AI-sammendrag.', W('top', 'speed'), '#/nyheter'],
+  // Prompt 45 (SERVER45): alle innstillinger fra fanene samlet i Innstillinger (claude-code-innstillinger-samlet.md). GET /api/settings/sections grupperer dem.
+  ['media', 'Media', 'Media', 'media sonarr radarr qbittorrent prowlarr plex jellyfin server servere nedlasting', 'Servere, Sonarr/Radarr/qBittorrent/Prowlarr og Plex/Jellyfin.', W('media'), M('media')],
+  ['media.servere', 'Media-servere', 'Media → Servere', 'server servere sted hjemme hytta sonarr radarr', 'Hvilke Media-servere som finnes, og hvilken som er valgt.', W('media', 'servere'), M('media'), true],
+  ['media.avspilling', 'Avspilling', 'Media → Avspilling', 'avspilling plex jellyfin statistikk tautulli', 'Plex/Jellyfin-tilkobling og statistikk.', W('media', 'avspilling'), M('media')],
+  ['gjoremal', 'Gjøremål', 'Gjøremål', 'gjøremål huskeliste oppgaver lister todo', 'Lister, rekkefølge, Glimt-forslag og synk.', W('gjoremal'), M('huske')],
+  ['gjoremal.synk', 'Synk med Home Assistant', 'Gjøremål → Synk', 'synk home assistant ha todo homey gjøremål liste koble', 'Koble lister i Gjøremål til todo-lister i Home Assistant.', W('gjoremal', 'synk'), M('huske'), true],
+  ['gjoremal.forslag', 'Forslag fra Glimt', 'Gjøremål → Forslag', 'forslag glimt pakkeliste like forfalte stedspåminnelse', 'Hvilke forslag Glimt kommer med i Gjøremål.', W('gjoremal', 'forslag'), M('huske')],
+  ['ruter', 'Ruter', 'Ruter', 'ruter kollektiv buss trikk min reise entur', 'Mine ruter, Min reise og varsler.', W('ruter'), M('ruter')],
+  ['ruter.antall', 'Antall anbefalte reiser', 'Ruter → Anbefalt for min reise', 'antall anbefalte reiser avganger 1 2 3 min reise', 'Hvor mange reiser kortet «Anbefalt for min reise» viser.', W('ruter', 'antall'), M('ruter')],
+  ['vaer', 'Vær', 'Vær', 'vær steder min posisjon yr', 'Steder, Min posisjon og visning.', W('vaer'), M('vaer')],
+  ['studie', 'Studie', 'Studie', 'studie vitnemål karakterer timeplan dokumenter', 'Dokumenter, timeplan og karakterer.', W('studie'), M('studie')],
+  ['familie.sonevarsler', 'Sonevarsler', 'Varsler → Familie → Sonevarsler', 'sone soner posisjonsvarsel varsel kommer går person familie', 'Varsle når noen kommer eller går – per person og per sone.', W('varsel', 'familie'), M('varsler')],
+  ['helse.ha', 'Helse fra Home Assistant', 'Helse (Familie) → Home Assistant', 'helse home assistant mobilapp skritt puls søvn enheter', 'Koble telefonene i Home Assistant til personer i familien.', W('helse', 'ha'), M('helse/ha'), true],
+  ['server.logger', 'Logger', 'Server → Logger', 'logg logger docker container feil feilsøking', 'Docker-logger, feil og feilsøking.', W('system', 'logger'), M('logger'), true],
+  ['domener.gsc', 'Google Search Console', 'Domener → Google Search Console', 'search console google søk statistikk klikk visninger servicekonto', 'Koble til Search Console (Google-konto eller servicekonto).', W('dom', 'gsc'), M('integ/gsc'), true],
+  ['ai.import', 'Importer fra Claude, ChatGPT og Gemini', 'AI → Importer', 'import importer claude chatgpt gemini samtaler minne eksport', 'Hent samtaler og minner fra andre AI-er.', W('ai', 'import'), M('ai/import')],
+  ['ai.personlighet', 'Glimts personlighet', 'AI → Personlighet', 'personlighet glimt humor spøk rakker', 'Av · Litt · Full rakker.', W('ai', 'personlighet'), M('ai')],
 ];
 const ICON = { konto: ['user', '#2b5d8a'], utseende: ['look', '#7a5ad6'], startside: ['top', '#3f7a6e'], domener: ['map', '#c0562a'], varsler: ['bell', '#b23a2a'], app: ['app', '#5b6470'],
   integrasjoner: ['plug', '#4a5bbf'], kalendere: ['cal', '#2f7d4f'], ai: ['ai', '#7a3b6b'], brukere: ['users', '#a8661a'], system: ['sys', '#6b6558'], backup: ['backup', '#2f6b45'],
-  finans: ['bank', '#2f7a4f'], nyheter: ['rss', '#c0562a'] };
+  finans: ['bank', '#2f7a4f'], nyheter: ['rss', '#c0562a'], media: ['film', '#35c5f4'], gjoremal: ['check', '#b23a2a'], ruter: ['bus', '#e05a2b'], vaer: ['sun', '#2b6cb0'], studie: ['book', '#7a5ad6'],
+  familie: ['users', '#a8456b'], helse: ['heart', '#c0392b'], server: ['sys', '#6b6558'] };
 
 // Prompt 34: mål-id (anchor) per handling: klienten går til siden, scroller målet (data-hl="<anchor>") midt i innholdet og markerer det.
 // tip = boblen over målet. answer = fast svar (Glimt) for akkurat denne handlingen.
@@ -87,6 +105,7 @@ export const ANCHOR = {
   'konto.2fa': { anchor: '2fa' }, 'konto.passord': { anchor: 'pw-change' }, 'backup.auto': { anchor: 'bk-auto' }, backup: { anchor: 'bk-auto' }, 'backup.na': { anchor: 'bk-now', tip: '✦ Trykk her for å ta backup nå' },
   'domener.liste': { anchor: 'cf-token' }, 'integrasjoner.cloudflare': { anchor: 'cf-token' }, 'ai.motor': { anchor: 'ai-mod' }, 'ai.modeller': { anchor: 'ai-mod' }, 'ai.kontroll': { anchor: 'ai-mod' },
   'ai.gemini': { anchor: 'ai-key-gemini' }, 'brukere.ny': { anchor: 'invite' }, brukere: { anchor: 'invite' }, 'varsler.haptikk': { anchor: 'haptic' }, 'konto.tokens': { anchor: 'tokens' },
+  'ruter.antall': { anchor: 'ruter-count' }, 'gjoremal.synk': { anchor: 'huske-ha' }, 'familie.sonevarsler': { anchor: 'zone-alerts' }, 'ai.import': { anchor: 'ai-import' }, 'ai.personlighet': { anchor: 'glimt-personality' },
   'utseende.sokebar': { anchor: 'search-style' }, 'startside.faner': { anchor: 'tabs' }, kalendere: { anchor: 'cal-ical' }, 'app.navn': { anchor: 'app-name' }, 'app.ikon': { anchor: 'app-icon' },
 };
 export const SETTINGS_INDEX = RAW.map(([id, title, path, kw, description, web, mobile, admin]) => {

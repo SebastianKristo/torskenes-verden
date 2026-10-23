@@ -9,7 +9,9 @@ ENV NODE_ENV=production TZ=Europe/Oslo DATA_DIR=/data PORT=3000 OCR_FALLBACK=on
 # smbclient: backup av FinansHub til SMB-share (Innstillinger → Backup og data).
 # tesseract-ocr (+ nor/eng): lokal OCR-reserve for kvitteringer når AI feiler (OCR_FALLBACK=on|off).
 # imagemagick: forbehandling (gråtoner, skjevhet, terskel) og beskjæring etter Roboflow. zbar-tools: strekkoder og QR.
-RUN apt-get update && apt-get install -y --no-install-recommends smbclient tesseract-ocr tesseract-ocr-nor tesseract-ocr-eng imagemagick zbar-tools \
+# Prompt 45: poppler-utils (pdftotext/pdftoppm: tekstlaget i PDF-er og skannede sider som bilder) og libheif-examples (heif-convert: HEIC → JPG)
+# for Studie → vitnemål. Uten dem fant analysen ingen fag i ekte PDF-er (innebygde skrifter) og skannede dokumenter.
+RUN apt-get update && apt-get install -y --no-install-recommends smbclient tesseract-ocr tesseract-ocr-nor tesseract-ocr-eng imagemagick zbar-tools poppler-utils libheif-examples \
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules

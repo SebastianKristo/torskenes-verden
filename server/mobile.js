@@ -101,6 +101,12 @@ const LAYOUT = {
 };
 // Enkle verdier (prompt 13): tema for FinansHub desktop, kompakt sidemeny, Homelab-tema, mobildesign, papirmodus og fotovindu.
 const SCALAR = {
+  // Prompt 45 (SERVER45 for IOS45/WEB45/ANDROID45): Mer-menyen – tittel under søket (title, titleHidden) og de fire store boksene (big: [modul-id]).
+  mer45: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && JSON.stringify(v).length <= 4000
+    && (v.title === undefined || v.title === null || (typeof v.title === 'string' && v.title.length <= 60))
+    && (v.titleHidden === undefined || typeof v.titleHidden === 'boolean')
+    && (v.big === undefined || (Array.isArray(v.big) && v.big.length <= 4 && v.big.every((x) => typeof x === 'string' && /^[\w-]{1,40}$/.test(x))))
+    && Object.keys(v).every((k) => /^[\w-]{1,40}$/.test(k)),
   // Prompt 39: oppsettet av Yr mot Storm (2a, wiggle-redigering: rekkefølge, skjulte kort, størrelser) – fritt objekt ≤ 4 kB, eller en design-id.
   vs_cmp_layout: (v) => (typeof v === 'string' && /^[\w-]{1,40}$/.test(v)) || (v && typeof v === 'object' && JSON.stringify(v).length <= 4000),
   vaer_glimt_p: (v) => ['sky', 'ugle', 'spire'].includes(v), // prompt 39: valgt figur i «Glimt · ukas vær»

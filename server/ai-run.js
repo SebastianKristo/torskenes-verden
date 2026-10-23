@@ -570,6 +570,7 @@ async function callOllama(model, o, signal, r, ctx = {}) {
   if (o.numPredict) options.num_predict = o.numPredict;
   const body = shortBody({ model, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: r.rules.think ? true : undefined });
   if (o.numCtx) body.options.num_ctx = o.numCtx;
+  if (Array.isArray(o.ollamaTools) && o.ollamaTools.length) body.tools = o.ollamaTools; // prompt 45: Ollama tool calling (Glimt-motoren)
   const lim = timeoutsOf(r, { images: !!o.images?.length });
   const jobId = ctx.jobId;
   let lastUpd = 0, loadIv = null, t0Load = 0;
@@ -588,7 +589,7 @@ async function callOllama(model, o, signal, r, ctx = {}) {
       loadMs: lim.loadMs, warmMs: lim.firstMs, idleMs: lim.idleMs, deadlineMs: o.timeoutMs ?? null, retryTimeouts: ctx.last !== false, label: o.title ?? taskName(t),
       onQueue: ctx.onQueue, onStart: ctx.onStart, onPhase, onRetry: jobId ? ({ attempt, waitMs }) => jobUpdate(jobId, { step: `Nytt forsøk ${attempt + 1} om ${Math.round(waitMs / 1000)} s …`, attempts: attempt }) : null });
     if (jobId) { const n = out.text.length; jobUpdate(jobId, { phase: { kind: 'answer', chars: n }, step: `Svarer · ${n} tegn`, backend: out.telemetry.backend, backendNote: out.telemetry.backendNote ?? null }); }
-    return { text: out.text, tin: out.telemetry.tokIn, tout: out.telemetry.tokOut, telemetry: out.telemetry };
+    return { text: out.text, tin: out.telemetry.tokIn, tout: out.telemetry.tokOut, telemetry: out.telemetry, ...(out.message?.tool_calls?.length ? { toolCalls: out.message.tool_calls } : {}) };
   } catch (e) {
     if (e?.status === 404) invalidateInventory();
     throw e;
@@ -831,15 +832,15 @@ export async function run(task, o = {}) {
           sig = AbortSignal.any([ctrl.signal, AbortSignal.timeout(o.timeoutMs ?? normalMs)]);
           out = await CALL[c.provider](c.id, opts, sig, r);
         }
-        if (!String(out.text ?? '').trim()) throw new Error('tomt svar');
+        if (!String(out.text ?? '').trim() && !out.toolCalls?.length) throw new Error('tomt svar');
         if (c.provider === 'ollama') markWarm(c.id, r.params.keepAlive);
-        const data = o.json || o.schema ? parseJsonText(out.text) : undefined;
+        const data = (o.json || o.schema) && !out.toolCalls?.length ? parseJsonText(out.text) : undefined;
         const ms = Date.now() - ta, cost = costKr(c.provider, c.id, out.tin, out.tout);
         jobEnd(jobId, { ms: Date.now() - t0, tokIn: out.tin, tokOut: out.tout, costKr: cost, step: null, phase: null, ...timing(out.telemetry), errKind: null,
           error: errors.length ? errors.map((x) => `${x.model}: ${x.error}`).join(' · ').slice(0, 400) : null });
         const warnings = [...res.warnings, ...errors.map((x) => `${x.model} svarte ikke (${x.error}) · brukte ${c.id}`)];
         if (warnings.length) console.warn(`[ai] ${tid}: ${warnings.join(' · ')}`);
-        return { text: out.text, ...(data !== undefined ? { data } : {}), model: c.id, provider: c.provider, ms, tokens: { in: out.tin, out: out.tout }, costKr: cost, jobId,
+        return { text: out.text, ...(data !== undefined ? { data } : {}), ...(out.toolCalls?.length ? { toolCalls: out.toolCalls } : {}), model: c.id, provider: c.provider, ms, tokens: { in: out.tin, out: out.tout }, costKr: cost, jobId,
           ...(out.telemetry ? { timing: out.telemetry } : {}),
           ...(i || c.from !== 'model' ? { fallbackFrom: res.route.model || (i ? res.list[0].id : null) } : {}), warnings, notice: res.notices[0] ?? null };
       } catch (e) {

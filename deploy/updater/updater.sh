@@ -3,7 +3,7 @@
 #
 # Kjører i sin egen container med Docker-socketen (= root i LXC-en). Derfor:
 # - Ingen nettverksport. Den leser bare data/update/request.json, og bare feltene «id» og «action» brukes (validert).
-#   action er 'update' (standard) eller 'rollback'. Ved rollback laster updateren ned forrige vellykkede sha fra sin
+#   action er 'update' (standard), 'rollback' eller (prompt 45) 'docker-setup' (bare Docker-tilgangen for Logger, se ensure_docker_proxy). Ved rollback laster updateren ned forrige vellykkede sha fra sin
 #   egen historikk (data/update/history.json, skrevet bare her) – serveren sender aldri sha, repo eller kommando.
 #   Databasen gjenopprettes IKKE ved rollback (data-migreringer går fremover); forhåndsbackupen ligger i data/backups/.
 # - Prompt 44: «Tidligere versjoner». Updateren eier versjonslista selv: data/update/versions.json (skrevet bare her) =
@@ -288,11 +288,105 @@ run_job() {
   [ "$ACTION" = rollback ] && [ -z "$RESTORED" ] && log "update.rollback to=${VERSION:-?} restore=false result=ok"
   log "Ferdig: ${VERSION:-ukjent versjon} (${SHA:0:7})."
   write_status "done" "Ferdig"
+  # Prompt 45: migrering – Docker-tilgangen for Logger legges til hvis den mangler (ikke ved rollback; proxyen fjernes aldri).
+  # Feil her stopper ikke oppdateringen: Logger viser «Sett opp nå» med feilen.
+  [ "$ACTION" != rollback ] && { ensure_docker_proxy "$JOB_ID" || true; }
 
   # 6. Rydd, og oppdater til slutt updateren selv (ikke ved rollback: en eldre updater kjenner kanskje ikke historikken).
   docker image prune -f >>"$LOG" 2>&1 || true
   [ "$SELF_UPDATE" = 1 ] && [ "$ACTION" != rollback ] && self_update
   trim_log
+  return 0
+}
+
+# ---------- Prompt 45: Docker-tilgang for Logger (homelab-docker) ----------
+# Logger (Innstillinger → Server → Logger) trenger lesetilgang til Docker. Updateren legger proxyen til selv, fra SIN EGEN
+# docker-compose.yml (den som ligger i HOST_DIR, kopiert inn fra arkivet updateren selv har lastet ned) – aldri fra serveren.
+# Serveren kan bare be om {action:'docker-setup'} i request.json. Tjenesten valideres før den startes: fast versjonstag,
+# POST=0 (bare ALLOW_START/STOP/RESTARTS), ingen EXEC/IMAGES/VOLUMES/NETWORKS/BUILD …, ingen porter, ikke privileged,
+# bare docker.sock montert :ro. Finnes det allerede en proxy (brukerens egen, oppdaget på image-navnet), gjenbrukes den.
+# Proxyen fjernes aldri (heller ikke ved rollback). Status: data/update/docker.json {id, state, at, error, proxy:{name, image, reused}}.
+DOCKER_STATE="$UPD/docker.json"
+PROXY_IMAGE_RE='^(docker\.io/)?(ghcr\.io/)?(lscr\.io/)?(tecnativa/docker-socket-proxy|linuxserver/socket-proxy)(:[A-Za-z0-9._-]+)?(@sha256:[0-9a-f]{64})?$'
+DOCKER_JOB=""
+write_docker_state() { # state [feil] [navn] [image] [gjenbrukt 0|1]
+  jq -n --arg id "$DOCKER_JOB" --arg state "$1" --arg error "${2:-}" --arg name "${3:-}" --arg image "${4:-}" --arg reused "${5:-0}" --argjson at "$(now_ms)" \
+    '{id:(if $id=="" then null else $id end), state:$state, at:$at, error:(if $error=="" then null else $error end),
+      proxy:(if $name=="" then null else {name:$name, image:$image, reused:($reused=="1")} end)}' >"$UPD/.docker.tmp" 2>/dev/null \
+    && mv -f "$UPD/.docker.tmp" "$DOCKER_STATE"
+}
+# Første proxy som ikke er vår egen: «navn<TAB>image<TAB>state», eller tomt.
+find_existing_proxy() {
+  local n img st
+  while IFS=$'\t' read -r n img st; do
+    [ -n "$n" ] || continue
+    [ "$n" = homelab-docker ] && continue
+    if [[ "$img" =~ $PROXY_IMAGE_RE ]]; then printf '%s\t%s\t%s\n' "$n" "$img" "$st"; return 0; fi
+  done < <(docker ps -a --format '{{.Names}}\t{{.Image}}\t{{.State}}' 2>/dev/null)
+  return 0
+}
+# Er homelab-docker-tjenesten i vår egen compose trygg? Skriver feilen på stdout og returnerer 1 hvis ikke.
+validate_proxy_compose() {
+  local j
+  j=$(compose config --format json 2>>"$LOG") || { echo "Kunne ikke lese docker-compose.yml"; return 1; }
+  printf '%s' "$j" | jq -e '.services["homelab-docker"] != null' >/dev/null 2>&1 || { echo "docker-compose.yml mangler tjenesten homelab-docker"; return 1; }
+  printf '%s' "$j" | jq -e '
+    .services["homelab-docker"] as $s
+    | (($s.image // "") | test("^tecnativa/docker-socket-proxy:[0-9]+\\.[0-9]+\\.[0-9]+$"))
+    and (($s.ports // []) | length == 0)
+    and (($s.privileged // false) == false)
+    and (($s.network_mode // "") == "")
+    and (($s.pid // "") == "")
+    and (($s.cap_add // []) | length == 0)
+    and (($s.environment // {}) as $e | (($e.POST // "") | tostring) == "0"
+         and ([$e.EXEC, $e.IMAGES, $e.VOLUMES, $e.NETWORKS, $e.BUILD, $e.COMMIT, $e.SWARM, $e.SERVICES, $e.TASKS, $e.NODES, $e.SECRETS, $e.CONFIGS,
+               $e.PLUGINS, $e.AUTH, $e.DISTRIBUTION, $e.SESSION, $e.GRPC, $e.ALLOW_ALL] | map((. // "0") | tostring) | all(. == "0")))
+    and (($s.volumes // []) | length == 1 and (.[0] | ((.source // "") == "/var/run/docker.sock" and (.target // "") == "/var/run/docker.sock" and .read_only == true)))
+  ' >/dev/null 2>&1 || { echo "homelab-docker i docker-compose.yml er ikke godkjent (krever fast versjonstag, POST=0, ingen porter og docker.sock :ro). Ingenting er startet."; return 1; }
+  return 0
+}
+# Sørger for at os og en gjenbrukt proxy deler et nett (ellers kobles proxyen til os sitt nett).
+connect_proxy() {
+  local name="$1" os_id nets pnets n
+  os_id=$(compose ps -q os 2>/dev/null | head -n 1)
+  [[ "$os_id" =~ ^[0-9a-f]{12,64}$ ]] || return 0
+  nets=$(docker inspect --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$os_id" 2>/dev/null || true)
+  pnets=$(docker inspect --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}} {{end}}' "$name" 2>/dev/null || true)
+  for n in $nets; do case " $pnets " in *" $n "*) return 0 ;; esac; done
+  for n in $nets; do
+    [[ "$n" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]] || continue
+    if docker network connect "$n" "$name" >>"$LOG" 2>&1; then log "Docker-tilgang: koblet $name til nettet $n."; return 0; fi
+  done
+  return 0
+}
+ensure_docker_proxy() { # [jobb-id]
+  DOCKER_JOB="${1:-}"
+  write_docker_state running
+  log "Docker-tilgang: sjekker proxyen for Logger …"
+  local ex name img st why
+  ex=$(find_existing_proxy)
+  if [ -n "$ex" ]; then
+    IFS=$'\t' read -r name img st <<<"$ex"
+    if [[ ! "$name" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]]; then write_docker_state failed "Fant en proxy med ugyldig navn"; return 1; fi
+    if [ "$st" != running ]; then docker start "$name" >>"$LOG" 2>&1 || log "Docker-tilgang: klarte ikke å starte $name."; fi
+    connect_proxy "$name"
+    log "Docker-tilgang: gjenbruker $name ($img). Ingen ny proxy lages."
+    write_docker_state done "" "$name" "$img" 1
+    return 0
+  fi
+  if ! why=$(validate_proxy_compose); then
+    log "Docker-tilgang: $why"
+    write_docker_state failed "$why"
+    return 1
+  fi
+  img=$(compose config --format json 2>/dev/null | jq -r '.services["homelab-docker"].image // empty' 2>/dev/null)
+  log "docker compose up -d --no-deps homelab-docker"
+  if ! compose up -d --no-deps homelab-docker >>"$LOG" 2>&1; then
+    write_docker_state failed "Kunne ikke starte homelab-docker. Se loggen (docker compose logs homelab-docker)."
+    return 1
+  fi
+  log "Docker-tilgang: homelab-docker kjører ($img). Logger virker uten ekstra oppsett."
+  write_docker_state done "" homelab-docker "${img:-tecnativa/docker-socket-proxy}" 0
   return 0
 }
 
@@ -378,7 +472,7 @@ while :; do
         at=$(jq -r '(.at // 0) | numbers | floor' "$UPD/request.json" 2>/dev/null || true); [[ "$at" =~ ^[0-9]{1,15}$ ]] || at=0
         by=$(jq -r '(.requestedBy // "") | strings' "$UPD/request.json" 2>/dev/null | tr -cd 'A-Za-z0-9._@-' | head -c 64)
         act=$(jq -r '(.action // "update") | strings' "$UPD/request.json" 2>/dev/null | head -c 20)
-        case "$act" in update|rollback) ;; *) act="" ;; esac
+        case "$act" in update|rollback|docker-setup) ;; *) act="" ;; esac
         # Prompt 44: target (bare semver, slås opp i updaterens egen liste) og restoreBackup (bare true/false).
         tgt=$(jq -r 'if (.target|type)=="string" then .target else "" end' "$UPD/request.json" 2>/dev/null | head -c 20)
         if [ -n "$tgt" ] && ! semver_ok "$tgt"; then say "Ignorerer forespørsel $id med ugyldig target."; act=""; fi
@@ -389,6 +483,10 @@ while :; do
           say "Ignorerer forespørsel $id med ukjent action."
         elif [ "$age" -gt "$REQUEST_MAX_AGE" ]; then
           say "Ignorerer gammel forespørsel $id ($age s)."
+        elif [ "$act" = docker-setup ]; then
+          # Prompt 45: bare «sett opp Docker-tilgangen» – ingen nedlasting, ingen bygging, ingen omstart av os.
+          if [ "$id" = "$(jq -r '.id // empty' "$DOCKER_STATE" 2>/dev/null)" ]; then say "Docker-oppsett $id er allerede kjørt.";
+          else say "Setter opp Docker-tilgang ($id)."; if ensure_docker_proxy "$id"; then say "Docker-tilgang klar."; else say "Docker-oppsett feilet."; fi; trim_log; fi
         else
           if [ "$act" = rollback ]; then say "Starter tilbakerulling $id."; else say "Starter oppdatering $id."; fi
           if run_job "$id" "$by" "$act" "$tgt" "$rst"; then say "Oppdatering $id ferdig."; else say "Oppdatering $id feilet."; fi

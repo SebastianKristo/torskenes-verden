@@ -290,14 +290,16 @@ test('prøveperiode med Glimt: lagres, svar med uthevet tidspunkt; mangler noe �
   assert.equal(m.body.source, 'Abonnementer');
 });
 
-test('rask time via Glimt bruker eksisterende jobbkø', async () => {
+// Prompt 45: rask time fra Hjem går gjennom Glimt-motoren (glimt45): hendelsen lagres og kontrolleres før Glimt sier at den er lagt inn.
+// Før svarte Glimt «Legger til …» mens jobben fortsatt sto i kø (bekreftet før datakilden hadde bekreftet).
+test('rask time via Glimt: lagres og bekreftes av kalenderen før svaret', async () => {
   const r = await A('/api/assist', 'POST', { q: 'time hos Nina frisør 14.30 25.09' });
   assert.equal(r.body.intent, 'appointment.create');
-  assert.match(r.body.quickJobId, /^q[0-9a-f]{12}$/);
-  assert.match(r.body.text, /^Legger til \*\*Nina frisør · [a-zæøå]+ 25\. sep · 14:30\*\* i kalenderen\.$/);
-  await quick._drain();
-  const jobs = (await A('/api/kalender/quick/jobs')).body;
-  assert.equal(jobs.find((j) => j.id === r.body.quickJobId).state, 'done');
+  assert.match(r.body.text, /^Lagt inn: \*\*«Nina frisør» [a-zæøå]+ 25\. september( \d{4})? kl\. 14:30–15:15\*\* i Personlig-kalenderen\./);
+  const ev = r.body.created.event;
+  assert.equal(r.body.agent.actions[0].status, 'done');
+  const evs = (await A(`/api/kalender?from=${ev.date}&to=${ev.date}`)).body;
+  assert.ok(JSON.stringify(evs).includes('Nina frisør'), 'hendelsen finnes i kalenderen');
 });
 
 test('LLM: lokal modell med systemprompten; sky (Gemini) bare med samtykke og uten brukerdata', async () => {
@@ -309,7 +311,7 @@ test('LLM: lokal modell med systemprompten; sky (Gemini) bare med samtykke og ut
   assert.equal(r.body.followUp, 'chat');
   assert.match(r.body.text, /Fortsett i Chat/);
   assert.equal(r.body.engine, 'none');
-  assert.deepEqual((await A('/api/assist/settings', 'PUT', { cloud: true })).body, { ai_bg_notify: true, n_ai_in: true, cloud: true }); // prompt 39: + n_ai_in
+  assert.deepEqual((await A('/api/assist/settings', 'PUT', { cloud: true })).body, { ai_bg_notify: true, n_ai_in: false, cloud: true }); // prompt 39: + n_ai_in · prompt 45: utgått (alltid false)
   assert.equal((await A('/api/assist/settings', 'PUT', { cloud: 'ja' })).status, 400);
   calls.length = 0;
   r = await A('/api/assist', 'POST', { q: 'hvem skrev Peer Gynt?' });

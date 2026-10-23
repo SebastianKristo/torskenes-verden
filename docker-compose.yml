@@ -14,6 +14,8 @@ services:
       # - /srv/backup:/srv/backup
     ports:
       - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:3000"   # BIND_ADDR=0.0.0.0 for LAN-tilgang
+    # Prompt 45: os når Docker-proxyen (homelab-docker) på det interne nettet docker-api. os får aldri selve socketen.
+    networks: [default, docker-api]
 
   # Updater: «Oppdater nå» i Innstillinger → System (se deploy/updater/updater.sh).
   # Den har Docker-socketen, og det er i praksis root i LXC-en. Derfor er den skilt ut fra os, som aldri får Docker-tilgang:
@@ -34,23 +36,30 @@ services:
       COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-}
       TZ: Europe/Oslo
 
-  # Prompt 44: Innstillinger → Server → Logger (Docker-logger, start/stopp). Valgfritt. os får ALDRI selve socketen; proxyen gir bare
-  # containere, logger og start/stopp/omstart. Slå på: docker compose --profile logs up -d, og sett DOCKER_HOST=tcp://docker-socket-proxy:2375
-  # i .env (os leser den derfra). Uten dette viser Logger en tomtilstand med oppsettet.
-  docker-socket-proxy:
-    profiles: [logs]
+  # Prompt 45: Innstillinger → Server → Logger virker uten ekstra oppsett. Docker-socket-proxyen er en fast del av stacken
+  # (updateren legger den til ved neste oppdatering og gjenbruker en proxy du har lagt inn selv – se ensure_docker_proxy i
+  # deploy/updater/updater.sh). Strengere enn standarden: fast versjonstag, POST=0, og bare start/stopp/omstart er åpnet (ALLOW_*).
+  # Ingen EXEC, IMAGES, VOLUMES, NETWORKS eller BUILD, så ingen kan lage nye containere gjennom den. Socketen er :ro, ingen porter,
+  # og den ligger bare på det interne nettet docker-api (ingen internett). os bruker tcp://homelab-docker:2375 (DOCKER_HOST i .env
+  # overstyrer). Restart/stopp krever fortsatt admin og bekreftelse i Homelab-API-et. (Erstatter profilen «logs» fra prompt 44.)
+  homelab-docker:
     image: tecnativa/docker-socket-proxy:0.2.0
+    container_name: homelab-docker
     restart: unless-stopped
     environment:
       CONTAINERS: 1
+      LOGS: 1
       INFO: 1
-      SYSTEM: 1
-      POST: 1
+      EVENTS: 1
+      SYSTEM: 1        # bare GET /system/df (diskbruk øverst på Logger)
+      POST: 0
       ALLOW_START: 1
       ALLOW_STOP: 1
       ALLOW_RESTARTS: 1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    security_opt: [no-new-privileges:true]
+    networks: [docker-api]
 
   cloudflared:
     profiles: [tunnel]   # start med: docker compose --profile tunnel up -d
@@ -71,3 +80,8 @@ services:
     restart: unless-stopped
     volumes:
       - ./proton:/root   # nøkler og cache – ta med i backup
+
+networks:
+  # Prompt 45: bare os og homelab-docker. internal = ingen trafikk ut til internett.
+  docker-api:
+    internal: true

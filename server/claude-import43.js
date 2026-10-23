@@ -144,7 +144,8 @@ claudeImport43Api.post('/claude', bodyLimit({ maxSize: MAX_BYTES, onError: (c) =
       const f = b.file ?? b.zip ?? b.export;
       if (f && typeof f === 'object' && typeof f.arrayBuffer === 'function') {
         if (f.size > MAX_BYTES) return bad(c, 'Fila kan være maks 200 MB', 413);
-        parsed = readExport43(Buffer.from(await f.arrayBuffer()), f.name ?? '');
+        // Prompt 45: samme robuste leser som /api/ai/import (ZIP64, strømming, zip-bomb-vern, faktisk feilårsak).
+        parsed = await (await import('./ai-import45.js')).readExport45(Buffer.from(await f.arrayBuffer()), { name: f.name ?? '', source: 'claude' });
       }
     } else if (ct.includes('json')) {
       const b = await c.req.json().catch(() => null);
@@ -154,11 +155,11 @@ claudeImport43Api.post('/claude', bodyLimit({ maxSize: MAX_BYTES, onError: (c) =
         memText = typeof b.memory === 'string' ? b.memory : Array.isArray(b.memory) ? b.memory.join('\n') : '';
         if (b.conversations != null) parsed = readExport43(Buffer.from(JSON.stringify(b.conversations)), 'conversations.json');
       }
-    } else if (ct.includes('zip') || ct.includes('octet-stream')) parsed = readExport43(Buffer.from(await c.req.arrayBuffer()), 'eksport.zip');
+    } else if (ct.includes('zip') || ct.includes('octet-stream')) parsed = await (await import('./ai-import45.js')).readExport45(Buffer.from(await c.req.arrayBuffer()), { name: 'eksport.zip', source: 'claude' });
     if (!parsed && !memText.trim()) return bad(c, 'Velg en .zip eller conversations.json, eller lim inn minnet');
     parsed ??= { convs: [], projects: [], memory: [], files: [], steps: [] };
     return c.json(preview(u, parsed, memText));
-  } catch (e) { return bad(c, e instanceof ImportError ? e.message : `Kunne ikke lese eksporten: ${e.message}`, e.status ?? 400); }
+  } catch (e) { return c.json({ error: e instanceof ImportError || e?.reason ? e.message : `Kunne ikke lese eksporten: ${e.message}`, ...(e?.reason ? { reason: e.reason } : {}) }, e.status ?? 400); }
 });
 const own = (c) => { sweep(); const x = imports.get(c.req.param('importId')); return x && x.user === c.get('user') ? x : null; };
 claudeImport43Api.get('/claude/:importId', (c) => {

@@ -88,6 +88,7 @@ import { bareDay37 } from './kalender33.js'; // prompt 37: «i morgen?»
 import { needsChatTools } from './chat-tools41.js'; // prompt 41: sammensatte faktaspørsmål går til chatten
 import { isWeekWeather41, weekAnswer41 } from './weather41.js'; // prompt 41: ukesvær med Ollama og 7 dager data
 import { isHuskeMessage41, startJob41 } from './tasks-glimt41.js'; // prompt 41: huskebeskjeder fra søkefeltet → Glimt i bakgrunnen
+import { agent45, registerLegacy45, toAssist45, wantsAgent45 } from './glimt45/engine.js'; // prompt 45: felles Glimt-motor
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -555,8 +556,16 @@ const TITLES = { 'tasks.glimt': 'Legger til i Huskeliste', 'weather.week': 'Lese
 const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender', 'calendar.fag': 'Kalender', 'tasks.glimt': 'Huskeliste', 'weather.week': 'Vær' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
-export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null } = {}) {
+export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null, skipAgent = false, module = 'home', jobId = null } = {}) {
   const t0 = Date.now();
+  // Prompt 45: handlinger og data-søk (kalender, gjøremål, finans) går gjennom Glimt-motoren: modellen forstår, koden validerer og
+  // utfører, datakilden bekrefter. Vær, avganger, pakker, sol, familie, prøveperioder og prat går videre til svarene under.
+  if (!skipAgent) {
+    try {
+      const g = await agent45(user, text, { module, today, requestId: jobId ? `assist-${jobId}` : null, legacyOk: false });
+      if (!g.legacy) { const a = toAssist45(g, text, today); onStep(1, a.intent); onStep(2, a.intent); return { ...a, ms: Date.now() - t0 }; }
+    } catch (e) { console.warn('[glimt45] assist:', String(e?.message ?? e).slice(0, 160)); }
+  }
   let intent = detectIntent(text, today);
   // Prompt 39: «hva slags timer har jeg i dag», «hva er fysikk» og oppfølging («hva slags fag er det») med forrige svar.
   const f39 = await fagAnswer(user, text, { today, followNeedsCtx: true }).catch(() => null);
@@ -683,7 +692,7 @@ async function runJob(id) {
   let a;
   const cal = row0.source === 'calendar';
   try {
-    a = await runAsUser(user, () => (cal ? calendarAnswer : answer)(user, row0.q, {
+    a = await runAsUser(user, () => (cal ? calendarAnswer : answer)(user, row0.q, { jobId: id, module: row0.source === 'chat' ? 'chat' : cal ? 'calendar' : 'home',
       onStep: (at, intent, labels) => {
         if (getJob(id)?.state === 'cancelled') return;
         setJob(id, { intent, title: TITLES[intent] ?? 'Glimt tenker', model: intent === 'llm' ? 'Glimt · lokal' : 'Glimt · verktøy', steps: JSON.stringify(stepsAt(intent, labels ? (at === 1 ? 0 : labels.length - 1) : at, false, labels)), progress: at === 1 ? 40 : 85,
@@ -772,7 +781,7 @@ api.post('/', async (c) => {
   }
   const chatId = typeof b.chatId === 'string' && b.chatId.length <= 80 ? b.chatId : null;
   // Chat strømmer vanlige spørsmål selv fra valgt modell; Glimt svarer bare når et verktøy passer (unngår to LLM-kall).
-  if (source === 'chat' && detectIntent(text, osloTodayISO()) === 'llm') return c.json({ intent: 'chat', followUp: 'chat', text: '', source: 'Glimt' });
+  if (source === 'chat' && detectIntent(text, osloTodayISO()) === 'llm' && !wantsAgent45(text, 'chat')) return c.json({ intent: 'chat', followUp: 'chat', text: '', source: 'Glimt' });
   // Prompt 41: sammensatte faktaspørsmål («været i Oslo i morgen og vinden i New York neste time», klokka i Tokyo) besvares i
   // chatten, der verktøylaget (server/chat-tools41.js) henter alle delene før modellen svarer.
   if (source === 'chat' && needsChatTools(text)) return c.json({ intent: 'chat', followUp: 'chat', text: '', source: 'Glimt', tools41: true });
@@ -853,5 +862,8 @@ api.post('/:id/cancel', (c) => {
   emit(getJob(id));
   return c.json({ ok: true, state: 'cancelled' });
 });
+
+// Prompt 45: motoren bruker de eksisterende svarene for vær, avganger, pakker osv.
+registerLegacy45({ answer: (u, t, o = {}) => answer(u, t, { ...o, skipAgent: true }), detect: detectIntent });
 
 export default api;

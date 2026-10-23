@@ -169,6 +169,8 @@ const kindOfEvent = (e) => { if (e.kind === 'trial' || e.source === 'trials' || 
 
 /* ---------------- Montering ---------------- */
 
+/** Prompt 45: (bruker, {q, list?, action?, …}) → {status, body} – samme som POST /api/tasks/glimt. Settes av mountGlimt37. */
+export let handleGlimt37 = null; // eslint-disable-line import/no-mutable-exports
 export function mountGlimt37(api, T) {
   const { q, db, listRow, canSeeList, canSeeTask, listsOf, itemOut, byId, cleanTask, insertTask, send, audienceOfTask, defaultList, VISIBLE, today, haLocal, parseArr } = T;
 
@@ -377,8 +379,13 @@ export function mountGlimt37(api, T) {
   const isQ = (text) => /\?\s*$/.test(String(text).trim()) || /^(hva|hvem|hvor|når|hvilke|hvilken|hvor mange|har|er det|what|when|who)\b/i.test(String(text).trim());
 
   api.post('/glimt', async (c) => {
-    const u = c.get('user');
-    const b = await c.req.json().catch(() => ({}));
+    const out = await glimt37(c.get('user'), await c.req.json().catch(() => ({})));
+    return c.json(out.body, out.status ?? 200);
+  });
+  // Prompt 45: samme behandling som funksjon, så Glimt-motoren (/api/glimt/agent, module:'tasks') kan bruke Gjøremål-funksjonene.
+  async function glimt37(u, b0) {
+    const b = b0 && typeof b0 === 'object' ? b0 : {};
+    const c = { json: (body, status = 200) => ({ body, status }) };
     const text = String(b.q ?? b.text ?? '').slice(0, 4000);
     const t0 = today();
     if (b.list && !canSeeList(listRow(b.list), u)) return c.json({ error: 'Fant ikke listen' }, 404);
@@ -399,7 +406,8 @@ export function mountGlimt37(api, T) {
     if (r.error) return c.json({ error: r.error }, r.status ?? 400);
     return c.json({ kind: r.kind ?? 'action', intent: r.intent, text: r.text, items: r.items ?? [], undo: r.undo ?? null, source: 'Glimt · Gjøremål',
       ...['skipped', 'example', 'event', 'notification', 'followUp', 'parsed', 'engine'].reduce((o, k) => (r[k] !== undefined ? { ...o, [k]: r[k] } : o), {}) });
-  });
+  }
+  handleGlimt37 = glimt37;
 
   api.post('/glimt/undo', async (c) => {
     const u = c.get('user'), b = await c.req.json().catch(() => ({}));

@@ -27,7 +27,7 @@
 //          pages:[{path, clicks, impressions, ctr}] (topp 6), footer:'Koblet til som … · sc-domain:… · sist hentet i dag 06:00 · data til 16. okt'}
 //   Cron 06:00: henter de siste 3 dagene på nytt (GSC reviderer) til gsc_daily / gsc_query / gsc_page. Første gang: 16 måneder.
 import { Hono } from 'hono';
-import { createCipheriv, createDecipheriv, createHash, randomBytes, hkdfSync } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, createSign, randomBytes, hkdfSync } from 'node:crypto';
 import { db, kv } from './db.js';
 import { cfg } from './settings.js';
 import { config } from './config.js';
@@ -206,20 +206,53 @@ function unsealFor(user, v) {
   if (typeof v !== 'string' || !v.startsWith('gsc1:')) return '';
   try { const b = Buffer.from(v.slice(5), 'base64'), d = createDecipheriv('aes-256-gcm', userKey(user), b.subarray(0, 12)); d.setAuthTag(b.subarray(12, 28)); return Buffer.concat([d.update(b.subarray(28)), d.final()]).toString('utf8'); } catch { return ''; }
 }
-const conf = (user) => ({ sites: {}, fetched: {}, dataTo: {}, ...(kv.get(user, 'gsc', {}) ?? {}) });
-const setConf = (user, patch) => kv.set(user, 'gsc', { ...conf(user), ...patch });
+// Prompt 45 (SERVER45): servicekonto som alternativ til OAuth (sa = forseglet JSON-nøkkel, bare på serveren, bare admin setter den).
+// conf().refresh er da SA_MARK, så alle «er koblet til?»-sjekkene (refresh) gjelder begge; markøren lagres aldri.
+const SA_MARK = 'sa:1';
+const conf = (user) => { const raw = { sites: {}, fetched: {}, dataTo: {}, ...(kv.get(user, 'gsc', {}) ?? {}) }; return raw.refresh || !raw.sa ? raw : { ...raw, refresh: SA_MARK }; };
+const setConf = (user, patch) => { const next = { ...conf(user), ...patch }; if (next.refresh === SA_MARK) delete next.refresh; kv.set(user, 'gsc', next); };
 const connected = (user) => !!conf(user).refresh;
 
 const accessCache = new Map();
+/** Prompt 45: Google-feil → {reason, message, activationUrl?} (norsk, uten tokens). */
+export function googleReason45(status, err = {}, sa = false) {
+  const msg = String(err?.message ?? ''), details = Array.isArray(err?.details) ? err.details : [], gst = String(err?.status ?? '');
+  const reasons = [...details.map((d) => d?.reason), ...(Array.isArray(err?.errors) ? err.errors.map((e) => e?.reason) : [])].filter(Boolean).map(String);
+  const activationUrl = details.map((d) => d?.metadata?.activationUrl).find((u) => /^https:\/\/console\.developers\.google\.com\//.test(u ?? '')) ?? msg.match(/https:\/\/console\.developers\.google\.com\/\S+/)?.[0]?.replace(/[).,]+$/, '') ?? null;
+  if (reasons.includes('SERVICE_DISABLED') || reasons.includes('accessNotConfigured') || /has not been used in project|it is disabled|API has not been used/i.test(msg))
+    return { reason: 'api_disabled', message: 'Search Console API er ikke slått på i Google Cloud-prosjektet. Slå på «Google Search Console API» og prøv igjen om noen minutter.', activationUrl };
+  if (status === 429 || gst === 'RESOURCE_EXHAUSTED' || reasons.includes('rateLimitExceeded') || reasons.includes('quotaExceeded')) return { reason: 'quota', message: 'Google sier at kvoten er brukt opp for nå. Prøv igjen om litt.' };
+  if (reasons.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') || reasons.includes('insufficientPermissions') || /insufficient authentication scopes/i.test(msg)) return { reason: 'scope', message: 'Tilkoblingen mangler lesetilgang (webmasters.readonly). Koble til på nytt og godta «Se Search Console-data».' };
+  if (status === 401 || gst === 'UNAUTHENTICATED') return { reason: 'token', message: 'Innloggingen hos Google er utløpt. Koble til på nytt.' };
+  if (status === 403 && /permission|forbidden|not have|tilgang/i.test(msg)) return sa ? { reason: 'sa_not_added', message: 'Servicekontoen er ikke lagt til i Search Console. Legg til e-postadressen dens som bruker (Innstillinger → Brukere og tillatelser) på eiendommen.' }
+    : { reason: 'noaccess', message: 'Google-kontoen har ikke tilgang til denne eiendommen i Search Console (eier, full eller begrenset bruker trengs).' };
+  if (status === 400 && /site|url|property|invalid/i.test(msg)) return { reason: 'property_format', message: 'Eiendommen har feil format. Domeneegenskaper skrives sc-domain:eksempel.no, URL-egenskaper https://eksempel.no/ (med skråstrek).' };
+  return { reason: status === 403 ? 'noaccess' : 'error', message: msg ? `Google: ${msg.slice(0, 200)}` : `Google svarte ${status}` };
+}
 async function tokenCall(params) {
   const r = await fetchG(G_TOKEN, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(params).toString() });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(j.error_description || j.error || `Google svarte ${r.status}`), { code: j.error, status: r.status });
   return j;
 }
+/** Prompt 45: tilgang med servicekonto (JWT RS256 → oauth2 token, scope webmasters.readonly). */
+async function saToken(user) {
+  let key;
+  try { key = JSON.parse(unsealFor(user, conf(user).sa)); } catch { key = null; }
+  if (!key?.client_email || !key?.private_key) throw Object.assign(new Error('Servicekonto-nøkkelen kan ikke leses. Legg den inn på nytt.'), { status: 409, reason: 'token' });
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url'), now = Math.floor(Date.now() / 1000);
+  const aud = /^https:\/\/oauth2\.googleapis\.com\/token$/.test(key.token_uri ?? '') ? key.token_uri : G_TOKEN;
+  const unsigned = `${b64({ alg: 'RS256', typ: 'JWT' })}.${b64({ iss: key.client_email, scope: GSC_SCOPE, aud, iat: now, exp: now + 3600 })}`;
+  let sig;
+  try { sig = createSign('RSA-SHA256').update(unsigned).sign(key.private_key).toString('base64url'); } catch { throw Object.assign(new Error('Den private nøkkelen i servicekonto-fila er ugyldig'), { status: 400, reason: 'token' }); }
+  const j = await tokenCall({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: `${unsigned}.${sig}` });
+  accessCache.set(user, { token: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 });
+  return j.access_token;
+}
 async function accessToken(user) {
   const hit = accessCache.get(user);
   if (hit && hit.exp > Date.now() + 30_000) return hit.token;
+  if (conf(user).refresh === SA_MARK) return saToken(user);
   const refresh = unsealFor(user, conf(user).refresh);
   if (!refresh) throw Object.assign(new Error('Ikke koblet til Google Search Console'), { status: 409 });
   const { id, secret } = googleClient();
@@ -228,7 +261,14 @@ async function accessToken(user) {
     accessCache.set(user, { token: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 });
     return j.access_token;
   } catch (e) {
-    if (e.code === 'invalid_grant') { setConf(user, { refresh: null, error: 'Google-tilgangen er utløpt eller trukket tilbake. Koble til på nytt.' }); accessCache.delete(user); }
+    if (e.code === 'invalid_grant') {
+      // Prompt 45: OAuth-app i «Testing» gir refresh-token som utløper etter 7 dager – den vanligste grunnen til at statistikken stopper.
+      const age = Date.now() - (Date.parse(conf(user).connectedAt ?? '') || Date.now());
+      const testing = age > 6 * 86400_000 && age < 9 * 86400_000;
+      const msg = testing ? 'Google-tilgangen utløp etter 7 dager. Står OAuth-appen i «Testing» i Google Cloud, må den settes til «In production». Koble til på nytt.' : 'Google-tilgangen er utløpt eller trukket tilbake. Koble til på nytt.';
+      setConf(user, { refresh: null, error: msg, errorReason: testing ? 'token_testing' : 'token' }); accessCache.delete(user);
+      e.reason = testing ? 'token_testing' : 'token'; e.message = msg;
+    }
     throw e;
   }
 }
@@ -236,8 +276,18 @@ async function wm(user, method, path, body) {
   const tok = await accessToken(user);
   const r = await fetchG(`${G_WM}${path}`, { method, headers: { authorization: `Bearer ${tok}`, ...(body ? { 'content-type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
   const j = await r.json().catch(() => null);
-  if (r.status === 401 || r.status === 403) { accessCache.delete(user); setConf(user, { error: `Google avviste tilgangen (${r.status}). Koble til på nytt.` }); }
-  if (!r.ok) throw Object.assign(new Error(j?.error?.message ? `Google: ${j.error.message}` : `Google svarte ${r.status}`), { status: r.status });
+  // Prompt 45: logg svaret uten tokens (Docker-loggen), og si den EKTE årsaken. Før ble alle 403 til «Koble til på nytt», også når
+  // Search Console API ikke var slått på i Google Cloud-prosjektet eller kontoen manglet tilgang til eiendommen.
+  const tag = `${method} ${path.replace(/\/sites\/[^/]+/, '/sites/…')}`;
+  if (!r.ok) {
+    const why = googleReason45(r.status, j?.error, conf(user).refresh === SA_MARK);
+    console.warn(`[gsc] ${tag} status=${r.status} reason=${why.reason} google=${String(j?.error?.status ?? '').slice(0, 40)}`);
+    if (r.status === 401) accessCache.delete(user);
+    if (['token', 'scope', 'api_disabled', 'sa_not_added'].includes(why.reason)) setConf(user, { error: why.message, errorReason: why.reason, ...(why.activationUrl ? { activationUrl: why.activationUrl } : {}) });
+    throw Object.assign(new Error(why.message), { status: r.status, reason: why.reason, ...(why.activationUrl ? { activationUrl: why.activationUrl } : {}) });
+  }
+  if (method === 'POST') console.log(`[gsc] ${tag} status=${r.status} rows=${j?.rows?.length ?? 0}`);
+  if (conf(user).error) setConf(user, { error: null, errorReason: null, activationUrl: null });
   return j;
 }
 
@@ -330,7 +380,7 @@ export function gscView(user, domain, period = 28) {
   const c = conf(user);
   const steps = [{ n: '1', t: 'Logg inn med Google-kontoen som eier eiendommen' }, { n: '2', t: `Velg eiendom, f.eks. sc-domain:${domain}` }, { n: '3', t: 'Data for de siste 16 månedene hentes inn' }];
   const base = { configured: !!googleClient().id || mockGsc(), scope: 'webmasters.readonly', scopeNote: 'Kun lesetilgang · webmasters.readonly', steps, connectUrl: '/api/gsc/auth' };
-  if (!c.refresh) return { connected: false, ...base, ...(c.error ? { reconnect: true, error: c.error } : {}) };
+  if (!c.refresh) return { connected: false, ...base, ...(c.error ? { reconnect: true, error: c.error, reason: c.errorReason ?? null } : {}) };
   const site = c.sites?.[domain];
   if (!site) return { connected: true, needsSite: true, ...base, account: c.email ?? null, candidates: (c.siteList ?? []).filter((s) => siteMatches(s.siteUrl, domain)).map((s) => s.siteUrl), sites: c.siteList ?? [] };
   const to = q('SELECT max(date) FROM gsc_daily WHERE user_id=? AND domain=?').pluck().get(user, domain);
@@ -351,7 +401,7 @@ export function gscView(user, domain, period = 28) {
       ctr: { value: r3(a.ctr), prev: r3(b.ctr), changePct: chg(a.ctr, b.ctr) }, position: { value: r1(a.position), prev: r1(b.position), change: r1(a.position - b.position), better: 'lower' } },
     series, queries, pages, footer: `Koblet til som ${c.email ?? 'Google-konto'} · ${site} · sist hentet ${when} · data til ${shortD(to)}`, ...(c.error ? { error: c.error } : {}) };
 }
-const siteMatches = (s, domain) => { const d = domain.toLowerCase(); return s === `sc-domain:${d}` || s === `https://${d}/` || s === `http://${d}/` || s === `sc-domain:${d.split('.').slice(-2).join('.')}`; };
+const siteMatches = (s, domain) => { const d = domain.toLowerCase(); return s === `sc-domain:${d}` || s === `https://${d}/` || s === `http://${d}/` || s === `https://www.${d}/` || s === `http://www.${d}/` || s === `sc-domain:${d.split('.').slice(-2).join('.')}`; }; // prompt 45: også www-URL-egenskaper
 async function loadSites(user) {
   const j = await wm(user, 'GET', '/sites');
   const list = (j?.siteEntry ?? []).map((s) => ({ siteUrl: String(s.siteUrl), permissionLevel: String(s.permissionLevel ?? '') })).filter((s) => s.permissionLevel !== 'siteUnverifiedUser');
@@ -651,4 +701,4 @@ export function startDomainGlimtScheduler() {
 
 /* ---------------- Prompt 43: diagnose og «Hent nå» (gsc43.js) ---------------- */
 const OWNER_GSC43 = '__gsc43';
-export const _gsc43 = { conf, setConf, wm, accessToken, loadSites, connected, googleClient, mockGsc, fetchG, GSC_SCOPE, LAG, osloDate, addDays };
+export const _gsc43 = { conf, setConf, wm, accessToken, loadSites, connected, googleClient, mockGsc, fetchG, GSC_SCOPE, LAG, osloDate, addDays, sealFor, unsealFor, SA_MARK, accessCache, syncGsc: (...a) => syncGsc(...a) };

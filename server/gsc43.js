@@ -33,6 +33,20 @@ export const GSC_REASONS43 = {
   pending: 'Venter på første henting. Google har 2–3 dagers forsinkelse.',
   nosource: 'Domenet har ikke valgt eiendom i Search Console ennå.',
   noimpressions: 'Ingen søkevisninger i perioden.',
+  // Prompt 45 (SERVER45): de ekte årsakene som før ble rapportert som «scope»/«koble til på nytt».
+  api_disabled: 'Search Console API er ikke slått på i Google Cloud-prosjektet. Slå på «Google Search Console API» og prøv igjen om noen minutter.',
+  token_testing: 'Google-tilgangen utløp etter 7 dager fordi OAuth-appen står i «Testing». Sett den til «In production» i Google Cloud og koble til på nytt.',
+  sa_not_added: 'Servicekontoen er ikke lagt til som bruker på eiendommen i Search Console.',
+  quota: 'Google-kvoten er brukt opp for nå. Prøv igjen om litt.',
+  property_format: 'Eiendommen har feil format (sc-domain:eksempel.no eller https://eksempel.no/).',
+};
+export const GSC_STEPS45 = {
+  api_disabled: ['Åpne Google Cloud Console → APIer og tjenester → Bibliotek', 'Søk etter «Google Search Console API» og trykk Aktiver', 'Vent et par minutter og trykk «Hent nå»'],
+  token_testing: ['Google Cloud Console → OAuth-samtykkeskjerm → Publiser appen («In production»)', 'Koble til Search Console på nytt'],
+  sa_not_added: ['Search Console → Innstillinger → Brukere og tillatelser → Legg til bruker', 'Lim inn servicekontoens e-postadresse med tilgangen «Full» eller «Begrenset»', 'Trykk «Hent nå»'],
+  noaccess: ['Logg inn i Search Console med samme Google-konto', 'Legg til eiendommen sc-domain:<domene> og bekreft den med DNS'],
+  scope: ['Koble fra og koble til på nytt', 'Godta «Se Search Console-data for de bekreftede nettstedene dine»'],
+  pending: ['Google har 2–3 dagers forsinkelse – nye eiendommer får tall etter noen dager'],
 };
 const siteMatches = (s, d) => { d = d.toLowerCase(); const root = d.split('.').slice(-2).join('.'); return s === `sc-domain:${d}` || s === `https://${d}/` || s === `http://${d}/` || s === `https://www.${d}/` || s === `sc-domain:${root}`; };
 const rawSites = new Map(); // bruker → {at, list} (10 min)
@@ -46,20 +60,21 @@ async function sitesRaw(u, force = false) {
 }
 /** Bare for tester: tøm eiendomscachen. */
 export const _resetGsc43 = () => rawSites.clear();
-const reasonOfError = (msg) => (/403|scope|insufficient|tilgang/i.test(msg ?? '') ? 'scope' : /utløpt|invalid_grant|401|trukket tilbake/i.test(msg ?? '') ? 'token' : null);
+// Prompt 45: «403» alene betyr ikke manglende scope (API av, ingen tilgang til eiendommen osv.) – årsaken kommer fra googleReason45 (e.reason/errorReason).
+const reasonOfError = (msg, reason = null) => reason ?? (/Search Console API er ikke slått på|has not been used in project/i.test(msg ?? '') ? 'api_disabled' : /scope|insufficient|lesetilgang/i.test(msg ?? '') ? 'scope' : /utløpt|invalid_grant|401|trukket tilbake/i.test(msg ?? '') ? 'token' : null);
 const inflight = new Map();
 const kick = (u, d) => { const k = `${u}|${d}`; if (!inflight.has(k)) inflight.set(k, syncGsc(u, d).catch((e) => G.setConf(u, { error: e.message })).finally(() => inflight.delete(k))); return inflight.get(k); };
 
 /** Hvorfor er Google Søk tomt for domenet? null = det er tall (eller ikke koblet: da viser siden «Koble til»). */
 export async function gscDiagnose43(u, domain, period = 28, { network = true } = {}) {
   const c = G.conf(u);
-  if (!c.refresh) return c.error ? { reason: reasonOfError(c.error) ?? 'token', message: c.error } : null;
+  if (!c.refresh) return c.error ? { reason: reasonOfError(c.error, c.errorReason) ?? 'token', message: c.error, steps: GSC_STEPS45[c.errorReason] } : null;
   if (c.scope && !String(c.scope).includes(G.GSC_SCOPE)) return { reason: 'scope', message: GSC_REASONS43.scope };
   const site = c.sites?.[domain];
   if (!site) {
     if (!network) return { reason: 'nosource', message: GSC_REASONS43.nosource };
     let list;
-    try { list = await sitesRaw(u); } catch (e) { const r = reasonOfError(e.message); return { reason: r ?? 'noaccess', message: r ? GSC_REASONS43[r] : e.message }; }
+    try { list = await sitesRaw(u); } catch (e) { const r = reasonOfError(e.message, e.reason); return { reason: r ?? 'noaccess', message: r ? GSC_REASONS43[r] ?? e.message : e.message, steps: GSC_STEPS45[r], ...(e.activationUrl ? { activationUrl: e.activationUrl } : {}) }; }
     const hits = list.filter((s) => siteMatches(s.siteUrl, domain));
     const good = hits.filter((s) => OK_LEVELS.has(s.permissionLevel));
     if (!hits.length) return { reason: 'noaccess', message: `${GSC_REASONS43.noaccess}. Legg til sc-domain:${domain} i Search Console.` };
@@ -69,13 +84,13 @@ export async function gscDiagnose43(u, domain, period = 28, { network = true } =
     if (pick) { G.setConf(u, { sites: { ...(G.conf(u).sites ?? {}), [domain]: pick.siteUrl } }); kick(u, domain); return { reason: 'pending', message: `Valgte ${pick.siteUrl}. ${GSC_REASONS43.pending}`, site: pick.siteUrl, permissionLevel: PERM[pick.permissionLevel] }; }
     return { reason: 'nosource', message: GSC_REASONS43.nosource, candidates: good.map((s) => s.siteUrl) };
   }
-  const r0 = reasonOfError(c.error);
+  const r0 = c.error ? reasonOfError(c.error, c.errorReason) : null;
   const to = q('SELECT max(date) FROM gsc_daily WHERE user_id=? AND domain=?').pluck().get(u, domain);
   const fetchedAt = c.fetched?.[domain] ? new Date(c.fetched[domain]).toISOString() : null;
   const perm = (c.siteList ?? []).find((s) => s.siteUrl === site)?.permissionLevel;
   const base = { site, fetchedAt, dataTo: to ?? null, ...(perm ? { permissionLevel: PERM[perm] ?? perm } : {}) };
   if (!to) {
-    if (r0) return { ...base, reason: r0, message: c.error };
+    if (r0) return { ...base, reason: r0, message: c.error, steps: GSC_STEPS45[r0], ...(c.activationUrl ? { activationUrl: c.activationUrl } : {}) };
     if (!fetchedAt) { kick(u, domain); return { ...base, reason: 'pending', message: GSC_REASONS43.pending }; }
     return { ...base, reason: 'noimpressions', message: `Ingen søkevisninger de siste ${period} dagene` };
   }
@@ -161,8 +176,8 @@ async function testSite(u, domain, siteUrl0) {
     if (!out.impressions28) return { ...out, reason: 'noimpressions', message: 'Ingen søkevisninger de siste 28 dagene' };
     return { ...out, reason: null, message: `✓ ${out.siteUrl} · ${out.permission} · ${out.rows28} dager med data · ${out.clicks28} klikk og ${out.impressions28} visninger siste 28 dager` };
   } catch (e) {
-    const reason = reasonOfError(e.message);
-    return { ...out, ok: false, reason, message: reason ? GSC_REASONS43[reason] : e.message, error: `${e.status ? `${e.status} · ` : ''}${e.message}`.slice(0, 300) };
+    const reason = reasonOfError(e.message, e.reason);
+    return { ...out, ok: false, reason, message: reason ? GSC_REASONS43[reason] ?? e.message : e.message, steps: GSC_STEPS45[reason], ...(e.activationUrl ? { activationUrl: e.activationUrl } : {}), error: `${e.status ? `${e.status} · ` : ''}${e.message}`.slice(0, 300) };
   }
 }
 
@@ -181,8 +196,8 @@ gscDomains43Api.post('/:domain/gsc/refresh', adminGuard, async (c) => {
     return c.json({ ok: true, domain: d, site: cf.sites[d], rows, dataTo: to, fetchedAt: cf.fetched?.[d] ? new Date(cf.fetched[d]).toISOString() : null, ms: Date.now() - t0 });
   } catch (e) {
     G.setConf(u, { error: e.message });
-    const reason = reasonOfError(e.message);
-    return c.json({ ok: false, reason, error: e.message }, e.status === 401 || e.status === 403 ? 409 : 502);
+    const reason = reasonOfError(e.message, e.reason);
+    return c.json({ ok: false, reason, error: e.message, steps: GSC_STEPS45[reason], ...(e.activationUrl ? { activationUrl: e.activationUrl } : {}) }, e.status === 401 || e.status === 403 ? 409 : 502);
   }
 });
 const testRoute = async (c) => {

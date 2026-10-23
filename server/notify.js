@@ -24,7 +24,7 @@ const GROUPS = ['pakker', 'finans', 'familie', 'reise', 'haptikk', 'birthdays'];
 // Visningsnavn i Innstillinger → Varsler. Prompt 24: «Bursdager» (påminnelse kl. 09:00, N dager før).
 export const GROUP_LABELS = { pakker: 'Pakker', finans: 'Finans', familie: 'Familie', reise: 'Reise', haptikk: 'Haptikk', birthdays: 'Bursdager' };
 // Prompt 39: myk standardlyd «draape» (Dråpe) med volum 50 (den gamle «klokke» var høy og skarp på Android).
-const DEFAULT_NOTIFY = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'draape', volume: 50, groups: Object.fromEntries(GROUPS.map((g) => [g, true])), ai_bg_notify: true, n_ai_in: true };
+const DEFAULT_NOTIFY = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'draape', volume: 50, groups: Object.fromEntries(GROUPS.map((g) => [g, true])), ai_bg_notify: true, n_ai_in: false };
 // Prompt 39: Glimt-varselet (AI-svar i bakgrunnen) har Glimt-logoen og tittelen «Glimt».
 export const GLIMT_ICON = '/assets/glimt-varsel.png', GLIMT_ICON_ROUND = '/assets/glimt-varsel-rund.png', GLIMT_BADGE = '/assets/glimt-badge.png';
 const glimtIcons = (category) => (category === 'ai' ? { icon: GLIMT_ICON, badge: GLIMT_BADGE, largeIcon: GLIMT_ICON_ROUND, color: '#E0553D', channel: 'glimt_ai' } : {});
@@ -43,8 +43,9 @@ export function notifyOf(id) {
     groups: Object.fromEntries(GROUPS.map((g) => [g, typeof s.groups?.[g] === 'boolean' ? s.groups[g] : true])),
     // Prompt 31: «AI-svar i bakgrunnen» (på). Følger hovedbryteren «Varsler».
     ai_bg_notify: typeof s.ai_bg_notify === 'boolean' ? s.ai_bg_notify : DEFAULT_NOTIFY.ai_bg_notify,
-    // Prompt 39: «Vis svaret i appen også» (banner «Glimt svarte mens du var borte» når man kommer tilbake). Av = bare chatten og systemvarselet.
-    n_ai_in: typeof s.n_ai_in === 'boolean' ? s.n_ai_in : DEFAULT_NOTIFY.n_ai_in,
+    // Prompt 45 (claude-code-glimt-kun-systemvarsel.md): «Vis svaret i appen også» er fjernet. Glimt-svar mens appen er lukket gir BARE
+    // systemvarsel; ingen banner ved retur. Feltet står igjen som false for eldre klienter.
+    n_ai_in: false,
     glimtIcon: { icon: GLIMT_ICON, round: GLIMT_ICON_ROUND, badge: GLIMT_BADGE, title: 'Glimt', channel: 'glimt_ai', color: '#E0553D' },
     groupList: GROUPS.map((id) => ({ id, label: GROUP_LABELS[id] })),
     customSound: custom ? { name: custom.name, type: custom.type, size: custom.size, url: `/api/me/notify/sound?v=${custom.v}` } : null,
@@ -78,7 +79,8 @@ api.get('/me/notify', anyAuth, (c) => c.json(notifyOf(c.get('user'))));
 api.put('/me/notify', anyAuth, async (c) => {
   const id = c.get('user'), b = await c.req.json().catch(() => ({})), cur = kv.get(id, 'notify', {}) ?? {};
   const next = { ...cur };
-  for (const k of ['on', 'quietOn', 'ai_bg_notify', 'n_ai_in']) if (k in b) { if (typeof b[k] !== 'boolean') return bad(c, `${k} må være true/false`); next[k] = b[k]; }
+  for (const k of ['on', 'quietOn', 'ai_bg_notify']) if (k in b) { if (typeof b[k] !== 'boolean') return bad(c, `${k} må være true/false`); next[k] = b[k]; }
+  if ('n_ai_in' in b && typeof b.n_ai_in !== 'boolean') return bad(c, 'n_ai_in må være true/false'); // prompt 45: godtas, men ignoreres (utgått)
   for (const k of ['quietFrom', 'quietTo']) if (k in b) { if (!TIME.test(b[k])) return bad(c, `${k} må være TT:MM`); next[k] = b[k]; }
   if ('sound' in b) {
     if (!SOUND_IDS.includes(b.sound)) return bad(c, 'Ukjent lyd');
@@ -206,7 +208,8 @@ export async function notifyUser(user, { title, body = '', url = null, tag = nul
   // Prompt 39: AI-svar → tittel «Glimt», Glimt-logo (ikon/badge) og inApp = «Vis svaret i appen også» (n_ai_in).
   const glimt = cat === 'ai' || data?.kind === 'receipt.reanalyzed';
   const item = { title: clip(cat === 'ai' ? 'Glimt' : title, 120), body: clip(body, 600), url: url ? String(url).slice(0, 500) : null, tag: tag ? String(tag).slice(0, 80) : null, category: cat,
-    data: data || glimt ? { ...(data ?? {}), ...(glimt ? { ...glimtIcons('ai'), inApp: n.n_ai_in !== false } : {}) } : null, ...(glimt ? { icon: GLIMT_ICON, badge: GLIMT_BADGE } : {}) };
+    // Prompt 45: Glimt-svar er bare systemvarsel (inApp:false, systemOnly:true) – klientene viser aldri «Glimt svarte mens du var borte».
+    data: data || glimt ? { ...(data ?? {}), ...(glimt ? { ...glimtIcons('ai'), inApp: false, systemOnly: true } : {}) } : null, ...(glimt ? { icon: GLIMT_ICON, badge: GLIMT_BADGE } : {}) };
   const group = GROUP_OF[item.category];
   const off = !n.on ? 'varsler av' : item.category === 'ai' && n.ai_bg_notify === false ? 'AI-svar i bakgrunnen av' : group && n.groups?.[group] === false ? `${group} av` : null;
   let id = null;

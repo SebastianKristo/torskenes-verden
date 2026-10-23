@@ -184,7 +184,8 @@ function readLog(lines) {
 // Venter updateren på å plukke opp en forespørsel vi allerede har skrevet? (Den sjekker hvert 5. s.)
 function pendingRequest(status) {
   const r = readJson('request.json');
-  return !!r?.id && r.id !== status.id && Date.now() - Number(r.at || 0) < 2 * 60_000;
+  // Prompt 45: «Sett opp Docker-tilgang» er ingen oppdatering (os startes ikke på nytt).
+  return !!r?.id && r.id !== status.id && r.action !== 'docker-setup' && Date.now() - Number(r.at || 0) < 2 * 60_000;
 }
 const isRunning = (status = readStatus()) => RUNNING.has(status.state) || pendingRequest(status);
 /** Prompt 40: pågår en ekte oppdatering/omstart nå? → {updating, state, version} (for /api/health · restarting). */
@@ -654,7 +655,10 @@ api.post('/rollback', (c) => startJob(c, 'rollback'));
 // Prompt 44: GET /api/version (uten innlogging) → {version, name, codename, api, dbSchema, features:[…]}. Appene skjuler det serveren ikke støtter.
 export const FEATURES44 = ['logs', 'containers', 'study.documents', 'study.overview', 'calendar.attendees', 'calendar.invite', 'users.directory', 'geo.address', 'tasks.subs', 'tasks.sync', 'tasks.deadline',
   'media.servers', 'media.search.jobs', 'media.files.delete', 'media.library.search', 'media.fanart', 'integrations.status', 'playback', 'playback.plex.pin', 'impersonate', 'users.layout', 'server.owner', 'update.versions',
-  'update.rollback.target', 'web_theme', 'health.state'];
+  'update.rollback.target', 'web_theme', 'health.state',
+  // Prompt 45 (SERVER45)
+  'docker.setup', 'gsc.serviceAccount', 'study.reanalyze', 'study.thumb', 'ai.import', 'ai.import.chatgpt', 'ai.import.gemini', 'ai.import.chunked', 'media.unmonitored', 'playback.summary',
+  'zone.alerts', 'zone.icon', 'health.ha.mobileapp', 'ruter.recoCount', 'weather.here', 'tasks.ha.summary', 'settings.sections', 'notify.systemOnly'];
 export const versionApi44 = new Hono();
 versionApi44.get('/', (c) => c.json({ version: ownVersion(), name: OS_NAME, codename: OS_CODENAME, shortName: shortName(ownVersion()), api: 44, dbSchema: DB_SCHEMA, features: FEATURES44 }, 200, { 'Cache-Control': 'no-store' }));
 

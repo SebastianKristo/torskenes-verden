@@ -282,7 +282,8 @@ test('logger: Docker-format, nivåer, maskering og tomtilstand uten socket', () 
   assert.equal(logs.normalize44('conn 10.0.0.1:443 id 3f2a9c1d2e3f4a5b failed 12 times'), logs.normalize44('conn 10.0.0.9:443 id 9f2a9c1d2e3f4a5c failed 3 times'));
   process.env.MOCK_DATA = '0';
   process.env.DOCKER_SOCKET = '/finnes/ikke.sock';
-  try { assert.equal(logs.dockerAvailable44(), false); } finally { process.env.MOCK_DATA = '1'; delete process.env.DOCKER_SOCKET; }
+  process.env.DOCKER_PROXY_DEFAULT = '0'; // prompt 45: standard er proxyen homelab-docker; uten den og uten socket er Docker utilgjengelig
+  try { assert.equal(logs.dockerAvailable44(), false); } finally { process.env.MOCK_DATA = '1'; delete process.env.DOCKER_SOCKET; delete process.env.DOCKER_PROXY_DEFAULT; }
   assert.match(logs.SETUP44.compose, /tecnativa\/docker-socket-proxy/);
 });
 

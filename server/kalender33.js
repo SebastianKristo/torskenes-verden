@@ -70,6 +70,7 @@
 //   Ord for ord: når klienten fikk 202, sendes «assist» {jobId, state:'running', partial:'tekst så langt', done:false} i biter før
 //   svaret; ellers animerer klienten text selv. Opprettelse (calendar.create) skjer med en gang og kan angres med undo.
 import { Hono } from 'hono';
+import { agent45, registerLegacy45, toAssist45 } from './glimt45/engine.js'; // prompt 45: felles Glimt-motor
 import { randomBytes } from 'node:crypto';
 import { kv } from './db.js';
 import { db as fhDb } from './finans/db.js';
@@ -570,6 +571,9 @@ export async function widgetMiddleware(c, next) {
 
 /* ═══════════════════════ Glimt i Kalender (/api/assist source:'calendar') ═══════════════════════ */
 
+const CAL_OWN45 = new Set(['calendar.create', 'calendar.update', 'calendar.delete', 'tasks.create']); // prompt 45
+registerLegacy45({ calendar: (u, t, o = {}) => calendarAnswer(u, t, { ...o, skipAgent: true }) });
+
 const QUESTION = /\?\s*$|^(hva|når|hvem|hvor|hvordan|hvilk\w*|finn|oppsummer|har jeg|blir det|kan jeg|er jeg|skal jeg|vis)\b/i;
 export const isQuestion = (t) => QUESTION.test(String(t ?? '').trim());
 const REM_TEXT = { '15m': '15 min før', '1h': '1 t før', day: '1 dag før' };
@@ -653,8 +657,23 @@ export async function createFromText(user, text, today, nowMin = oslo(Date.now()
 const CAL_NAME = (user, id) => appCalendarsOf(user).find((c) => c.id === id)?.name ?? 'Personlig';
 
 /** Glimt-svaret for Kalender-appen. onStep(at, intent, labels) for tenker-stegene. → svarobjektet (se toppen). */
-export async function calendarAnswer(user, text, { today = osloTodayISO(), now = Date.now(), onStep = () => {} } = {}) {
+export async function calendarAnswer(user, text, { today = osloTodayISO(), now = Date.now(), onStep = () => {}, skipAgent = false, jobId = null } = {}) {
   const t0 = Date.now();
+  // Prompt 45: opprette, flytte og slette går gjennom Glimt-motoren (samme forståelse som på Hjem). Spørsmål, ledig tid, fag,
+  // frister og vær svares som før under.
+  if (!skipAgent) {
+    try {
+      const g = await agent45(user, text, { module: 'calendar', today, requestId: jobId ? `kal-${jobId}` : null, legacyOk: false, own: CAL_OWN45 });
+      if (!g.legacy) {
+        const labels = g.ask ? ['Leser teksten', 'Mangler noe'] : g.confirm ? ['Leser teksten', 'Finner avtalen', 'Venter på bekreftelse'] : ['Leser teksten', 'Finner dato og tid', 'Lagrer i kalenderen', 'Sjekker at den ble lagret'];
+        onStep(1, g.actions[0]?.tool ?? 'calendar.ask', labels);
+        const a = toAssist45(g, text, today, { caller: 'calendar' });
+        decorate(user, a.events ?? []);
+        onStep(2, a.intent, labels);
+        return { ...a, steps: labels, events: a.events ?? [], slots: [], tools: g.actions.map((x) => x.tool), source: 'Kalender', tool: 'Kalender', deepLink: 'kalender://liste', ms: Date.now() - t0 };
+      }
+    } catch (e) { console.warn('[glimt45] kalender:', String(e?.message ?? e).slice(0, 160)); }
+  }
   const ql = String(text).toLowerCase();
   const nowMin = oslo(now).min;
   const load = async (a, b) => (await runAsUser(user, () => eventsFor(user, a, b))).events;

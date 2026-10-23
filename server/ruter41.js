@@ -76,7 +76,8 @@ function cleanRoutes(list) {
       prefer_lines: lines(r.prefer_lines), allow_lines: lines(r.allow_lines) };
   });
 }
-export const settingsOf41 = (u) => { const s = kv.get(u, 'ruter41_settings', {}) ?? {}; return { homeCard: HOME_CARDS.includes(s.homeCard) ? s.homeCard : 'over', push: s.push === true }; };
+// Prompt 45: recoCount = antall anbefalte reiser på kortet «Anbefalt for min reise» (1–3, standard 2), per bruker.
+export const settingsOf41 = (u) => { const s = kv.get(u, 'ruter41_settings', {}) ?? {}; return { homeCard: HOME_CARDS.includes(s.homeCard) ? s.homeCard : 'over', push: s.push === true, recoCount: [1, 2, 3].includes(s.recoCount) ? s.recoCount : 2 }; };
 
 /* ---------------- Skolesoner ---------------- */
 
@@ -270,7 +271,7 @@ export async function myTrip41(u, { dir = 'auto', delay = null, now = Date.now()
   const d = dir === 'toHome' || dir === 'toSchool' ? dir : j.active ? 'toHome' : osloParts(now).h < 12 ? 'toSchool' : 'toHome';
   const routes = routesOf41(u);
   const s = settingsOf41(u);
-  const base = { dir: d, from: d === 'toHome' ? 'Skole' : 'Amagerveien', to: d === 'toHome' ? 'Amagerveien' : 'Skole', label: d === 'toHome' ? 'Skole → Amagerveien' : 'Amagerveien → Skole', homeCard: s.homeCard, updatedAt: iso(now) };
+  const base = { dir: d, from: d === 'toHome' ? 'Skole' : 'Amagerveien', to: d === 'toHome' ? 'Amagerveien' : 'Skole', label: d === 'toHome' ? 'Skole → Amagerveien' : 'Amagerveien → Skole', homeCard: s.homeCard, recoCount: s.recoCount, updatedAt: iso(now) };
   if (!routes.length) return { ...base, options: [], empty: true, text: 'Legg inn egne ruter under Innstillinger → Ruter → Mine ruter.' };
   const zone = zonesOf41(u)[0];
   const school = zone ? { name: zone.name, lat: zone.lat, lon: zone.lon } : PLACES41.skole;
@@ -314,7 +315,9 @@ ruter41Api.put('/my-routes', async (c) => {
 ruter41Api.get('/my-trip', async (c) => {
   const dir = c.req.query('dir') ?? 'auto';
   if (!['auto', 'toHome', 'toSchool'].includes(dir)) return c.json({ error: 'dir må være auto, toHome eller toSchool' }, 400);
-  return c.json(await myTrip41(c.get('user'), { dir, delay: MOCK() ? c.req.query('delay') ?? null : null }), 200, { 'Cache-Control': 'no-store' });
+  const r = await myTrip41(c.get('user'), { dir, delay: MOCK() ? c.req.query('delay') ?? null : null });
+  // Prompt 45: recommended = nøyaktig de N første (færre hvis det ikke finnes flere, ingen plassholdere).
+  return c.json({ ...r, recommended: (r.options ?? []).slice(0, r.recoCount ?? 2) }, 200, { 'Cache-Control': 'no-store' });
 });
 ruter41Api.get('/school-zones', (c) => c.json({ zones: zonesOf41(c.get('user')) }));
 ruter41Api.post('/school-zones', async (c) => {
@@ -352,6 +355,7 @@ ruter41Api.put('/settings', async (c) => {
   const u = c.get('user'), b = await body(c), cur = settingsOf41(u);
   if ('homeCard' in b && !HOME_CARDS.includes(b.homeCard)) return c.json({ error: 'homeCard må være over, instead eller off' }, 400);
   if ('push' in b && typeof b.push !== 'boolean') return c.json({ error: 'push må være true eller false' }, 400);
-  kv.set(u, 'ruter41_settings', { ...cur, ...('homeCard' in b ? { homeCard: b.homeCard } : {}), ...('push' in b ? { push: b.push } : {}) });
+  if ('recoCount' in b && ![1, 2, 3].includes(b.recoCount)) return c.json({ error: 'recoCount må være 1, 2 eller 3' }, 400);
+  kv.set(u, 'ruter41_settings', { ...cur, ...('homeCard' in b ? { homeCard: b.homeCard } : {}), ...('push' in b ? { push: b.push } : {}), ...('recoCount' in b ? { recoCount: b.recoCount } : {}) });
   return c.json(settingsOf41(u));
 });
