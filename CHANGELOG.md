@@ -2,6 +2,9 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.41.1] – 23.10.2026 · QR-skanning på Android
+- **Android:** «Skann QR-kode» med Googles skanner i Finans og Kalender (ingen kameratillatelse). Koden sjekkes mot din egen server og godkjennes med fingeravtrykk/ansikt som før. Innliming av kode er beholdt som reserve. Innlimte lenker sjekkes nå også mot serveren.
+
 ## [4.41.0] – 23.10.2026 · prompt 46 – Kart, QR-innlogging overalt og oppdateringer som ikke henger
 - **Oppdateringen henger ikke lenger på 55 %:** byggesteget hadde ingen tidsgrense, og en lås fra en avbrutt oppdatering overlevde omstart. Nå har hvert steg tidsgrense, «Står fast» etter 3 min uten fremgang med Prøv igjen / Avbryt og gå tilbake / Vis logg, låsen rydder seg selv, og plass og minne sjekkes før start. Første oppdatering kjører fortsatt på den gamle updateren.
 - **Media «Utlogget» på mobil (rettet på ordentlig):** ukjente adresser ga «ikke innlogget» til appene og «finnes ikke» til web, så appen trodde du var logget ut. Serveren svarer nå riktig, og appen sjekker kontoen før den sier at du er utlogget.

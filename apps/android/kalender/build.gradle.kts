@@ -75,4 +75,6 @@ dependencies {
     // Hjemskjerm-widgets (Glance) og henting hvert 15. minutt.
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+    // Prompt 46: QR-skanning uten kameratillatelse (Googles skanner-UI)
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 }

@@ -293,3 +293,56 @@ private fun AppViewModel.useToken46(srv: String, token: String, u: JSONObject?):
     closeQrLogin46()
     return true
 }
+
+/* ======================= Skann QR-kode (Googles skanner-UI, ingen kameratillatelse) ======================= */
+
+/**
+ * Prompt 46: «Skann QR-kode» i «Logg inn på annen enhet». Bruker Google Code Scanner (play-services-code-scanner): Google Play-tjenester
+ * viser kamerabildet, så appen trenger ikke CAMERA-tillatelse og får bare teksten tilbake. Mangler Google Play-tjenester eller modulen,
+ * vises en rolig melding og innliming står som reserve. Resultatet går til samme håndtering som innlimt kode ([qrScanned46]).
+ */
+object QrScan46 {
+    fun start(ctx: android.content.Context, onRaw: (String) -> Unit, onMsg: (String) -> Unit) {
+        try {
+            val opts = com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+                .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE)
+                .enableAutoZoom()
+                .build()
+            com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx, opts).startScan()
+                .addOnSuccessListener { b ->
+                    val v = b.rawValue?.trim()
+                    if (v.isNullOrEmpty()) onMsg("Fant ingen tekst i QR-koden. Lim inn koden i stedet.") else onRaw(v)
+                }
+                .addOnCanceledListener { /* brukeren lukket skanneren – ingen melding */ }
+                .addOnFailureListener { e -> msgOf(e)?.let(onMsg) }
+        } catch (t: Throwable) {
+            onMsg("Skanneren er ikke tilgjengelig på denne telefonen (krever Google Play-tjenester). Lim inn koden i stedet.")
+        }
+    }
+
+    /** null = avbrutt (ingen melding). */
+    private fun msgOf(e: Exception): String? {
+        val code = (e as? com.google.mlkit.common.MlKitException)?.errorCode
+        val m = e.message.orEmpty().lowercase()
+        return when {
+            code == com.google.mlkit.common.MlKitException.CODE_SCANNER_CANCELLED -> null
+            code == com.google.mlkit.common.MlKitException.CODE_SCANNER_TASK_IN_PROGRESS -> "Skanneren er allerede åpen."
+            code == com.google.mlkit.common.MlKitException.UNAVAILABLE || code == com.google.mlkit.common.MlKitException.CODE_SCANNER_UNAVAILABLE ||
+                "download" in m || "module" in m -> "Skanneren lastes ned fra Google Play … prøv igjen om litt. Du kan også lime inn koden."
+            code == com.google.mlkit.common.MlKitException.CODE_SCANNER_GOOGLE_PLAY_SERVICES_VERSION_TOO_OLD -> "Google Play-tjenester må oppdateres for å skanne. Lim inn koden i stedet."
+            else -> "Kunne ikke skanne nå. Prøv igjen, eller lim inn koden."
+        }
+    }
+}
+
+/** Skannet eller innlimt tekst → samme sjekk som deep linken (riktig server) → [scanQr38] (godkjenn-arket med biometri). */
+fun AppViewModel.qrScanned46(raw: String) {
+    val s = p38
+    val code = qrCodeOf38(raw)
+    if (code == null) { s.qrErr = "Fant ingen gyldig kode. Skann QR-koden på nytt eller lim inn hele lenken."; Haptics.error(); return }
+    val srv = runCatching { android.net.Uri.parse(raw.trim()).getQueryParameter("srv") }.getOrNull()?.let { Api.normalizeServer(it) }
+    if (srv != null && srv.isNotBlank() && !qrSameServer46(srv)) {
+        s.qrErr = "QR-koden er for ${srv.substringAfter("://")}, men du er logget inn på ${base.substringAfter("://")}"; Haptics.error(); return
+    }
+    scanQr38(code)
+}

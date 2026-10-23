@@ -56,6 +56,9 @@
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true">
 
+        <!-- Prompt 46: Googles QR-skanner (play-services-code-scanner) lastes ned ved installasjon. Ingen CAMERA-tillatelse. -->
+        <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -222,8 +222,14 @@ fun ScanDialog46(vm: KalVm) {
                     }
                 }
                 else -> {
-                    Tx("Lim inn lenken eller koden som står under QR-koden på den andre enheten. Skanner du med kameraet til telefonen, åpnes Papir Finans.",
+                    Tx("Skann QR-koden som den andre enheten viser. Du kan også lime inn lenken eller koden under QR-koden.",
                         man(13.sp, FontWeight.Medium, k.mut, 18.sp), maxLines = 5)
+                    // Prompt 46: Googles skanner-UI (ingen kameratillatelse) → samme håndtering som innlimt kode (serversjekk, så biometri før godkjenning).
+                    InkPill("Skann QR-kode", {
+                        Hap.tick(); Kal46Qr.scanMsg = ""
+                        no.kristo.kalender.KalScan46.start(ctx, onRaw = { raw -> Kal46Qr.scanText = raw; Kal46Qr.scan(vm, raw) }, onMsg = { Kal46Qr.scanMsg = it })
+                    }, h = 48.dp)
+                    Tx("ELLER LIM INN", man(11.sp, FontWeight.Bold, k.mut2))
                     Box(Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, k.line, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp),
                         contentAlignment = Alignment.CenterStart) {
                         if (Kal46Qr.scanText.isEmpty()) Tx("papir://login?… eller kode", man(14.sp, FontWeight.Medium, k.mut2))

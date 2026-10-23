@@ -247,3 +247,42 @@ object KalQr46 {
         }
     }
 }
+
+/**
+ * Prompt 46: «Skann QR-kode» (innlogget Kalender godkjenner en annen Kalender-enhet). Google Code Scanner (play-services-code-scanner):
+ * Google Play-tjenester viser kamerabildet, så appen trenger ikke CAMERA-tillatelse. Uten Google Play-tjenester eller mens modulen lastes
+ * ned vises en rolig melding, og innliming er reserve. Teksten går til samme håndtering som innlimt kode (Kal46Qr.scan).
+ */
+object KalScan46 {
+    fun start(ctx: android.content.Context, onRaw: (String) -> Unit, onMsg: (String) -> Unit) {
+        try {
+            val opts = com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+                .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE)
+                .enableAutoZoom()
+                .build()
+            com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(ctx, opts).startScan()
+                .addOnSuccessListener { b ->
+                    val v = b.rawValue?.trim()
+                    if (v.isNullOrEmpty()) onMsg("Fant ingen tekst i QR-koden. Lim inn koden i stedet.") else onRaw(v)
+                }
+                .addOnCanceledListener { /* lukket – ingen melding */ }
+                .addOnFailureListener { e -> msgOf(e)?.let(onMsg) }
+        } catch (t: Throwable) {
+            onMsg("Skanneren er ikke tilgjengelig på denne telefonen (krever Google Play-tjenester). Lim inn koden i stedet.")
+        }
+    }
+
+    /** null = avbrutt (ingen melding). */
+    private fun msgOf(e: Exception): String? {
+        val code = (e as? com.google.mlkit.common.MlKitException)?.errorCode
+        val m = e.message.orEmpty().lowercase()
+        return when {
+            code == com.google.mlkit.common.MlKitException.CODE_SCANNER_CANCELLED -> null
+            code == com.google.mlkit.common.MlKitException.CODE_SCANNER_TASK_IN_PROGRESS -> "Skanneren er allerede åpen."
+            code == com.google.mlkit.common.MlKitException.UNAVAILABLE || code == com.google.mlkit.common.MlKitException.CODE_SCANNER_UNAVAILABLE ||
+                "download" in m || "module" in m -> "Skanneren lastes ned fra Google Play … prøv igjen om litt. Du kan også lime inn koden."
+            code == com.google.mlkit.common.MlKitException.CODE_SCANNER_GOOGLE_PLAY_SERVICES_VERSION_TOO_OLD -> "Google Play-tjenester må oppdateres for å skanne. Lim inn koden i stedet."
+            else -> "Kunne ikke skanne nå. Prøv igjen, eller lim inn koden."
+        }
+    }
+}

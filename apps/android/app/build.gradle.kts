@@ -84,4 +84,6 @@ dependencies {
     implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
     // Sanntid (Huskeliste, Familie, Sporing): én WebSocket mot /api/ws.
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Prompt 46: QR-skanning uten kameratillatelse (Googles skanner-UI)
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 }

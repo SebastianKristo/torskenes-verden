@@ -272,19 +272,20 @@ private fun QrSheet38(vm: AppViewModel) {
             SheetButton30("Lukk", "secondary", onClick = close)
         }
         Text("Åpne innloggingssiden på den nye enheten (nettleser, Mac eller nettbrett) og skann QR-koden med mobilen.", color = p.mut, fontSize = 13.5.sp, lineHeight = 19.sp)
-        // Skanner uten kamerabibliotek: systemkameraet leser koden og åpner lenken (homelab://login …), som kommer tilbake hit.
+        // Prompt 46: «Skann QR-kode» med Googles skanner-UI (ingen kameratillatelse). Teksten går til samme håndtering som innlimt kode.
         Row(
             Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(p.ink).clickable(role = Role.Button) {
+                if (s.qrBusy) return@clickable
                 Haptics.tap()
-                val ok = runCatching { ctx.startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
-                if (!ok) s.qrErr = "Fant ingen kamera-app. Lim inn koden i stedet."
+                s.qrErr = null
+                no.kristo.finanshub.QrScan46.start(ctx, onRaw = { raw -> s.qrCode = raw; vm.qrScanned46(raw) }, onMsg = { s.qrErr = it })
             }.padding(horizontal = 18.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
         ) {
             androidx.compose.material3.Icon(Icons.Filled.QrCodeScanner, null, tint = p.bg, modifier = Modifier.size(22.dp))
-            Text("Skann med kameraet", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text("Skann QR-kode", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
-        Text("Hold mobilen over koden og trykk på lenken kameraet viser. Da åpnes godkjenningen her.", color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
+        Text("Hold mobilen over QR-koden på den nye enheten. Da åpnes godkjenningen her.", color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
         PLabel("ELLER LIM INN KODEN", p.mut)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f).height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp),
@@ -301,7 +302,7 @@ private fun QrSheet38(vm: AppViewModel) {
         s.qrErr?.let { Text(it, color = RED38, fontSize = 13.sp, lineHeight = 18.sp) }
         val code = qrCodeOf38(s.qrCode)
         PButton(if (s.qrBusy) "Henter …" else "Fortsett", Modifier.fillMaxWidth()) {
-            if (code == null) { s.qrErr = "Fant ingen gyldig kode. Lim inn hele lenken fra QR-koden."; Haptics.error() } else vm.scanQr38(code)
+            if (code == null) { s.qrErr = "Fant ingen gyldig kode. Lim inn hele lenken fra QR-koden."; Haptics.error() } else vm.qrScanned46(s.qrCode)
         }
         Text("Koden inneholder aldri passord eller token, og gjelder i 60 sekunder.", color = p.mut, fontSize = 12.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     }
