@@ -91,6 +91,10 @@ export function resultHref(r) {
   if (k === 'receipt') return `/finans/#/kv${r.id ? `/${encodeURIComponent(r.id)}` : ''}`;
   if (k === 'transaction' || k === 'tx') return '/finans/#/transaksjoner';
   if (k === 'category') return '/finans/#/budsjett';
+  // Prompt 46: Kart («vis bussene rundt hjemme» → /api/kart/live gir open:{web:'#/kart', zoneId, live}).
+  const op = r.open ?? r.result?.open;
+  if (op?.web) return `${op.web}${op.zoneId != null ? `?zone=${encodeURIComponent(op.zoneId)}&live=${op.live === false ? 0 : 1}` : ''}`;
+  if (k === 'kart' || k === 'zone' || k === 'stop') return `#/kart${r.zoneId ?? (k === 'zone' ? r.id : null) ? `?zone=${encodeURIComponent(r.zoneId ?? r.id)}&live=1` : ''}`;
   return null;
 }
 

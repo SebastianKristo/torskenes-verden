@@ -11,7 +11,7 @@
 // GET/PUT /api/system/update/settings (require_password, auto_update, notify_updates).
 import { esc } from './util.js';
 import { store } from './store.js';
-import { U, UPD_CMD, onUpdate, loadUpdate, checkUpdate, openSheet, startUpdate, toggleLog, copyCmd, running, state, verTxt, ms, shortSha } from './sysupdate.js';
+import { U, UPD_CMD, onUpdate, loadUpdate, checkUpdate, openSheet, startUpdate, toggleLog, copyCmd, running, state, verTxt, ms, shortSha, stuck46, control46 } from './sysupdate.js';
 import { progress, ackDone, doneRecent } from './upd-banner.js';
 import { carpOnBar, sherlockFly, setSherlockText } from './glimt-outfits36.js'; // prompt 36: Sherlock- og snekker-Glimt
 import { versionsHtml44 } from './settings44.js'; // prompt 44: TIDLIGERE VERSJONER (tilbakerulling)
@@ -167,6 +167,21 @@ function logHtml(ph) {
     ${U.logOpen ? `<pre class="upd-log" data-mount-host data-no-i18n>${esc(logTxt || 'Loggen er tom.')}</pre>` : ''}</section>`;
 }
 
+/** Prompt 46: «Står fast» (vakten på serveren), feilet med lite plass, og «Rydd» før start. */
+function stuck46Html(ph, d) {
+  const sk = ph === 'run' ? stuck46() : null, c = U.ctl ?? {};
+  const acts = sk?.actions ?? (ph === 'fail' ? d?.status?.actions ?? [] : []);
+  const lowDisk = /lite plass|low_disk|for lite ledig plass/i.test(`${U.startErr} ${d?.status?.cause ?? ''}`);
+  if (!sk && !lowDisk && !acts.includes('prune') && !c.msg && !c.err) return '';
+  const b = (a, t, cls = '') => `<button type="button" class="ny46-b ${cls}" data-upd46="${a}"${c.busy ? ' disabled' : ''}>${esc(c.busy === a ? '…' : t)}</button>`;
+  const btns = [
+    ...(sk ? [b('retry', 'Prøv igjen', 'pri'), acts.includes('abort') ? b('abort', sk.abortLabel) : '', b('log', U.logOpen ? 'Skjul logg' : 'Vis logg')] : []),
+    ...((lowDisk || acts.includes('prune')) && !running() ? [b('prune', 'Rydd', sk ? '' : 'pri')] : []),
+  ].join('');
+  return `<section class="ny46${sk ? ' stuck' : ''}" role="${sk ? 'alert' : 'status'}">${sk ? `<b>Står fast</b><span data-no-i18n>${esc(sk.message)}</span>${sk.cause ? `<span class="ny46-c">✦ ${esc(sk.cause)}</span>` : ''}` : lowDisk || acts.includes('prune') ? `<b>Lite plass på serveren</b><span>${esc(U.startErr || d?.status?.glimt || 'Rydd gamle bilder (de 10 siste beholdes, volumer røres ikke) og prøv igjen.')}</span>` : ''}
+    ${btns ? `<div class="ny46-bs">${btns}</div>` : ''}${c.msg ? `<span class="ny46-m">${esc(c.msg)}</span>` : ''}${c.err ? `<span class="ny46-m err">${esc(c.err)}</span>` : ''}</section>`;
+}
+
 /** «Bekreft med passord» (når bryteren er på, eller serveren krever det). */
 function sheetHtml() {
   if (!U.sheet) return '';
@@ -189,7 +204,7 @@ export function systemView(h) {
   const soft = h.group('Programvare', [
     h.row({ t: 'Automatiske oppdateringer', k: 'auto automatisk natt', s: 'Kl. 03:30, etter nattlig backup.', tog: !!st.auto_update, act: 'data-upd-set="auto_update"', disabled: !st.loaded }),
   ]); // prompt 39: «Varsle om nye versjoner» ligger nå under Varsler (updNotifyRow)
-  const html = `<div class="ny">${heroHtml(ph, d)}${btnHtml(ph, d)}${d ? verHtml(ph, d, h) : ''}${d && d.available === false ? setupHtml('Oppdatering fra appen er ikke satt opp.') : ''}${logHtml(ph)}${d ? notesHtml(ph, d) : ''}</div>`;
+  const html = `<div class="ny">${heroHtml(ph, d)}${btnHtml(ph, d)}${stuck46Html(ph, d)}${d ? verHtml(ph, d, h) : ''}${d && d.available === false ? setupHtml('Oppdatering fra appen er ikke satt opp.') : ''}${logHtml(ph)}${d ? notesHtml(ph, d) : ''}</div>`;
   return { html: html + `<section class="sg"><h3 class="sg-t">Programvare</h3><div class="sg-box">${soft.rows.map((r) => r.html).join('')}</div></section>`, extra: sheetHtml(), mount: (el) => { el.scrollTop = el.scrollHeight; } };
 }
 
@@ -236,6 +251,16 @@ export async function startNow() {
 }
 
 export async function systemClick(e) {
+  const b46 = e.target.closest('[data-upd46]');
+  if (b46 && !b46.disabled) {
+    e.preventDefault();
+    const a = b46.dataset.upd46;
+    if (a === 'log') toggleLog();
+    else if (a === 'abort') { if (confirm('Avbryte oppdateringen? Serveren blir på (eller går tilbake til) versjonen som kjørte før.')) await control46('abort'); }
+    else await control46(a);
+    if (a === 'prune') U.startErr = '';
+    rerender(); return true;
+  }
   const ss = e.target.closest('[data-upd-set]');
   if (ss) { e.preventDefault(); await saveSetting(ss.dataset.updSet); return true; }
   const n = e.target.closest('[data-ny]');

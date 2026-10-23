@@ -242,7 +242,7 @@ function msgsHtml() {
     const who = meta.glimt ? 'GLIMT' : `GLIMT · ${(meta.auto?.modelName ?? mName(meta.auto?.model || meta.model || C.chat?.model || '')).toUpperCase()}`;
     return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
       <div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}
-      <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
+      <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}${i === lastA && !busyHere && !C.web && C.webAsk46 && String(C.webAsk46.chatId ?? '') === String(C.cur ?? '') ? `<button type="button" class="ch-web46" data-ch-web46="${i}">${svg(IC.web, 15)}${esc(C.webAsk46.action?.label ?? 'Søk denne gangen')}</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
   }).join('') + (busyHere ? streamHtml() : '');
 }
 /** «✦ Kode · Qwen 3» når Auto valgte modellen (serveren sender auto/reason/task i meta). */
@@ -442,7 +442,7 @@ async function sendInner(text, opt = {}) {
   const userMsg = { role: 'user', content: t, ...(imgs.length ? { images: imgs } : {}), ...(C.att.length ? { files: C.att.filter((a) => a.kind !== 'img').map((a) => a.name) } : {}) };
   const history = opt.history ?? [...prev, userMsg];
   const payload = { chatId: C.cur || undefined, model, messages: history.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}) })),
-    settings: { ...curSet(), theme: C.theme, ...(opt.remember ? { skipCloudAsk: true } : {}) }, webSearch: C.web, myData: C.data && !!C.set.chat_my_data, files,
+    settings: { ...curSet(), theme: C.theme, ...(opt.remember ? { skipCloudAsk: true } : {}) }, webSearch: opt.webOnce ? true : C.web, myData: C.data && !!C.set.chat_my_data, files,
     ...(opt.editFrom != null ? { editFrom: opt.editFrom } : {}), ...(opt.confirm ? { confirmCloud: true } : {}), ...(opt.withoutData ? { withoutMyData: true } : {}) };
   // Optimistisk: vis meldingen med en gang.
   const shown = { ...(C.chat ?? { id: null, title: t.slice(0, 60), model, settings: curSet() }), messages: history };
@@ -524,7 +524,8 @@ async function readSse(res, ctl) {
         if (ev === 'meta') { if (C.busy && (d.auto?.model || d.picked)) { C.busy.picked = d.auto?.model ?? d.picked; C.busy.pickLabel = d.auto?.label ?? ''; paintStream(); } if (C.data && d.chatId) dataSave41(d.chatId, C.data); chatId = d.chatId ?? chatId; if (!C.cur) { if (C.pendingLocal && chatId) { toolsRekey(C.pendingLocal, chatId); C.pendingLocal = null; } C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
         else if (ev === 'facts') { C.busy.facts = d.facts ?? []; if (Array.isArray(d.used)) C.busy.reading = [...new Set([...(C.busy.reading ?? []), ...d.used])]; paintStream(); } // prompt 41: faktakort mens svaret kommer
         else if (ev === 'delta') { C.busy.text += d.text ?? ''; if (!raf) raf = requestAnimationFrame(flush); }
-        else if (ev === 'done') done = d;
+        else if (ev === 'done') { done = d; if (d?.webSearchOff) C.webAsk46 = { chatId: d.chatId ?? chatId, ...d.webSearchOff }; }
+        else if (ev === 'websearch_off') C.webAsk46 = { chatId, ...d }; // prompt 46: Nettsøk er av – tilby «Søk denne gangen»
         else if (ev === 'error') { C.busy.error = d.error || 'Ukjent feil'; paintStream(); }
       }
     }
@@ -781,6 +782,13 @@ function bind(h) {
       const { i, v } = C.edit, t = v.trim(); if (!t) return;
       const msgs = (C.chat?.messages ?? []).filter((x) => x.role !== 'system'), hist = [...msgs.slice(0, i), { ...msgs[i], content: t }];
       send(t, { editFrom: i, history: hist }); return;
+    }
+    // Prompt 46 (claude-code-chat-nettsok-av.md): «Søk denne gangen» – samme spørsmål på nytt med nettsøk på for ett svar.
+    if (d.chWeb46) {
+      const i = +d.chWeb46, msgs = (C.chat?.messages ?? []).filter((x) => x.role !== 'system'), hist = msgs.slice(0, i);
+      const lastU = hist.at(-1); if (!lastU || lastU.role !== 'user') return;
+      C.webAsk46 = null;
+      send(lastU.content, { editFrom: i - 1, history: hist, webOnce: true }); return;
     }
     if (d.chRegen) {
       const i = +d.chRegen, msgs = (C.chat?.messages ?? []).filter((x) => x.role !== 'system'), hist = msgs.slice(0, i);

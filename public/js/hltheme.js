@@ -3,7 +3,7 @@
 import { appName } from './appicon.js';
 import { api, esc } from './util.js';
 import { store } from './store.js';
-import { BG_TYPES, FALLBACK_GRAD, bgState, setBgFromLayout, saveBg, resolveBg, cachedBg, forgetBg, creditOf, particles } from './bgsvc.js';
+import { BG_TYPES, FALLBACK_GRAD, bgState, setBgFromLayout, saveBg, resolveBg, cachedBg, forgetBg, creditOf, particles, gphotoAlbum, loadGphoto } from './bgsvc.js';
 
 const KEY = 'hl_theme';
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
@@ -104,7 +104,10 @@ export function renderBgMenu() {
   if (!is2c()) { host.innerHTML = ''; return; }
   const cur = bgState().type;
   const custom = store.me?.layout?.photoCustom || cachedBg('custom')?.url || cur === 'custom';
-  const rows = BG_TYPES.filter(([k]) => k !== 'custom' || custom);
+  // Prompt 46: Google Photos-album vises når et album er lagt til (ellers «+ Google Photos-album …» som åpner Innstillinger).
+  const gp = gphotoAlbum()?.configured || cur === 'gphoto';
+  if (!gphotoAlbum()) loadGphoto().then(() => { if (bgOpen) renderBgMenu(); });
+  const rows = BG_TYPES.filter(([k]) => (k !== 'custom' || custom) && (k !== 'gphoto' || gp));
   const thumb = (k) => { const e = cachedBg(k); return k !== 'none' && e?.url ? `url('${e.url.replace(/['"()\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}')` : FALLBACK_GRAD; };
   host.innerHTML = `<button type="button" class="hl-bgdd-btn" data-bgdd aria-haspopup="menu" aria-expanded="${bgOpen}">${esc(photoName(cur))} ▾</button>
     <div class="hl-bgdd-menu${bgOpen ? ' open' : ''}" role="menu">${rows.map(([k, n, s]) => {
@@ -112,6 +115,7 @@ export function renderBgMenu() {
       return `<button type="button" role="menuitemradio" aria-checked="${cur === k}" data-photo="${k}"><span class="th" style="background-image:${thumb(k)}"></span><span class="tx"><span>${esc(n)}</span><small>${esc(fail ? 'Fikk ikke lastet bildet' : s)}</small></span><b>${cur === k ? '✓' : ''}</b></button>`;
     }).join('')}
       <label class="hl-bgdd-up">+ Eget bilde<input type="file" accept="image/*" hidden data-photo-up></label>
+      ${gp ? '' : '<a class="hl-bgdd-up" href="#/innstillinger/look/bg" data-bg-more>+ Google Photos-album …</a>'}
       <a class="hl-bgdd-more" href="#/innstillinger/look/bg" data-bg-more>Flere valg …</a></div>`;
   // Miniatyrene lastes i bakgrunnen første gang menyen åpnes.
   if (bgOpen) for (const [k] of rows) if (k !== 'none' && !cachedBg(k)) resolveBg(k).then(() => bgOpen && renderBgMenu());
@@ -166,6 +170,7 @@ const HEAD = {
   matplan: () => [`Uke ${weekNo()}`, 'Mat'],
   sporing: () => ['Pakker og sendinger', 'Sporing'],
   familie: () => ['Posisjon, soner og helse', 'Familie'],
+  kart: () => ['Holdeplasser · sanntid · soner', 'Kart'], // prompt 46
   huskeliste: () => ['To-do for hele familien', 'Gjøremål'],
   bursdager: () => ['Familie og venner', 'Bursdager'],
   kalender: () => [`Skole · ${new Date().getMonth() >= 6 ? 'høst' : 'vår'} ${new Date().getFullYear()}`, 'Kalender'],

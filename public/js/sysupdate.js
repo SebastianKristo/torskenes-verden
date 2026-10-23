@@ -176,3 +176,19 @@ export async function watch() {
 export function stopWatch() { watching = false; clearTimeout(timer); }
 /** Minutter siden serveren gikk ned (for «Venter …»-teksten). */
 export const waitMin = () => (U.waitSince ? Math.floor((Date.now() - U.waitSince) / 60000) : 0);
+
+/* ---------- Prompt 46 (claude-code-oppdatering-henger-55.md): «Står fast» ----------
+   Serveren (SERVER46) har en vakt: ingen fremgang på 3 min → status.stuck med stuckMessage, glimt (årsak) og actions
+   ['retry','abort','log'] (+ 'prune' ved lite plass). Knappene sender bare {action} – serveren skriver forespørselen til updateren. */
+export const stuck46 = () => { const s = U.d?.status ?? {}; return s.stuck ? { message: s.stuckMessage || 'Oppdateringen står fast', cause: s.glimt || null, actions: s.actions ?? ['retry', 'abort', 'log'], abortLabel: s.abortLabel || 'Avbryt og gå tilbake' } : null; };
+export async function control46(action) {
+  U.ctl = { busy: action, msg: '', err: '' }; emit();
+  try {
+    const r = await req(`/${action}`, { method: 'POST', json: {} });
+    U.ctl = { busy: null, msg: r?.message ?? (action === 'prune' ? 'Rydder …' : action === 'abort' ? 'Avbryter …' : 'Prøver på nytt …'), err: '' };
+    if (r?.id && action === 'retry' && r.mode !== 'step') U.jobId = r.id;
+  } catch (e) { U.ctl = { busy: null, msg: '', err: e.status === 404 ? 'Serveren støtter ikke dette ennå. Oppdater Homelab-serveren.' : e.message }; }
+  emit();
+  await loadUpdate();
+  if (running()) watch();
+}

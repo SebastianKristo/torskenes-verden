@@ -366,3 +366,13 @@ html[data-theme=mork] .b42-toast button,html[data-theme=glod] .b42-toast button{
   html[data-ui=desktop] .side,html[data-ui=desktop] .head,.b42-acts,.b42-years,.b42-tabs,.b42-row12:has(> .b42-btn),.b42-vis,.b42-att{display:none!important}
   .b42{zoom:1}.b42-table{border-color:#999}
 }
+
+/* ---------- Prompt 46 (WEB46, claude-code-finans-web-kvittering-over-panel.md): faste lag i hele web-appen ----------
+   Årsak: «Original kvittering» (.b42-ov, z 50) og utgiftspanelet (.b42-ov.side, z 55) er søsken i samme lag, så panelet
+   havnet over vinduet. Samme i Transaksjoner: originalvinduet (.modal, z 60) og detaljpanelet (.f42-ov, z 60).
+   Lag: sidemeny 10 · toppfelt 20 · høyrepanel 55 · modal 200 · fullskjerm-bilde 210 · toast 300. */
+.b42-ov{z-index:200}
+.b42-ov.side,.f42-ov{z-index:55}
+.b42-full,.fa-lb{z-index:210}
+.b42-toast,.toast{z-index:300}
+.modal{z-index:200}

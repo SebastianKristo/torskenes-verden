@@ -40,8 +40,9 @@ import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bind
 import { initWeb44, after44 } from './web44.js'; // prompt 44: lys/mørk, GlimtInput, logg inn som, sidetillegg
 import * as study44 from './study44.js'; // prompt 44: nytt Studie-design
 import { initWeb45, after45 } from './web45.js'; // prompt 45
+import { initWeb46, after46, renderKart46 } from './web46.js'; // prompt 46: Kart, nyheter, bakgrunn m.m.
 
-const ROUTES = { dash: dash.render, studie: study44.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study44.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, kart: renderKart46, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 const KAL_APP = !!document.documentElement.dataset.kalApp;
 const scrollMem = scrollMemory();
@@ -83,8 +84,9 @@ function renderRoute() {
   after41(route, view); // prompt 41: 17. mai på Hjem
   after44(route, view); // prompt 44
   after45(route, view); // prompt 45
+  after46(route, view); // prompt 46
   // Rom er en underside av «Mer» på mobil.
-  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media'].includes(route) ? 'mer' : route;
+  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   setTitle();
   // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
@@ -92,7 +94,7 @@ function renderRoute() {
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
-const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', gjoremal: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', media: 'Media', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
+const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', gjoremal: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', media: 'Media', kart: 'Kart', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
 function setTitle() { document.title = KAL_APP ? 'Kalender' : TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.
@@ -190,6 +192,7 @@ async function main() {
   initWeb41();
   initWeb44(lay44);
   initWeb45();
+  initWeb46();
   bindSearch();
   setupDnd(document.querySelector('header'));
   study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);

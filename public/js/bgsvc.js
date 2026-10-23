@@ -10,6 +10,7 @@ export const BG_TYPES = [
   ['planets', 'Planeter', 'Jorda, Månen, Jupiter, Mars og Saturn fra NASA'],
   ['oslo', 'Oslo', 'Oslo fra lufta · skifter gjennom dagen'],
   ['custom', 'Eget bilde', 'Ditt opplastede bilde'],
+  ['gphoto', 'Google Photos-album', 'Delt album · bytter bilde hver time'], // prompt 46
   ['none', 'Ingen', 'Bare fargeovergang'],
 ];
 export const PLANETS = [['auto', 'Bytt automatisk'], ['earth', 'Jorda'], ['moon', 'Månen'], ['jupiter', 'Jupiter'], ['mars', 'Mars'], ['saturn', 'Saturn']];
@@ -19,6 +20,31 @@ export const FALLBACK_GRAD = 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c
 
 // Standardvalg. 'cur' (eldre «Ingen bilde» i Vindu og papir) leses som 'none'.
 const bg = { type: 'oslo', planet: 'auto', rotate: 'daily', blur: 0, dim: 0, animate: true };
+/* Prompt 46 (claude-code-bakgrunn-google-photos-album.md): Google Photos-album (GET/POST/DELETE /api/bg/gphoto, DATA46).
+   Godtar ikke serveren bgType «gphoto» i /me/layout ennå (400), huskes valget lokalt – men bare så lenge layout ellers
+   står på samme type som da det ble valgt (byttes bakgrunnen på en annen enhet, gjelder det). */
+const GP_LS = 'hl_bg_gphoto46';
+const gpLocal = () => { try { return JSON.parse(localStorage.getItem(GP_LS) || 'null'); } catch { return null; } };
+const gpSetLocal = (v) => { try { if (v) localStorage.setItem(GP_LS, JSON.stringify(v)); else localStorage.removeItem(GP_LS); } catch { /* privat modus */ } };
+let gpAlbum = null; // siste svar fra GET /api/bg/gphoto
+export const gphotoAlbum = () => gpAlbum;
+export async function loadGphoto(force) {
+  if (gpAlbum && !force) return gpAlbum;
+  try { gpAlbum = await api('/bg/gphoto'); } catch (e) { gpAlbum = { configured: false, missing: e.status === 404 }; }
+  return gpAlbum;
+}
+/** Lagrer albumlenken (serveren henter bildene). Kaster med serverens melding ved ugyldig lenke. */
+export async function setGphoto(url) {
+  const r = await api('/bg/gphoto', { method: 'POST', json: { url } }).catch((e) => { throw e; });
+  gpAlbum = r; forgetBg('gphoto');
+  return r;
+}
+export async function clearGphoto() {
+  await api('/bg/gphoto', { method: 'DELETE' }).catch(() => {});
+  gpAlbum = { configured: false }; forgetBg('gphoto');
+  if (bg.type === 'gphoto') await saveBg({ type: 'oslo' });
+}
+export async function nextGphoto() { try { gpAlbum = await api('/bg/gphoto/next', { method: 'POST' }); forgetBg('gphoto'); } catch { /* */ } return gpAlbum; }
 export const bgState = () => ({ ...bg });
 let known = false; // true når valget er lest fra layout (da brukes ikke det eldre klassiske valget)
 export const bgKnown = () => known;
@@ -30,6 +56,8 @@ const typeOf = (v) => (v === 'cur' ? 'none' : TYPES.includes(v) ? v : null);
 export function setBgFromLayout(l = {}) {
   if (typeOf(l.bgType) || typeOf(l.photo)) known = true;
   bg.type = typeOf(l.bgType) ?? typeOf(l.photo) ?? bg.type;
+  const gl = gpLocal();
+  if (bg.type !== 'gphoto' && gl?.on && gl.base === bg.type) bg.type = 'gphoto'; else if (bg.type !== 'gphoto' && gl) gpSetLocal(null);
   if (PLANETS.some((p) => p[0] === l.bgPlanet)) bg.planet = l.bgPlanet;
   if (l.bgRotate === 'daily' || l.bgRotate === 'hourly') bg.rotate = l.bgRotate;
   bg.blur = clamp(l.bgBlur, 0, 20, bg.blur);
@@ -53,6 +81,16 @@ export async function saveBg(patch) {
   if (patch.animate !== undefined) bg.animate = !!patch.animate;
   applyVars();
   const json = { bgType: bg.type, bgPlanet: bg.planet, bgRotate: bg.rotate, bgBlur: bg.blur, bgDim: bg.dim, bgAnimate: bg.animate, photo: bg.type === 'none' ? 'cur' : bg.type };
+  if (bg.type === 'gphoto') {
+    // Prompt 46: prøv bgType «gphoto»; avviser serveren den, lagres resten og valget huskes lokalt (se gpLocal).
+    const base = (await api('/me/layout').catch(() => null))?.bgType ?? 'oslo';
+    const ok = await api('/me/layout', { method: 'PUT', json: { ...json, mob2a_bg: 'gphoto', papir_bg_gphoto: gpAlbum?.url ?? undefined } }).then(() => true).catch(() => false);
+    if (!ok) { const { bgType, photo, ...rest } = json; await api('/me/layout', { method: 'PUT', json: rest }).catch(() => {}); gpSetLocal({ on: true, base: base === 'gphoto' ? 'oslo' : base }); }
+    else gpSetLocal(null);
+    document.dispatchEvent(new Event('hl:bg'));
+    return;
+  }
+  gpSetLocal(null);
   // Eldre servere avviser ukjente felt: prøv da bare photo.
   await api('/me/layout', { method: 'PUT', json }).catch(() => api('/me/layout', { method: 'PUT', json: { photo: json.photo } }).catch(() => {}));
   document.dispatchEvent(new Event('hl:bg'));
@@ -138,6 +176,12 @@ const LEGACY_KIND = { weather: 'weather', planets: 'planets', oslo: 'oslo', cust
 let hasService = null; // null = ukjent, false = eldre server uten /api/background
 
 async function fetchBg(type) {
+  if (type === 'gphoto') {
+    const a = await loadGphoto(true);
+    const cur = a?.current;
+    if (!a?.configured || !cur) return { type, image_url: null, fallbacks: [], credit: null, theme_hint: 'dark', gradient: FALLBACK_GRAD, error: a?.error ?? null, unconfigured: !a?.configured };
+    return { type, image_url: cur.large, fallbacks: [cur.mobile].filter(Boolean), thumb: cur.thumb, credit: { text: 'Google Photos-album' }, theme_hint: cur.light === 'light' ? 'light' : 'dark', gradient: FALLBACK_GRAD, next: a.nextChangeAt ?? null, error: a.error ?? null };
+  }
   const w = Math.round(Math.min(2560, (innerWidth || 1440) * (devicePixelRatio || 1)));
   const h = Math.round(Math.min(2560, (innerHeight || 900) * (devicePixelRatio || 1)));
   if (hasService !== false) {

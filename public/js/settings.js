@@ -4,7 +4,7 @@ import { esc, api, cssUrl, logoImg, initials, backdropClick } from './util.js';
 import { store, emit, load } from './store.js';
 import { applyBackground } from './background.js';
 import { logout } from './usercache.js';
-import { BG_TYPES, PLANETS, FALLBACK_GRAD, bgState, saveBg, resolveBg, cachedBg, creditOf, typeToLegacy } from './bgsvc.js';
+import { BG_TYPES, PLANETS, FALLBACK_GRAD, bgState, saveBg, resolveBg, cachedBg, creditOf, typeToLegacy, gphotoAlbum } from './bgsvc.js';
 import { SEARCH_STYLES, GWORD, renderTicker, applyTicker, menuLabels, loadHistory, searchState, setHistory } from './extras.js';
 import { DASH_WIDGETS, MOBILE_WIDGETS, TABS as NAV_TABS, FIXED_TABS, hiddenWidgets, hiddenTabs, tabAllowed, saveLayout, applyNav } from './profile.js';
 import { orderOf, setOrder } from './dnd.js';
@@ -18,6 +18,7 @@ import { loadInteg, integRows, integSub, integClick, integChange, integCount } f
 import { mediaRows43, mediaNote43, isMedia43, cfgStatus43, cfgGuide43, mediaSub43, mediaClick43, mediaSubmit43 } from './settings-integ43.js'; // prompt 43: MEDIA-gruppen
 import { myProfile, profilesLoaded, hasProfiles, loadProfiles } from './onboard37.js'; // prompt 37: profil i husstanden
 import { loadTrackKeys, trackGroup, trackSub, trackClick, trackChange } from './settings-track37.js'; // prompt 37: delte sporingsnøkler
+import { loadTrack46, trackGroup46, trackSub46, trackClick46, trackSubmit46, trackInput46 } from './settings-track46.js'; // prompt 46: Posten/Bring og PostNord-konto
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
 import { mountHa } from './tasks-ha.js';
 import { kalView, kalClick, kalChange } from './settings-kal.js';
@@ -32,6 +33,7 @@ import { sheetBtn } from './util.js';
 import { loadServer41, serverGroup41 } from './settings-server41.js'; // prompt 41: Konto → Server (lokal/ekstern adresse)
 import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt35.js'; // prompt 35: GLIMT → Glimt
 import { TABS44, modeGroup44, loggerView44, huskeView44, usersGroups44, click44 } from './settings44.js'; // prompt 44
+import { TABS46, ALIAS46, nyheterView46, gphotoBox46 } from './settings46.js'; // prompt 46: Innstillinger → Nyheter
 import { TABS45, ALIAS45, mediaView45, ruterView45, zoneGroups45, click45, setRender45, huskeTips45, vaerView45, studieView45, finansView45 } from './settings45.js'; // prompt 45: Media, Ruter, sonevarsler
 
 const modal = () => document.getElementById('settings');
@@ -94,6 +96,7 @@ const TABS = [
   ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
   TABS44[0], // prompt 44: Gjøremål (synk med Home Assistant)
   ...TABS45, // prompt 45: innstillinger som lå i modulene (Media, Ruter)
+  ...TABS46, // prompt 46: Nyheter (flyttet fra nyhetsleseren)
   ['ai', 'AI', 'Modeller, jobber, forbruk og nøkler.', 'Tilkoblinger', P.ai],
   ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
   ['system', 'System', 'Oppdater serveren til nyeste versjon.', 'Server', P.sys, true],
@@ -102,7 +105,7 @@ const TABS = [
 ];
 const tabsFor = () => TABS.filter((t) => !t[5] || isAdmin());
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', ...ALIAS45 };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', ...ALIAS45, ...ALIAS46 };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app', hahealth: 'familie' };
@@ -197,9 +200,10 @@ function loadBgPreviews(force) {
 }
 function bgCard([k, name, desc], cur) {
   const p = bgPrev?.[k], e = cachedBg(k);
-  const url = k === 'none' ? null : (k === cur && e?.url) || p?.image_url;
+  const gpa = k === 'gphoto' ? gphotoAlbum() : null; // prompt 46: Google Photos-album
+  const url = k === 'none' ? null : (k === cur && e?.url) || p?.image_url || gpa?.current?.mobile || (k === 'gphoto' ? e?.url : null);
   const style = url ? `background-image:${safeUrl(url)}` : `background:${p?.gradient || FALLBACK_GRAD}`;
-  const empty = k === 'custom' && !url ? '<em>Last opp et bilde</em>' : '';
+  const empty = k === 'custom' && !url ? '<em>Last opp et bilde</em>' : k === 'gphoto' && !gpa?.configured ? '<em>Legg til album</em>' : '';
   return `<button type="button" class="bgc" data-bgtype="${k}" aria-pressed="${cur === k}"><span class="bgc-img" style="${esc(style)}">${empty}${cur === k ? '<i>✓</i>' : ''}</span>
     <b>${esc(name)}</b><small>${esc(desc)}</small></button>`;
 }
@@ -222,6 +226,7 @@ function bgView() {
       ${credit ? `<div class="sg-note bg-credit41">${credit}</div>` : ''}
       ${bgMsg ? `<div class="sg-note green">${esc(bgMsg)}</div>` : ''}
       ${planet}
+      ${gphotoBox46()}
       ${box('Visning', `${slider('blur', 'Uskarphet', 20, 'px', b.blur)}${slider('dim', 'Mørklegging', 60, '%', b.dim)}
         ${row({ t: 'Animasjon', s: 'Diskret regn og snø når været tilsier det. Slås av når «Reduser bevegelse» er på.', tog: b.animate, act: 'data-bg-anim' }).html}`)}
       ${own}` };
@@ -479,12 +484,14 @@ function intView() {
     return { groups: [
       group('Tilkoblinger', [row({ t: run ? 'Tester …' : 'Test alle tilkoblinger', s: res.length ? `${ok} OK · ${bad} feilet` : 'Sjekker adresse, nøkkel og svar fra hver tjeneste.', btn: run ? 'Tester …' : 'Test alle', act: 'data-test-all', disabled: run })]),
       group('Dine integrasjoner', mineRows, 'Bare du ser og bruker disse verdiene. Hemmeligheter lagres kryptert på serveren og vises aldri igjen.'),
+      trackGroup46(row, group),
       trackGroup(row, group),
       ((r) => (r.length ? group('Media', r, mediaNote43(isAdmin())) : null))(mediaRows43(mediaCfg, row, tests, isAdmin())),
       srvRows.length ? group('Server (administrator)', srvRows, 'Gjelder hele serveren. Tomme felt bruker verdien fra serverens miljøvariabler (.env).') : null,
     ].filter(Boolean) };
   }
   if (sub === 'mail') return { title: 'Proton Mail', sub: 'Integrasjoner · Kvitteringer fra e-post via Bridge', html: '<div data-mail-host></div>', mount: mountMail };
+  if (sub.startsWith('trk46:')) { const v = trackSub46(sub.slice(6), note); if (v) return v; sub = null; return intView(); }
   if (sub.startsWith('trk37:')) { const v = trackSub(sub.slice(6), note); if (v) return v; sub = null; return intView(); }
   if (sub.startsWith('i24:')) { const v = integSub(sub.slice(4), note); if (v) return v; sub = null; return intView(); }
   if (sub.startsWith('m43:')) { const v = mediaSub43(sub.slice(4), isAdmin()); if (v) return v; sub = null; return intView(); }
@@ -579,7 +586,7 @@ const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [gro
   row({ t: 'Glimt-brief', s: 'Morgen-, dags-, kvelds- og nattbrief med klokkeslett', go: 'glimt', btn: 'Åpne', k: 'brief morgenbrief kveldsbrief varsel guide venner' }),
   row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure' }),
 ])] });
-const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => withZones45(notifyView(H), 'varsel'), app: () => appView({ ...H, sub }), familie: () => (sub ? fam42View(H, sub) : withZones45(fam42View(H, sub), 'familie')), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H), logger: () => loggerView44(H), huske: () => { setRender45(() => { if (!modal().hidden && tab === 'huske') render(); }); const v = huskeView44(H); return { ...v, extra: (v.extra ?? '') + huskeTips45(H) }; }, media: () => (setRender45(rerender45), mediaView45(H)), ruter: () => (setRender45(rerender45), ruterView45(H)), vaer: () => (setRender45(rerender45), vaerView45(H)), studie: () => studieView45(H), finans: () => finansView45(H) };
+const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => withZones45(notifyView(H), 'varsel'), app: () => appView({ ...H, sub }), familie: () => (sub ? fam42View(H, sub) : withZones45(fam42View(H, sub), 'familie')), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H), logger: () => loggerView44(H), huske: () => { setRender45(() => { if (!modal().hidden && tab === 'huske') render(); }); const v = huskeView44(H); return { ...v, extra: (v.extra ?? '') + huskeTips45(H) }; }, media: () => (setRender45(rerender45), mediaView45(H)), ruter: () => (setRender45(rerender45), ruterView45(H)), vaer: () => (setRender45(rerender45), vaerView45(H)), studie: () => studieView45(H), finans: () => finansView45(H), nyheter: () => nyheterView46(H) };
 // Prompt 45: Sonevarsler (av/på, per person og sone) i Familie og speilet i Varsler.
 const rerender45 = () => { if (!modal().hidden && ['familie', 'varsel', 'media', 'ruter', 'vaer'].includes(tab)) render(); };
 function withZones45(v, where) { setRender45(rerender45); if (v?.groups) v.groups = [...v.groups, ...zoneGroups45(H, where)]; return v; }
@@ -763,7 +770,7 @@ function enter() {
   if ((tab === 'int' || tab === 'kal' || q) && !cfg) loadCfg();
   if (tab === 'int' && !mail) loadMail();
   if (tab === 'int' || tab === 'kal' || q) loadInteg(reload);
-  if (tab === 'int' || q) loadTrackKeys(reload);
+  if (tab === 'int' || q) { loadTrackKeys(reload); loadTrack46(reload); }
   if (tab === 'konto' || tab === 'users' || q) loadLogin(reload);
   if (tab === 'dom' || q) loadDomains(reload);
   if (tab === 'varsel' || q) loadNotify(reload);
@@ -895,6 +902,7 @@ export function bindSettings() {
     if (await integClick(e, render)) return;
     if (await mediaClick43(e, render)) return;
     if (await trackClick(e, render)) return;
+    if (await trackClick46(e, render)) return; // prompt 46
     const cs43 = e.target.closest('[data-m43-cfgsave]');
     if (cs43) { e.preventDefault(); const n = cs43.dataset.m43Cfgsave; document.activeElement?.blur?.(); await new Promise((r) => setTimeout(r, 30)); await saving; if (!cfgMsg[n] || cfgMsg[n].ok) cfgMsg[n] = { text: 'Lagret ✓', ok: true }; render(); return; }
     const tb = e.target.closest('[data-test]');
@@ -1002,6 +1010,7 @@ export function bindSettings() {
 
   m.addEventListener('submit', async (e) => {
     if (mediaSubmit43(e, render)) return;
+    if (await trackSubmit46(e, render)) return; // prompt 46
     if (await glimtSubmit(e, render)) return;
     if (await systemSubmit(e)) return;
     if (await backupSubmit(e)) return;
@@ -1025,7 +1034,7 @@ export function bindSettings() {
 
   let qTimer = null;
   m.addEventListener('input', (e) => {
-    if (notifyInput(e) || appInput(e) || systemInput(e) || backupInput(e)) return;
+    if (notifyInput(e) || appInput(e) || systemInput(e) || backupInput(e) || trackInput46(e)) return;
     if (e.target.matches('[data-setq]')) {
       const val = e.target.value;
       clearTimeout(qTimer);

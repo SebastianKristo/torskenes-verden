@@ -61,7 +61,7 @@ function panelHtml() {
       <div class="tk44-card tk44-pl2"><div class="tk44-plh"><span class="tk44-k">STED</span><div class="tk44-plr"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b23a2a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></svg><input data-tk44f="pl" value="${esc(plOf(t))}" placeholder="Legg til sted eller adresse" aria-label="Sted eller adresse">${plOf(t) ? '<button type="button" class="tk44-sx" data-tk44="plclr" aria-label="Fjern sted">✕</button>' : ''}</div></div>
         ${geo ? `<div class="tk44-map" data-tk44-map></div><div class="tk44-mapb">${mapLinks({ ...geo, label: plOf(t) })}</div>` : plOf(t) && !P.geoTried.has(`${t.id}|${plOf(t)}`) ? '<span class="tk44-mut tk44-pad">Finner stedet på kartet …</span>' : ''}</div>
     </div><div class="tk44-pr">
-      <button type="button" class="tk44-done" data-tk44="done">${t.done ? 'Marker som ikke fullført' : 'Fullfør oppgaven'}</button>
+      <button type="button" class="tk44-done" data-tk44="done">${busy46 ? '✓ Fullført' : t.done ? 'Marker som ikke fullført' : 'Fullfør oppgaven'}</button>
       <div class="tk44-f"><span class="tk44-k">LISTE</span><div class="tk44-lists">${(S.d.lists ?? []).map((x) => `<button type="button" class="tk44-lp${x.id === C.tList(t) ? ' on' : ''}" data-tk44-list="${esc(x.id)}" aria-pressed="${x.id === C.tList(t)}"><span style="background:${esc(x.color)}"></span>${esc(x.name)}${x.id === C.tList(t) ? ' ✓' : ''}</button>`).join('')}</div></div>
       <div class="tk44-f"><span class="tk44-k">FRIST</span><div class="tk44-fr"><input type="date" class="tk44-in${overdue ? ' bad' : ''}" data-tk44f="dl" value="${esc(dl)}" aria-label="Frist">${dl ? '<button type="button" class="tk44-sx" data-tk44="dlclr" aria-label="Fjern frist">✕</button>' : ''}</div><span class="tk44-mut${overdue ? ' bad' : ''}">${dl ? `Frist: ${esc(fmtDay(dl))}${overdue ? ' · forfalt' : ''}` : 'Siste dag oppgaven må være gjort'}</span></div>
       <div class="tk44-f"><span class="tk44-k">NÅR</span><div class="tk44-fr"><input type="date" class="tk44-in" data-tk44f="due" value="${esc(t.due ?? '')}" aria-label="Dato"><input type="time" class="tk44-in tm" data-tk44f="time" value="${esc(t.time ?? '')}" aria-label="Klokkeslett">${t.due || t.time ? '<button type="button" class="tk44-sx" data-tk44="dueclr" aria-label="Fjern dato og tid">✕</button>' : ''}</div><span class="tk44-mut">${t.due ? esc(fmtDay(t.due)) : 'Når du planlegger å gjøre det'}</span></div>
@@ -106,7 +106,7 @@ function bindPanel(h) {
     if ((b = x('[data-tk44-sx]'))) { await subDel(b.dataset.tk44Sx); return; }
     const a = x('[data-tk44]')?.dataset.tk44;
     if (!a) return;
-    if (a === 'done') { await C.tick(String(t.id)); return paintPanel(); }
+    if (a === 'done') return complete46(t); // prompt 46: fullfør lukker panelet (Angre fullført gjør det ikke)
     if (a === 'flag') { await C.patchItem(t, { flag: !t.flag }); C.paint(); return paintPanel(); }
     if (a === 'dup') { try { const n = await C.createItem({ n: `${C.tTitle(t)} (kopi)`, list: C.tList(t), due: t.due ?? null, who: C.tWho(t), time: t.time, rep: t.rep, early: t.early, prio: t.prio, tags: t.tags, place: t.place, subs: subsOf(t).map((s) => ({ n: s.n, done: false })), notes: C.tNotes(t) || undefined, dl: t.dl, pl: t.pl, geo: t.geo }); C.flash('Duplisert'); C.paint(); if (n?.id) openPanel(n.id); } catch (er) { C.flash(er.message); } return; }
     if (a === 'del') { if (!confirm(`Slette «${C.tTitle(t)}»?`)) return; const id = String(t.id); closePanel(); return C.del(id); }
@@ -174,7 +174,7 @@ export function bind44() {
     if (!panelOpen()) return;
     if (document.querySelector('.tk-layer') || document.querySelector('.geo44')) return; // redigeringsarket eller adresselista har Esc
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closePanel(); return; }
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); const t = cur(); if (t) C.tick(String(t.id)).then(paintPanel); return; }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); const t = cur(); if (t) complete46(t); return; }
     if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName ?? '')) {
       e.preventDefault();
       const vis = [...document.querySelectorAll('#tasks [data-tw-sel]')].map((x) => x.dataset.twSel), i = vis.indexOf(String(P.id));
@@ -183,5 +183,73 @@ export function bind44() {
     }
   }, true);
 }
+/* ---------------- Prompt 46 (claude-code-gjoremal-fullfor-lukker.md, fasit Huskeliste.dc.html → toggle i vw) ----------------
+   «Fullfør oppgaven»: haken og overstrykingen vises, og etter 450 ms glir panelet ut og lista vises med en toast
+   «Fullført: X · Angre» (5 s). Uferdige deloppgaver: spør først («2 deloppgaver er ikke ferdige. Fullfør alle?»).
+   «Marker som ikke fullført» (Angre fullført) lukker ikke panelet. Gjentakende: «Fullført · neste fre 30. okt». */
+let busy46 = false;
+async function complete46(t) {
+  if (busy46) return;
+  if (t.done) { await C.tick(String(t.id)); return paintPanel(); }
+  const open = subsOf(t).filter((x) => !x.done).length;
+  if (open) { askSubs46(t, open); return; }
+  return finish46(t);
+}
+function askSubs46(t, n) {
+  const pan = host?.querySelector('.tk44-pan'); if (!pan) return;
+  pan.querySelector('.tk46-ask')?.remove();
+  const box = document.createElement('div');
+  box.className = 'tk46-ask'; box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-label', 'Uferdige deloppgaver');
+  box.innerHTML = `<div class="tk46-askc"><b>${n === 1 ? '1 deloppgave er ikke ferdig' : `${n} deloppgaver er ikke ferdige`}. Fullfør alle?</b><div class="tk46-askb"><button type="button" class="tk46-no">Avbryt</button><button type="button" class="tk46-yes">Fullfør alle</button></div></div>`;
+  pan.appendChild(box);
+  box.querySelector('.tk46-yes').focus();
+  box.addEventListener('click', async (e) => {
+    if (e.target.closest('.tk46-no') || e.target === box) { box.remove(); return; }
+    if (!e.target.closest('.tk46-yes')) return;
+    box.remove();
+    await C.patchItem(t, { subs: subsOf(t).map((x) => ({ ...x, done: true })) });
+    finish46(t);
+  });
+  box.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); box.remove(); } });
+}
+async function finish46(t) {
+  busy46 = true;
+  const id = String(t.id), title = C.tTitle(t), rep = t.rep && t.rep !== 'none';
+  const before = new Set((C.S.d?.items ?? []).map((x) => String(x.id)));
+  // Haken og overstrykingen med en gang (tick tegner lista; panelet males av oss).
+  host?.querySelector('.tk44-ck')?.classList.add('on', 'tk46-pop');
+  const ck = host?.querySelector('.tk44-ck'); if (ck) ck.textContent = '✓';
+  host?.querySelector('.tk44-ti')?.classList.add('done');
+  const btn = host?.querySelector('.tk44-done'); if (btn) btn.textContent = '✓ Fullført';
+  const ticking = C.tick(id);
+  await new Promise((r) => setTimeout(r, 450));
+  await ticking.catch(() => {});
+  const it = C.S.d?.items.find((x) => String(x.id) === id);
+  if (!it?.done) { busy46 = false; return paintPanel(); } // feilet på serveren: panelet blir stående
+  const pan = host?.querySelector('.tk44-pan'), scrim = host?.querySelector('.tk44-scrim');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (pan && !reduce) { pan.classList.add('tk46-out'); scrim?.classList.add('tk46-fade'); await new Promise((r) => setTimeout(r, 220)); }
+  if (String(P.id) === id) { P.id = null; if (String(C.S.sel) === id) C.S.sel = null; paintPanel(); C.paint(); }
+  busy46 = false;
+  let msg = `Fullført: ${title}`;
+  if (rep) {
+    const nx = (C.S.d?.items ?? []).find((x) => !before.has(String(x.id)) && !x.done && C.tTitle(x) === title);
+    const d = nx?.due ? new Date(`${String(nx.due).slice(0, 10)}T12:00`) : null;
+    msg = d && !Number.isNaN(+d) ? `Fullført · neste ${d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, '')}` : 'Fullført · neste er lagt til';
+  }
+  toast46(msg, async () => { const x = C.S.d?.items.find((y) => String(y.id) === id); if (x?.done) await C.tick(id); });
+}
+let toastT = 0;
+function toast46(msg, undo) {
+  document.querySelector('.tk46-toast')?.remove();
+  clearTimeout(toastT);
+  const el = document.createElement('div');
+  el.className = 'tk46-toast'; el.setAttribute('role', 'status');
+  el.innerHTML = `<span>${esc(msg)}</span><button type="button">Angre</button>`;
+  document.body.appendChild(el);
+  el.querySelector('button').addEventListener('click', async () => { el.remove(); clearTimeout(toastT); await undo(); });
+  toastT = setTimeout(() => el.remove(), 5000);
+}
+
 export function refresh44() { if (panelOpen()) paintPanel(); else if (host) paintPanel(); }
 export function after44() { /* lazy-import fra web44.js: alt kobles fra tasks.js */ }

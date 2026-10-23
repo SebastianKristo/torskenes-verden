@@ -18,15 +18,21 @@ const ensureCss = () => {
   }
 };
 
-const CAT_NAME = { auto: 'Auto', siste: 'Siste', norge: 'Norge', verden: 'Verden', okonomi: 'Økonomi', sport: 'Sport', teknologi: 'Teknologi', kultur: 'Kultur' };
+const CAT_NAME = { auto: 'Auto', fordeg: 'For deg', siste: 'Siste', norge: 'Norge', verden: 'Verden', okonomi: 'Økonomi', sport: 'Sport', teknologi: 'Teknologi', kultur: 'Kultur' };
 // Standardikonene på fanene (Nyhetsleser.dc.html). Serveren sender de samme som iconDefaults.
-const IC_DEF = { siste: 'lucide:zap', norge: 'lucide:mountain-snow', verden: 'lucide:globe', okonomi: 'lucide:trending-up', sport: 'lucide:trophy', teknologi: 'lucide:cpu', kultur: 'lucide:drama' };
+const IC_DEF = { fordeg: 'lucide:sparkles', siste: 'lucide:zap', norge: 'lucide:mountain-snow', verden: 'lucide:globe', okonomi: 'lucide:trending-up', sport: 'lucide:trophy', teknologi: 'lucide:cpu', kultur: 'lucide:drama' };
 // Prompt 24: faneikonene forhåndslastes (standard, lagrede og serverens), så de vises med en gang leseren åpnes.
 const icIds = (d) => { const s = d?.settings ?? {}, loc = 'icOn' in s ? null : readLocal(); return [...Object.values(d?.iconDefaults ?? IC_DEF), ...Object.values(('icOn' in s ? s.ic : loc?.ic) ?? {})]; };
 export async function preloadNewsIcons() {
   preloadIcons(icIds(null));
   try { return await preloadIcons(icIds(await api('/rss?limit=1'))); } catch { return []; }
 }
+// Prompt 46: egne kategorier, interesser og kilde→egen kategori når serveren ikke lagrer dem ennå.
+const LS46 = 'hl_rss46';
+const loc46 = () => { try { return JSON.parse(localStorage.getItem(LS46) || 'null') || {}; } catch { return {}; } };
+const saveLoc46 = (v) => { try { localStorage.setItem(LS46, JSON.stringify(v)); } catch { /* privat modus */ } };
+const slug46 = (t) => String(t ?? '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'kategori';
+const SUM46 = new Map(); // sammendrag per kategori (lever så lenge siden er åpen)
 const IC_LOCAL = 'hl_rss_ic'; // bare reserve når serveren ikke lagrer ikonene ennå
 const readLocal = () => { try { return JSON.parse(localStorage.getItem(IC_LOCAL) || 'null'); } catch { return null; } };
 const writeLocal = (v) => { try { localStorage.setItem(IC_LOCAL, JSON.stringify(v)); } catch { /* privat modus */ } };
@@ -37,7 +43,6 @@ const when = (iso) => {
   const d = new Date(iso), today = new Date().toDateString() === d.toDateString();
   return today ? hm(iso) : d.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }) + ' ' + hm(iso);
 };
-const gear = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4"/></svg>';
 
 let open = null;
 
@@ -48,46 +53,175 @@ let open = null;
  */
 export function openNews(opts = {}) {
   if (open) { open.focus(); return open; }
+  return reader(opts);
+}
+// Prompt 46: lys/mørk følger webmodusen (html[data-mode]) når den er satt, ellers systemet.
+const themeNow = () => {
+  const root = document.documentElement, paper = root.dataset.hlTheme === '2c' || document.body.classList.contains('theme-2c');
+  const dark = root.hasAttribute('data-mode') ? root.getAttribute('data-mode') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches && root.dataset.paperMode !== 'lys';
+  return paper ? (dark ? 'paperDark' : 'paper') : 'web';
+};
+/** Prompt 46 (claude-code-nyheter-innstillinger-flytt.md): innstillingene i Innstillinger → Nyheter. Samme lagring (/api/rss). */
+export function mountNewsSettings(host) {
   ensureCss();
-  const root = document.documentElement;
-  const paper = root.dataset.hlTheme === '2c' || document.body.classList.contains('theme-2c');
-  const theme = opts.theme ?? (paper ? (matchMedia('(prefers-color-scheme: dark)').matches && root.dataset.paperMode !== 'lys' ? 'paperDark' : 'paper') : 'web');
+  const el = document.createElement('div');
+  host.replaceChildren(el);
+  return reader({ settingsOnly: true, host: el });
+}
+
+function reader(opts = {}) {
+  ensureCss();
+  const theme = opts.theme ?? themeNow();
+  const SO = !!opts.settingsOnly;
   const st = { cat: opts.cat ?? 'siste', data: null, error: '', set: false, nf: '', busy: false, adding: false, addError: '', ip: null, icAll: false, icErr: '', art: null, gl: opts.glimt ? { open: true, cfg: false, busy: true, out: null, err: '' } : null };
   const artCache = new Map();
   bindSearchFields();
 
-  const el = document.createElement('div');
-  el.className = `nw nw-${theme}`;
-  el.setAttribute('role', 'dialog');
-  el.setAttribute('aria-modal', 'true');
-  el.setAttribute('aria-label', 'Nyhetsleser');
-  el.tabIndex = -1;
-  document.body.append(el);
-  document.body.classList.add('nw-open');
+  const el = SO ? opts.host : document.createElement('div');
+  if (SO) { el.className = `nw46-set nw-${theme}`; }
+  else {
+    el.className = `nw nw-${theme}`;
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('aria-label', 'Nyhetsleser');
+    el.tabIndex = -1;
+    document.body.append(el);
+    document.body.classList.add('nw-open');
+  }
 
   const close = () => {
+    if (SO) return;
     el.remove();
     document.body.classList.remove('nw-open');
     document.removeEventListener('keydown', onKey);
     open = null;
     opts.onClose?.();
   };
-  const onKey = (e) => { if (e.key === 'Escape') { if (e.defaultPrevented) return; if (st.ip) { st.ip = null; render(); } else if (st.set) { st.set = false; render(); } else if (st.art) { st.art = null; render(); } else if (st.gl?.cfg) { st.gl.cfg = false; render(); } else if (st.gl?.open) { glClose(); } else close(); } };
-  document.addEventListener('keydown', onKey);
+  const onKey = (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    if (SO) { if (st.ip) { e.preventDefault(); e.stopPropagation(); st.ip = null; render(); } return; }
+    if (st.more) { st.more = false; render(); } else if (st.ip) { st.ip = null; render(); } else if (st.art) { st.art = null; render(); } else if (st.gl?.cfg) { st.gl.cfg = false; render(); } else if (st.gl?.open) { glClose(); } else close();
+  };
+  if (SO) el.addEventListener('keydown', onKey, true); else document.addEventListener('keydown', onKey);
+  // Prompt 46: innstillinger endret i Innstillinger → Nyheter gjelder med en gang (samme fane, eller annen fane via storage).
+  if (!SO) { const onSet = () => { if (el.isConnected) load(); else document.removeEventListener('hl:news-settings', onSet); }; document.addEventListener('hl:news-settings', onSet); }
 
   // Bare svaret på siste forespørsel brukes, så et tregt førstekall ikke overskriver en kategori som er valgt etterpå.
   let seq = 0;
   async function load() {
     const n = ++seq;
     let data = null, error = '';
-    try { data = await api(`/rss?cat=${encodeURIComponent(st.cat)}&limit=60`); }
-    catch (e) { error = e.message || 'Kunne ikke hente nyheter'; }
+    // Prompt 46: «For deg» og egne kategorier. Kjenner ikke serveren dem (eldre versjon), filtreres «Siste» her.
+    const own = isFd46(st.cat) || isCC46(st.cat), srvKnows = [...(st.data?.categories ?? []), ...(st.data?.tabs ?? [])].some((c) => String(c.id) === st.cat);
+    const local = async () => { const d = await api('/rss?cat=siste&limit=200'); d.items = filter46(d, st.cat); d.local46 = true; return d; };
+    try { data = own && st.data && !srvKnows ? await local() : await api(`/rss?cat=${encodeURIComponent(st.cat)}&limit=60`); }
+    catch (e) { if (own && e.status === 400) { try { data = await local(); } catch (e2) { error = e2.message; } } else error = e.message || 'Kunne ikke hente nyheter'; }
     if (n !== seq || !el.isConnected) return;
     st.error = error;
-    if (data) { st.data = data; preloadIcons(icIds(data)); }
+    if (data) { if (own && !data.local46 && !Array.isArray(data.items)) data.items = []; st.data = data; preloadIcons(icIds(data)); }
     render();
+    if (data && !SO) catSum46();
+    // Glimt foreslår interesser ut fra det du leser (GET /api/rss/interests → suggestions).
+    if (data && SO && !st.sug46) { st.sug46 = true; api('/rss/interests').then((r) => { if (Array.isArray(r?.suggestions) && st.data) { st.data.suggestions46 = r.suggestions; render(); } }).catch(() => {}); }
     if (data && st.gl?.open && !st.gl.out && !st.gl.started) { st.gl.started = true; glRun(); }
   }
+
+  /* ---------- Prompt 46: egne kategorier, «For deg», favicon og sammendrag per kategori ----------
+     Serveren (SERVER46) eier lagringen: news_categories {id, name, keywords[], icon, order} og news_interests {word}.
+     Mangler den feltene, brukes localStorage «hl_rss46» så valgene ikke går tapt, og utvalget lages her. */
+  const ccSrv = () => { const d = st.data ?? {}; const v = d.customCategories ?? d.news_categories ?? d.settings?.customCategories; return Array.isArray(v) ? v : null; };
+  const ccList = () => (ccSrv() ?? loc46().cc ?? []).map((c, i) => ({ id: String(c.id ?? `cc-${slug46(c.name ?? c.n)}`), name: String(c.name ?? c.n ?? ''), keywords: (c.keywords ?? c.kw ?? []).map(String), icon: c.icon ?? 'lucide:tag', order: c.order ?? i })).filter((c) => c.name);
+  const intSrv = () => { const d = st.data ?? {}; const v = d.interests ?? d.news_interests ?? d.settings?.interests; return Array.isArray(v) ? v : null; };
+  const intList = () => (intSrv() ?? loc46().int ?? []).map((w) => (typeof w === 'string' ? w : w?.word)).filter(Boolean);
+  const isCC46 = (id) => ccList().some((c) => c.id === id);
+  const feedCat46 = (f) => loc46().feedCat?.[f.id] ?? f.category;
+  function filter46(d, cat) {
+    const items = d.items ?? [], fold = (t) => String(t ?? '').toLowerCase(), txt = (x) => fold(`${x.title} ${x.summary ?? x.description ?? x.desc ?? ''}`);
+    const hit = (x, W) => W.some((w) => w && txt(x).includes(fold(w)));
+    if (isFd46(cat)) return items.filter((x) => hit(x, intList())).slice(0, 30);
+    const c = ccList().find((q) => q.id === cat); if (!c) return [];
+    const feeds = new Set((d.feeds ?? []).filter((f) => feedCat46(f) === c.id).map((f) => f.name));
+    return items.filter((x) => feeds.has(x.feed) || x.category === c.id || hit(x, c.keywords));
+  }
+  async function saveCC(next) {
+    const cur = loc46(); saveLoc46({ ...cur, cc: next.map(({ id, name, keywords, icon, order }) => ({ id, name, keywords, icon, order })) });
+    if (st.data) st.data.customCategories = ccSrv() ? next : st.data.customCategories;
+    render(); document.dispatchEvent(new Event('hl:news-settings'));
+  }
+  async function addCC(name, kw) {
+    name = name.trim();
+    const all = [...cats().map((c) => c.name.toLowerCase()), 'for deg', 'auto'];
+    if (!name) { st.ccErr = 'Skriv et navn på kategorien.'; return render(); }
+    if (all.includes(name.toLowerCase())) { st.ccErr = 'Det finnes allerede en kategori med det navnet.'; return render(); }
+    const keywords = kw.split(',').map((w) => w.trim()).filter(Boolean);
+    st.ccErr = '';
+    try {
+      const r = await api('/rss/categories', { method: 'POST', json: { name, keywords, icon: 'lucide:tag' } });
+      const list = ccFrom46(r) ?? (r?.category?.id || r?.id ? [...(ccSrv() ?? []), r.category ?? r] : null);
+      if (list) { st.data.customCategories = list; st.ccN = ''; st.ccK = ''; render(); document.dispatchEvent(new Event('hl:news-settings')); return load(); }
+    } catch (e) { if (e.status && e.status !== 404 && e.status !== 405) { st.ccErr = e.message; return render(); } }
+    st.ccN = ''; st.ccK = '';
+    await saveCC([...ccList(), { id: `cc-${slug46(name)}-${Date.now().toString(36).slice(-4)}`, name, keywords, icon: 'lucide:tag', order: ccList().length }]);
+  }
+  async function delCC(id) {
+    const c = ccList().find((x) => x.id === id); if (!c) return;
+    if (!confirm(`Slette kategorien «${c.name}»? Kilder som sto på den settes til Auto.`)) return;
+    try {
+      const r = await api(`/rss/categories/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const list = ccFrom46(r);
+      if (list) st.data.customCategories = list; else if (ccSrv()) st.data.customCategories = ccSrv().filter((x) => String(x.id) !== id);
+      if (Array.isArray(r?.feeds)) st.data.feeds = r.feeds;
+    } catch (e) { if (e.status && e.status !== 404 && e.status !== 405) { st.ccErr = e.message; return render(); } }
+    const cur = loc46(), fc = { ...(cur.feedCat ?? {}) };
+    for (const k of Object.keys(fc)) if (fc[k] === id) delete fc[k];
+    saveLoc46({ ...cur, cc: (cur.cc ?? []).filter((x) => String(x.id) !== id), feedCat: fc });
+    if (st.cat === id) st.cat = 'siste';
+    render(); document.dispatchEvent(new Event('hl:news-settings')); load();
+  }
+  // Serveren svarer {categories:[…]} eller {categories:{standard, custom}} (SERVER46) eller {customCategories}.
+  function ccFrom46(r) { const c = r?.categories; return Array.isArray(r?.customCategories) ? r.customCategories : Array.isArray(c?.custom) ? c.custom : Array.isArray(c) ? c.filter((x) => !['siste', 'norge', 'verden', 'okonomi', 'sport', 'teknologi', 'kultur'].includes(x.id)) : null; }
+  async function setInts(words) {
+    const uniq = [...new Set(words.map((w) => w.trim()).filter(Boolean))].slice(0, 40);
+    try {
+      const r = await api('/rss/interests', { method: 'PUT', json: { words: uniq } });
+      if (st.data) { st.data.interests = Array.isArray(r?.interests) ? r.interests : uniq; if (Array.isArray(r?.suggestions)) st.data.suggestions46 = r.suggestions; }
+    } catch (e) { if (e.status && e.status !== 404 && e.status !== 405) { st.ccErr = e.message; return render(); } if (st.data && intSrv()) st.data.interests = uniq; }
+    saveLoc46({ ...loc46(), int: uniq });
+    render(); document.dispatchEvent(new Event('hl:news-settings'));
+  }
+  // Sammendrag per kategori: GET /api/rss/summary?cat= → {points:[{text, id|url}] | text, updatedAt, count}. Cache 30 min / ≥3 nye saker.
+  const sumCache = SUM46;
+  const catOn46 = () => (st.data?.settings?.catSummary ?? loc46().catSummary) !== false;
+  async function catSum46() {
+    const cat = st.cat, items = st.data?.items ?? [];
+    if (cat === 'siste' || !catOn46() || items.length < 3) return;
+    const c = sumCache.get(cat), ids = items.slice(0, 15).map((x) => String(x.id ?? x.url));
+    const fresh = c && !c.busy && Date.now() - c.at < 30 * 60_000 && ids.filter((i) => !c.ids.includes(i)).length < 3;
+    if (fresh || c?.busy) return;
+    sumCache.set(cat, { ...(c ?? {}), busy: true, ids, at: c?.at ?? 0 }); render();
+    let out = null;
+    try {
+      const r = await api(`/rss/summary?cat=${encodeURIComponent(cat)}`);
+      if (r?.pending || r?.skeleton) { sumCache.set(cat, { busy: false, out: null, ids, at: 0, retry: (c?.retry ?? 0) + 1 }); if ((c?.retry ?? 0) < 6) setTimeout(() => { if (st.cat === cat && el.isConnected) catSum46(); }, 4000); return; }
+      const seen = new Set(), pts = Array.isArray(r?.points) ? r.points.map((p) => (typeof p === 'string' ? { text: p } : { text: p.text ?? p.t ?? '', id: p.id ?? null, url: p.url ?? null })).filter((p) => { const k = p.text.trim().toLowerCase().replace(/[.!?]+$/, ''); if (!k || seen.has(k)) return false; seen.add(k); return true; }) : [];
+      if (r?.hidden || r?.empty) out = { none: true, at: Date.now() };
+      else if (pts.length || r?.text) out = { points: pts, text: pts.length ? '' : String(r.text ?? ''), at: Date.parse(r.updatedAt ?? '') || Date.now(), local: r.engine === 'lokal', upd: r.updatedText ?? null };
+    } catch { /* 404 / feil: lokalt */ }
+    if (!out) { const seen = new Set(); out = { points: items.filter((x) => { const k = String(x.title ?? '').trim().toLowerCase(); if (!k || seen.has(k)) return false; seen.add(k); return true; }).slice(0, 4).map((x) => ({ text: x.title, id: x.id ?? x.url, url: x.url })), at: Date.now(), local: true }; }
+    sumCache.set(cat, { busy: false, out, ids, at: Date.now() });
+    if (st.cat === cat && el.isConnected) render();
+  }
+  function catSumHtml(items) {
+    if (st.cat === 'siste' || !catOn46() || items.length < 3) return '';
+    const c = sumCache.get(st.cat), name = cats().find((x) => x.id === st.cat)?.name ?? '';
+    if (!c || (!c.out && (c.busy || (c.retry && c.retry <= 6)))) return `<div class="nw46-sum sk" aria-busy="true"><span class="nw-lab">✦ GLIMT · ${esc(name.toUpperCase())}</span><i></i><i></i><i class="s"></i></div>`;
+    const o = c.out; if (!o || o.none || (!o.points?.length && !o.text)) return '';
+    const ref = (p) => { const x = (st.data?.items ?? []).find((y) => String(y.id) === String(p.id) || (p.url && y.url === p.url)); return x ? ` data-art="${esc(x.id ?? x.url)}"` : ''; };
+    return `<section class="nw46-sum" aria-label="Sammendrag for ${esc(name)}"><span class="nw40-lh"><span class="nw-lab">✦ GLIMT · ${esc(name.toUpperCase())}</span><span class="nw-m">${esc(o.upd || `oppdatert kl. ${hm(new Date(o.at).toISOString())}`)}</span></span>
+      ${o.points?.length ? `<ul>${o.points.slice(0, 5).map((p) => { const r = ref(p); return `<li>${r ? `<button type="button" class="nw46-pt"${r}>` : '<span>'}<span data-no-i18n>${esc(p.text)}</span>${r ? ' <b aria-hidden="true">›</b></button>' : '</span>'}</li>`; }).join('')}</ul>` : `<p class="nw46-sumt" data-no-i18n>${esc(o.text)}</p>`}
+      ${o.local ? '<span class="nw-hint">Glimt-sammendraget er ikke klart ennå · viser de viktigste sakene.</span>' : ''}</section>`;
+  }
+  const favOf = (f) => { if (f.favErr) return ''; if (f.favicon || f.icon) return f.favicon || f.icon; if ('favicon' in f) return ''; try { const h = new URL(f.url).hostname.replace(/^(www|rss|feeds?)\./, ''); return `https://www.google.com/s2/favicons?sz=128&domain=${encodeURIComponent(h)}`; } catch { return ''; } };
 
   /* ---------- Ikoner på fanene (prompt 23) ---------- */
   const icState = () => {
@@ -95,8 +229,15 @@ export function openNews(opts = {}) {
     const srv = 'icOn' in s, loc = srv ? null : readLocal();
     return { ic: (srv ? s.ic : loc?.ic) ?? {}, icSrc: (srv ? s.icSrc : loc?.icSrc) ?? {}, icOn: (srv ? s.icOn : loc?.icOn) !== false };
   };
-  const icOf = (id) => { const x = icState(); return id in x.ic ? x.ic[id] : (st.data?.iconDefaults ?? IC_DEF)[id] ?? ''; };
-  const cats = () => st.data?.categories ?? Object.keys(CAT_NAME).slice(1).map((id) => ({ id, name: CAT_NAME[id] }));
+  const icOf = (id) => { const x = icState(); return id in x.ic ? x.ic[id] : (st.data?.iconDefaults ?? IC_DEF)[id] ?? IC_DEF[id] ?? (st.data?.tabs ?? []).find((t) => String(t.id) === id)?.icon ?? (isFd46(id) ? IC_DEF.fordeg : null) ?? (isCC46(id) ? ccList().find((c) => c.id === id)?.icon ?? 'lucide:tag' : ''); };
+  const cats0 = () => st.data?.categories ?? Object.keys(CAT_NAME).slice(1).map((id) => ({ id, name: CAT_NAME[id] }));
+  // Prompt 46: Siste · ✦ For deg · standard · egne kategorier (serveren kan sende dem selv i categories).
+  const cats = () => {
+    // SERVER46: GET /api/rss → tabs [{id, name, icon, kind:'std'|'for-deg'|'custom'}] i riktig rekkefølge.
+    if (Array.isArray(st.data?.tabs) && st.data.tabs.length) return st.data.tabs.map((t) => ({ id: String(t.id), name: t.name, icon: t.icon, custom: t.kind === 'custom', fd: t.kind === 'for-deg' }));
+    const base = cats0(), out = [...base]; if (!out.some((c) => c.id === 'fordeg')) out.splice(1, 0, { id: 'fordeg', name: 'For deg' }); for (const c of ccList()) if (!out.some((x) => x.id === c.id)) out.push({ id: c.id, name: c.name, custom: true }); return out; };
+  const stdCats = () => cats0().filter((c) => c.id !== 'siste' && !isFd46(c.id) && !isCC46(c.id));
+  const isFd46 = (id) => id === 'fordeg' || id === 'for-deg' || (st.data?.tabs ?? []).some((t) => String(t.id) === id && t.kind === 'for-deg');
   async function saveIcons(patch) {
     const next = { ...icState(), ...patch };
     st.data = st.data ?? { settings: {} };
@@ -109,6 +250,7 @@ export function openNews(opts = {}) {
       st.icErr = '';
     } catch (er) { st.icErr = er.message; }
     render();
+    document.dispatchEvent(new Event('hl:news-settings'));
   }
   const setIcon = (id, icon, src) => { const x = icState(); return saveIcons({ ic: { ...x.ic, [id]: icon }, icSrc: { ...x.icSrc, [id]: src } }); };
   async function ipSearch() {
@@ -120,8 +262,9 @@ export function openNews(opts = {}) {
     catch { if (st.ip !== ip || n !== ip.seq) return; ip.res = []; ip.err = 'Fikk ikke kontakt med ikonbiblioteket'; }
     ip.busy = false; render();
   }
+  const catName = (id) => cats().find((c) => c.id === id)?.name ?? CAT_NAME[id] ?? id;
   async function aiPick(id, lib) {
-    const icon = await suggestIcon(CAT_NAME[id] ?? id, lib).catch(() => null);
+    const icon = await suggestIcon(catName(id), lib).catch(() => null);
     if (icon) await setIcon(id, icon, 'ai');
     return icon;
   }
@@ -315,7 +458,13 @@ export function openNews(opts = {}) {
     const lead = d.settings?.aiSummary && d.digest?.text && st.cat === 'siste' ? d.digest.text : (items[0]?.title ?? 'Ingen saker i denne kategorien.');
     // Prompt 40: det øverste kortet «✦ GLIMT · SAMMENDRAG» er trykkbart og åpner Glimt-siden (langt sammendrag med kilder og bilder).
     const leadHtml = `<button type="button" class="nw-lead nw40-lead" data-act="gl-open"><span class="nw40-lh"><span class="nw-lab">✦ GLIMT · SAMMENDRAG</span><span class="nw-m">${items.length ? `${items.length} saker` : ''}</span></span><span class="nw-leadt">${esc(lead)}</span><span class="nw40-more">Les hele sammendraget med kilder og bilder ›</span></button>`;
-    if (!items.length) return leadHtml + (d.feeds?.length ? '' : '<div class="nw-empty">Ingen kilder. Legg til en RSS- eller Atom-adresse under tannhjulet.</div>');
+    // Prompt 46: hver kategori har sitt eget sammendrag øverst (Siste beholder det felles). For deg uten interesser: hint.
+    if (isFd46(st.cat) && !intList().length && !items.length) return '<div class="nw46-hint"><b>✦ For deg</b><span>Legg til interesser (f.eks. Oslo, Elbil, KI) under Nyhetsinnstillinger, så samler Glimt sakene her.</span><button type="button" class="nw-pill" data-act="nw46-set">Nyhetsinnstillinger</button></div>';
+    if (st.cat !== 'siste') {
+      if (!items.length) return `<div class="nw-empty">${d.feeds?.length ? 'Ingen saker i denne kategorien ennå.' : 'Ingen kilder. Legg til en RSS- eller Atom-adresse under Innstillinger → Nyheter.'}</div>`;
+      return catSumHtml(items) + `<section class="nw-g nw-wide">${items.map((x) => item(x, false)).join('')}</section>`;
+    }
+    if (!items.length) return leadHtml + (d.feeds?.length ? '' : '<div class="nw-empty">Ingen kilder. Legg til en RSS- eller Atom-adresse under Innstillinger → Nyheter.</div>');
     if (st.cat === 'siste') {
       const groups = (d.categories ?? []).slice(1).map((c) => ({ c, items: items.filter((x) => x.category === c.id) })).filter((g) => g.items.length);
       return leadHtml + groups.map((g) => `<section class="nw-g"><div class="nw-gh">${esc(g.c.name.toUpperCase())}</div>${g.items.slice(0, 8).map((x) => item(x, false)).join('')}</section>`).join('');
@@ -323,25 +472,35 @@ export function openNews(opts = {}) {
     return leadHtml + `<section class="nw-g nw-wide">${items.map((x) => item(x, false)).join('')}</section>`;
   }
 
-  function sheet() {
+  // Prompt 46: innstillingene vises i Innstillinger → Nyheter (settingsOnly), ikke lenger som ark i leseren.
+  function setHtml() {
     const d = st.data ?? { feeds: [], settings: {} };
     const s = d.settings ?? {};
-    const tog = (k, n, sub, i) => `<button class="nw-tog" data-tog="${k}" aria-pressed="${!!s[k]}" style="border-top:${i ? '1px solid var(--line)' : '0'}">
-      <span class="nw-tx"><b>${n}</b><span>${sub}</span></span><span class="nw-sw ${s[k] ? 'on' : ''}"><span></span></span></button>`;
-    return `<div class="nw-scrim" data-act="set-close"><div class="nw-sheet" data-stop>
-      <div class="nw-sh"><div><div class="nw-lab">NYHETSLESER</div><div class="nw-st">Kilder og AI</div></div><button class="nw-done" data-act="set-close">Ferdig</button></div>
-      <div class="nw-box">${tog('aiSummary', '✦ AI-sammendrag', 'Lager en kort ingress over de viktigste sakene øverst.', 0)}${tog('aiCategorize', '✦ AI-kategorisering', 'Setter kategori per sak når kilden står på Auto.', 1)}</div>
+    const on = (k) => (k === 'catSummary' ? catOn46() : !!s[k]);
+    const tog = (k, n, sub, i) => `<button type="button" class="nw-tog" data-tog="${k}" role="switch" aria-checked="${on(k)}" aria-pressed="${on(k)}" style="border-top:${i ? '1px solid var(--line)' : '0'}">
+      <span class="nw-tx"><b>${n}</b><span>${sub}</span></span><span class="nw-sw ${on(k) ? 'on' : ''}"><span></span></span></button>`;
+    const opts0 = Array.isArray(d.categoryOptions) && d.categoryOptions.length ? d.categoryOptions.map((o) => [String(o.id), o.id === 'auto' ? (s.aiCategorize ? '✦ Auto' : 'Auto') : o.name]) : [['auto', s.aiCategorize ? '✦ Auto' : 'Auto'], ...stdCats().map((c) => [c.id, c.name])];
+    const opts = [...opts0, ...ccList().filter((c) => !opts0.some(([v]) => v === c.id)).map((c) => [c.id, c.name])];
+    const fav = (f) => { const u = favOf(f); return `<span class="nw-ini nw46-fav" style="background:${esc(f.color)}">${esc(f.name.slice(0, 2).toUpperCase())}${u ? `<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-nw-img>` : ''}</span>`; };
+    const ints = intList();
+    return `<div class="nw-box">${tog('aiSummary', '✦ AI-sammendrag', 'Lager en kort ingress over de viktigste sakene øverst.', 0)}${tog('catSummary', '✦ Sammendrag per kategori', 'Eget Glimt-sammendrag øverst i hver kategori (minst 3 saker).', 1)}${tog('aiCategorize', '✦ AI-kategorisering', 'Setter kategori per sak når kilden står på Auto.', 2)}</div>
+      <span class="nw-lab">KATEGORIER</span>
+      <div class="nw-box nw46-fd"><div class="nw46-fdh"><span class="nw46-sq lab">✦</span><span class="nw-tx"><b>For deg</b><span>Personlig fane. Glimt velger saker etter interessene dine og hva du leser.</span></span></div>
+        <div class="nw46-ints">${ints.map((w, i) => `<span class="nw46-int">${esc(w)}<button type="button" data-nw46-intdel="${i}" aria-label="Fjern ${esc(w)}">×</button></span>`).join('') || '<span class="nw-hint">Ingen interesser ennå.</span>'}</div>
+        ${(st.data?.suggestions46 ?? []).map((w) => (typeof w === 'string' ? w : w?.word)).filter((w) => w && !ints.some((x) => x.toLowerCase() === w.toLowerCase())).length ? `<div class="nw46-ints"><span class="nw-hint">✦ Glimt foreslår:</span>${(st.data.suggestions46).map((w) => (typeof w === 'string' ? w : w?.word)).filter((w) => w && !ints.some((x) => x.toLowerCase() === w.toLowerCase())).slice(0, 6).map((w) => `<button type="button" class="nw46-int sug" data-nw46-sug="${esc(w)}">+ ${esc(w)}</button>`).join('')}</div>` : ''}
+        <form class="nw46-row" data-nw46-int><input name="nw46int" value="${esc(st.intN ?? '')}" placeholder="Legg til interesse, f.eks. Strømstad" autocomplete="off" aria-label="Ny interesse" data-glimt="off"><button type="submit">Legg til</button></form></div>
+      ${ccList().length ? `<div class="nw-box">${ccList().map((c, i) => `<div class="nw-feed" style="border-top:${i ? '1px solid var(--line)' : '0'}"><span class="nw46-sq">${iconHtml(icOf(c.id) || 'lucide:tag', 18)}</span><span class="nw-tx"><b>${esc(c.name)}</b><span class="nw-url">${esc(c.keywords.join(', ') || 'Ingen nøkkelord · bare kilder med denne kategorien')}</span></span><button type="button" class="nw-x" data-nw46-ccdel="${esc(c.id)}" aria-label="Slett kategorien ${esc(c.name)}">×</button></div>`).join('')}</div>` : ''}
+      <form class="nw-box nw46-cc" data-nw46-cc><b>+ Ny kategori</b><input name="nw46ccn" value="${esc(st.ccN ?? '')}" placeholder="Navn, f.eks. Strømstad" maxlength="40" autocomplete="off" aria-label="Navn på kategorien" required data-glimt="off"><input name="nw46cck" value="${esc(st.ccK ?? '')}" placeholder="Nøkkelord, kommaseparert (valgfritt)" autocomplete="off" aria-label="Nøkkelord" data-glimt="off"><button type="submit">Lag kategori</button>${st.ccErr ? `<span class="nw-hint err">${esc(st.ccErr)}</span>` : '<span class="nw-hint">En sak havner i kategorien når kilden står på den eller tittelen har et av nøkkelordene.</span>'}</form>
       ${iconSection()}
-      <div class="nw-row"><span class="nw-lab">ADRESSER · ${(d.feeds ?? []).length}</span><span class="nw-hint">Trykk på kategorien for å endre</span></div>
-      <div class="nw-box">${(d.feeds ?? []).map((f, i) => `<div class="nw-feed" style="border-top:${i ? '1px solid var(--line)' : '0'}">
-        <span class="nw-ini" style="background:${esc(f.color)}">${esc(f.name.slice(0, 2).toUpperCase())}</span>
+      <div class="nw-row"><span class="nw-lab">ADRESSER · ${(d.feeds ?? []).length}</span><span class="nw-hint">Velg kategori per kilde</span></div>
+      <div class="nw-box">${(d.feeds ?? []).map((f, i) => { const fc = feedCat46(f); return `<div class="nw-feed" style="border-top:${i ? '1px solid var(--line)' : '0'}">
+        ${fav(f)}
         <span class="nw-tx"><b>${esc(f.name)}${f.enabled ? '' : ' (av)'}</b><span class="nw-url" title="${esc(f.url)}">${esc(f.lastError ? `⚠ ${f.lastError}` : f.url)}</span></span>
-        <button class="nw-pill" data-cyc="${f.id}">${f.category === 'auto' && s.aiCategorize ? '✦ ' : ''}${esc(CAT_NAME[f.category] ?? f.category)} ▾</button>
-        <button class="nw-x" data-del="${f.id}" aria-label="Fjern ${esc(f.name)}">×</button></div>`).join('') || '<div class="nw-feed"><span class="nw-hint">Ingen kilder ennå.</span></div>'}</div>
-      <form class="nw-add" data-add><input name="url" value="${esc(st.nf)}" placeholder="https://www.nrk.no/toppsaker.rss" autocomplete="off" inputmode="url">
+        <span class="nw46-sel"><select data-nw46-cat="${f.id}" aria-label="Kategori for ${esc(f.name)}">${opts.map(([v, n]) => `<option value="${esc(v)}"${v === fc ? ' selected' : ''}>${esc(n)}</option>`).join('')}${opts.some(([v]) => v === fc) ? '' : `<option value="${esc(fc)}" selected>${esc(CAT_NAME[fc] ?? fc)}</option>`}</select><i aria-hidden="true">▾</i></span>
+        <button class="nw-x" data-del="${f.id}" aria-label="Fjern ${esc(f.name)}">×</button></div>`; }).join('') || '<div class="nw-feed"><span class="nw-hint">Ingen kilder ennå.</span></div>'}</div>
+      <form class="nw-add" data-add><input name="url" value="${esc(st.nf)}" placeholder="https://www.nrk.no/toppsaker.rss" autocomplete="off" inputmode="url" aria-label="Adresse til RSS eller Atom">
         <button type="submit" ${st.adding ? 'disabled' : ''}>${st.adding ? 'Leser feeden …' : '+ Legg til adresse'}</button>
-        <span class="nw-hint ${st.addError ? 'err' : ''}">${esc(st.addError || (s.aiCategorize ? '✦ AI foreslår kategori for saker fra kilder på Auto.' : 'Kategorien settes til Auto.'))}</span></form>
-    </div></div>`;
+        <span class="nw-hint ${st.addError ? 'err' : ''}">${esc(st.addError || (s.aiCategorize ? '✦ AI foreslår kategori for saker fra kilder på Auto. Ikonet til nettstedet hentes automatisk.' : 'Kategorien settes til Auto. Ikonet til nettstedet hentes automatisk.'))}</span></form>`;
   }
 
   function iconSection() {
@@ -362,9 +521,9 @@ export function openNews(opts = {}) {
     if (!ip) return '';
     const cur = icOf(ip.cat);
     const status = ip.busy ? 'Søker i over 200 ikonbibliotek …' : ip.err ? ip.err : ip.res ? (ip.res.length ? `${ip.res.length} av ${ip.total || ip.res.length} treff · Iconify (Lucide, Material, Phosphor, Tabler, Font Awesome …)` : 'Ingen treff. Prøv et annet engelsk ord.') : '';
-    return `<div class="nw-scrim nw-ipscrim" data-act="ip-close"><div class="nw-ip" data-stop role="dialog" aria-label="Ikon for ${esc(CAT_NAME[ip.cat] ?? ip.cat)}">
+    return `<div class="nw-scrim nw-ipscrim" data-act="ip-close"><div class="nw-ip" data-stop role="dialog" aria-label="Ikon for ${esc(catName(ip.cat))}">
       <div class="nw-iph">
-        <div class="nw-ipt"><span></span><div><div class="nw-lab">IKON FOR</div><div class="nw-ipn">${esc(CAT_NAME[ip.cat] ?? ip.cat)}</div></div><button class="nw-ipx" data-act="ip-close" aria-label="Lukk">×</button></div>
+        <div class="nw-ipt"><span></span><div><div class="nw-lab">IKON FOR</div><div class="nw-ipn">${esc(catName(ip.cat))}</div></div><button class="nw-ipx" data-act="ip-close" aria-label="Lukk">×</button></div>
         <form class="nw-ipq${ip.q ? ' has' : ''}" data-ip-form data-sf><span class="sf-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></span>${clearBtn()}
           <input name="ipq" value="${esc(ip.q)}" placeholder="Søk etter ikon (engelsk), f.eks. football" autocomplete="off" aria-label="Søk etter ikon"><button type="submit">Søk</button></form>
         <div class="nw-iplibs">${ICON_LIBS.map(([k, n]) => `<button data-ip-lib="${k}" class="${ip.lib === k ? 'on' : ''}" aria-pressed="${ip.lib === k}">${esc(n)}</button>`).join('')}</div>
@@ -376,6 +535,13 @@ export function openNews(opts = {}) {
 
   function render() {
     const d = st.data;
+    if (SO) {
+      const keepSo = el.querySelector('.nw-ipg')?.scrollTop ?? 0, act = document.activeElement, fn = el.contains(act) ? act.name : null, pos = fn ? act.selectionStart : null;
+      el.innerHTML = `<div class="nw46-in">${d ? setHtml() : st.error ? `<div class="nw-empty">${esc(st.error)} <button class="nw-pill" data-act="retry">Prøv igjen</button></div>` : '<div class="nw-empty">Henter nyhetsinnstillingene …</div>'}</div>${picker()}`;
+      const g2 = el.querySelector('.nw-ipg'); if (g2) g2.scrollTop = keepSo;
+      if (fn) { const n2 = el.querySelector(`[name="${fn}"]`); if (n2) { n2.focus({ preventScroll: true }); try { n2.setSelectionRange(pos, pos); } catch { /* */ } } }
+      return;
+    }
     const keepArt = el.querySelector('.nw-art-body')?.scrollTop ?? 0, keepScroll = el.querySelector('.nw-body')?.scrollTop ?? 0, keepSheet = el.querySelector('.nw-sheet')?.scrollTop ?? 0, keepIp = el.querySelector('.nw-ipg')?.scrollTop ?? 0;
     const focus = document.activeElement?.name === 'ipq' ? document.activeElement.selectionStart : null;
     const keepGl = el.querySelector('.nw40-gb')?.scrollTop ?? 0;
@@ -383,10 +549,10 @@ export function openNews(opts = {}) {
       <div class="nw-head"><div class="nw-hl">
         <button class="nw-back" data-act="close">${opts.backLabel ?? '‹ Tilbake'}</button>
         <div><div class="nw-lab">NYHETSLESER · ${d?.feeds?.length ?? 0} KILDER${d?.updatedAt ? ` · OPPDATERT ${hm(d.updatedAt)}` : ''}</div><h2 class="nw-title">Siste nytt</h2></div></div>
-        <div class="nw-hr"><button class="nw-ic" data-act="refresh" aria-label="Oppdater" title="Oppdater" ${st.busy ? 'disabled' : ''}>↻</button><button class="nw-ic" data-act="set-open" aria-label="Kilder og AI" title="Kilder og AI">${gear}</button></div></div>
+        <div class="nw-hr"><button class="nw-ic" data-act="refresh" aria-label="Oppdater" title="Oppdater" ${st.busy ? 'disabled' : ''}>↻</button><span class="nw46-mw"><button class="nw-ic" data-act="nw46-more" aria-label="Mer" title="Mer" aria-haspopup="menu" aria-expanded="${!!st.more}">⋯</button>${st.more ? '<div class="nw46-menu" role="menu"><button type="button" role="menuitem" data-act="nw46-set">⚙ Nyhetsinnstillinger</button></div>' : ''}</span></div></div>
       <nav class="nw-tabs">${cats().map((c) => `<button data-cat="${c.id}" class="${c.id === st.cat ? 'on' : ''}">${icState().icOn ? iconHtml(icOf(c.id), 16) : ''}${esc(c.name)}</button>`).join('')}</nav>
       <div class="nw-body">${body()}</div>
-      ${glView()}${artView()}${st.set ? sheet() : ''}${picker()}</div>`;
+      ${glView()}${artView()}${picker()}</div>`;
     const gb = el.querySelector('.nw40-gb'); if (gb) gb.scrollTop = keepGl;
     const b = el.querySelector('.nw-body');
     if (b) b.scrollTop = keepScroll;
@@ -398,9 +564,17 @@ export function openNews(opts = {}) {
 
   el.addEventListener('click', async (e) => {
     if (await glClick(e)) return;
+    // Prompt 46: ⋯-menyen, «Nyhetsinnstillinger» (dyp lenke til Innstillinger → Nyheter), kategorier og interesser.
+    if (st.more && !e.target.closest('.nw46-mw')) { st.more = false; render(); }
+    const sg46 = e.target.closest('[data-nw46-sug]');
+    if (sg46) return setInts([...intList(), sg46.dataset.nw46Sug]);
+    const t46 = e.target.closest('[data-nw46-intdel],[data-nw46-ccdel]');
+    if (t46) { if (t46.dataset.nw46Intdel !== undefined) return setInts(intList().filter((_, i) => i !== +t46.dataset.nw46Intdel)); return delCC(t46.dataset.nw46Ccdel); }
+    const a46 = e.target.closest('[data-act="nw46-more"],[data-act="nw46-set"]')?.dataset.act;
+    if (a46 === 'nw46-more') { st.more = !st.more; return render(); }
+    if (a46 === 'nw46-set') { st.more = false; const cat = st.cat; close(); window.__nw46Back = { cat }; document.dispatchEvent(new CustomEvent('hl:open-settings', { detail: 'nyheter' })); return; }
     const t = e.target.closest('[data-act],[data-cat],[data-tog],[data-cyc],[data-del],[data-ic-row],[data-ip-lib],[data-ip-pick],[data-art]');
-    if (!t) { if (backdropClick(e, el)) close(); return; }
-    if (t.dataset.act === 'set-close' && e.target.closest('[data-stop]') && !e.target.closest('.nw-done')) return;
+    if (!t) { if (!SO && backdropClick(e, el)) close(); return; }
     if (t.dataset.act === 'ip-close' && e.target.closest('.nw-ip') && !e.target.closest('.nw-ipx')) return;
     const act = t.dataset.act;
     if (t.dataset.art) { const x = findItem(t.dataset.art); if (x) openArt(x); return; }
@@ -418,15 +592,13 @@ export function openNews(opts = {}) {
       for (const c of cats()) await aiPick(c.id, '');
       st.icAll = false; return render();
     }
-    if (t.dataset.icRow) { const id = t.dataset.icRow; st.ip = { cat: id, q: keywordFor(CAT_NAME[id] ?? id), lib: st.ip?.lib ?? '', res: null, total: 0, busy: false, err: '', ai: false }; render(); return ipSearch(); }
+    if (t.dataset.icRow) { const id = t.dataset.icRow; st.ip = { cat: id, q: keywordFor(catName(id)), lib: st.ip?.lib ?? '', res: null, total: 0, busy: false, err: '', ai: false }; render(); return ipSearch(); }
     if (t.dataset.ipLib !== undefined) { st.ip.lib = t.dataset.ipLib; return ipSearch(); }
     if (t.dataset.ipPick) { const id = st.ip.cat; st.ip = null; return setIcon(id, t.dataset.ipPick, 'pick'); }
     if (act === 'ip-ai') { const ip = st.ip; ip.ai = true; render(); const r = await aiPick(ip.cat, ip.lib); if (st.ip === ip) { if (r) st.ip = null; else { ip.ai = false; ip.err = 'Fant ikke noe ikon. Søk selv.'; } } return render(); }
     if (act === 'ip-none') { const id = st.ip.cat; st.ip = null; return setIcon(id, '', 'pick'); }
     if (act === 'close') return close();
     if (act === 'retry') return load();
-    if (act === 'set-open') { st.set = true; return render(); }
-    if (act === 'set-close') { st.set = false; return render(); }
     if (act === 'refresh') {
       st.busy = true; render();
       try { await api('/rss/refresh', { method: 'POST' }); } catch (er) { st.error = er.message; }
@@ -434,9 +606,10 @@ export function openNews(opts = {}) {
     }
     if (t.dataset.cat) { st.cat = t.dataset.cat; st.data = st.data && { ...st.data, items: null }; render(); return load(); }
     if (t.dataset.tog) {
-      const k = t.dataset.tog, v = !st.data?.settings?.[k];
-      try { const s = await api('/rss/settings', { method: 'PUT', json: { [k]: v } }); st.data.settings = s; } catch (er) { st.addError = er.message; }
-      render(); return load();
+      const k = t.dataset.tog, v = k === 'catSummary' ? !catOn46() : !st.data?.settings?.[k];
+      try { const s = await api('/rss/settings', { method: 'PUT', json: { [k]: v } }); st.data.settings = { ...st.data.settings, ...s, ...(k in (s ?? {}) ? {} : { [k]: v }) }; } catch (er) { st.addError = er.message; }
+      if (k === 'catSummary') saveLoc46({ ...loc46(), catSummary: v });
+      render(); document.dispatchEvent(new Event('hl:news-settings')); return load();
     }
     if (t.dataset.cyc) {
       const f = st.data.feeds.find((x) => String(x.id) === t.dataset.cyc);
@@ -446,15 +619,27 @@ export function openNews(opts = {}) {
     }
     if (t.dataset.del) {
       try { const r = await api(`/rss/feeds/${t.dataset.del}`, { method: 'DELETE' }); st.data.feeds = r.feeds; } catch (er) { st.addError = er.message; }
-      render(); return load();
+      render(); document.dispatchEvent(new Event('hl:news-settings')); return load();
     }
   });
-  el.addEventListener('input', (e) => { if (e.target.name === 'url') st.nf = e.target.value; if (e.target.name === 'ipq' && st.ip) st.ip.q = e.target.value; });
+  el.addEventListener('input', (e) => { if (e.target.name === 'url') st.nf = e.target.value; if (e.target.name === 'ipq' && st.ip) st.ip.q = e.target.value; if (e.target.name === 'nw46int') st.intN = e.target.value; if (e.target.name === 'nw46ccn') st.ccN = e.target.value; if (e.target.name === 'nw46cck') st.ccK = e.target.value; });
+  // Prompt 46: kategori per kilde som ekte nedtrekksmeny. Lagres med en gang; egen kategori lagres lokalt hvis serveren ikke kjenner den.
+  el.addEventListener('change', async (e) => {
+    const sel = e.target.closest?.('[data-nw46-cat]'); if (!sel) return;
+    const f = st.data?.feeds?.find((x) => String(x.id) === sel.dataset.nw46Cat); if (!f) return;
+    const v = sel.value, cur = loc46(), fc = { ...(cur.feedCat ?? {}) };
+    try { const r = await api(`/rss/feeds/${f.id}`, { method: 'PATCH', json: { category: v } }); st.data.feeds = r.feeds ?? st.data.feeds; delete fc[f.id]; st.addError = ''; }
+    catch (er) { if (isCC46(v) && (er.status === 400 || er.status === 404)) { fc[f.id] = v; st.addError = ''; } else st.addError = er.message; }
+    saveLoc46({ ...cur, feedCat: fc });
+    render(); document.dispatchEvent(new Event('hl:news-settings'));
+  });
   // Bilder som ikke lar seg laste fjernes, så kildefarge og initialer vises.
   el.addEventListener('error', (e) => { if (e.target?.matches?.('[data-nw-img]')) e.target.remove(); }, true);
   el.addEventListener('sf:clear', () => { if (st.ip) { st.ip.seq = (st.ip.seq ?? 0) + 1; st.ip.res = null; st.ip.busy = false; render(); el.querySelector('[name=ipq]')?.focus(); } });
   el.addEventListener('submit', async (e) => {
     if (e.target.matches('[data-ip-form]')) { e.preventDefault(); return ipSearch(); }
+    if (e.target.matches('[data-nw46-int]')) { e.preventDefault(); const w = String(st.intN ?? '').trim(); if (!w || intList().some((x) => x.toLowerCase() === w.toLowerCase())) return; st.intN = ''; return setInts([...intList(), w]); }
+    if (e.target.matches('[data-nw46-cc]')) { e.preventDefault(); return addCC(String(st.ccN ?? ''), String(st.ccK ?? '')); }
     if (!e.target.matches('[data-add]')) return;
     e.preventDefault();
     const url = st.nf.trim();
@@ -463,13 +648,14 @@ export function openNews(opts = {}) {
     try { await api('/rss/feeds', { method: 'POST', json: { url } }); st.nf = ''; } catch (er) { st.addError = er.message; }
     st.adding = false;
     await load();
+    document.dispatchEvent(new Event('hl:news-settings'));
     el.querySelector('.nw-add input')?.focus();
   });
 
   render();
-  el.focus();
+  if (!SO) el.focus();
   load();
-  open = el;
+  if (!SO) open = el;
   return el;
 }
 

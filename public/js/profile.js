@@ -49,7 +49,7 @@ export async function removeAvatar() {
 // Widgets på dashboardet som kan skjules (id → navn). Rekkefølgen styres av dra-og-slipp / ▲▼.
 export const DASH_WIDGETS = [['d_cal', 'Skolekalender'], ['d_agenda', 'Agenda'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_links', 'Snarveier'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media'], ['d_media_hist', 'Mediehistorikk'], ['d_pos', 'Posisjon · familie'], ['d_bday', 'Bursdager · neste'], ['d_kal', 'Kalender']];
 export const MOBILE_WIDGETS = [['d_weather_m', 'Vær og pakker'], ['d_agenda', 'I dag'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media'], ['d_media_hist', 'Mediehistorikk'], ['d_pos', 'Posisjon · familie'], ['d_bday', 'Bursdager · neste'], ['d_kal', 'Kalender']];
-export const TABS = [['dash', 'Dashboard'], ['vaer', 'Vær'], ['chat', 'Chat'], ['studie', 'Studie'], ['rom', 'Rom'], ['okonomi', 'Økonomi'], ['hjem', 'Hjem'], ['matplan', 'Mat'], ['sporing', 'Sporing'], ['familie', 'Familie'], ['domener', 'Domener'], ['nettverk', 'Nettverk'], ['huskeliste', 'Gjøremål'], ['bursdager', 'Bursdager'], ['kalender', 'Kalender'], ['media', 'Media']]; // prompt 43: Media (indeks 15) vises etter Familie
+export const TABS = [['dash', 'Dashboard'], ['vaer', 'Vær'], ['chat', 'Chat'], ['studie', 'Studie'], ['rom', 'Rom'], ['okonomi', 'Økonomi'], ['hjem', 'Hjem'], ['matplan', 'Mat'], ['sporing', 'Sporing'], ['familie', 'Familie'], ['domener', 'Domener'], ['nettverk', 'Nettverk'], ['huskeliste', 'Gjøremål'], ['bursdager', 'Bursdager'], ['kalender', 'Kalender'], ['media', 'Media'], ['kart', 'Kart']]; // prompt 43: Media (indeks 15) vises etter Familie · prompt 46: Kart (indeks 16) rett etter Familie
 // ISO2: Hjem, Mat og Sporing har egne data per bruker; bare Domener er for administratorer.
 const ADMIN_TABS = ['domener'];
 export const FIXED_TABS = ['dash'];
@@ -83,11 +83,17 @@ export function applyNav() {
   const mi = TABS.findIndex(([k]) => k === 'media');
   if (store.me) {
     store.me.layouts ??= {};
-    const cur = store.me.layouts.tabs;
+    const cur = store.me.layouts.tabs, fresh46 = !Array.isArray(cur) || !cur.length;
     if (!Array.isArray(cur) || !cur.includes(mi)) {
       const base = Array.isArray(cur) && cur.length ? cur.filter((i) => i !== mi) : TABS.map((_, i) => i).filter((i) => i !== mi);
       const f = base.indexOf(TABS.findIndex(([k]) => k === 'familie'));
       base.splice(f < 0 ? base.length : f + 1, 0, mi); store.me.layouts.tabs = base;
+    }
+    // Prompt 46: Kart (indeks 16) settes rett etter Familie, på samme måte.
+    const ki = TABS.findIndex(([k]) => k === 'kart'), cur2 = store.me.layouts.tabs;
+    if (Array.isArray(cur2) && (fresh46 || !cur2.includes(ki))) {
+      const base = cur2.filter((i) => i !== ki), f = base.indexOf(TABS.findIndex(([k]) => k === 'familie'));
+      base.splice(f < 0 ? base.length : f + 1, 0, ki); store.me.layouts.tabs = base;
     }
   }
   const hid = hiddenTabs();

@@ -525,7 +525,8 @@ export function bindB42(el) {
     const t = e.target, d = (q) => t.closest(q), s = st(), h = curHome();
     let x;
     if (d('[data-b42-stop]') && !t.matches('input')) return;
-    if ((x = d('[data-b42-ov]')) && t === x) { s.hm = s.am = s.ex = s.pj = s.rcv = null; return render(); }
+    // Prompt 46: lukkes kvitteringen (over utgiftspanelet), står panelet åpent som før.
+    if ((x = d('[data-b42-ov]')) && t === x) { if (s.rcv && !x.classList.contains('side')) { s.rcv = null; return render(); } s.hm = s.am = s.ex = s.pj = s.rcv = null; return render(); }
     if ((x = d('[data-b42-full]')) && (t === x || t.matches('[data-b42-zoom]'))) { s.rcf = null; return render(); }
     if ((x = d('[data-b42-go]'))) return goHome(+x.dataset.b42Go);
     if ((x = d('[data-b42-edit]'))) { const hh = homes().find((y) => y.id === +x.dataset.b42Edit); s.hm = { id: hh.id, name: hh.name, type: hh.type ?? 'Enebolig', address: hh.address ?? '', color: homeColor(hh), img: homeImg(hh) }; return render(); }
@@ -563,7 +564,7 @@ export function bindB42(el) {
       case 'back': return goHome(null);
       case 'add': s.am = { h: h?.id ?? homes()[0]?.id }; return render();
       case 'new-home': s.hm = { id: null, name: '', type: 'Enebolig', address: '', color: COLS[homes().length % COLS.length] }; render(); return document.querySelector('[data-b42-h="name"]')?.focus();
-      case 'close': s.hm = s.am = s.ex = s.pj = s.rcv = null; return render();
+      case 'close': if (s.rcv && d('[data-b42="close"]')?.closest('.b42-ov:not(.side)')) { s.rcv = null; return render(); } s.hm = s.am = s.ex = s.pj = s.rcv = null; return render(); // prompt 46
       case 'gs': s.gsOn = !s.gsOn; render(); if (s.gsOn) document.querySelector('[data-b42-gsq]')?.focus(); return;
       case 'sq-close': s.sq = null; return render();
       case 'undo': { const f = s.toast?.undo; s.toast = null; render(); if (f) await f(); return; }

@@ -25,6 +25,8 @@ const pSvg = (d, size = 18, sw = 2) => `<svg width="${size}" height="${size}" vi
 const zPath = (z) => { const k = zIc(z); return IFY42.test(k) ? (z.icp || ZIC.pin[1]) : (ZIC[k] ?? ZIC.pin)[1]; };
 const zSvg = (z, size = 18, sw = 2) => pSvg(zPath(z), size, sw);
 const HEX = /^#[0-9a-f]{6}$/i;
+// Prompt 46 (claude-code-familie-ikoner-soner-helse.md): egne ikoner for Soner (nål i sone-ring) og Helse (hjerte med puls). Kart og Vel fremme som før.
+const TSV46 = { soner: 'M12 15s-3.5-3-3.5-6a3.5 3.5 0 0 1 7 0c0 3-3.5 6-3.5 6zM12 9h.01M5.5 14.2C3.9 14.9 3 15.9 3 17c0 2.2 4 4 9 4s9-1.8 9-4c0-1.1-.9-2.1-2.5-2.8', helse: 'M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10zM7.5 12.5h2.4l1.3-2.6 1.8 5 1.3-2.4h2.2' };
 const PCOL = ['#b23a2a', '#2b5d8a', '#2f6b45', '#a8661a', '#7a3b6b'];
 const host = () => document.getElementById('fam');
 
@@ -454,7 +456,7 @@ function zoneSheet() {
 }
 
 function tabs() {
-  return `<div class="fam-tabs"><div class="fam-tpill" role="tablist">${[['kart', 'Kart'], ['soner', 'Soner'], ['helse', 'Helse'], ['hjemlys', 'Vel fremme']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-fam-tab="${k}">${n}</button>`).join('')}</div>
+  return `<div class="fam-tabs"><div class="fam-tpill" role="tablist">${[['kart', 'Kart'], ['soner', 'Soner'], ['helse', 'Helse'], ['hjemlys', 'Vel fremme']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-fam-tab="${k}">${TSV46[k] ? pSvg(TSV46[k], 16, 1.8).replace('<svg ', '<svg class="fam-tic46" ') : ''}${n}</button>`).join('')}</div>
     <span class="fam-live"><i class="${liveOn() ? 'on' : ''}"></i>${liveOn() ? `Sanntid · ${S.sharingHere ? 'din posisjon deles herfra' : 'oppdatert nå'}` : 'Oppdateres hvert 20. sekund'}</span></div>`;
 }
 

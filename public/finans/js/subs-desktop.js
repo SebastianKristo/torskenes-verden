@@ -3,6 +3,7 @@
 // savings, upcoming, thisMonth). Kvitteringer lastes opp med data-mrc="sub" (modules.js), resten håndteres her.
 import { S, api, esc, n0, render, toast, logo, parseAmount, sheetBtn } from './core.js';
 import { subLogo } from './fin42.js';
+import { logView46, logClick46, logCss46, logReset46 } from './subs-log46.js'; // prompt 46: Historikk · Logg
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 import { parseTrial, trialPreview, trialBadge, cancelUrlFor, REMIND_OPTIONS, longDay } from '/assets/js/trial-parse.js';
 import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
@@ -163,7 +164,7 @@ export async function loadSubs() {
 
 function head() {
   const tab = u.subTab ?? 'ov';
-  return `<div class="so-top"><div class="so-seg">${[['ov', 'Oversikt'], ['cal', 'Kalender']].map(([k, n]) => `<button data-stab="${k}" aria-pressed="${tab === k}">${n}</button>`).join('')}</div>
+  return `<div class="so-top"><div class="so-seg">${[['ov', 'Oversikt'], ['cal', 'Kalender'], ['hist', 'Historikk']].map(([k, n]) => `<button data-stab="${k}" aria-pressed="${tab === k}">${n}</button>`).join('')}</div>
     <div class="so-addwrap"><button class="btn pri so-addbtn" data-sact="menu" aria-expanded="${!!u.subMenu}">+ Legg til abonnement ▾</button>
     ${u.subMenu ? `<div class="so-menu" role="menu">
       <label role="menuitem"><span class="so-mi">▣</span><span><b>Fra skjermbilde</b><small>✦ Ollama finner tjeneste, plan, pris og trekkdato</small></span>
@@ -459,14 +460,16 @@ export function subPage() {
   const d = S.subs;
   if (!d?.byMonth) return skel(400);
   const byId = new Map(d.items.map((s) => [s.id, s]));
-  return `<div class="so">${head()}${skPanel()}${candPanel()}${(u.subTab ?? 'ov') === 'cal' ? calendar(d, byId) : overview(d, byId)}</div>${editSheet(d)}${trialSheet()}`;
+  const tab46 = u.subTab ?? 'ov';
+  if (tab46 === 'hist') logCss46();
+  return `<div class="so">${head()}${skPanel()}${candPanel()}${tab46 === 'cal' ? calendar(d, byId) : tab46 === 'hist' ? logView46() : overview(d, byId)}</div>${editSheet(d)}${trialSheet()}`;
 }
 
 /* ---------- Hendelser ---------- */
 
 export function bindSubs(el) {
   const wrap = (fn) => async (e) => { if (u.page !== 'sub') return; try { await fn(e); } catch (err) { toast(err.message); } };
-  const reload = async () => { await loadSubs(); render(); };
+  const reload = async () => { await loadSubs(); logReset46(); render(); };
   const saveEd = async () => {
     const e2 = u.subEd, price = parseAmount(e2.v);
     if (!e2.n.trim() || !(price >= 0)) return toast('Fyll inn navn og pris');
@@ -491,7 +494,8 @@ export function bindSubs(el) {
     if (u.subMenu && !d('.so-addwrap')) { u.subMenu = false; render(); }
     if (u.subRow && !d('.so-hand')) { u.subRow = null; render(); }
     if ((x = d('[data-so37="tradd"]'))) { u.subTrAdd = u.subTrAdd ? null : { n: '', e: '', p: '', err: '', busy: false }; render(); if (u.subTrAdd) el.querySelector('[data-sform="tr37"] [name=n]')?.focus(); return; }
-    if ((x = d('[data-stab]'))) { u.subTab = x.dataset.stab; u.subMenu = false; return render(); }
+    if ((x = d('[data-stab]'))) { u.subTab = x.dataset.stab; u.subMenu = false; if (u.subTab === 'hist') logReset46(); return render(); }
+    if (logClick46(e, render)) return; // prompt 46
     if ((x = d('[data-smon]'))) { u.subMon = +x.dataset.smon; return render(); }
     if ((x = d('[data-sday]'))) { u.subDay = x.dataset.sday; return render(); }
     if ((x = d('[data-ssort]'))) { const k = x.dataset.ssort, cur = u.subSort ?? { k: 'next', dir: 1 }; u.subSort = { k, dir: cur.k === k ? -cur.dir : 1 }; return render(); }
