@@ -85,7 +85,20 @@ struct MacApp: App {
             o(id: "main")
             return
         }
-        if let u = URL(string: "kalender://") { _ = NSWorkspace.shared.open(u) }
+        // Prompt 45: ingen kalender:// til seg selv via NSWorkspace (ny runde gjennom LaunchServices, og med
+        // application(_:open:) en mulig løkke). Ved kald start lager WindowGroup vinduet selv, og MacMainWindow.onAppear
+        // kjører pending43. Kommer det ikke noe vindu, åpnes et når opener finnes.
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            if MacApp.pending43 == nil { return }
+            if MacWin.all.contains(where: { (x: MacWin) -> Bool in x.window != nil }) { return }
+            if let o = MacApp.opener {
+                o(id: "main")
+            } else {
+                // Ingen vinduer er laget ennå (og menylinja er ikke åpnet): be WindowGroup om et nytt vindu (Arkiv → Nytt vindu).
+                NSApp.sendAction(Selector(("newWindowForTab:")), to: nil, from: nil)
+            }
+        }
     }
 
     /// Prompt 43: Innstillinger-vinduet på en bestemt fane (gen | acc | upd).
@@ -148,16 +161,31 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    /// Prompt 45: lenker fra widgetene, varsler og Homelab (kalender://…) kommer hit – ett sted, gjenbruker det åpne vinduet.
+    /// SwiftUI sender dem da ikke videre til WindowGroup (ingen nye vinduer per trykk); onOpenURL i vinduet er bare reserve.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for u in urls where (u.scheme ?? "").lowercased() == "kalender" { MacLinks45.receive(u) }
+    }
+
+    /// Prompt 45: aktivering (også trykk på widgeten) starter ikke lenger en full synk hver gang. Synk bare når dataene er
+    /// eldre enn 5 min eller sanntid er nede, og først etter at vinduet/lenken er tegnet (0,6 s). WebSocket-en startes bare
+    /// på nytt når den faktisk er nede.
     func applicationDidBecomeActive(_ notification: Notification) {
         let now: Date = Date()
         if now.timeIntervalSince(lastActive) < 30 { return }
         lastActive = now
         let s: MacStore = MacStore.shared
         if !s.loggedIn { return }
-        if !MacLive.shared.connected { MacLive.shared.start() }
-        Task { await s.load(force: true) }
-        // Prompt 41: lokal/ekstern adresse fra Homelab (ingen SwiftUI-tilstand endres her).
-        Task { await MacLogin41Model.syncServers() }
+        let live: Bool = MacLive.shared.connected
+        if !live { MacLive.shared.start() }
+        let age: TimeInterval = now.timeIntervalSince(s.updated ?? Date.distantPast)
+        if live && age < 300 { return }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            await s.load(force: true)
+            // Prompt 41: lokal/ekstern adresse fra Homelab (ingen SwiftUI-tilstand endres her).
+            await MacLogin41Model.syncServers()
+        }
     }
 }
 

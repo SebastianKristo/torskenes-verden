@@ -29,6 +29,14 @@ final class MacLive {
         task = t
         t.resume()
         receive(t)
+        // Prompt 45: «tilkoblet» når forbindelsen svarer på ping – ikke først ved første melding fra serveren. Før var den
+        // nesten alltid «nede», så hver aktivering (trykk på widgeten) startet WebSocket-en og en full synk på nytt, og
+        // 60 s-tidtakeren synket alt hvert minutt.
+        t.sendPing { (err: Error?) in
+            Task { @MainActor in
+                if err == nil && MacLive.shared.task === t { MacLive.shared.connected = true }
+            }
+        }
     }
 
     func stop() {

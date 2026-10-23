@@ -236,7 +236,7 @@ enum KalEv44 {
 /// Liten regex-hjelper (KalRx ligger i iOS-appens KalQuick.swift, som ikke er med i widgetene).
 enum KalRx44 {
     static func test(_ pattern: String, _ s: String) -> Bool {
-        guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return false }
+        guard let re = KalRx45.re(pattern) else { return false }
         let ns: NSString = s as NSString
         return re.firstMatch(in: s, options: [], range: NSRange(location: 0, length: ns.length)) != nil
     }

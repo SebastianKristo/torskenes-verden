@@ -68,7 +68,7 @@ enum KalWeek35 {
 
 enum KalDay35 {
     private static func re(_ pattern: String) -> NSRegularExpression? {
-        try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+        KalRx45.re(pattern)
     }
 
     private static func replace(_ pattern: String, _ s: String, _ with: String) -> String {

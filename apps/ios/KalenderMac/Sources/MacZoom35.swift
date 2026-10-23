@@ -93,6 +93,27 @@ extension MacWin {
         load()
     }
 
+    /// Prompt 45: lenke fra widgeten – rett til visningen uten animasjon, og bare henting når datoen ligger utenfor det
+    /// som allerede er hentet (MacStore.load(around:) sjekker det selv). Samme mål som nå = ingenting endres.
+    func jump45(view v: String, day: String?) {
+        if webOn {
+            web38Cmd("view:" + v)
+            if let day { web38Cmd("date:" + day) }
+            return
+        }
+        let target: String = day ?? (v == "liste" ? KalD.todayKey() : anchor)
+        if v == view && target == anchor { return }
+        var tr: Transaction = Transaction()
+        tr.disablesAnimations = true
+        withTransaction(tr) {
+            if view != v { view = v }
+            if anchor != target { anchor = target }
+        }
+        let m: Date = KalD.firstOfMonth(KalD.date(anchor))
+        if KalD.key(m) != KalD.key(miniMonth) { miniMonth = m }
+        load()
+    }
+
     /// Klyp sammen / klikk på tittelen: Dag → 3 dager → Uke → Måned → År.
     func zoomOutStep(_ origin: UnitPoint) {
         let to: String = MacZoom35.outOf[view] ?? "mnd"

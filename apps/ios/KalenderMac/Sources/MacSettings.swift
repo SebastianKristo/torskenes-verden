@@ -46,7 +46,11 @@ struct MacSettingsView: View {
         .background(t.bg)
         .onAppear {
             // SMAppService-status leses når vinduet åpnes (ikke i init av visningen).
-            loginItem = MacLogin.enabled
+            // Prompt 45: i bakgrunnen – statusen er et synkront XPC-kall som kan bruke flere sekunder.
+            Task { @MainActor in
+                let on: Bool = await Task.detached(priority: .utility) { () -> Bool in MacLogin.enabled }.value
+                if loginItem != on { loginItem = on }
+            }
         }
     }
 

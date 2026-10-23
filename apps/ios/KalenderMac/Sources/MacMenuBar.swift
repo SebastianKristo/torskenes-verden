@@ -361,7 +361,8 @@ struct MacMenuRow: View {
 
 @MainActor
 enum MacLinks {
-    static func handle(_ url: URL, win: MacWin) {
+    /// Prompt 45: `animated: false` for lenker fra widgeten/varsler – visningen byttes uten zoom-animasjon over hele rutenettet.
+    static func handle(_ url: URL, win: MacWin, animated: Bool = true) {
         let host: String = (url.host ?? "").lowercased()
         let parts: [String] = url.pathComponents.filter { (p: String) -> Bool in p != "/" }
         let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
@@ -375,22 +376,30 @@ enum MacLinks {
             return
         }
         win.closeAll()
+        func go(_ v: String, _ day: String? = nil) {
+            if animated { win.go(view: v, day: day) } else { win.jump45(view: v, day: day) }
+        }
         switch host {
         case "dag", "day":
             let d: String = parts.first ?? q("date") ?? KalD.todayKey()
-            win.go(view: "dag", day: KalD.valid(d) ? d : KalD.todayKey())
+            go("dag", KalD.valid(d) ? d : KalD.todayKey())
         case "hendelse", "event":
             let day: String = q("date") ?? ""
-            if KalD.valid(day) { win.go(view: "dag", day: day) }
+            if KalD.valid(day) { go("dag", day) }
             let id: String = q("id") ?? parts.first ?? ""
-            if let e = MacStore.shared.event(id) { win.openDetail(e) }
+            if let e = MacStore.shared.event(id) {
+                win.openDetail(e)
+            } else if let e = MacLinks45.eventFromLink(id: id, day: day, title: q("t") ?? "", s: q("s"), e: q("e")) {
+                // Prompt 45: ikke i bufferen ennå (widgeten kan være nyere enn appen) – vis det lenken vet.
+                win.openDetail(e)
+            }
         case "liste", "agenda":
-            win.go(view: "liste")
+            go("liste")
         case "mnd", "maned", "month":
             let d: String = q("date") ?? ""
-            win.go(view: "mnd", day: KalD.valid(d) ? d : KalD.todayKey())
+            go("mnd", KalD.valid(d) ? d : KalD.todayKey())
         case "ar", "year":
-            win.go(view: "ar")
+            go("ar")
         case "ny", "new":
             if let text = q("text") {
                 let p: KalParsed = KalQuick.parse(text, defaultRem: MacStore.shared.defRem)

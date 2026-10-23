@@ -11,13 +11,14 @@ import WidgetKit
 enum MacWidgets41 {
     private static var lastSig: Int = 0
 
-    static func publish(_ snap: KalSnapshot) {
-        guard KalGroup.linked else { return }
+    /// Prompt 45: bare sjekken her (hovedtråden, rask). true = innholdet er endret og widgetene skal tegnes på nytt.
+    /// Selve kodingen og skrivingen til App Group-en gjør MacSnap45 i bakgrunnen (den låste hovedtråden før).
+    static func needsPublish(_ snap: KalSnapshot) -> Bool {
+        guard KalGroup.linked else { return false }
         let bases: [String] = MacSession.bases
         if let tok = MacSession.token, !bases.isEmpty, KalGroup.token != tok || KalGroup.bases != bases {
             KalGroup.saveSession(bases: bases, token: tok, user: MacSession.user, via: "mac")
         }
-        KalNet.saveSnapshot(snap)
         var h: Hasher = Hasher()
         for e in snap.events.prefix(300) {
             h.combine(e.id)
@@ -29,8 +30,13 @@ enum MacWidgets41 {
         }
         h.combine(KalD.todayKey())
         let sig: Int = h.finalize()
-        if sig == lastSig { return }
+        if sig == lastSig { return false }
         lastSig = sig
+        return true
+    }
+
+    /// Fra MacSnap45-køen etter at bufferen er skrevet (én gang per endring, aldri i løkke).
+    nonisolated static func reloadFromBackground() {
         WidgetCenter.shared.reloadAllTimelines()
     }
 

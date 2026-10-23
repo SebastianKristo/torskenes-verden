@@ -175,7 +175,8 @@ final class MacStore: ObservableObject {
         loggedIn = false
         events = []
         pending = []
-        UserDefaults.standard.removeObject(forKey: "mac.snapshot")
+        // Prompt 45: også en buffer som venter i bakgrunnskøen forkastes (ellers kunne den skrives etter utloggingen).
+        MacSnap45.clear()
         MacWidgets41.clear()
         rebuild()
     }
@@ -638,9 +639,9 @@ final class MacStore: ObservableObject {
         s.cals = cals
         s.wx = wx.values.sorted { (a: KalWxDay, b: KalWxDay) -> Bool in a.day < b.day }
         s.updated = Date().timeIntervalSince1970
-        if let d = try? JSONEncoder().encode(s) { UserDefaults.standard.set(d, forKey: "mac.snapshot") }
+        // Prompt 45: kodingen og skrivingen (ofte flere MB) i bakgrunnen – før låste den hovedtråden to ganger per synk.
         // Prompt 41: widgetene på skrivebordet (App Group når appen er signert med Team ID).
-        MacWidgets41.publish(s)
+        MacSnap45.save(s, widgets: KalGroup.linked, reload: MacWidgets41.needsPublish(s))
     }
 
     private func savePending() {

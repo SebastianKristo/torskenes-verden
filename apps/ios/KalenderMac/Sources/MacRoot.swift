@@ -67,7 +67,8 @@ struct MacRoot: View {
             // Nytt tema: vindusbakgrunnen følger etter systemutseendet er byttet.
             DispatchQueue.main.async { if let w = win.window { attach(w) } }
         }
-        .onOpenURL { (url: URL) in MacLinks.handle(url, win: win) }
+        // Prompt 45: reserve – lenkene tas imot i MacAppDelegate.application(_:open:); like lenker innen 0,8 s regnes som én.
+        .onOpenURL { (url: URL) in MacLinks45.receive(url) }
         .animation(.easeOut(duration: 0.18), value: win.modal)
         .animation(.easeOut(duration: 0.2), value: store.toast)
     }

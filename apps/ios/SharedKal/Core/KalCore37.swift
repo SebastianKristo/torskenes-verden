@@ -13,7 +13,7 @@ import Foundation
 
 private enum KalRx37 {
     static func re(_ p: String, _ ci: Bool = true) -> NSRegularExpression? {
-        try? NSRegularExpression(pattern: p, options: ci ? [.caseInsensitive] : [])
+        KalRx45.re(p, caseInsensitive: ci)
     }
 
     static func test(_ p: String, _ s: String, _ ci: Bool = true) -> Bool {
