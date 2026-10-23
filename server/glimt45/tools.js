@@ -9,6 +9,7 @@ import { eventsFor, createEvent, updateEvent, deleteEvent, findEvent, eventInput
 import { KINDS, parseQuick } from '../../public/js/quick-time.js';
 import { ensureIndex42, merchantKey42, synonymsOf42, stem42, fold42, norm42 } from '../finans/search42.js';
 import { ensureLedger, settings as fhSettings } from '../finans/db.js';
+import { inOriginal46 } from './tasks46.js';
 import { whenOf45, parsePeriod45, parseAmount45, parseDate45, parseTime45, isIsoDate45, isHm45, addDays45, addMin45, todayOslo45, longDate45, relDate45, mondayOf45, MON45 } from './dates.js';
 
 const q = (sql) => db.prepare(sql);
@@ -58,6 +59,18 @@ export function cleanTaskTitle45(raw) {
   while (FILLER.test(t)) t = t.replace(FILLER, '').trim();
   t = t.replace(/[\s.,;:!–-]+$/g, '').trim();
   return t ? cap(t.length > 200 ? t.slice(0, 200) : t) : '';
+}
+
+/**
+ * Prompt 46: kommer ordene i modellens tittel/sted fra brukerens tekst? Hvert ord på minst tre bokstaver må stå i teksten
+ * (små stavefeil godtas: «Colosseum» ≈ «coluseum»), unntatt typeord modellen får legge til («Kino», «Møte», «Time» …).
+ */
+const TYPE_WORDS46 = new Set(['kino', 'teater', 'konsert', 'møte', 'time', 'avtale', 'middag', 'lunsj', 'trening', 'kamp', 'fest', 'film', 'opera', 'show', 'tannlege', 'lege', 'frisør']);
+const levS = (a, b) => { const m = a.length, n = b.length; if (Math.abs(m - n) > 2) return 9; const d = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]); for (let j = 1; j <= n; j++) d[0][j] = j; for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); return d[m][n]; };
+export function wordsFromText46(title, text) {
+  const tw = normText(text).replace(/[^\p{L}\d\s+]/gu, ' ').split(/\s+/).filter(Boolean);
+  const words = normText(title).replace(/[^\p{L}\d\s+]/gu, ' ').split(/\s+/).filter((x) => x.length >= 3);
+  return words.every((w) => TYPE_WORDS46.has(w) || tw.includes(w) || tw.some((x) => x.length >= 4 && levS(x, w) <= (w.length >= 7 ? 2 : 1)) || tw.some((x) => x.length >= 4 && (x.startsWith(w) || w.startsWith(x))));
 }
 
 /* ---------------- Kalender ---------------- */
@@ -250,40 +263,96 @@ const sTxt = (d) => ({ type: 'string', description: d });
 export const TOOLS45 = [
   {
     name: 'calendar.create', module: 'calendar', destructive: false,
-    description: 'Opprett en avtale i kalenderen. title = kort ryddig tittel (ikke hele setningen), date/time slik brukeren skrev dem.',
-    parameters: S({ title: sTxt('Kort tittel, f.eks. «Kino – Dune», «Tannlege»'), date: sTxt('Dato slik brukeren skrev den («12.10», «fredag», «i morgen») eller YYYY-MM-DD'), time: sTxt('Starttid («12:15», «klokka sju») eller tom'), end_time: sTxt('Sluttid hvis oppgitt'), location: sTxt('Sted hvis oppgitt'), note: sTxt('Ekstra info') }, ['title']),
+    description: 'Opprett en avtale i kalenderen. title = kort ryddig tittel («Hva – Type», f.eks. «Dune – Kino», «Tannlege»; ikke hele setningen), date/time slik brukeren skrev dem, location = stedet (rett åpenbare stavefeil). calendarId bare hvis brukeren nevner en kalender.',
+    parameters: S({ title: sTxt('Kort tittel, f.eks. «Dune – Kino», «Tannlege»'), date: sTxt('Dato slik brukeren skrev den («12.10», «fredag», «i morgen») eller YYYY-MM-DD'), time: sTxt('Starttid («12:15», «klokka sju») eller tom'), end_time: sTxt('Sluttid hvis oppgitt'), location: sTxt('Sted hvis oppgitt («Colosseum Kino», «Nina»)'), calendarId: sTxt('Kalender-id bare hvis brukeren nevnte en kalender'), note: sTxt('Ekstra info') }, ['title']),
     async validate(args, ctx) {
-      const w = whenFor(args, ctx, 'future');
+      // Prompt 46: «i familiekalenderen» er valg av kalender, ikke en del av tittelen/datoen.
+      const C46 = await import('./calendar46.js');
+      const textNoCal = C46.withoutCalendarMention46(ctx.text);
+      const w = whenFor(args, { ...ctx, text: textNoCal }, 'future');
       if (w.errors.length) return ask(`${w.errors[0].message}. Hvilken dato mener du?`, null, 'date');
       let title = str(args.title, 120);
       // «Glimt husker»-alias, avsender i signaturen («Mvh Påhåret») og «time hos X» har egne regler i parseQuick – de gjenbrukes.
       let aliases = []; try { aliases = (await import('../glimt-memory.js')).aliasesOf(ctx.user); } catch { /* */ }
-      const pq = parseQuick(ctx.text, ctx.today, aliases);
-      const richPq = !!(pq.memory || pq.business || /(?<![a-zæøå])hos\s/i.test(ctx.text) || (pq.type && pq.type !== 'annet'));
+      const pq = parseQuick(textNoCal, ctx.today, aliases);
+      const richPq = !!(pq.memory || pq.business || /(?<![a-zæøå])hos\s/i.test(textNoCal) || (pq.type && pq.type !== 'annet'));
+      // Prompt 46: tittel og sted fra teksten (fyllord bort, «på coluseum kino» → sted Colosseum Kino, film → «Dune – Kino»).
+      const sp = C46.splitTitlePlace46(w.rest);
+      const fromText = (x) => wordsFromText46(x, ctx.text);
       if (pq.memory) title = pq.title;
-      else if (!title || title.length > 60 || normText(title) === normText(ctx.text) || /\d{1,2}[.:/]\d{1,2}|(?<![a-zæøå])(?:kl|klokka|legg til|i kalenderen)(?![a-zæøå])/i.test(title)) title = (richPq ? pq.title : '') || cleanEventTitle45(w.rest) || cleanEventTitle45(title);
+      else if (pq.business && !sp.film) title = pq.title;
+      else if (!title || title.length > 60 || normText(title) === normText(ctx.text) || /\d{1,2}[.:/]\d{1,2}|(?<![a-zæøå])(?:kl|klokka|legg til|i kalenderen|vi skal|jeg skal)(?![a-zæøå])/i.test(title) || !fromText(title)) {
+        title = ((sp.location || sp.film) && !/^(?:time|timen|avtale|avtalen|møte|hendelse)$/i.test(sp.title) ? sp.title : '') || (richPq ? (pq.type && pq.type !== 'annet' && sp.location && !pq.business && !/^(?:time|timen|avtale|avtalen|møte|hendelse)$/i.test(sp.title) ? sp.title : pq.title) : '') || cleanEventTitle45(w.rest) || cleanEventTitle45(title);
+      }
       if (!title) return ask('Hva skal avtalen hete?', null, 'title');
       if (!w.date) return ask(`Hvilken dag skal «${title}» være?`, null, 'date');
+      // Sted: modellens sted bare når ordene står i teksten (stavefeil rettes mot kjente steder), ellers fra teksten.
+      const mLoc = str(args.location, 200);
+      let location = (mLoc && fromText(mLoc) ? (C46.venueOf46(mLoc)?.name ?? mLoc) : '') || sp.location || (richPq ? pq.place : null) || null;
+      if (location && normText(location) === normText(title)) location = null;
+      // Kalender: id fra kalleren/modellen, nevnt kalender (fuzzy), ellers standardkalenderen. Aldri en hardkodet liste.
+      const cals = await C46.writableCalendars46(ctx.user);
+      const def = cals.calendars.find((c) => c.id === cals.defaultId) ?? cals.calendars[0];
+      const wantId = str(ctx.context?.calendarId ?? args.calendarId, 80);
+      const mention = C46.calendarMention46(ctx.text);
+      let cal = null;
+      const opts = () => cals.calendars.filter((c) => !c.virtual || c.id === 'familie').slice(0, 6).map((c) => ({ id: c.id, label: C46.calendarLabel46(c) }));
+      if (wantId) {
+        cal = cals.calendars.find((c) => c.id === wantId) ?? null;
+        const ro = !cal && cals.readOnly.find((c) => c.id === wantId);
+        if (ro) return ask(`Kan ikke legge til i «${ro.name}», den er skrivebeskyttet. Legge i ${C46.calendarLabel46(def)} i stedet?`, [{ id: def.id, label: C46.calendarLabel46(def) }], 'calendar');
+        if (!cal && mention) cal = C46.matchCalendar46(cals.calendars, mention);
+        if (!cal && !mention) cal = null;
+      } else if (mention) {
+        cal = C46.matchCalendar46(cals.calendars, mention);
+        if (!cal) {
+          const ro = C46.matchCalendar46(cals.readOnly, mention);
+          if (ro) return ask(`Kan ikke legge til i «${ro.name}», den er skrivebeskyttet. Legge i ${C46.calendarLabel46(def)} i stedet?`, [{ id: def.id, label: C46.calendarLabel46(def) }], 'calendar');
+          return ask(`Hvilken kalender? ${opts().map((o) => o.label).join(' · ')}`, opts(), 'calendar');
+        }
+      }
+      // Klientens valgte standard (context.defaultCalendarId) når den er skrivbar, ellers serverens standardkalender.
+      cal ??= cals.calendars.find((c) => c.id === ctx.context?.defaultCalendarId) ?? def;
       const allDay = !w.start;
-      const end = w.start ? (w.end ?? addMin45(w.start, pq.type && pq.type !== 'annet' ? pq.duration : durationOf(title))) : null;
-      const location = str(args.location, 200) || (richPq ? pq.place : null) || null;
-      return { args: { title, date: w.date, start: w.start, end, allDay, location, note: [str(args.note, 500), w.softTime].filter(Boolean).join(' · ') || null, assumedPm: w.assumedPm, corrections: w.corrections } };
+      // Film på kino: slutt = start + spilletid + 15 min (Media/TMDB), plakaten blir bilde på avtalen. Ellers standardvarighet.
+      const film = sp.film ?? (/^(.+?)\s+–\s+kino$/i.exec(title)?.[1] ?? null);
+      const movie = film && w.start && !w.end ? await C46.movieOf46(film).catch(() => null) : null;
+      const end = w.start ? (w.end ?? addMin45(w.start, movie?.runtime ? movie.runtime + 15 : pq.type && pq.type !== 'annet' ? pq.duration : durationOf(title))) : null;
+      const place = location && (sp.location === location || C46.VENUES46.some(([n]) => n === location)) ? await C46.lookupPlace46(location) : null;
+      const prefs = await import('../kalender33.js').then((k) => k.kal46.prefs(ctx.user)).catch(() => ({}));
+      return { args: { title, date: w.date, start: w.start, end, allDay, location, note: [str(args.note, 500), w.softTime].filter(Boolean).join(' · ') || null, assumedPm: w.assumedPm, corrections: w.corrections,
+        calendarId: cal.id, calendarName: C46.calendarLabel46(cal), calendarSource: cal.source, ...(cal.calId ? { calId: cal.calId } : {}), backend: cal.backend,
+        reminder: allDay ? 'none' : ({ none: 'none', '10m': '15m', '30m': '1h', '1h': '1h', '1d': 'day' }[prefs.defaultReminder] ?? '1h'),
+        ...(place ? { place: { name: location, address: place.address, label: place.label, lat: place.lat, lon: place.lon } } : {}),
+        ...(movie ? { movie: { title: movie.title, runtime: movie.runtime, poster: movie.poster ?? null } } : {}), ...(sp.corrected ? { locationCorrected: true } : {}) } };
     },
     async run(a, ctx) {
       const user = ctx.user;
       // Gjentatt forespørsel / dobbel lagring: samme tittel og tid samme dag finnes allerede → ikke lag en til.
       const same = (await eventsIn(user, a.date, a.date)).find((e) => sameTitle(e.title, a.title) && (a.allDay ? e.allDay : !e.allDay && hmOfEv(e) === a.start));
       if (same) return { status: 'done', result: { event: eventCard45(same), existing: true }, cards: [eventCard45(same)], events: [same] };
-      const v = eventInput({ title: a.title, allDay: a.allDay, date: a.date, start: a.start, end: a.end, location: a.location ?? '', calendar: 'privat', repeat: 'none', reminder: a.allDay ? 'none' : '1h', note: a.note ?? '' });
+      const v = eventInput({ title: a.title, allDay: a.allDay, date: a.date, start: a.start, end: a.end, location: a.location ?? '', calendar: a.backend === 'familie' ? 'familie' : 'privat', repeat: 'none', reminder: a.reminder ?? (a.allDay ? 'none' : '1h'), note: a.note ?? '' });
       if (v.error) return { status: 'failed', error: v.error };
-      const ev = await runAsUser(user, () => createEvent(user, { ...v.value, origin: 'Glimt' }));
-      try { const { attachGeo } = await import('../kal37.js'); if (ev) await attachGeo(user, ev, { place: a.location ?? null, text: ctx.text }); } catch { /* best effort */ }
+      let ev;
+      if (a.calendarSource === 'google' && a.calId) {
+        // Prompt 46: Google-kalender som er skrivbar i Google (ikke Personlig/Familie) – skrives direkte dit.
+        const { googleEventWrite } = await import('../birthdays.js');
+        const { googleBody } = await import('../calendar.js');
+        const g = await googleEventWrite(user, 'POST', a.calId, null, googleBody({ ...v.value, origin: 'Glimt' }));
+        ev = { id: g?.id ?? null, title: a.title, date: a.date, allDay: a.allDay, start: a.start, end: a.end, room: a.location ?? null, s: a.start, source: 'google', editable: true, appCalendar: a.calendarId, googleId: g?.id ?? null };
+      } else {
+        ev = await runAsUser(user, () => createEvent(user, { ...v.value, origin: 'Glimt' }));
+        try { if (ev?.id && a.calendarId && !['familie'].includes(a.calendarId)) { const k = await import('../kalender33.js'); k.kal46.setCalendar(user, ev.id, a.calendarId); k.kal46.decorate(user, [ev]); } } catch { /* visning, best effort */ }
+      }
+      try { const { attachGeo } = await import('../kal37.js'); if (ev?.id) await attachGeo(user, ev, { place: a.location ?? null, text: ctx.text }); if (ev?.id && !ev.address && a.place?.address) await attachGeo(user, ev, { place: a.place.address, text: '' }); } catch { /* best effort */ }
+      if (ev?.id && a.movie?.poster) { const C46 = await import('./calendar46.js'); C46.rememberPoster46(user, ev.id, a.movie.poster); ev.image = a.movie.poster; }
       broadcast('kalender', { action: 'created', id: ev?.id }, [user]);
-      return { status: 'done', result: { event: eventCard45(ev ?? { ...v.value, id: null }), eventId: ev?.id ?? null, undo: ev?.id ? { method: 'DELETE', url: `/api/kalender/events/${encodeURIComponent(ev.id)}` } : null }, cards: ev ? [eventCard45(ev)] : [], events: ev ? [ev] : [] };
+      return { status: 'done', result: { event: eventCard45(ev ?? { ...v.value, id: null }), eventId: ev?.id ?? null, calendar: { id: a.calendarId, name: a.calendarName, source: a.calendarSource }, ...(a.calId ? { calId: a.calId } : {}), undo: ev?.id && a.calendarSource !== 'google' ? { method: 'DELETE', url: `/api/kalender/events/${encodeURIComponent(ev.id)}` } : null }, cards: ev ? [eventCard45(ev)] : [], events: ev ? [ev] : [] };
     },
     async verify(r, ctx) {
       if (r.result?.existing) return true;
       if (!r.result?.eventId) return false;
+      if (r.result.calId) { try { const { googleEventWrite } = await import('../birthdays.js'); const g = await googleEventWrite(ctx.user, 'GET', r.result.calId, r.result.eventId); return !!g?.id; } catch { return false; } }
       return !!(await runAsUser(ctx.user, () => findEvent(ctx.user, r.result.eventId)).catch(() => null)) || (await eventsIn(ctx.user, r.result.event.date, r.result.event.date)).some((e) => String(e.id).split('~')[0] === String(r.result.eventId).split('~')[0]);
     },
   },
@@ -393,7 +462,8 @@ export const TOOLS45 = [
       const w = whenFor({ date: args.due, time: args.time }, ctx, 'future');
       if (w.errors.length) return ask(`${w.errors[0].message}. Hvilken dag mener du?`);
       let title = str(args.title, 200);
-      if (!title || normText(title) === normText(ctx.text) || TASK_LEAD.test(title) || /(?<![a-zæøå])(i morgen|i dag|neste uke|kl\.?|klokka)(?![a-zæøå])/i.test(title)) title = cleanTaskTitle45(w.rest) || cleanTaskTitle45(title);
+      // Prompt 46: modellens tittel brukes bare når den står ordrett i brukerens tekst (ingen omskriving av norsken).
+      if (!title || normText(title) === normText(ctx.text) || TASK_LEAD.test(title) || /(?<![a-zæøå])(i morgen|i dag|neste uke|kl\.?|klokka)(?![a-zæøå])/i.test(title) || !inOriginal46(title, ctx.text)) title = cleanTaskTitle45(w.rest) || cleanTaskTitle45(title);
       if (!title) return ask('Hva skal jeg minne deg på?');
       const soft = w.softTime && !new RegExp(w.softTime, 'i').test(title) ? w.softTime : null;
       const note = [str(args.note, 300), soft].filter(Boolean).filter((x, i, arr) => arr.findIndex((y) => normText(y) === normText(x)) === i).join(' · ') || null;
@@ -466,15 +536,23 @@ export const TOOLS45 = [
       if (item && merchant && normText(item) === normText(merchant)) item = '';
       const kind = ['receipt', 'transaction', 'any'].includes(args.kind) ? args.kind : /kvittering/i.test(ctx.text) ? 'receipt' : 'any';
       const a = { merchant: merchant || null, item: item || null, amount: am?.amount ?? (Number.isFinite(+args.amount) && /\d/.test(ctx.text) ? +args.amount : null), min: am?.min ?? null, max: am?.max ?? null,
-        from: per?.from ?? null, to: per?.to ?? null, label: per?.label ?? null, category: str(args.category, 40) || null, kind };
-      if (!a.merchant && !a.item && a.amount == null && a.min == null && !a.from && !a.category) return ask('Hva leter du etter – butikk, vare, beløp eller periode?');
+        from: per?.from ?? null, to: per?.to ?? null, label: per?.label ?? null, category: str(args.category, 40) || null, kind,
+        // Prompt 46: «dyreste kjøp», «den dyreste kvitteringen» → sortering (koden sorterer, modellen regner ikke).
+        sort: ['amount_desc', 'amount_asc', 'date_desc'].includes(args.sort) ? args.sort : /dyrest|størst|mest\s+kostbar/i.test(ctx.text) ? 'amount_desc' : /billigst|minst/i.test(ctx.text) && !/minst\s+\d/i.test(ctx.text) ? 'amount_asc' : null,
+        limit: Number.isInteger(args.limit) && args.limit > 0 ? Math.min(args.limit, 20) : null };
+      if (!a.merchant && !a.item && a.amount == null && a.min == null && !a.from && !a.category && !a.sort) return ask('Hva leter du etter – butikk, vare, beløp eller periode?');
       return { args: a };
     },
     async run(a, ctx) {
       const r = financeSearch45(ctx.user, a);
       let purchases = r.purchases, semantic = [];
+      const found = purchases.length;
+      if (a.sort && a.sort !== 'date_desc') {
+        purchases = purchases.filter((x) => x.amount != null && x.amount < 0).sort((x, y) => (a.sort === 'amount_desc' ? x.amount - y.amount : y.amount - x.amount));
+        if (a.limit) purchases = purchases.slice(0, a.limit);
+      }
       if (!purchases.length && a.item) semantic = await semantic45(ctx.user, a.item);
-      return { status: 'done', result: { count: purchases.length, filters: a, meta: r.meta, semantic: semantic.length, withoutReceipt: a.kind === 'receipt' ? (r.all.length - purchases.length) : 0 },
+      return { status: 'done', result: { count: purchases.length, found, filters: a, meta: r.meta, semantic: semantic.length, withoutReceipt: a.kind === 'receipt' ? (r.all.length - purchases.length) : 0 },
         cards: [...purchases.slice(0, 10).map(purchaseCard), ...semantic.map((h) => ({ kind: h.type === 'tx' ? 'transaction' : 'receipt', id: String(h.id), title: h.description ?? h.merchant ?? 'Treff', subtitle: `${h.date ?? ''} · lignende innhold`, date: h.date ?? null, amount: h.amount ?? null, semantic: true }))],
         purchases };
     },
@@ -484,22 +562,40 @@ export const TOOLS45 = [
     description: 'Regn ut forbruk fra faktiske transaksjoner: totalt, per kategori eller per butikk i en periode («hva brukte jeg mest penger på forrige måned»).',
     parameters: S({ period: sTxt('Periode slik brukeren skrev den'), group_by: { type: 'string', enum: ['category', 'merchant', 'total'] }, category: sTxt('Bare én kategori') }),
     async validate(args, ctx) {
-      const per = parsePeriod45(ctx.text, ctx.today, { prefer: 'past' }) ?? (args.period ? parsePeriod45(str(args.period, 60), ctx.today, { prefer: 'past' }) : null)
-        ?? { from: `${ctx.today.slice(0, 8)}01`, to: ctx.today, label: `i ${MON45[+ctx.today.slice(5, 7) - 1]}` };
+      // Prompt 46: «… sammenlignet med forrige måned» → denne perioden mot den nevnte. «Hva bruker jeg mest på?» uten periode → siste 3 måneder.
+      const cmp = /sammenlign\w*\s+(?:med|mot)|i\s+forhold\s+til|enn\s+(?:i\s+)?(?:forrige|i\s+fjor)|mot\s+(?:forrige|i\s+fjor)/i.exec(ctx.text);
+      const per0 = parsePeriod45(cmp ? ctx.text.slice(0, cmp.index) : ctx.text, ctx.today, { prefer: 'past' }) ?? (args.period ? parsePeriod45(str(args.period, 60), ctx.today, { prefer: 'past' }) : null);
+      const base = cmp ? parsePeriod45(ctx.text.slice(cmp.index), ctx.today, { prefer: 'past' }) : null;
+      const present = !per0 && /(?<![a-zæøå])bruker\s+(?:jeg|vi)(?![a-zæøå])/i.test(ctx.text) && /mest/i.test(ctx.text) && !cmp;
+      const per = per0 ?? (present ? { from: addDays45(ctx.today, -89), to: ctx.today, label: 'de siste tre månedene' } : { from: `${ctx.today.slice(0, 8)}01`, to: ctx.today, label: `i ${MON45[+ctx.today.slice(5, 7) - 1]}` });
+      const term = /(?<![a-zæøå])strøm(?:men|regning\w*)?(?!pris)(?![a-zæøå])/i.test(ctx.text) ? 'strøm' : null;
       const g = ['category', 'merchant', 'total'].includes(args.group_by) ? args.group_by : /butikk|hvor\s+(?:har|handlet)|forhandler/i.test(ctx.text) ? 'merchant' : /mest|kategori|hva\s+brukte/i.test(ctx.text) ? 'category' : 'total';
       const cat = str(args.category, 40) || FIN_CATS45.find(([re]) => re.test(ctx.text.toLowerCase()))?.[1] || null;
-      return { args: { from: per.from, to: per.to, label: per.label, group_by: cat && g === 'category' && !/mest/i.test(ctx.text) ? 'total' : g, category: cat } };
+      const out = { from: per.from, to: per.to, label: per.label, group_by: term ? 'total' : cat && g === 'category' && !/mest/i.test(ctx.text) ? 'total' : g, category: term ? null : cat, term };
+      if (base && (base.from !== per.from || base.to !== per.to)) {
+        // Like lang del av sammenligningsperioden (fram til samme dag) i tillegg til hele perioden.
+        const days = Math.round((Date.parse(per.to) - Date.parse(per.from)) / 864e5);
+        Object.assign(out, { compare: { from: base.from, to: base.to, label: base.label, sameTo: addDays45(base.from, days) < base.to ? addDays45(base.from, days) : base.to } });
+      }
+      return { args: out };
     },
     async run(a, ctx) {
       ensureLedger(ctx.user);
+      // Prompt 46: «strøm» = kategori med strøm i navnet eller kjente strømleverandører/nettselskap i teksten.
+      const TERM = { strøm: ['strøm', 'tibber', 'fjordkraft', 'hafslund', 'elvia', 'norgesenergi', 'fortum', 'ishavskraft', 'lyse', 'gudbrandsdal energi', 'agva', 'motkraft'] };
+      const termSql = a.term ? `AND (${['lower(coalesce(c.name, \'\')) LIKE ?', ...TERM[a.term].map(() => 'lower(coalesce(t.merchant, \'\') || \' \' || coalesce(t.description, \'\')) LIKE ?')].join(' OR ')})` : '';
+      const termArgs = a.term ? [`%${a.term}%`, ...TERM[a.term].map((x) => `%${x}%`)] : [];
+      const sumOf = (from, to) => q(`SELECT coalesce(sum(-t.amount), 0) AS s, count(*) AS n FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id WHERE t.user_id=? AND t.date BETWEEN ? AND ? AND t.amount < 0 AND coalesce(c.kind, 'expense') = 'expense' ${a.category ? 'AND lower(c.name) LIKE lower(?)' : ''} ${termSql}`)
+        .get(ctx.user, from, to, ...(a.category ? [`%${a.category}%`] : []), ...termArgs);
       const rows = q(`SELECT t.amount, t.date, coalesce(nullif(t.merchant,''), t.description) AS name, coalesce(c.name, 'Ukategorisert') AS cat FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id
-        WHERE t.user_id=? AND t.date BETWEEN ? AND ? AND t.amount < 0 AND coalesce(c.kind, 'expense') = 'expense' ${a.category ? 'AND lower(c.name) LIKE lower(?)' : ''}`).all(ctx.user, a.from, a.to, ...(a.category ? [`%${a.category}%`] : []));
+        WHERE t.user_id=? AND t.date BETWEEN ? AND ? AND t.amount < 0 AND coalesce(c.kind, 'expense') = 'expense' ${a.category ? 'AND lower(c.name) LIKE lower(?)' : ''} ${termSql}`).all(ctx.user, a.from, a.to, ...(a.category ? [`%${a.category}%`] : []), ...termArgs);
+      const compare = a.compare ? (() => { const full = sumOf(a.compare.from, a.compare.to), same = sumOf(a.compare.from, a.compare.sameTo); return { ...a.compare, total: Math.round(full.s) / 100, count: full.n, sameTotal: Math.round(same.s) / 100 }; })() : null;
       const total = rows.reduce((s, r) => s - r.amount, 0) / 100;
       const groups = new Map();
       for (const r of rows) { const k = a.group_by === 'merchant' ? (r.name || 'Ukjent') : r.cat; const g = groups.get(k) ?? { name: k, amount: 0, count: 0 }; g.amount -= r.amount / 100; g.count++; groups.set(k, g); }
       const top = [...groups.values()].sort((x, y) => y.amount - x.amount).map((g) => ({ ...g, amount: Math.round(g.amount * 100) / 100 }));
       const biggest = [...rows].sort((x, y) => x.amount - y.amount).slice(0, 3).map((r) => ({ name: r.name || 'Ukjent', amount: Math.round(-r.amount) / 100, date: r.date }));
-      return { status: 'done', result: { from: a.from, to: a.to, label: a.label, total: Math.round(total * 100) / 100, count: rows.length, groupBy: a.group_by, category: a.category, top: top.slice(0, 5), biggest },
+      return { status: 'done', result: { from: a.from, to: a.to, label: a.label, total: Math.round(total * 100) / 100, count: rows.length, groupBy: a.group_by, category: a.category, term: a.term ?? null, compare, top: top.slice(0, 5), biggest },
         cards: top.slice(0, 5).map((g) => ({ kind: a.group_by === 'merchant' ? 'merchant' : 'category', id: g.name, title: g.name, subtitle: `${kr45(g.amount)} · ${g.count} kjøp`, amount: -g.amount })) };
     },
   },

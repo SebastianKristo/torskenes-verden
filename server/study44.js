@@ -27,6 +27,7 @@ import { db, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { ocrTools } from './ocr-fallback.js';
 import { extract45, parseCourses45, cleanAiCourses45, statusOf45, STUDY_SCHEMA45, pdfPages45, tool45 } from './study45.js'; // prompt 45: ekte vitnemål (se study45.js)
+import { readStudy46, vgsAverage46, cleanEdited46 } from './study46.js'; // prompt 46: tabeller med posisjon, OCR-bokser, visjon i striper (se study46.js)
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const DIR = () => resolve(config.dataDir, 'study44');
@@ -186,10 +187,20 @@ async function analyse(user, buf, mime, name) {
   const steps = [];
   const step = async (key, label, fn) => { const t0 = Date.now(); try { const r = await fn(); steps.push({ key, label: typeof label === 'function' ? label(r) : label, ms: Date.now() - t0, ok: true }); return r; } catch (e) { steps.push({ key, label: typeof label === 'function' ? label(null) : label, ms: Date.now() - t0, ok: false, error: e.message }); throw e; } };
   steps.push({ key: 'upload', label: 'Lastet opp og kryptert', ms: 0, ok: true });
-  const ex = await step('read', (r) => (r?.how === 'ocr' ? 'Leste bildet (OCR)' : r?.how === 'pdf' ? 'Leste PDF-teksten' : 'Leste teksten'), () => extract(buf, mime, name));
+  // Prompt 46: tabellen leses med posisjoner først (tekstlag → kolonner; skannet → OCR-bokser; visjon i striper som reserve).
+  let t46 = null;
+  if (!textImpl && (mime === 'application/pdf' || /^image\//.test(mime))) {
+    const t0 = Date.now();
+    try { t46 = await readStudy46(buf, mime, { user, name }); } catch (e) { console.warn(`[study] tabell-leseren: ${e.message}`); }
+    if (t46) for (const s of t46.steps) steps.push({ ...s, key: `p46-${s.key}` });
+    void t0;
+  }
+  const ex = t46?.emner?.length ? { text: t46.text, how: t46.method, images: t46.images ?? [], notes: t46.notes ?? [] }
+    : await step('read', (r) => (r?.how === 'ocr' ? 'Leste bildet (OCR)' : r?.how === 'pdf' ? 'Leste PDF-teksten' : 'Leste teksten'), () => extract(buf, mime, name));
   const meta = await step('meta', 'Fant skole, dato og type', async () => metaOf(ex.text));
   // Prompt 45: begge tolkerne, den som finner flest fag vinner (parseCourses45 tåler FS-utskrifter og vgs-vitnemål).
-  let emner = await step('courses', (r) => `Leste ${r?.length ?? 0} fag og karakterer`, async () => { const a = parseCourses44(ex.text), b = parseCourses45(ex.text).map((e) => ({ ...e, tone: toneOf(e.karakter) })); return b.length >= a.length ? b : a; });
+  let emner = t46?.emner?.length ? t46.emner.map((e) => ({ ...e, tone: toneOf(e.karakter) }))
+    : await step('courses', (r) => `Leste ${r?.length ?? 0} fag og karakterer`, async () => { const a = parseCourses44(ex.text), b = parseCourses45(ex.text).map((e) => ({ ...e, tone: toneOf(e.karakter) })); return b.length >= a.length ? b : a; });
   // Prompt 45: bilder/skannede sider → lokal visjonsmodell med JSON-skjema når OCR ikke ga fag.
   if (!emner.length && ex.images?.length && vision()) {
     const t0 = Date.now();
@@ -211,7 +222,8 @@ async function analyse(user, buf, mime, name) {
       steps.push({ key: 'glimt', label: 'Glimt leste fagene (lokal modell)', ms: 0, ok: true });
     } catch (e) { steps.push({ key: 'glimt', label: 'Glimt kunne ikke lese fagene', ms: 0, ok: false, error: e.message }); }
   }
-  const avg = await step('calc', 'Regnet ut snitt og studiepoeng', async () => averages44(emner));
+  // Prompt 46: koden regner – vgs-snittet tar med eksamenskarakterene også.
+  const avg = await step('calc', 'Regner snitt …', async () => { const a = averages44(emner); const v = vgsAverage46(emner); return v ? { ...a, snittVgs: { value: v.value, points: v.points, text: v.text } } : a; });
   const d = { ...meta, emner, ...avg };
   d.found = foundOf(d);
   d.title = `${meta.kindLabel}${meta.institution ? ` · ${meta.institution}` : ''}`;
@@ -219,14 +231,21 @@ async function analyse(user, buf, mime, name) {
   d.steps = steps;
   d.spText = avg.sp ? `${String(avg.sp).replace('.', ',')} sp` : null;
   d.how = ex.how; d.notes = ex.notes ?? [];
+  // Prompt 46: metode (tekst | regler | ocr | visjon), validering mot totalen og antall rader som må sjekkes.
+  d.method = t46?.emner?.length ? t46.method : ex.how === 'vision' ? 'visjon' : ex.how === 'ocr' ? 'ocr' : ex.how === 'pdf' ? 'tekst' : ex.how ?? null;
+  d.format = t46?.format ?? null;
+  if (t46?.validation) d.validation = t46.validation;
+  d.checks = emner.filter((e) => e.check).length;
   Object.assign(d, statusOf45(d));
+  if (d.checks && d.status !== 'failed') d.statusText = `${d.statusText} · ${d.checks} må sjekkes`;
+  if (!emner.length) { d.statusText = 'Klarte ikke å lese dokumentet. Er det et bilde? Prøv en skarpere kopi eller PDF fra Vitnemålsportalen.'; d.manual = { label: 'Fyll inn selv', method: 'PUT', path: '/api/study/documents/:id/courses' }; }
   if (!emner.length) console.warn(`[study] fant ingen fag how=${ex.how} tekst=${(ex.text ?? '').length} tegn`);
   return { d, text: ex.text };
 }
 const docOut = (r, withText = false) => {
   const p = JSON.parse(r.parsed);
   const st = p.status ? {} : statusOf45(p); // prompt 45: eldre dokumenter får status også
-  return { id: r.id, ...p, ...st, retry: { method: 'POST', path: `/api/study/documents/${r.id}/reanalyze` },
+  return { id: r.id, ...p, ...st, retry: { method: 'POST', path: `/api/study/documents/${r.id}/reanalyze` }, edit: { method: 'PUT', path: `/api/study/documents/${r.id}/courses` }, // prompt 46
     file: { url: `/api/study/documents/${r.id}/file`, download: `/api/study/documents/${r.id}/file?download=1`, thumb: `/api/study/documents/${r.id}/thumb`, kind: r.mime === 'application/pdf' ? 'pdf' : /^image\//.test(r.mime) ? 'image' : 'text', mime: r.mime },
     filename: r.filename, mime: r.mime, size: r.size, createdAt: new Date(r.created).toISOString(), updatedAt: new Date(r.updated).toISOString(), appliedAt: r.applied ? new Date(r.applied).toISOString() : null,
     ...(withText && r.text_enc ? { text: dec(Buffer.from(r.text_enc, 'base64')).toString('utf8').slice(0, 20000) } : {}) };
@@ -384,6 +403,28 @@ for (const base of ['/study/documents', '/studie/docs']) {
       console.log(`study.reanalyze user=${u} id=${r.id} emner=${d.emner.length} how=${d.how}`);
       return c.json({ doc: docOut(ofUser(u, r.id)) });
     } catch (e) { console.warn(`[study] analyse feilet id=${r.id}: ${e.message}`); return fail(c, e); }
+  });
+  // Prompt 46: redigerbar tabell. PUT …/:id/courses {emner:[{kode, navn, sp, karakter, semester, standpunkt?, eksamen?}]} → {doc}
+  // Koden validerer og regner snitt/sum på nytt (aldri modellen); rader som fortsatt er feil beholder «Sjekk».
+  study44Api.put(`${base}/:id{[0-9]+}/courses`, authOrToken, noImp, async (c) => {
+    const u = c.get('user'), r = ofUser(u, c.req.param('id'));
+    if (!r) return c.json({ error: 'Fant ikke dokumentet' }, 404);
+    const b = await c.req.json().catch(() => null);
+    if (!b || !Array.isArray(b.emner)) return c.json({ error: 'Forventet {emner:[…]}' }, 400);
+    const p = JSON.parse(r.parsed);
+    const emner = cleanEdited46(b.emner).map((e) => ({ ...e, tone: toneOf(e.karakter) }));
+    const a = averages44(emner), v = vgsAverage46(emner);
+    const d = { ...p, emner, ...a, ...(v ? { snittVgs: { value: v.value, points: v.points, text: v.text } } : {}), edited: true, editedAt: new Date().toISOString() };
+    d.spText = d.sp ? `${String(d.sp).replace('.', ',')} sp` : null;
+    d.found = foundOf(d);
+    d.checks = emner.filter((e) => e.check).length;
+    if (p.validation?.total) d.validation = { ...p.validation, sum: a.sp, ok: Math.abs(p.validation.total - a.sp) < 0.05, diff: Math.round((p.validation.total - a.sp) * 10) / 10 };
+    delete d.manual;
+    Object.assign(d, statusOf45({ ...d, error: null }));
+    if (d.checks && d.status !== 'failed') d.statusText = `${d.statusText} · ${d.checks} må sjekkes`;
+    q('UPDATE study44_docs SET parsed=?, updated=? WHERE id=?').run(JSON.stringify(d), Date.now(), r.id);
+    console.log(`study.edit user=${u} id=${r.id} emner=${emner.length} checks=${d.checks}`);
+    return c.json({ doc: docOut(ofUser(u, r.id)) });
   });
   study44Api.delete(`${base}/:id{[0-9]+}`, authOrToken, noImp, (c) => {
     const r = ofUser(c.get('user'), c.req.param('id'));

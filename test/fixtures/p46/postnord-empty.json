@@ -1,0 +1,14 @@
+{
+ "_kilde": "Anonymisert; formen er fra ha-parcel-integrations (MIT) sine lagrede/syntetiske svar (tests/payloads.py, tests/account/payloads.py) og Bring Tracking API v2.",
+ "TrackingInformationResponse": {
+  "shipments": [],
+  "compositeFault": {
+   "faults": [
+    {
+     "faultCode": "API001",
+     "explanationText": "No shipment found"
+    }
+   ]
+  }
+ }
+}

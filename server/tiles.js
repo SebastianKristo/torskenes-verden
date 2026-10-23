@@ -26,6 +26,8 @@ const CARTO_ATTR = '© OpenStreetMap-bidragsytere © CARTO';
 // {s} = subdomene, {r} = «@2x» eller tom. maxZoom per stil.
 const STYLES = {
   topo: { url: 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png', max: 18, retina: false, attribution: '© Kartverket' },
+  // Prompt 46 (DATA46): Kartverket gråtone til Kart-siden (claude-code-kart-side.md). Aldri standard.
+  topograatone: { url: 'https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png', max: 18, retina: false, attribution: '© Kartverket' },
   voyager: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', subs: 'abcd', max: 19, retina: true, attribution: CARTO_ATTR },
   dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', subs: 'abcd', max: 19, retina: true, attribution: CARTO_ATTR },
   light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', subs: 'abcd', max: 19, retina: true, attribution: CARTO_ATTR },
@@ -172,7 +174,7 @@ api.get('/api/config/map', tileAuth, (c) => {
     auth: { cookie: true, header: 'Authorization: Bearer <token>', query: 'token' },
   }, 200, { 'Cache-Control': 'private, max-age=300' });
 });
-const STYLE_NAME = { topo: 'Kartverket topo', voyager: 'CARTO Voyager', dark: 'CARTO mørk', light: 'CARTO lys', maptiler: 'MapTiler', stadia: 'Stadia Maps' };
+const STYLE_NAME = { topo: 'Kartverket topo', topograatone: 'Kartverket gråtone', voyager: 'CARTO Voyager', dark: 'CARTO mørk', light: 'CARTO lys', maptiler: 'MapTiler', stadia: 'Stadia Maps' };
 
 export default api;
 

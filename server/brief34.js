@@ -36,6 +36,7 @@
 //   Daglig generering følger brukerens briefer (briefs.{kind}.on/at i /api/glimt/settings), varsel bare hvis notify er på.
 //   Med readAloud og en klar stemmemotor forhåndsgenereres lyden for guide-replikkene (cache i /api/tts).
 import { Hono } from 'hono';
+import { here46, noteHere46 } from './here46.js'; // prompt 46 (SERVER46)
 import { db, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { eventsFor } from './calendar.js';
@@ -100,8 +101,10 @@ const nameOf = (u) => { try { const p = profileName(u); if (p) return p.split(' 
 
 async function weatherPart(u, now) {
   const list = kv.get(u, 'wx_places', null);
-  const own = Array.isArray(list) && list[0]?.lat != null ? list[0] : null;
-  const place = own ? { lat: own.lat, lon: own.lon, name: own.name } : { place: 'oslo' };
+  // Prompt 46: «Min posisjon» – enhetens posisjon (here46.js) går foran det lagrede stedet og Oslo.
+  const here = here46(u);
+  const own = here ? { lat: here.lat, lon: here.lon, name: here.name ?? null, here: true } : Array.isArray(list) && list[0]?.lat != null ? list[0] : null;
+  const place = own ? { lat: own.lat, lon: own.lon, ...(own.name ? { name: own.name } : {}) } : { place: 'oslo' };
   let w;
   try { w = await (weatherImpl ? weatherImpl(place) : weatherFull(place)); } catch { return null; }
   if (!w) return null;
@@ -113,7 +116,7 @@ async function weatherPart(u, now) {
   const yHi = w.yesterday?.hi, tHi = w.today?.hi ?? today.hi;
   const diff = yHi != null && tHi != null ? r0(tHi - yHi) : null;
   return {
-    place: own?.name ?? w.place?.name ?? 'Oslo', now: { temp: r0(cur.temp), cond: wmoText(cur.code ?? 0), code: cur.code ?? 0, icon, ic: cur.isDay === false && (icon === 'clear' || icon === 'partly') ? '🌙' : WX_EMOJI[icon] ?? '☁️', isDay: cur.isDay !== false },
+    place: own?.name ?? (own?.here ? (w.place?.name && w.place.name !== 'Oslo' ? w.place.name : 'Min posisjon') : null) ?? w.place?.name ?? 'Oslo', here: !!own?.here, now: { temp: r0(cur.temp), cond: wmoText(cur.code ?? 0), code: cur.code ?? 0, icon, ic: cur.isDay === false && (icon === 'clear' || icon === 'partly') ? '🌙' : WX_EMOJI[icon] ?? '☁️', isDay: cur.isDay !== false },
     hi: r0(w.today?.hi ?? today.hi), lo: r0(w.today?.lo ?? today.lo), cond: wmoText(cur.code ?? 0), umbrella: (w.today?.precipProb ?? today.precipProb ?? 0) >= 50 || !!rainAt,
     rain12h, rainFrom: rainAt ? String(rainAt.t).slice(11, 16) : null,
     vsYesterday: diff == null ? null : { diff, text: diff === 0 ? 'Like varmt som i går' : `${Math.abs(diff)}° ${diff < 0 ? 'kaldere' : 'varmere'} enn i går` },
@@ -344,6 +347,7 @@ if (process.env.NODE_ENV !== 'test') setInterval(() => { runWindow().catch(() =>
 const api = new Hono();
 api.use('*', authOrToken);
 api.get('/', async (c) => {
+  noteHere46(c); // prompt 46: ?lat=&lon=[&name=] fra «Min posisjon»
   const u = c.get('user'), kind = c.req.query('kind');
   if (kind && !TITLES[kind]) return c.json({ error: 'kind må være morning, day, evening eller night' }, 400);
   const b = await buildBrief(u, { kind });
@@ -352,6 +356,7 @@ api.get('/', async (c) => {
   return c.json(b, 200, { 'Cache-Control': 'no-store' });
 });
 api.get('/widget', async (c) => {
+  noteHere46(c);
   const size = ['small', 'medium', 'large', 'lock'].includes(c.req.query('size')) ? c.req.query('size') : 'medium';
   const b = await buildBrief(c.get('user'));
   if (b.summarySource === 'mal') kickLlm(c.get('user'), b.kind);

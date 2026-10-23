@@ -19,6 +19,23 @@
 #
 # Miljø: HOST_DIR (påkrevd), UPDATE_REPO, UPDATE_BRANCH, COMPOSE_PROJECT_NAME. For tester: ONCE=1 (én runde),
 # HEALTH_URL, HEALTH_TIMEOUT, HEALTH_SLEEP, INTERVAL, LOCK_DIR, SELF_UPDATE=0.
+#
+# Prompt 46 (SERVER46, «står fast på 55 %»): 55 % er steget «building». Rotårsakene var:
+#  1. Ingen tidsavbrudd: `docker compose build os` kunne vente for alltid (npm/apt som henger på nett, OOM i en liten LXC),
+#     og status.json ble stående på «building» uten at noe skjedde.
+#  2. Låsen var en mappe i containerens /tmp. Ble updateren drept midt i jobben (OOM, omstart av LXC, docker restart),
+#     overlevde mappen omstarten (samme container), og den nye prosessen døde på «En annen updater kjører allerede» i opptil
+#     60 min – i en omstartsløkke uten hjerteslag. Da ble status.json aldri satt til «Avbrutt», og serveren nektet ny start
+#     («pågår allerede» / «ikke satt opp») til man startet på nytt fra Proxmox.
+#  3. Byggkonteksten var hele repoet (~150 MB med design_handoff_homelab/ og apps/), som gjør bygget tregere og tyngre i minnet.
+# Nå: hvert steg har tidsavbrudd (nedlasting DOWNLOAD_TIMEOUT 10 min, bygg BUILD_TIMEOUT 20 min, oppstart UP_TIMEOUT 90 s,
+# helsesjekk HEALTH_TIMEOUT 90 s; backupen tar serveren selv med 5 min grense), en vakt merker jobben «står fast» når loggen ikke
+# har vokst på STALL_TIMEOUT (180 s) sekunder (stuckSince/progressAt/lastLine i status.json), og brukeren kan be om
+# {action:'retry'} (stopp steget og kjør det på nytt) eller {action:'abort'} (stopp og bli på / gå tilbake til forrige versjon)
+# mens jobben kjører. {action:'prune'} rydder dinglende bilder og gammel byggcache (aldri volumer, aldri navngitte bilder).
+# Låsen er en fil med PID og tid: død prosess eller eldre enn LOCK_MAX_AGE (30 min, fornyes av hjerteslaget) ryddes.
+# Før start sjekkes ledig disk (MIN_DISK_MB, 3 GB) og minne (MIN_RAM_MB, 1 GB). Updateren stopper/erstatter aldri seg selv
+# midt i en jobb: compose up får aldri «updater», og selvoppdateringen skjer etter at status er «done».
 set -u
 umask 022
 
@@ -33,6 +50,20 @@ INTERVAL="${INTERVAL:-5}"
 LOCK_DIR="${LOCK_DIR:-/tmp}"
 SELF_UPDATE="${SELF_UPDATE:-1}"
 REQUEST_MAX_AGE="${REQUEST_MAX_AGE:-900}"   # sekunder; eldre forespørsler ignoreres
+# Prompt 46: tidsavbrudd per steg (sekunder), vakt og ressurskrav.
+DOWNLOAD_TIMEOUT="${DOWNLOAD_TIMEOUT:-600}"
+BUILD_TIMEOUT="${BUILD_TIMEOUT:-1200}"
+UP_TIMEOUT="${UP_TIMEOUT:-90}"
+STALL_TIMEOUT="${STALL_TIMEOUT:-180}"
+WATCH_SLEEP="${WATCH_SLEEP:-2}"
+MIN_DISK_MB="${MIN_DISK_MB:-3072}"
+MIN_RAM_MB="${MIN_RAM_MB:-1024}"
+LOCK_MAX_AGE="${LOCK_MAX_AGE:-1800}"
+PRUNE_TIMEOUT="${PRUNE_TIMEOUT:-300}"
+for _v in DOWNLOAD_TIMEOUT BUILD_TIMEOUT UP_TIMEOUT STALL_TIMEOUT WATCH_SLEEP MIN_DISK_MB MIN_RAM_MB LOCK_MAX_AGE PRUNE_TIMEOUT HEALTH_TIMEOUT; do
+  [[ "${!_v}" =~ ^[0-9]{1,7}$ ]] || { printf 'Ugyldig %s\n' "$_v" >&2; exit 1; }
+done
+[ "$WATCH_SLEEP" -ge 1 ] || WATCH_SLEEP=1
 LOG_MAX=200000
 
 say() { printf '%s [updater] %s\n' "$(date '+%F %T')" "$*" >&2; }
@@ -76,19 +107,33 @@ trim_log() {
 write_heartbeat() { date +%s >"$UPD/.heartbeat.tmp" && mv -f "$UPD/.heartbeat.tmp" "$UPD/heartbeat"; }
 
 JOB_ID=""; STARTED=""; FINISHED=""; SHA=""; VERSION=""; ACTION="update"
+# Prompt 46: fremdrift og vakt. CUR_STATE/CUR_STEP = steget som kjører nå, PROGRESS_S = sist loggen vokste (sekunder),
+# STUCK_SINCE = ms da vakten merket «står fast» (tomt ellers), CODE = maskinlesbar feilkode (timeout|oom|low_disk|low_ram|
+# disk_full|network|cancelled|health|build), FROM_VERSION = versjonen jobben startet fra (for «Avbryt og gå tilbake til 4.21»).
+CUR_STATE=""; CUR_STEP=""; PROGRESS_S=""; LAST_LINE=""; STUCK_SINCE=""; CODE=""; FROM_VERSION=""; DISK_MB=""; RAM_MB=""; ATTEMPT=1; CTRL=""
 write_status() { # state step [error]
   jq -n --arg id "$JOB_ID" --arg state "$1" --arg step "$2" --arg error "${3:-}" --arg sha "$SHA" --arg version "$VERSION" \
     --arg startedAt "$STARTED" --arg finishedAt "$FINISHED" --arg action "$ACTION" \
+    --arg progressAt "${PROGRESS_S:+$(( PROGRESS_S * 1000 ))}" --arg lastLine "$LAST_LINE" --arg stuckSince "$STUCK_SINCE" --arg code "$CODE" \
+    --arg fromVersion "$FROM_VERSION" --arg disk "$DISK_MB" --arg ram "$RAM_MB" --arg attempt "$ATTEMPT" --argjson now "$(now_ms)" \
     '{id:$id, state:$state, step:$step, action:$action,
       startedAt:(if $startedAt=="" then null else ($startedAt|tonumber) end),
       finishedAt:(if $finishedAt=="" then null else ($finishedAt|tonumber) end),
       error:(if $error=="" then null else $error end), sha:(if $sha=="" then null else $sha end),
-      version:(if $version=="" then null else $version end)}' >"$UPD/.status.tmp" \
+      version:(if $version=="" then null else $version end),
+      updatedAt:$now, progressAt:(if $progressAt=="" then null else ($progressAt|tonumber) end),
+      lastLine:(if $lastLine=="" then null else $lastLine end), stuckSince:(if $stuckSince=="" then null else ($stuckSince|tonumber) end),
+      code:(if $code=="" then null else $code end), fromVersion:(if $fromVersion=="" then null else $fromVersion end),
+      attempt:($attempt|tonumber),
+      resources:(if $disk=="" and $ram=="" then null else {diskFreeMb:(if $disk=="" then null else ($disk|tonumber) end), ramFreeMb:(if $ram=="" then null else ($ram|tonumber) end)} end)}' >"$UPD/.status.tmp" \
     && mv -f "$UPD/.status.tmp" "$UPD/status.json"
 }
+set_state() { CUR_STATE="$1"; CUR_STEP="$2"; STUCK_SINCE=""; PROGRESS_S=$(date +%s); write_status "$1" "$2"; }
 
 PROFILE=()
 compose() { docker compose --project-directory "$HOST_DIR" -p "$PROJECT" "${PROFILE[@]}" "$@"; }
+# Prompt 46: samme kommando som en ekte kjørbar (timeout kan ikke kjøre skallfunksjoner).
+compose_argv() { COMPOSE=(docker compose --project-directory "$HOST_DIR" -p "$PROJECT" "${PROFILE[@]}"); }
 
 TMPD=""
 cleanup_tmp() { [ -n "$TMPD" ] && rm -rf "$TMPD"; TMPD=""; }
@@ -104,6 +149,118 @@ $tail_lines}"
   cleanup_tmp
   trim_log
   return 1
+}
+
+# Prompt 46: feil med kode (timeout, oom, low_disk …) – serveren viser «Står fast»/årsak ut fra den.
+fail_code() { CODE="$1"; shift; fail "$@"; }
+
+# Gjetter årsaken ut fra loggen (OOM, full disk, nett). Skriver koden på stdout, eller tomt.
+guess_cause() {
+  local t; t=$(tail -n 80 "$LOG" 2>/dev/null)
+  if printf '%s' "$t" | grep -qiE 'no space left on device|ENOSPC'; then echo disk_full
+  elif printf '%s' "$t" | grep -qiE 'out of memory|cannot allocate memory|ENOMEM|exit code: 137|signal: killed|Killed$|OOMKilled'; then echo oom
+  elif printf '%s' "$t" | grep -qiE 'ETIMEDOUT|EAI_AGAIN|ENOTFOUND|ECONNRESET|Temporary failure resolving|Could not resolve|i/o timeout|TLS handshake timeout|network is unreachable'; then echo network
+  fi
+}
+cause_text() {
+  case "$1" in
+    oom) echo "Serveren gikk tom for minne under byggingen." ;;
+    disk_full) echo "Disken på serveren ble full under byggingen." ;;
+    network) echo "Nettet falt ut eller svarte ikke under nedlastingen." ;;
+  esac
+}
+
+# Prompt 46: kontrollforespørsler mens en jobb kjører. Bare {action:'retry'|'abort'} plukkes opp her (ny id, fersk, gyldig);
+# andre forespørsler blir liggende til jobben er ferdig. Setter CTRL (retry|abort) – ingenting annet leses fra fila.
+check_control() {
+  CTRL=""
+  [ -f "$UPD/request.json" ] || return 0
+  local id act at age
+  id=$(jq -r 'if type=="object" then (.id // empty) else empty end' "$UPD/request.json" 2>/dev/null | head -c 100 || true)
+  [ -n "$id" ] && [ "$id" != "$LAST_ID" ] && [ "$id" != "$JOB_ID" ] || return 0
+  [[ "$id" =~ ^[A-Za-z0-9-]{1,64}$ ]] || return 0
+  act=$(jq -r '(.action // "") | strings' "$UPD/request.json" 2>/dev/null | head -c 20)
+  case "$act" in retry|abort) ;; *) return 0 ;; esac
+  at=$(jq -r '(.at // 0) | numbers | floor' "$UPD/request.json" 2>/dev/null || true); [[ "$at" =~ ^[0-9]{1,15}$ ]] || at=0
+  LAST_ID="$id"
+  age=$(( $(date +%s) - at / 1000 ))
+  [ "$age" -le "$REQUEST_MAX_AGE" ] || return 0
+  CTRL="$act"
+  say "Fikk $act ($id) mens jobben kjører."
+}
+
+# Prompt 46: kjører én kommando med tidsavbrudd og vakt. → 0 ok, 124 tidsavbrudd, 130 avbrutt av brukeren (CTRL=retry|abort),
+# ellers kommandoens feilkode. Fremdrift = loggen (og ev. WATCH_FILE, f.eks. arkivet som lastes ned) vokser.
+run_watched() { # sekunder kommando…
+  local limit="$1"; shift
+  local pid rc size last=-1 now i ticks=$(( WATCH_SLEEP * 2 ))
+  CTRL=""
+  timeout -k 20 "$limit" "$@" >>"$LOG" 2>&1 &
+  pid=$!
+  PROGRESS_S=$(date +%s)
+  while kill -0 "$pid" 2>/dev/null; do
+    for (( i = 0; i < ticks; i++ )); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+    kill -0 "$pid" 2>/dev/null || break
+    now=$(date +%s)
+    size=$(( $(wc -c <"$LOG" 2>/dev/null || echo 0) + $( [ -n "${WATCH_FILE:-}" ] && wc -c <"$WATCH_FILE" 2>/dev/null || echo 0) ))
+    if [ "$size" != "$last" ]; then
+      last="$size"; PROGRESS_S=$now
+      LAST_LINE=$(tail -n 1 "$LOG" 2>/dev/null | tr -d '\r' | tr -cd '[:print:]\t' | cut -c1-200)
+      [ -n "$STUCK_SINCE" ] && say "Fremdrift igjen i «$CUR_STEP»."
+      STUCK_SINCE=""
+      write_status "$CUR_STATE" "$CUR_STEP"
+    elif [ -z "$STUCK_SINCE" ] && [ $(( now - PROGRESS_S )) -ge "$STALL_TIMEOUT" ]; then
+      STUCK_SINCE=$(now_ms)
+      say "Ingen fremgang i «$CUR_STEP» på $(( now - PROGRESS_S )) s – merket som «står fast»."
+      write_status "$CUR_STATE" "$CUR_STEP"
+    fi
+    check_control
+    if [ -n "$CTRL" ]; then
+      log "Stopper «$CUR_STEP» (${CTRL} fra appen)."
+      kill -TERM "$pid" 2>/dev/null
+      for (( i = 0; i < 50; i++ )); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+      kill -KILL "$pid" 2>/dev/null
+      wait "$pid" 2>/dev/null
+      return 130
+    fi
+  done
+  wait "$pid"; rc=$?
+  [ "$rc" = 137 ] && [ -z "$CTRL" ] && rc=124   # timeout -k drepte den etter fristen
+  return "$rc"
+}
+
+# Prompt 46: ledig disk (prosjektmappen = samme disk som Docker i LXC-en) og minne. → 0 ok, 1 for lite (feilet).
+fmt_gb() { awk -v m="$1" 'BEGIN { s = sprintf("%.1f", m / 1024); sub(/\./, ",", s); print s }'; }
+check_resources() {
+  DISK_MB=$(df -Pm "$HOST_DIR" 2>/dev/null | awk 'NR==2 {print $4}')
+  RAM_MB=$(awk '/^MemAvailable:/ {print int($2 / 1024)}' /proc/meminfo 2>/dev/null)
+  [[ "$DISK_MB" =~ ^[0-9]+$ ]] || DISK_MB=""
+  [[ "$RAM_MB" =~ ^[0-9]+$ ]] || RAM_MB=""
+  log "Ressurser: ${DISK_MB:-?} MB ledig disk, ${RAM_MB:-?} MB ledig minne (krav $MIN_DISK_MB / $MIN_RAM_MB MB)."
+  if [ -n "$DISK_MB" ] && [ "$DISK_MB" -lt "$MIN_DISK_MB" ]; then
+    fail_code low_disk "Lite plass på serveren ($(fmt_gb "$DISK_MB") GB ledig, trenger minst $(fmt_gb "$MIN_DISK_MB") GB). Rydd gamle bilder og prøv igjen. Ingenting er endret."
+    return 1
+  fi
+  if [ -n "$RAM_MB" ] && [ "$RAM_MB" -lt "$MIN_RAM_MB" ]; then
+    fail_code low_ram "Lite ledig minne på serveren ($(fmt_gb "$RAM_MB") GB, trenger minst $(fmt_gb "$MIN_RAM_MB") GB). Stopp noe som bruker mye minne, eller gi LXC-en mer RAM. Ingenting er endret."
+    return 1
+  fi
+  return 0
+}
+
+# Prompt 46: «Rydd» – dinglende bilder (gamle homelab-os-bygg uten navn) og byggcache eldre enn 3 døgn. Aldri volumer,
+# aldri navngitte bilder. Status: data/update/maint.json {id, action:'prune', state, at, freedMb, diskFreeMb}.
+run_prune() { # id
+  local id="$1" before after
+  before=$(df -Pm "$HOST_DIR" 2>/dev/null | awk 'NR==2 {print $4}'); [[ "$before" =~ ^[0-9]+$ ]] || before=0
+  jq -n --arg id "$id" --argjson at "$(now_ms)" '{id:$id, action:"prune", state:"running", at:$at}' >"$UPD/.maint.tmp" && mv -f "$UPD/.maint.tmp" "$UPD/maint.json"
+  log "Rydder: docker image prune -f · docker builder prune -f --filter until=72h"
+  timeout -k 10 "$PRUNE_TIMEOUT" docker image prune -f >>"$LOG" 2>&1 || true
+  timeout -k 10 "$PRUNE_TIMEOUT" docker builder prune -f --filter until=72h >>"$LOG" 2>&1 || true
+  after=$(df -Pm "$HOST_DIR" 2>/dev/null | awk 'NR==2 {print $4}'); [[ "$after" =~ ^[0-9]+$ ]] || after=0
+  local freed=$(( after - before )); [ "$freed" -lt 0 ] && freed=0
+  log "Ryddet $freed MB. Ledig nå: $after MB."
+  jq -n --arg id "$id" --argjson at "$(now_ms)" --argjson f "$freed" --argjson d "$after" '{id:$id, action:"prune", state:"done", at:$at, freedMb:$f, diskFreeMb:$d}' >"$UPD/.maint.tmp" && mv -f "$UPD/.maint.tmp" "$UPD/maint.json"
 }
 
 # Historikk over vellykkede installasjoner, nyeste først: {"entries":[{sha, version, at}]} (maks 10). Bare updateren skriver.
@@ -158,9 +315,28 @@ seed_history() {
   fi
 }
 
+# Prompt 46: kjører et steg med run_watched; «Prøv igjen» (retry) kjører samme steg på nytt i samme jobb.
+step_run() { # sekunder kommando…
+  local rc
+  while :; do
+    run_watched "$@"; rc=$?
+    if [ "$rc" = 130 ] && [ "$CTRL" = retry ]; then
+      ATTEMPT=$(( ATTEMPT + 1 ))
+      log "Prøver «$CUR_STEP» på nytt (forsøk $ATTEMPT)."
+      set_state "$CUR_STATE" "$CUR_STEP"
+      continue
+    fi
+    return "$rc"
+  done
+}
+# Updateren skal aldri stoppe eller erstatte seg selv midt i en jobb.
+no_self() { local x; for x in "$@"; do [ "$x" = updater ] && { log "Nekter å røre updater-tjenesten midt i en jobb."; return 1; }; done; return 0; }
+
 run_job() {
   JOB_ID="$1"; STARTED=$(now_ms); FINISHED=""; SHA=""; VERSION=""; ACTION="${3:-update}"
-  local TARGET="${4:-}" RESTORE="${5:-}" FROM_SHA="" FROM_VERSION="" BACKUP="" RESTORED=""
+  CUR_STATE=""; CUR_STEP=""; PROGRESS_S=""; LAST_LINE=""; STUCK_SINCE=""; CODE=""; DISK_MB=""; RAM_MB=""; ATTEMPT=1; CTRL=""
+  local TARGET="${4:-}" RESTORE="${5:-}" FROM_SHA="" BACKUP="" RESTORED="" rc
+  FROM_VERSION=""
   : >"$LOG"
   seed_history
   write_versions
@@ -170,11 +346,13 @@ run_job() {
   else
     log "Oppdatering $JOB_ID startet (forespurt av ${2:-ukjent}). Repo $UPDATE_REPO, branch $UPDATE_BRANCH, prosjekt $PROJECT, mappe $HOST_DIR."
   fi
+  # Prompt 46: nok disk og minne før noe lastes ned eller bygges.
+  check_resources || return
 
   # 1. Last ned (rollback: forrige vellykkede sha fra historikken)
   if [ "$ACTION" = rollback ] && [ -n "$TARGET" ]; then
     # Prompt 44: målversjonen MÅ finnes i updaterens egen liste.
-    write_status downloading "Laster ned $TARGET"
+    set_state downloading "Laster ned $TARGET"
     SHA=$(sha_for_version "$TARGET")
     [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { SHA=""; fail "Versjon $TARGET finnes ikke i updaterens liste over tidligere versjoner."; return; }
     [ "$SHA" != "$FROM_SHA" ] || { fail "Versjon $TARGET kjører allerede."; return; }
@@ -185,12 +363,12 @@ run_job() {
     fi
     log "Går tilbake til $TARGET ($SHA)"
   elif [ "$ACTION" = rollback ]; then
-    write_status downloading "Laster ned forrige versjon"
+    set_state downloading "Laster ned forrige versjon"
     SHA=$(history_entries | jq -r '.[1].sha // empty')
     [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { SHA=""; fail "Fant ingen tidligere versjon å gå tilbake til."; return; }
     log "Går tilbake til $SHA"
   else
-    write_status downloading "Laster ned siste versjon"
+    set_state downloading "Laster ned siste versjon"
   fi
   TMPD=$(mktemp -d "${TMPDIR:-/tmp}/homelab-update.XXXXXX") || { fail "Kunne ikke lage midlertidig mappe."; return; }
   if [ "$ACTION" != rollback ]; then
@@ -199,8 +377,15 @@ run_job() {
   [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { SHA=""; fail "Fant ikke siste versjon på GitHub ($UPDATE_REPO, $UPDATE_BRANCH). Er repoet offentlig og nettet oppe?"; return; }
   log "Siste commit: $SHA"
   fi
-  curl -fsSL --max-time 300 -H 'User-Agent: homelab-updater' -o "$TMPD/src.tgz" \
-    "https://codeload.github.com/$UPDATE_REPO/tar.gz/$SHA" 2>>"$LOG" || { fail "Nedlastingen feilet."; return; }
+  # Prompt 46: med tidsavbrudd og vakt (fremdrift = arkivet vokser); retry/abort virker her også.
+  WATCH_FILE="$TMPD/src.tgz" step_run "$DOWNLOAD_TIMEOUT" curl -fsSL --max-time "$DOWNLOAD_TIMEOUT" -H 'User-Agent: homelab-updater' -o "$TMPD/src.tgz" \
+    "https://codeload.github.com/$UPDATE_REPO/tar.gz/$SHA"; rc=$?
+  case "$rc" in
+    0) ;;
+    130) fail_code cancelled "Avbrutt under nedlastingen. Ingenting er endret – ${FROM_VERSION:-forrige versjon} kjører som før."; return ;;
+    124) fail_code timeout "Nedlastingen brukte mer enn $(( DOWNLOAD_TIMEOUT / 60 )) min og ble stoppet. Ingenting er endret."; return ;;
+    *) fail_code network "Nedlastingen feilet. Ingenting er endret."; return ;;
+  esac
   mkdir "$TMPD/src"
   tar -xzf "$TMPD/src.tgz" -C "$TMPD/src" --strip-components=1 --no-same-owner 2>>"$LOG" || { fail "Kunne ikke pakke ut arkivet."; return; }
   local SRC="$TMPD/src"
@@ -226,15 +411,22 @@ run_job() {
   PROFILE=()
   local services=(os)
   if grep -qE '^CLOUDFLARE_TUNNEL_TOKEN=.+' "$HOST_DIR/.env" 2>/dev/null; then PROFILE=(--profile tunnel); services=(os cloudflared); fi
-  write_status building "Bygger ny versjon"
+  set_state building "Bygger ny versjon"
+  compose_argv
   log "docker compose ${PROFILE[*]} build os"
-  if ! compose build os >>"$LOG" 2>&1; then
-    fail "Bygget feilet. Den gamle versjonen kjører videre (ingenting er startet på nytt), men de nye filene er allerede kopiert inn i $HOST_DIR. Neste vellykkede oppdatering retter det."
+  step_run "$BUILD_TIMEOUT" "${COMPOSE[@]}" build os; rc=$?
+  if [ "$rc" != 0 ]; then
+    local cause; cause=$(guess_cause)
+    case "$rc" in
+      130) fail_code cancelled "Avbrutt under byggingen. ${FROM_VERSION:-Den gamle versjonen} kjører som før (ingenting er startet på nytt)." ;;
+      124) fail_code "${cause:-timeout}" "Bygget brukte mer enn $(( BUILD_TIMEOUT / 60 )) min og ble stoppet. Den gamle versjonen kjører videre (ingenting er startet på nytt).${cause:+ $(cause_text "$cause")}" ;;
+      *) fail_code "${cause:-build}" "Bygget feilet. Den gamle versjonen kjører videre (ingenting er startet på nytt), men de nye filene er allerede kopiert inn i $HOST_DIR. Neste vellykkede oppdatering retter det.${cause:+ $(cause_text "$cause")}" ;;
+    esac
     return
   fi
 
   # 4. Start på nytt (bare os og ev. cloudflared – aldri updater midt i jobben)
-  write_status restarting "Starter på nytt"
+  set_state restarting "Starter på nytt"
   local DB="$HOST_DIR/data/homelab.db" KEEP_DB=""
   if [ -n "$BACKUP" ]; then
     # Prompt 44: databasen byttes mens os er stoppet. Innholdet skrives inn i samme fil (eier og rettigheter beholdes).
@@ -246,16 +438,27 @@ run_job() {
     RESTORED=1
     log "Databasen er gjenopprettet fra $BACKUP (kopi av den forrige: $(basename "$KEEP_DB"))."
   fi
+  no_self "${services[@]}" || { fail "Intern feil: updateren skulle startes på nytt midt i jobben."; return; }
   log "docker compose ${PROFILE[*]} up -d --no-deps ${services[*]}"
-  compose up -d --no-deps "${services[@]}" >>"$LOG" 2>&1 || { fail "Kunne ikke starte den nye versjonen. Se loggen, og kjør update.sh fra Proxmox hvis serveren ikke svarer."; return; }
+  # Prompt 46: oppstarten har eget tidsavbrudd (UP_TIMEOUT). Feiler den, henger den eller avbrytes den, går vi tilbake som ved helsesjekken.
+  local up_ok=1 why=""
+  step_run "$UP_TIMEOUT" "${COMPOSE[@]}" up -d --no-deps "${services[@]}"; rc=$?
+  case "$rc" in
+    0) ;;
+    130) up_ok=""; why="Avbrutt under omstarten"; CODE=cancelled ;;
+    124) up_ok=""; why="Oppstarten brukte mer enn $UP_TIMEOUT sekunder"; CODE=timeout ;;
+    *) up_ok=""; why="Kunne ikke starte den nye versjonen"; CODE=health ;;
+  esac
 
   # 5. Vent på at den nye versjonen svarer (HEALTH_TIMEOUT, 90 s). Ellers: tilbake til versjonen vi kom fra.
-  if ! wait_healthy; then
-    local why="Ny versjon startet ikke innen $HEALTH_TIMEOUT sekunder"
-    [ "$ACTION" = rollback ] && why="Kunne ikke gå tilbake til ${TARGET:-${VERSION:-forrige versjon}} (svarte ikke innen $HEALTH_TIMEOUT sekunder)"
+  if [ -z "$up_ok" ] || ! wait_healthy; then
+    if [ -n "$up_ok" ]; then
+      why="Ny versjon startet ikke innen $HEALTH_TIMEOUT sekunder"; CODE=health
+      [ "$ACTION" = rollback ] && why="Kunne ikke gå tilbake til ${TARGET:-${VERSION:-forrige versjon}} (svarte ikke innen $HEALTH_TIMEOUT sekunder)"
+    fi
     if [[ "$FROM_SHA" =~ ^[0-9a-f]{40}$ ]] && [ "$FROM_SHA" != "$SHA" ]; then
       log "$why. Går automatisk tilbake til ${FROM_VERSION:-$FROM_SHA}."
-      write_status restarting "Går tilbake til ${FROM_VERSION:-forrige versjon}"
+      set_state restarting "Går tilbake til ${FROM_VERSION:-forrige versjon}"
       [ -n "$RESTORED" ] && [ -n "$KEEP_DB" ] && { compose stop os >>"$LOG" 2>&1 || true; cat "$KEEP_DB" >"$DB"; rm -f "$DB-wal" "$DB-shm"; log "Databasen er satt tilbake."; }
       if install_sha "$FROM_SHA" && wait_healthy; then
         local sha_new="$SHA"; SHA="$FROM_SHA"; VERSION="$FROM_VERSION"
@@ -268,8 +471,9 @@ run_job() {
     fi
     fail "$why. Se loggen og 'docker compose logs os'."; return
   fi
+  CODE=""
 
-  FINISHED=$(now_ms)
+  FINISHED=$(now_ms); STUCK_SINCE=""
   jq -n --arg sha "$SHA" --arg version "$VERSION" --argjson at "$FINISHED" '{sha:$sha, version:(if $version=="" then null else $version end), at:$at}' \
     >"$UPD/.installed.tmp" && mv -f "$UPD/.installed.tmp" "$UPD/installed.json"
   # Historikk: ny versjon øverst. Rollback fjerner versjonen vi gikk bort fra, så neste rollback går enda ett steg tilbake.
@@ -293,7 +497,7 @@ run_job() {
   [ "$ACTION" != rollback ] && { ensure_docker_proxy "$JOB_ID" || true; }
 
   # 6. Rydd, og oppdater til slutt updateren selv (ikke ved rollback: en eldre updater kjenner kanskje ikke historikken).
-  docker image prune -f >>"$LOG" 2>&1 || true
+  timeout -k 10 "$PRUNE_TIMEOUT" docker image prune -f >>"$LOG" 2>&1 || true
   [ "$SELF_UPDATE" = 1 ] && [ "$ACTION" != rollback ] && self_update
   trim_log
   return 0
@@ -404,16 +608,17 @@ install_sha() {
   local sha="$1" d
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || return 1
   d=$(mktemp -d "${TMPDIR:-/tmp}/homelab-revert.XXXXXX") || return 1
-  curl -fsSL --max-time 300 -H 'User-Agent: homelab-updater' -o "$d/src.tgz" "https://codeload.github.com/$UPDATE_REPO/tar.gz/$sha" 2>>"$LOG" || { rm -rf "$d"; return 1; }
+  curl -fsSL --max-time "$DOWNLOAD_TIMEOUT" -H 'User-Agent: homelab-updater' -o "$d/src.tgz" "https://codeload.github.com/$UPDATE_REPO/tar.gz/$sha" 2>>"$LOG" || { rm -rf "$d"; return 1; }
   mkdir "$d/src" && tar -xzf "$d/src.tgz" -C "$d/src" --strip-components=1 --no-same-owner 2>>"$LOG" || { rm -rf "$d"; return 1; }
   [ -f "$d/src/docker-compose.yml" ] && [ -f "$d/src/server/index.js" ] || { rm -rf "$d"; return 1; }
   rm -rf "$d/src/.env" "$d/src/data" "$d/src/proton"
   if command -v rsync >/dev/null 2>&1; then rsync -a --exclude '/.env' --exclude '/data/' --exclude '/proton/' "$d/src/" "$HOST_DIR/" >>"$LOG" 2>&1 || { rm -rf "$d"; return 1; }
   else cp -a "$d/src/." "$HOST_DIR/" >>"$LOG" 2>&1 || { rm -rf "$d"; return 1; }; fi
   rm -rf "$d"
-  compose build os >>"$LOG" 2>&1 || return 1
+  compose_argv
+  timeout -k 20 "$BUILD_TIMEOUT" "${COMPOSE[@]}" build os >>"$LOG" 2>&1 || return 1
   local services=(os); [ "${#PROFILE[@]}" -gt 0 ] && services=(os cloudflared)
-  compose up -d --no-deps "${services[@]}" >>"$LOG" 2>&1 || return 1
+  timeout -k 20 "$UP_TIMEOUT" "${COMPOSE[@]}" up -d --no-deps "${services[@]}" >>"$LOG" 2>&1 || return 1
   return 0
 }
 
@@ -421,7 +626,8 @@ install_sha() {
 # kortlivet hjelpecontainer utenfor compose-prosjektet kjører «up -d --no-deps updater». Status er allerede «done».
 self_update() {
   log "Oppdaterer updateren selv …"
-  if ! compose build updater >>"$LOG" 2>&1; then log "Klarte ikke å bygge updateren (ikke kritisk, den gamle kjører videre)."; return 0; fi
+  compose_argv
+  if ! timeout -k 20 "$BUILD_TIMEOUT" "${COMPOSE[@]}" build updater >>"$LOG" 2>&1; then log "Klarte ikke å bygge updateren (ikke kritisk, den gamle kjører videre)."; return 0; fi
   local img; img=$(docker inspect --format '{{.Config.Image}}' "$SELF" 2>/dev/null || true)
   [ -n "$img" ] || img="homelab-updater:local"
   docker rm -f "$PROJECT-updater-selfupdate" >/dev/null 2>&1 || true
@@ -437,15 +643,31 @@ self_update() {
 cd "$HOST_DIR" || die "Kan ikke gå til $HOST_DIR."
 export PWD="$HOST_DIR"   # docker-compose.yml bruker ${PWD} for updaterens egen montering
 
+# Prompt 46: låsen er en FIL med «PID tid». Den gamle mappe-låsen ble liggende i containerens /tmp etter en hard omstart
+# (OOM, LXC-omstart), og da døde den nye updateren i en omstartsløkke i opptil en time. Nå ryddes låsen når prosessen ikke
+# lever (eller er oss selv: PID 1 i en ny container), eller når den er eldre enn LOCK_MAX_AGE (hjerteslaget fornyer den).
 LOCK="$LOCK_DIR/homelab-updater.lock"
-mkdir "$LOCK" 2>/dev/null || { [ -n "$(find "$LOCK" -maxdepth 0 -mmin +60 2>/dev/null)" ] && rm -rf "$LOCK" && mkdir "$LOCK"; } || die "En annen updater kjører allerede ($LOCK)."
+[ -d "$LOCK" ] && { say "Rydder gammel mappe-lås fra en eldre updater."; rm -rf "$LOCK"; }
+write_lock() { printf '%s %s\n' "$$" "$(date +%s)" >"$LOCK.tmp.$$" && mv -f "$LOCK.tmp.$$" "$LOCK"; }
+if [ -f "$LOCK" ]; then
+  read -r lpid lat _ <"$LOCK" 2>/dev/null || true
+  [[ "${lpid:-}" =~ ^[0-9]{1,10}$ ]] || lpid=""; [[ "${lat:-}" =~ ^[0-9]{1,12}$ ]] || lat=0
+  lage=$(( $(date +%s) - lat ))
+  if [ -n "$lpid" ] && [ "$lpid" != "$$" ] && kill -0 "$lpid" 2>/dev/null && [ "$lage" -lt "$LOCK_MAX_AGE" ]; then
+    die "En annen updater kjører allerede (PID $lpid, $LOCK)."
+  fi
+  say "Rydder gammel lås (PID ${lpid:-?}, $lage s gammel, prosessen kjører ikke lenger)."
+  rm -f "$LOCK"
+fi
+write_lock || die "Kan ikke skrive låsen $LOCK."
 HB_PID=""
-trap 'rm -rf "$LOCK"; [ -n "$HB_PID" ] && kill "$HB_PID" 2>/dev/null; cleanup_tmp' EXIT
+release_lock() { local p; read -r p _ <"$LOCK" 2>/dev/null || true; [ "${p:-}" = "$$" ] && rm -f "$LOCK"; }
+trap 'release_lock; [ -n "$HB_PID" ] && kill "$HB_PID" 2>/dev/null; cleanup_tmp' EXIT
 trap 'exit 0' INT TERM
 
-# Hjerteslag også mens en jobb kjører (bygg kan ta minutter).
+# Hjerteslag også mens en jobb kjører (bygg kan ta minutter). Prompt 46: fornyer også låsen.
 write_heartbeat
-if [ -z "${ONCE:-}" ]; then ( while sleep "$INTERVAL"; do write_heartbeat; done ) & HB_PID=$!; fi
+if [ -z "${ONCE:-}" ]; then ( while sleep "$INTERVAL"; do write_heartbeat; write_lock 2>/dev/null; done ) & HB_PID=$!; fi
 
 LAST_ID=$(jq -r '.id // empty' "$UPD/status.json" 2>/dev/null || true)
 # En jobb som var i gang da updateren stoppet (omstart av LXC-en e.l.) er avbrutt.
@@ -454,7 +676,9 @@ case "$prev_state" in downloading|building|restarting)
   JOB_ID="$LAST_ID"; STARTED=$(jq -r '.startedAt // empty' "$UPD/status.json"); FINISHED=$(now_ms)
   SHA=$(jq -r '.sha // empty' "$UPD/status.json"); VERSION=$(jq -r '.version // empty' "$UPD/status.json")
   ACTION=$(jq -r '(.action // "update") | strings' "$UPD/status.json" 2>/dev/null); case "$ACTION" in update|rollback) ;; *) ACTION=update ;; esac
+  CODE=interrupted; FROM_VERSION=$(jq -r '.fromVersion // empty' "$UPD/status.json" 2>/dev/null || true)
   write_status failed "Avbrutt" "Oppdateringen ble avbrutt fordi updateren startet på nytt. Prøv igjen."
+  CODE=""
   ;;
 esac
 say "Klar. Prosjekt $PROJECT i $HOST_DIR, repo $UPDATE_REPO ($UPDATE_BRANCH)."
@@ -472,7 +696,7 @@ while :; do
         at=$(jq -r '(.at // 0) | numbers | floor' "$UPD/request.json" 2>/dev/null || true); [[ "$at" =~ ^[0-9]{1,15}$ ]] || at=0
         by=$(jq -r '(.requestedBy // "") | strings' "$UPD/request.json" 2>/dev/null | tr -cd 'A-Za-z0-9._@-' | head -c 64)
         act=$(jq -r '(.action // "update") | strings' "$UPD/request.json" 2>/dev/null | head -c 20)
-        case "$act" in update|rollback|docker-setup) ;; *) act="" ;; esac
+        case "$act" in update|rollback|docker-setup|retry|abort|prune) ;; *) act="" ;; esac
         # Prompt 44: target (bare semver, slås opp i updaterens egen liste) og restoreBackup (bare true/false).
         tgt=$(jq -r 'if (.target|type)=="string" then .target else "" end' "$UPD/request.json" 2>/dev/null | head -c 20)
         if [ -n "$tgt" ] && ! semver_ok "$tgt"; then say "Ignorerer forespørsel $id med ugyldig target."; act=""; fi
@@ -483,11 +707,17 @@ while :; do
           say "Ignorerer forespørsel $id med ukjent action."
         elif [ "$age" -gt "$REQUEST_MAX_AGE" ]; then
           say "Ignorerer gammel forespørsel $id ($age s)."
+        elif [ "$act" = abort ]; then
+          say "Ingen jobb kjører – ingenting å avbryte ($id)."
+        elif [ "$act" = prune ]; then
+          say "Rydder gamle bilder ($id)."; run_prune "$id"; trim_log
         elif [ "$act" = docker-setup ]; then
           # Prompt 45: bare «sett opp Docker-tilgangen» – ingen nedlasting, ingen bygging, ingen omstart av os.
           if [ "$id" = "$(jq -r '.id // empty' "$DOCKER_STATE" 2>/dev/null)" ]; then say "Docker-oppsett $id er allerede kjørt.";
           else say "Setter opp Docker-tilgang ($id)."; if ensure_docker_proxy "$id"; then say "Docker-tilgang klar."; else say "Docker-oppsett feilet."; fi; trim_log; fi
         else
+          # Prompt 46: «Prøv igjen» uten jobb som kjører = ny vanlig oppdatering (serveren sender aldri sha/repo).
+          [ "$act" = retry ] && act=update
           if [ "$act" = rollback ]; then say "Starter tilbakerulling $id."; else say "Starter oppdatering $id."; fi
           if run_job "$id" "$by" "$act" "$tgt" "$rst"; then say "Oppdatering $id ferdig."; else say "Oppdatering $id feilet."; fi
         fi

@@ -8,6 +8,7 @@
 import { Hono } from 'hono';
 import { db } from './db.js';
 import { authOrToken } from './mobile.js';
+import { areasOf46 } from './claude-memory46.js'; // prompt 46 (SERVER46)
 
 db.exec(`CREATE TABLE IF NOT EXISTS ai_memory43 (
   id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, text TEXT NOT NULL, src TEXT NOT NULL DEFAULT 'Chat',
@@ -52,7 +53,9 @@ export const splitMemory43 = (text) => String(text ?? '').split(/\r?\n/).map(cle
 
 export const aiMemory43Api = new Hono();
 aiMemory43Api.use('*', authOrToken);
-aiMemory43Api.get('/', (c) => { const items = memoryOf43(c.get('user')); return c.json({ items, count: items.length }); });
+// Prompt 46: ?src=claude-memory filtrerer på kilde (lenken «Se minnene» etter Claude-importen); GET /areas = minneområdene.
+aiMemory43Api.get('/', (c) => { const src = c.req.query('src'); const items = memoryOf43(c.get('user')).filter((x) => !src || x.src === src); return c.json({ items, count: items.length, ...(src ? { src } : {}) }); });
+aiMemory43Api.get('/areas', (c) => { const areas = areasOf46(c.get('user')); return c.json({ areas, count: areas.length }); });
 aiMemory43Api.post('/', async (c) => {
   const b = await c.req.json().catch(() => null);
   const texts = Array.isArray(b?.items) ? b.items.map((x) => (typeof x === 'string' ? x : x?.text)) : typeof b?.text === 'string' ? splitMemory43(b.text) : [];

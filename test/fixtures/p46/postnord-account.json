@@ -1,0 +1,137 @@
+{
+ "_kilde": "Anonymisert; formen er fra ha-parcel-integrations (MIT) sine lagrede/syntetiske svar (tests/payloads.py, tests/account/payloads.py) og Bring Tracking API v2.",
+ "activeShipments": [
+  {
+   "shipmentId": "00370000000000000111",
+   "service": {
+    "code": "18",
+    "name": "PostNord Parcel"
+   },
+   "consignor": {
+    "name": "Eksempelbutikken",
+    "address": {
+     "countryCode": "NO"
+    }
+   },
+   "consignee": {
+    "name": "Ola Nordmann",
+    "address": {
+     "city": "Oslo",
+     "countryCode": "NO",
+     "postCode": "0150"
+    }
+   },
+   "totalWeight": {
+    "value": "1.25",
+    "unit": "kg"
+   },
+   "status": "EN_ROUTE",
+   "userData": {
+    "dateAdded": "2026-10-21T23:10:00Z",
+    "direction": "INCOMING"
+   },
+   "items": [
+    {
+     "itemId": "00370000000000000111",
+     "status": "EN_ROUTE",
+     "statusText": {
+      "header": "On its way"
+     },
+     "events": [
+      {
+       "status": "EN_ROUTE",
+       "eventTime": "2026-10-22T15:52:17Z",
+       "eventCode": "20",
+       "eventDescription": "At the terminal"
+      },
+      {
+       "status": "INFORMED",
+       "eventTime": "2026-10-21T23:03:58Z",
+       "eventCode": "68",
+       "eventDescription": "Shipment announced"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "archivedShipments": [
+  {
+   "shipmentId": "00370000000000000112",
+   "status": "DELIVERED",
+   "archivedStatus": "ARCHIVED",
+   "consignor": {
+    "name": "Eksempelbutikken"
+   },
+   "consignee": {
+    "address": {
+     "countryCode": "NO"
+    }
+   },
+   "deliveryDate": "__NOW__",
+   "destinationDeliveryPoint": {
+    "name": "EKSEMPEL HENTESTED"
+   },
+   "userData": {
+    "direction": "INCOMING"
+   },
+   "items": [
+    {
+     "itemId": "00370000000000000112",
+     "status": "DELIVERED",
+     "statusText": {
+      "header": "The shipment item has been delivered to the recipient"
+     },
+     "dimensions": {
+      "height": {
+       "unit": "m",
+       "value": "0.02"
+      },
+      "length": {
+       "unit": "m",
+       "value": "0.28"
+      },
+      "width": {
+       "unit": "m",
+       "value": "0.2"
+      }
+     },
+     "weight": {
+      "unit": "kg",
+      "value": "0.2"
+     },
+     "events": [
+      {
+       "status": "EN_ROUTE",
+       "eventTime": "2026-10-21T05:00:10Z",
+       "eventCode": "113",
+       "eventDescription": "The delivery of the shipment item is in progress."
+      },
+      {
+       "status": "AVAILABLE_FOR_DELIVERY",
+       "eventTime": "2026-10-21T07:34:00Z",
+       "eventCode": "1",
+       "eventDescription": "Delivered to a service point",
+       "location": {
+        "locationName": "EKSEMPEL HENTESTED"
+       }
+      },
+      {
+       "status": "OTHER",
+       "eventTime": "2026-10-21T07:35:26Z",
+       "eventCode": "z82",
+       "eventDescription": "SMS sent"
+      },
+      {
+       "status": "DELIVERED",
+       "eventTime": "__NOW__",
+       "eventCode": "21",
+       "eventDescription": "The shipment item has been delivered."
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "deletedShipments": []
+}

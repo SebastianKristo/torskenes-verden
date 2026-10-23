@@ -1,0 +1,48 @@
+{
+ "_kilde": "Anonymisert; formen er fra ha-parcel-integrations (MIT) sine lagrede/syntetiske svar (tests/payloads.py, tests/account/payloads.py) og Bring Tracking API v2.",
+ "apiVersion": "2",
+ "consignmentSet": [
+  {
+   "consignmentId": "70712345678901234",
+   "senderName": "Eksempelbutikken",
+   "totalWeightInKgs": 1.3,
+   "packageSet": [
+    {
+     "packageNumber": "370712345678901234",
+     "productName": "PAKKE I POSTKASSEN",
+     "weightInKgs": 1.3,
+     "lengthInCm": 30,
+     "widthInCm": 20,
+     "heightInCm": 10,
+     "dateOfEstimatedDelivery": "2026-10-24",
+     "eventSet": [
+      {
+       "description": "Sendingen er klar til henting",
+       "status": "READY_FOR_PICKUP",
+       "dateIso": "2026-10-23T08:12:00+02:00",
+       "city": "OSLO",
+       "country": "Norge",
+       "unitInformation": {
+        "name": "Rema 1000 Bislett"
+       }
+      },
+      {
+       "description": "Sendingen er under transport",
+       "status": "IN_TRANSIT",
+       "dateIso": "2026-10-22T06:12:00+02:00",
+       "city": "OSLO",
+       "country": "Norge"
+      },
+      {
+       "description": "Sendingen er forhåndsvarslet",
+       "status": "PRE_NOTIFIED",
+       "dateIso": "2026-10-21T10:00:00+02:00",
+       "city": "",
+       "country": ""
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

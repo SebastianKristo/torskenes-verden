@@ -14,6 +14,8 @@ import { config } from './config.js';
 import { aiJson } from './homeos-common.js';
 import { authOrToken, languageOf } from './mobile.js';
 import { ICON_DEFAULTS, validId as validIconId } from './icons.js';
+// Prompt 46 (SERVER46): egne kategorier + «For deg», favicon på kildene, sammendrag per kategori, Innstillinger → Nyheter (news46.js).
+import { mountNews46, customIds46, feedIcon46, itemsForCat46, fetchIcon46, feedDomain46, categoriesOut46 } from './news46.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const REFRESH_MS = 10 * 60_000;
@@ -103,7 +105,7 @@ function cleanIcons(b) {
   if (b.icOn !== undefined) { if (typeof b.icOn !== 'boolean') return { error: 'icOn må være true eller false' }; out.icOn = b.icOn; }
   return { out };
 }
-const settingsOut = (s) => ({ aiSummary: !!s.aiSummary, aiCategorize: !!s.aiCategorize, ic: s.ic ?? {}, icSrc: s.icSrc ?? {}, icOn: s.icOn !== false });
+const settingsOut = (s) => ({ aiSummary: !!s.aiSummary, aiCategorize: !!s.aiCategorize, ic: s.ic ?? {}, icSrc: s.icSrc ?? {}, icOn: s.icOn !== false, catSummary: s.catSummary !== false }); // prompt 46: catSummary («Sammendrag per kategori», på)
 
 function ensureFeeds(user) {
   if (kv.get(user, 'rss_seeded', false)) return;
@@ -392,7 +394,8 @@ export function latest(user, { cat = 'siste', feed = null, limit = 40 } = {}) {
 const feedsOf = (user) => {
   ensureFeeds(user);
   return db.prepare(`SELECT f.*, (SELECT COUNT(*) FROM rss_item i WHERE i.feed_id=f.id) AS count FROM rss_feed f WHERE f.user=? ORDER BY f.sort, f.id`).all(user)
-    .map((f) => ({ id: f.id, name: f.name, url: f.url, category: f.category, enabled: !!f.enabled, color: f.color, count: f.count, lastFetch: f.last_fetch ? new Date(f.last_fetch).toISOString() : null, lastError: f.last_error }));
+    .map((f) => ({ id: f.id, name: f.name, url: f.url, category: f.category, enabled: !!f.enabled, color: f.color, count: f.count, lastFetch: f.last_fetch ? new Date(f.last_fetch).toISOString() : null, lastError: f.last_error,
+      ...feedIcon46(f) })); // prompt 46: {domain, favicon, favErr}
 };
 
 /** For /api/mobile/home: de 5 nyeste sakene. Henter i bakgrunnen hvis ingenting er hentet ennå. */
@@ -410,7 +413,7 @@ const api = new Hono();
 api.use('*', (c, next) => authOrToken(c, next));
 const json = async (c) => c.req.json().catch(() => ({}));
 const COLORS = ['#6b665c', '#2f5d8a', '#2f7a4f', '#b23a2a', '#5b4a8a', '#c8553d', '#1a5a8a'];
-const validCat = (v) => v === 'auto' || CAT_IDS.includes(v);
+const validCat = (v, user = null) => v === 'auto' || CAT_IDS.includes(v) || (!!user && customIds46(user).includes(v)); // prompt 46: også egne kategorier
 
 api.get('/', async (c) => {
   const user = c.get('user');
@@ -422,9 +425,14 @@ api.get('/', async (c) => {
   const s = settingsOf(user);
   const limit = Math.min(Math.max(parseInt(c.req.query('limit') ?? '40', 10) || 40, 1), 200);
   const cat = c.req.query('cat') || 'siste';
-  if (cat !== 'siste' && !CAT_IDS.includes(cat)) return c.json({ error: 'Ukjent kategori' }, 400);
+  // Prompt 46: også «for-deg» og egne kategorier.
+  const custom = cat !== 'siste' && !CAT_IDS.includes(cat);
+  const customItems = custom ? itemsForCat46(user, cat, { latest, CATEGORIES, limit }) : null;
+  if (custom && !customItems) return c.json({ error: 'Ukjent kategori' }, 400);
+  const co = categoriesOut46(user, CATEGORIES);
   return c.json({
-    items: latest(user, { cat, feed: c.req.query('feed') || null, limit }),
+    items: customItems ?? latest(user, { cat, feed: c.req.query('feed') || null, limit }),
+    tabs: co.tabs, categoryOptions: co.options, customCategories: co.custom, feedHint: co.hint, interests: co.interests,
     feeds: feedsOf(user), settings: settingsOut(s), iconDefaults: ICON_DEFAULTS,
     digest: s.aiSummary ? (({ text, at }) => (text ? { text, at } : null))(kv.get(user, 'rss_digest', {}) ?? {}) : null,
     categories: CATEGORIES,
@@ -451,7 +459,7 @@ api.post('/feeds', async (c) => {
   if (url.length > 500) return c.json({ error: 'Adressen er for lang' }, 400);
   if (db.prepare('SELECT 1 FROM rss_feed WHERE user=? AND url=?').get(user, url)) return c.json({ error: 'Kilden finnes allerede' }, 409);
   const category = b.category ?? 'auto';
-  if (!validCat(category)) return c.json({ error: 'Ukjent kategori' }, 400);
+  if (!validCat(category, user)) return c.json({ error: 'Ukjent kategori' }, 400);
   let parsed;
   try { parsed = await fetchFeed(url); } catch (e) { return c.json({ error: `Kunne ikke lese feeden: ${e.message}` }, 422); }
   const host = (() => { try { return new URL(url).hostname.replace(/^www\./, '').split('.')[0]; } catch { return 'Kilde'; } })();
@@ -463,6 +471,7 @@ api.post('/feeds', async (c) => {
   db.transaction(() => { for (const it of parsed.items.slice(0, MAX_ITEMS)) upsert.run({ feed_id: id, ...it }); })();
   db.prepare('UPDATE rss_feed SET last_fetch=? WHERE id=?').run(Date.now(), id);
   if (settingsOf(user).aiCategorize && category === 'auto') aiCategorize(user).catch(() => {});
+  if (!MOCK) fetchIcon46(feedDomain46(url), url).catch(() => {}); // prompt 46: favicon hentes når adressen legges til
   return c.json({ feed: feedsOf(user).find((x) => x.id === f.id), feeds: feedsOf(user) }, 201);
 });
 
@@ -473,7 +482,7 @@ api.patch('/feeds/:id', async (c) => {
   if (!f) return c.json({ error: 'Fant ikke kilden' }, 404);
   const b = await json(c);
   if (b.name !== undefined) { const n = String(b.name).trim().slice(0, 40); if (!n) return c.json({ error: 'Navnet kan ikke være tomt' }, 400); db.prepare('UPDATE rss_feed SET name=? WHERE id=?').run(n, f.id); }
-  if (b.category !== undefined) { if (!validCat(b.category)) return c.json({ error: 'Ukjent kategori' }, 400); db.prepare('UPDATE rss_feed SET category=? WHERE id=?').run(b.category, f.id); }
+  if (b.category !== undefined) { if (!validCat(b.category, c.get('user'))) return c.json({ error: 'Ukjent kategori' }, 400); db.prepare('UPDATE rss_feed SET category=? WHERE id=?').run(b.category, f.id); }
   if (b.enabled !== undefined) db.prepare('UPDATE rss_feed SET enabled=? WHERE id=?').run(b.enabled ? 1 : 0, f.id);
   if (b.sort !== undefined && Number.isInteger(b.sort)) db.prepare('UPDATE rss_feed SET sort=? WHERE id=?').run(b.sort, f.id);
   return c.json({ feeds: feedsOf(c.get('user')) });
@@ -489,7 +498,7 @@ api.delete('/feeds/:id', (c) => {
 
 api.put('/settings', async (c) => {
   const user = c.get('user'), b = await json(c), next = settingsOf(user);
-  for (const k of ['aiSummary', 'aiCategorize']) if (typeof b[k] === 'boolean') next[k] = b[k];
+  for (const k of ['aiSummary', 'aiCategorize', 'catSummary']) if (typeof b[k] === 'boolean') next[k] = b[k]; // prompt 46: catSummary
   const ic = cleanIcons(b);
   if (ic.error) return c.json({ error: ic.error }, 400);
   Object.assign(next, ic.out);
@@ -507,5 +516,7 @@ api.post('/refresh', async (c) => {
   const s = settingsOf(user), d = kv.get(user, 'rss_digest', null);
   return c.json({ ok: true, feeds: feedsOf(user), digest: s.aiSummary && d?.text ? { text: d.text, at: d.at } : null });
 });
+
+mountNews46(api, { latest, CATEGORIES, settingsOf, settingsOut, feedsOf }); // prompt 46 (SERVER46)
 
 export default api;

@@ -1068,7 +1068,8 @@ export const media43Api = new Hono();
 const fail = (c, e) => {
   if (!(e instanceof MediaError)) console.warn('[media]', c.req.path, e.message);
   const st = e instanceof MediaError ? e.status : 502;
-  return c.json({ error: e.message, ...(e.service ? { service: e.service } : {}), ...(e.configured === false ? { configured: false } : {}), ...(e.field ? { field: e.field } : {}), ...(e.exists ? { exists: true, id: e.id ?? undefined, hash: e.hash ?? undefined } : {}) }, st >= 400 && st < 600 ? st : 502);
+  // Prompt 46: Sonarr/Radarr/qBittorrent avviser nøkkelen → 502 {code:'UPSTREAM_AUTH', service} (aldri «Utlogget fra Homelab»).
+  return c.json({ error: e.message, ...(e.service ? { service: e.service } : {}), ...(e.upstream === 401 || e.upstream === 403 ? { code: 'UPSTREAM_AUTH', upstream: e.upstream } : {}), ...(e.configured === false ? { configured: false } : {}), ...(e.field ? { field: e.field } : {}), ...(e.exists ? { exists: true, id: e.id ?? undefined, hash: e.hash ?? undefined } : {}) }, st >= 400 && st < 600 ? st : 502);
 };
 const H = (fn) => async (c) => { try { return c.json(await fn(c)); } catch (e) { return fail(c, e); } };
 /** GET-lister: ikke satt opp → 200 {configured:false, items:[]}, så klientene viser en tomtilstand. */

@@ -19,6 +19,7 @@
 // GET  /api/hjemlys får i tillegg notices:{mine, received} (Familie → Hjemlys).
 // Offentlig: GET /api/hjemlys/public/:token → {name, text, kind, place, at, eta, expiresAt} · GET /hl/:token → enkel statusside (HTML uten skript).
 import { Hono } from 'hono';
+import { originOf46 } from './public-url46.js'; // prompt 46 (SERVER46)
 import { randomBytes } from 'node:crypto';
 import { db, kv } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
@@ -191,7 +192,7 @@ hjemlys41Api.get('/public/:token', (c) => { const p = publicOf(c.req.param('toke
 hjemlys41Api.use('*', authOrToken);
 const body = async (c) => { const b = await c.req.json().catch(() => ({})); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };
 const fail = (c, e) => c.json({ error: e.message }, e.status ?? 400);
-const originOf = (c) => { try { const u = new URL(c.req.url); const host = c.req.header('x-forwarded-host') ?? u.host; const proto = c.req.header('x-forwarded-proto') ?? u.protocol.replace(':', ''); return `${proto}://${host}`; } catch { return ''; } };
+const originOf = (c) => originOf46(c) || (() => { try { return new URL(c.req.url).origin; } catch { return ''; } })(); // prompt 46: PUBLIC_URL / klarert X-Forwarded-Host, aldri Docker-IP (lenker i varsler)
 
 hjemlys41Api.post('/notice', async (c) => { try { return c.json(await notice41(c.get('user'), await body(c), { origin: originOf(c) })); } catch (e) { return fail(c, e); } });
 hjemlys41Api.post('/status', async (c) => { try { return c.json(await notice41(c.get('user'), await body(c), { origin: originOf(c) })); } catch (e) { return fail(c, e); } });

@@ -556,7 +556,7 @@ const TITLES = { 'tasks.glimt': 'Legger til i Huskeliste', 'weather.week': 'Lese
 const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender', 'calendar.fag': 'Kalender', 'tasks.glimt': 'Huskeliste', 'weather.week': 'Vær' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
-export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null, skipAgent = false, module = 'home', jobId = null } = {}) {
+export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null, skipAgent = false, module = 'home', jobId = null, noWeb = false } = {}) {
   const t0 = Date.now();
   // Prompt 45: handlinger og data-søk (kalender, gjøremål, finans) går gjennom Glimt-motoren: modellen forstår, koden validerer og
   // utfører, datakilden bekrefter. Vær, avganger, pakker, sol, familie, prøveperioder og prat går videre til svarene under.
@@ -590,7 +590,7 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
                   : intent === 'trial.create' ? toolTrial(user, text, today)
                     : intent === 'appointment.create' ? toolAppointment(user, text, today)
                       : intent === 'memory.add' ? await toolMemory(user, text, ctx)
-                        : await routedLlm(user, text, today);
+                        : await routedLlm(user, text, today, { noWeb }); // prompt 46: Nettsøk av → ingen nettverktøy
   } catch (e) {
     console.warn('[glimt]', intent, e?.message ?? e);
     r = { text: `Fikk ikke hentet ${TOOL_OF[intent]?.toLowerCase() ?? 'svaret'} akkurat nå. **Prøv igjen** om litt.`, source: 'Glimt', tool: TOOL_OF[intent], error: String(e?.message ?? e).slice(0, 200) };
@@ -612,7 +612,7 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
  * Prompt 44: fritekst (intent llm) går gjennom rutingen først. power → strømprisen direkte (verktøy, ingen modell);
  * web → eget nettsøk, og modellen svarer ut fra treffene. «Nettsøk» og meta.web bare når søket ga treff.
  */
-async function routedLlm(user, text, today) {
+async function routedLlm(user, text, today, { noWeb = false } = {}) {
   // Bare den lokale regelen her: Glimt-søket skal svare raskt (1,2 s før 202), og hovedmodellen kalles uansett etterpå.
   const route = await routeTools(text, { user, useLlm: false, localOnly: true }).catch(() => ({ tools: ['none'], query: '' }));
   if (route.tools.includes('power')) {
@@ -620,7 +620,7 @@ async function routedLlm(user, text, today) {
     if (!f.error) return { text: f.text.replace(/: snitt ([\d,]+ øre\/kWh)/, ': snitt **$1**'), source: `Strømpris · ${f.source}`, tool: 'Strømpris', engine: 'tool', facts: [f], routeTools: route.tools };
   }
   let web = null;
-  if (route.tools.includes('web')) { try { web = await webSearch(route.query || text); } catch { web = null; } }
+  if (route.tools.includes('web') && !noWeb) { try { web = await webSearch(route.query || text); } catch { web = null; } }
   const r = await toolLlm(user, withDateContext(text, today), web);
   return { ...r, routeTools: route.tools, ...(web?.hits?.length ? { web: webMeta(web), facts: [webFact(web)], used: ['Nettsøk'] } : {}) };
 }

@@ -1,0 +1,55 @@
+{
+ "_kilde": "Anonymisert; formen er fra ha-parcel-integrations (MIT) sine lagrede/syntetiske svar (tests/payloads.py, tests/account/payloads.py) og Bring Tracking API v2.",
+ "TrackingInformationResponse": {
+  "shipments": [
+   {
+    "shipmentId": "00370000000000000103",
+    "service": {
+     "code": "18",
+     "name": "PostNord Parcel"
+    },
+    "consignor": {
+     "name": "Eksempelbutikken",
+     "address": {
+      "countryCode": "NO"
+     }
+    },
+    "consignee": {
+     "name": "Ola Nordmann",
+     "address": {
+      "city": "Oslo",
+      "countryCode": "NO",
+      "postCode": "0150"
+     }
+    },
+    "totalWeight": {
+     "value": "1.25",
+     "unit": "kg"
+    },
+    "status": "RETURNED",
+    "statusText": {
+     "header": "Returned"
+    },
+    "items": [
+     {
+      "itemId": "00370000000000000103",
+      "events": [
+       {
+        "status": "RETURNED",
+        "eventTime": "2026-10-20T10:00:00Z",
+        "eventCode": "80",
+        "eventDescription": "Return to sender"
+       },
+       {
+        "status": "DELIVERED",
+        "eventTime": "2026-10-22T10:00:00Z",
+        "eventCode": "21",
+        "eventDescription": "Delivered to sender"
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

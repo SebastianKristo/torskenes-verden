@@ -123,21 +123,73 @@ export const MYBRING_STATUS = {
   CUSTOMS: 'in_transit', COLLECTED: 'delivered',
 };
 export const mybringStatus = (code, text) => MYBRING_STATUS[String(code ?? '').toUpperCase()] ?? normStatus(code ?? text);
+// Prompt 46 (DATA46): ukjent råstatus logges én gang (så den kan kartlegges), aldri med sporingsnummer eller token.
+const warned46 = new Set();
+export function warnUnknownStatus46(carrier, raw) {
+  const k = `${carrier}:${String(raw ?? '').slice(0, 60)}`;
+  if (!raw || warned46.has(k)) return;
+  warned46.add(k);
+  console.warn(`[sporing] ukjent status fra ${carrier}: «${String(raw).slice(0, 60)}» → vises som Ukjent`);
+}
+/**
+ * Prompt 46: Bring Tracking API v2 (og Postens offentlige sporingsside, samme format) → vårt resultat.
+ * ROTÅRSAK (Bring): det ekte svaret er consignmentSet[].packageSet[] (se nordic-parcel / developer.bring.com). Den gamle koden leste
+ * consignmentSet[0].consignment[0].packageSet[0], som ikke finnes – derfor ble ALLE Posten/Bring-sendinger «Fant ikke sendingen» (404)
+ * selv med gyldig Mybring-nøkkel, og etter 30 dager arkivert som «levert». Begge former godtas (den gamle brukes av eldre tester).
+ */
+export function parseBringV2(d, via = 'mybring') {
+  const set = Array.isArray(d?.consignmentSet) ? d.consignmentSet[0] : null;
+  if (!set) return null; // ikke Bring-format
+  if (set.error) throw new CarrierError(set.error.message ?? 'Fant ikke sendingen', 404);
+  const pkgs = Array.isArray(set.packageSet) ? set.packageSet : Array.isArray(set.consignment?.[0]?.packageSet) ? set.consignment[0].packageSet : [];
+  const pkg = pkgs[0];
+  if (!pkg) throw new CarrierError('Fant ikke sendingen', 404);
+  const evs = Array.isArray(pkg.eventSet) ? pkg.eventSet : [];
+  const events = evs.map((e) => ev(e.dateIso ?? e.displayDate, e.description ?? e.status, [e.city, e.country].filter(Boolean).join(', ')));
+  const pickup = evs.find((e) => /READY_FOR_PICKUP|NOTIFICATION_SENT/.test(e.status ?? ''));
+  const top = evs[0];
+  const status = mybringStatus(top?.status, top?.description);
+  if (top?.status && !MYBRING_STATUS[String(top.status).toUpperCase()] && status === 'unknown') warnUnknownStatus46('bring', top.status);
+  const unit = pickup?.unitInformation ?? {};
+  const deadline = pkg.dateOfReturn ?? pkg.lastRetrievalDate ?? pickup?.lastRetrievalDate ?? null;
+  const etaRaw = pkg.dateOfEstimatedDelivery ?? set.dateOfEstimatedDelivery ?? null;
+  const dims = [pkg.lengthInCm, pkg.widthInCm, pkg.heightInCm].map((x) => (x == null || x === '' ? null : +x));
+  return { status, canonical: canonical41(status), rawStatus: top?.status ?? null, eta: etaRaw && status !== 'delivered' ? String(etaRaw).slice(0, 10) : null, pickupPoint: unit.name ?? null,
+    pickup: status === 'ready_for_pickup' && (unit.name || deadline) ? { name: unit.name ?? null, deadline: deadline ? String(deadline).slice(0, 10) : null } : null, events,
+    sender: set.senderName ?? pkg.senderName ?? null, weight: pkg.weightInKgs != null ? +pkg.weightInKgs : set.totalWeightInKgs != null ? +set.totalWeightInKgs : null,
+    dimensions: dims.every((x) => Number.isFinite(x)) ? { length: dims[0], width: dims[1], height: dims[2], text: `${dims.map((x) => Math.round(x)).join(' x ')} cm` } : null,
+    packages: pkgs.length, via, source: via };
+}
 async function bring(no) {
   const uid = trkCfg('mybringUid'), key = trkCfg('mybringKey');
   if (!uid || !key) throw new CarrierError('Mangler Mybring-bruker og API-nøkkel');
   const d = await getJson(`https://api.bring.com/tracking/api/v2/tracking.json?q=${encodeURIComponent(no)}&lang=no`, {
     headers: { 'X-Mybring-API-Uid': uid, 'X-Mybring-API-Key': key, 'X-Bring-Client-URL': 'https://github.com/SebastianKristo/torskenes-verden', Accept: 'application/json' } });
-  const set = d.consignmentSet?.[0], pkg = set?.consignment?.[0]?.packageSet?.[0];
-  if (set?.error || !pkg) throw new CarrierError(set?.error?.message ?? 'Fant ikke sendingen', 404);
-  const events = (pkg.eventSet ?? []).map((e) => ev(e.dateIso, e.description ?? e.status, [e.city, e.country].filter(Boolean).join(', ')));
-  const pickup = (pkg.eventSet ?? []).find((e) => /READY_FOR_PICKUP|NOTIFICATION_SENT/.test(e.status ?? ''));
-  const top = pkg.eventSet?.[0];
-  const status = mybringStatus(top?.status, top?.description);
-  const unit = pickup?.unitInformation ?? {};
-  const deadline = pkg.dateOfReturn ?? pkg.lastRetrievalDate ?? pickup?.lastRetrievalDate ?? null;
-  return { status, eta: pkg.dateOfEstimatedDelivery ?? null, pickupPoint: unit.name ?? null,
-    pickup: status === 'ready_for_pickup' && (unit.name || deadline) ? { name: unit.name ?? null, deadline: deadline ? String(deadline).slice(0, 10) : null } : null, events };
+  const r = parseBringV2(d, 'mybring');
+  if (!r) throw new CarrierError('Bring: uventet svar', 502);
+  return r;
+}
+// Prompt 46: Posten/Bring uten Mybring-nøkkel – Postens offentlige sporingsside (sporing.posten.no) bruker samme JSON-format som
+// Tracking API v2. UOFFISIELT: kan endres uten varsel. 404/403/HTML regnes IKKE som «fant ikke» (da ville pakken blitt arkivert
+// etter 30 dager), bare et eksplisitt consignmentSet[].error. Maks ett oppslag per nummer hvert 15. minutt.
+export const POSTEN_WEB_URL = 'https://sporing.posten.no/tracking/api/fetch';
+const postenWebCache = new Map();
+export const _clearPostenWebCache = () => postenWebCache.clear();
+export async function postenWeb(no) {
+  const hit = postenWebCache.get(no);
+  if (hit && Date.now() - hit.at < 15 * 60_000) return hit.value;
+  let res, body = '';
+  const url = `${POSTEN_WEB_URL}?query=${encodeURIComponent(no)}&lang=no`;
+  try { res = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(TIMEOUT) }); body = await res.text(); }
+  catch (e) { throw new CarrierError(`Posten svarer ikke akkurat nå (${e.message})`, 503); }
+  pnLog42(no, { layer: 'Posten', url, status: res.status, body: body.slice(0, 300), variant: 'offentlig' });
+  if (!res.ok) throw new CarrierError(`Posten (offentlig) svarte ${res.status}`, 503);
+  let d; try { d = JSON.parse(body); } catch { throw new CarrierError('Posten (offentlig) svarte ikke med JSON', 503); }
+  const value = parseBringV2(d, 'posten-web');
+  if (!value) throw new CarrierError('Posten (offentlig): uventet svar', 503);
+  value.unofficial = true;
+  postenWebCache.set(no, { at: Date.now(), value });
+  return value;
 }
 
 // PostNord Track & Trace (developer.postnord.com). API-nøkkel som query-parameter.
@@ -185,7 +237,7 @@ export const PN_WEB_MS = 15 * 60_000;
 const pnWebCache = new Map(); // nummer → { at, value }
 const pnBlock = { until: 0, ms: 0 }; // backoff ved 401/403/429
 const pnHealth = { ok: null, lastOkAt: null, lastErrorAt: null, lastError: null, shapeOk: true, shapeErrorAt: null, notifiedAt: 0, calls: 0, blockedUntil: null };
-export const _clearPostnordWebCache = () => { pnWebCache.clear(); pnBlock.until = 0; pnBlock.ms = 0; pnVariantOk.clear(); pnFails.clear(); };
+export const _clearPostnordWebCache = () => { pnWebCache.clear(); pnBlock.until = 0; pnBlock.ms = 0; pnVariantOk.clear(); pnFails.clear(); pnProfile46 = 'ha'; };
 const pnFails = new Map(); // prompt 42: nummer → antall mislykkede PostNord-forsøk på rad (reserve etter 2)
 const txt = (v) => (v == null ? '' : typeof v === 'string' ? v : typeof v === 'object' ? String(v.displayName ?? v.locationName ?? v.name ?? v.header ?? v.text ?? v.city ?? '') : String(v));
 let pnAdminNotify = null;
@@ -215,6 +267,17 @@ export function pnLog42(no, entry) {
 export const pnDebugOf42 = (no) => pnDebug.get(normNo(no)) ?? [];
 export const PN_HEADERS42 = { 'x-bap-key': POSTNORD_BAP_KEY, Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
   Origin: 'https://www.postnord.no', Referer: 'https://www.postnord.no/' };
+// Prompt 46 (DATA46) – ROTÅRSAK (PostNord), fra koden (ikke verifisert mot ekte svar herfra – utgående nett er stengt i byggemiljøet):
+//  1) Med en lagret (gammel/ugyldig) postnordKey gikk alt til findByIdentifier.json → 401/403 → feilen ble kastet, og recipientview ble aldri prøvd.
+//  2) Prompt 42 sendte seg ut som Safari (User-Agent + Origin/Referer postnord.no) fra Node. Bot-vern hos PostNord kan svare 403/«Access denied»
+//     på en «nettleser» uten nettleserens TLS-fingeravtrykk, og én 403 satte en FELLES backoff for alle PostNord-oppslag (30 min → … 6 t).
+// ha-postnord (MIT), som er bekreftet mot ekte svar, sender bare X-Bap-Key. Nå: samme headere som ha-postnord først; avvises de, prøves
+// nettleser-headerne én gang før backoff, og profilen som virket huskes. Backoff er maks 1 t. Avvist nøkkel → recipientview (fetchStatus).
+export const PN_HEADERS_HA46 = { 'x-bap-key': POSTNORD_BAP_KEY, Accept: 'application/json' };
+const PN_PROFILES46 = { ha: PN_HEADERS_HA46, browser: PN_HEADERS42 };
+let pnProfile46 = 'ha';
+export const pnProfile46Of = () => pnProfile46;
+const PN_BLOCK_MAX46 = 3600_000;
 const pnVariantOk = new Map(); // nummer → varianten som virket sist
 /** Nummervarianter i rekkefølge: slik det står (locale en, som ha-postnord) → locale no → uten ledende 00 (SSCC 20 → 18 sifre) → som itemId → som shipmentId. */
 export function pnVariants42(no) {
@@ -231,21 +294,27 @@ export async function postnordWeb(no) {
   if (pnBlock.until > Date.now()) { pnLog42(no, { layer: 'backend', error: 'venter (backoff etter 403/429)', variant: null }); throw new CarrierError('PostNord svarer ikke akkurat nå', 429); }
   let empty = null, notFound = false;
   for (const v of pnVariants42(no)) {
-    pnHealth.calls++;
-    const url = pnUrl(v), t0 = Date.now();
+    const url = pnUrl(v);
     let res, body = '';
-    try {
-      res = await fetch(url, { headers: PN_HEADERS42, signal: AbortSignal.timeout(TIMEOUT) });
-      body = await res.text();
-    } catch (e) {
-      pnHealth.ok = false; pnHealth.lastError = e.message; pnHealth.lastErrorAt = Date.now();
-      pnLog42(no, { layer: 'PostNord', url, headers: { ...PN_HEADERS42 }, status: null, body: null, variant: v.label, ms: Date.now() - t0, error: e.message });
-      throw new CarrierError(`PostNord svarer ikke akkurat nå (${e.message})`, 503);
+    // Prompt 46: headerprofilen som virket sist først (standard ha-postnord), den andre bare ved 401/403.
+    for (const prof of [pnProfile46, pnProfile46 === 'ha' ? 'browser' : 'ha']) {
+      pnHealth.calls++;
+      const headers = PN_PROFILES46[prof], t0 = Date.now();
+      try {
+        res = await fetch(url, { headers, signal: AbortSignal.timeout(TIMEOUT) });
+        body = await res.text();
+      } catch (e) {
+        pnHealth.ok = false; pnHealth.lastError = e.message; pnHealth.lastErrorAt = Date.now();
+        pnLog42(no, { layer: 'PostNord', url, headers: { ...headers }, status: null, body: null, variant: v.label, profile: prof, ms: Date.now() - t0, error: e.message });
+        throw new CarrierError(`PostNord svarer ikke akkurat nå (${e.message})`, 503);
+      }
+      pnLog42(no, { layer: 'PostNord', url, headers: { ...headers }, status: res.status, body: body.slice(0, 500), variant: v.label, profile: prof, ms: Date.now() - t0 });
+      if (![401, 403].includes(res.status)) { pnProfile46 = prof; break; }
     }
-    pnLog42(no, { layer: 'PostNord', url, headers: { ...PN_HEADERS42 }, status: res.status, body: body.slice(0, 500), variant: v.label, ms: Date.now() - t0 });
     if ([401, 403, 429].includes(res.status)) {
-      pnBlock.ms = Math.min(6 * 3600_000, pnBlock.ms ? pnBlock.ms * 2 : 2 * PN_WEB_MS); pnBlock.until = Date.now() + pnBlock.ms;
+      pnBlock.ms = Math.min(PN_BLOCK_MAX46, pnBlock.ms ? pnBlock.ms * 2 : PN_WEB_MS); pnBlock.until = Date.now() + pnBlock.ms;
       pnHealth.ok = false; pnHealth.lastError = `HTTP ${res.status}`; pnHealth.lastErrorAt = Date.now();
+      console.warn(`[sporing] PostNord (offentlig) svarte ${res.status} med begge headerprofiler – venter ${Math.round(pnBlock.ms / 60_000)} min`);
       throw new CarrierError('PostNord svarer ikke akkurat nå', res.status);
     }
     if (res.status === 404) { notFound = true; continue; }
@@ -288,6 +357,7 @@ function pnParse(d, list) {
   if (status === 'in_transit' && String(newest?.eventCode) === PN_OUT_FOR_DELIVERY_EVENT) status = 'out_for_delivery'; // kode 113 = «delivery in progress»
   if (newest && PN_RETENTION_EVENTS.includes(String(newest.eventCode))) status = 'ready_for_pickup'; // forlenget hentefrist
   if (status === 'returned' && newest?.status === 'DELIVERED') status = 'delivered'; // returen er framme hos avsender
+  if (status === 'unknown' && typeof code === 'string' && code && code.toUpperCase() !== 'OTHER') warnUnknownStatus46('postnord', code);
   if (status === 'unknown' && events[0]) status = normStatus(events[0].status);
   const dpObj = [sh.destinationDeliveryPoint, sh.deliveryPoint, items[0]?.deliveryPoint].find((x) => x && typeof x === 'object' && (x.name || x.displayName));
   const waiting = dated.find(({ e }) => e.status === 'AVAILABLE_FOR_DELIVERY')?.e;
@@ -432,8 +502,24 @@ export const configured = {
 export const isConfigured = (carrier) => (configured[carrier] ?? configured.other)();
 // Tydelig melding når selskapets egen nøkkel mangler (vises i Sporing og under Integrasjoner → Sporing).
 export function missingKeyText(carrier) {
-  if (carrier === 'posten' || carrier === 'bring') return configured.posten() ? null : 'Mangler Mybring-nøkkel (mybringUid og mybringKey) under Integrasjoner → Sporing. ParcelsApp brukes som reserve.';
+  // Prompt 46: uten Mybring-nøkkel brukes Posten-kontoen (hvis innlogget) og Postens offentlige sporingsside.
+  if (carrier === 'posten' || carrier === 'bring') return configured.posten() ? null : 'Uten Mybring-nøkkel hentes status fra Posten-kontoen din (hvis innlogget) eller Postens offentlige sporingsside (uoffisielt), med ParcelsApp som reserve.';
   if (carrier === 'postnord') return configured.postnord() ? null : 'Uten PostNord-nøkkel hentes status fra PostNords offentlige sporingsside (uoffisielt), med ParcelsApp som reserve.';
+  return null;
+}
+
+// Prompt 46: kontoene (tracking46.js) kan svare for et nummer de allerede har i innboksen: (carrier, nummer) → resultat | null.
+let accountLookup46 = null;
+export const setAccountLookup46 = (fn) => { accountLookup46 = fn; };
+const NORDIC46 = ['posten', 'bring', 'postnord'];
+const sibling46 = (c) => (c === 'postnord' ? 'posten' : 'postnord');
+/** Prompt 46: SSCC-numre (18–20 sifre) sier ikke hvem som frakter (prefikset er avsenderens). Ett nøkkelfritt oppslag hos den andre. */
+async function siblingTry46(carrier, n) {
+  const sib = sibling46(carrier);
+  try {
+    const r = sib === 'postnord' ? await postnordWeb(n) : configured.posten() ? await bring(n).catch(() => postenWeb(n)) : await postenWeb(n);
+    if (r && !r.notScanned) return { ...r, carrierFound: sib };
+  } catch { /* ingen treff hos den andre heller */ }
   return null;
 }
 
@@ -441,7 +527,20 @@ export function missingKeyText(carrier) {
 // (bare når allowParcelsapp er satt, dvs. når brukeren selv ber om status).
 // override (prompt 26): transportøren brukeren har valgt. «parcelsapp» går rett til ParcelsApp med hint (gjenkjent transportør);
 // et selskap med egen klient (Posten/Bring, PostNord, DHL, UPS) bruker sitt API først, ellers reservene med selskapet som hint.
-export async function fetchStatus(carrier, no, { allowParcelsapp: allow0 = false, override = null, hint = null } = {}) {
+export async function fetchStatus(carrier, no, opts = {}) {
+  const n = normNo(no);
+  if (opts.override || !NORDIC46.includes(carrier) || !/^\d{18,20}$/.test(n)) return fetchStatus0(carrier, no, opts);
+  let r;
+  try { r = await fetchStatus0(carrier, no, opts); } catch (e) {
+    if (e.status !== 404) throw e;
+    const s = await siblingTry46(carrier, n);
+    if (s) return s;
+    throw e;
+  }
+  if (r?.notScanned) { const s = await siblingTry46(carrier, n); if (s) return s; }
+  return r;
+}
+async function fetchStatus0(carrier, no, { allowParcelsapp: allow0 = false, override = null, hint = null } = {}) {
   let allowParcelsapp = allow0;
   const n = normNo(no);
   if (override === 'parcelsapp') {
@@ -449,16 +548,32 @@ export async function fetchStatus(carrier, no, { allowParcelsapp: allow0 = false
     return parcelsapp(n, hint ?? carrier);
   }
   if (override && override !== carrier) carrier = override;
+  // Prompt 46: innlogget konto (Posten/Bring eller PostNord) som allerede kjenner nummeret.
+  if (accountLookup46 && NORDIC46.includes(carrier)) { try { const a = await accountLookup46(carrier, n); if (a) return a; } catch { /* nummeret spores videre under */ } }
   const own = CLIENT[carrier];
-  let err = null, err404 = null;
+  let err = null, err404 = null, keyRejected = false;
   // Selskapets eget API først. Feiler det (ikke «fant ikke»), prøves reservene (prompt 22).
   if (own && isConfigured(carrier)) {
-    try { return await own(n); } catch (e) { if (e.status === 404 || !(isConfigured('other') || (allowParcelsapp && trkCfg('trk_parcelsapp_key')))) throw e; err = e; }
+    try { return await own(n); } catch (e) {
+      // Prompt 46: avvist PostNord-/Mybring-nøkkel (401/403) skal ikke stoppe sporingen – de nøkkelfrie kildene prøves.
+      keyRejected = [401, 403].includes(e.status) && NORDIC46.includes(carrier);
+      if (!keyRejected && (e.status === 404 || !(isConfigured('other') || (allowParcelsapp && trkCfg('trk_parcelsapp_key'))))) throw e;
+      err = e;
+      if (keyRejected) console.warn(`[sporing] ${CARRIER[carrier]?.name ?? carrier}: nøkkelen ble avvist (${e.status}) – bruker offentlig sporing`);
+    }
+  }
+  // Prompt 46: Posten/Bring uten (gyldig) Mybring-nøkkel: Postens offentlige sporingsside.
+  if ((carrier === 'posten' || carrier === 'bring') && (!isConfigured(carrier) || keyRejected)) {
+    try { return await postenWeb(n); } catch (e) {
+      console.debug?.(`[sporing] posten-web: ${e.message}`);
+      if (e.status === 404) err404 = e;
+      else err ??= new CarrierError(`Fikk ikke status fra Postens offentlige sporing (${e.message}). Logg inn med Posten-kontoen eller legg inn Mybring-nøkkel under Integrasjoner → Sporing.`, e.status);
+    }
   }
   // PostNord uten nøkkel: den offentlige sporingssiden (uoffisielt). Feil logges stille, og reservene prøves.
-  if (carrier === 'postnord' && !isConfigured('postnord')) {
+  if (carrier === 'postnord' && (!isConfigured('postnord') || keyRejected)) {
     try { const r = await postnordWeb(n); pnFails.delete(n); return r; } catch (e) {
-      console.debug?.(`[sporing] postnord-web: ${e.message}`); err ??= e.status === 404 ? null : e; if (e.status === 404) err404 = e;
+      console.debug?.(`[sporing] postnord-web: ${e.message}`); if (e.status === 404) err404 = e; else if (!keyRejected) err ??= e; else err = e;
       // Prompt 42: etter 2 mislykkede PostNord-forsøk prøves ParcelsApp (nøkkel/kvote) og 17TRACK automatisk, også i bakgrunnen.
       const nf = (pnFails.get(n) ?? 0) + 1; pnFails.set(n, nf);
       if (nf >= 2) allowParcelsapp = true;
@@ -469,8 +584,8 @@ export async function fetchStatus(carrier, no, { allowParcelsapp: allow0 = false
   }
   if (isConfigured('other')) { try { const r = await track17(n); return carrier === 'postnord' ? { ...r, via: r.via ?? '17track', viaLabel: 'via 17TRACK' } : r; } catch (e) { err ??= e; } }
   if (allowParcelsapp && trkCfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) return parcelsapp(n, override ? carrier : hint ?? carrier);
-  if (err) throw err;
   if (err404) throw err404;
+  if (err) throw err;
   throw new CarrierError(own ? `Mangler nøkkel for ${CARRIER[carrier]?.name ?? carrier}` : 'Ingen nøkkel for 17TRACK eller ParcelsApp (reserve)');
 }
 

@@ -278,11 +278,11 @@ function view(r0) {
     lastEvent: lastEventOf(events), updateError, statusUnverified: !!r.last_error && !r.ok_at && r.source !== 'finn',
     noEtaText: status === 'registered' && !r.eta ? 'Ingen leveringsdato ennå' : null,
     archived: !!r.archived, delayed: status === 'delayed', updatedAt: r.updated_at, checkedAt: r.checked_at, nextCheckAt: next ? new Date(next).toISOString() : null,
-    rawStatus: r.raw_status ?? null, canonicalStatus: canonical41(status), notScanned: !!r.not_scanned, ...(r.not_scanned ? { notScannedText: 'Ikke skannet ennå' } : {}), // prompt 41
+    rawStatus: r.raw_status ?? null, canonicalStatus: canonical41(status), notScanned: !!r.not_scanned, ...(r.not_scanned ? { notScannedText: 'Ikke skannet ennå', waitingText: 'Venter på første skanning' } : {}), // prompt 41 (+ prompt 46: waitingText)
     lastError: r.last_error, url: trackUrl(r.carrier, r.tracking_no), keyed: isConfigured(r.carrier), keyMissing: missingKeyText(r.carrier),
     // Prompt 42: de interne linjene («Spores via …») vises ikke i hendelseslista (de ligger i «Detaljer for feilsøking»).
     events: events.filter((e) => !/^Spores (nå )?via /.test(e.status)).map(({ ts, status: st, location }) => ({ ts, status: st, location })),
-    via: r.via ?? null, viaLabel: r.via === 'parcelsapp' ? 'via ParcelsApp' : r.via === '17track' ? 'via 17TRACK' : r.via === 'cainiao' ? 'via Cainiao' : r.via === 'postnord-web' ? 'via PostNord' : null,
+    via: r.via ?? null, viaLabel: r.via === 'parcelsapp' ? 'via ParcelsApp' : r.via === '17track' ? 'via 17TRACK' : r.via === 'cainiao' ? 'via Cainiao' : r.via === 'postnord-web' ? 'via PostNord' : r.via === 'posten-web' ? 'via Posten' : r.via === 'posten-konto' ? 'via Posten-kontoen' : r.via === 'postnord-konto' ? 'via PostNord-kontoen' : null, // prompt 46: Posten offentlig og kontoene
     ...(r.local_no ? { localNo: r.local_no, localCarrier: r.local_carrier, localCarrierName: CARRIER[r.local_carrier]?.name ?? null } : {}),
     ...(r.carrier === 'aliexpress' || r.order_id ? { orderId: r.order_id ?? null, items: (() => { try { return JSON.parse(r.items ?? '[]'); } catch { return []; } })(),
       orderUrl: r.order_id ? `https://www.aliexpress.com/p/order/detail.html?orderId=${r.order_id}` : null, cainiaoUrl: `https://global.cainiao.com/detail.htm?mailNoList=${encodeURIComponent(r.tracking_no)}` } : {}),
@@ -360,6 +360,8 @@ function applyResult(r, res, { api = false } = {}) {
   q(`UPDATE hl_shipments SET status=?, eta=COALESCE(?, eta), pickup_point=COALESCE(?, pickup_point), pickup_deadline=COALESCE(?, pickup_deadline), last_error=NULL, checked_at=?,
       ok_at=CASE WHEN ? THEN ? ELSE ok_at END, updated_at=CASE WHEN status<>? THEN ? ELSE updated_at END WHERE id=?`)
     .run(status, res.eta ?? null, res.pickupPoint ?? res.pickup?.name ?? null, res.pickup?.deadline ?? null, now(), api ? 1 : 0, now(), status, now(), r.id);
+  // Prompt 46: SSCC-nummeret ble funnet hos den andre nordiske transportøren (Posten ↔ PostNord) – bytt når brukeren ikke har valgt selv.
+  if (res.carrierFound && CARRIER[res.carrierFound] && !r.carrier_override && res.carrierFound !== r.carrier) q('UPDATE hl_shipments SET carrier=? WHERE id=?').run(res.carrierFound, r.id);
   if (res.via || res.localNo) q('UPDATE hl_shipments SET via=COALESCE(?, via), local_no=COALESCE(?, local_no), local_carrier=COALESCE(?, local_carrier) WHERE id=?').run(res.via ?? null, res.localNo ?? null, res.localCarrier ?? null, r.id); // prompt 42
   if ('rawStatus' in res || 'notScanned' in res) q('UPDATE hl_shipments SET raw_status=COALESCE(?, raw_status), not_scanned=? WHERE id=?').run(res.rawStatus ?? null, res.notScanned ? 1 : 0, r.id); // prompt 41
   pushChange41(r, status, res);
@@ -493,6 +495,8 @@ let aliHook42 = null;
 /** Prompt 42: AliExpress-mappen skannes i samme runde (tracking42.js). */
 export const setAliHook42 = (fn) => { aliHook42 = fn; };
 export const trk42 = { refresh: (r, o) => refresh(r, o), byId: (id) => byId(id), view: (r) => view(r), addEvent: (...a) => addEvent(...a) };
+/** Prompt 46 (tracking46.js): kontoene lagrer status med samme regler (hendelser, varsler, push) som nummersporingen. */
+export const trk46 = { applyResult: (r, res, o) => applyResult(r, res, o), byId: (id) => byId(id), view: (r) => view(r), changed: (u, action, extra) => broadcast('tracking', { action, ...extra }, [u]) };
 const running = new Map();
 function checkUser(u, { force = false } = {}) {
   if (running.has(u)) return running.get(u);
@@ -515,6 +519,8 @@ function checkUser(u, { force = false } = {}) {
     let updated = 0;
     for (const r of due.slice(0, 40)) if (await refresh(r)) updated++;
     if (sources(u).autoArchive?.on) q("UPDATE hl_shipments SET archived=1 WHERE user_id=? AND archived=0 AND status IN ('delivered','returned') AND updated_at < ?").run(u, now() - 3 * 86400_000);
+    // Prompt 46 (som ha-parcel-integrations): levert/returnert beholdes i 7 dager, deretter Arkiv.
+    else q("UPDATE hl_shipments SET archived=1 WHERE user_id=? AND archived=0 AND status IN ('delivered','returned') AND updated_at < ?").run(u, now() - 7 * 86400_000);
     for (const r of q("SELECT * FROM hl_shipments WHERE user_id=? AND archived=0 AND source='email' AND status='delivered'").all(u)) archiveIfOld(r);
     kv.set(u, 'trk_last_run', now());
     if (found || updated) broadcast('tracking', { action: 'checked', found, updated }, [u]);

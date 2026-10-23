@@ -21,6 +21,7 @@
 // Samtaleinnstillinger (chat.settings): persona, system, temperature, topP, numCtx, theme, skipCloudAsk og think (av som
 // standard; på → Ollama får think:true, av → think:false, se server/ollama-opts.js).
 import { Hono } from 'hono';
+import { originOf46 } from './public-url46.js'; // prompt 46 (SERVER46)
 import { streamSSE } from 'hono/streaming';
 import { bodyLimit } from 'hono/body-limit';
 import { randomUUID, randomBytes } from 'node:crypto';
@@ -542,7 +543,7 @@ api.post('/chats/:id/share', (c) => {
   if (!r) return c.json({ error: 'Fant ikke samtalen' }, 404);
   const token = r.share_token || randomBytes(18).toString('base64url');
   if (!r.share_token) q('UPDATE hl_chats SET share_token=? WHERE id=?').run(token, r.id);
-  const origin = (() => { try { const u = new URL(c.req.url); const host = c.req.header('x-forwarded-host') ?? u.host; return `${c.req.header('x-forwarded-proto') ?? u.protocol.replace(':', '')}://${host}`; } catch { return ''; } })();
+  const origin = originOf46(c) || (() => { try { return new URL(c.req.url).origin; } catch { return ''; } })(); // prompt 46: PUBLIC_URL / klarert X-Forwarded-Host, aldri Docker-IP
   return c.json({ url: `${origin}/api/chat/shared/${token}`, token });
 });
 api.delete('/chats/:id/share', (c) => { q('UPDATE hl_chats SET share_token=NULL WHERE id=? AND user_id=?').run(c.req.param('id'), c.get('user')); return c.json({ ok: true }); });
@@ -707,6 +708,11 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
   // Prompt 44: rutingen før hovedmodellen. Bare delene av «Mine data» rutingen valgte legges ved (ikke Finans, Kalender og
   // Huskeliste på «hvem er statsminister i England»). «Nettsøk»-knappen (b.webSearch) tvinger web.
   const route = b.noTools ? { tools: ['none'], query: '', via: 'av', ms: 0 } : await routeTools(routeTextOf(history), { user: u, forceWeb: !!b.webSearch, localOnly: m.kind !== 'sky', useLlm: !isMock() }).catch(() => ({ tools: ['none'], query: '', via: 'feil', ms: 0 }));
+  // Prompt 46 (GLIMT46): Nettsøk av (webSearch:false fra appene) = ingen nettkall i det hele tatt – heller ikke vårt eget søk eller
+  // Open WebUIs (features.web_search:false, tool_ids:[] i hvert kall, se ai-gate owuiBody). Ville rutingen søke, sier Glimt fra.
+  const webOff = b.webSearch === false;
+  const wantedWeb = webOff && route.tools.includes('web');
+  if (webOff) { route.tools = route.tools.filter((x) => x !== 'web'); if (!route.tools.length) route.tools = ['none']; route.query = ''; }
   const data = wantData ? (b.noTools ? await myData(u) : pickData(await myData(u), route.tools)) : null; // noTools: uten ruting, som før
   const fileTexts = files.filter((f) => f.text).map((f) => ({ name: f.name, text: f.text.slice(0, 20_000) }));
   const owuiFiles = files.map((f) => (f.kb ? { type: 'collection', id: f.kb } : f.owui_id ? { type: 'file', id: f.owui_id } : null)).filter(Boolean);
@@ -779,6 +785,10 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
         }
       } catch (e) { console.warn('[chat] nettsøk (prompt 44):', e.message); }
     }
+    if (wantedWeb) {
+      sysAll = `${sysAll}\n\nNettsøk er slått av av brukeren. Ikke søk på nettet og ikke finn på ferske nyheter eller tall. Trenger svaret fersk informasjon fra nettet, si kort: «Nettsøk er av. Skal jeg søke på nettet for dette?»`;
+      if (!sse.aborted) await sse.writeSSE({ event: 'websearch_off', data: JSON.stringify({ question: 'Nettsøk er av. Skal jeg søke på nettet for dette?', action: { label: 'Søk denne gangen', webSearch: true, once: true } }) });
+    }
     const webHits = !!web?.hits?.length;
     const metaFacts = { ...(facts.length ? { facts } : {}), ...(webHits ? { web: webMeta(web) } : {}) };
     // Prompt 44: Chat i jobbloggen med backend, rutingsvalget og nettsøket.
@@ -800,13 +810,13 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
       const ms = Date.now() - t0;
       const genS = Math.max(0.001, (Date.now() - (first ?? t0)) / 1000);
       const tokensPerSec = Math.round((r.tokens?.perSec ?? (r.tokens?.count ?? Math.ceil(text.length / 4)) / genS) * 10) / 10;
-      const allUsed = [...new Set([...factUsed, ...used, ...(r.usedWeb ? ['Nettsøk'] : [])])]; // usedWeb: Open WebUI sendte kilder (sources)
+      const allUsed = [...new Set([...factUsed, ...used, ...(r.usedWeb && !webOff ? ['Nettsøk'] : [])])]; // usedWeb: Open WebUI sendte kilder (sources); prompt 46: aldri når Nettsøk er av
       const autoDone = auto ? { auto: { model: used41.id, modelName: used41.name, kind: auto.kind, label: `${auto.label} · ${String(tokensPerSec).replace('.', ',')} tok/s · ${String(Math.round(ms / 100) / 10).replace('.', ',')} s`, reason: auto.reason, ...(auto.fallbackFrom ? { fallbackFrom: auto.fallbackFrom } : {}) } } : {};
       if (auto) recordAuto41(u, { model: used41.id, kind: auto.kind, ttftMs: first ? first - t0 : null, tps: tokensPerSec, chatId });
       saveMsgs(text, { model: used41.id, tokensPerSec, ms, used: allUsed, ...metaFacts, ...autoDone });
       const tl = r.telemetry;
       jobEnd(jobId, { model: used41.id, ms, step: null, ...(tl ? { backend: tl.backend, backendNote: tl.backendNote ?? null, queueMs: tl.queueMs, loadMs: tl.loadMs, genMs: tl.genMs, attempts: tl.attempts, tokIn: tl.tokIn, tokOut: tl.tokOut } : { backend: r.engine }) });
-      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, tools: route.tools, ...(tl?.backend ? { backend: tl.backend } : {}), ...metaFacts, ...autoDone }) });
+      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, tools: route.tools, ...(tl?.backend ? { backend: tl.backend } : {}), ...metaFacts, ...autoDone, ...(webOff ? { webSearch: false } : {}), ...(wantedWeb ? { webSearchOff: { question: 'Nettsøk er av. Skal jeg søke på nettet for dette?', action: { label: 'Søk denne gangen', webSearch: true, once: true } } } : {}) }) });
     } catch (e) {
       const tl = e.telemetry;
       jobUpdate(jobId, { status: ctrl.signal.aborted || e.cancelled ? 'cancelled' : 'fail', error: ctrl.signal.aborted || e.cancelled ? 'Avbrutt av bruker' : e.message, ms: Date.now() - t0, step: null,

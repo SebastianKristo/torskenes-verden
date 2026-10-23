@@ -24,6 +24,8 @@ import { db, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { addMemory43, removeMemory43, splitMemory43 } from './ai-memory43.js';
 import { messageText43, memoryFrom43 } from './claude-import43.js';
+// Prompt 46 (SERVER46): minne-eksporten fra Claude (claude-memory-<dato>/areas/*.md) – se claude-memory46.js.
+import { isMemoryMd46, parseMemoryMd46, areasPreview46, importAreas46, undoAreas46, embedAreas46, LIMITS46 } from './claude-memory46.js';
 
 const q = (sql) => db.prepare(sql);
 export const LIMITS45 = { upload: 1024 ** 3, chunk: 16 * 1024 ** 2, unzipped: 2 * 1024 ** 3, entry: 1024 ** 3, entries: 20_000, smallFile: 64 * 1024 ** 2, conversations: 50_000, msgChars: 200_000 };
@@ -227,6 +229,7 @@ export async function readExport45(input, { name = '', source = 'auto' } = {}) {
     const isZip = head.length === 4 && head.readUInt32LE(0) === 0x04034b50;
     const files = [], convs = [];
     let projects = [], memory = [], detected = source !== 'auto' ? source : null;
+    const areas = []; // prompt 46: minneområder fra Markdown
     const take = (kind, x) => { if (convs.length >= LIMITS45.conversations) return; const cv = kind === 'chatgpt' ? chatgptConv45(x) : claudeConv45(x); if (cv.messages.length) convs.push(cv); };
     const kindOf = (x) => (x && typeof x === 'object' ? (x.mapping ? 'chatgpt' : Array.isArray(x.chat_messages) ? 'claude' : x.messages ? 'claude' : null) : null);
     const eat = async (chunks) => { let k = detected === 'gemini' ? null : detected; await streamJsonArray45(chunks, (x) => { const kk = kindOf(x); if (!k && kk) k = kk; take(kk ?? k ?? 'claude', x); }); detected ??= k ?? 'claude'; };
@@ -239,6 +242,11 @@ export async function readExport45(input, { name = '', source = 'auto' } = {}) {
       const base = (n) => n.split('/').pop();
       const conv = entries.find((e) => /^conversations[^/]*\.json$/i.test(base(e.name)));
       const gem = entries.filter((e) => isGeminiPath(e.name));
+      // Prompt 46: minne-eksporten (Markdown) og memories.json kjennes igjen på innholdet. Uten samtaler godtas alle .md-filer.
+      const memFile = (n) => /^(memor(y|ies)|conversations_memory|user_memories?)[^/]*\.(json|md|txt)$/i.test(base(n));
+      const strictMd = !!conv || gem.length > 0;
+      const mdAll = entries.filter((e) => /\.(md|markdown)$/i.test(e.name));
+      const md = entries.filter((e) => isMemoryMd46(e.name, { strict: strictMd })).slice(0, LIMITS46.files);
       t0 = t();
       if (conv) { files.push(conv.name); await eat(entryChunks(src, conv, budget)); steps.push({ t: `Fant ${convs.length} ${convs.length === 1 ? 'samtale' : 'samtaler'}`, ms: t() - t0 }); }
       else if (gem.length) {
@@ -252,7 +260,23 @@ export async function readExport45(input, { name = '', source = 'auto' } = {}) {
         }
         convs.push(...geminiConvs45(pairs));
         steps.push({ t: `Leste ${pairs.length} spørsmål og svar fra Gemini`, ms: t() - t0 });
-      } else throw new ImportError45(source === 'claude' || source === 'chatgpt' ? 'Fant ikke conversations.json i eksporten' : 'Fant ikke conversations.json (Claude/ChatGPT) eller Gemini-aktivitet (My Activity) i eksporten', 'no_conversations', 400, entries.slice(0, 15).map((e) => e.name).join(', '));
+      } else if (!md.length && !entries.some((e) => memFile(e.name))) {
+        throw new ImportError45(mdAll.length ? `Fant ${mdAll.length} Markdown-filer, men ingen samtaler eller minner Glimt kjenner igjen.`
+          : source === 'claude' || source === 'chatgpt' ? 'Fant ikke conversations.json i eksporten'
+          : `Fant ${entries.length} ${entries.length === 1 ? 'fil' : 'filer'}, men ingen samtaler (conversations.json), minner (memories.json / Markdown) eller Gemini-aktivitet.`, 'no_conversations', 400, entries.slice(0, 15).map((e) => e.name).join(', '));
+      }
+      if (md.length) {
+        const t1 = t();
+        for (const e of md) {
+          if (e.usize > LIMITS46.fileBytes) { warnings.push(`${base(e.name)} er for stor og ble hoppet over`); continue; }
+          files.push(e.name);
+          try { const a = parseMemoryMd46(e.name, await textOf(entryChunks(src, e, budget), LIMITS46.fileBytes)); if (a.points.length) areas.push(a); else warnings.push(`${base(e.name)} hadde ingen punkter`); }
+          catch (err) { warnings.push(`${base(e.name)} kunne ikke leses: ${err.message}`); }
+        }
+        if (!areas.length && !conv && !gem.length) throw new ImportError45(`Fant ${md.length} Markdown-filer, men ingen samtaler eller minner Glimt kjenner igjen.`, 'no_memory', 400, md.slice(0, 15).map((e) => e.name).join(', '));
+        if (!conv && !gem.length) detected = 'claude';
+        steps.push({ t: `Fant ${areas.length} minneområder i ${md.length} Markdown-filer`, ms: t() - t1 });
+      }
       for (const e of entries) {
         const b = base(e.name);
         if (/^projects[^/]*\.json$/i.test(b)) { files.push(e.name); try { const p = JSON.parse(await textOf(entryChunks(src, e, budget))); projects = (Array.isArray(p) ? p : []).map((x) => ({ uuid: x.uuid ?? null, name: String(x.name ?? '').slice(0, 120) })).filter((x) => x.name); } catch { warnings.push('projects.json kunne ikke leses'); } }
@@ -261,7 +285,14 @@ export async function readExport45(input, { name = '', source = 'auto' } = {}) {
       }
     } else {
       const first = src.read(0, 2048).toString('utf8').replace(/^﻿/, '').trimStart();
-      if (/^<(!doctype|html)/i.test(first) || /\.html?$/i.test(name)) {
+      if (/\.(md|markdown)$/i.test(name) || (/^#{1,6}\s/.test(first) && !/\.(json|html?)$/i.test(name))) {
+        // Prompt 46: én Markdown-fil fra minne-eksporten.
+        if (src.size > LIMITS46.fileBytes) throw new ImportError45('Markdown-fila er for stor', 'too_big', 413);
+        const a = parseMemoryMd46(name || 'minne.md', src.read(0, src.size).toString('utf8'));
+        if (!a.points.length) throw new ImportError45('Fant 1 Markdown-fil, men ingen samtaler eller minner Glimt kjenner igjen.', 'no_memory');
+        areas.push(a); files.push(name || 'minne.md'); detected = 'claude';
+        steps.push({ t: 'Fant 1 minneområde', ms: t() - t0 });
+      } else if (/^<(!doctype|html)/i.test(first) || /\.html?$/i.test(name)) {
         detected = 'gemini';
         if (src.size > 512 * 1024 ** 2) throw new ImportError45('HTML-fila er for stor', 'too_big', 413);
         const pairs = geminiPairsHtml45(src.read(0, src.size).toString('utf8'));
@@ -289,13 +320,39 @@ export async function readExport45(input, { name = '', source = 'auto' } = {}) {
     for (const cv of convs) if (!cv.project && cv.projectId && byId.has(cv.projectId)) cv.project = byId.get(cv.projectId);
     if (convs.length >= LIMITS45.conversations) warnings.push(`Bare de første ${LIMITS45.conversations} samtalene er tatt med`);
     if (memory.length) steps.push({ t: `Fant ${memory.length} minnepunkter`, ms: 0 });
-    return { source: detected ?? 'claude', convs, projects, memory, files, steps, warnings };
+    const kind = convs.length && (areas.length || memory.length) ? 'both' : areas.length || (memory.length && !convs.length) ? 'memory' : 'conversations';
+    return { source: detected ?? 'claude', convs, projects, memory, areas, kind, files, steps, warnings };
   } finally { src.close(); }
 }
 export function memoryFrom45(v) {
   // ChatGPT-minner: [{content|memory|text}] eller {memories:[…]}; ellers Claude-formen.
   if (Array.isArray(v?.memories)) return v.memories.flatMap(memoryFrom45);
   return memoryFrom43(v);
+}
+
+/* ---------------- Prompt 46: mappe dratt inn direkte ---------------- */
+
+/** Filene fra en mappe → samme form som readExport45: conversations.json leses som før, .md-filene blir minneområder. */
+async function readFolder46(list, paths, source) {
+  if (list.length > LIMITS46.files) throw new ImportError45(`Mappen har ${list.length} filer (maks ${LIMITS46.files})`, 'too_many', 413);
+  const named = list.map((f, i) => ({ f, name: String(paths[i] ?? f.name ?? `fil-${i + 1}`).replace(/\\/g, '/').replace(/^\/+/, '') }));
+  const conv = named.find((x) => /(^|\/)conversations[^/]*\.json$/i.test(x.name));
+  const out = conv ? await readExport45(Buffer.from(await conv.f.arrayBuffer()), { name: conv.name, source }) : { source: 'claude', convs: [], projects: [], memory: [], areas: [], files: [], steps: [], warnings: [] };
+  out.areas ??= [];
+  const mdAll = named.filter((x) => /\.(md|markdown)$/i.test(x.name));
+  const md = named.filter((x) => isMemoryMd46(x.name, { strict: !!conv }));
+  for (const x of md) {
+    if (x.f.size > LIMITS46.fileBytes) { out.warnings.push(`${x.name} er for stor og ble hoppet over`); continue; }
+    const a = parseMemoryMd46(x.name, Buffer.from(await x.f.arrayBuffer()).toString('utf8'));
+    out.files.push(x.name);
+    if (a.points.length) out.areas.push(a);
+  }
+  if (!out.convs.length && !out.areas.length) {
+    throw new ImportError45(mdAll.length ? `Fant ${mdAll.length} Markdown-filer, men ingen samtaler eller minner Glimt kjenner igjen.` : `Fant ${named.length} filer, men ingen samtaler eller minner Glimt kjenner igjen.`, 'no_memory', 400, named.slice(0, 15).map((x) => x.name).join(', '));
+  }
+  if (out.areas.length) out.steps.push({ t: `Fant ${out.areas.length} minneområder i ${md.length} Markdown-filer`, ms: 0 });
+  out.kind = out.convs.length && out.areas.length ? 'both' : out.areas.length ? 'memory' : 'conversations';
+  return out;
 }
 
 /* ---------------- Bitvis opplasting ---------------- */
@@ -326,13 +383,21 @@ export function preview45(u, parsed, memText = '') {
   const convs = parsed.convs.sort((a, b) => String(b.updated ?? '').localeCompare(String(a.updated ?? '')));
   const dates = convs.flatMap((x) => [x.created, x.updated]).filter(Boolean).sort();
   const projectNames = [...new Set([...parsed.projects.map((p) => p.name), ...convs.map((x) => x.project).filter(Boolean)])];
-  imports.set(importId, { user: u, at: Date.now(), source: src, convs, memory, done: null });
+  // Prompt 46: minneområder (Claude-minner i Markdown) – egen fane «Minner (n)» ved siden av «Samtaler (n)».
+  const areas = Array.isArray(parsed.areas) ? parsed.areas : [];
+  const ap = areas.length ? areasPreview46(u, areas) : null;
+  imports.set(importId, { user: u, at: Date.now(), source: src, convs, memory, areas, done: null });
   const have = haveIds(u, src), items = convs.map((x) => itemOut(x, have, src));
   const sel = items.filter((x) => x.selected).length, msel = memory.filter((m) => m.selected).length;
   return { importId, source: src, sourceLabel: SOURCES[src]?.name ?? src, conversations: convs.length, messages: convs.reduce((a, x) => a + x.messages.length, 0), projects: projectNames.length, projectNames,
     memory, range: dates.length ? { from: dates[0], to: dates[dates.length - 1], text: `Fra ${dText(dates[0])} til ${dText(dates[dates.length - 1])}` } : { from: null, to: null, text: '' },
     items: items.slice(0, 60), total: items.length, selected: sel, importedBefore: items.length - sel, steps: parsed.steps, files: parsed.files, warnings: parsed.warnings ?? [],
-    expiresAt: new Date(Date.now() + TTL).toISOString(), button: `Importer ${sel} samtaler og ${msel} minnepunkter` };
+    expiresAt: new Date(Date.now() + TTL).toISOString(),
+    kind: parsed.kind ?? (convs.length ? 'conversations' : 'memory'),
+    ...(ap ? { areas: ap.items, areaCount: ap.count, areaPoints: ap.points, areaDate: ap.date, areaDateText: ap.dateText, typeLabel: 'Claude-minner', summary: ap.label,
+      tabs: [...(convs.length ? [{ id: 'conversations', label: `Samtaler (${convs.length})` }] : []), { id: 'memory', label: `Minner (${ap.count})` }] } : {}),
+    button: ap && !convs.length ? `Importer ${ap.items.filter((x) => x.selected).length} ${ap.count === 1 ? 'område' : 'områder'}`
+      : ap ? `Importer ${sel} samtaler og ${ap.items.filter((x) => x.selected).length} områder` : `Importer ${sel} samtaler og ${msel} minnepunkter` };
 }
 function folderOf(u, name) {
   const f = q('SELECT id FROM hl_chat_folders WHERE user_id=? AND name=? ORDER BY created LIMIT 1').pluck().get(u, name);
@@ -376,14 +441,29 @@ export function commit45(u, x, b = {}) {
     const want = Array.isArray(b.memory) ? b.memory.map((m) => (typeof m === 'string' && /^m\d+$/.test(m) ? x.memory.find((y) => y.id === m)?.text : typeof m === 'string' ? m : m?.text)).filter(Boolean) : x.memory.filter((m) => m.selected).map((m) => m.text);
     mem = addMemory43(u, want, S.name);
   }
-  const done = { conversations: created.length, memory: mem.added.length, skipped, folderId, folder: S.name };
-  x.done = done; x.chatIds = created; x.memoryIds = mem.added.map((m) => m.id);
-  x.convs = []; x.memory = []; // personvern: eksporten slettes fra minnet
+  // Prompt 46: minneområder. b.areaIds (['a1', …] eller nøkler) velger; standard = alle med punkter.
+  let ar = null;
+  if (b.importAreas !== false && x.areas?.length) {
+    const ids = Array.isArray(b.areaIds) ? new Set(b.areaIds.map(String)) : null;
+    const pick = x.areas.filter((a, i) => a.points.length && (!ids || ids.has(`a${i + 1}`) || ids.has(a.key)));
+    ar = importAreas46(u, pick);
+    embedAreas46(u, ar.added).then((n) => { x.indexedAreas = n; }).catch(() => {});
+  }
+  const done = { conversations: created.length, memory: mem.added.length, skipped, folderId, folder: S.name, ...(ar ? { areas: ar.areas, areaPoints: ar.added.length + ar.kept, areaAdded: ar.added.length, areaRemoved: ar.removed, areaKept: ar.kept } : {}) };
+  x.done = done; x.chatIds = created; x.memoryIds = [...mem.added.map((m) => m.id), ...(ar ? ar.added.map((m) => m.id) : [])];
+  x.areaKeys = ar ? x.areas.map((a) => a.key) : [];
+  x.convs = []; x.memory = []; x.areas = []; // personvern: eksporten slettes fra minnet
   const log = kv.get(u, 'ai45_imports', []) ?? [];
-  kv.set(u, 'ai45_imports', [...log.slice(-19), { importId: b.importId, source: src, at: new Date().toISOString(), chatIds: created, memoryIds: x.memoryIds }]);
+  kv.set(u, 'ai45_imports', [...log.slice(-19), { importId: b.importId, source: src, at: new Date().toISOString(), chatIds: created, memoryIds: x.memoryIds, areaKeys: x.areaKeys }]);
   indexMemory(u, mem.added, S.name).then((n) => { x.indexed = n; }).catch(() => {});
-  console.log(`ai.import source=${src} user=${u} conversations=${created.length} memory=${mem.added.length} skipped=${skipped}`);
-  return { ok: true, ...done, indexing: mem.added.length > 0, text: `✓ ${created.length} ${created.length === 1 ? 'samtale' : 'samtaler'} og ${mem.added.length} minnepunkter importert fra ${S.name}`,
+  console.log(`ai.import source=${src} user=${u} conversations=${created.length} memory=${mem.added.length} skipped=${skipped}${ar ? ` areas=${ar.areas} areaAdded=${ar.added.length} areaRemoved=${ar.removed} areaKept=${ar.kept}` : ''}`);
+  if (ar && !created.length) {
+    return { ok: true, ...done, indexing: ar.added.length > 0, text: `Glimt husker nå ${ar.areas} ${ar.areas === 1 ? 'område' : 'områder'} fra Claude`,
+      detail: `${ar.added.length} nye punkter${ar.kept ? `, ${ar.kept} var der fra før` : ''}${ar.removed ? `, ${ar.removed} fjernet (ikke lenger i eksporten)` : ''}.`,
+      link: { label: 'Se minnene', url: '/#/ai/minne?src=claude-memory', route: 'ai-control/memory', filter: { src: 'claude-memory' } } };
+  }
+  return { ok: true, ...done, indexing: mem.added.length > 0 || !!ar?.added.length, text: `✓ ${created.length} ${created.length === 1 ? 'samtale' : 'samtaler'} og ${mem.added.length + (ar?.added.length ?? 0)} minnepunkter importert fra ${S.name}`,
+    ...(ar ? { link: { label: 'Se minnene', url: '/#/ai/minne?src=claude-memory', route: 'ai-control/memory', filter: { src: 'claude-memory' } } } : {}),
     detail: `Samtalene ligger i mappen «${S.name}» i Chat. Minnet ligger under Chat → ⚙ → Minne og brukes av Glimt.${skipped ? ` ${skipped} var importert før og ble hoppet over.` : ''}` };
 }
 export function undo45(u, id, x) {
@@ -393,6 +473,7 @@ export function undo45(u, id, x) {
   let removedConversations = 0;
   for (const cid of rec.chatIds ?? []) removedConversations += q('DELETE FROM hl_chats WHERE id=? AND user_id=?').run(cid, u).changes;
   const removedMemory = removeMemory43(u, rec.memoryIds ?? []);
+  undoAreas46(u, rec.memoryIds ?? [], rec.areaKeys ?? []); // prompt 46
   for (const m of rec.memoryIds ?? []) q('DELETE FROM ai_memory45_vec WHERE memory_id=? AND user_id=?').run(m, u);
   kv.set(u, 'ai45_imports', log.filter((r) => r.importId !== id));
   if (x) imports.delete(id);
@@ -418,7 +499,11 @@ const err = (c, e) => c.json({ error: e.message, reason: e.reason ?? 'error', ..
 const noImp = async (c, next) => { if (c.get('actor') && c.req.method !== 'GET') return c.json({ error: 'Import er ikke tilgjengelig mens du er logget inn som en annen bruker' }, 403); await next(); };
 
 aiImport45Api.get('/sources', (c) => c.json({ maxBytes: LIMITS45.upload, chunkBytes: 8 * 1024 ** 2, sources: [
-  { id: 'claude', name: 'Claude', color: SOURCES.claude.color, accept: '.zip,.json', files: ['conversations.json', 'projects.json', 'users.json', 'memories.json'], steps: ['Åpne claude.ai → Innstillinger → Personvern', 'Trykk «Eksporter data»', 'Last ned ZIP-en fra e-posten (lenken varer i 24 t)', 'Slipp ZIP-en her'], note: 'Minnet kan også limes inn som tekst.' },
+  { id: 'claude', name: 'Claude', color: SOURCES.claude.color, accept: '.zip,.json,.md', files: ['conversations.json', 'projects.json', 'users.json', 'memories.json', 'claude-memory-<dato>/areas/*.md'], steps: ['Åpne claude.ai → Innstillinger → Personvern', 'Trykk «Eksporter data»', 'Last ned ZIP-en fra e-posten (lenken varer i 24 t)', 'Slipp ZIP-en her'],
+    // Prompt 46: begge eksportene forklares.
+    exports: [{ id: 'conversations', title: 'Samtaler', steps: ['Innstillinger → Personvern → Eksporter data', 'Last ned ZIP-en fra e-posten', 'Slipp ZIP-en her'] },
+      { id: 'memory', title: 'Minner', steps: ['Innstillinger → Minne → Eksporter', 'Du får en ZIP eller mappe claude-memory-<dato> med én .md-fil per tema', 'Slipp ZIP-en eller hele mappen her'] }],
+    folder: true, note: 'Minnet kan også limes inn som tekst.' },
   { id: 'chatgpt', name: 'ChatGPT', color: SOURCES.chatgpt.color, accept: '.zip,.json', files: ['conversations.json'], steps: ['Åpne chatgpt.com → Innstillinger → Datakontroller', 'Trykk «Eksporter data» og bekreft', 'Last ned ZIP-en fra e-posten', 'Slipp ZIP-en her'], note: 'Minner er ikke med i eksporten. Lim dem inn fra Innstillinger → Personalisering → Administrer minner.' },
   { id: 'gemini', name: 'Gemini', color: SOURCES.gemini.color, accept: '.zip,.json,.html', files: ['My Activity/Gemini Apps/MyActivity.json', 'MyActivity.html'], steps: ['Åpne takeout.google.com', 'Velg bare «Min aktivitet» → «Gemini Apps» (JSON-format gir best resultat)', 'Last ned ZIP-en', 'Slipp ZIP-en her'], note: 'Gemini lagrer spørsmål og svar hver for seg. Spørsmål med under 30 min mellomrom blir én samtale.' },
 ] }));
@@ -447,11 +532,20 @@ aiImport45Api.post('/', noImp, bodyLimit({ maxSize: 210 * 1024 ** 2, onError: (c
   try {
     let parsed = null, memText = '', source = 'auto';
     if (ct.startsWith('multipart/')) {
-      const b = await c.req.parseBody();
-      memText = typeof b.memory === 'string' ? b.memory : '';
-      source = SOURCES[b.source] ? b.source : 'auto';
-      const f = b.file ?? b.zip ?? b.export;
-      if (f && typeof f.arrayBuffer === 'function') parsed = await readExport45(Buffer.from(await f.arrayBuffer()), { name: f.name ?? '', source });
+      const b = await c.req.parseBody({ all: true });
+      const one = (v) => (Array.isArray(v) ? v[0] : v);
+      memText = typeof one(b.memory) === 'string' ? one(b.memory) : '';
+      source = SOURCES[one(b.source)] ? one(b.source) : 'auto';
+      // Prompt 46: en mappe dratt inn (ikke ZIP): flere filer i «files»/«files[]» (filnavnet = relativ sti, f.eks.
+      // fd.append('files', f, f.webkitRelativePath)), eller «paths» (JSON-liste i samme rekkefølge).
+      const list = [b.files, b['files[]'], Array.isArray(b.file) ? b.file : null].flat().filter((x) => x && typeof x.arrayBuffer === 'function');
+      if (list.length > 1 || (list.length === 1 && !one(b.file))) {
+        let paths = []; try { paths = JSON.parse(String(one(b.paths) ?? '[]')); } catch { paths = []; }
+        parsed = await readFolder46(list, Array.isArray(paths) ? paths : [], source);
+      } else {
+        const f = one(b.file) ?? one(b.zip) ?? one(b.export);
+        if (f && typeof f.arrayBuffer === 'function') parsed = await readExport45(Buffer.from(await f.arrayBuffer()), { name: f.name ?? '', source });
+      }
     } else {
       const b = await c.req.json().catch(() => null);
       if (!b || typeof b !== 'object') return c.json({ error: 'Forventet en fil (multipart) eller JSON {uploadId}', reason: 'bad_request' }, 400);
@@ -473,7 +567,7 @@ aiImport45Api.post('/', noImp, bodyLimit({ maxSize: 210 * 1024 ** 2, onError: (c
     if (!parsed && !memText.trim()) return c.json({ error: 'Velg eksport-fila (ZIP, conversations.json eller MyActivity), eller lim inn minnet', reason: 'no_file' }, 400);
     parsed ??= { source: SOURCES[source] ? source : 'claude', convs: [], projects: [], memory: [], files: [], steps: [], warnings: [] };
     if (SOURCES[source] && source !== parsed.source && parsed.convs.length) parsed.warnings.push(`Fila ser ut som en ${SOURCES[parsed.source].name}-eksport, ikke ${SOURCES[source].name}. Den importeres som ${SOURCES[parsed.source].name}.`);
-    if (!parsed.convs.length && !parsed.memory.length && !memText.trim()) return c.json({ error: 'Fant ingen samtaler i fila', reason: 'no_conversations', files: parsed.files }, 400);
+    if (!parsed.convs.length && !parsed.memory.length && !parsed.areas?.length && !memText.trim()) return c.json({ error: 'Fant ingen samtaler eller minner i fila', reason: 'no_conversations', files: parsed.files }, 400);
     return c.json(preview45(u, parsed, memText));
   } catch (e) {
     if (!(e instanceof ImportError45)) console.warn(`[ai-import] ${e.message}`);

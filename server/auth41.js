@@ -29,6 +29,7 @@ import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } fr
 import { companionsOf, deviceName } from './kalender33.js';
 import { buildInfo } from './cache-bust.js';
 import { issueRefresh44 } from './auth44.js'; // prompt 44: refresh-token (90 d glidende, 60 s grace)
+import { lanUrls46, dropInternal46, publicUrl46, originOf46 } from './public-url46.js'; // prompt 46: aldri container-IP (172.18.0.3) som serveradresse
 
 fhDb.exec(`CREATE TABLE IF NOT EXISTS fh_app_codes (code_hash TEXT PRIMARY KEY, kind TEXT NOT NULL, user_id TEXT NOT NULL, client TEXT NOT NULL, redirect TEXT, challenge TEXT, scopes TEXT NOT NULL,
   expires_tok INTEGER, parent TEXT, created INTEGER NOT NULL, exp INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0);`);
@@ -44,16 +45,17 @@ const iso = (t) => (t ? new Date(t).toISOString() : null);
 
 const URL_RE = /^https?:\/\/[^\s/?#]+(?::\d+)?(\/[^\s]*)?$/i;
 const cleanUrl = (v) => { const s = String(v ?? '').trim().replace(/\/+$/, ''); return URL_RE.test(s) ? s : null; };
-function lanUrls() {
-  const out = [];
-  for (const list of Object.values(networkInterfaces())) for (const a of list ?? []) if (a.family === 'IPv4' && !a.internal) out.push(`http://${a.address}:${config.port}`);
-  return out.slice(0, 4);
-}
-/** Serverens egne adresser (admin kan sette dem i kv(OWNER,'server41')). */
+// Prompt 46: inne i Docker ga networkInterfaces() bare bridge-adressen (http://172.18.0.3:3000) – den ble «lokal adresse» i
+// /api/discovery og /api/me/server, og Kalender for Mac sjekket oppdateringer mot den. Se public-url46.js (LOCAL_URL/PUBLIC_URL).
+const lanUrls = () => lanUrls46();
+void networkInterfaces; void config;
+/** Serverens egne adresser (admin kan sette dem i kv(OWNER,'server41')). Interne adresser fjernes alltid. */
 export function serverAddresses41() {
   const s = kv.get(OWNER, 'server41', {}) ?? {};
-  const local = Array.isArray(s.local) && s.local.length ? s.local : lanUrls();
-  return { local, external: s.external ?? cleanUrl(process.env.PUBLIC_URL) ?? null };
+  const saved = dropInternal46(s.local);
+  const local = saved.length ? saved : lanUrls();
+  const ext = dropInternal46([s.external])[0] ?? null;
+  return { local, external: ext ?? publicUrl46() ?? cleanUrl(process.env.PUBLIC_URL) ?? null };
 }
 let version = null;
 export function discovery41() {
@@ -64,14 +66,20 @@ export function discovery41() {
 export function meServer41(u) {
   const s = kv.get(u, 'server41_me', {}) ?? {};
   const d = serverAddresses41();
-  return { local: s.local ?? d.local[0] ?? null, external: s.external ?? d.external ?? null, auto: s.auto !== false, discovered: d };
+  // Prompt 46: en lagret intern adresse (172.18.0.3 fra eldre versjoner) erstattes av den oppdagede/offentlige.
+  const local = dropInternal46([s.local])[0] ?? d.local[0] ?? null, external = dropInternal46([s.external])[0] ?? d.external ?? null;
+  return { local, external, auto: s.auto !== false, discovered: d };
 }
 export function setMeServer41(u, b = {}) {
   const cur = kv.get(u, 'server41_me', {}) ?? {};
   const next = { ...cur };
   for (const k of ['local', 'external']) if (k in b) {
     if (b[k] === null || b[k] === '') next[k] = null;
-    else { const v = cleanUrl(b[k]); if (!v) throw Object.assign(new Error(`${k === 'local' ? 'Lokal' : 'Ekstern'} adresse må starte med http:// eller https://`), { status: 400 }); next[k] = v; }
+    else {
+      const v = cleanUrl(b[k]); if (!v) throw Object.assign(new Error(`${k === 'local' ? 'Lokal' : 'Ekstern'} adresse må starte med http:// eller https://`), { status: 400 });
+      if (!dropInternal46([v]).length) throw Object.assign(new Error('Adressen er Docker-intern (f.eks. 172.18.x.x) og kan ikke nås fra andre enheter. Bruk LAN-adressen eller domenet.'), { status: 400 }); // prompt 46
+      next[k] = v;
+    }
   }
   if ('auto' in b) { if (typeof b.auto !== 'boolean') throw Object.assign(new Error('auto må være true eller false'), { status: 400 }); next.auto = b.auto; }
   kv.set(u, 'server41_me', next);
@@ -93,7 +101,7 @@ function requester(c) {
 const parentOf = (r) => r.tokenId ?? (r.sessionId ? `sid:${r.sessionId.slice(0, 24)}` : null);
 
 /** Kalender-token (samme tabell og regler som /api/tokens/companion). */
-function issueCompanion41(user, app, device, scopes, expires, parent) {
+export function issueCompanion41(user, app, device, scopes, expires, parent) { // prompt 46: også fra QR-innloggingen (qr38.js)
   for (const old of cq('SELECT token_id FROM fh_companion_tokens WHERE user_id=? AND app=? AND device=?').all(user, app, device)) {
     revokeTokenOf(user, old.token_id);
     cq('DELETE FROM fh_companion_tokens WHERE token_id=?').run(old.token_id);
@@ -117,8 +125,9 @@ export function revokeCompanions41(user, { parent = null } = {}) {
 
 /* ---------------- Redirect-hviteliste ---------------- */
 
+// Prompt 46: X-Forwarded-Host bare når den er et kjent eget domene (public-url46.js).
 function hostOf(c) {
-  try { const u = new URL(c.req.url); return (c.req.header('x-forwarded-host') ?? u.host).split(',')[0].trim(); } catch { return ''; }
+  try { const o = originOf46(c, { preferPublic: false }); return o ? new URL(o).host : ''; } catch { return ''; }
 }
 /** kalender://auth eller https://<denne serveren>/… (også den eksterne adressen). */
 export function redirectOk41(redirect, c) {

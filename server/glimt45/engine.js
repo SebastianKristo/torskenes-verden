@@ -6,9 +6,14 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { db, kv } from '../db.js';
 import { TOOL45, setCtx45, ctxOf45, kr45, eventLabel45 } from './tools.js';
-import { modelPlan45, localPlan45, legacyFirst45, modelAvailable45 } from './plan.js';
+import { modelPlan45, localPlan45, legacyFirst45, modelAvailable45, intentOfCalls45 } from './plan.js';
 import { parsePeriod45, todayOslo45, nowMinOslo45, longDate45, relDate45, addDays45, WD45, MON45 } from './dates.js';
 import { personalityOf, quipFor } from './personality.js';
+import { SENTENCES46, FAIL_TEXT46 } from './tools46.js'; // prompt 46: vær, abonnementer, faste utgifter, avslutningsfrist
+import { weatherCompare46 } from './weather46.js';
+import { installTaskHooks46 } from './tasks46.js';
+import { installPosterDecorator46 } from './calendar46.js';
+installTaskHooks46(); installPosterDecorator46(); // Gjøremål: plukk ut, ikke skriv om · plakat på kinoavtaler
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt45_requests (user_id TEXT NOT NULL, key TEXT NOT NULL, state TEXT NOT NULL, response TEXT, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));
 CREATE TABLE IF NOT EXISTS glimt45_confirm (token TEXT PRIMARY KEY, user_id TEXT NOT NULL, payload TEXT NOT NULL, created INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0);`);
@@ -53,7 +58,7 @@ function sentence(call, r, today) {
     case 'calendar.create': {
       const e = res.event;
       if (res.existing) return `«${e.title}» ${when(e.date, e.time, null, today)} ligger allerede i kalenderen, så jeg la den ikke inn på nytt.`;
-      return `Lagt inn: **«${e.title}» ${when(e.date, a.start, a.end, today)}** i Personlig-kalenderen.${a.allDay ? ' Hele dagen – si fra hvis du vil ha et klokkeslett.' : ''}${a.assumedPm ? ' (Tolket som kveld.)' : ''}`;
+      return `Lagt inn: **«${e.title}» ${when(e.date, a.start, a.end, today)}** i ${a.calendarName ?? 'Personlig'}-kalenderen.${a.location ? ` Sted: ${a.location}${a.place?.address ? ` (${a.place.address})` : ''}.` : ''}${a.allDay ? ' Hele dagen – si fra hvis du vil ha et klokkeslett.' : ''}${a.assumedPm ? ' (Tolket som kveld.)' : ''}`.replace('i Personlig (Google)-kalenderen', 'i Personlig-kalenderen (Google)');
     }
     case 'calendar.list': {
       const n = res.count, lab = cap(periodLabel(res, today));
@@ -84,13 +89,24 @@ function sentence(call, r, today) {
     case 'tasks.complete': return `Krysset av **${res.task.title}**.`;
     case 'finance.search': return financeSentence(a, r, today);
     case 'finance.summary': {
+      if (res.compare) {
+        // Prompt 46: sammenligning (deterministisk): perioden mot den nevnte, og mot samme antall dager i den.
+        const what = res.term ?? (res.category ? res.category.toLowerCase() : 'alt');
+        const c = res.compare;
+        const same = c.sameTo < c.to ? ` (${kr45(c.sameTotal)} til og med ${longDate45(c.sameTo, today)})` : '';
+        const ref = c.sameTo < c.to ? c.sameTotal : c.total;
+        const diff = Math.round((res.total - ref) * 100) / 100;
+        if (!res.count && !c.count) return `Fant **ingen utgifter** til ${what} verken ${res.label} eller ${c.label}.`;
+        return `${cap(res.label)} har du brukt **${kr45(res.total)}** på ${what}, mot **${kr45(c.total)}** ${c.label}${same}. ${diff === 0 ? 'Det er det samme.' : `Det er ${kr45(Math.abs(diff))} ${diff > 0 ? 'mer' : 'mindre'}${same ? ' enn i samme del av ' + c.label.replace(/^i\s+/, '') : ''}.`}`;
+      }
+      if (res.term && res.groupBy === 'total') return res.count ? `Du har brukt **${kr45(res.total)}** på ${res.term} ${res.label}.` : `Fant **ingen utgifter** til ${res.term} ${res.label}.`;
       if (!res.count) return res.category ? `Du har **ikke brukt noe** på ${res.category.toLowerCase()} ${res.label}.` : `Fant **ingen utgifter** ${res.label}.`;
       const [first, ...more] = res.top;
       if (res.groupBy === 'total') return `Du har brukt **${kr45(res.total)}** på ${res.category ? res.category.toLowerCase() : 'alt'} ${res.label}.${res.biggest?.[0] ? ` Mest hos ${res.biggest[0].name} (${kr45(res.biggest[0].amount)}).` : ''}`;
       return `${cap(res.label)} brukte du mest på **${first.name}: ${kr45(first.amount)}** (${first.count} kjøp).${more.length ? ` Deretter ${joinNo(more.slice(0, 2).map((g) => `${g.name} ${kr45(g.amount)}`))}.` : ''} Totalt ${kr45(res.total)}.`;
     }
     case 'nav.open': return `Åpner **${NAV_LABEL[a.target] ?? cap(a.target)}**.`;
-    default: return null;
+    default: return SENTENCES46[call.tool] ? SENTENCES46[call.tool](a, r, today) : null;
   }
 }
 function financeSentence(a, r, today) {
@@ -108,6 +124,13 @@ function financeSentence(a, r, today) {
     return `Fant **ingen ${a.kind === 'receipt' ? 'kvitteringer' : 'kjøp'}**${what}${where}${amt}${per}.`;
   }
   const c = r.cards[0];
+  // Prompt 46: sortert søk («dyreste kjøp forrige måned», «den dyreste kvitteringen») → det øverste treffet.
+  if (a.sort === 'amount_desc' || a.sort === 'amount_asc') {
+    const lines = c.lines?.length ? ` Varer: ${c.lines.slice(0, 3).map((l) => l.text).join(', ')}.` : '';
+    const rc = a.kind === 'receipt';
+    const head = a.sort === 'amount_desc' ? (rc ? 'Den dyreste kvitteringen' : 'Det dyreste kjøpet') : (rc ? 'Den billigste kvitteringen' : 'Det billigste kjøpet');
+    return `${head}${a.label ? ` ${a.label}` : ''}${a.merchant ? ` hos ${a.merchant}` : ''} er **${c.title} ${longDate45(c.date, today)}, ${kr45(Math.abs(c.amount ?? 0))}**.${lines}${(res.found ?? 0) > 1 ? ` (av ${res.found} ${rc ? 'kvitteringer' : 'kjøp'})` : ''}`;
+  }
   if (res.count === 1) {
     const lines = c.lines?.length ? ` Varer: ${c.lines.slice(0, 3).map((l) => l.text).join(', ')}.` : '';
     return `Fant ${c.receiptId ? 'kvitteringen' : 'kjøpet'}: **${c.title} ${longDate45(c.date, today)}, ${kr45(c.amount ?? 0)}**.${lines}${!c.receiptId ? ' Ingen kvittering er lagret for det.' : ''}`;
@@ -117,6 +140,7 @@ function financeSentence(a, r, today) {
 const NAV_LABEL = { kalender: 'Kalender', huskeliste: 'Gjøremål', finans: 'Finans', kvitteringer: 'Kvitteringer', budsjett: 'Budsjett', abonnement: 'Abonnement', vaer: 'Vær', familie: 'Familie', mat: 'Mat', bursdager: 'Bursdager', chat: 'Chat', innstillinger: 'Innstillinger', sporing: 'Sporing', domener: 'Domener', rom: 'Rom', nordlys: 'Nordlys OS' };
 const NAV_WEB = { kalender: '/#/kalender', huskeliste: '/#/huskeliste', finans: '/finans/', kvitteringer: '/finans/#/kv', budsjett: '/finans/#/budsjett', abonnement: '/finans/#/abonnement', vaer: '/#/vaer', familie: '/#/familie', mat: '/#/matplan', bursdager: '/#/bursdager', chat: '/#/chat', innstillinger: '/#/innstillinger', sporing: '/#/sporing', domener: '/#/domener', rom: '/#/rom', nordlys: '/#/innstillinger/system' };
 const FAIL_TEXT = { 'calendar.create': 'Fikk ikke lagt inn avtalen', 'calendar.update': 'Fikk ikke flyttet avtalen', 'calendar.delete': 'Fikk ikke slettet avtalen', 'tasks.create': 'Fikk ikke lagt inn gjøremålet', 'tasks.complete': 'Fikk ikke krysset av', 'finance.search': 'Fikk ikke søkt i Finans', 'finance.summary': 'Fikk ikke regnet ut forbruket', 'calendar.list': 'Fikk ikke lest kalenderen', 'calendar.search': 'Fikk ikke søkt i kalenderen', 'tasks.list': 'Fikk ikke lest Gjøremål' };
+Object.assign(FAIL_TEXT, FAIL_TEXT46);
 const QUIP_KIND = { 'calendar.create': 'calendar', 'calendar.update': 'calendar', 'tasks.create': 'tasks', 'tasks.complete': 'done', 'calendar.list': 'list', 'tasks.list': 'list', 'calendar.search': 'search' };
 
 /* ---------------- Pipeline ---------------- */
@@ -133,9 +157,9 @@ export const busyOf45 = (user) => busy.get(user) ?? 0;
 export async function agent45(user, text0, opts = {}) {
   const text = String(text0 ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1000);
   const module = opts.module ?? 'home';
-  const key = keyOf(user, module, text, opts.requestId);
+  const key = `${opts.preview ? 'p:' : ''}${keyOf(user, module, text, opts.requestId)}`; // prompt 46: forhåndsvisning har egen nøkkel
   const row = q('SELECT * FROM glimt45_requests WHERE user_id=? AND key=?').get(user, key);
-  if (row?.state === 'done' && (opts.requestId || Date.now() - row.created < IMPLICIT_MS)) {
+  if (row?.state === 'done' && !opts.preview && (opts.requestId || Date.now() - row.created < IMPLICIT_MS)) {
     try { return { ...JSON.parse(row.response), repeated: true }; } catch { /* lag på nytt */ }
   }
   const rk = `${user}|${key}`;
@@ -145,7 +169,8 @@ export async function agent45(user, text0, opts = {}) {
     q('INSERT OR REPLACE INTO glimt45_requests(user_id, key, state, response, created) VALUES(?,?,?,?,?)').run(user, key, 'running', null, Date.now());
     try {
       const out = await pipeline(user, text, { ...opts, module, key });
-      if (!out.legacy) q('UPDATE glimt45_requests SET state=?, response=? WHERE user_id=? AND key=?').run('done', JSON.stringify(out), user, key);
+      if (opts.preview) q('DELETE FROM glimt45_requests WHERE user_id=? AND key=?').run(user, key); // forhåndsvisning caches ikke
+      else if (!out.legacy) q('UPDATE glimt45_requests SET state=?, response=? WHERE user_id=? AND key=?').run('done', JSON.stringify(out), user, key);
       else q('DELETE FROM glimt45_requests WHERE user_id=? AND key=?').run(user, key);
       return out;
     } catch (e) {
@@ -174,7 +199,7 @@ async function pipeline(user, text, opts) {
   if (!text) return { ...base, reply: 'Hva kan jeg hjelpe med?', text: 'Hva kan jeg hjelpe med?', intent: 'ask', module: opts.module, actions: [], results: [], ask: { question: 'Hva kan jeg hjelpe med?' }, engine: 'lokal', ms: 0 };
   // 1. Forstå. De eksisterende, deterministiske svarene (vær, avganger …) trenger ingen modell; alt annet går til modellen først.
   const legacyIntent = legacy?.detect ? (() => { try { return legacy.detect(text, today); } catch { return null; } })() : null;
-  const local = localPlan45(text, { module: opts.module, today, legacyIntent });
+  const local = localPlan45(text, { module: opts.module, today, legacyIntent, user });
   const engineDomain = local.calls.some((c) => !['app.answer', 'chat.answer'].includes(c.tool)) || !!local.ask;
   let plan = null;
   // Uklare meldinger (ingen regel slo til) får også modellen – men bare når de handler om brukeren selv eller ber om noe
@@ -183,10 +208,13 @@ async function pipeline(user, text, opts) {
   if (engineDomain || (!legacyFirst45(text) && personal && ['llm', null, 'calendar.day', 'tasks', 'finance.spent', 'appointment.create', 'tasks.glimt'].includes(legacyIntent))) {
     const c = ctxOf45(user);
     const ctxLine = c.items?.length ? `Sist vist: ${c.items.slice(0, 3).map((x) => `${x.title} (${x.kind})`).join('; ')}.` : '';
-    plan = opts.noModel ? null : await modelPlan45(user, text, { module: opts.module, nowLine: nowLineOf(today), ctxLine }).catch(() => null);
+    const mp = opts.noModel ? null : modelPlan45(user, text, { module: opts.module, nowLine: nowLineOf(today), ctxLine }).catch(() => null);
+    // Prompt 46: forhåndsvisningen venter maks 3 s på modellen; ellers lokal tolkning (dato/tid er uansett fra teksten).
+    plan = mp ? await (opts.preview ? Promise.race([mp, new Promise((r) => { const t = setTimeout(() => r(null), opts.previewMs ?? 3000); t.unref?.(); })]) : mp) : null;
     // Modellen nede, eller den ville bare prate om noe den lokale planen ser er en handling: lokal plan.
     if (!plan || plan.invalid) plan = local;
     else if (engineDomain && plan.calls.every((x) => x.tool === 'chat.answer')) plan = local;
+    else plan = reconcile46(local, plan);
   } else plan = local;
   // Én dag fra Hjem («hva skjer i morgen?»): de eksisterende dagsvarene (med vær og første avtale) er riktige og beholdes.
   if (opts.module === 'home' && legacyIntent === 'calendar.day' && plan.calls.length === 1 && plan.calls[0].tool === 'calendar.list') {
@@ -198,6 +226,7 @@ async function pipeline(user, text, opts) {
   if (!plan.ask && !ownedCalls.length) {
     // Ikke motorens: de eksisterende svarene (vær, avganger, pakker, chat …).
     const lg = { legacy: true, plan, engine: plan.engine, legacyIntent };
+    if (opts.preview) return { ...base, preview: false, reply: 'Ingen avtale å forhåndsvise.', text: 'Ingen avtale å forhåndsvise.', intent: 'ask', module: opts.module, actions: [], results: [], engine: plan.engine, ms: Date.now() - t0 };
     if (opts.legacyOk === false || !legacy?.answer) return lg;
     if (opts.module === 'tasks' && plan.calls[0]?.args?.topic === 'tasks37') {
       const { handleGlimt37 } = await import('../tasks-glimt37.js');
@@ -212,21 +241,42 @@ async function pipeline(user, text, opts) {
         return out;
       }
     }
-    const a = opts.module === 'calendar' && legacy?.calendar ? await legacy.calendar(user, text, { today }) : await legacy.answer(user, text, { today, skipAgent: true, module: opts.module });
+    const a = opts.module === 'calendar' && legacy?.calendar ? await legacy.calendar(user, text, { today }) : await legacy.answer(user, text, { today, skipAgent: true, module: opts.module, noWeb: opts.webSearch === false });
     const out = { ...base, reply: a.text, text: a.text, intent: plan.calls[0]?.tool === 'chat.answer' ? 'chat' : 'ask', module: opts.module, actions: [{ tool: plan.calls[0]?.tool ?? 'app.answer', args: {}, status: 'done', result: { intent: a.intent, source: a.source } }],
       results: [], legacyAnswer: a, engine: plan.engine, model: plan.model ?? null, ms: Date.now() - t0, ...(a.nav ? { nav: a.nav } : {}) };
     logChoice(user, { module: opts.module, intent: out.intent, tools: ['app.answer'], statuses: ['done'], engine: plan.engine, ms: out.ms, len: text.length });
     return out;
   }
-  const ctxT = { user, text, today, nowMin, context, module: opts.module };
+  const ctxT = { user, text, today, nowMin, context, module: opts.module, preview: !!opts.preview };
   const out = await executePlan(user, { ...plan, calls: ownedCalls }, ctxT, base, t0);
   logChoice(user, { module: opts.module, intent: out.intent, tools: out.actions.map((x) => x.tool), statuses: out.actions.map((x) => x.status), engine: out.engine, ms: out.ms, len: text.length });
   return out;
 }
+// Prompt 46: etterkontroll av modellens plan mot den deterministiske oppdelingen av teksten. Delspørsmål modellen glemte
+// («… og temperaturen i New York i morgen»), abonnementsdata den ville svart på fra egen kunnskap, og frist i Subscription OS når
+// brukeren vil avslutte et abonnement, legges til. Vær kommer alltid fra oppdelingen (teksten er fasit for sted og tid).
+const FAMILY46 = (t) => (t === 'weather.get' ? 'weather' : t === 'finance.subscriptions' || t === 'finance.fixed' ? 'subs' : t === 'subscriptions.trial' ? 'trial' : null);
+export function reconcile46(local, model) {
+  const lc = local?.calls ?? [];
+  const fam = new Set(lc.map((c) => FAMILY46(c.tool)).filter(Boolean));
+  if (!fam.size || !model) return model;
+  const talk = (c) => c.tool === 'app.answer' || c.tool === 'chat.answer';
+  let calls = [...(model.calls ?? [])];
+  if (fam.has('weather')) calls = [...calls.filter((c) => c.tool !== 'weather.get' && !talk(c)), ...lc.filter((c) => c.tool === 'weather.get')];
+  if (fam.has('subs') && !calls.some((c) => FAMILY46(c.tool) === 'subs')) calls = [...calls.filter((c) => !talk(c) && c.tool !== 'finance.summary'), ...lc.filter((c) => FAMILY46(c.tool) === 'subs')];
+  if (fam.has('trial')) {
+    calls = calls.filter((c) => !talk(c) && c.tool !== 'calendar.create');
+    if (lc.some((c) => c.tool === 'tasks.create') && !calls.some((c) => c.tool === 'tasks.create')) calls.unshift({ tool: 'tasks.create', args: {} });
+    if (!calls.some((c) => c.tool === 'subscriptions.trial')) calls.push(lc.find((c) => c.tool === 'subscriptions.trial'));
+  }
+  if (!calls.length) return local;
+  return { ...model, calls, intent: intentOfCalls45(calls), module: model.module, compare: local.compare ?? null, reconciled: true };
+}
 function sanitizeCtx(c) {
   if (!c || typeof c !== 'object') return {};
   const id = (v) => (typeof v === 'string' || typeof v === 'number') && String(v).length <= 120 ? String(v) : null;
-  return { ...(id(c.selectedId) ? { selectedId: id(c.selectedId) } : {}), ...(Array.isArray(c.visibleIds) ? { visibleIds: c.visibleIds.map(id).filter(Boolean).slice(0, 50) } : {}), ...(id(c.listId) ? { listId: id(c.listId) } : {}) };
+  return { ...(id(c.selectedId) ? { selectedId: id(c.selectedId) } : {}), ...(Array.isArray(c.visibleIds) ? { visibleIds: c.visibleIds.map(id).filter(Boolean).slice(0, 50) } : {}), ...(id(c.listId) ? { listId: id(c.listId) } : {}),
+    ...(id(c.calendarId) ? { calendarId: id(c.calendarId) } : {}), ...(id(c.defaultCalendarId) ? { defaultCalendarId: id(c.defaultCalendarId) } : {}) }; // prompt 46: valgt kalender (svar på «Hvilken kalender?»)
 }
 
 async function executePlan(user, plan, ctxT, base, t0) {
@@ -243,6 +293,16 @@ async function executePlan(user, plan, ctxT, base, t0) {
     if (v.error) return { ...res0, reply: v.error, text: v.error, actions: [{ tool: c.tool, args: c.args ?? {}, status: 'failed', error: v.error }], results: [], ms: Date.now() - t0 };
     checked.push({ tool: c.tool, args: v.args, summary: v.summary ?? null });
   }
+  // Prompt 46: påminnelsen i Gjøremål får samme frist som i Subscription OS når brukeren ikke sa en egen dag.
+  const trialC = checked.find((c) => c.tool === 'subscriptions.trial'), taskC = checked.find((c) => c.tool === 'tasks.create');
+  if (trialC && taskC && !taskC.args.due) taskC.args.due = trialC.args.date;
+  // Prompt 46: forhåndsvisning (Kalender «Skriv en time» → GLIMT FORSTÅR): validert plan, ingenting lagres.
+  if (ctxT.preview) {
+    const cc = checked.find((c) => c.tool === 'calendar.create');
+    const pv = cc ? previewOf46(cc.args, today) : null;
+    const text0 = pv ? `${pv.title} · ${pv.line2}${pv.place ? ` · ${pv.place.name}` : ''}` : checked.map((c) => c.summary).filter(Boolean).join(' ') || 'Klar.';
+    return { ...res0, preview: pv ?? true, reply: text0, text: text0, actions: checked.map((c) => ({ tool: c.tool, args: publicArgs(c.args), status: 'proposed' })), results: [], ms: Date.now() - t0 };
+  }
   // Destruktivt: lagre planen og be om bekreftelse. Ingenting er gjort.
   const destr = checked.filter((c) => TOOL45[c.tool].destructive);
   if (destr.length && !ctxT.confirmed) {
@@ -255,7 +315,8 @@ async function executePlan(user, plan, ctxT, base, t0) {
   // 5–6. Utfør og kontroller.
   const actions = [], results = [], lines = [], events = [];
   let anyFail = false, quipOutcome = null;
-  for (const c of checked) {
+  // Prompt 46: uavhengige lesekall (vær for flere steder) kjøres parallelt; resten i rekkefølge. Resultatene behandles i planens rekkefølge.
+  const runOne = async (c) => {
     const tool = TOOL45[c.tool];
     let r;
     try { r = await tool.run(c.args, ctxT); } catch (e) { r = { status: 'failed', error: String(e?.message ?? e).slice(0, 300), reconnect: !!e?.reconnect }; }
@@ -263,6 +324,17 @@ async function executePlan(user, plan, ctxT, base, t0) {
       let ok = false; try { ok = await tool.verify(r, ctxT); } catch { ok = false; }
       if (!ok) r = { status: 'failed', error: 'Datakilden bekreftet ikke endringen', result: r.result };
     }
+    return r;
+  };
+  const outs = new Array(checked.length);
+  for (let i = 0; i < checked.length;) {
+    let j = i;
+    while (j < checked.length && TOOL45[checked[j].tool].parallel) j++;
+    if (j > i) { const rs = await Promise.all(checked.slice(i, j).map(runOne)); rs.forEach((r, k) => { outs[i + k] = r; }); i = j; continue; }
+    outs[i] = await runOne(checked[i]); i++;
+  }
+  for (const [ci, c] of checked.entries()) {
+    const r = outs[ci];
     actions.push({ tool: c.tool, args: publicArgs(c.args), status: r.status, ...(r.result ? { result: r.result } : {}), ...(r.error ? { error: r.error } : {}) });
     if (r.status === 'done') {
       results.push(...(r.cards ?? []));
@@ -270,17 +342,30 @@ async function executePlan(user, plan, ctxT, base, t0) {
       const s = sentence(c, r, today); if (s) lines.push(s);
       rememberCtx(user, c, r, ctxT.module);
       if (!quipOutcome && QUIP_KIND[c.tool] && !r.result?.existing) quipOutcome = { kind: QUIP_KIND[c.tool], ok: true, title: c.args.title ?? r.result?.event?.title ?? r.result?.task?.title ?? '' };
-    } else { anyFail = true; lines.push(`${FAIL_TEXT[c.tool] ?? 'Det gikk ikke'}: ${r.error}.${r.reconnect ? ' Koble til Google på nytt under Innstillinger → Kalendere.' : ''}`); }
+    } else { anyFail = true; lines.push(c.tool === 'weather.get' ? `${r.error}${/[.?!]$/.test(r.error ?? '') ? '' : '.'}` : `${FAIL_TEXT[c.tool] ?? 'Det gikk ikke'}: ${r.error}.${r.reconnect ? ' Koble til Google på nytt under Innstillinger → Kalendere.' : ''}`); }
   }
-  let reply = lines.join(' ');
+  // Prompt 46: sammenligning på tvers av værresultatene («er det varmere i Oslo eller New York i morgen?»).
+  const cmpMode = plan.compare ?? checked.find((c) => c.tool === 'weather.get' && c.args.compare)?.args.compare ?? null;
+  if (cmpMode) { const cl = weatherCompare46(actions.filter((x) => x.tool === 'weather.get').map((x) => x.result).filter(Boolean), cmpMode); if (cl) lines.push(cl); }
+  let reply = lines.filter(Boolean).join(' ');
   const finance = checked.some((c) => c.tool.startsWith('finance.'));
   const joke = anyFail ? null : quipFor(base.personality, { ...(quipOutcome ?? {}), finance, ok: !!quipOutcome }, { seed: base.requestId ?? ctxT.text, today });
   const nav = checked.find((c) => c.tool === 'nav.open');
-  const multiChoice = actions.some((a) => (a.tool === 'finance.search' && a.result?.count > 1) || (a.tool === 'calendar.search' && a.result?.count > 1));
+  const multiChoice = actions.some((a) => (a.tool === 'finance.search' && a.result?.count > 1 && !a.args?.sort) || (a.tool === 'calendar.search' && a.result?.count > 1));
   return { ...res0, reply: joke ? `${reply} ${joke}` : reply, text: joke ? `${reply} ${joke}` : reply, joke, actions, results, events,
     ...(multiChoice ? { choose: true } : {}),
     ...(nav ? { nav: { target: nav.args.target, label: NAV_LABEL[nav.args.target] ?? nav.args.target, web: NAV_WEB[nav.args.target] ?? '/', deepLink: `finanshub://${nav.args.target}`, delayMs: 450 } } : {}),
     ms: Date.now() - t0 };
+}
+/** Prompt 46: forhåndsvisningen i Kalender (GLIMT FORSTÅR). Linje 1 tittel + kalender, linje 2 dag · tid · varsel, linje 3 sted. */
+const REM_LABEL46 = { none: 'uten varsel', '15m': '15 min før', '1h': '1 t før', day: 'dagen før' };
+function previewOf46(a, today) {
+  const x = new Date(`${a.date}T00:00:00Z`);
+  const day = `${cap(WD45[x.getUTCDay()])} ${x.getUTCDate()}. ${MON45[x.getUTCMonth()]}${a.date.slice(0, 4) !== today.slice(0, 4) ? ` ${a.date.slice(0, 4)}` : ''}`;
+  const time = a.allDay ? 'hele dagen' : `${a.start}${a.end ? `–${a.end}` : ''}`;
+  return { title: a.title, calendarId: a.calendarId, calendarName: a.calendarName, date: a.date, start: a.start, end: a.end, allDay: a.allDay, reminder: a.reminder, location: a.location,
+    place: a.place ?? (a.location ? { name: a.location, address: null } : null), movie: a.movie ?? null, line1: a.title, line2: `${day} · ${time}${a.allDay ? '' : ` · ${REM_LABEL46[a.reminder] ?? '1 t før'}`}`,
+    line3: a.location ? `📍 ${a.location}${a.place?.address ? ` · ${String(a.place.address).split(',')[0]}` : ''}` : null, locationCorrected: !!a.locationCorrected };
 }
 const publicArgs = (a) => { const { corrections, prev, event, ...rest } = a ?? {}; return rest; };
 function rememberCtx(user, c, r, module) {

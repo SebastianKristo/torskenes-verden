@@ -34,9 +34,23 @@
 //   GET /api/system/version: + name 'Nordlys OS', codename 'Nordlys', tagline, sizeBytes (release-tarball fra GitHub
 //   eller null), notes uten tomme punkter («**Kalender:**» med underpunkter blir «Kalender: a. b.», uten dem hoppes det over).
 //   Varsel om ny versjon: «Nordlys 4.22 er klar» (realtime + notifyUser til administratorene: Web Push og kø).
+//
+// Prompt 46 (SERVER46), claude-code-oppdatering-henger-55.md – «står fast på 55 %» (55 % = steget building):
+//   Rotårsak (se også deploy/updater/updater.sh): bygget hadde ikke tidsavbrudd, en updater som døde midt i jobben (OOM/omstart)
+//   ble stående i en omstartsløkke på en gammel mappe-lås, og serveren stolte blindt på status.json: state «building» betydde
+//   «pågår» for alltid (409 på ny start) selv uten hjerteslag, så eneste vei ut var omstart fra Proxmox.
+//   Nå: status har en vakt (watchdog46): ingen fremgang på 3 min (progressAt/stuckSince fra updateren, eller hjerteslaget borte i
+//   1 min) → stuck:true med stuckMessage «Oppdateringen står fast på Bygger (4 min uten fremgang)», cause/glimt (OOM, full disk,
+//   nett) og actions ['retry','abort','log']. Nye ruter (samme tilgang som /start; serveren skriver BARE {id, requestedBy, at, action}):
+//   POST /retry  – kjører jobb: {action:'retry'} (updateren stopper steget og kjører det på nytt). Feilet jobb: ny vanlig start.
+//   POST /abort  – kjører jobb: {action:'abort'} (stopp; updateren blir på/går tilbake til forrige versjon). Updateren svarer ikke:
+//                  jobben merkes som avbrutt her (kv update_abandoned), så appen aldri blir stående på en gammel prosent.
+//   POST /prune  – {action:'prune'}: updateren rydder dinglende bilder og gammel byggcache (aldri volumer). Status i prune.
+//   GET  /resources → {diskFreeMb, needDiskMb, ramFreeMb, needRamMb, ok, low:[…]} (sjekkes også før /start: 409 code low_disk).
+//   Backupen før oppdateringen har 5 min tidsavbrudd.
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, statfsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
@@ -60,6 +74,7 @@ const DATA = resolve(config.dataDir);
 const UPD = join(DATA, 'update');
 const BACKUPS = join(DATA, 'backups');
 const KEEP_BACKUPS = 5;
+const BACKUP_TIMEOUT_MS = Math.max(1000, Number(process.env.BACKUP_TIMEOUT_MS ?? 300_000) || 300_000);
 const HEARTBEAT_MAX_MS = 30_000;
 const LATEST_TTL = 10 * 60_000;
 const RUNNING = new Set(['downloading', 'building', 'restarting']);
@@ -151,9 +166,91 @@ export function readStatus() {
   const s = readJson('status.json');
   if (!s || typeof s !== 'object') return { state: 'idle' };
   const str = (v, n = 2000) => (typeof v === 'string' ? v.slice(0, n) : null);
-  return { id: str(s.id, 80), state: str(s.state, 20) || 'idle', step: str(s.step, 200), action: s.action === 'rollback' ? 'rollback' : 'update', startedAt: Number(s.startedAt) || null,
-    finishedAt: Number(s.finishedAt) || null, error: str(s.error), sha: str(s.sha, 40), version: str(s.version, 20) };
+  const num = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
+  const out = { id: str(s.id, 80), state: str(s.state, 20) || 'idle', step: str(s.step, 200), action: s.action === 'rollback' ? 'rollback' : 'update', startedAt: Number(s.startedAt) || null,
+    finishedAt: Number(s.finishedAt) || null, error: str(s.error), sha: str(s.sha, 40), version: str(s.version, 20),
+    // Prompt 46: fremdrift og vakt fra updateren (eldre updatere har ikke feltene).
+    updatedAt: num(s.updatedAt), progressAt: num(s.progressAt), stuckSince: num(s.stuckSince), lastLine: str(s.lastLine, 200),
+    code: /^[a-z_]{1,20}$/.test(String(s.code ?? '')) ? s.code : null, fromVersion: /^\d+\.\d+\.\d+$/.test(String(s.fromVersion ?? '')) ? s.fromVersion : null,
+    attempt: num(s.attempt), resources: s.resources && typeof s.resources === 'object' ? { diskFreeMb: num(s.resources.diskFreeMb), ramFreeMb: num(s.resources.ramFreeMb) } : null };
+  // Prompt 46: jobben ble avbrutt fra appen mens updateren ikke svarte → vises som avbrutt, ikke som en evig prosent.
+  const ab = kv.get(OWNER, 'update_abandoned', null);
+  if (ab?.id && ab.id === out.id && RUNNING.has(out.state)) {
+    Object.assign(out, { state: 'failed', step: 'Avbrutt', code: 'abandoned', finishedAt: Number(ab.at) || Date.now(),
+      error: 'Avbrutt fra appen fordi updateren ikke svarte. Den gamle versjonen kjører videre hvis den ikke var startet på nytt. Updateren starter vanligvis av seg selv igjen; prøv på nytt når den svarer.' });
+  }
+  return out;
 }
+
+/* ---------------- Prompt 46: vakt («står fast») ---------------- */
+
+const STALL_MS = 180_000, HB_DOWN_MS = 60_000;
+// Eldre updatere uten progressAt: så lenge kan et steg ta før det regnes som fast.
+const OLD_MAX_MS = { downloading: 12 * 60_000, building: 25 * 60_000, restarting: 5 * 60_000 };
+const STEP_LABEL = { downloading: 'Laster ned', building: 'Bygger', restarting: 'Starter på nytt' };
+const CAUSES = {
+  oom: 'Serveren gikk tom for minne under bygging.',
+  disk_full: 'Disken på serveren ble full under byggingen.',
+  low_disk: 'Det er for lite ledig plass på serveren.',
+  low_ram: 'Det er for lite ledig minne på serveren.',
+  network: 'Nettet falt ut eller GitHub svarte ikke.',
+  timeout: 'Steget brukte lengre tid enn tillatt og ble stoppet.',
+  updater_down: 'Updateren svarer ikke. Den startes vanligvis på nytt av Docker innen ett minutt.',
+};
+/** Gjetter årsaken ut fra loggen (samme mønstre som updateren). */
+export function causeFromLog(text) {
+  const t = String(text ?? '').split('\n').slice(-80).join('\n');
+  if (/no space left on device|ENOSPC/i.test(t)) return 'disk_full';
+  if (/out of memory|cannot allocate memory|ENOMEM|exit code: 137|signal: killed|OOMKilled|^.*Killed$/im.test(t)) return 'oom';
+  if (/ETIMEDOUT|EAI_AGAIN|ENOTFOUND|ECONNRESET|Temporary failure resolving|Could not resolve|i\/o timeout|TLS handshake timeout|network is unreachable/i.test(t)) return 'network';
+  return null;
+}
+const fmtMin = (ms) => Math.max(1, Math.round(ms / 60_000));
+/** → {stuck, reason:'no_progress'|'updater_down'|null, since, forMs, message, cause, glimt, actions[], abortLabel} */
+export function watchdog46(st, now = Date.now()) {
+  const from = st.fromVersion ?? installed().version ?? null;
+  const abortLabel = from ? `Avbryt og gå tilbake til ${String(from).split('.').slice(0, 2).join('.')}` : 'Avbryt og gå tilbake';
+  const logCause = st.state === 'failed' || RUNNING.has(st.state) ? causeFromLog(readLog(80)) : null;
+  const known = st.code && CAUSES[st.code] ? st.code : null;
+  if (st.state === 'failed') {
+    const cause = known ?? logCause;
+    const actions = ['retry', 'log', ...(['low_disk', 'disk_full'].includes(cause) ? ['prune'] : [])];
+    return { stuck: false, reason: null, since: null, forMs: 0, message: null, cause, glimt: cause ? CAUSES[cause] : null, actions, abortLabel };
+  }
+  if (!RUNNING.has(st.state)) return { stuck: false, reason: null, since: null, forMs: 0, message: null, cause: null, glimt: null, actions: [], abortLabel };
+  const hb = heartbeatAge();
+  const last = st.progressAt ?? st.updatedAt ?? st.startedAt ?? null;
+  let reason = null, since = null;
+  if (hb > HB_DOWN_MS) { reason = 'updater_down'; since = Number.isFinite(hb) ? now - hb : last; }
+  else if (st.stuckSince) { reason = 'no_progress'; since = st.stuckSince; }
+  else if (st.progressAt && now - st.progressAt > STALL_MS) { reason = 'no_progress'; since = st.progressAt + STALL_MS; }
+  else if (!st.progressAt && st.startedAt && now - st.startedAt > (OLD_MAX_MS[st.state] ?? 25 * 60_000)) { reason = 'no_progress'; since = now; }
+  if (!reason) return { stuck: false, reason: null, since: null, forMs: last ? Math.max(0, now - last) : 0, message: null, cause: null, glimt: null, actions: [], abortLabel };
+  const forMs = Math.max(0, now - (last ?? since ?? now));
+  const label = STEP_LABEL[st.state] ?? 'Oppdaterer';
+  const cause = reason === 'updater_down' ? 'updater_down' : known ?? logCause;
+  const message = reason === 'updater_down'
+    ? `Oppdateringen står fast på ${label}: updateren svarer ikke${Number.isFinite(hb) ? ` (sist hørt for ${fmtMin(hb)} min siden)` : ''}`
+    : `Oppdateringen står fast på ${label} (${fmtMin(forMs)} min uten fremgang)`;
+  return { stuck: true, reason, since, forMs, message, cause, glimt: cause ? CAUSES[cause] : null, actions: ['retry', 'abort', 'log'], abortLabel };
+}
+
+/* ---------------- Prompt 46: ressurser ---------------- */
+
+const NEED_DISK_MB = Math.max(0, Number(process.env.MIN_DISK_MB ?? 3072) || 0), NEED_RAM_MB = Math.max(0, Number(process.env.MIN_RAM_MB ?? 1024) || 0);
+const fmtGb = (mb) => (mb / 1024).toFixed(1).replace('.', ',');
+export function resources46() {
+  let diskFreeMb = null, ramFreeMb = null;
+  try { const f = statfsSync(DATA); diskFreeMb = Math.floor((Number(f.bavail) * Number(f.bsize)) / 1048576); } catch { /* ukjent */ }
+  try { const m = readFileSync('/proc/meminfo', 'utf8').match(/^MemAvailable:\s+(\d+)/m); if (m) ramFreeMb = Math.floor(Number(m[1]) / 1024); } catch { /* ukjent */ }
+  const low = [];
+  if (diskFreeMb != null && diskFreeMb < NEED_DISK_MB) low.push('disk');
+  if (ramFreeMb != null && ramFreeMb < NEED_RAM_MB) low.push('ram');
+  const message = low.includes('disk') ? `Lite plass på serveren (${fmtGb(diskFreeMb)} GB ledig). Rydd gamle bilder?`
+    : low.includes('ram') ? `Lite ledig minne på serveren (${fmtGb(ramFreeMb)} GB). Oppdateringen trenger minst ${fmtGb(NEED_RAM_MB)} GB.` : null;
+  return { diskFreeMb, needDiskMb: NEED_DISK_MB, ramFreeMb, needRamMb: NEED_RAM_MB, ok: !low.length, low, message, canPrune: low.includes('disk') };
+}
+const pruneStatus = () => { const m = readJson('maint.json'); return m && m.action === 'prune' ? { id: typeof m.id === 'string' ? m.id.slice(0, 80) : null, state: m.state === 'done' ? 'done' : m.state === 'running' ? 'running' : 'unknown', at: Number(m.at) || null, freedMb: Number.isFinite(+m.freedMb) ? +m.freedMb : null, diskFreeMb: Number.isFinite(+m.diskFreeMb) ? +m.diskFreeMb : null } : null; };
 
 // Fremdrift for banneret: fire steg og en grov prosent. Backupen tas av serveren før forespørselen skrives, så den er
 // ferdig når updateren begynner å installere.
@@ -182,10 +279,12 @@ function readLog(lines) {
 }
 
 // Venter updateren på å plukke opp en forespørsel vi allerede har skrevet? (Den sjekker hvert 5. s.)
+// Prompt 46: bare ekte oppdateringer/tilbakerullinger – retry/abort/prune er kontrollforespørsler.
+const UPDATE_ACTIONS = new Set([undefined, null, 'update', 'rollback']);
 function pendingRequest(status) {
   const r = readJson('request.json');
   // Prompt 45: «Sett opp Docker-tilgang» er ingen oppdatering (os startes ikke på nytt).
-  return !!r?.id && r.id !== status.id && r.action !== 'docker-setup' && Date.now() - Number(r.at || 0) < 2 * 60_000;
+  return !!r?.id && r.id !== status.id && UPDATE_ACTIONS.has(r.action) && Date.now() - Number(r.at || 0) < 2 * 60_000;
 }
 const isRunning = (status = readStatus()) => RUNNING.has(status.state) || pendingRequest(status);
 /** Prompt 40: pågår en ekte oppdatering/omstart nå? → {updating, state, version} (for /api/health · restarting). */
@@ -211,8 +310,13 @@ export function statusOut(status = readStatus()) {
   const pending = pendingRequest(status);
   const req = pending ? readJson('request.json') : null;
   const pr = progressOf(status, pending);
+  // Prompt 46: vakt, årsak og knapper. Klienten leser dette etter omstart (status.json på disk), så den aldri blir stående på en gammel prosent.
+  const w = pending ? { stuck: false, reason: null, since: null, forMs: 0, message: null, cause: null, glimt: null, actions: [], abortLabel: null } : watchdog46(status);
   return { ...status, ...(pending ? { state: 'queued', step: 'Venter på updateren', action: req?.action === 'rollback' ? 'rollback' : 'update', error: null } : {}), ...pr, running: RUNNING.has(status.state) || pending,
-    phase: phaseOf44(status, pending), progress: pr.pct, from: installed().version, to: pending ? req?.target ?? null : status.version ?? null, ...(pending && req?.target ? { target: req.target } : {}) }; // prompt 44
+    phase: phaseOf44(status, pending), progress: pr.pct, from: installed().version, to: pending ? req?.target ?? null : status.version ?? null, ...(pending && req?.target ? { target: req.target } : {}), // prompt 44
+    stuck: w.stuck, stuckReason: w.reason, stuckSince: w.since, stuckForSec: Math.round(w.forMs / 1000), stuckMessage: w.message, stuckStep: w.stuck ? STEP_LABEL[status.state] ?? null : null,
+    cause: w.cause, glimt: w.glimt, actions: w.actions, abortLabel: w.abortLabel, updaterAlive: updaterAvailable(), prune: pruneStatus(),
+    logs: { url: '/api/system/update/log', ct: 'updater', container: 'homelab-updater' } };
 }
 
 // Updaterens historikk: bare versjonene leses (sha sendes aldri videre som instruks).
@@ -273,7 +377,11 @@ const getLatest = async (force) => (!force && latest && Date.now() - latest.at <
 export async function preUpdateBackup(meta = {}) {
   mkdirSync(BACKUPS, { recursive: true });
   const name = `pre-update-${new Date().toISOString().replace(/[:.]/g, '-')}.db`;
-  await db.backup(join(BACKUPS, name));
+  // Prompt 46: backupen har 5 min tidsavbrudd (BACKUP_TIMEOUT_MS), så «Oppdater nå» aldri henger på den.
+  let timer;
+  try {
+    await Promise.race([db.backup(join(BACKUPS, name)), new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('backupen brukte mer enn 5 min')), BACKUP_TIMEOUT_MS); timer.unref?.(); })]);
+  } finally { clearTimeout(timer); }
   // Prompt 44: hvilken versjon backupen er tatt fra (updateren finner backupen for «Gjenopprett backup» med fromVersion).
   const old = readdirSync(BACKUPS).filter((f) => /^pre-update-[\w-]+\.db$/.test(f)).sort().reverse().slice(KEEP_BACKUPS);
   for (const f of old) { try { unlinkSync(join(BACKUPS, f)); } catch { /* prøver igjen neste gang */ } }
@@ -300,9 +408,11 @@ function watchStatus() {
   const started = Date.now();
   watch = setInterval(() => {
     const s = readStatus();
-    const key = `${s.id}|${s.state}|${s.step}`;
+    // Prompt 46: også «står fast» sendes ut (stuck i status), og vakten følger jobben i opptil 60 min.
+    const w = RUNNING.has(s.state) ? watchdog46(s) : null;
+    const key = `${s.id}|${s.state}|${s.step}|${s.attempt ?? ''}|${w?.stuck ? w.reason : ''}`;
     if (key !== lastSent) { lastSent = key; broadcast('system-update', { status: statusOut(s) }); }
-    if ((!isRunning(s) && Date.now() - started > 10_000) || Date.now() - started > 30 * 60_000) { clearInterval(watch); watch = null; }
+    if ((!isRunning(s) && Date.now() - started > 10_000) || Date.now() - started > 60 * 60_000) { clearInterval(watch); watch = null; }
   }, 2000);
   watch.unref?.();
 }
@@ -483,6 +593,9 @@ async function startJob(c, action) {
   }
   if (!updaterAvailable()) return c.json({ error: 'Oppdatering fra appen er ikke satt opp. Kjør update.sh én gang fra Proxmox for å slå det på.' }, 409);
   if (isRunning()) return c.json({ error: 'En oppdatering pågår allerede' }, 409);
+  // Prompt 46: nok plass før start (updateren sjekker også minnet). For lite → 409 med «Rydd».
+  const res = resources46();
+  if (res.low.includes('disk')) return c.json({ error: res.message, code: 'low_disk', resources: res, canPrune: true }, 409);
   // Prompt 44: {version, restoreBackup, pauseAutoDays} – versjonen MÅ finnes i updaterens egen liste (versions.json).
   if (action === 'rollback' && b?.version !== undefined) {
     const v = String(b.version ?? '').replace(/^v/, '');
@@ -652,13 +765,66 @@ api.put('/settings', async (c) => {
 api.post('/start', (c) => startJob(c, 'update'));
 api.post('/rollback', (c) => startJob(c, 'rollback'));
 
+/* ---------------- Prompt 46: Prøv igjen · Avbryt og gå tilbake · Rydd ---------------- */
+
+// Kontrollforespørsel til updateren: bare {id, requestedBy, at, action}. Ingen backup (jobben har allerede tatt en).
+function writeControl(by, action) {
+  const req = { id: randomUUID(), requestedBy: String(by).slice(0, 64), at: Date.now(), action };
+  mkdirSync(UPD, { recursive: true });
+  const tmp = join(UPD, `.request-${req.id}.tmp`);
+  writeFileSync(tmp, JSON.stringify(req), { mode: 0o644 });
+  renameSync(tmp, join(UPD, 'request.json'));
+  console.warn(`[system-update] ${action} ${req.id} av ${req.requestedBy}`);
+  watchStatus();
+  return req.id;
+}
+const jsonOnly = (c) => /^application\/json\b/i.test(c.req.header('content-type') ?? '');
+api.get('/resources', (c) => c.json({ ...resources46(), prune: pruneStatus() }, 200, { 'Cache-Control': 'no-store' }));
+api.post('/retry', async (c) => {
+  if (!canWrite(c)) return c.json({ error: 'Tokenet mangler tilgangen finance:write' }, 403);
+  if (!jsonOnly(c)) return c.json({ error: 'Forventet JSON' }, 415);
+  const st = readStatus();
+  if (RUNNING.has(st.state) && !pendingRequest(st)) {
+    if (!updaterAvailable()) return c.json({ error: 'Updateren svarer ikke. Den startes vanligvis på nytt av Docker innen ett minutt – prøv igjen da. Hjelper ikke det: «docker compose up -d updater» i LXC-en.', code: 'updater_down' }, 409);
+    const id = writeControl(c.get('user'), 'retry');
+    return c.json({ ok: true, id, mode: 'step', message: `Prøver ${STEP_LABEL[st.state]?.toLowerCase() ?? 'steget'} på nytt` }, 202);
+  }
+  // Ingen jobb som kjører (feilet/avbrutt): vanlig ny start med samme regler som /start.
+  return startJob(c, st.action === 'rollback' && st.state === 'failed' ? 'rollback' : 'update');
+});
+api.post('/abort', async (c) => {
+  if (!canWrite(c)) return c.json({ error: 'Tokenet mangler tilgangen finance:write' }, 403);
+  if (!jsonOnly(c)) return c.json({ error: 'Forventet JSON' }, 415);
+  const st = readStatus();
+  if (!RUNNING.has(st.state)) return c.json({ error: 'Ingen oppdatering kjører' }, 409);
+  const w = watchdog46(st);
+  if (!updaterAvailable()) {
+    // Updateren er borte: jobben kan ikke fortsette uansett. Merk den som avbrutt, så appen viser riktig status.
+    kv.set(OWNER, 'update_abandoned', { id: st.id, at: Date.now(), by: String(c.get('user')) });
+    console.warn(`[system-update] jobb ${st.id} merket avbrutt (updateren svarte ikke) av ${c.get('user')}`);
+    return c.json({ ok: true, mode: 'abandoned', status: statusOut() });
+  }
+  const id = writeControl(c.get('user'), 'abort');
+  return c.json({ ok: true, id, mode: 'abort', message: w.abortLabel }, 202);
+});
+api.post('/prune', async (c) => {
+  if (!canWrite(c)) return c.json({ error: 'Tokenet mangler tilgangen finance:write' }, 403);
+  if (!jsonOnly(c)) return c.json({ error: 'Forventet JSON' }, 415);
+  if (!updaterAvailable()) return c.json({ error: 'Oppdatering fra appen er ikke satt opp. Kjør update.sh én gang fra Proxmox for å slå det på.' }, 409);
+  if (isRunning()) return c.json({ error: 'En oppdatering pågår allerede' }, 409);
+  const id = writeControl(c.get('user'), 'prune');
+  return c.json({ ok: true, id, message: 'Rydder gamle bilder og byggcache …' }, 202);
+});
+
 // Prompt 44: GET /api/version (uten innlogging) → {version, name, codename, api, dbSchema, features:[…]}. Appene skjuler det serveren ikke støtter.
 export const FEATURES44 = ['logs', 'containers', 'study.documents', 'study.overview', 'calendar.attendees', 'calendar.invite', 'users.directory', 'geo.address', 'tasks.subs', 'tasks.sync', 'tasks.deadline',
   'media.servers', 'media.search.jobs', 'media.files.delete', 'media.library.search', 'media.fanart', 'integrations.status', 'playback', 'playback.plex.pin', 'impersonate', 'users.layout', 'server.owner', 'update.versions',
   'update.rollback.target', 'web_theme', 'health.state',
   // Prompt 45 (SERVER45)
   'docker.setup', 'gsc.serviceAccount', 'study.reanalyze', 'study.thumb', 'ai.import', 'ai.import.chatgpt', 'ai.import.gemini', 'ai.import.chunked', 'media.unmonitored', 'playback.summary',
-  'zone.alerts', 'zone.icon', 'health.ha.mobileapp', 'ruter.recoCount', 'weather.here', 'tasks.ha.summary', 'settings.sections', 'notify.systemOnly'];
+  'zone.alerts', 'zone.icon', 'health.ha.mobileapp', 'ruter.recoCount', 'weather.here', 'tasks.ha.summary', 'settings.sections', 'notify.systemOnly',
+  // Prompt 46 (SERVER46)
+  'update.watchdog', 'update.retry', 'update.abort', 'update.prune'];
 export const versionApi44 = new Hono();
 versionApi44.get('/', (c) => c.json({ version: ownVersion(), name: OS_NAME, codename: OS_CODENAME, shortName: shortName(ownVersion()), api: 44, dbSchema: DB_SCHEMA, features: FEATURES44 }, 200, { 'Cache-Control': 'no-store' }));
 

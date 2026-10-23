@@ -559,7 +559,11 @@ export function owuiBody(kind, body, { thinking = true, extra = null } = {}) {
     ...(body.keep_alive !== undefined ? { keep_alive: body.keep_alive } : {}), ...(think !== undefined ? { think } : {}),
     ...(body.format ? { response_format: { type: 'json_object' }, format: body.format } : {}),
     stream_options: { include_usage: true } };
-  if (extra && typeof extra === 'object') Object.assign(out, extra);
+  // Prompt 46 (GLIMT46): Open WebUIs eget nettsøk og verktøy er AV med mindre kalleren ber om det (features.web_search:true).
+  // Uten feltene brukte Open WebUI sin egen standard («Enable Web Search by default», auto-søk) – også når Nettsøk var av i Chat.
+  out.features = { web_search: false };
+  out.tool_ids = [];
+  if (extra && typeof extra === 'object') Object.assign(out, extra, { features: { web_search: false, ...(extra.features ?? {}) } });
   return out;
 }
 registerBackend('openwebui', {
@@ -579,7 +583,15 @@ registerBackend('openwebui', {
       if (data === '[DONE]') { done = true; return; }
       let j; try { j = JSON.parse(data); } catch { return; }
       if (j.error) { streamErr = httpGateError(500, JSON.stringify({ error: j.error?.message ?? j.error }), 'Open WebUI'); return; }
-      if (j.sources?.length || j.citations?.length) usedWeb = true;
+      if (j.sources?.length || j.citations?.length) {
+        usedWeb = true;
+        // Prompt 46: nettsøk var eksplisitt av, men Open WebUI søkte likevel (kilder med http-URL-er) → forkast svaret.
+        if (ob.features?.web_search === false && JSON.stringify(j.sources ?? j.citations ?? []).match(/https?:\/\//)) {
+          console.warn('[ai-gate] chat.websearch_leak: Open WebUI brukte nettsøk selv om det var av');
+          streamErr = Object.assign(new GateError('http', 'Open WebUI søkte på nettet selv om Nettsøk er av', { status: 409, transient: false }), { websearchLeak: true, noContent: !part.content });
+          return;
+        }
+      }
       const c0 = j.choices?.[0] ?? {}, d = c0.delta ?? c0.message ?? {};
       const reasoning = d.reasoning_content ?? d.reasoning ?? d.thinking ?? '';
       const content = typeof d.content === 'string' ? d.content : '';
@@ -687,6 +699,13 @@ async function request(o0) {
       const timeoutBlocked = e.beforeFirst && o.retryTimeouts === false;
       // Strømmer kallet videre til en klient (chat) og noe er sendt, kan det ikke tas på nytt (teksten ville kommet to ganger).
       const streamedOut = !!o.onChunk && !!qjob?.gotFirst;
+      // Prompt 46: Open WebUI søkte på nettet selv om det var av → én gang til: direkte til Ollama (har ikke nettsøk) når det går,
+      // ellers samme backend med søket eksplisitt av. Søker den igjen, kastes feilen (svaret med nettkilder brukes aldri).
+      if (e.websearchLeak && !leakSwitched && (e.noContent || !streamedOut)) {
+        leakSwitched = true;
+        if ((o.base || defaultBase()) && o.backend === 'openwebui' && !o0.backend) { sel = { backend: 'ollama', note: 'via Ollama direkte: Open WebUI søkte på nettet selv om Nettsøk var av' }; o = { ...o0, backend: 'ollama' }; }
+        continue;
+      }
       if (!e.transient || timeoutBlocked || streamedOut || attempts > maxRetries) throw e;
       const wait = _gateTest.backoffMs[Math.min(attempts - 1, _gateTest.backoffMs.length - 1)] ?? 2000;
       console.warn(`[ai-gate] ${o.model} (${o.backend}): ${e.message} · nytt forsøk ${attempts}/${maxRetries} om ${Math.round(wait / 100) / 10} s`);

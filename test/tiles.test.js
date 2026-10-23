@@ -103,7 +103,7 @@ test('ugyldige fliser og stiler; maptiler bare med nøkkel', async () => {
   assert.equal((await get('/tiles/voyager/2/9/0.png')).headers.get('x-tile-source'), 'fallback');
   assert.equal((await get('/tiles/maptiler/1/0/0.png')).status, 404);
   let cfg = await (await get('/api/config/map')).json();
-  assert.deepEqual(Object.keys(cfg.tiles).sort(), ['dark', 'light', 'topo', 'voyager']);
+  assert.deepEqual(Object.keys(cfg.tiles).sort(), ['dark', 'light', 'topo', 'topograatone', 'voyager']); // prompt 46: + Kartverket gråtone (Kart)
   assert.equal(cfg.tiles.voyager, '/tiles/voyager/{z}/{x}/{y}{r}.png');
   // Prompt 21: topo (Kartverket) er standard, også i mørkt og Papir-tema (med CSS-filter). CARTO er bare valgbar.
   assert.equal(cfg.default, 'topo');

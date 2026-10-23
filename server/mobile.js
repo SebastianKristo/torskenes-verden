@@ -17,6 +17,8 @@ import { sessionUser, userInfo, serverName, isAdmin, installKind } from './auth.
 import { packagesFor } from './tracking.js';
 import { newsFor } from './rss.js';
 import finansApi, { bearerOk } from './finans/routes.js';
+import { signedImageUser46 } from './api-auth46.js'; // prompt 46 (SERVER46)
+import { noteHere46, hereWeather46 } from './here46.js'; // prompt 46 (SERVER46)
 import { matApi } from './mat.js';
 import { domainOverview } from './domains.js';
 import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage } from './bg.js';
@@ -40,6 +42,8 @@ export const authOrToken = async (c, next) => {
   const write = !['GET', 'HEAD'].includes(c.req.method);
   let id = sessionUser(c);
   if (!id && bearerOk(c, write ? 'finance:write' : 'finance:read')) id = c.get('user');
+  // Prompt 46: signerte bilde-URL-er (/api/media/cover|poster?…&sig=…) lastes uten header (AsyncImage/Coil/<img>).
+  if (!id && !write && !c.req.header('authorization')) id = signedImageUser46(c);
   if (!id || !userInfo(id)) return c.json({ error: 'Ikke innlogget' }, 401);
   c.set('user', id);
   await next();
@@ -244,7 +248,7 @@ export function profileOf(id) {
 }
 const SUB_HOME_CARDS = ['ai', 'next7', 'check', 'list'];
 export const NAV_STYLES = ['text', 'icons', 'icons_active_label'];
-const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur'];
+const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur', 'gphoto']; // prompt 46 (DATA46): gphoto = delt Google Photos-album
 export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media', 'huske', 'chat',
   // Prompt 40: alt fra Mer kan ligge i fanelinja (GET /api/app/pages, api40.js PAGES40) – nye id-er og designnøklene (HNAV_ALL).
   'kalender', 'bursdager', 'brief', 'nyhetsleser', 'bibel', 'nordlys', 'innstillinger', 'abo', 'kart', 'fsok', 'bursdag', 'rss', 'innst', 'gjoremal'];
@@ -254,7 +258,7 @@ const cardIds = (a) => Array.isArray(a) && a.length <= 40 && a.every((x) => type
 const FIN_TABS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'chat'];
 const FIN_TABS_DEFAULT = ['oversikt', 'liste', 'finn', 'sok'];
 const TRK_CARDS = ['add', 'shipments', 'notify', 'carriers'];
-const PHOTO_KINDS = ['cur', 'oslo', 'weather', 'planets', 'custom'];
+const PHOTO_KINDS = ['cur', 'oslo', 'weather', 'planets', 'custom', 'gphoto']; // prompt 46: gphoto (Google Photos-album, DATA46)
 export const layoutOf = (id) => kv.get(id, 'layout', {});
 
 /* ---------------- Snarveier ---------------- */
@@ -802,7 +806,10 @@ api.get('/widgets/departures', authOrToken, async (c) => {
 // Alt mobilforsiden i appene trenger, i ett kall.
 api.get('/mobile/home', authOrToken, async (c) => {
   const id = c.get('user'), me = meOut(id);
-  const [w, ruter, status, stops] = await Promise.all([safe(ext.getWeather), safe(ext.getRuter), serverStatus(), homeStops(id).catch(() => [])]);
+  // Prompt 46: «Min posisjon» – klienten sender ?lat=&lon=[&name=]; da vises været der enheten er, ikke serverens standardsted.
+  const here = noteHere46(c, id);
+  const wx = here ? () => hereWeather46(here, ext.getWeather).catch(() => ext.getWeather()) : ext.getWeather;
+  const [w, ruter, status, stops] = await Promise.all([safe(wx), safe(ext.getRuter), serverStatus(), homeStops(id).catch(() => [])]);
   return c.json({
     name: me.name, serverName: me.serverName, avatarUrl: me.avatarUrl, greeting: greetingFor(osloHour()),
     // Samme felter som /api/weather (vind er fortsatt et tall; detaljer i windInfo), pluss de korte navnene appene bruker.
@@ -879,6 +886,16 @@ api.get('/photo-window', authOrToken, async (c) => {
     const apod = MOCK ? null : await Promise.race([apodImage(a), new Promise((r) => setTimeout(() => r(null), 6000).unref?.())]);
     if (apod) return c.json(photoOut(kind, [apod, ...planetsToday()], { credit: `NASA APOD · ${a.title ?? ''}${a.copyright ? ` · © ${String(a.copyright).trim()}` : ''}`.trim(), gradient: SPACE_GRADIENT }));
     return c.json(photoOut(kind, planetsToday(), { credit: a?.media_type === 'video' ? 'Planeter · dagens APOD er en video' : 'Planeter', gradient: SPACE_GRADIENT }));
+  }
+  // Prompt 46: Google Photos-albumet (DATA46, gphoto46.js) – samme innlogging, bildet som gjelder denne timen.
+  if (kind === 'gphoto') {
+    try {
+      const { gphoto46Api } = await import('./gphoto46.js');
+      const r = await gphoto46Api.request('/gphoto', { headers: c.req.raw.headers });
+      const a = r.ok ? await r.json() : null;
+      if (a?.current) return c.json(photoOut(kind, [a.current.mobile ?? a.current.large, a.current.large, ...osloImages()].filter(Boolean), { credit: 'Google Photos-album', gradient: CUR_GRADIENT, textColor: a.current.textColor, next: a.next ?? null, nextChangeAt: a.nextChangeAt }));
+    } catch { /* faller tilbake */ }
+    kind = 'cur';
   }
   if (kind === 'oslo') return c.json(photoOut(kind, osloImages(), { credit: 'Oslo · Operaen og Bjørvika', gradient: OSLO_GRADIENT }));
   if (kind === 'weather') {

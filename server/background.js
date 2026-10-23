@@ -25,6 +25,7 @@ import { kv, OWNER } from './db.js';
 import { cfg } from './settings.js';
 import { isAdmin } from './auth.js';
 import { authOrToken, designOf, layoutOf } from './mobile.js';
+import { albumOut46 } from './gphoto46.js'; // prompt 46 (DATA46)
 import { CATALOG, PLANETS, PLANET_NAME, PLANET_FILES, KNOWN_CREDITS, bundledPath, filePathUrl, infoUrl, pageUrl, creditFromInfo } from './backgrounds/catalog.js';
 
 const isMock = () => process.env.MOCK_DATA === '1';
@@ -353,7 +354,7 @@ async function osloUploads() {
 
 /* ---------------- Innstillinger ---------------- */
 
-export const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur'];
+export const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur', 'gphoto']; // prompt 46 (DATA46): gphoto = delt Google Photos-album
 const clamp = (v, a, b, d) => (Number.isFinite(+v) ? Math.min(b, Math.max(a, Math.round(+v))) : d);
 export function bgSettings(userId) {
   const l = layoutOf(userId), d = designOf(userId);
@@ -448,6 +449,15 @@ export async function backgroundFor(userId, { type, lat, lon, w = 1440, now = Da
     const v = kv.get(userId, 'photo_v', 0);
     if (v) return out('custom', { ...base, image_url: `/api/me/photo-window?v=${v}`, credit: { text: 'Eget bilde', author: null, license: null, url: null, source: 'Eget bilde' }, theme_hint: 'dark', gradient: FALLBACK_GRADIENT });
     return out('custom', { ...base, credit: { text: 'Last opp et eget bilde under Innstillinger → Utseende → Bakgrunn', author: null, url: null, source: null }, gradient: FALLBACK_GRADIENT });
+  }
+
+  // Prompt 46 (DATA46): delt Google Photos-album – bildet for timen (lokalt cachet), samme på alle enheter. Uten album: som «cur».
+  if (t === 'gphoto') {
+    const a = albumOut46(kv.get(userId, 'bg_album', null), now);
+    if (a.current) return out('gphoto', { ...base, key: 'gphoto', image_url: width <= 1280 ? a.current.mobile : a.current.large, fallbacks: [a.current.large, a.current.mobile].filter((x, i, l) => l.indexOf(x) === i), thumb: a.current.thumb,
+      credit: { text: 'Google Photos-album', author: null, license: null, url: null, source: 'Google Photos' }, theme_hint: a.current.light === 'light' ? 'light' : 'dark', textColor: a.current.textColor,
+      gradient: FALLBACK_GRADIENT, next: a.nextChangeAt, gphoto: { count: a.count, error: a.error, rowText: a.rowText, url: a.url } });
+    return out('gphoto', { ...base, credit: { text: a.configured ? a.rowText : 'Velg et delt Google Photos-album under Bakgrunn', author: null, url: null, source: null }, gradient: FALLBACK_GRADIENT, gphoto: a.configured ? { count: a.count, error: a.error, rowText: a.rowText, url: a.url } : null });
   }
 
   return out(t === 'none' ? 'none' : 'cur', { ...base });

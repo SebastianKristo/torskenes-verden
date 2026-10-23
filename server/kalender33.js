@@ -231,6 +231,8 @@ function setEventCalendar(user, id, cal) {
 }
 const validCalendar = (user, id) => typeof id === 'string' && appCalendarsOf(user).some((c) => c.id === resolveCalendar(user, id) && c.writable);
 const backendOf = (user, id) => appCalendarsOf(user).find((c) => c.id === resolveCalendar(user, id))?.backend ?? 'privat';
+/** Prompt 46 (GLIMT46): Glimt bruker standardkalenderen og husker appens kalender for hendelser den lager. */
+export const kal46 = { prefs: (user) => prefsOf(store(user)), setCalendar: (user, id, cal) => setEventCalendar(user, id, cal), validCalendar, backendOf, decorate: (user, evs) => decorate(user, evs) };
 const changed = (user, action, id) => { try { broadcast('kalender', { action, ...(id ? { id } : {}) }, [user]); } catch { /* sanntid er best effort */ } };
 
 export async function calendarsOut(user, today = osloTodayISO()) {
@@ -331,6 +333,16 @@ export async function eventsMiddleware(c, next) {
     let want = null;
     if ((m === 'POST' && !id && !isCopy) || m === 'PATCH') {
       const b = await c.req.json().catch(() => null);
+      // Prompt 46 (GLIMT46): appene sender appens kalender-id i «calendar» («personlig», «c-…»). Før ga det
+      // «Kalenderen må være privat eller familie». En kjent, skrivbar app-kalender tolkes nå som appCalendar.
+      if (b && typeof b === 'object' && b.appCalendar === undefined && typeof b.calendar === 'string' && !['privat', 'familie'].includes(b.calendar)) {
+        if (validCalendar(user, b.calendar)) b.appCalendar = b.calendar, delete b.calendar;
+        else {
+          const cal = appCalendarsOf(user).find((x) => x.id === resolveCalendar(user, b.calendar));
+          if (cal) { c.res = c.json({ error: `Kan ikke legge til i «${cal.name}», den er skrivebeskyttet. Velg Personlig i stedet.`, readOnly: true, calendar: cal.id, suggest: 'personlig' }, 400); return; }
+          // ukjent id: som før (calendar.js svarer 400)
+        }
+      }
       if (b && typeof b === 'object' && b.appCalendar !== undefined) {
         if (!validCalendar(user, b.appCalendar)) { c.res = c.json({ error: 'Ukjent kalender (appCalendar)' }, 400); return; }
         want = b.appCalendar;
@@ -347,7 +359,7 @@ export async function eventsMiddleware(c, next) {
           c.res = c.json({ ok: true, event: ev });
           return;
         }
-        if (rest.calendar === undefined) rest.calendar = backendOf(user, want);
+        if (rest.calendar === undefined || !['privat', 'familie'].includes(rest.calendar)) rest.calendar = backendOf(user, want); // prompt 46: «calendar» = app-id → lagring
         if (m === 'PATCH') setEventCalendar(user, id, want);
         c.req.bodyCache = { text: Promise.resolve(JSON.stringify(rest)) }; // handleren i calendar.js leser den nye kroppen
       }

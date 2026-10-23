@@ -86,10 +86,15 @@ const LEAD41 = /^\s*(?:(?:og|men|så)\s+)?(?:(?:vi|jeg|du|dere)\s+(?:må|skal)\s
 /** Én handling → kort tittel i imperativ («til toten» → «Kjør til Toten»). */
 export function title41(piece) {
   let t = String(piece ?? '').replace(/[.!?]+$/, '').trim();
+  const lead = (t.match(LEAD41)?.[0] ?? '').toLowerCase();
   t = t.replace(LEAD41, '').replace(/^(?:å\s+)/i, '').trim();
-  t = fixWords(t);
+  t = fixWords(t).replace(/\s+(?:i morgen|i dag|i kveld|i overmorgen|på (?:mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag))$/i, '').trim(); // prompt 46: dato hører til fristen, ikke tittelen
   if (/^(til|hjem til)\s+\S/i.test(t)) t = `kjør ${t}`;
   else if (/^(på|i)\s+\p{Lu}/u.test(t)) t = `dra til ${t.replace(/^(på|i)\s+/i, '')}`;
+  // Prompt 46 (GLIMT46): brukerens egen verbform beholdes når den er riktig norsk: etter «husk å / minn meg på å» (infinitiv),
+  // og når flere verb er koordinert («Ringe tannlegen og bestille time» – før ble det «Ring tannlegen og bestille»).
+  if (/(?:å|at)\s*$/.test(lead) && !/(?:skal|må)\s/.test(lead)) return t.replace(/^./, (c) => c.toUpperCase()).replace(/\s{2,}/g, ' ').trim().slice(0, 200);
+  if (/^\p{L}+e\s.+\s+og\s+\p{L}+e(?:\s|$)/u.test(t)) return t.replace(/^./, (c) => c.toUpperCase()).replace(/\s{2,}/g, ' ').trim().slice(0, 200);
   return imperative40(t).replace(/\s{2,}/g, ' ').trim().slice(0, 200);
 }
 const SPLIT41 = /\s*,?\s*\b(før (?:vi|jeg|du|dere) (?:skal|må)|før det|hvor (?:vi|jeg|du|dere) (?:må|skal)|der (?:vi|jeg) (?:må|skal)|og så|og deretter|deretter|og etterpå|etterpå|siden|fordi|ettersom|men først)(?![\p{L}])\s*/giu;
@@ -150,7 +155,7 @@ async function askAi(u, prompt, attempt) {
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => { const t = setTimeout(() => rej(Object.assign(new Error('Tidsavbrudd'), { timeout: true })), ms); t.unref?.(); })]);
 /** → {items, engine:'glimt'|'lokal', engineLabel} */
 /** Prompt 42 (tasks-glimt42.js): liste-kontrakt {tasks:[…]}, ny prompt, lengdevakt og bedre lokal forhåndsdeling. */
-export const _hooks42 = { prompt: null, normalize: null, guard: null, local: null, log: null };
+export const _hooks42 = { prompt: null, normalize: null, guard: null, local: null, log: null, verbatim: null }; // verbatim: prompt 46 (glimt45/tasks46.js)
 export async function understand41(u, text, { lists = [], people = [], today = new Date().toISOString().slice(0, 10) } = {}) {
   const log = { input_len: String(text ?? '').length, model: null, tasks_count: 0, parse_ok: false, path: 'local' };
   const done = (r) => { log.tasks_count = r.items.length; if (r.engine === 'glimt') { log.path = 'ai'; log.model = r.engineLabel; } try { _hooks42.log?.(u, log); } catch { /* */ } return { ...r, log }; };
@@ -159,10 +164,11 @@ export async function understand41(u, text, { lists = [], people = [], today = n
     for (let attempt = 0; attempt <= AI_RETRIES41; attempt++) {
       try {
         let j = await withTimeout(Promise.resolve(askAi(u, attempt && _hooks42.prompt ? `${prompt}\nSvar kun med gyldig JSON.` : prompt, attempt)), (_ai41.ms ?? AI_MS41) + 2000);
-        if (_hooks42.normalize) j = _hooks42.normalize(j);
+        if (_hooks42.normalize) j = _hooks42.normalize(j, text); // prompt 46: originalteksten med (titler klippes ut av den)
         if (j) log.parse_ok = true;
         if (_hooks42.guard && j && !_hooks42.guard(j)) continue; // lengdevakt: for lange titler / flere handlinger i én → nytt forsøk
-        const ai = validateAi40(j, { lists, people });
+        let ai = validateAi40(j, { lists, people });
+        if (ai?.length && _hooks42.verbatim) ai = _hooks42.verbatim(text, ai, _hooks42.local?.(text, today) ?? splitLocal41(text, today)); // prompt 46: brukerens egne ord
         if (ai?.length) {
           const raw = Array.isArray(j.items) ? j.items : [];
           ai.forEach((x, i) => { const nt = raw[i]?.note; x.note = nt ? cap(String(nt).trim()).slice(0, 300) : null; x.n = fixWords(x.n); if (x.place) x.place = fixWords(String(x.place)); });

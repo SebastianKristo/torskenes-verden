@@ -22,6 +22,7 @@ import uiApi from './ui.js';
 import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
+import { faviconHandler46 } from './news46.js'; // prompt 46 (SERVER46)
 import iconsApi from './icons.js';
 import familyApi from './family.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
@@ -46,6 +47,7 @@ import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (v
 import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
 import { profilesApi, bibleApi, trackingKeysApi, kal37Api } from './api37.js'; // prompt 37 (SERVER37)
+import { bearerFallthrough46, homelabAuthCode46, signImages46, mediaDiag46, mediaDiagOut46 } from './api-auth46.js'; // prompt 46 (SERVER46)
 import { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler, brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
 import { cals39Api, googleMap39Api, rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
 import { twofa40Api, finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
@@ -62,6 +64,9 @@ import { study44Api } from './study44.js';
 import { auth44Api } from './auth44.js';
 import { playback44Api, startPlayback44 } from './playback44.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
+import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
+import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
+import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -291,6 +296,9 @@ app.get('/api/cv', (c) => c.json({ cv: cvOf(), canEdit: isAdmin(sessionUser(c)) 
 /* ---------------- Alt under er innlogget ---------------- */
 
 const authed = new Hono();
+// Prompt 46 (SERVER46): app-token mot en /api-sti som ikke finnes → 404 (ikke 401 «Ikke innlogget» – den ekte årsaken til «Utlogget» i Media
+// på mobil). Ingen/ugyldig innlogging → 401 code:'HOMELAB_AUTH'. Se server/api-auth46.js.
+authed.use('*', bearerFallthrough46(authed));
 authed.use('*', requireAuth);
 
 authed.put('/cv', requireAdmin, async (c) => {
@@ -652,6 +660,10 @@ authed.get('/news', proxy(api.getNews));
 // Hver bruker ser sin egen Plex/Jellyfin (ISO2).
 // Prompt 44: valgt sted (?server= eller brukerens valg) for hele /api/media, søk i biblioteket, og serverens Plex/Jellyfin for alle med
 // tilgang som ikke har egne verdier (den ekte årsaken til «ikke logget inn» på mobil, se media44.js).
+// Prompt 46 (SERVER46): hvert Media-kall logges (GET /api/media/diag), 401 får code:'HOMELAB_AUTH', bilde-URL-er signeres.
+app.use('/api/media/*', mediaDiag46, homelabAuthCode46, signImages46);
+app.use('/api/playback/*', mediaDiag46, homelabAuthCode46, signImages46);
+app.get('/api/media/diag', authOrToken, (c) => c.json(mediaDiagOut46(c.get('user')), 200, { 'Cache-Control': 'no-store' }));
 app.use('/api/media/*', mediaSiteMw44);
 app.use('/api/media/series', librarySearchMw44);
 app.use('/api/media/movies', librarySearchMw44);
@@ -678,12 +690,16 @@ authed.get('/space/gallery/:key', proxy((c) => {
 }));
 
 app.route('/api/ui', uiApi);
+app.route('/api/tracking', tracking46Api); // prompt 46 (DATA46): /sources46, /accounts/:src/{start,finish,sync} (Posten/Bring, PostNord)
+app.route('/api/bg', gphoto46Api); // prompt 46 (DATA46): /api/bg/gphoto (før mobileApi sin /api/bg/:file)
+app.route('/api/kart', kart46Api); // prompt 46 (DATA46): holdeplasser, avganger, kjøretøy for valgte soner, soner og personer
 app.route('/api/tracking', tracking41Api); // prompt 41: GET /postnord/health
 app.route('/api/tracking', tracking42Api); // prompt 42: /debug/:id (+ /test), /aliexpress (mappe, sjekk nå, e-post)
 app.route('/api/tracking/keys', trackingKeysApi); // prompt 37: husstandens sporingsnøkler (før /api/tracking/:id)
 app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn, e-post og manuelt
 app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
+app.get('/api/rss/favicon', faviconHandler46); // prompt 46: offentlig, bare domener fra kildelistene (news46.js)
 app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-sammendrag og -kategorisering
 app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cachet på disk og ✦ AI-forslag
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
@@ -836,6 +852,7 @@ app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
 if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startLogs44(); startPlayback44(); }
+if (process.env.NODE_ENV !== 'test') { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
 
 app.onError((err, c) => {
   console.error(err);

@@ -33,6 +33,7 @@ import * as backup from './backup.js';
 import * as subsOs from './subs.js';
 import { mountP27, mountP27Public } from './p27-routes.js';
 import { mountTrials, trialsFor } from './trials.js'; // prompt 31: gratis prøveperioder
+import { mountSubsLog46, trialsVisible46 } from '../subs-log46.js'; // prompt 46 (SERVER46)
 import { mountShared37, visibleSubs, decorateSub, asShare, editableSub } from './shared37.js'; // prompt 37: delte abonnementer
 import { subscriptionAnswer, mountSubsAsk } from './subs-ask32.js'; // prompt 32: AI-søk med abonnementer
 import { findLogo } from './logo-lookup.js';
@@ -512,6 +513,7 @@ function mockDemo(u) {
 }
 const R = need('finance:read'), W = need('finance:write');
 mountSubsAsk(api, { R, W }); // prompt 32: /subscriptions/knowledge (før /subscriptions/:id)
+mountSubsLog46(api, { R, W }); // prompt 46: /subscriptions/log (+ .csv) – fakturaer og prøveperioder (server/subs-log46.js)
 mountP27(api, { R, W }); // prompt 27: /forslag, /ai-audit, /merchants/logo, /receipts/:id/logo/ai, /subscriptions/from-screenshot
 // Prompt 31: /subscriptions/trials (før /subscriptions/:id). «Behold» gjør prøven om til et vanlig abonnement.
 mountShared37(api, { W, subOut }); // prompt 37: /subscriptions/:id/members og /leave
@@ -1811,7 +1813,8 @@ api.get('/subscriptions', R, (c) => {
     categories: subsOs.SUB_CATEGORIES, year, byMonth: subsOs.byMonth(raw, year), health: subsOs.health(raw), savings: subsOs.savings(raw),
     prevMonthly: Math.round(prevMonthly * 100) / 100, upcoming: subsOs.upcoming(raw, 7), month, thisMonth, monthTotal: sum(thisMonth), prevMonthTotal: sum(subsOs.chargesInMonth(raw, prevMonth)),
     today: now.toLocaleDateString('sv-SE'),
-    trials }); // prompt 31: aktive prøveperioder («Prøve · 12 dager igjen»)
+    trials, // prompt 31: aktive prøveperioder («Prøve · 12 dager igjen»)
+    trialsVisible: trialsVisible46(uid) }); // prompt 46: {visible, count, editHint} – seksjonen skjules uten aktive prøveperioder
 });
 api.get('/subscriptions/candidates', R, (c) => c.json(subsOs.candidates(q('SELECT * FROM fh_subscriptions WHERE user_id=?').all(c.get('user')))
   .map((x) => ({ ...x, domain: x.domain || domainFor(x.merchant) }))));

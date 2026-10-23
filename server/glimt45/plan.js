@@ -7,13 +7,18 @@
 import { kv, OWNER } from '../db.js';
 import { TOOLS45, TOOL45, ollamaTools45, merchantOf45, itemOf45 } from './tools.js';
 import { whenOf45, parsePeriod45, parseAmount45, todayOslo45 } from './dates.js';
+import { CANCEL_RE46 } from './tools46.js'; // prompt 46: registrerer vær, abonnementer, faste utgifter og avslutningsfrist i TOOLS45
+import { analyzeWeather46, isCompoundWeather46, WEATHER_WORDS46 } from './weather46.js';
+import { serviceOf } from '../../public/js/trial-parse.js';
+import { serviceInText46 } from './subs46.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 export const INTENTS45 = ['ask', 'search', 'create', 'update', 'delete', 'summarize', 'multi', 'chat', 'nav'];
 export const MODULES45 = ['home', 'calendar', 'tasks', 'finance', 'ruter', 'chat', 'weather', 'family', 'media', 'study'];
 const MODULE_OF_TOOL = (name) => TOOL45[name]?.module ?? 'home';
 const INTENT_OF_TOOL = { 'calendar.create': 'create', 'tasks.create': 'create', 'calendar.update': 'update', 'tasks.complete': 'update', 'calendar.delete': 'delete',
-  'calendar.list': 'summarize', 'tasks.list': 'summarize', 'finance.summary': 'summarize', 'calendar.search': 'search', 'finance.search': 'search', 'nav.open': 'nav', 'app.answer': 'ask', 'chat.answer': 'chat' };
+  'calendar.list': 'summarize', 'tasks.list': 'summarize', 'finance.summary': 'summarize', 'calendar.search': 'search', 'finance.search': 'search', 'nav.open': 'nav', 'app.answer': 'ask', 'chat.answer': 'chat',
+  'weather.get': 'ask', 'finance.subscriptions': 'summarize', 'finance.fixed': 'summarize', 'subscriptions.trial': 'update' };
 export const intentOfCalls45 = (calls) => (calls.length > 1 ? 'multi' : INTENT_OF_TOOL[calls[0]?.tool] ?? 'chat');
 
 /* ---------------- Modell ---------------- */
@@ -76,7 +81,10 @@ ${mode === 'tools' ? '' : `Verktøy:\n${toolLines()}\n`}Regler:
 - Avtaler, timer, kino, møter med dag/tid → calendar.create. «hva har jeg …», «hva skjer …» → calendar.list.
 - «flytt/endre/utsett» → calendar.update (target = det brukeren kalte avtalen, tomt for «den»/«avtalen»). «slett/avlys» → calendar.delete.
 - Kvitteringer, kjøp, butikk, beløp, varer → finance.search {merchant, item, amount, period, kind}. Forbruk og «mest penger» → finance.summary.
-- Vær, buss/trikk/avganger, pakker, sol, hvor er en person, prøveperioder, «neste time hos …», ledig tid → app.answer. Vanlige spørsmål og prat → chat.answer.
+- Vær med sted eller tid → weather.get, ett kall per (sted, tid): «været i Oslo i dag og temperaturen i New York i morgen» → weather.get {place:"Oslo", when:"i dag"} + weather.get {place:"New York", when:"i morgen", info:"temp"}.
+- Abonnementer («dyreste abonnement», «hvor mye betaler jeg for abonnementer», «hvilke har blitt dyrere») → finance.subscriptions. Faste utgifter/betalinger → finance.fixed. Ikke svar fra egen kunnskap – hent dataene.
+- «Minn meg på å avslutte/si opp X <dato>» → tasks.create OG subscriptions.trial {service:"X", date:"<dato>"}. Ikke finn på pris eller når prøveperioden slutter.
+- Buss/trikk/avganger, pakker, sol, hvor er en person, registrere en ny prøveperiode («Viaplay gratis i 14 dager»), «neste time hos …», ledig tid → app.answer. Vanlige spørsmål og prat → chat.answer.
 - Flere ting i én melding → flere kall. Er noe viktig uklart eller mangler: ingen kall, og ask = ett konkret spørsmål.${mode === 'tools' ? '\nMangler noe: svar bare med ett kort spørsmål.' : '\nSvar KUN med JSON: {"intent":"…","module":"…","calls":[{"tool":"…","args":{…}}],"ask":null}'}`;
 }
 const parseArgs = (a) => { if (a && typeof a === 'object' && !Array.isArray(a)) return a; try { const x = JSON.parse(String(a ?? '{}')); return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; } catch { return {}; } };
@@ -149,7 +157,7 @@ const LEGACY_FIRST = /(?<![a-zæøå])(når\s+går|avgang|buss(?:en)?|trikk(?:en
  * Den lokale planleggeren. own = verktøyene kalleren selv vil utføre (resten → app.answer/chat).
  * → plan {intent, module, calls, ask?, engine:'lokal'}
  */
-export function localPlan45(text, { module = 'home', today = todayOslo45(), legacyIntent = null } = {}) {
+export function localPlan45(text, { module = 'home', today = todayOslo45(), legacyIntent = null, user = null } = {}) {
   const t = L(text);
   const P = (tool, args = {}) => ({ intent: INTENT_OF_TOOL[tool], module: MODULE_OF_TOOL(tool), calls: [{ tool, args }], engine: 'lokal' });
   const askP = (q) => ({ intent: 'ask', module, calls: [], ask: q, engine: 'lokal' });
@@ -159,6 +167,31 @@ export function localPlan45(text, { module = 'home', today = todayOslo45(), lega
   if (!t) return askP('Hva kan jeg hjelpe med?');
   // Gjøremål-funksjonene fra prompt 37–42 (slå sammen, forfalte, pakkeliste, matplan, butikk, spørsmål om lista, limt inn flere linjer).
   if (module === 'tasks' && (TASKS37.test(t) || String(text).includes('\n') || (q && !/kalender/.test(t) && !TASK_LIST_SIMPLE.test(t)))) return P('app.answer', { topic: 'tasks37' });
+  // Prompt 46: sammensatte værspørsmål (flere steder/tider, periode, sammenligning) → ett weather.get per delspørsmål.
+  if (WEATHER_WORDS46.test(t) && !CREATE_RE.test(t) && !TASK_RE.test(t) && isCompoundWeather46(text, today)) {
+    const a = analyzeWeather46(text, today);
+    if (a.ask) return { ...askP(a.ask), module: 'weather' };
+    const calls = a.requests.map((r) => ({ tool: 'weather.get', args: { _req: { place: r.place, when: r.when, info: r.info }, compare: a.compare?.mode ?? null } }));
+    return { intent: calls.length > 1 ? 'multi' : 'ask', module: 'weather', calls, compare: a.compare?.mode ?? null, engine: 'lokal' };
+  }
+  // Prompt 46: «Minn meg på å avslutte Spotify 15.10» → påminnelse i Gjøremål OG frist i Subscription OS (Prøveperioder).
+  // Bare når det gjelder en tjeneste/et abonnement (ikke enhver oppgave med ordet «abonnement»), og ikke spørsmål («hvordan sier jeg opp …»).
+  // En beskrivelse av selve prøven («Viaplay gratis i 14 dager, påminn meg om å avslutte», «Netflix prøveperiode, si opp i tide») er
+  // den eksisterende prøveregistreringen (sluttdato + varsler) – den går videre som før.
+  const trialDesc = /gratis|trial|prøve/.test(t.replace(/før\s+(?:prøve\w*|gratisperiode\w*)\s+(?:går\s+ut|slutter|utløper)/g, ' '));
+  if (CANCEL_RE46.test(t) && !trialDesc && !/^(hvordan|hva|hvor|hvorfor|kan jeg|når)\b/.test(t)) {
+    const own = user ? serviceInText46(user, text) : null;
+    if (own || serviceOf(text) || /abonnement|prøveperiode|prøvetid|gratisperiode|gratis\s+prøve/.test(t)) {
+      const remind = /(?<![a-zæøå])(minn|påminn\w*|husk|ikke\s+glem|jeg\s+må|vi\s+må|må\s+huske)(?![a-zæøå])/.test(t);
+      const calls = [...(remind ? [{ tool: 'tasks.create', args: {} }] : []), { tool: 'subscriptions.trial', args: {} }];
+      return { intent: calls.length > 1 ? 'multi' : 'update', module: 'finance', calls, engine: 'lokal' };
+    }
+  }
+  // Prompt 46: abonnementer og faste utgifter (data fra Subscription OS / Budsjett, ikke modellens kunnskap).
+  if ((q || /^(finn|vis|list|regn)/.test(t)) && /abonnement|abonomang|abbonement|strømmetjenest|faste\s+(?:utgift|betaling|trekk|kostnad)/.test(t) && !/prøveperiode|gratis/.test(t)) {
+    return P(/faste\s+(?:utgift|betaling|trekk|kostnad)/.test(t) ? 'finance.fixed' : 'finance.subscriptions', {});
+  }
+  if (/(?<![a-zæøå])(dyrest|billigst|størst)\w*\s+(?:kjøp\w*|kvittering\w*|transaksjon\w*|handel)/.test(t)) return P('finance.search', {});
   if (legacyIntent === 'trial.create' || legacyIntent === 'memory.add') return P('app.answer', { topic: legacyIntent === 'trial.create' ? 'trial' : 'memory' });
   if (DELETE_RE.test(t) && !/abonnement|prøveperiode/.test(t)) return P('calendar.delete', {});
   if (UPDATE_RE.test(t)) return P('calendar.update', {});

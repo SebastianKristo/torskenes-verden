@@ -522,7 +522,7 @@ test('PostNord: varianter (uten 00, locale, itemId), feilsøkingslogg per kall, 
     const r = await carriers.postnordWeb(NO);
     assert.equal(r.status, 'in_transit');
     assert.equal(r.variant, 'uten 00 · en');
-    assert.equal(calls[0].init.headers.Origin, 'https://www.postnord.no');
+    assert.equal(calls[0].init.headers['x-bap-key'], 'web-ncp'); // prompt 46: ha-postnord-headere først (nettleser-headere bare ved 401/403)
     const log = carriers.pnDebugOf42(NO);
     assert.equal(log.length, 3);
     assert.ok(log.every((x) => x.url && x.status === 200 && typeof x.body === 'string' && x.body.length <= 500 && x.variant && x.layer === 'PostNord'));
