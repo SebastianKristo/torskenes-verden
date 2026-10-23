@@ -70,6 +70,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.15.0")
+    // Code Scanner drar inn en gammel fragment-versjon; ActivityResult-API-et krever ≥ 1.3 (lintVitalRelease). Samme versjon som Finans-appen.
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.security:security-crypto:1.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     // Hjemskjerm-widgets (Glance) og henting hvert 15. minutt.
