@@ -92,6 +92,8 @@ struct Tasks44Host: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            // Prompt 46: «Fullført: … · Angre» etter at infosiden lukket seg (Tasks46Done.swift).
+            .overlay(alignment: .bottom) { Tasks46UndoBar().environment(\.paper, p) }
             .fullScreenCover(item: Binding<TaskItem17?>(get: { ui.info }, set: { ui.info = $0 })) { (t: TaskItem17) in
                 Tasks44InfoPage(taskId: t.id)
                     .environment(\.paper, p)

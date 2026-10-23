@@ -35,13 +35,14 @@ final class Nav32b {
                                                   PaperTabItem(id: "ytl", label: "Ytelse", icon: "⚡"), PaperTabItem(id: "inf", label: "Infra", icon: "▤")]),
         "abo": Sec32bDef(title: "ABONNEMENT", all: [PaperTabItem(id: "home", label: "Hjem", icon: "house"), PaperTabItem(id: "ins", label: "Innsikt", icon: "chart.bar"),
                                                      PaperTabItem(id: "hist", label: "Historikk", icon: "clock")]),
-        "kart": Sec32bDef(title: "FAMILIE", all: [PaperTabItem(id: "kart", label: "Kart", icon: "◎"), PaperTabItem(id: "soner", label: "Soner", icon: "◌"),
-                                                  PaperTabItem(id: "helse", label: "Helse", icon: "♡"),
+        "kart": Sec32bDef(title: "FAMILIE", all: [PaperTabItem(id: "kart", label: "Kart", icon: "◎"), PaperTabItem(id: "soner", label: "Soner", icon: "fam46:soner"),
+                                                  // Prompt 46: nye SVG-ikoner for Soner og Helse (PaperTabIcon.svg46).
+                                                  PaperTabItem(id: "helse", label: "Helse", icon: "fam46:helse"),
                                                   // Prompt 41: Hjemlys som egen fane i Familie (Hjemlys41Views.swift). Prompt 42: heter Vel fremme.
                                                   PaperTabItem(id: "hjemlys", label: "Vel fremme", icon: "☼")]),
     ]
 
-    static let icons: [String] = ["⌂", "kr", "◐", "▣", "◎", "◍", "⚡", "▤", "◔", "↺", "↻", "◌", "♡", "◉", "★", "●", "◆", "♪", "✉", "⚑", "≡", "⇄", "☼", "✦",
+    static let icons: [String] = ["fam46:soner", "fam46:helse", "⌂", "kr", "◐", "▣", "◎", "◍", "⚡", "▤", "◔", "↺", "↻", "◌", "♡", "◉", "★", "●", "◆", "♪", "✉", "⚑", "≡", "⇄", "☼", "✦",
                                   "house", "chart.bar", "clock", "globe", "map", "heart", "person.2", "creditcard"]
 
     /// Domener-fanenes id i appen (paperTab) ↔ nøkkelen i secNav.

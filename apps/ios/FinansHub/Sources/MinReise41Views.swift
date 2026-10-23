@@ -96,6 +96,8 @@ struct MinReise41RuterCard: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @MainActor private var m: MinReise41 { MinReise41.shared }
+    /// Prompt 46: innstillingene (skolesoner, antall, På Hjem) vises bare i wiggle-redigering av Ruter.
+    var editing: Bool = false
 
     var body: some View {
         Group {
@@ -131,9 +133,20 @@ struct MinReise41RuterCard: View {
                     ForEach(Array(m.shown.enumerated()), id: \.element.id) { i, o in
                         MinReise41Row(o: o, first: i == 0)
                     }
-                    MinReise41Zones()
-                    MinReise41HomeSetting()
+                    // Prompt 46 (claude-code-ruter-innstillinger-i-wiggle.md): innstillingene ligger på kortet bare i wiggle.
+                    if editing {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Rectangle().fill(p.line).frame(height: 1)
+                            PLabel(text: "Innstillinger for kortet", color: p.mut)
+                            MinReise41Zones()
+                            MinReise41HomeSetting()
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    } else if CLLocationManager().authorizationStatus != .authorizedAlways {
+                        MinReise46AlwaysLine()
+                    }
                 }
+                .animation(.easeInOut(duration: 0.3), value: editing)
                 .padding(16)
                 .background(p.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             }
@@ -268,6 +281,28 @@ struct MinReise41Timeline: View {
         var s: String = l.modeName + (l.line.isEmpty ? "" : " " + l.line) + " til " + (l.to.isEmpty ? "neste stopp" : l.to) + " · " + String(l.minutes) + " min"
         if l.delayMin >= 3 { s += " · " + String(l.delayMin) + " min forsinket" }
         return s
+    }
+}
+
+/// Prompt 46: i normal visning – en liten linje når posisjon «Alltid» mangler (skolesonene virker ikke uten).
+struct MinReise46AlwaysLine: View {
+    @Environment(\.paper) private var p
+
+    var body: some View {
+        Button {
+            Haptics.shared.tap()
+            if let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) }
+        } label: {
+            HStack(spacing: 6) {
+                Text("Posisjon «Alltid» mangler – skolesonene virker ikke.").font(PF.ui(12)).foregroundStyle(p.mut)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 4)
+                Text("Slå på ›").font(PF.ui(12, .bold)).foregroundStyle(p.lab)
+            }
+            .frame(minHeight: 32)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

@@ -53,5 +53,7 @@ struct PaperSubs: View {
             Haptics.shared.tap()
             store.subEdit = s
         }
+        // Prompt 46: Logg – alle tidligere fakturaer og prøveperioder (Subs46Log.swift).
+        Subs46LogSection()
     }
 }

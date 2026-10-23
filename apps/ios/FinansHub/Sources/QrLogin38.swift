@@ -83,6 +83,10 @@ final class Qr38Model {
     /// homelab://login?c=… og https://<host>/l/<kode>. true = lenken var en QR-innlogging (håndtert her).
     func handle(_ url: URL, _ store: Store) -> Bool {
         guard let code = Qr38Model.code(fromURL: url) else { return false }
+        if let other = Qr38Model.otherServer(url, store) {
+            store.flash("QR-koden hører til " + other + ", ikke serveren du er logget inn på")
+            return true
+        }
         if !store.loggedIn {
             pendingCode = code
             store.flash("Logg inn på mobilen først, så kan du godkjenne den nye enheten")
@@ -106,6 +110,17 @@ final class Qr38Model {
     /// Plukker koden ut av en URL: homelab://login?c=<sid>.<nonce> eller https://<host>/l/<sid>.<nonce>.
     static func code(fromURL url: URL) -> String? {
         let scheme: String = (url.scheme ?? "").lowercased()
+        // Prompt 46: papir://login?s=<sessionId>&c=<engangskode>&srv=<offentlig server> (Kalender/Finans viser denne QR-en).
+        // Koden sendes til vår egen server som «s.c»; srv brukes bare til å sjekke at QR-en hører til samme server.
+        if scheme == "papir" {
+            let host: String = (url.host ?? "").lowercased()
+            let first: String = url.pathComponents.dropFirst().first?.lowercased() ?? ""
+            guard host == "login" || first == "login" else { return nil }
+            let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            func q(_ k: String) -> String { items.first(where: { (i: URLQueryItem) -> Bool in i.name == k })?.value ?? "" }
+            let c: String = q("s") + "." + q("c")
+            return Qr38Model.valid(c) && !q("s").isEmpty && !q("c").isEmpty ? c : nil
+        }
         if scheme == "homelab" || scheme == "finanshub" {
             let host: String = (url.host ?? "").lowercased()
             let first: String = url.pathComponents.dropFirst().first?.lowercased() ?? ""
@@ -154,8 +169,26 @@ final class Qr38Model {
             }
             return
         }
+        if let u = URL(string: raw.trimmingCharacters(in: .whitespacesAndNewlines)), let other = Qr38Model.otherServer(u, store) {
+            Haptics.shared.error()
+            error = "QR-koden hører til " + other + ", ikke serveren du er logget inn på."
+            return
+        }
         Haptics.shared.tap()
         submit(c, store)
+    }
+
+    /// Prompt 46: srv i papir://login peker på en annen server enn kontoen (lokal, ekstern eller lagret adresse) → vertsnavnet.
+    static func otherServer(_ url: URL, _ store: Store) -> String? {
+        guard (url.scheme ?? "").lowercased() == "papir" else { return nil }
+        let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let srv: String = items.first(where: { (i: URLQueryItem) -> Bool in i.name == "srv" })?.value ?? ""
+        guard !srv.isEmpty, let h = URL(string: API.normalize(srv))?.host?.lowercased() else { return nil }
+        let a: LoginAccount? = store.account
+        let mine: [String] = [a?.server ?? "", a?.local ?? "", a?.external ?? "", store.base].compactMap { (s: String) -> String? in
+            s.isEmpty ? nil : URL(string: API.normalize(s))?.host?.lowercased()
+        }
+        return mine.isEmpty || mine.contains(h) ? nil : h
     }
 
     func submitPaste(_ store: Store) {

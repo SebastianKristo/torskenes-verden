@@ -73,7 +73,7 @@ final class Media44 {
     func load(_ store: Store, status: Bool = false) async {
         loadingSites = true
         defer { loadingSites = false }
-        guard let d = try? await store.api.callAt("/api", "GET", "/media/servers" + (status ? "?status=1" : ""), timeout: status ? 20 : 10) else { return }
+        guard let d = try? await Media46.shared.call(store, "GET", "/media/servers" + (status ? "?status=1" : ""), timeout: status ? 20 : 10) else { return }
         let any: Any? = try? JSONSerialization.jsonObject(with: d)
         var rows: [[String: Any]] = (any as? [Any])?.compactMap { $0 as? [String: Any] } ?? []
         if rows.isEmpty { rows = JS.list(any as? [String: Any], "servers") + JS.list(any as? [String: Any], "items") }
@@ -112,7 +112,7 @@ final class Media44 {
         setLocal(id)
         pickerOpen = false
         Task { @MainActor in
-            _ = try? await store.api.callAt("/api", "PUT", "/media/servers/select", json: ["id": id])
+            _ = try? await Media46.shared.call(store, "PUT", "/media/servers/select", json: ["id": id])
             let m: Media43 = Media43.shared
             m.series = []
             m.movies = []
@@ -151,6 +151,9 @@ final class Media44 {
     /// «Utlogget fra Homelab» (401), «Svarer ikke» (nett/tidsavbrudd/502–504), «Ikke satt opp» (409/412 eller configured:false).
     nonisolated static func errorText(_ e: Error) -> String {
         guard let a = e as? APIError else { return e.localizedDescription }
+        // Prompt 46: «Utlogget» bare når innloggingen faktisk er ugyldig (HOMELAB_AUTH – fra serveren eller bekreftet mot /api/me i Media46).
+        if a.status == 401 && a.code != "HOMELAB_AUTH" { return "Serveren avviste kallet (401), men innloggingen din er gyldig. Trykk for detaljer." }
+        if let up = Media44.upstreamAuth(a) { return up }
         switch a.status {
         case 401: return "Utlogget fra Homelab. Logg inn igjen under Innstillinger → Kontoer og brukere."
         case 403: return "Du har ikke tilgang til Media. Be en administrator om modulen «media»."
@@ -164,9 +167,19 @@ final class Media44 {
         return a.message
     }
 
+    /// Prompt 46: Sonarr/Radarr/Prowlarr avviser nøkkelen på serveren (502 UPSTREAM_AUTH eller «feil API-nøkkel») – ikke Homelab-innloggingen.
+    nonisolated static func upstreamAuth(_ a: APIError) -> String? {
+        let m: String = a.message.lowercased()
+        guard a.code == "UPSTREAM_AUTH" || m.contains("feil api-nøkkel") || m.contains("feil brukernavn eller passord") else { return nil }
+        for (k, n) in [("sonarr", "Sonarr"), ("radarr", "Radarr"), ("prowlarr", "Prowlarr"), ("qbit", "qBittorrent")] where m.contains(k) {
+            return n + " avviser " + (k == "qbit" ? "brukernavnet eller passordet" : "API-nøkkelen") + ". Sjekk under Innstillinger → Integrasjoner → MEDIA."
+        }
+        return "Tjenesten avviser nøkkelen på serveren. Sjekk under Innstillinger → Integrasjoner → MEDIA."
+    }
+
     /// Samme status som Innstillinger: GET /api/integrations/status → services med configured/connected/state.
     func statusFromIntegrations(_ store: Store) async -> [Media43Service] {
-        guard let d = try? await store.api.callAt("/api", "GET", "/integrations/status", timeout: 12) else { return [] }
+        guard let d = try? await Media46.shared.call(store, "GET", "/integrations/status", timeout: 12) else { return [] }
         let o: [String: Any] = JS.obj(d)
         let names: [String: String] = ["sonarr": "Sonarr", "radarr": "Radarr", "qbittorrent": "qBittorrent", "qbit": "qBittorrent",
                                        "prowlarr": "Prowlarr", "jellyfin": "Jellyfin", "plex": "Plex"]

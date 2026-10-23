@@ -69,7 +69,7 @@ final class Media44Job {
         text = "Avbrutt"
         guard !jobId.isEmpty else { return }
         let id: String = jobId
-        Task { _ = try? await store.api.callAt("/api", "DELETE", "/media/release/search/\(id)", timeout: 10) }
+        Task { _ = try? await Media46.shared.call(store, "DELETE", "/media/release/search/\(id)", timeout: 10) }
     }
 
     /* ---------- Jobben ---------- */
@@ -96,12 +96,12 @@ final class Media44Job {
             try? await Task.sleep(nanoseconds: 1_000_000_000)
             waited += 1
             if cancelled { return }
-            guard let dd = try? await store.api.callAt("/api", "GET", Media44.shared.withSite("/media/release/search/\(jobId)"), timeout: 15) else { continue }
+            guard let dd = try? await Media46.shared.call(store, "GET", Media44.shared.withSite("/media/release/search/\(jobId)"), timeout: 15) else { continue }
             apply(JS.obj(dd))
             if !stateRunning { break }
         }
         // Ferdig med en gang (cache på serveren) uten resultatet i svaret: hent jobben én gang.
-        if !cancelled && !gotResult && !jobId.isEmpty, let dd = try? await store.api.callAt("/api", "GET", Media44.shared.withSite("/media/release/search/\(jobId)"), timeout: 15) {
+        if !cancelled && !gotResult && !jobId.isEmpty, let dd = try? await Media46.shared.call(store, "GET", Media44.shared.withSite("/media/release/search/\(jobId)"), timeout: 15) {
             apply(JS.obj(dd))
         }
     }

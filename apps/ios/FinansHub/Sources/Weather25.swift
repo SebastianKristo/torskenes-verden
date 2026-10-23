@@ -77,6 +77,9 @@ struct WxWide25: View {
             WxHeader22(w: w)
             WxHourCard22(w: w, mode: $mode) { openDay(0) }
             WxDaysCard22(w: w, mode: mode) { i in openDay(i) }
+            // Prompt 46: «Glimt · Ukas vær» nederst i venstre kolonne (tomrommet ved detaljkortene til høyre). Skjult i
+            // «Rediger kort» = skjult her også. Samme data og tekst som mobilkortet (WxWeek39Model.shared).
+            if Vaer41.shared.visible.contains("glimtuka") { WxWeek39Card(w: w) }
         }
     }
 

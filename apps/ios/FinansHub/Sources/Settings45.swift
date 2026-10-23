@@ -14,6 +14,8 @@ enum Settings45 {
             out.append(PaperLinkRow(name: "Media", sub: "Sonarr, Radarr, qBittorrent, Plex og Jellyfin", icon: "play.rectangle") { store.paperGo("innst-media") })
         }
         out.append(PaperLinkRow(name: "Gjøremål", sub: "Synk med Home Assistant · på/av", icon: "checklist") { store.paperGo("innst-huske") })
+        // Prompt 46: Nyhetsinnstillingene ligger her (ikke på Nyheter-siden).
+        out.append(PaperLinkRow(name: "Nyheter", sub: "Kilder, kategorier, For deg og Glimt-sammendrag", icon: "newspaper") { store.paperGo("innst-nyheter") })
         let n: Int = MinReise41.shared.recoCount
         out.append(PaperLinkRow(name: "Ruter", sub: "Anbefalte reiser: \(n) · Min reise på Hjem", icon: "tram") { store.paperGo("innst-ruter") })
         let z: String = Zone45.shared.on ? "På · per person og sone" : "Av"

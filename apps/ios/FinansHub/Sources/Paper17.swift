@@ -709,6 +709,8 @@ struct PaperSettings17: View {
             rows.append(PaperLinkRow(name: "Backup", sub: Backup29Model.shared.summary, icon: "externaldrive.badge.timemachine") { store.paperGo("innst-sysbackup") })
         }
         rows.append(PaperLinkRow(name: "API-tokens", sub: "Snarveier og integrasjoner", icon: "key") { store.loadTokens(); store.paperGo("innst-api") })
+        // Prompt 46: skann QR-koden som Kalender (Mac/iOS/Android) eller Finans viser, og godkjenn med Face ID (QrLogin38.swift).
+        rows.append(PaperLinkRow(name: "Logg inn på annen enhet", sub: "Skann QR-koden på den andre enheten", icon: "qrcode.viewfinder") { Qr38Model.shared.show() })
         return rows
     }
 
@@ -738,15 +740,7 @@ struct PaperSettings17: View {
     private var profileCard: some View {
         Button { store.paperGo("innst-konto") } label: {
             HStack(spacing: 14) {
-                ZStack {
-                    Circle().fill(p.popSel)
-                    if let a = store.avatar {
-                        Image(uiImage: a).resizable().scaledToFill().clipShape(Circle())
-                    } else {
-                        Text(String(store.displayName.prefix(1)).uppercased()).font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
-                    }
-                }
-                .frame(width: 54, height: 54)
+                Avatar46(size: 54, gap: p.card, shadow: false) // prompt 46: Glimt-ringen også i Innstillinger-toppen
                 VStack(alignment: .leading, spacing: 2) {
                     Text(store.displayName.isEmpty ? "Konto" : store.displayName).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1)
                     Text(accountSub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
@@ -833,6 +827,8 @@ struct PaperSettingsSub: View {
             case "media": Media43SettingsContent(inSheet: false)
             case "ruter": Ruter45SettingsPage()
             case "sone": Zone45SettingsPage()
+            // Prompt 46: Innstillinger → Nyheter (kilder, kategorier, For deg, Glimt-sammendrag) – flyttet fra Nyheter-siden.
+            case "nyheter": News46SettingsPage()
             default: SettingsSubpage(page: key)
             }
         }
@@ -868,6 +864,7 @@ struct PaperSettingsSub: View {
         "media": ("Media", "Tjenester, avspilling og kalender"),
         "ruter": ("Ruter", "Min reise og anbefalte reiser"),
         "sone": ("Sonevarsler", "Familie · hvem og hvilke soner"),
+        "nyheter": ("Nyheter", "Kilder, kategorier, For deg og Glimt"),
     ]
 }
 

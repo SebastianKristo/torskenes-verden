@@ -101,7 +101,7 @@ struct RuterView24: View {
                 .font(PF.ui(13)).foregroundStyle(p.lab).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true)
         }
         // Prompt 41: MIN REISE · SEBASTIAN over transportfilteret (bare for brukere med forhåndsruter), MinReise41Views.swift.
-        MinReise41RuterCard()
+        MinReise41RuterCard(editing: m.editing) // prompt 46: innstillingene bare i wiggle
         if m.current == nil {
             emptyCard
         } else {

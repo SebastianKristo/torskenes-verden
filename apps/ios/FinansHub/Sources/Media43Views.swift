@@ -40,11 +40,8 @@ struct Media43Poster: View {
         ZStack {
             LinearGradient(colors: [Media43Poster.tint(title), Media43Poster.tint(title).opacity(0.65)], startPoint: .top, endPoint: .bottom)
             Text(String(title.prefix(1)).uppercased()).font(PF.serif(width * 0.4, medium: true)).foregroundStyle(Color.white.opacity(0.85))
-            if let u = URL(string: url), !url.isEmpty {
-                AsyncImage(url: u, transaction: Transaction(animation: .easeOut(duration: 0.2))) { (ph: AsyncImagePhase) in
-                    if case .success(let img) = ph { img.resizable().scaledToFill() } else { Color.clear }
-                }
-            }
+            // Prompt 46: plakater fra Homelab (/api/media/cover?…) trenger token – egen laster (Media46.swift). Feil = bare forbokstaven.
+            if !url.isEmpty { Media46PosterImage(url: url) }
         }
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
@@ -132,7 +129,11 @@ struct Media43Page: View {
                 HStack(alignment: .top, spacing: 0) {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
-                            if !m.error.isEmpty && !m.loading { notice(m.error) }
+                            if !m.error.isEmpty && !m.loading {
+                                // Prompt 46: trykk → «Vis detaljer» (siste kall med statuskode, token, rute og tid).
+                                Button { Haptics.shared.tap(); Media46.shared.detailsOpen = true } label: { notice(m.error + "\nVis detaljer ›") }
+                                    .buttonStyle(.plain)
+                            }
                             tabBody(wide)
                         }
                         .padding(.horizontal, wide ? 24 : 16).padding(.top, 6).padding(.bottom, 40)
@@ -163,6 +164,9 @@ struct Media43Page: View {
             .media45Host(p)
             .sheet(isPresented: Binding<Bool>(get: { Media44.shared.pickerOpen }, set: { Media44.shared.pickerOpen = $0 })) {
                 Media44SiteSheet(tab: m.tab).sheet43(p, store)
+            }
+            .sheet(isPresented: Binding<Bool>(get: { Media46.shared.detailsOpen }, set: { Media46.shared.detailsOpen = $0 })) {
+                Media46Details().sheet43(p, store)
             }
         }
         .task {

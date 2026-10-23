@@ -238,6 +238,13 @@ extension Store {
             let d = try await api.callAt("/api", "GET", "/weather/full?\(q)&source=met&compare=1", timeout: 20)
             let raw41: [String: Any] = JS.obj(d)
             var w: WeatherFull = WeatherFull(raw41)
+            // Prompt 46: Min posisjon har egen id (koordinatspørringen gir serverens id), så valget og «MIN POSISJON» stemmer.
+            if weatherPlace == Vaer46.gpsId {
+                w.placeId = Vaer46.gpsId
+                if !Vaer46.shared.name.isEmpty { w.placeName = Vaer46.shared.name }
+                // Vær-tallet på Hjem følger også Min posisjon (forsiden fra serveren bruker serverens sted).
+                if var h = homeWeather { h.place = w.placeName; h.temp = w.temp; h.text = w.text; h.hi = w.hi; h.lo = w.lo; homeWeather = h }
+            }
             // Prompt 41: Skiføre (bare når serveren sender det, dvs. snø ≥ 15 cm og ikke slått av).
             Vaer41.shared.skiData = Ski41(JS.dict(raw41, "ski"))
             w.loadedAt = Date()
@@ -272,6 +279,8 @@ extension Store {
 
     func setWeatherPlace(_ id: String) {
         Haptics.shared.select()
+        // Prompt 46: brukeren har valgt sted selv (migreringen til Min posisjon rører ikke dette).
+        if id != Vaer46.gpsId { UserDefaults.standard.set(true, forKey: "vaer46_user_pick") }
         weatherPlace = id
         Task { await self.loadWeatherFull(force: true) }
     }

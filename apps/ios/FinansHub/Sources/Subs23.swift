@@ -487,8 +487,10 @@ struct SubHome23: View {
                     SubOrderBar23(reset: { resetOrder() }, done: { stopEditing() })
                 }
             }
-            ForEach(order.filter { !hid.contains($0) }, id: \.self) { k in cell(k) }
+            // Prompt 46: «Gratis prøveperioder» skjules når ingen er aktive (vises i wiggle, så kortet kan flyttes/skjules).
+            ForEach(order.filter { !hid.contains($0) && ($0 != "trials" || editing || !Trial31Model.shared.active.isEmpty) }, id: \.self) { k in cell(k) }
         }
+        .task(id: store.account?.id ?? "") { if !Trial31Model.shared.loaded { await Trial31Model.shared.load(store.api) } }
         .sheet(isPresented: $addOpen) {
             Sub37AddCardsSheet(hidden: hid, show: { (k: String) in
                 Haptics.shared.tick()

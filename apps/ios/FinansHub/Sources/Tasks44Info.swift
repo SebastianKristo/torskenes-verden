@@ -19,6 +19,8 @@ struct Tasks44InfoPage: View {
     @State private var picker: Tasks44Pick? = nil
     @State private var moreSheet: Bool = false
     @State private var confirmDelete: Bool = false
+    /// Prompt 46: «2 deloppgaver er ikke ferdige. Fullfør alle?» før siden lukkes.
+    @State private var askSubs: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,11 +30,15 @@ struct Tasks44InfoPage: View {
         }
         .background(p.bg.ignoresSafeArea())
         .environment(\.colorScheme, p.dark ? .dark : .light)
-        .overlay(alignment: .bottom) { if let cur = t { Tasks44DoneBar(t: cur, color: TasksModel.shared.color(cur.list)) { setDone(!cur.done) } } }
+        .overlay(alignment: .bottom) { if let cur = t { Tasks44DoneBar(t: cur, color: TasksModel.shared.color(cur.list)) { doneBar(cur) } } }
         .onAppear { t = Tasks44UI.shared.current(taskId) ?? Tasks44UI.shared.info }
         .onChange(of: Tasks44UI.shared.info) { (_: TaskItem17?, v: TaskItem17?) in if let v, v.id == taskId, v.subs != t?.subs { t = v } }
         .sheet(item: $picker) { (k: Tasks44Pick) in pickerSheet(k) }
         .sheet(isPresented: $moreSheet) { moreSheetView }
+        .confirmationDialog(subsTitle, isPresented: $askSubs, titleVisibility: .visible) {
+            Button("Fullfør alle") { complete46() }
+            Button("Avbryt", role: .cancel) {}
+        }
         .confirmationDialog("Slette oppgaven?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Slett oppgaven", role: .destructive) { delete() }
             Button("Avbryt", role: .cancel) {}
@@ -98,6 +104,29 @@ struct Tasks44InfoPage: View {
         if let cur = t { TasksModel.shared.save37(cur, store) }
         Tasks44UI.shared.setDone(taskId, on, store)
         t = Tasks44UI.shared.current(taskId) ?? t
+    }
+
+    /// Prompt 46: Fullfør → lukker siden etter 450 ms (med Angre i lista). Angre fullført → blir stående.
+    private func doneBar(_ cur: TaskItem17) {
+        if cur.done { setDone(false); return }
+        if Tasks46Undo.openSubs(cur) > 0 { askSubs = true; return }
+        complete46()
+    }
+
+    private var subsTitle: String {
+        let n: Int = t.map { Tasks46Undo.openSubs($0) } ?? 0
+        return n == 1 ? "1 deloppgave er ikke ferdig. Fullfør alle?" : "\(n) deloppgaver er ikke ferdige. Fullfør alle?"
+    }
+
+    private func complete46() {
+        setDone(true)
+        let done: TaskItem17? = t
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            if let cur = Tasks44UI.shared.current(taskId), !cur.done { return }
+            if Tasks44UI.shared.info?.id == taskId { withAnimation(.easeOut(duration: 0.25)) { close() } }
+            if let done { Tasks46Undo.shared.show(done) }
+        }
     }
 
     private func duplicate() {

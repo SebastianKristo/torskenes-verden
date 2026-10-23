@@ -15,12 +15,8 @@ struct Bible37Page: View {
         // Prompt 39: 14 pt mellom alle kort, og første kort starter 16 pt under hero (siden overlapper hero med 23 pt).
         VStack(alignment: .leading, spacing: 14) {
             if m.enabled {
-                Bible37StreakCard()
-                Bible37TodayCard()
-                Bible37PlanCard()
-                Bible37StatsRow()
-                Bible37SavedCard()
-                Bible37ReminderRow()
+                // Prompt 46: iPad (bredde ≥ 680 pt) – to kolonner, ellers som før (Bible46.swift).
+                Bible46Layout()
             } else {
                 PCard {
                     Text("Bibelvers er ikke slått på for denne brukeren. En administrator kan slå det på under Brukere → Moduler.")

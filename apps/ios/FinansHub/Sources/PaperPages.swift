@@ -21,6 +21,8 @@ struct PaperHome: View {
                 phone
             }
         }
+        // Prompt 46: Min posisjon (standard) holdes fersk for Vær-kortet på Hjem (Vaer46.swift).
+        .vaer46Keeper()
         .update30Sheet()
         // Prompt 37: arket med hele bibelverset, og modulen lastes (avgjør om h13 finnes).
         .bible37Sheet(p)
@@ -34,7 +36,8 @@ struct PaperHome: View {
         // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (Mai17Home41.swift).
         Mai17Home41()
         // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
-        PaperCardStack(page: "hjem", cards: homeCards, fullWidth: ["h1", "h5", "h12", "h13", "h14"], twoColumns: true)
+        PaperCardStack(page: "hjem", cards: homeCards + [shortcuts46], fullWidth: ["h1", "h5", "h12", "h13", "h14", "h16"], twoColumns: true)
+            .task(id: store.account?.id ?? "") { if !Trial31Model.shared.loaded { await Trial31Model.shared.load(store.api) } }
         homeErrorText
     }
 
@@ -47,6 +50,7 @@ struct PaperHome: View {
     @ViewBuilder private func wide45(_ pg: String) -> some View {
         if pg == Home45.page("na") { Update30Banner(home: true) }
         PaperCardStack(page: pg, cards: wideCards45, fullWidth: [], twoColumns: false)
+            .task(id: store.account?.id ?? "") { if !Trial31Model.shared.loaded { await Trial31Model.shared.load(store.api) } }
             .onAppear { Home45.ensure(Home45.tabFromPage(pg), Home45.allKeys, store) }
         homeErrorText
     }
@@ -54,8 +58,14 @@ struct PaperHome: View {
     private var wideCards45: [PaperCardDef] {
         let keys: [String] = Home45.usable(homeCards.map(\.key))
         var out: [PaperCardDef] = homeCards.filter { keys.contains($0.key) }
-        out.append(PaperCardDef(key: "h16", label: "Tall (Finans, Mat, Domener)", view: AnyView(minis)))
+        if !out.contains(where: { $0.key == "h16" }) { out.append(shortcuts46) }
         return out
+    }
+
+    /// Prompt 46: Søk (h1) og Snarveier (h16: Finans · Mat · Domener) er to egne kort på mobil – hvert med egen «–» og plass.
+    /// Eksisterende oppsett får h16 rett etter h1 (pageCards i Paper15.swift), så ingenting flytter seg.
+    private var shortcuts46: PaperCardDef {
+        PaperCardDef(key: "h16", label: "Snarveier (Finans, Mat, Domener)", view: AnyView(minis))
     }
 
     /// Kortene på Hjem. Prompt 37: «Dagens bibelvers» (h13) finnes bare for brukere med modulen (Bible37Views.swift).
@@ -64,7 +74,7 @@ struct PaperHome: View {
                 // Prompt 34: Glimt-brief øverst (blått kort med figuren), flyttes og skjules i wiggle-modus (Brief34Page.swift).
                 PaperCardDef(key: "h12", label: "Glimt-brief", view: AnyView(Brief36SwipeCard())), // prompt 36: sveip bort (Brief36.swift)
                 // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch29.swift).
-                PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { HomeSearch29(); minis })),
+                PaperCardDef(key: "h1", label: "Søk", view: AnyView(HomeSearch29())), // prompt 46: Snarveier er eget kort (h16)
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
                 // Prompt 43: Media (nedlastinger og det som kommer), Media43Home.swift. Nøkkelen h12 er Glimt-brief på iOS.
                 PaperCardDef(key: "h15", label: "Media", view: AnyView(Media43HomeCard())),
@@ -72,16 +82,18 @@ struct PaperHome: View {
                 // Prompt 41: Min reise over (eller i stedet for) Avganger når du har forlatt skolen (MinReise41Views.swift).
                 PaperCardDef(key: "h3", label: "Avganger", view: AnyView(MinReise41HomeSlot())),
                 // Prompt 32: Prøveperioder under Avganger (Trials32App.swift). Flyttes og skjules i wiggle-modus.
+                // Prompt 46: vises bare med minst én aktiv prøveperiode (eller i wiggle, så det kan flyttes/skjules) – se trials46.
                 PaperCardDef(key: "h11", label: "Prøveperioder", view: AnyView(Trial32bHomeCard())),
                 // Prompt 26: KALENDER etter Avganger (med lagret oppsett legger pageCards den nederst).
                 PaperCardDef(key: "h10", label: "Kalender", view: AnyView(Cal26HomeCard())),
-                PaperCardDef(key: "h4", label: "Snarveier", view: AnyView(shortcuts)),
+                PaperCardDef(key: "h4", label: "Lenker", view: AnyView(shortcuts)), // prompt 46: «Snarveier» er nå h16
                 PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(newsCard)),
                 PaperCardDef(key: "h6", label: "Gjøremål", view: AnyView(PaperTasksCard())),
                 PaperCardDef(key: "h7", label: "Posisjon", view: AnyView(PaperFamilyCard())),
                 PaperCardDef(key: "h8", label: "Bolig", view: AnyView(PaperHomeBoligCard())),
                 PaperCardDef(key: "h9", label: "Bursdager", view: AnyView(PaperBirthdaysCard24())),
         ]
+        if !trials46 { out.removeAll { $0.key == "h11" } }
         if Bible37Model.shared.enabled {
             let i: Int = (out.firstIndex { $0.key == "h12" } ?? -1) + 1
             out.insert(PaperCardDef(key: "h13", label: "Bibelvers", view: AnyView(Bible37HomeCard())), at: i)
@@ -92,6 +104,12 @@ struct PaperHome: View {
             out.insert(PaperCardDef(key: "h14", label: "Vel fremme", view: AnyView(Hjemlys40HomeCard())), at: i)
         }
         return out
+    }
+
+    /// Prompt 46: «Prøveperioder» bare når det finnes en aktiv (eller mens Hjem redigeres). Lasting skjer i trialsLoader46.
+    private var trials46: Bool {
+        let t: Trial31Model = Trial31Model.shared
+        return !t.active.isEmpty || store.paperEditPage != nil
     }
 
     /// Prompt 24: Pakker vises også uten aktive pakker («Ingen aktive pakker · Legg til et sporingsnummer»), med mindre
@@ -1005,6 +1023,7 @@ struct PaperSettings: View {
         case "weather": "Vær nå"
         case "planets": "Planeter"
         case "custom": "Eget bilde"
+        case "gphoto": "Google Photos" // prompt 46
         default: "Oslo"
         }
     }

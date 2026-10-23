@@ -46,7 +46,12 @@ struct WxPlace: Identifiable, Hashable, Codable {
 }
 
 extension Store {
-    var weatherPlaceObj: WxPlace? { weatherPlaces.first { $0.id == weatherPlace } }
+    /// Prompt 46: «__gps» = Min posisjon (koordinatene fra telefonen, Vaer46.swift). Uten posisjon ennå: første lagrede sted,
+    /// men valget beholdes.
+    var weatherPlaceObj: WxPlace? {
+        if weatherPlace == Vaer46.gpsId { return Vaer46.shared.place ?? weatherPlaces.first }
+        return weatherPlaces.first { $0.id == weatherPlace }
+    }
 
     func loadWeatherPlaces() async {
         guard let d = try? await api.callAt("/api", "GET", "/weather/places") else { return }

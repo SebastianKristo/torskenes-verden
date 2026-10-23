@@ -20,7 +20,13 @@ struct NewsReaderView: View {
             tabs(data)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    lead(data)
+                    // Prompt 46: Siste har det felles sammendraget; de andre kategoriene sitt eget (News46SummaryCard).
+                    if store.newsCat == "siste" {
+                        lead(data)
+                    } else {
+                        News46SummaryCard(cat: store.newsCat, name: News46.shared.tabs(data.categories).first { $0.id == store.newsCat }?.name ?? "",
+                                          items: data.items) { (x: NewsItem) in article27 = x }
+                    }
                     if store.news == nil || (store.newsBusy && data.items.isEmpty) {
                         ProgressView().frame(maxWidth: .infinity).padding(30)
                     } else if data.items.isEmpty {
@@ -39,11 +45,12 @@ struct NewsReaderView: View {
                 .sheetEdge30(p.bg)
         }
         .fullScreenCover(item: $article27) { x in
-            NewsArticleView27(start: x, catName: { c in (store.news ?? NewsData()).name(of: c) }, close: { article27 = nil })
+            // Prompt 46: lett haptikk ved trykk på tilbake (felles Haptic34.back, følger Haptikk-bryteren).
+            NewsArticleView27(start: x, catName: { c in (store.news ?? NewsData()).name(of: c) }, close: { Haptic34.back(); article27 = nil })
                 .environment(\.paper, p)
                 .environment(store)
                 // Prompt 30: kantsveip lukker artikkelen.
-                .edgeSwipeClose30 { article27 = nil }
+                .edgeSwipeClose30 { Haptic34.back(); article27 = nil } // prompt 46: haptikk når sveipet fullføres
         }
         // Prompt 40: Glimt-siden over Nyhetsleseren («‹ Nyheter» går tilbake hit).
         .fullScreenCover(isPresented: Binding<Bool>(get: { News40Model.shared.open }, set: { (v: Bool) in News40Model.shared.open = v })) {
@@ -58,7 +65,7 @@ struct NewsReaderView: View {
 
     private func header(_ d: NewsData) -> some View {
         HStack(spacing: 10) {
-            Button(action: back) {
+            Button { Haptic34.back(); back() } label: {
                 Text("‹ Tilbake").font(PF.ui(13, .semibold)).foregroundStyle(p.ink).padding(.leading, 10).padding(.trailing, 14).frame(height: 36)
                     .overlay(Capsule().stroke(p.line, lineWidth: 1)).contentShape(Capsule())
             }
@@ -68,12 +75,16 @@ struct NewsReaderView: View {
                 Text("Siste nytt").font(PF.serif(30, medium: true)).foregroundStyle(p.ink).lineLimit(1)
             }
             Spacer(minLength: 4)
-            Button { sources = true } label: {
-                Image(systemName: "gearshape").font(.system(size: 17, weight: .medium)).foregroundStyle(p.ink)
+            // Prompt 46: innstillingene ligger i Innstillinger → Nyheter. «…» har bare snarveien dit (og Hent nyheter nå).
+            Menu {
+                Button { store.paperGo("innst-nyheter") } label: { Label("Nyhetsinnstillinger", systemImage: "gearshape") }
+                Button { store.refreshNews() } label: { Label("Hent nyheter nå", systemImage: "arrow.clockwise") }
+            } label: {
+                Image(systemName: "ellipsis").font(.system(size: 17, weight: .bold)).foregroundStyle(p.ink)
                     .frame(width: 40, height: 40).background(p.card, in: Circle()).overlay(Circle().stroke(p.line, lineWidth: 1))
+                    .frame(width: 44, height: 44)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Kilder og AI")
+            .accessibilityLabel("Mer")
         }
         .padding(.horizontal, 18).padding(.top, 14).padding(.bottom, 12)
     }
@@ -87,7 +98,8 @@ struct NewsReaderView: View {
     private func tabs(_ d: NewsData) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 18) {
-                ForEach(d.categories) { c in
+                // Prompt 46: «For deg» etter Siste og egne kategorier bakerst (News46.swift).
+                ForEach(News46.shared.tabs(d.categories)) { c in
                     let on = store.newsCat == c.id
                     Button { store.setNewsCat(c.id) } label: {
                         // Prompt 23: ikon ved navnet (følger tekstfargen), se News23.swift.
@@ -155,30 +167,57 @@ struct NewsSourcesSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var url = ""
     @State private var iconFor: NewsCategory? = nil
+    /// Prompt 46: Innstillinger → Nyheter (News46SettingsPage) viser innholdet direkte, uten egen rulling og «Ferdig».
+    var embedded: Bool = false
 
     var body: some View {
-        let d = store.news ?? NewsData()
+        if embedded {
+            content.sheet(item: $iconFor) { c in
+                NewsIconPicker23(cat: c).environment(\.paper, p)
+                    .presentationDetents([.fraction(0.86), .large])
+                    .sheetEdge30(p.bg)
+            }
+        } else {
+            sheetBody
+        }
+    }
+
+    private var sheetBody: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
+            content
+            .padding(.horizontal, 18).padding(.top, 20).padding(.bottom, 30)
+        }
+        .background(p.bg)
+        .environment(\.colorScheme, p.dark ? .dark : .light)
+        .sheet(item: $iconFor) { c in
+            NewsIconPicker23(cat: c).environment(\.paper, p)
+                .presentationDetents([.fraction(0.86), .large])
+                .sheetEdge30(p.bg)
+        }
+    }
+
+    private var content: some View {
+        let d = store.news ?? NewsData()
+        return VStack(alignment: .leading, spacing: 14) {
+                if !embedded { HStack {
                     VStack(alignment: .leading, spacing: 1) {
                         PLabel(text: "Nyhetsleser")
                         Text("Kilder og AI").font(PF.serif(26, medium: true)).foregroundStyle(p.ink)
                     }
                     Spacer()
                     PInkButton(title: "Ferdig") { dismiss() }
-                }
+                } }
                 VStack(spacing: 0) {
                     toggle("✦ AI-sammendrag", "Lager en kort ingress over de viktigste sakene øverst.", d.aiSummary) { store.setNewsSetting("aiSummary", $0) }
                     Rectangle().fill(p.line).frame(height: 1)
                     toggle("✦ AI-kategorisering", "Setter kategori per sak når kilden står på Auto.", d.aiCategorize) { store.setNewsSetting("aiCategorize", $0) }
                 }
                 .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                NewsIconSection23(cats: d.categories) { c in iconFor = c }
+                NewsIconSection23(cats: News46.shared.tabs(d.categories)) { c in iconFor = c }
                 HStack(alignment: .firstTextBaseline) {
                     PLabel(text: "Adresser · \(d.feeds.count)")
                     Spacer()
-                    Text("Trykk på kategorien for å endre").font(PF.ui(12)).foregroundStyle(p.mut)
+                    Text("Velg kategori per kilde").font(PF.ui(12)).foregroundStyle(p.mut)
                 }
                 VStack(spacing: 0) {
                     ForEach(Array(d.feeds.enumerated()), id: \.element.id) { i, f in
@@ -204,15 +243,6 @@ struct NewsSourcesSheet: View {
                 }
                 PLineButton(title: "Hent nyheter nå", height: 44, full: true) { store.refreshNews() }
             }
-            .padding(.horizontal, 18).padding(.top, 20).padding(.bottom, 30)
-        }
-        .background(p.bg)
-        .environment(\.colorScheme, p.dark ? .dark : .light)
-        .sheet(item: $iconFor) { c in
-            NewsIconPicker23(cat: c).environment(\.paper, p)
-                .presentationDetents([.fraction(0.86), .large])
-                .sheetEdge30(p.bg)
-        }
     }
 
     private func add() {
@@ -240,19 +270,28 @@ struct NewsSourcesSheet: View {
 
     private func feedRow(_ f: NewsFeed, _ d: NewsData) -> some View {
         HStack(spacing: 10) {
-            Text(String(f.name.prefix(2)).uppercased()).font(PF.ui(10, .bold)).foregroundStyle(.white)
-                .frame(width: 34, height: 34).background(Color(hex: "#6b665c"), in: RoundedRectangle(cornerRadius: 9))
-                .opacity(f.enabled ? 1 : 0.4)
+            // Prompt 46: nettstedets ikon (favicon), bokstavene bare når det ikke finnes (News46.swift).
+            News46Fav(feed: f)
             VStack(alignment: .leading, spacing: 1) {
                 Text(f.name).font(PF.ui(14, .semibold)).foregroundStyle(p.ink).lineLimit(1)
                 Text(f.lastError.isEmpty ? f.url : f.lastError).font(PF.mono(11.5, bold: false)).foregroundStyle(f.lastError.isEmpty ? p.mut : p.lab).lineLimit(1)
             }
             Spacer(minLength: 4)
-            Button { store.cycleFeedCategory(f) } label: {
+            // Prompt 46: ekte nedtrekksmeny (✦ Auto + alle kategoriene, også egne), lagres med en gang.
+            Menu {
+                Button { store.patchFeed(f, ["category": "auto"]) } label: {
+                    menuItem((d.aiCategorize ? "✦ " : "") + "Auto", f.category.lowercased() == "auto" || f.category.isEmpty)
+                }
+                ForEach(News46.shared.pickable(d.categories)) { (c: NewsCategory) in
+                    Button { Haptics.shared.select(); store.patchFeed(f, ["category": c.id]) } label: {
+                        menuItem(c.name, f.category.lowercased() == c.id)
+                    }
+                }
+            } label: {
                 Text(catLabel(f, d) + " ▾").font(PF.ui(12, .semibold)).foregroundStyle(p.ink).padding(.horizontal, 10).frame(height: 30)
                     .overlay(Capsule().stroke(p.line, lineWidth: 1)).contentShape(Capsule())
+                    .frame(minHeight: 44)
             }
-            .buttonStyle(.plain)
             Button { store.deleteFeed(f) } label: {
                 Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(p.mut).frame(width: 28, height: 28)
             }
@@ -266,9 +305,14 @@ struct NewsSourcesSheet: View {
         }
     }
 
+    @ViewBuilder private func menuItem(_ t: String, _ on: Bool) -> some View {
+        if on { Label(t, systemImage: "checkmark") } else { Text(t) }
+    }
+
     private func catLabel(_ f: NewsFeed, _ d: NewsData) -> String {
         let c = f.category.lowercased()
         if c == "auto" || c.isEmpty { return (d.aiCategorize ? "✦ " : "") + "Auto" }
+        if let own = News46.shared.custom.first(where: { $0.id == c }) { return own.name }
         return d.name(of: c)
     }
 }

@@ -78,6 +78,7 @@ struct PaperLoginView: View {
         .environment(\.colorScheme, p.dark ? .dark : .light)
         .onAppear { if !store.addingAccount { server = store.server } }
         .server41Host(p)
+        .qr46Host(p, store)
     }
 
     private var host: String {
@@ -108,6 +109,8 @@ struct PaperLoginView: View {
             }
             .buttonStyle(.plain)
         }
+        // Prompt 46: QR-innlogging – en innlogget mobil skanner koden og godkjenner med Face ID (Qr46Login.swift).
+        Qr46LoginButton()
         Text("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.").font(PF.ui(12.5)).foregroundStyle(p.mut)
     }
 

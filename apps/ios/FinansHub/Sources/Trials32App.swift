@@ -130,7 +130,8 @@ struct Trial32bHomeCard: View {
             } else {
                 Button { store.subAdding = true } label: {
                     HStack {
-                        Text(m.loaded ? "Ingen aktive prøver" : "Henter …").font(PF.ui(13.5)).foregroundStyle(p.mut)
+                        // Prompt 46: kortet finnes bare i wiggle når lista er tom.
+                        Text(m.loaded ? "Vises når du har en aktiv prøveperiode" : "Henter …").font(PF.ui(13.5)).foregroundStyle(p.mut)
                         Spacer()
                         Text("+ Legg til").font(PF.ui(13, .bold)).foregroundStyle(p.lab)
                     }

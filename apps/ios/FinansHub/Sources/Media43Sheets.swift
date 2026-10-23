@@ -397,7 +397,7 @@ struct Media43MagnetSheet: View {
         Task { @MainActor in
             defer { busy = false }
             do {
-                _ = try await m.fetch(store, ["/media/qbit/torrents/magnet", "/media/torrents/magnet"], method: "POST", json: body)
+                _ = try await m.fetch(store, ["/media/torrents/magnet", "/media/qbit/torrents/magnet"], method: "POST", json: body)
                 Haptics.shared.success()
                 m.flash("Lagt til: " + ps.name)
                 await m.loadTorrents(store)
@@ -539,7 +539,7 @@ struct Media43SearchSheet: View {
         let svc: String = target.kind == "movie" ? "radarr" : "sonarr"
         Task { @MainActor in
             do {
-                _ = try await m.fetch(store, ["/media/\(svc)/release", "/media/release?service=\(svc)"], method: "POST", json: ["guid": r.guid, "indexerId": r.indexerId])
+                _ = try await m.fetch(store, ["/media/release?service=\(svc)", "/media/\(svc)/release"], method: "POST", json: ["guid": r.guid, "indexerId": r.indexerId])
                 Haptics.shared.success()
                 sent.insert(r.guid)
                 m.flash("Sendt til qBittorrent: " + [r.quality, Media43.size(r.size)].filter { !$0.isEmpty }.joined(separator: " · "))
@@ -990,7 +990,7 @@ struct Media43IndexerAddSheet: View {
         loading = true
         defer { loading = false }
         do {
-            let d: Data = try await m.fetch(store, ["/media/prowlarr/indexers/schema", "/media/indexers/schema"], timeout: 40)
+            let d: Data = try await m.fetch(store, ["/media/indexers/schema", "/media/prowlarr/indexers/schema"], timeout: 40)
             let have: Set<String> = Set(m.indexers.map { $0.name.lowercased() })
             schema = Media43.rows(d, ["schema", "indexers"]).map { (r: [String: Any]) -> Media43Schema in
                 var s: Media43Schema = Media43Schema()
@@ -1036,7 +1036,7 @@ struct Media43IndexerAddSheet: View {
         Task { @MainActor in
             defer { busy = false }
             do {
-                let d: Data = try await m.fetch(store, ["/media/prowlarr/indexers", "/media/indexers"], method: "POST", json: body, timeout: 60)
+                let d: Data = try await m.fetch(store, ["/media/indexers", "/media/prowlarr/indexers"], method: "POST", json: body, timeout: 60)
                 let o: [String: Any] = JS.obj(d)
                 Haptics.shared.success()
                 let ms: Int = JS.int(o, "ms") ?? 0

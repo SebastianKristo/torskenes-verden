@@ -12,7 +12,9 @@ extension Store {
     func applyPaperLayout(_ o: [String: Any]) {
         if JS.str(o, "mobileDesign") == "klassisk" { migrateClassic42(server: true) }
         if let v = JS.str(o, "paperMode"), ["auto", "lys", "mork"].contains(v), v != paperMode { paperMode = v }
-        if let v = JS.str(o, "photo"), ["cur", "oslo", "weather", "planets", "custom"].contains(v), v != photo {
+        // Prompt 46: Google Photos-albumet synkes som bgType 'gphoto' (layout.photo godtar ikke verdien) og vinner over photo.
+        let bg46: String? = JS.str(o, "bgType") == "gphoto" ? "gphoto" : JS.str(o, "photo")
+        if let v = bg46, ["cur", "oslo", "weather", "planets", "custom", "gphoto"].contains(v), v != photo {
             photo = v
             Task { await self.loadPhotoWindow() }
         }
@@ -72,8 +74,12 @@ extension Store {
     }
 
     func setPhoto(_ v: String) {
+        // Prompt 46: fra Google Photos-albumet (synket som bgType) tilbake til et vanlig valg – bgType følger med.
+        let wasAlbum: Bool = photo == "gphoto"
         photo = v
-        savePaperLayout(["photo": v])
+        var body46: [String: Any] = ["photo": v]
+        if wasAlbum && v != "gphoto" { body46["bgType"] = v }
+        savePaperLayout(body46)
         Task { await self.loadPhotoWindow() }
     }
 
@@ -97,6 +103,8 @@ extension Store {
         if paperTapBlocked { return }
         // Prompt 32: den gamle oppdateringssiden finnes ikke lenger; lenker dit åpner Nordlys OS (System31.swift).
         if t == "innst-oppdatering" { System31Model.shared.show(); return }
+        // Prompt 46: Kart (Mer → Kart, Glimt «vis bussene rundt hjemme» → tkart / tkart:<sone>) i fullskjerm.
+        if t == "tkart" || t.hasPrefix("tkart:") { Kart46.shared.show(self, zone: t.hasPrefix("tkart:") ? String(t.dropFirst(6)) : nil); return }
         // Prompt 33: kalenderfanen, Mer → Kalender, varsler og Glimt åpner Kalender-appen når den er installert (KalLink33.swift).
         if t == "kalender" && paperTab != "kalender" && KalLink33.today() { return }
         // Prompt 34: en tilbake-handling har allerede gitt én lett impuls (Haptic34) – ikke et valg-tikk i tillegg.
@@ -317,6 +325,8 @@ extension Store {
         if let cached = Store.cachedBg(kind) { photoImage = cached }
         // Prompt 41: Oslo = frie Commons-bilder fra lufta som skifter gjennom dagen (Bg41Oslo.swift), med mindre serveren har egne.
         if kind == "oslo", await Oslo41.shared.load(self) { return }
+        // Prompt 46: delt Google Photos-album (serveren henter og cacher, GPhoto46.swift).
+        if kind == "gphoto" { if !(await GPhoto46.shared.load(self)) { photoFailed = true }; return }
         // Ny bakgrunnstjeneste (prompt 19). Eldre servere: /api/photo-window under.
         if await loadBackground(kind) { return }
         guard let d = try? await api.callAt("/api", "GET", "/photo-window?kind=\(kind)") else {
@@ -393,10 +403,17 @@ extension Store {
     func loadNews() async {
         newsBusy = true
         defer { newsBusy = false }
-        let cat = newsCat.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? newsCat
+        // Prompt 46: «For deg» og egne kategorier som serveren ikke kjenner → Siste (80 saker) filtrert her (News46.swift).
+        let local: Bool = News46.shared.isLocal(newsCat)
+        let c0: String = local ? "siste" : newsCat
+        let cat = c0.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? c0
         do {
-            let d = try await api.callAt("/api", "GET", "/rss?cat=\(cat)&limit=40")
-            news = NewsData(JS.obj(d))
+            let d = try await api.callAt("/api", "GET", "/rss?cat=\(cat)&limit=\(local ? 80 : 40)")
+            let raw46: [String: Any] = JS.obj(d)
+            News46.shared.take(raw46)
+            var n46: NewsData = NewsData(raw46)
+            if News46.shared.isLocal(newsCat) { n46.items = News46.shared.filter(n46.items, newsCat) }
+            news = n46
         } catch let e as APIError {
             if news == nil { news = NewsData() }
             message = e.status == 404 ? "Nyhetsleseren finnes ikke på serveren ennå. Oppdater homelab." : e.message

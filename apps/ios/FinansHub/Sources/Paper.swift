@@ -314,7 +314,7 @@ struct PaperShell: View {
         // Prompt 37: mens briefen er åpen, vises Vær fra briefen selv (Brief35Page), så den legges over briefen.
         .fullScreenCover(isPresented: Binding(get: { store.weatherOpen && !Brief34Model.shared.open }, set: { store.weatherOpen = $0 })) {
             // Prompt 30: kantsveip fra venstre lukker Vær (fullskjerm har ikke appens egen tilbakegest).
-            PaperWeatherView().edgeSwipeClose30 { store.weatherOpen = false }
+            PaperWeatherView().vaer46Keeper().edgeSwipeClose30 { store.weatherOpen = false }
         }
         .dismissHaptic30(store.weatherOpen)
         // Prompt 31: System-siden «Nordlys OS» i fullskjerm, varsel-trykk og prøve-varsler (System31.swift).
@@ -328,6 +328,8 @@ struct PaperShell: View {
         .hjemlys40Host(p)
         // Prompt 43: Media i fullskjerm (Mer → Media, Hjem-kortet, widgetene og magnet:-lenker), Media43Views.swift.
         .media43Host(p)
+        // Prompt 46: Kart i fullskjerm (Mer → Kart, side-nøkkel tkart), Kart46Views.swift.
+        .kart46Host(p, store)
         // Prompt 43: Innstillinger → Widgets (galleriet), Widgets43.swift.
         .widgets43Host(p)
         // Prompt 44: Logger (Innstillinger → Server), Studie → Dokumenter og «Logget inn som X · Gå ut» (Logs44/Study44/Konto44.swift).
@@ -784,6 +786,8 @@ struct PaperBgMenu: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            // Prompt 46: Google Photos-album under «Eget bilde» (GPhoto46.swift).
+            GPhoto46Row()
         }
         .padding(6)
         .frame(width: 236)
@@ -862,11 +866,41 @@ struct PaperPage: View {
     @Environment(\.paper) private var p
     @Environment(\.paperWide) private var wide
     @State private var scrolled = false
+    @Environment(\.accessibilityReduceMotion) private var reduce46
 
     var body: some View {
+        if wide {
+            wide46
+        } else {
+            page46
+        }
+    }
+
+    /// Prompt 46 (claude-code-hjem-overgang-smooth-ipad-fold.md): på iPad holdes Hjem (1c) i minnet og tegnes alltid under
+    /// modulen. Overgangen er bare transform + opacity: modulen skalerer ned (0,92) og tones ut, Hjem tones inn fra 1,03.
+    /// Ingen layout-animasjon, ingen animert blur, og Hjem bygges ikke på nytt (widgetene viser det de har).
+    /// Fjær 0,38/0,86 (≈ 340 ms); «Reduser bevegelse»: bare crossfade 200 ms.
+    private var wide46: some View {
+        let onHome: Bool = store.paperTab == "hjem"
+        let out: AnyTransition = reduce46 ? AnyTransition.opacity : AnyTransition.asymmetric(insertion: .opacity, removal: AnyTransition.scale(scale: 0.92).combined(with: .opacity))
+        return ZStack {
+            Home45Wide()
+                .opacity(onHome ? 1 : 0)
+                .scaleEffect(onHome || reduce46 ? 1 : 1.03)
+                .allowsHitTesting(onHome)
+                .accessibilityHidden(!onHome)
+            if !onHome {
+                page46
+                    .transition(out)
+            }
+        }
+        .animation(reduce46 ? .easeInOut(duration: 0.2) : .spring(response: 0.38, dampingFraction: 0.86), value: onHome)
+    }
+
+    @ViewBuilder private var page46: some View {
         // Prompt 45: Hjem på iPad (brettet modus) er 1c – Glimt-kort til venstre, faner til høyre (Home45Wide.swift).
         if wide && store.paperTab == "hjem" {
-            Home45Wide()
+            Color.clear // prompt 46: Hjem ligger alltid under (wide46)
         } else if wide && store.paperTab == "familie" {
             // Prompt 45: Familie på iPad – kartet står stille til venstre, bare høyre kolonne scroller (Family16.swift).
             VStack(spacing: 0) {
@@ -888,7 +922,8 @@ struct PaperPage: View {
         let home = store.paperTab == "hjem"
         // Prompt 43: Gjøremål på iPad bruker hele bredden (tre kolonner, Tasks43Wide.swift).
         // Prompt 45: Familie på brettet skjerm har ingen maksbredde (Family16.swift, wideBody45).
-        let maxW: CGFloat = wide ? (home ? 960 : (store.paperTab == "huske" || store.paperTab == "finans" || store.paperTab == "familie" ? 1500 : 720)) : .infinity
+        // Prompt 46: Bibel på iPad bruker maks 1100 pt (to kolonner, Bible46.swift).
+        let maxW: CGFloat = wide ? (home ? 960 : (store.paperTab == "huske" || store.paperTab == "finans" || store.paperTab == "familie" ? 1500 : (store.paperTab == "bibel" ? 1100 : 720))) : .infinity
         VStack(spacing: 0) {
             PaperHero(home: home)
             // Prompt 25: ScrollViewReader for «Ta meg dit →» (Settings25.swift).
@@ -1112,6 +1147,7 @@ struct PaperHero: View {
         case "weather": "Vær nå"
         case "planets": "Planeter"
         case "custom": "Eget bilde"
+        case "gphoto": "Google Photos" // prompt 46
         default: "Oslo"
         }
     }
@@ -1137,17 +1173,8 @@ struct PaperHero: View {
             }
             // Prompt 37: profilbildet øverst åpner Innstillinger (oversikten), ikke Konto. Konto nås fra profilkortet der.
             Button { store.paperGo("innst") } label: {
-                ZStack {
-                    Circle().fill(Color(hex: "#f3efe6"))
-                    if let a = store.avatar {
-                        Image(uiImage: a).resizable().scaledToFill().clipShape(Circle())
-                    } else {
-                        Text(String(store.displayName.prefix(1)).uppercased()).font(PF.ui(14, .bold)).foregroundStyle(Color(hex: "#1b1a17"))
-                    }
-                }
-                .frame(width: 38, height: 38)
-                .overlay(Circle().stroke(plain45 ? p.line : Color.clear, lineWidth: 1))
-                .shadow(color: Color.black.opacity(plain45 ? 0.12 : 0), radius: 6, y: 3)
+                // Prompt 46: Glimt-ringen (40 pt), alle lag klippet til sirkel (Profile46.swift).
+                Avatar46(size: 40, gap: plain45 ? p.bg : Color.black.opacity(0.35), busy: Brief34Model.shared.loading, shadow: !plain45)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Innstillinger")

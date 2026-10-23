@@ -107,7 +107,13 @@ struct PaperTabIcon: View {
     /// glyf 16 pt, sentrert mot teksten og flyttet 1,5 pt ned. Tegn-ikoner (◎ ◌ ♡ ⋯) i Newsreader 500.
     var body: some View {
         let box: CGFloat = 18
-        if PaperTabIcon.isSymbol(icon) {
+        // Prompt 46: egne SVG-ikoner (Familie → Soner og Helse), strek 1,8 i currentColor (fargen følger fanen).
+        if let d = PaperTabIcon.svg46[icon] {
+            Fam22GlyphShape(d: d)
+                .stroke(style: StrokeStyle(lineWidth: 1.8 * box / 24, lineCap: .round, lineJoin: .round))
+                .frame(width: box, height: box)
+                .offset(y: 1.5)
+        } else if PaperTabIcon.isSymbol(icon) {
             Image(systemName: icon).font(.system(size: size - 2, weight: .semibold))
                 .frame(width: box, height: box)
                 .offset(y: 1.5)
@@ -118,6 +124,12 @@ struct PaperTabIcon: View {
         }
     }
     static func isSymbol(_ s: String) -> Bool { s.count > 2 && s.unicodeScalars.allSatisfy { $0.isASCII } }
+
+    /// Prompt 46 (claude-code-familie-ikoner-soner-helse.md, fasit TSV i Mobil Papir App.dc.html): 24 × 24-baner.
+    nonisolated static let svg46: [String: String] = [
+        "fam46:soner": "M12 15s-3.5-3-3.5-6a3.5 3.5 0 0 1 7 0c0 3-3.5 6-3.5 6zM12 9h.01M5.5 14.2C3.9 14.9 3 15.9 3 17c0 2.2 4 4 9 4s9-1.8 9-4c0-1.1-.9-2.1-2.5-2.8",
+        "fam46:helse": "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10zM7.5 12.5h2.4l1.3-2.6 1.8 5 1.3-2.4h2.2",
+    ]
 }
 
 /// Google-logoen i søkefeltet (den firefargede «G»-en).

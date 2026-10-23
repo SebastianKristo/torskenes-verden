@@ -402,8 +402,8 @@ struct Qr38KontoRow: View {
                     .frame(width: 30, height: 30)
                     .background(Color(hex: "#2b5d8a").opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Logg inn på ny enhet").font(PF.ui(14.5, .bold)).foregroundStyle(p.ink)
-                    Text("Skann QR-koden på skjermen").font(PF.ui(12)).foregroundStyle(p.mut)
+                    Text("Logg inn på annen enhet").font(PF.ui(14.5, .bold)).foregroundStyle(p.ink)
+                    Text("Kalender på Mac, iPhone, Android eller Finans – skann QR-koden").font(PF.ui(12)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 6)
                 Text("›").font(PF.ui(17)).foregroundStyle(p.mut)

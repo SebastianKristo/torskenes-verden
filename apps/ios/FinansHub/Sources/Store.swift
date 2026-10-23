@@ -319,7 +319,8 @@ final class Store {
     /// Værappen (trykk på temperaturen på Hjem).
     var weatherOpen = false
     var weatherFull: WeatherFull?
-    var weatherPlace = UserDefaults.standard.string(forKey: "fh_wx_place") ?? "oslo" {
+    // Prompt 46: standard er Min posisjon («__gps», Vaer46.swift), ikke Oslo.
+    var weatherPlace = UserDefaults.standard.string(forKey: "fh_wx_place") ?? "__gps" {
         didSet { UserDefaults.standard.set(weatherPlace, forKey: "fh_wx_place") }
     }
     var weatherBusy = false
@@ -545,6 +546,27 @@ final class Store {
     }
 
     func cancelTotp() { pending = nil }
+
+    /// Prompt 46: QR-innlogging (Qr46Login.swift) – serveren har gitt denne enheten et eget token etter godkjenning på en annen
+    /// mobil. Samme konto-oppsett som login(server:…), men uten passord.
+    func adoptToken46(server raw: String, token: String, username: String, name: String, role: String) {
+        let srv: String = API.normalize(raw)
+        guard !srv.isEmpty, !token.isEmpty else { return }
+        pending = nil
+        let firstEver = Store.freshInstall
+        UserDefaults.standard.set(true, forKey: "fh_installed_before")
+        if firstEver && !UserDefaults.standard.bool(forKey: "fh_onboarded") { onboarding = 0 }
+        Keychain.set("server", srv)
+        let same = accounts.first { $0.server == srv && $0.username.lowercased() == username.lowercased() }
+        let acc = LoginAccount(id: same?.id ?? UUID().uuidString, server: srv, username: username, name: name.isEmpty ? username : name,
+                               role: role.isEmpty ? "bruker" : role, token: token, local: same?.local ?? "", external: same?.external ?? "")
+        accounts = accounts.filter { $0.id != acc.id } + [acc]
+        addingAccount = false
+        switchTo(acc.id)
+        flash("Logget inn som \(acc.name)")
+        Server41.shared.unreachable = false
+        Task { await Server41.shared.learn(self) }
+    }
 
     func switchTo(_ id: String) {
         activeId = id
@@ -878,6 +900,10 @@ final class Store {
             mobileHome = try JSONDecoder().decode(MobileHome.self, from: d)
             let raw = JS.obj(d)
             homeWeather = JS.dict(raw, "weather").map(WeatherX.init)
+            // Prompt 46: Min posisjon – temperaturen på Hjem fra været der telefonen er (Vaer46.swift).
+            if weatherPlace == Vaer46.gpsId, let w = weatherFull, w.placeId == Vaer46.gpsId, var h = homeWeather {
+                h.place = w.placeName; h.temp = w.temp; h.text = w.text; h.hi = w.hi; h.lo = w.lo; homeWeather = h
+            }
             if raw["packages"] != nil { homePackages = JS.list(raw, "packages").map(Shipment.init) }
             applyPaperHome(raw)
             if UserDefaults.standard.string(forKey: layoutKey) == nil, let l = HomeLayout.from(json: ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any])?["layout"]) { layout = l }

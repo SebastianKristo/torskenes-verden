@@ -78,7 +78,7 @@ struct WxHeader22: View {
     let w: WeatherFull
     var body: some View {
         VStack(spacing: 0) {
-            Text(w.placeId == "pos" ? "MIN POSISJON" : "VÆRET I").font(.system(size: 12, weight: .heavy)).tracking(1.92).opacity(0.85)
+            Text(w.placeId == "pos" || w.placeId == Vaer46.gpsId ? "MIN POSISJON" : "VÆRET I").font(.system(size: 12, weight: .heavy)).tracking(1.92).opacity(0.85)
             Text(w.placeName).font(.system(size: 36, weight: .medium)).lineLimit(1).minimumScaleFactor(0.6)
             Text(WxFmt22.deg(w.temp)).font(.system(size: 112, weight: .ultraLight)).tracking(-4.48)
                 .padding(.leading, 22).padding(.top, 2).lineLimit(1)
@@ -113,13 +113,8 @@ struct WxHourCard22: View {
                 }
                 .buttonStyle(.plain)
                 Spacer()
-                HStack(spacing: 2) {
-                    modeButton("temp", "part", "Temperatur")
-                    modeButton("rain", "drop", "Nedbør")
-                    modeButton("wind", "wind", "Vind")
-                }
-                .padding(3)
-                .background(Color.black.opacity(0.18), in: Capsule())
+                // Prompt 46: Liquid Glass-dråpe som glir og kan sveipes (WxSeg46.swift – ScrollView med snapping, ingen egne dra-gester).
+                WxSeg46(mode: $mode, items: WxHourCard22.modes46)
             }
             .padding(.horizontal, 16)
             ScrollView(.horizontal, showsIndicators: false) {
@@ -148,6 +143,10 @@ struct WxHourCard22: View {
     }
 
     private var title: String { Wx32b.subtitle(mode) }
+
+    static let modes46: [WxSeg46Item] = [WxSeg46Item(id: "temp", icon: "part", label: "Temperatur"),
+                                         WxSeg46Item(id: "rain", icon: "drop", label: "Nedbør"),
+                                         WxSeg46Item(id: "wind", icon: "wind", label: "Vind")]
 
     private func modeButton(_ m: String, _ icon: String, _ label: String) -> some View {
         Button { Haptics.shared.select(); mode = m } label: {

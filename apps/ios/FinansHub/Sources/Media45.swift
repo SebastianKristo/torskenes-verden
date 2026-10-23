@@ -160,7 +160,7 @@ final class Media45Clean {
         loading = true
         defer { loading = false }
         do {
-            let d: Data = try await store.api.callAt("/api", "GET", "/media/unmonitored" + query, timeout: 30)
+            let d: Data = try await Media46.shared.call(store, "GET", "/media/unmonitored" + query, timeout: 30)
             let o: [String: Any] = JS.obj(d)
             items = JS.list(o, "items").map { (x: [String: Any]) -> Media45File in
                 let fid: String = JS.str(x, "fileId") ?? JS.int(x, "fileId").map { String($0) } ?? UUID().uuidString
@@ -204,7 +204,7 @@ final class Media45Clean {
         }
         let body: [String: Any] = ["service": service, "fileIds": fids, "confirm": true, "delaySec": 8]
         do {
-            let d: Data = try await store.api.callAt("/api", "POST", "/media/unmonitored/delete", json: body, timeout: 30)
+            let d: Data = try await Media46.shared.call(store, "POST", "/media/unmonitored/delete", json: body, timeout: 30)
             let o: [String: Any] = JS.obj(d)
             pendingId = JS.str(o, "pendingId") ?? ""
             undoPath = JS.str(JS.dict(o, "undo"), "path") ?? (pendingId.isEmpty ? "" : "/api/media/unmonitored/pending/" + pendingId)
@@ -241,7 +241,7 @@ final class Media45Undo {
         text = ""
         Haptics.shared.tap()
         Task {
-            _ = try? await store.api.callAt("/api", "DELETE", p, timeout: 15)
+            _ = try? await Media46.shared.call(store, "DELETE", p, timeout: 15)
             Media43.shared.toast = "Angret · ingen filer slettet"
         }
     }
@@ -394,7 +394,7 @@ final class Play45 {
         loading = true
         defer { loading = false }
         do {
-            let d: Data = try await store.api.callAt("/api", "GET", "/playback/summary?range=" + range, timeout: 20)
+            let d: Data = try await Media46.shared.call(store, "GET", "/playback/summary?range=" + range, timeout: 20)
             parse(JS.obj(d))
             available = true
         } catch let e as APIError where e.status == 404 {

@@ -114,7 +114,8 @@ struct More44Body: View {
         let daily: [More28Row] = visible.filter { big.contains($0.id) }
         let tools: [More28Row] = n.low ? visible : visible.filter { !big.contains($0.id) }
         VStack(alignment: .leading, spacing: 10) {
-            if !n.low || m.editing { More44Header(title: n.low ? "" : Mer45.shared.title) }
+            // Prompt 46: skjult tittel utenfor wiggle = ingen rad (heller ikke høyde/mellomrom), kortene starter rett under søket.
+            if (!n.low && !Mer45.shared.titleHidden) || m.editing { More44Header(title: n.low ? "" : Mer45.shared.title) }
             if !n.low && !daily.isEmpty { More44Tiles(rows: daily, all: all, columns: wide ? 4 : 2) }
             if !n.low && !tools.isEmpty { More44Label(text: "VERKTØY").padding(.top, 8) }
             if !tools.isEmpty { More44Tools(rows: tools, all: all, columns: wide ? 2 : 1) }

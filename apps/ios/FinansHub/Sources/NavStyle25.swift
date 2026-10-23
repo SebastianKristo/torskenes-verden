@@ -52,7 +52,12 @@ struct NavIcon25: View {
     let size: CGFloat
 
     var body: some View {
-        if PaperTabIcon.isSymbol(icon) {
+        // Prompt 46: egne SVG-ikoner (Familie → Soner/Helse).
+        if let d = PaperTabIcon.svg46[icon] {
+            Fam22GlyphShape(d: d)
+                .stroke(style: StrokeStyle(lineWidth: 1.8 * (size + 2) / 24, lineCap: .round, lineJoin: .round))
+                .frame(width: size + 2, height: size + 2)
+        } else if PaperTabIcon.isSymbol(icon) {
             Image(systemName: icon).font(.system(size: size - 2, weight: .semibold))
                 .frame(width: size + 2, height: size + 2)
         } else {

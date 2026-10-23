@@ -27,6 +27,17 @@ struct WxPlacesSheet22: View {
                 Text("MINE STEDER").font(.system(size: 11, weight: .semibold)).tracking(1.32).foregroundStyle(Color(hex: "#9aa3ae"))
                     .plainRow22().padding(.top, 4)
             }
+            // Prompt 46: «Min posisjon» fast øverst (kan ikke slettes, flyttes eller sveipes), Vaer46.swift.
+            Section {
+                Vaer46PlaceRow {
+                    store.setWeatherPlace(Vaer46.gpsId)
+                    Task { await Vaer46.shared.refresh(store, force: true) }
+                    dismiss()
+                }
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            }
             Section {
                 ForEach(store.weatherPlaces) { pl in
                     WxPlaceRow22(pl: pl, on: pl.id == store.weatherPlace) {

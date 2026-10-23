@@ -80,6 +80,8 @@ extension Store {
             else if k == "h12" { order.insert(k, at: 0) }
             // Prompt 37: Dagens bibelvers (h13) rett under Glimt-brief.
             else if k == "h13", let i = order.firstIndex(of: "h12") { order.insert(k, at: i + 1) }
+            // Prompt 46: Snarveier (h16) var en del av Søk (h1) – står rett etter Søk også med lagret oppsett.
+            else if k == "h16", let i = order.firstIndex(of: "h1") { order.insert(k, at: i + 1) }
             else { order.append(k) }
         }
         let hid = l.hidden.filter { keys.contains($0) }

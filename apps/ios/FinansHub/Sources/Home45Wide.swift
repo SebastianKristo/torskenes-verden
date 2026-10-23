@@ -194,18 +194,22 @@ struct Home45Greeting: View {
         VStack(alignment: .leading, spacing: 10) {
             topRow
             if !typing {
-                Text(longDate().capitalized(with: Locale(identifier: "nb_NO")))
-                    .font(PF.italic(17)).foregroundStyle(Color.white.opacity(0.92)).lineLimit(1)
-                greeting
-                Home45Temp()
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(longDate().capitalized(with: Locale(identifier: "nb_NO")))
+                        .font(PF.italic(17)).foregroundStyle(Color.white.opacity(0.92)).lineLimit(1)
+                    greeting
+                    Home45Temp()
+                }
+                .shadow(color: Color.black.opacity(0.4), radius: 8, y: 1)
             }
         }
-        .shadow(color: Color.black.opacity(0.4), radius: 8, y: 1)
+        // Prompt 46: skyggen bare på teksten (ikke på avataren – den ga en firkantet flate rundt profilbildet på iPad).
     }
 
     private var topRow: some View {
         HStack(spacing: 8) {
             Text(AppMeta.shared.name).font(PF.serif(24, medium: true)).foregroundStyle(Color.white).lineLimit(1)
+                .shadow(color: Color.black.opacity(0.4), radius: 8, y: 1)
             Spacer(minLength: 8)
             Button { store.paperGo("innst") } label: { avatar }
                 .buttonStyle(.plain)
@@ -213,16 +217,9 @@ struct Home45Greeting: View {
         }
     }
 
+    /// Prompt 46: Glimt-ringen, alt klippet til sirkel og skygge på sirkelen (ikke på en firkantet ramme) – Profile46.swift.
     private var avatar: some View {
-        ZStack {
-            Circle().fill(Color(hex: "#f3efe6"))
-            if let a = store.avatar {
-                Image(uiImage: a).resizable().scaledToFill().clipShape(Circle())
-            } else {
-                Text(String(store.displayName.prefix(1)).uppercased()).font(PF.ui(15, .bold)).foregroundStyle(Color(hex: "#1b1a17"))
-            }
-        }
-        .frame(width: 44, height: 44)
+        Avatar46(size: 44, gap: Color(hex: "#2a3440"), busy: Brief34Model.shared.loading)
     }
 
     private var greeting: some View {

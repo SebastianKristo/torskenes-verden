@@ -85,7 +85,7 @@ final class Playback44 {
     static let subs: [(String, String)] = [("now", "Spilles nå"), ("history", "Historikk"), ("stats", "Statistikk"), ("libs", "Biblioteker")]
 
     private func fetchObj(_ store: Store, _ path: String) async throws -> [String: Any] {
-        let d: Data = try await store.api.callAt("/api", "GET", "/playback" + path, timeout: 20)
+        let d: Data = try await Media46.shared.call(store, "GET", "/playback" + path, timeout: 20)
         let any: Any? = try? JSONSerialization.jsonObject(with: d)
         if let o = any as? [String: Any] { return o }
         return ["items": any ?? []]
@@ -227,7 +227,7 @@ final class Playback44 {
         pinTask = Task { @MainActor in
             defer { self.pinBusy = false }
             do {
-                let d: Data = try await store.api.callAt("/api", "POST", "/playback/plex/pin", json: [:], timeout: 20)
+                let d: Data = try await Media46.shared.call(store, "POST", "/playback/plex/pin", json: [:], timeout: 20)
                 let o: [String: Any] = JS.obj(d)
                 let id: String = JS.str(o, "id") ?? ""
                 self.pinCode = JS.str(o, "code") ?? ""
@@ -235,7 +235,7 @@ final class Playback44 {
                 for _ in 0..<150 {
                     try? await Task.sleep(nanoseconds: 2_000_000_000)
                     if Task.isCancelled || id.isEmpty { return }
-                    guard let dd = try? await store.api.callAt("/api", "GET", "/playback/plex/pin/\(id)", timeout: 10) else { continue }
+                    guard let dd = try? await Media46.shared.call(store, "GET", "/playback/plex/pin/\(id)", timeout: 10) else { continue }
                     let r: [String: Any] = JS.obj(dd)
                     let st: String = JS.str(r, "status") ?? JS.str(r, "state") ?? ""
                     if st == "ok" || JS.bool(r, "connected") == true {
