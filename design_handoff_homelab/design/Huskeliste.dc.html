@@ -316,7 +316,7 @@ class Component extends DCLogic {
       hasSubs:SB.length>0,subN:sd+' av '+SB.length,subW:SB.length?Math.round(sd/SB.length*100)+'%':'0%',subs:SB.map((u,k)=>({n:u.n,chk:u.done?'✓':'',bg:u.done?c:'transparent',td:u.done?'line-through':'none',op:u.done?.5:1,bt:k?'1px solid var(--h-line)':'0',tick:()=>upX({subs:SB.map((y,q)=>q===k?{...y,done:!y.done}:y)}),rm:()=>upX({subs:SB.filter((_,q)=>q!==k)})})),
       made:X.byGlimt?'✦ Laget med Glimt':'',hasMade:!!X.byGlimt,
       back:()=>this.setState({vw:null,vwMenu:false,vwList:false}),edit:()=>this.setState({ed:X.id,tagV:'',subV:'',vwMenu:false}),doneL:X.done?'Angre fullført':'Fullfør oppgaven',
-      toggle:()=>{upX({done:!X.done,doneAt:X.done?null:Date.now()});try{navigator.vibrate&&navigator.vibrate(12)}catch(_){}},
+      toggle:()=>{const fin=!X.done;upX({done:fin,doneAt:fin?Date.now():null});try{navigator.vibrate&&navigator.vibrate(fin?[10,40,18]:12)}catch(_){}if(fin){this.flash&&this.flash('Fullført: '+X.n);clearTimeout(this._dcl);this._dcl=setTimeout(()=>this.setState({vw:null,vwMenu:false,vwList:false}),450)}},
       flagT:()=>upX({flag:!X.flag}),flagL:X.flag?'Fjern flagg':'Flagg',
       del:()=>{sv(this.state.items.filter(y=>y.id!==X.id));this.setState({vw:null,vwMenu:false})}}}
   _rv0(){const s=this.state,p=this.props,t0=day(0),ME=p.user||'Sebastian',LS=this.lists(),VIS=LS.filter(l=>l.m.includes(ME)),VK=new Set(VIS.map(l=>l.k)),LM=Object.fromEntries(LS.map(l=>[l.k,l]));LISTS=[['alle','Alle','#1b1a17'],...VIS.map(l=>[l.k,l.n,l.c])];const LC=Object.fromEntries(LISTS.map(l=>[l[0],l[2]]));
