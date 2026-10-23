@@ -610,9 +610,11 @@ internal fun PlacesSheet(vm: AppViewModel) {
         }
         Text("MINE STEDER", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = .12.em, color = mut2)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Prompt 46 (claude-code-vaer-min-posisjon.md): fast rad øverst – kan ikke slettes, flyttes eller sveipes.
+            GpsPlaceRow46(vm) { close() }
             list.forEach { p ->
                 key(p.id) {
-                    PlaceRow(vm, p, selected = vm.weatherPlace == p.id, dragging = dragId == p.id, open = openId == p.id, canDelete = list.size > 1,
+                    PlaceRow(vm, p, selected = !vm.wxGps46() && vm.weatherPlace == p.id, dragging = dragId == p.id, open = openId == p.id, canDelete = list.size > 1,
                         onBounds = { bounds[p.id] = it },
                         onOpen = { openId = if (it) p.id else null },
                         onTap = { if (openId != null) openId = null else { vm.loadWeatherAt(p); close() } },

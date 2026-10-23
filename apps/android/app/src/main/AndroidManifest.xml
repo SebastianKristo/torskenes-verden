@@ -75,6 +75,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="homelab" android:host="login" />
+                <!-- Prompt 46: papir://login?s=<sid>&amp;c=<kode>&amp;srv=<server> (QR-innlogging for Finans og Kalender). -->
+                <data android:scheme="papir" android:host="login" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />

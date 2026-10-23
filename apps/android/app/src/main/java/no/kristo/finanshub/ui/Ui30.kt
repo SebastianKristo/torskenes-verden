@@ -182,7 +182,7 @@ internal fun UpdateBanner30(vm: AppViewModel, home: Boolean, modifier: Modifier 
     val nv = u.latest.ifBlank { "ny versjon" }
     val title: String = when (phase) {
         "done" -> if (u.action == "rollback") "Gjenopprettet $cur" else "Oppdatert til Nordlys $cur"
-        "run" -> if (u.action == "rollback") "Gjenoppretter forrige versjon" else "Oppdaterer Nordlys OS"
+        "run" -> if (vm.p46.updStuck) "Oppdateringen står fast" else if (u.action == "rollback") "Gjenoppretter forrige versjon" else "Oppdaterer Nordlys OS"
         "failed" -> "Oppdateringen feilet"
         else -> "Nordlys $nv er klar"
     }
@@ -221,6 +221,7 @@ internal fun UpdateBanner30(vm: AppViewModel, home: Boolean, modifier: Modifier 
         }
         // Prompt 36: snekker-Glimt på fremdriftslinja (36–44 dp luft over linja).
         if (phase == "run") Column { Carp36(vm, u.pct, 28.dp); UpdProgress30(u.pct, u.stepText.ifBlank { "Starter …" }) }
+        if (phase == "run" && vm.p46.updStuck) UpdStuck46(vm) // prompt 46: watchdog «Står fast»
         if (phase == "avail" && u.notesOpen) Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.bg).padding(12.dp, 10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),

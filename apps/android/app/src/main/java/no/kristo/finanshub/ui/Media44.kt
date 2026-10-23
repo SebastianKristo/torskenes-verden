@@ -94,12 +94,15 @@ private fun ServerSheet44(vm: AppViewModel) {
 /** Feil: «Utlogget fra Homelab» får en knapp til Kontoer og brukere, «Svarer ikke» får Prøv igjen. */
 @Composable
 internal fun ErrActions44(vm: AppViewModel) {
-    val k = vm.p44.errKind ?: return
     if (vm.p43.error == null) return
+    val k = vm.p44.errKind
     Row(Modifier.padding(start = 16.dp, top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (k == "token") Btn43("Logg inn på nytt", dark = true) { vm.p43.mediaOpen = false; vm.openPaperPage("set"); vm.settingsPage = "accounts" }
-        if (k == "down") Btn43("Prøv igjen", dark = true) { vm.p43.error = null; vm.p44.errKind = null; vm.loadMedia43() }
+        if (k == "down" || k == "route" || k == "upstream") Btn43("Prøv igjen", dark = true) { vm.p43.error = null; vm.p44.errKind = null; vm.loadMedia43() }
+        // Prompt 46: statuskode, tjeneste, adresse og tidspunkt for de siste Media-kallene (feilsøking av «Utlogget»).
+        Btn43(if (vm.p46.mediaDetails) "Skjul detaljer" else "Vis detaljer") { vm.p46.mediaDetails = !vm.p46.mediaDetails }
     }
+    if (vm.p46.mediaDetails) MediaDetails46(vm)
 }
 
 /** Søkefelt over filterpillene (Serier/Filmer). */

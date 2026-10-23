@@ -681,6 +681,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "kalender", "calendar" -> kalLink26(uri)
             "avganger", "ruter" -> { go(Screen.Homelab); openRuter() }
             "familie", "family" -> openFamily()
+            // Prompt 46: Kart (finanshub://kart[/<soneId>][?live=1]) – f.eks. fra Glimt «vis bussene rundt hjemme».
+            "kart", "map" -> kartLink46(uri)
             // Prompt 40: Hjemlys (varselet «Ja, start», Hjem-widgeten «Start for meg»): finanshub://hjemlys[/start?eta=…|/home]
             "hjemlys" -> hjemlysLink40(uri)
             "finn" -> go(Screen.Finn)
@@ -1604,7 +1606,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Prompt 42: «mobileDesign» fra serveren leses ikke lenger (Papir er eneste design; «klassisk» migreres i init).
         // Ny enhet starter i «lys» (prompt 22): serverens standardverdi «auto» skal ikke bytte tilbake, et eget valg (lys/mørk) gjelder.
         x.paperMode?.takeIf { it in setOf("lys", "mork") || (it == "auto" && !prefs.bool(AppPrefs.FRESH_PAPIR)) }?.let { prefs.set(AppPrefs.PAPER_MODE, it) }
-        x.photo?.takeIf { it in setOf("cur", "oslo", "weather", "planets", "custom") }?.let { prefs.set(AppPrefs.PHOTO, it) }
+        x.photo?.takeIf { it in setOf("cur", "oslo", "weather", "planets", "custom", "gphoto") }?.let { prefs.set(AppPrefs.PHOTO, it) } // prompt 46: gphoto
         runCatching { parseBgSettings(raw).type }.getOrNull()?.takeIf { it in BG_KINDS }?.let { prefs.set(AppPrefs.PHOTO, it) }
         prefs.set(AppPrefs.DESIGN_SYNCED, true)
         prefTick++
@@ -1615,6 +1617,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun loadPhotoNow() {
         val kind = photoKind
         if (kind == "cur" || kind == "none") { photo = null; photoGradient = emptyList(); photoCredit = null; photoError = null; bgInfo = null; return }
+        // Prompt 46: delt Google Photos-album (GET /api/bg/gphoto → current.mobile), nytt bilde hver hele time (P46b.kt).
+        if (kind == "gphoto") {
+            val bmp = gphotoPhoto46()
+            bgInfo = null; photoGradient = emptyList(); photoCredit = null
+            if (bmp != null) { photo = bmp; photoThumbs = photoThumbs + (kind to bmp); photoFailed = photoFailed - kind; photoError = null }
+            else { photoFailed = photoFailed + kind; photoError = "Fikk ikke hentet albumet · trykk for å prøve igjen" }
+            return
+        }
         // Prompt 41: Oslo fra lufta (Wikimedia Commons) etter tid på døgnet, nytt bilde hver hele time (P41.kt). Feiler alle: serverens bakgrunn.
         if (kind == "oslo") oslo41()?.let { (bmp, credit) ->
             bgInfo = null; photoGradient = emptyList(); photoCredit = credit; photo = bmp
@@ -1759,13 +1769,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var newsBusy by mutableStateOf(false)
     var newsError by mutableStateOf<String?>(null)
 
-    fun openNews(settings: Boolean = false) { newsOpen = true; newsSettings = settings; menuOpen = false; loadNews() }
+    // Prompt 46 (claude-code-nyheter-innstillinger-flytt.md): «Kilder og AI» ligger i Innstillinger → Nyheter, ikke på Nyheter-siden.
+    fun openNews(settings: Boolean = false) { if (settings) { menuOpen = false; openNewsSettings46(); return }; newsOpen = true; newsSettings = false; menuOpen = false; loadNews() }
 
     fun loadNews(cat: String = newsCat) = launch {
         newsCat = cat
         newsBusy = true
         try {
-            news = parseNews(api.hlGet("/rss?cat=" + URLEncoder.encode(cat, "UTF-8") + "&limit=40", timeout = 8000))
+            val raw = api.hlGet("/rss?cat=" + URLEncoder.encode(cat, "UTF-8") + "&limit=40", timeout = 8000)
+            news = parseNews(raw)
+            applyNewsExtras46(raw) // prompt 46: egne kategorier, interesser, favicon, sammendrag per kategori
             newsError = null
         } catch (e: ApiException) {
             newsError = if (e.status == 404) "Nyhetsleseren finnes ikke på serveren ennå. Oppdater homelab." else e.message
@@ -2435,7 +2448,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     /** «Forhold»-arket: valgt dag (0 = i dag), null = lukket. */
     var weatherSheetDay by mutableStateOf<Int?>(null)
-    fun openWeather() { weatherOpen = true; if (weatherFull == null || weatherFull?.placeId != weatherPlace) loadWeather(weatherPlace) }
+    fun openWeather() {
+        weatherOpen = true
+        // Prompt 46 (claude-code-vaer-min-posisjon.md): «Min posisjon» (standard) følger telefonens posisjon i stedet for fast «oslo».
+        if (wxGps46()) { openGps46(); return }
+        if (weatherFull == null || weatherFull?.placeId != weatherPlace) loadWeather(weatherPlace)
+    }
     fun loadWeather(place: String) {
         weatherPlace = place
         weatherError = null
@@ -2580,7 +2598,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (weatherPlace == id) wxPlaces.firstOrNull()?.let { loadWeatherAt(it) }
     }
     /** Været for et sted: kjente steder med ID, egne steder med koordinater. */
-    fun loadWeatherAt(p: WxPlace) = loadWeather(p.id)
+    fun loadWeatherAt(p: WxPlace) { wxPick46(p.id); loadWeather(p.id) } // prompt 46: valgt sted huskes (ikke lenger «Min posisjon»)
 
     /* ---------- Prompt 22: Yr og Pent, steder i egen rekkefølge, Huskeliste ↔ HA, logo for fraktselskap ---------- */
 
@@ -3616,6 +3634,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun <T> api45(f: suspend Api.() -> T): T = api.f()
     internal fun launch45(block: suspend () -> Unit) = launch(block)
     internal val appCtx45: Context get() = appCtx
+
+    /* ---------- Prompt 46 (ANDROID46): Media «Utlogget» (ekte årsak), Vær Min posisjon, QR-innlogging, Kart, Nyheter, Fold m.m. (P46.kt og ui-filene med 46) ---------- */
+    val p46 = P46State()
+    internal suspend fun <T> api46(f: suspend Api.() -> T): T = api.f()
+    internal fun launch46(block: suspend () -> Unit) = launch(block)
+    internal fun launchJob46(block: suspend () -> Unit): kotlinx.coroutines.Job = launch(block)
+    internal val appCtx46: Context get() = appCtx
+    internal val token46: String? get() = account?.token
+    /** QR-innlogging (P46.kt): serveren har utstedt et eget token for denne enheten etter godkjenning på en innlogget mobil. */
+    internal fun addQrAccount46(srv: String, r: LoginResult) {
+        store.rememberServer(srv)
+        val same = accounts.firstOrNull { it.server == srv && it.username.equals(r.username, true) }
+        val acc = UserAccount(same?.id ?: UUID.randomUUID().toString(), srv, r.username, r.name, r.role, r.token, same?.local ?: "", same?.external ?: "")
+        accounts = accounts.filter { it.id != acc.id } + acc
+        addingAccount = false
+        pending = null
+        switchTo(acc.id)
+        message = "Logget inn som ${r.name}"
+    }
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

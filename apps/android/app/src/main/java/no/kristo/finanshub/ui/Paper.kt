@@ -345,7 +345,7 @@ private fun PaperApp45(
                     // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
                     // Dra for å oppdatere: fra toppen når siden står øverst (ca. 70 dp), så hentes siden på nytt.
                     PullToRefreshBox(isRefreshing = vm.pullRefreshing, onRefresh = { vm.pullRefresh() }, modifier = Modifier.fillMaxHeight()) {
-                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide || home) 10_000.dp else 720.dp)) { key(pageKey, vm.b26.topSeq) { holder.SaveableStateProvider(scrollKey) {
+                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide || home) 10_000.dp else 720.dp).then(homeTx46(vm, home, wide))) { key(pageKey, vm.b26.topSeq) { holder.SaveableStateProvider(scrollKey) {
                         when {
                             vm.original != null -> PaneBox(navBottom) { OriginalScreen(vm) }
                             vm.editing != null -> PaneBox(navBottom) { TxEditScreen(vm, vm.editing!!, scan) }
@@ -424,6 +424,8 @@ private fun PaperApp45(
             if (vm.kal26.open) KalenderScreen27(vm)
             if (vm.chat27.open) ChatScreen27(vm)
             if (vm.p43.mediaOpen) MediaScreen43(vm) // Prompt 43: Media (ui/Media43.kt)
+            if (vm.p46.kart.open) KartPage46(vm) // Prompt 46: Kart (ui/Kart46Ui.kt)
+            if (vm.p46.gpSheet) GphotoSheet46(vm) // Prompt 46: Google Photos-album som bakgrunn (ui/Ui46b.kt)
             if (vm.p43.galleryOpen) WidgetGallery43(vm) // Prompt 43: Widgets-galleri (ui/WidgetGallery43.kt)
             if (vm.compareOpen) CompareScreen(vm)
             // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
@@ -518,11 +520,8 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
                     contentAlignment = Alignment.Center,
                 ) { Text("${photoName(vm.photoKind)} ▾", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1) }
                 // Profilbildet åpner Innstillinger → Profil.
-                Box(
-                    Modifier.size(38.dp).clip(CircleShape).background(Color(0xFFF3EFE6)).clickable(onClickLabel = "Innstillinger") { vm.openPaperPage("set") }
-                        .semantics { contentDescription = "Innstillinger" },
-                    contentAlignment = Alignment.Center,
-                ) { AvatarImage(vm, 38, Color(0xFFF3EFE6), Color(0xFF1B1A17)) }
+                // Prompt 46: Glimt-ring rundt profilbildet, alle lag klippet til sirkel (ui/Ui46.kt).
+                GlimtAvatar46(vm, busy = vm.p34.briefBusy) { vm.openPaperPage("set") }
             }
             Spacer(Modifier.weight(1f))
             Row(verticalAlignment = Alignment.Bottom) {
@@ -557,7 +556,7 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
 private fun bgPillHere29(vm: AppViewModel): Boolean =
     (vm.paperPage == "set" || vm.screen == Screen.Settings) && vm.settingsPage == null && vm.original == null && vm.editing == null && vm.detail == null
 
-private fun photoName(k: String) = when (k) { "cur" -> "Nåværende"; "none" -> "Ingen"; "weather" -> "Vær nå"; "planets" -> "Planeter"; "custom" -> "Eget bilde"; else -> "Oslo" }
+private fun photoName(k: String) = when (k) { "cur" -> "Nåværende"; "none" -> "Ingen"; "weather" -> "Vær nå"; "planets" -> "Planeter"; "custom" -> "Eget bilde"; "gphoto" -> "Google Photos"; else -> "Oslo" }
 
 private fun photoSub(vm: AppViewModel, k: String): String = when {
     k == "cur" -> "Mørk gradient"
@@ -612,6 +611,7 @@ private fun PhotoMenu(vm: AppViewModel, modifier: Modifier, own: () -> Unit) {
             Text("+ Eget bilde", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
             if (vm.photoKind == "custom") Text("✓", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
+        GphotoRow46(vm) // prompt 46: Google Photos-album (ui/Ui46b.kt)
         // Prompt 36: krediteringen (fotograf · lisens · kilde) står her, ikke over bildet.
         vm.photoCredit?.let { Text(it, color = p.mut, fontSize = 10.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 4.dp)) }
     }
@@ -753,7 +753,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean, mode43: Fo
     val h = vm.mobileHome
     LaunchedEffect(vm.base) { vm.loadHomeExtras(); vm.loadUpd30(); vm.loadUpdSettings30() }
     // Prompt 37: Pakker-valgene (h2), onboarding med profil og bibelverset.
-    LaunchedEffect(vm.account?.id) { vm.loadWopt37(); vm.checkOnboard37(); vm.loadBible37() }
+    LaunchedEffect(vm.account?.id) { vm.loadWopt37(); vm.checkOnboard37(); vm.loadBible37(); if (vm.p31.trials.isEmpty()) vm.loadTrials31() }
     AppUpd32Effects(vm) // prompt 32: ny versjon av selve appen (ui/AppUpdate32Ui.kt)
     if (vm.p30.upd.pwFor != null) UpdPwSheet30(vm)
     val grid37 = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
@@ -787,7 +787,8 @@ private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose
         if (vm.editPage != "hjem" && upd30Show(vm, home = true)) item(key = "upd30", span = { GridItemSpan(maxLineSpan) }) { UpdateBanner30(vm, home = true) }
         if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
         pageGridSecs(vm, "hjem", secs37, wide, skip = { k -> (k == "h40" && vm.p40.hlMissing) || (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) ||
-            (k == "h3" && trip && vm.p41.homeCard == "instead") || (k == "h43" && vm.homeMediaHidden43()) }) { k ->
+            (k == "h3" && trip && vm.p41.homeCard == "instead") || (k == "h43" && vm.homeMediaHidden43()) ||
+            (k == "h11" && vm.editPage != "hjem" && !vm.activeTrials46()) }) { k -> // prompt 46: Prøveperioder bare med aktive prøver (vises i wiggle)
             when (k) {
                 "h12" -> SwipeBrief36(vm) { HomeBrief34(vm) } // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt). Prompt 36: sveip mot høyre skjuler til neste brief
                 "h13" -> BibleHome37(vm) // Prompt 37: dagens bibelvers (ui/Bible37.kt)

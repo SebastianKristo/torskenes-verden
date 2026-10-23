@@ -79,7 +79,7 @@ internal fun NewsArticle27(vm: AppViewModel, p: PaperPal, cats: List<NewsCategor
     val x = s.articleFor ?: return
     val a = s.article
     val ctx = LocalContext.current
-    BackHandler { vm.closeArticle27() }
+    BackHandler { Haptics.back(); vm.closeArticle27() } // prompt 46: haptikk ved fullført tilbake (også prediktiv tilbake)
     val src = a?.source ?: x.feed
     val catId = a?.category ?: x.category
     val cat = catId?.let { c -> cats.firstOrNull { it.id == c }?.name ?: c.replaceFirstChar { it.uppercase() } } ?: "Nyheter"
@@ -88,7 +88,7 @@ internal fun NewsArticle27(vm: AppViewModel, p: PaperPal, cats: List<NewsCategor
     Box(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(18.dp, 14.dp, 18.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Tilbake") { vm.closeArticle27() }.padding(start = 12.dp, end = 16.dp),
+                Box(Modifier.height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Tilbake") { Haptics.back(); vm.closeArticle27() }.padding(start = 12.dp, end = 16.dp),
                     contentAlignment = Alignment.Center) { Text("‹ Siste nytt", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
                 Spacer(Modifier.weight(1f))
                 Box(Modifier.height(40.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Del") {

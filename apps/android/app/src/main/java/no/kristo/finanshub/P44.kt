@@ -157,8 +157,10 @@ private fun JSONObject.strs44(k: String): List<String> {
 /** Feiltekst som stemmer (claude-code-media-mobil-ikke-innlogget.md): aldri «ikke logget inn» når backend bare er treg. */
 internal fun AppViewModel.mediaErr44(e: ApiException): String {
     val m = e.message.orEmpty()
+    // Prompt 46: en 401 er ikke nok til «Utlogget» – den sjekkes mot /api/me først (P46.kt), og nøkkelfeil hos Sonarr/Radarr er aldri utlogging.
+    mediaUpstream46(e)?.let { return it }
     return when {
-        m.startsWith(Api.TOKEN_REFUSED) || e.status == 401 -> { p44.errKind = "token"; "Utlogget fra Homelab: serveren godtok ikke innloggingen for Media. Logg inn på nytt under Kontoer og brukere." }
+        m.startsWith(Api.TOKEN_REFUSED) || e.status == 401 -> mediaAuth46(e)
         e.status == 403 -> "Du har ikke tilgang til Media. Be admin om modulen «media»."
         e.status == 502 || e.status == 503 || e.status == 504 || m.contains("svarte ikke i tide") -> { p44.errKind = "down"; "Svarer ikke: tjenesten bak Homelab svarte ikke i tide (feil ${if (e.status > 0) e.status else "tidsavbrudd"}). Prøv igjen." }
         m.contains("Fikk ikke kontakt") || m.contains("Fant ikke serveren") -> { p44.errKind = "down"; "Svarer ikke: fikk ikke kontakt med Homelab ($base). Prøv igjen." }

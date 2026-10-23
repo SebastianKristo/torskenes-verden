@@ -129,11 +129,7 @@ private fun ColumnScope.FoldGreeting43(vm: AppViewModel, greet: androidx.compose
     val w = vm.mobileHome?.weather
     Row(verticalAlignment = Alignment.CenterVertically) {
         PSerif(vm.appName, 22.sp, Color.White, Modifier.weight(1f), maxLines = 1)
-        Box(
-            Modifier.size(38.dp).clip(CircleShape).background(Color(0xFFF3EFE6)).clickable(onClickLabel = "Innstillinger") { vm.openPaperPage("set") }
-                .semantics { contentDescription = "Innstillinger" },
-            contentAlignment = Alignment.Center,
-        ) { AvatarImage(vm, 38, Color(0xFFF3EFE6), Color(0xFF1B1A17)) }
+        GlimtAvatar46(vm) { vm.openPaperPage("set") } // prompt 46: Glimt-ring, ingen firkantet flate rundt bildet på Fold
     }
     PSerif(longDate(LocalDate.now()), 16.sp, Color.White.copy(alpha = .92f), italic = true, weight = FontWeight.Normal, maxLines = 1)
     AutoSerif("${greetingFor()},\n$first", greet, Color.White, min = 22.sp)

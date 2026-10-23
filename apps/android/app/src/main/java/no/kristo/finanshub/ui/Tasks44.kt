@@ -271,8 +271,11 @@ internal fun TaskPage44(vm: AppViewModel) {
         // Fast knapp nederst.
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().widthIn(max = 640.dp).padding(start = 18.dp, end = 18.dp, bottom = 14.dp + navB)
             .heightIn(min = 54.dp).shadow(10.dp, RoundedCornerShape(27.dp)).clip(RoundedCornerShape(27.dp)).background(if (t.done) p.card else c)
-            .clickable(role = Role.Button) { if (t.done) vm.toggleTask37(t.id) else { vm.completeTask44(t.id); vm.p44.taskPage = null } }, contentAlignment = Alignment.Center) {
-            Text(if (t.done) "Angre fullført" else "Fullfør oppgaven", color = if (t.done) p.ink else Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            // Prompt 46 (claude-code-gjoremal-fullfor-lukker.md): haken animeres, suksess-haptikk og infosiden lukkes etter 450 ms (P46.kt).
+            // «Angre fullført» lukker ikke siden.
+            .clickable(role = Role.Button) { if (t.done) vm.toggleTask37(t.id) else if (vm.p46.doneAnim == null) vm.finishFromPage46(t.id) }, contentAlignment = Alignment.Center) {
+            val anim = vm.p46.doneAnim == t.id
+            Text(if (anim) "✓ Fullført" else if (t.done) "Angre fullført" else "Fullfør oppgaven", color = if (t.done && !anim) p.ink else Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         }
     }
 }

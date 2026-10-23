@@ -256,7 +256,8 @@ internal fun HomeTrials32b(vm: AppViewModel) {
             }
             if (top == null) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Ingen aktive prøver. Skriv «Viaplay gratis i 14 dager» i søket.", color = p.mut, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    // Prompt 46 (claude-code-provperioder-skjul-tom.md): kortet vises bare i wiggle når det ikke finnes aktive prøver.
+                    Text("Vises når du har en aktiv prøveperiode", color = p.mut, fontSize = 14.sp, modifier = Modifier.weight(1f))
                     Box(
                         Modifier.height(34.dp).clip(CircleShape).background(p.bg).clickable(role = Role.Button) {
                             Haptics.select(); vm.openFromMer(Screen.Sub); vm.resetTrialForm31(); vm.b28.addStep = "trial"; vm.subAdding = true

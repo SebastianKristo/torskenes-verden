@@ -145,6 +145,8 @@ internal fun PaperSubs23(vm: AppViewModel, navBottom: Dp, lift: Dp = 0.dp) {
                         Text("−" + kr23(c.amount), color = t.fg, fontFamily = mono, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
                     }
                 }
+                // Prompt 46 (claude-code-subscription-logg.md): logg over prøveperioder og alle tidligere fakturaer (ui/Ui46b.kt).
+                item(key = "sublog46") { SubLog46(vm, t.fg, t.mut, t.card, Color(0xFF2F7A4F)) }
             }
             else -> {
                 // Prompt 37: GRATIS PRØVEPERIODER er et eget kort i rekkefølgen (øverst), med wiggle-redigering av kortene.
@@ -177,7 +179,9 @@ private val SUB_NAMES37 = mapOf("trials" to "Gratis prøveperioder", "ai" to "AI
 private fun HomeCards23(vm: AppViewModel, x: SubsX, t: SubTok) {
     val s = vm.m23
     val hid = vm.p37.subHid
-    val order = s.subOrder.filter { it !in hid }
+    // Prompt 46 (claude-code-provperioder-skjul-tom.md): prøveperiodene skjules uten aktive prøver (vises igjen i redigering og mens man legger til).
+    LaunchedEffect(vm.account?.id) { if (vm.p31.trials.isEmpty()) vm.loadTrials31() }
+    val order = s.subOrder.filter { it !in hid && (it != "trials" || s.subArrange || vm.subAdding || vm.activeTrials46()) }
     val heights = remember { HashMap<String, Int>() }
     val offset = remember { mutableFloatStateOf(0f) }
     val gapPx = with(androidx.compose.ui.platform.LocalDensity.current) { 14.dp.toPx() }

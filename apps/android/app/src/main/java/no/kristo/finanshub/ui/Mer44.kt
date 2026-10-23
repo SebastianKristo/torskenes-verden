@@ -94,7 +94,7 @@ internal fun LazyListScope.mer44(vm: AppViewModel, vis: List<MerItem28>, wide: B
     val cards = if (low) emptyList() else big.mapNotNull { k -> rows.firstOrNull { it.key == k } }
     val tools = if (low) rows else rows.filter { it.key !in big }
     if (cards.isNotEmpty()) {
-        if (!Mer45.titleHidden(vm)) item(key = "mer44-hl") { PLabel(Mer45.title(vm), modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
+        if (Mer45.showTitle(vm)) item(key = "mer44-hl") { PLabel(Mer45.title(vm), modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
         cards.chunked(if (wide) 4 else 2).forEachIndexed { i, ch ->
             item(key = "mer44-c$i") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {

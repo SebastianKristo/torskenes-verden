@@ -68,7 +68,8 @@ internal object Mer45 {
 
     private fun apply(o: JSONObject?) {
         if (o == null) return
-        titleV = o.optString("title").takeIf { it.isNotBlank() } ?: DEF_TITLE
+        // Prompt 46: tom tittel (teksten slettet) er et gyldig valg – raden tegnes da ikke utenfor wiggle (ingen tomrom).
+        titleV = if (o.has("title")) o.optString("title").trim() else DEF_TITLE
         hideV = o.optBoolean("hide", false)
         val a = o.optJSONArray("big")
         if (a != null && a.length() == 4) bigV = (0 until 4).map { a.optString(it) }.filter { it.isNotBlank() }.takeIf { it.size == 4 } ?: DEF_BIG
@@ -83,7 +84,9 @@ internal object Mer45 {
     fun title(vm: AppViewModel): String { ensure(vm); return titleV }
     fun titleHidden(vm: AppViewModel): Boolean { ensure(vm); return hideV }
     fun big(vm: AppViewModel): List<String> { ensure(vm); return bigV }
-    fun setTitle(vm: AppViewModel, t: String) { titleV = t.trim().ifBlank { DEF_TITLE }; save(vm) }
+    fun setTitle(vm: AppViewModel, t: String) { titleV = t.trim(); save(vm) }
+    /** Prompt 46 (claude-code-mer-tittel-fjern-mellomrom.md): skjult eller tom tittel → ingen tittelrad (heller ikke mellomrom). */
+    fun showTitle(vm: AppViewModel): Boolean { ensure(vm); return !hideV && titleV.isNotBlank() }
     fun setHidden(vm: AppViewModel, h: Boolean) { Haptics.select(); hideV = h; save(vm) }
     /** Bytter boks [i] til [k]; ligger [k] allerede i en annen boks, bytter de plass. */
     fun setBig(vm: AppViewModel, i: Int, k: String) {

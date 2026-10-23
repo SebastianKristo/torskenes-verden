@@ -577,11 +577,7 @@ private fun Fam22Hero(vm: AppViewModel) {
                     contentAlignment = Alignment.Center,
                 ) { Fam22Text("‹ Hjem", 13.sp, Color.White, FontWeight.SemiBold, maxLines = 1) }
                 Spacer(Modifier.weight(1f))
-                Box(
-                    Modifier.size(38.dp).clip(CircleShape).background(Color(0xFFF3EFE6)).clickable(onClickLabel = "Innstillinger") { vm.closeFamily(); vm.openPaperPage("set") }
-                        .semantics { contentDescription = "Innstillinger" },
-                    contentAlignment = Alignment.Center,
-                ) { AvatarImage(vm, 38, Color(0xFFF3EFE6), Color(0xFF1B1A17)) }
+                GlimtAvatar46(vm) { vm.closeFamily(); vm.openPaperPage("set") } // prompt 46
             }
             Spacer(Modifier.weight(1f))
             Fam22Text("Posisjon, soner og helse", 17.sp, fg.copy(alpha = .9f), FontWeight.Normal, PaperFonts.serif, maxLines = 1, italic = true, shadow = sh)

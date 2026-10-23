@@ -244,8 +244,11 @@ internal fun BiblePage37(vm: AppViewModel) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
             // Prompt 40 (claude-code-bibel-kort-opp-i-hero.md): toppbilde som de andre sidene; rekke-kortet går 36 dp opp i bildet.
             BibleHero40(vm) { s.biblePage = false }
-        Column(Modifier.fillMaxWidth().zIndex(2f).offset(y = (-BIBLE_OVERLAP40)).padding(start = 16.dp, end = 16.dp, bottom = 30.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // Prompt 46 (claude-code-bibel-side-ipad-fold.md): Fold åpen (≥ 680 dp) → to kolonner, toppjustert (14 dp / 18 dp), maks 1100 dp sentrert.
+        // Venstre: rekke-kortet og Dagens vers. Høyre: leseplan, statistikk, lagrede vers, påminnelse og kilde. Smal: én kolonne som før.
+        BoxWithConstraints(Modifier.fillMaxWidth().zIndex(2f).offset(y = (-BIBLE_OVERLAP40)), contentAlignment = Alignment.TopCenter) {
+        val two46 = maxWidth >= 680.dp
+        val left46: @Composable () -> Unit = {
             // Rekke-kortet (indigo, gyllen glød). Alle fire hjørner runde (24), skygge 0 14 30 −12 så det løfter seg fra bildet.
             Box(Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(24.dp), ambientColor = Color.Black.copy(alpha = .35f), spotColor = Color.Black.copy(alpha = .35f))
                 .clip(RoundedCornerShape(24.dp)).background(NIGHT_PAGE37).drawBehind {
@@ -317,6 +320,8 @@ internal fun BiblePage37(vm: AppViewModel) {
                     }
                 }
             }
+        }
+        val right46: @Composable () -> Unit = {
             // Leseplan.
             PLabel("LESEPLAN", p.mut, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
             val plan = PLANS37.firstOrNull { it.first == s.plan } ?: PLANS37.first()
@@ -374,6 +379,13 @@ internal fun BiblePage37(vm: AppViewModel) {
                 PToggle("Daglig påminnelse", if (s.remind) "Kl. 07:00 · «Dagens vers er klart»" else "Av", s.remind) { on -> vm.putBibleSet37 { it.copy(notify = on) } }
             }
             Text("Tekst: Bibelen 1930 (fri bruk). «Les ›» åpner kapitlet på bibel.no.", color = p.mut, fontSize = 11.5.sp, modifier = Modifier.padding(horizontal = 6.dp))
+        }
+        Column(Modifier.widthIn(max = 1100.dp).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 30.dp)) {
+            if (two46) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) { left46() }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) { right46() }
+            } else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) { left46(); right46() }
+        }
         }
         }
     }

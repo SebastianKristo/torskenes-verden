@@ -54,6 +54,9 @@ internal fun NewsReader(vm: AppViewModel) {
     // Prompt 27: saken lukkes når leseren lukkes, så den åpnes på listen neste gang.
     DisposableEffect(Unit) { onDispose { vm.closeArticle27() } }
     BackHandler { if (vm.newsSettings) vm.newsSettings = false else vm.newsOpen = false }
+    // Prompt 46: gamle lenker til «Kilder og AI» går til Innstillinger → Nyheter (ingen innstillinger på Nyheter-siden).
+    LaunchedEffect(vm.newsSettings) { if (vm.newsSettings) vm.openNewsSettings46() }
+    val tabs = vm.newsTabs46(cats)
     Box(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}.statusBarsPadding()) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(18.dp, 14.dp, 18.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -66,14 +69,22 @@ internal fun NewsReader(vm: AppViewModel) {
                     PLabel("Nyhetsleser · $upd kilder", p.lab)
                     PSerif("Siste nytt", 30.sp, p.ink, maxLines = 1)
                 }
-                Box(
-                    Modifier.size(40.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Kilder og AI") { vm.newsSettings = true },
-                    contentAlignment = Alignment.Center,
-                ) { Text("⚙", color = p.ink, fontSize = 18.sp) }
+                // Prompt 46: «…» med «Nyhetsinnstillinger» (dyp lenke til Innstillinger → Nyheter) i stedet for ⚙.
+                var menu by remember { mutableStateOf(false) }
+                Box {
+                    Box(
+                        Modifier.size(40.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Mer") { menu = true },
+                        contentAlignment = Alignment.Center,
+                    ) { Text("⋯", color = p.ink, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                    androidx.compose.material3.DropdownMenu(menu, { menu = false }, containerColor = p.card) {
+                        androidx.compose.material3.DropdownMenuItem({ Text("Nyhetsinnstillinger", color = p.ink) }, { menu = false; vm.openNewsSettings46() })
+                        androidx.compose.material3.DropdownMenuItem({ Text("Hent nye saker nå", color = p.ink) }, { menu = false; vm.refreshNews() })
+                    }
+                }
             }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                 // Prompt 23: ikon ved hver fane (følger tekstfargen).
-                cats.forEach { c -> NewsTab23(vm, c, vm.newsCat == c.id, p) { vm.loadNews(c.id) } }
+                tabs.forEach { c -> NewsTab23(vm, c, vm.newsCat == c.id, p) { vm.loadNews(c.id) } }
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(18.dp, 16.dp, 18.dp, 40.dp)) {
@@ -82,7 +93,10 @@ internal fun NewsReader(vm: AppViewModel) {
                 if (d != null) {
                     val lead = if (d.aiSummary) d.digest else d.items.firstOrNull()?.title
                     // Prompt 40 (claude-code-nyheter-glimt-side.md): kortet åpner Glimt-siden med langt sammendrag, kilder og bilder.
-                    if (d.items.isNotEmpty() || !lead.isNullOrBlank()) item { NewsGlimtEntry40(vm, lead) }
+                    // Prompt 46 (claude-code-nyheter-sammendrag-per-kategori.md): «Siste» beholder det felles sammendraget; hver kategori
+                    // har sitt eget øverst (skjelett mens det lages, skjult ved feil eller færre enn 3 saker).
+                    if (vm.newsCat == "siste" || !vm.p46.news.catSummary) { if (d.items.isNotEmpty() || !lead.isNullOrBlank()) item { NewsGlimtEntry40(vm, lead) } }
+                    else item(key = "catsum-" + vm.newsCat) { CatSummary46(vm, vm.newsCat, d.items) }
                     if (d.items.isEmpty()) item { Text("Ingen saker i denne kategorien.", color = p.mut, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp)) }
                     items(d.items.size) { i ->
                         val x = d.items[i]
@@ -107,37 +121,31 @@ internal fun NewsReader(vm: AppViewModel) {
             }
         }
         if (vm.b27.articleFor != null) NewsArticle27(vm, p, cats)
-        if (vm.newsSettings) NewsSettings(vm, p, cats)
         if (vm.m23.icPickFor != null) IconPicker23(vm, p, cats)
     }
 }
 
-/** «Kilder og AI»: to brytere, adresselisten (trykk på kategorien for å endre) og «+ Legg til adresse». */
+/**
+ * Prompt 46 (claude-code-nyheter-innstillinger-flytt.md): «Kilder og AI» som innhold i Innstillinger → Nyheter (samme lagring som før).
+ * Adressene har favicon (serverens cachede ikon / domenets logo, ellers bokstavene) og kategorien som ekte nedtrekksmeny.
+ */
 @Composable
-private fun NewsSettings(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory>) {
+internal fun NewsSettingsContent46(vm: AppViewModel, p: PaperPal) {
     val d = vm.news
+    val cats = d?.categories ?: NEWS_CATS
     var nf by remember { mutableStateOf("") }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .35f)).clickable { vm.newsSettings = false }, contentAlignment = Alignment.BottomCenter) {
-        Column(
-            Modifier.fillMaxWidth().fillMaxHeight(.86f).clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(p.bg)
-                .clickable(remember { MutableInteractionSource() }, null) {}.verticalScroll(rememberScrollState()).navigationBarsPadding().imePadding()
-                .padding(18.dp, 16.dp, 18.dp, 30.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) { PLabel("Nyhetsleser", p.lab); PSerif("Kilder og AI", 26.sp, p.ink) }
-                Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable { vm.newsSettings = false }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                    Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-            }
+    LaunchedEffect(Unit) { if (vm.news == null) vm.loadNews() }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card)) {
                 NewsToggle("✦ AI-sammendrag", "Lager en kort ingress over de viktigste sakene øverst.", d?.aiSummary ?: true, p, false) { vm.setNewsSetting("aiSummary", it) }
+                NewsToggle("✦ Sammendrag per kategori", "Eget Glimt-sammendrag øverst i hver kategori.", vm.p46.news.catSummary, p, true) { vm.setCatSummary46(it) }
                 NewsToggle("✦ AI-kategorisering", "Setter kategori per sak når kilden står på Auto.", d?.aiCategorize ?: true, p, true) { vm.setNewsSetting("aiCategorize", it) }
             }
-            NewsIconsSection23(vm, p, cats)
+            NewsCategories46(vm, p)
+            NewsIconsSection23(vm, p, vm.newsTabs46(cats))
             Row(verticalAlignment = Alignment.Bottom) {
                 PLabel("Adresser · ${d?.feeds?.size ?: 0}", p.lab, modifier = Modifier.weight(1f))
-                Text("Trykk på kategorien for å endre", color = p.mut, fontSize = 12.sp)
+                Text("Velg kategori per kilde", color = p.mut, fontSize = 12.sp)
             }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card)) {
                 val feeds = d?.feeds ?: emptyList()
@@ -145,21 +153,12 @@ private fun NewsSettings(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory>
                 feeds.forEachIndexed { i, f ->
                     if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                     Row(Modifier.fillMaxWidth().padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(34.dp).clip(RoundedCornerShape(9.dp)).background(p.ink), contentAlignment = Alignment.Center) {
-                            Text(f.name.take(2).uppercase(), color = p.bg, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                        }
+                        FeedIcon46(vm, f, p)
                         Column(Modifier.weight(1f)) {
                             Text(f.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(f.lastError ?: f.url, color = if (f.lastError != null) p.lab else p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        val order = listOf("auto") + cats.map { it.id }.filter { it != "siste" }
-                        Box(
-                            Modifier.height(30.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).clickable {
-                                val next = order[(order.indexOf(f.category).coerceAtLeast(0) + 1) % order.size]
-                                vm.setFeedCategory(f.id, next)
-                            }.padding(horizontal = 10.dp),
-                            contentAlignment = Alignment.Center,
-                        ) { Text((if (f.category == "auto" && d?.aiCategorize == true) "✦ " else "") + catName(f.category, cats) + " ▾", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1) }
+                        FeedCatMenu46(vm, f, p, cats)
                         Box(Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).clickable(onClickLabel = "Fjern ${f.name}") { vm.removeFeed(f.id) }, contentAlignment = Alignment.Center) {
                             Text("×", color = p.mut, fontSize = 16.sp)
                         }
@@ -179,16 +178,19 @@ private fun NewsSettings(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory>
                 Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.lab).clickable { if (nf.isNotBlank()) { vm.addFeed(nf); nf = "" } },
                 contentAlignment = Alignment.Center,
             ) { if (vm.newsBusy) CircularProgressIndicator(color = p.onLab, modifier = Modifier.size(20.dp), strokeWidth = 2.dp) else Text("+ Legg til adresse", color = p.onLab, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
-            Text(if (d?.aiCategorize != false) "✦ AI finner navnet på kilden og foreslår kategori." else "Kategorien settes til Auto.", color = p.mut, fontSize = 12.sp)
+            Text(if (d?.aiCategorize != false) "✦ AI finner navnet på kilden og foreslår kategori. Ikonet hentes fra nettstedet." else "Kategorien settes til Auto.", color = p.mut, fontSize = 12.sp)
             Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, p.line, RoundedCornerShape(14.dp)).clickable { vm.refreshNews() }, contentAlignment = Alignment.Center) {
                 Text("Hent nye saker nå", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             }
-        }
+    }
+    // Ikonvelgeren i et eget vindu (Innstillinger er en LazyColumn – et rutenett inni den ville fått uendelig høyde).
+    if (vm.m23.icPickFor != null) androidx.compose.ui.window.Dialog({ vm.m23.icPickFor = null }, androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        IconPicker23(vm, p, vm.newsTabs46(cats))
     }
 }
 
 @Composable
-private fun NewsToggle(title: String, sub: String, on: Boolean, p: PaperPal, top: Boolean, onChange: (Boolean) -> Unit) {
+internal fun NewsToggle(title: String, sub: String, on: Boolean, p: PaperPal, top: Boolean, onChange: (Boolean) -> Unit) {
     if (top) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
     Row(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f)) {

@@ -400,7 +400,9 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
     val p = PaperPal.current
     val s = vm.p41
     val first = firstName37(vm.displayName).uppercase()
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).then(if (home) Modifier.clickable { vm.openRuter() } else Modifier).padding(16.dp, 14.dp),
+    // Prompt 46 (claude-code-ruter-innstillinger-i-wiggle.md): innstillingene vises bare i redigering (hold inne / «Rediger stopp»).
+    val edit46 = !home && vm.stopEdit
+    Column(Modifier.fillMaxWidth().wiggle46(edit46).clip(RoundedCornerShape(22.dp)).background(p.card).then(if (home) Modifier.clickable { vm.openRuter() } else Modifier.longPressEdit(!vm.stopEdit) { Haptics.tap(); vm.stopEdit = true }).padding(16.dp, 14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Prompt 42 (claude-code-ruter-snu-knapp.md): raden er sentrert loddrett mot etikett + tittel, med 10 dp mellomrom.
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -456,15 +458,21 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
                 }
             }
         }
-        if (!home) {
-            Zones41(vm) // skolesoner (chips, «+ Sone», siste kan ikke slettes)
-            PLabel("Antall anbefalte reiser", p.mut)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf(1, 2, 3).forEach { n -> Pill41("$n", vm.p45.recoCount == n) { vm.setRecoCount45(n) } }
-            }
-            PLabel("På Hjem når du forlater skolen", p.mut)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("over" to "Over Ruter-kortet", "instead" to "I stedet", "off" to "Av").forEach { (k, n) -> Pill41(n, s.homeCard == k) { vm.setHomeCard41(k) } }
+        if (!home && !edit46) TripLocNote46(vm)
+        if (!home) AnimatedVisibility(edit46, enter = androidx.compose.animation.expandVertically(tween(300)) + fadeIn(tween(300)),
+            exit = androidx.compose.animation.shrinkVertically(tween(300)) + fadeOut(tween(200))) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+                PLabel("Innstillinger for kortet", p.mut)
+                Zones41(vm) // skolesoner (chips, «+ Sone», siste kan ikke slettes)
+                PLabel("Antall anbefalte reiser", p.mut)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(1, 2, 3).forEach { n -> Pill41("$n", vm.p45.recoCount == n) { vm.setRecoCount45(n) } }
+                }
+                PLabel("På Hjem når du forlater skolen", p.mut)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("over" to "Over Ruter-kortet", "instead" to "I stedet", "off" to "Av").forEach { (k, n) -> Pill41(n, s.homeCard == k) { vm.setHomeCard41(k) } }
+                }
             }
         }
     }

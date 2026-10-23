@@ -55,6 +55,7 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     // Prompt 44: Logger (Docker), Gjøremål-synk, Logg inn som / Overfør eier, Tidligere versjoner.
     if (vm.userIsAdmin) add(SetItem24("logger44", "Logger", "Server", "Docker-logger, feil og feilsøking", null, "logg logger docker feil feilsøking container"))
     add(SetItem24("huske", "Gjøremål", "App", "Synk med Home Assistant", "huske", "gjøremål synk home assistant todo"))
+    add(SetItem24("nyheter", "Nyheter", "App", "Kilder, kategorier, For deg og Glimt-sammendrag", "nyheter", "nyheter rss kilder kategori for deg sammendrag favicon")) // prompt 46
     if (vm.userIsAdmin) add(SetItem24("as44", "Logg inn som", "Konto → Kontoer og brukere", "Rediger oppsettet til et familiemedlem · overfør eierskap", "accounts", "logg inn som impersonering eier overfør familie oppsett"))
     if (vm.userIsAdmin) add(SetItem24("rollback44", "Tidligere versjoner", "System", "Rull tilbake til en tidligere versjon", null, "rull tilbake rollback versjon nedgrader"))
     add(SetItem24("ai", "AI og tolkning", "Finans", "Gemini · Groq · Roboflow · Ollama · tidsgrenser", "ai", "gemini groq ollama roboflow ocr"))

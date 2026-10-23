@@ -263,7 +263,8 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                     // Prompt 41 (claude-code-vaer-rediger-ski-julfigur.md): kortene i brukerens rekkefølge (vaer_layout), skjulte tas ut,
                     // Skiføre bare med snø ≥ 15 cm og «Skiføre» på. Hold inne 0,6 s eller «Rediger kort» → vugging og arket «Rediger Vær».
                     val lay = vm.vaerLay41()
-                    item(key = "here45") { HereCard45(vm, w) } // prompt 45: Min posisjon (ui/Vaer45.kt)
+                    // Prompt 46: med «Min posisjon» valgt er hovedværet allerede der telefonen er, så det ekstra kortet trengs ikke.
+                    if (!vm.wxGps46()) item(key = "here45") { HereCard45(vm, w) } // prompt 45: Min posisjon (ui/Vaer45.kt)
                     lay.ord.filter { it !in lay.hid && (it != "ski" || vm.skiShow41()) }.forEachIndexed { i, k ->
                         item(key = "vo41-$k") {
                             VaerWrap41(vm, i) {
@@ -849,6 +850,8 @@ private fun WideWeather25(
                     Header(w, Modifier)
                     HourCard32b(vm, w) { vm.weatherSheetDay = 0 }
                     DaysCard32b(vm, w, { DaysCard(w) { vm.weatherSheetDay = it } }) { vm.weatherSheetDay = it }
+                    // Prompt 46 (claude-code-vaer-glimt-uka-ipad-fold.md): «Glimt · Ukas vær» nederst i venstre kolonne (tomrommet ved detaljkortene).
+                    if ("glimt" !in vm.vaerLay41().hid) WeekGlimt39(vm, w)
                 }
                 Column(Modifier.weight(7f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     WxMapInline25(w, Modifier.fillMaxWidth().height(300.dp).clip(cardShape).border(1.dp, glassBg, cardShape), openMap)
@@ -860,7 +863,6 @@ private fun WideWeather25(
                     TileRow3({ HumTile(w, it) { open("hum") } }, { PresTile(w, it) { open("pres") } }, null)
                 }
             }
-            WeekGlimt39(vm, w) // prompt 39: Glimt · ukas vær
             val ctx = LocalContext.current
             Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = 12.5.sp, textDecoration = TextDecoration.Underline,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().alpha(.85f).clickable { openLink(ctx, w.yrUrl ?: "https://www.yr.no/") }.padding(top = 4.dp))

@@ -161,6 +161,7 @@ internal fun RailHome45(vm: AppViewModel, visible: Boolean, onLeave: (() -> Unit
                         s.homeBusy = true
                         Haptics.tap()
                         s.homeLeaving = true
+                        vm.p46.homeFromRail = true // prompt 46: Hjem tones inn med fjær etter at modulen har skalert ut (ui/Ui46.kt)
                         scope.launch {
                             delay(if (reduce) 0L else 190L)
                             onLeave?.invoke()

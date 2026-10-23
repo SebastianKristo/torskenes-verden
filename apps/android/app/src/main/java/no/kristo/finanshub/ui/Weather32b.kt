@@ -85,13 +85,8 @@ internal fun HourCard32b(vm: AppViewModel, w: WeatherFull, forhold: () -> Unit) 
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            Row(Modifier.clip(CircleShape).background(Color.Black.copy(alpha = .18f)).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                listOf("temp" to WX_IC.getValue("part"), "rain" to DROP32B, "wind" to WINDP32B).forEach { (k, ic) ->
-                    Box(Modifier.size(44.dp, 30.dp).clip(CircleShape).background(if (mode == k) Color.White.copy(alpha = .28f) else Color.Transparent)
-                        .clickable(onClickLabel = when (k) { "rain" -> "Nedbør"; "wind" -> "Vind"; else -> "Temperatur" }) { Haptics.select(); vm.p32b.wxMode = k },
-                        contentAlignment = Alignment.Center) { WxIcon(ic, Color.White, 18.dp, stroke = 1.9f) }
-                }
-            }
+            // Prompt 46 (claude-code-vaer-modusvelger-liquid-glass.md): glassdråpe som glir og kan dras (ui/Ui46.kt).
+            LiquidSeg46(listOf("temp" to WX_IC.getValue("part"), "rain" to DROP32B, "wind" to WINDP32B), listOf("Temperatur", "Nedbør", "Vind"), mode) { vm.p32b.wxMode = it }
         }
         if (hrs.isEmpty()) Text("Ingen timevarsel.", fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp).alpha(.75f))
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {

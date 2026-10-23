@@ -65,7 +65,7 @@ internal fun RowScope.PaperTab24(
         // Tegn-ikoner (◎ ◌ ♡ ⋯ i Familie) i Newsreader 500, ellers vektorikon.
         if (showIcon) Box(Modifier.size((glyph + 2).dp).offset(y = if (showLabel) 1.5.dp else 0.dp), contentAlignment = Alignment.Center) {
             val c = if (on) actInk else ink
-            if (serif) Text(icon, color = c, style = TAB_TEXT24.copy(fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = glyph.sp, lineHeight = glyph.sp), maxLines = 1)
+            if (serif && icon != "◌" && icon != "♡") Text(icon, color = c, style = TAB_TEXT24.copy(fontFamily = PaperFonts.serif, fontWeight = FontWeight.Medium, fontSize = glyph.sp, lineHeight = glyph.sp), maxLines = 1)
             else GlyphIcon(icon, c, glyph.dp)
         }
         if (showLabel) Text(label, color = if (on) actInk else ink, style = TAB_TEXT24, maxLines = 1, overflow = TextOverflow.Clip)
@@ -121,10 +121,14 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
         row("huske", "Gjøremål", "To-do for hele familien") { vm.openTasks() }
         if (vm.bibleAllowed37()) row("bibel", "Bibel", "Dagens vers, rekke og leseplan") { vm.p37.biblePage = true }
         if ("familie" !in inBar) row("kart", "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() }
+        // Prompt 46 (claude-code-kart-side.md): Mer → Kart (side-nøkkel tkart), fullskjerm som Media/Kalender.
+        row("tkart", "Kart", "Holdeplasser, sanntid og soner") { vm.openKart46() }
         if ("media" !in inBar) row("media", "Media", "Sonarr, Radarr, qBittorrent og Prowlarr") { vm.openMedia43() } // prompt 43
         if ("finans" !in inBar) row("finans", "Finans", "Oversikt, liste, Finn og mer") { vm.paperTab("fin") }
         row("abo", "Subscription OS", "Abonnementer og faste trekk") { vm.openSubFromMer38() }
         if ("nyheter" !in inBar) row("rss", "Nyhetsleser", "RSS med AI-sammendrag") { vm.openNews() }
+        // Prompt 46 (claude-code-qr-innlogging-finans-kalender.md): snarvei til skanneren (godkjenn innlogging på Mac, nettbrett, Kalender …).
+        row("qrlogin", "Logg inn på annen enhet", "Skann QR-koden på den andre skjermen") { vm.openQr38() }
         row("innst", "Innstillinger", "Tema, bakgrunn og konto") { vm.openPaperPage("set") }
     }
     // Prompt 37: én gangs migrering – Gjøremål var skjult i Mer-oppsettet; vis den (brukeren kan skjule den igjen selv).

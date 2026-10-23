@@ -248,6 +248,7 @@ fun AppViewModel.openShortcut32b(page: String) {
         "abo" -> openFromMer(Screen.Sub)
         "domener" -> deepLink(Uri.parse("finanshub://domains"))
         "kart" -> openFamily()
+        "tkart" -> openKart46() // prompt 46: Kart (holdeplasser, sanntid og soner)
         "mat" -> deepLink(Uri.parse("finanshub://mat"))
         "huske" -> openTasks()
         "bursdag" -> deepLink(Uri.parse("finanshub://bursdager"))

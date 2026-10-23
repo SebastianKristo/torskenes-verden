@@ -37,6 +37,7 @@ class Api(private val baseUrl: String, private val token: String?) {
 
     suspend fun request(method: String, path: String, json: JSONObject? = null, prefix: String = FINANS, timeout: Int = 10_000, read: Int = 30_000): String = withContext(Dispatchers.IO) {
         val conn = url(path, prefix).openConnection() as HttpURLConnection
+        val t46 = System.currentTimeMillis()
         try { net {
             conn.requestMethod = method
             conn.connectTimeout = timeout
@@ -48,8 +49,17 @@ class Api(private val baseUrl: String, private val token: String?) {
                 conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 conn.outputStream.use { it.write(json.toString().toByteArray()) }
             }
-            read(conn)
-        } } finally { conn.disconnect() }
+            read(conn).also { log46(prefix, path, method, conn, 200, t46, null) }
+        } } catch (e: ApiException) {
+            log46(prefix, path, method, conn, if (e.message?.startsWith(TOKEN_REFUSED) == true) 401 else e.status, t46, e.code ?: e.message)
+            throw e
+        } finally { conn.disconnect() }
+    }
+
+    /** Prompt 46: hvert Media-/Avspilling-kall logges (URL, status, om Authorization var med, tid) for «Vis detaljer» i Media. */
+    private fun log46(prefix: String, path: String, method: String, conn: HttpURLConnection, status: Int, t0: Long, err: String?) {
+        if (prefix != HOMELAB || !(path.startsWith("/media") || path.startsWith("/playback"))) return
+        runCatching { MediaLog46.add(method, conn.url.toString(), status, token != null, System.currentTimeMillis() - t0, err) }
     }
 
     /** Gjør nettverksfeil om til meldinger brukeren kan handle på. */
@@ -74,7 +84,7 @@ class Api(private val baseUrl: String, private val token: String?) {
             // «Ikke innlogget» fra Homelab-, Mat- eller Domener-ruter som ikke godtar app-tokenet ennå: finans-innloggingen er gyldig,
             // så det skal verken logge ut eller vise «Ikke innlogget» (prompt 14). Appen viser ingen melding for dette.
             val path = conn.url.path
-            if (code == 401 && !path.startsWith(FINANS) && o?.optBoolean("needsTotp") != true) throw ApiException("$TOKEN_REFUSED ($path)", 403)
+            if (code == 401 && !path.startsWith(FINANS) && o?.optBoolean("needsTotp") != true) throw ApiException("$TOKEN_REFUSED ($path)", 403, code = o?.optString("code")?.takeIf { it.isNotBlank() })
             throw ApiException(msg, code, o?.optBoolean("needsTotp") == true, o?.optString("code")?.takeIf { it.isNotBlank() }, o?.optBoolean("canGemini") == true)
         }
         // En nettside (innloggingssiden, en proxy eller Cloudflare) i stedet for data: si det tydelig i stedet for en JSON-feil.

@@ -268,7 +268,7 @@ private fun QrSheet38(vm: AppViewModel) {
     val close = { s.qrOpen = false; s.qrErr = null }
     Sheet38(close) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            PSerif("Logg inn på ny enhet", 24.sp, modifier = Modifier.weight(1f), maxLines = 1)
+            PSerif("Logg inn på annen enhet", 24.sp, modifier = Modifier.weight(1f), maxLines = 1)
             SheetButton30("Lukk", "secondary", onClick = close)
         }
         Text("Åpne innloggingssiden på den nye enheten (nettleser, Mac eller nettbrett) og skann QR-koden med mobilen.", color = p.mut, fontSize = 13.5.sp, lineHeight = 19.sp)
@@ -289,7 +289,7 @@ private fun QrSheet38(vm: AppViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.weight(1f).height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(14.dp)).padding(horizontal = 12.dp),
                 contentAlignment = Alignment.CenterStart) {
-                if (s.qrCode.isEmpty()) Text("homelab://login?c=…", color = p.mut, fontSize = 13.5.sp, fontFamily = PaperFonts.mono, maxLines = 1)
+                if (s.qrCode.isEmpty()) Text("papir://login?s=…", color = p.mut, fontSize = 13.5.sp, fontFamily = PaperFonts.mono, maxLines = 1)
                 BasicTextField(s.qrCode, { s.qrCode = it.trim(); s.qrErr = null }, singleLine = true,
                     textStyle = TextStyle(color = p.ink, fontSize = 13.5.sp, fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.ink),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth())
@@ -390,7 +390,7 @@ internal fun Session38(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Enheter", modifier = Modifier.padding(start = 4.dp, top = 6.dp))
         PCard {
-            SesRow38(Icons.Filled.QrCodeScanner, Color(0xFF2E6F75), "Logg inn på ny enhet", "Skann QR-koden på skjermen til den nye enheten") { vm.openQr38() }
+            SesRow38(Icons.Filled.QrCodeScanner, Color(0xFF2E6F75), "Logg inn på annen enhet", "Skann QR-koden på Mac, nettbrett, Kalender eller en annen mobil") { vm.openQr38() }
         }
         PLabel("Økt", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {

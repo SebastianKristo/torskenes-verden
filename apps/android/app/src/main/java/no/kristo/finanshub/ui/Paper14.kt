@@ -724,6 +724,8 @@ internal fun PaperLogin(vm: AppViewModel) {
                     PField("Passord", pw, { pw = it }, password = true, keyboard = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go),
                         onDone = { if (server.isNotBlank() && pw.isNotBlank()) vm.login(server, user, pw) })
                     PButton(if (vm.busy) "Logger inn …" else "Logg inn", Modifier.fillMaxWidth(), height = 54.dp) { if (server.isNotBlank() && pw.isNotBlank() && !vm.busy) vm.login(server, user, pw) }
+                    // Prompt 46 (claude-code-qr-innlogging-finans-kalender.md): logg inn ved å skanne QR-en med en innlogget mobil.
+                    QrLoginButton46 { vm.openQrLogin46(server) }
                     Text("Face ID / fingeravtrykk kan slås på etter innlogging, under Innstillinger → Sikkerhet.", color = p.mut, fontSize = 12.sp)
                     if (vm.addingAccount) Text("‹ Avbryt", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.addingAccount = false })
                 } else {
@@ -738,6 +740,7 @@ internal fun PaperLogin(vm: AppViewModel) {
                 }
             }
         }
+        if (vm.p46.qrShowOpen) QrLoginScreen46(vm) // prompt 46
         SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 16.dp))
     }
 }

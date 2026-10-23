@@ -134,7 +134,7 @@ fun AppViewModel.loadUpd30(force: Boolean = false) {
     }
 }
 
-private val RUN30 = setOf("downloading", "building", "restarting", "backup", "installing", "queued")
+private val RUN30 = setOf("downloading", "building", "restarting", "backup", "installing", "queued", "stuck", "stalled") // prompt 46: stuck = «Står fast»
 
 /** Grove anslag når serveren ikke sender pct: Laster ned 0–35, backup 35–60, installerer 60–85, starter på nytt 85–100. */
 private fun pctFor30(state: String?, step: String?): Int = when {
@@ -185,6 +185,8 @@ private fun AppViewModel.applyUpdStatus30(o: JSONObject): Boolean {
                 "backup" -> "Tar backup før oppdatering …"; "install" -> "Installerer på hjemmeserveren …"; "restart" -> "Starter tjenestene på nytt …"
                 "download" -> "Laster ned ${u.latest.ifBlank { "ny versjon" }} …"; else -> updStepText30(u.pct, u.latest)
             }
+            // Prompt 46 (claude-code-oppdatering-henger-55.md): watchdog – ingen ny prosent/steg på 3 min, eller serveren sier stuck.
+            updWatch46(state, pct, step ?: active ?: "", s.optBoolean("stuck") || o.optBoolean("stuck"))
             return false
         }
         else -> return u.phase != "run"

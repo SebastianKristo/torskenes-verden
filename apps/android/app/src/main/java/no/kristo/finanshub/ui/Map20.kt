@@ -70,7 +70,7 @@ internal object MapLog {
 }
 
 /** osmdroid-oppsett én gang per prosess, før første MapView: user agent, cache i appens egen mappe. */
-private object MapSetup {
+internal object MapSetup {
     private val done = AtomicBoolean(false)
     fun prepare(ctx: Context) {
         if (done.get()) return
@@ -105,7 +105,7 @@ private class TemplateTileSource(private val spec: MapTiles) :
 }
 
 /** MapView som aldri lar en feil i tegning, berøring eller layout ta ned appen; feilen går til feilgrensen. */
-private class SafeMapView(ctx: Context, private val onError: (Throwable) -> Unit) : MapView(ctx) {
+internal class SafeMapView(ctx: Context, private val onError: (Throwable) -> Unit) : MapView(ctx) {
     var tilesName: String? = null
     private fun fail(e: Throwable) { Handler(Looper.getMainLooper()).post { onError(e) } }
     override fun dispatchDraw(canvas: Canvas) { try { super.dispatchDraw(canvas) } catch (e: Exception) { fail(e) } }

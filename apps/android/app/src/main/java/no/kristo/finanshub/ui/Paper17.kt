@@ -61,6 +61,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner", "kal" to "Kalendere",
     "update" to "Oppdatering", "sysbackup" to "Backup",
     "huske" to "Gjøremål", // prompt 44: synk med Home Assistant
+    "nyheter" to "Nyheter", // prompt 46: innstillingene fra Nyheter-siden (kilder, kategorier, For deg, sammendrag)
     "media" to "Media", // prompt 45: innstillingene fra Media (status per tjeneste, Integrasjoner, Rydd uovervåkede)
 )
 
@@ -111,6 +112,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "kal" -> item { KalSettings26(vm) }
             "huske" -> item { TasksSyncPage44(vm) } // prompt 44: Innstillinger → Gjøremål
             "media" -> item { MediaSettings45(vm) } // prompt 45: Innstillinger → Media (flyttet fra ⚙ i Media)
+            "nyheter" -> item { NewsSettingsContent46(vm, PaperPal.current) } // prompt 46: Innstillinger → Nyheter (flyttet fra ⚙ i Nyheter)
             "cats" -> item { CategoriesPage(vm) }
             "rules" -> item { RulesPage(vm) }
             "stocks" -> item { StocksPrefsPage(vm) }
@@ -144,7 +146,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         PCard(shadow = true) {
             // Prompt 30: hele profilkortet åpner Konto; brukernavnet vises ikke her (bare i Konto → Profil).
             Row(Modifier.fillMaxWidth().clickable(onClickLabel = "Se konto") { vm.settingsPage = "accounts" }.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                AvatarImage(vm, 56, p.surf2, p.ink)
+                GlimtAvatar46(vm, 56.dp, p.surf2, p.ink, label = "Se konto") { vm.settingsPage = "accounts" } // prompt 46: Glimt-ring
                 Column(Modifier.weight(1f)) {
                     PSerif(vm.displayName.ifBlank { "Profil" }, 22.sp, maxLines = 1)
                     Text(listOf(roleName(vm.me?.role ?: vm.account?.role), "Se konto ›").filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 13.sp, maxLines = 1)
@@ -175,7 +177,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         // Prompt 39: navn, ikon, fanelinje, tema og bakgrunn ligger i «Tilpass».
         SetRow(vm, i(), Icons.Filled.Palette, "Tilpass", "Navn, ikon, tema, farger, bakgrunn og fanelinje", "›") { vm.settingsPage = "tilpass" }
         SetRow(vm, i(), Icons.Filled.Dashboard, "Moduler", "Familie, Gjøremål, Avganger, Vær", top = true) { vm.settingsPage = "modules" }
-        SetRow(vm, i(), Icons.Filled.Newspaper, "Nyhetsleser", "Kilder og AI", top = true) { vm.openNews(settings = true) }
+        SetRow(vm, i(), Icons.Filled.Newspaper, "Nyheter", "Kilder, kategorier, For deg og Glimt-sammendrag", top = true) { vm.settingsPage = "nyheter"; if (vm.news == null) vm.loadNews() }
     }
     // Prompt 35: ny gruppe GLIMT → «Glimt» (figur, brief, stemme og venner) i fullskjerm.
     group("Glimt") { _ -> GlimtSettingsRow35(vm) }
@@ -977,8 +979,9 @@ internal fun glyphVector(g: String): ImageVector? = when (g) {
     "✦" -> Icons.Filled.AutoAwesome
     "•" -> Icons.Filled.Circle
     // Prompt 32: Familie-linja (Soner, Helse) i «Rediger fanelinjen».
-    "◌" -> Icons.Filled.TripOrigin
-    "♡" -> Icons.Filled.FavoriteBorder
+    // Prompt 46 (claude-code-familie-ikoner-soner-helse.md): egne strekikoner (24×24, strek 1,8) for Soner og Helse.
+    "◌" -> FamIcons46.zones
+    "♡" -> FamIcons46.health
     // Prompt 40: sidene fra Mer i fanelinja.
     "☑" -> Icons.Filled.Checklist
     "✿" -> Icons.Filled.Cake

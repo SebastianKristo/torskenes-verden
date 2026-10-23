@@ -121,6 +121,10 @@ fun qrCodeOf38(raw: String): String? {
     if (t.isEmpty()) return null
     if (QR_CODE38.matches(t)) return t
     val u = runCatching { Uri.parse(t) }.getOrNull() ?: return null
+    // Prompt 46: papir://login?s=<sessionId>&c=<engangskode>&srv=<offentlig server-URL> → «s.c».
+    val s46 = runCatching { u.getQueryParameter("s") }.getOrNull()?.trim()
+    val c46 = runCatching { u.getQueryParameter("c") }.getOrNull()?.trim()
+    if (!s46.isNullOrBlank() && !c46.isNullOrBlank() && QR_CODE38.matches("$s46.$c46")) return "$s46.$c46"
     runCatching { u.getQueryParameter("c") }.getOrNull()?.trim()?.takeIf { QR_CODE38.matches(it) }?.let { return it }
     val segs = u.pathSegments ?: emptyList()
     val i = segs.indexOf("l")
@@ -131,10 +135,13 @@ fun qrCodeOf38(raw: String): String? {
 /** Deep link fra systemkameraet eller en annen app. true = håndtert her. */
 fun AppViewModel.qrLink38(uri: Uri): Boolean {
     val isLogin = (uri.scheme == "homelab" && uri.host == "login") || (uri.scheme == "https" && uri.pathSegments?.firstOrNull() == "l") ||
-        (uri.scheme == "finanshub" && uri.host == "login")
+        (uri.scheme == "finanshub" && uri.host == "login") || (uri.scheme == "papir" && uri.host == "login") // prompt 46
     if (!isLogin) return false
     val code = qrCodeOf38(uri.toString())
     if (code == null) { message = "Ugyldig innloggingskode"; return true }
+    // Prompt 46: koden gjelder en bestemt server (srv). Er den en annen enn den mobilen er logget inn på, sier vi fra i stedet for å sende den.
+    val srv = runCatching { uri.getQueryParameter("srv") }.getOrNull()?.let { Api.normalizeServer(it) }
+    if (loggedIn && srv != null && srv.isNotBlank() && !qrSameServer46(srv)) { message = "QR-koden er for ${srv.substringAfter("://")}, men du er logget inn på ${base.substringAfter("://")}"; return true }
     if (!loggedIn) { p38.qrPending = code; message = "Logg inn på mobilen først, så godkjenner du den nye enheten"; return true }
     scanQr38(code)
     return true

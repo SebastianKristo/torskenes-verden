@@ -212,6 +212,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
     // Prompt 45: på brett glir detaljpanelet inn fra høyre over lista (ui/Tasks45.kt); telefon: infosiden som før.
     if (LocalWide45.current) TaskPanel45(vm) else if (vm.p44.taskPage != null) TaskPage44(vm) // prompt 44: infoside (Papir), over lista og dokken
     AskDone44(vm)
+    TaskDone46(vm) // prompt 46: «N deloppgaver er ikke ferdige» og «Fullført: … · Angre»
     s.detail?.let { id -> (t?.items ?: emptyList()).firstOrNull { it.id == id }?.let { DetailSheet37(vm, it, lists, users, today) } ?: run { s.detail = null } }
     s.listSheet?.let { id -> ListSheet37(vm, if (id == "new") null else lists.firstOrNull { it.id == id }, users) }
     if (s.glimtOpen) GlimtSheet37(vm, lists)
