@@ -1,6 +1,7 @@
 // Familie og kart (prompt 16): alle på serveren på et OpenStreetMap-kart (Leaflet fra egen server), med spor,
 // sensorer, soner (trykk på kartet), varsler per person, hendelser og helse. Personvern håndheves på serveren;
 // her vises bare det den gir oss. Nettleseren kan dele egen posisjon mens siden er åpen.
+import { zoneAlertCard45, zoneEvent45 } from './family45.js'; // prompt 45: posisjonsvarsler
 import { bindHjemlys, loadHjemlys, hjemlysState } from './hjemlys40.js';
 import { hl41Html, bindHl41, hl41Busy } from './hjemlys41.js'; // prompt 41: Familie → Hjemlys med «Si fra» (prompt 42: heter «Vel fremme»)
 import { ZIC42, ICON_KEYS42, IFY42, matchLocal42, searchIconify42, recentIcons42, rememberIcon42 } from './icons42.js'; // prompt 42: ikonsøk
@@ -482,7 +483,7 @@ function body() {
   // i plasseringsmodus; når sonen er lagret eller avbrutt, skjules det igjen.
   const placing = S.tab === 'soner' && (S.picking || !!S.zoneDraft);
   if (S.tab === 'soner' && !placing) {
-    return `${tabs()}<div class="fam-sonly"><button type="button" class="fam-tb pri fam-snadd" data-fam-act="pick">+ Ny sone på kartet</button>${zonesCard()}</div>`;
+    return `${tabs()}<div class="fam-sonly">${zoneAlertCard45(paint)}<button type="button" class="fam-tb pri fam-snadd" data-fam-act="pick">+ Ny sone på kartet</button>${zonesCard()}</div>`;
   }
   // Verktøyraden ligger over kartet (prompt 22): «+ Ny sone på kartet» til venstre, «Vis alle» og ↻ til høyre.
   // Prompt 42: på Kart åpner «+ Ny sone på kartet» Soner i plasseringsmodus (skjemaet ligger der).
@@ -726,7 +727,8 @@ export function render() {
     unLive?.();
     unLive = onLive('family', (m) => {
       if (!host()) { unLive?.(); unLive = null; return; }
-      for (const e of m.events ?? (m.event ? [m.event] : [])) toast(`${e.name} ${e.kind === 'enter' ? 'kom til' : 'forlot'} ${e.zone}`);
+      // Prompt 45: varselbanner med soneikon i sonefarge, som følger Posisjonsvarsler-bryterne (family45.js).
+      for (const e of m.events ?? (m.event ? [m.event] : [])) if (!zoneEvent45(e, S.d, zPath)) toast(`${e.name} ${e.kind === 'enter' ? 'kom til' : 'forlot'} ${e.zone}`);
       if (!S.zoneDraft) load();
     });
     try { L = await loadLeaflet(); } catch (e) { S.err = e.message; }

@@ -141,15 +141,35 @@ export function mountLogger(host) {
     const G = S.groups.length ? S.groups : groupLocal();
     return `<section class="lg44-sec"><span class="lg44-cap acc">FEIL GRUPPERT · SISTE 24 TIMER</span>${G.length ? G.slice(0, 20).map((g, i) => `<button type="button" class="lg44-g" data-lg-grp="${i}"><b>×${esc(g.n)}</b><div><span class="mono">${esc(g.m)}</span><span>${esc(g.c)} · sist ${esc(agoTxt(g.last))}</span></div><em>Forklar ›</em></button>`).join('') : '<span class="lg44-mut">Ingen feil de siste 24 timene.</span>'}</section>`;
   }
+  // Prompt 45 (claude-code-docker-logger-automatisk.md): ingen manuelt oppsett. Homelab tar med Docker-tilgangen selv (proxyen
+  // homelab-docker følger med oppdateringen). Uten tilgang: «Får ikke tilgang til Docker. Homelab prøver å sette dette opp automatisk …»
+  // med «Sett opp nå» (POST /api/system/docker/setup, poll GET hvert 3. s) og «Vis detaljer» med feilen. Ingen tom side.
   function setupHtml() {
-    return `<div class="lg44-empty"><b>Docker-loggene er ikke koblet til</b><span>Homelab trenger lesetilgang til Docker Engine for å vise containere og logger. Legg til en socket-proxy i <span class="mono">docker-compose.yml</span> (anbefalt) og start på nytt:</span>
-      <pre class="mono">docker-proxy:
-  image: tecnativa/docker-socket-proxy
-  environment: { CONTAINERS: 1, LOGS: 1, INFO: 1, POST: 1, RESTART: 1 }
-  volumes: [ "/var/run/docker.sock:/var/run/docker.sock:ro" ]
-# og i homelab: DOCKER_HOST=tcp://docker-proxy:2375</pre>
-      <span class="lg44-mut">Eller monter <span class="mono">/var/run/docker.sock:/var/run/docker.sock:ro</span> direkte. Bare admin ser loggene, og hemmeligheter maskeres.</span>
-      <button type="button" class="lg44-b" data-lg-retry>Prøv igjen</button></div>`;
+    const U = S.setup?.setup ?? {}, st = S.setupSt ?? U.state ?? 'idle', run = st === 'requested' || st === 'running' || S.busy === 'setup';
+    const title = U.title || 'Får ikke tilgang til Docker';
+    const text = st === 'failed' ? 'Oppsettet feilet. Se detaljer under, eller prøv igjen.' : st === 'no-updater' ? 'Oppdateringstjenesten kjører ikke, så Homelab kan ikke legge til Docker-tilgangen selv. Start updateren, eller legg til tjenesten manuelt (detaljer).' : run ? 'Setter opp Docker-tilgangen … Dette tar under et minutt.' : st === 'done' ? 'Docker-tilgangen er satt opp. Henter containere …' : U.text || 'Homelab prøver å sette dette opp automatisk …';
+    const det = [U.details || S.setup?.error || U.error || S.setupErr || '', U.host ? `Adresse: ${U.host}` : '', U.proxy ? `Proxy: ${U.proxy.name} (${U.proxy.image})${U.proxy.reused ? ' · gjenbrukt' : ''}` : ''].filter(Boolean).join('\n');
+    return `<div class="lg44-empty lg45-setup"><span class="lg45-ic${run ? ' run' : st === 'failed' ? ' bad' : ''}" aria-hidden="true"></span><b>${esc(title)}</b><span>${esc(text)}</span>
+      ${S.setup?.missing ? '<span class="lg44-mut">Serveren har ikke Docker-loggene ennå. Oppdater Homelab under System.</span>' : `<div class="lg45-acts"><button type="button" class="lg44-b pri" data-lg45-setup${run || U.canRun === false && st !== 'failed' && st !== 'idle' ? ' disabled' : ''}>${run ? 'Setter opp …' : U.button || 'Sett opp nå'}</button><button type="button" class="lg44-b" data-lg-retry>Prøv igjen</button>${det || U.compose ? `<button type="button" class="lg44-b ghost" data-lg45-det aria-expanded="${!!S.det45}">${S.det45 ? 'Skjul detaljer' : 'Vis detaljer'}</button>` : ''}</div>`}
+      ${S.det45 ? `<pre class="mono lg45-det">${esc(det)}${U.compose ? `\n\n${esc(U.compose)}` : ''}</pre>${U.alt ? `<span class="lg44-mut">${esc(U.alt)}</span>` : ''}` : ''}
+      <span class="lg44-mut">Bare admin ser loggene, og hemmeligheter maskeres.</span></div>`;
+  }
+  async function runSetup45() {
+    S.busy = 'setup'; S.setupErr = ''; paint();
+    try {
+      const r = await fetch('/api/system/docker/setup', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { S.setupSt = d.state ?? 'failed'; S.setupErr = d.error || `Feil ${r.status}`; S.busy = ''; paint(); return; }
+      S.setupSt = d.state ?? 'requested';
+      for (let i = 0; i < 60 && alive(); i++) {
+        await new Promise((ok) => setTimeout(ok, 3000));
+        const g = await fetch('/api/system/docker/setup', { credentials: 'same-origin', cache: 'no-store' }).then((x) => (x.ok ? x.json() : null)).catch(() => null);
+        if (g) { S.setupSt = g.state; if (g.error) S.setupErr = g.error; if (S.setup?.setup) S.setup.setup = { ...S.setup.setup, ...g }; paint(); }
+        if (!g || g.state === 'done' || g.state === 'failed' || g.available) break;
+      }
+    } catch (e) { S.setupSt = 'failed'; S.setupErr = e.message; }
+    S.busy = ''; paint();
+    if (S.setupSt === 'done') reload();
   }
   function paint() {
     if (!alive()) return stopLive();
@@ -205,6 +225,8 @@ export function mountLogger(host) {
     if (d('[data-lg-copy]')) { const L = S.lines, i = L.findIndex((r) => r.id === S.pick?.id); const txt = L.slice(Math.max(0, i - 20), i + 21).map((r) => `${hms(r.t)} ${r.l} ${r.c} ${r.m}`).join('\n') || `${S.pick?.l} ${S.pick?.c} ${S.pick?.m}`; try { await navigator.clipboard.writeText(txt); } catch { /* */ } toast('Kopiert med 20 linjer rundt'); return; }
     if ((x = d('[data-lg-act]'))) { act(x.dataset.lgAct); return; }
     if (d('[data-lg-retry]')) { reload(); return; }
+    if (d('[data-lg45-setup]')) { runSetup45(); return; } // prompt 45
+    if (d('[data-lg45-det]')) { S.det45 = !S.det45; paint(); return; }
     if (d('[data-lg-insx]')) { S.insp = null; paint(); return; }
     if (d('[data-lg-inscopy]')) { try { await navigator.clipboard.writeText(mask(JSON.stringify(S.insp, null, 2))); } catch { /* */ } toast('Kopiert'); return; }
     if ((x = d('[data-lg-dl]'))) { x.href = `/api/system/logs/download?${params()}`; }

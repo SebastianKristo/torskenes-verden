@@ -8,6 +8,7 @@ import { assist, boldHtml, wxRoute } from './assist.js';
 import { toast } from './toast.js';
 import { isQuestion } from './ask36.js';
 import { isHuske41, addFromSearch41 } from './tasks41.js'; // prompt 41: huskebeskjeder fra søket
+import { agent, agentOn, agentExtras, agentText, isPlain, resultHref } from './glimt-agent45.js'; // prompt 45: felles Glimt-agent
 
 /* ---------- Popup ---------- */
 
@@ -296,6 +297,20 @@ async function handoff(q, jobId) {
 // Mørk glass rgba(22,20,18,.78) + blur 30, radius 26. Mens Glimt tenker: animert merke + «Tenker på «…» …».
 // Ferdig: svaret (det viktigste fet og hvitt), kilde «✦ …» og «Fortsett i Chat ›». Trykk på boblen eller et nytt søk lukker.
 const GL = { q: '', busy: false, ans: null, err: '', ctl: null, seq: 0 };
+// Prompt 45: valg i oppfølgingsspørsmålet sendes som nytt spørsmål (med valgt id), bekreftelsen oppdaterer boblen.
+const agentCb = () => ({
+  resend: (t, ctx) => { const f = ansForm; agentFollow(t, ctx, f); },
+  update: (a) => { if (!GL.ans) return; GL.ans = { ...GL.ans, text: agentText(a) || GL.ans.text, agent: a }; paintAns(); },
+  open: (r) => { closeAns(); const h = resultHref(r); if (h) { if (h.startsWith('#')) location.hash = h; else location.href = h; } return true; },
+});
+async function agentFollow(t, ctx, form) {
+  const q = GL.q;
+  Object.assign(GL, { busy: true }); paintAns();
+  const my = GL.seq;
+  try { const a = await agent(t, 'home', ctx); if (my !== GL.seq) return; GL.ans = a ? { text: agentText(a) || 'Ferdig.', source: 'Glimt', agent: a } : { text: 'Glimt fikk ikke svart.' }; GL.err = ''; }
+  catch (er) { GL.err = er.message; }
+  GL.q = q; GL.busy = false; ansForm = form; paintAns();
+}
 let lastForm = null;
 function ansHtml() {
   if (!GL.q) return '';
@@ -303,7 +318,7 @@ function ansHtml() {
     : GL.busy ? `<div class="gl-busy">${glimt(22, 'tenker', { dark: true })}<span>Tenker på «<span data-no-i18n>${esc(GL.q)}</span>» …</span></div>`
     // Prompt 34: feil vises tydelig («Glimt fikk ikke svar fra {modell}: {feil}») med Prøv igjen og Åpne AI-kontroll.
     : GL.err || !GL.ans?.text ? `<span class="gl-txt gl-err" data-no-i18n>${esc(GL.err || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.model || GL.ans?.source || 'Glimt')}</span><button type="button" class="gl-chat" data-gl-retry>Prøv igjen</button><button type="button" class="gl-chat" data-gl-aictl>Åpne AI-kontroll ›</button></div>`
-    : `<span class="gl-txt" data-no-i18n>${boldHtml(GL.ans.text)}</span>${GL.ans.notice ? `<span class="gl-note" data-no-i18n>${esc(GL.ans.notice)}</span>` : ''}<div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.open?.route === 'vaer' ? `<button type="button" class="gl-chat" data-gl-wx>${GL.ans.open.name ? `Åpne Vær for ${esc(GL.ans.open.name)}` : 'Åpne Vær'} ›</button>` : ''}${GL.ans?.open?.route === 'familie' ? '<button type="button" class="gl-chat" data-gl-fam>Vis på kart ›</button>' : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}</div>`;
+    : `<span class="gl-txt" data-no-i18n>${boldHtml(GL.ans.text)}</span>${GL.ans.agent ? agentExtras(GL.ans.agent, agentCb(), { dark: true }) : ''}${GL.ans.notice ? `<span class="gl-note" data-no-i18n>${esc(GL.ans.notice)}</span>` : ''}<div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.open?.route === 'vaer' ? `<button type="button" class="gl-chat" data-gl-wx>${GL.ans.open.name ? `Åpne Vær for ${esc(GL.ans.open.name)}` : 'Åpne Vær'} ›</button>` : ''}${GL.ans?.open?.route === 'familie' ? '<button type="button" class="gl-chat" data-gl-fam>Vis på kart ›</button>' : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}</div>`;
   // Prompt 38: lukkes med ✕, sveip opp eller trykk utenfor (laget under fanger trykket); trykk i boblen lukker ikke.
   return `<div class="gl-ans" data-gl-ans role="status" aria-live="polite"><button type="button" class="gl-x" data-gl-x aria-label="Lukk svaret" title="Lukk (Esc)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>${body}<span class="gl-grab" aria-hidden="true"></span></div>`;
 }
@@ -394,6 +409,19 @@ async function askGlimt(q, form = null) {
     }, sec * 1000);
   });
   try {
+    // Prompt 45: den felles agenten først (module home). Ren prat uten handling/treff → /api/assist (vær- og avgangskort).
+    let ag = null;
+    try { ag = await agent(q, 'home', {}, { signal: ctl.signal }); } catch (er) { if (er.name === 'AbortError') throw er; if (er.status !== 429) ag = { err: er.message }; }
+    if (my !== GL.seq) return;
+    if (ag?.err) { GL.err = ag.err; GL.busy = false; GL.ctl = null; clearTimeout(GL.toT); engState('klar'); paintAns(); return; }
+    if (ag && !(isPlain(ag) && ['chat', 'ask', ''].includes(ag.intent))) {
+      clearTimeout(GL.toT);
+      if (ag.nav?.web && isPlain({ ...ag, nav: null })) { GL.busy = false; GL.ans = { text: ag.reply || 'Åpner …', source: 'Snarvei', nav: true }; engState('klar'); paintAns(); const nv = ag.nav.web; setTimeout(() => { if (my !== GL.seq) return; closeAns(); goNav(nv.startsWith('/#/innstillinger/') ? `set:${nv.split('/').pop() || 'konto'}` : nv.startsWith('/#/') ? nv.slice(1) : nv); }, 450); return; }
+      GL.ans = { text: agentText(ag) || 'Ferdig.', source: ag.model ? `Glimt · ${ag.model}` : 'Glimt', agent: ag }; GL.err = '';
+      GL.busy = false; GL.ctl = null; engState('klar'); paintAns(); return;
+    }
+    if (!ag && agentOn() === false && apptOf(q)) { closeAns(); addQuick(q); return; }
+    if (!ag && agentOn() === false && huskeOf(q)) { closeAns(); addFromSearch41(q); return; }
     const a = await assist(q, { source: 'search', signal: ctl.signal, onJob: (id) => { if (my === GL.seq) GL.jobId = id; }, hideToast: () => !!document.querySelector('[data-gl-ans]') && !document.hidden });
     if (my !== GL.seq) return;
     clearTimeout(GL.toT);
@@ -466,8 +494,10 @@ export function bindSearch() {
     const q = it ? it.t : e.target.q.value;
     // Timer gjenkjennes uansett søkemotor og legges til i bakgrunnen.
     if (GL.q) closeAns();
-    if (!it && apptOf(q)) { addAppt(e.target, q.trim()); return; }
-    if (!it && huskeOf(q)) { addHuske(e.target, q.trim()); return; }
+    // Prompt 45: med Glimt som motor går alt til den felles agenten (forstår, planlegger, utfører). Lokal tolking bare uten agent.
+    const ag = engine === 'ai' && agentOn();
+    if (!it && !ag && apptOf(q)) { addAppt(e.target, q.trim()); return; }
+    if (!it && !ag && huskeOf(q)) { addHuske(e.target, q.trim()); return; }
     if (aiOn()) askAi(e.target, q); else runSearch(q);
   });
   // Søkemotor-menyen.

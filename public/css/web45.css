@@ -1,0 +1,237 @@
+/* Prompt 45 (WEB45): web-tillegg. Lastes etter web44/web44-dark. */
+
+/* ---------- Gjøremål: fullskjerm uten ramme, samme bakgrunn som resten (claude-code-gjoremal-web-bakgrunn.md, -web-fullskjerm.md) ----------
+   Ingen kort rundt visningen: kolonnene skilles med tynne linjer og fyller hele flaten under topplinja. */
+.tk40-sc{padding:0!important;display:flex;flex-direction:column}
+.tk40-fs .tk{flex:1;min-height:0;display:flex;flex-direction:column}
+.tk40-fs .tw{flex:1;min-height:100%!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;overflow:visible}
+.tk40-fs .tw-side{background:transparent!important;padding-left:clamp(16px,3vw,44px)}
+.tk40-fs .tw-mid{padding-left:clamp(16px,2vw,32px);padding-right:clamp(16px,2vw,32px)}
+.tk40-fs .tw-right{padding-right:clamp(16px,3vw,44px)}
+/* Synk med Home Assistant ligger bare i Innstillinger → Gjøremål (prompt 45). */
+.tk40-fs .tk44-ha,.tw .tk44-ha{display:none!important}
+
+/* ---------- Hjem · Kalender-kortet: ikonrute, «NESTE PRØVE» og pillen ble kuttet (claude-code-web-kalenderkort-ikon.md) ----------
+   Årsak: lenken inni kortet hadde egen border-radius 20 + overflow:hidden og null padding, så hjørnene kuttet barna.
+   Kortets runde hjørner kommer nå bare fra selve kortet (.dg36-wig). */
+.dg40 .kal.kal-hw{border-radius:0!important;overflow:visible!important}
+.dg40 .kal-hw-k::before{width:28px;height:28px;border-radius:9px;background-size:16px 16px}
+.dg40-s .kal-hw-k::before{background-color:rgba(255,255,255,.18)}
+.dg40 .kal-hw-x{padding-top:10px;border-top:1px solid rgba(127,127,127,.25);margin:0}
+.dg40-s .kal-hw-x{border-top-color:rgba(255,255,255,.18)}
+.dg40-s .kal-hw-x>span:first-child{color:rgba(255,255,255,.72)!important}
+.dg40 .kal-hw-x .kal-wp{flex:none;padding:3px 10px;border-radius:999px}
+.dg40 .kal-hw-h>span:last-child{white-space:nowrap}
+
+/* ---------- Glimt-agenten: treff, oppfølgingsspørsmål og bekreftelse (glimt-agent45.js) ---------- */
+.ga45{display:flex;flex-direction:column;gap:10px;margin-top:10px;font-family:Manrope,system-ui,sans-serif;--ga-ink:#1b1a17;--ga-mut:#6b665c;--ga-card:#fffdf8;--ga-line:#e3ddcf;--ga-chip:#efe9dc}
+.ga45.dark{--ga-ink:#fff;--ga-mut:rgba(255,255,255,.66);--ga-card:rgba(255,255,255,.08);--ga-line:rgba(255,255,255,.16);--ga-chip:rgba(255,255,255,.12)}
+html[data-mode="dark"] .ga45:not(.dark){--ga-ink:#f3efe6;--ga-mut:#a39d90;--ga-card:#211e18;--ga-line:#3a352c;--ga-chip:#2b2720}
+.ga45-res{display:flex;flex-direction:column;border:1px solid var(--ga-line);border-radius:14px;overflow:hidden;background:var(--ga-card)}
+.ga45-r{display:flex;align-items:center;gap:10px;padding:9px 12px;border:0;border-top:1px solid var(--ga-line);background:transparent;color:var(--ga-ink);text-align:left;cursor:pointer;font:inherit;min-width:0}
+.ga45-r:first-child{border-top:0}
+.ga45-r:hover{background:var(--ga-chip)}
+.ga45-r>i{flex:none;width:8px;height:8px;border-radius:50%}
+.ga45-rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ga45-rt b{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ga45-rt span{font-size:12px;color:var(--ga-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ga45-amt{flex:none;font:600 13px 'IBM Plex Mono',ui-monospace,monospace}
+.ga45-k{flex:none;font:600 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ga-mut)}
+.ga45-more{padding:6px 12px;font-size:12px;color:var(--ga-mut);border-top:1px solid var(--ga-line)}
+.ga45-ask,.ga45-cf{display:flex;flex-direction:column;gap:8px}
+.ga45-ask>b,.ga45-cf>b{font-size:14px;font-weight:700;color:var(--ga-ink)}
+.ga45-opts{display:flex;flex-wrap:wrap;gap:6px}
+.ga45-o{min-height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--ga-line);background:var(--ga-card);color:var(--ga-ink);font:600 13px Manrope,system-ui,sans-serif;cursor:pointer}
+.ga45-o:hover{background:var(--ga-chip)}
+.ga45-o.danger{background:#b23a2a;border-color:#b23a2a;color:#fff}
+.ga45-o:disabled{opacity:.6;cursor:default}
+.ga45-err{font-size:13px;color:#e0705e}
+
+/* ---------- Media: mer farge (claude-code-media-mer-farger.md) ----------
+   Hver tjeneste har sin farge (ikonprikk, aktiv fane); statuspiller i farger; svak toning fra plakaten bak banneret.
+   Papir-bakgrunnen beholdes – fargen er aksent, ikke heldekkende flater. */
+html .m43{--c-son:#35c5f4;--c-rad:#ffc230;--c-qb:#3d7dd6;--c-pro:#e66001;--c-plex:#e5a00d;--c-jf:#aa5cc3;--dl:#2f6fc0;--wait:#b8860b;--ok:#2f7a4f;--bad:#c0392b}
+html .m43.dk{--dl:#6aa6f0;--wait:#e8c04a;--ok:#6fc28f;--bad:#ec7a64}
+html .m43-tab[data-m43-tab]{display:inline-flex;align-items:center;gap:8px}
+html .m43-tab[data-m43-tab]:not([data-m43-tab="kom"])::before{content:'';flex:none;width:9px;height:9px;border-radius:50%;background:var(--svc)}
+html .m43-tab[data-m43-tab="son"]{--svc:var(--c-son)}html .m43-tab[data-m43-tab="rad"]{--svc:var(--c-rad)}html .m43-tab[data-m43-tab="qb"]{--svc:var(--c-qb)}
+html .m43-tab[data-m43-tab="pro"]{--svc:var(--c-pro)}html .m43-tab[data-m43-tab="av"]{--svc:linear-gradient(135deg,var(--c-plex) 50%,var(--c-jf) 50%)}
+html .m43-tab.on[data-m43-tab]:not([data-m43-tab="kom"]){background:color-mix(in srgb,var(--svc,var(--k)) 18%,var(--cd));color:var(--k);box-shadow:inset 0 0 0 1.5px var(--svc)}
+html .m43-tab.on[data-m43-tab="av"]{background:color-mix(in srgb,var(--c-jf) 16%,var(--cd));box-shadow:inset 0 0 0 1.5px var(--c-jf)}
+html .m43 .t-dl{color:var(--dl)}html .m43 .t-wait{color:var(--wait)}html .m43 .t-ok{color:var(--ok)}html .m43 .t-bad{color:var(--bad)}
+html .m43-dot.t-dl{color:var(--dl)}html .m43-dot.t-wait{color:var(--wait)}
+/* Statuspiller: tonet bakgrunn i statusfargen */
+html .m43-s.t-ok,html .m43-s.t-dl,html .m43-s.t-wait,html .m43-s.t-bad,html .m43-s.t-warn,html .m43-s.t-mut,html .m43-stc{display:inline-block;width:max-content;max-width:100%;padding:2px 9px;border-radius:999px;background:color-mix(in srgb,currentColor 13%,transparent);line-height:1.35}
+html .m43-s.t-mut,html .m43-stc.t-mut{color:var(--mt)}
+html .m44-ban{box-shadow:0 34px 80px -40px var(--pc,transparent)}
+html .m44-ban .m44-bgr{background:linear-gradient(90deg,color-mix(in srgb,var(--pc,#121010) 42%,rgba(18,16,12,.94)) 0%,rgba(18,16,12,.78) 50%,color-mix(in srgb,var(--pc,#121010) 30%,rgba(18,16,12,.5)) 100%)}
+html .m43-btn.red-t{color:var(--bad)}
+
+/* ---------- Media: felles tilbakeknapp (claude-code-media-tilbakeknapp.md) ---------- */
+html .m45-bk{display:flex;align-items:center;gap:10px;align-self:flex-start;margin:2px 0 4px}
+html .m45-back{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;padding:0;cursor:pointer;color:var(--k);
+  background:color-mix(in srgb,var(--cd) 72%,transparent);border:1px solid var(--ln);box-shadow:0 6px 18px -10px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+html .m45-back:hover{background:var(--cd)}
+html .m45-bkl{font:600 14px Manrope,system-ui,sans-serif;color:var(--mt)}
+
+/* ---------- Media: slett uovervåkede (media45.js) ---------- */
+.m45u-bg{position:fixed;inset:0;z-index:400;background:rgba(14,12,9,.45);display:grid;place-items:center;padding:16px}
+.m45u{--k:#1b1a17;--cd:#fffdf8;--ln:#e3ddcf;--mt:#6b665c;width:min(560px,100%);max-height:min(82vh,720px);display:flex;flex-direction:column;gap:12px;padding:20px 22px;border-radius:24px;background:var(--cd);color:var(--k);box-shadow:0 30px 80px -30px rgba(0,0,0,.5);font-family:Manrope,system-ui,sans-serif;overflow:hidden}
+html[data-mode="dark"] .m45u,.m43.dk~.m45u-host .m45u{--k:#efe9de;--cd:#211f1b;--ln:#3b3731;--mt:#a49d91}
+.m45u-top{display:flex;align-items:center;justify-content:space-between}
+.m45u-k{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a}
+.m45u-x{width:34px;height:34px;border-radius:50%;border:1px solid var(--ln);background:transparent;color:var(--k);cursor:pointer}
+.m45u-h{font:500 24px/1.2 Newsreader,Georgia,serif}
+.m45u-mut{font-size:13.5px;color:var(--mt)}
+.m45u-err{font-size:13.5px;color:#c0392b;font-weight:600}
+.m45u-all{display:flex;gap:14px}
+.m45u-l{border:0;background:none;padding:0;color:#b23a2a;font:700 13px Manrope,system-ui,sans-serif;cursor:pointer}
+.m45u-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--ln);border-radius:16px}
+.m45u-r{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid var(--ln);cursor:pointer}
+.m45u-r:first-child{border-top:0}
+.m45u-r input{width:18px;height:18px;accent-color:#b23a2a;flex:none}
+.m45u-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.m45u-t b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m45u-t span{font-size:12.5px;color:var(--mt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m45u-sz{flex:none;font:500 12.5px 'IBM Plex Mono',monospace;color:var(--mt)}
+.m45u-act{display:flex;justify-content:flex-end;gap:8px}
+.m45u-b{height:42px;padding:0 18px;border-radius:999px;font:700 14px Manrope,system-ui,sans-serif;cursor:pointer;border:1px solid var(--ln);background:transparent;color:var(--k)}
+.m45u-b.red{background:#b23a2a;border-color:#b23a2a;color:#fff}
+.m45u-b:disabled{opacity:.5;cursor:default}
+.m45u-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:420;display:flex;align-items:center;gap:14px;padding:12px 14px 12px 18px;border-radius:16px;background:#1b1a17;color:#f3efe6;font:600 14px Manrope,system-ui,sans-serif;box-shadow:0 16px 40px -16px rgba(0,0,0,.5);max-width:calc(100vw - 32px)}
+.m45u-toast[hidden]{display:none}
+.m45u-toast button{border:0;background:#f3efe6;color:#1b1a17;border-radius:999px;height:32px;padding:0 14px;font:700 13px Manrope,system-ui,sans-serif;cursor:pointer}
+
+/* ---------- Innstillinger samlet (settings45.js): segmentvalg, sonevarsler ---------- */
+.s45-seg{flex:none;display:inline-flex;gap:3px;padding:3px;border-radius:14px;background:color-mix(in srgb,currentColor 9%,transparent)}
+.s45-seg button{min-width:44px;height:34px;padding:0 14px;border:0;border-radius:11px;background:transparent;color:inherit;font:700 13.5px Manrope,system-ui,sans-serif;cursor:pointer}
+.s45-seg button[aria-checked=true]{background:var(--s45-on,#fffdf8);color:#1b1a17;box-shadow:0 1px 3px rgba(0,0,0,.14)}
+html[data-mode="dark"] .s45-seg button[aria-checked=true]{background:#f3efe6}
+.s45-link{border:0;background:none;padding:0;color:#b23a2a;font:inherit;font-weight:700;cursor:pointer;text-decoration:underline}
+.s45-zi{display:grid;place-items:center;color:#fff;font:700 13px Manrope,system-ui,sans-serif;border-radius:9px}
+.sg-av.s45-zav{background:transparent!important;overflow:visible}
+.s45-zex{display:flex;align-items:center;gap:12px;margin:12px 16px;padding:12px 14px;border-radius:22px;background:rgba(245,245,247,.92);color:#1b1a17;box-shadow:0 10px 30px -14px rgba(0,0,0,.35);font-family:-apple-system,system-ui,sans-serif;max-width:420px}
+.s45-zexi{position:relative;flex:none}
+.s45-zbadge{position:absolute;right:-4px;bottom:-4px;width:16px;height:16px;border-radius:5px;background:#b23a2a url("/assets/icons/icon.svg") center/12px no-repeat;box-shadow:0 0 0 2px rgba(245,245,247,.95)}
+.s45-zext{flex:1;min-width:0;display:flex;flex-direction:column}
+.s45-zext b{font-size:14px;font-weight:600}
+.s45-zext span{font-size:13.5px;color:#3d3a33}
+.s45-zexn{align-self:flex-start;font-size:12px;color:#6b665c}
+
+/* ---------- Studie: status, felter og originalen (claude-code-studie-vitnemal-analyse-original.md) ---------- */
+.st44-doc em.warn{color:var(--c44-warn)}.st44-doc em.bad{color:#b23a2a}
+.st45-dh{display:flex;gap:14px;align-items:flex-start}
+.st45-dht{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.st45-th{flex:none;position:relative;width:76px;height:96px;border-radius:12px;border:1px solid var(--c44-line2,#d8d1c2);background:var(--c44-chip,#efe9dc);overflow:hidden;cursor:zoom-in;padding:0;display:grid;place-items:center}
+.st45-th img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.st45-th span{position:relative;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:var(--c44-mut,#6b665c);background:var(--c44-card,#fffdf8);padding:2px 6px;border-radius:6px}
+.st45-th img+span{position:absolute;left:6px;bottom:6px}
+.st45-st{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:14px;font-size:13.5px;background:color-mix(in srgb,currentColor 9%,transparent)}
+.st45-st.ok{color:var(--c44-ok,#2f7a4f)}.st45-st.warn{color:var(--c44-warn,#a0671a)}.st45-st.bad{color:#b23a2a}.st45-st.busy{color:var(--c44-mut,#6b665c)}
+.st45-st span{color:var(--c44-ink,#1b1a17)}.st45-st b{color:inherit}
+.st45-f{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.st45-f span{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:12px;border:1px solid var(--c44-line2,#e3ddcf);min-width:0}
+.st45-f em{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;font-style:normal;color:var(--c44-mut,#6b665c)}
+.st45-f b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st45-f .nf b{color:var(--c44-mut,#6b665c);font-weight:500;font-style:italic}
+.st45-ov{position:fixed;inset:0;z-index:500;display:flex;flex-direction:column;background:rgba(14,12,9,.92);color:#f3efe6;font-family:Manrope,system-ui,sans-serif}
+.st45-ovt{flex:none;display:flex;align-items:center;gap:10px;padding:12px clamp(16px,3vw,32px);flex-wrap:wrap}
+.st45-ovt b{font:500 20px Newsreader,Georgia,serif}.st45-ovt>span:not(.st45-sp){font-size:13px;color:rgba(243,239,230,.65)}
+.st45-sp{flex:1}
+.st45-ob{height:38px;min-width:38px;padding:0 14px;border-radius:19px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:#f3efe6;font:700 13px Manrope,system-ui,sans-serif;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.st45-ob.x{background:#f3efe6;color:#1b1a17;width:40px;padding:0}
+.st45-ovb{flex:1;min-height:0;display:flex;padding:0 clamp(8px,2vw,24px) 16px}
+.st45-ovb iframe{flex:1;border:0;border-radius:12px;background:#fff}
+.st45-iw{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center}
+.st45-iw img{width:100%;max-width:none;height:auto;cursor:zoom-in;border-radius:8px;box-shadow:0 20px 60px -20px rgba(0,0,0,.6)}
+
+
+/* ---------- Familie → Soner: Posisjonsvarsler + varselbanner (family45.js) ---------- */
+.za45{display:flex;flex-direction:column;padding:4px 16px 8px!important;margin-bottom:12px}
+.za45-h{display:flex;align-items:center;gap:12px;min-height:60px}
+.za45-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.za45-t b{font-size:15px}.za45-t span{font-size:12.5px;opacity:.7}
+.za45-sw{flex:none;position:relative;width:52px;height:32px;border-radius:16px;border:0;background:#c9c2b4;cursor:pointer;transition:background .2s;padding:0}
+.za45-sw i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
+.za45-sw.on{background:#2f7a4f}.za45-sw.on i{left:23px}
+.za45-sw:disabled{cursor:default}
+.za45-ppl{display:flex;flex-direction:column;border-top:1px solid rgba(127,127,127,.22)}
+.za45-ppl.off{opacity:.45}
+.za45-p{display:flex;align-items:center;gap:12px;min-height:54px}
+.za45-p+.za45-p{border-top:1px solid rgba(127,127,127,.18)}
+.za45-av{flex:none;width:34px;height:34px;border-radius:17px;background-size:cover;background-position:center;color:#fff;display:grid;place-items:center;font:700 12px Manrope,system-ui,sans-serif}
+.za45-p b{flex:1;font-size:15px}
+.za45-ex{align-self:flex-start;margin-top:4px;height:36px;padding:0 4px;border:0;background:transparent;color:#b23a2a;cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
+.za45-bn{position:fixed;top:12px;left:50%;z-index:600;width:min(420px,calc(100vw - 32px));display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:22px;background:rgba(245,245,247,.94);color:#1b1a17;
+  box-shadow:0 14px 40px -14px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);font-family:-apple-system,system-ui,sans-serif;transform:translate(-50%,-140%);opacity:0;transition:transform .32s cubic-bezier(.2,.9,.25,1.1),opacity .2s;cursor:pointer}
+.za45-bn.on{transform:translate(-50%,0);opacity:1}
+html[data-mode="dark"] .za45-bn{background:rgba(40,38,34,.94);color:#f3efe6}
+.za45-bic{position:relative;flex:none;width:38px;height:38px}
+.za45-bic img,.za45-bi{display:grid;place-items:center;width:38px;height:38px;border-radius:11px}
+.za45-badge{position:absolute;right:-4px;bottom:-4px;width:16px;height:16px;border-radius:5px;background:#b23a2a url("/assets/icons/icon.svg") center/12px no-repeat;box-shadow:0 0 0 2px rgba(245,245,247,.95)}
+.za45-bt{flex:1;min-width:0;display:flex;flex-direction:column}
+.za45-bt b{font-size:14px;font-weight:600}.za45-bt span{font-size:13.5px;opacity:.8}
+.za45-bn-n{align-self:flex-start;font-size:12px;opacity:.6}
+@media (prefers-reduced-motion:reduce){.za45-bn{transition:opacity .2s}}
+
+/* ---------- Logger: Docker settes opp automatisk (logger44.js, prompt 45) ---------- */
+.lg45-setup{align-items:flex-start;text-align:left}
+.lg45-ic{width:40px;height:40px;border-radius:12px;background:#3d4a5c url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12h18M5 8h3v4H5zM9 8h3v4H9zM13 8h3v4h-3zM9 4h3v4H9zM4 12c0 5 4 7 8 7s7-3 8-7'/%3E%3C/svg%3E") center/22px no-repeat}
+.lg45-ic.run{animation:lg45p 1.2s ease-in-out infinite}.lg45-ic.bad{background-color:#b23a2a}
+@keyframes lg45p{50%{opacity:.5}}
+.lg45-acts{display:flex;flex-wrap:wrap;gap:8px}
+.lg44-b.pri{background:#b23a2a;border-color:#b23a2a;color:#fff}
+.lg44-b.ghost{background:transparent}
+.lg45-det{max-width:100%;overflow:auto;white-space:pre-wrap;font-size:12px;padding:12px;border-radius:12px;background:rgba(127,127,127,.12);margin:0}
+
+/* ---------- Vær: Min posisjon (weather45.js) ---------- */
+.wx45-k{display:inline-flex;align-items:center;gap:4px;font-size:10.5px!important;font-weight:800;letter-spacing:.12em;opacity:.85}
+.wx45-here.wx36-pc{background:linear-gradient(180deg,#2f6fb0 0%,#4d8bc6 60%,#7fb0dc 100%)}
+div.wx45-here{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.12);border:1px dashed rgba(255,255,255,.35);color:#fff}
+.wx45-t{font-size:13.5px;font-weight:600}
+.wx45-b{align-self:flex-start;height:32px;padding:0 14px;border-radius:16px;border:0;background:#fff;color:#1b1a17;font:700 13px -apple-system,system-ui,sans-serif;cursor:pointer}
+
+/* ---------- Innstillinger → Familie → Home Assistant (settings-familie42.js, prompt 45) ---------- */
+.ha45-st{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:color-mix(in srgb,currentColor 6%,transparent);margin-bottom:12px}
+.ha45-st>i{flex:none;width:10px;height:10px;border-radius:5px;background:#2f7a4f;box-shadow:0 0 0 4px rgba(47,122,79,.18)}
+.ha45-st>i.off{background:#b23a2a;box-shadow:0 0 0 4px rgba(178,58,42,.18)}
+.ha45-stt{flex:1;min-width:0;display:flex;flex-direction:column}.ha45-stt b{font-size:14px}.ha45-stt span{font-size:12.5px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ha45-stn{flex:none;font-size:12.5px;color:#2f7a4f}
+.ha45-seg{display:flex;padding:3px;border-radius:14px;background:color-mix(in srgb,currentColor 9%,transparent);gap:3px;margin-bottom:14px;max-width:420px}
+.ha45-seg button{flex:1;height:36px;border-radius:11px;border:0;background:transparent;color:inherit;cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
+.ha45-seg button[aria-checked=true]{background:#fffdf8;color:#1b1a17;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.ha45-g{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.ha45-gh{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;padding:6px 4px 0}
+.ha45-gb{border-radius:20px;background:color-mix(in srgb,currentColor 5%,transparent);overflow:hidden}
+.ha45-r.bt{border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+.ha45-r.none{opacity:.6}
+.ha45-rm{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.ha45-ic{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.ha45-rt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ha45-rt b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ha45-rt>span{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:12.5px;opacity:.75}
+.ha45-rt em{font-style:normal;white-space:nowrap;padding:1px 7px;border-radius:999px;background:#ece6da;color:#6b665c;font-weight:700}
+.ha45-rt em.ok{background:#e3eee5;color:#2f6b4a}
+.ha45-pick{flex:none;height:36px;padding:0 10px 0 4px;border-radius:18px;border:1px solid color-mix(in srgb,currentColor 22%,transparent);background:transparent;display:flex;align-items:center;gap:6px;cursor:pointer;font:700 12px Manrope,system-ui,sans-serif;color:inherit}
+.ha45-pav{width:28px;height:28px;border-radius:14px;color:#fff;display:grid;place-items:center;font-size:11px}
+.ha45-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 14px 66px}
+.ha45-chip{height:30px;padding:0 11px;border-radius:15px;border:1px solid color-mix(in srgb,currentColor 25%,transparent);background:transparent;color:inherit;cursor:pointer;font:700 12px Manrope,system-ui,sans-serif}
+.ha45-chip.on{background:#1b1a17;border-color:#1b1a17;color:#f3efe6}
+html[data-mode="dark"] .ha45-chip.on,html:not([data-hl="2c"]) .ha45-chip.on{background:#f3efe6;border-color:#f3efe6;color:#1b1a17}
+.ha45-ios{display:block;padding:0 14px 12px 66px;font-size:12px;line-height:1.4;color:#a0671a}
+.ha45-hid{display:block;font-size:12.5px;line-height:1.45;opacity:.7;padding:0 4px 8px}
+.ha45-save{padding:12px 0 4px}
+.ha45-save .sbtn{width:100%;max-width:420px;height:48px}
+.ha45-sbg{position:fixed;inset:0;z-index:700;background:rgba(14,12,9,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px}
+@media (min-width:700px){.ha45-sbg{align-items:center}}
+.ha45-sh{width:min(440px,100%);padding:18px 20px 22px;border-radius:26px;background:#fffdf8;color:#1b1a17;display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 80px -30px rgba(0,0,0,.5)}
+html[data-mode="dark"] .ha45-sh{background:#211e18;color:#f3efe6}
+.ha45-shh{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.ha45-shh>span{display:flex;flex-direction:column}.ha45-shh b{font:500 22px Newsreader,Georgia,serif}.ha45-shh span span{font-size:13px;opacity:.7}
+.ha45-x{width:34px;height:34px;border-radius:17px;border:1px solid rgba(127,127,127,.3);background:transparent;color:inherit;cursor:pointer}
+.ha45-ppl{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:10px}
+.ha45-pp{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:transparent;color:inherit;cursor:pointer;padding:6px 0;font:700 12.5px Manrope,system-ui,sans-serif}
+.ha45-pp span{width:56px;height:56px;border-radius:28px;color:#fff;display:grid;place-items:center;font:700 18px Manrope,system-ui,sans-serif}
+.ha45-pp.on span{box-shadow:0 0 0 3px #fffdf8,0 0 0 5px #1b1a17}
+.ha45-sug{font-size:13px;color:#b23a2a;font-weight:700}
+/* Fargeprikken gjør fanene bredere: litt mindre luft, og Glimt-feltet kan krympe, så ✕ ikke brytes til egen linje. */
+@media (min-width:900px){html .m43-tab[data-m43-tab]{padding:0 12px;gap:7px}html .m43-gl{flex:1 1 200px;min-width:180px}}

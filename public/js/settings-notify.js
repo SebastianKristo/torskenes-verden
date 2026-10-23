@@ -98,8 +98,7 @@ export function notifyView(h) {
       h.row({ t: 'Stille timer', s: `${n.quietFrom}–${n.quietTo}: ingen lyd eller vibrasjon`, tog: n.quietOn !== false, act: 'data-nf-tog="quietOn"' }),
       n.quietOn !== false ? `<div class="sg-row"><span class="sg-txt"><b>Fra og til</b><span>Varsler kommer fortsatt, men stille</span></span><span class="nf-times"><input type="time" value="${esc(n.quietFrom)}" data-nf-time="quietFrom" aria-label="Stille fra"><span>–</span><input type="time" value="${esc(n.quietTo)}" data-nf-time="quietTo" aria-label="Stille til"></span></div>` : '',
       h.row({ t: 'AI-svar i bakgrunnen', k: 'glimt ai svar varsel push bakgrunn', s: n.on ? 'Får du svar mens du er ute av appen, kommer det som varsel' : 'Følger hovedbryteren «Varsler» (av)', tog: !!n.on && n.ai_bg_notify !== false, act: 'data-nf-tog="ai_bg_notify"', disabled: !n.on }),
-      // Prompt 39 (claude-code-glimt-varsel-ikon.md): banneret i appen når svaret kom mens du var borte (n_ai_in, standard på).
-      h.row({ t: 'Vis svaret i appen også', k: 'glimt ai svar banner i appen varsel', s: 'Banner øverst når du kommer tilbake til appen', tog: !!n.on && n.ai_bg_notify !== false && n.n_ai_in !== false, act: 'data-nf-tog="n_ai_in"', disabled: !n.on || n.ai_bg_notify === false }),
+      // Prompt 45: «Vis svaret i appen også» (n_ai_in) er fjernet – Glimt-svar mens du er borte kommer bare som systemvarsel.
       updNotifyRow(h),
       pushSupported()
         ? h.row({ t: 'Varsler på denne enheten', k: 'push web push nettleser tillatelse', s: S.pushBusy ? 'Slår på …' : S.push?.subscribed ? 'Glimt-svar, prøveperioder og oppdateringer kommer også når fanen er lukket' : Notification.permission === 'denied' ? 'Blokkert i nettleseren. Tillat varsler for denne siden i nettleserens innstillinger.' : 'Nettleseren spør om tillatelse når du slår dette på', tog: !!S.push?.subscribed, act: 'data-nf-act="push"', disabled: S.pushBusy || Notification.permission === 'denied' })

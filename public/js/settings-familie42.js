@@ -94,30 +94,59 @@ export function fam42View(H, sub) {
   };
 }
 
+// Prompt 45 (claude-code-helse-ha-opprydding.md, fasit Helse Home Assistant.dc.html): bare enheter fra Mobilapp-integrasjonen,
+// Telefoner · Alle mobilapp, statuskort, gruppert per person («RUNE · 2», IKKE KOBLET sist), personvelger med avatarer og forslag,
+// sensorer som chips med hake, og Lagre (→ ✓ Lagret).  GET /api/family/health/ha?view=phones|all.
+const OSC = { android: ['#e3eee5', '#2f6b4a', 'Android'], ios: ['#e6ecf5', '#2b5d8a', 'iPhone'], tablet: ['#ece6da', '#6b665c', 'iPad'], other: ['#ece6da', '#6b665c', 'Enhet'] };
 function haView(H) {
   const { note } = H;
   if (!F.fam && !F.loading) loadFam42();
-  const base = { title: 'Home Assistant · Mobilapp', sub: 'Familie · Helse (Familie)' };
+  const base = { title: 'Home Assistant', sub: 'Helse fra mobilappen · les skritt, puls og søvn fra Home Assistant-appen på telefonene. Hver person godkjenner delingen første gang.' };
   if (F.haMissing) return { ...base, html: `<div class="sg-empty">Serveren har ikke Home Assistant-helse ennå. Oppdater Homelab, så vises HA-enhetene her.</div>` };
   if (F.haErr) return { ...base, html: `<div class="sg-empty">${esc(F.haErr)}</div>` };
   if (!F.ha) return { ...base, html: '<div class="sg-empty">Henter enhetene fra Home Assistant …</div>' };
   if (F.ha.connected === false) return { ...base, html: `<div class="sg-empty">${esc(F.ha.error === 'token' ? 'Tokenet til Home Assistant er utløpt. Koble til Home Assistant på nytt under Integrasjoner.' : F.ha.message || 'Home Assistant er ikke satt opp. Legg inn adresse og token under Integrasjoner.')}</div><button type="button" class="sbtn" data-go="int">Åpne Integrasjoner</button>` };
-  const devs = devicesOf(F.ha);
-  F.draft ??= Object.fromEntries(devs.map((d) => [d.id, { personId: d.personId ?? suggest(d), sensors: d.selected ?? (d.personId ? d.sensors : d.sensors.filter((k) => DEF_SENS.includes(k))) }]));
-  const opts = (cur) => `<option value="">Ingen</option>${members().map((m) => `<option value="${esc(m.userId)}"${cur === m.userId ? ' selected' : ''}>${esc(m.name)}${m.self ? ' (deg)' : ''}</option>`).join('')}`;
-  const card = (d) => {
-    const dr = F.draft[d.id] ?? { personId: null, sensors: [] }, none = !d.sensors.length;
-    const stale = d.unavailableSince ? `Ingen data fra ${d.name} siden ${new Date(d.unavailableSince).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}` : '';
-    return `<section class="f42-dev${none ? ' none' : ''}"><div class="f42-dh"><b>${esc(d.name || d.id)}</b><span>${esc([d.model, d.entities != null ? `${d.entities} entiteter` : '', none ? 'Ingen helsesensorer' : `${d.sensors.length} helsesensorer`].filter(Boolean).join(' · '))}</span></div>
-      ${none ? '' : `<label class="f42-person"><span>Koble til person</span><select data-f42-person="${esc(d.id)}" aria-label="Person for ${esc(d.name)}">${opts(dr.personId)}</select></label>
-      <div class="f42-sens" role="group" aria-label="Sensorer">${d.sensors.map((k) => `<label class="f42-sen"><input type="checkbox" data-f42-sensor="${esc(d.id)}" value="${esc(k)}"${dr.sensors.includes(k) ? ' checked' : ''}><span>${esc(SENS[k] ?? k.replace(/_/g, ' '))}</span></label>`).join('')}</div>
-      ${d.platform === 'ios' ? '<span class="f42-warn">Begrenset på iPhone: bare skritt, etasjer og aktivitet fra HA. Puls og søvn krever Homelab-appen (Apple Health).</span>' : ''}
-      ${stale ? `<span class="f42-warn">${esc(stale)}</span>` : ''}`}</section>`;
+  const all = devicesOf(F.ha), view = F.view ?? 'phones';
+  const kindOf = (d) => d.kind ?? (/ipad|tab\b|tablet/i.test(`${d.model ?? ''} ${d.name ?? ''}`) ? 'tablet' : 'phone');
+  const devs = view === 'all' ? all : all.filter((d) => kindOf(d) !== 'tablet');
+  F.draft ??= Object.fromEntries(all.map((d) => [d.id, { personId: d.personId ?? null, sensors: d.selected ?? (d.personId ? d.sensors : d.sensors.filter((k) => DEF_SENS.includes(k))) }]));
+  const mem = members(), mOf = (id) => mem.find((m) => m.userId === id);
+  const pcol = (m) => m?.color ?? '#2b5d8a';
+  const st = F.ha.status ?? {}, linked = all.filter((d) => F.draft[d.id]?.personId).length;
+  const counts = F.ha.counts ?? { phones: all.filter((d) => kindOf(d) !== 'tablet').length, all: all.length };
+  const statusCard = `<div class="ha45-st"><i class="${st.connected === false ? 'off' : ''}"></i><span class="ha45-stt"><b>${st.connected === false ? 'Ikke tilkoblet' : 'Tilkoblet'}</b><span>${esc([st.url ?? F.ha.url ?? '', 'Mobilapp-integrasjonen'].filter(Boolean).join(' · '))}</span></span><b class="ha45-stn">${esc(`${linked} av ${all.length} koblet`)}</b></div>`;
+  const seg = `<div class="ha45-seg" role="radiogroup" aria-label="Vis">${[['phones', `Telefoner · ${counts.phones ?? 0}`], ['all', `Alle mobilapp · ${counts.all ?? all.length}`]].map(([k, n]) => `<button type="button" role="radio" aria-checked="${view === k}" data-f45-view="${k}">${esc(n)}</button>`).join('')}</div>`;
+  const row = (d, i) => {
+    const dr = F.draft[d.id] ?? { personId: null, sensors: [] }, has = d.sensors.length > 0, m = mOf(dr.personId);
+    const os = kindOf(d) === 'tablet' ? 'tablet' : d.platform === 'ios' ? 'ios' : d.platform === 'android' ? 'android' : 'other', [ib, ic, osn] = OSC[os];
+    const icon = os === 'tablet' ? '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M11 18h2"/>' : '<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/>';
+    const chips = has && m ? `<div class="ha45-chips">${d.sensors.map((k) => { const on = dr.sensors.includes(k); return `<button type="button" class="ha45-chip${on ? ' on' : ''}" data-f45-sen="${esc(d.id)}" data-k="${esc(k)}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(SENS[k] ?? k.replace(/_/g, ' '))}</button>`; }).join('')}</div>${os === 'ios' ? '<span class="ha45-ios">Begrenset på iPhone: bare skritt, etasjer og aktivitet. Puls og søvn krever Homelab-appen.</span>' : ''}` : '';
+    const stale = d.unavailableSince ? `<span class="ha45-ios">Ingen data fra ${esc(d.name)} siden ${new Date(d.unavailableSince).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}</span>` : '';
+    return `<div class="ha45-r${has ? '' : ' none'}${i ? ' bt' : ''}"><div class="ha45-rm"><span class="ha45-ic" style="background:${ib};color:${ic}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icon}</svg></span>
+      <span class="ha45-rt"><b>${esc(d.name || d.id)}</b><span><em class="${has ? 'ok' : ''}">${esc(d.healthText ?? (has ? `${d.sensors.length} helsesensorer` : 'Ingen helsesensorer'))}</em>${esc(d.os ?? osn)}${d.model ? ` · ${esc(d.model)}` : ''}</span></span>
+      <button type="button" class="ha45-pick" data-f45-pick="${esc(d.id)}" aria-label="Hvem bruker ${esc(d.name)}?"><span class="ha45-pav" style="background:${m ? esc(pcol(m)) : '#8f897c'}">${m ? esc(String(m.name ?? '?')[0]) : '+'}</span>${m ? esc(m.name) : 'Velg'} ▾</button></div>${chips}${stale}</div>`;
   };
-  const html = `${devs.length ? devs.map(card).join('') : '<div class="sg-empty">Fant ingen enheter fra Mobilapp-integrasjonen i Home Assistant.</div>'}
-    ${note('Én person kan ha flere enheter. Da slås dataene sammen (Health Connect før iPhone-skritteller, høyeste skritt per dag, ingen dobbelttelling). Hver person må godkjenne deling første gang, og kan trekke den tilbake når som helst.')}
-    <div class="f42-save"><button type="button" class="sbtn pri" data-f42="hasave"${F.busy || !devs.length ? ' disabled' : ''}>${F.busy ? 'Lagrer …' : 'Lagre'}</button><span>Første synk henter 30 dager historikk.</span></div>`;
+  const groups = {};
+  for (const d of devs) { const k = F.draft[d.id]?.personId ?? '_'; (groups[k] ??= []).push(d); }
+  const gHtml = [...mem.filter((m) => groups[m.userId]).map((m) => [m.name.toUpperCase(), pcol(m), groups[m.userId]]), ...(groups._ ? [['IKKE KOBLET', '#8f897c', groups._]] : [])]
+    .map(([h, c, L]) => `<div class="ha45-g"><span class="ha45-gh" style="color:${esc(c)}">${esc(h)} · ${L.length}</span><div class="ha45-gb">${L.map(row).join('')}</div></div>`).join('');
+  const hidden = F.ha.hidden?.text ?? (F.ha.hidden?.count ? `${F.ha.hidden.count} andre enheter fra Home Assistant vises ikke her. De har ingen helsedata.` : '');
+  const sd = F.sheet && all.find((d) => d.id === F.sheet);
+  const sheet = sd ? (() => {
+    const cur = F.draft[sd.id]?.personId ?? null, sug = sd.suggestedPersonName ?? (mOf(sd.suggestedPersonId ?? suggest(sd))?.name ?? '');
+    return `<div class="ha45-sbg" data-f45-sclose><div class="ha45-sh" role="dialog" aria-modal="true" aria-label="Hvem bruker telefonen?"><div class="ha45-shh"><span><b>Hvem bruker telefonen?</b><span>${esc(sd.name)}</span></span><button type="button" class="ha45-x" data-f45-sclose aria-label="Lukk">✕</button></div>
+      <div class="ha45-ppl">${[...mem.map((m) => [m.userId, m.name, pcol(m), String(m.name ?? '?')[0]]), [null, 'Ingen', '#8f897c', '–']].map(([id, n, c, i]) => `<button type="button" class="ha45-pp${cur === id ? ' on' : ''}" data-f45-set="${esc(sd.id)}" data-p="${esc(id ?? '')}"><span style="background:${esc(c)}">${esc(i)}</span><b>${esc(n)}</b></button>`).join('')}</div>
+      ${sug ? `<span class="ha45-sug">✦ Foreslått ut fra navnet: ${esc(sug)}</span>` : ''}</div></div>`;
+  })() : '';
+  const html = `${statusCard}${seg}${devs.length ? gHtml : '<div class="sg-empty">Fant ingen enheter fra Mobilapp-integrasjonen i Home Assistant.</div>'}
+    ${hidden ? `<span class="ha45-hid">${esc(hidden)}</span>` : ''}
+    ${note('Én person kan ha flere enheter. Da slås dataene sammen (Health Connect før iPhone-skritteller, høyeste skritt per dag, ingen dobbelttelling). Første synk henter 30 dager historikk.')}
+    <div class="ha45-save"><button type="button" class="sbtn pri" data-f42="hasave"${F.busy || !all.length ? ' disabled' : ''}>${F.busy ? 'Lagrer …' : F.saved ? '✓ Lagret' : 'Lagre'}</button></div>${sheet}`;
   return { ...base, html };
+}
+function reloadHa(view) {
+  F.view = view;
+  return api(`/family/health/ha?view=${view === 'all' ? 'all' : 'phones'}`).then((r) => { F.ha = r; }).catch(() => {});
 }
 
 /** Klikk i Familie-fanen. Returnerer true når klikket hørte hit. */
@@ -131,6 +160,14 @@ export async function fam42Click(e, render) {
     catch (er) { if (F.fam?.me) F.fam.me.shareHealth = cur; toast(er.message); render(); }
     return true;
   }
+  const v45 = e.target.closest('[data-f45-view]');
+  if (v45) { F.view = v45.dataset.f45View; render(); reloadHa(F.view).then(render); return true; }
+  const pk = e.target.closest('[data-f45-pick]');
+  if (pk) { F.sheet = pk.dataset.f45Pick; render(); return true; }
+  if (e.target.closest('[data-f45-set]')) { const b2 = e.target.closest('[data-f45-set]'); const d = (F.draft ??= {})[b2.dataset.f45Set] ??= { personId: null, sensors: [] }; d.personId = b2.dataset.p || null; if (d.personId && !d.sensors.length) { const dv = devicesOf(F.ha).find((x) => x.id === b2.dataset.f45Set); d.sensors = (dv?.sensors ?? []).filter((k) => DEF_SENS.includes(k)); } F.sheet = null; F.saved = false; render(); return true; }
+  if (e.target.closest('[data-f45-sclose]') && (e.target.matches('[data-f45-sclose]') || e.target.closest('.ha45-x'))) { F.sheet = null; render(); return true; }
+  const sn = e.target.closest('[data-f45-sen]');
+  if (sn) { const d = (F.draft ??= {})[sn.dataset.f45Sen] ??= { personId: null, sensors: [] }, k = sn.dataset.k; d.sensors = d.sensors.includes(k) ? d.sensors.filter((x) => x !== k) : [...d.sensors, k]; F.saved = false; render(); return true; }
   const b = e.target.closest('[data-f42]');
   if (!b) return false;
   const a = b.dataset.f42;
@@ -139,7 +176,7 @@ export async function fam42Click(e, render) {
   if (a === 'hasave') {
     const devices = Object.entries(F.draft ?? {}).map(([id, d]) => ({ id, personId: d.personId || null, sensors: d.personId ? d.sensors : [] }));
     F.busy = true; render();
-    try { F.ha = await api('/family/health/ha', { method: 'PUT', json: { devices } }); F.draft = null; toast('Lagret. Helsedata hentes fra Home Assistant.'); }
+    try { F.ha = await api('/family/health/ha', { method: 'PUT', json: { devices } }); F.draft = null; F.saved = true; toast('Lagret. Helsedata hentes fra Home Assistant.'); if (F.view === 'all') await reloadHa('all'); }
     catch (er) { toast(er.status === 404 ? 'Serveren har ikke Home Assistant-helse ennå' : er.message); }
     F.busy = false; render();
     return true;

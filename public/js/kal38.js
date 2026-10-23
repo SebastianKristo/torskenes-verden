@@ -10,6 +10,7 @@
 import { esc, isMobile, haptic } from './util.js';
 import { glimt } from './glimt.js';
 import { preview, quickLabel, addQuick } from './kal-quick.js';
+import { agent, agentOn, agentExtras, agentText } from './glimt-agent45.js'; // prompt 45
 
 let C = null;
 /** kalender.js: { K, evOn, col, short, key, add, d0, mm, hmM, fromKey, curD, calById, paint, openDay, setView, openForm,
@@ -265,7 +266,7 @@ export function paintBar(h) {
 export function submitBar(force) {
   const v = G.bar.trim();
   if (!v) { openGlimt(); return; }
-  const p = isQ(v) ? null : preview(v);
+  const p = isQ(v) || agentOn() ? null : preview(v); // prompt 45: med agenten tolkes alt på serveren (ingen lokal regex først)
   if (force !== 'ask' && p?.ok && p.date) { G.bar = ''; G.sug = false; haptic(10); addQuick(v); C.paint(); return; }
   G.bar = ''; G.sug = false; G.focusBar = false;
   openGlimt(v);
@@ -314,7 +315,8 @@ function msgHtml(m) {
   }).join('') : '';
   const slots = done && R.slots?.length ? `<div class="k38-slots">${R.slots.map((s) => `<button type="button" data-k38-slot="${esc(`${s.k}|${s.s}|${s.e}`)}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>${esc(`${C.hmM(s.s)}–${C.hmM(s.e)}`)}</button>`).join('')}</div>` : '';
   const err = done && R.err ? `<span class="k38-err" role="alert">${esc(R.err)}</span>` : '';
-  return `<div class="k38-ma" data-k38-m="${m.id}"><span class="k38-mi" aria-hidden="true">${glimt(22, m.th ? 'tenker' : typing ? 'svarer' : 'ferdig')}</span><div class="k2-grow">${stepsH}${m.th ? '' : `<span class="k38-txt" data-no-i18n>${esc(txt)}${typing ? '<i class="k38-caret"></i>' : ''}</span>`}${cards}${slots}${err}</div></div>`;
+  const ag = done && R.agent ? agentExtras(R.agent, agentCb()) : ''; // prompt 45
+  return `<div class="k38-ma" data-k38-m="${m.id}"><span class="k38-mi" aria-hidden="true">${glimt(22, m.th ? 'tenker' : typing ? 'svarer' : 'ferdig')}</span><div class="k2-grow">${stepsH}${m.th ? '' : `<span class="k38-txt" data-no-i18n>${esc(txt)}${typing ? '<i class="k38-caret"></i>' : ''}</span>`}${cards}${slots}${ag}${err}</div></div>`;
 }
 /** Tegner bare én melding på nytt (steg og skriving), så panelet ikke blinker. */
 function paintMsg(m) {
@@ -335,6 +337,7 @@ export async function send(q) {
   await C.ensureNow?.();
   clearTimeout(glTimer); clearInterval(glType);
   G.msgs = G.msgs.map((m) => (m.r === 'a' ? { ...m, th: false, n: 1e9 } : m));
+  if (agentOn() && await sendAgent(q)) return;
   const local = ask(q), id = ++mid;
   const m = { id: `a${id}`, r: 'a', th: true, step: 0, full: local ?? { steps: ['Leser kalenderen', 'Spør Glimt på serveren'], txt: '' }, n: 0 };
   G.msgs.push({ id: `u${id}`, r: 'u', t: q }, m);
@@ -364,6 +367,38 @@ export async function send(q) {
   };
   glTimer = setTimeout(tick, 380);
 }
+
+/* Prompt 45: den felles Glimt-agenten (module calendar). Valgt/sist valgte hendelse og dagens hendelser er konteksten,
+   så «flytt den til fredag» vet hva «den» er. false = agenten finnes ikke (eldre server) → lokal/server-vei som før. */
+async function sendAgent(q, ctxIn = null) {
+  const id = ++mid, K = C.K;
+  const m = { id: `a${id}`, r: 'a', th: true, step: 0, full: { steps: ['Forstår hva du mener', 'Utfører i kalenderen'], txt: '' }, n: 0 };
+  G.msgs.push({ id: `u${id}`, r: 'u', t: q }, m);
+  G.gq = ''; G.open = true;
+  C.paint();
+  const box = document.querySelector('#kal [data-k38-glb]'); if (box) box.scrollTop = box.scrollHeight;
+  const sel = K.sel || K.lastSel || null;
+  let vis = [];
+  try { vis = (C.evOn(C.curD()) ?? []).map((e) => e.oid || e.id).filter(Boolean).slice(0, 50); } catch { /* */ }
+  let a;
+  try { a = await agent(q, 'calendar', ctxIn ?? { selectedId: sel ? (C.findEv?.(sel)?.oid || sel) : undefined, visibleIds: vis }); }
+  catch (e) { m.th = false; m.n = 1e9; m.full = { steps: m.full.steps, txt: '', err: e.message }; paintMsg(m); return true; }
+  if (!a) { G.msgs = G.msgs.filter((x) => x !== m && x.id !== `u${id}`); return false; }
+  if (a.done.length) { C.ensureKal?.(true); noteChanged(a.done.some((x) => /delete/.test(x.tool)) ? 'deleted' : 'created'); }
+  m.th = false; m.n = 1e9;
+  // Sist opprettede/endrede hendelse er «den» i neste forespørsel («flytt den til fredag»).
+  const ev = a.done.map((x) => x.result?.event ?? x.result).find((x) => x?.id && /^calendar\./.test(a.done[0]?.tool ?? ''));
+  if (ev?.id) K.lastSel = ev.id;
+  m.full = { steps: m.full.steps, txt: agentText(a, { plain: true }), agent: a };
+  paintMsg(m);
+  haptic(6);
+  return true;
+}
+const agentCb = () => ({
+  resend: (t, ctx) => sendAgent(t, ctx),
+  update: (a) => { const m = [...G.msgs].reverse().find((x) => x.r === 'a' && x.full?.agent); if (!m) return; if (a.done.length) C.ensureKal?.(true); m.full = { ...m.full, txt: agentText(a, { plain: true }), agent: a }; paintMsg(m); },
+  open: (r) => { if (r.kind !== 'event') return false; if (r.date) { C.K.cur = String(r.date).slice(0, 10); if (C.K.view === 'mnd' || C.K.view === 'liste') C.setView?.('dag'); } C.K.sel = r.id ?? null; closeGlimt(); C.paint(); return true; },
+});
 
 /** Lokale svar (samme regler som iPhone-appens ask()). null = la serveren svare. */
 export function ask(q) {

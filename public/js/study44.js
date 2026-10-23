@@ -6,6 +6,8 @@
 // Dokumenter: GET/POST /api/study/documents, POST …/:id/ask {q}, POST …/:id/apply, DELETE …/:id. Snitt kommer fra serveren.
 import { esc, api } from './util.js';
 import { store, on } from './store.js';
+import { agent, agentOn, agentText, agentFull } from './glimt-agent45.js'; // prompt 45
+
 
 const TABS = [['ov', 'Oversikt'], ['uke', 'Uke'], ['kar', 'Karakterer'], ['dok', 'Dokumenter']];
 const TEST_RE = /prøve|test|eksamen|innlevering|tentamen|heldag|muntlig|fremføring|frist|labrapport/i;
@@ -35,7 +37,10 @@ const KIND = { vitnemal: 'Vitnemål', vitnemål: 'Vitnemål', diploma: 'Vitnemå
 function docOut(x) {
   const d = x?.doc ?? x ?? {};
   const em = (d.emner ?? d.subjects ?? d.rows ?? []).map((r) => Array.isArray(r) ? { kode: r[0], navn: r[1], sp: r[2], karakter: r[3] } : { kode: r.kode ?? r.code ?? '', navn: r.navn ?? r.name ?? '', sp: r.sp ?? r.credits ?? null, karakter: r.karakter ?? r.grade ?? '', semester: r.semester ?? '' });
-  return { id: String(d.id ?? ''), kind: String(d.kind ?? d.type ?? '').toLowerCase(), title: d.title ?? d.name ?? d.filename ?? KIND[String(d.kind ?? '').toLowerCase()] ?? 'Dokument', inst: d.institution ?? d.school ?? '', date: d.date ?? d.issued ?? '', created: d.createdAt ?? d.uploadedAt ?? d.at ?? '', ext: String(d.ext ?? (d.mime?.includes('image') ? 'JPG' : 'PDF')).toUpperCase(), summary: d.summary ?? d.sum ?? '', emner: em, snitt: typeof d.snitt === 'object' && d.snitt ? d.snitt.value ?? null : d.snitt ?? d.average ?? null, snittL: (typeof d.snitt === 'object' && d.snitt ? d.snitt.letter : null) ?? d.snittLetter ?? d.letter ?? null, snittT: typeof d.snitt === 'object' && d.snitt ? d.snitt.text ?? '' : '', kindLabel: d.kindLabel ?? '', sp: d.sp ?? d.credits ?? em.reduce((a, r) => a + (+r.sp || 0), 0), found: d.found ?? d.insights ?? d.ins ?? [], status: d.status === 'reading' || d.status === 'pending' || d.status === 'failed' ? d.status : 'done', steps: d.steps ?? null, inst: d.institution ?? d.school ?? '', compare: typeof d.compare === 'object' && d.compare ? d.compare.text ?? null : d.compare ?? null };
+  return { id: String(d.id ?? ''), kind: String(d.kind ?? d.type ?? '').toLowerCase(), title: d.title ?? d.name ?? d.filename ?? KIND[String(d.kind ?? '').toLowerCase()] ?? 'Dokument', inst: d.institution ?? d.school ?? '', date: d.date ?? d.issued ?? '', created: d.createdAt ?? d.uploadedAt ?? d.at ?? '', ext: String(d.ext ?? (d.mime?.includes('image') ? 'JPG' : 'PDF')).toUpperCase(), summary: d.summary ?? d.sum ?? '', emner: em, snitt: typeof d.snitt === 'object' && d.snitt ? d.snitt.value ?? null : d.snitt ?? d.average ?? null, snittL: (typeof d.snitt === 'object' && d.snitt ? d.snitt.letter : null) ?? d.snittLetter ?? d.letter ?? null, snittT: typeof d.snitt === 'object' && d.snitt ? d.snitt.text ?? '' : '', kindLabel: d.kindLabel ?? '', sp: d.sp ?? d.credits ?? em.reduce((a, r) => a + (+r.sp || 0), 0), found: d.found ?? d.insights ?? d.ins ?? [], status: d.status === 'reading' || d.status === 'pending' || d.status === 'failed' ? d.status : 'done', steps: d.steps ?? null,
+    // Prompt 45: tydelig status («Fant 14 fag» / feil + Prøv igjen), felter med «Ikke funnet» og originalfila.
+    partial: d.status === 'partial', statusText: d.statusText ?? '', how: d.how ?? '', missing: Array.isArray(d.missing) ? d.missing : [], fields: d.fields && typeof d.fields === 'object' ? d.fields : null, error: d.error ?? '',
+    file: d.file && typeof d.file === 'object' ? d.file : d.id ? { url: `/api/study/documents/${encodeURIComponent(d.id)}/file`, download: `/api/study/documents/${encodeURIComponent(d.id)}/file?download=1`, kind: /image|jpe?g|png|heic|webp/i.test(`${d.mime ?? ''} ${d.ext ?? ''}`) ? 'image' : 'pdf' } : null, inst: d.institution ?? d.school ?? '', compare: typeof d.compare === 'object' && d.compare ? d.compare.text ?? null : d.compare ?? null };
 }
 function events() {
   const ov = S.ov ?? {};
@@ -122,7 +127,7 @@ function gradeCol() {
   const G = grades(), a = avg(G);
   return `<div class="st44-col"><div class="st44-colh"><span class="st44-k">KARAKTERER</span><span class="st44-sn">snitt ${a ? nbn(a) : '–'}</span></div>${G.length ? gradeRows(G.slice(0, 3)) : '<span class="st44-mut st44-pad">Ingen karakterer ennå.</span>'}${G.length > 3 ? '<button type="button" class="st44-lk" data-st44-tab="kar">Alle karakterer ›</button>' : ''}</div>`;
 }
-const docRow = (d, big) => `<button type="button" class="st44-doc${big && S.sel === d.id ? ' on' : ''}" data-st44-doc="${esc(d.id)}"><span class="st44-ext">${esc(d.ext)}</span><div><b>${esc(d.title)}</b><span>${esc([d.inst, d.created ? new Date(d.created).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }) : '', d.emner.length ? `${d.emner.length} emner` : ''].filter(Boolean).join(' · '))}</span></div><em class="${d.status === 'done' ? '' : 'busy'}">${d.status === 'done' ? '✦ Lest' : 'Leser …'}</em></button>`;
+const docRow = (d, big) => `<button type="button" class="st44-doc${big && S.sel === d.id ? ' on' : ''}" data-st44-doc="${esc(d.id)}"><span class="st44-ext">${esc(d.ext)}</span><div><b>${esc(d.title)}</b><span>${esc([d.inst, d.created ? new Date(d.created).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }) : '', d.emner.length ? `${d.emner.length} emner` : ''].filter(Boolean).join(' · '))}</span></div><em class="${d.status === 'done' ? (d.partial ? 'warn' : '') : d.status === 'failed' ? 'bad' : 'busy'}">${d.status === 'done' ? (d.partial ? '✦ Delvis lest' : '✦ Lest') : d.status === 'failed' ? 'Ikke lest' : 'Leser …'}</em></button>`;
 function docCol() {
   loadDocs();
   const D = S.docs ?? [];
@@ -147,6 +152,58 @@ function karHtml() {
   return `<div class="st44-stats">${st.map(([v, l]) => `<div class="st44-stat"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('')}</div>
     <div class="st44-card st44-gall">${G.length ? gradeRows(G) : '<span class="st44-mut">Ingen fag ennå. Legg dem inn fra dokumentene dine, eller under Karakterer på den gamle Studie-siden.</span>'}</div>`;
 }
+/* ---------------- Prompt 45: status, felter og originalfila (claude-code-studie-vitnemal-analyse-original.md) ---------------- */
+const FIELD45 = [['institution', 'Skole'], ['student', 'Navn'], ['program', 'Program'], ['date', 'Dato'], ['sp', 'Studiepoeng'], ['snitt', 'Snitt']];
+const HOW45 = { pdf: 'tekst i PDF-en', ocr: 'tekstgjenkjenning (OCR)', vision: 'bildemodell', tekst: 'tekst' };
+function statusHtml45(d) {
+  if (d.status === 'reading' || d.status === 'pending') return '<span class="st45-st busy">Analyserer …</span>';
+  if (d.status === 'failed') return `<div class="st45-st bad" role="alert"><span><b>Glimt fikk ikke lest dokumentet.</b> ${esc(d.error || d.statusText || 'Prøv igjen, eller last opp et tydeligere bilde.')}</span><button type="button" class="st44-b" data-st45-retry${S.retry45 ? ' disabled' : ''}>${S.retry45 ? 'Analyserer …' : 'Prøv igjen'}</button></div>`;
+  const txt = d.statusText || (d.emner.length ? `Fant ${d.emner.length} ${d.emner.length === 1 ? 'fag' : 'fag'}` : 'Fant ingen fag');
+  return `<div class="st45-st${d.emner.length ? ' ok' : ' warn'}"><span><b>${esc(txt)}</b>${d.how ? ` · lest med ${esc(HOW45[d.how] ?? d.how)}` : ''}</span>${!d.emner.length || d.partial ? `<button type="button" class="st44-b" data-st45-retry${S.retry45 ? ' disabled' : ''}>${S.retry45 ? 'Analyserer …' : 'Prøv igjen'}</button>` : ''}</div>`;
+}
+function fieldsHtml45(d) {
+  const F = d.fields;
+  if (!F) return '';
+  const v = (k) => { const x = F[k]; return x == null || x === '' ? 'Ikke funnet' : typeof x === 'object' ? x.text ?? x.value ?? 'Ikke funnet' : String(x); };
+  return `<div class="st45-f">${FIELD45.map(([k, n]) => { const t = v(k); return `<span class="${t === 'Ikke funnet' ? 'nf' : ''}"><em>${esc(n)}</em><b>${esc(t)}</b></span>`; }).join('')}</div>`;
+}
+function origThumb45(d) {
+  if (!d.file?.url) return '';
+  const th = d.file.thumb ?? (d.file.kind === 'image' ? d.file.url : null);
+  return `<button type="button" class="st45-th" data-st45-orig aria-label="Vis originalen" title="Vis original">${th ? `<img src="${esc(th)}" alt="" loading="lazy" data-st45-th>` : ''}<span>${esc(d.file.kind === 'image' ? 'BILDE' : d.ext || 'PDF')}</span></button>`;
+}
+/** Fullskjerm: PDF med sider (nettleserens PDF-visning) eller bilde med zoom. Last ned og ✕. */
+function openOrig45(d) {
+  if (!d?.file?.url) return;
+  document.querySelector('.st45-ov')?.remove();
+  const ov = document.createElement('div');
+  ov.className = 'st45-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', `Original: ${d.title}`);
+  const img = d.file.kind === 'image';
+  ov.innerHTML = `<div class="st45-ovt"><b>${esc(d.title)}</b><span>${esc([d.inst, d.date].filter(Boolean).join(' · '))}</span><span class="st45-sp"></span>${img ? '<button type="button" class="st45-ob" data-z="-">−</button><button type="button" class="st45-ob" data-z="0">100 %</button><button type="button" class="st45-ob" data-z="+">+</button>' : ''}${img ? '' : `<a class="st45-ob" href="${esc(d.file.url)}" target="_blank" rel="noopener">Åpne i ny fane</a>`}<a class="st45-ob" href="${esc(d.file.download ?? `${d.file.url}?download=1`)}" download>Last ned</a><button type="button" class="st45-ob x" data-x aria-label="Lukk">✕</button></div>
+    <div class="st45-ovb">${img ? `<div class="st45-iw"><img src="${esc(d.file.url)}" alt="Originalen av ${esc(d.title)}" draggable="false"></div>` : `<iframe src="${esc(d.file.url)}#view=FitH" title="Originalen av ${esc(d.title)}"></iframe>`}</div>`;
+  document.body.appendChild(ov);
+  let z = 1;
+  const im = ov.querySelector('.st45-iw img');
+  const setZ = (v) => { z = Math.max(0.25, Math.min(5, v)); if (im) { im.style.width = `${z * 100}%`; ov.querySelector('[data-z="0"]').textContent = `${Math.round(z * 100)} %`; } };
+  const close = () => { ov.remove(); document.removeEventListener('keydown', key, true); };
+  const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } if (im && (e.key === '+' || e.key === '=')) setZ(z * 1.25); if (im && e.key === '-') setZ(z / 1.25); };
+  document.addEventListener('keydown', key, true);
+  ov.addEventListener('click', (e) => { if (e.target.closest('[data-x]') || e.target === ov.querySelector('.st45-ovb')) return close(); const b = e.target.closest('[data-z]'); if (b) setZ(b.dataset.z === '+' ? z * 1.25 : b.dataset.z === '-' ? z / 1.25 : 1); if (e.target === im) setZ(z > 1 ? 1 : 2); });
+  ov.addEventListener('wheel', (e) => { if (!im || !(e.ctrlKey || e.metaKey)) return; e.preventDefault(); setZ(z * (e.deltaY < 0 ? 1.1 : 0.9)); }, { passive: false });
+  ov.querySelector('[data-x]').focus();
+}
+async function retry45() {
+  const d = S.docs?.find((y) => y.id === S.sel); if (!d) return;
+  S.retry45 = true; repaint();
+  try {
+    let r = await api(`/study/documents/${encodeURIComponent(d.id)}/reanalyze`, { method: 'POST', json: {} });
+    let x = docOut(r);
+    for (let i = 0; x.status !== 'done' && x.status !== 'failed' && i < 60; i++) { await new Promise((ok) => setTimeout(ok, 1500)); const k = await api(`/study/documents/${encodeURIComponent(d.id)}`).catch(() => null); if (k) x = docOut(k); }
+    S.docs = S.docs.map((y) => (y.id === x.id ? x : y));
+    toast(x.status === 'failed' ? `Glimt fikk ikke lest «${x.title}»` : x.statusText || `Fant ${x.emner.length} fag`);
+  } catch (er) { toast(er.status === 404 ? 'Serveren kan ikke analysere på nytt ennå. Oppdater Homelab.' : er.message); }
+  S.retry45 = false; repaint();
+}
 function dokHtml() {
   loadDocs();
   const D = S.docs ?? [], cur = D.find((d) => d.id === S.sel) ?? D[0];
@@ -157,13 +214,14 @@ function dokHtml() {
   const busy = S.busy ? `<div class="st44-busy" role="status"><b>Glimt leser «${esc(S.busy)}» …</b>${S.steps.map((x) => `<span><i>✓</i>${esc(x.n)}<em class="mono">${esc(x.ms)}</em></span>`).join('')}<span class="st44-spin"><i></i>${S.steps.length ? 'Leser videre …' : 'Laster opp …'}</span></div>` : '';
   const left = `<div class="st44-dl"><label class="st44-drop${S.drag ? ' on' : ''}" data-st44-drop><b>Slipp vitnemål, karakterutskrift eller attest</b><span>PDF eller bilde (JPG, PNG, HEIC). Glimt leser fagene, karakterene og studiepoengene. Lagres kryptert på hjemmeserveren.</span><span class="st44-pick">Velg fil</span><input type="file" accept="application/pdf,image/*,.heic" multiple hidden data-st44-file></label>${busy}
     ${S.docsErr === 'missing' ? '<span class="st44-mut">Serveren har ikke dokumentlesing ennå. Oppdater Nordlys først.</span>' : ''}${D.map((d) => docRow(d, true)).join('')}</div>`;
-  const right = cur ? `<div class="st44-card st44-dr"><span class="st44-k acc">✦ GLIMT HAR LEST</span><b class="st44-dt">${esc(cur.title)}</b><span class="st44-mut">${esc([cur.inst, cur.date, KIND[cur.kind] ?? ''].filter(Boolean).join(' · '))}</span>
+  const right = cur ? `<div class="st44-card st44-dr"><div class="st45-dh"><div class="st45-dht"><span class="st44-k acc">✦ GLIMT HAR LEST</span><b class="st44-dt">${esc(cur.title)}</b><span class="st44-mut">${esc([cur.inst, cur.date, KIND[cur.kind] ?? ''].filter(Boolean).join(' · '))}</span></div>${origThumb45(cur)}</div>
+      ${statusHtml45(cur)}${fieldsHtml45(cur)}
       ${cur.summary ? `<p class="st44-sum">${esc(cur.summary)}</p>` : ''}
       ${cur.emner.length ? `<div class="st44-tab"><div class="st44-th"><span>KODE</span><span>FAG</span><span>SP</span><span>KAR.</span></div>${cur.emner.map((r) => `<div class="st44-tr"><span class="mono">${esc(r.kode)}</span><span class="ell">${esc(r.navn)}</span><span class="mono">${r.sp == null || r.sp === '' ? '–' : esc(String(r.sp).replace('.', ','))}</span><span class="st44-gc ${gCls(r.karakter)}">${esc(r.karakter || '–')}</span></div>`).join('')}</div>` : ''}
       ${cur.snitt != null ? `<span class="st44-mut">Snitt ${esc(cur.snittL ?? '')} ${esc(nbn(cur.snitt))} · ${esc(String(cur.sp).replace('.', ','))} sp (regnet ut på serveren)</span>` : ''}
       ${cur.found?.length ? `<div class="st44-found"><span class="st44-k">GLIMT FANT</span>${cur.found.map((t) => `<span><i>✦</i>${esc(typeof t === 'string' ? t : t.text ?? t.t ?? '')}</span>`).join('')}</div>` : ''}
       <form class="st44-dask" data-st44-dask><input name="st44aq" value="${esc(S.aq)}" placeholder="Spør om dokumentet, f.eks. «hva er snittet i matte?»" autocomplete="off" data-glimt="studie"><button type="submit" ${S.aBusy ? 'disabled' : ''}>${S.aBusy ? '…' : 'Spør'}</button></form>${S.aAns ? `<span class="st44-aans">${esc(S.aAns)}</span>` : ''}
-      <div class="st44-btns"><button type="button" class="st44-b dark" data-st44-apply ${cur.emner.length ? '' : 'disabled'}>Legg emner i Studie</button><a class="st44-b" href="/api/study/documents/${encodeURIComponent(cur.id)}/file?copy=1" target="_blank" rel="noopener">Del som PDF</a><button type="button" class="st44-b red" data-st44-del>Slett</button></div></div>`
+      <div class="st44-btns"><button type="button" class="st44-b dark" data-st44-apply ${cur.emner.length ? '' : 'disabled'}>Legg emner i Studie</button><button type="button" class="st44-b" data-st45-orig>Vis original</button><a class="st44-b" href="/api/study/documents/${encodeURIComponent(cur.id)}/file?copy=1" target="_blank" rel="noopener">Del som PDF</a><button type="button" class="st44-b red" data-st44-del>Slett</button></div></div>`
     : `<div class="st44-card st44-dr"><span class="st44-k acc">✦ GLIMT LESER</span><b class="st44-dt">Ingen dokumenter ennå</b><p class="st44-sum">Last opp et vitnemål eller en karakterutskrift. Glimt finner skole, dato og type, leser fag og karakterer, og regner ut snitt og studiepoeng. Bare du ser dokumentene.</p></div>`;
   return `<div class="st44-stats sm">${stats.map(([v, l]) => `<div class="st44-stat"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('')}</div><div class="st44-dok">${left}${right}</div>`;
 }
@@ -194,7 +252,15 @@ function local(q) {
 }
 async function ask(q) {
   q = q.trim(); if (!q) return;
-  S.q = q; const l = local(q);
+  S.q = q;
+  // Prompt 45: den felles Glimt-agenten (module study) først; lokale svar og /api/assist bare når den ikke finnes.
+  if (agentOn()) {
+    S.asking = true; repaint();
+    try { const a = await agent(q, 'study'); if (a && agentText(a)) { S.ans = agentFull(a); S.asking = false; repaint(); return; } }
+    catch (e) { S.ans = `Glimt svarte ikke: ${e.message}`; S.asking = false; repaint(); return; }
+    S.asking = false;
+  }
+  const l = local(q);
   if (l) { S.ans = l; repaint(); return; }
   S.asking = true; repaint();
   try {
@@ -242,9 +308,12 @@ function bindOnce() {
     if (x('[data-st44-x]')) { S.ans = null; repaint(); return; }
     if (x('[data-st44-cal]')) { document.dispatchEvent(new CustomEvent('hl:open-settings', { detail: 'kal' })); return; }
     if ((b = x('[data-st44-doc]'))) { S.sel = b.dataset.st44Doc; S.tab = 'dok'; S.aAns = ''; S.aq = ''; repaint(); return; }
+    if (x('[data-st45-orig]')) { openOrig45(S.docs?.find((y) => y.id === S.sel)); return; } // prompt 45
+    if (x('[data-st45-retry]')) { retry45(); return; }
     if (x('[data-st44-apply]')) { try { const r = await api(`/study/documents/${encodeURIComponent(S.sel)}/apply`, { method: 'POST', json: {} }); toast(`${r?.added ?? r?.count ?? 'Emnene'} ${r?.added === 1 ? 'emne' : 'emner'} lagt i Studie`); const { loadStudy } = await import('./study.js'); loadStudy(); } catch (er) { toast(er.message); } return; }
     if (x('[data-st44-del]')) { const d = S.docs?.find((y) => y.id === S.sel); if (!d || !confirm(`Slette «${d.title}»? Filen, teksten og det Glimt har lest slettes.`)) return; try { await api(`/study/documents/${encodeURIComponent(d.id)}`, { method: 'DELETE' }); S.docs = S.docs.filter((y) => y.id !== d.id); S.sel = S.docs[0]?.id ?? null; toast('Slettet'); } catch (er) { toast(er.message); } return; }
   });
+  document.addEventListener('error', (e) => { if (e.target?.matches?.('img[data-st45-th]')) e.target.remove(); }, true); // prompt 45: miniatyr mangler (CSP: ingen inline onerror)
   document.addEventListener('submit', async (e) => {
     if (e.target.matches('[data-st44-ask]')) { e.preventDefault(); ask(e.target.querySelector('[name="st44q"]').value); return; }
     if (e.target.matches('[data-st44-dask]')) {

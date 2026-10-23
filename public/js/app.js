@@ -39,6 +39,7 @@ import { initWeb41, after41 } from './web41.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 import { initWeb44, after44 } from './web44.js'; // prompt 44: lys/mørk, GlimtInput, logg inn som, sidetillegg
 import * as study44 from './study44.js'; // prompt 44: nytt Studie-design
+import { initWeb45, after45 } from './web45.js'; // prompt 45
 
 const ROUTES = { dash: dash.render, studie: study44.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
@@ -81,6 +82,7 @@ function renderRoute() {
   if (route === 'dash') { mountDash(view); if (isEditingPending) { isEditingPending = false; requestAnimationFrame(() => startEdit()); } }
   after41(route, view); // prompt 41: 17. mai på Hjem
   after44(route, view); // prompt 44
+  after45(route, view); // prompt 45
   // Rom er en underside av «Mer» på mobil.
   const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -187,6 +189,7 @@ async function main() {
   initWeb40();
   initWeb41();
   initWeb44(lay44);
+  initWeb45();
   bindSearch();
   setupDnd(document.querySelector('header'));
   study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);

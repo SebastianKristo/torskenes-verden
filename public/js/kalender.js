@@ -22,6 +22,7 @@ import { addQuick, preview, quickLabel, setQuickHooks } from './kal-quick.js';
 import { glimt } from './glimt.js';
 import { LEARN_TYPES, typeName, addMemory, applyMemory, nameOfEvent, loadMemory, dinOf } from './glimt-memory.js'; // prompt 33
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
+import { agent, agentOn, agentFull } from './glimt-agent45.js'; // prompt 45
 import * as k38 from './kal38.js'; // prompt 38: zoom, Glimt-assistenten, kart, ark/tastatur, app-modus (Mac)
 import * as k42 from './kal42.js'; // prompt 42: Abonnementer (trekkdatoer fra Finans)
 import * as k39 from './kal39.js'; // prompt 39: hele oppsettet er en kopi av Kalender.app for Mac (fire kalendere)
@@ -526,6 +527,8 @@ function submitQa() {
   if (!v) { if (K.qa) { K.qa.err = 'Skriv hva timen gjelder.'; paint(); } return; }
   // Arket lukkes med en gang; jobben går i bakgrunnen.
   K.qa = null; paint();
+  // Prompt 45: «Skriv time» går også til den felles Glimt-agenten (svaret vises i Glimt-panelet). Eldre server: køen som før.
+  if (agentOn()) { k38.openGlimt(v); return; }
   addQuick(v);
 }
 /** Feilet tolkning: skjemaet ferdig utfylt med det som ble funnet, feilmelding og originalteksten i notat. */
@@ -632,6 +635,17 @@ function nextFive() {
 const withTimeout = (ms) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); return { signal: c.signal, done: () => clearTimeout(t) }; };
 /** Prompt 34: serveren svarer – POST /api/glimt {prompt, tool:'calendar'} → {text} og GET /api/kalender/search?ai=1 parallelt (12 s). */
 async function askServer(q) {
+  // Prompt 45: den felles agenten først. Hendelsene i svaret vises som treff; ellers som før (/api/glimt + søk).
+  if (agentOn()) {
+    try {
+      const a = await agent(q, 'calendar', { selectedId: K.sel || K.lastSel || undefined });
+      if (a && (a.reply || a.results.length)) {
+        if (a.done.length) ensureKal(true);
+        const items = a.results.filter((r) => r.kind === 'event').map((r) => { const e = findEv(r.id) ?? findEv(String(r.id)); return e ? { e, d: fromKey(e.k) } : null; }).filter(Boolean);
+        return { txt: agentFull(a), items };
+      }
+    } catch (e) { if (e.status !== 429) return { err: e.message }; }
+  }
   const T = withTimeout(12_000), clean = (t) => String(t ?? '').replace(/\*\*/g, '').replace(/\s*\[\d+\]/g, '').trim();
   const viaGlimt = fetch('/api/glimt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: q, tool: 'calendar' }), credentials: 'same-origin', signal: T.signal })
     .then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || `Feil ${r.status}`); const txt = clean(j.text ?? j.answer ?? j.reply); if (!txt) throw new Error(j.error || 'tomt svar'); return { txt, items: [], model: j.model }; });
@@ -661,7 +675,7 @@ function askGlimt(t) {
   if (!S || !q) return;
   S.q = q; S.hi = -1; S.ai = { q, busy: true }; S.res = localSearch(q);
   if (host()?.querySelector('[data-k-sai]')) paintAi(); else paint();
-  const loc = srLocal(q);
+  const loc = agentOn() ? null : srLocal(q); // prompt 45: agenten tolker (ingen lokal regex først)
   setTimeout(async () => {
     if (K.srch !== S || S.ai?.q !== q) return;
     if (loc) { S.ai = { q, ...loc }; paintAi(); return; }
@@ -1115,7 +1129,7 @@ function bind(h) {
     if (d.kCal) { K.filt = { ...K.filt, [d.kCal]: !shownCal(d.kCal) }; savePref('kalFilters', K.filt); return paint(); }
     if (d.kDay) { openDay.ev = e; const r = openDay(d.kDay); openDay.ev = null; return r; }
     if (d.kSel) {
-      K.sel = d.kSel; K.delArm = false; K.err2 = '';
+      K.sel = d.kSel; K.lastSel = d.kSel; K.delArm = false; K.err2 = '';
       // Prompt 33: «sist viste hendelse» for Glimt («det var frisør»). Svaret trengs ikke.
       const ev = findEv(d.kSel); if (ev?.editable) fetch(`/api/kalender/events/${encodeURIComponent(ev.oid || ev.id)}`, { cache: 'no-store' }).catch(() => {});
       return paint();
@@ -1196,7 +1210,7 @@ function startTick() {
 
 /* Prompt 38: kontekst til kal38.js og window.kalApp for Mac-appen (⌘N, ⌘T, ⌘1–5, ⌘F, ⌘,). */
 k38.initKal38({ K, evOn, col, short, key, add, d0, mm, hmM, fromKey, curD, calById, noUrl, longDate: dLong,
-  paint: () => paint(), openDay, setView, openForm, askServer,
+  paint: () => paint(), openDay, setView, openForm, askServer, ensureKal, findEv, // prompt 45: agenten laster på nytt etter endringer
   ensureNow: async () => { const td = d0(new Date()); ensureRange(key(add(td, -31)), key(add(td, 121))); if (K.loading) await K.loading.catch(() => {}); } });
 k44.initKal44({ K, paint: () => paint(), ensureKal, flash: (t) => flash(t), host: () => host() });
 k44.scheduleMidnight(() => { if (host()) paint(); });

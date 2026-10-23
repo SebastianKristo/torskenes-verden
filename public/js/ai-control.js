@@ -626,6 +626,28 @@ const LOGO = {
 const logo = (k, fb, c) => `<span class="ac-logo" aria-hidden="true">${LOGO[k] ?? `<b style="color:${c}">${esc(fb)}</b>`}</span>`;
 const PROV_LOGO = { gemini: 'gemini', groq: 'groq', openrouter: 'openrouter', ollama: 'ollama', openai: 'openai', anthropic: 'anthropic' };
 
+/* ---------------- Prompt 45: Glimt-personlighet (claude-code-glimt-intelligent-agent.md → Personlighet) ----------------
+   GET/PUT /api/glimt/agent/settings {personality:'off'|'little'|'full'} per bruker, standard «Litt». */
+const PERS45 = [['off', 'Av', 'Bare saklige svar.'], ['little', 'Litt', 'Varm og kvikk, en sjelden liten spøk etter bekreftelsen.'], ['full', 'Full rakker', 'God nordmann, monarkist og moroknarkist. Fortsatt aldri ved feil, sletting eller økonomi.']];
+function loadPers45() {
+  if (G.pers45 !== undefined) return;
+  G.pers45 = null;
+  fetch('/api/glimt/agent/settings', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : r.status === 404 ? { missing: true } : null)).then((j) => { G.pers45 = j ?? { personality: 'little' }; redraw(); }).catch(() => { G.pers45 = { personality: 'little' }; redraw(); });
+}
+function persCard45() {
+  loadPers45();
+  const P = G.pers45, cur = P?.personality ?? 'little', d = PERS45.find((x) => x[0] === cur) ?? PERS45[1];
+  if (P?.missing) return '';
+  return `<div class="ac-card ac-gap ac-pers45"><span class="ac-lab">GLIMT · PERSONLIGHET</span><span class="ac-row ac-sb"><span class="ac-col"><b>Personlighet</b><span class="ac-mut">${esc(d[2])}</span></span></span>
+    <div class="ac-seg auto" role="radiogroup" aria-label="Personlighet">${PERS45.map(([k, n]) => `<button type="button" role="radio" aria-checked="${cur === k}" class="${cur === k ? 'on' : ''}" data-ac-pers45="${k}"${P ? '' : ' disabled'}>${esc(n)}</button>`).join('')}</div>
+    <span class="ac-mut ac-sm">Bekreftelsen av hva som faktisk skjedde kommer alltid først. Gjelder Glimt i hele appen (Hjem, Kalender, Gjøremål, Finans, Chat).</span></div>`;
+}
+async function setPers45(v) {
+  const prev = G.pers45; G.pers45 = { ...(prev ?? {}), personality: v }; vibe(); redraw();
+  try { const r = await fetch('/api/glimt/agent/settings', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ personality: v }) }); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Feil ${r.status}`); G.pers45 = await r.json(); toast(`Personlighet: ${PERS45.find((x) => x[0] === v)?.[1]}`); }
+  catch (e) { G.pers45 = prev; toast(e.message); }
+  redraw();
+}
 function rtTab(o) {
   if (G.missing.routing) return missingNote('Ruting per oppgave');
   const fin = o.scope === 'finans', R = routingOf(), all = allModelOpts(), web = o.variant !== 'mobile', admin = G.admin;
@@ -826,7 +848,7 @@ function html(p) {
   if (p.tab === 'job' && G.jobs) markJobsSeen();
   const failN = p.tab === 'job' ? 0 : unseenFails(J); // prompt 40: bare nye feil siden du så fanen
   const status = `${fin ? 'Kvitteringer, kategorier og spørsmål' : `${I.length} lokale modeller · ${cloud().filter((c) => c.on).length} i skyen`} · ${runN ? `${runN} jobb${runN > 1 ? 'er' : ''} kjører` : 'ingen jobber kjører'}`;
-  const body = { ov: ovTab, mod: modTab, rt: rtTab, job: jobTab, use: useTab, api: apiTab, imp: impTab }[p.tab](o);
+  const body = { ov: ovTab, mod: modTab, rt: (x) => (x.scope === 'finans' ? '' : persCard45()) + rtTab(x), job: jobTab, use: useTab, api: apiTab, imp: impTab }[p.tab](o);
   p.status = status; // prompt 39: innebygd på web vises statuslinjen i Innstillinger-toppen (o.onStatus)
   const style = Object.entries(T).map(([k, v]) => `--${k}:${v}`).join(';');
   return `<div class="ac ${web ? 'web' : 'mob'} th-${esc(o.theme ?? 'papir')}${o.embedded ? ' emb' : ''}" style="${style}" data-ac-root>
@@ -877,6 +899,7 @@ function bind(el) {
     if (!b || !el.contains(b) || b.disabled) return;
     const d = b.dataset;
     if ('acClose' in d) { vibe(); p.o.onClose?.(); return; }
+    if (d.acPers45) return setPers45(d.acPers45); // prompt 45
     if (d.acTab) { vibe(); p.tab = d.acTab; p.o.onTab?.(p.tab); enterTab(p); paint(p); const m = el.querySelector('[data-ac-main]'); if (m) m.scrollTop = 0; return; }
     if ('acInstmod' in d) { vibe(); if (tabsFor(p.o).some(([k]) => k === 'mod')) { p.tab = 'mod'; p.o.onTab?.(p.tab); enterTab(p); paint(p); } else openAiControl({ ...p.o, scope: 'alle', tab: 'mod' }); return; }
     if ('acSelf' in d) return selftest(false);

@@ -224,6 +224,11 @@ const GSC_WHY43 = {
   token: ['Innloggingen er utløpt', 'Homelab fikk ikke fornyet tilgangen hos Google. Koble til på nytt (da lagres en ny refresh-token).'],
   pending: ['Venter på første henting', 'Dataene hentes nå eller ved neste nattlige henting (06:00). Google har 2–3 dagers forsinkelse.'],
   nosource: ['Domenet er ikke koblet til Search Console', 'Kontoen er koblet, men dette domenet har ikke valgt eiendom ennå. Velg eiendom under Innstillinger → Domener → Google Search Console.'],
+  // Prompt 45 (claude-code-search-console-statistikk.md): flere konkrete årsaker fra serveren.
+  api_disabled: ['Search Console API er ikke slått på', 'API-et må slås på i Google Cloud-prosjektet som eier OAuth-klienten eller servicekontoen. Slå det på, vent et par minutter og trykk Hent nå.'],
+  token_testing: ['Google-appen står i «Testing»', 'Da utløper tilgangen etter 7 dager. Publiser OAuth-appen i Google Cloud (eller bruk en servicekonto), og koble til på nytt.'],
+  sa_not_added: ['Servicekontoen er ikke lagt til i Search Console', 'Legg til e-posten til servicekontoen som bruker på eiendommen i Search Console (Innstillinger → Brukere og tillatelser), og trykk Hent nå.'],
+  quota: ['Google sier at kvoten er brukt opp', 'Search Console API har en grense per dag. Prøv igjen senere – Homelab henter automatisk i natt.'],
   noimpressions: ['Ingen søkevisninger', 'Google har ikke vist domenet i søk i perioden. Nye eller små domener kan ha 0 visninger en stund.'],
 };
 function gscEmpty43(d) {
@@ -233,19 +238,21 @@ function gscEmpty43(d) {
 }
 function gscEmptyHtml43(name, d, head) {
   const r = String(d.reason ?? d.emptyReason ?? d.state ?? '').toLowerCase();
-  const k = /unverif|ikke.?bekreft/.test(r) ? 'unverified' : /scope|403/.test(r) ? 'scope' : /token|refresh|401|expired/.test(r) ? 'token' : /access|perm|tilgang/.test(r) ? 'noaccess' : /pend|first|venter|loading/.test(r) ? 'pending' : /source|site|kilde/.test(r) ? 'nosource' : 'noimpressions';
+  const k = GSC_WHY43[r] ? r : /unverif|ikke.?bekreft/.test(r) ? 'unverified' : /scope|403/.test(r) ? 'scope' : /token|refresh|401|expired/.test(r) ? 'token' : /access|perm|tilgang/.test(r) ? 'noaccess' : /pend|first|venter|loading/.test(r) ? 'pending' : /source|site|kilde/.test(r) ? 'nosource' : 'noimpressions';
   const [t, tx0] = GSC_WHY43[k], days = { 7: '7 dagene', 28: '28 dagene', 90: '3 månedene' }[GSC.per] ?? `${GSC.per} dagene`;
   const title = k === 'noimpressions' ? `Ingen søkevisninger de siste ${days}` : t;
   const site = d.site ?? d.siteUrl ?? `sc-domain:${name}`, gUrl = `https://search.google.com/search-console/performance/search-analytics?resource_id=${encodeURIComponent(site)}`;
   const fetched = d.fetchedAt ? new Date(d.fetchedAt) : null;
   const meta = [site, d.permissionLevel ? `tilgang ${d.permissionLevel}` : '', fetched ? `sist hentet ${fetched.toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'ikke hentet ennå', d.dataTo ? `data til ${dmShort(d.dataTo)}` : ''].filter(Boolean).join(' · ');
-  const re = k === 'scope' || k === 'token';
+  const re = k === 'scope' || k === 'token' || k === 'token_testing';
   const st = GSC.fetch43;
+  const steps = Array.isArray(d.steps) && d.steps.length ? `<ol class="dm45-gsteps">${d.steps.map((x) => `<li>${esc(typeof x === 'string' ? x : x.t ?? x.text ?? '')}</li>`).join('')}</ol>` : '';
+  const act = k === 'api_disabled' && d.activationUrl ? `<a class="dm-gsc-cbtn" href="${esc(d.activationUrl)}" target="_blank" rel="noopener">Slå på API-et ›</a>` : '';
   return `<div data-dm-gsc>${head(true)}<section class="dm-card dm-gsc-off dm43-gsc-empty">
     <div class="dm-gsc-intro"><b class="dm-gsc-bt">${esc(title)}</b><span class="dm-gsc-tx">${esc(d.message || tx0)}</span></div>
-    <span class="dm43-gsc-meta mono" data-no-i18n>${esc(meta)}</span>
+    ${steps}<span class="dm43-gsc-meta mono" data-no-i18n>${esc(meta)}</span>
     ${st ? `<span class="dm43-gsc-st${st.err ? ' err' : ''}">${esc(st.t)}</span>` : ''}
-    <div class="dm-gsc-cta">${re ? `<button type="button" class="dm-gsc-cbtn" data-dom-gconnect>${G_LOGO}Koble til på nytt</button>` : `<button type="button" class="dm-gsc-cbtn" data-dom43-gfetch${st?.busy ? ' disabled' : ''}>${st?.busy ? 'Henter …' : 'Hent nå'}</button>`}<a class="dm-gsc-cbtn" href="${esc(gUrl)}" target="_blank" rel="noopener">${G_LOGO}Åpne i Search Console</a>${k === 'nosource' ? '<button type="button" class="dm-gsc-cbtn" data-dom-manage>Velg eiendom</button>' : ''}</div></section></div>`;
+    <div class="dm-gsc-cta">${re ? `<button type="button" class="dm-gsc-cbtn" data-dom-gconnect>${G_LOGO}Koble til på nytt</button>` : `<button type="button" class="dm-gsc-cbtn" data-dom43-gfetch${st?.busy ? ' disabled' : ''}>${st?.busy ? 'Henter …' : 'Hent nå'}</button>`}${act}<a class="dm-gsc-cbtn" href="${esc(gUrl)}" target="_blank" rel="noopener">${G_LOGO}Åpne i Search Console</a>${k === 'nosource' ? '<button type="button" class="dm-gsc-cbtn" data-dom-manage>Velg eiendom</button>' : ''}</div></section></div>`;
 }
 /** «Hent nå»: POST /api/domains/:domain/gsc/refresh (SERVER43). Eldre server: GET med ?refresh=1. */
 async function gscFetch43(name) {

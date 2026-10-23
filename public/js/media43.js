@@ -7,6 +7,7 @@ import { esc } from './util.js';
 import { orb43 } from './orb43.js';
 import { mountPlayback } from './playback44.js'; // prompt 44: fanen Avspilling (Plex/Jellyfin)
 import { glimtSource } from './glimt-input44.js'; // prompt 44: forslag i Glimt-feltet (Tab)
+import { agent, agentOn, isPlain, agentFull } from './glimt-agent45.js'; // prompt 45
 // Prompt 44 (claude-code-media-arr.md, -interaktivt-sok-504.md, -avspilling-plex-jellyfin.md, web):
 // søk i biblioteket, plakater i 2:3 (Kommer snart som liggende rader), Kommer snart Uke · Liste, banner med fanart i serie/film,
 // last ned på nytt / slett fil, felles servervalg («Hjemme/Hytta», ?server= på alle kall), frem/tilbake i nettleseren
@@ -156,8 +157,12 @@ function poll() {
 
 /* ---------------- Hjelpere ---------------- */
 
-const SC = { ok: 'ok', dl: 'bad', miss: 'warn', stall: 'warn', pause: 'mut', wait: 'mut', ann: 'mut', off: 'mut', seed: 'ok', meta: 'mut', queued: 'mut', check: 'mut', error: 'bad' };
+// Prompt 45 (claude-code-media-mer-farger.md): Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå.
+const SC = { ok: 'ok', dl: 'dl', miss: 'bad', stall: 'warn', pause: 'mut', wait: 'wait', ann: 'wait', off: 'mut', seed: 'ok', meta: 'mut', queued: 'wait', check: 'mut', error: 'bad' };
 const tone = (st) => `t-${SC[st] ?? 'mut'}`;
+/** Prompt 45 (claude-code-media-tilbakeknapp.md): samme tilbakeknapp som resten av systemet – rund 40 px glassknapp med ‹, og hvor den går som tekst ved siden av. */
+const backBtn45 = (a, label) => `<div class="m45-bk"><button type="button" class="m45-back" data-m43="${a}" aria-label="Tilbake til ${esc(label)}" title="Tilbake (Esc)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><span class="m45-bkl">${esc(label)}</span></div>`;
+const isAdm45 = () => !!M.status?.admin;
 /** Prompt 44: plakat alltid i 2:3 (aspect-ratio), med statusprikk. */
 const poster = (x, cls) => `<span class="${cls}" style="background-color:${esc(x?.color || '#3c4a5c')}${x?.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"><span class="m43-dot ${tone(x?.status)}"></span></span>`;
 const norm44 = (t) => String(t ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9æøå]+/g, '');
@@ -237,6 +242,11 @@ function glHtml() {
 async function glimt(q) {
   q = q.trim(); if (!q) return;
   M.gl = { q, busy: true, res: null }; paint();
+  // Prompt 45: den felles Glimt-agenten (module media) først. Ren prat eller eldre server → Media-Glimt som før.
+  try {
+    const a = agentOn() ? await agent(q, 'media') : null;
+    if (a && !isPlain(a)) { if (M.gl) { M.gl.busy = false; M.gl.res = { text: agentFull(a), actions: [] }; } if (a.done.length) { M.tor = null; loadTor(); } paint(); return; }
+  } catch { /* faller tilbake */ }
   try { M.gl.res = await mapi('/glimt', { method: 'POST', json: { q } }); } catch (e) { M.gl.err = e.status === 404 ? 'Serveren har ikke Glimt for Media ennå.' : e.message; }
   if (M.gl) M.gl.busy = false;
   const k = M.gl?.res?.kind;
@@ -312,7 +322,7 @@ function libHtml(k) {
     const meta = k === 's' ? [x.year, x.network].filter(Boolean).join(' · ') : [x.year, x.profile].filter(Boolean).join(' · ');
     return `<button type="button" class="m43-lc" data-m43-open="${k}:${x.id}"><div class="m43-lp" style="background-color:${esc(x.color || '#3c4a5c')}${x.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"><b>${esc(x.title)}</b><span class="m43-dot t-${dot}"></span></div><span class="m43-lm ell">${esc(meta)}</span><b class="m43-s ${lc}">${esc(line)}</b></button>`;
   };
-  return `<div class="m43-row sb xwrap"><div class="m43-row g10 base"><b class="m43-h1">${k === 's' ? 'Serier' : 'Filmer'}</b><span class="t-mut">${nb(items.length)} ${k === 's' ? 'serier' : 'filmer'}</span></div><button type="button" class="m43-btn ink" data-m43="add">${k === 's' ? '+ Legg til serie' : '+ Legg til film'}</button></div>
+  return `<div class="m43-row sb xwrap"><div class="m43-row g10 base"><b class="m43-h1">${k === 's' ? 'Serier' : 'Filmer'}</b><span class="t-mut">${nb(items.length)} ${k === 's' ? 'serier' : 'filmer'}</span></div><span class="m43-row g8">${isAdm45() ? `<button type="button" class="m43-btn line" data-m45-unmon="all" title="Slett filer som ikke er overvåket, på tvers av alle ${k === 's' ? 'serier' : 'filmer'}">Rydd uovervåkede</button>` : ''}<button type="button" class="m43-btn ink" data-m43="add">${k === 's' ? '+ Legg til serie' : '+ Legg til film'}</button></span></div>
     <div class="m44-lf"><label class="m44-lq">${ic.search}<input name="lq" value="${esc(M.libQ)}" placeholder="Søk i ${nb(items.length)} ${k === 's' ? 'serier' : 'filmer'}" autocomplete="off" spellcheck="false" aria-label="Søk i biblioteket" data-glimt="off">${M.libQ ? `<button type="button" class="m43-ib ghost sm" data-m44="lqx" aria-label="Tøm søket">${ic.x}</button>` : '<span class="m44-kbd" aria-hidden="true">/</span>'}</label>
     <div class="m43-chips">${filters.map((f) => chip(`${f.label} ${f.count ?? ''}`.trim(), M.libF === f.id, `data-m43-libf="${esc(f.id)}"`)).join('')}</div></div>
     ${L.length ? `<div class="m43-grid">${L.map(card).join('')}</div>` : M.libQ.trim() ? `<div class="m43-empty"><span>Ingen ${k === 's' ? 'serier' : 'filmer'} i biblioteket som heter «${esc(M.libQ.trim())}».</span><button type="button" class="m43-btn ink" data-m44="lqadd">Søk etter «${esc(M.libQ.trim())}» for å legge til</button></div>` : '<span class="t-mut">Ingenting her.</span>'}`;
@@ -331,14 +341,16 @@ function banner(d, x) {
   const facts = [runtime, genres, yrs].filter(Boolean).map((t) => `<span>${esc(t)}</span>`).join('<i>·</i>') + (have ? `<i>·</i><span class="${(s ? x.missingCount || !aired : !x.hasFile) ? 'warn' : 'ok'}">${esc(have)}</span>` : '');
   const chips = [['MAPPE', x.path], ['STR.', x.sizeText], ['PROFIL', x.profile, 'prof'], [null, x.monitored ? 'Overvåket' : 'Ikke overvåket', s ? 'mon' : 'mmon'], s ? [null, x.statusLabel ?? (x.status === 'ended' ? 'Avsluttet' : 'Fortsetter')] : null, ['SPRÅK', x.language ?? x.originalLanguage], [s ? 'KANAL' : 'STUDIO', s ? x.network : x.studio]].filter((c) => c && c[1]);
   const bg = x.fanart ? `background-image:url('${esc(x.fanart)}')` : x.poster ? `background-image:url('${esc(x.poster)}')` : '';
-  return `<section class="m44-ban${x.fanart ? '' : ' nofan'}"><div class="m44-bbg" style="${bg}"></div><div class="m44-bgr"></div>
+  return `<section class="m44-ban${x.fanart ? '' : ' nofan'}" style="--pc:${esc(x.color || '#3c4a5c')}"><div class="m44-bbg" style="${bg}"></div><div class="m44-bgr"></div>
     <div class="m44-bin">${poster(x, 'm44-bpo')}<div class="m43-col grow mw0 g8"><div class="m43-row sb xtop"><span class="m44-bk">${s ? 'SONARR · SERIE' : 'RADARR · FILM'}</span>${nav}</div><b class="m44-bt">${esc(x.title)}</b><div class="m44-bf">${facts}</div>
       <div class="m44-bc">${chips.map(([l, v, f]) => f ? `<button type="button" class="m44-gc" data-m43-edit="${f}">${l ? `<span>${esc(l)}</span>` : ''}<b>${esc(v)}</b></button>` : `<span class="m44-gc">${l ? `<span>${esc(l)}</span>` : ''}<b class="mono">${esc(v)}</b></span>`).join('')}</div></div></div>
     ${x.overview && !/^\S.*\(\d{4}\) ·/.test(x.overview) ? `<p class="m44-bo">${esc(x.overview)}</p>` : ''}<span class="m44-bm">Metadata fra ${s ? 'TheTVDB' : 'TMDb'}</span></section>`;
 }
 
+/** Antall episoder uten overvåking som har fil (seriedetaljen). */
+const unmonN45 = (x) => (x?.seasons ?? []).reduce((a, se) => a + (se.episodes ?? []).filter((e) => e.hasFile && e.monitored === false).length, 0);
 function detHtml() {
-  const d = M.det, x = M.detail, back = `<button type="button" class="m43-back" data-m43="detback">‹ ${d.k === 's' ? 'Serier' : 'Filmer'}</button>`;
+  const d = M.det, x = M.detail, back = backBtn45('detback', d.k === 's' ? 'Serier' : 'Filmer');
   if (!x) return back + skel(300);
   if (x.error) return back + errBox(x.error);
   const chips = (L) => `<div class="m43-row xwrap g8">${L.map(([l, v, f]) => `<button type="button" class="m43-dchip" data-m43-edit="${f}"><span class="m43-lab">${esc(l)}</span><b>${esc(v)} ›</b></button>`).join('')}</div>`;
@@ -346,7 +358,7 @@ function detHtml() {
   if (d.k === 'm') {
     const st = x.status === 'ann' ? x.note || 'Annonsert' : x.statusText;
     const file = x.file ? `${x.file.quality ?? ''} · ${x.file.sizeText ?? ''} · ${x.file.path ?? x.path ?? ''}` : `Ingen fil ennå · lagres i ${x.path ?? x.rootFolder ?? '/data/media/film'}`;
-    const acts = [x.hasFile && x.play ? `<a class="m43-btn ink" href="${esc(x.play.url)}" target="_blank" rel="noopener">${esc(x.play.label)}</a>` : '', `<button type="button" class="m43-btn ${x.hasFile ? 'line' : 'ink'}" data-m43="mauto"${M.busy.mauto ? ' disabled' : ''}>${M.busy.mauto ? 'Søker …' : 'Automatisk søk'}</button>`, x.hasFile ? '<button type="button" class="m43-btn line" data-m44="mre">⟳ Last ned på nytt</button>' : '<button type="button" class="m43-btn line" data-m43="minter">Interaktivt søk</button>', x.hasFile ? '<button type="button" class="m43-btn line red-t" data-m44="mdel">Slett fil</button>' : ''].join('');
+    const acts = [x.hasFile && x.play ? `<a class="m43-btn ink" href="${esc(x.play.url)}" target="_blank" rel="noopener">${esc(x.play.label)}</a>` : '', `<button type="button" class="m43-btn ${x.hasFile ? 'line' : 'ink'}" data-m43="mauto"${M.busy.mauto ? ' disabled' : ''}>${M.busy.mauto ? 'Søker …' : 'Automatisk søk'}</button>`, x.hasFile && x.monitored === false && isAdm45() ? '<button type="button" class="m43-btn line red-t" data-m45-unmon="movie">Slett fil (ikke overvåket)</button>' : '', x.hasFile ? '<button type="button" class="m43-btn line" data-m44="mre">⟳ Last ned på nytt</button>' : '<button type="button" class="m43-btn line" data-m43="minter">Interaktivt søk</button>', x.hasFile ? '<button type="button" class="m43-btn line red-t" data-m44="mdel">Slett fil</button>' : ''].join('');
     return `${back}${head}<b class="m43-s ${tone(x.status)} m43-14">${esc(st ?? '')}</b></div></div>
       ${chips([['PROFIL', x.profile ?? '–', 'prof'], ['LAST NED NÅR DEN ER', x.availabilityLabel ?? '–', 'av'], ['OVERVÅKET', x.monitored ? 'Ja' : 'Nei', 'mmon']])}
       <div class="m43-row xwrap g8">${acts}</div>
@@ -354,7 +366,7 @@ function detHtml() {
   }
   const miss = x.missingCount ?? 0, aired = (x.seasons ?? []).reduce((a, se) => a + se.episodes.filter((e) => e.aired).length, 0), have = (x.seasons ?? []).reduce((a, se) => a + se.have, 0);
   const epTxt = x.seasons ? `${have} av ${aired} episoder · ${miss ? `${miss} mangler` : 'komplett'}` : x.episodesText ?? '';
-  const acts = [`<button type="button" class="m43-btn ${miss ? 'ink' : 'line'}" data-m43="sall"${miss && !M.busy.sall ? '' : ' disabled'}>${M.busy.sall ? 'Søker …' : x.searchLabel ?? 'Ingenting mangler'}</button>`, x.play ? `<a class="m43-btn line" href="${esc(x.play.url)}" target="_blank" rel="noopener">${esc(x.play.label)}</a>` : ''].join('');
+  const acts = [`<button type="button" class="m43-btn ${miss ? 'ink' : 'line'}" data-m43="sall"${miss && !M.busy.sall ? '' : ' disabled'}>${M.busy.sall ? 'Søker …' : x.searchLabel ?? 'Ingenting mangler'}</button>`, x.play ? `<a class="m43-btn line" href="${esc(x.play.url)}" target="_blank" rel="noopener">${esc(x.play.label)}</a>` : '', unmonN45(x) && isAdm45() ? `<button type="button" class="m43-btn line red-t" data-m45-unmon="series">Slett uovervåkede (${unmonN45(x)})</button>` : ''].join('');
   const seasons = (x.seasons ?? []).map((se, si) => {
     const open = M.open[`${x.id}-${se.number}`] ?? si === 0, aired = se.episodes.filter((e) => e.aired).length;
     const sub = aired ? `${se.have} av ${aired} sendt${se.missing ? ` · ${se.missing} mangler` : ''}` : `Ikke sendt ennå · ${se.total} episoder`;
@@ -368,7 +380,7 @@ function detHtml() {
         ${e.hasFile ? `<button type="button" class="m43-ib line" data-m44-epre="${e.id}" aria-label="Last ned ${esc(e.e)} på nytt" title="Last ned på nytt (interaktivt søk)">${ic.re}</button><button type="button" class="m43-ib line red-t" data-m44-epdel="${e.id}" aria-label="Slett filen til ${esc(e.e)}" title="Slett filen">${ic.trash}</button>` : ''}</div>`;
     }).join('') : '';
     return `<div class="m43-se"><div class="m43-seh"><button type="button" class="m43-ib ghost mk" data-m43-semon="${se.number}" aria-label="Overvåk sesongen" aria-pressed="${se.monitored}">${ic.mark(se.monitored)}</button><button type="button" class="m43-set" data-m43-setog="${se.number}" aria-expanded="${open}"><b>${esc(se.label)}</b><span class="${se.missing ? 't-warn' : 't-mut'}">${esc(sub)}</span></button>
-      ${se.canSearch ? `<button type="button" class="m43-btn sm line" data-m43-sesearch="${se.number}">Søk sesong</button>` : ''}${se.have > 0 ? `<button type="button" class="m43-btn sm line" data-m44-sere="${se.number}" title="Last ned sesongen på nytt (sesongpakke)">⟳ Sesong</button><button type="button" class="m43-btn sm line red-t" data-m44-sedel="${se.number}" title="Slett alle filer i sesongen">Slett filer</button>` : ''}<span class="m43-chev">${open ? '▴' : '▾'}</span></div>${eps}</div>`;
+      ${se.canSearch ? `<button type="button" class="m43-btn sm line" data-m43-sesearch="${se.number}">Søk sesong</button>` : ''}${se.have > 0 ? `<button type="button" class="m43-btn sm line" data-m44-sere="${se.number}" title="Last ned sesongen på nytt (sesongpakke)">⟳ Sesong</button><button type="button" class="m43-btn sm line red-t" data-m44-sedel="${se.number}" title="Slett alle filer i sesongen">Slett filer</button>` : ''}${isAdm45() && unmonN45({ seasons: [se] }) ? `<button type="button" class="m43-btn sm line red-t" data-m45-unmon="season:${se.number}" title="Slett filene til episoder i sesongen som ikke er overvåket">Slett uovervåkede</button>` : ''}<span class="m43-chev">${open ? '▴' : '▾'}</span></div>${eps}</div>`;
   }).join('');
   return `${back}${head}<b class="m43-s ${miss ? 't-warn' : 't-ok'} m43-14">${esc(epTxt)}</b></div></div>
     ${chips([['PROFIL', x.profile ?? '–', 'prof'], ['OVERVÅKING', x.monitorLabel ?? monLbl(x.monitor), 'mon'], ['SERIETYPE', x.seriesTypeLabel ?? 'Standard', 'typ']])}
@@ -384,7 +396,7 @@ const profsOf = (k) => (M.prof?.[k === 's' ? 'sonarr' : 'radarr'] ?? []).map((p)
 /* ---------------- Interaktivt søk ---------------- */
 
 function srchHtml() {
-  const s = M.srch, R = M.rel, back = `<button type="button" class="m43-back" data-m43="srback">‹ ${esc(s.backL ?? 'Tilbake')}</button>`;
+  const s = M.srch, R = M.rel, back = backBtn45('srback', s.backL ?? 'Tilbake');
   if (!R) return back + jobHtml();
   if (R.error) return back + (R.allFailed ? `<div class="m43-empty err"><b>${esc(R.error)}</b><div class="m43-row g8"><button type="button" class="m43-btn ink" data-m44="relagain">Prøv igjen</button><button type="button" class="m43-btn line" data-m43-tab="pro">Åpne Prowlarr</button></div></div>` : `<div class="m43-empty err"><b>Fikk ikke hentet data</b><span>${esc(R.error)}</span><button type="button" class="m43-btn line" data-m44="relagain">Prøv igjen</button></div>`);
   const c = R.context ?? {};
@@ -783,6 +795,15 @@ function bind(r) {
     const d = b.dataset;
     if (d.m43Tab) { M.tab = d.m43Tab; M.det = null; M.srch = null; M.job = null; M.libF = 'all'; M.srvOpen = false; enterTab(); poll(); paint(); r.querySelector('[data-m43-main]')?.scrollTo(0, 0); nav(); return; }
     if (await act44(b, d)) return; // prompt 44
+    if (d.m45Unmon) { // prompt 45: slett uovervåkede
+      const v = d.m45Unmon, film = v === 'movie' || (v === 'all' && M.tab === 'rad');
+      const q = { service: film ? 'radarr' : 'sonarr', server: M.site ?? undefined };
+      if (v === 'series' || v.startsWith('season:')) { q.seriesId = M.detail?.id; q.label = M.detail?.title; if (v.startsWith('season:')) { q.season = +v.slice(7); q.label = `${M.detail?.title} · sesong ${q.season}`; } }
+      else if (v === 'movie') { q.movieId = M.detail?.id; q.label = M.detail?.title; }
+      else q.label = film ? 'alle filmer' : 'alle serier';
+      import('./media45.js').then((m) => m.openUnmonitored(q, () => { if (M.det) openDet(M.det.k, M.det.id, true); else { M.ser = M.mov = null; enterTab(); paint(); } }));
+      return;
+    }
     if (d.m43Open) { const [k, id] = d.m43Open.split(':'); return openDet(k, id); }
     if (d.m43Libf) { M.libF = d.m43Libf; return paintMain(); }
     if (d.m43Seg) { M.seg = d.m43Seg; return paintMain(); }
@@ -823,7 +844,9 @@ function bind(r) {
     const a = d.m43;
     if (!a) return;
     if (a === 'close') return close();
-    if (a === 'set') { M.sh = 'set'; paintSheet(); loadStatus().then(() => { if (M.status?.admin && !M.access) mapi('/access').then((j) => { M.access = j; paintSheet(); }).catch((er) => { M.access = { error: er.message }; paintSheet(); }); }); return; }
+    // Prompt 45 (claude-code-innstillinger-samlet.md): innstillingene for Media ligger i Innstillinger → Media.
+    if (a === 'set') { import('./settings.js').then((m) => m.openSettings('media')).catch(() => { location.hash = '#/innstillinger/media'; }); return; }
+    if (a === 'set43') { M.sh = 'set'; paintSheet(); loadStatus().then(() => { if (M.status?.admin && !M.access) mapi('/access').then((j) => { M.access = j; paintSheet(); }).catch((er) => { M.access = { error: er.message }; paintSheet(); }); }); return; }
     if (a === 'shclose') return closeSheet();
     if (a === 'glclose') { M.gl = null; M.gq = ''; return paint(); }
     if (a === 'retry') { M.up = M.ser = M.mov = M.tor = M.idx = null; enterTab(); if (M.det) loadDetail(); if (M.srch) loadRel(); return paint(); }

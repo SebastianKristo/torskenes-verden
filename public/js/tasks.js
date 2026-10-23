@@ -14,6 +14,7 @@ import { api, esc, isMobile } from './util.js';
 import { onLive, liveOn } from './realtime.js';
 import { store } from './store.js';
 import { mountHa } from './tasks-ha.js';
+import { agent, agentOn, agentExtras, agentText } from './glimt-agent45.js'; // prompt 45
 import { needsAi41, splitLocal41, startJob41, trackJob41, jobsHtml41, madeWithHtml41, originCard41, glimtSources41, srcItems41, clearDone41 } from './tasks41.js'; // prompt 41: Glimt deler opp i bakgrunnen
 import { parse as gParse, pasteLines, isAsk, ask as gAsk, splitSugg, guess, dupes, PACK, MAT_FALLBACK, isoDay } from './tasks37-glimt.js';
 import { colorFor } from './house37.js';
@@ -121,6 +122,7 @@ function glimtCard() {
   const g = S.g;
   const ans = g.ans ? `<div class="tk-gans" role="status"><div class="tk-gat">${spk(false)}<span>${esc(g.ans.text)}</span></div>
       ${g.ans.items?.length ? `<div class="tk-gres">${g.ans.items.slice(0, 12).map((x) => `<span class="tk-gri"><span class="tk-dot" style="background:${esc(x.c ?? 'var(--t-ink)')}"></span><b>${esc(x.n)}</b>${x.m ? `<span class="tk-meta">${esc(x.m)}</span>` : ''}</span>`).join('')}</div>` : ''}
+      ${g.ans.agent ? agentExtras(g.ans.agent, agentCbT()) : ''}
       <div class="tk-opts">${g.ans.undo ? '<button type="button" class="tk-gbtn" data-tk-g="undo">Angre</button>' : ''}<button type="button" class="tk-gbtn" data-tk-g="clear">Lukk</button></div></div>` : '';
   return `<section class="tk-glimt" aria-label="Glimt"><form class="tk-gf" data-tk-gform>${spk(!!g.busy)}<input name="gq" value="${esc(g.q)}" placeholder="${esc(g.busy || 'Spør Glimt eller skriv en oppgave …')}" autocomplete="off" maxlength="2000" aria-label="Spør Glimt eller skriv en oppgave"${g.busy ? ' disabled' : ''}>
       <label class="tk-gcam" title="Bilde av handlelapp eller oppskrift" aria-label="Legg ved bilde"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><input type="file" accept="image/*" data-tk-gimg hidden></label>
@@ -131,6 +133,15 @@ function glimtCard() {
 /* ---------- Glimt-kort i listen (holde orden og huske på) ---------- */
 const tipHide = (k) => { try { return localStorage.getItem(`tk37_tip_${k}`) === '1'; } catch { return false; } };
 const tipSet = (k) => { try { localStorage.setItem(`tk37_tip_${k}`, '1'); } catch { /* */ } };
+// Prompt 45 (claude-code-gjoremal-glimt-forslag.md): «Ikke foreslå slike» slår av en forslagstype (huske_tip_off.pack) for brukeren.
+let tipOff = null;
+const tipOffGet = () => { if (tipOff) return tipOff; try { tipOff = JSON.parse(localStorage.getItem('huske_tip_off') || '{}') || {}; } catch { tipOff = {}; } api('/me/layout').then((l) => { if (l?.huske_tip_off && typeof l.huske_tip_off === 'object') { tipOff = { ...tipOff, ...l.huske_tip_off }; paint(); } }).catch(() => {}); return tipOff; };
+document.addEventListener('hl:tip-off45', (e) => { tipOff = { ...(tipOff ?? {}), ...(e.detail ?? {}) }; if (S.d) paint(); });
+function tipOffSet(kind, off = true) {
+  tipOff = { ...tipOffGet(), [kind]: off };
+  try { localStorage.setItem('huske_tip_off', JSON.stringify(tipOff)); } catch { /* */ }
+  api('/me/layout', { method: 'PUT', json: { huske_tip_off: tipOff } }).catch(() => {});
+}
 // Serverens Glimt-kort (GET /api/tasks/glimt/cards) når de finnes; ellers lokale regler under.
 const CARD_IC = { merge: ['M8 7h11v11H8zM5 4h11v2M5 4v11h2', '#3d7f8a'], overdue: ['M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18', '#b23a2a'], store: ['M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 7a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5', '#2f6b45'], packlist: ['M3 21h18M5 21V10l7-6 7 6v11M10 21v-5h4v5', '#a8661a'] };
 const CARD_SUB = { merge: 'Slå sammen til én. Tagger og deloppgaver beholdes.', overdue: 'Flytt dem til i morgen, eller arkiver det som ikke trengs lenger.', store: 'Appen varsler når du er ved en matbutikk.', packlist: 'Fra kalenderen.' };
@@ -144,7 +155,8 @@ async function loadCards() {
 function srvTips() {
   // Prompt 39 (claude-code-gjoremal-glimt-forslag.md): pakkeliste bare for reise/hytte – ikke bursdager, prøver o.l.
   const ok = (c) => c.kind !== 'packlist' || (/hytt|reise|ferie|fjell|tur\b|camping|fly|tog|ski/i.test(c.event?.title ?? c.text ?? '') && !/bursdag|fødselsdag|prøve|eksamen|innlevering/i.test(c.event?.title ?? c.text ?? ''));
-  return S.cards.map((c, i) => (ok(c) ? [c, i] : null)).filter(Boolean).map(([c, i]) => { const [ic, col] = CARD_IC[c.kind] ?? CARD_IC.merge; return `<div class="tk-tip"><span class="tk-tipi" style="--c:${col}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ic}"/></svg></span><span class="tk-main"><b>${esc(c.text)}</b>${CARD_SUB[c.kind] && !/\?$/.test(c.text) ? `<span class="tk-meta">${esc(c.kind === 'store' && c.list ? `${CARD_SUB.store.replace('Appen', `${c.list.name}: appen`)}` : CARD_SUB[c.kind])}</span>` : ''}</span><span class="tk-tipb">${(c.actions ?? []).map((a, j) => `<button type="button" class="tk-gbtn${j ? '' : ' pri'}" data-tk-card="${i}:${j}">${esc(a.label)}</button>`).join('')}${(c.actions ?? []).some((a) => a.action === 'dismiss') ? '' : `<button type="button" class="tk-gbtn" data-tk-card="${i}:x">Ikke nå</button>`}</span></div>`; }).join('');
+  const off = tipOffGet();
+  return S.cards.map((c, i) => (ok(c) && !off[{ packlist: 'pack', merge: 'merge', overdue: 'late', store: 'store' }[c.kind] ?? c.kind] ? [c, i] : null)).filter(Boolean).map(([c, i]) => { const [ic, col] = CARD_IC[c.kind] ?? CARD_IC.merge; return `<div class="tk-tip"><span class="tk-tipi" style="--c:${col}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ic}"/></svg></span><span class="tk-main"><b>${esc(c.text)}</b>${CARD_SUB[c.kind] && !/\?$/.test(c.text) ? `<span class="tk-meta">${esc(c.kind === 'store' && c.list ? `${CARD_SUB.store.replace('Appen', `${c.list.name}: appen`)}` : CARD_SUB[c.kind])}</span>` : ''}</span><span class="tk-tipb">${(c.actions ?? []).map((a, j) => `<button type="button" class="tk-gbtn${j ? '' : ' pri'}" data-tk-card="${i}:${j}">${esc(a.label)}</button>`).join('')}${(c.actions ?? []).some((a) => a.action === 'dismiss') ? '' : `<button type="button" class="tk-gbtn" data-tk-card="${i}:x">Ikke nå</button>`}${c.kind === 'packlist' ? '<button type="button" class="tk-gbtn" data-tk-tip="off:pack">Ikke foreslå slike</button>' : ''}</span></div>`; }).join('');
 }
 async function cardAct(ref) {
   const [i, j] = ref.split(':'), c = S.cards?.[+i];
@@ -162,20 +174,21 @@ async function cardAct(ref) {
 function tips(inL) {
   if (Array.isArray(S.cards)) return srvTips();
   const out = [], norm = inL.map((t) => ({ id: t.id, n: tTitle(t), l: tList(t), done: t.done }));
-  for (const d of dupes(norm).slice(0, 2)) {
+  const off = tipOffGet();
+  for (const d of off.merge ? [] : dupes(norm).slice(0, 2)) {
     const k = `dup_${d.l}_${d.n.toLowerCase()}`;
     if (!tipHide(k)) out.push({ ic: 'M8 7h11v11H8zM5 4h11v2M5 4v11h2', c: '#3d7f8a', t: `${d.ids.length}× «${d.n}» i ${listOf(d.l)?.name ?? 'listen'}`, s: 'Slå sammen til én. Tagger og deloppgaver beholdes.', b1: ['Slå sammen', `merge:${d.ids.join(',')}`], b2: ['Ikke nå', `hide:${k}`] });
   }
   const late = inL.filter((t) => !t.done && t.due && t.due < today());
-  if (late.length >= 2 && !tipHide(`late_${today()}`)) out.push({ ic: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18', c: '#b23a2a', t: `${late.length} gjøremål er forfalt`, s: 'Flytt dem til i morgen, eller arkiver det som ikke trengs lenger.', b1: ['Flytt til i morgen', 'late-move'], b2: ['Arkiver', 'late-arch'] });
+  if (late.length >= 2 && !off.late && !tipHide(`late_${today()}`)) out.push({ ic: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18', c: '#b23a2a', t: `${late.length} gjøremål er forfalt`, s: 'Flytt dem til i morgen, eller arkiver det som ikke trengs lenger.', b1: ['Flytt til i morgen', 'late-move'], b2: ['Arkiver', 'late-arch'] });
   const handel = S.d.lists.find((l) => /handel|handle/i.test(l.name));
   const hItems = handel ? S.d.items.filter((t) => tList(t) === handel.id && !t.done) : [];
-  if (hItems.length >= 2 && (S.cur === 'alle' || S.cur === handel.id) && !hItems.every((t) => t.place === 'store') && !tipHide('store')) {
+  if (hItems.length >= 2 && (S.cur === 'alle' || S.cur === handel.id) && !hItems.every((t) => t.place === 'store') && !off.store && !tipHide('store')) {
     out.push({ ic: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 7a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5', c: '#2f6b45', t: 'Påminn meg ved butikken', s: `${hItems.length} varer i ${handel.name}. Appen varsler når du er ved Kiwi, Rema eller Coop.`, b1: ['Slå på', 'store-on'], b2: ['Ikke nå', 'hide:store'] });
   }
   const ev = tripEvent();
-  if (ev && !tipHide(`trip_${ev.key}`)) out.push({ ic: 'M3 21h18M5 21V10l7-6 7 6v11M10 21v-5h4v5', c: '#a8661a', t: `${ev.title} om ${ev.days} dager`, s: 'Fra kalenderen. Lage pakkeliste og huske brøyting?', b1: ['Lag pakkeliste', `pack:${ev.key}`], b2: ['Ikke nå', `hide:trip_${ev.key}`] });
-  return out.map((x) => `<div class="tk-tip"><span class="tk-tipi" style="--c:${x.c}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.ic}"/></svg></span><span class="tk-main"><b>${esc(x.t)}</b><span class="tk-meta">${esc(x.s)}</span></span><span class="tk-tipb"><button type="button" class="tk-gbtn pri" data-tk-tip="${esc(x.b1[1])}">${esc(x.b1[0])}</button>${x.b2 ? `<button type="button" class="tk-gbtn" data-tk-tip="${esc(x.b2[1])}">${esc(x.b2[0])}</button>` : ''}</span></div>`).join('');
+  if (ev && !tipHide(`trip_${ev.key}`) && !off.pack) out.push({ b3: ['Ikke foreslå slike', 'off:pack'], ic: 'M3 21h18M5 21V10l7-6 7 6v11M10 21v-5h4v5', c: '#a8661a', t: `${ev.title} om ${ev.days} dager`, s: 'Fra kalenderen. Lage pakkeliste og huske brøyting?', b1: ['Lag pakkeliste', `pack:${ev.key}`], b2: ['Ikke nå', `hide:trip_${ev.key}`] });
+  return out.map((x) => `<div class="tk-tip"><span class="tk-tipi" style="--c:${x.c}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.ic}"/></svg></span><span class="tk-main"><b>${esc(x.t)}</b><span class="tk-meta">${esc(x.s)}</span></span><span class="tk-tipb"><button type="button" class="tk-gbtn pri" data-tk-tip="${esc(x.b1[1])}">${esc(x.b1[0])}</button>${x.b2 ? `<button type="button" class="tk-gbtn" data-tk-tip="${esc(x.b2[1])}">${esc(x.b2[0])}</button>` : ''}${x.b3 ? `<button type="button" class="tk-gbtn" data-tk-tip="${esc(x.b3[1])}">${esc(x.b3[0])}</button>` : ''}</span></div>`).join('');
 }
 // Hytte/reise i kalenderen de neste 3–21 dagene (fra «Kommende» på Dashboard).
 function tripEvent() {
@@ -412,6 +425,15 @@ function setAns(a) {
 async function glimtRun(q, { image = null } = {}) {
   q = String(q ?? '').trim();
   if (!q && !image) return;
+  // Prompt 45: tekst går til den felles Glimt-agenten (module tasks). Bilder og eldre server: som før.
+  if (!image && agentOn()) {
+    S.g.q = ''; S.g.ans = null; S.g.busy = 'Glimt jobber …'; paint();
+    try {
+      const a = await agent(q, 'tasks', { listId: S.cur !== 'alle' && S.cur !== 'arkiv' && S.cur !== 'glimt41' ? S.cur : undefined, selectedId: S.ed ?? S.sel ?? undefined });
+      if (a) { setAgentAns(a); if (a.done.length) load(); return; }
+    } catch (er) { setAns({ text: `Glimt fikk ikke svar: ${er.message}`, items: [] }); return; }
+    S.g.busy = '';
+  }
   // Prompt 41: lange beskjeder deles opp av AI i bakgrunnen. Feltet tømmes med en gang; en stiplet rad viser jobben.
   if (!image && !isAsk(q) && needsAi41(q)) {
     S.g.q = ''; S.g.ans = null;
@@ -436,6 +458,18 @@ async function glimtRun(q, { image = null } = {}) {
   if (image) return setAns({ text: 'Bildelesing krever Glimt på serveren. Skriv varene i stedet, eller lim inn en liste.', items: [] });
   try { await localGlimt(q); } catch (er) { setAns({ text: er.message, items: [] }); }
 }
+/* Prompt 45: svaret fra agenten i Glimt-kortet. Oppgaver som ble laget kan angres i 10 s (slettes igjen). */
+function setAgentAns(a) {
+  const made = a.done.filter((x) => /^tasks\.(create|add)/.test(x.tool ?? '')).flatMap((x) => (Array.isArray(x.result?.items) ? x.result.items : x.result?.id ? [x.result] : []));
+  const items = made.length ? made.map((x) => (x.id != null && S.d?.items && !S.d.items.some((y) => String(y.id) === String(x.id)) ? (S.d.items.unshift(x), resItem(x)) : resItem(x)))
+    : a.results.filter((r) => r.kind === 'task').map((r) => ({ n: r.title ?? '', c: r.color, m: [r.subtitle, r.date].filter(Boolean).join(' · ') }));
+  setAns({ text: agentText(a, { plain: true }) || 'Ferdig.', items, undo: made.length ? { ids: made.map((x) => x.id).filter((x) => x != null) } : null, agent: a.ask || a.confirm || a.results.some((r) => r.kind !== 'task') ? a : null });
+}
+const agentCbT = () => ({
+  resend: async (t, ctx) => { S.g.busy = 'Glimt jobber …'; paint(); try { const a = await agent(t, 'tasks', { listId: S.cur !== 'alle' && S.cur !== 'arkiv' ? S.cur : undefined, ...ctx }); if (a) { setAgentAns(a); if (a.done.length) load(); } } catch (er) { setAns({ text: er.message, items: [] }); } },
+  update: (a) => { setAgentAns(a); if (a.done.length) load(); },
+  open: (r) => { if (r.kind !== 'task' || !r.id) return false; const t = S.d?.items?.find((x) => String(x.id) === String(r.id)); if (!t) return false; S.ed = String(t.id); S.tagIn = ''; S.subIn = ''; paintSheets(); return true; },
+});
 /** Lokal reserve for lange beskjeder (eldre server): ett punkt per handling, note på begrunnelsen, «Laget med Glimt» lokalt. */
 async function localSplit41(q) {
   const P = splitLocal41(q), at = new Date().toISOString(), made = [];
@@ -639,6 +673,7 @@ function bind(h) {
     if (t.dataset.tkTip) {
       const [k, arg] = t.dataset.tkTip.split(/:(.*)/s);
       if (k === 'hide') { tipSet(arg); return paint(); }
+      if (k === 'off') { tipOffSet(arg); flash('Glimt foreslår ikke pakkelister lenger. Slå på igjen i Gjøremål → Innstillinger → Forslag fra Glimt.'); return paint(); }
       if (k === 'merge') return merge(arg.split(','));
       const late = S.d.items.filter((x) => !x.done && x.due && x.due < today() && (S.cur === 'alle' || tList(x) === S.cur));
       if (k === 'late-move') { await Promise.all(late.map((x) => patchItem(x, { due: isoDay(1) }))); flash(`Flyttet ${late.length} til i morgen`); return paint(); }

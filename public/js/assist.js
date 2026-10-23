@@ -5,11 +5,10 @@
 //   fields, progress, title, model, input}) og GET /api/assist/:id (reserve hvert 1,5 s).
 // - Mangler endepunktet (eldre server, 404/405): enkel reserve her (vær fra /api/weather, kalenderen fra /api/kalender,
 //   prøveperioder med trial-parse.js, ellers /api/search/ask).
-// Kommer svaret mens fanen er skjult, vises banneret «Glimt svarte mens du var borte» når brukeren kommer tilbake (4 s).
+// Kommer svaret mens fanen er skjult, sender serveren et systemvarsel. Ingen banner i appen (prompt 45).
 // Serveren sender selv Web Push når fanen ikke er synlig (presence, se webpush.js).
 import { onLive } from './realtime.js';
 import { aiStart, aiUpdate, aiDone } from './ai-jobs.js';
-import { glimt } from './glimt.js';
 import { parseTrial, trialSentence } from './trial-parse.js';
 import { isQuestion } from './ask36.js';
 
@@ -177,31 +176,10 @@ export async function whereIs(q, t0 = Date.now()) {
   return { ...base, text, person: { userId: m.userId, name: m.name }, place: { name: zone?.name ?? geo, lat: L.lat, lon: L.lon }, open: { route: 'familie', person: m.userId } };
 }
 
-/* ---------------- «Glimt svarte mens du var borte» ---------------- */
-
-let away = null;
-// Prompt 39: «Vis svaret i appen også» (n_ai_in i /api/me/notify, standard på). Av = ingen banner, svaret ligger bare i chatten.
-let aiIn = null;
-const loadAiIn = () => fetch('/api/me/notify', { credentials: 'same-origin', cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((j) => { const n = j?.notify ?? j; aiIn = n && typeof n === 'object' ? n.n_ai_in !== false : true; }).catch(() => { aiIn = true; });
-function awayAnswer(q, text) {
-  if (!text) return;
-  away = { q, text };
-  loadAiIn().then(() => { if (!aiIn) away = null; else if (!document.hidden) showAway(); });
-}
-document.addEventListener('visibilitychange', () => { if (!document.hidden && away) setTimeout(showAway, 250); });
-function showAway() {
-  const a = away; away = null;
-  if (!a || aiIn === false) return;
-  let el = document.getElementById('glimt-away');
-  if (!el) {
-    el = document.createElement('div'); el.id = 'glimt-away'; el.className = 'glimt-away'; el.setAttribute('role', 'status');
-    document.body.appendChild(el);
-    el.addEventListener('click', () => el.classList.remove('on'));
-  }
-  el.innerHTML = `${glimt(26, 'ferdig', { dark: true })}<span class="glimt-away-t"><b>Glimt svarte mens du var borte</b><span data-no-i18n>${boldHtml(a.text)}</span></span>`;
-  requestAnimationFrame(() => el.classList.add('on'));
-  clearTimeout(showAway.t); showAway.t = setTimeout(() => el.classList.remove('on'), 4000);
-}
+/* ---------------- Svar mens fanen er skjult ----------------
+   Prompt 45 (claude-code-glimt-kun-systemvarsel.md): ingen banner i appen. Serveren sender selv systemvarsel (Web Push)
+   når fanen ikke er synlig; svaret ligger bare der det hører hjemme (boblen under feltet / chatten). */
+function awayAnswer() { /* bevisst tom */ }
 
 /* ---------------- Prompt 35: været for et sted (claude-code-ai-sok-vaer-sted.md) ---------------- */
 // Stedet står etter «i / på / in / for / at / ved / rundt», fram til «i morgen / i dag / i kveld / nå / tomorrow …» eller slutten.

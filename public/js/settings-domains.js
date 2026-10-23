@@ -52,7 +52,29 @@ function gscGuideHtml() {
 async function loadGsc() {
   try { S.gsc = await api('/domains/gsc/sites'); S.gscErr = ''; } catch (e) { S.gsc = e.status === 404 ? { missing: true } : null; S.gscErr = e.status === 404 ? '' : e.message; }
   try { S.imp = await api('/domains/import'); } catch { S.imp = null; }
+  // Prompt 45: autentisering (OAuth / servicekonto), forsinkelse og dataState fra GET /api/gsc.
+  try { S.gscCfg = await api('/gsc'); } catch { S.gscCfg = null; }
   rerender();
+}
+/* Prompt 45 (claude-code-search-console-statistikk.md): servicekonto som alternativ til OAuth (bare admin, nøkkelen blir på serveren). */
+function saHtml() {
+  const C = S.gscCfg;
+  if (!C || S.gsc?.missing) return '';
+  const sa = C.serviceAccount;
+  const row = sa ? `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>Servicekonto</b><span class="mono">${esc(sa.email ?? '')}${sa.projectId ? ` · ${esc(sa.projectId)}` : ''}</span></span><button type="button" class="sg-pill danger" data-dom45-saoff>Fjern</button></div>`
+    : `<label class="sg-row gsc45-sa">${domIc40('gsc')}<span class="sg-txt"><b>Bruk servicekonto i stedet</b><span>Last opp JSON-nøkkelfila fra Google Cloud. Legg så til e-posten til servicekontoen som bruker på eiendommen i Search Console.</span></span><span class="sg-btn2">${S.saBusy ? 'Laster opp …' : 'Velg fil'}</span><input type="file" accept="application/json,.json" data-dom45-sa hidden${S.saBusy ? ' disabled' : ''}></label>`;
+  const info = `Henter med ${C.auth === 'service-account' ? 'servicekonto' : C.auth === 'oauth' ? 'Google-innlogging (OAuth)' : 'ingen tilkobling ennå'} · Google har ${C.lagDays ?? 3} dagers forsinkelse, så de nyeste dagene kommer senere${C.dataState ? ` · dataState «${esc(C.dataState)}»` : ''}.`;
+  return `<section class="sg"><div class="sg-t">Search Console · tilkobling</div><div class="sg-box">${row}</div><div class="sg-note${S.saErr ? ' red' : ''}">${S.saErr ? esc(S.saErr) : S.saMsg ? esc(S.saMsg) : info}</div></section>`;
+}
+async function uploadSa(file) {
+  S.saBusy = true; S.saErr = ''; S.saMsg = ''; rerender();
+  try {
+    const json = await file.text();
+    const r = await api('/gsc/service-account', { method: 'POST', json: { json } });
+    S.saMsg = r?.message || `Servicekontoen ${r?.email ?? ''} ser ${(r?.sites ?? []).length} eiendommer.`;
+  } catch (e) { S.saErr = e.status === 404 ? 'Serveren støtter ikke servicekonto ennå. Oppdater Homelab.' : e.message; }
+  S.saBusy = false;
+  await loadGsc();
 }
 function gscHtml() {
   if (!admin()) return '';
@@ -70,7 +92,7 @@ function gscHtml() {
       ${x.state === 'i-bruk' ? `<span class="gsc39-on">✓ I bruk</span><button type="button" class="sg-btn2" data-dom43-gtest="${esc(x.domain)}"${S.gscTest?.domain === x.domain && S.gscTest.busy ? ' disabled' : ''}>${S.gscTest?.domain === x.domain && S.gscTest.busy ? 'Tester …' : 'Test'}</button>` : x.state === 'bruk' ? `<button type="button" class="sg-btn2" data-dom-gscuse="${esc(x.domain)}" data-site="${esc(x.siteUrls?.[0] ?? '')}"${S.gscBusy === x.domain ? ' disabled' : ''}>Bruk</button>` : `<button type="button" class="sg-btn2" data-dom-gscadd="${esc(x.domain)}"${S.gscBusy === x.domain ? ' disabled' : ''}>${S.gscBusy === x.domain ? 'Legger til …' : '+ Legg til'}</button>`}</div>${testOut(x)}`).join('');
     box = `<div class="sg-row">${domIc40('gsc')}<span class="sg-txt"><b>${esc(G.email || 'Google-kontoen')}</b><span>${G.count ?? (G.sites ?? []).length} ${(G.count ?? (G.sites ?? []).length) === 1 ? 'eiendom' : 'eiendommer'} · kun lesetilgang</span></span><button type="button" class="sg-pill danger" data-dom-gscoff>Koble fra</button></div>${rows || '<div class="sg-row"><span class="sg-txt"><span>Ingen eiendommer i kontoen. Trykk ? for hvordan du legger til en.</span></span></div>'}`;
   }
-  return `<section class="sg"><div class="sg-t gsc39-t">Google Search Console${q}</div><div class="sg-box">${box}</div>${G?.error ? `<div class="sg-note red">${esc(G.error)}</div>` : ''}</section>${importHtml()}`;
+  return `<section class="sg"><div class="sg-t gsc39-t">Google Search Console${q}</div><div class="sg-box">${box}</div>${G?.error ? `<div class="sg-note red">${esc(G.error)}</div>` : ''}</section>${saHtml()}${importHtml()}`;
 }
 /** «Hent domener» fra Search Console og Cloudflare (GET/POST /api/domains/import). */
 function importHtml() {
@@ -173,6 +195,7 @@ export function domainsPane() {
 }
 
 export async function domainsClick(e) {
+  if (e.target.closest('[data-dom45-saoff]')) { e.preventDefault(); if (!confirm('Fjerne servicekontoen? Search Console bruker da Google-innloggingen igjen.')) return true; try { await api('/gsc/service-account', { method: 'DELETE' }); S.saMsg = 'Servicekontoen er fjernet.'; } catch (er) { S.saErr = er.message; } await loadGsc(); return true; }
   if (e.target.closest('[data-dom-gscguide]')) { e.preventDefault(); S.guide = 'gsc'; rerender(); return true; }
   if (e.target.closest('[data-dom-gscconnect]')) { e.preventDefault(); location.href = `/api/gsc/auth?return=${encodeURIComponent('/#/innstillinger/domener')}`; return true; }
   if (e.target.closest('[data-dom-gscoff]')) { e.preventDefault(); if (!confirm('Koble fra Google Search Console? Tallene fra Google Søk slettes.')) return true; try { await api('/gsc', { method: 'DELETE' }); } catch (er) { S.gscErr = er.message; } await loadGsc(); return true; }
@@ -208,6 +231,7 @@ function syncForm(f) {
   S.form = { name: f.elements.name.value, url: f.elements.url?.value ?? S.form.url, source: f.elements.source.value, token: f.elements.token?.value ?? S.form.token };
 }
 export function domainsChange(e) {
+  if (e.target.matches?.('[data-dom45-sa]')) { const f = e.target.files?.[0]; e.target.value = ''; if (f) uploadSa(f); return true; } // prompt 45
   const f = e.target.closest('[data-dom-form]');
   if (!f) return false;
   syncForm(f);
