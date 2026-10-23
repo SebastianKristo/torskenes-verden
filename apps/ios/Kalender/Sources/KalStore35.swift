@@ -99,6 +99,8 @@ extension KalStore {
         if let v = p["weather"] { showWx = v == "true" }
         if let v = p["theme"], ["system", "light", "dark"].contains(v), v != theme { theme = v }
         if let v = p["defaultReminder"], let m = KalCalAPI35.remFromServer(v), m != defRemRaw { defRemRaw = m }
+        // Prompt 46: standardkalenderen (samme som web og Homelab).
+        if let v = p["defaultCalendar"], !v.isEmpty, v != defCal46 { defCal46 = v }
     }
 
     /* ---------- Kalendere ---------- */

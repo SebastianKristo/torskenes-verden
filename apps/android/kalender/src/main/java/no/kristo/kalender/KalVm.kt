@@ -418,17 +418,21 @@ class KalVm(app: Application) : AndroidViewModel(app) {
 
     fun openNew(d0: LocalDate? = null, s0: Int? = null, e0: Int? = null) {
         Hap.tick()
-        val T = today()
-        val base = d0 ?: if (v == "mnd" || v == "ar" || v == "liste") T else a
-        val nm = nowMin()
-        val st = s0 ?: minOf(23 * 60, ((nm + 1 + 29) / 30) * 30)
+        // Prompt 46: valgt dag/tidsluke, ellers i dag (Uke/3 d/Dag: første synlige dag når i dag ikke vises), neste hele time.
+        val base = d0 ?: newDay46()
+        val st = (s0 ?: nextHour46()).coerceIn(0, 23 * 60 + 45)
         // Prompt 35: «Standard varighet» fra Innstillinger.
-        nf = KNewForm(d = if (base.isBefore(T)) T else base, s = st, e = e0 ?: minOf(1439, st + dd), cal = writableDefault(), rem = drem)
+        var en = e0 ?: minOf(1439, st + dd)
+        if (en <= st) en = minOf(1439, st + dd)
+        val f = KNewForm(d = base, s = st, e = en, cal = writableDefault(), rem = drem)
+        nf = f
+        // Prompt 46: aldri grå skjerm – arket må melde fra innen 1,5 s, ellers «Kunne ikke åpne ny hendelse» + Prøv igjen.
+        Kal46Guard.arm(this, f)
     }
 
     /** Personlig, eller første skrivbare kalender fra serveren. */
-    private fun writableDefault(): String = cals.firstOrNull { (it.id == "p" || it.key == "p") && it.writable && !it.hidMenu }?.id
-        ?: cals.firstOrNull { it.writable && !it.hidMenu }?.id ?: "p"
+    /** Prompt 46: standardkalenderen (Innstillinger → Standardkalender), ellers Google, ellers Personlig, ellers første skrivbare. */
+    fun writableDefault(): String = Kal46Prefs.pick(cals, Kal46Prefs.defCal(ctx))
 
     fun closeNew() { Hap.dismiss(); nf = null }
 
@@ -451,7 +455,9 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         if (swRecent44) return
         Hap.tick()
         val st = Kal44.startFor(d, at)
-        nf = KNewForm(d = d, s = st, e = minOf(1439, st + dd), cal = writableDefault(), rem = drem)
+        val f = KNewForm(d = d, s = st, e = minOf(1439, st + dd), cal = writableDefault(), rem = drem)
+        nf = f
+        Kal46Guard.arm(this, f)
     }
 
     fun canEdit44(e: KEv): Boolean = !Kal44.readOnly(e) && (e.editable || e.pending) && !no.kristo.kalender.Kal41.isBirthday(e, cal(e.cal).n)
@@ -564,9 +570,12 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         // En innlimt melding (SMS/e-post) uten sikkert klokkeslett: Glimt (LLM) i bakgrunnen.
         if (looksPasted(t) && p.s == null) { ct = ""; quick(t); return }
         ct = ""
-        val e = KEv("u" + System.currentTimeMillis(), p.t, resolveCal(p.cal), p.d, p.s, p.e, rem = p.rem, src = p.src)
-        a = p.d
-        add(e, "Glimt la til «${p.t}» · " + dl(p.d) + (if (p.all) "" else " " + hm(p.s ?: 0)))
+        // Prompt 46: Glimt (module:'calendar') tolker tittel/sted og lagrer i standardkalenderen; lokal lagring som reserve.
+        a = Kal46Rask.merged(this, p, t).first.d
+        Kal46Rask.send(this, t, p) { m, loc ->
+            val e = KEv("u" + System.currentTimeMillis(), m.t, resolveCal(m.cal), m.d, m.s, m.e, loc = loc.ifBlank { null }, rem = m.rem, src = m.src)
+            add(e, "Glimt la til «${m.t}» · " + dl(m.d) + (if (m.all) "" else " " + hm(m.s ?: 0)))
+        }
     }
 
     private fun looksPasted(t: String) = t.contains('\n') || t.length > 90

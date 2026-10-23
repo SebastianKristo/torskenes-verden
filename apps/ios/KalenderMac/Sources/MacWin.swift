@@ -161,9 +161,8 @@ final class MacWin: ObservableObject {
 
     func openNew(day: String? = nil, s: Int? = nil, e: Int? = nil) {
         if web38Cmd(day == nil ? "new" : "new:" + (day ?? "")) { return }
-        let tk: String = KalD.todayKey()
-        var base: String = (view == "mnd" || view == "ar" || view == "liste") ? tk : anchor
-        if let day { base = day }
+        // Prompt 46: valgt dag/tidsluke, ellers i dag – i Uke/3 d/Dag første synlige dag når i dag ikke vises.
+        let base: String = day ?? newDay46()
         newForm = MacStore.shared.makeForm(day: base, s: s, e: e)
     }
 

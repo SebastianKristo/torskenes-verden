@@ -316,6 +316,14 @@ struct KalRoot: View {
                 .transition(drawerIn)
                 .zIndex(52)
         }
+        // Prompt 46: arket kom ikke fram – feilmelding med «Prøv igjen» i stedet for grå skjerm.
+        if KalNew46Guard.shared.failed != nil {
+            KalNewFail46()
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 90)
+                .transition(.opacity)
+                .zIndex(69)
+        }
         // Prompt 44: «Endret et annet sted. Behold din eller deres?» etter Lagre.
         if KalEdit44Model.shared.conflict != nil {
             KalDim { KalStore.shared.resolveConflict44(keepMine: false) }

@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
@@ -185,7 +186,10 @@ fun NewSheet(vm: KalVm) {
     val fr = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
     val ok = f.t.isNotBlank()
+    val dens = androidx.compose.ui.platform.LocalDensity.current.density
     SheetFrame(behindIme = true) {
+        // Prompt 46: arket melder fra til vakten når innholdet er lagt ut (ellers lukkes bakteppet med en feilmelding).
+        Column(Modifier.fillMaxWidth().onSizeChanged { no.kristo.kalender.Kal46Guard.seen(it.height, dens) }, verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Prompt 44: Rediger åpner samme ark med «Rediger» og «Lagre». Avbryt går tilbake til detaljarket.
             LinePill("Avbryt", { val back = f.editId; vm.closeNew(); if (back != null) vm.det = back })
@@ -227,6 +231,7 @@ fun NewSheet(vm: KalVm) {
         // Prompt 44: DELTAKERE (brukere i appen og e-post til andre).
         People44(vm, f)
         if (f.editId == null) Tx("Tips: skriv heller i feltet nederst, f.eks. «frisør 14.30 25.10», så fyller Glimt ut alt.", man(12.5.sp, FontWeight.Medium, k.mut), maxLines = 3)
+        }
     }
 }
 

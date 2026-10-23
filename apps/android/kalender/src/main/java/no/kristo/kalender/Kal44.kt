@@ -181,7 +181,8 @@ object Kal44 {
         val raw = runCatching { s.api.get("/api/users/directory", timeout = 10_000) }.getOrNull() ?: return emptyList<KUser44>() to ""
         val t = raw.trim()
         val obj = if (t.startsWith("{")) runCatching { JSONObject(t) }.getOrNull() else null
-        val arr = if (t.startsWith("[")) JSONArray(t) else obj?.optJSONArray("users") ?: JSONArray()
+        // Prompt 46: et uventet svar skal aldri krasje Ny hendelse-arket (LaunchedEffect i DELTAKERE).
+        val arr = if (t.startsWith("[")) runCatching { JSONArray(t) }.getOrDefault(JSONArray()) else obj?.optJSONArray("users") ?: JSONArray()
         var me = obj?.optJSONObject("me")?.optStrOrNull("email") ?: ""
         val out = ArrayList<KUser44>()
         for (i in 0 until arr.length()) {

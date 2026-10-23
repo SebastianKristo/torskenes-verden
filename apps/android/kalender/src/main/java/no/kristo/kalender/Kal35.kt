@@ -181,6 +181,8 @@ object Kal35Prefs {
         if (has("weather")) KalPrefs.setWeather(ctx, prefs.optBoolean("weather", true))
         if (has("theme")) prefs.optString("theme").takeIf { it in setOf("system", "light", "dark") }?.let { KalPrefs.setTheme(ctx, it) }
         if (has("defaultReminder")) KalPrefs.setDefRem(ctx, remFromPref(prefs.optString("defaultReminder")))
+        // Prompt 46: standardkalenderen (samme som web, Homelab og Glimt).
+        if (prefs.has("defaultCalendar") && !prefs.isNull("defaultCalendar")) prefs.optString("defaultCalendar").takeIf { it.isNotBlank() }?.let { Kal46Prefs.setDefCal(ctx, it) }
     }
 }
 

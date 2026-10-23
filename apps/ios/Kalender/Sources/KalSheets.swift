@@ -248,7 +248,8 @@ struct KalNewSheet: View {
     var body: some View {
         KalSheetFrame(behindKeyboard: true) {
             ScrollView {
-                fields.padding(.bottom, kbPad)
+                // Prompt 46: arket melder fra til vakten når innholdet er lagt ut (ellers lukkes bakteppet med en feilmelding).
+                fields.padding(.bottom, kbPad).modifier(KalNewSeen46())
             }
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
@@ -409,6 +410,7 @@ struct KalNewCals44: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             KalLabel(text: "KALENDER")
+            KalNewCalsHint46()
             KalFlow(spacing: 6) {
                 ForEach(list) { (c: KalCal) in
                     KalChip(title: c.name, on: cal == c.id, dot: t.calColor(c)) { cal = c.id }

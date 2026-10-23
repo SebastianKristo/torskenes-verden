@@ -147,6 +147,8 @@ struct MacSettingsView: View {
             .pickerStyle(.segmented)
             .disabled(!store.menuBarOn)
             Toggle("Antall hendelser i dag på Dock-ikonet", isOn: $store.dockBadge)
+            // Prompt 46: standardkalenderen for «+ Ny hendelse» og Glimt.
+            MacDefCal46Picker()
             Picker("Standardvarsel for nye hendelser", selection: $store.defRemRaw) {
                 Text("Ingen").tag(-1)
                 Text("10 min før").tag(10)

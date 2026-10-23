@@ -318,7 +318,11 @@ enum KalServer41 {
             found = !loc.isEmpty || !ext.isEmpty
         }
         if !found { return false }
-        let cleanLoc: [String] = loc.map { (s: String) -> String in KalAuth41.trim(s) }.filter { (s: String) -> Bool in s.hasPrefix("http") }
+        // Prompt 46: containerens egen adresse (Docker-nett 172.16/12, loopback) kan aldri nås fra telefonen/Mac-en – forkastes.
+        let cleanLoc: [String] = loc.map { (s: String) -> String in KalAuth41.trim(s) }.filter { (s: String) -> Bool in
+            s.hasPrefix("http") && !KalSrv46.isContainerIP(KalSrv46.host(s))
+        }
+        if KalSrv46.isContainerIP(KalSrv46.host(ext)) { ext = "" }
         let d: UserDefaults = KalGroup.defaults
         d.set(cleanLoc, forKey: "kal41.local")
         d.set(KalAuth41.trim(ext), forKey: "kal41.external")

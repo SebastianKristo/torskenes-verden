@@ -78,6 +78,11 @@ final class MacStore: ObservableObject {
         didSet { UserDefaults.standard.set(defRemRaw, forKey: "mac.drem") }
     }
     var defRem: Int? { defRemRaw < 0 ? nil : defRemRaw }
+    /// Prompt 46: standardkalenderen (profilens prefs.defaultCalendar). "" = ikke valgt.
+    @Published var defCal46: String = UserDefaults.standard.string(forKey: "mac46.defCal") ?? "" {
+        didSet { UserDefaults.standard.set(defCal46, forKey: "mac46.defCal") }
+    }
+    var defCalId46: String { KalDef46.pick(cals, preferred: defCal46) }
 
     /* ---------- Prompt 35: samme valg som iPhone-appen (profilen /api/kalender/calendars/prefs) ---------- */
     /// mon | sun – måned, år, uke, ukenummer og minikalenderen.
@@ -202,9 +207,11 @@ final class MacStore: ObservableObject {
 
     /// Vertsnavnet i «Ikke tilkoblet …».
     var host43: String {
-        let b: String = MacSession.bases.first ?? "home.kristo.no"
-        guard let h = URL(string: b)?.host, !h.isEmpty else { return "home.kristo.no" }
-        return h
+        // Prompt 46: domenet appen er logget inn med, aldri en intern Docker-adresse (172.18.0.3).
+        let login: String = UserDefaults.standard.string(forKey: "mac.lastServer") ?? ""
+        let b: String = KalSrv46.pick(login: login, bases: MacSession.bases)
+        if b.isEmpty { return "home.kristo.no" }
+        return KalSrv46.display(b, others: MacSession.bases)
     }
 
     /* ---------- Henting ---------- */
@@ -604,16 +611,17 @@ final class MacStore: ObservableObject {
     }
 
     func makeForm(day: String, s: Int?, e: Int?) -> MacNewForm {
-        let tk: String = KalD.todayKey()
-        let base: String = day < tk ? tk : day
-        let next: Int = ((KalD.minutesNow() + 1 + 29) / 30) * 30
-        let st: Int = s ?? Swift.min(23 * 60, next)
-        let en: Int = e ?? Swift.min(1439, st + defDur)
+        // Prompt 46: dagen kommer ferdig valgt fra vinduet (første synlige dag når i dag ikke vises), neste hele time.
+        let base: String = KalD.valid(day) ? day : KalD.todayKey()
+        let next: Int = (KalD.minutesNow() / 60 + 1) * 60
+        let st: Int = Swift.max(0, Swift.min(23 * 60, s ?? next))
+        var en: Int = Swift.min(1439, e ?? st + defDur)
+        if en <= st { en = Swift.min(1439, st + defDur) }
         var f: MacNewForm = MacNewForm()
         f.day = KalD.date(base)
         f.start = KalD.at(base, st)
         f.end = KalD.at(base, en)
-        f.cal = cals.first(where: { (c: KalCal) -> Bool in c.writable && c.on })?.id ?? "p"
+        f.cal = defCalId46
         f.rem = defRem
         return f
     }

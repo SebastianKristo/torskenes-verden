@@ -8,7 +8,10 @@ import SwiftUI
 @Observable
 final class KalComposerModel {
     static let shared: KalComposerModel = KalComposerModel()
-    var text: String = ""
+    var text: String = "" {
+        // Prompt 46: Glimt tolker teksten parallelt (400 ms etter siste tastetrykk).
+        didSet { if text != oldValue { KalRask46Model.shared.typed(text) } }
+    }
     var focused: Bool = false
 
     var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -31,12 +34,15 @@ final class KalComposerModel {
             return
         }
         guard let p = parsed else { return }
+        // Prompt 46: tittel/sted fra Glimt (eller lokal rydding) og lagring via Glimt-motoren (module:'calendar').
+        // (før feltet tømmes – å tømme feltet nullstiller Glimt-svaret)
+        let day: String = KalRask46Model.shared.merged(p, text: q).p.day
+        KalRask46Model.shared.submit(q, local: p)
         text = ""
         focused = false
         KalHaptic.done()
         let s: KalStore = KalStore.shared
-        withAnimation(.easeOut(duration: 0.2)) { s.anchor = p.day }
-        Task { await s.add(p, toastPrefix: "Glimt la til") }
+        withAnimation(.easeOut(duration: 0.2)) { s.anchor = day }
     }
 }
 
@@ -152,9 +158,17 @@ struct KalComposer: View {
 /// «GLIMT FORSTÅR»: tittel, dag, tid, varsel og kalender.
 struct KalPreview: View {
     @Environment(\.kal) private var t
-    let p: KalParsed
+    let p0: KalParsed
+
+    init(p: KalParsed) {
+        p0 = p
+    }
 
     var body: some View {
+        // Prompt 46: Glimt-svaret (tittel, sted, kalender) slått sammen med den lokale tolkningen.
+        let r: KalRask46Model = KalRask46Model.shared
+        let mg: (p: KalParsed, loc: String, address: String, glimt: Bool) = r.merged(p0, text: KalComposerModel.shared.text)
+        let p: KalParsed = mg.p
         let c: KalCal? = KalStore.shared.cal(p.cal)
         let d: Date = KalD.date(p.day)
         let when: String = KalD.dl(d) + (p.allDay ? " · hele dagen" : " · " + KalD.hm(p.s ?? 0) + "–" + KalD.hm(p.e ?? 0))
@@ -162,15 +176,20 @@ struct KalPreview: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("GLIMT FORSTÅR").font(KalFont.mono(10)).tracking(1.4).foregroundStyle(t.acc)
+                KalRaskBadge46(glimt: mg.glimt, thinking: r.thinking)
                 Spacer()
                 HStack(spacing: 5) {
                     Circle().fill(t.calColor(c)).frame(width: 8, height: 8)
                     Text(c?.name ?? "").font(KalFont.ui(12, .bold)).foregroundStyle(t.calText(c))
                 }
             }
+            // Prompt 46: trykk på en verdi for å rette den før lagring (Ny hendelse, utfylt).
             Text(p.title).font(KalFont.serif(22)).foregroundStyle(t.ink)
+                .onTapGesture { KalRask46Model.shared.edit(p, loc: mg.loc) }
             Text(when).font(KalFont.ui(13.5, .semibold)).foregroundStyle(t.ink)
+                .onTapGesture { KalRask46Model.shared.edit(p, loc: mg.loc) }
             Text(rem).font(KalFont.ui(12.5)).foregroundStyle(t.mut)
+            if !mg.loc.isEmpty { KalRaskPlace46(loc: mg.loc, address: mg.address) }
             HStack {
                 Text("Enter for å legge til").font(KalFont.ui(11.5)).foregroundStyle(t.mut2)
                 Spacer()

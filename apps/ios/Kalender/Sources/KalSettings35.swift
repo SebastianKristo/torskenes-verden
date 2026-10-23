@@ -32,6 +32,9 @@ struct KalSettings35View: View {
                     KalLabel(text: "KALENDERE")
                     KalLinkRow35(title: "Kalendere", sub: cals39Sub) { s.openCals39() }
                         .overlay(alignment: .top) { Rectangle().fill(t.line2).frame(height: 1) }
+                    // Prompt 46: standardkalenderen for «+», rask time og Glimt.
+                    KalLabel(text: "STANDARDKALENDER").padding(.top, 6)
+                    KalDefCal46Row()
                     KalLabel(text: "GENERELT").padding(.top, 6)
                     general
                     KalLabel(text: "VISNING").padding(.top, 6)
@@ -62,6 +65,8 @@ struct KalSettings35View: View {
                     notifications
                     KalLabel(text: "GLIMT OG KONTO").padding(.top, 6)
                     links
+                    // Prompt 46: skann QR-koden som Kalender på Mac/Android eller en annen enhet viser.
+                    KalQRScan46Row()
                     // Prompt 43: iPhone og iPad oppdateres via TestFlight/IPA (bare info).
                     KalUpdateInfo43()
                     // Prompt 41: Server (lesbar) og Logg ut ligger nå øverst i GLIMT OG KONTO (fasitens linkRows).

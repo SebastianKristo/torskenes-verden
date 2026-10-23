@@ -218,12 +218,13 @@ struct MacLogin41View: View {
     private var title: String {
         if m.phase == "wait" { return "Godkjenn i Homelab" }
         if m.phase == "err" { return "Fikk ikke logget inn" }
+        if m.phase == "qr" { return "Logg inn med QR-kode" }
         return "Velkommen til Kalender"
     }
 
     private var subtitle: String {
         if m.phase == "wait" { return "Godkjenn innloggingen i Homelab eller i nettleseren. Du kommer tilbake hit av deg selv." }
-        if m.phase == "err" { return "" }
+        if m.phase == "err" || m.phase == "qr" { return "" }
         return "Bruk samme konto som i Homelab. Kalendere, bursdager og frister synkes med en gang."
     }
 
@@ -232,6 +233,8 @@ struct MacLogin41View: View {
         case "wait": waitView
         case "err": errView
         case "pw": pwView
+        // Prompt 46: QR-koden (skannes med Papir Finans eller en innlogget Kalender på mobilen).
+        case "qr": MacLoginQR46(back: { m.phase = "start" })
         default: startView
         }
     }
@@ -276,6 +279,7 @@ struct MacLogin41View: View {
                 .buttonStyle(.plain)
             }
             big("Logg inn med Homelab-appen", filled: false) { m.viaApp() }
+            big("Logg inn med QR-kode", filled: false) { m.phase = "qr" }
             quiet("Bruk brukernavn og passord") { m.phase = "pw" }
         }
     }

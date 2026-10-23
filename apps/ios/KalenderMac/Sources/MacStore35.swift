@@ -21,6 +21,8 @@ extension MacStore {
         if let v = p["weekNumbers"], (v == "true") != showWeeks { showWeeks = v == "true" }
         if let v = p["weather"], (v == "true") != showWx { showWx = v == "true" }
         if let v = p["defaultReminder"], let m = KalCalAPI35.remFromServer(v), m != defRemRaw { defRemRaw = m }
+        // Prompt 46: standardkalenderen (samme som web, Homelab og Glimt).
+        if let v = p["defaultCalendar"], !v.isEmpty, v != defCal46 { defCal46 = v }
     }
 
     func timelineHour(todayIn: Bool) -> Int {

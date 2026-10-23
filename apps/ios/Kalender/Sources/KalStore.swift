@@ -70,6 +70,10 @@ final class KalStore {
         didSet { UserDefaults.standard.set(defRemRaw, forKey: "kal.drem") }
     }
     var defRem: Int? { defRemRaw < 0 ? nil : defRemRaw }
+    /// Prompt 46: Innstillinger → Kalender → Standardkalender (serverens prefs.defaultCalendar). "" = ikke valgt.
+    var defCal46: String = UserDefaults.standard.string(forKey: "kal46.defCal") ?? "" {
+        didSet { UserDefaults.standard.set(defCal46, forKey: "kal46.defCal") }
+    }
     /// system | light | dark (kalapp_th i fasiten).
     var theme: String = UserDefaults.standard.string(forKey: "kalapp_th") ?? "system" {
         didSet { UserDefaults.standard.set(theme, forKey: "kalapp_th") }
@@ -789,19 +793,18 @@ final class KalStore {
 
     func openNew(day: String? = nil, s: Int? = nil, e: Int? = nil) {
         KalHaptic.tap()
-        let tk: String = KalD.todayKey()
-        var base: String = (view == "mnd" || view == "ar" || view == "liste") ? tk : anchor
-        if let day { base = day }
-        if base < tk { base = tk }
-        let st: Int = s ?? Swift.min(23 * 60, ((KalD.minutesNow() + 1 + 29) / 30) * 30)
+        // Prompt 46: valgt tidsluke/dag først, ellers i dag (uke/3 d/dag: første synlige dag når i dag ikke vises), neste hele time.
+        let base: String = day ?? newDay46()
+        let st: Int = s ?? KalStore.nextHour46()
         let en: Int = e ?? Swift.min(1439, st + defDur)
         var f: KalNewForm = KalNewForm()
         f.day = KalD.date(base)
         f.start = KalD.at(base, st)
         f.end = KalD.at(base, en)
-        f.cal = cals.first(where: { (c: KalCal) -> Bool in c.writable && c.on })?.id ?? "p"
+        f.cal = defCalId46
         f.rem = defRem
-        newForm = f
+        // Prompt 46: aldri grå skjerm – arket åpnes via vakten (logger og viser «Kunne ikke åpne ny hendelse» hvis det ikke vises).
+        presentNew46(f)
     }
 
     func saveNew(_ f: KalNewForm) {

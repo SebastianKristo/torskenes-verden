@@ -50,6 +50,9 @@ final class MacUpdater43: ObservableObject {
     @Published var message: String = ""
     /// Serveren har ikke endepunktet (404): «Åpne siste release» på GitHub.
     @Published var noServer: Bool = false
+    /// Prompt 46: domenet som sjekkes («home.kristo.no») og «Vis detaljer» (URL, feilkode).
+    @Published var checkHost46: String = ""
+    @Published var detail46: String = ""
     @Published var lastCheck: Double = UserDefaults.standard.double(forKey: "mac43.updLast")
     @Published var auto: Bool = (UserDefaults.standard.object(forKey: "mac43.updAuto") as? Bool) ?? true {
         didSet { UserDefaults.standard.set(auto, forKey: "mac43.updAuto") }
@@ -135,42 +138,74 @@ final class MacUpdater43: ObservableObject {
         if phase == .dl || phase == .inst { return }
         if !quiet { phase = .check }
         message = ""
+        detail46 = ""
         noServer = false
         let path: String = "/api/apps/kalender/latest?platform=mac&channel=" + KalNet.enc(channel)
-        var bases: [String] = MacSession.bases
-        if bases.isEmpty { bases = [KalAuth41.defaultBase] }
-        do {
-            let d: Data = try await KalNet.send("GET", path, timeout: 8, bases: bases)
-            let now: Double = Date().timeIntervalSince1970
-            lastCheck = now
-            UserDefaults.standard.set(now, forKey: "mac43.updLast")
-            guard let r = MacUpdater43.parse(d, base: bases.first ?? "") else {
-                phase = quiet ? .idle : .err
-                message = "Uventet svar fra serveren."
+        // Prompt 46: mot adressen appen er logget inn med (ikke en adresse serveren har sendt), 15 s per forsøk.
+        let tries: [String] = MacUpdater43.bases46()
+        checkHost46 = KalSrv46.display(tries.first ?? "", others: tries)
+        var lastErr: KalNetError = KalNetError(status: 0, message: "Fikk ikke kontakt med serveren")
+        var lastBase: String = tries.first ?? ""
+        for base in tries {
+            lastBase = base
+            do {
+                let d: Data = try await KalNet.send("GET", path, timeout: KalSrv46.timeout, bases: [base])
+                handle46(d, base: base, quiet: quiet)
                 return
+            } catch let e as KalNetError {
+                lastErr = e
+                // Bare «ingen svar» prøver neste adresse; et svar fra serveren (404, 500 …) gjelder alle.
+                if e.status != 0 { break }
+            } catch {
+                lastErr = KalNetError(status: 0, message: error.localizedDescription)
             }
-            if MacUpdater43.isNewer(r, version: MacUpdater43.currentVersion, build: MacUpdater43.currentBuild) {
-                rel = r
-                phase = .avail
-            } else {
-                rel = nil
-                phase = quiet ? .idle : .none
-            }
-        } catch let e as KalNetError {
-            if quiet {
-                phase = .idle
-                return
-            }
-            phase = .err
-            if e.status == 404 {
-                noServer = true
-                message = "Serveren har ingen oppdateringsinformasjon ennå."
-            } else {
-                message = e.status == 0 ? "Fikk ikke kontakt med serveren." : e.message
-            }
-        } catch {
+        }
+        failed46(lastErr, base: lastBase, path: path, quiet: quiet)
+    }
+
+    /// Adressene i rekkefølge: den man logget inn med først, så resten uten Docker-/loopback-adresser. Maks to forsøk.
+    static func bases46() -> [String] {
+        let login: String = UserDefaults.standard.string(forKey: "mac.lastServer") ?? ""
+        var out: [String] = []
+        let first: String = KalSrv46.pick(login: login, bases: MacSession.bases)
+        if !first.isEmpty { out.append(first) }
+        for b in KalSrv46.clean(MacSession.bases, keep: login) where !out.contains(b) && out.count < 2 { out.append(b) }
+        if out.isEmpty { out = [KalAuth41.defaultBase] }
+        return out
+    }
+
+    private func handle46(_ d: Data, base: String, quiet: Bool) {
+        let now: Double = Date().timeIntervalSince1970
+        lastCheck = now
+        UserDefaults.standard.set(now, forKey: "mac43.updLast")
+        guard let r = MacUpdater43.parse(d, base: base) else {
             phase = quiet ? .idle : .err
-            message = error.localizedDescription
+            message = "Uventet svar fra serveren (" + checkHost46 + ")."
+            return
+        }
+        if MacUpdater43.isNewer(r, version: MacUpdater43.currentVersion, build: MacUpdater43.currentBuild) {
+            rel = r
+            phase = .avail
+        } else {
+            rel = nil
+            phase = quiet ? .idle : .none
+        }
+    }
+
+    private func failed46(_ e: KalNetError, base: String, path: String, quiet: Bool) {
+        if quiet {
+            phase = .idle
+            return
+        }
+        phase = .err
+        detail46 = KalSrv46.details(url: KalAuth41.trim(base) + path, status: e.status, error: e.status == 0 ? "" : e.message)
+        if e.status == 404 {
+            noServer = true
+            message = "Serveren (" + checkHost46 + ") har ingen oppdateringsinformasjon ennå."
+        } else if e.status == 0 {
+            message = "Fikk ikke kontakt med serveren (" + checkHost46 + "). Prøv igjen."
+        } else {
+            message = e.message
         }
     }
 
@@ -180,7 +215,8 @@ final class MacUpdater43: ObservableObject {
         let v: String = (o["version"] as? String) ?? ""
         var url: String = (o["url"] as? String) ?? ""
         if v.isEmpty || url.isEmpty { return nil }
-        if url.hasPrefix("/") { url = KalAuth41.trim(base) + url }
+        // Prompt 46: relative URL-er løses mot serveradressen, og en intern IP (172.18.0.3 …) byttes ut med den.
+        url = KalSrv46.resolve(url, base: KalAuth41.trim(base))
         var notes: [String] = []
         for n in (o["notes"] as? [Any]) ?? [] {
             if let s = n as? String { notes.append(s) } else if let m = n as? [String: Any], let s = (m["t"] as? String) ?? (m["text"] as? String) { notes.append(s) }
@@ -232,7 +268,8 @@ final class MacUpdater43: ObservableObject {
             Task { @MainActor in MacUpdater43.shared.finished(file, err, g) }
         }
         let cfg: URLSessionConfiguration = URLSessionConfiguration.default
-        cfg.timeoutIntervalForRequest = 30
+        // Prompt 46: 15 s uten data → feil (ikke evig venting).
+        cfg.timeoutIntervalForRequest = KalSrv46.timeout
         let s: URLSession = URLSession(configuration: cfg, delegate: del, delegateQueue: nil)
         session = s
         let t: URLSessionDownloadTask = s.downloadTask(with: url)
@@ -560,7 +597,8 @@ struct MacUpdate43View: View {
     }
 
     private var checkCard: some View {
-        let text: String = "Ser etter oppdateringer på " + MacStore.shared.host43 + " …"
+        let h: String = u.checkHost46.isEmpty ? MacStore.shared.host43 : u.checkHost46
+        let text: String = "Ser etter oppdateringer på " + h + " …"
         return card { Text(text).font(MacFont.ui(14, .bold)).foregroundColor(t.ink) }
     }
 
@@ -645,6 +683,7 @@ struct MacUpdate43View: View {
                 dark("Prøv igjen") { Task { await u.check() } }
                 if noServer { light("Åpne siste release") { u.openReleasePage() } }
             }
+            if !u.detail46.isEmpty { MacUpdDetails46(text: u.detail46) }
         }
     }
 
@@ -765,4 +804,25 @@ final class MacPrefsTab43: ObservableObject {
     static let shared: MacPrefsTab43 = MacPrefsTab43()
     /// gen | acc | upd
     @Published var tab: String = "gen"
+}
+
+/// Prompt 46: «Vis detaljer» under feilmeldingen (URL og feilkode).
+struct MacUpdDetails46: View {
+    @Environment(\.mk) private var t
+    let text: String
+    @State private var open: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button(action: { open.toggle() }) {
+                Text(open ? "Skjul detaljer" : "Vis detaljer").font(MacFont.ui(12.5, .bold)).foregroundColor(t.mut)
+            }
+            .buttonStyle(.plain)
+            if open {
+                Text(text).font(MacFont.mono(11.5)).foregroundColor(t.mut)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
 }

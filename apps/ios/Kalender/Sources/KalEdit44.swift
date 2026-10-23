@@ -40,9 +40,9 @@ extension KalStore {
         f.day = KalD.date(day)
         f.start = KalD.at(day, st)
         f.end = KalD.at(day, en)
-        f.cal = cals.first(where: { (c: KalCal) -> Bool in c.writable && c.on })?.id ?? "p"
+        f.cal = defCalId46
         f.rem = defRem
-        withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.32)) { newForm = f }
+        presentNew46(f)
     }
 
     /* ---------- Rediger ---------- */
@@ -71,6 +71,7 @@ extension KalStore {
         f.lat = e.lat
         f.lon = e.lon
         f.att = e.att44 ?? []
+        KalNew46Guard.shared.arm(f)
         withAnimation(.easeOut(duration: 0.22)) {
             detId = nil
             newForm = f

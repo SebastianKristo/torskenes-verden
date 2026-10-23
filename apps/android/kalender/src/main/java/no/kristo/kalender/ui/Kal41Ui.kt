@@ -81,10 +81,10 @@ fun LoginScreen41(vm: KalVm) {
     val k = LocalK.current
     val s = vm.k41
     LaunchedEffect(Unit) { s.loadWho() }
-    val title = when (s.phase) { "wait" -> "Godkjenn i Homelab"; "err" -> "Fikk ikke logget inn"; else -> "Velkommen til Kalender" }
+    val title = when (s.phase) { "wait" -> "Godkjenn i Homelab"; "err" -> "Fikk ikke logget inn"; "qr" -> "Logg inn med QR-kode"; else -> "Velkommen til Kalender" }
     val sub = when (s.phase) {
         "wait" -> "Homelab åpnes og spør om Kalender får logge inn. Du kommer tilbake hit av deg selv."
-        "err" -> ""
+        "err", "qr" -> ""
         else -> "Bruk samme konto som i Homelab. Kalendere, bursdager og frister synkes med en gang."
     }
     Column(
@@ -107,6 +107,8 @@ fun LoginScreen41(vm: KalVm) {
                 "wait" -> Wait41(vm)
                 "err" -> Err41(vm)
                 "pw" -> Pw41(vm)
+                // Prompt 46: QR-koden (skannes med Papir Finans eller en innlogget Kalender på mobilen).
+                "qr" -> QrLogin46(vm)
                 else -> Start41(vm)
             }
         }
@@ -132,6 +134,7 @@ private fun Start41(vm: KalVm) {
     }
     Box(Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(k.card).border(1.dp, k.line, RoundedCornerShape(26.dp)).tap("Logg inn med Homelab-appen") { s.viaApp() },
         contentAlignment = Alignment.Center) { Tx("Logg inn med Homelab-appen", man(14.5.sp, FontWeight.Bold, k.ink)) }
+    QrButton46(vm)
     Box(Modifier.fillMaxWidth().height(44.dp).tap("Bruk brukernavn og passord") { s.password() }, contentAlignment = Alignment.Center) {
         Tx("Bruk brukernavn og passord", man(13.5.sp, FontWeight.Bold, k.mut))
     }

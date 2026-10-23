@@ -371,6 +371,8 @@ fun SettingsPage35(vm: KalVm) {
             Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
                 LinkRow35("Kalendere", vm.cals.take(4).joinToString(", ") { it.n }) { vm.k39.open() }
             }
+            // Prompt 46: standardkalenderen for «+», rask time og Glimt.
+            DefCal46(vm)
             Label("GENERELT", Modifier.padding(top = 4.dp))
             Seg35("Uken starter", "", listOf("mon" to "Mandag", "sun" to "Søndag"), if (vm.sun) "sun" else "mon") { vm.setWeekStart(it == "sun") }
             Seg35("Åpne i", "Visningen appen starter i", listOf("mnd" to "Måned", "uke" to "Uke", "3d" to "3 dager", "dag" to "Dag", "liste" to "Liste"), vm.ov) { vm.setOpenView(it) }
@@ -430,6 +432,8 @@ fun SettingsPage35(vm: KalVm) {
                 LinkRow35("Server", no.kristo.kalender.Kal41.summary(vm.getApplication())) { Hap.tick(); vm.showToast("Endres i Homelab → Innstillinger → Konto → Server") }
                 LinkRow35("Logg ut", "Logg inn igjen med Homelab-appen") { Hap.tick(); vm.setOn = false; vm.logout() }
                 LinkRow35("Glimt", "Figur, stemme og briefer") { vm.openGlimtSettings() }
+                // Prompt 46: godkjenn QR-koden en annen enhet viser (fingeravtrykk/PIN først).
+                ScanRow46(vm)
                 LinkRow35("Kontoer og synk", "Google, iCloud, Outlook, Home Assistant") { vm.openAccounts() }
                 LinkRow35("Widgets", "Slik legger du til på Hjem- og låseskjerm") { Hap.tick(); vm.showToast("Hold inne på Hjem-skjermen → Widgets → Kalender") }
                 // Prompt 43: oppdater Kalender fra appen (APK fra GitHub-releasen via serveren, SHA-256 og samme signatur).

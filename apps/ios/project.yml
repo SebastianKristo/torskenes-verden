@@ -105,7 +105,8 @@ targets:
         # Prompt 41: homelab://app-auth?client=kalender&redirect=kalender://auth&state=…&cc=… (AppAuth41.swift).
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.finanshub
-            CFBundleURLSchemes: [finanshub, homelab]
+            # Prompt 46: papir://login?s=…&c=…&srv=… – QR-innlogging (Qr46Login.swift / QrLogin38.swift).
+            CFBundleURLSchemes: [finanshub, homelab, papir]
           # Prompt 43: magnet:-lenker åpner «Legg til magnet-lenke» i Media (qBittorrent).
           - CFBundleURLName: no.kristo.finanshub.magnet
             CFBundleURLSchemes: [magnet]
@@ -216,6 +217,9 @@ targets:
         # Prompt 44: forhåndslasting av kalenderen i bakgrunnen (BGAppRefreshTask, KalBg44.swift).
         BGTaskSchedulerPermittedIdentifiers: [no.kristo.kalender.refresh44]
         UIBackgroundModes: [fetch]
+        # Prompt 46: Innstillinger → Logg inn på annen enhet (skann QR-koden Kalender på Mac/Android viser, godkjenn med Face ID).
+        NSCameraUsageDescription: "Kalender bruker kameraet bare til å skanne QR-koden når du logger inn på en annen enhet."
+        NSFaceIDUsageDescription: "Kalender bekrefter med Face ID før en annen enhet logges inn på kontoen din."
 
   KalenderWidgets:
     type: app-extension

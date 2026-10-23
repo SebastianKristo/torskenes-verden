@@ -234,7 +234,8 @@ object Kal41 {
             ext = o.optString("external"); found = loc.isNotEmpty() || ext.isNotBlank()
         }
         if (!found) return null
-        val cl = loc.map { it.trim().trimEnd('/') }.filter { it.startsWith("http") }
+        // Prompt 46: containerens egen adresse (Docker-nett 172.16/12, loopback) kan aldri nås fra telefonen – forkastes.
+        val cl = loc.map { it.trim().trimEnd('/') }.filter { it.startsWith("http") && !Kal46Srv.isContainerIp(Kal46Srv.host(it)) }
         var useLocal = false
         if (au || ext.isBlank()) for (l in cl) {
             val t0 = System.currentTimeMillis()

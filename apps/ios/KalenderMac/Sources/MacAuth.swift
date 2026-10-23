@@ -92,9 +92,13 @@ enum MacSession {
     }
 
     /// Prompt 43: «har en lagret innlogging» uten å røre Nøkkelringen (adressene lagres sammen med tokenet og slettes ved utlogging).
-    static var hasLogin: Bool { !bases.isEmpty }
+    static var hasLogin: Bool { !(UserDefaults.standard.stringArray(forKey: "mac.bases") ?? []).isEmpty }
 
-    static var bases: [String] { UserDefaults.standard.stringArray(forKey: "mac.bases") ?? [] }
+    /// Prompt 46: uten Docker-/loopback-adresser (172.18.0.3 …) som serveren kan ha rapportert som «lokal» – de kan aldri nås fra Mac-en.
+    static var bases: [String] {
+        let raw: [String] = UserDefaults.standard.stringArray(forKey: "mac.bases") ?? []
+        return KalSrv46.clean(raw, keep: UserDefaults.standard.string(forKey: "mac.lastServer") ?? "")
+    }
     static var user: String { UserDefaults.standard.string(forKey: "mac.user") ?? "" }
 
     /// Leser Nøkkelringen på denne tråden hvis det ikke er gjort ennå. På hovedtråden: bare bufferen.

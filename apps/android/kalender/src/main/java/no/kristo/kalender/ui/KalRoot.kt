@@ -226,6 +226,9 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
         if (vm.newCal) NewCalendarDialog(vm)
         // Prompt 44: «Endret et annet sted» og «Bare denne / Denne og fremtidige / Alle».
         Dialogs44(vm)
+        // Prompt 46: arket kom ikke fram – feilmelding med «Prøv igjen» i stedet for grå skjerm, og «Logg inn på annen enhet».
+        NewFail46(vm, Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp))
+        ScanDialog46(vm)
     }
 }
 
@@ -340,8 +343,12 @@ private fun Composer(vm: KalVm, modifier: Modifier) {
     val kb = LocalSoftwareKeyboardController.current
     val focus = LocalFocusManager.current
     LaunchedEffect(vm.focusComposer) { if (vm.focusComposer > 0) runCatching { fr.requestFocus(); kb?.show() } }
-    val pv = vm.preview
+    val pv0 = vm.preview
     val isQ = vm.isQuestion
+    // Prompt 46: Glimt tolker teksten 400 ms etter siste tastetrykk; lokal dato/tid vinner, Glimt bestemmer tittel og sted.
+    LaunchedEffect(vm.ct) { no.kristo.kalender.Kal46Rask.preview(vm, vm.ct) }
+    val mg = pv0?.let { no.kristo.kalender.Kal46Rask.merged(vm, it, vm.ct) }
+    val pv = mg?.first
     val send = { vm.composerSend(); focus.clearFocus(); kb?.hide() }
     Column(
         modifier.fillMaxWidth().background(k.bg).border(width = 0.dp, color = Color.Transparent).imePadding().windowInsetsPadding(WindowInsets.navigationBars),
@@ -371,7 +378,10 @@ private fun Composer(vm: KalVm, modifier: Modifier) {
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Tx("GLIMT FORSTÅR", mono(10.sp, k.acc, .14f), Modifier.weight(1f))
+                        Tx("GLIMT FORSTÅR", mono(10.sp, k.acc, .14f))
+                        Spacer(Modifier.width(8.dp))
+                        RaskBadge46(mg?.second?.third == true)
+                        Spacer(Modifier.weight(1f))
                         Box(Modifier.size(8.dp).clip(CircleShape).background(c.col))
                         Spacer(Modifier.width(5.dp))
                         Tx(c.n, man(12.sp, FontWeight.Bold, c.fg(k)))
@@ -379,6 +389,7 @@ private fun Composer(vm: KalVm, modifier: Modifier) {
                     Tx(pv.t, news(22.sp, k.ink, 25.sp))
                     Tx(dl(pv.d) + if (pv.all) " · hele dagen" else " · " + hm(pv.s ?: 0) + "–" + hm(pv.e ?: 0), man(13.5.sp, FontWeight.SemiBold, k.ink))
                     Tx((if (pv.all) "Heldags" else "Varsel " + remL(pv.rem)) + " · " + c.n, man(12.5.sp, FontWeight.Medium, k.mut))
+                    RaskPlace46(mg?.second?.first.orEmpty(), mg?.second?.second.orEmpty())
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Tx("Enter for å legge til", man(11.5.sp, FontWeight.Medium, k.mut2), Modifier.weight(1f))
                         InkPill("Legg til", { send() }, h = 34.dp, padH = 16.dp, fs = 13.sp)

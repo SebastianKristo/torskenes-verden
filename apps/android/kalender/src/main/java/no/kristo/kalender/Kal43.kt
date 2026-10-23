@@ -113,6 +113,9 @@ object Kal43Upd {
     var pageOpen by mutableStateOf(false)
     /** «Installer ukjente apper» må slås på først (én linje forklaring vises). */
     var needPerm by mutableStateOf(false)
+    /** Prompt 46: domenet som sjekkes («home.kristo.no») og «Vis detaljer» (URL, feilkode). */
+    var host46 by mutableStateOf("")
+    var detail46 by mutableStateOf("")
     var apk: File? = null
     @Volatile private var cancel = false
     private val main = Handler(Looper.getMainLooper())
@@ -145,7 +148,8 @@ object Kal43Upd {
         val v = o.optString("version").removePrefix("v")
         var url = o.optString("url")
         if (v.isBlank() || url.isBlank()) return null
-        if (url.startsWith("/")) url = base.trimEnd('/') + url
+        // Prompt 46: relative URL-er mot serveradressen, intern IP (172.18.0.3 …) byttes ut med den.
+        url = Kal46Srv.resolve(url, base)
         val notes = mutableListOf<String>()
         o.optJSONArray("notes")?.let { a -> for (i in 0 until a.length()) { val n = a.opt(i); if (n is String) notes += n else if (n is JSONObject) notes += n.optString("t", n.optString("text")) } }
         return KRel43(v, o.optLong("build", 0L), o.optLong("size", 0L), url, o.optString("sha256").lowercase().trim(), notes.filter { it.isNotBlank() })
@@ -154,11 +158,14 @@ object Kal43Upd {
     /** Ser etter ny versjon. quiet = i bakgrunnen (ingen feil i vinduet). Returnerer utgivelsen når den er nyere. */
     suspend fun check(ctx: Context, quiet: Boolean = false): KRel43? {
         if (phase == "dl" || phase == "inst") return null
-        if (!quiet) ui { phase = "check"; msg = "" }
         val b = base(ctx)
+        val h = Kal46Srv.display(b)
+        if (!quiet) ui { phase = "check"; msg = ""; detail46 = ""; host46 = h }
         val ch = Kal43Prefs.channel(ctx)
+        val path = "/api/apps/kalender/latest?platform=android&channel=" + Uri.encode(ch)
         return try {
-            val body = KalApi(b, KalAuth.session(ctx)?.token).request("GET", "/api/apps/kalender/latest?platform=android&channel=" + Uri.encode(ch), timeout = 8_000, read = 8_000)
+            // Prompt 46: mot adressen appen er logget inn med, 15 s per forsøk.
+            val body = KalApi(b, KalAuth.session(ctx)?.token).request("GET", path, timeout = Kal46Srv.TIMEOUT, read = Kal46Srv.TIMEOUT)
             Kal43Prefs.setLastCheck(ctx, System.currentTimeMillis())
             val r = parse(body, b)
             if (r != null && newer(r, versionName(ctx), versionCode(ctx))) { ui { rel = r; phase = "avail" }; r }
@@ -167,7 +174,12 @@ object Kal43Upd {
             ui {
                 if (quiet) phase = "idle" else {
                     phase = "err"
-                    msg = if (e.status == 404) "Serveren har ingen oppdateringsinformasjon ennå." else (e.message ?: "Fikk ikke kontakt med serveren.")
+                    msg = when {
+                        e.status == 404 -> "Serveren ($h) har ingen oppdateringsinformasjon ennå."
+                        e.status == 0 -> "Fikk ikke kontakt med serveren ($h). Prøv igjen."
+                        else -> e.message ?: "Fikk ikke kontakt med serveren ($h)."
+                    }
+                    detail46 = Kal46Srv.details(b.trimEnd('/') + path, e.status, if (e.status == 0) (e.message ?: "") else "")
                 }
             }
             null
@@ -188,8 +200,8 @@ object Kal43Upd {
         val t0 = System.currentTimeMillis()
         try {
             val conn = URL(r.url).openConnection() as HttpURLConnection
-            conn.connectTimeout = 15_000
-            conn.readTimeout = 30_000
+            conn.connectTimeout = Kal46Srv.TIMEOUT
+            conn.readTimeout = Kal46Srv.TIMEOUT
             conn.instanceFollowRedirects = true
             try {
                 if (conn.responseCode >= 400) throw java.io.IOException("Serveren svarte med feil ${conn.responseCode}.")

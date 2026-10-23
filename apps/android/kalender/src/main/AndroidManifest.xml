@@ -12,6 +12,8 @@
     <!-- Varslene planlegges på nytt etter omstart. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Prompt 46: fingeravtrykk/ansikt (PIN som reserve) før en annen enhet logges inn med QR-koden. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Prompt 43: oppdatering fra appen (PackageInstaller-økt; systemet spør før installasjonen). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 

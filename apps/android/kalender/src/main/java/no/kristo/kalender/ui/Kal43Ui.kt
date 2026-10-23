@@ -353,7 +353,7 @@ fun UpdatePage43(vm: KalVm) {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(k.card).border(w, bd, RoundedCornerShape(18.dp)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { body() }
         }
         when (u.phase) {
-            "check" -> card { Tx("Ser etter oppdateringer …", man(14.sp, FontWeight.Bold, k.ink)) }
+            "check" -> card { Tx("Ser etter oppdateringer på " + u.host46.ifBlank { "serveren" } + " …", man(14.sp, FontWeight.Bold, k.ink), maxLines = 2) }
             "none" -> card {
                 Tx("Kalender er oppdatert", man(15.sp, FontWeight.Bold, k.ink))
                 Tx(Kal43Upd.currentLabel(ctx) + " er nyeste versjon.", man(14.sp, FontWeight.Medium, k.mut), maxLines = 2)
@@ -399,6 +399,7 @@ fun UpdatePage43(vm: KalVm) {
             "err" -> card {
                 Tx(u.msg.ifBlank { "Noe gikk galt." }, man(14.sp, FontWeight.Bold, k.acc), maxLines = 4)
                 InkPill("Prøv igjen", { scope.launch { u.check(ctx) } }, h = 44.dp)
+                if (u.detail46.isNotBlank()) no.kristo.kalender.ui.UpdDetails46(u.detail46)
             }
             else -> card {
                 val last = no.kristo.kalender.Kal43Prefs.lastCheck(ctx)
