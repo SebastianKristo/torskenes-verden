@@ -62,6 +62,7 @@ export function cleanTaskTitle45(raw) {
 
 /* ---------------- Kalender ---------------- */
 
+const WD_IDX45 = { søn: 0, man: 1, tir: 2, ons: 3, tor: 4, fre: 5, lør: 6 };
 const durationOf = (title) => { const k = KINDS.find(([re]) => re.test(String(title).toLowerCase())); return k ? k[1] : 60; };
 async function eventsIn(user, from, to) { return (await runAsUser(user, () => eventsFor(user, from, to))).events ?? []; }
 const onDay = (e, d) => (e.allDay ? e.date <= d && (e.end ?? e.date) > d || e.date === d : e.date === d);
@@ -328,17 +329,48 @@ export const TOOLS45 = [
       if (w2.errors.length) return ask(`${w2.errors[0].message}. Hvilken dato mener du?`);
       const title = str(args.title, 120) || null;
       if (!w2.date && !w2.start && !title) return ask(`Når vil du flytte «${ev.title}» til?`);
-      const date = w2.date ?? ev.date, start = w2.start ?? hmOfEv(ev);
+      // «fredag» om en avtale langt fram (f.eks. 12.10 neste år) betyr fredagen i avtalens uke – ikke kommende fredag, som ville flyttet
+      // avtalen nesten et år bakover. «neste fredag»/«denne fredagen»/datoer tolkes som før.
+      let date = w2.date ?? ev.date;
+      if (w2.dateKind === 'weekday' && !/neste|denne|kommende|om en|forrige|sist/i.test(w2.dateRaw ?? '') && ev.date > addDays45(mondayOf45(ctx.today), 6)) {
+        const inWeek = addDays45(mondayOf45(ev.date), (WD_IDX45[String(w2.dateRaw).toLowerCase().replace(/^på\s+/, '').slice(0, 3)] + 6) % 7);
+        if (isIsoDate45(inWeek) && inWeek >= ctx.today) date = inWeek;
+      }
+      const start = w2.start ?? hmOfEv(ev);
       const end = ev.allDay && !w2.start ? null : addMin45(start, durMin(ev) || 60);
+      // Samme tittel på samme tid den dagen finnes fra før: kalenderen viser bare én av dem (duplikatregelen i applyRules), så
+      // flyttingen ville «forsvunnet». Si fra i stedet for å lage en usynlig kopi.
+      const keyOf = (x) => String(x.id).split('~')[0].replace(/-\d{8}(T\d{4})?$/, '');
+      const twin = (await eventsIn(ctx.user, date, date)).find((x) => keyOf(x) !== keyOf(ev) && sameTitle(x.title, str(args.title, 120) || ev.title) && (ev.allDay && !w2.start ? x.allDay : !x.allDay && hmOfEv(x) === start));
+      if (twin) return ask(`«${twin.title}» ${longDate45(date, ctx.today)}${twin.allDay ? '' : ` kl. ${hmOfEv(twin)}`} ligger allerede i kalenderen. Vil du heller slette denne kopien, eller flytte den til en annen tid?`);
       return { args: { id: ev.id, title: title ?? ev.title, date, start: ev.allDay && !w2.start ? null : start, end, allDay: ev.allDay && !w2.start, prev: eventCard45(ev) } };
     },
     async run(a, ctx) {
       const patch = { title: a.title, date: a.date, allDay: a.allDay, ...(a.allDay ? {} : { start: a.start, end: a.end }), endDate: null };
       const ev = await runAsUser(ctx.user, () => updateEvent(ctx.user, a.id, patch));
       broadcast('kalender', { action: 'updated', id: ev?.id ?? a.id }, [ctx.user]);
-      return { status: 'done', result: { event: ev ? eventCard45(ev) : null, from: a.prev, eventId: ev?.id ?? a.id }, cards: ev ? [eventCard45(ev)] : [], events: ev ? [ev] : [] };
+      return { status: 'done', result: { event: ev ? eventCard45(ev) : null, from: a.prev, eventId: ev?.id ?? a.id, target: { date: a.date, start: a.allDay ? null : a.start, allDay: a.allDay } }, cards: ev ? [eventCard45(ev)] : [], events: ev ? [ev] : [] };
     },
-    async verify(r, ctx) { const e = r.result?.event; if (!e) return false; return (await eventsIn(ctx.user, e.date, e.date)).some((x) => String(x.id).split('~')[0] === String(r.result.eventId).split('~')[0] && x.date === e.date); },
+    // Kontroll: les hendelsen tilbake med id-en (uansett år/vindu) og sjekk at dato og tid er de nye. updateEvent kan gi null når
+    // visningsfiltre skjuler hendelsen den dagen – da hentes den med findEvent i stedet for å si at endringen ikke ble bekreftet.
+    async verify(r, ctx) {
+      const id = String(r.result?.eventId ?? ''), t = r.result?.target;
+      if (!id || !t) return false;
+      const base = (x) => String(x).split('~')[0].replace(/-\d{8}(T\d{4})?$/, '');
+      let ev = await runAsUser(ctx.user, () => findEvent(ctx.user, id)).catch(() => null);
+      if (!ev || ev.date !== t.date) ev = (await eventsIn(ctx.user, addDays45(t.date, -1), addDays45(t.date, 1))).find((x) => base(x.id) === base(id) && x.date === t.date) ?? ev;
+      // Lokale hendelser kan være skjult i visningen den dagen (fri-regler: «time» på en fridag, filtre). Da sjekkes lagringen direkte.
+      if (!ev || ev.date !== t.date) {
+        const raw = (kv.get(ctx.user, 'kal_local_events', []) ?? []).find((x) => x.id === base(id));
+        if (raw && raw.date === t.date && (t.allDay ? raw.allDay : raw.start === t.start)) {
+          if (!r.result.event) r.result.event = { kind: 'event', id: raw.id, title: raw.title, subtitle: shortDay(raw.date), date: raw.date, time: raw.start ?? null, end: raw.end ?? null, allDay: !!raw.allDay, place: raw.location || null, editable: true };
+          return true;
+        }
+      }
+      if (!ev || ev.date !== t.date || (!t.allDay && hmOfEv(ev) !== t.start)) { console.warn(`[glimt45] kontroll: calendar.update ikke bekreftet (${ev ? 'feil dato/tid' : 'fant ikke hendelsen'})`); return false; }
+      if (!r.result.event) { r.result.event = eventCard45(ev); r.cards = [eventCard45(ev)]; r.events = [ev]; }
+      return true;
+    },
   },
   {
     name: 'calendar.delete', module: 'calendar', destructive: true,

@@ -271,6 +271,46 @@ test('«Flytt avtalen til fredag»: entydig kontekst → flyttes; tvetydig → s
   assert.equal((await evsOf(KARI, '2026-10-29')).find((e) => e.title === 'Frisør')?.time, '14:00–14:45');
 });
 
+test('regresjon: «flytt den til fredag» på en avtale neste år (12.10 etter at 12.10 i år er passert) → fredag i avtalens uke, bekreftet', async () => {
+  const c = await agent(K, 'Legg til time 12.10 12:15 Kino se på dune', { module: 'calendar', requestId: RID() });
+  assert.equal(c.body.actions[0].args.date, '2027-10-12');
+  const id = c.body.actions[0].result.eventId;
+  const m = await agent(K, 'flytt den til fredag', { module: 'calendar', context: { selectedId: id, visibleIds: [id] }, requestId: RID() });
+  assert.equal(m.body.actions[0].status, 'done', JSON.stringify(m.body).slice(0, 500));
+  assert.ok(!/bekreftet ikke/.test(m.body.reply), m.body.reply);
+  assert.equal(m.body.actions[0].args.date, '2027-10-15', 'fredagen i avtalens uke, ikke 30.10.2026');
+  assert.match(m.body.reply, /^Flyttet \*\*«Kino – Dune»\*\* til \*\*fredag 15\. oktober 2027 kl\. 12:15–13:15\*\*/);
+  assert.equal((await evsOf(KARI, '2027-10-15')).find((e) => e.title === 'Kino – Dune')?.time, '12:15–13:15', 'lagret');
+  assert.equal((await evsOf(KARI, '2027-10-12')).filter((e) => e.title === 'Kino – Dune').length, 0);
+  // Med klokkeslett, og fra Hjem med kontekst: samme uke, kontrollert.
+  const t = await agent(K, 'flytt den til torsdag kl 18', { module: 'calendar', context: { selectedId: id }, requestId: RID() });
+  assert.equal(t.body.actions[0].status, 'done', t.body.reply);
+  assert.deepEqual([t.body.actions[0].args.date, t.body.actions[0].args.start], ['2027-10-14', '18:00']);
+  // «neste fredag» betyr fortsatt kommende fredag.
+  const n = await agent(K, 'flytt den til neste fredag', { module: 'calendar', context: { selectedId: id }, requestId: RID() });
+  assert.equal(n.body.actions[0].status, 'done', n.body.reply);
+  assert.equal(n.body.actions[0].args.date, '2026-10-30');
+  assert.ok((await evsOf(KARI, '2026-10-30')).some((e) => e.title === 'Kino – Dune' && e.time === '18:00–19:00'));
+});
+
+test('regresjon: flytt en kopi til samme tid som en lik avtale → spør (ikke «bekreftet ikke»); kontrollen leser lagringen direkte', async () => {
+  const mk = async (date) => (await K('/api/kalender/events', 'POST', { title: 'Kinokveld', date, start: '12:15', end: '13:15', calendar: 'privat' })).body.event.id;
+  const a = await mk('2027-11-09'), b = await mk('2027-11-10');
+  const m1 = await agent(K, 'flytt den til fredag', { module: 'calendar', context: { selectedId: a }, requestId: RID() });
+  assert.equal(m1.body.actions[0].status, 'done', m1.body.reply);
+  assert.equal(m1.body.actions[0].args.date, '2027-11-12');
+  const m2 = await agent(K, 'flytt den til fredag', { module: 'calendar', context: { selectedId: b }, requestId: RID() });
+  assert.ok(!/bekreftet ikke/.test(m2.body.reply), m2.body.reply);
+  assert.equal(m2.body.intent, 'ask');
+  assert.match(m2.body.reply, /ligger allerede i kalenderen/);
+  assert.equal((await evsOf(KARI, '2027-11-10')).filter((e) => e.title === 'Kinokveld').length, 1, 'ikke flyttet');
+  // Kontrollen: en hendelse som er lagret, men skjult i visningen den dagen, regnes som bekreftet (lagringen leses direkte).
+  const tool = TL.TOOL45['calendar.update'];
+  const raw = (kv.get(KARI, 'kal_local_events', []) ?? []).find((x) => x.id === a);
+  const ok = await tool.verify({ status: 'done', result: { event: null, eventId: a, target: { date: raw.date, start: raw.start, allDay: false } } }, { user: KARI, today: TODAY });
+  assert.equal(ok, true);
+});
+
 test('sletting krever bekreftelse; token per bruker; gjentatt bekreftelse = 409', async () => {
   const c = await agent(K, 'Legg til quiz lørdag kl 20', { requestId: RID() });
   const date = c.body.actions[0].args.date;
