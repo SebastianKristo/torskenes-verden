@@ -1,5 +1,6 @@
 // FinansHub desktop. Alle sider tegnes fra S (core.js); hendelser fanges med delegering på roten.
 import { scrollMemory } from '/assets/js/scrollmem.js';
+import { agent, agentFull, isPlain } from '/assets/js/glimt-agent45.js'; // prompt 45: felles Glimt-agent
 import {
   S, api, esc, n0, n2, sgn, neg, neg0, k, dd, dLong, today, monthName, cap, shiftMonth, ini, rgba, greet, pctChange, parseAmount,
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
@@ -1060,6 +1061,17 @@ async function askAi(text, force = false) {
     // Prompt 40: Glimt svarer først med strukturert svar og kort (POST /search/ask). 404 eller ingen kort → AI-søket som før.
     // Prompt 42: tankestegene strømmes (POST /search/ask/stream) og vises som «Glimt tenker … 1,4 s».
     let think = null;
+    // Prompt 45: den felles Glimt-agenten (module finance) først: forhandler, beløp, periode, varelinjer. Treff blir kort.
+    if (!force) {
+      const ag = await agent(qText, 'finance', {}, { signal: ctl.signal }).catch((e) => (e.name === 'AbortError' ? null : { err: e.message }));
+      if (!live()) return;
+      if (ag?.err) { u.ai = { q: qText, busy: false, answer: ag.err, hits: [], suggestions: u.ai?.suggestions }; render(); return; }
+      if (ag && !isPlain(ag)) {
+        const cards = ag.results.map((r) => ({ kind: r.kind === 'receipt' ? 'receipt' : r.kind === 'transaction' ? 'tx' : r.kind, id: r.id, name: r.title, note: [r.subtitle, r.date].filter(Boolean).join(' · '), amount: typeof r.amount === 'number' ? Math.abs(r.amount) : null, domain: r.domain }));
+        const g = glimtFrom(qText, { text: agentFull(ag), cards, source: 'Glimt', model: ag.model ?? '', engine: ag.engine ?? '', ms: ag.ms });
+        if (g) { u.ai = { q: qText, busy: false, glimt: g, suggestions: u.ai?.suggestions }; render(); return; }
+      }
+    }
     const raw = force ? null : await askStream(qText, { signal: ctl.signal, onStep: (T) => { think = T; if (live() && u.ai?.busy) { u.ai.think = T; paintAiJob(); } } }).catch(() => null);
     const g = raw ? glimtFrom(qText, raw) : null;
     if (!live()) return;

@@ -1,8 +1,8 @@
 // Prompt 31 (PWA): Glimt – AI-agenten i Nordlys OS. Merket med fire tilstander (Klar/Tenker/Svarer/Ferdig), AI-toast
 // med glassboble for alle AI-jobber (rask time, assist, kvittering), svarboble under søkefeltet på Hjem via /api/assist,
 // Chat-kort (vær, kalender, avganger, pakker, finans, huskeliste), System-siden «Nordlys OS» (egen side fra
-// PROGRAMVARE og fra oppdateringsbanneret), gratis prøveperioder, Web Push når appen er i bakgrunnen og banneret
-// «Glimt svarte mens du var borte». Fasit: Mobil Papir App.dc.html (aiSpark, aiToastEl, hsAsk, chToolRun, chCardVals,
+// PROGRAMVARE og fra oppdateringsbanneret), gratis prøveperioder, Web Push når appen er i bakgrunnen (prompt 45:
+// bare systemvarsel, ingen banner i appen). Fasit: Mobil Papir App.dc.html (aiSpark, aiToastEl, hsAsk, chToolRun, chCardVals,
 // aiBgNotify, System-siden), Glimt AI.dc.html, Abonnement Legg til ark.dc.html (Gratis prøveperiode).
 // API (SERVER31): POST /api/assist {q, source, chatId?} → 200 svar | 202 {jobId}; GET /api/assist/:id; realtime `assist`
 // og `calendar-quick` {jobId, state, steps[], fields[], progress, title, model, input}; POST /api/kalender/quick/:id/cancel;
@@ -137,7 +137,7 @@ export function ansBubble() {
   const A = G.ans; if (!A) return '';
   if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …${globalThis.P41?.wxComplex?.(A.q) ? '<small class="p41-step">Leser værdata for uken …</small>' : ''}</span></div>`; // prompt 41
   // Prompt 38: trykk i boblen lukker den ikke lenger (tekst kan markeres). ✕, sveip opp og trykk utenfor lukker (mobile-p38.js).
-  return `<div class="p31-ans ready p38-ans" role="status" aria-live="polite"><button type="button" class="p38-ax" data-p31="ansx" aria-label="Lukk svar">${svg('M6 6l12 12M18 6L6 18', 12, 2.8)}</button><span class="p31-at">${bold(A.text)}</span>${A.card ? cardHtml(A.card, true) : ''}
+  return `<div class="p31-ans ready p38-ans" role="status" aria-live="polite"><button type="button" class="p38-ax" data-p31="ansx" aria-label="Lukk svar">${svg('M6 6l12 12M18 6L6 18', 12, 2.8)}</button><span class="p31-at">${bold(A.text)}</span>${A.agent ? globalThis.P45?.agentExtra?.(A, 'home') ?? '' : '' /* prompt 45 */}${A.card ? cardHtml(A.card, true) : ''}
     ${A.err ? P34.errButtons(A.q) : ''}${A.open ? (A.open.route === 'familie' ? P37B.famOpenBtn(A.open) : P35.wxOpenBtn(A.open)) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(String(A.src || 'Glimt').replace(/^✦\s*/, ''))}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div><span class="p38-ah" aria-hidden="true"></span></div>`;
 }
 const ASSIST_MISSING = { v: false };
@@ -212,6 +212,19 @@ export async function ask(q, o = {}) {
   // standard 8 s), flyttes jobben til en Chat-tråd (POST /api/assist/:id/handoff → {chatId}) og Chat åpnes.
   let jobId = null, moved = false;
   const timer = setTimeout(() => { if (G.aid === id) { moved = true; handoff(q, id, () => jobId, 'Dette tar litt tid.'); } }, hsTimeout() * 1000);
+  // Prompt 45 (claude-code-glimt-intelligent-agent.md): Hjem-søket går til Glimt-agenten (POST /api/glimt/agent, module:'home').
+  // Svaret (reply) beskriver bare det som faktisk skjedde; spørsmål (ask), bekreftelse (confirm) og treff (results) vises i
+  // boblen (mobile-p45.js). Eldre server (404): /api/assist som før.
+  if (globalThis.P45?.agentHome) {
+    let A45 = null;
+    try { A45 = await globalThis.P45.agentHome(q); }
+    catch (e) { clearTimeout(timer); if (moved) return; haptic('err'); if (G.aid === id) { G.ans = { q, busy: false, text: e.status === 429 ? 'Glimt har mye å gjøre akkurat nå. Prøv igjen om litt.' : P34.aiErrText(e, e.model), src: 'Glimt', err: true }; draw(); } return; }
+    if (A45) {
+      clearTimeout(timer); if (moved || G.aid !== id) return;
+      if (A45.navHref) { navAns(q, A45.navHref, null, A45.src, A45.text, id); return; }
+      set(A45); return;
+    }
+  }
   let r;
   try {
     r = await assistCall(q, 'search', P36.isQ(q) ? { kind: 'question' } : {});
@@ -378,7 +391,7 @@ export async function chatTool(q, chatId, cb) {
 }
 
 /* =====================================================================
-   7. Varsel når appen er i bakgrunnen + «Glimt svarte mens du var borte»
+   7. Varsel når appen er i bakgrunnen (bare systemvarsel, prompt 45)
    ===================================================================== */
 export const aiBgOn = () => { const NT = m.nt31; if (NT && NT.on === false) return false; return (m.nt31?.ai_bg_notify ?? lsGet('p31_aibg', true)) !== false; };
 let awayAt = 0;
@@ -398,17 +411,9 @@ function bgNotify(q, txt, url) {
     }
   } catch {}
 }
-let banT = null;
-function showAway() {
-  const p = G.away.pop(); G.away = [];
-  if (!p || !aiInOn()) return; // prompt 39: «Vis svaret i appen også» av → ingen banner
-  G.banner = { t: 'Glimt svarte mens du var borte', b: p.body, url: p.url };
-  clearTimeout(banT); banT = setTimeout(() => { G.banner = null; draw(); }, 4200); draw();
-}
-export function bannerHtml() {
-  const B = G.banner; if (!B) return '';
-  return `<button type="button" class="p31-away" data-p31="away" role="status">${glimt(26, 'done')}<span class="m-grow"><b>${esc(B.t)}</b><span>${esc(B.b)}</span></span></button>`;
-}
+// Prompt 45 (claude-code-glimt-kun-systemvarsel.md): svar mens appen er lukket kommer bare som systemvarsel.
+// Ingen banner, toast eller tekst når appen åpnes igjen – svaret ligger der det hører hjemme (Chat / svarfeltet).
+export function bannerHtml() { return ''; }
 
 /* ---------- Web Push: abonnement og presence ---------- */
 const b64u = (s) => { const p = '='.repeat((4 - (s.length % 4)) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, (c) => c.charCodeAt(0)); };
@@ -455,17 +460,9 @@ export function varslerRows(tg) {
   const on = aiBgOn(), perm = 'Notification' in window ? Notification.permission : 'unsupported';
   const st = !pushSupported() ? 'Ikke støttet i denne nettleseren' : G.pushOn ? 'På · Glimt kan varsle når appen er lukket' : perm === 'denied' ? 'Blokkert i nettleseren' : 'Av · trykk for å slå på';
   return tg('data-p31="aibg"', 'AI-svar i bakgrunnen', 'Får du svar mens du er ute av appen, kommer det som varsel', on)
-    // Prompt 39 (claude-code-glimt-varsel-ikon.md): banneret i appen kan slås av (n_ai_in, synkes med kontoen).
-    + tg('data-p31="aiin"', 'Vis svaret i appen også', 'Banner øverst når du kommer tilbake til appen', aiInOn())
     + tg('data-p31="pushtog"', 'Varsler på denne enheten', st, !!G.pushOn);
 }
-export const aiInOn = () => (m.nt31?.n_ai_in ?? lsGet('p39_ai_in', true)) !== false;
-async function aiInToggle() {
-  const v = !aiInOn(); lsSet('p39_ai_in', v);
-  m.nt31 = { ...(m.nt31 ?? {}), n_ai_in: v }; draw();
-  try { await hlApi('/me/notify', { method: 'PUT', json: { n_ai_in: v } }); } catch (e) { if (e.status !== 404) flash(e.message); }
-  flash(v ? 'Glimt viser svaret i appen også ✓' : 'Svaret vises bare i chatten og i varselet');
-}
+export const aiInOn = () => false; // prompt 45: innstillingen «Vis svaret i appen også» er fjernet
 async function aiBgToggle() {
   const v = !aiBgOn(); lsSet('p31_aibg', v);
   m.nt31 = { ...(m.nt31 ?? {}), ai_bg_notify: v }; draw();
@@ -619,7 +616,6 @@ export async function bind31(e, t) {
     case 'anschat': { // prompt 43: «Fortsett i Chat ›» gjør det samme som å dra ned (samme svar, ingen ny forespørsel)
       const A = G.ans; if (globalThis.P41?.pillToChat && A) { globalThis.P41.pillToChat(x.closest('.p31-ans'), A); return true; }
       const q = A?.q; G.ans = null; draw(); const CHAT = await import('./mobile-chat.js'); CHAT.openChat(q ?? ''); return true; }
-    case 'away': { const B = G.banner; G.banner = null; draw(); if (B?.url && location.hash !== B.url) location.hash = B.url; return true; }
     case 'go': {
       const h = x.dataset.href, dt = x.dataset.date;
       if (dt && /^#\/kal/.test(h)) { const KAL = await import('./mobile-kal.js'); KAL.kalShowDay(dt); return true; }
@@ -635,7 +631,6 @@ export async function bind31(e, t) {
       return true;
     }
     case 'aibg': await aiBgToggle(); return true;
-    case 'aiin': await aiInToggle(); return true; // prompt 39
     case 'pushtog': if (G.pushOn) await pushDisable(); else await pushEnable(); return true;
     case 'trrem': { const T = G.tr; if (!T) return true; const d = +x.dataset.d; T.rem = T.rem.includes(d) ? T.rem.filter((v) => v !== d) : [...T.rem, d]; if (!T.rem.length) T.rem = [d === 1 ? 0 : 1]; haptic('tab'); draw(); return true; }
     case 'trsave': await trialSave(CB.trialSaved); return true;
@@ -658,7 +653,7 @@ export function boot31() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { awayAt = Date.now(); presence(false); clearInterval(presT); return; }
     awayAt = 0; presence(true); presLoop();
-    if (G.away.length) setTimeout(showAway, 250);
+    G.away = []; // prompt 45: ingen banner når appen åpnes igjen
   });
   addEventListener('pagehide', () => { awayAt = Date.now(); presence(false); });
   navigator.serviceWorker?.addEventListener?.('message', (ev) => {

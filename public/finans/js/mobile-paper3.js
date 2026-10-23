@@ -74,6 +74,9 @@ const ED = { page: null, vis: {}, add: false };
 export const edOn = (page) => ED.page === page; // prompt 36: brief-kortet sveipes ikke i redigeringsmodus
 export const editing = (page) => ED.page === page;
 export const edReset = () => { ED.page = null; ED.add = false; };
+// Prompt 45: wiggle-knappene i navbaren på brett (Tilbakestill bare når oppsettet er endret).
+export const edState = () => { if (!ED.page) return null; const { order, hidden } = pageCfg(ED.page), def = PG[ED.page].map(([k]) => k); return { page: ED.page, hidden: hidden.length, changed: hidden.length > 0 || order.join() !== def.join() }; };
+export function edResetPage() { if (!ED.page) return; savePage(ED.page, PG[ED.page].map(([k]) => k), []); haptic('ok'); draw(); }
 function fixH2() {
   const cur = L.pages?.hl;
   if (!L.h2fix && cur && (cur.hidden ?? []).includes('h2')) {
@@ -134,12 +137,16 @@ const edDrag = (e, el) => dragStart(e, el, { sel: '.pp-ed[data-edk]', attr: 'dat
 // bare 170 ms: på iOS kommer ingen pointermove mens nettleseren selv begynner å scrolle, så tidtakeren fyrte midt i
 // scrollen og låste siden. Nå: langt trykk (500 ms) åpner BARE redigering. I redigering starter draget først når
 // fingeren har holdt stille i 320 ms (< 6 px); touchmove > 6 px, scroll og pointercancel avbryter. ≡ drar med en gang.
-const ED_HOLD = 320, ED_SLOP = 6;
+// Prompt 45 (claude-code-wiggle-android-dra.md): på Android tok WebView/Chrome den loddrette scrollen (touch-action: pan-y) og
+// sendte pointercancel før draget startet. Der har kortene touch-action: none i redigering (CSS .p45-and), draget starter etter
+// 140 ms eller med en gang fingeren beveger seg på kortet, og siden scrolles ved å dra mellom kortene eller med to fingre.
+const AND = /Android/i.test(navigator.userAgent);
+const ED_HOLD = AND ? 140 : 320, ED_SLOP = 6;
 const dpCancel = () => { if (dp) { clearTimeout(dp.t); dp = null; } };
 let edBooted = false;
 function edBoot() {
   if (edBooted) return; edBooted = true;
-  document.addEventListener('touchmove', (e) => { const t = e.touches?.[0]; if (t && dp && (Math.abs(t.clientX - dp.x) > ED_SLOP || Math.abs(t.clientY - dp.y) > ED_SLOP)) dpCancel(); if (t && lp && (Math.abs(t.clientX - lp.x) > 8 || Math.abs(t.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; } }, { capture: true, passive: true });
+  document.addEventListener('touchmove', (e) => { const t = e.touches?.[0]; if (t && dp && !AND && (Math.abs(t.clientX - dp.x) > ED_SLOP || Math.abs(t.clientY - dp.y) > ED_SLOP)) dpCancel(); if (t && lp && (Math.abs(t.clientX - lp.x) > 8 || Math.abs(t.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; } }, { capture: true, passive: true });
   document.addEventListener('scroll', () => { dpCancel(); if (lp) { clearTimeout(lp.t); lp = null; } }, { capture: true, passive: true });
   document.addEventListener('pointercancel', () => { dpCancel(); if (lp) { clearTimeout(lp.t); lp = null; } }, true);
   // Reserve: draget avsluttes alltid når fingeren slippes, også om slippet havnet på et element som ble tegnet bort.
@@ -166,7 +173,7 @@ export function edDown(e) {
     if (ED.page !== b.dataset.edp || ED.add) return;
     const ev = { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY };
     dpCancel();
-    dp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { dp = null; if (b.isConnected) { navigator.vibrate?.(6); edDrag({ ...ev, clientX: lastXY.x ?? ev.clientX, clientY: lastXY.y ?? ev.clientY }, b); } }, ED_HOLD) };
+    dp = { x: e.clientX, y: e.clientY, b, t: setTimeout(() => { dp = null; if (b.isConnected) { navigator.vibrate?.(6); edDrag({ ...ev, clientX: lastXY.x ?? ev.clientX, clientY: lastXY.y ?? ev.clientY }, b); } }, ED_HOLD) };
     lastXY = {};
     return;
   }
@@ -179,7 +186,7 @@ export function edDown(e) {
 let dp = null, lastXY = {};
 export function edMove(e) {
   if (lp && (Math.abs(e.clientX - lp.x) > 8 || Math.abs(e.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; }
-  if (dp) { lastXY = { x: e.clientX, y: e.clientY }; if (Math.abs(e.clientX - dp.x) > ED_SLOP || Math.abs(e.clientY - dp.y) > ED_SLOP) dpCancel(); }
+  if (dp) { lastXY = { x: e.clientX, y: e.clientY }; if (Math.abs(e.clientX - dp.x) > ED_SLOP || Math.abs(e.clientY - dp.y) > ED_SLOP) { if (AND && dp.b?.isConnected) { const b = dp.b; dpCancel(); navigator.vibrate?.(6); edDrag({ pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY, preventDefault() {} }, b); } else dpCancel(); } }
 }
 export function edUp() { if (lp) clearTimeout(lp.t); lp = null; if (dp) clearTimeout(dp.t); dp = null; }
 /** Klikk: «Ferdig», ▲ ▼ − og «+ skjult kort». Mens siden redigeres, åpner ikke kortene noe. */
@@ -299,6 +306,14 @@ async function fsRun(force = false) {
     // Prompt 40 (claude-code-finans-sok-glimt-kort.md): standardspørsmål (abonnementer, forbruk i kategori/butikk, faste,
     // kontoer, budsjett) får et ryddig Glimt-svar med nøkkeltall og kort, med og uten ✦ Glimt på.
     const P40 = globalThis.P40;
+    // Prompt 45: med ✦ Glimt på går spørsmålet til Glimt-agenten (module:'finance'): forhandler, beløp, periode, kategori og
+    // varelinjer tolkes på serveren. Flere treff → liste å velge fra, ingen treff → sagt ærlig. 404 → som før.
+    if (FS.ai && (force || !simple(q)) && globalThis.P45?.agentFin) {
+      let A = null;
+      try { A = await globalThis.P45.agentFin(q); } catch (e) { if (my !== fsSeq) return; FS.err = e.status === 429 ? 'Glimt har mye å gjøre akkurat nå. Prøv igjen om litt.' : `Glimt svarte ikke: ${e.message}`; }
+      if (my !== fsSeq) return;
+      if (A) { FS.r = { q, agent45: A, mode: 'agent' }; FS.busy = false; draw(); return; }
+    }
     if (P40?.stdQ?.(q, FS.ai)) { const g = await P40.searchAsk(q).catch(() => null); if (my !== fsSeq) return; if (g) { FS.r = { ...(await plainSearch(q).catch(() => ({}))), glimt: g, q }; FS.busy = false; draw(); return; } }
     if (FS.ai && (force || !simple(q))) {
       // Prompt 25: ingen fast 25 s-grense. Tar søket lang tid, blir det en jobb på serveren («✦ Ollama tenker … 34 s av
@@ -337,8 +352,8 @@ export function paperSearch() {
     ${!q && !r ? `<div class="pp-col" style="gap:8px"><span class="pp-lab" style="padding:4px 2px 0">PRØV</span><div class="pp-chips pp-wrap">${sugg.map((n) => `<button class="pp-fchip" data-ppfsk="sugg" data-q="${esc(n)}">${esc(n)}</button>`).join('')}</div>
       <span class="pp-mut" style="line-height:1.45;padding:2px">Enkle ord som «rema» eller «spotify» søkes vanlig først. Med ✦ Glimt kan du spørre fritt, og Glimt leser også varelinjene i kvitteringene.</span></div>` : ''}
     ${FS.busy ? (P25.JOB.cur ? P25.jobCard() : '<div class="m-spin"></div>') : ''}${FS.err ? `<div class="pp-card pp-mut">${esc(FS.err)}</div>` : ''}
-    ${!FS.busy && G ? globalThis.P40.glimtCard(G) : ''}
-    ${!FS.busy && aiTxt && !G ? `<div class="pp-card pp-aians"><span class="pp-lab">✦ GLIMT</span><span class="pp-serif">${esc(String(aiTxt).replace(/\*\*|__|\[\d+\]/g, ''))}</span><span class="pp-mut">${esc(src)}</span></div>` : ''}
+    ${!FS.busy && r?.agent45 ? globalThis.P45?.agentCard?.(r.agent45, 'fin') ?? '' : ''}${!FS.busy && G ? globalThis.P40.glimtCard(G) : ''}
+    ${!FS.busy && aiTxt && !G && !r?.agent45 ? `<div class="pp-card pp-aians"><span class="pp-lab">✦ GLIMT</span><span class="pp-serif">${esc(String(aiTxt).replace(/\*\*|__|\[\d+\]/g, ''))}</span><span class="pp-mut">${esc(src)}</span></div>` : ''}
     ${!FS.busy && hits.length && !G?.cards?.length ? `<div class="pp-sec"><span>TREFF · ${hits.length}</span><span>Netto ${sum < 0 ? '−' : '+'}${n0(sum)} kr</span></div>
       <div class="pp-rows">${hits.slice(0, 60).map((h) => { const id = h.txId ?? (h.type === 'tx' ? h.id : null), name = h.description ?? h.merchant ?? h.title ?? 'Treff';
         return `<button class="pp-tx" ${id != null ? `data-tx="${esc(id)}" data-hl="${esc(q)}"` : ''}>${ppTi({ ...h, merchant: name }, ini(name), h.color)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(name)}</b><span class="pp-mut m-ell">${esc([h.date ? dd(h.date) : '', h.reason || h.why || h.category || ''].filter(Boolean).join(' · '))}</span></span><span class="pp-serif ${h.amount > 0 ? 'pp-pos' : ''}">${h.amount != null ? `${h.amount < 0 ? '−' : '+'}${n0(h.amount)}` : ''}</span></button>`; }).join('')}</div>` : ''}

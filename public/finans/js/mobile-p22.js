@@ -365,17 +365,25 @@ export function famView22() {
   if (!FM.d) return '<div class="m-spin"></div>';
   const tab = FT.tab;
   const hjl = globalThis.P42?.velStatus?.() ?? ''; // prompt 42: ikke Vel fremme-kortet på Kart, bare en statuslinje når en økt pågår
-  if (tab === 'helse') return `<div class="f22">${healthBlock()}</div>`;
-  if (tab === 'hjemlys') return `<div class="f22">${globalThis.P41?.famHjemlys?.() ?? '<div class="m-spin"></div>'}</div>`; // prompt 41: Vel fremme-fanen (Start · Hvem · Klar · Aktiv)
+  // Prompt 45 (claude-code-familie-fold-oppsett.md): på brett (≥ 700 px) to kolonner – kartet til venstre (sticky, høyt) og
+  // innholdet til høyre (min. 300 px), full bredde uten maksbredde. Telefon: én kolonne som før.
+  const W = !!globalThis.P45?.wide?.();
+  const two = (left, right) => (W ? `<div class="f22 p45-fw"><div class="p45-fl">${left}</div><div class="p45-fr">${right}</div></div>` : `<div class="f22">${left}${right}</div>`);
+  const alerts = globalThis.P45?.zoneAlertsCard?.() ?? ''; // prompt 45: Posisjonsvarsler (hovedbryter + per person)
+  if (tab === 'helse') return W ? two(mapBlock(), healthBlock()) : `<div class="f22">${healthBlock()}</div>`;
+  if (tab === 'hjemlys') { const H = globalThis.P41?.famHjemlys?.() ?? '<div class="m-spin"></div>'; return W ? two(mapBlock(), H) : `<div class="f22">${H}</div>`; } // prompt 41: Vel fremme-fanen (Start · Hvem · Klar · Aktiv)
   if (tab === 'soner') {
     const zones = FM.d.zones ?? [];
     // Prompt 42: Soner uten kart – kartet vises bare mens en ny sone plasseres (trådkors, radius, navn, farge, ikon).
     const placing = FM.zoneMode || !!FM.zone;
-    return `<div class="f22">${placing ? mapBlock() : '<button type="button" class="f22-tb ink p42-snadd" data-f22="place">+ Ny sone på kartet</button>'}${draftCard()}${zones.map(zoneCard).join('') || (FM.zone ? '' : '<div class="f22-card"><span class="f22-mut">Ingen soner ennå. Trykk «+ Ny sone på kartet» og så på kartet, for eksempel hjemme, skolen eller jobben.</span></div>')}
-      <span class="f22-note" style="padding:0 4px">Trykk på en person i en sone for å slå varsel av eller på når de kommer og går.</span></div>`;
+    const list = `${alerts}${zones.map(zoneCard).join('') || (FM.zone ? '' : '<div class="f22-card"><span class="f22-mut">Ingen soner ennå. Trykk «+ Ny sone på kartet» og så på kartet, for eksempel hjemme, skolen eller jobben.</span></div>')}
+      <span class="f22-note" style="padding:0 4px">Trykk på en person i en sone for å slå varsel av eller på når de kommer og går.</span>`;
+    if (W) return two(mapBlock(), `${draftCard()}${list}`); // brett: kartet viser alle soner til venstre, ny sone plasseres rett i kartet
+    return `<div class="f22">${placing ? mapBlock() : '<button type="button" class="f22-tb ink p42-snadd" data-f22="place">+ Ny sone på kartet</button>'}${draftCard()}${list}</div>`;
   }
   const others = mem().filter((p) => !isMe(p)), shr = others.filter((p) => p.sharing === 'on');
-  return `<div class="f22">${hjl}${mapBlock()}${personCard()}${peopleCard()}${shr.length ? '' : '<div class="f22-card"><b class="f22-h" style="font-size:18px">Ingen deler posisjon med deg ennå</b><span class="f22-mut">Deling er av som standard. Når noen i familien slår på deling i sin app, vises de her og på kartet.</span></div>'}${eventsCard()}${shareCard()}</div>`;
+  const right = `${personCard()}${peopleCard()}${shr.length ? '' : '<div class="f22-card"><b class="f22-h" style="font-size:18px">Ingen deler posisjon med deg ennå</b><span class="f22-mut">Deling er av som standard. Når noen i familien slår på deling i sin app, vises de her og på kartet.</span></div>'}${eventsCard()}${shareCard()}`;
+  return W ? two(`${hjl}${mapBlock()}`, right) : `<div class="f22">${hjl}${mapBlock()}${right}</div>`;
 }
 
 /* ---------- Huskeliste: «Ny oppgave …» over fanelinjen, + på knappen, HA-synk ---------- */

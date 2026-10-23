@@ -7,6 +7,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+const isAdmin = () => m.me?.role === 'admin' || m.me?.isMainAdmin === true; // prompt 45
 
 const LV = [['all', 'Alle'], ['info', 'Info+'], ['warn', 'Advarsler'], ['error', 'Feil']];
 const TM = [['15m', '15m'], ['1h', '1t'], ['24h', '24t'], ['7d', '7d']];
@@ -59,7 +60,17 @@ const dot = (st) => `<i class="p44l-dot ${st}"></i>`;
 export function logView() {
   if (!L.t && L.busy !== 'load') logLoad().catch(() => {});
   if (L.miss) return '<div class="p44l-empty"><b>Logger er ikke tilgjengelig ennå</b><span>Krever en nyere Homelab-server. Oppdater serveren under Innstillinger → System.</span></div>';
-  if (L.off) return `<div class="p44l-empty"><b>${esc(L.off.setup?.title ?? 'Fant ikke Docker')}</b><span>${esc(L.off.error ?? L.off.setup?.text ?? 'Homelab får ikke kontakt med Docker Engine.')}</span>${(L.off.setup?.steps ?? []).length ? `<ol class="p44l-ol">${L.off.setup.steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}${L.off.setup?.compose ? `<pre class="p44l-pre">${esc(L.off.setup.compose)}</pre>` : ''}${L.off.setup?.alt ? `<span>${esc(L.off.setup.alt)}</span>` : ''}<span>Gi containeren lesetilgang til Docker, helst via <code>tecnativa/docker-socket-proxy</code> med <code>CONTAINERS=1 LOGS=1 POST=1 RESTART=1</code>, og sett <code>DOCKER_HOST=tcp://docker-proxy:2375</code>. Alternativt: monter <code>/var/run/docker.sock:ro</code>.</span><button type="button" class="p44l-btn" data-p44l="reload">Prøv igjen</button></div>`;
+  // Prompt 45 (claude-code-docker-logger-automatisk.md): Homelab setter opp Docker-tilgangen selv (proxyen er del av stacken).
+  // Ingen tom side og ingen manuelle steg: «Sett opp nå» (POST /api/system/docker/setup) og «Vis detaljer» med feilen.
+  if (L.off) {
+    const St = { ...(L.off.setup ?? {}), ...(L.ds ?? {}) }, st = St.state ?? 'idle', run = st === 'requested' || st === 'running' || L.dsBusy;
+    const txt = run ? 'Homelab setter opp Docker-tilgangen … Dette tar vanligvis under ett minutt.' : st === 'failed' ? 'Oppsettet feilet. Se detaljer, eller prøv igjen.' : st === 'no-updater' ? 'Oppdateringstjenesten kjører ikke, så Homelab får ikke satt opp tilgangen selv ennå.' : (L.off.setup?.text ?? 'Homelab prøver å sette dette opp automatisk …');
+    const det = [St.details ?? St.error ?? L.off.error ?? '', St.host ? `Adresse: ${St.host}` : '', St.proxy?.name ? `Proxy: ${St.proxy.name}${St.proxy.reused ? ' (gjenbrukt)' : ''}` : ''].filter(Boolean).join('\n');
+    return `<div class="p44l-empty p45-dk"><span class="p45-dki${run ? ' spin' : ''}" aria-hidden="true">${run ? '' : '!'}</span><b>${esc(L.off.setup?.title ?? 'Får ikke tilgang til Docker')}</b><span>${esc(txt)}</span>
+      ${isAdmin() && St.canRun !== false && st !== 'no-updater' ? `<button type="button" class="p44l-btn ink" data-p44l="dksetup" ${run ? 'disabled' : ''}>${run ? 'Setter opp …' : esc(L.off.setup?.button ?? 'Sett opp nå')}</button>` : !isAdmin() ? '<span class="p45-dkm">Be en administrator åpne Logger, så settes det opp.</span>' : ''}
+      ${det ? `<details class="p45-dkd"${L.dsOpen ? ' open' : ''}><summary data-p44l="dkdet">Vis detaljer</summary><pre class="p44l-pre">${esc(det)}</pre></details>` : ''}
+      <button type="button" class="p44l-btn ghost" data-p44l="reload">Prøv igjen</button></div>`;
+  }
   if (!L.cts) return '<div class="m-spin"></div>';
   const C = L.cts, up = C.filter((c) => c.st === 'run').length, S = L.sum ?? {};
   const errH = S.errors1h ?? S.errorsHour ?? S.errors ?? (L.lines ?? []).filter((x) => x.lv === 'error').length, warn = S.warnings1h ?? S.warnings ?? S.warn ?? (L.lines ?? []).filter((x) => x.lv === 'warn').length;
@@ -123,6 +134,19 @@ export async function logBind(e, t) {
   const C = L.cts ?? [], sel = C.find((c) => c.id === L.ct || c.name === L.ct);
   switch (a) {
     case 'reload': await logLoad(); return true;
+    case 'dkdet': L.dsOpen = !L.dsOpen; return false;
+    case 'dksetup': {
+      L.dsBusy = true; draw();
+      try { const r = await hlApi('/system/docker/setup', { method: 'POST', json: {} }); L.ds = { state: r?.state ?? 'requested' }; flash(r?.message ?? 'Homelab setter opp Docker-tilgangen …'); }
+      catch (err) { L.dsBusy = false; const noUpd = err.status === 409 && /updater|oppdateringstjenest|kjører ikke/i.test(err.message ?? ''); L.ds = { state: noUpd ? 'no-updater' : err.status === 409 ? 'running' : 'failed', error: err.status === 404 ? 'Krever en nyere Homelab-server' : err.message }; draw(); if (err.status !== 409 || noUpd) return true; }
+      L.dsBusy = false;
+      clearInterval(L.dsPoll); let n = 0;
+      L.dsPoll = setInterval(async () => {
+        if (++n > 60 || m.screen !== 'set') { clearInterval(L.dsPoll); return; }
+        try { const d = await hlApi('/system/docker/setup'); L.ds = d; if (d?.state === 'done' || d?.state === 'failed' || d?.available) { clearInterval(L.dsPoll); await logLoad(); if (!L.off) { haptic('ok'); flash('Logger er klar ✓'); } } draw(); } catch {}
+      }, 3000);
+      draw(); return true;
+    }
     case 'ct': L.ct = x.dataset.k; L.sel = null; L.insp = null; haptic('tab'); draw(); await linesLoad(); if (L.live) liveSet(true); else draw(); return true;
     case 'lv': L.lv = x.dataset.k; haptic('tab'); draw(); await linesLoad(); draw(); return true;
     case 'tm': L.tm = x.dataset.k; haptic('tab'); draw(); await linesLoad(); draw(); return true;

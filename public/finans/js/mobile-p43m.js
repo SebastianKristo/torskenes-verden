@@ -32,7 +32,12 @@ const tbT = (b) => (b >= 1024 ** 4 ? `${nb(b / 1024 ** 4)} TB` : b >= 1024 ** 3 
 const C = ['#2e3b4a', '#3f5a4a', '#6b3b2e', '#7a5a2a', '#4a6b3a', '#5a4a6b', '#3c4a5c', '#2f2f36', '#6b4a3a', '#3a5a6b', '#5c3c4a', '#4a4a2e'];
 const col = (s) => { let h = 0; for (const ch of String(s ?? '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return C[h % C.length]; };
 const tint = (c) => `color-mix(in srgb, ${c} 15%, transparent)`;
-const ST = { ok: ['Lastet ned', '#2f6b4a'], dl: ['Lastes ned', 'var(--pp-lab)'], miss: ['Mangler', '#a0671a'], stall: ['Står fast', '#a0671a'], pause: ['Pauset', '#8a8478'], wait: ['Venter', '#8a8478'], ann: ['Annonsert', '#8a8478'], off: ['Ikke overvåket', '#8a8478'] };
+// Prompt 45 (claude-code-media-mer-farger.md): statusfarger – Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå.
+const ST = { ok: ['Lastet ned', '#2f8a55'], dl: ['Lastes ned', '#3d7dd6'], miss: ['Mangler', '#c8412f'], stall: ['Står fast', '#c8412f'], pause: ['Pauset', '#8a8478'], wait: ['Venter', '#d49a12'], ann: ['Annonsert', '#d49a12'], off: ['Ikke overvåket', '#8a8478'] };
+// Tjenestefarger brukt konsekvent (ikon, aktiv fane, statusprikker, fremdrift).
+export const SVCC = { kom: '#b23a2a', son: '#35c5f4', rad: '#ffc230', qb: '#3d7dd6', pro: '#e66001', avs: '#e5a00d', plex: '#e5a00d', jellyfin: '#aa5cc3' };
+const BK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+const bkBtn = (a, label) => `<button type="button" class="p45-bk" data-p43m="${a}" aria-label="${esc(label)}" title="${esc(label)}">${BK}</button>`; // prompt 45: felles rund tilbakeknapp
 const stv = (k, pc) => { const s = ST[k] ?? ST.wait; return { sT: (k === 'dl' || k === 'pause') && pc != null ? `${s[0]} ${Math.floor(pc)} %` : s[0], sC: s[1], dot: s[1] }; };
 const PROF = ['Any', 'HD-720p', 'HD-1080p', 'HD - 720p/1080p', 'Ultra-HD'];
 const PRES = { Any: 1080, 'HD-720p': 720, 'HD-1080p': 1080, 'HD - 720p/1080p': 1080, 'Ultra-HD': 2160 };
@@ -275,11 +280,12 @@ const empty = (key, what) => {
 };
 
 function header() {
-  return `<div class="p43-top"><div class="p43-tr"><button type="button" class="p43-back" data-p43m="back"><span aria-hidden="true">‹</span>Tilbake</button><span class="m-grow"></span>
-      <button type="button" class="p43-ib lab${M.glM ? ' on' : ''}" data-p43m="gltog" aria-label="Spør Glimt" aria-expanded="${M.glM}">✦</button><button type="button" class="p43-ib" data-p43m="set" aria-label="Innstillinger for Media">${svg(IC.gear, 18)}</button></div>
+  // Prompt 45: rund tilbakeknapp som resten av systemet, og ⋯ i stedet for egne innstillinger (de ligger i Innstillinger → Media).
+  return `<div class="p43-top"><div class="p43-tr">${bkBtn('back', 'Tilbake')}<span class="m-grow"></span>
+      <button type="button" class="p43-ib lab${M.glM ? ' on' : ''}" data-p43m="gltog" aria-label="Spør Glimt" aria-expanded="${M.glM}">✦</button><button type="button" class="p43-ib" data-p43m="more45" aria-label="Flere valg for Media" aria-expanded="${M.sh === 'more45'}">⋯</button></div>
     <b class="p43-h1">Media</b>
     ${M.glM ? `<form class="p43-glf" data-p43mf="gl"><span aria-hidden="true">✦</span><input id="p43-gq" name="q" value="${esc(M.gq)}" placeholder="«legg til Severance i 4K»" autocomplete="off" enterkeyhint="send" aria-label="Spør Glimt om Media"></form>` : ''}
-    <div class="p43-tabs" role="tablist">${TABS.map(([k, n]) => `<button type="button" role="tab" class="p43-tab${M.tab === k ? ' on' : ''}" aria-selected="${M.tab === k}" data-p43m="tab" data-k="${k}">${n}</button>`).join('')}</div></div>`;
+    <div class="p43-tabs" role="tablist">${TABS.map(([k, n]) => `<button type="button" role="tab" class="p43-tab p45-svc${M.tab === k ? ' on' : ''}" style="--svc:${SVCC[k]}" aria-selected="${M.tab === k}" data-p43m="tab" data-k="${k}"><i class="p45-sdot" aria-hidden="true"></i>${n}</button>`).join('')}</div></div>`;
 }
 
 function glimtPanel() {
@@ -357,13 +363,85 @@ function banner(x, k, facts, chips) {
   const L = (k === 's' ? D.ser : D.mov) ?? [], i = L.findIndex((y) => String(y.id) === String(x.id));
   const pv = i > 0 ? L[i - 1] : null, nx = i >= 0 && i < L.length - 1 ? L[i + 1] : null;
   const bg = x.fanart || x.poster;
-  return `<div class="p44m-ban">${bg ? `<span class="p44m-bg${x.fanart ? '' : ' pst'}" style="background-image:url('${esc(bg)}')"></span>` : `<span class="p44m-bg" style="background:${esc(x.c ?? '#3c4a5c')}"></span>`}<span class="p44m-gr"></span>
+  const tk = `${k}${x.id}`; tintFrom(x.poster, tk);
+  return `<div class="p44m-ban p45-ban" style="--tint:${esc(TINT[tk] ?? x.c ?? col(x.t))}">${bg ? `<span class="p44m-bg${x.fanart ? '' : ' pst'}" style="background-image:url('${esc(bg)}')"></span>` : `<span class="p44m-bg" style="background:${esc(x.c ?? '#3c4a5c')}"></span>`}<span class="p44m-gr"></span>
     <div class="p44m-bt"><span class="p43-k">${k === 's' ? 'SONARR · SERIE' : 'RADARR · FILM'}</span><span class="p44m-nav"><button type="button" data-p43m="detnav" data-id="${esc(pv?.id ?? '')}" ${pv ? '' : 'disabled'} aria-label="Forrige">←</button><button type="button" data-p43m="detnav" data-id="${esc(nx?.id ?? '')}" ${nx ? '' : 'disabled'} aria-label="Neste">→</button></span></div>
     <div class="p44m-bm">${poster(x, wideOn() ? 120 : 104, 0, 'det')}<div class="m-grow"><b class="p44m-bh">${esc(x.t)}</b><span class="p44m-bf">${facts}</span></div></div>
     <div class="p44m-chips">${chips.filter(Boolean).map(([l, v, a]) => `<${a ? 'button type="button"' : 'span'} class="p44m-gl"${a ? ` ${a}` : ''}>${l ? `<small>${esc(l)}</small>` : ''}<b>${esc(v)}</b></${a ? 'button' : 'span'}>`).join('')}</div>
     ${x.overview ? `<p class="p44m-ov">${esc(x.overview)}</p>` : ''}<span class="p44m-src">Metadata fra ${k === 's' ? 'TheTVDB' : 'TMDb'}</span></div>`;
 }
 const runT = (min) => (min ? (min >= 60 ? `${Math.floor(min / 60)} t ${min % 60 ? `${min % 60} min` : ''}`.trim() : `${min} min`) : '');
+/* ---------- Prompt 45: ⋯-menyer og «Slett uovervåkede» (claude-code-media-slett-uovervakede-episoder.md) ---------- */
+const isAdm = () => m.me?.role === 'admin' || m.me?.isMainAdmin === true;
+/** ⋯ i seriedetaljen (Sonarr) og filmdetaljen (Radarr). */
+function x0det(k, id) { return `<button type="button" class="p43-ib" data-p43m="dmore" data-kind="${k}" data-id="${esc(id)}" aria-label="Flere valg">⋯</button>`; }
+function menuSheet45(title, items) {
+  return sheetWrap(`${shHead(title)}<div class="p43-card p45-menu">${items.filter(Boolean).map(([n, sub, a, attrs = '', red = false]) => `<button type="button" class="p43-tr2${red ? ' p45-red' : ''}" data-p43m="${a}" ${attrs}><span class="m-grow"><b>${esc(n)}</b>${sub ? `<span class="mut">${esc(sub)}</span>` : ''}</span><span class="p43-chev" aria-hidden="true">›</span></button>`).join('')}</div>`, title);
+}
+function moreSheet45() {
+  const svc = M.tab === 'rad' ? 'radarr' : 'sonarr';
+  return menuSheet45('Media', [
+    ['Innstillinger for Media', 'Varsler, Kalender, avspilling og tjenester', 'setgo'],
+    isAdm() && (M.tab === 'son' || M.tab === 'rad') ? [svc === 'sonarr' ? 'Rydd uovervåkede episoder' : 'Rydd uovervåkede filmer', `Slett filer som ikke er overvåket i ${svc === 'sonarr' ? 'alle serier' : 'Radarr'}`, 'unm', `data-svc="${svc}"`, true] : null,
+    ['Oppdater', 'Hent alt på nytt fra tjenestene', 'retry'],
+  ]);
+}
+function dmoreSheet45() {
+  const { k } = M.det ?? {}; if (!k) return '';
+  if (k === 's') {
+    const x = curSer(), eps = x?.eps ?? [], seas = [...new Set(eps.filter((e) => e.has && !e.mon).map((e) => e.s))].sort((a, b) => a - b);
+    return menuSheet45(x?.t ?? 'Serie', [
+      isAdm() ? ['Slett uovervåkede', 'Episodefiler i hele serien som ikke er overvåket', 'unm', `data-svc="sonarr" data-sid="${esc(x?.id ?? '')}"`, true] : null,
+      ...(isAdm() ? seas.map((sn) => [`Slett uovervåkede i ${sn === 0 ? 'Spesialer' : `sesong ${sn}`}`, `${eps.filter((e) => e.s === sn && e.has && !e.mon).length} episodefiler`, 'unm', `data-svc="sonarr" data-sid="${esc(x?.id ?? '')}" data-s="${sn}"`, true]) : []),
+      ['Innstillinger for Media', '', 'setgo'],
+      isAdm() ? null : ['Sletting krever administrator', 'Be en admin om å rydde filene', 'shx'],
+    ]);
+  }
+  const x = curMov();
+  return menuSheet45(x?.t ?? 'Film', [
+    isAdm() && x?.has && !x?.mon ? ['Slett filen (ikke overvåket)', 'Filmen er ikke overvåket', 'unm', `data-svc="radarr" data-mid="${esc(x.id)}"`, true] : null,
+    isAdm() ? ['Rydd uovervåkede filmer', 'Alle filmer i Radarr som ikke er overvåket', 'unm', 'data-svc="radarr"', true] : null,
+    ['Innstillinger for Media', '', 'setgo'],
+  ]);
+}
+const UNM = { d: null, sel: {}, busy: false, err: '', q: null };
+async function unmOpen(q) {
+  Object.assign(UNM, { d: null, sel: {}, busy: false, err: '', q }); M.sh = 'unm'; draw();
+  const qs = new URLSearchParams({ service: q.svc }); if (q.sid) qs.set('seriesId', q.sid); if (q.s != null && q.s !== '') qs.set('season', q.s);
+  try { UNM.d = await mApi(`/unmonitored?${qs}`); let it = UNM.d?.items ?? []; if (q.mid) it = it.filter((x) => String(x.movieId) === String(q.mid)); UNM.d.items = it; for (const x of it) UNM.sel[x.fileId] = true; }
+  catch (e) { UNM.err = errText(e); UNM.d = { items: [] }; }
+  if (M.sh === 'unm') draw();
+}
+const szT = (b) => (b ? tbT(b) : '');
+function unmSheet() {
+  const D0 = UNM.d, it = D0?.items ?? [], n = it.filter((x) => UNM.sel[x.fileId]), tot = n.reduce((a, x) => a + (+x.size || 0), 0);
+  const ser = UNM.q?.svc === 'sonarr';
+  const head = !D0 ? '<div class="m-spin"></div>' : UNM.err ? `<span class="p43-err">${esc(UNM.err)}</span>` : !it.length ? `<span class="mut">Ingen ${ser ? 'episodefiler' : 'filmfiler'} som ikke er overvåket. Alt er ryddig.</span>`
+    : `<b class="p45-unmq">Slette ${n.length} ${ser ? (n.length === 1 ? 'episodefil' : 'episodefiler') : (n.length === 1 ? 'filmfil' : 'filmfiler')}${tot ? ` (${szT(tot)})` : ''} som ikke er overvåket?</b><span class="mut">Filene slettes fra disken. Du kan angre i noen sekunder etterpå.</span>`;
+  const list = it.length ? `<div class="p43-card p45-unml"><button type="button" class="p45-unma" data-p43m="unmall">${n.length === it.length ? 'Velg ingen' : 'Velg alle'}</button>${it.map((x) => `<button type="button" class="p45-unmr" data-p43m="unmsel" data-id="${esc(x.fileId)}" aria-pressed="${!!UNM.sel[x.fileId]}"><span class="p45-ck${UNM.sel[x.fileId] ? ' on' : ''}" aria-hidden="true">${UNM.sel[x.fileId] ? '✓' : ''}</span><span class="m-grow"><b class="m-ell">${esc([x.code, x.title].filter(Boolean).join(' · '))}</b><span class="mut m-ell">${esc([x.series, x.quality].filter(Boolean).join(' · '))}</span></span><span class="mono p43-sm">${esc(x.sizeText ?? szT(x.size))}</span></button>`).join('')}</div>` : '';
+  return sheetWrap(`${shHead('Slett uovervåkede')}${head}${list}<div class="p43-row two"><button type="button" class="p43-btn ghost lg" data-p43m="shx">Avbryt</button><button type="button" class="p43-btn red lg" data-p43m="unmgo" ${!n.length || UNM.busy ? 'disabled' : ''}>${UNM.busy ? 'Sletter …' : 'Slett filer'}</button></div>`, 'Slett uovervåkede');
+}
+async function unmGo() {
+  const ids = (UNM.d?.items ?? []).filter((x) => UNM.sel[x.fileId]).map((x) => x.fileId); if (!ids.length) return;
+  UNM.busy = true; draw();
+  try {
+    const r = await mApi('/unmonitored/delete', { method: 'POST', json: { service: UNM.q.svc, fileIds: ids, confirm: true } });
+    M.sh = null; UNM.busy = false; haptic('ok');
+    const U = r?.undo; const msg = r?.message ?? `Sletter ${ids.length} filer${r?.sizeText ? ` (${r.sizeText})` : ''}`;
+    if (U?.path && globalThis.P44?.toast) globalThis.P44.toast(msg, async () => { try { await hlApi(U.path.replace(/^\/api/, ''), { method: U.method ?? 'DELETE' }); flash('Slettingen er angret'); } catch (e) { flash(errText(e)); } }, 8000);
+    else flash(msg);
+    setTimeout(() => { if (M.det) { if (M.det.k === 's') loadSerDet(M.det.id, true).then(draw); else loadMovDet(M.det.id, true).then(draw); } }, (r?.executesAt ? Math.max(0, Date.parse(r.executesAt) - Date.now()) : 0) + 1500);
+  } catch (e) { UNM.busy = false; UNM.err = e.status === 403 ? 'Bare admin kan slette filer' : errText(e); }
+  draw();
+}
+/** Svak gradient bak hero fra posterens dominante farge (samme opphav: plakatene går via Homelab). */
+const TINT = {};
+function tintFrom(url, key) {
+  if (!url || TINT[key] !== undefined) return; TINT[key] = null;
+  const im = new Image(); im.crossOrigin = 'anonymous';
+  im.onload = () => { try { const c = document.createElement('canvas'); c.width = c.height = 12; const g = c.getContext('2d'); g.drawImage(im, 0, 0, 12, 12); const d = g.getImageData(0, 0, 12, 12).data; let r = 0, gg = 0, b = 0, n = 0; for (let i = 0; i < d.length; i += 4) { const mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]); if (mx - mn < 18 || mx < 30) continue; r += d[i]; gg += d[i + 1]; b += d[i + 2]; n++; } if (n) { TINT[key] = `rgb(${Math.round(r / n)},${Math.round(gg / n)},${Math.round(b / n)})`; if (m.screen === 'media' && M.det) draw(); } } catch {} };
+  im.src = url;
+}
 function fdelSheet() {
   const F = M.fdel;
   return sheetWrap(`${shHead(F.k === 'e' ? 'Slette episodefilen?' : 'Slette filmfilen?')}<span class="mut">${esc(F.label)}. Filen slettes fra disken, og overvåkingen slås av så den ikke lastes ned igjen med en gang.</span>
@@ -371,7 +449,7 @@ function fdelSheet() {
 }
 function detView() {
   const { k, id } = M.det, x = k === 's' ? D.sd[id] ?? (D.ser ?? []).find((y) => String(y.id) === String(id)) : D.md[id] ?? (D.mov ?? []).find((y) => String(y.id) === String(id));
-  const back = `<button type="button" class="p43-bk" data-p43m="detx">‹ ${k === 's' ? 'Serier' : 'Filmer'}</button>`;
+  const back = `<div class="p45-bkrow">${bkBtn('detx', k === 's' ? 'Tilbake til serier' : 'Tilbake til filmer')}<span class="p45-bkl">${k === 's' ? 'Serier' : 'Filmer'}</span><span class="m-grow"></span>${x0det(k, id)}</div>`;
   if (!x) return back + (D.err[`${k === 's' ? 'sd' : 'md'}${id}`] ? `<div class="p43-empty"><b>Fant ikke ${k === 's' ? 'serien' : 'filmen'}</b><span>${esc(D.err[`${k === 's' ? 'sd' : 'md'}${id}`])}</span></div>` : '<div class="m-spin"></div>');
   const player = M.set.player;
   const actBtn = (n, a, pri, extra = '') => `<button type="button" class="p43-btn${pri ? ' ink' : ' ghost'}" data-p43m="${a}" ${extra}>${esc(n)}</button>`;
@@ -477,7 +555,7 @@ function srchView() {
     : rows.length ? `<div class="p43-rl">${rows.map((r) => { const g = !!M.grab[`${relKey()}:${r.id}`]; return `<div class="p43-rr"><div class="m-grow"><span class="p43-rel">${esc(relS(r))}</span><span class="p43-rm"><span class="p43-q">${esc(r.q)}</span><b>${gbT(r.gb)}</b><b style="color:${sc(r)}">▲ ${nbN(r.s)} / ${nbN(r.l)}</b><span class="mut">${esc(r.ix)}</span></span>${r.lang ? `<span class="mut p43-sm">${esc(r.lang)}</span>` : ''}${r === b ? '<b class="p43-best">Best treff for profilen</b>' : ''}${r.rej.length ? `<span class="p43-rej">${esc(r.rej.slice(0, 2).join(' · '))}</span>` : ''}</div><button type="button" class="p43-dlb${g ? ' ok' : ''}" data-p43m="grab" data-g="${esc(r.id)}" aria-label="Last ned ${esc(r.q)}" ${r.partial ? 'disabled title="Kan lastes ned når søket er ferdig"' : ''}>${g ? '✓' : svg(IC.dl, 18, 2.4)}</button></div>`; }).join('')}</div>`
       : '<span class="mut">Ingen treff med dette filteret.</span>';
   const list2 = R && rows.length && R.running ? prog + list : R?.done ? prog + list : list;
-  return `<button type="button" class="p43-bk" data-p43m="srchx">‹ ${esc(x.t)}</button>
+  return `<div class="p45-bkrow">${bkBtn('srchx', `Tilbake til ${x.t}`)}<span class="p45-bkl m-ell">${esc(x.t)}</span></div>
     <div class="p43-dh">${poster(x, 56, 0, 'det')}<div class="m-grow"><span class="p43-k">INTERAKTIVT SØK</span><b class="p43-dt s">${esc(title)}</b><span class="mut">${esc(info)}</span></div></div>
     <div class="p43-chips">${[['all', `Alle ${all.length}`], ['1080', '1080p'], ['2160', '2160p'], ['no', 'Norsk tekst'], ['seed', 'Flest seedere']].map(([f, n]) => chip(M.fq === f, n, `data-p43m="fq" data-k="${f}"`)).join('')}</div>${list2}`;
 }
@@ -608,6 +686,14 @@ function idxSheet() {
     <div class="p43-card p43-togs">${togRow('Sonarr', 'Bruk til serier', a.son, 'itog', 'son')}${togRow('Radarr', 'Bruk til filmer', a.rad, 'itog', 'rad')}</div>
     ${a.err ? `<span class="p43-err">${esc(a.err)}</span>` : ''}<div class="p43-row two"><button type="button" class="p43-btn ghost lg" data-p43m="iback">Tilbake</button><button type="button" class="p43-btn ink lg" data-p43m="isave" ${a.busy ? 'disabled' : ''}>${a.busy ? 'Tester …' : 'Test og lagre'}</button></div>`, 'Legg til indekser');
 }
+/** Prompt 45 (claude-code-innstillinger-samlet.md): innholdet fra det gamle arket, vist i Innstillinger → Media. */
+export function mediaSetBody() {
+  if (!D.t.status && !D.busy.status) loadStatus(true).then(() => { if (m.screen === 'set') draw(); });
+  const html = setSheet();
+  const i = html.indexOf('<span class="p43-grab"'), j = html.indexOf('</div>', html.indexOf('class="p43-shh"'));
+  const inner = html.slice(j + 6, html.lastIndexOf('</div>'));
+  return `<div class="p45-mset p43m">${inner}</div>`;
+}
 function setSheet() {
   const S0 = D.status, sv = (n) => { const o = (Array.isArray(S0?.services) ? S0.services.find((y) => String(y.id ?? y.name).toLowerCase() === n) : null) ?? S0?.[n] ?? S0?.services?.[n]; return o; };
   const svcs = [['sonarr', 'Sonarr'], ['radarr', 'Radarr'], ['qbittorrent', 'qBittorrent'], ['prowlarr', 'Prowlarr'], ['jellyfin', 'Jellyfin'], ['plex', 'Plex']].map(([k, n]) => { const o = sv(k) ?? (k === 'qbittorrent' ? sv('qbit') : null); return { n, o }; }).filter((x) => x.o || ['Sonarr', 'Radarr', 'qBittorrent', 'Prowlarr'].includes(x.n));
@@ -628,6 +714,9 @@ export function layer43m() {
   if (M.sh === 'set') return setSheet();
   if (M.sh === 'srv') return srvSheet();
   if (M.sh === 'fdel' && M.fdel) return fdelSheet();
+  if (M.sh === 'more45') return moreSheet45(); // prompt 45
+  if (M.sh === 'dmore') return dmoreSheet45();
+  if (M.sh === 'unm') return unmSheet();
   return '';
 }
 
@@ -832,7 +921,8 @@ function goBack() {
 }
 
 export async function bind43m(e, t) {
-  if (m.screen !== 'media') return false;
+  const onSet = m.screen === 'set' && m.sub === 'media' && !!t.closest?.('.p45-mset'); // prompt 45: Innstillinger → Media
+  if (m.screen !== 'media' && !onSet) return false;
   const x = t.closest?.('[data-p43m]'); if (!x) return false;
   const a = x.dataset.p43m, k = x.dataset.k;
   if (x.tagName !== 'A') e.preventDefault();
@@ -846,7 +936,14 @@ export async function bind43m(e, t) {
     case 'glhit': { const h = M.gl?.res?.hit; if (!h) return true; if (h.ex) { M.gl = null; M.gq = ''; openDet(h.k, h.raw?.id ?? h.id); return true; } openAdd(h.k, { sel: h, prof: h.prof, mon: h.mon }); M.add.go = true; await addConfirm(); return true; }
     case 'gledit': { const h = M.gl?.res?.hit; if (h) openAdd(h.k, { sel: h, prof: h.prof, mon: h.mon, q: h.t }); return true; }
     case 'glact': { const ac = M.gl?.res?.actions?.[+x.dataset.i]; if (ac) await glAct(ac); return true; }
-    case 'set': M.sh = 'set'; loadStatus(true).then(draw); haptic('tap'); draw(); return true;
+    case 'set': M.sh = null; haptic('tap'); location.hash = '#/set/media'; return true; // prompt 45: Innstillinger → Media
+    case 'setgo': M.sh = null; haptic('tap'); location.hash = '#/set/media'; return true;
+    case 'more45': M.sh = M.sh === 'more45' ? null : 'more45'; haptic('tap'); draw(); return true;
+    case 'dmore': M.sh = 'dmore'; haptic('tap'); draw(); return true;
+    case 'unm': haptic('tap'); await unmOpen({ svc: x.dataset.svc, sid: x.dataset.sid, s: x.dataset.s, mid: x.dataset.mid }); return true;
+    case 'unmsel': UNM.sel[x.dataset.id] = !UNM.sel[x.dataset.id]; haptic('tap'); draw(); return true;
+    case 'unmall': { const it = UNM.d?.items ?? [], all = it.every((y) => UNM.sel[y.fileId]); UNM.sel = Object.fromEntries(it.map((y) => [y.fileId, !all])); draw(); return true; }
+    case 'unmgo': await unmGo(); return true;
     case 'shx': M.sh = null; draw(); return true;
     case 'retry': D.t = {}; D.err = {}; D.miss = {}; delete D.err.forbid; reload(true); draw(); return true;
     case 'cal': flash(M.set.cal ? 'Kommer snart vises i Kalender-appen under «Media»' : 'Slå på «Vis i Kalender» i innstillingene for Media'); return true;

@@ -346,7 +346,7 @@ function glSheet() {
     <form class="p37-gf" data-p37form="glimt">${SPARK(22, !!G7.gBusy)}<input id="p37-gq" value="${esc(q)}" placeholder="Spør Glimt eller skriv en oppgave …" enterkeyhint="send" autocomplete="off" data-p37in="gq" aria-label="Spør Glimt"><label class="p37-cam" title="Bilde av handlelapp eller oppskrift">${svg('M3 5h18v14H3zM12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4zM8 5l1.5-2h5L16 5', 17, 2.1)}<input type="file" accept="image/*" class="m-file" data-p37img aria-label="Bilde av handlelapp"></label><button type="submit" class="p37-send${q.trim() ? ' on' : ''}" aria-label="Send">${svg('M12 19V5M5 12l7-7 7 7', 15, 2.6)}</button></form>
     <div class="p37-chips">${SUGQ.map((n) => `<button type="button" class="p37-sc" data-p37="gsug" data-q="${esc(n)}">${esc(n.length > 34 ? `${n.slice(0, 32)}…` : n)}</button>`).join('')}</div>
     ${G7.gBusy ? `<div class="p37-gbusy">${SPARK(16, true)}${esc(G7.gBusy)}</div>` : ''}
-    ${A && !G7.gBusy ? `<div class="p37-ga"><span class="p37-lab red">GLIMT</span><span class="p37-gat">${esc(A.text)}</span>${A.res?.length ? `<div class="p37-gres">${A.res.slice(0, 8).map((x) => `<div><i style="background:${esc(x.c || '#1b1a17')}"></i><b class="m-grow m-ell">${esc(x.n)}</b><small>${esc(x.m || '')}</small></div>`).join('')}</div>` : ''}
+    ${A && !G7.gBusy ? `<div class="p37-ga"><span class="p37-lab red">GLIMT</span><span class="p37-gat">${esc(A.text)}</span>${A.agent ? globalThis.P45?.agentExtra?.(A, 'tasks') ?? '' : '' /* prompt 45 */}${!A.agent && A.res?.length ? `<div class="p37-gres">${A.res.slice(0, 8).map((x) => `<div><i style="background:${esc(x.c || '#1b1a17')}"></i><b class="m-grow m-ell">${esc(x.n)}</b><small>${esc(x.m || '')}</small></div>`).join('')}</div>` : ''}
       <div class="p37-gab">${A.undo && Date.now() - (A.at ?? 0) < 10000 ? '<button type="button" data-p37="gundo">Angre</button>' : ''}${A.chat ? '<button type="button" data-p37="gchat">Spør i Chat ›</button>' : ''}<button type="button" class="dim" data-p37="gclr">Lukk</button></div></div>` : ''}</div>`;
 }
 function geoBanner() {
@@ -469,6 +469,18 @@ export async function gRun(q0, extra = {}) {
   if (!HK.local && !extra.image && globalThis.P41?.needsAI?.(q)) {
     const ok = await globalThis.P41.huskeAsync(q, HK.cur !== 'alle' && HK.cur !== 'arkiv' && HK.cur !== 'glimt' ? HK.cur : undefined, 'huskeliste');
     if (ok) { G7.gl = false; G7.gBusy = ''; draw(); return; }
+  }
+  // Prompt 45: Glimt-agenten (POST /api/glimt/agent, module:'tasks') tolker og lagrer; spør når noe er uklart. 404 → som før.
+  if (!HK.local && !extra.image && globalThis.P45?.agentTasks) {
+    try {
+      const A = await globalThis.P45.agentTasks(q, { listId: HK.cur !== 'alle' && HK.cur !== 'arkiv' && HK.cur !== 'glimt' ? HK.cur : undefined });
+      if (A) {
+        HK.t = 0; await tasksLoad(true).catch(() => {});
+        haptic(A.failed ? 'err' : 'ok');
+        G7.gAns = { text: A.text, res: (A.agent.results ?? []).filter((x) => x.kind === 'task' || !x.kind).map((x) => ({ n: x.title ?? '', c: listOf(x.list ?? x.listId)?.color ?? '#1b1a17', m: [x.subtitle, x.date].filter(Boolean).join(' · ') })), undo: A.undo ? { token: A.undo } : null, at: Date.now(), chat: false, agent: A.agent };
+        G7.gBusy = ''; draw(); return;
+      }
+    } catch (e) { if (e.status && e.status !== 404) { G7.gBusy = ''; answer(e.status === 429 ? 'Glimt har mye å gjøre akkurat nå. Prøv igjen om litt.' : `Fikk ikke svar: ${e.message}`); return; } }
   }
   if (!HK.local && !G7.noSrv) {
     try {

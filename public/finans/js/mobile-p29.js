@@ -111,6 +111,8 @@ export async function quickRun(text, parsed) {
   P31.jobPut(tmp.id, { kind: 'quick', title: 'Legger til i kalenderen', model: 'Glimt · lokal', input: t, dur: 2600,
     fields: pr?.ok ? [['Hva', pr.title], ['Når', quickLabel(pr)], ['Kalender', 'Privat'], ['Varsel', pr.start ? '1 time før' : 'Ingen']] : [] });
   draw();
+  // Prompt 45: Glimt-agenten (module:'calendar') tolker dato, tid og tittel og lagrer avtalen; spør når noe mangler. 404 → som før.
+  if (globalThis.P45?.agentCalRun && !parsed?.local45) { const ok = await globalThis.P45.agentCalRun(t, () => dropJob(tmp.id)); if (ok) return; }
   if (!QJ.missing) {
     try {
       const r = await hlApi('/kalender/quick', { method: 'POST', json: { text: t } });

@@ -150,6 +150,7 @@ export function p17SetMain(T = {}) {
     ${grp(appName().toUpperCase(), [row('#/set/tilpass', 'Tilpass', 'Navn, ikon, tema, farger, bakgrunn og fanelinje', '', 'look', 'tilpass'), /* prompt 39: Navn, App-ikon, Fanelinje-stil og Fanelinje i Hjem ligger i Tilpass */
       row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
     ${grp('GLIMT', [row('#/glimt', 'Glimt', 'Figur, brief, stemme og venner', '', 'ai', 'glimt')])}
+    ${globalThis.P45?.modGroup?.(grp, row) ?? '' /* prompt 45: MODULER – alle innstillinger samlet her (Media, Ruter, Vær, Studie) */}
     ${globalThis.P42?.healthGroup?.(grp, row) ?? '' /* prompt 42: HELSE (FAMILIE) – flyttet fra Familie → Helse */}
     ${grp('APP', [/* prompt 39: «Utseende og fanelinje» er flyttet til Tilpass */row('#/aictl', 'AI og modeller', 'Modeller, jobber, forbruk og nøkler', '', 'ai', 'aictl'), /* prompt 34: AI-kontroll */ row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/kal', 'Kalendere', 'Google Kalender · Home Assistant', '', 'users', 'kal'), globalThis.P44?.setRowHuske?.() ?? '' /* prompt 44: Gjøremål */, row('#/set/integ', 'Integrasjoner', 'Home Assistant, Media, Entur, Bring og 17 til', '', 'home', 'integ'),
       row('#/set/widgets', 'Widgets', 'Media, Avganger, Kalender og 3 til', '', 'list', 'widgets'), row('#/set/kalapp', 'Kalender-appen', 'Egen app med samme konto · IPA og APK', '', 'down', 'kalapp'), row('#/set/appprofil', 'Appprofil', (P24N?.profName() ?? ''), '', 'users', 'appprofil') /* prompt 39 */])}
@@ -245,6 +246,7 @@ export function p17Varsler(trkRows = '') {
       <button class="opt-row" data-p17="nperm"><span class="m-grow"><b style="font-weight:500">Tillatelse på enheten</b><br><span style="font-size:13px;opacity:.65">${esc(permTxt)}</span></span><span class="sval">${perm === 'default' ? 'Spør ›' : ''}</span></button>
       <button class="opt-row" data-p17="ntest"><span class="m-grow" style="color:var(--m-acc);font-weight:700">Test varsel</span><span class="sval">Lyd, vibrasjon og varsel</span></button></div>
     ${NT.err ? `<div class="snote">${esc(NT.err)}</div>` : ''}
+    ${globalThis.P45?.zoneAlertsSettings?.() ?? '' /* prompt 45: Familie → Sonevarsler */}
     <div class="sec">Varsellyd</div><div class="list"><div class="opt-row col"><div class="pp-chips">${SOUNDS.map(([k, n]) => `<button class="pp-fchip sm" data-p17="snd" data-k="${k}" aria-pressed="${d.sound === k}">${d.sound === k ? '✓ ' : ''}${n}</button>`).join('')}</div></div>
       <label class="opt-row"><span class="m-grow">Volum</span><input type="range" min="0" max="100" step="5" value="${+d.volume || 0}" data-p17in="vol" aria-label="Volum"><b style="width:44px;text-align:right">${+d.volume || 0} %</b></label>
       <label class="opt-row"><span class="m-grow" style="color:var(--m-acc);font-weight:500">${d.sound === 'egen' ? 'Bytt egen lyd' : 'Last opp egen lyd'}<br><span style="font-size:12.5px;opacity:.65;color:inherit">MP3, WAV eller M4A under 1 MB</span></span><input class="m-file" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/x-m4a,.mp3,.wav,.m4a" data-p17file="snd"></label></div>
@@ -571,7 +573,7 @@ export function onRealtime(d) {
   rtT = setTimeout(async () => {
     if (d.type === 'tasks') { HK.t = 0; await tasksLoad(true); if (m.screen === 'huske' || m.screen === 'hl') draw(); }
     else if (d.type === 'family' && d.kind === 'ping') { playSound(); navigator.vibrate?.([200, 100, 200]); flash(`${d.fromName ?? 'Noen'} vil finne telefonen din`); }
-    else if (d.type === 'family') { await famLoad(); if (m.screen === 'hl') await import('./mobile-p20.js').then((x) => x.posLoad(true)).catch(() => {}); if (m.screen === 'fam' || m.screen === 'hl') draw(); }
+    else if (d.type === 'family') { if (d.kind === 'event' && !document.hidden) { const Z = d.data ?? d; const zn = Z.zone?.name ?? Z.zoneName ?? (typeof Z.zone === 'string' ? Z.zone : null) ?? d.title; if (zn && (Z.event || Z.zoneId || d.title)) globalThis.P45?.showZoneBanner?.({ title: d.title ?? zn, body: d.body ?? Z.text ?? `${Z.person ?? ''} ${Z.event === 'leave' ? 'forlot' : 'kom til'} ${zn}`.trim(), color: Z.color ?? Z.zone?.color, iconUrl: Z.iconUrl ?? Z.icon }); } /* prompt 45: sonevarsel i appen */ await famLoad(); if (m.screen === 'hl') await import('./mobile-p20.js').then((x) => x.posLoad(true)).catch(() => {}); if (m.screen === 'fam' || m.screen === 'hl') draw(); }
     else if (d.type === 'tracking' && (m.screen === 'spor' || m.screen === 'hl')) { const { trkLoad } = await import('./mobile-track.js'); await trkLoad().catch(() => {}); draw(); }
   }, 250);
 }

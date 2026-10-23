@@ -138,7 +138,7 @@ export function healthGroup(grp, row) {
   return grp('HELSE (FAMILIE)', [
     row('', 'Apple Health', conn('apple') ? 'Koblet til via appen · iPhone' : 'Ikke koblet · iPhone', st('apple'), 'users', 'hs-apple', 'data-p42="hs" data-k="apple"'),
     row('', 'Health Connect', conn('hc') ? 'Koblet til via appen · Android' : 'Ikke koblet · Android', st('hc'), 'users', 'hs-hc', 'data-p42="hs" data-k="hc"'),
-    row('', 'Home Assistant · Mobilapp', 'Hent helsesensorer fra HA Companion', 'Velg', 'home', 'hs-ha', 'data-p42="hs" data-k="ha"'),
+    row('#/set/helseha', 'Home Assistant · Mobilapp', 'Skritt, puls og søvn fra telefonene i HA', '', 'home', 'hs-ha'), // prompt 45: egen side (Helse Home Assistant.dc.html)
     row('', 'Hva deles med familien', 'Skritt, søvn, puls og aktivitet · velg per person', 'Velg', 'users', 'hs-share', 'data-p42="hs" data-k="share"'),
   ]);
 }

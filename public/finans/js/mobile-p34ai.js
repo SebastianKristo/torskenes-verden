@@ -103,8 +103,9 @@ function head() {
 export function aiView() {
   const t = curTab();
   const body = { ov, mod, rt, job, use, api, imp: () => globalThis.P43?.claudeImport?.() ?? '<div class="m-spin"></div>' }[t]();
+  const pers45 = t === 'rt' ? globalThis.P45?.persCard?.() ?? '' : ''; // prompt 45: Glimt-personlighet (Av · Litt · Full rakker)
   const err = Object.entries(AC.err).filter(([k]) => (NEED[t] ?? []).includes(k)).map(([, v]) => v);
-  return `<div class="p34a" data-tab="${t}">${head()}<div class="p34a-body">${err.length ? `<div class="p34a-err">${esc([...new Set(err)].join(' · '))}</div>` : ''}${body}</div></div>`;
+  return `<div class="p34a" data-tab="${t}">${head()}<div class="p34a-body">${err.length ? `<div class="p34a-err">${esc([...new Set(err)].join(' · '))}</div>` : ''}${pers45}${body}</div></div>`;
 }
 
 // Oversikt

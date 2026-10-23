@@ -122,16 +122,29 @@ function lpUp() {
 /* =====================================================================
    4. Claude-import (AI-kontroll → Importer), fasit Claude Import.dc.html
    ===================================================================== */
-export const CI = { st: 'start', err: '', mem: '', q: '', d: null, sel: {}, msel: {}, oChats: true, oMem: true, oSkip: true, steps: [], file: '', p: 0, res: null, busy: false };
+export const CI = { src: 'claude', srcs: null, api45: true, st: 'start', err: '', mem: '', q: '', d: null, sel: {}, msel: {}, oChats: true, oMem: true, oSkip: true, steps: [], file: '', p: 0, res: null, busy: false };
 const fmtD = (d) => { const x = new Date(d); return isNaN(x) ? '' : x.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }); };
 const HOW = [['claude.ai → Innstillinger → Personvern → Eksporter data', 'På mobil: profil → Innstillinger → Personvern.'], ['Du får en e-post med lenke', 'Lenken er gyldig i 24 timer. Last ned ZIP-fila.'], ['Velg fila her', 'Homelab leser conversations.json, projects.json og minnet hvis det ligger med. Alt lagres på hjemmeserveren.'], ['Minnet', 'Claude → Innstillinger → Minne → Vis og rediger → kopier teksten og lim den inn under hvis den ikke er i ZIP-fila.']];
+// Prompt 45 (claude-code-ai-import-claude-chatgpt-gemini.md): tre kilder – Claude (fikset), ChatGPT og Gemini (Google Takeout).
+// POST /api/ai/import (multipart, source) → forhåndsvisning; store filer bitvis via /api/ai/import/upload; commit og angre per import.
+// Eldre server (404): Claude via /api/chat/import/claude som før.
+const SRC45 = {
+  claude: { n: 'Claude', c: '#d97757', logo: 'claude.ai', folder: 'Claude', files: 'ZIP-fila fra e-posten, eller conversations.json', how: HOW },
+  chatgpt: { n: 'ChatGPT', c: '#10a37f', logo: 'chatgpt.com', folder: 'ChatGPT', files: 'ZIP-fila fra e-posten, eller conversations.json', how: [['chatgpt.com → Innstillinger → Datakontroller → Eksporter data', 'Trykk «Eksporter». På mobil: profil → Datakontroller.'], ['Du får en e-post med lenke', 'Lenken er gyldig i 24 timer. Last ned ZIP-fila.'], ['Velg fila her', 'Homelab leser conversations.json (samtaletreet flates ut i rekkefølge) og minnet hvis det ligger med.']] },
+  gemini: { n: 'Gemini', c: '#4285f4', logo: 'gemini.google.com', folder: 'Gemini', files: 'ZIP fra Google Takeout (My Activity → Gemini Apps), HTML eller JSON', how: [['takeout.google.com', 'Fjern alle avkrysninger, velg bare «Min aktivitet» → «Gemini Apps».'], ['Velg format', 'HTML eller JSON går fint. Eksporter én gang.'], ['Last ned ZIP-fila', 'Google sender lenke på e-post når eksporten er klar.'], ['Velg fila her', 'Homelab leser spørsmål og svar med tidspunkt. Ingenting kjøres, HTML blir ren tekst.']] },
+};
+const srcOf = () => SRC45[CI.src] ?? SRC45.claude;
+const srcLogo = (k, sz = 26) => { const S0 = SRC45[k]; return `<span class="p43-cil p45-cil" style="--c:${S0.c}"><img src="/finans/api/logo/${S0.logo}" alt="" width="${sz}" height="${sz}" data-p45fb="${S0.n[0]}"></span>`; };
 const convOf = (d) => (Array.isArray(d?.items) ? d.items : Array.isArray(d?.conversations) ? d.conversations : []).map((c) => ({ id: String(c.id ?? c.uuid), t: c.title ?? c.name ?? 'Uten tittel', d: c.updated_at ?? c.updatedAt ?? c.date ?? c.created_at, n: c.messages ?? c.messageCount ?? c.count ?? (c.chat_messages ?? []).length ?? 0, old: !!(c.imported ?? c.importedBefore ?? c.exists) }));
 const memOf = (d) => (Array.isArray(d?.memory) ? d.memory : []).map((x, i) => ({ id: String(x.id ?? i), t: typeof x === 'string' ? x : x.text ?? x.t ?? '', old: !!x.exists }));
 export function claudeImport() {
-  const head = `<div class="p43-card p43-cih"><span class="p43-cil"><img src="/finans/api/logo/claude.ai" alt="" width="26" height="26" onerror="this.replaceWith(Object.assign(document.createElement('b'),{textContent:'C'}))"></span><div class="m-grow"><b class="p43-serif22">Importer fra Claude</b><span class="pp-mut">Samtaler havner i Chat i mappen «Claude». Minnet brukes av Chat og Glimt.</span></div></div>`;
-  if (CI.st === 'reading' || CI.st === 'importing') return `<div class="p43-ci">${head}<div class="p43-card p43-col">${CI.steps.map(([n, ms]) => `<div class="p43-gs"><span>✓ ${esc(n)}</span><span>${esc(ms)}</span></div>`).join('')}<b>${CI.st === 'reading' ? `Leser ${esc(CI.file)} …` : 'Importerer …'}</b>${CI.st === 'importing' ? '<i class="p43-bar t"><i class="p43-ind"></i></i>' : '<div class="m-spin"></div>'}</div></div>`;
+  if (!CI.srcsT) { CI.srcsT = 1; hlApi('/ai/import/sources').then((r) => { CI.srcs = r?.sources ?? []; if (m.screen === 'aictl') draw(); }).catch(() => {}); } // prompt 45
+  const S0 = srcOf();
+  const pick = CI.st === 'start' ? `<div class="p45-cisrc" role="radiogroup" aria-label="Velg kilde">${Object.entries(SRC45).map(([k, o]) => `<button type="button" role="radio" aria-checked="${CI.src === k}" class="${CI.src === k ? 'on' : ''}" data-p43="cisrc" data-k="${k}" style="--c:${o.c}">${srcLogo(k, 20)}<b>${o.n}</b></button>`).join('')}</div>` : '';
+  const head = `${pick}<div class="p43-card p43-cih">${srcLogo(CI.src)}<div class="m-grow"><b class="p43-serif22">Importer fra ${S0.n}</b><span class="pp-mut">Samtaler havner i Chat i mappen «${S0.folder}». Minnet brukes av Chat og Glimt. Alt lagres på hjemmeserveren.</span></div></div>`;
+  if (CI.st === 'reading' || CI.st === 'importing') return `<div class="p43-ci">${head}<div class="p43-card p43-col">${CI.steps.map(([n, ms]) => `<div class="p43-gs"><span>✓ ${esc(n)}</span><span>${esc(ms)}</span></div>`).join('')}<b>${CI.st === 'reading' ? (CI.p && CI.p < 100 ? `Laster opp ${esc(CI.file)} … ${CI.p} %` : `Leser ${esc(CI.file)} …`) : 'Importerer …'}</b>${CI.st === 'importing' ? '<i class="p43-bar t"><i class="p43-ind"></i></i>' : CI.p && CI.p < 100 ? `<i class="p43-bar t"><i style="width:${CI.p}%"></i></i>` : '<div class="m-spin"></div>'}</div></div>`;
   if (CI.st === 'done') { const R = CI.res ?? {};
-    return `<div class="p43-ci">${head}<div class="p43-card p43-cidone"><b class="p43-serif24">✓ ${esc(`${R.conversations ?? 0} samtaler og ${R.memory ?? 0} minnepunkter importert`)}</b><span class="pp-mut">Samtalene ligger i mappen «Claude» i Chat. Minnet ligger under Chat → ⚙ → Minne.${R.skipped ? ` ${R.skipped} var importert før og ble hoppet over.` : ''}</span>
+    return `<div class="p43-ci">${head}<div class="p43-card p43-cidone"><b class="p43-serif24">✓ ${esc(`${R.conversations ?? 0} samtaler og ${R.memory ?? 0} minnepunkter importert`)}</b><span class="pp-mut">Samtalene ligger i mappen «${esc(R.folder ?? srcOf().folder)}» i Chat.${R.indexed ? ` ${R.indexed} er indeksert som Glimt-minne.` : ''} Minnet ligger under Chat → ⚙ → Minne.${R.skipped ? ` ${R.skipped} var importert før og ble hoppet over.` : ''}</span>
       <div class="p43-row wr"><button type="button" class="p43-btn ink" data-p43="ciopen">Åpne Chat</button><button type="button" class="p43-btn ghost" data-p43="cireset">Importer mer</button><button type="button" class="p43-btn plain lab" data-p43="ciundo" ${CI.busy ? 'disabled' : ''}>${CI.busy ? 'Angrer …' : 'Angre importen'}</button></div></div></div>`; }
   if (CI.st === 'preview') {
     const C = convOf(CI.d), Mm = memOf(CI.d), qq = CI.q.trim().toLowerCase(), vis = C.filter((c) => !qq || c.t.toLowerCase().includes(qq));
@@ -149,33 +162,59 @@ export function claudeImport() {
         <div class="p43-card p43-cil2">${vis.slice(0, CI.more ?? 60).map((c) => `<button type="button" class="p43-cr" data-p43="cisel" data-id="${esc(c.id)}" aria-pressed="${!!CI.sel[c.id]}">${ck(CI.sel[c.id])}<span class="m-grow"><b class="m-ell">${esc(c.t)}</b><span class="pp-mut">${esc([fmtD(c.d), `${c.n} meldinger`, c.old ? 'Importert før' : ''].filter(Boolean).join(' · '))}</span></span></button>`).join('')}</div>
         ${vis.length > (CI.more ?? 60) ? `<button type="button" class="p43-btn plain" data-p43="cimore">Vis flere (${vis.length - (CI.more ?? 60)} til)</button>` : ''}</div>` : ''}
       ${Mm.length ? `<div class="p43-sec"><span class="p43-k mut">MINNE · ${memN} AV ${Mm.length} PUNKTER</span><div class="p43-card p43-cil2">${Mm.map((x) => `<button type="button" class="p43-cr" data-p43="cimsel" data-id="${esc(x.id)}" aria-pressed="${!!CI.msel[x.id]}">${ck(CI.msel[x.id])}<span class="m-grow">${esc(x.t)}</span></button>`).join('')}</div></div>` : ''}
-      <div class="p43-card p43-togs">${[['oChats', 'Importer samtaler', 'Til mappen «Claude» i Chat'], ['oMem', 'Importer minne', 'Brukes av Chat og Glimt'], ['oSkip', 'Hopp over det som er importert før', 'Samme samtale-ID fra Claude']].map(([k, n, s]) => `<button type="button" class="p43-tr2" data-p43="ciopt" data-k="${k}" aria-pressed="${CI[k]}"><span class="m-grow"><b>${n}</b><span class="pp-mut">${s}</span></span><span class="p43-tg${CI[k] ? ' on' : ''}" aria-hidden="true"><i></i></span></button>`).join('')}</div>
+      <div class="p43-card p43-togs">${[['oChats', 'Importer samtaler', `Til mappen «${srcOf().folder}» i Chat`], ['oMem', 'Importer minne', 'Brukes av Chat og Glimt'], ['oSkip', 'Hopp over det som er importert før', `Samme samtale-ID fra ${srcOf().n}`]].map(([k, n, s]) => `<button type="button" class="p43-tr2" data-p43="ciopt" data-k="${k}" aria-pressed="${CI[k]}"><span class="m-grow"><b>${n}</b><span class="pp-mut">${s}</span></span><span class="p43-tg${CI[k] ? ' on' : ''}" aria-hidden="true"><i></i></span></button>`).join('')}</div>
       ${CI.err ? `<span class="p43-err">${esc(CI.err)}</span>` : ''}
       <div class="p43-row two"><button type="button" class="p43-btn ghost lg" data-p43="cireset">Avbryt</button><button type="button" class="p43-btn ink lg" data-p43="cigo" ${go + gm ? '' : 'disabled'}>Importer ${go} samtaler${gm ? ` og ${gm} minnepunkter` : ''}</button></div></div>`;
   }
-  return `<div class="p43-ci">${head}<div class="p43-card p43-col"><span class="pp-lab">SLIK EKSPORTERER DU FRA CLAUDE</span>${HOW.map(([t, d], i) => `<div class="p43-step"><span>${i + 1}</span><span class="m-grow"><b>${esc(t)}</b><span class="pp-mut">${esc(d)}</span></span></div>`).join('')}</div>
-    <label class="p43-drop" data-p43drop>${svg('M12 16V4M7 9l5-5 5 5M4 20h16', 28)}<b>Velg Claude-eksporten</b><span class="pp-mut">ZIP-fila fra e-posten, eller conversations.json · maks 200 MB</span><input type="file" accept=".zip,.json,application/zip,application/json" data-p43file="claude" hidden></label>
+  const HW = (CI.srcs?.find?.((x) => x.id === CI.src)?.steps ?? []).length ? CI.srcs.find((x) => x.id === CI.src).steps.map((t) => (Array.isArray(t) ? t : [String(t), ''])) : S0.how;
+  return `<div class="p43-ci">${head}<div class="p43-card p43-col"><span class="pp-lab">SLIK EKSPORTERER DU FRA ${S0.n.toUpperCase()}</span>${HW.map(([t, d], i) => `<div class="p43-step"><span>${i + 1}</span><span class="m-grow"><b>${esc(t)}</b><span class="pp-mut">${esc(d)}</span></span></div>`).join('')}</div>
+    <label class="p43-drop" data-p43drop>${svg('M12 16V4M7 9l5-5 5 5M4 20h16', 28)}<b>Velg ${S0.n}-eksporten</b><span class="pp-mut">${esc(S0.files)} · maks 1 GB</span><input type="file" accept=".zip,.json,.html,.htm,application/zip,application/json,text/html" data-p43file="claude" hidden></label>
     ${CI.err ? `<span class="p43-err">${esc(CI.err)}</span>` : ''}
-    <div class="p43-sec"><span class="p43-k mut">MINNE (VALGFRITT)</span><textarea class="p43-in ta" rows="4" data-p43i="cimem" placeholder="Lim inn teksten fra Claude → Innstillinger → Minne, ett punkt per linje">${esc(CI.mem)}</textarea><span class="pp-mut p43-sm">Ligger minnet i ZIP-fila, hentes det automatisk.</span></div>
+    <div class="p43-sec"><span class="p43-k mut">MINNE (VALGFRITT)</span><textarea class="p43-in ta" rows="4" data-p43i="cimem" placeholder="${CI.src === 'chatgpt' ? 'Lim inn fra ChatGPT → Innstillinger → Tilpasning → Minne' : CI.src === 'gemini' ? 'Lim inn fra Gemini → Lagret info' : 'Lim inn teksten fra Claude → Innstillinger → Minne'}, ett punkt per linje">${esc(CI.mem)}</textarea><span class="pp-mut p43-sm">Ligger minnet i ZIP-fila, hentes det automatisk.</span></div>
     <div class="p43-row wr"><button type="button" class="p43-btn ghost" data-p43="cimemonly" ${CI.mem.trim() ? '' : 'disabled'}>Importer bare minnet</button></div></div>`;
+}
+const REASON = { not_zip: 'Fila er ikke en gyldig ZIP.', no_conversations: 'Fant ingen samtaler i fila. Sjekk at du valgte riktig eksport.', too_big: 'Fila er for stor.', zip_bomb: 'ZIP-fila pakker ut til mer enn grensen (2 GB) og ble stoppet.', bad_json: 'JSON-fila kunne ikke leses (ødelagt eller ufullstendig).', unknown_format: 'Kjenner ikke igjen formatet.', expired: 'Forhåndsvisningen har gått ut. Velg fila på nytt.' };
+const ciErr = (d, status) => { const r = REASON[d?.reason]; return [r ?? d?.error ?? `Homelab svarte ${status}`, d?.detail].filter(Boolean).join(' · '); };
+/** Bitvis opplasting (16 MB per bit) for store filer – kreves bak Cloudflare over 100 MB. Returnerer uploadId. */
+async function ciChunks(file) {
+  const CH = 8 * 1024 * 1024, total = Math.ceil(file.size / CH); let id = null;
+  for (let i = 0; i < total; i++) {
+    const h = { 'Content-Type': 'application/octet-stream', 'X-Chunk-Index': String(i), 'X-Chunk-Total': String(total), 'X-File-Name': encodeURIComponent(file.name) };
+    if (id) h['X-Upload-Id'] = id;
+    const res = await fetch('/api/ai/import/upload', { method: 'POST', headers: h, body: file.slice(i * CH, (i + 1) * CH) });
+    const d = await res.json().catch(() => null);
+    if (!res.ok) throw Object.assign(new Error(ciErr(d, res.status)), { status: res.status });
+    id = d?.uploadId ?? id; CI.p = Math.round(((i + 1) / total) * 100); draw();
+  }
+  return id;
 }
 async function ciUpload(file) {
   if (!file) return;
-  if (file.size > 200 * 1024 * 1024) { CI.err = 'Fila er større enn 200 MB.'; draw(); return; }
-  if (!/\.(zip|json)$/i.test(file.name) && !/zip|json/.test(file.type)) { CI.err = 'Velg ZIP-fila fra Claude eller conversations.json.'; draw(); return; }
-  CI.st = 'reading'; CI.file = file.name; CI.err = ''; CI.steps = []; draw();
-  const t0 = performance.now(), fd = new FormData();
-  fd.append('file', file, file.name); if (CI.mem.trim()) fd.append('memory', CI.mem.trim());
+  if (file.size > 1024 * 1024 * 1024) { CI.err = 'Fila er større enn 1 GB.'; draw(); return; }
+  if (!/\.(zip|json|html?)$/i.test(file.name) && !/zip|json|html/.test(file.type)) { CI.err = `Velg ZIP-fila fra ${srcOf().n}, en JSON- eller HTML-fil.`; draw(); return; }
+  CI.st = 'reading'; CI.file = file.name; CI.err = ''; CI.steps = []; CI.p = 0; draw();
+  const t0 = performance.now();
   try {
-    const res = await fetch('/api/chat/import/claude', { method: 'POST', body: fd });
-    const d = res.headers.get('content-type')?.includes('json') ? await res.json() : null;
-    if (!res.ok) throw Object.assign(new Error(d?.error || `Homelab svarte ${res.status}`), { status: res.status });
-    CI.steps = (d?.steps ?? []).map((s) => [s.n ?? s.text ?? String(s), s.ms != null ? `${s.ms} ms` : '']);
+    let res, d;
+    if (CI.api45) {
+      if (file.size > 50 * 1024 * 1024) {
+        const uploadId = await ciChunks(file);
+        res = await fetch('/api/ai/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ uploadId, source: CI.src, memory: CI.mem.trim() || undefined }) });
+      } else { const fd = new FormData(); fd.append('file', file, file.name); fd.append('source', CI.src); if (CI.mem.trim()) fd.append('memory', CI.mem.trim()); res = await fetch('/api/ai/import', { method: 'POST', body: fd }); }
+      if (res.status === 404 && CI.src === 'claude') CI.api45 = false;
+      else if (res.status === 404) throw Object.assign(new Error(`Import fra ${srcOf().n} krever en nyere Homelab-server.`), { status: 404, own: true });
+    }
+    if (!CI.api45) { const fd = new FormData(); fd.append('file', file, file.name); if (CI.mem.trim()) fd.append('memory', CI.mem.trim()); res = await fetch('/api/chat/import/claude', { method: 'POST', body: fd }); }
+    d = res.headers.get('content-type')?.includes('json') ? await res.json() : null;
+    if (!res.ok) throw Object.assign(new Error(ciErr(d, res.status)), { status: res.status });
+    if (d?.source && SRC45[d.source] && d.source !== CI.src) CI.src = d.source; // serveren kjente igjen kilden
+    CI.steps = (d?.steps ?? []).map((s) => [s.n ?? s.t ?? s.text ?? String(s), s.ms != null ? `${s.ms} ms` : '']);
     if (!CI.steps.length) CI.steps = [['Lastet opp og leste fila', `${Math.round(performance.now() - t0)} ms`]];
-    CI.d = d; CI.st = 'preview'; CI.q = ''; CI.more = 60;
-    CI.sel = Object.fromEntries(convOf(d).map((c) => [c.id, !c.old])); CI.msel = Object.fromEntries(memOf(d).map((x) => [x.id, !x.old]));
+    CI.d = d; CI.st = 'preview'; CI.q = ''; CI.more = 60; CI.p = 0;
+    CI.sel = Object.fromEntries(convOf(d).map((c) => [c.id, c.selected ?? !c.old])); CI.msel = Object.fromEntries(memOf(d).map((x) => [x.id, !x.old]));
+    if ((d?.warnings ?? []).length) CI.err = d.warnings.join(' · ');
     haptic('ok');
-  } catch (e) { CI.st = 'start'; CI.err = e.status === 404 ? 'Import fra Claude krever en nyere Homelab-server.' : e.status === 413 ? 'Fila er for stor (maks 200 MB).' : e.message; haptic('err'); }
+  } catch (e) { CI.st = 'start'; CI.p = 0; CI.err = e.own ? e.message : e.status === 404 ? 'Import krever en nyere Homelab-server.' : e.status === 413 ? 'Fila er for stor for serveren.' : e.message; haptic('err'); }
   draw();
 }
 async function ciCommit(memOnly) {
@@ -186,9 +225,10 @@ async function ciCommit(memOnly) {
   CI.busy = true; CI.st = 'importing'; CI.steps = []; draw();
   try {
     let id = CI.d?.importId;
-    if (memOnly && !id) { const fd = new FormData(); fd.append('memory', CI.mem.trim()); const r0 = await fetch('/api/chat/import/claude', { method: 'POST', body: fd }); const d0 = await r0.json().catch(() => null); if (!r0.ok) throw Object.assign(new Error(d0?.error || `Homelab svarte ${r0.status}`), { status: r0.status }); id = d0?.importId; CI.d = d0; }
-    const r = await hlApi(`/chat/import/claude/${encodeURIComponent(id)}/commit`, { method: 'POST', json: { conversationIds, memory, skipExisting: CI.oSkip } });
-    CI.res = { conversations: r?.conversations ?? r?.imported ?? conversationIds.length, memory: r?.memory ?? r?.memoryAdded ?? memory.length, skipped: r?.skipped ?? C.filter((c) => CI.sel[c.id] && c.old).length, id };
+    const base = CI.api45 ? '/ai/import' : '/chat/import/claude';
+    if (memOnly && !id) { const fd = new FormData(); fd.append('memory', CI.mem.trim()); if (CI.api45) fd.append('source', CI.src); let r0 = await fetch(`/api${base}`, { method: 'POST', body: fd }); if (r0.status === 404 && CI.api45 && CI.src === 'claude') { CI.api45 = false; r0 = await fetch('/api/chat/import/claude', { method: 'POST', body: fd }); } const d0 = await r0.json().catch(() => null); if (!r0.ok) throw Object.assign(new Error(d0?.error || `Homelab svarte ${r0.status}`), { status: r0.status }); id = d0?.importId; CI.d = d0; }
+    const r = await hlApi(`${CI.api45 ? '/ai/import' : '/chat/import/claude'}/${encodeURIComponent(id)}/commit`, { method: 'POST', json: { conversationIds, memory, skipExisting: CI.oSkip, importConversations: !memOnly && CI.oChats, importMemory: memOnly || CI.oMem } });
+    CI.res = { conversations: r?.conversations ?? r?.imported ?? conversationIds.length, memory: r?.memory ?? r?.memoryAdded ?? memory.length, skipped: r?.skipped ?? C.filter((c) => CI.sel[c.id] && c.old).length, id, folder: r?.folder, indexed: r?.indexed, text: r?.text };
     CI.st = 'done'; haptic('ok'); vib(10);
   } catch (e) { CI.st = memOnly ? 'start' : 'preview'; CI.err = e.status === 404 ? 'Import fra Claude krever en nyere Homelab-server.' : e.message; haptic('err'); }
   CI.busy = false; draw();
@@ -229,6 +269,7 @@ export async function bind43(e, t) {
     case 'ordup': e.preventDefault(); ordMove(+x.dataset.i, +x.dataset.i - 1); return true;
     case 'orddn': e.preventDefault(); ordMove(+x.dataset.i, +x.dataset.i + 1); return true;
     case 'ordreset': e.preventDefault(); P37.setTabOrder(null); haptic('tap'); flash('Standard rekkefølge'); draw(); return true;
+    case 'cisrc': e.preventDefault(); CI.src = SRC45[x.dataset.k] ? x.dataset.k : 'claude'; CI.err = ''; haptic('tab'); draw(); return true;
     case 'ciall': e.preventDefault(); for (const c of convOf(CI.d)) CI.sel[c.id] = true; draw(); return true;
     case 'cinone': e.preventDefault(); CI.sel = {}; draw(); return true;
     case 'cisel': e.preventDefault(); CI.sel[x.dataset.id] = !CI.sel[x.dataset.id]; draw(); return true;
@@ -238,10 +279,10 @@ export async function bind43(e, t) {
     case 'cigo': e.preventDefault(); await ciCommit(false); return true;
     case 'cimemonly': e.preventDefault(); await ciCommit(true); return true;
     case 'cireset': e.preventDefault(); Object.assign(CI, { st: 'start', err: '', d: null, sel: {}, msel: {}, q: '', res: null }); draw(); return true;
-    case 'ciopen': { e.preventDefault(); const CH = await import('./mobile-chat.js'); CH.openChatFolder?.('Claude') ?? (location.hash = '#/chat'); return true; }
+    case 'ciopen': { e.preventDefault(); const CH = await import('./mobile-chat.js'); CH.openChatFolder?.(CI.res?.folder ?? srcOf().folder) ?? (location.hash = '#/chat'); return true; }
     case 'ciundo': {
       e.preventDefault(); CI.busy = true; draw();
-      try { await hlApi(`/chat/import/claude/${encodeURIComponent(CI.res?.id ?? CI.d?.importId)}/undo`, { method: 'POST', json: {} }); flash('Importen er angret'); Object.assign(CI, { st: 'start', d: null, res: null }); }
+      try { await hlApi(`${CI.api45 ? '/ai/import' : '/chat/import/claude'}/${encodeURIComponent(CI.res?.id ?? CI.d?.importId)}/undo`, { method: 'POST', json: {} }); flash('Importen er angret'); Object.assign(CI, { st: 'start', d: null, res: null }); }
       catch (err) { flash(err.status === 404 ? 'Angre krever en nyere Homelab-server' : err.message); }
       CI.busy = false; draw(); return true;
     }

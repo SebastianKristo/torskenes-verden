@@ -7,9 +7,9 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 
-const A = { tab: 'now', srv: 'plex', d: {}, err: {}, miss: false, t: {}, q: '', user: '', range: '7d', pin: null, poll: null, live: null };
+const A = { tab: 'now', srv: 'plex', d: {}, err: {}, miss: false, t: {}, q: '', user: '', range: '30d', sumMiss: false, pin: null, poll: null, live: null };
 const TABS = [['now', 'Spilles nå'], ['hist', 'Historikk'], ['stat', 'Statistikk'], ['lib', 'Biblioteker']];
-const SC = { plex: '#e5a00d', jellyfin: '#8a5cd6' };
+const SC = { plex: '#e5a00d', jellyfin: '#aa5cc3' }; // prompt 45: tjenestefargene fra claude-code-media-mer-farger.md
 const arr = (r, ...k) => { if (Array.isArray(r)) return r; for (const x of k) if (Array.isArray(r?.[x])) return r[x]; return []; };
 const nbN = (n) => Number(n ?? 0).toLocaleString('nb-NO');
 const AVC = ['#3b5d8a', '#7a5ad6', '#2f6b4a', '#b23a2a', '#a0671a', '#c2477a'];
@@ -24,9 +24,17 @@ export async function avsLoad(force = false) {
   if (force) A.t = {};
   const jobs = [get('now', `/playback/sessions?${qsrv()}`, 9000)];
   if (A.tab === 'hist') jobs.push(get(`hist:${A.q}:${A.user}`, `/playback/history?${qsrv()}&q=${encodeURIComponent(A.q)}&user=${encodeURIComponent(A.user)}&page=1`));
-  if (A.tab === 'stat') jobs.push(get(`stat:${A.range}`, `/playback/stats?${qsrv()}&range=${A.range}`, 60000));
+  // Prompt 45 (claude-code-avspilling-statistikk-mobil.md): GET /api/playback/summary?range=7d|30d|year|all (alle servere), ellers /stats.
+  if (A.tab === 'stat') jobs.push(A.sumMiss ? get(`stat:${A.range}`, `/playback/stats?${qsrv()}&range=${A.range === 'year' ? '12m' : A.range === 'all' ? '12m' : A.range}`, 60000) : getSum());
   if (A.tab === 'lib') jobs.push(get('lib', `/playback/libraries?${qsrv()}`, 60000));
   await Promise.all(jobs);
+}
+async function getSum() {
+  const key = `sum:${A.range}`;
+  if (A.t[key] && Date.now() - A.t[key] < 60000) return;
+  A.t[key] = Date.now();
+  try { A.d[key] = await hlApi(`/playback/summary?range=${A.range}`); A.err[key] = ''; }
+  catch (e) { if (e.status === 404) { A.sumMiss = true; A.t[key] = 0; return get(`stat:${A.range}`, `/playback/stats?${qsrv()}&range=${A.range === '30d' || A.range === '7d' ? A.range : '12m'}`, 60000); } A.err[key] = e.message; A.d[key] ??= null; }
 }
 const reload = () => avsLoad().then(() => { if (vis()) draw(); }).catch(() => {});
 const vis = () => m.screen === 'avspilling' || (m.screen === 'media' && globalThis.P43?.media?.M?.tab === 'avs');
@@ -67,9 +75,11 @@ function histView() {
     ${r === undefined ? '<div class="m-spin"></div>' : items.length ? `<div class="p44a-hist">${items.map((x) => { const p = pct(x.percent ?? x.watched); const d = new Date(x.when ?? x.at ?? x.started ?? x.date ?? '');
       return `<div class="p44a-hr">${pst(x, 40)}<span class="m-grow"><b>${esc(x.show ?? x.title ?? '')}</b><small>${esc([x.subtitle ?? (x.show ? x.episode ?? x.title : ''), x.user, x.device].filter(Boolean).join(' · '))}</small><span class="p44a-w"><span class="p44a-wb"><i style="width:${p}%;background:${p >= 90 ? '#2f6b4a' : 'var(--pp-mut)'}"></i></span>${p} %</span></span><small class="p44a-when">${esc(x.whenText ?? (isNaN(d) ? '' : d.toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })))}${x.durationText || x.duration ? `<br>${esc(String(x.durationText ?? x.duration))}` : ''}</small></div>`; }).join('')}</div>` : `<div class="p44a-empty"><b>Ingen historikk${A.q ? ` for «${esc(A.q)}»` : ''}</b><span>Avspillinger logges hvert minutt fra Plex og Jellyfin.</span></div>`}`;
 }
+const RANGES = [['7d', '7 d'], ['30d', '30 d'], ['year', 'År'], ['all', 'Alt']];
 function statView() {
+  const seg = `<span class="p44a-seg p45-aseg" role="radiogroup" aria-label="Periode">${RANGES.map(([k, n]) => `<button type="button" role="radio" aria-checked="${A.range === k}" class="${A.range === k ? 'on' : ''}" data-p44a="range" data-k="${k}">${n}</button>`).join('')}</span>`;
+  if (!A.sumMiss) return seg + sumView(A.d[`sum:${A.range}`], A.err[`sum:${A.range}`]);
   const r = A.d[`stat:${A.range}`];
-  const seg = `<span class="p44a-seg">${[['7d', '7 dager'], ['30d', '30 dager'], ['12m', '12 mnd']].map(([k, n]) => `<button type="button" class="${A.range === k ? 'on' : ''}" data-p44a="range" data-k="${k}">${n}</button>`).join('')}</span>`;
   if (r === undefined) return seg + '<div class="m-spin"></div>';
   const per = arr(r, 'perDay', 'days', 'plays'), mx = Math.max(1, ...per.map((x) => +(x.n ?? x.count ?? 0)));
   const list = (t, L, f) => (L.length ? `<span class="p44a-lab">${t}</span><div class="p44a-card">${L.slice(0, 6).map(f).join('')}</div>` : '');
@@ -77,6 +87,21 @@ function statView() {
     ${list('MEST SETTE SERIER', arr(r, 'topShows', 'shows'), (x, i) => `<div class="p44a-li"><b>${i + 1}</b><span class="m-grow">${esc(x.t ?? x.title ?? x.name)}</span><small>${nbN(x.plays ?? x.n)} avspillinger</small></div>`)}
     ${list('MEST AKTIVE BRUKERE', arr(r, 'topUsers', 'users'), (x) => `<div class="p44a-li"><span class="p44a-av" style="background:${colOf(x.name ?? x.user)}">${esc(String(x.name ?? x.user ?? '?').slice(0, 1).toUpperCase())}</span><span class="m-grow">${esc(x.name ?? x.user)}</span><small>${esc(x.hoursText ?? `${String(x.hours ?? x.h ?? 0).replace('.', ',')} t`)}</small></div>`)}
     ${list('PLATTFORMER', arr(r, 'platforms'), (x) => `<div class="p44a-li"><span class="m-grow">${esc(x.name ?? x.platform)}</span><span class="p44a-wb wide"><i style="width:${pct(x.pct ?? x.percent)}%;background:${SC[A.srv]}"></i></span><small>${pct(x.pct ?? x.percent)} %</small></div>`)}`;
+}
+/** Prompt 45: mobilversjonen av statistikksiden (én kolonne, kort i Papir-stil). Fasit: Avspilling.dc.html (web). */
+function sumView(r, err) {
+  if (r === undefined) return '<div class="m-spin"></div>';
+  if (!r) return `<div class="p44a-empty"><b>Fikk ikke hentet statistikken</b><span>${esc(err || 'Prøv igjen om litt.')}</span><button type="button" class="p44a-btn" data-p44a="retry">Prøv igjen</button></div>`;
+  const T = r.total ?? {}, per = arr(r, 'perDay'), mx = Math.max(1, ...per.map((x) => +(x.count ?? x.n ?? 0)));
+  const tile = (v, l, c) => `<span class="p45-at"><b style="color:${c}">${esc(v)}</b><small>${esc(l)}</small></span>`;
+  const top = (t, L) => (L.length ? `<span class="p44a-lab">${t}</span><div class="p44a-card">${L.slice(0, 5).map((x, i) => `<div class="p44a-li"><b class="p45-an">${i + 1}</b><span class="m-grow m-ell">${esc(x.title ?? x.name ?? '')}</span><small>${nbN(x.plays ?? x.n)} ${(x.plays ?? x.n) === 1 ? 'gang' : 'ganger'}</small></div>`).join('')}</div>` : '');
+  const users = arr(r, 'perUser'), devs = arr(r, 'perDevice'), hist = arr(r, 'history');
+  return `<div class="p45-atiles">${tile(nbN(T.plays ?? 0), 'avspillinger', '#e5a00d')}${tile(T.hoursText ?? `${nbN(T.hours ?? 0)} t`, 'sett totalt', '#aa5cc3')}${tile(nbN(T.titles ?? 0), 'titler', '#35c5f4')}${tile(nbN(T.users ?? 0), T.users === 1 ? 'bruker' : 'brukere', '#2f6b4a')}</div>
+    <span class="p44a-lab">AVSPILLINGER PER DAG</span><div class="p44a-chart">${per.slice(-31).map((x) => { const n = +(x.count ?? x.n ?? 0); return `<span title="${esc(String(x.date ?? ''))}: ${n}"><i style="height:${Math.round((n / mx) * 100)}%"></i><small>${esc(String(x.date ?? '').slice(-2))}</small></span>`; }).join('') || '<small class="p44a-dim">Ingen avspillinger i perioden.</small>'}</div>
+    ${top('MEST SETTE SERIER', arr(r, 'topShows'))}${top('MEST SETTE FILMER', arr(r, 'topMovies'))}
+    ${users.length ? `<span class="p44a-lab">PER BRUKER</span><div class="p44a-card">${users.slice(0, 8).map((x) => `<div class="p44a-li"><span class="p44a-av" style="background:${colOf(x.name)}">${esc(String(x.name ?? '?').slice(0, 1).toUpperCase())}</span><span class="m-grow m-ell">${esc(x.name ?? '')}</span><small>${nbN(x.plays)} · ${esc(x.hoursText ?? `${x.hours ?? 0} t`)}</small></div>`).join('')}</div>` : ''}
+    ${devs.length ? `<span class="p44a-lab">PER ENHET</span><div class="p44a-card">${devs.slice(0, 8).map((x) => `<div class="p44a-li"><span class="m-grow m-ell">${esc(x.name ?? x.platform ?? '')}<small class="p45-adim"> ${esc(x.platform && x.name ? x.platform : '')}</small></span><span class="p44a-wb wide"><i style="width:${pct(x.pct)}%;background:#3d7dd6"></i></span><small>${pct(x.pct)} %</small></div>`).join('')}</div>` : ''}
+    ${hist.length ? `<span class="p44a-lab">HISTORIKK</span><div class="p44a-card">${hist.slice(0, 12).map((x) => `<div class="p44a-li"><span class="p45-asrv" style="background:${x.server === 'jellyfin' ? '#aa5cc3' : '#e5a00d'}" aria-hidden="true"></span><span class="m-grow"><b class="m-ell">${esc(x.title ?? '')}</b><small class="p45-adim">${esc([x.subtitle, x.user, x.device].filter(Boolean).join(' · '))}</small></span><small>${esc(x.whenText ?? '')}${x.percent != null ? `<br>${pct(x.percent)} %` : ''}</small></div>`).join('')}</div>` : ''}`;
 }
 function libView() {
   const r = A.d.lib; if (r === undefined) return '<div class="m-spin"></div>';

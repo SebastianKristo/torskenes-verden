@@ -85,10 +85,11 @@ export function tripRuter() {
   if (RT.miss) return '';
   if (!RT.trip) { if (!RT.tripErr) once('trip', async () => { await tripLoad(true); if (!RT.trip) RT.tripErr = true; }); if (!RT.zones && !RT.zonesT) once('zones', () => zonesLoad(true)); return ''; }
   if (!RT.zones && !RT.zonesT) once('zones', () => zonesLoad(true));
-  const T = RT.trip, O = T.options ?? []; if (!O.length) return '';
+  // Prompt 45 (claude-code-ruter-anbefalt-antall.md): nøyaktig N anbefalte reiser (1 · 2 · 3, standard 2), ingen plassholdere.
+  const T = RT.trip, N = globalThis.P45?.recoN?.() ?? T.recoCount ?? 2, O = (T.recommended?.length >= N ? T.recommended : T.options ?? []).slice(0, N); if (!O.length) return '';
   const name = String(m.me?.name ?? 'Sebastian').split(/\s+/)[0].toUpperCase();
   const Z = RT.zones ?? [], hc = RT.set?.homeCard ?? T.homeCard ?? 'over';
-  return `<div class="p41-trip"><div class="p41-trh"><span class="m-grow"><span class="p41-lab">MIN REISE · ${esc(name)}</span><b class="pp-serif">${esc(T.label ?? `${T.from?.name ?? T.from ?? ''} → ${T.to?.name ?? T.to ?? ''}`)}</b></span><button type="button" class="p41-flipb" data-p41b="rtflip">⇄ Snu</button></div>
+  return `<div class="p41-trip"><div class="p41-trh"><span class="m-grow"><span class="p41-lab">MIN REISE · ${esc(name)}</span><b class="pp-serif">${esc(T.label ?? `${T.from?.name ?? T.from ?? ''} → ${T.to?.name ?? T.to ?? ''}`)}</b></span><button type="button" class="p41-flipb" data-p41b="rtflip">⇄ Snu</button><span class="p45-rmw">${globalThis.P45?.recoMenuBtn?.() ?? ''}</span></div>
     ${alertHtml(T.alert)}<div class="p41-ros">${O.map((o, i) => optRow(o, i, 'r')).join('')}</div>
     <span class="p41-lab mut">SKOLESONER · ALLE TELLER SOM SKOLE</span><div class="p41-zones">${Z.map((z) => `<span class="p41-zone">${esc(z.name)}<small>${esc(z.label?.replace(z.name, '').trim() || `${z.radius_m} m`)}</small>${Z.length > 1 ? `<button type="button" data-p41b="zrm" data-id="${esc(z.id)}" aria-label="Fjern ${esc(z.name)}">✕</button>` : ''}</span>`).join('')}<button type="button" class="p41-zadd" data-p41b="zadd">+ Sone</button></div>
     ${RT.addZ ? `<form class="p41-zform" data-p41bf="zone"><input class="p24-in" id="p41-zn" data-p41bin="zn" value="${esc(RT.addZ.n)}" placeholder="Navn, f.eks. Idrettshallen" autocomplete="off"><div class="p41-zr"><span class="p41-mut">Radius ${RT.addZ.r} m</span><input type="range" min="50" max="300" step="10" value="${RT.addZ.r}" data-p41bin="zr" aria-label="Radius"></div><span class="p41-mut">Sonen legges der du står nå (posisjonen brukes bare til dette).</span><div class="p24-two"><button type="button" class="p24-b" data-p41b="zx">Avbryt</button><button type="submit" class="p24-b ink">Legg til sone</button></div></form>` : ''}
@@ -101,9 +102,9 @@ export function tripHome(editing = false) {
   if (!RT.jrMiss && Date.now() - RT.jrT > 30_000) jrLoad().then(() => { if (m.screen === 'hl') draw(); });
   const J = RT.jr; if (!J?.active || J.hidden || (RT.set?.homeCard ?? J.homeCard) === 'off') return '';
   if (lsGet('papir_rt_hide') === J.leftSchoolAt) return '';
-  const T = J.trip ?? RT.trip, o = T?.options?.[0]; if (!o) return '';
+  const T = J.trip ?? RT.trip, N = globalThis.P45?.recoN?.() ?? 2, OO = (T?.options ?? []).slice(0, N), o = OO[0]; if (!o) return '';
   const card = `<a class="pp-card p41-trc" href="#/avg" data-p41tc><span class="p41-lab">${esc(J.title ?? `MIN REISE · FORLOT SKOLEN ${hm(J.leftSchoolAt)}`)}</span>
-    <span class="p41-rot"><b class="p41-dep">${esc(o.depLabel ?? hm(o.dep))}</b><span class="p41-mut">${esc(`→ hjemme ${hm(o.arr)}`)}</span></span><span class="p41-legs">${legsHtml(o.legs)}</span>
+    ${OO.map((x, i) => `<span class="p41-rot${i ? ' p45-rot2' : ''}"><b class="p41-dep">${esc(x.depLabel ?? hm(x.dep))}</b><span class="p41-mut">${esc(`→ hjemme ${hm(x.arr)}`)}</span></span><span class="p41-legs">${legsHtml(x.legs)}</span>`).join('')}
     ${T.alert ? `<span class="p41-trw"><span class="p41-ex" aria-hidden="true">!</span>${esc(T.alert.short ?? T.alert.text)}</span>` : ''}</a>`;
   if (editing) return card;
   return `<div class="p37-bsw p41-trw0" data-p41tw><div class="p37-bsr" data-sw-rev aria-hidden="true"><span class="p39-swl"><b data-sw-idle>Sveip for å skjule</b><b data-sw-armed>Slipp for å skjule</b><b data-sw-done>Min reise skjult</b></span><small>Kommer tilbake neste gang du forlater skolen</small></div>${card}</div>`;

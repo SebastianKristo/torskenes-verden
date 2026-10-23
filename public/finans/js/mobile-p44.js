@@ -49,8 +49,27 @@ function toast(t, undo = null, ms = 4500) { T44.t = t; T44.undo = undo; clearTim
 const ME = { edit: false, q: '', lp: null, lpAt: 0, tsz: ls.raw('papir_mer_tsz') === 'lav' ? 'lav' : 'stor' };
 const LIVE = { cal: null, calT: 0, bd: null, bdT: 0, fam: null, famT: 0, busy: {} };
 // Fargebrikker fra fasiten (lys) – mørkt tema blander fargen inn i kortet.
-const TILE_C = { avspilling: '#e5a00d', kal: '#b23a2a', huske: '#2f6b4a', bd: '#7a5ad6', fam: '#b23a2a', chat: '#2b5d8a', media: '#a0671a', dom: '#2f6b4a', sub: '#2f6b4a', bibel: '#b23a2a', nyheter: '#6b665c', hjem: '#2b5d8a', spor: '#a0671a', brief: '#7a5ad6', hl: '#3d4652', studie: '#2b5d8a', set: '#6b665c' };
-const TILES = ['kal', 'huske', 'bd', 'fam'];
+const TILE_C = { saldo: '#2f6b4a', budsjett: '#b23a2a', kv: '#a0671a', fast: '#2b5d8a', aks: '#2f6b4a', finn: '#a0671a', dir: '#b23a2a', liste: '#6b665c', konto: '#2b5d8a', imp: '#7a5ad6', rap: '#6b665c', sok: '#2b5d8a', avspilling: '#e5a00d', kal: '#b23a2a', huske: '#2f6b4a', bd: '#7a5ad6', fam: '#b23a2a', chat: '#2b5d8a', media: '#a0671a', dom: '#2f6b4a', sub: '#2f6b4a', bibel: '#b23a2a', nyheter: '#6b665c', hjem: '#2b5d8a', spor: '#a0671a', brief: '#7a5ad6', hl: '#3d4652', studie: '#2b5d8a', set: '#6b665c' };
+const TILES0 = { hl: ['kal', 'huske', 'bd', 'fam'], fin: ['saldo', 'budsjett', 'kv', 'fast'] };
+/* Prompt 45 (claude-code-mer-tittel-og-store-bokser.md, claude-code-finans-mer-samme-design.md): seksjonstittelen kan skjules
+   eller få nytt navn, og de fire store boksene kan byttes (⇄ → «Velg boks»). Finans → Mer bruker samme komponent (mode 'fin').
+   Lagring per bruker: /api/me/layout pages.mer45<mode> = {order:[4 bokser], hidden:['_title'?]} + navnet lokalt (papir_mer45_<mode>). */
+const MP = { hl: ls.get('papir_mer45_hl', {}) ?? {}, fin: ls.get('papir_mer45_fin', {}) ?? {} };
+const mpSave = (mode, patch) => {
+  MP[mode] = { ...MP[mode], ...patch }; ls.set(`papir_mer45_${mode}`, MP[mode]);
+  const P = MP[mode]; hlApi('/me/layout', { method: 'PUT', json: { pages: { [`mer45${mode}`]: { order: (P.tiles ?? TILES0[mode]).filter((k) => /^[\w.-]{1,40}$/.test(k)), hidden: P.titleOff ? ['_title'] : [] } } } }).catch(() => {});
+};
+export function merTake45(pages) { for (const mode of ['hl', 'fin']) { const v = pages?.[`mer45${mode}`]; if (!v) continue; MP[mode] = { ...MP[mode], tiles: Array.isArray(v.order) && v.order.length === 4 ? v.order : MP[mode].tiles, titleOff: (v.hidden ?? []).includes('_title') }; ls.set(`papir_mer45_${mode}`, MP[mode]); } }
+const tilesOf = (mode) => { const t = MP[mode]?.tiles; return Array.isArray(t) && t.length === 4 ? t : TILES0[mode]; };
+const TITLE0 = { hl: 'HVERDAG OG FAMILIE', fin: 'FINANS' };
+const titleOf = (mode) => (MP[mode]?.titleOff ? '' : String(MP[mode]?.title || TITLE0[mode]).toUpperCase());
+/* Finans → Mer: skjulte lagres separat (papir_fmer_hid + /api/prefs/mer?scope=fin). */
+const FKEY = { konto: 'kontoer', budsjett: 'budsjett', kv: 'kvitt', fast: 'faste', aks: 'aksjer', finn: 'finn', dir: 'boliger', sub: 'abo', liste: 'fliste', imp: 'fimport', rap: 'rapp', sok: 'fsok' };
+const FBACK = Object.fromEntries(Object.entries(FKEY).map(([a, b]) => [b, a]));
+const FH = { h: ls.get('papir_fmer_hid', []) ?? [], loaded: false };
+function fhLoad() { if (FH.loaded) return; FH.loaded = true; hlApi('/prefs/mer?scope=fin').then((r) => { if (Array.isArray(r?.h) && r.updated) { FH.h = r.h.map((k) => FBACK[k] ?? k); ls.set('papir_fmer_hid', FH.h); if (m.screen === 'fmer') draw(); } }).catch(() => {}); }
+const fhSave = () => { ls.set('papir_fmer_hid', FH.h); hlApi('/prefs/mer?scope=fin', { method: 'PUT', json: { o: [], h: FH.h.map((k) => FKEY[k]).filter(Boolean) } }).catch(() => {}); };
+const SW = { open: false, i: 0, mode: 'hl' };
 async function liveLoad(key, fn, max = 300000) {
   if (LIVE.busy[key] || Date.now() - (LIVE[`${key}T`] ?? 0) < max) return;
   LIVE.busy[key] = true;
@@ -102,7 +121,9 @@ function liveOf(key) {
     const s = M.length < 2 ? 'Bare deg i familien ennå' : has ? `${home} av ${M.length} hjemme` : `${M.length} i familien`;
     return { k: '', v: '', s, row: s, av: M.slice(0, 4) };
   }
-  return null;
+  if (ME.fin?.[key]) return ME.fin[key];
+  const r = (ME.all ?? []).find((x) => x.k === key); // prompt 45: valgfri modul i en stor boks
+  return r ? { k: '', v: '', s: r.s ?? '', row: r.s ?? '' } : null;
 }
 function toolSub(r) {
   if (r.k === 'media') {
@@ -115,43 +136,62 @@ function toolSub(r) {
 }
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const tint = (c) => `color-mix(in srgb, ${c} 14%, var(--pp-card))`;
-const IC44 = { avspilling: 'M4 5h16v11H4zM9 20h6M12 16v4M10 8.5v4l3.5-2z', studie: 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6' };
+const IC44 = { saldo: 'M3 7h18v12H3zM3 11h18M7 15h3', budsjett: 'M12 3a9 9 0 1 0 9 9h-9zM14 3.2V10h6.8', kv: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', fast: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3', aks: 'M3 17l6-6 4 4 8-8M15 7h6v6', finn: 'M7 7h10l3 4-8 10L4 11zM4 11h16', dir: 'M3 11l9-7 9 7M5 10v10h14V10', liste: 'M4 6h16M4 12h16M4 18h10', konto: 'M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18', imp: 'M12 3v12M7 10l5 5 5-5M5 21h14', rap: 'M4 20V10M10 20V4M16 20v-7M22 20H2', sok: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', avspilling: 'M4 5h16v11H4zM9 20h6M12 16v4M10 8.5v4l3.5-2z', studie: 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6' };
 const ic44 = (k, s = 30) => { const c = TILE_C[k] ?? '#6b665c'; return `<span class="p44-mi" style="width:${s}px;height:${s}px;background:${tint(c)};color:${c}">${svg(MER_IC[k] ?? IC44[k] ?? 'M12 12h.01', Math.round(s * 0.55), 2)}</span>`; };
 const MINUS = '<span aria-hidden="true">–</span>';
-/** rows = [[rute, navn, undertekst], …] fra paperMer() (Innstillinger sist). */
-export function merNew(rows) {
-  ME.rows = rows; merLive();
-  const { vis, hid } = P28.merSplit(rows), ed = ME.edit, lav = ME.tsz === 'lav', q = norm(ME.q.trim());
+/** rows = [[rute, navn, undertekst], …] fra paperMer() (Innstillinger sist). opt.mode 'fin' = Finans → Mer (prompt 45). */
+export function merNew(rows, opt = {}) {
+  const mode = opt.mode === 'fin' ? 'fin' : 'hl';
+  if (ME.mode !== mode) { ME.mode = mode; ME.edit = false; ME.q = ''; ME.ttlEd = false; }
+  ME.rows = rows; ME.fin = opt.live ?? null; ME.opt = opt;
+  if (mode === 'hl') merLive(); else fhLoad();
+  const split = mode === 'hl' ? P28.merSplit(rows) : { vis: rows.filter((r) => r.k === 'set' || !FH.h.includes(r.k)), hid: rows.filter((r) => r.k !== 'set' && FH.h.includes(r.k)) };
+  const { vis, hid } = split; ME.all = [...vis, ...hid];
+  const ed = ME.edit, lav = ME.tsz === 'lav', q = norm(ME.q.trim());
   const hit = (...a) => !q || norm(a.join(' ')).includes(q);
   const setR = vis.find((r) => r.k === 'set') ?? { k: 'set', n: 'Innstillinger', s: 'Tema, bakgrunn og konto' };
-  const mods = vis.filter((r) => r.k !== 'set');
-  const tiles = lav ? [] : TILES.map((k) => mods.find((r) => r.k === k)).filter(Boolean).map((r) => ({ ...r, L: liveOf(r.k) })).filter((r) => hit(r.n, r.L.v, r.L.s));
-  const tools = mods.filter((r) => lav || !TILES.includes(r.k)).map((r) => ({ ...r, sub: TILES.includes(r.k) ? liveOf(r.k).row : toolSub(r) })).filter((r) => hit(r.n, r.sub));
+  const mods = vis.filter((r) => r.k !== 'set'), T4 = tilesOf(mode);
+  const tiles = lav ? [] : T4.map((k) => mods.find((r) => r.k === k)).filter(Boolean).map((r) => ({ ...r, L: liveOf(r.k) ?? { k: '', v: '', s: r.s, row: r.s } })).filter((r) => hit(r.n, r.L.v, r.L.s));
+  const tools = mods.filter((r) => lav || !T4.includes(r.k)).map((r) => ({ ...r, sub: T4.includes(r.k) ? (liveOf(r.k)?.row ?? r.s) : toolSub(r) })).filter((r) => hit(r.n, r.sub));
   const an = (j) => (ed ? ` style="animation-delay:${(j % 3) * -0.1}s"` : '');
+  const href = (r) => `#/${r.href ?? r.k}`;
   const tile = (r, j) => { const L = r.L;
     const av = r.k === 'fam' && L.av?.length ? `<span class="p44-avs">${L.av.map((p, i) => `<i style="background:${colOf(p.userId, p.color)};margin-left:${i ? -8 : 0}px">${esc(String(p.name ?? '?').slice(0, 1).toUpperCase())}</i>`).join('')}</span>` : '';
-    return `<${ed ? 'div' : 'a'} class="p44-mt${ed ? ' wig' : ''}" ${ed ? '' : `href="#/${r.k}"`} data-p44mk="${r.k}"${an(j)}>${ed ? `<button type="button" class="p44-mx" data-p44="merhide" data-k="${r.k}" aria-label="Skjul ${esc(r.n)}">${MINUS}</button>` : ''}
+    return `<${ed ? 'div' : 'a'} class="p44-mt${ed ? ' wig' : ''}" ${ed ? '' : `href="${href(r)}"`} data-p44mk="${r.k}"${an(j)}>${ed ? `<button type="button" class="p44-mx" data-p44="merhide" data-k="${r.k}" aria-label="Skjul ${esc(r.n)}">${MINUS}</button><button type="button" class="p45-mswap" data-p44="merswap" data-i="${T4.indexOf(r.k)}" aria-label="Bytt ${esc(r.n)} med en annen modul" title="Bytt">⇄</button>` : ''}
       <span class="p44-mth">${ic44(r.k)}<b>${esc(r.n)}</b></span>
       <span class="p44-mtb">${L.k ? `<small>${esc(L.k)}</small>` : ''}${L.v ? `<b class="p44-mtv${L.big ? ' big' : ''}">${esc(L.v)}</b>` : ''}${L.s ? `<small>${esc(L.s)}</small>` : ''}${av}</span></${ed ? 'div' : 'a'}>`; };
-  const trow = (r, j) => `<${ed ? 'div' : 'a'} class="p44-mr${ed ? ' wig' : ''}" ${ed ? '' : `href="#/${r.k}"`} data-p44mk="${r.k}"${an(j + 4)}>${ed ? `<button type="button" class="p44-mx red" data-p44="merhide" data-k="${r.k}" aria-label="Skjul ${esc(r.n)}">${MINUS}</button>` : ''}${ic44(r.k, 34)}<span class="m-grow"><b class="pp-serif">${esc(r.n)}</b><small>${esc(r.sub)}</small></span><span class="p44-chev" aria-hidden="true">›</span></${ed ? 'div' : 'a'}>`;
+  const trow = (r, j) => `<${ed ? 'div' : 'a'} class="p44-mr${ed ? ' wig' : ''}" ${ed ? '' : `href="${href(r)}"`} data-p44mk="${r.k}"${an(j + 4)}>${ed ? `<button type="button" class="p44-mx red" data-p44="merhide" data-k="${r.k}" aria-label="Skjul ${esc(r.n)}">${MINUS}</button>` : ''}${ic44(r.k, 34)}<span class="m-grow"><b class="pp-serif">${esc(r.n)}</b><small>${esc(r.sub)}</small></span><span class="p44-chev" aria-hidden="true">›</span></${ed ? 'div' : 'a'}>`;
   const seg = `<span class="p44-seg" role="radiogroup" aria-label="Kortstørrelse">${[['stor', 'Store'], ['lav', 'Lave']].map(([k, n]) => `<button type="button" role="radio" aria-checked="${ME.tsz === k}" class="${ME.tsz === k ? 'on' : ''}" data-p44="mertsz" data-k="${k}">${n}</button>`).join('')}</span>`;
-  const head = ed ? `<div class="p44-mh"><span class="p44-lab">${lav ? '' : 'HVERDAG OG FAMILIE'}</span><span class="p44-mhr">${seg}<button type="button" class="p44-done" data-p44="merdone">Ferdig</button></span></div>`
-    : lav ? '' : `<div class="p44-mh"><span class="p44-lab">HVERDAG OG FAMILIE</span></div>`;
+  const T = titleOf(mode);
+  // Tittelen under søket: i wiggle med (−) for å skjule og trykk på teksten for å gi nytt navn; skjult → «+ Legg til tittel».
+  const ttlEd = ed && !lav ? (T ? (ME.ttlEd ? `<form class="p45-mtf" data-p44f="merttl"><input id="p45-merttl" data-p44in="merttl" value="${esc(MP[mode]?.title || TITLE0[mode])}" maxlength="40" enterkeyhint="done" aria-label="Navn på tittelen" autocomplete="off"><button type="submit" class="p44-done">OK</button></form>` : `<span class="p45-mtw"><button type="button" class="p44-mx red p45-mtx" data-p44="merttloff" aria-label="Skjul tittelen">${MINUS}</button><button type="button" class="p44-lab p45-mtn" data-p44="merttled" title="Trykk for å gi nytt navn">${esc(T)}</button></span>`) : '<button type="button" class="p45-mtadd" data-p44="merttlon">+ Legg til tittel</button>') : '';
+  const head = ed ? `<div class="p44-mh">${lav ? '<span></span>' : ttlEd}<span class="p44-mhr">${seg}<button type="button" class="p44-done" data-p44="merdone">Ferdig</button></span></div>`
+    : lav || !T ? '' : `<div class="p44-mh"><span class="p44-lab">${esc(T)}</span></div>`;
   const empty = q && !tiles.length && !tools.length ? `<div class="p44-mempty">Ingen moduler heter «${esc(ME.q.trim())}».</div>` : '';
-  return `<div class="p44-mer${ed ? ' ed' : ''}">
+  const setHref = opt.setHref ?? '#/set';
+  return `<div class="p44-mer${ed ? ' ed' : ''}${mode === 'fin' ? ' p45-fmer' : ''}">
     <label class="p44-msrch">${svg('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', 16, 2.2)}<input id="p44-merq" data-p44in="merq" value="${esc(ME.q)}" placeholder="Søk i moduler" autocomplete="off" enterkeyhint="search" aria-label="Søk i moduler">${ME.q ? '<button type="button" class="p44-mclr" data-p44="merclr" aria-label="Tøm søket">×</button>' : ''}</label>
     ${head}
     ${tiles.length ? `<div class="p44-mtiles">${tiles.map(tile).join('')}</div>` : ''}
-    ${!lav && tools.length ? '<div class="p44-mh tl"><span class="p44-lab">VERKTØY</span></div>' : ''}
+    ${!lav && tools.length ? `<div class="p44-mh tl"><span class="p44-lab">${mode === 'fin' ? 'VERKTØY' : 'VERKTØY'}</span></div>` : ''}
     ${tools.length ? `<div class="p44-mlist">${tools.map(trow).join('')}</div>` : ''}${empty}
-    ${hit(setR.n, setR.s) ? `<a class="p44-mset" href="#/set">${svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z', 18, 1.8)}<span class="m-grow"><b>${esc(setR.n)}</b><small>${esc(setR.s)}</small></span><span class="p44-chev" aria-hidden="true">›</span></a>` : ''}
+    ${hit(setR.n, setR.s) ? `<a class="p44-mset" href="${setHref}">${svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z', 18, 1.8)}<span class="m-grow"><b>${esc(setR.n)}</b><small>${esc(setR.s)}</small></span><span class="p44-chev" aria-hidden="true">›</span></a>` : ''}
     ${ed && hid.length ? `<button type="button" class="p44-mshow" data-p44="mershow">Vis ${hid.length} skjulte</button>` : ''}
-    ${ed ? '' : '<span class="p44-mhint">Hold inne for å skjule moduler eller velge Store · Lave.</span>'}</div>`;
+    ${ed ? '' : `<span class="p44-mhint">Hold inne for å skjule moduler, bytte de store boksene eller velge Store · Lave.</span>`}</div>`;
+}
+/** Bunnarket «Velg boks»: alle moduler med ikon og forhåndsvisning. Valgt modul har hake. */
+function swapSheet() {
+  if (!SW.open || !ME.all) return '';
+  const T4 = tilesOf(SW.mode), cur = T4[SW.i];
+  const L = ME.all.filter((r) => r.k !== 'set');
+  return `<div class="p44-scrim" data-p44="swapx"></div><div class="pp-sheet p45-swap" role="dialog" aria-modal="true" aria-label="Velg boks"><span class="pp-grab"></span>
+    <div class="p45-swh"><b class="pp-sh">Velg boks</b><button type="button" class="p44-done" data-p44="swapx">Ferdig</button></div><span class="pp-mut">Velg hva den ${['første', 'andre', 'tredje', 'fjerde'][SW.i] ?? ''} store boksen skal vise.</span>
+    <div class="p45-swl">${L.map((r) => { const on = r.k === cur, used = !on && T4.includes(r.k), Lv = liveOf(r.k); return `<button type="button" class="p45-swr${on ? ' on' : ''}" data-p44="merpick" data-k="${esc(r.k)}" aria-pressed="${on}">${ic44(r.k, 34)}<span class="m-grow"><b>${esc(r.n)}</b><small>${esc(Lv?.row || Lv?.s || r.s || '')}${used ? ' · i en annen boks' : ''}</small></span>${on ? '<span class="p45-swck" aria-hidden="true">✓</span>' : ''}</button>`; }).join('')}</div></div>`;
 }
 /** Søk mens man skriver: bytt bare innholdet under søkefeltet (feltet beholder fokus, ingen ny tegning av hele appen). */
 function merPatch() {
   const w = document.querySelector('#app .p44-mer'); if (!w || !ME.rows) { draw(); return; }
-  const tmp = document.createElement('div'); tmp.innerHTML = merNew(ME.rows);
+  const tmp = document.createElement('div'); tmp.innerHTML = merNew(ME.rows, ME.opt ?? {});
   const nw = tmp.firstElementChild; if (!nw) return;
   [...w.children].slice(1).forEach((c) => c.remove());
   [...nw.children].slice(1).forEach((c) => w.appendChild(c));
@@ -159,7 +199,7 @@ function merPatch() {
   if (want && !clr) lab.insertAdjacentHTML('beforeend', '<button type="button" class="p44-mclr" data-p44="merclr" aria-label="Tøm søket">×</button>'); else if (!want && clr) clr.remove();
 }
 function merDown(e) {
-  if (m.screen !== 'mer' || ME.edit || (e.button ?? 0) > 0) return;
+  if ((m.screen !== 'mer' && m.screen !== 'fmer') || ME.edit || (e.button ?? 0) > 0) return;
   const r = e.target.closest?.('[data-p44mk]'); if (!r || e.target.closest('button')) return;
   clearTimeout(ME.lp?.t);
   ME.lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { ME.lp = null; ME.edit = true; ME.lpAt = Date.now(); haptic('tab'); vib(12); draw(); }, 480) };
@@ -637,6 +677,7 @@ export function layer44() {
   let h = asPill();
   if (m.screen === 'huske' && VW.id) h += vwPage();
   if (m.screen === 'huske') h += askSheet();
+  if (m.screen === 'mer' || m.screen === 'fmer') h += swapSheet(); // prompt 45: «Velg boks»
   if (m.screen === 'set') h += asSheet() + ownSheet() + (LOGM?.logLayer?.() ?? '');
   if (m.screen === 'nordlys') h += rvSheet();
   if (m.screen === 'studie' && STU) h += STU.studieLayer?.() ?? '';
@@ -648,7 +689,8 @@ export function afterDraw44() {
   app?.classList.toggle('p44-as', !!asCur());
   app?.classList.toggle('p44-vwon', vwOn());
   if (m.screen !== 'huske' && VW.id) { VW.id = null; VW.menu = false; VW.list = false; }
-  if (m.screen !== 'mer' && ME.edit) ME.edit = false;
+  if (m.screen !== 'mer' && m.screen !== 'fmer' && ME.edit) ME.edit = false;
+  if (m.screen !== 'mer' && m.screen !== 'fmer') SW.open = false;
   const ta = document.getElementById('p44-vn'); if (ta) { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight}px`; }
   const tn = document.getElementById('p44-vnotes'); if (tn) { tn.style.height = 'auto'; tn.style.height = `${Math.max(44, tn.scrollHeight)}px`; }
   if (m.screen === 'nordlys') rvAfter();
@@ -662,6 +704,7 @@ export function input44(e, t) {
   const k = t.dataset?.p44in; if (!k) return LOGM?.logInput?.(e, t) || STU?.studieInput?.(e, t) || AVS?.avsInput?.(e, t) || false;
   const v = t.value;
   if (k === 'merq') { ME.q = v; merPatch(); return true; }
+  if (k === 'merttl') return true;
   if (k === 'addv') { VW.addV = v; return true; }
   if (k === 'vwsubv') { VW.subV = v; return true; }
   if (k === 'vwtitle') { t.style.height = 'auto'; t.style.height = `${t.scrollHeight}px`; clearTimeout(vwTitleT); const id = VW.id; vwTitleT = setTimeout(() => { if (v.trim()) P37.patchTask(id, { title: v.trim() }, false); }, e.type === 'change' ? 0 : 500); return true; }
@@ -683,21 +726,30 @@ export async function submit44(e, f) {
   const k = f.dataset?.p44f;
   if (!k) return (await LOGM?.logSubmit?.(e, f)) || (await STU?.studieSubmit?.(e, f)) || (await AVS?.avsSubmit?.(e, f)) || false;
   e.preventDefault();
+  if (k === 'merttl') { const v = String(f.querySelector('input')?.value ?? '').trim(); mpSave(ME.mode, { title: v || null, titleOff: false }); ME.ttlEd = false; haptic('ok'); draw(); return true; }
   if (k === 'subadd') { const id = f.dataset.id, v = VW.addV.trim(); if (v) { VW.addV = ''; await subPatch(id, (s) => [...s, { n: v, done: false }]); haptic('ok'); setTimeout(() => document.getElementById(`p44-sub-${id}`)?.focus({ preventScroll: true }), 30); } return true; }
   if (k === 'vwsub') { const v = VW.subV.trim(); if (v && VW.id) { VW.subV = ''; await subPatch(VW.id, (s) => [...s, { n: v, done: false }]); haptic('ok'); setTimeout(() => document.getElementById('p44-vsub')?.focus({ preventScroll: true }), 30); } return true; }
   return true;
 }
 export async function bind44(e, t) {
-  if (m.screen === 'mer' && Date.now() - ME.lpAt < 700 && t.closest?.('[data-p44mk]')) { e.preventDefault(); e.stopPropagation(); ME.lpAt = 0; return true; }
-  if (m.screen === 'mer' && ME.edit && t.closest?.('[data-p44mk]') && !t.closest('[data-p44]')) { e.preventDefault(); return true; }
+  const merS = m.screen === 'mer' || m.screen === 'fmer';
+  if (merS && Date.now() - ME.lpAt < 700 && t.closest?.('[data-p44mk]')) { e.preventDefault(); e.stopPropagation(); ME.lpAt = 0; return true; }
+  if (merS && ME.edit && t.closest?.('[data-p44mk]') && !t.closest('[data-p44]')) { e.preventDefault(); return true; }
   const x = t.closest?.('[data-p44]');
   if (!x) return (await LOGM?.logBind?.(e, t)) || (await STU?.studieBind?.(e, t)) || (await AVS?.avsBind?.(e, t)) || false;
   const a = x.dataset.p44, id = x.dataset.id;
   if (a !== 'vwpick') e.preventDefault();
   switch (a) {
     /* Mer */
-    case 'merhide': P28.merHide(x.dataset.k); haptic('tap'); draw(); return true;
-    case 'mershow': P28.merShowAll(); haptic('ok'); draw(); return true;
+    case 'merhide': if (ME.mode === 'fin') { FH.h = [...new Set([...FH.h, x.dataset.k])]; fhSave(); } else P28.merHide(x.dataset.k); vib(8); haptic('tap'); draw(); return true;
+    case 'mershow': if (ME.mode === 'fin') { FH.h = []; fhSave(); } else P28.merShowAll(); vib(8); haptic('ok'); draw(); return true;
+    /* Prompt 45: tittel og de fire store boksene */
+    case 'merttloff': mpSave(ME.mode, { titleOff: true }); ME.ttlEd = false; haptic('tap'); draw(); return true;
+    case 'merttlon': mpSave(ME.mode, { titleOff: false }); haptic('tap'); draw(); return true;
+    case 'merttled': ME.ttlEd = true; draw(); setTimeout(() => { const i = document.getElementById('p45-merttl'); i?.focus(); i?.select?.(); }, 40); return true;
+    case 'merswap': SW.open = true; SW.i = Math.max(0, +x.dataset.i || 0); SW.mode = ME.mode; haptic('tap'); draw(); return true;
+    case 'swapx': SW.open = false; draw(); return true;
+    case 'merpick': { const T4 = [...tilesOf(SW.mode)], k = x.dataset.k, j = T4.indexOf(k); if (j >= 0 && j !== SW.i) T4[j] = T4[SW.i]; T4[SW.i] = k; mpSave(SW.mode, { tiles: T4 }); SW.open = false; haptic('ok'); draw(); return true; }
     case 'merdone': ME.edit = false; haptic('ok'); draw(); return true;
     case 'mertsz': ME.tsz = x.dataset.k === 'lav' ? 'lav' : 'stor'; ls.put('papir_mer_tsz', ME.tsz); hlApi('/me/layout', { method: 'PUT', json: { papir_mer_tsz: ME.tsz } }).catch(() => {}); haptic('tab'); draw(); return true;
     case 'merclr': ME.q = ''; draw(); setTimeout(() => document.getElementById('p44-merq')?.focus(), 30); return true;
@@ -751,7 +803,7 @@ let booted = false;
 export function boot44() {
   if (booted) return; booted = true;
   fetchWrap();
-  globalThis.P44 = { toast, avsMod, merNew, subBtn, subRows, vwOpen, vwOn, haRow, setRowHuske, homelabGroup, huskeSet, loggerSet, kontoGroups, versionsSection, fixQuick, glimtTime, studieView, avsView, asCur };
+  globalThis.P44 = { toast, avsMod, merNew, merTake45, subBtn, subRows, vwOpen, vwOn, haRow, setRowHuske, homelabGroup, huskeSet, loggerSet, kontoGroups, versionsSection, fixQuick, glimtTime, studieView, avsView, asCur };
   document.addEventListener('pointerdown', merDown, true);
   document.addEventListener('pointermove', merMove, { capture: true, passive: true });
   document.addEventListener('pointerup', merUp, true); document.addEventListener('pointercancel', merUp, true);
