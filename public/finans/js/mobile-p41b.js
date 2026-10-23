@@ -13,6 +13,7 @@ import { haptic } from './mobile-haptics.js';
 import { BD, bdLoad } from './mobile-p24.js';
 import { swAdd } from './mobile-p39.js';
 import * as HM from './mobile-p40h.js';
+import { AV } from './mobile-p16.js'; // prompt 46: Ruter-redigering (wiggle)
 
 const pad = (n) => String(n).padStart(2, '0');
 const hm = (t) => { const d = new Date(t); return Number.isNaN(+d) ? '' : `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -89,12 +90,21 @@ export function tripRuter() {
   const T = RT.trip, N = globalThis.P45?.recoN?.() ?? T.recoCount ?? 2, O = (T.recommended?.length >= N ? T.recommended : T.options ?? []).slice(0, N); if (!O.length) return '';
   const name = String(m.me?.name ?? 'Sebastian').split(/\s+/)[0].toUpperCase();
   const Z = RT.zones ?? [], hc = RT.set?.homeCard ?? T.homeCard ?? 'over';
-  return `<div class="p41-trip"><div class="p41-trh"><span class="m-grow"><span class="p41-lab">MIN REISE · ${esc(name)}</span><b class="pp-serif">${esc(T.label ?? `${T.from?.name ?? T.from ?? ''} → ${T.to?.name ?? T.to ?? ''}`)}</b></span><button type="button" class="p41-flipb" data-p41b="rtflip">⇄ Snu</button><span class="p45-rmw">${globalThis.P45?.recoMenuBtn?.() ?? ''}</span></div>
+  // Prompt 46 (claude-code-ruter-innstillinger-i-wiggle.md): innstillingene (skolesoner, antall, Hjem-kortet) vises bare i
+  // redigering (hold inne i Ruter → AV.edit), inne i kortet under avgangene. Høyden animeres (p28-col: 0fr → 1fr).
+  const ed = !!AV.edit, geoOff = RT.geo46 === 'denied' || RT.geo46 === 'prompt';
+  if (!RT.geo46) { RT.geo46 = 'asking'; try { navigator.permissions?.query?.({ name: 'geolocation' }).then((p) => { RT.geo46 = p.state; p.onchange = () => { RT.geo46 = p.state; draw(); }; if (p.state !== 'granted') draw(); }).catch(() => { RT.geo46 = 'unknown'; }); } catch { RT.geo46 = 'unknown'; } }
+  const seg = globalThis.P45?.recoSeg?.() ?? '';
+  return `<div class="p41-trip${ed ? ' p28-wig p46-tred' : ''}" data-p24lp="stops"><div class="p41-trh"><span class="m-grow"><span class="p41-lab">MIN REISE · ${esc(name)}</span><b class="pp-serif">${esc(T.label ?? `${T.from?.name ?? T.from ?? ''} → ${T.to?.name ?? T.to ?? ''}`)}</b></span><button type="button" class="p41-flipb" data-p41b="rtflip">⇄ Snu</button></div>
     ${alertHtml(T.alert)}<div class="p41-ros">${O.map((o, i) => optRow(o, i, 'r')).join('')}</div>
+    ${!ed && geoOff ? `<button type="button" class="p46-trgeo" data-p46="trgeo"><span class="m-grow">Skolesonene trenger posisjon «Alltid»</span><b>Slå på ›</b></button>` : ''}
+    ${ed ? `<div class="p46-trcol"><div class="p46-trset"><span class="p46-trsl">INNSTILLINGER FOR KORTET</span>
+    ${seg ? `<span class="p41-lab mut">ANTALL ANBEFALTE REISER</span>${seg}` : ''}
     <span class="p41-lab mut">SKOLESONER · ALLE TELLER SOM SKOLE</span><div class="p41-zones">${Z.map((z) => `<span class="p41-zone">${esc(z.name)}<small>${esc(z.label?.replace(z.name, '').trim() || `${z.radius_m} m`)}</small>${Z.length > 1 ? `<button type="button" data-p41b="zrm" data-id="${esc(z.id)}" aria-label="Fjern ${esc(z.name)}">✕</button>` : ''}</span>`).join('')}<button type="button" class="p41-zadd" data-p41b="zadd">+ Sone</button></div>
     ${RT.addZ ? `<form class="p41-zform" data-p41bf="zone"><input class="p24-in" id="p41-zn" data-p41bin="zn" value="${esc(RT.addZ.n)}" placeholder="Navn, f.eks. Idrettshallen" autocomplete="off"><div class="p41-zr"><span class="p41-mut">Radius ${RT.addZ.r} m</span><input type="range" min="50" max="300" step="10" value="${RT.addZ.r}" data-p41bin="zr" aria-label="Radius"></div><span class="p41-mut">Sonen legges der du står nå (posisjonen brukes bare til dette).</span><div class="p24-two"><button type="button" class="p24-b" data-p41b="zx">Avbryt</button><button type="submit" class="p24-b ink">Legg til sone</button></div></form>` : ''}
     <span class="p41-lab mut">PÅ HJEM NÅR DU FORLATER SKOLEN</span><span class="p41-mut">${hc === 'instead' ? 'Vises i stedet for Avganger mens reisen er aktiv.' : hc === 'off' ? 'Vises ikke på Hjem.' : 'Vises over Avganger mens reisen er aktiv.'}</span>
-    <div class="p41-seg">${[['over', 'Over Ruter-kortet'], ['instead', 'I stedet'], ['off', 'Av']].map(([k, n]) => `<button type="button" data-p41b="rthc" data-v="${k}" aria-pressed="${hc === k}">${n}</button>`).join('')}</div></div>`;
+    <div class="p41-seg">${[['over', 'Over Ruter-kortet'], ['instead', 'I stedet'], ['off', 'Av']].map(([k, n]) => `<button type="button" data-p41b="rthc" data-v="${k}" aria-pressed="${hc === k}">${n}</button>`).join('')}</div>
+    <span class="p41-mut">${geoOff ? 'Skolesonene trenger posisjon «Alltid» for å virke.' : 'Endringer lagres med en gang. Samme valg i Innstillinger → Ruter.'}</span></div></div>` : ''}</div>`;
 }
 export const tripInstead = () => !!(RT.jr?.active && !RT.jr.hidden && (RT.set?.homeCard ?? RT.jr.homeCard) === 'instead');
 /** Hjem: bare når «forlot skolen» er aktiv (ikke ut fra klokkeslett), skjules per tur. */

@@ -373,8 +373,11 @@ function wkFromServer(r) {
   const T = r.thisWeek ?? {}, L = r.lastWeek ?? {};
   const t = (o) => o.tempAvg ?? o.avg ?? o.mean ?? o.temp ?? null, p = (o) => o.precip ?? o.mm ?? o.rain ?? null, s = (o) => o.sunHours ?? o.sun ?? null;
   const dT = t(T) != null && t(L) != null ? t(T) - t(L) : null;
-  const hl = Array.isArray(r.highlights) ? r.highlights.map((h) => (typeof h === 'string' ? (h.includes(':') ? h.split(/:\s*/, 2) : ['', h]) : [h.k ?? h.label ?? h.title ?? '', h.v ?? h.value ?? h.text ?? ''])).filter(([, v]) => v).slice(0, 4) : [];
-  return { txt: String(r.text ?? '').replace(/\*\*/g, ''), stats: [['TEMP', dT != null ? `${sg(dT)}°` : `${f1(t(T))}°`, dT != null ? 'mot forrige uke' : 'snitt denne uka'], ['NEDBØR', p(T) != null ? `${f1(p(T))} mm` : '–', `forrige: ${p(L) != null ? `${f1(p(L))} mm` : '–'}`], ['SOL', s(T) != null ? `${Math.round(s(T))} t` : '–', `forrige: ${s(L) != null ? `${Math.round(s(L))} t` : '–'}`]], rows: hl };
+  // Prompt 46: serveren kan sende nøkler på engelsk (best, umbrella, clothes) – vis de norske etikettene fra fasit.
+  const HLN = { best: 'Beste dag ute', bestday: 'Beste dag ute', umbrella: 'Paraply', clothes: 'Klær', clothing: 'Klær', wind: 'Vind', sun: 'Sol' };
+  const nbK = (k) => HLN[String(k ?? '').trim().toLowerCase().replace(/[\s_-]+/g, '')] ?? k;
+  const hl = Array.isArray(r.highlights) ? r.highlights.map((h) => (typeof h === 'string' ? (h.includes(':') ? h.split(/:\s*/, 2) : ['', h]) : [h.k ?? h.label ?? h.title ?? h.key ?? '', h.v ?? h.value ?? h.text ?? ''])).map(([k, v]) => [nbK(k), v]).filter(([, v]) => v).slice(0, 4) : [];
+  return { txt: String(r.text ?? '').replace(/\*\*/g, ''), stats: [['TEMP', dT != null ? `${sg(dT)}°` : t(T) != null ? `${f1(t(T))}°` : '–', dT != null ? 'mot forrige uke' : 'snitt denne uka'], ['NEDBØR', p(T) != null ? `${f1(p(T))} mm` : '–', `forrige: ${p(L) != null ? `${f1(p(L))} mm` : '–'}`], ['SOL', s(T) != null ? `${Math.round(s(T))} t` : '–', `forrige: ${s(L) != null ? `${Math.round(s(L))} t` : '–'}`]], rows: hl };
 }
 export function wkCard(D, place) {
   if (!D) return '';

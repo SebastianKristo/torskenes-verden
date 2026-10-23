@@ -168,11 +168,14 @@ export async function trialsWLoad(force = false) {
 }
 const tcol = (d) => (d <= 2 ? '#b23a2a' : d <= 7 ? '#a8661a' : 'var(--pp-ink)');
 const lg = (x, s) => `<span class="p32-tlg" style="width:${s}px;height:${s}px"><b>${esc(String(x.n).slice(0, 1).toUpperCase())}</b><img class="p32-li" src="${esc(x.logo)}" alt="" loading="lazy"></span>`;
-export function trialsWidget() {
+export function trialsWidget(editing = false) {
   if (!TR.d && !TR.busy) trialsWLoad().then(() => { if (m.screen === 'hl') draw(); }).catch(() => {});
   const A = (TR.d ?? []).map(normTrial).filter((x) => x && !x.done && x.dd >= 0).sort((a, b) => a.dd - b.dd), top = A[0];
   const head = `<div class="pp-row"><span class="pp-lab">PRØVEPERIODER · ${A.length ? `${A.length} AKTIVE` : 'INGEN'}</span><span class="pp-mut">alle ›</span></div>`;
-  if (!top) return `<a class="pp-card p32-trw" href="#/sub">${head}<span class="p32-trn"><span class="pp-mut">${TR.d ? 'Ingen aktive prøver. Skriv «Viaplay gratis i 14 dager» i søket.' : 'Henter prøveperioder …'}</span>${TR.d ? '<button type="button" class="p32-trb" data-p32="tradd">+ Legg til</button>' : ''}</span></a>`;
+  // Prompt 46 (claude-code-provperioder-skjul-tom.md): uten aktive prøveperioder vises ikke kortet (ingen «INGEN», ingen tom plass).
+  // I wiggle-redigering vises det fortsatt, så det kan flyttes eller skjules.
+  if (!top && !editing) return '';
+  if (!top) return `<div class="pp-card p32-trw p46-trw0"><div class="pp-row"><span class="pp-lab">PRØVEPERIODER</span></div><span class="p32-trn"><span class="pp-mut">Vises når du har en aktiv prøveperiode</span></span></div>`;
   const c = tcol(top.dd), when = `${WDS[top.e.getDay()]} ${top.e.getDate()}. ${MS[top.e.getMonth()]}`;
   return `<a class="pp-card p32-trw" href="#/sub">${head}
     <span class="p32-trt">${lg(top, 40)}<span class="m-grow p32-trm"><b class="pp-serif m-ell">${esc(top.n)}</b><span class="pp-mut m-ell">Avslutt før ${esc(when)}${top.pl ? ` · deretter ${esc(top.pl)}` : ''}</span></span><span class="p32-trd" style="color:${c}"><b class="pp-serif">${top.dd}</b><span>${top.dd === 1 ? 'dag igjen' : 'dager igjen'}</span></span></span>

@@ -23,7 +23,7 @@ const LS = (k, v) => { try { if (v === undefined) return localStorage.getItem(k)
    ===================================================================== */
 // «‹ Hjem / ‹ Finans»-pillene, Innstillinger ‹, Chat ‹, Kalender ‹ Homelab, Vær ✕, Finn-annonse ‹, innlogging ‹ Tilbake,
 // Hjem-knappen i fanelinja, AI-kontroll og brief Ferdig. Hjem-fanen fra en annen side regnes også som tilbake.
-const BACK_SEL = '.pp-back, .gback, .back, .gtop, .atop, .n31-back, [data-swipeback], [data-mact="txback"], [data-mact="pdback"], [data-p25="home"], [data-c27="exit"], [data-k27="back"], [data-wx="back"], [data-g="back"], [data-p34back]';
+const BACK_SEL = '.pp-back, .gback, .back, .gtop, .atop, .n31-back, [data-swipeback], [data-mact="txback"], [data-mact="pdback"], [data-p25="home"], [data-c27="exit"], [data-k27="back"], [data-wx="back"], [data-g="back"], [data-p34back], [data-p27="artx"], [data-pp="newsback"], .p30-back, [data-p40="ngx"], .p46-back'; // prompt 46: tilbake i nyhetssak og nyhetsleser (claude-code-nyheter-tilbake-haptikk.md)
 let lastPtr = 0, booted = false;
 function isBack(t) {
   const el = t?.closest?.(BACK_SEL);

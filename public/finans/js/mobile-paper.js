@@ -282,7 +282,7 @@ export function paperNav(scr) {
   }
   // Familie (prompt 21): Kart, Soner og Helse i fanelinja, pluss Mer (som Abonnementer). Knappene øverst er skjult.
   if (scr === 'fam') {
-    return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav p21-fnav" data-ctx="fam" aria-label="Familie (hold inne for å redigere)">${P32.secTabs('kart').map(([k, n, ic]) => `<a href="#/fam" data-p17="ftab" data-k="${k}" role="tab" aria-selected="${FT.tab === k}" ${FT.tab === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}</nav>`;
+    return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav p21-fnav" data-ctx="fam" aria-label="Familie (hold inne for å redigere)">${P32.secTabs('kart').map(([k, n, ic]) => `<a href="#/fam" data-p17="ftab" data-k="${k}" role="tab" aria-selected="${FT.tab === k}" ${FT.tab === k ? 'aria-current="page"' : ''}><i>${FAM_IC46[`${k}${ic}`] ?? ic}</i><span>${n}</span></a>`).join('')}</nav>`;
   }
   if (ctx === 'dom') plus = ['Legg til domene', 'dom'];
   const fabIc = plus[1] === 'spor' || plus[1] === 'dom' ? 'M12 5v14M5 12h14' : SCAN_IC;
@@ -344,6 +344,11 @@ export function paperUp(e) {
 }
 export function paperMove(e) { if (plusEl && !plusLong && (Math.abs(e.movementX) > 6 || Math.abs(e.movementY) > 6)) { clearTimeout(plusT); } return false; }
 
+/* Prompt 46 (claude-code-familie-ikoner-soner-helse.md): SVG-ikoner for Soner (nål i sone-ring) og Helse (hjerte med puls)
+   i stedet for «◌» og «♡» – bare når brukeren ikke har valgt et eget ikon for fanen. */
+const famSvg = (d) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+const FAM_IC46 = { 'soner◌': famSvg('M12 15s-3.5-3-3.5-6a3.5 3.5 0 0 1 7 0c0 3-3.5 6-3.5 6zM12 9h.01M5.5 14.2C3.9 14.9 3 15.9 3 17c0 2.2 4 4 9 4s9-1.8 9-4c0-1.1-.9-2.1-2.5-2.8'), 'helse♡': famSvg('M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10zM7.5 12.5h2.4l1.3-2.6 1.8 5 1.3-2.4h2.2') };
+
 /* ---------- Papir-forsiden (Hjem) ---------- */
 
 const lab = (t, r = '') => `<div class="pp-sec"><span>${esc(t)}</span>${r ? `<span>${r}</span>` : ''}</div>`;
@@ -382,7 +387,7 @@ export function homeBlocks() {
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
     h5: newsCard(H?.news),
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
-    h6: posCard(), h7: bolWidget(), h8: P37.todoWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(), // Prompt 32: Prøveperioder
+    h6: posCard(), h7: bolWidget(), h8: P37.todoWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(), h11: P32.trialsWidget(edOn('hl')), // prompt 46: skjult uten aktive prøveperioder // Prompt 32: Prøveperioder
     h12: P36.briefCard(P35.briefCard(), edOn('hl')), h13: P37B.bibleHome(edOn('hl')), h14: globalThis.P40?.hjemlysHome?.(edOn('hl')) ?? '', // Prompt 40: Vel fremme // Prompt 37: Dagens bibelvers (bare med modulen) // Prompt 34/35/36: sveip mot høyre skjuler kortet til neste brief: Glimt-brief øverst med vertsfiguren
     h15: globalThis.P41?.tripHome?.(edOn('hl')) ?? '', // Prompt 41: Min reise · forlot skolen (bare når relevant)
     h16: globalThis.P43?.mediaHome?.(edOn('hl')) ?? '', // Prompt 43: Media · lastes ned og kommer (h12 er Glimt-brief)
@@ -455,7 +460,7 @@ export function paperMer() {
   const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k)); // inBar: bare for valget Sporing/Domener under
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
   const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ['brief', 'Now Brief', P36.briefMerSub()], ...(P37B.bibleOn() ? [['bibel', 'Bibel', 'Dagens vers, rekke og leseplan']] : []), // prompt 37: bare med bibelvers-modulen // prompt 36: Now Brief øverst i Mer
-     ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
+     ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Gjøremål', 'To-do for hele familien'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'], ['tkart', 'Kart', 'Holdeplasser, sanntid og soner'] /* prompt 46 */,
     ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Sonarr, Radarr og nedlastinger'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['studie', 'Studie', 'Vitnemål, karakterer og snitt med Glimt'], ['avspilling', 'Avspilling', 'Plex og Jellyfin · spilles nå og historikk'] /* prompt 44 */, ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     ; // prompt 40 (claude-code-fanelinje-alle-sider.md): faner i fanelinja vises fortsatt i Mer
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
@@ -498,25 +503,44 @@ export function newsView() {
   const catName = (id) => cats.find(([k]) => k === id)?.[1] ?? id ?? '';
   return `<div class="pp-reader">
     <div class="pp-rhead"><a class="p30-sb p30-back" href="#/${m.sub === 'hl' ? 'hl' : 'mer'}" data-pp="newsback"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Tilbake</a><div class="m-grow"><div class="pp-lab">NYHETSLESER · ${feeds.length} KILDER${upd ? ` · OPPDATERT ${upd}` : ''}</div><div class="pp-serif pp-rtitle">Siste nytt</div></div>
-      <button class="pp-gear" data-pp="newsset" aria-label="Kilder og AI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4"/></svg></button></div>
+      ${globalThis.P46?.newsMenu ? globalThis.P46.newsMenu() /* prompt 46: «…» → Nyhetsinnstillinger (Innstillinger → Nyheter) */ : `<button class="pp-gear" data-pp="newsset" aria-label="Kilder og AI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4"/></svg></button>`}</div>
     ${P23.newsTabs(P, cats)}
     ${P.newsErr ? `<div class="pp-card pp-mut">${esc(P.newsErr)}</div>` : !N ? '<div class="m-spin"></div>' : `
-    ${lead ? `<button type="button" class="pp-lead p40-nlead" data-p40="ngl"><span class="pp-lab">✦ GLIMT · SAMMENDRAG</span><p>${esc(lead)}</p><span class="p40-nmore">Les hele sammendraget med kilder og bilder ›</span></button>` : '' /* prompt 40: åpner Glimt-siden */}
+    ${globalThis.P46?.newsCatDigest?.(P, cats) ?? ''}${(globalThis.P46?.newsCatDigestOn?.(P) ? '' : lead) ? `<button type="button" class="pp-lead p40-nlead" data-p40="ngl"><span class="pp-lab">✦ GLIMT · SAMMENDRAG</span><p>${esc(lead)}</p><span class="p40-nmore">Les hele sammendraget med kilder og bilder ›</span></button>` : '' /* prompt 40: åpner Glimt-siden */}
     <div class="pp-items p27-items">${items.map((x, i) => `<a href="${esc(x.url)}" target="_blank" rel="noopener" data-p27art="${i}"><span class="m-grow">${P.cat === 'siste' ? `<span class="pp-lab pp-cat">${esc(catName(x.category).toUpperCase())}</span>` : ''}<span class="pp-it">${esc(x.title)}</span><span class="pp-mut">${esc(x.feed)} · ${esc(timeOf(x.published))}${x.ai || x.aiCategory ? ' · ✦ AI' : ''}</span></span>${P27.newsThumb(x, i)}</a>`).join('') || '<div class="pp-mut" style="padding:20px 0">Ingen saker i denne kategorien.</div>'}</div>`}
     ${P.set ? newsSheet(feeds, st, cats) : ''}${P.set ? P23.iconPicker(P) : ''}
   </div>${P27.articleView(items, catName)}`;
 }
 function newsSheet(feeds, st, cats) {
-  const tog = (k, n, s, on) => `<button class="pp-tog" data-pp="newstog" data-k="${k}" role="switch" aria-checked="${on}"><span class="m-grow"><b>${n}</b><span class="pp-mut">${s}</span></span><span class="pp-sw${on ? ' on' : ''}"><i></i></span></button>`;
   return `<div class="sheet-bg" data-pp="newssetx"></div><div class="pp-sheet tall" role="dialog" aria-label="Kilder og AI">
     <div class="pp-row"><div><div class="pp-lab">NYHETSLESER</div><div class="pp-sh">Kilder og AI</div></div><button type="button" class="p30-sb p30-pri" data-pp="newssetx">Ferdig</button></div>
-    <div class="pp-card pp-tight">${tog('aiSummary', '✦ AI-sammendrag', 'Lager en kort ingress over de viktigste sakene øverst.', st.aiSummary !== false)}${tog('aiCategorize', '✦ AI-kategorisering', 'Setter kategori per sak når kilden står på Auto.', st.aiCategorize !== false)}</div>
-    ${P23.newsIconSection(P, cats)}
-    <div class="pp-row"><span class="pp-lab">ADRESSER · ${feeds.length}</span><span class="pp-mut">Trykk på kategorien for å endre</span></div>
-    <div class="pp-card pp-tight">${feeds.map((f, i) => `<div class="pp-feed"><span class="pp-fi" style="background:${esc(f.color || FCOL[i % FCOL.length])}">${esc(String(f.name).slice(0, 2).toUpperCase())}</span><span class="m-grow"><b class="m-ell">${esc(f.name)}</b><span class="pp-mono m-ell">${esc(f.url)}</span>${f.lastError ? `<span class="pp-lab" style="letter-spacing:0">${esc(f.lastError)}</span>` : ''}</span>
-      <button class="pp-chip" data-pp="feedcat" data-id="${f.id}" data-c="${esc(f.category)}">${f.category === 'auto' && st.aiCategorize !== false ? '✦ ' : ''}${esc(f.category === 'auto' ? 'Auto' : cats.find(([k]) => k === f.category)?.[1] ?? f.category)} ▾</button><button class="pp-x" data-pp="feeddel" data-id="${f.id}" aria-label="Fjern ${esc(f.name)}">×</button></div>`).join('') || '<div class="pp-mut" style="padding:12px">Ingen kilder.</div>'}</div>
-    <form class="pp-col" data-ppform="feed"><input class="pp-in" name="url" value="${esc(P.nf)}" placeholder="https://www.nrk.no/toppsaker.rss" inputmode="url" autocomplete="off" aria-label="RSS- eller Atom-adresse"><button class="pp-btn lab" type="submit" ${P.busy ? 'disabled' : ''}>${P.busy ? 'Sjekker …' : '+ Legg til adresse'}</button><span class="pp-mut">${st.aiCategorize !== false ? '✦ AI finner navnet på kilden og foreslår kategori.' : 'Kategorien settes til Auto.'}</span></form>
+    ${newsSetInner(feeds, st, cats)}
   </div>`;
+}
+/** Prompt 46 (claude-code-nyheter-innstillinger-flytt.md): innholdet brukes nå av Innstillinger → Nyheter (#/set/nyheter).
+ *  Kategorien per kilde er en ekte nedtrekksmeny (claude-code-nyheter-kilder-favicon-dropdown.md), og nettstedets ikon
+ *  vises i stedet for bokstavene når serveren har det (f.favicon / f.icon); feiler bildet, vises bokstavene. */
+function newsSetInner(feeds, st, cats) {
+  const tog = (k, n, s, on) => `<button class="pp-tog" data-pp="newstog" data-k="${k}" role="switch" aria-checked="${on}"><span class="m-grow"><b>${n}</b><span class="pp-mut">${s}</span></span><span class="pp-sw${on ? ' on' : ''}"><i></i></span></button>`;
+  const X = globalThis.P46;
+  const fav = (f, i) => { const u = f.favicon ?? f.icon ?? f.iconUrl ?? null, ini = esc(String(f.name).slice(0, 2).toUpperCase()), bg = esc(f.color || FCOL[i % FCOL.length]); return u && !f.favErr ? `<span class="pp-fi p46-fav"><img src="${esc(u)}" alt="" data-p45fb="${ini}" style="--fb:${bg}"></span>` : `<span class="pp-fi" style="background:${bg}">${ini}</span>`; };
+  const opts = (f) => [['auto', st.aiCategorize !== false ? '✦ Auto' : 'Auto'], ...cats.filter(([k]) => k !== 'siste' && k !== 'fordeg')].map(([k, n]) => `<option value="${esc(k)}"${f.category === k ? ' selected' : ''}>${esc(n)}</option>`).join('');
+  return `<div class="pp-card pp-tight">${tog('aiSummary', '✦ AI-sammendrag', 'Lager en kort ingress over de viktigste sakene øverst.', st.aiSummary !== false)}${tog('aiCategorize', '✦ AI-kategorisering', 'Setter kategori per sak når kilden står på Auto.', st.aiCategorize !== false)}${X?.newsTogExtra ? X.newsTogExtra(st, tog) : ''}</div>
+    ${X?.newsCatSection ? X.newsCatSection(cats) : ''}
+    ${P23.newsIconSection(P, cats)}
+    <div class="pp-row"><span class="pp-lab">ADRESSER · ${feeds.length}</span><span class="pp-mut">Velg kategori per kilde</span></div>
+    <div class="pp-card pp-tight">${feeds.map((f, i) => `<div class="pp-feed">${fav(f, i)}<span class="m-grow"><b class="m-ell">${esc(f.name)}</b><span class="pp-mono m-ell">${esc(f.url)}</span>${f.lastError ? `<span class="pp-lab" style="letter-spacing:0">${esc(f.lastError)}</span>` : ''}</span>
+      <label class="pp-chip p46-csel"><select data-p46feedcat="${esc(f.id)}" aria-label="Kategori for ${esc(f.name)}">${opts(f)}</select><span aria-hidden="true">▾</span></label><button class="pp-x" data-pp="feeddel" data-id="${f.id}" aria-label="Fjern ${esc(f.name)}">×</button></div>`).join('') || '<div class="pp-mut" style="padding:12px">Ingen kilder.</div>'}</div>
+    <form class="pp-col" data-ppform="feed"><input class="pp-in" name="url" value="${esc(P.nf)}" placeholder="https://www.nrk.no/toppsaker.rss" inputmode="url" autocomplete="off" aria-label="RSS- eller Atom-adresse"><button class="pp-btn lab" type="submit" ${P.busy ? 'disabled' : ''}>${P.busy ? 'Sjekker …' : '+ Legg til adresse'}</button><span class="pp-mut">${st.aiCategorize !== false ? '✦ AI finner navnet på kilden og foreslår kategori.' : 'Kategorien settes til Auto.'}</span></form>`;
+}
+/** Innstillinger → Nyheter (prompt 46). */
+export function newsSetBody() {
+  const N = P.news, feeds = N?.feeds ?? [], st = N?.settings ?? { aiSummary: true, aiCategorize: true };
+  const cats0 = N?.categories?.length ? N.categories.map((c) => [c.id, c.name]) : CATS;
+  const cats = [...cats0, ...(N?.customCategories ?? []).filter((c) => !cats0.some(([k]) => k === c.id)).map((c) => [c.id, c.name])];
+  if (P.newsErr && !N) return `<div class="pp-card pp-mut">${esc(P.newsErr)}</div>`;
+  if (!N) return '<div class="m-spin"></div>';
+  return `<div class="p46-nset">${newsSetInner(feeds, st, cats)}${P23.iconPicker(P)}<a class="opt-row p17-row p44-hlink" href="#/nyheter"><span class="m-grow p17-rt"><b>Åpne Nyheter</b><small>Siste nytt og Glimt-sammendrag</small></span><span class="p17-chev" aria-hidden="true">›</span></a></div>`;
 }
 
 /* ---------- Hendelser ---------- */

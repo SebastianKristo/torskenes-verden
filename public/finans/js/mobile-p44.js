@@ -49,7 +49,7 @@ function toast(t, undo = null, ms = 4500) { T44.t = t; T44.undo = undo; clearTim
 const ME = { edit: false, q: '', lp: null, lpAt: 0, tsz: ls.raw('papir_mer_tsz') === 'lav' ? 'lav' : 'stor' };
 const LIVE = { cal: null, calT: 0, bd: null, bdT: 0, fam: null, famT: 0, busy: {} };
 // Fargebrikker fra fasiten (lys) – mørkt tema blander fargen inn i kortet.
-const TILE_C = { saldo: '#2f6b4a', budsjett: '#b23a2a', kv: '#a0671a', fast: '#2b5d8a', aks: '#2f6b4a', finn: '#a0671a', dir: '#b23a2a', liste: '#6b665c', konto: '#2b5d8a', imp: '#7a5ad6', rap: '#6b665c', sok: '#2b5d8a', avspilling: '#e5a00d', kal: '#b23a2a', huske: '#2f6b4a', bd: '#7a5ad6', fam: '#b23a2a', chat: '#2b5d8a', media: '#a0671a', dom: '#2f6b4a', sub: '#2f6b4a', bibel: '#b23a2a', nyheter: '#6b665c', hjem: '#2b5d8a', spor: '#a0671a', brief: '#7a5ad6', hl: '#3d4652', studie: '#2b5d8a', set: '#6b665c' };
+const TILE_C = { saldo: '#2f6b4a', budsjett: '#b23a2a', kv: '#a0671a', fast: '#2b5d8a', aks: '#2f6b4a', finn: '#a0671a', dir: '#b23a2a', liste: '#6b665c', konto: '#2b5d8a', imp: '#7a5ad6', rap: '#6b665c', sok: '#2b5d8a', avspilling: '#e5a00d', kal: '#b23a2a', huske: '#2f6b4a', bd: '#7a5ad6', fam: '#b23a2a', chat: '#2b5d8a', media: '#a0671a', dom: '#2f6b4a', sub: '#2f6b4a', bibel: '#b23a2a', nyheter: '#6b665c', hjem: '#2b5d8a', spor: '#a0671a', brief: '#7a5ad6', hl: '#3d4652', studie: '#2b5d8a', set: '#6b665c', tkart: '#2b6fb3' };
 const TILES0 = { hl: ['kal', 'huske', 'bd', 'fam'], fin: ['saldo', 'budsjett', 'kv', 'fast'] };
 /* Prompt 45 (claude-code-mer-tittel-og-store-bokser.md, claude-code-finans-mer-samme-design.md): seksjonstittelen kan skjules
    eller få nytt navn, og de fire store boksene kan byttes (⇄ → «Velg boks»). Finans → Mer bruker samme komponent (mode 'fin').
@@ -57,9 +57,9 @@ const TILES0 = { hl: ['kal', 'huske', 'bd', 'fam'], fin: ['saldo', 'budsjett', '
 const MP = { hl: ls.get('papir_mer45_hl', {}) ?? {}, fin: ls.get('papir_mer45_fin', {}) ?? {} };
 const mpSave = (mode, patch) => {
   MP[mode] = { ...MP[mode], ...patch }; ls.set(`papir_mer45_${mode}`, MP[mode]);
-  const P = MP[mode]; hlApi('/me/layout', { method: 'PUT', json: { pages: { [`mer45${mode}`]: { order: (P.tiles ?? TILES0[mode]).filter((k) => /^[\w.-]{1,40}$/.test(k)), hidden: P.titleOff ? ['_title'] : [] } } } }).catch(() => {});
+  const P = MP[mode]; hlApi('/me/layout', { method: 'PUT', json: { pages: { [`mer45${mode}`]: { order: (P.tiles ?? TILES0[mode]).filter((k) => /^[\w.-]{1,40}$/.test(k)), hidden: [...(P.titleOff ? ['_title'] : []), ...(P.toolsOff ? ['_tools'] : [])] } } } }).catch(() => {});
 };
-export function merTake45(pages) { for (const mode of ['hl', 'fin']) { const v = pages?.[`mer45${mode}`]; if (!v) continue; MP[mode] = { ...MP[mode], tiles: Array.isArray(v.order) && v.order.length === 4 ? v.order : MP[mode].tiles, titleOff: (v.hidden ?? []).includes('_title') }; ls.set(`papir_mer45_${mode}`, MP[mode]); } }
+export function merTake45(pages) { for (const mode of ['hl', 'fin']) { const v = pages?.[`mer45${mode}`]; if (!v) continue; MP[mode] = { ...MP[mode], tiles: Array.isArray(v.order) && v.order.length === 4 ? v.order : MP[mode].tiles, titleOff: (v.hidden ?? []).includes('_title'), toolsOff: (v.hidden ?? []).includes('_tools') }; ls.set(`papir_mer45_${mode}`, MP[mode]); } }
 const tilesOf = (mode) => { const t = MP[mode]?.tiles; return Array.isArray(t) && t.length === 4 ? t : TILES0[mode]; };
 const TITLE0 = { hl: 'HVERDAG OG FAMILIE', fin: 'FINANS' };
 const titleOf = (mode) => (MP[mode]?.titleOff ? '' : String(MP[mode]?.title || TITLE0[mode]).toUpperCase());
@@ -136,7 +136,7 @@ function toolSub(r) {
 }
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const tint = (c) => `color-mix(in srgb, ${c} 14%, var(--pp-card))`;
-const IC44 = { saldo: 'M3 7h18v12H3zM3 11h18M7 15h3', budsjett: 'M12 3a9 9 0 1 0 9 9h-9zM14 3.2V10h6.8', kv: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', fast: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3', aks: 'M3 17l6-6 4 4 8-8M15 7h6v6', finn: 'M7 7h10l3 4-8 10L4 11zM4 11h16', dir: 'M3 11l9-7 9 7M5 10v10h14V10', liste: 'M4 6h16M4 12h16M4 18h10', konto: 'M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18', imp: 'M12 3v12M7 10l5 5 5-5M5 21h14', rap: 'M4 20V10M10 20V4M16 20v-7M22 20H2', sok: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', avspilling: 'M4 5h16v11H4zM9 20h6M12 16v4M10 8.5v4l3.5-2z', studie: 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6' };
+const IC44 = { saldo: 'M3 7h18v12H3zM3 11h18M7 15h3', budsjett: 'M12 3a9 9 0 1 0 9 9h-9zM14 3.2V10h6.8', kv: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', fast: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3', aks: 'M3 17l6-6 4 4 8-8M15 7h6v6', finn: 'M7 7h10l3 4-8 10L4 11zM4 11h16', dir: 'M3 11l9-7 9 7M5 10v10h14V10', liste: 'M4 6h16M4 12h16M4 18h10', konto: 'M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18', imp: 'M12 3v12M7 10l5 5 5-5M5 21h14', rap: 'M4 20V10M10 20V4M16 20v-7M22 20H2', sok: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', avspilling: 'M4 5h16v11H4zM9 20h6M12 16v4M10 8.5v4l3.5-2z', studie: 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6', tkart: 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14' };
 const ic44 = (k, s = 30) => { const c = TILE_C[k] ?? '#6b665c'; return `<span class="p44-mi" style="width:${s}px;height:${s}px;background:${tint(c)};color:${c}">${svg(MER_IC[k] ?? IC44[k] ?? 'M12 12h.01', Math.round(s * 0.55), 2)}</span>`; };
 const MINUS = '<span aria-hidden="true">–</span>';
 /** rows = [[rute, navn, undertekst], …] fra paperMer() (Innstillinger sist). opt.mode 'fin' = Finans → Mer (prompt 45). */
@@ -173,7 +173,7 @@ export function merNew(rows, opt = {}) {
     <label class="p44-msrch">${svg('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', 16, 2.2)}<input id="p44-merq" data-p44in="merq" value="${esc(ME.q)}" placeholder="Søk i moduler" autocomplete="off" enterkeyhint="search" aria-label="Søk i moduler">${ME.q ? '<button type="button" class="p44-mclr" data-p44="merclr" aria-label="Tøm søket">×</button>' : ''}</label>
     ${head}
     ${tiles.length ? `<div class="p44-mtiles">${tiles.map(tile).join('')}</div>` : ''}
-    ${!lav && tools.length ? `<div class="p44-mh tl"><span class="p44-lab">${mode === 'fin' ? 'VERKTØY' : 'VERKTØY'}</span></div>` : ''}
+    ${!lav && tools.length ? (ed ? `<div class="p44-mh tl">${MP[mode]?.toolsOff ? '<button type="button" class="p45-mtadd" data-p44="mertoolon">+ Legg til tittel</button>' : `<span class="p45-mtw"><button type="button" class="p44-mx red p45-mtx" data-p44="mertooloff" aria-label="Skjul tittelen Verktøy">${MINUS}</button><span class="p44-lab">VERKTØY</span></span>`}</div>` : MP[mode]?.toolsOff ? '' : '<div class="p44-mh tl"><span class="p44-lab">VERKTØY</span></div>') /* prompt 46: skjult tittel = ingen rad */ : ''}
     ${tools.length ? `<div class="p44-mlist">${tools.map(trow).join('')}</div>` : ''}${empty}
     ${hit(setR.n, setR.s) ? `<a class="p44-mset" href="${setHref}">${svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z', 18, 1.8)}<span class="m-grow"><b>${esc(setR.n)}</b><small>${esc(setR.s)}</small></span><span class="p44-chev" aria-hidden="true">›</span></a>` : ''}
     ${ed && hid.length ? `<button type="button" class="p44-mshow" data-p44="mershow">Vis ${hid.length} skjulte</button>` : ''}
@@ -210,7 +210,7 @@ function merUp() { if (ME.lp) { clearTimeout(ME.lp.t); ME.lp = null; } }
 /* =====================================================================
    2. Gjøremål: deloppgaver i lista og infosiden
    ===================================================================== */
-const VW = { id: null, menu: false, list: false, subV: '', addFor: null, addV: '', pl: null, sug: [], sugQ: '', geoBusy: false, ask: null };
+const VW = { id: null, menu: false, list: false, subV: '', addFor: null, addV: '', pl: null, sug: [], sugQ: '', geoBusy: false, ask: null, ask46: null, anim: null, out: false };
 const byId = (id) => { const x = (HK.d?.items ?? []).find((y) => String(y.id) === String(id)); return x ? P37.T(x) : null; };
 const listOf = (id) => P37.lists().find((l) => l.id === String(id)) ?? P37.lists()[0] ?? { id: '', name: 'Liste', color: '#1b1a17' };
 const SUB_IC = 'M5 4v8a3 3 0 0 0 3 3h6M17 12v6M14 15h6';
@@ -247,6 +247,35 @@ async function complete(id, on = true) {
   await P37.patchTask(id, patch); vib(8); haptic(on ? 'ok' : 'tap');
   if (on && x.rep && x.rep !== 'aldri') { HK.t = 0; await tasksLoad(true).catch(() => {}); draw(); }
 }
+/* Prompt 46 (claude-code-gjoremal-fullfor-lukker.md): «Fullfør oppgaven» i infosiden haker av, gir suksess-haptikk og lukker
+   siden etter 450 ms. Toast nederst «Fullført: … · Angre» (5 s). Angre fullført lukker ikke. Uferdige deloppgaver: spør først. */
+const REPN = { daglig: 1, ukentlig: 7, annenhver: 14, ukedager: 1 };
+function nextTxt(x) {
+  if (!x.rep || x.rep === 'aldri') return '';
+  const d = new Date(`${x.due || dayIso(0)}T12:00`);
+  if (x.rep === 'maanedlig') d.setMonth(d.getMonth() + 1); else if (x.rep === 'aarlig') d.setFullYear(d.getFullYear() + 1);
+  else { d.setDate(d.getDate() + (REPN[x.rep] ?? 1)); if (x.rep === 'ukedager') while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1); }
+  return d.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/^([a-zæøå]+)\.,?/i, '$1').replace(/\.$/, '');
+}
+async function doneClose(y) {
+  const id = String(y.id), title = y.title, nx = nextTxt(y);
+  VW.anim = id; draw();
+  const p = complete(id, true).catch((err) => { flash(err.message); });
+  await new Promise((r) => setTimeout(r, 450));
+  if (VW.id === id) { VW.out = true; draw(); await new Promise((r) => setTimeout(r, reduceM() ? 0 : 220)); }
+  if (VW.id === id) { VW.id = null; VW.menu = false; VW.list = false; }
+  VW.anim = null; VW.out = false;
+  await p;
+  toast(nx ? `Fullført · neste ${nx}` : `Fullført: ${title}`, { label: 'Angre', fn: () => complete(id, false) }, 5000);
+}
+const reduceM = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
+function ask46Sheet() {
+  const x = VW.ask46 && byId(VW.ask46); if (!x) { VW.ask46 = null; return ''; }
+  const n = x.subs.filter((u) => !u.done).length;
+  return `<div class="p44-scrim" data-p44="ask46x"></div><div class="pp-sheet p44-ask" role="dialog" aria-modal="true" aria-label="Fullfør alle"><span class="pp-grab"></span>
+    <b class="pp-sh">${n === 1 ? '1 deloppgave er ikke ferdig' : `${n} deloppgaver er ikke ferdige`}. Fullfør alle?</b>
+    <div class="p44-row2"><button type="button" class="pp-btn" data-p44="ask46x">Avbryt</button><button type="button" class="pp-btn ink" data-p44="ask46ok">Fullfør alle</button></div></div>`;
+}
 /* Infosiden */
 export const vwOpen = (id) => { VW.id = String(id); VW.menu = false; VW.list = false; VW.subV = ''; VW.pl = null; VW.sug = []; haptic('tap'); try { document.activeElement?.blur?.(); } catch {} draw(); };
 export const vwOn = () => m.screen === 'huske' && !!VW.id && !!byId(VW.id);
@@ -274,7 +303,8 @@ function vwPage() {
   const sd = x.subs.filter((u) => u.done).length, pl = VW.pl ?? plOf(x), g = geoOf(x);
   if (pl && !g && !VW.geoBusy && !x.raw?.geoTried) geoLookup(x, pl);
   const star = x.flag ? '★' : '☆';
-  return `<div class="p44-vw" role="dialog" aria-modal="true" aria-label="Gjøremål ${esc(x.title)}" style="--c:${esc(c)}">
+  const an = VW.anim === String(x.id), xd = x.done || an; // prompt 46: haken og overstrykingen vises med en gang
+  return `<div class="p44-vw${VW.out ? ' p46-out' : ''}" role="dialog" aria-modal="true" aria-label="Gjøremål ${esc(x.title)}" style="--c:${esc(c)}">
     <div class="p44-vtop"><button type="button" class="p44-vback" data-p44="vwback" data-p30close aria-label="Tilbake til Gjøremål">${svg('M15 5l-7 7 7 7', 14, 3.2)}Tilbake</button><span class="m-grow"></span>
       <button type="button" class="p44-rb star${x.flag ? ' on' : ''}" data-p44="vwflag" aria-pressed="${x.flag}" aria-label="${x.flag ? 'Fjern flagg' : 'Flagg'}">${star}</button>
       <button type="button" class="p44-rb" data-p44="vwmenu" aria-expanded="${VW.menu}" aria-label="Flere valg">${svg('M4 7h10M18 7h2M4 17h2M10 17h10M16 5a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM8 15a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', 18, 2)}</button></div>
@@ -282,7 +312,7 @@ function vwPage() {
     <div class="p44-vbody">
       <div class="p44-vlw"><button type="button" class="p44-vlist" data-p44="vwlist" aria-expanded="${VW.list}"><i style="background:${esc(c)}"></i>${esc(l.name)}<span aria-hidden="true">▼</span></button>
         ${VW.list ? `<div class="p44-vlmenu" role="menu">${L.map((y) => `<button type="button" role="menuitemradio" aria-checked="${y.id === l.id}" data-p44="vwsetl" data-k="${esc(y.id)}"><i style="background:${esc(y.color)}"></i><span class="m-grow">${esc(y.name)}</span>${y.id === l.id ? '✓' : ''}</button>`).join('')}</div>` : ''}</div>
-      <div class="p44-vt"><button type="button" class="p44-vck${x.done ? ' on' : ''}" data-p44="vwdone" aria-label="${x.done ? 'Angre fullført' : 'Fullfør oppgaven'}">${x.done ? '✓' : ''}</button><textarea id="p44-vn" class="p44-vn${x.done ? ' done' : ''}" data-p44in="vwtitle" rows="1" aria-label="Tittel">${esc(x.title)}</textarea></div>
+      <div class="p44-vt"><button type="button" class="p44-vck${xd ? ' on' : ''}${an ? ' p46-pop' : ''}" data-p44="vwdone" aria-label="${x.done ? 'Angre fullført' : 'Fullfør oppgaven'}">${xd ? '✓' : ''}</button><textarea id="p44-vn" class="p44-vn${xd ? ' done' : ''}" data-p44in="vwtitle" rows="1" aria-label="Tittel">${esc(x.title)}</textarea></div>
       <div class="p44-vcards">
         <div class="p44-vc${over ? ' over' : ''}" data-p44="vwpick" data-k="dl" role="button" tabindex="0"><span class="p44-lab">FRIST</span><b>${dl ? `${esc(`Frist: ${DL_DAY(dl)}`)}${over ? ' · forfalt' : ''}` : 'Legg til'}</b><input type="date" class="p44-hid" id="p44-dl" data-p44in="vwdl" value="${esc(dl ?? '')}" tabindex="-1" aria-label="Frist">${dl ? '<button type="button" class="p44-vx" data-p44="vwclr" data-k="dl" aria-label="Fjern frist">✕</button>' : ''}</div>
         <div class="p44-vc" data-p44="vwpick" data-k="due" role="button" tabindex="0"><span class="p44-lab">NÅR</span><span class="p44-vwhen"><b>${x.due ? esc(whenTxt(x.due)) : 'Legg til'}</b>${x.due ? `<span class="p44-tp" data-p44="vwpick" data-k="time" role="button" tabindex="0">${esc(x.time || 'Legg til tid')}<input type="time" class="p44-hid" id="p44-tm" data-p44in="vwtime" value="${esc(x.time ?? '')}" tabindex="-1" aria-label="Klokkeslett"></span>` : ''}</span><input type="date" class="p44-hid" id="p44-due" data-p44in="vwdue" value="${esc(x.due ?? '')}" tabindex="-1" aria-label="Dato">${x.due ? '<button type="button" class="p44-vx" data-p44="vwclr" data-k="due" aria-label="Fjern dato">✕</button>' : ''}</div></div>
@@ -676,7 +706,7 @@ export function load44(scr, sub) {
 export function layer44() {
   let h = asPill();
   if (m.screen === 'huske' && VW.id) h += vwPage();
-  if (m.screen === 'huske') h += askSheet();
+  if (m.screen === 'huske') h += askSheet() + ask46Sheet();
   if (m.screen === 'mer' || m.screen === 'fmer') h += swapSheet(); // prompt 45: «Velg boks»
   if (m.screen === 'set') h += asSheet() + ownSheet() + (LOGM?.logLayer?.() ?? '');
   if (m.screen === 'nordlys') h += rvSheet();
@@ -750,6 +780,8 @@ export async function bind44(e, t) {
     case 'merswap': SW.open = true; SW.i = Math.max(0, +x.dataset.i || 0); SW.mode = ME.mode; haptic('tap'); draw(); return true;
     case 'swapx': SW.open = false; draw(); return true;
     case 'merpick': { const T4 = [...tilesOf(SW.mode)], k = x.dataset.k, j = T4.indexOf(k); if (j >= 0 && j !== SW.i) T4[j] = T4[SW.i]; T4[SW.i] = k; mpSave(SW.mode, { tiles: T4 }); SW.open = false; haptic('ok'); draw(); return true; }
+    case 'mertooloff': mpSave(ME.mode, { toolsOff: true }); haptic('tap'); draw(); return true;
+    case 'mertoolon': mpSave(ME.mode, { toolsOff: false }); haptic('tap'); draw(); return true;
     case 'merdone': ME.edit = false; haptic('ok'); draw(); return true;
     case 'mertsz': ME.tsz = x.dataset.k === 'lav' ? 'lav' : 'stor'; ls.put('papir_mer_tsz', ME.tsz); hlApi('/me/layout', { method: 'PUT', json: { papir_mer_tsz: ME.tsz } }).catch(() => {}); haptic('tab'); draw(); return true;
     case 'merclr': ME.q = ''; draw(); setTimeout(() => document.getElementById('p44-merq')?.focus(), 30); return true;
@@ -768,7 +800,9 @@ export async function bind44(e, t) {
     case 'vwedit': VW.menu = false; P37.G7.ed = VW.id; P37.G7.tagV = ''; P37.G7.subV = ''; draw(); return true;
     case 'vwdup': { VW.menu = false; const y = byId(VW.id); if (y) { try { const n = await P37.addTask({ ...y, title: `${y.title} (kopi)`, done: false, subs: y.subs.map((u) => ({ ...u, done: false })) }); flash('Duplisert ✓'); if (n?.id != null) VW.id = String(n.id); } catch (err) { flash(err.message); } } draw(); return true; }
     case 'vwdel': { VW.menu = false; const y = byId(VW.id); if (y) { VW.id = null; await P37.delTask(y.id); flash('Oppgaven er slettet'); } draw(); return true; }
-    case 'vwdone': { const y = byId(VW.id); if (y) await complete(y.id, !y.done); return true; }
+    case 'vwdone': { const y = byId(VW.id); if (!y) return true; if (y.done) { await complete(y.id, false); return true; } if (y.subs.some((u) => !u.done)) { VW.ask46 = String(y.id); haptic('tap'); draw(); return true; } await doneClose(y); return true; }
+    case 'ask46x': VW.ask46 = null; draw(); return true;
+    case 'ask46ok': { const y = byId(VW.ask46); VW.ask46 = null; if (y) await doneClose(y); else draw(); return true; }
     case 'vwpick': if (t.closest('.p44-vx')) return false; e.preventDefault(); pick(x.dataset.k); return true;
     case 'vwclr': { const y = byId(VW.id); if (y) await P37.patchTask(y.id, x.dataset.k === 'dl' ? { dl: null } : { due: null, time: null }); haptic('tab'); return true; }
     case 'vwplclr': { const y = byId(VW.id); VW.pl = ''; VW.sug = []; if (y) await P37.patchTask(y.id, { pl: null, geo: null }); return true; }

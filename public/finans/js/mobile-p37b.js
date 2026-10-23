@@ -228,13 +228,15 @@ export function bibleView() {
   const week = ['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((l, i) => { const d = new Date(mon); d.setDate(mon.getDate() + i); const k = iso(d), on = has.has(k), isT = k === t; return `<span class="p37-wd${on ? ' on' : ''}${isT ? ' t' : ''}"><small>${l}</small><i>${on ? '✓' : ''}</i></span>`; }).join('');
   const pk = PL[S.plan] ? S.plan : 'joh', P = PL[pk], pd = Math.min(P[1], (S.pday || 0) + 1), pdone = S.pdone === t, saved = S.saved || [], isSaved = saved.some((x) => x.ref === v.ref);
   const tip = readToday ? 'Bra! Kom tilbake i morgen for å holde rekken.' : n ? `Les dagens vers for å holde rekken på ${n} dager.` : 'Les dagens vers for å starte en ny rekke.';
-  return `<div class="p37-bp">
+  // Prompt 46 (claude-code-bibel-side-ipad-fold.md): på brett (≥ 680 px) to kolonner – venstre rekke + dagens vers,
+  // høyre leseplan, statistikk, lagrede vers, påminnelse og kilde. Smal skjerm: kolonnene er display:contents (samme rekkefølge).
+  return `<div class="p37-bp p46-bp"><div class="p46-bc">
     <div class="p37-stk"><i class="p37-stg"></i><div class="p37-sth"><span class="p37-flm${readToday ? ' on' : ''}"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 5.5 5 11a5 5 0 0 1-10 0c0-2.6 1.4-4 2.5-5 .3 1.6 1 2.6 2 3 .4-3-1-6.5.5-9z" fill="currentColor"/></svg></span>
       <span class="p37-stn"><b>${n}</b><span>${n === 1 ? 'dag på rad' : 'dager på rad'}</span></span><span class="p37-stb"><small>LENGSTE</small><b>${best} dager</b></span></div>
       <div class="p37-wk">${week}</div><span class="p37-stt">${esc(tip)}</span></div>
     <div class="p37-bv page" style="background:${L.bg};color:${L.fg}"><div class="p37-bvh p38-bvh"><span class="p38-bvk"><span style="color:${L.lab}">DAGENS VERS</span><span style="color:${L.mut}">${esc(dateLbl())}</span><span class="p38-bvr" style="color:${L.mut}">Glimt leser dagens vers med deg.</span></span><span class="p38-bvf pg">${P38.priest(72, TTalk() ? 'talk' : 'idle')}</span></div><span class="p37-bvt big">«${esc(v.text)}»</span><b>${esc(v.ref)}</b>
       <div class="p37-bvb"><button type="button" data-p37b="bread" style="background:${readToday ? '#2f7a4f' : L.fg};color:${readToday ? '#fff' : L.fg === '#f3efe6' ? '#1b1a17' : '#fff'}">${readToday ? '✓ Lest i dag' : 'Jeg har lest'}</button><button type="button" data-p37b="bsave" style="background:${L.chip};color:${L.fg}">${isSaved ? '♥ Lagret' : '♡ Lagre'}</button><button type="button" data-p37b="bex" style="background:${L.chip};color:${L.fg}">✦ Forklar</button><button type="button" data-p37b="bcopy" style="background:${L.chip};color:${L.fg}">${BB.copied ? 'Kopiert' : 'Kopier'}</button></div>
-      ${BB.ex ? `<div class="p37-bex" style="background:${L.chip}"><small style="color:${L.lab}">GLIMT</small><span>${esc(BB.ex)}</span></div>` : ''}</div>
+      ${BB.ex ? `<div class="p37-bex" style="background:${L.chip}"><small style="color:${L.lab}">GLIMT</small><span>${esc(BB.ex)}</span></div>` : ''}</div></div><div class="p46-bc">
     <span class="p37-lab">LESEPLAN</span>
     <div class="p37-card p37-plan"><div class="p37-plh"><b>${esc(P[0])}</b><span>Dag ${pd} av ${P[1]}</span></div><span class="p37-bar"><i style="width:${Math.round(((S.pday || 0) / P[1]) * 100)}%"></i></span>
       <div class="p37-pld"><span class="m-grow"><small>I DAG</small><b>${esc(P[2](pd))}</b><span>${pdone ? 'Fullført i dag · neste i morgen' : 'Ca. 5 minutter'}</span></span><a href="https://www.bibel.no/nettbibelen?parse=${encodeURIComponent(P[2](pd))}" target="_blank" rel="noopener">Les ›</a><button type="button" data-p37b="pdone" class="${pdone ? 'ok' : ''}">${pdone ? '✓ Lest' : 'Ferdig'}</button></div>
@@ -243,7 +245,7 @@ export function bibleView() {
     <span class="p37-lab">LAGREDE VERS · ${saved.length}</span>
     ${saved.length ? saved.map((x, i) => `<div class="p37-card p37-sv"><span class="m-grow"><i>«${esc(x.t)}»</i><b>${esc(x.ref)}</b></span><button type="button" class="p37-ib x" data-p37b="srm" data-i="${i}" aria-label="Fjern">×</button></div>`).join('') : '<span class="p37-hint">Trykk «Lagre» på et vers for å samle det her.</span>'}
     <div class="p37-card p37-grp"><button type="button" class="p37-r" data-p37b="rem" role="switch" aria-checked="${!!S.rem}"><span class="m-grow"><b>Daglig påminnelse</b><small>${S.rem ? 'Kl. 07:00 · «Dagens vers er klart»' : 'Av'}</small></span><span class="p37-sw${S.rem ? ' on' : ''}"><i></i></span></button></div>
-    <span class="p37-hint">Tekst: Bibelen 1930 (fri bruk). «Les ›» åpner kapitlet på bibel.no.</span></div>`;
+    <span class="p37-hint">Tekst: Bibelen 1930 (fri bruk). «Les ›» åpner kapitlet på bibel.no.</span></div></div>`;
 }
 async function explain(v) {
   if (BB.ex) { BB.ex = null; draw(); return; }
@@ -397,12 +399,14 @@ const dLeft = (d) => { const t = new Date(); t.setHours(0, 0, 0, 0); return Math
 const fdate = (d) => { const x = new Date(`${String(d).slice(0, 10)}T12:00`); return `${WD3[x.getDay()]} ${x.getDate()}. ${MS3[x.getMonth()]}`; };
 async function linksLoad() { if (TRS.links) return; TRS.links = {}; try { const r = await api('/subscriptions/trials'); for (const l of r?.cancelLinks ?? []) TRS.links[String(l.name).toLowerCase()] = l.cancelUrl; } catch {} }
 /** Kortet øverst på Oversikt. trials = P31.G.trials (aktive prøver). */
-export function trialsCard(trials) {
+export function trialsCard(trials, { editing = false, adding = false } = {}) {
   linksLoad();
   const A = (trials ?? []).map((x) => { const end = x.ends_at ?? x.endsAt ?? x.end, dd = x.daysLeft ?? dLeft(end), st = x.started_at ?? x.startedAt ?? x.start, tot = st ? Math.max(1, dLeft(end) - dLeft(st)) : 14; return { ...x, end, dd, pct: Math.max(4, Math.min(100, Math.round(((tot - Math.max(0, dd)) / tot) * 100))) }; }).filter((x) => x.dd >= 0).sort((a, b) => a.dd - b.dd);
   const col = (d) => (d <= 2 ? 'var(--p37-red,#d9483a)' : d <= 7 ? '#d9961a' : 'currentColor');
   const price = (x) => { const v = x.priceAfter ?? x.price_after ?? x.priceLabel; return v == null || v === '' ? '' : typeof v === 'number' ? ` · deretter ${Math.round(v)} kr/mnd` : ` · deretter ${esc(v)}`; };
   const F = TRS.f;
+  // Prompt 46: ingen aktive prøveperioder → ingen seksjon (vises igjen mens man legger til, og i redigering med forklaring).
+  if (!A.length && !TRS.add && !adding) return editing ? '<div class="p37-trc"><div class="p37-trh"><span>GRATIS PRØVEPERIODER</span></div><span class="p37-trnone">Vises når du har en aktiv prøveperiode</span></div>' : '';
   return `<div class="p37-trc"><div class="p37-trh"><span>GRATIS PRØVEPERIODER · ${A.length}</span><button type="button" data-p37b="tradd">${TRS.add ? 'Avbryt' : '+ Legg til'}</button></div>
     ${TRS.add ? `<form class="p37-trf" data-p37bform="trial"><input id="p37-trn" value="${esc(F.n)}" placeholder="Tjeneste, f.eks. Storytel" data-p37bin="trn" autocomplete="off"><div><input type="date" value="${esc(F.end)}" data-p37bin="tre" aria-label="Sluttdato"><input value="${esc(F.p)}" inputmode="numeric" placeholder="Pris etterpå" data-p37bin="trp"></div><button type="submit" ${TRS.busy ? 'disabled' : ''}>${TRS.busy ? 'Lagrer …' : 'Legg til · påminn dagen før'}</button></form>` : ''}
     ${!A.length && !TRS.add ? '<span class="p37-trnone">Ingen aktive prøveperioder. Legg til en, så minner Glimt deg på å avslutte i tide.</span>' : ''}

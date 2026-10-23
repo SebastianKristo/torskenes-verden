@@ -13,17 +13,65 @@ import * as P25 from './mobile-p25.js';
 import { haptic } from './mobile-haptics.js';
 
 const PLACES = [['oslo', 'Oslo'], ['bergen', 'Bergen'], ['trondheim', 'Trondheim'], ['tromso', 'Tromsø']];
-export const WX = { places: null, add: false, q: '', res: null, sErr: '', busy: false, edit: false, place: (() => { try { return localStorage.getItem('fh_wx_place') || 'oslo'; } catch { return 'oslo'; } })(), d: {}, err: '', mode: 'temp', sh: null, feel: false, from: 'hl' };
+// Prompt 46 (claude-code-vaer-min-posisjon.md, andre gang): rotårsaken var at Vær aldri hadde et sted som fulgte enheten.
+// WX.place var alltid et lagret sted («oslo» som standard), og «Min posisjon» fra prompt 45 var bare et ekstra kort over
+// heroen. Nå er «__gps» et eget valg (standard for nye brukere og for dem som aldri har valgt noe annet enn standard-Oslo):
+// posisjonen hentes med navigator.geolocation (siste kjente ≤ 10 min først, lav nøyaktighet), stedsnavnet fra serveren
+// (/api/weather/here → place.name, cache per ~1 km), og været med /weather/full?lat=&lon=&name=.
+export const GPS_ID = '__gps';
+const startPlace = () => {
+  try {
+    const v = localStorage.getItem('fh_wx_place');
+    if (!localStorage.getItem('p46_wx_mig')) { localStorage.setItem('p46_wx_mig', '1'); if (!v || v === 'oslo') { localStorage.setItem('fh_wx_place', GPS_ID); return GPS_ID; } }
+    return v || GPS_ID;
+  } catch { return GPS_ID; }
+};
+export const WX = { places: null, add: false, q: '', res: null, sErr: '', busy: false, edit: false, place: startPlace(), d: {}, err: '', mode: 'temp', sh: null, feel: false, from: 'hl' };
+const GPS = (() => { let c = null; try { c = JSON.parse(localStorage.getItem('p46_gps') || 'null'); } catch {} return { pos: c?.pos ?? null, name: c?.name ?? '', at: c?.at ?? 0, st: c?.pos ? 'ok' : 'idle', busy: false, tried: 0 }; })();
+export const gpsState = () => GPS;
+const gpsSave = () => { try { localStorage.setItem('p46_gps', JSON.stringify({ pos: GPS.pos, name: GPS.name, at: GPS.at })); } catch {} };
+const kmBetween = (a, b) => (a && b ? Math.hypot((a.lat - b.lat) * 111, (a.lon - b.lon) * 111 * Math.cos((a.lat * Math.PI) / 180)) : 999);
+/** Hent posisjonen (maks hvert 10. min uten force). Flyttet > 2 km: nytt stedsnavn og nytt vær. */
+export function gpsEnsure(force = false) {
+  if (GPS.busy || typeof navigator === 'undefined' || !('geolocation' in navigator)) { if (!('geolocation' in (navigator ?? {}))) GPS.st = 'err'; return; }
+  if (!force && GPS.tried && Date.now() - GPS.tried < 600000) return;
+  GPS.busy = true; GPS.tried = Date.now(); if (!GPS.pos) GPS.st = 'busy';
+  navigator.geolocation.getCurrentPosition(async (p) => {
+    const pos = { lat: Math.round(p.coords.latitude * 1e4) / 1e4, lon: Math.round(p.coords.longitude * 1e4) / 1e4 };
+    const moved = kmBetween(GPS.pos, pos) > 2;
+    if (moved || !GPS.name) {
+      GPS.pos = pos;
+      try { const r = await hlApi(`/weather/here?lat=${pos.lat.toFixed(3)}&lon=${pos.lon.toFixed(3)}`); GPS.name = r?.place?.name || GPS.name || 'Min posisjon'; } catch { GPS.name ||= 'Min posisjon'; }
+      delete WX.d[GPS_ID]; delete CMP.d[GPS_ID];
+    }
+    GPS.at = Date.now(); GPS.st = 'ok'; GPS.busy = false; gpsSave();
+    if (WX.place === GPS_ID && (moved || !WX.d[GPS_ID] || WX.d[GPS_ID]._fb)) { await wxLoad(true); }
+    if (m.screen === 'vaer') draw();
+  }, (err) => { GPS.busy = false; GPS.st = err?.code === 1 ? 'denied' : 'err'; if (m.screen === 'vaer') draw(); }, { enableHighAccuracy: false, maximumAge: 600000, timeout: 15000 });
+}
+/** Raden øverst i Steder: fast, kan ikke slettes, flyttes eller sveipes (ingen data-wpl). */
+function meRow() {
+  const on = WX.place === GPS_ID, d = WX.d[GPS_ID], t = GPS.pos && d?.current?.temp != null ? ` · ${Math.round(d.current.temp)}°` : '';
+  const act = GPS.st === 'denied' || (GPS.st === 'err' && !GPS.pos);
+  return `<div class="w22-pl p46-me${on ? ' on' : ''}"><div class="w22-plin" data-wx2="sel" data-k="${GPS_ID}" role="button" tabindex="0" aria-pressed="${on}"><span class="p46-mei" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3L3 10.5l7.5 2.9L13.4 21z"/></svg></span><span class="m-grow" style="min-width:0"><b>${esc(GPS.pos ? GPS.name || 'Min posisjon' : 'Min posisjon')}</b><small>${esc(gpsSub())}${t}</small></span>${act ? '<span class="p46-meb" data-wx2="gpsre">Prøv igjen</span>' : on ? '<span class="p46-mek" aria-hidden="true">✓</span>' : ''}</div></div>`;
+}
+/** Tekst for raden «Min posisjon» i Steder (og heroen). */
+export function gpsSub() {
+  if (GPS.st === 'denied') return 'Gi appen tilgang til posisjon';
+  if (GPS.st === 'err' && !GPS.pos) return 'Fant ikke posisjonen';
+  if (!GPS.pos) return 'Finner posisjonen …';
+  return 'Min posisjon · følger telefonen';
+}
 
 async function placesLoad() {
   if (WX.places) return;
   try { const r = await hlApi('/weather/places'); WX.places = (Array.isArray(r) ? r : r?.items ?? []).map((x) => [String(x.id), x.name, x]); }
   catch { WX.places = PLACES.map(([k, n]) => [k, n, null]); WX.fixed = true; }
-  if (!plist().some(([k]) => k === WX.place) && WX.places[0]) WX.place = WX.places[0][0];
+  if (WX.place !== GPS_ID && !plist().some(([k]) => k === WX.place) && WX.places[0]) WX.place = WX.places[0][0];
 }
 // Prompt 35: sted fra AI-søket («været i New York») legges midlertidig sist i bylista (id «tmp:lat,lon»), lagres ikke.
 const plist = () => [...(WX.places ?? PLACES.map(([k, n]) => [k, n, null])), ...(WX.tmp ? [WX.tmp] : [])];
-export const placeQuery = (p) => { if (String(p).startsWith('tmp:') && WX.tmp?.[0] === p) { const o = WX.tmp[2]; return `lat=${encodeURIComponent(o.lat)}&lon=${encodeURIComponent(o.lon)}&name=${encodeURIComponent(WX.tmp[1])}`; } return `place=${encodeURIComponent(p)}`; };
+export const placeQuery = (p) => { if (p === GPS_ID) { if (GPS.pos) return `lat=${GPS.pos.lat}&lon=${GPS.pos.lon}&name=${encodeURIComponent(GPS.name || 'Min posisjon')}`; const f = plist().find(([k]) => !String(k).startsWith('tmp:')); return `place=${encodeURIComponent(f?.[0] ?? 'oslo')}`; } if (String(p).startsWith('tmp:') && WX.tmp?.[0] === p) { const o = WX.tmp[2]; return `lat=${encodeURIComponent(o.lat)}&lon=${encodeURIComponent(o.lon)}&name=${encodeURIComponent(WX.tmp[1])}`; } return `place=${encodeURIComponent(p)}`; };
 export function tempPlace({ name, lat, lon, label }) {
   const near = (WX.places ?? []).find(([, , o]) => o && Math.abs(+o.lat - lat) < 0.05 && Math.abs(+o.lon - lon) < 0.05);
   if (near) { WX.place = near[0]; return; }
@@ -33,8 +81,9 @@ export function tempPlace({ name, lat, lon, label }) {
 export async function wxLoad(force = false) {
   await placesLoad();
   const p = WX.place;
+  if (p === GPS_ID) gpsEnsure();
   if (!force && WX.d[p] && Date.now() - WX.d[p]._t < 10 * 60000) return;
-  try { const r = await hlApi(`/weather/full?${placeQuery(p)}`); WX.d[p] = { ...r, _t: Date.now() }; WX.err = ''; }
+  try { const r = await hlApi(`/weather/full?${placeQuery(p)}`); WX.d[p] = { ...r, _t: Date.now(), ...(p === GPS_ID && GPS.pos ? { place: { ...(r?.place ?? {}), name: GPS.name || r?.place?.name || 'Min posisjon' } } : {}), _fb: p === GPS_ID && !GPS.pos }; WX.err = ''; }
   catch (e) {
     const w = hlData()?.weather;
     if (p === 'oslo' && w) { WX.d[p] = { ...fromHome(w), _t: Date.now() }; WX.err = ''; }
@@ -128,7 +177,7 @@ export function wxView() {
   // Stedsvelgeren nederst: egne steder kan legges til (søk) og fjernes (Rediger → ✕).
   // Prompt 22: ingen stedspiller nederst. Kartknapp nede til venstre, ☰ (Steder) nede til høyre.
   const P0 = plist().find(([k]) => k === WX.place)?.[2] ?? D?.place;
-  const places = `${bottomBtns()}${placesSheet(WX, plist)}${mapView(P0, D?.place?.name ?? plist().find(([k]) => k === WX.place)?.[1])}`;
+  const places = `${bottomBtns()}${placesSheet(WX, plist, meRow())}${mapView(P0, D?.place?.name ?? plist().find(([k]) => k === WX.place)?.[1])}`;
   if (!D) WX.fx = null;
   if (!D) return `<div class="vx" style="background:${SKY.cloudy[0]}"><div class="vx-bar">${back}<span class="m-grow"></span>${close}</div><div class="vx-in">${WX.err ? `<div class="vx-card vx-pad">${esc(WX.err)}</div>` : '<div class="m-spin"></div>'}</div>${places}</div>`;
   const c = D.current ?? {}, td = D.today ?? {}, kind0 = D.kind ?? kindOf(c.code), kind = nightOf(kind0 === 'night' ? 'clear' : kind0, c.isDay !== false && kind0 !== 'night');
@@ -201,15 +250,15 @@ export function wxView() {
   return `<div class="vx${W41?.wxEditing?.() ? ' p41-wxed' : ''}" style="background:${sky}">${W41?.wxStyle?.() ?? ''}<div class="w22-fx" id="w22-fx" aria-hidden="true"></div><div class="vx-glow" style="background:${glow}"></div>
     <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div>${close}</div>
     <div class="vx-in${fold ? ' p25-fold' : ''}"><div class="p25-c1">
-      ${globalThis.P45?.hereCard?.(D.place) ?? '' /* prompt 45: været der enheten er */}
-      <div class="vx-head" data-wxk="na"><span class="vx-pos">${globalThis.P45?.hereLabel?.(D.place) ?? 'MIN POSISJON'}</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span><span class="w32-src">${esc(srcLine(D))}</span></div>
+      ${WX.place === GPS_ID ? '' : globalThis.P45?.hereCard?.(D.place) ?? '' /* prompt 45: været der enheten er; prompt 46: ikke når Min posisjon er valgt */}
+      <div class="vx-head" data-wxk="na"><span class="vx-pos">${WX.place === GPS_ID ? (GPS.pos ? 'MIN POSISJON' : `MIN POSISJON · ${GPS.st === 'denied' ? 'AV' : GPS.st === 'err' ? 'IKKE FUNNET' : 'FINNER …'}`) : globalThis.P45?.hereLabel?.(D.place) ?? 'VALGT STED'}</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span><span class="w32-src">${esc(srcLine(D))}</span></div>
       ${W41?.skiCard?.(D) ?? ''}
       ${hours.length ? `<div class="vx-card vx-hours w32-${M}" data-wxk="timer"><div class="vx-hrow"><button class="vx-forh w32-fh" data-wx="day" data-i="0"><b>Forhold ›</b><span>${esc(hrTitle2)}</span></button><div class="vx-modes">${modes.map(([k, n, p]) => `<button data-wx="mode" data-k="${k}" aria-label="${n}" aria-pressed="${WX.mode === k}">${tIco(p, k === 'rain', 18)}</button>`).join('')}</div></div><div class="vx-hs">${hrs}</div></div>` : ''}
-      ${days.length ? `<div class="vx-card vx-days w32-${M}" data-wxk="dager">${dayRows}</div>` : ''}</div><div class="p25-c2">${fold ? P25.wxMapCard(P0, WX2.layer) : ''}
+      ${days.length ? `<div class="vx-card vx-days w32-${M}" data-wxk="dager">${dayRows}</div>` : ''}${fold ? `<div class="p41-wb" data-wxk="uke">${P39.wkCard(D, WX.place)}</div>` /* prompt 46: brett – nederst i venstre kolonne */ : ''}</div><div class="p25-c2">${fold ? P25.wxMapCard(P0, WX2.layer) : ''}
       <div class="p41-wb" data-wxk="cmp">${cmpCard(C2, D, { IC, ICC, kindOf, busy: CMP.busy, err: CMP.err })}</div>
       ${wind}${moon}
       <div class="vx-grid" data-wxk="detaljer">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div></div>
-      <div class="p41-wb" data-wxk="uke">${P39.wkCard(D, WX.place)}</div>
+      ${fold ? '' : `<div class="p41-wb" data-wxk="uke">${P39.wkCard(D, WX.place)}</div>`}
       ${W41?.wxEditBtn?.() ?? ''}
       <a class="vx-yr" href="${esc(D.yrUrl || 'https://www.yr.no/nb')}" target="_blank" rel="noopener">${esc(D.credit || `Data: ${D.fallback || D.source === 'met' ? 'MET Norge' : 'Open-Meteo'}`)} · Se også yr.no ↗</a>
     </div>${places}${WX.sh != null ? sheet(D) : ''}${metricSheet(D)}${P39.cmpView39(WX.place, city)}</div>`;
@@ -364,3 +413,6 @@ export async function wxBind(e, t) {
 /** Etter tegning: animert værbakgrunn (prompt 22). */
 export function wxAfterDraw() { fxAfterDraw(m.screen === 'vaer' ? WX.fx : null); }
 export const wxPlaces = () => ({ WX, plist, wxLoad });
+// Prompt 46: Min posisjon brukes også fra Steder-arket (mobile-wx22.js) uten syklisk import.
+globalThis.P46WX = { gpsEnsure, gpsState, GPS_ID };
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (!document.hidden && WX.place === GPS_ID && m.screen === 'vaer') gpsEnsure(true); });

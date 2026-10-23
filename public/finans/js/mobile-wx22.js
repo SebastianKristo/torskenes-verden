@@ -82,7 +82,7 @@ export function mapView(P, city) {
 
 /* ---------- Steder ---------- */
 
-export function placesSheet(WX, plist) {
+export function placesSheet(WX, plist, me = '') {
   if (!WX2.pl) return '';
   const L = plist(), res = WX2.res ?? [];
   const have = (r) => L.find(([, n, o]) => o && Math.abs(+o.lat - r.lat) < 0.05 && Math.abs(+o.lon - r.lon) < 0.05) ?? L.find(([, n]) => n === r.name && !L.some(([, , o]) => o));
@@ -97,7 +97,7 @@ export function placesSheet(WX, plist) {
     <div class="w22-shh"><b>Steder</b><button type="button" class="w32-x p40-dk" data-wx2="plx" aria-label="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <form class="w22-q" data-wx2form><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9aa3ae" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="w22-q" data-wx2q value="${esc(WX2.q)}" placeholder="Søk etter by eller sted" autocomplete="off" enterkeyhint="search" aria-label="Søk etter sted"></form>
     ${WX2.busy ? '<span class="w22-m">Søker …</span>' : ''}${WX2.err ? `<span class="w22-m">${esc(WX2.err)}</span>` : ''}${resHtml}${WX2.res && !res.length && !WX2.busy && !WX2.err ? `<span class="w22-m">Fant ingen steder som heter «${esc(WX2.q.trim())}»</span>` : ''}
-    <span class="w22-lab">MINE STEDER</span><div class="w22-pls">${rows}</div>
+    <span class="w22-lab">MINE STEDER</span>${me}<div class="w22-pls">${rows}</div>
     <span class="w22-m" style="padding:0 4px">Hold inne for å flytte · sveip mot høyre for å slette</span>
     <span class="w22-m" style="line-height:1.45">Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo og OpenStreetMap.</span></div>`;
 }
@@ -319,9 +319,11 @@ export async function wx22Bind(e, t, ctx) {
     case 'layer': WX2.layer = x.dataset.k; haptic('tab'); break;
     case 'pl': WX2.pl = true; WX2.q = ''; WX2.res = null; WX2.err = ''; WX2.open = null; break;
     case 'plx': WX2.pl = false; WX2.open = null; break;
+    case 'gpsre': globalThis.P46WX?.gpsEnsure?.(true); haptic('tap'); break; // prompt 46: Min posisjon på nytt
     case 'sel': {
       if (WX2.open) { WX2.open = null; break; }
       WX.place = x.dataset.k; try { localStorage.setItem('fh_wx_place', WX.place); } catch {}
+      if (WX.place === '__gps') globalThis.P46WX?.gpsEnsure?.(true); // prompt 46
       WX2.pl = false; WX.sh = null; WX2.ms = null; draw(); scrollTo(0, 0); await wxLoad(); break;
     }
     case 'rm': await removePlace(ctx, x.dataset.k); return true;

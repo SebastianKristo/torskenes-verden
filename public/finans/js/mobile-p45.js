@@ -337,6 +337,7 @@ export function modGroup(grp, row) {
     row('#/set/media', 'Media', 'Varsler, Kalender, avspilling og tjenester', '', 'look', 'media45'),
     row('#/set/ruter', 'Ruter', `Anbefalte reiser: ${RU.n} · Min reise på Hjem`, '', 'globe', 'ruter45'),
     row('#/vaer', 'Vær', 'Steder, Min posisjon og varsler', '', 'look', 'vaer45'),
+    row('#/set/nyheter', 'Nyheter', 'Kilder, kategorier og Glimt-sammendrag', '', 'list', 'nyheter46'), // prompt 46: flyttet fra Nyheter-siden
     row('#/studie', 'Studie', 'Vitnemål, karakterer og dokumenter', '', 'list', 'studie45'),
   ]);
 }
