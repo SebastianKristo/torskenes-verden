@@ -148,7 +148,7 @@ private fun RedHome25(vm: AppViewModel) {
 
 /** Én fane i sidelinja: 58 høy, radius 18, ikon og navn under (Manrope 600 11,5, én linje). */
 @Composable
-private fun RailTab25(label: String, icon: String, on: Boolean, style: String, onClick: () -> Unit) {
+internal fun RailTab25(label: String, icon: String, on: Boolean, style: String, onClick: () -> Unit) {
     val p = PaperPal.current
     val fg = if (on) p.navActInk else p.navInk
     val showLabel = style != "icons"

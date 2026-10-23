@@ -92,10 +92,12 @@ import no.kristo.finanshub.closeAns31
 import no.kristo.finanshub.quickJob31
 import no.kristo.finanshub.retryHome34
 import no.kristo.finanshub.openWeatherGeo35
+import no.kristo.finanshub.confirmAgent45
+import no.kristo.finanshub.cancelAgent45
 
 /*
  * Prompt 31 (ANDROID31): Glimt-merket (Glimt AI.dc.html: Klar, Tenker, Svarer, Ferdig), toasten med glassboblen
- * (aiToastEl() i Mobil Papir App.dc.html), svarboblen under søkefeltet (hsAsk()), banneret «Glimt svarte mens du var borte»
+ * (aiToastEl() i Mobil Papir App.dc.html), svarboblen under søkefeltet (hsAsk()), banneret banneret ved retur (fjernet i prompt 45)
  * og søkemotor-logoene (vector drawables search_google / search_duckduckgo, farger beholdes).
  */
 
@@ -380,6 +382,19 @@ internal fun HomeAnswer31(vm: AppViewModel) {
                     .clickable(role = Role.Button) { Haptics.select(); vm.applyAns33() }.padding(horizontal = 14.dp),
                 contentAlignment = Alignment.Center,
             ) { Text("Endre ${a.applyCount} ${if (a.applyCount == 1) "avtale" else "avtaler"} ›", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
+            // Prompt 45: Glimt-agenten ber om bekreftelse før viktige/destruktive handlinger (POST /api/glimt/agent/confirm).
+            vm.p45.agentConfirm?.let { (_, summary) ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.height(34.dp).clip(CircleShape).background(Color.White).clickable(role = Role.Button, onClickLabel = summary) { vm.confirmAgent45() }.padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Text(summary, color = Color(0xFF161412), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    Box(
+                        Modifier.height(34.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f)).clickable(role = Role.Button) { Haptics.select(); vm.cancelAgent45() }.padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center,
+                    ) { Text("Avbryt", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
+                }
+            }
             // Prompt 34: Glimt svarte ikke → Prøv igjen og Åpne AI-kontroll.
             if (a.err) AiErrActions34(vm, Color.White, Color.White.copy(alpha = .14f)) { vm.retryHome34() }
             // Prompt 35: «været i New York» → trykk åpner Vær for stedet.
@@ -400,26 +415,4 @@ internal fun HomeAnswer31(vm: AppViewModel) {
     }
 }
 
-/* ======================= «Glimt svarte mens du var borte» ======================= */
-
-@Composable
-internal fun AwayBanner31(vm: AppViewModel, modifier: Modifier = Modifier) {
-    val s = vm.p31
-    val b = s.banner
-    AnimatedVisibility(b != null, modifier.fillMaxWidth().statusBarsPadding().padding(10.dp), enter = fadeIn() + slideInVertically { -it }, exit = fadeOut() + slideOutVertically { -it }) {
-        var last by remember { mutableStateOf(b) }
-        if (b != null) last = b
-        val x = last ?: return@AnimatedVisibility
-        Row(
-            Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(20.dp)).clip(RoundedCornerShape(20.dp)).background(Color(0xEB1E1E20))
-                .clickable { s.banner = null }.padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            GlimtMark31(34.dp, GLIMT_FERDIG, dark = true)
-            Column(Modifier.weight(1f)) {
-                Text(x.first, color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
-                Text(x.second, color = Color.White.copy(alpha = .85f), fontFamily = PaperFonts.sans, fontSize = 13.sp, lineHeight = 18.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            }
-        }
-    }
-}
+/* Prompt 45: banneret ved retur (AwayBanner31) er fjernet – Glimt-svar mens appen var lukket kommer bare som systemvarsel. */

@@ -313,13 +313,7 @@ internal fun ChatAnswersWith39(vm: AppViewModel, v: ChatV27, m: ChatModel27?, mo
 
 /* ======================= Varsler ======================= */
 
-/** Rett under «AI-svar i bakgrunnen»: banneret når du kommer tilbake (n_ai_in, standard på). */
-@Composable
-internal fun AiInToggle39(vm: AppViewModel) {
-    LaunchedEffect(vm.account?.id) { vm.loadAiIn39() }
-    val on = vm.notifyPrefs.on && vm.p31.aiBg
-    PToggle("Vis svaret i appen også", "Banner øverst når du kommer tilbake til appen", vm.p39.aiIn && on, top = true) { if (on) vm.setAiIn39(it) }
-}
+/* Prompt 45: «Vis svaret i appen også» (n_ai_in) er fjernet – Glimt-svar mens appen var lukket kommer bare som systemvarsel. */
 
 /** Volum for varsellyden: 20 / 35 / 50 / 70 / 100 %. Trykk spiller lyden med en gang. */
 @Composable

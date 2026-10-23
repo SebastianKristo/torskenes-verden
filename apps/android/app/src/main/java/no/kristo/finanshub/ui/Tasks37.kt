@@ -91,7 +91,10 @@ internal fun TasksScreen37(vm: AppViewModel) {
     val arch = vm.p32b.taskArch
     LaunchedEffect(vm.account?.id) { vm.loadArchived32b(); vm.loadUsers37(); vm.loadTasksHa() }
     LaunchedEffect(vm.taskFilter, t?.items?.size, t?.items?.count { it.done }) { vm.loadCards37(vm.taskFilter) }
+    val wide45 = LocalWide45.current
+    // Prompt 45 (claude-code-gjoremal-fold-nytt-design.md): på brett filterpiller (I dag · I morgen · Neste uke · Uten dato) og personvelger.
     val all = (t?.items ?: emptyList()).filter { it.id !in archIds && (vm.taskFilter == "alle" || it.list == vm.taskFilter) }
+        .let { if (wide45) taskFilter45(vm, it, today) else it }
     val now = all.filter { !it.done && it.due != null && it.due <= today }.sortedWith(compareByDescending<TaskItem> { it.prio }.thenBy { it.due }.thenBy { it.time ?: "99" })
     val later = all.filter { !it.done && (it.due == null || it.due > today) }.sortedWith(compareBy<TaskItem> { it.due ?: "9999" }.thenByDescending { it.prio })
     val done = all.filter { it.done }
@@ -132,6 +135,12 @@ internal fun TasksScreen37(vm: AppViewModel) {
     val narrowWide43 = maxWidth >= 600.dp && !split43
     val listW43 = if (maxWidth >= 1000.dp) 250.dp else 210.dp
     Row(Modifier.fillMaxSize()) {
+    // Prompt 45 (claude-code-gjoremal-fold-navbar-glimt.md): samme sidelinje som Hjem til venstre; innholdet starter 124 dp inn.
+    if (wide45) {
+        PaperRail45(vm, "main", vm.fabStyle == "float", Modifier.statusBarsPadding().navigationBarsPadding().padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
+            onTap = { vm.scanTarget = "receipt"; vm.scanSheet = true }, onHold = { vm.scanTarget = "receipt"; vm.scanSheet = true }, onLeave = { vm.closeTasks() })
+        Spacer(Modifier.width(16.dp))
+    }
     // 1c: lister i egen kolonne (210 på Fold, 250 på bredere skjerm), «+ Ny liste» sist; oppgavene til høyre.
     if (split43) Column(Modifier.width(listW43).fillMaxHeight().background(p.card).statusBarsPadding().verticalScroll(rememberScrollState())
         .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -146,7 +155,8 @@ internal fun TasksScreen37(vm: AppViewModel) {
         LazyColumn(Modifier.fillMaxHeight().then(if (narrowWide43) Modifier.widthIn(max = 720.dp).fillMaxWidth() else Modifier.fillMaxWidth()).then(if (split43) Modifier.statusBarsPadding() else Modifier), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 60.dp + 18.dp + 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
             verticalArrangement = Arrangement.spacedBy(10.dp)) {
             // Prompt 40: tilbake går alltid til Hjem (åpnet fra Hjem-widgeten eller Mer → Gjøremål).
-            if (!split43) item { ModuleHero("To-do for hele familien", "Gjøremål", "‹ Hjem") { vm.closeTasksHome40() } }
+            // Prompt 45 (claude-code-gjoremal-uten-bakgrunn.md): ingen bakgrunnsbilde – Papir-flate med mørk tekst (TaskHero45).
+            if (!split43) item { TaskHero45(vm) }
             if (!split43) item {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     chips43()
@@ -156,6 +166,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
                 item { ArchivedList32b(vm, lists) }
                 return@LazyColumn
             }
+            if (wide45) item { TaskFilters45(vm, users) }
             cur?.let { l -> item { ListInfo37(vm, l, users) } }
             // Prompt 41: «Glimt deler opp beskjeden …» (bakgrunnsjobber) og «✓ Glimt lagde N punkter».
             if (vm.p41.glimtJobs.isNotEmpty() || vm.p41.glimtDone != null) item { Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { GlimtJobs41(vm) } }
@@ -189,8 +200,7 @@ internal fun TasksScreen37(vm: AppViewModel) {
             group37(vm, "Senere", later, lists, users, today)
             group37(vm, "Ferdig", done.take(30), lists, users, today, archive = { ids -> vm.archiveDone32b(ids) })
             if (t != null && all.isEmpty()) item { Text("Ingen gjøremål her ennå. Skriv et nytt nederst, eller trykk ✦ og spør Glimt.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) }
-            // Prompt 44: synk-kortet ligger i Innstillinger → Gjøremål; her bare raden som åpner det.
-            if (vm.userIsAdmin && vm.tasksHa != null) item { HaRow44(vm) }
+            // Prompt 45: «ikke vis synk med Home Assistant i Gjøremål» – synken ligger bare i Innstillinger → Gjøremål.
         }
         // Dokken (felt + ✦) skjules i Arkivert og mens et ark er åpent.
         if (!arch && !sheet) Dock37(title, { title = it }, focus, Modifier.align(Alignment.BottomCenter).then(if (narrowWide43) Modifier.widthIn(max = 720.dp) else Modifier), onEnter = { add() }) {
@@ -199,7 +209,8 @@ internal fun TasksScreen37(vm: AppViewModel) {
     }
     }
     }
-    if (vm.p44.taskPage != null) TaskPage44(vm) // prompt 44: infoside (Papir), over lista og dokken
+    // Prompt 45: på brett glir detaljpanelet inn fra høyre over lista (ui/Tasks45.kt); telefon: infosiden som før.
+    if (LocalWide45.current) TaskPanel45(vm) else if (vm.p44.taskPage != null) TaskPage44(vm) // prompt 44: infoside (Papir), over lista og dokken
     AskDone44(vm)
     s.detail?.let { id -> (t?.items ?: emptyList()).firstOrNull { it.id == id }?.let { DetailSheet37(vm, it, lists, users, today) } ?: run { s.detail = null } }
     s.listSheet?.let { id -> ListSheet37(vm, if (id == "new") null else lists.firstOrNull { it.id == id }, users) }

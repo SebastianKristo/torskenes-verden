@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.platform.LocalContext
@@ -242,9 +243,11 @@ internal fun Modifier.holdDrag(
                 val ev = awaitPointerEvent(PointerEventPass.Initial)
                 val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
                 // Alt etter det lange trykket spises: ingen klikk og ingen scrolling mens kortet dras.
+                // Prompt 45: bevegelsen leses FØR consume() – positionChange() er Offset.Zero på en konsumert endring.
+                val mv45 = ch.positionChangeIgnoreConsumed()
                 ev.changes.forEach { it.consume() }
                 if (!ch.pressed) break
-                if (ch.positionChange() != androidx.compose.ui.geometry.Offset.Zero) onDrag(toRootY(ch.position))
+                if (mv45 != androidx.compose.ui.geometry.Offset.Zero) onDrag(toRootY(ch.position))
             }
         } finally { onEnd() }
     }

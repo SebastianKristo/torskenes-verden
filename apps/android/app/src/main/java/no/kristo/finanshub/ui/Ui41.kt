@@ -427,7 +427,9 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
                     color = p.ink, fontSize = 13.sp)
             }
         }
-        val opts = if (home) t.options.take(1) else t.options
+        // Prompt 45 (claude-code-ruter-anbefalt-antall.md): nøyaktig N rader (1 · 2 · 3, standard 2), færre hvis det finnes færre.
+        LaunchedEffect(Unit) { vm.loadRecoCount45() }
+        val opts = t.options.take(vm.p45.recoCount)
         opts.forEachIndexed { i, o ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             val open = s.tripOpen == i && !home
@@ -456,6 +458,10 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
         }
         if (!home) {
             Zones41(vm) // skolesoner (chips, «+ Sone», siste kan ikke slettes)
+            PLabel("Antall anbefalte reiser", p.mut)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(1, 2, 3).forEach { n -> Pill41("$n", vm.p45.recoCount == n) { vm.setRecoCount45(n) } }
+            }
             PLabel("På Hjem når du forlater skolen", p.mut)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("over" to "Over Ruter-kortet", "instead" to "I stedet", "off" to "Av").forEach { (k, n) -> Pill41(n, s.homeCard == k) { vm.setHomeCard41(k) } }

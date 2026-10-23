@@ -89,10 +89,12 @@ internal fun LazyListScope.mer44(vm: AppViewModel, vis: List<MerItem28>, wide: B
     val rows = vis.filter { it.key != "innst" }.map { MerItem28(it.key, it.title, liveSub44(vm, it.key, it.sub), it.index, it.go) }
         .filter { q.isEmpty() || norm44(it.title).contains(q) || norm44(it.sub).contains(q) }
     val low = Mer44.low(vm)
-    val cards = if (low) emptyList() else rows.filter { it.key in DAILY44 }
-    val tools = if (low) rows else rows.filter { it.key !in DAILY44 }
+    // Prompt 45 (claude-code-mer-tittel-og-store-bokser.md): brukeren velger de fire store boksene og kan skjule/gi nytt navn til tittelen.
+    val big = Mer45.big(vm)
+    val cards = if (low) emptyList() else big.mapNotNull { k -> rows.firstOrNull { it.key == k } }
+    val tools = if (low) rows else rows.filter { it.key !in big }
     if (cards.isNotEmpty()) {
-        item(key = "mer44-hl") { PLabel("Hverdag og familie", modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
+        if (!Mer45.titleHidden(vm)) item(key = "mer44-hl") { PLabel(Mer45.title(vm), modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
         cards.chunked(if (wide) 4 else 2).forEachIndexed { i, ch ->
             item(key = "mer44-c$i") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -167,7 +169,7 @@ private fun MerCard44(vm: AppViewModel, r: MerItem28, modifier: Modifier, onLong
                     PSerif(b?.first ?: "Ingen de neste 30 dagene", 20.sp, maxLines = 2)
                     b?.let { Text(dLabel44(it.second), color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 12.sp) }
                 }
-                else -> {
+                "kart" -> {
                     val m = vm.family?.members.orEmpty()
                     if (m.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
                         m.take(4).forEach { x ->
@@ -178,6 +180,8 @@ private fun MerCard44(vm: AppViewModel, r: MerItem28, modifier: Modifier, onLong
                     }
                     Text(home44(vm)?.let { (h, n) -> "$h av $n hjemme" } ?: r.sub, color = p.mut, fontSize = 12.sp, maxLines = 2)
                 }
+                // Prompt 45: andre moduler valgt som stor boks viser den levende underteksten.
+                else -> PSerif(r.sub, 18.sp, maxLines = 3)
             }
         }
     }

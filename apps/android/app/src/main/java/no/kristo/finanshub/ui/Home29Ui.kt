@@ -3,6 +3,8 @@ package no.kristo.finanshub.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -52,7 +54,7 @@ private fun placeholder29(e: String) = when (e) { "google" -> "Søk på Google";
 private fun EngineIcon29(e: String, size: Dp, busy: Boolean = false) = EngineLogo31(e, size, busy)
 
 @Composable
-internal fun PaperSearch29(vm: AppViewModel) {
+internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
     val p = PaperPal.current
     val ctx = LocalContext.current
     val fm = LocalFocusManager.current
@@ -64,7 +66,11 @@ internal fun PaperSearch29(vm: AppViewModel) {
         if (q.engine == "ai" && q.homeAppt == null && isHuske41(text)) { vm.huskeHome41(text); vm.setHomeQuery29("") }
         else vm.goHome29()?.let { openLink(ctx, it) }
     }
+    // Prompt 45 (claude-code-fold-skannikon-og-sokefelt.md): i Glimt-panelet på Fold/brett ligger svar og forslag OVER feltet
+    // (svaret maks 220 dp, scroller), så de aldri havner bak tastaturet. Telefon: under feltet som før.
+    val extras45: @Composable () -> Unit = { Search29Extras45(vm, text, above45, go) }
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (above45) extras45()
         Row(
             Modifier.fillMaxWidth().height(46.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.card).padding(start = 8.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -100,9 +106,23 @@ internal fun PaperSearch29(vm: AppViewModel) {
                 contentAlignment = Alignment.Center,
             ) { Text("✦ AI", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
         }
+        if (!above45) extras45()
+    }
+}
+
+/** Svaret fra Glimt og forslagene (Legg i kalender / Legg i Huskeliste / søkeforslag) under – eller over – søkefeltet. */
+@Composable
+private fun Search29Extras45(vm: AppViewModel, text: String, above: Boolean, go: () -> Unit) {
+    val p = PaperPal.current
+    val ctx = LocalContext.current
+    val fm = LocalFocusManager.current
+    val q = vm.q29
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val appt = q.homeAppt
         // Prompt 31: Glimt svarer i en mørk boble rett under feltet (vær, kalender, prøveperioder …).
-        if (vm.p31.ans != null && text.isBlank()) HomeAnswer31(vm)
+        if (vm.p31.ans != null && text.isBlank()) {
+            if (above) Box(Modifier.fillMaxWidth().heightIn(max = 220.dp).verticalScroll(rememberScrollState())) { HomeAnswer31(vm) } else HomeAnswer31(vm)
+        }
         if (appt != null && text.isNotBlank()) {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).clickable(role = Role.Button, onClickLabel = "Legg i kalender") { go() }

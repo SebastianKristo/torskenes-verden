@@ -417,6 +417,17 @@ private fun HaHealth42(vm: AppViewModel) {
     val s = vm.p42
     LaunchedEffect(vm.account?.id) { vm.loadHa42() }
     PLabel("Home Assistant · Mobilapp", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
+    vm.p45.haStatus?.let { Text("● Tilkoblet · $it", color = p.pos, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 6.dp)) }
+    // Prompt 45: Telefoner (standard, uten nettbrett) · Alle mobilapp.
+    Row(Modifier.clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).padding(3.dp)) {
+        listOf("phones" to "Telefoner", "all" to "Alle mobilapp").forEach { (k, n) ->
+            val on = vm.p45.haView == k
+            Box(Modifier.height(36.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent)
+                .clickable(role = Role.Tab) { if (!on) { Haptics.select(); vm.p45.haView = k; vm.loadHa42(force = true) } }.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
+        }
+    }
     when {
         s.haMissing -> PCard { Text("Serveren har ikke helse fra Home Assistant ennå. Oppdater Homelab, og koble til Home Assistant under Innstillinger → Integrasjoner.",
             color = p.mut, fontSize = 13.sp, lineHeight = 18.sp, modifier = Modifier.padding(14.dp)) }
@@ -426,10 +437,18 @@ private fun HaHealth42(vm: AppViewModel) {
         }
         s.haDevices == null -> PCard { Text(if (s.haBusy) "Henter enhetene fra Home Assistant …" else "Ingen enheter ennå.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(14.dp)) }
         s.haDevices!!.isEmpty() -> PCard { Text("Fant ingen enheter fra Mobilapp-integrasjonen i Home Assistant.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(14.dp)) }
-        else -> PCard {
-            s.haDevices!!.forEachIndexed { i, d -> HaDeviceRow42(vm, d, i > 0) }
+        else -> {
+            // Prompt 45: gruppert per person (overskrift i personens navn), «IKKE KOBLET» sist.
+            val devs = s.haDevices!!
+            val groups = devs.groupBy { it.personId?.takeIf { id -> s.haPeople.any { it.id == id } } }
+            groups.entries.sortedBy { if (it.key == null) 1 else 0 }.forEach { (pid, l) ->
+                val name = s.haPeople.firstOrNull { it.id == pid }?.name?.let { firstName37(it) } ?: "Ikke koblet"
+                PLabel("$name · ${l.size}", if (pid == null) p.mut else p.lab, modifier = Modifier.padding(start = 6.dp, top = 6.dp))
+                PCard { l.forEachIndexed { i, d -> HaDeviceRow42(vm, d, i > 0) } }
+            }
         }
     }
+    vm.p45.haHidden?.let { Text(it, color = p.mut, fontSize = 12.sp, lineHeight = 16.5.sp, modifier = Modifier.padding(horizontal = 6.dp)) }
     Text("Alle i familien har allerede Home Assistant-appen. Da leser Homelab skritt, puls og søvn derfra. Hver person godkjenner deling første gang, og kan trekke den tilbake.",
         color = p.mut, fontSize = 12.sp, lineHeight = 16.5.sp, modifier = Modifier.padding(horizontal = 6.dp))
 }

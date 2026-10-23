@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -58,8 +59,11 @@ internal fun FoldHome41(vm: AppViewModel, mode: FoldMode43, cards: @Composable (
         }
     } else {
         // 1c: Glimt-kort venstre (fyller høyden, scroller ikke), faner høyre (bare denne kolonnen scroller).
+        // Prompt 45 (claude-code-fold-sok-over-tastatur.md): bare venstre Glimt-kort følger tastaturet (WindowInsets.ime, som
+        // animeres sammen med IME-en), så søkefeltet ligger rett over tastaturet. Høyre kolonne flytter seg ikke.
+        val lift45 = (imeBottom45() - 12.dp).coerceAtLeast(0.dp)
         Row(Modifier.fillMaxSize().padding(top = top, end = 16.dp, bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            FoldMain41(vm, Modifier.weight(1f).fillMaxHeight())
+            FoldMain41(vm, Modifier.weight(1f).fillMaxHeight().padding(bottom = lift45))
             Column(Modifier.weight(1f).fillMaxHeight()) { FoldTabs41(vm); Spacer(Modifier.height(10.dp)); cards(Modifier.weight(1f)) }
         }
     }
@@ -109,8 +113,11 @@ private fun FoldMain41(vm: AppViewModel, modifier: Modifier, compact: Boolean = 
         else Column(Modifier.fillMaxSize().padding(18.dp, 18.dp, 18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Prompt 43: toppen får plassen som er igjen (klippes heller enn å klemme Brief-kortet ved stor skrift);
             // Brief-kortet og søkefeltet har alltid sin egen høyde nederst.
-            Column(Modifier.fillMaxWidth().weight(1f).clipToBounds(), verticalArrangement = Arrangement.spacedBy(12.dp)) { FoldGreeting43(vm, 38.sp) }
-            FoldBriefSearch43(vm)
+            // Prompt 45: mens man skriver tones hilsen og temperatur ut, og Brief-kortet glir bort, så svaret får plass over feltet.
+            val typing45 = imeBottom45() > 80.dp
+            val greetA by androidx.compose.animation.core.animateFloatAsState(if (typing45) 0f else 1f, androidx.compose.animation.core.tween(200), label = "greet45")
+            Column(Modifier.fillMaxWidth().weight(1f).clipToBounds().graphicsLayer { alpha = greetA }, verticalArrangement = Arrangement.spacedBy(12.dp)) { FoldGreeting43(vm, 38.sp) }
+            FoldBriefSearch43(vm, typing45)
         }
     }
 }
@@ -141,7 +148,12 @@ private fun ColumnScope.FoldGreeting43(vm: AppViewModel, greet: androidx.compose
 
 /** Brief-kortet (egen høyde, min. 148 dp, ikke klippet utenfra så Glimt-figuren vises hel) og søkefeltet med ✦ AI under. */
 @Composable
-private fun FoldBriefSearch43(vm: AppViewModel) {
-    HomeBrief34(vm, Modifier.heightIn(min = 148.dp))
-    PaperSearch29(vm)
+private fun FoldBriefSearch43(vm: AppViewModel, typing: Boolean = false) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = !typing,
+        enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)) + androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(220)),
+        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180)) + androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(220)),
+    ) { HomeBrief34(vm, Modifier.heightIn(min = 148.dp)) }
+    // Prompt 45: svar og forslag over feltet (claude-code-fold-skannikon-og-sokefelt.md).
+    PaperSearch29(vm, above45 = true)
 }

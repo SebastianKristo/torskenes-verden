@@ -61,6 +61,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner", "kal" to "Kalendere",
     "update" to "Oppdatering", "sysbackup" to "Backup",
     "huske" to "Gjøremål", // prompt 44: synk med Home Assistant
+    "media" to "Media", // prompt 45: innstillingene fra Media (status per tjeneste, Integrasjoner, Rydd uovervåkede)
 )
 
 /**
@@ -109,6 +110,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "integ" -> { item { TrkKeys37Section(vm) }; item { IntegList26(vm) } }
             "kal" -> item { KalSettings26(vm) }
             "huske" -> item { TasksSyncPage44(vm) } // prompt 44: Innstillinger → Gjøremål
+            "media" -> item { MediaSettings45(vm) } // prompt 45: Innstillinger → Media (flyttet fra ⚙ i Media)
             "cats" -> item { CategoriesPage(vm) }
             "rules" -> item { RulesPage(vm) }
             "stocks" -> item { StocksPrefsPage(vm) }
@@ -183,6 +185,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
         SetRow(vm, i(), Icons.Filled.CalendarMonth, "Kalendere", "Google Kalender · Home Assistant · Skole-iCal", top = true) { vm.openKalSettings26(null) }
         // Prompt 44: Gjøremål (synk med Home Assistant) under Kalendere.
         SetRow(vm, i(), Icons.Filled.Checklist, "Gjøremål", "Synk med Home Assistant · " + (if (vm.tasksHa?.enabled == true) "på" else "av"), top = true) { vm.settingsPage = "huske" }
+        // Prompt 45 (claude-code-innstillinger-samlet.md): Media-innstillingene ligger her, ikke inne i Media.
+        SetRow(vm, i(), Icons.Filled.Movie, "Media", "Sonarr, Radarr, qBittorrent, Prowlarr · status", top = true) { vm.settingsPage = "media" }
         SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", if (vm.userIsAdmin) "Home Assistant, Media, Entur, Bring og flere" else "Kalendere, Trading 212, Bring, e-post og flere", top = true) { vm.settingsPage = "integ" }
         SetRow(vm, i(), Icons.Filled.Widgets, "Widgets", "Media, Avganger, Kalender og 3 til", top = true) { vm.p43.galleryOpen = true } // prompt 43
         SetRow(vm, i(), Icons.Filled.MonitorHeart, "Helse og posisjon", "Health Connect, typer og posisjonsdeling", top = true) { vm.settingsPage = "healthpos" }
@@ -262,7 +266,7 @@ private fun NotifySub(vm: AppViewModel) {
             Box(Modifier.hl34(vm, "quiet", 0.dp)) { PToggle("Stille timer", "${n.quietFrom}–${n.quietTo}: varsler kommer uten lyd", n.quiet, top = true) { vm.saveNotify(n.copy(quiet = it)) } }
             // Prompt 31: svar fra Glimt som varsel når appen er i bakgrunnen (ai_bg_notify).
             AiBgToggle31(vm)
-            AiInToggle39(vm) // prompt 39: «Vis svaret i appen også» (n_ai_in)
+            ZoneAlertsToggle45(vm) // prompt 45: Sonevarsler (samme valg som Familie → Soner)
             UpdNotifyToggle39(vm) // prompt 39: «Varsle om nye versjoner» flyttet hit fra PROGRAMVARE
             if (n.quiet) Row(Modifier.fillMaxWidth().padding(14.dp, 4.dp, 14.dp, 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TimeChips("Fra", n.quietFrom, listOf("21:00", "22:00", "23:00")) { vm.saveNotify(n.copy(quietFrom = it)) }

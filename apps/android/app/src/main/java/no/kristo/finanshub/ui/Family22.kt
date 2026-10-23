@@ -441,26 +441,13 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
     val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val barBottom = maxOf(12.dp, navInset - 8.dp)
 
-    Box(Modifier.fillMaxSize().background(p.bg)) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            Fam22Hero(vm)
-            Column(
-                // Prompt 42: bare Kart har verktøyraden delvis over toppbildet; Vel fremme (og de andre) starter 16 dp under bildet.
-                Modifier.fillMaxWidth().offset(y = if (tab == "kart") (-23).dp else 16.dp).padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                vm.familyError?.let { e -> Fam22Text(e, 13.sp, p.lab, modifier = Modifier.padding(horizontal = 4.dp)) }
-                if (tab == "soner") Box(
-                    Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.ink).clickable(role = Role.Button) { placing = !placing; if (!placing) draft = null }
-                        .padding(horizontal = 18.dp),
-                    contentAlignment = Alignment.Center,
-                ) { Fam22Text(if (placing || draft != null) "Avbryt ny sone" else "+ Ny sone på kartet", 14.sp, p.bg, FontWeight.Bold, maxLines = 1) }
-                if (tab == "kart") VelFremmeStatus42(vm) // Prompt 42: liten statuslinje når en Vel fremme-økt pågår
-                if (showMap) {
+    // Prompt 45 (claude-code-familie-fold-oppsett.md): kartet (med verktøyraden) og fane-innholdet som egne deler, så brett
+    // kan legge kartet fast til venstre og innholdet i en egen kolonne til høyre.
+    val mapView45: @Composable (Modifier) -> Unit = { mapMod ->
                     if (tab == "kart") Fam22Toolbar(placing, { placing = !placing; draft = null }, fitAll) {
                         scope.launch { vm.loadFamily().join(); vm.flash("Posisjoner oppdatert") }
                     }
-                    Box(Modifier.fillMaxWidth().height(420.dp).clip(RoundedCornerShape(24.dp)).background(Color(0xFFE9E5DC))) {
+                    Box(mapMod.clip(RoundedCornerShape(24.dp)).background(Color(0xFFE9E5DC))) {
                         FamilyMapSafe(vm, Modifier.matchParentSize(), mapData, ctl, onPin = pick) { la, lo ->
                             placing = false
                             draft = Fam22Draft("", la, lo, 200.0, FAM22_ZC[zones.size % FAM22_ZC.size], null, false)
@@ -485,8 +472,8 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                             Fam22Text(if (live) "Sanntid · din GPS er på" else "Sanntid · du deler ikke", 11.sp, Color(0xFF1B1A17), FontWeight.SemiBold, maxLines = 1)
                         }
                     }
-                }
-                if (f == null && vm.familyError == null) Fam22Text("Henter familien …", 13.sp, p.mut, modifier = Modifier.padding(horizontal = 4.dp))
+                    }
+    val tabBody45: @Composable () -> Unit = {
                 when (tab) {
                     "kart" -> {
                         // Prompt 42 (claude-code-familie-fjern-hjemlys-kort.md): ikke Vel fremme-kortet øverst på Kart; det ligger i egen fane.
@@ -500,6 +487,7 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                         f?.me?.let { me -> Fam22MySharing(vm, me, startSharing, askLocation) }
                     }
                     "soner" -> {
+                        ZoneAlertsCard45(vm) // prompt 45: Posisjonsvarsler – hovedbryter og av/på per person (ui/Family45.kt)
                         draft?.let { d ->
                             Fam22DraftCard(d, { draft = it }, { draft = null }, { nd -> saveDraft(nd) }) { cur, set -> colorDlg = cur to set }
                         }
@@ -529,6 +517,33 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
                     "velfremme" -> VelFremmeTab42(vm)
                     else -> Fam22Health(vm, members, meId, photos, ::colorOf)
                 }
+    }
+    val top45: @Composable () -> Unit = {
+                vm.familyError?.let { e -> Fam22Text(e, 13.sp, p.lab, modifier = Modifier.padding(horizontal = 4.dp)) }
+                if (tab == "soner") Box(
+                    Modifier.height(42.dp).clip(RoundedCornerShape(21.dp)).background(p.ink).clickable(role = Role.Button) { placing = !placing; if (!placing) draft = null }
+                        .padding(horizontal = 18.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Fam22Text(if (placing || draft != null) "Avbryt ny sone" else "+ Ny sone på kartet", 14.sp, p.bg, FontWeight.Bold, maxLines = 1) }
+                if (tab == "kart") VelFremmeStatus42(vm) // Prompt 42: liten statuslinje når en Vel fremme-økt pågår
+    }
+    if (LocalWide45.current) {
+        Family45Wide(vm, tab, f == null && vm.familyError == null, top45, mapView45, tabBody45)
+        colorDlg?.let { (cur, set) -> Fam22ColorDialog(cur, { set(it); colorDlg = null }) { colorDlg = null } }
+        return
+    }
+    Box(Modifier.fillMaxSize().background(p.bg)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Fam22Hero(vm)
+            Column(
+                // Prompt 42: bare Kart har verktøyraden delvis over toppbildet; Vel fremme (og de andre) starter 16 dp under bildet.
+                Modifier.fillMaxWidth().offset(y = if (tab == "kart") (-23).dp else 16.dp).padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                top45()
+                if (showMap) mapView45(Modifier.fillMaxWidth().height(420.dp))
+                if (f == null && vm.familyError == null) Fam22Text("Henter familien …", 13.sp, p.mut, modifier = Modifier.padding(horizontal = 4.dp))
+                tabBody45()
             }
             Spacer(Modifier.height(PAPER_BAR + barBottom + 4.dp))
         }

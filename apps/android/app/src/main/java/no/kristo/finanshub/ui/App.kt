@@ -113,7 +113,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     val pickPhotos: () -> Unit = { photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
 
     // Prompt 42: Papir er det eneste mobildesignet (Material You-«Klassisk» er slettet): eget skall med fotovindu og fanelinje.
-    PaperApp(vm, snack, takePhoto, pickPhotos, pickFiles, onPrivacyChanged, wide = width != WindowWidthSizeClass.Compact)
+    PaperApp(vm, snack, takePhoto, pickPhotos, pickFiles, onPrivacyChanged, wideIn = width != WindowWidthSizeClass.Compact)
     if (vm.menuOpen) ProfileSheet(vm)
     if (vm.widgetGallery) WidgetGallery(vm)
 }

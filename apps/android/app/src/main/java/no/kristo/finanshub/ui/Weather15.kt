@@ -263,6 +263,7 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                     // Prompt 41 (claude-code-vaer-rediger-ski-julfigur.md): kortene i brukerens rekkefølge (vaer_layout), skjulte tas ut,
                     // Skiføre bare med snø ≥ 15 cm og «Skiføre» på. Hold inne 0,6 s eller «Rediger kort» → vugging og arket «Rediger Vær».
                     val lay = vm.vaerLay41()
+                    item(key = "here45") { HereCard45(vm, w) } // prompt 45: Min posisjon (ui/Vaer45.kt)
                     lay.ord.filter { it !in lay.hid && (it != "ski" || vm.skiShow41()) }.forEachIndexed { i, k ->
                         item(key = "vo41-$k") {
                             VaerWrap41(vm, i) {

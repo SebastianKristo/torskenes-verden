@@ -19,7 +19,7 @@ import java.time.ZoneId
  *    eller 202 {jobId} (GET /api/assist/:id). Realtime «assist» (og utvidet «calendar-quick») med {jobId, state, steps[], fields[],
  *    progress, title, model, input} driver toasten og glassboblen (ui/Glimt31.kt). Rask time avbrytes med POST /api/kalender/quick/:id/cancel.
  *  - Søkefeltet på Hjem: svaret i en mørk boble under feltet (ikke Chat). Chat: verktøysvar med kort (ui/Cards31.kt) før LLM.
- *  - Svar som kommer mens appen er i bakgrunnen: lokalt varsel «Glimt» (Notify31.kt), og banner «Glimt svarte mens du var borte».
+ *  - Svar som kommer mens appen er i bakgrunnen: lokalt varsel «Glimt» (Notify31.kt), og banner banneret ved retur (fjernet i prompt 45).
  *    WorkManager henter GET /api/notify/pending når prosessen er borte (Notify31.kt).
  *  - Prøveperioder: GET/POST /finans/api/subscriptions/trials, PATCH …/:id {status|snooze}; lokale varsler på enheten (AlarmManager).
  *  - Nordlys OS: System-siden (ui/Nordlys31.kt), oppdatering uten passord som standard; bryteren require_password i
@@ -80,7 +80,7 @@ class P31State {
     var ans by mutableStateOf<HomeAns31?>(null)
     internal var ansSeq = 0
     internal var assistMissing = false
-    /* «Glimt svarte mens du var borte» */
+    /* banneret ved retur (fjernet i prompt 45) */
     var banner by mutableStateOf<Pair<String, String>?>(null)
     var bannerSeq by mutableStateOf(0)
     internal var away: String? = null
@@ -213,6 +213,9 @@ private fun parseAssist31(o0: JSONObject): Assist31? {
 /** POST /api/assist. Null = serveren mangler ruteren (404/405) eller svarte ikke innen tiden. Venter på jobben (202) i opptil 60 s. */
 internal suspend fun AppViewModel.assist31(q: String, source: String, chatId: String? = null, onJob: (String) -> Unit = {}): Assist31? {
     val s = p31
+    // Prompt 45 (claude-code-glimt-intelligent-agent.md): Hjem-feltet går til den felles Glimt-agenten (POST /api/glimt/agent);
+    // eldre server (404) → /api/assist som før. Chat beholder /api/assist (strømming og verktøykort).
+    if (source == "search") agent45(q, source)?.let { return it }
     if (s.assistMissing) return null
     noteAiErr34(null, null)
     val body = JSONObject().put("q", q).put("source", source)
@@ -403,7 +406,8 @@ fun AppViewModel.onBackground31() {
     if (p31.ans?.busy == true || chat27.busy || q29.jobs.isNotEmpty()) Notify31.followUp(appCtx29)
 }
 
-/** Tilbake i appen: banneret «Glimt svarte mens du var borte» i 4 s (med mindre varselet ble trykket). */
+/** Tilbake i appen. Prompt 45 (claude-code-glimt-kun-systemvarsel.md): svar mens appen var lukket kommer KUN som systemvarsel;
+ *  ingen banner, toast eller tekst når appen åpnes igjen. Svaret ligger i chatten / svarfeltet på Hjem. */
 fun AppViewModel.onForeground31() {
     Notify31.setForeground(appCtx29, true)
     val s = p31
@@ -415,11 +419,7 @@ fun AppViewModel.onForeground31() {
         val b = s.away ?: sp.getString("away", null) ?: return@launch31
         s.away = null
         sp.edit().remove("away").apply()
-        if (!p39.aiIn) return@launch31 // prompt 39: «Vis svaret i appen også» av – svaret ligger bare i chatten og varselet
-        s.banner = "Glimt svarte mens du var borte" to b
-        s.bannerSeq++
-        delay(4200)
-        if (s.banner?.second == b) s.banner = null
+        if (b.isEmpty()) return@launch31
     }
 }
 

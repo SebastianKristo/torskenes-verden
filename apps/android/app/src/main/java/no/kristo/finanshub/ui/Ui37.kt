@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -88,6 +89,8 @@ internal fun Modifier.holdDrag37(
                 val ch = ev.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull true
                 if (!ch.pressed) return@withTimeoutOrNull true
                 if ((ch.position - down.position).getDistance() > slop) { moved = true; return@withTimeoutOrNull true }
+                // Prompt 45: to fingre = scroll (siden kan alltid scrolles med to fingre i wiggle-modus).
+                if (ev.changes.count { it.pressed } > 1) { moved = true; return@withTimeoutOrNull true }
             }
             @Suppress("UNREACHABLE_CODE") true
         }
@@ -109,9 +112,13 @@ internal fun Modifier.holdDrag37(
             while (true) {
                 val ev = awaitPointerEvent(PointerEventPass.Initial)
                 val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                // Prompt 45 (claude-code-wiggle-android-dra.md), DEN EKTE ÅRSAKEN: før ble alle endringer konsumert og SÅ ble
+                // positionChange() lest. På en konsumert endring returnerer positionChange() alltid Offset.Zero, så onDrag ble aldri
+                // kalt: kortet ble «løftet» (skala/alpha), men fulgte aldri fingeren og byttet aldri plass. Nå leses bevegelsen først.
+                val mv45 = ch.positionChangeIgnoreConsumed()
                 ev.changes.forEach { it.consume() }
                 if (!ch.pressed) break
-                if (ch.positionChange() != Offset.Zero) onDrag(runCatching { toRoot(ch.position) }.getOrDefault(ch.position))
+                if (mv45 != Offset.Zero) onDrag(runCatching { toRoot(ch.position) }.getOrDefault(ch.position))
             }
         } finally { onEnd() }
     }

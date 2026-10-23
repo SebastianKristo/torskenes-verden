@@ -105,7 +105,8 @@ internal val WIGGLE_CLIP32B: Dp = 85.dp
 internal fun WiggleSpace30(on: Boolean, extra: Dp = 0.dp) {
     // Starter alltid på 0, så luften også animeres inn når raden nettopp er lagt til (rutenettene).
     val a = remember { Animatable(0f) }
-    val target = if (on) (WIGGLE_PAD30 + extra).value else 0f
+    // Prompt 45: på brett ingen ekstra toppmarg (knappene ligger i sidelinja), bare litt luft så «−»-merket ikke klippes.
+    val target = if (!on) 0f else if (LocalWide45.current) 14f else (WIGGLE_PAD30 + extra).value
     LaunchedEffect(target) { a.animateTo(target, tween(280, easing = EASE30)) }
     if (a.value > .5f) Spacer(Modifier.height(a.value.dp))
 }

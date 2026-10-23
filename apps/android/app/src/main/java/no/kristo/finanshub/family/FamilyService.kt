@@ -145,7 +145,8 @@ class FamilyService : Service() {
                 .put("device", Build.MODEL).put("deviceId", installId24(ctx)).put("platform", "android")
             val r = JSONObject(api.hlPost("/family/location", body))
             synchronized(queue) { queue.removeAll(batch.toSet()) }
-            notifyEvents(ctx, r.optJSONArray("events"))
+            // Prompt 45: sonevarsel med soneikonet, egen kanal «Sonevarsler» og av/på per person (P45b.kt).
+            no.kristo.finanshub.ZoneNotify45.postEvents(ctx, api, r.optJSONArray("events"))
         } catch (_: Exception) {
             // Beholdes i køen og sendes ved neste posisjon.
         }

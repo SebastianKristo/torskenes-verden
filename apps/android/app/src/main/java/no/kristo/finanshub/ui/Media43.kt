@@ -60,7 +60,8 @@ internal val RED43 = Color(0xFFB23A2A)
 private val MEDIA_TABS43 = listOf("snart" to "Kommer snart", "sonarr" to "Sonarr", "radarr" to "Radarr", "qbit" to "qBittorrent", "prowlarr" to "Prowlarr", "spill" to "Avspilling") // prompt 44: Avspilling etter Prowlarr
 
 @Composable
-internal fun stColor43(k: String): Color = when (k) { "ok" -> OK43; "dl" -> RED43; "warn" -> WARN43; else -> PaperPal.current.mut }
+// Prompt 45 (claude-code-media-mer-farger.md): Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå.
+internal fun stColor43(k: String): Color = when (k) { "ok" -> OK43; "dl" -> Color(0xFF3D7DD6); "warn" -> WARN43; "missing", "err" -> RED43; else -> PaperPal.current.mut }
 
 @Composable
 internal fun MediaScreen43(vm: AppViewModel) {
@@ -76,16 +77,16 @@ internal fun MediaScreen43(vm: AppViewModel) {
         val wide = maxWidth >= 600.dp
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("‹ Tilbake", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1, softWrap = false,
-                    modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable(role = Role.Button) { vm.closeMedia43() }.padding(horizontal = 10.dp).wrapContentHeight())
+                // Prompt 45: systemets tilbakeknapp (rund glass-knapp med ‹) og ⋯ i stedet for ⚙ (innstillingene ligger i Innstillinger → Media).
+                BackCircle45("Tilbake") { vm.closeMedia43() }
                 Spacer(Modifier.weight(1f))
                 IconBtn43("✦", "Glimt", s.glimtOpen) { s.glimtOpen = !s.glimtOpen }
                 Spacer(Modifier.width(6.dp))
-                IconBtn43("⚙", "Innstillinger for Media", false) { s.optSheet = "settings"; vm.loadStatus43() }
+                MediaMenu45(vm)
             }
             PSerif("Media", 34.sp, modifier = Modifier.padding(start = 18.dp, top = 2.dp, bottom = 8.dp), maxLines = 1)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                MEDIA_TABS43.forEach { (k, n) -> Pill43(n, s.tab == k) { s.tab = k; s.detail = null; s.relFor = null } }
+                MEDIA_TABS43.forEach { (k, n) -> MediaTab45(k, n, s.tab == k) { s.tab = k; s.detail = null; s.relFor = null } } // prompt 45: tjenestefarger
             }
             ServerRow44(vm) // prompt 44: felles servervalg
             if (s.glimtOpen) MediaGlimt43(vm)
@@ -118,6 +119,7 @@ internal fun MediaScreen43(vm: AppViewModel) {
             }
         }
         Undo44(vm) // prompt 44: «Angre» etter Slett fil
+        UnmonSheet45(vm) // prompt 45: Slett uovervåkede (ark + Angre)
     }
     if (s.add != null) AddSheet43(vm)
     s.torMenu?.let { h -> TorMenu43(vm, h) }
@@ -347,8 +349,7 @@ private fun Detail43(vm: AppViewModel, d: MItem43, pad: PaddingValues) {
     var delAsk by remember(d.id) { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
-            Text("‹ ${if (d.kind == "tv") "Serier" else "Filmer"}", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
-                modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { s.detail = null; s.seasons = null }.wrapContentHeight())
+            BackCircle45(if (d.kind == "tv") "Tilbake til Serier" else "Tilbake til Filmer") { s.detail = null; s.seasons = null } // prompt 45
         }
         // Prompt 44: banner med fanart, plakat 2:3, tittel, fakta og info-brikker.
         item { Banner44(vm, d) }
@@ -357,6 +358,8 @@ private fun Detail43(vm: AppViewModel, d: MItem43, pad: PaddingValues) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 val prof = d.profile ?: s.profiles[app]?.firstOrNull { it.id == d.profileId }?.name ?: "Profil"
                 Pill43("Profil · $prof", false) { s.optSheet = "profile" }
+                // Prompt 45: «Slett uovervåkede» for serien (Sonarr) / filmen (Radarr), bare admin, med bekreftelse.
+                if (vm.userIsAdmin) Pill43(if (d.kind == "tv") "Slett uovervåkede" else "Slett uovervåket fil", false) { vm.openUnmon45(app, d.id) }
                 if (d.kind == "tv") {
                     Pill43("Overvåking · " + (MONITOR43.firstOrNull { it.first == d.monitor }?.second ?: if (d.monitored) "På" else "Av"), false) { s.optSheet = "monitor" }
                     Pill43("Serietype · " + (TYPES43.firstOrNull { it.first == d.seriesType }?.second ?: "Standard"), false) { s.optSheet = "type" }
@@ -589,8 +592,7 @@ private fun Releases43(vm: AppViewModel, pad: PaddingValues, wide: Boolean) {
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(0.dp)) {
         item {
-            Text("‹ Tilbake", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp,
-                modifier = Modifier.heightIn(min = 44.dp).clip(CircleShape).clickable { s.relFor = null; s.rel = null }.wrapContentHeight())
+            BackCircle45("Tilbake") { s.relFor = null; s.rel = null } // prompt 45
             PLabel("Interaktivt søk")
             PSerif(title, 22.sp, maxLines = 2)
             Text(sub, color = p.mut, fontSize = 13.sp, maxLines = 2)

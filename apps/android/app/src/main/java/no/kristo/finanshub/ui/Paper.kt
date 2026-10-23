@@ -245,7 +245,18 @@ private fun backLabel(vm: AppViewModel): String = when {
 @Composable
 internal fun PaperApp(
     vm: AppViewModel, snack: SnackbarHostState, takePhoto: () -> Unit, pickPhotos: () -> Unit, pickFiles: () -> Unit, onPrivacyChanged: () -> Unit,
-    wide: Boolean = false,
+    wideIn: Boolean = false,
+) {
+    // Prompt 45 (claude-code-ipad-brettoppsett.md): én felles LayoutMode – brettoppsett når vinduet er ≥ 700 dp bredt.
+    val wide = layoutWide45(wideIn, androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp)
+    CompositionLocalProvider(LocalWide45 provides wide) { PaperApp45(vm, snack, takePhoto, pickPhotos, pickFiles, onPrivacyChanged, wide) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PaperApp45(
+    vm: AppViewModel, snack: SnackbarHostState, takePhoto: () -> Unit, pickPhotos: () -> Unit, pickFiles: () -> Unit, onPrivacyChanged: () -> Unit,
+    wide: Boolean,
 ) {
     val p = PaperPal.current
     val s = vm.screen
@@ -327,7 +338,8 @@ internal fun PaperApp(
                     Modifier.weight(1f).fillMaxWidth().underNav34(23.dp).padding(start = if (wide) 112.dp else 0.dp)
                         // Prompt 32 (claude-code-rediger-knapper-plass.md): i redigeringsmodus klippes innholdet 14 dp under ＋/✓
                         // (WIGGLE_CLIP32B), så widgets glir under en ren stripe og aldri bak knappene; ellers ved papirkanten (23 dp).
-                        .nestedScroll(meter).clip(if (meter.y > 1f) TopCut(if (vm.editPage != null || vm.p32b.fmEdit || vm.b28.merEdit) WIGGLE_CLIP32B else 23.dp) else RectangleShape),
+                        // Prompt 45: på brett ligger wiggle-knappene i sidelinja, så det trengs ingen ekstra klipp under dem.
+                        .nestedScroll(meter).clip(if (meter.y > 1f) TopCut(if (!wide && (vm.editPage != null || vm.p32b.fmEdit || vm.b28.merEdit)) WIGGLE_CLIP32B else 23.dp) else RectangleShape),
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
@@ -365,7 +377,8 @@ internal fun PaperApp(
                     } } }
                     }
                     // Prompt 28: wiggle-modus (Hjem, Finans, Mat, Sporing): ＋/✓-piller i eget lag over listen, aldri kuttet av scrolling.
-                    if (vm.editPage != null) WigglePills28(vm, Modifier.align(Alignment.TopCenter).padding(top = WIGGLE_TOP28).widthIn(max = if (wide) 720.dp else 10_000.dp))
+                    // Prompt 45 (claude-code-fold-wiggle-knapper-navbar.md): på brett ligger ＋/↺/✓ nederst i sidelinja (PaperRail45), ikke øverst.
+                    if (vm.editPage != null) WigglePills28(vm, Modifier.align(Alignment.TopCenter).padding(top = WIGGLE_TOP28).widthIn(max = if (wide) 720.dp else 10_000.dp), showBar = !wide)
                 }
             }
             if (setHere) Unit
@@ -375,7 +388,8 @@ internal fun PaperApp(
                 PaperNav(vm, bar, float, Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = barBottom), onTap, onHold)
                 ModPicker42(vm, barBottom + 72.dp) // Prompt 42: 1d Modulvelger (rutenett over fanelinja)
             }
-            if (float && bar != "sub" && !noScanHere(vm) && !setHere) PaperFab(vm, bar,
+            // Prompt 45 (claude-code-fold-skann-i-navbar.md): på brett ligger skann-knappen i sidelinja, ingen flytende knapp.
+            if (float && !wide && bar != "sub" && !noScanHere(vm) && !setHere) PaperFab(vm, bar,
                 Modifier.align(Alignment.BottomEnd).padding(end = if (wide) 24.dp else 18.dp, bottom = if (wide) navInset + 24.dp else barBottom + 62.dp + 14.dp), onTap, onHold)
             vm.plusHint?.let { h ->
                 Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (wide) navInset + 96.dp else barBottom + (if (float) 146.dp else 72.dp)).clip(RoundedCornerShape(12.dp)).background(p.ink).padding(12.dp, 8.dp)) {
@@ -423,8 +437,7 @@ internal fun PaperApp(
             if (vm.p34.aiOpen) AiControl34(vm)
             // Prompt 29: «Legg til time»-arket, pillen og banneret over alt (Kalender og Hjem). Prompt 31: Glimt-toasten ligger her.
             Quick29Overlay(vm)
-            // Prompt 31: «Glimt svarte mens du var borte».
-            AwayBanner31(vm, Modifier.align(Alignment.TopCenter))
+            // Prompt 45: banneret ved retur er fjernet – Glimt-svar mens appen var lukket kommer bare som systemvarsel.
             // Prompt 36: «Brief skjult til …» med Angre, og «Starter opp» mens serveren starter på nytt etter oppdateringen.
             BriefToast36(vm, Modifier.align(Alignment.BottomCenter).padding(bottom = if (wide) navInset + 24.dp else barBottom + 74.dp))
             StartGate36(vm)

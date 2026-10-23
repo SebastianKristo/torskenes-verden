@@ -83,6 +83,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import kotlinx.coroutines.withTimeoutOrNull
@@ -199,8 +200,9 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
                 },
                 onEnd = { dragging = false; ty = 0f; st.startY = Float.NaN; vm.wiggleEnd37(page) },
                 toRoot = { o -> st.coords?.takeIf { it.isAttached }?.localToRoot(o) ?: o },
-                // Prompt 40: i redigering starter draget først når fingeren har holdt stille i 320 ms (< 6 dp); beveger den seg før, er det scroll.
-                holdMs = { if (vm.editPage == page) 320L else 500L },
+                // Prompt 40: i redigering starter draget først når fingeren har holdt stille (< 6 dp); beveger den seg før, er det scroll.
+                // Prompt 45 (claude-code-wiggle-android-dra.md krav 2): maks 150 ms i redigering (før 320 ms), så trykk-og-dra føles direkte.
+                holdMs = { if (vm.editPage == page) 150L else 500L },
                 startDrag = { vm.editPage == page },
                 slopDp = { if (vm.editPage == page) 6f else 8f },
             ),
@@ -467,11 +469,11 @@ internal fun PaperFab(vm: AppViewModel, bar: String, modifier: Modifier, onTap: 
 /** Fold (bredde ≥ 600 dp): loddrett sidelinje til venstre. Prompt 25: se PaperRail25 (P25Ui.kt). */
 @Composable
 internal fun PaperRail(vm: AppViewModel, bar: String, float: Boolean, modifier: Modifier, onTap: () -> Unit, onHold: () -> Unit) =
-    PaperRail25(vm, bar, float, modifier, onTap, onHold)
+    PaperRail45(vm, bar, float, modifier, onTap, onHold) // Prompt 45: skann, Hjem-animasjon og wiggle-knapper (ui/Fold45.kt)
 
 /* ---------------- Finans → Mer som rutenett ---------------- */
 
-private class FinTile(val key: String, val title: String, val value: String, val icon: ImageVector, val badge: String? = null, val pos: Boolean = false, val go: () -> Unit)
+internal class FinTile(val key: String, val title: String, val value: String, val icon: ImageVector, val badge: String? = null, val pos: Boolean = false, val go: () -> Unit)
 
 /**
  * «Alt fra FinansHub på nettsiden»: to kort i bredden (3–4 på Fold), ikon i farget rute, tittel og et live-tall.
@@ -524,6 +526,9 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     DisposableEffect(Unit) { onDispose { vm.p30.fmAdd = false } }
     // Prompt 30: tilbake (også predictive back) avslutter redigeringen og lagrer rekkefølgen.
     androidx.activity.compose.BackHandler(enabled = editing) { editing = false; vm.p30.fmAdd = false; vm.saveFmOrder(order) }
+    // Prompt 45 (claude-code-finans-mer-samme-design.md): utenfor redigering samme design som hoved-Mer (ui/Mer45.kt);
+    // hold inne → wiggle-rutenettet under (flytt, − skjul, ＋ N vis skjulte, ✓).
+    if (!editing) { FinMer45(vm, tiles, navBottom, wide) { editing = true }; return }
     val grid = rememberLazyGridState()
     // Prompt 28: samme vugging som Hjem (±0,45°, 0,6 s).
     val wobble = rememberInfiniteTransition(label = "wobble").animateFloat(-1f, 1f, infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w")
@@ -566,9 +571,11 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 while (true) {
                     val ev = awaitPointerEvent(PointerEventPass.Initial)
                     val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                    // Prompt 45: les bevegelsen før consume() (positionChange() er null på en konsumert endring, så flisen sto stille).
+                    val mv45 = ch.positionChangeIgnoreConsumed()
                     ev.changes.forEach { it.consume() }
                     if (!ch.pressed) break
-                    dragOffset += ch.positionChange()
+                    dragOffset += mv45
                     val cur = grid.layoutInfo.visibleItemsInfo.firstOrNull { it.key == k } ?: continue
                     val center = Offset(cur.offset.x + cur.size.width / 2f, cur.offset.y + cur.size.height / 2f) + dragOffset
                     val target = hit(center)
@@ -671,7 +678,9 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
         }
     }
     // Prompt 30: ＋ N (antall skjulte) til venstre, ✓ til høyre; ＋ viser/skjuler SKJULT-seksjonen.
-    if (editing) WiggleBar28(Modifier.align(Alignment.TopCenter).padding(top = WIGGLE_TOP28), left = if (hidTiles.isNotEmpty()) "add" else null, hidden = hidTiles.size,
+    // Prompt 45: ✓ i sidelinja (brett) avslutter også redigeringen her.
+    LaunchedEffect(vm.p45.fmDoneSeq) { if (vm.p45.fmDoneSeq > 0 && editing) { editing = false; vm.p30.fmAdd = false; vm.saveFmOrder(order) } }
+    if (editing && !wide) WiggleBar28(Modifier.align(Alignment.TopCenter).padding(top = WIGGLE_TOP28), left = if (hidTiles.isNotEmpty()) "add" else null, hidden = hidTiles.size,
         onLeft = { vm.p30.fmAdd = !vm.p30.fmAdd; Haptics.select() },
         onDone = { editing = false; vm.p30.fmAdd = false; vm.saveFmOrder(order); Haptics.success() })
     }

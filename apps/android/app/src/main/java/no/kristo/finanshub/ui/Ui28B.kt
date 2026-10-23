@@ -411,10 +411,29 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
         }
         item(key = "mer-space") { WiggleSpace30(true, extra = (-10).dp) }
         item(key = "mer-tsz") { MerSize44(vm) } // prompt 44: Store · Lave bare i wiggle-redigering
+        item(key = "mer45-ed") { MerEdit45(vm, rows) } // prompt 45: tittel (− / gi nytt navn / + Legg til tittel) og de fire store boksene (⇄ Bytt)
         itemsIndexed(visKeys, key = { _, k -> "mer-$k" }) { i, k ->
             val r = byKey[k] ?: return@itemsIndexed
             val on = drag == k
             val shape = RoundedCornerShape(18.dp)
+            // Prompt 45: samme dra-logikk fra håndtaket (≡, med en gang) og fra hele kortet (trykk, hold 150 ms og dra).
+            val start45 = { drag = k; dy = 0f; work = visNow; Haptics.select() }
+            val end45 = { drag = null; dy = 0f; work?.let { w -> vm.saveMer28(s.mer.copy(o = w + hidNow)) }; work = null }
+            val move45: (Float) -> Unit = { amountY ->
+                dy += amountY
+                val l = (work ?: visNow).toMutableList()
+                val at = l.indexOf(k)
+                val h = (heights[k] ?: 140).toFloat()
+                val sw = when { dy > h / 2 && at in 0 until l.size - 1 -> 1; dy < -h / 2 && at > 0 -> -1; else -> 0 }
+                val now37 = android.os.SystemClock.uptimeMillis()
+                if (sw != 0 && now37 - vm.p37.lastSw >= 140) {
+                    vm.p37.lastSw = now37
+                    val o = l[at + sw]; l[at + sw] = k; l[at] = o
+                    dy -= sw * (heights[o] ?: h.toInt())
+                    work = l
+                    Haptics.select()
+                }
+            }
             Box(
                 Modifier.fillMaxWidth().then(if (on) Modifier else Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = tween(180)))
                     .zIndex(if (on) 5f else 0f)
@@ -423,7 +442,8 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
                         val sc = if (on) 1.02f else 1f; scaleX = sc; scaleY = sc
                         rotationZ = if (on) 0f else wobble.value * (if (i % 2 == 0) .45f else -.45f)
                     }
-                    .onSizeChanged { heights[k] = it.height },
+                    .onSizeChanged { heights[k] = it.height }
+                    .holdDragDelta45(start45, move45, end45),
             ) {
                 Row(
                     Modifier.fillMaxWidth().shadow(if (on) 18.dp else 8.dp, shape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
@@ -438,25 +458,13 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
                     Box(
                         Modifier.size(44.dp).semantics { contentDescription = "Flytt ${r.title}" }.pointerInput(k) {
                             detectDragGestures(
-                                onDragStart = { drag = k; dy = 0f; work = visNow; Haptics.select() },
-                                onDragEnd = { drag = null; dy = 0f; work?.let { w -> vm.saveMer28(s.mer.copy(o = w + hidNow)) }; work = null },
-                                onDragCancel = { drag = null; dy = 0f; work?.let { w -> vm.saveMer28(s.mer.copy(o = w + hidNow)) }; work = null },
+                                onDragStart = { start45() },
+                                onDragEnd = { end45() },
+                                onDragCancel = { end45() },
                             ) { ch, amount ->
                                 ch.consume()
-                                dy += amount.y
-                                val l = (work ?: visNow).toMutableList()
-                                val at = l.indexOf(k)
-                                val h = (heights[k] ?: 140).toFloat()
-                                val sw = when { dy > h / 2 && at in 0 until l.size - 1 -> 1; dy < -h / 2 && at > 0 -> -1; else -> 0 }
                                 // Prompt 37 (krasjfiksen): maks ett bytte per 140 ms; lagres først ved slipp.
-                                val now37 = android.os.SystemClock.uptimeMillis()
-                                if (sw != 0 && now37 - vm.p37.lastSw >= 140) {
-                                    vm.p37.lastSw = now37
-                                    val o = l[at + sw]; l[at + sw] = k; l[at] = o
-                                    dy -= sw * (heights[o] ?: h.toInt())
-                                    work = l
-                                    Haptics.select()
-                                }
+                                move45(amount.y)
                             }
                         },
                         contentAlignment = Alignment.Center,
@@ -492,7 +500,7 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
             }
         }
     }
-    if (edit) WiggleBar28(
+    if (edit && !LocalWide45.current) WiggleBar28( // prompt 45: på brett ligger knappene i sidelinja
         Modifier.align(Alignment.TopCenter).padding(top = 8.dp), left = if (hid.isNotEmpty()) "add" else null, hidden = hid.size,
         onLeft = { vm.p30.merAdd = !vm.p30.merAdd; Haptics.select() },
         onDone = { Haptics.success(); s.merEdit = false; vm.p30.merAdd = false; drag = null; work = null },
@@ -595,7 +603,7 @@ internal fun WiggleBar28(modifier: Modifier = Modifier, left: String?, hidden: I
 
 /** Pillene for sidene med vm.editPage (Hjem, Finans, Mat: ＋ og ✓; Sporing: bare ✓), og «Legg til widget»-arket. */
 @Composable
-internal fun WigglePills28(vm: AppViewModel, modifier: Modifier = Modifier) {
+internal fun WigglePills28(vm: AppViewModel, modifier: Modifier = Modifier, showBar: Boolean = true) {
     val page = vm.editPage ?: return
     // Bare på siden som redigeres (ikke når en annen side, et skjema eller detaljer ligger øverst).
     val base = vm.paperPage == null && vm.original == null && vm.editing == null && vm.detail == null && vm.selectedTx == null
@@ -609,7 +617,7 @@ internal fun WigglePills28(vm: AppViewModel, modifier: Modifier = Modifier) {
     if (!here) return
     val secs = vm.b28.pageSecs[page] ?: emptyList()
     val hidden = vm.pageHidden(page).count { h -> secs.any { it.first == h } }
-    WiggleBar28(
+    if (showBar) WiggleBar28(
         modifier, left = if (page == "sporing") null else "add", hidden = hidden,
         onLeft = { Haptics.select(); vm.b28.addWidgetFor = page },
         onDone = { Haptics.success(); vm.editPage = null },

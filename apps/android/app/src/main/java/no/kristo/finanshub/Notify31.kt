@@ -64,6 +64,8 @@ object Notify31 {
         if (fg) e.putLong("since", System.currentTimeMillis())
         e.apply()
     }
+    /** Prompt 45: appen er åpen og i forgrunnen (da vises ingen systemvarsler for Glimt-svar). */
+    fun isForeground(ctx: Context): Boolean = sp(ctx).getBoolean("fg", false)
     fun setAiBg(ctx: Context, on: Boolean) = sp(ctx).edit().putBoolean("ai_bg", on).apply()
 
     /** Glimt-jobber som venter på svar (følges opp i bakgrunnen). Verdien er «hjem|spørsmål» eller «chat|spørsmål». */
@@ -255,6 +257,11 @@ internal suspend fun pending31(ctx: Context, api: Api) {
                 else -> "finanshub://glimt"
             }
         }
+        // Prompt 45: sonevarsler (category familie, data.kind zone) med soneikonet og egen kanal (ZoneNotify45).
+        val data45 = x.optJSONObject("data")
+        if (data45 != null && data45.optString("kind") == "zone") { ZoneNotify45.postPending(ctx, api, title, body, tag, data45); Notify31.markSeen(ctx, tag); continue }
+        // Prompt 45: AI-svar med data.systemOnly vises bare som systemvarsel når appen ikke er åpen (aldri som banner ved retur).
+        if (cat == "ai" && data45?.optBoolean("systemOnly") == true && Notify31.isForeground(ctx)) continue
         val trialId = x.optString("trialId").ifBlank { x.optJSONObject("data")?.optString("trialId").orEmpty() }
         val acts = if (cat == "trial" && trialId.isNotBlank()) Notify31.trialActions(ctx, trialId, title, body, x.optString("cancelUrl").takeIf { it.isNotBlank() }) else emptyList()
         Notify31.post(ctx, title, body, tag, url ?: "finanshub://glimt", if (cat == "trial") "trial" else if (cat == "ai") "ai" else "other", acts)

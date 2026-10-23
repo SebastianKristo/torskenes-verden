@@ -164,10 +164,15 @@ fun AppViewModel.loadHa42(force: Boolean = false) {
     s.haBusy = true
     launch42 {
         try {
-            val raw = try { api42 { hlGet("/family/health/ha", timeout = 12_000) } } catch (e: ApiException) {
+            // Prompt 45 (claude-code-helse-ha-opprydding.md): bare enheter fra mobile_app; Telefoner (standard) eller Alle mobilapp.
+            val raw = try { api42 { hlGet("/family/health/ha?view=" + p45.haView, timeout = 12_000) } } catch (e: ApiException) {
                 if (e.status == 404) api42 { hlGet("/health/ha/devices", timeout = 12_000) } else throw e
             }
             val (d, p) = parseHa42(raw)
+            runCatching { org.json.JSONObject(raw) }.getOrNull()?.let { o ->
+                p45.haHidden = o.optJSONObject("hidden")?.optString("text")?.takeIf { it.isNotBlank() }
+                p45.haStatus = o.optJSONObject("status")?.optString("text")?.takeIf { it.isNotBlank() }
+            }
             s.haDevices = d
             s.haPeople = p.ifEmpty { family?.members?.map { HaPerson42(it.userId, it.name) } ?: emptyList() }
             s.haMissing = false; s.haError = null

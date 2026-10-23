@@ -3611,6 +3611,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         switchTo(to)
     }
 
+    /* ---------- Prompt 45 (ANDROID45): Fold/brett (sidelinje med skann, Hjem-animasjon, wiggle-knapper), Familie og Gjøremål på stor skjerm, wiggle-dra, Glimt-agent m.m. (P45.kt og ui-filene med 45) ---------- */
+    val p45 = P45State()
+    internal suspend fun <T> api45(f: suspend Api.() -> T): T = api.f()
+    internal fun launch45(block: suspend () -> Unit) = launch(block)
+    internal val appCtx45: Context get() = appCtx
+
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.
     init {
