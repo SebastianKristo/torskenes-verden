@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>body{margin:0;background:#e9e3d6;font-family:-apple-system,'SF Pro Text',Manrope,system-ui,sans-serif}a{color:#b23a2a}a:hover{color:#8a2a1e}</style>
+</helmet>
+<div style="min-height:100vh;display:grid;place-items:center;padding:40px 20px;box-sizing:border-box">
+<div style="width:390px;height:844px;border-radius:54px;background:#0b0b0d;padding:12px;box-sizing:border-box;box-shadow:0 40px 80px -40px rgba(27,26,23,.6)">
+<div style="position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:linear-gradient(165deg,#3d5a80 0%,#6a5a8f 45%,#c9826b 100%);color:#fff">
+<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;font:600 16px -apple-system,system-ui"><span>09:44</span><span style="width:120px;height:34px;border-radius:17px;background:#000"></span><span style="font-size:13px">●●● ▮</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:26px 0;padding:70px 22px 0;justify-items:center">
+<sc-for list="{{ apps }}" as="a" hint-placeholder-count="16"><div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:62px;height:62px;border-radius:15px;background:{{ a.c }};display:grid;place-items:center;font:800 22px Manrope;color:#fff">{{ a.i }}</span><span style="font-size:11.5px;text-shadow:0 1px 2px rgba(0,0,0,.35)">{{ a.n }}</span></div></sc-for>
+</div>
+<div style="position:absolute;left:20px;right:20px;bottom:22px;height:92px;border-radius:32px;background:rgba(255,255,255,.22);backdrop-filter:blur(24px);display:flex;justify-content:space-around;align-items:center">
+<sc-for list="{{ dock }}" as="a" hint-placeholder-count="4"><span style="width:62px;height:62px;border-radius:15px;background:{{ a.c }};display:grid;place-items:center;font:800 22px Manrope;color:#fff">{{ a.i }}</span></sc-for>
+</div>
+<div style="position:absolute;left:10px;right:10px;top:{{ top }};transition:top .45s cubic-bezier(.2,.9,.3,1.15);display:flex;gap:12px;align-items:center;padding:13px 14px;border-radius:26px;background:rgba(246,246,246,.86);backdrop-filter:blur(30px) saturate(1.6);box-shadow:0 10px 30px -10px rgba(0,0,0,.35);color:#111">
+<span style="flex:none;position:relative;width:42px;height:42px;border-radius:11px;background:{{ n.c }};display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.p }}"></path></svg><span style="position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;border-radius:5px;background:#2f7a4f;border:2px solid #f6f6f6;display:grid;place-items:center;font:800 9px Manrope;color:#fff">F</span></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:15px">{{ n.t }}</b><span style="font-size:13px;color:#777">nå</span></span><span style="font-size:14.5px;line-height:1.3">{{ n.b }}</span></span>
+</div>
+<button type="button" onClick="{{ next }}" style="position:absolute;left:50%;bottom:132px;transform:translateX(-50%);height:40px;padding:0 18px;border-radius:20px;border:0;background:rgba(0,0,0,.4);color:#fff;cursor:pointer;font:700 13px Manrope;white-space:nowrap">Vis neste varsel</button>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const Z=[['Hjem','#2b5d8a','M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6','Ingrid forlot Hjem'],['Skole','#a8661a','M2 9l10-5 10 5-10 5zM6 11v5c3 2 9 2 12 0v-5','Pål kom til Skole'],['Mormor','#2f6b45','M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z','Kari kom til Mormor']];
+class Component extends DCLogic {
+  state={i:0,show:false};
+  componentDidMount(){this._t=setTimeout(()=>this.setState({show:true}),400)}
+  componentWillUnmount(){clearTimeout(this._t)}
+  renderVals(){const s=this.state,z=Z[s.i];
+    return{top:s.show?'58px':'-120px',n:{t:z[0],c:z[1],p:z[2],b:z[3]},
+      apps:[['Kalender','#fff','23'],['Bilder','#f2a03d','✿'],['Kamera','#555','◉'],['Mail','#2f7ae5','✉'],['Klokke','#111','◷'],['Kart','#4caf6a','➤'],['Vær','#3b8fd9','☀'],['Notater','#f5c542','≡'],['FinansHub','#2f7a4f','F'],['Podkaster','#9b4fd6','◎'],['Innst.','#8e8e93','⚙'],['Helse','#fff','♥']].map(([n,c,i])=>({n,c,i:c==='#fff'?'':i})),
+      dock:[['#34c759','✆'],['#2f7ae5','◐'],['#34c759','✉'],['#fa3c4c','♪']].map(([c,i])=>({c,i})),
+      next:()=>{this.setState({show:false});clearTimeout(this._t);this._t=setTimeout(()=>this.setState({i:(s.i+1)%Z.length,show:true}),450)}}}
+}
+</script>
+</body>
+</html>

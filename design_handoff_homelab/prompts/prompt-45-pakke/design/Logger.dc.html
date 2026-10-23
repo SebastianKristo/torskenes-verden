@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display:flex;flex-direction:column;gap:16px;color:#1b1a17;font-family:Manrope,system-ui,sans-serif;width:100%;box-sizing:border-box">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px"><sc-for list="{{ stats }}" as="x"><div style="padding:12px 14px;border-radius:16px;background:#fbf8f1;border:1px solid #e4ddcf;display:flex;flex-direction:column;gap:2px"><b style="font:500 26px/1 Newsreader,serif;color:{{ x.c }}">{{ x.v }}</b><span style="font-size:12.5px;color:#6b6558">{{ x.l }}</span></div></sc-for></div>
+
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a;padding-bottom:8px;border-bottom:2px solid #1b1a17">CONTAINERE · {{ nCt }}</span>
+<div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ cts }}" as="c"><button onClick="{{ c.go }}" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:999px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer;font:700 13px Manrope;white-space:nowrap"><span style="width:8px;height:8px;border-radius:4px;background:{{ c.dot }}"></span>{{ c.n }}<sc-if value="{{ c.hasE }}"><span style="padding:1px 7px;border-radius:999px;background:#b23a2a;color:#fff;font-size:11px">{{ c.e }}</span></sc-if></button></sc-for></div></div>
+
+<sc-if value="{{ hasSel }}"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:16px;background:#fbf8f1;border:1px solid #e4ddcf"><span style="width:10px;height:10px;border-radius:5px;background:{{ sel.dot }}"></span><div style="flex:1 1 220px;min-width:0;display:flex;flex-direction:column"><b style="font-size:15px">{{ sel.n }} <span style="font:500 12px 'IBM Plex Mono',monospace;color:#6b6558">{{ sel.img }}</span></b><span style="font-size:12.5px;color:#6b6558">{{ sel.st }} · oppe {{ sel.up }} · CPU {{ sel.cpu }} · minne {{ sel.mem }} · omstarter {{ sel.rs }}</span></div><div style="display:flex;gap:6px"><sc-for list="{{ acts }}" as="a"><button onClick="{{ a.go }}" style="height:36px;padding:0 12px;border-radius:18px;border:1px solid {{ a.bd }};background:#fff;color:{{ a.c }};cursor:pointer;font:700 12.5px Manrope">{{ a.n }}</button></sc-for></div></div></sc-if>
+
+<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+<div style="flex:1 1 260px;display:flex;align-items:center;gap:8px;height:42px;padding:0 14px;border-radius:21px;border:1px solid #d8d1c2;background:#fff"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8f897c" stroke-width="2.2" stroke-linecap="round"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"></path></svg><input value="{{ q }}" onChange="{{ onQ }}" placeholder="Søk i loggen, f.eks. timeout eller 502" style="flex:1;min-width:0;border:0;outline:none;background:transparent;font:500 14px Manrope;color:#1b1a17"></div>
+<div style="display:flex;padding:3px;border-radius:12px;background:#fff;border:1px solid #d8d1c2"><sc-for list="{{ lv }}" as="l"><button onClick="{{ l.go }}" style="height:34px;padding:0 11px;border-radius:9px;border:0;background:{{ l.bg }};color:{{ l.fg }};cursor:pointer;font:700 12.5px Manrope">{{ l.n }}</button></sc-for></div>
+<div style="display:flex;padding:3px;border-radius:12px;background:#fff;border:1px solid #d8d1c2"><sc-for list="{{ tr }}" as="l"><button onClick="{{ l.go }}" style="height:34px;padding:0 10px;border-radius:9px;border:0;background:{{ l.bg }};color:{{ l.fg }};cursor:pointer;font:600 12px 'IBM Plex Mono',monospace">{{ l.n }}</button></sc-for></div>
+<button onClick="{{ togLive }}" style="display:flex;align-items:center;gap:7px;height:40px;padding:0 14px;border-radius:20px;border:1px solid {{ liveBd }};background:{{ liveBg }};color:{{ liveFg }};cursor:pointer;font:700 13px Manrope"><span style="width:8px;height:8px;border-radius:4px;background:{{ liveDot }}"></span>{{ liveT }}</button>
+<button onClick="{{ dl }}" style="height:40px;padding:0 14px;border-radius:20px;border:1px solid #d8d1c2;background:#fbf8f1;color:#1b1a17;cursor:pointer;font:700 13px Manrope">Last ned</button>
+</div>
+
+<div ref="{{ boxRef }}" style="height:420px;overflow-y:auto;border-radius:16px;background:#16140f;color:#e9e3d6;padding:10px 0;font:500 12.5px/1.55 'IBM Plex Mono',monospace;box-sizing:border-box">
+<sc-for list="{{ lines }}" as="r"><button onClick="{{ r.go }}" style="display:grid;grid-template-columns:86px 54px 120px minmax(0,1fr);gap:10px;width:100%;padding:2px 14px;border:0;background:{{ r.bg }};color:inherit;font:inherit;text-align:left;cursor:pointer"><span style="color:#8f897c">{{ r.t }}</span><b style="color:{{ r.lc }}">{{ r.l }}</b><span style="color:#9fb6c9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.c }}</span><span style="white-space:pre-wrap;word-break:break-word">{{ r.m }}</span></button></sc-for>
+<sc-if value="{{ none }}"><span style="display:block;padding:20px 14px;color:#8f897c">Ingen linjer med dette filteret.</span></sc-if>
+</div>
+
+<sc-if value="{{ hasPick }}"><div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:18px;background:#fbf8f1;border:1.5px solid #1b1a17">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">{{ pick.l }} · {{ pick.c }} · {{ pick.t }}</span><button onClick="{{ unpick }}" style="width:32px;height:32px;border-radius:16px;border:0;background:#ece6da;cursor:pointer">✕</button></div>
+<code style="display:block;padding:10px 12px;border-radius:10px;background:#16140f;color:#e9e3d6;font:500 12.5px/1.5 'IBM Plex Mono',monospace;white-space:pre-wrap;word-break:break-word">{{ pick.full }}</code>
+<div style="display:flex;gap:10px;align-items:flex-start"><span style="flex:none;width:28px;height:28px;border-radius:50%;background:conic-gradient(#b23a2a,#e8794a,#f2c14e,#3fbf9a,#7a5ad6,#b23a2a);display:grid;place-items:center"><span style="width:22px;height:22px;border-radius:50%;background:#fffdf8;display:grid;place-items:center;color:#b23a2a;font-size:11px">✦</span></span><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b style="font-size:14px">Glimt: {{ pick.why }}</b><span style="font-size:13.5px;line-height:1.5;color:#3d3a33;text-wrap:pretty">{{ pick.fix }}</span></div></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button onClick="{{ copy }}" style="height:38px;padding:0 14px;border-radius:19px;border:0;background:#1b1a17;color:#f3efe6;cursor:pointer;font:700 13px Manrope">Kopier med 20 linjer rundt</button><button onClick="{{ ctx }}" style="height:38px;padding:0 14px;border-radius:19px;border:1px solid #d8d1c2;background:#fff;cursor:pointer;font:700 13px Manrope">Vis i sammenheng</button></div>
+</div></sc-if>
+
+<div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a;padding-bottom:8px;border-bottom:2px solid #1b1a17">FEIL GRUPPERT · SISTE 24 TIMER</span>
+<sc-for list="{{ grp }}" as="g"><button onClick="{{ g.go }}" style="display:flex;align-items:center;gap:12px;min-height:54px;padding:6px 2px;border:0;border-bottom:1px solid #e4ddcf;background:transparent;color:#1b1a17;cursor:pointer;text-align:left;font-family:inherit"><b style="flex:none;min-width:40px;font:600 14px 'IBM Plex Mono',monospace;color:#b23a2a">×{{ g.n }}</b><div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font:500 13px 'IBM Plex Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ g.m }}</span><span style="font-size:12px;color:#6b6558">{{ g.c }} · sist {{ g.last }}</span></div><span style="flex:none;font-size:13px;color:#b23a2a;font-weight:700">Forklar ›</span></button></sc-for>
+</div>
+
+<sc-if value="{{ toastOn }}"><div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:90;padding:11px 18px;border-radius:14px;background:#1b1a17;color:#f3efe6;font:700 13.5px Manrope;box-shadow:0 12px 30px rgba(0,0,0,.25)">{{ toast }}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const CT=[['homelab-api','ghcr.io/kristo/homelab-api:2.14','up','4 d','3 %','312 MB',0],['homelab-web','ghcr.io/kristo/homelab-web:2.14','up','4 d','1 %','96 MB',0],['postgres','postgres:16','up','12 d','2 %','420 MB',0],['ollama','ollama/ollama:0.4','up','6 t','38 %','9,8 GB',1],['sonarr','linuxserver/sonarr:4','up','2 d','1 %','280 MB',0],['radarr','linuxserver/radarr:5','up','2 d','1 %','310 MB',0],['qbittorrent','linuxserver/qbittorrent:5','up','2 d','6 %','520 MB',0],['prowlarr','linuxserver/prowlarr:1','up','2 d','0 %','150 MB',0],['cloudflared','cloudflare/cloudflared:2024.10','restarting','12 s','0 %','18 MB',7],['home-assistant','homeassistant/home-assistant:2026.10','up','9 d','4 %','610 MB',0]];
+const RAW=[['10:41:02','INFO','homelab-api','GET /api/finans/oversikt 200 · 42 ms'],['10:41:05','WARN','ollama','model gemma3:12b loaded in 8.4 s (cold start)'],['10:41:09','ERROR','cloudflared','Unable to reach the origin service: dial tcp 172.18.0.4:8080: connect: connection refused'],['10:41:09','INFO','cloudflared','Retrying connection in 2s …'],['10:41:12','ERROR','homelab-api','GSC sync failed: 403 insufficientPermissions (scope webmasters.readonly missing)'],['10:41:14','INFO','qbittorrent','Torrent added: Shrinking.S03E08.1080p.ATVP.WEB-DL'],['10:41:20','WARN','prowlarr','Indexer 1337x: request timed out after 10000 ms'],['10:41:21','INFO','sonarr','Grabbed Only Murders in the Building S05E09 from IPTorrents'],['10:41:30','ERROR','cloudflared','Unable to reach the origin service: dial tcp 172.18.0.4:8080: connect: connection refused'],['10:41:33','INFO','homelab-web','GET / 200 · 8 ms'],['10:41:40','DEBUG','homelab-api','cache hit media:calendar (ttl 54 s)'],['10:41:44','ERROR','homelab-api','Unhandled rejection in /api/kalender/sync: ETIMEDOUT caldav.icloud.com:443'],['10:41:50','WARN','postgres','checkpoint took 4.2 s (wal 512 MB)'],['10:41:52','INFO','home-assistant','Automation «Hjemlys» triggered'],['10:42:01','ERROR','cloudflared','Unable to reach the origin service: dial tcp 172.18.0.4:8080: connect: connection refused']];
+const WHY=[[/connection refused/,'Tunnelen får ikke kontakt med appen på port 8080.','Containeren cloudflared peker på 172.18.0.4:8080, men homelab-web lytter ikke der (ny IP etter omstart). Bruk tjenestenavnet i stedet for IP: service: http://homelab-web:8080 i config.yml, og sørg for at begge er på samme Docker-nettverk.'],[/insufficientPermissions/,'Google-tokenet mangler lesetilgang til Search Console.','Koble til Google på nytt under Innstillinger → Domener og godta «Se Search Console-data» (webmasters.readonly).'],[/ETIMEDOUT caldav/,'iCloud-kalenderen svarte ikke innen tidsgrensen.','Vanligvis midlertidig hos Apple. Sjekk app-spesifikt passord under Kalendere hvis det skjer flere ganger på rad.'],[/timed out/,'Indekseren svarte ikke innen 10 s.','Test indekseren i Media → Prowlarr. Står den bak Cloudflare, legg til FlareSolverr.'],[/cold start/,'Modellen ble lastet inn fra disk.','Normalt etter omstart. Sett OLLAMA_KEEP_ALIVE=30m for å holde den i minnet.'],[/checkpoint/,'Databasen skrev mye på én gang.','Ufarlig ved store importer. Øk max_wal_size hvis det skjer ofte.']];
+const LC={ERROR:'#ff8a7a',WARN:'#f2c14e',INFO:'#9fd3b0',DEBUG:'#8f897c'};
+class Component extends DCLogic {
+  state={ct:'alle',lv:'alle',tr:'1t',q:'',live:true,pick:null,extra:[],toast:''};
+  componentDidMount(){this._iv=setInterval(()=>{if(!this.state.live)return;const n=new Date(),t=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':'),R=RAW[Math.floor(Math.random()*RAW.length)];this.setState(s=>({extra:[...s.extra.slice(-80),[t,R[1],R[2],R[3]]]}),()=>{const b=this._box;if(b)b.scrollTop=b.scrollHeight})},2500)}
+  componentWillUnmount(){clearInterval(this._iv);clearTimeout(this._tt)}
+  toastShow(t){clearTimeout(this._tt);this.setState({toast:t});this._tt=setTimeout(()=>this.setState({toast:''}),2200)}
+  renderVals(){const s=this.state,set=o=>this.setState(o),all=[...RAW,...s.extra],q=s.q.trim().toLowerCase();
+    const L=all.filter(r=>(s.ct==='alle'||r[2]===s.ct)&&(s.lv==='alle'||(s.lv==='feil'?r[1]==='ERROR':s.lv==='adv'?r[1]==='ERROR'||r[1]==='WARN':r[1]!=='DEBUG'))&&(!q||r[3].toLowerCase().includes(q)||r[2].includes(q)));
+    const ec=c=>all.filter(r=>r[1]==='ERROR'&&(c==='alle'||r[2]===c)).length;
+    const G={};all.filter(r=>r[1]==='ERROR').forEach(r=>{const k=r[2]+'|'+r[3];G[k]=G[k]||{n:0,c:r[2],m:r[3],last:r[0]};G[k].n++;G[k].last=r[0]});
+    const sc=CT.find(c=>c[0]===s.ct),dot=st=>st==='up'?'#2f6b45':st==='restarting'?'#c48a1a':'#b23a2a';
+    const pk=s.pick,why=pk?(WHY.find(([re])=>re.test(pk[3]))||[0,'Ingen kjent årsak ennå.','Kopier linjen med sammenheng og spør Glimt i Chat.']):null;
+    return{stats:[[String(CT.filter(c=>c[2]==='up').length)+' / '+CT.length,'containere oppe','#2f6b45'],[String(ec('alle')),'feil siste time','#b23a2a'],[String(all.filter(r=>r[1]==='WARN').length),'advarsler','#a0671a'],['7','omstarter · cloudflared','#a0671a'],['31 %','disk /var/lib/docker','#1b1a17']].map(([v,l,c])=>({v,l,c})),
+      nCt:CT.length,cts:[['alle','Alle','up',ec('alle')],...CT.map(c=>[c[0],c[0],c[2],ec(c[0])])].map(([k,n,st,e])=>{const on=s.ct===k;return{n,e:String(e),hasE:e>0,dot:k==='alle'?'#1b1a17':dot(st),bg:on?'#1b1a17':'#fff',fg:on?'#f3efe6':'#1b1a17',bd:on?'#1b1a17':'#d8d1c2',go:()=>set({ct:k,pick:null})}}),
+      hasSel:!!sc,sel:sc?{n:sc[0],img:sc[1],st:sc[2]==='up'?'Kjører':'Starter på nytt',up:sc[3],cpu:sc[4],mem:sc[5],rs:String(sc[6]),dot:dot(sc[2])}:{},
+      acts:[['Start på nytt','#1b1a17','#d8d1c2'],['Stopp','#b23a2a','#e8c4ba'],['Inspiser','#1b1a17','#d8d1c2']].map(([n,c,bd])=>({n,c,bd,go:()=>this.toastShow(n==='Inspiser'?'docker inspect '+(sc?sc[0]:'')+' kopiert':n+': '+(sc?sc[0]:'')+' …')})),
+      q:s.q,onQ:e=>set({q:e.target.value}),
+      lv:[['alle','Alle'],['info','Info+'],['adv','Advarsler'],['feil','Feil']].map(([k,n])=>({n,bg:s.lv===k?'#1b1a17':'transparent',fg:s.lv===k?'#f3efe6':'#1b1a17',go:()=>set({lv:k})})),
+      tr:['15m','1t','24t','7d'].map(k=>({n:k,bg:s.tr===k?'#1b1a17':'transparent',fg:s.tr===k?'#f3efe6':'#1b1a17',go:()=>set({tr:k})})),
+      togLive:()=>set({live:!s.live}),liveT:s.live?'Live':'Pauset',liveDot:s.live?'#2f6b45':'#a39d90',liveBg:s.live?'#eaf3ec':'#fff',liveFg:s.live?'#2f6b45':'#1b1a17',liveBd:s.live?'#2f6b45':'#d8d1c2',
+      dl:()=>this.toastShow('Laster ned '+(s.ct==='alle'?'alle':s.ct)+'-'+s.tr+'.log ('+L.length+' linjer)'),
+      boxRef:this._br||(this._br=el=>{this._box=el}),
+      lines:L.map((r,i)=>({t:r[0],l:r[1],c:r[2],m:r[3],lc:LC[r[1]],bg:pk&&pk===r?'rgba(255,255,255,.1)':r[1]==='ERROR'?'rgba(178,58,42,.16)':'transparent',go:()=>set({pick:r})})),none:!L.length,
+      hasPick:!!pk,pick:pk?{t:pk[0],l:pk[1],c:pk[2],full:pk[3],why:why[1],fix:why[2]}:{},unpick:()=>set({pick:null}),
+      copy:()=>{try{navigator.clipboard.writeText(pk?pk.join(' '):'')}catch(e){}this.toastShow('Kopiert med 20 linjer rundt')},ctx:()=>set({ct:pk?pk[2]:'alle',lv:'alle',q:''}),
+      grp:Object.values(G).sort((a,b)=>b.n-a.n).map(g=>({...g,n:String(g.n),go:()=>set({pick:all.find(r=>r[1]==='ERROR'&&r[2]===g.c&&r[3]===g.m)})})),
+      toastOn:!!s.toast,toast:s.toast}}
+}
+</script>
+</body>
+</html>

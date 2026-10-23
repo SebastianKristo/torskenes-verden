@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#e9e3d6;font-family:Manrope,system-ui,sans-serif;color:#1b1a17}a{color:#b23a2a}a:hover{color:#8a2a1e}</style>
+</helmet>
+<div style="min-height:100vh;display:grid;place-items:center;padding:40px 20px;box-sizing:border-box">
+<div style="width:390px;height:844px;border-radius:54px;background:#0b0b0d;padding:12px;box-sizing:border-box;box-shadow:0 40px 80px -40px rgba(27,26,23,.6)">
+<div style="position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:#f3efe6;display:flex;flex-direction:column">
+<div style="flex:none;display:flex;justify-content:space-between;align-items:center;padding:16px 30px 0;font:600 16px -apple-system,system-ui"><span>10:05</span><span style="width:120px;height:34px;border-radius:17px;background:#000"></span><span style="font-size:13px">5G ▮</span></div>
+<div style="flex:1;min-height:0;overflow-y:auto;padding:14px 18px 120px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center"><button type="button" style="height:40px;padding:0 16px 0 12px;border-radius:20px;border:1px solid #d8d1c2;background:#fffdf8;color:#1b1a17;font:700 14px Manrope;white-space:nowrap;display:flex;align-items:center;gap:6px;cursor:pointer">‹ Alle innstillinger</button><span style="width:40px;height:40px;border-radius:20px;background:#b23a2a;color:#fff;display:grid;place-items:center;font:700 14px Manrope">S</span></div>
+<div style="display:flex;flex-direction:column;gap:2px;padding:4px 2px 0"><span style="font:italic 400 16px Newsreader,serif;color:#6b665c">Helse fra mobilappen</span><b style="font:500 36px/1.1 Newsreader,serif">Home Assistant</b><span style="margin-top:6px;font-size:14px;line-height:1.45;color:#6b665c;text-wrap:pretty">Les skritt, puls og søvn fra Home Assistant-appen på telefonene. Hver person godkjenner delingen første gang.</span></div>
+
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:#fffdf8"><span style="flex:none;width:10px;height:10px;border-radius:5px;background:#2f7a4f;box-shadow:0 0 0 4px #e3eee5"></span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font-size:14px">Tilkoblet</b><span style="font-size:12.5px;color:#6b665c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">ha.hjemme.no · Mobilapp-integrasjonen</span></span><span style="flex:none;font:700 12.5px Manrope;color:#2f7a4f">{{ connSum }}</span></div>
+
+<div style="display:flex;padding:3px;border-radius:14px;background:#e6e0d4;gap:3px"><sc-for list="{{ segs }}" as="g" hint-placeholder-count="2"><button type="button" onClick="{{ g.go }}" style="flex:1;height:36px;border-radius:11px;border:0;background:{{ g.bg }};color:#1b1a17;cursor:pointer;font:700 13px Manrope;box-shadow:{{ g.sh }}">{{ g.n }}</button></sc-for></div>
+
+<sc-for list="{{ groups }}" as="gr" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:8px">
+<span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:{{ gr.c }};padding:6px 4px 0">{{ gr.h }}</span>
+<div style="border-radius:20px;background:#fffdf8;overflow:hidden">
+<sc-for list="{{ gr.rows }}" as="d"><div style="border-top:{{ d.bt }};opacity:{{ d.op }}">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px">
+<span style="flex:none;width:40px;height:40px;border-radius:12px;background:{{ d.ib }};color:{{ d.ic }};display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="{{ d.rx }}" y="2" width="{{ d.rw }}" height="20" rx="3"></rect><path d="M11 18h2"></path></svg></span>
+<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ d.n }}</b><span style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:12.5px;color:#6b665c"><span style="flex:none;white-space:nowrap;padding:1px 7px;border-radius:999px;background:{{ d.sb }};color:{{ d.sc }};font-weight:700">{{ d.s }}</span>{{ d.os }}</span></span>
+<button type="button" onClick="{{ d.pick }}" aria-label="Velg person: {{ d.pn }}" style="flex:none;height:36px;padding:0 8px 0 4px;border-radius:18px;border:1px solid #d8d1c2;background:#fff;display:flex;align-items:center;gap:4px;cursor:pointer;font:700 12px Manrope;color:#6b665c"><span style="width:28px;height:28px;border-radius:14px;background:{{ d.pc }};color:#fff;display:grid;place-items:center;font-size:11px">{{ d.pi }}</span>▾</button>
+</div>
+<sc-if value="{{ d.hasS }}"><div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 14px 66px"><sc-for list="{{ d.sens }}" as="x"><button type="button" onClick="{{ x.go }}" style="flex:none;white-space:nowrap;height:30px;padding:0 11px;border-radius:15px;border:1px solid {{ x.bd }};background:{{ x.bg }};color:{{ x.fg }};cursor:pointer;font:700 12px Manrope">{{ x.n }}</button></sc-for></div></sc-if>
+<sc-if value="{{ d.ios }}"><span style="display:block;padding:0 14px 12px 66px;font-size:12px;line-height:1.4;color:#8a6a2a">Begrenset på iPhone: bare skritt, etasjer og aktivitet. Puls og søvn krever Homelab-appen.</span></sc-if>
+</div></sc-for>
+</div></div></sc-for>
+
+<span style="font-size:12.5px;line-height:1.45;color:#6b665c;padding:0 4px;text-wrap:pretty">{{ hidden }}</span>
+</div>
+
+<div style="position:absolute;left:0;right:0;bottom:0;padding:12px 18px 30px;background:linear-gradient(rgba(243,239,230,0),#f3efe6 30%)"><button type="button" onClick="{{ save }}" style="width:100%;height:52px;border-radius:26px;border:0;background:#1b1a17;color:#f3efe6;cursor:pointer;font:800 15px Manrope">{{ saveT }}</button></div>
+
+<sc-if value="{{ sheet }}"><div onClick="{{ close }}" style="position:absolute;inset:0;background:rgba(27,26,23,.35)"></div><div style="position:absolute;left:0;right:0;bottom:0;border-radius:28px 28px 0 0;background:#f3efe6;padding:10px 18px 34px;display:flex;flex-direction:column;gap:10px">
+<span style="align-self:center;width:40px;height:5px;border-radius:3px;background:#cfc8ba"></span>
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;flex-direction:column"><b style="font:500 24px Newsreader,serif">Hvem bruker telefonen?</b><span style="font-size:13px;color:#6b665c">{{ sheet.dev }}</span></span><button type="button" onClick="{{ close }}" aria-label="Lukk" style="width:36px;height:36px;border-radius:18px;border:0;background:#e6e0d4;cursor:pointer;font:700 13px Manrope">✕</button></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:6px 0"><sc-for list="{{ sheet.ppl }}" as="p"><button type="button" onClick="{{ p.go }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0;border:0;background:transparent;cursor:pointer;font:700 13px Manrope;color:#1b1a17"><span style="width:56px;height:56px;border-radius:28px;background:{{ p.c }};color:#fff;display:grid;place-items:center;font-size:16px;box-shadow:{{ p.sh }}">{{ p.i }}</span>{{ p.n }}</button></sc-for></div>
+<sc-if value="{{ sheet.sug }}"><span style="font-size:12.5px;color:#6b665c">✦ Foreslått ut fra navnet: {{ sheet.sug }}</span></sc-if>
+</div></sc-if>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const P={seb:['Sebastian','#b23a2a'],cyb:['Cybele','#6f5ad6'],rune:['Rune','#2b5d8a'],ingrid:['Ingrid','#2f6b45'],none:['Ingen','#8f897c']};
+const DEV=[['seb17','Sebastian iPhone 17 Pro','ios','seb',['Skritt','Etasjer','Aktivitet']],['sebipad','Sebastian iPad Pro','ipad','seb',[]],['cyb12','Cybele OnePlus 12','and','cyb',['Skritt','Puls','Hvilepuls','Søvn','Kalorier','Aktivitet']],['rune13','Rune iPhone 13','ios','rune',['Skritt','Etasjer','Aktivitet']],['rune8','Rune OnePlus 8','and','rune',['Skritt','Puls','Søvn']],['s26','Samsung S26 Ultra','and',null,['Skritt','Puls','Hvilepuls','Søvn','Oksygen']]];
+const DEF=['Skritt','Puls','Hvilepuls','Søvn','Kalorier','Aktivitet'];
+class Component extends DCLogic {
+  state={seg:'tlf',own:Object.fromEntries(DEV.map(d=>[d[0],d[3]])),off:{},sheet:null,saved:false};
+  renderVals(){const s=this.state;
+    const list=DEV.filter(d=>s.seg==='alle'||d[2]!=='ipad');
+    const row=(d,i)=>{const [id,n,os,,sens]=d,o=s.own[id],pp=P[o||'none'],has=sens.length>0;
+      return{n,bt:i?'1px solid #ece6da':'0',op:has?1:.6,ib:os==='and'?'#e3eee5':os==='ios'?'#e6ecf5':'#ece6da',ic:os==='and'?'#2f6b4a':os==='ios'?'#2b5d8a':'#6b665c',rx:os==='ipad'?'3':'6',rw:os==='ipad'?'18':'12',
+        s:has?sens.length+' helsesensorer':'Ingen helsesensorer',sb:has?'#e3eee5':'#ece6da',sc:has?'#2f6b4a':'#6b665c',os:os==='and'?'Android':os==='ios'?'iPhone':'iPad',
+        pi:o?pp[0][0]:'+',pn:o?pp[0]:'Velg',pc:pp[1],pick:()=>this.setState({sheet:id}),
+        hasS:has&&!!o,ios:os==='ios'&&!!o,
+        sens:sens.map(x=>{const on=!(s.off[id]||{})[x]&&DEF.concat(['Etasjer','Oksygen']).includes(x);return{n:(on?'✓ ':'')+x,bd:on?'#1b1a17':'#d8d1c2',bg:on?'#1b1a17':'#fff',fg:on?'#f3efe6':'#1b1a17',go:()=>this.setState({off:{...s.off,[id]:{...(s.off[id]||{}),[x]:on}},saved:false})}})}};
+    const byP={};list.forEach(d=>{const k=s.own[d[0]]||'_';(byP[k]=byP[k]||[]).push(d)});
+    const groups=[...Object.keys(P).filter(k=>byP[k]).map(k=>({h:P[k][0].toUpperCase()+' · '+byP[k].length,c:P[k][1],rows:byP[k].map(row)})),...(byP._?[{h:'IKKE KOBLET · '+byP._.length,c:'#8f897c',rows:byP._.map(row)}]:[])];
+    const sd=s.sheet&&DEV.find(d=>d[0]===s.sheet);
+    const sug=sd&&Object.keys(P).find(k=>k!=='none'&&sd[1].toLowerCase().startsWith(P[k][0].toLowerCase()));
+    return{connSum:DEV.filter(d=>s.own[d[0]]).length+' av '+DEV.length+' koblet',
+      segs:[['tlf','Telefoner · '+DEV.filter(d=>d[2]!=='ipad').length],['alle','Alle mobilapp · '+DEV.length]].map(([k,n])=>({n,bg:s.seg===k?'#fffdf8':'transparent',sh:s.seg===k?'0 1px 3px rgba(0,0,0,.12)':'none',go:()=>this.setState({seg:k})})),
+      groups,hidden:'50 andre enheter fra Home Assistant (brytere, sensorer, rullegardiner) vises ikke her. De har ingen helsedata.',
+      saveT:s.saved?'✓ Lagret':'Lagre',save:()=>this.setState({saved:true}),
+      sheet:sd?{dev:sd[1],sug:sug?P[sug][0]:'',ppl:Object.keys(P).map(k=>({n:P[k][0],i:k==='none'?'–':P[k][0][0],c:P[k][1],sh:s.own[sd[0]]===k||(!s.own[sd[0]]&&k==='none')?'0 0 0 3px #f3efe6,0 0 0 5px #1b1a17':'none',go:()=>this.setState({own:{...s.own,[sd[0]]:k==='none'?null:k},sheet:null,saved:false})}))}:null,
+      close:()=>this.setState({sheet:null})}}
+}
+</script>
+</body>
+</html>
