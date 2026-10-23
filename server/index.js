@@ -92,6 +92,19 @@ app.get('/starting.html', async (c) => c.body(await readFile(join(resolve('publi
 const UPLOADS = resolve(config.dataDir, 'uploads');
 const PUBLIC = resolve('public');
 
+// Prompt 45 (SERVER45): originalen i Studie (PDF/bilde) skal kunne vises inne i appen/web (iframe/WebView fra samme opprinnelse).
+// Registrert FØR secureHeaders, så dette kjører etter den og erstatter den globale frame-ancestors 'none' for akkurat disse rutene.
+// Bare eieren får fila (ruten sjekker det); andre opprinnelser kan fortsatt ikke ramme den inn.
+const STUDY_FILE45 = /^\/api\/(?:study\/documents|studie\/docs)\/\d+\/(?:file|thumb)$/;
+app.use('/api/*', async (c, next) => {
+  await next();
+  if (!STUDY_FILE45.test(c.req.path) || c.res.status !== 200) return;
+  const ct = c.res.headers.get('content-type') ?? '';
+  const viewable = /^(application\/pdf|image\/(jpeg|png|webp|gif|heic|heif))\b/i.test(ct);
+  c.res.headers.set('Content-Security-Policy', viewable ? "frame-ancestors 'self'" : "default-src 'none'; sandbox; frame-ancestors 'self'");
+  c.res.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  c.res.headers.set('X-Content-Type-Options', 'nosniff');
+});
 app.use('*', secureHeaders({
   contentSecurityPolicy: {
     defaultSrc: ["'self'"],

@@ -363,7 +363,7 @@ for (const base of ['/study/documents', '/studie/docs']) {
     const r = ofUser(c.get('user'), c.req.param('id'));
     if (!r || !existsSync(fileOf(c.get('user'), r.id))) return c.json({ error: 'Fant ikke dokumentet' }, 404);
     const fname = r.filename.replace(/[^\w.\- ]/g, '_');
-    return c.body(dec(readFileSync(fileOf(c.get('user'), r.id))), 200, { 'Content-Type': r.mime, 'Content-Disposition': `${c.req.query('download') === '1' ? 'attachment' : 'inline'}; filename="${fname}"; filename*=UTF-8''${encodeURIComponent(r.filename)}`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox", 'Cross-Origin-Resource-Policy': 'same-origin' });
+    return c.body(dec(readFileSync(fileOf(c.get('user'), r.id))), 200, { 'Content-Type': r.mime, 'Content-Disposition': `${c.req.query('download') === '1' ? 'attachment' : 'inline'}; filename="${fname}"; filename*=UTF-8''${encodeURIComponent(r.filename)}`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' }); // prompt 45: CSP (frame-ancestors 'self') settes i index.js for file/thumb
   });
   // Prompt 45: miniatyr (bilde: originalen; PDF: side 1 som PNG) og «Prøv igjen» (hele kjeden på nytt fra originalfila).
   study44Api.get(`${base}/:id{[0-9]+}/thumb`, authOrToken, async (c) => {

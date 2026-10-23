@@ -239,6 +239,28 @@ test('Studie: status, «Ikke funnet», original, nedlasting, miniatyr og «Prøv
   st44._setStudyVision45(null); st45._setTools45({});
 });
 
+test('Studie: originalen (PDF) kan vises i appen – frame-ancestors self, uten sandbox, bare for eieren', async () => {
+  st44._setStudyText44(async () => 'Universitetet i Oslo\nKarakterutskrift\nIN1000 Introduksjon 2025 HØST B 10');
+  try {
+    const pdf = Buffer.from('%PDF-1.4\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF', 'latin1');
+    const r0 = await multipart('/api/study/documents', { file: new File([pdf], 'utskrift.pdf', { type: 'application/pdf' }) }, { cookie: ck });
+    assert.equal(r0.status, 201, r0.text);
+    const id = r0.body.doc.id;
+    let r = await A(`/api/study/documents/${id}/file`);
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get('content-type'), 'application/pdf');
+    assert.equal(r.headers.get('content-security-policy'), "frame-ancestors 'self'");
+    assert.doesNotMatch(r.headers.get('content-security-policy'), /sandbox|'none'/);
+    assert.equal(r.headers.get('x-content-type-options'), 'nosniff');
+    assert.equal(r.headers.get('x-frame-options'), 'SAMEORIGIN');
+    assert.match(r.headers.get('content-disposition'), /^inline;/);
+    assert.match((await A(`/api/study/documents/${id}/file?download=1`)).headers.get('content-disposition'), /^attachment;/);
+    assert.equal((await I(`/api/study/documents/${id}/file`)).status, 404, 'andre brukere får ikke fila');
+    // Andre ruter beholder den globale frame-ancestors 'none'.
+    assert.match((await A('/api/study/documents')).headers.get('content-security-policy'), /frame-ancestors 'none'/);
+  } finally { st44._setStudyText44(null); }
+});
+
 /* ---------------- AI-import ---------------- */
 
 const CLAUDE = [{ uuid: 'aaaa-1', name: 'Hardlinks', created_at: '2026-01-02T10:00:00Z', updated_at: '2026-01-02T11:00:00Z', chat_messages: [{ sender: 'human', text: 'Hvordan?', created_at: '2026-01-02T10:00:00Z' }, { sender: 'assistant', content: [{ type: 'text', text: 'Slik.' }] }] },
