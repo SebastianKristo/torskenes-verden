@@ -2,6 +2,21 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.41.0] – 23.10.2026 · prompt 46 – Kart, QR-innlogging overalt og oppdateringer som ikke henger
+- **Oppdateringen henger ikke lenger på 55 %:** byggesteget hadde ingen tidsgrense, og en lås fra en avbrutt oppdatering overlevde omstart. Nå har hvert steg tidsgrense, «Står fast» etter 3 min uten fremgang med Prøv igjen / Avbryt og gå tilbake / Vis logg, låsen rydder seg selv, og plass og minne sjekkes før start. Første oppdatering kjører fortsatt på den gamle updateren.
+- **Media «Utlogget» på mobil (rettet på ordentlig):** ukjente adresser ga «ikke innlogget» til appene og «finnes ikke» til web, så appen trodde du var logget ut. Serveren svarer nå riktig, og appen sjekker kontoen før den sier at du er utlogget.
+- **Kart (nytt, web og mobil, i Mer):** holdeplasser for buss, T-bane, trikk, tog og båt, dine soner, familien, og busser og trikker i sanntid for valgte soner.
+- **QR-innlogging overalt:** Finans og Kalender på iOS, Android og Mac. Logg inn på en annen enhet ved å skanne med Finans. QR-koden har bare en engangskode, aldri et innloggingstoken, og godkjenning krever Face ID.
+- **Glimt:** svarer på «dyreste abonnement» og faste utgifter fra dine faktiske data, «Minn meg på å avslutte Spotify 15.10» lager påminnelse og kobler den til abonnementet, sammensatte værspørsmål («Oslo i dag og New York i morgen»), bruker standardkalenderen, forstår «Dune – Kino på Colosseum», skriver gjøremål med dine egne ord, og bruker aldri nettet når nettsøk er av.
+- **Vær «Min posisjon» (rettet på ordentlig):** eget standardsted øverst i Steder som følger telefonen, og velger med liquid glass-effekt.
+- **Sporing:** Posten/Bring virker (svaret ble lest feil), PostNord uten nøkkel, og innlogging med Posten-, Bring- og PostNord-konto finner pakkene selv.
+- **Kalender:** standardkalender, rask time via Glimt (tittel og sted), vakt mot grå skjerm ved +, Mac-oppdatering mot din egen serveradresse (ikke 172.18.0.3).
+- **Studie:** vitnemål leses som tabeller (FS/UiO, NTNU, vgs), skannede sider i høyere oppløsning, og koden regner snittet.
+- **Claude-import:** minner i markdown (`claude-memory-*/areas/*.md`) importeres.
+- **Nyheter:** innstillingene ligger i Innstillinger, egne kategorier og «For deg», sammendrag per kategori, favicon på kildene, haptikk på tilbake.
+- **Også:** Google Photos-album som bakgrunn, Subscription-logg med prøveperioder og alle tidligere fakturaer, prøveperioder skjules når ingen er aktive, kvitteringen vises over panelet i Finans på web, Gjøremål lukker når du fullfører, Glimt-ring rundt profilbildet (uten firkant på iPad/Fold), jevnere overgang til Hjem på iPad/Fold, Bibel og «Glimt · Ukas vær» på iPad/Fold, Søk og Snarveier som egne kort på Hjem, Ruter-innstillinger i kortet i redigering, nye ikoner for Soner og Helse.
+- **Manuelt:** sett `PUBLIC_URL` i `.env` (f.eks. `https://home.kristo.no`).
+
 ## [4.40.0] – 23.10.2026 · prompt 45 – Glimt forstår hva du mener, iPad/Fold-oppsett og Logger uten oppsett
 - **Glimt (ny motor for hele appen):** Hjem, Kalender, Gjøremål, Finans og Chat bruker samme motor. Modellen forstår hva du mener og velger verktøy, mens dato, klokkeslett og beløp kontrolleres av appen (12.10, «fredag klokka sju», «neste uke», månedsskifte og årsskifte). Glimt bekrefter først når avtalen eller oppgaven faktisk er lagret, spør når noe er uklart, ber om bekreftelse før sletting og lager ikke duplikater. «Flytt den til fredag» forstår hvilken avtale du mener. Finans-søk på butikk, beløp, periode, kategori og kvitteringslinjer. Personlighet i AI-kontroll: Av · Litt · Full rakker. Rotårsakene står i `docs/glimt-dataflyt.md`.
 - **iPad:** Hjem i nytt brettoppsett (Glimt-kort til venstre, faner til høyre), sidelinje med Hjem-knapp, skann og wiggle-knapper, Gjøremål og Familie i brettoppsett.
