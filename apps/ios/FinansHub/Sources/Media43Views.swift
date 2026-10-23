@@ -80,23 +80,38 @@ struct Media43Chip: View {
     let text: String
     let on: Bool
     var count: Int? = nil
+    /// Prompt 45: tjenestens farge (Sonarr, Radarr, qBittorrent …) på aktiv fane og som prikk (Media45.swift).
+    var tint: String? = nil
     let act: () -> Void
 
     var body: some View {
         Button(action: act) {
             HStack(spacing: 5) {
+                if let tint, !on { Circle().fill(Media45.color(tint)).frame(width: 7, height: 7) }
                 Text(text).font(PF.ui(13, .semibold)).lineLimit(1)
                 if let count { Text("\(count)").font(PF.mono(11, bold: false)).opacity(0.7) }
             }
-            .foregroundStyle(on ? p.bg : p.ink)
+            .foregroundStyle(fg)
             .padding(.horizontal, 13).frame(height: 34)
-            .background(on ? p.ink : p.card, in: Capsule())
-            .overlay(Capsule().stroke(on ? p.ink : p.line, lineWidth: 1))
+            .background(bg, in: Capsule())
+            .overlay(Capsule().stroke(on ? bg : p.line, lineWidth: 1))
             .frame(minHeight: 44)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    private var bg: Color {
+        if !on { return p.card }
+        if let tint { return Media45.color(tint) }
+        return p.ink
+    }
+
+    private var fg: Color {
+        if !on { return p.ink }
+        if let tint { return Media45.onColor(tint) }
+        return p.bg
     }
 }
 
@@ -144,6 +159,8 @@ struct Media43Page: View {
                     .presentationDragIndicator(.visible)
             }
             .media43Sheets(p)
+            // Prompt 45: «Slett uovervåkede» (ark + Angre), Media45.swift.
+            .media45Host(p)
             .sheet(isPresented: Binding<Bool>(get: { Media44.shared.pickerOpen }, set: { Media44.shared.pickerOpen = $0 })) {
                 Media44SiteSheet(tab: m.tab).sheet43(p, store)
             }
@@ -162,14 +179,8 @@ struct Media43Page: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Button {
-                    Haptics.shared.tap()
-                    m.open = false
-                } label: {
-                    Text("‹ Tilbake").font(PF.ui(15, .semibold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
-                        .frame(minHeight: 44).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                // Prompt 45: systemets runde tilbakeknapp (Media45.swift).
+                Back45 { m.open = false }
                 Spacer(minLength: 8)
                 Button {
                     Haptics.shared.tap()
@@ -180,12 +191,8 @@ struct Media43Page: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Glimt i Media")
-                Button { Haptics.shared.tap(); m.settingsOpen = true } label: {
-                    Image(systemName: "gearshape").font(.system(size: 16, weight: .semibold)).foregroundStyle(p.ink)
-                        .frame(width: 44, height: 44).background(p.card, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Innstillinger for Media")
+                // Prompt 45: innstillingene ligger i Innstillinger → Media; ⋯ har snarveien og «Rydd uovervåkede».
+                Media45Menu()
             }
             Text("Media").font(PF.serif(34, medium: true)).foregroundStyle(p.ink)
         }
@@ -196,7 +203,7 @@ struct Media43Page: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 ForEach(Media43.tabs, id: \.0) { (t: (String, String)) in
-                    Media43Chip(text: t.1, on: m.tab == t.0, count: count(t.0)) {
+                    Media43Chip(text: t.1, on: m.tab == t.0, count: count(t.0), tint: t.0) {
                         Haptics.shared.select()
                         m.tab = t.0
                     }
@@ -524,6 +531,15 @@ struct Media43Detail: View {
             // Prompt 44: ⟳ Last ned på nytt (interaktivt søk) og Slett fil for film med fil.
             if t.kind == "movie" && t.hasFile { Media44MovieFileActions(t: t, profile: profiles.first(where: { $0.id == t.profileId })?.name ?? "") }
             if t.kind == "series" { seasons }
+            // Prompt 45: slett episodefiler som ikke er overvåket (bare admin), Media45.swift.
+            if t.kind == "series" && Update28Model.isAdmin(store) {
+                Button { Media45Clean.shared.open(service: "sonarr", seriesId: t.id, season: nil, store) } label: {
+                    Text("Slett uovervåkede episoder …").font(PF.ui(13.5, .semibold)).foregroundStyle(p.ink)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .overlay(Capsule().stroke(p.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
             Button(role: .destructive) { confirmDelete = true } label: {
                 Text(t.kind == "series" ? "Slett serien" : "Slett filmen").font(PF.ui(13.5, .semibold)).foregroundStyle(p.lab)
                     .frame(maxWidth: .infinity, minHeight: 44)

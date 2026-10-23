@@ -10,7 +10,7 @@ import UserNotifications
 // Jobben kjører på serveren og fortsetter selv om appen lukkes. Appen ber om litt ekstra tid (beginBackgroundTask) så
 // svaret som regel kommer fram og vises som lokalt varsel «Glimt» (kategori AI_ANSWER). Rekker den det ikke, henter
 // BGAppRefreshTask /api/notify/pending senere (Notify31.swift). Kommer brukeren tilbake uten å trykke på varselet:
-// banneret «Glimt svarte mens du var borte» i 4 s (AiJob31.swift).
+// (prompt 45: ingen banner ved retur – bare systemvarselet).
 
 struct Assist31Answer: Equatable {
     var text: String = ""
@@ -313,7 +313,6 @@ final class Assist31 {
         if UIApplication.shared.applicationState == .active { return }
         let body: String = a.plain
         if body.isEmpty { return }
-        awayPending = ("Glimt svarte mens du var borte", body, go)
         awayGo = go
         awayChat = chatId ?? ""
         guard NotifyModel.shared.on && NotifyModel.shared.aiBg else { return }
@@ -322,10 +321,9 @@ final class Assist31 {
         Notify31.postAnswer(body: body, go: go, chatId: chatId ?? "", id: key)
     }
 
+    /// Prompt 45: når appen åpnes igjen vises ingen banner – svaret ligger i chatten / svarfeltet på Hjem.
     private func becameActive() {
-        guard let p = awayPending else { return }
         awayPending = nil
-        AiJobs31.shared.showAway(p.0, p.1)
     }
 
     /// Varselet ble trykket på: ikke vis banneret i tillegg.

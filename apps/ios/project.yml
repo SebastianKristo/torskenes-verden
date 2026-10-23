@@ -111,6 +111,9 @@ targets:
             CFBundleURLSchemes: [magnet]
         # Prompt 33: canOpenURL(kalender://) – åpne Kalender-appen når den er installert, ellers Homelabs egen kalender.
         LSApplicationQueriesSchemes: [kalender]
+        # Prompt 45: sonevarsler som Communication Notifications (soneikonet stort, app-ikonet som merke), Zone45.swift.
+        # Selve rettigheten (com.apple.developer.usernotifications.communication) legges til når appen signeres med egen Team ID.
+        NSUserActivityTypes: [INSendMessageIntent]
         # Prompt 41: tilgangsgruppen for det delte enhets-tokenet (KalShared41, SharedKal/Group). Tom prefiks uten Team ID → ignoreres.
         KalKeychainGroup41: $(AppIdentifierPrefix)no.kristo.shared
         # Prompt 41: standardadressen appen leveres med (innlogging uten serverfelt, Server41.swift).

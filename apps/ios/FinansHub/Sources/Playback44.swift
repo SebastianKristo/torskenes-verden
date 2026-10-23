@@ -371,7 +371,8 @@ struct Playback44Body: View {
     var body: some View {
         switch m.sub {
         case "history": Playback44History()
-        case "stats": Playback44Stats()
+        // Prompt 45: mobilsiden for statistikk (7 d · 30 d · År · Alt), Media45.swift. Eldre server: den gamle.
+        case "stats": Playback45Stats()
         case "libs": Playback44Libs()
         default: Playback44Now()
         }

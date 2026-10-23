@@ -62,6 +62,9 @@ extension Store {
         // Prompt 32: fanelinjene på Domener, Abonnement og Familie (secNav) og Glimt-grensen (hs_timeout_s).
         Nav32b.shared.take(o)
         Search32b.shared.take(o)
+        // Prompt 45: Mer – tittel og de fire store boksene (layout.mer45), og Finans → Mer (layout.fmer45).
+        Mer45.shared.take(o)
+        Fin45More.shared.take(o)
     }
 
     /* ---------- Tilpass hver side ---------- */
@@ -514,20 +517,32 @@ struct PaperRail: View {
     var style: String = "text"
     var showHome: Bool = false
     var goHome: () -> Void = {}
+    /// Prompt 45: siden som redigeres (wiggle) – da står + / ↺ / ✓ nederst i stedet for skann-knappen.
+    var editPage: String? = nil
+    var scanLabel: String = "Skann"
+    @Environment(\.accessibilityReduceMotion) private var reduce45
 
     var body: some View {
         let shape: RoundedRectangle = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        // Prompt 45: Hjem-knappen i fane-form (samme mål som aktiv fane) med jevn inn/ut-animasjon (Layout45.swift).
+        let home45: Bool = showHome && !Layout45.shared.homeLeaving
         VStack(spacing: 4) {
-            if showHome {
-                RailHomeButton25(act: goHome)
-                    .padding(.bottom, 4)
-                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+            if home45 {
+                RailHome45()
+                    .padding(.bottom, 8)
+                    .transition(.railHome45(reduce: reduce45))
             }
             ForEach(tabs, id: \.0) { t in item(t.0, t.1, t.2, on: current == t.0) }
             Spacer(minLength: 8)
-            if showPlus { PaperPlusButton(label: "Skann", tap: plusTap, hold: plusHold) }
+            if let e = editPage {
+                if RailEdit45.handles(e) { RailEdit45(page: e) }
+            } else if showPlus {
+                RailScan45(label: scanLabel, tap: plusTap, hold: plusHold)
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+            }
         }
-        .animation(.easeOut(duration: 0.15), value: showHome)
+        .animation(reduce45 ? .easeOut(duration: 0.18) : .spring(response: 0.32, dampingFraction: 0.78), value: home45)
+        .animation(.timingCurve(0.2, 0.9, 0.25, 1.15, duration: 0.32), value: editPage)
         .padding(.horizontal, 6).padding(.vertical, 12)
         .frame(width: 84)
         .frame(maxHeight: .infinity)

@@ -1055,15 +1055,28 @@ struct Media43IndexerAddSheet: View {
 
 struct Media43SettingsSheet: View {
     @Environment(Store.self) private var store
+    @MainActor private var m: Media43 { Media43.shared }
+
+    var body: some View {
+        ScrollView {
+            Media43SettingsContent(inSheet: true).padding(20)
+        }
+        .task { await m.loadStatus(store) }
+    }
+}
+
+/// Prompt 45: innholdet brukes både i arket og i Innstillinger → Media (claude-code-innstillinger-samlet.md).
+struct Media43SettingsContent: View {
+    @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @Environment(\.dismiss) private var dismiss
     @MainActor private var m: Media43 { Media43.shared }
     @AppStorage("media43_calendar") private var inCalendar: Bool = true
+    var inSheet: Bool = false
 
     var body: some View {
-        ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Media43SheetHead(title: "Media", sub: "Tjenester, avspilling og kalender")
+                if inSheet { Media43SheetHead(title: "Media", sub: "Tjenester, avspilling og kalender") }
                 Text("TJENESTER").font(PF.mono(10)).tracking(1.2).foregroundStyle(p.lab)
                 VStack(spacing: 0) {
                     if m.services.isEmpty { Text("Ingen status fra serveren ennå.").font(PF.ui(13)).foregroundStyle(p.mut).padding(14) }
@@ -1080,7 +1093,7 @@ struct Media43SettingsSheet: View {
                 }
                 .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 Button {
-                    dismiss()
+                    if inSheet { dismiss() }
                     m.open = false
                     store.paperGo("innst-integ")
                 } label: {
@@ -1105,8 +1118,6 @@ struct Media43SettingsSheet: View {
                 Text("Varsler når en nedlasting er ferdig, feiler eller står fast sendes fra serveren (Glimt-brief og push).")
                     .font(PF.ui(12)).foregroundStyle(p.mut)
             }
-            .padding(20)
-        }
-        .task { await m.loadStatus(store) }
+            .task { if !inSheet { await m.loadStatus(store) } }
     }
 }

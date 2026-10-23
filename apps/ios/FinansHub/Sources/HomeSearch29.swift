@@ -101,6 +101,13 @@ final class Search29Model {
         // Prompt 32: alle søk logges for brukeren (vises bare på web), og snarveier til sider åpnes med en gang (Search32.swift).
         Search32b.shared.log(t, engine: engine, store)
         if Search32b.shared.tryShortcut(t, engine: engine, store) { appt = nil; return }
+        // Prompt 45: med Glimt valgt går teksten rett til den felles agenten (forstår, velger verktøy, utfører og svarer),
+        // i stedet for at appen gjetter avtale/huskebeskjed først. Eldre server (404): kjeden under som før (GlimtAgent45.swift).
+        if engine == "ai" && GlimtAgent45.shared.available {
+            appt = nil
+            store.suggestions = []
+            if await GlimtAgent45.shared.home(t, store) { return }
+        }
         let question36: Bool = Assist36.blocksAppt(t)
         var isTime: Bool = appt != nil && !question36
         if !isTime && !question36 && t.count > 4 {
@@ -163,6 +170,8 @@ struct HomeSearch29: View {
         }
         .animation(.easeOut(duration: 0.15), value: m.appt)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: Assist31.shared.homeOpen)
+        // Prompt 45: bekreftelse og oppfølgingsspørsmål fra Glimt-agenten.
+        .glimtAgent45Host()
         .task(id: store.account?.id ?? "") { await m.boot(store) }
     }
 

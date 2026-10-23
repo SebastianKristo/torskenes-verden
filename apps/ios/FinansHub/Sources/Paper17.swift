@@ -105,7 +105,7 @@ final class NotifyModel {
     var hasCustom = false
     /// Prompt 31: «AI-svar i bakgrunnen» (ai_bg_notify, på som standard).
     var aiBg = true
-    /// Prompt 39: «Vis svaret i appen også» (n_ai_in, på som standard): banneret «Glimt svarte mens du var borte».
+    /// Prompt 39: n_ai_in – prompt 45: brukes ikke lenger (ingen banner ved retur), leses bare så lagringen er uendret.
     var aiIn = true
     var authorized: UNAuthorizationStatus = .notDetermined
     var loaded = false
@@ -342,9 +342,7 @@ struct PaperNotifySettings: View {
                     if n.on {
                         toggleRow("AI-svar i bakgrunnen", "Får du svar mens du er ute av appen, kommer det som varsel fra Glimt", n.aiBg) { n.aiBg = $0; n.save(store) }
                         sep
-                        // Prompt 39: banneret i appen kan slås av (n_ai_in). Svaret ligger uansett i chatten.
-                        toggleRow("Vis svaret i appen også", "Banner øverst når du kommer tilbake til appen", n.aiIn) { n.aiIn = $0; n.save(store) }
-                        sep
+                        // Prompt 45: «Vis svaret i appen også» (n_ai_in) er fjernet – svar mens appen er lukket kommer bare som varsel.
                         // Prompt 39: flyttet hit fra PROGRAMVARE (samme nøkkel, notify_updates / upd_note).
                         if Update28Model.isAdmin(store) {
                             toggleRow("Varsle om nye versjoner", "Nordlys OS · banner på Hjem og push", Update30Model.shared.notifyUpdates) { Update30Model.shared.setSetting("notify_updates", $0, store) }
@@ -662,13 +660,15 @@ struct PaperSettings17: View {
             ])
             // Prompt 42: HELSE (FAMILIE) – Apple Health, Health Connect, Home Assistant · Mobilapp og hva som deles (Health42.swift).
             group("Helse (Familie)", 4, Health42.rows(store, p))
+            // Prompt 45: én seksjon per modul (claude-code-innstillinger-samlet.md) – Media, Gjøremål, Ruter og Sonevarsler
+            // samlet her i stedet for egne innstillingssider inne i modulene (Settings45.swift).
+            group("Moduler", 3, Settings45.rows(store))
             group("App", 2, [
                 // Prompt 34: APP → AI og modeller (AI-kontroll i fullskjerm).
                 PaperLinkRow(name: "AI og modeller", sub: "Modeller, jobber, forbruk og nøkler", icon: "cpu") { AiCtl34.shared.show("ov") },
                 PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
                 PaperLinkRow(name: "Kalendere", sub: "Google Kalender · Home Assistant · Skole-iCal", icon: "calendar") { Int26Nav.openKal(from: nil, store) },
-                // Prompt 44: Innstillinger → Gjøremål (synk med Home Assistant), flyttet fra Gjøremål-siden (Tasks44Subs.swift).
-                PaperLinkRow(name: "Gjøremål", sub: "Synk med Home Assistant · på/av", icon: "checklist") { store.paperGo("innst-huske") },
+                // Prompt 44: Innstillinger → Gjøremål ligger nå under MODULER (prompt 45, Settings45.swift).
                 // Prompt 43: Widgets-galleriet (Widgets43.swift).
                 PaperLinkRow(name: "Widgets", sub: "Media, Avganger, Kalender og 3 til", icon: "square.grid.2x2") { Widgets43.shared.open = true },
                 PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Media, Entur, Bring og 17 til", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
@@ -829,6 +829,10 @@ struct PaperSettingsSub: View {
             case "sysbackup": Backup29Page()
             // Prompt 44: Innstillinger → Gjøremål (synk med Home Assistant).
             case "huske": Tasks44SyncPage()
+            // Prompt 45: Media, Ruter og Sonevarsler (Settings45.swift).
+            case "media": Media43SettingsContent(inSheet: false)
+            case "ruter": Ruter45SettingsPage()
+            case "sone": Zone45SettingsPage()
             default: SettingsSubpage(page: key)
             }
         }
@@ -861,6 +865,9 @@ struct PaperSettingsSub: View {
         "oppdatering": ("Oppdatering", "Versjon og oppdatering av serveren"),
         "sysbackup": ("Backup", "Hele systemet · automatisk og gjenoppretting"),
         "huske": ("Gjøremål", "Synk med Home Assistant"),
+        "media": ("Media", "Tjenester, avspilling og kalender"),
+        "ruter": ("Ruter", "Min reise og anbefalte reiser"),
+        "sone": ("Sonevarsler", "Familie · hvem og hvilke soner"),
     ]
 }
 

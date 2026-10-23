@@ -91,7 +91,7 @@ enum Notify31 {
     }
 
     /// GET /api/notify/pending?since= → lokale varsler. Køen inneholder AI-svar, prøve-varsler, oppdatering og rask time.
-    /// post = false (appen er åpen): ingen varsler, men et nytt Glimt-svar vises som «Glimt svarte mens du var borte».
+    /// post = false (appen er åpen): ingen varsler, og ingen banner (prompt 45: Glimt-svar bare som systemvarsel).
     @MainActor static func fetchPending(_ api: API, post: Bool = true) async {
         let since: String = UserDefaults.standard.string(forKey: sinceKey) ?? ""
         let q: String = since.isEmpty ? "" : "?since=" + (since.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? since)
@@ -119,7 +119,8 @@ enum Notify31 {
         }
         if let now = JS.str(root, "now") ?? JS.str(root, "cursor") { newest = now }
         if !newest.isEmpty { UserDefaults.standard.set(newest, forKey: sinceKey) }
-        if !lastAi.isEmpty && !since.isEmpty { AiJobs31.shared.showAway("Glimt svarte mens du var borte", lastAi) }
+        // Prompt 45: ingen banner i appen for svar som kom mens den var lukket (bare systemvarsel).
+        _ = lastAi
     }
 
     /// Ett element fra køen som lokalt varsel (hopper over det som allerede er vist).

@@ -394,6 +394,8 @@ struct PaperWeatherView: View {
         // Hold inne et kort (0,6 s) eller «Rediger kort» nederst for å redigere. Scroll virker hele tiden.
         ForEach(Array(Vaer41.shared.visible.enumerated()), id: \.element) { (pair: (offset: Int, element: String)) in
             card41(pair.element, w).vaer41Wiggle(pair.offset)
+            // Prompt 45: «MIN POSISJON» – været der denne enheten er, rett under Nå-kortet (Vaer45.swift).
+            if pair.element == "na" { Vaer45HereCard() }
         }
         Vaer41EditButton().padding(.top, 6)
         Button { store.openLink(w.yrUrl) } label: {

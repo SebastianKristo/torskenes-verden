@@ -148,6 +148,7 @@ struct ShareSheet: UIViewControllerRepresentable {
 struct PaperShell: View {
     @Environment(Store.self) private var store
     @Environment(\.scenePhase) private var phase
+    @Environment(\.horizontalSizeClass) private var hsc45
     let scan: ScanActions
     @Binding var photos: [PhotosPickerItem]
     @Binding var files: Bool
@@ -156,7 +157,8 @@ struct PaperShell: View {
         // Appen tvinger mørk modus i roten (klassisk design), så systemets valg leses fra skjermen.
         let p = PaperPalette.of(store.paperMode, system: paperSystemScheme(phase))
         GeometryReader { g in
-            let wide = g.size.width >= 600
+            // Prompt 45: én felles regel for brettoppsett (≥ 700 pt og ikke kompakt), Layout45.swift. Før: bredde ≥ 600 her.
+            let wide = Layout45.mode(width: g.size.width, hsc: hsc45) == .wide
             let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
             // Prompt 28: med tastaturet oppe (safe area-bunnen er da tastaturet) står fanelinja 8 pt over tastaturet,
             // og FAB-en følger med (claude-code-sok-tastatur.md).
@@ -168,8 +170,11 @@ struct PaperShell: View {
             // Prompt 41: Bursdager har heller ingen fanelinje eller skanneknapp (Birthdays41.swift).
             // Prompt 42: samme regel brukes av Hjem-knappen (NavHome42.swift), så den ligger i Store.nav42BarShown.
             let showBar = store.nav42BarShown
+            // Prompt 45: på iPad har Gjøremål samme sidelinje som Hjem (claude-code-gjoremal-fold-navbar-glimt.md).
+            let rail45: Bool = wide && (showBar || store.inTasks37)
             // Prompt 23: ingen skann-knapp på Aksjer.
-            let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
+            // Prompt 45: i brettet modus ligger skann-knappen i sidelinja – ingen flytende knapp i tillegg.
+            let fab = !wide && showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
                 p.bg.ignoresSafeArea()
                 VStack(spacing: 0) {
@@ -177,13 +182,13 @@ struct PaperShell: View {
                     // Prompt 22: FinansHub-sidene bruker «Lys hovedbok» (lys-tokens) som standard (Theme22.swift).
                     content(store.finPalette22(p)).environment(\.paper, store.finPalette22(p)).frame(maxWidth: .infinity, maxHeight: .infinity)
                         // Sidene fra den klassiske appen skal ikke ligge under skinnen på bred skjerm.
-                        .padding(.leading, wide && showBar && (store.paperClassic != nil || store.paperFin != nil) ? 108 : 0)
+                        .padding(.leading, rail45 && (store.paperClassic != nil || store.paperFin != nil) ? 108 : 0)
                         // Prompt 34: innholdet går helt ned bak fanelinjen og skann-knappen (claude-code-innhold-under-navbar.md).
                         // Tidligere sto en Color.clear-rad her, så scroll-innholdet stoppet over linja og bakgrunnen ble en flat stripe.
                         // safeAreaInset gir scroll-visningene luft nederst, men de tegner fortsatt under linja (Nav34.swift).
                         .safeAreaInset(edge: .bottom, spacing: 0) { Nav34BarSpace(height: showBar && !wide ? 62 - shift + 10 : 0) }
                 }
-                if showBar && wide {
+                if rail45 {
                     PaperTabBar(scan: scan, rail: true)
                         .padding(.leading, 12)
                         .padding(.vertical, 12)
@@ -224,6 +229,11 @@ struct PaperShell: View {
                     .animation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.24), value: Kb32b.shared.frame)
                     .transition(.opacity)
                 }
+                // Prompt 45: iPad – «Ny oppgave …» og ✦ (Glimt) nederst i oppgavekolonnen, til høyre for sidelinja og
+                // listekolonnen og til venstre for Glimt-/detaljkolonnen (Tasks43Wide.swift). Følger tastaturet.
+                if wide && store.inTasks37 && TaskDock22.shared.cur != Tasks32b.archId && !Tasks37UI.shared.anySheet {
+                    Tasks45WideDock(width: g.size.width, kb: kb28, safeBottom: g.safeAreaInsets.bottom)
+                }
             }
             .overlay(alignment: .bottomTrailing) {
                 if fab {
@@ -251,6 +261,9 @@ struct PaperShell: View {
             // Prompt 41: svar-pillen vokser til fullskjerm og blir Chat (Search41Pull.swift).
             .overlay { Pull41Overlay() }
             .environment(\.paperWide, wide)
+            .environment(\.layoutMode45, wide ? .wide : .compact)
+            .onAppear { Layout45.shared.set(wide) }
+            .onChange(of: wide) { (_: Bool, v: Bool) in Layout45.shared.set(v) }
         }
         .environment(\.paper, p)
         .animation(.easeOut(duration: 0.16), value: store.paperBgOpen)
@@ -475,8 +488,11 @@ struct PaperTabBar: View {
     var body: some View {
         let cur = current
         if rail {
-            PaperRail(tabs: tabs, current: cur, showPlus: !floating, tapTab: { id, on in tapTab(id, on: on) }, plusTap: plusTap, plusHold: plusHold,
-                      style: store.navStyle25, showHome: !store.paperIsHome25, goHome: { store.paperGoHome25() })
+            // Prompt 45: skann-knappen (skann-ikon) ligger alltid i sidelinja (ikke flytende), skjules på sider der den ikke
+            // hører hjemme og mens man redigerer – da står + / ↺ / ✓ der i stedet (Layout45.swift).
+            PaperRail(tabs: tabs, current: cur, showPlus: !Layout45.scanHidden(store), tapTab: { id, on in tapTab(id, on: on) }, plusTap: plusTap, plusHold: plusHold,
+                      style: store.navStyle25, showHome: !store.paperIsHome25, goHome: { store.paperGoHome25() },
+                      editPage: store.paperEditPage, scanLabel: plusLabel)
         } else {
             // Prompt 42: Hjem-knappen etter valget i Tilpass → Fanelinje → Hjem-knapp (NavHome42.swift).
             let nh: String = NavHome42.shared.value
@@ -537,6 +553,8 @@ struct PaperTabBar: View {
     private func plusTap() {
         Haptics.shared.tap()
         if store.paperTab == "abo" { store.subAdding = true; return }
+        // Prompt 45: i sidelinja erstatter knappen den flytende «Ny sending» på Sporing.
+        if rail && store.paperTab == "sporing" && store.paperClassic == nil { store.trackAddOpen = true; return }
         if store.paperInDomains { Dom38Glimt.shared.tap(store); return }
         store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
         scan.camera()
@@ -846,9 +864,31 @@ struct PaperPage: View {
     @State private var scrolled = false
 
     var body: some View {
+        // Prompt 45: Hjem på iPad (brettet modus) er 1c – Glimt-kort til venstre, faner til høyre (Home45Wide.swift).
+        if wide && store.paperTab == "hjem" {
+            Home45Wide()
+        } else if wide && store.paperTab == "familie" {
+            // Prompt 45: Familie på iPad – kartet står stille til venstre, bare høyre kolonne scroller (Family16.swift).
+            VStack(spacing: 0) {
+                PaperHero(home: false)
+                FamilyView()
+                    .padding(.leading, 108 + 16)
+                    .padding(.trailing, 16)
+                    .padding(.top, 14)
+                    .padding(.bottom, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            }
+            .ignoresSafeArea(edges: .top)
+        } else {
+            scrollPage
+        }
+    }
+
+    @ViewBuilder private var scrollPage: some View {
         let home = store.paperTab == "hjem"
         // Prompt 43: Gjøremål på iPad bruker hele bredden (tre kolonner, Tasks43Wide.swift).
-        let maxW: CGFloat = wide ? (home ? 960 : (store.paperTab == "huske" || store.paperTab == "finans" ? 1500 : 720)) : .infinity
+        // Prompt 45: Familie på brettet skjerm har ingen maksbredde (Family16.swift, wideBody45).
+        let maxW: CGFloat = wide ? (home ? 960 : (store.paperTab == "huske" || store.paperTab == "finans" || store.paperTab == "familie" ? 1500 : 720)) : .infinity
         VStack(spacing: 0) {
             PaperHero(home: home)
             // Prompt 25: ScrollViewReader for «Ta meg dit →» (Settings25.swift).
@@ -870,7 +910,8 @@ struct PaperPage: View {
                         .padding(.leading, wide ? 108 : 0)
                         // Prompt 32: Innstillinger har ingen fanelinje eller skann-knapp: 28 pt + safe area nederst.
                         // Prompt 37: Gjøremål – plass til feltet nederst (60 + bunnmarg + 16).
-                        .padding(.bottom, store.inSettings32b ? 28 : (store.inBible39 || store.inBirthdays41) ? 24 : (store.inTasks37 && !wide ? 124 : (store.fabMode == "float" && !wide ? 112 : 20)))
+                        // Prompt 45: også på iPad ligger «Ny oppgave …» + ✦ nederst i oppgavekolonnen.
+                        .padding(.bottom, bottomPad45)
                 }
             }
             .coordinateSpace(name: "ppage")
@@ -898,7 +939,8 @@ struct PaperPage: View {
                 }
             )
             // Prompt 40: Bibel-siden går 36 pt opp i bakgrunnen (de andre sidene 23 pt). Kortet har egen skygge og runde hjørner.
-            .padding(.top, store.inBible39 ? -36 : -23)
+            // Prompt 45: Gjøremål har ikke bakgrunnsbilde, og innholdet overlapper ikke toppen (ingen negativ marg).
+            .padding(.top, topShift45)
             // Prompt 28: pillene i redigeringsmodus ligger over listen, utenfor scroll-innholdet (Wiggle28.swift).
             .edit28Layer(p)
             .overlay(alignment: .top) { Mer30Pills() }
@@ -911,6 +953,20 @@ struct PaperPage: View {
             }
         }
         .ignoresSafeArea(edges: .top)
+    }
+
+    private var bottomPad45: CGFloat {
+        if store.inSettings32b { return 28 }
+        if store.inBible39 || store.inBirthdays41 { return 24 }
+        if store.inTasks37 { return 124 }
+        if store.fabMode == "float" && !wide { return 112 }
+        return 20
+    }
+
+    private var topShift45: CGFloat {
+        if store.inBible39 { return -36 }
+        if store.paperTab == "huske" { return 0 }
+        return -23
     }
 
     /// Scroller til raden som skal fremheves (midt på skjermen).
@@ -930,7 +986,8 @@ struct PaperPage: View {
         case "finans": PaperFinance()
         case "fliste": PaperFinList()
         case "finn": PaperFinn()
-        case "fmer": PaperFinMoreGrid()
+        // Prompt 45: Finans → Mer i samme design som Mer (Fin45More.swift). PaperFinMoreGrid brukes ikke lenger.
+        case "fmer": PaperFinMore45()
         case "fsok": PaperFinSearch()
         case "ftx": PaperTxDetailView()
         case "abo": PaperSubs()
@@ -989,14 +1046,22 @@ struct PaperHero: View {
     @Environment(\.paperWide) private var wide
     let home: Bool
 
+    /// Prompt 45: Gjøremål har ikke bakgrunnsbilde – Papir-bakgrunnen og mørk tekst, som Nordlys (claude-code-gjoremal-uten-bakgrunn.md).
+    private var plain45: Bool { store.paperTab == "huske" && store.paperClassic == nil && store.paperFin == nil }
+    private var ink45: Color { plain45 ? p.ink : store.heroInk }
+
     var body: some View {
         ZStack(alignment: .bottom) {
-            background
-            // Prompt 24: bakgrunnen til valgt bolig (Boliger24Hero.swift).
-            if store.paperTab == "boliger" && store.folder == nil { Bol24HeroLayer() }
-            // Mørk toning øverst og nederst, så teksten alltid er lesbar.
-            LinearGradient(stops: [.init(color: .black.opacity(0.25), location: 0), .init(color: .clear, location: 0.35), .init(color: .black.opacity(0.45), location: 1)],
-                           startPoint: .top, endPoint: .bottom)
+            if plain45 {
+                p.bg
+            } else {
+                background
+                // Prompt 24: bakgrunnen til valgt bolig (Boliger24Hero.swift).
+                if store.paperTab == "boliger" && store.folder == nil { Bol24HeroLayer() }
+                // Mørk toning øverst og nederst, så teksten alltid er lesbar.
+                LinearGradient(stops: [.init(color: .black.opacity(0.25), location: 0), .init(color: .clear, location: 0.35), .init(color: .black.opacity(0.45), location: 1)],
+                               startPoint: .top, endPoint: .bottom)
+            }
             VStack(alignment: .leading, spacing: 6) {
                 topRow
                 Spacer(minLength: 0)
@@ -1006,9 +1071,9 @@ struct PaperHero: View {
             .padding(.trailing, 22)
             .padding(.top, topInset + 10)
             // Prompt 40: på Bibel overlapper første kort hero med 36 pt, så tittelen flyttes like mye opp (minst 12 pt luft).
-            .padding(.bottom, home ? 36 : (store.inBible39 ? 47 : 34))
+            .padding(.bottom, home ? 36 : (store.inBible39 ? 47 : (plain45 ? 12 : 34)))
         }
-        .frame(height: (home ? (wide ? 230 : 172) : 154) + topInset)
+        .frame(height: (home ? (wide ? 230 : 172) : (plain45 ? 132 : 154)) + topInset)
         // Prompt 41: ingen bildekreditering på Hjem (flyttet til Innstillinger → Tilpass → Bakgrunn, Bg41Oslo.swift).
         .clipped()
     }
@@ -1081,18 +1146,30 @@ struct PaperHero: View {
                     }
                 }
                 .frame(width: 38, height: 38)
+                .overlay(Circle().stroke(plain45 ? p.line : Color.clear, lineWidth: 1))
+                .shadow(color: Color.black.opacity(plain45 ? 0.12 : 0), radius: 6, y: 3)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Innstillinger")
         }
     }
 
-    private func pill(_ t: String, _ act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            Text(t).font(PF.ui(12.5, .semibold)).foregroundStyle(.white).lineLimit(1).padding(.horizontal, 12).frame(height: 34)
-                .background(Color(hex: "#1b1a17").opacity(0.55), in: Capsule())
+    @ViewBuilder private func pill(_ t: String, _ act: @escaping () -> Void) -> some View {
+        if plain45 {
+            // Lys pille med kant på Papir-bakgrunnen.
+            Button(action: act) {
+                Text(t).font(PF.ui(12.5, .semibold)).foregroundStyle(p.ink).lineLimit(1).padding(.horizontal, 12).frame(height: 34)
+                    .background(p.card, in: Capsule())
+                    .overlay(Capsule().stroke(p.line, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button(action: act) {
+                Text(t).font(PF.ui(12.5, .semibold)).foregroundStyle(.white).lineLimit(1).padding(.horizontal, 12).frame(height: 34)
+                    .background(Color(hex: "#1b1a17").opacity(0.55), in: Capsule())
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 
     /// Hilsenen står alltid på to linjer («God ettermiddag,» / navnet) og skaleres ned i stedet for å brytes.
@@ -1109,8 +1186,8 @@ struct PaperHero: View {
             if home { weather }
             if store.prof24DomainPill { Dom24Pill() }
         }
-        .foregroundStyle(store.heroInk)
-        .shadow(color: .black.opacity(store.heroInk == .white ? 0.45 : 0), radius: 8, y: 1)
+        .foregroundStyle(ink45)
+        .shadow(color: .black.opacity(!plain45 && store.heroInk == .white ? 0.45 : 0), radius: 8, y: 1)
     }
 
     @ViewBuilder private var weather: some View {

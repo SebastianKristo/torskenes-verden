@@ -245,7 +245,8 @@ struct PaperTasksView: View {
             // Prompt 37: infokort for valgt liste (privat/delt + Del/Administrer), Tasks37Lists.swift.
             if let l = m.lists.first(where: { $0.id == cur }) { Task37ListInfo(list: l) }
             // Prompt 22: på telefon ligger feltet fast over fanelinjen (TaskDockField22), ikke øverst.
-            if wide { addField }
+            // Prompt 45: på iPad ligger feltet nederst i oppgavekolonnen med Glimt-knappen (Tasks45Wide.swift), ikke øverst.
+            if wide && !split43 { addField }
             options
             // Prompt 37: Glimt-kortene (like oppgaver, forfalte), Tasks37Glimt.swift. Prompt 43: på iPad i høyre kolonne.
             if !split43 { Task37GlimtCards(cur: cur) }
@@ -274,8 +275,8 @@ struct PaperTasksView: View {
                 }
                 .buttonStyle(.plain).padding(.leading, 4)
             }
-            // Prompt 44: synken er flyttet til Innstillinger → Gjøremål; her står bare en rad som åpner den (Tasks44Subs.swift).
-            Tasks44SyncRow()
+            // Prompt 45: synken med Home Assistant vises ikke i Gjøremål i det hele tatt – den ligger bare i
+            // Innstillinger → Moduler → Gjøremål (Settings45.swift, Tasks44SyncPage).
             Text("Widgeten «Gjøremål» på hjemskjermen viser de tre neste oppgavene, og du kan krysse av rett i den.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 4).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
             }

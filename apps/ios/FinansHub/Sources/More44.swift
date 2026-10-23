@@ -86,7 +86,11 @@ struct PaperMore44: View {
             if m.editing && !cur.hidden.isEmpty { More44ShowHidden(count: cur.hidden.count) }
             if !m.editing && vis.isEmpty && !n.query.isEmpty { More44Empty() }
         }
+        // Prompt 45: «Velg boks» og nytt navn på tittelen (Mer45.swift).
+        .modifier(Mer45Sheets(all: all))
+        .onAppear { Mer45.shared.boot() }
         .task(id: store.account?.id ?? "") {
+            Mer45.shared.boot()
             await m.load(store)
             await Media43.shared.probe(store)
             await More44Rows.warm(store)
@@ -105,10 +109,12 @@ struct More44Body: View {
     let hiddenCount: Int
 
     var body: some View {
-        let daily: [More28Row] = visible.filter { Mer44.dailyKeys.contains($0.id) }
-        let tools: [More28Row] = n.low ? visible : visible.filter { !Mer44.dailyKeys.contains($0.id) }
+        // Prompt 45: de fire store boksene velges i wiggle (Mer45.big), tittelen kan skjules eller få nytt navn.
+        let big: [String] = Mer45.shared.big
+        let daily: [More28Row] = visible.filter { big.contains($0.id) }
+        let tools: [More28Row] = n.low ? visible : visible.filter { !big.contains($0.id) }
         VStack(alignment: .leading, spacing: 10) {
-            if !n.low || m.editing { More44Header(title: n.low ? "" : "HVERDAG OG FAMILIE") }
+            if !n.low || m.editing { More44Header(title: n.low ? "" : Mer45.shared.title) }
             if !n.low && !daily.isEmpty { More44Tiles(rows: daily, all: all, columns: wide ? 4 : 2) }
             if !n.low && !tools.isEmpty { More44Label(text: "VERKTØY").padding(.top, 8) }
             if !tools.isEmpty { More44Tools(rows: tools, all: all, columns: wide ? 2 : 1) }
@@ -133,7 +139,7 @@ struct More44Header: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            if !title.isEmpty { More44Label(text: title) }
+            if !title.isEmpty { Mer45Title(editing: m.editing) }
             Spacer(minLength: 6)
             if m.editing {
                 More44SizePicker()
@@ -258,7 +264,7 @@ struct More44Tiles: View {
             enter: { m.start() },
             commit: { (o: [String]) in Mer44.shared.commit(o, all, store) },
             content: { (k: String) in tile(k) },
-            accessory: { (_: String) in EmptyView() }
+            accessory: { (k: String) in Mer45SwapBadge(key: k) { Haptics.shared.tap(); Mer45.shared.swapping = k } }
         )
     }
 
@@ -266,8 +272,19 @@ struct More44Tiles: View {
 
     @ViewBuilder private func tile(_ k: String) -> some View {
         if let r = rows.first(where: { $0.id == k }) {
-            More44Tile(row: r, live: More44Rows.live(k, store))
+            More44Tile(row: r, live: live45(r))
         }
+    }
+
+    /// Prompt 45: moduler uten eget levende innhold (valgt som stor boks) viser den levende underteksten.
+    private func live45(_ r: More28Row) -> More44Live {
+        var l: More44Live = More44Rows.live(r.id, store)
+        if l.value.isEmpty && l.kicker.isEmpty && l.avatars.isEmpty {
+            let t: String = More44Rows.line(r, store)
+            l.value = t.isEmpty ? r.sub : t
+            l.line = l.value
+        }
+        return l
     }
 }
 

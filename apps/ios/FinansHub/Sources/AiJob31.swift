@@ -51,7 +51,7 @@ final class AiJobs31 {
     var open: Bool = false
     /// «✓ …» i 3 s etter en ferdig jobb.
     var doneText: String? = nil
-    /// «Glimt svarte mens du var borte» + svaret (4 s).
+    /// Prompt 45: alltid nil (banneret ved retur er fjernet). Beholdt så eldre visninger kompilerer.
     var away: (String, String)? = nil
     var awayTick: Int = 0
 
@@ -215,19 +215,8 @@ final class AiJobs31 {
         store.flash("Avbrutt · ingenting ble lagt til")
     }
 
-    /// «Glimt svarte mens du var borte» (4 s).
-    func showAway(_ title: String, _ body: String) {
-        // Prompt 39: «Vis svaret i appen også» av → ingen banner (svaret ligger i chatten og i systemvarselet).
-        if !NotifyModel.shared.aiIn { return }
-        away = (title, body)
-        awayTick += 1
-        awayTask?.cancel()
-        awayTask = Task {
-            try? await Task.sleep(nanoseconds: 4_200_000_000)
-            if !Task.isCancelled { self.away = nil; self.awayTick += 1 }
-        }
-    }
-
+    /// Prompt 45: svar som kom mens appen var lukket, vises bare som systemvarsel – aldri som banner når appen åpnes igjen
+    /// (claude-code-glimt-kun-systemvarsel.md). Lukker et ev. gammelt banner.
     func closeAway() {
         away = nil
         awayTick += 1
@@ -246,7 +235,7 @@ extension Quick29Model {
 
 /* ---------- Visningen øverst ---------- */
 
-/// Toasten, boblen, «✓ …» og «Glimt svarte mens du var borte». Ligger i Quick29Overlay (PaperShell, over hele appen).
+/// Toasten, boblen og «✓ …». Ligger i Quick29Overlay (PaperShell, over hele appen).
 struct Glimt31Overlay: View {
     @Environment(Store.self) private var store
     @MainActor private var m: AiJobs31 { AiJobs31.shared }
@@ -254,10 +243,7 @@ struct Glimt31Overlay: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            if let a = m.away {
-                Glimt31AwayBanner(title: a.0, text: a.1)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            } else if let j = m.current(store.paperTab) {
+            if let j = m.current(store.paperTab) {
                 if m.open {
                     Glimt31Bubble(job: j, ns: ns)
                         .transition(.scale(scale: 0.6, anchor: .top).combined(with: .opacity))
@@ -462,36 +448,3 @@ struct Glimt31BubbleButtons: View {
     }
 }
 
-/// «Glimt svarte mens du var borte» + svaret. Trykk åpner der spørsmålet ble stilt.
-struct Glimt31AwayBanner: View {
-    @Environment(Store.self) private var store
-    let title: String
-    let text: String
-
-    var body: some View {
-        Button {
-            AiJobs31.shared.closeAway()
-            Assist31.shared.openAway(store)
-        } label: {
-            HStack(alignment: .top, spacing: 10) {
-                Glimt31Mark(size: 24, state: .done, dark: true)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(PF.ui(13, .bold)).foregroundStyle(Color(hex: "#f3efe6")).lineLimit(1)
-                    Text(text).font(PF.ui(13)).foregroundStyle(Color(hex: "#f3efe6").opacity(0.85)).lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(.horizontal, 14).padding(.vertical, 12)
-            .background(Color(hex: "#1b1a17").opacity(0.94), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .shadow(color: Color.black.opacity(0.45), radius: 15, y: 8)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .frame(maxWidth: 440)
-        .padding(.horizontal, 12)
-        .gesture(DragGesture(minimumDistance: 12).onEnded { (v: DragGesture.Value) in
-            if v.translation.height < -10 { AiJobs31.shared.closeAway() }
-        })
-    }
-}

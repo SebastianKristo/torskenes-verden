@@ -10,22 +10,52 @@ private func pkr(_ v: Double) -> String { "\(neg0(v)) kr" }
 struct PaperHome: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
+    /// Prompt 45: iPad/brettet (1c) – kortene for én fane i høyre kolonne (layout.pages["fold-…"], Home45Wide.swift).
+    var page45: String? = nil
 
     var body: some View {
         VStack(spacing: 10) {
-            // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). Update30.swift.
-            Update30Banner(home: true)
-            // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (Mai17Home41.swift).
-            Mai17Home41()
-            // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
-            PaperCardStack(page: "hjem", cards: homeCards, fullWidth: ["h1", "h5", "h12", "h13", "h14"], twoColumns: true)
-            if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
+            if let pg = page45 {
+                wide45(pg)
+            } else {
+                phone
+            }
         }
         .update30Sheet()
         // Prompt 37: arket med hele bibelverset, og modulen lastes (avgjør om h13 finnes).
         .bible37Sheet(p)
         .task { await Update30Model.shared.load(store) }
         .task { await Bible37Model.shared.load(store) }
+    }
+
+    @ViewBuilder private var phone: some View {
+        // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). Update30.swift.
+        Update30Banner(home: true)
+        // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (Mai17Home41.swift).
+        Mai17Home41()
+        // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
+        PaperCardStack(page: "hjem", cards: homeCards, fullWidth: ["h1", "h5", "h12", "h13", "h14"], twoColumns: true)
+        homeErrorText
+    }
+
+    @ViewBuilder private var homeErrorText: some View {
+        if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
+    }
+
+    /// Prompt 45: én fane i 1c. Oppdateringsbanneret står øverst i «Nå». Søk og Brief ligger i Glimt-kortet til venstre,
+    /// tallene (Finans, Mat, Domener) er et eget kort (h16).
+    @ViewBuilder private func wide45(_ pg: String) -> some View {
+        if pg == Home45.page("na") { Update30Banner(home: true) }
+        PaperCardStack(page: pg, cards: wideCards45, fullWidth: [], twoColumns: false)
+            .onAppear { Home45.ensure(Home45.tabFromPage(pg), Home45.allKeys, store) }
+        homeErrorText
+    }
+
+    private var wideCards45: [PaperCardDef] {
+        let keys: [String] = Home45.usable(homeCards.map(\.key))
+        var out: [PaperCardDef] = homeCards.filter { keys.contains($0.key) }
+        out.append(PaperCardDef(key: "h16", label: "Tall (Finans, Mat, Domener)", view: AnyView(minis)))
+        return out
     }
 
     /// Kortene på Hjem. Prompt 37: «Dagens bibelvers» (h13) finnes bare for brukere med modulen (Bible37Views.swift).

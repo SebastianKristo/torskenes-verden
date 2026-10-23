@@ -863,6 +863,8 @@ final class Media43 {
     }
 
     nonisolated static func statusColor(_ s: String, _ p: PaperPalette) -> Color {
+        // Prompt 45: Lastes ned blå, Venter gul, Ferdig grønn, Mangler rød, Uovervåket grå (Media45.swift).
+        if let c = Media45.status(s) { return c }
         switch s {
         case "downloaded", "hasfile", "ok": return Color(hex: "#2f6b4a")
         case "downloading": return p.lab

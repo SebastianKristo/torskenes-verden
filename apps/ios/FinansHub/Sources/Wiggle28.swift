@@ -25,7 +25,8 @@ final class Edit28 {
     @ObservationIgnored var labels: [String: [(String, String)]] = [:]
 
     /// Sidene med pillene.
-    static let pages: Set<String> = ["hjem", "mat", "finans", "sporing", "fmer"]
+    /// Prompt 45: Finans → Mer har Ferdig og Store · Lave i overskriftsraden (Fin45More.swift), som Mer – ingen piller.
+    static let pages: Set<String> = ["hjem", "mat", "finans", "sporing"]
     /// Kort med egne innstillinger («✎ Rediger widget»).
     static let settingsCards: Set<String> = ["h2", "h3", "h10"]
 
@@ -51,7 +52,8 @@ struct Edit28Pills: View {
 
     var body: some View {
         // Prompt 39: pillene skjules mens et redigeringsark er åpent.
-        if let page = store.paperEditPage, Edit28.pages.contains(page), !e.anySheet39 {
+        // Prompt 45: i brettet modus ligger knappene i sidelinja (RailEdit45), ikke øverst.
+        if let page = store.paperEditPage, Edit28.pages.contains(page), !e.anySheet39, !Layout45.shared.wide {
             HStack(spacing: 10) {
                 left(page)
                 Spacer(minLength: 8)

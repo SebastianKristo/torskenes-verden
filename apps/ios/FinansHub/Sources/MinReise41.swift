@@ -114,6 +114,13 @@ final class MinReise41 {
     /// Aktiv «forlot skolen»-hendelse.
     var leftAt: Date? = nil
     var hiddenFor: String = UserDefaults.standard.string(forKey: "papir_rt_hide") ?? ""
+    /// Prompt 45: antall anbefalte reiser som vises (1 · 2 · 3, standard 2), per bruker (ruter/settings recoCount).
+    var recoCount: Int = {
+        let v: Int = UserDefaults.standard.integer(forKey: "papir_rt_reco")
+        return (1...3).contains(v) ? v : 2
+    }()
+    /// De N første forslagene – nøyaktig N rader, færre hvis det ikke finnes flere (ingen plassholdere).
+    var shown: [MinReise41Option] { Array(options.prefix(recoCount)) }
     var toast: Bool = false
     @ObservationIgnored private var lastLoad: Date = .distantPast
     @ObservationIgnored private var hideBefore: String = ""
@@ -130,6 +137,7 @@ final class MinReise41 {
             let arr: [Any] = ((try? JSONSerialization.jsonObject(with: d)) as? [Any]) ?? []
             enabled = !routes.isEmpty || !arr.isEmpty
             if let h = JS.str(o, "homeCard"), ["over", "instead", "off"].contains(h) { homeCard = h }
+            takeReco(JS.int(o, "recoCount"))
         } catch {
             enabled = false
             loaded = true
@@ -158,6 +166,7 @@ final class MinReise41 {
 
     private func parse(_ o: [String: Any]) {
         resolvedDir = JS.str(o, "dir") ?? ""
+        takeReco(JS.int(o, "recoCount"))
         from = MinReise41.place(o["from"])
         to = MinReise41.place(o["to"])
         options = JS.list(o, "options").map { (x: [String: Any]) -> MinReise41Option in
@@ -249,6 +258,21 @@ final class MinReise41 {
         UserDefaults.standard.set(hiddenFor, forKey: "papir_rt_hide")
         Task { _ = try? await store.api.callAt("/api", "DELETE", "/ruter/journey/hide", timeout: 10) }
         withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { toast = false }
+    }
+
+    private func takeReco(_ v: Int?) {
+        guard let v, (1...3).contains(v), v != recoCount else { return }
+        recoCount = v
+        UserDefaults.standard.set(v, forKey: "papir_rt_reco")
+    }
+
+    /// Prompt 45: 1 · 2 · 3 (lett haptikk), lagres per bruker på serveren (tåler 404 på eldre server).
+    func setReco(_ v: Int, _ store: Store) {
+        guard (1...3).contains(v), v != recoCount else { return }
+        Haptics.shared.select()
+        withAnimation(.easeOut(duration: 0.2)) { recoCount = v }
+        UserDefaults.standard.set(v, forKey: "papir_rt_reco")
+        Task { _ = try? await store.api.callAt("/api", "PUT", "/ruter/settings", json: ["recoCount": v], timeout: 10) }
     }
 
     func setHomeCard(_ v: String, _ store: Store) {

@@ -301,6 +301,8 @@ struct Fam22MapCard: View {
     let fit: () -> Void
     let onPin: (String) -> Void
     let onPlace: (CLLocationCoordinate2D) -> Void
+    /// Prompt 45: høyere kart på iPad (skjermhøyde − ca. 150, minst 460), Family45Wide.swift.
+    var height: CGFloat = 420
 
     var body: some View {
         ZStack {
@@ -309,7 +311,7 @@ struct Fam22MapCard: View {
             zoomButtons
             livePill
         }
-        .frame(height: 420)
+        .frame(height: height)
         .background(Color(hex: "#e9e5dc"))
         .clipShape(RoundedRectangle(cornerRadius: 24))
     }

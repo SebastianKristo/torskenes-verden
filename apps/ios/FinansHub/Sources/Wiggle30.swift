@@ -22,6 +22,8 @@ enum Wiggle30 {
 
     /// Luften over innholdet når en wiggle-verktøylinje vises på siden.
     static func topPad(_ store: Store) -> CGFloat {
+        // Prompt 45: i brettet modus ligger + / ✓ i sidelinja, så innholdet får ingen ekstra toppmarg.
+        if Layout45.shared.wide { return 0 }
         if let e = store.paperEditPage, Edit28.pages.contains(e) { return pad }
         // Prompt 44: Mer har Ferdig og Store · Lave i overskriftsraden (More44.swift), ingen piller over lista.
         return 0

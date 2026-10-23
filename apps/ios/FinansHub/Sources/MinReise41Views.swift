@@ -127,7 +127,8 @@ struct MinReise41RuterCard: View {
                     if !m.err.isEmpty && m.options.isEmpty {
                         Text(m.err).font(PF.ui(13)).foregroundStyle(p.lab)
                     }
-                    ForEach(Array(m.options.enumerated()), id: \.element.id) { i, o in
+                    // Prompt 45: nøyaktig N anbefalte reiser (Antall anbefalte reiser 1 · 2 · 3).
+                    ForEach(Array(m.shown.enumerated()), id: \.element.id) { i, o in
                         MinReise41Row(o: o, first: i == 0)
                     }
                     MinReise41Zones()
@@ -316,6 +317,7 @@ struct MinReise41HomeSetting: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            MinReise45Count()
             PLabel(text: "På Hjem når du forlater skolen")
             HStack(spacing: 6) {
                 chip("over", "Over Ruter-kortet")
@@ -448,6 +450,8 @@ struct MinReise41HomeCard: View {
                     Text("→ hjemme " + (o.arr.map { Hjemlys40Look.clock($0) } ?? "–")).font(PF.ui(14)).foregroundStyle(p.mut)
                 }
                 MinReise41Strip(legs: o.legs)
+                // Prompt 45: de neste anbefalte reisene (til sammen N rader, kortet følger antallet).
+                MinReise45More(first: o)
             } else {
                 Text("Henter neste avgang …").font(PF.ui(14)).foregroundStyle(p.mut)
             }
@@ -478,5 +482,60 @@ struct MinReise41Toast: View {
         .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 6)
         .background(Color(hex: "#1b1a17").opacity(0.92), in: Capsule())
         .shadow(color: Color.black.opacity(0.3), radius: 12, y: 8)
+    }
+}
+
+/* ---------- Prompt 45: antall anbefalte reiser (claude-code-ruter-anbefalt-antall.md) ---------- */
+
+/// «Antall anbefalte reiser» 1 · 2 · 3 (standard 2). Samme verdi på Hjem-kortet og Ruter-siden.
+struct MinReise45Count: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    @MainActor private var m: MinReise41 { MinReise41.shared }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            PLabel(text: "Antall anbefalte reiser")
+            HStack(spacing: 0) {
+                ForEach(1...3, id: \.self) { (n: Int) in seg(n) }
+            }
+            .padding(3)
+            .background(p.line.opacity(0.5), in: Capsule())
+            .frame(maxWidth: 220)
+        }
+        .padding(.bottom, 4)
+    }
+
+    private func seg(_ n: Int) -> some View {
+        let on: Bool = m.recoCount == n
+        return Button { m.setReco(n, store) } label: {
+            Text("\(n)").font(PF.ui(13.5, .bold)).foregroundStyle(on ? p.bg : p.ink)
+                .frame(maxWidth: .infinity).frame(height: 30)
+                .background(on ? p.ink : Color.clear, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(n) anbefalte")
+        .accessibilityAddTraits(on ? [.isSelected, .isButton] : .isButton)
+    }
+}
+
+/// Rad 2 og 3 i Hjem-kortet: avgang → hjemme, kompakt.
+struct MinReise45More: View {
+    @Environment(\.paper) private var p
+    @MainActor private var m: MinReise41 { MinReise41.shared }
+    let first: MinReise41Option
+
+    var body: some View {
+        let rest: [MinReise41Option] = Array(m.options.filter { $0.id != first.id }.prefix(Swift.max(0, m.recoCount - 1)))
+        ForEach(rest, id: \.id) { (o: MinReise41Option) in
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(o.dep.map { Hjemlys40Look.clock($0) } ?? "–").font(PF.serif(20, medium: true)).foregroundStyle(p.ink)
+                Text("→ hjemme " + (o.arr.map { Hjemlys40Look.clock($0) } ?? "–")).font(PF.ui(13)).foregroundStyle(p.mut)
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 6)
+            .overlay(alignment: .top) { Rectangle().fill(p.line).frame(height: 1) }
+        }
     }
 }

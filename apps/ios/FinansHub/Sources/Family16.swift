@@ -369,12 +369,12 @@ final class FamilyModel {
 
     private func notify(_ ev: FamEvent) {
         guard NotifyModel.allowed("familie") else { return }
-        let c = UNMutableNotificationContent()
-        c.title = "Familie"
-        c.body = eventText(ev)
-        c.sound = NotifyModel.currentSound()
-        let r = UNNotificationRequest(identifier: "fam-\(ev.id)", content: c, trigger: nil)
-        UNUserNotificationCenter.current().add(r)
+        // Prompt 45: hovedbryter, person og sone (mottakerens valg), og soneikonet i varselet (Zone45.swift).
+        guard Zone45.shared.allows(person: ev.userId, zone: ev.zoneId) else { return }
+        let z: FamZone? = zone(ev.zoneId)
+        let title: String = z?.name ?? (ev.zoneName.isEmpty ? "Familie" : ev.zoneName)
+        Zone45Notify.post(id: "fam-\(ev.id)", zoneId: ev.zoneId, title: title, body: eventText(ev),
+                          icon: z?.icon ?? "pin", color: z?.color ?? "#2f6b4a")
     }
 
     func eventText(_ ev: FamEvent) -> String {
@@ -568,8 +568,70 @@ struct FamilyView: View {
     @MainActor private var m: FamilyModel { FamilyModel.shared }
 
     private var tab: String { m.tab }
+    /// Prompt 45: brettet modus (iPad) – kart til venstre (56 %, står stille), innholdet til høyre scroller (Family16.swift, wideBody45).
+    @Environment(\.paperWide) private var wide45
 
     var body: some View {
+        Group {
+            if wide45 { wideBody45 } else { phoneBody45 }
+        }
+        .overlay(alignment: .top) { Zone45Banner() }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: Zone45.shared.banner)
+        .task { await refreshLoop() }
+        .task { await Hjemlys40Model.shared.load(store) }
+    }
+
+    /// Prompt 45: to kolonner, 24 pt mellom. Kartet (med knapperaden over) står til venstre i alle fanene; i Soner viser det
+    /// alle sonene og nye soner plasseres rett i kartet. Trykk på en person til høyre zoomer kartet (ingen sidebytte).
+    private var wideBody45: some View {
+        GeometryReader { (g: GeometryProxy) in
+            HStack(alignment: .top, spacing: 24) {
+                VStack(spacing: 12) {
+                    Fam22Toolbar(placing: m.placing22, place: togglePlacing, fit: fitAll, refresh: refresh)
+                    Fam22MapCard(zones: mapZones, pins: mapPins, trails: tab == "soner" ? [] : mapTrails, placing: m.placing22,
+                                 liveOn: liveOn, liveText: liveText, ctl: ctl, fit: fitAll, onPin: { id in pickWide45(id) },
+                                 onPlace: { c in place(c) }, height: Swift.max(460, g.size.height - 64))
+                }
+                .frame(width: Swift.max(320, (g.size.width - 24) * 0.56))
+                ScrollView {
+                    VStack(spacing: 14) { rightColumn45 }
+                        .padding(.bottom, 24)
+                }
+                .scrollIndicators(.hidden)
+                .frame(minWidth: 300, maxWidth: .infinity)
+            }
+        }
+    }
+
+    @ViewBuilder private var rightColumn45: some View {
+        if let e = m.error { errorCard(e) }
+        if tab == "kart" { VelFremmeStatus42() }
+        if tab == "soner" {
+            Zone45Card()
+            ZonesAddRow42(placing: m.placing22, start: startZone, cancel: cancelZone)
+        }
+        tabContent45
+    }
+
+    @ViewBuilder private var tabContent45: some View {
+        switch tab {
+        case "hjemlys": Hjemlys41Tab()
+        case "soner":
+            Fam22ZonesTab { z in
+                ctl.focusZone(z.coord, radius: z.radius)
+            }
+        case "helse": Fam22HealthTab()
+        default: kartTab
+        }
+    }
+
+    /// Trykk på en pin: personens kort åpnes øverst i høyre kolonne (Kart-fanen).
+    private func pickWide45(_ id: String) {
+        if tab != "kart" { m.tab = "kart" }
+        pick(id)
+    }
+
+    private var phoneBody45: some View {
         VStack(spacing: 14) {
             if let e = m.error { errorCard(e) }
             // Prompt 42: ingen Vel fremme-kort (tidligere Hjemlys) øverst på Kart – bare en liten statuslinje mens en økt pågår
@@ -578,6 +640,8 @@ struct FamilyView: View {
             // Prompt 42: kartet og verktøyraden bare på Kart. Soner viser kartet midlertidig mens en ny sone plasseres/redigeres.
             if tab == "kart" { mapSection }
             if tab == "soner" {
+                // Prompt 45: «Posisjonsvarsler» med hovedbryter og bryter per person (Zone45.swift).
+                Zone45Card()
                 ZonesAddRow42(placing: m.placing22, start: startZone, cancel: cancelZone)
                 if m.placing22 || m.draft22 != nil { zoneMap }
             }
@@ -600,8 +664,6 @@ struct FamilyView: View {
         }
         // Prompt 42: bare Kart-fanen har verktøyraden delvis over toppbildet; de andre fanene starter 16 pt under bildet.
         .padding(.top, tab == "kart" ? 0 : 39)
-        .task { await refreshLoop() }
-        .task { await Hjemlys40Model.shared.load(store) }
     }
 
     private func errorCard(_ e: String) -> some View {
