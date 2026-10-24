@@ -254,3 +254,18 @@ struct Receipt51RawBody: View {
         }
     }
 }
+
+/// Prompt 51: kvitteringsbildet som JPEG på høyst 2560 px lengste side (aldri skalert opp), med riktig orientering.
+enum Rc51Image {
+    nonisolated static func fullJpeg(_ image: UIImage, maxSide: CGFloat = 2560, quality: CGFloat = 0.9) -> Data? {
+        let w: CGFloat = image.size.width * image.scale
+        let h: CGFloat = image.size.height * image.scale
+        guard w > 0, h > 0 else { return nil }
+        let k: CGFloat = min(1, maxSide / max(w, h))
+        let size = CGSize(width: (w * k).rounded(), height: (h * k).rounded())
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let out: UIImage = UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+        return out.jpegData(compressionQuality: quality)
+    }
+}
