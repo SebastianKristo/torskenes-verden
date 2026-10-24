@@ -1,0 +1,836 @@
+{
+ "source": "ios_vision",
+ "lines": [
+  {
+   "text": "COOP EXTRA STORO",
+   "confidence": 0.97,
+   "bbox": [
+    0.3605,
+    0.0602,
+    0.2789,
+    0.0087
+   ]
+  },
+  {
+   "text": "Vitaminveien 7, 0485 Oslo",
+   "confidence": 0.86,
+   "bbox": [
+    0.2821,
+    0.0781,
+    0.4355,
+    0.0108
+   ]
+  },
+  {
+   "text": "Org.nr NO 944 551 204 MVA",
+   "confidence": 0.94,
+   "bbox": [
+    0.2821,
+    0.0971,
+    0.4355,
+    0.0114
+   ]
+  },
+  {
+   "text": "23.10.2026 18:22  Kasse 5  Kvittering 20411",
+   "confidence": 0.98,
+   "bbox": [
+    0.1316,
+    0.1334,
+    0.75,
+    0.0119
+   ]
+  },
+  {
+   "text": "GULROT 1KG",
+   "confidence": 0.88,
+   "bbox": [
+    0.1316,
+    0.1708,
+    0.175,
+    0.0087
+   ]
+  },
+  {
+   "text": "79,90",
+   "confidence": 0.91,
+   "bbox": [
+    0.7812,
+    0.1708,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "POTET 2,5KG",
+   "confidence": 0.96,
+   "bbox": [
+    0.1316,
+    0.1893,
+    0.1921,
+    0.0103
+   ]
+  },
+  {
+   "text": "39,90",
+   "confidence": 0.89,
+   "bbox": [
+    0.7812,
+    0.1893,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "LØK GUL 1KG",
+   "confidence": 0.89,
+   "bbox": [
+    0.1316,
+    0.2072,
+    0.1921,
+    0.0098
+   ]
+  },
+  {
+   "text": "24,90",
+   "confidence": 0.95,
+   "bbox": [
+    0.7812,
+    0.2077,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "AGURK",
+   "confidence": 0.9,
+   "bbox": [
+    0.1316,
+    0.2261,
+    0.0882,
+    0.0087
+   ]
+  },
+  {
+   "text": "79,90",
+   "confidence": 0.9,
+   "bbox": [
+    0.7812,
+    0.2261,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "TOMAT 500G",
+   "confidence": 0.96,
+   "bbox": [
+    0.1316,
+    0.2446,
+    0.175,
+    0.0087
+   ]
+  },
+  {
+   "text": "149,00",
+   "confidence": 0.91,
+   "bbox": [
+    0.7638,
+    0.2446,
+    0.1053,
+    0.0103
+   ]
+  },
+  {
+   "text": "PAPRIKA RØD",
+   "confidence": 0.91,
+   "bbox": [
+    0.1316,
+    0.2625,
+    0.1921,
+    0.0098
+   ]
+  },
+  {
+   "text": "79,90",
+   "confidence": 0.97,
+   "bbox": [
+    0.7812,
+    0.263,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "EPLE RØDE 1KG",
+   "confidence": 0.96,
+   "bbox": [
+    0.1316,
+    0.2809,
+    0.2263,
+    0.0098
+   ]
+  },
+  {
+   "text": "34,90",
+   "confidence": 0.93,
+   "bbox": [
+    0.7812,
+    0.2815,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "APPELSIN 1KG",
+   "confidence": 0.97,
+   "bbox": [
+    0.1316,
+    0.2999,
+    0.2092,
+    0.0087
+   ]
+  },
+  {
+   "text": "79,90",
+   "confidence": 0.92,
+   "bbox": [
+    0.7812,
+    0.2999,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "TINE LETTMELK 1L",
+   "confidence": 0.93,
+   "bbox": [
+    0.1316,
+    0.3183,
+    0.2789,
+    0.0087
+   ]
+  },
+  {
+   "text": "29,90",
+   "confidence": 0.99,
+   "bbox": [
+    0.7812,
+    0.3183,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "TINE YOGHURT NATURELL",
+   "confidence": 0.89,
+   "bbox": [
+    0.1316,
+    0.3368,
+    0.3658,
+    0.0087
+   ]
+  },
+  {
+   "text": "  2 X 149,00",
+   "confidence": 0.91,
+   "bbox": [
+    0.1316,
+    0.3552,
+    0.2092,
+    0.0103
+   ]
+  },
+  {
+   "text": "298,00",
+   "confidence": 0.92,
+   "bbox": [
+    0.7638,
+    0.3552,
+    0.1053,
+    0.0103
+   ]
+  },
+  {
+   "text": "JARLSBERG 7OOG",
+   "confidence": 0.89,
+   "bbox": [
+    0.1316,
+    0.3736,
+    0.2447,
+    0.0087
+   ]
+  },
+  {
+   "text": "49,90",
+   "confidence": 0.91,
+   "bbox": [
+    0.7812,
+    0.3736,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "SMØR 500G",
+   "confidence": 0.89,
+   "bbox": [
+    0.1316,
+    0.3915,
+    0.1566,
+    0.0098
+   ]
+  },
+  {
+   "text": "24,90",
+   "confidence": 0.86,
+   "bbox": [
+    0.7812,
+    0.3921,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "KYLLINGFILET 1KG",
+   "confidence": 0.94,
+   "bbox": [
+    0.1316,
+    0.4105,
+    0.2789,
+    0.0087
+   ]
+  },
+  {
+   "text": "24,90",
+   "confidence": 0.96,
+   "bbox": [
+    0.7812,
+    0.4105,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "KJØTTDEIG 400G",
+   "confidence": 0.88,
+   "bbox": [
+    0.1316,
+    0.4284,
+    0.2447,
+    0.0098
+   ]
+  },
+  {
+   "text": "119,00",
+   "confidence": 0.86,
+   "bbox": [
+    0.7638,
+    0.429,
+    0.1053,
+    0.0103
+   ]
+  },
+  {
+   "text": "LAKSEFILET 4PK",
+   "confidence": 0.95,
+   "bbox": [
+    0.1316,
+    0.4474,
+    0.2447,
+    0.0087
+   ]
+  },
+  {
+   "text": "19,90",
+   "confidence": 0.92,
+   "bbox": [
+    0.7812,
+    0.4474,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "FISKEBOLLER",
+   "confidence": 0.98,
+   "bbox": [
+    0.1316,
+    0.4658,
+    0.1934,
+    0.0087
+   ]
+  },
+  {
+   "text": "59,90",
+   "confidence": 0.97,
+   "bbox": [
+    0.7812,
+    0.4658,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "PASTA PENNE 1KG",
+   "confidence": 0.96,
+   "bbox": [
+    0.1316,
+    0.4843,
+    0.2618,
+    0.0087
+   ]
+  },
+  {
+   "text": "119,00",
+   "confidence": 0.88,
+   "bbox": [
+    0.7638,
+    0.4843,
+    0.1053,
+    0.0103
+   ]
+  },
+  {
+   "text": "RIS JASMIN 1KG",
+   "confidence": 0.91,
+   "bbox": [
+    0.1316,
+    0.5027,
+    0.2447,
+    0.0087
+   ]
+  },
+  {
+   "text": "29,90",
+   "confidence": 0.98,
+   "bbox": [
+    0.7812,
+    0.5027,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "HAVREGRYN 1KG",
+   "confidence": 0.97,
+   "bbox": [
+    0.1316,
+    0.5211,
+    0.2263,
+    0.0087
+   ]
+  },
+  {
+   "text": "29,90",
+   "confidence": 0.98,
+   "bbox": [
+    0.7812,
+    0.5211,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "KNEKKEBRØD",
+   "confidence": 0.92,
+   "bbox": [
+    0.1316,
+    0.539,
+    0.175,
+    0.0098
+   ]
+  },
+  {
+   "text": "79,90",
+   "confidence": 0.97,
+   "bbox": [
+    0.7812,
+    0.5396,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "SYLTETOY JORDBÆR",
+   "confidence": 0.96,
+   "bbox": [
+    0.1316,
+    0.5575,
+    0.2803,
+    0.0098
+   ]
+  },
+  {
+   "text": "79,90",
+   "confidence": 0.95,
+   "bbox": [
+    0.7812,
+    0.558,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "KAFFE FILTERMALT",
+   "confidence": 0.95,
+   "bbox": [
+    0.1316,
+    0.5765,
+    0.2789,
+    0.0087
+   ]
+  },
+  {
+   "text": "79,90",
+   "confidence": 0.93,
+   "bbox": [
+    0.7812,
+    0.5765,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "TE EARL GREY",
+   "confidence": 0.97,
+   "bbox": [
+    0.1316,
+    0.5949,
+    0.2092,
+    0.0087
+   ]
+  },
+  {
+   "text": "24,90",
+   "confidence": 0.98,
+   "bbox": [
+    0.7812,
+    0.5949,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "OPPVASKMIDDEL",
+   "confidence": 0.9,
+   "bbox": [
+    0.1316,
+    0.6133,
+    0.2263,
+    0.0087
+   ]
+  },
+  {
+   "text": "59,90",
+   "confidence": 0.93,
+   "bbox": [
+    0.7812,
+    0.6133,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "TOALETTPAPIR 12PK",
+   "confidence": 0.88,
+   "bbox": [
+    0.1316,
+    0.6318,
+    0.2974,
+    0.0087
+   ]
+  },
+  {
+   "text": "29,90",
+   "confidence": 0.96,
+   "bbox": [
+    0.7812,
+    0.6318,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "TANNKREM",
+   "confidence": 0.9,
+   "bbox": [
+    0.1316,
+    0.6502,
+    0.1395,
+    0.0087
+   ]
+  },
+  {
+   "text": "12,90",
+   "confidence": 0.93,
+   "bbox": [
+    0.7812,
+    0.6502,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "SJAMPO",
+   "confidence": 0.94,
+   "bbox": [
+    0.1316,
+    0.6687,
+    0.1053,
+    0.0087
+   ]
+  },
+  {
+   "text": "19,90",
+   "confidence": 0.86,
+   "bbox": [
+    0.7812,
+    0.6687,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "MINERALVANN 1,5L",
+   "confidence": 0.94,
+   "bbox": [
+    0.1316,
+    0.6871,
+    0.2789,
+    0.0103
+   ]
+  },
+  {
+   "text": "  2 X 49,90",
+   "confidence": 0.87,
+   "bbox": [
+    0.1316,
+    0.7055,
+    0.1921,
+    0.0103
+   ]
+  },
+  {
+   "text": "99,80",
+   "confidence": 0.91,
+   "bbox": [
+    0.7812,
+    0.7055,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "PANT",
+   "confidence": 0.97,
+   "bbox": [
+    0.1316,
+    0.724,
+    0.0697,
+    0.0087
+   ]
+  },
+  {
+   "text": "6,00",
+   "confidence": 0.88,
+   "bbox": [
+    0.7987,
+    0.724,
+    0.0697,
+    0.0103
+   ]
+  },
+  {
+   "text": "COOP MEDLEMSRABATT",
+   "confidence": 0.9,
+   "bbox": [
+    0.1316,
+    0.7424,
+    0.3145,
+    0.0087
+   ]
+  },
+  {
+   "text": "-25,00",
+   "confidence": 0.99,
+   "bbox": [
+    0.7638,
+    0.7424,
+    0.1053,
+    0.0103
+   ]
+  },
+  {
+   "text": "RABATT KYLLINGFILET",
+   "confidence": 0.87,
+   "bbox": [
+    0.1316,
+    0.7608,
+    0.3316,
+    0.0087
+   ]
+  },
+  {
+   "text": "-30,00",
+   "confidence": 0.87,
+   "bbox": [
+    0.7638,
+    0.7608,
+    0.1053,
+    0.0103
+   ]
+  },
+  {
+   "text": "29 VARER   TOTAL",
+   "confidence": 0.95,
+   "bbox": [
+    0.1316,
+    0.7977,
+    0.2789,
+    0.0087
+   ]
+  },
+  {
+   "text": "1 811,50",
+   "confidence": 0.89,
+   "bbox": [
+    0.7289,
+    0.7977,
+    0.1395,
+    0.0103
+   ]
+  },
+  {
+   "text": "VISA",
+   "confidence": 0.94,
+   "bbox": [
+    0.1316,
+    0.8162,
+    0.0697,
+    0.0087
+   ]
+  },
+  {
+   "text": "1 811,50",
+   "confidence": 0.88,
+   "bbox": [
+    0.7289,
+    0.8162,
+    0.1395,
+    0.0103
+   ]
+  },
+  {
+   "text": "MVA 15%",
+   "confidence": 0.95,
+   "bbox": [
+    0.1316,
+    0.853,
+    0.1224,
+    0.0087
+   ]
+  },
+  {
+   "text": "220,29",
+   "confidence": 0.94,
+   "bbox": [
+    0.7638,
+    0.853,
+    0.1053,
+    0.0103
+   ]
+  },
+  {
+   "text": "MVA 25%",
+   "confidence": 0.88,
+   "bbox": [
+    0.1316,
+    0.8715,
+    0.1224,
+    0.0087
+   ]
+  },
+  {
+   "text": "24,52",
+   "confidence": 0.92,
+   "bbox": [
+    0.7812,
+    0.8715,
+    0.0868,
+    0.0103
+   ]
+  },
+  {
+   "text": "Coop – medlemmene eier",
+   "confidence": 0.93,
+   "bbox": [
+    0.3082,
+    0.9078,
+    0.3842,
+    0.0119
+   ]
+  },
+  {
+   "text": "Takk for besøket",
+   "confidence": 0.95,
+   "bbox": [
+    0.3605,
+    0.9262,
+    0.2789,
+    0.0098
+   ]
+  }
+ ],
+ "rows": [
+  "COOP EXTRA STORO",
+  "Vitaminveien 7, 0485 Oslo",
+  "Org.nr NO 944 551 204 MVA",
+  "23.10.2026 18:22  Kasse 5  Kvittering 20411",
+  "GULROT 1KG 79,90",
+  "POTET 2,5KG 39,90",
+  "LØK GUL 1KG 24,90",
+  "AGURK 79,90",
+  "TOMAT 500G 149,00",
+  "PAPRIKA RØD 79,90",
+  "EPLE RØDE 1KG 34,90",
+  "APPELSIN 1KG 79,90",
+  "TINE LETTMELK 1L 29,90",
+  "TINE YOGHURT NATURELL",
+  "  2 X 149,00 298,00",
+  "JARLSBERG 7OOG 49,90",
+  "SMØR 500G 24,90",
+  "KYLLINGFILET 1KG 24,90",
+  "KJØTTDEIG 400G 119,00",
+  "LAKSEFILET 4PK 19,90",
+  "FISKEBOLLER 59,90",
+  "PASTA PENNE 1KG 119,00",
+  "RIS JASMIN 1KG 29,90",
+  "HAVREGRYN 1KG 29,90",
+  "KNEKKEBRØD 79,90",
+  "SYLTETOY JORDBÆR 79,90",
+  "KAFFE FILTERMALT 79,90",
+  "TE EARL GREY 24,90",
+  "OPPVASKMIDDEL 59,90",
+  "TOALETTPAPIR 12PK 29,90",
+  "TANNKREM 12,90",
+  "SJAMPO 19,90",
+  "MINERALVANN 1,5L",
+  "  2 X 49,90 99,80",
+  "PANT 6,00",
+  "COOP MEDLEMSRABATT -25,00",
+  "RABATT KYLLINGFILET -30,00",
+  "29 VARER   TOTAL 1 811,50",
+  "VISA 1 811,50",
+  "MVA 15% 220,29",
+  "MVA 25% 24,52",
+  "Coop – medlemmene eier",
+  "Takk for besøket"
+ ],
+ "full_text": "COOP EXTRA STORO\nVitaminveien 7, 0485 Oslo\nOrg.nr NO 944 551 204 MVA\n23.10.2026 18:22  Kasse 5  Kvittering 20411\nGULROT 1KG 79,90\nPOTET 2,5KG 39,90\nLØK GUL 1KG 24,90\nAGURK 79,90\nTOMAT 500G 149,00\nPAPRIKA RØD 79,90\nEPLE RØDE 1KG 34,90\nAPPELSIN 1KG 79,90\nTINE LETTMELK 1L 29,90\nTINE YOGHURT NATURELL\n  2 X 149,00 298,00\nJARLSBERG 7OOG 49,90\nSMØR 500G 24,90\nKYLLINGFILET 1KG 24,90\nKJØTTDEIG 400G 119,00\nLAKSEFILET 4PK 19,90\nFISKEBOLLER 59,90\nPASTA PENNE 1KG 119,00\nRIS JASMIN 1KG 29,90\nHAVREGRYN 1KG 29,90\nKNEKKEBRØD 79,90\nSYLTETOY JORDBÆR 79,90\nKAFFE FILTERMALT 79,90\nTE EARL GREY 24,90\nOPPVASKMIDDEL 59,90\nTOALETTPAPIR 12PK 29,90\nTANNKREM 12,90\nSJAMPO 19,90\nMINERALVANN 1,5L\n  2 X 49,90 99,80\nPANT 6,00\nCOOP MEDLEMSRABATT -25,00\nRABATT KYLLINGFILET -30,00\n29 VARER   TOTAL 1 811,50\nVISA 1 811,50\nMVA 15% 220,29\nMVA 25% 24,52\nCoop – medlemmene eier\nTakk for besøket",
+ "image_size": [
+  760,
+  1844
+ ],
+ "ms": 692
+}

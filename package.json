@@ -10,6 +10,7 @@
     "hash-password": "node scripts/hash-password.js",
     "test": "node --test \"test/**/*.test.js\"",
     "eval": "node eval/run.mjs",
+    "eval:receipts": "node tests/receipts/run.mjs",
     "reset-password": "node scripts/reset-password.js"
   },
   "engines": {

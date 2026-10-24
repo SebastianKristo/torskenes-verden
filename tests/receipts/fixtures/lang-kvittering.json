@@ -1,0 +1,211 @@
+{
+  "today": "2026-10-24",
+  "notes": "Lang kvittering (høyde > 2,5 × bredde, Mac-OCR leser i bånd), 29 varelinjer, pant og to rabatter",
+  "receipt": {
+    "merchant": "Coop Extra Storo",
+    "org_number": "944551204",
+    "date": "2026-10-23",
+    "time": "18:22",
+    "currency": "NOK",
+    "items": [
+      {
+        "description": "GULROT 1KG",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 79.9
+      },
+      {
+        "description": "POTET 2,5KG",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 39.9
+      },
+      {
+        "description": "LØK GUL 1KG",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 24.9
+      },
+      {
+        "description": "AGURK",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 79.9
+      },
+      {
+        "description": "TOMAT 500G",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 149.0
+      },
+      {
+        "description": "PAPRIKA RØD",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 79.9
+      },
+      {
+        "description": "EPLE RØDE 1KG",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 34.9
+      },
+      {
+        "description": "APPELSIN 1KG",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 79.9
+      },
+      {
+        "description": "TINE LETTMELK 1L",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 29.9
+      },
+      {
+        "description": "TINE YOGHURT NATURELL",
+        "quantity": 2,
+        "unit_price": 149.0,
+        "amount": 298.0
+      },
+      {
+        "description": "JARLSBERG 700G",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 49.9
+      },
+      {
+        "description": "SMØR 500G",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 24.9
+      },
+      {
+        "description": "KYLLINGFILET 1KG",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 24.9
+      },
+      {
+        "description": "KJØTTDEIG 400G",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 119.0
+      },
+      {
+        "description": "LAKSEFILET 4PK",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 19.9
+      },
+      {
+        "description": "FISKEBOLLER",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 59.9
+      },
+      {
+        "description": "PASTA PENNE 1KG",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 119.0
+      },
+      {
+        "description": "RIS JASMIN 1KG",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 29.9
+      },
+      {
+        "description": "HAVREGRYN 1KG",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 29.9
+      },
+      {
+        "description": "KNEKKEBRØD",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 79.9
+      },
+      {
+        "description": "SYLTETØY JORDBÆR",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 79.9
+      },
+      {
+        "description": "KAFFE FILTERMALT",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 79.9
+      },
+      {
+        "description": "TE EARL GREY",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 24.9
+      },
+      {
+        "description": "OPPVASKMIDDEL",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 59.9
+      },
+      {
+        "description": "TOALETTPAPIR 12PK",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 29.9
+      },
+      {
+        "description": "TANNKREM",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 12.9
+      },
+      {
+        "description": "SJAMPO",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 19.9
+      },
+      {
+        "description": "MINERALVANN 1,5L",
+        "quantity": 2,
+        "unit_price": 49.9,
+        "amount": 99.8
+      },
+      {
+        "description": "PANT",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 6.0
+      }
+    ],
+    "discounts": [
+      {
+        "description": "COOP MEDLEMSRABATT",
+        "amount": -25.0
+      },
+      {
+        "description": "RABATT KYLLINGFILET",
+        "amount": -30.0
+      }
+    ],
+    "subtotal": null,
+    "vat": [
+      {
+        "rate": 15,
+        "amount": 220.29
+      },
+      {
+        "rate": 25,
+        "amount": 24.52
+      }
+    ],
+    "total": 1811.5,
+    "payment_method": "Visa",
+    "category_suggestion": "Mat og dagligvarer"
+  }
+}

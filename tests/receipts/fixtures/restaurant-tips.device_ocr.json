@@ -1,0 +1,226 @@
+{
+ "source": "ios_vision",
+ "lines": [
+  {
+   "text": "TRATTORIA LUCCA",
+   "confidence": 0.87,
+   "bbox": [
+    0.3692,
+    0.1347,
+    0.2618,
+    0.0194
+   ]
+  },
+  {
+   "text": "Bryggen 12, 5003 Bergen",
+   "confidence": 0.95,
+   "bbox": [
+    0.2995,
+    0.176,
+    0.4013,
+    0.0255
+   ]
+  },
+  {
+   "text": "Org.nr 920 112 234 MVA",
+   "confidence": 0.96,
+   "bbox": [
+    0.3082,
+    0.2172,
+    0.3842,
+    0.0255
+   ]
+  },
+  {
+   "text": "Dato: 17.10.2026  Kl. 19:48  Bord 7",
+   "confidence": 0.91,
+   "bbox": [
+    0.1316,
+    0.2985,
+    0.6105,
+    0.0206
+   ]
+  },
+  {
+   "text": "2 PASTA CARBONARA",
+   "confidence": 0.98,
+   "bbox": [
+    0.1316,
+    0.3823,
+    0.2961,
+    0.0194
+   ]
+  },
+  {
+   "text": "398,00",
+   "confidence": 0.94,
+   "bbox": [
+    0.7638,
+    0.3823,
+    0.1053,
+    0.0231
+   ]
+  },
+  {
+   "text": "1 TIRAMlSU",
+   "confidence": 0.98,
+   "bbox": [
+    0.1316,
+    0.4235,
+    0.175,
+    0.0194
+   ]
+  },
+  {
+   "text": "119,00",
+   "confidence": 0.95,
+   "bbox": [
+    0.7638,
+    0.4235,
+    0.1053,
+    0.0231
+   ]
+  },
+  {
+   "text": "2 ØL 0,5L",
+   "confidence": 0.89,
+   "bbox": [
+    0.1316,
+    0.4636,
+    0.1566,
+    0.0243
+   ]
+  },
+  {
+   "text": "238,00",
+   "confidence": 0.96,
+   "bbox": [
+    0.7638,
+    0.4648,
+    0.1053,
+    0.0231
+   ]
+  },
+  {
+   "text": "SUBTOTAL",
+   "confidence": 0.89,
+   "bbox": [
+    0.1316,
+    0.5473,
+    0.1395,
+    0.0194
+   ]
+  },
+  {
+   "text": "755,00",
+   "confidence": 0.9,
+   "bbox": [
+    0.7638,
+    0.5473,
+    0.1053,
+    0.0231
+   ]
+  },
+  {
+   "text": "TIPS",
+   "confidence": 0.88,
+   "bbox": [
+    0.1316,
+    0.5886,
+    0.0697,
+    0.0194
+   ]
+  },
+  {
+   "text": "75,00",
+   "confidence": 0.97,
+   "bbox": [
+    0.7812,
+    0.5886,
+    0.0868,
+    0.0231
+   ]
+  },
+  {
+   "text": "TOTALT Å BETALE",
+   "confidence": 0.87,
+   "bbox": [
+    0.1316,
+    0.625,
+    0.2618,
+    0.0243
+   ]
+  },
+  {
+   "text": "830,00",
+   "confidence": 0.94,
+   "bbox": [
+    0.7638,
+    0.6299,
+    0.1053,
+    0.0231
+   ]
+  },
+  {
+   "text": "Herav mva 25%",
+   "confidence": 0.99,
+   "bbox": [
+    0.1316,
+    0.7124,
+    0.2263,
+    0.0194
+   ]
+  },
+  {
+   "text": "151,00",
+   "confidence": 0.97,
+   "bbox": [
+    0.7638,
+    0.7124,
+    0.1053,
+    0.0231
+   ]
+  },
+  {
+   "text": "MASTERCARD ************4821",
+   "confidence": 0.86,
+   "bbox": [
+    0.1316,
+    0.7536,
+    0.4711,
+    0.0194
+   ]
+  },
+  {
+   "text": "Grazie e arrivederci!",
+   "confidence": 0.94,
+   "bbox": [
+    0.3169,
+    0.835,
+    0.3658,
+    0.0206
+   ]
+  }
+ ],
+ "rows": [
+  "TRATTORIA LUCCA",
+  "Bryggen 12, 5003 Bergen",
+  "Org.nr 920 112 234 MVA",
+  "Dato: 17.10.2026  Kl. 19:48  Bord 7",
+  "2 PASTA CARBONARA 398,00",
+  "1 TIRAMlSU 119,00",
+  "2 ØL 0,5L 238,00",
+  "SUBTOTAL 755,00",
+  "TIPS 75,00",
+  "TOTALT Å BETALE 830,00",
+  "Herav mva 25% 151,00",
+  "MASTERCARD ************4821",
+  "Grazie e arrivederci!"
+ ],
+ "full_text": "TRATTORIA LUCCA\nBryggen 12, 5003 Bergen\nOrg.nr 920 112 234 MVA\nDato: 17.10.2026  Kl. 19:48  Bord 7\n2 PASTA CARBONARA 398,00\n1 TIRAMlSU 119,00\n2 ØL 0,5L 238,00\nSUBTOTAL 755,00\nTIPS 75,00\nTOTALT Å BETALE 830,00\nHerav mva 25% 151,00\nMASTERCARD ************4821\nGrazie e arrivederci!",
+ "image_size": [
+  760,
+  824
+ ],
+ "ms": 460
+}

@@ -1,0 +1,46 @@
+{
+  "today": "2026-10-24",
+  "notes": "Bensinstasjon med liter × literpris på egen rad, bilvask og kaffe (25 % og 15 % mva)",
+  "receipt": {
+    "merchant": "Esso Express Lysaker",
+    "org_number": "931770012",
+    "date": "2026-10-20",
+    "time": "07:31",
+    "currency": "NOK",
+    "items": [
+      {
+        "description": "BENSIN 95 PUMPE 3",
+        "quantity": 38.52,
+        "unit_price": 22.79,
+        "amount": 877.87
+      },
+      {
+        "description": "BILVASK STANDARD",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 189.0
+      },
+      {
+        "description": "KAFFE MEDIUM",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 34.0
+      }
+    ],
+    "discounts": [],
+    "subtotal": null,
+    "vat": [
+      {
+        "rate": 25,
+        "amount": 213.37
+      },
+      {
+        "rate": 15,
+        "amount": 4.43
+      }
+    ],
+    "total": 1100.87,
+    "payment_method": "BankAxept",
+    "category_suggestion": "Transport og lading"
+  }
+}

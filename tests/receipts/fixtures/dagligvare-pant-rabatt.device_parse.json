@@ -1,0 +1,67 @@
+{
+  "merchant": "KIWI 452 Majorstuen",
+  "org_number": "916543212",
+  "date": "2026-10-22",
+  "time": "16:05",
+  "currency": "NOK",
+  "items": [
+    {
+      "description": "TINE HELMELK 1,75L",
+      "quantity": null,
+      "unit_price": null,
+      "amount": 32.9
+    },
+    {
+      "description": "BRØD KNEIPP",
+      "quantity": null,
+      "unit_price": null,
+      "amount": 29.9
+    },
+    {
+      "description": "EGG 12 STK",
+      "quantity": null,
+      "unit_price": null,
+      "amount": 49.9
+    },
+    {
+      "description": "NORVEGIA 1KG",
+      "quantity": null,
+      "unit_price": null,
+      "amount": 129.0
+    },
+    {
+      "description": "FARRIS 1,5L",
+      "quantity": null,
+      "unit_price": null,
+      "amount": 24.9
+    },
+    {
+      "description": "PANT",
+      "quantity": null,
+      "unit_price": null,
+      "amount": 3.0
+    },
+    {
+      "description": "BANAN",
+      "quantity": 3,
+      "unit_price": 5.9,
+      "amount": 17.7
+    }
+  ],
+  "discounts": [
+    {
+      "description": "RABATT NORVEGIA",
+      "amount": -20.0
+    }
+  ],
+  "subtotal": null,
+  "vat": [
+    {
+      "rate": 15,
+      "amount": 34.87
+    }
+  ],
+  "total": 267.3,
+  "payment_method": "BankAxept",
+  "category_suggestion": "Mat og dagligvarer"
+}

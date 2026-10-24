@@ -1,0 +1,48 @@
+{
+  "today": "2026-10-24",
+  "notes": "Restaurant med subtotal og tips som egen varelinje",
+  "receipt": {
+    "merchant": "Trattoria Lucca",
+    "org_number": "920112234",
+    "date": "2026-10-17",
+    "time": "19:48",
+    "currency": "NOK",
+    "items": [
+      {
+        "description": "PASTA CARBONARA",
+        "quantity": 2,
+        "unit_price": null,
+        "amount": 398.0
+      },
+      {
+        "description": "TIRAMISU",
+        "quantity": 1,
+        "unit_price": null,
+        "amount": 119.0
+      },
+      {
+        "description": "ØL 0,5L",
+        "quantity": 2,
+        "unit_price": null,
+        "amount": 238.0
+      },
+      {
+        "description": "TIPS",
+        "quantity": null,
+        "unit_price": null,
+        "amount": 75.0
+      }
+    ],
+    "discounts": [],
+    "subtotal": 755.0,
+    "vat": [
+      {
+        "rate": 25,
+        "amount": 151.0
+      }
+    ],
+    "total": 830.0,
+    "payment_method": "Mastercard",
+    "category_suggestion": "Restaurant og kafé"
+  }
+}

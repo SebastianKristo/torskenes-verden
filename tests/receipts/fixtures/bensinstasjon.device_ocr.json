@@ -1,0 +1,226 @@
+{
+ "source": "ios_vision",
+ "lines": [
+  {
+   "text": "ESSO EXPRESS LYSAKER",
+   "confidence": 0.86,
+   "bbox": [
+    0.3257,
+    0.1347,
+    0.35,
+    0.0194
+   ]
+  },
+  {
+   "text": "Drammensveien 165, 1366 Lysaker",
+   "confidence": 0.95,
+   "bbox": [
+    0.2298,
+    0.1748,
+    0.5408,
+    0.0267
+   ]
+  },
+  {
+   "text": "Org.nr NO 931 770 012 MVA",
+   "confidence": 0.93,
+   "bbox": [
+    0.2821,
+    0.2172,
+    0.4355,
+    0.0255
+   ]
+  },
+  {
+   "text": "2026-10-20 07:31",
+   "confidence": 0.92,
+   "bbox": [
+    0.1316,
+    0.2998,
+    0.2789,
+    0.0194
+   ]
+  },
+  {
+   "text": "BENSIN 95 PUMPE 3",
+   "confidence": 0.93,
+   "bbox": [
+    0.1316,
+    0.3823,
+    0.2961,
+    0.0194
+   ]
+  },
+  {
+   "text": "38,52 L X 22,79",
+   "confidence": 0.95,
+   "bbox": [
+    0.1316,
+    0.4235,
+    0.2618,
+    0.0231
+   ]
+  },
+  {
+   "text": "877,87",
+   "confidence": 0.98,
+   "bbox": [
+    0.7638,
+    0.4235,
+    0.1053,
+    0.0231
+   ]
+  },
+  {
+   "text": "BILVASK STANDAKD",
+   "confidence": 0.93,
+   "bbox": [
+    0.1316,
+    0.4648,
+    0.2789,
+    0.0194
+   ]
+  },
+  {
+   "text": "189,00",
+   "confidence": 0.9,
+   "bbox": [
+    0.7638,
+    0.4648,
+    0.1053,
+    0.0231
+   ]
+  },
+  {
+   "text": "KAFFE MEDIUM",
+   "confidence": 0.99,
+   "bbox": [
+    0.1316,
+    0.5061,
+    0.2092,
+    0.0194
+   ]
+  },
+  {
+   "text": "34,00",
+   "confidence": 0.91,
+   "bbox": [
+    0.7812,
+    0.5061,
+    0.0868,
+    0.0231
+   ]
+  },
+  {
+   "text": "SUM",
+   "confidence": 0.97,
+   "bbox": [
+    0.1316,
+    0.5886,
+    0.0526,
+    0.0194
+   ]
+  },
+  {
+   "text": "1 100,87",
+   "confidence": 0.98,
+   "bbox": [
+    0.7289,
+    0.5886,
+    0.1395,
+    0.0231
+   ]
+  },
+  {
+   "text": "BANKAXEPT",
+   "confidence": 0.96,
+   "bbox": [
+    0.1316,
+    0.6299,
+    0.1566,
+    0.0194
+   ]
+  },
+  {
+   "text": "1 100,87",
+   "confidence": 0.94,
+   "bbox": [
+    0.7289,
+    0.6299,
+    0.1395,
+    0.0231
+   ]
+  },
+  {
+   "text": "MVA 25%",
+   "confidence": 0.92,
+   "bbox": [
+    0.1316,
+    0.7124,
+    0.1224,
+    0.0194
+   ]
+  },
+  {
+   "text": "213,37",
+   "confidence": 0.89,
+   "bbox": [
+    0.7638,
+    0.7124,
+    0.1053,
+    0.0231
+   ]
+  },
+  {
+   "text": "MVA 15%",
+   "confidence": 0.92,
+   "bbox": [
+    0.1316,
+    0.7536,
+    0.1224,
+    0.0194
+   ]
+  },
+  {
+   "text": "4,43",
+   "confidence": 0.91,
+   "bbox": [
+    0.7987,
+    0.7536,
+    0.0697,
+    0.0231
+   ]
+  },
+  {
+   "text": "God tur!",
+   "confidence": 0.96,
+   "bbox": [
+    0.4303,
+    0.835,
+    0.1395,
+    0.0206
+   ]
+  }
+ ],
+ "rows": [
+  "ESSO EXPRESS LYSAKER",
+  "Drammensveien 165, 1366 Lysaker",
+  "Org.nr NO 931 770 012 MVA",
+  "2026-10-20 07:31",
+  "BENSIN 95 PUMPE 3",
+  "38,52 L X 22,79 877,87",
+  "BILVASK STANDAKD 189,00",
+  "KAFFE MEDIUM 34,00",
+  "SUM 1 100,87",
+  "BANKAXEPT 1 100,87",
+  "MVA 25% 213,37",
+  "MVA 15% 4,43",
+  "God tur!"
+ ],
+ "full_text": "ESSO EXPRESS LYSAKER\nDrammensveien 165, 1366 Lysaker\nOrg.nr NO 931 770 012 MVA\n2026-10-20 07:31\nBENSIN 95 PUMPE 3\n38,52 L X 22,79 877,87\nBILVASK STANDAKD 189,00\nKAFFE MEDIUM 34,00\nSUM 1 100,87\nBANKAXEPT 1 100,87\nMVA 25% 213,37\nMVA 15% 4,43\nGod tur!",
+ "image_size": [
+  760,
+  824
+ ],
+ "ms": 460
+}

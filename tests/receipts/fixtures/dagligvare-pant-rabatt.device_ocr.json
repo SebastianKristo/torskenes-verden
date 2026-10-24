@@ -1,0 +1,310 @@
+{
+ "source": "ios_vision",
+ "lines": [
+  {
+   "text": "KIWI 452 MAJORSTUEN",
+   "confidence": 0.87,
+   "bbox": [
+    0.3344,
+    0.1156,
+    0.3316,
+    0.0167
+   ]
+  },
+  {
+   "text": "Kirkeveien 64, 0364 Oslo",
+   "confidence": 0.92,
+   "bbox": [
+    0.2908,
+    0.15,
+    0.4184,
+    0.0208
+   ]
+  },
+  {
+   "text": "Org.nr NO 916 543 212 MVA",
+   "confidence": 0.89,
+   "bbox": [
+    0.2821,
+    0.1865,
+    0.4355,
+    0.0219
+   ]
+  },
+  {
+   "text": "22.10.2026 16:05   Kasse 2",
+   "confidence": 0.86,
+   "bbox": [
+    0.1316,
+    0.2573,
+    0.4539,
+    0.0167
+   ]
+  },
+  {
+   "text": "TINE HELMELK 1,75L",
+   "confidence": 0.89,
+   "bbox": [
+    0.1316,
+    0.3281,
+    0.3145,
+    0.0198
+   ]
+  },
+  {
+   "text": "32,90",
+   "confidence": 0.91,
+   "bbox": [
+    0.7812,
+    0.3281,
+    0.0868,
+    0.0198
+   ]
+  },
+  {
+   "text": "BR0D KNEIPP",
+   "confidence": 0.9,
+   "bbox": [
+    0.1316,
+    0.3625,
+    0.1921,
+    0.0187
+   ]
+  },
+  {
+   "text": "29,90",
+   "confidence": 0.93,
+   "bbox": [
+    0.7812,
+    0.3635,
+    0.0868,
+    0.0198
+   ]
+  },
+  {
+   "text": "EGG 12 STK",
+   "confidence": 0.97,
+   "bbox": [
+    0.1316,
+    0.399,
+    0.175,
+    0.0167
+   ]
+  },
+  {
+   "text": "49,90",
+   "confidence": 0.97,
+   "bbox": [
+    0.7812,
+    0.399,
+    0.0868,
+    0.0198
+   ]
+  },
+  {
+   "text": "NORVEGlA 1KG",
+   "confidence": 0.9,
+   "bbox": [
+    0.1316,
+    0.4344,
+    0.2092,
+    0.0167
+   ]
+  },
+  {
+   "text": "129,00",
+   "confidence": 0.93,
+   "bbox": [
+    0.7638,
+    0.4344,
+    0.1053,
+    0.0198
+   ]
+  },
+  {
+   "text": "FARRIS 1,5L",
+   "confidence": 0.97,
+   "bbox": [
+    0.1316,
+    0.4698,
+    0.1921,
+    0.0198
+   ]
+  },
+  {
+   "text": "24,90",
+   "confidence": 0.91,
+   "bbox": [
+    0.7812,
+    0.4698,
+    0.0868,
+    0.0198
+   ]
+  },
+  {
+   "text": "PANT",
+   "confidence": 0.88,
+   "bbox": [
+    0.1316,
+    0.5052,
+    0.0697,
+    0.0167
+   ]
+  },
+  {
+   "text": "3,00",
+   "confidence": 0.92,
+   "bbox": [
+    0.7987,
+    0.5052,
+    0.0697,
+    0.0198
+   ]
+  },
+  {
+   "text": "BANAN",
+   "confidence": 0.97,
+   "bbox": [
+    0.1316,
+    0.5406,
+    0.0868,
+    0.0167
+   ]
+  },
+  {
+   "text": "  3 X 5,90",
+   "confidence": 0.97,
+   "bbox": [
+    0.1316,
+    0.576,
+    0.175,
+    0.0198
+   ]
+  },
+  {
+   "text": "17,70",
+   "confidence": 0.86,
+   "bbox": [
+    0.7812,
+    0.576,
+    0.0868,
+    0.0198
+   ]
+  },
+  {
+   "text": "RABATT NORVEGIA",
+   "confidence": 0.86,
+   "bbox": [
+    0.1316,
+    0.6115,
+    0.2618,
+    0.0167
+   ]
+  },
+  {
+   "text": "-20,00",
+   "confidence": 0.92,
+   "bbox": [
+    0.7638,
+    0.6115,
+    0.1053,
+    0.0198
+   ]
+  },
+  {
+   "text": "TOTAL",
+   "confidence": 0.98,
+   "bbox": [
+    0.1316,
+    0.6823,
+    0.0868,
+    0.0167
+   ]
+  },
+  {
+   "text": "267,30",
+   "confidence": 0.88,
+   "bbox": [
+    0.7638,
+    0.6823,
+    0.1053,
+    0.0198
+   ]
+  },
+  {
+   "text": "BANKAXEPT",
+   "confidence": 0.98,
+   "bbox": [
+    0.1316,
+    0.7177,
+    0.1566,
+    0.0167
+   ]
+  },
+  {
+   "text": "267,30",
+   "confidence": 0.94,
+   "bbox": [
+    0.7638,
+    0.7177,
+    0.1053,
+    0.0198
+   ]
+  },
+  {
+   "text": "MVA 15%",
+   "confidence": 0.88,
+   "bbox": [
+    0.1316,
+    0.7885,
+    0.1224,
+    0.0167
+   ]
+  },
+  {
+   "text": "34,87",
+   "confidence": 0.98,
+   "bbox": [
+    0.7812,
+    0.7885,
+    0.0868,
+    0.0198
+   ]
+  },
+  {
+   "text": "Takk for handelen!",
+   "confidence": 0.92,
+   "bbox": [
+    0.3431,
+    0.8583,
+    0.3145,
+    0.0177
+   ]
+  }
+ ],
+ "rows": [
+  "KIWI 452 MAJORSTUEN",
+  "Kirkeveien 64, 0364 Oslo",
+  "Org.nr NO 916 543 212 MVA",
+  "22.10.2026 16:05   Kasse 2",
+  "TINE HELMELK 1,75L 32,90",
+  "BR0D KNEIPP 29,90",
+  "EGG 12 STK 49,90",
+  "NORVEGlA 1KG 129,00",
+  "FARRIS 1,5L 24,90",
+  "PANT 3,00",
+  "BANAN",
+  "  3 X 5,90 17,70",
+  "RABATT NORVEGIA -20,00",
+  "TOTAL 267,30",
+  "BANKAXEPT 267,30",
+  "MVA 15% 34,87",
+  "Takk for handelen!"
+ ],
+ "full_text": "KIWI 452 MAJORSTUEN\nKirkeveien 64, 0364 Oslo\nOrg.nr NO 916 543 212 MVA\n22.10.2026 16:05   Kasse 2\nTINE HELMELK 1,75L 32,90\nBR0D KNEIPP 29,90\nEGG 12 STK 49,90\nNORVEGlA 1KG 129,00\nFARRIS 1,5L 24,90\nPANT 3,00\nBANAN\n  3 X 5,90 17,70\nRABATT NORVEGIA -20,00\nTOTAL 267,30\nBANKAXEPT 267,30\nMVA 15% 34,87\nTakk for handelen!",
+ "image_size": [
+  760,
+  960
+ ],
+ "ms": 492
+}
