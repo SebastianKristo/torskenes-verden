@@ -175,7 +175,8 @@ test('tidsgrenser: innstillingene valideres og ligger i FinansHub-innstillingene
   assert.equal((await A('/finans/api/settings')).body.aiTimeouts.gemini, 5);
 });
 
-test('tidsgrenser: Gemini henger → nytt forsøk, neste nøkkel, så Groq; status og ai_log viser motoren', async () => {
+// Prompt 48: Groq er tatt ut av kvitteringskjeden og Gemini står sist (etter Ollama). Gemini som henger gir derfor feil til slutt, ikke Groq.
+test('tidsgrenser: Gemini henger → nytt forsøk, neste nøkkel, så ingen Groq (prompt 48); status og ai_log viser motoren', async () => {
   AI._resetAi();
   AI._aiTest.scale = 0.01; // 5 s → 50 ms, 1 s ventetid → 10 ms
   setSecret('geminiKey', 'AIza-main-key-aaaaaaaaaaaaaaaa');
@@ -185,21 +186,18 @@ test('tidsgrenser: Gemini henger → nytt forsøk, neste nøkkel, så Groq; stat
   const f = aiFetch();
   const statuses = [];
   try {
-    const res = await AI.extract(PNG, 'image/png', ['Dagligvarer'], null, { status: (t, info) => statuses.push([t, info.timeoutEngine]) });
-    assert.equal(res.provider, 'groq');
-    assert.equal(res.timeoutEngine, 'gemini');
-    assert.equal(res.data.merchant, 'REMA 1000');
+    await assert.rejects(AI.extract(PNG, 'image/png', ['Dagligvarer'], null, { status: (t, info) => statuses.push([t, info.timeoutEngine]) }), /Gemini: svarte ikke innen tidsfristen/);
   } finally { f.restore(); }
+  assert.equal(f.calls.filter((c) => c.url.includes('api.groq.com')).length, 0, 'Groq brukes ikke til kvitteringer');
   const gem = f.calls.filter((c) => c.url.includes('generativelanguage')).map((c) => c.key);
   assert.deepEqual(gem, ['AIza-main-key-aaaaaaaaaaaaaaaa', 'AIza-main-key-aaaaaaaaaaaaaaaa', 'AIzaReserveKeyBBBBBBBBBBBBBBBBBB', 'AIzaReserveKeyBBBBBBBBBBBBBBBBBB'], 'to forsøk per nøkkel');
   const texts = statuses.map((s) => s[0]);
   assert.ok(texts.includes('✦ Gemini svarte ikke innen 5 s · nytt forsøk om 1 s …'), texts.join('\n'));
   assert.ok(texts.includes('✦ Gemini svarte ikke innen 5 s · prøver Gemini (Reserve 1) …'), texts.join('\n'));
-  assert.equal(texts.at(-1), '✦ Gemini svarte ikke innen 5 s · prøver Groq …');
+  assert.ok(!texts.some((t) => /Groq/.test(t)), texts.join('\n'));
   assert.ok(statuses.every((s) => s[1] === 'gemini'));
   const log = (await A('/finans/api/ai/log?limit=20')).body.items;
   assert.ok(log.some((l) => l.engine === 'gemini' && l.status === 'tidsavbrudd' && l.timeoutEngine === 'gemini'));
-  assert.ok(log.some((l) => l.engine === 'groq' && l.status === 'ok' && l.timeoutEngine === 'gemini'));
 });
 
 test('tidsgrenser: tekst-AI (søk, kategorier) går videre til neste motor ved tidsavbrudd', async () => {

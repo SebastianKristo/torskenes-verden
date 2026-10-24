@@ -45,6 +45,9 @@ import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } 
 import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
 import { mailAddress42 } from './homes42.js'; // prompt 42
 import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipts47.js'; // prompt 47 (SERVER47): OCR-tekst og ferdig tolket kvittering fra enheten
+import { mountReceipts48, preScanned48 } from '../receipts48/routes.js'; // prompt 48 (SERVER48): /receipts/scan (kjeden A→B→C→Tesseract→D), /receipts/health, rettelser
+import { cleanMacOcrUrl, cleanReceipts48 } from '../receipts48/settings.js';
+import { correctionOnBook48 } from '../receipts48/corrections.js';
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -354,7 +357,7 @@ async function processReceipt(r, id, force) {
       const onTimeout = (r.retry_n ?? 0) >= QUEUE_MAX ? 'next' : undefined;
       // Prompt 47: ferdig tolket på iPhone (apple-fm) → ikke nytt AI-kall; OCR-tekst fra Android/iPhone får OCR-instruksen.
       const ocr47 = ocrTextOf47(r, force);
-      const res = preParsed47(r, force) ?? (ocr47 ? await extractText(ocr47, cats, { kind: 'ocr' }) : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats, textKind47(r)) : await extract(img, mime, cats, force, { log, status, onTimeout }));
+      const res = preParsed47(r, force) ?? preScanned48(r, force) ?? (ocr47 ? await extractText(ocr47, cats, { kind: 'ocr' }) : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats, textKind47(r)) : await extract(img, mime, cats, force, { log, status, onTimeout }));
       const d = res.data;
       if (live.ctrl.signal.aborted) throw Object.assign(new Error('Avbrutt av brukeren'), { cancelled: true });
       live.model = res.model ?? live.model;
@@ -946,6 +949,8 @@ export async function ingestReceipt({ buffer, mime, name, meta, target = null, s
 api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
 // Prompt 47: POST /receipts/ocr-text og /receipts/parsed (receipts47.js) – samme kø, samme datamodell og samme Til godkjenning.
 mountReceipts47(api, { W: need('receipts:write'), enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
+// Prompt 48: POST /receipts/scan, GET /receipts/health, /receipts/schemas/:kind og rettelser (server/receipts48/) – samme kø og datamodell.
+mountReceipts48(api, { W: need('receipts:write', 'finance:write'), R: need('finance:read', 'receipts:write'), adminOnly, sessionOnly, enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
 // Legg ved kvittering på en eksisterende transaksjon. AI-en leser den, og den bekreftes i gjennomgangskøen som vanlig.
 api.post('/transactions/:id/receipt', need('receipts:write'), upload, (c) => {
   const id = +c.req.param('id');
@@ -1061,6 +1066,7 @@ api.post('/receipts/:id/book', W, async (c) => {
     }
   })();
   try { const rule = confirmOnBook39(u, origSelect.get(r.id)); if (rule) scanLog(r.id, 'regel', `✦ ${rule.pattern} → ${rule.category}`); } catch (e) { console.warn('[finans39] godkjenning:', e.message); } // prompt 39
+  try { const booked = origSelect.get(r.id); correctionOnBook48(u, booked, catById(u).get(booked.category_id)?.name ?? null); } catch (e) { console.warn('[finans48] rettelse:', e.message); } // prompt 48: rettelser som testdata
   return c.json(receiptOut(origSelect.get(r.id)));
 });
 
@@ -1581,10 +1587,12 @@ const SETTING_KEYS = { name: (v) => str(v, 40), currency: (v) => (['NOK', 'EUR',
   aiTimeouts: (v) => cleanAiTimeouts(v, aiTimeoutsOf()),
   aiSummaries: Boolean, imapHost: (v) => (/^[a-z0-9.-]{0,120}$/i.test(v) ? v : ''), imapUser: (v) => str(v, 120), imapFolder: (v) => str(v, 60) || 'INBOX',
   // ISO2: Trading 212-miljøet er en personlig integrasjon (videresendes til setUserCfg via saveSettings).
-  t212Env: (v) => (v === 'demo' ? 'demo' : 'live'), boligAiNew: Boolean };
+  t212Env: (v) => (v === 'demo' ? 'demo' : 'live'), boligAiNew: Boolean,
+  // Prompt 48: Mac-OCR-adressen (ugyldig → beholder lagret) og av/på per steg i kvitteringskjeden (flettes med lagret verdi).
+  macOcrUrl: (v) => cleanMacOcrUrl(v) ?? settings().macOcrUrl, receipts48: (v) => cleanReceipts48(v, settings().receipts48) };
 // Serveroppsett som vanlige brukere ikke får se (adresser, kontoer, arbeidsflyter). Modellnavn og motorvalg vises.
-const SERVER_HIDDEN = new Set(['ollamaUrl', 'roboflowWorkflow', 'roboflowWorkspace', 'roboflowModel', 'roboflowBarcodeModel', 'smbShare', 'smbDir', 'smbUser', 'smbDomain', 'smbVersion']);
-const SERVER_SECRETS = ['geminiKey', 'groqKey', 'roboflowKey'];
+const SERVER_HIDDEN = new Set(['ollamaUrl', 'macOcrUrl', 'roboflowWorkflow', 'roboflowWorkspace', 'roboflowModel', 'roboflowBarcodeModel', 'smbShare', 'smbDir', 'smbUser', 'smbDomain', 'smbVersion']);
+const SERVER_SECRETS = ['geminiKey', 'groqKey', 'roboflowKey', 'macOcrKey']; // prompt 48: macOcrKey
 const sameVal = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 // ISO2: serverfelt (SERVER_KEYS og Gemini/Groq/Roboflow-nøklene) kan bare endres av admin; en vanlig bruker som prøver å endre
@@ -1633,7 +1641,7 @@ function settingsOut(c) {
   const flat = Object.fromEntries(Object.entries(out).filter(([k]) => seen(k)));
   const aiTimeouts = aiTimeoutsOf(out), imapPin = out.imapPin ? { fingerprint: out.imapPin.fingerprint } : null;
   const server = { ...Object.fromEntries([...SERVER_KEYS].filter(seen).map((k) => [k, out[k]])), aiTimeouts,
-    geminiKeySet: !!hasGemini(), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey') };
+    geminiKeySet: !!hasGemini(), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), ...(a.admin ? { macOcrKeySet: !!secret('macOcrKey') } : {}) };
   const user = { ...Object.fromEntries(Object.entries(out).filter(([k]) => !SERVER_KEYS.has(k))), imapPin, imapPassSet: !!secret('imapPass'), t212Set: t212Configured() };
   return { ...flat, aiTimeouts, aiTimeoutOptions: { steps: TIMEOUT_STEPS, retries: [0, 1, 2, 3], onTimeout: ON_TIMEOUT, defaults: AI_TIMEOUT_DEFAULTS },
     imapPin, geminiKeySet: server.geminiKeySet, groqKeySet: server.groqKeySet, roboflowKeySet: server.roboflowKeySet, imapPassSet: user.imapPassSet, t212Set: user.t212Set,

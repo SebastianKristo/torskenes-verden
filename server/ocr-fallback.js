@@ -201,8 +201,11 @@ export function parseReceiptText(text) {
 
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/tiff': 'tif', 'image/bmp': 'bmp', 'application/pdf': 'pdf', 'image/heic': 'heic', 'image/heif': 'heif' };
 
-/** Leser bildet med Tesseract. Kaster med en norsk melding når verktøyene mangler eller bildet ikke kan leses. */
-export async function ocrReceipt(image, mime) {
+/**
+ * Leser bildet med Tesseract. Kaster med en norsk melding når verktøyene mangler eller bildet ikke kan leses.
+ * lookup:false (prompt 48: «Finansdata forlater aldri huset») slår av oppslaget i Brønnøysundregistrene.
+ */
+export async function ocrReceipt(image, mime, { lookup = true } = {}) {
   const tl = await ocrTools();
   if (!tl.tesseract) throw Object.assign(new Error('Tesseract er ikke installert på serveren'), { noRetry: true, missing: true });
   const dir = await mkdtemp(join(tmpdir(), 'ocr-'));
@@ -223,7 +226,7 @@ export async function ocrReceipt(image, mime) {
     if (!String(text).trim()) throw new Error('Fant ingen tekst i bildet');
     const out = parseReceiptText(text);
     // Ukjent kjede, men gyldig org.nr.: slå opp navnet i Enhetsregisteret.
-    if (out.org_number && !CHAINS.some(([re, n]) => n && re.test(text))) {
+    if (lookup && out.org_number && !CHAINS.some(([re, n]) => n && re.test(text))) {
       const name = await brregName(out.org_number);
       if (name) { out.merchant = name; out.confidence.merchant = 0.7; }
     }

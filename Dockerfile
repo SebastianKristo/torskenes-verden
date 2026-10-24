@@ -17,6 +17,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json CHANGELOG.md ./
 COPY server ./server
+COPY shared ./shared
 COPY public ./public
 COPY scripts ./scripts
 COPY eval ./eval

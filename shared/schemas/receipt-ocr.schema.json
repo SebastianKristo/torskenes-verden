@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "receipt-ocr.schema.json",
+  "title": "Felles OCR-format for kvitteringer (prompt 48)",
+  "description": "Samme format fra iPhone (Vision), Android (ML Kit) og Mac mini (Vision). bbox er [x, y, w, h] normalisert til 0–1 med origo øverst til venstre. rows = linjer med overlappende y-intervall, sortert på x og slått sammen med mellomrom. «tesseract» lages bare av serveren selv.",
+  "type": "object",
+  "required": ["source", "lines", "rows", "full_text"],
+  "properties": {
+    "source": { "type": "string", "enum": ["ios_vision", "android_mlkit", "mac_vision", "tesseract"] },
+    "lines": {
+      "type": "array",
+      "maxItems": 3000,
+      "items": {
+        "type": "object",
+        "required": ["text"],
+        "properties": {
+          "text": { "type": "string", "maxLength": 1000 },
+          "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+          "bbox": {
+            "type": ["array", "null"],
+            "minItems": 4,
+            "maxItems": 4,
+            "items": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    },
+    "rows": { "type": "array", "maxItems": 2000, "items": { "type": "string", "maxLength": 2000 } },
+    "full_text": { "type": "string", "maxLength": 60000 },
+    "image_size": {
+      "type": ["array", "null"],
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number", "minimum": 1 }
+    },
+    "ms": { "type": ["number", "null"], "minimum": 0 }
+  }
+}

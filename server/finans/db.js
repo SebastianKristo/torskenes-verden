@@ -350,6 +350,8 @@ export const DEFAULT_SETTINGS = {
   // Backup til SMB-share. Passord og passfrase ligger i hemmelighetene.
   smbOn: false, smbShare: process.env.SMB_SHARE ?? '', smbDir: 'finanshub', smbVersion: '3.1.1', smbUser: process.env.SMB_USER ?? '', smbDomain: 'WORKGROUP',
   smbSchedule: 'off', smbKeep: 14, smbDb: true, smbReceipts: true, smbSettings: true, smbEncrypt: true,
+  // Prompt 48: Mac-OCR-tjenesten på Mac mini (nøkkelen ligger i hemmelighetene: macOcrKey) og av/på per steg i kvitteringskjeden.
+  macOcrUrl: process.env.MAC_OCR_URL ?? 'http://10.69.1.173:8765', receipts48: {},
 };
 
 // Visningsnavnet følger hovedadmin (fra førstegangsoppsettet) til det overstyres under Generelt.
@@ -363,7 +365,7 @@ function mainAdminName() {
 // - IMAP-tilkoblingen og Trading 212-miljøet er personlige integrasjoner hos ISO-INT (kv(bruker,'cfg_personal'), userCfg/setUserCfg).
 export const SERVER_KEYS = new Set(['provider', 'fallback', 'ollamaUrl', 'ollamaModel', 'ollamaTextModel', 'geminiModel', 'groqModel', 'groqVisionModel',
   'roboflowWorkflow', 'roboflowWorkspace', 'roboflowModel', 'roboflowBarcodeModel', 'minConf', 'aiTasks', 'ocrFallback', 'ocrLowConf', 'aiTimeouts', 'embedModel', 'aiSearchEmbed',
-  'boligAiNew', 'smbOn', 'smbShare', 'smbDir', 'smbVersion', 'smbUser', 'smbDomain', 'smbSchedule', 'smbKeep', 'smbDb', 'smbReceipts', 'smbSettings', 'smbEncrypt']);
+  'boligAiNew', 'macOcrUrl', 'receipts48', 'smbOn', 'smbShare', 'smbDir', 'smbVersion', 'smbUser', 'smbDomain', 'smbSchedule', 'smbKeep', 'smbDb', 'smbReceipts', 'smbSettings', 'smbEncrypt']);
 // FinansHub-navn → nøkkel i cfg_personal (settings.js).
 export const PERSONAL_CFG = { imapHost: 'imapHost', imapPort: 'imapPort', imapSecurity: 'imapSecurity', imapUser: 'imapUser', imapFolder: 'imapFolder',
   imapDoneFolder: 'imapDoneFolder', imapFinnFolder: 'imapFinnFolder', t212Env: 't212_env' };
@@ -406,7 +408,7 @@ export function saveSettings(patch, u = me()) {
 
 // Hemmeligheter for FinansHub (Gemini, Trading 212, SMB, IMAP) lagres separat, kryptert med AES-256-GCM, og sendes aldri ut.
 // Nøkkelen avledes fra SECRET_KEY (eller SESSION_SECRET). Byttes den, må hemmelighetene legges inn på nytt.
-const SECRET_ENV = { openaiKey: 'OPENAI_API_KEY', elevenlabsKey: 'ELEVENLABS_API_KEY', azureSpeechKey: 'AZURE_SPEECH_KEY', geminiKey: 'GEMINI_API_KEY', groqKey: 'GROQ_API_KEY', roboflowKey: 'ROBOFLOW_API_KEY', imapPass: ['IMAP_PASSWORD', 'FINN_IMAP_PASSWORD'], t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE' };
+const SECRET_ENV = { openaiKey: 'OPENAI_API_KEY', elevenlabsKey: 'ELEVENLABS_API_KEY', azureSpeechKey: 'AZURE_SPEECH_KEY', geminiKey: 'GEMINI_API_KEY', groqKey: 'GROQ_API_KEY', roboflowKey: 'ROBOFLOW_API_KEY', imapPass: ['IMAP_PASSWORD', 'FINN_IMAP_PASSWORD'], t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE', macOcrKey: 'MAC_OCR_KEY' };
 const sealKey = () => createHash('sha256').update('fh-secret:' + (process.env.SECRET_KEY || config.sessionSecret || 'dev')).digest();
 export function seal(text) {
   const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', sealKey(), iv);

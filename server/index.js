@@ -13,6 +13,7 @@ import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig, runRequest, userCfgSet, runAsUser } from './settings.js';
 import finansApi from './finans/routes.js';
+import { receiptsAlias48 } from './receipts48/routes.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
 import { matApi, matCalendar, startMatScheduler } from './mat.js';
@@ -183,6 +184,7 @@ app.route('/finans/api', finans43Api); // prompt 43: /overview, /transactions/mo
 app.route('/finans/api', finans42Api); // prompt 42: Glimt-søk (SQL før LLM, tankesteg), filter, avanserte oppgaver + PDF, Boliger web, import til bolig, aksje-logoer
 app.route('/finans/api', finans40Api); // prompt 40: added, PATCH alt + historikk, Les på nytt, POST /search/ask (før routes.js)
 app.route('/finans/api', finansApi);
+app.route('/api/receipts', receiptsAlias48(finansApi)); // prompt 48: alias POST /api/receipts/scan og GET /api/receipts/health
 // Del-mål for PWA-en: «Del → FinansHub» fra bilder-appen legger kvitteringen i køen.
 app.post('/finans/share', async (c) => {
   if (!sessionUser(c)) return c.redirect('/login?next=/finans/');

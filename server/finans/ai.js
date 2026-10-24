@@ -10,6 +10,7 @@ import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
 const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok' };
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 import { RULES39, normalizeLines39, extras39, verify39 } from './receipts39.js'; // prompt 39: varelinjer og sumkontroll
+import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: sperren for eksterne tjenester i kvitteringskjeden
 
 export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON etter skjemaet.
 - Beløp i kroner som tall med punktum som desimalskille (386.50).
@@ -89,7 +90,7 @@ export function validate(x) {
 /* ---------------- Felles: motorer, reserve og «nede»-vakt ---------------- */
 
 export const ENGINES = ['ollama', 'gemini', 'groq'];
-export const providerName = (p) => ({ gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama', tesseract: 'Lokal OCR', roboflow: 'Roboflow', 'apple-fm': 'Apple Intelligence' }[p] ?? 'Ollama'); // prompt 47: apple-fm
+export const providerName = (p) => ({ gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama', tesseract: 'Lokal OCR', roboflow: 'Roboflow', 'apple-fm': 'Apple Intelligence', device: 'Enheten' }[p] ?? 'Ollama'); // prompt 47: apple-fm, prompt 48: device
 export const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'meta-llama/llama-4-scout-17b-16e-instruct', 'qwen/qwen3-32b'];
 export const ROBOFLOW_WORKSPACE = 'sebastians-workspace-y3jnc';
 
@@ -232,6 +233,22 @@ export function engineOrder(st = settings(), { force = null, skipDown = true, ta
   return live.length ? live : all;
 }
 
+/**
+ * Prompt 48: motorene kvitteringskjeden får bruke. Groq er tatt ut av kvitteringskjeden (koden er beholdt for andre
+ * oppgaver), Gemini står alltid sist, og når «Finansdata forlater aldri huset» er på (eller sky-budsjettet er brukt opp)
+ * brukes bare Ollama – for både bilde og tekst, også ved «Les på nytt med Gemini». → {list, blocked}
+ */
+export function receiptEngines48(list) {
+  const blocked = externalBlocked48();
+  let out = [...new Set(list)].filter((p) => p !== 'groq');
+  if (blocked.blocked) out = out.filter((p) => p === 'ollama');
+  out.sort((a, b) => (a === 'gemini') - (b === 'gemini'));
+  return { list: out, blocked };
+}
+const receiptForceErr48 = (force, g) => Object.assign(new Error(force === 'groq' ? 'Groq brukes ikke til kvitteringer' : `${g.blocked.text ?? 'Eksterne tjenester er sperret'}, så ${providerName(force)} brukes ikke til kvitteringer`), { noRetry: true, blocked: true });
+// Etter et tidsavbrudd: resten av listen (etter idx) får samme regel (ingen Groq, Gemini sist, sperren).
+const guardRest48 = (list, idx) => { const tried = list.slice(0, idx + 1); list.splice(idx + 1, Infinity, ...receiptEngines48(list.slice(idx + 1)).list.filter((x) => !tried.includes(x))); };
+
 // Nettverksfeil («fetch failed») sier lite; ta med årsaken (ECONNREFUSED, tidsavbrudd …).
 const netErr = (name, url, e) => {
   if (e.name === 'TimeoutError' || e.name === 'AbortError') return Object.assign(new Error(`${name} svarte ikke innen tidsfristen`), { noRetry: true, net: true, timeout: true });
@@ -349,6 +366,24 @@ async function geminiGenerate(parts, { schema, timeout, temperature, model, star
   throw new Error('Gemini svarte ikke');
 }
 
+/**
+ * Prompt 48: Gemini for den nye kvitteringskjeden (steg D, via AI-gaten som backend «gemini48», se receipts48/engines/gemini.js).
+ * Samme nøkkelrotasjon og modellvalg som resten. Sjekker selv sperren, så ingenting sendes ut når den er på.
+ */
+export async function geminiJson48(parts, schema, { timeout = 30_000, signal = null, temperature = 0 } = {}) {
+  const b = externalBlocked48();
+  if (b.blocked) throw Object.assign(new Error(`${b.text}, så Gemini brukes ikke`), { noRetry: true, blocked: true });
+  const t0 = Date.now(), model = settings().geminiModel || GEMINI_DEFAULT;
+  try {
+    const r = await geminiGenerate(parts, { schema, timeout, temperature, model, signal });
+    logAi({ task: 'receipts', engine: 'gemini', model: r.model, promptLen: JSON.stringify(parts).length, ms: Date.now() - t0 });
+    return r;
+  } catch (e) {
+    logAi({ task: 'receipts', engine: 'gemini', model, promptLen: 0, ms: Date.now() - t0, status: errKind(e), error: e.message });
+    throw e;
+  }
+}
+
 /* ---------------- Groq (OpenAI-kompatibelt) ---------------- */
 
 async function groqChat(content, schema, { timeout, temperature, model, signal = null }) {
@@ -393,12 +428,18 @@ export async function extract(image, mime, cats, force, { log = () => {}, status
   const st = settings();
   const mode = onTimeout ?? aiTimeoutsOf(st).onTimeout;
   let order = engineOrder(st, { force, task: 'receipts' });
-  // Roboflow (valgfritt): finn kvitteringen i bildet og beskjær før AI/OCR leser den.
-  if (!force && /^image\/(jpe?g|png|webp)$/.test(mime)) {
+  // Prompt 48: ingen Groq, Gemini sist, og bare lokalt når «Finansdata forlater aldri huset» er på (også for bildet).
+  const g48 = receiptEngines48(order);
+  if (force && !g48.list.includes(force)) throw receiptForceErr48(force, g48);
+  order = g48.list.length ? g48.list : ['ollama'];
+  if (g48.blocked.blocked) log('lokal', `${g48.blocked.text} · bare lokal modell og lokal OCR`);
+  // Roboflow (valgfritt): finn kvitteringen i bildet og beskjær før AI/OCR leser den. Roboflow er en ekstern tjeneste (sperren).
+  if (!force && !g48.blocked.blocked && /^image\/(jpe?g|png|webp)$/.test(mime)) {
     const crop = await roboflowCrop(image, mime, st).catch((e) => { log('roboflow', `hoppet over: ${e.timeout ? `svarte ikke innen ${aiTimeoutsOf(st).roboflow} s` : e.message}`); return null; });
     if (crop) { log('roboflow', `kvitteringen funnet og beskåret (${Math.round(crop.box.confidence * 100)} %)`); image = crop.image; }
   }
-  if (!force && (mime === 'image/heic' || mime === 'image/heif') && hasGemini()) order = ['gemini', ...order];
+  // HEIC: bare Gemini kan lese det (Ollama feiler raskt med beskjed); Gemini står fortsatt sist og bare når sperren er av.
+  if (!force && (mime === 'image/heic' || mime === 'image/heif') && hasGemini() && !g48.blocked.blocked) order = [...order.filter((p) => p !== 'gemini'), 'gemini'];
   let lastErr, timedOut = null, ocrNow = false;
   const errors = [];
   const done = (r) => (timedOut ? { ...r, timeoutEngine: timedOut.engine } : r);
@@ -430,8 +471,8 @@ export async function extract(image, mime, cats, force, { log = () => {}, status
           errors.push(`${providerName(p)}: svarte ikke innen tidsfristen (${secs} s)`);
           if (mode === 'queue' && !force) throw Object.assign(new Error(timeoutText(p, secs)), { queue: true, timeout: true, timeoutEngine: p, timeoutSecs: secs });
           if (mode === 'ocr' && !force) { ocrNow = true; onStatus(timeoutText(p, secs, 'prøver lokal OCR …'), { timeoutEngine: p }); break; }
-          // Neste motor: resten av rekkefølgen, så alle andre som er satt opp (Gemini → Groq → Ollama), så lokal OCR.
-          if (!force) afterTimeout(list, idx, st);
+          // Neste motor: resten av rekkefølgen, så alle andre som er satt opp, så lokal OCR (prompt 48: uten Groq, Gemini sist).
+          if (!force) { afterTimeout(list, idx, st); guardRest48(list, idx); }
           const nx = list.slice(idx + 1).find((x) => !isDown(x)) ?? list[idx + 1];
           onStatus(timeoutText(p, secs, nx ? `prøver ${providerName(nx)} …` : !force && ocrEnabled(st) ? 'prøver lokal OCR …' : null), { timeoutEngine: p });
           break;
@@ -447,7 +488,7 @@ export async function extract(image, mime, cats, force, { log = () => {}, status
     const t0 = Date.now();
     try {
       log('ocr', timedOut ? `${providerName(timedOut.engine)} svarte ikke innen ${timedOut.secs} s, prøver lokal OCR (Tesseract)` : 'AI feilet, prøver lokal OCR (Tesseract)');
-      const data = validate(await ocrReceipt(image, mime));
+      const data = validate(await ocrReceipt(image, mime, { lookup: !g48.blocked.blocked }));
       data.needs_review = true;
       logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, timeoutEngine: timedOut?.engine ?? null });
       return done({ provider: 'tesseract', model: 'tesseract-nor', data, seconds: (Date.now() - t0) / 1000, aiError: why });
@@ -484,7 +525,7 @@ async function sumRetry39(res, p, st, image, mime, cats, log, mode) {
 export async function extractOcr(image, mime) {
   const t0 = Date.now();
   try {
-    const data = validate(await ocrReceipt(image, mime));
+    const data = validate(await ocrReceipt(image, mime, { lookup: !externalBlocked48().blocked }));
     data.needs_review = true;
     logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, status: 'manuell' });
     return { provider: 'tesseract', model: 'tesseract-nor', data, seconds: (Date.now() - t0) / 1000 };
@@ -499,7 +540,7 @@ async function lowConfCheck(res, image, mime, st, log) {
   if (!st.ocrLowConf || !ocrEnabled(st) || res.data.confidence.total >= st.minConf / 100) return res;
   const t0 = Date.now();
   try {
-    const o = await ocrReceipt(image, mime);
+    const o = await ocrReceipt(image, mime, { lookup: !externalBlocked48().blocked });
     logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, status: 'kontroll' });
     const d = res.data;
     const agree = o.total != null && d.total != null && Math.abs(o.total - d.total) < 0.01;
@@ -533,6 +574,12 @@ export async function textJson(prompt, schema, { temperature = 0.2, force = null
       }
     } catch { /* ruting er valgfri */ }
   }
+  // Prompt 48: kvitteringer (OCR-tekst og e-post) – ingen Groq, Gemini sist, og sperren gjelder også med tvungen motor.
+  if (task === 'receipts') {
+    const g = receiptEngines48(list);
+    if (force && !g.list.includes(force)) throw receiptForceErr48(force, g);
+    list = g.list.length ? g.list : ['ollama'];
+  }
   const limits = aiTimeoutsOf(st);
   for (let idx = 0; idx < list.length; idx++) {
     if (signal?.aborted) throw cancelled();
@@ -553,7 +600,7 @@ export async function textJson(prompt, schema, { temperature = 0.2, force = null
       markDown(p, e); errors.push(`${providerName(p)}: ${e.timeout ? `svarte ikke innen tidsfristen (${e.timeoutSecs ?? limits[p]} s)` : e.message}`);
       if (e.timeout) timeouts.push({ engine: p, limitS: e.timeoutSecs ?? limits[p], elapsedS: e.elapsedS ?? Math.round((Date.now() - t0) / 100) / 10, text: e.limitText ?? `${providerName(p)} svarte ikke innen ${limits[p]} s` });
       // Tidsavbrudd: neste motor, også når reserve er av (gjelder ikke «Test tilkobling», som tvinger én motor).
-      if (e.timeout && !force) afterTimeout(list, idx, st);
+      if (e.timeout && !force) { afterTimeout(list, idx, st); if (task === 'receipts') guardRest48(list, idx); }
       if (e.timeout) { const nx = list[idx + 1]; status(timeoutText(p, e.timeoutSecs ?? limits[p], nx ? `prøver ${providerName(nx)} …` : 'bruker vanlig søk …'), { timeoutEngine: p, next: nx ?? null }); }
     }
   }
