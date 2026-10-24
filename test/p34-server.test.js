@@ -98,7 +98,10 @@ test('Glimt (AI-søk): modellen i innstillingene finnes ikke (404) → før: sti
   assert.match(r.body.text, /Svar fra/);
   assert.match(r.body.warning, /Modellen «qwen2\.5vl:7b» finnes ikke på Ollama-serveren · bruker «qwen3:8b»/);
   const chat = ollama.calls.filter((c) => c.url.endsWith('/api/chat'));
-  assert.equal(chat.length, 1, 'ingen kall til en modell som ikke finnes');
+  // Prompt 47: Glimt-planleggeren får alltid spørsmålet først (her svarer den falske modellen med prat, ikke en plan → lokal plan),
+  // så svaret. Ingen kall går til modellen som ikke finnes.
+  assert.ok(chat.length >= 1 && chat.every((c) => c.body.model === 'qwen3:8b'), 'ingen kall til en modell som ikke finnes');
+  chat.splice(0, chat.length - 1);
   // Riktige felt til Ollama: /api/chat, stream:true (prompt 43: alltid strømming via Ollama-gaten), think:false, num_ctx som tall,
   // keep_alive per modell (prompt 43: qwen3:8b = 15m som standard).
   const b = chat[0].body;
@@ -143,7 +146,7 @@ test('PUT /api/ai/routing: modell + reserve, keep_alive «alltid» → -1, konte
   assert.equal(out.model, 'gemma4:12b');
   const body = ollama.calls.find((c) => c.url.endsWith('/api/chat')).body;
   assert.equal(body.keep_alive, -1);
-  assert.equal(body.options.num_ctx, 4096, 'korte oppgaver bruker 4096 (8 GB-kort)');
+  assert.equal(body.options.num_ctx, 8192, 'prompt 47: korte oppgaver sender num_ctx 8192 eksplisitt (ikke 4096-taket, ikke rutens 32768)');
   assert.equal(body.options.temperature, 0.4);
   // Kari kan bare endre egne valg for chat/søk/Glimt/brief.
   assert.equal((await K('/api/ai/routing', 'PUT', { budget: { monthlyKr: 10 } })).status, 403);

@@ -33,6 +33,7 @@ import { db, kv, OWNER } from './db.js';
 import { settings as fhSettings, secret, me } from './finans/db.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
 import { shortBody, stripThink, SHORT_NUM_CTX } from './ollama-opts.js';
+import { STEP47, TASK_STEP47, stepOf47, estTokens47, CTX_MARGIN47 } from './glimt45/params47.js'; // prompt 47: parametre per steg
 import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError, maskSecrets, backendConfig, owuiConf, testOpenWebuiModels } from './ai-gate.js';
 import { broadcast } from './realtime.js';
 import { envHw } from './aihw38.js';
@@ -553,6 +554,9 @@ const parseJsonText = (t) => {
   throw new Error('svarte ikke med gyldig JSON');
 };
 
+/** Prompt 47: stegets parametre (o.step, ellers oppgavens standardsteg, f.eks. brief). → {name, numCtx, numPredict, temperature, think} | null */
+const stepParams = (o, t = taskId(o.task)) => stepOf47(o.step ?? TASK_STEP47[t]);
+
 /**
  * Prompt 43: Ollama via gaten (kø, strømming, to tidsgrenser, nye forsøk). ctx: {jobId, last, onQueue, onStart, sizeGb}.
  * → {text, tin, tout, telemetry}. Kaster GateError (message er norsk: «lastet ikke inn på 90 s», «ingen nye tokens på 30 s» …).
@@ -565,12 +569,20 @@ async function callOllama(model, o, signal, r, ctx = {}) {
   if (sys) msgs.push({ role: 'system', content: sys });
   msgs.push({ role: 'user', content: String(o.prompt ?? ''), ...(o.images?.length ? { images: o.images.map(b64) } : {}) });
   const t = taskId(o.task);
-  // Prompt 44: o.numCtx (f.eks. 8192 for svar med søkeresultater) overstyrer det korte vinduet.
-  const options = { temperature: o.temperature ?? r.params.temperature, num_ctx: o.numCtx ?? (t === 'chat' ? r.params.numCtx : Math.min(r.params.numCtx || SHORT_NUM_CTX, SHORT_NUM_CTX)) };
-  if (o.numPredict) options.num_predict = o.numPredict;
-  const body = shortBody({ model, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: r.rules.think ? true : undefined });
-  if (o.numCtx) body.options.num_ctx = o.numCtx;
+  // Prompt 47: parametre per steg fra én sentral config (glimt45/params47.js). num_ctx sendes ALLTID eksplisitt (aldri Ollamas
+  // standard), og korte kall har ikke lenger et 4096-tak: o.numCtx → stegets num_ctx → Chat: rutens numCtx, ellers 8192.
+  const sp = stepParams(o, t);
+  const options = { temperature: o.temperature ?? sp?.temperature ?? r.params.temperature, num_ctx: o.numCtx ?? sp?.numCtx ?? (t === 'chat' ? r.params.numCtx : STEP47.short.numCtx) };
+  const np = o.numPredict ?? sp?.numPredict;
+  if (np) options.num_predict = np;
+  const think = o.think ?? sp?.think;
+  const body = shortBody({ model, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: think === true || (think == null && r.rules.think) ? true : undefined });
+  if (think === true) body.think = true; // prompt 47: planleggerens andre forsøk tenker (med token-/tidsgrense)
   if (Array.isArray(o.ollamaTools) && o.ollamaTools.length) body.tools = o.ollamaTools; // prompt 45: Ollama tool calling (Glimt-motoren)
+  // Prompt 47: mål prompt-lengden før kallet. Ollama kutter stille fra starten hvis prompten er lengre enn num_ctx.
+  const promptEst = estTokens47(`${sys ?? ''}\n${o.prompt ?? ''}`) + (body.tools ? estTokens47(JSON.stringify(body.tools)) : 0) + (o.schema ? estTokens47(JSON.stringify(o.schema)) : 0) + (o.images?.length ?? 0) * 800;
+  if (promptEst + (options.num_predict ?? 0) > options.num_ctx * CTX_MARGIN47) console.warn(`[ai] ${t}${sp ? `/${sp.name}` : ''}: prompten (~${promptEst} tokens) + num_predict ${options.num_predict ?? '–'} er nær num_ctx ${options.num_ctx}`);
+  if (ctx.params) Object.assign(ctx.params, { numCtx: options.num_ctx, numPredict: options.num_predict ?? null, temperature: options.temperature, think: body.think ?? null, step: sp?.name ?? null, promptEst });
   const lim = timeoutsOf(r, { images: !!o.images?.length });
   const jobId = ctx.jobId;
   let lastUpd = 0, loadIv = null, t0Load = 0;
@@ -586,7 +598,7 @@ async function callOllama(model, o, signal, r, ctx = {}) {
   } : null;
   try {
     const out = await gateChat({ model, body, base, fetch: F, signal, priority: o.background ? 'background' : 'interactive', short: true, allowThink: !('think' in body), image: !!o.images?.length,
-      loadMs: lim.loadMs, warmMs: lim.firstMs, idleMs: lim.idleMs, deadlineMs: o.timeoutMs ?? null, retryTimeouts: ctx.last !== false, label: o.title ?? taskName(t),
+      loadMs: lim.loadMs, warmMs: lim.firstMs, idleMs: lim.idleMs, deadlineMs: o.timeoutMs ?? null, retryTimeouts: ctx.last !== false, ...(o.retries != null ? { retries: o.retries } : {}), label: o.title ?? taskName(t),
       onQueue: ctx.onQueue, onStart: ctx.onStart, onPhase, onRetry: jobId ? ({ attempt, waitMs }) => jobUpdate(jobId, { step: `Nytt forsøk ${attempt + 1} om ${Math.round(waitMs / 1000)} s …`, attempts: attempt }) : null });
     if (jobId) { const n = out.text.length; jobUpdate(jobId, { phase: { kind: 'answer', chars: n }, step: `Svarer · ${n} tegn`, backend: out.telemetry.backend, backendNote: out.telemetry.backendNote ?? null }); }
     return { text: out.text, tin: out.telemetry.tokIn, tout: out.telemetry.tokOut, telemetry: out.telemetry, ...(out.message?.tool_calls?.length ? { toolCalls: out.message.tool_calls } : {}) };
@@ -686,6 +698,21 @@ export async function ensureLoaded(model, { jobId = null, loadMs = timeoutsOf().
   return { loaded: true, ms: Date.now() - t0 };
 }
 
+/* ---------------- Prompt 47: tolkningsoppgaver og modellstørrelse ---------------- */
+
+/** Oppgaver der modellen tolker fritekst (ruting, kalender, kategorisering, spørsmål om Finans). */
+export const INTERPRET_TASKS47 = ['glimt', 'sok', 'kat', 'fsok'];
+/** Antall milliarder parametre fra inventaret («3.2B») eller navnet («llama3.2:3b», «qwen2.5:1.5b»). → tall | null */
+export function paramsB47(name, invn = null) {
+  const m = invn?.models?.find((x) => sameModel(x.name, name));
+  const p = String(m?.params ?? '').match(/([\d.]+)\s*([BM])/i);
+  if (p) return p[2].toUpperCase() === 'M' ? +p[1] / 1000 : +p[1];
+  const n = String(name ?? '').match(/[:\-_](\d+(?:\.\d+)?)b\b/i);
+  return n ? +n[1] : null;
+}
+/** «3,2B» når modellen er under 7B, ellers null. */
+export function smallModel47(name, invn = null) { const b = paramsB47(name, invn); return b != null && b < 7 ? `${String(Math.round(b * 10) / 10).replace('.', ',')}B` : null; }
+
 /* ---------------- Oppløsning: rute → kandidater ---------------- */
 
 /**
@@ -738,7 +765,10 @@ export async function resolveTask(task, { user = me(), images = null, localOnly 
     // Modeller som får plass i VRAM (AI_GPU_VRAM_GB, standard 8) går foran: gemma4:12b (9,6 GB) kjører delvis på CPU og er treg.
     const vram = Number(process.env.AI_GPU_VRAM_GB) > 0 ? Number(process.env.AI_GPU_VRAM_GB) : 8;
     const byFit = [...invn.models].sort((a, b) => ((a.sizeGb ?? 0) > vram - 0.5) - ((b.sizeGb ?? 0) > vram - 0.5));
-    const auto = (wantKind === 'tekst' ? byFit.find((m) => m.kind === 'tekst') : wantKind === 'bilde' ? byFit.find((m) => m.kind === 'bilde') : null) ?? byFit.find(fitsKindOf);
+    // Prompt 47: tolkningsoppgaver (glimt, sok, kat, fsok) velger hovedmodellen qwen3:8b, ellers en tekstmodell på minst 7B, før små modeller.
+    const interp = wantKind === 'tekst' && INTERPRET_TASKS47.includes(t.id)
+      ? byFit.find((m) => m.kind === 'tekst' && /^qwen3:8b/.test(m.name)) ?? byFit.find((m) => m.kind === 'tekst' && (paramsB47(m.name, invn) ?? 0) >= 7) : null;
+    const auto = interp ?? (wantKind === 'tekst' ? byFit.find((m) => m.kind === 'tekst') : wantKind === 'bilde' ? byFit.find((m) => m.kind === 'bilde') : null) ?? byFit.find(fitsKindOf);
     if (auto) {
       if (warnings.length && !list.length) warnings.push(`bruker «${auto.name}» (første installerte ${wantKind === 'embedding' ? 'embedding-' : wantKind === 'bilde' ? 'bilde' : 'tekst'}modell)`);
       list.push({ provider: 'ollama', id: auto.name, from: 'auto' });
@@ -810,6 +840,7 @@ export async function run(task, o = {}) {
   const r = routing(user);
   const phased = !!o.phased;
   let memSkip = null, lastTele = null;
+  const callParams = {}; // prompt 47: num_ctx/num_predict/temperatur/think/promptanslag som faktisk ble sendt (tracen)
   const timing = (tl) => (tl ? { queueMs: tl.queueMs, loadMs: tl.loadMs, genMs: tl.genMs, attempts: tl.attempts, ...(tl.backend ? { backend: tl.backend, backendNote: tl.backendNote ?? null } : {}) } : {});
   try {
     for (let i = 0; i < res.list.length; i++) {
@@ -823,7 +854,7 @@ export async function run(task, o = {}) {
         else if (c.provider === 'ollama') {
           // Prompt 40: minnesjekk først (selvtest/phased). Prompt 43: resten (kø, innlasting, strømming, grenser) i gaten.
           const sizeGb = phased ? await memCheck(c.id) : (await ollamaInventory()).models?.find((m) => sameModel(m.name, c.id))?.sizeGb ?? null;
-          out = await callOllama(c.id, opts, ctrl.signal, r, { jobId, last, onQueue, onStart: markRun, sizeGb });
+          out = await callOllama(c.id, opts, ctrl.signal, r, { jobId, last, onQueue, onStart: markRun, sizeGb, params: callParams });
           lastTele = out.telemetry;
         } else {
           markRun();
@@ -841,7 +872,7 @@ export async function run(task, o = {}) {
         const warnings = [...res.warnings, ...errors.map((x) => `${x.model} svarte ikke (${x.error}) · brukte ${c.id}`)];
         if (warnings.length) console.warn(`[ai] ${tid}: ${warnings.join(' · ')}`);
         return { text: out.text, ...(data !== undefined ? { data } : {}), ...(out.toolCalls?.length ? { toolCalls: out.toolCalls } : {}), model: c.id, provider: c.provider, ms, tokens: { in: out.tin, out: out.tout }, costKr: cost, jobId,
-          ...(out.telemetry ? { timing: out.telemetry } : {}),
+          ...(out.telemetry ? { timing: out.telemetry } : {}), ...(callParams.numCtx ? { params: { ...callParams } } : {}),
           ...(i || c.from !== 'model' ? { fallbackFrom: res.route.model || (i ? res.list[0].id : null) } : {}), warnings, notice: res.notices[0] ?? null };
       } catch (e) {
         if (e?.telemetry) lastTele = e.telemetry;

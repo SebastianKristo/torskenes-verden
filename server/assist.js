@@ -88,7 +88,8 @@ import { bareDay37 } from './kalender33.js'; // prompt 37: «i morgen?»
 import { needsChatTools } from './chat-tools41.js'; // prompt 41: sammensatte faktaspørsmål går til chatten
 import { isWeekWeather41, weekAnswer41 } from './weather41.js'; // prompt 41: ukesvær med Ollama og 7 dager data
 import { isHuskeMessage41, startJob41 } from './tasks-glimt41.js'; // prompt 41: huskebeskjeder fra søkefeltet → Glimt i bakgrunnen
-import { agent45, registerLegacy45, toAssist45, wantsAgent45 } from './glimt45/engine.js'; // prompt 45: felles Glimt-motor
+import { agent45, registerLegacy45, toAssist45, wantsAgent45 } from './glimt45/engine.js';
+import { hasWord47 } from './glimt45/words47.js'; // prompt 47: ordgrenser // prompt 45: felles Glimt-motor
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -241,6 +242,8 @@ export function detectIntent(text, today = osloTodayISO()) {
   if (RE.trial.test(n) && (/gratis|trial|prøveperiode|prøvetid/.test(n) || serviceOf(text))) return 'trial.create';
   if (bareDay37(text, today)) return 'calendar.day'; // «i morgen?»
   if (parseMemoryIntent(text)) return 'memory.add';
+  // Prompt 47: vær før «neste …» – «været i Oslo neste time» er et værspørsmål, ikke neste avtale.
+  if (RE.next.test(n) && RE.nextWhat.test(n) && /v(æ|ae)r(et)?\b|temperatur|grader|regn|snø|vind/.test(n) && !/(?<![a-zæøå])(time|avtale)(?:n|r)?\s+(?:hos|til)\s/.test(n)) return 'weather';
   if (RE.next.test(n) && RE.nextWhat.test(n)) return 'calendar.next';
   const pq = parseQuick(text, today);
   // Prompt 36: spørsmålsvakt – et spørsmål med dato er aldri en avtale («hvor mange timer med dagslys er det den 29.06.2027»).
@@ -361,7 +364,8 @@ async function toolCalendarNext(user, text, today) {
   try { aliases = types.size ? aliasesOf(user).filter((m) => types.has(m.type)) : []; } catch { /* */ }
   const schoolQ = parseIntent37(text).schoolTest; // prompt 37: «neste prøve» er aldri en prøveperiode
   const hits = events.filter((e) => (e.allDay ? e.date >= today : Date.parse(e.start) >= now - 5 * 60_000)).filter((e) => !(schoolQ && (e.source === 'trials' || e.kind === 'trial')))
-    .filter((e) => !kw.length || kw.some((w) => normText(`${e.title} ${e.room ?? ''}`).includes(normText(w))) || aliases.some((m) => eventHitsAlias(e, m)));
+    // Prompt 47: hele ord i tittel/notat (ikke sted), så «oslo» ikke treffer «OsloMet P35».
+    .filter((e) => !kw.length || kw.some((w) => w.length >= 3 && hasWord47(`${e.title}\n${e.note ?? ''}`, w)) || aliases.some((m) => eventHitsAlias(e, m)));
   const what = kw.length ? kw.join(' ') : '';
   if (!hits.length) return { text: `Fant ingen kommende ${what ? what + 'time' : 'time'} i kalenderen.`, source: 'Kalender', tool: 'Kalender', card: { k: 'calendar', date: today, wd: '', n: null, t: 'Neste', sub: 'Ingen treff', items: [] } };
   const e = hits[0];
@@ -556,7 +560,10 @@ const TITLES = { 'tasks.glimt': 'Legger til i Huskeliste', 'weather.week': 'Lese
 const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender', 'calendar.fag': 'Kalender', 'tasks.glimt': 'Huskeliste', 'weather.week': 'Vær' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
-export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null, skipAgent = false, module = 'home', jobId = null, noWeb = false } = {}) {
+// Prompt 47: når Glimt-planleggeren (modellen) har valgt et av de eksisterende svarene (app.answer {topic}), brukes det svaret –
+// regex-kjeden under (detectIntent) bestemmer bare når planen er lokal eller emnet er «other».
+const TOPIC_INTENT47 = { departures: 'departures', packages: 'packages', sun: 'sun.daylight', family: 'family.where', trial: 'trial.create', memory: 'memory.add', school: 'calendar.school', nav: 'nav', weather: 'weather' };
+export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null, skipAgent = false, module = 'home', jobId = null, noWeb = false, topic = null } = {}) {
   const t0 = Date.now();
   // Prompt 45: handlinger og data-søk (kalender, gjøremål, finans) går gjennom Glimt-motoren: modellen forstår, koden validerer og
   // utfører, datakilden bekrefter. Vær, avganger, pakker, sol, familie, prøveperioder og prat går videre til svarene under.
@@ -564,9 +571,10 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
     try {
       const g = await agent45(user, text, { module, today, requestId: jobId ? `assist-${jobId}` : null, legacyOk: false });
       if (!g.legacy) { const a = toAssist45(g, text, today); onStep(1, a.intent); onStep(2, a.intent); return { ...a, ms: Date.now() - t0 }; }
+      if (g.plan?.engine && g.plan.engine !== 'lokal') topic = g.plan.calls?.find((c) => c.tool === 'app.answer')?.args?.topic ?? topic;
     } catch (e) { console.warn('[glimt45] assist:', String(e?.message ?? e).slice(0, 160)); }
   }
-  let intent = detectIntent(text, today);
+  let intent = TOPIC_INTENT47[topic] ?? detectIntent(text, today);
   // Prompt 39: «hva slags timer har jeg i dag», «hva er fysikk» og oppfølging («hva slags fag er det») med forrige svar.
   const f39 = await fagAnswer(user, text, { today, followNeedsCtx: true }).catch(() => null);
   if (f39) intent = 'calendar.fag';

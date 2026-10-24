@@ -76,7 +76,12 @@ export function wordsFromText46(title, text) {
 /* ---------------- Kalender ---------------- */
 
 const WD_IDX45 = { søn: 0, man: 1, tir: 2, ons: 3, tor: 4, fre: 5, lør: 6 };
-const durationOf = (title) => { const k = KINDS.find(([re]) => re.test(String(title).toLowerCase())); return k ? k[1] : 60; };
+// Prompt 47: standardvarighet per type når brukeren ikke sa når det slutter: kino/film 3 t, frisør 1 t, ellers 1 t. Alltid merket som
+// antatt (durationAssumed) og sagt i bekreftelsen. Kjent spilletid for filmen (TMDB via Media) brukes når den finnes.
+export const DURATION47 = [[/(?<![\p{L}])(kino|film|forestilling|teater|konsert|opera|musikal)/u, 180, 'kino'], [/(?<![\p{L}])(frisør|hårklipp|klipp|barber)/u, 60, 'frisør']];
+export const durationOf47 = (title, place = '') => { const t = `${String(title ?? '')} ${String(place ?? '')}`.toLowerCase(); const k = DURATION47.find(([re]) => re.test(t)); return k ? { min: k[1], kind: k[2] } : { min: 60, kind: null }; };
+const durationOf = (title) => durationOf47(title).min;
+void KINDS;
 async function eventsIn(user, from, to) { return (await runAsUser(user, () => eventsFor(user, from, to))).events ?? []; }
 const onDay = (e, d) => (e.allDay ? e.date <= d && (e.end ?? e.date) > d || e.date === d : e.date === d);
 const sortEv = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (a.allDay ? -1 : b.allDay ? 1 : Date.parse(a.start) - Date.parse(b.start)));
@@ -271,6 +276,7 @@ export const TOOLS45 = [
       const textNoCal = C46.withoutCalendarMention46(ctx.text);
       const w = whenFor(args, { ...ctx, text: textNoCal }, 'future');
       if (w.errors.length) return ask(`${w.errors[0].message}. Hvilken dato mener du?`, null, 'date');
+      // Prompt 47: strukturerte felt (title, location, start/date+time, end, all_day, notes). Tittelvakt: ≤ 60 tegn og ikke lik meldingen.
       let title = str(args.title, 120);
       // «Glimt husker»-alias, avsender i signaturen («Mvh Påhåret») og «time hos X» har egne regler i parseQuick – de gjenbrukes.
       let aliases = []; try { aliases = (await import('../glimt-memory.js')).aliasesOf(ctx.user); } catch { /* */ }
@@ -317,10 +323,13 @@ export const TOOLS45 = [
       // Film på kino: slutt = start + spilletid + 15 min (Media/TMDB), plakaten blir bilde på avtalen. Ellers standardvarighet.
       const film = sp.film ?? (/^(.+?)\s+–\s+kino$/i.exec(title)?.[1] ?? null);
       const movie = film && w.start && !w.end ? await C46.movieOf46(film).catch(() => null) : null;
-      const end = w.start ? (w.end ?? addMin45(w.start, movie?.runtime ? movie.runtime + 15 : pq.type && pq.type !== 'annet' ? pq.duration : durationOf(title))) : null;
+      const dur = durationOf47(title, location ?? '');
+      const durationAssumed = !!(w.start && !w.end && !movie?.runtime);
+      const end = w.start ? (w.end ?? addMin45(w.start, movie?.runtime ? movie.runtime + 15 : dur.min)) : null;
       const place = location && (sp.location === location || C46.VENUES46.some(([n]) => n === location)) ? await C46.lookupPlace46(location) : null;
       const prefs = await import('../kalender33.js').then((k) => k.kal46.prefs(ctx.user)).catch(() => ({}));
-      return { args: { title, date: w.date, start: w.start, end, allDay, location, note: [str(args.note, 500), w.softTime].filter(Boolean).join(' · ') || null, assumedPm: w.assumedPm, corrections: w.corrections,
+      return { args: { title, date: w.date, start: w.start, end, allDay, location, note: [str(args.note ?? args.notes, 500), w.softTime].filter(Boolean).join(' · ') || null, assumedPm: w.assumedPm, corrections: w.corrections,
+        ...(durationAssumed ? { durationAssumed: true, durationMin: dur.min, durationKind: dur.kind } : {}),
         calendarId: cal.id, calendarName: C46.calendarLabel46(cal), calendarSource: cal.source, ...(cal.calId ? { calId: cal.calId } : {}), backend: cal.backend,
         reminder: allDay ? 'none' : ({ none: 'none', '10m': '15m', '30m': '1h', '1h': '1h', '1d': 'day' }[prefs.defaultReminder] ?? '1h'),
         ...(place ? { place: { name: location, address: place.address, label: place.label, lat: place.lat, lon: place.lon } } : {}),

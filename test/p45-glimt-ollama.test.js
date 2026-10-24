@@ -37,7 +37,8 @@ async function ollama(url, init = {}) {
       // Som Ollama: tool_calls kommer i én bit før den siste.
       return nd([{ model: b.model, message: { role: 'assistant', content: '', tool_calls: [{ function: { name: 'calendar.create', arguments: { title: 'Kino – Dune', date: '12.10', time: '12:15' } } }] }, done: false }, done]);
     }
-    const plan = /melk/.test(msg) ? { intent: 'create', module: 'tasks', calls: [{ tool: 'tasks.create', args: { title: 'Kjøpe melk', due: 'i morgen' } }], ask: null } : { intent: 'chat', module: 'chat', calls: [{ tool: 'chat.answer', args: {} }], ask: null };
+    const plan = /melk/.test(msg) ? { intent: 'create', module: 'tasks', calls: [{ tool: 'tasks.create', args: { title: 'Kjøpe melk', due: 'i morgen' } }], ask: null }
+      : /dune/i.test(msg) ? { intent: 'calendar_create', calls: [{ tool: 'calendar.create', args: { title: 'Kino – Dune', date: '12.10', time: '12:15' } }], needs_clarification: false, clarification_question: null } : { intent: 'chat', module: 'chat', calls: [{ tool: 'chat.answer', args: {} }], ask: null };
     const s = JSON.stringify(plan);
     return nd([{ model: b.model, message: { role: 'assistant', content: s.slice(0, 20) }, done: false }, { model: b.model, message: { role: 'assistant', content: s.slice(20) }, done: false }, done]);
   }
@@ -58,20 +59,25 @@ const r0 = await app.request('/api/login', { method: 'POST', headers: { 'content
 const cookie = r0.headers.getSetCookie().map((x) => x.split(';')[0]).find((x) => x.startsWith('hl_sid='));
 const A = async (path, method = 'GET', body) => { const r = await app.request(path, { method, headers: { cookie, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }); return { status: r.status, body: await r.json() }; };
 
-test('qwen3:8b: tool calling via gaten → tool_calls → validert avtale lagres', async () => {
+// Prompt 47: planleggeren bruker JSON-skjema (Ollama format) for alle modeller, med num_ctx 8192 / num_predict 512 / temperatur 0 /
+// think av eksplisitt, og en engelsk systemprompt med dato og klokkeslett.
+test('qwen3:8b: planleggeren via gaten → format:<JSON-skjema> → validert avtale lagres', async () => {
   fake.models = ['qwen3:8b']; fake.bodies.length = 0; ai.invalidateInventory();
   const r = await A('/api/glimt/agent', 'POST', { text: 'Legg til time 12.10 12:15 Kino se på dune', module: 'home', requestId: 'ollama45-0001' });
   assert.equal(r.status, 200, JSON.stringify(r.body));
-  assert.equal(r.body.engine, 'ollama-tools', JSON.stringify(r.body));
+  assert.equal(r.body.engine, 'ollama-json', JSON.stringify(r.body));
   assert.equal(r.body.model, 'qwen3:8b');
   assert.equal(r.body.actions[0].status, 'done');
   assert.deepEqual([r.body.actions[0].args.title, r.body.actions[0].args.date, r.body.actions[0].args.start], ['Kino – Dune', '2027-10-12', '12:15']);
-  const b = fake.bodies.find((x) => x.tools);
-  assert.ok(b, 'tools sendt til Ollama');
+  const b = fake.bodies.find((x) => x.format);
+  assert.ok(b, 'format (JSON-skjema) sendt til Ollama');
   assert.equal(b.stream, true);
-  assert.equal(b.think, false, 'qwen3 tenker ikke på korte kall');
-  assert.ok(b.tools.some((t) => t.type === 'function' && t.function.name === 'calendar.create' && t.function.parameters.type === 'object'));
-  assert.equal(b.format, undefined, 'ikke format sammen med tools');
+  assert.equal(b.think, false, 'qwen3 tenker ikke på første forsøk');
+  assert.equal(b.tools, undefined, 'ingen tools sammen med format');
+  assert.ok(b.format.properties.calls && b.format.properties.needs_clarification, 'planskjemaet');
+  assert.deepEqual([b.options.num_ctx, b.options.num_predict, b.options.temperature], [8192, 512, 0], 'planleggerens parametre sendes eksplisitt');
+  assert.match(b.messages[0].content, /^You are the planner for Glimt/);
+  assert.match(b.messages[0].content, /Nå: fredag 23\. oktober 2026 kl\. 10:00 \(Europe\/Oslo\)/);
   assert.equal(fake.bodies.filter((x) => x.messages).length, 1, 'ett modellkall');
   const n = db.prepare("SELECT count(*) FROM ai_runs WHERE title='Glimt · forstår' AND status='ok'").pluck().get();
   assert.ok(n >= 1, 'kallet står i AI-jobbloggen (via ai-run)');

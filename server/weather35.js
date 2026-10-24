@@ -127,14 +127,18 @@ async function forecastOf(p) {
     const w = await weatherFull({ lat: p.lat, lon: p.lon, name: p.name });
     const days = (w.days ?? []).slice(0, 7).map((d) => ({ date: d.date, hi: r0(d.hi), lo: r0(d.lo), code: d.code ?? 0, precipProb: r0(d.precipProb) ?? 0 }));
     const c = w.current ?? {};
-    return { now: { temp: r0(c.temp), code: c.code ?? 0, wind: r0(c.wind), isDay: c.isDay !== false }, days, source: w.source === 'mock' ? 'mock' : String(w.source ?? 'met').startsWith('met') ? 'met' : w.source, tz: p.tz ?? 'Europe/Oslo' };
+    // Prompt 47: timeprognosen (lokal tid i stedets tidssone) for «neste time», «om 2 timer», «i kveld».
+    const hours = (w.hours ?? []).map((h) => ({ t: String(h.t ?? '').slice(0, 16), temp: r0(h.temp), code: h.code ?? 0, precip: h.precip ?? null, precipProb: r0(h.precipProb), wind: r0(h.wind) })).filter((h) => h.t);
+    return { now: { temp: r0(c.temp), code: c.code ?? 0, wind: r0(c.wind), isDay: c.isDay !== false }, days, hours, source: w.source === 'mock' ? 'mock' : String(w.source ?? 'met').startsWith('met') ? 'met' : w.source, tz: p.tz ?? 'Europe/Oslo' };
   }
   return cached(`wx35:fc:${p.lat},${p.lon}`, 10 * 60_000, async () => {
     const d = await getJson(`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&timezone=auto&forecast_days=7&wind_speed_unit=ms`
-      + '&current=temperature_2m,weather_code,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max', 8000);
-    const D = d.daily ?? {}, C = d.current ?? {};
+      + '&current=temperature_2m,weather_code,wind_speed_10m,is_day&daily=temperature_2m_max,temperature_2m_min,weather_code,precipitation_probability_max'
+      + '&hourly=temperature_2m,weather_code,precipitation,precipitation_probability,wind_speed_10m', 8000); // prompt 47: timeprognose
+    const D = d.daily ?? {}, C = d.current ?? {}, H = d.hourly ?? {};
     const days = (D.time ?? []).map((date, i) => ({ date, hi: r0(D.temperature_2m_max?.[i]), lo: r0(D.temperature_2m_min?.[i]), code: D.weather_code?.[i] ?? 0, precipProb: r0(D.precipitation_probability_max?.[i]) ?? 0 }));
-    return { now: { temp: r0(C.temperature_2m), code: C.weather_code ?? 0, wind: r0(C.wind_speed_10m), isDay: C.is_day !== 0 }, days, source: 'open-meteo', tz: d.timezone ?? p.tz };
+    const hours = (H.time ?? []).slice(0, 72).map((t, i) => ({ t: String(t).slice(0, 16), temp: r0(H.temperature_2m?.[i]), code: H.weather_code?.[i] ?? 0, precip: H.precipitation?.[i] ?? null, precipProb: r0(H.precipitation_probability?.[i]), wind: r0(H.wind_speed_10m?.[i]) }));
+    return { now: { temp: r0(C.temperature_2m), code: C.weather_code ?? 0, wind: r0(C.wind_speed_10m), isDay: C.is_day !== 0 }, days, hours, source: 'open-meteo', tz: d.timezone ?? p.tz };
   });
 }
 
@@ -160,7 +164,7 @@ export async function placeWeather(q, { offset = 0 } = {}) {
   if (!p) throw new PlaceNotFound(String(q ?? '').trim());
   const f = await forecastOf(p);
   const days = f.days.map(dayOut);
-  const r = { place: { ...p, tz: p.tz ?? f.tz ?? null }, now: { ...f.now, cond: wmoText(f.now.code), ...icOf(f.now.code, f.now.isDay) }, today: days[0] ?? null, tomorrow: days[1] ?? null, days, source: f.source };
+  const r = { place: { ...p, tz: p.tz ?? f.tz ?? null }, now: { ...f.now, cond: wmoText(f.now.code), ...icOf(f.now.code, f.now.isDay) }, today: days[0] ?? null, tomorrow: days[1] ?? null, days, hours: (f.hours ?? []).map((h) => ({ ...h, cond: wmoText(h.code) })), source: f.source };
   r.text = placeText(r, offset);
   r.plain = r.text.replace(/\*\*/g, '');
   r.open = { route: 'vaer', name: p.label, lat: p.lat, lon: p.lon };

@@ -26,6 +26,8 @@ export const intentOfCalls45 = (calls) => (calls.length > 1 ? 'multi' : INTENT_O
 let modelImpl = null, modeImpl = null;
 /** Bare for tester: falsk modell ({mode, system, prompt, tools, schema, user}) → {toolCalls?:[{name, arguments}], text?, data?, model?}. */
 export const _setGlimtModel45 = (fn) => { modelImpl = fn ?? null; };
+/** Prompt 47: testkroken for planleggeren og svarsteget (engine.js). */
+export const _glimtModel45 = () => modelImpl;
 /** Bare for tester: tving 'tools' eller 'json'. */
 export const _setToolMode45 = (m) => { modeImpl = m ?? null; };
 export const modelAvailable45 = () => !!modelImpl || !MOCK(); // MOCK_DATA: ai-run svarer med en fast mock, så den lokale planleggeren brukes
@@ -35,9 +37,10 @@ const TOOL_FAMILY = /^(qwen3|qwen2\.5(?!-?vl)|llama3\.[123]|mistral|mistral-nemo
 const NOTOOLS = 'glimt45_notools';
 export function toolModeFor45(model, backend = 'ollama') {
   if (modeImpl) return modeImpl;
-  if (!model || backend === 'openwebui') return 'json'; // Open WebUI-veien sender ikke tool_calls tilbake
-  const no = kv.get(OWNER, NOTOOLS, {}) ?? {};
-  return TOOL_FAMILY.test(String(model)) && !no[model] ? 'tools' : 'json';
+  // Prompt 47: planleggeren svarer med JSON etter et skjema (Ollama `format`) for alle modeller – samme oppførsel uansett
+  // verktøystøtte og backend (Open WebUI sender heller ikke tool_calls tilbake). Tools-modus finnes bare som testkrok.
+  void model; void backend; void TOOL_FAMILY; void NOTOOLS;
+  return 'json';
 }
 const markNoTools = (model) => { try { kv.set(OWNER, NOTOOLS, { ...(kv.get(OWNER, NOTOOLS, {}) ?? {}), [model]: Date.now() }); } catch { /* */ } };
 
@@ -50,6 +53,7 @@ async function defaultModel(o) {
 /** Hvilken modell og modus Glimt vil bruke nå (uten å kalle modellen). */
 export async function modelInfo45(user) {
   if (modelImpl) return { model: 'test', mode: modeImpl ?? 'json' };
+  // Prompt 47: planleggeren bruker JSON-skjema (Ollama format) som standard; tools-modus bare når en test tvinger den.
   if (!modelAvailable45()) return { model: null, mode: 'json' };
   try {
     const ai = await import('../ai-run.js');
@@ -157,7 +161,7 @@ const LEGACY_FIRST = /(?<![a-zæøå])(når\s+går|avgang|buss(?:en)?|trikk(?:en
  * Den lokale planleggeren. own = verktøyene kalleren selv vil utføre (resten → app.answer/chat).
  * → plan {intent, module, calls, ask?, engine:'lokal'}
  */
-export function localPlan45(text, { module = 'home', today = todayOslo45(), legacyIntent = null, user = null } = {}) {
+export function localPlan45(text, { module = 'home', today = todayOslo45(), legacyIntent = null, user = null, nowMin = null } = {}) {
   const t = L(text);
   const P = (tool, args = {}) => ({ intent: INTENT_OF_TOOL[tool], module: MODULE_OF_TOOL(tool), calls: [{ tool, args }], engine: 'lokal' });
   const askP = (q) => ({ intent: 'ask', module, calls: [], ask: q, engine: 'lokal' });
@@ -168,8 +172,8 @@ export function localPlan45(text, { module = 'home', today = todayOslo45(), lega
   // Gjøremål-funksjonene fra prompt 37–42 (slå sammen, forfalte, pakkeliste, matplan, butikk, spørsmål om lista, limt inn flere linjer).
   if (module === 'tasks' && (TASKS37.test(t) || String(text).includes('\n') || (q && !/kalender/.test(t) && !TASK_LIST_SIMPLE.test(t)))) return P('app.answer', { topic: 'tasks37' });
   // Prompt 46: sammensatte værspørsmål (flere steder/tider, periode, sammenligning) → ett weather.get per delspørsmål.
-  if (WEATHER_WORDS46.test(t) && !CREATE_RE.test(t) && !TASK_RE.test(t) && isCompoundWeather46(text, today)) {
-    const a = analyzeWeather46(text, today);
+  if (WEATHER_WORDS46.test(t) && !CREATE_RE.test(t) && !TASK_RE.test(t) && isCompoundWeather46(text, today, nowMin)) {
+    const a = analyzeWeather46(text, today, nowMin);
     if (a.ask) return { ...askP(a.ask), module: 'weather' };
     const calls = a.requests.map((r) => ({ tool: 'weather.get', args: { _req: { place: r.place, when: r.when, info: r.info }, compare: a.compare?.mode ?? null } }));
     return { intent: calls.length > 1 ? 'multi' : 'ask', module: 'weather', calls, compare: a.compare?.mode ?? null, engine: 'lokal' };

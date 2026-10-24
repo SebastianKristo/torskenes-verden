@@ -97,5 +97,6 @@ export function recommendFor(hw, routing = null) {
   ];
 }
 /** Modellvalg som passer maskinen. */
-export const SUGGESTED_MODELS = { rc: 'qwen2.5vl:7b', kat: 'llama3.2:3b', chat: 'gemma3:12b', fsok: 'gemma3:12b', glimt: 'qwen3:8b', kb: 'nomic-embed-text' };
+// Prompt 47: llama3.2:3b brukes ikke til tolkning (kategorisering med fritekst, ruting, kalender) – hovedmodellen qwen3:8b.
+export const SUGGESTED_MODELS = { rc: 'qwen2.5vl:7b', kat: 'qwen3:8b', sok: 'qwen3:8b', chat: 'gemma3:12b', fsok: 'gemma3:12b', glimt: 'qwen3:8b', kb: 'nomic-embed-text' };
 export const TIMEOUTS = { coldS: 60, warmS: 30, loadingText: 'Laster modellen fra disk …' };

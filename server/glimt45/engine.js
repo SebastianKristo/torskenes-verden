@@ -6,9 +6,18 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { db, kv } from '../db.js';
 import { TOOL45, setCtx45, ctxOf45, kr45, eventLabel45 } from './tools.js';
-import { modelPlan45, localPlan45, legacyFirst45, modelAvailable45, intentOfCalls45 } from './plan.js';
+import { localPlan45, modelAvailable45, modelInfo45, intentOfCalls45, _glimtModel45 } from './plan.js';
+import { modelPlan47, planGap47 } from './plan47.js';
+import { buildContext47, rememberTurn47 } from './context.js';
+import { recallFacts47 } from './memory47.js';
+import { startTrace47 } from './trace47.js';
+import { STEP47 } from './params47.js';
+import { answer47 } from './answer47.js';
+import { SENTENCES47, FAIL_TEXT47 } from './tools47.js';
+import { parseEpisodeAsk43 } from './media47.js';
 import { parsePeriod45, todayOslo45, nowMinOslo45, longDate45, relDate45, addDays45, WD45, MON45 } from './dates.js';
 import { personalityOf, quipFor } from './personality.js';
+import { nowLine47 } from './context.js';
 import { SENTENCES46, FAIL_TEXT46 } from './tools46.js'; // prompt 46: vær, abonnementer, faste utgifter, avslutningsfrist
 import { weatherCompare46 } from './weather46.js';
 import { installTaskHooks46 } from './tasks46.js';
@@ -54,11 +63,14 @@ const evShort = (c) => `${c.title} ${['søn', 'man', 'tir', 'ons', 'tor', 'fre',
 function sentence(call, r, today) {
   const a = call.args, res = r.result ?? {};
   if (r.status !== 'done') return null;
+  if (SENTENCES47[call.tool]) return SENTENCES47[call.tool](a, r, today); // prompt 47: kalendersøk, minne, media, nettsøk
   switch (call.tool) {
     case 'calendar.create': {
       const e = res.event;
       if (res.existing) return `«${e.title}» ${when(e.date, e.time, null, today)} ligger allerede i kalenderen, så jeg la den ikke inn på nytt.`;
-      return `Lagt inn: **«${e.title}» ${when(e.date, a.start, a.end, today)}** i ${a.calendarName ?? 'Personlig'}-kalenderen.${a.location ? ` Sted: ${a.location}${a.place?.address ? ` (${a.place.address})` : ''}.` : ''}${a.allDay ? ' Hele dagen – si fra hvis du vil ha et klokkeslett.' : ''}${a.assumedPm ? ' (Tolket som kveld.)' : ''}`.replace('i Personlig (Google)-kalenderen', 'i Personlig-kalenderen (Google)');
+      // Prompt 47: «Lagt inn: Dune, Colosseum kino, torsdag 17. desember kl. 17:30.» + antatt varighet når brukeren ikke sa slutt.
+      const dur = a.durationAssumed ? ` Slutt kl. ${a.end} er antatt (${a.durationMin % 60 ? `${a.durationMin} min` : `${a.durationMin / 60} t`}${a.durationKind === 'kino' ? ' for kino' : ''}) – si fra hvis den varer lenger.` : '';
+      return `Lagt inn: **${e.title}${a.location ? `, ${a.location}` : ''}, ${when(e.date, a.start, null, today)}** i ${a.calendarName ?? 'Personlig'}-kalenderen.${a.place?.address ? ` Adresse: ${a.place.address}.` : ''}${a.allDay ? ' Hele dagen – si fra hvis du vil ha et klokkeslett.' : ''}${a.assumedPm ? ' (Tolket som kveld.)' : ''}${dur}`.replace('i Personlig (Google)-kalenderen', 'i Personlig-kalenderen (Google)');
     }
     case 'calendar.list': {
       const n = res.count, lab = cap(periodLabel(res, today));
@@ -140,7 +152,7 @@ function financeSentence(a, r, today) {
 const NAV_LABEL = { kalender: 'Kalender', huskeliste: 'Gjøremål', finans: 'Finans', kvitteringer: 'Kvitteringer', budsjett: 'Budsjett', abonnement: 'Abonnement', vaer: 'Vær', familie: 'Familie', mat: 'Mat', bursdager: 'Bursdager', chat: 'Chat', innstillinger: 'Innstillinger', sporing: 'Sporing', domener: 'Domener', rom: 'Rom', nordlys: 'Nordlys OS' };
 const NAV_WEB = { kalender: '/#/kalender', huskeliste: '/#/huskeliste', finans: '/finans/', kvitteringer: '/finans/#/kv', budsjett: '/finans/#/budsjett', abonnement: '/finans/#/abonnement', vaer: '/#/vaer', familie: '/#/familie', mat: '/#/matplan', bursdager: '/#/bursdager', chat: '/#/chat', innstillinger: '/#/innstillinger', sporing: '/#/sporing', domener: '/#/domener', rom: '/#/rom', nordlys: '/#/innstillinger/system' };
 const FAIL_TEXT = { 'calendar.create': 'Fikk ikke lagt inn avtalen', 'calendar.update': 'Fikk ikke flyttet avtalen', 'calendar.delete': 'Fikk ikke slettet avtalen', 'tasks.create': 'Fikk ikke lagt inn gjøremålet', 'tasks.complete': 'Fikk ikke krysset av', 'finance.search': 'Fikk ikke søkt i Finans', 'finance.summary': 'Fikk ikke regnet ut forbruket', 'calendar.list': 'Fikk ikke lest kalenderen', 'calendar.search': 'Fikk ikke søkt i kalenderen', 'tasks.list': 'Fikk ikke lest Gjøremål' };
-Object.assign(FAIL_TEXT, FAIL_TEXT46);
+Object.assign(FAIL_TEXT, FAIL_TEXT46, FAIL_TEXT47);
 const QUIP_KIND = { 'calendar.create': 'calendar', 'calendar.update': 'calendar', 'tasks.create': 'tasks', 'tasks.complete': 'done', 'calendar.list': 'list', 'tasks.list': 'list', 'calendar.search': 'search' };
 
 /* ---------------- Pipeline ---------------- */
@@ -184,9 +196,9 @@ export async function agent45(user, text0, opts = {}) {
 // Rydd gamle nøkler (beholder 7 dager).
 try { q('DELETE FROM glimt45_requests WHERE created < ?').run(Date.now() - 7 * 86400_000); q('DELETE FROM glimt45_confirm WHERE created < ?').run(Date.now() - 86400_000); } catch { /* */ }
 
-function nowLineOf(today) {
-  const x = new Date(`${today}T00:00:00Z`);
-  return `I dag er ${WD45[x.getUTCDay()]} ${x.getUTCDate()}. ${MON45[x.getUTCMonth()]} ${x.getUTCFullYear()} (${today}), tidssone Europe/Oslo, språk norsk`;
+// Prompt 47: dato, ukedag, klokkeslett og tidssone er alltid med (context.js). Klokka følger motorens (fryste) klokke.
+function nowLineOf(today, nowMin = minNow()) {
+  return `${nowLine47(today, nowMin)} (${today}), språk norsk`;
 }
 
 async function pipeline(user, text, opts) {
@@ -197,37 +209,55 @@ async function pipeline(user, text, opts) {
   const level = personalityOf(user);
   const base = { requestId: opts.requestId ?? null, personality: level };
   if (!text) return { ...base, reply: 'Hva kan jeg hjelpe med?', text: 'Hva kan jeg hjelpe med?', intent: 'ask', module: opts.module, actions: [], results: [], ask: { question: 'Hva kan jeg hjelpe med?' }, engine: 'lokal', ms: 0 };
-  // 1. Forstå. De eksisterende, deterministiske svarene (vær, avganger …) trenger ingen modell; alt annet går til modellen først.
+  // Prompt 47: trace per forespørsel (melding, fakta, plan, normaliserte verdier, verktøy, modellkall, svar, tid per steg).
+  const tr = opts.preview ? null : startTrace47(user, text, { module: opts.module });
+  // A + B. Kontekst og minne: dato/klokke/tidssone, profil, relevante minnefakta (med hvorfor), siste meldinger.
+  const facts = await recallFacts47(user, text, { embed: !opts.preview }).catch(() => []);
+  const c47 = buildContext47(user, text, { today, nowMin, facts });
+  tr?.set('facts', facts.map((f) => ({ subject: f.subject, object: f.object, aliases: f.aliases, why: f.why, score: f.score })));
+  tr?.set('now', c47.nowLine);
+  tr?.step('kontekst og minne');
+  // C. Forstå. Tekstmønstrene (legacy.detect, localPlan45) er bare HINT til planleggeren og reserve når modellen er nede.
+  // Hurtigvei uten modell bare for helt entydige kommandoer (fastPath47, se under).
   const legacyIntent = legacy?.detect ? (() => { try { return legacy.detect(text, today); } catch { return null; } })() : null;
-  const local = localPlan45(text, { module: opts.module, today, legacyIntent, user });
-  const engineDomain = local.calls.some((c) => !['app.answer', 'chat.answer'].includes(c.tool)) || !!local.ask;
-  let plan = null;
-  // Uklare meldinger (ingen regel slo til) får også modellen – men bare når de handler om brukeren selv eller ber om noe
-  // («jeg», «min», «kan du …»). Rene faktaspørsmål («hvem er statsminister») går rett til de eksisterende svarene: ett modellkall, ikke to.
-  const personal = /(?<![a-zæøå])(jeg|meg|min|mitt|mine|vi|oss|vår|våre|kan du|vil du|husk|minn|legg|sett|flytt|slett|finn)(?![a-zæøå])/i.test(text);
-  if (engineDomain || (!legacyFirst45(text) && personal && ['llm', null, 'calendar.day', 'tasks', 'finance.spent', 'appointment.create', 'tasks.glimt'].includes(legacyIntent))) {
-    const c = ctxOf45(user);
-    const ctxLine = c.items?.length ? `Sist vist: ${c.items.slice(0, 3).map((x) => `${x.title} (${x.kind})`).join('; ')}.` : '';
-    const mp = opts.noModel ? null : modelPlan45(user, text, { module: opts.module, nowLine: nowLineOf(today), ctxLine }).catch(() => null);
+  const local = localPlan45(text, { module: opts.module, today, legacyIntent, user, nowMin });
+  let plan = fastPath47(text, { module: opts.module, legacyIntent });
+  if (!plan && !opts.noModel && modelAvailable45()) {
+    const info = await modelInfo45(user);
+    const mp = modelPlan47(user, text, { ctx: c47, hint: hintOf47(local, legacyIntent), mode: info.mode, call: plannerCall47, trace: tr }).catch((e) => { console.warn('[glimt47] plan:', String(e?.message ?? e).slice(0, 160)); return null; });
     // Prompt 46: forhåndsvisningen venter maks 3 s på modellen; ellers lokal tolkning (dato/tid er uansett fra teksten).
-    plan = mp ? await (opts.preview ? Promise.race([mp, new Promise((r) => { const t = setTimeout(() => r(null), opts.previewMs ?? 3000); t.unref?.(); })]) : mp) : null;
-    // Modellen nede, eller den ville bare prate om noe den lokale planen ser er en handling: lokal plan.
-    if (!plan || plan.invalid) plan = local;
-    else if (engineDomain && plan.calls.every((x) => x.tool === 'chat.answer')) plan = local;
-    else plan = reconcile46(local, plan);
-  } else plan = local;
+    let mpl = await (opts.preview ? Promise.race([mp, new Promise((r) => { const t = setTimeout(() => r(null), opts.previewMs ?? 3000); t.unref?.(); })]) : mp);
+    // Steg G: dekker planen det tekstmønstrene så (alle steder i værspørsmålet, abonnementsdata, frist)? Ellers ett nytt forsøk med hint.
+    const gap = mpl && !opts.preview ? planGap47(local, mpl) : null;
+    if (gap) {
+      tr?.norm({ planGap: gap });
+      const p2 = await modelPlan47(user, text, { ctx: c47, hint: `${hintOf47(local, legacyIntent)}. ${gap}`, mode: info.mode, call: plannerCall47, trace: tr }).catch(() => null);
+      if (p2 && !planGap47(local, p2)) mpl = { ...p2, attempts: (mpl.attempts ?? 1) + (p2.attempts ?? 1), gapFixed: true };
+    }
+    if (mpl) plan = { ...mpl, module: mpl.calls[0] ? TOOL45[mpl.calls[0].tool]?.module ?? opts.module : opts.module, intent: mpl.calls.length ? (mpl.calls.length > 1 ? 'multi' : intentOfCalls45(mpl.calls)) : 'ask', planIntent: mpl.intent };
+  }
+  // Modellen nede, tidsavbrudd eller to ubrukelige svar: den lokale planen (samme validering og utførelse).
+  plan ??= local;
+  tr?.set('plan', { engine: plan.engine, model: plan.model ?? null, intent: plan.planIntent ?? plan.intent, calls: plan.calls, ask: plan.ask ?? null, dropped: plan.dropped ?? [], fast: !!plan.fast, attempts: plan.attempts ?? null, hint: plan.engine === 'lokal' ? null : hintOf47(local, legacyIntent) });
+  tr?.step('plan');
+  const modelPlan = plan.engine !== 'lokal';
   // Én dag fra Hjem («hva skjer i morgen?»): de eksisterende dagsvarene (med vær og første avtale) er riktige og beholdes.
   if (opts.module === 'home' && legacyIntent === 'calendar.day' && plan.calls.length === 1 && plan.calls[0].tool === 'calendar.list') {
     const per = parsePeriod45(text, today, { prefer: 'future' });
     if (!per || per.day) plan = { ...plan, calls: [{ tool: 'app.answer', args: { topic: 'other' } }] };
   }
   const own = opts.own ?? null;
-  const ownedCalls = plan.calls.filter((c) => !['app.answer', 'chat.answer'].includes(c.tool) && (!own || own.has(c.tool)));
+  // Prompt 47: med modellens plan svarer motoren selv på prat og nettsøk (svarsteget, answer47.js). Den lokale planen bruker de
+  // eksisterende svarene som før. Kallere med eget verktøyutvalg (own, f.eks. Kalender) får prat tilbake som legacy.
+  // (Tester med falsk planlegger uten falskt svarsteg beholder de gamle prat-svarene.)
+  const engineTalk = modelPlan && !own && !(_glimtModel45() && !answerImpl47);
+  const legacyTools = engineTalk ? ['app.answer'] : ['app.answer', 'chat.answer', 'web.search'];
+  const ownedCalls = plan.calls.filter((c) => !legacyTools.includes(c.tool) && (!own || own.has(c.tool)));
   if (!plan.ask && !ownedCalls.length) {
     // Ikke motorens: de eksisterende svarene (vær, avganger, pakker, chat …).
-    const lg = { legacy: true, plan, engine: plan.engine, legacyIntent };
+    const lg = { legacy: true, plan, engine: plan.engine, legacyIntent, traceId: tr?.id ?? null };
     if (opts.preview) return { ...base, preview: false, reply: 'Ingen avtale å forhåndsvise.', text: 'Ingen avtale å forhåndsvise.', intent: 'ask', module: opts.module, actions: [], results: [], engine: plan.engine, ms: Date.now() - t0 };
-    if (opts.legacyOk === false || !legacy?.answer) return lg;
+    if (opts.legacyOk === false || !legacy?.answer) { tr?.save({ reply: '(gamle svar)', engine: plan.engine }); return lg; }
     if (opts.module === 'tasks' && plan.calls[0]?.args?.topic === 'tasks37') {
       const { handleGlimt37 } = await import('../tasks-glimt37.js');
       if (handleGlimt37) {
@@ -236,21 +266,83 @@ async function pipeline(user, text, opts) {
         const ok = (r.status ?? 200) < 400;
         const items = (b.items ?? []).map((x) => ({ kind: 'task', id: String(x.id), title: x.title, subtitle: [x.due, x.time].filter(Boolean).join(' · ') || null, date: x.due ?? null, done: !!x.done }));
         const out = { ...base, reply: ok ? b.text : b.error, text: ok ? b.text : b.error, intent: b.kind === 'question' ? 'ask' : 'create', module: 'tasks', actions: [{ tool: 'tasks.glimt', args: {}, status: ok ? 'done' : 'failed', result: { intent: b.intent, count: items.length, undo: b.undo ?? null }, ...(ok ? {} : { error: b.error }) }],
-          results: items, joke: null, engine: b.engine === 'glimt' ? 'ollama-json' : 'lokal', model: null, ms: Date.now() - t0, legacyAnswer: b };
+          results: items, joke: null, engine: b.engine === 'glimt' ? 'ollama-json' : 'lokal', model: null, ms: Date.now() - t0, legacyAnswer: b, traceId: tr?.id ?? null };
         logChoice(user, { module: 'tasks', intent: out.intent, tools: ['tasks.glimt'], statuses: [out.actions[0].status], engine: out.engine, ms: out.ms, len: text.length });
+        tr?.save(out);
         return out;
       }
     }
-    const a = opts.module === 'calendar' && legacy?.calendar ? await legacy.calendar(user, text, { today }) : await legacy.answer(user, text, { today, skipAgent: true, module: opts.module, noWeb: opts.webSearch === false });
+    const topic = modelPlan ? plan.calls.find((c) => c.tool === 'app.answer')?.args?.topic ?? null : null;
+    const a = opts.module === 'calendar' && legacy?.calendar ? await legacy.calendar(user, text, { today }) : await legacy.answer(user, text, { today, skipAgent: true, module: opts.module, noWeb: opts.webSearch === false, ...(topic ? { topic } : {}) });
     const out = { ...base, reply: a.text, text: a.text, intent: plan.calls[0]?.tool === 'chat.answer' ? 'chat' : 'ask', module: opts.module, actions: [{ tool: plan.calls[0]?.tool ?? 'app.answer', args: {}, status: 'done', result: { intent: a.intent, source: a.source } }],
-      results: [], legacyAnswer: a, engine: plan.engine, model: plan.model ?? null, ms: Date.now() - t0, ...(a.nav ? { nav: a.nav } : {}) };
+      results: [], legacyAnswer: a, engine: plan.engine, model: plan.model ?? null, ms: Date.now() - t0, ...(a.nav ? { nav: a.nav } : {}), traceId: tr?.id ?? null };
     logChoice(user, { module: opts.module, intent: out.intent, tools: ['app.answer'], statuses: ['done'], engine: plan.engine, ms: out.ms, len: text.length });
+    tr?.tool({ tool: out.actions[0].tool, status: 'done', args: { topic }, result: { intent: a.intent, source: a.source } });
+    tr?.step('gamle svar'); tr?.save(out);
+    rememberTurn47(user, text, out.reply);
     return out;
   }
-  const ctxT = { user, text, today, nowMin, context, module: opts.module, preview: !!opts.preview };
+  const ctxT = { user, text, today, nowMin, context, module: opts.module, preview: !!opts.preview, facts, c47, trace: tr, webSearch: opts.webSearch !== false };
   const out = await executePlan(user, { ...plan, calls: ownedCalls }, ctxT, base, t0);
   logChoice(user, { module: opts.module, intent: out.intent, tools: out.actions.map((x) => x.tool), statuses: out.actions.map((x) => x.status), engine: out.engine, ms: out.ms, len: text.length });
+  if (tr) { for (const a of out.actions) tr.tool(a); tr.step('verktøy og svar'); tr.save(out); out.traceId = tr.id; }
+  if (!opts.preview && !out.ask) rememberTurn47(user, text, out.reply);
   return out;
+}
+
+/* ---------------- Prompt 47: hurtigvei, hint og modellkall ---------------- */
+
+// «Entydig» = hele meldingen (ankret ^…$) er én kommando av en kjent form som ikke kan bety noe annet:
+//   1. minne-setning: «Nina er frisøren min», «husk at Påhåret er frisøren min», «det var frisør» (parseMemoryIntent: ingen «?»,
+//      maks 120 tegn, typeordet må være en kjent type),
+//   2. ren navigasjon: «åpne kalender», «gå til budsjett» (verb + sidenavn og ingenting mer),
+//   3. Gjøremål-modulens egne kommandoer i Gjøremål («slå sammen like», «pakkeliste», limt inn flere linjer),
+//   4. Media: «last ned siste episode fra 9-1-1» (verb først + siste/neste/SxxEyy + episode + av/fra + tittel).
+// Alt annet – også spørsmål som ligner («når er neste …», «hva er været …») – går til planleggeren.
+const NAV_RE47 = /^(?:kan du\s+)?(?:åpne|gå\s+til|ta\s+meg\s+til|vis\s+meg)\s+(?:siden\s+)?(?:kalender(?:en)?|gjøremål|huskelist(?:a|en)|finans|kvitteringer|budsjett(?:et)?|abonnement(?:er)?|vær(?:et)?|familie|mat(?:plan)?|bursdager|chat|innstillinger|sporing|domener|rom)\s*[.!]?$/i;
+const TASKS_CMD47 = /^(?:slå\s+sammen(?:\s+like)?|lag\s+(?:en\s+)?pakkeliste\b.*|lag\s+(?:en\s+)?matplan\b.*|del\s+opp\b.*)$/i;
+export function fastPath47(text, { module = 'home', legacyIntent = null } = {}) {
+  const t = String(text ?? '').trim();
+  const P = (tool, args, why) => ({ intent: 'ask', module, calls: [{ tool, args }], engine: 'lokal', fast: why });
+  if (legacyIntent === 'memory.add' && !/\?\s*$/.test(t)) return P('app.answer', { topic: 'memory' }, 'minne');
+  if (NAV_RE47.test(t)) return P('app.answer', { topic: 'nav' }, 'navigasjon');
+  if (module === 'tasks' && (TASKS_CMD47.test(t) || t.includes('\n'))) return P('app.answer', { topic: 'tasks37' }, 'gjøremål');
+  // 4. Media: «last ned/hent siste|neste episode av X», «last ned S09E06 av X» (verbet først, hele setningen er kommandoen).
+  const ep = /^(?:kan\s+du\s+)?(?:last\s+ned|hent|søk\s+etter)\s/i.test(t) ? parseEpisodeAsk43(t) : null;
+  if (ep) return { ...P('media.episode', { title: ep.title, pick: ep.pick, season: ep.season ?? null, episode: ep.episode ?? null }, 'media'), module: 'media' };
+  return null;
+}
+/** Kort hint fra tekstmønstrene til planleggeren (kan være feil – modellen bestemmer). */
+export function hintOf47(local, legacyIntent) {
+  const parts = [];
+  for (const c of (local?.calls ?? []).slice(0, 4)) {
+    if (c.tool === 'app.answer' || c.tool === 'chat.answer') continue;
+    const r = c.args?._req;
+    parts.push(r ? `weather.get(${r.place ?? 'own place'}, ${r.when?.label ?? ''})` : c.tool);
+  }
+  const L = { departures: 'app.answer(departures)', packages: 'app.answer(packages)', 'sun.daylight': 'app.answer(sun)', 'family.where': 'app.answer(family)', 'trial.create': 'app.answer(trial)', 'calendar.school': 'app.answer(school)', nav: 'nav.open' }[legacyIntent];
+  if (L) parts.push(L);
+  return [...new Set(parts)].join(', ');
+}
+/** Planleggerens modellkall: ruten «glimt» (hovedmodellen), steg planner/plannerRetry fra params47, JSON-skjema i format. */
+async function plannerCall47(o) {
+  const impl = _glimtModel45();
+  if (impl) return impl(o);
+  const ai = await import('../ai-run.js');
+  const sp = STEP47[o.step] ?? STEP47.planner;
+  const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, ...(o.mode === 'tools' && o.tools ? { ollamaTools: o.tools } : { schema: o.schema }), step: o.step,
+    localOnly: true, background: false, title: 'Glimt · forstår', timeoutMs: sp.timeoutMs, noRetry: true, retries: 0 });
+  return { toolCalls: out.toolCalls ?? null, text: out.text, data: out.data, model: out.model, tokens: out.tokens, params: out.params };
+}
+/** Svarstegets modellkall (fritekst og nettsøk): ruten «glimt», steg answer. */
+let answerImpl47 = null;
+/** Bare for tester: falskt svarsteg ({system, prompt, step, user}) → {text, model}. */
+export const _setAnswerModel47 = (fn) => { answerImpl47 = fn ?? null; };
+async function answerCall47(o) {
+  if (answerImpl47) { const r = await answerImpl47(o); return { text: r?.text ?? '', model: r?.model ?? 'test' }; }
+  const ai = await import('../ai-run.js');
+  const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, step: 'answer', localOnly: true, background: false, title: 'Glimt · svarer', timeoutMs: STEP47.answer.timeoutMs, noRetry: true, retries: 0 });
+  return { text: out.text, model: out.model, tokens: out.tokens, params: out.params };
 }
 // Prompt 46: etterkontroll av modellens plan mot den deterministiske oppdelingen av teksten. Delspørsmål modellen glemte
 // («… og temperaturen i New York i morgen»), abonnementsdata den ville svart på fra egen kunnskap, og frist i Subscription OS når
@@ -292,6 +384,7 @@ async function executePlan(user, plan, ctxT, base, t0) {
     if (v.ask) return { ...res0, reply: v.ask.question, text: v.ask.question, intent: 'ask', actions: [{ tool: c.tool, args: c.args ?? {}, status: 'proposed' }], results: (v.ask.options ?? []).map((o) => ({ kind: 'option', id: o.id, title: o.label })), ask: v.ask, ms: Date.now() - t0 };
     if (v.error) return { ...res0, reply: v.error, text: v.error, actions: [{ tool: c.tool, args: c.args ?? {}, status: 'failed', error: v.error }], results: [], ms: Date.now() - t0 };
     checked.push({ tool: c.tool, args: v.args, summary: v.summary ?? null });
+    ctxT.trace?.norm({ tool: c.tool, args: publicArgs(v.args) }); // prompt 47: normaliserte verdier (tolkede datoer, steder, beløp, søketermer)
   }
   // Prompt 46: påminnelsen i Gjøremål får samme frist som i Subscription OS når brukeren ikke sa en egen dag.
   const trialC = checked.find((c) => c.tool === 'subscriptions.trial'), taskC = checked.find((c) => c.tool === 'tasks.create');
@@ -341,8 +434,30 @@ async function executePlan(user, plan, ctxT, base, t0) {
       if (Array.isArray(r.events)) events.push(...r.events.slice(0, 20));
       const s = sentence(c, r, today); if (s) lines.push(s);
       rememberCtx(user, c, r, ctxT.module);
-      if (!quipOutcome && QUIP_KIND[c.tool] && !r.result?.existing) quipOutcome = { kind: QUIP_KIND[c.tool], ok: true, title: c.args.title ?? r.result?.event?.title ?? r.result?.task?.title ?? '' };
+      if (!quipOutcome && QUIP_KIND[c.tool] && !r.result?.existing && r.result?.count !== 0) quipOutcome = { kind: QUIP_KIND[c.tool], ok: true, title: c.args.title ?? r.result?.event?.title ?? r.result?.task?.title ?? '' };
     } else { anyFail = true; lines.push(c.tool === 'weather.get' ? `${r.error}${/[.?!]$/.test(r.error ?? '') ? '' : '.'}` : `${FAIL_TEXT[c.tool] ?? 'Det gikk ikke'}: ${r.error}.${r.reconnect ? ' Koble til Google på nytt under Innstillinger → Kalendere.' : ''}`); }
+  }
+  // Prompt 47 Steg F: prat og nettsøk formuleres av svarsteget (bare verktøydata + kontekst; nettsøk-regelen først).
+  // Tekstmønsteret for aktuelle fakta («hvem er statsminister …», nyheter) er et hint: planla modellen bare prat, søkes det likevel.
+  const talk = checked.filter((c) => c.tool === 'chat.answer' || c.tool === 'web.search');
+  let answerModel = null;
+  if (talk.length && ctxT.c47) {
+    let webAct = actions.find((x) => x.tool === 'web.search' && x.status === 'done');
+    if (!webAct && ctxT.webSearch !== false && checked.some((c) => c.tool === 'chat.answer')) {
+      const { routeLocal, webQueryOf } = await import('../tool-router44.js');
+      const rl = routeLocal(ctxT.text);
+      if (rl.tools.includes('web') && /aktuelle fakta/.test(rl.reason)) {
+        const wr = await TOOL45['web.search'].run({ query: rl.query || webQueryOf(ctxT.text) }, ctxT).catch((e) => ({ status: 'failed', error: String(e?.message ?? e).slice(0, 200) }));
+        webAct = { tool: 'web.search', args: { query: rl.query, via: 'hint' }, status: wr.status, ...(wr.result ? { result: wr.result } : {}), ...(wr.error ? { error: wr.error } : {}) };
+        actions.push(webAct);
+      }
+    }
+    const web = webAct?.result ? { query: webAct.result.query, hits: webAct.result.hits ?? [] } : null;
+    const a = await answer47(user, ctxT.text, { ctx: ctxT.c47, web, call: answerCall47, trace: ctxT.trace });
+    answerModel = a.model;
+    if (a.error) anyFail = true;
+    lines.push(a.text);
+    if (web?.hits?.length) results.push(...web.hits.slice(0, 3).map((h, i) => ({ kind: 'web', id: `web${i}`, title: h.title, subtitle: h.source, url: h.url })));
   }
   // Prompt 46: sammenligning på tvers av værresultatene («er det varmere i Oslo eller New York i morgen?»).
   const cmpMode = plan.compare ?? checked.find((c) => c.tool === 'weather.get' && c.args.compare)?.args.compare ?? null;
@@ -352,6 +467,7 @@ async function executePlan(user, plan, ctxT, base, t0) {
   const joke = anyFail ? null : quipFor(base.personality, { ...(quipOutcome ?? {}), finance, ok: !!quipOutcome }, { seed: base.requestId ?? ctxT.text, today });
   const nav = checked.find((c) => c.tool === 'nav.open');
   const multiChoice = actions.some((a) => (a.tool === 'finance.search' && a.result?.count > 1 && !a.args?.sort) || (a.tool === 'calendar.search' && a.result?.count > 1));
+  if (answerModel && !res0.model) res0.model = answerModel;
   return { ...res0, reply: joke ? `${reply} ${joke}` : reply, text: joke ? `${reply} ${joke}` : reply, joke, actions, results, events,
     ...(multiChoice ? { choose: true } : {}),
     ...(nav ? { nav: { target: nav.args.target, label: NAV_LABEL[nav.args.target] ?? nav.args.target, web: NAV_WEB[nav.args.target] ?? '/', deepLink: `finanshub://${nav.args.target}`, delayMs: 450 } } : {}),

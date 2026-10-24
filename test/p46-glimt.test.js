@@ -75,7 +75,7 @@ const SUBS = {
 db.prepare('UPDATE fh_subscriptions SET prev_price=9900, price_changed=? WHERE id=?').run('2026-09-01', SUBS.spotify);
 db.prepare('INSERT INTO fh_recurring(name, amount, interval, day, active, user_id) VALUES(?,?,?,?,1,?)').run('Husleie', -950000, 'monthly', 1, OLA);
 
-test('abonnementer: dyreste (årskostnad), månedlig mot årlig, total, prisøkning, manglende pris – fra faktiske data', async () => {
+test('abonnementer: dyreste (månedspris), månedlig mot årlig, total, prisøkning, manglende pris – fra faktiske data', async () => {
   const r = await agent(O, 'Hva er det dyreste abonnementet jeg har?');
   assert.equal(r.status, 200, r.text);
   assert.equal(r.body.actions[0].tool, 'finance.subscriptions');
@@ -84,7 +84,8 @@ test('abonnementer: dyreste (årskostnad), månedlig mot årlig, total, prisøkn
   assert.deepEqual([res.ranked[0].monthly, res.ranked[0].yearly], [149, 1788]);
   assert.deepEqual(res.ranked.map((x) => x.name), ['Netflix', 'Spotify', 'Domeneboks'], 'årlig 1 200 kr = 100 kr/mnd, under Spotify');
   assert.deepEqual(res.uncertain.map((x) => x.name), ['Avisa']);
-  assert.match(r.body.reply, /Det dyreste abonnementet ditt er \*\*Netflix\*\*, som koster \*\*149 kr per måned\*\*.*\*\*149 kr per måned\*\* og \*\*1 788 kr per år\*\*/);
+  // Prompt 47: rangert på månedspris, og svaret viser både kr/mnd og kr/år.
+  assert.match(r.body.reply, /Det dyreste abonnementet ditt er \*\*Netflix\*\* til \*\*149 kr\/mnd\*\* \(1 788 kr\/år\)/);
   assert.match(r.body.reply, /«Avisa» mangler pris/);
   // Flere naturlige formuleringer → samme verktøy og samme svar.
   for (const q of ['Hvilket av abonnementene mine koster mest?', 'Hva er den største årlige abonnementskostnaden min?', 'Hvilket abonnement er dyrest hvis vi regner per måned?', 'Hva bruker jeg mest på abonnementer?']) {
@@ -118,14 +119,19 @@ test('abonnementer: tom liste, datakilden nede og samme spørsmål fra Hjem (/ap
   assert.equal(h.body.agent.actions[0].tool, 'finance.subscriptions');
 });
 
-test('modellen vil svare uten data (finance.summary/chat) → etterkontrollen henter abonnementene', async () => {
-  P._setGlimtModel45(async () => ({ data: { intent: 'summarize', module: 'finance', calls: [{ tool: 'finance.summary', args: { category: 'Abonnementer' } }] }, model: 'mock' }));
+// Prompt 47: tekstmønstrene legger ikke inn kall selv lenger. De gir planleggeren ETT nytt forsøk med et hint (Steg G), og en
+// modell som følger hintet, får hentet abonnementene.
+test('modellen vil svare uten data (finance.summary/chat) → nytt forsøk med hint henter abonnementene', async () => {
+  const prompts = [];
+  P._setGlimtModel45(async ({ prompt }) => { prompts.push(prompt); return /use finance\.subscriptions/.test(prompt) ? { data: { intent: 'finance_query', calls: [{ tool: 'finance.subscriptions', args: { mode: 'top' } }] }, model: 'mock' } : { data: { intent: 'summarize', module: 'finance', calls: [{ tool: 'finance.summary', args: { category: 'Abonnementer' } }] }, model: 'mock' }; });
   P._setToolMode45('json');
   try {
     const r = await agent(O, 'Hva er det dyreste abonnementet jeg har?');
     assert.equal(r.body.engine, 'ollama-json');
     assert.deepEqual(r.body.actions.map((x) => x.tool), ['finance.subscriptions']);
     assert.equal(r.body.actions[0].result.ranked[0].name, 'Netflix');
+    assert.equal(prompts.length, 2, 'ett nytt forsøk');
+    assert.match(prompts[1], /use finance\.subscriptions/);
   } finally { P._setGlimtModel45(null); P._setToolMode45(null); }
 });
 
@@ -312,7 +318,8 @@ test('vær: relative datoer ved månedsskifte og årsskifte, helg og ukedag (det
   const h = W.analyzeWeather46('været i oslo og bergen til helgen', TODAY);
   assert.deepEqual(h.requests.map((r) => [r.place, r.when.from, r.when.to]), [['Oslo', '2026-10-24', '2026-10-25'], ['Bergen', '2026-10-24', '2026-10-25']]);
   assert.equal(W.isCompoundWeather46('Hvordan er været i Oslo i dag?', TODAY), false, 'ett sted, én dag: det gamle svaret');
-  assert.equal(W.analyzeWeather46('Blir det regn i Bergen på fredag?', TODAY).requests[0].when.from, '2026-10-30');
+  assert.equal(W.analyzeWeather46('Blir det regn i Bergen på fredag?', TODAY).requests[0].when.from, '2026-10-23', 'prompt 47: «på fredag» en fredag = i dag');
+  assert.equal(W.analyzeWeather46('Blir det regn i Bergen neste fredag?', TODAY).requests[0].when.from, '2026-10-30');
 });
 
 /* ---------------- Kalender: standardkalender ---------------- */
@@ -470,8 +477,8 @@ test('Chat: Nettsøk av → ingen eget nettsøk, Open WebUI får web_search:fals
   assert.ok(!g.body.legacyAnswer?.web);
 });
 
-test('modellen glemmer et delspørsmål (bare Oslo) → etterkontrollen legger til New York', async () => {
-  P._setGlimtModel45(async () => ({ toolCalls: [{ function: { name: 'weather.get', arguments: { place: 'Oslo', when: 'i dag' } } }], text: '', model: 'mock' }));
+test('modellen glemmer et delspørsmål (bare Oslo) → nytt forsøk med hint gir også New York', async () => {
+  P._setGlimtModel45(async ({ prompt }) => ({ toolCalls: [{ function: { name: 'weather.get', arguments: { place: 'Oslo', when: 'i dag' } } }, ...(/New York/.test(prompt.split('\n').slice(1).join('\n')) ? [{ function: { name: 'weather.get', arguments: { place: 'New York', when: 'i morgen', info: 'temp' } } }] : [])], text: '', model: 'mock' }));
   P._setToolMode45('tools');
   try {
     const r = await agent(O, 'Hvordan er været i Oslo i dag og temperaturen i New York i morgen?');

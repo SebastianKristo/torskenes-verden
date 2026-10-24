@@ -389,7 +389,7 @@ test('Finans-modellvalg: GET /api/ai/routing?scope=finans gir alltid 4 rader med
   assert.equal(r.body.scope, 'finans');
   assert.deepEqual(r.body.tasks.map((t) => [t.id, t.name, t.model, t.fallback]), [
     ['rc', 'Kvitteringer (bilde)', 'qwen2.5vl:7b', 'gemini-2.5-flash'],
-    ['kat', 'Kategorisering', 'llama3.2:3b', 'llama-3.3-70b-versatile'],
+    ['kat', 'Kategorisering', 'qwen3:8b', 'llama-3.3-70b-versatile'], // prompt 47: ikke llama3.2:3b
     ['fsok', 'Finans · spør', 'gemma4:latest', 'gemini-2.5-flash'],
     ['bar', 'Strekkoder og pakkelapper', 'roboflow/kvittering/1', 'qwen2.5vl:7b']]);
   for (const t of r.body.tasks) {

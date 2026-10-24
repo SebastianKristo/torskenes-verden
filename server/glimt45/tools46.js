@@ -3,6 +3,7 @@
 import { TOOLS45, TOOL45, kr45 } from './tools.js';
 import { whenOf45, longDate45, todayOslo45, MON45, isIsoDate45 } from './dates.js';
 import { analyzeWeather46, whenOf46, fetchWeather46, weatherSentence46, weatherCard46, placesIn46 } from './weather46.js';
+import { hasWord47 } from './words47.js';
 import { subscriptions46, fixedCosts46, chargesInMonth46, upsertCancelDeadline46, findService46, serviceInText46, trialById46, fold } from './subs46.js';
 
 const ask = (question, options = null, field = null) => ({ ask: { question, ...(options ? { options } : {}), ...(field ? { field } : {}) } });
@@ -24,13 +25,15 @@ const weatherTool = {
   async validate(args, ctx) {
     // Fasit er teksten: delspørsmålene fra den deterministiske oppdelingen. Modellens sted brukes bare når det står i teksten.
     if (args._req) return { args: { ...args._req, compare: args.compare ?? null } };
-    const a = analyzeWeather46(ctx.text, ctx.today);
+    const a = analyzeWeather46(ctx.text, ctx.today, ctx.nowMin);
     if (a.ask) return ask(a.ask);
-    const place = str(args.place, 60);
-    const inText = place && fold(ctx.text).includes(fold(place));
+    // Prompt 47: planleggeren gir sted og tid som råtekst ({place|location, when|time_range}); koden tolker tiden (dates.js) og
+    // sjekker at stedet står i spørsmålet som HELE ORD («Oslo» er ikke «OsloMet»).
+    const place = str(args.place ?? args.location, 60);
+    const inText = !!place && hasWord47(ctx.text, place, { suffix: false });
     const hit = a.requests.find((r) => r.place && fold(r.place) === fold(place)) ?? (inText ? null : a.requests[0]);
-    const w = str(args.when, 40);
-    const when = (w && fold(ctx.text).includes(fold(w)) ? whenOf46(w, ctx.today) : null) ?? hit?.when ?? whenOf46('i dag', ctx.today);
+    const w = str(args.when ?? args.time_range ?? args.time, 40);
+    const when = (w && fold(ctx.text).includes(fold(w)) ? whenOf46(w, ctx.today, ctx.nowMin) : null) ?? hit?.when ?? whenOf46('i dag', ctx.today, ctx.nowMin);
     const info = ['summary', 'temp', 'precip', 'wind'].includes(args.info) ? args.info : hit?.info ?? 'summary';
     if (place && !inText && !hit) return { error: `«${place}» står ikke i spørsmålet` };
     return { args: { place: inText ? (placesIn46(ctx.text).find((p) => fold(p) === fold(place)) ?? place) : hit?.place ?? null, when, info, compare: args.compare ?? null } };
@@ -53,15 +56,17 @@ const subsTool = {
   name: 'finance.subscriptions', module: 'finance', destructive: false,
   description: 'Abonnementene brukeren har registrert (Subscription OS): dyreste/billigste, sum per måned/år, liste, prisøkninger. Koden normaliserer til måned og år.',
   parameters: S({ mode: { type: 'string', enum: ['top', 'bottom', 'total', 'list', 'increased'], description: 'top = dyreste, bottom = billigste, total = sum, list = alle, increased = blitt dyrere' },
-    basis: { type: 'string', enum: ['yearly', 'monthly'], description: 'Sammenlign per år (standard) eller per måned' }, limit: { type: 'integer', description: 'Hvor mange (f.eks. 5)' } }),
+    basis: { type: 'string', enum: ['monthly', 'yearly'], description: 'Rangering per måned (standard) eller per år – samme rekkefølge' }, sort_by: { type: 'string', enum: ['monthly_cost'] }, order: { type: 'string', enum: ['desc', 'asc'] }, limit: { type: 'integer', description: 'Hvor mange (f.eks. 5)' } }),
   async validate(args, ctx) {
     const t = ctx.text.toLowerCase();
-    const mode = ['top', 'bottom', 'total', 'list', 'increased'].includes(args.mode) ? args.mode
+    // Prompt 47: query_subscriptions-formen (sort_by:'monthly_cost', order) godtas også. Koden normaliserer ALT til månedspris
+    // (årspris / 12, ukepris × 52 / 12) og rangerer på den; svaret viser både kr/mnd og kr/år.
+    const mode = ['top', 'bottom', 'total', 'list', 'increased'].includes(args.mode) ? args.mode : args.order === 'asc' ? 'bottom' : args.order === 'desc' || args.sort_by ? 'top'
       : /dyrere|økt|øker|prisøk|steget|gått\s+opp/.test(t) ? 'increased'
         : /billigst|minst|lavest/.test(t) ? 'bottom'
           : /totalt|til\s+sammen|samlet|sum|hvor\s+mye\s+(?:betaler|bruker)/.test(t) && !/mest|dyrest|størst/.test(t) ? 'total'
             : /dyrest|mest|størst|høyest|koster\s+mest/.test(t) ? 'top' : 'list';
-    const basis = ['yearly', 'monthly'].includes(args.basis) ? args.basis : /per\s+måned|i\s+måneden|hver\s+måned|månedlig|regner\s+per\s+måned|per\s+mnd/.test(t) ? 'monthly' : 'yearly';
+    const basis = 'monthly';
     const n = /(?<![a-zæøå])(?:topp|de)\s+(\d+|tre|fem|ti)\b/.exec(t)?.[1];
     const limit = Number.isInteger(args.limit) && args.limit > 0 ? Math.min(args.limit, 20) : n ? ({ tre: 3, fem: 5, ti: 10 }[n] ?? +n) : mode === 'top' || mode === 'bottom' ? 1 : 10;
     return { args: { mode, basis, limit } };
@@ -69,7 +74,7 @@ const subsTool = {
   async run(a, ctx) {
     const { items } = await subscriptions46(ctx.user, ctx.today);
     const paid = items.filter((x) => x.kind === 'subscription');
-    const known = paid.filter((x) => !x.uncertain).sort((x, y) => y.yearly - x.yearly || x.name.localeCompare(y.name, 'nb'));
+    const known = paid.filter((x) => !x.uncertain).sort((x, y) => y.monthly - x.monthly || x.name.localeCompare(y.name, 'nb'));
     const uncertain = paid.filter((x) => x.uncertain);
     const trials = items.filter((x) => x.kind === 'trial');
     const total = { monthly: Math.round(known.reduce((s, x) => s + x.monthly, 0) * 100) / 100, yearly: Math.round(known.reduce((s, x) => s + x.yearly, 0) * 100) / 100 };
@@ -89,11 +94,11 @@ function subsSentence(a, r, today) {
   if (a.mode === 'top' || a.mode === 'bottom') {
     if (!first) return `Ingen av abonnementene har både pris og betalingsintervall, så jeg kan ikke rangere dem.${unc}`;
     const word = a.mode === 'top' ? 'dyreste' : 'billigste';
-    const basisTxt = a.basis === 'monthly' ? 'regnet per måned' : 'rangert etter årskostnad';
+    const orig = (x) => (x.cycle === 'monthly' ? '' : `, ${priceLine({ ...x, cycleLabel: null })}`);
     const head = a.limit > 1
-      ? `De ${a.limit} ${word} abonnementene dine (${basisTxt}): ${res.ranked.slice(0, a.limit).map((x, i) => `${i + 1}. **${x.name}** ${krm(x.monthly)}/mnd (${krm(x.yearly)}/år)`).join(', ')}.`
-      : `Det ${word} abonnementet ditt er **${first.name}**, som koster **${priceLine({ ...first, cycleLabel: null })}**. Det tilsvarer omtrent **${krm(first.monthly)} per måned** og **${krm(first.yearly)} per år** (${basisTxt}).`;
-    const more = a.limit <= 1 && rest.length ? ` Deretter: ${rest.slice(0, 3).map((x) => `${x.name} ${krm(x.monthly)}/mnd`).join(', ')}.` : '';
+      ? `De ${Math.min(a.limit, res.ranked.length)} ${word} abonnementene dine (regnet om til månedspris): ${res.ranked.slice(0, a.limit).map((x, i) => `${i + 1}. **${x.name}** ${krm(x.monthly)}/mnd (${krm(x.yearly)}/år${orig(x)})`).join(', ')}.`
+      : `Det ${word} abonnementet ditt er **${first.name}** til **${krm(first.monthly)}/mnd** (${krm(first.yearly)}/år${orig(first)}).`;
+    const more = a.limit <= 1 && rest.length ? ` Deretter: ${rest.slice(0, 2).map((x) => `${x.name} ${krm(x.monthly)}/mnd`).join(' og ')}.` : '';
     return `${head}${more}${unc}`;
   }
   if (a.mode === 'total') return `Du betaler **${krm(res.total.monthly)} per måned** for abonnementer, omtrent **${krm(res.total.yearly)} per år** (${res.count - res.uncertain.length} abonnementer, årlige trekk regnet om til måned).${unc}${res.trials.length ? ` ${res.trials.length === 1 ? 'Én prøveperiode er' : `${res.trials.length} prøveperioder er`} gratis nå og ikke med.` : ''}`;

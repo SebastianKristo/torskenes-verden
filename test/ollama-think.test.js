@@ -122,7 +122,7 @@ test('kort oppgave sender think:false og num_ctx, og fjerner <think> fra svaret'
   const gen = calls.filter((c) => c.url.endsWith('/api/chat'));
   assert.equal(gen.length, 1);
   assert.equal(gen[0].body.think, false);
-  assert.equal(gen[0].body.options.num_ctx, 4096);
+  assert.equal(gen[0].body.options.num_ctx, 8192, 'prompt 47: num_ctx eksplisitt, uten 4096-taket');
   assert.equal(gen[0].body.options.temperature, 0);
   assert.equal(r.engine, 'ollama', 'svaret ble tolket etter at <think> ble fjernet');
   assert.equal(r.event.date, '2026-10-21');
@@ -135,7 +135,7 @@ test('kort oppgave: ai_think på → think sendes ikke', async () => {
   await describe(OWNER, 'Tannlege med Ola');
   const gen = calls.find((c) => c.url.endsWith('/api/chat'));
   assert.equal('think' in gen.body, false);
-  assert.equal(gen.body.options.num_ctx, 4096);
+  assert.equal(gen.body.options.num_ctx, 8192, 'prompt 47: num_ctx eksplisitt, uten 4096-taket');
   setUserCfg(OWNER, { ai_think: '0' });
 });
 

@@ -61,7 +61,7 @@ const RID = () => `t45-${String(++rid).padStart(4, '0')}-${Math.random().toStrin
 // Planene en god modell gir (bevisst med sløve felt: hele setningen som tittel, feil år), så valideringen må rette dem.
 const MODEL_PLANS = [
   [/^Legg til time 12\.10 12:15 Kino se på dune$/i, { intent: 'create', module: 'calendar', calls: [{ tool: 'calendar.create', args: { title: 'Legg til time 12.10 12:15 Kino se på dune', date: '2026-10-12', time: '12:15' } }] }],
-  [/^Legg til kino fredag klokka sju$/i, { intent: 'create', module: 'calendar', calls: [{ tool: 'calendar.create', args: { title: 'Kino', date: 'fredag', time: 'klokka sju' } }] }],
+  [/^Legg til kino (?:neste )?fredag klokka sju$/i, { intent: 'create', module: 'calendar', calls: [{ tool: 'calendar.create', args: { title: 'Kino', date: 'fredag', time: 'klokka sju' } }] }],
   [/^Minn meg på å kjøpe melk i morgen$/i, { intent: 'create', module: 'tasks', calls: [{ tool: 'tasks.create', args: { title: 'Kjøpe melk', due: 'i morgen' } }] }],
   [/^Hva har jeg i kalenderen neste uke\?$/i, { intent: 'summarize', module: 'calendar', calls: [{ tool: 'calendar.list', args: { period: 'neste uke' } }] }],
   [/^Finn kvitteringen fra Elkjøp forrige måned$/i, { intent: 'search', module: 'finance', calls: [{ tool: 'finance.search', args: { merchant: 'Elkjøp', period: 'forrige måned', kind: 'receipt' } }] }],
@@ -109,7 +109,10 @@ test('dato/tid: norske formater, relative datoer, månedsskifte, årsskifte og u
   const W = (t, today = TODAY, o = {}) => { const w = D.whenOf45(t, today, { nowMin: 600, ...o }); return [w.date, w.start, w.end]; };
   assert.deepEqual(W('Legg til time 12.10 12:15 Kino se på dune'), ['2027-10-12', '12:15', null], 'dd.mm passert → neste år (appens regel)');
   assert.deepEqual(W('12/11 kl 9.30'), ['2026-11-12', '09:30', null]);
-  assert.deepEqual(W('fredag klokka sju kino'), ['2026-10-30', '19:00', null], 'samme ukedag som i dag = neste uke; kino → kveld');
+  // Prompt 47: ukedag-regelen – samme ukedag som i dag = i dag når klokkeslettet ikke er passert (kl. 10 nå), ellers om en uke.
+  assert.deepEqual(W('fredag klokka sju kino'), ['2026-10-23', '19:00', null], 'samme ukedag, 19:00 ikke passert = i dag; kino → kveld');
+  assert.deepEqual(W('fredag kl 9'), ['2026-10-30', '09:00', null], 'samme ukedag, 09:00 passert = om en uke');
+  assert.deepEqual(W('neste fredag klokka sju kino'), ['2026-10-30', '19:00', null], '«neste» samme ukedag = om en uke');
   assert.deepEqual(W('møte kl 16'), ['2026-10-23', '16:00', null]);
   for (const t of ['16h', '1600', 'kl1600', '16:00', 'kl. 16.00']) assert.equal(D.parseTime45(t).start, '16:00', t);
   assert.equal(D.parseTime45('halv åtte i kveld').start, '19:30');
@@ -157,19 +160,19 @@ test('modell (JSON): «Legg til time 12.10 12:15 Kino se på dune» → avtale m
     assert.equal(r.body.intent, 'create');
     assert.equal(r.body.actions[0].tool, 'calendar.create');
     assert.equal(r.body.actions[0].status, 'done');
-    assert.deepEqual([r.body.actions[0].args.title, r.body.actions[0].args.date, r.body.actions[0].args.start, r.body.actions[0].args.end], ['Kino – Dune', '2027-10-12', '12:15', '13:15']);
-    assert.match(r.body.reply, /^Lagt inn: \*\*«Kino – Dune» tirsdag 12\. oktober 2027 kl\. 12:15–13:15\*\*/);
+    assert.deepEqual([r.body.actions[0].args.title, r.body.actions[0].args.date, r.body.actions[0].args.start, r.body.actions[0].args.end], ['Kino – Dune', '2027-10-12', '12:15', '15:15']); // prompt 47: kino = 3 t (antatt)
+    assert.match(r.body.reply, /^Lagt inn: \*\*Kino – Dune, tirsdag 12\. oktober 2027 kl\. 12:15\*\*.*Slutt kl\. 15:15 er antatt \(3 t for kino\)/);
     assert.equal(calls.length, 1, 'ett modellkall');
   });
   const saved = await evsOf(OLA, '2027-10-12');
   assert.equal(saved.length, 1);
   assert.equal(saved[0].title, 'Kino – Dune');
-  assert.equal(saved[0].time, '12:15–13:15');
+  assert.equal(saved[0].time, '12:15–15:15');
 });
 
-test('modell (tool calling): «Legg til kino fredag klokka sju» → riktig fredag og 19:00, ingen oppdiktet sted', async () => {
+test('modell (tool calling): «Legg til kino neste fredag klokka sju» → riktig fredag og 19:00, ingen oppdiktet sted', async () => {
   await withModel('tools', async () => {
-    const r = await agent(O, 'Legg til kino fredag klokka sju', { requestId: RID() });
+    const r = await agent(O, 'Legg til kino neste fredag klokka sju', { requestId: RID() }); // prompt 47: «fredag» en fredag = i dag
     assert.equal(r.body.engine, 'ollama-tools');
     assert.equal(r.body.actions[0].status, 'done');
     assert.equal(r.body.actions[0].args.date, '2026-10-30');
@@ -179,7 +182,7 @@ test('modell (tool calling): «Legg til kino fredag klokka sju» → riktig fred
   });
   const e = (await evsOf(OLA, '2026-10-30')).find((x) => x.title === 'Kino');
   assert.ok(e, 'lagret');
-  assert.equal(e.time, '19:00–20:00');
+  assert.equal(e.time, '19:00–22:00', 'prompt 47: kino = 3 t');
   assert.equal(e.room, '');
 });
 
@@ -221,7 +224,7 @@ test('modell: verktøy ikke støttet (400) → JSON-modus i samme forespørsel',
     assert.equal(P.toolModeFor45('gemma3:12b'), 'tools', 'tvunget i test');
     P._setToolMode45(null);
     assert.equal(P.toolModeFor45('gemma3:12b'), 'json', 'gemma3 → JSON-skjema');
-    assert.equal(P.toolModeFor45('qwen3:8b'), 'tools', 'qwen3 → tool calling');
+    assert.equal(P.toolModeFor45('qwen3:8b'), 'json', 'prompt 47: planleggeren bruker JSON-skjema (Ollama format) for alle modeller');
     assert.equal(P.toolModeFor45('qwen3:8b', 'openwebui'), 'json', 'Open WebUI sender ikke tool_calls tilbake');
   } finally { P._setGlimtModel45(null); P._setToolMode45(null); }
 });
@@ -255,9 +258,9 @@ test('«Flytt avtalen til fredag»: entydig kontekst → flyttes; tvetydig → s
   const m = await withModel('json', () => agent(K, 'Flytt avtalen til fredag', { requestId: RID() }));
   assert.equal(m.body.actions[0].tool, 'calendar.update');
   assert.equal(m.body.actions[0].status, 'done', JSON.stringify(m.body));
-  assert.match(m.body.reply, /^Flyttet \*\*«Frisør»\*\* til \*\*fredag 30\. oktober kl\. 10:00–10:45\*\*/);
+  assert.match(m.body.reply, /^Flyttet \*\*«Frisør»\*\* til \*\*fredag 30\. oktober kl\. 10:00–11:00\*\*/); // prompt 47: frisør = 1 t
   assert.equal((await evsOf(KARI, '2026-10-26')).length, 0, 'ikke lenger mandag');
-  assert.equal((await evsOf(KARI, '2026-10-30')).find((e) => e.title === 'Frisør')?.time, '10:00–10:45', 'varigheten beholdes');
+  assert.equal((await evsOf(KARI, '2026-10-30')).find((e) => e.title === 'Frisør')?.time, '10:00–11:00', 'varigheten beholdes');
   // Etter en liste med flere avtaler er «den» tvetydig → spør med valg.
   await agent(K, 'Legg til lege tirsdag kl 12', { requestId: RID() });
   await agent(K, 'Hva har jeg i kalenderen neste uke?', { requestId: RID() });
@@ -268,7 +271,7 @@ test('«Flytt avtalen til fredag»: entydig kontekst → flyttes; tvetydig → s
   // Valgt i Kalender (context.selectedId) → den, også fra modulen.
   const sel = await agent(K, 'flytt den til torsdag kl 14', { module: 'calendar', context: { selectedId: id }, requestId: RID() });
   assert.equal(sel.body.actions[0].status, 'done');
-  assert.equal((await evsOf(KARI, '2026-10-29')).find((e) => e.title === 'Frisør')?.time, '14:00–14:45');
+  assert.equal((await evsOf(KARI, '2026-10-29')).find((e) => e.title === 'Frisør')?.time, '14:00–15:00'); // prompt 47: frisør = 1 t
 });
 
 test('regresjon: «flytt den til fredag» på en avtale neste år (12.10 etter at 12.10 i år er passert) → fredag i avtalens uke, bekreftet', async () => {
@@ -279,8 +282,8 @@ test('regresjon: «flytt den til fredag» på en avtale neste år (12.10 etter a
   assert.equal(m.body.actions[0].status, 'done', JSON.stringify(m.body).slice(0, 500));
   assert.ok(!/bekreftet ikke/.test(m.body.reply), m.body.reply);
   assert.equal(m.body.actions[0].args.date, '2027-10-15', 'fredagen i avtalens uke, ikke 30.10.2026');
-  assert.match(m.body.reply, /^Flyttet \*\*«Kino – Dune»\*\* til \*\*fredag 15\. oktober 2027 kl\. 12:15–13:15\*\*/);
-  assert.equal((await evsOf(KARI, '2027-10-15')).find((e) => e.title === 'Kino – Dune')?.time, '12:15–13:15', 'lagret');
+  assert.match(m.body.reply, /^Flyttet \*\*«Kino – Dune»\*\* til \*\*fredag 15\. oktober 2027 kl\. 12:15–15:15\*\*/);
+  assert.equal((await evsOf(KARI, '2027-10-15')).find((e) => e.title === 'Kino – Dune')?.time, '12:15–15:15', 'lagret');
   assert.equal((await evsOf(KARI, '2027-10-12')).filter((e) => e.title === 'Kino – Dune').length, 0);
   // Med klokkeslett, og fra Hjem med kontekst: samme uke, kontrollert.
   const t = await agent(K, 'flytt den til torsdag kl 18', { module: 'calendar', context: { selectedId: id }, requestId: RID() });
@@ -290,7 +293,7 @@ test('regresjon: «flytt den til fredag» på en avtale neste år (12.10 etter a
   const n = await agent(K, 'flytt den til neste fredag', { module: 'calendar', context: { selectedId: id }, requestId: RID() });
   assert.equal(n.body.actions[0].status, 'done', n.body.reply);
   assert.equal(n.body.actions[0].args.date, '2026-10-30');
-  assert.ok((await evsOf(KARI, '2026-10-30')).some((e) => e.title === 'Kino – Dune' && e.time === '18:00–19:00'));
+  assert.ok((await evsOf(KARI, '2026-10-30')).some((e) => e.title === 'Kino – Dune' && e.time === '18:00–21:00')); // varigheten (3 t kino) beholdes
 });
 
 test('regresjon: flytt en kopi til samme tid som en lik avtale → spør (ikke «bekreftet ikke»); kontrollen leser lagringen direkte', async () => {

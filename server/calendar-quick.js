@@ -106,6 +106,26 @@ export function fromOllama(o) {
   return { ok: true, title, date, start, end, place, type, duration, allDay: !start, confidence: Math.round(conf * 100) / 100, isAppointment: true };
 }
 
+/**
+ * Prompt 47: modellens svar brukes ikke ukritisk. Dato og klokkeslett kommer fra den felles datoparseren (glimt45/dates.js) når
+ * teksten har dem – modellens dato bare når teksten ikke sier noe selv. Tittelvakt: maks 60 tegn, ikke lik hele meldingen, og
+ * ordene må stå i teksten (typeord som «Frisør» er lov) – ellers den lokale tittelen.
+ */
+async function guardQuick47(r, text, today, local) {
+  const { whenOf45, addMin45 } = await import('./glimt45/dates.js');
+  const { wordsFromText46 } = await import('./glimt45/tools.js');
+  const w = whenOf45(text, today, { prefer: 'future', timeWithoutDate: 'none' });
+  const out = { ...r };
+  if (!w.errors.length) {
+    if (w.date && w.date !== out.date) out.date = w.date;
+    if (w.start && w.start !== out.start) { out.start = w.start; out.end = w.end ?? addMin45(w.start, out.duration ?? 60); out.allDay = false; }
+  }
+  const norm = (x) => String(x ?? '').toLowerCase().replace(/[^\p{L}\d]+/gu, ' ').trim();
+  const words = String(out.title).replace(/·/g, ' ');
+  if (out.title.length > 60 || norm(out.title) === norm(text) || !wordsFromText46(words, text)) out.title = local.title || out.title.slice(0, 60);
+  return out;
+}
+
 /** Tolker teksten: Ollama først, parseQuick som reserve. → {r, engine}. Prompt 33: «Glimt husker» (aliasene) vinner. */
 export async function interpret(text, user, today = osloTodayISO()) {
   let aliases = [];
@@ -115,7 +135,8 @@ export async function interpret(text, user, today = osloTodayISO()) {
   let res = null;
   if (fn) {
     try {
-      const r = fromOllama(await fn(PROMPT(text, today, aliases), user));
+      const r0 = fromOllama(await fn(PROMPT(text, today, aliases), user));
+      const r = r0 ? await guardQuick47(r0, text, today, local) : null;
       if (r) {
         // Overskrift («NB! NY ADRESSE …») eller telefonnummer som tittel: bruk den lokale tittelen.
         const bad = isNoiseLine(r.title) || /^(?:nb|obs|viktig|husk|ny adresse)\b/i.test(r.title);

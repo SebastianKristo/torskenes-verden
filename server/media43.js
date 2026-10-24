@@ -6,6 +6,7 @@
 // Tilgang: sesjon eller app-token (skriving krever finance:write) + modulen «media» (admin alltid, andre når admin gir tilgang,
 // PUT /api/media/access). Bare admin kan slette, endre profiler/overvåking, legge til indeksere og velge bort filer.
 // Ruter under /api/media (svarformene står i rapporten for prompt 43 og i kommentarene ved hver rute).
+import { normTitle43, parseEpisodeAsk43 } from './glimt45/media47.js'; // prompt 47
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
@@ -842,6 +843,54 @@ async function statusOut(u) {
     ...(admin ? { hooks: hookUrls() } : {}) };
 }
 
+/* ---------------- Prompt 47: «siste/neste episode av X» (bare Sonarr) ---------------- */
+
+// Tolkningen (normTitle43, parseEpisodeAsk43) ligger i glimt45/media47.js, så Glimt-motoren kan bruke den uten å laste Media.
+/**
+ * Bibliotek først (Sonarr /series), så oppslag. Eksakt normalisert tittel vinner («9-1-1» før «9-1-1: Lone Star»); flere like
+ * gode treff → valgknapper. Siste episode = siste sendte (sesong > 0) → Sonarr EpisodeSearch. Neste = neste usendte (bare info).
+ * → {ok, kind, text, series?, episode?, results, actions}
+ */
+export async function episodeGlimt43(u, { title, pick = 'latest', season = null, episode = null, download = true } = {}) {
+  if (!svcConf43('sonarr').on) return { ok: false, kind: 'setup', text: 'Sonarr er ikke satt opp, så jeg kan ikke hente episoder.', results: [], actions: [] };
+  const want = normTitle43(title);
+  if (!want) return { ok: false, kind: 'help', text: 'Hvilken serie?', results: [], actions: [] };
+  const lib = await seriesList().catch(() => []);
+  let exact = lib.filter((s) => normTitle43(s.title) === want || normTitle43(s.sortTitle) === want);
+  if (!exact.length) {
+    const starts = lib.filter((s) => normTitle43(s.title).startsWith(want));
+    if (starts.length > 1) return { ok: true, kind: 'choose', text: `Flere serier passer «${title}». Hvilken mener du?`, results: starts.slice(0, 5).map((s) => ({ type: 'series', id: s.id, title: s.title })), actions: starts.slice(0, 5).map((s) => ({ type: 'episode', label: s.title, query: `${pick === 'next' ? 'Neste' : 'Siste'} episode av ${s.title}` })) };
+    exact = starts;
+  }
+  if (!exact.length) {
+    const look = await lookupSeries(title).catch(() => []);
+    const hit = look.find((x) => normTitle43(x.title) === want) ?? null;
+    if (!hit) return { ok: true, kind: 'none', text: `Fant ingen serie som heter «${title}» i Sonarr.`, results: [], actions: [] };
+    const prof = await profileFor43('sonarr', null);
+    return { ok: true, kind: 'add', text: `${hit.title} er ikke i biblioteket ennå. Vil du legge den til?`, results: [addResult(hit, prof, 'latestSeason')], actions: [addAction(hit, prof, 'latestSeason')] };
+  }
+  const s = exact[0];
+  const eps = await arr('sonarr', 'GET', '/episode', { query: { seriesId: s.id } });
+  const now = Date.now();
+  const air = (e) => (e.airDateUtc ? Date.parse(e.airDateUtc) : NaN);
+  const real = (eps ?? []).filter((e) => e.seasonNumber > 0);
+  let e = null;
+  if (pick === 'exact') e = real.find((x) => x.seasonNumber === season && x.episodeNumber === episode) ?? null;
+  else if (pick === 'next') e = real.filter((x) => !(air(x) <= now)).sort((a, b) => (air(a) || Infinity) - (air(b) || Infinity) || a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber)[0] ?? null;
+  else e = real.filter((x) => air(x) <= now).sort((a, b) => air(b) - air(a) || b.seasonNumber - a.seasonNumber || b.episodeNumber - a.episodeNumber)[0] ?? null;
+  if (!e) return { ok: true, kind: 'none', text: pick === 'next' ? `Sonarr kjenner ingen kommende episoder av ${s.title}.` : `Fant ingen sendte episoder av ${s.title} i Sonarr.`, series: { id: s.id, title: s.title }, results: [], actions: [] };
+  const code = epCode(e.seasonNumber, e.episodeNumber);
+  const date = e.airDateUtc ? dateText(String(e.airDate ?? e.airDateUtc).slice(0, 10)) : null;
+  const res = { type: 'episode', id: e.id, episodeId: e.id, seriesId: s.id, title: `${s.title} ${code}`, subtitle: `«${e.title ?? `Episode ${e.episodeNumber}`}»${date ? ` · ${date}` : ''}${e.hasFile ? ' · har den' : ''}`, code, hasFile: !!e.hasFile };
+  const searchAction = { type: 'command', label: e.hasFile ? 'Last ned på nytt' : 'Last ned', method: 'POST', path: '/api/media/command', body: { name: 'EpisodeSearch', episodeIds: [e.id] } };
+  if (pick === 'next' && !(air(e) <= now)) return { ok: true, kind: 'next', text: `Neste episode av ${s.title} er ${code} «${e.title ?? ''}»${date ? `, som sendes ${date}` : ''}. Den kan lastes ned når den er sendt.`, series: { id: s.id, title: s.title }, episode: res, results: [res], actions: [] };
+  if (e.hasFile && pick !== 'exact') return { ok: true, kind: 'has', text: `Du har allerede den siste episoden av ${s.title}: ${code} «${e.title ?? ''}»${date ? ` (sendt ${date})` : ''}.`, series: { id: s.id, title: s.title }, episode: res, results: [res], actions: [searchAction] };
+  if (!download) return { ok: true, kind: 'found', text: `Siste episode av ${s.title} er ${code} «${e.title ?? ''}»${date ? ` (sendt ${date})` : ''}${e.hasFile ? '' : ', og den mangler'}.`, series: { id: s.id, title: s.title }, episode: res, results: [res], actions: [searchAction] };
+  const r = await arr('sonarr', 'POST', '/command', { body: { name: 'EpisodeSearch', episodeIds: [e.id] } });
+  clearMedia43('queue'); clearMedia43('sonarr:');
+  return { ok: true, kind: 'search', text: `Søker etter ${s.title} ${code} «${e.title ?? ''}»${date ? ` (sendt ${date})` : ''} i Sonarr.`, series: { id: s.id, title: s.title }, episode: res, commandId: r?.id ?? null, results: [res], actions: [{ type: 'open', label: 'Åpne serien', tab: 'sonarr', id: s.id }] };
+}
+
 /* ---------------- Glimt i Media ---------------- */
 
 const SIZE_RE = /episode[rn]?\s+(?:av|fra|i)\s+(.+?)\s+(?:som\s+er\s+|på\s+)?(under|over|mindre enn|større enn|maks|minst)\s*([\d.,]+)\s*(mb|gb)/i;
@@ -894,14 +943,21 @@ async function glimt(u, qRaw) {
     const miss = aired.filter((e) => !e.hasFile).length;
     return out({ kind: 'size', text: `${list.length} ${list.length === 1 ? 'utgivelse' : 'utgivelser'} av ${hit.title} ${lt ? 'under' : 'over'} ${limT}${miss ? ` · ${miss} ${miss === 1 ? 'episode mangler' : 'episoder mangler'}` : ''}.`, series: { id: hit.id, title: hit.title }, limit: limT, under: lt, results: list, actions: list.map((x) => x.action) });
   }
+  // Prompt 47: «last ned siste episode fra 9-1-1», «neste episode av The Rookie», «S09E06 av 9-1-1» → bare Sonarr, bibliotek først,
+  // normaliserte titler (9-1-1 ≈ 911 ≈ 9 1 1), siste sendte episode → EpisodeSearch. Hele resten av setningen er aldri tittelen.
+  const epAsk = parseEpisodeAsk43(q);
+  if (epAsk) {
+    const r = await step((x) => (x?.series ? `Fant ${x.series.title} i Sonarr` : 'Søker i Sonarr'), () => episodeGlimt43(u, epAsk));
+    return out({ kind: r.kind, text: r.text, ...(r.series ? { series: r.series } : {}), ...(r.episode ? { episode: r.episode } : {}), results: r.results ?? [], actions: r.actions ?? [] });
+  }
   const m = q.match(/(?:legg til|last ned|hent|finn)\s+(.+?)(?:\s+(?:i|på)\s+(4k|uhd|2160p?|1080p?|720p?|hd))?\s*$/i);
   if (m) {
     const ttl = m[1].trim(), qq = (m[2] ?? '').toLowerCase();
     const want = /4k|uhd|2160/.test(qq) ? 'Ultra-HD' : /720/.test(qq) ? 'HD-720p' : qq ? 'HD-1080p' : null;
     const [ser, mov] = await step('Søker i Sonarr og Radarr', () => Promise.all([svcConf43('sonarr').on ? lookupSeries(ttl).catch(() => []) : [], svcConf43('radarr').on ? lookupMovies(ttl).catch(() => []) : []]));
-    const norm = (s) => s.toLowerCase().replace(/[^a-z0-9æøå]+/g, ' ').trim();
     const all = [...ser, ...mov];
-    const hit = all.find((x) => norm(x.title) === norm(ttl)) ?? all.find((x) => norm(x.title).includes(norm(ttl))) ?? null;
+    // Prompt 47: normaliserte titler (9-1-1 ≈ 911), eksakt først, ellers den korteste tittelen som starter med teksten.
+    const hit = all.find((x) => normTitle43(x.title) === normTitle43(ttl)) ?? all.filter((x) => normTitle43(x.title).startsWith(normTitle43(ttl))).sort((a, b) => a.title.length - b.title.length)[0] ?? null;
     if (!hit) return out({ kind: 'none', text: `Fant ingenting som heter «${ttl}».` });
     const svc = hit.kind === 'series' ? 'sonarr' : 'radarr';
     const prof = await profileFor43(svc, want);
@@ -1225,5 +1281,6 @@ media43Api.get('/cover', ...G, async (c) => {
 });
 
 // Prompt 44 (SERVER44): byggeklosser for media44.js (servere per sted, søk som jobb, slett fil, felles status).
+export { normTitle43, parseEpisodeAsk43 };
 export { arr as arr43, qb as qb43, cached as cached43, indexersRaw as indexersRaw43, posterOf as posterOf43, fanartOf as fanartOf43, epCode as epCode43,
   releaseOut as releaseOut43, statusOut as mediaStatusOut43, fail as mediaFail43, guard as mediaGuard43, admin as mediaAdmin43, jb as mediaBody43, nb1 as nb143 };

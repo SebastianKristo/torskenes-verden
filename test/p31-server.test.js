@@ -295,7 +295,8 @@ test('prøveperiode med Glimt: lagres, svar med uthevet tidspunkt; mangler noe �
 test('rask time via Glimt: lagres og bekreftes av kalenderen før svaret', async () => {
   const r = await A('/api/assist', 'POST', { q: 'time hos Nina frisør 14.30 25.09' });
   assert.equal(r.body.intent, 'appointment.create');
-  assert.match(r.body.text, /^Lagt inn: \*\*«Nina frisør» [a-zæøå]+ 25\. september( \d{4})? kl\. 14:30–15:15\*\* i Personlig-kalenderen\./);
+  // Prompt 47: «Lagt inn: Nina frisør, <dag> 25. september kl. 14:30» + antatt varighet (frisør 1 t).
+  assert.match(r.body.text, /^Lagt inn: \*\*Nina frisør, [a-zæøå]+ 25\. september( \d{4})? kl\. 14:30\*\* i Personlig-kalenderen\. Slutt kl\. 15:30 er antatt \(1 t\)/);
   const ev = r.body.created.event;
   assert.equal(r.body.agent.actions[0].status, 'done');
   const evs = (await A(`/api/kalender?from=${ev.date}&to=${ev.date}`)).body;

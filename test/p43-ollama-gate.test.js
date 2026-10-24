@@ -233,11 +233,11 @@ test('tidsgrenser: idle_timeout slår ikke til mens tokens strømmer; load_timeo
 
 /* ---------------- 7. keep_alive per modell ---------------- */
 
-test('keep_alive per modell: llama3.2 1h, qwen3 15m, qwen2.5vl kort mens køen ikke er tom – og lastes ut når køen er tom', async () => {
+test('keep_alive per modell: llama3.2 standard (prompt 47: ikke 1h), qwen3 15m, qwen2.5vl kort mens køen ikke er tom – og lastes ut når køen er tom', async () => {
   await Promise.all([ask('llama3.2:3b'), ask('qwen3:8b'), ask('qwen2.5vl:7b'), ask('qwen2.5vl:7b')]);
   await new Promise((r) => setTimeout(r, 30));
   const keep = (m) => sim.log.find((x) => x.model === m && !x.unload).body.keep_alive;
-  assert.deepEqual([keep('llama3.2:3b'), keep('qwen3:8b'), keep('qwen2.5vl:7b')], ['1h', '15m', gate.SHORT_KEEP]);
+  assert.deepEqual([keep('llama3.2:3b'), keep('qwen3:8b'), keep('qwen2.5vl:7b')], [gate.gateParams().keepAlive, '15m', gate.SHORT_KEEP]);
   const un = sim.log.filter((x) => x.unload);
   assert.deepEqual(un.map((x) => x.model), ['qwen2.5vl:7b'], 'lastet ut én gang, etter de to jobbene');
   assert.equal(sim.unloads[0].activeAt, 0);
@@ -246,7 +246,7 @@ test('keep_alive per modell: llama3.2 1h, qwen3 15m, qwen2.5vl kort mens køen i
   await ask('llama3.2:3b');
   await gate.loadedModels({ base: BASE, force: true });
   const st = gate.gateState();
-  assert.ok(st.loaded.some((m) => m.name === 'llama3.2:3b' && m.keepAlive === '1h'), JSON.stringify(st.loaded));
+  assert.ok(st.loaded.some((m) => m.name === 'llama3.2:3b' && m.keepAlive === gate.gateParams().keepAlive), JSON.stringify(st.loaded));
   assert.deepEqual(st.waiting, []);
   // Endres i innstillingene (validert).
   let r = await A('/api/ai/routing', 'PUT', { params: { modelKeepAlive: { 'qwen3:8b': '30m', 'llama3.2:3b': 'alltid' } } });

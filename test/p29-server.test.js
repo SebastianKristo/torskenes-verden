@@ -74,8 +74,12 @@ test('jobbkø: Ollama brukes når sikker, ellers parseQuick; hendelse i Privat m
   const j = jobs.find((x) => x.id === r.body.jobId);
   assert.equal(j.state, 'done');
   assert.equal(j.engine, 'ollama');
-  assert.deepEqual({ ...j.result, eventId: !!j.result.eventId }, { eventId: true, title: 'Nina frisør', date: '2026-10-23', start: '14:30', end: '15:15', place: 'Bogstadveien 1', label: 'fre 23. okt · 14:30' });
-  const ev = (await eventsOn(A, '2026-10-23')).find((e) => e.id === j.result.eventId);
+  // Prompt 47: datoen kommer fra den felles datoparseren (teksten sier «fredag»), ikke fra modellens faste '2026-10-23'.
+  const D47 = await import('../server/glimt45/dates.js');
+  const fri = D47.whenOf45('fredag 14.30', D47.todayOslo45(), { timeWithoutDate: 'none' }).date;
+  const MON3 = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+  assert.deepEqual({ ...j.result, eventId: !!j.result.eventId }, { eventId: true, title: 'Nina frisør', date: fri, start: '14:30', end: '15:15', place: 'Bogstadveien 1', label: `fre ${+fri.slice(8)}. ${MON3[+fri.slice(5, 7) - 1]} · 14:30` });
+  const ev = (await eventsOn(A, fri)).find((e) => e.id === j.result.eventId);
   assert.ok(ev);
   assert.equal(ev.calendar, 'privat');
   assert.equal(ev.reminder, '1h');

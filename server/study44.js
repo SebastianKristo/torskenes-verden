@@ -179,10 +179,13 @@ function foundOf(d) {
 let visionImpl = null;
 /** Bare for tester: (images, user) → {emner, institution, …}. */
 export const _setStudyVision45 = (fn) => { visionImpl = fn; };
-const vision = () => visionImpl ?? (MOCK() ? null : async (images, user) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('rc', { user, images, prompt: 'Dette er et norsk vitnemål eller en karakterutskrift. Les ALLE fag/emner med fagkode, navn, studiepoeng, karakter (A–F, 1–6, Bestått/Ikke bestått), semester, og for vitnemål standpunkt og eksamen. Svar KUN med JSON etter skjemaet. Ikke regn ut snitt, ikke finn på fag.', json: true, schema: STUDY_SCHEMA45, localOnly: true, numPredict: 1500, title: 'Glimt · les vitnemål (bilde)', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
+const vision = () => visionImpl ?? (MOCK() ? null : async (images, user) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('rc', { user, images, prompt: 'Dette er et norsk vitnemål eller en karakterutskrift. Les ALLE fag/emner med fagkode, navn, studiepoeng, karakter (A–F, 1–6, Bestått/Ikke bestått), semester, og for vitnemål standpunkt og eksamen. Svar KUN med JSON etter skjemaet. Ikke regn ut snitt, ikke finn på fag.', json: true, schema: STUDY_SCHEMA45, localOnly: true, step: 'document', numCtx: 8192, numPredict: 4096, title: 'Glimt · les vitnemål (bilde)', background: true }); /* prompt 47: 8192 (visjonsmodellen + bilde), 4096 ut */ return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
 let aiImpl = null;
 export const _setStudyAi44 = (fn) => { aiImpl = fn; };
-const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('glimt', { user, prompt, json: true, localOnly: true, numPredict: 900, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
+// Prompt 47: dokumentstrukturering med steg «document» (params47: num_ctx 16384, num_predict 4096, temperatur 0, think av) og
+// strengt JSON-skjema når kalleren gir et – før kuttet 4096/900 lange dokumenter, og fag manglet.
+import { completeness47, retryMissing47, completenessText47 } from './glimt45/document47.js'; // prompt 47
+const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user, schema = null) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('glimt', { user, prompt, json: true, ...(schema ? { schema } : {}), step: 'document', localOnly: true, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
 async function analyse(user, buf, mime, name) {
   const steps = [];
   const step = async (key, label, fn) => { const t0 = Date.now(); try { const r = await fn(); steps.push({ key, label: typeof label === 'function' ? label(r) : label, ms: Date.now() - t0, ok: true }); return r; } catch (e) { steps.push({ key, label: typeof label === 'function' ? label(null) : label, ms: Date.now() - t0, ok: false, error: e.message }); throw e; } };
@@ -215,12 +218,21 @@ async function analyse(user, buf, mime, name) {
   }
   if (!emner.length && ai()) {
     try {
-      const j = await ai()(`Les dette dokumentet (vitnemål eller karakterutskrift). Svar KUN med JSON {"emner":[{"kode":"","navn":"","sp":0,"karakter":"","semester":""}],"institution":"","student":""}. Ikke regn ut snitt.\n\n${ex.text.slice(0, 12000)}`, user);
+      const j = await ai()(`Les dette dokumentet (vitnemål eller karakterutskrift). Svar KUN med JSON {"emner":[{"kode":"","navn":"","sp":0,"karakter":"","semester":""}],"institution":"","student":""}. Ikke regn ut snitt.\n\n${ex.text.slice(0, 30000)}`, user);
       emner = (Array.isArray(j?.emner) ? j.emner : []).slice(0, 80).map((e) => ({ kode: e.kode ? String(e.kode).slice(0, 20) : null, navn: cap(String(e.navn ?? '').slice(0, 120)), sp: Number.isFinite(+e.sp) && +e.sp > 0 ? +e.sp : null, karakter: String(e.karakter ?? '').trim().slice(0, 20), semester: e.semester ? String(e.semester).slice(0, 20) : null, tone: toneOf(e.karakter) })).filter((e) => e.navn && GRADE.test(e.karakter));
       if (!meta.institution && j?.institution) meta.institution = String(j.institution).slice(0, 90);
       if (!meta.student && j?.student) meta.student = String(j.student).slice(0, 60);
       steps.push({ key: 'glimt', label: 'Glimt leste fagene (lokal modell)', ms: 0, ok: true });
     } catch (e) { steps.push({ key: 'glimt', label: 'Glimt kunne ikke lese fagene', ms: 0, ok: false, error: e.message }); }
+  }
+  // Prompt 47: fullstendighetssjekk i kode – fag-rader i OCR-teksten mot fagene i JSON. Manglende rader får ett nytt forsøk (bare de
+  // radene, strengt skjema), og avvik flagges i svaret. Modellen får ikke legge til fag som ikke står i OCR-teksten.
+  let comp = ex.text ? completeness47(ex.text, emner) : null;
+  if (comp && comp.missing.length && emner.length && ai()) {
+    const add = await retryMissing47(comp.missing, (p, schema) => ai()(p, user, schema));
+    for (const e of add) if (GRADE.test(e.karakter) && !emner.some((x) => x.navn.toLowerCase() === e.navn.toLowerCase())) emner.push({ kode: null, navn: cap(e.navn), sp: null, karakter: e.karakter, semester: null, ...(e.eksamen ? { eksamen: e.eksamen } : {}), tone: toneOf(e.karakter), source: 'glimt-rad', check: true, checkReason: 'Lest på nytt av Glimt – sjekk karakteren' });
+    if (add.length) steps.push({ key: 'complete', label: `Leste ${add.length} manglende ${add.length === 1 ? 'rad' : 'rader'} på nytt`, ms: 0, ok: true });
+    comp = completeness47(ex.text, emner);
   }
   // Prompt 46: koden regner – vgs-snittet tar med eksamenskarakterene også.
   const avg = await step('calc', 'Regner snitt …', async () => { const a = averages44(emner); const v = vgsAverage46(emner); return v ? { ...a, snittVgs: { value: v.value, points: v.points, text: v.text } } : a; });
@@ -236,7 +248,9 @@ async function analyse(user, buf, mime, name) {
   d.format = t46?.format ?? null;
   if (t46?.validation) d.validation = t46.validation;
   d.checks = emner.filter((e) => e.check).length;
+  if (comp) d.completeness = { ocrRows: comp.ocrRows, found: comp.found, missing: comp.missing.map((r) => r.name).slice(0, 20), complete: comp.complete };
   Object.assign(d, statusOf45(d));
+  if (comp && !comp.complete && emner.length) d.statusText = `${d.statusText} · ${completenessText47(comp)}`;
   if (d.checks && d.status !== 'failed') d.statusText = `${d.statusText} · ${d.checks} må sjekkes`;
   if (!emner.length) { d.statusText = 'Klarte ikke å lese dokumentet. Er det et bilde? Prøv en skarpere kopi eller PDF fra Vitnemålsportalen.'; d.manual = { label: 'Fyll inn selv', method: 'PUT', path: '/api/study/documents/:id/courses' }; }
   if (!emner.length) console.warn(`[study] fant ingen fag how=${ex.how} tekst=${(ex.text ?? '').length} tegn`);

@@ -7,6 +7,8 @@ import { agent45, confirm45, logOf45, busyOf45 } from './engine.js';
 import { registryOut45 } from './tools.js';
 import { modelInfo45, MODULES45 } from './plan.js';
 import { personalityOf, setPersonality, PERSONALITIES, PERSONALITY_LABELS } from './personality.js';
+import { traceOf47, tracesOf47, traceHtml47 } from './trace47.js';
+import { isAdmin } from '../auth.js';
 
 export const agentApi45 = new Hono();
 agentApi45.use('*', authOrToken);
@@ -70,6 +72,22 @@ agentApi45.put('/settings', async (c) => {
 });
 agentApi45.get('/tools', async (c) => { const m = await modelInfo45(c.get('user')); return c.json({ tools: registryOut45(), toolMode: m.mode, model: m.model }); });
 agentApi45.get('/log', (c) => c.json({ items: logOf45(c.get('user')) }));
+// Prompt 47: trace per forespørsel (traceId står i svaret fra POST /). Bare egne traces – admin kan lese alle med id.
+//   GET /trace?id=t…  → {trace}   · GET /trace (uten id) → {items:[{id, at, module, intent, tools, ms}]}   · GET /trace/view?id= → HTML
+const TID = /^t[0-9a-f]{18}$/;
+agentApi45.get('/trace', (c) => {
+  const u = c.get('user'), id = c.req.query('id');
+  if (!id) return c.json({ items: tracesOf47(u) }, 200, { 'Cache-Control': 'no-store' });
+  if (!TID.test(id)) return c.json({ error: 'Ugyldig id' }, 400);
+  const t = traceOf47(id, u, { admin: isAdmin(u) });
+  return t ? c.json({ trace: t }, 200, { 'Cache-Control': 'no-store' }) : c.json({ error: 'Fant ikke tracen (eller den er utløpt)' }, 404);
+});
+agentApi45.get('/trace/view', (c) => {
+  const u = c.get('user'), id = c.req.query('id') ?? '';
+  const t = TID.test(id) ? traceOf47(id, u, { admin: isAdmin(u) }) : null;
+  if (!t) return c.text('Fant ikke tracen', 404);
+  return c.html(traceHtml47(t), 200, { 'Cache-Control': 'no-store', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" });
+});
 // Prompt 46: kalenderne Glimt kan legge avtaler i (skrivbare), og standardkalenderen. Klientene viser valget når Glimt spør.
 agentApi45.get('/calendars', async (c) => {
   const { writableCalendars46, calendarLabel46 } = await import('./calendar46.js');

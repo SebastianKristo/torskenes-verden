@@ -113,7 +113,8 @@ test('fiks: helsesjekk, én modell om gangen gruppert per modell, oppvarming med
   // Prompt 43: ingen egen oppvarming lenger (gaten gir kald modell egen grense til første token), og keep_alive er per modell:
   // qwen3:8b 15m, llama3.2:3b 1h, qwen2.5vl:7b kort (2m) mens køen for den ikke er tom – så lastes den ut (keep_alive 0).
   const keepOf = (m) => ol.log.find((x) => x.model === m && x.path !== '/api/generate')?.keep;
-  assert.deepEqual(['qwen3:8b', 'llama3.2:3b', 'qwen2.5vl:7b', 'bge-m3:latest'].map(keepOf), ['15m', '1h', '2m', '30m']);
+  // Prompt 47: llama3.2:3b har ikke lenger 1 t keep_alive (standarden 30m gjelder).
+  assert.deepEqual(['qwen3:8b', 'llama3.2:3b', 'qwen2.5vl:7b', 'bge-m3:latest'].map(keepOf), ['15m', '30m', '2m', '30m']);
   assert.ok(ol.log.some((x) => x.model === 'qwen2.5vl:7b' && x.path === '/api/generate' && x.keep === 0), 'qwen2.5vl:7b lastet ut når køen var tom');
   assert.deepEqual(r.body.groups.map((g) => g.model), ['qwen3:8b', 'qwen2.5vl:7b', 'llama3.2:3b', 'zbar', 'bge-m3:latest']);
   // Kald start med innlasting (400 ms) lengre enn den gamle grensen (300 ms) – likevel OK, fordi svarklokka starter etter innlastingen.

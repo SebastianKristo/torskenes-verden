@@ -54,13 +54,14 @@ import { THINK_UNSUPPORTED, isThinkingModel, rememberNoThink, hasNoThink, stripT
 
 /* ---------------- Innstillinger ---------------- */
 
-export const DEFAULT_MODEL_KEEP_ALIVE = { 'llama3.2:3b': '1h', 'qwen3:8b': '15m', 'qwen2.5vl:7b': 0 };
+// Prompt 47: llama3.2:3b har ikke lenger 1 t keep_alive (den skal ikke ligge lastet ved siden av qwen3:8b på 16 GB) – standarden gjelder.
+export const DEFAULT_MODEL_KEEP_ALIVE = { 'qwen3:8b': '15m', 'qwen2.5vl:7b': 0 };
 export const GATE_DEFAULTS = { ollamaConcurrency: 1, keepAlive: '30m', loadTimeout: 90, firstTokenTimeout: 30, idleTimeout: 30, idleTimeoutImage: 60 };
 export const GATE_FAIR = { maxJobs: 6, maxMs: 90_000 };
 export const SHORT_KEEP = '2m'; // keep_alive mens det står noe i kø for en modell med keep_alive 0
 export const EMBED_MS = 60_000;
 /** Tester: kortere backoff og ps-cache. */
-export const _gateTest = { backoffMs: [2000, 8000], psTtlMs: 3000, maxRetries: 2, unloadGraceMs: 1500 };
+export const _gateTest = { backoffMs: [2000, 8000], psTtlMs: 3000, maxRetries: 2, unloadGraceMs: 1500, maxRetrying: 1 };
 
 let paramsFn = () => ({});
 /** ai-run.js kobler inn rutingen (params) her, så gaten ikke trenger å importere ai-run (sirkulært). */
@@ -207,7 +208,7 @@ const isLoadedIn = (ps, model) => !!ps?.some((m) => sameModel(m.name ?? m.model,
 
 /* ---------------- Køen ---------------- */
 
-const Q = { seq: 0, waiting: [], running: new Map(), current: null, streakN: 0, streakAt: 0, paused: false, hold: 0, warm: new Map(), wake: null, lastBase: null, unloadTimers: new Map() };
+const Q = { seq: 0, waiting: [], running: new Map(), retrying: new Map(), current: null, streakN: 0, streakAt: 0, paused: false, hold: 0, warm: new Map(), wake: null, lastBase: null, unloadTimers: new Map() };
 const PRIO = { interactive: 0, background: 1 };
 export const holdGate = () => { Q.hold++; let done = false; return () => { if (done) return; done = true; Q.hold = Math.max(0, Q.hold - 1); pump(); }; };
 export const setGatePaused = (v) => { Q.paused = !!v; pump(); return Q.paused; };
@@ -226,12 +227,21 @@ const best = (list) => list.slice().sort(better)[0] ?? null;
  * Utlasting (exclusive) starter bare når ingen forespørsel pågår, og ingen ny forespørsel starter før utlastingen er ferdig
  * (ellers kunne keep_alive:0 komme fram etter at et nytt kall startet – den gamle feilen). Utlasting tar under ett sekund.
  */
+// Prompt 47: én kø PER OLLAMA-INSTANS (adressen). Samtidighetsgrensen (standard 1) og «aldri to modeller samtidig» gjelder per
+// instans, så en ekstra Ollama (f.eks. eval mot en annen maskin) ikke blokkerer – og ikke blokkeres av – den vanlige.
+const instOf = (j) => j.inst ?? '';
 function pickNext() {
-  const now = clock.now(), p = gateParams();
-  const runs = [...Q.running.values()];
+  const now = clock.now();
+  const bases = [...new Set(Q.waiting.filter((j) => eligible(j, now)).sort(better).map(instOf))];
+  for (const b of bases) { const j = pickNextIn(b, now); if (j) return j; }
+  return null;
+}
+function pickNextIn(base, now) {
+  const p = gateParams();
+  const runs = [...Q.running.values()].filter((r) => instOf(r) === base);
   const active = runs.filter((r) => !r.exclusive); // ekte forespørsler
   if (runs.some((r) => r.exclusive)) return null;
-  const el = Q.waiting.filter((j) => eligible(j, now));
+  const el = Q.waiting.filter((j) => instOf(j) === base && eligible(j, now));
   if (!el.length) return null;
   const ex = el.filter((j) => j.exclusive);
   if (ex.length && !active.length) return best(ex);
@@ -326,7 +336,7 @@ async function doUnload(model, base, f) {
 function enqueue({ model, backend = 'ollama', prio, retry = false, exclusive = false, auto = false, kind, label, signal, run, onQueue, base, fetch: f }) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(cancelErr()); return; }
-    const j = { id: `g${++Q.seq}`, seq: Q.seq, model, backend, prio, retry, exclusive, auto, kind, label, signal, run, base, fetch: f, enqAt: clock.now(), resolve, reject };
+    const j = { id: `g${++Q.seq}`, seq: Q.seq, model, backend, prio, retry, exclusive, auto, kind, label, signal, run, base, inst: base || defaultBase() || '', fetch: f, enqAt: clock.now(), resolve, reject };
     j.onAbort = () => { const i = Q.waiting.indexOf(j); if (i >= 0) { Q.waiting.splice(i, 1); reject(cancelErr()); pump(); } };
     signal?.addEventListener?.('abort', j.onAbort, { once: true });
     if (kind !== 'unload') cancelUnload(model);
@@ -707,10 +717,15 @@ async function request(o0) {
         continue;
       }
       if (!e.transient || timeoutBlocked || streamedOut || attempts > maxRetries) throw e;
+      // Prompt 47: ingen stablende nye forsøk. Venter allerede en annen forespørsel mot samme instans på et nytt forsøk, gir denne
+      // opp med en gang (feilen går videre til ruterens reserve) i stedet for å legge seg i kø bak.
+      const inst = o.base || defaultBase() || '';
+      if ((Q.retrying.get(inst) ?? 0) >= _gateTest.maxRetrying) { e.retrySkipped = true; throw e; }
       const wait = _gateTest.backoffMs[Math.min(attempts - 1, _gateTest.backoffMs.length - 1)] ?? 2000;
       console.warn(`[ai-gate] ${o.model} (${o.backend}): ${e.message} · nytt forsøk ${attempts}/${maxRetries} om ${Math.round(wait / 100) / 10} s`);
       try { o.onRetry?.({ attempt: attempts, error: e, waitMs: wait }); } catch { /* */ }
-      try { await sleep(wait, o.signal); } catch (c) { c.telemetry = tele(); throw c; }
+      Q.retrying.set(inst, (Q.retrying.get(inst) ?? 0) + 1);
+      try { await sleep(wait, o.signal); } catch (c) { c.telemetry = tele(); throw c; } finally { Q.retrying.set(inst, Math.max(0, (Q.retrying.get(inst) ?? 1) - 1)); }
     }
   }
 }

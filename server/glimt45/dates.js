@@ -52,6 +52,16 @@ export function relDate45(date, today = todayOslo45()) {
   return longDate45(date, today);
 }
 const err = (raw, message, kind = 'invalid') => ({ error: kind, message, raw });
+/** Prompt 47: «etter jul» → 2. januar etter neste jul (mandag hvis 2. januar er lørdag/søndag). */
+export function afterChristmas45(today = todayOslo45()) {
+  const y = +today.slice(0, 4);
+  // Fra 25.12 til og med 2.1 gjelder julen som er nå; ellers neste jul.
+  const nyY = today >= `${y}-12-25` ? y + 1 : today <= `${y}-01-02` ? y : y + 1;
+  let d = `${nyY}-01-02`;
+  const wd = weekdayOf45(d);
+  if (wd === 6) d = addDays45(d, 2); else if (wd === 0) d = addDays45(d, 1);
+  return d;
+}
 
 /* ---------------- Dato ---------------- */
 
@@ -104,6 +114,9 @@ export function parseDate45(text, today = todayOslo45(), { prefer = 'future' } =
   const rel = [[/(?<![a-zæøå])i\s*overmorgen(?![a-zæøå])/, 2], [/(?<![a-zæøå])(i\s*morgen|imorgen|i morra|imorra)(?![a-zæøå])/, 1], [/(?<![a-zæøå])i\s*går(?![a-zæøå])/, -1], [/(?<![a-zæøå])i\s*forgårs(?![a-zæøå])/, -2],
     [/(?<![a-zæøå])(i dag|idag|i kveld|ikveld|i ettermiddag|nå i kveld)(?![a-zæøå])/, 0]];
   for (const [r, n] of rel) { const x = r.exec(t); if (x) return { date: addDays45(today, n), raw: x[0], kind: 'rel', span: [x.index, x.index + x[0].length] }; }
+  // Prompt 47: «etter jul» = første hverdag etter nyttår (2. januar, eller mandagen etter hvis den er en helgedag) etter neste jul.
+  m = /(?<![a-zæøå])etter\s+jul(?:a|en|ehelga|ehelgen|eferien)?(?![a-zæøå])/.exec(t);
+  if (m) return { date: afterChristmas45(today), raw: m[0], kind: 'rel', span: [m.index, m.index + m[0].length], approx: true };
   m = /(?<![a-zæøå])om\s+(\d{1,3}|en|ett|to|tre|fire|fem|seks|sju|syv|åtte|ni|ti)\s+(dag|dager|døgn|uke|uker)(?![a-zæøå])/.exec(t);
   if (m) { const n = /^\d/.test(m[1]) ? +m[1] : NUMW[m[1]]; return { date: addDays45(today, /^uke/.test(m[2]) ? n * 7 : n), raw: m[0], kind: 'rel', span: [m.index, m.index + m[0].length] }; }
   // Ukedag: «fredag», «på fredag», «neste fredag», «fredag neste uke», «fredag om en uke»
@@ -117,7 +130,14 @@ export function parseDate45(text, today = todayOslo45(), { prefer = 'future' } =
     if (nextWeek) date = addDays45(mondayOf45(addDays45(today, 7)), (wd + 6) % 7);
     else if (thisWeek) date = addDays45(mondayOf45(today), (wd + 6) % 7);
     else if (past) { let n = (tw - wd + 7) % 7; if (n === 0) n = 7; date = addDays45(today, -n); if (m[1] === 'forrige' || /forrige/.test(m[3] ?? '')) date = addDays45(mondayOf45(addDays45(today, -7)), (wd + 6) % 7); }
-    else { let n = (wd - tw + 7) % 7; if (n === 0) n = 7; date = addDays45(today, n); }
+    else {
+      // Prompt 47: ukedag = neste forekomst. Er det i dag (og ingen «neste»/«om en uke»), brukes i dag – whenOf45 flytter til om en
+      // uke hvis klokkeslettet allerede er passert. «neste fredag» på en fredag = om en uke.
+      let n = (wd - tw + 7) % 7;
+      if (n === 0 && (m[1] === 'neste' || m[1] === 'kommende')) n = 7;
+      if (n === 0) return { date: today, raw: m[0].trim(), kind: 'weekday', span, sameDay: true };
+      date = addDays45(today, n);
+    }
     return { date, raw: m[0].trim(), kind: 'weekday', span };
   }
   // «neste uke» alene som dato (oppgaver): mandag neste uke
@@ -305,6 +325,18 @@ export function whenOf45(text, today = todayOslo45(), { prefer = 'future', nowMi
   let date = null, dateRaw = null, dateKind = null;
   if (dt?.error) errors.push({ field: 'date', message: dt.message });
   else if (dt) { date = dt.date; dateRaw = dt.raw; dateKind = dt.kind; spans.push(dt.span); }
+  // Prompt 47: ukedag som er i dag («på fredag» en fredag) = i dag, med mindre klokkeslettet allerede er passert (da om en uke).
+  if (dt?.sameDay && start && toMin(start) <= (nowMin ?? nowMinOslo45())) date = addDays45(date, 7);
+  // Prompt 47: «om 2 timer», «om 30 minutter», «om en time» → klokkeslett regnet fra nå (i dag, eller i morgen over midnatt).
+  if (!start && !errors.length) {
+    const rel = REL_TIME47.exec(t);
+    if (rel) {
+      const nm = nowMin ?? nowMinOslo45();
+      const at = nm + relMinutes47(rel);
+      start = fmt(Math.floor((at % 1440) / 60), at % 60); timeRaw = rel[0]; spans.push([rel.index, rel.index + rel[0].length]);
+      if (!date) { date = addDays45(today, Math.floor(at / 1440)); dateKind = 'rel'; dateRaw = rel[0]; }
+    }
+  }
   if (!date && start && timeWithoutDate === 'today' && !errors.some((e) => e.field === 'date')) {
     const nm = nowMin ?? nowMinOslo45();
     date = toMin(start) <= nm ? addDays45(today, 1) : today;
@@ -313,4 +345,48 @@ export function whenOf45(text, today = todayOslo45(), { prefer = 'future', nowMi
   const soft = SOFT_TIME45.exec(t);
   if (soft) spans.push([soft.index, soft.index + soft[0].length]);
   return { date, start, end, dateRaw, timeRaw, dateKind, softTime: soft ? soft[0] : null, assumedPm, errors, rest: cut(src, spans) };
+}
+
+/* ---------------- Prompt 47: relative klokkeslett og tidsvinduer ---------------- */
+
+const NUMW47 = '\\d{1,3}|en|ei|ett|to|tre|fire|fem|seks|sju|syv|åtte|ni|ti|tolv|femten|tjue|tretti|førti|femti|halvannen|en\\s+halv';
+export const REL_TIME47 = new RegExp(`(?<![a-zæøå])om\\s+(${NUMW47})\\s+(time|timer|t|minutt|minutter|min)(?![a-zæøå])|(?<![a-zæøå])om\\s+(en\\s+halvtime|et\\s+kvarter|ett\\s+kvarter|halvtimen|kvarteret)(?![a-zæøå])`);
+const NUM47 = { en: 1, ei: 1, ett: 1, to: 2, tre: 3, fire: 4, fem: 5, seks: 6, sju: 7, syv: 7, åtte: 8, ni: 9, ti: 10, tolv: 12, femten: 15, tjue: 20, tretti: 30, førti: 40, femti: 50, halvannen: 1.5 };
+export function relMinutes47(m) {
+  if (m[3]) return /kvarter/.test(m[3]) ? 15 : 30;
+  const raw = m[1].replace(/\s+/g, ' ');
+  const n = /^\d/.test(raw) ? +raw : raw === 'en halv' ? 0.5 : NUM47[raw] ?? 1;
+  return Math.round(/^t|time/.test(m[2]) && !/^min/.test(m[2]) ? n * 60 : n);
+}
+/**
+ * Tidsvindu for spørsmål («neste time», «om 2 timer», «i kveld», «i natt», «i ettermiddag», «i morgen tidlig»). Minutter fra midnatt
+ * i Oslo (nowMin) – værverktøyet regner vinduet om til stedets tidssone. → {kind:'hour'|'evening'|'night'|'afternoon'|'morning',
+ * from, to (datoer), fromMin, toMin, label, offset (dager fra i dag)} | null
+ */
+export function parseWindow47(text, today = todayOslo45(), nowMin = nowMinOslo45()) {
+  const t = low(text);
+  let m;
+  const win = (kind, offset, fromMin, toMin, label) => {
+    const from = addDays45(today, offset + Math.floor(fromMin / 1440)), to = addDays45(today, offset + Math.floor((toMin - 1) / 1440));
+    return { kind, offset, from, to, fromMin: ((fromMin % 1440) + 1440) % 1440, toMin: ((toMin % 1440) + 1440) % 1440 || 1440, label };
+  };
+  if ((m = /(?<![a-zæøå])(?:den\s+)?neste\s+(?:timen|time)(?![a-zæøå])|(?<![a-zæøå])(?:den\s+)?kommende\s+timen?(?![a-zæøå])/.exec(t))) return win('hour', 0, nowMin, nowMin + 60, 'neste time');
+  if ((m = /(?<![a-zæøå])de\s+neste\s+(\d{1,2}|to|tre|fire|fem|seks)\s+timene(?![a-zæøå])/.exec(t))) { const n = /^\d/.test(m[1]) ? +m[1] : NUM47[m[1]]; return win('hour', 0, nowMin, nowMin + n * 60, `de neste ${n} timene`); }
+  if ((m = REL_TIME47.exec(t))) { const at = nowMin + relMinutes47(m); return win('hour', 0, at - 30, at + 30, m[0].trim()); }
+  if (/(?<![a-zæøå])(i\s*kveld|ikveld|nå\s+i\s+kveld)(?![a-zæøå])/.test(t)) return win('evening', 0, Math.max(18 * 60, Math.min(nowMin, 23 * 60)), 24 * 60, 'i kveld');
+  if (/(?<![a-zæøå])(i\s*natt|inatt)(?![a-zæøå])/.test(t)) return win('night', 0, 23 * 60, 30 * 60, 'i natt');
+  if (/(?<![a-zæøå])i\s+ettermiddag(?![a-zæøå])/.test(t)) return win('afternoon', 0, 12 * 60, 18 * 60, 'i ettermiddag');
+  if (/(?<![a-zæøå])i\s*morgen\s+tidlig(?![a-zæøå])/.test(t)) return win('morning', 1, 6 * 60, 10 * 60, 'i morgen tidlig');
+  if (/(?<![a-zæøå])i\s*morgen\s+kveld(?![a-zæøå])/.test(t)) return win('evening', 1, 18 * 60, 24 * 60, 'i morgen kveld');
+  return null;
+}
+/**
+ * Prompt 47: den felles inngangen for norske dato-/tidsuttrykk. now = {today, nowMin} (Europe/Oslo), tz er med for tydelighet
+ * (datoene er kalenderdatoer i Oslo; værverktøyet regner om til stedets tidssone).
+ * → {date, start, end, window, dateRaw, timeRaw, dateKind, assumedPm, errors, rest, tz}
+ */
+export function parseNorwegianDateTime(text, now = {}, tz = 'Europe/Oslo') {
+  const today = now.today ?? todayOslo45(), nowMin = now.nowMin ?? nowMinOslo45();
+  const w = whenOf45(text, today, { prefer: now.prefer ?? 'future', nowMin, timeWithoutDate: now.timeWithoutDate ?? 'today' });
+  return { ...w, window: parseWindow47(text, today, nowMin), tz };
 }

@@ -244,8 +244,12 @@ async function routingOut(u) {
     let res = null;
     try { res = t.id === 'bar' && ai.providerOf(r.tasks.bar.model).provider === 'roboflow' ? null : await ai.resolveTask(t.id, { user: u }); } catch { res = null; }
     const first = res?.list[0];
+    // Prompt 47: brukerens valg respekteres, men en tolkningsrute (Glimt, AI-søk, kategorisering, Finans · spør) på en modell under 7B
+    // gir en advarsel – små modeller tolker fritekst (kalender, ruting, kategorier) for dårlig.
+    const small = first?.provider === 'ollama' && ai.INTERPRET_TASKS47.includes(t.id) ? ai.smallModel47(first.id, inv) : null;
+    const warn = [...(res?.warnings ?? []), ...(small ? [`«${first.id}» (${small}) er for liten til å tolke fritekst – bruk en modell på minst 7B, f.eks. qwen3:8b`] : [])];
     tasks.push({ ...t, model: r.tasks[t.id].model, fallback: r.tasks[t.id].fallback, own: !!r.own[t.id], resolved: first?.id ?? (t.id === 'bar' ? r.tasks.bar.model || 'zbar' : null),
-      provider: first?.provider ?? null, warning: res?.warnings?.length ? `${res.warnings.join(' · ')}${res.warnings.some((w) => /finnes ikke/.test(w)) ? ' · bytt' : ''}` : null,
+      provider: first?.provider ?? null, warning: warn.length ? `${warn.join(' · ')}${warn.some((w) => /finnes ikke/.test(w)) ? ' · bytt' : ''}` : null, ...(small ? { smallModel: true } : {}),
       notice: res?.notices?.[0] ?? null, error: res && !first ? res.reason : null,
       finCloud: !!(t.fin && first && ai.isCloud(first.provider)) });
   }
@@ -285,7 +289,7 @@ api.put('/routing', async (c) => {
 //   {id, name, desc, model, fallback, isDefault, default:{model, fallback}, resolved, provider,
 //    options:[{id, label, local, provider, tag:'LOKAL'|'SKY', installed, missing?}], warning, cloudBlocked}
 //   + scope:'finans', finLocal, empty (ingen modeller installert eller tilkoblet), emptyText, installRoute:'ai/modeller'.
-export const FIN_DEFAULTS = { rc: { model: 'qwen2.5vl:7b', fallback: 'gemini-2.5-flash' }, kat: { model: 'llama3.2:3b', fallback: 'llama-3.3-70b-versatile' },
+export const FIN_DEFAULTS = { rc: { model: 'qwen2.5vl:7b', fallback: 'gemini-2.5-flash' }, kat: { model: 'qwen3:8b', fallback: 'llama-3.3-70b-versatile' }, // prompt 47: ikke llama3.2:3b
   fsok: { model: 'gemma4:latest', fallback: 'gemini-2.5-flash' }, bar: { model: 'roboflow/kvittering/1', fallback: 'qwen2.5vl:7b' } };
 async function finansRouting(u, out) {
   const inv = await ai.ollamaInventory();
