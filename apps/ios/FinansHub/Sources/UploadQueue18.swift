@@ -16,6 +16,8 @@ struct PendingUpload: Codable, Identifiable, Hashable {
     var lastError: String?
     /// Prompt 21: kontoen som la filen i køen (AcctScope-nøkkel). Bare den kontoen laster den opp.
     var accountId: String?
+    /// Prompt 47: ferdig tolket på iPhonen (JSON-feltet «data» til POST /receipts/parsed). nil = vanlig opplasting til Glimt.
+    var parsed47: String? = nil
 }
 
 enum PendingQueue {
@@ -50,7 +52,7 @@ enum PendingQueue {
 
 extension Store {
     /// Legger filen i køen «Venter på opplasting».
-    func enqueuePending(_ f: Upload, folder: Int?, error: String?) {
+    func enqueuePending(_ f: Upload, folder: Int?, error: String?, parsed47: String? = nil) {
         let data: Data?
         let kind: String
         let ext: String
@@ -62,7 +64,8 @@ extension Store {
         }
         guard let data, let name = PendingQueue.write(data, ext: ext) else { return }
         let owner: String? = account?.scopeKey
-        let item = PendingUpload(id: UUID().uuidString, created: Date(), kind: kind, file: name, folderId: folder, attempts: 0, lastError: error, accountId: owner)
+        let item = PendingUpload(id: UUID().uuidString, created: Date(), kind: kind, file: name, folderId: folder, attempts: 0, lastError: error, accountId: owner,
+                                 parsed47: parsed47)
         pendingUploads.append(item)
         PendingQueue.save(pendingUploads)
     }
@@ -76,15 +79,26 @@ extension Store {
         var done = 0
         for item in mine {
             guard let data = PendingQueue.read(item) else { removePending(item.id); continue }
-            let parts: [API.Part]
+            var parts: [API.Part]
             if item.kind == "pdf" {
                 parts = [API.Part(name: "file", filename: "kvittering.pdf", mime: "application/pdf", data: data)]
             } else if let img = UIImage(data: data) {
                 parts = uploadParts(img)
             } else { removePending(item.id); continue }
-            let path = item.folderId.map { "/folders/\($0)/receipts" } ?? "/receipts"
+            var path = item.folderId.map { "/folders/\($0)/receipts" } ?? "/receipts"
+            // Prompt 47: tolket på iPhonen – resultatet sendes med bildet som vedlegg (miniatyr, ikke AI-kopien).
+            let plain: [API.Part] = parts
+            if let p47 = item.parsed47, item.folderId == nil {
+                parts = [API.Part.text("data", p47)] + parts.filter { $0.name != "scan" }
+                path = "/receipts/parsed"
+            }
             do {
-                _ = try await api.upload(path, parts: parts)
+                do {
+                    _ = try await api.upload(path, parts: parts)
+                } catch let e as APIError where path == "/receipts/parsed" && (e.status == 404 || e.status == 405) {
+                    // Eldre server: bildet tolkes av Glimt i stedet.
+                    _ = try await api.upload("/receipts", parts: plain)
+                }
                 PendingQueue.delete(item)
                 pendingUploads.removeAll { $0.id == item.id }
                 done += 1
@@ -146,7 +160,7 @@ struct PendingUploadsList: View {
         HStack(spacing: 10) {
             PendingThumb(item: p)
             VStack(alignment: .leading, spacing: 2) {
-                Text(p.kind == "pdf" ? "PDF-kvittering" : "Kvittering").font(.subheadline.weight(.semibold)).foregroundStyle(Color.skinFg)
+                Text((p.kind == "pdf" ? "PDF-kvittering" : "Kvittering") + (p.parsed47 != nil ? " · tolket på iPhone" : "")).font(.subheadline.weight(.semibold)).foregroundStyle(Color.skinFg)
                 Text(sub(p)).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(2)
             }
             Spacer(minLength: 4)

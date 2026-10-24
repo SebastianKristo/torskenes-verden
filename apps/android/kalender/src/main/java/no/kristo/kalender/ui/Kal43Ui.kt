@@ -417,7 +417,7 @@ fun UpdatePage43(vm: KalVm) {
             // Bryterne leser SharedPreferences; telleren tegner raden på nytt etter et trykk.
             var tick by remember { mutableIntStateOf(0) }
             val seen = tick
-            ToggleRow43("Se etter oppdateringer automatisk", "Én gang om dagen fra home.kristo.no", p.auto(ctx)) { p.setAuto(ctx, !p.auto(ctx)); Kal43Upd.schedule(ctx); tick++ }
+            ToggleRow43("Se etter oppdateringer automatisk", "Én gang om dagen fra serveren", p.auto(ctx)) { p.setAuto(ctx, !p.auto(ctx)); Kal43Upd.schedule(ctx); tick++ }
             ToggleRow43("Last ned i bakgrunnen på Wi-Fi", "Du trykker bare Installer når den er klar", p.autoDl(ctx)) { p.setAutoDl(ctx, !p.autoDl(ctx)); Kal43Upd.schedule(ctx); tick++ }
             Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Tx("Kanal", man(15.sp, FontWeight.Bold, k.ink), Modifier.weight(1f))

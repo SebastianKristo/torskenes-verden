@@ -187,9 +187,14 @@ struct KalSettings35View: View {
     /* ---------- GLIMT OG KONTO ---------- */
 
     private var links: some View {
+        KalSrv47Host { linkRows }
+    }
+
+    private var linkRows: some View {
         VStack(spacing: 0) {
+            // Prompt 47: Server kan endres her (ekstern/lokal med standardverdier, Test, Tilbakestill) – synkes til kontoen.
             KalLinkRow35(title: "Server", sub: KalServer41.summary()) {
-                s.showToast("Endres i Homelab → Innstillinger → Konto → Server", undo: "")
+                KalSrv47Model.shared.sheetOpen = true
             }
             KalLinkRow35(title: "Logg ut", sub: "Logg inn igjen med Homelab-appen") {
                 s.settingsOpen = false
@@ -345,5 +350,19 @@ struct KalLinkRow35: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+    }
+}
+
+/// Prompt 47: arket Innstillinger → Server (egen visning, så KalSettings35View ikke trenger å observere modellen).
+struct KalSrv47Host<Content: View>: View {
+    @Environment(\.kal) private var t
+    @ObservedObject private var m: KalSrv47Model = KalSrv47Model.shared
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        content()
+            .sheet(isPresented: $m.sheetOpen) {
+                KalSrv47Sheet().environment(\.kal, t)
+            }
     }
 }

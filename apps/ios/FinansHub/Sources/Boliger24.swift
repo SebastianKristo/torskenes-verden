@@ -56,7 +56,8 @@ struct Bol24Page: View {
         case "ex":
             Bol24Expenses(home: h) { e in sheet = Bol24Sheet(id: "entry:\(e.id)") }
         case "acc":
-            Bol24Access(home: h)
+            // Prompt 47: Tilgang er ikke lenger en fane – den åpnes fra «Rediger bolig» og har «‹ Oversikt» øverst.
+            Bol47AccessPage(home: h)
         default:
             Bol24Overview(home: h, open: { e in sheet = Bol24Sheet(id: "entry:\(e.id)") }, add: { sheet = Bol24Sheet(id: "add") })
         }
@@ -68,7 +69,12 @@ struct Bol24Page: View {
         } else if s.id == "add" {
             if let h = m.home { Bol24AddSheet(home: h) { sheet = nil } }
         } else if s.id.hasPrefix("edit:") {
-            if let id = Int(s.id.dropFirst(5)), let h = m.homes.first(where: { $0.id == id }) { Bol24EditSheet(home: h) { sheet = nil } }
+            if let id = Int(s.id.dropFirst(5)), let h = m.homes.first(where: { $0.id == id }) {
+                Bol24EditSheet(home: h, close: { sheet = nil }, access: {
+                    sheet = nil
+                    m.tab = "acc"
+                })
+            }
         } else if s.id.hasPrefix("entry:") {
             if let id = Int(s.id.dropFirst(6)), let h = m.home, let e = h.entries.first(where: { $0.id == id }) {
                 Bol24EntrySheet(home: h, entry: e) { sheet = nil }
@@ -192,7 +198,8 @@ struct Bol24Tabs: View {
         let mine: [Bol24Entry] = h?.entries ?? []
         let hasReview: Bool = mine.contains { $0.review }
         let ex: String = hasReview ? "Utgifter · \(mine.count)" : "Utgifter"
-        return [("ov", "Oversikt"), ("ex", ex), ("acc", "Tilgang")]
+        // Prompt 47: fanen «Tilgang» er fjernet på mobil (åpnes fra «Delt med N» i «Rediger bolig»).
+        return [("ov", "Oversikt"), ("ex", ex)]
     }
 
     var body: some View {

@@ -281,7 +281,13 @@ struct KalNewSheet: View {
     private var titleField: some View {
         TextField("Tittel", text: $f.title)
             .font(KalFont.serif(24)).foregroundStyle(t.ink)
+            // Prompt 47: vanlig tastatur uten autofyll (iOS foreslo «mobil +47 …» i tittelfeltet).
+            .textContentType(nil)
+            .keyboardType(.default)
+            .textInputAutocapitalization(.sentences)
+            .submitLabel(.done)
             .focused($titleFocus)
+            .accessibilityIdentifier("kal.new.title")
             .frame(height: 50)
             .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
     }
@@ -293,9 +299,13 @@ struct KalNewSheet: View {
 
     private func appear() {
         KalKeyboard37.windowBg(UIColor(t.card))
-        Task {
-            try? await Task.sleep(nanoseconds: 80_000_000)
-            titleFocus = true
+        // Prompt 47: fokus (og tastaturet) først når arket har glidd ferdig inn (0,32 s), ikke midt i overgangen.
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 360_000_000)
+            if KalStore.shared.newForm != nil { titleFocus = true }
+            // Prompt 47: når tastaturet er oppe – sjekk at ingen flate over appen skjuler arket.
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            KalKeyboard37.clearCovers47()
         }
     }
 
@@ -337,6 +347,7 @@ struct KalNewTop44: View {
             KalPill(title: "Avbryt", filled: false) { cancel() }
             Spacer()
             Text(editing ? "Rediger" : "Ny hendelse").font(KalFont.serif(22)).foregroundStyle(t.ink)
+                .accessibilityIdentifier("kal.new.heading")
             Spacer()
             KalPill(title: editing ? "Lagre" : "Legg til", enabled: ok) { save() }
         }

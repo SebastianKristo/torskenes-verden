@@ -13,7 +13,7 @@ import CryptoKit
 //    https://home.kristo.no/app-auth?client=kalender&redirect=kalender://auth&state=…&cc=… (universal link) eller
 //    homelab://app-auth?… (fungerer uten entitlements). Homelab godkjenner (Face ID), kaller POST /api/auth/app-code og åpner
 //    kalender://auth?code=…&state=…(&server=…). Kalender sjekker state og bytter code + verifier: POST /api/auth/token.
-// 3. Ingen adresse ved innlogging: https://home.kristo.no som standard, adressene fra Homelab (App Group) og /api/discovery.
+// 3. Ingen adresse ved innlogging: https://os.smarthjemexperten.no (prompt 47) som standard, adressene fra Homelab (App Group) og /api/discovery.
 
 struct KalSession41 {
     let token: String
@@ -37,11 +37,22 @@ struct KalPending41: Codable {
 }
 
 enum KalAuth41 {
+    /// Prompt 47: standardadressene (claude-code-standard-serveradresser.md). Info.plist kan overstyre.
+    static let standardExternal47: String = "https://os.smarthjemexperten.no"
+    static let standardLocal47: String = "http://10.69.1.39:3000"
+
     /// Standardadressen appen leveres med (Info.plist KalDefaultServer41 kan overstyre).
     static var defaultBase: String {
         let v: String = (Bundle.main.object(forInfoDictionaryKey: "KalDefaultServer41") as? String) ?? ""
         if v.hasPrefix("http://") || v.hasPrefix("https://") { return trim(v) }
-        return "https://home.kristo.no"
+        return standardExternal47
+    }
+
+    /// Prompt 47: standard lokal adresse (Info.plist KalDefaultLocal47 kan overstyre).
+    static var defaultLocal47: String {
+        let v: String = (Bundle.main.object(forInfoDictionaryKey: "KalDefaultLocal47") as? String) ?? ""
+        if v.hasPrefix("http://") || v.hasPrefix("https://") { return trim(v) }
+        return standardLocal47
     }
 
     static let client: String = "kalender"
@@ -166,6 +177,8 @@ enum KalAuth41 {
         let last: String = UserDefaults.standard.string(forKey: "kal.lastServer") ?? ""
         if !last.isEmpty { raw.append(last) }
         raw.append(defaultBase)
+        // Prompt 47: standard lokal adresse til slutt (5G: ekstern først, så den svarer raskt; hjemme velger choose() lokal).
+        raw.append(defaultLocal47)
         var out: [String] = []
         for r in raw {
             let s: String = trim(r)
@@ -280,8 +293,15 @@ enum KalAuth41 {
 /* ---------- Lokal og ekstern adresse (Innstillinger → Server, lesbar i Kalender) ---------- */
 
 enum KalServer41 {
-    static var local: [String] { KalGroup.defaults.stringArray(forKey: "kal41.local") ?? [] }
-    static var external: String { KalGroup.defaults.string(forKey: "kal41.external") ?? "" }
+    /// Prompt 47: uten lagrede adresser (ny installasjon, eldre server) gjelder standardverdiene.
+    static var local: [String] {
+        let v: [String] = KalGroup.defaults.stringArray(forKey: "kal41.local") ?? []
+        return v.isEmpty ? [KalAuth41.defaultLocal47] : v
+    }
+    static var external: String {
+        let v: String = KalGroup.defaults.string(forKey: "kal41.external") ?? ""
+        return v.isEmpty ? KalAuth41.defaultBase : v
+    }
     static var auto: Bool { (KalGroup.defaults.object(forKey: "kal41.auto") as? Bool) ?? true }
     /// «Lokal» eller «Ekstern» (sist valgt).
     static var now: String { KalGroup.defaults.string(forKey: "kal41.now") ?? "" }
@@ -309,6 +329,7 @@ enum KalServer41 {
             ext = (o["external"] as? String) ?? ""
             au = (o["auto"] as? Bool) ?? true
             found = !loc.isEmpty || !ext.isEmpty
+            KalSrv47.noteServer(o)
         }
         if !found, let d = try? await KalNet.get("/api/discovery", timeout: 8),
            let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] {
@@ -318,6 +339,8 @@ enum KalServer41 {
             found = !loc.isEmpty || !ext.isEmpty
         }
         if !found { return false }
+        // Prompt 47: adressene ble endret i Innstillinger → Server mot en server uten synk – behold dem.
+        if KalSrv47.localOnly { return true }
         // Prompt 46: containerens egen adresse (Docker-nett 172.16/12, loopback) kan aldri nås fra telefonen/Mac-en – forkastes.
         let cleanLoc: [String] = loc.map { (s: String) -> String in KalAuth41.trim(s) }.filter { (s: String) -> Bool in
             s.hasPrefix("http") && !KalSrv46.isContainerIP(KalSrv46.host(s))
@@ -330,7 +353,7 @@ enum KalServer41 {
         return true
     }
 
-    /// Bytt automatisk: lokal når den svarer innen 300 ms, ellers ekstern. Returnerer adressene i rekkefølge.
+    /// Bytt automatisk: lokal når den svarer innen 1,5 s (prompt 47, før 300 ms), ellers ekstern. Returnerer adressene i rekkefølge.
     static func choose() async -> [String] {
         let loc: [String] = local
         let ext: String = external
@@ -339,7 +362,7 @@ enum KalServer41 {
         if auto || ext.isEmpty {
             for l in loc {
                 let t0: Date = Date()
-                if await KalAuth41.reachable(l, timeout: 0.6), Date().timeIntervalSince(t0) < 0.3 || ext.isEmpty {
+                if await KalAuth41.reachable(l, timeout: 1.5), Date().timeIntervalSince(t0) < 1.5 || ext.isEmpty {
                     useLocal = true
                     break
                 }
@@ -349,7 +372,7 @@ enum KalServer41 {
         return ordered()
     }
 
-    /// «Lokal: 192.168.1.40:8080 · ekstern: home.kristo.no · hentes fra Homelab»
+    /// «Lokal: 10.69.1.39:3000 · ekstern: os.smarthjemexperten.no · hentes fra Homelab»
     static func summary() -> String {
         func host(_ s: String) -> String {
             var x: String = s

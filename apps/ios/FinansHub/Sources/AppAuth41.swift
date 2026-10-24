@@ -83,7 +83,7 @@ final class AppAuth41 {
     static func allowed(_ redirect: String, _ store: Store) -> Bool {
         if redirect == "kalender://auth" { return true }
         guard let u = URL(string: redirect), u.scheme == "https", let h = u.host?.lowercased() else { return false }
-        var hosts: [String] = ["home.kristo.no"]
+        var hosts: [String] = ["home.kristo.no", URL(string: Server47.defaultExternal)?.host ?? "os.smarthjemexperten.no"]
         for a in store.accounts {
             for s in [a.server, a.external] where !s.isEmpty {
                 if let x = URL(string: s)?.host?.lowercased() { hosts.append(x) }

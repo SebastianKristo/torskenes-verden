@@ -210,7 +210,7 @@ final class MacStore: ObservableObject {
         // Prompt 46: domenet appen er logget inn med, aldri en intern Docker-adresse (172.18.0.3).
         let login: String = UserDefaults.standard.string(forKey: "mac.lastServer") ?? ""
         let b: String = KalSrv46.pick(login: login, bases: MacSession.bases)
-        if b.isEmpty { return "home.kristo.no" }
+        if b.isEmpty { return KalSrv46.host(KalAuth41.defaultBase) }
         return KalSrv46.display(b, others: MacSession.bases)
     }
 

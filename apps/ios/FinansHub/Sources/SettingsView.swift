@@ -547,9 +547,9 @@ private struct ServerPage: View {
         VStack(spacing: 12) {
             SectionLabel(text: "Adresser")
             VStack(alignment: .leading, spacing: 10) {
-                TextField("Lokal adresse, f.eks. 192.168.1.20:3000", text: $local).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                TextField("Lokal adresse, f.eks. " + Server47.defaultLocal, text: $local).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).frame(height: 46).glass(16)
-                TextField("Ekstern adresse, f.eks. os.dittdomene.no", text: $external).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                TextField("Ekstern adresse, f.eks. " + Server47.short(Server47.defaultExternal), text: $external).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).frame(height: 46).glass(16)
                 HStack(spacing: 10) {
                     Button { store.updateAddresses(local: local, external: external) } label: { Text("Lagre").fontWeight(.bold).frame(maxWidth: .infinity, minHeight: 44) }
@@ -557,6 +557,13 @@ private struct ServerPage: View {
                     Button { store.testConnection(local.isEmpty ? external : local) } label: { Text("Test tilkobling").frame(maxWidth: .infinity, minHeight: 44) }
                         .buttonStyle(.plain).glass(22)
                 }
+                // Prompt 47: «Tilbakestill til standard» (Server47.swift).
+                Button {
+                    local = Server47.defaultLocal
+                    external = Server47.defaultExternal
+                    Server47Model.shared.reset(store)
+                } label: { Text("Tilbakestill til standard").frame(maxWidth: .infinity, minHeight: 44) }
+                    .buttonStyle(.plain).glass(22)
                 Note(text: "Eksternt går trafikken via Cloudflare Tunnel. Hjemme brukes den lokale adressen når den svarer.")
             }
             .padding(16).glass(24)

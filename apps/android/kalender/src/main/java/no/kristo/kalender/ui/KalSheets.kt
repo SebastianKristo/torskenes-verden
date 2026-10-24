@@ -184,7 +184,8 @@ fun NewSheet(vm: KalVm) {
     val f = vm.nf ?: return
     val ctx = LocalContext.current
     val fr = remember { FocusRequester() }
-    LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
+    // Prompt 47: fokus (og tastaturet) først når arket har glidd ferdig inn, ikke midt i overgangen.
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(340); runCatching { fr.requestFocus() } }
     val ok = f.t.isNotBlank()
     val dens = androidx.compose.ui.platform.LocalDensity.current.density
     SheetFrame(behindIme = true) {
@@ -196,7 +197,9 @@ fun NewSheet(vm: KalVm) {
             Tx(if (f.editId != null) "Rediger" else "Ny hendelse", news(22.sp, k.ink).copy(textAlign = TextAlign.Center), Modifier.weight(1f))
             InkPill(if (f.editId != null) "Lagre" else "Legg til", { vm.saveForm44() }, enabled = ok)
         }
-        Field(f.t, { vm.nf = vm.nf?.copy(t = it) }, "Tittel", news(24.sp, k.ink), 50, Modifier.focusRequester(fr))
+        // Prompt 47: vanlig teksttastatur med stor forbokstav, ikke telefon-/kontaktforslag.
+        Field(f.t, { vm.nf = vm.nf?.copy(t = it) }, "Tittel", news(24.sp, k.ink), 50, Modifier.focusRequester(fr),
+            KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences, keyboardType = KeyboardType.Text, imeAction = ImeAction.Done))
         // Prompt 44: «Sted eller adresse» med forslag (Kartverket).
         AddrField44(vm, f)
         Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }) {
@@ -236,12 +239,13 @@ fun NewSheet(vm: KalVm) {
 }
 
 @Composable
-private fun Field(value: String, onChange: (String) -> Unit, hint: String, style: TextStyle, h: Int, modifier: Modifier = Modifier) {
+private fun Field(value: String, onChange: (String) -> Unit, hint: String, style: TextStyle, h: Int, modifier: Modifier = Modifier,
+                  kb: KeyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)) {
     val k = LocalK.current
     Box(Modifier.fillMaxWidth().height(h.dp).drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }.padding(horizontal = 2.dp),
         contentAlignment = Alignment.CenterStart) {
         if (value.isEmpty()) Tx(hint, style.copy(color = k.mut2))
-        BasicTextField(value, onChange, modifier.fillMaxWidth().semantics { contentDescription = hint }, textStyle = style, singleLine = true, cursorBrush = SolidColor(Red))
+        BasicTextField(value, onChange, modifier.fillMaxWidth().semantics { contentDescription = hint }, textStyle = style, singleLine = true, cursorBrush = SolidColor(Red), keyboardOptions = kb)
     }
 }
 

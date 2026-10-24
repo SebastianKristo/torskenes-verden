@@ -23,7 +23,7 @@ struct MacLoginView: View {
             Text("Kalender").font(MacFont.serif(42)).foregroundColor(t.ink)
             Text("Logg inn med Homelab-kontoen din. Kalender for Mac deler kalendere, hendelser, bursdager og frister med Homelab på web og iPhone.")
                 .font(MacFont.ui(14)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
-            MacLoginField(title: "Serveradresse (f.eks. homelab.kristo.no eller 192.168.1.10:3000)", text: $server, secure: false)
+            MacLoginField(title: "Serveradresse (f.eks. os.smarthjemexperten.no eller 10.69.1.39:3000)", text: $server, secure: false)
             if qrMode {
                 MacQR38Panel(base: MacAuth.normalize(server), onPassword: { qrMode = false })
             } else {

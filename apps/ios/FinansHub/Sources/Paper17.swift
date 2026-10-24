@@ -793,7 +793,8 @@ struct PaperSettingsSub: View {
             switch key {
             case "konto":
                 // Prompt 41: SERVER (lokal, ekstern, bytt automatisk) øverst i Konto (Server41.swift).
-                Server41Group()
+                // Prompt 47: med status, Test og «Tilbakestill til standard» (Server47.swift).
+                Server47Group()
                 SettingsSubpage(page: "accounts")
                 // Prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER (Konto44.swift).
                 Konto44Sections()

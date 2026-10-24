@@ -348,7 +348,7 @@ struct MacLogin41View: View {
     @ViewBuilder private var serverLink: some View {
         if m.serverOpen {
             VStack(alignment: .leading, spacing: 6) {
-                MacLoginField(title: "https://home.kristo.no", text: $server, secure: false, onSubmit: saveServer)
+                MacLoginField(title: KalAuth41.defaultBase, text: $server, secure: false, onSubmit: saveServer)
                 HStack {
                     Button("Lagre") { saveServer() }
                     Button("Avbryt") { m.serverOpen = false }

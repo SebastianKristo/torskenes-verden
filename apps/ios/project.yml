@@ -43,6 +43,10 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub
         TARGETED_DEVICE_FAMILY: "1,2"
+        # Prompt 47: FoundationModels (iOS 26) lenkes svakt, så appen starter på iOS 17/18. Bare med iOS 26-SDK (Xcode 26);
+        # Xcode 16 har ikke rammeverket, og koden er bak #if canImport(FoundationModels) (Receipt47Engine.swift).
+        "OTHER_LDFLAGS[sdk=iphoneos26*]": "$(inherited) -weak_framework FoundationModels"
+        "OTHER_LDFLAGS[sdk=iphonesimulator26*]": "$(inherited) -weak_framework FoundationModels"
         GENERATE_INFOPLIST_FILE: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Innstillinger → App-ikon. Prompt 39: standard (AppIcon) = «Papir-monogram» (vedlegg/app-icon-1024.png);
@@ -118,7 +122,10 @@ targets:
         # Prompt 41: tilgangsgruppen for det delte enhets-tokenet (KalShared41, SharedKal/Group). Tom prefiks uten Team ID → ignoreres.
         KalKeychainGroup41: $(AppIdentifierPrefix)no.kristo.shared
         # Prompt 41: standardadressen appen leveres med (innlogging uten serverfelt, Server41.swift).
-        HomelabServer: https://home.kristo.no
+        # Prompt 47: ny standard ekstern og lokal adresse (Server47.swift). Klartekst-HTTP til den lokale adressen dekkes av
+        # NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
+        HomelabServer: https://os.smarthjemexperten.no
+        HomelabLocal47: http://10.69.1.39:3000
 
   FinansHubWidgets:
     type: app-extension
@@ -212,7 +219,10 @@ targets:
         # Gratuler via WhatsApp.
         LSApplicationQueriesSchemes: [finanshub, homelab, whatsapp]
         # Prompt 41: standardadressen (ingen serverfelt ved innlogging) og den delte Nøkkelring-gruppen for «Fortsett som».
-        KalDefaultServer41: "https://home.kristo.no"
+        # Prompt 47: standard ekstern og lokal adresse (claude-code-standard-serveradresser.md). Klartekst-HTTP bare til lokalt
+        # nett via NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
+        KalDefaultServer41: "https://os.smarthjemexperten.no"
+        KalDefaultLocal47: "http://10.69.1.39:3000"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
         # Prompt 44: forhåndslasting av kalenderen i bakgrunnen (BGAppRefreshTask, KalBg44.swift).
         BGTaskSchedulerPermittedIdentifiers: [no.kristo.kalender.refresh44]
@@ -220,6 +230,22 @@ targets:
         # Prompt 46: Innstillinger → Logg inn på annen enhet (skann QR-koden Kalender på Mac/Android viser, godkjenn med Face ID).
         NSCameraUsageDescription: "Kalender bruker kameraet bare til å skanne QR-koden når du logger inn på en annen enhet."
         NSFaceIDUsageDescription: "Kalender bekrefter med Face ID før en annen enhet logges inn på kontoen din."
+
+  # Prompt 47: enkel UI-test – «+» skal vise «Ny hendelse» og «Tittel» synlig (hit-testbart), ikke bare i treet.
+  # Bygges bare med `xcodebuild test -scheme KalenderUITests47` (ikke en del av Kalender-skjemaet CI bygger).
+  KalenderUITests47:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - KalenderUITests47
+    dependencies:
+      - target: Kalender
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.uitests47
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Kalender
+        TARGETED_DEVICE_FAMILY: "1,2"
 
   KalenderWidgets:
     type: app-extension
@@ -347,7 +373,10 @@ targets:
             CFBundleURLSchemes: [kalender]
         # Prompt 41: tom uten team → ingen App Group (widgetene viser «Krever signering med Team ID»).
         KalTeam41: "$(DEVELOPMENT_TEAM)"
-        KalDefaultServer41: "https://home.kristo.no"
+        # Prompt 47: standard ekstern og lokal adresse (claude-code-standard-serveradresser.md). Klartekst-HTTP bare til lokalt
+        # nett via NSAllowsLocalNetworking over (ATS er ikke slått av globalt).
+        KalDefaultServer41: "https://os.smarthjemexperten.no"
+        KalDefaultLocal47: "http://10.69.1.39:3000"
         KalKeychainGroup41: "$(AppIdentifierPrefix)no.kristo.shared"
 
   # Prompt 41: Kalender-widgets på Mac (skrivebord og Varslingssenter, macOS 14+). Samme kode som iOS (KalenderWidgets/Sources,

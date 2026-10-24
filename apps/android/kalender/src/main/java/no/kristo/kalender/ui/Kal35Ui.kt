@@ -37,6 +37,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -359,6 +361,9 @@ private fun Input35(v: String, on: (String) -> Unit, hint: String, url: Boolean)
 @Composable
 fun SettingsPage35(vm: KalVm) {
     val k = LocalK.current
+    // Prompt 47: Innstillinger → Server (ekstern/lokal med standardverdier).
+    var srv47 by remember { androidx.compose.runtime.mutableStateOf(false) }
+    if (srv47) ServerDialog47 { srv47 = false }
     Column(Modifier.fillMaxSize().background(k.bg).tap(null) {}) {
         Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
         Row(Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -429,7 +434,7 @@ fun SettingsPage35(vm: KalVm) {
             Label("GLIMT OG KONTO", Modifier.padding(top = 4.dp))
             Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
                 // Prompt 41: Server (lesbar, endres i Homelab) og Logg ut øverst.
-                LinkRow35("Server", no.kristo.kalender.Kal41.summary(vm.getApplication())) { Hap.tick(); vm.showToast("Endres i Homelab → Innstillinger → Konto → Server") }
+                LinkRow35("Server", no.kristo.kalender.Kal41.summary(vm.getApplication())) { Hap.tick(); srv47 = true }
                 LinkRow35("Logg ut", "Logg inn igjen med Homelab-appen") { Hap.tick(); vm.setOn = false; vm.logout() }
                 LinkRow35("Glimt", "Figur, stemme og briefer") { vm.openGlimtSettings() }
                 // Prompt 46: godkjenn QR-koden en annen enhet viser (fingeravtrykk/PIN først).

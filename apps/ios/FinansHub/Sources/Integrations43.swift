@@ -32,7 +32,7 @@ enum Int43Media {
                 Int26Step(title: "Rotmappe", text: "Settings → Media Management → Root Folders.", code: "/data/media/tv"),
                 Int26Step(title: "Koble til qBittorrent", text: "Download Clients → qBittorrent, port 8080, kategori tv-sonarr."),
                 Int26Step(title: "Standard kvalitetsprofil", text: "Brukes når du legger til fra Media eller Glimt (4K → Ultra-HD)."),
-                Int26Step(title: "Webhook", text: "Connect → Webhook (On Grab, On Import, On Upgrade, On Health Issue).", code: "https://home.kristo.no/api/media/hook/sonarr"),
+                Int26Step(title: "Webhook", text: "Connect → Webhook (On Grab, On Import, On Upgrade, On Health Issue).", code: "https://os.smarthjemexperten.no/api/media/hook/sonarr"),
             ]
         case "radarr":
             return [
@@ -41,7 +41,7 @@ enum Int43Media {
                 Int26Step(title: "Rotmappe", text: "Settings → Media Management → Root Folders.", code: "/data/media/film"),
                 Int26Step(title: "Koble til qBittorrent", text: "Download Clients → qBittorrent, port 8080, kategori radarr."),
                 Int26Step(title: "Minimum Availability", text: "Announced = Annonsert, In Cinemas = På kino, Released = Utgitt digitalt."),
-                Int26Step(title: "Webhook", text: "Connect → Webhook (On Grab, On Import, On Health Issue).", code: "https://home.kristo.no/api/media/hook/radarr"),
+                Int26Step(title: "Webhook", text: "Connect → Webhook (On Grab, On Import, On Health Issue).", code: "https://os.smarthjemexperten.no/api/media/hook/radarr"),
             ]
         case "qbittorrent", "qbit":
             return [
@@ -49,7 +49,7 @@ enum Int43Media {
                 Int26Step(title: "Eget brukernavn og sterkt passord", text: "Tools → Options → Web UI → Authentication."),
                 Int26Step(title: "Bare Homelab-serveren", text: "Tillat bare serverens IP. Ikke åpne Web UI mot internett."),
                 Int26Step(title: "Kategorier", text: "tv-sonarr → /data/downloads/tv, radarr → /data/downloads/film."),
-                Int26Step(title: "Varsel når ferdig", text: "«Kjør eksternt program når torrent er ferdig»:", code: "curl -s -X POST https://home.kristo.no/api/media/hook/qbit -d \"hash=%I&name=%N\""),
+                Int26Step(title: "Varsel når ferdig", text: "«Kjør eksternt program når torrent er ferdig»:", code: "curl -s -X POST https://os.smarthjemexperten.no/api/media/hook/qbit -d \"hash=%I&name=%N\""),
                 Int26Step(title: "Alt-hastighet", text: "Fart → Alternative fartsgrenser (f.eks. 5 MB/s ned)."),
             ]
         case "prowlarr":
@@ -58,7 +58,7 @@ enum Int43Media {
                 Int26Step(title: "Apps → Sonarr og Radarr med Full Sync", text: "Prowlarr-, Sonarr- og Radarr-adressene inne i Docker-nettet:", code: "http://prowlarr:9696\nhttp://sonarr:8989\nhttp://radarr:7878"),
                 Int26Step(title: "Legg til indeksere", text: "Fra Media → Prowlarr → «+ Legg til indekser», eller i Prowlarr."),
                 Int26Step(title: "FlareSolverr (valgfri)", text: "For indeksere bak Cloudflare. Legg til taggen flaresolverr på indekseren.", code: "docker run -d --name flaresolverr -p 8191:8191 ghcr.io/flaresolverr/flaresolverr"),
-                Int26Step(title: "Webhook", text: "Settings → Connect → Webhook.", code: "https://home.kristo.no/api/media/hook/prowlarr"),
+                Int26Step(title: "Webhook", text: "Settings → Connect → Webhook.", code: "https://os.smarthjemexperten.no/api/media/hook/prowlarr"),
             ]
         case "jellyfin":
             return [

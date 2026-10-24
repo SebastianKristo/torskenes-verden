@@ -441,7 +441,10 @@ final class Store {
             let wifi = path.usesInterfaceType(.wifi) || path.usesInterfaceType(.wiredEthernet)
             let up = path.status == .satisfied
             Task { @MainActor in
+                // Prompt 47: ny vei (lokal/ekstern) når nettverket endres (Wi-Fi ⇄ mobilnett).
+                let changed: Bool = self?.onWifi != wifi
                 self?.onWifi = wifi
+                if changed, up { await self?.reroute47() }
                 // Nettet er tilbake: last opp det som venter.
                 if up { await self?.flushPending() }
             }
@@ -659,6 +662,14 @@ final class Store {
         base = a.external.isEmpty ? a.server : a.external
         let host = URL(string: base)?.host ?? ""
         route = API.isLocal(host) ? "Lokal" : "Ekstern"
+    }
+
+    /// Prompt 47: velger lokal/ekstern adresse på nytt uten å laste alt på nytt (nettverksendring).
+    func reroute47() async {
+        guard loggedIn else { return }
+        let before: String = base
+        await resolveBase()
+        if base != before { syncWidgets(); Server41.shared.shareWithKalender(self) }
     }
 
     func testConnection(_ raw: String) {
@@ -1219,13 +1230,27 @@ final class Store {
     func uploadParts(_ image: UIImage) -> [API.Part] { imageParts(image) }
 
     /// Flere filer legges i kø og lastes opp én og én; AI-en leser dem i bakgrunnen på serveren.
-    func upload(_ files: [Upload]) {
+    /// Prompt 47: onDevice47 = false hopper over tolking på iPhonen (reserven til Glimt, Receipt47Views.swift).
+    func upload(_ files: [Upload], onDevice47: Bool = true) {
         guard !files.isEmpty else { return }
         // Skann/opplasting inne i en bolig: kvitteringen havner i valgt bolig, og AI velger kategori og underkategori.
         if module == .folders || paperTab == "boliger", editing == nil, let bolig = uploadFolder ?? folder?.id { uploadToFolder(bolig, files); return }
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         // Prompt 23: i Papir havner kvitteringen i KØ på Kvitteringer-siden (Receipts23.swift).
         if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if paperTab != "kvitt" { paperGo("kvitt") }
+        // Prompt 47: «Tolk kvitteringer på iPhone» – bildene leses og tolkes på telefonen (Foundation Models), PDF-er går til Glimt.
+        if onDevice47, editing == nil, Receipt47.wanted {
+            var imgs: [UIImage] = []
+            var rest: [Upload] = []
+            for f in files {
+                if case .image(let i) = f { imgs.append(i) } else { rest.append(f) }
+            }
+            if !imgs.isEmpty {
+                Receipt47Flow.shared.handle(imgs.map { (i: UIImage) -> [UIImage] in [i] }, self)
+                if !rest.isEmpty { upload(rest, onDevice47: false) }
+                return
+            }
+        }
         guard canUpload else {
             for f in files { enqueuePending(f, folder: nil, error: "Venter på Wi-Fi") }
             flash("\(files.count) kvittering(er) venter på Wi-Fi")

@@ -580,7 +580,7 @@ struct KalServer41Sheet: View {
             Text("Serveradresse").font(KalFont.serif(24)).foregroundStyle(t.ink)
             Text("Vanligvis hentes adressen fra Homelab. Skriv inn adressen hvis Kalender ikke finner serveren.")
                 .font(KalFont.ui(13)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
-            TextField("https://home.kristo.no", text: Binding(get: { m.serverText }, set: { (v: String) in m.serverText = v }))
+            TextField(KalAuth41.defaultBase, text: Binding(get: { m.serverText }, set: { (v: String) in m.serverText = v }))
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)

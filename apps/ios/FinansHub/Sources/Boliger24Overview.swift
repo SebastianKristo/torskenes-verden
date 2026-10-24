@@ -34,42 +34,12 @@ struct Bol24Overview: View {
             Bol24Categories(home: home)
             Bol24History(home: home)
             Bol24Recent(home: home, open: open)
-            sharedRow
+            // Prompt 47: «Delt med N» er flyttet til «Rediger bolig» (Boliger47.swift).
         }
-    }
-
-    private var sharedRow: some View {
-        let mem: [Bol24Member] = home.members
-        return Button {
-            Haptics.shared.select()
-            m.tab = "acc"
-        } label: {
-            HStack(spacing: 12) {
-                HStack(spacing: -8) {
-                    ForEach(Array(mem.prefix(4).enumerated()), id: \.offset) { i, u in
-                        Text(String(u.name.prefix(2)).uppercased()).font(PF.ui(12, .heavy)).foregroundStyle(Color.white)
-                            .frame(width: 34, height: 34)
-                            .background(Circle().fill(Color(hex: Bol24Pal.colors[(i + 1) % Bol24Pal.colors.count])))
-                            .overlay(Circle().strokeBorder(p.card, lineWidth: 2))
-                    }
-                }
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Delt med \(mem.count) " + (mem.count == 1 ? "person" : "personer")).font(PF.ui(14.5, .bold)).foregroundStyle(p.ink)
-                    Text("Hvem som kan se og laste opp").font(PF.ui(12)).foregroundStyle(p.mut)
-                }
-                .padding(.leading, 2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
-            }
-            .padding(.horizontal, 16).padding(.vertical, 14)
-            .background(p.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
-/* ---------- Handlinger: Skann · Last opp · Fra e-post · Ny utgift ---------- */
+/* ---------- Handlinger: Skann · Last opp · Ny utgift (prompt 47: «Fra e-post» er fjernet på mobil) ---------- */
 
 struct Bol24Actions: View {
     @Environment(Store.self) private var store
@@ -78,10 +48,9 @@ struct Bol24Actions: View {
     let add: () -> Void
     @State private var photos: [PhotosPickerItem] = []
     @State private var files: Bool = false
-    @State private var mailing: Bool = false
 
     var body: some View {
-        let cols: [GridItem] = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+        let cols: [GridItem] = [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
         LazyVGrid(columns: cols, spacing: 8) {
             Button { scan() } label: { tile("Skann", red: true) { Bol24ScanGlyph() } }.buttonStyle(.plain)
             Menu {
@@ -91,8 +60,6 @@ struct Bol24Actions: View {
                 tile("Last opp", red: false) { Image(systemName: "square.and.arrow.up").font(.system(size: 16, weight: .semibold)) }
             }
             .buttonStyle(.plain)
-            Button { mail() } label: { tile(mailing ? "Henter …" : "Fra e-post", red: false) { Image(systemName: "envelope").font(.system(size: 16, weight: .semibold)) } }
-                .buttonStyle(.plain)
             Button(action: add) { tile("Ny utgift", red: false) { Text("+").font(.system(size: 20)) } }.buttonStyle(.plain)
         }
         .onChange(of: photos) { _, items in
@@ -143,28 +110,6 @@ struct Bol24Actions: View {
         store.uploadFolder = home.id
         store.scanTarget = "receipt"
         store.paperScanOpen = true
-    }
-
-    /// Henter nye kvitteringer fra e-post (samme som «Kjør nå» under Kvitteringer på e-post).
-    private func mail() {
-        guard !mailing else { return }
-        mailing = true
-        Haptics.shared.tap()
-        let id: Int = home.id
-        Task { @MainActor in
-            do {
-                let d: Data = try await store.api.call("POST", "/mail/run")
-                let o: [String: Any] = JS.obj(d)
-                let n: Int = JS.int(o, "imported") ?? JS.int(o, "count") ?? 0
-                store.flash(n > 0 ? "Fant \(n) kvitteringer i e-posten" : "Ingen nye kvitteringer i e-posten")
-                await Bol24Model.shared.loadDetail(id, store)
-            } catch let e as APIError where e.status == 403 || e.status == 404 {
-                store.flash("Henting fra e-post settes opp under Integrasjoner → Kvitteringer på e-post")
-            } catch {
-                store.flash("Fikk ikke hentet e-post: \(error.localizedDescription)")
-            }
-            mailing = false
-        }
     }
 
     private func reloadSoon(_ id: Int) async {

@@ -43,15 +43,17 @@ import kotlin.math.sin
  *       sier hvem som er innlogget og adressene, «exchange41» gjør POST /api/auth/device-exchange i Homelab og gir eget token.
  *       Eldre Homelab: «companion» (prompt 33).
  *     • «Logg inn med Homelab-appen» (PKCE): state + code_verifier lagres kryptert FØR app-byttet, så åpnes
- *       https://home.kristo.no/app-auth?client=kalender&redirect=kalender://auth&state=…&cc=… (App Link, bare ikke-nettleser),
+ *       https://<server>/app-auth?client=kalender&redirect=kalender://auth&state=…&cc=… (App Link, bare ikke-nettleser),
  *       ellers homelab://app-auth?… . Svaret kommer som kalender://auth?code=…&state=…(&server=…) → POST /api/auth/token.
- *     • Brukernavn og passord: adressen finnes selv (Homelab, forrige økt, /api/me/server, https://home.kristo.no).
+ *     • Brukernavn og passord: adressen finnes selv (Homelab, forrige økt, /api/me/server, https://os.smarthjemexperten.no – prompt 47).
  *  2. Bursdagskort i hendelsesarket (claude-code-kalender-bursdag-hendelse.md).
  *  3. Søk med Glimt (Ollama) og testvarsel (claude-code-kalender-glimt-sok-testvarsel.md).
  */
 
 object Kal41 {
-    const val DEFAULT_BASE = "https://home.kristo.no"
+    /** Prompt 47 (claude-code-standard-serveradresser.md): standard ekstern og lokal adresse. */
+    const val DEFAULT_BASE = "https://os.smarthjemexperten.no"
+    const val DEFAULT_LOCAL = "http://10.69.1.39:3000"
     const val CLIENT = "kalender"
     const val REDIRECT = "kalender://auth"
     const val TIMEOUT_MS = 60_000L
@@ -63,7 +65,7 @@ object Kal41 {
         )
     }.getOrElse { ctx.applicationContext.getSharedPreferences("kalender_auth41_plain", Context.MODE_PRIVATE) }
 
-    private fun plain(ctx: Context): SharedPreferences = ctx.applicationContext.getSharedPreferences("kalender_prefs", Context.MODE_PRIVATE)
+    internal fun plain(ctx: Context): SharedPreferences = ctx.applicationContext.getSharedPreferences("kalender_prefs", Context.MODE_PRIVATE)
 
     /* ---------- PKCE ---------- */
 
@@ -120,8 +122,10 @@ object Kal41 {
 
     fun manual(ctx: Context): String = plain(ctx).getString("k41_manual", "") ?: ""
     fun setManual(ctx: Context, s: String) { plain(ctx).edit().putString("k41_manual", s).apply() }
+    // Prompt 47: uten lagrede adresser (ny installasjon, eldre server) gjelder standardverdiene.
     fun local(ctx: Context): List<String> = (plain(ctx).getString("k41_local", "") ?: "").split('\n').filter { it.startsWith("http") }
-    fun external(ctx: Context): String = plain(ctx).getString("k41_external", "") ?: ""
+        .ifEmpty { listOf(Kal47Srv.stdLocal(ctx)) }
+    fun external(ctx: Context): String = (plain(ctx).getString("k41_external", "") ?: "").ifBlank { Kal47Srv.stdExternal(ctx) }
     fun auto(ctx: Context): Boolean = plain(ctx).getBoolean("k41_auto", true)
     fun now(ctx: Context): String = plain(ctx).getString("k41_now", "") ?: ""
 
@@ -133,6 +137,8 @@ object Kal41 {
         raw += local(ctx); raw += external(ctx)
         raw += KalAuth.lastServer(ctx)
         raw += DEFAULT_BASE
+        // Prompt 47: standard lokal adresse til slutt (5G: ekstern først; hjemme velger syncServers() lokal).
+        raw += DEFAULT_LOCAL
         return raw.map { it.trim().trimEnd('/') }.filter { it.startsWith("http://") || it.startsWith("https://") }.distinct()
     }
 
@@ -219,7 +225,7 @@ object Kal41 {
         else -> (e.message ?: "Feil") + " (HTTP ${e.status})"
     }
 
-    /** Lokal/ekstern adresse fra serveren (GET /api/me/server, ellers /api/discovery). Bytt automatisk: lokal når den svarer < 300 ms. */
+    /** Lokal/ekstern adresse fra serveren (GET /api/me/server, ellers /api/discovery). Bytt automatisk: lokal når den svarer < 1,5 s. */
     suspend fun syncServers(ctx: Context): KalSession? {
         val s = KalAuth.session(ctx) ?: return null
         val loc = ArrayList<String>(); var ext = ""; var au = true; var found = false
@@ -227,6 +233,7 @@ object Kal41 {
             val o = JSONObject(s.api.get("/api/me/server", timeout = 8000))
             o.opt("local")?.let { v -> if (v is String && v.isNotBlank()) loc += v; if (v is JSONArray) for (i in 0 until v.length()) loc += v.optString(i) }
             ext = o.optString("external"); au = o.optBoolean("auto", true); found = loc.isNotEmpty() || ext.isNotBlank()
+            Kal47Srv.noteServer(ctx, o)
         }
         if (!found) runCatching {
             val o = JSONObject(s.api.get("/api/discovery", timeout = 8000))
@@ -234,12 +241,15 @@ object Kal41 {
             ext = o.optString("external"); found = loc.isNotEmpty() || ext.isNotBlank()
         }
         if (!found) return null
+        // Prompt 47: adressene ble endret i Innstillinger → Server mot en server uten synk – behold dem.
+        if (Kal47Srv.localOnly(ctx)) return null
         // Prompt 46: containerens egen adresse (Docker-nett 172.16/12, loopback) kan aldri nås fra telefonen – forkastes.
         val cl = loc.map { it.trim().trimEnd('/') }.filter { it.startsWith("http") && !Kal46Srv.isContainerIp(Kal46Srv.host(it)) }
         var useLocal = false
         if (au || ext.isBlank()) for (l in cl) {
             val t0 = System.currentTimeMillis()
-            if (reachable(l, 600) && (System.currentTimeMillis() - t0 < 300 || ext.isBlank())) { useLocal = true; break }
+            // Prompt 47: lokal når den svarer innen 1,5 s (før 300 ms).
+            if (reachable(l, 1500) && (System.currentTimeMillis() - t0 < 1500 || ext.isBlank())) { useLocal = true; break }
         }
         plain(ctx).edit().putString("k41_local", cl.joinToString("\n")).putString("k41_external", ext.trimEnd('/')).putBoolean("k41_auto", au)
             .putString("k41_now", if (useLocal) "Lokal" else "Ekstern").apply()
@@ -250,7 +260,7 @@ object Kal41 {
         return n
     }
 
-    /** «Lokal: 192.168.1.40:8080 · ekstern: home.kristo.no · nå: Lokal · hentes fra Homelab» */
+    /** «Lokal: 10.69.1.39:3000 · ekstern: os.smarthjemexperten.no · nå: Lokal · hentes fra Homelab» */
     fun summary(ctx: Context): String {
         val parts = ArrayList<String>()
         local(ctx).firstOrNull()?.let { parts += "Lokal: " + it.substringAfter("://") }

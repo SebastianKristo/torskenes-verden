@@ -72,6 +72,7 @@ struct KalThemed: View {
         let style: UIUserInterfaceStyle = theme == "light" ? .light : (theme == "dark" ? .dark : .unspecified)
         for scene in UIApplication.shared.connectedScenes {
             guard let ws = scene as? UIWindowScene else { continue }
+            // Prompt 47: også tastaturvinduene får stilen (tastaturet følger temaet), men aldri bakgrunnsfarge (se KalKeyboard37.windowBg).
             for w in ws.windows { w.overrideUserInterfaceStyle = style }
         }
     }

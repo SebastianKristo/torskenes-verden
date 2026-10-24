@@ -85,6 +85,9 @@ struct KalComposer: View {
             TextField("Spør Glimt eller skriv en hendelse …", text: Binding(get: { m.text }, set: { (v: String) in m.text = v }))
                 .font(KalFont.ui(16, .medium))
                 .foregroundStyle(t.ink)
+                // Prompt 47: ingen autofyll-forslag (telefonnummer o.l.) i skrivefeltet.
+                .textContentType(nil)
+                .keyboardType(.default)
                 .focused($focus)
                 .submitLabel(.done)
                 .onSubmit { m.submit() }

@@ -61,6 +61,8 @@ struct Bol24EditSheet: View {
     @Environment(\.paper) private var p
     let home: Bol24Home
     let close: () -> Void
+    /// Prompt 47: «Delt med N» lukker arket og åpner Tilgang.
+    var access: (() -> Void)? = nil
     @State private var name: String = ""
     @State private var address: String = ""
     @State private var budget: String = ""
@@ -84,6 +86,7 @@ struct Bol24EditSheet: View {
                 Bol24Field(label: "Budsjett per måned (kr)", placeholder: "8000", text: $budget, mono: true, numeric: true)
                 colors
                 backgrounds
+                if let access { Bol47SharedRow(home: home, open: access) }
                 buttons
             }
             .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 30)

@@ -252,8 +252,10 @@ struct System31Hero: View {
     }
 
     @MainActor static func host(_ store: Store) -> String {
+        // Prompt 47: domenet vises, aldri den interne IP-en.
         let b: String = store.api.base
-        return URL(string: b)?.host ?? "home.kristo.no"
+        let h: String = URL(string: b)?.host ?? ""
+        return h.isEmpty || API.isLocal(h) ? Server47.displayHost(store) : h
     }
 }
 

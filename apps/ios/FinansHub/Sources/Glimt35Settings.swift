@@ -136,6 +136,8 @@ struct Glimt35SettingsContent: View {
             Brief38CardsSettings()
             // Prompt 37: Bibelvers (på/av i morgen- og kveldsbrief, varsel) – bare for brukere med modulen.
             Bible37SettingsBlock().padding(.top, 4)
+            // Prompt 47: KVITTERINGER → «Tolk kvitteringer på iPhone» (Foundation Models, bare iOS 26+, Receipt47Views.swift).
+            Receipt47Settings()
             Glimt35Label(text: "STEMMEMOTOR").padding(.top, 4)
             Glimt35Engines()
             Glimt35Label(text: "STEMME").padding(.top, 4)

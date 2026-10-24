@@ -207,6 +207,8 @@ struct Receipts23Page: View {
 
     private func deliver(_ imgs: [UIImage]) {
         guard let first = imgs.first else { return }
+        // Prompt 47: flere sider fra skanneren er én kvittering også når den tolkes på iPhonen (Receipt47Views.swift).
+        if Receipt47.wanted { Receipt47Flow.shared.handle([imgs], store); return }
         if imgs.count == 1 { store.upload([.image(first)]); return }
         // Flere sider fra skanneren er én lang kvittering: sendes som én PDF.
         store.upload([.pdf(Receipts23Page.pdf(imgs))])
@@ -431,7 +433,8 @@ struct Receipts23Line: View {
     static func meta(_ r: Receipt) -> String {
         var c: Double = r.confidence ?? 0
         if c <= 1 { c *= 100 }
-        let motor: String = r.provider ?? r.engine ?? "Glimt"
+        // Prompt 47: «Tolket på iPhone» / «Tolket av Glimt».
+        let motor: String = Receipt47.motor(r)
         return ddmm(r.date) + " · " + motor + " · \(Int(c.rounded())) % sikker"
     }
 }

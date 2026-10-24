@@ -211,7 +211,7 @@ private fun ServerFix41(vm: KalVm) {
         }
         return
     }
-    Field41(s.serverText, { s.serverText = it }, "https://home.kristo.no", KeyboardType.Uri)
+    Field41(s.serverText, { s.serverText = it }, no.kristo.kalender.Kal41.DEFAULT_BASE, KeyboardType.Uri)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         LinePill("Avbryt", { s.serverOpen = false })
         InkPill("Lagre", { s.saveServer() })

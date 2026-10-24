@@ -274,6 +274,8 @@ struct PaperShell: View {
                 .presentationDetents([.height(360), .medium])
                 .sheetEdge30(p.bg)
         }
+        // Prompt 47: bekreftelsesarket for kvitteringer tolket på iPhonen og «✦ Leser …»-pillen (Receipt47Views.swift).
+        .receipt47Host(p)
         .sheet(isPresented: Binding(get: { store.trackAddOpen }, set: { store.trackAddOpen = $0 })) {
             PaperNewShipmentSheet()
                 .environment(\.paper, p)

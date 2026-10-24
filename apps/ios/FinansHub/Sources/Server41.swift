@@ -32,7 +32,8 @@ final class Server41 {
     /// Standardadressen som leveres med appen.
     nonisolated static var defaultServer: String {
         if let s = Bundle.main.object(forInfoDictionaryKey: "HomelabServer") as? String, !s.isEmpty { return s }
-        return "https://home.kristo.no"
+        // Prompt 47: ny standard (Server47.swift). Lokal standard: Server47.defaultLocal.
+        return "https://os.smarthjemexperten.no"
     }
 
     /// Adressene som prøves ved innlogging, i rekkefølge, uten duplikater.
@@ -52,6 +53,8 @@ final class Server41 {
         }
         add(Keychain.get("server") ?? "")
         for b in KalGroup.homelabBases { add(b) }
+        // Prompt 47: standardadressene – lokal først (svarer innen 1,5 s hjemme), så ekstern.
+        add(Server47.defaultLocal)
         add(Server41.defaultServer)
         return out
     }
@@ -86,6 +89,10 @@ final class Server41 {
             auto = JS.bool(o, "auto")
         }
         if let v = auto, v != store.useLocal { store.useLocal = v }
+        // Prompt 47: tomme felt fylles fra /api/config (publicUrl/localUrl) eller standardverdiene.
+        let filled: (local: String, external: String) = await Server47.fill(store, local: local, external: external)
+        local = filled.local
+        external = filled.external
         if local != a.local || external != a.external {
             store.updateAddresses(local: local, external: external)
         }
@@ -118,7 +125,7 @@ final class Server41 {
         push(store)
     }
 
-    private func push(_ store: Store) {
+    func push(_ store: Store) {
         guard let a = store.account else { return }
         let body: [String: Any] = ["local": a.local, "external": a.external.isEmpty ? a.server : a.external, "auto": store.useLocal]
         Task { _ = try? await store.api.callAt("/api", "PUT", "/me/server", json: body, timeout: 10) }
@@ -213,7 +220,7 @@ struct Server41Sheet: View {
                 .buttonStyle(.plain)
             }
             Text(sub).font(PF.ui(13)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
-            TextField(kind == "local" ? "http://192.168.1.40:8080" : "https://home.kristo.no", text: $text)
+            TextField(kind == "local" ? Server47.defaultLocal : Server47.defaultExternal, text: $text)
                 .keyboardType(.URL).textContentType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                 .font(PF.mono(15, bold: false)).foregroundStyle(p.ink)
                 .padding(.horizontal, 14).frame(height: 48)
@@ -258,7 +265,7 @@ struct Server41Sheet: View {
     private var sub: String {
         switch kind {
         case "local": return "Brukes når du er hjemme på Wi-Fi."
-        case "external": return "Brukes når du er borte, f.eks. https://home.kristo.no."
+        case "external": return "Brukes når du er borte, f.eks. " + Server47.defaultExternal + "."
         default: return "Adressen til Homelab-serveren din. Den lagres og kan endres senere i Innstillinger → Konto → Server."
         }
     }

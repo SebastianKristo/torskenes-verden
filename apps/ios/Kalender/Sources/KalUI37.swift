@@ -51,11 +51,40 @@ enum KalKeyboard37 {
     }
 
     /// Vinduets bakgrunn i arkets farge mens Ny hendelse er åpen (nil = standard).
+    /// Prompt 47 (rotårsaken til «blank skjerm ved + andre gang»): løkka satte fargen på ALLE vinduene i scenen – også
+    /// tastaturets egne vinduer (UITextEffectsWindow / UIRemoteKeyboardWindow), som dekker hele skjermen over appen og
+    /// ellers er gjennomsiktige. De finnes først etter at tastaturet har vært oppe én gang; andre gang (eller etter at
+    /// Glimt-feltet hadde vært i bruk, f.eks. ved app-bytte fra Homelab) ble hele skjermen dekket av en ugjennomsiktig flate i
+    /// arkets farge (#211f1b i mørk modus), med tastaturet oppå og skjemaet usynlig under. Nå: bare appens egne vinduer.
     @MainActor static func windowBg(_ c: UIColor?) {
         for scene in UIApplication.shared.connectedScenes {
             guard let ws = scene as? UIWindowScene else { continue }
-            for w in ws.windows { w.backgroundColor = c }
+            for w in ws.windows where appWindow47(w) {
+                if w.backgroundColor != c { w.backgroundColor = c }
+            }
         }
+    }
+
+    /// Prompt 47: vakt – et vindu over appen (tastatur o.l.) med ugjennomsiktig bakgrunn dekker hele skjermen. Fjern fargen og logg.
+    @MainActor static func clearCovers47() {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let ws = scene as? UIWindowScene else { continue }
+            for w in ws.windows where !appWindow47(w) {
+                guard let c = w.backgroundColor else { continue }
+                if c.cgColor.alpha > 0.01 {
+                    w.backgroundColor = nil
+                    KalLog44.send("cal.new47.cover", ["win": String(describing: type(of: w))])
+                }
+            }
+        }
+    }
+
+    /// Appens innholdsvindu (ikke tastatur-, tekst-effekt- eller systemvinduer over appen).
+    @MainActor static func appWindow47(_ w: UIWindow) -> Bool {
+        if w.windowLevel != UIWindow.Level.normal { return false }
+        let name: String = String(describing: type(of: w))
+        if name.contains("Keyboard") || name.contains("TextEffects") || name.hasPrefix("_") { return false }
+        return true
     }
 
     @MainActor static var screenHeight: CGFloat {
