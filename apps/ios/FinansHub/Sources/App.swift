@@ -8,6 +8,8 @@ struct FinansHubApp: App {
     @Environment(\.scenePhase) private var phase
 
     init() {
+        // Prompt 51 (QA51): krasjrapporter – håndtererne først, forrige krasj legges i køen (FHCrash51.swift).
+        Crash51.install()
         // Bakgrunnsoppgavene (helse og familie) må registreres før appen er ferdig startet.
         HealthSync.registerBackground()
         // Prompt 20: HealthKit vekker appen ved nye skritt og puls (enableBackgroundDelivery, hver time).
@@ -25,6 +27,8 @@ struct FinansHubApp: App {
                 .qr38Host()
                 // Prompt 41: «Logge inn i Kalender?» (homelab://app-auth og universal link /app-auth), AppAuth41.swift.
                 .appAuth41Host()
+                // Prompt 51: «Ny enhet vil logge inn», «Nytt i denne versjonen», feature flags og krasjkøen (FHSec51.swift).
+                .fh51Host()
                 .environment(store)
                 // Prompt 38: homelab://login?c=… (QR-innlogging på ny enhet, QrLogin38.swift) før de vanlige dyplenkene.
                 .onOpenURL { (u: URL) in

@@ -309,6 +309,10 @@ private struct SecurityPage: View {
                 link("Administrer i Homelab") { if let u = URL(string: store.base + "/") { openURL(u) } }
             }
             Note(text: "Appen bruker et eget token. Fra internett kreves alltid passord, og 2FA hvis det er på.")
+            // Prompt 51 (SEC51): innlogginger fra nye enheter godkjennes her med Face ID (FHSec51.swift).
+            SectionLabel(text: "Nye enheter")
+            Card { Sec51ApprovalsCard() }
+            Note(text: "En ny enhet som logger inn fra internett får ikke tilgang før den er godkjent fra en enhet som allerede er logget inn, eller av en administrator.")
         }
         .tfa40Host()
     }

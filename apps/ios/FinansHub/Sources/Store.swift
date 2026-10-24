@@ -529,6 +529,11 @@ final class Store {
                 if self.pending != nil, let code, !code.isEmpty { self.message = e.message }
                 self.pending = PendingLogin(server: srv, username: username, password: password)
                 return
+            } catch let e as APIError where e.approval51 != nil {
+                // Prompt 51 (SEC51): ny enhet fra internett – «Venter på godkjenning» (FHSec51.swift), ingen token ennå.
+                self.pending = nil
+                if let ap = e.approval51 { Sec51Model.shared.beginWait(ap, server: srv, self) }
+                return
             }
             self.pending = nil
             // Første innlogging på en ny installasjon: onboarding i tre steg (design, bakgrunn, tilgang).

@@ -60,6 +60,7 @@ final class Set24Model {
         add("sik.2fa", "Totrinnsbekreftelse", "Autentiseringsapp", "Sikkerhet", "innst-sik")
         add("sik.face", "Face ID", "Lås opp appen", "Sikkerhet", "innst-sik")
         add("sik.okter", "Aktive økter", "Enheter som er logget inn", "Sikkerhet", "innst-sik")
+        add("sik.nye51", "Nye enheter", "Godkjenn innlogging på en ny enhet", "Sikkerhet", "innst-sik") // prompt 51
         add("api", "API-tokens", "Snarveier og integrasjoner", "Konto", "innst-api")
         add("ai", "AI og tolkning", "Gemini · Groq · Roboflow · Ollama · tidsgrenser", "Finans", "innst-ai")
         add("kat", "Kategorier og budsjett", "Farger og budsjett per måned", "Finans", "innst-kat")

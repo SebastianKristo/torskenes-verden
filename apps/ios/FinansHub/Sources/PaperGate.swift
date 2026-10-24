@@ -63,9 +63,10 @@ struct PaperLoginView: View {
         ScrollView {
             VStack(spacing: 0) {
                 GateHeader(kicker: store.pending != nil ? "\(AppMeta.shared.name) · \(host)" : "\(AppMeta.shared.name) · \(host.isEmpty ? "logg inn" : host)",
-                           title: store.pending != nil ? "Totrinns-\nbekreftelse" : store.addingAccount ? "Legg til\nkonto" : "Hei,\nvelkommen hjem")
+                           title: Sec51Model.shared.wait != nil ? "Ny\nenhet" : store.pending != nil ? "Totrinns-\nbekreftelse" : store.addingAccount ? "Legg til\nkonto" : "Hei,\nvelkommen hjem")
                 VStack(alignment: .leading, spacing: 18) {
-                    if let pd = store.pending { twoFactor(pd, p) } else { form(p) }
+                    // Prompt 51 (SEC51): «Venter på godkjenning» når innloggingen fra en ny enhet må godkjennes (FHSec51.swift).
+                    if Sec51Model.shared.wait != nil { Sec51WaitView() } else if let pd = store.pending { twoFactor(pd, p) } else { form(p) }
                 }
                 .padding(.horizontal, 26).padding(.top, 26).padding(.bottom, 40)
                 .frame(maxWidth: 520)

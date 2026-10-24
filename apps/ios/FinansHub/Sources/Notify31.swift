@@ -198,6 +198,8 @@ enum Notify31 {
     /// /chat/… → chat, /kalender → kalender, abonnement → abo, system/oppdatering → system.
     nonisolated static func page(_ url: String) -> String {
         let u: String = url.lowercased()
+        // Prompt 51 (SEC51): «Ny enhet vil logge inn» → Innstillinger → Sikkerhet.
+        if u.contains("sikkerhet") || u.contains("security") { return "innst-sik" }
         if u.contains("chat") { return "chat" }
         if u.contains("kalender") || u.contains("calendar") { return "kalender" }
         if u.contains("abonnement") || u.contains("subscription") || u.contains("trial") { return "abo" }
@@ -233,6 +235,8 @@ enum Notify31 {
             store.paperGo("kalender")
         case "system":
             System31Model.shared.show()
+        case "innst-sik":
+            store.paperGo("innst-sik")
         default:
             store.paperGo("hjem")
         }

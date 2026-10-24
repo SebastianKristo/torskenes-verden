@@ -10,6 +10,8 @@ struct APIError: LocalizedError {
     /// Prompt 28: maskinlesbar feilkode fra serveren (f.eks. ollama_down, no_vision, timeout, not_found) og om Gemini kan brukes.
     var code: String? = nil
     var canGemini = false
+    /// Prompt 51 (SEC51): 403 DEVICE_APPROVAL_REQUIRED – ny enhet må godkjennes (FHSec51.swift).
+    var approval51: DeviceApproval51? = nil
     var errorDescription: String? { message }
 }
 
@@ -26,6 +28,8 @@ struct API {
         r.timeoutInterval = timeout
         r.setValue("application/json", forHTTPHeaderField: "Accept")
         if let token { r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        // Prompt 51 (SEC51): fast enhetsnøkkel, så serveren kjenner igjen en godkjent enhet (FHDevice51.swift).
+        if r.value(forHTTPHeaderField: "X-Device-Key") == nil { r.setValue(Device51.key, forHTTPHeaderField: "X-Device-Key") }
         let data: Data, res: URLResponse
         do { (data, res) = try await URLSession.shared.data(for: r) } catch let e as URLError {
             let host = r.url?.host ?? base
@@ -45,8 +49,10 @@ struct API {
         let code = (res as? HTTPURLResponse)?.statusCode ?? 0
         if code >= 400 {
             let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-            throw APIError(message: (obj?["error"] as? String) ?? "Feil \(code)", status: code, needsTotp: (obj?["needsTotp"] as? Bool) ?? false,
-                           code: (obj?["code"] as? String) ?? (obj?["kode"] as? String), canGemini: (obj?["canGemini"] as? Bool) ?? false) // prompt 50: også «kode»
+            var err = APIError(message: (obj?["error"] as? String) ?? "Feil \(code)", status: code, needsTotp: (obj?["needsTotp"] as? Bool) ?? false,
+                               code: (obj?["code"] as? String) ?? (obj?["kode"] as? String), canGemini: (obj?["canGemini"] as? Bool) ?? false) // prompt 50: også «kode»
+            if code == 403 && err.code == "DEVICE_APPROVAL_REQUIRED" { err.approval51 = DeviceApproval51.parse(obj) }
+            throw err
         }
         return data
     }
@@ -65,6 +71,23 @@ struct API {
     func callAt(_ prefix: String, _ method: String, _ path: String, json: [String: Any]? = nil, timeout: TimeInterval = 30) async throws -> Data {
         var r = URLRequest(url: url(path, prefix: prefix))
         r.httpMethod = method
+        if let json {
+            r.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            r.httpBody = try JSONSerialization.data(withJSONObject: json)
+        }
+        return try await send(r, timeout: timeout)
+    }
+
+    /// Prompt 51: kall mot en sti fra serverens rot (f.eks. statusUrl/finishUrl fra godkjenningen) med egne headere
+    /// (X-Approval-Key, X-Device-Id, X-Client-Platform).
+    @discardableResult
+    func send51(_ method: String, _ path: String, headers: [String: String] = [:], json: [String: Any]? = nil, timeout: TimeInterval = 20) async throws -> Data {
+        guard path.hasPrefix("/"), let u = URL(string: base.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + path) else {
+            throw APIError(message: "Ugyldig adresse", status: 0)
+        }
+        var r = URLRequest(url: u)
+        r.httpMethod = method
+        for (k, v) in headers { r.setValue(v, forHTTPHeaderField: k) }
         if let json {
             r.setValue("application/json", forHTTPHeaderField: "Content-Type")
             r.httpBody = try JSONSerialization.data(withJSONObject: json)
