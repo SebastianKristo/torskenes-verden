@@ -8,6 +8,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -86,7 +89,6 @@ internal fun NordlysPage31(vm: AppViewModel) {
     val p = PaperPal.current
     val u = vm.p30.upd
     val s = vm.p31
-    val ctx = LocalContext.current
     BackHandler { vm.closeNordlys31() }
     LaunchedEffect(Unit) { vm.loadNordlys31() }
     val avail = u.phase == "avail" || (u.available && u.phase == "none")
@@ -94,108 +96,156 @@ internal fun NordlysPage31(vm: AppViewModel) {
     val done = u.phase == "done"
     val failed = u.phase == "failed"
     val nv = u.latest.ifBlank { u.current }
+    // Prompt 50 (claude-code-innstillinger-to-kolonner-fold-ipad.md, System på Fold/brett): hele bredden med 28 dp marg og to kolonner –
+    // venstre versjonskortet med «Oppdater nå» og teksten rett under (egen scroll, står fast), høyre Programvareversjon, «Krev …»,
+    // «Nytt i» og tidligere versjoner. Telefon er uendret (flytende knapp nederst).
+    val wide50 = LocalWide45.current
+    val navB50 = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Box(Modifier.fillMaxSize().background(p.bg).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             // Toppen: papirfarget, mørk tekst, 128 dp.
-            Column(Modifier.fillMaxWidth().height(128.dp).padding(start = 8.dp, end = 16.dp, top = 4.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.fillMaxWidth().height(128.dp).padding(start = if (wide50) 20.dp else 8.dp, end = 16.dp, top = 4.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 SheetButton30("Tilbake", "back") { vm.closeNordlys31() }
                 Column(Modifier.padding(start = 8.dp, bottom = 10.dp)) {
                     PLabel("Programvareoppdatering")
                     PSerif("System", 34.sp, maxLines = 1)
                 }
             }
-            Column(
+            if (wide50) Row(Modifier.fillMaxWidth().weight(1f).padding(horizontal = 28.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                Column(Modifier.weight(1.1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(bottom = navB50 + 24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    NordHeroBox50(vm, nv, avail, run, done, failed)
+                    NordUpdBtn50(vm, avail, run, done, failed, Modifier.fillMaxWidth())
+                }
+                Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    NordVer50(vm, nv, avail, done)
+                    NordInfo50(vm, nv, navB50 + 24.dp)
+                }
+            } else Column(
                 Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                // Prompt 36: Sherlock-Glimt flyr inn i kortet ved «Se etter» (ui/Glimt36.kt).
-                val sher = vm.p36.sherOn
-                Box(Modifier.fillMaxWidth().then(if (sher) Modifier.clip(RoundedCornerShape(26.dp)) else Modifier)) {
-                    NordHero31(vm, nv, avail, run, done, failed)
-                    if (sher) Sherlock36(vm, Modifier.align(Alignment.TopEnd))
-                }
-                // Programvareversjon og bryteren.
-                Column(Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(22.dp), ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
-                    .clip(RoundedCornerShape(22.dp)).background(p.card)) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Programvareversjon", color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            val line = listOfNotNull(nv.ifBlank { "–" }, s.sha.takeIf { it.isNotBlank() }, if (done || !avail) null else sizeText31(s.sizeBytes)).joinToString(" · ")
-                            Text(line, color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                        val inst = done || !avail
-                        Text(if (inst) "Installert" else "Du har ${u.current.ifBlank { "–" }}", color = if (inst) GREEN31 else p.mut, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
-                    }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                    Box(Modifier.hl34(vm, "pw", 0.dp)) { // prompt 34: mål «pw»
-                        NordToggle31("Krev fingeravtrykk eller passord",
-                            if (s.reqPw) "Fingeravtrykk eller passord før oppdateringen starter" else "Av · oppdater med ett trykk", s.reqPw) { vm.setReqPw31(it) }
-                    }
-                    if (s.reqPw) {
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                        NordToggle31("Bruk fingeravtrykk", if (s.bioOn) "Passordet ligger kryptert på denne telefonen" else "Av · skriv passordet hver gang", s.bioOn) { on ->
-                            if (on) { s.bioAsk = true; s.bioErr = "" } else vm.clearBioPw31()
-                        }
-                    }
-                }
-                Text("Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.", color = p.mut, fontFamily = PaperFonts.sans,
-                    fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
-                // Prompt 44 (claude-code-rull-tilbake-versjon.md): TIDLIGERE VERSJONER med Installer, under «Krev passord» og over endringsloggen.
-                if (vm.userIsAdmin) Rollback44(vm)
-                Column(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 120.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    val big = bigVer31(nv)
-                    PSerif("Dette er Nordlys $big. ${s.tagline}", 22.sp)
-                    Text("NYTT I ${nv.ifBlank { "–" }}" + (relDate31(s.relDate)?.let { " · $it" } ?: ""), color = p.lab, fontFamily = PaperFonts.mono,
-                        fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
-                    // Prompt 36: notatene for den nye versjonen (fallback fra /system/changelog når /system/version mangler dem).
-                    LaunchedEffect(nv, u.notes.isEmpty()) { if (u.notes.isEmpty()) vm.loadLatestNotes36(nv) }
-                    u.notes.ifEmpty { vm.p36.latestNotes }.filter { it.isNotBlank() && !Regex("^[^:]{1,30}:\\s*$").matches(it.trim()) }.ifEmpty { listOf("Feilrettinger og forbedringer.") }.forEach { n ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("•", color = p.lab, fontSize = 14.sp)
-                            Text(n, color = p.ink, fontFamily = PaperFonts.sans, fontSize = 14.sp, lineHeight = 21.sp)
-                        }
-                    }
-                    // Prompt 36: TIDLIGERE VERSJONER (én åpen om gangen, «Vis flere»).
-                    NordHist36(vm, nv)
-                    // Prompt 32: fra den gamle Oppdatering-siden (Installert · build, Kopier, Se etter oppdatering, Logg).
-                    Spacer(Modifier.height(6.dp))
-                    NordlysInstalled32b(vm)
-                }
+                NordHeroBox50(vm, nv, avail, run, done, failed)
+                NordVer50(vm, nv, avail, done)
+                NordInfo50(vm, nv, 120.dp)
             }
         }
-        // «Oppdater nå» fast nederst med fade fra bakgrunnen.
-        Column(
+        // «Oppdater nå» fast nederst med fade fra bakgrunnen (bare telefon).
+        if (!wide50) NordUpdBtn50(
+            vm, avail, run, done, failed,
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()
                 .background(Brush.verticalGradient(0f to p.bg.copy(alpha = 0f), .38f to p.bg, 1f to p.bg))
                 .navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            val label = when { run -> "Oppdaterer … ${u.pct} %"; done -> "Ferdig"; failed -> "Prøv igjen"; avail -> if (s.startBusy) "Starter …" else "Oppdater nå"; else -> "Du har siste versjon" }
-            val bg = when { done -> GREEN31; avail || run || failed -> BLUE31; else -> Color(0xFFB0A998) }
-            Hl34Bubble(vm, "upd") // prompt 34: «✦ Trykk her for å oppdatere» over knappen når AI-søket viser den
-            Box(
-                Modifier.widthIn(max = 520.dp).fillMaxWidth().height(54.dp).hl34(vm, "upd", 27.dp).alpha(if (run) .75f else 1f)
-                    .shadow(16.dp, RoundedCornerShape(27.dp), ambientColor = BLUE31.copy(alpha = .6f), spotColor = BLUE31.copy(alpha = .6f))
-                    .clip(RoundedCornerShape(27.dp)).background(bg)
-                    .clickable(enabled = !run, role = Role.Button) {
-                        when {
-                            done -> vm.doneUpd30()
-                            failed -> vm.startUpd31(ctx, u.action)
-                            avail -> vm.startUpd31(ctx, "start")
-                            else -> vm.check36()
-                        }
-                    },
-                contentAlignment = Alignment.Center,
-            ) { Text(label, color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, maxLines = 1) }
-            Text(
-                when { run -> "Du kan bruke appen mens den oppdateres."; done -> "Endringene er aktive i appen og på web."; failed -> u.error.ifBlank { "Noe gikk galt under oppdateringen." }
-                    avail -> "Tar backup først · ca. 2 minutter"; else -> "Sist sjekket nå" },
-                color = p.mut, fontFamily = PaperFonts.sans, fontSize = 12.sp, textAlign = TextAlign.Center, maxLines = 2,
-            )
-        }
+        )
     }
     if (s.bioAsk) BioPwDialog31(vm)
     if (u.pwFor != null) UpdPwSheet30(vm)
+}
+
+/** Prompt 50: hero-kortet med Sherlock-Glimt (delt mellom telefon og brett). */
+@Composable
+private fun NordHeroBox50(vm: AppViewModel, nv: String, avail: Boolean, run: Boolean, done: Boolean, failed: Boolean) {
+    // Prompt 36: Sherlock-Glimt flyr inn i kortet ved «Se etter» (ui/Glimt36.kt).
+    val sher = vm.p36.sherOn
+    Box(Modifier.fillMaxWidth().then(if (sher) Modifier.clip(RoundedCornerShape(26.dp)) else Modifier)) {
+        NordHero31(vm, nv, avail, run, done, failed)
+        if (sher) Sherlock36(vm, Modifier.align(Alignment.TopEnd))
+    }
+}
+
+/** Prompt 50: Programvareversjon og «Krev fingeravtrykk eller passord». */
+@Composable
+private fun NordVer50(vm: AppViewModel, nv: String, avail: Boolean, done: Boolean) {
+    val p = PaperPal.current
+    val u = vm.p30.upd
+    val s = vm.p31
+    // Programvareversjon og bryteren.
+    Column(Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(22.dp), ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
+        .clip(RoundedCornerShape(22.dp)).background(p.card)) {
+        Row(Modifier.fillMaxWidth().padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Programvareversjon", color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                val line = listOfNotNull(nv.ifBlank { "–" }, s.sha.takeIf { it.isNotBlank() }, if (done || !avail) null else sizeText31(s.sizeBytes)).joinToString(" · ")
+                Text(line, color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            val inst = done || !avail
+            Text(if (inst) "Installert" else "Du har ${u.current.ifBlank { "–" }}", color = if (inst) GREEN31 else p.mut, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+        Box(Modifier.hl34(vm, "pw", 0.dp)) { // prompt 34: mål «pw»
+            NordToggle31("Krev fingeravtrykk eller passord",
+                if (s.reqPw) "Fingeravtrykk eller passord før oppdateringen starter" else "Av · oppdater med ett trykk", s.reqPw) { vm.setReqPw31(it) }
+        }
+        if (s.reqPw) {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+            NordToggle31("Bruk fingeravtrykk", if (s.bioOn) "Passordet ligger kryptert på denne telefonen" else "Av · skriv passordet hver gang", s.bioOn) { on ->
+                if (on) { s.bioAsk = true; s.bioErr = "" } else vm.clearBioPw31()
+            }
+        }
+    }
+}
+
+/** Prompt 50: forklaringen, TIDLIGERE VERSJONER (admin), «Nytt i» og installert-raden. */
+@Composable
+private fun NordInfo50(vm: AppViewModel, nv: String, infoBottom: androidx.compose.ui.unit.Dp) {
+    val p = PaperPal.current
+    val u = vm.p30.upd
+    val s = vm.p31
+    Text("Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.", color = p.mut, fontFamily = PaperFonts.sans,
+        fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
+    // Prompt 44 (claude-code-rull-tilbake-versjon.md): TIDLIGERE VERSJONER med Installer, under «Krev passord» og over endringsloggen.
+    if (vm.userIsAdmin) Rollback44(vm)
+    Column(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = infoBottom), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        val big = bigVer31(nv)
+        PSerif("Dette er Nordlys $big. ${s.tagline}", 22.sp)
+        Text("NYTT I ${nv.ifBlank { "–" }}" + (relDate31(s.relDate)?.let { " · $it" } ?: ""), color = p.lab, fontFamily = PaperFonts.mono,
+            fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
+        // Prompt 36: notatene for den nye versjonen (fallback fra /system/changelog når /system/version mangler dem).
+        LaunchedEffect(nv, u.notes.isEmpty()) { if (u.notes.isEmpty()) vm.loadLatestNotes36(nv) }
+        u.notes.ifEmpty { vm.p36.latestNotes }.filter { it.isNotBlank() && !Regex("^[^:]{1,30}:\\s*$").matches(it.trim()) }.ifEmpty { listOf("Feilrettinger og forbedringer.") }.forEach { n ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("•", color = p.lab, fontSize = 14.sp)
+                Text(n, color = p.ink, fontFamily = PaperFonts.sans, fontSize = 14.sp, lineHeight = 21.sp)
+            }
+        }
+        // Prompt 36: TIDLIGERE VERSJONER (én åpen om gangen, «Vis flere»).
+        NordHist36(vm, nv)
+        // Prompt 32: fra den gamle Oppdatering-siden (Installert · build, Kopier, Se etter oppdatering, Logg).
+        Spacer(Modifier.height(6.dp))
+        NordlysInstalled32b(vm)
+    }
+}
+
+/** Prompt 50: «Oppdater nå» med teksten under (fast nederst på telefon, rett under versjonskortet på brett). */
+@Composable
+private fun NordUpdBtn50(vm: AppViewModel, avail: Boolean, run: Boolean, done: Boolean, failed: Boolean, modifier: Modifier) {
+    val p = PaperPal.current
+    val u = vm.p30.upd
+    val s = vm.p31
+    val ctx = LocalContext.current
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        val label = when { run -> "Oppdaterer … ${u.pct} %"; done -> "Ferdig"; failed -> "Prøv igjen"; avail -> if (s.startBusy) "Starter …" else "Oppdater nå"; else -> "Du har siste versjon" }
+        val bg = when { done -> GREEN31; avail || run || failed -> BLUE31; else -> Color(0xFFB0A998) }
+        Hl34Bubble(vm, "upd") // prompt 34: «✦ Trykk her for å oppdatere» over knappen når AI-søket viser den
+        Box(
+            Modifier.widthIn(max = 520.dp).fillMaxWidth().height(54.dp).hl34(vm, "upd", 27.dp).alpha(if (run) .75f else 1f)
+                .shadow(16.dp, RoundedCornerShape(27.dp), ambientColor = BLUE31.copy(alpha = .6f), spotColor = BLUE31.copy(alpha = .6f))
+                .clip(RoundedCornerShape(27.dp)).background(bg)
+                .clickable(enabled = !run, role = Role.Button) {
+                    when {
+                        done -> vm.doneUpd30()
+                        failed -> vm.startUpd31(ctx, u.action)
+                        avail -> vm.startUpd31(ctx, "start")
+                        else -> vm.check36()
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) { Text(label, color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = 16.sp, maxLines = 1) }
+        Text(
+            when { run -> "Du kan bruke appen mens den oppdateres."; done -> "Endringene er aktive i appen og på web."; failed -> u.error.ifBlank { "Noe gikk galt under oppdateringen." }
+                avail -> "Tar backup først · ca. 2 minutter"; else -> "Sist sjekket nå" },
+            color = p.mut, fontFamily = PaperFonts.sans, fontSize = 12.sp, textAlign = TextAlign.Center, maxLines = 2,
+        )
+    }
 }
 
 private fun relDate31(v: String): String? = runCatching { LocalDate.parse(v.take(10)) }.getOrNull()?.let { "%02d.%02d.%d".format(it.dayOfMonth, it.monthValue, it.year) }

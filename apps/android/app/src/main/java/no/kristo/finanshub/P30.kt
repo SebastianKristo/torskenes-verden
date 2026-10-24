@@ -425,7 +425,7 @@ fun AppViewModel.rereadReceipt30(receiptId: String, txId: Int) {
             loadBoxes30(txId)
             flash("Kvitteringen er lest på nytt")
         } catch (e: ApiException) {
-            flash(if (e.status == 404) "Kunne ikke lese på nytt: serveren støtter det ikke ennå" else "Kunne ikke lese på nytt: ${e.message}")
+            flash("Kunne ikke lese på nytt: " + glimtErr50(e, "reread30").text) // prompt 50: ikke «Feil 502»
         } finally { s.rereading = false }
     }
 }

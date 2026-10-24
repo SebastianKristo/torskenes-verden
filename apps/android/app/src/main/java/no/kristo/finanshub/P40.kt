@@ -412,7 +412,9 @@ fun AppViewModel.loadAdded40(id: Int, cb: (Added40?, Added40?) -> Unit) {
 }
 
 data class Change40(val field: String, val old: String, val new: String)
-data class Reread40(val receiptId: String, val busy: Boolean, val changes: List<Change40>, val candidateId: String?, val text: String?, val sumOk: Boolean?, val error: String?)
+data class Reread40(val receiptId: String, val busy: Boolean, val changes: List<Change40>, val candidateId: String?, val text: String?, val sumOk: Boolean?, val error: String?,
+    /** Prompt 50: hva slags feil (SLOW gir «Les mindre versjon»), når lesingen startet (fremdrift «Leser … 12 s») og om det var mindre versjon. */
+    val kind50: GlimtErrKind50? = null, val started50: Long = 0L, val small50: Boolean = false)
 
 private fun nok40(v: Double?): String = v?.let { String.format(java.util.Locale("nb", "NO"), "%,.2f", it).replace(',', ' ').replace('.', ',').replace(' ', ' ') + " kr" } ?: "–"
 
@@ -420,15 +422,19 @@ private fun nok40(v: Double?): String = v?.let { String.format(java.util.Locale(
  * «✦ La Glimt lese kvitteringen på nytt»: POST /finans/api/receipts/:id/reanalyze {engine, async:true, apply:false} → jobb →
  * {previous, result, candidateId}. Endringene vises som «gammelt → nytt»; ingenting lagres før «Bruk endringene».
  */
-fun AppViewModel.reread40(txId: Int, receiptId: String, engine: String = "gemini") {
+fun AppViewModel.reread40(txId: Int, receiptId: String, engine: String = "gemini", small: Boolean = false) {
     val s = p40
     if (s.rr[txId]?.busy == true) return
     Haptics.tap()
-    s.rr = s.rr + (txId to Reread40(receiptId, true, emptyList(), null, null, null, null))
+    s.rr = s.rr + (txId to Reread40(receiptId, true, emptyList(), null, null, null, null, started50 = System.currentTimeMillis(), small50 = small))
     launch40 {
-        fun fail(m: String) { s.rr = s.rr + (txId to Reread40(receiptId, false, emptyList(), null, null, null, m)) }
+        // Prompt 50: tydelige meldinger i stedet for «Feil 502» (GlimtErr50.kt).
+        fun fail(e: GlimtErr50) { s.rr = s.rr + (txId to Reread40(receiptId, false, emptyList(), null, null, null, e.text, kind50 = e.kind, small50 = small)) }
+        fun fail(m: String) = fail(GlimtErr50(m, GlimtErrKind50.OTHER))
         try {
-            val first = JSONObject(api40 { request("POST", "/receipts/$receiptId/reanalyze", JSONObject().put("engine", engine).put("async", true).put("apply", false), read = 120_000) })
+            val body = JSONObject().put("engine", engine).put("async", true).put("apply", false)
+            if (small) body.put("small", true).put("maxSide", 1024) // «Les mindre versjon»
+            val first = JSONObject(api40 { request("POST", "/receipts/$receiptId/reanalyze", body, read = 120_000) })
             var res: JSONObject? = if (first.has("result") || first.has("candidateId")) first else null
             val job = first.s37("jobId")
             var n = 0
@@ -437,9 +443,9 @@ fun AppViewModel.reread40(txId: Int, receiptId: String, engine: String = "gemini
                 val j = runCatching { JSONObject(api40 { get("/jobs/$job") }) }.getOrNull() ?: continue
                 val st = j.s37("status") ?: "running"
                 if (st == "done" || j.s37("step") == "done") res = j.optJSONObject("result") ?: JSONObject()
-                else if (st == "error" || st == "cancelled" || j.s37("step") == "error") { fail(j.s37("error") ?: j.s37("msg") ?: "Glimt fikk ikke lest kvitteringen"); return@launch40 }
+                else if (st == "error" || st == "cancelled" || j.s37("step") == "error") { fail(glimtJobErr50(j)); return@launch40 }
             }
-            val r = res ?: run { fail("Glimt brukte for lang tid. Prøv igjen."); return@launch40 }
+            val r = res ?: run { fail(glimtErr50(504, "timeout", "jobben ble ikke ferdig", "reread40")); return@launch40 }
             val prev = r.optJSONObject("previous") ?: JSONObject()
             val now = r.optJSONObject("result") ?: JSONObject()
             val ch = ArrayList<Change40>()
@@ -473,7 +479,7 @@ fun AppViewModel.reread40(txId: Int, receiptId: String, engine: String = "gemini
             s.rr = s.rr + (txId to Reread40(receiptId, false, ch, r.s37("candidateId"), text, sumOk, null))
             Haptics.success()
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
-            fail(if (e.status == 404) "Serveren kan ikke lese kvitteringen på nytt ennå. Oppdater Homelab." else e.message ?: "Glimt fikk ikke lest kvitteringen")
+            fail(glimtErr50(e, "reread40"))
         } catch (e: Exception) { fail(e.message ?: "Glimt fikk ikke lest kvitteringen") }
     }
 }

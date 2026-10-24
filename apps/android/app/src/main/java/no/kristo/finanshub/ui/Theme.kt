@@ -110,6 +110,8 @@ object Tone {
     var light by mutableStateOf(true)
     /** Kveldspapir. */
     var paperDark by mutableStateOf(false)
+    /** Prompt 50: Liquid Glass (mørkt glass med fargeskyer, ui/Glass50.kt). paperDark er også true. */
+    var glass by mutableStateOf(false)
     private val cache = HashMap<Long, Color>()
     private var cacheKey: Any? = null
 
@@ -181,7 +183,7 @@ class PaperPal(
             Color(0xFF2A2821), Color(0xFF2E2B23), Color(0xFF2F2C1D), Color(0xFF17271E), Color(0xFF2A2821), Color(0xFFA39D90), Color(0xFFECE7DC), Color(0xFF14130F),
             onLab = Color(0xFF1B1A17), pop = Color(0xFF2A2821), popSel = Color(0xFF3A372E),
         )
-        val current: PaperPal get() = if (Tone.paperDark) DARK else LIGHT
+        val current: PaperPal get() = if (Tone.glass) GLASS_PAL50 else if (Tone.paperDark) DARK else LIGHT
     }
 }
 
@@ -272,12 +274,13 @@ private val shapes = Shapes(
     small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp), extraLarge = RoundedCornerShape(32.dp),
 )
 
-/** Papir · lys, Papir · mørk eller «auto» (følger systemet). Prompt 42: det eneste temaet (Material You-«Klassisk» er slettet). */
+/** Papir · lys, Papir · mørk, Liquid Glass (prompt 50) eller «auto» (følger systemet). Prompt 42: det eneste temaet (Material You-«Klassisk» er slettet). */
 @Composable
 fun FinansTheme(paperMode: String, content: @Composable () -> Unit) {
     val sysDark = isSystemInDarkTheme()
-    val paperDark = when (paperMode) { "mork" -> true; "lys" -> false; else -> sysDark }
+    val paperDark = when (paperMode) { "mork", "glass" -> true; "lys" -> false; else -> sysDark }
     if (Tone.paperDark != paperDark) Tone.paperDark = paperDark
+    if (Tone.glass != (paperMode == "glass")) Tone.glass = paperMode == "glass" // prompt 50: Liquid Glass
     if (Tone.light != !paperDark) Tone.light = !paperDark
     val scheme = schemeFromPalette(!paperDark)
     val view = LocalView.current

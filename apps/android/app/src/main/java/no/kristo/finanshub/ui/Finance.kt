@@ -490,14 +490,9 @@ internal fun EditField(label: String, value: String, key: Any, number: Boolean =
 /** «✦ Analyser på nytt med Gemini» på bekreftelsessiden. */
 @Composable
 internal fun ReanalyzeButton(vm: AppViewModel, r: Receipt) {
-    val busy = vm.reanalyzing == r.id
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        FilledTonalButton(onClick = { vm.reanalyze(r.id) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) {
-            if (busy) { CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(10.dp)); Text("Gemini leser kvitteringen …") }
-            else Text("✦ Analyser på nytt med Gemini", fontWeight = FontWeight.SemiBold)
-        }
-        r.reanalyzeReason?.let { Text(it, color = C.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp)) }
-    }
+    // Prompt 50 (claude-code-finans-kvittering-fargefeil.md + …-les-pa-nytt-502.md): temafarger, Gemini som primærknapp,
+    // «Les med lokal OCR» sekundær, jobb med fremdrift og tydelige feil (ui/Receipt50.kt).
+    LowConfBox50(vm, r)
     vm.reanalysis?.takeIf { it.receiptId == r.id }?.let { ReanalysisDialog(vm, it) }
 }
 
@@ -511,10 +506,10 @@ private fun ReanalysisDialog(vm: AppViewModel, a: Reanalysis) {
         text = {
             Row(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ExtractColumn("Forrige", a.previous, a.result, Modifier.weight(1f))
-                ExtractColumn("Gemini", a.result, a.previous, Modifier.weight(1f))
+                ExtractColumn("Ny lesing", a.result, a.previous, Modifier.weight(1f)) // prompt 50: Gemini eller lokal OCR
             }
         },
-        confirmButton = { Button(onClick = { vm.applyReanalysis("new") }, colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Bruk Gemini") } },
+        confirmButton = { Button(onClick = { vm.applyReanalysis("new") }, colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Bruk ny lesing") } },
         dismissButton = { TextButton(onClick = { vm.applyReanalysis("old") }) { Text("Behold forrige") } },
     )
 }

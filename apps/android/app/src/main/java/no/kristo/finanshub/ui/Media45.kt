@@ -80,7 +80,7 @@ internal fun MediaMenu45(vm: AppViewModel) {
     var open by remember { mutableStateOf(false) }
     val p = PaperPal.current
     Box {
-        IconBtn43("⋯", "Flere valg", false) { open = true }
+        RoundBtn50("⋯", "Flere valg") { open = true } // prompt 50: rund 40 dp som ⋯ i Nyheter
         DropdownMenu(open, { open = false }, containerColor = p.card) {
             DropdownMenuItem({ Text("Innstillinger for Media", color = p.ink) }, {
                 open = false; vm.closeMedia43(); vm.openPaperPage("set"); vm.settingsPage = "media"

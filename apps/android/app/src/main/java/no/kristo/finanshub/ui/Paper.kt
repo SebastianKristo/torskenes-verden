@@ -111,8 +111,8 @@ internal fun PCard(modifier: Modifier = Modifier, shadow: Boolean = false, onCli
     val p = PaperPal.current
     Column(
         modifier.fillMaxWidth()
-            .then(if (shadow) Modifier.shadow(14.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black.copy(alpha = .25f), spotColor = Color.Black.copy(alpha = .25f)) else Modifier)
-            .clip(RoundedCornerShape(20.dp)).background(p.card)
+            .then(if (shadow && !glass50) Modifier.shadow(14.dp, RoundedCornerShape(20.dp), ambientColor = Color.Black.copy(alpha = .25f), spotColor = Color.Black.copy(alpha = .25f)) else Modifier)
+            .clip(RoundedCornerShape(20.dp)).background(p.card).then(glassEdge50(RoundedCornerShape(20.dp))) // prompt 50: glasskant i Liquid Glass
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
         content = content,
     )
@@ -227,9 +227,9 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
     }
 }
 
-private fun backLabel(vm: AppViewModel): String = when {
+private fun backLabel(vm: AppViewModel, outOfSet50: Boolean = false): String = when {
     vm.b24BackLabel() != null -> vm.b24BackLabel()!!
-    vm.settingsPage != null && (vm.paperPage == "set" || vm.screen == Screen.Settings) -> vm.settingsBackLabel26()
+    !outOfSet50 && vm.settingsPage != null && (vm.paperPage == "set" || vm.screen == Screen.Settings) -> vm.settingsBackLabel26()
     vm.selectedTx != null && vm.paperPage == "fsok" -> "Søk"
     vm.selectedTx != null && vm.paperPage == null -> when (vm.screen) { Screen.List -> "Liste"; Screen.Home -> "Oversikt"; else -> "Tilbake" }
     vm.screen == Screen.Domains && vm.paperPage == null -> "Hjem"
@@ -327,6 +327,7 @@ private fun PaperApp45(
     CompositionLocalProvider(LocalTopRow provides true) {
       Nav23Back(vm, nav, backEnabled, p.bg, preview = !backLocal, onBack = onBack) {
         Box(Modifier.fillMaxSize().background(p.bg)) {
+            GlassBackdrop50() // prompt 50: fargeskyene bak alt innhold i Liquid Glass (ui/Glass50.kt)
             Column(Modifier.fillMaxSize()) {
                 // Prompt 41: Fold 1c – toppbildet skjules på Hjem (bildet ligger i det store Glimt-kortet, ui/Fold41.kt).
                 if (!(homeSplit43 && home)) Hero(vm, home, wide) { vm.photoMenu = !vm.photoMenu; if (vm.photoMenu) vm.loadPhotoThumbs() }
@@ -335,7 +336,7 @@ private fun PaperApp45(
                     // Prompt 34 (claude-code-innhold-under-navbar.md): før var boksen bare flyttet 23 dp opp (offset), så de nederste 23 dp
                     // av skjermen ble en flat papirstripe under fanelinja. Nå er den 23 dp høyere enn plassen sin (underNav34), så innholdet
                     // går helt ned bak den svevende linja og skann-knappen. Listene har fortsatt luft nok til at siste kort scrolles over linja.
-                    Modifier.weight(1f).fillMaxWidth().underNav34(23.dp).padding(start = if (wide) 112.dp else 0.dp)
+                    Modifier.weight(1f).fillMaxWidth().underNav34(23.dp).padding(start = if (wide && !setHere) 112.dp else 0.dp) /* prompt 50: Innstillinger på brett bruker hele bredden (ingen sidelinje) */
                         // Prompt 32 (claude-code-rediger-knapper-plass.md): i redigeringsmodus klippes innholdet 14 dp under ＋/✓
                         // (WIGGLE_CLIP32B), så widgets glir under en ren stripe og aldri bak knappene; ellers ved papirkanten (23 dp).
                         // Prompt 45: på brett ligger wiggle-knappene i sidelinja, så det trengs ingen ekstra klipp under dem.
@@ -345,7 +346,7 @@ private fun PaperApp45(
                     // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
                     // Dra for å oppdatere: fra toppen når siden står øverst (ca. 70 dp), så hentes siden på nytt.
                     PullToRefreshBox(isRefreshing = vm.pullRefreshing, onRefresh = { vm.pullRefresh() }, modifier = Modifier.fillMaxHeight()) {
-                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide || home) 10_000.dp else 720.dp).then(homeTx46(vm, home, wide))) { key(pageKey, vm.b26.topSeq) { holder.SaveableStateProvider(scrollKey) {
+                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide || home || setHere) 10_000.dp else 720.dp).then(homeTx46(vm, home, wide))) { key(pageKey, vm.b26.topSeq) { holder.SaveableStateProvider(scrollKey) {
                         when {
                             vm.original != null -> PaneBox(navBottom) { OriginalScreen(vm) }
                             vm.editing != null -> PaneBox(navBottom) { TxEditScreen(vm, vm.editing!!, scan) }
@@ -435,8 +436,9 @@ private fun PaperApp45(
             // Prompt 34: Glimt-brief og AI-kontroll i fullskjerm (over Chat, så «Full AI-kontroll ›» i Chat legger seg over).
             if (vm.p34.briefOpen) BriefPage35(vm)
             if (vm.p34.briefOpen && vm.weatherOpen) WeatherApp(vm)
-            if (vm.p35.glimtOpen) GlimtPage35(vm)
-            if (vm.p34.aiOpen) AiControl34(vm)
+            // Prompt 50: fra Innstillinger på brett sentrert med maks 820 dp (ui/Settings50.kt).
+            if (vm.p35.glimtOpen) Centered50(wide && setHere) { GlimtPage35(vm) }
+            if (vm.p34.aiOpen) Centered50(wide && setHere) { AiControl34(vm) }
             // Prompt 29: «Legg til time»-arket, pillen og banneret over alt (Kalender og Hjem). Prompt 31: Glimt-toasten ligger her.
             Quick29Overlay(vm)
             // Prompt 45: banneret ved retur er fjernet – Glimt-svar mens appen var lukket kommer bare som systemvarsel.
@@ -497,22 +499,27 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
     val grad = HERO_FALLBACK
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     // Hjem: 226 dp (250 på Fold), så navnet aldri havner bak søkefeltet.
-    val h = (if (home) (if (wide) 214.dp else 190.dp) else 132.dp) + statusTop
+    // Prompt 50 (claude-code-lik-bakgrunnshoyde.md): alle faner med toppbilde har samme høyde som Hjem, så kanten står i ro (ui/Hero50.kt).
+    val h = heroHeight50(wide, statusTop)
     Box(Modifier.fillMaxWidth().height(h).background(Brush.verticalGradient(*grad)).animateContentSize()) {
         // Bilde med blur, demping, scrim, papirtekstur og partikler (prompt 19).
         BgLayer(vm, bmp)
         BoligHero24(vm, Modifier.matchParentSize()) // Prompt 24: bakgrunnen til valgt bolig på Boliger
-        Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = if (wide) 130.dp else 22.dp, end = 22.dp, bottom = if (home) 40.dp else 32.dp)) {
+        Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = if (wide && !setWide50(vm, wide)) 130.dp else if (wide) 28.dp else 22.dp, end = 22.dp, bottom = HERO_PB50)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (home) PSerif(vm.appName, 22.sp, fg, Modifier.weight(1f), maxLines = 1)
                 else {
                     // Prompt 24: ingen tilbakeknapp på rotsidene i profilene (profilbildet står fortsatt til høyre).
                     // Prompt 25: på Fold viser sidelinja en rød Hjem-knapp; da trengs ikke «‹ Hjem» (andre mål vises fortsatt).
                     // Prompt 42: med Hjem-knapp i fanelinja (1a–1d) står ikke «‹ Hjem» på modulens toppside (ui/Ui42.kt).
-                    if (!vm.b24IsRoot() && !(wide && backLabel(vm) == "Hjem") && !navHomeHidesBack42(vm, wide, backLabel(vm))) Box(
-                        Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake") { if (!vm.b24Back()) vm.back() }.padding(start = 10.dp, end = 14.dp),
+                    // Prompt 50: Innstillinger i to kolonner har ingen «‹ Alle innstillinger» (venstre liste er navigasjonen) og ingen
+                    // sidelinje: pillen fører ut av Innstillinger (lukker en åpen underside først i samme trykk).
+                    val set50 = setWide50(vm, wide)
+                    val bl50 = backLabel(vm, set50)
+                    if (!vm.b24IsRoot() && (set50 || (!(wide && bl50 == "Hjem") && !navHomeHidesBack42(vm, wide, bl50)))) Box(
+                        Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake") { if (set50) vm.settingsPage = null; if (!vm.b24Back()) vm.back() }.padding(start = 10.dp, end = 14.dp),
                         contentAlignment = Alignment.Center,
-                    ) { Text("‹ ${backLabel(vm)}", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }
+                    ) { Text("‹ $bl50", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }
                     Spacer(Modifier.weight(1f))
                 }
                 // Prompt 29: pillen «<bakgrunn> ▾» på Hjem og øverst i Innstillinger, rett til venstre for profilbildet (samme meny).
@@ -672,7 +679,7 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
 private fun PaperNavPill(vm: AppViewModel, bar: String, modifier: Modifier, content: @Composable RowScope.() -> Unit) {
     val p = PaperPal.current
     Row(
-        modifier.height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav)
+        modifier.height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav).then(glassEdge50(CircleShape)) // prompt 50: glass-fanelinje
             // Prompt 32: også Domener og Abonnement har «Rediger fanelinjen».
             .longPressEdit26(bar == "main" || bar == "fin" || bar == "dom" || bar == "sub", bar) {
                 Haptics.tap()
@@ -739,7 +746,7 @@ private fun ScanQueue(vm: AppViewModel) {
 
 private val HOME_SECS = listOf(
     PSec("h12", "Glimt-brief", full = true), // Prompt 34: øverst, over widgetene (kan flyttes og skjules i wiggle-modus)
-    PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h43", "Media", full = true), PSec("h3", "Avganger"), PSec("h11", "Prøveperioder"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
+    PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h43", "Media", full = true), PSec("h3", "Avganger"), PSec("h11", "Prøveperioder"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Fliser", full = true),
     PSec("h8", "Gjøremål"), PSec("h6", "Posisjon"), PSec("h40", "Vel fremme"), PSec("h7", "Bolig"), // prompt 40: Hjemlys
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
 )
@@ -788,7 +795,7 @@ private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose
         if (vm.editPage != "hjem" && upd30Show(vm, home = true)) item(key = "upd30", span = { GridItemSpan(maxLineSpan) }) { UpdateBanner30(vm, home = true) }
         if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
         pageGridSecs(vm, "hjem", secs37, wide, skip = { k -> (k == "h40" && vm.p40.hlMissing) || (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) ||
-            (k == "h3" && trip && vm.p41.homeCard == "instead") || (k == "h43" && vm.homeMediaHidden43()) ||
+            (k == "h3" && trip && vm.p41.homeCard == "instead") || tilesHide50(vm, k, secs37) || (k == "h43" && vm.homeMediaHidden43()) ||
             (k == "h11" && vm.editPage != "hjem" && !vm.activeTrials46()) }) { k -> // prompt 46: Prøveperioder bare med aktive prøver (vises i wiggle)
             when (k) {
                 "h12" -> SwipeBrief36(vm) { HomeBrief34(vm) } // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt). Prompt 36: sveip mot høyre skjuler til neste brief
@@ -828,7 +835,7 @@ private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose
                     if (lines.isNotEmpty()) PaperRuter(lines, if (wide) Modifier.height(FOLD_CARD) else Modifier) { vm.openRuter() }
                     else PCard(if (wide) Modifier.height(FOLD_CARD) else Modifier, onClick = { vm.openRuter() }) { Text("Ingen avganger ennå. Trykk for å legge til en holdeplass.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
                 }
-                "hm" -> PaperMinis(vm)
+                "hm" -> if (vm.homeTiles50()) HomeTiles50(vm) else PaperMinis(vm) // prompt 50: fliser (1d), ui/Tiles50.kt
                 // Nye kort: Huskeliste (de tre neste med avkrysning), Posisjon (familien) og Bolig.
                 "h8" -> HomeTasksCard(vm)
                 "h9" -> HomeBirthdaysCard24(vm)

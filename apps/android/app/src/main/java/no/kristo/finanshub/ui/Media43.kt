@@ -67,7 +67,8 @@ internal fun stColor43(k: String): Color = when (k) { "ok" -> OK43; "dl" -> Colo
 internal fun MediaScreen43(vm: AppViewModel) {
     val p = PaperPal.current
     val s = vm.p43
-    BackHandler { vm.closeMedia43() }
+    // Prompt 50: tilbake (knapp og sveip) lukker først Glimt-panelet, så utgivelser/detalj (closeMedia43), og forlater Media sist.
+    BackHandler { if (s.glimtOpen) s.glimtOpen = false else vm.closeMedia43() }
     LaunchedEffect(s.tab) { vm.loadMedia43() }
     // qBittorrent: hvert 2. sekund mens fanen er åpen.
     LaunchedEffect(s.tab, s.mediaOpen) { while (s.tab == "qbit" && s.mediaOpen) { delay(2000); vm.loadTorrents43() } }
@@ -76,15 +77,12 @@ internal fun MediaScreen43(vm: AppViewModel) {
     BoxWithConstraints(Modifier.fillMaxSize().background(p.bg)) {
         val wide = maxWidth >= 600.dp
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 12.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Prompt 45: systemets tilbakeknapp (rund glass-knapp med ‹) og ⋯ i stedet for ⚙ (innstillingene ligger i Innstillinger → Media).
-                BackCircle45("Tilbake") { vm.closeMedia43() }
-                Spacer(Modifier.weight(1f))
-                IconBtn43("✦", "Glimt", s.glimtOpen) { s.glimtOpen = !s.glimtOpen }
-                Spacer(Modifier.width(6.dp))
+            // Prompt 50 (claude-code-media-topp-som-nyheter.md): topplinje som i Nyheter – «‹ Tilbake», kicker + «Media» på samme rad,
+            // ✦ Glimt og ⋯ (innstillinger) som runde 40 dp-knapper. Den separate tittelen under raden er fjernet.
+            NewsTop50("Media · Filmer og serier", "Media", Modifier.padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 10.dp), onBack = { vm.closeMedia43() }) {
+                RoundBtn50("✦", "Glimt", s.glimtOpen) { s.glimtOpen = !s.glimtOpen }
                 MediaMenu45(vm)
             }
-            PSerif("Media", 34.sp, modifier = Modifier.padding(start = 18.dp, top = 2.dp, bottom = 8.dp), maxLines = 1)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MEDIA_TABS43.forEach { (k, n) -> MediaTab45(k, n, s.tab == k) { s.tab = k; s.detail = null; s.relFor = null } } // prompt 45: tjenestefarger
             }

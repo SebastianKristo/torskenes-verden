@@ -310,12 +310,12 @@ fun AppViewModel.reanalyze39(id: String, engine: String = "gemini") {
         val raw = try {
             api39 { request("POST", "/receipts/$id/reanalyze", JSONObject().put("engine", engine).put("async", true), read = 120_000) }
         } catch (e: ApiException) {
-            if (e.status == 404) {
+            if (e.status == 404 && e.code != "bilde_mangler") { // prompt 50: 404 bilde_mangler er ikke «gammel server»
                 setRe39(id) { null }
                 runCatching { api39 { post("/receipts/$id/reprocess?provider=gemini") } }
                 message = "✦ Leses på nytt med Gemini"
                 runCatching { loadReceipts(); loadJobs() }
-            } else setRe39(id) { (it ?: Re39(null, "upload", 0, null, label)).copy(step = "error", error = true, msg = e.message ?: "✕ $label svarte ikke") }
+            } else setRe39(id) { (it ?: Re39(null, "upload", 0, null, label)).copy(step = "error", error = true, msg = glimtErr50(e, "reanalyze39").text) } // prompt 50
             return@launch39
         }
         val o = runCatching { JSONObject(raw) }.getOrNull() ?: JSONObject()
@@ -358,7 +358,7 @@ private suspend fun AppViewModel.jobUpdate39(id: String, j: JSONObject): Boolean
         }
         status == "cancelled" -> { cancelledRe39(id); return true }
         status == "error" || step == "error" -> {
-            setRe39(id) { it?.copy(step = "error", error = true, msg = j.optStr("msg") ?: j.optStr("error") ?: "✕ ${it.engine} svarte ikke") }
+            setRe39(id) { it?.copy(step = "error", error = true, msg = j.optStr("melding") ?: j.optStr("msg") ?: j.optStr("error") ?: "✕ ${it.engine} svarte ikke") } // prompt 50: «melding»
             return true
         }
         else -> setRe39(id) { it?.copy(step = step ?: it.step, pct = maxOf(it.pct, pct ?: it.pct), msg = j.optStr("msg") ?: it.msg) }

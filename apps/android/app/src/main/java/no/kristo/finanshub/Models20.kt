@@ -64,6 +64,8 @@ fun validLatLon(lat: Double, lon: Double): Boolean = lat.isFinite() && lon.isFin
 data class PosCard(
     val id: String, val name: String, val color: Long, val photo: String?, val initials: String,
     val line2: String, val status: String, val self: Boolean,
+    /** Prompt 50: kjent sone personen er i (null = ikke i en sone). Brukes av Familie-flisen på Hjem («Alle på plass»). */
+    val zone: String? = null,
 )
 
 /** Fargene som brukes når Familie ikke har en egen farge for personen (stabil per id). */
@@ -94,7 +96,7 @@ fun parsePositions(s: String): List<PosCard> {
             ?: listOfNotNull(o.optStr("sone"), o.optStr("sted")).firstOrNull()
             ?: lastSeen(o.optStr("oppdatert")) ?: "Deler ikke posisjon"
         PosCard(id, name, o.optStr("farge")?.let(::color) ?: o.optStr("color")?.let(::color) ?: posColorFor(id), o.optStr("bilde"),
-            o.optStr("initialer") ?: posInitials(name), line2, status, self)
+            o.optStr("initialer") ?: posInitials(name), line2, status, self, zone = o.optStr("sone") ?: o.optStr("zone"))
     }
     // «Du» først, og bare én gang.
     return out.filter { it.self }.take(1) + out.filter { !it.self }
@@ -137,7 +139,7 @@ fun positionsFromFamily(f: Family, now: Instant = Instant.now()): List<PosCard> 
             else -> lastSeen(l.ts) ?: "Deler ikke posisjon"
         }
         val name = if (self) "Du" else m.name.split(' ').first()
-        PosCard(m.userId, name, posColorFor(m.userId), m.avatarUrl, posInitials(name), line2, status, self)
+        PosCard(m.userId, name, posColorFor(m.userId), m.avatarUrl, posInitials(name), line2, status, self, zone = zone)
     }
 }
 

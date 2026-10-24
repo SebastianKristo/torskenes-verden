@@ -567,9 +567,9 @@ private fun Fam22Hero(vm: AppViewModel) {
     val fg = bgForeground(vm, bmp != null)
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val sh = Shadow(Color.Black.copy(alpha = .35f), Offset(0f, 2f), 14f)
-    Box(Modifier.fillMaxWidth().height(140.dp + statusTop).background(Brush.verticalGradient(*HERO_FALLBACK))) {
+    Box(Modifier.fillMaxWidth().height(heroHeight50(false, statusTop)).background(Brush.verticalGradient(*HERO_FALLBACK))) { // prompt 50: lik høyde
         BgLayer(vm, bmp)
-        Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = 22.dp, end = 22.dp, bottom = 34.dp)) {
+        Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = 22.dp, end = 22.dp, bottom = HERO_PB50)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake til Hjem") { vm.closeFamily() }

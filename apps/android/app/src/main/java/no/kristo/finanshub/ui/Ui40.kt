@@ -532,6 +532,7 @@ internal fun Reread40Section(vm: AppViewModel, t: Tx, receiptId: String?) {
             Column(Modifier.weight(1f)) {
                 Text("Glimt leser kvitteringen på nytt …", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text("Sjekker butikk, dato, hver linje og at summen stemmer", color = p.mut, fontSize = 12.5.sp)
+                ReadSecs50(r.started50, r.small50) // prompt 50: «Leser … 12 s» så det ikke ser hengt ut
             }
         }
         else -> Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(18.dp)).padding(14.dp),
@@ -548,7 +549,8 @@ internal fun Reread40Section(vm: AppViewModel, t: Tx, receiptId: String?) {
                     }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (r.error != null) RereadErr50Buttons(vm, t.id, receiptId, r) // prompt 50: Prøv igjen · Les mindre versjon · Lukk
+            else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (r.changes.isNotEmpty() && r.candidateId != null) {
                     PButton("Bruk endringene", Modifier.weight(1f), height = 42.dp) { vm.rereadApply40(t.id, keep = true) }
                     PButton("Behold som før", Modifier.weight(1f), kind = "line", height = 42.dp) { vm.rereadApply40(t.id, keep = false) }

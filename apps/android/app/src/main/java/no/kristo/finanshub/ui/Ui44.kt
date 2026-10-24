@@ -441,9 +441,28 @@ internal fun StudyScreen44(vm: AppViewModel) {
     }
     val navB = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     Column(Modifier.fillMaxSize().background(p.bg).statusBarsPadding()) {
-        Text("‹ Tilbake", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(start = 8.dp, top = 6.dp).heightIn(min = 44.dp).clip(CircleShape)
-            .clickable { if (t.doc != null) t.doc = null else t.studyOpen = false }.padding(horizontal = 10.dp).wrapContentHeight())
-        PSerif(t.doc?.title ?: "Studie · Dokumenter", 30.sp, maxLines = 2, modifier = Modifier.padding(start = 18.dp, end = 18.dp, bottom = 8.dp))
+        // Prompt 50 (claude-code-studie-topp-som-nyheter.md): topplinje som i Nyheter og Media – «‹ Tilbake»-pille, kicker + tittel
+        // på samme rad, ✦ Glimt (velg dokument som Glimt leser) og ⋯ til høyre. Undertekst rett under raden; ingen egen stor tittel.
+        val d0 = t.doc
+        var menu50 by remember { mutableStateOf(false) }
+        NewsTop50(
+            if (d0 == null) "Studie · Dokumenter" else "Studie · Dokument", d0?.title ?: "Dokumenter",
+            Modifier.padding(start = 16.dp, end = 12.dp, top = 8.dp), onBack = { if (t.doc != null) t.doc = null else t.studyOpen = false },
+        ) {
+            RoundBtn50("✦", "Glimt leser et dokument") { if (!t.docBusy) pick.launch(arrayOf("application/pdf", "image/*")) }
+            Box {
+                RoundBtn50("⋯", "Flere valg") { menu50 = true }
+                androidx.compose.material3.DropdownMenu(menu50, { menu50 = false }, containerColor = p.card) {
+                    androidx.compose.material3.DropdownMenuItem({ Text("Last opp dokument", color = p.ink) }, { menu50 = false; pick.launch(arrayOf("application/pdf", "image/*")) })
+                    androidx.compose.material3.DropdownMenuItem({ Text("Hent listen på nytt", color = p.ink) }, { menu50 = false; vm.loadDocs44() })
+                }
+            }
+        }
+        Text(
+            if (d0 == null) "Vitnemål, karakterutskrift og attester · Glimt leser og regner ut"
+            else listOfNotNull(kindNo44(d0.kind), d0.institution, d0.date?.take(10)).joinToString(" · ").ifBlank { "Glimt leser og regner ut" },
+            color = p.mut, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 2.dp, bottom = 12.dp),
+        )
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 24.dp + navB), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             val d = t.doc
             if (d == null) {
@@ -510,7 +529,7 @@ private fun DocView44(vm: AppViewModel, d: SDoc44) {
     var q by remember(d.id) { mutableStateOf("") }
     var del by remember(d.id) { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(listOfNotNull(kindNo44(d.kind), d.institution, d.date?.take(10)).joinToString(" · "), color = p.mut, fontSize = 13.sp)
+        // Prompt 50: «type · institusjon · dato» står nå som undertekst under topplinja.
         d.summary?.let { Text(it, color = p.ink, fontSize = 14.sp, lineHeight = 20.sp) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Kpi44("Snitt", d.snitt ?: "–", p.ink)

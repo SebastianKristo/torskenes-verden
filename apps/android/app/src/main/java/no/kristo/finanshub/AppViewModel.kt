@@ -1592,7 +1592,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun pushDesign() {
         viewModelScope.launch {
             runCatching {
-                api.hlPut("/me/layout", JSONObject().put("mobileDesign", "papir").put("paperMode", paperMode)
+                api.hlPut("/me/layout", JSONObject().put("mobileDesign", "papir").put("paperMode", if (paperMode == "glass") "mork" else paperMode) // prompt 50: Glass er per enhet
                     .put("photo", if (photoKind == "none") "cur" else photoKind).put("bgType", photoKind))
             }
         }

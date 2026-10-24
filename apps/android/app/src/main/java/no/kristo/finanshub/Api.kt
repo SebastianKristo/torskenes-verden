@@ -85,7 +85,8 @@ class Api(private val baseUrl: String, private val token: String?) {
             // så det skal verken logge ut eller vise «Ikke innlogget» (prompt 14). Appen viser ingen melding for dette.
             val path = conn.url.path
             if (code == 401 && !path.startsWith(FINANS) && o?.optBoolean("needsTotp") != true) throw ApiException("$TOKEN_REFUSED ($path)", 403, code = o?.optString("code")?.takeIf { it.isNotBlank() })
-            throw ApiException(msg, code, o?.optBoolean("needsTotp") == true, o?.optString("code")?.takeIf { it.isNotBlank() }, o?.optBoolean("canGemini") == true)
+            // Prompt 50: «kode» (norsk, f.eks. modell_utilgjengelig) leses også.
+            throw ApiException(msg, code, o?.optBoolean("needsTotp") == true, o?.optString("code")?.takeIf { it.isNotBlank() } ?: o?.optString("kode")?.takeIf { it.isNotBlank() }, o?.optBoolean("canGemini") == true)
         }
         // En nettside (innloggingssiden, en proxy eller Cloudflare) i stedet for data: si det tydelig i stedet for en JSON-feil.
         if (body.trimStart().startsWith("<")) throw ApiException("Uventet svar fra serveren: fikk en nettside i stedet for data fra ${conn.url.path}. Oppdater homelab eller logg inn på nytt.", 502)

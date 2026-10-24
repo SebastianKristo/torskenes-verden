@@ -63,6 +63,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "huske" to "Gjøremål", // prompt 44: synk med Home Assistant
     "nyheter" to "Nyheter", // prompt 46: innstillingene fra Nyheter-siden (kilder, kategorier, For deg, sammendrag)
     "media" to "Media", // prompt 45: innstillingene fra Media (status per tjeneste, Integrasjoner, Rydd uovervåkede)
+    "prog50" to "Programvare", // prompt 50: egen side i høyre kolonne på brett
 )
 
 /**
@@ -72,6 +73,13 @@ internal val PAPER_SET_TITLES = mapOf(
  */
 @Composable
 internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: () -> Unit) {
+    // Prompt 50: på Fold/brett (≥ 700 dp) i to kolonner – liste til venstre, valgt side til høyre (ui/Settings50.kt).
+    if (LocalWide45.current) { SettingsSplit50(vm, navBottom) { PaperSettings17Body(vm, navBottom, onPrivacyChanged, wide50 = true) }; return }
+    PaperSettings17Body(vm, navBottom, onPrivacyChanged, wide50 = false)
+}
+
+@Composable
+private fun PaperSettings17Body(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: () -> Unit, wide50: Boolean) {
     val sub = vm.settingsPage
     LaunchedEffect(sub) {
         when (sub) { "tokens" -> vm.loadTokens(); "notify" -> vm.loadNotify(); null -> { vm.loadAppInfo(); if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadBk29(); vm.loadUpd30(); vm.loadUpdSettings30() } } }
@@ -79,7 +87,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
     // Utseende: tema, ikonfarger, bakgrunn og fanelinje (egen liste fra prompt 16).
     // Prompt 39: «Tilpass» samler navn, ikon, fanelinje, tema og bakgrunn. Gamle lenker til «look» havner også her.
     if (sub == "look" || sub == "tilpass") {
-        SetIcons36("look") { PaperSettings16(vm, navBottom) { tilpassHead39(vm) } }
+        SetIcons36("look") { PaperSettings16(vm, navBottom) { if (wide50) settingsHead50(vm); tilpassHead39(vm) } }
         if (vm.appNameEdit) AppNameSheet24(vm)
         if (vm.appIconEdit) AppIconSheet24(vm)
         return
@@ -90,8 +98,10 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
     // Prompt 36: ikon på hver rad i undersidene (hovedsiden har egne ikonruter).
     androidx.compose.runtime.CompositionLocalProvider(LocalSetIcons36 provides (if (sub == null) null else setTint36(sub))) {
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 30.dp + navBottom), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (wide50) settingsHead50(vm) // prompt 50: tittel-pille (og «‹ Integrasjoner» på nivå 2) i høyre kolonne
         when (sub) {
-            null -> settingsMain(vm)
+            null -> if (wide50) settingsHome50(vm) else settingsMain(vm)
+            "prog50" -> item { Programvare50(vm) } // prompt 50: Programvare som egen side i høyre kolonne
             "fin" -> item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     // Prompt 26: samme editor som når man holder inne på Finans-linja.
@@ -126,7 +136,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             // Prompt 32: den gamle Oppdatering-siden (og lenker hit) går til Nordlys-siden.
             "update" -> item { LaunchedEffect(Unit) { vm.settingsPage = null; vm.openNordlys31() } }
             "sysbackup" -> item { Backup29Page(vm) } // Prompt 29: backup av hele systemet (bare admin)
-            else -> sub?.takeIf { it.startsWith("integ:") }?.let { ip -> item { IntegPage26(vm, ip.removePrefix("integ:")) } } ?: settingsMain(vm)
+            else -> sub?.takeIf { it.startsWith("integ:") }?.let { ip -> item { IntegPage26(vm, ip.removePrefix("integ:")) } } ?: if (wide50) settingsHome50(vm) else settingsMain(vm)
         }
     }
     }
@@ -141,6 +151,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     if (settingsSearch24(vm)) return
     // Prompt 30: oppdateringsbanneret øverst (bare admin, kan ikke skjules her).
     if (upd30Show(vm, home = false)) item { UpdateBanner30(vm, home = false) }
+    profileCard17(vm)
+    // Prompt 39: PROFIL-gruppen er flyttet til «Appprofil» nederst i APP.
+    settingsGroups17(vm)
+}
+
+/** Profilkortet øverst (prompt 50: også i høyre kolonne på brett når ingen underside er valgt). */
+internal fun androidx.compose.foundation.lazy.LazyListScope.profileCard17(vm: AppViewModel) {
     item {
         val p = PaperPal.current
         PCard(shadow = true) {
@@ -156,7 +173,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
             }
         }
     }
-    // Prompt 39: PROFIL-gruppen er flyttet til «Appprofil» nederst i APP.
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.settingsGroups17(vm: AppViewModel) {
     group("Konto") { i ->
         SetRow(vm, i(), Icons.Filled.People, "Kontoer og brukere", "Bytt konto, legg til og logg ut") { vm.settingsPage = "accounts" }
         SetRow(vm, i(), Icons.Filled.Lock, "Sikkerhet", if (vm.me?.totp == true) "2FA på" else "2FA av", top = true) { vm.settingsPage = "security" }
