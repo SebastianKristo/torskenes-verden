@@ -25,6 +25,8 @@ import { kalView, kalClick, kalChange } from './settings-kal.js';
 import { loadAi, aiView, aiClick, aiChange, aiSubmit, setAiTab } from './settings-ai.js';
 import { clearBtn, glassIcon } from './searchfield.js';
 import { loadSystem, systemView, systemClick, systemInput, systemSubmit, systemEsc } from './settings-system.js';
+import { setObs51Render, obs51Click, obs51Change, obs51Input, obs51Submit } from './obs51.js'; // prompt 51 (OBS51): drift i System, ntfy i Varsler
+import { ops51Click, ops51Submit } from './ops51.js'; // prompt 51 (OPS51): backup og oppdateringer i System
 import { loadBackup, backupView, backupClick, backupChange, backupInput, backupSubmit, backupEsc } from './settings-backup.js';
 import { decorateRows } from './settings-icons36.js';
 import { kontoAvatar, avatarRow } from './avatar36.js'; // prompt 36: profilbilde i Konto // prompt 36: ikon på hver rad
@@ -34,6 +36,7 @@ import { loadServer41, serverGroup41 } from './settings-server41.js'; // prompt 
 import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt35.js'; // prompt 35: GLIMT → Glimt
 import { TABS44, modeGroup44, loggerView44, huskeView44, usersGroups44, click44 } from './settings44.js'; // prompt 44
 import { TABS46, ALIAS46, nyheterView46, gphotoBox46 } from './settings46.js'; // prompt 46: Innstillinger → Nyheter
+import { TABS51, ALIAS51, sikkerhetView51 } from './sec51.js'; // prompt 51 (SEC51): Innstillinger → Sikkerhet
 import { TABS45, ALIAS45, mediaView45, ruterView45, zoneGroups45, click45, setRender45, huskeTips45, vaerView45, studieView45, finansView45 } from './settings45.js'; // prompt 45: Media, Ruter, sonevarsler
 
 const modal = () => document.getElementById('settings');
@@ -99,13 +102,14 @@ const TABS = [
   ...TABS46, // prompt 46: Nyheter (flyttet fra nyhetsleseren)
   ['ai', 'AI', 'Modeller, jobber, forbruk og nøkler.', 'Tilkoblinger', P.ai],
   ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
+  ...TABS51, // prompt 51: passkeys, nye enheter, innloggingslogg, sperrer og nøkler
   ['system', 'System', 'Oppdater serveren til nyeste versjon.', 'Server', P.sys, true],
   ['backup', 'Backup', 'Backup av hele systemet: automatisk, hva som tas med, hvor og gjenoppretting.', 'Server', P.backup, true],
   TABS44[1], // prompt 44: Logger
 ];
 const tabsFor = () => TABS.filter((t) => !t[5] || isAdmin());
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', ...ALIAS45, ...ALIAS46 };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', ...ALIAS45, ...ALIAS46, ...ALIAS51 };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app', hahealth: 'familie' };
@@ -586,7 +590,7 @@ const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [gro
   row({ t: 'Glimt-brief', s: 'Morgen-, dags-, kvelds- og nattbrief med klokkeslett', go: 'glimt', btn: 'Åpne', k: 'brief morgenbrief kveldsbrief varsel guide venner' }),
   row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure' }),
 ])] });
-const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => withZones45(notifyView(H), 'varsel'), app: () => appView({ ...H, sub }), familie: () => (sub ? fam42View(H, sub) : withZones45(fam42View(H, sub), 'familie')), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H), logger: () => loggerView44(H), huske: () => { setRender45(() => { if (!modal().hidden && tab === 'huske') render(); }); const v = huskeView44(H); return { ...v, extra: (v.extra ?? '') + huskeTips45(H) }; }, media: () => (setRender45(rerender45), mediaView45(H)), ruter: () => (setRender45(rerender45), ruterView45(H)), vaer: () => (setRender45(rerender45), vaerView45(H)), studie: () => studieView45(H), finans: () => finansView45(H), nyheter: () => nyheterView46(H) };
+const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => withZones45(notifyView(H), 'varsel'), app: () => appView({ ...H, sub }), familie: () => (sub ? fam42View(H, sub) : withZones45(fam42View(H, sub), 'familie')), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H), logger: () => loggerView44(H), huske: () => { setRender45(() => { if (!modal().hidden && tab === 'huske') render(); }); const v = huskeView44(H); return { ...v, extra: (v.extra ?? '') + huskeTips45(H) }; }, media: () => (setRender45(rerender45), mediaView45(H)), ruter: () => (setRender45(rerender45), ruterView45(H)), vaer: () => (setRender45(rerender45), vaerView45(H)), studie: () => studieView45(H), finans: () => finansView45(H), nyheter: () => nyheterView46(H), sikkerhet: () => sikkerhetView51(H) };
 // Prompt 45: Sonevarsler (av/på, per person og sone) i Familie og speilet i Varsler.
 const rerender45 = () => { if (!modal().hidden && ['familie', 'varsel', 'media', 'ruter', 'vaer'].includes(tab)) render(); };
 function withZones45(v, where) { setRender45(rerender45); if (v?.groups) v.groups = [...v.groups, ...zoneGroups45(H, where)]; return v; }
@@ -778,6 +782,7 @@ function enter() {
   if (tab === 'familie' || q) loadFam42(reload);
   if (tab === 'ai' || q) loadAi(reload, tab === 'ai');
   if (tab === 'system' || q) loadSystem(reload);
+  if (tab === 'system' || tab === 'varsel' || q) setObs51Render(reload); // prompt 51
   if (tab === 'backup' || q) loadBackup(reload);
   if (tab === 'glimt') loadGlimt(reload);
 }
@@ -890,6 +895,8 @@ export function bindSettings() {
     if (g) return go(g.dataset.go);
     if (await loginClick(e)) return;
     if (await domainsClick(e)) return;
+    if (await obs51Click(e, render)) return; // prompt 51
+    if (await ops51Click(e)) return; // prompt 51 (OPS51)
     if (await notifyClick(e)) return;
     if (tab === 'familie' && await fam42Click(e, render)) return;
     if (await appClick(e)) return;
@@ -1012,6 +1019,8 @@ export function bindSettings() {
     if (mediaSubmit43(e, render)) return;
     if (await trackSubmit46(e, render)) return; // prompt 46
     if (await glimtSubmit(e, render)) return;
+    if (await obs51Submit(e)) return; // prompt 51
+    if (await ops51Submit(e)) return; // prompt 51 (OPS51)
     if (await systemSubmit(e)) return;
     if (await backupSubmit(e)) return;
     if (await aiSubmit(e, render)) return;
@@ -1034,7 +1043,7 @@ export function bindSettings() {
 
   let qTimer = null;
   m.addEventListener('input', (e) => {
-    if (notifyInput(e) || appInput(e) || systemInput(e) || backupInput(e) || trackInput46(e)) return;
+    if (notifyInput(e) || appInput(e) || systemInput(e) || backupInput(e) || trackInput46(e) || obs51Input(e)) return;
     if (e.target.matches('[data-setq]')) {
       const val = e.target.value;
       clearTimeout(qTimer);
@@ -1071,6 +1080,7 @@ export function bindSettings() {
     if (await aiChange(e, render)) return;
     if (await loginChange(e)) return;
     if (domainsChange(e)) return;
+    if (await obs51Change(e)) return; // prompt 51
     if (await notifyChange(e)) return;
     if (tab === 'familie' && fam42Change(e)) return;
     if (t.matches('[data-news-speed]')) { saveUi({ newsSpeed: +t.value }); return; }

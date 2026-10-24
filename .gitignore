@@ -6,6 +6,10 @@ server/data/*
 !server/data/bible1930-*.json
 .env
 proton/
+# Prompt 51 (OBS51): ntfy-tjenestens brukere, tilganger og buffer (docker compose --profile ntfy)
+ntfy/
+# Prompt 51 (QA51): GlitchTips database og opplastinger (docker compose --profile glitchtip)
+glitchtip/
 apps/android/.gradle/
 apps/android/build/
 apps/android/app/build/

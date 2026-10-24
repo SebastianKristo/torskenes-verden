@@ -5,6 +5,7 @@
 import { api, esc } from './util.js';
 import { pushSupported, pushState, enablePush, disablePush } from './webpush.js';
 import { updNotifyRow } from './settings-system.js'; // prompt 39
+import { ntfyGroup51 } from './obs51.js'; // prompt 51 (OBS51): ntfy-emner per enhet
 // Prompt 31: «AI-svar i bakgrunnen» (ai_bg_notify i /api/me/notify, på som standard, følger hovedbryteren) og
 // «Varsler på denne enheten» (Web Push: tillatelse + abonnement, se webpush.js).
 
@@ -116,6 +117,8 @@ export function notifyView(h) {
   if (S.pkg && n.groups.pakker !== false) {
     groups.push(h.group('Pakker', PKG.map(([k, t, s]) => h.row({ t, s, tog: !!S.pkg[k], act: `data-nf-pkg="${k}"` })), 'Kilder (e-post, Finn og automatisk arkivering) velges på Sporing-siden.'));
   }
+  const nt51 = ntfyGroup51(h); // prompt 51
+  if (nt51) groups.push(nt51);
   return { groups };
 }
 

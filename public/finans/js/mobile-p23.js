@@ -9,8 +9,10 @@ import { haptic, hapBack } from './mobile-haptics.js';
 import * as P34 from './mobile-p34.js'; // prompt 34: ✦ ANALYSERES AV AI i Kvitteringer
 import { logo } from './mobile-p20.js';
 import { canSrv } from './mobile-p17.js';
-import { form48, via48, uncCls48, uncTag48, is48, flush48, bind48, setRedraw48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
+import { form48, via48, uncCls48, uncTag48, is48, flush48, bind48, setRedraw48, _e48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
+import { srcTag51, raw51, bind51, learn51 } from './rcpt51.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
 bind48(); setRedraw48(() => draw());
+bind51((id) => (S.receipts ?? []).find((x) => x.id === id));
 
 const root = () => document.getElementById('app');
 const lab = (t, r = '') => `<span class="p23-lab"><span>${t}</span>${r ? `<span>${r}</span>` : ''}</span>`;
@@ -246,9 +248,9 @@ export function kvView() {
           <div class="p41-bka"><button class="p23-ok" data-p23="rcsave" data-id="${esc(r.id)}" ${KV.busy === r.id ? 'disabled' : ''}>${KV.busy === r.id ? 'Lagrer …' : 'Lagre endringer'}</button><button class="p41-undo" data-p23="rcundo" data-id="${esc(r.id)}">↺ Til gjennomgang</button></div>${P39.rePanel(r.id)}</div>` : ''}</div>`;
     }
     return `<div data-p39re="${esc(r.id)}" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><button class="p23-rrow p23-rbtn" data-p23="rcopen" data-id="${esc(r.id)}" aria-expanded="${op}">${head}</button>${P39.reLine(r.id)}
-      ${op ? `<div class="p23-red">${is48(r) && (uncTag48(r, 'merchant') || uncTag48(r, 'total')) ? `<div class="p48-unc">${uncTag48(r, 'merchant') ? `Butikk${uncTag48(r, 'merchant')}` : ''} ${uncTag48(r, 'total') ? `Beløp${uncTag48(r, 'total')}` : ''}</div>` : ''}<div class="p23-red2"><input class="p23-in${uncCls48(r, 'merchant')}" id="p23-rn-${esc(r.id)}" data-p23in="rcn" data-id="${esc(r.id)}" value="${esc(e.n)}" aria-label="Butikk" autocomplete="off"><input class="p23-in mono${uncCls48(r, 'total')}" id="p23-rv-${esc(r.id)}" data-p23in="rcv" data-id="${esc(r.id)}" value="${esc(e.v)}" inputmode="decimal" aria-label="Beløp"></div>
+      ${op ? `<div class="p23-red">${srcTag51(r) ? `<div class="p51-src">Butikknavn ${srcTag51(r)}</div>` : ''}${is48(r) && (uncTag48(r, 'merchant') || uncTag48(r, 'total')) ? `<div class="p48-unc">${uncTag48(r, 'merchant') ? `Butikk${uncTag48(r, 'merchant')}` : ''} ${uncTag48(r, 'total') ? `Beløp${uncTag48(r, 'total')}` : ''}</div>` : ''}<div class="p23-red2"><input class="p23-in${uncCls48(r, 'merchant')}" id="p23-rn-${esc(r.id)}" data-p23in="rcn" data-id="${esc(r.id)}" value="${esc(e.n)}" aria-label="Butikk" autocomplete="off"><input class="p23-in mono${uncCls48(r, 'total')}" id="p23-rv-${esc(r.id)}" data-p23in="rcv" data-id="${esc(r.id)}" value="${esc(e.v)}" inputmode="decimal" aria-label="Beløp"></div>
         <div class="p23-cats">${cats.map((c) => `<button class="p23-cat" data-p23="rccat" data-id="${esc(r.id)}" data-c="${c.id}" aria-pressed="${+e.cat === c.id}">${esc(c.name)}</button>`).join('')}</div>
-        ${is48(r) ? form48(r, { has: ['merchant', 'total', 'category'], total: parseAmount(String(e.v ?? '')) ?? r.total }) : ''}
+        ${is48(r) ? form48(r, { has: ['merchant', 'total', 'category'], total: parseAmount(String(e.v ?? '')) ?? r.total }) : ''}${raw51(r)}
         <div class="p23-racts"><button class="p23-ok" data-p23="rcok" data-id="${esc(r.id)}" ${KV.busy === r.id ? 'disabled' : ''}>${KV.busy === r.id ? 'Bokfører …' : '✓ Godkjenn og bokfør'}</button>${P39.reBtn(r.id) /* prompt 39: fremdrift */}<button class="p23-del" data-p23="rcdel" data-id="${esc(r.id)}" aria-label="${KV.del === r.id ? 'Trykk igjen for å slette' : 'Slett'}">${KV.del === r.id ? 'Slett?' : '🗑'}</button></div>${P39.rePanel(r.id)}${globalThis.P40?.addedLine?.(r, 'rc') ?? '' /* prompt 40: lagt til */}</div>` : ''}</div>`;
   };
   return `<div class="p23-kv">
@@ -274,7 +276,10 @@ async function rcBook(id) {
   try {
     // Prompt 48: endrede detaljer (dato, varelinjer, rabatter …) sendes som rettelse før bokføringen.
     const catName = (S.boot?.categories ?? []).find((c) => c.id === (patch.categoryId ?? r.categoryId))?.name ?? r.category ?? null;
+    const org51 = _e48[id]?.org_number ?? null; // flush48 glemmer skjemaet etter sending
     const f48 = await flush48(r, { merchant: patch.merchant ?? r.merchant, total: patch.total ?? r.total, category: catName });
+    // Prompt 51: rettet butikknavn → POST /receipts/:id/merchant (serveren lærer org.nr. → navn); eldre server → PATCH under.
+    if (patch.merchant?.trim() && await learn51(id, patch.merchant, org51).catch(() => null)) delete patch.merchant;
     if (f48.error) flash(`Rettelsen ble ikke lagret: ${f48.error}`);
     if (!r.date && !f48.date) patch.date = today();
     if (Object.keys(patch).length) await api(`/receipts/${id}`, { method: 'PATCH', json: patch });
@@ -294,7 +299,7 @@ async function rcSave(id) {
   if (e.cat != null && +e.cat !== r.categoryId) patch.categoryId = +e.cat;
   if (!Object.keys(patch).length) { KV.open = null; draw(); return; }
   KV.busy = id; draw();
-  try { await api(`/receipts/${id}`, { method: 'PATCH', json: patch }); KV.open = null; delete KV.e[id]; await loadReceipts(); flash('Endringene er lagret'); }
+  try { if (patch.merchant?.trim() && await learn51(id, patch.merchant).catch(() => null)) delete patch.merchant; /* prompt 51: lær butikknavnet */ if (Object.keys(patch).length) await api(`/receipts/${id}`, { method: 'PATCH', json: patch }); KV.open = null; delete KV.e[id]; await loadReceipts(); flash('Endringene er lagret'); }
   catch (err) { haptic('err'); flash(err.message); }
   KV.busy = null; draw();
 }

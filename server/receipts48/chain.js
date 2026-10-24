@@ -15,12 +15,24 @@ import { parseRows48, SYSTEM48 } from './engines/llm.js';
 import { macOcr48 } from './engines/mac-vision.js';
 import { tesseractOcr48 } from './engines/tesseract.js';
 import { geminiParse48 } from './engines/gemini.js';
+import { macHealth48 } from './engines/mac-vision.js';
+import { resolveMerchant51 } from './brreg51.js'; // prompt 51: butikknavn via org.nr. → kjent butikk → modellen
 
 export const STEP_NAMES48 = { A: 'Tolket på enheten', B: 'Enhetens OCR + lokal modell', C: 'Mac Vision + lokal modell', T: 'Tesseract + lokal modell', D: 'Gemini Flash' };
 export const DEVICE_OCR_SOURCES48 = ['ios_vision', 'android_mlkit'];
 // Mac-OCR som ikke svarte, hoppes over i 2 minutter (så hver kvittering ikke venter på samme tidsavbrudd).
-const macDown = { until: 0, why: null };
-export const _resetChain48 = () => { macDown.until = 0; macDown.why = null; };
+// Prompt 51: før bildet sendes, sjekkes /health med kort tidsavbrudd (1,5 s) – svarer ikke verten, merkes Mac-OCR som nede i 5 min
+// i stedet for å vente 30 s på /ocr. Et vellykket helsesvar huskes i 60 s.
+const macDown = { until: 0, why: null, okAt: 0 };
+export const MAC_PROBE_MS51 = 1500;
+export const _resetChain48 = () => { macDown.until = 0; macDown.why = null; macDown.okAt = 0; };
+/** Status for Mac-OCR slik kjeden ser den: {down_until, last_error}. */
+/** Helsesvaret → samme feiltekst som /ocr ville gitt (uten nøkkelen). */
+const probeErr51 = (h, url) => (h.status === 401 || h.status === 403 ? `Mac-OCR avviste forespørselen (${h.status}: ${h.status === 401 ? 'feil nøkkel' : 'serverens IP-adresse er ikke på tillatelseslista'})`
+  : h.configured === false ? (h.error === 'Nøkkelen er ikke satt' ? 'Mac-OCR-nøkkelen er ikke satt (Innstillinger → AI → Mac-OCR)' : 'Mac-OCR-adressen er ikke satt')
+  : /Svarte ikke innen/.test(h.error ?? '') ? `Mac-OCR svarte ikke innen ${MAC_PROBE_MS51 / 1000} s (helsesjekk)`
+  : h.status ? `Mac-OCR svarte ${h.status} på helsesjekken` : `Mac-OCR kan ikke nås på ${url} (${String(h.error ?? '').replace(/^Kan ikke nås \(|\)$/g, '')})`);
+export const macState51 = () => ({ down_until: macDown.until > Date.now() ? new Date(macDown.until).toISOString() : null, last_error: macDown.why });
 const sameTotal = (a, b) => a != null && b != null && Math.abs(a - b) < 0.005;
 
 /** Device-OCR fra klienten → {ocr} | {error}. Godtar prompt 47-kildene (android-mlkit/ios-vision). */
@@ -37,10 +49,11 @@ export function deviceOcr48(x) {
  * Kjører kjeden. → {receipt, confidence, failed_fields, uncertain_fields, errors, warnings, pipeline[], used, engine, provider,
  *   model, label, ocr (beste OCR), compare, seconds}
  */
-export async function runChain48({ image, mime, smallImage = null, deviceOcr = null, deviceParse = null, client = null, categories = [], log = () => {}, signal = null }) {
+export async function runChain48({ image, mime, smallImage = null, deviceOcr = null, deviceParse = null, client = null, categories = [], log = () => {}, signal = null, user = null, receiptId = null }) {
   const cfg = r48Settings();
   const t00 = Date.now();
-  // Tesseract og Gemini får den nedskalerte JPEG-kopien når klienten sendte en (raskere, og HEIC kan leses); Mac-OCR originalen.
+  // Prompt 51: Tesseract og Mac-OCR leser ORIGINALEN (forbehandlet, aldri under 2000 px). Den nedskalerte kopien er bare reserve når
+  // originalen ikke kan leses (HEIC uten libheif) og bildet Gemini får (bare når sperren er av).
   const small = smallImage ?? image, smallMime = smallImage ? 'image/jpeg' : mime;
   const pipeline = [], cands = [];
   let modelDown = null, macOcr = null, macErr = null, tessOcr = null, passed = null;
@@ -59,6 +72,7 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
       const ta = Date.now();
       try {
         const r = await parseRows48(rows, { categories, feedback, model: cfg.textModel, base: cfg.ollamaUrl, timeoutS: cfg.modelTimeoutS, signal });
+        if (r.numCtx) Object.assign(e, { num_ctx: r.numCtx, prompt_tokens_est: r.promptEst, rows_sent: r.rowsSent });
         const v = validateReceipt48(r.data, { ocrText: text, categories });
         e.attempts.push({ attempt, ms: Date.now() - ta, confidence: v.confidence, failed_fields: v.failed_fields });
         cands.push({ step, v, ocr, engine, model: r.model, provider: 'ollama', order: cands.length });
@@ -108,15 +122,27 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
   else if (macDown.until > Date.now()) { macErr = macDown.why; skip('C', `Mac-OCR utilgjengelig (${macDown.why})`); }
   else {
     const t0 = Date.now();
-    try {
+    // Prompt 51: rask helsesjekk før bildet sendes (ikke 30 s venting når verten er nede).
+    if (Date.now() - macDown.okAt > 60_000) {
+      const h = await macHealth48({ url: cfg.macOcrUrl, key: macOcrKey48(), timeoutMs: MAC_PROBE_MS51 });
+      if (h.ok) macDown.okAt = Date.now();
+      else if (h.configured === false || !h.status || h.status >= 500 || h.status === 401 || h.status === 403) {
+        macErr = probeErr51(h, cfg.macOcrUrl);
+        Object.assign(macDown, { until: Date.now() + 5 * 60_000, why: macErr });
+        log('mac-ocr', `utilgjengelig: ${macErr} · prøver igjen om 5 min`);
+      }
+    }
+    if (macErr) entry('C', { status: 'unavailable', engine: 'mac_vision', ms: Date.now() - t0, error: macErr });
+    else try {
       macOcr = await macOcr48(image, mime, { url: cfg.macOcrUrl, key: macOcrKey48(), timeoutS: passed ? Math.min(10, cfg.macOcrTimeoutS) : cfg.macOcrTimeoutS, signal });
       log('mac-ocr', `${macOcr.rows.length} rader · ${macOcr.ms ?? Date.now() - t0} ms`);
     } catch (e) {
       macErr = e.message;
-      if (e.unavailable) Object.assign(macDown, { until: Date.now() + 2 * 60_000, why: e.message });
+      if (e.unavailable) Object.assign(macDown, { until: Date.now() + 2 * 60_000, why: e.message, okAt: 0 });
       log('mac-ocr', `utilgjengelig: ${e.message}`);
     }
-    if (!macOcr) entry('C', { status: 'unavailable', engine: 'mac_vision', ms: Date.now() - t0, error: macErr });
+    if (macErr && !pipeline.some((p) => p.step === 'C')) entry('C', { status: 'unavailable', engine: 'mac_vision', ms: Date.now() - t0, error: macErr });
+    else if (!macOcr) { /* allerede registrert */ }
     else if (passed) entry('C', { status: 'compare', engine: 'mac_vision', ocr_ms: macOcr.ms ?? Date.now() - t0, ms: Date.now() - t0, reason: 'bare OCR for å sammenligne totalen' });
     else if (await modelStep('C', macOcr, 'mac_vision')) passed = 'C';
   }
@@ -128,7 +154,11 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
     else if (!image) skip('T', 'ingen bilde');
     else {
       const t0 = Date.now();
-      try { tessOcr = await tesseractOcr48(small, smallMime); log('tesseract', `${tessOcr.rows.length} rader · ${tessOcr.ms} ms`); }
+      try {
+        tessOcr = await tesseractOcr48(image, mime, { fallback: smallImage ? { buf: smallImage, mime: 'image/jpeg' } : null });
+        const pp = tessOcr.preprocess;
+        log('tesseract', `${tessOcr.rows.length} rader · ${tessOcr.ms} ms${tessOcr.image_size ? ` · ${tessOcr.image_size.join('×')} px` : ''}${pp ? ` · ${[pp.from === 'scan' ? 'fra 1600 px-kopien' : 'original', pp.rotated && 'rotert', pp.perspective && 'perspektiv rettet', pp.cropped && 'beskåret', pp.upscaled && 'skalert opp'].filter(Boolean).join(', ')}` : ''}`);
+      }
       catch (e) { entry('T', { status: 'unavailable', engine: 'tesseract', ms: Date.now() - t0, error: e.message }); log('tesseract', `utilgjengelig: ${e.message}`); }
       if (tessOcr && await modelStep('T', tessOcr, 'tesseract')) passed = 'T';
     }
@@ -196,7 +226,18 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
     }
   }
 
-  const v = pick?.v ?? null;
+  let v = pick?.v ?? null;
+  // Prompt 51 (Del C): butikknavnet – org.nr. i OCR-teksten (lokal kopi av Enhetsregisteret / lært navn) → kjent butikk → modellen.
+  let merchant51 = null;
+  const ocrUsed = pick?.ocr ?? bestOcr;
+  if (v?.receipt) {
+    try {
+      const m = resolveMerchant51({ user, receipt: v.receipt, ocrText: ocrUsed ? ocrText48(ocrUsed) : '', receiptId });
+      merchant51 = { source: m.merchant_source, org_number: m.org_number, detail: m.detail, model_merchant: m.model_merchant };
+      if (m.merchant && m.merchant !== v.receipt.merchant) log('butikk', `${m.merchant} (${m.merchant_source}${m.detail ? `/${m.detail}` : ''}) i stedet for modellens «${m.model_merchant ?? '–'}»`);
+      v = { ...v, receipt: { ...v.receipt, merchant: m.merchant ?? v.receipt.merchant, org_number: m.org_number ?? v.receipt.org_number ?? null } };
+    } catch (e) { log('butikk', `oppslaget feilet: ${e.message}`); }
+  }
   const uncertain = [...new Set([...(v?.failed_fields ?? ['merchant', 'date', 'total', 'items']), ...uncertainExtra])];
   let confidence = v?.confidence ?? 'low';
   if (confidence === 'high' && uncertainExtra.length) confidence = 'medium';
@@ -204,6 +245,33 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
   return {
     receipt: v?.receipt ?? null, confidence, failed_fields: v?.failed_fields ?? [], uncertain_fields: uncertain, errors: v?.errors ?? ['Ingen steg ga et resultat'], warnings: v?.warnings ?? [],
     checks: v?.checks ?? null, pipeline, used: pick?.step ?? null, passed: !!passed && pick?.step === passed, engine: pick?.engine ?? null, provider: pick?.provider ?? null, model: pick?.model ?? null, label,
-    ocr: pick?.ocr ?? bestOcr, compare, macError: macErr, seconds: (Date.now() - t00) / 1000,
+    ocr: ocrUsed, compare, macError: macErr, seconds: (Date.now() - t00) / 1000, merchant51,
   };
+}
+
+/**
+ * Prompt 51: bare OCR (uten modell) – til dokumenter i Glimt-chatten. Mac Vision først (rask helsesjekk, «nede» huskes),
+ * så Tesseract på originalen. → {ocr, engine, error?}
+ */
+export async function bestOcr51(image, mime, { smallImage = null, log = () => {}, signal = null } = {}) {
+  const cfg = r48Settings();
+  let err = null;
+  if (cfg.macOcr && macDown.until <= Date.now()) {
+    let ok = Date.now() - macDown.okAt <= 60_000;
+    if (!ok) {
+      const h = await macHealth48({ url: cfg.macOcrUrl, key: macOcrKey48(), timeoutMs: MAC_PROBE_MS51 });
+      if (h.ok) { macDown.okAt = Date.now(); ok = true; }
+      else { err = probeErr51(h, cfg.macOcrUrl); Object.assign(macDown, { until: Date.now() + 5 * 60_000, why: err }); }
+    }
+    if (ok) {
+      try { const o = await macOcr48(image, mime, { url: cfg.macOcrUrl, key: macOcrKey48(), timeoutS: cfg.macOcrTimeoutS, signal }); log('mac-ocr', `${o.rows.length} rader`); return { ocr: o, engine: 'mac_vision' }; }
+      catch (e) { err = e.message; if (e.unavailable) Object.assign(macDown, { until: Date.now() + 2 * 60_000, why: e.message, okAt: 0 }); }
+    }
+  } else if (cfg.macOcr) err = macDown.why;
+  if (!cfg.tesseract) return { ocr: null, engine: null, error: err ?? 'Tesseract er slått av' };
+  try {
+    const o = await tesseractOcr48(image, mime, { fallback: smallImage ? { buf: smallImage, mime: 'image/jpeg' } : null });
+    log('tesseract', `${o.rows.length} rader · ${o.ms} ms`);
+    return { ocr: o, engine: 'tesseract', ...(err ? { macError: err } : {}) };
+  } catch (e) { return { ocr: null, engine: null, error: [err, e.message].filter(Boolean).join(' · ') }; }
 }

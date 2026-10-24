@@ -53,7 +53,8 @@ import { jobStart, jobUpdate, jobEnd } from './ai-run.js'; // prompt 44: Chat i 
 import { memoryPrompt43 } from './ai-memory43.js'; // prompt 43: AI-minne i systemprompten
 import { saveFile50, deleteFile50, desc50, mountFiles50, visionCaps50, bestVision50, prepareHistory50, stored50, dropImages50, ocrImages50, ocrNote50, receiptChat50, attIds50, RECEIPT_RE50, LIMITS50, kindOf50 } from './chat50.js'; // prompt 50 (SRVCHAT50): vedlegg, miniatyr, vision, kvittering i chat
 import { rankFor41 } from './chat41.js';
-import { externalBlocked48 } from './receipts48/settings.js';
+import { externalBlocked48, r48Settings } from './receipts48/settings.js';
+import { imageIntent51, looksLikeDocument51, documentNote51, readDocument51, visionModel51, textModel51, isMultimodalError51, markNoVision51, friendlyError51, owuiVision51 } from './chat51.js'; // prompt 51 (RCPTSRV51): bilder i chatten
 
 const q = (sql) => db.prepare(sql);
 const isMock = () => process.env.MOCK_DATA === '1' && !fx;
@@ -136,7 +137,8 @@ async function owuiModels(o) {
     const isOllama = m.owned_by === 'ollama' || !!m.ollama;
     const provider = isOllama ? 'ollama' : /gemini/i.test(m.id + (m.name ?? '')) ? 'gemini' : /groq|llama-3\.\d-\d+b-(versatile|instant)/i.test(m.id + (m.name ?? '') + (m.urlIdx ?? '')) ? 'groq' : 'openwebui';
     return { id: m.id, name: m.name || (isOllama ? prettyLocal(m.id) : m.id), kind: isOllama ? 'lokal' : 'sky', provider, size: gb(m.ollama?.size ?? m.size),
-      vision: !!(m.info?.meta?.capabilities?.vision) || VISION_RE.test(m.id), installed: true, via: 'openwebui' };
+      // Prompt 51: Open WebUI sier vision:true for alle modeller som standard – for Ollama-modeller gjelder navnet/familien, så /api/show.
+      vision: isOllama ? (VISION_RE.test(m.id) || (m.ollama?.details?.families ?? []).includes('clip')) : (!!(m.info?.meta?.capabilities?.vision) || VISION_RE.test(m.id)), installed: true, via: 'openwebui' };
   });
 }
 const modelCache = { at: 0, key: '', list: [] };
@@ -146,7 +148,7 @@ export async function listModels() {
   const o = owui(), key = `${o?.url ?? ''}|${ollamaBase()}|${hasGemini()}|${!!secret('groqKey')}`;
   if (modelCache.key === key && Date.now() - modelCache.at < 30_000) return modelCache.list;
   let list = null;
-  if (o) { try { list = await owuiModels(o); } catch { list = null; } }
+  if (o) { try { list = await owuiVision51(await owuiModels(o), ollamaBase(), F, visionCaps50); } catch { list = null; } }
   if (!list) { const local = await directLocal(); list = [...local, ...catalogMissing(local), ...cloudModels()]; }
   else list = [...list, ...catalogMissing(list.filter((m) => m.provider === 'ollama'))];
   Object.assign(modelCache, { at: Date.now(), key, list });
@@ -715,19 +717,46 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
   const wantReceipt50 = hasImg50 && RECEIPT_RE50.test(last50.content ?? '') && !b.noTools && b.imageMode !== 'model';
   const finBlocked50 = wantReceipt50 && externalBlocked48().blocked;
   let readWith50 = null, modelMsgs = history;
-  if (hasImg50 && (b.imageMode === 'ocr' || !m.vision || (finBlocked50 && m.kind === 'sky'))) {
-    const vm = b.imageMode === 'ocr' ? null : bestVision50(await listModels(), rankFor41);
-    const who = (m.kind === 'sky' ? m.name : m.id).replace(/:latest$/, '');
-    if (vm) {
-      readWith50 = { engine: 'vision', model: vm.id, modelName: vm.name, from: m.id, label: m.vision ? `Lest med ${vm.id.replace(/:latest$/, '')} fordi kvitteringer ikke sendes ut av huset` : `Lest med ${vm.id.replace(/:latest$/, '')} fordi ${who} ikke kan se bilder` };
-      m = vm;
-    } else {
-      const o = await ocrImages50(prep50.imageFiles);
-      readWith50 = { engine: 'ocr', model: 'tesseract', from: m.id, label: o.ok ? 'Lest med lokal OCR' : `Kunne ikke lese bildet (${o.error})` };
-      const note = o.ok ? ocrNote50(o.text) : `[Bildet kunne ikke leses: ingen installert modell ser bilder, og lokal OCR ga ingen tekst (${o.error}). Si det kort til brukeren.]`;
-      const { images, ...rest } = last50; void images;
-      modelMsgs = [...history.slice(0, -1), { ...rest, content: `${last50.content ?? ''}\n\n${note}`.trim() }];
+  // Prompt 51 (RCPTSRV51): vei per bilde – kvittering (kjeden), dokument (OCR-rader → tekstmodell), foto (visjonsmodell) eller modellen selv.
+  // Aldri bilder til en modell uten bildestøtte; veien som ble brukt står i readWith (route, label).
+  const intent51 = hasImg50 && !wantReceipt50 ? (b.imageMode === 'ocr' ? 'document' : imageIntent51(last50.content)) : null;
+  const toDocument51 = async (doc, why = null) => {
+    const tm = textModel51(m, await listModels(), { blocked: externalBlocked48().blocked, fallbackId: r48Settings().textModel || 'qwen3:8b' });
+    const from = m.id;
+    m = tm;
+    const { images, ...rest } = last50; void images;
+    modelMsgs = [...history.slice(0, -1), { ...rest, content: `${last50.content ?? ''}\n\n${documentNote51(doc.ocr, doc.engine)}`.trim() }];
+    readWith50 = { route: 'document', engine: 'ocr', ocr_engine: doc.engine, model: tm.id, from, rows: doc.ocr.rows.length,
+      label: `Lest med ${doc.engine === 'mac_vision' ? 'Mac Vision' : 'Tesseract'} + ${tm.id.replace(/:latest$/, '')}${why ? ` (${why})` : ' (dokument)'}` };
+  };
+  if (hasImg50 && !wantReceipt50) {
+    let doc = null;
+    if (intent51 === 'document' || (!m.vision && intent51 !== 'photo')) {
+      doc = await readDocument51(prep50.imageFiles).catch((e) => ({ ok: false, error: e.message }));
+      if (doc.ok && (intent51 === 'document' || looksLikeDocument51(doc.ocr))) await toDocument51(doc);
+      else doc = doc.ok ? doc : null;
     }
+    if (!readWith50 && (!m.vision || (finBlocked50 && m.kind === 'sky'))) {
+      const models51 = await listModels();
+      const vm = visionModel51(models51, () => bestVision50(models51, rankFor41));
+      const who = (m.kind === 'sky' ? m.name : m.id).replace(/:latest$/, '');
+      if (vm) {
+        readWith50 = { route: 'vision', engine: 'vision', model: vm.id, modelName: vm.name, from: m.id, label: `Lest med ${vm.id.replace(/:latest$/, '')} fordi ${who} ikke kan se bilder` };
+        m = vm;
+      } else {
+        // Ingen visjonsmodell: teksten i bildet (OCR) til valgt modell.
+        const o = doc?.ok ? { ok: true, text: doc.ocr.rows.join('\n').slice(0, 12_000) } : await ocrImages50(prep50.imageFiles);
+        readWith50 = { route: 'document', engine: 'ocr', ocr_engine: doc?.engine ?? 'tesseract', model: m.id, from: m.id, label: o.ok ? 'Lest med lokal OCR' : `Kunne ikke lese bildet (${o.error})` };
+        const note = o.ok ? ocrNote50(o.text) : `[Bildet kunne ikke leses: ingen installert modell ser bilder, og lokal OCR ga ingen tekst (${o.error}). Si det kort til brukeren.]`;
+        const { images, ...rest } = last50; void images;
+        modelMsgs = [...history.slice(0, -1), { ...rest, content: `${last50.content ?? ''}\n\n${note}`.trim() }];
+      }
+    }
+    if (!readWith50) readWith50 = { route: 'model', engine: 'vision', model: m.id, from: m.id, label: `${m.name ?? m.id} ser bildet selv` };
+  } else if (hasImg50 && wantReceipt50 && (!m.vision || (finBlocked50 && m.kind === 'sky'))) {
+    // Kvittering: kjeden svarer i strømmen. Feiler den, leses teksten som et dokument (aldri bildet til en modell uten bildestøtte).
+    const { images, ...rest } = last50; void images;
+    modelMsgs = [...history.slice(0, -1), rest];
   }
   if (!m.vision) modelMsgs = modelMsgs.map((x) => { if (!x.images) return x; const { images, ...rest } = x; void images; return rest; });
 
@@ -782,7 +811,7 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
     // Prompt 50: kvittering i chat – samme kvitteringskjede som Finans, svaret er en tabell + «Legg i Finans ›». Ingen språkmodell i skyen.
     if (wantReceipt50 && prep50.imageFiles.length) {
       try {
-        const rc = await receiptChat50(u, prep50.imageFiles[0], { signal: ctrl.signal });
+        const rc = await receiptChat50(u, prep50.imageFiles[0], { signal: ctrl.signal, text: last50.content ?? '' });
         if (rc.ok) {
           await onDelta(rc.markdown);
           const ms = Date.now() - t0, used = ['Kvitteringsleser'];
@@ -792,6 +821,13 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
         }
         console.warn('[chat] kvittering (prompt 50):', rc.error);
       } catch (e) { if (ctrl.signal.aborted) return; console.warn('[chat] kvittering (prompt 50):', e.message); }
+      // Prompt 51: kjeden ga ingen kvittering – les teksten som et dokument (OCR-rader → tekstmodell), aldri bildet til en tekstmodell.
+      if (!m.vision || m.kind === 'sky') {
+        const doc = await readDocument51(prep50.imageFiles, { signal: ctrl.signal }).catch((e) => ({ ok: false, error: e.message }));
+        if (doc.ok) await toDocument51(doc, 'kvitteringen kunne ikke tolkes');
+        else readWith50 = { route: 'document', engine: 'ocr', model: m.id, from: m.id, label: `Kunne ikke lese bildet (${doc.error})` };
+        if (!sse.aborted) await sse.writeSSE({ event: 'meta', data: JSON.stringify({ chatId, model: m.id, modelName: m.name, kind: m.kind, title: chat.title, readWith: readWith50 }) });
+      }
     }
     // Prompt 41: Glimt henter fakta (vær, tid, sol) før modellen svarer. Feil her stopper aldri svaret.
     let facts = [], factUsed = [], sysAll = sys;
@@ -847,13 +883,40 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
       // Open WebUIs eget nettsøk (features.web_search) bare når vårt eget søk ikke ga treff.
       const owuiWeb = !!b.webSearch && !webHits;
       try { r = await runEngine(m, { sys: sysAll, msgs: modelMsgs, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text }); }
-      catch (e) {
+      catch (e0) {
+        let e = e0;
+        // Prompt 51: modellen avviste bildet («does not support multimodal») – lagre det og bytt vei: foto → visjonsmodellen,
+        // ellers OCR-rader → tekstmodellen. Brukeren ser aldri den rå feilen.
+        if (!text && !ctrl.signal.aborted && isMultimodalError51(e) && modelMsgs.some((x) => x.images?.length)) {
+          markNoVision51(m.id, ollamaBase()); modelCache.at = 0;
+          try {
+            const models51 = await listModels();
+            const vm = intent51 !== 'document' ? visionModel51(models51.filter((x) => x.id !== m.id), null) : null;
+            if (vm) {
+              readWith50 = { route: 'vision', engine: 'vision', model: vm.id, modelName: vm.name, from: m.id, switched: true, label: `Lest med ${vm.id.replace(/:latest$/, '')} fordi ${m.id.replace(/:latest$/, '')} ikke kan se bilder` };
+              used41 = vm;
+              r = await runEngine(vm, { sys: sysAll, msgs: modelMsgs, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+            } else {
+              const doc = await readDocument51(prep50.imageFiles, { signal: ctrl.signal });
+              if (!doc.ok) throw Object.assign(new Error(`Bildet kunne ikke leses: ${doc.error}`), { handled51: true });
+              const from = m.id;
+              await toDocument51(doc, `${from.replace(/:latest$/, '')} kan ikke se bilder`);
+              readWith50.switched = true;
+              used41 = m;
+              r = await runEngine(m, { sys: sysAll, msgs: modelMsgs.map((x) => { if (!x.images) return x; const { images, ...rest } = x; void images; return rest; }), s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+            }
+            if (!sse.aborted) await sse.writeSSE({ event: 'meta', data: JSON.stringify({ chatId, model: used41.id, modelName: used41.name, kind: used41.kind, title: chat.title, readWith: readWith50 }) });
+            e = null;
+          } catch (e2) { e = e2; }
+        }
+        if (e) {
         // Prompt 41: Auto – svarer ikke valgt modell (og ingenting er strømmet), prøv neste beste og si det i svaret.
         const next = auto && !text && !ctrl.signal.aborted ? auto.candidates.find((id) => id !== m.id) : null;
         if (!next) throw e;
         used41 = await modelFor(next);
         auto.fallbackFrom = m.id; auto.model = used41.id; auto.modelName = used41.name; auto.label = `${auto.label.split(' · ')[0]} · ${used41.name}`; auto.reason = `${m.name} svarte ikke · bruker ${used41.name}`;
-        r = await runEngine(used41, { sys: sysAll, msgs: modelMsgs, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+        r = await runEngine(used41, { sys: sysAll, msgs: used41.vision ? modelMsgs : modelMsgs.map((x) => { if (!x.images) return x; const { images, ...rest } = x; void images; return rest; }), s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+        }
       }
       const ms = Date.now() - t0;
       const genS = Math.max(0.001, (Date.now() - (first ?? t0)) / 1000);
@@ -870,8 +933,10 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
       jobUpdate(jobId, { status: ctrl.signal.aborted || e.cancelled ? 'cancelled' : 'fail', error: ctrl.signal.aborted || e.cancelled ? 'Avbrutt av bruker' : e.message, ms: Date.now() - t0, step: null,
         ...(tl ? { backend: tl.backend, backendNote: tl.backendNote ?? null, queueMs: tl.queueMs, loadMs: tl.loadMs, attempts: tl.attempts } : {}) });
       if (ctrl.signal.aborted || e.cancelled) { if (text) saveMsgs(text, { model: m.id, stopped: true, used: [...factUsed, ...used], ...metaFacts }); return; }
-      if (text) saveMsgs(text, { model: m.id, error: e.message, used: [...factUsed, ...used], ...metaFacts });
-      await sse.writeSSE({ event: 'error', data: JSON.stringify({ error: e.message, chatId }) });
+      const msg51 = friendlyError51(e.message); // prompt 51: aldri rå Ollama-feil til brukeren
+      if (msg51 !== e.message) console.warn('[chat] modellfeil:', maskSecrets(String(e.message).slice(0, 300)));
+      if (text) saveMsgs(text, { model: m.id, error: msg51, used: [...factUsed, ...used], ...metaFacts });
+      await sse.writeSSE({ event: 'error', data: JSON.stringify({ error: msg51, chatId, ...(isMultimodalError51(e) ? { kode: 'ingen_bildestotte' } : {}) }) });
     }
   });
 });

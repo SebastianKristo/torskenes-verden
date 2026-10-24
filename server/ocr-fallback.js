@@ -160,7 +160,7 @@ export function findStore(text) {
   return first ? tidy(first) : null;
 }
 
-// Brønnøysundregistrene (åpent API): org.nr. → navn. Brukes bare når kjeden ikke ble gjenkjent.
+// Brønnøysundregistrene (åpent API): org.nr. → navn. Prompt 51: brukes ikke lenger av kvitteringene (lokal kopi i receipts48/brreg51.js).
 const brregCache = new Map();
 export async function brregName(org) {
   if (!org || !/^\d{9}$/.test(org)) return null;
@@ -214,21 +214,32 @@ export async function ocrReceipt(image, mime, { lookup = true } = {}) {
     await writeFile(src, image);
     let input = src;
     if (tl.magick && mime !== 'application/pdf') {
-      // Gråtoner, oppskalering av små bilder, støyfjerning, oppretting av skjevhet og adaptiv terskel.
-      const out = join(dir, 'pre.png');
-      const args = [src, '-auto-orient', '-colorspace', 'Gray', '-resize', '1800x1800<', '-despeckle', '-deskew', '40%', '-lat', '31x31-8%', out];
-      try { await run(tl.magick, args, { timeout: 30_000 }); input = out; } catch { /* bruk originalbildet */ }
+      // Prompt 51: samme forbehandling som kjeden (EXIF-rotasjon, perspektiv/beskjæring, lengste side minst 2000 px, gråtoner, skjevhet).
+      const { preprocess51 } = await import('./receipts48/preprocess51.js');
+      const pre = await preprocess51(image, mime, { tools: tl }).catch(() => null);
+      if (pre) { input = join(dir, 'pre51.png'); await writeFile(input, pre.buf); }
+      else {
+        const out = join(dir, 'pre.png');
+        const args = [src, '-auto-orient', '-colorspace', 'Gray', '-resize', '2000x2000<', '-despeckle', '-deskew', '40%', out];
+        try { await run(tl.magick, args, { timeout: 30_000 }); input = out; } catch { /* bruk originalbildet */ }
+      }
     } else if (mime === 'application/pdf') {
       throw Object.assign(new Error('Lokal OCR kan ikke lese PDF uten ImageMagick'), { noRetry: true });
     }
-    const text = await run('tesseract', [input, 'stdout', '-l', 'nor+eng', '--oem', '1', '--psm', '4', '-c', 'preserve_interword_spaces=1'], { timeout: 60_000 })
+    const text = await run('tesseract', [input, 'stdout', '-l', 'nor+eng', '--oem', '1', '--psm', '4', '--dpi', '300', '-c', 'preserve_interword_spaces=1'], { timeout: 90_000 })
       .catch(() => run('tesseract', [input, 'stdout', '-l', 'eng', '--psm', '4'], { timeout: 60_000 }));
     if (!String(text).trim()) throw new Error('Fant ingen tekst i bildet');
     const out = parseReceiptText(text);
-    // Ukjent kjede, men gyldig org.nr.: slå opp navnet i Enhetsregisteret.
-    if (lookup && out.org_number && !CHAINS.some(([re, n]) => n && re.test(text))) {
-      const name = await brregName(out.org_number);
-      if (name) { out.merchant = name; out.confidence.merchant = 0.7; }
+    // Gyldig org.nr.: navnet fra den LOKALE kopien av Enhetsregisteret (prompt 51 – aldri nettkall per kvittering, uansett sperren).
+    // Bare når den lokale kopien ikke finnes ennå og sperren er av (lookup), brukes det åpne API-et som før.
+    if (out.org_number) {
+      const { brregLookup51, brregStatus51 } = await import('./receipts48/brreg51.js');
+      const hit = brregLookup51(out.org_number);
+      if (hit?.display_name) { out.merchant = hit.display_name; out.confidence.merchant = 0.85; }
+      else if (lookup && !brregStatus51().count && !CHAINS.some(([re, n]) => n && re.test(text))) {
+        const name = await brregName(out.org_number);
+        if (name) { out.merchant = name; out.confidence.merchant = 0.7; }
+      }
     }
     return { ...out, engineVersion: tl.tesseract };
   } finally {

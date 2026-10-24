@@ -1,0 +1,23 @@
+/* Prompt 51 (RCPTUI51): merkelapp for kilden til butikknavnet (r51-src) og «Rådata»-seksjonen (r51-raw) i kvitteringsskjemaet.
+   Fargene følger vertens tekstfarge (currentColor), så de passer i Homelab web, FinansHub (Papir/mørk) og PWA-en. */
+.r51-src{display:inline-flex;align-items:center;height:20px;padding:0 8px;margin-left:8px;border-radius:99px;font-size:11px;font-weight:700;letter-spacing:.01em;white-space:nowrap;vertical-align:middle;
+  background:color-mix(in srgb,currentColor 9%,transparent);color:color-mix(in srgb,currentColor 72%,transparent)}
+.r51-src.orgnr{background:color-mix(in srgb,#2f9e6b 16%,transparent);color:#2f9e6b}
+.r51-src.known{background:color-mix(in srgb,#3a7bd5 15%,transparent);color:#3a7bd5}
+.r51-src.model{background:color-mix(in srgb,#c98a1b 17%,transparent);color:#b07612}
+.r51-raw{margin-top:10px;border:1px solid color-mix(in srgb,currentColor 14%,transparent);border-radius:14px;padding:0 14px;min-width:0;font-size:13px}
+.r51-raw>summary{cursor:pointer;font-weight:650;padding:11px 0;list-style:none;overflow-wrap:anywhere;display:flex;align-items:center;gap:8px}
+.r51-raw>summary::-webkit-details-marker{display:none}
+.r51-raw>summary::after{content:'';margin-left:auto;flex:none;width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);opacity:.55;transition:transform .15s}
+.r51-raw[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}
+.r51-raw[open]>summary{border-bottom:1px solid color-mix(in srgb,currentColor 10%,transparent)}
+.r51-body{display:flex;flex-direction:column;gap:10px;padding:10px 0 14px;min-width:0}
+.r51-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px 14px;margin:0}
+.r51-facts div{min-width:0}
+.r51-facts dt{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:color-mix(in srgb,currentColor 58%,transparent)}
+.r51-facts dd{margin:2px 0 0;overflow-wrap:anywhere}
+.r51-rows{margin:0;max-height:340px;overflow:auto;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,currentColor 5%,transparent);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;-webkit-overflow-scrolling:touch}
+.r51-n{color:color-mix(in srgb,currentColor 40%,transparent);user-select:none}
+.r51-note{font-size:12.5px;color:color-mix(in srgb,currentColor 62%,transparent)}
+.p51-src{display:flex;align-items:center;gap:2px;font-size:12px;font-weight:600;color:color-mix(in srgb,currentColor 62%,transparent);margin:0 0 6px}

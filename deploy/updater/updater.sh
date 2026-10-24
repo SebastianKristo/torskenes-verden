@@ -36,6 +36,24 @@
 # Låsen er en fil med PID og tid: død prosess eller eldre enn LOCK_MAX_AGE (30 min, fornyes av hjerteslaget) ryddes.
 # Før start sjekkes ledig disk (MIN_DISK_MB, 3 GB) og minne (MIN_RAM_MB, 1 GB). Updateren stopper/erstatter aldri seg selv
 # midt i en jobb: compose up får aldri «updater», og selvoppdateringen skjer etter at status er «done».
+#
+# Prompt 51 (OPS51): staging-kanal og tilbakerulling med ett trykk – bygget her, med updaterens EGEN konfig (miljøet under).
+# Serveren kan fortsatt bare skrive {id, requestedBy, at, action}; nye action-verdier: 'stage', 'promote', 'discard', 'rollback-image'.
+#  - UPDATE_STAGING=1 (compose-standard): en vanlig oppdatering bygges først som <image>:staging51 fra arkivet updateren selv har
+#    lastet ned, startes som egen container (homelab-os-staging51, ingen porter med mindre STAGING_PORT er satt, bare compose-nettet
+#    <prosjekt>_default – aldri docker-api) mot en kopi av databasene (sqlite3 VACUUM INTO til data/update/staging51/data) med
+#    OPS51_SANDBOX=1 (ingen bakgrunnsjobber). Røyktester: /healthz, /api/ops51/smoke (databasen åpnes og sjekkes), forsiden og en
+#    innlogging som skal avvises. Feiler noe, byttes INGENTING: filene i prosjektmappen er ikke rørt og os kjører som før.
+#    Går alt bra, tas staging-imaget i bruk direkte (ingen ny bygging). For lite minne (STAGING_MIN_RAM_MB) → vanlig oppdatering.
+#  - 'stage': bare bygg og test i staging; containeren blir stående til 'promote' (bytt) eller 'discard' (forkast), maks STAGING_MAX_AGE.
+#    Status: data/update/staging51.json {id, state: running|ready|failed|promoted|discarded, sha, version, at, error, smoke[], port}
+#    og jobbstatus i staging51-job.json (samme form som status.json), logg i staging51-log.txt.
+#  - Forrige image beholdes: etter en vellykket oppdatering merkes imaget som kjørte før som <image>:prev51 (data/update/prev51.json
+#    {sha, version, at}). 'rollback-image' bytter tilbake til det med ett trykk (ingen nedlasting, ingen bygging) og merker versjonen
+#    vi gikk fra som prev51, så samme knapp angrer. Databasen gjenopprettes ikke (som vanlig rollback); filene i prosjektmappen
+#    oppdateres ved neste oppdatering.
+#  Miljø: UPDATE_STAGING (0/1), STAGING_PORT (tom = ingen port), STAGING_BIND (127.0.0.1), STAGING_MIN_RAM_MB (1536),
+#  STAGING_MAX_AGE (86400 s), STAGING_URL (for tester; standard http://homelab-os-staging51:3000).
 set -u
 umask 022
 
@@ -60,7 +78,19 @@ MIN_DISK_MB="${MIN_DISK_MB:-3072}"
 MIN_RAM_MB="${MIN_RAM_MB:-1024}"
 LOCK_MAX_AGE="${LOCK_MAX_AGE:-1800}"
 PRUNE_TIMEOUT="${PRUNE_TIMEOUT:-300}"
-for _v in DOWNLOAD_TIMEOUT BUILD_TIMEOUT UP_TIMEOUT STALL_TIMEOUT WATCH_SLEEP MIN_DISK_MB MIN_RAM_MB LOCK_MAX_AGE PRUNE_TIMEOUT HEALTH_TIMEOUT; do
+# Prompt 51: staging-kanalen (egen konfig, aldri fra serveren).
+UPDATE_STAGING="${UPDATE_STAGING:-0}"
+STAGING_PORT="${STAGING_PORT:-}"
+STAGING_BIND="${STAGING_BIND:-127.0.0.1}"
+STAGING_MIN_RAM_MB="${STAGING_MIN_RAM_MB:-1536}"
+STAGING_MAX_AGE="${STAGING_MAX_AGE:-86400}"
+STAGING_NAME="homelab-os-staging51"
+STAGING_URL="${STAGING_URL:-http://$STAGING_NAME:3000}"
+[[ "$UPDATE_STAGING" =~ ^[01]$ ]] || UPDATE_STAGING=0
+[ -z "$STAGING_PORT" ] || [[ "$STAGING_PORT" =~ ^[0-9]{2,5}$ ]] || { printf 'Ugyldig STAGING_PORT\n' >&2; exit 1; }
+[[ "$STAGING_BIND" =~ ^[0-9.]{7,15}$ ]] || { printf 'Ugyldig STAGING_BIND\n' >&2; exit 1; }
+[[ "$STAGING_URL" =~ ^https?://[A-Za-z0-9._:-]+$ ]] || { printf 'Ugyldig STAGING_URL\n' >&2; exit 1; }
+for _v in DOWNLOAD_TIMEOUT BUILD_TIMEOUT UP_TIMEOUT STALL_TIMEOUT WATCH_SLEEP MIN_DISK_MB MIN_RAM_MB LOCK_MAX_AGE PRUNE_TIMEOUT HEALTH_TIMEOUT STAGING_MIN_RAM_MB STAGING_MAX_AGE; do
   [[ "${!_v}" =~ ^[0-9]{1,7}$ ]] || { printf 'Ugyldig %s\n' "$_v" >&2; exit 1; }
 done
 [ "$WATCH_SLEEP" -ge 1 ] || WATCH_SLEEP=1
@@ -126,8 +156,10 @@ write_status() { # state step [error]
       code:(if $code=="" then null else $code end), fromVersion:(if $fromVersion=="" then null else $fromVersion end),
       attempt:($attempt|tonumber),
       resources:(if $disk=="" and $ram=="" then null else {diskFreeMb:(if $disk=="" then null else ($disk|tonumber) end), ramFreeMb:(if $ram=="" then null else ($ram|tonumber) end)} end)}' >"$UPD/.status.tmp" \
-    && mv -f "$UPD/.status.tmp" "$UPD/status.json"
+    && mv -f "$UPD/.status.tmp" "$UPD/$STATUS_NAME"
 }
+# Prompt 51: 'stage' skriver jobbstatusen til staging51-job.json (status.json gjelder bare det som faktisk kjører).
+STATUS_NAME="status.json"
 set_state() { CUR_STATE="$1"; CUR_STEP="$2"; STUCK_SINCE=""; PROGRESS_S=$(date +%s); write_status "$1" "$2"; }
 
 PROFILE=()
@@ -336,11 +368,23 @@ run_job() {
   JOB_ID="$1"; STARTED=$(now_ms); FINISHED=""; SHA=""; VERSION=""; ACTION="${3:-update}"
   CUR_STATE=""; CUR_STEP=""; PROGRESS_S=""; LAST_LINE=""; STUCK_SINCE=""; CODE=""; DISK_MB=""; RAM_MB=""; ATTEMPT=1; CTRL=""
   local TARGET="${4:-}" RESTORE="${5:-}" FROM_SHA="" BACKUP="" RESTORED="" rc
+  local PIN_TGZ="" PREBUILT="" OLD_IMG_ID="" PROMOTE=""
   FROM_VERSION=""
   : >"$LOG"
   seed_history
   write_versions
   FROM_SHA=$(history_entries | jq -r '.[0].sha // empty'); FROM_VERSION=$(history_entries | jq -r '.[0].version // empty')
+  # Prompt 51: «bytt til versjonen i staging» (imagenavnene leses fra vår egen compose-fil).
+  if [ "$ACTION" = promote ]; then
+    PROMOTE=1; ACTION=update; set_images
+    local pst psha
+    pst=$(jq -r '.state // empty' "$STAGING_FILE" 2>/dev/null); psha=$(jq -r '.sha // empty' "$STAGING_FILE" 2>/dev/null)
+    if [ "$pst" != ready ] || [[ ! "$psha" =~ ^[0-9a-f]{40}$ ]] || [ ! -f "$SDIR/src.tgz" ] || ! docker image inspect "$STAGING_IMG" >/dev/null 2>&1; then
+      fail "Ingen versjon er klar i staging (kjør «Prøv i staging» på nytt)."; return
+    fi
+    SHA="$psha"; PIN_TGZ="$SDIR/src.tgz"
+    log "Bytter til versjonen i staging ($psha) – samme image som ble røyktestet."
+  fi
   if [ "$ACTION" = rollback ]; then
     log "Tilbakerulling $JOB_ID startet (forespurt av ${2:-ukjent}). Repo $UPDATE_REPO, prosjekt $PROJECT, mappe $HOST_DIR."
   else
@@ -367,10 +411,15 @@ run_job() {
     SHA=$(history_entries | jq -r '.[1].sha // empty')
     [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { SHA=""; fail "Fant ingen tidligere versjon å gå tilbake til."; return; }
     log "Går tilbake til $SHA"
+  elif [ -n "$PIN_TGZ" ]; then
+    set_state downloading "Henter versjonen fra staging"
   else
     set_state downloading "Laster ned siste versjon"
   fi
   TMPD=$(mktemp -d "${TMPDIR:-/tmp}/homelab-update.XXXXXX") || { fail "Kunne ikke lage midlertidig mappe."; return; }
+  if [ -n "$PIN_TGZ" ]; then
+    cp -f "$PIN_TGZ" "$TMPD/src.tgz" 2>>"$LOG" || { fail "Kunne ikke lese arkivet fra staging."; return; }
+  else
   if [ "$ACTION" != rollback ]; then
   SHA=$(curl -fsSL --max-time 30 -H 'Accept: application/vnd.github+json' -H 'User-Agent: homelab-updater' \
     "https://api.github.com/repos/$UPDATE_REPO/commits/$UPDATE_BRANCH" 2>>"$LOG" | jq -r '.sha // empty' 2>>"$LOG")
@@ -386,6 +435,7 @@ run_job() {
     124) fail_code timeout "Nedlastingen brukte mer enn $(( DOWNLOAD_TIMEOUT / 60 )) min og ble stoppet. Ingenting er endret."; return ;;
     *) fail_code network "Nedlastingen feilet. Ingenting er endret."; return ;;
   esac
+  fi
   mkdir "$TMPD/src"
   tar -xzf "$TMPD/src.tgz" -C "$TMPD/src" --strip-components=1 --no-same-owner 2>>"$LOG" || { fail "Kunne ikke pakke ut arkivet."; return; }
   local SRC="$TMPD/src"
@@ -395,6 +445,28 @@ run_job() {
   log "Versjon i arkivet: ${VERSION:-ukjent}"
   # Prompt 44: databaseskjemaet til versjonen (DB_SCHEMA i server/system-update.js), lagres i historikken.
   DBSCHEMA=$(sed -n -E 's/^export const DB_SCHEMA = ([0-9]{1,6}).*/\1/p' "$SRC/server/system-update.js" 2>/dev/null | head -n 1)
+
+  # Prompt 51: staging FØR noe kopieres inn – feiler røyktestene, er prosjektmappen og os urørt.
+  set_images
+  if [ "$ACTION" = stage ] || { [ "$ACTION" = update ] && [ "$UPDATE_STAGING" = 1 ] && [ -z "$PIN_TGZ" ]; }; then
+    run_staging "$SRC"; rc=$?
+    case "$rc" in
+      0) PREBUILT=1 ;;
+      2) ;;   # hoppet over (for lite minne / mangler sqlite3) → vanlig oppdatering
+      *) return ;;
+    esac
+    if [ "$ACTION" = stage ]; then
+      mkdir -p "$SDIR" && cp -f "$TMPD/src.tgz" "$SDIR/src.tgz" 2>>"$LOG" || { staging_fail "Kunne ikke lagre arkivet for staging."; return; }
+      write_staging ready
+      FINISHED=$(now_ms)
+      log "Klar i staging: ${VERSION:-ukjent versjon} (${SHA:0:7}). Trykk «Bytt» for å ta den i bruk, eller «Forkast»."
+      write_status done "Klar i staging"
+      cleanup_tmp; trim_log
+      return 0
+    fi
+  fi
+  [ -n "$PIN_TGZ" ] && PREBUILT=1
+  if [ -n "$PREBUILT" ]; then docker rm -f "$STAGING_NAME" >>"$LOG" 2>&1 || true; fi
 
   # 2. Kopier inn. .env, data/ og proton/ fjernes fra kopien og utelates i tillegg (bare på toppnivå: server/data er kode).
   rm -rf "$SRC/.env" "$SRC/data" "$SRC/proton"
@@ -411,10 +483,19 @@ run_job() {
   PROFILE=()
   local services=(os)
   if grep -qE '^CLOUDFLARE_TUNNEL_TOKEN=.+' "$HOST_DIR/.env" 2>/dev/null; then PROFILE=(--profile tunnel); services=(os cloudflared); fi
-  set_state building "Bygger ny versjon"
+  # Prompt 51: imaget som kjører nå (id), så det kan beholdes som <image>:prev51 når den nye versjonen svarer.
+  OLD_IMG_ID=$(docker image inspect -f '{{.Id}}' "$IMG" 2>/dev/null | head -n 1); [[ "$OLD_IMG_ID" =~ ^sha256:[0-9a-f]{64}$ ]] || OLD_IMG_ID=""
   compose_argv
+  if [ -n "$PREBUILT" ]; then
+    set_state building "Tar i bruk versjonen fra staging"
+    log "docker tag $STAGING_IMG $IMG (røyktestet i staging, ingen ny bygging)"
+    docker tag "$STAGING_IMG" "$IMG" >>"$LOG" 2>&1; rc=$?
+    [ "$rc" = 0 ] || { fail "Kunne ikke ta i bruk imaget fra staging. Den gamle versjonen kjører videre, men de nye filene er allerede kopiert inn i $HOST_DIR."; return; }
+  else
+  set_state building "Bygger ny versjon"
   log "docker compose ${PROFILE[*]} build os"
   step_run "$BUILD_TIMEOUT" "${COMPOSE[@]}" build os; rc=$?
+  fi
   if [ "$rc" != 0 ]; then
     local cause; cause=$(guess_cause)
     case "$rc" in
@@ -488,6 +569,15 @@ run_job() {
     write_history "$(printf '%s' "$h" | jq -c --argjson e "$ENTRY" '[$e] + [.[] | select(.sha != $e.sha)]')"
   fi
   write_versions
+  # Prompt 51: forrige image beholdes (tilbakerulling med ett trykk), og staging ryddes etter et bytte.
+  if [ -n "$OLD_IMG_ID" ] && [[ "$FROM_SHA" =~ ^[0-9a-f]{40}$ ]] && [ "$FROM_SHA" != "$SHA" ]; then
+    if docker tag "$OLD_IMG_ID" "$PREV_IMG" >>"$LOG" 2>&1; then write_prev "$FROM_SHA" "$FROM_VERSION"; log "Forrige versjon (${FROM_VERSION:-${FROM_SHA:0:7}}) er beholdt som $PREV_IMG."; fi
+  fi
+  if [ -n "$PREBUILT" ]; then
+    write_staging promoted
+    docker image rm "$STAGING_IMG" >>"$LOG" 2>&1 || true
+    rm -rf "$SDIR"
+  fi
   [ -n "$RESTORED" ] && log "update.rollback to=${VERSION:-?} restore=true result=ok"
   [ "$ACTION" = rollback ] && [ -z "$RESTORED" ] && log "update.rollback to=${VERSION:-?} restore=false result=ok"
   log "Ferdig: ${VERSION:-ukjent versjon} (${SHA:0:7})."
@@ -639,6 +729,187 @@ self_update() {
     || log "Klarte ikke å starte hjelpecontaineren for selvoppdatering (ikke kritisk)."
 }
 
+# ---------- Prompt 51 (OPS51): staging-kanal og tilbakerulling med ett trykk ----------
+# Alt her bestemmes av updateren: imagenavnet leses fra vår egen docker-compose.yml, sha/versjon fra egne filer.
+SDIR="$UPD/staging51"
+STAGING_FILE="$UPD/staging51.json"
+PREV_FILE="$UPD/prev51.json"
+IMG="homelab-os:local"; STAGING_IMG="homelab-os:staging51"; PREV_IMG="homelab-os:prev51"; SMOKE_JSON='[]'; SMOKE_FAIL=""
+set_images() {
+  local img
+  img=$(compose config --format json 2>/dev/null | jq -r '.services.os.image // empty' 2>/dev/null | head -n 1)
+  [[ "$img" =~ ^[a-z0-9][a-z0-9._/-]{0,127}:[A-Za-z0-9._-]{1,64}$ ]] || img="homelab-os:local"
+  IMG="$img"; STAGING_IMG="${img%:*}:staging51"; PREV_IMG="${img%:*}:prev51"
+}
+write_staging() { # state [feil]
+  jq -n --arg id "$JOB_ID" --arg state "$1" --arg error "${2:-}" --arg sha "$SHA" --arg version "$VERSION" --arg port "$STAGING_PORT" \
+    --argjson smoke "${SMOKE_JSON:-[]}" --argjson at "$(now_ms)" \
+    '{id:$id, state:$state, sha:(if $sha=="" then null else $sha end), version:(if $version=="" then null else $version end), at:$at,
+      error:(if $error=="" then null else $error end), smoke:$smoke, port:(if $port=="" then null else ($port|tonumber) end)}' >"$UPD/.staging51.tmp" 2>/dev/null \
+    && mv -f "$UPD/.staging51.tmp" "$STAGING_FILE"
+}
+write_prev() { # sha versjon
+  jq -n --arg sha "$1" --arg version "${2:-}" --arg image "$PREV_IMG" --argjson at "$(now_ms)" \
+    '{sha:$sha, version:(if $version=="" then null else $version end), image:$image, at:$at}' >"$UPD/.prev51.tmp" 2>/dev/null && mv -f "$UPD/.prev51.tmp" "$PREV_FILE"
+}
+smoke_add() { # navn ok(1|tom) detalj
+  SMOKE_JSON=$(jq -c --arg n "$1" --arg ok "${2:-}" --arg d "${3:-}" '. + [{name:$n, ok:($ok=="1"), detail:(if $d=="" then null else $d end)}]' <<<"${SMOKE_JSON:-[]}" 2>/dev/null || echo '[]')
+  write_staging running
+}
+staging_fail() { # melding
+  docker rm -f "$STAGING_NAME" >>"$LOG" 2>&1 || true
+  write_staging failed "$1"
+  fail_code staging "$1 Ingenting er byttet – ${FROM_VERSION:-den gamle versjonen} kjører som før."
+}
+# Røyktester mot staging-containeren. → 0 ok, ellers 1 med SMOKE_FAIL.
+smoke_staging() {
+  SMOKE_FAIL=""
+  local deadline=$(( $(date +%s) + HEALTH_TIMEOUT )) ok="" body code
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    if curl -fsS --max-time 3 "$STAGING_URL/healthz" >/dev/null 2>&1; then ok=1; break; fi
+    [ "$(docker inspect -f '{{.State.Running}}' "$STAGING_NAME" 2>/dev/null)" = false ] && break
+    sleep "$HEALTH_SLEEP"
+  done
+  smoke_add "Svarer (/healthz)" "$ok"
+  [ -n "$ok" ] || { SMOKE_FAIL="den nye versjonen svarte ikke innen $HEALTH_TIMEOUT sekunder"; return 1; }
+  body=$(curl -fsS --max-time 30 "$STAGING_URL/api/ops51/smoke" 2>/dev/null || true)
+  if printf '%s' "$body" | jq -e '.ok == true' >/dev/null 2>&1; then
+    smoke_add "Databasen (kopi)" 1 "$(printf '%s' "$body" | jq -r '"\(.tables // "?") tabeller · integritet \(.integrity // "?")"' 2>/dev/null | head -c 120)"
+  else
+    smoke_add "Databasen (kopi)" "" "$(printf '%s' "$body" | jq -r '.error // empty' 2>/dev/null | head -c 120)"
+    SMOKE_FAIL="databasesjekken mot kopien feilet"; return 1
+  fi
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$STAGING_URL/" 2>/dev/null || true)
+  if [[ "$code" =~ ^(200|301|302|303|307|308)$ ]]; then smoke_add "Forsiden" 1 "HTTP $code"; else smoke_add "Forsiden" "" "HTTP ${code:-ingen}"; SMOKE_FAIL="forsiden svarte ${code:-ikke}"; return 1; fi
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Content-Type: application/json' --data '{"username":"ops51-roeyktest","password":"feil-passord-51"}' "$STAGING_URL/api/login" 2>/dev/null || true)
+  if [[ "$code" =~ ^4[0-9][0-9]$ ]]; then smoke_add "Innlogging avviser feil passord" 1 "HTTP $code"; else smoke_add "Innlogging avviser feil passord" "" "HTTP ${code:-ingen}"; SMOKE_FAIL="innloggingen svarte ${code:-ikke} på feil passord"; return 1; fi
+  return 0
+}
+# Bygger og røyktester en versjon i staging. → 0 ok (imaget $STAGING_IMG er klart), 1 feilet (fail er kalt), 2 hoppet over.
+run_staging() { # kildemappe
+  local src="$1" rc f n cause
+  if [ "$ACTION" != stage ] && [ -n "$RAM_MB" ] && [ "$RAM_MB" -lt "$STAGING_MIN_RAM_MB" ]; then
+    log "Staging hoppes over: $RAM_MB MB ledig minne (krav $STAGING_MIN_RAM_MB MB). Vanlig oppdatering."; return 2
+  fi
+  if ! command -v sqlite3 >/dev/null 2>&1; then
+    [ "$ACTION" = stage ] && { fail_code staging "sqlite3 mangler i updateren. Oppdater Nordlys én gang (updateren bygges da på nytt) og prøv igjen."; return 1; }
+    log "Staging hoppes over: sqlite3 mangler i updateren (bygges på nytt etter denne oppdateringen)."; return 2
+  fi
+  SMOKE_JSON='[]'
+  write_staging running
+  set_state building "Bygger ny versjon i staging"
+  log "docker build -t $STAGING_IMG (staging, fra arkivet updateren selv lastet ned)"
+  step_run "$BUILD_TIMEOUT" docker build -t "$STAGING_IMG" "$src"; rc=$?
+  if [ "$rc" != 0 ]; then
+    cause=$(guess_cause)
+    case "$rc" in
+      130) write_staging failed "Avbrutt"; fail_code cancelled "Avbrutt under byggingen i staging. Ingenting er byttet." ;;
+      124) staging_fail "Bygget i staging brukte mer enn $(( BUILD_TIMEOUT / 60 )) min.${cause:+ $(cause_text "$cause")}" ;;
+      *) staging_fail "Bygget i staging feilet.${cause:+ $(cause_text "$cause")}" ;;
+    esac
+    return 1
+  fi
+  set_state building "Kopierer databasen til staging"
+  rm -rf "$SDIR/data"; mkdir -p "$SDIR/data/uploads" || { staging_fail "Kunne ikke lage $SDIR."; return 1; }
+  for f in "$HOST_DIR"/data/*.db; do
+    [ -f "$f" ] || continue
+    n=$(basename "$f"); [[ "$n" =~ ^[A-Za-z0-9._-]{1,80}\.db$ ]] || continue
+    # VACUUM INTO gir en konsistent kopi mens os skriver (WAL). Originalen åpnes bare for lesing.
+    timeout -k 10 300 sqlite3 -readonly "$f" ".timeout 10000" "VACUUM INTO '$SDIR/data/$n'" >>"$LOG" 2>&1 \
+      || { staging_fail "Kunne ikke kopiere databasen $n til staging."; return 1; }
+  done
+  chown -R "$(stat -c %u:%g "$HOST_DIR/data")" "$SDIR" 2>/dev/null || true
+  docker rm -f "$STAGING_NAME" >/dev/null 2>&1 || true
+  local pub=()
+  [ -n "$STAGING_PORT" ] && pub=(-p "$STAGING_BIND:$STAGING_PORT:3000")
+  set_state building "Starter ny versjon i staging"
+  # Bare compose-nettet <prosjekt>_default (ikke docker-api), ingen bakgrunnsjobber, ingen Docker-proxy, ingen ntfy.
+  log "docker run $STAGING_NAME ($STAGING_IMG) mot kopien i $SDIR/data${STAGING_PORT:+, port $STAGING_BIND:$STAGING_PORT}"
+  docker run -d --name "$STAGING_NAME" --label nordlys.staging51=1 --restart no --network "${PROJECT}_default" --env-file "$HOST_DIR/.env" \
+    -e DATA_DIR=/data -e PORT=3000 -e OPS51_SANDBOX=1 -e BACKUP_DIR=/data/system-backups -e DOCKER_HOST=tcp://127.0.0.1:9 -e NTFY_URL= -e NTFY_TOKEN= \
+    -v "$SDIR/data:/data" "${pub[@]}" "$STAGING_IMG" >>"$LOG" 2>&1 || { staging_fail "Kunne ikke starte staging-containeren."; return 1; }
+  set_state building "Røyktester i staging"
+  if ! smoke_staging; then
+    log "Staging-loggen (siste linjer):"; docker logs --tail 40 "$STAGING_NAME" >>"$LOG" 2>&1 || true
+    staging_fail "Røyktestene i staging feilet: $SMOKE_FAIL."; return 1
+  fi
+  log "Staging: alle røyktester er grønne."
+  return 0
+}
+# 'discard': stopp og rydd staging (container, image-taggen, datakopien). Rører aldri os.
+discard_staging() { # id
+  JOB_ID="$1"; SHA=$(jq -r '.sha // empty' "$STAGING_FILE" 2>/dev/null); VERSION=$(jq -r '.version // empty' "$STAGING_FILE" 2>/dev/null)
+  [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || SHA=""; semver_ok "$VERSION" || VERSION=""
+  SMOKE_JSON=$(jq -c '.smoke // [] | if type=="array" then . else [] end' "$STAGING_FILE" 2>/dev/null || echo '[]')
+  set_images
+  docker rm -f "$STAGING_NAME" >>"$LOG" 2>&1 || true
+  docker image rm "$STAGING_IMG" >>"$LOG" 2>&1 || true
+  rm -rf "$SDIR"
+  write_staging discarded
+  log "Staging forkastet ($1)."
+}
+# Forkaster staging som har stått klar lenger enn STAGING_MAX_AGE (bruker minne).
+expire_staging() {
+  local st at
+  st=$(jq -r '.state // empty' "$STAGING_FILE" 2>/dev/null); at=$(jq -r '(.at // 0) | numbers | floor' "$STAGING_FILE" 2>/dev/null || echo 0)
+  [[ "$at" =~ ^[0-9]{1,15}$ ]] || at=0
+  [ "$st" = ready ] && [ $(( $(date +%s) - at / 1000 )) -gt "$STAGING_MAX_AGE" ] || return 0
+  say "Staging har stått klar i over $(( STAGING_MAX_AGE / 3600 )) t – forkaster."
+  discard_staging "expired-$(date +%s)"
+}
+# 'rollback-image': tilbake til <image>:prev51 med ett trykk. Ingen nedlasting, ingen bygging. Svarer den ikke, settes
+# imaget vi kom fra tilbake. Versjonen vi går fra blir ny prev51, så samme knapp angrer.
+run_rollback_image() { # id hvem
+  JOB_ID="$1"; STARTED=$(now_ms); FINISHED=""; SHA=""; VERSION=""; ACTION=rollback
+  CUR_STATE=""; CUR_STEP=""; PROGRESS_S=""; LAST_LINE=""; STUCK_SINCE=""; CODE=""; DISK_MB=""; RAM_MB=""; ATTEMPT=1; CTRL=""
+  local psha pver cur_id rc FROM_SHA
+  : >"$LOG"
+  seed_history
+  FROM_SHA=$(history_entries | jq -r '.[0].sha // empty'); FROM_VERSION=$(history_entries | jq -r '.[0].version // empty')
+  set_images
+  log "Tilbakerulling med ett trykk $JOB_ID (forespurt av ${2:-ukjent}). Prosjekt $PROJECT, image $PREV_IMG."
+  psha=$(jq -r '.sha // empty' "$PREV_FILE" 2>/dev/null); pver=$(jq -r '.version // empty' "$PREV_FILE" 2>/dev/null)
+  semver_ok "$pver" || pver=""
+  set_state restarting "Går tilbake til ${pver:-forrige versjon}"
+  [[ "$psha" =~ ^[0-9a-f]{40}$ ]] || { fail "Updateren har ikke tatt vare på forrige versjon ennå."; return; }
+  [ "$psha" != "$FROM_SHA" ] || { fail "Versjon ${pver:-${psha:0:7}} kjører allerede."; return; }
+  docker image inspect "$PREV_IMG" >/dev/null 2>&1 || { fail "Imaget for forrige versjon ($PREV_IMG) finnes ikke lenger. Bruk «Tidligere versjoner»."; return; }
+  cur_id=$(docker image inspect -f '{{.Id}}' "$IMG" 2>/dev/null | head -n 1); [[ "$cur_id" =~ ^sha256:[0-9a-f]{64}$ ]] || cur_id=""
+  PROFILE=(); local services=(os)
+  if grep -qE '^CLOUDFLARE_TUNNEL_TOKEN=.+' "$HOST_DIR/.env" 2>/dev/null; then PROFILE=(--profile tunnel); services=(os cloudflared); fi
+  compose_argv
+  docker tag "$PREV_IMG" "$IMG" >>"$LOG" 2>&1 || { fail "Kunne ikke bytte image. Ingenting er endret."; return; }
+  log "docker compose ${PROFILE[*]} up -d --no-deps ${services[*]} ($PREV_IMG → $IMG)"
+  step_run "$UP_TIMEOUT" "${COMPOSE[@]}" up -d --no-deps "${services[@]}"; rc=$?
+  if [ "$rc" != 0 ] || ! wait_healthy; then
+    CODE=health
+    if [ -n "$cur_id" ]; then
+      log "Forrige versjon svarte ikke. Setter tilbake imaget vi kom fra."
+      docker tag "$cur_id" "$IMG" >>"$LOG" 2>&1 && timeout -k 20 "$UP_TIMEOUT" "${COMPOSE[@]}" up -d --no-deps "${services[@]}" >>"$LOG" 2>&1 && wait_healthy \
+        && { SHA="$FROM_SHA"; VERSION="$FROM_VERSION"; fail "${pver:-Forrige versjon} svarte ikke innen $HEALTH_TIMEOUT sekunder. Gikk automatisk tilbake · kjører ${FROM_VERSION:-versjonen} som før."; return; }
+    fi
+    fail "${pver:-Forrige versjon} svarte ikke, og tilbakegangen svarte heller ikke. Kjør update.sh fra Proxmox."; return
+  fi
+  CODE=""; SHA="$psha"; VERSION="$pver"; FINISHED=$(now_ms)
+  # Bytt: versjonen vi gikk fra blir «forrige», så samme knapp angrer.
+  if [ -n "$cur_id" ] && [[ "$FROM_SHA" =~ ^[0-9a-f]{40}$ ]]; then docker tag "$cur_id" "$PREV_IMG" >>"$LOG" 2>&1 && write_prev "$FROM_SHA" "$FROM_VERSION"; else rm -f "$PREV_FILE"; fi
+  jq -n --arg sha "$SHA" --arg version "$VERSION" --argjson at "$FINISHED" '{sha:$sha, version:(if $version=="" then null else $version end), at:$at}' \
+    >"$UPD/.installed.tmp" && mv -f "$UPD/.installed.tmp" "$UPD/installed.json"
+  local h ENTRY; h=$(history_entries)
+  ENTRY=$(jq -cn --arg sha "$SHA" --arg version "$VERSION" --argjson at "$FINISHED" '{sha:$sha, version:(if $version=="" then null else $version end), at:$at, dbSchema:null}')
+  write_history "$(printf '%s' "$h" | jq -c --argjson e "$ENTRY" '[$e] + [.[] | select(.sha != $e.sha)]')"
+  write_versions
+  log "update.rollback-image to=${VERSION:-?} from=${FROM_VERSION:-?} result=ok"
+  log "Ferdig: ${VERSION:-forrige versjon} (${SHA:0:7}). Filene i $HOST_DIR oppdateres ved neste oppdatering."
+  write_status done "Ferdig"
+  trim_log
+  return 0
+}
+write_config51() {
+  jq -n --arg st "$UPDATE_STAGING" --arg port "$STAGING_PORT" --argjson ram "$STAGING_MIN_RAM_MB" --argjson at "$(now_ms)" \
+    '{staging:($st=="1"), stagingPort:(if $port=="" then null else ($port|tonumber) end), minRamMb:$ram, at:$at}' >"$UPD/.config51.tmp" 2>/dev/null && mv -f "$UPD/.config51.tmp" "$UPD/config51.json"
+}
+
 # ---------- Hovedløkke ----------
 cd "$HOST_DIR" || die "Kan ikke gå til $HOST_DIR."
 export PWD="$HOST_DIR"   # docker-compose.yml bruker ${PWD} for updaterens egen montering
@@ -681,14 +952,28 @@ case "$prev_state" in downloading|building|restarting)
   CODE=""
   ;;
 esac
-say "Klar. Prosjekt $PROJECT i $HOST_DIR, repo $UPDATE_REPO ($UPDATE_BRANCH)."
+# Prompt 51: en staging-jobb som var i gang er også avbrutt (containeren ryddes), og konfigen vår vises i appen (bare lesing).
+SLOG="$UPD/staging51-log.txt"; MAIN_LOG="$LOG"
+case "$(jq -r '.state // empty' "$UPD/staging51-job.json" 2>/dev/null)" in downloading|building|restarting)
+  STATUS_NAME=staging51-job.json; LOG="$SLOG"
+  JOB_ID=$(jq -r '.id // empty' "$UPD/staging51-job.json"); STARTED=$(jq -r '.startedAt // empty' "$UPD/staging51-job.json"); FINISHED=$(now_ms); ACTION=stage
+  SHA=$(jq -r '.sha // empty' "$UPD/staging51-job.json"); VERSION=$(jq -r '.version // empty' "$UPD/staging51-job.json")
+  CODE=interrupted; write_status failed "Avbrutt" "Staging ble avbrutt fordi updateren startet på nytt. Prøv igjen."; CODE=""
+  docker rm -f "$STAGING_NAME" >/dev/null 2>&1 || true
+  SMOKE_JSON='[]'; write_staging failed "Avbrutt fordi updateren startet på nytt."
+  STATUS_NAME=status.json; LOG="$MAIN_LOG"; ACTION=update
+  ;;
+esac
+STAGE_LAST_ID=$(jq -r '.id // empty' "$UPD/staging51-job.json" 2>/dev/null || true)
+write_config51
+say "Klar. Prosjekt $PROJECT i $HOST_DIR, repo $UPDATE_REPO ($UPDATE_BRANCH)${UPDATE_STAGING:+, staging $([ "$UPDATE_STAGING" = 1 ] && echo på || echo av)}."
 write_versions
 [ -n "${TAGS_ONCE:-}" ] && refresh_tags
 
 while :; do
   if [ -f "$UPD/request.json" ]; then
     id=$(jq -r 'if type=="object" then (.id // empty) else empty end' "$UPD/request.json" 2>/dev/null | head -c 100 || true)
-    if [ -n "$id" ] && [ "$id" != "$LAST_ID" ]; then
+    if [ -n "$id" ] && [ "$id" != "$LAST_ID" ] && [ "$id" != "$STAGE_LAST_ID" ]; then
       LAST_ID="$id"
       if [[ ! "$id" =~ ^[A-Za-z0-9-]{1,64}$ ]]; then
         say "Ignorerer forespørsel med ugyldig id."
@@ -696,7 +981,7 @@ while :; do
         at=$(jq -r '(.at // 0) | numbers | floor' "$UPD/request.json" 2>/dev/null || true); [[ "$at" =~ ^[0-9]{1,15}$ ]] || at=0
         by=$(jq -r '(.requestedBy // "") | strings' "$UPD/request.json" 2>/dev/null | tr -cd 'A-Za-z0-9._@-' | head -c 64)
         act=$(jq -r '(.action // "update") | strings' "$UPD/request.json" 2>/dev/null | head -c 20)
-        case "$act" in update|rollback|docker-setup|retry|abort|prune) ;; *) act="" ;; esac
+        case "$act" in update|rollback|docker-setup|retry|abort|prune|stage|promote|discard|rollback-image) ;; *) act="" ;; esac
         # Prompt 44: target (bare semver, slås opp i updaterens egen liste) og restoreBackup (bare true/false).
         tgt=$(jq -r 'if (.target|type)=="string" then .target else "" end' "$UPD/request.json" 2>/dev/null | head -c 20)
         if [ -n "$tgt" ] && ! semver_ok "$tgt"; then say "Ignorerer forespørsel $id med ugyldig target."; act=""; fi
@@ -711,6 +996,17 @@ while :; do
           say "Ingen jobb kjører – ingenting å avbryte ($id)."
         elif [ "$act" = prune ]; then
           say "Rydder gamle bilder ($id)."; run_prune "$id"; trim_log
+        elif [ "$act" = stage ]; then
+          # Prompt 51: bygg og røyktest i staging. Egen status- og loggfil; os og status.json røres ikke.
+          say "Prøver ny versjon i staging ($id)."
+          STATUS_NAME=staging51-job.json; LOG="$SLOG"; STAGE_LAST_ID="$id"
+          if run_job "$id" "$by" stage; then say "Staging $id klar."; else say "Staging $id feilet."; fi
+          STATUS_NAME=status.json; LOG="$MAIN_LOG"
+        elif [ "$act" = discard ]; then
+          say "Forkaster staging ($id)."; discard_staging "$id"; trim_log
+        elif [ "$act" = rollback-image ]; then
+          say "Tilbakerulling med ett trykk ($id)."
+          if run_rollback_image "$id" "$by"; then say "Tilbakerulling $id ferdig."; else say "Tilbakerulling $id feilet."; fi
         elif [ "$act" = docker-setup ]; then
           # Prompt 45: bare «sett opp Docker-tilgangen» – ingen nedlasting, ingen bygging, ingen omstart av os.
           if [ "$id" = "$(jq -r '.id // empty' "$DOCKER_STATE" 2>/dev/null)" ]; then say "Docker-oppsett $id er allerede kjørt.";
@@ -726,6 +1022,6 @@ while :; do
   fi
   [ -n "${ONCE:-}" ] && break
   # Prompt 44: les taggene (tidligere versjoner) selv, sjelden.
-  if [ "$TAGS_INTERVAL" -gt 0 ] && [ $(( $(date +%s) - ${TAGS_AT:-0} )) -ge "$TAGS_INTERVAL" ]; then TAGS_AT=$(date +%s); refresh_tags; fi
+  if [ "$TAGS_INTERVAL" -gt 0 ] && [ $(( $(date +%s) - ${TAGS_AT:-0} )) -ge "$TAGS_INTERVAL" ]; then TAGS_AT=$(date +%s); refresh_tags; expire_staging; fi
   sleep "$INTERVAL"
 done

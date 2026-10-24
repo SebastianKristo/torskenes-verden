@@ -17,7 +17,8 @@ import { orb, brandMark, navTile, thinkHtml, askStream } from './fin42.js';
 import { bolScope, bolSearch, afterB42 } from './bol42.js';
 import { filterPage, loadFilter, bindFilter, enterFilter } from './filter42.js';
 import { tasksCard, loadTasks, bindGj42, startTask, homeRulesBox, loadHomeRules } from './gj42.js';
-import { form48, via48, uncTag48, uncCls48, is48, flush48, bind48, setRedraw48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
+import { form48, via48, uncTag48, uncCls48, is48, flush48, bind48, setRedraw48, _e48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
+import { srcTag51, raw51, bind51, learn51 } from './rcpt51.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 ICONS.filter = 'M4 6h16M7 12h10M10 18h4';
@@ -477,13 +478,14 @@ function confirmPanel(R) {
     ${!done && (R.canReanalyze || R.reanalyzeReason) ? `<div class="rc-low50" style="display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:14px;background:var(--inner);border:1px solid var(--line)"><span style="font-size:13px;color:var(--text2)">${R.error ? 'Lesingen mislyktes.' : `Lav sikkerhet${R.provider ? ` fra ${esc(R.provider)}` : ''}.`} Gemini kan lese originalbildet på nytt, og du velger hvilket resultat du vil beholde.</span><div style="display:flex;gap:10px;flex-wrap:wrap">${reanalyzeBtn(R, 'btn', 'height:40px', 'btn pri')}</div>${!R.canReanalyze && R.reanalyzeReason ? `<span style="font-size:12px;color:var(--text2)">${esc(R.reanalyzeReason)}</span>` : ''}</div>` : ''}
     <div class="row-flex" style="gap:18px">${img}
       <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:12px">
-        <label class="f">Butikk${uncTag48(R, 'merchant')}<input class="inp${uncCls48(R, 'merchant')}" data-rc-field="merchant" value="${esc(R.merchant ?? '')}" ${done ? 'disabled' : ''}></label>
+        <label class="f"><span>Butikk${uncTag48(R, 'merchant')}${srcTag51(R)}</span><input class="inp${uncCls48(R, 'merchant')}" data-rc-field="merchant" value="${esc(R.merchant ?? '')}" ${done ? 'disabled' : ''}></label>
         <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato${uncTag48(R, 'date')}<input class="inp${uncCls48(R, 'date')}" type="date" data-rc-field="date" value="${R.date ?? ''}" ${done ? 'disabled' : ''}></label><label class="f" style="flex:1">Total (kr)${uncTag48(R, 'total')}<input class="inp hl mono${uncCls48(R, 'total')}" data-rc-field="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}" ${done ? 'disabled' : ''}></label></div>
         <div class="f">Kategori${uncTag48(R, 'category')}<div class="catpick">${catBtns}</div></div>
         <label class="f">Konto<select class="inp" data-rc-field="accountId" ${done ? 'disabled' : ''}>${accOpts(R.accountId, '–')}</select></label>
         <div class="match ${R.match ? '' : 'none'}">${icon('link', 18, R.match ? 'var(--pos)' : 'var(--muted)')}<div><div style="font-weight:600;color:${R.match ? 'var(--pos)' : 'var(--text)'}">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch ennå'}</div><div class="sub">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</div></div></div>
       </div></div>
     ${is48(R) ? form48(R, { done, head: false }) : ''}
+    ${raw51(R)}
     ${log}
     ${addedLine(R)}
     <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
@@ -1178,6 +1180,7 @@ export function bind() {
   el.addEventListener('click', (e) => { const b = e.target.closest?.('[data-t42-tog]'); if (b) { u.thinkOpen = !u.thinkOpen; render(); } });
   loadLogoRegistry().then((changed) => { if (changed) render(); });
   bindReanalyze(el, (r) => { u.selRc = r.id; refreshAll().then(() => toast('Kvitteringen er oppdatert')); });
+  bind51((id) => S.receipts?.find((x) => x.id === id)); // prompt 51: «Rådata» hentes ved åpning
   bind48(); setRedraw48(() => render()); // prompt 48: varelinjer/rabatter i skjemaet for skannede kvitteringer
   // Prompt 40: varelinjer i «Rediger alt», hurtigtaster (E rediger · R les på nytt · ⌘S lagre · Esc avbryt) og høyreklikk i lista.
   const selTx = () => S.tx?.items.find((y) => y.id === u.sel) ?? null;
@@ -1374,6 +1377,8 @@ export function bind() {
       if (f === 'description' && !v.trim()) { toast('Beskrivelse må fylles ut'); return render(); }
       return patchTx(u.sel, { [f]: ['categoryId', 'accountId', 'folderId'].includes(f) ? (+v || null) : v });
     }
+    // Prompt 51: rettet butikknavn → POST /receipts/:id/merchant (serveren lærer org.nr. → navn); eldre server → PATCH som før.
+    if (t.dataset.rcField === 'merchant' && t.value.trim()) { const id = u.selRc; try { const r = await learn51(id, t.value, _e48[id]?.org_number); if (r) { S.receipts = S.receipts.map((x) => (x.id === id ? { ...x, ...r } : x)); return render(); } } catch (e) { toast(e.message); return; } }
     if (t.dataset.rcField) { const f = t.dataset.rcField; return patchRc(u.selRc, { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? (+t.value || null) : t.value }); }
     if (t.dataset.budget) { await api('/budgets', { method: 'PUT', json: { categoryId: +t.dataset.budget, amount: parseAmount(t.value) ?? 0 } }); await loadSummary(); return render(); }
     if (t.dataset.aiTo) {

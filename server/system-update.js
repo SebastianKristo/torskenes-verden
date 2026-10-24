@@ -280,7 +280,8 @@ function readLog(lines) {
 
 // Venter updateren på å plukke opp en forespørsel vi allerede har skrevet? (Den sjekker hvert 5. s.)
 // Prompt 46: bare ekte oppdateringer/tilbakerullinger – retry/abort/prune er kontrollforespørsler.
-const UPDATE_ACTIONS = new Set([undefined, null, 'update', 'rollback']);
+// Prompt 51 (OPS51): 'promote' (bytt til versjonen i staging) og 'rollback-image' (forrige image) starter også os på nytt.
+const UPDATE_ACTIONS = new Set([undefined, null, 'update', 'rollback', 'promote', 'rollback-image']);
 function pendingRequest(status) {
   const r = readJson('request.json');
   // Prompt 45: «Sett opp Docker-tilgang» er ingen oppdatering (os startes ikke på nytt).

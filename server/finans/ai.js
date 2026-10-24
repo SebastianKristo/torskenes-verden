@@ -488,7 +488,9 @@ export async function extract(image, mime, cats, force, { log = () => {}, status
     const t0 = Date.now();
     try {
       log('ocr', timedOut ? `${providerName(timedOut.engine)} svarte ikke innen ${timedOut.secs} s, prøver lokal OCR (Tesseract)` : 'AI feilet, prøver lokal OCR (Tesseract)');
-      const data = validate(await ocrReceipt(image, mime, { lookup: !g48.blocked.blocked }));
+      const o51 = await ocrReceipt(image, mime, { lookup: !g48.blocked.blocked });
+      const data = validate(o51);
+      data.raw_text = o51.raw_text; // prompt 51: OCR-radene lagres på kvitteringen (ocr_raw)
       data.needs_review = true;
       logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, timeoutEngine: timedOut?.engine ?? null });
       return done({ provider: 'tesseract', model: 'tesseract-nor', data, seconds: (Date.now() - t0) / 1000, aiError: why });
@@ -525,7 +527,9 @@ async function sumRetry39(res, p, st, image, mime, cats, log, mode) {
 export async function extractOcr(image, mime) {
   const t0 = Date.now();
   try {
-    const data = validate(await ocrReceipt(image, mime, { lookup: !externalBlocked48().blocked }));
+    const o51 = await ocrReceipt(image, mime, { lookup: !externalBlocked48().blocked });
+    const data = validate(o51);
+    data.raw_text = o51.raw_text; // prompt 51: OCR-radene (ocr_raw)
     data.needs_review = true;
     logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, status: 'manuell' });
     return { provider: 'tesseract', model: 'tesseract-nor', data, seconds: (Date.now() - t0) / 1000 };

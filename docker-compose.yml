@@ -12,6 +12,9 @@ services:
       # Systembackup (Innstillinger → Backup): egen disk på Proxmox-verten, og BACKUP_DIR=/srv/backup i .env.
       # Uten dette havner backupene i data/system-backups.
       # - /srv/backup:/srv/backup
+      # Prompt 51 (OPS51): restic-backup (Innstillinger → System → Backup). Lokalt repo: BACKUP_DIR/restic51 (egen disk over).
+      # NAS: monter sharen på Proxmox-verten / i LXC-en og gi den til os på samme sti, og velg stien som NAS-mål i appen.
+      # - /mnt/nas/nordlys:/mnt/nas/nordlys
     ports:
       - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:3000"   # BIND_ADDR=0.0.0.0 for LAN-tilgang
     # Prompt 45: os når Docker-proxyen (homelab-docker) på det interne nettet docker-api. os får aldri selve socketen.
@@ -33,6 +36,11 @@ services:
       HOST_DIR: ${PWD}
       UPDATE_REPO: ${UPDATE_REPO:-SebastianKristo/torskenes-verden}
       UPDATE_BRANCH: ${UPDATE_BRANCH:-main}
+      # Prompt 51 (OPS51): staging-kanal – ny versjon røyktestes i en kopi (egen container mot kopi av databasen) før byttet.
+      # UPDATE_STAGING=0 i .env slår det av. STAGING_PORT=3001 gjør staging synlig på STAGING_BIND (standard bare 127.0.0.1).
+      UPDATE_STAGING: ${UPDATE_STAGING:-1}
+      STAGING_PORT: ${STAGING_PORT:-}
+      STAGING_BIND: ${STAGING_BIND:-127.0.0.1}
       COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-}
       TZ: Europe/Oslo
 
@@ -81,7 +89,94 @@ services:
     volumes:
       - ./proton:/root   # nøkler og cache – ta med i backup
 
+  # Prompt 51 (OBS51): ntfy – selvhostet push til telefonene (docs/drift-51.md). Start: docker compose --profile ntfy up -d
+  # Bare på LAN (NTFY_BIND, standard 127.0.0.1) og aldri via Cloudflare uten auth. deny-all som standard: serveren publiserer med
+  # NTFY_TOKEN (brukeren «homelab», bare skrive hl_*), og telefonene leser sine egne, tilfeldige emner (hl_<128 bit>).
+  # upstream-base-url (iOS via ntfy.sh) er AV. Slås den på (NTFY_UPSTREAM_BASE_URL=https://ntfy.sh), går bare en poll-forespørsel
+  # med emne-hash ut – aldri innholdet. I .env for os: NTFY_URL=http://ntfy:80 og NTFY_PUBLIC_URL=http://<LAN-IP>:2586.
+  ntfy:
+    profiles: [ntfy]
+    image: binwiederhier/ntfy:v2.11.0
+    container_name: homelab-ntfy
+    restart: unless-stopped
+    command: serve
+    environment:
+      TZ: Europe/Oslo
+      NTFY_BASE_URL: ${NTFY_PUBLIC_URL:-http://localhost:2586}
+      NTFY_CACHE_FILE: /var/lib/ntfy/cache.db
+      NTFY_AUTH_FILE: /var/lib/ntfy/user.db
+      NTFY_AUTH_DEFAULT_ACCESS: deny-all
+      NTFY_ENABLE_LOGIN: "false"
+      NTFY_ENABLE_SIGNUP: "false"
+      NTFY_BEHIND_PROXY: "false"
+    volumes:
+      - ./ntfy:/var/lib/ntfy   # brukere, tilganger og meldingsbuffer – ta med i backup
+    ports:
+      - "${NTFY_BIND:-127.0.0.1}:${NTFY_PORT:-2586}:80"   # NTFY_BIND=<LAN-IP> så telefonene på hjemmenettet når den
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --tries=1 http://localhost:80/v1/health -O - | grep -Eq '\"healthy\" *: *true' || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # Prompt 51 (QA51): selvhostet krasjrapportering (GlitchTip, Sentry-kompatibel). Valgfri og tung (Postgres), derfor en profil:
+  #   docker compose --profile glitchtip up -d
+  # os tar imot rapportene på POST /api/crash og videresender til http://glitchtip:8000 når GLITCHTIP_DSN er satt i .env
+  # (uten DSN lagres de lokalt i databasen). Nettgrensesnittet bindes til GLITCHTIP_BIND (standard 127.0.0.1, sett LAN-IP for
+  # tilgang hjemme) og eksponeres aldri via Cloudflare. Postgres og Valkey ligger på et internt nett uten porter og uten internett.
+  # Hemmeligheter (GLITCHTIP_SECRET_KEY, GLITCHTIP_DB_PASSWORD) står bare i .env. Se docs/kvalitet-51.md.
+  glitchtip:
+    profiles: [glitchtip]
+    image: glitchtip/glitchtip:6.2.6
+    container_name: homelab-glitchtip
+    restart: unless-stopped
+    depends_on: [glitchtip-postgres, glitchtip-valkey]
+    environment:
+      DATABASE_URL: postgres://glitchtip:${GLITCHTIP_DB_PASSWORD:-}@glitchtip-postgres:5432/glitchtip
+      VALKEY_URL: redis://glitchtip-valkey:6379/0
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-}
+      PORT: "8000"
+      GLITCHTIP_DOMAIN: ${GLITCHTIP_PUBLIC_URL:-http://localhost:8010}
+      DEFAULT_FROM_EMAIL: glitchtip@homelab.local
+      EMAIL_URL: consolemail://
+      ENABLE_USER_REGISTRATION: "false"
+      ENABLE_ORGANIZATION_CREATION: "false"
+      GLITCHTIP_MAX_EVENT_LIFE_DAYS: "30"
+      TZ: Europe/Oslo
+    volumes:
+      - ./glitchtip/uploads:/code/uploads
+    ports:
+      - "${GLITCHTIP_BIND:-127.0.0.1}:${GLITCHTIP_PORT:-8010}:8000"
+    security_opt: [no-new-privileges:true]
+    networks: [default, glitchtip-db]
+
+  glitchtip-postgres:
+    profiles: [glitchtip]
+    image: postgres:17.11-alpine
+    container_name: homelab-glitchtip-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: glitchtip
+      POSTGRES_DB: glitchtip
+      POSTGRES_PASSWORD: ${GLITCHTIP_DB_PASSWORD:-}
+    volumes:
+      - ./glitchtip/postgres:/var/lib/postgresql/data
+    security_opt: [no-new-privileges:true]
+    networks: [glitchtip-db]
+
+  glitchtip-valkey:
+    profiles: [glitchtip]
+    image: valkey/valkey:8.1.10-alpine
+    container_name: homelab-glitchtip-valkey
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
+    networks: [glitchtip-db]
+
 networks:
   # Prompt 45: bare os og homelab-docker. internal = ingen trafikk ut til internett.
   docker-api:
+    internal: true
+  # Prompt 51 (QA51): GlitchTips database og kø. internal = ingen porter ut og ingen internett.
+  glitchtip-db:
     internal: true

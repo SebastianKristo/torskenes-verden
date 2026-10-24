@@ -4,6 +4,7 @@ import { db, kv, OWNER } from './db.js';
 import { config } from './config.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { passwordHash as legacyPasswordHash, setPasswordHash as setLegacyPasswordHash } from './settings.js';
+import { blocked51, fail51, clear51 } from './ratelimit51.js'; // prompt 51 (SEC51)
 import { verifyTotp, newSecret, base32Encode, otpauthUrl, qrSvg, encryptSecret, decryptSecret, newRecoveryCodes, recoveryHash } from './totp.js';
 
 const COOKIE = 'hl_sid';
@@ -216,28 +217,29 @@ export function disableTotp(id, { password, code }) {
 
 /* ---------------- Rate limiting ---------------- */
 
-// Per IP: maks 5 feil på 15 min. Per brukernavn: maks 10 feil på 15 min (utestengning).
-const attempts = new Map();
-const WINDOW = 15 * 60_000, MAX_FAILS = 5, MAX_USER_FAILS = 10;
+// Prompt 51 (SEC51): eksponentiell sperre per IP og per konto i ratelimit51.js (lagres i SQLite, vises i Innstillinger → Sikkerhet).
+// Per IP: sperre etter 5 feil (1 min, så 2, 4, 8 … maks 6 t). Per konto: etter 10 feil (1 min, dobles, maks 1 t).
+// Nøkler som starter med «u:» er kontoer, resten IP-adresser.
+const MAX_FAILS = 5, MAX_USER_FAILS = 10;
+const limKey = (key) => (String(key).startsWith('u:') ? ['acct', String(key).slice(2)] : ['ip', String(key)]);
 
+// Adressen til rate limiting og logg. Prompt 51: headere (CF-Connecting-IP, X-Forwarded-For) gjelder bare når tilkoblingen kommer fra
+// en proxy på lokalt nett/Docker (cloudflared) eller ikke har noen socket (tester). Kommer tilkoblingen rett fra en offentlig adresse,
+// brukes den – en klient på internett kan ikke velge sin egen IP for å slippe unna sperren.
 export function clientIp(c) {
-  return c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for')?.split(',')[0].trim() || c.env?.incoming?.socket?.remoteAddress || 'ukjent';
+  const peer = peerIp(c);
+  if (peer && !isLan(peer)) return peer;
+  return c.req.header('cf-connecting-ip')?.trim() || c.req.header('x-forwarded-for')?.split(',')[0].trim() || peer || 'ukjent';
 }
+const peerIp = (c) => String(c.env?.incoming?.socket?.remoteAddress ?? '').replace(/^::ffff:/, '');
 
-function blockedFor(key, max) {
-  const a = attempts.get(key);
-  if (!a || a.reset < Date.now()) return 0;
-  return a.fails >= max ? Math.ceil((a.reset - Date.now()) / 1000) : 0;
-}
-function fail(key) {
-  const a = attempts.get(key);
-  if (!a || a.reset < Date.now()) attempts.set(key, { fails: 1, reset: Date.now() + WINDOW });
-  else a.fails++;
-}
+function blockedFor(key, _max) { const [k, s] = limKey(key); return blocked51('login', k, s); }
+function fail(key) { const [k, s] = limKey(key); fail51('login', k, s); }
+const clearKey = (key) => { const [k, s] = limKey(key); clear51('login', k, s); };
 
 export const loginBlocked = (ip) => blockedFor(ip, MAX_FAILS);
 export const loginFailed = (ip) => fail(ip);
-export const loginSucceeded = (ip) => attempts.delete(ip);
+export const loginSucceeded = (ip) => clearKey(ip);
 
 /**
  * Felles innloggingssjekk for web, mobilapper og FinansHub-tokens.
@@ -249,7 +251,8 @@ export function verifyLogin(username, password, code, ip = 'ukjent') {
   const uname = String(username ?? '').trim().toLowerCase();
   const u = uname ? userByName(uname) : userRow(OWNER);
   const ukey = 'u:' + (u ? u.id : uname);
-  const wait = Math.max(loginBlocked(ip), blockedFor(ukey, MAX_USER_FAILS));
+  // Prompt 51: kontosperren gjelder ikke fra lokalt nett, så noen på internett ikke kan stenge eieren ute hjemme.
+  const wait = Math.max(loginBlocked(ip), isLan(ip) ? 0 : blockedFor(ukey, MAX_USER_FAILS));
   if (wait) return { ok: false, status: 429, error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` };
   const bad = uname ? 'Feil brukernavn eller passord' : 'Feil passord';
   // Ukjent bruker bruker like lang tid som feil passord, så brukernavn ikke kan gjettes ut fra svartiden.
@@ -262,7 +265,7 @@ export function verifyLogin(username, password, code, ip = 'ukjent') {
     if (code === undefined || code === null || code === '') return { ok: false, needsTotp: true, status: 401, error: 'Tofaktor-kode kreves', user: { id: u.id, username: u.username } };
     if (!checkSecondFactor(u.id, code)) { fail(ip); fail(ukey); return { ok: false, needsTotp: true, status: 401, error: 'Feil kode. Prøv igjen.' }; }
   }
-  loginSucceeded(ip); attempts.delete(ukey);
+  loginSucceeded(ip); clearKey(ukey);
   return { ok: true, user: userInfo(u.id) };
 }
 
@@ -330,9 +333,13 @@ export function sessionUser(c) {
   }
   // Pålitelig enhet: passordet hoppes over kun med gyldig enhetscookie OG klient på lokalt nett.
   const dev = trustedDevice(c);
-  if (dev) { createSession(c, dev.user); return dev.user; }
+  if (dev) { createSession(c, dev.user); try { authHook51?.(c, dev.user, 'trusted-device'); } catch { /* */ } return dev.user; }
   return null;
 }
+
+// Prompt 51 (SEC51): revisjonsloggen får beskjed når en pålitelig enhet logges inn automatisk (sec51.js setter kroken).
+let authHook51 = null;
+export const setAuthHook51 = (fn) => { authHook51 = fn; };
 
 /* ---------------- Pålitelige enheter ---------------- */
 
@@ -344,10 +351,19 @@ const DEVICE_AGE = 60 * 60 * 24 * 365; // 1 år
 //   overskriver det klienten sender, så trafikk fra internett blir aldri regnet som lokal.
 // - Ellers brukes adressen fra selve TCP-tilkoblingen.
 // X-Forwarded-For og lignende brukes aldri her, fordi klienten kan sette dem selv.
+// Prompt 51 (SEC51): CF-Connecting-IP godtas bare når selve tilkoblingen kommer fra lokalt nett/Docker (cloudflared-containeren)
+// eller ikke har noen socket (tester). Er porten nådd direkte fra en offentlig adresse, er det den adressen som gjelder – da kan
+// ikke en klient på internett sende «CF-Connecting-IP: 192.168.1.5» og bli regnet som lokal.
 export function trustIp(c) {
+  const peer = peerIp(c);
   const cf = c.req.header('cf-connecting-ip');
-  if (cf) return cf.trim();
-  return (c.env?.incoming?.socket?.remoteAddress ?? '').replace(/^::ffff:/, '');
+  if (cf && (!peer || isLan(peer))) return cf.trim();
+  return peer;
+}
+/** Prompt 51: kom forespørselen gjennom Cloudflare (så CF-IPCountry kan stoles på)? */
+export function viaCloudflare(c) {
+  const peer = peerIp(c);
+  return !!c.req.header('cf-connecting-ip') && (!peer || isLan(peer));
 }
 
 export function isLan(ip) {

@@ -46,7 +46,9 @@ import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } 
 import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
 import { mailAddress42 } from './homes42.js'; // prompt 42
 import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipts47.js'; // prompt 47 (SERVER47): OCR-tekst og ferdig tolket kvittering fra enheten
-import { mountReceipts48, preScanned48 } from '../receipts48/routes.js'; // prompt 48 (SERVER48): /receipts/scan (kjeden A→B→C→Tesseract→D), /receipts/health, rettelser
+import { mountReceipts48, preScanned48, setMerchant51 } from '../receipts48/routes.js';
+import { ocrRaw51, crossCheck51 } from '../receipts48/ocr-raw51.js'; // prompt 51 (RCPTSRV51): rådata per kvittering, OCR-kontroll av den gamle kjeden
+import { merchantOut51 } from '../receipts48/brreg51.js'; // prompt 48 (SERVER48): /receipts/scan (kjeden A→B→C→Tesseract→D), /receipts/health, rettelser
 import { cleanMacOcrUrl, cleanReceipts48, externalBlocked48 } from '../receipts48/settings.js';
 import { correctionOnBook48 } from '../receipts48/corrections.js';
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
@@ -236,6 +238,7 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     ...reanalyzeInfo(r, st), ...(reanalyzeJobOf(r) ? { reanalyzeJob: reanalyzeJobOf(r) } : {}), log: scanLogOf(r), timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
     added: addedOf40(r, 'receipt'), // prompt 40: «Lagt til … · skannet kvittering · Sebastian»
     domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload',
+    ocr_raw: ocrRaw51(r), ...merchantOut51(ex), // prompt 51: rådata (OCR-motor, rader, bildestørrelse) og kilden til butikknavnet
     // Prompt 47: etiketten «Tolket på iPhone» / «Tolket av Glimt».
     tolketAv: r.source === 'apple-fm' ? 'apple-on-device' : 'glimt-ollama', tolketAvTekst: r.source === 'apple-fm' ? 'Tolket på iPhone' : 'Tolket av Glimt', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
 }
@@ -361,7 +364,14 @@ async function processReceipt(r, id, force) {
       const onTimeout = (r.retry_n ?? 0) >= QUEUE_MAX ? 'next' : undefined;
       // Prompt 47: ferdig tolket på iPhone (apple-fm) → ikke nytt AI-kall; OCR-tekst fra Android/iPhone får OCR-instruksen.
       const ocr47 = ocrTextOf47(r, force);
-      const res = preParsed47(r, force) ?? preScanned48(r, force) ?? (ocr47 ? await extractText(ocr47, cats, { kind: 'ocr' }) : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats, textKind47(r)) : await extract(img, mime, cats, force, { log, status, onTimeout }));
+      const pre51 = preParsed47(r, force) ?? preScanned48(r, force);
+      const res = pre51 ?? (ocr47 ? await extractText(ocr47, cats, { kind: 'ocr' }) : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats, textKind47(r)) : await extract(img, mime, cats, force, { log, status, onTimeout }));
+      // Prompt 51 (RCPTSRV51): den gamle kjeden – OCR-rader lagres, visjonsmodellen er aldri eneste kilde (totalen kontrolleres mot
+      // Tesseract på ORIGINALEN), og butikknavnet går via org.nr. → kjent butikk → modellen.
+      if (!pre51 && !ocr47 && /^image\//.test(r.mime ?? '')) {
+        let orig = img; if (r.scan && r.file) { try { orig = await readFile(join(DIR, r.file)); } catch { orig = img; } }
+        await crossCheck51(res, { id, user: r.user_id || OWNER, original: { buf: orig, mime: r.mime }, fallback: r.scan ? { buf: img, mime: 'image/jpeg' } : null, log });
+      }
       const d = res.data;
       if (live.ctrl.signal.aborted) throw Object.assign(new Error('Avbrutt av brukeren'), { cancelled: true });
       live.model = res.model ?? live.model;
@@ -1034,6 +1044,8 @@ api.patch('/receipts/:id', W, async (c) => {
     b.merchant !== undefined ? str(b.merchant, 120) : r.merchant, isDate(b.date) ? b.date : r.date,
     b.total !== undefined ? ore(b.total) : r.total, b.categoryId !== undefined ? (+b.categoryId || null) : r.category_id,
     b.accountId !== undefined ? (+b.accountId || null) : r.account_id, r.id);
+  // Prompt 51: rettet butikknavn → lær org.nr. → visningsnavn (og merk kilden «rettet av deg»).
+  if (b.merchant !== undefined && str(b.merchant, 120) && str(b.merchant, 120) !== r.merchant) { try { setMerchant51(c.get('user'), origSelect.get(r.id), str(b.merchant, 120), b.org_number ?? b.orgNumber); } catch (e) { console.warn('[finans51] butikknavn:', e.message); } }
   // Ny dato eller nytt beløp kan gi en annen bankmatch.
   const u = origSelect.get(r.id);
   if (b.total !== undefined || b.date !== undefined) {

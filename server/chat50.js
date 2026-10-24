@@ -249,24 +249,25 @@ export function receiptTable50(rc) {
  * Leser kvitteringen i bildet med kvitteringskjeden fra prompt 48 (lokale steg først; Gemini bare når sperren er av).
  * → {ok, markdown, meta:{receipt, label, engine, model, confidence, fileId, action}} | {ok:false, error}
  */
-export async function receiptChat50(u, row, { signal = null } = {}) {
+export async function receiptChat50(u, row, { signal = null, text = '' } = {}) {
   const { runChain48 } = await import('./receipts48/chain.js');
   let buf;
   try { buf = await readFile(row.path); } catch { return { ok: false, error: 'Fant ikke bildet' }; }
   const small = await toJpeg50(buf, 2048).catch(() => null);
   const categories = fdb.prepare("SELECT name FROM fh_categories WHERE kind='expense' AND user_id=? ORDER BY sort").all(u).map((x) => x.name);
-  const res = await runChain48({ image: buf, mime: row.mime, smallImage: small?.buf ?? null, categories, signal, log: (s, d) => console.info(`[chat50] kvittering ${s} – ${String(d).slice(0, 160)}`) });
+  const res = await runChain48({ image: buf, mime: row.mime, smallImage: small?.buf ?? null, categories, signal, user: u, log: (s, d) => console.info(`[chat50] kvittering ${s} – ${String(d).slice(0, 160)}`) });
   const rc = res.receipt;
   if (!rc || (!rc.items?.length && rc.total == null)) return { ok: false, error: res.errors?.join(' · ') || 'Kvitteringen kunne ikke leses' };
   const label = `Lest med ${res.label ?? 'kvitteringsleseren'}`;
   return {
     ok: true,
-    markdown: `${receiptTable50(rc)}\n\n${res.confidence === 'high' ? 'Summen stemmer med varelinjene.' : 'Sjekk beløpene – utlesingen er usikker.'}`,
+    markdown: `${(await import('./chat51.js')).formatReceipt51(rc, (await import('./chat51.js')).wantedFormat51(text)) ?? receiptTable50(rc)}\n\n${res.confidence === 'high' ? 'Summen stemmer med varelinjene.' : 'Sjekk beløpene – utlesingen er usikker.'}`,
     meta: {
       receipt: { merchant: rc.merchant ?? null, date: rc.date ?? null, total: rc.total ?? null, currency: rc.currency ?? 'NOK', items: (rc.items ?? []).map((l) => ({ description: l.description, quantity: l.quantity ?? null, amount: l.amount })),
         confidence: res.confidence, label: res.label, engine: res.engine, model: res.model, fileId: row.id,
+        merchant_source: res.merchant51?.source ?? null, org_number: res.merchant51?.org_number ?? rc.org_number ?? null, ocr_engine: res.ocr?.source ?? null, ocr_rows: res.ocr?.rows?.length ?? 0, // prompt 51
         action: { label: 'Legg i Finans ›', method: 'POST', url: `/api/chat/files/${row.id}/finans` } },
-      readWith: { engine: 'receipt', model: res.model ?? null, label },
+      readWith: { route: 'receipt', engine: 'receipt', ocr_engine: res.ocr?.source ?? null, model: res.model ?? null, label: res.model && !label.includes(res.model) ? `${label} · ${res.model}` : label },
     },
   };
 }

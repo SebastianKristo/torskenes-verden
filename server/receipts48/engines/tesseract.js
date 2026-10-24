@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ocrTools } from '../../ocr-fallback.js';
 import { rows48 } from '../normalize.js';
+import { preprocess51 } from '../preprocess51.js'; // prompt 51: original, EXIF, perspektiv, aldri under 2000 px
 
 const EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/tiff': 'tif', 'image/bmp': 'bmp', 'image/heic': 'heic', 'image/heif': 'heif' };
 const execRun = (cmd, args, { timeout = 60_000 } = {}) => new Promise((resolve, reject) => {
@@ -50,25 +51,36 @@ export function tsvToOcr48(tsv) {
   return { source: 'tesseract', lines, rows: rws, full_text: rws.join('\n'), image_size: W && H ? [W, H] : null };
 }
 
-/** Bildet → felles OCR-format. Kaster {missing:true} når Tesseract ikke er installert. */
-export async function tesseractOcr48(image, mime) {
+/**
+ * Bildet → felles OCR-format. Kaster {missing:true} når Tesseract ikke er installert.
+ * Prompt 51: image skal være ORIGINALEN. Forbehandlingen (preprocess51) retter EXIF-rotasjon og perspektiv, beskjærer og sørger for
+ * at lengste side aldri er under 2000 px. fallback {buf, mime} (klientens 1600 px-kopi) brukes bare når originalen ikke kan leses.
+ * Svaret har preprocess {rotated, perspective, cropped, upscaled, downscaled, from} og image_size for bildet som faktisk ble lest.
+ */
+export async function tesseractOcr48(image, mime, { fallback = null } = {}) {
   const tl = await T.tools();
   if (!tl.tesseract) throw Object.assign(new Error('Tesseract er ikke installert på serveren'), { missing: true, unavailable: true });
   if (mime === 'application/pdf') throw Object.assign(new Error('Tesseract-steget leser ikke PDF'), { unavailable: true });
   const t0 = Date.now();
   const dir = await mkdtemp(join(tmpdir(), 'ocr48-'));
   try {
-    const src = join(dir, `in.${EXT[mime] ?? 'jpg'}`);
-    await writeFile(src, image);
-    let input = src;
-    if (tl.magick) {
-      const out = join(dir, 'pre.png');
-      try { await T.run(tl.magick, [src, '-auto-orient', '-colorspace', 'Gray', '-resize', '1800x1800<', '-despeckle', '-deskew', '40%', '-lat', '31x31-8%', out], { timeout: 30_000 }); input = out; } catch { /* originalbildet */ }
+    let input, pre = null;
+    if (tl.magick) pre = await preprocess51(image, mime, { tools: tl, fallback }).catch(() => null);
+    if (pre) { input = join(dir, 'pre51.png'); await writeFile(input, pre.buf); }
+    else {
+      const src = join(dir, `in.${EXT[mime] ?? 'jpg'}`);
+      await writeFile(src, image);
+      input = src;
+      if (tl.magick) {
+        const out = join(dir, 'pre.png');
+        // Reserve (prompt 48): bare oppskalering, aldri nedskalering, og lengste side minst 2000 px.
+        try { await T.run(tl.magick, [src, '-auto-orient', '-colorspace', 'Gray', '-resize', '2000x2000<', '-despeckle', '-deskew', '40%', out], { timeout: 30_000 }); input = out; } catch { /* originalbildet */ }
+      }
     }
-    const tsv = await T.run('tesseract', [input, 'stdout', '-l', 'nor+eng', '--oem', '1', '--psm', '4', '-c', 'preserve_interword_spaces=1', 'tsv'], { timeout: 60_000 })
-      .catch(() => T.run('tesseract', [input, 'stdout', '-l', 'eng', '--psm', '4', 'tsv'], { timeout: 60_000 }));
+    const tsv = await T.run('tesseract', [input, 'stdout', '-l', 'nor+eng', '--oem', '1', '--psm', '4', '--dpi', '300', '-c', 'preserve_interword_spaces=1', 'tsv'], { timeout: 90_000 })
+      .catch(() => T.run('tesseract', [input, 'stdout', '-l', 'eng', '--psm', '4', 'tsv'], { timeout: 90_000 }));
     const ocr = tsvToOcr48(tsv);
     if (!ocr.full_text.trim()) throw new Error('Tesseract fant ingen tekst i bildet');
-    return { ...ocr, ms: Date.now() - t0 };
+    return { ...ocr, ...(pre ? { preprocess: pre.preprocess } : {}), ms: Date.now() - t0 };
   } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); }
 }

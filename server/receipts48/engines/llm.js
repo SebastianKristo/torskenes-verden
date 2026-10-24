@@ -68,12 +68,21 @@ const parseJson = (text) => {
 export async function parseRows48(rows, { categories = [], feedback = null, model = 'qwen3:8b', base, timeoutS = 90, signal = null } = {}) {
   if (!base) throw Object.assign(new Error('Ollama-adressen er ikke satt'), { net: true });
   const t0 = Date.now();
-  const body = { model, messages: messages48(rows.slice(0, 400).map((r) => String(r).slice(0, 300)), categories, feedback), format: modelFormat48(), options: { ...LLM_OPTIONS48 }, think: false };
+  // Prompt 51: kontekstvinduet måles før kallet. Ollama kutter stille fra starten av prompten (systemteksten og eksemplene!) når den
+  // er lengre enn num_ctx, så lange kvitteringer får 32768, og radene kortes inn (aldri systemteksten) hvis det fortsatt ikke er plass.
+  let sendRows = rows.slice(0, 400).map((r) => String(r).slice(0, 300));
+  let messages = messages48(sendRows, categories, feedback);
+  const est = (ms) => Math.ceil(ms.reduce((n, m) => n + String(m.content).length, 0) / 3) + 64;
+  let numCtx = LLM_OPTIONS48.num_ctx;
+  if (est(messages) + LLM_OPTIONS48.num_predict > numCtx * 0.9) numCtx = 32768;
+  while (est(messages) + LLM_OPTIONS48.num_predict > numCtx * 0.9 && sendRows.length > 20) { sendRows = sendRows.slice(0, Math.floor(sendRows.length * 0.85)); messages = messages48(sendRows, categories, feedback); }
+  const promptEst = est(messages);
+  const body = { model, messages, format: modelFormat48(), options: { ...LLM_OPTIONS48, num_ctx: numCtx }, think: false };
   const ms = timeoutS * 1000 * _llmTest48.scale;
   try {
     const out = await gateChat({ model, body, base, signal, priority: 'interactive', short: true, allowThink: false, label: 'Finans · kvittering (tekst)',
       loadMs: ms, warmMs: Math.min(ms, 60_000 * _llmTest48.scale), idleMs: Math.min(ms, 30_000 * _llmTest48.scale), deadlineMs: ms * 3, retryTimeouts: false, retries: 1 });
-    return { data: parseJson(out.text), model, ms: Date.now() - t0, telemetry: out.telemetry ?? null };
+    return { data: parseJson(out.text), model, ms: Date.now() - t0, telemetry: out.telemetry ?? null, numCtx, promptEst, rowsSent: sendRows.length };
   } catch (e) {
     if (e.badJson) throw e;
     if (e?.kind === 'nocontact') throw Object.assign(new Error(`Ollama kan ikke nås (${e.message})`), { net: true });

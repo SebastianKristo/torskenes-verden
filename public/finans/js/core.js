@@ -127,8 +127,13 @@ export async function uploadReceipt(file, accountId, { original = true } = {}) {
   }
   if (!scan48Off && (SCAN48_IMG.test(file.type) || (!file.type && /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name ?? '')))) {
     const f48 = new FormData();
-    if (!original && scan) f48.append('image', scan, (file.name || 'kvittering').replace(/\.\w+$/, '') + '.jpg');
-    else { f48.append('image', file, file.name || 'kvittering.jpg'); if (scan) f48.append('scan', scan, 'scan.jpg'); }
+    // Prompt 51 (RCPTUI51): OCR-en på serveren trenger full oppløsning – originalen sendes alltid som «image» når den finnes.
+    // Med «Lagre originalbildet» av sendes en oppreist JPEG på høyst 2560 px (aldri ned mot 1600 px), og 1600 px-kopien som «scan».
+    let big = null;
+    if (!original) { try { big = await toJpeg(file, 2560, 0.9); } catch { /* kan ikke tegnes – originalen under */ } }
+    if (big) f48.append('image', big, (file.name || 'kvittering').replace(/\.\w+$/, '') + '.jpg');
+    else f48.append('image', file, file.name || 'kvittering.jpg');
+    if (scan) f48.append('scan', scan, 'scan.jpg');
     if (thumb) f48.append('thumb', thumb, 'thumb.jpg');
     f48.append('client', JSON.stringify({ platform: 'web', version: build48() }));
     const t0 = Date.now();

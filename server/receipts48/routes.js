@@ -31,6 +31,7 @@ import { macHealth48 } from './engines/mac-vision.js';
 import { r48Settings, macOcrKey48 } from './settings.js';
 import { recordCorrection48, listCorrections48, exportCorrections48 } from './corrections.js';
 import { todayOslo45 } from '../glimt45/dates.js';
+import { MERCHANT_LABELS51, brregStatus51, brregLookup51, updateBrreg51, learnMerchant51, mod11Ok } from './brreg51.js'; // prompt 51: Enhetsregisteret (lokal kopi)
 
 const DIR = resolve(config.dataDir, 'receipts');
 const q = (sql) => db.prepare(sql);
@@ -67,7 +68,26 @@ async function storeFile(id, buf, suffix) {
 const firstAccount = (u) => q('SELECT id FROM fh_accounts WHERE user_id=? ORDER BY sort, id LIMIT 1').get(u)?.id ?? null;
 const expenseCats = (u) => q("SELECT name FROM fh_categories WHERE kind='expense' AND user_id=? ORDER BY sort").all(u).map((x) => x.name);
 // OCR-resultatet som lagres (og går til rettelsene): uten for mye tekst.
-const ocrStore = (o) => (o ? JSON.stringify({ source: o.source, rows: (o.rows ?? []).slice(0, 600), full_text: String(o.full_text ?? '').slice(0, 30_000), lines: (o.lines ?? []).slice(0, 800), image_size: o.image_size ?? null, ms: o.ms ?? null, ...(o.cropped ? { cropped: true } : {}) }) : null);
+export const ocrStore = (o) => (o ? JSON.stringify({ source: o.source, rows: (o.rows ?? []).slice(0, 600), full_text: String(o.full_text ?? '').slice(0, 30_000), lines: (o.lines ?? []).slice(0, 800), image_size: o.image_size ?? null, ms: o.ms ?? null, ...(o.cropped ? { cropped: true } : {}), ...(o.preprocess ? { preprocess: o.preprocess } : {}) }) : null);
+
+/**
+ * Prompt 51: brukeren har skrevet/rettet butikknavnet. Lagrer navnet på kvitteringen, merker kilden «user» og lærer
+ * org.nr. → navn når kvitteringen har et gyldig org.nr. (eller klienten sender et). → {learned, org_number}
+ */
+export function setMerchant51(u, r, name, orgIn = null) {
+  const ex = parse(r.extraction) ?? null;
+  const nr = String(orgIn ?? ex?.merchant51?.org_number ?? ex?.org_number ?? '').replace(/\D/g, '');
+  const org = mod11Ok(nr) ? nr : null;
+  const learned = org ? learnMerchant51(u, org, name, { receiptId: r.id }) : false;
+  if (ex) {
+    const prev = ex.merchant51 ?? {};
+    ex.merchant51 = { ...prev, source: 'user', org_number: org ?? prev.org_number ?? null, suggested: prev.suggested ?? r.merchant ?? null };
+    if (org) ex.org_number = org;
+    ex.merchant = name;
+    q('UPDATE fh_receipts SET merchant=?, extraction=? WHERE id=?').run(name, JSON.stringify(ex), r.id);
+  } else q('UPDATE fh_receipts SET merchant=? WHERE id=?').run(name, r.id);
+  return { learned, org_number: org };
+}
 
 /** Motoren i køen (processReceipt): resultatet fra kjeden uten nytt AI-kall. force (Les på nytt) bruker den gamle kjeden. */
 export function preScanned48(r, force) {
@@ -117,9 +137,9 @@ export function mountReceipts48(api, { W, R, adminOnly, sessionOnly, enqueue, ou
     const logs = [];
     const log = (step, detail) => { logs.push([step, detail]); console.info(`[skann48] ${step} – ${String(detail).slice(0, 200)}`); };
     // Kjeden fullføres selv om klienten kobler fra (kvitteringen lagres uansett; appens kø sender den ellers på nytt).
-    const res = await runChain48({ image: buf, mime, smallImage: scanImg, deviceOcr, deviceParse, client, categories: expenseCats(u), log });
-
     const id = randomUUID();
+    const res = await runChain48({ image: buf, mime, smallImage: scanImg, deviceOcr, deviceParse, client, categories: expenseCats(u), log, user: u, receiptId: id });
+
     const file = await storeFile(id, buf, `.${IMG[mime]}`);
     const scanRel = scanImg ? await storeFile(id, scanImg, '_scan.jpg') : null;
     const thumbRel = thumb ? await storeFile(id, thumb, '_t.jpg') : null;
@@ -129,7 +149,7 @@ export function mountReceipts48(api, { W, R, adminOnly, sessionOnly, enqueue, ou
     let extraction = null;
     if (rc && (rc.merchant || rc.total != null)) {
       const legacy = toLegacy48(rc, { confidence: res.confidence, failed: res.uncertain_fields, bboxes: itemBoxes48(rc.items, res.ocr) });
-      try { extraction = JSON.stringify({ ...validate(legacy), subtotal: rc.subtotal ?? null, receipt48: { ...meta48, model_receipt: rc, warnings: res.warnings } }); }
+      try { extraction = JSON.stringify({ ...validate(legacy), subtotal: rc.subtotal ?? null, receipt48: { ...meta48, model_receipt: rc, warnings: res.warnings }, ...(res.merchant51 ? { merchant51: res.merchant51 } : {}) }); }
       catch (e) { meta48.error = e.message; }
     }
     const name = String(img.name ?? '').slice(0, 120) || rc?.merchant || `Kvittering (${res.label ?? 'skann'})`;
@@ -143,17 +163,41 @@ export function mountReceipts48(api, { W, R, adminOnly, sessionOnly, enqueue, ou
     return c.json({
       receipt_id: id, receipt: rc, confidence: res.confidence, failed_fields: res.failed_fields, uncertain_fields: res.uncertain_fields, pipeline: res.pipeline,
       used: res.used, label: res.label, engine: res.engine, model: res.model, compare: res.compare, warnings: [...warnings, ...res.warnings], errors: res.errors,
-      ocr: res.ocr ? { source: res.ocr.source, rows: res.ocr.rows?.length ?? 0, image_size: res.ocr.image_size ?? null } : null, seconds: res.seconds, stored: out(id),
+      ocr: res.ocr ? { source: res.ocr.source, engine: res.ocr.source, rows: res.ocr.rows?.length ?? 0, image_size: res.ocr.image_size ?? null } : null, seconds: res.seconds, stored: out(id),
+      merchant_source: res.merchant51?.source ?? null, merchant_label: MERCHANT_LABELS51[res.merchant51?.source] ?? null, org_number: res.merchant51?.org_number ?? rc?.org_number ?? null,
     }, 201);
   });
 
   api.get('/receipts/health', R, async (c) => c.json(await health48({ admin: !!c.get('access')?.admin, categories: expenseCats(c.get('user')) }), 200, { 'Cache-Control': 'no-store' }));
   // «Test tilkobling» for Mac-OCR (Innstillinger › AI › Mac-OCR): GET /health på tjenesten med lagret adresse og nøkkel.
   api.post('/receipts/mac-ocr/test', adminOnly, async (c) => { const cfg = r48Settings(); const h = await macHealth48({ url: cfg.macOcrUrl, key: macOcrKey48(), timeoutMs: 4000 }); return c.json({ ...h, url: cfg.macOcrUrl }); });
+  // Prompt 51: lokal kopi av Enhetsregisteret – status, manuell oppdatering (admin) og lokalt oppslag (aldri nett).
+  api.get('/receipts/brreg', R, (c) => c.json(brregStatus51(), 200, { 'Cache-Control': 'no-store' }));
+  api.post('/receipts/brreg/update', adminOnly, (c) => {
+    if (brregStatus51().running) return c.json({ started: false, running: true }, 409);
+    updateBrreg51().catch(() => { /* logget */ });
+    return c.json({ started: true }, 202);
+  });
+  api.get('/receipts/brreg/:orgnr{[0-9 ]{9,11}}', R, (c) => {
+    const nr = c.req.param('orgnr').replace(/\D/g, '');
+    const hit = brregLookup51(nr);
+    return c.json(hit ? { ...hit, found: true } : { org_number: nr, name: null, display_name: null, address: null, found: false });
+  });
   api.get('/receipts/schemas/:kind{(ocr|receipt)}', R, (c) => c.json(c.req.param('kind') === 'ocr' ? OCR_SCHEMA48 : RECEIPT_SCHEMA48));
 
   api.get('/receipts/corrections/export', sessionOnly, adminOnly, (c) => c.body(exportCorrections48(), 200, { 'Content-Type': 'application/x-ndjson; charset=utf-8', 'Content-Disposition': 'attachment; filename="receipt-corrections48.jsonl"', 'Cache-Control': 'no-store' }));
   api.get('/receipts/corrections', R, (c) => c.json({ items: listCorrections48(c.get('user'), Number(c.req.query('limit') ?? 100) || 100) }));
+  // Prompt 51: rettet butikknavn → lær org.nr. → visningsnavn (per bruker). Navnet lagres på kvitteringen uansett.
+  api.post('/receipts/:id/merchant', W, async (c) => {
+    const u = c.get('user');
+    const r = q('SELECT * FROM fh_receipts WHERE id=? AND user_id=?').get(c.req.param('id'), u);
+    if (!r) return c.notFound();
+    const b = await c.req.json().catch(() => null);
+    const name = String(b?.merchant ?? '').replace(/\s+/g, ' ').trim().slice(0, 120);
+    if (!name) return bad(c, 'Forventet {merchant: "Butikknavn"}');
+    const res = setMerchant51(u, r, name, b?.org_number);
+    return c.json({ ok: true, learned: res.learned, org_number: res.org_number, merchant: name, receipt: out(r.id) });
+  });
   api.post('/receipts/:id/corrections', W, async (c) => {
     const r = q('SELECT * FROM fh_receipts WHERE id=? AND user_id=?').get(c.req.param('id'), c.get('user'));
     if (!r) return c.notFound();

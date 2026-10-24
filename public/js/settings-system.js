@@ -15,6 +15,8 @@ import { U, UPD_CMD, onUpdate, loadUpdate, checkUpdate, openSheet, startUpdate, 
 import { progress, ackDone, doneRecent } from './upd-banner.js';
 import { carpOnBar, sherlockFly, setSherlockText } from './glimt-outfits36.js'; // prompt 36: Sherlock- og snekker-Glimt
 import { versionsHtml44 } from './settings44.js'; // prompt 44: TIDLIGERE VERSJONER (tilbakerulling)
+import { obs51SystemHtml } from './obs51.js'; // prompt 51 (OBS51): helse, selvreparasjon og trege forespørsler
+import { ops51SystemHtml } from './ops51.js'; // prompt 51 (OPS51): backup (3-2-1, testet gjenoppretting), staging/tilbakerulling, database
 
 let rerender = () => {}, subscribed = false;
 const admin = () => store.me?.me?.role === 'admin';
@@ -205,7 +207,7 @@ export function systemView(h) {
     h.row({ t: 'Automatiske oppdateringer', k: 'auto automatisk natt', s: 'Kl. 03:30, etter nattlig backup.', tog: !!st.auto_update, act: 'data-upd-set="auto_update"', disabled: !st.loaded }),
   ]); // prompt 39: «Varsle om nye versjoner» ligger nå under Varsler (updNotifyRow)
   const html = `<div class="ny">${heroHtml(ph, d)}${btnHtml(ph, d)}${stuck46Html(ph, d)}${d ? verHtml(ph, d, h) : ''}${d && d.available === false ? setupHtml('Oppdatering fra appen er ikke satt opp.') : ''}${logHtml(ph)}${d ? notesHtml(ph, d) : ''}</div>`;
-  return { html: html + `<section class="sg"><h3 class="sg-t">Programvare</h3><div class="sg-box">${soft.rows.map((r) => r.html).join('')}</div></section>`, extra: sheetHtml(), mount: (el) => { el.scrollTop = el.scrollHeight; } };
+  return { html: html + `<section class="sg"><h3 class="sg-t">Programvare</h3><div class="sg-box">${soft.rows.map((r) => r.html).join('')}</div></section>` + ops51SystemHtml(rerender) + obs51SystemHtml(), extra: sheetHtml(), mount: (el) => { el.scrollTop = el.scrollHeight; } };
 }
 
 /** Prompt 39 (claude-code-varsler-versjon-app-ikon.md): raden i Innstillinger → Varsler (samme nøkkel notify_updates, bare admin). */

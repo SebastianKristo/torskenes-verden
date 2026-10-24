@@ -8,6 +8,7 @@ import { loadAppIdentity } from './appicon.js';
 import { initI18n, setLang, lang } from './i18n.js';
 import { noteUser } from './usercache.js';
 import { initQr, showQr } from './login-qr38.js'; // prompt 38: QR-innlogging fra mobilen
+import { initPasskey51, waitApproval51 } from './sec51-login.js'; // prompt 51: passkey og godkjenning av ny enhet
 
 const $ = (id) => document.getElementById(id);
 const form = $('gate');
@@ -33,6 +34,7 @@ const st = {
   userEdited: false,
   app: 'Homelab',
   qr: false, // prompt 38: serveren har QR-innlogging
+  passkey: false, // prompt 51: serveren og nettleseren kan passkeys
 };
 
 // Brukernavn foreslås fra navnet: små bokstaver, æ→ae, ø→o, å→a, bare a–z og 0–9.
@@ -68,6 +70,7 @@ function render(focus = true) {
   $('g-back').hidden = !(onb && S > 0) && st.mode !== '2fa';
   $('g-foot').textContent = onb ? 'Alt kan endres senere i Innstillinger.' : location.host;
   $('g-toqr').hidden = !(st.qr && st.mode === 'login');
+  $('g-passkey').hidden = !(st.passkey && st.mode === 'login');
 
   // Toppbildet: kicker og tittel som i fasiten.
   const name = form.adminName.value.trim();
@@ -132,6 +135,7 @@ async function login() {
   const { ok, data } = await post('/api/auth/login', { username: u, password: form.password.value, remember: true });
   if (data.needsTotp) { form.code.value = ''; return go({ mode: '2fa', ticket: data.ticket, recovery: false }); }
   if (ok) return done(data.user);
+  if (data.pendingApproval) return waitApproval51(data, { done, fail }); // prompt 51: ny enhet fra internett
   fail(data.error || 'Feil brukernavn eller passord.');
   form.password.select();
 }
@@ -142,6 +146,7 @@ async function verify() {
   if (st.recovery && code.length < 6) return fail('Skriv inn en gjenopprettingskode.');
   const { ok, data } = await post('/api/auth/totp', { ticket: st.ticket, code, remember: true });
   if (ok) return done(data.user);
+  if (data.pendingApproval) return waitApproval51(data, { done, fail }); // prompt 51
   if (data.expired) { form.password.value = ''; go({ mode: 'login', ticket: null }); return fail(data.error || 'Innloggingen tok for lang tid. Prøv igjen.'); }
   fail(data.error || 'Feil kode. Prøv igjen.');
   const ob = $('g-otp'); ob.classList.remove('shake'); void ob.offsetWidth; ob.classList.add('shake');
@@ -240,6 +245,8 @@ const showForm = (show) => { form.hidden = !show; if (show) render(); };
 form.hidden = true;
 const formT = setTimeout(() => { if (form.hidden && !$('g-qr').innerHTML) showForm(true); }, 2500);
 $('g-toqr').addEventListener('click', () => showQr());
+// Prompt 51: «Logg inn med passkey» (brukernavnet brukes hvis det er fylt inn, ellers velger enheten passkey).
+initPasskey51({ done, fail, username: () => form.username.value.trim(), button: $('g-passkey') }).then((ok) => { st.passkey = ok; render(false); }).catch(() => {});
 fetch('/api/setup/status').then((r) => r.json()).then(async (s) => {
   if (s.needsSetup) { clearTimeout(formT); showForm(true); go({ mode: 'onboarding', step: 0 }); return; }
   st.qr = await initQr({ done, form: showForm, app: () => st.app, noQr: () => { st.qr = false; render(false); } });

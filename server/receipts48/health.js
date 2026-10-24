@@ -5,6 +5,9 @@ import { hasGemini } from '../finans/gemini-keys.js';
 import { ocrTools } from '../ocr-fallback.js';
 import { r48Settings, macOcrKey48, externalBlocked48 } from './settings.js';
 import { macHealth48 } from './engines/mac-vision.js';
+import { macState51 } from './chain.js';
+import { brregStatus51 } from './brreg51.js';
+import { MIN_PX51 } from './preprocess51.js';
 
 let F = (u, i) => fetch(u, i);
 export const _setHealthFetch48 = (fn) => { F = fn ?? ((u, i) => fetch(u, i)); };
@@ -33,11 +36,13 @@ export async function health48({ admin = false, categories = [] } = {}) {
     ok: !!(mac.ok || (tools.tesseract && cfg.tesseract)) && !!model.ok,
     steps: { deviceParse: cfg.deviceParse, deviceOcr: cfg.deviceOcr, macOcr: cfg.macOcr, tesseract: cfg.tesseract, gemini: cfg.gemini },
     compareMac: cfg.compareMac,
-    macOcr: { enabled: cfg.macOcr, ...mac, ...(admin ? { url: cfg.macOcrUrl, keySet: !!key } : {}) },
+    macOcr: { enabled: cfg.macOcr, ...mac, ...macState51(), ...(admin ? { url: cfg.macOcrUrl, keySet: !!key } : {}) },
     model: { name: cfg.textModel, ...model, ...(admin ? { url: cfg.ollamaUrl } : {}) },
     tesseract: { enabled: cfg.tesseract, installed: !!tools.tesseract, version: tools.tesseract || null, imagemagick: !!tools.magick },
     gemini,
     external: blk,
+    brreg: (({ count, updated }) => ({ count, updated }))(brregStatus51()),
+    preprocess: { imagemagick: !!tools.magick, perspective: !!tools.magick, min_px: MIN_PX51 },
     categories,
     formats: { ocr: '/finans/api/receipts/schemas/ocr', receipt: '/finans/api/receipts/schemas/receipt' },
   };

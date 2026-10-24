@@ -495,3 +495,13 @@ logs44Api.get('/logs/stream', async (c) => {
     for (const r of reqs) { try { r.destroy(); } catch { /* */ } }
   });
 });
+
+/* ---------------- Prompt 51 (OBS51): drift og selvreparasjon ---------------- */
+// Bare lesing (GET) og omstart – samme proxy og samme regler som over. Ingen nye Docker-handlinger.
+export const docker51 = {
+  list: () => rawContainers(),
+  get: (path, opts) => dockerJson('GET', path, opts),
+  restart: (id) => action44(id, 'restart'),
+  logs: async (id, sinceT, tail = 200) => { const c = await findContainer(id); return c ? linesOf(c, sinceT, tail) : []; },
+  nameOf, self: SELF,
+};

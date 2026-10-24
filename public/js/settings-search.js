@@ -26,6 +26,7 @@ export const TAB_IC = {
   backup: ['#2f6b45', 'M12 3a9 9 0 1 1-8.5 6M3 4v5h5M12 8v4l3 2'],
   logger: ['#3d4a5c', 'M4 5h16v14H4zM7 9l3 3-3 3M12 15h5'], // prompt 44
   huske: ['#a0671a', 'M5 6h2M5 12h2M5 18h2M10 6h9M10 12h9M10 18h9'], // prompt 44
+  sikkerhet: ['#1f6f78', 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4'], // prompt 51 (SEC51)
 };
 export const icBox = (k, size = 30, icon = 16) => {
   const [c, d] = TAB_IC[k] ?? TAB_IC.app;

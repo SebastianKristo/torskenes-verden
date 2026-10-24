@@ -23,6 +23,33 @@ PORT="${PORT:-3000}"
 c() { printf '\e[1;34m%s\e[0m\n' "$*"; }
 die() { printf '\e[1;31m%s\e[0m\n' "$*" >&2; exit 1; }
 
+# Prompt 51 (OPS51): backup-disk og NAS for restic (3-2-1). BACKUP_MP=/sti/på/verten → /srv/backup i os (BACKUP_DIR),
+# NAS_MP=/mnt/pve/nas/nordlys → /mnt/nas/nordlys i os (velg stien som NAS-mål i Innstillinger → System → Backup).
+# Monteres inn i LXC-en (pct set -mpN) og videre til os med docker-compose.override.yml (overlever oppdateringer).
+add_mounts51() {
+  [ -n "${BACKUP_MP:-}${NAS_MP:-}" ] || return 0
+  local lines="" pair host ct n used changed=""
+  for pair in "${BACKUP_MP:-}|/srv/backup" "${NAS_MP:-}|/mnt/nas/nordlys"; do
+    host="${pair%%|*}"; ct="${pair##*|}"
+    [ -n "$host" ] || continue
+    case "$host" in /*) ;; *) die "Stien må være absolutt: $host" ;; esac
+    if [ ! -d "$host" ]; then mkdir -p "$host" && chown 101000:101000 "$host"; fi   # uprivilegert LXC: PUID 1000 = 101000 på verten
+    if ! pct config "$CTID" | grep -qE "^mp[0-9]+: ${host},mp=${ct}(,|$)"; then
+      used=$(pct config "$CTID" | sed -n -E 's/^mp([0-9]+):.*/\1/p')
+      for n in $(seq 0 9); do printf '%s\n' $used | grep -qx "$n" || break; done
+      pct set "$CTID" -mp$n "$host,mp=$ct"; changed=1
+      c "Monterte $host som $ct i container $CTID (mp$n)."
+    fi
+    lines="$lines      - $ct:$ct\n"
+  done
+  [ -n "$changed" ] && { pct reboot "$CTID" || { pct stop "$CTID" && pct start "$CTID"; }; for _ in $(seq 1 30); do pct exec "$CTID" -- true 2>/dev/null && break; sleep 2; done; }
+  printf 'services:\n  os:\n    volumes:\n%b' "$lines" | pct exec "$CTID" -- bash -c 'cat > /opt/homelab-os/docker-compose.override.yml'
+  if [ -n "${BACKUP_MP:-}" ]; then
+    pct exec "$CTID" -- bash -c "grep -q '^BACKUP_DIR=' /opt/homelab-os/.env && sed -i 's|^BACKUP_DIR=.*|BACKUP_DIR=/srv/backup|' /opt/homelab-os/.env || echo BACKUP_DIR=/srv/backup >> /opt/homelab-os/.env"
+  fi
+  c "Backup-stiene er klare (docker-compose.override.yml). Velg mål i Innstillinger → System → Backup."
+}
+
 command -v pct >/dev/null || die "Dette må kjøres på en Proxmox VE-vert."
 [ "$(id -u)" = 0 ] || die "Kjør som root."
 
@@ -100,6 +127,7 @@ pct exec "$CTID" -- cat /opt/homelab-os/.env.example \
 pct push "$CTID" "$TMP_ENV" /opt/homelab-os/.env --perms 600
 rm -f "$TMP_ENV"
 
+add_mounts51
 c "Starter …"
 PROFILE=""; [ -n "$TUNNEL_TOKEN" ] && PROFILE="--profile tunnel"
 run "cd /opt/homelab-os && export PWD=/opt/homelab-os && docker compose $PROFILE up -d"

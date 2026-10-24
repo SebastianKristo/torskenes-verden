@@ -4,6 +4,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 COPY package*.json ./
 RUN npm ci --omit=dev
 
+# Prompt 51 (OPS51): restic for backupen (3-2-1, Innstillinger → System). Fast versjon og sjekksum fra restic sine egne utgivelser.
+FROM node:22-bookworm-slim AS restic
+ARG TARGETARCH
+ARG RESTIC_VERSION=0.17.3
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates bzip2 && rm -rf /var/lib/apt/lists/* \
+  && ARCH="${TARGETARCH:-amd64}" \
+  && case "$ARCH" in amd64) SUM=5097faeda6aa13167aae6e36efdba636637f8741fed89bbf015678334632d4d3 ;; arm64) SUM=db27b803534d301cef30577468cf61cb2e242165b8cd6d8cd6efd7001be2e557 ;; *) echo "restic: ukjent arkitektur $ARCH" >&2; exit 1 ;; esac \
+  && curl -fsSL -o /tmp/restic.bz2 "https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_${ARCH}.bz2" \
+  && echo "$SUM  /tmp/restic.bz2" | sha256sum -c - && bunzip2 /tmp/restic.bz2 && install -m 0755 /tmp/restic /usr/local/bin/restic
+
 FROM node:22-bookworm-slim
 ENV NODE_ENV=production TZ=Europe/Oslo DATA_DIR=/data PORT=3000 OCR_FALLBACK=on
 # smbclient: backup av FinansHub til SMB-share (Innstillinger → Backup og data).
@@ -15,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends smbclient tesse
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=restic /usr/local/bin/restic /usr/local/bin/restic
 COPY package.json CHANGELOG.md ./
 COPY server ./server
 COPY shared ./shared

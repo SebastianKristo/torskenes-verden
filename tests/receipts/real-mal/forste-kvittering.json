@@ -1,0 +1,18 @@
+{
+  "today": "2026-10-24",
+  "notes": "Brukerens første ekte testcase (prompt 51, Del E 14). Kopier til tests/receipts/real/<navn>.json og fyll inn fasiten fra papirkvitteringen.",
+  "receipt": {
+    "merchant": "FYLL INN (slik det står øverst, f.eks. REMA 1000)",
+    "merchant_aliases": ["FYLL INN visningsnavn fra Enhetsregisteret, f.eks. REMA 1000 Grünerløkka"],
+    "org_number": "FYLL INN 9 siffer (står ofte etter «Org.nr» eller «Foretaksregisteret»)",
+    "date": "YYYY-MM-DD",
+    "time": "TT:MM",
+    "currency": "NOK",
+    "items": [
+      { "description": "VARE SLIK DEN STÅR", "quantity": null, "unit_price": null, "amount": 0.0 }
+    ],
+    "discounts": [],
+    "total": 0.0,
+    "payment_method": "BankAxept"
+  }
+}
