@@ -1,0 +1,24 @@
+{
+  "_om": "Sonarr-mock. «9-1-1» er i biblioteket; siste sendte episode er S09E06 (id 9106, sendt 2026-10-23, mangler fil). Lokkeduer: 9-1-1: Lone Star og 9-1-1: Nashville. Forventet: EpisodeSearch for episode 9106 (eller en handling som peker på den).",
+  "series": [
+    { "id": 7, "title": "9-1-1", "sortTitle": "911", "year": 2018, "tvdbId": 345678, "status": "continuing", "network": "ABC", "monitored": true, "qualityProfileId": 4, "path": "/data/media/tv/9-1-1", "seasons": [{ "seasonNumber": 8, "monitored": true }, { "seasonNumber": 9, "monitored": true }], "statistics": { "episodeFileCount": 22, "episodeCount": 24, "totalEpisodeCount": 30, "sizeOnDisk": 30000000000, "percentOfEpisodes": 91.6 } },
+    { "id": 8, "title": "9-1-1: Lone Star", "sortTitle": "911 lone star", "year": 2020, "tvdbId": 364080, "status": "ended", "network": "FOX", "monitored": true, "qualityProfileId": 4, "path": "/data/media/tv/9-1-1 Lone Star", "seasons": [{ "seasonNumber": 5, "monitored": true }], "statistics": { "episodeFileCount": 12, "episodeCount": 12, "totalEpisodeCount": 12, "sizeOnDisk": 15000000000, "percentOfEpisodes": 100 } },
+    { "id": 12, "title": "The Rookie", "sortTitle": "rookie", "year": 2018, "tvdbId": 350665, "status": "continuing", "network": "ABC", "monitored": true, "qualityProfileId": 4, "path": "/data/media/tv/The Rookie", "seasons": [{ "seasonNumber": 8, "monitored": true }], "statistics": { "episodeFileCount": 5, "episodeCount": 5, "totalEpisodeCount": 10, "sizeOnDisk": 9000000000, "percentOfEpisodes": 100 } }
+  ],
+  "lookupExtra": [
+    { "title": "9-1-1: Nashville", "year": 2025, "tvdbId": 451234, "status": "continuing", "network": "ABC", "seasons": [{ "seasonNumber": 1 }] }
+  ],
+  "episodes": {
+    "7": [
+      { "id": 9101, "seasonNumber": 9, "episodeNumber": 1, "title": "Ninety-One One", "airDateUtc": "2026-09-25T01:00:00Z", "hasFile": true, "monitored": true },
+      { "id": 9102, "seasonNumber": 9, "episodeNumber": 2, "title": "Aftershock", "airDateUtc": "2026-10-02T01:00:00Z", "hasFile": true, "monitored": true },
+      { "id": 9103, "seasonNumber": 9, "episodeNumber": 3, "title": "Blackout", "airDateUtc": "2026-10-09T01:00:00Z", "hasFile": true, "monitored": true },
+      { "id": 9104, "seasonNumber": 9, "episodeNumber": 4, "title": "Riptide", "airDateUtc": "2026-10-16T01:00:00Z", "hasFile": true, "monitored": true },
+      { "id": 9106, "seasonNumber": 9, "episodeNumber": 6, "title": "Mayday", "airDateUtc": "2026-10-23T01:00:00Z", "hasFile": false, "monitored": true },
+      { "id": 9105, "seasonNumber": 9, "episodeNumber": 5, "title": "Pileup", "airDateUtc": "2026-10-20T01:00:00Z", "hasFile": false, "monitored": true },
+      { "id": 9107, "seasonNumber": 9, "episodeNumber": 7, "title": "Undertow", "airDateUtc": "2026-10-30T01:00:00Z", "hasFile": false, "monitored": true }
+    ],
+    "8": [], "12": []
+  },
+  "expected": { "seriesId": 7, "episodeId": 9106, "code": "S09E06" }
+}

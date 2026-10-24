@@ -1,0 +1,12 @@
+{
+  "_om": "Abonnementer (fh_subscriptions). price er kroner per trekk; cycle monthly|yearly|weekly. Fasit etter normalisering til månedspris: Aftenposten 89 kr/uke = 385,67 kr/mnd (dyrest), Adobe 3 588 kr/år = 299 kr/mnd, Spotify 239, Netflix 149, iCloud 129, Microsoft 365 1 099 kr/år = 91,58. Fellen: Adobe har høyest tall per trekk, Aftenposten lavest.",
+  "items": [
+    { "name": "Netflix", "plan": "Standard", "price": 149, "cycle": "monthly", "next_date": "2026-11-05" },
+    { "name": "Spotify", "plan": "Family", "price": 239, "cycle": "monthly", "next_date": "2026-11-10" },
+    { "name": "Adobe Creative Cloud", "plan": "Årlig", "price": 3588, "cycle": "yearly", "next_date": "2027-03-01" },
+    { "name": "Aftenposten Digital", "plan": "Ukepris", "price": 89, "cycle": "weekly", "next_date": "2026-10-26" },
+    { "name": "iCloud+", "plan": "2 TB", "price": 129, "cycle": "monthly", "next_date": "2026-11-02" },
+    { "name": "Microsoft 365", "plan": "Family", "price": 1099, "cycle": "yearly", "next_date": "2027-01-15" }
+  ],
+  "expected": { "top": "Aftenposten Digital", "monthly": 385.67, "yearly": 4628, "second": "Adobe Creative Cloud", "third": "Spotify" }
+}

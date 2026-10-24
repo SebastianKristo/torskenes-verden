@@ -1,0 +1,17 @@
+{
+  "_om": "Fasit for kvittering.png. make-images.py tegner bildet fra denne fila.",
+  "butikk": "REMA 1000",
+  "avdeling": "REMA 1000 Grünerløkka",
+  "dato": "2026-10-22",
+  "tid": "17:42",
+  "total": 333.58,
+  "linjer": [
+    { "navn": "TINE Lettmelk 1L", "belop": 22.90 },
+    { "navn": "Kneippbrød", "belop": 34.90 },
+    { "navn": "Egg 12 stk", "belop": 52.90 },
+    { "navn": "Bananer", "belop": 31.08 },
+    { "navn": "Norvegia 500g", "belop": 89.90 },
+    { "navn": "Evergood kaffe 500g", "belop": 99.90 },
+    { "navn": "Bærepose", "belop": 2.00 }
+  ]
+}

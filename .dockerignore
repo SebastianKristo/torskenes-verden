@@ -10,3 +10,5 @@ apps
 test
 docs
 .github
+# Prompt 47: eval/ er med i imaget (npm run eval i containeren), men ikke lokale resultater.
+eval/results

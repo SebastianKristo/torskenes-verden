@@ -1,0 +1,4 @@
+{
+  "_om": "Minnefakta, seedet via det eksisterende alias-API-et (POST /api/glimt/memory {match, type}).",
+  "nina": { "match": "Nina", "type": "frisør" }
+}

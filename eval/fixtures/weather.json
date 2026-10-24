@@ -1,0 +1,14 @@
+{
+  "_om": "Vær-mock (Open-Meteo, MET Locationforecast, geokoding). Tallene er faste, så svaret kan sjekkes. Oslo nå/neste time: 7 °C, skyet, 4 m/s. New York i morgen (25.10, lokal dato): 9–16 °C, sol, 10 % nedbør.",
+  "places": [
+    { "name": "Oslo", "country_code": "NO", "country": "Norge", "latitude": 59.9127, "longitude": 10.7461, "timezone": "Europe/Oslo", "aliases": ["oslo"] },
+    { "name": "New York", "country_code": "US", "country": "USA", "latitude": 40.7143, "longitude": -74.006, "timezone": "America/New_York", "aliases": ["new york", "new york city", "nyc"] },
+    { "name": "Bergen", "country_code": "NO", "country": "Norge", "latitude": 60.392, "longitude": 5.3242, "timezone": "Europe/Oslo", "aliases": ["bergen"] }
+  ],
+  "profiles": {
+    "Oslo": { "temp": 7, "lo": 4, "hi": 9, "code": 3, "wind": 4, "precipProb": 40, "precip": 0.2, "symbol": "cloudy" },
+    "New York": { "temp": 12, "lo": 9, "hi": 16, "code": 0, "wind": 5, "precipProb": 10, "precip": 0, "symbol": "clearsky_day" },
+    "Bergen": { "temp": 9, "lo": 7, "hi": 10, "code": 61, "wind": 8, "precipProb": 90, "precip": 1.5, "symbol": "rain" }
+  },
+  "expected": { "osloNow": 7, "nyTomorrow": { "date": "2026-10-25", "lo": 9, "hi": 16 } }
+}

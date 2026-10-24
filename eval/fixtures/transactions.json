@@ -1,0 +1,15 @@
+{
+  "_om": "Transaksjoner (POST /finans/api/transactions). amount er kroner, negativt = utgift. Fasit: mat (Mat og dagligvarer) i oktober 2026 til og med 24.10 = 2 191,10 kr. Fellene: september, restaurant, inntekt.",
+  "items": [
+    { "date": "2026-10-02", "description": "REMA 1000 GRUNERLOKKA", "amount": -412.50, "category": "Mat og dagligvarer" },
+    { "date": "2026-10-09", "description": "KIWI 505 SOFIENBERG", "amount": -289.90, "category": "Mat og dagligvarer" },
+    { "date": "2026-10-15", "description": "MENY STORO", "amount": -1045.30, "category": "Mat og dagligvarer" },
+    { "date": "2026-10-21", "description": "COOP EXTRA CARL BERNERS", "amount": -356.00, "category": "Mat og dagligvarer" },
+    { "date": "2026-10-23", "description": "BUNNPRIS TORGGATA", "amount": -87.40, "category": "Mat og dagligvarer" },
+    { "date": "2026-09-28", "description": "REMA 1000 GRUNERLOKKA", "amount": -600.00, "category": "Mat og dagligvarer" },
+    { "date": "2026-10-11", "description": "MATHALLEN OSLO RESTAURANT", "amount": -450.00, "category": "Restaurant og kafé" },
+    { "date": "2026-10-12", "description": "RUTER BILLETT", "amount": -924.00, "category": "Transport og lading" },
+    { "date": "2026-10-15", "description": "LØNN OKTOBER", "amount": 32500.00, "category": null }
+  ],
+  "expected": { "category": "Mat og dagligvarer", "from": "2026-10-01", "to": "2026-10-24", "total": 2191.10 }
+}

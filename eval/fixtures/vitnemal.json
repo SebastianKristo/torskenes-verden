@@ -1,0 +1,23 @@
+{
+  "_om": "Fasit for vitnemal.png (15 fag, én karakter per fag). make-images.py tegner bildet fra denne fila.",
+  "skole": "Oslo katedralskole",
+  "elev": "Sebastian Kristo",
+  "dato": "2026-06-20",
+  "fag": [
+    { "kode": "NOR1211", "navn": "Norsk hovedmål, skriftlig", "karakter": "4" },
+    { "kode": "NOR1212", "navn": "Norsk sidemål, skriftlig", "karakter": "3" },
+    { "kode": "NOR1213", "navn": "Norsk, muntlig", "karakter": "5" },
+    { "kode": "ENG1007", "navn": "Engelsk", "karakter": "5" },
+    { "kode": "REA3056", "navn": "Matematikk R1", "karakter": "3" },
+    { "kode": "NAT1007", "navn": "Naturfag", "karakter": "4" },
+    { "kode": "SAM3072", "navn": "Samfunnskunnskap", "karakter": "5" },
+    { "kode": "GEO1003", "navn": "Geografi", "karakter": "4" },
+    { "kode": "HIS1010", "navn": "Historie", "karakter": "5" },
+    { "kode": "REL1003", "navn": "Religion og etikk", "karakter": "4" },
+    { "kode": "KRO1019", "navn": "Kroppsøving", "karakter": "6" },
+    { "kode": "REA3049", "navn": "Informasjonsteknologi 1", "karakter": "6" },
+    { "kode": "FSP6237", "navn": "Spansk II", "karakter": "3" },
+    { "kode": "REA3045", "navn": "Kjemi 1", "karakter": "5" },
+    { "kode": "REA3038", "navn": "Fysikk 1", "karakter": "4" }
+  ]
+}

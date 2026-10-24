@@ -19,6 +19,7 @@ COPY package.json CHANGELOG.md ./
 COPY server ./server
 COPY public ./public
 COPY scripts ./scripts
+COPY eval ./eval
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN mkdir -p /data
 VOLUME /data

@@ -1,0 +1,16 @@
+{
+  "_om": "Faste nettsøk-treff. Navnet er bevisst oppdiktet: et svar som bygger på søket MÅ nevne Eleanor Whitcombe. Svarer modellen med et navn fra treningsdataene (Sunak, Starmer …), bygger den ikke på søket.",
+  "uk_pm": {
+    "match": "statsminister|prime minister|storbritannia|england|britisk|uk\\b|downing",
+    "expectName": "Whitcombe",
+    "forbidden": ["Sunak", "Starmer", "Johnson", "Truss", "May", "Cameron"],
+    "hits": [
+      { "title": "Eleanor Whitcombe er ny statsminister i Storbritannia", "url": "https://www.nrk.no/urix/eleanor-whitcombe-ny-statsminister-1.17000001", "snippet": "Eleanor Whitcombe ble torsdag utnevnt til Storbritannias statsminister av kong Charles etter at hun vant partilederkampen. Hun flytter inn i Downing Street 10 i helgen.", "published": "2026-10-22" },
+      { "title": "Prime Minister Eleanor Whitcombe – GOV.UK", "url": "https://www.gov.uk/government/people/eleanor-whitcombe", "snippet": "Eleanor Whitcombe became Prime Minister and First Lord of the Treasury on 22 October 2026.", "published": "2026-10-22" },
+      { "title": "Who is Eleanor Whitcombe, the UK's new prime minister?", "url": "https://www.bbc.co.uk/news/uk-politics-70000001", "snippet": "Eleanor Whitcombe, 49, has been confirmed as the new UK prime minister after her predecessor stepped down.", "published": "2026-10-22" }
+    ]
+  },
+  "generic": [
+    { "title": "Søkeresultat", "url": "https://snl.no/eval", "snippet": "Et generelt oppslag uten relevant innhold (eval-mock).", "published": "2026-10-20" }
+  ]
+}

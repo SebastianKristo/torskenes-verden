@@ -9,6 +9,7 @@
     "dev": "node --watch server/index.js",
     "hash-password": "node scripts/hash-password.js",
     "test": "node --test \"test/**/*.test.js\"",
+    "eval": "node eval/run.mjs",
     "reset-password": "node scripts/reset-password.js"
   },
   "engines": {
