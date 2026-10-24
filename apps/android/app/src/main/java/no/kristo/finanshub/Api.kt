@@ -15,7 +15,8 @@ import javax.net.ssl.SSLException
 
 /** Feil fra serveren. needsTotp = innloggingen krever en 6-sifret kode (2FA). */
 /** Prompt 28: code og canGemini fra serverens feilsvar ({error, code, canGemini}), f.eks. «Fra skjermbilde». */
-class ApiException(message: String, val status: Int = 0, val needsTotp: Boolean = false, val code: String? = null, val canGemini: Boolean = false) : Exception(message)
+/** Prompt 51: body51 = hele feilsvaret ved 403 (DEVICE_APPROVAL_REQUIRED: approvalId, pollKey, statusUrl, finishUrl – Sec51.kt). */
+class ApiException(message: String, val status: Int = 0, val needsTotp: Boolean = false, val code: String? = null, val canGemini: Boolean = false, val body51: JSONObject? = null) : Exception(message)
 
 /** Resultat av innlogging: token og hvem som er logget inn. */
 data class LoginResult(val token: String, val username: String, val name: String, val role: String)
@@ -44,6 +45,7 @@ class Api(private val baseUrl: String, private val token: String?) {
             conn.readTimeout = read
             conn.setRequestProperty("Accept", "application/json")
             token?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
+            Sec51Http.apply(conn, prefix, path) // prompt 51: X-Device-Key på innlogging, X-Device-Id på /api/flags
             if (json != null) {
                 conn.doOutput = true
                 conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -86,7 +88,7 @@ class Api(private val baseUrl: String, private val token: String?) {
             val path = conn.url.path
             if (code == 401 && !path.startsWith(FINANS) && o?.optBoolean("needsTotp") != true) throw ApiException("$TOKEN_REFUSED ($path)", 403, code = o?.optString("code")?.takeIf { it.isNotBlank() })
             // Prompt 50: «kode» (norsk, f.eks. modell_utilgjengelig) leses også.
-            throw ApiException(msg, code, o?.optBoolean("needsTotp") == true, o?.optString("code")?.takeIf { it.isNotBlank() } ?: o?.optString("kode")?.takeIf { it.isNotBlank() }, o?.optBoolean("canGemini") == true)
+            throw ApiException(msg, code, o?.optBoolean("needsTotp") == true, o?.optString("code")?.takeIf { it.isNotBlank() } ?: o?.optString("kode")?.takeIf { it.isNotBlank() }, o?.optBoolean("canGemini") == true, if (code == 403) o else null)
         }
         // En nettside (innloggingssiden, en proxy eller Cloudflare) i stedet for data: si det tydelig i stedet for en JSON-feil.
         if (body.trimStart().startsWith("<")) throw ApiException("Uventet svar fra serveren: fikk en nettside i stedet for data fra ${conn.url.path}. Oppdater homelab eller logg inn på nytt.", 502)

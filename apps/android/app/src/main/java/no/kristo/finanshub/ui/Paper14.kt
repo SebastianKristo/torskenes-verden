@@ -741,6 +741,7 @@ internal fun PaperLogin(vm: AppViewModel) {
             }
         }
         if (vm.p46.qrShowOpen) QrLoginScreen46(vm) // prompt 46
+        if (vm.sec51.wait != null) ApprovalWait51(vm) // prompt 51: ny enhet venter på godkjenning
         SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 16.dp))
     }
 }

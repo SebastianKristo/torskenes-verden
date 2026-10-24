@@ -15,6 +15,9 @@
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Prompt 51: «Varsler via ntfy (hjemmeserver)» – forgrunnstjeneste som holder strømmen mot ntfy (Ntfy51.kt), startes igjen etter omstart. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Prompt 40: Hjemlys som Live Update (Android 16, «promoted ongoing»). -->
     <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
@@ -377,6 +380,18 @@
             android:name=".family.FamilyService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- Prompt 51: ntfy-strømmen (bare når brukeren har slått på «Varsler via ntfy») og omstart etter oppstart/oppdatering. -->
+        <service
+            android:name=".Ntfy51Service"
+            android:exported="false"
+            android:foregroundServiceType="remoteMessaging" />
+        <receiver android:name=".Ntfy51Boot" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <!-- Health Connect: personvernforklaringen (Android 13 og eldre). -->
         <activity

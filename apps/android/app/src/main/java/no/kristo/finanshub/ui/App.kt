@@ -118,6 +118,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     PaperApp(vm, snack, takePhoto, pickPhotos, pickFiles, onPrivacyChanged, wideIn = width != WindowWidthSizeClass.Compact)
     if (vm.menuOpen) ProfileSheet(vm)
     if (vm.widgetGallery) WidgetGallery(vm)
+    Overlays51(vm) // prompt 51: «Ny enhet vil logge inn» og «Nytt i denne versjonen»
 }
 
 /**

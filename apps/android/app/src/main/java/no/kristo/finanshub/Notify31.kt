@@ -243,8 +243,12 @@ internal suspend fun pending31(ctx: Context, api: Api) {
         val cat = x.optString("category", "ai").ifBlank { "ai" }
         val ref = x.optString("jobId").ifBlank { x.optString("ref") }
         val tag = x.optString("tag").ifBlank { if (ref.isNotBlank()) "assist-$ref" else "pend-" + x.optString("id", ts.toString()) }
+        // Prompt 51: «Ny enhet vil logge inn» (Sec51.kt), og varsler ntfy allerede har vist (Ntfy51.kt) vises ikke to ganger.
+        if (runCatching { Sec51Notify.pending(ctx, x) }.getOrDefault(false)) { Notify31.markSeen(ctx, tag); continue }
         // Prompt 50: Sjekk inn (innsjekk, forespørsel, «Hent meg», svar, påminnelse) med handlinger og egen kanal (P50Fam.kt).
+        // (Prompt 51: vises alltid, også når ntfy kom først – bare her finnes handlingene 👍 / Ring / Hent / Kart.)
         if (runCatching { pendingCheckin50(ctx, x, tag) }.getOrDefault(false)) continue
+        if (runCatching { Ntfy51.seen(ctx, x) }.getOrDefault(false)) { Notify31.markSeen(ctx, tag); continue }
         if (tag in seen || (ref.isNotBlank() && ("assist-$ref" in seen || ref in seen))) continue
         val title = x.optString("title").ifBlank { "Glimt" }
         val body = plain31(x.optString("body").ifBlank { x.optString("text") })

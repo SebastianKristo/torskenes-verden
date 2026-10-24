@@ -228,6 +228,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun onForeground() {
         if (loggedIn) { startTrackingPoll(); viewModelScope.launch { loadReviewCount() } }
         if (loggedIn) { onForeground31(); refreshMe39(); loadAiIn39() } // prompt 39: nytt profilbilde fra web vises uten å logge ut
+        if (loggedIn && backgroundAt != null) runCatching { refresh51() } // prompt 51: flagg, «Nytt», ventende enheter
         val at = backgroundAt ?: return
         backgroundAt = null
         if (loggedIn && prefs.bool(AppPrefs.LOCK) && System.currentTimeMillis() - at >= prefs.int(AppPrefs.LOCK_AFTER, 0) * 60_000L) locked = true
@@ -359,6 +360,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     if (pending != null && !code.isNullOrBlank()) message = e.message ?: "Feil kode"
                     pending = PendingLogin(srv, username, password); return@launch
                 }
+                // Prompt 51: ny enhet fra internett må godkjennes fra en kjent enhet (Sec51.kt, ui/Sec51Ui.kt).
+                if (e.code == APPROVAL_CODE51) { pending = null; startApproval51(srv, e.body51); return@launch }
                 throw e
             }
             pending = null
@@ -3707,6 +3710,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal val scope50: kotlinx.coroutines.CoroutineScope get() = viewModelScope
     internal val appCtx50: Context get() = appCtx
 
+    /* ---------- Prompt 51 (APPAND51): ny enhet godkjennes, krasjrapporter, feature flags, «Nytt i denne versjonen», ntfy (Sec51.kt, Qa51.kt, Ntfy51.kt, ui/Sec51Ui.kt) ---------- */
+    val sec51 = Sec51State()
+    val qa51 = Qa51State()
+    val ntfy51 = Ntfy51State()
+    internal suspend fun <T> api51(f: suspend Api.() -> T): T = api.f()
+    internal fun launch51(block: suspend () -> Unit) = launch(block)
+    internal fun launchJob51(block: suspend () -> Unit): kotlinx.coroutines.Job = launch(block)
+    internal val appCtx51: Context get() = appCtx
+    /** Godkjent innlogging (finishUrl) legges til som en vanlig innlogging. */
+    internal fun addAccount51(srv: String, r: LoginResult) = addQrAccount46(srv, r)
+
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.
     init {
@@ -3723,6 +3737,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         runCatching { Jul40.ensure(appCtx) }
         // Prompt 44: pågående «Logg inn som» (stripa) eller avslutt den stille når tokenet har gått ut.
         runCatching { restoreAs44() }
+        // Prompt 51: enhetsnøkkel/-id, bufrede flagg, krasjkøen og ntfy-tjenesten (Qa51.kt).
+        runCatching { start51() }
         if (loggedIn) refresh()
     }
 

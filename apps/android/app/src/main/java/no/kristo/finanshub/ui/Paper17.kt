@@ -110,10 +110,10 @@ private fun PaperSettings17Body(vm: AppViewModel, navBottom: Dp, onPrivacyChange
                 }
             }
             "modules" -> item { ModulesSub(vm) }
-            "notify" -> item { NotifySub(vm) }
+            "notify" -> { item { NotifySub(vm) }; item { Ntfy51Section(vm) } } // prompt 51: ntfy
             "profil" -> profilPage39(vm) // Prompt 39: Appprofil som egen underside
             "accounts" -> item { AccountsPage(vm) }
-            "security" -> item { SecurityPage(vm, onPrivacyChanged) }
+            "security" -> { item { SecurityPage(vm, onPrivacyChanged) }; item { Sec51Section(vm) } } // prompt 51: enheter som venter
             "tokens" -> item { TokensPage(vm) }
             "ai" -> { item { GlimtSearchSettings32b(vm) }; item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { Memory33Settings(vm) }; item { AiTimeouts23(vm) } }
             // Prompt 26: gruppert liste som på web, egen side per integrasjon, og Kalendere.

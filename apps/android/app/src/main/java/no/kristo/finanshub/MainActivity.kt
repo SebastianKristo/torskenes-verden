@@ -25,6 +25,7 @@ class MainActivity : FragmentActivity() {
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+        runCatching { Crash51.install(this) } // prompt 51: krasj → fil, sendes ved neste oppstart (Qa51.kt)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         preferHighRefresh39() // prompt 39: myke sveip på 90/120 Hz-skjermer
