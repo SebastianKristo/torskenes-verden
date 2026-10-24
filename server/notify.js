@@ -223,11 +223,13 @@ export async function notifyUser(user, { title, body = '', url = null, tag = nul
   const realtime = sendRealtime ? broadcast('notify', { id, ...item, silent: !!off }, [user]) : 0;
   if (off) return { id, realtime, pushed: 0, skipped: off };
   if (isForeground(user, now)) return { id, realtime, pushed: 0, skipped: 'i forgrunnen' };
-  if (inQuiet(n, now)) return { id, realtime, pushed: 0, skipped: 'stille timer' };
+  // Prompt 50 (SRVFAM50): «Hent meg» (data.priority 'high') går gjennom stille timer og sendes med høy prioritet.
+  const high = item.data?.priority === 'high';
+  if (inQuiet(n, now) && !high) return { id, realtime, pushed: 0, skipped: 'stille timer' };
   const subs = db.prepare('SELECT * FROM push_subscriptions WHERE user_id=?').all(user);
   let pushed = 0;
   for (const s of subs) {
-    const r = await sendPush(s, { id, ...item }, { urgency: item.category === 'ai' || item.category === 'abonnement' ? 'high' : 'normal', topic: item.tag });
+    const r = await sendPush(s, { id, ...item }, { urgency: high || item.category === 'ai' || item.category === 'abonnement' ? 'high' : 'normal', topic: item.tag });
     if (r.ok) { pushed++; db.prepare('UPDATE push_subscriptions SET last_ok=?, fails=0 WHERE id=?').run(now, s.id); }
     else if (r.gone || s.fails >= 9) db.prepare('DELETE FROM push_subscriptions WHERE id=?').run(s.id);
     else db.prepare('UPDATE push_subscriptions SET fails=fails+1 WHERE id=?').run(s.id);

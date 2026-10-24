@@ -66,6 +66,7 @@ import { study44Api } from './study44.js';
 import { auth44Api } from './auth44.js';
 import { playback44Api, startPlayback44 } from './playback44.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
+import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
@@ -708,6 +709,7 @@ app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-s
 app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cachet på disk og ✦ AI-forslag
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
 app.route('/', tilesApi);
+mountFamily50(app); // prompt 50 (SRVFAM50): /api/family/places…, /people50, /today50, /health50…, /checkin… (før de eldre /api/family-rutene)
 app.route('/api/family/health/ha', health42Api); // prompt 42: helse fra Home Assistant
 app.use('/api/family/*', familyHealthMw42); // prompt 42: health.source/sourceDevice/limited/stale
 app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse

@@ -13,6 +13,9 @@
 //      Entur Journey Planner v3 (ET-Client-Name: kristo-homelab) for holdeplasser, trikkelinjer, gangtid og sanntid; MOCK_DATA=1 gir en fast rutetabell
 //      (delay= simulerer forsinket trikk fra Frydenlund, bare med MOCK_DATA).
 // GET/POST/DELETE /api/ruter/school-zones[/:id] → {zones:[{id, name, lat, lon, radius_m, label:'Skolen 150 m'}]}  (radius 50–300 m, maks 20, siste kan ikke slettes)
+//      Prompt 50: «zones» er nå OMRÅDENE i stedet med type skole i Familie › Steder (+ place, source:'steder'). school_zones er migrert inn dit
+//      én gang (kv ruter50_school_migrated) og brukes ikke lenger (tabellen står igjen urørt – additive migrasjoner).
+// GET  /api/ruter/school50 → {title:'SKOLE · FRA FAMILIE › STEDER', place, areas, chips, readOnly:true, edit, empty}   (se SERVER50-API.md)
 // POST /api/ruter/left-school {at?, zoneId?, arrivedAt?} → {journey}  (hverdager 07–18, ikke innen 10 min etter ankomst; ellers 409 med grunn)
 // POST /api/ruter/arrived-school {at?} → {ok}   (ankomst, så korte besøk ikke teller)
 // GET  /api/ruter/journey → {journey}   journey = {active, leftSchoolAt, title:'MIN REISE · FORLOT SKOLEN 16:31', expiresAt, endedAt?, endedReason?, hidden, homeCard, trip?}
@@ -22,6 +25,7 @@
 import { Hono } from 'hono';
 import { db, kv, OWNER } from './db.js';
 import { authOrToken as authOrToken0 } from './mobile.js';
+import { family50 as F50, placesChanged50, areaOut50 } from './family.js'; // prompt 50 (SRVFAM50): skolen kommer fra Familie › Steder
 const authOrToken = (c, next) => authOrToken0(c, next); // sen binding (mobile.js kan være midt i lastingen)
 
 db.exec(`CREATE TABLE IF NOT EXISTS school_zones (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, name TEXT NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, radius_m INTEGER NOT NULL, created INTEGER NOT NULL);
@@ -81,15 +85,73 @@ export const settingsOf41 = (u) => { const s = kv.get(u, 'ruter41_settings', {})
 
 /* ---------------- Skolesoner ---------------- */
 
-const zoneOut = (z) => ({ id: z.id, name: z.name, lat: z.lat, lon: z.lon, radius_m: z.radius_m, label: `${z.name} ${z.radius_m} m` });
+// Prompt 50 (SRVFAM50): én kilde. Skolen er stedet med type skole i Familie › Steder (eget først, ellers et delt sted i familien).
+const ownSchool50 = (u) => q("SELECT * FROM family_zone WHERE created_by=? AND place_type='skole' ORDER BY id LIMIT 1").get(u) ?? null;
+/** Stedet Ruter bruker som skole for brukeren: eget sted med type skole, ellers et sted med type skole som familien har delt. */
+export function schoolPlaceOf50(u) {
+  migrateSchool50();
+  return ownSchool50(u) ?? F50.zonesFor(u).find((z) => z.place_type === 'skole') ?? null;
+}
+function newSchool50(u, { name = 'Skole', lat, lon, radius }) {
+  return q("INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared, icon, place_type) VALUES(?,?,?,?,?,?,?,0,'school','skole') RETURNING *").get(name, lat, lon, radius, '#2f5d8a', u, Date.now());
+}
+const addArea50 = (zoneId, { name, lat, lon, radius }) => q('INSERT INTO family_area50(zone_id, name, lat, lon, radius, created) VALUES(?,?,?,?,?,?)').run(zoneId, name, lat, lon, radius, Date.now());
+let migrated50 = false;
+/** Engangsmigrering: hver brukers Ruter-skolesoner blir områder i brukerens sted «Skole» (opprettes ved behov, privat til eieren). */
+export function migrateSchool50() {
+  if (migrated50) return;
+  migrated50 = true;
+  F50.migrate();
+  if (kv.get(OWNER, 'ruter50_school_migrated', false)) return;
+  const touched = [];
+  db.transaction(() => {
+    for (const { user_id: u } of q('SELECT DISTINCT user_id FROM school_zones').all()) {
+      const rows = q('SELECT * FROM school_zones WHERE user_id=? ORDER BY id').all(u);
+      let p = ownSchool50(u);
+      if (!p) p = newSchool50(u, { lat: rows[0].lat, lon: rows[0].lon, radius: rows[0].radius_m });
+      const have = F50.areasOf(p.id);
+      for (const r of rows) {
+        if (have.some((a) => F50.dist(a, r) < 20 && Math.abs(a.radius - r.radius_m) < 1)) continue;
+        addArea50(p.id, { name: r.name, lat: r.lat, lon: r.lon, radius: r.radius_m });
+      }
+      touched.push(p.id);
+    }
+    kv.set(OWNER, 'ruter50_school_migrated', Date.now());
+  })();
+  for (const id of touched) placesChanged50(id);
+}
+/** Bare for tester: kjør migreringen på nytt. */
+export const _resetSchool50 = () => { migrated50 = false; kv.del(OWNER, 'ruter50_school_migrated'); };
 export function zonesOf41(u) {
-  let rows = q('SELECT * FROM school_zones WHERE user_id=? ORDER BY id').all(u);
-  if (!rows.length && isPreset41(u) && !kv.get(u, 'ruter41_zones_seeded', false)) {
-    q('INSERT INTO school_zones(user_id,name,lat,lon,radius_m,created) VALUES(?,?,?,?,?,?)').run(u, 'Skolen', PLACES41.skole.lat, PLACES41.skole.lon, 150, Date.now());
+  let p = schoolPlaceOf50(u);
+  if (!p && isPreset41(u) && !kv.get(u, 'ruter41_zones_seeded', false)) {
+    p = newSchool50(u, { lat: PLACES41.skole.lat, lon: PLACES41.skole.lon, radius: 150 });
+    addArea50(p.id, { name: 'Skolen', lat: PLACES41.skole.lat, lon: PLACES41.skole.lon, radius: 150 });
     kv.set(u, 'ruter41_zones_seeded', true);
-    rows = q('SELECT * FROM school_zones WHERE user_id=? ORDER BY id').all(u);
+    placesChanged50(p.id);
   }
-  return rows.map(zoneOut);
+  return p ? F50.areasOf(p.id).map(areaOut50) : [];
+}
+/** Ruter › Min reise: skoleseksjonen (bare visning). */
+export function school50(u) {
+  const p = schoolPlaceOf50(u) ?? (zonesOf41(u), schoolPlaceOf50(u));
+  const base = { title: 'SKOLE · FRA FAMILIE › STEDER', readOnly: true };
+  if (!p) return { ...base, place: null, areas: [], chips: '', edit: null, empty: { text: 'Ingen skole valgt', action: 'Legg til i Steder ›', tab: 'steder', newType: 'skole', url: '/#/familie/steder?ny=skole' } };
+  const areas = F50.areasOf(p.id).map(areaOut50);
+  return { ...base, place: { id: p.id, name: p.name, color: String(p.color).toLowerCase(), icon: p.icon ?? 'school', mine: p.created_by === u, shared: !!p.shared }, areas, chips: areas.map((a) => a.label).join(' · '),
+    edit: { label: 'Endre i Steder ›', tab: 'steder', placeId: p.id, url: `/#/familie/steder?sted=${p.id}` }, empty: null };
+}
+/** Hendelser fra Familie (family.js): kom til skolen → ankomst; forlot skolen (utenfor alle områdene i 2 min) → Min reise. */
+export function ruterPlaceEvents50(u, events) {
+  const p = schoolPlaceOf50(u);
+  if (!p) return;
+  for (const e of events) {
+    if (e.zoneId !== p.id) continue;
+    if (e.kind === 'enter') { const a = kv.get(u, 'ruter41_arrived', null); if (!Number.isFinite(a) || a < e.ts) kv.set(u, 'ruter41_arrived', e.ts); continue; }
+    const j = jget(u);
+    if (j?.leftSchoolAt && Math.abs(j.leftSchoolAt - e.ts) < 10 * MIN) continue; // appen har allerede meldt det
+    try { leftSchool41(u, { at: new Date(e.ts).toISOString() }); } catch { /* utenfor hverdager 07–18 eller for kort besøk */ }
+  }
 }
 
 /* ---------------- «Forlot skolen» ---------------- */
@@ -319,22 +381,32 @@ ruter41Api.get('/my-trip', async (c) => {
   // Prompt 45: recommended = nøyaktig de N første (færre hvis det ikke finnes flere, ingen plassholdere).
   return c.json({ ...r, recommended: (r.options ?? []).slice(0, r.recoCount ?? 2) }, 200, { 'Cache-Control': 'no-store' });
 });
-ruter41Api.get('/school-zones', (c) => c.json({ zones: zonesOf41(c.get('user')) }));
+const zonesResp50 = (u) => { const zones = zonesOf41(u), p = schoolPlaceOf50(u); return { zones, source: 'steder', place: p ? { id: p.id, name: p.name, mine: p.created_by === u } : null }; };
+ruter41Api.get('/school-zones', (c) => c.json(zonesResp50(c.get('user'))));
+ruter41Api.get('/school50', (c) => c.json(school50(c.get('user')), 200, { 'Cache-Control': 'no-store' }));
+// Eldre klienter: legger til/fjerner områder i skole-stedet (eget sted; et sted andre har delt kan bare eieren endre).
 ruter41Api.post('/school-zones', async (c) => {
   const u = c.get('user'), b = await body(c);
   const name = clean(b.name, 40), lat = +b.lat, lon = +b.lon, r = Math.round(+(b.radius_m ?? b.radius));
   if (!name || !Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return c.json({ error: 'Forventet {name, lat, lon, radius_m}' }, 400);
   if (!(r >= 50 && r <= 300)) return c.json({ error: 'Radius må være 50–300 m' }, 400);
-  if (zonesOf41(u).length >= 20) return c.json({ error: 'Maks 20 skolesoner' }, 409);
-  q('INSERT INTO school_zones(user_id,name,lat,lon,radius_m,created) VALUES(?,?,?,?,?,?)').run(u, name, lat, lon, r, Date.now());
-  return c.json({ zones: zonesOf41(u) }, 201);
+  zonesOf41(u);
+  let p = ownSchool50(u);
+  if (!p && schoolPlaceOf50(u)) return c.json({ error: 'Skolen er delt av noen andre i familien. Endre den i Familie › Steder.', code: 'not_owner' }, 403);
+  if (p && F50.areasOf(p.id).length >= 20) return c.json({ error: 'Maks 20 skolesoner' }, 409);
+  if (!p) p = newSchool50(u, { lat, lon, radius: r });
+  addArea50(p.id, { name, lat, lon, radius: r });
+  placesChanged50(p.id);
+  return c.json(zonesResp50(u), 201);
 });
 ruter41Api.delete('/school-zones/:id{[0-9]+}', (c) => {
-  const u = c.get('user'), zones = zonesOf41(u), id = +c.req.param('id');
+  const u = c.get('user'), zones = zonesOf41(u), id = +c.req.param('id'), p = schoolPlaceOf50(u);
   if (!zones.some((z) => z.id === id)) return c.json({ error: 'Fant ikke sonen' }, 404);
+  if (p.created_by !== u) return c.json({ error: 'Bare den som lagde stedet kan endre det', code: 'not_owner' }, 403);
   if (zones.length <= 1) return c.json({ error: 'Den siste skolesonen kan ikke slettes' }, 409);
-  q('DELETE FROM school_zones WHERE id=? AND user_id=?').run(id, u);
-  return c.json({ zones: zonesOf41(u) });
+  q('DELETE FROM family_area50 WHERE id=? AND zone_id=?').run(id, p.id);
+  placesChanged50(p.id);
+  return c.json(zonesResp50(u));
 });
 ruter41Api.post('/left-school', async (c) => { try { const b = await body(c); return c.json({ journey: leftSchool41(c.get('user'), b) }); } catch (e) { return fail(c, e); } });
 ruter41Api.post('/arrived-school', async (c) => {

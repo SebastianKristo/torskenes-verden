@@ -95,6 +95,9 @@ test('soner: inn og ut gir hendelser, og varsel bare der seeren har slått det p
   const noise = await b('/location', 'POST', { lat: HOME.lat + 0.0014, lon: HOME.lon });
   assert.equal(noise.body.events.length, 0, `${dist(HOME, { lat: HOME.lat + 0.0014, lon: HOME.lon })} m`);
   await b('/location', 'POST', { lat: 59.94, lon: 10.70 });
+  // Prompt 50: «forlot» først når personen har vært utenfor i minst 2 min.
+  assert.equal((await a(`/events?since=${since}`)).body.events.length, 0, 'ikke «forlot» før 2 min');
+  await b('/location', 'POST', { lat: 59.94, lon: 10.70, ts: Date.now() + 150_000 });
   const ev = (await a(`/events?since=${since}`)).body.events;
   assert.deepEqual(ev.map((e) => [e.kind, e.name]), [['leave', 'Ingrid']]);
   assert.equal((await b(`/events?since=${since}`)).body.events.length, 0, 'egne hendelser varsles ikke');

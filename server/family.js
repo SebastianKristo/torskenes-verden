@@ -79,6 +79,47 @@ if (!db.prepare('PRAGMA table_info(family_pos)').all().some((c) => c.name === 'd
 if (!db.prepare('PRAGMA table_info(family_pos)').all().some((c) => c.name === 'platform')) db.exec('ALTER TABLE family_pos ADD COLUMN platform TEXT');
 db.transaction(() => { for (const z of db.prepare('SELECT id, name FROM family_zone WHERE icon IS NULL').all()) db.prepare('UPDATE family_zone SET icon=? WHERE id=?').run(defaultZoneIcon(z.name), z.id); })();
 
+/* ---------------- Steder med flere områder (prompt 50, SRVFAM50) ---------------- */
+// claude-code-steder-flere-omrader-ruter.md: en sone (family_zone) er nå et STED med type (hjem|skole|jobb|annet) og 1..n OMRÅDER
+// (family_area50). family_zone.lat/lon/radius speiler det første området, så eldre klienter og moduler (Hjemlys, Kart) virker som før.
+// «I stedet» = innenfor minst ett område. «Forlot stedet» = utenfor alle områder i minst 2 min (LEAVE_MS50), for alle steder.
+db.exec(`CREATE TABLE IF NOT EXISTS family_area50 (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, zone_id INTEGER NOT NULL, name TEXT NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, radius REAL NOT NULL, created INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS family_area50_zone ON family_area50(zone_id, id);`);
+export const PLACE_TYPES50 = ['hjem', 'skole', 'jobb', 'annet'];
+export const LEAVE_MS50 = 2 * 60_000;
+/** Type etter ikon/navn for eksisterende soner: home → hjem, school → skole, work → jobb, ellers annet. */
+export function defaultPlaceType50(icon, name) {
+  const k = zoneIconOk(icon) ? icon : defaultZoneIcon(name);
+  return k === 'home' ? 'hjem' : k === 'school' ? 'skole' : k === 'work' ? 'jobb' : 'annet';
+}
+if (!db.prepare('PRAGMA table_info(family_zone)').all().some((c) => c.name === 'place_type')) db.exec('ALTER TABLE family_zone ADD COLUMN place_type TEXT');
+if (!db.prepare('PRAGMA table_info(family_inside)').all().some((c) => c.name === 'out_since')) db.exec('ALTER TABLE family_inside ADD COLUMN out_since INTEGER');
+if (!db.prepare('PRAGMA table_info(family_health)').all().some((c) => c.name === 'sleep_start')) db.exec('ALTER TABLE family_health ADD COLUMN sleep_start TEXT; ALTER TABLE family_health ADD COLUMN sleep_end TEXT; ALTER TABLE family_health ADD COLUMN source TEXT');
+/** Migrering (idempotent): hver sone uten områder får ett område med sonens sentrum og radius; type settes etter ikon/navn. */
+export function migrateAreas50() {
+  db.transaction(() => {
+    for (const z of db.prepare('SELECT * FROM family_zone WHERE place_type IS NULL').all()) db.prepare('UPDATE family_zone SET place_type=? WHERE id=?').run(defaultPlaceType50(z.icon, z.name), z.id);
+    for (const z of db.prepare('SELECT z.* FROM family_zone z WHERE NOT EXISTS (SELECT 1 FROM family_area50 a WHERE a.zone_id=z.id)').all()) {
+      db.prepare('INSERT INTO family_area50(zone_id, name, lat, lon, radius, created) VALUES(?,?,?,?,?,?)').run(z.id, z.name, z.lat, z.lon, z.radius, z.created ?? Date.now());
+    }
+  })();
+}
+migrateAreas50();
+const areasOf = (zoneId) => db.prepare('SELECT * FROM family_area50 WHERE zone_id=? ORDER BY id').all(zoneId);
+/** Første område speiles i family_zone (lat/lon/radius) for eldre klienter. */
+function mirrorZone50(zoneId) {
+  const a = areasOf(zoneId)[0];
+  if (a) db.prepare('UPDATE family_zone SET lat=?, lon=?, radius=? WHERE id=?').run(a.lat, a.lon, a.radius, zoneId);
+}
+/** Er punktet i stedet? Innenfor minst ett område (med hysterese-faktor når personen allerede er der). */
+function inPlace(p, z, factor = 1) {
+  const list = z.id != null ? areasOf(z.id) : [];
+  if (!list.length) return dist(p, z) <= z.radius * factor;
+  return list.some((a) => dist(p, a) <= a.radius * factor);
+}
+
 /* ---------------- Innstillinger per bruker ---------------- */
 
 // Prompt 21: deling er av som standard, og ingen helsetyper deles før brukeren selv slår dem på.
@@ -193,8 +234,11 @@ const zoneVisible = (z, viewer) => !!z && (z.created_by === viewer || !!z.shared
 const zoneOut = (z, viewer) => {
   const n = q('SELECT target, enter, leave FROM family_notify WHERE zone_id=? AND viewer=?').all(z.id, viewer);
   return { id: z.id, name: z.name, lat: z.lat, lon: z.lon, radius: z.radius, color: String(z.color).toLowerCase(), icon: zoneIconOk(z.icon) ? z.icon : defaultZoneIcon(z.name), ...(IFY_ICON.test(String(z.icon ?? '')) && z.icon_path ? { icp: z.icon_path } : {}), createdBy: z.created_by, mine: z.created_by === viewer, shared: !!z.shared,
-    notify: Object.fromEntries(n.map((x) => [x.target, { enter: !!x.enter, leave: !!x.leave }]).filter(([t]) => t === viewer || canSee(viewer, t))) };
+    notify: Object.fromEntries(n.map((x) => [x.target, { enter: !!x.enter, leave: !!x.leave }]).filter(([t]) => t === viewer || canSee(viewer, t))),
+    // Prompt 50: type og områder (additivt).
+    type: PLACE_TYPES50.includes(z.place_type) ? z.place_type : defaultPlaceType50(z.icon, z.name), areas: areasOf(z.id).map(areaOut50) };
 };
+export const areaOut50 = (a) => ({ id: a.id, name: a.name, lat: a.lat, lon: a.lon, radius_m: Math.round(a.radius), label: `${a.name} ${Math.round(a.radius)} m` });
 // Deler personen posisjon med deg? «on» gjelder hele familien; en selv ser alltid seg selv.
 function canSee(viewer, id) {
   if (id === viewer) return true;
@@ -208,19 +252,68 @@ const eventOut = (e) => ({ id: e.id, userId: e.user, name: userInfo(e.user)?.dis
 
 // Inn/ut av soner: sammenligner med forrige tilstand og lagrer en hendelse ved endring. Litt hysterese
 // (ut først 15 % utenfor radius) så GPS-støy ved kanten ikke gir mange hendelser.
+// Prompt 50: et sted kan ha flere områder. Inn = innenfor minst ett område (straks). Ut = utenfor alle områder i minst 2 min
+// (out_since settes ved første punkt utenfor; «forlot» lagres når et senere punkt fortsatt er utenfor etter 2 min, eller når
+// sweepLeaves50 finner at det har gått 2 min). Tilbake innen 2 min gir ingen hendelse. Hendelsen får tidspunktet personen gikk ut.
 function zoneEvents(user, p) {
   const out = [];
+  const setIn = q('INSERT INTO family_inside(user, zone_id, inside, out_since) VALUES(?,?,?,?) ON CONFLICT(user, zone_id) DO UPDATE SET inside=excluded.inside, out_since=excluded.out_since');
   for (const z of zones()) {
-    const d = dist(p, z), prev = q('SELECT inside FROM family_inside WHERE user=? AND zone_id=?').get(user, z.id);
+    const prev = q('SELECT inside, out_since FROM family_inside WHERE user=? AND zone_id=?').get(user, z.id);
     const was = prev ? !!prev.inside : null;
-    const inside = was ? d <= z.radius * 1.15 : d <= z.radius;
-    if (was === inside) continue;
-    q('INSERT INTO family_inside(user, zone_id, inside) VALUES(?,?,?) ON CONFLICT(user, zone_id) DO UPDATE SET inside=excluded.inside').run(user, z.id, inside ? 1 : 0);
-    if (was === null && !inside) continue; // første punkt utenfor: ingen «forlot»
-    const r = q('INSERT INTO family_event(user, zone_id, zone_name, kind, ts) VALUES(?,?,?,?,?) RETURNING *').get(user, z.id, z.name, inside ? 'enter' : 'leave', p.ts);
+    const inside = inPlace(p, z, was ? 1.15 : 1);
+    if (inside) {
+      if (was && prev.out_since != null) setIn.run(user, z.id, 1, null); // tilbake innen 2 min: ingen hendelse
+      if (was) continue;
+      setIn.run(user, z.id, 1, null);
+      const r = q('INSERT INTO family_event(user, zone_id, zone_name, kind, ts) VALUES(?,?,?,?,?) RETURNING *').get(user, z.id, z.name, 'enter', p.ts);
+      out.push(eventOut(r));
+      continue;
+    }
+    if (was === null) { setIn.run(user, z.id, 0, null); continue; } // første punkt utenfor: ingen «forlot»
+    if (!was) continue;
+    if (prev.out_since == null) { setIn.run(user, z.id, 1, p.ts); continue; }
+    if (p.ts - prev.out_since < LEAVE_MS50) continue;
+    setIn.run(user, z.id, 0, null);
+    const r = q('INSERT INTO family_event(user, zone_id, zone_name, kind, ts) VALUES(?,?,?,?,?) RETURNING *').get(user, z.id, z.name, 'leave', prev.out_since);
     out.push(eventOut(r));
   }
   return out;
+}
+let placeEventHook50 = null;
+/** Prompt 50: (bruker, hendelser) etter inn/ut – Ruter («forlot skolen»/ankomst) kobler seg på her (family50.js). */
+export const setPlaceEventHook50 = (fn) => { placeEventHook50 = fn; };
+const runPlaceHook = (user, events) => { if (placeEventHook50 && events.length) { try { placeEventHook50(user, events); } catch (err) { console.warn('[family] stedshendelse:', err.message); } } };
+/** Lagrer «forlot» for alle som har vært utenfor alle områdene i minst 2 min uten nye punkter. → antall hendelser. */
+export function sweepLeaves50(now = Date.now()) {
+  const rows = q('SELECT i.user, i.zone_id, i.out_since, z.name FROM family_inside i JOIN family_zone z ON z.id=i.zone_id WHERE i.inside=1 AND i.out_since IS NOT NULL AND i.out_since <= ?').all(now - LEAVE_MS50);
+  const by = new Map();
+  for (const r of rows) {
+    q('UPDATE family_inside SET inside=0, out_since=NULL WHERE user=? AND zone_id=?').run(r.user, r.zone_id);
+    const e = eventOut(q('INSERT INTO family_event(user, zone_id, zone_name, kind, ts) VALUES(?,?,?,?,?) RETURNING *').get(r.user, r.zone_id, r.name, 'leave', r.out_since));
+    by.set(r.user, [...(by.get(r.user) ?? []), e]);
+  }
+  for (const [user, events] of by) { notifyLive(user, events); runPlaceHook(user, events); }
+  return rows.length;
+}
+setInterval(() => { try { sweepLeaves50(); } catch (err) { console.warn('[family] forlot-sjekk:', err.message); } }, 30_000).unref?.();
+/** Versjon for geofence-regionene (øker ved hver endring i Steder). */
+export const placesVersion50 = () => Number(kv.get(OWNER, 'places50_version', 0)) || 0;
+/** Etter endring i et sted: speil første område, ny versjon og sanntid {kind:'places'} til alle som ser stedet (oppdaterer regionene på enhetene). */
+export function placesChanged50(zoneId, { removed = false, viewers = null } = {}) {
+  if (!removed) mirrorZone50(zoneId);
+  const v = Date.now();
+  kv.set(OWNER, 'places50_version', v);
+  const z = removed ? null : q('SELECT * FROM family_zone WHERE id=?').get(zoneId);
+  const to = viewers ?? listUsers().map((u) => u.id).filter((id) => zoneVisible(z, id));
+  if (to.length) broadcast('family', { kind: 'places', placeId: zoneId, removed, version: v }, to);
+  return v;
+}
+export function deletePlace50(id) {
+  const z = q('SELECT * FROM family_zone WHERE id=?').get(id);
+  const viewers = listUsers().map((u) => u.id).filter((u) => zoneVisible(z, u));
+  db.transaction(() => { for (const t of ['family_notify', 'family_inside', 'family_area50']) q(`DELETE FROM ${t} WHERE zone_id=?`).run(id); q('DELETE FROM family_zone WHERE id=?').run(id); })();
+  placesChanged50(id, { removed: true, viewers });
 }
 
 // Sanntid (WebSocket): de andre får vite at personen har flyttet seg (uten koordinater, de hentes med GET /api/family
@@ -260,7 +353,7 @@ function prune() {
 const lastPos = (user) => pickSource(deviceRows(user), manualSource(user));
 function posOut(r, exact, viewer) {
   if (!r) return null;
-  const inZone = (viewer ? zonesFor(viewer) : []).find((z) => dist(r, z) <= z.radius);
+  const inZone = (viewer ? zonesFor(viewer) : []).find((z) => inPlace(r, z));
   const base = { ts: r.ts, battery: r.battery, charging: r.charging == null ? null : !!r.charging, activity: r.activity, place: inZone?.name ?? null, device: r.device ?? null };
   if (exact) return { ...base, lat: r.lat, lon: r.lon, acc: r.acc, speed: r.speed, heading: r.heading, alt: r.alt };
   return { ...base, lat: rough(r.lat), lon: rough(r.lon), acc: Math.max(r.acc ?? 0, 1000), speed: null, heading: null, alt: null, approx: true };
@@ -541,6 +634,7 @@ api.post('/location', async (c) => {
   })();
   prune();
   notifyLive(me, events);
+  runPlaceHook(me, events);
   return c.json({ ok: true, stored: pts.length, sharing: pr.sharing, events: events.filter((e) => zoneVisible(q('SELECT * FROM family_zone WHERE id=?').get(e.zoneId), me)) });
 });
 
@@ -639,7 +733,9 @@ api.post('/zones', async (c) => {
   const z = zoneInput(await body(c));
   if (typeof z === 'string') return bad(c, z);
   const r = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared, icon, icon_path) VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING *').get(z.name, z.lat, z.lon, z.radius, z.color, c.get('user'), Date.now(), z.shared, z.icon, z.icon_path ?? null);
-  return c.json(zoneOut(r, c.get('user')), 201);
+  migrateAreas50(); // prompt 50: ett område + type
+  placesChanged50(r.id);
+  return c.json(zoneOut(q('SELECT * FROM family_zone WHERE id=?').get(r.id), c.get('user')), 201);
 });
 // Sonen må være synlig (ellers 404) og din egen for å endres eller slettes (ellers 403).
 function ownZone(c) {
@@ -659,14 +755,20 @@ api.patch('/zones/:id', async (c) => {
   const b0 = c.get('zoneBody') ?? {};
   if (b0.icon === null) { n.icon = defaultZoneIcon(n.name); n.icon_path = null; }
   q('UPDATE family_zone SET name=?, lat=?, lon=?, radius=?, color=?, shared=?, icon=?, icon_path=? WHERE id=?').run(n.name, n.lat, n.lon, n.radius, n.color, n.shared ? 1 : 0, zoneIconOk(n.icon) ? n.icon : defaultZoneIcon(n.name), zoneIconOk(n.icon) ? n.icon_path ?? null : null, id);
-  if (z.lat != null || z.lon != null || z.radius != null) q('DELETE FROM family_inside WHERE zone_id=?').run(id); // ny form: start på nytt
+  if (z.lat != null || z.lon != null || z.radius != null) {
+    // Prompt 50: eldre klienter endrer sentrum/radius = det første området.
+    const a0 = areasOf(id)[0];
+    if (a0) q('UPDATE family_area50 SET lat=?, lon=?, radius=? WHERE id=?').run(n.lat, n.lon, n.radius, a0.id);
+    q('DELETE FROM family_inside WHERE zone_id=?').run(id); // ny form: start på nytt
+  }
+  placesChanged50(id);
   // Ikke delt lenger: andres varsler for sonen fjernes.
   if (cur.shared && !n.shared) q('DELETE FROM family_notify WHERE zone_id=? AND viewer<>?').run(id, cur.created_by);
   return c.json(zoneOut(q('SELECT * FROM family_zone WHERE id=?').get(id), c.get('user')));
 });
 api.delete('/zones/:id', (c) => {
   const { id, err } = ownZone(c); if (err) return err;
-  db.transaction(() => { for (const t of ['family_notify', 'family_inside']) q(`DELETE FROM ${t} WHERE zone_id=?`).run(id); q('DELETE FROM family_zone WHERE id=?').run(id); })();
+  deletePlace50(id);
   return c.json({ ok: true });
 });
 api.put('/zones/:id/notify', async (c) => {
@@ -681,6 +783,13 @@ api.put('/zones/:id/notify', async (c) => {
 // Helse: bare feltene brukeren deler lagres. Én rad per dato; «week» kan fylle inn de siste dagene.
 // Prompt 24: flere enheter (Apple Health og Health Connect) sender hver sin dagssum. Skritt, søvn og aktive kalorier slås
 // sammen med høyeste verdi per dag, ikke summen, så de ikke telles dobbelt. Puls er siste verdi.
+// «23:10», «2026-10-24T06:58:00+02:00» eller ms → «HH:MM» i Oslo-tid.
+function hhmm50(v) {
+  if (typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) return v;
+  const t = typeof v === 'number' ? (v < 1e12 ? v * 1000 : v) : Date.parse(String(v ?? ''));
+  if (!Number.isFinite(t) || v == null || v === '') return null;
+  return new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
+}
 const hi = (col) => `CASE WHEN excluded.${col} IS NULL THEN ${col} WHEN ${col} IS NULL THEN excluded.${col} ELSE MAX(${col}, excluded.${col}) END`;
 api.post('/health', async (c) => {
   const me = c.get('user'), b = await body(c), share = prefsOf(me).shareHealth;
@@ -692,16 +801,20 @@ api.post('/health', async (c) => {
       steps: share.steps ? num(r.steps, 0, 200_000) : null, resting_hr: share.restingHr ? num(r.restingHr, 20, 250) : null,
       hr: share.hr ? num(r.hr, 20, 250) : null, sleep_min: share.sleep ? num(r.sleepMin, 0, 1440) : null,
       active_kcal: share.activeKcal ? num(r.activeKcal, 0, 20_000) : null,
+      // Prompt 50: leggetid og våknet («23:10»–«06:58», eller ISO-tid) når søvn deles, og kilden («Apple Health · iPhone 15»).
+      sleep_start: share.sleep ? hhmm50(r.sleepStart) : null, sleep_end: share.sleep ? hhmm50(r.sleepEnd) : null,
+      source: typeof (r.source ?? b.source) === 'string' ? String(r.source ?? b.source).replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 60) || null : null,
     };
   };
   const rows = [day(b), ...(share.week && Array.isArray(b.week) ? b.week.slice(0, 31).map(day) : [])].filter(Boolean);
   if (!rows.length) return bad(c, 'Mangler dato (YYYY-MM-DD)');
-  const ins = q(`INSERT INTO family_health(user, date, steps, resting_hr, hr, sleep_min, active_kcal, updated) VALUES(?,?,?,?,?,?,?,?)
+  const ins = q(`INSERT INTO family_health(user, date, steps, resting_hr, hr, sleep_min, active_kcal, updated, sleep_start, sleep_end, source) VALUES(?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(user, date) DO UPDATE SET steps=${hi('steps')}, resting_hr=COALESCE(excluded.resting_hr, resting_hr), hr=COALESCE(excluded.hr, hr),
-      sleep_min=${hi('sleep_min')}, active_kcal=${hi('active_kcal')}, updated=excluded.updated`);
-  db.transaction(() => { for (const r of rows) ins.run(me, r.date, r.steps, r.resting_hr, r.hr, r.sleep_min, r.active_kcal, Date.now()); })();
+      sleep_min=${hi('sleep_min')}, active_kcal=${hi('active_kcal')}, updated=excluded.updated,
+      sleep_start=COALESCE(excluded.sleep_start, sleep_start), sleep_end=COALESCE(excluded.sleep_end, sleep_end), source=COALESCE(excluded.source, source)`);
+  db.transaction(() => { for (const r of rows) ins.run(me, r.date, r.steps, r.resting_hr, r.hr, r.sleep_min, r.active_kcal, Date.now(), r.sleep_start, r.sleep_end, r.source); })();
   // Felt brukeren ikke deler lenger, fjernes fra lagrede dager.
-  const off = [['steps', 'steps'], ['restingHr', 'resting_hr'], ['hr', 'hr'], ['sleep', 'sleep_min'], ['activeKcal', 'active_kcal']].filter(([k]) => !share[k]).map(([, col]) => `${col}=NULL`);
+  const off = [['steps', 'steps'], ['restingHr', 'resting_hr'], ['hr', 'hr'], ['sleep', 'sleep_min'], ['sleep', 'sleep_start'], ['sleep', 'sleep_end'], ['activeKcal', 'active_kcal']].filter(([k]) => !share[k]).map(([, col]) => `${col}=NULL`);
   if (off.length) q(`UPDATE family_health SET ${off.join(', ')} WHERE user=?`).run(me);
   prune();
   return c.json({ ok: true, stored: rows.length, health: healthOut(me, Object.fromEntries(HEALTH_KEYS.map((k) => [k, true]))) });
@@ -788,3 +901,24 @@ export function familyPeople37(me) {
   return out.map((m) => ({ userId: m.userId, name: m.name, username: m.username, color: m.color, self: !!m.self, sharing: m.sharing, visible: m.visible,
     precision: m.precision, last: m.visible ? m.last : null, photoUrl: m.photoUrl ?? m.avatarUrl ?? null, mock: !!m.mock }));
 }
+
+/** Prompt 50 (SRVFAM50): hjelpere for family50.js (Steder, Folk, Helse, I dag, Sjekk inn). Personvernet er det samme som over. */
+export const family50 = {
+  q, MOCK, canSee: (v, id) => canSee(v, id), isMember: (id) => isMember(id), zonesFor: (v) => zonesFor(v), zoneOut: (z, v) => zoneOut(z, v),
+  zoneById: (id) => q('SELECT * FROM family_zone WHERE id=?').get(id), zoneVisible: (z, v) => zoneVisible(z, v), areasOf: (id) => areasOf(id), inPlace: (p, z) => inPlace(p, z),
+  /** Personene i Familie for seeren (deg selv + dem som deler, + eksempelpersoner i MOCK_DATA), som i GET /api/family. */
+  members: (v) => { seedMock(v); const list = visibleUsers(v).map((u) => memberOut(u, v)); if (MOCK) list.push(...MOCKS.filter((m) => m.sharing === 'on').map((m) => mockMember(m, v))); return list; },
+  /** Alle i familien (også dem som ikke deler posisjon) – for Sjekk inn-mottakere og Helse «Ikke delt». */
+  everyone: (v) => [...listUsers().map((u) => ({ id: u.id, name: u.displayName ?? u.name ?? u.username, color: colorOf(u.id), photoUrl: photoUrlFor(v, u.id, u.avatarUrl ?? null), self: u.id === v, mock: false })),
+    ...(MOCK ? MOCKS.map((m) => ({ id: m.id, name: m.name, color: m.color, photoUrl: photoUrlFor(v, m.id, null), self: false, mock: true })) : [])],
+  mockHealth: (id) => { const m = MOCK && MOCKS.find((x) => x.id === id); return m ? mockMember(m, id).health : null; },
+  lastRaw: (user) => (MOCK && MOCKS.some((m) => m.id === user) ? null : lastPos(user)),
+  eventsSince: (v, since) => q('SELECT * FROM family_event WHERE ts >= ? ORDER BY ts DESC LIMIT 500').all(since).filter((e) => isMember(e.user) && eventVisible(e, v)).map((e) => ({ ...eventOut(e), placeType: q('SELECT place_type FROM family_zone WHERE id=?').get(e.zone_id)?.place_type ?? null })),
+  lastEnter: (user, zoneId) => q("SELECT ts FROM family_event WHERE user=? AND zone_id=? AND kind='enter' ORDER BY ts DESC LIMIT 1").get(user, zoneId)?.ts ?? null,
+  lastLeave: (user) => q("SELECT * FROM family_event WHERE user=? AND kind='leave' ORDER BY ts DESC LIMIT 1").get(user) ?? null,
+  healthRows: (user, n = 7) => q('SELECT * FROM family_health WHERE user=? ORDER BY date DESC LIMIT ?').all(user, n),
+  prefsOf: (id) => prefsOf(id), colorOf: (id) => colorOf(id), photoUrlFor: (v, id, a) => photoUrlFor(v, id, a),
+  nameOf: (id) => userInfo(id)?.displayName ?? userInfo(id)?.name ?? mockName(id) ?? id, initials: (n) => initials(n), clock: (ts, now) => clock(ts, now), aktivitet: (p) => aktivitet(p),
+  placeFor: (lat, lon, o) => placeFor(lat, lon, o), dist, seedMock: (v) => seedMock(v), migrate: () => migrateAreas50(),
+  PLACE_TYPES: PLACE_TYPES50, ZONE_COLOR: COLOR, zoneIconOk: (k) => zoneIconOk(k), defaultZoneIcon: (n) => defaultZoneIcon(n), defaultPlaceType: (i, n) => defaultPlaceType50(i, n),
+};
