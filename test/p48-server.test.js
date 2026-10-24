@@ -566,3 +566,16 @@ test('rettelser: modellsvar + rettelse lagres per bruker (eksplisitt og ved bokf
   assert.equal((await T('/finans/api/receipts/corrections/export')).status, 403, 'krever innlogget økt');
   assert.deepEqual(corr.changedFields48(GOOD(), { total: 56.4, merchant: 'rema 1000' }), []);
 });
+
+test('rettelser: bokføring med samme verdier som appens rettelse lagrer ikke dobbelt', async () => {
+  setup();
+  const r = await scan(A, { deviceOcr: ocrOf('ios_vision', DEV_ROWS) });
+  const id = r.body.receipt_id;
+  await settled(A, id);
+  const fixed = { ...GOOD(), merchant: 'REMA 1000 Grünerløkka', total: 56.4 };
+  assert.equal((await A(`/finans/api/receipts/${id}/corrections`, 'POST', { receipt: fixed })).status, 201);
+  assert.equal((await A(`/finans/api/receipts/${id}`, 'PATCH', { merchant: fixed.merchant, total: 56.4 })).status, 200);
+  assert.equal((await A(`/finans/api/receipts/${id}/book`, 'POST', {})).status, 200);
+  const list = (await A('/finans/api/receipts/corrections')).body.items;
+  assert.deepEqual(list.filter((x) => x.receiptId === id).map((x) => x.kind), ['edit']);
+});

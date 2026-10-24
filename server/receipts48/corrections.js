@@ -44,6 +44,13 @@ export function recordCorrection48(userId, r, corrected, kind = 'edit') {
 export function correctionOnBook48(userId, r, categoryName = null) {
   if (r?.source !== 'scan48') return null;
   const corrected = { merchant: r.merchant ?? '', date: r.date ?? '', total: r.total != null ? r.total / 100 : null, ...(categoryName ? { category_suggestion: categoryName } : {}) };
+  // Har klienten allerede sendt en rettelse (kind 'edit') med de samme bokførte verdiene, lagres ingen ekstra 'book'-rettelse (unngår dobbel testdata).
+  const last = r?.id ? q("SELECT corrected_json FROM receipt_corrections48 WHERE user_id=? AND receipt_id=? AND kind='edit' ORDER BY id DESC LIMIT 1").get(userId, r.id) : null;
+  if (last) {
+    const prev = parse(last.corrected_json) || {};
+    const same = ['merchant', 'date', 'total', 'category_suggestion'].every((k) => !(k in corrected) || String(prev[k] ?? '') === String(corrected[k] ?? ''));
+    if (same) return null;
+  }
   return recordCorrection48(userId, r, corrected, 'book');
 }
 
