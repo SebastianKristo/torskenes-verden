@@ -25,7 +25,7 @@ export function jobView(j) {
   return {
     id: j.id, jobId: j.id, kind: j.kind, status: j.status, engine: j.engine, engineName: j.engine ? providerName(j.engine) : null,
     elapsedS, totalS: secs(now - j.startedAt), limitS: j.limitS, text, notice: j.notice ?? null,
-    ...(j.status === 'done' ? { result: j.result } : {}), ...(j.status === 'error' ? { error: j.error } : {}),
+    ...(j.status === 'done' ? { result: j.result } : {}), ...(j.status === 'error' ? { error: j.error, ...(j.kode ? { kode: j.kode, code: j.kode, httpStatus: j.httpStatus ?? null, melding: j.melding ?? null } : {}) } : {}), // prompt 50: feilkoden
     // Prompt 39: fremdrift for «✦ På nytt» (kvitteringer): {step:'upload'|'ocr'|'llm'|'verify'|'done'|'error', pct, msg}.
     ...(j.progress ? { step: j.progress.step, pct: j.progress.pct, msg: j.progress.msg, ...(j.progress.receiptId ? { receiptId: j.progress.receiptId } : {}) } : {}),
   };
@@ -61,7 +61,7 @@ export function startJob(uid, kind, run) {
     .then((result) => finish(j, { status: 'done', result }), (e) => {
       if (j.ctrl.signal.aborted || e?.cancelled) return finish(j, { status: 'cancelled' });
       console.error('[ai-jobb]', e);
-      return finish(j, { status: 'error', error: e?.message ?? String(e) });
+      return finish(j, { status: 'error', error: e?.message ?? String(e), kode: e?.kode ?? null, httpStatus: e?.httpStatus ?? null, melding: e?.melding ?? null });
     })
     .then(() => j);
   return { job: j, promise };

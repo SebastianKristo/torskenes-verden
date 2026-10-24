@@ -13,6 +13,7 @@ import { glimt, glimtDots } from './glimt.js';
 import { assist, looksLikeTool } from './assist.js';
 import { cardHtml, bindCards } from './chat-cards.js';
 import { factsHtml41, usedWithoutFacts41 } from './chat-facts41.js'; // prompt 41: faktakort
+import { css50, rejectReason50, isImg50, upload50, attRow50, bubbleImgs50, otherFiles50, filePills50, imagesOf50, bindDrop50, pastedFiles50, lightbox50, readWith50, finansBtn50, MAX_FILES50 } from './chat50.js'; // prompt 50: vedlegg, miniatyr, lysboks
 
 /* Prompt 31: Glimt i Chat (claude-code-chat-kort-vaer-kalender.md, claude-code-glimt-ai.md).
    - Avsender er Glimt-merket (22 px) + modellnavnet; mens svaret kommer: merket animert og tre prikker (ikke «Tenker …»).
@@ -161,9 +162,21 @@ const curSet = () => ({ ...DEF, ...(C.chat ? C.chat.settings : C.draftSet) });
 /* ---------------- Tekst ---------------- */
 
 /** Enkel Markdown: kodeblokker, punkter, nummerering, overskrifter, **fet** og `kode`. Alt escapes. */
+// Prompt 50: markdown-tabeller (kvittering i chat: Vare | Antall | Pris).
+const cellsOf = (l) => l.trim().replace(/^\|/, '').replace(/\|$/, '').split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, '|'));
+function tableHtml(rows) {
+  const sep = rows.findIndex((r) => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(r));
+  const head = sep === 1 ? cellsOf(rows[0]) : null, al = sep === 1 ? cellsOf(rows[1]).map((c) => (/-:$/.test(c) ? ' class="r"' : '')) : [];
+  const inl = (x) => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  const body = rows.slice(sep === 1 ? 2 : 0).map((r) => `<tr>${cellsOf(r).map((c, i) => `<td${al[i] ?? ''}>${inl(c)}</td>`).join('')}</tr>`).join('');
+  return `<table>${head ? `<thead><tr>${head.map((c, i) => `<th${al[i] ?? ''}>${inl(c)}</th>`).join('')}</tr></thead>` : ''}<tbody>${body}</tbody></table>`;
+}
 function md(t) {
-  const out = []; let code = null;
+  const out = []; let code = null, tbl = null;
+  const flushT = () => { if (tbl) { out.push(tableHtml(tbl)); tbl = null; } };
   for (const l of String(t ?? '').split('\n')) {
+    if (!code && /^\s*\|.*\|\s*$/.test(l)) { (tbl ??= []).push(l); continue; }
+    flushT();
     if (/^```/.test(l)) { if (code) { out.push(`<pre class="ch-code">${esc(code.join('\n'))}</pre>`); code = null; } else code = []; continue; }
     if (code) { code.push(l); continue; }
     if (!l.trim()) continue;
@@ -172,6 +185,7 @@ function md(t) {
     const inl = esc(txt).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
     out.push(li || nu ? `<div class="ch-li"><span>${li ? '•' : `${nu[1]}.`}</span><span>${inl}</span></div>` : hd ? `<div class="ch-p"><b>${inl}</b></div>` : `<div class="ch-p">${inl}</div>`);
   }
+  flushT();
   if (code) out.push(`<pre class="ch-code">${esc(code.join('\n'))}</pre>`);
   return out.join('');
 }
@@ -228,11 +242,12 @@ function msgsHtml() {
   return msgs.map((m, i) => {
     const key = `${C.cur}:${i}`;
     if (m.role === 'user') {
-      const att = [...(m.files ?? []).map((f) => (typeof f === 'string' ? f : f.name)), ...(m.images?.length ? [`${m.images.length === 1 ? 'Bilde' : `${m.images.length} bilder`}`] : [])];
+      // Prompt 50: bildene vises over teksten (miniatyrer); andre filer som piller.
+      const att = [...new Set([...(m.files ?? []).map((f) => (typeof f === 'string' ? f : f.name)).filter((n) => !(m.attachments ?? []).some((a) => a.kind === 'image' && a.name === n)), ...otherFiles50(m)])];
       if (C.edit && C.edit.i === i) {
         return `<div class="ch-u"><div class="ch-edit"><textarea data-ch-edv rows="3">${esc(C.edit.v)}</textarea><div><button type="button" class="ch-pill line" data-ch-edcancel>Avbryt</button><button type="button" class="ch-pill ink" data-ch-edsave>Lagre og send</button></div></div></div>`;
       }
-      return `<div class="ch-u">${att.length ? `<div class="ch-atts">${att.map((n) => `<span data-no-i18n>${esc(n)}</span>`).join('')}</div>` : ''}<div class="ch-ub" data-no-i18n>${esc(m.content)}</div>
+      return `<div class="ch-u">${bubbleImgs50(m, i)}${att.length ? `<div class="ch-atts">${att.map((n) => `<span data-no-i18n>${esc(n)}</span>`).join('')}</div>` : ''}<div class="ch-ub" data-no-i18n>${esc(m.content)}</div>
         <div class="ch-acts">${busyHere ? '' : `<button type="button" data-ch-edit="${i}">Rediger</button>`}<button type="button" data-ch-copy="${i}">${C.copied === key ? 'Kopiert' : 'Kopier'}</button></div></div>`;
     }
     const meta = m.meta ?? {}, used = usedWithoutFacts41(meta.used, meta.facts), tool = meta.tool ? [].concat(meta.tool) : [];
@@ -240,8 +255,9 @@ function msgsHtml() {
     const st = meta.glimt || tool.length ? [`Verktøy${sec ? ` · ${sec}` : ''}`, meta.source && meta.source !== 'Glimt' ? meta.source : ''].filter(Boolean).join(' · ')
       : [meta.stopped ? 'Stoppet' : '', autoWhy41(meta), meta.tokensPerSec ? `${String(meta.tokensPerSec).replace('.', ',')} tok/s` : '', sec].filter(Boolean).join(' · ');
     const who = meta.glimt ? 'GLIMT' : `GLIMT · ${(meta.auto?.modelName ?? mName(meta.auto?.model || meta.model || C.chat?.model || '')).toUpperCase()}`;
-    return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-      <div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}
+    const pu = i > 0 && msgs[i - 1]?.role === 'user' ? i - 1 : -1; // prompt 50: bildet svaret leste, som liten miniatyr + filnavn
+    return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${pu >= 0 ? filePills50(msgs[pu], pu) : ''}${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
+      <div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}${finansBtn50(meta, `${C.cur}:${i}`, C.fin50?.[`${C.cur}:${i}`])}${readWith50(meta)}
       <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}${i === lastA && !busyHere && !C.web && C.webAsk46 && String(C.webAsk46.chatId ?? '') === String(C.cur ?? '') ? `<button type="button" class="ch-web46" data-ch-web46="${i}">${svg(IC.web, 15)}${esc(C.webAsk46.action?.label ?? 'Søk denne gangen')}</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
   }).join('') + (busyHere ? streamHtml() : '');
 }
@@ -257,8 +273,9 @@ function streamHtml() {
   const b = C.busy;
   // Prompt 31: Glimt-merket ved siden av modellnavnet: Tenker (før første ord), Svarer (mens teksten strømmer inn).
   const who = b.glimt ? 'GLIMT · TENKER' : `GLIMT · ${(b.pickLabel || (b.picked ? `✦ ${mName(b.picked)}` : mName(b.model))).toUpperCase()}`;
-  return `<div class="ch-a" data-ch-stream><div class="ch-ah"><span class="ch-lab">${glimt(22, b.text ? 'svarer' : 'tenker')}${esc(who)}</span>${(b.reading ?? []).map((u) => `<span class="ch-used">Leser <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-    ${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}${factsHtml41(b.facts)}</div>`;
+  const all = (C.chat?.messages ?? []).filter((m) => m.role !== 'system'), lu = all.length - 1;
+  return `<div class="ch-a" data-ch-stream><div class="ch-ah"><span class="ch-lab">${glimt(22, b.text ? 'svarer' : 'tenker')}${esc(who)}</span>${all[lu]?.role === 'user' ? filePills50(all[lu], lu) : ''}${(b.reading ?? []).map((u) => `<span class="ch-used">Leser <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
+    ${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}${factsHtml41(b.facts)}${b.readWith ? readWith50({ readWith: b.readWith }) : ''}</div>`;
 }
 function emptyHtml() {
   const id = curModelId(), m = modelOf(id), P = curSet();
@@ -268,7 +285,7 @@ function emptyHtml() {
 }
 function composerHtml() {
   const id = curModelId(), sky = isSky(id), busy = !!C.busy, dataOK = !!C.set.chat_my_data, m = modelOf(id);
-  const attH = C.att.length ? `<div class="ch-catt">${C.att.map((a, i) => `<span><i>${a.kind === 'img' ? '▣' : a.kind === 'doc' ? '#' : '⎙'}</i><span data-no-i18n>${esc(a.name)}</span>${a.up ? '<small>…</small>' : ''}<button type="button" data-ch-rmatt="${i}" aria-label="Fjern vedlegg">✕</button></span>`).join('')}</div>` : '';
+  const attH = attRow50(C.att), upl = C.att.some((a) => a.up); // prompt 50: miniatyrer med fremdrift; Send er av til alt er lastet opp
   return `<div class="ch-comp">${C.toast ? `<div class="ch-toast" role="status">${esc(C.toast)}</div>` : ''}
     <div class="ch-box">${attH}
       ${C.rec ? `<div class="ch-rec"><i></i><span class="ch-grow">Lytter … snakk nå</span><span class="ch-wave">${'<span></span>'.repeat(7)}</span></div>` : `<textarea data-ch-in rows="${Math.min(6, Math.max(1, C.inp.split('\n').length))}" placeholder="${m.kind === 'auto' ? 'Spør Glimt …' : `Spør ${esc(sky ? m.name : m.id)} …`}" enterkeyhint="send" aria-label="Melding">${esc(C.inp)}</textarea>`}
@@ -277,7 +294,7 @@ function composerHtml() {
         <button type="button" class="ch-chip${C.data && dataOK ? ' on' : ''}${dataOK ? '' : ' dim'}" data-ch-data aria-pressed="${C.data && dataOK}">${svg(IC.db, 15)}Mine data</button>
         <span class="ch-grow"></span>
         <button type="button" class="ch-mic${C.rec ? ' on' : ''}" data-ch-mic aria-label="${C.rec ? 'Stopp opptak' : 'Snakk'}">${svg(IC.mic, 19)}</button>
-        ${busy ? '<button type="button" class="ch-send" data-ch-stop aria-label="Stopp"><span class="ch-sq-ic"></span></button>' : `<button type="button" class="ch-send${C.inp.trim() ? '' : ' dim'}" data-ch-send aria-label="Send">${svg(IC.up, 18, 2.6)}</button>`}
+        ${busy ? '<button type="button" class="ch-send" data-ch-stop aria-label="Stopp"><span class="ch-sq-ic"></span></button>' : `<button type="button" class="ch-send${C.inp.trim() && !upl ? '' : ' dim'}" data-ch-send aria-label="Send"${upl ? ' disabled title="Vent til vedleggene er lastet opp"' : ''}>${svg(IC.up, 18, 2.6)}</button>`}
       </div></div>
     <div class="ch-foot">${m.kind === 'auto' ? (C.data && C.set.chat_my_data ? 'Glimt velger modell for hver melding. Med Mine data holdes alt lokalt.' : 'Glimt velger beste modell for hver melding.') : sky ? `Sky-modell: meldingen sendes til ${m.provider === 'groq' ? 'Groq' : 'Google'}.` : 'Kjører lokalt på hjemmeserveren. Ingenting sendes ut.'}</div></div>`;
 }
@@ -292,7 +309,7 @@ function openAiCtl(tab) {
 
 const sheetWrap = (inner, t, cls = '') => `<div class="ch-sheet-bg" data-ch-close><div class="ch-sheet ${cls}" role="dialog" aria-modal="true" aria-label="${esc(t)}"><div class="ch-sh-h"><b>${esc(t)}</b><button type="button" class="ch-x" data-ch-close aria-label="Lukk">✕</button></div>${inner}</div></div>`;
 function modelSheet() {
-  const id = curModelId(), row = (m) => `<button type="button" class="ch-mrow" data-ch-model="${esc(m.id)}"><span class="ch-grow"><b data-no-i18n>${esc(m.kind === 'sky' ? m.name : m.id)}</b><span>${esc([m.kind === 'sky' ? (m.provider === 'groq' ? 'Groq · sky' : 'Google · sky') : m.name, m.size, m.vision ? 'Tekst og bilde' : 'Tekst'].filter(Boolean).join(' · '))}</span></span><span class="ch-badge ${m.kind === 'sky' ? 'sky' : ''}">${m.kind === 'sky' ? 'SKY' : 'LOKAL'}</span><span class="ch-chk">${m.id === id ? '✓' : ''}</span></button>`;
+  const id = curModelId(), row = (m) => `<button type="button" class="ch-mrow" data-ch-model="${esc(m.id)}"><span class="ch-grow"><b data-no-i18n>${esc(m.kind === 'sky' ? m.name : m.id)}</b><span>${esc([m.kind === 'sky' ? (m.provider === 'groq' ? 'Groq · sky' : 'Google · sky') : m.name, m.size, m.vision ? 'Tekst og bilde' : 'Tekst'].filter(Boolean).join(' · '))}</span></span>${m.vision ? '<span class="ch-vis50" title="Modellen kan lese bilder">Ser bilder</span>' : ''}<span class="ch-badge ${m.kind === 'sky' ? 'sky' : ''}">${m.kind === 'sky' ? 'SKY' : 'LOKAL'}</span><span class="ch-chk">${m.id === id ? '✓' : ''}</span></button>`;
   const loc = allModels().filter((m) => m.kind === 'lokal' && m.installed), sky = allModels().filter((m) => m.kind === 'sky');
   const auto = C.auto ? `<div class="ch-list"><button type="button" class="ch-mrow ch-auto41" data-ch-model="${esc(C.auto.id)}"><span class="ch-grow"><b>${esc(C.auto.label || '✦ Auto')}</b><span>Glimt velger beste modell for hver melding · lokalt når dine data er med</span></span><span class="ch-badge auto41">AUTO</span><span class="ch-chk">${id === C.auto.id ? '✓' : ''}</span></button></div>` : '';
   return sheetWrap(`${auto}<div class="ch-gl">LOKALT · OLLAMA PÅ HJEMMESERVEREN</div><div class="ch-list">${loc.map(row).join('') || '<div class="ch-li-e">Ingen lokale modeller installert.</div>'}</div>
@@ -336,7 +353,7 @@ function guardSheet() {
 }
 function plusSheet() {
   return sheetWrap(`<div class="ch-list">
-    <label class="ch-mi"><input type="file" accept="image/*" multiple data-ch-file="img" hidden><i>▣</i><span class="ch-grow"><b>Bilde eller kamera</b><small>For bildemodeller (Qwen 2.5 VL, Gemma 3, Gemini)</small></span></label>
+    <label class="ch-mi"><input type="file" accept="image/*" multiple data-ch-file="img" hidden><i>▣</i><span class="ch-grow"><b>Bilde eller kamera</b><small>Glimt bruker en modell som ser bilder (eller lokal OCR) · du kan også dra inn eller lime inn</small></span></label>
     <label class="ch-mi"><input type="file" multiple data-ch-file="file" hidden><i>⎙</i><span class="ch-grow"><b>Fil</b><small>PDF, Word, tekst – leses av serveren</small></span></label>
     <button type="button" class="ch-mi" data-ch-sheet="kb"><i>#</i><span class="ch-grow"><b>Fra kunnskapsbasen</b><small>Dokumenter som er lastet opp før</small></span></button></div>`, 'Legg ved');
 }
@@ -403,7 +420,7 @@ function toast(t) { C.toast = t; paint(); clearTimeout(toastT); toastT = setTime
 
 /* ---------------- Sende ---------------- */
 
-const fileB64 = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).replace(/^data:[^,]+,/, '')); r.onerror = rej; r.readAsDataURL(f); });
+// (prompt 50: bilder sendes ikke lenger som base64 – de lastes opp som vedlegg)
 // Prompt 41: Mine data huskes per samtale (på i nye samtaler); Auto er standardmodell for nye samtaler.
 const DKEY41 = 'chat_data41', AKEY41 = 'chat_auto_mig41';
 function dataMap41() { try { return JSON.parse(localStorage.getItem(DKEY41) || '{}') || {}; } catch { return {}; } }
@@ -437,11 +454,12 @@ async function sendInner(text, opt = {}) {
   // En samtale som bare finnes lokalt (bare Glimt-svar så langt) blir en ny samtale på serveren nå.
   if (isLocalId(C.cur)) { C.pendingLocal = C.cur; C.cur = null; if (C.chat) C.chat = { ...C.chat, id: null }; }
   const prev = (C.chat?.messages ?? []).filter((m) => m.role !== 'system');
-  const imgs = C.att.filter((a) => a.kind === 'img').map((a) => a.b64);
+  // Prompt 50: bildene er lastet opp på forhånd (POST /files); meldingen bærer bare id-ene (attachments), aldri base64.
+  const imgAtt = C.att.filter((a) => a.kind === 'img' && a.id).map((a) => ({ id: a.id, kind: 'image', name: a.name, thumb: a.thumb || a.preview, preview: a.preview, url: a.url || a.preview }));
   const files = C.att.filter((a) => a.kind !== 'img' && a.id).map((a) => a.id);
-  const userMsg = { role: 'user', content: t, ...(imgs.length ? { images: imgs } : {}), ...(C.att.length ? { files: C.att.filter((a) => a.kind !== 'img').map((a) => a.name) } : {}) };
+  const userMsg = { role: 'user', content: t, ...(imgAtt.length ? { attachments: imgAtt } : {}), ...(C.att.some((a) => a.kind !== 'img') ? { files: C.att.filter((a) => a.kind !== 'img').map((a) => a.name) } : {}) };
   const history = opt.history ?? [...prev, userMsg];
-  const payload = { chatId: C.cur || undefined, model, messages: history.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}) })),
+  const payload = { chatId: C.cur || undefined, model, messages: history.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length && !m.attachments?.length ? { images: m.images } : {}), ...(m.attachments?.length ? { attachments: m.attachments.map((a) => a.id).filter(Boolean) } : {}) })),
     settings: { ...curSet(), theme: C.theme, ...(opt.remember ? { skipCloudAsk: true } : {}) }, webSearch: opt.webOnce ? true : C.web, myData: C.data && !!C.set.chat_my_data, files,
     ...(opt.editFrom != null ? { editFrom: opt.editFrom } : {}), ...(opt.confirm ? { confirmCloud: true } : {}), ...(opt.withoutData ? { withoutMyData: true } : {}) };
   // Optimistisk: vis meldingen med en gang.
@@ -521,6 +539,7 @@ async function readSse(res, ctl) {
         if (line.startsWith('event:')) { ev = line.slice(6).trim(); continue; }
         if (!line.startsWith('data:')) { if (!line) ev = 'message'; continue; }
         let d; try { d = JSON.parse(line.slice(5).trim()); } catch { continue; }
+        if (ev === 'meta' && C.busy && d.readWith) C.busy.readWith = d.readWith; // prompt 50: «Lest med …»
         if (ev === 'meta') { if (C.busy && (d.auto?.model || d.picked)) { C.busy.picked = d.auto?.model ?? d.picked; C.busy.pickLabel = d.auto?.label ?? ''; paintStream(); } if (C.data && d.chatId) dataSave41(d.chatId, C.data); chatId = d.chatId ?? chatId; if (!C.cur) { if (C.pendingLocal && chatId) { toolsRekey(C.pendingLocal, chatId); C.pendingLocal = null; } C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
         else if (ev === 'facts') { C.busy.facts = d.facts ?? []; if (Array.isArray(d.used)) C.busy.reading = [...new Set([...(C.busy.reading ?? []), ...d.used])]; paintStream(); } // prompt 41: faktakort mens svaret kommer
         else if (ev === 'delta') { C.busy.text += d.text ?? ''; if (!raf) raf = requestAnimationFrame(flush); }
@@ -545,24 +564,47 @@ function stop() { C.busy?.ctl.abort(); }
 
 /* ---------------- Vedlegg ---------------- */
 
+// Prompt 50: alle vedlegg (også bilder) lastes opp med en gang med fremdrift; bildene får miniatyr på serveren.
+// Dra og slipp, lim inn og «+» bruker samme vei. Maks 10 filer, maks 20 MB hver.
 async function addFiles(kind, files) {
+  const jobs = [];
+  if (kind !== 'kbup') C.sheet = null;
   for (const f of files) {
-    if (kind === 'img') {
-      if (!/^image\//.test(f.type)) continue;
-      if (f.size > 10 * 1024 * 1024) { toast(`${f.name} er for stort (maks 10 MB)`); continue; }
-      C.att = [...C.att, { kind: 'img', name: f.name, b64: await fileB64(f) }];
-      continue;
-    }
-    const a = { kind: kind === 'kbup' ? 'doc' : 'file', name: f.name, up: true };
-    C.att = [...C.att, a]; paint();
-    try {
-      const fd = new FormData(); fd.append('file', f);
-      const r = await call('/files', { method: 'POST', body: fd });
-      a.id = r.id; a.up = false; C.att = [...C.att];
-      if (kind === 'kbup') C.kb = null;
-    } catch (e) { C.att = C.att.filter((x) => x !== a); toast(`Kunne ikke laste opp ${f.name}: ${e.message}`); }
+    if (kind !== 'kbup' && C.att.length >= MAX_FILES50) { toast(`Maks ${MAX_FILES50} vedlegg per melding`); break; }
+    const why = rejectReason50(f);
+    if (why) { toast(why); continue; }
+    const img = kind !== 'kbup' && isImg50(f);
+    if (kind === 'img' && !img) { toast(`${f.name} er ikke et bilde`); continue; }
+    const a = { kind: kind === 'kbup' ? 'doc' : img ? 'img' : 'file', name: f.name || 'Bilde', up: true, pct: 2, ...(img && !/heic|heif/i.test(f.type) ? { preview: URL.createObjectURL(f) } : {}) };
+    C.att = [...C.att, a];
+    let raf = 0;
+    jobs.push(upload50(f, (p) => { a.pct = p; if (!raf) raf = requestAnimationFrame(() => { raf = 0; const el = host()?.querySelectorAll('.ch-att50 .p i')[C.att.indexOf(a)]; if (el) el.style.width = `${Math.round(p)}%`; }); })
+      .then((r) => { a.id = r.id; a.thumb = r.thumb ?? null; a.url = r.url ?? null; a.up = false; C.att = [...C.att]; if (kind === 'kbup') C.kb = null; })
+      .catch((e) => { C.att = C.att.filter((x) => x !== a); toast(e.status === 413 ? 'Filen er for stor (maks 20 MB)' : `Kunne ikke laste opp ${f.name}: ${e.message}`); })
+      .finally(() => paint()));
   }
-  if (kind === 'kbup') { await loadKb(); } else C.sheet = null;
+  paint();
+  await Promise.all(jobs);
+  if (kind === 'kbup') await loadKb();
+  paint();
+}
+/** Lysboksen for bildene i melding nr. i (av meldingene uten system). */
+function openLb(key) {
+  const [i, j] = String(key).split(':').map(Number);
+  const m = (C.chat?.messages ?? []).filter((x) => x.role !== 'system')[i];
+  if (m) lightbox50(imagesOf50(m), j || 0);
+}
+/** «Legg i Finans ›» for kvitteringen i svaret. */
+async function toFinans(key) {
+  const i = +String(key).split(':').pop(), m = (C.chat?.messages ?? []).filter((x) => x.role !== 'system')[i], a = m?.meta?.receipt?.action;
+  if (!a?.url) return;
+  C.fin50 = { ...(C.fin50 ?? {}), [key]: 'busy' }; paint();
+  try {
+    const r = await fetch(a.url, { method: a.method || 'POST' });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `Feil ${r.status}`);
+    C.fin50[key] = 'ok'; toast('Kvitteringen er lagt i Finans · Til godkjenning');
+  } catch (e) { delete C.fin50[key]; toast(`Kunne ikke legge i Finans: ${e.message}`); }
   paint();
 }
 async function loadKb() {
@@ -705,8 +747,16 @@ async function menuAct(act, arg) {
 
 function bind(h) {
   bindCards();
+  css50();
+  // Prompt 50: hele chatområdet tar imot filer (dra og slipp); lim inn bilder i feltet.
+  bindDrop50(h, (fs) => { if (C.missing) return; addFiles('drop', fs); });
   if (h.dataset.chBound) return;
   h.dataset.chBound = '1';
+  h.addEventListener('paste', (e) => {
+    if (!e.target.matches?.('[data-ch-in]')) return;
+    const fs = pastedFiles50(e);
+    if (fs.length) { e.preventDefault(); addFiles('drop', fs); }
+  });
   h.addEventListener('input', (e) => {
     const t = e.target;
     if (t.matches('[data-ch-in]')) { C.inp = t.value; const rows = Math.min(6, Math.max(1, t.value.split('\n').length)); if (+t.rows !== rows) t.rows = rows; h.querySelector('[data-ch-send]')?.classList.toggle('dim', !t.value.trim()); return; }
@@ -768,7 +818,9 @@ function bind(h) {
     if ('chWeb' in d) { C.web = !C.web; writeLocal(); paint(); return; }
     if ('chData' in d) { if (!C.set.chat_my_data) { toast('Slått av i Innstillinger → AI og tolkning'); return; } C.data = !C.data; dataSave41(C.cur, C.data); writeLocal(); paint(); return; }
     if ('chMic' in d) { mic(); return; }
-    if (d.chRmatt) { C.att = C.att.filter((_, i) => i !== +d.chRmatt); paint(); return; }
+    if (d.chRmatt) { const x = C.att[+d.chRmatt]; if (x?.preview) setTimeout(() => URL.revokeObjectURL(x.preview), 60_000); C.att = C.att.filter((_, i) => i !== +d.chRmatt); paint(); return; }
+    if (d.chLb) { openLb(d.chLb); return; } // prompt 50: lysboks
+    if (d.chFin50) { toFinans(d.chFin50); return; }
     if (d.chKbsel) { const doc = C.kb?.find((x) => x.id === d.chKbsel); if (!doc) return; C.att = C.att.some((a) => a.id === doc.id) ? C.att.filter((a) => a.id !== doc.id) : [...C.att, { kind: 'doc', id: doc.id, name: doc.name }]; paint(); return; }
     if (d.chCopy) {
       const m = (C.chat?.messages ?? []).filter((x) => x.role !== 'system')[+d.chCopy];

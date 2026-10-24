@@ -24,7 +24,7 @@ export async function api(path, opts = {}) {
   const res = await fetch('/finans/api' + path, init);
   if (res.status === 401) await authLost();
   const data = res.headers.get('content-type')?.includes('json') ? await res.json() : await res.text();
-  if (!res.ok) throw Object.assign(new Error(data?.error || `Feil ${res.status}`), { status: res.status });
+  if (!res.ok) throw Object.assign(new Error(data?.error || `Feil ${res.status}`), { status: res.status, kode: data?.kode ?? null, data: typeof data === 'object' ? data : null }); // prompt 50: kode
   return data;
 }
 

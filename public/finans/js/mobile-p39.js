@@ -441,7 +441,8 @@ export async function rcRe(id, engine = 'gemini') {
   } catch (e) {
     if (!alive()) return;
     // Prompt 41: alle statuser kan leses på nytt; mangler originalen, sier vi det (ikke en generisk feil).
-    reFail(id, e.status === 410 || /no_file|missing_file|original/i.test(`${e.code ?? ''} ${e.message ?? ''}`) ? 'Fant ikke originalbildet. Last det opp på nytt for å lese det.' : !e.status || e.status >= 500 ? `${engine === 'tesseract' ? 'Lokal OCR' : 'Gemini'} svarte ikke` : e.message || 'Noe gikk galt');
+    // Prompt 50: forklaringen etter feilkoden (503 modell_utilgjengelig, 504/502 tidsavbrudd, 404 bilde_mangler …), aldri «Feil 502».
+    reFail(id, e.status === 410 || /no_file|missing_file|original/i.test(`${e.code ?? ''} ${e.message ?? ''}`) ? 'Originalbildet finnes ikke lenger. Last opp kvitteringen på nytt.' : (await import('./reread50.js')).rereadError50(e).text);
   }
 }
 async function reWait(id, seq) {
@@ -464,7 +465,7 @@ export function onRt39(d) {
   const id = Object.keys(RE).find((k) => RE[k].jobId != null && (String(RE[k].jobId) === String(jid ?? d.id)));
   if (!id) return false;
   const R = RE[id];
-  if (d.step === 'error' || d.status === 'error') { reFail(id, d.msg || d.error || 'Gemini svarte ikke'); return true; }
+  if (d.step === 'error' || d.status === 'error') { if (d.kode) { import('./reread50.js').then((x) => reFail(id, x.rereadError50({ kode: d.kode, status: d.httpStatus, message: d.error }).text)).catch(() => reFail(id, d.error || 'Noe gikk galt')); return true; } reFail(id, d.msg || d.error || 'Gemini svarte ikke'); return true; }
   if (d.step === 'done') { reDone(id, d.confidence); return true; }
   if (Number.isFinite(+d.pct)) { R.pct = Math.max(R.pct, Math.min(99, +d.pct)); R.real = Date.now(); }
   if (RST.some(([k]) => k === d.step)) R.step = d.step; else R.step = stepOf(R.pct);

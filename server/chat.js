@@ -25,7 +25,7 @@ import { originOf46 } from './public-url46.js'; // prompt 46 (SERVER46)
 import { streamSSE } from 'hono/streaming';
 import { bodyLimit } from 'hono/body-limit';
 import { randomUUID, randomBytes } from 'node:crypto';
-import { mkdir, writeFile, unlink } from 'node:fs/promises';
+import { unlink } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv } from './db.js';
@@ -51,9 +51,11 @@ import { powerFact, powerPrompt } from './power-price.js'; // prompt 44: strømp
 import { backendConfig, maskSecrets } from './ai-gate.js';
 import { jobStart, jobUpdate, jobEnd } from './ai-run.js'; // prompt 44: Chat i jobbloggen (backend, verktøy, nettsøk)
 import { memoryPrompt43 } from './ai-memory43.js'; // prompt 43: AI-minne i systemprompten
+import { saveFile50, deleteFile50, desc50, mountFiles50, visionCaps50, bestVision50, prepareHistory50, stored50, dropImages50, ocrImages50, ocrNote50, receiptChat50, attIds50, RECEIPT_RE50, LIMITS50, kindOf50 } from './chat50.js'; // prompt 50 (SRVCHAT50): vedlegg, miniatyr, vision, kvittering i chat
+import { rankFor41 } from './chat41.js';
+import { externalBlocked48 } from './receipts48/settings.js';
 
 const q = (sql) => db.prepare(sql);
-const FILES = resolve(config.dataDir, 'chat', 'files');
 const isMock = () => process.env.MOCK_DATA === '1' && !fx;
 
 db.exec(`
@@ -122,8 +124,9 @@ async function directLocal() {
   try {
     const r = await F(`${ollamaBase()}/api/tags`, { signal: AbortSignal.timeout(4000) });
     if (!r.ok) return [];
-    return ((await r.json()).models ?? []).filter((m) => !/embed/i.test(m.name)).map((m) => ({ id: m.name, name: prettyLocal(m.name), kind: 'lokal', provider: 'ollama', size: gb(m.size),
+    const list = ((await r.json()).models ?? []).filter((m) => !/embed/i.test(m.name)).map((m) => ({ id: m.name, name: prettyLocal(m.name), kind: 'lokal', provider: 'ollama', size: gb(m.size),
       vision: VISION_RE.test(m.name) || (m.details?.families ?? []).includes('clip'), installed: true }));
+    return await visionCaps50(list, ollamaBase(), F); // prompt 50: vision fra /api/show (capabilities), lagret
   } catch { return []; }
 }
 async function owuiModels(o) {
@@ -188,7 +191,7 @@ const chatRow = (u, id) => q('SELECT * FROM hl_chats WHERE id=? AND user_id=?').
 const iso = (t) => new Date(t).toISOString();
 const brief = (r) => ({ id: r.id, title: r.title, model: r.model, updatedAt: iso(r.updated), pinned: !!r.pinned, folderId: r.folder_id ?? null,
   ...(r.kind ? { kind: r.kind, ref: parse(r.ref, {}), status: parse(r.messages, [])[1]?.meta?.status ?? null } : {}) }); // prompt 34: skann-samtaler
-const msgOut = (m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}), ...(m.files?.length ? { files: m.files } : {}), ...(m.ts ? { ts: m.ts } : {}), ...(m.meta ? { meta: m.meta } : {}),
+const msgOut = (m) => ({ role: m.role, content: m.content, ...(m.images?.length && !m.attachments?.length ? { images: m.images } : {}), ...(m.attachments?.length ? { attachments: m.attachments } : {}), ...(m.files?.length ? { files: m.files } : {}), ...(m.ts ? { ts: m.ts } : {}), ...(m.meta ? { meta: m.meta } : {}),
   ...(m.card ? { card: m.card } : {}), ...(m.tool ? { tool: m.tool } : {}) }); // prompt 31: Glimt-kort (vær, kalender …) og verktøy-chip lagres i meldingen
 const full = (r) => ({ ...brief(r), createdAt: iso(r.created), settings: cleanSettings(parse(r.settings, {})), messages: parse(r.messages, []).map(msgOut), shared: !!r.share_token });
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -446,7 +449,8 @@ function cleanMessages(list) {
   for (const m of list.slice(-200)) {
     if (!m || !['user', 'assistant', 'system'].includes(m.role)) continue;
     const images = Array.isArray(m.images) ? m.images.slice(0, 4).map(stripData).filter((b) => b.length < 12_000_000 && B64.test(b.slice(0, 200))) : [];
-    out.push({ role: m.role, content: String(m.content ?? '').slice(0, 100_000), ...(images.length ? { images } : {}) });
+    const att = attIds50(m.attachments); // prompt 50: vedlegg (id-er) – beskrivelsen hentes fra databasen
+    out.push({ role: m.role, content: String(m.content ?? '').slice(0, 100_000), ...(images.length ? { images } : {}), ...(att.length ? { attachments: att } : {}) });
   }
   return out;
 }
@@ -463,6 +467,7 @@ api.get('/shared/:token', (c) => {
   return c.body(toMarkdown(r), 200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' });
 });
 api.use('*', authOrToken);
+mountFiles50(api); // prompt 50: GET /files/:id, /files/:id/thumb, POST /files/:id/finans
 const adminOnly = async (c, next) => { if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer kan endre modellene på serveren' }, 403); await next(); };
 const bad = (c, error, code = 400) => c.json({ error }, code);
 
@@ -609,16 +614,13 @@ api.post('/files', bodyLimit({ maxSize: 25 * 1024 * 1024, onError: (c) => bad(c,
   let f;
   try { f = (await c.req.parseBody()).file; } catch { f = null; }
   if (!(f instanceof File) || !f.size) return bad(c, 'Velg en fil');
-  const id = randomUUID(), name = String(f.name || 'vedlegg').replace(/[\\/\0]/g, '_').slice(0, 120), buf = Buffer.from(await f.arrayBuffer());
+  if (f.size > LIMITS50.maxBytes) return bad(c, 'Filen er for stor (maks 20 MB)', 413); // prompt 50
+  const name = String(f.name || 'vedlegg').replace(/[\\/\0]/g, '_').slice(0, 120), buf = Buffer.from(await f.arrayBuffer());
   const mime = f.type || 'application/octet-stream';
-  const dir = join(FILES, String(u).replace(/[^\w-]/g, '_'));
-  await mkdir(dir, { recursive: true });
-  const path = join(dir, id);
-  await writeFile(path, buf);
   const text = TEXTY.test(mime) || /\.(md|txt|csv|json|ya?ml|log|ini|conf|sh|js|py)$/i.test(name) ? buf.toString('utf8').slice(0, 60_000) : null;
   let owuiId = null;
   const o = owui();
-  if (o && !isMock()) {
+  if (o && !isMock() && !/^image\//.test(mime)) { // prompt 50: bilder går til modellen som bilder, ikke som RAG-fil
     try {
       const fd = new FormData();
       fd.append('file', new Blob([buf], { type: mime }), name);
@@ -626,12 +628,14 @@ api.post('/files', bodyLimit({ maxSize: 25 * 1024 * 1024, onError: (c) => bad(c,
       if (r.ok) owuiId = (await r.json()).id ?? null;
     } catch { /* lokalt vedlegg holder */ }
   }
-  q('INSERT INTO hl_chat_files(id,user_id,name,size,mime,path,text,owui_id,created) VALUES(?,?,?,?,?,?,?,?,?)').run(id, u, name, buf.length, mime, path, text, owuiId, Date.now());
-  return c.json({ id, name, size: buf.length, mime, readable: !!text || !!owuiId });
+  // Prompt 50: original + miniatyr (maks 480 px, WebP) for bilder; typen leses fra innholdet.
+  const row = await saveFile50(u, { buf, name, mime, text, owuiId });
+  const d = desc50(row);
+  return c.json({ ...d, readable: !!text || !!owuiId || d.kind === 'image' });
 });
 api.delete('/files/:id', async (c) => {
   const r = q('SELECT * FROM hl_chat_files WHERE id=? AND user_id=?').get(c.req.param('id'), c.get('user'));
-  if (r) { q('DELETE FROM hl_chat_files WHERE id=?').run(r.id); await unlink(r.path).catch(() => {}); }
+  if (r) { q('DELETE FROM hl_chat_files WHERE id=?').run(r.id); await unlink(r.path).catch(() => {}); await deleteFile50(r); }
   return c.json({ ok: true });
 });
 api.get('/knowledge', async (c) => {
@@ -677,8 +681,11 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
   if (!wantModel) return bad(c, 'Ingen modell er tilgjengelig. Installer en Ollama-modell eller legg inn en Gemini-/Groq-nøkkel.');
   const s = cleanSettings({ ...parse(chat?.settings ?? '{}', {}), ...(b.settings && typeof b.settings === 'object' ? b.settings : {}) });
   const wantData = !!b.myData && !b.withoutMyData && userBool(u, 'chat_my_data');
-  const files = (Array.isArray(b.files) ? b.files : []).slice(0, 10).map((id) => String(id)).map((id) => (id.startsWith('kb:') ? { kb: id.slice(3), name: 'Kunnskapsbase' } : q('SELECT * FROM hl_chat_files WHERE id=? AND user_id=?').get(id, u))).filter(Boolean);
-  const imgCount = incoming.reduce((n, x) => n + (x.images?.length ?? 0), 0);
+  let files = (Array.isArray(b.files) ? b.files : []).slice(0, 10).map((id) => String(id)).map((id) => (id.startsWith('kb:') ? { kb: id.slice(3), name: 'Kunnskapsbase' } : q('SELECT * FROM hl_chat_files WHERE id=? AND user_id=?').get(id, u))).filter(Boolean);
+  // Prompt 50: bildefiler (files eller attachments i siste melding) teller som bilder, så Auto velger en modell som ser bilder.
+  const isImgRow50 = (f) => !!f && !f.kb && (f.kind ?? kindOf50(f.mime)) === 'image';
+  const attRows50 = attIds50(incoming.at(-1)?.attachments).map((id) => q('SELECT * FROM hl_chat_files WHERE id=? AND user_id=?').get(id, u)).filter(Boolean);
+  const imgCount = incoming.reduce((n, x) => n + (x.images?.length ?? 0), 0) + new Set([...files, ...attRows50].filter(isImgRow50).map((f) => f.id)).size;
   // Prompt 41: «✦ Auto» – Glimt velger modell for denne meldingen (samtalen står fortsatt på Auto).
   let auto = null;
   if (wantModel === AUTO_ID) {
@@ -686,7 +693,8 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
     if (!auto) return bad(c, 'Ingen modell er tilgjengelig. Installer en Ollama-modell eller legg inn en Gemini-/Groq-nøkkel.');
   }
   const modelId = auto ? auto.model : wantModel;
-  const m = await modelFor(modelId);
+  let m = await modelFor(modelId);
+  const chatModelId = auto ? AUTO_ID : m.id; // prompt 50: samtalen beholder valgt modell selv om en vision-modell svarer på bildet
 
   // Historikk: lagret samtale (kuttet ved editFrom) + nye meldinger. Sender klienten hele historikken, brukes den.
   let base = chat ? parse(chat.messages, []) : [];
@@ -697,6 +705,31 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
   else if (incoming.length <= 2 && incoming.at(-1).role === 'user') history = [...base, incoming.at(-1)];
   else history = incoming;
   if (history.at(-1)?.role !== 'user') return bad(c, 'Siste melding må være fra deg');
+
+  // Prompt 50 (SRVCHAT50): vedlegg → lagrede bilder med miniatyr; modellen får nedskalerte bilder. Kan valgt modell ikke se bilder,
+  // svarer beste lokale vision-modell på denne meldingen, ellers lokal OCR. Kvitteringer går aldri til sky når sperren er på.
+  const prep50 = await prepareHistory50(u, history, files);
+  { const ids = new Set(prep50.imageFiles.map((r) => r.id)); files = files.filter((f) => !ids.has(f.id)); }
+  const last50 = history.at(-1);
+  const hasImg50 = !!last50.images?.length;
+  const wantReceipt50 = hasImg50 && RECEIPT_RE50.test(last50.content ?? '') && !b.noTools && b.imageMode !== 'model';
+  const finBlocked50 = wantReceipt50 && externalBlocked48().blocked;
+  let readWith50 = null, modelMsgs = history;
+  if (hasImg50 && (b.imageMode === 'ocr' || !m.vision || (finBlocked50 && m.kind === 'sky'))) {
+    const vm = b.imageMode === 'ocr' ? null : bestVision50(await listModels(), rankFor41);
+    const who = (m.kind === 'sky' ? m.name : m.id).replace(/:latest$/, '');
+    if (vm) {
+      readWith50 = { engine: 'vision', model: vm.id, modelName: vm.name, from: m.id, label: m.vision ? `Lest med ${vm.id.replace(/:latest$/, '')} fordi kvitteringer ikke sendes ut av huset` : `Lest med ${vm.id.replace(/:latest$/, '')} fordi ${who} ikke kan se bilder` };
+      m = vm;
+    } else {
+      const o = await ocrImages50(prep50.imageFiles);
+      readWith50 = { engine: 'ocr', model: 'tesseract', from: m.id, label: o.ok ? 'Lest med lokal OCR' : `Kunne ikke lese bildet (${o.error})` };
+      const note = o.ok ? ocrNote50(o.text) : `[Bildet kunne ikke leses: ingen installert modell ser bilder, og lokal OCR ga ingen tekst (${o.error}). Si det kort til brukeren.]`;
+      const { images, ...rest } = last50; void images;
+      modelMsgs = [...history.slice(0, -1), { ...rest, content: `${last50.content ?? ''}\n\n${note}`.trim() }];
+    }
+  }
+  if (!m.vision) modelMsgs = modelMsgs.map((x) => { if (!x.images) return x; const { images, ...rest } = x; void images; return rest; });
 
   // Spør før sky: modellen er SKY og mine data eller vedlegg er med.
   if (m.kind === 'sky' && (wantData || files.length || imgCount) && !b.confirmCloud && userBool(u, 'chat_ask_cloud') && !s.skipCloudAsk) {
@@ -724,16 +757,16 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
     const id = randomUUID();
     const first = history.find((x) => x.role === 'user')?.content ?? 'Ny samtale';
     const title = first.replace(/\s+/g, ' ').trim().slice(0, 60) || 'Ny samtale';
-    q('INSERT INTO hl_chats(id,user_id,title,model,settings,messages,created,updated) VALUES(?,?,?,?,?,?,?,?)').run(id, u, title, auto ? AUTO_ID : m.id, JSON.stringify(s), JSON.stringify(history.map((x) => ({ ...x, ts: now }))), now, now);
+    q('INSERT INTO hl_chats(id,user_id,title,model,settings,messages,created,updated) VALUES(?,?,?,?,?,?,?,?)').run(id, u, title, chatModelId, JSON.stringify(s), JSON.stringify(history.map((x) => stored50({ ...x, ts: now }))), now, now);
     chat = chatRow(u, id);
   }
-  kv.set(u, 'chat_last_model', auto ? AUTO_ID : m.id);
+  kv.set(u, 'chat_last_model', chatModelId);
   if (m.kind === 'sky') audit(m.provider === 'openwebui' ? 'openwebui' : m.provider, 'chat', { modell: m.name, meldinger: history.length, mineData: data ? Object.keys(data) : [], vedlegg: files.map((f) => f.name), bilder: imgCount, nettsok: !!b.webSearch }, u);
   const chatId = chat.id;
   const saveMsgs = (answer, meta) => {
-    const stored = history.map((x) => ({ ...x, ts: x.ts ?? now }));
-    if (answer) stored.push({ role: 'assistant', content: answer, ts: Date.now(), meta });
-    q('UPDATE hl_chats SET messages=?, model=?, settings=?, updated=? WHERE id=? AND user_id=?').run(JSON.stringify(stored), auto ? AUTO_ID : m.id, JSON.stringify(s), Date.now(), chatId, u);
+    const stored = history.map((x) => stored50({ ...x, ts: x.ts ?? now })); // prompt 50: vedlegg lagres som beskrivelse + miniatyr, ikke base64
+    if (answer) stored.push({ role: 'assistant', content: answer, ts: Date.now(), meta: readWith50 && !meta?.readWith ? { ...meta, readWith: readWith50 } : meta });
+    q('UPDATE hl_chats SET messages=?, model=?, settings=?, updated=? WHERE id=? AND user_id=?').run(JSON.stringify(stored), chatModelId, JSON.stringify(s), Date.now(), chatId, u);
   };
   saveMsgs(null);
 
@@ -744,7 +777,22 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
     const t0 = Date.now();
     const onDelta = async (d) => { if (!d) return; first ??= Date.now(); text += d; if (!sse.aborted) await sse.writeSSE({ event: 'delta', data: JSON.stringify({ text: d }) }); };
     const autoMeta = auto ? { auto: { model: auto.model, modelName: auto.modelName, kind: auto.kind, label: auto.label, reason: auto.reason, candidates: auto.candidates } } : {};
-    await sse.writeSSE({ event: 'meta', data: JSON.stringify({ chatId, model: m.id, modelName: m.name, kind: m.kind, title: chat.title, ...autoMeta }) });
+    await sse.writeSSE({ event: 'meta', data: JSON.stringify({ chatId, model: m.id, modelName: m.name, kind: m.kind, title: chat.title, ...autoMeta, ...(readWith50 ? { readWith: readWith50 } : {}),
+      ...(last50.attachments?.length ? { attachments: last50.attachments } : {}) }) });
+    // Prompt 50: kvittering i chat – samme kvitteringskjede som Finans, svaret er en tabell + «Legg i Finans ›». Ingen språkmodell i skyen.
+    if (wantReceipt50 && prep50.imageFiles.length) {
+      try {
+        const rc = await receiptChat50(u, prep50.imageFiles[0], { signal: ctrl.signal });
+        if (rc.ok) {
+          await onDelta(rc.markdown);
+          const ms = Date.now() - t0, used = ['Kvitteringsleser'];
+          saveMsgs(text, { model: rc.meta.receipt.model ?? 'Glimt', ms, used, ...rc.meta });
+          await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, ms, used, engine: 'receipt', tokensPerSec: null, ...rc.meta }) });
+          return;
+        }
+        console.warn('[chat] kvittering (prompt 50):', rc.error);
+      } catch (e) { if (ctrl.signal.aborted) return; console.warn('[chat] kvittering (prompt 50):', e.message); }
+    }
     // Prompt 41: Glimt henter fakta (vær, tid, sol) før modellen svarer. Feil her stopper aldri svaret.
     let facts = [], factUsed = [], sysAll = sys;
     if (!b.noTools && hasFactWords(history.at(-1)?.content)) {
@@ -798,14 +846,14 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
       let r, used41 = m;
       // Open WebUIs eget nettsøk (features.web_search) bare når vårt eget søk ikke ga treff.
       const owuiWeb = !!b.webSearch && !webHits;
-      try { r = await runEngine(m, { sys: sysAll, msgs: history, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text }); }
+      try { r = await runEngine(m, { sys: sysAll, msgs: modelMsgs, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text }); }
       catch (e) {
         // Prompt 41: Auto – svarer ikke valgt modell (og ingenting er strømmet), prøv neste beste og si det i svaret.
         const next = auto && !text && !ctrl.signal.aborted ? auto.candidates.find((id) => id !== m.id) : null;
         if (!next) throw e;
         used41 = await modelFor(next);
         auto.fallbackFrom = m.id; auto.model = used41.id; auto.modelName = used41.name; auto.label = `${auto.label.split(' · ')[0]} · ${used41.name}`; auto.reason = `${m.name} svarte ikke · bruker ${used41.name}`;
-        r = await runEngine(used41, { sys: sysAll, msgs: history, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+        r = await runEngine(used41, { sys: sysAll, msgs: modelMsgs, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
       }
       const ms = Date.now() - t0;
       const genS = Math.max(0.001, (Date.now() - (first ?? t0)) / 1000);
@@ -816,7 +864,7 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
       saveMsgs(text, { model: used41.id, tokensPerSec, ms, used: allUsed, ...metaFacts, ...autoDone });
       const tl = r.telemetry;
       jobEnd(jobId, { model: used41.id, ms, step: null, ...(tl ? { backend: tl.backend, backendNote: tl.backendNote ?? null, queueMs: tl.queueMs, loadMs: tl.loadMs, genMs: tl.genMs, attempts: tl.attempts, tokIn: tl.tokIn, tokOut: tl.tokOut } : { backend: r.engine }) });
-      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, tools: route.tools, ...(tl?.backend ? { backend: tl.backend } : {}), ...metaFacts, ...autoDone, ...(webOff ? { webSearch: false } : {}), ...(wantedWeb ? { webSearchOff: { question: 'Nettsøk er av. Skal jeg søke på nettet for dette?', action: { label: 'Søk denne gangen', webSearch: true, once: true } } } : {}) }) });
+      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, ...(readWith50 ? { readWith: readWith50 } : {}), tools: route.tools, ...(tl?.backend ? { backend: tl.backend } : {}), ...metaFacts, ...autoDone, ...(webOff ? { webSearch: false } : {}), ...(wantedWeb ? { webSearchOff: { question: 'Nettsøk er av. Skal jeg søke på nettet for dette?', action: { label: 'Søk denne gangen', webSearch: true, once: true } } } : {}) }) });
     } catch (e) {
       const tl = e.telemetry;
       jobUpdate(jobId, { status: ctrl.signal.aborted || e.cancelled ? 'cancelled' : 'fail', error: ctrl.signal.aborted || e.cancelled ? 'Avbrutt av bruker' : e.message, ms: Date.now() - t0, step: null,

@@ -11,6 +11,7 @@ import { runAsUser, userCfg, setUserCfg } from '../settings.js';
 import { loadDemo } from './demo.js';
 import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode, aiTimeoutsOf, cleanAiTimeouts, AI_TIMEOUT_DEFAULTS, TIMEOUT_STEPS, ON_TIMEOUT, _aiTest, aiLimits } from './ai.js';
 import { startJob, getJob, cancelJob, jobView, subscribe, runningFor, MAX_RUNNING_PER_USER, _jobTest } from './ai-jobs.js';
+import { modelImage50, classify50, KODER50, REREAD50 } from './reread50.js'; // prompt 50 (SRVCHAT50): nedskalering + feilkoder for «Les på nytt»
 import { streamSSE } from 'hono/streaming';
 import { hasGemini, listKeysOut, addKey, removeKey, renameKey, orderKeys, resetKey, testKey } from './gemini-keys.js';
 import { ollamaModels, startPull, pullStatus, deleteModel } from './ollama-models.js';
@@ -1124,16 +1125,25 @@ export const _setReread = (fn) => { rereadImpl = fn; };
 api.post('/receipts/:id/reread', W, async (c) => {
   const r = rcGet(c);
   if (!r) return c.notFound();
-  if (r.status === 'pending' || r.status === 'processing' || rereading.has(r.id)) return bad(c, 'Kvitteringen leses allerede', 409);
+  if (r.status === 'pending' || r.status === 'processing' || rereading.has(r.id)) return c.json({ error: 'Kvitteringen leses allerede', kode: 'opptatt', code: 'opptatt' }, 409);
   if (r.mime === 'text/plain') return bad(c, 'E-postkvitteringer har ikke bilde, så posisjoner finnes ikke');
-  if (!r.file) return bad(c, 'Kvitteringen har ingen fil å lese');
+  if (!r.file) return c.json({ error: KODER50.bilde_mangler.text, kode: 'bilde_mangler', code: 'bilde_mangler' }, 404);
   rereading.add(r.id);
   scanLog(r.id, 'les-på-nytt', 'posisjoner for markering');
   const u = c.get('user');
+  // Prompt 50: også dette er en jobb (GET /finans/api/jobs/:id) med fremdrift; svaret kommer med en gang.
+  const { job: pj } = startJob(u, 'reread', async (ctx) => {
+    ctx.progress({ step: 'upload', pct: 5, msg: 'Leser kvitteringen …', receiptId: r.id });
+    await job;
+    const n = receiptLines(origSelect.get(r.id) ?? r).filter((l) => l.bbox).length;
+    ctx.progress({ step: 'done', pct: 100, msg: n ? `${n} linjer med posisjon` : 'Motoren ga ingen posisjoner', receiptId: r.id });
+    return { receiptId: r.id, boxes: n };
+  });
   const job = (async () => {
     try {
-      const img = await readFile(join(DIR, r.scan || r.file));
-      const mime = r.scan ? 'image/jpeg' : r.mime;
+      let img = await readFile(join(DIR, r.scan || r.file));
+      let mime = r.scan ? 'image/jpeg' : r.mime;
+      if (!r.scan) { const mi = await modelImage50(img, mime); img = mi.img; mime = mi.mime; } // prompt 50: aldri full oppløsning til modellen
       const cats = q("SELECT name FROM fh_categories WHERE kind='expense' AND user_id=? ORDER BY sort").all(u).map((x) => x.name);
       const res = rereadImpl ? await rereadImpl(img, mime) : await extract(img, mime, cats, undefined, { log: (step, d) => scanLog(r.id, step, d) });
       const cur = origSelect.get(r.id);
@@ -1145,7 +1155,7 @@ api.post('/receipts/:id/reread', W, async (c) => {
     } catch (e) { scanLog(r.id, 'feil', `Les på nytt: ${e.message}`); } finally { rereading.delete(r.id); }
   })();
   if (rereadImpl) await job; // tester venter på resultatet
-  return c.json({ queued: true, receiptId: r.id }, 202);
+  return c.json({ queued: true, receiptId: r.id, jobId: pj.id, statusUrl: `/finans/api/jobs/${pj.id}` }, 202);
 });
 
 // «✦ Analyser på nytt med Gemini»: originalfilen sendes til Gemini. Resultatet lagres som kandidat og vises
@@ -1162,7 +1172,7 @@ const readOut = (o) => ({ merchant: o.merchant ?? null, date: o.date ?? null, to
 //   DELETE /finans/api/jobs/:id avbryter: «Avbrutt · ingenting ble endret».
 const reanalyzing = new Map(); // kvittering-id → jobb-id
 export const reanalyzeJobOf = (r) => { const id = reanalyzing.get(r.id); const j = id ? getJob(r.user_id ?? OWNER, id) : null; return j && j.status === 'running' ? { jobId: j.id, step: j.progress?.step ?? 'upload', pct: j.progress?.pct ?? 0, msg: j.progress?.msg ?? null } : null; };
-async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {} } = {}) {
+async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {}, small = false, maxSide = null } = {}) {
   const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
   const log = (step, detail) => scanLog(r.id, step, detail);
   let at = 'upload', pct = 0;
@@ -1174,22 +1184,27 @@ async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {} }
     engine: r.provider ? providerName(r.provider) : null, model: r.model, category: catById(u).get(r.category_id)?.name, error: r.error });
   let res;
   // Prompt 41: mangler originalen, si det konkret (ikke en generisk feil).
-  if (!r.file) { P('error', pct, '✕ Fant ikke originalbildet'); return { error: 'Fant ikke originalbildet. Last det opp på nytt for å lese det.', status: 404, missingOriginal: true }; }
-  try { await readFile(join(DIR, r.file)); } catch (e) { if (e.code === 'ENOENT') { P('error', pct, '✕ Fant ikke originalbildet'); return { error: 'Fant ikke originalbildet. Last det opp på nytt for å lese det.', status: 404, missingOriginal: true }; } }
+  if (!r.file) { P('error', pct, '✕ Fant ikke originalbildet'); return { error: 'Fant ikke originalbildet. Last det opp på nytt for å lese det.', status: 404, kode: 'bilde_mangler', missingOriginal: true }; }
+  try { await readFile(join(DIR, r.file)); } catch (e) { if (e.code === 'ENOENT') { P('error', pct, '✕ Fant ikke originalbildet'); return { error: 'Fant ikke originalbildet. Last det opp på nytt for å lese det.', status: 404, kode: 'bilde_mangler', missingOriginal: true }; } }
   try {
-    const img = await readFile(join(DIR, r.file));
+    let img = await readFile(join(DIR, r.file)), mime = r.mime;
+    // Prompt 50: nedskaler til 2048 px (small: 1280 px, «Les mindre versjon») før modellen. Originalen på disk er uendret.
+    const mi = await modelImage50(img, mime, { small, maxSide });
+    if (mi.resized) { img = mi.img; mime = mi.mime; log('nedskalert', `${mi.fromKb} kB → ${mi.toKb} kB${mi.w ? ` (${mi.w}×${mi.h} px)` : ''}${small ? ' · mindre versjon' : ''}`); }
     P('upload', 15, 'Laster opp bildet');
     P('ocr', 25, 'Leser teksten (OCR)');
     const cats = q("SELECT name FROM fh_categories WHERE kind='expense' AND user_id=? ORDER BY sort").all(u).map((x) => x.name);
     const logp = (step, detail) => { log(step, detail); if (step === 'ai') P('llm', 45, `✦ ${label} tolker butikk, linjer og beløp`); else if (step === 'kontroll') P('verify', 80, String(detail)); };
     if (engine === 'tesseract') P('ocr', 40, 'Leser teksten (OCR)');
     else P('llm', 40, `✦ ${label} tolker butikk, linjer og beløp`);
-    res = engine === 'tesseract' ? await extractOcr(img, r.mime)
-      : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, r.mime, cats, 'gemini', { log: logp });
+    res = engine === 'tesseract' ? await extractOcr(img, mime)
+      : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, mime, cats, 'gemini', { log: logp });
   } catch (e) {
     log('feil', `${label}: ${e.message}`);
-    P('error', pct, `✕ ${label} svarte ikke`);
-    return { error: `${label} kunne ikke lese kvitteringen: ${e.message}`, status: e.missing ? 501 : 502 };
+    // Prompt 50: tydelige koder (503 modell_utilgjengelig, 504 tidsavbrudd, 422 ulesbar …) – aldri 502, som bare proxyen skal gi.
+    const k = classify50(e, label);
+    P('error', pct, k.kode === 'tidsavbrudd' ? `✕ ${label} brukte for lang tid` : `✕ ${label} svarte ikke`);
+    return { error: k.error, status: e.missing && engine === 'tesseract' ? 501 : k.status, kode: k.kode, melding: k.melding };
   }
   if (signal?.aborted) return { cancelled: true };
   P('verify', 90, 'Sjekker sum og dato');
@@ -1208,20 +1223,22 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   // Prompt 41: lov for alle statuser. Bokført og avvist får alltid bare et forslag (apply:false) – ingenting endres før «Bruk endringene».
   if (['booked', 'rejected'].includes(r.status)) b.apply = false;
-  if (r.status === 'pending' || r.status === 'processing') return bad(c, 'Kvitteringen leses fortsatt');
+  if (r.status === 'pending' || r.status === 'processing') return c.json({ error: 'Kvitteringen leses fortsatt', kode: 'opptatt', code: 'opptatt' }, 409);
   const engine = b.engine === 'tesseract' ? 'tesseract' : 'gemini';
   const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
-  if (engine === 'gemini' && !hasGemini()) return bad(c, 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.');
+  if (engine === 'gemini' && !hasGemini()) return c.json({ error: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.', kode: 'gemini_mangler', code: 'gemini_mangler' }, 400);
+  const small = b.small === true || b.variant === 'small' || c.req.query('small') === '1'; // prompt 50: «Les mindre versjon»
+  const maxSide = Number.isFinite(+b.maxSide) && +b.maxSide > 0 ? +b.maxSide : null; // prompt 50 (iOS): lengste side, 512–2048 px
   if (engine === 'tesseract' && r.mime === 'text/plain') return bad(c, 'Lokal OCR leser bare bilder og PDF, ikke e-posttekst');
   const u = c.get('user');
   const bg = b.async === true || b.progress === true || /respond-async/i.test(c.req.header('prefer') ?? '') || c.req.query('async') === '1';
   if (bg && reanalyzing.has(r.id) && getJob(u, reanalyzing.get(r.id))?.status === 'running') return c.json({ jobId: reanalyzing.get(r.id), receiptId: r.id, running: true, statusUrl: `/finans/api/jobs/${reanalyzing.get(r.id)}`, eventsUrl: `/finans/api/jobs/${reanalyzing.get(r.id)}/events`, channel: `job:${reanalyzing.get(r.id)}` }, 202);
-  let errStatus = 502;
+  let errStatus = 500, errKode = 'ukjent';
   const { job, promise } = startJob(u, 'reanalyze', async (ctx) => {
     const progress = (p) => { ctx.progress(p); try { broadcast('job', { channel: `job:${ctx.job.id}`, jobId: ctx.job.id, kind: 'reanalyze', ...p }, [u]); broadcast('receipt-job', { jobId: ctx.job.id, receiptId: r.id, step: p.step, pct: p.pct, msg: p.msg }, [u]); } catch { /* sanntid er best effort */ } };
-    const out = await reanalyzeRun(r, u, engine, { signal: ctx.signal, progress });
+    const out = await reanalyzeRun(r, u, engine, { signal: ctx.signal, progress, small, maxSide });
     if (out.cancelled || ctx.signal.aborted) { progress({ step: 'error', pct: 0, msg: 'Avbrutt · ingenting ble endret' }); throw Object.assign(new Error('Avbrutt'), { cancelled: true }); }
-    if (out.error) { errStatus = out.status ?? 502; throw new Error(out.error); }
+    if (out.error) { errStatus = out.status ?? 500; errKode = out.kode ?? 'ukjent'; throw Object.assign(new Error(out.error), { kode: errKode, httpStatus: errStatus, melding: out.melding ?? KODER50[errKode]?.text ?? null }); }
     const pctTxt = Math.round((out.confidence ?? 0) * 100);
     if (bg && b.apply !== false) {
       const before = origSelect.get(r.id);
@@ -1247,12 +1264,19 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
     promise.finally(() => { if (reanalyzing.get(r.id) === job.id) reanalyzing.delete(r.id); });
     return c.json({ jobId: job.id, receiptId: r.id, statusUrl: `/finans/api/jobs/${job.id}`, eventsUrl: `/finans/api/jobs/${job.id}/events`, channel: `job:${job.id}`, steps: stepsOut39('upload', label) }, 202);
   }
-  const j = await promise;
-  if (j.status !== 'done') return bad(c, j.error ?? 'Avbrutt', j.status === 'cancelled' ? 409 : errStatus);
+  // Prompt 50: uten async venter vi høyst REREAD50.syncMaxMs (25 s), så ingen proxy-tidsgrense treffer. Tar det lengre tid, svarer vi
+  // 202 {jobId, pending:true, statusUrl, …}; klienten følger jobben (GET /finans/api/jobs/:id) som med async:true.
+  reanalyzing.set(r.id, job.id);
+  promise.finally(() => { if (reanalyzing.get(r.id) === job.id) reanalyzing.delete(r.id); });
+  const j = await Promise.race([promise, new Promise((res) => { const t = setTimeout(() => res(null), REREAD50.syncMaxMs); t.unref?.(); })]);
+  if (!j) return c.json({ jobId: job.id, receiptId: r.id, pending: true, statusUrl: `/finans/api/jobs/${job.id}`, eventsUrl: `/finans/api/jobs/${job.id}/events`, channel: `job:${job.id}`, steps: stepsOut39('upload', label) }, 202);
+  if (j.status !== 'done') return j.status === 'cancelled' ? bad(c, j.error ?? 'Avbrutt', 409) : c.json({ error: j.error ?? 'Avbrutt', kode: errKode, code: errKode, melding: KODER50[errKode]?.text ?? null, jobId: j.id }, errStatus);
   const { confidence, ...out } = j.result;
   return c.json({ ...out, jobId: j.id, status: r.status, ...(r.status === 'rejected' ? { offer: 'review', offerText: 'Flytt til gjennomgang' } : {}), ...(r.status === 'booked' ? { offer: 'apply', offerText: 'Bruk endringene' } : {}) });
 });
 // Prompt 39 (PWA): GET /finans/api/receipts/reanalyze/:jobId → {jobId, receiptId, status, step, pct, msg, steps, result?} · DELETE samme = Avbryt.
+// Prompt 50 (iOS-reserve): GET /finans/api/receipts/jobs/:jobId → samme jobbvisning (reanalyze og reread) som /jobs/:id.
+api.get('/receipts/jobs/:jobId', R, (c) => { const j = getJob(c.get('user'), c.req.param('jobId')); return j && ['reanalyze', 'reread'].includes(j.kind) ? c.json({ ...jobView(j), steps: j.progress?.steps ?? null }) : c.json({ error: 'Fant ikke jobben', kode: 'ukjent_jobb', code: 'ukjent_jobb' }, 404); });
 api.get('/receipts/reanalyze/:jobId', R, (c) => { const j = getJob(c.get('user'), c.req.param('jobId')); return j && j.kind === 'reanalyze' ? c.json({ ...jobView(j), steps: j.progress?.steps ?? null }) : bad(c, 'Fant ikke jobben', 404); });
 api.delete('/receipts/reanalyze/:jobId', W, (c) => {
   const j = getJob(c.get('user'), c.req.param('jobId'));

@@ -364,8 +364,11 @@ async function reread(id, rid) {
   const T0 = MOD.p3?.TX?.d?.[id];
   TXE.rr = { id, busy: true }; draw();
   try {
-    const r = rid ? await api(`/receipts/${rid}/reanalyze`, { method: 'POST', json: { engine: 'gemini', full: true } }) : await api(`/transactions/${id}/reread`, { method: 'POST', json: {} }); // prompt 41
-    if (r?.jobId && MOD.p39 && rid) { TXE.rr = null; delete MOD.p39.RE[rid]; MOD.p39.rcRe(rid); return; } // fremdrift som i prompt 39
+    // Prompt 50: som jobb (202 + polling), så proxyen ikke gir 502 på lange lesinger. small = «Les mindre versjon».
+    const { reanalyzeJob50 } = await import('./reread50.js');
+    const small = TXE.rrSmall === id; TXE.rrSmall = null;
+    const tick = ({ secs }) => { const b = document.querySelector('#app .p40-rr b'); if (b && TXE.rr?.busy) b.textContent = `Glimt leser kvitteringen på nytt … ${secs} s`; };
+    const r = await reanalyzeJob50(rid, { engine: 'gemini', small, onTick: tick, ...(rid ? {} : { path: `/transactions/${id}/reread` }) }); // prompt 41
     const N = r?.result ?? r?.candidate ?? r ?? {}, O = rid ? T0?.receipt ?? {} : { merchant: T0?.merchant ?? T0?.description, date: T0?.date, total: T0?.amount != null ? Math.abs(T0.amount) : null };
     const ch = Array.isArray(r?.changes) ? r.changes : [['merchant', 'Butikk'], ['date', 'Dato'], ['total', 'Beløp'], ['vat', 'MVA']].map(([f, label]) => ({ field: f, label, old: O[f], new: N[f] })).filter((c) => c.new != null && String(c.new) !== String(c.old ?? ''));
     const ln = (L) => (L ?? []).map((l) => `${l.name} ${l.price}`).join('|');
@@ -373,7 +376,13 @@ async function reread(id, rid) {
     const tot = (N.lines ?? []).reduce((a, l) => a + (+l.price || 0), 0);
     TXE.rr = { id, rid, cand: r?.candidateId ?? null, res: { changes: ch.map((c) => ({ ...c, old: c.field === 'total' && c.old != null ? kr(c.old) : c.old, new: c.field === 'total' && c.new != null ? kr(c.new) : c.new })), total_ok: r?.total_ok ?? (N.lines?.length && N.total != null ? Math.abs(Math.abs(tot) - Math.abs(N.total)) < 0.6 : null) } };
     haptic('ok');
-  } catch (e) { TXE.rr = null; flash(e.status === 404 ? 'Ny lesing er ikke tilgjengelig på denne serveren ennå.' : e.message, 'err'); }
+  } catch (e) {
+    // Prompt 50: forklaring brukeren kan handle på + «Les mindre versjon» ved tidsavbrudd.
+    const { rereadError50 } = await import('./reread50.js');
+    const E = e.status === 404 && !e.kode ? { text: 'Ny lesing er ikke tilgjengelig på denne serveren ennå.' } : rereadError50(e);
+    TXE.rr = null; flash(E.text, 'err');
+    if (E.small && rid) { TXE.rrSmall = id; flash(`${E.text} Trykk «Les på nytt» igjen for å lese en mindre versjon.`, 'err'); }
+  }
   draw();
 }
 async function rrApply(id, keep) {

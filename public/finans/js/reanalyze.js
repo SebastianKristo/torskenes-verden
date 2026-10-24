@@ -1,14 +1,16 @@
 // «✦ Analyser på nytt med Gemini»: sender originalbildet til Gemini og viser resultatet side om side med det forrige.
 // Brukes av desktop (bekreftelsessiden og køen) og PWA-en. Brukeren velger hvilket resultat som beholdes.
 import { api, esc, n2, dd, uploadReceipt } from './core.js';
+import { reanalyzeJob50, rereadError50 } from './reread50.js'; // prompt 50: jobb + feilmeldinger i stedet for «Feil 502»
 
 /** Knappene: «✦ Analyser på nytt med Gemini» (når det trengs) og «Les med lokal OCR» (Tesseract, uten AI).
  *  Gemini-knappen er deaktivert med årsak når Gemini ikke er satt opp. Tom streng når ingen trengs. */
-export function reanalyzeBtn(r, cls = 'btn ghost', style = '') {
+// Prompt 50 (fargefeil): gCls = klassen til Gemini-knappen (primærknapp i «Lav sikkerhet»-boksen), OCR-knappen er sekundær (cls).
+export function reanalyzeBtn(r, cls = 'btn ghost', style = '', gCls = cls) {
   if (!r) return '';
   const st = style ? ` style="${esc(style)}"` : '';
   let out = '';
-  if (r.canReanalyze) out += `<button type="button" class="${cls} ra-btn"${st} data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</button>`;
+  if (r.canReanalyze) out += `<button type="button" class="${gCls} ra-btn"${st} data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</button>`;
   else if (r.reanalyzeReason) out += `<button type="button" class="${cls} ra-btn"${st} disabled title="${esc(r.reanalyzeReason)}">✦ Analyser på nytt med Gemini</button>`;
   if (r.canOcr) out += `<button type="button" class="${cls} ra-btn"${st} data-reanalyze="${esc(r.id)}" data-engine="tesseract" title="Leser bildet lokalt på serveren med Tesseract, uten AI">Les med lokal OCR</button>`;
   return out;
@@ -36,21 +38,21 @@ const CSS = `
 .ra-col.new{border-color:#4F6BFF66;box-shadow:inset 0 0 0 1px #4F6BFF33}
 .ra-h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:600}
 .ra-tag{font-size:11.5px;padding:2px 8px;border-radius:99px;background:#24242A;color:var(--text2,#B9B9C2);font-weight:500}
-.ra-col.new .ra-tag{background:#1C2450;color:#B6C3FF}
+.ra-col.new .ra-tag{background:var(--blue-soft,#1C2450);color:var(--blue-l,#B6C3FF)}
 .ra-row{display:flex;justify-content:space-between;gap:8px;font-size:13.5px}
 .ra-row span:first-child{color:var(--muted,#8C8C96)}
 .ra-row b{font-weight:600;text-align:right}
-.ra-row b.diff{color:#FFD27A}
+.ra-row b.diff{color:var(--acc-l,#FFD27A)}
 .ra-items{border-top:1px solid var(--line,#24242A);padding-top:8px;font-size:12.5px;color:var(--text2,#B9B9C2);display:flex;flex-direction:column;gap:3px;max-height:180px;overflow:auto}
 .ra-items div{display:flex;justify-content:space-between;gap:8px}
-.ra-err{color:#FF8A80;font-size:12.5px}
+.ra-err{color:var(--neg,#FF8A80);font-size:12.5px}
 .ra-act{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
 .ra-act button{height:44px;padding:0 18px;border-radius:12px;border:1px solid var(--line2,#2A2A31);background:var(--inner,#1B1B20);color:inherit;font:inherit;font-weight:600;cursor:pointer}
 .ra-act button.pri{background:#4F6BFF;border-color:#4F6BFF;color:#fff}
 .ra-act button:disabled{opacity:.5;cursor:default}
 .ra-diff{display:flex;flex-direction:column;border:1px solid var(--line,#24242A);border-radius:14px;overflow:hidden}
 .ra-diff>div{display:grid;grid-template-columns:90px minmax(0,1fr) minmax(0,1fr);gap:10px;padding:9px 12px;border-bottom:1px solid var(--line,#24242A);font-size:13.5px}
-.ra-diff>div:last-child{border-bottom:0}.ra-diff span{color:var(--muted,#8C8C96)}.ra-diff s{color:var(--muted,#8C8C96);overflow-wrap:anywhere}.ra-diff b{font-weight:600;color:#FFD27A;overflow-wrap:anywhere}
+.ra-diff>div:last-child{border-bottom:0}.ra-diff span{color:var(--muted,#8C8C96)}.ra-diff s{color:var(--muted,#8C8C96);overflow-wrap:anywhere}.ra-diff b{font-weight:600;color:var(--acc-l,#FFD27A);overflow-wrap:anywhere}
 .ra-ok{padding:14px;border-radius:14px;background:rgba(61,214,140,.1);color:var(--pos,#3DD68C);font-weight:600}
 .ra-more{margin-top:12px;font-size:13px}.ra-more summary{cursor:pointer;color:var(--muted,#8C8C96);margin-bottom:10px}
 .ra-load{display:flex;align-items:center;gap:12px;padding:28px 4px;color:var(--text2,#B9B9C2)}
@@ -112,7 +114,7 @@ export function openReanalyze(id, { onDone, engine = 'gemini', status = '' } = {
   document.body.appendChild(ov);
   let busy = true, data = null, resolve;
   const done = new Promise((r) => { resolve = r; });
-  const close = (r = null) => { ov.remove(); document.removeEventListener('keydown', key); resolve(r); if (r) onDone?.(r); };
+  const close = (r = null) => { ctl?.abort(); ov.remove(); document.removeEventListener('keydown', key); resolve(r); if (r) onDone?.(r); };
   const key = (e) => { if (e.key === 'Escape' && !busy) close(); };
   document.addEventListener('keydown', key);
   const body = ov.querySelector('.ra-body'), act = ov.querySelector('.ra-act');
@@ -123,18 +125,23 @@ export function openReanalyze(id, { onDone, engine = 'gemini', status = '' } = {
     const k = b.dataset.ra;
     if (k === 'cancel') return close();
     if (k === 'retry') return run();
+    if (k === 'small') return run(true); // prompt 50: «Les mindre versjon» (1280 px)
     if (k === 'old' || k === 'new') {
       act.querySelectorAll('button').forEach((x) => { x.disabled = true; });
       try { close(await api(`/receipts/${encodeURIComponent(id)}/reanalyze/apply`, { method: 'POST', json: { candidateId: data.candidateId, keep: k } })); }
       catch (err) { body.insertAdjacentHTML('beforeend', `<div class="ra-err" style="margin-top:10px">${esc(err.message)}</div>`); act.querySelectorAll('button').forEach((x) => { x.disabled = false; }); }
     }
   });
-  async function run() {
+  let ctl = null;
+  async function run(small = false) {
     busy = true;
-    body.innerHTML = `<div class="ra-load"><span class="ra-spin"></span>${esc(loading)}</div>`;
+    body.innerHTML = `<div class="ra-load"><span class="ra-spin"></span><span>${esc(loading)}<br><small class="ra-tick" style="color:var(--muted,#8C8C96)"></small></span></div>`;
     act.innerHTML = '<button type="button" data-ra="cancel">Avbryt</button>';
+    ctl?.abort(); ctl = new AbortController();
+    const myCtl = ctl;
     try {
-      data = await api(`/receipts/${encodeURIComponent(id)}/reanalyze`, { method: 'POST', json: { engine, apply: false } });
+      // Prompt 50: jobb (202 + polling hvert 1,5 s) med fremdrift «Leser … 12 s», så proxyen aldri gir 502.
+      data = await reanalyzeJob50(id, { engine, small, signal: myCtl.signal, onTick: ({ secs, msg }) => { const t = body.querySelector('.ra-tick'); if (t) t.textContent = `${msg && !/^Leser/.test(msg) ? `${msg} · ` : 'Leser … '}${secs} s`; } });
       const ch = diff40(data.previous ?? {}, data.result ?? {}), R = data.result ?? {};
       const items = R.items ?? [], sum = items.reduce((t, l) => t + (Number(l.amount) || 0), 0), sumOk = !items.length || R.total == null || Math.abs(sum - R.total) < 0.01;
       const sumNote = sumOk ? '' : `<div class="ra-err" style="margin-top:10px">Summen av linjene (${money(sum)}) stemmer ikke med totalen (${money(R.total)}). Bruk «Rediger alt» i transaksjonen for å rette.</div>`;
@@ -148,7 +155,7 @@ export function openReanalyze(id, { onDone, engine = 'gemini', status = '' } = {
       }
     } catch (err) {
       // Mangler originalbildet: egen tekst og opplasting, ikke en generisk feil.
-      if (/original|fant ikke (bildet|fila|filen)|mangler (bildet|fil)|no such file|ENOENT/i.test(err.message ?? '') || err.status === 410) {
+      if (/original|fant ikke (bildet|fila|filen)|mangler (bildet|fil)|no such file|ENOENT/i.test(err.message ?? '') || err.kode === 'bilde_mangler') {
         body.innerHTML = '<div class="ra-err" style="padding:12px 0">Fant ikke originalbildet. Last det opp på nytt for å lese det.</div>';
         act.innerHTML = '<button type="button" data-ra="cancel">Lukk</button><label class="pri ra-up" style="display:inline-flex;align-items:center;height:44px;padding:0 18px;border-radius:12px;background:#4F6BFF;color:#fff;font-weight:600;cursor:pointer">Last opp bildet<input type="file" accept="image/*,application/pdf" hidden data-ra-up></label>';
         act.querySelector('[data-ra-up]')?.addEventListener('change', async (e) => {
@@ -158,9 +165,12 @@ export function openReanalyze(id, { onDone, engine = 'gemini', status = '' } = {
         });
         return;
       }
-      body.innerHTML = `<div class="ra-err" style="padding:12px 0">${esc(err.message)}${err.status ? ` (HTTP ${err.status})` : ''}</div>`;
-      act.innerHTML = '<button type="button" data-ra="cancel">Lukk</button><button type="button" class="pri" data-ra="retry">Prøv igjen</button>';
-    } finally { busy = false; }
+      if (err.name === 'AbortError') return;
+      // Prompt 50: forklaring brukeren kan handle på (ikke «Feil 502 (HTTP 502)»); full respons i konsollen.
+      const E = rereadError50(err);
+      body.innerHTML = `<div class="ra-err" style="padding:12px 0">${esc(E.text)}</div>`;
+      act.innerHTML = `<button type="button" data-ra="cancel">Lukk</button>${E.small && !ocr ? '<button type="button" data-ra="small">Les mindre versjon</button>' : ''}<button type="button" class="pri" data-ra="retry">Prøv igjen</button>`;
+    } finally { if (myCtl === ctl) busy = false; }
   }
   run();
   return done;

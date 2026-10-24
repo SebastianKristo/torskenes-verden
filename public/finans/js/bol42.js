@@ -469,6 +469,16 @@ async function reAi() {
     let r = null;
     try { r = await api(`/folders/${X.h}/entries/${X.id}/reanalyze`, { method: 'POST', json: { keep: X.touched ?? [] } }); }
     catch (e) { if (e.status !== 404 && e.status !== 405) throw e; await api(`/receipts/${encodeURIComponent(X.rid)}/reread`, { method: 'POST' }); }
+    // Prompt 50: følg jobben (GET /jobs/:id hvert 1,5 s, maks 5 min) – lesingen holder aldri en forespørsel åpen.
+    if (r?.jobId) {
+      for (let i = 0; i < 200; i++) {
+        await new Promise((ok) => setTimeout(ok, 1500));
+        const j = await api(`/jobs/${encodeURIComponent(r.jobId)}`).catch((e) => (e.status === 404 ? { status: 'done' } : null));
+        if (!j || j.status === 'running') continue;
+        if (j.status === 'error') throw Object.assign(new Error(j.error || 'Lesingen feilet'), { status: j.httpStatus ?? 500, kode: j.kode ?? null, data: j });
+        break;
+      }
+    }
     // Vent på at kvitteringsleseren er ferdig, og hent varelinjene på nytt. Felt brukeren har endret beholdes.
     for (let i = 0; i < 20; i++) {
       const rc = await api(`/receipts/${encodeURIComponent(X.rid)}`).catch(() => null);
@@ -484,7 +494,7 @@ async function reAi() {
     X.lines = r?.lines ?? r?.items ?? X.lines; B.lines[X.rid] = X.lines;
     X.ai = r?.aiDescription ?? r?.aiShort ?? e?.aiShort ?? X.ai;
     flash('✦ Glimt leste kvitteringen på nytt');
-  } catch (err) { toast(err.message); } finally { if (s.ex === X) X.busy = false; render(); }
+  } catch (err) { toast((await import('./reread50.js')).rereadError50(err).text); } finally { if (s.ex === X) X.busy = false; render(); }
 }
 async function saveHome() {
   const s = st(), H = s.hm;

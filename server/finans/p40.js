@@ -251,7 +251,7 @@ finans40Api.post('/transactions/:id{[0-9]+}/reread', async (c) => {
   const b = await c.req.json().catch(() => ({})) ?? {};
   const { default: fin } = await import('./routes.js');
   const res = await fin.request(`/receipts/${encodeURIComponent(r.id)}/reanalyze`, { method: 'POST', headers: { cookie: c.req.header('cookie') ?? '', authorization: c.req.header('authorization') ?? '', 'content-type': 'application/json' },
-    body: JSON.stringify({ engine: b.engine ?? 'gemini', apply: false, ...(b.async ? { async: true } : {}) }) }, c.env);
+    body: JSON.stringify({ engine: b.engine ?? 'gemini', apply: false, ...(b.async ? { async: true } : {}), ...(b.small ? { small: true } : {}) }) }, c.env); // prompt 50: small = «Les mindre versjon»
   const j = await res.json().catch(() => ({}));
   if (!res.ok) return c.json({ receiptId: r.id, ...j }, res.status);
   if (res.status === 202) return c.json({ receiptId: r.id, ...j }, 202);
