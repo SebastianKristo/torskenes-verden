@@ -2,6 +2,14 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.42.0] – 24.10.2026 · prompt 47 – standardadresser, kvitteringer på enheten og Kalender-rettelser
+- **Kalender: blank skjerm ved «+» (rettet på ordentlig):** arkfargen ble satt på alle vinduene i skjermbildet, også tastaturets egne. Fra andre gang tastaturet var oppe la de seg som en ugjennomsiktig flate over skjemaet. Telefonnummer foreslås ikke lenger i tittelfeltet.
+- **Standard serveradresser overalt:** ekstern `https://os.smarthjemexperten.no` og lokal `http://10.69.1.39:3000`, med status («Svarer · 34 ms»), Test og «Tilbakestill til standard» i Innstillinger → Server på iPhone, Android, Kalender, Mac og web. Ukryptert HTTP er bare tillatt til akkurat den lokale adressen. Serveren kan overstyre med `PUBLIC_URL`/`LOCAL_URL` (`GET /api/config/servers`).
+- **Kvitteringer på iPhone med Apple Intelligence (valgfritt):** Glimt → Kvitteringer → «Tolk kvitteringer på iPhone». Teksten leses med Vision og tolkes på telefonen; serveren validerer før lagring. Av som standard.
+- **Kvitteringer på Android med ML Kit (valgfritt):** «Les teksten på telefonen» leser kvitteringen lokalt og sender teksten (og bildet) til Glimt. Av som standard.
+- **Boliger på mobil:** uten «Fra e-post» og «Tilgang»-fanen; Tilgang åpnes fra «Rediger bolig».
+- **Glimt:** kartlegging av hvorfor Glimt misforstår (`docs/glimt-kartlegging-47.md`) og testsuiten `npm run eval` for baseline mot egen modell. Selve ombyggingen kommer i en egen versjon.
+
 ## [4.41.1] – 23.10.2026 · QR-skanning på Android
 - **Android:** «Skann QR-kode» med Googles skanner i Finans og Kalender (ingen kameratillatelse). Koden sjekkes mot din egen server og godkjennes med fingeravtrykk/ansikt som før. Innliming av kode er beholdt som reserve. Innlimte lenker sjekkes nå også mot serveren.
 
