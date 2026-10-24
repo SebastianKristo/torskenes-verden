@@ -191,6 +191,8 @@ export async function person50(m, v, me, { now = Date.now(), geo = true } = {}) 
     battery, charging: shares ? l?.charging ?? null : null, lowBattery: lowBattery(battery),
     lat: status === 'off' ? null : l.lat, lon: status === 'off' ? null : l.lon, acc: status === 'off' ? null : l.acc ?? null, approx: !!l?.approx, updatedAt: l?.ts ? new Date(l.ts).toISOString() : null,
     device: status === 'off' ? null : l.device ?? null, fromMe, healthShared: !!m.health,
+    // FAMWEB50: «Ring»/«Melding» på Personsiden – telefonnummeret personen har lagt inn i Vel fremme (kv hjemlys_phone), bare for familien.
+    phone: self ? null : kv.get(m.userId, 'hjemlys_phone', null) || null,
   };
 }
 export async function people50(v, now = Date.now()) {
@@ -689,7 +691,7 @@ family50Api.post('/checkin/:id{[0-9]+}/reply', async (c) => {
     await notifyUser(r.from_user, { title: 'Sjekk inn', body: body0, url: `/#/familie/sjekk?id=${r.id}`, tag: `checkin-reply-${r.id}-${v}`, category: 'familie', data: { kind: 'checkin.reply', checkinId: r.id, reply, from: v, fromName: name, channel: 'sjekkinn' } }).catch(() => null);
   }
   broadcast('family', { kind: 'checkin', id: r.id, action: 'reply', reply, from: v }, participants(r));
-  return c.json({ checkin: checkinOut50(ckGet(r.id), v), ...(answer ? { answer } : {}), ...(reply === 'call' ? { call: { userId: r.from_user, name: F.nameOf(r.from_user), phone: userInfo(r.from_user)?.phone ?? null } } : {}) });
+  return c.json({ checkin: checkinOut50(ckGet(r.id), v), ...(answer ? { answer } : {}), ...(reply === 'call' ? { call: { userId: r.from_user, name: F.nameOf(r.from_user), phone: userInfo(r.from_user)?.phone ?? (kv.get(r.from_user, 'hjemlys_phone', null) || null) } } : {}) });
 });
 // «Hent meg» fra kortet etter innsjekk: høy prioritet med (ny) posisjon til de samme mottakerne (eller to).
 family50Api.post('/checkin/:id{[0-9]+}/pickup', async (c) => {

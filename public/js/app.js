@@ -15,7 +15,7 @@ import * as home from './home.js';
 import * as mat from './mat.js';
 import * as domains from './domains.js';
 import * as tracking from './tracking.js';
-import * as family from './family.js';
+import * as family from './family50-web.js'; // prompt 50 (FAMWEB50): Familie i nytt design (family50.js); gammel side: family.js
 import * as tasks from './tasks.js';
 import * as weatherPage from './weather-page.js';
 import * as birthdays from './birthdays.js';
@@ -156,7 +156,7 @@ function bindShell() {
   });
   // Innstillinger legger #/innstillinger/<fane> i adressen (og fjerner den igjen) uten at siden under skal tegnes på nytt.
   // Prompt 44: Media styrer sin egen adresse (#/media/sonarr/s/12 …, frem/tilbake), så siden tegnes ikke på nytt for den.
-  window.addEventListener('hashchange', () => { if (!settingsOwnsHash() && !(route === 'media' && current() === 'media' && media43.ownsHash?.())) renderRoute(); });
+  window.addEventListener('hashchange', () => { if (!settingsOwnsHash() && !(route === 'media' && current() === 'media' && media43.ownsHash?.()) && !(route === 'familie' && current() === 'familie' && family.ownsHash?.())) renderRoute(); });
   document.addEventListener('hl:theme', () => { route = null; renderRoute(); weatherPill(); });
   // Nytt språk: tegn visningen på nytt (tekster fra t() og Intl-datoer).
   document.addEventListener('hl:lang', () => { route = null; renderRoute(); weatherPill(); langLabel(); renderTicker(); });

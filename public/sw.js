@@ -7,7 +7,10 @@
 // Prompt 50: v34 – Media-plakater fra /api/media/bilde/… (WebP med ?v=<versjon>) svares cache-først fra en egen cache
 // (BILDER, beholdes mellom versjoner, maks ~800 bilder), så andre gang Media åpnes kommer alle synlige plakater uten nettverkskall,
 // også uten nett. Andre API-kall går fortsatt aldri via cachen.
-const CACHE = 'os-v34';
+// Prompt 50 (FAMWEB50): v35 – Familie i nytt design (family50.js, family50-web.js, family50.css). Sjekk inn-varsler (data.kind
+// 'checkin.*') får handlingene 👍 / Ring / Hent (data.actions) som svarer med POST /api/family/checkin/:id/reply uten å åpne appen;
+// «Hent meg» (data.priority 'high', kanal sjekkinn-hast) blir liggende til den er sett (requireInteraction) og vibrerer.
+const CACHE = 'os-v35';
 const BILDER = 'mb50-bilder';
 const BILDER_MAX = 800;
 const SHELL = ['/assets/icons/icon-192.png'];
@@ -55,9 +58,10 @@ self.addEventListener('push', (e) => {
   const title = d.title || 'Glimt';
   const opts = {
     body: String(d.body || '').replace(/\*\*/g, ''), tag: d.tag || undefined, renotify: !!d.tag, icon: d.icon || '/assets/icons/icon-192.png', badge: d.badge || '/assets/icons/icon-192.png', // prompt 39: Glimt-logo på AI-svar
-    data: { url: d.url || '/#/dash', category: d.category || '', id: d.id ?? null, actions: d.actions || null },
-    actions: Array.isArray(d.actions) ? d.actions.slice(0, 2).map((a) => ({ action: a.action || a.id, title: a.title })) : [],
+    data: { url: d.url || '/#/dash', category: d.category || '', id: d.id ?? null, actions: d.actions || d.data?.actions || null, kind: d.data?.kind || null, checkinId: d.data?.checkinId ?? null },
+    actions: (Array.isArray(d.actions) ? d.actions : Array.isArray(d.data?.actions) ? d.data.actions : []).slice(0, Math.max(2, (self.Notification && Notification.maxActions) || 2)).map((a) => ({ action: a.action || a.id, title: a.title })),
   };
+  if (d.data?.priority === 'high') { opts.requireInteraction = true; opts.vibrate = [300, 120, 300, 120, 300]; }
   e.waitUntil((async () => {
     const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const vis = cs.some((c) => c.visibilityState === 'visible' && !new URL(c.url).pathname.startsWith('/finans'));
@@ -73,6 +77,16 @@ self.addEventListener('notificationclick', (e) => {
   const act = e.action && Array.isArray(D.actions) ? D.actions.find((a) => (a.action || a.id) === e.action) : null;
   if (act?.url) url = act.url;
   e.waitUntil((async () => {
+    // Prompt 50: svar på innsjekk/forespørsel med ett trykk. «Ring» åpner innsjekken (nummeret vises der); «Sjekk inn» åpner fanen.
+    if (/^checkin\./.test(D.kind || '') && D.checkinId != null && e.action) {
+      if (e.action === 'checkin') { url = `/#/familie/sjekk?req=${encodeURIComponent(D.checkinId)}`; }
+      else if (['ok', 'call', 'pickup'].includes(e.action)) {
+        let r = null;
+        try { r = await fetch(`/api/family/checkin/${encodeURIComponent(D.checkinId)}/reply`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reply: e.action }) }); } catch {}
+        if (e.action !== 'call' && r && r.ok) return;
+        if (e.action === 'call') { try { const j = r && r.ok ? await r.json() : null; const ph = j && j.call && j.call.phone; if (ph) { await self.clients.openWindow(`tel:${String(ph).replace(/[^\d+]/g, '')}`); return; } } catch {} }
+      }
+    }
     if (act && act.patch && D.id != null) {
       try { await fetch(`/finans/api/subscriptions/trials/${encodeURIComponent(D.id)}`, { method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(act.patch) }); } catch {}
       if (!act.url) return;

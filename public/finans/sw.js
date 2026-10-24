@@ -37,9 +37,12 @@
 // Prompt 48: v51 – kvitteringer lastes opp til /receipts/scan (serveren kjører Mac-OCR → Tesseract → Gemini), skjema med usikre
 // felt og merkelapp for veien (scan48.js), AI i Finans → Kvitteringer (Mac-OCR og stegene, /assets/js/receipts48-set.js).
 // Prompt 50 (SRVCHAT50): v52 – «Les på nytt» som jobb (reread50.js) og nye feilmeldinger.
-const CACHE = 'finanshub-v52';
+// Prompt 50 (FAMWEB50): v53 – Familie i nytt design (mobile-p50f.js + /assets/js/family50.js), Ruter › Min reise henter skolen fra
+// Familie › Steder. Sjekk inn-varsler: 👍 / Ring / Hent svarer med POST /api/family/checkin/:id/reply; «Hent meg» (priority high)
+// blir liggende (requireInteraction). Familie-lenker (/#/familie/…) åpnes som #/fam/… i appen.
+const CACHE = 'finanshub-v53';
 const BGCACHE = 'finanshub-bg-v1', BGMAX = 40;
-const SHELL = ['/assets/finans/css/finans.css', '/assets/finans/css/mobile.css', '/assets/finans/js/main.js', '/assets/finans/js/core.js', '/assets/finans/js/desktop.js', '/assets/finans/js/modules.js', '/assets/finans/js/mobile.js', '/assets/finans/js/mobile-mods.js', '/assets/finans/js/mobile-set.js', '/assets/finans/js/mobile-hl.js', '/assets/finans/js/mobile-pages.js', '/assets/finans/js/mobile-tx.js', '/assets/finans/js/mobile-theme.js', '/assets/finans/js/mobile-mat.js', '/assets/finans/js/mobile-finn.js', '/assets/finans/js/mobile-track.js', '/assets/finans/js/mobile-aks.js', '/assets/finans/js/mobile-p16.js', '/assets/finans/js/mobile-p17.js', '/assets/finans/js/mobile-subs.js', '/assets/finans/js/mobile-haptics.js', '/assets/finans/js/mobile-paper.js', '/assets/finans/js/mobile-bg.js', '/assets/finans/js/mobile-paper2.js', '/assets/finans/js/mobile-paper3.js', '/assets/finans/js/mobile-wx.js', '/assets/finans/js/mobile-gate.js', '/assets/finans/js/mobile-upq.js', '/assets/finans/js/mobile-p20.js', '/assets/finans/js/mobile-p21.js', '/assets/finans/js/mobile-p22.js', '/assets/finans/js/mobile-p23.js', '/assets/finans/js/mobile-p24.js', '/assets/finans/js/mobile-p25.js', '/assets/finans/js/mobile-wx22.js', '/assets/finans/js/mobile-p26.js', '/assets/finans/js/mobile-kal.js', '/assets/finans/js/mobile-p27.js', '/assets/finans/js/mobile-p28.js', '/assets/finans/js/mobile-p29.js', '/assets/finans/js/mobile-p30.js', '/assets/finans/js/mobile-p30b.js', '/assets/finans/js/mobile-p31.js', '/assets/finans/js/mobile-p32.js', '/assets/finans/js/mobile-p33.js', '/assets/finans/js/mobile-p34.js', '/assets/finans/js/mobile-p34ai.js', '/assets/finans/js/mobile-p35.js', '/assets/finans/js/mobile-p36.js', '/assets/finans/js/mobile-p37.js', '/assets/finans/js/mobile-p37b.js', '/assets/finans/js/mobile-p38.js', '/assets/finans/js/mobile-p39.js', '/assets/finans/js/mobile-p40.js', '/assets/finans/js/mobile-p40h.js', '/assets/finans/js/mobile-p41.js', '/assets/finans/js/mobile-p41b.js', '/assets/finans/js/mobile-p42.js', '/assets/finans/js/mobile-p43.js', '/assets/finans/js/mobile-p43m.js', '/assets/finans/js/mobile-orb43.js', '/assets/finans/js/mobile-p44.js', '/assets/finans/js/mobile-p44l.js', '/assets/finans/js/mobile-p44s.js', '/assets/finans/js/mobile-p44a.js', '/assets/finans/js/mobile-p45.js', '/assets/finans/js/mobile-p45h.js', '/assets/finans/js/mobile-p46.js', '/assets/finans/js/mobile-p46k.js', '/assets/js/glimt-figs.js', '/assets/js/settings-srv47.js', '/assets/js/receipts48-set.js', '/assets/css/receipts48.css', '/assets/finans/js/scan48.js', '/assets/js/widget-help.js', '/assets/finans/js/sub-shot.js', '/assets/finans/js/mobile-chat.js', '/assets/finans/js/mobile-upd.js', '/assets/finans/js/loader.js', '/assets/finans/js/reanalyze.js', '/assets/finans/js/reread50.js', '/assets/finans/js/finn-desktop.js', '/assets/finans/css/finn.css', '/assets/finans/icons/icon-192.png'];
+const SHELL = ['/assets/finans/css/finans.css', '/assets/finans/css/mobile.css', '/assets/finans/js/main.js', '/assets/finans/js/core.js', '/assets/finans/js/desktop.js', '/assets/finans/js/modules.js', '/assets/finans/js/mobile.js', '/assets/finans/js/mobile-mods.js', '/assets/finans/js/mobile-set.js', '/assets/finans/js/mobile-hl.js', '/assets/finans/js/mobile-pages.js', '/assets/finans/js/mobile-tx.js', '/assets/finans/js/mobile-theme.js', '/assets/finans/js/mobile-mat.js', '/assets/finans/js/mobile-finn.js', '/assets/finans/js/mobile-track.js', '/assets/finans/js/mobile-aks.js', '/assets/finans/js/mobile-p16.js', '/assets/finans/js/mobile-p17.js', '/assets/finans/js/mobile-subs.js', '/assets/finans/js/mobile-haptics.js', '/assets/finans/js/mobile-paper.js', '/assets/finans/js/mobile-bg.js', '/assets/finans/js/mobile-paper2.js', '/assets/finans/js/mobile-paper3.js', '/assets/finans/js/mobile-wx.js', '/assets/finans/js/mobile-gate.js', '/assets/finans/js/mobile-upq.js', '/assets/finans/js/mobile-p20.js', '/assets/finans/js/mobile-p21.js', '/assets/finans/js/mobile-p22.js', '/assets/finans/js/mobile-p23.js', '/assets/finans/js/mobile-p24.js', '/assets/finans/js/mobile-p25.js', '/assets/finans/js/mobile-wx22.js', '/assets/finans/js/mobile-p26.js', '/assets/finans/js/mobile-kal.js', '/assets/finans/js/mobile-p27.js', '/assets/finans/js/mobile-p28.js', '/assets/finans/js/mobile-p29.js', '/assets/finans/js/mobile-p30.js', '/assets/finans/js/mobile-p30b.js', '/assets/finans/js/mobile-p31.js', '/assets/finans/js/mobile-p32.js', '/assets/finans/js/mobile-p33.js', '/assets/finans/js/mobile-p34.js', '/assets/finans/js/mobile-p34ai.js', '/assets/finans/js/mobile-p35.js', '/assets/finans/js/mobile-p36.js', '/assets/finans/js/mobile-p37.js', '/assets/finans/js/mobile-p37b.js', '/assets/finans/js/mobile-p38.js', '/assets/finans/js/mobile-p39.js', '/assets/finans/js/mobile-p40.js', '/assets/finans/js/mobile-p40h.js', '/assets/finans/js/mobile-p41.js', '/assets/finans/js/mobile-p41b.js', '/assets/finans/js/mobile-p42.js', '/assets/finans/js/mobile-p43.js', '/assets/finans/js/mobile-p43m.js', '/assets/finans/js/mobile-orb43.js', '/assets/finans/js/mobile-p44.js', '/assets/finans/js/mobile-p44l.js', '/assets/finans/js/mobile-p44s.js', '/assets/finans/js/mobile-p44a.js', '/assets/finans/js/mobile-p45.js', '/assets/finans/js/mobile-p45h.js', '/assets/finans/js/mobile-p46.js', '/assets/finans/js/mobile-p46k.js', '/assets/finans/js/mobile-p50f.js', '/assets/js/family50.js', '/assets/js/icons42.js', '/assets/css/family50.css', '/assets/js/glimt-figs.js', '/assets/js/settings-srv47.js', '/assets/js/receipts48-set.js', '/assets/css/receipts48.css', '/assets/finans/js/scan48.js', '/assets/js/widget-help.js', '/assets/finans/js/sub-shot.js', '/assets/finans/js/mobile-chat.js', '/assets/finans/js/mobile-upd.js', '/assets/finans/js/loader.js', '/assets/finans/js/reanalyze.js', '/assets/finans/js/reread50.js', '/assets/finans/js/finn-desktop.js', '/assets/finans/css/finn.css', '/assets/finans/icons/icon-192.png'];
 // Feiler én fil (f.eks. en modul som ikke finnes på en eldre server), installeres service workeren likevel.
 self.addEventListener('install', (e) => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then((c) => Promise.all(SHELL.map((u) => c.add(new Request(u, { cache: 'reload' })).catch(() => {}))))); });
 self.addEventListener('message', (e) => { if (e.data === 'skipWaiting' || e.data?.type === 'skipWaiting') self.skipWaiting(); });
@@ -93,9 +96,10 @@ self.addEventListener('push', (e) => {
   const zIcon = zone ? (D.iconUrl || d.icon || null) : null;
   const opts = {
     body: String(d.body || '').replace(/\*\*/g, ''), tag: d.tag || undefined, renotify: !!d.tag, icon: zIcon || (gl ? '/assets/glimt-varsel.png' : '/assets/finans/icons/icon-192.png'), badge: gl ? '/assets/glimt-badge.png' : '/assets/finans/icons/icon-192.png',
-    data: { url: d.url || '/finans/#/hl', category: d.category || '', trialId: D.trialId ?? null, cancelUrl: D.cancelUrl ?? null },
-    actions: acts.slice(0, 2).map((a) => ({ action: a.id || a.action, title: a.title })),
+    data: { url: d.url || '/finans/#/hl', category: d.category || '', trialId: D.trialId ?? null, cancelUrl: D.cancelUrl ?? null, kind: D.kind ?? null, checkinId: D.checkinId ?? null },
+    actions: acts.slice(0, Math.max(2, (self.Notification && Notification.maxActions) || 2)).map((a) => ({ action: a.id || a.action, title: a.title })),
   };
+  if (D.priority === 'high') { opts.requireInteraction = true; opts.vibrate = [300, 120, 300, 120, 300]; }
   e.waitUntil((async () => {
     const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const vis = cs.some((c) => c.visibilityState === 'visible' && new URL(c.url).pathname.startsWith('/finans'));
@@ -111,6 +115,16 @@ self.addEventListener('notificationclick', (e) => {
   let url = D.url || '/finans/#/hl';
   if (e.action === 'cancel' && D.cancelUrl) url = D.cancelUrl;
   e.waitUntil((async () => {
+    // Prompt 50: svar på innsjekk/forespørsel med ett trykk fra varselet.
+    if (/^checkin\./.test(D.kind || '') && D.checkinId != null && e.action) {
+      if (e.action === 'checkin') url = `/#/familie/sjekk?req=${encodeURIComponent(D.checkinId)}`;
+      else if (['ok', 'call', 'pickup'].includes(e.action)) {
+        let r = null;
+        try { r = await fetch(`/api/family/checkin/${encodeURIComponent(D.checkinId)}/reply`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reply: e.action }) }); } catch {}
+        if (e.action !== 'call' && r && r.ok) return;
+        if (e.action === 'call') { try { const j = r && r.ok ? await r.json() : null; const ph = j && j.call && j.call.phone; if (ph) { await self.clients.openWindow(`tel:${String(ph).replace(/[^\d+]/g, '')}`); return; } } catch {} }
+      }
+    }
     if (ACT[e.action] && D.trialId != null) {
       try { await fetch(`/finans/api/subscriptions/trials/${encodeURIComponent(D.trialId)}`, { method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ACT[e.action]) }); } catch {}
       return;
@@ -119,10 +133,21 @@ self.addEventListener('notificationclick', (e) => {
     if (new URL(abs).origin !== self.location.origin) { await self.clients.openWindow(abs); return; }
     // Web-lenker (/chat, /kalender …) åpnes i appen når den er installert: Chat og Hjem har egne sider der.
     const u = new URL(abs), map = { '/chat': '/finans/#/chat', '/': '/finans/#/hl', '/kalender': '/finans/#/kal', '/abonnementer': '/finans/#/sub' };
-    const dest = u.pathname.startsWith('/finans') ? abs : /system/.test(u.hash) ? new URL('/finans/#/nordlys', self.location.origin).href : new URL(map[u.pathname] || abs, self.location.origin).href;
+    const fam = !u.pathname.startsWith('/finans') && /^#\/familie/.test(u.hash) ? famPath50(u.hash) : null; // prompt 50
+    const dest = fam != null ? new URL(`/finans/#/fam${fam ? `/${fam}` : ''}`, self.location.origin).href : u.pathname.startsWith('/finans') ? abs : /system/.test(u.hash) ? new URL('/finans/#/nordlys', self.location.origin).href : new URL(map[u.pathname] || abs, self.location.origin).href;
     const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const c = cs.find((x) => new URL(x.url).pathname.startsWith('/finans'));
     if (c) { try { await c.focus(); } catch {} c.postMessage({ type: 'p31-open', url: dest }); return; }
     await self.clients.openWindow(dest);
   })());
 });
+
+/** Prompt 50: /#/familie/sjekk?id=5 → sjekk/5 · ?req=5 → sjekk/svar/5 · steder?sted=3 → steder/3 · ?ny=skole → steder/ny/skole (PWA-en har ikke ?-parametre i ruten). */
+function famPath50(hash) {
+  const h = String(hash).replace(/^#\/familie\/?/, ''), i = h.indexOf('?'), p = i < 0 ? h : h.slice(0, i), Q = new URLSearchParams(i < 0 ? '' : h.slice(i + 1));
+  if (Q.get('id')) return `${p || 'sjekk'}/${encodeURIComponent(Q.get('id'))}`;
+  if (Q.get('req')) return `sjekk/svar/${encodeURIComponent(Q.get('req'))}`;
+  if (Q.get('sted')) return `steder/${encodeURIComponent(Q.get('sted'))}`;
+  if (Q.get('ny')) return `steder/ny/${encodeURIComponent(Q.get('ny'))}`;
+  return p;
+}

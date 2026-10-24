@@ -50,6 +50,19 @@ async function zonesLoad(force = false) {
   RT.zonesT = Date.now(); if (RT.miss) { RT.zones ??= []; return; }
   try { const [z, s] = await Promise.all([hlApi('/ruter/school-zones'), hlApi('/ruter/settings').catch(() => null)]); RT.zones = z?.zones ?? []; if (s) RT.set = s; } catch { RT.zones ??= []; }
 }
+// Prompt 50 (FAMWEB50): skolen kommer fra Familie › Steder (GET /api/ruter/school50). Bare visning her; «Endre i Steder ›».
+// Eldre server (404): de gamle skolesonene med ✕ og + Sone som før. RT.s50 nullstilles av WebSocket family {kind:'places'} (mobile-p50f.js).
+async function s50Load() {
+  if (RT.s50miss) return;
+  try { RT.s50 = await hlApi('/ruter/school50'); } catch (e) { if (e.status === 404 || e.status === 405) RT.s50miss = true; RT.s50 ??= false; }
+}
+const famHref50 = (u) => { const h = String(u ?? '').replace(/^\/?#\/familie\/?/, ''); const [p, q] = h.split('?'), Q = new URLSearchParams(q ?? ''); return `#/fam/${Q.get('sted') ? `steder/${encodeURIComponent(Q.get('sted'))}` : Q.get('ny') ? `steder/ny/${encodeURIComponent(Q.get('ny'))}` : p || 'steder'}`; };
+function school50Html() {
+  const S = RT.s50;
+  if (!S) return null;
+  if (S.empty || !S.place) return `<span class="p41-lab mut">${esc(S.title ?? 'SKOLE · FRA FAMILIE › STEDER')}</span><div class="p41-zones"><span class="p41-zone">${esc(S.empty?.text ?? 'Ingen skole valgt')}</span><a class="p41-zadd" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(famHref50(S.empty?.url ?? '#/familie/steder?ny=skole'))}">${esc(S.empty?.action ?? 'Legg til i Steder ›')}</a></div>`;
+  return `<span class="p41-lab mut">${esc(S.title ?? 'SKOLE · FRA FAMILIE › STEDER')}</span><div class="p41-zones">${(S.areas ?? []).map((z) => `<span class="p41-zone">${esc(z.name)}<small>${esc(String(z.label ?? '').replace(z.name, '').trim() || `${z.radius_m} m`)}</small></span>`).join('')}${S.edit ? `<a class="p41-zadd" style="text-decoration:none;display:inline-flex;align-items:center" href="${esc(famHref50(S.edit.url))}">${esc(S.edit.label ?? 'Endre i Steder ›')}</a>` : ''}</div>`;
+}
 async function jrLoad(force = false) {
   if (RT.jrMiss || (!force && Date.now() - RT.jrT < 30_000)) return;
   RT.jrT = Date.now();
@@ -86,6 +99,7 @@ export function tripRuter() {
   if (RT.miss) return '';
   if (!RT.trip) { if (!RT.tripErr) once('trip', async () => { await tripLoad(true); if (!RT.trip) RT.tripErr = true; }); if (!RT.zones && !RT.zonesT) once('zones', () => zonesLoad(true)); return ''; }
   if (!RT.zones && !RT.zonesT) once('zones', () => zonesLoad(true));
+  if (RT.s50 == null && !RT.s50miss) once('s50', s50Load); // prompt 50
   // Prompt 45 (claude-code-ruter-anbefalt-antall.md): nøyaktig N anbefalte reiser (1 · 2 · 3, standard 2), ingen plassholdere.
   const T = RT.trip, N = globalThis.P45?.recoN?.() ?? T.recoCount ?? 2, O = (T.recommended?.length >= N ? T.recommended : T.options ?? []).slice(0, N); if (!O.length) return '';
   const name = String(m.me?.name ?? 'Sebastian').split(/\s+/)[0].toUpperCase();
@@ -100,8 +114,8 @@ export function tripRuter() {
     ${!ed && geoOff ? `<button type="button" class="p46-trgeo" data-p46="trgeo"><span class="m-grow">Skolesonene trenger posisjon «Alltid»</span><b>Slå på ›</b></button>` : ''}
     ${ed ? `<div class="p46-trcol"><div class="p46-trset"><span class="p46-trsl">INNSTILLINGER FOR KORTET</span>
     ${seg ? `<span class="p41-lab mut">ANTALL ANBEFALTE REISER</span>${seg}` : ''}
-    <span class="p41-lab mut">SKOLESONER · ALLE TELLER SOM SKOLE</span><div class="p41-zones">${Z.map((z) => `<span class="p41-zone">${esc(z.name)}<small>${esc(z.label?.replace(z.name, '').trim() || `${z.radius_m} m`)}</small>${Z.length > 1 ? `<button type="button" data-p41b="zrm" data-id="${esc(z.id)}" aria-label="Fjern ${esc(z.name)}">✕</button>` : ''}</span>`).join('')}<button type="button" class="p41-zadd" data-p41b="zadd">+ Sone</button></div>
-    ${RT.addZ ? `<form class="p41-zform" data-p41bf="zone"><input class="p24-in" id="p41-zn" data-p41bin="zn" value="${esc(RT.addZ.n)}" placeholder="Navn, f.eks. Idrettshallen" autocomplete="off"><div class="p41-zr"><span class="p41-mut">Radius ${RT.addZ.r} m</span><input type="range" min="50" max="300" step="10" value="${RT.addZ.r}" data-p41bin="zr" aria-label="Radius"></div><span class="p41-mut">Sonen legges der du står nå (posisjonen brukes bare til dette).</span><div class="p24-two"><button type="button" class="p24-b" data-p41b="zx">Avbryt</button><button type="submit" class="p24-b ink">Legg til sone</button></div></form>` : ''}
+    ${school50Html() ?? `<span class="p41-lab mut">SKOLESONER · ALLE TELLER SOM SKOLE</span><div class="p41-zones">${Z.map((z) => `<span class="p41-zone">${esc(z.name)}<small>${esc(z.label?.replace(z.name, '').trim() || `${z.radius_m} m`)}</small>${Z.length > 1 ? `<button type="button" data-p41b="zrm" data-id="${esc(z.id)}" aria-label="Fjern ${esc(z.name)}">✕</button>` : ''}</span>`).join('')}<button type="button" class="p41-zadd" data-p41b="zadd">+ Sone</button></div>
+    ${RT.addZ ? `<form class="p41-zform" data-p41bf="zone"><input class="p24-in" id="p41-zn" data-p41bin="zn" value="${esc(RT.addZ.n)}" placeholder="Navn, f.eks. Idrettshallen" autocomplete="off"><div class="p41-zr"><span class="p41-mut">Radius ${RT.addZ.r} m</span><input type="range" min="50" max="300" step="10" value="${RT.addZ.r}" data-p41bin="zr" aria-label="Radius"></div><span class="p41-mut">Sonen legges der du står nå (posisjonen brukes bare til dette).</span><div class="p24-two"><button type="button" class="p24-b" data-p41b="zx">Avbryt</button><button type="submit" class="p24-b ink">Legg til sone</button></div></form>` : ''}`}
     <span class="p41-lab mut">PÅ HJEM NÅR DU FORLATER SKOLEN</span><span class="p41-mut">${hc === 'instead' ? 'Vises i stedet for Avganger mens reisen er aktiv.' : hc === 'off' ? 'Vises ikke på Hjem.' : 'Vises over Avganger mens reisen er aktiv.'}</span>
     <div class="p41-seg">${[['over', 'Over Ruter-kortet'], ['instead', 'I stedet'], ['off', 'Av']].map(([k, n]) => `<button type="button" data-p41b="rthc" data-v="${k}" aria-pressed="${hc === k}">${n}</button>`).join('')}</div>
     <span class="p41-mut">${geoOff ? 'Skolesonene trenger posisjon «Alltid» for å virke.' : 'Endringer lagres med en gang. Samme valg i Innstillinger → Ruter.'}</span></div></div>` : ''}</div>`;

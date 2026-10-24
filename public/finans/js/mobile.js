@@ -50,6 +50,7 @@ let P41 = null; // prompt 41: mobile-p41.js (dynamisk import i bind(); TDZ i syk
 let P42 = null; // prompt 42: mobile-p42.js (dynamisk import i bind())
 let P43 = null; // prompt 43: mobile-p43.js (+ mobile-p43m.js for Media), dynamisk import i bind()
 let P44 = null; // prompt 44: mobile-p44.js (+ p44l Logger, p44s Studie, p44a Avspilling), dynamisk import i bind()
+let P50F = null; // prompt 50 (FAMWEB50): mobile-p50f.js – Familie i nytt design (/assets/js/family50.js), dynamisk import i bind()
 let P46 = null; // prompt 46: mobile-p46.js (+ mobile-p46k.js Kart), dynamisk import i bind()
 let P45 = null; // prompt 45: mobile-p45.js (+ p45f Familie, p45h Gjøremål/Helse/Logger/Import, p45m Media), dynamisk import i bind()
 import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
@@ -405,7 +406,7 @@ export function draw() {
   const ppMain = !pp ? null : scr === 'hl' ? (fold41 ? P41.foldHome() : paperHome()) : m.detail && !m.edit && m.sel != null && ['liste', 'sok', 'hjem'].includes(scr) ? paperTx(m.sel)
     : scr === 'hjem' && plain ? paperFin() : scr === 'mer' ? paperMer()
     : scr === 'bd' ? P24.bdView() : scr === 'kal' ? KAL.kalView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? P23.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
-  const v45 = P46?.view46?.(scr, m.sub, pp) ?? P45?.view45?.(scr, m.sub, pp) ?? null; // prompt 46: Kart, Innstillinger → Nyheter // prompt 45: Finans → Mer (Mer ny) m.fl.
+  const v45 = P50F?.view50?.(scr) ?? P46?.view46?.(scr, m.sub, pp) ?? P45?.view45?.(scr, m.sub, pp) ?? null; // prompt 46: Kart, Innstillinger → Nyheter // prompt 45: Finans → Mer (Mer ny) m.fl.
   const main = v45 != null ? v45 : scr === 'studie' ? (P44 ? P44.studieView() : '<div class="m-spin"></div>') /* prompt 44 */ : scr === 'avspilling' ? (P44 ? P44.avsView(false) : '<div class="m-spin"></div>') : scr === 'aictl' ? P34AI.aiView() : scr === 'brief' ? P35.briefView() : scr === 'glimt' ? P35.glimtView() : scr === 'nordlys' ? P30.sysView() : scr === 'chat' ? CHAT.chatView() : scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'bibel' ? P37B.bibleView() : scr === 'huske' ? (pp ? P37.huskeView37() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Gjøremål</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
     : scr === 'kal' && !pp ? KAL.kalView() : scr === 'media' ? (P43?.media?.() ? P43.media().mediaView43() : (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()) // prompt 43: Sonarr, Radarr, qBittorrent og Prowlarr
     : ppMain ?? (scr === 'set' ? settingsView(th, m.sub)
@@ -419,7 +420,7 @@ export function draw() {
     : !fin || FINMODS.includes(scr) ? modView(scr, th, m.sub)
     : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th));
   // Prompt 24: Ruter-visningen (Avganger) er et fullskjerm-overlegg uten fanelinje og skanneknapp, med eget toppbilde.
-  const rv = pp && scr === 'avg', fsx = scr === 'chat' || scr === 'kal' || scr === 'nordlys' || scr === 'aictl' || scr === 'brief' || scr === 'glimt' || (scr === 'media' && !!P43?.media?.()) || scr === 'tkart'; // prompt 46: Kart i fullskjerm som Media/Kalender // prompt 43: Media i fullskjerm med «‹ Tilbake» // Prompt 27: Chat og Kalender i fullskjerm (31: System-siden uten bunnmeny og skann)
+  const rv = pp && scr === 'avg', fsx = (scr === 'fam' && !!P50F?.on50?.()) /* prompt 50: Familie i fullskjerm med egen fanelinje */ || scr === 'chat' || scr === 'kal' || scr === 'nordlys' || scr === 'aictl' || scr === 'brief' || scr === 'glimt' || (scr === 'media' && !!P43?.media?.()) || scr === 'tkart'; // prompt 46: Kart i fullskjerm som Media/Kalender // prompt 43: Media i fullskjerm med «‹ Tilbake» // Prompt 27: Chat og Kalender i fullskjerm (31: System-siden uten bunnmeny og skann)
   const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr) && scr !== 'vaer', hero = pp && scr !== 'nyheter' && scr !== 'vaer' && !fad && !rv && !fsx && !fold41;
   const nonav = scr === 'set' || scr === 'bibel' || scr === 'bd'; // Prompt 41: Bursdager uten fanelinje og Skann // Prompt 39: Bibel uten fanelinje og Skann (HIDE_CHROME) // Prompt 32: Innstillinger og undersidene uten bunnmeny og skann-knapp
   const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv || fsx || (pp && nonav) ? '' : scr === 'huske' ? (P45?.huskeRail?.(() => P25.nav25(paperNav(scr), scr)) ?? '') + P37.huskeBottom() /* prompt 45: navbar på brett */ : (P42 ? P42.nav42(P25.nav25(paperNav(scr), scr), scr) : P25.nav25(paperNav(scr), scr)); // prompt 42: Hjem-knapp (Standard/1a–1d)
@@ -435,7 +436,7 @@ export function draw() {
   if (fad) P23.finnAdAfterDraw();
   P23.arrive(vk, vkChanged);
   P25.afterDraw();
-  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39(); P40?.afterDraw40(); P41?.afterDraw41(); P42?.afterDraw42(); P43?.afterDraw43(); P44?.afterDraw44(); P45?.afterDraw45(); P46?.afterDraw46();
+  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39(); P40?.afterDraw40(); P41?.afterDraw41(); P42?.afterDraw42(); P43?.afterDraw43(); P44?.afterDraw44(); P45?.afterDraw45(); P46?.afterDraw46(); P50F?.afterDraw50();
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -782,6 +783,7 @@ export function bind() {
   // Prompt 45: Glimt-agenten, brettoppsett (skann, Hjem-knapp og wiggle i navbaren), Mer, Ruter, Vær, Familie, Gjøremål, Media m.m. (lat, som 40–44).
   import('./mobile-p45.js').then((x) => { P45 = x; x.boot45(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p45', err));
   // Prompt 46: Kart, Ruter-innstillinger i wiggle, Nyheter i Innstillinger, profilring, liquid glass i Vær (lat, som 40–45).
+  import('./mobile-p50f.js').then((x) => { P50F = x; x.boot50(); }).catch((err) => console.warn('mobile-p50f', err)); // prompt 50 (FAMWEB50)
   import('./mobile-p46.js').then((x) => { P46 = x; x.boot46(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p46', err));
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
