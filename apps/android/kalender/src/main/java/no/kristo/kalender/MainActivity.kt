@@ -18,6 +18,8 @@ import no.kristo.kalender.widget.KalSync
 class KalApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        // Prompt 51: krasjfangeren og enhetsnøkkelen først (Kal51.kt).
+        Kal51.init(this)
         KalNotify.channels(this)
         KalTheme.apply(this, KalPrefs.theme(this))
     }
@@ -59,11 +61,14 @@ class MainActivity : ComponentActivity() {
         vm.refresh()
         // Prompt 41: lokal/ekstern adresse fra Homelab (Bytt automatisk).
         if (vm.session != null) vm.k41.syncServers()
+        // Prompt 51: krasjrapporter, flagg, ventende enheter og «Nytt i denne versjonen».
+        vm.k51.active()
     }
 
     override fun onStop() {
         super.onStop()
         vm.foreground = false
+        vm.k51.inactive()
         // Endringer i appen vises i widgetene, og varslene planlegges på nytt.
         KalSync.refreshNow(this)
     }

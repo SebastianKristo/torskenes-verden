@@ -28,6 +28,8 @@ final class KalLogin41Model {
     var needsCode: Bool = false
     /// Tilbud om å godkjenne i nettleseren (Homelab-appen mangler).
     var webOffer: Bool = false
+    /// Prompt 51: ny enhet venter på godkjenning (fase «approve51»). pollKey vises aldri.
+    var approval51: KalApproval51? = nil
     @ObservationIgnored private var waitId: Int = 0
     /// Prompt 44: samme svar fra Homelab to ganger (onOpenURL + aktivering) skal ikke gi «koden er allerede brukt».
     @ObservationIgnored private var lastCode44: String = ""
@@ -222,6 +224,12 @@ final class KalLogin41Model {
                 finish(KalSession41(token: r.token, refresh: "", user: r.user, base: base), via: "login")
             } catch let f as KalAuth.Failure {
                 busy = false
+                if let ap = f.approval51 {
+                    pass = ""
+                    code = ""
+                    startApproval51(ap)
+                    return
+                }
                 error = f.message
                 if f.needsCode { needsCode = true }
             } catch {
@@ -229,6 +237,41 @@ final class KalLogin41Model {
                 self.error = error.localizedDescription
             }
         }
+    }
+
+    /* ---------- Prompt 51: ny enhet venter på godkjenning ---------- */
+
+    /// Poller statusUrl til innloggingen er godkjent fra en kjent enhet (eller avvist/utløpt), og fullfører med finishUrl.
+    func startApproval51(_ ap: KalApproval51) {
+        waitId += 1
+        let id: Int = waitId
+        approval51 = ap
+        error = ""
+        phase = "approve51"
+        KalLog44.send("auth.approval51.wait", [:])
+        Task { @MainActor in
+            let r: KalApprove51Outcome = await KalApprove51.run(ap) { () -> Bool in self.waitId != id }
+            if self.waitId != id { return }
+            self.approval51 = nil
+            switch r {
+            case .done(let s):
+                KalHaptic.done()
+                self.finish(s, via: "login")
+            case .cancelled:
+                return
+            default:
+                self.error = KalApprove51.message(r)
+                self.phase = "pw"
+            }
+        }
+    }
+
+    func cancelApproval51() {
+        KalHaptic.tap()
+        waitId += 1
+        approval51 = nil
+        error = ""
+        phase = "start"
     }
 
     /* ---------- Serveradresse (bare ved feil) ---------- */
@@ -260,6 +303,8 @@ final class KalLogin41Model {
         }
         done(name: s.user)
         Task { await KalLogin41Model.syncServers() }
+        // Prompt 51: flagg, ventende enheter og «Nytt i denne versjonen» for den nye innloggingen.
+        KalSec51Model.shared.didLogin()
     }
 
     private func done(name: String) {
@@ -340,12 +385,14 @@ struct KalLogin41View: View {
         if m.phase == "wait" { return "Godkjenn i Homelab" }
         if m.phase == "err" { return "Fikk ikke logget inn" }
         if m.phase == "qr" { return "Logg inn med QR-kode" }
+        if m.phase == "approve51" { return "Venter på godkjenning" }
         return "Velkommen til Kalender"
     }
 
     private var subtitle: String {
         if m.phase == "wait" { return "Homelab åpnes og spør om Kalender får logge inn. Du kommer tilbake hit av deg selv." }
         if m.phase == "err" || m.phase == "qr" { return "" }
+        if m.phase == "approve51" { return "Denne enheten er ny for kontoen din." }
         return "Bruk samme konto som i Homelab. Kalendere, bursdager og frister synkes med en gang."
     }
 
@@ -356,6 +403,8 @@ struct KalLogin41View: View {
         case "pw": KalLogin41Pw()
         // Prompt 46: QR-koden (skannes med Papir Finans eller en innlogget Kalender på mobilen).
         case "qr": KalLoginQR46()
+        // Prompt 51: ny enhet må godkjennes fra en kjent enhet (KalSec51.swift).
+        case "approve51": KalApprove51Wait()
         default: KalLogin41Start()
         }
     }

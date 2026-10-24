@@ -28,7 +28,8 @@ import javax.net.ssl.SSLException
  *  - Bare plattformens HttpURLConnection og org.json (ingen nye avhengigheter).
  */
 
-class KalApiException(message: String, val status: Int = 0, val needsTotp: Boolean = false) : Exception(message)
+/** Prompt 51: approval51 er satt når serveren svarer 403 DEVICE_APPROVAL_REQUIRED (ny enhet må godkjennes, Kal51.kt). */
+class KalApiException(message: String, val status: Int = 0, val needsTotp: Boolean = false, val approval51: Kal51Approval? = null) : Exception(message)
 
 class KalApi(private val base: String, private val token: String?) {
 
@@ -42,6 +43,8 @@ class KalApi(private val base: String, private val token: String?) {
                 conn.setRequestProperty("Accept", "application/json")
                 conn.setRequestProperty("X-Client", "kalender-android")
                 token?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
+                // Prompt 51: enhetsnøkkel på innlogging/token-kall, enhets-id på flagg/krasj/nyheter.
+                for ((hk, hv) in Kal51.headers(path)) conn.setRequestProperty(hk, hv)
                 if (json != null) {
                     conn.doOutput = true
                     conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
@@ -51,7 +54,8 @@ class KalApi(private val base: String, private val token: String?) {
                 val body = (if (code < 400) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() } ?: ""
                 if (code >= 400) {
                     val o = runCatching { JSONObject(body) }.getOrNull()
-                    throw KalApiException(o?.optString("error")?.takeIf { it.isNotBlank() } ?: "Feil $code", code, o?.optBoolean("needsTotp") == true)
+                    throw KalApiException(o?.optString("error")?.takeIf { it.isNotBlank() } ?: "Feil $code", code, o?.optBoolean("needsTotp") == true,
+                        if (code == 403) Kal51Approval.parse(o, base) else null)
                 }
                 if (body.trimStart().startsWith("<")) throw KalApiException("Uventet svar fra serveren (en nettside i stedet for data).", 502)
                 body

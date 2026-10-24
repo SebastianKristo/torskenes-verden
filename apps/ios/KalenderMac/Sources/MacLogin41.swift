@@ -19,6 +19,8 @@ final class MacLogin41Model: ObservableObject {
     @Published var needsCode: Bool = false
     @Published var offerServer: Bool = false
     @Published var serverOpen: Bool = false
+    /// Prompt 51: ny enhet venter på godkjenning (fase «approve51»). pollKey vises aldri.
+    @Published var approval51: KalApproval51? = nil
     private var waitId: Int = 0
 
     /// Prompt 43: leses fra bufferen (KalShared41 leser aldri Nøkkelringen på hovedtråden på Mac). `quickTick` tegner på nytt
@@ -150,6 +152,10 @@ final class MacLogin41Model: ObservableObject {
                 finish(KalSession41(token: r.token, refresh: "", user: r.user, base: base))
             } catch let f as MacAuth.Failure {
                 busy = false
+                if let ap = f.approval51 {
+                    startApproval51(ap)
+                    return
+                }
                 error = f.message
                 if f.needsCode { needsCode = true }
             } catch {
@@ -157,6 +163,36 @@ final class MacLogin41Model: ObservableObject {
                 self.error = error.localizedDescription
             }
         }
+    }
+
+    /// Prompt 51: poller statusUrl til innloggingen er godkjent fra en kjent enhet, og fullfører med finishUrl.
+    func startApproval51(_ ap: KalApproval51) {
+        waitId += 1
+        let id: Int = waitId
+        approval51 = ap
+        error = ""
+        phase = "approve51"
+        Task { @MainActor in
+            let r: KalApprove51Outcome = await KalApprove51.run(ap) { () -> Bool in self.waitId != id }
+            if self.waitId != id { return }
+            self.approval51 = nil
+            switch r {
+            case .done(let s):
+                self.finish(s)
+            case .cancelled:
+                return
+            default:
+                self.error = KalApprove51.message(r)
+                self.phase = "pw"
+            }
+        }
+    }
+
+    func cancelApproval51() {
+        waitId += 1
+        approval51 = nil
+        error = ""
+        phase = "start"
     }
 
     private func finish(_ s: KalSession41) {
@@ -168,6 +204,8 @@ final class MacLogin41Model: ObservableObject {
         error = ""
         MacStore.shared.showToast("✓ Logget inn som " + (s.user.isEmpty ? "Homelab-kontoen" : s.user), undo: "")
         Task { await MacLogin41Model.syncServers() }
+        // Prompt 51: flagg, ventende enheter og «Nytt i denne versjonen» for den nye innloggingen.
+        KalSec51Model.shared.didLogin()
     }
 
     private func fail(_ msg: String, server: Bool) {
@@ -219,12 +257,14 @@ struct MacLogin41View: View {
         if m.phase == "wait" { return "Godkjenn i Homelab" }
         if m.phase == "err" { return "Fikk ikke logget inn" }
         if m.phase == "qr" { return "Logg inn med QR-kode" }
+        if m.phase == "approve51" { return "Venter på godkjenning" }
         return "Velkommen til Kalender"
     }
 
     private var subtitle: String {
         if m.phase == "wait" { return "Godkjenn innloggingen i Homelab eller i nettleseren. Du kommer tilbake hit av deg selv." }
         if m.phase == "err" || m.phase == "qr" { return "" }
+        if m.phase == "approve51" { return "Denne Mac-en er ny for kontoen din." }
         return "Bruk samme konto som i Homelab. Kalendere, bursdager og frister synkes med en gang."
     }
 
@@ -235,6 +275,8 @@ struct MacLogin41View: View {
         case "pw": pwView
         // Prompt 46: QR-koden (skannes med Papir Finans eller en innlogget Kalender på mobilen).
         case "qr": MacLoginQR46(back: { m.phase = "start" })
+        // Prompt 51: ny enhet må godkjennes fra en kjent enhet (MacSec51.swift).
+        case "approve51": MacApprove51Wait(m: m)
         default: startView
         }
     }

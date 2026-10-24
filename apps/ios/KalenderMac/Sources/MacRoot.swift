@@ -62,6 +62,8 @@ struct MacRoot: View {
                 MacLogin41View()
             }
         }
+        // Prompt 51: «Nytt i denne versjonen» (egen visning som bare observerer KalSec51Model).
+        .overlay { MacNew51Host() }
         .background(MacWindowReader { (w: NSWindow) in attach(w) })
         .onChange(of: store.theme) { (_: String) in
             // Nytt tema: vindusbakgrunnen følger etter systemutseendet er byttet.

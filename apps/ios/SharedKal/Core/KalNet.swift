@@ -11,6 +11,8 @@ struct KalNetError: LocalizedError {
     var needsTotp: Bool = false
     /// Prompt 44: serveren avviser tokenet også etter fornyelse (KalAuthGate44) – bare da logges man ut.
     var revoked44: Bool = false
+    /// Prompt 51: 403 DEVICE_APPROVAL_REQUIRED – ny enhet må godkjennes (KalSec51Core.swift).
+    var approval51: KalApproval51? = nil
     var errorDescription: String? { message }
 }
 
@@ -70,6 +72,8 @@ enum KalNet {
             r.timeoutInterval = (isLast || base == good) ? timeout : Swift.min(timeout, 6)
             r.setValue("application/json", forHTTPHeaderField: "Accept")
             if let token, !token.isEmpty { r.setValue("Bearer " + token, forHTTPHeaderField: "Authorization") }
+            // Prompt 51: enhetsnøkkel på innlogging/token-kall og enhets-id på flagg/krasj (bare i appen, aldri i widgetene).
+            for (k, v) in KalSec51.headers(path) { r.setValue(v, forHTTPHeaderField: k) }
             if let json {
                 r.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 r.httpBody = try? JSONSerialization.data(withJSONObject: json)
@@ -89,7 +93,8 @@ enum KalNet {
             let obj: [String: Any] = ((try? JSONSerialization.jsonObject(with: pair.0)) as? [String: Any]) ?? [:]
             let msg: String = (obj["error"] as? String) ?? ("Feil " + String(code))
             // Serveren svarte: ikke prøv neste adresse (samme server, samme svar).
-            throw KalNetError(status: code, message: msg, needsTotp: (obj["needsTotp"] as? Bool) ?? false)
+            throw KalNetError(status: code, message: msg, needsTotp: (obj["needsTotp"] as? Bool) ?? false,
+                              approval51: code == 403 ? KalApproval51.parse(obj, base: trimmed) : nil)
         }
         throw lastError
     }

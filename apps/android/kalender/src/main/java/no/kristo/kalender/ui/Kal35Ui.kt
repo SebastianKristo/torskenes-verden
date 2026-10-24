@@ -431,6 +431,9 @@ fun SettingsPage35(vm: KalVm) {
                 OptRow("Reisetid", "Varsle når du må dra, basert på sted", vm.nTv) { vm.setNotify("travelTime", !vm.nTv) }
             }
 
+            // Prompt 51: nye enheter som venter på godkjenning (Godkjenn med fingeravtrykk/PIN · Avvis) og «Nytt i denne versjonen».
+            Label("SIKKERHET", Modifier.padding(top = 4.dp))
+            Sec51Section(vm)
             Label("GLIMT OG KONTO", Modifier.padding(top = 4.dp))
             Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
                 // Prompt 41: Server (lesbar, endres i Homelab) og Logg ut øverst.

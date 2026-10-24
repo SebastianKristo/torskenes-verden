@@ -118,6 +118,8 @@ fun KalRoot(vm: KalVm, onBackToHomelab: () -> Unit) {
             if (vm.session == null) LoginScreen41(vm) else Wide43(vm) { KalApp(vm, onBackToHomelab) }
             // Prompt 37: fagfarger synkes, og tastaturet lukkes når et hendelsesark åpnes.
             Kal37Effects(vm)
+            // Prompt 51: «Nytt i denne versjonen» over alt annet (bare når det finnes noe nytt).
+            if (vm.session != null) News51Host(vm)
         }
     }
 }

@@ -414,6 +414,8 @@ class K41State(private val vm: KalVm) {
     var serverText by mutableStateOf(Kal41.manual(vm.getApplication()))
     var webOffer by mutableStateOf(false)
     var whoName by mutableStateOf<String?>(null)
+    /** Prompt 51: ny enhet venter på godkjenning (fase «approve51»). pollKey vises aldri. */
+    var approval51 by mutableStateOf<Kal51Approval?>(null)
     private var waitJob: Job? = null
     private var waitId = 0
     /** Prompt 44: samme svar to ganger (onCreate + onNewIntent) skal ikke gi «koden er allerede brukt». */
@@ -533,12 +535,35 @@ class K41State(private val vm: KalVm) {
                 KalAuth.rememberServer(ctx, base)
                 done(s)
             } catch (e: KalApiException) {
-                if (e.needsTotp) { vm.lTotp = true; vm.lErr = if (vm.lCode.isBlank()) null else e.message } else vm.lErr = e.message
+                val ap = e.approval51
+                if (ap != null) { vm.lPass = ""; vm.lCode = ""; startApproval51(ap) }
+                else if (e.needsTotp) { vm.lTotp = true; vm.lErr = if (vm.lCode.isBlank()) null else e.message } else vm.lErr = e.message
             } catch (e: CancellationException) { throw e } catch (e: Exception) {
                 vm.lErr = e.message ?: "Innloggingen feilet"
             } finally { vm.lBusy = false }
         }
     }
+
+    /* ---------- Prompt 51: ny enhet venter på godkjenning ---------- */
+
+    /** Poller statusUrl til innloggingen er godkjent fra en kjent enhet (eller avvist/utløpt), og fullfører med finishUrl. */
+    fun startApproval51(ap: Kal51Approval) {
+        val id = ++waitId
+        waitJob?.cancel()
+        approval51 = ap; err = ""; vm.lErr = null; phase = "approve51"
+        waitJob = vm.viewModelScope41 {
+            val r = Kal51Approve.run(ap) { id != waitId }
+            if (id != waitId) return@viewModelScope41
+            approval51 = null
+            when (r) {
+                is Kal51Outcome.Done -> done(r.s)
+                is Kal51Outcome.Cancelled -> Unit
+                else -> { vm.lErr = Kal51Approve.message(r); phase = "pw" }
+            }
+        }
+    }
+
+    fun cancelApproval51() { Hap.tick(); waitId++; waitJob?.cancel(); approval51 = null; phase = "start" }
 
     fun saveServer() {
         val s = KalApi.normalizeServer(serverText)
@@ -550,6 +575,8 @@ class K41State(private val vm: KalVm) {
     private fun done(s: KalSession) {
         phase = "start"; step = 0; err = ""
         vm.signedIn41(s)
+        // Prompt 51: flagg, ventende enheter og «Nytt i denne versjonen» for den nye innloggingen.
+        vm.k51.didLogin()
         Hap.tick()
         vm.showToast("✓ Logget inn som " + s.name.ifBlank { s.username.ifBlank { "Homelab-kontoen" } })
         vm.viewModelScope41 { Kal41.syncServers(ctx)?.let { vm.session = it } }

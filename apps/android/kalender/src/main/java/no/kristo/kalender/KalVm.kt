@@ -118,6 +118,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     val k39 = no.kristo.kalender.ui.K39State(this)
     /** Prompt 41: innlogging uten adresse (Fortsett som / PKCE), bursdagskort, Glimt-søk og testvarsel (Kal41.kt). */
     val k41 = K41State(this)
+    /** Prompt 51: ventende enheter (Sikkerhet), «Nytt i denne versjonen», flagg og krasjrapporter (Kal51.kt). */
+    val k51 = K51State(this)
     /** Prompt 43: oppsett på Fold/nettbrett (tlf | delt | full) og om steg 2 av 2 er vist (Kal43.kt). */
     val k43 = K43State(app)
     /** Prompt 43: «Full skjerm» med dagspanel – trykk på en dag i måneden bytter bare dag (Wide43 setter den). */
@@ -1012,6 +1014,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             host == "liste" -> { v = "liste"; a = T }
             // Prompt 43: varselet «Kalender 1.1 er klar» → Programvareoppdatering.
             host == "oppdatering" -> Kal43Upd.pageOpen = true
+            // Prompt 51: varselet «Ny enhet vil logge inn» → Innstillinger (SIKKERHET).
+            host == "sikkerhet" || host == "innstillinger" -> { if (session != null) { setOn = true; k51.loadPending() } }
             host == "maned" || host == "mnd" -> { v = "mnd"; a = date(path.firstOrNull()) ?: T }
             host == "ny" -> incomingText(uri.getQueryParameter("text").orEmpty())
             host == "hendelse" -> {

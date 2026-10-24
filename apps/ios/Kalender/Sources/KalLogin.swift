@@ -38,6 +38,8 @@ enum KalAuth {
     struct Failure: Error {
         let message: String
         let needsCode: Bool
+        /// Prompt 51: ny enhet må godkjennes fra en kjent enhet (SEC51) – innloggingen viser «Venter på godkjenning».
+        var approval51: KalApproval51? = nil
     }
 
     static func login(base: String, username: String, password: String, code: String) async throws -> Result {
@@ -52,10 +54,12 @@ enum KalAuth {
         do {
             data = try await KalNet.send("POST", "/finans/api/login", json: body, timeout: 20, bases: [base], token: nil)
         } catch let e as KalNetError {
+            if let ap = e.approval51 { throw Failure(message: e.message, needsCode: false, approval51: ap) }
             if e.status == 404 {
                 do {
                     data = try await KalNet.send("POST", "/finans/api/auth/token", json: body, timeout: 20, bases: [base], token: nil)
                 } catch let e2 as KalNetError {
+                    if let ap = e2.approval51 { throw Failure(message: e2.message, needsCode: false, approval51: ap) }
                     throw Failure(message: e2.status == 404 ? "Fant ikke Homelab på " + base + " (404)." : e2.message, needsCode: false)
                 }
             } else {

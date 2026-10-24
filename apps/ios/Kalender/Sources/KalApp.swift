@@ -13,6 +13,9 @@ struct KalApp: App {
 
     init() {
         KalCache44.launched = Date()
+        // Prompt 51: krasjfangeren først (forrige økts krasj legges i køen), så enhetsnøkkel/flagg (KalSec51Core.swift).
+        KalSec51.enabled = true
+        KalCrash51.install()
         // Prompt 44: forhåndslasting i bakgrunnen (BGAppRefreshTask) må registreres før appen er ferdig startet.
         KalBg44.register()
         KalNotify.setup()
@@ -28,6 +31,8 @@ struct KalApp: App {
                 }
                 .task {
                     KalStore.shared.bootstrap()
+                    // Prompt 51: krasjrapporter, flagg, ventende enheter og «Nytt i denne versjonen».
+                    KalSec51Model.shared.active()
                     await KalStore.shared.load(force: true)
                 }
         }
@@ -41,7 +46,9 @@ struct KalApp: App {
                 Task { await s.load(force: true) }
                 // Prompt 41: lokal eller ekstern adresse (Bytt automatisk), hentet fra Homelab-serveren.
                 if s.loggedIn { Task { await KalLogin41Model.syncServers() } }
+                KalSec51Model.shared.active()
             } else if p == .background {
+                KalSec51Model.shared.inactive()
                 s.stopPolling()
                 s.saveSnapshot()
                 KalBg44.schedule()
@@ -82,7 +89,10 @@ struct KalSchemeReader: View {
     @Environment(\.colorScheme) private var cs
 
     var body: some View {
-        KalRoot().environment(\.kal, cs == .dark ? KalTheme.darkTheme : KalTheme.light)
+        // Prompt 51: «Nytt i denne versjonen» over alt annet (tegner ingenting når det ikke er noe nytt).
+        KalRoot()
+            .overlay { KalNew51Host() }
+            .environment(\.kal, cs == .dark ? KalTheme.darkTheme : KalTheme.light)
     }
 }
 

@@ -20,6 +20,9 @@ struct MacApp: App {
 
     init() {
         MacSession.install()
+        // Prompt 51: krasjfangeren tidlig (forrige økts krasj legges i køen), enhetsnøkkel og flagg (KalSec51Core.swift).
+        KalSec51.enabled = true
+        KalCrash51.install()
     }
 
     var body: some Scene {
@@ -146,6 +149,8 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         if s.loggedIn { Task { await s.bootstrap43() } }
         // Prompt 43: automatisk sjekk etter oppdateringer (én gang om dagen, standard på).
         Task { await MacUpdater43.shared.autoCheck() }
+        // Prompt 51: krasjrapporter, flagg, ventende enheter (varsel) og «Nytt i denne versjonen».
+        KalSec51Model.shared.active()
     }
 
     /// Prompt 43: «Last ned og installer i bakgrunnen» – en ferdig nedlastet versjon installeres når appen avslutter.
@@ -172,6 +177,8 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     /// på nytt når den faktisk er nede.
     func applicationDidBecomeActive(_ notification: Notification) {
         let now: Date = Date()
+        // Prompt 51: maks én gang per minutt (egen sperre i KalSec51Model).
+        KalSec51Model.shared.active()
         if now.timeIntervalSince(lastActive) < 30 { return }
         lastActive = now
         let s: MacStore = MacStore.shared

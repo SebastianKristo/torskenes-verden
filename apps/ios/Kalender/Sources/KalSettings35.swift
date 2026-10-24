@@ -63,6 +63,9 @@ struct KalSettings35View: View {
                     // Prompt 41: «Send testvarsel» øverst (lang-trykk = push fra serveren).
                     KalTestRow41()
                     notifications
+                    // Prompt 51: nye enheter som venter på godkjenning (Godkjenn med Face ID / Avvis) og «Nytt i denne versjonen».
+                    KalLabel(text: "SIKKERHET").padding(.top, 6)
+                    KalSec51Section()
                     KalLabel(text: "GLIMT OG KONTO").padding(.top, 6)
                     links
                     // Prompt 46: skann QR-koden som Kalender på Mac/Android eller en annen enhet viser.

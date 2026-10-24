@@ -81,9 +81,10 @@ fun LoginScreen41(vm: KalVm) {
     val k = LocalK.current
     val s = vm.k41
     LaunchedEffect(Unit) { s.loadWho() }
-    val title = when (s.phase) { "wait" -> "Godkjenn i Homelab"; "err" -> "Fikk ikke logget inn"; "qr" -> "Logg inn med QR-kode"; else -> "Velkommen til Kalender" }
+    val title = when (s.phase) { "wait" -> "Godkjenn i Homelab"; "err" -> "Fikk ikke logget inn"; "qr" -> "Logg inn med QR-kode"; "approve51" -> "Venter på godkjenning"; else -> "Velkommen til Kalender" }
     val sub = when (s.phase) {
         "wait" -> "Homelab åpnes og spør om Kalender får logge inn. Du kommer tilbake hit av deg selv."
+        "approve51" -> "Denne enheten er ny for kontoen din."
         "err", "qr" -> ""
         else -> "Bruk samme konto som i Homelab. Kalendere, bursdager og frister synkes med en gang."
     }
@@ -109,6 +110,8 @@ fun LoginScreen41(vm: KalVm) {
                 "pw" -> Pw41(vm)
                 // Prompt 46: QR-koden (skannes med Papir Finans eller en innlogget Kalender på mobilen).
                 "qr" -> QrLogin46(vm)
+                // Prompt 51: ny enhet må godkjennes fra en kjent enhet (Kal51Ui.kt).
+                "approve51" -> Approve51(vm)
                 else -> Start41(vm)
             }
         }

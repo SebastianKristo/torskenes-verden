@@ -61,6 +61,9 @@ enum KalLinks {
             s.view = "ar"
         case "ny", "new":
             if let t = q("text") { KalComposerModel.shared.text = t } else { s.openNew() }
+        // Prompt 51: varselet «Ny enhet vil logge inn» → Innstillinger (SIKKERHET).
+        case "innstillinger", "sikkerhet":
+            if s.loggedIn { s.settingsOpen = true }
         case "glimt", "spor":
             s.glimtOpen = true
             if let text = q("q") { KalGlimtModel.shared.send(text) }
