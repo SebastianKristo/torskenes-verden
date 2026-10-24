@@ -130,8 +130,8 @@ enum Fam50Notify {
         case actCall:
             let o: [String: Any]? = await reply(id, "call")
             let server: String = JS.str(JS.dict(o, "call"), "phone") ?? ""
-            let num: String = server.isEmpty ? Fam50Phone.get(from) : server
-            if !num.isEmpty { Fam50Phone.open(num, sms: false) } else { openPerson(from) }
+            let num: String = server.isEmpty ? Fam50Tel.get(from) : server
+            if !num.isEmpty { Fam50Tel.open(num, sms: false) } else { openPerson(from) }
         case actPickup:
             _ = await reply(id, "pickup")
             if let lat, let lon, let u = URL(string: String(format: "https://maps.apple.com/?daddr=%.6f,%.6f", lat, lon)) {

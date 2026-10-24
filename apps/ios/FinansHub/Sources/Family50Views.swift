@@ -823,21 +823,21 @@ struct Fam50PersonView: View {
 
     private func contact(_ x: Fam50Person, sms: Bool) {
         Haptics.shared.tap()
-        let saved: String = Fam50Phone.get(x.id)
+        let saved: String = Fam50Tel.get(x.id)
         let num: String = x.phone.isEmpty ? saved : x.phone
         if num.isEmpty {
             phoneText = ""
             askPhone = sms ? "sms" : "tel"
             return
         }
-        Fam50Phone.open(num, sms: sms)
+        Fam50Tel.open(num, sms: sms)
     }
 
     private func savePhone() {
         let n: String = phoneText.filter { $0.isNumber || $0 == "+" }
         guard !n.isEmpty else { return }
-        Fam50Phone.set(userId, n)
-        Fam50Phone.open(n, sms: askPhone == "sms")
+        Fam50Tel.set(userId, n)
+        Fam50Tel.open(n, sms: askPhone == "sms")
         askPhone = nil
     }
 
@@ -851,7 +851,7 @@ struct Fam50PersonView: View {
 }
 
 /// Telefonnumre til Ring og Melding (serveren har ingen numre): lagres per konto på enheten.
-enum Fam50Phone {
+enum Fam50Tel {
     static func get(_ userId: String) -> String { UserDefaults.standard.string(forKey: AcctScope.key("fam50_phone_" + userId)) ?? "" }
     static func set(_ userId: String, _ n: String) { UserDefaults.standard.set(n, forKey: AcctScope.key("fam50_phone_" + userId)) }
     @MainActor static func open(_ n: String, sms: Bool) {
