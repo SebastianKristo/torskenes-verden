@@ -18,6 +18,7 @@ import { routing as aiRouting, jobStart, jobEnd, jobUpdate } from '../ai-run.js'
 const OWNER_ID = 'owner';
 import { SUB_CATEGORIES, categoryFor } from './subs.js';
 import { domainFor } from './enrich.js';
+import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 
 const q = (sql) => db.prepare(sql);
 let fx = null;
@@ -136,13 +137,14 @@ const MESSAGES = {
   bad_image: 'Bildet kunne ikke leses. Prøv et skjermbilde som JPEG eller PNG.',
   no_gemini: 'Gemini er ikke satt opp (Innstillinger → AI og tolkning).',
   gemini_failed: 'Gemini kunne ikke lese bildet.',
+  blocked: '«Finansdata forlater aldri huset» er på, så skjermbildet sendes ikke til Gemini. Det leses bare med den lokale bildemodellen.',
 };
-const STATUS = { ollama_down: 502, no_vision: 409, timeout: 504, not_found: 422, bad_image: 415, no_gemini: 400, gemini_failed: 502 };
+const STATUS = { ollama_down: 502, no_vision: 409, timeout: 504, not_found: 422, bad_image: 415, no_gemini: 400, gemini_failed: 502, blocked: 403 };
 export const shotError = (code, detail = null) => Object.assign(new Error(MESSAGES[code]), { code, status: STATUS[code], detail });
 /** Feilsvaret til klienten: {error, code, canGemini, detail?, install?}. */
 export function errorBody(e) {
   const code = e.code ?? 'ollama_down';
-  return { error: e.code ? e.message : MESSAGES.ollama_down, code, canGemini: code !== 'no_gemini' && code !== 'gemini_failed' && hasGemini(),
+  return { error: e.code ? e.message : MESSAGES.ollama_down, code, canGemini: code !== 'no_gemini' && code !== 'gemini_failed' && code !== 'blocked' && canGemini48(),
     ...(e.detail ? { detail: String(e.detail).slice(0, 300) } : {}), ...(code === 'no_vision' ? { install: VISION_INSTALL } : {}) };
 }
 
@@ -315,7 +317,10 @@ async function readOllama(img) {
 /* ---------------- Gemini (bare når brukeren ber om det) ---------------- */
 
 export const GEMINI_SHOT_MODELS = ['gemini-2.5-flash', 'gemini-flash-latest'];
+/** Prompt 48 (PRIV48): Gemini kan tilbys bare når nøkkelen finnes OG «Finansdata forlater aldri huset» er av. */
+export const canGemini48 = () => hasGemini() && !externalBlocked48().blocked;
 async function readGemini(img) {
+  if (externalBlocked48().blocked) throw shotError('blocked');
   if (!hasGemini()) throw shotError('no_gemini');
   audit('gemini', 'subscreenshot', { image: { mime: img.mime, bytes: img.buf.length, w: img.w, h: img.h }, prompt: 'abonnement-fra-skjermbilde' });
   for (const model of GEMINI_SHOT_MODELS) {
@@ -349,6 +354,7 @@ async function readGemini(img) {
  * → normalisert svar + {engine, model, image:{w,h,bytes,converted}}. Kaster shotError med code.
  */
 export async function readScreenshot(buf, { engine = 'ollama', u = me(), mock = null } = {}) {
+  if (engine === 'gemini' && externalBlocked48().blocked) throw shotError('blocked'); // prompt 48: også i mock-modus
   // MOCK_DATA=1: ?mock=ollama_down|no_vision|timeout|not_found gir feilkortet (for klienttester), ellers Spotify.
   if (process.env.MOCK_DATA === '1' && !fx && mock && MESSAGES[mock]) throw shotError(mock);
   if (process.env.MOCK_DATA === '1' && !fx) return { ...normalizeSub({ ...MOCK_SUB }, { u }), engine: 'mock', model: 'mock' };

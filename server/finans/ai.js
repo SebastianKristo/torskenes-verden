@@ -7,7 +7,7 @@ import { shortBody } from '../ollama-opts.js';
 import { gateChat } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
 // Prompt 34: finans-oppgavene → oppgavene i AI-kontroll-rutingen.
-const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok' };
+const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok', import: 'fsok' }; // prompt 48: import = bankimport (finansdata)
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 import { RULES39, normalizeLines39, extras39, verify39 } from './receipts39.js'; // prompt 39: varelinjer og sumkontroll
 import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: sperren for eksterne tjenester i kvitteringskjeden
@@ -719,7 +719,8 @@ export async function barcode(image, mime) {
   let engine = 'zbar';
   const add = (list) => { for (const c of list) if (!codes.some((x) => x.value === c.value)) codes.push(c); };
   const bcModel = String(st.roboflowBarcodeModel || '').split('/').filter(Boolean).slice(-2).join('/');
-  if (secret('roboflowKey') && bcModel) {
+  // Prompt 48 (PRIV48): Roboflow er en ekstern tjeneste – hoppes over når «Finansdata forlater aldri huset» er på (zbar lokalt).
+  if (secret('roboflowKey') && bcModel && !externalBlocked48().blocked) {
     try {
       const { predictions } = await roboflowDetect(image, bcModel, { timeout: engineMs('roboflow', st) });
       engine = 'roboflow+zbar';

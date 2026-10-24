@@ -7,6 +7,7 @@ import { geminiFetch, hasGemini } from './gemini-keys.js';
 import { textJson, aiTimeoutsOf, AiCancelled } from './ai.js';
 import { gateEmbed } from '../ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { stripMarkers } from './subs-ask32.js';
+import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset» gjelder også embeddings
 
 const q = (sql) => db.prepare(sql);
 db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS fh_fts USING fts5(kind UNINDEXED, ref UNINDEXED, text, tokenize = 'unicode61 remove_diacritics 2');
@@ -59,6 +60,8 @@ const embedModel = () => {
   // En valgt Ollama-embeddingmodell slår på vektorsøket; Gemini-embeddings krever bryteren.
   if (st.embedModel) return { kind: 'ollama', model: st.embedModel };
   if (!st.aiSearchEmbed) return null;
+  // Prompt 48 (PRIV48): Gemini-embeddings sender butikk, sammendrag og varelinjer ut av huset – ikke når sperren er på.
+  if (externalBlocked48().blocked) return null;
   // text-embedding-004 ble slått av hos Google i januar 2026; gemini-embedding-001 er etterfølgeren (768 dimensjoner holder lagringen liten).
   if (hasGemini()) return { kind: 'gemini', model: 'gemini-embedding-001' };
   return null;

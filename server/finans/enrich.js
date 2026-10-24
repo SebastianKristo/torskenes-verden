@@ -8,6 +8,7 @@ import { config } from '../config.js';
 import { settings, me } from './db.js';
 import { runAsUser } from '../settings.js';
 import { askJson } from './ai.js';
+import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 import { matchMerchant, fileForDomain, isManualDomain } from '../logos/match.js';
 
 const q = (sql) => db.prepare(sql);
@@ -119,6 +120,9 @@ export async function logo(domain) {
   if (isManualDomain(d)) return null; // prompt 22: manuelt kontrollert logo (f.eks. Posten) får aldri et tilfeldig favicon
   const file = join(LOGOS, d + '.png');
   try { const s = await stat(file); if (Date.now() - s.mtimeMs < MAX_AGE) return s.size ? await readFile(file) : null; } catch { /* mangler */ }
+  // Prompt 48 (PRIV48): butikkdomenet sendes ikke til Googles favicon-tjeneste når sperren er på (klienten viser bokstavikon).
+  // Ingen tom cachefil skrives, så logoen hentes når sperren slås av.
+  if (externalBlocked48().blocked) return null;
   if (inflight.has(d)) return inflight.get(d);
   const p = (async () => {
     try {

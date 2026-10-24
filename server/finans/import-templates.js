@@ -143,8 +143,10 @@ const AI_SCHEMA = {
   },
   required: ['date_col', 'date_format'],
 };
-let aiImpl = (prompt) => askJson(prompt, AI_SCHEMA, { timeout: 30_000 });
-export const _setAi = (fn) => { aiImpl = fn ?? ((prompt) => askJson(prompt, AI_SCHEMA, { timeout: 30_000 })); };
+// Prompt 48 (PRIV48): task 'import' (finansoppgave) – med «Finansdata forlater aldri huset» på brukes bare lokal Ollama.
+const askImport = (prompt) => askJson(prompt, AI_SCHEMA, { timeout: 30_000, task: 'import' });
+let aiImpl = askImport;
+export const _setAi = (fn) => { aiImpl = fn ?? askImport; };
 
 async function aiMapping(head, data) {
   const W = Math.max(head?.length ?? 0, ...data.slice(0, 5).map((r) => r.length));

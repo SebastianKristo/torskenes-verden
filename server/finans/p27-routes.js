@@ -10,9 +10,8 @@ import { forslag } from './forslag.js';
 import { auditList } from './ai-audit.js';
 import { findLogo, setManualLogo, clearLogo, isLogoFile, LOGO_DIR } from './logo-lookup.js';
 import { streamSSE } from 'hono/streaming';
-import { readScreenshot, decodeImageField, imageKind, errorBody, shotError, pickVisionModel, clearVisionCache, VISION_INSTALL } from './sub-screenshot.js';
+import { readScreenshot, decodeImageField, imageKind, errorBody, shotError, pickVisionModel, clearVisionCache, VISION_INSTALL, canGemini48 } from './sub-screenshot.js';
 import { startPull, pullStatus } from './ollama-models.js';
-import { hasGemini } from './gemini-keys.js';
 import { annotateForslag } from './highlight30.js';
 
 const q = (sql) => db.prepare(sql);
@@ -120,7 +119,7 @@ export function mountP27(api, { R, W }) {
 
   // GET /ai/vision → {ok:true, model, canGemini} | {ok:false, error, code, canGemini, install?}: hvilken bildemodell som brukes.
   api.get('/ai/vision', R, async (c) => {
-    try { return c.json({ ok: true, model: await pickVisionModel({ fresh: c.req.query('fresh') === '1' }), canGemini: hasGemini() }); }
+    try { return c.json({ ok: true, model: await pickVisionModel({ fresh: c.req.query('fresh') === '1' }), canGemini: canGemini48() }); } // prompt 48: ikke når «Finansdata forlater aldri huset» er på
     catch (e) { return c.json({ ok: false, ...errorBody(e.code ? e : shotError('ollama_down', e.message)) }); }
   });
   // POST /ai/vision/install (admin) → SSE: data = {name, status, pct, completed, total, done, error} hvert sekund til done;

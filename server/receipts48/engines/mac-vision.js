@@ -22,7 +22,9 @@ export async function macOcr48(image, mime, { url, key, timeoutS = 30, signal = 
   const boundary = `----r48${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
   const fname = `kvittering.${/png/.test(mime) ? 'png' : /heic|heif/.test(mime) ? 'heic' : /webp/.test(mime) ? 'webp' : 'jpg'}`;
   const body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="${fname}"\r\nContent-Type: ${mime || 'image/jpeg'}\r\n\r\n`), Buffer.from(image), Buffer.from(`\r\n--${boundary}--\r\n`)]);
-  const headers = { authorization: `Bearer ${key}`, 'content-type': `multipart/form-data; boundary=${boundary}`, 'content-length': String(body.length) };
+  // Ikke sett content-length selv: med undici 8 lastet (gphoto46/integrations) avviser fetch headeren («invalid content-length
+  // header», UND_ERR_INVALID_ARG). En Buffer-kropp får Content-Length automatisk (aldri chunked). (WEB48-fiks)
+  const headers = { authorization: `Bearer ${key}`, 'content-type': `multipart/form-data; boundary=${boundary}` };
   const to = AbortSignal.timeout(timeoutS * 1000);
   let res;
   try { res = await F(`${url}/ocr`, { method: 'POST', headers, body, signal: signal ? AbortSignal.any([to, signal]) : to }); }

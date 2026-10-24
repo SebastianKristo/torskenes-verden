@@ -25,6 +25,7 @@ import { validDomain } from './enrich.js';
 import { matchMerchant, filePath as libraryFile } from '../logos/match.js';
 import { ocrTools } from '../ocr-fallback.js';
 import { run as aiRun } from '../ai-run.js';
+import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
 
 const run = promisify(execFile);
 const q = (sql) => db.prepare(sql);
@@ -290,6 +291,13 @@ export async function findLogo(rawName, { orgnr = null, receiptId = null, force 
     // Steg 2b: kjent kjede i logobiblioteket (ferdig fil eller kjent domene).
     const lib = matchMerchant(c.name) ?? matchMerchant(rawName);
     if (lib?.id && libraryFile(lib.id)) return save({ domain: lib.domene ?? null, file: `lib:${lib.id}`, source: 'bibliotek' });
+    // Prompt 48 (PRIV48): med «Finansdata forlater aldri huset» (eller brukt opp sky-budsjett) går ingenting ut – ingen
+    // Brønnøysund, Gemini, nettsider eller favicon-tjeneste med butikknavn/org.nr. Bare logobiblioteket (over) og klipp fra
+    // kvitteringen (lokal modell). Lagres ikke som «ingen», så oppslaget prøves igjen når sperren slås av.
+    if (externalBlocked48().blocked) {
+      if (receiptId && localReceipts) { const file = await cropFromReceipt(receiptId, u, c.key); if (file) return save({ domain: null, file, source: 'kvittering' }); }
+      return { none: true, key: c.key, blocked: true };
+    }
     const tried = new Set();
     const attempt = async (domain, source, extra = {}) => {
       const d = cleanDomain(domain);
