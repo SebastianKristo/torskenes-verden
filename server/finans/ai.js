@@ -89,7 +89,7 @@ export function validate(x) {
 /* ---------------- Felles: motorer, reserve og «nede»-vakt ---------------- */
 
 export const ENGINES = ['ollama', 'gemini', 'groq'];
-export const providerName = (p) => ({ gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama', tesseract: 'Lokal OCR', roboflow: 'Roboflow' }[p] ?? 'Ollama');
+export const providerName = (p) => ({ gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama', tesseract: 'Lokal OCR', roboflow: 'Roboflow', 'apple-fm': 'Apple Intelligence' }[p] ?? 'Ollama'); // prompt 47: apple-fm
 export const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'meta-llama/llama-4-scout-17b-16e-instruct', 'qwen/qwen3-32b'];
 export const ROBOFLOW_WORKSPACE = 'sebastians-workspace-y3jnc';
 
@@ -713,8 +713,13 @@ export async function testRoboflow() {
 }
 
 // Kvittering fra e-posttekst (nettbutikker sender ofte kvitteringen som HTML uten vedlegg). Samme skjema som bildelesingen.
-export async function extractText(text, cats) {
+export async function extractText(text, cats, { kind = 'email' } = {}) {
   const t0 = Date.now();
+  // Prompt 47: OCR-tekst lest på mobilen (ML Kit / Vision) – linjene er bevart, tab skiller kolonner. Motoren som svarte lagres.
+  if (kind === 'ocr') {
+    const r = await textJson(`${PROMPT(cats)}\n\nTeksten under er lest med OCR på mobilen. Hver linje er en linje på kvitteringen, og tabulator skiller kolonner (varenavn til venstre, pris til høyre). Les beløp, dato, butikk og varelinjer. Rett bare åpenbare OCR-feil. bbox = null.\n\n---\n${String(text).slice(0, 15000)}`, SCHEMA, { task: 'receipts' });
+    return { provider: r.engine ?? 'tekst', model: r.model ?? 'OCR-tekst', data: validate(r.data), seconds: (Date.now() - t0) / 1000 };
+  }
   const raw = await askJson(`${PROMPT(cats)}\n\nKvitteringen er en e-post. Les beløp, dato, butikk og varelinjer fra teksten under. Ignorer reklame og bunntekst.\n\n---\n${String(text).slice(0, 15000)}`, SCHEMA, { timeout: 60_000, task: 'receipts' });
   return { provider: 'tekst', model: 'e-post', data: validate(raw), seconds: (Date.now() - t0) / 1000 };
 }

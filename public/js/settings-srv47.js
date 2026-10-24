@@ -2,7 +2,7 @@
 // Brukes av web (settings-server41.js) og PWA (finans/js/mobile-p41.js). Ingen imports, så begge kan laste den.
 //
 // Standardverdier: ekstern https://os.smarthjemexperten.no, lokal http://10.69.1.39:3000. Serveren kan overstyre dem via env
-// (PUBLIC_URL / LOCAL_URL) i GET /api/config ({publicUrl, localUrl?}; localUrl bare etter innlogging). Mangler ruten (404) eller
+// (PUBLIC_URL / LOCAL_URL) i GET /api/config/servers ({publicUrl, localUrl?}; localUrl bare etter innlogging). Mangler ruten (404) eller
 // feltene, gjelder standardverdiene.
 //
 // Sikkerhet: en side lastet over https prøver aldri en http-adresse (blandet innhold) – da brukes den eksterne. CSP tillater
@@ -14,12 +14,12 @@ const clean = (u) => String(u ?? '').trim().replace(/\/+$/, '');
 const okUrl = (u) => /^https?:\/\/[^\s/?#@]+(:\d+)?(\/\S*)?$/i.test(clean(u));
 
 let defP = null;
-/** Standardadressene (env-overstyrt fra /api/config hvis serveren har det). Hentes én gang per sidevisning. */
+/** Standardadressene (env-overstyrt fra /api/config/servers hvis serveren har det). Hentes én gang per sidevisning. */
 export function defaults47(force = false) {
   if (defP && !force) return defP;
   defP = (async () => {
     try {
-      const r = await fetch('/api/config', { credentials: 'same-origin', cache: 'no-store', headers: { accept: 'application/json' } });
+      const r = await fetch('/api/config/servers', { credentials: 'same-origin', cache: 'no-store', headers: { accept: 'application/json' } });
       if (!r.ok) return { ...DEF47 };
       const j = await r.json().catch(() => null), s = j?.server ?? j ?? {};
       const ext = clean(s.publicUrl ?? s.public_url), loc = clean(s.localUrl ?? s.local_url);

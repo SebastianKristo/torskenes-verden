@@ -11,7 +11,7 @@ import org.json.JSONObject
 /*
  * Prompt 47 (ANDROID47) – design_handoff_homelab/prompts/prompt-47-pakke/:
  *  - Standard serveradresser (claude-code-standard-serveradresser.md): ekstern https://os.smarthjemexperten.no, lokal
- *    http://10.69.1.39:3000. Serveren kan overstyre dem (PUBLIC_URL/LOCAL_URL → GET /api/config: publicUrl offentlig, localUrl etter
+ *    http://10.69.1.39:3000. Serveren kan overstyre dem (PUBLIC_URL/LOCAL_URL → GET /api/config/servers: publicUrl offentlig, localUrl etter
  *    innlogging). Innstillinger → Server: to felt med status («Svarer · 34 ms» / «Svarer ikke»), Test og «Tilbakestill til standard»
  *    (ui/Ui47.kt). Lagres på kontoen (PUT /api/me/server, synkes til andre enheter) som før (P41.kt).
  *  - Valg av adresse: lokal når den svarer innen 1,5 s OG er samme server (publicUrl/discovery peker på den eksterne verten), ellers
@@ -32,7 +32,7 @@ const val PREF_OCR_LOCAL47 = "ocr_local47"
 data class SrvStatus47(val ok: Boolean?, val ms: Long = 0, val note: String? = null)
 
 class P47State {
-    /** Standardverdier fra serveren (/api/config), ellers konstantene over. */
+    /** Standardverdier fra serveren (/api/config/servers), ellers konstantene over. */
     var defExternal by mutableStateOf(DEFAULT_EXTERNAL47)
     var defLocal by mutableStateOf(DEFAULT_LOCAL47)
     internal var configFor: String? = null
@@ -58,7 +58,7 @@ fun cleartextBlocked47(u: String): Boolean {
 internal suspend fun probeConfig47(url: String, timeout: Int): Pair<String?, String?>? {
     val api = Api(url, null)
     return try {
-        val o = JSONObject(api.request("GET", "/config", prefix = Api.HOMELAB, timeout = timeout, read = timeout))
+        val o = JSONObject(api.request("GET", "/config/servers", prefix = Api.HOMELAB, timeout = timeout, read = timeout))
         o.optString("publicUrl").takeIf { it.isNotBlank() } to o.optString("localUrl").takeIf { it.isNotBlank() }
     } catch (e: CancellationException) { throw e } catch (e: ApiException) {
         if (e.status == 0) return null
@@ -84,14 +84,14 @@ internal suspend fun localIsOurs47(local: String, vararg external: String?): Boo
     return hostOf47(local) != hostOf47(DEFAULT_LOCAL47)
 }
 
-/** GET /api/config etter innlogging: standardverdiene serveren bruker (PUBLIC_URL/LOCAL_URL). 404 → konstantene. */
+/** GET /api/config/servers etter innlogging: standardverdiene serveren bruker (PUBLIC_URL/LOCAL_URL). 404 → konstantene. */
 fun AppViewModel.loadConfig47() {
     val s = p47
     val id = account?.id ?: return
     if (s.configFor == id) return
     s.configFor = id
     launch47 {
-        val o = try { JSONObject(api47 { hlGet("/config", timeout = 6_000) }) } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
+        val o = try { JSONObject(api47 { hlGet("/config/servers", timeout = 6_000) }) } catch (e: CancellationException) { throw e } catch (_: Exception) { null }
         o?.optString("publicUrl")?.takeIf { validUrl41(it) }?.let { s.defExternal = it.trimEnd('/') }
         o?.optString("localUrl")?.takeIf { validUrl41(it) }?.let { s.defLocal = it.trimEnd('/') }
         prefill47()

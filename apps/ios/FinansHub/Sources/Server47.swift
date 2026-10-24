@@ -3,7 +3,7 @@ import SwiftUI
 // ---------------- Prompt 47: standard serveradresser + Innstillinger → Konto → Server ----------------
 // Spesifikasjon: prompts/prompt-47-pakke/claude-code-standard-serveradresser.md.
 // – Standard: ekstern https://os.smarthjemexperten.no, lokal http://10.69.1.39:3000 (Info.plist «HomelabServer» og
-//   «HomelabLocal47» kan overstyre). Serveren kan overstyre med PUBLIC_URL / LOCAL_URL; appen leser dem fra GET /api/config
+//   «HomelabLocal47» kan overstyre). Serveren kan overstyre med PUBLIC_URL / LOCAL_URL; appen leser dem fra GET /api/config/servers
 //   etter innlogging (publicUrl, localUrl). Tåler 404 (eldre server): da fylles standardverdiene inn når kontoen er på en av dem.
 // – Innstillinger → Server: Ekstern og Lokal adresse med status under hvert felt («Svarer · 34 ms» / «Svarer ikke») og «Test»,
 //   og «Tilbakestill til standard». Endringer lagres på serveren (PUT /api/me/server) og synkes til andre enheter på kontoen.
@@ -42,12 +42,12 @@ enum Server47 {
         return URL(string: defaultExternal)?.host ?? "os.smarthjemexperten.no"
     }
 
-    /// Fyller tomme adresser fra /api/config (publicUrl, localUrl) og ellers fra standardverdiene. Tåler 404.
+    /// Fyller tomme adresser fra /api/config/servers (publicUrl, localUrl) og ellers fra standardverdiene. Tåler 404.
     @MainActor static func fill(_ store: Store, local: String, external: String) async -> (local: String, external: String) {
         var l: String = local
         var e: String = external
         if l.isEmpty || e.isEmpty {
-            if let d = try? await store.api.callAt("/api", "GET", "/config", timeout: 8) {
+            if let d = try? await store.api.callAt("/api", "GET", "/config/servers", timeout: 8) {
                 let o: [String: Any] = JS.obj(d)
                 let pub: String = JS.str(o, "publicUrl") ?? JS.str(o, "public_url") ?? ""
                 let loc: String = JS.str(o, "localUrl") ?? JS.str(o, "local_url") ?? ""

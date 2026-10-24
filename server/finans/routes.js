@@ -44,6 +44,7 @@ import { classify39, verify39, createAiCategory, categoryOut39, confirmOnBook39,
 import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } from '../ai-run.js'; // prompt 34: AI-kontroll → Jobber
 import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
 import { mailAddress42 } from './homes42.js'; // prompt 42
+import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipts47.js'; // prompt 47 (SERVER47): OCR-tekst og ferdig tolket kvittering fra enheten
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -230,7 +231,9 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? `${providerName(st.provider)} leser kvitteringen …` : null), aiLong: r.ai_long ?? null,
     ...reanalyzeInfo(r, st), ...(reanalyzeJobOf(r) ? { reanalyzeJob: reanalyzeJobOf(r) } : {}), log: scanLogOf(r), timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
     added: addedOf40(r, 'receipt'), // prompt 40: «Lagt til … · skannet kvittering · Sebastian»
-    domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
+    domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload',
+    // Prompt 47: etiketten «Tolket på iPhone» / «Tolket av Glimt».
+    tolketAv: r.source === 'apple-fm' ? 'apple-on-device' : 'glimt-ollama', tolketAvTekst: r.source === 'apple-fm' ? 'Tolket på iPhone' : 'Tolket av Glimt', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
 }
 
 // «✦ Analyser på nytt med Gemini»: når lesingen feilet, var usikker (under minConf) eller Ollama var usikker.
@@ -349,7 +352,9 @@ async function processReceipt(r, id, force) {
       // E-post uten vedlegg lagres som tekst og leses som tekst.
       // Etter tre runder i køen gjelder «neste motor», så jobben ikke venter for alltid.
       const onTimeout = (r.retry_n ?? 0) >= QUEUE_MAX ? 'next' : undefined;
-      const res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, mime, cats, force, { log, status, onTimeout });
+      // Prompt 47: ferdig tolket på iPhone (apple-fm) → ikke nytt AI-kall; OCR-tekst fra Android/iPhone får OCR-instruksen.
+      const ocr47 = ocrTextOf47(r, force);
+      const res = preParsed47(r, force) ?? (ocr47 ? await extractText(ocr47, cats, { kind: 'ocr' }) : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats, textKind47(r)) : await extract(img, mime, cats, force, { log, status, onTimeout }));
       const d = res.data;
       if (live.ctrl.signal.aborted) throw Object.assign(new Error('Avbrutt av brukeren'), { cancelled: true });
       live.model = res.model ?? live.model;
@@ -939,6 +944,8 @@ export async function ingestReceipt({ buffer, mime, name, meta, target = null, s
 }
 
 api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
+// Prompt 47: POST /receipts/ocr-text og /receipts/parsed (receipts47.js) – samme kø, samme datamodell og samme Til godkjenning.
+mountReceipts47(api, { W: need('receipts:write'), enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
 // Legg ved kvittering på en eksisterende transaksjon. AI-en leser den, og den bekreftes i gjennomgangskøen som vanlig.
 api.post('/transactions/:id/receipt', need('receipts:write'), upload, (c) => {
   const id = +c.req.param('id');

@@ -51,6 +51,7 @@ import { bearerFallthrough46, homelabAuthCode46, signImages46, mediaDiag46, medi
 import { qrAuthApi, meSessionsApi, qrLinkHandler, preAuthTicket, qrAfter2fa, assetLinksHandler, appleAssociationHandler, brief38Api, startApi38 } from './api38.js'; // prompt 38 (SERVER38)
 import { cals39Api, googleMap39Api, rec39Api, week39Api } from './api39.js'; // prompt 39 (SERVER39)
 import { twofa40Api, finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages40Api, briefJul40, tasksAfter40, tasksCreate40, startApi40 } from './api40.js'; // prompt 40 (SERVER40)
+import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
 import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, birthdays41Api, mai17Api, kalender41Api, mountAuth41, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
 import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
 import { media43Api, mediaCalendarsMw43, startMediaWatch43, widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, kalUpdate43Api, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
@@ -137,6 +138,7 @@ app.route('/api/version', versionApi44); // prompt 44: {version, features} uten 
 // Prompt 41: /api/discovery, /api/me/server, Kalender-innlogging (device-token/-exchange, app-code, token, /app-auth) og utlogging som
 // tilbakekaller Kalender-tokenene (må stå før /api/logout og /finans/api).
 mountAuth41(app);
+mountServer47(app); // prompt 47 (SERVER47): GET /api/config/servers {publicUrl, localUrl etter innlogging} + /api/finans/kvitteringer-aliasene
 app.route('/api', auth44Api); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
 app.get('/hl/:token', hlPage41); // prompt 41: Hjemlys-statusside for kontakter uten Papir (24 t)
 
