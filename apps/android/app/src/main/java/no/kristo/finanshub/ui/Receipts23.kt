@@ -52,6 +52,7 @@ import no.kristo.finanshub.reanalyze39
 import no.kristo.finanshub.AppViewModel
 import no.kristo.finanshub.Haptics
 import no.kristo.finanshub.Receipt
+import no.kristo.finanshub.learnMerchant51
 import no.kristo.finanshub.parseReceipts
 import org.json.JSONObject
 
@@ -91,7 +92,8 @@ internal fun AppViewModel.approve23(r: Receipt) = launchNav {
     try {
         if (d != null) {
             val body = JSONObject()
-            if (d.name.isNotBlank() && d.name != r.merchant) body.put("merchant", d.name.trim())
+            // Prompt 51: rettet butikknavn → POST /receipts/:id/merchant (serveren lærer org.nr. → navn); eldre server → PATCH.
+            if (d.name.isNotBlank() && d.name != r.merchant && !learnMerchant51(r.id, d.name)) body.put("merchant", d.name.trim())
             parseAmount(d.amount)?.takeIf { it != r.total }?.let { body.put("total", it) }
             if (d.categoryId != r.categoryId) body.put("categoryId", d.categoryId ?: JSONObject.NULL)
             if (body.length() > 0) apiNav { patch("/receipts/${r.id}", body) }
@@ -343,6 +345,7 @@ private fun RcEditor(vm: AppViewModel, r: Receipt, cats: List<no.kristo.finanshu
                     textStyle = TextStyle(color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, textAlign = TextAlign.End), modifier = Modifier.fillMaxWidth())
             }
         }
+        if (d.name == r.merchant.orEmpty()) MerchantSource51(r.merchantSource, r.merchantLabel) // prompt 51
         if (cats.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             cats.forEach { c ->
                 val on = d.categoryId == c.id
@@ -371,5 +374,6 @@ private fun RcEditor(vm: AppViewModel, r: Receipt, cats: List<no.kristo.finanshu
             ) { Text("🗑", color = p.lab, fontSize = 16.sp) }
         }
         vm.p39.re[r.id]?.let { ReProgress39(vm, r.id, it) } // prompt 39: fremdriftspanelet
+        if (r.file != null || r.ocrRaw != null) RawData51(vm, r.id, r.ocrRaw) // prompt 51: «Rådata»
     }
 }

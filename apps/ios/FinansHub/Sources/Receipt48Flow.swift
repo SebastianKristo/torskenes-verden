@@ -190,6 +190,12 @@ final class Receipt48Flow {
             patch["categoryId"] = c.id
         }
         do {
+            // Prompt 51: rettet butikknavn (eller org.nr.) → POST /receipts/:id/merchant, så serveren lærer org.nr. → navn.
+            // Eldre server (404/405) eller feil: navnet går med PATCH som før (serveren lærer også der).
+            if edited.merchant != orig.merchant || (edited.orgNumber ?? "") != (orig.orgNumber ?? "") {
+                await waitDone(id, store)
+                if await Rc51.learn(store, id: id, merchant: edited.merchant, org: edited.orgNumber) { patch.removeValue(forKey: "merchant") }
+            }
             if !patch.isEmpty {
                 // Køen på serveren (kategori, bankmatch) skal være ferdig før rettelsen, ellers kan den skrive over.
                 await waitDone(id, store)
@@ -232,11 +238,15 @@ final class Receipt48Flow {
 /* ---------- Opplastingen ---------- */
 
 extension Store {
-    /// Delene til POST /finans/api/receipts/scan: image (original, eller 1600 px når «Lagre originalbildet» er av), scan (1600 px
-    /// JPEG til Tesseract/Gemini), thumb, device_ocr og device_parse (JSON, når bryterne er på) og client («ios <versjon>»).
+    /// Delene til POST /finans/api/receipts/scan: image (originalen i full oppløsning, eller høyst 2560 px når «Lagre originalbildet»
+    /// er av – prompt 51: aldri bare 1600 px, OCR-en på serveren trenger minst ca. 2000 px), scan (1600 px JPEG), thumb,
+    /// device_ocr og device_parse (JSON, når bryterne er på) og client («ios <versjon>»).
     func scan48Parts(_ image: UIImage, ocr: String?, parse: String?) -> [API.Part] {
         var parts: [API.Part] = uploadParts(image).map { (p: API.Part) -> API.Part in
             p.name == "file" ? API.Part(name: "image", filename: p.filename, mime: p.mime, data: p.data) : p
+        }
+        if !keepOriginal, let big = Rc51Image.fullJpeg(image), let i = parts.firstIndex(where: { (p: API.Part) in p.name == "image" }) {
+            parts[i] = API.Part(name: "image", filename: "kvittering.jpg", mime: "image/jpeg", data: big)
         }
         if let ocr, !ocr.isEmpty { parts.append(API.Part.text("device_ocr", ocr)) }
         if let parse, !parse.isEmpty { parts.append(API.Part.text("device_parse", parse)) }

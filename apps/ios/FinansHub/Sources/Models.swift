@@ -98,6 +98,10 @@ struct Receipt: Decodable, Identifiable, Hashable {
     var engine: String? = nil
     /// Prompt 39: kategori-tolkningen fra lesingen ({category, isNew, confidence, reason}), Receipt39.swift.
     var aiCategory: Rc39Cat? = nil
+    /// Prompt 51 (Receipt51Raw.swift): kilden til butikknavnet (orgnr | known | model | user), merkelappen og OCR-radene.
+    var merchant_source: String? = nil
+    var merchant_label: String? = nil
+    var ocr_raw: Rc51Raw? = nil
 }
 
 struct Budget: Decodable, Identifiable, Hashable {

@@ -184,6 +184,11 @@ struct Rc48ScanResponse: Decodable {
     var warnings: [String]?
     var errors: [String]?
     var seconds: Double?
+    /// Prompt 51: kilden til butikknavnet (orgnr | known | model | user) og ferdig norsk merkelapp.
+    var merchantSource: String?
+    var merchantLabel: String?
+    /// Prompt 51: den lagrede kvitteringen (receiptOut) – her bare ocr_raw og kilden til butikknavnet.
+    var stored: Rc51Detail?
 
     enum CodingKeys: String, CodingKey {
         case receiptId = "receipt_id"
@@ -199,6 +204,9 @@ struct Rc48ScanResponse: Decodable {
         case warnings
         case errors
         case seconds
+        case merchantSource = "merchant_source"
+        case merchantLabel = "merchant_label"
+        case stored
     }
 
     /// Felt som feilet kontrollen eller er usikre (markeres i skjemaet).

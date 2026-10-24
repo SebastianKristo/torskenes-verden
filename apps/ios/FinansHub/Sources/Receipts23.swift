@@ -82,6 +82,8 @@ final class Receipts23Model {
         if let c = category { body["categoryId"] = c }
         if r.date == nil { body["date"] = JS.fmt(Date(), "yyyy-MM-dd") }
         do {
+            // Prompt 51: rettet butikknavn → POST /receipts/:id/merchant (serveren lærer org.nr. → navn); eldre server → PATCH.
+            if n != (r.merchant ?? ""), await Rc51.learn(store, id: r.id, merchant: n, org: nil) { body.removeValue(forKey: "merchant") }
             try await store.api.call("PATCH", "/receipts/\(r.id)", json: body)
             try await store.api.call("POST", "/receipts/\(r.id)/book")
             open = nil
@@ -514,6 +516,7 @@ struct Receipts23ReviewRow: View {
                 field(TextField("0,00", text: $amount).font(PF.mono(14)).multilineTextAlignment(.trailing).keyboardType(.decimalPad), hl: hl("amount"))
                     .frame(width: 120)
             }
+            if name == (r.merchant ?? "") { Receipt51SourceTag(source: r.merchant_source, label: r.merchant_label) }
             Receipts23CategoryChips(selected: $cat)
                 .background(hl("category") ? Rc39.highlight.opacity(0.7) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             // Prompt 39: AI-ens begrunnelse for kategorien («Bokhandel · pensum»).
@@ -543,6 +546,8 @@ struct Receipts23ReviewRow: View {
             if let j = rean.jobs[r.id] {
                 Rean39Panel(r: r, model: model, job: j)
             }
+            // Prompt 51: OCR-radene (hentes ved åpning når listen ikke har dem med).
+            if r.file != nil || r.ocr_raw != nil { Receipt51RawSection(receiptId: r.id, raw: r.ocr_raw) }
         }
         .animation(.easeOut(duration: 0.2), value: rean.jobs[r.id] != nil)
     }

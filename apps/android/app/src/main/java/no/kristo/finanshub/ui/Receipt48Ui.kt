@@ -174,6 +174,7 @@ private fun Draft48(vm: AppViewModel, s: ReceiptScanState48.Draft) {
     if (r.receipt == null) Text("Glimt fant ingen tolkning som besto kontrollen. Fyll ut feltene selv.", color = p.lab, fontSize = 13.sp)
     (r.errors + r.warnings).take(3).forEach { Text(it, color = p.mut, fontSize = 12.sp, maxLines = 3) }
     Field48("Butikk", f.merchant, r.unsure("merchant")) { v -> vm.scan48.edit { it.copy(merchant = v) } }
+    if (f.merchant.trim() == (r.receipt?.optStr("merchant") ?: "")) MerchantSource51(r.merchantSource, r.merchantLabel) // prompt 51
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Field48("Dato (ÅÅÅÅ-MM-DD)", f.date, r.unsure("date"), Modifier.weight(1.4f)) { v -> vm.scan48.edit { it.copy(date = v) } }
         Field48("Klokken", f.time, r.unsure("time"), Modifier.weight(1f)) { v -> vm.scan48.edit { it.copy(time = v) } }
@@ -185,6 +186,7 @@ private fun Draft48(vm: AppViewModel, s: ReceiptScanState48.Draft) {
         Field48("Betaling", f.payment, r.unsure("payment_method"), Modifier.weight(1f)) { v -> vm.scan48.edit { it.copy(payment = v) } }
     }
     Items48(vm, r, f)
+    RawData51(vm, r.receiptId, r.ocrRaw) // prompt 51: «Rådata» (OCR-motor, rader, bildestørrelse)
     s.error?.let { Text(it, color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
     if (s.saving) Busy48("Lagrer …")
     else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

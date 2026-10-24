@@ -45,6 +45,8 @@ data class ScanResult48(
     val receiptId: String, val receipt: JSONObject?, val confidence: String, val failed: Set<String>, val uncertain: Set<String>,
     val pipeline: List<ScanStep48>, val used: String?, val label: String?, val engine: String?, val model: String?,
     val warnings: List<String>, val errors: List<String>, val seconds: Double?, val sentOcr: Boolean,
+    /** Prompt 51: kilden til butikknavnet og OCR-radene (stored.ocr_raw). */
+    val merchantSource: String? = null, val merchantLabel: String? = null, val ocrRaw: OcrRaw51? = null,
 ) {
     fun unsure(field: String) = field in failed || field in uncertain
 }
@@ -86,6 +88,9 @@ internal fun parseScan48(s: String, sentOcr: Boolean): ScanResult48 {
     return ScanResult48(
         o.getString("receipt_id"), o.optJSONObject("receipt"), o.optString("confidence", "low"), set("failed_fields"), set("uncertain_fields"),
         steps, o.optStr("used"), o.optStr("label"), o.optStr("engine"), o.optStr("model"), list("warnings"), list("errors"), o.optDoubleOrNull("seconds"), sentOcr,
+        merchantSource = o.optStr("merchant_source") ?: o.optJSONObject("stored")?.optStr("merchant_source"),
+        merchantLabel = o.optStr("merchant_label") ?: o.optJSONObject("stored")?.optStr("merchant_label"),
+        ocrRaw = parseOcrRaw51(o.optJSONObject("stored")?.optJSONObject("ocr_raw")),
     )
 }
 
@@ -173,7 +178,11 @@ internal class ReceiptRepository48(private val vm: AppViewModel) {
         if (corrected) runCatching { vm.api48 { request("POST", "/receipts/$id/corrections", JSONObject().put("receipt", receiptOf48(r.receipt, f))) } }
         val stored = ready(id)
         val body = JSONObject()
-        if (f.merchant.trim() != stored.optString("merchant")) body.put("merchant", f.merchant.trim())
+        // Prompt 51: rettet butikknavn (eller org.nr.) → POST /receipts/:id/merchant, så serveren lærer org.nr. → navn.
+        val model = formOf48(r.receipt)
+        val learned = (f.merchant.trim() != model.merchant.trim() || f.orgNumber.filter { it.isDigit() } != model.orgNumber.filter { it.isDigit() }) &&
+            vm.learnMerchant51(id, f.merchant, f.orgNumber)
+        if (!learned && f.merchant.trim() != stored.optString("merchant")) body.put("merchant", f.merchant.trim())
         if (f.date.trim() != stored.optString("date")) body.put("date", f.date.trim())
         if (stored.optDoubleOrNull("total") != total) body.put("total", total)
         if (f.categoryTouched) {

@@ -45,6 +45,8 @@ data class Receipt(
     val aiShort: String? = null, val domain: String? = null,
     /** Serveren sier at «✦ Analyser på nytt med Gemini» kan brukes (feil, lav sikkerhet eller usikker Ollama). */
     val canReanalyze: Boolean = false, val reanalyzeReason: String? = null,
+    /** Prompt 51 (Receipt51.kt): kilden til butikknavnet (orgnr | known | model | user), merkelappen og OCR-radene. */
+    val merchantSource: String? = null, val merchantLabel: String? = null, val ocrRaw: OcrRaw51? = null,
 )
 
 /** Én tolkning av en kvittering (forrige eller ny fra Gemini) i sammenligningen. */
@@ -368,6 +370,7 @@ fun parseReceipt(o: JSONObject): Receipt = Receipt(
     o.optStr("flag"), o.optStr("error"), o.optStr("mime"), o.optStr("file"), o.optStr("thumb"), lines(o.optJSONObject("extraction")?.optJSONArray("lines")),
     o.optJSONObject("match")?.let(::parseTx), o.optStr("aiShort"), o.optStr("domain"),
     o.optBoolean("canReanalyze", false), o.optStr("reanalyzeReason") ?: o.optStr("reason"),
+    merchantSource = o.optStr("merchant_source"), merchantLabel = o.optStr("merchant_label"), ocrRaw = parseOcrRaw51(o.optJSONObject("ocr_raw")),
 )
 
 fun parseReceipts(s: String): List<Receipt> = JSONArray(s).map(::parseReceipt)

@@ -75,6 +75,7 @@ struct Receipt48Sheet: View {
                 fields
                 Receipt48Items(receipt: result.receipt, warn: warn("items", true))
                 Receipt48Pipeline(steps: result.response?.pipeline ?? [])
+                if let res = result.response { Receipt51RawSection(receiptId: res.receiptId, raw: res.stored?.ocr_raw) }
                 if !error.isEmpty {
                     Text(error).font(PF.ui(13, .semibold)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true)
                 }
@@ -90,6 +91,10 @@ struct Receipt48Sheet: View {
     private var fields: some View {
         VStack(alignment: .leading, spacing: 10) {
             Receipt47Field(label: "Butikk", text: $merchant, warn: warn("merchant", merchant == orig.merchant))
+            if merchant == orig.merchant, let res = result.response {
+                // Prompt 51: hvor butikknavnet kom fra («fra org.nr.», «kjent butikk», «modellens forslag»).
+                Receipt51SourceTag(source: res.merchantSource ?? res.stored?.merchant_source, label: res.merchantLabel ?? res.stored?.merchant_label)
+            }
             HStack(spacing: 10) {
                 Receipt47Field(label: "Dato (ÅÅÅÅ-MM-DD)", text: $date, warn: warn("date", date == orig.date), mono: true)
                 Receipt47Field(label: "Klokkeslett", text: $time, warn: warn("time", time == (orig.time ?? "")), mono: true)
