@@ -2,6 +2,28 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.44.0] – 24.10.2026 · prompt 50 – Familie i nytt design, Media som laster ned og viser bilder med en gang, filer i chat
+- **Familie (nytt design):** iPhone, Android, web og PWA har fått fanene Folk, Steder, Helse og Sjekk inn.
+  - Kart med ark som dras opp og ned. Personer utenfor utsnittet får en merkelapp i kanten.
+  - Personside med Ring, Melding og Veibeskrivelse.
+  - Helse per person med siste 7 dager.
+  - To kolonner på iPad og Fold.
+- **Sjekk inn (erstatter Vel fremme):** send «Er på bursdag, alt bra» med sted til valgte familiemedlemmer, eller be noen sjekke inn. Mottakeren svarer 👍 / Ring / Hent rett fra varselet. «Hent meg» sendes som hastevarsel. Posisjonen deles bare i selve innsjekken.
+- **Steder med flere områder:** f.eks. Skolen, Idrettshallen og Biblioteket i samme sted. Du «forlater» stedet først etter 2 minutter utenfor alle områdene. Ruter › Min reise henter skolen fra Steder. Eksisterende soner og skolesoner er flyttet over automatisk.
+- **Media laster ned igjen:** etter et søk viser Media hva som faktisk skjer («Fant ingen utgivelser» med grunn, «Laster ned 12 %», «qBittorrent svarer ikke»), og du kan velge utgivelse manuelt. Torrenter som qBittorrent la til stoppet, startes automatisk. Innstillinger → Media → Diagnostikk viser hvilket ledd som feiler. Se `docs/media-nedlasting-50.md`.
+- **Plakater med en gang:** serveren skalerer ned og cacher bildene. Appene og web viser en plassholder i plakatens farger med en gang og husker bildene til neste gang.
+- **Filer i chat:** dra og slipp eller lim inn bilder og PDF-er.
+  - Miniatyrer i feltet og i meldingen, og bildet kan åpnes i full skjerm.
+  - Bruker du en modell som ikke kan se bilder (f.eks. gpt-oss), leses bildet av en lokal bildemodell eller med OCR, og svaret sier hvilken som ble brukt.
+  - Kvitteringer i chat blir en tabell med «Legg i Finans».
+- **Kvittering «Les på nytt» uten feil 502:** lesingen går nå som en jobb med fremdrift, på et nedskalert bilde, og eventuelle feil forklares tydelig. Du kan også velge «Les mindre versjon». Fargene i «Lav sikkerhet»-boksen er rettet.
+- **iPhone:** kant-sveip tilbake virker på alle sider med tilbakeknapp, også fullskjerm, Kart og værkart.
+- **Android:** tilbake lukker undersider og paneler først.
+- **iPad og Fold:** Innstillinger og Systemoppdatering vises i to kolonner over hele bredden.
+- **Hjem som fliser:** Avgang, Finans, Middag, Familie og Domener. Kan slås av under Utseende.
+- **Nytt tema «Liquid Glass»:** mørkt glass med fargeskyer. Ekte glass på iOS 26.
+- **Også:** lik høyde på bakgrunnsbildet på alle faner, topplinje som i Nyheter i Media og Studie, og nye faner på web starter øverst (Mat startet på bunnen).
+
 ## [4.43.0] – 24.10.2026 · prompt 47 og 48 – ny Glimt-motor og kvitteringer med reserveløsning
 - **Glimt bygget om:** modellen forstår hva du mener og lager en plan. Tekstmønstre brukes bare som hint og som hurtigvei for helt entydige kommandoer. Felles datoparser for «neste time», «om 2 timer», «etter jul» og ukedager. Minnet bruker aliaser begge veier, og kalendersøk matcher hele ord («Oslo» treffer ikke «OsloMet»). Avtaler uten sluttid får standardvarighet (kino 3 t, frisør 1 t, ellers 1 t), merket som antatt. Abonnementer rangeres på månedspris og vises med både kr/mnd og kr/år. «Siste episode av X» hentes fra Sonarr. Svarene bygger på faktiske data, og hver forespørsel får et spor som kan vises.
 - **Kvitteringer med reserveløsning:** skann i FinansHub på iPhone, Android og web. Glimt prøver i rekkefølge: tolkning fra telefonen, teksten fra telefonen, Apple Vision på Mac minien, Tesseract og til slutt Gemini. Alt kontrolleres på serveren: sum, total, dato, org.nr. og mva. Før lagring får du et skjema du kan redigere. Usikre felt er markert, og en merkelapp viser hvem som leste kvitteringen («iPhone», «Mac», «Glimt», «Gemini»). Rettelsene dine lagres som testdata.
