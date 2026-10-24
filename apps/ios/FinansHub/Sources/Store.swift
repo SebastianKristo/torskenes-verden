@@ -1238,15 +1238,17 @@ final class Store {
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         // Prompt 23: i Papir havner kvitteringen i KØ på Kvitteringer-siden (Receipts23.swift).
         if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if paperTab != "kvitt" { paperGo("kvitt") }
-        // Prompt 47: «Tolk kvitteringer på iPhone» – bildene leses og tolkes på telefonen (Foundation Models), PDF-er går til Glimt.
-        if onDevice47, editing == nil, Receipt47.wanted {
+        // Prompt 48: bildene går til POST /receipts/scan (Receipt48Flow.swift) – med device_ocr/device_parse når bryterne
+        // «Les teksten på iPhone»/«Tolk kvitteringer på iPhone» er på (av som standard). PDF-er går til Glimt som før.
+        // onDevice47 = false (reserven) laster opp som før til /receipts.
+        if onDevice47, editing == nil {
             var imgs: [UIImage] = []
             var rest: [Upload] = []
             for f in files {
                 if case .image(let i) = f { imgs.append(i) } else { rest.append(f) }
             }
             if !imgs.isEmpty {
-                Receipt47Flow.shared.handle(imgs.map { (i: UIImage) -> [UIImage] in [i] }, self)
+                Receipt48Flow.shared.handle(imgs.map { (i: UIImage) -> [UIImage] in [i] }, self, scanned: false)
                 if !rest.isEmpty { upload(rest, onDevice47: false) }
                 return
             }

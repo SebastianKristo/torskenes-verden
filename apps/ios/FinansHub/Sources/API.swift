@@ -33,7 +33,8 @@ struct API {
             case .cannotFindHost, .dnsLookupFailed: throw APIError(message: "Fant ikke serveren \(host). Sjekk adressen.", status: 0)
             case .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet:
                 throw APIError(message: "Fikk ikke kontakt med \(host). Er du på samme nett, og stemmer http/https og port?", status: 0)
-            case .timedOut: throw APIError(message: "Serveren svarte ikke i tide.", status: 0)
+            // Prompt 48: code «timeout» (status 0) skiller tidsavbrudd fra manglende nett (kvitteringer i køen sendes ikke dobbelt).
+            case .timedOut: throw APIError(message: "Serveren svarte ikke i tide.", status: 0, code: "timeout")
             case .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid:
                 throw APIError(message: "HTTPS-feil. Bruk http:// på lokalt nett, eller installer sertifikatet.", status: 0)
             case .appTransportSecurityRequiresSecureConnection:

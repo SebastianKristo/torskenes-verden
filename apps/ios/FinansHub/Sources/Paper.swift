@@ -276,6 +276,8 @@ struct PaperShell: View {
         }
         // Prompt 47: bekreftelsesarket for kvitteringer tolket på iPhonen og «✦ Leser …»-pillen (Receipt47Views.swift).
         .receipt47Host(p)
+        // Prompt 48: skjemaet etter POST /receipts/scan (usikre felt, merkelapp for veien) og pillen (Receipt48Sheet.swift).
+        .receipt48Host(p)
         .sheet(isPresented: Binding(get: { store.trackAddOpen }, set: { store.trackAddOpen = $0 })) {
             PaperNewShipmentSheet()
                 .environment(\.paper, p)

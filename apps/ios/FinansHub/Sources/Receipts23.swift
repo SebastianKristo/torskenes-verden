@@ -206,12 +206,10 @@ struct Receipts23Page: View {
     }
 
     private func deliver(_ imgs: [UIImage]) {
-        guard let first = imgs.first else { return }
-        // Prompt 47: flere sider fra skanneren er én kvittering også når den tolkes på iPhonen (Receipt47Views.swift).
-        if Receipt47.wanted { Receipt47Flow.shared.handle([imgs], store); return }
-        if imgs.count == 1 { store.upload([.image(first)]); return }
-        // Flere sider fra skanneren er én lang kvittering: sendes som én PDF.
-        store.upload([.pdf(Receipts23Page.pdf(imgs))])
+        if imgs.isEmpty { return }
+        // Prompt 48: flere sider fra skanneren er én kvittering – til POST /receipts/scan (Receipt48Flow.swift). I en bolig
+        // eller fra «Legg ved kvittering» som før (én side som bilde, flere som én PDF).
+        store.uploadScanned48(imgs)
     }
 
     static func pdf(_ imgs: [UIImage]) -> Data {

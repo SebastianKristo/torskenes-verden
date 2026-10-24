@@ -18,6 +18,10 @@ struct PendingUpload: Codable, Identifiable, Hashable {
     var accountId: String?
     /// Prompt 47: ferdig tolket på iPhonen (JSON-feltet «data» til POST /receipts/parsed). nil = vanlig opplasting til Glimt.
     var parsed47: String? = nil
+    /// Prompt 48: sendes til POST /receipts/scan (Receipt48Flow.swift) med device_ocr/device_parse (JSON) når de finnes.
+    var scan48: Bool? = nil
+    var ocr48: String? = nil
+    var parse48: String? = nil
 }
 
 enum PendingQueue {
@@ -52,7 +56,7 @@ enum PendingQueue {
 
 extension Store {
     /// Legger filen i køen «Venter på opplasting».
-    func enqueuePending(_ f: Upload, folder: Int?, error: String?, parsed47: String? = nil) {
+    func enqueuePending(_ f: Upload, folder: Int?, error: String?, parsed47: String? = nil, scan48: Bool = false, ocr48: String? = nil, parse48: String? = nil) {
         let data: Data?
         let kind: String
         let ext: String
@@ -65,7 +69,7 @@ extension Store {
         guard let data, let name = PendingQueue.write(data, ext: ext) else { return }
         let owner: String? = account?.scopeKey
         let item = PendingUpload(id: UUID().uuidString, created: Date(), kind: kind, file: name, folderId: folder, attempts: 0, lastError: error, accountId: owner,
-                                 parsed47: parsed47)
+                                 parsed47: parsed47, scan48: scan48 ? true : nil, ocr48: ocr48, parse48: parse48)
         pendingUploads.append(item)
         PendingQueue.save(pendingUploads)
     }
@@ -92,13 +96,26 @@ extension Store {
                 parts = [API.Part.text("data", p47)] + parts.filter { $0.name != "scan" }
                 path = "/receipts/parsed"
             }
+            // Prompt 48: bilde + device_ocr + device_parse til /receipts/scan (Glimt validerer på nytt).
+            if item.scan48 == true, item.kind == "image", item.folderId == nil, let img = UIImage(data: data) {
+                parts = scan48Parts(img, ocr: item.ocr48, parse: item.parse48)
+                path = "/receipts/scan"
+            }
             do {
                 do {
-                    _ = try await api.upload(path, parts: parts)
+                    _ = try await api.upload(path, parts: parts, timeout: path == "/receipts/scan" ? 180 : 30)
+                } catch let e as APIError where path == "/receipts/scan" && (e.status == 404 || e.status == 405) {
+                    // Eldre server uten /receipts/scan: bildet tolkes av Glimt som før.
+                    _ = try await api.upload("/receipts", parts: plain)
                 } catch let e as APIError where path == "/receipts/parsed" && (e.status == 404 || e.status == 405) {
                     // Eldre server: bildet tolkes av Glimt i stedet.
                     _ = try await api.upload("/receipts", parts: plain)
                 }
+                PendingQueue.delete(item)
+                pendingUploads.removeAll { $0.id == item.id }
+                done += 1
+            } catch let e as APIError where path == "/receipts/scan" && e.status == 0 && e.code == "timeout" {
+                // Prompt 48: serveren fullfører kjeden selv om appen ga opp å vente – ikke send den på nytt (da blir den dobbel).
                 PendingQueue.delete(item)
                 pendingUploads.removeAll { $0.id == item.id }
                 done += 1
@@ -160,7 +177,7 @@ struct PendingUploadsList: View {
         HStack(spacing: 10) {
             PendingThumb(item: p)
             VStack(alignment: .leading, spacing: 2) {
-                Text((p.kind == "pdf" ? "PDF-kvittering" : "Kvittering") + (p.parsed47 != nil ? " · tolket på iPhone" : "")).font(.subheadline.weight(.semibold)).foregroundStyle(Color.skinFg)
+                Text((p.kind == "pdf" ? "PDF-kvittering" : "Kvittering") + (p.parsed47 != nil || p.parse48 != nil ? " · tolket på iPhone" : p.ocr48 != nil ? " · lest på iPhone" : "")).font(.subheadline.weight(.semibold)).foregroundStyle(Color.skinFg)
                 Text(sub(p)).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(2)
             }
             Spacer(minLength: 4)
