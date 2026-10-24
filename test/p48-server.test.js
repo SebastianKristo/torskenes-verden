@@ -319,7 +319,7 @@ test('B: device_ocr + qwen3:8b (riktige modellvalg), Mac-OCR sammenligner totale
   assert.match(rx[1].body.messages.at(-1).content, /Kontrollen fant feil:[\s\S]*summerer 21,90/, 'nytt forsøk med feilbeskrivelse');
   assert.equal(hostCalls('mac.test:8765', '/ocr')[0].init.headers.authorization, `Bearer ${MAC_KEY}`);
   const mreq = hostCalls('mac.test:8765', '/ocr')[0].init;
-  assert.equal(+mreq.headers['content-length'], mreq.body.length, 'Content-Length (tjenesten godtar ikke chunked)');
+  assert.ok(Buffer.isBuffer(mreq.body) && !mreq.headers['content-length'], 'Buffer-kropp → fetch setter Content-Length selv (tjenesten godtar ikke chunked; egen header avvises av undici 8)');
   assert.match(mreq.body.toString('latin1'), /name="image"; filename="kvittering\.jpg"\r\nContent-Type: image\/jpeg/);
 });
 
