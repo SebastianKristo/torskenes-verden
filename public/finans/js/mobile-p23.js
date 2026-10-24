@@ -9,6 +9,8 @@ import { haptic, hapBack } from './mobile-haptics.js';
 import * as P34 from './mobile-p34.js'; // prompt 34: ✦ ANALYSERES AV AI i Kvitteringer
 import { logo } from './mobile-p20.js';
 import { canSrv } from './mobile-p17.js';
+import { form48, via48, uncCls48, uncTag48, is48, flush48, bind48, setRedraw48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
+bind48(); setRedraw48(() => draw());
 
 const root = () => document.getElementById('app');
 const lab = (t, r = '') => `<span class="p23-lab"><span>${t}</span>${r ? `<span>${r}</span>` : ''}</span>`;
@@ -231,7 +233,7 @@ export function kvView() {
   const cats = (S.boot?.categories ?? []).filter((c) => c.kind !== 'income' && c.kind !== 'transfer');
   const row = (r, i, booked) => {
     const op = !booked && KV.open === r.id, e = KV.e[r.id] ?? { n: r.merchant ?? '', v: r.total != null ? n2(r.total) : '', cat: r.categoryId ?? null };
-    const meta = !booked && P39.reMeta(r.id) ? P39.reMeta(r.id) /* prompt 39: ✦ Analyserer på nytt … 42 % */ : booked ? `${dd(r.date)} · ${esc(r.category ?? 'Ukategorisert')}` : r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.provider ?? 'Manuell')}${conf(r) ? ` · ${conf(r)}` : ''}` : `<span style="color:var(--pp-lab)">Kunne ikke leses · fyll ut selv</span>`;
+    const meta = !booked && P39.reMeta(r.id) ? P39.reMeta(r.id) /* prompt 39: ✦ Analyserer på nytt … 42 % */ : booked ? `${dd(r.date)} · ${esc(r.category ?? 'Ukategorisert')}` : r.status === 'needs_review' ? `${dd(r.date)} · ${is48(r) && via48(r) ? via48(r) : esc(r.provider ?? 'Manuell')}${conf(r) ? ` · ${conf(r)}` : ''}` : `<span style="color:var(--pp-lab)">Kunne ikke leses · fyll ut selv</span>`;
     const head = `${rcLogo(r)}<span class="p23-rt"><b class="${P39.hlOf(r.id, 'merchant')}">${esc(r.merchant || 'Ny kvittering')}</b><span class="${P39.hlOf(r.id, 'date')}${P39.hlOf(r.id, 'cat')}">${meta}</span></span><span class="p23-rv${P39.hlOf(r.id, 'total')}">${r.total != null ? kr2(r.total) : '–'}</span>`;
     // Prompt 41 (claude-code-finans-les-pa-nytt-alltid.md): bokførte kan åpnes (bilde, navn og beløp, kategori,
     // «Lagre endringer» og «↺ Til gjennomgang»), og «✦ På nytt» står på raden.
@@ -244,15 +246,16 @@ export function kvView() {
           <div class="p41-bka"><button class="p23-ok" data-p23="rcsave" data-id="${esc(r.id)}" ${KV.busy === r.id ? 'disabled' : ''}>${KV.busy === r.id ? 'Lagrer …' : 'Lagre endringer'}</button><button class="p41-undo" data-p23="rcundo" data-id="${esc(r.id)}">↺ Til gjennomgang</button></div>${P39.rePanel(r.id)}</div>` : ''}</div>`;
     }
     return `<div data-p39re="${esc(r.id)}" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><button class="p23-rrow p23-rbtn" data-p23="rcopen" data-id="${esc(r.id)}" aria-expanded="${op}">${head}</button>${P39.reLine(r.id)}
-      ${op ? `<div class="p23-red"><div class="p23-red2"><input class="p23-in" id="p23-rn-${esc(r.id)}" data-p23in="rcn" data-id="${esc(r.id)}" value="${esc(e.n)}" aria-label="Butikk" autocomplete="off"><input class="p23-in mono" id="p23-rv-${esc(r.id)}" data-p23in="rcv" data-id="${esc(r.id)}" value="${esc(e.v)}" inputmode="decimal" aria-label="Beløp"></div>
+      ${op ? `<div class="p23-red">${is48(r) && (uncTag48(r, 'merchant') || uncTag48(r, 'total')) ? `<div class="p48-unc">${uncTag48(r, 'merchant') ? `Butikk${uncTag48(r, 'merchant')}` : ''} ${uncTag48(r, 'total') ? `Beløp${uncTag48(r, 'total')}` : ''}</div>` : ''}<div class="p23-red2"><input class="p23-in${uncCls48(r, 'merchant')}" id="p23-rn-${esc(r.id)}" data-p23in="rcn" data-id="${esc(r.id)}" value="${esc(e.n)}" aria-label="Butikk" autocomplete="off"><input class="p23-in mono${uncCls48(r, 'total')}" id="p23-rv-${esc(r.id)}" data-p23in="rcv" data-id="${esc(r.id)}" value="${esc(e.v)}" inputmode="decimal" aria-label="Beløp"></div>
         <div class="p23-cats">${cats.map((c) => `<button class="p23-cat" data-p23="rccat" data-id="${esc(r.id)}" data-c="${c.id}" aria-pressed="${+e.cat === c.id}">${esc(c.name)}</button>`).join('')}</div>
+        ${is48(r) ? form48(r, { has: ['merchant', 'total', 'category'], total: parseAmount(String(e.v ?? '')) ?? r.total }) : ''}
         <div class="p23-racts"><button class="p23-ok" data-p23="rcok" data-id="${esc(r.id)}" ${KV.busy === r.id ? 'disabled' : ''}>${KV.busy === r.id ? 'Bokfører …' : '✓ Godkjenn og bokfør'}</button>${P39.reBtn(r.id) /* prompt 39: fremdrift */}<button class="p23-del" data-p23="rcdel" data-id="${esc(r.id)}" aria-label="${KV.del === r.id ? 'Trykk igjen for å slette' : 'Slett'}">${KV.del === r.id ? 'Slett?' : '🗑'}</button></div>${P39.rePanel(r.id)}${globalThis.P40?.addedLine?.(r, 'rc') ?? '' /* prompt 40: lagt til */}</div>` : ''}</div>`;
   };
   return `<div class="p23-kv">
-    <button class="p23-cam" data-p23="cam"><span class="p23-camic">${SVG('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 24)}</span><span class="p23-rt"><b style="font-size:17px;font-weight:700">Ta bilde av kvittering</b><span style="font-size:13px">Bakkamera · ✦ ${esc(S.boot?.settings?.provider === 'ollama' ? 'Ollama' : 'Gemini')} leser beløp og butikk</span></span></button>
+    <button class="p23-cam" data-p23="cam"><span class="p23-camic">${SVG('M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 24)}</span><span class="p23-rt"><b style="font-size:17px;font-weight:700">Ta bilde av kvittering</b><span style="font-size:13px">Bakkamera · ✦ Glimt leser butikk, beløp og varelinjer</span></span></button>
     <div class="p23-two"><label class="p23-pick">${SVG('M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9.5h.01')}Bilder<input class="m-file" type="file" accept="image/*" multiple data-mupload data-stay></label><label class="p23-pick">${SVG('M6 3h8l4 4v14H6zM14 3v4h4')}Filer<input class="m-file" type="file" accept="application/pdf,image/*,.heic,.heif" multiple data-mupload data-stay></label></div>
     <input class="m-file" id="p23-cap" type="file" accept="image/*" capture="environment" data-mupload data-stay>
-    ${m.uploading ? `<span class="pp-mut" style="font-size:13px;padding:0 4px">Laster opp ${m.uploading} fil${m.uploading > 1 ? 'er' : ''} …</span>` : ''}
+    ${m.uploading ? `<span class="pp-mut" style="font-size:13px;padding:0 4px" data-p48-up>Laster opp og leser ${m.uploading > 1 ? `${m.uploading} kvitteringer` : 'kvitteringen'} … Glimt kontrollerer svaret</span>` : ''}
     ${P34.kvAi()}
     ${Q.length ? `${lab('KØ')}<div class="p23-box">${Q.map((x, i) => `<div class="p23-q" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p23-qt"><b>${esc(x.n)}</b><span style="color:${x.c}">${esc(x.st)}</span><span class="p23-qbar"><i style="width:${x.w}%;background:${x.c}"></i></span></span>
       <button class="p23-qre" data-p23="${x.k === 'off' ? 'qretry' : 'qre'}" data-id="${esc(x.id)}">${x.k === 'off' ? '↻ Send nå' : '✦ Analyser på nytt'}</button></div>`).join('')}</div>` : ''}
@@ -267,9 +270,13 @@ async function rcBook(id) {
   if (e.n != null && e.n !== (r.merchant ?? '')) patch.merchant = e.n;
   if (e.v != null) { const v = parseAmount(String(e.v)); if (Number.isFinite(v) && v !== r.total) patch.total = Math.abs(v); }
   if (e.cat != null && +e.cat !== r.categoryId) patch.categoryId = +e.cat;
-  if (!r.date) patch.date = today();
   KV.busy = id; draw();
   try {
+    // Prompt 48: endrede detaljer (dato, varelinjer, rabatter …) sendes som rettelse før bokføringen.
+    const catName = (S.boot?.categories ?? []).find((c) => c.id === (patch.categoryId ?? r.categoryId))?.name ?? r.category ?? null;
+    const f48 = await flush48(r, { merchant: patch.merchant ?? r.merchant, total: patch.total ?? r.total, category: catName });
+    if (f48.error) flash(`Rettelsen ble ikke lagret: ${f48.error}`);
+    if (!r.date && !f48.date) patch.date = today();
     if (Object.keys(patch).length) await api(`/receipts/${id}`, { method: 'PATCH', json: patch });
     await api(`/receipts/${id}/book`, { method: 'POST' });
     KV.open = null; delete KV.e[id];

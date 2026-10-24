@@ -7431,3 +7431,11 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p47-test{flex:none;height:30px;padding:0 14px;border-radius:15px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 12.5px Manrope,sans-serif;cursor:pointer}
 .m .p47-test:disabled,.m .p47-rst:disabled{opacity:.5}
 .m .p47-rst b{color:var(--pp-lab)}
+/* Prompt 48 (WEB48): kvitteringskjeden – «FOR LITEN» i AI-valg, usikre felt i Kvitteringer, fanen Kvitteringer i AI i Finans. */
+.m .p48-small{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.05em;vertical-align:middle;background:color-mix(in oklab,var(--pp-warn) 20%,transparent);color:var(--pp-warn)}
+.m .p48-unc{font-size:12px;font-weight:600;color:var(--pp-mut);display:flex;gap:10px;padding:0 2px 4px}
+.m .p23-red .r48{margin:10px 0 4px;color:var(--pp-ink,inherit)}
+.m .p23-red .r48 .r48-via{background:color-mix(in oklab,var(--pp-lab) 14%,transparent);color:var(--pp-lab)}
+.m .p48-r48 .r48s{margin:0}
+.m .p48-r48 .r48s-card{background:var(--pp-card);border-color:var(--pp-line)}
+.m .p48-r48 .r48s-btn.pri{background:var(--pp-lab)}

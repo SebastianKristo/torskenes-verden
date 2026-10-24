@@ -135,7 +135,7 @@ const FIN_ALIAS = { kvittering: 'rc', kvitteringer: 'rc', receipts: 'rc', catego
 function finRows() {
   const F = G.finRouting?.taskList ?? (G.routing?.taskList ?? []), byId = new Map(F.map((t) => [FIN_ALIAS[t.id] ?? t.id, t]));
   const R = { ...(G.routing?.tasks ?? {}), ...(G.finRouting?.tasks ?? {}) };
-  return FIN4.map(([id, n, d, m0, f0]) => { const t = byId.get(id) ?? {}, r = R[t.id ?? id] ?? R[id] ?? {}; return { id: t.id ?? id, n: t.name ?? n, d: t.desc ?? d, model: r.model ?? t.model ?? '', fallback: r.fallback ?? t.fallback ?? '', def: m0, defF: f0, options: Array.isArray(t.options) ? t.options : null, warning: t.warning ?? '' }; });
+  return FIN4.map(([id, n, d, m0, f0]) => { const t = byId.get(id) ?? {}, r = R[t.id ?? id] ?? R[id] ?? {}; return { id: t.id ?? id, n: t.name ?? n, d: t.desc ?? d, model: r.model ?? t.model ?? '', fallback: r.fallback ?? t.fallback ?? '', def: m0, defF: f0, options: Array.isArray(t.options) ? t.options : null, warning: t.warning ?? '', small: !!(t.smallModel ?? (G.routing?.taskList ?? []).find((x) => x.id === (t.id ?? id))?.smallModel) }; });
 }
 const loadKeys = () => get('keys', '/keys', (d) => d.providers ?? d);
 const loadJobs = () => get('jobs', '/jobs?limit=60', (d) => { if (typeof d?.paused === 'boolean') G.paused = d.paused; G.jobGroups = Array.isArray(d?.groups) ? d.groups : null; G.unseenFailed = Number.isFinite(d?.unseenFailed) ? d.unseenFailed : null; return Array.isArray(d) ? d : d.running || d.queued || d.recent ? [...(d.running ?? []), ...(d.queued ?? []), ...(d.recent ?? [])] : d.jobs ?? d.items ?? []; });
@@ -653,14 +653,17 @@ function rtTab(o) {
   const fin = o.scope === 'finans', R = routingOf(), all = allModelOpts(), web = o.variant !== 'mobile', admin = G.admin;
   const warns = Object.fromEntries([...(G.status?.routes ?? []).filter((x) => x.warning || x.state === 'degraded').map((x) => [x.task, x.warning || x.error]), ...(G.routing?.taskList ?? []).filter((t) => t.warning).map((t) => [t.id, t.warning])]);
   // Prompt 38: finans-radene kommer fra FIN4 + /api/ai/routing?scope=finans (filteret på t[3] ga et tomt kort når serveren sendte en liste uten fin).
-  if (fin) return finRt(o) + rtRest(o, R, admin);
+  const rw = (G.routing?.warnings ?? []).filter(Boolean); // prompt 48: advarslene fra GET /api/ai/routing (warning/smallModel) samlet øverst
+  const rwBox = rw.length ? `<div class="ac-card ac-warn48" role="note"><b>Sjekk modellvalget</b>${rw.map((w) => `<span>${esc(w)}</span>`).join('')}</div>` : '';
+  if (fin) return rwBox + finRt(o) + rtRest(o, R, admin);
   const rows = tasksOf().map(([k, n, s, isFin, personal], i) => {
     const r = R.tasks?.[k] ?? {}, v = r.model ?? '', fb = r.fallback ?? '', can = admin || personal;
     const mv = all.find((m) => m.v === v), fbm = all.find((m) => m.v === fb), isCloudSel = (mv && !mv.loc) || (fbm && !fbm.loc);
     const opt = (L, cur) => [{ v: '', n: 'Automatisk' }, ...(cur && !L.some((m) => m.v === cur) ? [{ v: cur, n: `${cur} · finnes ikke` }] : []), ...L].map((m) => `<option value="${esc(m.v)}"${m.v === cur ? ' selected' : ''}>${esc(m.n)}</option>`).join('');
     const warn = isFin && R.rules?.finLocal && isCloudSel ? 'Finansdata skal holdes lokalt, men denne bruker en sky-modell. Bytt til en lokal modell.'
       : v && G.models && !mv ? `Modellen «${v}» finnes ikke · bytt` : warns[k] ?? '';
-    return `<div class="ac-rt${web ? ' web' : ''}"${i ? '' : ' style="border-top:0"'}><span class="ac-col"><b>${esc(n)}</b><span>${esc(s)}</span></span>
+    const sm = (G.routing?.taskList ?? []).find((t) => t.id === k)?.smallModel; // prompt 48: tolkning på en modell under 7B
+    return `<div class="ac-rt${web ? ' web' : ''}"${i ? '' : ' style="border-top:0"'}><span class="ac-col"><b>${esc(n)}${sm ? ' <span class="ac-small48" title="For liten til å tolke fritekst – bruk minst 7B, f.eks. qwen3:8b">FOR LITEN</span>' : ''}</b><span>${esc(s)}</span></span>
       <label class="ac-sel"><span>MODELL</span><select data-ac-rt="${k}" data-f="model"${can ? '' : ' disabled'}>${opt(all, v)}</select></label>
       <label class="ac-sel"><span>RESERVE</span><select data-ac-rt="${k}" data-f="fallback"${can ? '' : ' disabled'}>${opt(all, fb).replace('>Automatisk<', '>Ingen<')}</select></label>
       ${warn ? `<span class="ac-warn">${esc(warn)}</span>` : ''}</div>`;
@@ -675,7 +678,7 @@ function rtTab(o) {
       ['loadTimeout', 'Tid til første token · kald modell', 'Når modellen må lastes fra disk (ekstern disk: 2–40 s)', LOADT], ['firstTokenTimeout', 'Tid til første token · lastet modell', 'Når modellen allerede er i minnet', FIRSTT],
       ['idleTimeout', 'Tid uten nye tokens · tekst', 'Stopper bare når svaret står stille, ikke mens det skrives', IDLET], ['idleTimeoutImage', 'Tid uten nye tokens · bilde', 'Bilder (kvitteringer, strekkoder) trenger mer tid', IDLEI]])
     .map(([k, n, s, opts]) => { const cur = opts.find((x) => String(x[0]) === String(P[k])); return `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>${n}</b><span>${s}</span></span><b class="ac-mono">${esc(cur?.[1] ?? P[k] ?? '–')}</b></span><div class="ac-seg">${opts.map(([v, l]) => `<button type="button" class="${String(P[k]) === String(v) ? 'on' : ''}" data-ac-par="${k}" data-v="${esc(JSON.stringify(v))}"${admin || k === 'temperature' ? '' : ' disabled'}>${l}</button>`).join('')}</div></div>`; }).join('');
-  return `${fin ? '' : glCard() + beMini(admin)}<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
+  return `${rwBox}${fin ? '' : glCard() + beMini(admin)}<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
     <div class="ac-sec">${lab('REGLER')}<div class="ac-card ac-list">${rules}</div></div>
     <div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>
     ${fin ? '' : mkaCard(P, admin)}`;
@@ -711,7 +714,7 @@ function finRt(o) {
     const warn = finLocal && cloudSel ? 'Finansdata forlater aldri huset er på, men modellen er i skyen. Bytt til en lokal modell.'
       : finLocal && fv && !fv.loc ? 'Reserven er i skyen og brukes ikke mens «Finansdata forlater aldri huset» er på.'
         : r.model && (G.models || r.options) && !mv ? `Modellen «${r.model}» finnes ikke · bytt` : r.warning;
-    return `<div class="ac-rt${web ? ' web' : ''} ac-rt38"${i ? '' : ' style="border-top:0"'}><span class="ac-col"><b>${esc(r.n)}</b><span>${esc(r.d)}</span>${!r.model ? `<span class="ac-mono ac-mut ac-def">Standard: ${esc(r.def)} · reserve ${esc(r.defF)}</span>` : ''}</span>
+    return `<div class="ac-rt${web ? ' web' : ''} ac-rt38"${i ? '' : ' style="border-top:0"'}><span class="ac-col"><b>${esc(r.n)}${r.small ? ' <span class="ac-small48" title="For liten til å tolke fritekst – bruk minst 7B, f.eks. qwen3:8b">FOR LITEN</span>' : ''}</b><span>${esc(r.d)}</span>${!r.model ? `<span class="ac-mono ac-mut ac-def">Standard: ${esc(r.def)} · reserve ${esc(r.defF)}</span>` : ''}</span>
       <div class="ac-sels"><label class="ac-sel"><span>MODELL</span><select data-ac-rt="${esc(r.id)}" data-f="model"${admin ? '' : ' disabled'}>${opt(r.model, `Standard (${r.def})`)}</select></label>
       <label class="ac-sel"><span>RESERVE</span><select data-ac-rt="${esc(r.id)}" data-f="fallback"${admin ? '' : ' disabled'}>${opt(r.fallback, `Standard (${r.defF})`)}</select></label></div>
       ${warn ? `<span class="ac-warn">${esc(warn)}</span>` : ''}</div>`;

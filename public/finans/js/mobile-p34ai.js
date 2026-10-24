@@ -6,13 +6,14 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import { viewReceipts48, ensureReceipts48 } from '/assets/js/receipts48-set.js'; // prompt 48: Mac-OCR og stegene i kvitteringskjeden
 
 export const AC = {
   tab: null, fin: false, from: 'set', st: null, md: null, lib: null, rt: null, jobs: null, use: null, keys: null, toks: null,
   err: {}, miss: false, q: '', cat: 'alle', per: '30', eye: {}, test: {}, kf: {}, fresh: null, sel: null, pulls: {}, mdel: null, t: {}, busy: {},
 };
 const TABS = [['ov', 'Oversikt'], ['mod', 'Modeller'], ['rt', 'Valg'], ['job', 'Jobber'], ['use', 'Forbruk'], ['api', 'API og nøkler'], ['imp', 'Importer']]; // prompt 43: Importer fra Claude
-const TABS_FIN = [['rt', 'AI-valg'], ['api', 'Tilkoblinger'], ['job', 'Jobber'], ['use', 'Forbruk']];
+const TABS_FIN = [['rt', 'AI-valg'], ['ocr', 'Kvitteringer'], ['api', 'Tilkoblinger'], ['job', 'Jobber'], ['use', 'Forbruk']]; // prompt 48: Kvitteringer (Mac-OCR, steg i kjeden)
 const tabs = () => (AC.fin ? TABS_FIN : TABS);
 const admin = () => AC.rt?.admin ?? (m.me?.role ? m.me.role === 'admin' : false);
 const nb = (n) => Math.round(+n || 0).toLocaleString('nb-NO');
@@ -102,7 +103,7 @@ function head() {
 }
 export function aiView() {
   const t = curTab();
-  const body = { ov, mod, rt, job, use, api, imp: () => globalThis.P43?.claudeImport?.() ?? '<div class="m-spin"></div>' }[t]();
+  const body = { ov, mod, rt, job, use, api, ocr: () => { queueMicrotask(ensureReceipts48); return `<div data-r48-host class="p48-r48">${viewReceipts48()}</div>`; }, imp: () => globalThis.P43?.claudeImport?.() ?? '<div class="m-spin"></div>' }[t]();
   const pers45 = t === 'rt' ? globalThis.P45?.persCard?.() ?? '' : ''; // prompt 45: Glimt-personlighet (Av · Litt · Full rakker)
   const err = Object.entries(AC.err).filter(([k]) => (NEED[t] ?? []).includes(k)).map(([, v]) => v);
   return `<div class="p34a" data-tab="${t}">${head()}<div class="p34a-body">${err.length ? `<div class="p34a-err">${esc([...new Set(err)].join(' · '))}</div>` : ''}${pers45}${body}</div></div>`;
@@ -293,7 +294,7 @@ function finTasks(R) {
   return FIN4.map(([id, name, desc, dm, df, kind], i) => {
     const t = src.find((x) => x.id === id) ?? (src.length === 4 && !src.some((x) => FIN4.some(([k]) => k === x.id)) ? src[i] : null) ?? {};
     return { id: t.id ?? id, name: t.name ?? name, desc: t.desc ?? desc, kind: t.kind ?? kind, model: t.model ?? '', fallback: t.fallback ?? '', resolved: t.resolved ?? null, def: [t.defaultModel ?? dm, t.defaultFallback ?? df],
-      options: Array.isArray(t.options) ? t.options : null, warning: t.warning ?? t.error ?? (t.finCloud ? 'Finansdata skal holdes lokalt, men denne bruker en sky-modell. Bytt til en lokal modell.' : null), personal: !!t.personal };
+      options: Array.isArray(t.options) ? t.options : null, warning: t.warning ?? t.error ?? (t.finCloud ? 'Finansdata skal holdes lokalt, men denne bruker en sky-modell. Bytt til en lokal modell.' : null), personal: !!t.personal, smallModel: !!(t.smallModel ?? (R?.tasks ?? []).find((x) => x.id === (t.id ?? id))?.smallModel) };
   });
 }
 function finRows(R, A) {
@@ -307,11 +308,13 @@ function finRows(R, A) {
     const sel = (field, cur) => `<select data-ai="route" data-id="${esc(t.id)}" data-f="${field}" ${can ? '' : 'disabled'} aria-label="${field === 'model' ? 'Modell' : 'Reserve'} for ${esc(t.name)}"><option value=""${cur ? '' : ' selected'}>${field === 'model' ? esc(t.resolved ?? t.def[0]) : esc(t.def[1])}</option>${cur && !O.some((o) => o.id === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)} · finnes ikke</option>` : ''}${O.map((o) => `<option value="${esc(o.id)}"${o.id === cur ? ' selected' : ''}>${esc(o.label ?? o.id)} · ${tag(o)}</option>`).join('')}</select>`;
     const cloudSel = finLocal && [t.model, t.fallback].some((v) => v && O.find((o) => o.id === v)?.local === false);
     const warn = t.warning || (cloudSel ? '«Finansdata forlater aldri huset» er på: sky-modellen brukes ikke. Velg en lokal modell.' : '');
-    return `<div class="p34a-rt p38-frt" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-rtn"><b>${esc(t.name)}</b><span>${esc(t.desc)}</span></span>
+    return `<div class="p34a-rt p38-frt" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-rtn"><b>${esc(t.name)}${small48(t)}</b><span>${esc(t.desc)}</span></span>
       <label><span>MODELL</span>${sel('model', t.model)}</label><label><span>RESERVE</span>${sel('fallback', t.fallback)}</label>
       ${warn ? `<span class="p34a-warn bad">${esc(warn)}</span>` : ''}</div>`;
   }).join('');
 }
+// Prompt 48: /api/ai/routing merker tolkningsoppgaver på en modell under 7B (smallModel) – advarselen står i t.warning.
+const small48 = (t) => (t.smallModel ? ' <span class="p48-small" title="Modellen er for liten til å tolke fritekst – bruk minst 7B, f.eks. qwen3:8b">FOR LITEN</span>' : '');
 const KEEP = [['5m', '5 min'], ['30m', '30 min'], [-1, 'Alltid'], [0, 'Aldri']];
 const CTX = [[8192, '8k'], [32768, '32k'], [131072, '128k']];
 const TEMP = [[0.2, '0,2'], [0.7, '0,7'], [1, '1,0']];
@@ -325,7 +328,7 @@ function rt() {
     const can = A || t.personal, ms = M.filter((x) => (t.kind === 'embed' ? x.kind === 'embedding' : t.kind === 'vision' ? x.kind === 'bilde' || x.kind === 'tekst' || !x.local : x.kind !== 'embedding'));
     const sel = (field, cur) => `<select data-ai="route" data-id="${esc(t.id)}" data-f="${field}" ${can ? '' : 'disabled'} aria-label="${field === 'model' ? 'Modell' : 'Reserve'} for ${esc(t.name)}">${opt('', cur)}${field === 'model' ? `Auto${t.resolved ? ` · ${esc(t.resolved)}` : ''}` : 'Ingen'}</option>${cur && !ms.some((x) => x.id === cur) ? `${opt(cur, cur)}${esc(cur)} · finnes ikke</option>` : ''}${ms.map((x) => `${opt(x.id, cur)}${esc(x.id)} · ${x.local ? 'lokal' : esc(x.provider)}</option>`).join('')}</select>`;
     const warn = t.error || t.warning || (t.finCloud ? 'Finansdata skal holdes lokalt, men denne bruker en sky-modell. Bytt til en lokal modell.' : '') || t.notice;
-    return `<div class="p34a-rt" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-rtn"><b>${esc(t.name)}</b><span>${esc(t.desc ?? '')}${t.own ? ' · ditt valg' : ''}</span></span>
+    return `<div class="p34a-rt" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-rtn"><b>${esc(t.name)}${small48(t)}</b><span>${esc(t.desc ?? '')}${t.own ? ' · ditt valg' : ''}</span></span>
       <label><span>MODELL</span>${sel('model', t.model ?? '')}</label><label><span>RESERVE</span>${sel('fallback', t.fallback ?? '')}</label>
       ${warn ? `<span class="p34a-warn${t.error ? ' bad' : ''}">${esc(warn)}${/finnes ikke/i.test(warn) ? ' · bytt' : ''}</span>` : ''}</div>`;
   }).join('');

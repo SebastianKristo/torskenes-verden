@@ -17,6 +17,7 @@ import { orb, brandMark, navTile, thinkHtml, askStream } from './fin42.js';
 import { bolScope, bolSearch, afterB42 } from './bol42.js';
 import { filterPage, loadFilter, bindFilter, enterFilter } from './filter42.js';
 import { tasksCard, loadTasks, bindGj42, startTask, homeRulesBox, loadHomeRules } from './gj42.js';
+import { form48, via48, uncTag48, uncCls48, is48, flush48, bind48, setRedraw48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 ICONS.filter = 'M4 6h16M7 12h10M10 18h4';
@@ -432,14 +433,14 @@ function receipts() {
   const booked = all.filter((r) => r.status === 'booked' || r.status === 'rejected').slice(0, 12);
   if (!u.selRc || !all.find((r) => r.id === u.selRc)) u.selRc = queue[0]?.id ?? null;
   const R = all.find((r) => r.id === u.selRc);
-  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}${r.canReanalyze ? `<span class="acc-l" role="button" tabindex="0" style="display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:var(--blue-l)" data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</span>` : ''}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
+  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.extraction?.receipt48?.label ?? r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}${r.canReanalyze ? `<span class="acc-l" role="button" tabindex="0" style="display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:var(--blue-l)" data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</span>` : ''}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
   let panel;
   if (!R) panel = '<div class="empty" style="padding:80px 20px">Velg en kvittering i køen, eller last opp en ny.</div>';
   else if (R.status === 'pending' || R.status === 'processing') panel = `<div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px" class="sub"><span class="spin"></span>${R.aiShort ? esc(R.aiShort) : `Leser kvitteringen med ${aiShort} …`}<button class="btn sm ghost" data-act="rc-manual">Fyll ut manuelt i stedet</button></div>`;
   else panel = confirmPanel(R);
   return `<div class="row-flex">
     <div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px">
-      <label class="drop" data-drop><span class="drop-ic">${icon('scan', 24, 'currentColor')}</span><b style="font-size:15px;font-weight:600">Last opp kvitteringer</b><span class="note" style="font-size:13px">Bilder eller PDF · flere filer · dra hit eller klikk · leses av ${aiShort}</span><input type="file" accept="image/*,application/pdf" multiple data-upload hidden></label>
+      <label class="drop" data-drop><span class="drop-ic">${icon('scan', 24, 'currentColor')}</span><b style="font-size:15px;font-weight:600">Last opp kvitteringer</b><span class="note" style="font-size:13px">Bilder eller PDF · flere filer · dra hit eller klikk · bilder leses av Glimt (Mac-OCR, ellers Tesseract)</span><input type="file" accept="image/*,application/pdf" multiple data-upload hidden></label>
       ${card(`<div class="card-h"><h2 style="font-size:16px">Kø</h2><span class="note" style="font-size:12.5px">${queue.length} til gjennomgang</span></div>${qHtml || '<div class="note">Ingen kvitteringer i køen.</div>'}${(() => { const n = queue.filter((r) => r.canOcr && (r.error || r.merchant == null || r.total == null)).length; return n ? `<button class="btn ghost sm" style="align-self:flex-start;margin-top:4px" data-act="rc-ocr-all" title="Leser bildene lokalt på serveren med Tesseract, uten AI">Les ${n} som Glimt ikke klarte, med lokal OCR</button>` : ''; })()}`, '', 'padding:20px;gap:8px')}
       ${card(`<h2 style="font-size:16px">Bokført</h2><div>${booked.map((r) => `<div class="kv-line" style="font-size:13.5px"><button class="link" style="color:var(--text);text-align:left;display:flex;align-items:center;gap:8px" data-open-rc="${r.id}">${logo({ merchant: r.merchant ?? '', domain: r.domain }, 24, 7)}${esc(r.merchant ?? '–')} ${r.aiShort ? `<span class="acc-l" style="font-size:12px">✦ ${esc(r.aiShort)}</span> ` : ''}<span class="muted">· ${dd(r.date)}</span></button><span class="mono" style="color:${r.status === 'rejected' ? 'var(--muted)' : 'var(--text)'}">${r.status === 'rejected' ? 'Avvist' : n2(r.total) + ' kr'}</span><button type="button" class="btn sm ghost f41-again" style="margin-left:8px" data-reanalyze="${esc(r.id)}" data-status="${esc(r.status)}" title="La Glimt lese kvitteringen på nytt. Ingenting endres før du velger «Bruk endringene».">✦ På nytt</button></div>`).join('') || '<div class="note">Ingen ennå.</div>'}</div>`, '', 'padding:20px;gap:2px')}
     </div>
@@ -469,19 +470,20 @@ function confirmPanel(R) {
   // Skanneloggen: hvert steg fra opplasting til lagring, så en feil kan spores.
   const log = (R.log ?? []).length ? `<details class="note" style="font-size:12.5px"><summary style="cursor:pointer">Skannelogg (${R.log.length} steg)</summary><div class="mono" style="display:flex;flex-direction:column;gap:2px;margin-top:6px">${R.log.map((l) => `<div><span class="muted">${new Date(l.t).toLocaleTimeString('nb-NO')}</span> ${esc(l.step)}${l.detail ? ` – ${esc(l.detail)}` : ''}</div>`).join('')}</div></details>` : '';
   const catBtns = cats('expense').map((c) => `<button data-rc-cat="${c.id}" aria-pressed="${R.categoryId === c.id}" ${done ? 'disabled' : ''}>${esc(c.name)}</button>`).join('');
-  return `<div class="card-h"><div><h2 style="font-size:18px">${done ? (R.status === 'booked' ? 'Bokført kvittering' : 'Avvist kvittering') : 'Bekreft kvittering'}</h2><div class="note" style="font-size:13px">${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/,?0+$/, '')} s` : ''}${R.model ? ` · ${esc(R.model)}` : ''}` : 'Manuell utfylling'}</div></div>
+  return `<div class="card-h"><div><h2 style="font-size:18px">${done ? (R.status === 'booked' ? 'Bokført kvittering' : 'Avvist kvittering') : 'Bekreft kvittering'}</h2><div class="note" style="font-size:13px">${via48(R) ? `${via48(R)} ${R.model ? `Tolket av ${esc(R.model)}` : ''}${R.extraction?.receipt48?.seconds ? ` · ${n2(R.extraction.receipt48.seconds).replace(/,?0+$/, '')} s` : ''}` : R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/,?0+$/, '')} s` : ''}${R.model ? ` · ${esc(R.model)}` : ''}` : 'Manuell utfylling'}</div></div>
       ${R.error ? `<span class="conf" style="background:var(--warn-soft);color:var(--acc-l)"><i></i>Må fylles ut</span>` : `<span class="conf" style="background:${high ? 'var(--pos-soft)' : 'var(--warn-soft)'};color:${high ? 'var(--pos)' : 'var(--acc-l)'}"><i></i>${high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span>`}</div>
     ${R.error ? `<div class="err-msg">${esc(R.error)}</div>` : R.flag ? `<div class="err-msg">${esc(R.flag)}</div>` : ''}
     ${hlTop}
     ${!done && (R.canReanalyze || R.reanalyzeReason) ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--blue-soft);border:1px solid #2A3570"><span style="flex:1 1 220px;font-size:13px;color:#C9D2FF">${R.error ? 'Lesingen mislyktes.' : `Lav sikkerhet${R.provider ? ` fra ${esc(R.provider)}` : ''}.`} Gemini kan lese originalbildet på nytt, og du velger hvilket resultat du vil beholde.</span>${reanalyzeBtn(R, 'btn', 'height:40px')}</div>` : ''}
     <div class="row-flex" style="gap:18px">${img}
       <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:12px">
-        <label class="f">Butikk<input class="inp" data-rc-field="merchant" value="${esc(R.merchant ?? '')}" ${done ? 'disabled' : ''}></label>
-        <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato<input class="inp" type="date" data-rc-field="date" value="${R.date ?? ''}" ${done ? 'disabled' : ''}></label><label class="f" style="flex:1">Total (kr)<input class="inp hl mono" data-rc-field="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}" ${done ? 'disabled' : ''}></label></div>
-        <div class="f">Kategori<div class="catpick">${catBtns}</div></div>
+        <label class="f">Butikk${uncTag48(R, 'merchant')}<input class="inp${uncCls48(R, 'merchant')}" data-rc-field="merchant" value="${esc(R.merchant ?? '')}" ${done ? 'disabled' : ''}></label>
+        <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato${uncTag48(R, 'date')}<input class="inp${uncCls48(R, 'date')}" type="date" data-rc-field="date" value="${R.date ?? ''}" ${done ? 'disabled' : ''}></label><label class="f" style="flex:1">Total (kr)${uncTag48(R, 'total')}<input class="inp hl mono${uncCls48(R, 'total')}" data-rc-field="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}" ${done ? 'disabled' : ''}></label></div>
+        <div class="f">Kategori${uncTag48(R, 'category')}<div class="catpick">${catBtns}</div></div>
         <label class="f">Konto<select class="inp" data-rc-field="accountId" ${done ? 'disabled' : ''}>${accOpts(R.accountId, '–')}</select></label>
         <div class="match ${R.match ? '' : 'none'}">${icon('link', 18, R.match ? 'var(--pos)' : 'var(--muted)')}<div><div style="font-weight:600;color:${R.match ? 'var(--pos)' : 'var(--text)'}">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch ennå'}</div><div class="sub">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</div></div></div>
       </div></div>
+    ${is48(R) ? form48(R, { done, head: false }) : ''}
     ${log}
     ${addedLine(R)}
     <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
@@ -772,7 +774,7 @@ function settingsPage() {
   // AI-kontroll (scope finans: AI-valg · Tilkoblinger · Jobber · Forbruk). Lokal OCR-reserve blir værende under.
   else if (t === 'ai' && !S.aiLegacy) {
     const ai = S.ai;
-    body = `<div data-aictl-finans class="fh-aictl"></div>
+    body = `<div data-aictl-finans class="fh-aictl"></div><div data-r48-mount class="fh-r48"></div>
       <div class="box" style="flex-direction:column;align-items:stretch;gap:8px;padding:16px"><div><b style="font-weight:600">Lokal OCR-reserve</b><div class="note" style="font-size:12.5px">Tesseract leser kvitteringen i containeren når AI feiler. Resultatet havner alltid til gjennomgang. ${ai?.ocr ? (ai.ocr.tesseract ? `Installert: ${esc(ai.ocr.tesseract)}` : 'Tesseract er ikke installert på serveren (bruk Docker-imaget).') : ''}</div></div>
         <button class="tog-row" data-act="ocr-toggle"${canSrv() ? '' : ' disabled'}><span class="grow"><b style="font-weight:500">Bruk lokal OCR når AI feiler</b></span><span class="toggle" role="switch" aria-checked="${!!(ai?.ocr?.enabled ?? st.ocrFallback ?? true)}"></span></button>
         <button class="tog-row" data-tog="ocrLowConf"${canSrv() ? '' : ' disabled'}><span class="grow"><b style="font-weight:500">Bruk også ved lav AI-sikkerhet</b><br><span class="note" style="font-size:12.5px">Sammenligner AI-svaret med lokal OCR når sikkerheten er under ${st.minConf} %</span></span><span class="toggle" role="switch" aria-checked="${!!st.ocrLowConf}"></span></button></div>`;
@@ -929,7 +931,7 @@ let mailPaneEl = null, aiCtlEl = null, aiCtlTab;
 export function draw() {
   const el = root();
   const scroll = window.scrollY;
-  const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;
+  const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field], [data-r48f]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;
   applyTheme();
   el.innerHTML = shell(PAGE_FN[u.page]());
   // E-postimporten (felles med Homelab-innstillingene) monteres i Innstillinger → Import.
@@ -942,13 +944,16 @@ export function draw() {
     import('/assets/js/ai-control.js').then((m) => m.mountAiControl(aiCtlEl, { variant: 'web', scope: 'finans', theme: design() === 'lys' ? 'papir' : 'finans', admin: canSrv(), tab: aiCtlTab, onTab: (x) => { aiCtlTab = x; } }))
       .catch(() => { S.aiLegacy = true; draw(); });
   }
+  // Prompt 48: Innstillinger → AI → Kvitteringer (Mac-OCR og stegene i kjeden).
+  const r48 = el.querySelector('[data-r48-mount]');
+  if (r48) import('/assets/js/receipts48-set.js').then((m) => m.mountReceipts48(r48)).catch(() => { r48.innerHTML = '<div class="note">Kunne ikke laste kvitteringsoppsettet.</div>'; });
   if (u.page === 'dir') afterB42(el);
   window.scrollTo(0, scroll);
   window.fhLoaded?.(); // fjerner lasteskjermen fra index.html (loader.js)
   if (focus?.sel) { const f = el.querySelector(focus.sel); if (f) { f.focus(); try { f.setSelectionRange(focus.pos, focus.pos); } catch {} } }
   if (u.hlFocus && el.querySelector('.rc-hlr.hit,[data-hl-first]')) { u.hlFocus = false; requestAnimationFrame(() => hlFocus(el)); }
 }
-const focusSel = (e) => (e.name ? `[data-form] input[name="${e.name}"]` : e.dataset.txField ? `[data-tx-field="${e.dataset.txField}"]` : e.dataset.rcField ? `[data-rc-field="${e.dataset.rcField}"]` : null);
+const focusSel = (e) => (e.name ? `[data-form] input[name="${e.name}"]` : e.dataset.txField ? `[data-tx-field="${e.dataset.txField}"]` : e.dataset.rcField ? `[data-rc-field="${e.dataset.rcField}"]` : e.dataset.r48f ? `[data-r48f="${e.dataset.r48f}"]${e.dataset.i != null ? `[data-i="${e.dataset.i}"]` : ''}` : null);
 
 const loadTxFolders = async () => { S.txFolders = await api('/folders').catch(() => []); };
 const loadAiPage = async () => { [S.aiHist, S.aiSugg] = await Promise.all([api('/search/history').catch(() => []), api('/search/suggestions').then(suggList).catch(() => [])]); };
@@ -1017,8 +1022,12 @@ const patchRc = busyWrap(async (id, body) => { const r = await api(`/receipts/${
 const saveSet = busyWrap(async (body) => { S.boot.settings = await api('/settings', { method: 'PUT', json: body }); render(); });
 
 async function uploadFiles(files) {
+  // Prompt 48: bilder leses av kjeden på serveren mens vi venter (Mac-OCR → Tesseract → Gemini), så skjemaet åpnes ferdig utfylt.
+  let i = 0;
   for (const f of files) {
-    try { const r = await uploadReceipt(f); u.selRc = r.id; } catch (e) { toast(`${f.name}: ${e.message}`); }
+    i++;
+    if (/^image\//.test(f.type)) toast(files.length > 1 ? `Leser kvittering ${i} av ${files.length} …` : 'Leser kvitteringen …');
+    try { const r = await uploadReceipt(f); if (r.pending48) toast(r.message); else u.selRc = r.id; } catch (e) { toast(`${f.name}: ${e.message}`); }
   }
   location.hash = '#/kv';
   await refreshAll();
@@ -1169,6 +1178,7 @@ export function bind() {
   el.addEventListener('click', (e) => { const b = e.target.closest?.('[data-t42-tog]'); if (b) { u.thinkOpen = !u.thinkOpen; render(); } });
   loadLogoRegistry().then((changed) => { if (changed) render(); });
   bindReanalyze(el, (r) => { u.selRc = r.id; refreshAll().then(() => toast('Kvitteringen er oppdatert')); });
+  bind48(); setRedraw48(() => render()); // prompt 48: varelinjer/rabatter i skjemaet for skannede kvitteringer
   // Prompt 40: varelinjer i «Rediger alt», hurtigtaster (E rediger · R les på nytt · ⌘S lagre · Esc avbryt) og høyreklikk i lista.
   const selTx = () => S.tx?.items.find((y) => y.id === u.sel) ?? null;
   bindEditor(el, { getTx: selTx, save: (body) => patchTx(u.sel, body), rerender: render });
@@ -1263,7 +1273,7 @@ export function bind() {
         await api('/rules', { method: 'POST', json: { pattern: word + '*', categoryId: sel.categoryId } });
         await loadBoot(); u.msg.rule = `Regel lagt til: ${word}* → ${sel.category}`; return render();
       }
-      case 'rc-book': await api(`/receipts/${R.id}/book`, { method: 'POST' }); toast('Bokført ✓'); { const nx = S.receipts.find((y) => y.id !== R.id && y.status === 'needs_review'); u.selRc = nx?.id ?? null; } return refreshAll();
+      case 'rc-book': { const f48 = await flush48(R, { category: R.category }); if (f48.error) toast(`Rettelsen ble ikke lagret: ${f48.error}`); } await api(`/receipts/${R.id}/book`, { method: 'POST' }); toast('Bokført ✓'); { const nx = S.receipts.find((y) => y.id !== R.id && y.status === 'needs_review'); u.selRc = nx?.id ?? null; } return refreshAll();
       case 'rc-unbook': await api(`/receipts/${R.id}/unbook`, { method: 'POST' }); toast('Flyttet til gjennomgang'); return refreshAll();
       case 'rc-reject': await api(`/receipts/${R.id}/reject`, { method: 'POST' }); toast('Kvittering avvist'); u.selRc = null; return refreshAll();
       case 'rc-ocr-all': {

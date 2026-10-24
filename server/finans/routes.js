@@ -46,7 +46,7 @@ import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Ch
 import { mailAddress42 } from './homes42.js'; // prompt 42
 import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipts47.js'; // prompt 47 (SERVER47): OCR-tekst og ferdig tolket kvittering fra enheten
 import { mountReceipts48, preScanned48 } from '../receipts48/routes.js'; // prompt 48 (SERVER48): /receipts/scan (kjeden A→B→C→Tesseract→D), /receipts/health, rettelser
-import { cleanMacOcrUrl, cleanReceipts48 } from '../receipts48/settings.js';
+import { cleanMacOcrUrl, cleanReceipts48, externalBlocked48 } from '../receipts48/settings.js';
 import { correctionOnBook48 } from '../receipts48/corrections.js';
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
@@ -255,6 +255,9 @@ function reanalyzeInfo0(r, st) {
   const needs = r.status === 'failed' || !!r.error || unsure;
   if (!needs) return { canReanalyze: false, ...ocr };
   if (!hasGemini()) return { canReanalyze: false, ...ocr, reanalyzeReason: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.' };
+  // Prompt 48: «Finansdata forlater aldri huset» – ikke tilby Gemini (kallet blokkeres uansett; knappen skal ikke villede).
+  const xb48 = externalBlocked48();
+  if (xb48.blocked) return { canReanalyze: false, ...ocr, reanalyzeReason: `${xb48.text}, så kvitteringen analyseres ikke på nytt med Gemini. Prøv lokal OCR i stedet.` };
   return { canReanalyze: true, ...ocr, ...(r.candidate ? { reanalyzePending: true } : {}) };
 }
 

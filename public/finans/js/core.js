@@ -112,11 +112,36 @@ async function toJpeg(file, max, q) {
 }
 // Originalen sendes urørt; i tillegg en ~1600 px JPEG (85 %) til AI-en og et miniatyrbilde.
 // original:false (mobilvalget «Lagre originalbildet» av) sender bare den nedskalerte JPEG-en.
+// Prompt 48 (WEB48): bilder går til POST /receipts/scan (serveren kjører Mac-OCR → Tesseract → Gemini og kontrollerer svaret);
+// nettleseren leser ingenting selv. PDF og andre filer går til /receipts som før. Svaret er den lagrede kvitteringen
+// (receiptOut) + scan48 (veien, usikre felt, stegene). Eldre server (404/405) → /receipts. Kjeden kan ta tid: brytes
+// forbindelsen etter lang venting (proxy-tidsavbrudd), fullfører serveren likevel, så kvitteringen legges ikke i køen på nytt.
+const SCAN48_IMG = /^image\/(jpeg|png|webp|heic|heif)$/i;
+let scan48Off = false;
+const build48 = () => document.querySelector('meta[name="nordlys-build"]')?.content || 'web';
 export async function uploadReceipt(file, accountId, { original = true } = {}) {
   const fd = new FormData();
   let scan = null, thumb = null;
   if (file.type.startsWith('image/')) {
     try { scan = await toJpeg(file, 1600, 0.85); thumb = await toJpeg(file, 240, 0.75); } catch { /* HEIC o.l. – serveren bruker originalen */ }
+  }
+  if (!scan48Off && (SCAN48_IMG.test(file.type) || (!file.type && /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name ?? '')))) {
+    const f48 = new FormData();
+    if (!original && scan) f48.append('image', scan, (file.name || 'kvittering').replace(/\.\w+$/, '') + '.jpg');
+    else { f48.append('image', file, file.name || 'kvittering.jpg'); if (scan) f48.append('scan', scan, 'scan.jpg'); }
+    if (thumb) f48.append('thumb', thumb, 'thumb.jpg');
+    f48.append('client', JSON.stringify({ platform: 'web', version: build48() }));
+    const t0 = Date.now();
+    try {
+      const r = await api('/receipts/scan', { method: 'POST', body: f48 });
+      let out = { ...(r.stored ?? {}), id: r.receipt_id ?? r.stored?.id, scan48: r };
+      if (accountId && out.id) { try { out = { ...out, ...(await api(`/receipts/${out.id}`, { method: 'PATCH', json: { accountId } })), scan48: r }; } catch { /* kontoen kan velges i skjemaet */ } }
+      return out;
+    } catch (e) {
+      if (e.status === 404 || e.status === 405) scan48Off = true; // eldre server: vanlig opplasting under
+      else if (Date.now() - t0 > 25_000 && (e instanceof TypeError || [502, 503, 504, 520, 522, 524].includes(e.status))) return { id: null, pending48: true, message: 'Kvitteringen leses fortsatt på serveren – den dukker opp i køen om litt' };
+      else throw e;
+    }
   }
   if (!original && scan) fd.append('file', scan, (file.name || 'kvittering').replace(/\.\w+$/, '') + '.jpg');
   else { fd.append('file', file); if (scan) fd.append('scan', scan, 'scan.jpg'); }

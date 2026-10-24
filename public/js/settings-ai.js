@@ -11,6 +11,7 @@ import { LEARN_TYPES, memoryLine, loadMemory, addMemory, deleteMemory, applyMemo
 import { setHsTimeout } from './extras.js';
 import { mountAiControl } from './ai-control.js';
 import { is2c } from './hltheme.js';
+import { mountReceipts48 } from './receipts48-set.js'; // prompt 48: Innstillinger → AI → Kvitteringer (Mac-OCR, steg i kjeden)
 // Prompt 32 (claude-code-sok-fullfor-forst.md): GLIMT I SØKEFELTET → «Send til Chat etter» 5 / 8 / 15 / 30 s (hs_timeout_s i /api/me/layout).
 const HS = [5, 8, 15, 30];
 
@@ -53,8 +54,10 @@ const acMount = (el) => mountAiControl(el, { variant: matchMedia('(max-width: 76
   // Prompt 39: statuslinjen («5 lokale modeller · 5 i skyen · 2 jobber kjører») står i undertittelen til Innstillinger-toppen.
   onStatus: (st) => { const el = document.querySelector('#settings .set-ps'); if (el && st && document.getElementById('set-title')?.textContent === 'AI' && el.textContent !== st) el.textContent = st; } });
 export function aiView({ group, row, note }) {
-  const pre = '<div class="set-aictl" data-mount-host data-hl="ai-mod"></div><h3 class="sg-t set-aimore">Chat, Glimt og personvern</h3>';
-  if (!A.loaded) return { pre, mount: acMount, groups: [group('', [row({ t: 'Laster …' })])] };
+  const pre = '<div class="set-aictl" data-mount-host data-hl="ai-mod"></div><div class="set-r48" data-r48-mount data-hl="ai-r48"></div><h3 class="sg-t set-aimore">Chat, Glimt og personvern</h3>';
+  // Prompt 48: kvitteringsseksjonen tegnes på nytt fra egen tilstand ved hver tegning (AI-kontroll flyttes over som før).
+  const mount = (slot) => { acMount(slot); mountReceipts48(document.querySelector('#settings [data-r48-mount]') ?? slot.parentElement?.querySelector('[data-r48-mount]')); };
+  if (!A.loaded) return { pre, mount, groups: [group('', [row({ t: 'Laster …' })])] };
   const ch = A.chat, pv = A.priv, groups = [];
   if (ch) {
     const opts = (A.models ?? []).filter((m) => m.installed);
@@ -93,7 +96,7 @@ export function aiView({ group, row, note }) {
   groups.push(memoryGroup(group, row));
   if (A.msg) groups.push({ t: '', note: '', rows: [{ q: '', html: `<div class="sg-row"><span class="sg-txt"><span>${esc(A.msg)}</span></span></div>` }] });
   void note;
-  return { pre, mount: acMount, groups };
+  return { pre, mount, groups };
 }
 
 /* Prompt 33: GLIMT HUSKER */

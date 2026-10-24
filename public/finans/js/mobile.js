@@ -578,7 +578,7 @@ export async function upload(files, { confirm = false, stay = false } = {}) {
   m.uploading = files.length; draw();
   let first = null;
   for (const f of files) {
-    try { const r = await sendOne(f); first ??= r; }
+    try { const r = await sendOne(f); if (r?.pending48) flash(r.message); else first ??= r; }
     catch (e) {
       // Uten nett, tapt forbindelse eller serverfeil: legg den i «Venter på opplasting» i stedet for å miste den.
       if (UPQ.transient(e)) { await UPQ.enqueue(f, navigator.onLine ? 'server' : 'offline'); await refreshQueue(); flash(navigator.onLine ? 'Serveren svarte ikke – lagt i «Venter på opplasting»' : 'Uten nett – lastes opp når du er på nett igjen'); }
@@ -586,6 +586,8 @@ export async function upload(files, { confirm = false, stay = false } = {}) {
     }
     m.uploading--; await loadJobs(); draw();
   }
+  // Prompt 48: lest av kjeden på serveren → skjemaet åpnes på raden i Kvitteringer (Papir).
+  if (first?.scan48 && first.id && P23.KV) { P23.KV.open = first.id; await loadReceipts().catch(() => {}); }
   // Ett kamerabilde: gå rett til «Bekreft kvittering» (viser «Leser …» til AI-en er ferdig).
   if (confirm && first?.id) { m.rc = first.id; await loadReceipts().catch(() => {}); if (location.hash !== '#/skann') location.hash = '#/skann'; else draw(); }
   else if (two()) await loadReceipts().catch(() => {});

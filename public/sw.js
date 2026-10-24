@@ -3,7 +3,8 @@
 // - Versjonerte filer (/assets/…?v=<build>, serveren skriver dem inn i HTML og importer): cache først (immutable).
 // - Uversjonerte /assets/: nettverket først med revalidering. API-kall går aldri via cachen.
 // - skipWaiting i install, clients.claim i activate, og alle gamle cacher (andre navn) slettes.
-const CACHE = 'os-v32';
+// Prompt 48: v33 – Innstillinger → AI → Kvitteringer (receipts48-set.js, receipts48.css), advarsler fra /api/ai/routing i AI-kontroll.
+const CACHE = 'os-v33';
 const SHELL = ['/assets/icons/icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {})); self.skipWaiting(); });
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k.startsWith('os-')).map((k) => caches.delete(k)))).then(() => self.clients.claim())));

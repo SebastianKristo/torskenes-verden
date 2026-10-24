@@ -126,7 +126,8 @@ const IDX = [
   // Prompt 35: Innstillinger → GLIMT → Glimt (figur, brief, stemme og venner).
   ['glimt', 'Glimt', 'Glimt', '#/glimt', 'glimt figur figurer vert venner gris ugle sky dråpe natt maskot', 'gl-fig'], ['gl-brief', 'Glimt-brief', 'Glimt', '#/glimt', 'brief briefer morgenbrief dagsbrief kveldsbrief nattbrief varsel guide vis meg rundt', 'gl-brief'],
   ['gl-voice', 'Stemme og opplesning', 'Glimt', '#/glimt', 'stemme stemmer opplesning les opp tts openai elevenlabs azure nora henrik lys tempo språk engelsk', 'gl-voice'],
-  ['fai', 'AI og tolkning', 'Finans', '#/aictl/fin', 'ai gemini groq ollama roboflow kvittering ocr finans'], ['kat', 'Kategorier og budsjett', 'Finans', '#/set/kat', 'kategori budsjett'], ['regel', 'Regler', 'Finans', '#/set/regel', 'regel automatisk'],
+  ['fai', 'AI og tolkning', 'Finans', '#/aictl/fin', 'ai gemini groq ollama roboflow kvittering ocr finans'], ['r48', 'Kvitteringer · Mac-OCR', 'Finans · AI og tolkning', '#/aictl/fin/ocr', 'mac ocr vision tesseract gemini kvittering kjede nøkkel skann'], // prompt 48
+  ['kat', 'Kategorier og budsjett', 'Finans', '#/set/kat', 'kategori budsjett'], ['regel', 'Regler', 'Finans', '#/set/regel', 'regel automatisk'],
   ['bank', 'Bankimport', 'Finans', '#/set/bank', 'bank dnb csv import'], ['t212', 'Aksjer · Trading 212', 'Finans', '#/set/t212', 'aksje trading212 t212 fond'], ['fanelinje', 'Fanelinje og Mer i Finans', 'Finans', '#/set/fanelinje', 'fane faner navigasjon'], ['sub', 'Subscription OS', 'Finans', '#/sub', 'abonnement'],
   // Prompt 39: alt med utseende og farger ligger i Homelab → Tilpass (#/set/tilpass).
   ['tilpass', 'Tilpass', 'Homelab', '#/set/tilpass', 'tilpass utseende tema farge farger ikon navn fanelinje bakgrunn customize mørk lys papir', 'theme'],
