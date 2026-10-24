@@ -96,7 +96,7 @@ final class Search32b {
         case "budsjett": store.paperGo("fmer"); store.paperOpenFin(.budget)
         case "domener": store.paperOpenDomains(from: "hjem")
         case "chat": store.openChat()
-        case "hjemlys41": store.paperGo("familie"); FamilyModel.shared.tab = "hjemlys"
+        case "hjemlys41": store.paperGo("familie"); FamilyModel.shared.tab = "hjemlys"; Fam50Nav.shared.openVelFremme()
         default: store.paperGo(route)
         }
     }

@@ -340,6 +340,8 @@ final class MinReise41Geo: NSObject, CLLocationManagerDelegate {
     private var enteredAt: Date? = nil
     private var watching: Bool = false
     private weak var store: Store? = nil
+    /// Prompt 50: id-ene (område-id fra Steder) som har egen region her.
+    private(set) var monitoredIds: [String] = []
 
     override init() {
         super.init()
@@ -353,7 +355,10 @@ final class MinReise41Geo: NSObject, CLLocationManagerDelegate {
         guard CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
         for r in manager.monitoredRegions where r.identifier.hasPrefix(MinReise41Geo.prefix) { manager.stopMonitoring(for: r) }
         let st: CLAuthorizationStatus = manager.authorizationStatus
+        monitoredIds = []
         guard st == .authorizedAlways else { return }
+        // Prompt 50: skoleområdene kommer nå fra Familie › Steder; de telles med i taket på 20 regioner (Fam50Fence).
+        monitoredIds = zones.map { $0.id }
         for z in zones {
             let reg: CLCircularRegion = CLCircularRegion(center: CLLocationCoordinate2D(latitude: z.lat, longitude: z.lon),
                                                          radius: Swift.min(Swift.max(z.radius, 50), 300), identifier: MinReise41Geo.prefix + z.id)

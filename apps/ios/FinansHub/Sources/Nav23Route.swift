@@ -25,6 +25,8 @@ extension Store {
         k.append(detail != nil ? "d" : "-")
         k.append(editing != nil ? "e" : "-")
         k.append(original != nil ? "o" : "-")
+        // Prompt 50: undersidene i Familie (Kart, Personside, Sted …), så sveipet viser riktig side bak.
+        if paperTab == "familie" { k.append(Fam50Nav.shared.key) }
         return k.joined(separator: "|")
     }
 

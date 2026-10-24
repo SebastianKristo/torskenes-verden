@@ -511,6 +511,7 @@ final class Hjemlys41 {
             } else {
                 store.paperGo("familie")
                 FamilyModel.shared.tab = "hjemlys"
+                Fam50Nav.shared.openVelFremme()
             }
         }
         return true

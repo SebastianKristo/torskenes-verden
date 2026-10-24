@@ -19,6 +19,8 @@ extension Store {
     /// Avganger, Kalender og Chat, og alle andre sider der toppbildet viser «‹ …». Aldri på Hjem (roten).
     var nav50CanSwipe: Bool {
         if paperCanSwipeBack { return true }
+        // Prompt 50 (Familie): en åpen underside (Kart, Personside, Sted, Helse for personen …) lukkes med sveipet.
+        if fam50Full && Fam50Nav.shared.canBack { return true }
         if ruter24Full || full27 { return true }
         if paperTab == "hjem" || paperTab.isEmpty { return false }
         if prof24IsRoot { return false }
@@ -31,6 +33,7 @@ extension Store {
 
     /// Det kantsveipet gjør: lukker det som er åpent på siden (paperBack), ellers samme som pila øverst (paperUp).
     func nav50SwipeBack() {
+        if fam50Full && Fam50Nav.shared.canBack { Fam50Nav.shared.back(); return }
         if paperCanSwipeBack { paperBack() } else { paperUp() }
     }
 }

@@ -580,6 +580,8 @@ final class Realtime: NSObject {
                 LocalNotify.post("Familie", "\(JS.str(o, "fromName") ?? "Noen") vil finne telefonen din", id: "ping-\(Date().timeIntervalSince1970)", group: nil)
                 return
             }
+            // Prompt 50: steder endret (geofence-regioner, Steder, Ruter-skolen) og innsjekker (Family50Notify.swift).
+            if Fam50Notify.realtime(o, store) { return }
             Task { await FamilyModel.shared.load(store); await FamilyModel.shared.pollEvents(store.api) }
         case "tracking": Task { try? await store.loadTracking() }
         // Prompt 29: rask time ferdig eller feilet (Quick29Model.swift).

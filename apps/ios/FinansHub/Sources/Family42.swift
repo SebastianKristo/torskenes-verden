@@ -16,7 +16,7 @@ struct VelFremmeStatus42: View {
         if let t = text {
             Button {
                 Haptics.shared.select()
-                withAnimation(.easeOut(duration: 0.2)) { FamilyModel.shared.tab = "hjemlys" }
+                withAnimation(.easeOut(duration: 0.2)) { FamilyModel.shared.tab = "hjemlys"; Fam50Nav.shared.openVelFremme() }
             } label: {
                 HStack(spacing: 8) {
                     Hjemlys40Dot(size: 10, state: state)

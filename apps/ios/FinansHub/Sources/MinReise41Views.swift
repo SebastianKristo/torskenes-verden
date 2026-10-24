@@ -314,6 +314,25 @@ struct MinReise41Zones: View {
     @MainActor private var m: MinReise41 { MinReise41.shared }
 
     var body: some View {
+        // Prompt 50: skolen hentes fra Familie › Steder (bare visning, «Endre i Steder ›»). Eldre server: sonene som før.
+        if Fam50School.shared.supported {
+            VStack(alignment: .leading, spacing: 8) {
+                Fam50SchoolSection()
+                alwaysNote
+            }
+        } else {
+            legacy
+        }
+    }
+
+    @ViewBuilder private var alwaysNote: some View {
+        if CLLocationManager().authorizationStatus != .authorizedAlways {
+            Text("Slå på posisjon «Alltid» for appen, så merker den når du forlater skolen.").font(PF.ui(12)).foregroundStyle(p.mut)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var legacy: some View {
         VStack(alignment: .leading, spacing: 8) {
             PLabel(text: "Skolesoner · alle teller som skole")
             Flow(spacing: 6) {

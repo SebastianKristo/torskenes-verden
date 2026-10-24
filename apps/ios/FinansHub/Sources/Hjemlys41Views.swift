@@ -546,6 +546,7 @@ struct Hjemlys41PosRow: View {
             Haptics.shared.tap()
             store.paperGo("familie")
             FamilyModel.shared.tab = "hjemlys"
+            Fam50Nav.shared.openVelFremme()
         }
     }
 

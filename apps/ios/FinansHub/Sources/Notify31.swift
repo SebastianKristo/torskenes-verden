@@ -39,7 +39,8 @@ enum Notify31 {
         let ai = UNNotificationCategory(identifier: aiCategory, actions: [], intentIdentifiers: [], options: [])
         // Prompt 40 (1b): Glimt foreslår Hjemlys – «Ja, start» / «Ikke nå» (Hjemlys40Glimt.swift).
         // Prompt 41: «Drar du nå?» (Ja / + 15 min) for Hjemlys «Drar snart» (Hjemlys41.swift).
-        UNUserNotificationCenter.current().setNotificationCategories([trial, ai, Hjemlys40Glimt.makeCategory(), Hjemlys41.makeCategory()])
+        // Prompt 50: Sjekk inn – 👍 / Ring / Hent, «👍 Alt bra» / Sjekk inn og Hent / Ring på «Hent meg» (Family50Notify.swift).
+        UNUserNotificationCenter.current().setNotificationCategories(Set<UNNotificationCategory>([trial, ai, Hjemlys40Glimt.makeCategory(), Hjemlys41.makeCategory()] + Fam50Notify.categories()))
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: nil) { (task: BGTask) in
             Notify31.schedule()
             let work = Task { @MainActor in
@@ -106,6 +107,10 @@ enum Notify31 {
         for it in items {
             if post {
                 Notify31.post(it)
+            } else if Fam50Notify.wants(it["data"] as? [String: Any]) {
+                // Prompt 50: innsjekker og «Hent meg» vises også når appen er åpen (samme varsel som sanntid, bare én gang).
+                let qid: String = JS.str(it, "id") ?? ""
+                if !qid.isEmpty && !delivered(qid) { markDelivered(qid); Fam50Notify.postPending(it) }
             } else {
                 let id: String = JS.str(it, "jobId") ?? JS.str(it, "id") ?? ""
                 let cat: String = (JS.str(it, "category") ?? JS.str(it, "kind") ?? "").lowercased()
@@ -128,6 +133,8 @@ enum Notify31 {
         let id: String = JS.str(it, "jobId") ?? JS.str(it, "id") ?? UUID().uuidString
         if delivered(id) { return }
         markDelivered(id)
+        // Prompt 50: Sjekk inn med handlinger (👍 / Ring / Hent) og «Hent meg» som tidskritisk varsel (Family50Notify.swift).
+        if Fam50Notify.wants(it["data"] as? [String: Any]) { Fam50Notify.postPending(it); return }
         let cat: String = (JS.str(it, "category") ?? JS.str(it, "kind") ?? "").lowercased()
         if !NotifyModel.allowed(nil) { return }
         if cat.hasPrefix("ai") && !NotifyModel.shared.aiBg { return }
@@ -163,6 +170,7 @@ enum Notify31 {
 
     /// Fra NotifyDelegate (Haptics.swift).
     nonisolated static func handle(_ response: UNNotificationResponse) {
+        if Fam50Notify.handle(response) { return }
         if Hjemlys40Glimt.handle(response) { return }
         if Hjemlys41.handle(response) { return }
         let info: [AnyHashable: Any] = response.notification.request.content.userInfo

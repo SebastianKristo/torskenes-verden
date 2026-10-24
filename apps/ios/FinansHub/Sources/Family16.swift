@@ -205,6 +205,7 @@ final class FamilyModel {
         loaded = false; error = nil; zoneDraft = nil; zoneEdit = nil; addingZone = false
         trails = [:]; placing22 = false; draft22 = nil; editZone22 = nil
         Fam22Photos.shared.reset()
+        Fam50Model.shared.resetForAccount()
         meId = ""
         sharing = UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_sharing")) ?? "off"
         precision = UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_precision")) ?? "exact"
@@ -248,7 +249,8 @@ final class FamilyModel {
         }
         zones = JS.list(o, "zones").map { FamZone($0) }
         // Geofencing i iOS: inn og ut av sonene sendes til serveren med en gang, også når appen er lukket.
-        FamilyLocation.shared.syncZones(zones)
+        // Prompt 50: én region per område fra /api/family/places/regions (Family50Notify.swift); eldre server: sonene.
+        Fam50Fence.shared.kick(zones)
         events = JS.list(o, "events").map { FamEvent($0) }
         // Prompt 22: ingen person er valgt fra start (som i designet); en valgt person som ikke lenger finnes, nullstilles.
         if let s = selected, !members.contains(where: { $0.id == s }) { selected = nil }
@@ -480,9 +482,29 @@ final class FamilyLocation: NSObject, CLLocationManagerDelegate {
 
     /* ---------- Geofencing (soner) ---------- */
 
+    /// Prompt 50: delingen er på (regionene registreres bare da), API-et og siste sendte posisjon (nærmeste steder).
+    var running50: Bool { running }
+    var api50: API? { server.isEmpty ? nil : API(base: server, token: token) }
+    var last50: CLLocation? { lastSent ?? manager.location }
+
+    /// Prompt 50: én CLCircularRegion per område (fam50-<stedId>:<områdeId>). Erstatter de gamle sone-regionene (fam-).
+    func applyRegions50(_ list: [Fam50Region]) {
+        for r in manager.monitoredRegions where r.identifier.hasPrefix("fam-") || r.identifier.hasPrefix("fam50-") { manager.stopMonitoring(for: r) }
+        guard running, CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
+        let maxR: Double = manager.maximumRegionMonitoringDistance
+        for x in list.prefix(20) {
+            let radius: Double = Swift.min(Swift.max(x.radius, 25), maxR)
+            let r: CLCircularRegion = CLCircularRegion(center: CLLocationCoordinate2D(latitude: x.lat, longitude: x.lon), radius: radius, identifier: "fam50-" + x.id)
+            r.notifyOnEntry = true
+            r.notifyOnExit = true
+            manager.startMonitoring(for: r)
+        }
+    }
+
     /// Overvåker sonene med CLCircularRegion (maks 18; iOS tillater 20 per app). Bare når delingen er på.
+    /// Prompt 50: brukes bare mot eldre server uten /api/family/places/regions.
     func syncZones(_ zones: [FamZone]) {
-        for r in manager.monitoredRegions where r.identifier.hasPrefix("fam-") { manager.stopMonitoring(for: r) }
+        for r in manager.monitoredRegions where r.identifier.hasPrefix("fam-") || r.identifier.hasPrefix("fam50-") { manager.stopMonitoring(for: r) }
         guard running, CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
         let maxR = manager.maximumRegionMonitoringDistance
         for z in zones.prefix(18) {
@@ -499,7 +521,9 @@ final class FamilyLocation: NSObject, CLLocationManagerDelegate {
 
     /// Inn eller ut av en sone: hent en fersk posisjon og send den uten å vente på de vanlige 60 sekundene.
     private func regionChanged(_ r: CLRegion) {
-        guard r.identifier.hasPrefix("fam-") else { return }
+        // Prompt 50: også områdene (fam50-) og skoleområdene i Min reise (school41-).
+        guard r.identifier.hasPrefix("fam-") || r.identifier.hasPrefix("fam50-") || r.identifier.hasPrefix("school41-") else { return }
+        if r.identifier.hasPrefix("school41-") && !running { return }
         lastSentAt = .distantPast
         lastSent = nil
         manager.requestLocation()
@@ -675,6 +699,8 @@ struct FamilyView: View {
 
     /// Henter på nytt hvert 30. sekund mens siden er åpen. Første gang zoomes kartet så alle vises.
     private func refreshLoop() async {
+        // Prompt 50: når serveren får /api/family/people50, byttes det til det nye designet (Family50Views.swift).
+        await Fam50Model.shared.loadPeople(store)
         await m.load(store)
         for mem in m.members { await Fam22Photos.shared.ensure(mem, store) }
         if !ctl.fitted { ctl.fitted = true; ctl.fit(pinned.compactMap { $0.last?.coord }) }

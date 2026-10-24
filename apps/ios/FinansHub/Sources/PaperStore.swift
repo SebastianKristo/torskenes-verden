@@ -142,7 +142,10 @@ extension Store {
         // Prompt 23: Kvitteringer i Papir (Receipts23.swift) laster selv.
         case "kvitt": break
         case "boliger": Task { await self.loadBoligerList() }
-        case "familie": Task { await FamilyModel.shared.load(self) }
+        case "familie":
+            // Prompt 50: Familie åpnes på roten (Folk) når du kommer fra en annen side (Family50Model.swift).
+            if paperTab != "familie" { Fam50Nav.shared.reset() }
+            Task { await FamilyModel.shared.load(self) }
         case "avg": Task { await RuterModel.shared.load(self) }
         case "huske": Task { await TasksModel.shared.load(self) }
         case "mat": open(.mat)

@@ -390,6 +390,9 @@ struct PaperShell: View {
             classic(back: m == .tracking ? "Sporing" : nil) { ModuleView(module: m, scan: scan, photos: $photos, files: $files) }
         } else if store.ruter24Full {
             RuterView24()
+        } else if store.fam50Full {
+            // Prompt 50: Familie i nytt design – fullskjerm med egen fanelinje (Family50Views.swift).
+            Family50Page().environment(\.colorScheme, p.dark ? .dark : .light)
         } else if store.full27 {
             // Prompt 27: Kalender v2 og Chat i fullskjerm (Calendar27Page.swift, Chat27Page.swift).
             if store.paperTab == "chat" { Chat27Page() } else { Cal27Page() }
@@ -602,6 +605,8 @@ struct PaperTabBar: View {
         if id.hasPrefix("fam:") {
             Haptics.shared.select()
             FamilyModel.shared.tab = String(id.dropFirst(4))
+            // Prompt 50: fanen åpnes på roten (undersidene lukkes), også ved nytt trykk på aktiv fane.
+            Fam50Nav.shared.reset()
             return
         }
         if id == "mer" && store.paperTab == "familie" { store.paperMainTab("mer"); return }
