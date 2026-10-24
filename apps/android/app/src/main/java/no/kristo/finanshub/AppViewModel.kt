@@ -261,6 +261,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val cb = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 if (pendingUploads.isNotEmpty() && loggedIn) viewModelScope.launch { delay(1500); if (canUpload()) flushPending(quiet = true) }
+                // Prompt 47: nytt nett (Wi-Fi ↔ 5G) → velg lokal eller ekstern på nytt.
+                if (loggedIn) reroute47()
             }
         }
         runCatching { cm.registerDefaultNetworkCallback(cb); netCallback = cb }
@@ -345,7 +347,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val srv = Api.normalizeServer(url)
             if (srv.isBlank()) { message = "Skriv inn serveradressen"; return@launch }
             val r = try {
-                Api.login(srv, username, password, code, "${Build.MANUFACTURER} ${Build.MODEL}".trim())
+                val dev = "${Build.MANUFACTURER} ${Build.MODEL}".trim()
+                // Prompt 47: ekstern (https) først; svarer den ikke, prøves den lokale standardadressen hvis den er vår server.
+                try { Api.login(srv, username, password, code, dev) } catch (e0: ApiException) {
+                    val via = if (e0.status == 0) loginVia47(srv) else null
+                    if (via == null) throw e0
+                    Api.login(via, username, password, code, dev)
+                }
             } catch (e: ApiException) {
                 if (e.needsTotp) {
                     if (pending != null && !code.isNullOrBlank()) message = e.message ?: "Feil kode"
@@ -470,7 +478,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Velger lokal adresse når den svarer (og «Bruk lokal adresse hjemme» er på), ellers ekstern. */
     private suspend fun resolveBase() {
         val a = account ?: return
-        if (prefs.bool(AppPrefs.USE_LOCAL, true) && a.local.isNotBlank() && reachable(a.local, a.token)) { base = a.local; route = "Lokal"; return }
+        // Prompt 47: lokal bare når den svarer innen 1,5 s og er samme server (sjekkes uten token, se P47.kt).
+        if (prefs.bool(AppPrefs.USE_LOCAL, true) && a.local.isNotBlank() && localIsOurs47(a.local, a.external, a.server)) { base = a.local; route = "Lokal"; return }
         base = a.external.ifBlank { a.server }
         route = if (Api.isLocalHost(base.substringAfter("://").substringBefore('/').substringBefore(':'))) "Lokal" else "Ekstern"
     }
@@ -1154,6 +1163,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             return
         }
+        // Prompt 47: «Les teksten på telefonen» (ML Kit) – arket viser teksten før den sendes (ReceiptOcr47.kt).
+        if (editing == null && !ocrBypass47 && ocrIntercept47(uris)) return
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         if (editing != null) message = "Kvitteringen er lagt i opplastingskøen"
         else if (screen != Screen.Scan && !stay) this.open(Screen.Scan)
@@ -3652,6 +3663,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         pending = null
         switchTo(acc.id)
         message = "Logget inn som ${r.name}"
+    }
+
+    /* ---------- Prompt 47 (ANDROID47): standard serveradresser, Innstillinger → Server, ML Kit-kvitteringer (P47.kt, ReceiptOcr47.kt, ui/Ui47.kt) ---------- */
+    val p47 = P47State()
+    internal suspend fun <T> api47(f: suspend Api.() -> T): T = api.f()
+    internal fun launch47(block: suspend () -> Unit) = launch(block)
+    internal val appCtx47: Context get() = appCtx
+    /** Som launch, men avbrudd (nytt bilde, lukket ark) gir ingen feilmelding. */
+    internal fun launchJob47(block: suspend () -> Unit): kotlinx.coroutines.Job = viewModelScope.launch {
+        try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { message = e.message ?: "Noe gikk galt" }
+    }
+    private var ocrBypass47 = false
+    /** Vanlig bildeopplasting uten ML Kit-arket (eldre server eller «Last opp bildet i stedet»). */
+    internal fun uploadImage47(u: Uri) { ocrBypass47 = true; try { uploadUris(listOf(u)) } finally { ocrBypass47 = false } }
+    internal suspend fun reloadReceipts47() { runCatching { loadReceipts(); loadJobs() } }
+    private var reroute47Job: kotlinx.coroutines.Job? = null
+    /** Nettverksendring: vent litt (nettet settes opp), velg adresse på nytt og last siden på nytt bare når veien er byttet. */
+    internal fun reroute47() {
+        reroute47Job?.cancel()
+        reroute47Job = viewModelScope.launch {
+            delay(1500)
+            val before = base
+            runCatching { resolveBase() }
+            if (base != before && loggedIn) refresh()
+        }
     }
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.

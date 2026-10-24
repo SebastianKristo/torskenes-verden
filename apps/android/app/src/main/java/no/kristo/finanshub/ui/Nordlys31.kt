@@ -250,7 +250,7 @@ private fun NordHero31(vm: AppViewModel, nv: String, avail: Boolean, run: Boolea
             val name = s.osName.removeSuffix(" OS").ifBlank { "Nordlys" }
             Text(buildAnnotatedString { append(name); withStyle(SpanStyle(fontWeight = FontWeight.Medium, color = Color.White.copy(alpha = .75f))) { append("OS") } },
                 color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.ExtraBold, fontSize = 36.sp, lineHeight = 38.sp, letterSpacing = (-.7).sp)
-            Text("Homelab · " + vm.base.substringAfter("://").substringBefore('/').ifBlank { "home.kristo.no" }, color = Color.White.copy(alpha = .75f),
+            Text("Homelab · " + vm.base.substringAfter("://").substringBefore('/').ifBlank { DEFAULT_EXTERNAL47.substringAfter("://") }, color = Color.White.copy(alpha = .75f),
                 fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1)
             if (run) {
                 val f by animateFloatAsState(u.pct.coerceIn(0, 100) / 100f, tween(400), label = "nord31")

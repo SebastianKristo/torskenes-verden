@@ -86,4 +86,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Prompt 46: QR-skanning uten kameratillatelse (Googles skanner-UI)
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    // Prompt 47: kvitteringer leses på telefonen (Google ML Kit, modellen via Play-tjenester). Task ventes på med
+    // suspendCancellableCoroutine, så kotlinx-coroutines-play-services trengs ikke. Krever fragment ≥ 1.3 (fragment-ktx over).
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
 }

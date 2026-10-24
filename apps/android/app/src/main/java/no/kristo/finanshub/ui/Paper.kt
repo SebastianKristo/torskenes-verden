@@ -451,6 +451,7 @@ private fun PaperApp45(
             Global40(vm)
             // Prompt 41: Kalender-innlogging, Konto → Server, Si fra, Min reise-toast, Oslo-bakgrunn hver time (ui/Ui41.kt).
             Global41(vm)
+            Global47(vm) // prompt 47: standardadresser fra /api/config, ML Kit-kvitteringsarket
             // Prompt 44: «Logget inn som X · Gå ut», Logger og Studie-dokumenter (ui/Ui44.kt).
             Global44(vm)
         }

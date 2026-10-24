@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Homelab nås ofte på http://192.168.x.x eller http://server.local på lokalt nett.
-  Android 9+ blokkerer klartekst uten denne filen. Brukerinstallerte CA-er tillates
+  Prompt 47 (claude-code-standard-serveradresser.md): klartekst-HTTP bare til den lokale serveren http://10.69.1.39:3000.
+  Alt annet må gå over https (ekstern adresse https://os.smarthjemexperten.no). Brukerinstallerte CA-er tillates fortsatt,
   slik at et selvsignert sertifikat for homelab kan installeres på telefonen.
 -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="true">
+    <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" />
         </trust-anchors>
     </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.69.1.39</domain>
+    </domain-config>
 </network-security-config>

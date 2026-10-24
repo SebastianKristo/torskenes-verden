@@ -159,7 +159,7 @@ internal fun Server41(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Server", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
-            PRow("Lokal adresse", "Brukes når du er hjemme på Wi-Fi", srv.local.ifBlank { "Ikke satt" }.removePrefix("http://").removePrefix("https://") + " ›", serif = false) { s.srvTest = null; s.srvSheet = "local" }
+            PRow("Lokal adresse", "Brukes når du er hjemme på Wi-Fi", srv.local.ifBlank { DEFAULT_LOCAL47 }.removePrefix("http://").removePrefix("https://") + " ›", serif = false) { s.srvTest = null; s.srvSheet = "local" }
             PRow("Ekstern adresse", "Når du er borte", srv.external.ifBlank { DEFAULT_SERVER41 }.removePrefix("https://").removePrefix("http://") + " ›", serif = false, top = true) { s.srvTest = null; s.srvSheet = "external" }
             PToggle("Bytt automatisk", "Lokal når den svarer raskt, ellers ekstern · nå: ${vm.route}", srv.auto, top = true) { vm.saveServer41(srv.local, srv.external, it) }
         }
@@ -176,8 +176,8 @@ private fun ServerSheet41(vm: AppViewModel, which: String) {
     var v by remember(which) { mutableStateOf(if (which == "local") srv.local else srv.external.ifBlank { DEFAULT_SERVER41 }) }
     Sheet41({ s.srvSheet = null; s.srvTest = null }) {
         PSerif(if (which == "local") "Lokal adresse" else "Ekstern adresse", 24.sp)
-        Text(if (which == "local") "F.eks. http://192.168.1.40:8080. Brukes når du er hjemme på Wi-Fi." else "F.eks. https://home.kristo.no.", color = p.mut, fontSize = 13.sp)
-        PField("Adresse", v, { v = it.trim() }, placeholder = if (which == "local") "http://192.168.1.40:8080" else DEFAULT_SERVER41,
+        Text(if (which == "local") "Standard: $DEFAULT_LOCAL47. Brukes når du er hjemme på Wi-Fi." else "Standard: $DEFAULT_EXTERNAL47.", color = p.mut, fontSize = 13.sp)
+        PField("Adresse", v, { v = it.trim() }, placeholder = if (which == "local") DEFAULT_LOCAL47 else DEFAULT_SERVER41,
             keyboard = KeyboardOptions(keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
         s.srvTest?.let { Text(it, color = if (s.srvTestOk) p.pos else p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

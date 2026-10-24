@@ -105,7 +105,7 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
     // Prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER (claude-code-rediger-andres-oppsett.md, claude-code-overfor-servereier.md).
     Accounts44(vm)
     // Prompt 38: ENHETER (Logg inn på ny enhet) og ØKT (Lås skjermen, Logg ut, Logg ut av alle enheter) nederst på Konto.
-    Server41(vm); Session38(vm) // Prompt 41: Konto → SERVER (lokal, ekstern, bytt automatisk)
+    ServerLink47(vm); Session38(vm) // Prompt 41/47: Konto → SERVER åpner Innstillinger → Server (lokal, ekstern, status, Tilbakestill)
 }
 
 @Composable
@@ -215,6 +215,8 @@ internal fun ScanPage(vm: AppViewModel) = Pages {
         Toggle("Beskjær automatisk", "Finner kantene på kvitteringen før AI-en leser den", vm.flag(AppPrefs.AUTO_CROP, true)) { vm.setPref(AppPrefs.AUTO_CROP, it) }
         Toggle("Lagre originalbildet", "Lagres sammen med kvitteringen på serveren", vm.flag(AppPrefs.KEEP_ORIGINAL, true)) { vm.setPref(AppPrefs.KEEP_ORIGINAL, it) }
         Toggle("Last opp bare på Wi-Fi", "Ellers settes filer i kø til du er på Wi-Fi", vm.flag(AppPrefs.WIFI_ONLY)) { vm.setPref(AppPrefs.WIFI_ONLY, it) }
+        // Prompt 47: ML Kit leser teksten lokalt; bare teksten sendes til serveren (ReceiptOcr47.kt).
+        Toggle("Les teksten på telefonen", "Google ML Kit leser kvitteringen lokalt, og bare teksten sendes til Glimt. Bildet lagres ikke.", vm.flag(PREF_OCR_LOCAL47, false)) { vm.setPref(PREF_OCR_LOCAL47, it) }
     }
     val st = vm.boot?.settings
     Section("AI-motor (på serveren)") {

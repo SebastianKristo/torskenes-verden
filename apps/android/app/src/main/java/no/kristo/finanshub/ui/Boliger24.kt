@@ -227,7 +227,7 @@ internal fun PaperBoliger24(vm: AppViewModel, navBottom: Dp, takePhoto: () -> Un
             // Fanevelger
             item {
                 Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(CircleShape).background(p.card).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf("ov" to "Oversikt", "ex" to (if (rv.isNotEmpty()) "Utgifter · ${d?.entries?.size ?: 0}" else "Utgifter"), "acc" to "Tilgang").forEach { (k, n) ->
+                    listOf("ov" to "Oversikt", "ex" to (if (rv.isNotEmpty()) "Utgifter · ${d?.entries?.size ?: 0}" else "Utgifter")).forEach { (k, n) ->
                         val on = s.tab == k
                         Box(
                             Modifier.weight(1f).height(38.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).clickable(role = Role.Tab) { Haptics.select(); s.tab = k },
@@ -239,7 +239,11 @@ internal fun PaperBoliger24(vm: AppViewModel, navBottom: Dp, takePhoto: () -> Un
             if (d == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
             else when (s.tab) {
                 "ex" -> item { Box(Modifier.padding(horizontal = 16.dp)) { Expenses24(vm, d) } }
-                "acc" -> item { Box(Modifier.padding(horizontal = 16.dp)) { Access24(vm, d, list.size) } }
+                // Prompt 47 (claude-code-boliger-mobil-uten-epost-tilgang.md): Tilgang er ikke en fane lenger, men åpnes fra Rediger bolig → «Delt med N».
+                "acc" -> {
+                    item { Box(Modifier.padding(horizontal = 16.dp)) { BackToOverview47(vm) } }
+                    item { Box(Modifier.padding(horizontal = 16.dp)) { Access24(vm, d, list.size) } }
+                }
                 else -> {
                     item { Box(Modifier.padding(horizontal = 16.dp)) { HomeCard24(d, homeColor24(cur, curIdx), spentOf(cur.id), spentOf(cur.id, ym.minusMonths(1)), ym) } }
                     item { Box(Modifier.padding(horizontal = 16.dp)) { Actions24(vm, cur.id, takePhoto, pickFiles) } }
@@ -247,7 +251,6 @@ internal fun PaperBoliger24(vm: AppViewModel, navBottom: Dp, takePhoto: () -> Un
                     item { Box(Modifier.padding(horizontal = 16.dp)) { Categories24(vm, d, ym) } }
                     item { Box(Modifier.padding(horizontal = 16.dp)) { History24(d, homeColor24(cur, curIdx), ym) } }
                     item { Box(Modifier.padding(horizontal = 16.dp)) { Recent24(vm, d) } }
-                    item { Box(Modifier.padding(horizontal = 16.dp)) { Shared24(vm, d) } }
                 }
             }
         }
@@ -314,7 +317,6 @@ private fun Actions24(vm: AppViewModel, id: Int, takePhoto: () -> Unit, pickFile
         listOf<Triple<String, String, () -> Unit>>(
             Triple("Skann", "<path d=\"M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 12h8\"/>") { vm.scanTarget = "receipt"; takePhoto() },
             Triple("Last opp", "<path d=\"M12 16V4M7 9l5-5 5 5M4 20h16\"/>") { vm.scanTarget = "receipt"; pickFiles() },
-            Triple("Fra e-post", "<path d=\"M4 6h16v12H4zM4 7l8 6 8-6\"/>") { vm.b24MailNow(id); Unit },
             Triple("Ny utgift", "") { vm.b24.newEntry = true },
         ).forEachIndexed { i, (n, d, go) ->
             Column(
@@ -486,8 +488,10 @@ private fun Recent24(vm: AppViewModel, d: HomeDetail24) {
 @Composable
 private fun Shared24(vm: AppViewModel, d: HomeDetail24) {
     val p = PaperPal.current
+    // Prompt 47: raden står i Rediger bolig (ikke på Oversikt); trykk lukker arket og åpner Tilgang.
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.card).clickable { vm.b24.tab = "acc" }.padding(16.dp, 14.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).border(1.dp, p.line, RoundedCornerShape(18.dp))
+            .clickable(role = Role.Button) { vm.b24.edit = null; vm.b24.tab = "acc" }.padding(16.dp, 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val n = minOf(4, d.members.size)
@@ -501,7 +505,7 @@ private fun Shared24(vm: AppViewModel, d: HomeDetail24) {
         }
         Column(Modifier.weight(1f).padding(start = 10.dp)) {
             Text("Delt med ${d.members.size} ${if (d.members.size == 1) "person" else "personer"}", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1)
-            Text("Hvem som kan se og laste opp", color = p.mut, fontSize = 12.sp, maxLines = 1)
+            Text("Tilgang · hvem som kan se og laste opp", color = p.mut, fontSize = 12.sp, maxLines = 1)
         }
         Text("›", color = p.mut, fontSize = 17.sp)
     }
@@ -820,6 +824,7 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
+            s.details[h.id]?.let { Shared24(vm, it) } // prompt 47: Tilgang flyttet hit fra fanen
             Column(Modifier.padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 PillBtn24(if (s.busy) "Lagrer …" else "Lagre", Modifier.fillMaxWidth(), 48.dp) {
                     if (!s.busy) vm.b24SaveHome(h.id, name.ifBlank { h.name }, addr, bud, col, bg)
@@ -931,4 +936,14 @@ private fun NewEntrySheet24(vm: AppViewModel, d: HomeDetail24) {
             }
         }
     }
+}
+
+/** Prompt 47: «‹ Oversikt» øverst på Tilgang-siden. */
+@Composable
+private fun BackToOverview47(vm: AppViewModel) {
+    val p = PaperPal.current
+    Box(
+        Modifier.height(40.dp).clip(RoundedCornerShape(20.dp)).background(p.card).clickable(role = Role.Button) { Haptics.select(); vm.b24.tab = "ov" }.padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text("‹ Oversikt", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1, softWrap = false) }
 }

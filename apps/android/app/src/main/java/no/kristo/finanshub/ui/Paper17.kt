@@ -118,7 +118,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "stocks" -> item { StocksPrefsPage(vm) }
             "haptics" -> item { HapticsPage(vm) }
             "scan" -> item { ScanPage(vm) }
-            "server" -> item { ServerPage(vm) }
+            "server" -> item { ServerPage47(vm) } // prompt 47: Innstillinger → Server (status, Test, Tilbakestill)
             "data" -> item { DataPage(vm) }
             "backup" -> item { BackupPage(vm) }
             "about" -> item { AboutPage(vm) }

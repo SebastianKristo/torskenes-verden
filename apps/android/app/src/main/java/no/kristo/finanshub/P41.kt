@@ -204,7 +204,8 @@ fun jobTime41(j: AiJob34, now: Long = System.currentTimeMillis()): Pair<String, 
 
 /* ======================= Server: lokal og ekstern adresse ======================= */
 
-const val DEFAULT_SERVER41 = "https://home.kristo.no"
+// Prompt 47: standard ekstern adresse (claude-code-standard-serveradresser.md).
+const val DEFAULT_SERVER41 = DEFAULT_EXTERNAL47
 
 fun AppViewModel.loadServer41() {
     val s = p41
