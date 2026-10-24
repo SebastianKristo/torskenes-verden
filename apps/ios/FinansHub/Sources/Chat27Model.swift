@@ -63,6 +63,11 @@ struct ChatMsg27: Identifiable, Hashable {
     var card31: String = ""
     /// Prompt 41: fakta Glimt hentet før svaret (meta.facts), vist som små kort (Chat41Facts.swift).
     var facts41: [ChatFact41] = []
+    /// Prompt 50: lagrede vedlegg med miniatyr (bruker), «Lest med …» og «Legg i Finans ›» (svar). Chat50Attach.swift.
+    var att50: [Chat50File] = []
+    var readWith50: String = ""
+    var fin50: String = ""
+    var fin50Label: String = ""
 }
 
 struct ChatSettings27: Hashable {
@@ -98,6 +103,12 @@ struct ChatAttach27: Identifiable, Hashable {
     var kind: String
     var fileId: String = ""
     var b64: String = ""
+    /// Prompt 50: opplasting med fremdrift og miniatyr fra serveren (Chat50Attach.swift).
+    var mime: String = ""
+    var thumb: String = ""
+    var uploading: Bool = false
+    var pct: Double = 0
+    var err: String = ""
 
     var icon: String { kind == "img" ? "▣" : kind == "doc" ? "#" : "⎙" }
 }
@@ -443,6 +454,9 @@ final class ChatStore27 {
             msg.model = JS.str(m, "model") ?? ""
             msg.used = JS.strings(m, "used")
             msg.attach = JS.strings(m, "files")
+            // Prompt 50: vedlegg med miniatyr (bilder i boblen), andre filer som piller.
+            msg.att50 = Chat50File.list(JS.list(m, "attachments"))
+            for f in msg.att50 where !f.isImage && !msg.attach.contains(f.name) { msg.attach.append(f.name) }
             // Prompt 31: kort og verktøy lagret i meldingen.
             if let cd = m["card"] as? [String: Any], let cj = try? JSONSerialization.data(withJSONObject: cd) {
                 msg.card31 = String(data: cj, encoding: .utf8) ?? ""
@@ -452,6 +466,7 @@ final class ChatStore27 {
             let meta41: [String: Any]? = JS.dict(m, "meta")
             if msg.used.isEmpty { msg.used = JS.strings(meta41, "used") }
             msg.facts41 = ChatFact41.parse41(JS.list(meta41, "facts"))
+            if role == "assistant" { Chat50.shared.apply(&msg, meta41) }
             if let tps = JS.num(m, "tokensPerSec") {
                 msg.stats = ChatStore27.stats(tps: tps, ms: JS.num(m, "ms") ?? 0, stopped: false)
             }
@@ -658,6 +673,8 @@ final class ChatStore27 {
         if busy { return }
         let t: String = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.isEmpty && attach.isEmpty { return }
+        // Prompt 50: send er av til alle vedlegg er lastet opp.
+        if attach.contains(where: { $0.uploading }) { flash("Venter på at vedleggene lastes opp …"); return }
         if model.isEmpty {
             flash(notice.isEmpty ? "Ingen modell er valgt" : notice)
             return
@@ -665,7 +682,12 @@ final class ChatStore27 {
         if let d = data, d, myDataAllowed { dataOn = true }
         var m = ChatMsg27(role: "user", content: t)
         m.attach = attach.filter { $0.kind != "img" }.map { $0.name }
-        m.images = attach.filter { $0.kind == "img" }.map { $0.b64 }
+        // Prompt 50: opplastede bilder sendes som id (attachments) og vises som miniatyr; base64 bare for eldre server.
+        m.images = attach.filter { $0.kind == "img" && $0.fileId.isEmpty && !$0.b64.isEmpty }.map { $0.b64 }
+        m.att50 = attach.filter { $0.kind == "img" && !$0.fileId.isEmpty }.map { (a: ChatAttach27) -> Chat50File in
+            Chat50File(id: a.fileId, name: a.name, mime: a.mime.isEmpty ? "image/jpeg" : a.mime, kind: "image", thumb: a.thumb,
+                       url: "/api/chat/files/" + a.fileId, preview: a.id)
+        }
         msgs.append(m)
         if title.isEmpty { title = String(t.prefix(48)) }
         input = ""
@@ -712,6 +734,7 @@ final class ChatStore27 {
             let m: ChatMsg27 = msgs[i]
             var o: [String: Any] = ["role": m.role, "content": m.content]
             if i == lastUser && !m.images.isEmpty { o["images"] = m.images }
+            if i == lastUser && !m.att50.isEmpty { o["attachments"] = m.att50.map { $0.id } }
             list.append(o)
         }
         var b: [String: Any] = ["model": model, "messages": list, "settings": params.json, "webSearch": webOn,
@@ -740,6 +763,7 @@ final class ChatStore27 {
         if let tok = store.api.token { req.setValue("Bearer \(tok)", forHTTPHeaderField: "Authorization") }
         req.httpBody = try? JSONSerialization.data(withJSONObject: b)
         pendingBody = b
+        Chat50.shared.clearMeta()
         busy = true
         finished = false
         streamText = ""
@@ -796,6 +820,7 @@ final class ChatStore27 {
         switch event {
         case "meta":
             if let id = JS.str(o, "chatId") { curId = id }
+            Chat50.shared.noteMeta(o)
         case "delta", "message":
             if let t = o["text"] as? String {
                 streamText += t
@@ -825,6 +850,7 @@ final class ChatStore27 {
             a.stats = ChatStore27.stats(tps: tps, ms: ms, stopped: stopped)
             a.used = used
             a.facts41 = ChatFact41.parse41(JS.list(doneStats, "facts"))
+            Chat50.shared.apply(&a, doneStats)
             msgs.append(a)
         }
         busy = false
@@ -906,17 +932,22 @@ final class ChatStore27 {
     /* ---------- Vedlegg ---------- */
 
     func addImage(_ img: UIImage) {
-        let maxSide: CGFloat = 1600
+        let maxSide: CGFloat = 2048
         let s: CGSize = img.size
         let scale: CGFloat = Swift.min(1, maxSide / Swift.max(1, Swift.max(s.width, s.height)))
         let size: CGSize = CGSize(width: s.width * scale, height: s.height * scale)
         let r = UIGraphicsImageRenderer(size: size)
         let out: UIImage = r.image { _ in img.draw(in: CGRect(origin: .zero, size: size)) }
-        guard let d = out.jpegData(compressionQuality: 0.8) else { return }
+        guard let d = out.jpegData(compressionQuality: 0.85) else { return }
         let n: Int = attach.filter { $0.kind == "img" }.count + 1
-        attach.append(ChatAttach27(name: "Bilde \(n).jpg", kind: "img", b64: d.base64EncodedString()))
         sheet = nil
-        if !current.vision { flash("Velg en bildemodell (f.eks. qwen2.5vl) for å lese bildet") }
+        // Prompt 50: lastes opp med en gang (miniatyr + fremdrift, Chat50Attach.swift). Serveren velger vision-modell eller
+        // lokal OCR når valgt modell ikke ser bilder («Lest med …» under svaret).
+        guard let api else {
+            attach.append(ChatAttach27(name: "Bilde \(n).jpg", kind: "img", b64: d.base64EncodedString()))
+            return
+        }
+        Chat50.shared.upload(ChatAttach27(name: "Bilde \(n).jpg", kind: "img", mime: "image/jpeg"), data: d, preview: out, api: api)
     }
 
     /// Fil fra Filer: lastes opp (POST /api/chat/files) og sendes som fil-id.
@@ -927,6 +958,11 @@ final class ChatStore27 {
         let name: String = url.lastPathComponent
         let mime: String = ChatStore27.mime(url.pathExtension)
         sheet = toKnowledge ? "kb" : nil
+        // Prompt 50: vedlegg til meldingen får miniatyrkort med fremdrift (Chat50Attach.swift).
+        if !toKnowledge {
+            Chat50.shared.upload(ChatAttach27(name: name, kind: "file", mime: mime), data: d, preview: nil, api: store.api)
+            return
+        }
         Task {
             do {
                 let r: Data = try await store.api.upload("/chat/files", parts: [API.Part(name: "file", filename: name, mime: mime, data: d)], prefix: "/api")

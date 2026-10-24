@@ -167,6 +167,8 @@ struct Chat27ModelSheet: View {
                             HStack(spacing: 8) {
                                 Text(m.label).font(c.ui(15, .bold)).foregroundStyle(c.ink).lineLimit(1)
                                 Chat27Badge(sky: m.sky)
+                                // Prompt 50: «Ser bilder» for modeller med vision (Ollama /api/show → capabilities).
+                                if m.vision && m.kind != "auto" { Chat50VisionBadge(c: c) }
                             }
                             Text(detail(m)).font(c.ui(12.5)).foregroundStyle(c.mut).lineLimit(1)
                         }
@@ -191,7 +193,6 @@ struct Chat27ModelSheet: View {
             if m.name != m.id { parts.append(m.name) }
             if !m.size.isEmpty { parts.append(m.size) }
         }
-        if m.vision { parts.append("leser bilder") }
         return parts.joined(separator: " · ")
     }
 }

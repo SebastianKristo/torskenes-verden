@@ -69,7 +69,7 @@ struct Media44Banner: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 14) {
-                Media43Poster(url: t.poster, title: t.title, width: column ? 84 : 104, height: column ? 126 : 156, radius: 12)
+                Media43Poster(url: t.poster, title: t.title, width: column ? 84 : 104, height: column ? 126 : 156, radius: 12, big: true)
                     .shadow(color: Color.black.opacity(0.4), radius: 10, y: 6)
                 Media44BannerHead(t: t, column: column)
             }
@@ -97,10 +97,9 @@ struct Media44BannerBack: View {
         let src: String = t.fanart.isEmpty ? t.poster : t.fanart
         ZStack {
             Color(hex: "#1b1a17")
-            if let u = URL(string: src), !src.isEmpty {
-                AsyncImage(url: u) { (ph: AsyncImagePhase) in
-                    if case .success(let img) = ph { img.resizable().scaledToFill() } else { Color.clear }
-                }
+            // Prompt 50: fanart/plakat via disk- og minnecachen (Media50Img.swift) – plakaten fra listen vises med en gang.
+            if !src.isEmpty {
+                Media50Remote(url: src, want: t.fanart.isEmpty ? 320 : 1280)
                 .blur(radius: t.fanart.isEmpty ? 18 : 3)
                 .opacity(t.fanart.isEmpty ? 0.7 : 1)
             }

@@ -35,13 +35,19 @@ struct Media43Poster: View {
     var width: CGFloat = 52
     var height: CGFloat = 78
     var radius: CGFloat = 10
+    /// Prompt 50: detaljsiden ber om 640 px, listene om 320 px (Media50Img.swift).
+    var big: Bool = false
 
     var body: some View {
         ZStack {
             LinearGradient(colors: [Media43Poster.tint(title), Media43Poster.tint(title).opacity(0.65)], startPoint: .top, endPoint: .bottom)
             Text(String(title.prefix(1)).uppercased()).font(PF.serif(width * 0.4, medium: true)).foregroundStyle(Color.white.opacity(0.85))
-            // Prompt 46: plakater fra Homelab (/api/media/cover?…) trenger token – egen laster (Media46.swift). Feil = bare forbokstaven.
-            if !url.isEmpty { Media46PosterImage(url: url) }
+            // Prompt 50: ThumbHash-plassholder i plakatens farger med en gang, så bildet fra disk-/minnecachen (Media50Img.swift).
+            // Feil = plassholderen eller forbokstaven står igjen.
+            if !url.isEmpty {
+                Media50Placeholder(url: url)
+                Media50Remote(url: url, want: big ? 640 : 320)
+            }
         }
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
@@ -450,8 +456,11 @@ struct Media43Library: View {
                     .font(PF.ui(14)).foregroundStyle(p.mut).padding(.vertical, 16)
             }
             if !q.isEmpty && list.isEmpty && !all.isEmpty { Media44LibNoHit(kind: kind, q: q) }
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: wide ? (m.selected == nil ? 6 : 4) : 3), spacing: 12) {
-                ForEach(list) { (t: Media43Title) in
+            let cols: Int = wide ? (m.selected == nil ? 6 : 4) : 3
+            let posters: [String] = list.map(\.poster)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: cols), spacing: 12) {
+                ForEach(Array(list.enumerated()), id: \.element.id) { (pair: (offset: Int, element: Media43Title)) in
+                    let t: Media43Title = pair.element
                     Button { m.select(t, store) } label: {
                         VStack(alignment: .leading, spacing: 5) {
                             GeometryReader { (g: GeometryProxy) in
@@ -470,6 +479,8 @@ struct Media43Library: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    // Prompt 50: plakatene for de neste 2 radene lastes før man scroller dit.
+                    .onAppear { Media50Prefetch.ahead(posters, from: pair.offset, cols: cols, store) }
                 }
             }
         }
@@ -620,16 +631,30 @@ struct Media43Detail: View {
                     wideButton("🔍 Automatisk søk", primary: !t.hasFile) {
                         m.command("MoviesSearch", ["movieIds": [t.id]], service: "radarr", store, toast: "Søker etter \(t.title)")
                     }
-                    wideButton("Interaktivt søk", primary: false) {
-                        m.searchFor = Media43SearchTarget(kind: "movie", title: t.title, sub: t.year > 0 ? String(t.year) : "", poster: t.poster,
-                                                          profile: profiles.first(where: { $0.id == t.profileId })?.name ?? "", movieId: t.id)
-                    }
+                    wideButton("Interaktivt søk", primary: false) { openManualMovie() }
                 }
+            }
+            // Prompt 50: sann status etter søket (Media50Track.swift).
+            if t.kind == "movie" {
+                Media50TrackLine(key: "m:\(t.id)", manual: { openManualMovie() })
+            } else {
+                Media50TrackLine(key: "s:\(t.id):")
             }
             if !t.playUrl.isEmpty, let u = URL(string: t.playUrl) {
                 wideButton("▶ Spill av i " + (m.player == "plex" ? "Plex" : "Jellyfin"), primary: false) { openURL(u) }
             }
         }
+    }
+
+    private func openManualMovie() {
+        m.searchFor = Media43SearchTarget(kind: "movie", title: t.title, sub: t.year > 0 ? String(t.year) : "", poster: t.poster,
+                                          profile: profiles.first(where: { $0.id == t.profileId })?.name ?? "", movieId: t.id)
+    }
+
+    private func openManualEpisode(_ e: Media43Episode) {
+        m.searchFor = Media43SearchTarget(kind: "episode", title: t.title, sub: String(format: "S%02dE%02d · ", e.season, e.number) + e.title,
+                                          poster: t.poster, profile: profiles.first(where: { $0.id == t.profileId })?.name ?? "",
+                                          episodeId: e.id, seriesId: t.id, season: e.season)
     }
 
     private func wideButton(_ title: String, primary: Bool, _ act: @escaping () -> Void) -> some View {
@@ -692,6 +717,7 @@ struct Media43Detail: View {
                             .buttonStyle(.plain)
                         }
                     }
+                    Media50TrackLine(key: "s:\(t.id):\(s)").padding(.bottom, 6)
                     if open {
                         ForEach(eps) { (e: Media43Episode) in episodeRow(e) }
                     }
@@ -735,11 +761,7 @@ struct Media43Detail: View {
                             .background(p.ink, in: Capsule()).frame(minHeight: 44)
                     }
                     .buttonStyle(.plain)
-                    Button {
-                        m.searchFor = Media43SearchTarget(kind: "episode", title: t.title, sub: String(format: "S%02dE%02d · ", e.season, e.number) + e.title,
-                                                          poster: t.poster, profile: profiles.first(where: { $0.id == t.profileId })?.name ?? "",
-                                                          episodeId: e.id, seriesId: t.id, season: e.season)
-                    } label: {
+                    Button { openManualEpisode(e) } label: {
                         Text("Interaktivt søk").font(PF.ui(12, .bold)).foregroundStyle(p.ink).padding(.horizontal, 12).frame(height: 32)
                             .overlay(Capsule().stroke(p.line, lineWidth: 1)).frame(minHeight: 44)
                     }
@@ -747,6 +769,8 @@ struct Media43Detail: View {
                 }
                 .padding(.leading, 44)
             }
+            Media50TrackLine(key: "e:\(e.id)", single: true, manual: { openManualEpisode(e) })
+                .padding(.leading, 44).padding(.bottom, 6)
         }
     }
 }

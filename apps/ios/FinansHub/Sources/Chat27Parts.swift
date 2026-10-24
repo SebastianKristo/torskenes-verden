@@ -107,20 +107,23 @@ struct Chat27UserBubble: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 6) {
-            if !m.attach.isEmpty || !m.images.isEmpty {
+            // Prompt 50: bildene over teksten (ett maks 240×240, flere i 2 × 120), trykk åpner lysboksen (Chat50Attach.swift).
+            Chat50BubbleImages(m: m, c: c)
+            if !m.attach.isEmpty {
                 Flow(spacing: 6) {
                     ForEach(m.attach, id: \.self) { a in tag("# " + a) }
-                    if !m.images.isEmpty { tag("▣ \(m.images.count) bilde" + (m.images.count == 1 ? "" : "r")) }
                 }
             }
             if s.editIndex == index {
                 editor
             } else {
-                Text(m.content).font(c.ui(15.5)).foregroundStyle(c.uI).lineSpacing(3)
-                    .padding(.horizontal, 16).padding(.vertical, 11)
-                    .background(c.ub, in: UnevenRoundedRectangle(topLeadingRadius: 22, bottomLeadingRadius: 22, bottomTrailingRadius: 6, topTrailingRadius: 22, style: .continuous))
-                    .textSelection(.enabled)
-                    .frame(maxWidth: 520, alignment: .trailing)
+                if !m.content.isEmpty {
+                    Text(m.content).font(c.ui(15.5)).foregroundStyle(c.uI).lineSpacing(3)
+                        .padding(.horizontal, 16).padding(.vertical, 11)
+                        .background(c.ub, in: UnevenRoundedRectangle(topLeadingRadius: 22, bottomLeadingRadius: 22, bottomTrailingRadius: 6, topTrailingRadius: 22, style: .continuous))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: 520, alignment: .trailing)
+                }
                 HStack(spacing: 2) {
                     small("Rediger") { s.startEdit(index) }
                     small(s.copied == m.id ? "Kopiert" : "Kopier") { s.copy(m) }
@@ -180,8 +183,12 @@ struct Chat27Answer: View {
     var body: some View {
         let last: Bool = s.msgs.lastIndex(where: { $0.role == "assistant" }) == index
         VStack(alignment: .leading, spacing: 10) {
-            Chat27AnswerHead(title: headName, tools: ChatFact41.usedWithout41(m.used, m.facts41), prefix: "Brukte", c: c)
-            Chat27Blocks(text: m.content, c: c)
+            let read50: [Chat50LBItem] = Chat50.shared.itemsBefore(index)
+            Chat27AnswerHead(title: headName, tools: tools50(read50), prefix: "Brukte", c: c)
+            // Prompt 50: bildene som ble lest som små miniatyrer (28 pt), tabeller (kvittering) og «Lest med …» / «Legg i Finans ›».
+            if !read50.isEmpty { Chat50FilePills(items: read50, c: c) }
+            Chat50Body(text: m.content, c: c)
+            Chat50AnswerExtras(m: m, c: c)
             // Prompt 41: faktakort (vær, tid, sol) under svaret.
             if !m.facts41.isEmpty { Chat41FactsView(facts: m.facts41, c: c) }
             // Prompt 31: kortet fra Glimt (vær, kalender, avganger …), lagret i meldingen (Chat31Cards.swift).
@@ -197,6 +204,12 @@ struct Chat27Answer: View {
             .padding(.leading, -8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Brikkene «Brukte …» uten bildenavnene (de vises som miniatyrer, prompt 50).
+    private func tools50(_ read: [Chat50LBItem]) -> [String] {
+        let names: Set<String> = Set(read.map(\.name))
+        return ChatFact41.usedWithout41(m.used, m.facts41).filter { !names.contains($0) }
     }
 
     private var headName: String {

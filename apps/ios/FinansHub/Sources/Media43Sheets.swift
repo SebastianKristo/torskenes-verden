@@ -543,6 +543,8 @@ struct Media43SearchSheet: View {
                 Haptics.shared.success()
                 sent.insert(r.guid)
                 m.flash("Sendt til qBittorrent: " + [r.quality, Media43.size(r.size)].filter { !$0.isEmpty }.joined(separator: " · "))
+                // Prompt 50: følg nedlastingen videre (Laster ned … / Lagt til, men stoppet), Media50Track.swift.
+                Media50Track.shared.grabbed(target, store)
             } catch { m.flash(m.errorText(error)) }
         }
     }
@@ -1117,6 +1119,8 @@ struct Media43SettingsContent: View {
                 .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 Text("Varsler når en nedlasting er ferdig, feiler eller står fast sendes fra serveren (Glimt-brief og push).")
                     .font(PF.ui(12)).foregroundStyle(p.mut)
+                // Prompt 50: Diagnostikk (ledd 2–6) – bare for administrator (Media50Track.swift).
+                if Update28Model.isAdmin(store) { Media50DiagCard().padding(.top, 6) }
             }
             .task { if !inSheet { await m.loadStatus(store) } }
     }

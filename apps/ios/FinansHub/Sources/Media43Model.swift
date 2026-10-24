@@ -417,6 +417,7 @@ final class Media43 {
         it.sub = movieLike ? (JS.str(r, "sub") ?? "Film") : [code, epTitle].filter { !$0.isEmpty }.joined(separator: " · ")
         it.date = JS.date(r["airDateUtc"] ?? r["date"] ?? r["airDate"] ?? r["digitalRelease"] ?? r["releaseDate"])
         it.poster = JS.str(r, "poster") ?? Media43.poster(series ?? r)
+        Media50Reg.take(r) // prompt 50: posterImg (hash, srcset) for plassholder og riktig bredde (Media50Img.swift)
         it.status = (JS.str(r, "status") ?? (JS.bool(r, "hasFile") == true ? "downloaded" : "missing")).lowercased()
         it.progress = JS.num(r, "progress") ?? 0
         if it.progress > 1 { it.progress /= 100 }
@@ -452,6 +453,7 @@ final class Media43 {
         t.network = JS.str(r, "network") ?? JS.str(r, "studio") ?? ""
         t.status = (JS.str(r, "status") ?? "").lowercased()
         t.poster = Media43.poster(r)
+        Media50Reg.take(r) // prompt 50: posterImg/fanartImg (Media50Img.swift)
         t.overview = JS.str(r, "overview") ?? ""
         t.have = JS.int(stats, "episodeFileCount") ?? JS.int(r, "episodeFileCount") ?? JS.int(r, "have") ?? 0
         t.total = JS.int(stats, "episodeCount") ?? JS.int(r, "episodeCount") ?? JS.int(r, "total") ?? 0
@@ -524,6 +526,7 @@ final class Media43 {
                 t.eta = JS.int(r, "eta") ?? 0
                 t.size = JS.num(r, "size") ?? JS.num(r, "total_size") ?? 0
                 t.poster = JS.str(r, "poster") ?? ""
+                Media50Reg.take(r)
                 t.category = JS.str(r, "category") ?? ""
                 return t
             }
@@ -630,8 +633,9 @@ final class Media43 {
         b["name"] = name
         Task { @MainActor in
             do {
-                _ = try await self.fetch(store, ["/media/command?service=\(service)", "/media/\(service)/command"], method: "POST", json: b)
-                self.flash(toast)
+                let d: Data = try await self.fetch(store, ["/media/command?service=\(service)", "/media/\(service)/command"], method: "POST", json: b)
+                // Prompt 50: sann status etter søk (track) i stedet for et evig «Søker» (Media50Track.swift).
+                if !Media50Track.shared.start(d, body: b, store) { self.flash(toast) }
             } catch { self.flash(self.errorText(error)) }
         }
     }
@@ -776,6 +780,7 @@ final class Media43 {
             do {
                 let d: Data = try await self.fetch(store, ["/media/glimt"], method: "POST", json: ["q": t], timeout: 60)
                 let o: [String: Any] = JS.obj(d)
+                _ = Media50Track.shared.start(d, body: [:], store) // prompt 50: Glimt startet et EpisodeSearch
                 self.glimtText = JS.str(o, "text") ?? ""
                 self.glimtSteps = JS.list(o, "steps").enumerated().map { Media43Step(id: $0.offset, text: JS.str($0.element, "text") ?? JS.str($0.element, "t") ?? "", ms: JS.int($0.element, "ms") ?? 0) }
                 if self.glimtSteps.isEmpty {
@@ -784,6 +789,7 @@ final class Media43 {
                 self.glimtResults = JS.list(o, "results").enumerated().map { (pair: (offset: Int, element: [String: Any])) -> Media43Result in
             let i: Int = pair.offset
             let r: [String: Any] = pair.element
+                    Media50Reg.take(r)
                     return Media43Result(id: i, title: JS.str(r, "title") ?? JS.str(r, "name") ?? "", sub: JS.str(r, "sub") ?? JS.str(r, "quality") ?? "",
                                   size: JS.str(r, "size") ?? "", poster: JS.str(r, "poster") ?? "",
                                   actions: Media43.actions(JS.list(r, "actions")))

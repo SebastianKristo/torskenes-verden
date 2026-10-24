@@ -64,6 +64,8 @@ struct Chat27Page: View {
         .fileImporter(isPresented: $fileOpen, allowedContentTypes: [.pdf, .plainText, .commaSeparatedText, .data], allowsMultipleSelection: false) { r in
             if case .success(let urls) = r, let u = urls.first { s.addFile(u, store, toKnowledge: fileToKb) }
         }
+        // Prompt 50: lysboks for bildene i chatten (Chat50Attach.swift).
+        .chat50Host()
     }
 
     private func detents(_ id: String) -> Set<PresentationDetent> {
@@ -136,6 +138,8 @@ struct Chat27Main: View {
                 .frame(maxHeight: .infinity)
             Chat27Composer(c: c)
         }
+        // Prompt 50: dra og slipp filer inn i chatten (iPad/Fold), med laget «Slipp for å legge ved».
+        .chat50Drop(c)
         .keyboardLift32b()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea(.keyboard, edges: .bottom)
@@ -310,7 +314,8 @@ struct Chat27Composer: View {
         let sky: Bool = s.current.sky
         VStack(spacing: 6) {
             VStack(alignment: .leading, spacing: 6) {
-                if !s.attach.isEmpty { attachments }
+                // Prompt 50: miniatyrrad (64×64, ×, fremdrift) og «Lim inn bilde» (Chat50Attach.swift).
+                if !s.attach.isEmpty { Chat50AttachRow(c: c) }
                 if voice.recording {
                     HStack(spacing: 10) {
                         Circle().fill(Color(hex: "#b23a2a")).frame(width: 8, height: 8)
@@ -391,9 +396,16 @@ struct Chat27Composer: View {
             }
         }
         .animation(.easeOut(duration: 0.18), value: s.toast)
+        // Prompt 50: «Lim inn bilde» flyter over feltet når utklippstavlen har et bilde (tar ikke plass i layouten).
+        .overlay(alignment: .topLeading) {
+            if s.toast.isEmpty { Chat50PasteChip(c: c).padding(.leading, 16).offset(y: -40) }
+        }
     }
 
-    private var canSend: Bool { !s.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !s.attach.isEmpty }
+    private var canSend: Bool {
+        if s.attach.contains(where: { $0.uploading }) { return false }
+        return !s.input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !s.attach.isEmpty
+    }
 
     private func send() {
         if voice.recording { voice.stop() }
