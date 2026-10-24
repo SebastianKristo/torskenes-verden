@@ -89,4 +89,8 @@ dependencies {
     // Prompt 47: kvitteringer leses på telefonen (Google ML Kit, modellen via Play-tjenester). Task ventes på med
     // suspendCancellableCoroutine, så kotlinx-coroutines-play-services trengs ikke. Krever fragment ≥ 1.3 (fragment-ktx over).
     implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+    // Prompt 48: ML Kit Document Scanner (kantfinning, perspektivretting og beskjæring av kvitteringer). Skanner-UI og modell kommer
+    // fra Play-tjenester (ingen kameratillatelse, ingen modell i APK-en). Brukes bare når «Dokumentskanner» er på; ellers/uten
+    // Play-tjenester brukes systemkameraet som før (ui/Receipt48Ui.kt).
+    implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
 }

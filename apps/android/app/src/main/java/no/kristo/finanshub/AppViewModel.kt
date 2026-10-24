@@ -1163,8 +1163,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             return
         }
-        // Prompt 47: «Les teksten på telefonen» (ML Kit) – arket viser teksten før den sendes (ReceiptOcr47.kt).
-        if (editing == null && !ocrBypass47 && ocrIntercept47(uris)) return
+        // Prompt 48: ett bilde fra Skann går til POST /receipts/scan (bilde + evt. device_ocr) og vises som redigerbart skjema (ReceiptScan48.kt).
+        if (editing == null && !bypass48 && scan48.intercept(uris)) return
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         if (editing != null) message = "Kvitteringen er lagt i opplastingskøen"
         else if (screen != Screen.Scan && !stay) this.open(Screen.Scan)
@@ -3670,14 +3670,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun <T> api47(f: suspend Api.() -> T): T = api.f()
     internal fun launch47(block: suspend () -> Unit) = launch(block)
     internal val appCtx47: Context get() = appCtx
-    /** Som launch, men avbrudd (nytt bilde, lukket ark) gir ingen feilmelding. */
-    internal fun launchJob47(block: suspend () -> Unit): kotlinx.coroutines.Job = viewModelScope.launch {
-        try { block() } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { message = e.message ?: "Noe gikk galt" }
-    }
-    private var ocrBypass47 = false
-    /** Vanlig bildeopplasting uten ML Kit-arket (eldre server eller «Last opp bildet i stedet»). */
-    internal fun uploadImage47(u: Uri) { ocrBypass47 = true; try { uploadUris(listOf(u)) } finally { ocrBypass47 = false } }
-    internal suspend fun reloadReceipts47() { runCatching { loadReceipts(); loadJobs() } }
     private var reroute47Job: kotlinx.coroutines.Job? = null
     /** Nettverksendring: vent litt (nettet settes opp), velg adresse på nytt og last siden på nytt bare når veien er byttet. */
     internal fun reroute47() {
@@ -3689,6 +3681,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (base != before && loggedIn) refresh()
         }
     }
+
+    /* ---------- Prompt 48 (ANDROID48): kvitteringsskanning med felles OCR-format og /receipts/scan (ReceiptOcr48.kt, ReceiptScan48.kt, ui/Receipt48Ui.kt) ---------- */
+    val scan48 = ReceiptScanViewModel48(this)
+    internal suspend fun <T> api48(f: suspend Api.() -> T): T = api.f()
+    internal val appCtx48: Context get() = appCtx
+    internal val scope48: kotlinx.coroutines.CoroutineScope get() = viewModelScope
+    internal fun canUpload48(): Boolean = canUpload()
+    internal suspend fun queue48(path: String, parts: List<Api.Part>, name: String, error: String?) = queuePending(path, parts, name, error)
+    internal suspend fun reloadReceipts48() { runCatching { loadReceipts(); loadJobs() } }
+    private var bypass48 = false
+    /** Vanlig bildeopplasting uten skjemaet (eldre server uten /receipts/scan, eller «Last opp bildet i stedet»). */
+    internal fun uploadPlain48(u: Uri) { bypass48 = true; try { uploadUris(listOf(u)) } finally { bypass48 = false } }
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

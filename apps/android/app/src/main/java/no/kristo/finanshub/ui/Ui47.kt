@@ -3,15 +3,9 @@ package no.kristo.finanshub.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,14 +20,14 @@ import no.kristo.finanshub.*
 
 /*
  * Prompt 47 (ANDROID47): Innstillinger → Server (claude-code-standard-serveradresser.md) og arket for kvitteringer lest med
- * ML Kit på telefonen (claude-code-android-kvittering-mlkit-ocr.md). Logikken ligger i P47.kt og ReceiptOcr47.kt.
+ * ML Kit på telefonen (claude-code-android-kvittering-mlkit-ocr.md). Fra prompt 48 ligger kvitteringsarket i ui/Receipt48Ui.kt.
  */
 
 /** Globalt (Paper.kt): standardverdier fra /api/config etter innlogging, og ML Kit-arket. */
 @Composable
 internal fun Global47(vm: AppViewModel) {
     LaunchedEffect(vm.account?.id) { if (vm.account != null) vm.loadConfig47() }
-    if (vm.p47.scan != ReceiptScanUiState47.Idle) ReceiptSheet47(vm)
+    ReceiptSheet48(vm) // prompt 48: kvitteringsskanning (ui/Receipt48Ui.kt)
 }
 
 /* ======================= Innstillinger → Server ======================= */
@@ -115,68 +109,3 @@ private fun AddrField47(vm: AppViewModel, which: String, label: String, value: S
         }
     }
 }
-
-/* ======================= Kvittering lest på telefonen (ML Kit) ======================= */
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ReceiptSheet47(vm: AppViewModel) {
-    val p = PaperPal.current
-    val st = vm.p47.scan
-    ModalBottomSheet(
-        onDismissRequest = { vm.closeOcr47() }, containerColor = p.bg, contentColor = p.ink, shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle(width = 36.dp, height = 5.dp, color = p.line) },
-    ) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(start = 18.dp, end = 18.dp, bottom = 26.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            PSerif("Kvittering", 24.sp, maxLines = 1)
-            when (st) {
-                ReceiptScanUiState47.Idle -> Unit
-                ReceiptScanUiState47.Scanning -> Busy47("Leser teksten på telefonen …")
-                ReceiptScanUiState47.Uploading -> Busy47("Glimt tolker kvitteringen …")
-                is ReceiptScanUiState47.TextReady -> {
-                    Text("Lest på telefonen med ML Kit. Bare teksten sendes til serveren.", color = p.mut, fontSize = 12.5.sp)
-                    OcrPreview47(st.ocr.text)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PButton("Last opp bildet", Modifier.weight(1f), kind = "line") { vm.uploadInstead47() }
-                        PButton("Send til Glimt", Modifier.weight(1f)) { vm.sendOcr47(st.ocr) }
-                    }
-                }
-                is ReceiptScanUiState47.Parsed -> {
-                    Text(listOfNotNull(st.merchant, st.total?.let { kr47(it) }).joinToString(" · ").ifBlank { "Sendt til Glimt" }, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text(if (st.review) "Glimt tolker teksten nå. Kvitteringen havner i «Til gjennomgang»." else "Kvitteringen er lagret.", color = p.mut, fontSize = 13.sp)
-                    PButton("Ferdig", Modifier.fillMaxWidth()) { vm.closeOcr47() }
-                }
-                is ReceiptScanUiState47.Error -> {
-                    Text(st.message, color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
-                    st.ocr?.let { OcrPreview47(it.text) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PButton("Last opp bildet", Modifier.weight(1f), kind = "line") { vm.uploadInstead47() }
-                        val o = st.ocr
-                        if (o != null) PButton("Prøv igjen", Modifier.weight(1f)) { vm.sendOcr47(o) }
-                        else PButton("Lukk", Modifier.weight(1f)) { vm.closeOcr47() }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Busy47(text: String) {
-    val p = PaperPal.current
-    Text(text, color = p.mut, fontSize = 13.sp)
-    LinearProgressIndicator(Modifier.fillMaxWidth(), color = p.ink, trackColor = p.line)
-}
-
-@Composable
-private fun OcrPreview47(text: String) {
-    val p = PaperPal.current
-    Box(Modifier.fillMaxWidth().heightIn(max = 320.dp).clip(RoundedCornerShape(16.dp)).background(p.card)) {
-        Text(
-            text.replace("\t", "    "), color = p.ink, fontFamily = PaperFonts.mono, fontSize = 12.sp, lineHeight = 16.sp,
-            modifier = Modifier.verticalScroll(rememberScrollState()).padding(12.dp),
-        )
-    }
-}
-
-private fun kr47(v: Double): String = String.format(java.util.Locale("nb", "NO"), "%,.2f", v).removeSuffix(",00") + " kr"

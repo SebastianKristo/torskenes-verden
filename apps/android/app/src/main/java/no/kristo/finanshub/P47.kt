@@ -1,6 +1,5 @@
 package no.kristo.finanshub
 
-import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -18,7 +17,7 @@ import org.json.JSONObject
  *    ekstern. Byttes på nytt ved nettverksendring. Tokenet sendes ikke til den lokale adressen før identiteten er sjekket uten token.
  *  - Klartekst bare til 10.69.1.39 (res/xml/network_security_config.xml).
  *  - Innlogging: passordet sendes over https til den eksterne adressen; lokal adresse brukes bare som reserve når ekstern ikke svarer.
- *  - Kvitteringer med ML Kit på telefonen (ReceiptOcr47.kt).
+ *  - Kvitteringer med ML Kit på telefonen (ReceiptOcr47.kt; fra prompt 48 via ReceiptScan48.kt).
  * Nye endepunkter tåler 404 (eldre server): da brukes standardverdiene og /api/discovery.
  */
 
@@ -39,10 +38,7 @@ class P47State {
     /** "local" | "external" → status. */
     val status = mutableStateMapOf<String, SrvStatus47>()
 
-    /* Kvittering med ML Kit (ReceiptOcr47.kt) */
-    var scan by mutableStateOf<ReceiptScanUiState47>(ReceiptScanUiState47.Idle)
-    internal var scanUri: Uri? = null
-    internal var scanJob: kotlinx.coroutines.Job? = null
+    /* Kvitteringer: prompt 48 (ReceiptScan48.kt, vm.scan48). */
 }
 
 internal fun hostOf47(u: String?): String? = u?.trim()?.takeIf { it.isNotEmpty() }?.let { runCatching { java.net.URI(Api.normalizeServer(it)).host?.lowercase() }.getOrNull() }

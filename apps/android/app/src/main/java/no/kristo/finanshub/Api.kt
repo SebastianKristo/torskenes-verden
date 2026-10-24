@@ -122,6 +122,7 @@ class Api(private val baseUrl: String, private val token: String?) {
     suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS, read: Int = 60_000): String = withContext(Dispatchers.IO) {
         val boundary = "----FinansHub" + UUID.randomUUID().toString().replace("-", "")
         val conn = url(path, prefix).openConnection() as HttpURLConnection
+        var sent48 = false
         try { net {
             conn.requestMethod = "POST"
             conn.doOutput = true
@@ -144,8 +145,14 @@ class Api(private val baseUrl: String, private val token: String?) {
             out.write("--$boundary--\r\n".toByteArray())
             conn.setFixedLengthStreamingMode(out.size())
             conn.outputStream.use { out.writeTo(it) }
+            sent48 = true
             read(conn)
-        } } finally { conn.disconnect() }
+        } } catch (e: ApiException) {
+            // Prompt 48: hele kroppen er sendt, men svaret uteble (tidsavbrudd/brudd mens serveren jobbet). Serveren kan ha lagret
+            // opplastingen, så den skal ikke sendes på nytt automatisk (ReceiptScan48.kt, PendingUploads).
+            if (sent48 && e.status == 0 && e.code == null) throw ApiException(e.message ?: "Serveren svarte ikke i tide.", 0, code = SENT48)
+            throw e
+        } finally { conn.disconnect() }
     }
 
     data class Part(val name: String, val filename: String, val mime: String, val data: ByteArray) {
@@ -162,6 +169,8 @@ class Api(private val baseUrl: String, private val token: String?) {
         const val HOMELAB = "/api"
         /** Begynnelsen på meldingen når en Homelab-rute ikke godtar app-tokenet. Vises ikke som melding. */
         const val TOKEN_REFUSED = "Ikke tilgang med app-token"
+        /** Prompt 48: ApiException.code når en opplasting kom fram, men svaret ikke kom (se upload). */
+        const val SENT48 = "sent48"
         /** Prompt 44: valgt Media-server (id fra /api/media/servers), null = serverens standard. Settes av P44.kt. */
         @Volatile var mediaServer44: String? = null
 

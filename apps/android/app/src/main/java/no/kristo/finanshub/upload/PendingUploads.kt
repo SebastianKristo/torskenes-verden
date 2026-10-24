@@ -12,6 +12,9 @@ import androidx.work.WorkerParameters
 import no.kristo.finanshub.AccountStore
 import no.kristo.finanshub.Api
 import no.kristo.finanshub.ApiException
+import no.kristo.finanshub.SCAN_PATH48
+import no.kristo.finanshub.SCAN_READ48
+import no.kristo.finanshub.legacyParts48
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -80,7 +83,16 @@ object PendingUploads {
         var ok = 0
         for (u in listFor(ctx, account, legacy)) {
             try {
-                api.upload(u.path, parts(ctx, u))
+                val scan48 = u.path.startsWith(SCAN_PATH48)
+                try { api.upload(u.path, parts(ctx, u), read = if (scan48) SCAN_READ48 else 60_000) } catch (e: ApiException) {
+                    when {
+                        // Prompt 48: eldre server uten /receipts/scan → vanlig opplasting (bildet som «file»).
+                        scan48 && (e.status == 404 || e.status == 405) -> api.upload("/receipts", legacyParts48(parts(ctx, u)))
+                        // Kroppen kom fram, men kjeden på serveren brukte lenger tid enn vi ventet: kvitteringen er lagret der.
+                        scan48 && e.code == Api.SENT48 -> Unit
+                        else -> throw e
+                    }
+                }
                 remove(ctx, u.id); ok++
             } catch (e: ApiException) {
                 mark(ctx, u, e.message ?: "Feil")

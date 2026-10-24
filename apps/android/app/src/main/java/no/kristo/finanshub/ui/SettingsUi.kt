@@ -215,8 +215,10 @@ internal fun ScanPage(vm: AppViewModel) = Pages {
         Toggle("Beskjær automatisk", "Finner kantene på kvitteringen før AI-en leser den", vm.flag(AppPrefs.AUTO_CROP, true)) { vm.setPref(AppPrefs.AUTO_CROP, it) }
         Toggle("Lagre originalbildet", "Lagres sammen med kvitteringen på serveren", vm.flag(AppPrefs.KEEP_ORIGINAL, true)) { vm.setPref(AppPrefs.KEEP_ORIGINAL, it) }
         Toggle("Last opp bare på Wi-Fi", "Ellers settes filer i kø til du er på Wi-Fi", vm.flag(AppPrefs.WIFI_ONLY)) { vm.setPref(AppPrefs.WIFI_ONLY, it) }
-        // Prompt 47: ML Kit leser teksten lokalt; bare teksten sendes til serveren (ReceiptOcr47.kt).
-        Toggle("Les teksten på telefonen", "Google ML Kit leser kvitteringen lokalt, og bare teksten sendes til Glimt. Bildet lagres ikke.", vm.flag(PREF_OCR_LOCAL47, false)) { vm.setPref(PREF_OCR_LOCAL47, it) }
+        // Prompt 48: begge valgene er av som standard. ML Kit og dokumentskanneren kjører på telefonen (Play-tjenester); bildet og
+        // den lokale OCR-teksten sendes bare til din egen Glimt-server (POST /finans/api/receipts/scan), som tolker og kontrollerer.
+        Toggle("Les teksten på telefonen", "Google ML Kit leser teksten lokalt. Teksten sendes til Glimt sammen med bildet, og Glimt kontrollerer alt.", vm.flag(PREF_OCR_LOCAL47, false)) { vm.setPref(PREF_OCR_LOCAL47, it) }
+        Toggle("Dokumentskanner", "Googles skanner på telefonen retter opp perspektivet og beskjærer kvitteringen før den sendes", vm.flag(PREF_DOCSCAN48, false)) { vm.setPref(PREF_DOCSCAN48, it) }
     }
     val st = vm.boot?.settings
     Section("AI-motor (på serveren)") {

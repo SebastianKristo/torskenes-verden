@@ -92,13 +92,15 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) photoUri?.let { vm.scanUris(listOf(it)) } }
     val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(20)) { uris -> vm.scanUris(uris) }
     val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> vm.scanUris(uris) }
-    val takePhoto: () -> Unit = {
+    val systemCamera: () -> Unit = {
         val dir = File(ctx.cacheDir, "scans").apply { mkdirs() }
         val f = File(dir, "kvittering-${System.currentTimeMillis()}.jpg")
         val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
         photoUri = uri
         camera.launch(uri)
     }
+    // Prompt 48: «Dokumentskanner» på → ML Kit Document Scanner for kvitteringer (perspektiv og beskjæring), ellers/reserve kameraet.
+    val takePhoto: () -> Unit = rememberDocScan48(vm, systemCamera)
     val scan = ScanActions(takePhoto, { vm.scanSheet = true }, vm.option(AppPrefs.SCAN_TAP, "camera") == "camera")
     // Skann-widgeten: finanshub://scan/camera eller /files.
     LaunchedEffect(vm.pendingScan) {
