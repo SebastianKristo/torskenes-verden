@@ -2,6 +2,15 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.43.0] – 24.10.2026 · prompt 47 og 48 – ny Glimt-motor og kvitteringer med reserveløsning
+- **Glimt bygget om:** modellen forstår hva du mener og lager en plan. Tekstmønstre brukes bare som hint og som hurtigvei for helt entydige kommandoer. Felles datoparser for «neste time», «om 2 timer», «etter jul» og ukedager. Minnet bruker aliaser begge veier, og kalendersøk matcher hele ord («Oslo» treffer ikke «OsloMet»). Avtaler uten sluttid får standardvarighet (kino 3 t, frisør 1 t, ellers 1 t), merket som antatt. Abonnementer rangeres på månedspris og vises med både kr/mnd og kr/år. «Siste episode av X» hentes fra Sonarr. Svarene bygger på faktiske data, og hver forespørsel får et spor som kan vises.
+- **Kvitteringer med reserveløsning:** skann i FinansHub på iPhone, Android og web. Glimt prøver i rekkefølge: tolkning fra telefonen, teksten fra telefonen, Apple Vision på Mac minien, Tesseract og til slutt Gemini. Alt kontrolleres på serveren: sum, total, dato, org.nr. og mva. Før lagring får du et skjema du kan redigere. Usikre felt er markert, og en merkelapp viser hvem som leste kvitteringen («iPhone», «Mac», «Glimt», «Gemini»). Rettelsene dine lagres som testdata.
+- **Mac-OCR (nytt):** egen tjeneste på Mac minien (`tools/vision-ocr/install.sh`). Den godtar bare Glimt-serveren og en hemmelig nøkkel, og eksponeres aldri via Cloudflare. Adresse, nøkkel og Test ligger i Innstillinger → AI → Kvitteringer, sammen med av/på for hvert steg.
+- **Android:** ML Kit Document Scanner retter opp og beskjærer kvitteringen. Uten Play-tjenester brukes systemkameraet.
+- **Personvern:** når «Finansdata forlater aldri huset» er på, går ingenting ut av huset. Det gjelder Gemini, Groq, Roboflow, Brønnøysund, logo- og favicon-oppslag, finanssøk og bankimport. En test passer på at det forblir slik. Groq er tatt ut av kvitteringskjeden.
+- **Av som standard:** bryterne for lesing og tolkning på telefonen.
+- **Test selv på Mac minien:** `npm run eval` (Glimt) og `make eval-receipts` (kvitteringer). Se `tests/receipts/README.md`.
+
 ## [4.42.0] – 24.10.2026 · prompt 47 – standardadresser, kvitteringer på enheten og Kalender-rettelser
 - **Kalender: blank skjerm ved «+» (rettet på ordentlig):** arkfargen ble satt på alle vinduene i skjermbildet, også tastaturets egne. Fra andre gang tastaturet var oppe la de seg som en ugjennomsiktig flate over skjemaet. Telefonnummer foreslås ikke lenger i tittelfeltet.
 - **Standard serveradresser overalt:** ekstern `https://os.smarthjemexperten.no` og lokal `http://10.69.1.39:3000`, med status («Svarer · 34 ms»), Test og «Tilbakestill til standard» i Innstillinger → Server på iPhone, Android, Kalender, Mac og web. Ukryptert HTTP er bare tillatt til akkurat den lokale adressen. Serveren kan overstyre med `PUBLIC_URL`/`LOCAL_URL` (`GET /api/config/servers`).
