@@ -31,6 +31,25 @@ export function scrollMemory({ el = () => document.scrollingElement || document.
     step();
   }
 
+  // Prompt 50 (claude-code-web-fanebytte-scroll-topp.md): ny fane/side starter alltid øverst – også når deler som lastes etterpå
+  // (Matplan, Media, Kart) monteres og trekker posisjonen ned, eller nettleseren klemmer den mot bunnen av en kortere side.
+  // Toppen holdes i 1,5 s etter fanebyttet, men slippes straks brukeren selv scroller (hjul, berøring, tast, mus).
+  function pinTop() {
+    clearTimeout(timer);
+    userMoved = false;
+    const t0 = Date.now();
+    const s0 = target();
+    s0.scrollTop = 0; lastY = 0;
+    if (scroller === window) { try { window.scrollTo(0, 0); } catch { /* */ } }
+    const step = () => {
+      if (userMoved || Date.now() - t0 > 1500) return;
+      const s = target();
+      if (s.scrollTop > 0) { s.scrollTop = 0; lastY = 0; }
+      timer = setTimeout(step, 60);
+    };
+    timer = setTimeout(step, 30);
+  }
+
   return {
     /** Kalles etter at ruten er tegnet. key skiller sider (f.eks. «inn»); samme nøkkel som nå gjør ingenting. */
     enter(key) {
@@ -45,8 +64,7 @@ export function scrollMemory({ el = () => document.scrollingElement || document.
         try { history.replaceState({ ...st, __sx: idx }, ''); } catch { /* sandkasse */ }
         // Oppføringer etter denne finnes ikke lenger.
         for (const k of [...mem.keys()]) if (k >= idx) mem.delete(k);
-        clearTimeout(timer);
-        target().scrollTop = 0; lastY = 0;
+        pinTop();
       } else if (cur && idx < cur.idx) {
         // Tilbake: siden vi forlot glemmes, og forrige side får posisjonen sin igjen.
         mem.delete(cur.idx);

@@ -316,7 +316,9 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
     const active = document.activeElement, keep = active?.matches?.('[data-q]') && el.contains(active) ? active.selectionStart : null;
     el.innerHTML = html();
     if (keep !== null) { const q = el.querySelector('[data-q]'); q?.focus(); q?.setSelectionRange(keep, keep); }
-    el.querySelector('.mp-fchip.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // Prompt 50 (claude-code-web-fanebytte-scroll-topp.md): den ekte grunnen til at Mat startet på bunnen – scrollIntoView på den
+    // valgte mappebrikken scrollet hele siden ned til brikken (den ligger under ukeplanen). Nå rulles bare brikkeraden sidelengs.
+    { const ch = el.querySelector('.mp-fchip.on'), row = ch?.parentElement; if (ch && row && row.scrollWidth > row.clientWidth) { const a = ch.getBoundingClientRect(), r = row.getBoundingClientRect(); if (a.left < r.left) row.scrollLeft += a.left - r.left; else if (a.right > r.right) row.scrollLeft += a.right - r.right; } }
   }
   function paintStatus() { const s = el.querySelector('[data-status]'); if (s) { s.textContent = S.status; s.hidden = !S.status; } }
   function paintList() { const l = el.querySelector('[data-list]'); if (l && S.w) l.innerHTML = dishList(S.w); }

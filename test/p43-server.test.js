@@ -462,7 +462,8 @@ test('media: ekte tjenester – normalisering og feilmeldinger (fetch byttet ut)
     const s = await A('/api/media/series');
     assert.equal(s.status, 200, s.text);
     const x = s.body.items[0];
-    assert.deepEqual([x.title, x.status, x.profile, x.episodesText, x.sizeText, x.poster], ['The Expanse', 'ended', 'Ultra-HD', '60 av 62 episoder · 2 mangler', '2,5 TB', 'https://artworks.thetvdb.com/x.jpg']);
+    assert.deepEqual([x.title, x.status, x.profile, x.episodesText, x.sizeText], ['The Expanse', 'ended', 'Ultra-HD', '60 av 62 episoder · 2 mangler', '2,5 TB']);
+    assert.match(x.poster, /^\/api\/media\/bilde\/serie\/7\/poster\?w=320&v=/, 'prompt 50: plakaten går via serverens bildecache, ikke rett til TVDB');
     assert.ok(calls.every(([, url, key]) => !url.includes('riktig') && (!url.includes('sonarr.test') || ['riktig', 'feil'].includes(key))), 'nøkkelen bare i hodet');
     await A('/api/integrations/sonarr', 'PUT', { sonarr_url: 'http://nede.test:8989' });
     m43.clearMedia43();

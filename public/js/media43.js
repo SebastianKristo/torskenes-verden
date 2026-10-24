@@ -8,6 +8,8 @@ import { orb43 } from './orb43.js';
 import { mountPlayback } from './playback44.js'; // prompt 44: fanen Avspilling (Plex/Jellyfin)
 import { glimtSource } from './glimt-input44.js'; // prompt 44: forslag i Glimt-feltet (Tab)
 import { agent, agentOn, isPlain, agentFull } from './glimt-agent45.js'; // prompt 45
+// Prompt 50: plakater med ThumbHash-plassholder + srcset, og sann status etter søk (sporing) i stedet for «Søker».
+import { bg50, img50, prefetch50, setup50, onToast50, startTrack50, trackGrab50, trackHtml50, multiTrackHtml50, click50 } from './media50.js';
 // Prompt 44 (claude-code-media-arr.md, -interaktivt-sok-504.md, -avspilling-plex-jellyfin.md, web):
 // søk i biblioteket, plakater i 2:3 (Kommer snart som liggende rader), Kommer snart Uke · Liste, banner med fanart i serie/film,
 // last ned på nytt / slett fil, felles servervalg («Hjemme/Hytta», ?server= på alle kall), frem/tilbake i nettleseren
@@ -33,6 +35,7 @@ const M = {
 };
 const relCache = new Map(); // prompt 44: interaktivt søk caches i 10 min per episode/film
 let root = null, pollT = 0, toastT = 0, magT = 0, lookT = 0, schT = 0, wasNarrow = null;
+setup50((path, opt) => mapi(path, opt), () => paintMain()); onToast50((m) => toast(m)); // prompt 50
 const narrow = () => innerWidth < 900;
 
 /* ---------------- Data ---------------- */
@@ -164,9 +167,10 @@ const tone = (st) => `t-${SC[st] ?? 'mut'}`;
 const backBtn45 = (a, label) => `<div class="m45-bk"><button type="button" class="m45-back" data-m43="${a}" aria-label="Tilbake til ${esc(label)}" title="Tilbake (Esc)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button><span class="m45-bkl">${esc(label)}</span></div>`;
 const isAdm45 = () => !!M.status?.admin;
 /** Prompt 44: plakat alltid i 2:3 (aspect-ratio), med statusprikk. */
-const poster = (x, cls) => `<span class="${cls}" style="background-color:${esc(x?.color || '#3c4a5c')}${x?.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"><span class="m43-dot ${tone(x?.status)}"></span></span>`;
+// Prompt 50: plassholder fra ThumbHash med én gang, <img srcset> for riktig bredde (sizes = bredden i CSS-px).
+const poster = (x, cls, sizes = '64px', high = false) => `<span class="${cls} m50-ph" style="${bg50(x)}">${img50(x, { sizes, high })}<span class="m43-dot ${tone(x?.status)}"></span></span>`;
 const norm44 = (t) => String(t ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9æøå]+/g, '');
-const art = (x, cls = 'm43-art') => `<div class="${cls}" style="background-color:${esc(x?.color || '#3c4a5c')}${x?.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"></div>`;
+const art = (x, cls = 'm43-art') => `<div class="${cls} m50-ph" style="${bg50(x)}">${img50(x, { sizes: /\b(dp)\b/.test(cls) ? '150px' : /\bsp\b/.test(cls) ? '72px' : '52px' })}</div>`;
 const pill = (on) => (on ? ' on' : '');
 const chip = (n, on, attr) => `<button type="button" class="m43-chip${pill(on)}" ${attr}>${esc(n)}</button>`;
 const sw = (on) => `<span class="m43-sw${on ? ' on' : ''}" aria-hidden="true"><i></i></span>`;
@@ -281,7 +285,7 @@ function komHtml() {
   const item = (x, mob) => {
     const go = `data-m43-open="${x.kind === 'movie' ? 'm' : 's'}:${x.kind === 'movie' ? x.movieId : x.seriesId}"`;
     if (mob) return `<button type="button" class="m43-kmi" ${go}>${art(x, 'm43-art kp')}<div class="m43-col grow"><b>${esc(x.title)}</b><span class="t-mut">${esc([x.code, x.episodeTitle].filter(Boolean).join(' · '))}</span><b class="m43-s ${tone(x.status)}">${esc(x.statusText ?? '')}</b></div><span class="mono t-mut">${esc(x.time ?? '')}</span></button>`;
-    return `<button type="button" class="m43-ki" ${go}><div class="m43-kp" style="background-color:${esc(x.color || '#3c4a5c')}${x.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"><b>${esc(x.title)}</b><span class="m43-dot ${tone(x.status)}"></span></div>
+    return `<button type="button" class="m43-ki" ${go}><div class="m43-kp m50-ph" style="${bg50(x)}">${img50(x, { sizes: '200px', high: true })}<b>${esc(x.title)}</b><span class="m43-dot ${tone(x.status)}"></span></div>
       <span class="m43-ke"><b>${esc(x.code)}</b> <span class="t-mut">${esc(x.time ?? '')}</span></span><b class="m43-s ${tone(x.status)}">${esc(x.statusText ?? '')}</b></button>`;
   };
   const vsw = `<div class="m44-seg" role="tablist" aria-label="Visning">${[['uke', 'Uke'], ['liste', 'Liste']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${M.komv === k}" class="${M.komv === k ? 'on' : ''}" data-m44-komv="${k}">${n}</button>`).join('')}</div>`;
@@ -315,17 +319,17 @@ function libHtml(k) {
   const fx = k === 's' ? { all: () => true, missing: (x) => x.episodes?.missing > 0, continuing: (x) => x.status === 'continuing', ended: (x) => x.status === 'ended' } : { all: () => true, has: (x) => x.hasFile, missing: (x) => !x.hasFile && x.status !== 'ann', announced: (x) => x.status === 'ann' };
   const filters = D.filters ?? Object.keys(fx).map((id) => ({ id, label: id, count: items.filter(fx[id]).length }));
   const q = norm44(M.libQ), L = items.filter(fx[M.libF] ?? fx.all).filter((x) => !q || norm44(`${x.title} ${x.network ?? ''} ${x.year ?? ''} ${x.studio ?? ''}`).includes(q) || norm44(x.title).includes(q));
-  const card = (x) => {
+  const card = (x, i) => {
     let line, lc, dot;
     if (k === 's') { const miss = x.episodes?.missing ?? 0; line = miss ? `${miss} mangler` : x.status === 'ended' ? 'Komplett · avsluttet' : x.nextText ?? 'Komplett'; lc = miss ? 't-warn' : 't-mut'; dot = miss ? 'warn' : x.status === 'ended' ? 'mut' : 'ok'; }
     else { line = x.hasFile ? `Lastet ned${x.file?.quality ? ` · ${x.file.quality}` : ''}` : x.status === 'ann' ? x.note || 'Annonsert' : x.statusText; lc = tone(x.status); dot = SC[x.status] ?? 'mut'; }
     const meta = k === 's' ? [x.year, x.network].filter(Boolean).join(' · ') : [x.year, x.profile].filter(Boolean).join(' · ');
-    return `<button type="button" class="m43-lc" data-m43-open="${k}:${x.id}"><div class="m43-lp" style="background-color:${esc(x.color || '#3c4a5c')}${x.poster ? `;background-image:url('${esc(x.poster)}')` : ''}"><b>${esc(x.title)}</b><span class="m43-dot t-${dot}"></span></div><span class="m43-lm ell">${esc(meta)}</span><b class="m43-s ${lc}">${esc(line)}</b></button>`;
+    return `<button type="button" class="m43-lc" data-m43-open="${k}:${x.id}"><div class="m43-lp m50-ph" style="${bg50(x)}">${img50(x, { sizes: '(max-width: 600px) 46vw, 200px', high: i < 12 })}<b>${esc(x.title)}</b><span class="m43-dot t-${dot}"></span></div><span class="m43-lm ell">${esc(meta)}</span><b class="m43-s ${lc}">${esc(line)}</b></button>`;
   };
   return `<div class="m43-row sb xwrap"><div class="m43-row g10 base"><b class="m43-h1">${k === 's' ? 'Serier' : 'Filmer'}</b><span class="t-mut">${nb(items.length)} ${k === 's' ? 'serier' : 'filmer'}</span></div><span class="m43-row g8">${isAdm45() ? `<button type="button" class="m43-btn line" data-m45-unmon="all" title="Slett filer som ikke er overvåket, på tvers av alle ${k === 's' ? 'serier' : 'filmer'}">Rydd uovervåkede</button>` : ''}<button type="button" class="m43-btn ink" data-m43="add">${k === 's' ? '+ Legg til serie' : '+ Legg til film'}</button></span></div>
     <div class="m44-lf"><label class="m44-lq">${ic.search}<input name="lq" value="${esc(M.libQ)}" placeholder="Søk i ${nb(items.length)} ${k === 's' ? 'serier' : 'filmer'}" autocomplete="off" spellcheck="false" aria-label="Søk i biblioteket" data-glimt="off">${M.libQ ? `<button type="button" class="m43-ib ghost sm" data-m44="lqx" aria-label="Tøm søket">${ic.x}</button>` : '<span class="m44-kbd" aria-hidden="true">/</span>'}</label>
     <div class="m43-chips">${filters.map((f) => chip(`${f.label} ${f.count ?? ''}`.trim(), M.libF === f.id, `data-m43-libf="${esc(f.id)}"`)).join('')}</div></div>
-    ${L.length ? `<div class="m43-grid">${L.map(card).join('')}</div>` : M.libQ.trim() ? `<div class="m43-empty"><span>Ingen ${k === 's' ? 'serier' : 'filmer'} i biblioteket som heter «${esc(M.libQ.trim())}».</span><button type="button" class="m43-btn ink" data-m44="lqadd">Søk etter «${esc(M.libQ.trim())}» for å legge til</button></div>` : '<span class="t-mut">Ingenting her.</span>'}`;
+    ${L.length ? `<div class="m43-grid">${L.map(card).join('')}</div>${prefetch50(L, 12, 24) ?? ''}` : M.libQ.trim() ? `<div class="m43-empty"><span>Ingen ${k === 's' ? 'serier' : 'filmer'} i biblioteket som heter «${esc(M.libQ.trim())}».</span><button type="button" class="m43-btn ink" data-m44="lqadd">Søk etter «${esc(M.libQ.trim())}» for å legge til</button></div>` : '<span class="t-mut">Ingenting her.</span>'}`;
 }
 
 /* ---------------- Serie- og filmside ---------------- */
@@ -342,7 +346,7 @@ function banner(d, x) {
   const chips = [['MAPPE', x.path], ['STR.', x.sizeText], ['PROFIL', x.profile, 'prof'], [null, x.monitored ? 'Overvåket' : 'Ikke overvåket', s ? 'mon' : 'mmon'], s ? [null, x.statusLabel ?? (x.status === 'ended' ? 'Avsluttet' : 'Fortsetter')] : null, ['SPRÅK', x.language ?? x.originalLanguage], [s ? 'KANAL' : 'STUDIO', s ? x.network : x.studio]].filter((c) => c && c[1]);
   const bg = x.fanart ? `background-image:url('${esc(x.fanart)}')` : x.poster ? `background-image:url('${esc(x.poster)}')` : '';
   return `<section class="m44-ban${x.fanart ? '' : ' nofan'}" style="--pc:${esc(x.color || '#3c4a5c')}"><div class="m44-bbg" style="${bg}"></div><div class="m44-bgr"></div>
-    <div class="m44-bin">${poster(x, 'm44-bpo')}<div class="m43-col grow mw0 g8"><div class="m43-row sb xtop"><span class="m44-bk">${s ? 'SONARR · SERIE' : 'RADARR · FILM'}</span>${nav}</div><b class="m44-bt">${esc(x.title)}</b><div class="m44-bf">${facts}</div>
+    <div class="m44-bin">${poster(x, 'm44-bpo', '(max-width: 899px) 104px, 168px', true)}<div class="m43-col grow mw0 g8"><div class="m43-row sb xtop"><span class="m44-bk">${s ? 'SONARR · SERIE' : 'RADARR · FILM'}</span>${nav}</div><b class="m44-bt">${esc(x.title)}</b><div class="m44-bf">${facts}</div>
       <div class="m44-bc">${chips.map(([l, v, f]) => f ? `<button type="button" class="m44-gc" data-m43-edit="${f}">${l ? `<span>${esc(l)}</span>` : ''}<b>${esc(v)}</b></button>` : `<span class="m44-gc">${l ? `<span>${esc(l)}</span>` : ''}<b class="mono">${esc(v)}</b></span>`).join('')}</div></div></div>
     ${x.overview && !/^\S.*\(\d{4}\) ·/.test(x.overview) ? `<p class="m44-bo">${esc(x.overview)}</p>` : ''}<span class="m44-bm">Metadata fra ${s ? 'TheTVDB' : 'TMDb'}</span></section>`;
 }
@@ -361,7 +365,7 @@ function detHtml() {
     const acts = [x.hasFile && x.play ? `<a class="m43-btn ink" href="${esc(x.play.url)}" target="_blank" rel="noopener">${esc(x.play.label)}</a>` : '', `<button type="button" class="m43-btn ${x.hasFile ? 'line' : 'ink'}" data-m43="mauto"${M.busy.mauto ? ' disabled' : ''}>${M.busy.mauto ? 'Søker …' : 'Automatisk søk'}</button>`, x.hasFile && x.monitored === false && isAdm45() ? '<button type="button" class="m43-btn line red-t" data-m45-unmon="movie">Slett fil (ikke overvåket)</button>' : '', x.hasFile ? '<button type="button" class="m43-btn line" data-m44="mre">⟳ Last ned på nytt</button>' : '<button type="button" class="m43-btn line" data-m43="minter">Interaktivt søk</button>', x.hasFile ? '<button type="button" class="m43-btn line red-t" data-m44="mdel">Slett fil</button>' : ''].join('');
     return `${back}${head}<b class="m43-s ${tone(x.status)} m43-14">${esc(st ?? '')}</b></div></div>
       ${chips([['PROFIL', x.profile ?? '–', 'prof'], ['LAST NED NÅR DEN ER', x.availabilityLabel ?? '–', 'av'], ['OVERVÅKET', x.monitored ? 'Ja' : 'Nei', 'mmon']])}
-      <div class="m43-row xwrap g8">${acts}</div>
+      <div class="m43-row xwrap g8">${acts}</div>${trackHtml50(`m:${x.id}`, { movieId: x.id, cls: 'movie' })}
       <div class="m43-card m43-col g4"><span class="m43-lab">FIL</span><span class="m43-rel">${esc(file)}</span></div>`;
   }
   const miss = x.missingCount ?? 0, aired = (x.seasons ?? []).reduce((a, se) => a + se.episodes.filter((e) => e.aired).length, 0), have = (x.seasons ?? []).reduce((a, se) => a + se.have, 0);
@@ -377,14 +381,14 @@ function detHtml() {
         <div class="m43-col grow"><b class="ell">${esc(e.title)}</b><span class="m43-sm ${n ? tone(e.status) : 't-mut'}">${esc(n ? `${air} · ${e.statusText}` : air)}</span></div>
         ${!n ? `<span class="m43-stc ${tone(e.status)}">${esc(e.statusText ?? '')}</span>` : ''}
         ${e.canSearch ? `<button type="button" class="m43-ib line" data-m43-epauto="${e.id}" aria-label="Automatisk søk" title="Automatisk søk"${M.busy[`ep${e.id}`] ? ' disabled' : ''}>${ic.search}</button><button type="button" class="m43-ib ink" data-m43-epint="${e.id}" aria-label="Interaktivt søk" title="Interaktivt søk">${ic.list}</button>` : ''}
-        ${e.hasFile ? `<button type="button" class="m43-ib line" data-m44-epre="${e.id}" aria-label="Last ned ${esc(e.e)} på nytt" title="Last ned på nytt (interaktivt søk)">${ic.re}</button><button type="button" class="m43-ib line red-t" data-m44-epdel="${e.id}" aria-label="Slett filen til ${esc(e.e)}" title="Slett filen">${ic.trash}</button>` : ''}</div>`;
+        ${e.hasFile ? `<button type="button" class="m43-ib line" data-m44-epre="${e.id}" aria-label="Last ned ${esc(e.e)} på nytt" title="Last ned på nytt (interaktivt søk)">${ic.re}</button><button type="button" class="m43-ib line red-t" data-m44-epdel="${e.id}" aria-label="Slett filen til ${esc(e.e)}" title="Slett filen">${ic.trash}</button>` : ''}</div>${trackHtml50(`e:${e.id}`, { episodeId: e.id })}`;
     }).join('') : '';
     return `<div class="m43-se"><div class="m43-seh"><button type="button" class="m43-ib ghost mk" data-m43-semon="${se.number}" aria-label="Overvåk sesongen" aria-pressed="${se.monitored}">${ic.mark(se.monitored)}</button><button type="button" class="m43-set" data-m43-setog="${se.number}" aria-expanded="${open}"><b>${esc(se.label)}</b><span class="${se.missing ? 't-warn' : 't-mut'}">${esc(sub)}</span></button>
       ${se.canSearch ? `<button type="button" class="m43-btn sm line" data-m43-sesearch="${se.number}">Søk sesong</button>` : ''}${se.have > 0 ? `<button type="button" class="m43-btn sm line" data-m44-sere="${se.number}" title="Last ned sesongen på nytt (sesongpakke)">⟳ Sesong</button><button type="button" class="m43-btn sm line red-t" data-m44-sedel="${se.number}" title="Slett alle filer i sesongen">Slett filer</button>` : ''}${isAdm45() && unmonN45({ seasons: [se] }) ? `<button type="button" class="m43-btn sm line red-t" data-m45-unmon="season:${se.number}" title="Slett filene til episoder i sesongen som ikke er overvåket">Slett uovervåkede</button>` : ''}<span class="m43-chev">${open ? '▴' : '▾'}</span></div>${eps}</div>`;
   }).join('');
   return `${back}${head}<b class="m43-s ${miss ? 't-warn' : 't-ok'} m43-14">${esc(epTxt)}</b></div></div>
     ${chips([['PROFIL', x.profile ?? '–', 'prof'], ['OVERVÅKING', x.monitorLabel ?? monLbl(x.monitor), 'mon'], ['SERIETYPE', x.seriesTypeLabel ?? 'Standard', 'typ']])}
-    <div class="m43-row xwrap g8">${acts}</div><div class="m43-col">${seasons}</div>`;
+    <div class="m43-row xwrap g8">${acts}</div>${multiTrackHtml50((x.seasons ?? []).flatMap((se) => se.episodes.map((e) => e.id)))}<div class="m43-col">${seasons}</div>`;
 }
 const MON0 = [['all', 'Alle episoder'], ['future', 'Fremtidige episoder'], ['missing', 'Manglende episoder'], ['existing', 'Eksisterende episoder'], ['firstSeason', 'Første sesong'], ['latestSeason', 'Siste sesong'], ['pilot', 'Bare pilot'], ['none', 'Ingen']];
 const TYP0 = [['standard', 'Standard'], ['daily', 'Daglig'], ['anime', 'Anime']];
@@ -658,7 +662,8 @@ addEventListener('popstate', () => { if (!root?.isConnected || !/^#\/media/.test
 function back(fallback) { if (depth > 0 && typeof history.state?.m44 === 'number') { history.back(); return; } fallback(); nav(true); }
 async function cmd(body, key, okMsg) {
   M.busy[key] = true; paint();
-  try { const r = await mapi('/command', { method: 'POST', json: body }); toast(okMsg ?? r.message ?? 'Søk startet'); } catch (e) { toast(e.message); }
+  // Prompt 50: svaret har `track` – statuslinja under episoden/filmen følger søket til det er ferdig (ikke bare «Søk startet»).
+  try { const r = await mapi('/command', { method: 'POST', json: body }); if (!startTrack50(r, { episodeIds: body.episodeIds ?? [], movieIds: body.movieIds ?? [], seriesId: body.seriesId ?? null, seasonNumber: body.seasonNumber ?? null })) toast(okMsg ?? r.message ?? 'Søk startet'); } catch (e) { toast(e.message); }
   M.busy[key] = false; paint();
 }
 async function allToggle(pause) {
@@ -679,7 +684,7 @@ async function patchDet(json, msg) {
 async function grab(guid) {
   const r = (M.rel?.items ?? []).find((x) => x.guid === guid); if (!r) return;
   M.busy[guid] = true; paintMain();
-  try { const j = await mapi('/release', { method: 'POST', json: { guid, indexerId: r.indexerId, service: r.service } }); M.grab[guid] = true; toast(j.message ?? `Sendt til qBittorrent: ${r.quality} · ${r.sizeText}`); try { navigator.vibrate?.(10); } catch { /* */ } }
+  try { const j = await mapi('/release', { method: 'POST', json: { guid, indexerId: r.indexerId, service: r.service } }); M.grab[guid] = true; toast(j.message ?? `Sendt til qBittorrent: ${r.quality} · ${r.sizeText}`); if (M.srch?.k === 'm' || M.srch?.episodeId) trackGrab50(M.srch.k === 'm' ? { movieId: M.srch.id } : { episodeId: M.srch.episodeId }); try { navigator.vibrate?.(10); } catch { /* */ } }
   catch (e) { toast(e.message); }
   M.busy[guid] = false; M.tor = null; paintMain();
 }
@@ -793,6 +798,7 @@ function bind(r) {
     const b = t.closest('button,a[data-m43]');
     if (!b || b.disabled) return;
     const d = b.dataset;
+    if (await click50(b)) return; // prompt 50: Start / Søk igjen / Innstillinger → Media i statuslinja
     if (d.m43Tab) { M.tab = d.m43Tab; M.det = null; M.srch = null; M.job = null; M.libF = 'all'; M.srvOpen = false; enterTab(); poll(); paint(); r.querySelector('[data-m43-main]')?.scrollTo(0, 0); nav(); return; }
     if (await act44(b, d)) return; // prompt 44
     if (d.m45Unmon) { // prompt 45: slett uovervåkede

@@ -7,6 +7,7 @@ import { esc } from './util.js';
 import { store } from './store.js';
 import { TAB_IC } from './settings-search.js';
 import { toast } from './toast.js';
+import { diagGroup50, diagClick50 } from './settings-media50.js'; // prompt 50: Media → Diagnostikk (admin)
 
 const admin = () => store.me?.me?.role === 'admin';
 async function j(path, opt = {}) {
@@ -61,6 +62,7 @@ export function mediaView45(H) {
     group('Spill av med', [{ html: `<div class="sg-row"><span class="sg-txt"><b>Avspilling</b><span>Hvor «Spill av» åpner serier og filmer</span></span>${players}</div>`, q: 'spill av med jellyfin plex avspilling' }]),
     group('Tjenester', svc, `API-nøklene lagres på serveren. Appen snakker bare med Homelab. Adresser og nøkler: <button type="button" class="s45-link" data-go="int">Integrasjoner → Media</button>.`),
   ];
+  if (S?.admin) groups.push(diagGroup50(H)); // prompt 50 (SRVMEDIA50): ledd 2–6 grønt/rødt
   if (S?.admin) {
     const A = MD.access;
     groups.push(group('Tilgang til Media', !A ? [row({ t: MD.accErr || 'Henter …' })] : (A.users ?? []).map((u) => (u.admin ? row({ t: u.name, s: 'Administrator · har alltid tilgang', k: 'tilgang media' }) : row({ t: u.name, s: u.allowed ? 'Har tilgang' : 'Ingen tilgang', tog: !!u.allowed, act: `data-s45-macc="${esc(u.id)}"`, k: 'tilgang media bruker' })))));
@@ -176,6 +178,7 @@ export function huskeTips45(H) {
 /* ---------------- Klikk ---------------- */
 export async function click45(e, render) {
   rr = render;
+  if (await diagClick50(e, render)) return true; // prompt 50
   const b = e.target.closest('[data-s45-href],[data-s45-geo],[data-s45-tip],[data-s45],[data-s45-mpref],[data-s45-player],[data-s45-macc],[data-s45-reco],[data-s45-zon],[data-s45-zp],[data-s45-zz]');
   if (!b || b.disabled) return false;
   const d = b.dataset;

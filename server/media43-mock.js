@@ -227,11 +227,23 @@ async function sonarrRadarr(svc, method, path, q, init) {
   if (P === '/queue') { const rec = queueFor(st, svc); return json({ page: 1, pageSize: 200, totalRecords: rec.length, records: rec }); }
   if (P === '/command' && method === 'POST') {
     const id = st.nextId.cmd++;
-    st.commands.push({ svc, ...b });
+    st.commands.push({ svc, id, ...b, queued: new Date().toISOString() });
     // Automatisk søk: beste treff sendes til qBittorrent (som i designet).
     if (/^(EpisodeSearch|SeasonSearch|SeriesSearch|MissingEpisodeSearch|MoviesSearch)$/.test(b?.name ?? '')) autoGrab(st, svc, b);
     return json({ id, name: b?.name, status: 'queued', queued: new Date().toISOString() }, 201);
   }
+  // Prompt 50: kjeden for diagnostikk/sporing (kommandostatus, historikk, nedlastingsklient, indeksere).
+  const cm = P.match(/^\/command\/(\d+)$/);
+  if (cm && method === 'GET') { const x = st.commands.find((y) => y.svc === svc && y.id === +cm[1]); return x ? json({ id: x.id, name: x.name, commandName: x.name, status: 'completed', message: 'Completed', queued: x.queued, started: x.queued, ended: x.queued }) : json({ message: 'NotFound' }, 404); }
+  if (P === '/command' && method === 'GET') return json(st.commands.filter((y) => y.svc === svc).map((x) => ({ id: x.id, name: x.name, commandName: x.name, status: 'completed', message: 'Completed', queued: x.queued })));
+  if ((P === '/history' || P === '/history/movie') && method === 'GET') {
+    const ep = +q.get('episodeId') || null, mid = +q.get('movieId') || null;
+    const recs = (st.history ?? []).filter((h) => h.svc === svc && (!ep || h.episodeId === ep) && (!mid || h.movieId === mid)).slice().reverse();
+    return json(P === '/history/movie' ? recs : { page: 1, pageSize: 20, totalRecords: recs.length, records: recs });
+  }
+  if (P === '/indexer' && method === 'GET') return json(st.indexers.slice(0, 6).map((x) => ({ id: x.id, name: `${x.name} (Prowlarr)`, enable: true, enableAutomaticSearch: true, enableInteractiveSearch: true, protocol: 'torrent' })));
+  if (P === '/downloadclient' && method === 'GET') return json([{ id: 1, name: 'qBittorrent', enable: true, implementation: 'QBittorrent', implementationName: 'qBittorrent', protocol: 'torrent', fields: [{ name: 'host', value: 'qbittorrent' }, { name: 'port', value: 8080 }, { name: 'useSsl', value: false }, { name: 'username', value: 'admin' }, { name: 'password', value: '********' }, { name: isS ? 'tvCategory' : 'movieCategory', value: isS ? 'tv-sonarr' : 'radarr' }, { name: 'initialState', value: 0 }] }]);
+  if (P === '/downloadclient/testall' && method === 'POST') return json([{ id: 1, isValid: true, validationFailures: [] }]);
   if (isS) {
     if (P === '/calendar') {
       const from = Date.parse(q.get('start')), to = Date.parse(q.get('end'));
@@ -350,6 +362,9 @@ function grab(st, r, svc) {
   st.torrents.push({ hash, name: r.title, size: r.size, total_size: r.size, progress: 0, dlspeed: 0, upspeed: 0, eta: 8640000, state: r.seeders > 0 ? 'downloading' : 'stalledDL', category: svc === 'radarr' ? 'radarr' : 'tv-sonarr',
     save_path: `/data/downloads/${svc === 'radarr' ? 'film' : 'tv'}`, priority: st.torrents.length + 1, num_seeds: r.seeders, num_leechs: r.leechers, added_on: Math.floor(Date.now() / 1000), force_start: false, seq_dl: false, f_l_piece_prio: false,
     _rate: r.seeders > 0 ? Math.min(14, 4 + r.seeders / 120) * MB : 0, _link: link, _files: [{ name: `${r.title}.mkv`, size: r.size, priority: 1 }] });
+  // Prompt 50: grab i historikken (eventType grabbed) per episode/film.
+  st.history ??= [];
+  for (const eid of svc === 'radarr' ? [null] : (r.episodeIds ?? [])) st.history.push({ id: st.history.length + 1, svc, eventType: 'grabbed', date: new Date().toISOString(), sourceTitle: r.title, downloadId: hash.toUpperCase(), episodeId: eid, movieId: svc === 'radarr' ? r.movieId : null, seriesId: r.seriesId ?? null, data: { downloadClient: 'qBittorrent' } });
 }
 function autoGrab(st, svc, b) {
   let targets = [];
@@ -384,6 +399,7 @@ async function qbit(method, path, q, init) {
   if (P === '/torrents/categories') return json({ 'tv-sonarr': { name: 'tv-sonarr', savePath: '/data/downloads/tv' }, radarr: { name: 'radarr', savePath: '/data/downloads/film' } });
   if (P === '/transfer/info') { const dl = st.torrents.reduce((a, t) => a + t.dlspeed, 0), up = st.torrents.reduce((a, t) => a + t.upspeed, 0); return json({ dl_info_speed: dl, up_info_speed: up, dl_info_data: 0, up_info_data: 0, connection_status: 'connected', dht_nodes: 312 }); }
   if (P === '/transfer/speedLimitsMode') return text(st.alt ? '1' : '0');
+  if (P === '/sync/maindata') return json({ rid: 1, full_update: true, server_state: { free_space_on_disk: Math.round(2.4 * 1024 * GB), connection_status: 'connected' }, torrents: Object.fromEntries(st.torrents.map((t) => { const { hash, ...x } = qbOut(t); return [hash, x]; })), categories: {} }); // prompt 50
   if (P === '/transfer/toggleSpeedLimitsMode') { st.alt = !st.alt; return text(''); }
   const hashes = String(b.hashes ?? b.hash ?? q.get('hash') ?? '').toLowerCase();
   const pick = () => (hashes === 'all' ? st.torrents : st.torrents.filter((t) => hashes.split('|').includes(t.hash)));

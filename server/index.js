@@ -66,6 +66,7 @@ import { study44Api } from './study44.js';
 import { auth44Api } from './auth44.js';
 import { playback44Api, startPlayback44 } from './playback44.js';
 import { mountApi45 } from './api45.js'; // prompt 45 (SERVER45)
+import { mountMedia50, startMedia50 } from './media50.js'; // prompt 50 (SRVMEDIA50): bilder med diskcache, sporing etter søk, diagnostikk
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
@@ -672,6 +673,7 @@ app.get('/api/media/diag', authOrToken, (c) => c.json(mediaDiagOut46(c.get('user
 app.use('/api/media/*', mediaSiteMw44);
 app.use('/api/media/series', librarySearchMw44);
 app.use('/api/media/movies', librarySearchMw44);
+mountMedia50(app); // prompt 50 (SRVMEDIA50): /bilde, /track, /diagnostics, /torrents/:hash/start + posterImg/track i svarene (før mountApi45 og media43/44)
 mountApi45(app); // prompt 45 (SERVER45): Docker-oppsett, Search Console, AI-import, Media/Avspilling, sonevarsler, HA-helse, Vær, Gjøremål, Innstillinger (etter mediaSiteMw44, før de eldre rutene)
 app.get('/api/media/now', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaNow))));
 app.get('/api/media/recent', authOrToken, legacyMedia44(personal('media', proxy(api.getMediaRecent))));
@@ -857,7 +859,7 @@ app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startLogs44(); startPlayback44(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); startApi38(); startApi40(); startHealth42(); startMediaWatch43(); startMedia50(); startLogs44(); startPlayback44(); }
 if (process.env.NODE_ENV !== 'test') { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
 
 app.onError((err, c) => {

@@ -8,7 +8,7 @@
 // Ruter under /api/media (svarformene står i rapporten for prompt 43 og i kommentarene ved hver rute).
 import { normTitle43, parseEpisodeAsk43 } from './glimt45/media47.js'; // prompt 47
 import { Hono } from 'hono';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { kv, OWNER } from './db.js';
 import { userCfg, userCfgSet } from './settings.js';
@@ -155,7 +155,7 @@ async function qb(method, path, { form, query, conf, raw = false } = {}) {
 /** qBittorrent 5 heter stop/start, 4.x pause/resume. */
 async function qbVerb(v5, v4, hashes) {
   try { return await qb('POST', `/torrents/${v5}`, { form: { hashes } }); }
-  catch (e) { if (e.status === 404) return qb('POST', `/torrents/${v4}`, { form: { hashes } }); throw e; }
+  catch (e) { if (e.status === 404 || e.upstream === 404 || e.upstream === 405) return qb('POST', `/torrents/${v4}`, { form: { hashes } }); throw e; } // prompt 50: også 405
 }
 
 /* ---------------- Cache ---------------- */
@@ -200,14 +200,33 @@ const stOut = (status, progress = null) => ({ status, statusText: (status === 'd
 
 /* ---------------- Bilder ---------------- */
 
+/* Prompt 50 (SRVMEDIA50, claude-code-media-bilder-raskt.md): årsaken til at plakatene var trege – posterOf ga TVDB/TMDB-adressen
+   (remoteUrl, 1–3 MB i full størrelse rett fra internett) eller /cover (full størrelse gjennom serveren uten diskcache). For
+   serier og filmer i biblioteket peker plakaten nå på /api/media/bilde/{serie|film}/{id}/{variant}?w=&v= (media50.js): lokal
+   MediaCover fra Sonarr/Radarr (eller image.tmdb.org), skalert ned til WebP og lagret på disk. v = versjon av kilden (lastWrite). */
+const bildeVer43 = (p) => createHash('sha1').update(`${p?.url ?? ''}|${p?.remoteUrl ?? ''}`).digest('hex').slice(0, 10);
+const BILDE_W43 = { poster: 320, fanart: 1280, banner: 1280 };
+function bildeOf43(svc, images, id, variant) {
+  if (id == null || !Number.isInteger(+id) || +id <= 0 || !['sonarr', 'radarr'].includes(svc)) return null;
+  const p = (images ?? []).find((i) => i.coverType === variant);
+  if (!p || !(/\/MediaCover\//.test(p.url ?? '') || /^https:\/\/image\.tmdb\.org\//.test(p.remoteUrl ?? ''))) return null;
+  const c = svcConf43(svc);
+  if (!c.on || c.mock) return null;
+  const site = mediaSite43();
+  return `/api/media/bilde/${svc === 'radarr' ? 'film' : 'serie'}/${+id}/${variant}?w=${BILDE_W43[variant]}&v=${bildeVer43(p)}${site ? `&server=${encodeURIComponent(site)}` : ''}`;
+}
 function posterOf(svc, images, id) {
+  const b = bildeOf43(svc, images, id, 'poster');
+  if (b) return b;
   const p = (images ?? []).find((i) => i.coverType === 'poster');
   if (p?.remoteUrl && /^https:\/\//.test(p.remoteUrl)) return p.remoteUrl;
   if (p?.url && /^\/MediaCover\//.test(p.url.replace(/^\/[^/]*(?=\/MediaCover)/, ''))) return `/api/media/cover?svc=${svc}&path=${encodeURIComponent(p.url.replace(/^.*(\/MediaCover\/)/, '$1').split('?')[0])}`;
   return null;
 }
 /** Prompt 44: bredt bilde (16:9) for banner og hero. Sonarr/Radarr coverType fanart; ellers null (klienten bruker plakaten uskarpt). */
-function fanartOf(svc, images) {
+function fanartOf(svc, images, id = null) {
+  const b = bildeOf43(svc, images, id, 'fanart');
+  if (b) return b;
   const p = (images ?? []).find((i) => i.coverType === 'fanart');
   if (p?.remoteUrl && /^https:\/\//.test(p.remoteUrl)) return p.remoteUrl;
   if (p?.url && /\/MediaCover\//.test(p.url)) return `/api/media/cover?svc=${svc}&path=${encodeURIComponent(p.url.replace(/^.*(\/MediaCover\/)/, '$1').split('?')[0])}`;
@@ -303,7 +322,7 @@ async function seriesOut(s) {
   const st = s.statistics ?? {};
   const have = st.episodeFileCount ?? 0, total = st.episodeCount ?? st.totalEpisodeCount ?? 0;
   return { id: s.id, kind: 'series', title: s.title, year: s.year ?? null, network: s.network ?? '', status: s.status === 'ended' ? 'ended' : 'continuing', statusLabel: s.status === 'ended' ? 'Avsluttet' : 'Fortsetter', overview: s.overview ?? '',
-    poster: posterOf('sonarr', s.images, s.id), fanart: fanartOf('sonarr', s.images), color: artOf('sonarr', s.id), tvdbId: s.tvdbId ?? null, profileId: s.qualityProfileId ?? null, profile: await profName('sonarr', s.qualityProfileId),
+    poster: posterOf('sonarr', s.images, s.id), fanart: fanartOf('sonarr', s.images, s.id), color: artOf('sonarr', s.id), tvdbId: s.tvdbId ?? null, profileId: s.qualityProfileId ?? null, profile: await profName('sonarr', s.qualityProfileId),
     monitored: s.monitored !== false, monitor: s._monitor ?? null, seriesType: s.seriesType ?? 'standard', seriesTypeLabel: SERIES_TYPES43.find((x) => x[0] === s.seriesType)?.[1] ?? 'Standard', path: s.path ?? null, rootFolder: s.rootFolderPath ?? null,
     episodes: { have, total, missing: Math.max(0, total - have) }, episodesText: `${have} av ${total} episoder${total - have > 0 ? ` · ${total - have} mangler` : ''}`, sizeOnDisk: st.sizeOnDisk ?? 0, sizeText: st.sizeOnDisk ? sizeText43(st.sizeOnDisk) : '0 GB', seasonCount: st.seasonCount ?? s.seasons?.length ?? 0 };
 }
@@ -339,7 +358,7 @@ async function lookupSeries(term) {
   const [res, lib] = await Promise.all([arr('sonarr', 'GET', '/series/lookup', { query: { term } }), seriesList().catch(() => [])]);
   return (res ?? []).slice(0, 25).map((x) => {
     const have = lib.find((s) => (x.tvdbId && s.tvdbId === x.tvdbId) || (x.id && s.id === x.id));
-    return { kind: 'series', tvdbId: x.tvdbId ?? null, title: x.title, year: x.year ?? null, network: x.network ?? '', overview: x.overview ?? '', poster: posterOf('sonarr', x.images, have?.id), fanart: fanartOf('sonarr', x.images), color: have ? artOf('sonarr', have.id) : x._color ?? colorFor(x.title),
+    return { kind: 'series', tvdbId: x.tvdbId ?? null, title: x.title, year: x.year ?? null, network: x.network ?? '', overview: x.overview ?? '', poster: posterOf('sonarr', x.images, have?.id), fanart: fanartOf('sonarr', x.images, have?.id), color: have ? artOf('sonarr', have.id) : x._color ?? colorFor(x.title),
       seasons: (x.seasons ?? []).filter((s) => s.seasonNumber > 0).length, exists: !!have, id: have?.id ?? null, existsLabel: have ? 'Finnes' : null };
   });
 }
@@ -390,7 +409,7 @@ async function updateSeries(id, b) {
 async function movieOut(m, q = null) {
   const f = m.movieFile;
   const d = m.digitalRelease?.slice(0, 10) ?? null;
-  return { id: m.id, kind: 'movie', title: m.title, year: m.year ?? null, overview: m.overview ?? '', poster: posterOf('radarr', m.images, m.id), fanart: fanartOf('radarr', m.images), color: artOf('radarr', m.id), tmdbId: m.tmdbId ?? null,
+  return { id: m.id, kind: 'movie', title: m.title, year: m.year ?? null, overview: m.overview ?? '', poster: posterOf('radarr', m.images, m.id), fanart: fanartOf('radarr', m.images, m.id), color: artOf('radarr', m.id), tmdbId: m.tmdbId ?? null,
     movieFileId: f?.id ?? null, canRedownload: !!m.hasFile, canDeleteFile: !!m.hasFile, // prompt 44
     profileId: m.qualityProfileId ?? null, profile: await profName('radarr', m.qualityProfileId), monitored: m.monitored !== false, minimumAvailability: m.minimumAvailability ?? 'released',
     availabilityLabel: AVAILABILITY43.find((x) => x[0] === m.minimumAvailability)?.[1] ?? 'Utgitt digitalt', hasFile: !!m.hasFile, path: m.path ?? null, rootFolder: m.rootFolderPath ?? null,
@@ -410,7 +429,7 @@ async function lookupMovies(term) {
   const [res, lib] = await Promise.all([arr('radarr', 'GET', '/movie/lookup', { query: { term } }), movieList().catch(() => [])]);
   return (res ?? []).slice(0, 25).map((x) => {
     const have = lib.find((m) => (x.tmdbId && m.tmdbId === x.tmdbId) || (x.id && m.id === x.id));
-    return { kind: 'movie', tmdbId: x.tmdbId ?? null, title: x.title, year: x.year ?? null, overview: x.overview ?? '', poster: posterOf('radarr', x.images, have?.id), fanart: fanartOf('radarr', x.images), color: have ? artOf('radarr', have.id) : x._color ?? colorFor(x.title), exists: !!have, id: have?.id ?? null, existsLabel: have ? 'Finnes' : null };
+    return { kind: 'movie', tmdbId: x.tmdbId ?? null, title: x.title, year: x.year ?? null, overview: x.overview ?? '', poster: posterOf('radarr', x.images, have?.id), fanart: fanartOf('radarr', x.images, have?.id), color: have ? artOf('radarr', have.id) : x._color ?? colorFor(x.title), exists: !!have, id: have?.id ?? null, existsLabel: have ? 'Finnes' : null };
   });
 }
 async function addMovie(b) {
@@ -496,7 +515,7 @@ export async function interactive(svc, query, { signal } = {}) {
     const m = await arr('radarr', 'GET', `/movie/${query.movieId}`);
     const pn = await profName('radarr', m.qualityProfileId);
     ctx = { kind: 'movie', movieId: m.id, title: m.title, code: String(m.year ?? ''), titlePrefix: '', profile: pn, profileRes: resOfProfile(pn), poster: posterOf('radarr', m.images, m.id), color: artOf('radarr', m.id),
-      header: `${m.title}${m.year ? ` · ${m.year}` : ''}`, sub: `Profil ${pn ?? '–'}`, fanart: fanartOf('radarr', m.images), hasFile: !!m.hasFile };
+      header: `${m.title}${m.year ? ` · ${m.year}` : ''}`, sub: `Profil ${pn ?? '–'}`, fanart: fanartOf('radarr', m.images, m.id), hasFile: !!m.hasFile };
     rows = await releaseRows('radarr', { movieId: m.id }, signal);
   } else {
     const e = query.episodeId ? await arr('sonarr', 'GET', `/episode/${+query.episodeId}`) : null;
@@ -1283,4 +1302,5 @@ media43Api.get('/cover', ...G, async (c) => {
 // Prompt 44 (SERVER44): byggeklosser for media44.js (servere per sted, søk som jobb, slett fil, felles status).
 export { normTitle43, parseEpisodeAsk43 };
 export { arr as arr43, qb as qb43, cached as cached43, indexersRaw as indexersRaw43, posterOf as posterOf43, fanartOf as fanartOf43, epCode as epCode43,
+  rawFetch as rawFetch43, qbVerb as qbVerb43, queues as queues43, torrentsRaw as torrentsRaw43, seriesList as seriesList43, movieList as movieList43, TSTATE as TSTATE43, bildeVer43, // prompt 50
   releaseOut as releaseOut43, statusOut as mediaStatusOut43, fail as mediaFail43, guard as mediaGuard43, admin as mediaAdmin43, jb as mediaBody43, nb1 as nb143 };

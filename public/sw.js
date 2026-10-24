@@ -4,7 +4,12 @@
 // - Uversjonerte /assets/: nettverket først med revalidering. API-kall går aldri via cachen.
 // - skipWaiting i install, clients.claim i activate, og alle gamle cacher (andre navn) slettes.
 // Prompt 48: v33 – Innstillinger → AI → Kvitteringer (receipts48-set.js, receipts48.css), advarsler fra /api/ai/routing i AI-kontroll.
-const CACHE = 'os-v33';
+// Prompt 50: v34 – Media-plakater fra /api/media/bilde/… (WebP med ?v=<versjon>) svares cache-først fra en egen cache
+// (BILDER, beholdes mellom versjoner, maks ~800 bilder), så andre gang Media åpnes kommer alle synlige plakater uten nettverkskall,
+// også uten nett. Andre API-kall går fortsatt aldri via cachen.
+const CACHE = 'os-v34';
+const BILDER = 'mb50-bilder';
+const BILDER_MAX = 800;
 const SHELL = ['/assets/icons/icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {})); self.skipWaiting(); });
 self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k.startsWith('os-')).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
@@ -13,6 +18,7 @@ const put = (req, res) => { if (res && res.ok && res.type === 'basic' && !res.re
 self.addEventListener('fetch', (e) => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/api/media/bilde/') && url.searchParams.has('v')) { e.respondWith(bilde(req)); return; }
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/finans/') || url.pathname === '/version.json' || url.pathname === '/sw.js') return;
   if (req.mode === 'navigate') {
     // HTML: nettverket først, uten HTTP-cache. Uten nett: siste kopi.
@@ -26,6 +32,19 @@ self.addEventListener('fetch', (e) => {
   }
   e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => put(req, res)).catch(() => caches.match(req).then((r) => r || Response.error())));
 });
+
+/** Prompt 50: cache først for plakatene (adressen har versjonen, så et endret bilde får ny adresse). */
+async function bilde(req) {
+  const c = await caches.open(BILDER);
+  const hit = await c.match(req);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res.ok && res.type === 'basic' && /^image\//.test(res.headers.get('content-type') || '')) {
+    const copy = res.clone();
+    c.put(req, copy).then(async () => { const ks = await c.keys(); if (ks.length > BILDER_MAX) await Promise.all(ks.slice(0, ks.length - BILDER_MAX).map((k) => c.delete(k))); }).catch(() => {});
+  }
+  return res;
+}
 
 /* ---------- Prompt 31: Web Push (varsler når fanen er lukket) ---------- */
 // Serveren (server/notify.js → notifyUser) sender {title, body, url, tag, category, id?, actions?}, kryptert med aes128gcm.
