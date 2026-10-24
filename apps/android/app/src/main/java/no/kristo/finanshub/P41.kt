@@ -1030,8 +1030,10 @@ fun AppViewModel.loadZones41() {
                 val id = z.s37("id") ?: return@mapNotNull null
                 Zone41(id, z.s37("name") ?: "Skole", z.optDouble("lat"), z.optDouble("lon"), z.optInt("radius_m", 150), z.s37("label") ?: "${z.s37("name") ?: "Skole"} ${z.optInt("radius_m", 150)} m")
             }
-            SchoolZones41.save(appCtx40, s.zones ?: emptyList(), base39, token39)
         }
+        // Prompt 50 (P50Fam.kt): én region per område fra Familie › Steder (skolen er et sted med type skole). Eldre server: som før.
+        refreshRegions50()
+        if (!fam50.regionsOk) runCatching { SchoolZones41.save(appCtx40, s.zones ?: emptyList(), base39, token39) }
     }
 }
 

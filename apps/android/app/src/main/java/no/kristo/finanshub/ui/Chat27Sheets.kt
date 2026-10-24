@@ -188,6 +188,7 @@ private fun Ch27ModelSheet(vm: AppViewModel, v: ChatV27) {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text(m.label, color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                             Ch27Badge(m.sky)
+                            if (m.vision) ChatVisionBadge50(v) // prompt 50: «Ser bilder»
                         }
                         val sub = if (m.sky) listOfNotNull(m.provider.replaceFirstChar { it.uppercase() } + " · sky", m.desc).joinToString(" · ")
                         else listOfNotNull(m.name.takeIf { it != m.id }, m.size, m.desc ?: if (m.vision) "Tekst og bilde" else null).joinToString(" · ")

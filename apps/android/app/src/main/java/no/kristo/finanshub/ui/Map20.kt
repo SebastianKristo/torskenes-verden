@@ -152,6 +152,8 @@ private fun darkFilter(): ColorMatrixColorFilter {
 /** En sone på kartet: sirkel (fyll 13 %, kant 2 dp), ikon i 28 dp sirkel i sentrum og navnet i en hvit etikett under. */
 internal class Fam22ZoneDraw(
     val id: String, val name: String, val lat: Double, val lon: Double, val radius: Double, val color: Int, val icon: String, val draft: Boolean,
+    /** Prompt 50: bare sirkelen (nøyaktighetssirkel på Personside), uten ikon og navn. */
+    val plain: Boolean = false,
 )
 
 /** En person på kartet: rund pin 40 dp (50 dp valgt) med 3 dp hvit kant, bilde eller initialer, og fart-badge. */
@@ -386,6 +388,7 @@ private class Fam22Overlay(ctx: Context) : Overlay() {
         }
         // 3) Ikon i sentrum (28 dp, hvit 2 dp kant, skygge 0 3 8 / 25 %) og navnet under (hvit 88 %, radius 8, Manrope 700 11)
         for (z in dd.zones) {
+            if (z.plain) continue
             val r = zr[z.id] ?: continue
             pj.toPixels(GeoPoint(z.lat, z.lon), pt)
             val cx = pt.x.toFloat()

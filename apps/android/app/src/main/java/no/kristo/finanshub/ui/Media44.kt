@@ -228,14 +228,13 @@ internal fun BoxScope.Undo44(vm: AppViewModel) {
 /** Banner øverst i serie/film: fanart (uskarp) med mørk gradient, plakat 2:3 (104) og tittel. */
 @Composable
 internal fun Banner44(vm: AppViewModel, d: MItem43) {
-    var bmp by remember(d.fanart) { mutableStateOf<Bitmap?>(null) }
-    LaunchedEffect(d.fanart) { val u = d.fanart; if (!u.isNullOrBlank()) bmp = if (u.startsWith("/")) vm.image(u) else vm.bgImage41(u) }
+    val bmp = rememberFanart50(vm, d.fanart, d.fanartImg) // prompt 50: fanart 1280 fra Img50 (disk-/minnecache)
     val app = if (d.kind == "tv") "SONARR · SERIE" else "RADARR · FILM"
     Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(d.color?.let { Color(it) } ?: Color(0xFF2E3B4A))) {
         bmp?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize().blur(6.dp)) }
         Box(Modifier.matchParentSize().background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = .92f), Color.Black.copy(alpha = .55f)))))
         Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Poster43(vm, d.poster, d.color, d.title, 104.dp, 156.dp)
+            Poster43(vm, d.poster, d.color, d.title, 104.dp, 156.dp, img = d.posterImg)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(app, color = Color(0xFFF2A3B5), fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.3.sp)
                 Text(d.title, color = Color.White, fontFamily = PaperFonts.serif, fontSize = 26.sp, lineHeight = 28.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)

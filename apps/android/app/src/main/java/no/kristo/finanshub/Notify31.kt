@@ -243,6 +243,8 @@ internal suspend fun pending31(ctx: Context, api: Api) {
         val cat = x.optString("category", "ai").ifBlank { "ai" }
         val ref = x.optString("jobId").ifBlank { x.optString("ref") }
         val tag = x.optString("tag").ifBlank { if (ref.isNotBlank()) "assist-$ref" else "pend-" + x.optString("id", ts.toString()) }
+        // Prompt 50: Sjekk inn (innsjekk, forespørsel, «Hent meg», svar, påminnelse) med handlinger og egen kanal (P50Fam.kt).
+        if (runCatching { pendingCheckin50(ctx, x, tag) }.getOrDefault(false)) continue
         if (tag in seen || (ref.isNotBlank() && ("assist-$ref" in seen || ref in seen))) continue
         val title = x.optString("title").ifBlank { "Glimt" }
         val body = plain31(x.optString("body").ifBlank { x.optString("text") })

@@ -113,12 +113,13 @@ class MainActivity : FragmentActivity() {
             } else {
                 val uri: Uri? = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
                 else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)
-                uri?.let { vm.uploadUri(it) }
+                // Prompt 50: deling mens Chat er åpen legger filen ved i chatten i stedet for i Finans-køen.
+                uri?.let { if (vm.chat27.open) vm.addChat50(listOf(it)) else vm.uploadUri(it) }
             }
             Intent.ACTION_SEND_MULTIPLE -> {
                 val uris: List<Uri>? = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
                 else @Suppress("DEPRECATION") intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
-                uris?.let { vm.uploadUris(it) }
+                uris?.let { if (vm.chat27.open) vm.addChat50(it) else vm.uploadUris(it) }
             }
         }
     }

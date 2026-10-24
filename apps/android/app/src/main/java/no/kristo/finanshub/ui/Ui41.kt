@@ -464,7 +464,7 @@ private fun TripCard41(vm: AppViewModel, t: Trip41, home: Boolean) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 PLabel("Innstillinger for kortet", p.mut)
-                Zones41(vm) // skolesoner (chips, «+ Sone», siste kan ikke slettes)
+                School50(vm) // prompt 50: «SKOLE · FRA FAMILIE › STEDER» (bare visning, «Endre i Steder ›»); eldre server: Zones41
                 PLabel("Antall anbefalte reiser", p.mut)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf(1, 2, 3).forEach { n -> Pill41("$n", vm.p45.recoCount == n) { vm.setRecoCount45(n) } }

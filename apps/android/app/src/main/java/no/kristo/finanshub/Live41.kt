@@ -218,6 +218,22 @@ object SchoolZones41 {
     }
 
     internal fun prefs(ctx: Context) = ctx.getSharedPreferences(PREF, Context.MODE_PRIVATE)
+
+    /**
+     * Prompt 50 (P50Fam.kt): skole-områdene fra Familie › Steder. Nærhetsvarslene registreres av Geofence50 (én region per område,
+     * maks 20 totalt), så de gamle skolesone-varslene fjernes her og «inside» ryddes for områder som ikke finnes lenger.
+     */
+    fun saveOnly50(ctx: Context, zones: List<Zone41>) {
+        val sp = prefs(ctx)
+        val old = runCatching { JSONArray(sp.getString("zones", "[]")) }.getOrDefault(JSONArray())
+        val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        if (lm != null) for (i in 0 until old.length()) old.optJSONObject(i)?.optString("id")?.let { runCatching { lm.removeProximityAlert(pi(ctx, it)) } }
+        val arr = JSONArray()
+        zones.forEach { z -> arr.put(JSONObject().put("id", z.id).put("name", z.name).put("lat", z.lat).put("lon", z.lon).put("r", z.radius)) }
+        val ids = zones.map { it.id }.toSet()
+        val inside = (sp.getStringSet("inside", emptySet()) ?: emptySet()).filter { it in ids }.toSet()
+        sp.edit().putString("zones", arr.toString()).putStringSet("inside", inside).apply()
+    }
 }
 
 class SchoolZone41Receiver : BroadcastReceiver() {

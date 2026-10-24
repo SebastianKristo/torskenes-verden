@@ -46,7 +46,8 @@ internal fun FamilyScreen(vm: AppViewModel) {
         shareAfter = false
         locPerm.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
-    Family22Screen(vm, startSharing, askLocation)
+    // Prompt 50: Familie i nytt design (ui/Family50.kt). Eldre server uten /api/family/people50: den forrige siden.
+    if (vm.fam50.missing) Family22Screen(vm, startSharing, askLocation) else Family50Screen(vm, startSharing)
     if (vm.famPrivacy) PrivacySheet(vm, startSharing)
 }
 

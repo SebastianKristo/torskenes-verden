@@ -293,7 +293,8 @@ internal fun Family22Screen(vm: AppViewModel, startSharing: () -> Unit, askLocat
     val acc = vm.account?.id
     val meId = f?.me?.userId
     // Prompt 42: fanen Vel fremme (tidligere Hjemlys) i Familie (ui/Ui42.kt).
-    val tab = vm.famTab.takeIf { it in setOf("kart", "soner", "helse", "velfremme") } ?: "kart"
+    // Prompt 50: fanene heter nå folk/steder/helse/sjekk (Family50); denne siden brukes bare mot eldre server.
+    val tab = when (vm.famTab) { "folk" -> "kart"; "steder" -> "soner"; "sjekk" -> "velfremme"; else -> vm.famTab }.takeIf { it in setOf("kart", "soner", "helse", "velfremme") } ?: "kart"
     val ctl = remember { Fam22MapCtl() }
 
     var placing by remember { mutableStateOf(false) }

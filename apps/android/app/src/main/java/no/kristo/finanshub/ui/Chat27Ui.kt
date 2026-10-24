@@ -126,7 +126,8 @@ internal fun ChatScreen27(vm: AppViewModel) {
     val s = vm.chat27
     val v = chatV27(s.theme)
     BackHandler { vm.closeChat27() }
-    BoxWithConstraints(Modifier.fillMaxSize().background(v.bg)) {
+    // Prompt 50: hele chatten tar imot filer som dras inn (Fold/nettbrett), se ui/Chat50Ui.kt.
+    BoxWithConstraints(Modifier.fillMaxSize().background(v.bg).chatDrop50(vm)) {
         val wide = maxWidth >= 600.dp
         Row(Modifier.fillMaxSize()) {
             if (wide) Ch27Side(vm, v, true, Modifier.width(288.dp).fillMaxHeight().background(v.side).statusBarsPadding().navigationBarsPadding())
@@ -138,6 +139,8 @@ internal fun ChatScreen27(vm: AppViewModel) {
             Ch27Side(vm, v, false, Modifier.fillMaxHeight().widthIn(max = 320.dp).fillMaxWidth(.86f).background(v.side).statusBarsPadding().navigationBarsPadding())
         }
         Ch27Sheets(vm, v, wide)
+        ChatDropLayer50(v) // prompt 50: «Slipp for å legge ved»
+        ChatLightbox50(vm) // prompt 50: lysboks for bildene
         // Meldinger fra appen (eksport, deling, nedlasting) vises over chatten.
         vm.message?.let { msg ->
             LaunchedEffect(msg) { delay(2600); if (vm.message == msg) vm.message = null }
@@ -275,7 +278,7 @@ private fun Ch27Main(vm: AppViewModel, v: ChatV27, wide: Boolean, modifier: Modi
 }
 
 /** Svaret delt i blokker: avsnitt, punkter («•», «1.»), overskrifter (fet) og kodeblokker (mono på kort). **fet** tekst støttes. */
-private class Ch27Blk(val code: Boolean, val mk: String, val text: AnnotatedString)
+private class Ch27Blk(val code: Boolean, val mk: String, val text: AnnotatedString, val table: List<String>? = null)
 
 private fun ch27Inline(t: String, bold: Boolean): AnnotatedString = buildAnnotatedString {
     t.replace("`", "").split("**").forEachIndexed { i, x -> if (i % 2 == 1 || bold) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(x) } else append(x) }
@@ -291,6 +294,12 @@ private fun ch27Blocks(t: String): List<Ch27Blk> {
             return@forEach
         }
         code?.let { it.add(l); return@forEach }
+        // Prompt 50: markdown-tabeller (kvittering i chat: | Vare | Antall | Pris |) samles til én tabellblokk.
+        if (isTableLine50(l)) {
+            val last = out.lastOrNull()
+            if (last?.table != null) out[out.lastIndex] = Ch27Blk(false, "", last.text, last.table + l) else out.add(Ch27Blk(false, "", AnnotatedString(""), listOf(l)))
+            return@forEach
+        }
         if (l.isBlank()) return@forEach
         val li = Regex("^\\s*[-*•]\\s+(.*)").find(l)
         val nu = Regex("^\\s*(\\d+)[.)]\\s+(.*)").find(l)
@@ -310,7 +319,8 @@ private fun ch27Blocks(t: String): List<Ch27Blk> {
 private fun Ch27Body(v: ChatV27, text: String) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ch27Blocks(text).forEach { b ->
-            if (b.code) Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(v.card).horizontalScroll(rememberScrollState()).padding(12.dp, 10.dp)) {
+            if (b.table != null) ChatTable50(v, b.table)
+            else if (b.code) Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(v.card).horizontalScroll(rememberScrollState()).padding(12.dp, 10.dp)) {
                 Text(b.text, color = v.ink, fontFamily = PaperFonts.mono, fontSize = 13.sp, lineHeight = 20.sp, softWrap = false)
             } else Row(Modifier.padding(top = if (b.mk.isNotEmpty()) 0.dp else 0.dp).offset(y = if (b.mk.isNotEmpty()) (-6).dp else 0.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (b.mk.isNotEmpty()) Text(b.mk, color = v.mut, fontFamily = v.sans, fontSize = 15.5.sp, lineHeight = 25.sp, modifier = Modifier.widthIn(min = 16.dp))
@@ -365,6 +375,7 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                             }
                         }
                     }
+                    ChatBubbleImgs50(vm, v, msg.files50) // prompt 50: bildene over teksten
                     if (s.editIdx == i) {
                         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(v.card).border(1.5.dp, v.ink, RoundedCornerShape(20.dp)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             BasicTextField(s.editText, { s.editText = it }, textStyle = TextStyle(color = v.ink, fontSize = 15.5.sp, lineHeight = 22.sp, fontFamily = v.sans),
@@ -379,7 +390,7 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                             }
                         }
                     } else {
-                        Box(Modifier.fillMaxWidth(.84f).wrapContentWidth(Alignment.End).clip(RoundedCornerShape(22.dp, 22.dp, 6.dp, 22.dp)).background(v.ub).padding(16.dp, 11.dp)) {
+                        if (msg.content.isNotBlank() || msg.files50.isEmpty()) Box(Modifier.fillMaxWidth(.84f).wrapContentWidth(Alignment.End).clip(RoundedCornerShape(22.dp, 22.dp, 6.dp, 22.dp)).background(v.ub).padding(16.dp, 11.dp)) {
                             Text(msg.content, color = v.uI, fontFamily = v.sans, fontSize = 15.5.sp, lineHeight = 22.sp)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -399,9 +410,15 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                             Ch27Mono("GLIMT", v.acc)
                         } else Ch27Mono("✦ " + (msg.model?.let { s.modelLabel27(it) } ?: "").uppercase(), v.acc, modifier = Modifier.align(Alignment.CenterVertically))
                         msg.tool?.let { Ch27Chips(v, "⚙", listOf(it)) }
-                        Ch27Chips(v, "Brukte", usedWithoutFacts41(msg.used, msg.facts))
+                        // Prompt 50: bilder fra meldingen før blir en liten miniatyr + filnavn (trykk = lysboks).
+                        val imgs50 = s.msgs.getOrNull(i - 1)?.takeIf { it.role == "user" }?.files50?.filter { it.isImage }.orEmpty()
+                        val used50 = usedWithoutFacts41(msg.used, msg.facts)
+                        imgs50.forEachIndexed { k, f -> if (f.name in used50 || msg.readWith50 != null) ChatFilePill50(vm, v, imgs50, k) }
+                        Ch27Chips(v, "Brukte", used50.filter { n -> imgs50.none { it.name == n } })
                     }
                     Ch27Body(v, msg.content)
+                    ChatFinBtn50(vm, v, key, msg.finUrl50) // prompt 50: «Legg i Finans ›»
+                    ChatReadWith50(v, msg.readWith50) // prompt 50: «Lest med …»
                     // Prompt 41: faktakort (vær, tid, sol) under svaret.
                     if (msg.facts.isNotEmpty()) ChatFacts41(v, msg.facts)
                     msg.card?.let { ChatCard31(vm, it, v) }
@@ -435,6 +452,7 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                     Ch27Chips(v, "Leser", s.streamTools)
                 }
                 if (s.stream.isNotEmpty()) Ch27Body(v, s.stream)
+                ChatReadWith50(v, Chat50.busyReadWith) // prompt 50
             }
         }
         if (s.loadingChat && s.msgs.isEmpty()) item(key = "load") { Text("Henter samtalen …", color = v.mut, fontFamily = v.sans, fontSize = 14.sp) }
@@ -503,18 +521,9 @@ private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
                     .clip(RoundedCornerShape(26.dp)).background(v.card).border(1.dp, v.line, RoundedCornerShape(26.dp)).padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                if (s.att.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(start = 2.dp, top = 2.dp, end = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    s.att.forEachIndexed { i, a ->
-                        Row(Modifier.height(32.dp).widthIn(max = 240.dp).clip(RoundedCornerShape(12.dp)).background(v.bg).padding(start = 10.dp, end = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(when (a.kind) { "img" -> "▣"; "doc" -> "#"; else -> "⎙" }, color = v.mut, fontSize = 12.5.sp)
-                            Text(a.name, color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                            Box(Modifier.size(26.dp).clip(CircleShape).press24 { s.att = s.att.filterIndexed { j, _ -> j != i } }.ch27Label("Fjern vedlegg"), contentAlignment = Alignment.Center) {
-                                Text("✕", color = v.mut, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
+                // Prompt 50: miniatyrrad (64×64, ×, fremdrift) og «Lim inn bilde» (ui/Chat50Ui.kt).
+                ChatAttRow50(vm, v)
+                ChatPaste50(vm, v)
                 if (s.rec) Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(9.dp).clip(CircleShape).background(CH27_SKY))
                     Text(s.input.ifBlank { "Lytter … snakk nå" }, color = v.ink, fontFamily = v.sans, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -543,7 +552,7 @@ private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
                     }.ch27Label("Snakk"), contentAlignment = Alignment.Center) { WxIcon(ChIc27.MIC, if (s.rec) Color.White else v.ink, 20.dp, stroke = 1.9f) }
                     if (s.busy) Box(Modifier.size(38.dp).clip(CircleShape).background(v.ink).press24 { vm.stopChat27() }.ch27Label("Stopp"), contentAlignment = Alignment.Center) {
                         Box(Modifier.size(13.dp).clip(RoundedCornerShape(3.dp)).background(v.bg))
-                    } else SendBtn43(v, s.input.isNotBlank()) { s.voice?.stop(); vm.sendChat27(s.input) }
+                    } else SendBtn43(v, (s.input.isNotBlank() || s.att.isNotEmpty()) && !s.uploading50) { s.voice?.stop(); vm.sendChat27(s.input) } // prompt 50: av til alt er lastet opp
                 }
             }
             if (s.toast.isNotEmpty()) Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp).clip(CircleShape).background(v.ink).padding(14.dp, 9.dp)) {

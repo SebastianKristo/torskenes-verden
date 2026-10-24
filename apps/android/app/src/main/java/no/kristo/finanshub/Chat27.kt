@@ -62,6 +62,8 @@ data class ChatMsg27(
     val card: String? = null, val tool: String? = null,
     /** Prompt 41: fakta Glimt hentet før svaret (meta.facts), vist som små kort. */
     val facts: List<ChatFact41> = emptyList(),
+    /** Prompt 50: lagrede vedlegg (miniatyr 480 px fra serveren), «Lest med …» og «Legg i Finans ›» (Chat50.kt). */
+    val files50: List<ChatFile50> = emptyList(), val readWith50: String? = null, val finUrl50: String? = null,
 )
 
 data class ChatSet27(
@@ -80,7 +82,11 @@ data class ChatSet27(
 }
 
 /** Vedlegg i skrivefeltet: bilde (base64 til bildemodellen), fil (lastet opp, id) eller dokument fra kunnskapsbasen (id). */
-data class ChatAtt27(val name: String, val kind: String, val id: String? = null, val b64: String? = null)
+data class ChatAtt27(
+    val name: String, val kind: String, val id: String? = null, val b64: String? = null,
+    /** Prompt 50: opplasting med fremdrift (Chat50.pct[key]), miniatyr og original fra /api/chat/files. */
+    val key: String = "", val up: Boolean = false, val thumb: String? = null, val url: String? = null, val mime: String? = null,
+)
 
 /** «Sende til …?»: modellen, hva som forlater serveren, og meldingen som venter. */
 data class ChatGuard27(val model: String, val leaves: List<String>, val text: String, val hasData: Boolean)
@@ -220,7 +226,10 @@ fun parseChatMsg27(o: JSONObject): ChatMsg27? {
     // Svarene har meta {model, tokensPerSec, ms, used, stopped} (server/chat.js).
     val meta = o.optJSONObject("meta") ?: o
     val used = meta.optJSONArray("used").strs27().ifEmpty { o.optJSONArray("tools").strs27() }
-    val att = (o.optJSONArray("files").strs27() + o.optJSONArray("attachments").strs27()).distinct()
+    // Prompt 50: bildevedleggene vises som miniatyrer (files50), ikke som navnepiller.
+    val files50 = parseChatFiles50(o.optJSONArray("attachments"))
+    val imgNames50 = files50.filter { it.isImage }.map { it.name }.toSet()
+    val att = (o.optJSONArray("files").strs27() + o.optJSONArray("attachments").strs27()).distinct().filter { it !in imgNames50 && files50.none { f -> f.isImage && f.id == it } }
     val tps = meta.optDouble("tokensPerSec", Double.NaN)
     val ms = meta.optDouble("ms", Double.NaN)
     val stopped = meta.optBoolean("stopped", false)
@@ -229,7 +238,9 @@ fun parseChatMsg27(o: JSONObject): ChatMsg27? {
     val card = (o.optJSONObject("card") ?: meta.optJSONObject("card"))?.toString()
     return ChatMsg27(if (role == "assistant") "assistant" else "user", content, att + (if (imgs > 0) List(imgs) { "Bilde ${it + 1}" } else emptyList()),
         emptyList(), meta.optStr("model") ?: o.optStr("model"), used, stats, card, meta.optStr("tool") ?: o.optStr("tool"),
-        facts = parseFacts41(meta.optJSONArray("facts")))
+        facts = parseFacts41(meta.optJSONArray("facts")),
+        files50 = files50, readWith50 = meta.optJSONObject("readWith")?.optStr("label"),
+        finUrl50 = meta.optJSONObject("receipt")?.optJSONObject("action")?.optStr("url"))
 }
 
 fun chatStats27(tps: Double, ms: Double, stopped: Boolean): String {
@@ -624,48 +635,13 @@ private fun uriName27(ctx: Context, uri: Uri, def: String): String = runCatching
     ctx.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
 }.getOrNull() ?: def
 
-/** Bilder fra velgeren: skaleres til 1600 px og sendes som base64 til bildemodellen. */
-fun AppViewModel.addChatImages27(uris: List<Uri>) {
-    val s = chat27
-    val ctx = getApplication<android.app.Application>()
-    s.sheet = null
-    launch27 {
-        val add = withContext(Dispatchers.IO) {
-            uris.mapNotNull { u ->
-                runCatching {
-                    val bytes = ctx.contentResolver.openInputStream(u)!!.use { it.readBytes() }
-                    val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@runCatching null
-                    ChatAtt27(uriName27(ctx, u, "bilde.jpg"), "img", b64 = jpeg27(bmp))
-                }.getOrNull()
-            }
-        }
-        s.att = s.att + add
-    }
-}
+/** Bilder fra velgeren. Prompt 50: lastes opp med en gang (miniatyr + fremdrift), meldingen bærer id-ene (Chat50.kt). */
+fun AppViewModel.addChatImages27(uris: List<Uri>) = addChat50(uris)
 
-fun AppViewModel.addChatPhoto27(bmp: Bitmap) {
-    val s = chat27
-    s.sheet = null
-    launch27 { val b = withContext(Dispatchers.Default) { jpeg27(bmp) }; s.att = s.att + ChatAtt27("Kamera.jpg", "img", b64 = b) }
-}
+fun AppViewModel.addChatPhoto27(bmp: Bitmap) { chat27.sheet = null; addChatBitmap50(bmp) }
 
-/** Filer lastes opp til /api/chat/files (multipart) og sendes som files:[id]. */
-fun AppViewModel.addChatFiles27(uris: List<Uri>) {
-    val s = chat27
-    val ctx = getApplication<android.app.Application>()
-    s.sheet = null
-    launch27 {
-        for (u in uris) {
-            val name = uriName27(ctx, u, "fil")
-            val mime = ctx.contentResolver.getType(u) ?: "application/octet-stream"
-            val bytes = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(u)?.use { it.readBytes() } } ?: continue
-            try {
-                val r = JSONObject(api27 { upload("/chat/files", listOf(Api.Part("file", name, mime, bytes)), prefix = Api.HOMELAB) })
-                s.att = s.att + ChatAtt27(r.optStr("name") ?: name, "file", r.optStr("id"))
-            } catch (e: ApiException) { flash("Fikk ikke lastet opp $name: ${e.message}") }
-        }
-    }
-}
+/** Filer lastes opp til /api/chat/files (multipart, med fremdrift) og sendes som files:[id]. */
+fun AppViewModel.addChatFiles27(uris: List<Uri>) = addChat50(uris)
 
 /** Opplasting til kunnskapsbasen: samme /api/chat/files med feltet knowledge=1, så hentes listen på nytt. */
 fun AppViewModel.uploadKb27(uris: List<Uri>) {
@@ -740,19 +716,22 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
     val s = chat27
     val t = text.trim()
     if (s.busy) return
-    if (t.isEmpty() && editFrom == null) return
+    // Prompt 50: et bilde alene kan sendes; vent til vedleggene er lastet opp.
+    if (t.isEmpty() && editFrom == null && s.att.isEmpty()) return
+    if (editFrom == null && s.uploading50) { chatToast27("Vent til vedleggene er lastet opp"); return }
     // Prompt 31: Glimt ruter vær, kalender, avganger, pakker, finans, huskeliste og prøveperioder før modellen (svar med kort).
-    if (tool31 && editFrom == null && !confirm && !noData && chatTool31(t)) return
+    if (tool31 && editFrom == null && !confirm && !noData && s.att.isEmpty() && chatTool31(t)) return
     val m = s.curModel27() ?: run { chatToast27(if (s.unavailable) "Chat er ikke satt opp på serveren" else "Velg en modell først"); return }
     val useData = s.data && s.myDataOn && !noData
     val atts = s.att
-    // Bilder krever en bildemodell.
-    if (atts.any { it.kind == "img" } && !m.vision && m.sky.not() && s.models.any { it.vision }) chatToast27("${m.label} leser kanskje ikke bilder – velg en bildemodell")
+    // Bilder krever en bildemodell (prompt 50: opplastede bilder velger serveren vision-modell/OCR for selv).
+    if (atts.any { it.kind == "img" && it.id == null } && !m.vision && m.sky.not() && s.models.any { it.vision }) chatToast27("${m.label} leser kanskje ikke bilder – velg en bildemodell")
     val tools = (if (useData) listOf("Finans", "Kalender", "Gjøremål") else emptyList()) + (if (s.web) listOf("Nettsøk") else emptyList()) +
         atts.filter { it.kind != "img" }.map { it.name }
     val history: List<ChatMsg27>
     if (editFrom == null) {
-        history = s.msgs + ChatMsg27("user", t, atts.map { it.name }, atts.mapNotNull { it.b64 })
+        val f50 = atts.filter { it.kind == "img" && it.id != null }.map { a -> ChatFile50(a.id!!, a.name, a.mime ?: "image/jpeg", "image", a.url, a.thumb, null, null) }
+        history = s.msgs + ChatMsg27("user", t, atts.filter { it.kind != "img" || it.id == null }.map { it.name }, atts.mapNotNull { it.b64 }, files50 = f50)
         s.msgs = history
         s.input = ""; s.att = emptyList()
     } else history = s.msgs
@@ -763,6 +742,8 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
                 val o = JSONObject().put("role", x.role).put("content", x.content)
                 // Bildene sendes bare med den nye meldingen.
                 if (x.images.isNotEmpty() && i == history.lastIndex) o.put("images", JSONArray(x.images))
+                // Prompt 50: bildene er lastet opp på forhånd – meldingene bærer bare id-ene.
+                if (x.files50.isNotEmpty()) o.put("attachments", JSONArray(x.files50.map { it.id }))
                 put(o)
             }
         })
@@ -773,6 +754,7 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
     if (confirm) body.put("confirmCloud", true)
     if (noData) body.put("withoutMyData", true)
     s.busy = true; s.stream = ""; s.streamTools = tools; s.stopped = false
+    Chat50.busyReadWith = null
     val t0 = System.currentTimeMillis()
     s.job = viewModelScope.launch {
         var used: List<String> = s.streamTools
@@ -780,18 +762,23 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
         var tps = Double.NaN
         var ms = Double.NaN
         var err: String? = null
+        var read50: String? = null
+        var fin50: String? = null
         try {
             chatSse27("/chat/send", body, conn = { c -> s.conn = c }) { ev, d ->
                 when (ev) {
                     "meta" -> {
                         d.optStr("chatId")?.let { if (s.curId == null) s.curId = it }
                         d.optStr("title")?.let { if (s.title.isBlank()) s.title = it }
+                        d.optJSONObject("readWith")?.optStr("label")?.let { read50 = it; Chat50.busyReadWith = it } // prompt 50
                     }
                     "delta" -> s.stream += d.optString("text", "")
                     "done" -> {
                         tps = d.optDouble("tokensPerSec", Double.NaN); ms = d.optDouble("ms", Double.NaN)
                         d.optJSONArray("used").strs27().takeIf { it.isNotEmpty() }?.let { used = it }
                         facts41 = parseFacts41(d.optJSONArray("facts"))
+                        d.optJSONObject("readWith")?.optStr("label")?.let { read50 = it } // prompt 50: «Lest med …»
+                        d.optJSONObject("receipt")?.optJSONObject("action")?.optStr("url")?.let { fin50 = it } // «Legg i Finans ›»
                     }
                     "facts" -> facts41 = parseFacts41(d.optJSONArray("facts"))
                     "error" -> err = d.optStr("error") ?: "Noe gikk galt"
@@ -828,8 +815,8 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
             stopped -> "$full …"
             else -> full
         }
-        s.msgs = s.msgs + ChatMsg27("assistant", content, model = m.id, used = used, stats = chatStats27(tps, ms, stopped), facts = facts41)
-        s.busy = false; s.stream = ""; s.streamTools = emptyList()
+        s.msgs = s.msgs + ChatMsg27("assistant", content, model = m.id, used = used, stats = chatStats27(tps, ms, stopped), facts = facts41, readWith50 = read50, finUrl50 = fin50)
+        s.busy = false; s.stream = ""; s.streamTools = emptyList(); Chat50.busyReadWith = null
         if (err != null) Haptics.error()
         loadChats27()
     }

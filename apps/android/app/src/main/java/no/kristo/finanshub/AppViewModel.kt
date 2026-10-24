@@ -689,7 +689,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "bursdager", "birthdays" -> birthdaysLink24(uri)
             "kalender", "calendar" -> kalLink26(uri)
             "avganger", "ruter" -> { go(Screen.Homelab); openRuter() }
-            "familie", "family" -> openFamily()
+            "familie", "family" -> familyLink50(uri) // prompt 50: …/sjekk?id=&act=call, /steder, /helse
             // Prompt 46: Kart (finanshub://kart[/<soneId>][?live=1]) – f.eks. fra Glimt «vis bussene rundt hjemme».
             "kart", "map" -> kartLink46(uri)
             // Prompt 40: Hjemlys (varselet «Ja, start», Hjem-widgeten «Start for meg»): finanshub://hjemlys[/start?eta=…|/home]
@@ -2862,14 +2862,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             while (familyOpen) { kotlinx.coroutines.delay(30_000); if (familyOpen) loadFamilyNow(first = false) }
         }
     }
-    fun closeFamily() { familyOpen = false; famJob?.cancel(); famZoneDraft = null; famZoneEdit = null }
+    fun closeFamily() { familyOpen = false; famJob?.cancel(); famZoneDraft = null; famZoneEdit = null; fam50.sub = null; fam50.from = null; fam50.placeSel = null }
     fun loadFamily() = launch { loadFamilyNow(first = false) }
     private suspend fun loadFamilyNow(first: Boolean) {
         try {
             val f = parseFamily(api.hlGet("/family", timeout = 12_000))
             family = f
             familyError = null
-            no.kristo.finanshub.family.FamilyPrefs.setZones(appCtx, f.zones.map { Triple(it.id, it.lat to it.lon, it.radius) })
+            // Prompt 50: med regionene fra Steder (én per område) settes sonekantene av Geofence50 i stedet.
+            if (!fam50.regionsOk) no.kristo.finanshub.family.FamilyPrefs.setZones(appCtx, f.zones.map { Triple(it.id, it.lat to it.lon, it.radius) })
             f.me?.let { me ->
                 no.kristo.finanshub.family.FamilyPrefs.setSharing(appCtx, me.sharing == "on")
                 no.kristo.finanshub.family.FamilyPrefs.setPrecise(appCtx, me.precision != "approx")
@@ -3359,7 +3360,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Notify.test(appCtx, notifyPrefs.copy(sound = notifyPrefs.sound.takeIf { it != "stille" } ?: "klokke"))
                 Haptics.test()
                 message = "${msg.optString("fromName").ifBlank { "Noen" }} ber telefonen spille av lyd"
-            } else if (familyOpen || family != null) loadFamily()
+            } else {
+                if (familyOpen || family != null) loadFamily()
+                onFamilyWs50(msg) // prompt 50: steder (regioner), innsjekk og Folk
+            }
+            // Prompt 50: varsel i sanntid (innsjekk, forespørsel, svar) med handlingene 👍 / Ring / Hent.
+            "notify" -> onNotify50(msg)
             "tracking" -> viewModelScope.launch { pollTracking() }
             "calendar-quick" -> { onQuickEvent31(msg); onQuickEvent29(msg) }
             // Prompt 31: Glimt-jobbene (steg, felt, fremdrift og svaret).
@@ -3693,6 +3699,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var bypass48 = false
     /** Vanlig bildeopplasting uten skjemaet (eldre server uten /receipts/scan, eller «Last opp bildet i stedet»). */
     internal fun uploadPlain48(u: Uri) { bypass48 = true; try { uploadUris(listOf(u)) } finally { bypass48 = false } }
+
+    /* ---------- Prompt 50 (FAMAND50): Familie i nytt design, Steder med flere områder, Sjekk inn, geofencing per område (P50Fam.kt, ui/Family50.kt) ---------- */
+    val fam50 = FamState50()
+    internal suspend fun <T> api50(f: suspend Api.() -> T): T = api.f()
+    internal fun launch50(block: suspend () -> Unit) = launch(block)
+    internal val scope50: kotlinx.coroutines.CoroutineScope get() = viewModelScope
+    internal val appCtx50: Context get() = appCtx
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

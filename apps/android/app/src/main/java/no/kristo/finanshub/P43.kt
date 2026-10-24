@@ -25,6 +25,8 @@ data class MSvc43(val key: String, val name: String, val configured: Boolean, va
 data class MUp43(
     val key: String, val kind: String, val refId: Int?, val title: String, val code: String?, val epTitle: String?,
     val day: String, val time: String?, val status: String, val progress: Int?, val poster: String?, val color: Long?,
+    /** Prompt 50: plakat med ThumbHash og faste bredder fra /api/media/bilde. */
+    val posterImg: MImg50? = null,
 )
 data class MItem43(
     val id: Int, val kind: String, val title: String, val year: Int?, val network: String?, val status: String?, val ended: Boolean,
@@ -33,6 +35,8 @@ data class MItem43(
     val hasFile: Boolean, val availability: String?, val seriesType: String?, val monitor: String?, val fileLine: String?, val playUrl: String?,
     /** Prompt 44: filmfilens id (Slett fil) og fanart (banner). */
     val fileId: Int? = null, val fanart: String? = null,
+    /** Prompt 50: posterImg/fanartImg {url, hash, w, h, srcset} (ThumbHash-plassholder, riktig bredde). */
+    val posterImg: MImg50? = null, val fanartImg: MImg50? = null,
 )
 data class MEp43(val id: Int, val n: Int, val title: String, val air: String?, val hasFile: Boolean, val monitored: Boolean, val status: String, val fileId: Int? = null /* prompt 44 */)
 data class MSeason43(val n: Int, val monitored: Boolean, val eps: List<MEp43>)
@@ -44,6 +48,7 @@ data class MRelRes43(val items: List<MRel43>, val ms: Int?, val indexers: Int?)
 data class MTor43(
     val hash: String, val name: String, val progress: Float, val state: String, val dl: Long, val ul: Long, val eta: Long?, val size: Long?,
     val category: String?, val poster: String?, val color: Long?, val sub: String?,
+    val posterImg: MImg50? = null, // prompt 50
 )
 data class MTransfer43(val dl: Long, val ul: Long, val alt: Boolean, val limit: Long?, val queued: Int?)
 data class MFile43(val id: Int, val name: String, val size: Long, val progress: Float, val on: Boolean)
@@ -173,6 +178,7 @@ internal fun parseItem43(o: JSONObject, kind: String): MItem43 {
         fileLine, o.optJSONObject("play")?.s43("url") ?: o.s43("playUrl", "jellyfinUrl", "plexUrl"),
         fileId = file?.i43("id") ?: o.i43("movieFileId", "fileId"),
         fanart = o.s43("fanart", "fanartUrl", "banner") ?: objs34(o.optJSONArray("images")).firstOrNull { it.s37("coverType") == "fanart" }?.s43("remoteUrl", "url"),
+        posterImg = parseImg50(o.optJSONObject("posterImg")), fanartImg = parseImg50(o.optJSONObject("fanartImg")),
     )
 }
 
@@ -293,7 +299,8 @@ fun AppViewModel.loadUpcoming43() = run43 {
         MUp43(x.s43("key", "id") ?: "$day-$code-${x.s43("title")}", if (kind.startsWith("movie") || kind == "film") "film" else "tv",
             x.i43("seriesId", "movieId", "refId"), x.s43("seriesTitle", "showTitle") ?: ser?.s43("title") ?: x.s43("title") ?: "",
             code, if (code != null) x.s43("episodeTitle", "title") else null, day, time, x.s43("status") ?: "venter",
-            x.i43("progress", "pct"), x.poster43() ?: ser?.poster43(), hex37(x.s43("color") ?: ser?.s43("color")))
+            x.i43("progress", "pct"), x.poster43() ?: ser?.poster43(), hex37(x.s43("color") ?: ser?.s43("color")),
+            parseImg50(x.optJSONObject("posterImg") ?: ser?.optJSONObject("posterImg")))
     }.sortedWith(compareBy({ it.day }, { it.time ?: "" }))
 }
 
@@ -368,9 +375,11 @@ fun AppViewModel.monitorEp43(ep: MEp43, on: Boolean) {
 /** Kommando: automatisk søk (episode, sesong, serie, film). */
 fun AppViewModel.command43(app: String, name: String, extra: JSONObject, label: String) = run43 {
     val body = extra.put("app", app).put("service", app).put("name", name)
-    api43 { hlPost("/media/command", body) }
+    val raw = api43 { hlPost("/media/command", body) }
     Haptics.select()
     p43.toast = label
+    // Prompt 50: følg søket til sann status (track) i stedet for et evig «Søker».
+    startTrack50(runCatching { JSONObject(raw) }.getOrNull(), body)
 }
 
 /** Prompt 44: søket kjøres som jobb med status per indekser (P44.kt → openRelease44). */
@@ -381,6 +390,7 @@ fun AppViewModel.grab43(r: MRel43, app: String) = run43 {
     Haptics.tap()
     p43.grabbed = p43.grabbed + r.guid
     p43.toast = o?.s43("message") ?: "Sendt til qBittorrent: ${r.quality} · ${size43(r.size)}"
+    if (!startTrack50(o)) trackGrab50(p43.relFor?.third) // prompt 50: følg nedlastingen etter manuelt valg
 }
 
 fun AppViewModel.lookup43(kind: String, q: String) {
@@ -449,7 +459,8 @@ fun AppViewModel.loadTorrents43() = run43 {
         val name = listOfNotNull(x.s43("title"), x.s43("code")?.takeIf { it != "Film" }).joinToString(" ").ifBlank { x.s43("name") ?: "" }
         MTor43(x.s43("hash") ?: "", name, p, st, x.l43("dlSpeed", "dlspeed", "dl") ?: 0, x.l43("upSpeed", "upspeed", "ul") ?: 0,
             x.l43("eta")?.takeIf { it in 1..8_640_000 }, x.l43("size", "total_size")?.takeIf { it > 0 }, x.s43("category"), x.poster43(), hex37(x.s43("color")),
-            listOfNotNull(x.s43("quality"), x.s43("statusText")?.takeIf { st == "stall" || st == "meta" || st == "error" }).joinToString(" · ").ifBlank { x.s43("sub", "episode", "line") })
+            listOfNotNull(x.s43("quality"), x.s43("statusText")?.takeIf { st == "stall" || st == "meta" || st == "error" }).joinToString(" · ").ifBlank { x.s43("sub", "episode", "line") },
+            parseImg50(x.optJSONObject("posterImg")))
     }
     val t = o?.optJSONObject("transfer") ?: o?.optJSONObject("transferInfo") ?: runCatching { JSONObject(get43("/media/transferinfo") ?: "{}") }.getOrNull()
     if (t != null) p43.transfer = MTransfer43(t.l43("dlSpeed", "dl_info_speed", "dl") ?: p43.torrents.orEmpty().sumOf { it.dl }, t.l43("upSpeed", "up_info_speed", "ul") ?: p43.torrents.orEmpty().sumOf { it.ul },
@@ -609,6 +620,7 @@ fun AppViewModel.mediaGlimt43(q: String) {
             val o = JSONObject(api43 { hlPost("/media/glimt", JSONObject().put("q", q)) })
             val steps = (o.optJSONArray("steps")?.let { a -> (0 until a.length()).map { i -> a.optJSONObject(i)?.let { st -> listOfNotNull(st.s43("t", "text", "label"), st.i43("ms")?.takeIf { it > 0 }?.let { "$it ms" }, st.s43("error")).joinToString(" · ") } ?: a.optString(i) } } ?: emptyList())
             s.glimt = MGlimt43(q, o.s43("text", "answer") ?: "", steps, objs34(o.optJSONArray("results")), objs34(o.optJSONArray("actions")))
+            startTrack50(o) // prompt 50: Glimt startet et søk → sann status
             if (o.optJSONArray("actions")?.length() ?: 0 > 0 || q.contains("pause", true) || q.contains("fortsett", true)) { loadTorrents43() }
         } catch (e: CancellationException) { throw e } catch (e: ApiException) {
             s.glimt = MGlimt43(q, if (e.status == 404) "Glimt i Media er ikke på serveren ennå." else (e.message ?: "Glimt svarte ikke"), emptyList(), emptyList(), emptyList())

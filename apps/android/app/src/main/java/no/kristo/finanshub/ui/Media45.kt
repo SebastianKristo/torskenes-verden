@@ -244,5 +244,6 @@ internal fun MediaSettings45(vm: AppViewModel) {
         }
         PButton("Integrasjoner …", Modifier.fillMaxWidth(), kind = "line") { vm.settingsPage = "integ" }
         if (vm.userIsAdmin) PButton("Rydd uovervåkede episoder", Modifier.fillMaxWidth(), kind = "line") { vm.p43.mediaOpen = true; vm.openUnmon45("sonarr", null) }
+        MediaDiag50(vm) // prompt 50: Diagnostikk (bare admin)
     }
 }

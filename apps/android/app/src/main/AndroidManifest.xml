@@ -734,6 +734,9 @@
         <!-- Prompt 41: knappene i Live Update (Drar snart, Min reise) og geofence for skolesonene (LocationManager.addProximityAlert). -->
         <receiver android:name=".Live41Receiver" android:exported="false" />
         <receiver android:name=".SchoolZone41Receiver" android:exported="false" />
+        <!-- Prompt 50: geofencing per område (Familie › Steder) og svar 👍 / Hent fra Sjekk inn-varsler (P50Fam.kt). -->
+        <receiver android:name=".Geofence50Receiver" android:exported="false" />
+        <receiver android:name=".Checkin50Receiver" android:exported="false" />
 
         <!-- Prompt 33: server-adresse og et eget token til Kalender-appen (call «companion»). -->
         <provider

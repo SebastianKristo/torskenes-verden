@@ -172,16 +172,9 @@ internal fun Note43(text: String, red: Boolean = false, onClose: (() -> Unit)? =
 }
 
 @Composable
-internal fun Poster43(vm: AppViewModel, url: String?, color: Long?, title: String, w: Dp, h: Dp, modifier: Modifier = Modifier) {
-    var bmp by remember(url) { mutableStateOf<Bitmap?>(null) }
-    LaunchedEffect(url) { if (!url.isNullOrBlank()) bmp = if (url.startsWith("/")) vm.image(url) else vm.bgImage41(url) }
-    val shape = RoundedCornerShape(8.dp)
-    Box(modifier.size(w, h).clip(shape).background(color?.let { Color(it) } ?: Color(0xFF2E3B4A)), contentAlignment = Alignment.BottomStart) {
-        val b = bmp
-        if (b != null) Image(b.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
-        else Text(title, color = Color.White.copy(alpha = .9f), fontFamily = PaperFonts.serif, fontSize = if (w < 70.dp) 9.sp else 13.sp, lineHeight = if (w < 70.dp) 10.sp else 15.sp,
-            maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(6.dp))
-    }
+internal fun Poster43(vm: AppViewModel, url: String?, color: Long?, title: String, w: Dp, h: Dp, modifier: Modifier = Modifier, img: MImg50? = null) {
+    // Prompt 50: ThumbHash-plassholder, riktig bredde og disk-/minnecache (ui/Media50Ui.kt, Img50.kt).
+    Poster50(vm, url, img, color, title, w, h, modifier)
 }
 
 @Composable
@@ -266,10 +259,10 @@ private fun Upcoming43(vm: AppViewModel, pad: PaddingValues) {
                     val (st, c) = status43(u.status, u.progress)
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).clickable {
                         val lib = if (u.kind == "tv") s.series else s.movies
-                        val hit = lib?.firstOrNull { it.id == u.refId } ?: u.refId?.let { id -> MItem43(id, u.kind, u.title, null, null, null, false, true, null, null, 0, 0, 0, u.poster, u.color, true, null, null, null, false, null, null, null, null, null) }
+                        val hit = lib?.firstOrNull { it.id == u.refId } ?: u.refId?.let { id -> MItem43(id, u.kind, u.title, null, null, null, false, true, null, null, 0, 0, 0, u.poster, u.color, true, null, null, null, false, null, null, null, null, null, posterImg = u.posterImg) }
                         if (hit != null) { s.tab = if (u.kind == "tv") "sonarr" else "radarr"; vm.openItem43(hit) }
                     }.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Poster43(vm, u.poster, u.color, u.title, 52.dp, 78.dp)
+                        Poster43(vm, u.poster, u.color, u.title, 52.dp, 78.dp, img = u.posterImg)
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             PSerif(u.title, 17.sp, maxLines = 1)
                             Text(listOfNotNull(u.code, u.epTitle).joinToString(" · ").ifBlank { "Film" }, color = p.ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -306,7 +299,11 @@ private fun Library43(vm: AppViewModel, kind: String, pad: PaddingValues, wide: 
     val f = if (filters.any { it.first == s.libFilter }) s.libFilter else "alle"
     val q44 = vm.p44.libQ
     val list = all.orEmpty().filter { match(it, f) && libMatch44(it, q44) } // prompt 44: søk i biblioteket
-    LazyVerticalGrid(GridCells.Fixed(if (wide) 6 else 3), Modifier.fillMaxSize(), contentPadding = pad, verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    // Prompt 50: plakatene i de neste 2 radene forhåndslastes (Img50), synlige lastes først.
+    val grid50 = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val cols50 = if (wide) 6 else 3
+    Prefetch50(vm, grid50, list, cols50, (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp - 40.dp) / cols50)
+    LazyVerticalGrid(GridCells.Fixed(cols50), Modifier.fillMaxSize(), state = grid50, contentPadding = pad, verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Btn43(if (kind == "tv") "+ Legg til serie" else "+ Legg til film", dark = true, modifier = Modifier.fillMaxWidth()) { s.add = kind; s.addQ = ""; s.addRes = null; s.addPick = null }
@@ -322,7 +319,7 @@ private fun Library43(vm: AppViewModel, kind: String, pad: PaddingValues, wide: 
             item(key = "${kind}-${it.id}") {
                 Column(Modifier.clip(RoundedCornerShape(10.dp)).clickable { vm.openItem43(it) }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     BoxWithConstraints(Modifier.fillMaxWidth()) {
-                        Poster43(vm, it.poster, it.color, it.title, maxWidth, maxWidth * 1.5f)
+                        Poster43(vm, it.poster, it.color, it.title, maxWidth, maxWidth * 1.5f, img = it.posterImg)
                         if (kind == "tv" && it.missing > 0) Box(Modifier.align(Alignment.TopEnd).padding(5.dp).clip(CircleShape).background(WARN43).padding(horizontal = 7.dp, vertical = 2.dp)) {
                             Text("${it.missing}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         }
@@ -379,6 +376,10 @@ private fun Detail43(vm: AppViewModel, d: MItem43, pad: PaddingValues) {
                 Btn43("Slett", color = RED43) { delAsk = true }
             }
         }
+        // Prompt 50: sann status etter søk (film, eller hele serien/sesongen).
+        (if (d.kind == "tv") Med50.forSeries(d.id) else Med50.forMovie(d.id))?.let { t -> item(key = "tr50-" + t.id) {
+            Track50Line(vm, t, if (d.kind == "tv") null else ({ vm.openRelease43(d.title, listOfNotNull(d.year?.toString(), d.profile?.let { "Profil $it" }).joinToString(" · "), "movieId=${d.id}") }))
+        } }
         if (delAsk) item {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Slette ${d.title} fra ${if (d.kind == "tv") "Sonarr" else "Radarr"}?", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -440,6 +441,10 @@ private fun LazyListScope.seasons43(vm: AppViewModel, d: MItem43) {
                     if (needs) Row(Modifier.padding(start = 84.dp, bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Btn43("🔍 Automatisk søk") { vm.command43("sonarr", "EpisodeSearch", JSONObject().put("episodeIds", org.json.JSONArray().put(e.id)), "Søker etter E%02d …".format(e.n)) }
                         Btn43("Interaktivt søk", dark = true) { vm.openRelease43(d.title, "S%02dE%02d · %s".format(se.n, e.n, e.title), "episodeId=${e.id}") }
+                    }
+                    // Prompt 50: sann status etter søket for episoden.
+                    Med50.forEpisode(e.id)?.let { t ->
+                        Track50Line(vm, t, { vm.openRelease43(d.title, "S%02dE%02d · %s".format(se.n, e.n, e.title), "episodeId=${e.id}") }, Modifier.padding(start = 44.dp, bottom = 8.dp))
                     }
                     if (e.hasFile) EpFileBtns44(vm, d, se, e) // prompt 44
                     Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
@@ -527,7 +532,7 @@ private fun AddSheet43(vm: AppViewModel) {
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.card).clickable {
                         if (r.exists) { close(); vm.openItem43(r) } else s.addPick = r
                     }.padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Poster43(vm, r.poster, r.color, r.title, 46.dp, 69.dp)
+                        Poster43(vm, r.poster, r.color, r.title, 46.dp, 69.dp, img = r.posterImg)
                         Column(Modifier.weight(1f)) {
                             PSerif(r.title, 17.sp, maxLines = 2)
                             Text(listOfNotNull(r.year?.toString(), r.network).joinToString(" · "), color = p.mut, fontSize = 12.sp)
@@ -547,7 +552,7 @@ private fun AddSheet43(vm: AppViewModel) {
             var search by remember(pick) { mutableStateOf(true) }
             Text("‹ Tilbake til søket", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.heightIn(min = 44.dp).clickable { s.addPick = null }.wrapContentHeight())
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Poster43(vm, pick.poster, pick.color, pick.title, 64.dp, 96.dp)
+                Poster43(vm, pick.poster, pick.color, pick.title, 64.dp, 96.dp, img = pick.posterImg)
                 Column(Modifier.weight(1f)) {
                     PSerif(pick.title, 22.sp, maxLines = 2)
                     Text(listOfNotNull(pick.year?.toString(), pick.network).joinToString(" · "), color = p.mut, fontSize = 12.5.sp)
@@ -688,7 +693,7 @@ private fun Torrents43(vm: AppViewModel, pad: PaddingValues) {
                 val c = when (k) { "ferdig" -> OK43; "fast" -> WARN43; "pauset" -> p.mut; else -> RED43 }
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Poster43(vm, t.poster, t.color, t.name, 40.dp, 60.dp)
+                        Poster43(vm, t.poster, t.color, t.name, 40.dp, 60.dp, img = t.posterImg)
                         Column(Modifier.weight(1f)) {
                             Text(t.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Text(listOfNotNull(t.sub, t.size?.let { size43(it) } ?: "størrelse ukjent").joinToString(" · "), color = p.mut, fontSize = 12.sp, maxLines = 1)
@@ -1017,7 +1022,7 @@ internal fun HomeMedia43(vm: AppViewModel) {
             if (ups.isNotEmpty()) PLabel("Kommer", color = p.mut)
             ups.forEach { u ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Poster43(vm, u.poster, u.color, u.title, 26.dp, 38.dp)
+                    Poster43(vm, u.poster, u.color, u.title, 26.dp, 38.dp, img = u.posterImg)
                     Column(Modifier.weight(1f)) {
                         Text(u.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val d = runCatching { java.time.LocalDate.parse(u.day) }.getOrNull()
