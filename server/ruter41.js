@@ -327,6 +327,26 @@ async function enturOptions(dir, school, now) {
   return opts;
 }
 
+/* Prompt 51 (MEDFAM51): generelt reiseforslag A → B for «hvem kjører?» i familiekalenderen (henting/bringing).
+   from/to = {name, lat, lon}; arriveBy = må være framme da (bringing), ellers avreise fra at (henting). MOCK_DATA gir et fast forslag. */
+const TRIP51 = `query($from:Location!,$to:Location!,$dt:DateTime,$arr:Boolean!){
+  trip(from:$from,to:$to,numTripPatterns:3,dateTime:$dt,arriveBy:$arr){ tripPatterns{ expectedStartTime expectedEndTime legs{ mode distance aimedStartTime expectedStartTime expectedEndTime fromPlace{name} toPlace{name} line{publicCode} } } }
+}`;
+export async function tripBetween51(from, to, { at = Date.now(), arriveBy = false } = {}) {
+  const ok = (p) => p && Number.isFinite(+p.lat) && Number.isFinite(+p.lon);
+  if (!ok(from) || !ok(to)) return { options: [], source: 'Entur', error: 'Mangler sted med koordinater (legg inn sted på hendelsen og et hjem i Familie › Steder)' };
+  if (MOCK()) {
+    const start = arriveBy ? at - 28 * MIN : at, mid = start + 6 * MIN, end = start + 28 * MIN;
+    const legs = [leg('foot', from.name, 'Holdeplass', start, mid, { meters: 450 }), leg('bus', 'Holdeplass', to.name, mid + 2 * MIN, end, { line: '45' })];
+    return { options: [optionOf('mock-1', 'Holdeplass', legs)], source: 'Mock' };
+  }
+  try {
+    const d = await gql(TRIP51, { from: loc(from), to: loc(to), dt: iso(at), arr: !!arriveBy });
+    const options = (d.trip?.tripPatterns ?? []).slice(0, 3).map((p, i) => { const legs = p.legs.map(enturLeg); return optionOf(`t51-${i}`, legs.find((l) => l.mode !== 'foot')?.from ?? from.name, legs); });
+    return { options, source: 'Entur' };
+  } catch (e) { return { options: [], source: 'Entur', error: `Fikk ikke hentet reiseforslag fra Entur: ${e.message}` }; }
+}
+
 /** Hovedfunksjonen bak GET /api/ruter/my-trip. */
 export async function myTrip41(u, { dir = 'auto', delay = null, now = Date.now() } = {}) {
   const j = journeyOf41(u, now);

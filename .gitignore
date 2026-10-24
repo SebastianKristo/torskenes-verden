@@ -10,6 +10,10 @@ proton/
 ntfy/
 # Prompt 51 (QA51): GlitchTips database og opplastinger (docker compose --profile glitchtip)
 glitchtip/
+# Prompt 51 (MEDFAM51): Bazarr- og Audiobookshelf-oppsett og standard mediemappe (docker compose --profile bazarr/audiobookshelf)
+bazarr/
+audiobookshelf/
+/media/
 apps/android/.gradle/
 apps/android/build/
 apps/android/app/build/

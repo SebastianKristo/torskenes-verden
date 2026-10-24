@@ -56,6 +56,8 @@ import { twofa40Api, finans40Api, news40Api, newsDigestApi, hjemlys40Api, pages4
 import { mountServer47 } from './server47.js'; // prompt 47 (SERVER47)
 import { hjemlys41Api, hjemlysGet41, hlPage41, ruter41Api, birthdays41Api, mai17Api, kalender41Api, mountAuth41, huske41Api, tracking41Api, weather41Api, brief41, weatherFull41 } from './api41.js'; // prompt 41 (SERVER41)
 import { finans42Api, abCalendarsMw42, abApi42, calendarsEvents42, abIcs42, tracking42Api, health42Api, familyHealthMw42, startHealth42, hjemlys42Api, tasks42Api } from './api42.js'; // prompt 42 (SERVER42)
+import fin51Api from './finans/fin51.js'; // prompt 51 (FIN51): sparemål, faste utgifter-kalender, skattehjelp, prishistorikk, abonnementsjeger
+import { startTax51 } from './finans/fin51-tax.js'; // prompt 51 (FIN51): påminnelse før skattemeldingen
 import { media43Api, mediaCalendarsMw43, startMediaWatch43, widgets43Api, claudeImport43Api, aiMemory43Api, gscDomains43Api, gsc43Api, gscViewMw43, gscOverviewMw43, kalUpdate43Api, finans43Api, summaryMw43, transactionsMw43, tasks43Api, tasksOrderMw43 } from './api43.js'; // prompt 43 (SERVER43)
 // Prompt 44 (SERVER44): Logger (Docker), Media (servere, søk som jobb, felles status), Avspilling, Studie-dokumenter, Kalender-deltakere,
 // Logg inn som / andres oppsett / overfør eier.
@@ -72,6 +74,7 @@ import { mountSec51 } from './sec51.js'; // prompt 51 (SEC51): sikkerhet
 import { mountFamily50 } from './family50.js'; // prompt 50 (SRVFAM50): Steder med områder, Folk, Helse, I dag, Sjekk inn
 import { traceObs51, mountObs51, startObs51 } from './obs51/index.js'; // prompt 51 (OBS51): helsedashbord, selvreparasjon, spor, ntfy
 import { mountQa51, startQa51, reportServerError51 } from './qa51.js'; // prompt 51 (QA51): feature flags, krasjrapporter (GlitchTip), «Nytt i denne versjonen»
+import { mountMedfam51, startMedfam51 } from './medfam51/index.js'; // prompt 51 (MEDFAM51): familiekalender med «hvem kjører?», «I kveld», undertekster, lagring, lydbøker
 import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
@@ -189,10 +192,13 @@ const MOBILE_UA = /iPhone|iPad|iPod|Android|Mobile/i;
 app.get('/finans/', async (c) => (sessionUser(c) || (!needsSetup() && MOBILE_UA.test(c.req.header('user-agent') ?? '')))
   ? html(c, await page('finans/index.html')) : c.redirect('/login?next=/finans/'));
 app.get('/finans/manifest.webmanifest', async (c) => c.body(await page('finans/manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
+// Prompt 51 (FIN51): Planlegging (sparemål, kalender, skatt, priser, abonnementsjeger) som egen side for PWA/mobil; desktop viser den i FinansHub.
+app.get('/finans/plan51', async (c) => (sessionUser(c) ? html(c, await page('finans/plan51.html')) : c.redirect('/login?next=/finans/plan51')));
 app.get('/finans/sw.js', async (c) => c.body(await page('finans/sw.js'), 200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache' }));
 app.use('/finans/api/summary', summaryMw43); // prompt 43: spentMonth, day, daysInMonth (saldokortet)
 app.use('/finans/api/transactions', transactionsMw43); // prompt 43: months:[{month, label, count, net}]
 app.route('/finans/api', finans43Api); // prompt 43: /overview, /transactions/months
+app.route('/finans/api', fin51Api); // prompt 51 (FIN51): /fin51/* (egen tilgangskontroll, per bruker)
 app.route('/finans/api', finans42Api); // prompt 42: Glimt-søk (SQL før LLM, tankesteg), filter, avanserte oppgaver + PDF, Boliger web, import til bolig, aksje-logoer
 app.route('/finans/api', finans40Api); // prompt 40: added, PATCH alt + historikk, Les på nytt, POST /search/ask (før routes.js)
 app.route('/finans/api', finansApi);
@@ -721,6 +727,7 @@ app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-s
 app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cachet på disk og ✦ AI-forslag
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
 app.route('/', tilesApi);
+mountMedfam51(app); // prompt 51 (MEDFAM51): /api/famcal51/* og /api/media51/*
 mountFamily50(app); // prompt 50 (SRVFAM50): /api/family/places…, /people50, /today50, /health50…, /checkin… (før de eldre /api/family-rutene)
 app.route('/api/family/health/ha', health42Api); // prompt 42: helse fra Home Assistant
 app.use('/api/family/*', familyHealthMw42); // prompt 42: health.source/sourceDevice/limited/stale
@@ -877,7 +884,9 @@ if (BG51) { startMatScheduler(); startTrackingWorker(); startRssWorker(); startB
 if (BG51) { startAccounts46(); startGphoto46(); } // prompt 46 (DATA46)
 if (process.env.NODE_ENV !== 'test') startOps51(); // prompt 51 (OPS51): planlegger (backup, testet gjenoppretting, vedlikehold) og migrasjonslogg
 if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): samples, driftsvarsler og selvreparasjon (ikke i test)
+if (BG51) startTax51(); // prompt 51 (FIN51): påminnelse om skattemeldingen (15. mars og 20. april, én gang per år)
 if (BG51) startQa51(); // prompt 51 (QA51): sender krasjrapporter som ikke kom fram til GlitchTip
+if (BG51) startMedfam51(); // prompt 51 (MEDFAM51): påminnelser «hvem kjører?» og slettinger etter angrefristen
 
 app.onError((err, c) => {
   console.error(err);

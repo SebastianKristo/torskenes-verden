@@ -219,7 +219,7 @@ function finRows() {
     { k: 'saldo', n: 'Saldo', s: live.saldo.row, href: 'konto' }, { k: 'budsjett', n: 'Budsjett', s: live.budsjett.row }, { k: 'kv', n: 'Kvitteringer', s: live.kv.row }, { k: 'fast', n: 'Faste trekk', s: live.fast.row },
     { k: 'aks', n: 'Aksjer', s: st ? `${n0(st.value ?? st.total ?? 0)} kr` : D.stocks?.configured === false ? 'Ikke koblet til' : 'Portefølje og kurser' },
     { k: 'finn', n: 'Finn', s: 'Kjøp og salg med Fiks ferdig' }, { k: 'dir', n: 'Boliger', s: dirs ? `${dirs.length} ${dirs.length === 1 ? 'bolig' : 'boliger'}` : 'Utgifter per bolig' },
-    { k: 'sub', n: 'Abonnement', s: D.sub ? `${n0(D.sub.monthly ?? 0)} kr/mnd` : 'Abonnementer og prøveperioder' }, { k: 'liste', n: 'Transaksjoner', s: 'Alle kontoer' },
+    { k: 'sub', n: 'Abonnement', s: D.sub ? `${n0(D.sub.monthly ?? 0)} kr/mnd` : 'Abonnementer og prøveperioder' }, { k: 'plan', n: 'Planlegging', s: 'Sparemål, faste trekk, skatt og priser' } /* prompt 51 (FIN51) */, { k: 'liste', n: 'Transaksjoner', s: 'Alle kontoer' },
     { k: 'konto', n: 'Kontoer', s: banks || `${acc.length} kontoer` }, { k: 'imp', n: 'Import', s: 'Bank, CSV og e-post' }, { k: 'rap', n: 'Rapporter', s: 'Måned og år' },
     { k: 'set', n: 'Innstillinger', s: 'Kategorier, regler og fanelinje' },
   ].filter((r) => ['saldo', 'budsjett', 'kv', 'fast', 'set'].includes(r.k) || !inTabs.includes(r.k));

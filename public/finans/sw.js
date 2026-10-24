@@ -55,8 +55,10 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   // HTML og navigasjon: alltid nettverket først (no-store), cachen bare uten nett.
   if (e.request.mode === 'navigate' || (e.request.headers.get('accept') || '').includes('text/html')) {
-    if (!url.pathname.startsWith('/finans')) return;
-    e.respondWith(fetch(e.request, { cache: 'no-store' }).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put('/finans/', copy)); } return res; }).catch(async () => (await caches.match(e.request)) || (await caches.match('/finans/')) || Response.error()));
+    if (!url.pathname.startsWith('/finans') || url.pathname.startsWith('/finans/api/')) return; // prompt 51 (FIN51): API-sider (skatteeksport o.l.) caches ikke som appskallet
+    // Prompt 51 (FIN51): egne sider (/finans/plan51) caches under sin egen adresse, ikke som appskallet /finans/.
+    const key = url.pathname === '/finans/' || url.pathname === '/finans' ? '/finans/' : url.pathname;
+    e.respondWith(fetch(e.request, { cache: 'no-store' }).then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(key, copy)); } return res; }).catch(async () => (await caches.match(key)) || (await caches.match(e.request)) || (await caches.match('/finans/')) || Response.error()));
     return;
   }
   if (!url.pathname.startsWith('/assets/finans/') && !url.pathname.startsWith('/assets/js/')) return;

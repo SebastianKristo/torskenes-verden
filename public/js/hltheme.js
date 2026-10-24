@@ -177,6 +177,8 @@ const HEAD = {
   domener: () => ['Trafikk, oppetid og sikkerhet', 'Domener'],
   nettverk: () => ['Nettverk og lenker', 'Nettverk'],
   mer: () => ['Alle sider', 'Mer'],
+  familiekalender: () => ['Hvem kjører? · henting og bringing', 'Familiekalender'], // prompt 51 (MEDFAM51)
+  mediakveld: () => ['Eget bibliotek · hvem er hjemme', 'I kveld'], // prompt 51 (MEDFAM51)
 };
 
 /** Det lave fotovinduet øverst på alle sider unntatt Dashboard. */

@@ -7,6 +7,7 @@ import { glimt } from '/assets/js/glimt.js';
 import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
 import { bolPage, loadB42, bindB42 } from './bol42.js'; // prompt 42: Boliger 2a + 1b
 import { stockLogo, instrSub } from './fin42.js';
+import { plan51Page, PLAN51_ICON } from './plan51.js'; // prompt 51 (FIN51): Planlegging – sparemål, kalender, skatt, priser, abonnementsjeger
 
 Object.assign(ICONS, {
   sub: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
@@ -16,8 +17,9 @@ Object.assign(ICONS, {
   aks: 'M3 17l6-6 4 4 8-8M15 7h6v6',
 });
 
-export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Subscription OS'], ['dir', 'Boliger'], ['finn', 'Finn-handler'], ['imp', 'Import']];
-export const MODULE_SUB = { aks: 'Trading 212', sub: 'Abonnementer', finn: 'Trygg betaling, Fiks ferdig, Tillit', imp: 'CSV, XLSX og tekst' };
+export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Subscription OS'], ['plan', 'Planlegging'], ['dir', 'Boliger'], ['finn', 'Finn-handler'], ['imp', 'Import']];
+ICONS.plan = PLAN51_ICON; // prompt 51 (FIN51)
+export const MODULE_SUB = { aks: 'Trading 212', sub: 'Abonnementer', finn: 'Trygg betaling, Fiks ferdig, Tillit', imp: 'CSV, XLSX og tekst', plan: 'Sparemål, faste trekk, skatt, priser og abonnementsjeger' };
 const u = S.ui;
 const card = (inner, style = '') => `<section class="card" style="${style}">${inner}</section>`;
 const skel = (h = 160) => `<div class="skel" style="min-height:${h}px"></div>`;
@@ -334,7 +336,7 @@ export function firstRunCard() {
     ${S.stage ? stagePreview() : ''}</section>`;
 }
 
-export const MODULE_FN = { aks: aksPage, sub: subPage, dir: bolPage, finn: finnDesk, imp: impPage };
+export const MODULE_FN = { aks: aksPage, sub: subPage, dir: bolPage, finn: finnDesk, imp: impPage, plan: plan51Page };
 
 /* ===================== Lasting ===================== */
 

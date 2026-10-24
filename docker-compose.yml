@@ -15,6 +15,10 @@ services:
       # Prompt 51 (OPS51): restic-backup (Innstillinger → System → Backup). Lokalt repo: BACKUP_DIR/restic51 (egen disk over).
       # NAS: monter sharen på Proxmox-verten / i LXC-en og gi den til os på samme sti, og velg stien som NAS-mål i appen.
       # - /mnt/nas/nordlys:/mnt/nas/nordlys
+      # Prompt 51 (MEDFAM51): Media › Lagring kan flytte slettede filmer/serier til en papirkurv i stedet for å slette dem med en gang.
+      # Monter mediemappa (samme disk som papirkurven) og sett MEDFAM51_TRASH_DIR og MEDFAM51_PATH_MAP i .env. Uten dette slettes
+      # filene via Sonarr/Radarr etter 24 t angrefrist.
+      # - /srv/media:/media
     ports:
       - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:3000"   # BIND_ADDR=0.0.0.0 for LAN-tilgang
     # Prompt 45: os når Docker-proxyen (homelab-docker) på det interne nettet docker-api. os får aldri selve socketen.
@@ -172,6 +176,46 @@ services:
     restart: unless-stopped
     security_opt: [no-new-privileges:true]
     networks: [glitchtip-db]
+
+  # Prompt 51 (MEDFAM51): norske undertekster (Bazarr). Valgfri – start med: docker compose --profile bazarr up -d
+  # Bazarr kobles til Sonarr/Radarr i sitt eget grensesnitt og må se mediefilene på SAMME sti som de (MEDIA_DIR → MEDIA_PATH_IN_ARR).
+  # os snakker med den på http://bazarr:6767 (BAZARR_URL + BAZARR_API_KEY i .env – nøkkelen går aldri til appene). Nettgrensesnittet
+  # bindes til BAZARR_BIND (standard 127.0.0.1, sett LAN-IP for tilgang hjemme) og eksponeres aldri via Cloudflare.
+  # Whisper (lokal generering av undertekster på Mac minien) er valgfritt og beskrevet i docs/media-familie-51.md – ingen skytjenester.
+  bazarr:
+    profiles: [bazarr]
+    image: lscr.io/linuxserver/bazarr:version-v1.5.1
+    container_name: homelab-bazarr
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Oslo
+      PUID: ${MEDIA_PUID:-1000}
+      PGID: ${MEDIA_PGID:-1000}
+    volumes:
+      - ./bazarr/config:/config
+      - ${MEDIA_DIR:-./media}:${MEDIA_PATH_IN_ARR:-/data/media}
+    ports:
+      - "${BAZARR_BIND:-127.0.0.1}:${BAZARR_PORT:-6767}:6767"
+    security_opt: [no-new-privileges:true]
+
+  # Prompt 51 (MEDFAM51): lydbøker og podkaster (Audiobookshelf). Valgfri – start med: docker compose --profile audiobookshelf up -d
+  # os leser «fortsett der du slapp» på http://audiobookshelf:80 (ABS_URL + ABS_TOKEN i .env, admin-token – aldri til appene).
+  # Nettgrensesnittet/appene bruker ABS_BIND (standard 127.0.0.1, sett LAN-IP hjemme); aldri via Cloudflare uten egen innlogging.
+  audiobookshelf:
+    profiles: [audiobookshelf]
+    image: advplyr/audiobookshelf:2.17.5
+    container_name: homelab-audiobookshelf
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Oslo
+    volumes:
+      - ./audiobookshelf/config:/config
+      - ./audiobookshelf/metadata:/metadata   # fremdrift, brukere og omslag – ta med i backup
+      - ${AUDIOBOOKS_DIR:-./media/lydbøker}:/audiobooks
+      - ${PODCASTS_DIR:-./media/podkaster}:/podcasts
+    ports:
+      - "${ABS_BIND:-127.0.0.1}:${ABS_PORT:-13378}:80"
+    security_opt: [no-new-privileges:true]
 
 networks:
   # Prompt 45: bare os og homelab-docker. internal = ingen trafikk ut til internett.

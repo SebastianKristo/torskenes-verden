@@ -549,6 +549,8 @@ export function route() {
   // Prompt 39: «Utseende og fanelinje» er slått sammen med Tilpass (gamle lenker #/set/look).
   if (paper() && parts[0] === 'set' && parts[1] === 'look') { history.replaceState(null, '', '#/set/tilpass'); parts[1] = 'tilpass'; }
   const h = parts[0];
+  // Prompt 51 (FIN51): Planlegging (sparemål, kalender, skatt, priser, abonnementsjeger) er en egen side i PWA-en.
+  if (h === 'plan' || h === 'plan51' || h === 'sparemal') { location.replace(`/finans/plan51${parts[1] ? `#${parts[1]}` : ''}`); return; }
   // Desktop- og eldre lenker
   const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor', news: 'nyheter', nyhetsleser: 'nyheter', rss: 'nyheter', bursdager: 'bd', bursdag: 'bd', birthdays: 'bd', ruter: 'avg', avganger: 'avg', kalender: 'kal', calendar: 'kal', timeplan: 'kal', ollama: 'chat', plex: 'avspilling', jellyfin: 'avspilling', kart: 'tkart', map: 'tkart' /* prompt 46 */, logger: 'set', system: 'nordlys', nordlysos: 'nordlys', programvare: 'nordlys' };
   const start = startScr();

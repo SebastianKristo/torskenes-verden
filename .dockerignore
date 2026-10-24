@@ -5,6 +5,9 @@ data
 proton
 ntfy
 glitchtip
+bazarr
+audiobookshelf
+media
 # Prompt 46: byggkonteksten var hele repoet (~150 MB). Imaget bruker bare package*.json, CHANGELOG.md, server/, public/,
 # scripts/ og docker-entrypoint.sh (se Dockerfile), så resten sendes ikke til Docker – raskere og lettere bygg i LXC-en.
 design_handoff_homelab

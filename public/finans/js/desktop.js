@@ -54,6 +54,7 @@ function navCfg() {
   const def = (S.boot.navDefault ?? NAV_DEFAULT).filter((p) => PAGES.some(([x]) => x === p) && !NAV_NEVER.includes(p));
   // Prompt 42: Filter ligger rett under Glimt, også når serverens standardliste ikke kjenner siden ennå.
   if (!def.includes('filter')) def.splice(def.includes('ai') ? def.indexOf('ai') + 1 : 2, 0, 'filter');
+  if (!def.includes('plan')) def.splice(def.includes('sub') ? def.indexOf('sub') + 1 : def.length - 1, 0, 'plan'); // prompt 51 (FIN51): Planlegging etter Subscription OS
   const fin = sideCfg();
   const saved = (fin?.order?.length ? fin.order : S.boot.nav) ?? def;
   // Fjernede sider faller bort; nye (AI-søk, Import) settes inn etter nærmeste side foran dem i standardrekkefølgen.
