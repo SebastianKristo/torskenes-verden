@@ -50,16 +50,9 @@ extension Store {
     }
 
     /// Sender originalbildet til Gemini på nytt (POST /receipts/:id/reanalyze) og gir begge resultatene.
-    func reanalyze(_ id: String) async throws -> ReanalyzeResult {
-        // Prompt 39: async:false = gammel synkron sammenligning (Til gjennomgang bruker jobben med fremdrift, Receipt39.swift).
-        let d = try await api.callAt("/finans/api", "POST", "/receipts/\(id)/reanalyze", json: ["engine": "gemini", "async": false], timeout: 120)
-        let o = JS.obj(d)
-        if let e = JS.str(o, "error") { throw APIError(message: e, status: 0) }
-        if JS.str(o, "candidateId") == nil, JS.str(o, "jobId") != nil {
-            throw APIError(message: "Analyserer i bakgrunnen – se Kvitteringer → Til gjennomgang", status: 0)
-        }
-        return ReanalyzeResult(receiptId: id, candidateId: JS.str(o, "candidateId") ?? "",
-                               previous: ReadResult(JS.dict(o, "previous")), result: ReadResult(JS.dict(o, "result")))
+    /// Prompt 50: som jobb med polling i stedet for ett synkront kall på opptil 120 s (det ga 502 fra proxyen), Receipt50Reread.swift.
+    func reanalyze(_ id: String, small: Bool = false, engine: String = "gemini") async throws -> ReanalyzeResult {
+        try await reanalyze50(id, engine: engine, small: small)
     }
 
     /// Beholder det nye eller det forrige resultatet.
@@ -77,14 +70,57 @@ struct ReanalyzeButton: View {
     @Environment(Store.self) private var store
     let receiptId: String
     var compact = false
+    /// Prompt 50: primærknapp (blå #4f63ff, hvit tekst) i «Lav sikkerhet»-boksen; grå bare når den faktisk er av.
+    var primary50 = false
+    var disabledWhy: String? = nil
+    /// Prompt 50: «tesseract» = sekundærknappen «Les med lokal OCR».
+    var engine50: String = "gemini"
     @State private var busy = false
     @State private var shown: ReanalyzeResult?
 
+    private var ocr50: Bool { engine50 == "tesseract" }
+    private var off50: Bool { disabledWhy != nil }
+
+    private var title50: String {
+        if ocr50 { return busy ? "Leser med lokal OCR …" : "Les med lokal OCR" }
+        if busy { return "Gemini leser på nytt …" }
+        if primary50 { return "✦ Analyser på nytt med Gemini" }
+        return compact ? "Analyser på nytt" : "Analyser på nytt med Gemini"
+    }
+
     var body: some View {
+        if primary50 || ocr50 { paper50 } else { classic }
+    }
+
+    /// Prompt 50: knappene i boksen med temafarger (Receipt50Look). Primær først, sekundær med kant.
+    private var paper50: some View {
+        let p: PaperPalette = PaperSkin.palette ?? PaperPalette.light
+        let primary: Bool = primary50 && !off50
+        return Button { start() } label: {
+            HStack(spacing: 6) {
+                if busy { ProgressView().controlSize(.small).tint(primary ? .white : p.ink) }
+                Text(title50).font(PF.ui(13.5, .semibold)).lineLimit(1).minimumScaleFactor(0.85)
+            }
+            .foregroundStyle(primary ? Color.white : (off50 ? p.mut : p.ink))
+            .padding(.horizontal, 14)
+            .frame(minHeight: 40)
+            .background(primary ? Receipt50Look.acc : (off50 ? Receipt50Look.line(p) : p.card), in: Capsule())
+            .overlay(Capsule().stroke(primary ? Color.clear : Receipt50Look.line(p), lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(busy || off50)
+        .accessibilityHint(disabledWhy ?? "")
+        .sheet(item: $shown) { r in
+            ReanalyzeCompare(result: r).presentationDetents([.large]).skinSheetBackground()
+        }
+    }
+
+    private var classic: some View {
         Button { start() } label: {
             HStack(spacing: 8) {
                 if busy { ProgressView().controlSize(.small) } else { Text("✦").fontWeight(.bold) }
-                Text(busy ? "Gemini leser på nytt …" : (compact ? "Analyser på nytt" : "Analyser på nytt med Gemini")).fontWeight(.semibold).lineLimit(1)
+                Text(title50).fontWeight(.semibold).lineLimit(1)
             }
             .font(compact ? .footnote : .body)
             .foregroundStyle(Color.accentLight)
@@ -106,13 +142,13 @@ struct ReanalyzeButton: View {
         busy = true
         Task {
             do {
-                let r = try await store.reanalyze(receiptId)
+                let r = try await store.reanalyze(receiptId, engine: engine50)
                 busy = false
                 shown = r
             } catch {
                 busy = false
-                let msg = (error as? APIError)?.message ?? error.localizedDescription
-                store.flash("Kunne ikke analysere på nytt: \(msg)")
+                // Prompt 50: forklaring brukeren kan handle på i stedet for «Feil 502» (Receipt50Reread.swift).
+                store.flash(Receipt50Err.text(error).text)
             }
         }
     }

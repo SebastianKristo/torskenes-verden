@@ -79,7 +79,8 @@ final class Hl30 {
             if let d = try? await store.api.call("GET", "/transactions/\(txId)") { store.txDetail = PaperTxData(JS.obj(d)) }
             store.flash("Kvitteringen er lest på nytt")
         } catch {
-            store.flash("Kunne ikke lese kvitteringen på nytt: \(error.localizedDescription)")
+            // Prompt 50: lesbar feil (502/503/504/404) i stedet for «Feil 502» (Receipt50Reread.swift).
+            store.flash(Receipt50Err.text(error).text)
         }
     }
 }

@@ -65,7 +65,9 @@ struct PaperHome: View {
     /// Prompt 46: Søk (h1) og Snarveier (h16: Finans · Mat · Domener) er to egne kort på mobil – hvert med egen «–» og plass.
     /// Eksisterende oppsett får h16 rett etter h1 (pageCards i Paper15.swift), så ingenting flytter seg.
     private var shortcuts46: PaperCardDef {
-        PaperCardDef(key: "h16", label: "Snarveier (Finans, Mat, Domener)", view: AnyView(minis))
+        // Prompt 50: «Hjem som fliser» (standard) – flisene ligger i h16 i stedet for minikortene (Home50Tiles.swift).
+        let label: String = Home50Tiles.shared.on ? "Fliser" : "Snarveier (Finans, Mat, Domener)"
+        return PaperCardDef(key: "h16", label: label, view: AnyView(Home50TilesSlot(minis: AnyView(minis))))
     }
 
     /// Kortene på Hjem. Prompt 37: «Dagens bibelvers» (h13) finnes bare for brukere med modulen (Bible37Views.swift).
@@ -94,6 +96,11 @@ struct PaperHome: View {
                 PaperCardDef(key: "h9", label: "Bursdager", view: AnyView(PaperBirthdaysCard24())),
         ]
         if !trials46 { out.removeAll { $0.key == "h11" } }
+        // Prompt 50: med fliser skjules Posisjon (h7) og Avganger-kortet; h3 står bare igjen mens Min reise vises.
+        if Home50Tiles.shared.on {
+            let mr: MinReise41 = MinReise41.shared
+            out.removeAll { $0.key == "h7" || ($0.key == "h3" && !(mr.showOnHome || mr.toast)) }
+        }
         if Bible37Model.shared.enabled {
             let i: Int = (out.firstIndex { $0.key == "h12" } ?? -1) + 1
             out.insert(PaperCardDef(key: "h13", label: "Bibelvers", view: AnyView(Bible37HomeCard())), at: i)
@@ -573,7 +580,7 @@ struct PaperLinkList: View {
                 .set25Highlight(r.name)
             }
         }
-        .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .glass50Card(p) // prompt 50: glass i Liquid Glass
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .padding(.top, 8)
     }
@@ -934,7 +941,7 @@ struct PaperSettings: View {
     }
 
     private var themeSub: String {
-        let m = store.paperMode == "lys" ? "Papir lys" : store.paperMode == "mork" ? "Papir mørk" : "Følger systemet"
+        let m = store.paperModeName50 // prompt 50: også «Liquid Glass»
         let t = PaperIconTheme.themes.first { $0.0 == store.iconTheme }?.1 ?? "Standard"
         return "\(m) · \(photoName) · ikoner: \(t)"
     }

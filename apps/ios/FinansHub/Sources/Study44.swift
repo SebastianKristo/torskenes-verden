@@ -55,6 +55,8 @@ final class Study44 {
     var asking: Bool = false
     var toast: String = ""
     var missing: Bool = false
+    /// Prompt 50: ✦ i toppen flytter fokus til «Spør om dokumentet» (Study44Ask).
+    var askFocus50: Int = 0
     @ObservationIgnored private var loadedOnce: Bool = false
 
     var merSub: String {
@@ -290,20 +292,45 @@ struct Study44Page: View {
     }
 }
 
+/// Prompt 50: topplinje som i Nyheter (Top50.swift): «‹ Tilbake», STUDIE · DOKUMENTER / Dokumenter, ✦ og ⋯.
+/// Underteksten ligger rett under raden (14 pt, mut).
 struct Study44Top: View {
+    @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @MainActor private var m: Study44 { Study44.shared }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Button { Haptic34.back(); m.open = false } label: {
-                Text("‹ Tilbake").font(PF.ui(16, .bold)).foregroundStyle(Color(hex: "#b23a2a")).frame(minHeight: 44).contentShape(Rectangle())
+            Top50Bar(kicker: "Studie · dokumenter", title: "Dokumenter", back: { m.open = false }) {
+                Glimt50Button(label: "Spør Glimt om dokumentet") { glimt() }
+                menu
             }
-            .buttonStyle(.plain)
-            Text("STUDIE · DOKUMENTER").font(PF.mono(10.5)).tracking(1.3).foregroundStyle(p.lab)
-            Text("Dokumenter").font(PF.serif(34, medium: true)).foregroundStyle(p.ink)
-            Text("Vitnemål, karakterutskrift og attester · Glimt leser og regner ut").font(PF.ui(13)).foregroundStyle(p.mut)
+            Text("Vitnemål, karakterutskrift og attester · Glimt leser og regner ut").font(PF.ui(14)).foregroundStyle(p.mut)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 6)
+        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 6)
+    }
+
+    private var menu: some View {
+        Menu {
+            Button { Task { await m.load(store) } } label: { Label("Oppdater", systemImage: "arrow.clockwise") }
+            Button {
+                m.open = false
+                store.openChat()
+            } label: { Label("Spør Glimt i Chat", systemImage: "sparkles") }
+        } label: {
+            Image(systemName: "ellipsis").font(.system(size: 16, weight: .bold)).foregroundStyle(p.ink).round50()
+        }
+        .accessibilityLabel("Mer for Studie")
+    }
+
+    /// ✦: til spørsmålsfeltet for valgt dokument; uten dokumenter åpnes Chat.
+    private func glimt() {
+        if m.selected != nil {
+            m.askFocus50 += 1
+        } else {
+            m.open = false
+            store.openChat()
+        }
     }
 }

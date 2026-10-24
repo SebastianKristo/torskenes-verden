@@ -107,28 +107,42 @@ final class Fin40Reread {
     var changes: [Fin40Change] = []
     var err: String = ""
     var shown: Bool = false
+    /// Prompt 50: «Les mindre versjon» tilbys etter 502/504/tidsavbrudd; startAt gir «Leser … 12 s».
+    var offerSmall: Bool = false
+    var startAt: Date? = nil
+    @ObservationIgnored private var last: PaperTxData? = nil
 
-    func run(_ d: PaperTxData, _ store: Store) {
+    func run(_ d: PaperTxData, _ store: Store, small: Bool = false) {
         if busy || d.receiptId.isEmpty { return }
         Haptic30.light()
+        last = d
         busy = true
         err = ""
+        offerSmall = false
         result = nil
         changes = []
         shown = true
+        startAt = Date()
         Task {
             defer { self.busy = false }
             do {
-                let r: ReanalyzeResult = try await store.reanalyze(d.receiptId)
+                // Prompt 50: jobb med polling, ingen lange HTTP-kall (Receipt50Reread.swift).
+                let r: ReanalyzeResult = try await store.reanalyze(d.receiptId, small: small)
                 self.result = r
                 self.changes = Fin40Reread.diff(r.previous, r.result)
-            } catch let e as APIError {
-                // Prompt 41: ny lesing er lov for alle statuser; mangler originalen, si det konkret.
-                self.err = e.status == 404 ? "Fant ikke originalbildet. Last det opp på nytt for å lese det." : e.message
             } catch {
-                self.err = error.localizedDescription
+                // Prompt 50: forklaring i stedet for «Feil 502 (HTTP 502)».
+                let m: (text: String, small: Bool) = Receipt50Err.text(error)
+                self.err = m.text
+                self.offerSmall = m.small && !small
             }
         }
+    }
+
+    /// Prompt 50: «Prøv igjen» og «Les mindre versjon» i arket.
+    func retry(_ store: Store, small: Bool) {
+        guard let d = last else { return }
+        run(d, store, small: small)
     }
 
     nonisolated static func money(_ v: Double?) -> String {
@@ -223,10 +237,10 @@ struct Fin40RereadSheet: View {
                 if m.busy {
                     Text("Glimt leser kvitteringen på nytt …").font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
                     Text("Sjekker butikk, dato, hver linje og at summen stemmer").font(PF.ui(13.5)).foregroundStyle(p.mut)
-                    ProgressView().frame(maxWidth: .infinity).padding(.top, 10)
+                    // Prompt 50: fremdrift med sekunder, så det ikke ser hengt ut.
+                    Fin50Elapsed(start: m.startAt)
                 } else if !m.err.isEmpty {
-                    Text(m.err).font(PF.ui(14)).foregroundStyle(Color(hex: "#b23a2a")).fixedSize(horizontal: false, vertical: true)
-                    Tfa40Primary(title: "OK") { m.shown = false }
+                    Fin50RereadError()
                 } else if m.changes.isEmpty {
                     Text("Ingen endringer").font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
                     Text("Butikk, dato og alle \(lineCount) linjer stemmer, og summen er " + Fin40Reread.money(total) + ".")
@@ -479,6 +493,46 @@ struct Fin40EditSheet: View {
             } catch {
                 busy = false
                 err = (error as? APIError)?.message ?? error.localizedDescription
+            }
+        }
+    }
+}
+
+/* ---------- Prompt 50: fremdrift og feil i «Glimt leser kvitteringen på nytt» ---------- */
+
+/// «Leser … 12 s» med spinner, oppdatert hvert sekund.
+struct Fin50Elapsed: View {
+    @Environment(\.paper) private var p
+    let start: Date?
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { ctx in
+            let s: Int = Swift.max(0, Int(ctx.date.timeIntervalSince(start ?? ctx.date)))
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Leser … \(s) s").font(PF.mono(13)).foregroundStyle(p.mut).monospacedDigit()
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 10)
+        }
+    }
+}
+
+/// Feilen med «Lukk» og «Prøv igjen» (og «Les mindre versjon» etter tidsavbrudd).
+struct Fin50RereadError: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    @MainActor private var m: Fin40Reread { Fin40Reread.shared }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(m.err).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Tfa40Secondary(title: "Lukk") { m.shown = false }
+                Tfa40Primary(title: "Prøv igjen") { m.retry(store, small: false) }
+            }
+            if m.offerSmall {
+                Tfa40Secondary(title: "Les mindre versjon") { m.retry(store, small: true) }
             }
         }
     }

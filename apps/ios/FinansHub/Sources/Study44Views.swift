@@ -306,12 +306,14 @@ struct Study44Ask: View {
     @Environment(\.paper) private var p
     @MainActor private var m: Study44 { Study44.shared }
     @State private var q: String = ""
+    @FocusState private var focus50: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 TextField("Spør om dokumentet, f.eks. «har jeg strøk?»", text: $q)
                     .font(PF.ui(14.5)).foregroundStyle(p.ink)
+                    .focused($focus50)
                     .submitLabel(.search)
                     .onSubmit { m.ask(q, store) }
                     .padding(.leading, 14)
@@ -327,5 +329,6 @@ struct Study44Ask: View {
                     .background(p.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
+        .onChange(of: m.askFocus50) { (_: Int, _: Int) in focus50 = true }
     }
 }

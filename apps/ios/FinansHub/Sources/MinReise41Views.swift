@@ -457,7 +457,8 @@ struct MinReise41HomeSlot: View {
                 .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .trailing).combined(with: .opacity)))
             }
             if m.toast { MinReise41Toast().transition(.opacity.combined(with: .move(edge: .bottom))) }
-            if !(show && m.homeCard == "instead") { RuterHomeCard27() }
+            // Prompt 50: med fliser på Hjem står avgangene i Avgang-flisen (Home50Tiles.swift).
+            if !(show && m.homeCard == "instead") && !Home50Tiles.shared.on { RuterHomeCard27() }
         }
         .animation(.easeOut(duration: 0.25), value: show)
         .task {

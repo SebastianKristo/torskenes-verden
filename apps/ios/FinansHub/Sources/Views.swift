@@ -520,7 +520,11 @@ struct ConfirmView: View {
                         }
                         .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7)).padding(.horizontal, 6)
                         if let e = r.error { Text(e).font(.footnote).foregroundStyle(Color.accentLight).padding(.horizontal, 6) }
-                        if store.canReanalyze(r) {
+                        // Prompt 50 (claude-code-finans-kvittering-fargefeil.md): «Lav sikkerhet»-boksen i temafarger med
+                        // «✦ Analyser på nytt med Gemini» som primærknapp og «Les med lokal OCR» ved siden av (Receipt50Reread.swift).
+                        if PaperSkin.palette != nil && (!high || store.canReanalyze(r)) {
+                            Receipt50LowBox(r: r)
+                        } else if store.canReanalyze(r) {
                             ReanalyzeButton(receiptId: r.id)
                         } else if let why = r.reanalyzeReason, r.error != nil {
                             Text(why).font(.caption).foregroundStyle(Color.skinFg.opacity(0.55)).padding(.horizontal, 6)

@@ -243,8 +243,10 @@ struct EdgeSwipeClose30: ViewModifier {
 }
 
 extension View {
+    /// Prompt 50: UIKit-kantgesten (EdgeClose50, Nav50Back.swift) i stedet for SwiftUI-draget over, som tapte mot
+    /// ScrollView, vannrette fanerader og lister. EdgeSwipeClose30 står igjen ubrukt.
     func edgeSwipeClose30(enabled: Bool = true, _ close: @escaping () -> Void) -> some View {
-        modifier(EdgeSwipeClose30(enabled: enabled, close: close))
+        modifier(EdgeClose50(enabled: enabled, close: close))
     }
 }
 

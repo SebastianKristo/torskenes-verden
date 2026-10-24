@@ -437,8 +437,10 @@ extension View {
     /// Kart i fullskjerm (fanelinjen skjules). Legges på roten i Papir.
     func kart46Host(_ p: PaperPalette, _ store: Store) -> some View {
         fullScreenCover(isPresented: Binding<Bool>(get: { Kart46.shared.open }, set: { (v: Bool) in if !v { Kart46.shared.close() } })) {
-            // Ingen kantsveip her: kartet skal kunne dras helt fra kanten. «‹ Mer» lukker.
+            // Prompt 50: kantsveip lukker også Kart. UIKit-kantgesten tar bare berøringer som starter i kantsonen (ca. 20 pt),
+            // så kartet kan fortsatt dras overalt ellers. «‹ Mer» lukker som før.
             Kart46Page().environment(\.paper, p).environment(store)
+                .edgeSwipeClose30 { Kart46.shared.close() }
         }
     }
 }

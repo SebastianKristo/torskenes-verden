@@ -103,7 +103,8 @@ final class Rean39Model {
                     // Eldre server: les kvitteringen på nytt i køen.
                     _ = try? await store.api.call("POST", "/receipts/\(id)/reprocess")
                 } else {
-                    self.fail(id, e.message.isEmpty ? "Gemini svarte ikke" : e.message)
+                    // Prompt 50: lesbar feil (502/503/504/404) i stedet for «Feil 502» (Receipt50Reread.swift).
+                    self.fail(id, Receipt50Err.text(e).text)
                     return
                 }
             } catch {
@@ -186,7 +187,7 @@ final class Rean39Model {
                     if self.isDone(id, model) { await self.finish(id, model, store); return }
                 }
                 if Date().timeIntervalSince(j.started) > 150 {
-                    self.fail(id, "Gemini svarte ikke")
+                    self.fail(id, Receipt50Err.text(status: 504, code: "timeout", message: "").text) // prompt 50
                     return
                 }
             }

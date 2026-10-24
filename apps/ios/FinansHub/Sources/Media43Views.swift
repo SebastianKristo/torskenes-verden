@@ -180,25 +180,15 @@ struct Media43Page: View {
         .onDisappear { m.stopPolling() }
     }
 
+    /// Prompt 50: topplinje som i Nyheter (Top50.swift): «‹ Tilbake», MEDIA · FILMER OG SERIER / Media, ✦ og innstillinger.
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                // Prompt 45: systemets runde tilbakeknapp (Media45.swift).
-                Back45 { m.open = false }
-                Spacer(minLength: 8)
-                Button {
-                    Haptics.shared.tap()
-                    withAnimation(.easeOut(duration: 0.2)) { m.glimtOpen.toggle() }
-                    if m.glimtOpen { glimtFocus = true }
-                } label: {
-                    Orb43(size: 24, busy: m.glimtBusy).padding(10).background(p.card, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Glimt i Media")
-                // Prompt 45: innstillingene ligger i Innstillinger → Media; ⋯ har snarveien og «Rydd uovervåkede».
-                Media45Menu()
+        Top50Bar(kicker: "Media · filmer og serier", title: "Media", back: { m.open = false }) {
+            Glimt50Button(label: "Glimt i Media") {
+                withAnimation(.easeOut(duration: 0.2)) { m.glimtOpen.toggle() }
+                if m.glimtOpen { glimtFocus = true }
             }
-            Text("Media").font(PF.serif(34, medium: true)).foregroundStyle(p.ink)
+            // Innstillinger for Media (og «Rydd uovervåkede» for admin) som før, nå som rund knapp med kant.
+            Media45Menu()
         }
         .padding(.horizontal, 16).padding(.top, 8)
     }

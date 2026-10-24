@@ -355,6 +355,7 @@ struct PaperWeatherView: View {
         .fullScreenCover(isPresented: $map) {
             WxMapView22(name: w?.placeName ?? store.weatherPlaceObj?.name ?? "Kart", lat: w?.lat ?? store.weatherPlaceObj?.lat ?? 59.91,
                         lon: w?.lon ?? store.weatherPlaceObj?.lon ?? 10.75)
+                .edgeSwipeClose30 { map = false } // prompt 50: kantsveip lukker værkartet
         }
         // Prompt 30: ett lett haptisk tikk når et ark, kartet, Steder eller Yr mot Storm lukkes (ikke ved åpning).
         .dismissHaptic30(sheet != nil)

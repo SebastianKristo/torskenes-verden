@@ -330,16 +330,9 @@ final class EdgePanCoordinator: NSObject, UIGestureRecognizerDelegate {
     }
 
     /// Kart og vannrette karuseller venter på kantgesten, så de ikke stjeler sveipet fra kanten.
+    /// Prompt 50: også sveip-handlinger i lister, egne pan-gester og SwiftUI-drag venter (Nav50Edge.waits).
     func gestureRecognizer(_ g: UIGestureRecognizer, shouldBeRequiredToFailBy other: UIGestureRecognizer) -> Bool {
-        var v: UIView? = other.view
-        var depth: Int = 0
-        while let cur = v, depth < 12 {
-            if cur is MKMapView { return true }
-            if let s = cur as? UIScrollView, s.contentSize.width > s.bounds.width + 1 { return true }
-            v = cur.superview
-            depth += 1
-        }
-        return false
+        Nav50Edge.waits(other)
     }
 
     @objc private func handle(_ g: UIScreenEdgePanGestureRecognizer) {

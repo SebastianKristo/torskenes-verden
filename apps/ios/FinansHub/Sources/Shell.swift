@@ -115,8 +115,9 @@ struct RootView: View {
                 ZStack { Rectangle().fill(.ultraThinMaterial); Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(Color.skinFg.opacity(0.8)) }.ignoresSafeArea()
             }
         }
-        .edgeSwipeBack(enabled: store.loggedIn && !store.locked && !store.addingAccount && store.paperCanSwipeBack) {
-            store.paperBack()
+        // Prompt 50: sveipet virker på alle sider med tilbakeknapp (nav50CanSwipe, Nav50Back.swift).
+        .edgeSwipeBack(enabled: store.loggedIn && !store.locked && !store.addingAccount && store.nav50CanSwipe) {
+            store.nav50SwipeBack()
         }
         // Papir følger valget lys/mørk (eller systemet).
         .preferredColorScheme(pal.dark ? .dark : .light)

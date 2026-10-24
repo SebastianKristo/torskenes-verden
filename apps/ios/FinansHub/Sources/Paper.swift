@@ -11,6 +11,8 @@ struct PaperPalette {
     let ink, bg, card, line, lab, mut, pos, nav, navInk, navAct, navActInk: Color
     /// Ikonet på +-knappen, nedtrekksmenyen og valgt rad i den.
     let onLab, pop, popSel: Color
+    /// Prompt 50: Liquid Glass (glass på kort, fliser og fanelinje, fargeskyer bak). Glass50.swift.
+    var glass: Bool = false
 
     static let light = PaperPalette(dark: false, ink: Color(hex: "#1b1a17"), bg: Color(hex: "#f3efe6"), card: .white, line: Color(hex: "#d8d1c2"),
                                     lab: Color(hex: "#b23a2a"), mut: Color(hex: "#7a7468"), pos: Color(hex: "#2f7a4f"), nav: Color(hex: "#1b1a17"),
@@ -25,6 +27,7 @@ struct PaperPalette {
         switch mode {
         case "lys": return light
         case "mork": return night
+        case "glass": return glass50 // prompt 50 (Glass50.swift)
         default: return system == .dark ? night : light
         }
     }
@@ -94,7 +97,7 @@ struct PCard<C: View>: View {
     @ViewBuilder let content: () -> C
     var body: some View {
         content().padding(padding).frame(maxWidth: .infinity, alignment: .leading)
-            .background(p.card, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .glass50Card(p, radius: radius) // prompt 50: glass i Liquid Glass
     }
 }
 
@@ -177,6 +180,8 @@ struct PaperShell: View {
             let fab = !wide && showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
                 p.bg.ignoresSafeArea()
+                // Prompt 50: Liquid Glass – tre fargeskyer bak alt innhold (Glass50.swift).
+                if p.glass { Glass50Clouds() }
                 VStack(spacing: 0) {
                     // Ikke .clipped(): da kuttes fotovinduet ved safe area, og statuslinja får papirfarge i stedet for bildet.
                     // Prompt 22: FinansHub-sidene bruker «Lys hovedbok» (lys-tokens) som standard (Theme22.swift).
@@ -521,7 +526,8 @@ struct PaperTabBar: View {
                 }
                 .padding(.horizontal, 8)
                 .frame(height: 62)
-                .background(p.nav, in: Capsule())
+                // Prompt 50: glass-fanelinje i Liquid Glass (Glass50.swift).
+                .glass50Bg(p, p.nav, Capsule())
                 .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
                 .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
                     // Prompt 26: Finans har egen editor (FinNav26.swift). Klikket når fingeren slippes slukes én gang.
@@ -917,6 +923,9 @@ struct PaperPage: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             .ignoresSafeArea(edges: .top)
+        } else if wide && store.inSettings32b {
+            // Prompt 50: Innstillinger i to kolonner på Fold og iPad (Settings50Wide.swift).
+            Settings50Wide()
         } else {
             scrollPage
         }
@@ -1110,9 +1119,12 @@ struct PaperHero: View {
             .padding(.trailing, 22)
             .padding(.top, topInset + 10)
             // Prompt 40: på Bibel overlapper første kort hero med 36 pt, så tittelen flyttes like mye opp (minst 12 pt luft).
-            .padding(.bottom, home ? 36 : (store.inBible39 ? 47 : (plain45 ? 12 : 34)))
+            // Prompt 50 (claude-code-lik-bakgrunnshoyde.md): samme bunnpolstring som Hjem på alle sider med bilde.
+            .padding(.bottom, store.inBible39 ? 47 : (plain45 ? 12 : 36))
         }
-        .frame(height: (home ? (wide ? 230 : 172) : (plain45 ? 132 : 154)) + topInset)
+        // Prompt 50: alle sider med bakgrunnsbilde har samme høyde som Hjem (målt fra toppen av skjermen), så bunnkanten
+        // av bildet står helt i ro ved fanebytte. Unntak som før: Gjøremål (uten bilde).
+        .frame(height: Paper50Hero.height(wide: wide, plain: plain45) + topInset)
         // Prompt 41: ingen bildekreditering på Hjem (flyttet til Innstillinger → Tilpass → Bakgrunn, Bg41Oslo.swift).
         .clipped()
     }
@@ -1160,7 +1172,7 @@ struct PaperHero: View {
         HStack(spacing: 8) {
             if home {
                 Text(AppMeta.shared.name).font(PF.serif(22, medium: true)).foregroundStyle(store.heroInk).lineLimit(1).minimumScaleFactor(0.7).shadow(color: .black.opacity(store.heroInk == .white ? 0.4 : 0), radius: 6)
-            } else if store.prof24IsRoot || (wide && store.prof24UpLabel == "Hjem") || store.nav42HideUp(wide: wide) {
+            } else if store.prof24IsRoot || (wide && store.prof24UpLabel == "Hjem") || store.nav42HideUp(wide: wide) || store.settings50HideUp(wide: wide) {
                 // Prompt 24: rotsidene i Finans + Boliger har ingen tilbakeknapp; profilbildet står fortsatt til høyre.
                 // Prompt 25: på bred skjerm går den røde Hjem-knappen i sidelinja hjem, så «‹ Hjem» skjules.
                 Color.clear.frame(width: 1, height: 34)
@@ -1295,6 +1307,14 @@ struct PaperHero: View {
         case "innst": return "Innstillinger"
         default: return store.paper16Title ?? ""
         }
+    }
+}
+
+/// Prompt 50: felles høyde på toppbildet (uten safe area). Hjem og alle andre faner er like; Gjøremål er lavere.
+enum Paper50Hero {
+    nonisolated static func height(wide: Bool, plain: Bool) -> CGFloat {
+        if plain { return 132 }
+        return wide ? 230 : 172
     }
 }
 

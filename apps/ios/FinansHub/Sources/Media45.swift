@@ -100,10 +100,11 @@ struct Media45Menu: View {
                 Label("Innstillinger for Media", systemImage: "gearshape")
             }
         } label: {
-            Image(systemName: "ellipsis").font(.system(size: 16, weight: .bold)).foregroundStyle(p.ink)
-                .frame(width: 44, height: 44).background(p.card, in: Circle())
+            // Prompt 50: tannhjul i rund 40 pt-knapp med kant, som i Nyheter (Top50.swift).
+            Image(systemName: "gearshape").font(.system(size: 16, weight: .semibold)).foregroundStyle(p.ink)
+                .round50()
         }
-        .accessibilityLabel("Mer for Media")
+        .accessibilityLabel("Innstillinger for Media")
     }
 }
 

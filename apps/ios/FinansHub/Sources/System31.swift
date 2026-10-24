@@ -132,9 +132,27 @@ extension View {
 struct System31Page: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
+    @Environment(\.horizontalSizeClass) private var hsc50
     @MainActor private var u: Update30Model { Update30Model.shared }
 
     var body: some View {
+        GeometryReader { (g: GeometryProxy) in
+            // Prompt 50: Fold og iPad (≥ 700 pt, samme regel som Layout45) – to kolonner (System50Wide).
+            if Layout45.mode(width: g.size.width, hsc: hsc50) == .wide {
+                System50Wide(width: g.size.width)
+            } else {
+                phone
+            }
+        }
+        .background(p.bg.ignoresSafeArea())
+        .overlay { Starter36Overlay() }
+        .environment(\.colorScheme, p.dark ? .dark : .light)
+        .task { await u.load(store, force: true) }
+        .update30Sheet()
+    }
+
+    /// Telefon: uendret, med den flytende knappen nederst.
+    private var phone: some View {
         VStack(spacing: 0) {
             System31Top()
             ScrollViewReader { (proxy: ScrollViewProxy) in
@@ -142,10 +160,7 @@ struct System31Page: View {
                 VStack(alignment: .leading, spacing: 14) {
                     System31Hero()
                     System31VersionCard()
-                    Text("Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.")
-                        .font(PF.ui(12)).foregroundStyle(p.mut).lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 4)
+                    System31Footnote()
                     // Prompt 44: TIDLIGERE VERSJONER med Installer (rull tilbake), rett under «Krev …» og over NYTT I (Versions44.swift).
                     Versions44Section()
                     System31Notes()
@@ -166,12 +181,69 @@ struct System31Page: View {
             }
             }
         }
-        .background(p.bg.ignoresSafeArea())
         .overlay(alignment: .bottom) { System31BigButton() }
-        .overlay { Starter36Overlay() }
-        .environment(\.colorScheme, p.dark ? .dark : .light)
-        .task { await u.load(store, force: true) }
-        .update30Sheet()
+    }
+}
+
+/// «Oppdateringen gjøres av updater-containeren …»
+struct System31Footnote: View {
+    @Environment(\.paper) private var p
+
+    var body: some View {
+        Text("Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.")
+            .font(PF.ui(12)).foregroundStyle(p.mut).lineSpacing(2)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 4)
+    }
+}
+
+/// Prompt 50 (claude-code-innstillinger-to-kolonner-fold-ipad.md, System / Nordlys-oppdatering): hele bredden, marg 28 pt.
+/// Venstre: versjonskortet med «Oppdater nå» og teksten rett under (står i ro). Høyre: Programvareversjon, «Krev Face ID
+/// eller passord», tidligere versjoner og «Nytt i …» (scroller).
+struct System50Wide: View {
+    let width: CGFloat
+
+    var body: some View {
+        let left: CGFloat = Swift.min(420, Swift.max(320, (width - 84) * 0.42))
+        VStack(spacing: 0) {
+            System31Top(hPad: 28)
+            HStack(alignment: .top, spacing: 28) {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        System31Hero()
+                        System31BigButton(inline: true)
+                        System31Footnote()
+                    }
+                    .padding(.top, 4).padding(.bottom, 24)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(width: left)
+                System50WideRight()
+            }
+            .padding(.horizontal, 28)
+        }
+    }
+}
+
+struct System50WideRight: View {
+    var body: some View {
+        ScrollViewReader { (proxy: ScrollViewProxy) in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 14) {
+                    System31VersionCard()
+                    Versions44Section()
+                    System31Notes()
+                    if Versions44.shared.loaded && !Versions44.shared.available { System36History() }
+                    System32bInstalled()
+                }
+                .padding(.top, 4).padding(.bottom, 40)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .onChange(of: Set34Focus.shared.tick) { (_: Int, _: Int) in
+                guard let a = Set34Focus.shared.target, a != "upd" else { return }
+                withAnimation(.easeInOut(duration: 0.35)) { proxy.scrollTo(Set34Focus.rowId(a), anchor: .center) }
+            }
+        }
     }
 }
 
@@ -179,6 +251,8 @@ struct System31Page: View {
 struct System31Top: View {
     @Environment(\.paper) private var p
     @MainActor private var m: System31Model { System31Model.shared }
+    /// Prompt 50: 28 pt på Fold og iPad.
+    var hPad: CGFloat = 16
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -197,7 +271,7 @@ struct System31Top: View {
             .padding(.leading, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16).padding(.top, 6).padding(.bottom, 12)
+        .padding(.horizontal, hPad).padding(.top, 6).padding(.bottom, 12)
     }
 }
 
@@ -454,6 +528,8 @@ struct System31BigButton: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @MainActor private var u: Update30Model { Update30Model.shared }
+    /// Prompt 50: på Fold og iPad står knappen rett under versjonskortet (ikke flytende over innholdet).
+    var inline: Bool = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -471,12 +547,13 @@ struct System31BigButton: View {
             .hl34("upd", radius: 27)
             Text(sub).font(PF.ui(12)).foregroundStyle(p.mut)
         }
-        .padding(.horizontal, 16).padding(.top, 22).padding(.bottom, 14)
+        .padding(.horizontal, inline ? 0 : 16).padding(.top, inline ? 2 : 22).padding(.bottom, inline ? 0 : 14)
         .frame(maxWidth: .infinity)
         .background(
             LinearGradient(stops: [.init(color: p.bg.opacity(0), location: 0), .init(color: p.bg, location: 0.38)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea(edges: .bottom)
+                .opacity(inline ? 0 : 1)
         )
     }
 

@@ -37,6 +37,8 @@ extension Store {
 
     /// Paletten for innholdet: Lys hovedbok på Finans-sidene når designet er «lys», ellers Papir-paletten.
     func finPalette22(_ p: PaperPalette) -> PaperPalette {
+        // Prompt 50: Liquid Glass gjelder også Finans-sidene (ingen lys hovedbok over glasset).
+        if p.glass { return p }
         if paperOnFinance22 && finDesign22 == "lys" { return PaperPalette.ledger }
         return p
     }

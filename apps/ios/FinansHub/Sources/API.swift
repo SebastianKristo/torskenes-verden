@@ -46,7 +46,7 @@ struct API {
         if code >= 400 {
             let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
             throw APIError(message: (obj?["error"] as? String) ?? "Feil \(code)", status: code, needsTotp: (obj?["needsTotp"] as? Bool) ?? false,
-                           code: obj?["code"] as? String, canGemini: (obj?["canGemini"] as? Bool) ?? false)
+                           code: (obj?["code"] as? String) ?? (obj?["kode"] as? String), canGemini: (obj?["canGemini"] as? Bool) ?? false) // prompt 50: også «kode»
         }
         return data
     }
