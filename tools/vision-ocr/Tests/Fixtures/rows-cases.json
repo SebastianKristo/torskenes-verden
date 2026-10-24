@@ -1,0 +1,33 @@
+[
+  {
+    "name": "vare og pris på samme rad (litt skjevt bilde), blandet rekkefølge inn",
+    "lines": [
+      { "text": "24,90", "confidence": 0.95, "bbox": [0.75, 0.205, 0.15, 0.02] },
+      { "text": "39,90", "confidence": 0.95, "bbox": [0.75, 0.236, 0.15, 0.02] },
+      { "text": "REMA 1000", "confidence": 0.99, "bbox": [0.30, 0.05, 0.40, 0.03] },
+      { "text": "BRØD GROVT", "confidence": 0.93, "bbox": [0.05, 0.23, 0.35, 0.02] },
+      { "text": "MELK 1L", "confidence": 0.97, "bbox": [0.05, 0.20, 0.30, 0.02] }
+    ],
+    "rows": ["REMA 1000", "MELK 1L 24,90", "BRØD GROVT 39,90"]
+  },
+  {
+    "name": "naborader som så vidt overlapper slås ikke sammen",
+    "lines": [
+      { "text": "TOTAL", "confidence": 0.99, "bbox": [0.05, 0.50, 0.20, 0.03] },
+      { "text": "84,80", "confidence": 0.99, "bbox": [0.70, 0.50, 0.20, 0.03] },
+      { "text": "BANKAXEPT", "confidence": 0.98, "bbox": [0.05, 0.525, 0.30, 0.03] },
+      { "text": "84,80", "confidence": 0.97, "bbox": [0.70, 0.527, 0.20, 0.03] }
+    ],
+    "rows": ["TOTAL 84,80", "BANKAXEPT 84,80"]
+  },
+  {
+    "name": "tre kolonner sorteres på x, tom tekst droppes, mellomrom trimmes",
+    "lines": [
+      { "text": "2 x 12,50", "confidence": 0.9, "bbox": [0.40, 0.30, 0.20, 0.02] },
+      { "text": "PANT", "confidence": 0.9, "bbox": [0.05, 0.301, 0.15, 0.02] },
+      { "text": " 25,00 ", "confidence": 0.9, "bbox": [0.80, 0.299, 0.12, 0.02] },
+      { "text": "   ", "confidence": 0.1, "bbox": [0.50, 0.40, 0.10, 0.02] }
+    ],
+    "rows": ["PANT 2 x 12,50 25,00"]
+  }
+]

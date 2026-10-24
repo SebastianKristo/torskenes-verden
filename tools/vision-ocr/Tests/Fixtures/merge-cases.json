@@ -1,0 +1,55 @@
+[
+  {
+    "name": "kuttede linjer i kanten forsvinner, dobbel linje i overlappen dedupliseres (høyest konfidens)",
+    "image_height": 3800,
+    "bands": [[0, 2000], [1800, 2000]],
+    "per_band": [
+      [
+        { "text": "REMA 1000", "confidence": 0.99, "bbox": [0.30, 0.02, 0.40, 0.012] },
+        { "text": "MELK 1L", "confidence": 0.97, "bbox": [0.05, 0.5, 0.30, 0.012] },
+        { "text": "BRØD", "confidence": 0.90, "bbox": [0.05, 0.905, 0.20, 0.012] },
+        { "text": "PANT 2,00", "confidence": 0.80, "bbox": [0.05, 0.943, 0.40, 0.012] },
+        { "text": "SMØR 59,90", "confidence": 0.96, "bbox": [0.05, 0.975, 0.40, 0.012] },
+        { "text": "SU", "confidence": 0.40, "bbox": [0.05, 0.995, 0.20, 0.005] }
+      ],
+      [
+        { "text": "BRØD", "confidence": 0.91, "bbox": [0.05, 0.005, 0.20, 0.012] },
+        { "text": "PANT 2,00", "confidence": 0.95, "bbox": [0.05, 0.0445, 0.40, 0.012] },
+        { "text": "SMØR 59,90", "confidence": 0.96, "bbox": [0.05, 0.075, 0.40, 0.012] },
+        { "text": "SUM 84,80", "confidence": 0.98, "bbox": [0.05, 0.095, 0.40, 0.012] },
+        { "text": "TOTAL 84,80", "confidence": 0.99, "bbox": [0.05, 0.5, 0.40, 0.012] }
+      ]
+    ],
+    "expected": [
+      { "text": "REMA 1000", "confidence": 0.99 },
+      { "text": "MELK 1L", "confidence": 0.97 },
+      { "text": "BRØD", "confidence": 0.90 },
+      { "text": "PANT 2,00", "confidence": 0.95 },
+      { "text": "SMØR 59,90", "confidence": 0.96 },
+      { "text": "SUM 84,80", "confidence": 0.98 },
+      { "text": "TOTAL 84,80", "confidence": 0.99 }
+    ],
+    "rows": ["REMA 1000", "MELK 1L", "BRØD", "PANT 2,00", "SMØR 59,90", "SUM 84,80", "TOTAL 84,80"]
+  },
+  {
+    "name": "nesten lik tekst på tvers av snittet dedupliseres, lik tekst langt unna i x beholdes",
+    "image_height": 3800,
+    "bands": [[0, 2000], [1800, 2000]],
+    "per_band": [
+      [
+        { "text": "KAFFE 89,90", "confidence": 0.70, "bbox": [0.10, 0.94, 0.50, 0.015] },
+        { "text": "1", "confidence": 0.90, "bbox": [0.05, 0.9425, 0.03, 0.012] }
+      ],
+      [
+        { "text": "KAFFE 89.90", "confidence": 0.90, "bbox": [0.10, 0.045, 0.50, 0.015] },
+        { "text": "1", "confidence": 0.90, "bbox": [0.80, 0.046, 0.03, 0.012] }
+      ]
+    ],
+    "expected": [
+      { "text": "1", "confidence": 0.90 },
+      { "text": "1", "confidence": 0.90 },
+      { "text": "KAFFE 89.90", "confidence": 0.90 }
+    ],
+    "rows": ["1 KAFFE 89.90 1"]
+  }
+]
