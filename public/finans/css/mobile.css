@@ -7410,3 +7410,24 @@ html.h40-ov,html.h40-ov body{overflow:hidden}
 .m .p46-trcol>div{min-height:0;overflow:hidden}
 @keyframes p46grow{from{grid-template-rows:0fr;opacity:0}to{grid-template-rows:1fr;opacity:1}}
 @media (prefers-reduced-motion:reduce){.m .p46-trcol{animation:none}}
+
+/* Prompt 47: Boliger mobil – Tilgang fra «Rediger bolig» (raden «Delt med N»), «‹ Oversikt» på Tilgang-siden */
+.m .p47-back{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 16px;margin:2px 0 4px;border-radius:20px;border:0;background:var(--pp-card);color:var(--pp-ink);font:700 13.5px Manrope,sans-serif;cursor:pointer}
+.m .p47-acc{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;border-radius:18px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);text-align:left;font:inherit;cursor:pointer;box-sizing:border-box}
+.m .p47-acc b{display:block;font-size:14.5px;font-weight:700}
+.m .p47-acc small{display:block;font-size:12px;color:var(--pp-mut)}
+.m .p47-avs{display:flex;flex:none;padding-right:8px}
+.m .p47-av{width:34px;height:34px;margin-right:-8px;border-radius:17px;border:2px solid var(--pp-card);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;box-sizing:border-box}
+.m .p47-chev{color:var(--pp-mut);font-size:17px}
+/* Prompt 47: Innstillinger → Server – status og Test under hver adresse, Tilbakestill til standard */
+.m .p47-srow{flex-direction:column;align-items:stretch;gap:8px}
+.m .p47-sed{display:flex;align-items:center;gap:12px;width:100%;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer;min-width:0}
+.m .p47-sed .p17-rt{flex:1;min-width:0}
+.m .p47-sbar{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.m .p47-st{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--pp-mut);min-width:0}
+.m .p47-st i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.m .p47-st.ok{color:var(--pp-pos,#2f8a4f)}
+.m .p47-st.err{color:var(--pp-lab,#c2412d)}
+.m .p47-test{flex:none;height:30px;padding:0 14px;border-radius:15px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 12.5px Manrope,sans-serif;cursor:pointer}
+.m .p47-test:disabled,.m .p47-rst:disabled{opacity:.5}
+.m .p47-rst b{color:var(--pp-lab)}

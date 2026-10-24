@@ -22,6 +22,7 @@ import { hlData } from './mobile-hl.js';
 import * as P31 from './mobile-p31.js';
 import { grp } from './mobile-p17.js';
 import * as B from './mobile-p41b.js';
+import { DEF47, defaults47, probe47, canTry47 } from '/assets/js/settings-srv47.js'; // prompt 47: standard serveradresser
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -270,41 +271,65 @@ export async function huskeFromHome(t) {
 /* =====================================================================
    6. Innstillinger → Konto → SERVER (lokal og ekstern adresse)
    ===================================================================== */
-const SV = { d: null, t: 0, miss: false, sheet: null, f: { local: '', external: '' }, test: '', busy: false, now: '' };
+// Prompt 47 (claude-code-standard-serveradresser.md): forhåndsutfylt med standardadressene (env-overstyrt via /api/config),
+// status «Svarer · 34 ms» / «Svarer ikke» og «Test» under hver adresse, «Tilbakestill til standard». En https-side prøver
+// aldri http-adressen (blandet innhold) – da brukes den eksterne. Testene går via settings-srv47.js (CSP: bare eget opphav
+// med fetch, andre https-adresser som bilde).
+const SV = { d: null, t: 0, miss: false, sheet: null, f: { local: '', external: '' }, test: '', busy: false, now: '', def: { ...DEF47 }, st: {}, rst: false };
 async function srvLoad(force = false) {
   if (SV.miss || (!force && Date.now() - SV.t < 30_000)) return;
   SV.t = Date.now();
-  try { SV.d = await hlApi('/me/server'); } catch (e) { if (e.status === 404) { SV.miss = true; SV.d = lsGet('p41_server', null); } }
-  probeNow();
+  defaults47().then((d) => { SV.def = d; fillDef(); if (m.screen === 'set') draw(); }).catch(() => {});
+  try { SV.d = await hlApi('/me/server'); useSrvDef(SV.d); } catch (e) { if (e.status === 404) { SV.miss = true; SV.d = lsGet('p41_server', null); } }
+  fillDef(); probeNow(); probeAll();
 }
-async function ping(url, ms = 1500) {
-  const t0 = performance.now(), c = new AbortController(), to = setTimeout(() => c.abort(), ms);
-  try { const r = await fetch(`${String(url).replace(/\/$/, '')}/api/discovery`, { signal: c.signal, mode: 'cors', credentials: 'omit' }); clearTimeout(to); return { ok: r.ok || r.status === 401, ms: Math.round(performance.now() - t0) }; }
-  catch { clearTimeout(to); return { ok: false, ms: null }; }
+/** Serveren (prompt 47) sender sine standardverdier i /api/me/server → defaults. */
+function useSrvDef(d) { const x = d?.defaults; if (x?.local && x?.external) SV.def = { local: x.local, external: x.external }; }
+/** Tomme felt får standardadressene (lagres ikke før brukeren endrer noe). */
+function fillDef() { const D = SV.d ?? {}; SV.d = { ...D, local: D.local || SV.def.local, external: D.external || SV.def.external }; }
+async function ping(url, ms = 1500) { const r = await probe47(url, ms); return { ok: r.state === 'ok', ms: r.ms, skip: r.state === 'skip', text: r.text }; }
+async function probeAll() {
+  const D = SV.d ?? {};
+  await Promise.all(['local', 'external'].map(async (k) => { if (D[k]) SV.st[k] = await probe47(D[k]); }));
+  if (m.screen === 'set') draw();
 }
 async function probeNow() {
   const D = SV.d ?? {}, loc = D.local;
-  // Nettleseren bruker adressen siden ble åpnet med; den lokale «svarer» hvis den er samme opphav eller svarer < 300 ms.
+  // Nettleseren bruker adressen siden ble åpnet med; den lokale «svarer» hvis den er samme opphav eller svarer innen 1,5 s.
+  // Fra en https-side prøves aldri http-adressen.
   if (loc && location.origin.startsWith(String(loc).replace(/\/$/, ''))) SV.now = 'Lokal';
-  else if (loc && D.auto !== false) { const p = await ping(loc, 600); SV.now = p.ok && p.ms < 300 ? 'Lokal' : 'Ekstern'; }
+  else if (loc && D.auto !== false && canTry47(loc)) { const p = await ping(loc, 1500); SV.now = p.ok ? 'Lokal' : 'Ekstern'; }
   else SV.now = 'Ekstern';
   if (m.screen === 'set') draw();
 }
+const stLine = (k) => { const r = SV.st[k]; return r ? `<span class="p47-st ${r.state}">${r.state === 'ok' || r.state === 'err' ? '<i></i>' : ''}${esc(r.text)}</span>` : ''; };
 export function serverGroup() {
   srvLoad();
-  const D = SV.d ?? {}, rowS = (k, n, v, sub) => `<button type="button" class="opt-row p17-row" data-p41="srvedit" data-k="${k}"><span class="m-grow p17-rt"><b>${n}</b><small>${esc(sub)}</small></span><span class="sval p41-mono">${esc(v || 'Ikke satt')}</span><span class="p17-chev" aria-hidden="true">›</span></button>`;
+  const D = SV.d ?? {}, isDef = D.local === SV.def.local && D.external === SV.def.external;
+  const rowS = (k, n, v, sub) => `<div class="opt-row p17-row p47-srow"><button type="button" class="m-grow p47-sed" data-p41="srvedit" data-k="${k}"><span class="p17-rt"><b>${n}</b><small>${esc(sub)}</small></span><span class="sval p41-mono">${esc(v || 'Ikke satt')}</span></button>
+      <div class="p47-sbar">${stLine(k) || '<span class="p47-st">Ikke testet</span>'}<button type="button" class="p47-test" data-p41="srvt47" data-k="${k}"${SV.st[k]?.state === 'run' ? ' disabled' : ''}>${SV.st[k]?.state === 'run' ? 'Tester …' : 'Test'}</button></div></div>`;
   return `<span class="pp-lab p17-gl" data-hl="server">SERVER</span><div class="list p17-list p41-srv">
+    ${rowS('external', 'Ekstern adresse', D.external, 'Utenfor hjemmet')}
     ${rowS('local', 'Lokal adresse', D.local, 'Brukes når du er hjemme på Wi-Fi')}
-    ${rowS('external', 'Ekstern adresse', D.external || location.origin, 'Utenfor hjemmet')}
-    <button type="button" class="opt-row p17-row" data-p41="srvauto" role="switch" aria-checked="${D.auto !== false}"><span class="m-grow p17-rt"><b>Bytt automatisk</b><small>Lokal når den svarer på under 300 ms, ellers ekstern${SV.now ? ` · nå: ${SV.now}` : ''}</small></span>${sw(D.auto !== false)}</button></div>
-    <div class="snote">Adressene lagres på kontoen din og brukes av Homelab og Kalender på alle enheter. Du trenger ikke skrive dem når du logger inn.</div>`;
+    <button type="button" class="opt-row p17-row" data-p41="srvauto" role="switch" aria-checked="${D.auto !== false}"><span class="m-grow p17-rt"><b>Bytt automatisk</b><small>Lokal når den svarer innen 1,5 s, ellers ekstern${SV.now ? ` · nå: ${SV.now}` : ''}</small></span>${sw(D.auto !== false)}</button>
+    <button type="button" class="opt-row p17-row p47-rst" data-p41="srvrst"${isDef || SV.rst ? ' disabled' : ''}><span class="m-grow p17-rt"><b>Tilbakestill til standard</b><small>${isDef ? 'Begge adressene er standard' : esc(`${hostOf(SV.def.external)} og ${hostOf(SV.def.local)}`)}</small></span></button></div>
+    <div class="snote">Adressene lagres på kontoen din og brukes av Homelab og Kalender på alle enheter. Du trenger ikke skrive dem når du logger inn.${location.protocol === 'https:' ? ' Denne siden er åpnet over https og prøver aldri http-adressen.' : ''}</div>`;
+}
+const hostOf = (u) => { try { return new URL(u).host; } catch { return String(u ?? ''); } };
+async function srvReset() {
+  const def = SV.def ?? DEF47;
+  SV.rst = true; haptic('ok'); draw();
+  const next = { local: def.local, external: def.external, auto: (SV.d ?? {}).auto !== false };
+  // reset:true (SERVER47) setter serverens standardverdier; eldre server bruker local/external i samme kall.
+  try { SV.d = await hlApi('/me/server', { method: 'PUT', json: { ...next, reset: true, device: 'Nettapp (mobil)' } }); useSrvDef(SV.d); } catch (e) { if (e.status !== 404) { SV.rst = false; flash(e.message); draw(); return; } SV.d = next; lsSet('p41_server', SV.d); }
+  fillDef(); SV.rst = false; SV.st = {}; flash('Standardadressene er satt'); probeNow(); probeAll(); draw();
 }
 function srvSheet() {
   if (!SV.sheet) return '';
   const k = SV.sheet, n = k === 'local' ? 'Lokal adresse' : 'Ekstern adresse';
   return `<div class="sheet-bg" data-p41="srvx"></div><form class="pp-sheet p41-srvsh" data-p41f="srv" role="dialog" aria-modal="true" aria-label="${n}"><span class="pp-grab"></span>
     <div class="pp-row"><div class="pp-sh">${n}</div><button type="button" class="w32-x" data-p41="srvx" aria-label="Lukk">✕</button></div>
-    <input id="p41-srvin" class="p24-in mono" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(SV.f[k])}" placeholder="${k === 'local' ? 'http://192.168.1.40:8080' : 'https://home.kristo.no'}" data-p41in="srv">
+    <input id="p41-srvin" class="p24-in mono" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(SV.f[k])}" placeholder="${esc(SV.def[k])}" data-p41in="srv">
     ${SV.test ? `<span class="p41-srvt${/^✓/.test(SV.test) ? ' ok' : ''}">${esc(SV.test)}</span>` : ''}
     <div class="p24-two"><button type="button" class="p24-b" data-p41="srvtest">${SV.busy ? 'Tester …' : 'Test'}</button><button type="submit" class="p24-b ink">Lagre</button></div></form>`;
 }
@@ -314,7 +339,7 @@ async function srvSave() {
   const patch = { [k]: v || null };
   try { SV.d = await hlApi('/me/server', { method: 'PUT', json: { ...(SV.d ?? {}), ...patch } }); }
   catch (e) { if (e.status !== 404) { SV.test = e.message; draw(); return; } SV.d = { ...(SV.d ?? {}), ...patch }; lsSet('p41_server', SV.d); }
-  SV.sheet = null; SV.test = ''; flash('Adressen er lagret'); probeNow(); draw();
+  fillDef(); SV.sheet = null; SV.test = ''; flash('Adressen er lagret'); probeNow(); probeAll(); draw();
 }
 
 /* =====================================================================
@@ -483,10 +508,12 @@ export async function bind41(e, t) {
     }
     case 'gredo': e.preventDefault(); try { const r = await hlApi(`/tasks/glimt/sources/${encodeURIComponent(x.dataset.id)}/redo`, { method: 'POST', json: {} }); const id = r?.jobId ?? r?.job_id; if (id) { const s = (HJ41.srcs ?? []).find((y) => String(y.id) === String(x.dataset.id)); HJ41.jobs.push({ id: String(id), q: s?.text ?? '', t0: Date.now() }); pollJobs(); } haptic('tap'); } catch (err) { flash(err.message, 'err'); } draw(); return true;
     case 'gforget': e.preventDefault(); try { await hlApi(`/tasks/glimt/sources/${encodeURIComponent(x.dataset.id)}`, { method: 'DELETE' }); HJ41.srcs = (HJ41.srcs ?? []).filter((y) => String(y.id) !== String(x.dataset.id)); flash('Beskjeden er glemt · punktene blir'); } catch (err) { flash(err.message, 'err'); } draw(); return true;
-    case 'srvedit': e.preventDefault(); SV.sheet = k; SV.f[k] = (SV.d ?? {})[k] ?? (k === 'external' ? location.origin : ''); SV.test = ''; haptic('tap'); draw(); setTimeout(() => document.getElementById('p41-srvin')?.focus(), 80); return true;
+    case 'srvedit': e.preventDefault(); SV.sheet = k; SV.f[k] = (SV.d ?? {})[k] || SV.def[k] || ''; SV.test = ''; haptic('tap'); draw(); setTimeout(() => document.getElementById('p41-srvin')?.focus(), 80); return true;
     case 'srvx': e.preventDefault(); SV.sheet = null; draw(); return true;
     case 'srvauto': e.preventDefault(); { const auto = (SV.d ?? {}).auto === false; SV.d = { ...(SV.d ?? {}), auto }; haptic('tab'); hlApi('/me/server', { method: 'PUT', json: SV.d }).catch(() => lsSet('p41_server', SV.d)); probeNow(); draw(); } return true;
-    case 'srvtest': e.preventDefault(); { const v = String(SV.f[SV.sheet] ?? '').trim(); if (!/^https?:\/\//i.test(v)) { SV.test = 'Adressen må starte med http:// eller https://'; draw(); return true; } SV.busy = true; draw(); const p = await ping(v, 4000); SV.busy = false; SV.test = p.ok ? `✓ Homelab svarer på ${v.replace(/^https?:\/\//, '')} · ${p.ms} ms` : 'Får ikke kontakt med Homelab på den adressen'; draw(); } return true;
+    case 'srvtest': e.preventDefault(); { const v = String(SV.f[SV.sheet] ?? '').trim(); if (!/^https?:\/\//i.test(v)) { SV.test = 'Adressen må starte med http:// eller https://'; draw(); return true; } SV.busy = true; draw(); const p = await ping(v, 4000); SV.busy = false; SV.test = p.ok ? `✓ Homelab svarer på ${v.replace(/^https?:\/\//, '')} · ${p.ms} ms` : p.skip ? (location.protocol === 'https:' ? 'Testes ikke: en https-side prøver aldri en http-adresse. Appene tester den selv.' : 'Kan ikke testes fra nettleseren. Appene tester den selv.') : 'Får ikke kontakt med Homelab på den adressen'; draw(); } return true;
+    case 'srvt47': e.preventDefault(); { const v = (SV.d ?? {})[k]; if (!v) return true; SV.st[k] = { state: 'run', text: 'Tester …' }; haptic('tap'); draw(); SV.st[k] = await probe47(v, 4000); draw(); } return true;
+    case 'srvrst': e.preventDefault(); await srvReset(); return true;
     case 'mai': e.preventDefault(); maiSet(x.dataset.v); return true;
     case 'maitog': e.preventDefault(); lsSet('p41_mai_off', maiActive() ? today() : null); haptic('tab'); draw(); return true;
     case 'hurra': e.preventDefault(); hurra(); return true;

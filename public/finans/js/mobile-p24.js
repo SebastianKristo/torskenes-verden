@@ -482,8 +482,15 @@ function editSheet() {
     <span class="p24-fl">Farge</span><div class="p24-cols">${COLS.map((c) => `<button data-p24="becol" data-v="${c}" aria-label="Farge ${c}" aria-pressed="${E.color === c}" style="background:${c}"></button>`).join('')}<label class="p24-colf" title="Egen farge"><input type="color" value="${esc(E.color)}" data-p24in="becolf"></label></div>
     <span class="p24-fl">Bakgrunn</span><div class="p24-bgs">${opt('color', 'Farge', `background:linear-gradient(150deg,${E.color},color-mix(in srgb,${E.color} 70%,#000))`)}${opt('preset:stromstad', 'Strømstad', `background-image:url('${STROM}')`)}${own}
       <label class="p24-bgo"><span class="up">+</span><small>Last opp</small><input class="m-file" type="file" accept="image/*" data-p24file="bebg"></label></div>
+    ${accRow47(f)}
     <button class="p24-b ink lg" data-p24="besave" ${BE.busy ? 'disabled' : ''}>${BE.busy ? 'Lagrer …' : 'Lagre'}</button>
     <button class="p24-b ghost lab" data-p24="bedel" ${last ? 'disabled' : ''}>${last ? 'Kan ikke slette siste bolig' : BE.delArm ? `Trykk igjen for å slette ${esc(f.name)}` : 'Slett bolig'}</button></div>`;
+}
+// Prompt 47: «Delt med N» i Rediger bolig åpner Tilgang-siden (fanen Tilgang finnes ikke lenger på mobil).
+function accRow47(f) {
+  const mem = BO.d[f.id]?.members ?? f.members ?? [], n = Math.max(0, mem.length - 1);
+  const av = mem.slice(0, 4).map((x) => `<span class="p47-av" style="background:${esc(x.color || '#6b6558')}">${esc(ini(x.name || '?').slice(0, 1))}</span>`).join('');
+  return `<button type="button" class="p47-acc" data-p24="beacc" data-id="${f.id}">${av ? `<span class="p47-avs" aria-hidden="true">${av}</span>` : ''}<span class="m-grow"><b>${n ? `Delt med ${n}` : 'Ikke delt'}</b><small>Tilgang · hvem som kan se og laste opp</small></span><span class="p47-chev" aria-hidden="true">›</span></button>`;
 }
 function openEdit(id) {
   const f = (BO.list ?? []).find((x) => x.id === id);
@@ -687,6 +694,7 @@ async function bindAsync(e, t) {
     case 'rvadd': AV.edit = true; AV.q = ''; AV.res = null; draw(); setTimeout(() => document.getElementById('p16-avq')?.focus(), 40); return true;
     // Boliger
     case 'bex': BE.id = null; draw(); return true;
+    case 'beacc': { const id = +x.dataset.id; BE.id = null; BO.tab = 'tilg'; haptic('tap'); if (+String(m.sub ?? '').split('/')[0] !== id) location.hash = `#/dir/${id}`; window.scrollTo(0, 0); draw(); return true; } // prompt 47
     case 'becol': BE.f.color = x.dataset.v; draw(); return true;
     case 'bebg': BE.f.background = x.dataset.v; draw(); return true;
     case 'besave': await saveEdit(); return true;

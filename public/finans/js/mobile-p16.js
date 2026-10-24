@@ -405,7 +405,9 @@ async function famGeo(on) {
 /* ---------- Boliger (full mobilversjon) ---------- */
 
 export const BO = { list: null, err: '', d: {}, tab: 'over', add: false, ny: false, f: { description: '', amount: '', date: '', categoryId: '' }, nf: { name: '', type: 'Hytte', address: '' }, q: '', busy: false, up: 0 };
-const BTABS = [['over', 'Oversikt'], ['utg', 'Utgifter'], ['proj', 'Prosjekter'], ['reg', 'Regninger'], ['kv', 'Kvitteringer'], ['tilg', 'Tilgang']]; // prompt 30: Tilgang (Del boligen)
+// Prompt 47 (claude-code-boliger-mobil-uten-epost-tilgang.md): fanen «Tilgang» er fjernet på mobil. Tilgang-siden (BO.tab = 'tilg')
+// åpnes fra raden «Delt med N» i «Rediger bolig» (mobile-p24.js) og har «‹ Oversikt» øverst. Web (bol42.js) er uendret.
+const BTABS = [['over', 'Oversikt'], ['utg', 'Utgifter'], ['proj', 'Prosjekter'], ['reg', 'Regninger'], ['kv', 'Kvitteringer']];
 const TYPE_IC = { Enebolig: '⌂', Leilighet: '▦', Rekkehus: '▥', Hytte: '△', Fritidsbolig: '△', Utleie: '⚿', Annet: '◇' };
 const kr = (v) => `${(v ?? 0) < 0 ? '−' : ''}${n0(v)} kr`;
 export async function bolLoad(sub) {
@@ -435,13 +437,14 @@ function newBolSheet() {
     <input class="sinp p16-inp" data-p16b="address" value="${esc(BO.nf.address)}" placeholder="Adresse (valgfritt)" maxlength="120">
     <button class="pp-btn ink" data-p16="bolnysave">Lag bolig</button><button class="pp-btn" data-p16="bolnyx">Avbryt</button></div>`;
 }
+const rvN = (d) => (d.entries ?? []).filter((e) => e.status === 'review' || e.pending).length; // prompt 47: «Utgifter · N» når noe venter
 function bolDetail(d) {
   const k = d.kpi ?? {};
   const head = `<div class="pp-card p16-bover"><div class="pp-row" style="align-items:center"><span class="pp-lab">I ÅR</span><span class="pp-mut">${esc(d.myRole ?? '')}</span></div><b class="pp-serif p16-big">${kr(k.yearTotal ?? d.yearTotal)}</b>
       <div class="p16-kpi"><span><small>Per måned</small><b>${kr(k.perMonth)}</b></span><span><small>Poster</small><b>${n0(k.count ?? d.count)}</b></span><span><small>Prosjekter igjen</small><b>${kr(k.projectsLeft)}</b></span><span><small>Strøm denne mnd.</small><b>${kr(k.stromNow)}</b></span></div>
       <div class="p16-qa">${d.canEdit ? `<label class="pp-btn sm ink">↑ Last opp kvittering<input class="m-file" type="file" multiple accept="image/*,application/pdf,.heic" data-p16up="${d.id}"></label><button class="pp-btn sm" data-p16="boladd">+ Utgift</button>` : ''}</div>
       ${BO.up ? `<div class="pp-mut">✦ Laster opp ${BO.up} …</div>` : ''}</div>
-    <div class="p16-tabs" role="tablist">${BTABS.map(([t, n]) => `<button role="tab" data-p16="boltab" data-k="${t}" aria-selected="${BO.tab === t}">${n}</button>`).join('')}</div>`;
+    ${BO.tab === 'tilg' ? '<button type="button" class="p47-back" data-p16="boltab" data-k="over">‹ Oversikt</button>' : `<div class="p16-tabs" role="tablist">${BTABS.map(([t, n]) => `<button role="tab" data-p16="boltab" data-k="${t}" aria-selected="${BO.tab === t}">${t === 'utg' && rvN(d) ? `${n} · ${(d.entries ?? []).length}` : n}</button>`).join('')}</div>`}`;
   const body = { over: bolOver, utg: bolEntries, proj: bolProj, reg: bolBills, kv: bolRc, tilg: P30B.accessTab }[BO.tab] ?? bolOver;
   return head + body(d) + (BO.add ? addSheet(d) : '') + P30B.entSheet(d); // prompt 30: detaljarket for en utgift
 }
