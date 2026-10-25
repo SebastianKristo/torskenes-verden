@@ -423,6 +423,13 @@ run_job() {
   if [ "$ACTION" != rollback ]; then
   SHA=$(curl -fsSL --max-time 30 -H 'Accept: application/vnd.github+json' -H 'User-Agent: homelab-updater' \
     "https://api.github.com/repos/$UPDATE_REPO/commits/$UPDATE_BRANCH" 2>>"$LOG" | jq -r '.sha // empty' 2>>"$LOG")
+  # GitHub-API-et gir 403 når grensen på 60 kall i timen per IP uten innlogging er brukt opp (serveren, appene og updateren
+  # deler hjemme-IP-en). Da leses siste commit fra git-protokollen (info/refs), som ikke har den grensen.
+  if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+    log "GitHub-API-et svarte ikke (ofte grensen på 60 kall i timen). Prøver git-protokollen."
+    SHA=$(curl -fsSL --max-time 30 -H 'User-Agent: homelab-updater' "https://github.com/$UPDATE_REPO.git/info/refs?service=git-upload-pack" 2>>"$LOG" \
+      | tr -d '\0' | grep -a -o "[0-9a-f]\{40\} refs/heads/$UPDATE_BRANCH\$" | head -n1 | cut -c1-40)
+  fi
   [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { SHA=""; fail "Fant ikke siste versjon på GitHub ($UPDATE_REPO, $UPDATE_BRANCH). Er repoet offentlig og nettet oppe?"; return; }
   log "Siste commit: $SHA"
   fi

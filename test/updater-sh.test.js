@@ -42,7 +42,8 @@ out=""; url=""
 while [ $# -gt 0 ]; do case "$1" in -o) out="$2"; shift 2;; -H|--max-time) shift 2;; http*) url="$1"; shift;; *) shift;; esac; done
 echo "curl $url" >> "${calls}"
 case "$url" in
-  https://api.github.com/*) echo '{"sha":"${SHA}"}';;
+  https://api.github.com/*) [ -n "\${FAKE_API_403:-}" ] && exit 22; echo '{"sha":"${SHA}"}';;
+  https://github.com/*info/refs*) printf '001e# service=git-upload-pack\n0000003f${SHA} refs/heads/main\n0000';;
   https://codeload.github.com/*) cp "${tgz}" "$out";;
   *healthz) exit "\${FAKE_HEALTH_RC:-0}";;
   *) exit 22;;
@@ -108,6 +109,15 @@ test('vellykket oppdatering: done, installed.json, .env/data/proton urørt', { s
   const before = r.calls.length;
   const again = run(t, null);
   assert.equal(again.calls.slice(before).includes('docker compose '), false);
+});
+
+test('GitHub-API-et gir 403 (grensen på 60 kall i timen): siste commit leses fra git-protokollen', { skip }, () => {
+  const t = setup();
+  const r = run(t, { id: 'req-403', at: Date.now() }, { FAKE_API_403: '1' });
+  assert.equal(r.status?.state, 'done', `${r.stderr}\n${readFileSync(join(t.host, 'data', 'update', 'log.txt'), 'utf8')}`);
+  assert.equal(r.status.sha, SHA);
+  assert.match(r.calls, /curl https:\/\/github\.com\/SebastianKristo\/torskenes-verden\.git\/info\/refs\?service=git-upload-pack/);
+  assert.match(r.calls, new RegExp(`curl https://codeload.github.com/SebastianKristo/torskenes-verden/tar.gz/${SHA}`));
 });
 
 test('tunnel-profil når CLOUDFLARE_TUNNEL_TOKEN er satt', { skip }, () => {
