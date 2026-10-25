@@ -14,6 +14,7 @@ import { assist, looksLikeTool } from './assist.js';
 import { cardHtml, bindCards } from './chat-cards.js';
 import { factsHtml41, usedWithoutFacts41 } from './chat-facts41.js'; // prompt 41: faktakort
 import { css50, rejectReason50, isImg50, upload50, attRow50, bubbleImgs50, otherFiles50, filePills50, imagesOf50, bindDrop50, pastedFiles50, lightbox50, readWith50, finansBtn50, MAX_FILES50 } from './chat50.js'; // prompt 50: vedlegg, miniatyr, lysboks
+import { speak57, stop57, aiTag57 } from './voices57.js'; // prompt 57: «Les høyt» med valgt stemme (POST /api/tts), nettleseren som reserve
 import { css52, thinkOf52, thinkHtml52, thumbDataUrl52 } from './chat52.js'; // prompt 52: tankegang, miniatyr (attTh), modellark som scroller
 
 /* Prompt 31: Glimt i Chat (claude-code-chat-kort-vaer-kalender.md, claude-code-glimt-ai.md).
@@ -259,7 +260,7 @@ function msgsHtml() {
     const pu = i > 0 && msgs[i - 1]?.role === 'user' ? i - 1 : -1; // prompt 50: bildet svaret leste, som liten miniatyr + filnavn
     return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${pu >= 0 ? filePills50(msgs[pu], pu) : ''}${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
       ${(() => { const th = thinkOf52(m); return th ? thinkHtml52({ key, steps: th.steps, s: th.s, source: th.source, open: !!C.thOpen?.[key] }) : ''; })()}<div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}${finansBtn50(meta, `${C.cur}:${i}`, C.fin50?.[`${C.cur}:${i}`])}${readWith50(meta)}
-      <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}${i === lastA && !busyHere && !C.web && C.webAsk46 && String(C.webAsk46.chatId ?? '') === String(C.cur ?? '') ? `<button type="button" class="ch-web46" data-ch-web46="${i}">${svg(IC.web, 15)}${esc(C.webAsk46.action?.label ?? 'Søk denne gangen')}</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
+      <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}${i === lastA && !busyHere && !C.web && C.webAsk46 && String(C.webAsk46.chatId ?? '') === String(C.cur ?? '') ? `<button type="button" class="ch-web46" data-ch-web46="${i}">${svg(IC.web, 15)}${esc(C.webAsk46.action?.label ?? 'Søk denne gangen')}</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? `Stopp${C.speakAi ? aiTag57() : ''}` : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
   }).join('') + (busyHere ? streamHtml() : '');
 }
 /** «✦ Kode · Qwen 3» når Auto valgte modellen (serveren sender auto/reason/task i meta). */
@@ -641,15 +642,18 @@ async function loadKb() {
 /* ---------------- Tale ---------------- */
 
 function speak(i) {
-  const key = `${C.cur}:${i}`, S = window.speechSynthesis;
-  if (!S) { toast('Nettleseren kan ikke lese opp tekst'); return; }
-  if (C.speak === key) { S.cancel(); C.speak = ''; paint(); return; }
-  S.cancel();
+  // Prompt 57: Glimt-stemmen (tts.voice) via POST /api/tts; 503/404/feil → nettleserens speechSynthesis som før.
+  const key = `${C.cur}:${i}`;
+  if (C.speak === key) { stop57(); C.speak = ''; C.speakAi = false; paint(); return; }
   const m = (C.chat?.messages ?? []).filter((x) => x.role !== 'system')[i];
-  const u = new SpeechSynthesisUtterance(String(m?.content ?? '').replace(/\*\*|`|#/g, ''));
-  u.lang = lang() === 'en' ? 'en-GB' : 'nb-NO';
-  u.onend = () => { if (C.speak === key) { C.speak = ''; paint(); } };
-  S.speak(u); C.speak = key; paint();
+  const txt = String(m?.content ?? '').replace(/```[\s\S]*?```/g, ' ').replace(/\*\*|`|#|\[(.*?)\]\(.*?\)/g, '$1');
+  C.speak = key; C.speakAi = false; paint();
+  speak57(txt, { purpose: 'chat', lang: lang() === 'en' ? 'en' : 'no', onState: (state, x) => {
+    if (C.speak !== key) return;
+    if (state === 'idle') { C.speak = ''; C.speakAi = false; paint(); if (x?.needTap) toast('Nettleseren blokkerte lyden. Trykk Les høyt igjen.'); return; }
+    const ai = state === 'ai';
+    if (ai !== !!C.speakAi) { C.speakAi = ai; paint(); }
+  } });
 }
 async function mic() {
   if (C.rec) { try { recog?.stop(); } catch { /* */ } try { mediaRec?.stop(); } catch { /* */ } C.rec = false; paint(); return; }

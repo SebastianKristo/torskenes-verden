@@ -50,3 +50,16 @@ Kreditering: «NB-Whisper © Nasjonalbiblioteket (NbAiLab), Apache-2.0». NB-Whi
 Kjøretiden på Mac mini-en er `mlx` og `mlx-whisper` (Apple, MIT) eller whisper.cpp (`whisper-cpp` fra Homebrew, MIT), installert med
 `tools/nb-whisper/install.sh`. Vektene lastes ned fra Hugging Face på Mac mini-en ved installasjon (eventuelt konvertert til MLX der),
 aldri i Docker-imaget eller repoet. Detaljer: `docs/nb-whisper-54.md`.
+
+## VoxCPM2 (OpenBMB)
+
+| Modell | Lisens | Brukes til |
+| --- | --- | --- |
+| VoxCPM2 (`openbmb/VoxCPM2`, og GGUF-konverteringen `DennisHuang648/VoxCPM2-GGUF`) | Apache-2.0 (<https://www.apache.org/licenses/LICENSE-2.0>), både kode og vekter | Tekst til tale på norsk med ferdige stemmer, egne stemmer fra beskrivelse og klonede stemmer, på Mac mini-en (Glimt og nyhetsleseren) |
+
+Kreditering: «VoxCPM2 © OpenBMB, Apache-2.0» (<https://github.com/OpenBMB/VoxCPM>).
+Kjøretiden på Mac mini-en er `voxcpm2-cli` fra llama.cpp-omni (<https://github.com/tc-mb/llama.cpp-omni>, bygger på llama.cpp, MIT) – standard –
+eller pip-pakken `voxcpm` (Apache-2.0) med PyTorch (BSD-3-Clause). Installert med `tools/voxcpm/install.sh`; vektene lastes ned fra
+Hugging Face på Mac mini-en, aldri i Docker-imaget eller repoet. Bruksvilkår fra OpenBMB: kloning skal ikke brukes til å utgi seg for andre,
+svindel eller desinformasjon, og KI-generert lyd bør merkes (Glimt viser «KI-stemme», og mp3-filene har en kommentar om det).
+Detaljer: `docs/voxcpm-57.md`.

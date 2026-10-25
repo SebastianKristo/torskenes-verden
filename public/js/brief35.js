@@ -241,7 +241,7 @@ function panelHtml() {
 }
 function spkHtml() {
   const s = gs();
-  if (tts.speaking) return `<div class="gb-spk"><span class="gb-bars">${[0.42, 0.3, 0.5, 0.36].map((d) => `<i style="animation-duration:${d}s"></i>`).join('')}</span>${esc(capF(lc(WHO[tts.who] ?? 'GLIMT')))} snakker · ${esc(voiceName(s.tts.voice))}<button type="button" data-gb-stop>Stopp</button></div>`;
+  if (tts.speaking) return `<div class="gb-spk"><span class="gb-bars">${[0.42, 0.3, 0.5, 0.36].map((d) => `<i style="animation-duration:${d}s"></i>`).join('')}</span>${esc(capF(lc(WHO[tts.who] ?? 'GLIMT')))} snakker · ${esc(voiceName(s.tts.voice))}${tts.ai ? '<span class="v57-ai" title="Lyden er laget av en KI-stemme">KI-stemme</span>' : ''}<button type="button" data-gb-stop>Stopp</button></div>`;
   if (tts.needTap || (s.readAloud && !P.tapped)) return '<button type="button" class="gb-spk tap" data-gb-tap>🔊 Trykk for å høre Glimt</button>';
   return '';
 }

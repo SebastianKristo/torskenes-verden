@@ -5,6 +5,7 @@ import { api, esc, backdropClick } from './util.js';
 import { ICON_LIBS, iconHtml, searchIcons, suggestIcon, keywordFor, preloadIcons } from './icons.js';
 import { clearBtn, bindSearchFields } from './searchfield.js';
 import { glimt } from './glimt.js';
+import { speak57, stop57, aiTag57 } from './voices57.js'; // prompt 57: «Les opp» med valgt stemme (POST /api/tts), nettleseren som reserve
 
 const CSS_ID = 'news-css';
 const ensureCss = () => {
@@ -375,18 +376,19 @@ function reader(opts = {}) {
     g.busy = false; g.out = out ?? glLocal(A); render();
   }
   function glOpen() { st.gl = { open: true, cfg: false, busy: true, out: null, err: '' }; render(); glRun(); }
-  function glClose() { try { speechSynthesis.cancel(); } catch { /* */ } st.gl = null; render(); }
+  function glClose() { stop57(); st.gl = null; render(); }
   function glSpeak() {
     const g = st.gl, o = g?.out;
     if (!o || o.none) return;
-    try {
-      if (g.speaking) { speechSynthesis.cancel(); g.speaking = false; return render(); }
-      const txt = [o.title, o.lead, ...(o.sections ?? []).map((sc) => `${sc.h}. ${segsOf(sc).map((x) => x.t).join(' ')}`)].join(' \n');
-      const u = new SpeechSynthesisUtterance(txt); u.lang = 'nb-NO'; u.rate = 1;
-      const v = speechSynthesis.getVoices().find((x) => /^(nb|no)/i.test(x.lang)); if (v) u.voice = v;
-      u.onend = () => { if (st.gl === g) { g.speaking = false; render(); } };
-      speechSynthesis.speak(u); g.speaking = true; render();
-    } catch { /* ingen talesyntese */ }
+    if (g.speaking) { stop57(); g.speaking = false; g.ai = false; return render(); }
+    // Prompt 57: nyhetsleserens egen stemme (tts.newsVoice, ellers Glimt-stemmen) via POST /api/tts; 503/feil → speechSynthesis.
+    const txt = [o.title, o.lead, ...(o.sections ?? []).map((sc) => `${sc.h}. ${segsOf(sc).map((x) => x.t).join(' ')}`)].map((x) => String(x ?? '').trim()).filter(Boolean).map((x) => (/[.!?…]$/.test(x) ? x : `${x}.`)).join(' ');
+    g.speaking = true; g.ai = false; render();
+    speak57(txt, { purpose: 'news', lang: 'no', onState: (state) => {
+      if (st.gl !== g) return;
+      const sp = state !== 'idle', ai = state === 'ai';
+      if (sp !== g.speaking || ai !== !!g.ai) { g.speaking = sp; g.ai = ai; render(); }
+    } });
   }
   async function glClick(e) {
     const b = e.target.closest?.('[data-gl]');
@@ -438,7 +440,7 @@ function reader(opts = {}) {
     const refList = refs.filter((r) => used.has(r.n) || o?.local);
     const meta = o && !o.none ? [new Date(o.updatedAt ?? Date.now()).toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }), `${refs.length} saker`, `${new Set(refs.map((r) => r.source)).size} kilder`, glP.len === 'kort' ? 'kort' : 'langt'].join(' · ') : 'Velg innholdet under «Innhold»';
     return `<div class="nw40-gl" role="document" aria-label="Glimt-sammendrag">
-      <div class="nw40-gh"><button type="button" class="nw40-pill" data-gl="close">‹ Nyheter</button><span class="nw-sp"></span><button type="button" class="nw40-pill" data-gl="speak"${o && !o.none ? '' : ' disabled'}>${g.speaking ? '■<span class="nw41-lt"> Stopp</span>' : '▶<span class="nw41-lt"> Les opp</span>'}</button><button type="button" class="nw40-pill ink${g.cfg ? ' on' : ''}" data-gl="cfg" aria-pressed="${!!g.cfg}">Innhold</button></div>
+      <div class="nw40-gh"><button type="button" class="nw40-pill" data-gl="close">‹ Nyheter</button><span class="nw-sp"></span><button type="button" class="nw40-pill" data-gl="speak"${o && !o.none ? '' : ' disabled'}>${g.speaking ? `■<span class="nw41-lt"> Stopp</span>${g.ai ? aiTag57() : ''}` : '▶<span class="nw41-lt"> Les opp</span>'}</button><button type="button" class="nw40-pill ink${g.cfg ? ' on' : ''}" data-gl="cfg" aria-pressed="${!!g.cfg}">Innhold</button></div>
       <div class="nw40-gb"><div class="nw40-in">
         <div class="nw40-top"><span class="nw-lab">✦ GLIMT · NYHETSOPPSUMMERING</span><b class="nw40-t">${esc(title)}</b><span class="nw-m">${esc(meta)}</span></div>
         ${cfg}

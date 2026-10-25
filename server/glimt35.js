@@ -16,6 +16,8 @@
 //      503 {error, fallback:'browser'}. Cache 30 dager (motor, stemme, figur, tempo, språk, tekst). Teksten normaliseres for
 //      uttale (kl. → klokka, 15:15 → kvart over tre, 8° → 8 grader, tir 21. → tirsdag tjueførste, ordbok). Hvert kall som ikke
 //      er cache-treff logges i AI-kontroll (oppgave «tts», /api/ai/usage) med anslått kostnad.
+//      Prompt 57 (VOX57): + motor «voxcpm» (VoxCPM2 på Mac mini-en, server/voxcpm57), stemme-id-er vx-…/vxu-…, tts.newsVoice,
+//      body purpose:'news'|'glimt', headere X-TTS-AI: 1 og X-TTS-Fallback: voxcpm. Se docs/voxcpm-57.md.
 // GET /api/img?u=<url>[&s=<sig>] → bildet (cache 7 dager på disk). Krever innlogging ELLER gyldig signatur s (som briefen
 //      lager, så native bildevisning uten token fungerer). Bare http(s), ikke private adresser, bare image/*, maks 5 MB.
 import { Hono } from 'hono';
@@ -35,6 +37,8 @@ import * as ai from './ai-run.js';
 import { cardsOf, cleanCards, saveCards, auroraNotifyOf, setAuroraNotify } from './cards38.js'; // prompt 38: kortene i Now Brief
 import { julActive, cleanJul, JUL_DEFAULTS } from './jul40.js'; // prompt 40: julemodus
 import { mai17Active, cleanMai17, MAI17_DEFAULTS } from './mai17-41.js'; // prompt 41: 17. mai
+import { isVxId57, vxVoiceOf57, classicOf57, vxSpeakFor57, VX_LABEL57 } from './voxcpm57/voices.js'; // prompt 57: VoxCPM2 på Mac mini-en
+import { vxReady57, vxConfigured57 } from './voxcpm57/health.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 
@@ -70,6 +74,7 @@ const TTS_ENGINES = [
   { id: 'openai', name: 'OpenAI · gpt-4o-mini-tts', desc: 'Nesten menneskelig. Følger instruks om tone og følelse.', badge: 'ANBEFALT', secret: 'openaiKey', model: 'gpt-4o-mini-tts', link: 'https://platform.openai.com/api-keys' },
   { id: 'elevenlabs', name: 'ElevenLabs · Multilingual v2', desc: 'Mest naturlig og uttrykksfull. Kan klone en egen stemme.', badge: 'BEST', secret: 'elevenlabsKey', model: 'eleven_multilingual_v2', link: 'https://elevenlabs.io/app/settings/api-keys' },
   { id: 'azure', name: 'Azure · nb-NO Neural (Pernille, Finn, Iselin)', desc: 'Ekte norske stemmer med riktig tonelag.', badge: 'NORSK', secret: 'azureSpeechKey', model: 'azure-neural', link: 'https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices' },
+  { id: 'voxcpm', name: VX_LABEL57, desc: 'Lokal på Mac mini-en, gratis. Ferdige norske stemmer, egne fra beskrivelse og klonede stemmer.', badge: 'LOKAL', secret: null, model: 'VoxCPM2', link: null }, // prompt 57
   { id: 'browser', name: 'Nettleserens stemme', desc: 'Robotaktig. Bare for testing uten nøkkel.', badge: '', secret: null, model: null, link: null },
 ];
 const ENGINE_IDS = TTS_ENGINES.map((e) => e.id);
@@ -108,7 +113,7 @@ const AZ_STYLE = { natt: 'whispering', ugle: 'calm', sky: 'cheerful', drape: 'ch
 const KINDS = ['morning', 'day', 'evening', 'night'];
 const DEFAULTS = () => ({ char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true, briefGlimt: true, // prompt 39: Glimt-figuren i Now Brief av/på
   briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
-  tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' }, ...JUL_DEFAULTS, ...MAI17_DEFAULTS });
+  tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no', newsVoice: null }, ...JUL_DEFAULTS, ...MAI17_DEFAULTS });
 const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** Brukerens Glimt-innstillinger (standard + eldre brief_settings + lagret). */
@@ -122,7 +127,9 @@ export function glimtSettingsOf(u) {
   return out;
 }
 /** Renser en delvis endring. → {patch, errors} */
-export function cleanGlimtPatch(b, cur) {
+// Prompt 57: gyldig stemme = nora|henrik|lys eller en VoxCPM-stemme brukeren har (uten bruker: bare formen sjekkes).
+const voiceOk57 = (id, u) => VOICES.some((v) => v.id === id) || (isVxId57(id) && (u === undefined || !!vxVoiceOf57(u, id)));
+export function cleanGlimtPatch(b, cur, u = undefined) {
   const errors = [], next = JSON.parse(JSON.stringify(cur));
   if (!b || typeof b !== 'object' || Array.isArray(b)) return { next, errors: ['Forventet et objekt'] };
   const known = new Set(['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefGlimt', 'briefs', 'tts', 'engines', 'chars', 'voices', 'rates', 'host', 'cards', 'auroraNotify', 'jul', 'julPhase', 'snow', 'julSound', 'julActive', 'mai17', 'mai17Active']);
@@ -146,8 +153,9 @@ export function cleanGlimtPatch(b, cur) {
     const t = b.tts ?? {};
     if (typeof t !== 'object') errors.push('tts må være et objekt');
     else {
-      if (t.engine !== undefined) { if (!ENGINE_IDS.includes(t.engine)) errors.push('tts.engine må være openai, elevenlabs, azure eller browser'); else next.tts.engine = t.engine; }
-      if (t.voice !== undefined) { if (!VOICES.some((v) => v.id === t.voice)) errors.push('tts.voice må være nora, henrik eller lys'); else next.tts.voice = t.voice; }
+      if (t.engine !== undefined) { if (!ENGINE_IDS.includes(t.engine)) errors.push('tts.engine må være openai, elevenlabs, azure, voxcpm eller browser'); else next.tts.engine = t.engine; }
+      if (t.voice !== undefined) { if (!voiceOk57(t.voice, u)) errors.push('tts.voice må være nora, henrik, lys eller en av dine VoxCPM-stemmer'); else next.tts.voice = t.voice; }
+      if (t.newsVoice !== undefined) { if (t.newsVoice !== null && !voiceOk57(t.newsVoice, u)) errors.push('tts.newsVoice må være null, nora, henrik, lys eller en av dine VoxCPM-stemmer'); else next.tts.newsVoice = t.newsVoice; } // prompt 57
       if (t.rate !== undefined) { if (!SPEED[t.rate]) errors.push('tts.rate må være calm, normal eller fast'); else next.tts.rate = t.rate; }
       if (t.lang !== undefined) { if (!['no', 'en'].includes(t.lang)) errors.push('tts.lang må være no eller en'); else next.tts.lang = t.lang; }
     }
@@ -177,11 +185,11 @@ const azureRegion = () => String(kv.get(OWNER, 'tts35_cfg', {})?.azureRegion ?? 
 export const setAzureRegion = (r) => kv.set(OWNER, 'tts35_cfg', { ...(kv.get(OWNER, 'tts35_cfg', {}) ?? {}), azureRegion: r });
 export const getAzureRegion = azureRegion;
 const keyOf = (id) => (TTS_SECRET[id] ? secret(TTS_SECRET[id], OWNER) || '' : '');
-export const engineReady = (id) => (id === 'browser' ? true : id === 'azure' ? !!keyOf('azure') && !!azureRegion() : !!keyOf(id));
+export const engineReady = (id) => (id === 'browser' ? true : id === 'voxcpm' ? vxReady57() : id === 'azure' ? !!keyOf('azure') && !!azureRegion() : !!keyOf(id)); // prompt 57: voxcpm = Mac-en svarte
 export function enginesOut(u) {
   const admin = isAdmin(u);
-  return TTS_ENGINES.map((e) => ({ id: e.id, name: e.name, desc: e.desc, badge: e.badge || null, ready: engineReady(e.id), keySet: e.id === 'browser' ? false : !!keyOf(e.id),
-    tail: e.id === 'browser' ? null : tail(keyOf(e.id)), admin, link: e.link, ...(e.id === 'azure' ? { region: azureRegion() || null } : {}) }));
+  return TTS_ENGINES.map((e) => ({ id: e.id, name: e.name, desc: e.desc, badge: e.badge || null, ready: engineReady(e.id), keySet: e.id === 'browser' ? false : e.id === 'voxcpm' ? vxConfigured57() : !!keyOf(e.id),
+    tail: e.id === 'browser' || e.id === 'voxcpm' ? null : tail(keyOf(e.id)), admin, link: e.link, ...(e.id === 'azure' ? { region: azureRegion() || null } : {}) }));
 }
 export function settingsOut(u) {
   const s = glimtSettingsOf(u);
@@ -194,7 +202,7 @@ settingsApi.get('/', (c) => c.json(settingsOut(c.get('user')), 200, { 'Cache-Con
 settingsApi.put('/', async (c) => {
   const u = c.get('user');
   const b = await c.req.json().catch(() => null);
-  const { next, errors } = cleanGlimtPatch(b, glimtSettingsOf(u));
+  const { next, errors } = cleanGlimtPatch(b, glimtSettingsOf(u), u);
   if (errors.length) return c.json({ error: errors[0], errors }, 400);
   saveGlimtSettings(u, next);
   return c.json(settingsOut(u));
@@ -304,28 +312,55 @@ async function callEngine(engine, { text, voice, ch, speed, lang }) {
 /** Velger motor: brukerens valg hvis klar, ellers første klare sky-motor. «browser» eller ingen klar → TtsUnavailable. */
 export function pickEngine(want) {
   if (want === 'browser') throw new TtsUnavailable('Nettleserstemmen er valgt. Opplesningen skjer i nettleseren.');
-  if (want && engineReady(want)) return want;
+  if (want && want !== 'voxcpm' && engineReady(want)) return want; // prompt 57: voxcpm håndteres i speak()
   const any = ['openai', 'elevenlabs', 'azure'].find(engineReady);
   if (!any) throw new TtsUnavailable('Ingen stemmemotor er satt opp. En administrator kan legge inn en nøkkel for OpenAI, ElevenLabs eller Azure under AI → API og nøkler.');
   return any;
 }
 
-/** → {audio:Buffer, engine, cache:'hit'|'miss', voice, chars, text} */
-export async function speak(user, { text, character, voice, rate, lang } = {}) {
+/** Prompt 57: VoxCPM-stemmen for forespørselen, eller null (sky-motorene). vx-id vinner alltid; motor «voxcpm» + nora|henrik|lys → vx-<samme>. */
+function vxWanted57(engine, voiceId) {
+  if (isVxId57(voiceId)) return voiceId;
+  if (engine === 'voxcpm') return VOICES.some((v) => v.id === voiceId) ? `vx-${voiceId}` : 'vx-nora';
+  return null;
+}
+async function vxTry57(user, vxId, say, L, R) {
+  const r = await vxSpeakFor57(user, { voiceId: vxId, text: say, lang: L, speed: SPEED[R] });
+  return { ...r, engine: 'voxcpm', fallback: null };
+}
+
+/** → {audio:Buffer, engine, cache:'hit'|'miss', voice, chars, text, contentType?, fallback?} */
+export async function speak(user, { text, character, voice, rate, lang, purpose } = {}) {
   const s = glimtSettingsOf(user);
   const raw = String(text ?? '').trim();
   if (!raw) throw new TtsUnavailable('Skriv en tekst', 400);
   if (raw.length > MAX_CHARS) throw new TtsUnavailable(`Teksten er for lang (maks ${MAX_CHARS} tegn)`, 400);
   const L = lang === 'en' || lang === 'no' ? lang : s.tts.lang;
-  const V = VOICES.find((v) => v.id === (voice ?? s.tts.voice)) ?? VOICES[0];
+  const wantId = voice ?? (purpose === 'news' ? (s.tts.newsVoice ?? s.tts.voice) : s.tts.voice); // prompt 57: egen stemme for nyhetsleseren
   const R = SPEED[rate] ? rate : s.tts.rate;
   const ch = voiceChar(CHAR_IDS.has(character) ? character : hostOf(user, Date.now(), s));
-  const engine = pickEngine(s.tts.engine);
   const say = normalizeSpeech(raw, L);
+  // Prompt 57: VoxCPM på Mac mini-en først når en VoxCPM-stemme er valgt; svarer den ikke → brukerens sky-motor → første klare → nettleseren.
+  const vxId = vxWanted57(s.tts.engine, wantId);
+  let fallback = null;
+  if (vxId) {
+    if (vxReady57()) {
+      try { return await vxTry57(user, vxId, say, L, R); } catch (e) { if (e?.status === 400) throw new TtsUnavailable(e.message, 400); }
+    }
+    fallback = 'voxcpm';
+  }
+  const V = VOICES.find((v) => v.id === (vxId ? classicOf57(vxId) : wantId)) ?? VOICES[0];
+  let engine;
+  try { engine = pickEngine(vxId && s.tts.engine === 'voxcpm' ? null : s.tts.engine); }
+  catch (e) {
+    // Ingen sky-motor: VoxCPM som siste reserve (ikke når nettleserstemmen er valgt med vilje).
+    if (!vxId && s.tts.engine !== 'browser' && vxReady57()) { try { return await vxTry57(user, `vx-${V.id}`, say, L, R); } catch { /* nettleseren */ } }
+    throw e;
+  }
   const model = TTS_ENGINES.find((e) => e.id === engine).model;
   const h = createHash('sha256').update(JSON.stringify([engine, model, V.id, ch, R, L, say])).digest('hex');
   const file = join(CACHE_DIR(), `${h}.mp3`);
-  if (existsSync(file) && Date.now() - statSync(file).mtimeMs < CACHE_MS) return { audio: readFileSync(file), engine: MOCK() && !injected ? 'mock' : engine, cache: 'hit', voice: V.id, chars: say.length, text: say };
+  if (existsSync(file) && Date.now() - statSync(file).mtimeMs < CACHE_MS) return { audio: readFileSync(file), engine: MOCK() && !injected ? 'mock' : engine, cache: 'hit', voice: V.id, chars: say.length, text: say, fallback };
   const b = ai.budgetState();
   if (b.blocked) throw new TtsUnavailable(`Sky-budsjettet er brukt opp (${b.monthCostKr} av ${b.monthlyKr} kr denne måneden)`);
   const t0 = Date.now();
@@ -336,7 +371,7 @@ export async function speak(user, { text, character, voice, rate, lang } = {}) {
   const costKr = MOCK() && !injected ? 0 : Math.round(say.length * (USD_PER_CHAR[engine] ?? 0) * ai.USD_NOK * 10000) / 10000;
   ai.jobEnd(job, { ms: Date.now() - t0, tokIn: say.length, tokOut: 0, costKr });
   try { mkdirSync(CACHE_DIR(), { recursive: true }); writeFileSync(file, audio); } catch (e) { console.warn('[tts] cache:', e.message); }
-  return { audio, engine: MOCK() && !injected ? 'mock' : engine, cache: 'miss', voice: V.id, chars: say.length, text: say };
+  return { audio, engine: MOCK() && !injected ? 'mock' : engine, cache: 'miss', voice: V.id, chars: say.length, text: say, fallback };
 }
 
 /** Test av en bestemt motor (AI → API og nøkler → Test): uten cache. → {model, bytes} */
@@ -355,11 +390,11 @@ export const ttsApi = new Hono();
 ttsApi.use('*', authOrToken);
 ttsApi.post('/', async (c) => {
   const b = await c.req.json().catch(() => null);
-  if (!b || typeof b.text !== 'string') return c.json({ error: 'Forventet {text, character?, voice?, rate?, lang?}' }, 400);
+  if (!b || typeof b.text !== 'string') return c.json({ error: 'Forventet {text, character?, voice?, rate?, lang?, purpose?}' }, 400);
   try {
     const r = await speak(c.get('user'), b);
-    return new Response(r.audio, { status: 200, headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': String(r.audio.length), 'Cache-Control': 'private, max-age=2592000',
-      'X-TTS-Engine': r.engine, 'X-TTS-Cache': r.cache, 'X-TTS-Voice': r.voice, 'X-TTS-Chars': String(r.chars) } });
+    return new Response(r.audio, { status: 200, headers: { 'Content-Type': r.contentType || 'audio/mpeg', 'Content-Length': String(r.audio.length), 'Cache-Control': 'private, max-age=2592000',
+      'X-TTS-Engine': r.engine, 'X-TTS-Cache': r.cache, 'X-TTS-Voice': r.voice, 'X-TTS-Chars': String(r.chars), 'X-TTS-AI': '1', ...(r.fallback ? { 'X-TTS-Fallback': r.fallback } : {}) } }); // prompt 57: + X-TTS-AI, X-TTS-Fallback
   } catch (e) {
     if (e instanceof TtsUnavailable && e.status === 400) return c.json({ error: e.message }, 400);
     return c.json({ error: e.message, fallback: 'browser' }, 503);

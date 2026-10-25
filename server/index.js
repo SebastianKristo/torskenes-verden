@@ -81,6 +81,7 @@ import { mountSrv52 } from './srv52.js'; // prompt 52 (SRV52): Glimt «sist jeg 
 import { mountFermion53 } from './fermion53/index.js'; // prompt 53 (FERMION53): Neutrino-1 8B og Phonon på Mac mini-en (admin: /api/admin/fermion53/*)
 import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant Labs-modellene (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)
 import { mountWhisper54 } from './whisper54/index.js'; // prompt 54 (WHISPER54): NB-Whisper på Mac mini-en (admin: /api/admin/whisper54/*), norsk tale til tekst i /api/voice53/*
+import { mountVoxcpm57 } from './voxcpm57/index.js'; // prompt 57 (VOX57): VoxCPM2 på Mac mini-en – /api/voices57 (stemmer per bruker) og /api/admin/voxcpm57/*
 import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
@@ -136,6 +137,7 @@ app.use('*', secureHeaders({
     fontSrc: ['https://fonts.gstatic.com'],
     // Plakater fra Sonarr/Radarr kommer fra varierende CDN-er (TheTVDB, TMDB, fanart.tv), så alle https-bilder tillates.
     imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+    mediaSrc: ["'self'", 'blob:'], // prompt 57: opplesning (/api/tts, VoxCPM) spilles som blob:-lyd
     // Prompt 42: ikonsøket i Familie → Soner (web og PWA) søker i Lucide og Tabler via Iconify-API-et.
     connectSrc: ["'self'", 'https://api.iconify.design'],
     frameAncestors: ["'none'"],
@@ -166,6 +168,7 @@ mountSrv52(app); // prompt 52 (SRV52): /api/glimt/quickparse52, /api/glimt/lex52
 mountFermion53(app); // prompt 53 (FERMION53): /api/admin/fermion53/{health,config,test} (bare admin)
 mountDal53(app); // prompt 53 (DAL53): /api/admin/dal53/{health,preload}, /api/emo53/suggest, /api/voice53/*; Moderator foran /api/chat/files og /api/img
 mountWhisper54(app); // prompt 54 (WHISPER54): /api/admin/whisper54/{health,config,test} (bare admin)
+mountVoxcpm57(app); // prompt 57 (VOX57): /api/voices57*, /api/admin/voxcpm57/{health,config,test}
 app.route('/api', auth44Api); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
 app.get('/hl/:token', hlPage41); // prompt 41: Hjemlys-statusside for kontakter uten Papir (24 t)
 
@@ -451,6 +454,7 @@ authed.delete('/users/:id', requireAdmin, (c) => {
   const id = c.req.param('id');
   try { deleteUser(id, c.get('user')); } catch (e) { return fail(c, e); }
   removeAvatar(id); revokeUserTokens(id);
+  import('./voxcpm57/voices.js').then((m) => m.purgeUser57(id)).catch(() => {}); // prompt 57: brukerens stemmer og opptak
   return c.json({ ok: true });
 });
 authed.post('/auth/totp/setup', (c) => { try { return c.json(startTotpSetup(c.get('user'))); } catch (e) { return fail(c, e); } });

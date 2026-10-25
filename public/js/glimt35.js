@@ -7,12 +7,13 @@ import { api, esc } from './util.js';
 import { store } from './store.js';
 import { fig, FIGS, hostFor, setJul, julOn, julAuto, JUL_PHASES, julPhaseName, setMai17, mai17Auto } from './glimt-figs.js';
 import { CARDS38, cardList38, toSrv38 } from './brief38.js'; // prompt 38: kortene i briefen (av/på og rekkefølge)
+import { voicesHtml57, engineSwitched57, voiceName57, stop57, playBlob57, unlockAudio57 } from './voices57.js'; // prompt 57: VoxCPM2-stemmer (lokal), egen stemme for nyhetsleseren
 
 export const DEF = {
   char: 'glimt', friends: true, brief: true, briefGlimt: true, // prompt 39: «Glimt i briefen» (figuren av/på)
   readAloud: false, guide: true, notify: true,
   briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
-  tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' },
+  tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no', newsVoice: null }, // prompt 57: newsVoice (null = samme som Glimt)
   engines: null, chars: null,
   jul: 'auto', julPhase: null, snow: true, julSound: 'av', // prompt 40: julemodus (per bruker, synkes)
 };
@@ -90,12 +91,13 @@ const ENG = [
   ['openai', 'OpenAI · gpt-4o-mini-tts', 'Nesten menneskelig. Følger instruks om tone og følelse.', 'ANBEFALT', '#e3efe6', '#2f7a4f', 'https://platform.openai.com/api-keys', 'sk-…'],
   ['elevenlabs', 'ElevenLabs · Multilingual v2', 'Mest naturlig og uttrykksfull. Kan klone en egen stemme.', 'BEST', '#fbeee8', '#b23a2a', 'https://elevenlabs.io/app/settings/api-keys', 'xi-…'],
   ['azure', 'Azure · nb-NO Neural (Pernille, Finn, Iselin)', 'Ekte norske stemmer med riktig tonelag.', 'NORSK', '#e6eef4', '#2b5d8a', 'https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices', 'nøkkel'],
+  ['voxcpm', 'VoxCPM2 (Mac mini, lokal)', 'Lokal og privat på Mac mini-en. Lag stemmer fra en beskrivelse, eller klon din egen.', 'LOKAL', '#efe6f6', '#6a3d8f', '', ''], // prompt 57
   ['browser', 'Nettleserens stemme', 'Robotaktig. Bare for testing uten nøkkel.', '', '', '', '', ''],
 ];
 const RATES = [['calm', 'Rolig', 0.85], ['normal', 'Normal', 1], ['fast', 'Rask', 1.15]];
 const CHV = { glimt: [1, 1], natt: [0.92, 0.95], sky: [1.12, 1.02], drape: [1.25, 1.06], ugle: [0.8, 0.94], gris: [1.08, 1.04], stjerne: [1.1, 1.04], spire: [1.06, 1], blekk: [1.06, 1.02] };
 export const rateOf = (r) => RATES.find((x) => x[0] === r)?.[2] ?? 1;
-export const voiceName = (id) => (VOICES.find((v) => v[0] === id) ?? VOICES[0])[1].split(' · ')[0];
+export const voiceName = (id) => voiceName57(id) ?? (VOICES.find((v) => v[0] === id) ?? VOICES[0])[1].split(' · ')[0];
 const engineInfo = (id) => { const s = gs(), e = (s.engines ?? []).find((x) => x.id === id || (id === 'elevenlabs' && x.id === 'eleven')); return e ?? null; };
 
 /* ---------- Opplesning ---------- */
@@ -119,14 +121,15 @@ export function stopSpeak() {
 export async function say(text, ch = 'glimt', { force = false } = {}) {
   const s = gs();
   if (!s.readAloud && !force) return;
-  stopSpeak();
+  unlockAudio57(); stopSpeak(); stop57(); // prompt 57: nyhetsleseren/chat stopper når Glimt begynner å snakke
   const seq = T.seq, txt = cleanTxt(text);
   if (!txt) return;
   T.last = { text, ch };
-  T.err = '';
+  T.err = ''; T.ai = false;
   // Motoren er ikke klar (ingen nøkkel): rett til nettleserens stemme, uten et kall som gir 503.
   const inf = engineInfo(s.tts.engine);
-  if (inf && inf.ready === false && s.tts.engine !== 'browser') T.err = `${inf.name?.split(' · ')[0] ?? 'Stemmemotoren'} mangler nøkkel. Bruker nettleserens stemme.`;
+  // Prompt 57: VoxCPM har ingen nøkkel i nettleseren; serveren faller selv tilbake til neste motor når Mac mini-en ikke svarer.
+  if (inf && inf.ready === false && s.tts.engine !== 'browser' && s.tts.engine !== 'voxcpm') T.err = `${inf.name?.split(' · ')[0] ?? 'Stemmemotoren'} mangler nøkkel. Bruker nettleserens stemme.`;
   else if (s.tts.engine !== 'browser') {
     T.speaking = true; T.who = ch; emitS();
     const ctl = new AbortController(); T.ctl = ctl;
@@ -138,11 +141,20 @@ export async function say(text, ch = 'glimt', { force = false } = {}) {
       if (r.ok && /audio|octet/.test(ct)) {
         const b = await r.blob();
         if (seq !== T.seq) return;
-        const url = URL.createObjectURL(b), a = new Audio(url);
-        T.au = a; T.url = url;
-        a.onended = a.onerror = () => { if (T.au === a) { T.au = null; T.speaking = false; T.who = null; emitS(); } };
-        try { await a.play(); T.needTap = false; T.speaking = true; T.who = ch; emitS(); }
-        catch (e) { if (seq !== T.seq) return; T.speaking = false; T.who = null; T.needTap = e?.name === 'NotAllowedError'; if (!T.needTap) T.err = 'Kunne ikke spille av lyden.'; emitS(); }
+        // Prompt 57: Web Audio i stedet for <audio src="blob:…"> (sidens CSP har ingen media-src, så blob-lyd blokkeres).
+        T.ai = true; // serverlyd er KI-generert («KI-stemme»)
+        let h;
+        try { h = await playBlob57(b); }
+        catch (e) {
+          if (seq !== T.seq) return;
+          if (e?.name === 'NotAllowedError') { T.speaking = false; T.who = null; T.needTap = true; emitS(); return; }
+          T.ai = false; T.err = 'Kunne ikke spille av lyden. Bruker nettleserens stemme.';
+          sayBrowser(txt, ch); return;
+        }
+        if (seq !== T.seq) { h.stop(); return; }
+        const au = { pause: h.stop }; T.au = au;
+        T.needTap = false; T.speaking = true; T.who = ch; emitS();
+        h.done.then(() => { if (T.au === au) { T.au = null; T.speaking = false; T.who = null; emitS(); } });
         return;
       }
       const j = /json/.test(ct) ? await r.json().catch(() => ({})) : {};
@@ -191,7 +203,7 @@ const BR = [['morning', 'Morgenbrief', 'Vær, dagen og første avtale'], ['day',
 function engineRows(s) {
   const list = ENG.map(([id, n, d0, tag0, tb, tf, href, ph]) => {
     const info = engineInfo(id), name = info?.name || n, d = info?.desc || d0, tag = info?.badge ?? tag0;
-    const st = id === 'browser' ? '' : info ? (info.ready ? ' · klar' : info.keySet ? ' · nøkkel lagt inn' : ' · mangler nøkkel') : '';
+    const st = id === 'browser' ? '' : !info ? '' : id === 'voxcpm' ? (info.ready ? ' · svarer' : info.keySet ? ' · satt opp, svarer ikke nå' : ' · ikke satt opp') : (info.ready ? ' · klar' : info.keySet ? ' · nøkkel lagt inn' : ' · mangler nøkkel');
     return { id, name, d: d + st, tag, tb, tf, href, ph, info };
   });
   return list.map((o) => `<button type="button" class="gs-opt" data-gs-engine="${o.id}" aria-pressed="${s.tts.engine === o.id}"><span class="gs-ot"><span class="gs-on"><b>${esc(o.name)}</b>${o.tag ? `<span class="gs-tag" style="background:${o.tb};color:${o.tf}">${esc(o.tag)}</span>` : ''}</span><span class="gs-os">${esc(o.d)}</span></span></button>`).join('');
@@ -199,6 +211,7 @@ function engineRows(s) {
 function keyBlock(s) {
   const id = s.tts.engine;
   if (id === 'browser') return `<p class="gs-note">Nettleserens innebygde stemme. Bare for testing.</p>`;
+  if (id === 'voxcpm') { const info = engineInfo(id); return `<p class="gs-note">${info ? (info.ready ? 'VoxCPM2 på Mac mini-en svarer.' : 'VoxCPM2 på Mac mini-en svarer ikke nå – opplesningen bruker neste motor eller nettleserens stemme.') : 'Krever VoxCPM2 på Mac mini-en.'} ${isAdmin() ? 'Adresse og nøkkel settes under AI → Tale til tekst (kortet «VoxCPM2 på Mac mini-en»).' : 'Administrator setter den opp.'} Ingen lyd forlater huset.</p>`; }
   const e = ENG.find((x) => x[0] === id), info = engineInfo(id), msg = G.keyMsg[id], link = info?.link || e[6];
   const status = info?.keySet ? `Nøkkel lagt inn${info.tail ? ` (…${esc(info.tail)})` : ''}` : 'Ingen nøkkel lagt inn';
   if (!isAdmin()) return `<p class="gs-note">${status}. Bare administrator kan legge inn nøkler for stemmemotorene (AI → API og nøkler).</p>`;
@@ -244,8 +257,9 @@ export function glimtSettingsHtml({ figs = false } = {}) {
     <span class="gs-h">STEMMEMOTOR</span>
     <div class="gs-opts" data-hl="glimt-voice">${engineRows(s)}</div>
     ${keyBlock(s)}
-    <span class="gs-h">STEMME</span>
-    <div class="gs-opts">${VOICES.map(([k, n, d]) => `<div class="gs-opt gs-voice" aria-pressed="${s.tts.voice === k}"><button type="button" class="gs-vb" data-gs-voice="${k}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span></button><button type="button" class="gs-try" data-gs-try="${k}">▶ Hør</button></div>`).join('')}</div>
+    <span class="gs-h">STEMMER</span>
+    ${s.tts.engine === 'voxcpm' ? '' : `<div class="gs-opts">${VOICES.map(([k, n, d]) => `<div class="gs-opt gs-voice" aria-pressed="${s.tts.voice === k}"><button type="button" class="gs-vb" data-gs-voice="${k}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span></button><button type="button" class="gs-try" data-gs-try="${k}">▶ Hør</button></div>`).join('')}</div>`}
+    ${voicesHtml57()}
     <div class="gs-seg-w"><span class="gs-seg-l"><b>Språk for opplesning</b><span>${s.tts.lang === 'en' ? 'English' : 'Norsk'}</span></span><div class="gs-seg">${[['no', 'Norsk'], ['en', 'English']].map(([k, n]) => `<button type="button" data-gs-lang="${k}" aria-pressed="${s.tts.lang === k}">${n}</button>`).join('')}</div></div>
     <div class="gs-seg-w"><span class="gs-seg-l"><b>Tempo</b><span>×${String(rateOf(s.tts.rate)).replace('.', ',')}</span></span><div class="gs-seg">${RATES.map(([k, n]) => `<button type="button" data-gs-rate="${k}" aria-pressed="${s.tts.rate === k}">${n}</button>`).join('')}</div></div>
     ${T.err ? `<p class="gs-msg">${esc(T.err)}</p>` : ''}
@@ -311,7 +325,7 @@ export function glimtClick(e, redraw) {
   const cm = t.closest('[data-gs-cmv]');
   if (cm) { const [id, d] = cm.dataset.gsCmv.split(':'), L = cardList38(gs()), i = L.findIndex((c) => c.id === id), j = i + +d; if (i >= 0 && j >= 0 && j < L.length) { [L[i], L[j]] = [L[j], L[i]]; saveGlimt({ cards: toSrv38(L) }); redraw(); } return true; }
   const en = t.closest('[data-gs-engine]');
-  if (en) { saveGlimt({ tts: { engine: en.dataset.gsEngine } }); redraw(); return true; }
+  if (en) { saveGlimt({ tts: { engine: en.dataset.gsEngine } }); engineSwitched57(en.dataset.gsEngine); redraw(); return true; }
   const tr = t.closest('[data-gs-try]');
   if (tr) { saveGlimt({ tts: { voice: tr.dataset.gsTry } }); redraw(); say(gs().tts.lang === 'en' ? "Hi, I'm Glimt. This is how I sound." : 'Hei, jeg er Glimt. Slik høres jeg ut.', 'glimt', { force: true }); return true; }
   const vo = t.closest('[data-gs-voice]');

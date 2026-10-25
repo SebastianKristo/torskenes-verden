@@ -53,6 +53,9 @@ const LICENSES53 = [
   // Prompt 54 (WHISPER54): NB-Whisper.
   { name: 'NB-Whisper – Nasjonalbiblioteket', what: 'Tale til tekst på norsk (bokmål og nynorsk) og engelsk, og språkdeteksjon, på Mac mini-en (NbAiLab/nb-whisper, bygger på OpenAI Whisper, MIT). Kjøres med MLX (Apple, MIT) eller whisper.cpp (MIT).',
     lic: 'Apache-2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0', credit: 'NB-Whisper © Nasjonalbiblioteket (NbAiLab)' },
+  // Prompt 57 (VOX57): VoxCPM2.
+  { name: 'VoxCPM2 – OpenBMB', what: 'Tekst til tale på norsk på Mac mini-en: ferdige stemmer, egne stemmer fra beskrivelse og klonede stemmer (bare egen stemme eller med samtykke). Kjøres med llama.cpp-omni (MIT) eller PyTorch (BSD-3-Clause).',
+    lic: 'Apache-2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0', credit: 'VoxCPM2 © OpenBMB' },
 ];
 export function openAbout53() {
   overlay(`<h2>Om / Lisenser</h2>
