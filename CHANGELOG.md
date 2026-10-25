@@ -2,6 +2,17 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.50.0] – 26.10.2026 · Glimt forstår samtaler, beste modeller og stemmer i bakgrunnen
+- **Glimt husker samtalen:**
+  - «Hvordan er været i Oslo i morgen?» og så «og i Bergen?» virker. Det samme gjør «Legg inn tannlege fredag kl 10» og så «flytt den til 11».
+  - «Hva er det dyreste abonnementet mitt?» og så «si opp det» spør alltid om bekreftelse før noe skjer. Abonnementet markeres som sagt opp. Selve oppsigelsen hos leverandøren gjør du selv.
+  - Når Glimt er usikker, får du knapper å velge mellom («Mener du frisøren hos Nina eller middagen med Nina?»), og «den andre» forstås.
+- **Register over personer og steder** under Innstillinger → AI: personer, steder, butikker og abonnementer med andre navn. «Hjemme», «hytta», «jobben» og «skolen» kobles til de faktiske stedene.
+- **De beste modellene settes av seg selv** etter oppdateringen, ut fra eval på Mac minien: qwen3:8b til all tekst og qwen2.5vl:7b til bilder. Kunnskapsbasen og egne valg røres ikke. «Glimt anbefaler» bruker de samme målingene.
+- **VoxCPM-stemmer lages i bakgrunnen:** opplesning starter med en gang med en rask stemme, og VoxCPM-lyden lages til neste gang. Briefen lages på forhånd.
+- **oMLX kan slås av** i AI-kontroll uten å miste oppsettet.
+- **AI-kontroll:** nye brytere for «Forstår samtaler».
+
 ## [4.49.0] – 25.10.2026 · Raskere svar som strømmer
 - **Glimt svarer raskere:**
   - Når en oppgave ba modellen om ikke å tenke, gjaldt ikke det når «La modellen tenke» var på. qwen3 tenkte da på hvert Glimt-kall. Det er rettet, så valget bare gjelder der det hører hjemme (for eksempel Chat).
