@@ -2,6 +2,50 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.45.0] – 25.10.2026 · kvitteringsrettingen og prompt 51 – backup, sikkerhet, drift, Planlegging og mediekveld
+- **Bedre lesing av kvitteringer:**
+  - OCR leser originalbildet, minst ca. 2000 px på lengste side, og retter rotasjon og perspektiv.
+  - Butikknavnet hentes fra org.nr. i en lokal kopi av Enhetsregisteret, som oppdateres ukentlig. Ingenting sendes ut per kvittering. Skjemaet viser hvor navnet kom fra, og retter du det, husker systemet det.
+  - Ny sammenleggbar «Rådata»-seksjon viser OCR-radene, så du ser om feilen ligger i OCR-en eller i modellen.
+  - Når Mac-OCR ikke svarer, venter ikke hver kvittering 30 s lenger.
+- **Bilder i chat uten feil 400:** bilder sendes aldri til modeller som ikke kan se bilder, heller ikke via Open WebUI. Kvitteringer og dokumenter leses med OCR og tolkes av qwen3:8b, og vanlige foto beskrives av qwen2.5vl. Glimt viser hvilken vei den tok.
+- **Backup og oppdateringer:**
+  - Backup med restic til lokal disk, NAS og eventuelt et sted utenfor huset.
+  - Gjenopprettingen testes automatisk hver søndag, og kortene i System viser grønt eller rødt.
+  - Nye versjoner prøves i en kopi før de tas i bruk, og kan rulles tilbake med ett trykk.
+  - Databasene vedlikeholdes ukentlig.
+- **Sikkerhet:**
+  - Revisjonslogg over innlogginger.
+  - Nye enheter fra internett må godkjennes fra en enhet som allerede er logget inn. Appene viser «Venter på godkjenning». Hjemmenett, første enhet og QR slipper rett inn.
+  - Varsel ved innlogging fra et nytt land.
+  - Passkeys på web.
+  - Sperren mot gjentatte innloggingsforsøk overlever omstart.
+  - Påminnelse om å rotere nøkler, og en vakt som sjekker at nøkler ikke havner i loggene.
+  - Et hull er tettet: en falsk `CF-Connecting-IP`-header kunne få serveren til å tro at en tilkobling kom fra lokalt nett.
+- **Drift:**
+  - Helsedashbord for containere, disk, Ollama og Mac minien, med trendvarsel («disken er full om 9 dager»).
+  - Selvreparasjon: containere som henger startes på nytt automatisk. Ingenting annet gjøres av seg selv.
+  - Spor for trege forespørsler.
+  - Valgfrie varsler via ntfy, også i Android-appen.
+- **Kvalitet:** feature flags, krasjrapporter (lokalt eller til GlitchTip), «Nytt i denne versjonen» og ende-til-ende-tester.
+- **Planlegging i FinansHub (web):**
+  - Sparemål med «rund opp».
+  - Kalender for faste utgifter med saldoprognose.
+  - Skattehjelp med fradragsposter, eksport og påminnelser. Satsene er anslag.
+  - Prishistorikk fra kvitteringene.
+  - Abonnementsjeger.
+- **Familie og Media (web):**
+  - Familiekalender med «hvem kjører?» og Ruter-forslag.
+  - «Hva skal vi se i kveld?».
+  - Norske undertekster via Bazarr.
+  - Lagring med anbefaling og 24 t angre.
+  - Lydbøker og podkaster via Audiobookshelf.
+- **Manuelt:**
+  - Sett `PUBLIC_URL` i `.env`, ellers virker ikke passkeys.
+  - Kjør `ollama pull qwen2.5vl:7b`.
+  - Sett opp backup under Innstillinger → System.
+  - ntfy, GlitchTip, Bazarr og Audiobookshelf er valgfrie. Se `docs/*-51.md`.
+
 ## [4.44.0] – 24.10.2026 · prompt 50 – Familie i nytt design, Media som laster ned og viser bilder med en gang, filer i chat
 - **Familie (nytt design):** iPhone, Android, web og PWA har fått fanene Folk, Steder, Helse og Sjekk inn.
   - Kart med ark som dras opp og ned. Personer utenfor utsnittet får en merkelapp i kanten.
