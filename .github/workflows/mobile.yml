@@ -27,6 +27,7 @@ jobs:
           path: |
             apps/android/app/build/outputs/apk/debug/app-debug.apk
             apps/android/kalender/build/outputs/apk/debug/kalender-debug.apk
+            apps/android/wear/build/outputs/apk/debug/wear-debug.apk
 
   ios:
     strategy:
@@ -69,6 +70,16 @@ jobs:
             CODE_SIGNING_ALLOWED=NO build > mac.log 2>&1 && s=0 || s=$?
           grep -E ": error: |: fatal error: " mac.log | sort -u | head -80 || true
           tail -25 mac.log
+          exit $s
+      - name: Bygg FinansHub for Apple Watch (simulator)
+        # Prompt 51: eget target uten avhengighet til FinansHub. Første gang uten å stoppe jobben (watchOS-SDK på runneren).
+        continue-on-error: true
+        run: |
+          xcodebuild -project FinansHub.xcodeproj -scheme FinansHubWatch51 -configuration Debug \
+            -sdk watchsimulator -destination 'generic/platform=watchOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build > watch.log 2>&1 && s=0 || s=$?
+          grep -E ": error: |: fatal error: " watch.log | sort -u | head -80 || true
+          tail -25 watch.log
           exit $s
       - name: Start Kalender for Mac (røyktest)
         # Bygger som i releasen (Release, ad hoc-signert med sandkasse), starter appen og viser krasjrapporten hvis den dør.

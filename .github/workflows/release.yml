@@ -53,6 +53,7 @@ jobs:
               -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
             cp app/build/outputs/apk/release/app-release.apk "../../dist/FinansHub-$V.apk"
             cp kalender/build/outputs/apk/release/kalender-release.apk "../../dist/Kalender-$V.apk" || echo "Advarsel: fant ikke Kalender-APK"
+            cp wear/build/outputs/apk/release/wear-release.apk "../../dist/HomelabWear-$V.apk" || echo "Advarsel: fant ikke Wear-APK"
             rm -f "$RUNNER_TEMP/release.keystore"
           else
             # Uten egen nøkkel: release-bygg signert med den faste sideload-nøkkelen i repoet,
@@ -60,6 +61,7 @@ jobs:
             ./gradlew --no-daemon assembleRelease -PversionName="$V" -PversionCode=$((1000 + ${{ github.run_number }}))
             cp app/build/outputs/apk/release/app-release.apk "../../dist/FinansHub-$V.apk"
             cp kalender/build/outputs/apk/release/kalender-release.apk "../../dist/Kalender-$V.apk" || echo "Advarsel: fant ikke Kalender-APK"
+            cp wear/build/outputs/apk/release/wear-release.apk "../../dist/HomelabWear-$V.apk" || echo "Advarsel: fant ikke Wear-APK"
           fi
       - uses: actions/upload-artifact@v4
         with:
