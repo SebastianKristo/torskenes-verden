@@ -298,7 +298,7 @@ fun AppViewModel.setGlimt35(patch: JSONObject, f: (GlimtSet35) -> GlimtSet35) {
 fun AppViewModel.setChar35(id: String) {
     val c = Fig35.norm(id)
     setGlimt35(JSONObject().put("char", c)) { it.copy(char = c) }
-    say35(if (c == "gris") "Nøff! Nå er jeg din Glimt." else "Hei! Nå er jeg din Glimt.", c, force = true)
+    say35(when (c) { "gris" -> "Nøff! Nå er jeg din Glimt."; "blekk" -> "Hei! Seks armer klare. Nå er jeg din Glimt."; else -> "Hei! Nå er jeg din Glimt." }, c, force = true)
 }
 
 fun AppViewModel.setBriefSlot35(kind: String, on: Boolean? = null, at: String? = null) {
@@ -349,7 +349,7 @@ fun AppViewModel.settingsLink35(path: String) {
 /* ---------------- Opplesning ---------------- */
 
 /** Klang per figur for telefonens stemme (fasit: CHV): [pitch, tempo]. */
-private val CHV35 = mapOf("glimt" to (1f to 1f), "natt" to (.92f to .95f), "sky" to (1.12f to 1.02f), "drape" to (1.25f to 1.06f), "ugle" to (.8f to .94f), "gris" to (1.08f to 1.04f), "stjerne" to (1.15f to 1.05f))
+private val CHV35 = mapOf("glimt" to (1f to 1f), "natt" to (.92f to .95f), "sky" to (1.12f to 1.02f), "drape" to (1.25f to 1.06f), "ugle" to (.8f to .94f), "gris" to (1.08f to 1.04f), "stjerne" to (1.15f to 1.05f), "blekk" to (1.06f to 1.02f))
 private val VOICE_P35 = mapOf("nora" to (1f to 1f), "henrik" to (.9f to .92f), "lys" to (1.15f to 1.05f))
 
 /** Uttale før TTS: «kl.» → «klokka», «15:15» → «kvart over tre» … (serveren gjør det samme; dette er for reservestemmen). */

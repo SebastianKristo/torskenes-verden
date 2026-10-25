@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Prompt 52 (AND52A): mobilappen heter «Homelab» (pakkenavnet no.kristo.finanshub er uendret). -->
+    <string name="app_name">Homelab</string>
+</resources>

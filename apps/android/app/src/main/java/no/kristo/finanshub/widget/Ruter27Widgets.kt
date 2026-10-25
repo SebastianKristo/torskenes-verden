@@ -181,7 +181,9 @@ private fun parseWidget27(raw: String, now: Long): WRuter27? = runCatching {
 internal suspend fun fetchRuter27(ctx: Context, api: Api, acct: String?) {
     val now = System.currentTimeMillis()
     val r = runCatching { parseWidget27(api.hlGet("/widgets/departures", timeout = 12_000), now) }.getOrNull() ?: run {
-        val mine = runCatching { parseStopList(api.hlGet("/me/stops", timeout = 8_000)) }.getOrDefault(emptyList())
+        // Prompt 52 (AND52B): uten nett brukes appens hurtigbuffer (Mine stopp og avgangene, no.kristo.finanshub.Ruter52Cache).
+        val mine = runCatching { parseStopList(api.hlGet("/me/stops", timeout = 8_000)) }.getOrNull()?.takeIf { it.isNotEmpty() }
+            ?: no.kristo.finanshub.Ruter52Cache.stops(ctx, acct ?: "") ?: emptyList()
         if (mine.isEmpty()) return
         val hd = runCatching { JSONObject(api.hlGet("/me/home-departures", timeout = 8_000)) }.getOrNull()
             ?.let { (it.optJSONObject("home_departures") ?: it).optJSONArray("stops") }
@@ -189,7 +191,8 @@ internal suspend fun fetchRuter27(ctx: Context, api: Api, acct: String?) {
         val shown = mine.filter { it.id in ids }.ifEmpty { mine.take(1) }.take(3)
         val stops = shown.mapNotNull { st ->
             runCatching {
-                val sd = parseStopDeps(api.hlGet("/ruter/departures?stop=" + URLEncoder.encode(st.id, "UTF-8") + "&n=6", timeout = 12_000))
+                val sd = runCatching { parseStopDeps(api.hlGet("/ruter/departures?stop=" + URLEncoder.encode(st.id, "UTF-8") + "&n=6", timeout = 12_000)) }.getOrNull()
+                    ?: no.kristo.finanshub.Ruter52Cache.deps(ctx, acct ?: "", st.id)?.first ?: error("ingen data")
                 WStop27(st.id, st.name.ifBlank { sd.stop.name }, sd.departures.filter { !it.cancelled }.map { d ->
                     WDep27(d.line, d.to, d.color ?: ruterModeColor(d.mode, d.line), d.textColor ?: 0xFFFFFFFF, epoch27(d.expected ?: d.aimed), d.minutes, d.realtime)
                 })

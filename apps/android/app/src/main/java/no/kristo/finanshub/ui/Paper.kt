@@ -346,7 +346,7 @@ private fun PaperApp45(
                     // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
                     // Dra for å oppdatere: fra toppen når siden står øverst (ca. 70 dp), så hentes siden på nytt.
                     PullToRefreshBox(isRefreshing = vm.pullRefreshing, onRefresh = { vm.pullRefresh() }, modifier = Modifier.fillMaxHeight()) {
-                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide || home || setHere) 10_000.dp else 720.dp).then(homeTx46(vm, home, wide))) { key(pageKey, vm.b26.topSeq) { holder.SaveableStateProvider(scrollKey) {
+                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide || home || setHere) 10_000.dp else 720.dp).then(homeTx46(vm, home, wide))) { key(pageKey, vm.b26.topSeq) { holder.SaveableStateProvider(scrollKey) { PgBase52(vm) { // prompt 52: sideanimasjon (ui/Ui52B.kt)
                         when {
                             vm.original != null -> PaneBox(navBottom) { OriginalScreen(vm) }
                             vm.editing != null -> PaneBox(navBottom) { TxEditScreen(vm, vm.editing!!, scan) }
@@ -375,7 +375,7 @@ private fun PaperApp45(
                             s == Screen.Scan && vm.selectedReceipt == null -> PaperReceipts23(vm, navBottom, takePhoto, pickPhotos, pickFiles)
                             else -> PaneBox(navBottom, pullUp = s in PAPER_PULL_UP) { MainPane(vm, false, scan, onPrivacyChanged) }
                         }
-                    } } }
+                    } } } }
                     }
                     // Prompt 28: wiggle-modus (Hjem, Finans, Mat, Sporing): ＋/✓-piller i eget lag over listen, aldri kuttet av scrolling.
                     // Prompt 45 (claude-code-fold-wiggle-knapper-navbar.md): på brett ligger ＋/↺/✓ nederst i sidelinja (PaperRail45), ikke øverst.
@@ -415,17 +415,17 @@ private fun PaperApp45(
             if (vm.busy) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) }
             // Prompt 38: trykk utenfor Glimt-boblen lukker den og fanges (under fullskjermsflatene under).
             AnsScrim38(vm)
-            if (vm.newsOpen) NewsReader(vm)
+            if (vm.newsOpen) PgIn52 { NewsReader(vm) } // prompt 52: pgIn – alle fullskjermsider glir inn (ui/Ui52B.kt)
             // Prompt 37: Vær åpnet fra briefen legger seg over briefen (lenger ned); ✕ går tilbake til briefen.
-            if (vm.weatherOpen && !vm.p34.briefOpen) WeatherApp(vm)
-            if (vm.ruterOpen) RuterScreen24(vm)
-            if (vm.familyOpen) FamilyScreen(vm)
-            if (vm.tasksOpen) TasksScreen37(vm) // Prompt 37: Gjøremål (ui/Tasks37.kt)
-            if (vm.bd24.open) BirthdaysScreen24(vm)
-            if (vm.kal26.open) KalenderScreen27(vm)
-            if (vm.chat27.open) ChatScreen27(vm)
-            if (vm.p43.mediaOpen) MediaScreen43(vm) // Prompt 43: Media (ui/Media43.kt)
-            if (vm.p46.kart.open) KartPage46(vm) // Prompt 46: Kart (ui/Kart46Ui.kt)
+            if (vm.weatherOpen && !vm.p34.briefOpen) PgIn52 { WeatherApp(vm) }
+            if (vm.ruterOpen) PgIn52 { RuterScreen24(vm) }
+            if (vm.familyOpen) PgIn52 { FamilyScreen(vm) }
+            if (vm.tasksOpen) PgIn52 { TasksScreen37(vm) } // Prompt 37: Gjøremål (ui/Tasks37.kt)
+            if (vm.bd24.open) PgIn52 { BirthdaysScreen24(vm) }
+            if (vm.kal26.open) PgIn52 { KalenderScreen27(vm) }
+            if (vm.chat27.open) PgIn52 { ChatScreen27(vm) }
+            if (vm.p43.mediaOpen) PgIn52 { MediaScreen43(vm) } // Prompt 43: Media (ui/Media43.kt)
+            if (vm.p46.kart.open) PgIn52 { KartPage46(vm) } // Prompt 46: Kart (ui/Kart46Ui.kt)
             if (vm.p46.gpSheet) GphotoSheet46(vm) // Prompt 46: Google Photos-album som bakgrunn (ui/Ui46b.kt)
             if (vm.p43.galleryOpen) WidgetGallery43(vm) // Prompt 43: Widgets-galleri (ui/WidgetGallery43.kt)
             if (vm.compareOpen) CompareScreen(vm)
@@ -433,13 +433,13 @@ private fun PaperApp45(
             // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
             if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
             // Prompt 31: System-siden «Nordlys OS» i fullskjerm (uten bakgrunnsbilde, fanelinje og skann).
-            if (vm.p31.nordOpen) NordlysPage31(vm)
+            if (vm.p31.nordOpen) PgIn52 { NordlysPage31(vm) }
             // Prompt 34: Glimt-brief og AI-kontroll i fullskjerm (over Chat, så «Full AI-kontroll ›» i Chat legger seg over).
-            if (vm.p34.briefOpen) BriefPage35(vm)
-            if (vm.p34.briefOpen && vm.weatherOpen) WeatherApp(vm)
+            if (vm.p34.briefOpen) PgIn52 { BriefPage35(vm) }
+            if (vm.p34.briefOpen && vm.weatherOpen) PgIn52 { WeatherApp(vm) }
             // Prompt 50: fra Innstillinger på brett sentrert med maks 820 dp (ui/Settings50.kt).
-            if (vm.p35.glimtOpen) Centered50(wide && setHere) { GlimtPage35(vm) }
-            if (vm.p34.aiOpen) Centered50(wide && setHere) { AiControl34(vm) }
+            if (vm.p35.glimtOpen) PgIn52 { Centered50(wide && setHere) { GlimtPage35(vm) } }
+            if (vm.p34.aiOpen) PgIn52 { Centered50(wide && setHere) { AiControl34(vm) } }
             // Prompt 29: «Legg til time»-arket, pillen og banneret over alt (Kalender og Hjem). Prompt 31: Glimt-toasten ligger her.
             Quick29Overlay(vm)
             // Prompt 45: banneret ved retur er fjernet – Glimt-svar mens appen var lukket kommer bare som systemvarsel.
@@ -699,8 +699,8 @@ private fun PaperScanSheet(vm: AppViewModel, camera: () -> Unit, photos: () -> U
     ModalBottomSheet(onDismissRequest = { vm.scanSheet = false }, containerColor = p.bg, contentColor = p.ink) {
         Column(Modifier.fillMaxWidth().padding(18.dp, 0.dp, 18.dp, 34.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             PSerif(when { fin -> "Legg til kvittering"; vm.scanTarget == "recipe" -> "Skann oppskrift"; else -> "Skann" }, 24.sp)
-            Text(if (fin) "Ta bilde, velg filer eller del fra e-post. ✦ Gemini leser i bakgrunnen og kobler mot transaksjonen."
-                else "Kvittering, oppskrift eller dokument. ✦ Gemini leser i bakgrunnen.", color = p.mut, fontSize = 13.sp)
+            Text(if (fin) "Ta bilde, velg filer eller del fra e-post. ✦ Glimt leser lokalt i bakgrunnen og kobler mot transaksjonen."
+                else "Kvittering, oppskrift eller dokument. ✦ Glimt leser lokalt i bakgrunnen.", color = p.mut, fontSize = 13.sp)
             if (!fin) Row(Modifier.fillMaxWidth().clip(CircleShape).border(1.dp, p.line, CircleShape).padding(3.dp)) {
                 listOf("receipt" to "Kvittering", "recipe" to "Oppskrift").forEach { (k, n) ->
                     val on = vm.scanTarget == k
@@ -774,17 +774,17 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean, mode43: Fo
     val secs37 = if (fold) foldKeys41(vm.p41.foldTab).mapNotNull { k -> secsAll.firstOrNull { it.key == k } } else secsAll
     val tripHome = vm.tripOnHome41()
     if (fold) FoldHome41(vm, mode43) { m -> HomeGrid41(vm, m.foldSwipe41(vm), grid37, PaddingValues(0.dp, 0.dp, 0.dp, 24.dp + navBottom), 1, secs37, false, tripHome && vm.p41.foldTab == "na", navBottom) }
-    else HomeGrid41(vm, Modifier.fillMaxSize(), grid37, PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), 1, secs37, false, tripHome, navBottom)
+    else HomeGrid41(vm, Modifier.fillMaxSize(), grid37, PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), 1, secs37, false, tripHome, navBottom, g52 = vm.homeTiles50()) // prompt 52: Hjem 3a
 }
 
 /** Prompt 41: selve kortlista på Hjem (telefon, og høyre halvdel på Fold). */
 @Composable
-private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose.foundation.lazy.grid.LazyGridState, pad: PaddingValues, cols: Int, secs37: List<PSec>, wide: Boolean, trip: Boolean, navBottom: Dp) {
+private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose.foundation.lazy.grid.LazyGridState, pad: PaddingValues, cols: Int, secs37: List<PSec>, wide: Boolean, trip: Boolean, navBottom: Dp, g52: Boolean = false) {
     val p = PaperPal.current
     val ctx = LocalContext.current
     val h = vm.mobileHome
     LazyVerticalGrid(
-        GridCells.Fixed(cols), mod.gridBounds37(vm), state = grid37, contentPadding = pad,
+        GridCells.Fixed(if (g52) 2 else cols), mod.gridBounds37(vm), state = grid37, contentPadding = pad, // prompt 52 (AND52B): 2 kolonner i 3a
         verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Prompt 41: 17. mai-Hjem (bare på dagen / «Vis nå», bak bryteren «17. mai-design») øverst.
@@ -795,7 +795,7 @@ private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose
         // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (admin; ✕ skjuler «Tilgjengelig» i 24 t).
         if (vm.editPage != "hjem" && upd30Show(vm, home = true)) item(key = "upd30", span = { GridItemSpan(maxLineSpan) }) { UpdateBanner30(vm, home = true) }
         if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
-        pageGridSecs(vm, "hjem", secs37, wide, skip = { k -> (k == "h40" && vm.p40.hlMissing) || (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) ||
+        homeGridSecs52(vm, g52, secs37, wide, skip = { k -> (k == "h40" && vm.p40.hlMissing) || (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) ||
             (k == "h3" && trip && vm.p41.homeCard == "instead") || tilesHide50(vm, k, secs37) || (k == "h43" && vm.homeMediaHidden43()) ||
             (k == "h11" && vm.editPage != "hjem" && !vm.activeTrials46()) }) { k -> // prompt 46: Prøveperioder bare med aktive prøver (vises i wiggle)
             when (k) {
@@ -1014,7 +1014,8 @@ internal fun newsTime(iso: String?): String {
 
 /* ---------------- Finans ---------------- */
 
-private val FIN_SECS = listOf(PSec("f1", "Saldo"), PSec("f2", "Kvitteringer"), PSec("f3", "Siste transaksjoner"), PSec("f4", "Budsjett"))
+private val FIN_SECS = listOf(PSec("f1", "Saldo", hold = false), // prompt 52: hold på saldokortet åpner utseende-arket, ikke wiggle
+    PSec("f2", "Kvitteringer"), PSec("f3", "Siste transaksjoner"), PSec("f4", "Budsjett"))
 
 @Composable
 private fun PaperFinance(vm: AppViewModel, navBottom: Dp) {
@@ -1026,7 +1027,7 @@ private fun PaperFinance(vm: AppViewModel, navBottom: Dp) {
         pageSecs(vm, "finans", FIN_SECS) { k ->
             when (k) {
                 // Prompt 43: nytt saldokort (4b i Papir): bare saldo og brukt denne måneden (ui/Fin43.kt). Trykk → Kontoer.
-                "f1" -> SaldoCard43(saldo, sm?.ut ?: 0.0) { vm.go(Screen.Accounts) }
+                "f1" -> SaldoCard52(vm, saldo, sm?.ut ?: 0.0) { vm.go(Screen.Accounts) } // prompt 52: Standard · Glass · Kvittering · Fargebunn
                 // «N kvitteringer til gjennomgang»: teksten åpner køen, «Skann ›» åpner skannearket. Skjules når køen er tom.
                 "f2" -> if (review > 0) ReviewBanner(review, open = { vm.openReview() }, scan = { vm.scanTarget = "receipt"; vm.scanSheet = true })
                 "f3" -> Column {

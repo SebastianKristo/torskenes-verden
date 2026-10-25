@@ -223,10 +223,12 @@ internal fun ScanPage(vm: AppViewModel) = Pages {
     val st = vm.boot?.settings
     Section("AI-motor (på serveren)") {
         Group {
-            if (!vm.canEditServer) Info("AI-motor", engineName(st)) else {
-                Choice("Ollama lokalt", "Bildet forlater aldri huset", st?.provider == "ollama" && st?.fallback != true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
-                Choice("Gemini", "Raskest og mest presis", st?.provider == "gemini") { vm.saveSetting("provider", "gemini"); vm.saveSetting("fallback", false) }
-                Choice("Ollama + Gemini", "Lokalt først, Gemini som reserve", st?.provider == "ollama" && st?.fallback == true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", true) }
+            // Prompt 52 (AND52A): kvitteringer leses bare lokalt – Gemini er fjernet fra kjeden, også som reserve.
+            if (!vm.canEditServer) Info("Kvitteringer", engineName(st)) else {
+                // Eneste valg: lokal kjede. Et gammelt «gemini»/«ollama + reserve» lagres som ollama uten reserve ved trykk (serveren migrerer også).
+                Choice("Glimt leser lokalt", "Telefon → Mac Vision → Tesseract → lokal modell → kø. Bildet forlater aldri huset.", true) {
+                    if (st?.provider != "ollama" || st.fallback) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
+                }
             }
         }
         if (!vm.canEditServer) Note(SERVER_LOCKED)
@@ -303,7 +305,7 @@ internal fun AboutPage(vm: AppViewModel) = Pages {
     val ctx = LocalContext.current
     val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "–" }
     Group {
-        Info("Appversjon", "FinansHub $version")
+        Info("Appversjon", "Homelab $version")
         Info("Serverversjon", vm.me?.version ?: "–")
         Info("Plattform", "Android ${android.os.Build.VERSION.RELEASE}")
     }
@@ -322,10 +324,11 @@ internal fun AboutPage(vm: AppViewModel) = Pages {
 internal fun AiPage(vm: AppViewModel) = Pages {
     val st = vm.boot?.settings
     Group {
-        if (!vm.canEditServer) Info("AI-motor", engineName(st)) else {
-            Choice("Ollama lokalt", "Bildet forlater aldri huset", st?.provider == "ollama" && st?.fallback != true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
-            Choice("Gemini", "Raskest og mest presis", st?.provider == "gemini") { vm.saveSetting("provider", "gemini"); vm.saveSetting("fallback", false) }
-            Choice("Ollama + Gemini", "Lokalt først, Gemini som reserve", st?.provider == "ollama" && st?.fallback == true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", true) }
+        if (!vm.canEditServer) Info("Kvitteringer", engineName(st)) else {
+            // Eneste valg: lokal kjede. Et gammelt «gemini»/«ollama + reserve» lagres som ollama uten reserve ved trykk (serveren migrerer også).
+            Choice("Glimt leser lokalt", "Telefon → Mac Vision → Tesseract → lokal modell → kø. Bildet forlater aldri huset.", true) {
+                if (st?.provider != "ollama" || st.fallback) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
+            }
         }
     }
     if (!vm.canEditServer) Note("AI-motor, modeller og minimum sikkerhet: $SERVER_LOCKED")
@@ -333,8 +336,8 @@ internal fun AiPage(vm: AppViewModel) = Pages {
         Info("Minimum sikkerhet", "${st?.minConf ?: 85} %")
         Toggle("Kategoriser automatisk", "Regler først, deretter AI", st?.autoCat == true) { vm.saveSetting("autoCat", it) }
     }
-    Note(if (vm.canEditServer) "Nøkler og modeller for Ollama og Gemini legges inn i FinansHub på PC. De lagres bare på serveren."
-        else "Nøkler og modeller for Ollama og Gemini er felles for serveren. $SERVER_LOCKED")
+    Note(if (vm.canEditServer) "Glimt leser kvitteringer lokalt (telefon, Mac Vision, Tesseract og lokal modell). Kvitteringsbilder sendes aldri til skytjenester. Modeller settes i FinansHub på PC."
+        else "Glimt leser kvitteringer lokalt. Modellene er felles for serveren. $SERVER_LOCKED")
 }
 
 /** ISO2: serveroppsettet (AI-motorer, modeller, tidsgrenser, SMB) kan bare endres når canEditServer er true. */
@@ -342,9 +345,8 @@ internal const val SERVER_LOCKED = "Settes opp av administrator."
 
 internal fun engineName(st: no.kristo.finanshub.Settings?): String = when {
     st == null -> "–"
-    st.provider == "gemini" -> "Gemini"
-    st.provider == "ollama" && st.fallback -> "Ollama + Gemini"
-    st.provider == "ollama" -> "Ollama lokalt"
+    // Prompt 52: Gemini leser ikke kvitteringer lenger – gamle verdier (gemini, ollama + reserve) vises som lokal AI.
+    st.provider == "gemini" || st.provider == "ollama" -> "Lokal AI"
     else -> st.provider.replaceFirstChar { it.uppercase() }
 }
 

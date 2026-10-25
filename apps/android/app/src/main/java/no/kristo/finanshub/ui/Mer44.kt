@@ -86,7 +86,8 @@ private fun home44(vm: AppViewModel): Pair<Int, Int>? {
 
 /** Ikke-redigering: søkefelt, kort/rader og Innstillinger. Kalles fra MerList28. */
 internal fun LazyListScope.mer44(vm: AppViewModel, vis: List<MerItem28>, wide: Boolean, onLong: () -> Unit) {
-    item(key = "mer44-q") { MerSearch44() }
+    val (sok52, tit52, vkt52) = Mer52.vis(vm, "mer") // prompt 52: skjul søkefelt og titler (wiggle)
+    if (sok52) item(key = "mer44-q") { MerSearch44() }
     val q = norm44(Mer44.q)
     val rows = vis.filter { it.key != "innst" }.map { MerItem28(it.key, it.title, liveSub44(vm, it.key, it.sub), it.index, it.go) }
         .filter { q.isEmpty() || norm44(it.title).contains(q) || norm44(it.sub).contains(q) }
@@ -96,7 +97,7 @@ internal fun LazyListScope.mer44(vm: AppViewModel, vis: List<MerItem28>, wide: B
     val cards = if (low) emptyList() else big.mapNotNull { k -> rows.firstOrNull { it.key == k } }
     val tools = if (low) rows else rows.filter { it.key !in big }
     if (cards.isNotEmpty()) {
-        if (Mer45.showTitle(vm)) item(key = "mer44-hl") { PLabel(Mer45.title(vm), modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
+        if (tit52 && Mer45.showTitle(vm)) item(key = "mer44-hl") { PLabel(Mer45.title(vm), modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
         cards.chunked(if (wide) 4 else 2).forEachIndexed { i, ch ->
             item(key = "mer44-c$i") {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -107,7 +108,7 @@ internal fun LazyListScope.mer44(vm: AppViewModel, vis: List<MerItem28>, wide: B
         }
     }
     if (tools.isNotEmpty()) {
-        if (!low) item(key = "mer44-tl") { PLabel("Verktøy", modifier = Modifier.padding(start = 4.dp, top = 6.dp)) }
+        if (!low && vkt52) item(key = "mer44-tl") { PLabel("Verktøy", modifier = Modifier.padding(start = 4.dp, top = 6.dp)) }
         item(key = "mer-card") { PCard(shadow = true) { tools.forEachIndexed { i, r -> MerRowNormal28(vm, r, top = i > 0, onLong = onLong) } } }
     }
     if (rows.isEmpty()) item(key = "mer44-none") { Text("Ingen moduler heter «${Mer44.q}».", color = PaperPal.current.mut, fontSize = 13.sp, modifier = Modifier.padding(4.dp)) }

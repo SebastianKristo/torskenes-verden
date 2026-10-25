@@ -60,11 +60,16 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
     val fm = LocalFocusManager.current
     val q = vm.q29
     val text = q.homeQ
+    val go0: () -> Unit = {
+        val tx = q.homeQ
+        // Prompt 41: huskebeskjed (ikke spørsmål, ikke time) → Glimt deler opp i punkter i Huskeliste. Prompt 52: også når AI sier «huske».
+        if (q.engine == "ai" && q.homeAppt == null && (isHuske41(tx) || vm.qpHuske52(tx))) { vm.huskeHome41(tx); vm.setHomeQuery29("") }
+        else vm.goHome29()?.let { openLink(ctx, it) }
+    }
     val go: () -> Unit = {
         fm.clearFocus()
-        // Prompt 41: huskebeskjed (ikke spørsmål, ikke time) → Glimt deler opp i punkter i Huskeliste.
-        if (q.engine == "ai" && q.homeAppt == null && isHuske41(text)) { vm.huskeHome41(text); vm.setHomeQuery29("") }
-        else vm.goHome29()?.let { openLink(ctx, it) }
+        // Prompt 52 (AND52B): Enter mens AI tolker → vent opptil 2,5 s og bruk AI-svaret.
+        if (q.engine == "ai" && vm.qpPending52(text)) vm.awaitQp52(text) { go0() } else go0()
     }
     // Prompt 45 (claude-code-fold-skannikon-og-sokefelt.md): i Glimt-panelet på Fold/brett ligger svar og forslag OVER feltet
     // (svaret maks 220 dp, scroller), så de aldri havner bak tastaturet. Telefon: under feltet som før.
@@ -124,6 +129,7 @@ private fun Search29Extras45(vm: AppViewModel, text: String, above: Boolean, go:
             if (above) Box(Modifier.fillMaxWidth().heightIn(max = 220.dp).verticalScroll(rememberScrollState())) { HomeAnswer31(vm) } else HomeAnswer31(vm)
         }
         Search51Hint(vm, text) // prompt 51 (ANDFEAT51): treff fra felles søk og «Søk i alt ›» (ui/Search51Ui.kt)
+        if (appt == null && text.isNotBlank() && vm.qpPending52(text)) Text("✦ Glimt tolker …", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 14.dp)) // prompt 52
         if (appt != null && text.isNotBlank()) {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).clickable(role = Role.Button, onClickLabel = "Legg i kalender") { go() }
@@ -133,7 +139,9 @@ private fun Search29Extras45(vm: AppViewModel, text: String, above: Boolean, go:
                 WxIcon(H29_CAL, p.bg, 16.dp, stroke = 2f)
                 Column(Modifier.weight(1f)) {
                     Text(appt.title, color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(quickLabel29(appt.date, appt.start), color = p.bg.copy(alpha = .8f), fontSize = 12.sp, maxLines = 1)
+                    // Prompt 52: sted fra tolkningen og «✦ tolker …» mens AI-tilkoblingen jobber.
+                    Text(listOf(quickLabel29(appt.date, appt.start), appt.place).filter { it.isNotBlank() }.joinToString(" · ") + if (vm.qpPending52(text)) " · ✦ tolker …" else "",
+                        color = p.bg.copy(alpha = .8f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(Modifier.height(32.dp).clip(CircleShape).background(p.bg).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
                     Text("Legg i kalender", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1)

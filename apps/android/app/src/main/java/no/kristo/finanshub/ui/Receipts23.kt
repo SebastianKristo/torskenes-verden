@@ -107,11 +107,11 @@ internal fun AppViewModel.approve23(r: Receipt) = launchNav {
     } finally { rc23.busy = null }
 }
 
-/** ✦ På nytt / ✦ Analyser på nytt: kvitteringen leses igjen med Gemini (går til KØ). */
+/** ✦ På nytt / ✦ Analyser på nytt: kvitteringen leses igjen lokalt (går til KØ). Prompt 52: aldri Gemini. */
 internal fun AppViewModel.reread23(id: String) = launchNav {
-    apiNav { post("/receipts/$id/reprocess?provider=gemini") }
+    apiNav { post("/receipts/$id/reprocess") }
     rc23.open = null
-    message = "✦ Leses på nytt med Gemini"
+    message = "✦ Glimt leser lokalt på nytt"
     refreshReceipts23()
 }
 
@@ -178,7 +178,7 @@ internal fun PaperReceipts23(vm: AppViewModel, navBottom: Dp, camera: () -> Unit
                 }
                 Column(Modifier.weight(1f)) {
                     Text("Ta bilde av kvittering", color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 17.sp, maxLines = 1)
-                    Text("Bakkamera · ✦ Gemini leser beløp og butikk", color = p.mut, fontFamily = PaperFonts.sans, fontSize = 13.sp, maxLines = 2)
+                    Text("Bakkamera · ✦ Glimt leser lokalt beløp og butikk", color = p.mut, fontFamily = PaperFonts.sans, fontSize = 13.sp, maxLines = 2)
                 }
             }
         }

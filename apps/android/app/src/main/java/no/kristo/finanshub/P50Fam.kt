@@ -141,7 +141,10 @@ class FamState50 {
     @Volatile var lastLoad = 0L
     @Volatile var regionsOk = false
     @Volatile var regionsVersion = -1L
-    internal val photoCache = LruCache<String, Bitmap>(48)
+    /** Prompt 52 (AND52A, Familie-krasj): profilbildene er nedskalert (maks 2× visning) og cachen telles i byte (8 MB), ikke i antall. */
+    internal val photoCache = object : LruCache<String, Bitmap>(8 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount.coerceAtLeast(1)
+    }
     var photoVer by mutableStateOf(0)
 }
 
@@ -553,7 +556,10 @@ fun AppViewModel.familyLink50(uri: Uri) {
 suspend fun AppViewModel.photo50(url: String?): Bitmap? {
     if (url.isNullOrBlank() || !url.startsWith("/")) return null
     fam50.photoCache.get(url)?.let { return it }
-    val b = image(url) ?: return null
+    // Prompt 52: før ble originalen dekodet i full størrelse (et 12–50 MP profilbilde = 48–200 MB per person). Det ga OOM og
+    // «Canvas: trying to draw too large bitmap» når Familie åpnet med flere profilbilder. Nå: maks 2× største visning (52 dp).
+    val px = (52 * 2 * appCtx50.resources.displayMetrics.density).toInt().coerceIn(96, 400)
+    val b = runCatching { decodeScaled52(api50 { bytes(url) }, px) }.getOrNull() ?: return null
     fam50.photoCache.put(url, b)
     return b
 }

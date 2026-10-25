@@ -360,7 +360,7 @@ private fun Review24(vm: AppViewModel, d: HomeDetail24, rv: List<HomeEntry24>) {
                     ReceiptThumb24(vm, id, e, Modifier.size(42.dp, 52.dp))
                     Column(Modifier.weight(1f)) {
                         Text(e.description, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(if (ai) "Gemini leser kvitteringen …" else "AI foreslår ${e.category}" + (e.paidBy?.let { " · $it" } ?: ""), color = if (ai) p.lab else p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (ai) "Glimt leser lokalt …" else "AI foreslår ${e.category}" + (e.paidBy?.let { " · $it" } ?: ""), color = if (ai) p.lab else p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Text(if (ai) "…" else kr24(e.amount), color = p.ink, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
                     Text("›", color = p.mut, fontSize = 17.sp)
@@ -863,21 +863,23 @@ private fun EntrySheet24(vm: AppViewModel, d: HomeDetail24, e: HomeEntry24) {
                 }
                 SheetButton30("Ferdig") { s.sel = null }
             }
-            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.width(96.dp).heightIn(min = 124.dp).fillMaxHeight().clip(RoundedCornerShape(12.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                    if (e.receiptId != null) ServerImage(vm, "/finans/api/folders/$id/receipts/${e.receiptId}/thumb", Modifier.matchParentSize())
-                    else Text("Ingen kvittering", color = p.mut, fontSize = 12.sp, textAlign = TextAlign.Center)
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (d.canEdit && e.status != "ai") {
-                        EntryAmountDate30(vm, id, e)
-                        e.paidBy?.let { Text("Lagt til av $it", color = p.mut, fontSize = 12.sp) }
-                    } else {
-                        PSerif(if (e.status == "ai") "…" else kr24(e.amount), 34.sp, maxLines = 1)
-                        Text(ddmm24(e.date) + (e.paidBy?.let { " · lagt til av $it" } ?: ""), color = p.mut, fontSize = 13.sp)
-                    }
-                    e.aiShort?.let { Text("✦ $it", color = p.ink, fontSize = 13.sp, lineHeight = 18.9.sp, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(p.card).padding(12.dp, 10.dp)) }
-                }
+            // Prompt 52 (claude-code-kvittering-lokal-lik-overalt.md, mobil): samme kvitteringsvisning som Finans → transaksjon –
+            // kortet (ReceiptHead52: logo, butikk, «kategori · dato · bolig», beløp, ✦ Glimt) og så «ORIGINAL KVITTERING».
+            val rc52 by produceState<BoligRc52?>(null, id, e.id) { value = runCatching { parseBoligRc52(JSONObject(vm.api50 { get("/homes/$id/expenses/${e.id}") })) }.getOrNull() }
+            ReceiptHead52(
+                vm, null, e.description.substringBefore(" · "), e.color?.let { runCatching { color(it) }.getOrNull() } ?: 0xFF7A7468,
+                listOfNotNull(rc52?.category ?: e.category, ddmm24(e.date), d.home.name).joinToString(" · "),
+                if (e.status == "ai") "…" else "−${kr24(e.amount)}", glimt = if (e.status == "ai") "Glimt leser lokalt …" else rc52?.glimt ?: e.aiShort, logoUrl = rc52?.logoUrl,
+                extra = if (d.canEdit && e.status != "ai") { { EntryAmountDate30(vm, id, e); e.paidBy?.let { Text("Lagt til av $it", color = p.mut, fontSize = 12.sp) } } } else null,
+            )
+            PLabel("Original kvittering", modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+            val full52 = rc52?.fileUrl ?: e.receiptId?.let { "/finans/api/folders/$id/receipts/$it/file" }
+            if (e.receiptId == null) Text("Ingen kvittering er lagt ved.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(start = 4.dp))
+            else if (rc52 != null && rc52!!.lines.isNotEmpty()) ReceiptSlip52(e.description.substringBefore(" · "), e.date, rc52!!.lines, e.amount,
+                onOpen = full52?.takeIf { rc52?.isPdf != true }?.let { u -> { vm.launch50 { vm.receiptFull = vm.image(u) } } })
+            else Box(Modifier.fillMaxWidth().heightIn(min = 220.dp).clip(RoundedCornerShape(12.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(12.dp))
+                .clickable(enabled = full52 != null) { full52?.let { u -> vm.launch50 { vm.receiptFull = vm.image(u) } } }, contentAlignment = Alignment.Center) {
+                ServerImage(vm, rc52?.thumbUrl ?: "/finans/api/folders/$id/receipts/${e.receiptId}/thumb", Modifier.matchParentSize())
             }
             FieldLabel24("Kategori")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

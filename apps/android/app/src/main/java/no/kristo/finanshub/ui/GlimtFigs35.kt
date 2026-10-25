@@ -60,21 +60,21 @@ import kotlin.math.sqrt
  */
 
 object Fig35 {
-    val IDS = listOf("glimt", "halo", "boble", "antenne", "bane", "pastell", "natt", "sky", "drape", "ugle", "stjerne", "spire", "gris")
+    val IDS = listOf("glimt", "halo", "boble", "antenne", "bane", "pastell", "natt", "sky", "drape", "ugle", "stjerne", "spire", "gris", "blekk") // prompt 52: Blekksprut (ui/Blekk52.kt)
     private val NAMES = mapOf(
         "glimt" to "Glimt", "halo" to "Halo", "boble" to "Boble", "antenne" to "Antenne", "bane" to "Bane", "pastell" to "Pastell", "natt" to "Natt",
-        "sky" to "Sky", "drape" to "Dråpe", "ugle" to "Ugle", "stjerne" to "Stjerne", "spire" to "Spire", "gris" to "Gris",
+        "sky" to "Sky", "drape" to "Dråpe", "ugle" to "Ugle", "stjerne" to "Stjerne", "spire" to "Spire", "gris" to "Gris", "blekk" to "Blekksprut",
     )
     /** Navnet i boblen (GLIMT / SKY / DRÅPE …) og fargen på det. */
     private val WHO = mapOf("gris" to "GRIS", "glimt" to "GLIMT", "natt" to "GLIMT", "sky" to "SKY", "drape" to "DRÅPE", "ugle" to "UGLE", "stjerne" to "STJERNE", "spire" to "SPIRE",
-        "halo" to "GLIMT", "boble" to "GLIMT", "antenne" to "GLIMT", "bane" to "GLIMT", "pastell" to "GLIMT")
+        "halo" to "GLIMT", "boble" to "GLIMT", "antenne" to "GLIMT", "bane" to "GLIMT", "pastell" to "GLIMT", "blekk" to "BLEKKSPRUT")
     private val WHO_C = mapOf("gris" to 0xFFF6B3C1, "glimt" to 0xFFFFC7B8, "natt" to 0xFFFFE7A8, "sky" to 0xFFBCD7EF, "drape" to 0xFF9FD0F2, "ugle" to 0xFFE8C49A,
-        "stjerne" to 0xFFFFB38A, "spire" to 0xFF9FD8A8, "halo" to 0xFFFFC7B8, "boble" to 0xFFFFC7B8, "antenne" to 0xFFFFC7B8, "bane" to 0xFFFFC7B8, "pastell" to 0xFFF4A6A0)
+        "stjerne" to 0xFFFFB38A, "spire" to 0xFF9FD8A8, "halo" to 0xFFFFC7B8, "boble" to 0xFFFFC7B8, "antenne" to 0xFFFFC7B8, "bane" to 0xFFFFC7B8, "pastell" to 0xFFF4A6A0, "blekk" to 0xFFF1A3AD)
     fun name(id: String): String = NAMES[id] ?: "Glimt"
     fun who(id: String): String = WHO[id] ?: "GLIMT"
     fun whoColor(id: String): Color = Color(WHO_C[id] ?: 0xFFFFC7B8)
     /** Høyden i forhold til bredden (wrap(S, mood, kids, h) i fasiten). */
-    fun h(id: String): Float = when (id) { "drape", "spire" -> 1f; "ugle", "gris" -> 1.04f; else -> 1.1f }
+    fun h(id: String): Float = when (id) { "drape", "spire" -> 1f; "ugle", "gris", "blekk" -> 1.04f; else -> 1.1f }
     fun norm(id: String?): String = id?.trim()?.lowercase()?.takeIf { it in IDS } ?: "glimt"
     fun mood(m: String?): String = when (m?.lowercase()) { "glad", "happy", "wave", "done" -> "glad"; "talk", "snakker", "point", "speak" -> "talk"; "sov", "sover", "sleep", "night" -> "sov"; else -> "idle" }
 }
@@ -83,6 +83,7 @@ object Fig35 {
 @Composable
 internal fun GlimtFig35(id: String, size: Dp, mood: String = "idle", modifier: Modifier = Modifier, still: Boolean = false, noJul: Boolean = false) {
     val reduce = reduceMotion31() || still
+    if (id == "blekk") Blekk52.ensure(androidx.compose.ui.platform.LocalContext.current) // prompt 52: kroppen fra ressursene
     val clock = remember { mutableFloatStateOf(0f) }
     if (!reduce) LaunchedEffect(Unit) {
         val t0 = withFrameNanos { it }
@@ -369,6 +370,8 @@ internal fun DrawScope.drawFig35(id: String, S: Float, mood: String, t: Float, a
     val ck = rgba(232, 121, 74, .38f)
     withTransform({ translate(0f, dy); scale(sx, sy, Offset(S / 2, S * hf)) }) {
         when (id) {
+            // Prompt 52 (AND52B): Blekksprut – bildet uten ansikt + ansikt per humør (ui/Blekk52.kt), zz når den sover.
+            "blekk" -> { drawBlekk52(S, mood, t, anim); zz35(S, mood, Color(0xFFB3303F), a) }
             "halo" -> {
                 val g = a.glow(3.2f)
                 glow35(-S * .08f, S * .04f, S * 1.16f, S * .09f, .6f * (.55f + .35f * g), .96f + .1f * g, a.spin(sp))

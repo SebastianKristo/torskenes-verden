@@ -335,7 +335,7 @@ fun AppViewModel.submitQuick29(text: String = q29.text) {
     }
 }
 
-private suspend fun AppViewModel.createDirect29(text: String, r: Quick29Parse) {
+internal suspend fun AppViewModel.createDirect29(text: String, r: Quick29Parse) {
     val d = r.date ?: return
     val allDay = r.start.isNullOrBlank()
     val st = r.start ?: "09:00"
@@ -500,8 +500,10 @@ fun AppViewModel.setHomeQuery29(v: String) {
     q.homeJob = viewModelScope.launch {
         delay(200)
         val r = parseQuick29(t)
-        if (q.homeQ.trim() == t && !isQuestion36(t)) q.homeAppt = r.takeIf { it.ok && it.isAppointment && it.date != null }
+        // Prompt 52: et ferdig AI-svar (quickparse52) for samme tekst vinner over regelparseren.
+        if (q.homeQ.trim() == t && !isQuestion36(t) && p52b.qpRes?.takeIf { p52b.qpText == t } == null) q.homeAppt = r.takeIf { it.ok && it.isAppointment && it.date != null }
     }
+    homeAi52(t) // prompt 52 (AND52B): AI tolker beskjeden med kontekst (P52B.kt)
 }
 
 /** ↵ / «Gå» eller «Legg i kalender». Returnerer adressen som skal åpnes i nettleseren (Google/DuckDuckGo), ellers null. */
@@ -513,7 +515,8 @@ fun AppViewModel.goHome29(): String? {
     val appt = q.homeAppt?.takeIf { !isQuestion36(t) && !isSunQ36(t) }
     q.homeQ = ""; q.homeAppt = null
     suggest("")
-    if (appt != null) { logSearch32b(t, "time"); submitQuick29(t); return null }
+    // Prompt 52: AI-tolket time (tittel, sted, dato) lagres med de feltene, ellers køen som før.
+    if (appt != null) { logSearch32b(t, "time"); if (qpAppt52(t)) launch29 { createDirect29(t, appt) } else submitQuick29(t); return null }
     return when (q.engine) {
         "google" -> googleUrl(t)
         "ddg" -> { logSearch32b(t, "ddg"); "https://duckduckgo.com/?q=" + URLEncoder.encode(t, "UTF-8") }

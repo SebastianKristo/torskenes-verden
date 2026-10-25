@@ -375,7 +375,7 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                             }
                         }
                     }
-                    ChatBubbleImgs50(vm, v, msg.files50) // prompt 50: bildene over teksten
+                    ChatThumbs52(vm, v, msg.files50) // prompt 52: miniatyrer 96 × 120 over boblen (trykk = lysboks)
                     if (s.editIdx == i) {
                         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(v.card).border(1.5.dp, v.ink, RoundedCornerShape(20.dp)).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             BasicTextField(s.editText, { s.editText = it }, textStyle = TextStyle(color = v.ink, fontSize = 15.5.sp, lineHeight = 22.sp, fontFamily = v.sans),
@@ -416,6 +416,7 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                         imgs50.forEachIndexed { k, f -> if (f.name in used50 || msg.readWith50 != null) ChatFilePill50(vm, v, imgs50, k) }
                         Ch27Chips(v, "Brukte", used50.filter { n -> imgs50.none { it.name == n } })
                     }
+                    ThinkSaved52(v, key, msg.think52, msg.thS52) // prompt 52: «✦ Tenkte i 2,1 s ›»
                     Ch27Body(v, msg.content)
                     ChatFinBtn50(vm, v, key, msg.finUrl50) // prompt 50: «Legg i Finans ›»
                     ChatReadWith50(v, msg.readWith50) // prompt 50: «Lest med …»
@@ -447,10 +448,12 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                     // Prompt 31: Glimt-merket (Tenker / Svarer mens teksten strømmer inn) i stedet for «Tenker …»-teksten.
                     Row(Modifier.align(Alignment.CenterVertically), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         GlimtMark31(22.dp, if (s.stream.isEmpty()) GLIMT_TENKER else GLIMT_SVARER)
-                        Ch27Mono((m?.label ?: "Glimt").uppercase() + if (s.stream.isEmpty()) " · TENKER" else "", v.acc)
+                        Ch27Mono((m?.label ?: "Glimt").uppercase(), v.acc)
                     }
                     Ch27Chips(v, "Leser", s.streamTools)
                 }
+                // Prompt 52: «✦ Tenker … 2,1 s ▾» med stegene (modellens egne, eller Glimts når modellen ikke tenker).
+                ThinkLive52(v, s.stream.isNotEmpty(), localSteps52(s.streamTools.isNotEmpty(), m?.label, s.data && s.myDataOn))
                 if (s.stream.isNotEmpty()) Ch27Body(v, s.stream)
                 ChatReadWith50(v, Chat50.busyReadWith) // prompt 50
             }

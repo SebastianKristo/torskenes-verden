@@ -88,7 +88,7 @@ internal fun AppUpdateRow32(vm: AppViewModel) {
     }
     val busy: Boolean = s.phase != "none"
     Column {
-        PRow("FinansHub-appen $cur", sub, if (busy) "›" else if (s.loaded) "✓" else "›", if (busy) p.lab else p.pos, serif = false) {
+        PRow("Homelab-appen $cur", sub, if (busy) "›" else if (s.loaded) "✓" else "›", if (busy) p.lab else p.pos, serif = false) {
             if (!busy) vm.checkAppUpd32(force = true)
         }
         if (busy) Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, bottom = 14.dp)) { AppUpdCard32(vm, home = false) }
@@ -110,7 +110,7 @@ private fun AppUpdCard32(vm: AppViewModel, home: Boolean) {
     }
     val text: String = when (s.phase) {
         "dl" -> "${s.pct} % · sjekksummen kontrolleres før installasjonen."
-        "perm" -> "Android må tillate at FinansHub installerer oppdateringer. Slå på «Installer ukjente apper» for FinansHub, og gå tilbake hit."
+        "perm" -> "Android må tillate at Homelab installerer oppdateringer. Slå på «Installer ukjente apper» for Homelab, og gå tilbake hit."
         "install" -> "Bekreft i dialogen fra Android. Appen starter på nytt etterpå."
         "failed" -> s.error.ifBlank { "Noe gikk galt." }
         else -> s.error.ifBlank { "Du har ${s.current.ifBlank { "–" }}. Lastes ned via hjemmeserveren og installeres over den gamle." }

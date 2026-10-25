@@ -64,6 +64,8 @@ data class ChatMsg27(
     val facts: List<ChatFact41> = emptyList(),
     /** Prompt 50: lagrede vedlegg (miniatyr 480 px fra serveren), «Lest med …» og «Legg i Finans ›» (Chat50.kt). */
     val files50: List<ChatFile50> = emptyList(), val readWith50: String? = null, val finUrl50: String? = null,
+    /** Prompt 52 (AND52A): tankegangen (think: string[]) og tiden den tok (thS). Sendes aldri tilbake til modellen. */
+    val think52: List<String> = emptyList(), val thS52: Double? = null,
 )
 
 data class ChatSet27(
@@ -222,7 +224,8 @@ fun parseChatRow27(o: JSONObject): ChatRow27? {
 fun parseChatMsg27(o: JSONObject): ChatMsg27? {
     val role = o.optStr("role") ?: return null
     if (role == "system") return null
-    val content = o.optString("content", "")
+    val think52 = parseThink52(o) // prompt 52: tankegangen lagres på meldingen
+    val content = stripThink52(o.optString("content", ""))
     // Svarene har meta {model, tokensPerSec, ms, used, stopped} (server/chat.js).
     val meta = o.optJSONObject("meta") ?: o
     val used = meta.optJSONArray("used").strs27().ifEmpty { o.optJSONArray("tools").strs27() }
@@ -240,7 +243,8 @@ fun parseChatMsg27(o: JSONObject): ChatMsg27? {
         emptyList(), meta.optStr("model") ?: o.optStr("model"), used, stats, card, meta.optStr("tool") ?: o.optStr("tool"),
         facts = parseFacts41(meta.optJSONArray("facts")),
         files50 = files50, readWith50 = meta.optJSONObject("readWith")?.optStr("label"),
-        finUrl50 = meta.optJSONObject("receipt")?.optJSONObject("action")?.optStr("url"))
+        finUrl50 = meta.optJSONObject("receipt")?.optJSONObject("action")?.optStr("url"),
+        think52 = if (role == "assistant") think52.first else emptyList(), thS52 = if (role == "assistant") think52.second else null)
 }
 
 fun chatStats27(tps: Double, ms: Double, stopped: Boolean): String {
@@ -755,6 +759,7 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
     if (noData) body.put("withoutMyData", true)
     s.busy = true; s.stream = ""; s.streamTools = tools; s.stopped = false
     Chat50.busyReadWith = null
+    Think52.reset() // prompt 52: «✦ Tenker … 2,1 s»
     val t0 = System.currentTimeMillis()
     s.job = viewModelScope.launch {
         var used: List<String> = s.streamTools
@@ -772,8 +777,14 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
                         d.optStr("title")?.let { if (s.title.isBlank()) s.title = it }
                         d.optJSONObject("readWith")?.optStr("label")?.let { read50 = it; Chat50.busyReadWith = it } // prompt 50
                     }
-                    "delta" -> s.stream += d.optString("text", "")
+                    // Prompt 52: tankegangen strømmer som egne hendelser, som `thinking` på delta eller i <think>…</think>.
+                    // SRV52: {step, i, source:"model"|"glimt", s} – én linje per steg; eldre/andre: {text}/{thinking} som fri tekst.
+                    "thinking", "think" -> d.optStr("step")?.let { Think52.addStep(it) } ?: Think52.addText(d.optStr("text") ?: d.optStr("thinking"))
+                    "thinking_done" -> Think52.markAnswer()
+                    "step", "think_step" -> Think52.addStep(d.optStr("text") ?: d.optStr("step"))
+                    "delta" -> { Think52.addText(d.optStr("thinking")); s.stream += Think52.filter(d.optString("text", "")) }
                     "done" -> {
+                        d.optJSONArray("think")?.let { a -> Think52.setAll((0 until a.length()).mapNotNull { a.optString(it).trim().takeIf { t -> t.isNotEmpty() } }) }
                         tps = d.optDouble("tokensPerSec", Double.NaN); ms = d.optDouble("ms", Double.NaN)
                         d.optJSONArray("used").strs27().takeIf { it.isNotEmpty() }?.let { used = it }
                         facts41 = parseFacts41(d.optJSONArray("facts"))
@@ -782,7 +793,10 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
                     }
                     "facts" -> facts41 = parseFacts41(d.optJSONArray("facts"))
                     "error" -> err = d.optStr("error") ?: "Noe gikk galt"
-                    else -> d.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("delta")?.optString("content", "")?.let { s.stream += it }
+                    else -> d.optJSONArray("choices")?.optJSONObject(0)?.optJSONObject("delta")?.let { dl ->
+                        Think52.addText(dl.optStr("reasoning_content") ?: dl.optStr("reasoning")) // prompt 52
+                        s.stream += Think52.filter(dl.optString("content", ""))
+                    }
                 }
             }
         } catch (e: CancellationException) {
@@ -815,7 +829,9 @@ fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Bool
             stopped -> "$full …"
             else -> full
         }
-        s.msgs = s.msgs + ChatMsg27("assistant", content, model = m.id, used = used, stats = chatStats27(tps, ms, stopped), facts = facts41, readWith50 = read50, finUrl50 = fin50)
+        Think52.markAnswer()
+        s.msgs = s.msgs + ChatMsg27("assistant", content, model = m.id, used = used, stats = chatStats27(tps, ms, stopped), facts = facts41, readWith50 = read50, finUrl50 = fin50,
+            think52 = Think52.lines, thS52 = Think52.secs().takeIf { Think52.lines.isNotEmpty() })
         s.busy = false; s.stream = ""; s.streamTools = emptyList(); Chat50.busyReadWith = null
         if (err != null) Haptics.error()
         loadChats27()

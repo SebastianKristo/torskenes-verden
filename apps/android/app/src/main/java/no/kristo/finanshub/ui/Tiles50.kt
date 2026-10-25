@@ -72,10 +72,10 @@ internal fun tilesHide50(vm: AppViewModel, k: String, secs: List<PSec>): Boolean
     (k == "h3" || k == "h6") && vm.homeTiles50() && secs.any { it.key == "hm" } && "hm" !in vm.pageHidden("hjem")
 
 /** Én avgang i flisen: linje, farger, mål og minutter. */
-private data class TileDep50(val line: String, val color: Long, val ink: Color, val to: String, val num: String, val unit: String)
+internal data class TileDep50(val line: String, val color: Long, val ink: Color, val to: String, val num: String, val unit: String)
 
 @Composable
-private fun tileDeps50(vm: AppViewModel): List<TileDep50> {
+internal fun tileDeps50(vm: AppViewModel): List<TileDep50> {
     if (homeRuter27(vm)) {
         val s = vm.b27
         val shown = vm.homeShown27()
@@ -142,7 +142,7 @@ private fun Tile50(bg: Color, label: String, modifier: Modifier, onClick: () -> 
 private fun TileLabel50(text: String, color: Color) = PLabel(text, color, 10.sp)
 
 @Composable
-private fun AvgangTile50(vm: AppViewModel, deps: List<TileDep50>, modifier: Modifier) {
+internal fun AvgangTile50(vm: AppViewModel, deps: List<TileDep50>, modifier: Modifier) {
     val t = tileTok50
     val r = deps.firstOrNull()
     val r2 = deps.getOrNull(1)
@@ -164,7 +164,7 @@ private fun AvgangTile50(vm: AppViewModel, deps: List<TileDep50>, modifier: Modi
 }
 
 @Composable
-private fun FinTile50(vm: AppViewModel, modifier: Modifier) {
+internal fun FinTile50(vm: AppViewModel, modifier: Modifier) {
     val p = PaperPal.current
     val saldo = vm.boot?.accounts?.sumOf { it.balance }
     val review = vm.boot?.reviewCount ?: vm.summary?.review?.size ?: 0
@@ -176,7 +176,7 @@ private fun FinTile50(vm: AppViewModel, modifier: Modifier) {
 }
 
 @Composable
-private fun MatTile50(vm: AppViewModel, modifier: Modifier) {
+internal fun MatTile50(vm: AppViewModel, modifier: Modifier) {
     val t = tileTok50
     Tile50(t.mat, "Mat", modifier, { vm.paperTab("mat") }) {
         TileLabel50("Middag", t.matLab)
@@ -185,7 +185,7 @@ private fun MatTile50(vm: AppViewModel, modifier: Modifier) {
 }
 
 @Composable
-private fun DomTile50(vm: AppViewModel, modifier: Modifier) {
+internal fun DomTile50(vm: AppViewModel, modifier: Modifier) {
     val p = PaperPal.current
     val dom = vm.domainToday
     Tile50(p.card, "Domener", modifier, { vm.domSection = "oversikt"; vm.go(Screen.Domains) }, edge = false) {
@@ -206,7 +206,7 @@ private fun famLine50(list: List<PosCard>?): String {
 }
 
 @Composable
-private fun FamTile50(vm: AppViewModel, modifier: Modifier) {
+internal fun FamTile50(vm: AppViewModel, modifier: Modifier) {
     val t = tileTok50
     val list = vm.famPositions
     Tile50(t.fam, "Familie", modifier, { vm.openFamily() }) {

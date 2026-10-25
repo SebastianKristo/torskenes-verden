@@ -55,7 +55,7 @@ internal fun AppNameSheet24(vm: AppViewModel) {
             PSerif("Navn på appen", 24.sp)
             Text("Vises øverst på Hjem, i widgets og i varsler.", color = p.mut, fontSize = 13.sp)
             // Under ikonet står et ferdig navn (eller standardnavnet), siden Android ikke kan endre etiketten fritt.
-            HomePreview24(vm.appInfo.icon, if (preset) v else (vm.launcherLabel ?: "FinansHub"))
+            HomePreview24(vm.appInfo.icon, if (preset) v else (vm.launcherLabel ?: "Homelab"))
             PField("Navn (maks 20 tegn)", name, { name = it.take(20) }, placeholder = "Homelab", onDone = { vm.saveAppName(name); vm.appNameEdit = false })
             Text("${name.length} / 20", color = p.mut, fontSize = 11.5.sp, fontFamily = PaperFonts.mono)
             PLabel("Ferdige navn (også under ikonet)")

@@ -1620,6 +1620,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         applyLayout24a(raw)
         applyLayout26b(raw)
         applyLayout32b(raw) // prompt 32: secNav, hs_timeout_s og search_history
+        runCatching { no.kristo.finanshub.ui.Mer52.apply(this, raw); no.kristo.finanshub.ui.Sal52.apply(this, raw) } // prompt 52 (AND52A): Mer-skjuling og saldokort
         val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
         onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
@@ -1647,6 +1648,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Prompt 41: Oslo fra lufta (Wikimedia Commons) etter tid på døgnet, nytt bilde hver hele time (P41.kt). Feiler alle: serverens bakgrunn.
         if (kind == "oslo") oslo41()?.let { (bmp, credit) ->
+            bgInfo = null; photoGradient = emptyList(); photoCredit = credit; photo = bmp
+            photoThumbs = photoThumbs + (kind to bmp); photoFailed = photoFailed - kind; photoError = null
+            return
+        }
+        // Prompt 52 (AND52B): «Vær nå» velger bilde etter værtype × tid på døgnet (P52B.kt). Feiler alle: serverens bakgrunn.
+        if (kind == "weather") runCatching { vaer52() }.getOrNull()?.let { (bmp, credit) ->
             bgInfo = null; photoGradient = emptyList(); photoCredit = credit; photo = bmp
             photoThumbs = photoThumbs + (kind to bmp); photoFailed = photoFailed - kind; photoError = null
             return
@@ -2251,7 +2258,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var editPage by mutableStateOf<String?>(null)
 
     fun pageOrder(page: String, keys: List<String>): List<String> {
-        val saved = (pageLayouts[page]?.order ?: emptyList()).filter { it in keys }.distinct()
+        // Prompt 52 (AND52B): Hjem 3a – de fem flisene (h52av … h52do) står der «Fliser» (hm) sto i et lagret oppsett.
+        val raw = (pageLayouts[page]?.order ?: emptyList()).let { o -> if (page == "hjem" && "h52av" in keys && "hm" !in keys && o.none { it.startsWith("h52") }) o.flatMap { if (it == "hm") no.kristo.finanshub.ui.TILE_KEYS52 else listOf(it) } else o }
+        val saved = raw.filter { it in keys }.distinct()
         // Prompt 24: nye kort (f.eks. Bursdager h9) legges inn etter nærmeste kort foran dem i standardrekkefølgen,
         // i tillegg til den lagrede rekkefølgen. Ingenting erstattes eller faller ut.
         val out = saved.toMutableList()
@@ -2749,8 +2758,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         ruterOpen = true
         stopEdit = false
         ruterJob?.cancel()
+        // Prompt 52 (AND52B): listen tegnes fra bufferen i første frame; ny henting bare når dataene er eldre enn 30 s (stille i bakgrunnen).
+        runCatching { seedRuter52() }
+        if (stopSel == null || myStops.none { it.id == stopSel }) stopSel = myStops.firstOrNull()?.id
         ruterJob = viewModelScope.launch {
-            loadStopsNow()
+            if (!ruterFresh52()) loadStopsNow()
             // Sanntid: nye tider hvert 30. sekund mens siden er åpen.
             while (ruterOpen) { kotlinx.coroutines.delay(30_000); if (ruterOpen) refreshDeps() }
         }
@@ -2759,18 +2771,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun loadStopsNow() {
         stopsError = null
         try {
-            myStops = parseStopList(api.hlGet("/me/stops"))
+            val raw = api.hlGet("/me/stops")
+            myStops = parseStopList(raw)
+            runCatching { cacheStops52(raw) } // prompt 52: Mine stopp i bufferen
             if (stopSel == null || myStops.none { it.id == stopSel }) stopSel = myStops.firstOrNull()?.id
             refreshDeps()
         } catch (e: ApiException) {
-            stopsError = if (e.status == 404) "Avganger med egne stopp trenger en nyere Homelab-server." else e.message
+            // Prompt 52: feil ved henting – behold det som vises; feilmelding bare når det ikke finnes noe å vise.
+            if (myStops.isEmpty()) stopsError = if (e.status == 404) "Avganger med egne stopp trenger en nyere Homelab-server." else e.message
         }
     }
     private suspend fun refreshDeps() {
         val out = stopDeps.toMutableMap()
         for (st in myStops) {
-            runCatching { parseStopDeps(api.hlGet("/ruter/departures?stop=" + URLEncoder.encode(st.id, "UTF-8") + "&n=20", timeout = 12_000)) }
-                .getOrNull()?.let { out[st.id] = it.copy(stop = it.stop.copy(name = st.name.ifBlank { it.stop.name })) }
+            runCatching { api.hlGet("/ruter/departures?stop=" + URLEncoder.encode(st.id, "UTF-8") + "&n=20", timeout = 12_000).let { raw -> raw to parseStopDeps(raw) } }
+                .getOrNull()?.let { (raw, sd) ->
+                    val v = sd.copy(stop = sd.stop.copy(name = st.name.ifBlank { sd.stop.name }))
+                    out[st.id] = v
+                    runCatching { cacheDeps52(st.id, raw, v); p52b.ruterAt = System.currentTimeMillis() } // prompt 52: hurtigbuffer per stopp
+                }
         }
         stopDeps = out
     }
@@ -3729,6 +3748,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal val appCtx51: Context get() = appCtx
     /** Godkjent innlogging (finishUrl) legges til som en vanlig innlogging. */
     internal fun addAccount51(srv: String, r: LoginResult) = addQrAccount46(srv, r)
+
+    /* ---------- Prompt 52 (AND52B): Ruter med en gang, Vær nå, kalenderkontekst, brief-kort, figur per bruker, logoer (P52B.kt, ui/Ui52B.kt, ui/Blekk52.kt) ---------- */
+    val p52b = P52BState()
+    internal suspend fun <T> api52b(f: suspend Api.() -> T): T = api.f()
+    internal fun launch52b(block: suspend () -> Unit) = launch(block)
+    internal fun launchJob52b(block: suspend () -> Unit): kotlinx.coroutines.Job = launch(block)
+    internal val appCtx52b: Context get() = appCtx
+    /** Mine stopp/avgangene fra bufferen eller forhåndshentingen (null = uendret). */
+    internal fun setRuter52(stops: List<StopRef>?, deps: Map<String, StopDeps>?) { stops?.let { myStops = it }; deps?.let { stopDeps = it } }
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

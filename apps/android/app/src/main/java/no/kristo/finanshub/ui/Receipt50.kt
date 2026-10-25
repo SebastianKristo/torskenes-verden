@@ -60,7 +60,7 @@ private val ACC50 = Color(0xFF4F63FF)
 private object ReState50 {
     var err by mutableStateOf<Pair<String, GlimtErr50>?>(null)
     var started by mutableLongStateOf(0L)
-    var engine by mutableStateOf("gemini")
+    var engine by mutableStateOf("ollama") // prompt 52: Gemini er fjernet fra kvitteringslesingen
 }
 
 /** «Leser … 12 s» mens en lesing pågår. */
@@ -102,7 +102,7 @@ internal fun RereadErr50Buttons(vm: AppViewModel, txId: Int, receiptId: String, 
  * «✦ Analyser på nytt» som jobb: POST /finans/api/receipts/:id/reanalyze {engine, async:true[, small:true]} → {jobId} → GET /jobs/:id
  * hvert 1,5 s → {previous, result, candidateId}. Sammenligningen (vm.reanalysis) vises som før; ingenting lagres før brukeren velger.
  */
-internal fun AppViewModel.reanalyze50(id: String, engine: String = "gemini", small: Boolean = false) {
+internal fun AppViewModel.reanalyze50(id: String, engine: String = "ollama", small: Boolean = false) {
     if (reanalyzing != null) return
     reanalyzing = id
     ReState50.err = null; ReState50.started = System.currentTimeMillis(); ReState50.engine = engine
@@ -136,7 +136,7 @@ internal fun AppViewModel.reanalyze50(id: String, engine: String = "gemini", sma
     }
 }
 
-/** «Lav sikkerhet»-boksen på Bekreft kvittering (tekst øverst, Gemini først, så lokal OCR). */
+/** «Lav sikkerhet»-boksen på Bekreft kvittering (tekst øverst, lokal AI først, så lokal OCR). Prompt 52: ingen Gemini. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun LowConfBox50(vm: AppViewModel, r: Receipt) {
@@ -144,7 +144,7 @@ internal fun LowConfBox50(vm: AppViewModel, r: Receipt) {
     val busy = vm.reanalyzing == r.id
     val err = ReState50.err?.takeIf { it.first == r.id }?.second
     val pct = (if (r.confidence <= 1) r.confidence * 100 else r.confidence).toInt()
-    val geminiOff = !r.canReanalyze && r.reanalyzeReason != null
+    val localOff = !r.canReanalyze && r.reanalyzeReason != null && !r.reanalyzeReason.contains("Gemini", ignoreCase = true)
     val info = when {
         r.status == "error" || r.error != null -> "Glimt fikk ikke lest kvitteringen sikkert. Les den på nytt, eller fyll ut feltene selv."
         else -> "Lav sikkerhet fra ${r.provider ?: "lesingen"}${if (pct > 0) " ($pct %)" else ""}. Sjekk beløp og dato, eller les kvitteringen på nytt."
@@ -153,15 +153,15 @@ internal fun LowConfBox50(vm: AppViewModel, r: Receipt) {
     Column(Modifier.fillMaxWidth().clip(shape).background(p.surf2).border(1.dp, p.line, shape).padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(info, color = p.sub, fontSize = 13.5.sp, lineHeight = 19.sp)
         if (busy) {
-            Text(if (ReState50.engine == "tesseract") "Lokal OCR leser kvitteringen …" else "Gemini leser kvitteringen …", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+            Text(if (ReState50.engine == "tesseract") "Lokal OCR leser kvitteringen …" else "Glimt leser lokalt …", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
             ReadSecs50(ReState50.started)
         } else FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Btn50("✦ Analyser på nytt med Gemini", true, enabled = !geminiOff) { vm.reanalyze50(r.id) }
+            Btn50("✦ Analyser på nytt lokalt", true, enabled = !localOff) { vm.reanalyze50(r.id) }
             Btn50("Les med lokal OCR", false, enabled = r.mime != "text/plain") { vm.reanalyze50(r.id, "tesseract") }
-            if (err?.kind == GlimtErrKind50.SLOW) Btn50("Les mindre versjon", false, enabled = !geminiOff) { vm.reanalyze50(r.id, small = true) }
+            if (err?.kind == GlimtErrKind50.SLOW) Btn50("Les mindre versjon", false, enabled = !localOff) { vm.reanalyze50(r.id, small = true) }
         }
-        // Grunnen til at Gemini er av (f.eks. ingen nøkkel eller «Finansdata forlater aldri huset»).
-        if (geminiOff) Text(r.reanalyzeReason ?: "", color = p.sub, fontSize = 12.5.sp, lineHeight = 17.sp)
+        // Grunnen til at lesingen er av (en gammel server kan fortsatt si «Gemini-nøkkel mangler» – den vises ikke).
+        if (localOff) Text(r.reanalyzeReason ?: "", color = p.sub, fontSize = 12.5.sp, lineHeight = 17.sp)
         if (err != null && !busy) Text(err.text, color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, lineHeight = 18.sp)
     }
 }

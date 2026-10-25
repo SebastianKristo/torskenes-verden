@@ -34,7 +34,7 @@ internal fun AiTimeouts23(vm: AppViewModel) {
         PLabel("Tidsgrenser", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
             var i = 0
-            listOf(Triple("gemini", "Gemini", "Les kvitteringer"), Triple("groq", "Groq", "AI-søk og kategorier"), Triple("roboflow", "Roboflow", "Strekkoder"),
+            listOf(Triple("gemini", "Gemini", "Logo og chat (aldri kvitteringer)"), Triple("groq", "Groq", "AI-søk og kategorier"), Triple("roboflow", "Roboflow", "Strekkoder"),
                 Triple("ollama", "Ollama (lokal)", "Reserve på hjemmeserveren")).forEach { (k, n, sd) ->
                 val v = when (k) { "gemini" -> t.gemini; "groq" -> t.groq; "roboflow" -> t.roboflow; else -> t.ollama }
                 SetRow(vm, i, Icons.Filled.AutoAwesome, n, "$sd · $tap", "$v s", top = i > 0) {

@@ -414,6 +414,7 @@ fun AppViewModel.loadHomeDep27() {
         s.homeDepFor = key
         s.homeStops = null; s.homeDeps = emptyMap()
         s.homeDep = parseHomeDep27(prefs.str(key, "")) ?: HomeDep27(emptyList(), 3)
+        runCatching { seedHome52() } // prompt 52 (AND52B): stoppene og avgangene fra bufferen før nettverkskallet
         launch27b {
             val srv = runCatching { api27b { hlGet("/me/home-departures") } }.getOrNull()?.let(::parseHomeDep27)
                 ?: runCatching { api27b { hlGet("/me/layout") } }.getOrNull()?.let(::parseHomeDep27)
@@ -426,15 +427,19 @@ fun AppViewModel.loadHomeDep27() {
 suspend fun AppViewModel.refreshHomeDeps27(stops: Boolean = false) {
     val s = b27
     if (stops || s.homeStops == null) {
-        s.homeStops = runCatching { parseStopList(api27b { hlGet("/me/stops") }) }.getOrNull() ?: s.homeStops ?: emptyList()
+        s.homeStops = runCatching { api27b { hlGet("/me/stops") }.let { raw -> parseStopList(raw).also { runCatching { cacheStops52(raw) } } } }.getOrNull() ?: s.homeStops ?: emptyList()
     }
     val shown = homeShown27()
     if (shown.isEmpty()) return
     val n = maxOf(4, s.homeDep.n)
     val out = s.homeDeps.toMutableMap()
     for (st in shown) {
-        runCatching { parseStopDeps(api27b { hlGet("/ruter/departures?stop=" + URLEncoder.encode(st.id, "UTF-8") + "&n=" + (n + 2), timeout = 12_000) }) }
-            .getOrNull()?.let { out[st.id] = it.copy(stop = it.stop.copy(id = st.id, name = st.name.ifBlank { it.stop.name })) }
+        runCatching { api27b { hlGet("/ruter/departures?stop=" + URLEncoder.encode(st.id, "UTF-8") + "&n=" + (n + 2), timeout = 12_000) }.let { raw -> raw to parseStopDeps(raw) } }
+            .getOrNull()?.let { (raw, sd) ->
+                val v = sd.copy(stop = sd.stop.copy(id = st.id, name = st.name.ifBlank { sd.stop.name }))
+                out[st.id] = v
+                runCatching { cacheDeps52(st.id, raw, v) } // prompt 52: hurtigbuffer per stopp
+            }
     }
     s.homeDeps = out
 }

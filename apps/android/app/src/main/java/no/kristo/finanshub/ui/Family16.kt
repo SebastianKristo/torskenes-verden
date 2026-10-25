@@ -34,7 +34,7 @@ internal fun FamilyScreen(vm: AppViewModel) {
         if (r.values.any { it }) {
             if (Build.VERSION.SDK_INT >= 29 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_BACKGROUND_LOCATION) != PackageManager.PERMISSION_GRANTED) bgPerm.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
             if (shareAfter) vm.famSetSharing("on") else vm.flash("GPS er på")
-        } else vm.message = "Tilgang til posisjon ble avslått. Slå det på i Android-innstillingene for FinansHub."
+        } else vm.message = "Tilgang til posisjon ble avslått. Slå det på i Android-innstillingene for Homelab."
     }
     val notifPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val startSharing: () -> Unit = {

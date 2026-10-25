@@ -217,7 +217,13 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
                 score27(t.merchant ?: t.description, ql) > 0)
     }
     val sum = list.sumOf { it.amount }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Prompt 52: hvilken månedslinje som er festet øverst (stickyHeader med indeks før første synlige rad, eller rullet forbi).
+    val list52 = androidx.compose.foundation.lazy.rememberLazyListState()
+    val pinned52 by remember { derivedStateOf {
+        list52.layoutInfo.visibleItemsInfo.firstOrNull { (it.key as? String)?.startsWith("m43-") == true && it.offset <= 0 &&
+            (list52.firstVisibleItemIndex > it.index || list52.firstVisibleItemScrollOffset > 0) }?.key
+    } }
+    LazyColumn(Modifier.fillMaxSize(), state = list52, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             Row(
                 Modifier.fillMaxWidth().height(46.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).padding(start = 16.dp, end = 5.dp),
@@ -245,7 +251,7 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
         // Prompt 43 (claude-code-finans-liste-maned-topp.md): gruppert per måned med rød mono-etikett, «Netto …» og 2 dp strek i ink (sticky).
         val months43 = list.groupBy { it.date.take(7) }.entries.sortedByDescending { it.key }
         months43.forEachIndexed { mi, (ym, txs) ->
-        stickyHeader(key = "m43-$ym") { MonthHead43(ym, cat, txs.size, txs.sumOf { it.amount }, top = if (mi == 0) 4.dp else 14.dp) }
+        stickyHeader(key = "m43-$ym") { MonthHead52(ym, cat, txs.size, txs.sumOf { it.amount }, top = if (mi == 0) 4.dp else 14.dp, pinned = pinned52 == "m43-$ym") }
         items(txs.size, key = { i -> "t43-" + txs[i].id }) { i ->
             val t = txs[i]
             val rc = when (t.receipt) { "booked" -> "kvittering"; null -> "ingen kvittering"; else -> "til gjennomgang" }

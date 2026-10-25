@@ -155,7 +155,7 @@ object AppUpd32 {
 
     internal fun openUnknownSources(ctx: Context) {
         val i = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        runCatching { ctx.startActivity(i) }.onFailure { fail("Fant ikke innstillingen. Åpne Innstillinger → Apper → FinansHub → Installer ukjente apper.") }
+        runCatching { ctx.startActivity(i) }.onFailure { fail("Fant ikke innstillingen. Åpne Innstillinger → Apper → Homelab → Installer ukjente apper.") }
     }
 
     internal fun install(ctx: Context) {

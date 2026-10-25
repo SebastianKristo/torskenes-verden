@@ -120,6 +120,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.widgetGallery) WidgetGallery(vm)
     Overlays51(vm) // prompt 51: «Ny enhet vil logge inn» og «Nytt i denne versjonen»
     Theme51Effects(vm) // prompt 51 (ANDFEAT51): tema synket mellom enheter + automatisk tema (ui/Theme51Ui.kt)
+    Effects52B(vm) // prompt 52 (AND52B): Ruter forhåndshentes, Vær nå-bildet, Glimt-figur per bruker (ui/Ui52B.kt)
 }
 
 /**
@@ -247,7 +248,7 @@ internal fun ProfileSheet(vm: AppViewModel) {
 internal fun LockScreen(vm: AppViewModel, unlock: () -> Unit) {
     Column(Modifier.fillMaxSize().background(C.bg).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically)) {
         Box(Modifier.size(72.dp).clip(RoundedCornerShape(24.dp)).background(C.accent), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Lock, null, tint = tc(0xFF1A0C04), modifier = Modifier.size(32.dp)) }
-        Text("FinansHub er låst", style = MaterialTheme.typography.headlineMedium)
+        Text("Homelab er låst", style = MaterialTheme.typography.headlineMedium)
         Text(vm.displayName, color = C.text2)
         Button(onClick = unlock, modifier = Modifier.fillMaxWidth().widthIn(max = 360.dp).height(56.dp), shape = RoundedCornerShape(28.dp),
             colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) {

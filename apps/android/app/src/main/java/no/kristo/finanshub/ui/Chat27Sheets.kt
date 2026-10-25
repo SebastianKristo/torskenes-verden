@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -51,7 +53,7 @@ internal fun Ch27Sheets(vm: AppViewModel, v: ChatV27, wide: Boolean) {
     val upKb = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { l -> if (l.isNotEmpty()) vm.uploadKb27(l) }
     val close: () -> Unit = { s.sheet = null; s.delArm = false; s.modDel = null }
     when (s.sheet) {
-        "model" -> Ch27Sheet(v, wide, close) { Ch27ModelSheet(vm, v) }
+        "model" -> Ch27ScrollSheet52(v, wide, close) { Ch27ModelSheet(vm, v) } // prompt 52: arket scroller (claude-code-chat-velg-modell-scroll.md)
         "params" -> Ch27Sheet(v, wide, close) { Ch27ParamsSheet(vm, v) }
         "menu" -> {
             val row = (s.pinned + s.folders.flatMap { it.chats } + s.chats + (s.found ?: emptyList())).firstOrNull { it.id == s.menuId }
@@ -111,6 +113,36 @@ private fun Ch27Sheet(v: ChatV27, wide: Boolean, onClose: () -> Unit, top: Dp = 
                 .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 16.dp, top = top, end = 16.dp, bottom = 22.dp),
             verticalArrangement = Arrangement.spacedBy(gap),
         ) { content() }
+    }
+}
+
+/**
+ * Prompt 52: ark med maks 90 % høyde der innholdet ligger i ÉN scrollbar flate som får begrenset høyde (weight uten fill),
+ * så ingenting krymper eller klippes. Grabberen øverst lukker ved sveip ned; sveip i listen scroller. «Administrer modeller»
+ * ligger nederst i scrollen med luft til navigasjonslinja.
+ */
+@Composable
+private fun Ch27ScrollSheet52(v: ChatV27, wide: Boolean, onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val shape = if (wide) RoundedCornerShape(24.dp) else RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
+    BoxWithConstraints(
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = .42f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose),
+        contentAlignment = if (wide) Alignment.Center else Alignment.BottomCenter,
+    ) {
+        val maxH = maxHeight * .9f
+        Column(
+            Modifier.then(if (wide) Modifier.widthIn(max = 460.dp).fillMaxWidth() else Modifier.fillMaxWidth()).heightIn(max = maxH).imePadding().clip(shape).background(v.bg)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+        ) {
+            Box(
+                Modifier.fillMaxWidth().height(22.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy > 12) onClose() } },
+                contentAlignment = Alignment.Center,
+            ) { Box(Modifier.size(40.dp, 5.dp).clip(CircleShape).background(v.line)) }
+            Column(
+                Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding()
+                    .padding(start = 16.dp, top = 4.dp, end = 16.dp, bottom = 28.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) { content() }
+        }
     }
 }
 

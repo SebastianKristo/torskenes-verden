@@ -103,7 +103,7 @@ class MainActivity : FragmentActivity() {
         if (BiometricManager.from(this).canAuthenticate(auth) != BiometricManager.BIOMETRIC_SUCCESS) { vm.locked = false; return }
         prompting = true
         prompt.authenticate(
-            BiometricPrompt.PromptInfo.Builder().setTitle("Lås opp FinansHub").setSubtitle(vm.displayName.ifBlank { "FinansHub" }).setAllowedAuthenticators(auth).build(),
+            BiometricPrompt.PromptInfo.Builder().setTitle("Lås opp Homelab").setSubtitle(vm.displayName.ifBlank { "Homelab" }).setAllowedAuthenticators(auth).build(),
         )
     }
 

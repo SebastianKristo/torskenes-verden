@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import no.kristo.finanshub.hasBriefTodo52
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -157,7 +158,9 @@ internal fun BriefPage35(vm: AppViewModel) {
             if (bibleTop) BriefBible37(vm, if (kind == "morning") "morning" else "evening")
             Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["kal"] = it.positionInParent().y }) { BriefKal35(vm, b, ring("kal")) }
             // Prompt 37: Gjøremål · 3 gjøremål i dag (forfalt + i dag), avkrysning i briefen.
-            BriefTodos37(vm)
+            // Prompt 52 (AND52B): Huskeliste kommer som 4a i brief-kortene når serveren har dem.
+            if (!vm.hasBriefTodo52()) BriefTodos37(vm)
+            BriefCards52(vm) // prompt 52: de ni kortene for den som er logget inn (GET /api/brief52, ui/Ui52B.kt)
             if (trials.isNotEmpty()) Box(Modifier.fillMaxWidth().onGloballyPositioned { pos["abo"] = it.positionInParent().y }) { BriefTrials35(vm, trials, ring("abo")) }
             // Prompt 41: Skiføre · NORDMARKA i briefen når skikortet er relevant (og «Skiføre» ikke er slått av i Rediger Vær).
             if (b?.skiText != null && vm.vaerLay41().ski) BriefSki41(b.skiText, b.skiItems)
@@ -535,6 +538,7 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
             Text("Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle, Gris …) tar over når temaet passer, om det er slått på under. Er «Glimt» valgt, blir verten Glimt Natt mellom 21 og 06.",
                 color = p.mut, fontSize = 12.5.sp, lineHeight = 17.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
+        if (figures) CharAdmin52(vm) // prompt 52 (AND52B): admin setter standardfigur per bruker (f.eks. Blekksprut)
         // Prompt 40 (claude-code-glimt-jul.md): Julemodus rett under figurvalget og teksten om vennene, før Glimt-brief-bryteren.
         Jul40Card(vm)
         Mai41Card(vm) // Prompt 41: Høytider → 17. mai

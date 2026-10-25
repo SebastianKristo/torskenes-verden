@@ -70,13 +70,15 @@ internal object Mer45 {
         if (o == null) return
         // Prompt 46: tom tittel (teksten slettet) er et gyldig valg – raden tegnes da ikke utenfor wiggle (ingen tomrom).
         titleV = if (o.has("title")) o.optString("title").trim() else DEF_TITLE
-        hideV = o.optBoolean("hide", false)
+        hideV = o.optBoolean("hide", o.optBoolean("titleHidden", false)) // prompt 52: iOS skriver titleHidden
         val a = o.optJSONArray("big")
         if (a != null && a.length() == 4) bigV = (0 until 4).map { a.optString(it) }.filter { it.isNotBlank() }.takeIf { it.size == 4 } ?: DEF_BIG
     }
 
     private fun save(vm: AppViewModel) {
-        val o = JSONObject().put("title", titleV).put("hide", hideV).put("big", JSONArray(bigV))
+        // Prompt 52: fmerVis/merVis/salsty følger med i samme objekt (serveren lagrer mer45 som ett objekt, som iOS).
+        val o = runCatching { Mer52.into(vm, JSONObject().put("title", titleV).put("hide", hideV).put("titleHidden", hideV).put("big", JSONArray(bigV))) }
+            .getOrElse { JSONObject().put("title", titleV).put("hide", hideV).put("big", JSONArray(bigV)) }
         vm.prefs.set(key(vm), o.toString())
         vm.launch45 { runCatching { vm.api45 { hlPut("/me/layout", JSONObject().put("mer45", o)) } } }
     }
@@ -204,10 +206,11 @@ internal fun FinMer45(vm: AppViewModel, tiles: List<FinTile>, navBottom: android
     val accts = vm.boot?.accounts
     val review = vm.reviewCount ?: vm.boot?.reviewCount ?: 0
     val nextFast = vm.recurring?.filter { it.active && it.next != null }?.minByOrNull { it.next!! }
+    val (sok52, tit52, vkt52) = Mer52.vis(vm, "fmer") // prompt 52: søkefelt og titler kan skjules i wiggle
     androidx.compose.foundation.lazy.LazyColumn(
         Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item(key = "fm45-q") {
+        if (sok52) item(key = "fm45-q") {
             Row(Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 48.dp).shadow(6.dp, RoundedCornerShape(24.dp)).clip(RoundedCornerShape(24.dp)).background(p.card)
                 .padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("⌕", color = p.mut, fontSize = 17.sp)
@@ -219,7 +222,7 @@ internal fun FinMer45(vm: AppViewModel, tiles: List<FinTile>, navBottom: android
             }
         }
         if (big.isNotEmpty()) {
-            item(key = "fm45-hl") { PLabel("Finans", modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
+            if (tit52) item(key = "fm45-hl") { PLabel("Finans", modifier = Modifier.padding(start = 4.dp, top = 4.dp)) }
             big.chunked(if (wide) 4 else 2).forEachIndexed { i, ch ->
                 item(key = "fm45-c$i") {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -233,14 +236,14 @@ internal fun FinMer45(vm: AppViewModel, tiles: List<FinTile>, navBottom: android
                             }
                             Column(
                                 Modifier.weight(1f).height(150.dp).shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = .25f), spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = .25f))
-                                    .clip(RoundedCornerShape(22.dp)).background(p.card)
+                                    .clip(RoundedCornerShape(22.dp)).background(merTint52(t.key)) // prompt 52: modulfargen 13 % i kortet
                                     .combinedClickable(role = Role.Button, onClickLabel = lab, onLongClick = { Haptics.tap(); onLong() }) { Haptics.select(); t.go() }.padding(14.dp),
                                 verticalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    val tint = androidx.compose.ui.graphics.Color(FM_COLORS[t.key] ?: 0xFF6F6A60)
-                                    Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(androidx.compose.ui.graphics.lerp(p.card, tint, .14f)), contentAlignment = Alignment.Center) {
-                                        androidx.compose.material3.Icon(t.icon, null, tint = tint, modifier = Modifier.size(17.dp))
+                                    val tint = merColor52(t.key)
+                                    Box(Modifier.size(30.dp).clip(RoundedCornerShape(9.dp)).background(tint), contentAlignment = Alignment.Center) {
+                                        androidx.compose.material3.Icon(t.icon, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(17.dp))
                                     }
                                     Text(lab, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
@@ -256,7 +259,7 @@ internal fun FinMer45(vm: AppViewModel, tiles: List<FinTile>, navBottom: android
             }
         }
         if (tools.isNotEmpty()) {
-            item(key = "fm45-tl") { PLabel("Verktøy", modifier = Modifier.padding(start = 4.dp, top = 6.dp)) }
+            if (vkt52) item(key = "fm45-tl") { PLabel("Verktøy", modifier = Modifier.padding(start = 4.dp, top = 6.dp)) }
             item(key = "fm45-tools") { PCard(shadow = true) { tools.forEachIndexed { i, t -> FinMerRow45(t, i > 0, onLong) } } }
         }
         tiles.firstOrNull { it.key == "innst" }?.takeIf(::hit)?.let { st ->
@@ -274,7 +277,7 @@ internal fun FinMer45(vm: AppViewModel, tiles: List<FinTile>, navBottom: android
 @Composable
 private fun FinMerRow45(t: FinTile, top: Boolean, onLong: () -> Unit) {
     val p = PaperPal.current
-    val tint = androidx.compose.ui.graphics.Color(FM_COLORS[t.key] ?: 0xFF6F6A60)
+    val tint = merColor52(t.key) // prompt 52: helfylt ikonbrikke i modulfargen med hvitt symbol
     Column {
         if (top) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Row(
@@ -282,8 +285,8 @@ private fun FinMerRow45(t: FinTile, top: Boolean, onLong: () -> Unit) {
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(androidx.compose.ui.graphics.lerp(p.card, tint, .14f)), contentAlignment = Alignment.Center) {
-                androidx.compose.material3.Icon(t.icon, null, tint = tint, modifier = Modifier.size(21.dp))
+            Box(Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(tint), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.Icon(t.icon, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(21.dp))
             }
             Column(Modifier.weight(1f)) {
                 PSerif(t.title, 19.sp, maxLines = 1)

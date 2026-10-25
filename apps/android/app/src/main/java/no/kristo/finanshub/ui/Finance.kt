@@ -337,9 +337,9 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
                         val idx = i + if (vm.uploading > 0) 1 else 0
                         val (title, sub) = when (j.status) {
                             "pending" -> j.name to "I kø"
-                            "processing" -> j.name to "Gemini leser … ${j.progress} %"
+                            "processing" -> j.name to "Glimt leser lokalt … ${j.progress} %"
                             "needs_review" -> (j.merchant ?: j.name) to "Klar · trykk for å bekrefte"
-                            "error" -> j.name to "Feilet · trykk for å analysere på nytt med Gemini"
+                            "error" -> j.name to "Feilet · trykk for å analysere på nytt lokalt"
                             else -> j.name to j.status
                         }
                         JobRow(title, sub, j.progress.takeIf { j.status == "processing" }, itemShape(idx, n)) { vm.selectedReceipt = j.id }
@@ -412,13 +412,13 @@ internal fun ReceiptConfirm(vm: AppViewModel, back: (() -> Unit)?) {
         }
         if (r.status == "pending" || r.status == "processing") {
             Column(Modifier.fillMaxWidth().padding(40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                CircularProgressIndicator(color = C.primary); Text("Leser kvitteringen med ${if (st?.provider == "gemini") "Gemini" else "Ollama"} …", color = C.text2)
+                CircularProgressIndicator(color = C.primary); Text("Glimt leser lokalt …", color = C.text2)
             }
             return@Column
         }
         ReceiptImage(vm, r)
         val high = r.error == null && r.flag == null && r.confidence >= (st?.minConf ?: 85) / 100.0
-        // Feilet, lav sikkerhet eller usikker Ollama: la Gemini lese originalbildet på nytt.
+        // Feilet, lav sikkerhet eller usikker lesing: les originalbildet på nytt lokalt (prompt 52: aldri Gemini).
         if (r.canReanalyze || r.status == "error" || !high) ReanalyzeButton(vm, r)
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(r.provider?.let { p -> "$p${r.seconds?.let { " · ${n2(it)} s" } ?: ""}" } ?: "Manuell utfylling", color = C.text2, fontSize = 13.sp)
@@ -487,7 +487,7 @@ internal fun EditField(label: String, value: String, key: Any, number: Boolean =
 }
 
 
-/** «✦ Analyser på nytt med Gemini» på bekreftelsessiden. */
+/** «✦ Analyser på nytt lokalt» på bekreftelsessiden. */
 @Composable
 internal fun ReanalyzeButton(vm: AppViewModel, r: Receipt) {
     // Prompt 50 (claude-code-finans-kvittering-fargefeil.md + …-les-pa-nytt-502.md): temafarger, Gemini som primærknapp,
@@ -496,7 +496,7 @@ internal fun ReanalyzeButton(vm: AppViewModel, r: Receipt) {
     vm.reanalysis?.takeIf { it.receiptId == r.id }?.let { ReanalysisDialog(vm, it) }
 }
 
-/** Forrige tolkning og Gemini side om side. Brukeren velger hvilken som beholdes. */
+/** Forrige tolkning og den nye lokale lesingen side om side. Brukeren velger hvilken som beholdes. */
 @Composable
 private fun ReanalysisDialog(vm: AppViewModel, a: Reanalysis) {
     AlertDialog(

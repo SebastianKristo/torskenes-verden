@@ -608,7 +608,10 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                     PLabel("Finans · Mer")
                     Text("Alt fra FinansHub på nettsiden · hold inne for å flytte", color = p.mut, fontSize = 13.sp)
                 }
-            } else WiggleSpace30(true, extra = (-10).dp) // Prompt 30: 64 dp luft under ＋ N · ✓ (animert)
+            } else Column {
+                WiggleSpace30(true, extra = (-10).dp) // Prompt 30: 64 dp luft under ＋ N · ✓ (animert)
+                MerHideRow52(vm, "fmer", "Finans") // prompt 52: Søkefelt · Finans · Verktøy
+            }
         }
         items(tiles.size, key = { tiles[it].key }) { i ->
             val t = tiles[i]
@@ -751,6 +754,7 @@ internal fun PaperFinSearch(vm: AppViewModel, navBottom: Dp) {
             if (r.hits.isEmpty()) { if (ask40 == null) item { Text("Ingen treff på «$q».", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(6.dp)) } }
             else {
                 item {
+                    LaunchedEffect(r) { vm.logos52(r.hits.map { it.description }) } // prompt 52: alle logoene i ett kall
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
                         PLabel("Treff · ${r.hits.size}", modifier = Modifier.weight(1f))
                         val sum = r.hits.sumOf { it.amount ?: 0.0 }
@@ -765,6 +769,7 @@ internal fun PaperFinSearch(vm: AppViewModel, navBottom: Dp) {
                             Modifier.fillMaxWidth().clickable(enabled = h.txId != null) { h.txId?.let { vm.openTxHl30(it, q.takeIf { q.trim().split(Regex("\\s+")).size <= 2 }) } }.padding(2.dp, 8.dp), // Prompt 30: ?hl= søkeordet
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
+                            StoreLogo52(vm, h.description) // prompt 52 (AND52B): butikklogo foran kjøpet (lokal logo-cache, forbokstav som reserve)
                             Column(Modifier.weight(1f)) {
                                 Text(h.description, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(listOfNotNull(h.date?.let(::ddmm), h.reason).joinToString(" · "), color = p.mut, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -815,22 +820,14 @@ internal fun PaperTxDetail(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
         }
         val t = d.tx
         item {
-            PCard(shadow = true) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Logo(vm, t.domain, t.merchant ?: t.description, t.color, 46, RoundedCornerShape(13.dp))
-                        Column(Modifier.weight(1f)) {
-                            PSerif(t.merchant ?: t.description, 22.sp, maxLines = 2)
-                            Text(listOf(t.category, longDate(runCatching { java.time.LocalDate.parse(t.date.take(10)) }.getOrDefault(java.time.LocalDate.now())), t.account).filter { it.isNotBlank() }.joinToString(" · "),
-                                color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                    // Prompt 27: «Velg logo» (Finn logo · Last opp · Lim inn domene) når butikken mangler logo.
-                    VelgLogo27(vm, t.domain, t.merchant ?: t.description, t.receiptId ?: d.receipt?.id)
-                    PSerif("${signed(t.amount)} kr", 40.sp, if (t.amount > 0) p.pos else p.ink, weight = FontWeight.Normal, maxLines = 1)
-                    d.aiSummary?.let { Text("✦ $it", color = p.lab, fontSize = 14.sp) }
-                }
-            }
+            // Prompt 52: samme kvitteringshode som Boliger (ui/And52AUi.kt ReceiptHead52).
+            ReceiptHead52(
+                vm, t.domain, t.merchant ?: t.description, t.color,
+                listOf(t.category, longDate(runCatching { java.time.LocalDate.parse(t.date.take(10)) }.getOrDefault(java.time.LocalDate.now())), t.account).filter { it.isNotBlank() }.joinToString(" · "),
+                "${signed(t.amount)} kr", if (t.amount > 0) p.pos else null, glimt = d.aiSummary,
+                // Prompt 27: «Velg logo» (Finn logo · Last opp · Lim inn domene) når butikken mangler logo.
+                extra = { VelgLogo27(vm, t.domain, t.merchant ?: t.description, t.receiptId ?: d.receipt?.id) },
+            )
         }
         val rc = d.receipt
         item {

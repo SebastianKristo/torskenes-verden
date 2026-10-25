@@ -20,7 +20,7 @@ class HealthRationaleActivity : ComponentActivity() {
         setContent {
             Column(Modifier.fillMaxSize().background(Color(0xFFF3EFE6)).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Spacer(Modifier.height(40.dp))
-                Text("Helse i FinansHub", color = Color(0xFF1B1A17), fontSize = 28.sp, fontWeight = FontWeight.Medium)
+                Text("Helse i Homelab", color = Color(0xFF1B1A17), fontSize = 28.sp, fontWeight = FontWeight.Medium)
                 Text(
                     "FinansHub leser bare de typene du slår på under Innstillinger → App → Helse og posisjon: skritt, puls og hvilepuls, " +
                         "søvn, og aktivitet og trening (aktive kalorier og treningsøkter), for i dag og de siste 7 dagene. Et sammendrag sendes " +

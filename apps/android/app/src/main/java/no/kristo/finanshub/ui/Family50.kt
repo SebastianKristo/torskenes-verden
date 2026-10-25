@@ -362,8 +362,8 @@ private fun Folk50(vm: AppViewModel, wide: Boolean, startSharing: () -> Unit) {
     if (!wide && people.any { it.hasPos }) {
         Box(Modifier.padding(14.dp, 12.dp, 14.dp, 0.dp).fillMaxWidth().height(120.dp).clip(RoundedCornerShape(22.dp)).background(p.surf2)) {
             val ctl = remember { Fam22MapCtl() }
-            val data = mapData50(vm, people, emptyList(), null, false)
-            FamilyMapSafe(vm, Modifier.matchParentSize(), data, ctl, onPin = {}) { _, _ -> }
+            val data = famGuard52("kartet") { mapData50(vm, people, emptyList(), null, false) }
+            if (data == null) FamCardErr52("kartet", Modifier.matchParentSize()) else FamilyMapSafe(vm, Modifier.matchParentSize(), data, ctl, onPin = {}) { _, _ -> }
             LaunchedEffect(people.count { it.hasPos }) { delay(250); ctl.fit(people.filter { it.hasPos }.map { it.lat!! to it.lon!! }); ctl.zoomOut() }
             // Stripa er bare en forhåndsvisning: trykk åpner kartet (ingen panorering inne i rullelisten).
             Box(Modifier.matchParentSize().clickable(role = Role.Button, onClickLabel = "Åpne kart") { s.sub = "kart" })
@@ -440,7 +440,7 @@ private fun ItemList50(vm: AppViewModel, items: List<FamItem50>, empty: String, 
 
 /* ======================= Kartdata ======================= */
 
-@Composable
+/** Prompt 52: ren utregning (ikke @Composable), så den kan ligge i krasjgrensen famGuard52. */
 private fun mapData50(vm: AppViewModel, people: List<FamPerson50>, places: List<FamPlace50>, sel: String?, placing: Boolean, acc: FamPerson50? = null): Fam22MapData {
     val zones = places.flatMap { pl ->
         pl.areas.map { a -> Fam22ZoneDraw("${pl.id}:${a.id}", a.name, a.lat, a.lon, a.radius.toDouble(), pl.color.toInt(), iconFor50(pl.type, pl.icon), false) }
@@ -466,7 +466,8 @@ private fun Kart50(vm: AppViewModel, embedded: Boolean) {
     val ctx = LocalContext.current
     val people = s.people ?: emptyList()
     val ctl = remember { Fam22MapCtl() }
-    val data = mapData50(vm, people, s.places ?: emptyList(), null, false)
+    // Prompt 52: dårlige data for én person/ett sted gir «Kunne ikke laste kartet» i stedet for krasj.
+    val data = famGuard52("kartet") { mapData50(vm, people, s.places ?: emptyList(), null, false) } ?: Fam22MapData(emptyList(), emptyList(), emptyList(), 0, false)
     var bb by remember { mutableStateOf<DoubleArray?>(null) }
     LaunchedEffect(Unit) {
         delay(250)
@@ -571,7 +572,7 @@ private fun Person50(vm: AppViewModel, embedded: Boolean) {
     val ctl = remember(pr.userId) { Fam22MapCtl() }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val sheetH = minOf(480.dp, maxHeight * .62f)
-        val data = mapData50(vm, listOf(pr), emptyList(), pr.userId, false, acc = pr)
+        val data = famGuard52("kartet") { mapData50(vm, listOf(pr), emptyList(), pr.userId, false, acc = pr) } ?: Fam22MapData(emptyList(), emptyList(), emptyList(), 0, false)
         FamilyMapSafe(vm, Modifier.fillMaxWidth().height(maxHeight - sheetH + 30.dp), data, ctl, onPin = {}) { _, _ -> }
         LaunchedEffect(pr.userId, pr.hasPos) { if (pr.hasPos) { delay(250); ctl.center(pr.lat!!, pr.lon!!, 15.0) } }
         Row(Modifier.then(if (embedded) Modifier else Modifier.statusBarsPadding()).padding(14.dp, 8.dp)) {
@@ -728,7 +729,7 @@ private fun Sted50(vm: AppViewModel) {
     var delArm by remember { mutableStateOf(false) }
     val ctl = remember(s.placeSel) { Fam22MapCtl() }
     val shown = FamPlace50(pl?.id ?: "new", name, type, pl?.color ?: 0xFFA8661A, pl?.icon, true, false, emptyMap(), areas, "", emptyList(), "", null, null, true, true)
-    val data = mapData50(vm, emptyList(), listOf(shown), null, placing && canEdit)
+    val data = famGuard52("kartet") { mapData50(vm, emptyList(), listOf(shown), null, placing && canEdit) } ?: Fam22MapData(emptyList(), emptyList(), emptyList(), 0, false)
     LaunchedEffect(s.placeSel, areas.size) {
         delay(250)
         if (areas.isEmpty()) {
@@ -1042,7 +1043,7 @@ private fun Sjekk50(vm: AppViewModel) {
     }
     if (c == null) { T50("Henter …", 13.sp, p.sub, modifier = Modifier.padding(horizontal = 20.dp)); return }
     // «På vei hjem» (Vel fremme) som pågår.
-    val trip = vm.p40.hl?.mine?.takeIf { it.state != "home" && it.state != "ended" }
+    val trip = famGuard52("«På vei hjem»") { vm.p40.hl?.mine?.takeIf { it.state != "home" && it.state != "ended" } }
     if (trip != null) Box(Modifier.padding(horizontal = 14.dp).padding(bottom = 10.dp)) { HjemlysCard40(vm, compact = true) }
     c.requests.forEach { r -> Request50(vm, r) }
     val latest = c.latest

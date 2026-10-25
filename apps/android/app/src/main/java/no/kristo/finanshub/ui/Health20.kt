@@ -80,10 +80,10 @@ internal fun HealthPosPage(vm: AppViewModel) {
 
     val bgPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         background = ok; FamilyPrefs.putBackground(ctx, ok); FamilyService.sync(ctx)
-        if (!ok) vm.message = "Velg «Tillat alltid» for FinansHub i Android-innstillingene for deling i bakgrunnen."
+        if (!ok) vm.message = "Velg «Tillat alltid» for Homelab i Android-innstillingene for deling i bakgrunnen."
     }
     val locPerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r: Map<String, Boolean> ->
-        if (r.values.any { it }) vm.famSetSharing("on") else vm.message = "Posisjon er ikke tillatt. Slå det på i Android-innstillingene for FinansHub."
+        if (r.values.any { it }) vm.famSetSharing("on") else vm.message = "Posisjon er ikke tillatt. Slå det på i Android-innstillingene for Homelab."
     }
     val finePerm = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> vm.famSetPrecision(if (ok) "exact" else "approx") }
 
@@ -129,8 +129,8 @@ internal fun HealthPosPage(vm: AppViewModel) {
             }
         }
         PCard(modifier = Modifier.padding(top = 10.dp)) {
-            PRow("Åpne Health Connect", "Health Connect → Apptillatelser → FinansHub", "↗", serif = false) { openHealthConnect(ctx) }
-            PRow("Åpne Android-innstillinger", "Apper → FinansHub → Tillatelser", "↗", serif = false, top = true) { openAppSettings(ctx) }
+            PRow("Åpne Health Connect", "Health Connect → Apptillatelser → Homelab", "↗", serif = false) { openHealthConnect(ctx) }
+            PRow("Åpne Android-innstillinger", "Apper → Homelab → Tillatelser", "↗", serif = false, top = true) { openAppSettings(ctx) }
         }
         Text("Health Connect sier ikke om appen får lese data. Viser Familie «Ingen data», sjekk tilgangen i Health Connect.",
             color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(4.dp))

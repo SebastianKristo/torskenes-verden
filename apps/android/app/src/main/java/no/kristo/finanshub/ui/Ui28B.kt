@@ -411,6 +411,7 @@ internal fun MerList28(vm: AppViewModel, rows: List<MerItem28>, navBottom: Dp, b
         }
         item(key = "mer-space") { WiggleSpace30(true, extra = (-10).dp) }
         item(key = "mer-tsz") { MerSize44(vm) } // prompt 44: Store · Lave bare i wiggle-redigering
+        item(key = "mer52-hid") { MerHideRow52(vm, "mer", "Tittel") } // prompt 52: Søkefelt · Tittel · Verktøy
         item(key = "mer45-ed") { MerEdit45(vm, rows) } // prompt 45: tittel (− / gi nytt navn / + Legg til tittel) og de fire store boksene (⇄ Bytt)
         itemsIndexed(visKeys, key = { _, k -> "mer-$k" }) { i, k ->
             val r = byKey[k] ?: return@itemsIndexed

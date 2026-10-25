@@ -175,7 +175,11 @@ object Flags51 {
 
 /* ---------------- «Nytt i denne versjonen» ---------------- */
 
-data class WhatsNew51(val version: String, val date: String, val title: String, val items: List<String>)
+data class WhatsNew51(
+    val version: String, val date: String, val title: String, val items: List<String>,
+    /** Prompt 52 (AND52A): ett punkt per blokk – overskrift + kort tekst (claude-code-nytt-i-versjon-lesbar.md). */
+    val points52: List<Pair<String, String>> = emptyList(),
+)
 
 class Qa51State {
     var whatsNew by mutableStateOf<WhatsNew51?>(null)
@@ -192,9 +196,10 @@ fun AppViewModel.loadWhatsNew51() = launch51 {
     if (v.isBlank() || v in qa51.closed) return@launch51
     val a = o.optJSONArray("items")
     val items = ArrayList<String>()
-    if (a != null) for (i in 0 until a.length()) a.optString(i).trim().takeIf { it.isNotEmpty() }?.let { items += it.take(400) }
-    if (items.isEmpty()) return@launch51
-    qa51.whatsNew = WhatsNew51(v, o.optString("date"), o.optString("title").ifBlank { "Nytt i versjon $v" }, items.take(12))
+    if (a != null) for (i in 0 until a.length()) { if (a.optJSONObject(i) == null) a.optString(i).trim().takeIf { it.isNotEmpty() }?.let { items += it.take(400) } }
+    val points = whatsPoints52(o) // prompt 52: strukturerte punkter (eller utledet fra items)
+    if (items.isEmpty() && points.isEmpty()) return@launch51
+    qa51.whatsNew = WhatsNew51(v, o.optString("date_label").ifBlank { o.optString("date") }, cleanTitle52(o.optString("title")).ifBlank { "Versjon $v" }, items.take(12), points.take(12))
 }
 
 fun AppViewModel.closeWhatsNew51() {

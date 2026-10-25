@@ -204,7 +204,7 @@ internal fun Overlays51(vm: AppViewModel) {
                 }
             }
         }
-        vm.qa51.whatsNew?.let { w -> WhatsNew51Card(w) { vm.closeWhatsNew51() } }
+        vm.qa51.whatsNew?.let { w -> WhatsNew52Card(w) { vm.closeWhatsNew51() } } // prompt 52: lesbar papirboks
     }
 }
 

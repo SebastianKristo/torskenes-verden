@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.focus.focusRequester
 import android.annotation.SuppressLint
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -231,13 +232,9 @@ internal fun ForholdSheet(w: WeatherFull, day: Int, setDay: (Int) -> Unit, close
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(sheetLine))
         }
-        Row(Modifier.fillMaxWidth().clip(CircleShape).background(Color(0xFF24272E)).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf("Faktisk" to false, "Føles som" to true).forEach { (n, f) ->
-                Box(Modifier.weight(1f).height(40.dp).clip(CircleShape).background(if (feel == f) Color(0xFF4A4E57) else Color.Transparent).clickable { feel = f }, contentAlignment = Alignment.Center) {
-                    Text(n, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
+        // Prompt 52 (AND52B): samme glass-pille som temp/regn/vind – kan dras, strekker seg etter farten, vibrerer på midten (ui/Ui52B.kt).
+        LiquidTextSeg52(listOf("act" to "Faktisk", "feel" to "Føles som"), if (feel) "feel" else "act", { feel = it == "feel" }, Modifier.fillMaxWidth(),
+            cellH = 40.dp, fontSize = 15.sp, fill = true, bg = Color(0xFF24272E))
         Text(if (feel) "Hvordan temperaturen føles med vind og fuktighet." else "Den faktiske temperaturen.", fontSize = 14.sp, modifier = Modifier.alpha(.65f).padding(horizontal = 6.dp))
         Column(Modifier.padding(top = 8.dp)) {
             Text("Sjanse for nedbør", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold)
@@ -563,6 +560,9 @@ private fun WhitePill(t: String, onClick: () -> Unit) {
 internal fun PlacesSheet(vm: AppViewModel) {
     var q by remember { mutableStateOf("") }
     val close = { vm.wxPlacesSheet = false; vm.searchWxPlaces("") }
+    // Prompt 52 (AND52B): rett inn i et søk etter by – markøren står i søkefeltet og tastaturet kommer opp.
+    val focus52 = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(250); runCatching { focus52.requestFocus() } }
     LaunchedEffect(Unit) { if (vm.wxPlaces.isEmpty()) vm.loadWxPlaces() }
     var order by remember { mutableStateOf<List<WxPlace>?>(null) }
     val list = order ?: vm.wxPlaces.ifEmpty { WX_PLACES.map { (id, n) -> WxPlace(id, n, 0.0, 0.0, "") } }
@@ -582,7 +582,7 @@ internal fun PlacesSheet(vm: AppViewModel) {
                 q, { q = it; vm.searchWxPlaces(it) }, singleLine = true,
                 textStyle = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, fontFamily = FontFamily.Default),
                 cursorBrush = SolidColor(sky), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.searchWxPlaces(q) }),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).focusRequester(focus52),
                 decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (q.isEmpty()) Text("Søk etter by eller sted", fontSize = 16.sp, color = mut2); inner() } },
             )
         }
@@ -717,18 +717,8 @@ internal fun WxMap(w: WeatherFull?, close: () -> Unit) {
                 style = TextStyle(color = Color.White, shadow = androidx.compose.ui.graphics.Shadow(Color(0x99000000), Offset(0f, 2f), 16f)))
             VaerCloseButton(dark = true, onClick = close)
         }
-        Row(
-            Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 22.dp).clip(CircleShape).background(Color(0xBF0A1423))
-                .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            MAP_LAYERS.forEach { (k, n) ->
-                val on = layer == k
-                Box(Modifier.height(38.dp).clip(CircleShape).background(if (on) Color.White else Color.Transparent).clickable { Haptics.select(); layer = k }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                    Text(n, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, color = if (on) Color(0xFF0D1520) else Color.White, maxLines = 1)
-                }
-            }
-        }
+        // Prompt 52 (AND52B): lagvelgeren med glass-pille som kan dras (ui/Ui52B.kt).
+        LiquidTextSeg52(MAP_LAYERS, layer, { layer = it }, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 22.dp), cellH = 38.dp, fontSize = 13.5.sp, padH = 14.dp)
     }
 }
 
@@ -757,17 +747,6 @@ internal fun WxMapInline25(w: WeatherFull?, modifier: Modifier, onFull: () -> Un
                 .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).clickable { Haptics.select(); onFull() }.padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center,
         ) { Text("⤢ Fullskjerm", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1) }
-        Row(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp).clip(CircleShape).background(Color(0xBF0A1423))
-                .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).padding(3.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            MAP_LAYERS.forEach { (k, n) ->
-                val on = layer == k
-                Box(Modifier.height(32.dp).clip(CircleShape).background(if (on) Color.White else Color.Transparent).clickable { Haptics.select(); layer = k }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                    Text(n, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, color = if (on) Color(0xFF0D1520) else Color.White, maxLines = 1)
-                }
-            }
-        }
+        LiquidTextSeg52(MAP_LAYERS, layer, { layer = it }, Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp), cellH = 32.dp, fontSize = 12.5.sp, padH = 12.dp) // prompt 52
     }
 }

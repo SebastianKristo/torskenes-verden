@@ -301,9 +301,9 @@ private fun AppViewModel.setRe39(id: String, f: (Re39?) -> Re39?) {
  * GET /finans/api/jobs/:id (hvert sekund). Eldre server: svarer synkront ({candidateId, result}) – da tas resultatet i bruk
  * direkte. Mangler endepunktet (404): kvitteringen legges i køen som før (reprocess).
  */
-fun AppViewModel.reanalyze39(id: String, engine: String = "gemini") {
+fun AppViewModel.reanalyze39(id: String, engine: String = "ollama") { // prompt 52: Gemini er fjernet fra kvitteringslesingen
     if (p39.re[id]?.running == true) return
-    val label = if (engine == "tesseract") "Lokal OCR" else "Gemini"
+    val label = if (engine == "tesseract") "Lokal OCR" else "Lokal AI"
     Haptics.tap()
     setRe39(id) { Re39(null, "upload", 2, "Laster opp bildet", label) }
     launch39 {
@@ -312,8 +312,8 @@ fun AppViewModel.reanalyze39(id: String, engine: String = "gemini") {
         } catch (e: ApiException) {
             if (e.status == 404 && e.code != "bilde_mangler") { // prompt 50: 404 bilde_mangler er ikke «gammel server»
                 setRe39(id) { null }
-                runCatching { api39 { post("/receipts/$id/reprocess?provider=gemini") } }
-                message = "✦ Leses på nytt med Gemini"
+                runCatching { api39 { post("/receipts/$id/reprocess") } }
+                message = "✦ Glimt leser lokalt på nytt"
                 runCatching { loadReceipts(); loadJobs() }
             } else setRe39(id) { (it ?: Re39(null, "upload", 0, null, label)).copy(step = "error", error = true, msg = glimtErr50(e, "reanalyze39").text) } // prompt 50
             return@launch39
@@ -379,7 +379,7 @@ fun AppViewModel.onJob39(msg: JSONObject) {
 
 private suspend fun AppViewModel.finishRe39(id: String, conf: Double, changed: List<String>) {
     val pct = if (conf.isNaN()) null else Math.round(if (conf <= 1.0) conf * 100 else conf).toInt()
-    setRe39(id) { (it ?: Re39(null, "done", 100, null, "Gemini")).copy(step = "done", pct = 100, done = true, msg = "✦ Glimt har analysert på nytt") }
+    setRe39(id) { (it ?: Re39(null, "done", 100, null, "Lokal AI")).copy(step = "done", pct = 100, done = true, msg = "✦ Glimt har analysert på nytt") }
     Haptics.success()
     message = "✦ Glimt har analysert på nytt" + (pct?.let { " · $it % sikker" } ?: "")
     // Raden markeres i 2 s (endrede felt: ${changed.joinToString()}; eldre server sier ikke hvilke).

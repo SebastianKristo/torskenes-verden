@@ -168,7 +168,7 @@ internal fun BirthdaysScreen24(vm: AppViewModel) {
             item {
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     BdLabel("WIDGETS PÅ TELEFONEN")
-                    Text("Hold inne på hjemskjermen → Widgets → FinansHub: «Bursdager» viser de tre neste, og + legger til en ny." +
+                    Text("Hold inne på hjemskjermen → Widgets → Homelab: «Bursdager» viser de tre neste, og + legger til en ny." +
                         (if (no.kristo.finanshub.widget.S24.isSamsung) " På Samsung finnes også «Bursdager · Samsung» i samme størrelse som Samsungs egne widgets." else ""),
                         color = p.mut, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
                 }
