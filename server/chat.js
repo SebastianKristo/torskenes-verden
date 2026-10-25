@@ -39,7 +39,8 @@ import { CATALOG } from './finans/ollama-models.js';
 import { audit } from './finans/ai-audit.js';
 import { finansSummary } from './finans/summary.js';
 import { nextTasks } from './tasks.js';
-import { chatBody, thinkFilter } from './ollama-opts.js';
+import { chatBody, isThinkingModel } from './ollama-opts.js';
+import { thinkSplit52, thinkState52, glimtSteps52, stripThink52, cleanAttTh52 } from './chat52.js'; // prompt 52 (SRV52): tankegang
 import { gateChat, GateError } from './ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
 import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './chat-scans.js';
 import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './chat-tools41.js'; // prompt 41: Glimt henter fakta
@@ -194,7 +195,8 @@ const iso = (t) => new Date(t).toISOString();
 const brief = (r) => ({ id: r.id, title: r.title, model: r.model, updatedAt: iso(r.updated), pinned: !!r.pinned, folderId: r.folder_id ?? null,
   ...(r.kind ? { kind: r.kind, ref: parse(r.ref, {}), status: parse(r.messages, [])[1]?.meta?.status ?? null } : {}) }); // prompt 34: skann-samtaler
 const msgOut = (m) => ({ role: m.role, content: m.content, ...(m.images?.length && !m.attachments?.length ? { images: m.images } : {}), ...(m.attachments?.length ? { attachments: m.attachments } : {}), ...(m.files?.length ? { files: m.files } : {}), ...(m.ts ? { ts: m.ts } : {}), ...(m.meta ? { meta: m.meta } : {}),
-  ...(m.card ? { card: m.card } : {}), ...(m.tool ? { tool: m.tool } : {}) }); // prompt 31: Glimt-kort (vær, kalender …) og verktøy-chip lagres i meldingen
+  ...(m.card ? { card: m.card } : {}), ...(m.tool ? { tool: m.tool } : {}),
+  ...(Array.isArray(m.think) && m.think.length ? { think: m.think, thS: m.thS ?? null, thinkSource: m.thinkSource ?? null } : {}), ...(Array.isArray(m.attTh) && m.attTh.length ? { attTh: m.attTh } : {}) }); // prompt 52: tankegang og miniatyr // prompt 31: Glimt-kort (vær, kalender …) og verktøy-chip lagres i meldingen
 const full = (r) => ({ ...brief(r), createdAt: iso(r.created), settings: cleanSettings(parse(r.settings, {})), messages: parse(r.messages, []).map(msgOut), shared: !!r.share_token });
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
@@ -312,9 +314,10 @@ const openaiMessages = (sys, msgs) => [{ role: 'system', content: sys }, ...msgs
   : { role: m.role, content: m.content }))];
 
 /** OpenAI-kompatibel SSE (Open WebUI og Groq). */
-async function openaiStream(name, url, headers, body, { onDelta, signal, idleMs }) {
+async function openaiStream(name, url, headers, body, { onDelta, onThink = async () => {}, signal, idleMs }) {
   const g = idleGuard(idleMs, signal);
   let tokens = null, usedWeb = false;
+  const tf52 = thinkSplit52(); // prompt 52: <think>…</think> til tankegangen, aldri i svaret
   try {
     let res;
     try { res = await F(url, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'text/event-stream', ...headers }, body: JSON.stringify(body), signal: g.signal }); }
@@ -329,11 +332,14 @@ async function openaiStream(name, url, headers, body, { onDelta, signal, idleMs 
         if (j.error) throw Object.assign(new Error(`${name}: ${String(j.error.message ?? j.error).slice(0, 200)}`), { engine: true });
         if (j.sources?.length || j.citations?.length) usedWeb = true;
         const d = j.choices?.[0]?.delta?.content ?? j.choices?.[0]?.message?.content ?? '';
-        if (d) await onDelta(d);
+        const rc = j.choices?.[0]?.delta?.reasoning_content ?? j.choices?.[0]?.delta?.reasoning ?? ''; // prompt 52: tankegang
+        if (rc) await onThink(rc);
+        if (d) { const x = tf52.push(d); if (x.think) await onThink(x.think); if (x.text) await onDelta(x.text); }
         if (j.usage) tokens = { count: j.usage.completion_tokens ?? j.usage.eval_count ?? null, perSec: j.usage['response_token/s'] ?? null };
         if (j.x_groq?.usage) tokens = { count: j.x_groq.usage.completion_tokens, perSec: j.x_groq.usage.completion_tokens / (j.x_groq.usage.completion_time || 1) };
       }
     } catch (e) { if (e.engine) throw e; throw engineError(name, e, g); }
+    { const x = tf52.end(); if (x.think) await onThink(x.think); if (x.text) await onDelta(x.text); }
     return { tokens, usedWeb };
   } finally { g.done(); }
 }
@@ -341,9 +347,9 @@ async function openaiStream(name, url, headers, body, { onDelta, signal, idleMs 
 // nye tokens). Bitene sendes videre til klienten mens de kommer. backend: 'ollama' (direkte) | undefined (gaten velger:
 // Open WebUI, eller Ollama direkte når Open WebUI ikke slo av tenkingen for modellen) | 'openwebui' (sky-modeller via Open WebUI,
 // utenom køen). owuiExtra: files (kunnskapsbase) og features (Open WebUIs eget nettsøk) – bare til Open WebUI.
-async function gateStream(model, sys, msgs, s, { onDelta, signal, backend, owuiExtra = null, noQueue = false, name = 'Ollama' }) {
+async function gateStream(model, sys, msgs, s, { onDelta, onThink = async () => {}, signal, backend, owuiExtra = null, noQueue = false, name = 'Ollama' }) {
   let tokens = null;
-  const tf = thinkFilter(); // <think>…</think> i selve teksten (eldre maler) vises aldri; message.thinking sendes ikke videre
+  const tf = thinkSplit52(); // <think>…</think> i selve teksten (eldre maler) og message.thinking går til tankegangen (prompt 52), aldri i svaret
   const idle = aiTimeoutsOf().ollama * 1000;
   const body = chatBody({ model, options: { temperature: s.temperature, top_p: s.topP, num_ctx: s.numCtx },
     messages: [{ role: 'system', content: sys }, ...msgs.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}) }))] }, s.think);
@@ -351,11 +357,14 @@ async function gateStream(model, sys, msgs, s, { onDelta, signal, backend, owuiE
     const out = await gateChat({ model, body, base: ollamaBase(), fetch: F, signal, priority: 'interactive', short: false, allowThink: !!s.think, image: msgs.some((m) => m.images?.length),
       warmMs: idle, idleMs: idle, label: 'Chat', ...(backend ? { backend } : {}), ...(owuiExtra ? { owuiExtra } : {}), ...(noQueue ? { noQueue: true } : {}),
       onChunk: async (j) => {
-        if (j.message?.content) { const d = tf.push(j.message.content); if (d) await onDelta(d); }
+        const th = j.message?.thinking ?? j.message?.reasoning_content ?? j.choices?.[0]?.delta?.reasoning_content ?? ''; // prompt 52
+        if (th) await onThink(th);
+        if (j.message?.content) { const x = tf.push(j.message.content); if (x.think) await onThink(x.think); if (x.text) await onDelta(x.text); }
         if (j.done && j.eval_count) tokens = { count: j.eval_count, perSec: j.eval_duration ? j.eval_count / (j.eval_duration / 1e9) : null };
       } });
     const rest = tf.end();
-    if (rest) await onDelta(rest);
+    if (rest.think) await onThink(rest.think);
+    if (rest.text) await onDelta(rest.text);
     return { tokens, telemetry: out.telemetry, usedWeb: !!out.usedWeb };
   } catch (e) {
     if (e instanceof GateError) {
@@ -413,7 +422,9 @@ async function mockStream(text, data, { onDelta, signal, facts = null }) {
 
 /** Kjører modellen: Open WebUI først når den er satt opp (og modellen kommer derfra), ellers direkte. */
 async function runEngine(m, ctx) {
-  const { sys, msgs, s, webSearch, files, onDelta, signal, gotText } = ctx;
+  const { sys, s, webSearch, files, onDelta, signal, gotText } = ctx;
+  const msgs = stripThink52(ctx.msgs); // prompt 52: tankegangen sendes aldri tilbake til modellen
+  const onThink = ctx.onThink ?? (async () => {});
   if (isMock()) return { ...(await mockStream(msgs.at(-1)?.content, ctx.data, { onDelta, signal, facts: ctx.facts })), engine: 'mock' };
   const o = owui();
   // Prompt 44: Open WebUI via gaten (samme kø som Ollama). ai_backend = 'ollama' → Ollama-modeller går direkte.
@@ -422,7 +433,7 @@ async function runEngine(m, ctx) {
     try {
       const owuiExtra = { ...(webSearch ? { features: { web_search: true } } : {}), ...(files.length ? { files } : {}) };
       const local = m.provider === 'ollama';
-      const r = await gateStream(m.id, sys, msgs, s, { onDelta, signal, ...(local ? {} : { backend: 'openwebui', noQueue: true }), owuiExtra, name: 'Open WebUI' });
+      const r = await gateStream(m.id, sys, msgs, s, { onDelta, onThink, signal, ...(local ? {} : { backend: 'openwebui', noQueue: true }), owuiExtra, name: 'Open WebUI' });
       return { ...r, engine: r.telemetry?.backend === 'ollama' ? 'ollama' : 'openwebui' };
     } catch (e) {
       // Open WebUI nede (og ingenting er strømmet ennå): prøv motoren direkte.
@@ -437,9 +448,9 @@ async function runEngine(m, ctx) {
     let model = m.id.replace(/^groq:/, '');
     if (msgs.some((x) => x.images?.length) && !/llama-4|scout/.test(model)) model = GROQ_VISION_DEFAULT;
     return { ...(await openaiStream('Groq', 'https://api.groq.com/openai/v1/chat/completions', { Authorization: `Bearer ${key}` },
-      { model: model || GROQ_DEFAULT, stream: true, messages: openaiMessages(sys, msgs), temperature: s.temperature, top_p: s.topP }, { onDelta, signal, idleMs: aiTimeoutsOf().groq * 1000 })), engine: 'groq', usedWeb: false };
+      { model: model || GROQ_DEFAULT, stream: true, messages: openaiMessages(sys, msgs), temperature: s.temperature, top_p: s.topP }, { onDelta, onThink, signal, idleMs: aiTimeoutsOf().groq * 1000 })), engine: 'groq', usedWeb: false };
   }
-  return { ...(await ollamaStream(m.id, sys, msgs, s, { onDelta, signal })), engine: 'ollama' };
+  return { ...(await ollamaStream(m.id, sys, msgs, s, { onDelta, onThink, signal })), engine: 'ollama' };
 }
 
 /* ---------------- Meldinger inn ---------------- */
@@ -452,7 +463,8 @@ function cleanMessages(list) {
     if (!m || !['user', 'assistant', 'system'].includes(m.role)) continue;
     const images = Array.isArray(m.images) ? m.images.slice(0, 4).map(stripData).filter((b) => b.length < 12_000_000 && B64.test(b.slice(0, 200))) : [];
     const att = attIds50(m.attachments); // prompt 50: vedlegg (id-er) – beskrivelsen hentes fra databasen
-    out.push({ role: m.role, content: String(m.content ?? '').slice(0, 100_000), ...(images.length ? { images } : {}), ...(att.length ? { attachments: att } : {}) });
+    const attTh = m.role === 'user' ? cleanAttTh52(m.attTh) : []; // prompt 52: miniatyr (maks 220 px) lagres på meldingen
+    out.push({ role: m.role, content: String(m.content ?? '').slice(0, 100_000), ...(images.length ? { images } : {}), ...(att.length ? { attachments: att } : {}), ...(attTh.length ? { attTh } : {}) });
   }
   return out;
 }
@@ -792,9 +804,10 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
   kv.set(u, 'chat_last_model', chatModelId);
   if (m.kind === 'sky') audit(m.provider === 'openwebui' ? 'openwebui' : m.provider, 'chat', { modell: m.name, meldinger: history.length, mineData: data ? Object.keys(data) : [], vedlegg: files.map((f) => f.name), bilder: imgCount, nettsok: !!b.webSearch }, u);
   const chatId = chat.id;
+  let think52 = null; // prompt 52: tankegangen for svaret (settes i strømmen)
   const saveMsgs = (answer, meta) => {
     const stored = history.map((x) => stored50({ ...x, ts: x.ts ?? now })); // prompt 50: vedlegg lagres som beskrivelse + miniatyr, ikke base64
-    if (answer) stored.push({ role: 'assistant', content: answer, ts: Date.now(), meta: readWith50 && !meta?.readWith ? { ...meta, readWith: readWith50 } : meta });
+    if (answer) stored.push({ role: 'assistant', content: answer, ts: Date.now(), ...(think52?.out() ?? {}), meta: readWith50 && !meta?.readWith ? { ...meta, readWith: readWith50 } : meta });
     q('UPDATE hl_chats SET messages=?, model=?, settings=?, updated=? WHERE id=? AND user_id=?').run(JSON.stringify(stored), chatModelId, JSON.stringify(s), Date.now(), chatId, u);
   };
   saveMsgs(null);
@@ -804,7 +817,10 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
     sse.onAbort(() => ctrl.abort());
     let text = '', first = null;
     const t0 = Date.now();
-    const onDelta = async (d) => { if (!d) return; first ??= Date.now(); text += d; if (!sse.aborted) await sse.writeSSE({ event: 'delta', data: JSON.stringify({ text: d }) }); };
+    // Prompt 52: tankegang – modellens egne steg (thinking/<think>/reasoning_content) eller Glimts egne steg; lukkes ved første svartekst.
+    think52 = thinkState52({ t0, emit: async (event, data) => { if (!sse.aborted) await sse.writeSSE({ event, data: JSON.stringify(data) }); } });
+    const onThink = (d) => think52.onThink(d);
+    const onDelta = async (d) => { if (!d) return; if (first == null) await think52.finish(); first ??= Date.now(); text += d; if (!sse.aborted) await sse.writeSSE({ event: 'delta', data: JSON.stringify({ text: d }) }); };
     const autoMeta = auto ? { auto: { model: auto.model, modelName: auto.modelName, kind: auto.kind, label: auto.label, reason: auto.reason, candidates: auto.candidates } } : {};
     await sse.writeSSE({ event: 'meta', data: JSON.stringify({ chatId, model: m.id, modelName: m.name, kind: m.kind, title: chat.title, ...autoMeta, ...(readWith50 ? { readWith: readWith50 } : {}),
       ...(last50.attachments?.length ? { attachments: last50.attachments } : {}) }) });
@@ -882,7 +898,12 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
       let r, used41 = m;
       // Open WebUIs eget nettsøk (features.web_search) bare når vårt eget søk ikke ga treff.
       const owuiWeb = !!b.webSearch && !webHits;
-      try { r = await runEngine(m, { sys: sysAll, msgs: modelMsgs, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text }); }
+      // Prompt 52: Glimts egne steg når modellen ikke tenker selv (tenkemodell + think:true gir modellens egne steg i stedet).
+      if (!(s.think && isThinkingModel(m.id))) {
+        await think52.glimt(glimtSteps52({ text: history.at(-1)?.content ?? '', images: imgCount, files: files.map((f) => f.name), tools: route.tools, used: [...factUsed, ...used],
+          model: m.name ?? m.id, reason: auto?.reason ?? (readWith50?.label ?? null), readWith: readWith50 }));
+      }
+      try { r = await runEngine(m, { sys: sysAll, msgs: modelMsgs, s, webSearch: owuiWeb, files: owuiFiles, onDelta, onThink, signal: ctrl.signal, data, facts, gotText: () => !!text }); }
       catch (e0) {
         let e = e0;
         // Prompt 51: modellen avviste bildet («does not support multimodal») – lagre det og bytt vei: foto → visjonsmodellen,
@@ -895,7 +916,7 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
             if (vm) {
               readWith50 = { route: 'vision', engine: 'vision', model: vm.id, modelName: vm.name, from: m.id, switched: true, label: `Lest med ${vm.id.replace(/:latest$/, '')} fordi ${m.id.replace(/:latest$/, '')} ikke kan se bilder` };
               used41 = vm;
-              r = await runEngine(vm, { sys: sysAll, msgs: modelMsgs, s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+              r = await runEngine(vm, { sys: sysAll, msgs: modelMsgs, s, webSearch: owuiWeb, files: owuiFiles, onDelta, onThink, signal: ctrl.signal, data, facts, gotText: () => !!text });
             } else {
               const doc = await readDocument51(prep50.imageFiles, { signal: ctrl.signal });
               if (!doc.ok) throw Object.assign(new Error(`Bildet kunne ikke leses: ${doc.error}`), { handled51: true });
@@ -903,7 +924,7 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
               await toDocument51(doc, `${from.replace(/:latest$/, '')} kan ikke se bilder`);
               readWith50.switched = true;
               used41 = m;
-              r = await runEngine(m, { sys: sysAll, msgs: modelMsgs.map((x) => { if (!x.images) return x; const { images, ...rest } = x; void images; return rest; }), s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+              r = await runEngine(m, { sys: sysAll, msgs: modelMsgs.map((x) => { if (!x.images) return x; const { images, ...rest } = x; void images; return rest; }), s, webSearch: owuiWeb, files: owuiFiles, onDelta, onThink, signal: ctrl.signal, data, facts, gotText: () => !!text });
             }
             if (!sse.aborted) await sse.writeSSE({ event: 'meta', data: JSON.stringify({ chatId, model: used41.id, modelName: used41.name, kind: used41.kind, title: chat.title, readWith: readWith50 }) });
             e = null;
@@ -915,7 +936,7 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
         if (!next) throw e;
         used41 = await modelFor(next);
         auto.fallbackFrom = m.id; auto.model = used41.id; auto.modelName = used41.name; auto.label = `${auto.label.split(' · ')[0]} · ${used41.name}`; auto.reason = `${m.name} svarte ikke · bruker ${used41.name}`;
-        r = await runEngine(used41, { sys: sysAll, msgs: used41.vision ? modelMsgs : modelMsgs.map((x) => { if (!x.images) return x; const { images, ...rest } = x; void images; return rest; }), s, webSearch: owuiWeb, files: owuiFiles, onDelta, signal: ctrl.signal, data, facts, gotText: () => !!text });
+        r = await runEngine(used41, { sys: sysAll, msgs: used41.vision ? modelMsgs : modelMsgs.map((x) => { if (!x.images) return x; const { images, ...rest } = x; void images; return rest; }), s, webSearch: owuiWeb, files: owuiFiles, onDelta, onThink, signal: ctrl.signal, data, facts, gotText: () => !!text });
         }
       }
       const ms = Date.now() - t0;
@@ -927,7 +948,8 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
       saveMsgs(text, { model: used41.id, tokensPerSec, ms, used: allUsed, ...metaFacts, ...autoDone });
       const tl = r.telemetry;
       jobEnd(jobId, { model: used41.id, ms, step: null, ...(tl ? { backend: tl.backend, backendNote: tl.backendNote ?? null, queueMs: tl.queueMs, loadMs: tl.loadMs, genMs: tl.genMs, attempts: tl.attempts, tokIn: tl.tokIn, tokOut: tl.tokOut } : { backend: r.engine }) });
-      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, ...(readWith50 ? { readWith: readWith50 } : {}), tools: route.tools, ...(tl?.backend ? { backend: tl.backend } : {}), ...metaFacts, ...autoDone, ...(webOff ? { webSearch: false } : {}), ...(wantedWeb ? { webSearchOff: { question: 'Nettsøk er av. Skal jeg søke på nettet for dette?', action: { label: 'Søk denne gangen', webSearch: true, once: true } } } : {}) }) });
+      await think52.finish(); // prompt 52: tomt svar – tankegangen lukkes likevel
+      await sse.writeSSE({ event: 'done', data: JSON.stringify({ chatId, tokensPerSec, ms, used: allUsed, engine: r.engine, ...think52.out(), ...(readWith50 ? { readWith: readWith50 } : {}), tools: route.tools, ...(tl?.backend ? { backend: tl.backend } : {}), ...metaFacts, ...autoDone, ...(webOff ? { webSearch: false } : {}), ...(wantedWeb ? { webSearchOff: { question: 'Nettsøk er av. Skal jeg søke på nettet for dette?', action: { label: 'Søk denne gangen', webSearch: true, once: true } } } : {}) }) });
     } catch (e) {
       const tl = e.telemetry;
       jobUpdate(jobId, { status: ctrl.signal.aborted || e.cancelled ? 'cancelled' : 'fail', error: ctrl.signal.aborted || e.cancelled ? 'Avbrutt av bruker' : e.message, ms: Date.now() - t0, step: null,

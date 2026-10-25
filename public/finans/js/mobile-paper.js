@@ -308,7 +308,7 @@ export function paperScanSheet() {
   // Hold inne på skanneknappen: Kvittering, Oppskrift, Bilder og Fil. I en bolig havner kvitteringen i boligen.
   const bol = scanCtx() === 'bol', qc = bol ? 'bol' : 'fin', bolN = bol ? (bolTitle()?.[0] ?? 'boligen') : '';
   const title = mat ? 'Skann oppskrift' : bol ? `Legg i ${bolN}` : ctx === 'fin' ? 'Legg til kvittering' : 'Skann';
-  const sub = bol ? `Kvitteringen legges i ${bolN} med status «til gjennomgang». ✦ AI fyller inn beløp og kategori.` : ctx === 'fin' ? 'Ta bilde, velg filer eller del fra e-post. ✦ Gemini leser i bakgrunnen og kobler mot transaksjonen.' : mat ? 'Bilde eller PDF av en oppskrift. ✦ AI trekker ut ingredienser og steg.' : 'Kvittering, oppskrift, bilder eller fil. ✦ Gemini leser i bakgrunnen.';
+  const sub = bol ? `Kvitteringen legges i ${bolN} med status «til gjennomgang». ✦ AI fyller inn beløp og kategori.` : ctx === 'fin' ? 'Ta bilde, velg filer eller del fra e-post. ✦ Glimt leser lokalt i bakgrunnen og kobler mot transaksjonen.' : mat ? 'Bilde eller PDF av en oppskrift. ✦ AI trekker ut ingredienser og steg.' : 'Kvittering, oppskrift, bilder eller fil. ✦ Glimt leser lokalt i bakgrunnen.';
   const IMG = 'application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif';
   const opt = (n, s2, attr, ink = false) => `<label class="pp-btn p17-opt${ink ? ' ink' : ''}"><span><b>${n}</b><small>${s2}</small></span><input class="m-file" type="file" ${attr}></label>`;
   return `<div class="sheet-bg" data-pp="scanx"></div><div class="pp-sheet" role="dialog" aria-label="${esc(title)}"><span class="pp-grab"></span>
@@ -454,11 +454,19 @@ function salCard43(s, bal) {
   const mn = new Date(yy, mm - 1, 15).toLocaleDateString('nb-NO', { month: 'long' });
   const hid = pref('hideAmt') && !m.reveal, amt = (v) => (hid ? '••••' : `${v < 0 ? '−' : ''}${n0(Math.abs(v))}`);
   const tag = hid ? 'div' : 'a';
-  return `<${tag} class="pp-card p43-sal" ${hid ? 'role="button" tabindex="0" data-mact="reveal" aria-label="Saldo alle kontoer (trykk for å vise beløp)"' : 'href="#/konto" aria-label="Saldo alle kontoer – åpne Kontoer"'}>
-    <span class="p43-salh"><span class="pp-lab">SALDO · ALLE KONTOER</span><span class="p43-salgo" aria-hidden="true">›</span></span>
-    <b class="p43-salv">${amt(bal)} <span>kr</span></b>
-    <span class="p43-salm"><span class="p43-ring" style="background:conic-gradient(var(--pp-lab) 0 ${pc}%, color-mix(in srgb,var(--pp-line) 80%,transparent) ${pc}% 100%)"><span>${day}.</span></span>
-      <span class="m-grow"><span class="p43-salt">Brukt i ${esc(mn)} · dag ${day} av ${dim}</span><b>${amt(spent)} kr</b></span></span></${tag}>`;
+  // Prompt 52 (claude-code-saldokort-utseende.md): utseende std | glass | kvitt | farge (papir_salsty, synkes som layout salSty).
+  // Hold inne 0,5 s → arket «Utseende på saldokortet» (mobile-p52.js). data-p52sal: holdet starter ikke wiggle og åpner ikke Kontoer.
+  let sty = 'std'; try { sty = localStorage.getItem('papir_salsty') || 'std'; } catch {}
+  if (!['std', 'glass', 'kvitt', 'farge'].includes(sty)) sty = 'std';
+  const ring = sty === 'glass' ? `conic-gradient(#f08a76 0 ${pc}%, rgba(255,255,255,.25) ${pc}% 100%)` : sty === 'farge' ? `conic-gradient(var(--pp-on,#fff) 0 ${pc}%, color-mix(in srgb,var(--pp-on,#fff) 30%,transparent) ${pc}% 100%)` : `conic-gradient(var(--pp-lab) 0 ${pc}%, color-mix(in srgb,var(--pp-line) 80%,transparent) ${pc}% 100%)`;
+  const head = `<span class="p43-salh"><span class="pp-lab">SALDO · ALLE KONTOER</span><span class="p43-salgo" aria-hidden="true">›</span></span>
+    <b class="p43-salv">${amt(bal)} <span>kr</span></b>`;
+  const mrow = `<span class="p43-salm"><span class="p43-ring" style="background:${ring}"><span>${day}.</span></span>
+      <span class="m-grow"><span class="p43-salt">Brukt i ${esc(mn)} · dag ${day} av ${dim}</span><b>${amt(spent)} kr</b></span></span>`;
+  const inner = sty === 'kvitt' ? `<span class="p52-salt">${head}</span><span class="p52-perf" aria-hidden="true"></span>${mrow}`
+    : sty === 'farge' ? `<span class="p52-salt">${head}</span>${mrow}` : `${head}${mrow}`;
+  return `<${tag} class="pp-card p43-sal p52-sal ${sty}" data-p52sal ${hid ? 'role="button" tabindex="0" data-mact="reveal" aria-label="Saldo alle kontoer (trykk for å vise beløp, hold inne for å velge utseende)"' : 'href="#/konto" aria-label="Saldo alle kontoer – åpne Kontoer. Hold inne for å velge utseende"'}>
+    ${inner}</${tag}>`;
 }
 
 /* ---------- Mer ---------- */

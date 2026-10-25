@@ -10,6 +10,7 @@ import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
 const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok', import: 'fsok' }; // prompt 48: import = bankimport (finansdata)
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 import { RULES39, normalizeLines39, extras39, verify39 } from './receipts39.js'; // prompt 39: varelinjer og sumkontroll
+import { blockCloudReceipt52, warnCloudReceipt52, RECEIPT_ENGINE_NOTE52 } from '../receipts48/cloud-guard52.js'; // prompt 52: kvitteringer bare lokalt
 import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: sperren for eksterne tjenester i kvitteringskjeden
 
 export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON etter skjemaet.
@@ -98,7 +99,7 @@ export const ROBOFLOW_WORKSPACE = 'sebastians-workspace-y3jnc';
 
 // Oppgavene og standardmotoren. Lagres som settings.aiTasks = { receipts:'gemini', … }. Strekkoder leses av Roboflow/zbar.
 export const TASKS = {
-  receipts: { name: 'Les kvitteringer', engine: 'gemini' },
+  receipts: { name: 'Les kvitteringer', engine: 'ollama' }, // prompt 52: bare lokalt (Gemini er tatt ut av kvitteringer)
   search: { name: 'AI-søk', engine: 'groq' },
   categorize: { name: 'Kategorisering', engine: 'groq' },
   barcode: { name: 'Strekkoder', engine: 'roboflow' },
@@ -240,12 +241,10 @@ export function engineOrder(st = settings(), { force = null, skipDown = true, ta
  */
 export function receiptEngines48(list) {
   const blocked = externalBlocked48();
-  let out = [...new Set(list)].filter((p) => p !== 'groq');
-  if (blocked.blocked) out = out.filter((p) => p === 'ollama');
-  out.sort((a, b) => (a === 'gemini') - (b === 'gemini'));
+  // Prompt 52 (SRV52): kvitteringer leses bare lokalt – Gemini og Groq er tatt helt ut, også som reserve og når sperren er av.
+  const out = [...new Set(list)].filter((p) => p === 'ollama');
   return { list: out, blocked };
 }
-const receiptForceErr48 = (force, g) => Object.assign(new Error(force === 'groq' ? 'Groq brukes ikke til kvitteringer' : `${g.blocked.text ?? 'Eksterne tjenester er sperret'}, så ${providerName(force)} brukes ikke til kvitteringer`), { noRetry: true, blocked: true });
 // Etter et tidsavbrudd: resten av listen (etter idx) får samme regel (ingen Groq, Gemini sist, sperren).
 const guardRest48 = (list, idx) => { const tried = list.slice(0, idx + 1); list.splice(idx + 1, Infinity, ...receiptEngines48(list.slice(idx + 1)).list.filter((x) => !tried.includes(x))); };
 
@@ -371,6 +370,8 @@ async function geminiGenerate(parts, { schema, timeout, temperature, model, star
  * Samme nøkkelrotasjon og modellvalg som resten. Sjekker selv sperren, så ingenting sendes ut når den er på.
  */
 export async function geminiJson48(parts, schema, { timeout = 30_000, signal = null, temperature = 0 } = {}) {
+  // Prompt 52 (SRV52): bare brukt av kvitteringskjeden (steg D), som er fjernet. Stopper alt som likevel prøver.
+  if (parts) throw blockCloudReceipt52('finans/ai geminiJson48', 'gemini');
   const b = externalBlocked48();
   if (b.blocked) throw Object.assign(new Error(`${b.text}, så Gemini brukes ikke`), { noRetry: true, blocked: true });
   const t0 = Date.now(), model = settings().geminiModel || GEMINI_DEFAULT;
@@ -404,15 +405,19 @@ async function groqChat(content, schema, { timeout, temperature, model, signal =
 
 async function ollama(image, mime, cats, st, ms = engineMs('ollama', st)) {
   if (mime === 'application/pdf') throw Object.assign(new Error('Ollama kan ikke lese PDF'), { noRetry: true });
-  if (mime === 'image/heic' || mime === 'image/heif') throw Object.assign(new Error('Ollama kan ikke lese HEIC-bilder (bruk Gemini, eller last opp som JPEG)'), { noRetry: true });
+  if (mime === 'image/heic' || mime === 'image/heif') throw Object.assign(new Error('Ollama kan ikke lese HEIC-bilder (last opp som JPEG)'), { noRetry: true });
   const model = await modelFor('rc', 'ollama', st.ollamaModel, { images: [1] }); // prompt 34: ruten «Kvitteringer (bilde)», validert
   return (await ollamaChat(st, [{ role: 'user', content: PROMPT(cats), images: [image.toString('base64')] }], SCHEMA,
     { timeout: ms, temperature: 0, model })).data;
 }
 async function gemini(image, mime, cats, st, ms = engineMs('gemini', st), startKey = null) {
+  throw blockCloudReceipt52('finans/ai gemini(kvitteringsbilde)', 'gemini'); // prompt 52: kvitteringsbilder sendes aldri til Gemini
+  // eslint-disable-next-line no-unreachable
   return (await geminiGenerate([{ inline_data: { mime_type: mime, data: image.toString('base64') } }, { text: PROMPT(cats) }], { schema: SCHEMA, timeout: ms, temperature: 0, model: st.geminiModel, startKey })).data;
 }
 async function groq(image, mime, cats, st, ms = engineMs('groq', st)) {
+  throw blockCloudReceipt52('finans/ai groq(kvitteringsbilde)', 'groq'); // prompt 52
+  // eslint-disable-next-line no-unreachable
   if (!/^image\/(jpe?g|png|webp|gif)$/.test(mime)) throw Object.assign(new Error('Groq kan bare lese JPEG, PNG og WebP'), { noRetry: true });
   return (await groqChat([{ type: 'text', text: PROMPT(cats) }, { type: 'image_url', image_url: { url: `data:${mime};base64,${image.toString('base64')}` } }], SCHEMA,
     { timeout: ms, temperature: 0, model: st.groqVisionModel || GROQ_VISION_DEFAULT })).data;
@@ -429,20 +434,18 @@ export async function extract(image, mime, cats, force, { log = () => {}, status
   const mode = onTimeout ?? aiTimeoutsOf(st).onTimeout;
   let order = engineOrder(st, { force, task: 'receipts' });
   // Prompt 48: ingen Groq, Gemini sist, og bare lokalt når «Finansdata forlater aldri huset» er på (også for bildet).
+  // Prompt 52: «Les på nytt med Gemini» fra eldre klienter leses lokalt (advarsel i loggen), aldri i skyen.
+  let engineNote52 = null;
+  if (force && force !== 'ollama') { warnCloudReceipt52(`Les på nytt (${force})`, force); engineNote52 = RECEIPT_ENGINE_NOTE52; force = 'ollama'; order = ['ollama']; log('lokal', engineNote52); }
   const g48 = receiptEngines48(order);
-  if (force && !g48.list.includes(force)) throw receiptForceErr48(force, g48);
   order = g48.list.length ? g48.list : ['ollama'];
   if (g48.blocked.blocked) log('lokal', `${g48.blocked.text} · bare lokal modell og lokal OCR`);
   // Roboflow (valgfritt): finn kvitteringen i bildet og beskjær før AI/OCR leser den. Roboflow er en ekstern tjeneste (sperren).
-  if (!force && !g48.blocked.blocked && /^image\/(jpe?g|png|webp)$/.test(mime)) {
-    const crop = await roboflowCrop(image, mime, st).catch((e) => { log('roboflow', `hoppet over: ${e.timeout ? `svarte ikke innen ${aiTimeoutsOf(st).roboflow} s` : e.message}`); return null; });
-    if (crop) { log('roboflow', `kvitteringen funnet og beskåret (${Math.round(crop.box.confidence * 100)} %)`); image = crop.image; }
-  }
-  // HEIC: bare Gemini kan lese det (Ollama feiler raskt med beskjed); Gemini står fortsatt sist og bare når sperren er av.
-  if (!force && (mime === 'image/heic' || mime === 'image/heif') && hasGemini() && !g48.blocked.blocked) order = [...order.filter((p) => p !== 'gemini'), 'gemini'];
+  // Prompt 52 (SRV52): Roboflow-beskjæringen er tatt ut – kvitteringsbildet sendes aldri til en sky-API (heller ikke når sperren er av).
+  // Prompt 52: HEIC sendes ikke lenger til Gemini – lokal OCR/kø tar over (klientene sender JPEG-kopien).
   let lastErr, timedOut = null, ocrNow = false;
   const errors = [];
-  const done = (r) => (timedOut ? { ...r, timeoutEngine: timedOut.engine } : r);
+  const done = (r) => ({ ...(timedOut ? { ...r, timeoutEngine: timedOut.engine } : r), ...(engineNote52 ? { engineNote: engineNote52 } : {}) });
   const onStatus = (text, info) => { log('tidsavbrudd', text); status(text, info); };
   const list = [...new Set(order)];
   for (let idx = 0; idx < list.length && !ocrNow; idx++) {
@@ -580,8 +583,8 @@ export async function textJson(prompt, schema, { temperature = 0.2, force = null
   }
   // Prompt 48: kvitteringer (OCR-tekst og e-post) – ingen Groq, Gemini sist, og sperren gjelder også med tvungen motor.
   if (task === 'receipts') {
+    if (force && force !== 'ollama') { warnCloudReceipt52(`kvitteringstekst med tvungen motor ${force}`, force); force = 'ollama'; list = ['ollama']; } // prompt 52
     const g = receiptEngines48(list);
-    if (force && !g.list.includes(force)) throw receiptForceErr48(force, g);
     list = g.list.length ? g.list : ['ollama'];
   }
   const limits = aiTimeoutsOf(st);

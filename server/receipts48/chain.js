@@ -3,22 +3,20 @@
 //   B  device_ocr finnes?                                 → qwen3:8b på radene → valider (ett nytt forsøk med feilbeskrivelse)
 //   C  Mac Vision OCR på bildet                           → qwen3:8b → valider (ett nytt forsøk)
 //   T  Tesseract (tsv) når Mac-OCR er av/utilgjengelig    → qwen3:8b → valider (ett nytt forsøk)
-//   D  Gemini Flash (bilde + beste OCR-tekst), bare når «Finansdata forlater aldri huset» er av → valider (ett nytt forsøk)
+//   (D  Gemini er fjernet i prompt 52: kvitteringer leses bare lokalt, også når sperren er av)
 // Hvert steg kan slås av (settings.receipts48). Finnes både device-OCR og Mac-OCR, sammenlignes totalen: avvik → resultatet
 // som består sumsjekken brukes, ellers merkes totalen som usikker. Består ingen, brukes det beste forsøket (færrest feil).
-import { hasGemini } from '../finans/gemini-keys.js';
 import { checkOcr48 } from './schema.js';
 import { normalizeOcr48, ocrText48 } from './normalize.js';
 import { validateReceipt48, score48, totalCandidates48 } from './validate.js';
-import { r48Settings, macOcrKey48, externalBlocked48 } from './settings.js';
-import { parseRows48, SYSTEM48 } from './engines/llm.js';
+import { r48Settings, macOcrKey48 } from './settings.js';
+import { parseRows48 } from './engines/llm.js';
 import { macOcr48 } from './engines/mac-vision.js';
 import { tesseractOcr48 } from './engines/tesseract.js';
-import { geminiParse48 } from './engines/gemini.js';
 import { macHealth48 } from './engines/mac-vision.js';
 import { resolveMerchant51 } from './brreg51.js'; // prompt 51: butikknavn via org.nr. → kjent butikk → modellen
 
-export const STEP_NAMES48 = { A: 'Tolket på enheten', B: 'Enhetens OCR + lokal modell', C: 'Mac Vision + lokal modell', T: 'Tesseract + lokal modell', D: 'Gemini Flash' };
+export const STEP_NAMES48 = { A: 'Tolket på enheten', B: 'Enhetens OCR + lokal modell', C: 'Mac Vision + lokal modell', T: 'Tesseract + lokal modell' };
 export const DEVICE_OCR_SOURCES48 = ['ios_vision', 'android_mlkit'];
 // Mac-OCR som ikke svarte, hoppes over i 2 minutter (så hver kvittering ikke venter på samme tidsavbrudd).
 // Prompt 51: før bildet sendes, sjekkes /health med kort tidsavbrudd (1,5 s) – svarer ikke verten, merkes Mac-OCR som nede i 5 min
@@ -53,8 +51,7 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
   const cfg = r48Settings();
   const t00 = Date.now();
   // Prompt 51: Tesseract og Mac-OCR leser ORIGINALEN (forbehandlet, aldri under 2000 px). Den nedskalerte kopien er bare reserve når
-  // originalen ikke kan leses (HEIC uten libheif) og bildet Gemini får (bare når sperren er av).
-  const small = smallImage ?? image, smallMime = smallImage ? 'image/jpeg' : mime;
+  // originalen ikke kan leses (HEIC uten libheif).
   const pipeline = [], cands = [];
   let modelDown = null, macOcr = null, macErr = null, tessOcr = null, passed = null;
   const entry = (step, extra = {}) => { const e = { step, name: STEP_NAMES48[step], status: 'skipped', ms: 0, ...extra }; pipeline.push(e); return e; };
@@ -164,45 +161,11 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
     }
   }
 
-  // Beste OCR-tekst så langt (til Gemini og til lagring): Mac, så enheten, så Tesseract.
+  // Beste OCR-tekst så langt (til lagring): Mac, så enheten, så Tesseract.
   const bestOcr = macOcr ?? deviceOcr ?? tessOcr ?? null;
 
-  // D: Gemini – siste reserve, bare når sperren er av.
-  if (!passed) {
-    const blk = externalBlocked48();
-    if (!cfg.gemini) skip('D', 'slått av i innstillingene');
-    else if (blk.blocked) skip('D', blk.text);
-    else if (!hasGemini()) skip('D', 'Gemini-nøkkel mangler');
-    else if (!image) skip('D', 'ingen bilde');
-    else {
-      const e = entry('D', { engine: 'gemini', status: 'failed', attempts: [] });
-      const t0 = Date.now();
-      const text = bestOcr ? ocrText48(bestOcr) : '';
-      let feedback = null;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        const ta = Date.now();
-        try {
-          const r = await geminiParse48(small, smallMime, { rows: bestOcr?.rows ?? [], categories, feedback, prompt: `Bildet er kvitteringen. ${SYSTEM48}`, base: cfg.ollamaUrl, signal });
-          const v = validateReceipt48(r.data, { ocrText: text, categories });
-          e.model = r.model;
-          e.attempts.push({ attempt, ms: Date.now() - ta, confidence: v.confidence, failed_fields: v.failed_fields });
-          cands.push({ step: 'D', v, ocr: bestOcr, engine: 'gemini', model: r.model, provider: 'gemini', order: cands.length });
-          log('steg-D', `Gemini (${r.model})${attempt > 1 ? ' (nytt forsøk)' : ''} · ${v.ok ? 'besto kontrollen' : `feilet: ${v.failed_fields.join(', ')}`} · ${Date.now() - ta} ms`);
-          if (v.ok) { Object.assign(e, { status: 'ok', confidence: v.confidence }); passed = 'D'; break; }
-          feedback = v.feedback;
-          Object.assign(e, { failed_fields: v.failed_fields, confidence: v.confidence });
-        } catch (err) {
-          e.attempts.push({ attempt, ms: Date.now() - ta, error: err.message });
-          Object.assign(e, { status: 'error', error: err.message });
-          log('steg-D', `Gemini: ${err.message}`);
-          if (signal?.aborted) throw err;
-          if (!err.badJson) break;
-          feedback = 'Forrige svar var ikke gyldig JSON. Svar bare med ett JSON-objekt etter skjemaet.';
-        }
-      }
-      e.ms = Date.now() - t0;
-    }
-  }
+  // Prompt 52 (SRV52): steg D (Gemini) er fjernet. Kvitteringer leses bare lokalt – ingen sky-reserve, uansett innstilling.
+  // Består ingen av de lokale stegene, brukes beste forsøk, og kvitteringen kan leses på nytt (kø/prøv igjen).
 
   // Valg: første som besto, ellers beste forsøk (færrest alvorlige feil, så færrest feil, så sumsjekk, så senest).
   let pick = passed ? cands.find((c) => c.step === passed && c.v.ok) : [...cands].sort((a, b) => score48(a.v) - score48(b.v) || (b.v.checks?.sumOk ? 1 : 0) - (a.v.checks?.sumOk ? 1 : 0) || b.order - a.order)[0] ?? null;
@@ -241,7 +204,7 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
   const uncertain = [...new Set([...(v?.failed_fields ?? ['merchant', 'date', 'total', 'items']), ...uncertainExtra])];
   let confidence = v?.confidence ?? 'low';
   if (confidence === 'high' && uncertainExtra.length) confidence = 'medium';
-  const label = !pick ? null : pick.step === 'A' ? (client?.platform === 'android' ? 'Android' : 'iPhone') : pick.step === 'B' ? (deviceOcr?.source === 'android_mlkit' ? 'Android + Glimt' : 'iPhone + Glimt') : pick.step === 'C' ? 'Mac' : pick.step === 'T' ? 'Glimt (Tesseract)' : 'Gemini';
+  const label = !pick ? null : pick.step === 'A' ? (client?.platform === 'android' ? 'Android' : 'iPhone') : pick.step === 'B' ? (deviceOcr?.source === 'android_mlkit' ? 'Android + Glimt' : 'iPhone + Glimt') : pick.step === 'C' ? 'Mac' : pick.step === 'T' ? 'Glimt (Tesseract)' : 'Lokal AI';
   return {
     receipt: v?.receipt ?? null, confidence, failed_fields: v?.failed_fields ?? [], uncertain_fields: uncertain, errors: v?.errors ?? ['Ingen steg ga et resultat'], warnings: v?.warnings ?? [],
     checks: v?.checks ?? null, pipeline, used: pick?.step ?? null, passed: !!passed && pick?.step === passed, engine: pick?.engine ?? null, provider: pick?.provider ?? null, model: pick?.model ?? null, label,

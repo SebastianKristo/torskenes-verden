@@ -10,6 +10,7 @@ import { m, draw, flash } from './mobile.js';
 import { BO } from './mobile-p16.js';
 import { sheetBtn, hapLight } from './mobile-p30.js';
 import { glimt } from './mobile-p31.js';
+import { rcCard52, slip52 } from './rccard52.js'; // prompt 52: samme kvitteringskort som Finans → transaksjon
 
 export const B30 = { ent: null, edit: {}, t: null, saving: false, hist: {}, sh: {}, sel: [], role: 'editor', email: '', busy: false };
 const kr = (v) => `${(v ?? 0) < 0 ? '−' : ''}${n0(v)} kr`;
@@ -21,6 +22,21 @@ const catName = (t) => t.label ?? t.name ?? '';
 // Forslag: kategoriene boligen bruker mest (d.categories), ellers de første i treet.
 const topCats = (d) => { const L = (d.categories ?? []).filter((c) => c.id != null).map((c) => ({ id: c.id, name: c.name })); return (L.length ? L : (d.catTree ?? []).filter((t) => !/›/.test(catName(t))).map((t) => ({ id: t.id, name: catName(t) }))).slice(0, 4); };
 const thumb = (d, e) => (e.receiptId ? `<span class="b30-th" style="background-image:url('/finans/api/folders/${d.id}/receipts/${esc(e.receiptId)}/thumb')"></span>` : '<span class="b30-th none" aria-hidden="true">kr</span>');
+
+/* Prompt 52 (claude-code-kvittering-lokal-lik-overalt.md → Mobil): utgiftsarket viser samme kvitteringskort som
+   Finans → transaksjon (rccard52.js). Varelinjene hentes fra samme kvitteringstjeneste (/receipts/:id). */
+const RCL = {};
+function rcOf52(d, e) {
+  const rid = e.receiptId, fileUrl = rid ? `/finans/api/folders/${d.id}/receipts/${encodeURIComponent(rid)}/file` : null;
+  if (rid && RCL[rid] === undefined) { RCL[rid] = null; api(`/receipts/${encodeURIComponent(rid)}`).then((r) => { RCL[rid] = { lines: r?.lines ?? r?.items ?? [], ai: r?.aiDescription ?? r?.aiLong ?? r?.aiShort ?? '' }; draw(); }).catch(() => { RCL[rid] = { lines: [] }; }); }
+  const L = (e.lines?.length ? e.lines : RCL[rid]?.lines ?? []).map((l) => ({ name: l.text ?? l.description ?? l.name ?? '', price: l.amount ?? l.price ?? null })).filter((l) => l.name);
+  const pdf = /pdf/i.test(e.mime ?? '') || /\.pdf$/i.test(e.fileName ?? '');
+  const cat = (d.catTree ?? []).find((t) => String(t.id) === String(e.categoryId)), dtxt = e.date ? new Date(`${e.date}T12:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '') : '';
+  return { name: e.description || 'Utgift', color: e.color || '#6b665c', meta: [cat ? catName(cat) : e.category, dtxt, d.name].filter(Boolean).join(' · '), amount: -Math.abs(Number(e.amount) || 0),
+    ai: e.aiShort || RCL[rid]?.ai || '', status: rid ? (e.status === 'review' ? 'Til gjennomgang' : 'Vedlagt') : 'Mangler', statusWarn: !rid || e.status === 'review',
+    slip: rid ? slip52({ name: e.description || '', date: e.date ? `${dd(e.date)}.${e.date.slice(0, 4)}` : '', href: fileUrl, hasFile: true, pdf, lines: L, total: Math.abs(Number(e.amount) || 0) })
+      : '<div class="pp-card pp-col" style="gap:8px"><span class="pp-mut">Ingen kvittering er lagt ved denne utgiften.</span></div>' };
+}
 
 /* ---------- 1. Til gjennomgang: hele toppraden åpner detaljarket (også mens AI leser) ---------- */
 export function reviewCard(d) {
@@ -45,7 +61,8 @@ export function entSheet(d) {
   return `<div class="sheet-bg" data-b30="entx"></div><div class="pp-sheet b30-sheet" role="dialog" aria-modal="true" aria-label="Utgift">
     <span class="pp-grab" aria-hidden="true"></span>
     <div class="b30-hd"><div class="m-grow"><span class="pp-lab">${esc(d.name.toUpperCase())} · ${rv ? 'TIL GJENNOMGANG' : 'GODKJENT'}</span><input class="b30-mer" id="b30-mer" data-b30in="merchant" value="${esc(mer)}" aria-label="Butikk eller beskrivelse" maxlength="120" ${ro ? 'readonly' : ''}></div>${sheetBtn('Ferdig', 'pri', 'data-b30="entx"')}</div>
-    <div class="b30-body">${e.receiptId ? `<a class="b30-img" href="/finans/api/folders/${d.id}/receipts/${esc(e.receiptId)}/file" target="_blank" rel="noopener" style="background-image:url('/finans/api/folders/${d.id}/receipts/${esc(e.receiptId)}/thumb')" aria-label="Åpne kvitteringen"></a>` : '<span class="b30-img none">Ingen kvittering</span>'}
+    ${rcCard52(rcOf52(d, e))}
+    <div class="b30-body">
       <div class="b30-f"><label class="b30-amtl"><input id="b30-amt" data-b30in="amount" value="${esc(amt)}" inputmode="decimal" placeholder="0" aria-label="Beløp" ${ro ? 'readonly' : ''}><span>kr</span></label>
         <label class="b30-date">Dato<input type="date" id="b30-date" data-b30in="date" value="${esc(date)}" ${ro ? 'readonly' : ''}></label>
         <span class="pp-mut b30-who">${B30.saving ? 'Lagrer …' : esc(who)}</span>${e.aiShort ? `<span class="b30-ai">✦ ${esc(e.aiShort)}</span>` : ''}</div></div>

@@ -19,13 +19,13 @@ const H = { authorization: `Bearer ${token}`, 'content-type': 'application/json'
 test('logo- og chat-brytere lagres og leses tilbake', async () => {
   const before = await (await fin.request('/settings', { headers: H })).json();
   assert.equal(before.chat_ask_cloud, true);
-  assert.equal(before.user.logo_gemini, true);
-  const r = await fin.request('/settings', { method: 'PUT', headers: H, body: JSON.stringify({ logo_gemini: false, chat_my_data: true, chat_theme: 'noytral' }) });
+  assert.equal(before.user.logo_gemini, false); // prompt 52: «Finn logo med Gemini» er av som standard
+  const r = await fin.request('/settings', { method: 'PUT', headers: H, body: JSON.stringify({ logo_gemini: true, chat_my_data: true, chat_theme: 'noytral' }) });
   assert.equal(r.status, 200);
   const s = await r.json();
-  assert.equal(s.logo_gemini, false);
+  assert.equal(s.logo_gemini, true);
   assert.equal(s.chat_my_data, true);
   assert.equal(s.chat_theme, 'noytral');
   const p = await (await fin.request('/ai-privacy', { headers: H })).json();
-  assert.equal(p.logo_gemini === false || p.logoGemini === false, true);
+  assert.equal(p.logo_gemini === true || p.logoGemini === true, true);
 });

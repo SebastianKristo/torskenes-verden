@@ -13,6 +13,7 @@
 //   Boliger + import rett til Boliger                      → homes42.js
 //   GET  /stocks (mellomvare): hver posisjon får logo:{url, issuer, domain}, monogram, tickerBadge, exchange, subtitle:'VUAG · London · USD', instrument
 //   GET  /aksjer/logo/:key                                 → bildet (Cache-Control 30 d) eller 404 (klienten viser monogram)
+import { lastVisitSpecial52 } from '../srv52.js'; // prompt 52
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { db, settings, ensureLedger } from './db.js';
@@ -100,7 +101,8 @@ export function subsAnswer42(u, text) {
 }
 const SPECIAL40 = /\b(budsjett\w*|faste utgifter|faste regninger|regninger)\b|^(?:mine )?(kontoer|konto|saldo|disponibelt)\b/;
 /** Budsjett, faste utgifter og kontoer: prompt 40-svarene (med kort og nøkkeltall). */
-const special42 = (u, text, p) => (!p.merchant && SPECIAL40.test(fold42(text).trim()) ? financeAsk40(u, text) : null);
+// Prompt 52 (SRV52): «sist jeg var på X» først (butikkmatch med «&» → «og» og Levenshtein, svar uten LLM, 0-treff-forslag).
+const special42 = (u, text, p) => lastVisitSpecial52(u, text) ?? (!p.merchant && SPECIAL40.test(fold42(text).trim()) ? financeAsk40(u, text) : null);
 // scope: {module:'boliger', home_id} eller {home:<id>} (FinansHub web) – søket filtreres på boligen.
 const scopeOf = (sc) => (!sc || typeof sc !== 'object' ? null : sc.module === 'boliger' || sc.home != null || sc.home_id != null || sc.homeId != null ? { module: 'boliger', home_id: sc.home_id ?? sc.homeId ?? (sc.home === 'all' ? null : sc.home) ?? null } : null);
 const askOpts = (b) => ({ scope: scopeOf(b.scope), homeSearch: homeSearch42, subsAnswer: subsAnswer42, special: special42 });

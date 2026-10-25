@@ -394,7 +394,7 @@ export function wkCard(D, place) {
 /* =====================================================================
    5. Kvitteringer: «✦ På nytt» med fremdrift (POST /finans/api/receipts/:id/reanalyze)
    ===================================================================== */
-const RST = [['upload', 'Laster opp bildet', 15], ['ocr', 'Leser teksten (OCR)', 45], ['llm', '✦ Gemini tolker butikk, linjer og beløp', 80], ['verify', 'Sjekker sum og dato', 97]];
+const RST = [['upload', 'Laster opp bildet', 15], ['ocr', 'Leser teksten (OCR)', 45], ['llm', '✦ Glimt tolker lokalt: butikk, linjer og beløp', 80], ['verify', 'Sjekker sum og dato', 97]];
 export const RE = {};
 export const HLF = {};
 const rcOf = (id) => (S.receipts ?? []).find((x) => String(x.id) === String(id));
@@ -417,7 +417,8 @@ function paintRe(id) {
   const meta = root.querySelector('[data-p39rm]'); if (meta) meta.textContent = `✦ Glimt analyserer på nytt … ${P} %`;
   const st = root.querySelector('[data-p39rs]'); if (st) { const i = RST.findIndex(([k]) => k === R.step); st.textContent = `${(RST[i] ?? RST[0])[1]} …`; root.querySelectorAll('[data-p39ri]').forEach((x) => { const j = +x.dataset.p39ri; x.className = j < i ? 'ok' : j === i ? 'on' : ''; x.firstChild.textContent = j < i ? '✓' : j === i ? '•' : '·'; }); }
 }
-export async function rcRe(id, engine = 'gemini') {
+export async function rcRe(id, engine = 'ollama') {
+  if (engine === 'gemini') engine = 'ollama'; // prompt 52: kvitteringer leses bare lokalt
   if (RE[id] && !RE[id].err) return;
   const before = snap(rcOf(id));
   const R = RE[id] = { pct: 2, step: 'upload', t0: Date.now(), real: 0, before, engine, seq: (RE[id]?.seq ?? 0) + 1 };

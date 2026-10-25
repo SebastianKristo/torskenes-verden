@@ -49,6 +49,13 @@ async function fake(url, init = {}) {
     if (u.pathname === '/api/version') return Response.json({ version: '0.12.0' });
     if (u.pathname === '/api/chat') {
       const last = body?.messages?.at(-1)?.content ?? '';
+      // Prompt 52: «Les på nytt» leses lokalt (Ollama med kvitteringsprompten) – samme feilmoduser som Gemini hadde før.
+      if (/Du leser en norsk kvittering/.test(last) && body?.messages?.at(-1)?.images?.length) {
+        if (net.geminiDelay) await new Promise((r) => setTimeout(r, net.geminiDelay));
+        if (net.gemini === 'down') throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } });
+        if (net.gemini === 'timeout') throw Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' });
+        return new Response(`${JSON.stringify({ model: body.model, message: { role: 'assistant', content: JSON.stringify({ merchant: 'Clas Ohlson', date: '2026-10-12', total: 249, currency: 'NOK', lines: [{ description: 'Skrutrekker', amount: 249 }], confidence: { merchant: 0.97, date: 0.96, total: 0.96 }, suggested_category: 'Diverse' }) }, done: true, done_reason: 'stop' })}\n`, { headers: { 'content-type': 'application/x-ndjson' } });
+      }
       if (/Rader:/.test(last)) return new Response(`${JSON.stringify({ model: body.model, message: { role: 'assistant', content: JSON.stringify(GOOD48) }, done: true, done_reason: 'stop' })}\n`, { headers: { 'content-type': 'application/x-ndjson' } });
       return new Response(streamOf([{ message: { content: 'Jeg ser ' } }, { message: { content: 'kvitteringen.' } }, { done: true, eval_count: 10, eval_duration: 1e9 }].map((l) => `${JSON.stringify(l)}\n`)));
     }
@@ -262,9 +269,10 @@ async function waitJob(path) {
   for (let i = 0; i < 200; i++) { const j = await S(path); if (j.body?.status !== 'running') return j; await new Promise((r) => setTimeout(r, 15)); }
   throw new Error('jobben ble aldri ferdig');
 }
-const geminiImage = () => { const g = calls.filter((x) => x.host === 'generativelanguage.googleapis.com' && x.body?.contents).at(-1); return g?.body.contents[0].parts.find((p) => p.inline_data)?.inline_data; };
+// Prompt 52: bildet «Les på nytt» sender til den lokale modellen (aldri Gemini).
+const geminiImage = () => { const g = calls.filter((x) => x.host === 'ollama.test:11434' && x.path === '/api/chat' && /Du leser en norsk kvittering/.test(x.body?.messages?.at(-1)?.content ?? '')).at(-1); const b64 = g?.body.messages.at(-1).images?.[0]; return b64 ? { mime_type: b64.startsWith('/9j') ? 'image/jpeg' : 'ukjent', data: b64 } : null; };
 
-test('«Les på nytt»: originalen nedskaleres til 2048 px (small: 1280, maxSide) før Gemini; jobben kan følges på alle tre stiene', async () => {
+test('«Les på nytt»: originalen nedskaleres til 2048 px (small: 1280, maxSide) før den lokale modellen (prompt 52, engine:gemini → lokalt); jobben kan følges på alle tre stiene', async () => {
   fdb.setSecret('geminiKey', 'AIza-test-key-aaaaaaaaaaaaaaaaaaaa');
   const r = aiRun.routing(); delete r.own; aiRun.saveServerRouting({ ...r, rules: { ...r.rules, finLocal: false } });
   _resetAi(); net.gemini = 'ok'; calls.length = 0; magickCalls.length = 0;
@@ -275,6 +283,7 @@ test('«Les på nytt»: originalen nedskaleres til 2048 px (small: 1280, maxSide
   assert.equal(j.body.status, 'done', j.text);
   assert.ok(j.body.result.candidateId);
   for (const p of [`/finans/api/receipts/reanalyze/${st.body.jobId}`, `/finans/api/receipts/jobs/${st.body.jobId}`]) assert.equal((await S(p)).body.status, 'done', p);
+  assert.equal(calls.filter((x) => x.host === 'generativelanguage.googleapis.com' && x.body?.contents).length, 0, 'prompt 52: aldri Gemini');
   const g = geminiImage();
   assert.equal(g.mime_type, 'image/jpeg');
   assert.ok(Buffer.from(g.data, 'base64').length < 10_000, 'ikke originalen (600 kB)');

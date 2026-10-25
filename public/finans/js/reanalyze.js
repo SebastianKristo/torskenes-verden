@@ -1,17 +1,17 @@
-// «✦ Analyser på nytt med Gemini»: sender originalbildet til Gemini og viser resultatet side om side med det forrige.
+// «✦ Les på nytt»: leser originalbildet lokalt på nytt (prompt 52: aldri Gemini) og viser resultatet side om side med det forrige.
 // Brukes av desktop (bekreftelsessiden og køen) og PWA-en. Brukeren velger hvilket resultat som beholdes.
 import { api, esc, n2, dd, uploadReceipt } from './core.js';
 import { reanalyzeJob50, rereadError50 } from './reread50.js'; // prompt 50: jobb + feilmeldinger i stedet for «Feil 502»
 
-/** Knappene: «✦ Analyser på nytt med Gemini» (når det trengs) og «Les med lokal OCR» (Tesseract, uten AI).
- *  Gemini-knappen er deaktivert med årsak når Gemini ikke er satt opp. Tom streng når ingen trengs. */
-// Prompt 50 (fargefeil): gCls = klassen til Gemini-knappen (primærknapp i «Lav sikkerhet»-boksen), OCR-knappen er sekundær (cls).
+/** Knappene: «✦ Les på nytt» (lokalt, når det trengs) og «Les med lokal OCR» (Tesseract, uten AI).
+ *  «Les på nytt» er deaktivert med årsak fra serveren når den ikke kan brukes. Tom streng når ingen trengs. */
+// Prompt 50 (fargefeil): gCls = klassen til «Les på nytt»-knappen (primærknapp i «Lav sikkerhet»-boksen), OCR-knappen er sekundær (cls).
 export function reanalyzeBtn(r, cls = 'btn ghost', style = '', gCls = cls) {
   if (!r) return '';
   const st = style ? ` style="${esc(style)}"` : '';
   let out = '';
-  if (r.canReanalyze) out += `<button type="button" class="${gCls} ra-btn"${st} data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</button>`;
-  else if (r.reanalyzeReason) out += `<button type="button" class="${cls} ra-btn"${st} disabled title="${esc(r.reanalyzeReason)}">✦ Analyser på nytt med Gemini</button>`;
+  if (r.canReanalyze) out += `<button type="button" class="${gCls} ra-btn"${st} data-reanalyze="${esc(r.id)}">✦ Les på nytt</button>`;
+  else if (r.reanalyzeReason) out += `<button type="button" class="${cls} ra-btn"${st} disabled title="${esc(r.reanalyzeReason)}">✦ Les på nytt</button>`;
   if (r.canOcr) out += `<button type="button" class="${cls} ra-btn"${st} data-reanalyze="${esc(r.id)}" data-engine="tesseract" title="Leser bildet lokalt på serveren med Tesseract, uten AI">Les med lokal OCR</button>`;
   return out;
 }
@@ -23,7 +23,7 @@ export function bindReanalyze(root, onDone) {
     const b = e.target.closest?.('[data-reanalyze]');
     if (!b || b.disabled || b.getAttribute('aria-disabled') === 'true') return;
     e.preventDefault(); e.stopImmediatePropagation();
-    openReanalyze(b.dataset.reanalyze, { onDone, engine: b.dataset.engine === 'tesseract' ? 'tesseract' : 'gemini', status: b.dataset.status ?? '' });
+    openReanalyze(b.dataset.reanalyze, { onDone, engine: b.dataset.engine === 'tesseract' ? 'tesseract' : 'ollama', status: b.dataset.status ?? '' });
   });
 }
 
@@ -94,16 +94,17 @@ function diff40(a, b) {
 }
 
 /** Åpner dialogen og starter analysen. Returnerer et løfte med kvitteringen etter valget (eller null ved avbryt). */
-export function openReanalyze(id, { onDone, engine = 'gemini', status = '' } = {}) {
+export function openReanalyze(id, { onDone, engine = 'ollama', status = '' } = {}) {
+  if (engine === 'gemini') engine = 'ollama'; // prompt 52: kvitteringsbilder sendes aldri til skyen
   // Prompt 41 (claude-code-finans-les-pa-nytt-alltid.md): lov for alle statuser. Ny lesing er bare et forslag (apply:false);
   // ingenting endres før «Bruk endringene». Avvist kvittering: «Flytt til gjennomgang» tar forslaget i bruk og legger den i køen.
   const rejected = status === 'rejected';
-  const ocr = engine === 'tesseract', name = ocr ? 'Lokal OCR' : 'Gemini';
+  const ocr = engine === 'tesseract', name = ocr ? 'Lokal OCR' : 'Lokal AI';
   // Prompt 40 (claude-code-finans-les-pa-nytt-rediger.md): «✦ La Glimt lese kvitteringen på nytt» – endringene vises som
   // «gammelt → nytt», og lagres bare når du trykker «Bruk endringene».
   const title = ocr ? 'Les med lokal OCR' : '✦ Glimt leser kvitteringen på nytt';
   const sub = ocr ? 'Originalbildet leses på serveren med Tesseract, uten AI og uten at noe sendes ut. Du velger selv hvilket resultat som beholdes.' : 'Glimt leser originalbildet i full oppløsning på nytt. Endringene lagres bare hvis du trykker «Bruk endringene».';
-  const loading = ocr ? 'Tesseract leser kvitteringen …' : '✦ Glimt analyserer på nytt … Laster opp → OCR → Gemini tolker → Sjekker sum og dato';
+  const loading = ocr ? 'Tesseract leser kvitteringen …' : '✦ Glimt analyserer på nytt … Glimt leser lokalt … OCR → lokal modell tolker → sjekker sum og dato';
   if (!document.getElementById('ra-css')) { const s = document.createElement('style'); s.id = 'ra-css'; s.textContent = CSS; document.head.appendChild(s); }
   const ov = document.createElement('div');
   ov.className = 'ra-ov';

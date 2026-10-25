@@ -137,7 +137,7 @@ test('Nyhetsleser: ic, icSrc og icOn lagres i hl_rss per bruker og beholdes', as
 // Gemini «henger» (svarer aldri før signalet avbryter), Groq svarer. Alt annet (Ollama) er nede.
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
 const RECEIPT = { merchant: 'REMA 1000', date: '2026-10-18', total: 99.9, currency: 'NOK', confidence: { merchant: 0.95, date: 0.95, total: 0.95 } };
-function aiFetch({ geminiHangs = true } = {}) {
+function aiFetch({ geminiHangs = true, ollamaHangs = false } = {}) {
   const calls = [];
   const orig = globalThis.fetch;
   globalThis.fetch = async (url, init = {}) => {
@@ -149,6 +149,7 @@ function aiFetch({ geminiHangs = true } = {}) {
       return new Promise((_, rej) => { init.signal?.addEventListener('abort', () => rej(init.signal.reason)); });
     }
     if (url.includes('api.groq.com')) return json({ choices: [{ message: { content: JSON.stringify(RECEIPT) } }] });
+    if (ollamaHangs && /\/api\/(chat|generate)/.test(url)) return new Promise((_, rej) => { init.signal?.addEventListener('abort', () => rej(init.signal.reason)); });
     throw Object.assign(new TypeError('fetch failed'), { cause: { code: 'ECONNREFUSED' } });
   };
   return { calls, restore: () => { globalThis.fetch = orig; } };
@@ -175,29 +176,21 @@ test('tidsgrenser: innstillingene valideres og ligger i FinansHub-innstillingene
   assert.equal((await A('/finans/api/settings')).body.aiTimeouts.gemini, 5);
 });
 
-// Prompt 48: Groq er tatt ut av kvitteringskjeden og Gemini står sist (etter Ollama). Gemini som henger gir derfor feil til slutt, ikke Groq.
-test('tidsgrenser: Gemini henger → nytt forsøk, neste nøkkel, så ingen Groq (prompt 48); status og ai_log viser motoren', async () => {
+// Prompt 52: kvitteringer leses bare lokalt. Selv med Gemini som hovedmotor og nøkler satt brukes verken Gemini eller Groq.
+test('tidsgrenser: kvitteringer går aldri til Gemini eller Groq (prompt 52), heller ikke med Gemini som hovedmotor', async () => {
   AI._resetAi();
-  AI._aiTest.scale = 0.01; // 5 s → 50 ms, 1 s ventetid → 10 ms
+  AI._aiTest.scale = 0.01;
   setSecret('geminiKey', 'AIza-main-key-aaaaaaaaaaaaaaaa');
   setSecret('groqKey', 'gsk_test');
   keys.addKey('Reserve 1', 'AIzaReserveKeyBBBBBBBBBBBBBBBBBB');
   saveSettings({ provider: 'gemini', fallback: true, aiTasks: {}, aiTimeouts: { gemini: 5, groq: 5, roboflow: 5, ollama: 5, retries: 1, onTimeout: 'next' } });
   const f = aiFetch();
-  const statuses = [];
   try {
-    await assert.rejects(AI.extract(PNG, 'image/png', ['Dagligvarer'], null, { status: (t, info) => statuses.push([t, info.timeoutEngine]) }), /Gemini: svarte ikke innen tidsfristen/);
-  } finally { f.restore(); }
+    await assert.rejects(AI.extract(PNG, 'image/png', ['Dagligvarer'], null, {}), /Ollama/);
+    await assert.rejects(AI.extract(PNG, 'image/png', ['Dagligvarer'], 'gemini', {}), /Ollama/); // «Les på nytt med Gemini» → lokalt
+  } finally { f.restore(); AI._aiTest.scale = 1; }
   assert.equal(f.calls.filter((c) => c.url.includes('api.groq.com')).length, 0, 'Groq brukes ikke til kvitteringer');
-  const gem = f.calls.filter((c) => c.url.includes('generativelanguage')).map((c) => c.key);
-  assert.deepEqual(gem, ['AIza-main-key-aaaaaaaaaaaaaaaa', 'AIza-main-key-aaaaaaaaaaaaaaaa', 'AIzaReserveKeyBBBBBBBBBBBBBBBBBB', 'AIzaReserveKeyBBBBBBBBBBBBBBBBBB'], 'to forsøk per nøkkel');
-  const texts = statuses.map((s) => s[0]);
-  assert.ok(texts.includes('✦ Gemini svarte ikke innen 5 s · nytt forsøk om 1 s …'), texts.join('\n'));
-  assert.ok(texts.includes('✦ Gemini svarte ikke innen 5 s · prøver Gemini (Reserve 1) …'), texts.join('\n'));
-  assert.ok(!texts.some((t) => /Groq/.test(t)), texts.join('\n'));
-  assert.ok(statuses.every((s) => s[1] === 'gemini'));
-  const log = (await A('/finans/api/ai/log?limit=20')).body.items;
-  assert.ok(log.some((l) => l.engine === 'gemini' && l.status === 'tidsavbrudd' && l.timeoutEngine === 'gemini'));
+  assert.equal(f.calls.filter((c) => c.url.includes('generativelanguage')).length, 0, 'Gemini brukes ikke til kvitteringer');
 });
 
 test('tidsgrenser: tekst-AI (søk, kategorier) går videre til neste motor ved tidsavbrudd', async () => {
@@ -214,9 +207,10 @@ test('tidsgrenser: tekst-AI (søk, kategorier) går videre til neste motor ved t
   } finally { f.restore(); }
 });
 
-test('tidsgrenser: onTimeout=queue legger jobben tilbake i køen med retryAt og statustekst', async () => {
+// Prompt 52: køens tidsavbrudd-regler (onTimeout=queue/ocr) gjaldt Gemini-kallet i kvitteringskjeden, som er fjernet. Nå sjekkes at
+// en opplastet kvittering med Gemini som hovedmotor (og onTimeout=queue) aldri sendes til skyen og havner til gjennomgang lokalt.
+test('tidsgrenser: kvittering i køen med Gemini som hovedmotor sendes aldri til skyen (prompt 52)', async () => {
   AI._resetAi();
-  keys.removeKey((keys.listKeysOut().find((k) => !k.main) ?? {}).id);
   saveSettings({ provider: 'gemini', fallback: true, aiTimeouts: { gemini: 5, retries: 0, onTimeout: 'queue' } });
   const f = aiFetch();
   try {
@@ -224,26 +218,15 @@ test('tidsgrenser: onTimeout=queue legger jobben tilbake i køen med retryAt og 
     fd.append('file', new Blob([PNG], { type: 'image/png' }), 'kvittering.png');
     const up = await A('/finans/api/receipts', 'POST', fd);
     assert.equal(up.status, 200, up.text);
-    const id = up.body.id;
     let job;
-    for (let i = 0; i < 100; i++) {
-      job = (await A('/finans/api/receipts/jobs')).body.find((j) => j.id === id);
-      if (job?.retryAt) break;
+    for (let i = 0; i < 150; i++) {
+      job = (await A('/finans/api/receipts/jobs')).body.find((j) => j.id === up.body.id);
+      if (job && !['pending', 'processing'].includes(job.status)) break;
       await new Promise((r) => setTimeout(r, 20));
     }
-    assert.equal(job.status, 'pending');
-    assert.equal(job.timeoutEngine, 'gemini');
-    assert.ok(job.retryAt > Date.now() - 1000);
-    assert.match(job.statusText, /^✦ Gemini svarte ikke innen 5 s · lagt i kø, prøver igjen kl\. \d\d:\d\d$/);
-    assert.equal(job.aiShort, job.statusText);
-    assert.equal(f.calls.filter((c) => c.url.includes('api.groq.com')).length, 0, 'køen prøver ikke neste motor');
-    // onTimeout=ocr: lokal OCR med en gang (her er OCR av/ikke installert, så feilen sier at Gemini ikke svarte).
-    saveSettings({ aiTimeouts: { gemini: 5, retries: 0, onTimeout: 'ocr' } });
-    AI._resetAi();
-    const statuses = [];
-    await AI.extract(PNG, 'image/png', ['Dagligvarer'], null, { status: (t) => statuses.push(t) }).catch((e) => { assert.equal(e.timeoutEngine, 'gemini'); });
-    assert.ok(statuses.includes('✦ Gemini svarte ikke innen 5 s · prøver lokal OCR …'), statuses.join('\n'));
-    assert.equal(f.calls.filter((c) => c.url.includes('api.groq.com')).length, 0);
+    assert.notEqual(job.timeoutEngine, 'gemini');
+    assert.doesNotMatch(String(job.statusText ?? ''), /Gemini/);
+    assert.equal(f.calls.filter((c) => c.url.includes('api.groq.com') || c.url.includes('generativelanguage')).length, 0);
   } finally { f.restore(); AI._aiTest.scale = 1; saveSettings({ aiTimeouts: { onTimeout: 'next' } }); }
 });
 

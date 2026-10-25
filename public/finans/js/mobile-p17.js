@@ -167,14 +167,14 @@ export function p17Modules() {
 /* ---------- AI og tolkning: hvem gjør hva, lokal OCR-reserve og logg ---------- */
 
 export const AI17 = { log: null, f: {}, msg: '' };
-const TASKS = [['receipts', 'Les kvitteringer', 'gemini'], ['search', 'AI-søk og sammendrag', 'groq'], ['categorize', 'Kategorisering', 'groq'], ['barcode', 'Strekkoder', 'roboflow']];
+const TASKS = [['receipts', 'Les kvitteringer', 'ollama'], ['search', 'AI-søk og sammendrag', 'groq'], ['categorize', 'Kategorisering', 'groq'], ['barcode', 'Strekkoder', 'roboflow']];
 const ENGINES = [['gemini', 'Gemini'], ['groq', 'Groq'], ['ollama', 'Ollama'], ['roboflow', 'Roboflow']];
 export async function aiLoad() {
   try { const r = await api('/ai/log?limit=20'); AI17.log = Array.isArray(r) ? r : r?.items ?? []; } catch { AI17.log = null; }
 }
 export function p17AiExtra() {
   const st = S.boot?.settings ?? {}, tk = st.aiTasks ?? {}, f = AI17.f;
-  const sel = (k, def) => { const cur = tk[k] ?? def, opts = k === 'barcode' ? ENGINES.filter(([e]) => e === 'roboflow' || e === 'gemini') : ENGINES.filter(([e]) => e !== 'roboflow'); return `<div class="pp-chips p17-eng">${opts.map(([e, n]) => `<button class="pp-fchip sm" data-p17="task" data-k="${k}" data-v="${e}" aria-pressed="${cur === e}">${n}</button>`).join('')}</div>`; };
+  const sel = (k, def) => { const cur = k === 'receipts' ? 'ollama' : tk[k] ?? def, opts = k === 'barcode' ? ENGINES.filter(([e]) => e === 'roboflow' || e === 'gemini') : k === 'receipts' ? [['ollama', 'Lokal AI']] /* prompt 52: aldri Gemini */ : ENGINES.filter(([e]) => e !== 'roboflow'); return `<div class="pp-chips p17-eng">${opts.map(([e, n]) => `<button class="pp-fchip sm" data-p17="task" data-k="${k}" data-v="${e}" aria-pressed="${cur === e}">${n}</button>`).join('')}</div>`; };
   const inp = (k, label, ph, type = 'text', val = '') => `<label class="opt-row col"><span style="font-size:13px;opacity:.7">${esc(label)}</span><input class="sinp" data-p17in="ai:${k}" type="${type}" value="${esc(f[k] ?? val)}" placeholder="${esc(ph)}" autocomplete="off" autocapitalize="off"></label>`;
   const tg = (k, n, s, on) => `<button class="opt-row" data-p17="aitog" data-k="${k}" role="switch" aria-checked="${!!on}"><span class="m-grow"><b style="font-weight:500">${n}</b><br><span style="font-size:13px;opacity:.65">${s}</span></span><span class="sw" aria-hidden="true" aria-checked="${!!on}"></span></button>`;
   const log = AI17.log;

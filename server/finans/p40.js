@@ -7,7 +7,7 @@
 // PATCH /finans/api/transactions/:id {date?, amount?, type?, description?, merchant?|counterparty?, categoryId?|category?(navn), accountId?|account?(navn),
 //                                       note?, tags?:[…], folderId?(deling), receiptId?, lines?:[{description|name, amount|price}]}
 //        → transaksjonen + tags, lines, lineCheck:{sum, total, ok, text}, added (med edited), history, changes (det som ble endret nå)
-// POST  /finans/api/transactions/:id/reread {engine?:'gemini'|'tesseract'} → «✦ La Glimt lese kvitteringen på nytt» = prompt 39 reanalyze
+// POST  /finans/api/transactions/:id/reread {engine?:'ollama'|'tesseract'} (prompt 52: lokalt, aldri Gemini) → «✦ La Glimt lese kvitteringen på nytt» = prompt 39 reanalyze
 //        (apply:false – ingenting lagres før «Bruk endringene» = POST /finans/api/receipts/:rid/reanalyze/apply)
 //        → {receiptId, jobId?, changes:[{field, label, old, new}], lines_new:[…], total_ok, noChanges, text, candidateId?, …reanalyze-svaret}
 // POST  /finans/api/transactions/:id/reread/apply {candidateId, keep?:'new'|'old'} → «Bruk endringene» / «Behold som før»
@@ -251,7 +251,7 @@ finans40Api.post('/transactions/:id{[0-9]+}/reread', async (c) => {
   const b = await c.req.json().catch(() => ({})) ?? {};
   const { default: fin } = await import('./routes.js');
   const res = await fin.request(`/receipts/${encodeURIComponent(r.id)}/reanalyze`, { method: 'POST', headers: { cookie: c.req.header('cookie') ?? '', authorization: c.req.header('authorization') ?? '', 'content-type': 'application/json' },
-    body: JSON.stringify({ engine: b.engine ?? 'gemini', apply: false, ...(b.async ? { async: true } : {}), ...(b.small ? { small: true } : {}) }) }, c.env); // prompt 50: small = «Les mindre versjon»
+    body: JSON.stringify({ engine: b.engine ?? 'ollama', apply: false, ...(b.async ? { async: true } : {}), ...(b.small ? { small: true } : {}) }) }, c.env); // prompt 50: small = «Les mindre versjon»
   const j = await res.json().catch(() => ({}));
   if (!res.ok) return c.json({ receiptId: r.id, ...j }, res.status);
   if (res.status === 202) return c.json({ receiptId: r.id, ...j }, 202);

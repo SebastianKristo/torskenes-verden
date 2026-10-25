@@ -496,6 +496,10 @@ logs44Api.get('/logs/stream', async (c) => {
   });
 });
 
+/* ---------------- Prompt 52 (SRV52): «Start» på Homelab-kortet i briefen ---------------- */
+// Bare admin (sjekkes i srv52.js). Samme faste proxy-handling som Start-knappen i Logger (POST /containers/:id/start, ALLOW_START).
+export const docker52 = { start: (id) => action44(id, 'start') };
+
 /* ---------------- Prompt 51 (OBS51): drift og selvreparasjon ---------------- */
 // Bare lesing (GET) og omstart – samme proxy og samme regler som over. Ingen nye Docker-handlinger.
 export const docker51 = {

@@ -366,27 +366,16 @@ test('C → Tesseract: Mac-OCR utilgjengelig (nettverk, 401, 503) → Tesseract 
   assert.equal(k.body.used, 'T');
 });
 
-test('D: Gemini sist (bilde + beste OCR-tekst) når Mac-OCR og Tesseract er av; Gemini av → beste forsøk med lav sikkerhet', async () => {
+// Prompt 52: steg D (Gemini) er fjernet – også med nøkkel og uten sperre brukes beste lokale forsøk.
+test('ingen steg D: Mac-OCR og Tesseract av → beste lokale forsøk med lav sikkerhet, aldri Gemini (prompt 52)', async () => {
   setup({ macOcr: false, tesseract: false, geminiKey: true });
   llm.queue.push(JSON.stringify(BAD_SUM()), JSON.stringify(BAD_SUM()));
-  const r = await scan(T, { deviceOcr: ocrOf('ios_vision', DEV_ROWS) });
-  assert.equal(r.body.used, 'D', r.text);
-  assert.equal(r.body.label, 'Gemini');
-  assert.deepEqual(steps(r.body), { A: 'skipped', B: 'failed', C: 'skipped', T: 'skipped', D: 'ok' });
-  const g = hostCalls('generativelanguage.googleapis.com', ':generateContent');
-  assert.equal(g.length, 1);
-  const parts = g[0].body.contents[0].parts;
-  assert.ok(parts.some((p) => p.inline_data?.mime_type === 'image/jpeg'), 'bildet sendes');
-  assert.ok(parts.some((p) => /MELK 1L 21,90/.test(p.text ?? '')), 'beste OCR-tekst sendes med');
-  assert.equal(g[0].body.generationConfig.temperature, 0);
-  // Gemini av → beste forsøk (B), medium.
-  setup({ macOcr: false, tesseract: false, gemini: false, geminiKey: true });
-  llm.queue.push(JSON.stringify(BAD_SUM()), JSON.stringify(BAD_SUM()));
   const n = await scan(T, { deviceOcr: ocrOf('ios_vision', DEV_ROWS) });
-  assert.equal(n.body.used, 'B');
+  assert.equal(n.body.used, 'B', n.text);
   assert.equal(n.body.confidence, 'medium');
   assert.deepEqual(n.body.uncertain_fields, ['items']);
-  assert.equal(n.body.pipeline.find((p) => p.step === 'D').reason, 'slått av i innstillingene');
+  assert.deepEqual(steps(n.body), { A: 'skipped', B: 'failed', C: 'skipped', T: 'skipped' });
+  assert.equal(n.body.source_label, 'Lokal AI');
   assert.equal(hostCalls('generativelanguage.googleapis.com').length, 0);
 });
 
@@ -395,11 +384,11 @@ test('sperren: «Finansdata forlater aldri huset» → Gemini (bilde og tekst) o
   fdb.setSecret('groqKey', 'gsk_test');
   llm.queue.push(JSON.stringify(BAD_SUM()), JSON.stringify(BAD_SUM()));
   const r = await scan(T, { deviceOcr: ocrOf('ios_vision', DEV_ROWS) });
-  assert.equal(r.body.pipeline.find((p) => p.step === 'D').reason, '«Finansdata forlater aldri huset» er på');
+  assert.ok(!r.body.pipeline.some((p) => p.step === 'D'), 'prompt 52: ingen Gemini-steg');
   assert.equal(r.body.used, 'B');
   const h = await T('/finans/api/receipts/health');
-  assert.equal(h.body.gemini.blocked, true);
-  assert.equal(h.body.gemini.usable, false);
+  assert.equal(h.body.external.blocked, true);
+  assert.equal(h.body.local_only, true);
   // Gammel kjede (bilde): provider=gemini med reserve → bare Ollama, ingen Gemini/Groq/Roboflow.
   fdb.saveSettings({ provider: 'gemini', fallback: true, aiTasks: {} }, 'owner');
   calls.length = 0; ai._resetAi();
@@ -408,7 +397,8 @@ test('sperren: «Finansdata forlater aldri huset» → Gemini (bilde og tekst) o
   assert.equal(hostCalls('generativelanguage.googleapis.com').length, 0, 'bildesporet sjekker sperren');
   assert.equal(hostCalls('api.groq.com').length, 0);
   assert.ok(hostCalls('ollama.test:11434', '/api/chat').length >= 1, 'lokal modell');
-  await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], 'gemini'), /aldri huset/, '«Les på nytt med Gemini» stoppes også');
+  await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], 'gemini')); // prompt 52: «Les på nytt med Gemini» leses lokalt
+  assert.equal(hostCalls('generativelanguage.googleapis.com').length, 0, '«Les på nytt med Gemini» går aldri til Gemini');
   // Gammel kjede (tekst): OCR-tekst/e-post.
   calls.length = 0;
   await assert.rejects(() => ai.extractText('REMA 1000\nTOTAL 56,40', ['Annet'], { kind: 'ocr' }));
@@ -416,19 +406,19 @@ test('sperren: «Finansdata forlater aldri huset» → Gemini (bilde og tekst) o
   llm.fallback = null;
 });
 
-test('gammel kjede uten sperre: Groq er ute av kvitteringskjeden og Gemini står sist (etter Ollama)', async () => {
+test('gammel kjede uten sperre: Gemini og Groq er ute av kvitteringskjeden – bare Ollama (prompt 52)', async () => {
   setup({ geminiKey: true });
   fdb.setSecret('groqKey', 'gsk_test');
   fdb.saveSettings({ provider: 'gemini', fallback: true, aiTasks: {} }, 'owner');
   ai._resetAi(); calls.length = 0;
-  llm.fallback = '{}'; // Ollama svarer uten butikk og total → ugyldig → neste motor
-  const res = await ai.extract(JPEG, 'image/jpeg', ['Annet'], undefined);
-  assert.equal(res.provider, 'gemini');
-  const ol = calls.findIndex((c) => c.host === 'ollama.test:11434' && c.path === '/api/chat'), ge = calls.findIndex((c) => c.host === 'generativelanguage.googleapis.com');
-  assert.ok(ol >= 0 && ge > ol, 'Ollama før Gemini');
+  llm.fallback = '{}'; // Ollama svarer uten butikk og total → ugyldig → ingen sky-reserve
+  await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], undefined));
+  assert.ok(calls.some((c) => c.host === 'ollama.test:11434' && c.path === '/api/chat'), 'lokal modell');
+  await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], 'groq'));
+  await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], 'gemini'));
+  assert.equal(hostCalls('generativelanguage.googleapis.com').length, 0, 'Gemini brukes ikke til kvitteringer');
   assert.equal(hostCalls('api.groq.com').length, 0, 'Groq brukes ikke til kvitteringer');
-  await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], 'groq'), /Groq brukes ikke til kvitteringer/);
-  assert.deepEqual(ai.receiptEngines48(['gemini', 'groq', 'ollama']).list, ['ollama', 'gemini']);
+  assert.deepEqual(ai.receiptEngines48(['gemini', 'groq', 'ollama']).list, ['ollama']);
   llm.fallback = null;
   fdb.saveSettings({ provider: 'ollama', fallback: true }, 'owner');
   fdb.setSecret('groqKey', '');
@@ -492,10 +482,10 @@ test('health: Mac-OCR, modell, Tesseract, Gemini og sperren, kategorilisten; adr
   assert.equal(h.body.macOcr.url, 'http://mac.test:8765');
   assert.equal(h.body.macOcr.keySet, true);
   assert.deepEqual([h.body.model.name, h.body.model.ok, h.body.model.installed], ['qwen3:8b', true, true]);
-  assert.equal(h.body.gemini.usable, true);
-  assert.equal(h.body.gemini.blocked, false);
+  assert.equal(h.body.gemini, undefined, 'prompt 52: ingen Gemini i kvitteringskjeden');
+  assert.equal(h.body.local_only, true);
   assert.ok(h.body.categories.includes('Mat og dagligvarer'));
-  assert.deepEqual(Object.keys(h.body.steps), ['deviceParse', 'deviceOcr', 'macOcr', 'tesseract', 'gemini']);
+  assert.deepEqual(Object.keys(h.body.steps), ['deviceParse', 'deviceOcr', 'macOcr', 'tesseract']);
   assert.ok(!h.text.includes(MAC_KEY));
   const k = await K('/finans/api/receipts/health');
   assert.equal(k.body.macOcr.url, undefined, 'adressen vises ikke for vanlige brukere');
@@ -520,7 +510,7 @@ test('innstillinger: macOcrUrl (standard 10.69.1.173:8765), macOcrKey kryptert o
   const p = await A('/finans/api/settings', 'PUT', { macOcrUrl: 'http://10.69.1.173:8765/', macOcrKey: 'b'.repeat(64), receipts48: { gemini: false, textModel: 'qwen3:8b', macOcrTimeoutS: 999, tull: 1 } });
   assert.equal(p.status, 200, p.text);
   assert.equal(p.body.server.macOcrUrl, 'http://10.69.1.173:8765');
-  assert.deepEqual(p.body.server.receipts48, { deviceOcr: true, deviceParse: true, macOcr: true, tesseract: true, gemini: false, compareMac: true, textModel: 'qwen3:8b', macOcrTimeoutS: 120, modelTimeoutS: 90 });
+  assert.deepEqual(p.body.server.receipts48, { deviceOcr: true, deviceParse: true, macOcr: true, tesseract: true, compareMac: true, textModel: 'qwen3:8b', macOcrTimeoutS: 120, modelTimeoutS: 90 }); // prompt 52: gemini-steget er fjernet
   assert.equal(fdb.secret('macOcrKey'), 'b'.repeat(64));
   assert.ok(String(fdb.kv?.get?.('owner', 'fh_secret', {})?.macOcrKey ?? 'enc:').startsWith('enc:'), 'kryptert');
   assert.equal((await A('/finans/api/settings', 'PUT', { macOcrUrl: 'ftp://x' })).body.server.macOcrUrl, 'http://10.69.1.173:8765', 'ugyldig adresse beholder lagret');

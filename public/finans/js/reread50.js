@@ -24,7 +24,7 @@ export function rereadError50(err) {
  * Leser kvitteringen på nytt som jobb. onTick({secs, msg, pct}) hvert sekund. → reanalyze-resultatet {previous, result, candidateId, …}
  * Kaster Error med status/kode (se rereadError50). signal: AbortSignal (Avbryt → DELETE jobben).
  */
-export async function reanalyzeJob50(id, { engine = 'gemini', small = false, apply = false, onTick = () => {}, signal = null, path = null } = {}) {
+export async function reanalyzeJob50(id, { engine = 'ollama', small = false, apply = false, onTick = () => {}, signal = null, path = null } = {}) {
   const t0 = Date.now();
   let msg = small ? 'Leser en mindre versjon …' : 'Leser …', pct = 0;
   const tick = setInterval(() => onTick({ secs: Math.round((Date.now() - t0) / 1000), msg, pct }), 1000);

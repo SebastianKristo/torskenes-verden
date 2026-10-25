@@ -193,7 +193,7 @@ if (process.env.NODE_ENV !== 'test') { setInterval(() => { try { sweepAiCategori
 export const RE_STEPS = [
   ['upload', 'Laster opp bildet'], ['ocr', 'Leser teksten (OCR)'], ['llm', '✦ {motor} tolker butikk, linjer og beløp'], ['verify', 'Sjekker sum og dato'],
 ];
-export const stepsOut39 = (at, engine = 'Gemini', failed = false) => {
+export const stepsOut39 = (at, engine = 'Lokal AI', failed = false) => {
   const idx = RE_STEPS.findIndex(([k]) => k === at);
   return RE_STEPS.map(([k, label], i) => ({ k, label: label.replace('{motor}', engine), state: at === 'done' || i < idx ? 'done' : i === idx ? (failed ? 'error' : 'active') : 'pending' }));
 };

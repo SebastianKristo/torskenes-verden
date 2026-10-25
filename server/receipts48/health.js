@@ -1,7 +1,7 @@
 // Prompt 48 (SERVER48): GET /finans/api/receipts/health – status for hvert steg i kjeden: Mac-OCR, lokal modell,
-// Tesseract og Gemini (og om sperren «Finansdata forlater aldri huset» hindrer Gemini), pluss kategorilisten appene skal
+// og Tesseract (prompt 52: Gemini er fjernet fra kvitteringene), pluss kategorilisten appene skal
 // velge category_suggestion fra. Adressene vises bare for admin; nøkkelen sendes aldri ut.
-import { hasGemini } from '../finans/gemini-keys.js';
+import { RECEIPT_SOURCE_LABEL52, RECEIPT_LOCAL_TEXT52 } from './cloud-guard52.js'; // prompt 52
 import { ocrTools } from '../ocr-fallback.js';
 import { r48Settings, macOcrKey48, externalBlocked48 } from './settings.js';
 import { macHealth48 } from './engines/mac-vision.js';
@@ -30,16 +30,15 @@ export async function health48({ admin = false, categories = [] } = {}) {
     })(),
     ocrTools().catch(() => ({})),
   ]);
-  const gemini = { enabled: cfg.gemini, configured: hasGemini(), blocked: blk.blocked, blockedReason: blk.text };
-  gemini.usable = gemini.enabled && gemini.configured && !gemini.blocked;
   return {
     ok: !!(mac.ok || (tools.tesseract && cfg.tesseract)) && !!model.ok,
-    steps: { deviceParse: cfg.deviceParse, deviceOcr: cfg.deviceOcr, macOcr: cfg.macOcr, tesseract: cfg.tesseract, gemini: cfg.gemini },
+    steps: { deviceParse: cfg.deviceParse, deviceOcr: cfg.deviceOcr, macOcr: cfg.macOcr, tesseract: cfg.tesseract },
+    // Prompt 52 (SRV52): bare lokalt – ingen Gemini-steg, heller ikke som reserve.
+    local_only: true, source_label: RECEIPT_SOURCE_LABEL52, reading_text: RECEIPT_LOCAL_TEXT52,
     compareMac: cfg.compareMac,
     macOcr: { enabled: cfg.macOcr, ...mac, ...macState51(), ...(admin ? { url: cfg.macOcrUrl, keySet: !!key } : {}) },
     model: { name: cfg.textModel, ...model, ...(admin ? { url: cfg.ollamaUrl } : {}) },
     tesseract: { enabled: cfg.tesseract, installed: !!tools.tesseract, version: tools.tesseract || null, imagemagick: !!tools.magick },
-    gemini,
     external: blk,
     brreg: (({ count, updated }) => ({ count, updated }))(brregStatus51()),
     preprocess: { imagemagick: !!tools.magick, perspective: !!tools.magick, min_px: MIN_PX51 },

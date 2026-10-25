@@ -285,7 +285,7 @@ async function pullAll() {
 /* Prompt 38: «HVILKEN MODELL GJØR HVA I FINANS» – alltid 4 rader (GET /api/ai/routing?scope=finans → rader med model,
    fallback, options:[{id, label, local}], warning). Eldre server: Finans-oppgavene fra /ai/routing, ellers standardene.
    Ingen modeller installert eller tilkoblet → «Ingen modeller ennå» + Installer modell ›, aldri et tomt kort. */
-const FIN4 = [['rc', 'Kvitteringer (bilde)', 'Leser butikk, beløp og varelinjer', 'qwen2.5vl:7b', 'gemini-2.5-flash', 'vision'], ['kat', 'Kategorisering', 'Foreslår kategori for transaksjoner', 'llama3.2:3b', 'llama-3.3-70b-versatile', 'text'],
+const FIN4 = [['rc', 'Kvitteringer (bilde)', 'Leser butikk, beløp og varelinjer · bare lokalt', 'qwen2.5vl:7b', 'tesseract', 'vision'], ['kat', 'Kategorisering', 'Foreslår kategori for transaksjoner', 'llama3.2:3b', 'llama-3.3-70b-versatile', 'text'],
   ['fsok', 'Finans · spør', '«Har jeg et musikkabonnement?»', 'gemma4:latest', 'gemini-2.5-flash', 'text'], ['bar', 'Strekkoder og pakkelapper', 'Bildefelt fra kamera', 'roboflow/kvittering/1', 'qwen2.5vl:7b', 'vision']];
 function finTasks(R) {
   const F = AC.rtf, L = Array.isArray(F?.tasks) ? F.tasks : Array.isArray(F?.rows) ? F.rows : Array.isArray(F) ? F : null;

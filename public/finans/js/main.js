@@ -32,6 +32,8 @@ async function start() {
   window.addEventListener('resize', pick);
   pick();
   loadAi().then(() => ui.draw());
+  // Prompt 52 (WEB52F): «Nytt i versjon» som lesbart papirkort første gang etter en oppdatering (web og PWA).
+  import('./whatsnew52.js').then((x) => x.checkWhatsNew52()).catch(() => {});
   // Prompt 32: på desktop eier vi SW-oppdateringen og versjonsbanneret (mobil/PWA har sin egen i mobile*.js).
   if (isMobile()) { if ('serviceWorker' in navigator) navigator.serviceWorker.register('/finans/sw.js', { scope: '/finans/' }).catch(() => {}); }
   else startVersionCheck({ sw: '/finans/sw.js', scope: '/finans/' });

@@ -60,7 +60,11 @@ export function meOut(id) {
   const v = avatarV(id);
   // Prompt 43: Media-fanen vises for admin og brukere admin har gitt tilgang (samme nøkkel som mediaAllowed43 i media43.js).
   const media = isAdmin(id) || ((kv.get(OWNER, 'media43_access', {}) ?? {}).users ?? []).includes(id);
-  return { ...u, serverName: serverName(), avatarUrl: v ? `/api/me/avatar?v=${v}` : null, language: languageOf(id), media };
+  // Prompt 52: Glimt-figuren per bruker (eget valg → admins standard for brukeren → glimt). Samme regel som glimtSettingsOf (glimt35.js).
+  const ownChar = kv.get(id, 'glimt35_settings', null)?.char, defChar = (kv.get(OWNER, 'glimt_char_defaults52', {}) ?? {})[id];
+  const glimtChar = typeof ownChar === 'string' ? ownChar : typeof defChar === 'string' ? defChar : 'glimt';
+  return { ...u, serverName: serverName(), avatarUrl: v ? `/api/me/avatar?v=${v}` : null, language: languageOf(id), media,
+    glimt_char: glimtChar, glimt_char_source: typeof ownChar === 'string' ? 'user' : typeof defChar === 'string' ? 'default' : 'standard' };
 }
 
 export const removeAvatar = (id) => unlink(avatarFile(id)).catch(() => {});
@@ -192,6 +196,8 @@ const SCALAR = {
     && Object.entries(v).every(([k, r]) => k.length >= 1 && k.length <= 120 && !/[<>]/.test(k) && ['none', '15m', '1h', 'day'].includes(r)),
   // Prompt 37: valg for Hjem-widgetene (størrelse/innstillinger per widget) fra appene, lagres som de er (maks 8 KB).
   wopt: (v) => !!v && typeof v === 'object' && JSON.stringify(v).length <= 8192,
+  // Prompt 52 (WEB52F): utseende på saldokortet i Finans (hold inne på kortet): std | glass | kvitt | farge. Synkes mellom web/PWA og appene.
+  salSty: (v) => ['std', 'glass', 'kvitt', 'farge'].includes(v),
   subjectColors: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 60
     && Object.entries(v).every(([k, col]) => KAL_KEY.test(k) && typeof col === 'string' && /^#[0-9a-f]{6}$/i.test(col)),
 };
@@ -467,7 +473,46 @@ api.delete('/me/avatar', authOrToken, async (c) => {
 api.get('/users/:id/avatar', authOrToken, (c) => sendAvatar(c, c.req.param('id')));
 
 // Lagret oppsett med standardverdiene for utseendet fylt inn (de avhenger av om installasjonen er ny, se designOf).
-api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, finNavMeta: _m, ...l } = layoutOf(id); if (l.kalView === 'agenda') l.kalView = 'liste'; return c.json({ search_engine: 'ai', calendar_web_layout: 'menu', ...layoutDefaults30(), ...l, language: languageOf(id), ...designOf(id), ...profileOf(id) }); });
+api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, finNavMeta: _m, ...l } = merBoth52(layoutOf(id)); if (l.kalView === 'agenda') l.kalView = 'liste'; return c.json({ search_engine: 'ai', calendar_web_layout: 'menu', ...layoutDefaults30(), ...l, language: languageOf(id), ...designOf(id), ...profileOf(id) }); });
+/* Prompt 52 (SRV52): serveren er fasit for Mer- og saldokortvalgene.
+   Web/PWA: salSty (std|glass|kvitt|farge) og pages.mer45hl / pages.mer45fin = {order, hidden:['_sok','_title','_tools']}.
+   iOS/Android: mer45.salsty og mer45.merVis (Homelab → Mer) / mer45.fmerVis (Finans → Mer) = {sok, tit, vkt} (true = vises).
+   PUT: det som ble sendt speiles til den andre formen. GET: begge formene fylles ut fra det som er lagret. */
+const SAL52 = ['std', 'glass', 'kvitt', 'farge'];
+const MER52 = [['hl', 'merVis'], ['fin', 'fmerVis']];
+const HID52 = [['sok', '_sok'], ['tit', '_title'], ['vkt', '_tools']];
+const visOf52 = (hidden) => Object.fromEntries(HID52.map(([v, h]) => [v, !(hidden ?? []).includes(h)]));
+const hiddenFrom52 = (vis, cur = []) => [...(cur ?? []).filter((x) => !HID52.some(([, h]) => h === x)), ...HID52.filter(([v]) => vis?.[v] === false).map(([, h]) => h)];
+const isVis52 = (v) => !!v && typeof v === 'object' && !Array.isArray(v) && HID52.some(([k]) => typeof v[k] === 'boolean');
+export function syncMer52(next, b = {}) {
+  const m = next.mer45 && typeof next.mer45 === 'object' ? { ...next.mer45 } : {};
+  let mChanged = false;
+  if (b.salSty !== undefined && SAL52.includes(next.salSty)) { m.salsty = next.salSty; mChanged = true; }
+  else if (b.mer45 && SAL52.includes(b.mer45.salsty)) next.salSty = b.mer45.salsty;
+  for (const [mode, f] of MER52) {
+    const pk = `mer45${mode}`;
+    if (b.pages?.[pk]) { m[f] = visOf52(next.pages?.[pk]?.hidden); mChanged = true; }
+    else if (b.mer45 && isVis52(b.mer45[f])) {
+      const cur = next.pages?.[pk] ?? {};
+      next.pages = { ...(next.pages ?? {}), [pk]: { ...cur, hidden: hiddenFrom52({ ...visOf52(cur.hidden), ...b.mer45[f] }, cur.hidden) } };
+    }
+  }
+  if (mChanged || (b.mer45 && next.mer45)) next.mer45 = m;
+  return next;
+}
+/** GET: begge formene fra det som er lagret (eldre lagringer har bare den ene). */
+export function merBoth52(l) {
+  const out = { ...l };
+  const m = out.mer45 && typeof out.mer45 === 'object' ? { ...out.mer45 } : {};
+  if (SAL52.includes(out.salSty)) m.salsty = out.salSty; else if (SAL52.includes(m.salsty)) out.salSty = m.salsty;
+  for (const [mode, f] of MER52) {
+    const pk = `mer45${mode}`, pg = out.pages?.[pk];
+    if (pg) m[f] = visOf52(pg.hidden);
+    else if (isVis52(m[f])) out.pages = { ...(out.pages ?? {}), [pk]: { hidden: hiddenFrom52(m[f]) } };
+  }
+  if (Object.keys(m).length) out.mer45 = m;
+  return out;
+}
 api.put('/me/layout', authOrToken, async (c) => {
   const b = await json(c);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
@@ -516,6 +561,7 @@ api.put('/me/layout', authOrToken, async (c) => {
     // Tomme navn betyr standardnavnet og lagres ikke.
     for (const f of ['labels', 'names']) if (v[f]) next[k][f] = Object.fromEntries(Object.entries(v[f]).map(([id, n]) => [id, n.trim()]).filter(([, n]) => n));
   }
+  syncMer52(next, b); // prompt 52: Mer- og saldokortvalg speiles mellom web (salSty, pages.mer45*) og appene (mer45.{fmerVis, merVis, salsty})
   // Egne endringer i fanene eller startsiden: «Egendefinert», med mindre de er lik den valgte profilen.
   if (custom) {
     const p = PROFILES[next.profile ?? 'standard'];

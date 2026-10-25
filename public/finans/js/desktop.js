@@ -19,6 +19,7 @@ import { filterPage, loadFilter, bindFilter, enterFilter } from './filter42.js';
 import { tasksCard, loadTasks, bindGj42, startTask, homeRulesBox, loadHomeRules } from './gj42.js';
 import { form48, via48, uncTag48, uncCls48, is48, flush48, bind48, setRedraw48, _e48 } from './scan48.js'; // prompt 48: skjemaet for skannede kvitteringer
 import { srcTag51, raw51, bind51, learn51 } from './rcpt51.js'; // prompt 51: kilden til butikknavnet, «Rådata» og læring av butikknavn
+import { rcPanel52, rcpBefore52, rcpAfter52, rcpGone52 } from './rcpanel52.js'; // prompt 52 (WEB52F): felles kvitteringspanel
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 ICONS.filter = 'M4 6h16M7 12h10M10 18h4';
@@ -216,7 +217,7 @@ function shell(content) {
     ${sideNav()}
     ${`<button type="button" class="ai-box a42" data-act="open-ai-set" title="Åpne AI-innstillinger"><div class="side-label" style="padding:0">AI-motor</div>
       <div style="display:flex;align-items:center;gap:8px;font-weight:600"><span class="ai-dot ${aiOk === null ? 'unk' : aiOk ? '' : 'off'}"></span>${prov === 'ollama' ? 'Ollama · lokalt' : 'Gemini · sky'}</div>
-      <div class="note" style="font-size:12px">${prov === 'ollama' ? `${esc(st.ollamaModel)} · reserve: ${st.fallback ? 'Gemini' : 'ingen'}` : esc(st.geminiModel)}${aiOk === false ? ' · <span class="neg">ikke tilgjengelig</span>' : ''}</div></button>`}
+      <div class="note" style="font-size:12px">${prov === 'ollama' ? `${esc(st.ollamaModel)} · kvitteringer leses lokalt` : `${esc(st.geminiModel)} · kvitteringer leses lokalt`}${aiOk === false ? ' · <span class="neg">ikke tilgjengelig</span>' : ''}</div></button>`}
   </aside>
   <main class="main"><div class="wrap">
     <header class="head">
@@ -336,7 +337,7 @@ function overview() {
       <div class="prog"><i style="width:${Math.min(100, (b.used / (b.budget || 1)) * 100)}%;background:${o ? 'var(--acc)' : b.color}"></i></div></div>`;
   }).join('');
   const rv = s.review.slice(0, 4).map((r) => `<button class="rq" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : '–'}</span></span>
-    <span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${r.status === 'needs_review' ? esc(r.provider ?? 'manuell') : 'Leser …'}</span>
+    <span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${r.status === 'needs_review' ? esc(r.source_label ?? r.provider ?? 'manuell') : 'Glimt leser lokalt …'}</span>
     <span style="display:block;font-size:12px;color:${r.flag || r.error ? 'var(--acc-l)' : r.status === 'needs_review' ? 'var(--pos)' : 'var(--blue-l)'}">${r.status !== 'needs_review' ? 'Leses av Glimt …' : r.error ? 'Må fylles ut manuelt' : r.flag ?? 'Alle felt lest sikkert'}</span></span></button>`).join('');
   const up = s.upcoming.slice(0, 4).map((r) => `<div class="kv-line" style="align-items:center"><div><div style="font-weight:500">${esc(r.name)}</div><div class="note" style="font-size:12px">Trekkes ${new Date(r.next + 'T12:00').toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }).replace('.', '')}</div></div><div class="mono" style="font-weight:500">${n0(r.amount)} kr</div></div>`).join('');
   // På PC lastes kvitteringer opp fra filer (ingen kamera).
@@ -385,14 +386,16 @@ function transactions() {
     <td style="font-size:12.5px;color:${t.receipt === 'needs_review' ? 'var(--acc-l)' : 'var(--muted)'}">${t.receipt === 'booked' ? 'Vedlagt' : t.receipt ? 'Til gjennomgang' : '–'}</td>
     <td class="mono" style="white-space:nowrap;font-weight:500;color:${amtColor(t.amount)}">${sgn(t.amount)}</td></tr>`).join('');
   const sel = list?.items.find((t) => t.id === u.sel);
-  const detail = sel ? card(`<div style="display:flex;justify-content:space-between;align-items:flex-start">${logo(sel, 46, 14)}<button class="x-btn" data-act="close-sel" aria-label="Lukk">×</button></div>
-    <div><input class="inp" data-tx-field="description" value="${esc(sel.description)}" aria-label="Beskrivelse" style="font-size:18px;font-weight:600;background:none;border-color:transparent;padding:0;height:auto"><div class="note" style="font-size:13px">${dLong(sel.date)} · ${esc(sel.account)}</div></div>
-    <div class="mono" style="font-size:32px;font-weight:600;letter-spacing:-.03em;color:${amtColor(sel.amount)}">${sgn(sel.amount)} <span style="font-size:15px;color:var(--muted);font-weight:400">kr</span></div>
-    <div style="display:flex;gap:10px;align-items:flex-end"><div class="seg" style="border-radius:10px;flex:none" role="group" aria-label="Type">${[['expense', 'Utgift'], ['income', 'Inntekt']].map(([k2, l]) => `<button type="button" data-txkind="${k2}" aria-pressed="${sel.type === k2}" style="height:38px;padding:0 14px">${l}</button>`).join('')}</div>
+  // Prompt 52 (WEB52F): felles kvitteringspanel (rcpanel52.js) – sticky med egen scroll, skuff under 1100 px.
+  const detail = sel ? `<div class="rcp52-scrim" data-act="close-sel" aria-hidden="true"></div>${rcPanel52({
+    key: `tx:${sel.id}`, cls: 'card detail inline', close: 'data-act="close-sel"', logo: logo(sel, 46, 14), label: sel.description,
+    titleHtml: `<input class="inp" data-tx-field="description" value="${esc(sel.description)}" aria-label="Beskrivelse" style="font-size:18px;font-weight:600;background:none;border-color:transparent;padding:0;height:auto">`,
+    meta: [dLong(sel.date), sel.account].filter(Boolean).join(' · '), amount: sel.amount, amountColor: amtColor(sel.amount),
+    top: `<div style="display:flex;gap:10px;align-items:flex-end"><div class="seg" style="border-radius:10px;flex:none" role="group" aria-label="Type">${[['expense', 'Utgift'], ['income', 'Inntekt']].map(([k2, l]) => `<button type="button" data-txkind="${k2}" aria-pressed="${sel.type === k2}" style="height:38px;padding:0 14px">${l}</button>`).join('')}</div>
       <label class="f" style="flex:1">Beløp (kr)<input class="inp mono" data-tx-field="amount" inputmode="decimal" value="${n2(Math.abs(sel.amount))}"></label></div>
-    ${txHl(sel)}
-    ${sel.aiLong ? `<div class="ai-card"><b>✦ Glimt-beskrivelse</b><span>${esc(sel.aiLong)}</span>${sel.lines?.length ? `<div class="ai-lines">${sel.lines.map((l, i) => { const on = txHlIdx(sel).includes(i); return `<span class="${on ? 'rc-hit' : ''}"><span>${on ? markText(l.description, hlQ()) : esc(l.description)}</span><span class="mono">${n2(l.amount)}</span></span>`; }).join('')}</div>` : ''}</div>` : ''}
-    <label class="f">Kategori<select class="inp" data-tx-field="categoryId">${opt('', 'Ukategorisert', sel.categoryId)}${catOpts(sel.categoryId)}</select></label>
+    ${txHl(sel)}`,
+    glimt: sel.aiLong ? { text: sel.aiLong, lines: (sel.lines ?? []).map((l, i) => { const on = txHlIdx(sel).includes(i); return { hit: on, html: on ? markText(l.description, hlQ()) : esc(l.description), amount: l.amount }; }) } : null,
+    body: `<label class="f">Kategori<select class="inp" data-tx-field="categoryId">${opt('', 'Ukategorisert', sel.categoryId)}${catOpts(sel.categoryId)}</select></label>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato<input class="inp" type="date" data-tx-field="date" value="${sel.date}"></label><label class="f" style="flex:1">Konto<select class="inp" data-tx-field="accountId">${accOpts(sel.accountId, '–')}</select></label></div>
     <label class="f">Bolig<select class="inp" data-tx-field="folderId">${opt('', 'Ingen', sel.folderId)}${(S.txFolders ?? []).map((f) => opt(f.id, f.name, sel.folderId)).join('')}</select></label>
     <label class="f">Notat<input class="inp" data-tx-field="note" value="${esc(sel.note ?? '')}" placeholder="Legg til notat"></label>
@@ -404,7 +407,8 @@ function transactions() {
     <div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" data-act="make-rule">Lag regel</button><button class="btn danger" style="flex:1" data-act="del-tx">Slett</button></div>
     ${u.msg.rule ? `<div class="ok-msg">${esc(u.msg.rule)}</div>` : ''}
     ${addedLine(sel)}
-    <div class="note" style="font-size:11.5px;text-align:center">E rediger · R les på nytt · ⌘S lagre · Esc lukk</div>`, 'detail') : '';
+    <div class="note" style="font-size:11.5px;text-align:center">E rediger · R les på nytt · ⌘S lagre · Esc lukk</div>`,
+  })}` : '';
   return `<div style="display:flex;flex-direction:column;gap:16px">
     <div class="filters">
       <form class="search${u.q ? ' has' : ''}" data-form="txsearch" data-sf role="search"><span class="sf-ic">${icon('search', 17, 'var(--muted)')}</span>${clearBtn()}<input name="q" value="${esc(u.q)}" placeholder="Søk etter butikk eller beskrivelse" aria-label="Søk" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></form>
@@ -414,7 +418,7 @@ function transactions() {
       <button class="btn pri" data-act="add-tx">+ Ny transaksjon</button>
     </div>
     <div class="chips">${chips}</div>
-    <div class="row-flex">
+    <div class="row-flex${sel ? ' tx52' : ''}">
       <section class="card" style="flex:2 1 600px;padding:10px 22px 16px;gap:0">
         <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:13px" class="muted"><span>${list ? `${list.count} transaksjoner` : 'Laster …'}</span><span>Netto <b class="mono" style="color:var(--text);font-weight:500">${list ? sgn(list.net) + ' kr' : ''}</b></span></div>
         <div class="tbl-wrap"><table style="min-width:620px"><thead><tr><th>Dato</th><th>Beskrivelse</th><th>Kategori</th><th>Kvittering</th><th>Beløp</th></tr></thead><tbody>${rows ?? ''}</tbody></table></div>
@@ -430,15 +434,15 @@ const STATUS = { pending: ['I kø', 'var(--blue-soft)', 'var(--blue-l)'], proces
 function receipts() {
   const all = S.receipts;
   if (!all) return skel(400);
-  const st = S.boot.settings, aiShort = st.provider === 'ollama' ? 'Ollama' : 'Gemini';
+  const st = S.boot.settings, aiShort = 'Lokal AI'; // prompt 52: kvitteringer leses bare lokalt (aldri Gemini)
   const queue = all.filter((r) => STATUS[r.status]);
   const booked = all.filter((r) => r.status === 'booked' || r.status === 'rejected').slice(0, 12);
   if (!u.selRc || !all.find((r) => r.id === u.selRc)) u.selRc = queue[0]?.id ?? null;
   const R = all.find((r) => r.id === u.selRc);
-  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.extraction?.receipt48?.label ?? r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}${r.canReanalyze ? `<span class="acc-l" role="button" tabindex="0" style="display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:var(--blue-l)" data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</span>` : ''}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
+  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.extraction?.receipt48?.label ?? r.source_label ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}${r.canReanalyze ? `<span class="acc-l" role="button" tabindex="0" style="display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:var(--blue-l)" data-reanalyze="${esc(r.id)}">✦ Les på nytt</span>` : ''}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
   let panel;
   if (!R) panel = '<div class="empty" style="padding:80px 20px">Velg en kvittering i køen, eller last opp en ny.</div>';
-  else if (R.status === 'pending' || R.status === 'processing') panel = `<div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px" class="sub"><span class="spin"></span>${R.aiShort ? esc(R.aiShort) : `Leser kvitteringen med ${aiShort} …`}<button class="btn sm ghost" data-act="rc-manual">Fyll ut manuelt i stedet</button></div>`;
+  else if (R.status === 'pending' || R.status === 'processing') panel = `<div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px" class="sub"><span class="spin"></span>${R.aiShort ? esc(R.aiShort) : 'Glimt leser lokalt …'}<button class="btn sm ghost" data-act="rc-manual">Fyll ut manuelt i stedet</button></div>`;
   else panel = confirmPanel(R);
   return `<div class="row-flex">
     <div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px">
@@ -455,7 +459,7 @@ function confirmPanel(R) {
   const done = R.status === 'booked' || R.status === 'rejected';
   const conf = R.confidence ?? 0, high = !R.error && conf >= st.minConf / 100 && !R.flag;
   const ex = R.extraction ?? {};
-  const other = (R.rawProvider ?? st.provider) === 'ollama' ? 'gemini' : 'ollama';
+  const other = 'ollama'; // prompt 52: «Les på nytt» er alltid lokalt
   // Prompt 30: markering av søketreff (banner, gule linjer, bbox-rektangler over bildet).
   const hq = !u.hlOff && u.hl && String(u.hlRc) === String(R.id) ? u.hl : '', L = hq ? linesOf(R) : [], hIdx = hq ? matchLines(L, hq) : [];
   const hasBox = hIdx.some((i) => L[i]?.bbox);
@@ -476,7 +480,7 @@ function confirmPanel(R) {
       ${R.error ? `<span class="conf" style="background:var(--warn-soft);color:var(--acc-l)"><i></i>Må fylles ut</span>` : `<span class="conf" style="background:${high ? 'var(--pos-soft)' : 'var(--warn-soft)'};color:${high ? 'var(--pos)' : 'var(--acc-l)'}"><i></i>${high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span>`}</div>
     ${R.error ? `<div class="err-msg">${esc(R.error)}</div>` : R.flag ? `<div class="err-msg">${esc(R.flag)}</div>` : ''}
     ${hlTop}
-    ${!done && (R.canReanalyze || R.reanalyzeReason) ? `<div class="rc-low50" style="display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:14px;background:var(--inner);border:1px solid var(--line)"><span style="font-size:13px;color:var(--text2)">${R.error ? 'Lesingen mislyktes.' : `Lav sikkerhet${R.provider ? ` fra ${esc(R.provider)}` : ''}.`} Gemini kan lese originalbildet på nytt, og du velger hvilket resultat du vil beholde.</span><div style="display:flex;gap:10px;flex-wrap:wrap">${reanalyzeBtn(R, 'btn', 'height:40px', 'btn pri')}</div>${!R.canReanalyze && R.reanalyzeReason ? `<span style="font-size:12px;color:var(--text2)">${esc(R.reanalyzeReason)}</span>` : ''}</div>` : ''}
+    ${!done && (R.canReanalyze || R.reanalyzeReason) ? `<div class="rc-low50" style="display:flex;flex-direction:column;gap:10px;padding:12px 14px;border-radius:14px;background:var(--inner);border:1px solid var(--line)"><span style="font-size:13px;color:var(--text2)">${R.error ? 'Lesingen mislyktes.' : `Lav sikkerhet${R.source_label ? ` fra ${esc(R.source_label)}` : ''}.`} Glimt kan lese originalbildet på nytt lokalt, og du velger hvilket resultat du vil beholde.</span><div style="display:flex;gap:10px;flex-wrap:wrap">${reanalyzeBtn(R, 'btn', 'height:40px', 'btn pri')}</div>${!R.canReanalyze && R.reanalyzeReason ? `<span style="font-size:12px;color:var(--text2)">${esc(R.reanalyzeReason)}</span>` : ''}</div>` : ''}
     <div class="row-flex" style="gap:18px">${img}
       <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:12px">
         <label class="f"><span>Butikk${uncTag48(R, 'merchant')}${srcTag51(R)}</span><input class="inp${uncCls48(R, 'merchant')}" data-rc-field="merchant" value="${esc(R.merchant ?? '')}" ${done ? 'disabled' : ''}></label>
@@ -491,7 +495,7 @@ function confirmPanel(R) {
     ${addedLine(R)}
     <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
       ${done ? `<button class="btn ghost" data-act="rc-delete">Slett kvittering</button>${R.status === 'booked' ? '<button class="btn ghost" data-act="rc-unbook">↺ Til gjennomgang</button>' : ''}${R.file ? `<a class="btn" href="${R.file}" target="_blank">Åpne original ↗</a>` : ''}<button class="btn pri" data-reanalyze="${esc(R.id)}" data-status="${esc(R.status)}">✦ Les på nytt med Glimt</button>`
-        : `${R.file && !(other === 'gemini' && R.canReanalyze) ? `<button class="btn ghost" style="height:48px" data-act="rc-reprocess" data-prov="${other}">Les på nytt med ${other === 'gemini' ? 'Gemini' : 'Ollama'}</button>` : ''}${R.canOcr && !(R.canReanalyze || R.reanalyzeReason) ? `<button class="btn ghost" style="height:48px" data-reanalyze="${esc(R.id)}" data-engine="tesseract" title="Leser bildet lokalt med Tesseract, uten AI">Les med lokal OCR</button>` : ''}<button class="btn ghost" style="height:48px" data-act="rc-reject">Avvis</button><button class="btn pri" style="height:48px;padding:0 28px" data-act="rc-book">Bokfør</button>`}
+        : `${R.file && !R.canReanalyze ? `<button class="btn ghost" style="height:48px" data-act="rc-reprocess" data-prov="${other}">Les på nytt</button>` : ''}${R.canOcr && !(R.canReanalyze || R.reanalyzeReason) ? `<button class="btn ghost" style="height:48px" data-reanalyze="${esc(R.id)}" data-engine="tesseract" title="Leser bildet lokalt med Tesseract, uten AI">Les med lokal OCR</button>` : ''}<button class="btn ghost" style="height:48px" data-act="rc-reject">Avvis</button><button class="btn pri" style="height:48px;padding:0 28px" data-act="rc-book">Bokfør</button>`}
     </div>`;
 }
 
@@ -609,7 +613,7 @@ const SRV_NOTE = '<div class="note" style="font-size:12.5px">Settes opp av admin
 function timeoutsBox(st, ro = false) {
   const to = aiTo(st), dis = ro ? ' disabled' : '';
   const steps = (v) => (AI_TO_STEPS.includes(v) ? AI_TO_STEPS : [...AI_TO_STEPS, v].sort((a, b) => a - b));
-  const eng = [['gemini', 'Gemini', 'Les kvitteringer'], ['groq', 'Groq', 'Glimt-søk og kategorier'], ['roboflow', 'Roboflow', 'Strekkoder'], ['ollama', 'Ollama (lokal)', 'Reserve på hjemmeserveren']]
+  const eng = [['gemini', 'Gemini', 'Tekst i skyen · aldri kvitteringer'], ['groq', 'Groq', 'Glimt-søk og kategorier'], ['roboflow', 'Roboflow', 'Strekkoder'], ['ollama', 'Ollama (lokal)', 'Reserve på hjemmeserveren']]
     .map(([k2, n, sd]) => `<label class="f">${n} · <span class="note" style="font-size:12px">${sd}</span><select class="inp" data-ai-to="${k2}"${dis}>${steps(to[k2]).map((v) => opt(v, `${v} s`, to[k2])).join('')}</select></label>`).join('');
   return `<div class="box" style="flex-direction:column;align-items:stretch;gap:10px;padding:16px"><div><b style="font-weight:600">Tidsgrenser</b><div class="note" style="font-size:12.5px">Hvor lenge hver motor får før den regnes som tidsavbrutt. Køen viser hvilken motor som ikke svarte.${ro ? ' Settes opp av administrator.' : ''}</div></div>
     <div class="form-grid">${eng}
@@ -751,7 +755,7 @@ function aiReadOnly(st) {
   const ENG = { gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama (lokalt)', roboflow: 'Roboflow + zbar', zbar: 'Bare zbar (lokalt)' };
   const model = st.provider === 'gemini' ? st.geminiModel : st.provider === 'groq' ? st.groqModel : st.ollamaModel;
   const row = (k2, v) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)"><span class="note">${esc(k2)}</span><b style="font-weight:500;text-align:right" class="mono">${esc(v ?? '–')}</b></div>`;
-  const tasks = (ai?.tasks ?? [{ id: 'receipts', name: 'Les kvitteringer', engine: 'gemini' }, { id: 'search', name: 'Glimt-søk', engine: 'groq' }, { id: 'categorize', name: 'Kategorisering', engine: 'groq' }, { id: 'barcode', name: 'Strekkoder', engine: 'roboflow' }])
+  const tasks = (ai?.tasks ?? [{ id: 'receipts', name: 'Les kvitteringer', engine: 'ollama' }, { id: 'search', name: 'Glimt-søk', engine: 'groq' }, { id: 'categorize', name: 'Kategorisering', engine: 'groq' }, { id: 'barcode', name: 'Strekkoder', engine: 'roboflow' }])
     .map((tk) => row(tk.name, ENG[st.aiTasks?.[tk.id] ?? tk.engine] ?? (st.aiTasks?.[tk.id] ?? tk.engine)));
   return `<div class="box" style="flex-direction:column;align-items:stretch;gap:6px;padding:16px"><div><b style="font-weight:600">AI-motorer</b>${SRV_NOTE}</div>
       ${row('Hovedmotor', PROV[st.provider] ?? st.provider)}${row('Modell', model || '–')}${row('Reserve', st.fallback ? 'På' : 'Av')}${row('Minste sikkerhet', `${st.minConf} %`)}</div>
@@ -788,7 +792,7 @@ function settingsPage() {
     const models = ai?.ollama?.models?.length ? ai.ollama.models : ['qwen2.5vl:7b', 'gemma3:12b', 'llama3.2-vision:11b', 'minicpm-v'];
     if (!models.includes(st.ollamaModel)) models.unshift(st.ollamaModel);
     body = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-      ${[['ollama', 'Ollama · lokalt', 'Bildet forlater aldri huset'], ['gemini', 'Gemini · sky', 'Raskest og mest presis'], ['groq', 'Groq · sky', 'Svært rask tekst, Llama-modeller']].map(([k2, n, s2]) => `<button class="prov" data-provider="${k2}" aria-pressed="${st.provider === k2}"><b><span class="radio"></span>${n}</b><span class="note" style="font-size:12.5px">${s2}</span></button>`).join('')}</div>
+      ${[['ollama', 'Ollama · lokalt', 'Bildet forlater aldri huset'], ['gemini', 'Gemini · sky', 'Tekst og søk · kvitteringer leses alltid lokalt'], ['groq', 'Groq · sky', 'Svært rask tekst, Llama-modeller']].map(([k2, n, s2]) => `<button class="prov" data-provider="${k2}" aria-pressed="${st.provider === k2}"><b><span class="radio"></span>${n}</b><span class="note" style="font-size:12.5px">${s2}</span></button>`).join('')}</div>
       <div class="form-grid">
         <label class="f">Ollama-adresse<input class="inp mono" style="font-size:13px" data-set="ollamaUrl" value="${esc(st.ollamaUrl)}"></label>
         <label class="f">Ollama-modell (kvitteringer, må lese bilder)<select class="inp" data-set="ollamaModel">${models.map((m) => opt(m, m, st.ollamaModel)).join('')}</select></label>
@@ -805,7 +809,7 @@ function settingsPage() {
         <label class="f">Roboflow-modell for kvitteringer (prosjekt/versjon)<input class="inp mono" style="font-size:13px" data-set="roboflowModel" value="${esc(st.roboflowModel || st.roboflowWorkflow || '')}" placeholder="kvitteringer/1"></label>
         <label class="f">Roboflow-modell for strekkoder (valgfri)<input class="inp mono" style="font-size:13px" data-set="roboflowBarcodeModel" value="${esc(st.roboflowBarcodeModel ?? '')}" placeholder="barcodes/2"></label></div>
       <div class="box" style="flex-direction:column;align-items:stretch;gap:10px;padding:16px"><div><b style="font-weight:600">Hvem gjør hva</b><div class="note" style="font-size:12.5px">Motor per oppgave. Feiler den, prøves neste motor automatisk når reserve er på.</div></div>
-        <div class="form-grid">${(ai?.tasks ?? [{ id: 'receipts', name: 'Les kvitteringer', engine: 'gemini' }, { id: 'search', name: 'Glimt-søk', engine: 'groq' }, { id: 'categorize', name: 'Kategorisering', engine: 'groq' }, { id: 'barcode', name: 'Strekkoder', engine: 'roboflow' }]).map((tk) => `<label class="f">${esc(tk.name)}<select class="inp" data-ai-task="${tk.id}">${(tk.id === 'barcode' ? [['roboflow', 'Roboflow + zbar'], ['zbar', 'Bare zbar (lokalt)']] : [['gemini', 'Gemini'], ['groq', 'Groq'], ['ollama', 'Ollama (lokalt)']]).map(([v, l]) => opt(v, l, st.aiTasks?.[tk.id] ?? tk.engine)).join('')}</select></label>`).join('')}</div></div>
+        <div class="form-grid">${(ai?.tasks ?? [{ id: 'receipts', name: 'Les kvitteringer', engine: 'ollama' }, { id: 'search', name: 'Glimt-søk', engine: 'groq' }, { id: 'categorize', name: 'Kategorisering', engine: 'groq' }, { id: 'barcode', name: 'Strekkoder', engine: 'roboflow' }]).map((tk) => `<label class="f">${esc(tk.name)}<select class="inp" data-ai-task="${tk.id}">${(tk.id === 'barcode' ? [['roboflow', 'Roboflow + zbar'], ['zbar', 'Bare zbar (lokalt)']] : tk.id === 'receipts' ? [['ollama', 'Lokal AI (Ollama)']] /* prompt 52: aldri Gemini */ : [['gemini', 'Gemini'], ['groq', 'Groq'], ['ollama', 'Ollama (lokalt)']]).map(([v, l]) => opt(v, l, tk.id === 'receipts' ? 'ollama' : st.aiTasks?.[tk.id] ?? tk.engine)).join('')}</select></label>`).join('')}</div></div>
       ${timeoutsBox(st)}
       <div class="box" style="flex-direction:column;align-items:stretch;gap:8px;padding:16px"><div><b style="font-weight:600">Lokal OCR-reserve</b><div class="note" style="font-size:12.5px">Tesseract leser kvitteringen i containeren når AI feiler. Resultatet havner alltid til gjennomgang. ${ai?.ocr ? (ai.ocr.tesseract ? `Installert: ${esc(ai.ocr.tesseract)}` : 'Tesseract er ikke installert på serveren (bruk Docker-imaget).') : ''}</div></div>
         <button class="tog-row" data-act="ocr-toggle"><span class="grow"><b style="font-weight:500">Bruk lokal OCR når AI feiler</b></span><span class="toggle" role="switch" aria-checked="${!!(ai?.ocr?.enabled ?? st.ocrFallback ?? true)}"></span></button>
@@ -813,7 +817,7 @@ function settingsPage() {
       <label class="f">Minste sikkerhet før bilaget merkes «Sjekk» · <b class="mono" style="color:var(--text)">${st.minConf} %</b><input type="range" min="50" max="99" value="${st.minConf}" data-set="minConf"></label>
       <button class="tog-row" data-tog="fallback"><span class="grow"><b style="font-weight:500">Bruk de andre motorene som reserve</b><br><span class="note" style="font-size:12.5px">Når hovedmotoren er utilgjengelig eller usikker. Slå av for å holde alt lokalt.</span></span><span class="toggle" role="switch" aria-checked="${!!st.fallback}"></span></button>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn ghost" data-act="test-ai">Test tilkobling</button>${['ollama', 'gemini', 'groq'].map((k2) => `<button class="btn ghost" data-test-engine="${k2}">Test ${k2 === 'groq' ? 'Groq' : k2 === 'gemini' ? 'Gemini' : 'Ollama'}</button>`).join('')}<button class="btn ghost" data-act="test-roboflow">Test Roboflow</button>${u.msg.ai ? `<span class="${u.msg.aiOk ? 'ok-msg' : 'err-msg'}">${esc(u.msg.ai)}</span>` : ''}</div>
-      <div class="note" style="font-size:12.5px">Med Gemini sendes bildet til Google. På gratisnivået kan Google bruke data til å forbedre tjenestene – sjekk vilkårene.</div>
+      <div class="note" style="font-size:12.5px">Kvitteringsbilder sendes aldri til Gemini eller andre skytjenester – de leses bare lokalt. Gemini brukes bare til tekst der du har valgt det.</div>
       ${aiLogBox()}`;
   } else if (t === 'cat') body = `<div style="display:flex;flex-direction:column;gap:8px">${cats().map((c) => `<div class="edit-row"><input type="color" value="${c.color}" data-cat-field="color" data-id="${c.id}" aria-label="Farge"><input class="inp grow" value="${esc(c.name)}" data-cat-field="name" data-id="${c.id}" aria-label="Navn" style="flex:1 1 160px">
       <select class="inp" data-cat-field="kind" data-id="${c.id}" style="width:140px">${Object.entries(KINDS).map(([k2, l]) => opt(k2, l, c.kind)).join('')}</select><button class="del" data-del-cat="${c.id}" aria-label="Slett">×</button></div>`).join('')}
@@ -936,6 +940,7 @@ export function draw() {
   const scroll = window.scrollY;
   const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field], [data-r48f]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;
   applyTheme();
+  rcpBefore52(el); // prompt 52: kvitteringspanelet beholder sin egen scroll mellom tegningene
   el.innerHTML = shell(PAGE_FN[u.page]());
   // E-postimporten (felles med Homelab-innstillingene) monteres i Innstillinger → Import.
   const mp = el.querySelector('[data-mailpane]');
@@ -952,6 +957,7 @@ export function draw() {
   if (r48) import('/assets/js/receipts48-set.js').then((m) => m.mountReceipts48(r48)).catch(() => { r48.innerHTML = '<div class="note">Kunne ikke laste kvitteringsoppsettet.</div>'; });
   if (u.page === 'dir') afterB42(el);
   window.scrollTo(0, scroll);
+  rcpAfter52(el); rcpGone52(); // prompt 52
   window.fhLoaded?.(); // fjerner lasteskjermen fra index.html (loader.js)
   if (focus?.sel) { const f = el.querySelector(focus.sel); if (f) { f.focus(); try { f.setSelectionRange(focus.pos, focus.pos); } catch {} } }
   if (u.hlFocus && el.querySelector('.rc-hlr.hit,[data-hl-first]')) { u.hlFocus = false; requestAnimationFrame(() => hlFocus(el)); }

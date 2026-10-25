@@ -101,6 +101,36 @@ export function preScanned48(r, force) {
   return { provider: meta.provider ?? 'ollama', model: meta.model ?? null, data, seconds: meta.seconds ?? 0 };
 }
 
+/* ---------------- Prompt 52 (SRV52): Boliger på samme kvitteringsleser ---------------- */
+
+/** home_id/expense_id fra skjemaet → {folderId, name, entryId, target} | {error, status} | null (ingen bolig). */
+export function homeTarget52(u, homeId, expenseId) {
+  if (homeId == null || homeId === '') return null;
+  const fid = Number(homeId);
+  if (!Number.isInteger(fid) || fid <= 0) return { error: 'home_id må være id-en til en bolig', status: 400 };
+  const f = q('SELECT id, name FROM fh_folders WHERE id=?').get(fid);
+  const m = f ? q('SELECT role FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(fid, u) : null;
+  if (!f || !m) return { error: 'Fant ikke boligen', status: 404 };
+  if (m.role === 'viewer') return { error: 'Du har lesetilgang. Be en eier om redigeringstilgang.', status: 403 };
+  let entryId = null;
+  if (expenseId != null && expenseId !== '') {
+    const e = q('SELECT id, receipt_id FROM fh_folder_entries WHERE id=? AND folder_id=?').get(Number(expenseId), fid);
+    if (!e) return { error: 'Fant ikke utgiften i boligen', status: 404 };
+    entryId = e.id;
+  }
+  return { folderId: fid, name: f.name, entryId, target: `folder:${fid}:${u}` };
+}
+/** Posten i boligen med en gang (fylles ut/oppdateres av køen via routeTarget). */
+function linkHome52(h, receiptId, { merchant, date, total }) {
+  try {
+    if (h.entryId) { q('UPDATE fh_folder_entries SET receipt_id=? WHERE id=? AND folder_id=?').run(receiptId, h.entryId, h.folderId); return; }
+    if (q('SELECT 1 FROM fh_folder_entries WHERE receipt_id=?').get(receiptId)) return;
+    const payer = q('SELECT name FROM fh_folder_members WHERE folder_id=? AND user_id=?').pluck().get(h.folderId, h.target.split(':')[2]) ?? 'Meg';
+    q("INSERT INTO fh_folder_entries(folder_id,receipt_id,description,date,amount,paid_by,category,status,created) VALUES(?,?,?,?,?,?,?,'review',?)")
+      .run(h.folderId, receiptId, String(merchant || 'Kvittering').slice(0, 120), date, Math.abs(total || 0), payer, null, Date.now());
+  } catch (e) { console.warn('[skann48] bolig:', e.message); }
+}
+
 /**
  * deps: {W: skrivetilgang (receipts:write/finance:write), R: lesetilgang, adminOnly, sessionOnly, enqueue(id), out(id)}
  */
@@ -134,6 +164,10 @@ export function mountReceipts48(api, { W, R, adminOnly, sessionOnly, enqueue, ou
     const thumb = form.thumb instanceof File && form.thumb.type === 'image/jpeg' ? Buffer.from(await form.thumb.arrayBuffer()) : null;
 
     const u = c.get('user');
+    // Prompt 52 (SRV52): Boliger bruker samme kvitteringsleser. home_id (og valgfritt expense_id) kobler kvitteringen til boligen:
+    // target «folder:<id>:<bruker>» → posten havner i boligen når køen er ferdig (routeTarget), som for den gamle Boliger-opplastingen.
+    const home52 = homeTarget52(u, form.home_id ?? form.homeId, form.expense_id ?? form.expenseId);
+    if (home52?.error) return bad(c, home52.error, home52.status);
     const logs = [];
     const log = (step, detail) => { logs.push([step, detail]); console.info(`[skann48] ${step} – ${String(detail).slice(0, 200)}`); };
     // Kjeden fullføres selv om klienten kobler fra (kvitteringen lagres uansett; appens kø sender den ellers på nytt).
@@ -153,9 +187,10 @@ export function mountReceipts48(api, { W, R, adminOnly, sessionOnly, enqueue, ou
       catch (e) { meta48.error = e.message; }
     }
     const name = String(img.name ?? '').slice(0, 120) || rc?.merchant || `Kvittering (${res.label ?? 'skann'})`;
-    q("INSERT INTO fh_receipts(id,file,scan,thumb,mime,status,date,account_id,name,source,target,uploaded_by,created,user_id,extraction,merchant,total,meta,ocr48) VALUES(?,?,?,?,?,'pending',?,?,?,?,NULL,?,?,?,?,?,?,?,?)")
-      .run(id, file, scanRel, thumbRel, mime, rc?.date || todayOslo45(), firstAccount(u), name, SOURCE48, u, Date.now(), u, extraction, rc?.merchant || null,
+    q("INSERT INTO fh_receipts(id,file,scan,thumb,mime,status,date,account_id,name,source,target,uploaded_by,created,user_id,extraction,merchant,total,meta,ocr48) VALUES(?,?,?,?,?,'pending',?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      .run(id, file, scanRel, thumbRel, mime, rc?.date || todayOslo45(), firstAccount(u), name, SOURCE48, home52?.target ?? null, u, Date.now(), u, extraction, rc?.merchant || null,
         rc?.total != null ? Math.round(rc.total * 100) : null, JSON.stringify({ scan48: meta48 }), ocrStore(res.ocr));
+    if (home52) linkHome52(home52, id, { merchant: rc?.merchant || name, date: rc?.date || todayOslo45(), total: rc?.total != null ? Math.round(rc.total * 100) : 0 });
     scanLog(id, 'mottatt', `Skann (prompt 48)${client ? ` fra ${client.platform}${client.version ? ` ${client.version}` : ''}` : ''} · ${mime} · ${Math.round(buf.length / 1024)} kB${deviceOcr ? ' + device_ocr' : ''}${deviceParse ? ' + device_parse' : ''}`);
     for (const [step, detail] of logs) scanLog(id, step, detail);
     scanLog(id, 'vei', `${res.pipeline.map((p) => `${p.step}:${p.status}${p.ms ? ` ${p.ms} ms` : ''}`).join(' → ')} · brukte ${res.used ?? 'ingen'} (${res.label ?? '–'}) · ${res.confidence}`);
@@ -165,6 +200,8 @@ export function mountReceipts48(api, { W, R, adminOnly, sessionOnly, enqueue, ou
       used: res.used, label: res.label, engine: res.engine, model: res.model, compare: res.compare, warnings: [...warnings, ...res.warnings], errors: res.errors,
       ocr: res.ocr ? { source: res.ocr.source, engine: res.ocr.source, rows: res.ocr.rows?.length ?? 0, image_size: res.ocr.image_size ?? null } : null, seconds: res.seconds, stored: out(id),
       merchant_source: res.merchant51?.source ?? null, merchant_label: MERCHANT_LABELS51[res.merchant51?.source] ?? null, org_number: res.merchant51?.org_number ?? rc?.org_number ?? null,
+      source_label: 'Lokal AI', // prompt 52: kvitteringer leses bare lokalt
+      ...(home52 ? { home: { id: home52.folderId, name: home52.name, expense_id: home52.entryId ?? q('SELECT id FROM fh_folder_entries WHERE receipt_id=?').pluck().get(id) ?? null } } : {}),
     }, 201);
   });
 

@@ -271,7 +271,8 @@ test('sperren på · /receipts/scan: uten device-data, med device_ocr, med devic
   assert.equal(al.status, 201, al.text);
   await settled(al.body.receipt_id);
   const h = await T('/finans/api/receipts/health');
-  assert.equal(h.body.gemini.blocked, true);
+  assert.equal(h.body.external.blocked, true);
+  assert.equal(h.body.local_only, true); // prompt 52
   assertInside(m, 'alias + health');
 });
 
@@ -331,7 +332,7 @@ test('sperren på · «Les på nytt» (valgt motor, tvunget Gemini/Groq), reread
     const r = await T(`/finans/api/receipts/${id}/reprocess${p ? `?provider=${p}` : ''}`, 'POST', {});
     assert.equal(r.status, 200, r.text);
     const s = await settled(id);
-    if (p === 'gemini' || p === 'groq') assert.match(String(s.body.error ?? ''), /aldri huset|brukes ikke/, `tvunget ${p} stoppes`);
+    if (p === 'gemini' || p === 'groq') assert.doesNotMatch(String(s.body.error ?? ''), /Gemini|Groq/, `tvunget ${p} leses lokalt (prompt 52)`);
   }
   const rr = await T(`/finans/api/receipts/${id}/reread`, 'POST', {});
   assert.equal(rr.status, 202, rr.text);
@@ -354,7 +355,7 @@ test('sperren på · «Les på nytt» (valgt motor, tvunget Gemini/Groq), reread
     if (att.status === 200) { await settled(att.body.id); await T(`/finans/api/transactions/${txId}/reread`, 'POST', { engine: 'gemini' }); await T(`/finans/api/transactions/${txId}/reread`, 'POST', { engine: 'tesseract' }); }
   }
   // Den gamle kjeden direkte: bilde (med og uten tvang), tekst (OCR og e-post), lokal OCR.
-  await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], 'gemini'), /aldri huset/);
+  await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], 'gemini')); // prompt 52: leses lokalt (Ollama feiler her)
   await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], 'groq'));
   await ai.extract(JPEG, 'image/jpeg', ['Annet'], undefined).catch(() => {});
   await ai.extract(HEIC, 'image/heic', ['Annet'], undefined).catch(() => {});
@@ -449,28 +450,28 @@ test('sperren på · butikklogoer: ingen favicon-oppslag hos Google (klienten vi
 
 /* ---------------- Sperren AV: positiv kontroll ---------------- */
 
-test('sperren AV (positiv kontroll): Gemini i ny og gammel kjede, Brønnøysund, Roboflow, embeddings, logo, bankimport, skjermbilde og favicon går ut – fellene ser trafikken', async () => {
+test('sperren AV (positiv kontroll): kvitteringer aldri ut (prompt 52); Brønnøysund, Roboflow, embeddings, logo, bankimport, skjermbilde og favicon går ut – fellene ser trafikken', async () => {
   setup({ finLocal: false, ollama: 'fail', mac: 'down' });
   tess._setTesseract48({ tools: async () => ({ tesseract: null }), run: async () => '' });
   const m0 = mark();
   let m = mark();
   const r = await T('/finans/api/receipts/scan', 'POST', scanForm({ deviceOcr: ocrOf('ios_vision') }));
   assert.equal(r.status, 201, r.text);
-  assert.equal(r.body.used, 'D', r.text);
-  assert.ok(outside(m).some((c) => c.host === 'generativelanguage.googleapis.com'), 'ny kjede: Gemini (D) er tillatt når sperren er av');
+  // Prompt 52: Gemini er tatt helt ut av kvitteringene – også når sperren er av (ny og gammel kjede, «Les på nytt med Gemini»).
+  assert.equal(r.body.used, null, r.text);
+  assert.ok(!outside(m).some((c) => c.host === 'generativelanguage.googleapis.com'), 'ny kjede: aldri Gemini, heller ikke uten sperre');
   await settled(r.body.receipt_id);
   m = mark();
-  const res = await ai.extract(JPEG, 'image/jpeg', ['Annet'], 'gemini');
-  assert.equal(res.provider, 'gemini');
-  assert.ok(outside(m).some((c) => c.host === 'generativelanguage.googleapis.com'), 'gammel kjede: «Les på nytt med Gemini»');
+  await assert.rejects(() => ai.extract(JPEG, 'image/jpeg', ['Annet'], 'gemini'));
+  assert.ok(!outside(m).some((c) => c.host === 'generativelanguage.googleapis.com' || c.host === 'detect.roboflow.com'), 'gammel kjede: «Les på nytt med Gemini» leses lokalt');
   const o = await ai.extractOcr(JPEG, 'image/jpeg');
   // Oppslaget huskes per org.nr. (brregCache), så det kan ha skjedd i lav-sikkerhet-kontrollen i extract over.
   assert.ok(outside(m0).some((c) => c.host === 'data.brreg.no'), 'Tesseract-reserven slår opp org.nr. i Brønnøysund når sperren er av');
   assert.equal(o.data.confidence.merchant, 0.7, 'navnet kom fra Brønnøysund');
-  // Roboflow (beskjæring før AI), Gemini-embeddings i AI-søket og logo-oppslaget (Brønnøysund/Gemini) går ut når sperren er av.
+  // Prompt 52: Roboflow-beskjæringen av kvitteringsbildet er tatt ut. Gemini-embeddings i AI-søket og logo-oppslaget går ut når sperren er av.
   m = mark();
   await ai.extract(JPEG, 'image/jpeg', ['Annet'], undefined).catch(() => {});
-  assert.ok(outside(m).some((c) => c.host === 'detect.roboflow.com'), 'Roboflow-beskjæringen');
+  assert.ok(!outside(m).some((c) => c.host === 'detect.roboflow.com' || c.host === 'generativelanguage.googleapis.com'), 'kvitteringsbildet går aldri til Roboflow/Gemini');
   m = mark();
   await T('/finans/api/search/ai', 'POST', { q: 'hvor mye brukte jeg på skruer' });
   await pause(800);

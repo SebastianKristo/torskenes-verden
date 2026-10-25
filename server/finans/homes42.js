@@ -29,6 +29,9 @@ import { fold42, stem42, synonymsOf42, parsePeriod42 } from './search42.js';
 import { kv, OWNER } from '../db.js';
 
 const q = (sql) => db.prepare(sql);
+// Prompt 52 (SRV52): kvitteringen i samme form som Transaksjoner/Kvitteringer (receiptOut) – samme panel/komponent i Boliger.
+let receiptOut52 = null;
+import('./routes.js').then((m) => { receiptOut52 = m.receiptOut52 ?? null; }).catch(() => {});
 const MON = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -152,11 +155,13 @@ function expenseOut(e, f, { full = false } = {}) {
     amount: e.amount / 100, amountLabel: `−${(e.amount / 100).toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\s/g, '\u00a0')}\u00a0kr`, paidBy: e.paid_by, ...cat, project: proj?.name ?? null, projectId: proj?.id ?? null,
     status: e.status === 'review' ? 'review' : 'ok', txId: e.tx_id ?? null, receiptId: e.receipt_id ?? null, hasReceipt: !!r?.file, receiptLabel: r?.file ? 'Vis ›' : 'Mangler',
     thumbUrl: r?.file ? `/finans/api/folders/${f.id}/receipts/${r.id}/thumb` : null, fileUrl: r?.file ? `/finans/api/folders/${f.id}/receipts/${r.id}/file` : null,
-    missingAmount: !e.amount, glimtCategory: !!catPair(e.category_id).top?.created_by_ai };
+    missingAmount: !e.amount, glimtCategory: !!catPair(e.category_id).top?.created_by_ai,
+    merchant_logo: LOGO(merchant) }; // prompt 52: butikklogo i Boliger-lista (bare lokal logo-cache)
   if (!full) return out;
   return { ...out, logo: LOGO(merchant), lines: linesOf(r), aiShort: r?.ai_short ?? tx?.ai_short ?? null, aiLong: r?.ai_long ?? tx?.ai_long ?? null, aiTitle: 'Glimt leste kvitteringen',
     receipt: r ? { id: r.id, name: r.name ?? null, mime: r.mime ?? null, isPdf: r.mime === 'application/pdf', status: r.status, fileUrl: out.fileUrl, thumbUrl: out.thumbUrl, originalLabel: 'Se originalen ⤢',
       card: { title: 'Vis original kvittering', sub: r.name ? r.name : `Kvittering fra ${dLabel(r.date ?? e.date)} · ${merchant}` }, reanalyze: { label: 'Analyser på nytt med Glimt', sub: 'Leser originalen igjen · butikk, beløp, varelinjer og kategori', busyLabel: 'Glimt leser kvitteringen …' } } : null,
+    receiptFull: r && receiptOut52 ? receiptOut52(r.id) : null, // prompt 52: felles kvitteringsform (samme panel som Transaksjoner)
     chips: chipsFor(e), projects: q('SELECT id, name FROM fh_folder_projects WHERE folder_id=? ORDER BY id').all(f.id), homes: homesOf42(me()).map((h) => ({ id: h.id, name: h.name })) };
 }
 /** Kategori-chips på kvitteringskortet: Glimts forslag (valgt) + 3 alternativer (nest beste + mest brukte). */

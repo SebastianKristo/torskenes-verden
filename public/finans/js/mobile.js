@@ -52,6 +52,7 @@ let P43 = null; // prompt 43: mobile-p43.js (+ mobile-p43m.js for Media), dynami
 let P44 = null; // prompt 44: mobile-p44.js (+ p44l Logger, p44s Studie, p44a Avspilling), dynamisk import i bind()
 let P50F = null; // prompt 50 (FAMWEB50): mobile-p50f.js – Familie i nytt design (/assets/js/family50.js), dynamisk import i bind()
 let P46 = null; // prompt 46: mobile-p46.js (+ mobile-p46k.js Kart), dynamisk import i bind()
+let P52 = null; // prompt 52 (WEB52F): mobile-p52.js – saldokortets utseende (hold inne) og avrundet månedslinje i Liste
 let P45 = null; // prompt 45: mobile-p45.js (+ p45f Familie, p45h Gjøremål/Helse/Logger/Import, p45m Media), dynamisk import i bind()
 import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
 import * as P35 from './mobile-p35.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
@@ -162,7 +163,7 @@ function jobsPill(th) {
   const run = j.filter((x) => ACTIVE.includes(x.status)).length, ready = j.filter((x) => x.status === 'needs_review').length;
   if (!run && !ready) return '';
   const pct = Math.round(j.reduce((a, x) => a + (ACTIVE.includes(x.status) ? x.progress ?? 0 : 100), 0) / j.length);
-  return `<a class="pill ${th === 'ios' ? 'glass2' : ''}" href="#/opp"><span class="ring" style="background:${conic([{ value: pct, color: '#FF8A4C' }], 100, 0, th === 'ios' ? 'rgba(255,255,255,.15)' : c3('#31281F'))}"></span><span class="m-grow">${run ? `Gemini leser i bakgrunnen · ${j.length - run} av ${j.length} ferdig` : `${ready} kvitteringer klare til bekreftelse`}</span><span style="opacity:.6">›</span></a>`;
+  return `<a class="pill ${th === 'ios' ? 'glass2' : ''}" href="#/opp"><span class="ring" style="background:${conic([{ value: pct, color: '#FF8A4C' }], 100, 0, th === 'ios' ? 'rgba(255,255,255,.15)' : c3('#31281F'))}"></span><span class="m-grow">${run ? `Glimt leser lokalt · ${j.length - run} av ${j.length} ferdig` : `${ready} kvitteringer klare til bekreftelse`}</span><span style="opacity:.6">›</span></a>`;
 }
 
 function andCards(s) {
@@ -231,10 +232,10 @@ function budget(th) {
     ${rows.map((b) => budCard(b, th, s)).join('') || '<div class="m-empty">Ingen budsjett satt. Sett opp på desktop under Budsjett.</div>'}`;
 }
 
-/* ---------- Analyser på nytt med Gemini (prompt 12) ---------- */
+/* ---------- Les på nytt (prompt 12; prompt 52: alltid lokalt, aldri Gemini) ---------- */
 // Serveren sier fra med canReanalyze; eldre servere: vis knappen ved feil eller lav sikkerhet.
 const canRe = (R, high) => (R.canReanalyze ?? (!!R.error || R.status === 'error' || !high)) && !['booked', 'pending', 'processing'].includes(R.status);
-const reBtn = (th, R, sub = R.reason) => `<button class="rean ${th === 'ios' ? 'glass2' : ''}" data-reanalyze="${esc(R.id)}"><span>✦</span><span class="m-grow">Analyser på nytt med Gemini${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>`;
+const reBtn = (th, R, sub = R.reason) => `<button class="rean ${th === 'ios' ? 'glass2' : ''}" data-reanalyze="${esc(R.id)}"><span>✦</span><span class="m-grow">Les på nytt${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>`;
 // «Les med lokal OCR» (Tesseract på serveren, uten AI). Vises på kvitteringer serveren sier kan leses (canOcr).
 const ocrBtn = (th, R, sub = 'Uten AI · leses på serveren med Tesseract') => (R.canOcr ? `<button class="rean ${th === 'ios' ? 'glass2' : ''}" data-reanalyze="${esc(R.id)}" data-engine="tesseract"><span>⌗</span><span class="m-grow">Les med lokal OCR${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>` : '');
 // Dialogen (side om side, «Behold») ligger i reanalyze.js, som også brukes på desktop.
@@ -265,7 +266,7 @@ function uploadScreen(th) {
   const j = m.jobs;
   const st = (x) => (x.status === 'needs_review' ? ['Klar · trykk for å bekrefte', '#9FE3C6', 100] : x.status === 'booked' ? ['Bokført', '#9FE3C6', 100] : x.status === 'error' ? ['Feil – åpne for å fylle ut', '#FF8A6B', 100] : x.status === 'processing' ? [`Gemini leser … ${x.progress ?? 50} %`, th === 'and' ? c3('#FFB68A') : '#FF8A4C', x.progress ?? 50] : ['I kø', 'currentColor', 0]);
   return `<div class="m-row">${backBtn(th, '#/kv', 'Tilbake til Kvitteringer')}<b class="ptitle">Last opp</b></div>
-    <label class="drop ${th === 'ios' ? 'glass' : ''}"><span class="n">${icon('up', 22)}</span><b>Velg kvitteringer</b><span>Bilder eller PDF – flere om gangen. Gemini leser dem i bakgrunnen. Du kan bruke appen mens du venter.</span><input class="m-file" type="file" accept="image/*,application/pdf" multiple data-mupload></label>
+    <label class="drop ${th === 'ios' ? 'glass' : ''}"><span class="n">${icon('up', 22)}</span><b>Velg kvitteringer</b><span>Bilder eller PDF – flere om gangen. Glimt leser dem lokalt i bakgrunnen. Du kan bruke appen mens du venter.</span><input class="m-file" type="file" accept="image/*,application/pdf" multiple data-mupload></label>
     <button class="cta ${th === 'ios' ? 'glass2' : ''}" data-mact="cam"><span class="n">${icon('cam', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde</b><span style="font-size:13px;opacity:.75">Bakkamera</span></span></button>
     ${upqList(th)}
     ${m.uploading ? `<div class="m-empty">Laster opp ${m.uploading} fil${m.uploading > 1 ? 'er' : ''} …</div>` : ''}
@@ -279,7 +280,7 @@ function scanQueue(th) {
   const q = (S.receipts ?? []).filter((r) => ['pending', 'processing', 'needs_review'].includes(r.status));
   return `<div class="m-row">${backBtn(th, '#/kv', 'Tilbake til Kvitteringer')}<b class="ptitle">Skann</b></div>
     <button class="cta ${th === 'ios' ? 'glass' : ''}" data-scan><span class="n">${icon('scan', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde av kvittering</b><span style="font-size:13px;opacity:.75">Hold inne for Bilder eller Filer</span></span></button>
-    ${q.length ? `<div class="sec">Til gjennomgang</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${q.map((r) => `<button class="item${m.rc === r.id ? ' on' : ''}" data-rc="${r.id}">${r.thumb ? `<span class="m-ini" style="border-radius:10px;background:#ECE8E0 center/cover;background-image:url('${r.thumb}')"></span>` : logo({ ...r, description: r.merchant ?? 'Kvittering' }, 40, 10)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(r.merchant ?? 'Ny kvittering')}</span><span class="m-ell s">${r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.provider ?? 'manuell')}` : 'Leser …'}</span></span><span class="m-mono">${r.total != null ? n2(r.total) : ''}</span></button>`).join('')}</div>` : '<div class="m-empty">Ingen kvitteringer i køen.</div>'}`;
+    ${q.length ? `<div class="sec">Til gjennomgang</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${q.map((r) => `<button class="item${m.rc === r.id ? ' on' : ''}" data-rc="${r.id}">${r.thumb ? `<span class="m-ini" style="border-radius:10px;background:#ECE8E0 center/cover;background-image:url('${r.thumb}')"></span>` : logo({ ...r, description: r.merchant ?? 'Kvittering' }, 40, 10)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(r.merchant ?? 'Ny kvittering')}</span><span class="m-ell s">${r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.source_label ?? r.provider ?? 'manuell')}` : 'Glimt leser lokalt …'}</span></span><span class="m-mono">${r.total != null ? n2(r.total) : ''}</span></button>`).join('')}</div>` : '<div class="m-empty">Ingen kvitteringer i køen.</div>'}`;
 }
 
 function confirmRc(th) {
@@ -300,7 +301,7 @@ function confirmRc(th) {
   return `${rcBar(th, 'Bekreft kvittering', idx > -1 ? `${idx + 1} av ${q.length}` : '')}
     ${th === 'ios' ? '<div class="title" style="font-size:28px">Bekreft kvittering</div>' : ''}
     ${paper}
-    <div class="conf"><span>${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/0$/, '')} s` : ''}` : 'Manuell utfylling'}</span><span style="color:${high ? '#9FE3C6' : '#FFB08A'};font-weight:600">● ${R.error ? 'Fyll ut' : high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span></div>
+    <div class="conf"><span>${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.source_label ?? R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/0$/, '')} s` : ''}` : 'Manuell utfylling'}</span><span style="color:${high ? '#9FE3C6' : '#FFB08A'};font-weight:600">● ${R.error ? 'Fyll ut' : high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span></div>
     ${R.error ? `<div style="font-size:13px;color:#FFB08A;padding:0 6px">${esc(R.error)}</div>` : ''}
     ${canRe(R, high) ? reBtn(th, R) : ''}${!['booked', 'pending', 'processing'].includes(R.status) ? ocrBtn(th, R) : ''}
     ${fields}
@@ -436,7 +437,7 @@ export function draw() {
   if (fad) P23.finnAdAfterDraw();
   P23.arrive(vk, vkChanged);
   P25.afterDraw();
-  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39(); P40?.afterDraw40(); P41?.afterDraw41(); P42?.afterDraw42(); P43?.afterDraw43(); P44?.afterDraw44(); P45?.afterDraw45(); P46?.afterDraw46(); P50F?.afterDraw50();
+  P27.afterDraw27(); P28.afterDraw28(); P32.afterDraw32(); P30.afterDraw30(); P30B.hlAfter(); P34.afterDraw34(); P36.afterDraw36(); P37.afterDraw37(); P37B.afterDraw37b(); P39.afterDraw39(); P40?.afterDraw40(); P41?.afterDraw41(); P42?.afterDraw42(); P43?.afterDraw43(); P44?.afterDraw44(); P45?.afterDraw45(); P46?.afterDraw46(); P50F?.afterDraw50(); P52?.afterDraw52();
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -787,6 +788,7 @@ export function bind() {
   // Prompt 46: Kart, Ruter-innstillinger i wiggle, Nyheter i Innstillinger, profilring, liquid glass i Vær (lat, som 40–45).
   import('./mobile-p50f.js').then((x) => { P50F = x; x.boot50(); }).catch((err) => console.warn('mobile-p50f', err)); // prompt 50 (FAMWEB50)
   import('./mobile-p46.js').then((x) => { P46 = x; x.boot46(); if (document.documentElement.dataset.ui === 'mobile') { draw(); load(); } }).catch((err) => console.warn('mobile-p46', err));
+  import('./mobile-p52.js').then((x) => { P52 = x; x.boot52(); if (document.documentElement.dataset.ui === 'mobile') x.afterDraw52(); }).catch((err) => console.warn('mobile-p52', err));
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
     takeDesign(r); P37B.takeWopt(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); P32.take32(r); takeApp(r); P39.take39(r);

@@ -39,7 +39,7 @@ export const KODER50 = {
 };
 
 /** Motorfeil → {status, kode, error}. Aldri 502 (det betyr «proxyen fikk ikke svar» og skal bare komme fra proxyen). */
-export function classify50(e, label = 'Gemini') {
+export function classify50(e, label = 'Lokal AI') {
   const msg = String(e?.message ?? e ?? '');
   const st = Number(e?.status) || 0;
   let kode;

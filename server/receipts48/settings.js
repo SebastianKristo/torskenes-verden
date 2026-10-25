@@ -1,14 +1,15 @@
 // Prompt 48 (SERVER48): innstillingene for kvitteringskjeden og sperren for eksterne tjenester.
 //   settings.macOcrUrl   – adressen til Mac-OCR-tjenesten (standard http://10.69.1.173:8765, bare admin, vises ikke til andre)
 //   secret('macOcrKey')  – nøkkelen (kryptert som de andre hemmelighetene, sendes aldri ut og logges aldri)
-//   settings.receipts48  – av/på per steg og modell: {deviceOcr, deviceParse, macOcr, tesseract, gemini, compareMac,
+//   settings.receipts48  – av/på per steg og modell: {deviceOcr, deviceParse, macOcr, tesseract, compareMac, (gemini fjernet i prompt 52)
 //                          textModel:'qwen3:8b', macOcrTimeoutS:30, modelTimeoutS:90}
 import { settings, secret } from '../finans/db.js';
 import { routing, budgetState } from '../ai-run.js';
 
 export const MAC_OCR_DEFAULT_URL = 'http://10.69.1.173:8765';
-export const R48_DEFAULTS = Object.freeze({ deviceOcr: true, deviceParse: true, macOcr: true, tesseract: true, gemini: true, compareMac: true, textModel: 'qwen3:8b', macOcrTimeoutS: 30, modelTimeoutS: 90 });
-export const R48_STEPS = ['deviceParse', 'deviceOcr', 'macOcr', 'tesseract', 'gemini'];
+// Prompt 52 (SRV52): steget «gemini» er fjernet (kvitteringer leses bare lokalt). Lagrede/innsendte gemini-verdier ignoreres.
+export const R48_DEFAULTS = Object.freeze({ deviceOcr: true, deviceParse: true, macOcr: true, tesseract: true, compareMac: true, textModel: 'qwen3:8b', macOcrTimeoutS: 30, modelTimeoutS: 90 });
+export const R48_STEPS = ['deviceParse', 'deviceOcr', 'macOcr', 'tesseract'];
 const BOOL_KEYS = [...R48_STEPS, 'compareMac'];
 
 /** Validerer (og fletter inn i base): ukjente felt droppes, ugyldige verdier beholder base. */

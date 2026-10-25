@@ -4,6 +4,7 @@
 // Data: /folders (+ /folders/:id), /boliger/categories og (når serveren har det) /boliger/oversikt. Alt tåler 404.
 import { S, api, esc, n2, render, toast, today, logo } from './core.js';
 import { orb, kr, secs, askStream } from './fin42.js';
+import { rcPanel52 } from './rcpanel52.js'; // prompt 52 (WEB52F): samme kvitteringspanel som Transaksjoner
 
 const u = S.ui;
 const B = (S.b42 ??= { homes: null, det: {}, cats: null, ov: null, users: null, lines: {} });
@@ -58,7 +59,7 @@ const pstat = () => LS('fh_b42_pst') ?? {};
 // Utgiftene i en bolig i samme form som fasiten: h, d, m, desc, cat, amt, rc, by, proj.
 function exps(h) {
   const d = B.det[h.id];
-  return (d?.entries ?? []).map((e) => ({ id: e.id, h: h.id, d: e.date ?? '', m: e.description ?? '', desc: e.note ?? e.what ?? '', ai: e.aiText ?? e.aiShort ?? '', cat: e.category ?? 'Annet', catId: e.categoryId, sub: e.subcategory, amt: Math.abs(+e.amount || 0), rid: e.receiptId ?? null, rc: !!e.receiptId || !!e.hasReceipt, by: e.paidBy ?? '', proj: e.projectId ?? null, review: e.status === 'review' || !!e.pending, pending: !!e.pending, domain: e.domain, lines: e.lines ?? null, file: e.fileName ?? null, mime: e.mime ?? null }));
+  return (d?.entries ?? []).map((e) => ({ id: e.id, h: h.id, d: e.date ?? '', m: e.description ?? '', desc: e.note ?? e.what ?? '', ai: e.aiText ?? e.aiShort ?? '', cat: e.category ?? 'Annet', catId: e.categoryId, sub: e.subcategory, amt: Math.abs(+e.amount || 0), rid: e.receiptId ?? null, rc: !!e.receiptId || !!e.hasReceipt, by: e.paidBy ?? '', proj: e.projectId ?? null, review: e.status === 'review' || !!e.pending, pending: !!e.pending, domain: e.domain, lines: e.lines ?? e.receipt?.lines ?? null, file: e.fileName ?? null, mime: e.mime ?? null, logo: e.merchant_logo ?? e.receipt?.merchant_logo ?? null /* prompt 52 */ }));
 }
 const done = (h) => exps(h).filter((e) => !e.review);
 const allCats = () => {
@@ -234,7 +235,7 @@ function utgTab(h) {
   const rows = list.map((e, i) => {
     const k = `${e.h}:${e.id}`;
     const rcB = e.rc ? `<button type="button" class="b42-vis" data-b42-view="${k}">Vis ›</button>` : `<label class="b42-att" data-b42-stop>Legg ved<input type="file" accept="image/*,application/pdf" data-b42-attach="${k}" hidden></label>`;
-    return `<div class="b42-tr${i % 2 ? ' alt' : ''}" data-b42-open="${k}" role="button" tabindex="0"><span>${dS(e.d)}</span><span class="b42-col b42-what">${logo({ description: e.m, domain: e.domain }, 30, 8)}<span class="b42-col"><b>${esc(e.m)}</b><small>${esc([e.desc || e.ai, e.by].filter(Boolean).join(' · '))}</small></span></span><span class="b42-tcat">${esc(e.cat)}</span><b class="b42-mono b42-r">${kr(e.amt)}</b><span class="b42-r">${rcB}</span></div>`;
+    return `<div class="b42-tr${i % 2 ? ' alt' : ''}" data-b42-open="${k}" role="button" tabindex="0"><span>${dS(e.d)}</span><span class="b42-col b42-what b42-what52">${logo({ description: e.m, domain: e.domain, merchant_logo: e.logo }, 40, 11) /* prompt 52: 40 px butikklogo */}<span class="b42-col"><b>${esc(e.m)}</b><small>${esc([e.desc || e.ai, e.by].filter(Boolean).join(' · '))}</small></span></span><span class="b42-tcat">${esc(e.cat)}</span><b class="b42-mono b42-r">${kr(e.amt)}</b><span class="b42-r">${rcB}</span></div>`;
   }).join('');
   return `${reviewBox(h)}<div class="b42-mnav">${btn(`‹ ${yy - 1}`, 'data-b42="yr-prev"')}<b class="b42-serif32">${yy}</b>${btn(`${yy + 1} ›`, `data-b42="yr-next"${yy >= cy ? ' disabled' : ''}`)}</div>
     <div class="b42-kpis"><div class="b42-kpi"><span>Brukt i ${yy}</span><b class="b42-mono">${kr(sm)}</b></div><div class="b42-kpi"><span>Hittil i år</span><b class="b42-mono">${kr(sum(done(h).filter((e) => e.d.startsWith(String(cy)))))}</b></div></div>
@@ -252,7 +253,7 @@ function katTab(h) {
     const per = pm === 'mnd' ? `i ${MN[mm - 1]} ${yy}` : pm === 'ar' ? `i ${yy}` : 'totalt', ci = catInfo(CV);
     return `<div class="b42-col g16"><div class="b42-between">${btn('‹ Alle kategorier', 'data-b42="cv-back"')}<div class="b42-seg">${[['mnd', 'Måned'], ['ar', 'Året'], ['alt', 'Alt']].map(([k, n]) => `<button type="button" class="${pm === k ? 'on' : ''}" data-b42-cvmode="${k}">${n}</button>`).join('')}</div></div>
       <div class="b42-box b42-row16"><span class="b42-cini lg" style="background:${cc(CV)}">${esc(CV[0])}</span><span class="b42-col grow"><b class="b42-serif30">${ci?.ai ? '✦ ' : ''}${esc(CV)}</b><span class="b42-mute">${cl.length === 1 ? '1 kjøp' : `${cl.length} kjøp`} ${per} · ${esc(hName(h))}</span></span><b class="b42-mono b42-f26">${kr(sum(cl))}</b></div>
-      <div class="b42-table">${cl.map((e) => `<div class="b42-tr c4" data-b42-open="${e.h}:${e.id}" role="button" tabindex="0"><span class="b42-mute">${dS(e.d)}</span><span class="b42-col"><b>${esc(e.m)}</b><small>${esc([e.desc || e.ai, e.by, e.rc ? 'kvittering' : 'mangler kvittering'].filter(Boolean).join(' · '))}</small></span><b class="b42-mono">${kr(e.amt)}</b><span>${e.rc ? `<button type="button" class="b42-vis" data-b42-view="${e.h}:${e.id}">Kvittering ›</button>` : ''}</span></div>`).join('') || `<div class="b42-tempty"><span>Ingen kjøp i ${esc(CV)} ${per}.</span></div>`}</div>
+      <div class="b42-table">${cl.map((e) => `<div class="b42-tr c4" data-b42-open="${e.h}:${e.id}" role="button" tabindex="0"><span class="b42-mute">${dS(e.d)}</span><span class="b42-what52">${logo({ description: e.m, domain: e.domain, merchant_logo: e.logo }, 40, 11)}<span class="b42-col"><b>${esc(e.m)}</b><small>${esc([e.desc || e.ai, e.by, e.rc ? 'kvittering' : 'mangler kvittering'].filter(Boolean).join(' · '))}</small></span></span><b class="b42-mono">${kr(e.amt)}</b><span>${e.rc ? `<button type="button" class="b42-vis" data-b42-view="${e.h}:${e.id}">Kvittering ›</button>` : ''}</span></div>`).join('') || `<div class="b42-tempty"><span>Ingen kjøp i ${esc(CV)} ${per}.</span></div>`}</div>
       <div class="b42-row12">${btn(`+ Legg til utgift i ${esc(CV)}`, `data-b42-addcat="${esc(CV)}"`, 'green')}${canM && ci && CV !== 'Annet' ? btn('Slett kategori', `data-b42-delcat="${ci.id}"`, 'danger') : ''}</div></div>`;
   }
   const tot = {}; src.forEach((e) => { tot[e.cat] = (tot[e.cat] ?? 0) + e.amt; });
@@ -388,15 +389,24 @@ function projModal(PJ) {
     ${PJ.err ? '<span class="b42-err">Skriv inn et navn.</span>' : ''}
     <div class="b42-col g8">${btn('Lagre', 'data-b42="p-save"', 'dark lg')}${PJ.id ? btn(PJ.arm ? 'Trykk igjen for å slette prosjektet' : 'Slett prosjektet', 'data-b42="p-del"', 'link red') : ''}</div>`);
 }
+// Prompt 52 (WEB52F, claude-code-kvittering-lokal-lik-overalt.md): kvitteringen i Boliger vises i samme panel som i
+// Transaksjoner (rcpanel52.js): skuff fra høyre (maks 500 px, egen scroll), logo + ×, butikk, «dato · bolig · kategori»,
+// stort beløp, ✦ Glimt-beskrivelse med varelinjer, selve kvitteringen, «⇩ Last ned original», «Endre» og «Lukk».
 function rcView(V) {
   if (!V) return '';
   const hh = homes().find((x) => x.id === V.h), url = fileUrl(V);
-  const fields = [['Butikk', V.m], ['Dato', V.d ? dL(V.d) : ''], ['Beløp', V.amt ? kr(V.amt) : 'Mangler'], ['Kategori', V.cat], ['Bolig', hName(hh)], ['Fil', V.file ?? '']].filter((f) => f[1]);
-  return `<div class="b42-ov" data-b42-ov><div class="b42-sheet wide" role="dialog" aria-modal="true" aria-label="Original kvittering"><div class="b42-rcv-img" data-b42="rc-full" title="Se originalen">${url ? `<img class="b42-rcimg" src="${esc(url)}" alt="Kvittering fra ${esc(V.m)}">` : `<div class="b42-roll"><b>${esc(String(V.m).toUpperCase())}</b><span>${esc(hh?.address ?? '')}</span><span>${esc(V.d ? V.d.split('-').reverse().join('.') : '')}</span><hr>${(V.lines?.length ? V.lines : [{ text: V.desc || 'Varer', amount: V.amt }]).map((l) => `<span class="lr"><span>${esc(l.text ?? l.description ?? l.t ?? '')}</span><span>${n2(+(l.amount ?? l.a ?? 0))}</span></span>`).join('')}<hr><span class="lr b700"><span>TOTALT</span><span>${n2(V.amt)}</span></span></div>`}</div>
-    <div class="b42-col g14"><div class="b42-between"><span class="b42-kick">${V.review ? 'ORIGINAL · VENTER PÅ GODKJENNING' : 'ORIGINAL KVITTERING'}</span>${btn('Lukk', 'data-b42="close"', 'line sm')}</div><b class="b42-serif32">${esc(V.m)}</b>
-      <div class="b42-table">${fields.map(([k, v]) => `<div class="b42-kv"><span class="b42-mute">${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
-      ${url ? '' : '<span class="b42-mute sm">Originalfilen finnes ikke for denne utgiften, så kvitteringen vises slik Glimt leste den.</span>'}
-      <div class="b42-row10 b42-wrap">${url ? btn('Se originalen ⤢', 'data-b42="rc-full"', 'green') : ''}${btn('Endre', `data-b42-open="${V.h}:${V.id}"`, 'dark')}${url ? `<a class="b42-btn line" href="${esc(url)}" download>Last ned</a>` : ''}</div></div></div></div>`;
+  const lines = (V.lines?.length ? V.lines : B.lines[V.rid] ?? []).map((l) => ({ text: l.text ?? l.description ?? l.name ?? l.t ?? '', amount: +(l.amount ?? l.price ?? l.a ?? 0) }));
+  return `<div class="b42-ov side rcv52" data-b42-ov>${rcPanel52({
+    key: `bol:${V.h}:${V.id}`, cls: 'drawer', role: 'dialog', attrs: 'aria-modal="true"', label: `Kvittering fra ${V.m}`,
+    close: 'data-b42="close"', logo: logo({ description: V.m || '?', domain: V.domain, merchant_logo: V.logo }, 52, 14), title: V.m || 'Utgift',
+    meta: [V.d ? `${dL(V.d)} ${V.d.slice(0, 4)}` : '', hName(hh), V.cat].filter(Boolean).join(' · '), amount: -num(V.amt),
+    top: V.review ? '<span class="rcp52-note">Venter på godkjenning</span>' : '',
+    glimt: V.ai || lines.length ? { text: V.ai || V.desc || '', lines } : null,
+    receipt: { url, mime: V.mime, zoom: url ? 'data-b42="rc-full"' : '', label: V.review ? 'ORIGINAL · VENTER PÅ GODKJENNING' : 'ORIGINAL KVITTERING',
+      paper: { merchant: V.m, sub: [hh?.address, V.d ? V.d.split('-').reverse().join('.') : ''], lines: lines.length ? lines : [{ text: V.desc || 'Varer', amount: num(V.amt) }], total: num(V.amt) },
+      note: url ? '' : 'Originalfilen finnes ikke for denne utgiften, så kvitteringen vises slik Glimt leste den.' },
+    download: url, actions: `${btn('Endre', `data-b42-open="${V.h}:${V.id}"`, 'dark')}${btn('Lukk', 'data-b42="close"', 'line')}`,
+  })}</div>`;
 }
 function rcFull(F) {
   if (!F) return '';
@@ -408,6 +418,12 @@ function rcFull(F) {
 /* ===================== Handlinger ===================== */
 
 const findE = (k) => { const [hid, id] = String(k).split(':'); const h = homes().find((x) => String(x.id) === hid); return h ? exps(h).find((e) => String(e.id) === id) ?? null : null; };
+// Prompt 52: varelinjer og Glimt-tekst til kvitteringspanelet hentes når panelet åpnes fra lista.
+function rcLines52(V) {
+  if (!V?.rid || V.lines?.length || B.lines[V.rid]) return;
+  B.lines[V.rid] = [];
+  api(`/receipts/${encodeURIComponent(V.rid)}`).then((r) => { B.lines[V.rid] = r?.lines ?? r?.items ?? []; const s = st(); if (s.rcv && s.rcv.rid === V.rid) { s.rcv.ai ||= r?.aiDescription ?? r?.aiLong ?? r?.aiShort ?? ''; render(); } }).catch(() => {});
+}
 function flash(t, undo = null) {
   const s = st(); s.toast = { t, undo }; render();
   clearTimeout(flash.t); flash.t = setTimeout(() => { s.toast = null; render(); }, 5500);
@@ -536,13 +552,13 @@ export function bindB42(el) {
     let x;
     if (d('[data-b42-stop]') && !t.matches('input')) return;
     // Prompt 46: lukkes kvitteringen (over utgiftspanelet), står panelet åpent som før.
-    if ((x = d('[data-b42-ov]')) && t === x) { if (s.rcv && !x.classList.contains('side')) { s.rcv = null; return render(); } s.hm = s.am = s.ex = s.pj = s.rcv = null; return render(); }
+    if ((x = d('[data-b42-ov]')) && t === x) { if (s.rcv && (!x.classList.contains('side') || x.classList.contains('rcv52'))) { s.rcv = null; return render(); } s.hm = s.am = s.ex = s.pj = s.rcv = null; return render(); }
     if ((x = d('[data-b42-full]')) && (t === x || t.matches('[data-b42-zoom]'))) { s.rcf = null; return render(); }
     if ((x = d('[data-b42-go]'))) return goHome(+x.dataset.b42Go);
     if ((x = d('[data-b42-edit]'))) { const hh = homes().find((y) => y.id === +x.dataset.b42Edit); s.hm = { id: hh.id, name: hh.name, type: hh.type ?? 'Enebolig', address: hh.address ?? '', color: homeColor(hh), img: homeImg(hh) }; return render(); }
     if ((x = d('[data-b42-tab]'))) { s.cv = null; s.pv = null; s.gres = null; location.hash = `#/dir/${h.id}${x.dataset.b42Tab === 'utg' ? '' : `?fane=${TAB_IDS[x.dataset.b42Tab]}`}`; return; }
     if ((x = d('[data-b42-year]'))) { const Y = +x.dataset.b42Year; s.ym = Y === CY() ? CYM() : `${Y}-12`; return render(); }
-    if ((x = d('[data-b42-view]'))) { e.stopPropagation(); s.rcv = findE(x.dataset.b42View); return render(); }
+    if ((x = d('[data-b42-view]'))) { e.stopPropagation(); s.rcv = findE(x.dataset.b42View); rcLines52(s.rcv); return render(); }
     if ((x = d('[data-b42-open]'))) { const en = findE(x.dataset.b42Open); if (!en) return; s.rcv = null; return openEx({ ...en, h0: en.h, amt: en.amt }); }
     if ((x = d('[data-b42-ok]'))) { await approve(findE(x.dataset.b42Ok)); return render(); }
     if ((x = d('[data-b42-rvcat]'))) { const [hid, id, ...c] = x.dataset.b42Rvcat.split(':'); const n = c.join(':'), cid = catIdOf(n); await patchE(+hid, +id, cid ? { categoryId: cid } : { category: n }); return render(); }
@@ -574,7 +590,7 @@ export function bindB42(el) {
       case 'back': return goHome(null);
       case 'add': s.am = { h: h?.id ?? homes()[0]?.id }; return render();
       case 'new-home': s.hm = { id: null, name: '', type: 'Enebolig', address: '', color: COLS[homes().length % COLS.length] }; render(); return document.querySelector('[data-b42-h="name"]')?.focus();
-      case 'close': if (s.rcv && d('[data-b42="close"]')?.closest('.b42-ov:not(.side)')) { s.rcv = null; return render(); } s.hm = s.am = s.ex = s.pj = s.rcv = null; return render(); // prompt 46
+      case 'close': if (s.rcv && d('[data-b42="close"]')?.closest('.b42-ov:not(.side), .rcv52')) { s.rcv = null; return render(); } s.hm = s.am = s.ex = s.pj = s.rcv = null; return render(); // prompt 46
       case 'gs': s.gsOn = !s.gsOn; render(); if (s.gsOn) document.querySelector('[data-b42-gsq]')?.focus(); return;
       case 'sq-close': s.sq = null; return render();
       case 'undo': { const f = s.toast?.undo; s.toast = null; render(); if (f) await f(); return; }
@@ -595,7 +611,7 @@ export function bindB42(el) {
       case 'h-save': return saveHome();
       case 'h-del': { const H = s.hm; if (!H.arm) { H.arm = true; return render(); } await api(`/folders/${H.id}`, { method: 'DELETE' }); s.hm = null; await loadB42(); flash(`${H.name} er slettet`); return goHome(null); }
       case 'h-rmimg': s.hm.img = ''; s.hm.preview = null; s.hm.rmImg = true; return render();
-      case 'ex-view': { const X = s.ex; s.rcv = { ...X, amt: num(X.amt) }; return render(); }
+      case 'ex-view': { const X = s.ex; s.rcv = { ...X, amt: num(X.amt) }; rcLines52(s.rcv); return render(); }
       case 'ex-reai': return reAi();
       case 'ex-nc': s.ex.nc = ''; render(); return document.querySelector('[data-b42-x="nc"]')?.focus();
       case 'ex-nc-cancel': s.ex.nc = null; return render();

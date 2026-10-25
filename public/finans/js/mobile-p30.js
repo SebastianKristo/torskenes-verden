@@ -14,6 +14,7 @@ import * as P23 from './mobile-p23.js';
 import { U, loadUpdate, startUpdate, checkUpdate, running, state, watch, onUpdate } from '/assets/js/sysupdate.js';
 import { glimt } from './mobile-p31.js';
 import * as P36 from './mobile-p36.js'; // prompt 36: Sherlock-/snekker-Glimt, oppstartsside, tidligere versjoner
+import { point52 } from './whatsnew52.js'; // prompt 52: «Nytt i» som punkter med overskrift, uten interne merknader
 
 const ls = {
   get: (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
@@ -403,7 +404,7 @@ export function sysView() {
     <span class="n31-note">Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.</span>
     ${globalThis.P44?.versionsSection?.() ?? '' /* prompt 44: TIDLIGERE VERSJONER (under «Krev passord», over endringsloggen) */}
     <div class="n31-new"><b class="n31-tag">Dette er Nordlys ${esc(short(nv))}. ${esc(V.tagline || 'Lys i mørket, kjørt hjemme.')}</b>
-      ${notes.length ? `<span class="n31-lab">NYTT I ${esc(nv)}${date ? ` · ${esc(date)}` : ''}</span><ul>${notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+      ${notes.length ? `<span class="n31-lab">NYTT I ${esc(nv)}${date ? ` · ${esc(date)}` : ''}</span><div class="p52-np">${notes.map(point52).filter((x) => x.title || x.text).map((x) => `<div>${x.title ? `<b>${esc(x.title)}</b>` : ''}${x.text ? `<span>${esc(x.text)}</span>` : ''}</div>`).join('')}</div>` : ''}
       ${P36.histSection(nv)}
       ${cur ? `<span class="p32-inst"><span class="p30-mono">Installert ${esc(cur)}${instSha() ? ` · build ${esc(instSha())}` : ''}</span><button type="button" class="p32-copy" data-p30="instcopy">Kopier</button></span>` : ''}</div></div>`;
 }

@@ -1,12 +1,12 @@
-// Prompt 48 (SERVER48): steg D – Gemini Flash med bildet og den beste OCR-teksten. Siste reserve, og bare når
+// Prompt 52: steg D er fjernet (geminiParse48 kaster alltid). Opprinnelig (prompt 48): Gemini Flash med bildet og OCR-teksten, bare når
 // «Finansdata forlater aldri huset» er av (sjekkes her og i geminiJson48). Kallet går via AI-gaten: denne modulen
 // registrerer backenden «gemini48» med gatens eksisterende registerBackend (ai-gate.js er ikke endret) og kaller
 // gateChat({backend:'gemini48', noQueue:true}) – sky-kall venter ikke i Ollama-køen. Selve HTTP-kallet, nøkkelrotasjonen
 // og modellvalget gjenbrukes fra finans/ai.js (geminiJson48).
-import { gateChat, registerBackend, GateError } from '../../ai-gate.js';
+import { registerBackend, GateError } from '../../ai-gate.js';
 import { geminiJson48 } from '../../finans/ai.js';
 import { modelFormat48 } from '../schema.js';
-import { externalBlocked48 } from '../settings.js';
+import { blockCloudReceipt52 } from '../cloud-guard52.js'; // prompt 52
 
 export const GEMINI_BACKEND48 = 'gemini48';
 const imgMime = (b64) => (String(b64).startsWith('iVBOR') ? 'image/png' : String(b64).startsWith('UklGR') ? 'image/webp' : String(b64).startsWith('AAAA') ? 'image/heic' : 'image/jpeg');
@@ -45,16 +45,9 @@ registerBackend(GEMINI_BACKEND48, {
 /**
  * Bildet + beste OCR-tekst → {data, model, ms}. Kaster {blocked:true} når sperren er på.
  */
-export async function geminiParse48(image, mime, { rows = [], categories = [], feedback = null, prompt, timeoutS = 30, base, signal = null } = {}) {
-  const b = externalBlocked48();
-  if (b.blocked) throw Object.assign(new Error(`${b.text}, så Gemini brukes ikke`), { blocked: true });
-  const t0 = Date.now();
-  const text = `${prompt}\n\nKategorier: ${categories.join(', ') || 'Annet'}\n\nOCR-tekst (kan inneholde feil – bildet gjelder):\n${rows.length ? rows.join('\n') : '(ingen)'}${feedback ? `\n\n${feedback}` : ''}`;
-  const ms = timeoutS * 1000;
-  const out = await gateChat({ backend: GEMINI_BACKEND48, noQueue: true, model: 'gemini-flash', base: base || 'http://127.0.0.1:11434', signal, priority: 'interactive', retries: 0,
-    body: { messages: [{ role: 'user', content: text, images: image ? [image.toString('base64')] : [] }], mime, timeoutMs: ms, geminiSchema: geminiSchema48() },
-    loadMs: ms + 2000, warmMs: ms + 2000, idleMs: ms + 2000, label: 'Finans · kvittering (Gemini)' });
-  let data;
-  try { data = JSON.parse(out.text); } catch { throw Object.assign(new Error('Gemini svarte ikke med gyldig JSON'), { badJson: true }); }
-  return { data, model: out.final?.model ?? 'gemini', ms: Date.now() - t0 };
+// Prompt 52 (SRV52): Gemini er tatt helt ut av kvitteringslesingen (også som reserve og når sperren er av). Funksjonen finnes
+// bare så gamle kall feiler trygt: den sender ingenting, logger en advarsel og kaster en feil med blocked:true.
+// eslint-disable-next-line no-unused-vars
+export async function geminiParse48(image, mime, opts = {}) {
+  throw blockCloudReceipt52('receipts48/geminiParse48', 'gemini');
 }

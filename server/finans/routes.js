@@ -49,8 +49,10 @@ import { mountReceipts47, preParsed47, textKind47, ocrTextOf47 } from './receipt
 import { mountReceipts48, preScanned48, setMerchant51 } from '../receipts48/routes.js';
 import { ocrRaw51, crossCheck51 } from '../receipts48/ocr-raw51.js'; // prompt 51 (RCPTSRV51): rådata per kvittering, OCR-kontroll av den gamle kjeden
 import { merchantOut51 } from '../receipts48/brreg51.js'; // prompt 48 (SERVER48): /receipts/scan (kjeden A→B→C→Tesseract→D), /receipts/health, rettelser
-import { cleanMacOcrUrl, cleanReceipts48, externalBlocked48 } from '../receipts48/settings.js';
+import { cleanMacOcrUrl, cleanReceipts48 } from '../receipts48/settings.js';
 import { correctionOnBook48 } from '../receipts48/corrections.js';
+import { mountLogos52 } from '../logos52.js'; // prompt 52
+import { warnCloudReceipt52, RECEIPT_SOURCE_LABEL52, RECEIPT_ENGINE_NOTE52 } from '../receipts48/cloud-guard52.js'; // prompt 52: kvitteringer bare lokalt
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -234,12 +236,13 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     aiCategory: ex?.cat39 ? { category: ex.cat39.category, isNew: !!ex.cat39.isNew, confidence: ex.cat39.confidence, reason: ex.cat39.reason ?? null } : null,
     verify: ex ? (ex.verify ? { ok: ex.verify.ok, status: ex.verify.status, text: ex.verify.text, sum: ex.verify.sum, total: ex.verify.total, diff: ex.verify.diff, lines: ex.verify.lines } : (ex.lines ? (({ feedback, ...v }) => v)(verify39(ex)) : null)) : null,
     payment: ex?.payment_method ?? null, discounts: ex?.discounts ?? [], pant: ex?.pant ?? 0, vat: ex?.vat ?? [], receiptNo: ex?.receipt_no ?? null, time: ex?.time ?? null,
-    aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? `${providerName(st.provider)} leser kvitteringen …` : null), aiLong: r.ai_long ?? null,
+    aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? 'Glimt leser lokalt …' /* prompt 52 */ : null), aiLong: r.ai_long ?? null,
     ...reanalyzeInfo(r, st), ...(reanalyzeJobOf(r) ? { reanalyzeJob: reanalyzeJobOf(r) } : {}), log: scanLogOf(r), timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
     added: addedOf40(r, 'receipt'), // prompt 40: «Lagt til … · skannet kvittering · Sebastian»
     domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload',
     ocr_raw: ocrRaw51(r), ...merchantOut51(ex), // prompt 51: rådata (OCR-motor, rader, bildestørrelse) og kilden til butikknavnet
     // Prompt 47: etiketten «Tolket på iPhone» / «Tolket av Glimt».
+    source_label: r.provider === 'gemini' ? 'Gemini (eldre)' : 'Lokal AI', // prompt 52: kvitteringer leses bare lokalt
     tolketAv: r.source === 'apple-fm' ? 'apple-on-device' : 'glimt-ollama', tolketAvTekst: r.source === 'apple-fm' ? 'Tolket på iPhone' : 'Tolket av Glimt', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
 }
 
@@ -248,7 +251,7 @@ function receiptOut(r, cats = catById(), accs = accById()) {
 function reanalyzeInfo(r, st = settings()) {
   // Prompt 41: «Les på nytt med Glimt» er lov for alle statuser (også bokført/avvist) – det lager bare et forslag.
   const re41 = !r.file ? { canReread: false, rereadReason: 'Fant ikke originalbildet. Last det opp på nytt for å lese det.' } : ['pending', 'processing'].includes(r.status) ? { canReread: false }
-    : hasGemini() ? { canReread: true } : { canReread: false, rereadReason: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å lese på nytt.' };
+    : { canReread: true }; // prompt 52: leses på nytt lokalt (Gemini brukes ikke lenger til kvitteringer)
   return { ...reanalyzeInfo0(r, st), ...re41 };
 }
 function reanalyzeInfo0(r, st) {
@@ -258,10 +261,7 @@ function reanalyzeInfo0(r, st) {
   const unsure = (r.confidence ?? 0) < st.minConf / 100;
   const needs = r.status === 'failed' || !!r.error || unsure;
   if (!needs) return { canReanalyze: false, ...ocr };
-  if (!hasGemini()) return { canReanalyze: false, ...ocr, reanalyzeReason: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.' };
-  // Prompt 48: «Finansdata forlater aldri huset» – ikke tilby Gemini (kallet blokkeres uansett; knappen skal ikke villede).
-  const xb48 = externalBlocked48();
-  if (xb48.blocked) return { canReanalyze: false, ...ocr, reanalyzeReason: `${xb48.text}, så kvitteringen analyseres ikke på nytt med Gemini. Prøv lokal OCR i stedet.` };
+  // Prompt 52: «Analyser på nytt» leser lokalt (Ollama/lokal OCR) – ingen Gemini-nøkkel trengs, og sperren hindrer ingenting.
   return { canReanalyze: true, ...ocr, ...(r.candidate ? { reanalyzePending: true } : {}) };
 }
 
@@ -357,7 +357,7 @@ async function processReceipt(r, id, force) {
       try { img = await readFile(join(DIR, rel)); } catch (e) { throw new Error(`Fant ikke filen på serveren (${e.code ?? e.message})`); }
       const mime = r.scan ? 'image/jpeg' : r.mime;
       log('lest', `${rel.split('/').pop()} · ${mime} · ${Math.round(img.length / 1024)} kB${r.scan ? ' (nedskalert JPEG)' : ''}`);
-      if (isHeic(mime)) log('heic', hasGemini() ? 'HEIC uten JPEG-kopi fra klienten: sendes til Gemini, som kan lese HEIC' : 'HEIC uten JPEG-kopi og uten Gemini-nøkkel: Ollama kan ikke lese HEIC');
+      if (isHeic(mime)) log('heic', 'HEIC uten JPEG-kopi fra klienten: leses med lokal OCR (sendes aldri til Gemini)'); // prompt 52
       const cats = q("SELECT name FROM fh_categories WHERE kind='expense' AND user_id=? ORDER BY sort").all(me()).map((x) => x.name);
       // E-post uten vedlegg lagres som tekst og leses som tekst.
       // Etter tre runder i køen gjelder «neste motor», så jobben ikke venter for alltid.
@@ -933,7 +933,7 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target, uploadedBy = nul
   scanLog(id, 'mottatt', `${f.name || 'kvittering'} · ${f.type} · ${Math.round(f.size / 1024)} kB${scan ? ' + JPEG-kopi' : ''}${thumb ? ' + miniatyr' : ''}`);
   const tm = String(target ?? '').match(/^tx:(\d+)$/);
   if (tm) q('UPDATE fh_receipts SET transaction_id=? WHERE id=?').run(+tm[1], id);
-  // Mappe: posten vises med en gang («Gemini leser …») og fylles ut når AI-en er ferdig.
+  // Mappe: posten vises med en gang («Glimt leser lokalt …», prompt 52) og fylles ut når AI-en er ferdig.
   const fm = String(target ?? '').match(/^folder:(\d+)(?::(.+))?$/);
   if (fm) {
     const payer = q('SELECT name FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(+fm[1], fm[2] ?? owner)?.name ?? settings(owner).name;
@@ -965,6 +965,7 @@ api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
 mountReceipts47(api, { W: need('receipts:write'), enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
 // Prompt 48: POST /receipts/scan, GET /receipts/health, /receipts/schemas/:kind og rettelser (server/receipts48/) – samme kø og datamodell.
 mountReceipts48(api, { W: need('receipts:write', 'finance:write'), R: need('finance:read', 'receipts:write'), adminOnly, sessionOnly, enqueue: (id) => { queue.push({ id }); runQueue(); }, out: (id) => { const r = origSelect.get(id); return { ...receiptOut(r), jobs: [jobOut(r)] }; } });
+mountLogos52(api, { R }); // prompt 52 (SRV52): butikklogoer for lister, bare lokal cache (/logos52/batch, /logos52/match)
 // Legg ved kvittering på en eksisterende transaksjon. AI-en leser den, og den bekreftes i gjennomgangskøen som vanlig.
 api.post('/transactions/:id/receipt', need('receipts:write'), upload, (c) => {
   const id = +c.req.param('id');
@@ -979,7 +980,7 @@ function jobOut(r) {
     error: r.error ?? null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null, aiShort: r.ai_short ?? null, created: r.created, ...reanalyzeInfo(r),
     // Prompt 23: motoren som ikke svarte innen tidsgrensen, når jobben prøves igjen, og statusteksten i køen.
     timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
-    statusText: r.status === 'pending' || r.status === 'processing' ? (r.ai_short ?? `${providerName(settings().provider)} leser kvitteringen …`) : null };
+    statusText: r.status === 'pending' || r.status === 'processing' ? (r.ai_short ?? 'Glimt leser lokalt …' /* prompt 52 */) : null };
 }
 // ISO2: hver bruker ser bare sine egne opplastinger (alle roller).
 api.get('/receipts/jobs', R, (c) => {
@@ -987,6 +988,8 @@ api.get('/receipts/jobs', R, (c) => {
   return c.json(rows.map(jobOut));
 });
 const origSelect = q('SELECT * FROM fh_receipts WHERE id=?');
+// Prompt 52 (SRV52): kvitteringen i felles form (receiptOut) for Boliger-panelet – samme komponent som Transaksjoner/Kvitteringer.
+export const receiptOut52 = (id) => { const r = id ? origSelect.get(id) : null; return r ? receiptOut(r) : null; };
 
 // Prompt 34: kvitteringer som analyseres av AI nå (og de som venter i køen). Mobilens «✦ ANALYSERES AV AI · N».
 // GET /receipts/analyzing (= /receipts?status=analyzing) → {count, items:[{id, receiptId, file, thumb, status:'queued'|'analyzing', model, progress,
@@ -1170,7 +1173,7 @@ api.post('/receipts/:id/reread', W, async (c) => {
   return c.json({ queued: true, receiptId: r.id, jobId: pj.id, statusUrl: `/finans/api/jobs/${pj.id}` }, 202);
 });
 
-// «✦ Analyser på nytt med Gemini»: originalfilen sendes til Gemini. Resultatet lagres som kandidat og vises
+// «✦ Analyser på nytt» (prompt 52: lokalt, aldri Gemini): originalfilen leses lokalt. Resultatet lagres som kandidat og vises
 // side om side med det forrige; brukeren velger hvilket som beholdes (POST …/reanalyze/apply).
 const readOut = (o) => ({ merchant: o.merchant ?? null, date: o.date ?? null, total: o.total ?? null, items: (o.lines ?? []).map((l) => ({ description: l.description, amount: l.amount, quantity: l.quantity ?? null })),
   confidence: o.confidence ?? null, engine: o.engine ?? null, model: o.model ?? null, category: o.category ?? null, error: o.error ?? null });
@@ -1185,7 +1188,7 @@ const readOut = (o) => ({ merchant: o.merchant ?? null, date: o.date ?? null, to
 const reanalyzing = new Map(); // kvittering-id → jobb-id
 export const reanalyzeJobOf = (r) => { const id = reanalyzing.get(r.id); const j = id ? getJob(r.user_id ?? OWNER, id) : null; return j && j.status === 'running' ? { jobId: j.id, step: j.progress?.step ?? 'upload', pct: j.progress?.pct ?? 0, msg: j.progress?.msg ?? null } : null; };
 async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {}, small = false, maxSide = null } = {}) {
-  const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
+  const label = engine === 'tesseract' ? 'Lokal OCR' : RECEIPT_SOURCE_LABEL52; // prompt 52: «Lokal AI»
   const log = (step, detail) => scanLog(r.id, step, detail);
   let at = 'upload', pct = 0;
   const P = (step, p, msg) => { at = step; pct = Math.max(pct, p); progress({ step, pct, msg, receiptId: r.id, steps: stepsOut39(step, label, step === 'error') }); };
@@ -1210,7 +1213,7 @@ async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {}, 
     if (engine === 'tesseract') P('ocr', 40, 'Leser teksten (OCR)');
     else P('llm', 40, `✦ ${label} tolker butikk, linjer og beløp`);
     res = engine === 'tesseract' ? await extractOcr(img, mime)
-      : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, mime, cats, 'gemini', { log: logp });
+      : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, mime, cats, 'ollama', { log: logp }); // prompt 52: lokalt
   } catch (e) {
     log('feil', `${label}: ${e.message}`);
     // Prompt 50: tydelige koder (503 modell_utilgjengelig, 504 tidsavbrudd, 422 ulesbar …) – aldri 502, som bare proxyen skal gi.
@@ -1223,8 +1226,8 @@ async function reanalyzeRun(r, u, engine, { signal = null, progress = () => {}, 
   const d = res.data;
   if (!d.verify) { d.verify = verify39(d); d.status = d.verify.status; }
   const candidateId = randomUUID();
-  q('UPDATE fh_receipts SET candidate=? WHERE id=?').run(JSON.stringify({ id: candidateId, at: Date.now(), provider: res.provider === 'tekst' ? 'gemini' : res.provider, model: res.model, seconds: res.seconds, data: d }), r.id);
-  saveRead41(r.id, { engine: res.provider === 'tekst' ? 'gemini' : res.provider, model: res.model, data: d, candidateId }); // prompt 41: receipt_reads (forslaget)
+  q('UPDATE fh_receipts SET candidate=? WHERE id=?').run(JSON.stringify({ id: candidateId, at: Date.now(), provider: res.provider === 'tekst' ? 'ollama' : res.provider, model: res.model, seconds: res.seconds, data: d }), r.id);
+  saveRead41(r.id, { engine: res.provider === 'tekst' ? 'ollama' : res.provider, model: res.model, data: d, candidateId }); // prompt 41: receipt_reads (forslaget)
   log('reanalyse-ferdig', `${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} %`);
   const confidence = Math.min(d.confidence.total, d.confidence.merchant || 1);
   return { previous, result: readOut({ ...d, confidence, engine: label, model: res.model, category: d.suggested_category }), candidateId, confidence, verify: (({ feedback, ...v }) => v)(d.verify) };
@@ -1236,9 +1239,10 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
   // Prompt 41: lov for alle statuser. Bokført og avvist får alltid bare et forslag (apply:false) – ingenting endres før «Bruk endringene».
   if (['booked', 'rejected'].includes(r.status)) b.apply = false;
   if (r.status === 'pending' || r.status === 'processing') return c.json({ error: 'Kvitteringen leses fortsatt', kode: 'opptatt', code: 'opptatt' }, 409);
-  const engine = b.engine === 'tesseract' ? 'tesseract' : 'gemini';
-  const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
-  if (engine === 'gemini' && !hasGemini()) return c.json({ error: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.', kode: 'gemini_mangler', code: 'gemini_mangler' }, 400);
+  // Prompt 52 (SRV52): «Analyser på nytt» er lokalt. engine:'gemini' (eldre klienter) leses lokalt og får engine_note.
+  const engine = b.engine === 'tesseract' ? 'tesseract' : 'ollama';
+  const label = engine === 'tesseract' ? 'Lokal OCR' : RECEIPT_SOURCE_LABEL52;
+  const engineNote52 = b.engine === 'gemini' || b.force === 'gemini' || b.provider === 'gemini' ? (warnCloudReceipt52('Analyser på nytt med Gemini (eldre klient)', 'gemini'), RECEIPT_ENGINE_NOTE52) : null;
   const small = b.small === true || b.variant === 'small' || c.req.query('small') === '1'; // prompt 50: «Les mindre versjon»
   const maxSide = Number.isFinite(+b.maxSide) && +b.maxSide > 0 ? +b.maxSide : null; // prompt 50 (iOS): lengste side, 512–2048 px
   if (engine === 'tesseract' && r.mime === 'text/plain') return bad(c, 'Lokal OCR leser bare bilder og PDF, ikke e-posttekst');
@@ -1284,7 +1288,7 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
   if (!j) return c.json({ jobId: job.id, receiptId: r.id, pending: true, statusUrl: `/finans/api/jobs/${job.id}`, eventsUrl: `/finans/api/jobs/${job.id}/events`, channel: `job:${job.id}`, steps: stepsOut39('upload', label) }, 202);
   if (j.status !== 'done') return j.status === 'cancelled' ? bad(c, j.error ?? 'Avbrutt', 409) : c.json({ error: j.error ?? 'Avbrutt', kode: errKode, code: errKode, melding: KODER50[errKode]?.text ?? null, jobId: j.id }, errStatus);
   const { confidence, ...out } = j.result;
-  return c.json({ ...out, jobId: j.id, status: r.status, ...(r.status === 'rejected' ? { offer: 'review', offerText: 'Flytt til gjennomgang' } : {}), ...(r.status === 'booked' ? { offer: 'apply', offerText: 'Bruk endringene' } : {}) });
+  return c.json({ ...out, jobId: j.id, status: r.status, ...(engineNote52 ? { engine_note: engineNote52 } : {}), ...(r.status === 'rejected' ? { offer: 'review', offerText: 'Flytt til gjennomgang' } : {}), ...(r.status === 'booked' ? { offer: 'apply', offerText: 'Bruk endringene' } : {}) });
 });
 // Prompt 39 (PWA): GET /finans/api/receipts/reanalyze/:jobId → {jobId, receiptId, status, step, pct, msg, steps, result?} · DELETE samme = Avbryt.
 // Prompt 50 (iOS-reserve): GET /finans/api/receipts/jobs/:jobId → samme jobbvisning (reanalyze og reread) som /jobs/:id.
@@ -1321,12 +1325,12 @@ api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
   const tx40 = keepNew && r.status === 'booked' && r.transaction_id ? q('SELECT * FROM fh_transactions WHERE id=? AND user_id=?').get(r.transaction_id, r.user_id ?? c.get('user')) : null;
   if (tx40) {
     applyRereadTx40(c.get('user'), tx40, r, cand);
-    scanLog(r.id, 'reanalyse-valgt', `${cand.provider === 'tesseract' ? 'Lokal OCR' : 'Gemini'}-resultatet beholdes (bokført transaksjon oppdatert)`);
+    scanLog(r.id, 'reanalyse-valgt', `${cand.provider === 'tesseract' ? 'Lokal OCR' : cand.provider === 'gemini' ? 'Gemini (eldre)' : 'Lokal AI'}-resultatet beholdes (bokført transaksjon oppdatert)`);
   } else if (keepNew) {
     // Prompt 41: avvist + «Flytt til gjennomgang» → resultatet tas i bruk og status blir til gjennomgang. Bokført uten transaksjon endres ikke.
     if (r.status === 'booked') return bad(c, 'Kvitteringen er bokført uten transaksjon – endre den fra transaksjonen');
     await applyCandidate(r, cand);
-    scanLog(r.id, 'reanalyse-valgt', `${cand.provider === 'tesseract' ? 'Lokal OCR' : 'Gemini'}-resultatet beholdes`);
+    scanLog(r.id, 'reanalyse-valgt', `${cand.provider === 'tesseract' ? 'Lokal OCR' : cand.provider === 'gemini' ? 'Gemini (eldre)' : 'Lokal AI'}-resultatet beholdes`);
   } else {
     q('UPDATE fh_receipts SET candidate=NULL WHERE id=?').run(r.id);
     scanLog(r.id, 'reanalyse-valgt', 'forrige resultat beholdes');
@@ -1618,7 +1622,7 @@ const SETTING_KEYS = { name: (v) => str(v, 40), currency: (v) => (['NOK', 'EUR',
   roboflowWorkspace: (v) => (/^[a-z0-9._\-]{0,80}$/i.test(String(v)) ? String(v) : ''), roboflowModel: (v) => (/^[a-z0-9._\-/]{0,120}$/i.test(String(v)) ? String(v) : ''),
   roboflowBarcodeModel: (v) => (/^[a-z0-9._\-/]{0,120}$/i.test(String(v)) ? String(v) : ''),
   // «Hvem gjør hva»: motor per oppgave. Ukjente oppgaver/motorer droppes; null = standard.
-  aiTasks: (v) => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).filter(([k, e]) => TASKS[k] && (k === 'barcode' ? ['roboflow', 'zbar'] : ENGINES).includes(e))),
+  aiTasks: (v) => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).filter(([k, e]) => TASKS[k] && (k === 'barcode' ? ['roboflow', 'zbar'] : k === 'receipts' ? ['ollama'] : ENGINES).includes(e))),
   // Lokal OCR-reserve: null = følg OCR_FALLBACK. ocrLowConf = les også lokalt når AI er usikker.
   ocrFallback: (v) => (v === null ? null : !!v), ocrLowConf: Boolean,
   autoCat: Boolean, n80: Boolean, n100: Boolean, nRc: Boolean, nFast: Boolean, csvProfile: (v) => (PROFILES.includes(v) ? v : 'DNB'),
@@ -2121,7 +2125,7 @@ function folderOut(f, uid, full = false) {
     const pending = r && (r.status === 'pending' || r.status === 'processing');
     return { id: e.id, description: e.description, date: e.date, amount: e.amount / 100, paidBy: e.paid_by, ...entryCat(e), project: e.project, projectId: e.project_id,
       txId: e.tx_id, receiptId: e.receipt_id, editedBy: e.edited_by ?? null, editedAt: e.edited_at ?? null, pending: !!pending, status: e.status === 'review' ? 'review' : 'ok', domain: t?.domain || r?.domain || domainFor(e.description),
-      aiShort: pending ? 'Gemini leser kvitteringen …' : t?.ai_short || r?.ai_short || heuristic({ merchant: e.description, amount: -e.amount / 100 }).short };
+      aiShort: pending ? 'Glimt leser lokalt …' : t?.ai_short || r?.ai_short || heuristic({ merchant: e.description, amount: -e.amount / 100 }).short };
   });
   // Hovedkategorier (prosjekter og faste regninger) og hele treet med ID-er (utgifter).
   out.catOptions = catTree().map((t) => t.name);

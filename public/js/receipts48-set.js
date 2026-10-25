@@ -57,7 +57,7 @@ function statusRows(H) {
     ['Mac-OCR (Apple Vision)', macTxt, m.enabled === false ? 'off' : m.ok ? 'ok' : 'bad'],
     [`Lokal modell · ${mo.name ?? 'qwen3:8b'}`, mo.ok ? (mo.installed === false ? `Ollama svarer, men modellen mangler – kjør: ollama pull ${mo.name ?? 'qwen3:8b'}` : 'Klar') : mo.error ?? 'Svarer ikke', mo.ok && mo.installed !== false ? 'ok' : 'bad'],
     ['Tesseract (reserve)', t.enabled === false ? 'Slått av' : t.installed ? (t.version || 'Installert') : 'Ikke installert på serveren', t.enabled === false ? 'off' : t.installed ? 'ok' : 'warn'],
-    ['Gemini Flash (siste reserve)', g.blocked ? `Brukes ikke · ${g.blockedReason ?? 'eksterne tjenester er sperret'}` : g.enabled === false ? 'Slått av' : g.configured ? 'Klar' : 'Ingen Gemini-nøkkel', g.blocked || g.enabled === false ? 'off' : g.configured ? 'ok' : 'warn'],
+    // Prompt 52 (WEB52F): Gemini leser aldri kvitteringer (heller ikke som reserve) – raden er fjernet.
   ];
   return rows.map(([n, s, st]) => `<div class="r48s-row"><span class="r48s-col">${dot(st)}<b>${esc(n)}</b></span><span class="r48s-v" data-r48s-st="${esc(n)}">${esc(s)}</span></div>`).join('');
 }
@@ -81,7 +81,6 @@ const STEPS = [
   ['deviceOcr', 'B · Teksten fra telefonen', 'Lokal modell leser teksten iPhone/Android har lest ut'],
   ['macOcr', 'C · Mac-OCR', 'Apple Vision på Mac mini-en leser bildet, så tolker den lokale modellen'],
   ['tesseract', 'Tesseract', 'Reserve på serveren når Mac-OCR ikke svarer'],
-  ['gemini', 'D · Gemini Flash', 'Siste reserve: bildet og teksten sendes til Google'],
   ['compareMac', 'Sammenlign totalen med Mac-OCR', 'Når telefonen leste teksten, sjekkes totalen også mot Mac-OCR'],
 ];
 function stepsCard(H) {
@@ -92,7 +91,7 @@ function stepsCard(H) {
     return `<button type="button" class="r48s-li${gem ? ' blocked' : ''}" role="switch" aria-checked="${on}" data-r48s="tog" data-k="${k}"${dis ? ' disabled' : ''}${gem ? ' aria-describedby="r48s-gem"' : ''}><span class="r48s-col2"><b>${esc(n)}</b><span${gem ? ' id="r48s-gem"' : ''}>${esc(sub)}</span></span>${sw(on)}</button>`;
   }).join('');
   return `<div class="r48s-card"><span class="r48s-lab">STEG I KJEDEN</span>${rows}
-    <div class="r48s-note">Rekkefølgen er A → B → C → Tesseract → D; første steg som består kontrollen, vinner. Selve lesingen på telefonen slås på i FinansHub-appen (av som standard).${can ? '' : ' Bare administrator kan endre stegene.'}</div></div>`;
+    <div class="r48s-note">Rekkefølgen er A → B → C → Tesseract, ellers legges kvitteringen i kø og prøves igjen; første steg som består kontrollen, vinner. Selve lesingen på telefonen slås på i FinansHub-appen (av som standard).${can ? '' : ' Bare administrator kan endre stegene.'}</div></div>`;
 }
 
 export function viewReceipts48() {
@@ -100,7 +99,7 @@ export function viewReceipts48() {
   const H = X.health;
   if (!H) return `<section class="r48s" data-r48s-root><div class="r48s-hd"><b>Kvitteringer</b><span>${esc(X.err || 'Laster status …')}</span></div></section>`;
   const blk = H.external?.blocked;
-  return `<section class="r48s" data-r48s-root><div class="r48s-hd"><b>Kvitteringer</b><span>Telefonen → Mac mini → Tesseract → Gemini. All kontroll skjer på serveren.</span></div>
+  return `<section class="r48s" data-r48s-root><div class="r48s-hd"><b>Kvitteringer</b><span>Telefonen → Mac mini → Tesseract → kø. Glimt leser lokalt – kvitteringsbilder sendes aldri ut av huset.</span></div>
     ${blk ? `<div class="r48s-lock" role="note"><b>${esc(H.external.text ?? 'Eksterne tjenester er sperret')}</b><span>Ingen kvitteringsdata sendes ut av huset – verken til Gemini, Groq, Roboflow eller Brønnøysund.</span></div>` : ''}
     <div class="r48s-card"><span class="r48s-lab">STATUS</span>${statusRows(H)}${(H.categories ?? []).length ? `<div class="r48s-note">Kategoriforslag velges fra ${H.categories.length} kategorier: ${esc(H.categories.slice(0, 6).join(', '))}${H.categories.length > 6 ? ' …' : ''}</div>` : ''}</div>
     ${macCard(H)}${stepsCard(H)}

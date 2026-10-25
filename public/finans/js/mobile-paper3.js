@@ -2,6 +2,7 @@
 // Finans-fanelinja og Mer-rutenettet, Finans → Søk med ✦ AI, transaksjonsdetaljer med original kvittering,
 // kvitteringsbanneret, Finn «På vei» og arket «Ny sending» i Sporing. Valgene lagres per bruker i /api/me/layout.
 import * as P30B from './mobile-p30b.js';
+import { rcCard52, slip52 } from './rccard52.js'; // prompt 52: felles kvitteringskort (Finans og Boliger)
 import { glimtOrb } from './mobile-orb43.js'; // prompt 43
 import { S, api, esc, n0, ini, hlApi, dd, cats, uploadReceipt } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
@@ -165,6 +166,7 @@ export function edDown(e) {
   if (gr && ED.page) { const b0 = gr.closest('[data-edk]'); if (b0 && !ED.add) { e.preventDefault?.(); navigator.vibrate?.(6); edDrag({ pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY, preventDefault() {} }, b0); } return; }
   const b = e.target.closest?.('[data-edk]');
   if (!b || e.target.closest('input,textarea,select,[data-ped],[data-ppplus],.p28-pills')) return;
+  if (!ED.page && e.target.closest('[data-p52sal]')) return; // prompt 52: hold på saldokortet åpner «Utseende», ikke wiggle
   // En pakke i Sporing har sitt eget lange trykk (velg flere).
   if (m.screen === 'spor' && e.target.closest('[data-pk]')) return;
   // Prompt 39 (claude-code-hjem-wiggle-scroll-ark.md): i redigering scroller vanlig sveip siden (touch-action: pan-y).
@@ -385,9 +387,9 @@ export function paperTx(id) {
   const hl = P30B.hlInfo(id, t), hix = new Set(hl?.lineIndex ?? []);
   const lines = (r?.lines ?? []).map((l, i) => (l ? { ...l, i } : null)).filter((l) => l && l.name);
   const pdf = /pdf/i.test(r?.mime ?? '') || /\.pdf($|\?)/i.test(r?.fileUrl ?? '');
-  const slip = r ? `<button class="pp-slip" data-pptx="full" ${r.fileUrl ? '' : 'disabled'} aria-label="Åpne original kvittering"><span class="pp-slipn">${esc(name.toUpperCase())}</span><span class="pp-slipd">${esc(t.date ? `${dd(t.date)}.${t.date.slice(0, 4)}` : '')} · KVITTERING</span><i></i>
-      ${lines.length ? lines.map((l) => (hix.has(l.i) ? `<span class="pp-slipl p30-hl"${l.i === hl.lineIndex[0] ? ' data-p30hl="1"' : ''}><span>${P30B.markWord(l.name, hl.query, hl.matchedText)}</span><span>${l.price != null ? kr2(Math.abs(l.price)) : ''}</span></span>` : `<span class="pp-slipl"><span>${esc(l.name)}</span><span>${l.price != null ? kr2(Math.abs(l.price)) : ''}</span></span>`)).join('') : `<span class="pp-slipl"><span>${r.fileUrl ? 'Trykk for å se originalen' : 'Varelinjene er ikke lest ennå'}</span><span></span></span>`}<i></i>
-      <span class="pp-slipl tot"><span>TOTAL</span><span>${kr2(r.total ?? Math.abs(amt))}</span></span>${r.fileUrl ? `<span class="pp-slipo">${pdf ? 'Åpne PDF ↗' : 'Trykk for originalbildet'}</span>` : ''}</button>`
+  // Prompt 52: samme kvitteringskort og papirlapp som Boliger → utgift (rccard52.js).
+  const slip = r ? slip52({ name, date: t.date ? `${dd(t.date)}.${t.date.slice(0, 4)}` : '', open: 'data-pptx="full"', hasFile: !!r.fileUrl, pdf, total: r.total ?? Math.abs(amt),
+      linesHtml: lines.length ? lines.map((l) => (hix.has(l.i) ? `<span class="pp-slipl p30-hl"${l.i === hl.lineIndex[0] ? ' data-p30hl="1"' : ''}><span>${P30B.markWord(l.name, hl.query, hl.matchedText)}</span><span>${l.price != null ? kr2(Math.abs(l.price)) : ''}</span></span>` : `<span class="pp-slipl"><span>${esc(l.name)}</span><span>${l.price != null ? kr2(Math.abs(l.price)) : ''}</span></span>`)).join('') : `<span class="pp-slipl"><span>${r.fileUrl ? 'Trykk for å se originalen' : 'Varelinjene er ikke lest ennå'}</span><span></span></span>` })
     : `<div class="pp-card pp-col" style="gap:8px"><span class="pp-mut">Ingen kvittering er lagt ved denne transaksjonen.</span><div class="pp-two"><label class="pp-btn ink">Kamera<input class="m-file" type="file" accept="image/*" capture="environment" data-pptxfile></label><label class="pp-btn">Filer<input class="m-file" type="file" accept="application/pdf,image/*,.heic,.heif" data-pptxfile></label></div></div>`;
   const catList = cats(amt > 0 ? 'income' : 'expense');
   const cat = TX.cat ? `<div class="sheet-bg" data-pptx="catx"></div><div class="pp-sheet tall" role="dialog" aria-label="Endre kategori"><span class="pp-grab"></span>
@@ -399,10 +401,8 @@ export function paperTx(id) {
       ${b ? `<div class="pp-card pp-tight">${[['Tekst', b.description], ['KID / melding', b.message], ['Beløp', b.amount != null ? `${kr2(b.amount)} kr` : null], ['Bokført', b.bookingDate ? dd(b.bookingDate) + '.' + String(b.bookingDate).slice(0, 4) : null], ['Rentedato', b.valueDate ? dd(b.valueDate) + '.' + String(b.valueDate).slice(0, 4) : null], ['Konto', b.account], ['Arkivreferanse', b.archiveReference]].filter(([, v]) => v != null && v !== '').map(([k, v]) => `<div class="pp-kv"><span class="pp-mut">${k}</span><span class="pp-mono" style="color:var(--pp-ink);font-size:13px">${esc(v)}</span></div>`).join('')}</div>`
         : '<div class="pp-mut">Ingen bankrad er lagret. Transaksjonen er lagt inn manuelt eller fra en kvittering.</div>'}</div>` : '';
   const full = TX.full ? `<div class="pp-full" role="dialog" aria-label="Original kvittering"><button type="button" class="p30-sb pp-fullx" data-pptx="fullx">Lukk</button><div class="pp-fullsc">${pdf ? `<iframe src="${esc(TX.full)}" title="Kvittering"></iframe>` : `<img src="${esc(TX.full)}" alt="Original kvittering">`}</div></div>` : '';
-  return `<div class="pp-card pp-txd"><div class="pp-row" style="align-items:center;justify-content:flex-start;gap:12px"><span class="pp-ti big" style="background:${esc(t.color ?? '#6b665c')}">${esc(ini(name))}</span><div style="min-width:0"><b class="pp-serif m-ell" style="display:block;font-size:22px">${esc(name)}</b><span class="pp-mut">${esc([t.category, dtxt, t.account].filter(Boolean).join(' · '))}</span></div></div>
-      <span class="pp-serif pp-txamt ${amt > 0 ? 'pp-pos' : ''}">${amt < 0 ? '−' : '+'}${kr2(Math.abs(amt))} kr</span>${t.aiSummary || r?.aiSummary ? `<span class="pp-lab-c" style="font-size:13px">✦ ${esc(t.aiSummary || r.aiSummary)}</span>` : ''}</div>
-    <div class="pp-sec"><span>ORIGINAL KVITTERING</span><span class="${st === 'Vedlagt' ? '' : 'pp-lab-c'}">${st}</span></div>
-    ${P30B.hlBanner(id, t)}${P30B.hlImage(id, t)}${slip}
+  return `${rcCard52({ name, color: t.color ?? '#6b665c', meta: [t.category, dtxt, t.account].filter(Boolean).join(' · '), amount: amt, ai: t.aiSummary || r?.aiSummary || '', status: st, statusWarn: st !== 'Vedlagt',
+      slip: `${P30B.hlBanner(id, t)}${P30B.hlImage(id, t)}${slip}` })}
     <div class="pp-two"><button class="pp-btn" data-pptx="cat">Endre kategori</button><button class="pp-btn" data-pptx="bank">Bankutskrift</button></div>
     ${globalThis.P40?.txTools?.(id, t) ?? '' /* prompt 40: Les på nytt, Rediger alt, lagt til */}
     ${cat}${bank}${full}`;

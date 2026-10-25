@@ -246,7 +246,7 @@ export function receiptTable50(rc) {
 }
 
 /**
- * Leser kvitteringen i bildet med kvitteringskjeden fra prompt 48 (lokale steg først; Gemini bare når sperren er av).
+ * Leser kvitteringen i bildet med kvitteringskjeden fra prompt 48 (bare lokale steg – prompt 52: aldri Gemini).
  * → {ok, markdown, meta:{receipt, label, engine, model, confidence, fileId, action}} | {ok:false, error}
  */
 export async function receiptChat50(u, row, { signal = null, text = '' } = {}) {

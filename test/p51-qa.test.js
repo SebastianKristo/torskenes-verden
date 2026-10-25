@@ -206,7 +206,8 @@ test('nytt i versjonen: siste CHANGELOG-seksjon som JSON, vises én gang per bru
   const w = await I('/api/whatsnew');
   assert.equal(w.status, 200);
   assert.equal(w.body.version, '4.45.0');
-  assert.equal(w.body.title, 'prompt 51 – kvalitet');
+  assert.equal(w.body.title, 'Kvalitet'); // prompt 52: interne merknader («prompt 51») fjernes fra tittelen; title_raw har originalen
+  assert.equal(w.body.title_raw, 'prompt 51 – kvalitet');
   assert.deepEqual(w.body.items, ['Feature flags: slå ting av og på per bruker.', 'Krasjrapporter til GlitchTip.']);
   assert.match(w.body.markdown, /\*\*Feature flags:\*\*/);
   assert.equal(w.body.show, true);

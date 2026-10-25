@@ -100,7 +100,7 @@ function main() {
   return `${paper() ? paperTop() : ''}${G('', [profile(true)])}
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
     ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('hap', 'Haptikk', hpref('hap') ? 'På' : 'Av', 'vib', '#FF2D55'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF'), nav('widgets', 'Widgets', 'Slik legger du til', 'list', '#30D158'), nav('kalapp', 'Kalender-appen', 'iPhone · Android', 'down', '#b23a2a')])}
-    ${G('Finans', [nav('fai', 'AI-motor', !canSrv() ? ADMIN_NOTE : st.provider === 'gemini' ? 'Gemini' : st.fallback ? 'Ollama + Gemini' : 'Ollama', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
+    ${G('Finans', [nav('fai', 'AI-motor', !canSrv() ? ADMIN_NOTE : 'Lokal AI', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
     ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
 `; // Prompt 38: Logg ut ligger under Konto → Økt
 }
@@ -192,7 +192,7 @@ const PAGE = {
 
   scan: () => `${G('Skanneknappen', [chips('scanTap', 'Trykk på skann', [['cam', 'Åpne kamera'], ['sheet', 'Vis valg']], pref('scanTap'))], 'Hold inne skanneknappen for å velge fra Bilder eller Filer.')}
     ${G('Bilde', [tog('crop', 'Beskjær automatisk', 'Hold kvitteringen innenfor rammen i kameraet', pref('crop')), tog('origImg', 'Lagre originalbildet', 'Lagres sammen med kvitteringen på serveren', pref('origImg')), tog('wifi', 'Last opp bare på Wi-Fi', 'Ellers settes filer i kø', pref('wifi'))])}
-    ${G('AI-motor', [chips('ai', 'Leses av', [['ollama', 'Ollama lokalt'], ['gemini', 'Gemini'], ['both', 'Ollama + Gemini']], aiMode())], 'Med «Ollama lokalt» forlater ingen kvitteringer hjemmenettet. «Ollama + Gemini» bruker Gemini som reserve.')}`,
+    ${G('AI-motor', [val('Leses av', 'Lokal AI')], 'Glimt leser kvitteringer lokalt (Mac Vision eller Tesseract med lokal modell). Kvitteringsbilder forlater aldri hjemmenettet.')}`,
 
   notif: () => {
     const st = S.boot?.settings ?? {};
@@ -228,15 +228,14 @@ const PAGE = {
     const st = S.boot?.settings ?? {}, f = T.f;
     // ISO2: serveroppsettet er skrivebeskyttet for andre enn admin. Ollama-adresse, nøkler og «Test motor» vises ikke.
     if (!canSrv()) {
-      const MODE = { ollama: 'Ollama lokalt', gemini: 'Gemini', groq: 'Groq', both: 'Ollama + Gemini' };
-      return `${G('Motor', [val('Hovedmotor', esc(MODE[aiMode()] ?? '–')), val('Minste sikkerhet', `0,${String(st.minConf ?? 85).padStart(2, '0')}`)], `🔒 ${ADMIN_NOTE}. Under minste sikkerhet markeres kvitteringen «Sjekk beløp».`)}
+      return `${G('Motor', [val('Kvitteringer', 'Lokal AI'), val('Minste sikkerhet', `0,${String(st.minConf ?? 85).padStart(2, '0')}`)], `🔒 ${ADMIN_NOTE}. Under minste sikkerhet markeres kvitteringen «Sjekk beløp».`)}
       ${P27.aiSections()}
       ${P32.glimtSearchSection()}
       ${P33.memSection()}
       ${paper() ? P23.aiTimeoutsView() : ''}
       ${p17AiExtra()}`;
     }
-    return `${G('Motor', [chips('ai', 'Hovedmotor', [['ollama', 'Ollama lokalt'], ['gemini', 'Gemini'], ['groq', 'Groq'], ['both', 'Ollama + Gemini']], aiMode()), chips('minConf', 'Minste sikkerhet', [['75', '0,75'], ['85', '0,85'], ['95', '0,95']], String(st.minConf ?? 85))], 'Under minste sikkerhet markeres kvitteringen «Sjekk beløp».')}
+    return `${G('Motor', [val('Kvitteringer', 'Lokal AI'), chips('minConf', 'Minste sikkerhet', [['75', '0,75'], ['85', '0,85'], ['95', '0,95']], String(st.minConf ?? 85))], 'Kvitteringer leses bare lokalt, aldri av Gemini. Under minste sikkerhet markeres kvitteringen «Sjekk beløp».')}
       ${G('Ollama', [inp('ollamaUrl', 'Adresse', f.ollamaUrl ?? st.ollamaUrl, 'http://192.168.1.40:11434', 'url'), inp('ollamaModel', 'Modell', f.ollamaModel ?? st.ollamaModel, 'qwen2.5vl:7b')])}
       ${G('Gemini', [inp('geminiModel', 'Modell', f.geminiModel ?? st.geminiModel, 'gemini-2.5-flash'), inp('geminiKey', st.geminiKeySet ? 'API-nøkkel (lagret – skriv for å bytte)' : 'API-nøkkel', f.geminiKey ?? '', '••••••••', 'password')])}
       ${G('', [btn('Lagre', 'aisave'), btn('Test motor', 'aitest')], T.ai ?? '')}

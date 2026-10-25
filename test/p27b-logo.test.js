@@ -134,6 +134,7 @@ test('kjente kjeder: PLANTASJEN, KIWI 123 PILESTREDET, VINMONOPOLET og CIRCLE K 
 
 test('Gemini får BARE {butikk, land} via logoLookup – aldri org.nr., kortnr., beløp, varelinjer eller bilde', async () => {
   calls.length = 0;
+  setUserCfg('owner', { logo_gemini: '1' }); // prompt 52: «Finn logo med Gemini» er av som standard – slås på her
   const r = await L.findLogo('HAGEGLEDE SANDVIKA AS NO 981 234 567 MVA ****1234 KVITTERING 549,00', { orgnr: '981234567', u: 'owner', force: true });
   assert.equal(r.domain, 'hageglede.no');
   assert.equal(r.source, 'gemini');

@@ -81,39 +81,42 @@ test('opplasting med feil filtype godtas, hvert steg logges, og usikker Ollama k
   assert.equal(r.merchant, 'Rema 1000');
   const steps = r.log.map((l) => l.step);
   for (const s of ['mottatt', 'lest', 'ai', 'lest-ut', 'lagret']) assert.ok(steps.includes(s), `mangler steget ${s}: ${steps}`);
-  assert.equal(r.canReanalyze, false, 'uten Gemini-nøkkel');
-  assert.match(r.reanalyzeReason, /Gemini-nøkkel/);
-  assert.equal((await call(`/receipts/${r.id}/reanalyze`, 'POST', { engine: 'gemini' })).status, 400);
-
-  setSecret('geminiKey', 'test-key');
-  const r2 = (await call(`/receipts/${r.id}`)).body;
-  assert.equal(r2.canReanalyze, true);
+  // Prompt 52: «Analyser på nytt» er lokalt – ingen Gemini-nøkkel trengs, og engine:'gemini' (eldre klienter) leses også lokalt.
+  assert.equal(r.canReanalyze, true, 'usikker Ollama kan analyseres på nytt lokalt');
   const jobs = (await call('/receipts/jobs')).body;
   assert.equal(jobs.find((j) => j.id === r.id).canReanalyze, true, 'knappen vises også i køen');
 
+  setSecret('geminiKey', 'test-key'); // selv med nøkkel sendes ingenting til Gemini
+  ollamaReply = () => geminiReply();
+  const before = calls.length;
   const ra = await call(`/receipts/${r.id}/reanalyze`, 'POST', { engine: 'gemini' });
   assert.equal(ra.status, 200, JSON.stringify(ra.body));
+  assert.equal(ra.body.engine_note, 'Gemini brukes ikke lenger til kvitteringer – lest lokalt');
   assert.equal(ra.body.previous.merchant, 'Rema 1000');
   assert.equal(ra.body.previous.engine, 'Ollama');
   assert.equal(ra.body.result.merchant, 'REMA 1000 Lading');
   assert.equal(ra.body.result.items.length, 2);
   assert.ok(ra.body.candidateId);
-  assert.equal(calls.at(-1)?.engine === 'gemini' || calls.some((c) => c.engine === 'gemini' && c.mime === 'image/jpeg'), true);
+  assert.ok(!calls.slice(before).some((c) => c.engine === 'gemini'), 'aldri Gemini');
+  assert.ok(calls.slice(before).some((c) => c.engine === 'ollama'));
 
   // Behold forrige: ingenting endres.
   const old = await call(`/receipts/${r.id}/reanalyze/apply`, 'POST', { candidateId: ra.body.candidateId, keep: 'old' });
   assert.equal(old.body.merchant, 'Rema 1000');
   assert.equal((await call(`/receipts/${r.id}/reanalyze/apply`, 'POST', { candidateId: ra.body.candidateId, keep: 'new' })).status, 400, 'kandidaten er brukt');
 
-  const ra2 = await call(`/receipts/${r.id}/reanalyze`, 'POST', { engine: 'gemini' });
+  const ra2 = await call(`/receipts/${r.id}/reanalyze`, 'POST', {});
   const nw = await call(`/receipts/${r.id}/reanalyze/apply`, 'POST', { candidateId: ra2.body.candidateId, keep: 'new' });
   assert.equal(nw.status, 200);
   assert.equal(nw.body.merchant, 'REMA 1000 Lading');
   assert.equal(nw.body.total, 132.5);
-  assert.equal(nw.body.rawProvider, 'gemini');
+  assert.equal(nw.body.rawProvider, 'ollama');
+  assert.equal(nw.body.source_label, 'Lokal AI');
   assert.equal(nw.body.error, null);
   assert.equal(nw.body.canReanalyze, false, 'sikker nok nå');
+  assert.ok(!calls.some((c) => c.engine === 'gemini'));
   setSecret('geminiKey', '');
+  ollamaReply = () => ({ merchant: 'Rema 1000', date: '2026-10-10', total: 123.5, currency: 'NOK', lines: [{ description: 'Melk', amount: 123.5 }], confidence: { merchant: 0.9, date: 0.9, total: 0.4 } });
 });
 
 test('feil i én kvittering stopper ikke køen, og årsaken vises på kvitteringen', async () => {
@@ -128,7 +131,7 @@ test('feil i én kvittering stopper ikke køen, og årsaken vises på kvittering
   assert.equal(b.error, null);
 });
 
-test('HEIC uten JPEG-kopi går til Gemini, og uten nøkkel gis en tydelig feil', async () => {
+test('HEIC uten JPEG-kopi går aldri til Gemini (prompt 52), heller ikke med nøkkel – tydelig feil', async () => {
   const up = await upload([[HEIC, '', 'IMG_0001.HEIC']]);
   assert.equal(up.status, 200, JSON.stringify(up.body));
   const r = await settle(up.body.id);
@@ -138,8 +141,8 @@ test('HEIC uten JPEG-kopi går til Gemini, og uten nøkkel gis en tydelig feil',
   setSecret('geminiKey', 'test-key');
   const up2 = await upload([[HEIC, 'image/heic', 'IMG_0002.HEIC']]);
   const r2 = await settle(up2.body.id);
-  assert.equal(r2.rawProvider, 'gemini');
-  assert.ok(calls.some((c) => c.engine === 'gemini' && c.mime === 'image/heic'));
+  assert.notEqual(r2.rawProvider, 'gemini');
+  assert.ok(!calls.some((c) => c.engine === 'gemini'));
   setSecret('geminiKey', '');
 });
 

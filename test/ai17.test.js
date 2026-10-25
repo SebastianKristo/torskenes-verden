@@ -62,7 +62,7 @@ test('«Hvem gjør hva»: motor per oppgave, med reserve og bare motorer som er 
   setSecret('groqKey', 'gsk');
   saveSettings({ provider: 'ollama', fallback: true, aiTasks: {} });
   assert.deepEqual(AI.engineOrder(settings(), { task: 'search' }).slice(0, 2), ['groq', 'ollama']);
-  assert.equal(AI.engineOrder(settings(), { task: 'receipts' })[0], 'gemini');
+  assert.equal(AI.engineOrder(settings(), { task: 'receipts' })[0], 'ollama'); // prompt 52: kvitteringer leses bare lokalt (Gemini er tatt ut)
   // Uten reserve («hold alt lokalt») gjelder bare valgt motor, med mindre brukeren selv har valgt motor for oppgaven.
   saveSettings({ fallback: false });
   assert.deepEqual(AI.engineOrder(settings(), { task: 'search' }), ['ollama']);

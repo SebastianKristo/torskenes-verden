@@ -237,7 +237,9 @@ export function logo(t, size = 40, radius = 12) {
   const box = `width:${size}px;height:${size}px;border-radius:${radius}px;flex:none`;
   const domain = t?.domain || it?.domene || null;
   const fav = domain ? `/finans/api/logo/${encodeURIComponent(domain)}` : null;
-  const src = it && it.hasFile !== false ? `/finans/api/logos/file/${encodeURIComponent(it.id)}` : fav;
+  // Prompt 52: serverens merchant_logo (lokal logo-cache, /finans/api/logos52) går foran registeret og favicon.
+  const ml = t?.merchant_logo?.url && /^\/finans\/api\//.test(t.merchant_logo.url) ? t.merchant_logo.url : null;
+  const src = ml ?? (it && it.hasFile !== false ? `/finans/api/logos/file/${encodeURIComponent(it.id)}` : fav);
   if (src) return `<span class="m-logo" style="${box}"><img src="${src}"${src !== fav && fav ? ` data-fb="${fav}"` : ''} alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i style="color:${esc(color)}">${esc(ini(name))}</i></span>`;
   return `<span class="m-ini" style="${box};background:${rgba(color, 0.18)};color:${esc(color)};font-size:${Math.round(size * 0.4)}px">${esc(ini(name))}</span>`;
 }

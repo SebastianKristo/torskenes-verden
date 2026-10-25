@@ -43,7 +43,19 @@ const MOCK = () => process.env.MOCK_DATA === '1';
 export const CHARS = [
   ['glimt', 'Glimt', 'ring'], ['halo', 'Halo', 'ring'], ['boble', 'Boble', 'ring'], ['antenne', 'Antenne', 'ring'], ['bane', 'Bane', 'ring'], ['pastell', 'Pastell', 'ring'],
   ['natt', 'Natt', 'ring'], ['sky', 'Sky', 'venn'], ['drape', 'Dråpe', 'venn'], ['ugle', 'Ugle', 'venn'], ['stjerne', 'Stjerne', 'venn'], ['spire', 'Spire', 'venn'], ['gris', 'Gris', 'venn'],
+  ['blekk', 'Blekksprut', 'venn'], // prompt 52: ny figur (seks armer, glad og vennlig)
 ].map(([id, name, family]) => ({ id, name, family }));
+// Prompt 52: farge, navnelapp og hilsen per figur (bare de som har egne; klientene har resten).
+export const CHAR_META52 = { blekk: { color: '#f1a3ad', tag: 'BLEKKSPRUT', greeting: 'Hei! Seks armer klare. Nå er jeg din Glimt.' } };
+// Prompt 52: standardfigur per bruker satt av admin (kv OWNER glimt_char_defaults52 = {brukerId: figur}). Gjelder til brukeren velger selv.
+const CHAR_DEF_KEY52 = 'glimt_char_defaults52';
+export const charDefaultOf52 = (u) => { const d = kv.get(OWNER, CHAR_DEF_KEY52, {})?.[u]; return typeof d === 'string' && CHARS.some((c) => c.id === d) ? d : null; };
+export function setCharDefault52(u, id) {
+  const all = { ...(kv.get(OWNER, CHAR_DEF_KEY52, {}) ?? {}) };
+  if (id) all[u] = id; else delete all[u];
+  kv.set(OWNER, CHAR_DEF_KEY52, all);
+  try { const out = settingsOut(u); broadcast('glimt-settings', out, [u]); broadcast('glimt:settings', out, [u]); } catch { /* sanntid er best effort */ }
+}
 const CHAR_IDS = new Set(CHARS.map((c) => c.id));
 export const charName = (id) => CHARS.find((c) => c.id === id)?.name ?? 'Glimt';
 
@@ -73,6 +85,7 @@ const CHAR_NO = {
   gris: 'Du er Gris, en blid sparegris: vennlig, sprettende og litt frekk, nøye med penger. Norsk bokmål.',
   stjerne: 'Du er Stjerne: glad, energisk og feirende, som når noe er ferdig. Norsk bokmål.',
   spire: 'Du er Spire, en liten plante: frisk, blid og rolig. Norsk bokmål.',
+  blekk: 'Du er Blekksprut, en blid og nysgjerrig blekksprut med seks armer: varm, leken og litt klønete, ler lett. Norsk bokmål.', // prompt 52
 };
 const CHAR_EN = {
   glimt: 'You are Glimt, a warm, friendly and slightly playful assistant. Speak natural, relaxed English with a gentle smile in your voice.',
@@ -83,11 +96,12 @@ const CHAR_EN = {
   gris: 'You are Piggy, a cheerful piggy bank: friendly, bouncy, a little cheeky, careful with money.',
   stjerne: 'You are Star: happy, energetic and celebrating.',
   spire: 'You are Sprout, a little plant: fresh, cheerful and calm.',
+  blekk: 'You are Octopus, a cheerful, curious octopus with six arms: warm, playful and a little clumsy, laughs easily.', // prompt 52
 };
 const voiceChar = (ch) => (CHAR_NO[ch] ? ch : 'glimt'); // halo, boble, antenne, bane, pastell → Glimt
-const CHV = { glimt: [1, 1], natt: [0.92, 0.95], sky: [1.12, 1.02], drape: [1.25, 1.06], ugle: [0.8, 0.94], gris: [1.08, 1.04], stjerne: [1.1, 1.05], spire: [1.05, 1] };
-const ELEVEN_ST = { glimt: [0.45, 0.35], natt: [0.7, 0.15], sky: [0.35, 0.55], drape: [0.3, 0.65], ugle: [0.75, 0.2], gris: [0.4, 0.5], stjerne: [0.35, 0.6], spire: [0.5, 0.3] };
-const AZ_STYLE = { natt: 'whispering', ugle: 'calm', sky: 'cheerful', drape: 'cheerful', gris: 'cheerful', stjerne: 'cheerful', glimt: 'friendly', spire: 'calm' };
+const CHV = { glimt: [1, 1], natt: [0.92, 0.95], sky: [1.12, 1.02], drape: [1.25, 1.06], ugle: [0.8, 0.94], gris: [1.08, 1.04], stjerne: [1.1, 1.05], spire: [1.05, 1], blekk: [1.06, 1.02] }; // prompt 52: blekk
+const ELEVEN_ST = { glimt: [0.45, 0.35], natt: [0.7, 0.15], sky: [0.35, 0.55], drape: [0.3, 0.65], ugle: [0.75, 0.2], gris: [0.4, 0.5], stjerne: [0.35, 0.6], spire: [0.5, 0.3], blekk: [0.35, 0.6] };
+const AZ_STYLE = { natt: 'whispering', ugle: 'calm', sky: 'cheerful', drape: 'cheerful', gris: 'cheerful', stjerne: 'cheerful', glimt: 'friendly', spire: 'calm', blekk: 'cheerful' };
 
 /* ═══════════════════════ Innstillinger ═══════════════════════ */
 
@@ -101,6 +115,7 @@ const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
 export function glimtSettingsOf(u) {
   const d = DEFAULTS(), old = kv.get(u, 'brief_settings', null) ?? {}, s = kv.get(u, 'glimt35_settings', null) ?? {};
   const out = { ...d, ...(typeof old.notify === 'boolean' ? { notify: old.notify } : {}), ...(typeof old.guide === 'boolean' ? { guide: old.guide } : {}) };
+  { const def52 = charDefaultOf52(u); if (def52) out.char = def52; } // prompt 52: admins standardfigur for brukeren (eget valg vinner under)
   for (const k of ['char', 'friends', 'brief', 'readAloud', 'guide', 'notify', 'briefGlimt', 'jul', 'julPhase', 'snow', 'julSound', 'mai17']) if (s[k] !== undefined) out[k] = s[k];
   out.briefs = Object.fromEntries(KINDS.map((k) => [k, { ...d.briefs[k], ...(s.briefs?.[k] ?? {}) }]));
   out.tts = { ...d.tts, ...(s.tts ?? {}) };

@@ -235,7 +235,7 @@ export function kvView() {
   const cats = (S.boot?.categories ?? []).filter((c) => c.kind !== 'income' && c.kind !== 'transfer');
   const row = (r, i, booked) => {
     const op = !booked && KV.open === r.id, e = KV.e[r.id] ?? { n: r.merchant ?? '', v: r.total != null ? n2(r.total) : '', cat: r.categoryId ?? null };
-    const meta = !booked && P39.reMeta(r.id) ? P39.reMeta(r.id) /* prompt 39: ✦ Analyserer på nytt … 42 % */ : booked ? `${dd(r.date)} · ${esc(r.category ?? 'Ukategorisert')}` : r.status === 'needs_review' ? `${dd(r.date)} · ${is48(r) && via48(r) ? via48(r) : esc(r.provider ?? 'Manuell')}${conf(r) ? ` · ${conf(r)}` : ''}` : `<span style="color:var(--pp-lab)">Kunne ikke leses · fyll ut selv</span>`;
+    const meta = !booked && P39.reMeta(r.id) ? P39.reMeta(r.id) /* prompt 39: ✦ Analyserer på nytt … 42 % */ : booked ? `${dd(r.date)} · ${esc(r.category ?? 'Ukategorisert')}` : r.status === 'needs_review' ? `${dd(r.date)} · ${is48(r) && via48(r) ? via48(r) : esc(r.source_label ?? r.provider ?? 'Manuell')}${conf(r) ? ` · ${conf(r)}` : ''}` : `<span style="color:var(--pp-lab)">Kunne ikke leses · fyll ut selv</span>`;
     const head = `${rcLogo(r)}<span class="p23-rt"><b class="${P39.hlOf(r.id, 'merchant')}">${esc(r.merchant || 'Ny kvittering')}</b><span class="${P39.hlOf(r.id, 'date')}${P39.hlOf(r.id, 'cat')}">${meta}</span></span><span class="p23-rv${P39.hlOf(r.id, 'total')}">${r.total != null ? kr2(r.total) : '–'}</span>`;
     // Prompt 41 (claude-code-finans-les-pa-nytt-alltid.md): bokførte kan åpnes (bilde, navn og beløp, kategori,
     // «Lagre endringer» og «↺ Til gjennomgang»), og «✦ På nytt» står på raden.
@@ -313,7 +313,7 @@ async function kvBind(e, t, x) {
   if (k === 'rcimg') { const u = `/finans/api/receipts/${encodeURIComponent(id)}/file`; globalThis.P41?.zoomImg ? globalThis.P41.zoomImg(u) : window.open(u, '_blank', 'noopener'); return true; }
   if (k === 'rcre') {
     P39.rcRe(id); return true; // Prompt 39: fremdrift i raden i stedet for side-om-side-dialogen
-    try { const mod = await import('./reanalyze.js'); await mod.openReanalyze(id, { engine: 'gemini', onDone: async () => { await Promise.all([loadReceipts().catch(() => {}), loadJobs().catch(() => {})]); draw(); } }); }
+    try { const mod = await import('./reanalyze.js'); await mod.openReanalyze(id, { engine: 'ollama', onDone: async () => { await Promise.all([loadReceipts().catch(() => {}), loadJobs().catch(() => {})]); draw(); } }); }
     catch { try { await api(`/receipts/${id}/reprocess`, { method: 'POST' }); await loadJobs(); flash('✦ Analyseres på nytt'); } catch (err) { flash(err.message); } }
     return true;
   }
@@ -463,7 +463,7 @@ export function aiTimeoutsView() {
   const r = (k, n, s, v, c = 'var(--pp-ink)') => ed ? `<button class="opt-row p17-row" data-p23="ato" data-k="${k}"><span class="m-grow p17-rt"><b>${esc(n)}</b><small>${esc(s)}</small></span><span class="sval" style="color:${c};opacity:1;font-weight:700">${esc(v)}</span><span class="p17-chev" aria-hidden="true">›</span></button>`
     : `<div class="opt-row p17-row p23-ro"><span class="m-grow p17-rt"><b>${esc(n)}</b><small>${esc(s)}</small></span><span class="sval" style="color:${c};opacity:1;font-weight:700">${esc(v)}</span></div>`;
   return `<span class="pp-lab p17-gl">TIDSGRENSER${ed ? '' : ' · SKRIVEBESKYTTET'}</span><div class="list p17-list p23-to">
-    ${[['gemini', 'Gemini', 'Les kvitteringer'], ['groq', 'Groq', 'AI-søk og kategorier'], ['roboflow', 'Roboflow', 'Strekkoder'], ['ollama', 'Ollama (lokal)', 'Reserve på hjemmeserveren']].map(([k, n, s]) => r(k, n, ed ? `${s} · trykk for å endre` : s, `${T[k]} s`)).join('')}
+    ${[['gemini', 'Gemini', 'Tekst i skyen · aldri kvitteringer'], ['groq', 'Groq', 'AI-søk og kategorier'], ['roboflow', 'Roboflow', 'Strekkoder'], ['ollama', 'Ollama (lokal)', 'Reserve på hjemmeserveren']].map(([k, n, s]) => r(k, n, ed ? `${s} · trykk for å endre` : s, `${T[k]} s`)).join('')}
     ${r('retries', 'Nye forsøk', 'Før den gir opp en motor', ret === 0 ? 'Ingen' : `${ret} ${ret === 1 ? 'gang' : 'ganger'}`)}
     ${r('onTimeout', 'Ved tidsavbrudd', 'Hva som skjer når grensen er nådd', (THEN.find(([k]) => k === T.onTimeout) ?? THEN[0])[1], 'var(--pp-lab)')}</div>
     <div class="snote">${ed ? '' : '🔒 Settes opp av administrator. '}Når en motor ikke svarer innen grensen, prøver serveren på nytt med 1 s, 2 s og 4 s pause. Køen viser hvilken motor som svarte for sent.</div>`;

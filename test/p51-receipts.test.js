@@ -345,7 +345,7 @@ test('B6: Gemini får aldri bildet når «Finansdata forlater aldri huset» er p
   fdb.setSecret('geminiKey', 'AIza-test-key-aaaaaaaaaaaaaaaaaaaa');
   tess._setTesseract48({ tools: async () => ({ tesseract: null }) });
   const r = await A('/finans/api/receipts/scan', 'POST', scanForm());
-  assert.equal(r.body.pipeline.find((p) => p.step === 'D').status, 'skipped');
+  assert.ok(!r.body.pipeline.some((p) => p.step === 'D'), 'prompt 52: Gemini-steget finnes ikke');
   assert.equal(calls.filter((x) => x.host.includes('googleapis')).length, 0);
   fdb.setSecret('geminiKey', '');
 });

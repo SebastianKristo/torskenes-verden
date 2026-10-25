@@ -26,6 +26,7 @@ import { db, kv } from './db.js';
 import { authOrToken } from './mobile.js';
 import { isAdmin, userInfo, listUsers, currentDeviceId, sessionUser, clientIp } from './auth.js';
 import { parseChangelog } from './system-update.js';
+import { whatsNewExtra52 } from './whatsnew52.js'; // prompt 52 (SRV52)
 
 const q = (sql) => db.prepare(sql);
 
@@ -352,7 +353,8 @@ export function whatsNew51(version = null) {
   const sections = parseChangelog(text);
   const s = version ? sections.find((x) => x.version === version) : sections[0];
   if (!s) return null;
-  return { version: s.version, date: s.date, title: s.title, items: s.items, markdown: rawSection(text, s.version), current: sections[0]?.version ?? null };
+  const w = { version: s.version, date: s.date, title: s.title, items: s.items, markdown: rawSection(text, s.version), current: sections[0]?.version ?? null };
+  return { ...w, ...whatsNewExtra52(w) }; // prompt 52: punkter (overskrift + kort tekst), renset tittel uten interne merknader
 }
 
 /* =====================================================================================================================

@@ -197,7 +197,7 @@ export const SCHEMA = [
   ]],
   ['Personvern og logoer', { id: 'privacy', scope: 'personal', domain: 'brreg.no', category: 'AI', help: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }, [
     ['logo_local_receipts', 'Les kvitteringer lokalt', '1', false, 'bool'],
-    ['logo_gemini', 'Finn logo med Gemini', '1', false, 'bool'],
+    ['logo_gemini', 'Finn logo med Gemini (bare butikknavnet)', '0', false, 'bool'], // prompt 52: av som standard
     ['logo_verify', 'Sjekk logoen før den lagres', '1', false, 'bool'],
   ]],
   // Korte AI-oppgaver (Glimt, rask time, logo, kvitteringer, oppsummeringer …) sender think:false til Ollama (server/ollama-opts.js).
@@ -235,7 +235,7 @@ export const PERSONAL_KEYS = new Set([...FIELDS.values()].filter((f) => f.person
 export const isPersonalKey = (k) => PERSONAL_KEYS.has(LEGACY[k] ?? k);
 // Ufarlige standarder for andre enn eieren (ingen adresser, nøkler eller e-post fra eierens miljø).
 const SAFE_DEF = { t212_env: 'live', sonarr_days: '14', radarr_days: '14', imapPort: '143', imapSecurity: 'starttls', imapFolder: 'Folders/Kvitteringer', imapDoneFolder: 'Folders/Kvitteringer/Lest',
-  chat_my_data: '1', chat_ask_cloud: '1', chat_theme: 'papir', logo_local_receipts: '1', logo_gemini: '1', logo_verify: '1', ai_think: '0' };
+  chat_my_data: '1', chat_ask_cloud: '1', chat_theme: 'papir', logo_local_receipts: '1', logo_gemini: '0', logo_verify: '1', ai_think: '0' };
 const defFor = (user, f) => (user === OWNER ? f.def ?? '' : SAFE_DEF[f.key] ?? '');
 
 // FinansHub krypterer sine hemmeligheter med «enc:» (finans/db.js). Kopierte verdier derfra åpnes her med samme nøkkel.

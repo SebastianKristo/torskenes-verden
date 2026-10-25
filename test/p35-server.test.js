@@ -128,8 +128,8 @@ test('Glimt-innstillinger: standard, delvis PUT per bruker, validering, alias /a
   assert.deepEqual(plain, { char: 'glimt', friends: true, brief: true, readAloud: false, guide: true, notify: true, briefGlimt: true, // prompt 39: + briefGlimt
     briefs: { morning: { on: true, at: '06:45' }, day: { on: false, at: '12:00' }, evening: { on: true, at: '18:00' }, night: { on: false, at: '22:30' } },
     tts: { engine: 'openai', voice: 'nora', rate: 'normal', lang: 'no' } });
-  assert.equal(chars.length, 13);
-  assert.deepEqual(chars.map((c) => c.id), ['glimt', 'halo', 'boble', 'antenne', 'bane', 'pastell', 'natt', 'sky', 'drape', 'ugle', 'stjerne', 'spire', 'gris']);
+  assert.equal(chars.length, 14); // prompt 52: + blekk
+  assert.deepEqual(chars.map((c) => c.id), ['glimt', 'halo', 'boble', 'antenne', 'bane', 'pastell', 'natt', 'sky', 'drape', 'ugle', 'stjerne', 'spire', 'gris', 'blekk']);
   assert.equal(chars.find((c) => c.id === 'gris').family, 'venn');
   assert.deepEqual(engines.map((e) => e.id), ['openai', 'elevenlabs', 'azure', 'browser']);
   for (const e of engines) for (const k of ['id', 'name', 'ready', 'keySet', 'tail', 'admin']) assert.ok(k in e, `${e.id}.${k}`);

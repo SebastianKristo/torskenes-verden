@@ -49,7 +49,7 @@ function toast(t, undo = null, ms = 4500) { T44.t = t; T44.undo = undo; clearTim
 const ME = { edit: false, q: '', lp: null, lpAt: 0, tsz: ls.raw('papir_mer_tsz') === 'lav' ? 'lav' : 'stor' };
 const LIVE = { cal: null, calT: 0, bd: null, bdT: 0, fam: null, famT: 0, busy: {} };
 // Fargebrikker fra fasiten (lys) – mørkt tema blander fargen inn i kortet.
-const TILE_C = { saldo: '#2f6b4a', budsjett: '#b23a2a', kv: '#a0671a', fast: '#2b5d8a', aks: '#2f6b4a', finn: '#a0671a', dir: '#b23a2a', liste: '#6b665c', konto: '#2b5d8a', imp: '#7a5ad6', rap: '#6b665c', sok: '#2b5d8a', avspilling: '#e5a00d', kal: '#b23a2a', huske: '#2f6b4a', bd: '#7a5ad6', fam: '#b23a2a', chat: '#2b5d8a', media: '#a0671a', dom: '#2f6b4a', sub: '#2f6b4a', bibel: '#b23a2a', nyheter: '#6b665c', hjem: '#2b5d8a', spor: '#a0671a', brief: '#7a5ad6', hl: '#3d4652', studie: '#2b5d8a', set: '#6b665c', tkart: '#2b6fb3' };
+const TILE_C = { plan: '#3d7f8a' /* prompt 52 */, saldo: '#2f6b4a', budsjett: '#b23a2a', kv: '#a0671a', fast: '#2b5d8a', aks: '#2f6b4a', finn: '#a0671a', dir: '#b23a2a', liste: '#6b665c', konto: '#2b5d8a', imp: '#7a5ad6', rap: '#6b665c', sok: '#2b5d8a', avspilling: '#e5a00d', kal: '#b23a2a', huske: '#2f6b4a', bd: '#7a5ad6', fam: '#b23a2a', chat: '#2b5d8a', media: '#a0671a', dom: '#2f6b4a', sub: '#2f6b4a', bibel: '#b23a2a', nyheter: '#6b665c', hjem: '#2b5d8a', spor: '#a0671a', brief: '#7a5ad6', hl: '#3d4652', studie: '#2b5d8a', set: '#6b665c', tkart: '#2b6fb3' };
 const TILES0 = { hl: ['kal', 'huske', 'bd', 'fam'], fin: ['saldo', 'budsjett', 'kv', 'fast'] };
 /* Prompt 45 (claude-code-mer-tittel-og-store-bokser.md, claude-code-finans-mer-samme-design.md): seksjonstittelen kan skjules
    eller få nytt navn, og de fire store boksene kan byttes (⇄ → «Velg boks»). Finans → Mer bruker samme komponent (mode 'fin').
@@ -57,9 +57,12 @@ const TILES0 = { hl: ['kal', 'huske', 'bd', 'fam'], fin: ['saldo', 'budsjett', '
 const MP = { hl: ls.get('papir_mer45_hl', {}) ?? {}, fin: ls.get('papir_mer45_fin', {}) ?? {} };
 const mpSave = (mode, patch) => {
   MP[mode] = { ...MP[mode], ...patch }; ls.set(`papir_mer45_${mode}`, MP[mode]);
-  const P = MP[mode]; hlApi('/me/layout', { method: 'PUT', json: { pages: { [`mer45${mode}`]: { order: (P.tiles ?? TILES0[mode]).filter((k) => /^[\w.-]{1,40}$/.test(k)), hidden: [...(P.titleOff ? ['_title'] : []), ...(P.toolsOff ? ['_tools'] : [])] } } } }).catch(() => {});
+  const P = MP[mode]; hlApi('/me/layout', { method: 'PUT', json: { pages: { [`mer45${mode}`]: { order: (P.tiles ?? TILES0[mode]).filter((k) => /^[\w.-]{1,40}$/.test(k)), hidden: [...(P.titleOff ? ['_title'] : []), ...(P.toolsOff ? ['_tools'] : []), ...(P.sokOff ? ['_sok'] : [])] } } } }).catch(() => {});
+  hidVis52(mode);
 };
-export function merTake45(pages) { for (const mode of ['hl', 'fin']) { const v = pages?.[`mer45${mode}`]; if (!v) continue; MP[mode] = { ...MP[mode], tiles: Array.isArray(v.order) && v.order.length === 4 ? v.order : MP[mode].tiles, titleOff: (v.hidden ?? []).includes('_title'), toolsOff: (v.hidden ?? []).includes('_tools') }; ls.set(`papir_mer45_${mode}`, MP[mode]); } }
+// Prompt 52 (claude-code-finans-mer-farge-skjul.md): {sok, tit, vkt} (false = skjult) per side, speilet i papir_fmer_hid_vis / papir_mer_hid_vis.
+function hidVis52(mode) { const P = MP[mode] ?? {}; ls.set(mode === 'fin' ? 'papir_fmer_hid_vis' : 'papir_mer_hid_vis', { sok: !P.sokOff, tit: !P.titleOff, vkt: !P.toolsOff }); }
+export function merTake45(pages) { for (const mode of ['hl', 'fin']) { const v = pages?.[`mer45${mode}`]; if (!v) continue; MP[mode] = { ...MP[mode], tiles: Array.isArray(v.order) && v.order.length === 4 ? v.order : MP[mode].tiles, titleOff: (v.hidden ?? []).includes('_title'), toolsOff: (v.hidden ?? []).includes('_tools'), sokOff: (v.hidden ?? []).includes('_sok') }; ls.set(`papir_mer45_${mode}`, MP[mode]); } }
 const tilesOf = (mode) => { const t = MP[mode]?.tiles; return Array.isArray(t) && t.length === 4 ? t : TILES0[mode]; };
 const TITLE0 = { hl: 'HVERDAG OG FAMILIE', fin: 'FINANS' };
 const titleOf = (mode) => (MP[mode]?.titleOff ? '' : String(MP[mode]?.title || TITLE0[mode]).toUpperCase());
@@ -136,8 +139,9 @@ function toolSub(r) {
 }
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const tint = (c) => `color-mix(in srgb, ${c} 14%, var(--pp-card))`;
-const IC44 = { saldo: 'M3 7h18v12H3zM3 11h18M7 15h3', budsjett: 'M12 3a9 9 0 1 0 9 9h-9zM14 3.2V10h6.8', kv: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', fast: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3', aks: 'M3 17l6-6 4 4 8-8M15 7h6v6', finn: 'M7 7h10l3 4-8 10L4 11zM4 11h16', dir: 'M3 11l9-7 9 7M5 10v10h14V10', liste: 'M4 6h16M4 12h16M4 18h10', konto: 'M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18', imp: 'M12 3v12M7 10l5 5 5-5M5 21h14', rap: 'M4 20V10M10 20V4M16 20v-7M22 20H2', sok: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', avspilling: 'M4 5h16v11H4zM9 20h6M12 16v4M10 8.5v4l3.5-2z', studie: 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6', tkart: 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14' };
-const ic44 = (k, s = 30) => { const c = TILE_C[k] ?? '#6b665c'; return `<span class="p44-mi" style="width:${s}px;height:${s}px;background:${tint(c)};color:${c}">${svg(MER_IC[k] ?? IC44[k] ?? 'M12 12h.01', Math.round(s * 0.55), 2)}</span>`; };
+const IC44 = { plan: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4M8 14h3' /* prompt 52 */, saldo: 'M3 7h18v12H3zM3 11h18M7 15h3', budsjett: 'M12 3a9 9 0 1 0 9 9h-9zM14 3.2V10h6.8', kv: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', fast: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3', aks: 'M3 17l6-6 4 4 8-8M15 7h6v6', finn: 'M7 7h10l3 4-8 10L4 11zM4 11h16', dir: 'M3 11l9-7 9 7M5 10v10h14V10', liste: 'M4 6h16M4 12h16M4 18h10', konto: 'M3 10l9-6 9 6M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18', imp: 'M12 3v12M7 10l5 5 5-5M5 21h14', rap: 'M4 20V10M10 20V4M16 20v-7M22 20H2', sok: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', avspilling: 'M4 5h16v11H4zM9 20h6M12 16v4M10 8.5v4l3.5-2z', studie: 'M2 9l10-5 10 5-10 5zM6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6', tkart: 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14' };
+// Prompt 52: ikonbrikkene er helfylt i modulfargen med hvitt symbol.
+const ic44 = (k, s = 30) => { const c = TILE_C[k] ?? '#6b665c'; return `<span class="p44-mi" style="width:${s}px;height:${s}px;background:${c};color:#fff">${svg(MER_IC[k] ?? IC44[k] ?? 'M12 12h.01', Math.round(s * 0.55), 2)}</span>`; };
 const MINUS = '<span aria-hidden="true">–</span>';
 /** rows = [[rute, navn, undertekst], …] fra paperMer() (Innstillinger sist). opt.mode 'fin' = Finans → Mer (prompt 45). */
 export function merNew(rows, opt = {}) {
@@ -154,10 +158,12 @@ export function merNew(rows, opt = {}) {
   const tiles = lav ? [] : T4.map((k) => mods.find((r) => r.k === k)).filter(Boolean).map((r) => ({ ...r, L: liveOf(r.k) ?? { k: '', v: '', s: r.s, row: r.s } })).filter((r) => hit(r.n, r.L.v, r.L.s));
   const tools = mods.filter((r) => lav || !T4.includes(r.k)).map((r) => ({ ...r, sub: T4.includes(r.k) ? (liveOf(r.k)?.row ?? r.s) : toolSub(r) })).filter((r) => hit(r.n, r.sub));
   const an = (j) => (ed ? ` style="animation-delay:${(j % 3) * -0.1}s"` : '');
+  // Prompt 52: kortene øverst får modulfargen 13 % blandet inn i kortfargen (følger lyst/mørkt tema).
+  const tc = (r, j) => ` style="background:color-mix(in srgb,${TILE_C[r.k] ?? '#6b665c'} 13%,var(--pp-card))${ed ? `;animation-delay:${(j % 3) * -0.1}s` : ''}"`;
   const href = (r) => `#/${r.href ?? r.k}`;
   const tile = (r, j) => { const L = r.L;
     const av = r.k === 'fam' && L.av?.length ? `<span class="p44-avs">${L.av.map((p, i) => `<i style="background:${colOf(p.userId, p.color)};margin-left:${i ? -8 : 0}px">${esc(String(p.name ?? '?').slice(0, 1).toUpperCase())}</i>`).join('')}</span>` : '';
-    return `<${ed ? 'div' : 'a'} class="p44-mt${ed ? ' wig' : ''}" ${ed ? '' : `href="${href(r)}"`} data-p44mk="${r.k}"${an(j)}>${ed ? `<button type="button" class="p44-mx" data-p44="merhide" data-k="${r.k}" aria-label="Skjul ${esc(r.n)}">${MINUS}</button><button type="button" class="p45-mswap" data-p44="merswap" data-i="${T4.indexOf(r.k)}" aria-label="Bytt ${esc(r.n)} med en annen modul" title="Bytt">⇄</button>` : ''}
+    return `<${ed ? 'div' : 'a'} class="p44-mt${ed ? ' wig' : ''}" ${ed ? '' : `href="${href(r)}"`} data-p44mk="${r.k}"${tc(r, j)}>${ed ? `<button type="button" class="p44-mx" data-p44="merhide" data-k="${r.k}" aria-label="Skjul ${esc(r.n)}">${MINUS}</button><button type="button" class="p45-mswap" data-p44="merswap" data-i="${T4.indexOf(r.k)}" aria-label="Bytt ${esc(r.n)} med en annen modul" title="Bytt">⇄</button>` : ''}
       <span class="p44-mth">${ic44(r.k)}<b>${esc(r.n)}</b></span>
       <span class="p44-mtb">${L.k ? `<small>${esc(L.k)}</small>` : ''}${L.v ? `<b class="p44-mtv${L.big ? ' big' : ''}">${esc(L.v)}</b>` : ''}${L.s ? `<small>${esc(L.s)}</small>` : ''}${av}</span></${ed ? 'div' : 'a'}>`; };
   const trow = (r, j) => `<${ed ? 'div' : 'a'} class="p44-mr${ed ? ' wig' : ''}" ${ed ? '' : `href="${href(r)}"`} data-p44mk="${r.k}"${an(j + 4)}>${ed ? `<button type="button" class="p44-mx red" data-p44="merhide" data-k="${r.k}" aria-label="Skjul ${esc(r.n)}">${MINUS}</button>` : ''}${ic44(r.k, 34)}<span class="m-grow"><b class="pp-serif">${esc(r.n)}</b><small>${esc(r.sub)}</small></span><span class="p44-chev" aria-hidden="true">›</span></${ed ? 'div' : 'a'}>`;
@@ -169,8 +175,13 @@ export function merNew(rows, opt = {}) {
     : lav || !T ? '' : `<div class="p44-mh"><span class="p44-lab">${esc(T)}</span></div>`;
   const empty = q && !tiles.length && !tools.length ? `<div class="p44-mempty">Ingen moduler heter «${esc(ME.q.trim())}».</div>` : '';
   const setHref = opt.setHref ?? '#/set';
-  return `<div class="p44-mer${ed ? ' ed' : ''}${mode === 'fin' ? ' p45-fmer' : ''}">
-    <label class="p44-msrch">${svg('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', 16, 2.2)}<input id="p44-merq" data-p44in="merq" value="${esc(ME.q)}" placeholder="Søk i moduler" autocomplete="off" enterkeyhint="search" aria-label="Søk i moduler">${ME.q ? '<button type="button" class="p44-mclr" data-p44="merclr" aria-label="Tøm søket">×</button>' : ''}</label>
+  const P52 = MP[mode] ?? {}, sokOn = !P52.sokOff;
+  // Prompt 52: i wiggle en rad med tre brytere (Søkefelt · tittel · Verktøy). På = svart pille med ✓, av = kontur med +.
+  const pill = (k, n, on) => `<button type="button" class="p52-pill${on ? ' on' : ''}" data-p44="p52vis" data-k="${k}" role="switch" aria-checked="${on}"><span aria-hidden="true">${on ? '✓' : '+'}</span>${esc(n)}</button>`;
+  const ttlName = String(MP[mode]?.title || (mode === 'fin' ? 'Finans' : 'Hverdag og familie')).toLowerCase().replace(/^./, (c) => c.toUpperCase());
+  const pills = ed ? `<div class="p52-pills" role="group" aria-label="Vis eller skjul">${pill('sok', 'Søkefelt', sokOn)}${pill('tit', ttlName, !P52.titleOff)}${pill('vkt', 'Verktøy', !P52.toolsOff)}</div>` : '';
+  return `<div class="p44-mer${ed ? ' ed' : ''}${mode === 'fin' ? ' p45-fmer' : ''}${sokOn ? '' : ' p52-nosok'}">${pills}
+    ${sokOn ? `<label class="p44-msrch">${svg('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', 16, 2.2)}<input id="p44-merq" data-p44in="merq" value="${esc(ME.q)}" placeholder="Søk i moduler" autocomplete="off" enterkeyhint="search" aria-label="Søk i moduler">${ME.q ? '<button type="button" class="p44-mclr" data-p44="merclr" aria-label="Tøm søket">×</button>' : ''}</label>` : ''}
     ${head}
     ${tiles.length ? `<div class="p44-mtiles">${tiles.map(tile).join('')}</div>` : ''}
     ${!lav && tools.length ? (ed ? `<div class="p44-mh tl">${MP[mode]?.toolsOff ? '<button type="button" class="p45-mtadd" data-p44="mertoolon">+ Legg til tittel</button>' : `<span class="p45-mtw"><button type="button" class="p44-mx red p45-mtx" data-p44="mertooloff" aria-label="Skjul tittelen Verktøy">${MINUS}</button><span class="p44-lab">VERKTØY</span></span>`}</div>` : MP[mode]?.toolsOff ? '' : '<div class="p44-mh tl"><span class="p44-lab">VERKTØY</span></div>') /* prompt 46: skjult tittel = ingen rad */ : ''}
@@ -193,9 +204,13 @@ function merPatch() {
   const w = document.querySelector('#app .p44-mer'); if (!w || !ME.rows) { draw(); return; }
   const tmp = document.createElement('div'); tmp.innerHTML = merNew(ME.rows, ME.opt ?? {});
   const nw = tmp.firstElementChild; if (!nw) return;
-  [...w.children].slice(1).forEach((c) => c.remove());
-  [...nw.children].slice(1).forEach((c) => w.appendChild(c));
-  const lab = w.firstElementChild, clr = lab.querySelector('.p44-mclr'), want = !!ME.q;
+  // Prompt 52: søkefeltet er ikke alltid første barn (bryterraden i wiggle står over det).
+  const lab = w.querySelector(':scope > .p44-msrch'), nlab = nw.querySelector(':scope > .p44-msrch');
+  if (!lab || !nlab) { draw(); return; }
+  const after = (el) => { const a = []; for (let c = el.nextElementSibling; c; c = c.nextElementSibling) a.push(c); return a; };
+  after(lab).forEach((c) => c.remove());
+  after(nlab).forEach((c) => w.appendChild(c));
+  const clr = lab.querySelector('.p44-mclr'), want = !!ME.q;
   if (want && !clr) lab.insertAdjacentHTML('beforeend', '<button type="button" class="p44-mclr" data-p44="merclr" aria-label="Tøm søket">×</button>'); else if (!want && clr) clr.remove();
 }
 function merDown(e) {
@@ -781,6 +796,7 @@ export async function bind44(e, t) {
     case 'swapx': SW.open = false; draw(); return true;
     case 'merpick': { const T4 = [...tilesOf(SW.mode)], k = x.dataset.k, j = T4.indexOf(k); if (j >= 0 && j !== SW.i) T4[j] = T4[SW.i]; T4[SW.i] = k; mpSave(SW.mode, { tiles: T4 }); SW.open = false; haptic('ok'); draw(); return true; }
     case 'mertooloff': mpSave(ME.mode, { toolsOff: true }); haptic('tap'); draw(); return true;
+    case 'p52vis': { const k = x.dataset.k, f = k === 'sok' ? 'sokOff' : k === 'tit' ? 'titleOff' : 'toolsOff', off = !MP[ME.mode]?.[f]; mpSave(ME.mode, { [f]: off }); if (k === 'sok' && off) ME.q = ''; if (k === 'tit') ME.ttlEd = false; haptic('tap'); draw(); return true; }
     case 'mertoolon': mpSave(ME.mode, { toolsOff: false }); haptic('tap'); draw(); return true;
     case 'merdone': ME.edit = false; haptic('ok'); draw(); return true;
     case 'mertsz': ME.tsz = x.dataset.k === 'lav' ? 'lav' : 'stor'; ls.put('papir_mer_tsz', ME.tsz); hlApi('/me/layout', { method: 'PUT', json: { papir_mer_tsz: ME.tsz } }).catch(() => {}); haptic('tab'); draw(); return true;

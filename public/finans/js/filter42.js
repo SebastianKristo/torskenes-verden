@@ -5,6 +5,7 @@
 // ellers filtreres lista her. Glimt fyller ut filteret: POST /filter/glimt {q}, ellers lokal tolkning (parseQuery).
 import { S, api, esc, n0, n2, dd, render, toast, logo } from './core.js';
 import { orb, secs } from './fin42.js';
+import { rcPanel52 } from './rcpanel52.js'; // prompt 52 (WEB52F)
 
 const u = S.ui;
 const F = () => (u.f42 ??= fromHash());
@@ -173,25 +174,26 @@ export function filterPage() {
     <div class="f42-acts">${act.map(([k, t]) => `<button type="button" class="f42-chip act" data-f42-clr="${k}" title="Fjern filter">${esc(t)} <em>×</em></button>`).join('')}${act.length ? `<button type="button" class="f42-reset" data-f42-act="reset">Nullstill</button>` : ''}<span class="note" style="font-size:13px">${R.length === 1 ? '1 treff' : `${R.length} treff`}</span><span class="grow" style="flex:1"></span>${act.length ? `<button type="button" class="btn sm" data-f42-act="ask">${orb(18)} Spør Glimt om dette</button><button type="button" class="btn sm" data-f42-act="report">Lag rapport</button>` : ''}</div>
     <div class="f42-list"><div><div class="f42-lh"><span>${R.length === 1 ? '1 transaksjon' : `${R.length} transaksjoner`}</span><span>Sum <b>${n2(sum)} kr</b></span></div>
       <div class="f42-tr h"><span>DATO</span><span>BESKRIVELSE</span><span>KATEGORI</span><span style="text-align:right">BELØP</span></div>
-      ${R.slice(0, u.f42n ?? 300).map((t) => `<button type="button" class="f42-tr" data-f42-open="${t.id}"><span class="d">${dd(t.date)}</span><span class="n"><b>${esc(t.merchant || t.description)}</b><small>${esc([t.aiShort, t.account, t.folder?.name].filter(Boolean).join(' · '))}</small></span><span class="c"><i style="background:${esc(t.color ?? '#8a8478')}"></i>${esc(t.category ?? 'Ukategorisert')}</span><span class="a"><span>${t.amount < 0 ? '−' : '+'}${n2(Math.abs(t.amount))}</span><small class="${t.receiptId ? 'ok' : ''}">${t.receiptId ? 'Kvittering ›' : 'Ingen kvittering'}</small></span></button>`).join('')}
+      ${R.slice(0, u.f42n ?? 300).map((t) => `<button type="button" class="f42-tr" data-f42-open="${t.id}"><span class="d">${dd(t.date)}</span><span class="n52">${logo(t, 36, 10) /* prompt 52: butikklogo foran navnet */}<span class="n"><b>${esc(t.merchant || t.description)}</b><small>${esc([t.aiShort, t.account, t.folder?.name].filter(Boolean).join(' · '))}</small></span></span><span class="c"><i style="background:${esc(t.color ?? '#8a8478')}"></i>${esc(t.category ?? 'Ukategorisert')}</span><span class="a"><span>${t.amount < 0 ? '−' : '+'}${n2(Math.abs(t.amount))}</span><small class="${t.receiptId ? 'ok' : ''}">${t.receiptId ? 'Kvittering ›' : 'Ingen kvittering'}</small></span></button>`).join('')}
       ${R.length > (u.f42n ?? 300) ? '<div class="f42-empty"><button class="btn sm" data-f42-act="more-rows">Vis flere</button></div>' : ''}
       ${R.length ? '' : '<div class="f42-empty">Ingen transaksjoner passer filteret.</div>'}</div></div>
     ${pane()}</div>`;
 }
+// Prompt 52 (WEB52F): samme kvitteringspanel som Transaksjoner og Boliger (rcpanel52.js).
 function pane() {
   const t = (S.f42 ?? []).find((x) => x.id === u.f42open);
   if (!t) return '';
   const rc = t.receiptId ? `/finans/api/receipts/${encodeURIComponent(t.receiptId)}/file` : null;
-  const lines = t.lines ?? [];
-  return `<div class="f42-ov" data-f42-ov><aside class="f42-pane" role="dialog" aria-modal="true" aria-label="${esc(t.merchant || t.description)}">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">${logo(t, 52, 14)}<button type="button" class="x-btn" data-f42-act="close" aria-label="Lukk">×</button></div>
-    <div><div style="font-size:24px;font-weight:700">${esc(t.merchant || t.description)}</div><div class="note" style="font-size:14px;margin-top:2px">${esc([dd(t.date), t.account, t.category].filter(Boolean).join(' · '))}</div></div>
-    <div class="big">${t.amount < 0 ? '−' : '+'}${n2(Math.abs(t.amount))} kr</div>
-    ${t.aiLong || t.aiShort ? `<div class="f42-ai"><b>✦ Glimt-beskrivelse</b><div style="margin-top:4px">${esc(t.aiLong || t.aiShort)}</div></div>` : ''}
-    ${rc ? `<div style="display:flex;flex-direction:column;gap:10px"><b style="font-size:15px">Kvittering</b><div class="f42-rc"><img src="${esc(rc)}" alt="Kvittering fra ${esc(t.merchant || t.description)}" loading="lazy">${lines.length ? lines.map((l) => `<span class="lr"><span>${esc(l.description ?? l.text ?? '')}</span><span>${n2(l.amount ?? 0)}</span></span>`).join('') : ''}</div>
-      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><a class="btn ink" href="${esc(rc)}" download>⇩ Last ned original</a><button type="button" class="btn" data-f42-act="close">Lukk</button></div></div>`
-      : `<div class="f42-none"><b style="font-size:15px">Ingen kvittering lagt ved</b><span class="note" style="font-size:13.5px">Last opp et bilde eller en PDF, så leser Glimt varelinjene.</span><label class="btn ink">Last opp kvittering<input type="file" accept="image/*,application/pdf" data-f42-attach="${t.id}" hidden></label></div>`}
-  </aside></div>`;
+  const lines = (t.lines ?? []).map((l) => ({ text: l.description ?? l.text ?? '', amount: l.amount ?? 0 }));
+  const name = t.merchant || t.description;
+  return `<div class="f42-ov" data-f42-ov>${rcPanel52({
+    key: `f42:${t.id}`, cls: 'drawer f42-pane52', role: 'dialog', attrs: 'aria-modal="true"', label: name, close: 'data-f42-act="close"',
+    logo: logo(t, 52, 14), title: name, meta: [dd(t.date), t.account, t.folder?.name, t.category].filter(Boolean).join(' · '), amount: t.amount,
+    glimt: t.aiLong || t.aiShort || lines.length ? { text: t.aiLong || t.aiShort || '', lines } : null,
+    receipt: rc ? { url: rc, mime: t.receiptMime ?? 'image/' } : null,
+    body: rc ? '' : `<div class="f42-none"><b style="font-size:15px">Ingen kvittering lagt ved</b><span class="note" style="font-size:13.5px">Last opp et bilde eller en PDF, så leser Glimt varelinjene.</span><label class="btn ink">Last opp kvittering<input type="file" accept="image/*,application/pdf" data-f42-attach="${t.id}" hidden></label></div>`,
+    download: rc, actions: '<button type="button" class="btn" data-f42-act="close">Lukk</button>',
+  })}</div>`;
 }
 
 /* ---------- Hendelser ---------- */

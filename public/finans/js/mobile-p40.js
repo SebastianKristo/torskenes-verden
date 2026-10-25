@@ -368,7 +368,7 @@ async function reread(id, rid) {
     const { reanalyzeJob50 } = await import('./reread50.js');
     const small = TXE.rrSmall === id; TXE.rrSmall = null;
     const tick = ({ secs }) => { const b = document.querySelector('#app .p40-rr b'); if (b && TXE.rr?.busy) b.textContent = `Glimt leser kvitteringen på nytt … ${secs} s`; };
-    const r = await reanalyzeJob50(rid, { engine: 'gemini', small, onTick: tick, ...(rid ? {} : { path: `/transactions/${id}/reread` }) }); // prompt 41
+    const r = await reanalyzeJob50(rid, { engine: 'ollama', small, onTick: tick, ...(rid ? {} : { path: `/transactions/${id}/reread` }) }); // prompt 41
     const N = r?.result ?? r?.candidate ?? r ?? {}, O = rid ? T0?.receipt ?? {} : { merchant: T0?.merchant ?? T0?.description, date: T0?.date, total: T0?.amount != null ? Math.abs(T0.amount) : null };
     const ch = Array.isArray(r?.changes) ? r.changes : [['merchant', 'Butikk'], ['date', 'Dato'], ['total', 'Beløp'], ['vat', 'MVA']].map(([f, label]) => ({ field: f, label, old: O[f], new: N[f] })).filter((c) => c.new != null && String(c.new) !== String(c.old ?? ''));
     const ln = (L) => (L ?? []).map((l) => `${l.name} ${l.price}`).join('|');
