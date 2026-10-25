@@ -65,7 +65,7 @@ import kotlinx.coroutines.launch
 
 /*
  * Prompt 51 (ANDPLAT51): Wear OS-appen «Homelab» (Gradle-modul :wear, frittstående – trenger ikke telefonen i nærheten, bare nett).
- * Sider: Hjem (Sjekk inn «Alt bra», «Hent meg», Avganger, Handleliste, Glimt) · Innlogging med QR · Bekreft «Hent meg» · Avganger ·
+ * Sider: Hjem (Sjekk inn «Alt bra», «Hent meg», Avganger, Handleliste, Glimt, Media) · Media (spilles nå med pause/neste/stopp, MEDCTL51) · Innlogging med QR · Bekreft «Hent meg» · Avganger ·
  * Handleliste (kryss av, legg til med tale) · Glimt (tale inn, svar som tekst) · Innstillinger (server, logg ut).
  * Navigasjon: egen stabel med SwipeToDismissBox (sveip mot høyre = tilbake; på Hjem lukker sveipet appen som vanlig).
  * Tilgjengelighet: alle knapper er Chips med tekst (TalkBack leser dem), ≥ 48 dp høye, tekst i sp (følger systemets tekststørrelse).
@@ -115,6 +115,7 @@ private fun Page51(st: WearState51, page: String) {
         "list" -> Shop51(st)
         "glimt" -> Glimt51(st)
         "settings" -> Settings51(st)
+        "media" -> Media51(st)
         else -> Home51(st)
     }
 }
@@ -218,6 +219,7 @@ private fun Home51(st: WearState51) {
         item { Btn51("Avganger", "Mine stopp") { st.push("deps") } }
         item { Btn51("Handleliste", "Kryss av og legg til") { st.push("list") } }
         item { Btn51("Glimt", "Spør med stemmen") { st.push("glimt") } }
+        item { Btn51("Media", "Spilles nå: pause, neste, stopp") { st.push("media") } }
         item { Btn51("Innstillinger") { st.push("settings") } }
     }
 }
@@ -286,6 +288,56 @@ private fun Deps51(st: WearState51) {
                             colors = ChipDefaults.secondaryChipColors(), modifier = Modifier.fillMaxWidth())
                     }
                 }
+            }
+        }
+        item { Btn51("Oppdater") { tick++ } }
+    }
+}
+
+/* ---------------- Media (MEDCTL51) ---------------- */
+
+@Composable
+private fun Media51(st: WearState51) {
+    val scope = rememberCoroutineScope()
+    var items by remember { mutableStateOf<List<WPlay51>?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var msg by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var tick by remember { mutableStateOf(0) }
+    LaunchedEffect(tick) {
+        error = null
+        try { items = st.api()?.nowPlaying() ?: emptyList() } catch (e: CancellationException) { throw e } catch (e: Exception) { error = err51(e) }
+    }
+    LaunchedEffect(Unit) { while (true) { delay(15_000); tick++ } }
+    fun cmd(p: WPlay51, action: String, body: org.json.JSONObject = org.json.JSONObject()) {
+        if (busy) return
+        busy = true
+        scope.launch {
+            msg = try {
+                val api = st.api() ?: throw WearApiError51("Ikke innlogget", 401)
+                val n = api.control(p.id, action, body)
+                items = items?.mapNotNull { if (it.id == p.id) n else it }
+                when { n == null -> "Stoppet"; action == "toggle" -> if (n.paused) "Satt på pause" else "Spiller"; else -> "OK" }
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { err51(e) }
+            busy = false
+        }
+    }
+    Frame51 {
+        item { ListHeader { Text("Spilles nå") } }
+        msg?.let { t -> item { Info51(t) } }
+        val list = items
+        when {
+            error != null -> item { Info51(error ?: "") }
+            list == null -> item { CircularProgressIndicator(Modifier.size(32.dp)) }
+            list.isEmpty() -> item { Info51("Ingenting spilles nå.") }
+            else -> list.forEach { p ->
+                item { Text(p.title, style = MaterialTheme.typography.title3, maxLines = 2, modifier = Modifier.padding(top = 6.dp)) }
+                if (p.sub.isNotBlank()) item { Text(p.sub, style = MaterialTheme.typography.caption1, maxLines = 2) }
+                if (p.controls.isEmpty()) item { Info51(p.note ?: "Kan ikke styres herfra") }
+                if ("playpause" in p.controls) item { Btn51(if (p.paused) "Spill av" else "Pause", primary = true) { cmd(p, "toggle") } }
+                if ("next" in p.controls) item { Btn51("Neste") { cmd(p, "next") } }
+                if ("seek" in p.controls) item { Btn51("Spol 30 s tilbake") { cmd(p, "seek", org.json.JSONObject().put("offset", -30_000)) } }
+                if ("stop" in p.controls) item { Btn51("Stopp") { cmd(p, "stop") } }
             }
         }
         item { Btn51("Oppdater") { tick++ } }

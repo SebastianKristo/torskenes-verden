@@ -2,8 +2,8 @@
 :root{
   color-scheme:light;
   --bg:#f4f1ea; --side:#ece7dc; --card:#faf8f3; --inner:#ece7dc; --line:#e2ddd2; --line2:#d9d3c6; --sep:#e2ddd2; --line3:#cfc8b9;
-  --text:#1c1b19; --text2:#5c5850; --muted:#8a8478; --dim:#5c5850;
-  --acc:#1f4d3a; --acc-l:#c8553d; --acc-ink:#f4f1ea; --acc-h:#2a634b; --pos:#2f7a4f; --warn:#c8553d; --neg:#c8553d; --note:#b4462f; --ok:#2f7a4f;
+  --text:#1c1b19; --text2:#5c5850; --muted:#6c675e; --dim:#5c5850;
+  --acc:#1f4d3a; --acc-l:#b74b34; --acc-ink:#f4f1ea; --acc-h:#2a634b; --pos:#2f7a4f; --warn:#b74b34; --neg:#b74b34; --note:#a8412b; --ok:#2f7a4f;
   --blue:#2f5d8a; --blue-l:#2f5d8a; --blue-t:#2f5d8a; --blue-soft:#dde6f0; --purple:#5b4a8a; --purple-soft:#e6e0ef;
   --pos-bg:#dfe9e1; --pos-soft:#dfe9e1; --pos-line:#c5d8ca; --warn-soft:#f3e3d9; --gold:#8a5a12;
   --link:#1f4d3a; --link-h:#2a634b; --hover:#ece7dc; --warm:#f3e3d9; --warm2:#f3e3d9; --warm-line:#e6cfc1; --warm-line2:#d9b8a6;
@@ -16,8 +16,8 @@
 html[data-ui=desktop][data-theme=lys]{
   color-scheme:light;
   --bg:#f4f1ea; --side:#ece7dc; --card:#faf8f3; --inner:#ece7dc; --line:#e2ddd2; --line2:#d9d3c6; --sep:#e2ddd2; --line3:#cfc8b9;
-  --text:#1c1b19; --text2:#5c5850; --muted:#8a8478; --dim:#5c5850;
-  --acc:#1f4d3a; --acc-l:#c8553d; --acc-ink:#f4f1ea; --acc-h:#2a634b; --pos:#2f7a4f; --warn:#c8553d; --neg:#c8553d; --note:#b4462f; --ok:#2f7a4f;
+  --text:#1c1b19; --text2:#5c5850; --muted:#6c675e; --dim:#5c5850;
+  --acc:#1f4d3a; --acc-l:#b74b34; --acc-ink:#f4f1ea; --acc-h:#2a634b; --pos:#2f7a4f; --warn:#b74b34; --neg:#b74b34; --note:#a8412b; --ok:#2f7a4f;
   --blue:#2f5d8a; --blue-l:#2f5d8a; --blue-t:#2f5d8a; --blue-soft:#dde6f0; --purple:#5b4a8a; --purple-soft:#e6e0ef;
   --pos-bg:#dfe9e1; --pos-soft:#dfe9e1; --pos-line:#c5d8ca; --warn-soft:#f3e3d9; --gold:#8a5a12;
   --link:#1f4d3a; --link-h:#2a634b; --hover:#ece7dc; --warm:#f3e3d9; --warm2:#f3e3d9; --warm-line:#e6cfc1; --warm-line2:#d9b8a6;
@@ -112,6 +112,8 @@ h1,h2,h3{margin:0;font-weight:600}
 .bars{display:flex;align-items:flex-end;gap:2px;height:46px}
 .bars i{display:block;border-radius:2px;background:var(--acc)}
 .link{border:0;background:none;color:var(--acc-l);font-size:13px;padding:0}
+/* Prompt 51 (A11Y51): treffflate minst 24 px høy uten å flytte noe */
+a.link,button.link{padding-block:4px;margin-block:-4px}
 .btn{height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-weight:500;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
 .btn:hover{background:var(--inner)}
 .btn.sm{height:34px;padding:0 12px;border-radius:10px;font-size:13px}
@@ -644,7 +646,7 @@ html[data-v3] .review .rq{background:color-mix(in srgb,var(--rev-ink) 9%,transpa
 html[data-v3] .review .rq:hover{background:color-mix(in srgb,var(--rev-ink) 14%,transparent)}
 html[data-v3] .review .rq .note,html[data-v3] .review .rq .muted{color:var(--rev-mute)!important}
 html[data-v3] .search{width:280px;flex:0 1 280px}
-html[data-theme=lys]{--rev-warn:#f2b8a6}html[data-theme=mork]{--rev-warn:#7a2814}html[data-theme=glod]{--rev-warn:#8a2a10}
+html[data-theme=lys]{--rev-warn:#f7cbbd}html[data-theme=mork]{--rev-warn:#7a2814}html[data-theme=glod]{--rev-warn:#8a2a10}
 html[data-v3] .review .rq [style*="--pos"],html[data-v3] .review .rq [style*="--blue-l"]{color:var(--rev-mute)!important}
 html[data-v3] .review .rq [style*="--acc-l"]{color:var(--rev-warn)!important}
 html[data-v3] .so-prog i{background:var(--acc)}

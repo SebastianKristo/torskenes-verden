@@ -92,6 +92,7 @@ struct W51HomeView: View {
             NavigationLink { W51DeparturesView() } label: { Label("Avganger", systemImage: "bus.fill") }
             NavigationLink { W51ShopView() } label: { Label("Handleliste", systemImage: "cart.fill") }
             NavigationLink { W51GlimtView() } label: { Label("Glimt", systemImage: "sparkles") }
+            NavigationLink { W51MediaView() } label: { Label("Spilles nå", systemImage: "play.tv.fill") } // prompt 51 (MEDCTL51), Watch51Media.swift
             Section {
                 Button(role: .destructive) { store.logout() } label: { Label("Logg ut", systemImage: "rectangle.portrait.and.arrow.right") }
             } footer: {

@@ -427,6 +427,7 @@ struct Playback44SessionCard: View {
                 if !s.chips.isEmpty { Text(s.chips.joined(separator: " · ")).font(PF.mono(10, bold: false)).foregroundStyle(p.mut).lineLimit(2) }
                 Playback44Bar(progress: s.progress, buffer: s.buffer, color: Color(hex: plex ? "#e5a00d" : "#7a5ad6"))
                 Text([s.user, s.left].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(12, .semibold)).foregroundStyle(p.ink)
+                MediaCtl51Bar(id: s.id) // prompt 51 (MEDCTL51): pause/spill av, neste, forrige, spol, stopp
             }
         }
         .padding(12)

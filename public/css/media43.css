@@ -1,6 +1,6 @@
 /* Prompt 43: Media på web (media43.js). Fasit: design/Media.dc.html, variant web (2a). Følger valgt tema:
    Papir lyst, og mørkt (.dk) når Homelab-temaet / systemet er mørkt. Statusfarger: grønn, gul og rød. */
-.m43{--k:#1b1a17;--b:#f3efe6;--cd:#fffdf8;--ln:#d8d1c2;--lb:#b23a2a;--mt:#6b665c;--ok:#2f6b4a;--warn:#a0671a;--warn2:#c48a1a;--bad:#b23a2a;--gr:#8a8478;
+.m43{--k:#1b1a17;--b:#f3efe6;--cd:#fffdf8;--ln:#d8d1c2;--lb:#b23a2a;--mt:#6b665c;--ok:#2f6b4a;--warn:#82531a;--warn2:#c48a1a;--bad:#b23a2a;--gr:#8a8478;
   --sf:color-mix(in srgb,var(--ln) 60%,transparent);
   position:fixed;inset:0;z-index:110;display:flex;flex-direction:column;overflow:hidden;background:var(--b);color:var(--k);
   font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased;outline:none;color-scheme:light}

@@ -4,6 +4,7 @@
 // tokenet er lagret på serveren (det kommer aldri hit). Data: GET /api/playback/sessions · history?q=&user=&page= · stats?range= ·
 // libraries (alle med ?server=plex|jellyfin). 404 (eldre server): tomtilstand.
 import { esc } from './util.js';
+import { loadCtl51, ctlBar51, audioNow51, linksHtml51, mountCtl51 } from './medctl51.js'; // prompt 51 (MEDCTL51): fjernkontroll i «Spilles nå»
 
 const P = { srv: 'plex', sec: 'now', hq: '', user: '', range: '7d', d: {}, err: {}, login: null, t: 0, host: null };
 try { const s = localStorage.getItem('pb44_srv'); if (s === 'plex' || s === 'jellyfin') P.srv = s; } catch { /* */ }
@@ -21,7 +22,7 @@ async function load(k, path) {
   paint();
 }
 function enter() {
-  if (P.sec === 'now') load('now', `/sessions${q()}`);
+  if (P.sec === 'now') { load('now', `/sessions${q()}`); loadCtl51().then(paint); }
   if (P.sec === 'hist') load('hist', `/history${q({ q: P.hq, user: P.user, page: '1' })}`);
   if (P.sec === 'stat') load('stat', `/stats${q({ range: P.range })}`);
   if (P.sec === 'lib') load('lib', `/libraries${q()}`);
@@ -48,11 +49,11 @@ function nowHtml() {
     const tr = /transcod|omkod/i.test(s.decision ?? s.videoDecision ?? s.stream ?? ''), c = COL[s.server] ?? COL[P.srv];
     const tags = [s.resolution, s.hdr, s.audio, s.bitrateText, s.transcodeText, s.cpuText].concat(s.chips ?? s.tags ?? []).map((x) => (typeof x === 'string' ? x : x?.text ?? x?.t ?? '')).filter(Boolean);
     return `<div class="pb44-s"><div class="pb44-sh">${poster(s.poster ?? s.thumb)}<div class="pb44-st"><div class="pb44-sr"><span class="pb44-dec ${tr ? 'tr' : 'dp'}">${esc(s.decisionText ?? (tr ? 'Omkoder' : 'Direkte avspilling'))}</span><span class="pb44-mut">${esc(s.device ?? s.player ?? '')}</span></div><b>${esc(s.title ?? '')}</b><span class="pb44-mut">${esc(s.subtitle ?? s.episode ?? '')}</span><div class="pb44-tags">${tags.map((t) => `<span>${esc(t)}</span>`).join('')}</div></div></div>
-      <div class="pb44-pr"><span class="pb44-bar"><i class="buf" style="width:${pct(s.buffer ?? s.bufferPct ?? s.progress)}%"></i><i style="width:${pct(s.progress)}%;background:${c}"></i></span><div class="pb44-pm"><span class="mono">${esc(s.positionText ?? (s.position != null ? dur(s.position) : ''))}</span><span class="pb44-u"><span class="pb44-av">${esc(ini(s.user))}</span>${esc(s.user ?? '')}</span><span class="mono">${esc(s.remainingText ?? s.leftText ?? s.durationText ?? '')}</span></div></div></div>`;
+      <div class="pb44-pr"><span class="pb44-bar"><i class="buf" style="width:${pct(s.buffer ?? s.bufferPct ?? s.progress)}%"></i><i style="width:${pct(s.progress)}%;background:${c}"></i></span><div class="pb44-pm"><span class="mono">${esc(s.positionText ?? (s.position != null ? dur(s.position) : ''))}</span><span class="pb44-u"><span class="pb44-av">${esc(ini(s.user))}</span>${esc(s.user ?? '')}</span><span class="mono">${esc(s.remainingText ?? s.leftText ?? s.durationText ?? '')}</span></div></div>${ctlBar51(s.id)}</div>`;
   };
   return `<div class="pb44-kpis">${kp.map(([l, v, s]) => `<div class="pb44-kpi"><span class="pb44-k">${l}</span><b>${esc(v)}</b><span class="pb44-mut">${esc(s)}</span></div>`).join('')}</div>
     <div class="pb44-h"><b>Spilles nå</b><span class="pb44-mut">${S.length} ${S.length === 1 ? 'strøm' : 'strømmer'}</span></div>
-    ${S.length ? `<div class="pb44-ss">${S.map(card).join('')}</div>` : '<span class="pb44-mut pb44-pad">Ingen ser på noe akkurat nå.</span>'}`;
+    ${S.length ? `<div class="pb44-ss">${S.map(card).join('')}</div>` : '<span class="pb44-mut pb44-pad">Ingen ser på noe akkurat nå.</span>'}${audioNow51()}${linksHtml51()}`;
 }
 function histHtml() {
   const d = P.d.hist; if (!d) return '<div class="pb44-skel"></div>';
@@ -128,7 +129,8 @@ export function mountPlayback(host) {
     if (d.pb44 === 'integ') { import('./settings.js').then((m) => m.openSettings('int')).catch(() => {}); }
   });
   host.addEventListener('input', (e) => { if (e.target.name !== 'pb44q') return; P.hq = e.target.value; clearTimeout(qT); qT = setTimeout(enter, 300); });
+  mountCtl51(paint);
   paint(); enter();
   clearInterval(P.t);
-  P.t = setInterval(() => { if (!host.isConnected) { clearInterval(P.t); return; } if (!document.hidden && P.sec === 'now') load('now', `/sessions${q()}`); }, 10_000);
+  P.t = setInterval(() => { if (!host.isConnected) { clearInterval(P.t); return; } if (!document.hidden && P.sec === 'now') { load('now', `/sessions${q()}`); loadCtl51().then(paint); } }, 10_000);
 }

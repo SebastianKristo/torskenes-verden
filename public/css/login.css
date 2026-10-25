@@ -1,7 +1,7 @@
 /* Innlogging og førstegangsoppsett i Papir-stil (prompt 25). Fasit: «Homelab Papir Web.dc.html», tweak gate.
    Venstre: toppbilde med «Homelab» og stor Newsreader-tittel. Høyre: skjema på papir med rød etikett,
    hvite felt og svart pilleknapp. Under 840 px ligger delene under hverandre. */
-:root{--g-page:#f3efe6;--g-ink:#1b1a17;--g-ink2:#7a7468;--g-rule:#d8d1c2;--g-acc:#b23a2a;--g-field:#fff;
+:root{--g-page:#f3efe6;--g-ink:#1b1a17;--g-ink2:#6f6a5f;--g-rule:#d8d1c2;--g-acc:#b23a2a;--g-field:#fff;
   --g-serif:Newsreader,Georgia,serif;--g-sans:Manrope,system-ui,sans-serif;--g-mono:'IBM Plex Mono',ui-monospace,monospace;color-scheme:light}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--g-page)}
@@ -33,7 +33,7 @@ body{font-family:var(--g-sans);color:var(--g-ink);-webkit-font-smoothing:antiali
 .gate-in.mono{font-family:var(--g-mono);font-weight:500}
 .gate-code{height:60px;font:600 24px var(--g-mono);letter-spacing:.3em;text-align:center}
 .gate-code.rc{font-size:18px;letter-spacing:.12em}
-.gate-link{align-self:flex-start;padding:0;border:0;background:none;color:var(--g-ink2);font:600 12.5px var(--g-sans);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.gate-link{align-self:flex-start;padding:5px 0;margin-block:-5px;border:0;background:none;color:var(--g-ink2);font:600 12.5px var(--g-sans);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 
 .gate-bgs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .gate-bg{display:flex;flex-direction:column;gap:6px;padding:0;border:0;background:transparent;cursor:pointer;text-align:left;font-family:inherit;color:var(--g-ink)}

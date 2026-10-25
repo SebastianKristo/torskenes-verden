@@ -4,7 +4,7 @@
 .lock-pw,.p-flab{display:none}
 
 html[data-hl="2c"]{
-  --pp:#f3efe6; --ink:#1b1a17; --ink2:#6b665c; --ink3:#8f897c; --rule:#d8d1c2; --rule2:#e3ddcf; --acc:#b23a2a; --pos:#2f7a4f;
+  --pp:#f3efe6; --ink:#1b1a17; --ink2:#6b665c; --ink3:#6f6a5f; --rule:#d8d1c2; --rule2:#e3ddcf; --acc:#b23a2a; --pos:#2f7a4f;
   --serif:'Newsreader',Georgia,'Times New Roman',serif; --sans:'Manrope',system-ui,sans-serif; --pmono:'IBM Plex Mono',ui-monospace,monospace;
   --pw-h:420px;
   color-scheme:light;
@@ -12,7 +12,7 @@ html[data-hl="2c"]{
 }
 html[data-hl="2c"] body,html[data-hl="2c"] body.not-dash{
   --page:#f3efe6; --lock:#1b1a17; --card:transparent; --row:#ebe5d8; --line:#d8d1c2; --field:#fff;
-  --glass:transparent; --pill:#fff; --text:#1b1a17; --text-2:#6b665c; --muted:#8f897c; --faint:#a39d90;
+  --glass:transparent; --pill:#fff; --text:#1b1a17; --text-2:#6b665c; --muted:#6f6a5f; --faint:#a39d90;
   --blue:#2f5d8a; --green:#2f7a4f; --red:#b23a2a; --yellow:#9a6a0c; --pink:#a03c8a; --purple:#4b5fc8;
   --mono:'IBM Plex Mono',ui-monospace,monospace; --side:44px; --r-card:0; --gap:0px;
   background:var(--pp); color:var(--ink); font-family:var(--sans);
@@ -221,7 +221,7 @@ html[data-hl="2c"] .mh-row{margin:0;padding:0 0 4px}
 html[data-hl="2c"] .mh-card{background:transparent;border:0;border-radius:0;color:var(--ink)}
 html[data-hl="2c"] .mh-meta{padding:8px 0 0;color:var(--ink2);font-family:var(--sans)}
 html[data-hl="2c"] .mh-meta .mh-ell:nth-child(3){color:var(--ink);font:500 15px var(--serif)}
-html[data-hl="2c"] .mh-user{color:#9a6a0c}
+html[data-hl="2c"] .mh-user{color:#8c600b}
 
 /* ---------- Innstillinger (3a) ---------- */
 html[data-hl="2c"] .modal{background:rgba(27,26,23,.35)}
@@ -431,14 +431,14 @@ html[data-hl="2c"] .top>[data-hp=menu]{margin-left:0;flex:none}
 html[data-hl="2c"] .hl-bgdd{margin-left:auto;flex:none;position:relative}
 html[data-hl="2c"] .hl-bgdd-btn{height:36px;padding:0 14px;border-radius:999px;border:0;background:rgba(27,26,23,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;cursor:pointer;font:600 12.5px var(--sans);white-space:nowrap}
 html[data-hl="2c"] body:not(.pw-on) .hl-bgdd-btn{background:#fff;color:var(--ink);border:1px solid var(--rule)}
-html[data-hl="2c"] .hl-bgdd-menu{position:absolute;top:46px;right:0;z-index:40;width:236px;padding:6px;border-radius:18px;background:#f3efe6;color:var(--ink);box-shadow:0 20px 40px -10px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px;opacity:0;transform:scale(.96);transform-origin:top right;pointer-events:none;transition:opacity .14s,transform .14s;text-shadow:none}
-html[data-hl="2c"] .hl-bgdd-menu.open{opacity:1;transform:none;pointer-events:auto}
+html[data-hl="2c"] .hl-bgdd-menu{position:absolute;top:46px;right:0;z-index:40;width:236px;padding:6px;border-radius:18px;background:#f3efe6;color:var(--ink);box-shadow:0 20px 40px -10px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px;opacity:0;transform:scale(.96);transform-origin:top right;pointer-events:none;transition:opacity .14s,transform .14s,visibility 0s linear .14s;text-shadow:none;visibility:hidden}
+html[data-hl="2c"] .hl-bgdd-menu.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .14s,transform .14s,visibility 0s}
 html[data-hl="2c"] .hl-bgdd-menu button{display:flex;align-items:center;gap:10px;height:50px;padding:0 10px;border-radius:12px;border:0;background:transparent;color:var(--ink);cursor:pointer;text-align:left;font:600 14px var(--sans)}
 html[data-hl="2c"] .hl-bgdd-menu button[aria-checked=true]{background:#e6e0d2}
 html[data-hl="2c"] .hl-bgdd-menu button:hover{background:#ebe5d8}
 html[data-hl="2c"] .hl-bgdd-menu .th{flex:none;width:30px;height:30px;border-radius:8px;background:#5d7690 center/cover}
 html[data-hl="2c"] .hl-bgdd-menu .tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
-html[data-hl="2c"] .hl-bgdd-menu small{font:500 11.5px var(--sans);color:var(--ink3)}
+html[data-hl="2c"] .hl-bgdd-menu small{font:500 11.5px var(--sans);color:var(--ink2)}
 html[data-hl="2c"] .hl-bgdd-up{display:block;padding:10px 12px;border-top:1px solid var(--rule);margin-top:4px;font:600 13px var(--sans);color:var(--acc);cursor:pointer;border-radius:0 0 12px 12px}
 html[data-hl="2c"] .hl-bgdd-up:hover{background:#ebe5d8}
 html[data-hl="2c"] .menu{right:0;width:220px;padding:6px;border-radius:18px;background:#f3efe6;border:0;box-shadow:0 20px 40px -10px rgba(0,0,0,.45);text-shadow:none}
@@ -504,7 +504,7 @@ html[data-hl="2c"] .dm-kvr,html[data-hl="2c"] .dm-ev>div{border-top-color:var(--
 html[data-hl="2c"] .dm-bar .t,html[data-hl="2c"] body.not-dash .dm-bar .t{background:#e3ddcf}
 html[data-hl="2c"] .dm-bar .t div,html[data-hl="2c"] .dm-lbars span{background:#3b6fb5}
 html[data-hl="2c"] .dm-chips span,html[data-hl="2c"] body.not-dash .dm-chips span{background:#f3efe6;color:#6b665c}
-html[data-hl="2c"] .dm-chart .y,html[data-hl="2c"] .dm-chart .x{color:#8f897c}
+html[data-hl="2c"] .dm-chart .y,html[data-hl="2c"] .dm-chart .x{color:#6f6a5f}
 html[data-hl="2c"] .dm-chart svg path:first-child{stroke:#d8d1c2}
 html[data-hl="2c"] .dm-chart svg path:nth-child(2){fill:rgba(178,58,42,.1)}
 html[data-hl="2c"] .dm-chart svg path:nth-child(3){stroke:#b23a2a}
@@ -529,7 +529,7 @@ html[data-hl="2c"] .dm-warn{color:#9a5a10}
 html[data-hl="2c"] .wm-tip{background:var(--ink);color:var(--pp);border-color:var(--ink)}
 
 /* ---------- Hjem (Home OS): papirfarger i stedet for mørke paneler ---------- */
-html[data-hl="2c"] .fx{--f-bg:#f3efe6;--f-card:#fff;--f-line:#e3ddcf;--f-in:#d8d1c2;--f-sub:#f3efe6;--f-t:#1b1a17;--f-2:#6b665c;--f-3:#8f897c;--f-acc:#b23a2a;--f-acc-t:#fff;--f-acc-l:#b23a2a;--f-pos:#2f7a4f;--f-pos-bg:#dfe9e1;--f-mono:var(--pmono);font-family:var(--sans);color:var(--ink)}
+html[data-hl="2c"] .fx{--f-bg:#f3efe6;--f-card:#fff;--f-line:#e3ddcf;--f-in:#d8d1c2;--f-sub:#f3efe6;--f-t:#1b1a17;--f-2:#6b665c;--f-3:#6f6a5f;--f-acc:#b23a2a;--f-acc-t:#fff;--f-acc-l:#b23a2a;--f-pos:#2f7a4f;--f-pos-bg:#dfe9e1;--f-mono:var(--pmono);font-family:var(--sans);color:var(--ink)}
 html[data-hl="2c"] .fx .kpi,html[data-hl="2c"] .fx .fcard,html[data-hl="2c"] .fx .list,html[data-hl="2c"] body.not-dash .fx .card{background:#fff;border:0;border-radius:20px}
 html[data-hl="2c"] .fx .kpi b{font:400 30px var(--serif)}
 html[data-hl="2c"] .fx .chip{border-color:var(--ink);color:var(--ink)}

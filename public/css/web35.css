@@ -110,7 +110,7 @@ body.gb-open{overflow:hidden}
 .gb-nwm{display:flex;flex-direction:column;gap:3px;min-width:0}
 .gb-nw .gb-src{font-size:10.5px}
 .gb-nwt{font:500 15px/1.3 var(--gb-serif);text-wrap:pretty;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.gb-foot{font-size:12px;color:#8a8478;text-align:center}
+.gb-foot{font-size:12px;color:#726d62;text-align:center}
 .gb-ring{animation:gbRing 1.3s ease-out infinite}
 .gb-err{padding:20px;border-radius:20px;background:#fffdf8;font-size:14px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
 .gb-skelp{display:flex;flex-direction:column;gap:14px}
@@ -234,6 +234,6 @@ html:not([data-hl="2c"]) #settings .gs-pill.dark{background:#eef1f6;color:#0c111
 .km35-ent{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer}
 .km35-ent input{width:18px;height:18px;accent-color:#1b1a17}
 .km35-ent span{display:flex;flex-direction:column;min-width:0}
-.km35-ent span span{font:500 11.5px var(--gb-mono);color:#8a8478}
+.km35-ent span span{font:500 11.5px var(--gb-mono);color:#726d62}
 .km35-more{align-self:flex-start;border:0;background:transparent;padding:4px 0;color:#b23a2a;font:700 13px var(--gb-sans);cursor:pointer}
 .km35 .gs-pill{--gs-line:#ddd5c5}

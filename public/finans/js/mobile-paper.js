@@ -402,9 +402,18 @@ export function paperHome() {
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
 const RUTER = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regionbus: '#75A300', water: '#682C88', ferry: '#682C88', rail: '#003087', train: '#003087' };
-export const lineBg = (d) => d.color || RUTER[d.mode] || (/^\d$/.test(String(d.line)) ? RUTER.metro : /^1[1-9]$/.test(String(d.line)) ? RUTER.tram : /^\d{2,3}[A-Z]?$/.test(String(d.line)) ? RUTER.bus : RUTER.metro);
+const lineBgRaw = (d) => d.color || RUTER[d.mode] || (/^\d$/.test(String(d.line)) ? RUTER.metro : /^1[1-9]$/.test(String(d.line)) ? RUTER.tram : /^\d{2,3}[A-Z]?$/.test(String(d.line)) ? RUTER.bus : RUTER.metro);
 // Prompt 28: tekstfarge på linjemerket etter luminans (L > 0,4 → mørk tekst, ellers hvit).
 const relLum = (hex) => { const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(String(hex ?? '').trim()); if (!m) return 0; let h = m[1]; if (h.length === 3) h = [...h].map((c) => c + c).join(''); const f = (i) => { const v = parseInt(h.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(0) + 0.7152 * f(2) + 0.0722 * f(4); };
+// Prompt 51 (A11Y51): hvit tekst på linjemerket skal ha minst 4,5:1 – mørkner Ruter-fargen (samme fargetone) til kravet er nådd.
+export const lineBg = (d) => {
+  const c = lineBgRaw(d);
+  if (relLum(c) > 0.4 || !/^#?[0-9a-f]{6}$/i.test(String(c ?? '').trim())) return c;
+  let h = String(c).trim().replace('#', ''), rgb = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const hex = (a) => '#' + a.map((v) => v.toString(16).padStart(2, '0')).join('');
+  for (let i = 0; i < 20 && 1.05 / (relLum(hex(rgb)) + 0.05) < 4.55; i++) rgb = rgb.map((v) => Math.round(v * 0.93));
+  return hex(rgb);
+};
 export const lineFg = (d) => (relLum(lineBg(d)) > 0.4 ? '#1b1a17' : '#ffffff');
 
 function newsCard(list) {

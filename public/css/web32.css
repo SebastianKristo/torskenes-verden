@@ -33,7 +33,7 @@ html[data-hl="2c"] #settings .set-q .set-aibtn{background:#f1ece2;color:#1b1a17}
 /* ---------- Nylige søk: «mobil»-etikett (claude-code-sokehistorikk-synk.md) ---------- */
 .sq-item:has(.sq-dev) .sq-t{flex:0 1 auto}
 .sq-item .sq-dev{flex:none;margin-right:auto;padding:0 6px;font:500 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.04em;color:var(--text-2,#8f897c);opacity:.85}
-html[data-hl="2c"] .sq-item .sq-dev{color:#8f897c}
+html[data-hl="2c"] .sq-item .sq-dev{color:#6f6a5f}
 
 /* ---------- Domener: Glimt-oppsummering og Google Søk (Homelab Domener Papir.dc.html → sumVals, gscVals) ---------- */
 .dm{--dm-pos:#8fe0b0;--dm-neg:#f2b56b;--dm-warn:#f59a8f;--dm-info:#7fe0d0;--dm-neu:#8a93a6;--dm-mut:#8a93a6;--dm-ink:#eef0f4;--dm-line:rgba(255,255,255,.1);--dm-chip:rgba(255,255,255,.06);--dm-red:#f59a8f}

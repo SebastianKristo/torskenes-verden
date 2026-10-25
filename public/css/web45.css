@@ -19,7 +19,7 @@
 .dg40-s .kal-hw-k::before{background-color:rgba(255,255,255,.18)}
 .dg40 .kal-hw-x{padding-top:10px;border-top:1px solid rgba(127,127,127,.25);margin:0}
 .dg40-s .kal-hw-x{border-top-color:rgba(255,255,255,.18)}
-.dg40-s .kal-hw-x>span:first-child{color:rgba(255,255,255,.72)!important}
+.dg40-s .kal-hw-x>span:first-child{color:rgba(255,255,255,.92)!important}
 .dg40 .kal-hw-x .kal-wp{flex:none;padding:3px 10px;border-radius:999px}
 .dg40 .kal-hw-h>span:last-child{white-space:nowrap}
 
@@ -50,7 +50,7 @@ html[data-mode="dark"] .ga45:not(.dark){--ga-ink:#f3efe6;--ga-mut:#a39d90;--ga-c
 /* ---------- Media: mer farge (claude-code-media-mer-farger.md) ----------
    Hver tjeneste har sin farge (ikonprikk, aktiv fane); statuspiller i farger; svak toning fra plakaten bak banneret.
    Papir-bakgrunnen beholdes – fargen er aksent, ikke heldekkende flater. */
-html .m43{--c-son:#35c5f4;--c-rad:#ffc230;--c-qb:#3d7dd6;--c-pro:#e66001;--c-plex:#e5a00d;--c-jf:#aa5cc3;--dl:#2f6fc0;--wait:#b8860b;--ok:#2f7a4f;--bad:#c0392b}
+html .m43{--c-son:#35c5f4;--c-rad:#ffc230;--c-qb:#3d7dd6;--c-pro:#e66001;--c-plex:#e5a00d;--c-jf:#aa5cc3;--dl:#2961a7;--wait:#765507;--ok:#2a6d47;--bad:#ad3327}
 html .m43.dk{--dl:#6aa6f0;--wait:#e8c04a;--ok:#6fc28f;--bad:#ec7a64}
 html .m43-tab[data-m43-tab]{display:inline-flex;align-items:center;gap:8px}
 html .m43-tab[data-m43-tab]:not([data-m43-tab="kom"])::before{content:'';flex:none;width:9px;height:9px;border-radius:50%;background:var(--svc)}

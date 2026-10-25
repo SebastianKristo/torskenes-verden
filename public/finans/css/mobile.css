@@ -1880,7 +1880,7 @@ a.wx-r{color:inherit;text-decoration:none}
 .p17-tk b{font-size:15px;font-weight:600;overflow-wrap:anywhere}
 .p17-tk.done b{text-decoration:line-through;opacity:.5}
 .p17-chk{flex:none;width:26px;height:26px;border-radius:50%!important;border:2px solid var(--c,var(--pp-ink))!important;background:var(--cb,transparent)!important;color:#fff;font:800 13px Manrope,sans-serif;cursor:pointer;display:grid;place-items:center;padding:0}
-.p17-chk.sm{width:20px;height:20px}
+.p17-chk.sm{width:24px;height:24px;margin:-2px} /* A11Y51: minst 24 × 24 px */
 .m.papir .p17-list>.p17-row{border-radius:0!important;margin:0!important;box-shadow:none!important}
 .p17-x{flex:none;width:32px;height:32px;border-radius:16px;border:0;background:transparent;color:var(--pp-mut);font-size:20px;cursor:pointer}
 .p17-hw .p17-hwr{display:flex;align-items:center;gap:10px;min-height:30px;font-size:14px}
@@ -3005,7 +3005,7 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 .m .k26-wp{flex:none;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.07);color:inherit;font-size:10.5px;font-weight:800;white-space:nowrap}
 .m .k26-wp.soon{background:#b23a2a;color:#fff}
 .m .k26-hw .k26-wp{background:var(--pp-bg);color:var(--pp-ink)}
-.m .k26-hw .k26-wp.soon{background:var(--pp-lab);color:#fff}
+.m .k26-hw .k26-wp.soon{background:var(--pp-lab);color:var(--pp-onLab,#fff)}
 /* Hjem-widgeten KALENDER */
 .m .k26-hw{width:100%;box-sizing:border-box;border-radius:20px;background:var(--pp-card);color:var(--pp-ink);padding:14px 16px;display:flex;flex-direction:column;gap:10px;text-align:left;text-decoration:none;font-family:Manrope,system-ui,sans-serif}
 .m .k26-hwh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;width:100%}

@@ -232,3 +232,38 @@ html[data-mode="dark"] .ny46-m.err,html:not([data-hl="2c"]) .ny46-m.err{color:#f
 /* ---------- Chat: «Søk denne gangen» når Nettsøk er av (claude-code-chat-nettsok-av.md) ---------- */
 .ch-acts button.ch-web46{border:1px solid currentColor!important;color:var(--ci,inherit)!important}
 .nw46-int.sug{border:1px dashed var(--line);background:transparent;color:var(--ink);cursor:pointer;padding:0 12px}
+
+/* Prompt 51 (A11Y51): berøringsflater på minst 24 × 24 px (WCAG 2.2 2.5.8) uten å flytte noe. Små tekstlenker/-knapper får
+   usynlig polstring i høyden (padding + like stor negativ margin), små ikonknapper litt bredere treffflate. */
+html .ticker-track a{padding-block:4px;margin-block:-4px}
+html[data-hl="2c"] .p-links a,html[data-hl="2c"] a.p-more,html[data-hl="2c"] .card>a.sub,html[data-hl="2c"] .sg-btn2{padding-block:4px;margin-block:-4px}
+html[data-hl] .dg40 .p-links a{padding-block:5px;margin-block:0}
+html[data-hl="2c"] a.p-more{margin-top:4px}
+.k39-ed{padding-block:4px;margin-block:-4px}
+.k39-dot{width:24px;margin-inline:-3px}
+.k39-mini:not(.compact) .k39-mg .k39-mwk{width:24px;margin-inline:-1px}
+/* Heldagsbrikker: 24 px treffflate, men samme 17 px synlige brikke (gjennomsiktig kant + bakgrunn bare i polstringsboksen) */
+.k39-ga .k39-chip{box-sizing:border-box;height:24px;margin-block:-3.5px;border-block:3.5px solid transparent;background-clip:padding-box;border-radius:8.5px/8.5px}
+.k39-ga .k39-chip:hover{background-clip:padding-box}
+html .ticker-track a,html[data-hl] .ticker-track a{padding-block:4px;margin-block:-4px}
+html .gate-link{padding-block:5px;margin-block:-5px}
+/* Kalenderen: hvit tekst på rødt trenger mørkere rødt i mørk modus; rød tekst på mørkt trenger lysere */
+#kal.k39 .k39-md.today b,#kal.k39 .k39-ghc.today b,#kal.k39 .k43-new{background:var(--red-bg,var(--red))}
+#kal.k39 .k39-ghc.today .k39-ghw{color:var(--red-tx,var(--red))}
+html[data-kal-theme="mork"] #kal.k39{--red-bg:#b8452f;--red-tx:#dc6c58}
+@media (prefers-color-scheme:dark){html:not([data-kal-theme="lys"]) #kal.k39{--red-bg:#b8452f;--red-tx:#dc6c58}}
+#kal.k39 .k39-md.out b{color:var(--mut2)}
+#kal.k39 .k39-bdg{color:var(--ink2)}
+/* «Kommer ut»: «overvåkes»-merket */
+.poster-img .badge.watch{color:#f3d38a}
+html[data-hl="2c"] .poster-img .badge.watch{color:var(--ink)}
+html:not([data-hl="2c"]){--hl40-amb:#c98a1b}
+/* Gjøremål: listeetiketter i listefargen, blandet mot teksten så de holder 4,5:1 på den tonede bakgrunnen */
+.tw-lb{color:color-mix(in srgb,var(--c) 72%,var(--t-ink,#1b1a17))}
+html[data-mode="dark"] .tw-lb{color:color-mix(in srgb,var(--c) 45%,var(--t-ink,#f3efe6))}
+/* Innstillinger: tellermerket i mørk modus (hvitt på lys korall ga 2,8:1) */
+html[data-mode="dark"][data-hl="2c"] #settings .set-badge{color:#16140f}
+/* Fokusmarkering: felt som skrur av omrisset får det tilbake ved tastaturfokus, og søkefelt-innpakninger viser fokus rundt hele feltet */
+:is(.field,.search,.bare,.ch-inp,.ch-ta,.bd-in,.k2-in,.m43-in,.fam-inp,.ci43-ta,.ci43-in,.tab-name):focus-visible{outline:2px solid var(--acc,var(--blue,#2f5d8a));outline-offset:1px}
+:is(.set-q,.bd-q,.k2-sf,.k3-sr-in,.ch-sf,.m43-gl,.ac-search,.sg-field):has(input:focus-visible,select:focus-visible){outline:2px solid var(--acc,var(--blue,#2f5d8a));outline-offset:2px}
+.sq-eng-menu button:focus-visible{outline:2px solid var(--acc,var(--blue,#2f5d8a));outline-offset:-2px}

@@ -16,7 +16,7 @@ Gjelder FinansHub for Android (`apps/android/app`) og den nye Wear OS-appen (`ap
 ## Android Auto
 - **Avganger** (Mine stopp), **På vei hjem** (reisen hjem nå og «Si fra til familien»), **Media** (hva som spilles nå og «Fortsett» fra Audiobookshelf).
 - Sideloadet app: åpne Android Auto på telefonen → trykk på versjonsnummeret 10 ganger → ⋮ → Utviklerinnstillinger → slå på **Ukjente kilder**. Da vises Homelab i bilen.
-- Media i bilen er bare visning: serveren har ikke API for å styre avspilling (pause/spill) ennå.
+- Media i bilen: trykk på en avspilling du har lov til å styre for pause/spill av, neste, forrige, spol 30 s og stopp (MEDCTL51, se docs/mediekontroll-51.md). Eldre server: bare visning.
 
 ## Wear OS-app (klokka)
 - Sider: Sjekk inn «Alt bra», **Hent meg** (med bekreftelse), Avganger, Handleliste (kryss av, legg til med stemmen) og **Glimt** (snakk inn spørsmålet, svaret vises som tekst).

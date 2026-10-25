@@ -83,6 +83,18 @@ function ruterColor(d) {
     : /^[1-5]$/.test(n) ? 'metro' : /^1[1-9]$/.test(n) ? 'tram' : /^B\d/i.test(n) ? 'water' : /^(R|L|F)\d/i.test(n) ? 'rail' : /^\d{3}/.test(n) ? 'regional' : 'bus';
   return [RUTER[k], '#fff'];
 }
+// Prompt 51 (A11Y51): linjemerket skal ha minst 4,5:1 kontrast (11 px tekst). Mørkner bakgrunnen (samme fargetone) til kravet er nådd.
+function ruterColorA11y(d) {
+  const [bg, fg] = ruterColor(d);
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  if (!/^#[0-9a-f]{6}$/i.test(bg) || !/^#[0-9a-f]{6}$/i.test(fg)) return [bg, fg];
+  const f = rgb(fg); let c = rgb(bg);
+  if (lum(f) < 0.5) return [bg, fg]; // mørk tekst på lys bakgrunn: la Ruters farger stå
+  for (let i = 0; i < 20 && ratio(c, f) < 4.55; i++) c = c.map((v) => Math.round(v * 0.93));
+  return ['#' + c.map((v) => v.toString(16).padStart(2, '0')).join(''), fg];
+}
 
 // Prompt 21: trykk på en avgang som har stopp (serveren sender stops fra Entur) for å se holdeplassene på turen.
 // Bare én er åpen om gangen; trykk igjen lukker. Eldre servere uten stops: avgangen er en vanlig lenke som før.
@@ -99,7 +111,7 @@ function depStatus(d) {
 }
 
 function depPanel(trip, d, m) {
-  const [bg, fg] = ruterColor(d), st = d.stops ?? [];
+  const [bg, fg] = ruterColorA11y(d), st = d.stops ?? [];
   const status = depStatus(d), late = /forsinket/.test(status);
   const sub = [modeName(d), d.platform ? `plattform ${d.platform}` : '', status].filter(Boolean);
   const subHtml = sub.map((x) => (x === status && late ? `<span class="dx-late">${esc(x)}</span>` : esc(x))).join(' · ');
@@ -132,7 +144,7 @@ function renderTrips() {
       if (open) panel = depPanel(trip, d, m);
       const attrs = d.stops?.length ? ` role="button" tabindex="0" data-dep-open="${esc(k)}" aria-expanded="${!!open}"` : '';
       if (paper) {
-        const [bg, fg] = ruterColor(d);
+        const [bg, fg] = ruterColorA11y(d);
         return `<span class="p-dep${open ? ' on' : ''}"${attrs}><span class="p-line" style="background:${bg};color:${fg};border-color:${bg}">${esc(d.line)}</span>${m <= 0 ? 'nå' : `${m} min`}</span>`;
       }
       const min = m <= 0 ? 'nå' : isMobile() ? `${m}m` : `${m} min`;
@@ -275,7 +287,7 @@ const dayFmt = (iso) => {
 
 function posters(kind, items) {
   return `<div class="posters">${items.slice(0, isMobile() ? 6 : 12).map((m, i) => `<button class="poster" data-pop="up:${kind}:${i}">
-    <div class="poster-img" style="${m.img ? `background-image:url('${esc(m.img)}')` : ''}">${m.img ? '' : `<span class="ph">${esc(m.title)}</span>`}<span class="badge" style="${m.date ? '' : 'color:#f3d38a'}">${esc(dayFmt(m.date))}</span></div>
+    <div class="poster-img" style="${m.img ? `background-image:url('${esc(m.img)}')` : ''}">${m.img ? '' : `<span class="ph">${esc(m.title)}</span>`}<span class="badge${m.date ? '' : ' watch'}">${esc(dayFmt(m.date))}</span></div>
     <b>${esc(m.title)}</b><span>${esc(m.sub)}</span></button>`).join('')}</div>`;
 }
 

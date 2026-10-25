@@ -16,7 +16,7 @@ const CSS = `
 .mf51-grow{flex:1;min-width:0}.mf51-t{font-weight:600}.mf51-m{color:var(--muted,#8a93a6);font-size:13px}
 .mf51-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .mf51-b{border:1px solid var(--line,#232938);background:transparent;color:inherit;border-radius:999px;padding:6px 13px;font:600 13px Outfit,Geist,system-ui,sans-serif;cursor:pointer}
-.mf51-b.pri{background:var(--blue,#a8d4fb);border-color:transparent;color:#0b1220}.mf51-b.danger{color:var(--red,#f59a8f)}
+.mf51-b.pri{background:var(--blue,#a8d4fb);border-color:transparent;color:#0b1220}html[data-hl="2c"] .mf51-b.pri{color:#fff}html[data-mode="dark"][data-hl="2c"] .mf51-b.pri{color:#16140f}.mf51-b.danger{color:var(--red,#f59a8f)}
 .mf51-b:focus-visible,.mf51 input:focus-visible,.mf51 select:focus-visible{outline:2px solid var(--blue,#a8d4fb);outline-offset:2px}
 .mf51 input,.mf51 select,.mf51 textarea{background:var(--field,#0b0e15);color:inherit;border:1px solid var(--line,#232938);border-radius:10px;padding:7px 10px;font:inherit;min-width:0}
 .mf51-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mf51-form .full{grid-column:1/-1}.mf51-form label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted,#8a93a6)}

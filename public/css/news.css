@@ -1,7 +1,7 @@
 /* Nyhetsleser (prompt 13). Paletter fra design/Nyhetsleser.dc.html: web (mørk, Homelab v2), papir lys og papir mørk (2c). */
 .nw { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: clamp(0px, 3vw, 40px); background: rgba(0, 0, 0, .45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); outline: none; }
 .nw-web { --ink: #eef0f4; --bg: #11151d; --card: #181e29; --line: #262d3b; --lab: #a8d4fb; --mut: #8a93a6; --acc-ink: #11151d; }
-.nw-paper { --ink: #1b1a17; --bg: #f3efe6; --card: #fff; --line: #d8d1c2; --lab: #b23a2a; --mut: #8f897c; --acc-ink: #fff; }
+.nw-paper { --ink: #1b1a17; --bg: #f3efe6; --card: #fff; --line: #d8d1c2; --lab: #b23a2a; --mut: #6f6a5f; --acc-ink: #fff; }
 .nw-paperDark { --ink: #ece7dc; --bg: #14130f; --card: #211f19; --line: #34322a; --lab: #e8705c; --mut: #8a8578; --acc-ink: #fff; }
 body.nw-open { overflow: hidden; }
 

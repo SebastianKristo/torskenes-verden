@@ -176,7 +176,7 @@ function nTor(x) {
 }
 const torRow = (t) => {
   const short = t.stT && !(t.st === 'dl' && !t.pz) ? t.stT : t.st === 'meta' ? 'Henter metadata …' : t.st === 'seed' ? `Ferdig · deler ↑ ${mbT(t.up || 0)}` : t.st === 'stall' ? `Står fast · ${t.seeds ?? 0} seedere` : t.pz ? 'Pauset' : t.st === 'wait' ? 'Venter i køen' : `${mbT(t.spd)} · ${etaT(t.eta ?? (t.spd ? (t.gb * 1024 * (100 - t.p)) / 100 / t.spd : Infinity))}`;
-  return { ...t, short, bc: t.st === 'seed' ? '#2f6b4a' : t.st === 'stall' ? '#c48a1a' : t.pz ? '#a39d90' : 'var(--pp-ink)', lc: t.st === 'stall' ? '#a0671a' : t.st === 'seed' ? '#2f6b4a' : 'var(--pp-mut)' };
+  return { ...t, short, bc: t.st === 'seed' ? '#2f6b4a' : t.st === 'stall' ? '#c48a1a' : t.pz ? '#a39d90' : 'var(--pp-ink)', lc: t.st === 'stall' ? 'var(--pp-warn,#a0671a)' : t.st === 'seed' ? '#2f6b4a' : 'var(--pp-mut)' };
 };
 function nRel(r, i) {
   const qn = typeof r.quality === 'string' ? r.quality : r.quality?.quality?.name ?? r.qualityName ?? '', res = r.quality?.quality?.resolution ?? r.resolution ?? (/2160/.test(qn) ? 2160 : /1080/.test(qn) ? 1080 : /720/.test(qn) ? 720 : /480/.test(qn) ? 480 : 0);

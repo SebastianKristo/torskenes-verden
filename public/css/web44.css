@@ -1,7 +1,7 @@
 /* Prompt 44 (WEB44). Felles fargetokens for nye komponenter: lyst papir som standard, mørkt papir når html[data-mode=dark]
    (Innstillinger → Utseende → Lys og mørk) og i «Nåværende» (mørkt glass). Mørk: bg #16140f, kort #211e18, tekst #f3efe6,
    dempet #a39d90, linjer #3a352c, rød #ec7a64 (kontrast ≥ 4.5:1). */
-:root{--c44-bg:#f3efe6;--c44-card:#fffdf8;--c44-card2:#fbf8f1;--c44-ink:#1b1a17;--c44-ink2:#3d3a33;--c44-mut:#6b665c;--c44-mut2:#8f897c;--c44-line:#e1d9c9;--c44-line2:#d8d1c2;--c44-chip:#ece6da;--c44-lab:#b23a2a;--c44-ok:#2f6b4a;--c44-okbg:#e3eee5;--c44-warn:#a0671a;--c44-warnbg:#f4e8cf;--c44-bad:#b23a2a;--c44-badbg:#f6dfd8;--c44-inv:#1b1a17;--c44-invt:#f3efe6;--c44-field:#fff;--c44-sh:0 18px 40px -18px rgba(0,0,0,.35)}
+:root{--c44-bg:#f3efe6;--c44-card:#fffdf8;--c44-card2:#fbf8f1;--c44-ink:#1b1a17;--c44-ink2:#3d3a33;--c44-mut:#6b665c;--c44-mut2:#6f6a5f;--c44-line:#e1d9c9;--c44-line2:#d8d1c2;--c44-chip:#ece6da;--c44-lab:#b23a2a;--c44-ok:#2f6b4a;--c44-okbg:#e3eee5;--c44-warn:#a0671a;--c44-warnbg:#f4e8cf;--c44-bad:#b23a2a;--c44-badbg:#f6dfd8;--c44-inv:#1b1a17;--c44-invt:#f3efe6;--c44-field:#fff;--c44-sh:0 18px 40px -18px rgba(0,0,0,.35)}
 html[data-hl="cur"],html[data-mode="dark"]{--c44-bg:#16140f;--c44-card:#211e18;--c44-card2:#1c1a15;--c44-ink:#f3efe6;--c44-ink2:#d9d3c6;--c44-mut:#a39d90;--c44-mut2:#8f897c;--c44-line:#3a352c;--c44-line2:#4a443a;--c44-chip:#2a261f;--c44-lab:#ec7a64;--c44-ok:#6fbf8f;--c44-okbg:rgba(111,191,143,.16);--c44-warn:#e0a85a;--c44-warnbg:rgba(224,168,90,.16);--c44-bad:#ec7a64;--c44-badbg:rgba(236,122,100,.16);--c44-inv:#f3efe6;--c44-invt:#16140f;--c44-field:#1c1a15;--c44-sh:0 18px 40px -18px rgba(0,0,0,.7)}
 html[data-mode="dark"][data-hl="2c"]{color-scheme:dark}
 html[data-mode="dark"][data-hl="2c"] body{background:#16140f}
@@ -23,7 +23,7 @@ html[data-mode="dark"][data-hl="2c"] body{background:#16140f}
 .md44{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;padding:14px}
 .md44-opt{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;border-radius:16px;border:1px solid var(--w30-line,#d8d1c2);background:transparent;color:inherit;cursor:pointer;text-align:left;font-family:inherit}
 .md44-opt[aria-checked="true"]{border:2px solid var(--w30-ink,#1b1a17);padding:9px}
-.md44-opt b{font-size:14.5px}.md44-opt>span:last-child{font-size:12.5px;color:var(--w30-mut,#8f897c)}
+.md44-opt b{font-size:14.5px}.md44-opt>span:last-child{font-size:12.5px;color:var(--w30-mut,#6f6a5f)}
 .md44-prev{display:flex;flex-direction:column;gap:5px;width:100%;height:64px;border-radius:10px;padding:9px;box-sizing:border-box;margin-bottom:6px;overflow:hidden}
 .md44-prev i{display:block;height:7px;border-radius:4px}
 .md44-prev i:first-child{width:56%;height:9px}.md44-prev i:nth-child(3){width:72%}
@@ -58,7 +58,7 @@ html[data-mode="dark"] .s44-toast,html[data-hl="cur"] .s44-toast{background:#f3e
 .rb44-r.cur{background:color-mix(in srgb,var(--w30-line,#d8d1c2) 22%,transparent)}
 .rb44-r>b{font-size:13.5px;padding-left:2px}
 .rb44-m{min-width:0;display:flex;flex-direction:column;gap:2px}
-.rb44-t{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px;color:var(--w30-mut,#8f897c)}
+.rb44-t{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px;color:var(--w30-mut,#6f6a5f)}
 .rb44-tag{height:20px;padding:0 7px;border-radius:10px;background:var(--c44-chip);color:var(--c44-ink);font:700 10.5px Manrope,system-ui,sans-serif;display:inline-flex;align-items:center;white-space:nowrap}
 .rb44-tag.ok{background:var(--c44-okbg);color:var(--c44-ok)}.rb44-tag.warn{background:var(--c44-warnbg);color:var(--c44-warn)}
 .rb44-n{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

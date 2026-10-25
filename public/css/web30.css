@@ -8,7 +8,7 @@
   --w30-acc:#f26b5e; --w30-field:#0c1119; --w30-chip:rgba(255,255,255,.08);
 }
 html[data-hl="2c"]{
-  --w30-bg:#f3efe6; --w30-side:#f3efe6; --w30-ink:#1b1a17; --w30-mut:#8f897c; --w30-line:#d8d1c2; --w30-hov:#ece6da; --w30-card:#fbf8f1;
+  --w30-bg:#f3efe6; --w30-side:#f3efe6; --w30-ink:#1b1a17; --w30-mut:#67625a; --w30-line:#d8d1c2; --w30-hov:#ece6da; --w30-card:#fbf8f1;
   --w30-acc:#b23a2a; --w30-field:#fff; --w30-chip:#ece6da;
 }
 
@@ -114,9 +114,9 @@ html[data-hl="2c"] #settings .set-ps{font:italic 400 18px var(--serif);color:var
 .cfg-sk{border-radius:12px;border:1px solid #d8d1c2;background:#fff;overflow:hidden;font:500 12px Manrope,system-ui,sans-serif;color:#3d3a33}
 .cfg-sk-b{display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;background:#ece6da;border-bottom:1px solid #d8d1c2}
 .cfg-sk-b i{width:7px;height:7px;border-radius:4px;background:#c9c1b1}
-.cfg-sk-b span{flex:1;text-align:center;font:500 10.5px 'IBM Plex Mono',ui-monospace,monospace;color:#8f897c}
+.cfg-sk-b span{flex:1;text-align:center;font:500 10.5px 'IBM Plex Mono',ui-monospace,monospace;color:#6f6a5f}
 .cfg-sk-in{padding:12px;display:flex;flex-direction:column;gap:6px}
-.cfg-sk-r{display:flex;align-items:center;gap:8px;min-height:28px;padding:0 10px;border-radius:8px;border:1px solid #ece6da;background:#faf8f4;color:#8f897c}
+.cfg-sk-r{display:flex;align-items:center;gap:8px;min-height:28px;padding:0 10px;border-radius:8px;border:1px solid #ece6da;background:#faf8f4;color:#6f6a5f}
 .cfg-sk-r.hl{border:1.5px solid #f6821f;background:#fff3e6;font-weight:700;color:#1b1a17}
 .cfg-sk-r span{flex:1;min-width:0}
 .cfg-sk-r em{flex:none;font:normal 11px 'IBM Plex Mono',ui-monospace,monospace}

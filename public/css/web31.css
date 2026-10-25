@@ -66,7 +66,7 @@ html[data-hl="2c"] .ny-sub{color:#6b6558}
 .ny-inst.ok{color:#2f7d4f}
 html:not([data-hl="2c"]) .ny-inst.ok{color:#8fe0b0}
 #settings .ny-sec>.sg-row{padding-left:0;padding-right:0;border-bottom:1px solid var(--w30-line,#d8d1c2);border-radius:0;background:transparent}
-.ny-note{font-size:13px;color:var(--w30-mut,#8f897c);padding:12px 0 0}
+.ny-note{font-size:13px;color:var(--w30-mut,#6f6a5f);padding:12px 0 0}
 .ny-note.red{color:#b23a2a}
 .ny-setup{gap:8px;padding:16px 18px;border-radius:18px;border:1px solid var(--w30-line,#d8d1c2)}
 .ny-setup>span{font-size:13.5px;color:var(--w30-mut,#6b6558)}

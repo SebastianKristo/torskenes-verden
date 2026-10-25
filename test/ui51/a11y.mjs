@@ -31,7 +31,10 @@ function audit() {
     return parts.join(' > ');
   };
   const txt = (el) => (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60);
-  const parse = (c) => { const m = String(c).match(/rgba?\(([^)]+)\)/); if (!m) return null; const [r, g, b, a = '1'] = m[1].split(/[ ,/]+/).filter(Boolean); return [Number(r), Number(g), Number(b), Number(a)]; };
+  const parse = (c) => {
+    // color-mix() o.l. gir «color(srgb r g b / a)» med 0–1-verdier (A11Y51)
+    const k = String(c).match(/color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.]+))?\)/); if (k) return [k[1] * 255, k[2] * 255, k[3] * 255, k[4] == null ? 1 : Number(k[4])];
+    const m = String(c).match(/rgba?\(([^)]+)\)/); if (!m) return null; const [r, g, b, a = '1'] = m[1].split(/[ ,/]+/).filter(Boolean); return [Number(r), Number(g), Number(b), Number(a)]; };
   const lum = ([r, g, b]) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
   const blend = (top, bot) => { const a = top[3]; return [top[0] * a + bot[0] * (1 - a), top[1] * a + bot[1] * (1 - a), top[2] * a + bot[2] * (1 - a), 1]; };
   /** Effektiv bakgrunn: blander gjennomsiktige lag oppover til en ugjennomsiktig farge. null = bilde/gradient bak (kan ikke måles). */

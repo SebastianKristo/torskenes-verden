@@ -109,7 +109,7 @@ function listView() {
       ${navRow('tfa', icn('#7a5af0', LOCK), 'Tofaktor (2FA)', 'Kode fra autentiseringsappen ved innlogging', meU.totp ? 'På' : 'Av', meU.totp ? '#8fe0b0' : '')}
       ${navRow('pw', icn('#e0a325', KEY), 'Bytt passord', 'Gjelder nettsiden og mobilappene')}`,
     'Passordet hoppes bare over når enheten har en gyldig enhetscookie <b>og</b> kobler til fra lokalt nett (192.168.x.x, 10.x.x.x, 172.16–31.x.x). Fra internett kreves alltid passord, og kode hvis 2FA er på.'),
-    box('Brukere', data.users.map((u) => navRow(`user:${u.id}`, avatar(u), u.name || u.username, userLine(u), u.totp ? '2FA på' : '2FA av', u.totp ? '#8fe0b0' : '#8a93a6')).join('')
+    box('Brukere', data.users.map((u) => navRow(`user:${u.id}`, avatar(u), u.name || u.username, userLine(u), u.totp ? '2FA på' : '2FA av', u.totp ? 'var(--green,#8fe0b0)' : 'var(--text-2,#8a93a6)')).join('')
       + (admin ? `<button type="button" class="sg-row" data-go="add">${icn('#1d2738', PLUS)}<span class="sg-txt"><b style="color:var(--blue)">Legg til bruker</b></span></button>` : ''),
     `${me ? `Innlogget som ${esc(me.name || me.username)} · ${roleTxt(me.role)}${me.isMainAdmin ? ' · hovedadmin' : ''}. ` : ''}${admin ? 'Admin kan legge til og fjerne brukere. Bruker ser dashbordet og styrer egen 2FA.' : 'Brukere legges til av administrator. Du styrer egen totrinnsbekreftelse.'}`),
     admin ? box('Server', navRow('server', icn('#3b6fd6', SRV), 'Navn på serveren', 'Vises i menyen og i mobilappen', store.me.serverName ?? '')) : '',

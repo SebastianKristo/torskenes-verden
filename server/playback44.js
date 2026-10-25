@@ -261,3 +261,6 @@ playback44Api.get('/history', ...G, H((c) => history44(c.req.query())));
 playback44Api.get('/stats', ...G, H((c) => stats44(c.req.query('range'))));
 playback44Api.get('/libraries', ...G, H(() => libraries44()));
 playback44Api.get('/status', ...G, (c) => c.json(serversOut()));
+
+// Prompt 51 (MEDCTL51): mediekontrollen (server/medctl51.js) leser sesjonene med de samme hjelperne og samme test-fetch.
+export const pb44 = { plexConf, jfConf, plexOn, jfOn, demo, PLEX_HDR, plexGet, jfGet, plexSession, jfSession, DEMO_SESS, fetch: (url, o) => (fx ?? fetch)(url, o) };

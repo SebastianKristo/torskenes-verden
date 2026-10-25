@@ -75,8 +75,9 @@ html[data-mode="dark"][data-hl="2c"] .fam{--f-card:#211e18;--f-bg:#16140f}
 :where(html[data-mode="dark"][data-hl="2c"]) .nw-paperDark{--acc-ink:#211e18}
 :where(html[data-mode="dark"][data-hl="2c"]) .nw-sw span{background:#211e18}
 /* paper.css */
-html[data-mode="dark"][data-hl="2c"]{--pp:#16140f;--ink:#f3efe6;--ink2:#a39d90;--rule:#3a352c;--rule2:#3a352c}
-html[data-mode="dark"][data-hl="2c"] body,html[data-mode="dark"][data-hl="2c"] body.not-dash{--page:#16140f;--lock:#f3efe6;--row:#2a261f;--line:#3a352c;--field:#211e18;--pill:#211e18;--text:#f3efe6;--text-2:#a39d90}
+html[data-mode="dark"][data-hl="2c"]{--pp:#16140f;--ink:#f3efe6;--ink2:#a39d90;--ink3:#938d80;--rule:#3a352c;--rule2:#3a352c}
+html[data-mode="dark"][data-hl="2c"] .bdw-all,html[data-mode="dark"][data-hl="2c"] .bdw-t span,html[data-mode="dark"][data-hl="2c"] .bdw-e{color:#a39d90}
+html[data-mode="dark"][data-hl="2c"] body,html[data-mode="dark"][data-hl="2c"] body.not-dash{--page:#16140f;--lock:#f3efe6;--row:#2a261f;--line:#3a352c;--field:#211e18;--pill:#211e18;--text:#f3efe6;--text-2:#a39d90;--muted:#938d80;--red:#e0705e;--green:#5fb383;--hl40-amb:#c98a1b}
 html[data-mode="dark"][data-hl="2c"] .pillnav{background:rgba(243,239,230,.06)}
 html[data-mode="dark"][data-hl="2c"] body.pw-on .pillnav{background:rgba(22,20,15,.94)}
 html[data-mode="dark"][data-hl="2c"] .pill{background:#211e18}
@@ -182,7 +183,7 @@ html[data-mode="dark"][data-hl="2c"] .trk-err{color:#ec7a64}
 :where(html[data-mode="dark"][data-hl="2c"]) .wxp-layers button.on{background:#211e18}
 :where(html[data-mode="dark"][data-hl="2c"]) .wxp-wgr i{background:#211e18}
 /* web30.css */
-html[data-mode="dark"][data-hl="2c"]{--w30-bg:#16140f;--w30-side:#16140f;--w30-ink:#f3efe6;--w30-line:#3a352c;--w30-hov:#2a261f;--w30-card:#211e18;--w30-field:#211e18;--w30-chip:#2a261f}
+html[data-mode="dark"][data-hl="2c"]{--w30-bg:#16140f;--w30-side:#16140f;--w30-ink:#f3efe6;--w30-mut:#a39d90;--w30-line:#3a352c;--w30-hov:#2a261f;--w30-card:#211e18;--w30-field:#211e18;--w30-chip:#2a261f}
 html[data-mode="dark"][data-hl="2c"] #settings .set-q{box-shadow:0 1px 0 #3a352c}
 :where(html[data-mode="dark"][data-hl="2c"]) .cfg-test-msg.ok{color:#6fbf8f}
 :where(html[data-mode="dark"][data-hl="2c"]) .cfg-guide{background:rgba(243,239,230,.45)}
@@ -406,12 +407,11 @@ html[data-mode="dark"][data-hl="2c"] .wh-steps{color:var(--ink,#f3efe6)}
 :where(html[data-mode="dark"][data-hl="2c"]) .sg-fhelp40,html[data-mode="dark"][data-hl="2c"] .sg-fhelp40{border-bottom:1px solid var(--rule,#3a352c)}
 html[data-mode="dark"][data-hl="2c"] .tk40-fs{--f-bg:#16140f;--f-ink:#f3efe6;--f-mut:#a39d90;--f-line:#3a352c;--f-btn:#211e18;--f-x:#f3efe6;--f-xfg:#16140f}
 :where(html[data-mode="dark"][data-hl="2c"]) .dg40{--c40-card:#211e18;--c40-ink:#f3efe6;--c40-mut:#a39d90;--c40-chip:#16140f}
-:where(html[data-mode="dark"][data-hl="2c"]) .dg40 .dg36-it.dg40-s>.dg36-wig{--c40-ink:#211e18;--acc:#211e18;--lab40:#211e18;--blue:#211e18}
-:where(html[data-mode="dark"][data-hl="2c"]) .dg40-s .p-tag-ink{background:#211e18}
-:where(html[data-mode="dark"][data-hl="2c"]) .dg40-s .bar>i{background:#211e18!important}
-:where(html[data-mode="dark"][data-hl="2c"]) .dg40-s .kal-hw-n>span{border-left-color:#211e18!important}
-:where(html[data-mode="dark"][data-hl="2c"]) .dg40-s .kal-strip{background:#211e18!important}
-:where(html[data-mode="dark"][data-hl="2c"]) .dg40-s .kal-hw-x .kal-wp.soon{background:#211e18}
+/* Prompt 51 (A11Y51): helfargede kort beholder hvit tekst også i mørk modus (mørk tekst på de mellomtone-fargene ga 2,1–3,6:1).
+   Lyse kort i mørk modus: etiketter og aksentfarge blandes mot lys tekst så de holder minst 4,5:1 mot #211e18. */
+:where(html[data-mode="dark"][data-hl="2c"]) .dg40 .dg36-it>.dg36-wig{--lab40:color-mix(in srgb,var(--wc) 50%,#f3efe6);--acc:color-mix(in srgb,var(--wc) 50%,#f3efe6);--red:#ec7a64;--neg:#ec7a64;--green:#7fc79a;--pos:#7fc79a}
+:where(html[data-mode="dark"][data-hl="2c"]) .dg40 .dg36-it.dg40-s>.dg36-wig{--lab40:#fff;--acc:#fff;--red:#ffd0c8;--neg:#ffd0c8;--green:#e3f9ea;--pos:#e3f9ea}
+:where(html[data-mode="dark"][data-hl="2c"]) .dg40 .dg36-it.dg40-m>.dg36-wig{--lab40:#e5a00d}
 :where(html[data-mode="dark"][data-hl="2c"]) .ac-card.ac-jwarn{border-left:3px solid var(--red,#ec7a64)}
 :where(html[data-mode="dark"][data-hl="2c"]) .gb40-gl{color:#ec7a64}
 :where(html[data-mode="dark"][data-hl="2c"]) .gs40-jul{background:var(--gs-card,#211e18)}

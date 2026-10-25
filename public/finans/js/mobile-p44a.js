@@ -6,6 +6,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import { loadCtl51, ctlBar51, audioNow51, linksHtml51, mountCtl51 } from '/assets/js/medctl51.js'; // prompt 51 (MEDCTL51): fjernkontroll i «Spilles nå»
 
 const A = { tab: 'now', srv: 'plex', d: {}, err: {}, miss: false, t: {}, q: '', user: '', range: '30d', sumMiss: false, pin: null, poll: null, live: null };
 const TABS = [['now', 'Spilles nå'], ['hist', 'Historikk'], ['stat', 'Statistikk'], ['lib', 'Biblioteker']];
@@ -22,7 +23,7 @@ async function get(key, path, max = 15000) {
 }
 export async function avsLoad(force = false) {
   if (force) A.t = {};
-  const jobs = [get('now', `/playback/sessions?${qsrv()}`, 9000)];
+  const jobs = [get('now', `/playback/sessions?${qsrv()}`, 9000), loadCtl51(force)];
   if (A.tab === 'hist') jobs.push(get(`hist:${A.q}:${A.user}`, `/playback/history?${qsrv()}&q=${encodeURIComponent(A.q)}&user=${encodeURIComponent(A.user)}&page=1`));
   // Prompt 45 (claude-code-avspilling-statistikk-mobil.md): GET /api/playback/summary?range=7d|30d|year|all (alle servere), ellers /stats.
   if (A.tab === 'stat') jobs.push(A.sumMiss ? get(`stat:${A.range}`, `/playback/stats?${qsrv()}&range=${A.range === 'year' ? '12m' : A.range === 'all' ? '12m' : A.range}`, 60000) : getSum());
@@ -37,6 +38,7 @@ async function getSum() {
   catch (e) { if (e.status === 404) { A.sumMiss = true; A.t[key] = 0; return get(`stat:${A.range}`, `/playback/stats?${qsrv()}&range=${A.range === '30d' || A.range === '7d' ? A.range : '12m'}`, 60000); } A.err[key] = e.message; A.d[key] ??= null; }
 }
 const reload = () => avsLoad().then(() => { if (vis()) draw(); }).catch(() => {});
+if (typeof document !== 'undefined') mountCtl51(() => { if (vis()) draw(); });
 const vis = () => m.screen === 'avspilling' || (m.screen === 'media' && globalThis.P43?.media?.M?.tab === 'avs');
 const pst = (x, w = 64) => `<span class="p44a-pst" style="width:${w}px;background-color:${colOf(x.title ?? x.t)}${x.poster || x.thumb ? `;background-image:url('${esc(x.poster ?? x.thumb)}')` : ''}"></span>`;
 const pct = (v) => Math.max(0, Math.min(100, Math.round(+v || 0)));
@@ -59,7 +61,7 @@ function nowView() {
         <b class="p44a-t">${esc(x.show ?? x.title ?? '')}</b>${x.subtitle || x.show ? `<small>${esc(x.subtitle ?? [x.episode ?? '', x.title].filter(Boolean).join(' · '))}</small>` : ''}
         ${chips.length ? `<span class="p44a-chips">${chips.map((c) => `<i>${esc(c)}</i>`).join('')}</span>` : ''}
         <span class="p44a-bar" style="--c:${SC[A.srv]}"><i class="b" style="width:${bf}%"></i><i class="p" style="width:${p}%"></i></span>
-        <span class="p44a-u"><span class="p44a-av" style="background:${colOf(x.user)}">${esc(x.userInitial ?? String(x.user ?? '?').slice(0, 1).toUpperCase())}</span>${esc(x.user ?? '')}<span class="m-grow"></span>${x.remainingText ? esc(x.remainingText) : x.left ?? x.minutesLeft ? `${esc(String(x.left ?? `${x.minutesLeft} min`))} igjen` : `${p} %`}</span></div></div>`; }).join('') : '<div class="p44a-empty"><b>Ingen spiller noe akkurat nå</b><span>Strømmene vises her med en gang noen begynner å se.</span></div>'}`;
+        <span class="p44a-u"><span class="p44a-av" style="background:${colOf(x.user)}">${esc(x.userInitial ?? String(x.user ?? '?').slice(0, 1).toUpperCase())}</span>${esc(x.user ?? '')}<span class="m-grow"></span>${x.remainingText ? esc(x.remainingText) : x.left ?? x.minutesLeft ? `${esc(String(x.left ?? `${x.minutesLeft} min`))} igjen` : `${p} %`}</span>${ctlBar51(x.id)}</div></div>`; }).join('') : '<div class="p44a-empty"><b>Ingen spiller noe akkurat nå</b><span>Strømmene vises her med en gang noen begynner å se.</span></div>'}${audioNow51()}${linksHtml51()}`;
 }
 function plexLogin() {
   const P = A.pin;

@@ -5,13 +5,13 @@
 
 
 /* MacTheme.light / MacTheme.darkTheme */
-#kal.k39{--bg:#f3efe6;--ink:#1b1a17;--card:#fffdf8;--chip:#e9e2d3;--line:#ddd5c5;--line2:#e6dfd1;--mut:#6b665c;--mut2:#a39d90;--ink2:#3d3a33;
+#kal.k39{--bg:#f3efe6;--ink:#1b1a17;--card:#fffdf8;--chip:#e9e2d3;--line:#ddd5c5;--line2:#e6dfd1;--mut:#6b665c;--mut2:#716b5e;--ink2:#3d3a33;
   --acc:#b23a2a;--red:#b23a2a;--sun:#b23a2a;--dim:rgba(20,18,14,.46);--glass:rgba(255,253,248,.94);--tint:16%;--tint-all:18%;--today:rgba(178,58,42,.035);--today-m:rgba(178,58,42,.06);
   --serif:Newsreader,Georgia,serif;--ui:Manrope,system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,monospace;--monoh:ui-monospace,'SF Mono',Menlo,Consolas,'DejaVu Sans Mono',monospace;
   --k-ink:var(--ink);--k-mut:var(--mut);--k-line:var(--line);--k-lab:var(--red);--k-labt:var(--acc);--k-card:var(--card);--k-bg:var(--bg);--k-in:var(--chip);--k-hero:var(--ink);--k-herofg:var(--bg);--k-shadow:0 10px 30px -18px rgba(0,0,0,.3);
   color-scheme:light}
 @media (prefers-color-scheme:dark){
-  #kal.k39{--bg:#161513;--ink:#efe9de;--card:#211f1b;--chip:#2b2824;--line:#3b3731;--line2:#2e2b26;--mut:#a49d91;--mut2:#7a746a;--ink2:#d6cfc2;
+  #kal.k39{--bg:#161513;--ink:#efe9de;--card:#211f1b;--chip:#2b2824;--line:#3b3731;--line2:#2e2b26;--mut:#a49d91;--mut2:#8c867b;--ink2:#d6cfc2;
     --acc:#ec7a64;--sun:#ec7a64;--dim:rgba(0,0,0,.55);--glass:rgba(33,31,27,.94);--tint:32%;--tint-all:30%;--k-shadow:0 10px 30px -14px rgba(0,0,0,.7);color-scheme:dark}
   html[data-kal-app],html[data-kal-app] body{background:#161513}
   #kal.k39 .k39-ev,#kal.k39 .k39-chip.all{color:var(--lt)}

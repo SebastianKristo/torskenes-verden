@@ -157,7 +157,7 @@ function kontoView() {
       { html: avatarRow(store.me.me ?? me), q: 'Profilbilde avatar bilde last opp fjern' },
     ]),
     group('Innlogging', d ? [
-      row({ t: 'Totrinnsbekreftelse', k: '2FA tofaktor TOTP kode autentisering', s: 'Krev en kode fra autentiseringsappen når du logger inn.', v: mu.totp ? 'På' : 'Av', vc: mu.totp ? '#8fe0b0' : '#8a93a6', btn: 'Administrer', go: 'konto|tfa' }),
+      row({ t: 'Totrinnsbekreftelse', k: '2FA tofaktor TOTP kode autentisering', s: 'Krev en kode fra autentiseringsappen når du logger inn.', v: mu.totp ? 'På' : 'Av', vc: mu.totp ? 'var(--green,#8fe0b0)' : 'var(--text-2,#8a93a6)', btn: 'Administrer', go: 'konto|tfa' }),
       row({ t: 'Pålitelig enhet', k: 'lokalt nett LAN', s: d.devices.trusted ? 'Denne enheten slipper passord på lokalt nett.' : 'Passord kreves alltid på denne enheten.', tog: !!d.devices.trusted, act: 'data-trust' }),
       row({ t: 'Pålitelige enheter', s: d.devices.lan ? 'Du er på lokalt nett nå.' : 'Du er ikke på lokalt nett nå.', v: String(d.devices.devices.length), btn: 'Administrer', go: 'konto|devices' }),
       row({ t: 'Passord', k: 'bytt endre', s: 'Gjelder nettsiden og mobilappene.', v: '••••••••', go: 'konto|pw' }),
@@ -167,7 +167,7 @@ function kontoView() {
     // Prompt 38: «Lås skjermen» og «Logg ut» er flyttet hit fra sidemenyen (web og mobil), + «Logg ut av alle enheter».
     group('Økt', [
       row({ t: 'Lås skjermen', k: 'lås låse skjerm pin', s: 'Låser med en gang. Passord (eller Face ID i appen) for å fortsette · Ctrl+Alt+L', btn: 'Lås', act: 'data-set-lock', ico: svg(P.lock, 16), ic: '#2b5d8a' }),
-      row({ t: 'Logg ut', k: 'logg ut sign out', tc: '#e0675a', s: 'Logger ut av Homelab på denne enheten og glemmer den.', btn: 'Logg ut', act: 'data-set-logout', ico: svg(P.out, 16), ic: '#b23a2a' }),
+      row({ t: 'Logg ut', k: 'logg ut sign out', tc: 'var(--red,#e0675a)', s: 'Logger ut av Homelab på denne enheten og glemmer den.', btn: 'Logg ut', act: 'data-set-logout', ico: svg(P.out, 16), ic: '#b23a2a' }),
       row({ t: 'Logg ut av alle enheter', k: 'alle økter enheter logg ut overalt', s: sessCount38 == null ? 'Ugyldiggjør alle økter. Krever passordet.' : `${sessCount38} ${sessCount38 === 1 ? 'økt' : 'økter'} er logget inn nå. Krever passordet.`, btn: 'Logg ut alle', act: 'data-set-logoutall', ico: svg('M3 12h4M17 12h4M12 3v4M12 17v4M8 8l8 8M16 8l-8 8', 16), ic: '#7a3b6b' }),
     ]),
   ].filter(Boolean) };

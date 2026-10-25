@@ -30,8 +30,9 @@ import java.net.URLEncoder
  *  - «Avganger»: Mine stopp (/api/me/stops, maks 4) → de neste avgangene (/api/ruter/departures?stop=…&n=6).
  *  - «På vei hjem»: reisen hjem nå (/api/ruter/my-trip?dir=toHome) og «Si fra til familien» (innsjekk «På vei hjem» til familien,
  *    posisjonen bare med denne innsjekken; uten nett i offline-køen).
- *  - «Media»: hva som spilles nå (/api/playback/sessions) og «Fortsett» fra Audiobookshelf (/api/media51/audio/continue).
- *    Bare visning: serveren har ingen API for å styre avspillingen (play/pause) ennå – se docs/android-plattform-51.md.
+ *  - «Media»: hva som spilles nå med fjernkontroll (MEDCTL51: /api/medctl51/now og POST /api/medctl51/sessions/:id/:action –
+ *    pause/spill av, neste, forrige, spol 30 s, stopp; serveren avgjør hvem som kan styre hva) og «Fortsett» fra Audiobookshelf
+ *    (/api/media51/audio/continue). Eldre server uten /medctl51: bare visning via /api/playback/sessions.
  * Kontoen er den aktive i appen (bgApi41). Uten innlogging vises en melding. Ingen tekstfelt eller lange lister (bilmalenes grenser:
  * maks 6 rader per liste). Sideloadet app: Android Auto → Utviklerinnstillinger → «Ukjente kilder» må være på (se dokumentasjonen).
  */
@@ -195,21 +196,31 @@ class Car51Trip(ctx: CarContext) : Car51Base(ctx) {
     }
 }
 
-/* ---------------- Media ---------------- */
+/* ---------------- Media (MEDCTL51: fjernkontroll) ---------------- */
+
+/** En aktiv avspilling slik /api/medctl51/now gir den (eller /api/playback/sessions på eldre server, da uten kontroller). */
+data class Car51Play(val id: String, val title: String, val line: String, val state: String, val canControl: Boolean, val controls: List<String>, val controlText: String?)
+
+internal fun car51Plays(o: JSONObject, ctl: Boolean): List<Car51Play> {
+    val a = o.optJSONArray("items") ?: JSONArray()
+    return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { s ->
+        val st = when (s.optString("state")) { "paused" -> "pause"; "buffering" -> "laster"; else -> "spiller" }
+        val c = s.optJSONArray("controls") ?: JSONArray()
+        Car51Play(s.optString("id"), s.optString("title").ifBlank { "Ukjent" },
+            listOf(s.optString("user"), s.optString("device"), st, s.optString("remainingText")).filter { it.isNotBlank() }.joinToString(" · "),
+            s.optString("state"), ctl && s.optBoolean("canControl"), (0 until c.length()).map { c.optString(it) }, s.optString("controlText").takeIf { it.isNotBlank() && it != "null" })
+    }
+}
 
 class Car51Media(ctx: CarContext) : Car51Base(ctx) {
-    private var playing: List<Pair<String, String>> = emptyList()
+    private var playing: List<Car51Play> = emptyList()
     private var resume: List<Pair<String, String>> = emptyList()
     init { reload() }
 
     override fun reload() = load { api ->
-        playing = runCatching {
-            val a = JSONObject(api.hlGet("/playback/sessions?server=all", timeout = 10_000)).optJSONArray("items") ?: JSONArray()
-            (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { s ->
-                val st = when (s.optString("state")) { "paused" -> "pause"; "buffering" -> "laster"; else -> "spiller" }
-                s.optString("title").ifBlank { "Ukjent" } to listOf(s.optString("user"), s.optString("device"), st, s.optString("remainingText")).filter { it.isNotBlank() }.joinToString(" · ")
-            }
-        }.getOrDefault(emptyList())
+        playing = runCatching { car51Plays(JSONObject(api.hlGet("/medctl51/now", timeout = 10_000)), true) }.getOrElse {
+            runCatching { car51Plays(JSONObject(api.hlGet("/playback/sessions?server=all", timeout = 10_000)), false) }.getOrDefault(emptyList())
+        }
         resume = runCatching {
             val a = JSONObject(api.hlGet("/media51/audio/continue?limit=4", timeout = 10_000)).optJSONArray("items") ?: JSONArray()
             (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { i ->
@@ -226,10 +237,55 @@ class Car51Media(ctx: CarContext) : Car51Base(ctx) {
         if (loading) return b.setLoading(true).build()
         if (playing.isEmpty() && resume.isEmpty()) return message("Media", "Ingenting spilles nå, og ingen lydbøker eller podkaster å fortsette.")
         val list = ItemList.Builder()
-        playing.take(3).forEach { (t, s) -> list.addItem(row("▶ $t", s).build()) }
+        playing.take(3).forEach { p ->
+            val r = row((if (p.state == "paused") "❚❚ " else "▶ ") + p.title, p.line, if (p.canControl) "Trykk for å styre" else p.controlText)
+            if (p.canControl) r.setBrowsable(true).setOnClickListener { screenManager.push(Car51Ctl(carContext, p)) }
+            list.addItem(r.build())
+        }
         resume.take(6 - minOf(3, playing.size)).forEach { (t, s) -> list.addItem(row("Fortsett: $t", s).build()) }
         return b.setSingleList(list.build())
             .setActionStrip(androidx.car.app.model.ActionStrip.Builder().addAction(Action.Builder().setTitle("Oppdater").setOnClickListener { reload(); invalidate() }.build()).build())
             .build()
+    }
+}
+
+/** Fjernkontroll for én avspilling: store rader (bilmalene har ikke knapperader), maks 6. */
+class Car51Ctl(ctx: CarContext, private var p: Car51Play) : Car51Base(ctx) {
+    private var busy = false
+    init { loading = false }
+
+    private fun cmd(action: String, body: JSONObject = JSONObject()) {
+        val api = api() ?: return
+        if (busy) return
+        busy = true
+        invalidate()
+        scope.launch {
+            val msg = try {
+                val r = JSONObject(withContext(Dispatchers.IO) { api.hlPost("/medctl51/sessions/" + URLEncoder.encode(p.id, "UTF-8") + "/" + action, body) })
+                val item = r.optJSONObject("item")
+                if (item == null) { busy = false; CarToast.makeText(carContext, r.optString("message").ifBlank { "Stoppet" }, CarToast.LENGTH_SHORT).show(); screenManager.pop(); return@launch }
+                car51Plays(JSONObject().put("items", JSONArray().put(item)), true).firstOrNull()?.let { n -> p = n }
+                r.optString("message").ifBlank { "OK" }
+            } catch (e: ApiException) {
+                if (Offline51.isOffline(e)) "Ingen kontakt med serveren" else e.message ?: "Fikk ikke styrt avspillingen"
+            }
+            busy = false
+            CarToast.makeText(carContext, msg, CarToast.LENGTH_SHORT).show()
+            invalidate()
+        }
+    }
+
+    override fun onGetTemplate(): Template {
+        val list = ItemList.Builder()
+        val has = { k: String -> p.controls.contains(k) }
+        if (has("playpause")) list.addItem(row(if (p.state == "paused") "▶ Spill av" else "❚❚ Pause").setOnClickListener { cmd("toggle") }.build())
+        if (has("next")) list.addItem(row("⏭ Neste").setOnClickListener { cmd("next") }.build())
+        if (has("previous")) list.addItem(row("⏮ Forrige").setOnClickListener { cmd("previous") }.build())
+        if (has("seek")) list.addItem(row("↺ Spol 30 s tilbake").setOnClickListener { cmd("seek", JSONObject().put("offset", -30_000)) }.build())
+        if (has("seek")) list.addItem(row("↻ Spol 30 s frem").setOnClickListener { cmd("seek", JSONObject().put("offset", 30_000)) }.build())
+        if (has("stop")) list.addItem(row("■ Stopp").setOnClickListener { cmd("stop") }.build())
+        val b = ListTemplate.Builder().setTitle(p.title).setHeaderAction(Action.BACK)
+        if (busy) return b.setLoading(true).build()
+        return b.setSingleList(list.build()).build()
     }
 }

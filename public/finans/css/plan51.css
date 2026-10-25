@@ -122,7 +122,7 @@
 /* Egen side (PWA/mobil) */
 .p51-page{max-width:1080px;margin:0 auto;padding:max(16px,env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom))}
 .p51-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
-.p51-top a{color:var(--link);text-decoration:none;font-weight:600;font-size:14px}
+.p51-top a{color:var(--link);text-decoration:none;font-weight:600;font-size:14px;padding-block:4px;margin-block:-4px}
 .p51-top h1{margin:0;font-family:var(--font-d);font-weight:var(--dw,400);font-size:30px}
 @media (max-width:600px){
   .p51-big{font-size:28px}

@@ -3,7 +3,7 @@
    sidepanel (minikalender, kalendere) og visningen. Ark for detaljer, ny/rediger og søk. Hjem-widgeten nederst. */
 .kal{--k-ink:var(--text);--k-mut:var(--text-2);--k-line:rgba(255,255,255,.12);--k-lab:#c8483a;--k-labt:#f59a8f;--k-card:var(--card,#141a26);--k-bg:#0b0e15;--k-in:rgba(255,255,255,.05);
   --k-hero:#232b3b;--k-herofg:#f3efe6;--k-shadow:0 10px 30px -14px rgba(0,0,0,.6)}
-html[data-hl="2c"] .kal{--k-ink:#1b1a17;--k-mut:#7a7468;--k-line:#d8d1c2;--k-lab:#b23a2a;--k-labt:#b23a2a;--k-card:#fff;--k-bg:#f3efe6;--k-in:#f3efe6;--k-hero:#1b1a17;--k-herofg:#f3efe6;--k-shadow:0 10px 30px -18px rgba(0,0,0,.3)}
+html[data-hl="2c"] .kal{--k-ink:#1b1a17;--k-mut:#6f6a5f;--k-line:#d8d1c2;--k-lab:#b23a2a;--k-labt:#b23a2a;--k-card:#fff;--k-bg:#f3efe6;--k-in:#f3efe6;--k-hero:#1b1a17;--k-herofg:#f3efe6;--k-shadow:0 10px 30px -18px rgba(0,0,0,.3)}
 .kal-grow{flex:1;min-width:0}
 .kal-strip{flex:none;width:6px;align-self:stretch;border-radius:3px;background:var(--c)}
 

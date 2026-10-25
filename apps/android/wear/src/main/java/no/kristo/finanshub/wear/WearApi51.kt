@@ -24,6 +24,8 @@ import java.net.URLEncoder
  *  - Avganger: /api/me/stops + /api/ruter/departures?stop=…&n=5.
  *  - Handleliste: Gjøremål-listen «Handel» (/api/tasks/lists, /api/tasks?list=…, PATCH /api/tasks/:id {done}, POST /api/tasks).
  *  - Glimt med tale: talegjenkjenning på klokka (systemets RecognizerIntent) → POST /api/glimt/agent {text, module:'home'}.
+ *  - Media (MEDCTL51): GET /api/medctl51/now og POST /api/medctl51/sessions/:id/:action (toggle, next, previous, seek {offset}, stop).
+ *    Serveren avgjør hvem som kan styre hva; klokka viser bare knappene i «controls».
  */
 
 class WearApiError51(message: String, val status: Int = 0) : Exception(message)
@@ -33,6 +35,7 @@ data class WPerson51(val id: String, val name: String)
 data class WDep51(val line: String, val to: String, val minutes: Int?, val realtime: Boolean)
 data class WStop51(val id: String, val name: String, val deps: List<WDep51>)
 data class WItem51(val id: String, val title: String, val done: Boolean)
+data class WPlay51(val id: String, val title: String, val sub: String, val paused: Boolean, val controls: List<String>, val note: String?)
 data class WQr51(val sessionId: String, val payload: String, val key: String, val expires: Long)
 
 const val DEFAULT_SERVER51 = "https://os.smarthjemexperten.no"
@@ -171,6 +174,27 @@ class WearApi51(private val server: String, private val token: String?) {
         val b = JSONObject().put("title", title).put("n", title)
         if (list != null) b.put("list", list).put("l", list)
         call("POST", "/tasks", b)
+    }
+
+    /* ---------- Media: spilles nå med fjernkontroll (MEDCTL51) ---------- */
+
+    private fun play51(s: JSONObject): WPlay51 {
+        val c = s.optJSONArray("controls") ?: JSONArray()
+        val ctl = if (s.optBoolean("canControl")) (0 until c.length()).map { c.optString(it) } else emptyList()
+        return WPlay51(s.optString("id"), s.optString("title").ifBlank { "Ukjent" },
+            listOf(s.optString("user"), s.optString("device"), s.optString("remainingText")).filter { it.isNotBlank() }.joinToString(" · "),
+            s.optString("state") == "paused", ctl, s.optString("controlText").takeIf { it.isNotBlank() && it != "null" })
+    }
+
+    suspend fun nowPlaying(): List<WPlay51> {
+        val a = call("GET", "/medctl51/now").optJSONArray("items") ?: JSONArray()
+        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.map { play51(it) }.filter { it.id.isNotBlank() }.take(6)
+    }
+
+    /** → oppdatert avspilling, eller null når den er stoppet. */
+    suspend fun control(id: String, action: String, body: JSONObject = JSONObject()): WPlay51? {
+        val o = call("POST", "/medctl51/sessions/" + URLEncoder.encode(id, "UTF-8") + "/" + action, body)
+        return o.optJSONObject("item")?.let { play51(it) }
     }
 
     /* ---------- Glimt ---------- */

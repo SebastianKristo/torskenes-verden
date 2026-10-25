@@ -1,6 +1,6 @@
 /* Familie og kart (prompt 16). Mørk som resten av «Nåværende»; papir i «Vindu og papir» (html[data-hl="2c"]). */
 .fam{--f-ink:var(--text);--f-mute:var(--text-2);--f-faint:var(--muted);--f-line:var(--line);--f-acc:#f59a8f;--f-pos:#8fe0b0;--f-chip:rgba(255,255,255,.06);--f-sheet:#121722;--f-on:#eef0f4;--f-onink:#0b0e15}
-html[data-hl="2c"] .fam{--f-ink:#1b1a17;--f-mute:#6b665c;--f-faint:#8f897c;--f-line:#e3ddcf;--f-acc:#b23a2a;--f-pos:#2f7a4f;--f-chip:#f3efe6;--f-sheet:#fff;--f-on:#1b1a17;--f-onink:#f3efe6}
+html[data-hl="2c"] .fam{--f-ink:#1b1a17;--f-mute:#6b665c;--f-faint:#6f6a5f;--f-line:#e3ddcf;--f-acc:#b23a2a;--f-pos:#2f7a4f;--f-chip:#f3efe6;--f-sheet:#fff;--f-on:#1b1a17;--f-onink:#f3efe6}
 .fam-top{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 .fam-sub{color:var(--f-mute,var(--text-2));font-size:13px;min-width:0}
 .fam{color:var(--f-ink)}

@@ -1,7 +1,7 @@
 /* Bursdager (prompt 24, Bursdager.dc.html variant «web»). Mørk i «Nåværende», papir i «Vindu og papir» (html[data-hl="2c"]). */
 .bd{--b-ink:var(--text);--b-mut:var(--text-2);--b-line:var(--line);--b-lab:#e0604f;--b-labt:#f59a8f;--b-pos:#8fe0b0;--b-card:var(--card,#141a26);--b-bg:var(--bg,#0b0e15);--b-in:rgba(255,255,255,.04);
   color:var(--b-ink);max-width:1200px;position:relative;font-family:Manrope,system-ui,sans-serif}
-html[data-hl="2c"] .bd{--b-ink:#1b1a17;--b-mut:#7a7468;--b-line:#d8d1c2;--b-lab:#b23a2a;--b-labt:#b23a2a;--b-pos:#2f7a4f;--b-card:#fff;--b-bg:#f3efe6;--b-in:#f3efe6}
+html[data-hl="2c"] .bd{--b-ink:#1b1a17;--b-mut:#6f6a5f;--b-line:#d8d1c2;--b-lab:#b23a2a;--b-labt:#b23a2a;--b-pos:#2f7a4f;--b-card:#fff;--b-bg:#f3efe6;--b-in:#f3efe6}
 .bd-top{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 .bd-tsub{color:var(--text-2);font-size:13px}
 html[data-hl="2c"] body.pw-low .bd-top{display:none}
@@ -114,9 +114,9 @@ html:not([data-hl="2c"]) .bd-sw.on{background:#2f7a4f}
 .bd-wk{font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:#b23a2a}
 .bd-wbig{display:flex;align-items:baseline;gap:5px;margin-top:4px}
 .bd-ws .bd-wbig b{font:500 40px/1 Newsreader,Georgia,serif;color:#b23a2a}
-.bd-ws .bd-wbig span{font-size:12px;font-weight:700;color:#7a7468}
+.bd-ws .bd-wbig span{font-size:12px;font-weight:700;color:#6f6a5f}
 .bd-wn{margin-top:auto;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bd-wsub{font-size:11.5px;color:#7a7468;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bd-wsub{font-size:11.5px;color:#6f6a5f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bd-wm{width:100%;height:158px;border-radius:24px;background:rgba(255,255,255,.94);color:#1b1a17;padding:12px 14px;gap:6px}
 .bd-wmh{display:flex;justify-content:space-between;align-items:baseline}
 .bd-wmh b{font:500 17px Newsreader,Georgia,serif}
@@ -125,7 +125,7 @@ html:not([data-hl="2c"]) .bd-sw.on{background:#2f7a4f}
 .bd-wav{flex:none;width:26px;height:26px;border-radius:13px;color:#fff;display:grid;place-items:center;font:800 10px Manrope,system-ui,sans-serif;overflow:hidden}
 .bd-wr .bd-grow{display:flex;flex-direction:column}
 .bd-wr .bd-grow b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bd-wr .bd-grow span{font-size:11px;color:#7a7468;white-space:nowrap}
+.bd-wr .bd-grow span{font-size:11px;color:#6f6a5f;white-space:nowrap}
 .bd-wr .bd-ww{flex:none;font:500 14px Newsreader,Georgia,serif;color:#1b1a17}
 .bd-ww.soon{color:#b23a2a!important}
 .bd-wa{width:200px;border-radius:28px;background:#f4ddd8;color:#3b0f0a;padding:14px;gap:8px}
@@ -162,7 +162,7 @@ html:not([data-hl="2c"]) .bd-sw.on{background:#2f7a4f}
 .bdw-w.soon{color:#f59a8f}
 .bdw-e{font-size:13px;color:var(--text-2)}
 html[data-hl="2c"] .bdw-k,html[data-hl="2c"] .bdw-w.soon{color:#b23a2a}
-html[data-hl="2c"] .bdw-all,html[data-hl="2c"] .bdw-t span,html[data-hl="2c"] .bdw-e{color:#7a7468}
+html[data-hl="2c"] .bdw-all,html[data-hl="2c"] .bdw-t span,html[data-hl="2c"] .bdw-e{color:#6f6a5f}
 html[data-hl="2c"] .p-sec .bdw{padding:2px 0}
 .bd-ch .bd-grow>span.err{display:block;color:var(--b-labt);font-size:12px}
 

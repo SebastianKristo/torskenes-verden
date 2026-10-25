@@ -69,4 +69,5 @@ export async function probe47(url, ms = 1500) {
 }
 
 /** Statusfarge for en test. */
-export const tone47 = (r) => (r?.state === 'ok' ? '#2f8a4f' : r?.state === 'err' ? '#c2412d' : null);
+// A11Y51: temafargene (lys/mørk papir og «Nåværende») i stedet for faste farger, så statusteksten holder 4,5:1 i begge temaer.
+export const tone47 = (r) => (r?.state === 'ok' ? 'var(--green,#2f8a4f)' : r?.state === 'err' ? 'var(--red,#c2412d)' : null);

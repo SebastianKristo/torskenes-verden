@@ -2,7 +2,7 @@
    Fargene er papirfargene fra fasiten; mørk modus (web data-mode=dark / PWA papir mørk) bytter tokenene. */
 .f50 {
   --f-bg: #f3efe6; --f-card: #fff; --f-ink: #1b1a17; --f-ink2: #4a463f; --f-mut: #6b665c; --f-mut2: #8a857a; --f-line: #ece6da; --f-bd: #d8d1c2; --f-dash: #c9c1b0;
-  --f-red: #b23a2a; --f-redbg: #f6e0dc; --f-green: #2f7d4f; --f-greenbg: #e3efe6; --f-map: #e8e4da; --f-pri: #1b1a17; --f-onpri: #fff;
+  --f-red: #b23a2a; --f-redbg: #f6e0dc; --f-green: #2d774b; --f-greenbg: #e3efe6; --f-map: #e8e4da; --f-pri: #1b1a17; --f-onpri: #fff;
   --f-pill: #1b1a17; --f-tabon: #f3efe6; --f-taboff: #cfc7b7; --f-darkc: #1b1a17; --f-sh: 0 6px 16px rgba(0, 0, 0, .18);
   --f-serif: Newsreader, Georgia, serif; --f-mono: 'IBM Plex Mono', ui-monospace, monospace;
   background: var(--f-bg); color: var(--f-ink); font-family: Manrope, system-ui, sans-serif; font-size: 14px; line-height: 1.35; -webkit-tap-highlight-color: transparent; box-sizing: border-box;
