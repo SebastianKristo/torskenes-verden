@@ -57,10 +57,17 @@ const base = (id) => String(id ?? '').replace(/:latest$/, '');
 const sameModel = (a, b) => !!a && !!b && (a === b || base(a) === base(b));
 const gb = (v) => String(Math.round(v * 10) / 10).replace('.', ',');
 
+// Prompt 59: målt på Mac mini-en med `npm run eval` (19/19 caser 3/3, 25.10.2026): qwen3:8b til all tekst og qwen2.5vl:7b til bilder.
+// Én tekstmodell til alle tekstoppgavene gir ingen modellbytter med OLLAMA_MAX_LOADED_MODELS=1. Store modeller (> 6 GB, f.eks. gemma4)
+// dytter qwen3:8b ut av minnet på 16 GB og ga 50–170 s svartid i eval – de trekkes ned når GPU-budsjettet er ≤ 12 GB.
+export const EVAL_BEST59 = Object.freeze({ text: 'qwen3:8b', vision: 'qwen2.5vl:7b', embed: null });
+const evalBonus59 = (c, w) => (w.need.includes('bilde') ? (sameModel(c.id, EVAL_BEST59.vision) ? 0.35 : 0) : w.need.includes('embedding') ? 0 : sameModel(c.id, EVAL_BEST59.text) ? 0.35 : 0);
 function scoreOf(c, w, budget, { installed, inUse }) {
   const norsk = c.norsk / 5, fart = Math.min(1, c.fart / 40), minne = Math.max(0, 1 - c.mem / budget), acc = c.acc;
-  return (w.n ?? 0) * norsk + (w.f ?? 0) * fart + (w.m ?? 0) * minne + (w.a ?? 0) * acc + (installed ? 0.1 : 0) + (inUse ? 0.1 : 0);
+  const swap = budget <= 12 && c.mem > LARGE_GB ? 0.3 : 0;
+  return (w.n ?? 0) * norsk + (w.f ?? 0) * fart + (w.m ?? 0) * minne + (w.a ?? 0) * acc + (installed ? 0.1 : 0) + (inUse ? 0.1 : 0) + evalBonus59(c, w) - swap;
 }
+const EVAL_WHY59 = (t, c) => (sameModel(c.id, EVAL_BEST59.text) || sameModel(c.id, EVAL_BEST59.vision) ? ' Testet i eval på Mac mini-en: alle casene besto 3 av 3 ganger.' : '');
 const WHY_RULE = {
   chat: (c) => `${cap(c.desc)}, og passer i minnet (${gb(c.mem)} GB).`,
   sok: (c) => `Svarer raskt på korte spørsmål og er ${c.desc}.`,
@@ -107,7 +114,7 @@ export async function recommend(u, { hw = null, withWhy = true } = {}) {
   const pick = (t) => {
     const w = WEIGHTS[t.id];
     const cands = REC.filter((c) => w.need.every((e) => c.evner.includes(e)) && (w.need.includes('embedding') || !c.evner.every((e) => NO_TEXT.has(e))) && c.mem <= budget - 0.2
-      && !(ai.INTERPRET_TASKS47.includes(t.id) && ai.retiredModel55(c.id))); // prompt 55: llama3.2:3b anbefales aldri til tolkning
+      && !ai.retiredModel55(c.id)); // prompt 55/59: llama3.2:3b anbefales aldri (heller ikke som alternativ)
     const cur = r.tasks?.[t.id]?.model ?? '';
     return cands.map((c) => ({ c, s: scoreOf(c, w, budget, { installed: isInst(c.id), inUse: sameModel(cur, c.id) }) })).sort((a, b) => b.s - a.s);
   };
@@ -128,8 +135,10 @@ export async function recommend(u, { hw = null, withWhy = true } = {}) {
       if (repl) { alt = top; top = repl; }
     }
     const cur = r.tasks?.[t.id]?.model ?? '';
+    // Embeddings: bytte modell betyr at hele kunnskapsbasen må indekseres på nytt – behold den som er i bruk når den er en embedding-modell.
+    if (t.id === 'kb' && cur) { const keep = L.find((x) => sameModel(x.c.id, cur)); if (keep && keep !== top) { alt = top; top = keep; } }
     const fit = fit38(top.c.mem, budget) ?? 'PASSER';
-    items.push({ task: t.id, taskName: t.name, model: top.c.id, why: WHY_RULE[t.id]?.(top.c) ?? cap(top.c.desc), alt: alt?.c.id ?? null, fit, installed: isInst(top.c.id), inUse: sameModel(cur, top.c.id),
+    items.push({ task: t.id, taskName: t.name, model: top.c.id, why: (WHY_RULE[t.id]?.(top.c) ?? cap(top.c.desc)) + EVAL_WHY59(t.id, top.c), alt: alt?.c.id ?? null, fit, installed: isInst(top.c.id), inUse: sameModel(cur, top.c.id),
       sizeGb: top.c.mem, pullCmd: `ollama pull ${top.c.id}`, current: cur || null, score: Math.round(top.s * 100) / 100, fin: !!t.fin, localOnly: !!(t.fin && finLocal) });
   }
   let engine = 'regler', cachedAt = null;
