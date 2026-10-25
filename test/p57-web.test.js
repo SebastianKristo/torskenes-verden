@@ -61,7 +61,7 @@ test('lyd spilles med Web Audio (CSP uten media-src blokkerer blob:-lyd i <audio
 
 test('chunks57 deler lang tekst i biter under serverens grense på 1500 tegn', () => {
   const src = V.slice(V.indexOf('export function chunks57'), V.indexOf('function setState'));
-  const chunks57 = new Function(`const MAXC = 1400; ${src.replace('export function', 'function')}; return chunks57;`)();
+  const chunks57 = new Function(`const MAXC = 1400, FIRSTC = 160; ${src.replace(/export function/g, 'function')}; return chunks57;`)();
   assert.deepEqual(chunks57(''), []);
   assert.deepEqual(chunks57('Hei. Hallo!'), ['Hei. Hallo!']);
   const long = Array.from({ length: 80 }, (_, i) => `Dette er setning nummer ${i + 1} i en lang nyhetsoppsummering.`).join(' ');
@@ -70,6 +70,11 @@ test('chunks57 deler lang tekst i biter under serverens grense på 1500 tegn', (
   assert.ok(parts.every((p) => p.length <= 1400 && p.length > 0));
   assert.ok(parts.every((p) => /\.$/.test(p)), 'bitene slutter ved setningsslutt');
   assert.equal(parts.join(' '), long);
+  // VoxCPM: første bit er kort (lyden starter fort), resten små.
+  const small = chunks57(long);
+  assert.ok(small[0].length <= 160, `første bit ${small[0].length} tegn`);
+  assert.ok(small.every((p) => p.length <= 1400 && p.length > 0));
+  assert.equal(small.join(' '), long);
   const word = 'a'.repeat(3000);
   assert.ok(chunks57(word, 1400).every((p) => p.length <= 1400));
 });

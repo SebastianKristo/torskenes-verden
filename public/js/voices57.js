@@ -379,9 +379,17 @@ export async function engineSwitched57(engine) {
 
 const P = { seq: 0, h: null, ctl: null, state: 'idle', onState: null };
 export const speak57State = P;
-const MAXC = 1400;
-/** Deler teksten i biter på maks MAXC tegn, helst ved setningsslutt. */
-export function chunks57(text, max = MAXC) {
+// VoxCPM på Mac mini-en lager lyd tregere enn sanntid: første bit er én kort setning (lyden starter etter noen sekunder), resten
+// små biter som lages mens forrige spilles. Sky-stemmene tåler store biter, men små biter skader ikke.
+const MAXC = 420, FIRSTC = 160;
+/** Deler teksten i biter på maks MAXC tegn (første maks FIRSTC), helst ved setningsslutt. */
+export function chunks57(text, max = MAXC, first = Math.min(FIRSTC, max)) {
+  const all = chunksOf57(text, max);
+  if (!all.length || all[0].length <= first) return all;
+  const head = chunksOf57(all[0], first);
+  return [head[0], ...chunksOf57(head.slice(1).join(' ') + ' ' + all.slice(1).join(' '), max)].filter(Boolean);
+}
+function chunksOf57(text, max) {
   const t = String(text ?? '').replace(/\s+/g, ' ').trim();
   if (!t) return [];
   const sents = t.match(/[^.!?…]+[.!?…]+["»”)]*\s*|[^.!?…]+$/g) ?? [t], out = [];

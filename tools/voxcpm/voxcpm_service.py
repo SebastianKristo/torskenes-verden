@@ -705,6 +705,7 @@ def make_handler(svc: Service):
             body = self._body(t0)
             if body is None:
                 return
+            log(f"[voxcpm] {self.client_address[0]} POST {self._logpath()} start · {len(body)} B")  # innholdet logges aldri
             try:
                 audio, ctype = svc.speech(body)
             except BadRequest as e:
