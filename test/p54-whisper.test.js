@@ -81,6 +81,7 @@ const fieldsOf = (body, ctype) => {
   }
   return out;
 };
+let noText = 'Hei fra Nasjonalbiblioteket'; // det NB-Whisper svarer med language=no
 const fake = createServer((rq, rs) => {
   const chunks = [];
   rq.on('data', (c) => chunks.push(c));
@@ -95,7 +96,7 @@ const fake = createServer((rq, rs) => {
     if (rq.url === '/v1/audio/transcriptions') {
       assert.equal(f.file[0], 'RIFF', 'serveren sender WAV (16 kHz) til Mac-en');
       const l = f.language?.[0] ?? null;
-      const text = { no: 'Hei fra Nasjonalbiblioteket', nn: 'Hei frå Nasjonalbiblioteket', en: 'Hello from the library' }[l] ?? `tekst (${l})`;
+      const text = { no: noText, nn: 'Hei frå Nasjonalbiblioteket', en: 'Hello from the library' }[l] ?? `tekst (${l})`;
       return send(200, { task: 'transcribe', language: l ?? 'no', duration: 0.1, text: ` ${text} `, model: 'nb-whisper-medium', engine: 'mlx',
         segments: [{ id: 0, start: 0, end: 1.2, text }], words: text.split(' ').map((w, i) => ({ word: ` ${w}`, start: i * 0.4, end: i * 0.4 + 0.3, probability: 0.9 })) });
     }
@@ -271,6 +272,42 @@ test('auto: språket oppdages med NB-Whisper (/detect, første 30 s); profilen e
   assert.match(r.body.error, /Oppdaget språk/);
   detectReply = { language: 'no', probability: 0.82, languages: [{ language: 'no', probability: 0.82 }, { language: 'nn', probability: 0.06 }] };
   M._setLoader53('voz', null); ASR._setPhonon53(null);
+});
+
+test('auto: NB-Whisper tror engelsk tale er norsk → Tongue leser teksten som engelsk → Voz på nytt', async () => {
+  await useNb();
+  let vozCalls = 0;
+  await readyMock('voz', { transcribe: async () => { vozCalls++; return { text: 'Hello from Voz', words: [] }; } });
+  let tongue = 'en';
+  await readyMock('tongue', { detect: () => ({ language: tongue, reliability: 'confident', isTooCloseToCall: false, candidates: [{ language: tongue }] }) });
+  detectReply = { language: 'no', probability: 0.71, languages: [{ language: 'no', probability: 0.71 }, { language: 'en', probability: 0.2 }] };
+  noText = 'Hello, can you add milk to the shopping list';
+  let r = await say('');
+  assert.equal(r.status, 200);
+  assert.equal(r.body.engine, 'voz');
+  assert.equal(r.body.language, 'en');
+  assert.equal(r.body.text, 'Hello from Voz');
+  assert.equal(r.body.detected.source, 'text');
+  assert.equal(r.body.detected.first.language, 'no', 'første gjetning vises');
+  assert.equal(vozCalls, 1);
+  // Valgt norsk (ikke auto) → ingen ny runde.
+  r = await say('?language=no');
+  assert.equal(r.body.engine, 'nbwhisper');
+  assert.equal(vozCalls, 1);
+  // Tongue sier norsk → NB-Whisper står.
+  tongue = 'no'; noText = 'Hei fra Nasjonalbiblioteket';
+  r = await say('');
+  assert.equal(r.body.engine, 'nbwhisper');
+  assert.equal(vozCalls, 1);
+  // Voz feiler på andre runde → NB-Whisper-svaret beholdes.
+  tongue = 'en'; noText = 'Hello again from the library';
+  M._setLoader53('voz', async () => ({ transcribe: async () => { throw new Error('krasj'); } })); await M.load53('voz');
+  r = await say('');
+  assert.equal(r.status, 200);
+  assert.equal(r.body.engine, 'nbwhisper');
+  assert.equal(r.body.text.trim(), 'Hello again from the library');
+  noText = 'Hei fra Nasjonalbiblioteket';
+  M._setLoader53('voz', null); M._setLoader53('tongue', null);
 });
 
 test('auto uten NB-Whisper: profilens språk brukes (engelsk → Voz), norsk uten norsk motor → 422', async () => {

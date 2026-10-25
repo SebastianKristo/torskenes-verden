@@ -9,6 +9,7 @@
 import { execFile } from 'node:child_process';
 import { use53, ready53 } from './models.js';
 import { on53 } from './flags.js';
+import { detectLang53 } from './text.js';
 import { splitLang54, nbWire54, decide54, order54, langLabel54, ENGINE_LABELS54 } from '../whisper54/route.js';
 
 // Språkene Voz oppgir (25, europeiske). Pakken har ingen språkliste; tallet og lista stemmer med modellfamilien Voz og Phonon-2.5
@@ -187,20 +188,35 @@ export async function transcribe53(buf, { language = null, backend = 'auto', enh
   const ready = pick(lang, auto && detected?.source === 'detected');
   if (!ready.length) throw unavailable();
   let lastErr = null;
-  for (const [i, x] of ready.entries()) {
-    try {
-      if (x.id !== 'voz') wav ??= wav16k53(samples);
-      // eslint-disable-next-line no-await-in-loop
-      const r = await x.b.transcribe({ wav, samples16k: samples, sampleRate: 16000, language: lang, variant, signal });
-      const words = (r.words ?? []).map((w) => ({ text: String(w.text ?? w.word ?? '').trim(), start: r3(w.start), end: r3(w.end) })).filter((w) => w.text && w.start != null && w.end != null);
-      return { text: r.text, words, language: lang, ...(lang === 'no' ? { variant } : {}), language_label: langLabel54(lang, variant), ...(detected ? { detected } : {}),
-        engine: x.id, engine_label: ENGINE_LABELS54[x.id] ?? x.label, backend: x.id, ...(i > 0 ? { fallback: true } : {}),
-        enhanced, duration: r.duration ?? Math.round((samples.length / 16000) * 100) / 100, ms: Date.now() - t0 };
-    } catch (e) {
-      lastErr = e;
-      if (e?.code === 'cancelled' || signal?.aborted) throw asrErr53('cancelled', 'Avbrutt', 499);
-      console.warn(`[dal53] ASR ${x.id} feilet: ${String(e?.code ?? '')} ${String(e?.message ?? e).slice(0, 160)}`);
+  const run = async (list, l, v, det) => {
+    for (const [i, x] of list.entries()) {
+      try {
+        if (x.id !== 'voz') wav ??= wav16k53(samples);
+        // eslint-disable-next-line no-await-in-loop
+        const r = await x.b.transcribe({ wav, samples16k: samples, sampleRate: 16000, language: l, variant: v, signal });
+        const words = (r.words ?? []).map((w) => ({ text: String(w.text ?? w.word ?? '').trim(), start: r3(w.start), end: r3(w.end) })).filter((w) => w.text && w.start != null && w.end != null);
+        return { text: r.text, words, language: l, ...(l === 'no' ? { variant: v } : {}), language_label: langLabel54(l, v), ...(det ? { detected: det } : {}),
+          engine: x.id, engine_label: ENGINE_LABELS54[x.id] ?? x.label, backend: x.id, ...(i > 0 ? { fallback: true } : {}),
+          enhanced, duration: r.duration ?? Math.round((samples.length / 16000) * 100) / 100, ms: Date.now() - t0 };
+      } catch (e) {
+        lastErr = e;
+        if (e?.code === 'cancelled' || signal?.aborted) throw asrErr53('cancelled', 'Avbrutt', 499);
+        console.warn(`[dal53] ASR ${x.id} feilet: ${String(e?.code ?? '')} ${String(e?.message ?? e).slice(0, 160)}`);
+      }
+    }
+    return null;
+  };
+  const res = await run(ready, lang, variant, detected);
+  // NB-Whisper er finjustert på norsk, og språkdeteksjonen heller mot «no» også for engelsk tale. Når språket ble oppdaget (ikke valgt)
+  // og Tongue sikkert leser teksten som et annet språk som en egen motor (Voz/Phonon) støtter, kjøres lyden på nytt der.
+  if (res && auto && lang === 'no' && res.engine === 'nbwhisper') {
+    const t = detectLang53(res.text);
+    const alt = t?.sure && t.language !== 'no' ? pick(t.language).filter((x) => x.id !== 'nbwhisper') : [];
+    if (alt.length) {
+      const again = await run(alt, t.language, null, { language: t.language, probability: null, source: 'text', engine: 'tongue', first: detected });
+      if (again) return again;
     }
   }
+  if (res) return res;
   throw asrErr53('asr_unavailable', `Tale til tekst feilet${lastErr?.message ? `: ${String(lastErr.message).slice(0, 160)}` : ''}`, 503);
 }
