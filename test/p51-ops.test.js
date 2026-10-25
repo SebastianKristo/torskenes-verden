@@ -285,6 +285,28 @@ test('offsite slått på: B2-nøkkelen bare i miljøet til offsite; feil på ett
   await A('/api/ops51/backup/settings', 'PUT', { targets: { offsite: { enabled: false } } });
 });
 
+test('3-2-1: den eldre systembackupen til nettverksdisken (verifisert siste døgn) teller som NAS-kopi', async () => {
+  const { db } = await import('../server/db.js');
+  await import('../server/system-backup.js'); // lager backup_jobs
+  const s0 = b51.backupSettings51();
+  const nasWas = s0.targets.nas.enabled;
+  await A('/api/ops51/backup/settings', 'PUT', { targets: { nas: { enabled: false } } });
+  let card = b51.backupCard51();
+  assert.ok(card.issues.some((x) => /3-2-1/.test(x)), 'bare lokal kopi → 3-2-1-varsel');
+  assert.equal(card.legacyNas, null);
+  const id = 'bk-test321';
+  db.prepare("INSERT INTO backup_jobs(id, kind, state, started, finished, scope, modules, smb) VALUES(?, 'auto', 'done', ?, ?, 'all', '[]', ?)")
+    .run(id, Date.now() - 3600_000, Date.now() - 3500_000, JSON.stringify({ ok: true, verified: true, at: new Date(Date.now() - 3500_000).toISOString(), url: 'smb://10.69.1.126/Skogen/backup' }));
+  card = b51.backupCard51();
+  assert.ok(!card.issues.some((x) => /3-2-1/.test(x)), card.issues.join(' · '));
+  assert.equal(card.rule321.copies, 3);
+  assert.equal(card.legacyNas.url, 'smb://10.69.1.126/Skogen/backup');
+  // Eldre enn et døgn teller ikke.
+  assert.equal(b51.backupCard51(Date.now() + 27 * 3600_000).legacyNas, null);
+  db.prepare('DELETE FROM backup_jobs WHERE id=?').run(id);
+  await A('/api/ops51/backup/settings', 'PUT', { targets: { nas: { enabled: nasWas } } });
+});
+
 /* ---------------- Testet gjenoppretting ---------------- */
 
 test('testet gjenoppretting: snapshot → temp-mappe → integritet → server mot kopien (port 4602) → røyktest → grønt kort', { timeout: 120_000 }, async () => {

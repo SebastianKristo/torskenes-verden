@@ -462,6 +462,16 @@ async function runRestoreTest(id, src) {
 /* ---------------- Status for kortet i System ---------------- */
 
 const DAY = 86400_000;
+/** Siste verifiserte opplasting fra den eldre systembackupen til nettverksdisken (backup_jobs.smb) siste døgn. → {at, url} | null */
+function legacyNas51(now = Date.now()) {
+  try {
+    const r = db.prepare("SELECT finished, started, smb FROM backup_jobs WHERE state='done' AND smb IS NOT NULL ORDER BY started DESC LIMIT 1").get();
+    const m = r ? JSON.parse(r.smb) : null;
+    const at = (m?.at ? Date.parse(m.at) : NaN) || r?.finished || r?.started;
+    if (!m?.ok || m.verified === false || !at || now - at >= 26 * 3600_000) return null;
+    return { at, url: m.url ?? null };
+  } catch { return null; }
+}
 /** {status: green|yellow|red, title, detail, …}. Grønt: siste backup ok < 26 t på minst to mål, og siste testede gjenoppretting ok < 8 døgn. */
 export function backupCard51(now = Date.now()) {
   const s = backupSettings51(), info = resticInfo51();
@@ -475,17 +485,21 @@ export function backupCard51(now = Date.now()) {
     return { id, label: LABEL[id], repo: redactRepo(s.targets[id].repo), lastOkAt: t?.at ?? null, snapshot: t?.snapshot ?? null, lastState: lastT?.state ?? null, lastError: lastT?.state === 'failed' ? lastT.error : null };
   });
   const test = restoreTests51(1)[0] ?? null;
+  // Den eldre systembackupen (Innstillinger → Backup, tarball av hele systemet til nettverksdisken med smbclient) er også en kopi
+  // på et annet medium: en verifisert opplasting siste døgn teller som NAS i 3-2-1.
+  const nasOld = legacyNas51(now);
   const fresh = perTarget.filter((t) => t.lastOkAt && now - t.lastOkAt < 26 * 3600_000);
+  const copies = fresh.length + (nasOld && !fresh.some((t) => t.id === 'nas') ? 1 : 0);
   const issues = [];
   let status = 'green';
   const red = (m) => { status = 'red'; issues.push(m); };
   const yellow = (m) => { if (status === 'green') status = 'yellow'; issues.push(m); };
   if (!info.available) red(info.error);
-  if (!s.enabled) red('Automatisk backup er av');
+  if (!s.enabled) (nasOld ? yellow : red)(nasOld ? 'Automatisk restic-backup er av (systembackupen til nettverksdisken går som før)' : 'Automatisk backup er av');
   if (!on.length) red('Ingen backupmål er slått på');
-  else if (!fresh.length) red(perTarget.some((t) => t.lastOkAt) ? 'Ingen vellykket backup siste døgn' : 'Ingen backup er tatt ennå');
+  else if (!fresh.length && !nasOld) red(perTarget.some((t) => t.lastOkAt) ? 'Ingen vellykket backup siste døgn' : 'Ingen backup er tatt ennå');
   for (const t of perTarget) if (t.lastState === 'failed') yellow(`${t.label}: ${t.lastError ?? 'feilet'}`);
-  if (on.length && fresh.length < 2) yellow('3-2-1: legg til NAS (og gjerne offsite) – nå finnes bare én backupkopi');
+  if (on.length && copies < 2) yellow('3-2-1: legg til NAS (og gjerne offsite) – nå finnes bare én backupkopi');
   if (!test) yellow('Gjenoppretting er ikke testet ennå');
   else if (test.state === 'failed') red(`Gjenopprettingstesten feilet: ${test.error ?? ''}`.trim());
   else if (test.state === 'ok' && now - (test.finishedAt ?? test.startedAt) > 8 * DAY) yellow('Gjenopprettingen er ikke testet på over en uke');
@@ -494,7 +508,8 @@ export function backupCard51(now = Date.now()) {
     status, title, issues, enabled: s.enabled, restic: info, running: running ? { ...running } : null,
     lastRun: lastRun ? { id: lastRun.id, state: lastRun.state, at: lastRun.finishedAt ?? lastRun.startedAt, error: lastRun.error } : null,
     lastOkAt: perTarget.reduce((m, t) => Math.max(m, t.lastOkAt ?? 0), 0) || null,
-    copies: fresh.length, targets: perTarget, rule321: { copies: 1 + fresh.length, media: new Set(fresh.map((t) => (t.id === 'offsite' ? 'cloud' : t.id))).size, offsite: fresh.some((t) => t.id === 'offsite') },
+    copies, targets: perTarget, legacyNas: nasOld,
+    rule321: { copies: 1 + copies, media: new Set([...fresh.map((t) => (t.id === 'offsite' ? 'cloud' : t.id)), ...(nasOld ? ['nas'] : [])]).size, offsite: fresh.some((t) => t.id === 'offsite') },
     restoreTest: test ? { id: test.id, state: test.state, at: test.finishedAt ?? test.startedAt, target: test.target, snapshot: test.snapshot, scope: test.scope, error: test.error, steps: test.steps } : null,
   };
 }
