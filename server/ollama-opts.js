@@ -18,7 +18,7 @@ const noThink = new Set(); // modellnavn som har svart «does not support thinki
 const caps = new Map(); // modell → capabilities fra /api/show (når en modul har slått dem opp)
 
 /** Tenkemodeller etter navn. Bildemodellene qwen3-vl/qwen2.5vl regnes ikke med. */
-export const THINKING_RE = /(^|\/)(qwen3(?![-.]?vl)|qwq|deepseek-r1|deepseek-v3\.1|gemma4|magistral|phi4-reasoning|gpt-oss|cogito|exaone-deep|openthinker|smallthinker)|-thinking\b|:thinking\b/i;
+export const THINKING_RE = /(^|\/)(qwen3(?![-.]?vl)|qwq|deepseek-r1|deepseek-v3\.1|gemma4|magistral|phi4-reasoning|gpt-oss|cogito|exaone-deep|openthinker|smallthinker|saluki)|-thinking\b|:thinking\b/i;
 /** Husker capabilities fra /api/show (f.eks. ['completion','vision','thinking']). */
 export function noteCapabilities(model, list) { if (model && Array.isArray(list)) caps.set(model, list.map(String)); }
 /** Er modellen en tenkemodell? Navnet, eller «thinking» i capabilities når de er kjent. */
