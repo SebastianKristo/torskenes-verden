@@ -2,6 +2,35 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.48.0] – 25.10.2026 · Tale til tekst på norsk, egne stemmer, oMLX og Glimt som består alle testene
+- **Glimt består hele testsettet:** 19 av 19 caser 3 av 3 ganger mot ekte modell på Mac minien.
+  - Når planleggeren ikke får til en plan, prøver den én gang til med tenking og spør deretter kort med konkrete valg. Den lagrer aldri noe ut fra en gjetning.
+  - llama3.2:3b er tatt ut av alle standardveier, så modellbyttene som ga 30–90 s svartid er borte.
+  - Vitnemål: karakterer valideres (1–6, bestått o.l.), fagkoder leses aldri som karakterer, og fagnavn med skrivefeil kobles til riktig fag.
+  - Uten OCR leses kvitteringer med bildemodellen, merket med middels sikkerhet.
+- **Tale til tekst på norsk og engelsk:**
+  - Norsk går til NB-Whisper fra Nasjonalbiblioteket på Mac minien, engelsk til Voz eller Phonon. Språket oppdages av seg selv.
+  - Mikrofon i Glimt-chatten og Glimt-søket på web, iPhone, iPad og Android. Trykk eller hold for å snakke. Telefonens egen talegjenkjenning er reserve.
+- **Egne stemmer med VoxCPM2** (lokalt på Mac minien):
+  - Ferdige norske stemmer, stemmer laget fra en beskrivelse, og kloning av din egen stemme (krever samtykke, er privat og kan slettes).
+  - Glimt og nyhetsleseren kan ha hver sin stemme. «Les opp» i Nyheter og «Les høyt» i chat bruker den valgte stemmen.
+  - Opplesning med sky-stemmene ble stoppet av nettleserens sikkerhetsregler på web. Det er rettet.
+- **oMLX (valgfritt):** MLX-modeller på Mac minien som alternativ motor til Ollama, valgt per oppgave i AI-kontroll med Ollama som reserve. Eval kan sammenligne begge motorene (median og p90 per case). Ollama er fortsatt standard.
+- **AI-feil rettet:**
+  - Glimt går direkte til Ollama når Open WebUI er nede, i stedet for å feile.
+  - Selvtesten viste «tomt svar» når «La modellen tenke» var på, og feil for bildemodellen. Begge var feil i testen, ikke i modellene.
+  - Groq har fjernet llama-3.1-8b-instant. Lagrede valg går til llama-3.3-70b-versatile.
+- **Admin:**
+  - «Brukere: brief og figur» under Innstillinger → System: hvem som er barn, hvem som får Homelab, Domener og Aksjer i briefen, og hvilken Glimt-figur hver bruker starter med.
+  - Skjema for Fermion (Neutrino og Phonon) i AI-kontroll.
+- **Backup:**
+  - Systembackupen til nettverksdisken teller nå som NAS-kopi i 3-2-1.
+  - Gjenopprettingstesten sier tydelig fra når ingen backup er tatt ennå.
+- **Oppdatering fra appen** virker også når GitHub-API-et har nådd grensen på 60 kall i timen.
+- **Manuelt:**
+  - Mac minien: `tools/nb-whisper/install.sh`, `tools/voxcpm/install.sh` og eventuelt `tools/omlx/install.sh` (se `docs/nb-whisper-54.md`, `docs/voxcpm-57.md` og `docs/omlx-58.md`). Legg inn adressene og nøklene i AI-kontroll → Modeller.
+  - Neste oppdatering fra appen installerer den nye updateren av seg selv.
+
 ## [4.47.0] – 25.10.2026 · Familie uten krasj, Blekkspruten, lokale modeller og kvitteringer bare i huset
 Inneholder også alt fra 4.46.0 nedenfor (appene: Planlegging, familiekalender, mediekveld, søk, widgets, Watch, Wear OS og Android Auto).
 - **Familie krasjer ikke lenger:**
