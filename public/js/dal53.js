@@ -2,8 +2,8 @@
 //  - «Om / Lisenser» (alle): #/om eller #/lisenser åpner siden med krediteringen (Desert Ant Labs, Fermion Research m.fl.).
 //    Innstillinger → Konto får raden «Om / Lisenser».
 //  - Admin: Innstillinger → System får kortet «Lokale modeller» med helse per modell og «Forhåndslast» (GET/POST /api/admin/dal53/*).
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-async function api(path, opt = {}) {
+export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+export async function api(path, opt = {}) {
   const r = await fetch(path, { credentials: 'same-origin', ...opt, headers: { ...(opt.body ? { 'content-type': 'application/json' } : {}), ...(opt.headers ?? {}) } });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw Object.assign(new Error(j.error || `Feil ${r.status}`), { status: r.status });
@@ -28,7 +28,7 @@ html[data-theme="lys"] .dal53-panel,html[data-hl="cur"] .dal53-panel{background:
 `;
 function css() { if (!document.getElementById('dal53-css')) { const s = document.createElement('style'); s.id = 'dal53-css'; s.textContent = CSS; document.head.appendChild(s); } }
 
-function overlay(html, label) {
+export function overlay(html, label) {
   css();
   document.querySelector('.dal53-ov')?.remove();
   const ov = document.createElement('div');
