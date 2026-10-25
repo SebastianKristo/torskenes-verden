@@ -206,17 +206,32 @@ export async function transcribe53(buf, { language = null, backend = 'auto', enh
     }
     return null;
   };
-  const res = await run(ready, lang, variant, detected);
-  // NB-Whisper er finjustert på norsk, og språkdeteksjonen heller mot «no» også for engelsk tale. Når språket ble oppdaget (ikke valgt)
-  // og Tongue sikkert leser teksten som et annet språk som en egen motor (Voz/Phonon) støtter, kjøres lyden på nytt der.
-  if (res && auto && lang === 'no' && res.engine === 'nbwhisper') {
-    const t = detectLang53(res.text);
-    const alt = t?.sure && t.language !== 'no' ? pick(t.language).filter((x) => x.id !== 'nbwhisper') : [];
-    if (alt.length) {
-      const again = await run(alt, t.language, null, { language: t.language, probability: null, source: 'text', engine: 'tongue', first: detected });
-      if (again) return again;
+  // NB-Whisper er finjustert på norsk: deteksjonen heller mot «no» også for engelsk tale, og med language=no skrives engelsk tale ofte
+  // om til norsk. Når språket ble oppdaget (ikke valgt) som norsk og Voz er klar, kjøres Voz parallelt, og Tongue avgjør på teksten:
+  // er Voz-teksten sikkert engelsk (eller et annet ikke-nordisk Voz-språk), brukes den. Ellers står NB-Whisper. Det samme for NB-teksten.
+  const second = auto && lang === 'no' && detected?.source !== 'hint' ? usable.find((x) => x.id === 'voz' && x.available) : null;
+  const tongueOk = (t) => t?.sure && t.language !== 'no' && !['da', 'sv', 'nn', 'nb'].includes(t.language);
+  if (second) {
+    ready53('tongue');
+    const [res, vz] = await Promise.all([run(ready, lang, variant, detected), second.b.transcribe({ samples16k: samples, sampleRate: 16000, language: null, signal }).catch(() => null)]);
+    const tv = vz?.text ? detectLang53(vz.text) : null;
+    if (tongueOk(tv) && supports(second, tv.language)) {
+      const words = (vz.words ?? []).map((w) => ({ text: String(w.text ?? '').trim(), start: r3(w.start), end: r3(w.end) })).filter((w) => w.text && w.start != null && w.end != null);
+      return { text: vz.text, words, language: tv.language, language_label: langLabel54(tv.language, null), detected: { language: tv.language, probability: null, source: 'text', engine: 'tongue', first: detected },
+        engine: 'voz', engine_label: ENGINE_LABELS54.voz ?? second.label, backend: 'voz', enhanced, duration: vz.duration ?? Math.round((samples.length / 16000) * 100) / 100, ms: Date.now() - t0 };
     }
+    if (res) return res;
+  } else {
+    const res = await run(ready, lang, variant, detected);
+    if (res && auto && lang === 'no' && res.engine === 'nbwhisper') {
+      const t = detectLang53(res.text);
+      const alt = tongueOk(t) ? pick(t.language).filter((x) => x.id !== 'nbwhisper') : [];
+      if (alt.length) {
+        const again = await run(alt, t.language, null, { language: t.language, probability: null, source: 'text', engine: 'tongue', first: detected });
+        if (again) return again;
+      }
+    }
+    if (res) return res;
   }
-  if (res) return res;
   throw asrErr53('asr_unavailable', `Tale til tekst feilet${lastErr?.message ? `: ${String(lastErr.message).slice(0, 160)}` : ''}`, 503);
 }

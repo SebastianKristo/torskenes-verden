@@ -274,7 +274,7 @@ test('auto: språket oppdages med NB-Whisper (/detect, første 30 s); profilen e
   M._setLoader53('voz', null); ASR._setPhonon53(null);
 });
 
-test('auto: NB-Whisper tror engelsk tale er norsk → Tongue leser teksten som engelsk → Voz på nytt', async () => {
+test('auto: NB-Whisper tror engelsk tale er norsk → Voz parallelt, Tongue leser Voz-teksten som engelsk → Voz', async () => {
   await useNb();
   let vozCalls = 0;
   await readyMock('voz', { transcribe: async () => { vozCalls++; return { text: 'Hello from Voz', words: [] }; } });
@@ -290,15 +290,17 @@ test('auto: NB-Whisper tror engelsk tale er norsk → Tongue leser teksten som e
   assert.equal(r.body.detected.source, 'text');
   assert.equal(r.body.detected.first.language, 'no', 'første gjetning vises');
   assert.equal(vozCalls, 1);
-  // Valgt norsk (ikke auto) → ingen ny runde.
+  // Valgt norsk (ikke auto) → Voz kjøres ikke.
   r = await say('?language=no');
   assert.equal(r.body.engine, 'nbwhisper');
   assert.equal(vozCalls, 1);
-  // Tongue sier norsk → NB-Whisper står.
+  // Tongue sier norsk (eller dansk/svensk – Voz på norsk tale ligner) → NB-Whisper står.
   tongue = 'no'; noText = 'Hei fra Nasjonalbiblioteket';
   r = await say('');
   assert.equal(r.body.engine, 'nbwhisper');
-  assert.equal(vozCalls, 1);
+  tongue = 'da';
+  r = await say('');
+  assert.equal(r.body.engine, 'nbwhisper');
   // Voz feiler på andre runde → NB-Whisper-svaret beholdes.
   tongue = 'en'; noText = 'Hello again from the library';
   M._setLoader53('voz', async () => ({ transcribe: async () => { throw new Error('krasj'); } })); await M.load53('voz');
