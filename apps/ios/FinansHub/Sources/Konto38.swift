@@ -154,7 +154,7 @@ struct Konto38Row: View {
             VStack(spacing: 0) {
                 if !first { Rectangle().fill(p.line).frame(height: 1).padding(.leading, 56) }
                 HStack(spacing: 12) {
-                    Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(tint)
+                    Image(systemName: icon).font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(tint)
                         .frame(width: 30, height: 30)
                         .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                     VStack(alignment: .leading, spacing: 1) {

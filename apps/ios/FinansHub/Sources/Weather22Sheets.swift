@@ -15,7 +15,7 @@ struct WxSheetFrame22<C: View>: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 ZStack {
-                    Text(title).font(.system(size: 18, weight: .bold)).frame(maxWidth: .infinity)
+                    Text(title).font(.dyn51(size: 18, weight: .bold)).frame(maxWidth: .infinity)
                     HStack {
                         Spacer()
                         // Prompt 40: samme ✕ som hovedsiden i Vær (Vaer40.swift).
@@ -44,8 +44,8 @@ struct WxDayPicker22: View {
                 let on: Bool = pair.offset == sel
                 Button { Haptics.shared.select(); sel = pair.offset } label: {
                     VStack(spacing: 6) {
-                        Text(WxFmt22.letter(pair.element)).font(.system(size: 12, weight: .heavy)).opacity(0.8)
-                        Text(WxFmt22.dayNum(pair.element)).font(.system(size: 17, weight: .bold))
+                        Text(WxFmt22.letter(pair.element)).font(.dyn51(size: 12, weight: .heavy)).opacity(0.8)
+                        Text(WxFmt22.dayNum(pair.element)).font(.dyn51(size: 17, weight: .bold))
                             .foregroundStyle(on ? Color(hex: "#0d2233") : Color.white)
                             .frame(width: 38, height: 38)
                             .background(on ? Color(hex: "#5ec8f2") : Color.clear, in: Circle())
@@ -63,7 +63,7 @@ struct WxSheetDate22: View {
     let text: String
     var body: some View {
         VStack(spacing: 10) {
-            Text(text).font(.system(size: 16, weight: .semibold)).frame(maxWidth: .infinity)
+            Text(text).font(.dyn51(size: 16, weight: .semibold)).frame(maxWidth: .infinity)
             Rectangle().fill(Color(hex: "#2a2d34")).frame(height: 1)
         }
     }
@@ -75,8 +75,8 @@ struct WxAbout22: View {
     let text: String
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Om " + title).font(.system(size: 15, weight: .bold))
-            Text(text).font(.system(size: 14)).lineSpacing(5).foregroundStyle(Color(hex: "#c7ccd4")).fixedSize(horizontal: false, vertical: true)
+            Text("Om " + title).font(.dyn51(size: 15, weight: .bold))
+            Text(text).font(.dyn51(size: 14)).lineSpacing(5).foregroundStyle(Color(hex: "#c7ccd4")).fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -269,7 +269,7 @@ struct WxScale22: View {
     let items: [WxScaleItem22]
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Skala").font(.system(size: 15, weight: .bold))
+            Text("Skala").font(.dyn51(size: 15, weight: .bold))
             HStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.offset) { pair in
                     Rectangle().fill(Color(hex: pair.element.c))
@@ -280,8 +280,8 @@ struct WxScale22: View {
             HStack(alignment: .top, spacing: 4) {
                 ForEach(Array(items.enumerated()), id: \.offset) { pair in
                     VStack(alignment: .leading, spacing: 0) {
-                        Text(pair.element.a).font(.system(size: 12.5, weight: .bold))
-                        Text(pair.element.b).font(.system(size: 11.5)).foregroundStyle(Color(hex: "#9aa0aa"))
+                        Text(pair.element.a).font(.dyn51(size: 12.5, weight: .bold))
+                        Text(pair.element.b).font(.dyn51(size: 11.5)).foregroundStyle(Color(hex: "#9aa0aa"))
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -305,7 +305,7 @@ struct WxChartPart22: View {
         let have: [Double] = vv.compactMap { $0 }
         VStack(alignment: .leading, spacing: 14) {
             if have.isEmpty {
-                Text("Ingen timedata for denne dagen ennå.").font(.system(size: 14)).foregroundStyle(Color(hex: "#9aa0aa"))
+                Text("Ingen timedata for denne dagen ennå.").font(.dyn51(size: 14)).foregroundStyle(Color(hex: "#9aa0aa"))
             } else {
                 head(vv, have)
                 VStack(alignment: .leading, spacing: 6) {
@@ -336,8 +336,8 @@ struct WxChartPart22: View {
         }
         _ = imn
         return VStack(alignment: .leading, spacing: 2) {
-            Text(big).font(.system(size: 34, weight: .semibold))
-            Text(sub).font(.system(size: 14)).foregroundStyle(Color(hex: "#9aa0aa")).fixedSize(horizontal: false, vertical: true)
+            Text(big).font(.dyn51(size: 34, weight: .semibold))
+            Text(sub).font(.dyn51(size: 14)).foregroundStyle(Color(hex: "#9aa0aa")).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -352,7 +352,7 @@ struct WxChartPart22: View {
                 Text(m.line2Label)
             }
         }
-        .font(.system(size: 12, weight: .bold)).foregroundStyle(Color(hex: "#9aa0aa")).padding(.top, 2)
+        .font(.dyn51(size: 12, weight: .bold)).foregroundStyle(Color(hex: "#9aa0aa")).padding(.top, 2)
     }
 
     /// Samme regler som msVals i designet: W 296, HT 150, X(i) = 4 + i/23·(W−8), Y(x) = 8 + (1 − (x−lo)/(hi−lo))·HT.
@@ -420,8 +420,8 @@ struct WxListPart22: View {
         VStack(alignment: .leading, spacing: 14) {
             if !days.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(big(days[di])).font(.system(size: 34, weight: .semibold))
-                    Text(sub(days[di])).font(.system(size: 14)).foregroundStyle(Color(hex: "#9aa0aa"))
+                    Text(big(days[di])).font(.dyn51(size: 34, weight: .semibold))
+                    Text(sub(days[di])).font(.dyn51(size: 14)).foregroundStyle(Color(hex: "#9aa0aa"))
                 }
             }
             VStack(spacing: 0) {
@@ -440,10 +440,10 @@ struct WxListPart22: View {
         let a: String = i == 0 ? "I dag" : WxFmt22.weekday(d.date)
         return Button { Haptics.shared.select(); sel = i } label: {
             HStack(spacing: 10) {
-                Text(a).font(.system(size: 15, weight: .bold)).frame(width: 52, alignment: .leading)
-                Text(colB(d)).font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity, alignment: .leading)
-                Text(colC(d)).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color(hex: "#bfe6ff"))
-                Text(colE(d)).font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa0aa")).lineLimit(1)
+                Text(a).font(.dyn51(size: 15, weight: .bold)).frame(width: 52, alignment: .leading)
+                Text(colB(d)).font(.dyn51(size: 15, weight: .semibold)).frame(maxWidth: .infinity, alignment: .leading)
+                Text(colC(d)).font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(Color(hex: "#bfe6ff"))
+                Text(colE(d)).font(.dyn51(size: 13)).foregroundStyle(Color(hex: "#9aa0aa")).lineLimit(1)
             }
             .padding(.horizontal, 8).padding(.vertical, 12)
             .background(on ? Color(red: 94.0 / 255.0, green: 200.0 / 255.0, blue: 242.0 / 255.0).opacity(0.16) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -517,13 +517,13 @@ struct WxForholdBody22: View {
             HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 8) {
-                        Text(WxFmt22.deg(today ? w.temp : d.hi)).font(.system(size: 40, weight: .bold))
+                        Text(WxFmt22.deg(today ? w.temp : d.hi)).font(.dyn51(size: 40, weight: .bold))
                         Glyph22Icon(name: k, size: 34, color: WxFmt22.iconColor(k), stroke: 1.8)
                     }
-                    Text("H:" + WxFmt22.deg(d.hi) + " L:" + WxFmt22.deg(d.lo)).font(.system(size: 15, weight: .semibold)).opacity(0.6)
+                    Text("H:" + WxFmt22.deg(d.hi) + " L:" + WxFmt22.deg(d.lo)).font(.dyn51(size: 15, weight: .semibold)).opacity(0.6)
                 }
                 Spacer()
-                Text(WxFmt22.desc(d.code)).font(.system(size: 13)).opacity(0.6)
+                Text(WxFmt22.desc(d.code)).font(.dyn51(size: 13)).opacity(0.6)
             }
             VStack(spacing: 0) {
                 Rectangle().fill(Color(hex: "#2a2d34")).frame(height: 1)
@@ -531,15 +531,15 @@ struct WxForholdBody22: View {
                 if raw.compactMap({ $0 }).count >= 2 {
                     WxChart22(spec: tempSpec(raw))
                 } else {
-                    Text("Ingen timevarsel for denne dagen.").font(.system(size: 13.5)).opacity(0.75).padding(.vertical, 20)
+                    Text("Ingen timevarsel for denne dagen.").font(.dyn51(size: 13.5)).opacity(0.75).padding(.vertical, 20)
                 }
                 Rectangle().fill(Color(hex: "#2a2d34")).frame(height: 1).padding(.top, 8)
             }
             toggle
-            Text(feel ? "Hvordan temperaturen føles med vind og fuktighet." : "Den faktiske temperaturen.").font(.system(size: 14)).opacity(0.65).padding(.horizontal, 6)
+            Text(feel ? "Hvordan temperaturen føles med vind og fuktighet." : "Den faktiske temperaturen.").font(.dyn51(size: 14)).opacity(0.65).padding(.horizontal, 6)
             VStack(alignment: .leading, spacing: 0) {
-                Text("Sjanse for nedbør").font(.system(size: 22, weight: .heavy))
-                Text("Dagens sjanse: \(Int(d.precipProb)) %").font(.system(size: 15)).opacity(0.6)
+                Text("Sjanse for nedbør").font(.dyn51(size: 22, weight: .heavy))
+                Text("Dagens sjanse: \(Int(d.precipProb)) %").font(.dyn51(size: 15)).opacity(0.6)
             }
             .padding(.top, 8)
             VStack(spacing: 0) {
@@ -572,7 +572,7 @@ struct WxForholdBody22: View {
 
     private func seg(_ t: String, _ f: Bool) -> some View {
         Button { Haptics.shared.select(); feel = f } label: {
-            Text(t).font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
+            Text(t).font(.dyn51(size: 15, weight: .bold)).foregroundStyle(.white)
                 .frame(maxWidth: .infinity).frame(height: 40)
                 .background(feel == f ? Color(hex: "#4a4e57") : Color.clear, in: Capsule())
         }
@@ -670,8 +670,8 @@ struct WxCompareSheet22: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .center, spacing: 10) {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Yr mot Storm").font(.system(size: 30, weight: .bold))
-                        Text(w.placeName).font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae"))
+                        Text("Yr mot Storm").font(.dyn51(size: 30, weight: .bold))
+                        Text(w.placeName).font(.dyn51(size: 13)).foregroundStyle(Color(hex: "#9aa3ae"))
                     }
                     Spacer()
                     // Prompt 30: felles Ferdig-pille (hvit på mørk flate), lett haptikk ved lukking.
@@ -689,14 +689,14 @@ struct WxCompareSheet22: View {
                     .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 4)
                     .background(Color(hex: "#20232a"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 } else {
-                    Text(w.compareState == 2 ? "Storm svarte ikke. Prøv igjen senere." : "Henter Storm-data …").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae"))
+                    Text(w.compareState == 2 ? "Storm svarte ikke. Prøv igjen senere." : "Henter Storm-data …").font(.dyn51(size: 13)).foregroundStyle(Color(hex: "#9aa3ae"))
                 }
                 HStack(spacing: 8) {
                     link("Åpne yr.no ↗", w.yrUrl)
                     link("Åpne storm.no ↗", "https://www.storm.no/")
                 }
                 Text("Yr er MET Norway (api.met.no). Storm (StormGeo) har ikke et åpent API, så Storm-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.")
-                    .font(.system(size: 12)).lineSpacing(4).foregroundStyle(Color(hex: "#9aa3ae")).fixedSize(horizontal: false, vertical: true)
+                    .font(.dyn51(size: 12)).lineSpacing(4).foregroundStyle(Color(hex: "#9aa3ae")).fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, 16).padding(.top, inPanel ? 14 : 48).padding(.bottom, 30)
             .frame(maxWidth: 760)
@@ -711,8 +711,8 @@ struct WxCompareSheet22: View {
         HStack(spacing: 12) {
             Circle().fill(c.color).frame(width: 12, height: 12)
             VStack(alignment: .leading, spacing: 1) {
-                Text(c.title).font(.system(size: 15, weight: .bold))
-                Text(c.subtitle).font(.system(size: 12.5)).foregroundStyle(Color(hex: "#9aa3ae"))
+                Text(c.title).font(.dyn51(size: 15, weight: .bold))
+                Text(c.subtitle).font(.dyn51(size: 12.5)).foregroundStyle(Color(hex: "#9aa3ae"))
             }
             Spacer(minLength: 0)
         }
@@ -723,16 +723,16 @@ struct WxCompareSheet22: View {
     private func chartCard(_ c: WxCompare22) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("NESTE 24 TIMER").font(.system(size: 11, weight: .semibold)).tracking(1.32).foregroundStyle(Color(hex: "#9aa3ae"))
+                Text("NESTE 24 TIMER").font(.dyn51(size: 11, weight: .semibold)).tracking(1.32).foregroundStyle(Color(hex: "#9aa3ae"))
                 Spacer()
                 HStack(spacing: 12) {
                     legend("#5ec8f2", "Yr", logo: "YrLogo")
                     legend("#ff8a3d", "Storm", logo: "StormLogo")
                 }
-                .font(.system(size: 12, weight: .bold))
+                .font(.dyn51(size: 12, weight: .bold))
             }
             WxCompareChart22(hours: next24(c))
-            Text("Søyler viser nedbør per time. Yr til venstre, Storm til høyre.").font(.system(size: 11.5)).foregroundStyle(Color(hex: "#9aa3ae"))
+            Text("Søyler viser nedbør per time. Yr til venstre, Storm til høyre.").font(.dyn51(size: 11.5)).foregroundStyle(Color(hex: "#9aa3ae"))
         }
         .padding(.horizontal, 14).padding(.top, 14).padding(.bottom, 10)
         .background(Color(hex: "#20232a"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -759,7 +759,7 @@ struct WxCompareSheet22: View {
 
     private func link(_ t: String, _ url: String) -> some View {
         Button { store.openLink(url) } label: {
-            Text(t).font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
+            Text(t).font(.dyn51(size: 13, weight: .bold)).foregroundStyle(.white)
                 .frame(maxWidth: .infinity).frame(height: 42)
                 .background(Color(hex: "#20232a"), in: Capsule())
         }

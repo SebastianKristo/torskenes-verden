@@ -401,7 +401,7 @@ struct AiPicker34: View {
                 HStack(spacing: 4) {
                     Text(title(known)).font(PF.ui(12.5, .bold)).foregroundStyle(known ? p.ink : p.lab).lineLimit(1)
                     Spacer(minLength: 0)
-                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .bold)).foregroundStyle(p.mut)
+                    Image(systemName: "chevron.up.chevron.down").font(.dyn51(size: 10, weight: .bold)).foregroundStyle(p.mut)
                 }
             }
             .padding(.horizontal, 12).padding(.vertical, 7)

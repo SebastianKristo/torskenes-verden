@@ -78,7 +78,7 @@ struct DomainsView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) { Circle().fill(Color.positive).frame(width: 8, height: 8); Text("Live · akkurat nå").fontWeight(.semibold) }
             HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text(count(a.live?.visitors ?? 0)).font(.system(size: 36, weight: .semibold, design: .monospaced))
+                Text(count(a.live?.visitors ?? 0)).font(.dyn51(size: 36, weight: .semibold, design: .monospaced))
                 Text(" besøkende").foregroundStyle(Color.skinFg.opacity(0.7))
             }
             Text("\(count(a.live?.requests ?? 0)) forespørsler · \(String(format: "%.1f", a.live?.mb ?? 0).replacingOccurrences(of: ".", with: ",")) MB").font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.75))
@@ -152,7 +152,7 @@ struct DomainsView: View {
     @ViewBuilder private func security(_ a: Analytics) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Trusler stoppet").foregroundStyle(Color.skinFg.opacity(0.75))
-            Text(count(a.threats?.total ?? 0)).font(.system(size: 40, weight: .semibold, design: .monospaced))
+            Text(count(a.threats?.total ?? 0)).font(.dyn51(size: 40, weight: .semibold, design: .monospaced))
         }
         .padding(20).frame(maxWidth: .infinity, alignment: .leading).glass(28, tint: Color.domPink.opacity(0.35))
         card("Hva ble stoppet") { Bars(rows: (a.threats?.types ?? []).map { ($0.label, $0.value) }) }

@@ -251,7 +251,7 @@ struct Brief36Reveal: View {
     var body: some View {
         let full: Bool = progress >= 1 || out
         HStack(spacing: 12) {
-            Image(systemName: "checkmark").font(.system(size: 16, weight: .heavy)).foregroundStyle(Color.white)
+            Image(systemName: "checkmark").font(.dyn51(size: 16, weight: .heavy)).foregroundStyle(Color.white)
                 .frame(width: 36, height: 36)
                 .background(Color.white.opacity(0.16), in: Circle())
                 .scaleEffect(full ? 1.15 : 0.7 + progress * 0.3)

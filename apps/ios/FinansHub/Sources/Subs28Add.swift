@@ -265,7 +265,7 @@ struct SubAdd28Option: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: icon).font(.system(size: 19, weight: .regular)).foregroundStyle(c.lab)
+            Image(systemName: icon).font(.dyn51(size: 19, weight: .regular)).foregroundStyle(c.lab)
                 .frame(width: 44, height: 44)
                 .background(c.tile, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
@@ -276,7 +276,7 @@ struct SubAdd28Option: View {
                 Text(desc).font(PF.ui(13.5)).foregroundStyle(c.mut).multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(c.chev)
+            Image(systemName: "chevron.right").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(c.chev)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
         .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)

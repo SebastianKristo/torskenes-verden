@@ -33,6 +33,12 @@ struct API {
         let data: Data, res: URLResponse
         do { (data, res) = try await URLSession.shared.data(for: r) } catch let e as URLError {
             let host = r.url?.host ?? base
+            // Prompt 51 (IOSPLAT51): forespørselen nådde aldri serveren → skrivinger som tåler å vente (gjøremål, handleliste,
+            // Sjekk inn) legges i offline-køen og sendes når nettet er tilbake (Plat51Host.swift). Aldri ved tidsavbrudd.
+            let unsent51: [URLError.Code] = [.notConnectedToInternet, .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed]
+            if unsent51.contains(e.code), Plat51Queue.offer(r, base: base) {
+                throw APIError(message: Plat51Queue.message, status: 0, code: Plat51Queue.queuedCode)
+            }
             switch e.code {
             case .cannotFindHost, .dnsLookupFailed: throw APIError(message: "Fant ikke serveren \(host). Sjekk adressen.", status: 0)
             case .cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet:
@@ -92,6 +98,19 @@ struct API {
             r.setValue("application/json", forHTTPHeaderField: "Content-Type")
             r.httpBody = try JSONSerialization.data(withJSONObject: json)
         }
+        return try await send(r, timeout: timeout)
+    }
+
+    /// Prompt 51 (IOSFEAT51): rå body fra serverens rot, f.eks. bildet til PUT /finans/api/fin51/goals/:id/image.
+    @discardableResult
+    func sendRaw51(_ method: String, _ path: String, body: Data, contentType: String, timeout: TimeInterval = 60) async throws -> Data {
+        guard path.hasPrefix("/"), let u = URL(string: base.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + path) else {
+            throw APIError(message: "Ugyldig adresse", status: 0)
+        }
+        var r = URLRequest(url: u)
+        r.httpMethod = method
+        r.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        r.httpBody = body
         return try await send(r, timeout: timeout)
     }
 

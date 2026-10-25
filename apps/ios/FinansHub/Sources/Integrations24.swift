@@ -327,7 +327,7 @@ struct Int24Group: View {
     private var statusRow: some View {
         let v: (String, Color) = statusValue
         return HStack(spacing: 12) {
-            Image(systemName: Int24Group.icon(item.id)).font(.system(size: 15, weight: .semibold)).foregroundStyle(v.1 == p.mut ? p.lab : v.1)
+            Image(systemName: Int24Group.icon(item.id)).font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(v.1 == p.mut ? p.lab : v.1)
                 .frame(width: 34, height: 34)
                 .background(p.bg, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 1) {

@@ -290,7 +290,7 @@ struct NewsIconPicker23: View {
             HStack {
                 Spacer()
                 Button { dismiss() } label: {
-                    Text("×").font(.system(size: 17)).foregroundStyle(p.ink).frame(width: 38, height: 38)
+                    Text("×").font(.dyn51(size: 17)).foregroundStyle(p.ink).frame(width: 38, height: 38)
                         .background(p.card, in: Circle()).overlay(Circle().stroke(p.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)

@@ -66,7 +66,7 @@ struct TaskDockField22: View {
                 .shadow(color: Color.black.opacity(0.12), radius: 3, y: 2)
             if ownButton {
                 Button { d.submit(store) } label: {
-                    Image(systemName: "plus").font(.system(size: 24, weight: .semibold)).foregroundStyle(p.onLab)
+                    Image(systemName: "plus").font(.dyn51(size: 24, weight: .semibold)).foregroundStyle(p.onLab)
                         .frame(width: 60, height: 60)
                         .background(p.lab, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 }

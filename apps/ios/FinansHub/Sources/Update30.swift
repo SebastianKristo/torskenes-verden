@@ -505,7 +505,7 @@ struct Update30Head: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            Image(systemName: icon).font(.system(size: 16, weight: .bold)).foregroundStyle(p.onLab)
+            Image(systemName: icon).font(.dyn51(size: 16, weight: .bold)).foregroundStyle(p.onLab)
                 .frame(width: 40, height: 40)
                 .background(p.lab, in: Circle())
             VStack(alignment: .leading, spacing: 1) {
@@ -519,7 +519,7 @@ struct Update30Head: View {
                     withAnimation(.easeOut(duration: 0.2)) { m.hideOnHome() }
                     store.flash("Du finner oppdateringen i Innstillinger")
                 } label: {
-                    Image(systemName: "xmark").font(.system(size: 10, weight: .heavy)).foregroundStyle(p.ink)
+                    Image(systemName: "xmark").font(.dyn51(size: 10, weight: .heavy)).foregroundStyle(p.ink)
                         .frame(width: 30, height: 30).background(p.line, in: Circle())
                         .frame(width: 44, height: 44).contentShape(Rectangle())
                 }
@@ -571,7 +571,7 @@ struct Update30StepRow: View {
         let active: Bool = step.state == "active" || step.state == "running"
         HStack(spacing: 8) {
             Image(systemName: done ? "checkmark.circle.fill" : (active ? "circle.dotted" : "circle"))
-                .font(.system(size: 12, weight: .semibold))
+                .font(.dyn51(size: 12, weight: .semibold))
                 .foregroundStyle(done ? p.pos : (active ? p.lab : p.line))
             Text(step.name).font(PF.ui(12.5, active ? .bold : .regular)).foregroundStyle(active ? p.ink : p.mut)
         }
@@ -760,7 +760,7 @@ struct Update30Software: View {
                         }
                         Spacer(minLength: 6)
                         Text(canUpdate ? "Oppdater" : "✓").font(PF.ui(14, .bold)).foregroundStyle(canUpdate ? p.lab : p.pos)
-                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(p.mut)
+                        Image(systemName: "chevron.right").font(.dyn51(size: 12, weight: .semibold)).foregroundStyle(p.mut)
                     }
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .contentShape(Rectangle())

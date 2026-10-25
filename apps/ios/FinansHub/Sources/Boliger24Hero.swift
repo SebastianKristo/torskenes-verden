@@ -99,7 +99,7 @@ struct Dom24Pill: View {
 
     private var pill: some View {
         HStack(spacing: 8) {
-            Image(systemName: "globe").font(.system(size: 14, weight: .semibold))
+            Image(systemName: "globe").font(.dyn51(size: 14, weight: .semibold))
             VStack(alignment: .leading, spacing: 0) {
                 Text(s.visits.map { Dom24Summary.format($0) } ?? "–").font(PF.mono(14)).lineLimit(1)
                 Text("besøk i dag · \(s.domains) " + (s.domains == 1 ? "domene" : "domener")).font(PF.ui(10.5, .semibold)).opacity(0.85).lineLimit(1)

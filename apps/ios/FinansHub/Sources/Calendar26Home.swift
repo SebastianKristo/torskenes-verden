@@ -145,7 +145,7 @@ struct Cal26PlatformPlate: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(spec.name).font(.system(size: 12.5, weight: .bold)).foregroundStyle(Color.white)
+            Text(spec.name).font(.dyn51(size: 12.5, weight: .bold)).foregroundStyle(Color.white)
             labeled(spec.labels[0]) {
                 box(spec.small, pad: 14) { Cal26WSmall(w: w, pal: spec.pal) }
             }
@@ -165,7 +165,7 @@ struct Cal26PlatformPlate: View {
     private func labeled<V: View>(_ label: String, @ViewBuilder _ v: () -> V) -> some View {
         VStack(spacing: 6) {
             v()
-            Text(label).font(.system(size: 11, weight: .bold)).foregroundStyle(Color.white.opacity(0.85))
+            Text(label).font(.dyn51(size: 11, weight: .bold)).foregroundStyle(Color.white.opacity(0.85))
         }
     }
 

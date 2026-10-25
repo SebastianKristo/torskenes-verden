@@ -462,7 +462,7 @@ struct BirthdayFormCard24: View {
         HStack(spacing: 4) {
             Text(t).font(PF.ui(15, .semibold)).foregroundStyle(p.ink).lineLimit(1)
             Spacer(minLength: 2)
-            Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(p.mut)
+            Image(systemName: "chevron.up.chevron.down").font(.dyn51(size: 10, weight: .semibold)).foregroundStyle(p.mut)
         }
         .padding(.horizontal, 10).frame(height: 44)
         .background(p.bg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))

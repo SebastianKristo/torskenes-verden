@@ -371,17 +371,17 @@ struct Tfa40Row: View {
         let on: Bool = m.enabled ?? (store.me?.twoFactor ?? false)
         Button { m.begin(store) } label: {
             HStack(spacing: 12) {
-                Image(systemName: on ? "lock.shield.fill" : "lock.shield").font(.system(size: 18, weight: .medium))
+                Image(systemName: on ? "lock.shield.fill" : "lock.shield").font(.dyn51(size: 18, weight: .medium))
                     .foregroundStyle(on ? Color(hex: "#2f7a4f") : Color.secondary)
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Totrinnsbekreftelse").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.primary)
+                    Text("Totrinnsbekreftelse").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(Color.primary)
                     Text(on ? "På · autentiseringsapp · " + m.leftText : "Av · sett opp i appen på 1 minutt")
-                        .font(.system(size: 13)).foregroundStyle(Color.secondary)
+                        .font(.dyn51(size: 13)).foregroundStyle(Color.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Text(on ? "Endre ›" : "Sett opp ›").font(.system(size: 14, weight: .semibold))
+                Text(on ? "Endre ›" : "Sett opp ›").font(.dyn51(size: 14, weight: .semibold))
                     .foregroundStyle(on ? Color.secondary : Color(hex: "#b23a2a"))
             }
             .padding(.vertical, 12).padding(.horizontal, 14)
@@ -727,7 +727,7 @@ struct Tfa40Done: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: "checkmark").font(.system(size: 34, weight: .heavy)).foregroundStyle(Color.white)
+            Image(systemName: "checkmark").font(.dyn51(size: 34, weight: .heavy)).foregroundStyle(Color.white)
                 .frame(width: 84, height: 84)
                 .background(Color(hex: "#2f7a4f"), in: Circle())
             Text("Denne telefonen er merket som pålitelig enhet.").font(PF.ui(14)).foregroundStyle(p.mut)

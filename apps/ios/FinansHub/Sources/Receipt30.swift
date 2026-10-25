@@ -141,9 +141,9 @@ struct Hl30Line: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(label).font(.system(size: 12, weight: hit ? .bold : .regular, design: .monospaced)).foregroundStyle(Hl30Line.ink).lineLimit(1)
+            Text(label).font(.dyn51(size: 12, weight: hit ? .bold : .regular, design: .monospaced)).foregroundStyle(Hl30Line.ink).lineLimit(1)
             Spacer(minLength: 6)
-            Text(price.map { n2(abs($0)) } ?? "").font(.system(size: 12, weight: hit ? .bold : .regular, design: .monospaced)).foregroundStyle(Hl30Line.ink)
+            Text(price.map { n2(abs($0)) } ?? "").font(.dyn51(size: 12, weight: hit ? .bold : .regular, design: .monospaced)).foregroundStyle(Hl30Line.ink)
         }
         .padding(.horizontal, hit ? 6 : 0).padding(.vertical, hit ? 3 : 0)
         .background {
@@ -275,7 +275,7 @@ struct Hl30Reread: View {
             Task { await h.reread(receiptId, txId: txId, store) }
         } label: {
             HStack(spacing: 6) {
-                if h.rereading { ProgressView().controlSize(.small) } else { Image(systemName: "doc.text.viewfinder").font(.system(size: 13, weight: .semibold)) }
+                if h.rereading { ProgressView().controlSize(.small) } else { Image(systemName: "doc.text.viewfinder").font(.dyn51(size: 13, weight: .semibold)) }
                 Text(h.rereading ? "Leser kvitteringen …" : "Les kvitteringen på nytt").font(PF.ui(13, .semibold))
             }
             .foregroundStyle(p.ink)

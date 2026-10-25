@@ -135,7 +135,7 @@ struct Bday41PhotoRow: View {
 
     private func label(_ t: String, icon: String, color: Color? = nil) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+            Image(systemName: icon).font(.dyn51(size: 12, weight: .semibold))
             Text(t).font(PF.ui(12.5, .bold))
         }
         .foregroundStyle(color ?? p.ink)
@@ -150,7 +150,7 @@ struct Bday41PlusBadge: View {
     @Environment(\.paper) private var p
 
     var body: some View {
-        Image(systemName: "plus").font(.system(size: 8, weight: .heavy)).foregroundStyle(p.ink)
+        Image(systemName: "plus").font(.dyn51(size: 8, weight: .heavy)).foregroundStyle(p.ink)
             .frame(width: 16, height: 16)
             .background(p.card, in: Circle())
             .overlay(Circle().stroke(p.line, lineWidth: 1))
@@ -278,7 +278,7 @@ struct Bday41Trumpet: View {
             if !still {
                 ForEach(0..<3, id: \.self) { (i: Int) in
                     let ph: Double = ((t + Double(i) * 0.6) / 1.8).truncatingRemainder(dividingBy: 1)
-                    Text(i % 2 == 0 ? "♪" : "♫").font(.system(size: size * 0.24, weight: .bold))
+                    Text(i % 2 == 0 ? "♪" : "♫").font(.dyn51(size: size * 0.24, weight: .bold))
                         .foregroundStyle(Bday41Party.confetti[(i * 2) % Bday41Party.confetti.count])
                         .offset(x: size * (0.6 + 0.2 * ph), y: -size * (0.1 + 0.7 * ph))
                         .opacity(1 - ph)

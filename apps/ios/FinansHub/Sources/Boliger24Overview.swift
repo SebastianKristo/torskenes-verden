@@ -57,10 +57,10 @@ struct Bol24Actions: View {
                 PhotosPicker(selection: $photos, maxSelectionCount: 10, matching: .images) { Label("Bilder", systemImage: "photo") }
                 Button { files = true } label: { Label("Filer (PDF og bilder)", systemImage: "doc") }
             } label: {
-                tile("Last opp", red: false) { Image(systemName: "square.and.arrow.up").font(.system(size: 16, weight: .semibold)) }
+                tile("Last opp", red: false) { Image(systemName: "square.and.arrow.up").font(.dyn51(size: 16, weight: .semibold)) }
             }
             .buttonStyle(.plain)
-            Button(action: add) { tile("Ny utgift", red: false) { Text("+").font(.system(size: 20)) } }.buttonStyle(.plain)
+            Button(action: add) { tile("Ny utgift", red: false) { Text("+").font(.dyn51(size: 20)) } }.buttonStyle(.plain)
         }
         .onChange(of: photos) { _, items in
             guard !items.isEmpty else { return }
@@ -197,7 +197,7 @@ struct Bol24Review: View {
             if let path {
                 PaperServerImage(path: path, tint: p.bg, initials: "⎙")
             } else {
-                Text("⎙").font(.system(size: 16)).foregroundStyle(p.mut)
+                Text("⎙").font(.dyn51(size: 16)).foregroundStyle(p.mut)
             }
         }
         .frame(width: 42, height: 52)
@@ -327,7 +327,7 @@ struct Bol24Categories: View {
             m.tab = "ex"
         } label: {
             HStack(spacing: 10) {
-                Text(Bol24Icon.glyph(c.name)).font(.system(size: 14, weight: .heavy)).foregroundStyle(Color(hex: c.color))
+                Text(Bol24Icon.glyph(c.name)).font(.dyn51(size: 14, weight: .heavy)).foregroundStyle(Color(hex: c.color))
                     .frame(width: 30, height: 30)
                     .background(RoundedRectangle(cornerRadius: 10).fill(Color(hex: c.color).opacity(0.16)))
                 HStack(spacing: 0) {
@@ -443,7 +443,7 @@ struct Bol24EntryRow: View {
         let rc: String = e.pending ? "Leses av AI" : (e.status == "review" ? "Til gjennomgang" : (e.receiptId.isEmpty ? "" : "⎙ Kvittering"))
         return Button(action: action) {
             HStack(spacing: 12) {
-                Text(Bol24Icon.glyph(e.category)).font(.system(size: 14, weight: .heavy)).foregroundStyle(Color(hex: e.color))
+                Text(Bol24Icon.glyph(e.category)).font(.dyn51(size: 14, weight: .heavy)).foregroundStyle(Color(hex: e.color))
                     .frame(width: 36, height: 36)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color(hex: e.color).opacity(0.16)))
                 VStack(alignment: .leading, spacing: 1) {

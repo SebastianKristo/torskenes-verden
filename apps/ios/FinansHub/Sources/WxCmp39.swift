@@ -279,7 +279,7 @@ struct WxCmp39Page: View {
             VStack(alignment: .leading, spacing: WxCmp39Layout.gap) {
                 header
                 if L.editing {
-                    Text("Dra kortene for å flytte · − for å skjule").font(.system(size: 12.5)).opacity(0.8)
+                    Text("Dra kortene for å flytte · − for å skjule").font(.dyn51(size: 12.5)).opacity(0.8)
                         .frame(maxWidth: .infinity).transition(.opacity)
                 }
                 if let c = w.compare {
@@ -290,10 +290,10 @@ struct WxCmp39Page: View {
                     if L.editing && !L.hiddenList.isEmpty { WxCmp39AddBox() }
                 } else {
                     Text(w.compareState == 2 ? "Storm svarte ikke. Prøv igjen senere." : "Henter Storm-data …")
-                        .font(.system(size: 13)).opacity(0.75)
+                        .font(.dyn51(size: 13)).opacity(0.75)
                 }
                 Text("Yr: MET Norway. Storm: ECMWF via Open-Meteo (Storm har ikke åpent API).")
-                    .font(.system(size: 11.5)).opacity(0.55).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+                    .font(.dyn51(size: 11.5)).opacity(0.55).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 4)
             }
             .padding(.horizontal, 16).padding(.top, topPad).padding(.bottom, 30)
@@ -315,8 +315,8 @@ struct WxCmp39Page: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Yr mot Storm").font(.system(size: 28, weight: .bold))
-                Text(w.placeName).font(.system(size: 13.5)).opacity(0.75)
+                Text("Yr mot Storm").font(.dyn51(size: 28, weight: .bold))
+                Text(w.placeName).font(.dyn51(size: 13.5)).opacity(0.75)
             }
             Spacer(minLength: 6)
             // Prompt 40: ✕ som i Vær; «Ferdig» (hvit pille, 42 pt) bare mens kortene redigeres.
@@ -376,7 +376,7 @@ struct WxCmp39Slot<C: View>: View {
         .overlay(alignment: .topLeading) {
             if editing {
                 Button { L.hide(k, store) } label: {
-                    Text("−").font(.system(size: 17, weight: .bold)).foregroundStyle(.white)
+                    Text("−").font(.dyn51(size: 17, weight: .bold)).foregroundStyle(.white)
                         .frame(width: 26, height: 26)
                         .background(Color(hex: "#0f1b2b"), in: Circle())
                         .shadow(color: .black.opacity(0.35), radius: 4, y: 2)
@@ -428,13 +428,13 @@ struct WxCmp39AddBox: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("LEGG TIL KORT").font(.system(size: 11, weight: .bold)).tracking(1.1).opacity(0.7)
+            Text("LEGG TIL KORT").font(.dyn51(size: 11, weight: .bold)).tracking(1.1).opacity(0.7)
             ForEach(L.hiddenList, id: \.self) { (k: String) in
                 Button { L.show(k, store) } label: {
                     HStack(spacing: 10) {
-                        Text("+").font(.system(size: 17, weight: .heavy)).foregroundStyle(Color(hex: "#0f1b2b"))
+                        Text("+").font(.dyn51(size: 17, weight: .heavy)).foregroundStyle(Color(hex: "#0f1b2b"))
                             .frame(width: 26, height: 26).background(Color(hex: "#6fdc8c"), in: Circle())
-                        Text(WxCmp39.name(k)).font(.system(size: 15, weight: .semibold))
+                        Text(WxCmp39.name(k)).font(.dyn51(size: 15, weight: .semibold))
                         Spacer(minLength: 0)
                     }
                     .frame(minHeight: 44).contentShape(Rectangle())
@@ -470,7 +470,7 @@ struct WxCmp39Hero: View {
             side("YR", t.map { WxCmp39.deg($0.yH) } ?? "–", t.map { WxCmp39.mm($0.yP) + " mm · min " + WxCmp39.deg($0.yL) } ?? "", yr: true)
             ZStack {
                 Rectangle().fill(Color.white.opacity(0.16)).frame(width: 1).padding(.vertical, 14)
-                Text(diffText(t)).font(.system(size: 12, weight: .heavy)).lineLimit(1).fixedSize()
+                Text(diffText(t)).font(.dyn51(size: 12, weight: .heavy)).lineLimit(1).fixedSize()
                     .padding(.horizontal, 9).padding(.vertical, 5)
                     .background(Color(hex: "#2c4869"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.14), lineWidth: 1))
@@ -493,12 +493,12 @@ struct WxCmp39Hero: View {
     private func side(_ name: String, _ big: String, _ sub: String, yr: Bool) -> some View {
         VStack(alignment: yr ? .leading : .trailing, spacing: 6) {
             HStack(spacing: 7) {
-                if !yr { Text(name).font(.system(size: 12, weight: .heavy)).tracking(1.2).foregroundStyle(WxCmp39.stT) }
+                if !yr { Text(name).font(.dyn51(size: 12, weight: .heavy)).tracking(1.2).foregroundStyle(WxCmp39.stT) }
                 WxLogo30(asset: yr ? "YrLogo" : "StormLogo", size: 20)
-                if yr { Text(name).font(.system(size: 12, weight: .heavy)).tracking(1.2).foregroundStyle(WxCmp39.yrT) }
+                if yr { Text(name).font(.dyn51(size: 12, weight: .heavy)).tracking(1.2).foregroundStyle(WxCmp39.yrT) }
             }
-            Text(big).font(.system(size: 56, weight: .light)).lineLimit(1).minimumScaleFactor(0.6)
-            Text(sub).font(.system(size: 13)).opacity(0.8).lineLimit(1).minimumScaleFactor(0.8)
+            Text(big).font(.dyn51(size: 56, weight: .light)).lineLimit(1).minimumScaleFactor(0.6)
+            Text(sub).font(.dyn51(size: 13)).opacity(0.8).lineLimit(1).minimumScaleFactor(0.8)
         }
         .padding(.horizontal, 18).padding(.top, 18).padding(.bottom, 16)
         .frame(maxWidth: .infinity, alignment: yr ? .leading : .trailing)
@@ -514,19 +514,19 @@ struct WxCmp39Agree: View {
         let n: Int = days.filter { $0.ok }.count
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("\(n) av \(days.count)").font(.system(size: 34, weight: .light))
-                Text("dager der de er enige").font(.system(size: 14)).opacity(0.85)
+                Text("\(n) av \(days.count)").font(.dyn51(size: 34, weight: .light))
+                Text("dager der de er enige").font(.dyn51(size: 14)).opacity(0.85)
             }
             HStack(spacing: 6) {
                 ForEach(days) { (d: WxCmp39Day) in
                     VStack(spacing: 6) {
-                        Text(d.ok ? "✓" : "≠").font(.system(size: 12, weight: .heavy))
+                        Text(d.ok ? "✓" : "≠").font(.dyn51(size: 12, weight: .heavy))
                             .foregroundStyle(d.ok ? Color(hex: "#22395a") : Color(hex: "#ffb3a6"))
                             .frame(width: 26, height: 26)
                             .background(d.ok ? Color.white : Color.clear, in: Circle())
                             .overlay(Circle().stroke(d.ok ? Color.white : Color(hex: "#ffb3a6"), lineWidth: 1.5))
                         Text(d.label == "I dag" ? "I D" : String(d.label.prefix(1)).uppercased())
-                            .font(.system(size: 10.5, weight: .bold)).opacity(0.7)
+                            .font(.dyn51(size: 10.5, weight: .bold)).opacity(0.7)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -548,10 +548,10 @@ struct WxCmp39Glimt: View {
                 Circle().fill(AngularGradient(colors: [Color(hex: "#b23a2a"), Color(hex: "#e8794a"), Color(hex: "#f2c14e"), Color(hex: "#3fbf9a"),
                                                        Color(hex: "#4f8fd6"), Color(hex: "#7a5ad6"), Color(hex: "#b23a2a")], center: .center))
                 Circle().fill(Color(hex: "#fffdf8")).frame(width: 15, height: 15)
-                Text("✦").font(.system(size: 10)).foregroundStyle(Color(hex: "#e0553d"))
+                Text("✦").font(.dyn51(size: 10)).foregroundStyle(Color(hex: "#e0553d"))
             }
             .frame(width: 22, height: 22)
-            Text(text).font(.system(size: 14)).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+            Text(text).font(.dyn51(size: 14)).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 16).padding(.vertical, 14)
@@ -594,7 +594,7 @@ struct WxCmp39List: View {
             Haptics.shared.select()
             withAnimation(.easeOut(duration: 0.2)) { tab = k }
         } label: {
-            Text(t).font(.system(size: 13.5, weight: .semibold))
+            Text(t).font(.dyn51(size: 13.5, weight: .semibold))
                 .foregroundStyle(tab == k ? Color.white : Color.white.opacity(0.7))
                 .frame(maxWidth: .infinity).frame(height: 34)
                 .background(tab == k ? Color.white.opacity(0.22) : Color.clear, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
@@ -622,7 +622,7 @@ struct WxCmp39ListHead: View {
             Text("STORM").foregroundStyle(WxCmp39.stT).frame(width: 50, alignment: .leading)
             Color.clear.frame(width: 12, height: 1)
         }
-        .font(.system(size: 10.5, weight: .heavy)).tracking(1)
+        .font(.dyn51(size: 10.5, weight: .heavy)).tracking(1)
         .lineLimit(1)
         .opacity(0.7)
         .padding(.top, 10).padding(.bottom, 6)
@@ -643,11 +643,11 @@ struct WxCmp39Row: View {
             Rectangle().fill(Color.white.opacity(0.1)).frame(height: 1)
             Button(action: tap) {
                 HStack(spacing: 8) {
-                    Text(d.label).font(.system(size: 15, weight: .semibold)).frame(width: 44, alignment: .leading).lineLimit(1).minimumScaleFactor(0.8)
-                    Text(yr).font(.system(size: 15, weight: .semibold)).monospacedDigit().frame(width: 50, alignment: .trailing).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(d.label).font(.dyn51(size: 15, weight: .semibold)).frame(width: 44, alignment: .leading).lineLimit(1).minimumScaleFactor(0.8)
+                    Text(yr).font(.dyn51(size: 15, weight: .semibold)).monospacedDigit().frame(width: 50, alignment: .trailing).lineLimit(1).minimumScaleFactor(0.7)
                     WxCmp39Bar(df: df, unit: tab == "t" ? "°" : " mm").frame(maxWidth: .infinity)
-                    Text(st).font(.system(size: 15, weight: .semibold)).monospacedDigit().frame(width: 50, alignment: .leading).lineLimit(1).minimumScaleFactor(0.7)
-                    Text("›").font(.system(size: 14)).opacity(0.6).rotationEffect(.degrees(open ? 90 : 0)).frame(width: 12)
+                    Text(st).font(.dyn51(size: 15, weight: .semibold)).monospacedDigit().frame(width: 50, alignment: .leading).lineLimit(1).minimumScaleFactor(0.7)
+                    Text("›").font(.dyn51(size: 14)).opacity(0.6).rotationEffect(.degrees(open ? 90 : 0)).frame(width: 12)
                 }
                 .frame(minHeight: 56)
                 .padding(.top, 6)
@@ -660,7 +660,7 @@ struct WxCmp39Row: View {
 
     private var details: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(d.status).font(.system(size: 12.5, weight: .bold)).foregroundStyle(d.ok ? Color(hex: "#8ff0b0") : Color(hex: "#ffb3a6"))
+            Text(d.status).font(.dyn51(size: 12.5, weight: .bold)).foregroundStyle(d.ok ? Color(hex: "#8ff0b0") : Color(hex: "#ffb3a6"))
             HStack(spacing: 8) {
                 box("YR", WxCmp39.deg(d.yH) + " / " + WxCmp39.deg(d.yL), WxCmp39.mm(d.yP) + " mm", WxCmp39.yrT, WxCmp39.yrC)
                 box("STORM", WxCmp39.deg(d.sH) + " / " + WxCmp39.deg(d.sL), WxCmp39.mm(d.sP) + " mm", WxCmp39.stT, WxCmp39.stC)
@@ -671,9 +671,9 @@ struct WxCmp39Row: View {
 
     private func box(_ name: String, _ t: String, _ x: String, _ fg: Color, _ bg: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(name).font(.system(size: 10.5, weight: .heavy)).tracking(1).foregroundStyle(fg)
-            Text(t).font(.system(size: 20, weight: .medium))
-            Text(x).font(.system(size: 12.5)).opacity(0.8)
+            Text(name).font(.dyn51(size: 10.5, weight: .heavy)).tracking(1).foregroundStyle(fg)
+            Text(t).font(.dyn51(size: 20, weight: .medium))
+            Text(x).font(.dyn51(size: 12.5)).opacity(0.8)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -698,7 +698,7 @@ struct WxCmp39Bar: View {
                 Capsule().fill(yrSide ? WxCmp39.yrC : WxCmp39.stC).frame(width: w, height: 10)
                     .offset(x: yrSide ? W / 2 - w : W / 2, y: 6)
                 if !label.isEmpty {
-                    Text(label).font(.system(size: 10.5, weight: .heavy)).foregroundStyle(yrSide ? WxCmp39.yrT : WxCmp39.stT)
+                    Text(label).font(.dyn51(size: 10.5, weight: .heavy)).foregroundStyle(yrSide ? WxCmp39.yrT : WxCmp39.stT)
                         .lineLimit(1).fixedSize()
                         .frame(width: W, alignment: .center)
                         .offset(y: -12)
@@ -728,16 +728,16 @@ struct WxCmp39Chart: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("NESTE 24 TIMER").font(.system(size: 11, weight: .bold)).tracking(1.1).opacity(0.65)
+                Text("NESTE 24 TIMER").font(.dyn51(size: 11, weight: .bold)).tracking(1.1).opacity(0.65)
                 Spacer(minLength: 6)
                 HStack(spacing: 12) {
                     legend(WxCmp39.yrC, "Yr")
                     legend(WxCmp39.stC, "Storm")
                 }
-                .font(.system(size: 12, weight: .bold))
+                .font(.dyn51(size: 12, weight: .bold))
             }
             if hours.isEmpty {
-                Text("Ingen timedata ennå.").font(.system(size: 13)).opacity(0.7)
+                Text("Ingen timedata ennå.").font(.dyn51(size: 13)).opacity(0.7)
             } else {
                 WxCompareChart22(hours: hours)
             }
@@ -762,7 +762,7 @@ struct WxCmp39Rain: View {
     var body: some View {
         let pMax: Double = Swift.max(0.5, days.map { Swift.max($0.yP, $0.sP) }.max() ?? 0)
         VStack(alignment: .leading, spacing: 10) {
-            Text("NEDBØR · MM PER DAG").font(.system(size: 11, weight: .bold)).tracking(1.1).opacity(0.65)
+            Text("NEDBØR · MM PER DAG").font(.dyn51(size: 11, weight: .bold)).tracking(1.1).opacity(0.65)
             HStack(alignment: .bottom, spacing: 6) {
                 ForEach(days) { (d: WxCmp39Day) in
                     VStack(spacing: 5) {
@@ -773,7 +773,7 @@ struct WxCmp39Rain: View {
                                 .fill(WxCmp39.stC).frame(width: 9, height: CGFloat(Swift.max(2, d.sP / pMax * 64)))
                         }
                         .frame(height: 64, alignment: .bottom)
-                        Text(d.label == "I dag" ? "I d" : String(d.label.prefix(2))).font(.system(size: 11, weight: .bold)).opacity(0.7)
+                        Text(d.label == "I dag" ? "I d" : String(d.label.prefix(2))).font(.dyn51(size: 11, weight: .bold)).opacity(0.7)
                     }
                     .frame(maxWidth: .infinity)
                 }

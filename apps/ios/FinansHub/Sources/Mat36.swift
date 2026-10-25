@@ -24,7 +24,7 @@ struct Mat36Shared: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: "person.2").font(.system(size: 11, weight: .semibold)).foregroundStyle(pal.muted)
+            Image(systemName: "person.2").font(.dyn51(size: 11, weight: .semibold)).foregroundStyle(pal.muted)
             Text(note).font(pal.ui(12)).foregroundStyle(pal.muted).lineLimit(1).minimumScaleFactor(0.85)
         }
         .padding(.horizontal, 4)

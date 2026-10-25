@@ -421,7 +421,7 @@ struct PaperTasksView: View {
                 .submitLabel(.done)
                 .onSubmit { add() }
             Button { add() } label: {
-                Image(systemName: "plus").font(.system(size: 18, weight: .bold)).foregroundStyle(p.onLab)
+                Image(systemName: "plus").font(.dyn51(size: 18, weight: .bold)).foregroundStyle(p.onLab)
                     .frame(width: 48, height: 48).background(p.lab, in: Circle())
             }
             .buttonStyle(.plain)
@@ -432,7 +432,7 @@ struct PaperTasksView: View {
                 text = ""
                 Tasks37Glimt.shared.open(store)
             } label: {
-                Image(systemName: "sparkle").font(.system(size: 18, weight: .bold)).foregroundStyle(p.ink)
+                Image(systemName: "sparkle").font(.dyn51(size: 18, weight: .bold)).foregroundStyle(p.ink)
                     .frame(width: 48, height: 48).background(p.card, in: Circle())
             }
             .buttonStyle(.plain)
@@ -495,7 +495,7 @@ struct PaperTasksView: View {
                     RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(c, lineWidth: 2)
                     if t.done {
                         RoundedRectangle(cornerRadius: 8, style: .continuous).fill(c)
-                        Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
+                        Image(systemName: "checkmark").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(.white)
                     }
                 }
                 .frame(width: 26, height: 26)

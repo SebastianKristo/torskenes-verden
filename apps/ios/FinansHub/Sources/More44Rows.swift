@@ -22,7 +22,12 @@ enum More44Rows {
         out.append(More28Row(id: "chat", name: "Chat", sub: "Ollama lokalt, Gemini og Groq", icon: "bubble.left.and.bubble.right") { store.openChat() })
         if Media43.shared.allowed {
             out.append(More28Row(id: "media", name: "Media", sub: mediaSub, icon: "play.rectangle") { Media43.shared.show() })
+            // Prompt 51 (IOSFEAT51): «Hva skal vi se i kveld?», Fortsett, Undertekster og Lagring (Kveld51*.swift).
+            out.append(More28Row(id: "ikveld51", name: "Hva skal vi se i kveld?", sub: "Forslag fra eget bibliotek · lydbøker og podkaster", icon: "tv") { Kveld51.shared.show() })
         }
+        // Prompt 51 (IOSFEAT51): felles familiekalender med «hvem kjører?» (FamCal51.swift) og felles søk (Search51.swift).
+        out.append(More28Row(id: "famcal51", name: "Familiekalender", sub: FamCal51.shared.drivesText.isEmpty ? "Hvem kjører? Henting og bringing" : FamCal51.shared.drivesText, icon: "car") { FamCal51.shared.show() })
+        out.append(More28Row(id: "sok51", name: "Søk i alt", sub: "Alle moduler med handlinger", icon: "magnifyingglass") { Search51.shared.show() })
         if !inBar.contains("hjem") {
             out.append(More28Row(id: "hjem", name: "Hjem", sub: "Pakker, avganger og widgets", icon: "house") { store.paperGo("hjem") })
         }

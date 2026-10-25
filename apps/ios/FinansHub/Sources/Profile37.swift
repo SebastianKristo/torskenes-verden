@@ -210,7 +210,7 @@ struct Profile37LinkView: View {
             m.isNew = true
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: "plus").font(.system(size: 16, weight: .bold)).foregroundStyle(p.ink)
+                Image(systemName: "plus").font(.dyn51(size: 16, weight: .bold)).foregroundStyle(p.ink)
                     .frame(width: 42, height: 42)
                     .overlay(Circle().stroke(p.line, style: StrokeStyle(lineWidth: 1.2, dash: [4, 3])))
                 Text("Jeg er ny i husstanden").font(PF.ui(15.5, .semibold)).foregroundStyle(p.ink)

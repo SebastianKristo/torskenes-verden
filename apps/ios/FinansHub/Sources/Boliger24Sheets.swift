@@ -41,7 +41,7 @@ struct Bol24SheetHead: View {
                 HStack {
                     Spacer()
                     Button(action: close) {
-                        Text("×").font(.system(size: 17)).foregroundStyle(p.ink)
+                        Text("×").font(.dyn51(size: 17)).foregroundStyle(p.ink)
                             .frame(width: 38, height: 38)
                             .background(Circle().fill(p.card))
                             .overlay(Circle().strokeBorder(p.line, lineWidth: 1))
@@ -185,7 +185,7 @@ struct Bol24EditSheet: View {
                 ForEach(bgOptions, id: \.0) { o in bgTile(o.0, o.1) }
                 PhotosPicker(selection: $pick, matching: .images) {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("+").font(.system(size: 20)).foregroundStyle(p.mut)
+                        Text("+").font(.dyn51(size: 20)).foregroundStyle(p.mut)
                             .frame(maxWidth: .infinity)
                             .aspectRatio(1.6, contentMode: .fit)
                             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(p.line, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4])))

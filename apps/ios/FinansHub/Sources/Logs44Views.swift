@@ -150,7 +150,7 @@ struct Logs44Filters: View {
                 Spacer(minLength: 4)
                 Media43Chip(text: m.live ? "● Live" : "Live", on: m.live) { m.setLive(!m.live, store) }
                 Button { Task { shareURL = await m.download(store) } } label: {
-                    Image(systemName: "square.and.arrow.down").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.ink)
+                    Image(systemName: "square.and.arrow.down").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.ink)
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)

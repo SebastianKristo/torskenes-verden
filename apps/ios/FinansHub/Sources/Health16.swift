@@ -313,6 +313,8 @@ final class HealthSync {
             HealthSync.schedule()
             let work = Task { @MainActor in
                 if let api = HealthSync.backgroundAPI() { await FamilyModel.shared.pollEvents(api) }
+                // Prompt 51 (IOSPLAT51): offline-køen sendes også i bakgrunnen (Plat51Shared.swift).
+                if Offline51.count > 0 { _ = await Offline51.flush() }
                 task.setTaskCompleted(success: true)
             }
             task.expirationHandler = { work.cancel() }

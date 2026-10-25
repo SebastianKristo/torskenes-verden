@@ -278,7 +278,7 @@ struct IconPicker42: View {
         let shown: [String] = q.isEmpty && !all ? Array(list.prefix(18)) : list
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").font(.system(size: 13, weight: .semibold)).foregroundStyle(t.mut)
+                Image(systemName: "magnifyingglass").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(t.mut)
                 TextField("Søk i ikoner, f.eks. båt, kirke, ski …", text: $q)
                     .font(PF.ui(13.5)).foregroundStyle(t.ink)
                     .textInputAutocapitalization(.never).autocorrectionDisabled()

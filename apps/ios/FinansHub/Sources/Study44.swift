@@ -319,7 +319,7 @@ struct Study44Top: View {
                 store.openChat()
             } label: { Label("Spør Glimt i Chat", systemImage: "sparkles") }
         } label: {
-            Image(systemName: "ellipsis").font(.system(size: 16, weight: .bold)).foregroundStyle(p.ink).round50()
+            Image(systemName: "ellipsis").font(.dyn51(size: 16, weight: .bold)).foregroundStyle(p.ink).round50()
         }
         .accessibilityLabel("Mer for Studie")
     }

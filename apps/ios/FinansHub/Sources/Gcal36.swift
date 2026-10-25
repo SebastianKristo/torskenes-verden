@@ -157,7 +157,7 @@ struct Gcal36MainRow: View {
         Button(action: act) {
             HStack(spacing: 12) {
                 Image(systemName: cal.main ? "largecircle.fill.circle" : "circle")
-                    .font(.system(size: 20)).foregroundStyle(cal.main ? p.ink : p.mut)
+                    .font(.dyn51(size: 20)).foregroundStyle(cal.main ? p.ink : p.mut)
                 Gcal36Dot(hex: cal.color)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(cal.name).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)

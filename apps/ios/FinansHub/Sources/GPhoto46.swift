@@ -141,7 +141,7 @@ struct GPhoto46Row: View {
                 g.editing.toggle()
             } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "photo.stack").font(.system(size: 14, weight: .semibold)).foregroundStyle(p.ink)
+                    Image(systemName: "photo.stack").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(p.ink)
                         .frame(width: 30, height: 30)
                         .background(p.card, in: RoundedRectangle(cornerRadius: 8))
                     VStack(alignment: .leading, spacing: 1) {

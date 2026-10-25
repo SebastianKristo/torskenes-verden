@@ -68,7 +68,7 @@ struct Task37DetailSheet: View {
     private var top: some View {
         HStack(spacing: 10) {
             Button { commit(); close() } label: {
-                Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).foregroundStyle(p.ink)
+                Image(systemName: "xmark").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(p.ink)
                     .frame(width: 36, height: 36)
                     .background(p.card, in: Circle())
                     .overlay(Circle().stroke(p.line, lineWidth: 1))
@@ -271,7 +271,7 @@ struct Task37DetailSheet: View {
                 subRow(i, s)
             }
             HStack(spacing: 8) {
-                Image(systemName: "plus").font(.system(size: 13, weight: .bold)).foregroundStyle(p.mut).frame(width: 30)
+                Image(systemName: "plus").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(p.mut).frame(width: 30)
                 TextField("Ny deloppgave", text: $subText)
                     .font(PF.ui(14.5)).foregroundStyle(p.ink)
                     .submitLabel(.done)
@@ -289,7 +289,7 @@ struct Task37DetailSheet: View {
                 if i < t.subs.count { t.subs[i].done.toggle(); commit() }
                 Haptics.shared.tick()
             } label: {
-                Image(systemName: s.done ? "checkmark.circle.fill" : "circle").font(.system(size: 20, weight: .semibold))
+                Image(systemName: s.done ? "checkmark.circle.fill" : "circle").font(.dyn51(size: 20, weight: .semibold))
                     .foregroundStyle(s.done ? p.pos : p.line)
                     .frame(width: 30)
             }
@@ -299,7 +299,7 @@ struct Task37DetailSheet: View {
             Button {
                 if i < t.subs.count { t.subs.remove(at: i); commit() }
             } label: {
-                Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(p.mut).frame(width: 28, height: 28)
+                Image(systemName: "xmark").font(.dyn51(size: 10, weight: .bold)).foregroundStyle(p.mut).frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Fjern deloppgave")
@@ -408,7 +408,7 @@ struct Task37Icon: View {
     let tint: Color
 
     var body: some View {
-        Image(systemName: icon).font(.system(size: 13, weight: .bold)).foregroundStyle(Color.white)
+        Image(systemName: icon).font(.dyn51(size: 13, weight: .bold)).foregroundStyle(Color.white)
             .frame(width: 30, height: 30)
             .background(tint, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             .accessibilityHidden(true)

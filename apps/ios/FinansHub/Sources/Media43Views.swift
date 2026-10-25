@@ -193,6 +193,8 @@ struct Media43Page: View {
                 withAnimation(.easeOut(duration: 0.2)) { m.glimtOpen.toggle() }
                 if m.glimtOpen { glimtFocus = true }
             }
+            // Prompt 51 (IOSFEAT51): «Hva skal vi se i kveld?» (Kveld51Views.swift) – Media lukkes først (én fullskjerm om gangen).
+            Kveld51MediaButton()
             // Innstillinger for Media (og «Rydd uovervåkede» for admin) som før, nå som rund knapp med kant.
             Media45Menu()
         }

@@ -163,7 +163,7 @@ struct Qr46LoginButton: View {
     var body: some View {
         Button { Qr46Show.shared.show(store) } label: {
             HStack(spacing: 8) {
-                Image(systemName: "qrcode").font(.system(size: 16, weight: .semibold))
+                Image(systemName: "qrcode").font(.dyn51(size: 16, weight: .semibold))
                 Text("Logg inn med QR-kode").font(PF.ui(15, .bold))
             }
             .foregroundStyle(p.ink)

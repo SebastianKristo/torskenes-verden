@@ -290,7 +290,7 @@ struct Versions44Choice: View {
     var body: some View {
         Button(action: act) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: on ? "largecircle.fill.circle" : "circle").font(.system(size: 20)).foregroundStyle(on ? Color(hex: "#b23a2a") : p.mut)
+                Image(systemName: on ? "largecircle.fill.circle" : "circle").font(.dyn51(size: 20)).foregroundStyle(on ? Color(hex: "#b23a2a") : p.mut)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(PF.ui(15, .bold)).foregroundStyle(p.ink)
                     Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)

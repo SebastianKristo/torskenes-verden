@@ -309,7 +309,7 @@ struct Sec51ApprovalsCard: View {
                 }
             }
             if !m.err.isEmpty {
-                Text(m.err).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
+                Text(m.err).font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14).padding(.bottom, 12)
                     .fixedSize(horizontal: false, vertical: true)
@@ -320,11 +320,11 @@ struct Sec51ApprovalsCard: View {
 
     private var empty: some View {
         HStack(spacing: 12) {
-            Image(systemName: "checkmark.shield").font(.system(size: 18, weight: .medium)).foregroundStyle(Color.secondary).frame(width: 28)
+            Image(systemName: "checkmark.shield").font(.dyn51(size: 18, weight: .medium)).foregroundStyle(Color.secondary).frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Ingen enheter venter").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.primary)
+                Text("Ingen enheter venter").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(Color.primary)
                 Text("Logger noen inn på en ny enhet fra internett, må det godkjennes her.")
-                    .font(.system(size: 13)).foregroundStyle(Color.secondary).fixedSize(horizontal: false, vertical: true)
+                    .font(.dyn51(size: 13)).foregroundStyle(Color.secondary).fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -340,11 +340,11 @@ struct Sec51ApprovalRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "iphone.and.arrow.forward").font(.system(size: 18, weight: .medium))
+                Image(systemName: "iphone.and.arrow.forward").font(.dyn51(size: 18, weight: .medium))
                     .foregroundStyle(Color(hex: "#b23a2a")).frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(a.device).font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.primary)
-                    Text(a.detail).font(.system(size: 13)).foregroundStyle(Color.secondary).fixedSize(horizontal: false, vertical: true)
+                    Text(a.device).font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(Color.primary)
+                    Text(a.detail).font(.dyn51(size: 13)).foregroundStyle(Color.secondary).fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -358,15 +358,15 @@ struct Sec51ApprovalRow: View {
         return HStack(spacing: 10) {
             Spacer(minLength: 40)
             Button { m.decide(a, approve: false, store) } label: {
-                Text("Avvis").font(.system(size: 14, weight: .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
+                Text("Avvis").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
                     .padding(.horizontal, 16).frame(height: 36)
                     .overlay(Capsule().stroke(Color(hex: "#b23a2a").opacity(0.6), lineWidth: 1))
             }
             .buttonStyle(.plain)
             Button { m.decide(a, approve: true, store) } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "faceid").font(.system(size: 13, weight: .semibold))
-                    Text(busy ? "Godkjenner …" : "Godkjenn").font(.system(size: 14, weight: .semibold))
+                    Image(systemName: "faceid").font(.dyn51(size: 13, weight: .semibold))
+                    Text(busy ? "Godkjenner …" : "Godkjenn").font(.dyn51(size: 14, weight: .semibold))
                 }
                 .foregroundStyle(Color.white)
                 .padding(.horizontal, 16).frame(height: 36)

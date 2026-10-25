@@ -221,7 +221,7 @@ struct Chat27Answer: View {
     private func action(_ icon: String, _ t: String, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: 6) {
-                Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+                Image(systemName: icon).font(.dyn51(size: 12, weight: .semibold))
                 Text(t).font(c.ui(12.5, .semibold))
             }
             .foregroundStyle(c.mut)
@@ -298,7 +298,7 @@ struct Chat27History: View {
                 Text("Chat").font(c.head(25)).foregroundStyle(c.ink)
                 Spacer()
                 Button { s.newChat() } label: {
-                    Image(systemName: "square.and.pencil").font(.system(size: 18, weight: .semibold)).foregroundStyle(c.ink)
+                    Image(systemName: "square.and.pencil").font(.dyn51(size: 18, weight: .semibold)).foregroundStyle(c.ink)
                         .frame(width: 42, height: 42)
                 }
                 .buttonStyle(.plain)
@@ -373,7 +373,7 @@ struct Chat27History: View {
                 HStack(spacing: 8) {
                     Text(f.open ? "▾" : "▸").font(c.ui(12)).foregroundStyle(c.mut).frame(width: 12)
                     // Prompt 34: kvitteringsikon i rødt for «Kvitteringer og skanninger».
-                    Image(systemName: f.sys ? "doc.text" : "folder").font(.system(size: 13, weight: .semibold)).foregroundStyle(f.sys ? Chat34Scans.red : c.mut)
+                    Image(systemName: f.sys ? "doc.text" : "folder").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(f.sys ? Chat34Scans.red : c.mut)
                     Text(g.title).font(c.ui(13.5, .semibold)).foregroundStyle(c.ink).lineLimit(1)
                     Spacer(minLength: 0)
                 }
@@ -421,7 +421,7 @@ struct Chat27History: View {
     private func footRow(_ icon: String, _ t: String, _ sub: String, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: 10) {
-                Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(c.ink).frame(width: 22)
+                Image(systemName: icon).font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(c.ink).frame(width: 22)
                 Text(t).font(c.ui(14, .semibold)).foregroundStyle(c.ink)
                 Spacer(minLength: 4)
                 Text(sub).font(c.ui(12)).foregroundStyle(c.mut).lineLimit(1)

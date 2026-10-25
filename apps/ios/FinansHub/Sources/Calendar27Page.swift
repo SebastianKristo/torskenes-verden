@@ -144,14 +144,14 @@ struct Cal27TopBar: View {
             .accessibilityLabel("Velg dag og kalendere")
             Spacer(minLength: 4)
             Button { m.openSearch() } label: {
-                Image(systemName: "magnifyingglass").font(.system(size: 19, weight: .semibold)).foregroundStyle(p.ink)
+                Image(systemName: "magnifyingglass").font(.dyn51(size: 19, weight: .semibold)).foregroundStyle(p.ink)
                     .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Søk i kalenderen")
             Button { m.goToday() } label: {
                 ZStack {
-                    Image(systemName: "calendar").font(.system(size: 22, weight: .regular)).foregroundStyle(p.ink)
+                    Image(systemName: "calendar").font(.dyn51(size: 22, weight: .regular)).foregroundStyle(p.ink)
                     Text("\(Cal26.cal.component(.day, from: now))").font(PF.ui(9.5, .heavy)).foregroundStyle(p.ink).offset(y: 3)
                 }
                 .frame(width: 44, height: 44)
@@ -330,7 +330,7 @@ struct Cal27BottomBar: View {
             .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
             // Prompt 29: + åpner «Legg til time» (rask time med AI). «Fyll ut selv» i arket gir det vanlige skjemaet.
             Button { Quick29Model.shared.openSheet() } label: {
-                Image(systemName: "plus").font(.system(size: 22, weight: .bold)).foregroundStyle(Color.white)
+                Image(systemName: "plus").font(.dyn51(size: 22, weight: .bold)).foregroundStyle(Color.white)
                     .frame(width: 62, height: 62)
                     .background(p.lab, in: Circle())
                     .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
@@ -347,7 +347,7 @@ struct Cal27BottomBar: View {
         let on: Bool = m.view == id
         return Button { m.setView(id, store) } label: {
             VStack(spacing: 2) {
-                Image(systemName: icon).font(.system(size: 16, weight: .semibold))
+                Image(systemName: icon).font(.dyn51(size: 16, weight: .semibold))
                 Text(name).font(PF.ui(10.5, .bold)).lineLimit(1).minimumScaleFactor(0.75)
             }
             .foregroundStyle(on ? p.ink : p.bg.opacity(0.72))

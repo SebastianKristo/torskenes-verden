@@ -49,7 +49,7 @@ struct Study44Upload: View {
 
     private func label(_ t: String, _ icon: String) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon).font(.system(size: 13, weight: .semibold))
+            Image(systemName: icon).font(.dyn51(size: 13, weight: .semibold))
             Text(t).font(PF.ui(13.5, .bold))
         }
         .foregroundStyle(p.bg)

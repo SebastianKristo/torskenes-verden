@@ -57,7 +57,7 @@ struct VaerDoneButton40: View {
             Haptic30.light()
             action()
         } label: {
-            Text("Ferdig").font(.system(size: 15, weight: .bold))
+            Text("Ferdig").font(.dyn51(size: 15, weight: .bold))
                 .foregroundStyle(Color(hex: "#22395a"))
                 .padding(.horizontal, 18).frame(height: 42)
                 .background(Color.white, in: Capsule())

@@ -196,8 +196,8 @@ struct AppAuth41Sheet: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.white)
                 VStack(spacing: 0) {
-                    Text(AppAuth41Sheet.weekday()).font(.system(size: 10, weight: .bold)).foregroundStyle(Color(hex: "#e0342a"))
-                    Text(AppAuth41Sheet.day()).font(.system(size: 28, weight: .regular)).foregroundStyle(Color.black)
+                    Text(AppAuth41Sheet.weekday()).font(.dyn51(size: 10, weight: .bold)).foregroundStyle(Color(hex: "#e0342a"))
+                    Text(AppAuth41Sheet.day()).font(.dyn51(size: 28, weight: .regular)).foregroundStyle(Color.black)
                 }
             }
             .frame(width: 64, height: 64)
@@ -232,7 +232,7 @@ struct AppAuth41Sheet: View {
             }
             Button { m.approve(store) } label: {
                 HStack(spacing: 8) {
-                    if m.busy { ProgressView().tint(p.bg) } else { Image(systemName: "faceid").font(.system(size: 17, weight: .semibold)) }
+                    if m.busy { ProgressView().tint(p.bg) } else { Image(systemName: "faceid").font(.dyn51(size: 17, weight: .semibold)) }
                     Text(m.busy ? "Godkjenner …" : "Godkjenn med Face ID").font(PF.ui(15, .bold))
                 }
                 .foregroundStyle(p.bg).frame(maxWidth: .infinity, minHeight: 52)

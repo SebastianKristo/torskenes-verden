@@ -342,7 +342,7 @@ struct Chat27GuardSheet: View {
         .background(c.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         Button { s.guardRemember.toggle() } label: {
             HStack(spacing: 10) {
-                Image(systemName: s.guardRemember ? "checkmark.square.fill" : "square").font(.system(size: 18)).foregroundStyle(c.ink)
+                Image(systemName: s.guardRemember ? "checkmark.square.fill" : "square").font(.dyn51(size: 18)).foregroundStyle(c.ink)
                 Text("Ikke spør igjen i denne samtalen").font(c.ui(14, .semibold)).foregroundStyle(c.ink)
             }
             .frame(minHeight: 40)

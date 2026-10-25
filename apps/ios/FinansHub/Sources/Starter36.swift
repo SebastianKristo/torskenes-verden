@@ -340,7 +340,7 @@ struct Starter36StepRow: View {
         HStack(spacing: 12) {
             ZStack {
                 if step.status == "ok" {
-                    Image(systemName: "checkmark.circle.fill").font(.system(size: 18, weight: .semibold))
+                    Image(systemName: "checkmark.circle.fill").font(.dyn51(size: 18, weight: .semibold))
                         .foregroundStyle(Color(hex: "#3fbf9a"))
                         .transition(.scale(scale: 0.4).combined(with: .opacity))
                 } else if step.status == "run" {

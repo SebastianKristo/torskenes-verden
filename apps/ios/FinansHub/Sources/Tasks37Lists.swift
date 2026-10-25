@@ -170,7 +170,7 @@ struct Task37ListSheet: View {
     private var top: some View {
         HStack(spacing: 10) {
             Button { close() } label: {
-                Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).foregroundStyle(p.ink)
+                Image(systemName: "xmark").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(p.ink)
                     .frame(width: 36, height: 36)
                     .background(p.card, in: Circle())
                     .overlay(Circle().stroke(p.line, lineWidth: 1))

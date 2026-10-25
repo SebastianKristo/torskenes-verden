@@ -293,13 +293,13 @@ struct Task37GlimtSheet: View {
                 .submitLabel(.send)
                 .onSubmit { g.run(store) }
             PhotosPicker(selection: $photo, matching: .images) {
-                Image(systemName: "camera").font(.system(size: 16, weight: .semibold)).foregroundStyle(p.ink)
+                Image(systemName: "camera").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(p.ink)
                     .frame(width: 38, height: 38)
                     .background(p.bg, in: Circle())
             }
             .accessibilityLabel("Bilde av handlelapp eller oppskrift")
             Button { g.run(store) } label: {
-                Image(systemName: "arrow.up").font(.system(size: 15, weight: .bold)).foregroundStyle(p.onLab)
+                Image(systemName: "arrow.up").font(.dyn51(size: 15, weight: .bold)).foregroundStyle(p.onLab)
                     .frame(width: 38, height: 38)
                     .background(p.lab, in: Circle())
             }
@@ -380,7 +380,7 @@ struct Task37GlimtButton: View {
 
     var body: some View {
         Button { Tasks37Glimt.shared.open(store) } label: {
-            Image(systemName: "sparkle").font(.system(size: 24, weight: .bold)).foregroundStyle(p.onLab)
+            Image(systemName: "sparkle").font(.dyn51(size: 24, weight: .bold)).foregroundStyle(p.onLab)
                 .frame(width: 60, height: 60)
                 .background(p.lab, in: Circle())
                 .shadow(color: .black.opacity(0.4), radius: 14, y: 10)

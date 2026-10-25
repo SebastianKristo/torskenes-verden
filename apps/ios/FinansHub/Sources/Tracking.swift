@@ -463,7 +463,7 @@ struct CarrierBadge: View {
         }
     }
     private var initials: some View {
-        Text(ini).font(.system(size: size * (ini.count > 2 ? 0.28 : 0.36), weight: .heavy)).foregroundStyle(Color(hex: fg)).lineLimit(1).minimumScaleFactor(0.6)
+        Text(ini).font(.dyn51(size: size * (ini.count > 2 ? 0.28 : 0.36), weight: .heavy)).foregroundStyle(Color(hex: fg)).lineLimit(1).minimumScaleFactor(0.6)
             .frame(width: size, height: size).background(Color(hex: color), in: RoundedRectangle(cornerRadius: size * 0.28))
     }
 }
@@ -610,7 +610,7 @@ struct TrackingView: View {
 
     private func arrow(_ icon: String, enabled: Bool, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Image(systemName: icon).font(.system(size: 14, weight: .bold)).foregroundStyle(Color.ink)
+            Image(systemName: icon).font(.dyn51(size: 14, weight: .bold)).foregroundStyle(Color.ink)
                 .frame(width: 34, height: 34).background(Color.skinFg.opacity(enabled ? 0.92 : 0.35), in: Circle())
         }
         .buttonStyle(.plain)
@@ -622,7 +622,7 @@ struct TrackingView: View {
         let sum = t.map { d in [d.activeCount > 0 ? "\(d.activeCount) på vei" : "Ingen på vei", d.pickupCount > 0 ? "\(d.pickupCount) klar for henting" : nil].compactMap { $0 }.joined(separator: " · ") } ?? "Pakker på vei"
         return HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(store.hlName(.trk)).font(.system(size: 30, weight: .bold)).lineLimit(1)
+                Text(store.hlName(.trk)).font(.dyn51(size: 30, weight: .bold)).lineLimit(1)
                 Text(sum).font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.7)).lineLimit(1)
             }
             Spacer()
@@ -764,7 +764,7 @@ struct TrackingView: View {
                     StepBar(step: s.step, color: s.done ? .positive : .accent)
                     HStack(spacing: 2) {
                         ForEach(Array(s.steps.enumerated()), id: \.offset) { i, l in
-                            Text(l).font(.system(size: 9.5, weight: i == s.step ? .semibold : .regular)).foregroundStyle(Color.skinFg.opacity(i <= s.step ? 0.85 : 0.4))
+                            Text(l).font(.dyn51(size: 9.5, weight: i == s.step ? .semibold : .regular)).foregroundStyle(Color.skinFg.opacity(i <= s.step ? 0.85 : 0.4))
                                 .lineLimit(1).minimumScaleFactor(0.6).frame(maxWidth: .infinity)
                         }
                     }

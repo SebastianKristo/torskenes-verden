@@ -56,7 +56,7 @@ struct Qr38Screen: View {
         }
         .overlay(alignment: .topLeading) {
             Button { m.close() } label: {
-                Image(systemName: "xmark").font(.system(size: 15, weight: .bold))
+                Image(systemName: "xmark").font(.dyn51(size: 15, weight: .bold))
                     .foregroundStyle(m.phase == "wait2fa" || m.phase == "done" || m.phase == "denied" ? Qr38C.ink : Color.white)
                     .frame(width: 40, height: 40)
                     .background(.ultraThinMaterial, in: Circle())
@@ -285,7 +285,7 @@ struct Qr38AskSheet: View {
                 Button { m.approve(store) } label: {
                     HStack(spacing: 8) {
                         if m.phase == "approving" { ProgressView().tint(Qr38C.paper) }
-                        Image(systemName: "faceid").font(.system(size: 16, weight: .semibold))
+                        Image(systemName: "faceid").font(.dyn51(size: 16, weight: .semibold))
                         Text("Godkjenn med Face ID").font(PF.ui(15, .heavy))
                     }
                     .foregroundStyle(Qr38C.paper)
@@ -397,7 +397,7 @@ struct Qr38KontoRow: View {
     var body: some View {
         Button { Qr38Model.shared.show() } label: {
             HStack(spacing: 12) {
-                Image(systemName: "qrcode.viewfinder").font(.system(size: 15, weight: .semibold))
+                Image(systemName: "qrcode.viewfinder").font(.dyn51(size: 15, weight: .semibold))
                     .foregroundStyle(Color(hex: "#2b5d8a"))
                     .frame(width: 30, height: 30)
                     .background(Color(hex: "#2b5d8a").opacity(0.12), in: RoundedRectangle(cornerRadius: 9, style: .continuous))

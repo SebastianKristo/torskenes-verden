@@ -325,7 +325,7 @@ struct Cal32bSearchField: View {
         let has: Bool = !m.query.trimmingCharacters(in: .whitespaces).isEmpty
         HStack(spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.mut)
+                Image(systemName: "magnifyingglass").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.mut)
                 TextField("", text: Binding<String>(get: { m.query }, set: { (v: String) in
                     m.query = v
                     s.clearAnswer()
@@ -337,7 +337,7 @@ struct Cal32bSearchField: View {
                     .onSubmit { s.ask(m.query, store) }
                 if has {
                     Button { m.clearSearch(); s.clearAnswer() } label: {
-                        Image(systemName: "xmark.circle.fill").font(.system(size: 16)).foregroundStyle(p.mut)
+                        Image(systemName: "xmark.circle.fill").font(.dyn51(size: 16)).foregroundStyle(p.mut)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Tøm")

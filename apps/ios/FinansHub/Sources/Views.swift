@@ -46,7 +46,7 @@ struct Initial: View {
     let color: String
     var size: CGFloat = 40
     var body: some View {
-        Text(initial(text)).font(.system(size: size * 0.4, weight: .bold)).foregroundStyle(Color(hex: color))
+        Text(initial(text)).font(.dyn51(size: size * 0.4, weight: .bold)).foregroundStyle(Color(hex: color))
             .frame(width: size, height: size).background(Color(hex: color).opacity(0.18), in: Circle())
     }
 }
@@ -94,7 +94,7 @@ struct Logo: View {
 struct AiLine: View {
     let text: String?
     var body: some View {
-        if let text, !text.isEmpty { Text("✦ " + text).font(.system(size: 12)).foregroundStyle(Color.accentLight).lineLimit(1) }
+        if let text, !text.isEmpty { Text("✦ " + text).font(.dyn51(size: 12)).foregroundStyle(Color.accentLight).lineLimit(1) }
     }
 }
 
@@ -140,7 +140,7 @@ struct Hero: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Igjen å bruke i \(monthLabel(s.month).lowercased())").font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.75))
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text(neg0(s.left)).font(.system(size: 42, weight: .semibold, design: .monospaced))
+                    Text(neg0(s.left)).font(.dyn51(size: 42, weight: .semibold, design: .monospaced))
                     Text(" kr").font(.title3).foregroundStyle(Color.skinFg.opacity(0.65))
                 }
                 GeometryReader { g in
@@ -191,7 +191,7 @@ struct HomeView: View {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading) {
                         Text("\(greetingWord()), \(store.displayName.split(separator: " ").first.map(String.init) ?? store.displayName)").font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.7))
-                        Text(monthLabel(store.summary?.month ?? "")).font(.system(size: 34, weight: .bold))
+                        Text(monthLabel(store.summary?.month ?? "")).font(.dyn51(size: 34, weight: .bold))
                     }
                     Spacer()
                     if store.hideAmounts {
@@ -220,17 +220,17 @@ struct ListView: View {
         ScrollView {
             VStack(spacing: 12) {
                 HStack(spacing: 10) {
-                    Text("Transaksjoner").font(.system(size: 34, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                    Text("Transaksjoner").font(.dyn51(size: 34, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
                     Spacer()
                     Button { store.newTx() } label: {
-                        Image(systemName: "plus").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
+                        Image(systemName: "plus").font(.dyn51(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Ny transaksjon")
                     Avatar()
                 }
                 .padding(.top, 6)
                 HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 18)).foregroundStyle(Color.skinFg.opacity(0.6))
+                    Image(systemName: "magnifyingglass").font(.dyn51(size: 18)).foregroundStyle(Color.skinFg.opacity(0.6))
                     TextField("Søk i transaksjoner", text: $s.query).submitLabel(.search).onSubmit { store.search() }
                         .textInputAutocapitalization(.never)
                 }
@@ -267,7 +267,7 @@ struct BudgetView: View {
         let rows = (store.summary?.budgets ?? []).filter { $0.budget > 0 }.sorted { $0.used / $0.budget > $1.used / $1.budget }
         ScrollView {
             VStack(spacing: 12) {
-                HStack { Text("Budsjett").font(.system(size: 34, weight: .bold)); Spacer(); Avatar() }.padding(.top, 6)
+                HStack { Text("Budsjett").font(.dyn51(size: 34, weight: .bold)); Spacer(); Avatar() }.padding(.top, 6)
                 if let s = store.summary {
                     HStack(spacing: 0) {
                         stat("Budsjett", n0(s.budgetTotal)); stat("Brukt", n0(s.budgetUsed)); stat("Dager igjen", "\(s.daysLeft)")
@@ -341,7 +341,7 @@ struct TxDetail: View {
                         VStack(alignment: .leading) { Text(t.description).font(.title2.weight(.bold)); Text(dayLabel(t.date)).foregroundStyle(Color.skinFg.opacity(0.7)) }
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 0) {
-                        Text(signed(t.amount)).font(.system(size: 40, weight: .semibold, design: .monospaced)).foregroundStyle(t.amount > 0 ? Color.positive : Color.skinFg)
+                        Text(signed(t.amount)).font(.dyn51(size: 40, weight: .semibold, design: .monospaced)).foregroundStyle(t.amount > 0 ? Color.positive : Color.skinFg)
                         Text(" kr").font(.title3).foregroundStyle(Color.skinFg.opacity(0.6))
                     }
                     if let ai = t.aiLong ?? t.aiShort {
@@ -506,7 +506,7 @@ struct ConfirmView: View {
                         Spacer()
                         if let i = queue.firstIndex(where: { $0.id == r.id }) { Text("\(i + 1) av \(queue.count)").foregroundStyle(Color.skinFg.opacity(0.7)) }
                     }
-                    Text("Bekreft kvittering").font(.system(size: 28, weight: .bold))
+                    Text("Bekreft kvittering").font(.dyn51(size: 28, weight: .bold))
                     if r.status != "needs_review" && r.status != "error" {
                         VStack(spacing: 14) { ProgressView().controlSize(.large); Text("Leser kvitteringen …").foregroundStyle(Color.skinFg.opacity(0.7)) }.frame(maxWidth: .infinity).padding(50)
                     } else {
@@ -592,7 +592,7 @@ struct ConfirmView: View {
                 Divider()
                 HStack { Text("TOTAL").fontWeight(.bold); Spacer(); Text(r.total.map(n2) ?? "–").fontWeight(.bold) }
             }
-            .font(.system(size: 12.5, design: .monospaced)).foregroundStyle(Color(hex: "#3A362E"))
+            .font(.dyn51(size: 12.5, design: .monospaced)).foregroundStyle(Color(hex: "#3A362E"))
             .padding(18).background(Color.paper, in: RoundedRectangle(cornerRadius: 18))
         }
     }
@@ -740,7 +740,7 @@ struct MatWeekView: View {
         ScrollView {
             VStack(spacing: 12) {
                 HStack {
-                    Text("Hele uka").font(.system(size: 28, weight: .bold))
+                    Text("Hele uka").font(.dyn51(size: 28, weight: .bold))
                     Spacer()
                     Button { store.matFull = false } label: { Text("Ferdig").fontWeight(.semibold).foregroundStyle(Color.accentLight).frame(height: 44) }.buttonStyle(.plain)
                 }

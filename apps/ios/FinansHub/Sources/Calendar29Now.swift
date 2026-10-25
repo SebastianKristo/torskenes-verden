@@ -125,7 +125,7 @@ struct Cal29NowIcon: View {
     let color: Color
 
     var body: some View {
-        Image(systemName: "clock").font(.system(size: 18, weight: .semibold)).foregroundStyle(color)
+        Image(systemName: "clock").font(.dyn51(size: 18, weight: .semibold)).foregroundStyle(color)
             .frame(width: 40, height: 40)
             .background(color.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }

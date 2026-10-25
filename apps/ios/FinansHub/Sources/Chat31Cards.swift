@@ -205,18 +205,18 @@ struct Chat31WeatherTop: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(city).font(.system(size: 16, weight: .bold)).lineLimit(1)
-                    Image(systemName: "location.fill").font(.system(size: 11, weight: .bold))
+                    Text(city).font(.dyn51(size: 16, weight: .bold)).lineLimit(1)
+                    Image(systemName: "location.fill").font(.dyn51(size: 11, weight: .bold))
                 }
-                Text(temp).font(.system(size: 44, weight: .light)).lineLimit(1)
+                Text(temp).font(.dyn51(size: 44, weight: .light)).lineLimit(1)
             }
             Spacer(minLength: 6)
             VStack(alignment: .trailing, spacing: 4) {
-                Text(ic).font(.system(size: 24))
+                Text(ic).font(.dyn51(size: 24))
                 Spacer(minLength: 0)
-                Text(Cal26.cap(desc)).font(.system(size: 13.5, weight: .semibold)).opacity(0.85).lineLimit(1)
+                Text(Cal26.cap(desc)).font(.dyn51(size: 13.5, weight: .semibold)).opacity(0.85).lineLimit(1)
                 if !hi.isEmpty || !lo.isEmpty {
-                    Text("H:" + hi + " L:" + lo).font(.system(size: 13.5, weight: .semibold)).opacity(0.85).lineLimit(1)
+                    Text("H:" + hi + " L:" + lo).font(.dyn51(size: 13.5, weight: .semibold)).opacity(0.85).lineLimit(1)
                 }
             }
         }
@@ -254,9 +254,9 @@ struct Chat31WeatherHour: View {
         let h: String = JS.str(o, "h") ?? JS.str(o, "time") ?? JS.str(o, "label") ?? ""
         let ic: String = Chat31.icon(JS.str(o, "ic") ?? JS.str(o, "icon") ?? JS.str(o, "symbol") ?? "", night: night)
         VStack(spacing: 4) {
-            Text(h.count > 5 ? String(h.dropFirst(11).prefix(2)) : h).font(.system(size: 12, weight: .semibold)).opacity(0.85).lineLimit(1)
-            Text(ic).font(.system(size: 17))
-            Text(Chat31.deg(o, ["t", "temp"])).font(.system(size: 14, weight: .semibold)).lineLimit(1)
+            Text(h.count > 5 ? String(h.dropFirst(11).prefix(2)) : h).font(.dyn51(size: 12, weight: .semibold)).opacity(0.85).lineLimit(1)
+            Text(ic).font(.dyn51(size: 17))
+            Text(Chat31.deg(o, ["t", "temp"])).font(.dyn51(size: 14, weight: .semibold)).lineLimit(1)
         }
         .frame(maxWidth: .infinity)
     }
@@ -537,7 +537,7 @@ struct Chat31TaskRow: View {
         let on: Bool = done ?? (JS.bool(o, "done") ?? false)
         Button { toggle(!on) } label: {
             HStack(spacing: 10) {
-                Image(systemName: on ? "checkmark.circle.fill" : "circle").font(.system(size: 18, weight: .semibold))
+                Image(systemName: on ? "checkmark.circle.fill" : "circle").font(.dyn51(size: 18, weight: .semibold))
                     .foregroundStyle(on ? c.acc : c.mut)
                 Text(title).font(c.ui(14.5, .semibold)).foregroundStyle(on ? c.mut : c.ink).strikethrough(on).lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)

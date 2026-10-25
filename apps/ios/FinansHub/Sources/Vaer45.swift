@@ -164,8 +164,8 @@ struct Vaer45HereCard: View {
 
     private var label: some View {
         HStack(spacing: 5) {
-            Image(systemName: "location.fill").font(.system(size: 10, weight: .bold))
-            Text("MIN POSISJON").font(.system(size: 11, weight: .bold, design: .monospaced)).tracking(1.2)
+            Image(systemName: "location.fill").font(.dyn51(size: 10, weight: .bold))
+            Text("MIN POSISJON").font(.dyn51(size: 11, weight: .bold, design: .monospaced)).tracking(1.2)
         }
         .opacity(0.85)
     }
@@ -174,12 +174,12 @@ struct Vaer45HereCard: View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
                 label
-                Text(v.place).font(.system(size: 19, weight: .semibold)).lineLimit(1)
-                Text(hl).font(.system(size: 13)).opacity(0.8).lineLimit(1)
+                Text(v.place).font(.dyn51(size: 19, weight: .semibold)).lineLimit(1)
+                Text(hl).font(.dyn51(size: 13)).opacity(0.8).lineLimit(1)
             }
             Spacer(minLength: 6)
-            Image(systemName: Vaer45.symbol(v.code, day: v.isDay)).symbolRenderingMode(.multicolor).font(.system(size: 30))
-            Text("\(Int((v.temp ?? 0).rounded()))°").font(.system(size: 40, weight: .light))
+            Image(systemName: Vaer45.symbol(v.code, day: v.isDay)).symbolRenderingMode(.multicolor).font(.dyn51(size: 30))
+            Text("\(Int((v.temp ?? 0).rounded()))°").font(.dyn51(size: 40, weight: .light))
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -199,12 +199,12 @@ struct Vaer45HereCard: View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 label
-                Text("Slå på posisjon for å se været der du er").font(.system(size: 14.5, weight: .semibold))
+                Text("Slå på posisjon for å se været der du er").font(.dyn51(size: 14.5, weight: .semibold))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 6)
             Button { v.allow(store) } label: {
-                Text("Tillat").font(.system(size: 14, weight: .bold)).foregroundStyle(Color(hex: "#1b1a17"))
+                Text("Tillat").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(Color(hex: "#1b1a17"))
                     .padding(.horizontal, 16).frame(height: 36)
                     .background(Color.white, in: Capsule())
             }

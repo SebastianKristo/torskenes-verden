@@ -260,7 +260,7 @@ struct Brief35Top: View {
             Spacer(minLength: 8)
             Button { g.setBool("readAloud", !on, store) } label: {
                 Image(systemName: on ? "speaker.wave.2.fill" : "speaker.slash")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.dyn51(size: 15, weight: .semibold))
                     .foregroundStyle(on ? Brief34C.paper : Brief34C.ink)
                     .frame(width: 36, height: 36)
                     .background(on ? Brief34C.ink : Brief34C.card, in: Circle())
@@ -272,7 +272,7 @@ struct Brief35Top: View {
             .accessibilityLabel(on ? "Slå av opplesning" : "Slå på opplesning")
             Button { Haptic34.light(); openCfg() } label: {
                 Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.dyn51(size: 14, weight: .semibold))
                     .foregroundStyle(Brief34C.ink)
                     .frame(width: 36, height: 36)
                     .background(Brief34C.card, in: Circle())

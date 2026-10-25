@@ -49,7 +49,7 @@ struct PaperIntegrations23: View {
         let v: (String, Color) = connValue
         let sub: String = st.map { s in s.entities.isEmpty ? "Home Assistant To-do (todo.*)" : "\(s.entities.count) To-do-lister i Home Assistant" } ?? "Home Assistant To-do (todo.*)"
         return HStack(spacing: 12) {
-            Image(systemName: "house").font(.system(size: 15, weight: .semibold)).foregroundStyle(PaperIconTheme.color(store.iconTheme, 0))
+            Image(systemName: "house").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(PaperIconTheme.color(store.iconTheme, 0))
                 .frame(width: 34, height: 34).background(p.bg, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 1) {
                 Text("Tilkobling").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)

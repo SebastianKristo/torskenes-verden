@@ -258,7 +258,7 @@ private struct HealthGauge: View {
                 }
             }
             VStack(spacing: 0) {
-                Text("\(Int(score))").font(.system(size: 36, weight: .bold)).monospacedDigit()
+                Text("\(Int(score))").font(.dyn51(size: 36, weight: .bold)).monospacedDigit()
                 Text("/100").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
             }
         }
@@ -276,7 +276,7 @@ struct SubsMobileView: View {
             VStack(spacing: 12) {
                 ModuleHeader(title: "Subscription OS", trailing: {
                     Button { Haptics.shared.tap(); adding = true } label: {
-                        Image(systemName: "plus").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
+                        Image(systemName: "plus").font(.dyn51(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Legg til abonnement")
                 })
@@ -306,7 +306,7 @@ struct SubsMobileView: View {
             ForEach([("home", "Hjem", "house"), ("ins", "Innsikt", "chart.bar"), ("hist", "Historikk", "clock")], id: \.0) { k, n, icon in
                 let on = store.subTab == k
                 Button { Haptics.shared.select(); store.subTab = k } label: {
-                    HStack(spacing: 6) { Image(systemName: icon).font(.system(size: 13, weight: .semibold)); Text(n).font(.subheadline.weight(.semibold)) }
+                    HStack(spacing: 6) { Image(systemName: icon).font(.dyn51(size: 13, weight: .semibold)); Text(n).font(.subheadline.weight(.semibold)) }
                         .foregroundStyle(on ? (PaperSkin.palette?.bg ?? Color.black) : Color.skinFg.opacity(0.7))
                         .frame(maxWidth: .infinity, minHeight: 38)
                         .background(on ? Color.skinFg : Color.clear, in: Capsule())
@@ -395,10 +395,10 @@ struct SubsMobileView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 ForEach(Array(days.enumerated()), id: \.offset) { i, d in
                     VStack(spacing: 4) {
-                        if sums[i] > 0 { Text(n0(sums[i])).font(.system(size: 9)).foregroundStyle(Color.skinFg.opacity(0.7)).lineLimit(1).minimumScaleFactor(0.6) }
+                        if sums[i] > 0 { Text(n0(sums[i])).font(.dyn51(size: 9)).foregroundStyle(Color.skinFg.opacity(0.7)).lineLimit(1).minimumScaleFactor(0.6) }
                         RoundedRectangle(cornerRadius: 5).fill(sums[i] > 0 ? Color.accent : Color.skinFg.opacity(0.1))
                             .frame(height: Swift.max(6, CGFloat(sums[i] / mx) * 70))
-                        Text(i == 0 ? "I dag" : JS.fmt(d, "EEE").capitalized).font(.system(size: 10)).foregroundStyle(Color.skinFg.opacity(i == 0 ? 0.9 : 0.6)).lineLimit(1)
+                        Text(i == 0 ? "I dag" : JS.fmt(d, "EEE").capitalized).font(.dyn51(size: 10)).foregroundStyle(Color.skinFg.opacity(i == 0 ? 0.9 : 0.6)).lineLimit(1)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -457,7 +457,7 @@ struct SubsMobileView: View {
                     ForEach(Array(months.enumerated()), id: \.offset) { i, m in
                         Button { Haptics.shared.select(); month = i } label: {
                             VStack(spacing: 4) {
-                                Text(i == sel ? n0(m.1) : " ").font(.system(size: 9, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
+                                Text(i == sel ? n0(m.1) : " ").font(.dyn51(size: 9, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
                                 Group {
                                     if i == sel { Stripes(color: .accent) } else { Color.skinFg.opacity(0.14) }
                                 }
@@ -595,7 +595,7 @@ struct SubAddSheet: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     if mode != nil {
-                        Button { mode = nil } label: { Image(systemName: "chevron.left").font(.system(size: 16, weight: .semibold)).frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20)
+                        Button { mode = nil } label: { Image(systemName: "chevron.left").font(.dyn51(size: 16, weight: .semibold)).frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20)
                     }
                     Text(mode == "manual" ? "Skriv inn selv" : mode == "receipt" ? "Fra kvittering" : mode == "tx" ? "Fra transaksjoner" : "Legg til abonnement").font(.title3.weight(.bold))
                     Spacer()
@@ -647,7 +647,7 @@ struct SubAddSheet: View {
     private func option(_ icon: String, _ t: String, _ s: String, _ act: @escaping () -> Void) -> some View {
         Button { Haptics.shared.select(); act() } label: {
             HStack(spacing: 14) {
-                Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.accentLight).frame(width: 40, height: 40).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                Image(systemName: icon).font(.dyn51(size: 17, weight: .semibold)).foregroundStyle(Color.accentLight).frame(width: 40, height: 40).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                 VStack(alignment: .leading, spacing: 2) { Text(t).fontWeight(.semibold); Text(s).font(.caption).foregroundStyle(Color.skinFg.opacity(0.65)) }
                 Spacer()
                 Image(systemName: "chevron.right").foregroundStyle(Color.skinFg.opacity(0.45))

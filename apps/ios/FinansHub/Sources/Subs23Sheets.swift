@@ -408,7 +408,7 @@ struct SubAdd23Sheet: View {
     private func tile(_ ic: String, _ title: String, _ key: String, _ t: SubTok23, _ act: @escaping () -> Void) -> some View {
         Button { Haptics.shared.select(); act() } label: {
             VStack(alignment: .leading, spacing: 8) {
-                Text(ic).font(.system(size: 18)).foregroundStyle(SubTok23.peach)
+                Text(ic).font(.dyn51(size: 18)).foregroundStyle(SubTok23.peach)
                 Text(title).font(PF.ui(13.5, .semibold)).foregroundStyle(t.fg).lineLimit(1).minimumScaleFactor(0.65)
             }
             .padding(12)

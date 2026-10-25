@@ -341,7 +341,7 @@ struct MinReise41Zones: View {
                         Text(z.name + " " + String(Int(z.radius)) + " m").font(PF.ui(12.5, .semibold)).foregroundStyle(p.ink)
                         if m.zones.count > 1 {
                             Button { m.deleteZone(z, store) } label: {
-                                Image(systemName: "xmark").font(.system(size: 9, weight: .heavy)).foregroundStyle(p.mut)
+                                Image(systemName: "xmark").font(.dyn51(size: 9, weight: .heavy)).foregroundStyle(p.mut)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel("Slett " + z.name)

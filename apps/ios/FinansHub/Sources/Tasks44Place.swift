@@ -85,7 +85,7 @@ struct Tasks44PlaceCard: View {
 
     private var field: some View {
         HStack(spacing: 10) {
-            Image(systemName: "mappin.and.ellipse").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
+            Image(systemName: "mappin.and.ellipse").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
             TextField("Legg til sted eller adresse", text: $q)
                 .font(PF.ui(15)).foregroundStyle(p.ink)
                 .focused($focus)
@@ -94,7 +94,7 @@ struct Tasks44PlaceCard: View {
                 .onSubmit { if let h = hits.first { pick(h) } else { save(q, []) } }
             if !q.isEmpty {
                 Button { q = ""; hits = []; save("", []) } label: {
-                    Image(systemName: "xmark").font(.system(size: 11, weight: .bold)).foregroundStyle(p.mut)
+                    Image(systemName: "xmark").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(p.mut)
                         .frame(width: 36, height: 36).contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

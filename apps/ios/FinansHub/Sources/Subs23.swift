@@ -326,7 +326,7 @@ struct SubCheckCard23: View {
         let n: Int = Swift.max(f.count, x.suggestions.count)
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                Text("♛").font(.system(size: 18)).foregroundStyle(SubTok23.peach)
+                Text("♛").font(.dyn51(size: 18)).foregroundStyle(SubTok23.peach)
                     .frame(width: 42, height: 42).background(SubTok23.warnBg, in: Circle())
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Abonnementssjekk").font(PF.ui(16, .semibold)).foregroundStyle(t.fg)

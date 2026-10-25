@@ -67,7 +67,7 @@ struct AppUpd32Row: View {
                     }
                     Spacer(minLength: 6)
                     Text(canOpen ? "Last ned IPA" : (m.loaded ? "✓" : "")).font(PF.ui(14, .bold)).foregroundStyle(canOpen ? p.lab : p.pos)
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(p.mut)
+                    Image(systemName: "chevron.right").font(.dyn51(size: 12, weight: .semibold)).foregroundStyle(p.mut)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .contentShape(Rectangle())

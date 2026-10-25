@@ -48,7 +48,7 @@ struct WxTile22<C: View>: View {
 struct WxTileFoot22: View {
     let text: String
     var body: some View {
-        Text(text).font(.system(size: 14, weight: .semibold)).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
+        Text(text).font(.dyn51(size: 14, weight: .semibold)).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -66,11 +66,11 @@ struct WxSunTile22: View {
         let nh: Double = Double(comp.hour ?? 12) + Double(comp.minute ?? 0) / 60
         let rising: Bool = nh > sh || nh < rh
         WxTile22(icon: "hSun", title: rising ? "SOLOPPGANG" : "SOLNEDGANG", spacing: 4, hPad: 0) {
-            Text(rising ? WxFmt22.hm(rise) : WxFmt22.hm(set)).font(.system(size: 32, weight: .bold)).padding(.horizontal, 16)
+            Text(rising ? WxFmt22.hm(rise) : WxFmt22.hm(set)).font(.dyn51(size: 32, weight: .bold)).padding(.horizontal, 16)
             Spacer(minLength: 0)
             WxSunCurve22(rise: rh, set: sh, now: nh).frame(height: 52)
             Text(rising ? "Solnedgang: " + WxFmt22.hm(set) : "Soloppgang: " + WxFmt22.hm(rise))
-                .font(.system(size: 13.5, weight: .semibold)).padding(.horizontal, 16)
+                .font(.dyn51(size: 13.5, weight: .semibold)).padding(.horizontal, 16)
         }
     }
 }
@@ -120,8 +120,8 @@ struct WxUvTile22: View {
     var body: some View {
         let uv: Int = Int((w.nowHour?.uv ?? w.uv).rounded())
         WxTile22(icon: "hUv", title: "UV-INDEKS") {
-            Text("\(uv)").font(.system(size: 32, weight: .bold))
-            Text(WxUvTile22.level(Double(uv))).font(.system(size: 18, weight: .bold))
+            Text("\(uv)").font(.dyn51(size: 32, weight: .bold))
+            Text(WxUvTile22.level(Double(uv))).font(.dyn51(size: 18, weight: .bold))
             Spacer(minLength: 0)
             GeometryReader { g in
                 let x: CGFloat = CGFloat(Swift.min(11, Double(uv)) / 11) * g.size.width
@@ -150,7 +150,7 @@ struct WxFeelTile22: View {
         let diff: Double = w.feels - w.temp
         let txt: String = abs(diff) < 1 ? "Omtrent som den faktiske temperaturen." : diff < 0 ? "Føles kaldere enn faktisk, på grunn av vind." : "Føles varmere enn den faktiske temperaturen."
         WxTile22(icon: "hFeel", title: "FØLES SOM") {
-            Text(WxFmt22.deg(w.feels)).font(.system(size: 32, weight: .bold))
+            Text(WxFmt22.deg(w.feels)).font(.dyn51(size: 32, weight: .bold))
             Spacer(minLength: 0)
             WxTileFoot22(text: txt)
         }
@@ -168,8 +168,8 @@ struct WxYesterdayTile22: View {
         let big: String = (a == nil || b == nil) ? "–" : (d >= 0 ? "+" : "−") + "\(Int(abs(d).rounded()))°"
         let txt: String = (a == nil || b == nil) ? "Ingen tall for i går." : Int(d.rounded()) == 0 ? "Like varmt som i går" : d > 0 ? "Varmere enn i går" : "Kaldere enn i går"
         WxTile22(icon: "hYd", title: "MOT I GÅR") {
-            Text(big).font(.system(size: 32, weight: .bold))
-            Text(txt).font(.system(size: 14, weight: .bold)).fixedSize(horizontal: false, vertical: true)
+            Text(big).font(.dyn51(size: 32, weight: .bold))
+            Text(txt).font(.dyn51(size: 14, weight: .bold)).fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 2) {
                 GridRow {
@@ -181,7 +181,7 @@ struct WxYesterdayTile22: View {
                     Text("H:" + WxFmt22.degOpt(b))
                 }
             }
-            .font(.system(size: 13.5, weight: .bold))
+            .font(.dyn51(size: 13.5, weight: .bold))
         }
     }
 }
@@ -193,8 +193,8 @@ struct WxRainTile22: View {
     var body: some View {
         let today: Double = w.days.first?.precipSum ?? w.precipSum
         WxTile22(icon: "drop", title: "NEDBØR", fillIcon: "drop", spacing: 4) {
-            Text(WxFmt22.f1(today) + " mm").font(.system(size: 32, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
-            Text("I dag").font(.system(size: 18, weight: .bold))
+            Text(WxFmt22.f1(today) + " mm").font(.dyn51(size: 32, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
+            Text("I dag").font(.dyn51(size: 18, weight: .bold))
             Spacer(minLength: 0)
             WxTileFoot22(text: next)
         }
@@ -217,7 +217,7 @@ struct WxVisTile22: View {
         let big: String = km == nil ? "–" : v >= 30 ? "+\(Int(v.rounded())) km" : v >= 10 ? "\(Int(v.rounded())) km" : WxFmt22.f1(v) + " km"
         let txt: String = km == nil ? "" : v >= 20 ? "Helt klar sikt." : v >= 10 ? "God sikt." : v >= 4 ? "Moderat sikt." : "Dårlig sikt."
         WxTile22(icon: "hVis", title: "SIKT", spacing: 4) {
-            Text(big).font(.system(size: 32, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
+            Text(big).font(.dyn51(size: 32, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
             Spacer(minLength: 0)
             WxTileFoot22(text: txt)
         }
@@ -232,7 +232,7 @@ struct WxHumTile22: View {
         let rh: Double? = w.humidity ?? w.nowHour?.humidity
         let dew: Double? = w.dew ?? rh.map { w.temp - (100 - $0) / 5 }
         WxTile22(icon: "hHum", title: "LUFTFUKTIGHET", spacing: 4) {
-            Text(rh.map { "\(Int($0.rounded())) %" } ?? "–").font(.system(size: 32, weight: .bold))
+            Text(rh.map { "\(Int($0.rounded())) %" } ?? "–").font(.dyn51(size: 32, weight: .bold))
             Spacer(minLength: 0)
             WxTileFoot22(text: dew.map { "Duggpunktet er " + WxFmt22.deg($0) + " akkurat nå." } ?? "")
         }
@@ -272,12 +272,12 @@ struct WxPressureGauge22: View {
             let rot: CGAffineTransform = CGAffineTransform(translationX: c.x, y: c.y).rotated(by: ang).translatedBy(x: -c.x, y: -c.y)
             ctx.stroke(needle.applying(rot), with: .color(.white), style: StrokeStyle(lineWidth: 3 * s, lineCap: .round))
             let arrow: String = trend == "rising" ? "↑" : trend == "falling" ? "↓" : "→"
-            ctx.draw(Text(arrow).font(.system(size: 12 * s, weight: .heavy)).foregroundColor(.white), at: P(50, 36))
+            ctx.draw(Text(arrow).font(.dyn51(size: 12 * s, weight: .heavy)).foregroundColor(.white), at: P(50, 36))
             let txt: String = pressure.map { WxPressureGauge22.thousands($0) } ?? "–"
-            ctx.draw(Text(txt).font(.system(size: 15 * s, weight: .heavy)).foregroundColor(.white), at: P(50, 51))
-            ctx.draw(Text("hPa").font(.system(size: 8 * s, weight: .bold)).foregroundColor(.white), at: P(50, 63))
-            ctx.draw(Text("Lavt").font(.system(size: 8 * s, weight: .bold)).foregroundColor(.white), at: P(26, 81))
-            ctx.draw(Text("Høyt").font(.system(size: 8 * s, weight: .bold)).foregroundColor(.white), at: P(74, 81))
+            ctx.draw(Text(txt).font(.dyn51(size: 15 * s, weight: .heavy)).foregroundColor(.white), at: P(50, 51))
+            ctx.draw(Text("hPa").font(.dyn51(size: 8 * s, weight: .bold)).foregroundColor(.white), at: P(50, 63))
+            ctx.draw(Text("Lavt").font(.dyn51(size: 8 * s, weight: .bold)).foregroundColor(.white), at: P(26, 81))
+            ctx.draw(Text("Høyt").font(.dyn51(size: 8 * s, weight: .bold)).foregroundColor(.white), at: P(74, 81))
         }
     }
 

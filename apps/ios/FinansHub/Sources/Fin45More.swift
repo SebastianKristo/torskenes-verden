@@ -63,6 +63,8 @@ enum Fin45 {
         out.append(More28Row(id: "kontoer", name: "Kontoer", sub: store.boot == nil ? "Banker og kort" : "\(accounts.count) kontoer", icon: "building.columns") { store.paperFinGo("kontoer") })
         out.append(More28Row(id: "import", name: "Import", sub: "Bank, Excel og Finn", icon: "square.and.arrow.down") { store.paperOpen(.imports) })
         out.append(More28Row(id: "rapp", name: "Rapporter", sub: "Måned og år", icon: "chart.bar") { store.paperOpen(.reports) })
+        // Prompt 51 (IOSFEAT51): Planlegging – sparemål, faste trekk fremover, skatt, priser og abonnementsjeger (Plan51*.swift).
+        out.append(More28Row(id: "plan51", name: "Planlegging", sub: "Sparemål, saldoprognose, skatt og priser", icon: "calendar.badge.clock") { Plan51.shared.show() })
         if !store.finNav.contains("sok") {
             out.append(More28Row(id: "fsok", name: "Søk", sub: "Transaksjoner og kvitteringer · ✦ AI", icon: "magnifyingglass") { store.paperGo("fsok") })
         }

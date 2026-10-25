@@ -89,7 +89,7 @@ struct Receipts41BookedRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(p.line, lineWidth: 1))
                     .overlay(alignment: .bottomTrailing) {
-                        Image(systemName: "arrow.up.left.and.arrow.down.right").font(.system(size: 12, weight: .bold)).foregroundStyle(Color.white)
+                        Image(systemName: "arrow.up.left.and.arrow.down.right").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(Color.white)
                             .frame(width: 30, height: 30).background(Color.black.opacity(0.45), in: Circle()).padding(8)
                     }
             }
@@ -192,7 +192,7 @@ struct Receipts41Zoom: View {
                 ProgressView().tint(Color.white).frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             Button(action: close) {
-                Image(systemName: "xmark").font(.system(size: 15, weight: .bold)).foregroundStyle(Color.white)
+                Image(systemName: "xmark").font(.dyn51(size: 15, weight: .bold)).foregroundStyle(Color.white)
                     .frame(width: 40, height: 40).background(Color.white.opacity(0.18), in: Circle())
             }
             .buttonStyle(.plain)

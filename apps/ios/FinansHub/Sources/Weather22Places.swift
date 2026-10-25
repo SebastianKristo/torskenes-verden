@@ -21,10 +21,10 @@ struct WxPlacesSheet22: View {
             Section {
                 header
                 searchField
-                if busy { Text("Søker …").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22() }
+                if busy { Text("Søker …").font(.dyn51(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22() }
                 if !hits.isEmpty { results }
                 if searched && !busy && q.count >= 2 { emptyText }
-                Text("MINE STEDER").font(.system(size: 11, weight: .semibold)).tracking(1.32).foregroundStyle(Color(hex: "#9aa3ae"))
+                Text("MINE STEDER").font(.dyn51(size: 11, weight: .semibold)).tracking(1.32).foregroundStyle(Color(hex: "#9aa3ae"))
                     .plainRow22().padding(.top, 4)
             }
             // Prompt 46: «Min posisjon» fast øverst (kan ikke slettes, flyttes eller sveipes), Vaer46.swift.
@@ -57,9 +57,9 @@ struct WxPlacesSheet22: View {
                 .onMove { from, to in store.moveWeatherPlaces(from: from, to: to) }
             }
             Section {
-                Text("Hold inne for å flytte · sveip mot høyre for å slette").font(.system(size: 12)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
+                Text("Hold inne for å flytte · sveip mot høyre for å slette").font(.dyn51(size: 12)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
                 Text("Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo og OpenStreetMap.")
-                    .font(.system(size: 12)).lineSpacing(4).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
+                    .font(.dyn51(size: 12)).lineSpacing(4).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
             }
         }
         .listStyle(.plain)
@@ -94,15 +94,15 @@ struct WxPlacesSheet22: View {
     @ViewBuilder private var emptyText: some View {
         let t: String = q.trimmingCharacters(in: .whitespaces)
         if failed {
-            Text("Får ikke søkt nå. Prøv igjen.").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
+            Text("Får ikke søkt nå. Prøv igjen.").font(.dyn51(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
         } else if hits.isEmpty {
-            Text("Fant ingen steder som heter «\(t)»").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
+            Text("Fant ingen steder som heter «\(t)»").font(.dyn51(size: 13)).foregroundStyle(Color(hex: "#9aa3ae")).plainRow22()
         }
     }
 
     private var header: some View {
         HStack {
-            Text("Steder").font(.system(size: 24, weight: .bold))
+            Text("Steder").font(.dyn51(size: 24, weight: .bold))
             Spacer()
             // Prompt 40: ✕ som på hovedsiden i Vær.
             VaerCloseButton { dismiss() }
@@ -146,11 +146,11 @@ struct WxPlacesSheet22: View {
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(h.name).font(.system(size: 15, weight: .semibold))
-                    Text(h.region + coords).font(.system(size: 12.5)).foregroundStyle(Color(hex: "#9aa3ae"))
+                    Text(h.name).font(.dyn51(size: 15, weight: .semibold))
+                    Text(h.region + coords).font(.dyn51(size: 12.5)).foregroundStyle(Color(hex: "#9aa3ae"))
                 }
                 Spacer()
-                Text(have == nil ? "+ Legg til" : "Vis").font(.system(size: 13, weight: .bold))
+                Text(have == nil ? "+ Legg til" : "Vis").font(.dyn51(size: 13, weight: .bold))
                     .foregroundStyle(have == nil ? Color(hex: "#5ec8f2") : Color(hex: "#9aa3ae"))
             }
             .padding(.vertical, 12)
@@ -180,8 +180,8 @@ struct WxPlaceRow22: View {
         Button(action: pick) {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(pl.name).font(.system(size: 16, weight: .semibold))
-                    if !pl.region.isEmpty { Text(pl.region).font(.system(size: 12.5)).foregroundStyle(Color(hex: "#c4cbd4")) }
+                    Text(pl.name).font(.dyn51(size: 16, weight: .semibold))
+                    if !pl.region.isEmpty { Text(pl.region).font(.dyn51(size: 12.5)).foregroundStyle(Color(hex: "#c4cbd4")) }
                 }
                 Spacer()
             }
@@ -214,7 +214,7 @@ struct WxMapView22: View {
                     // Prompt 40: ✕ øverst til høyre (mørk glass over kartet), bynavnet midt på.
                     Color.clear.frame(width: 44, height: 1)
                     Spacer()
-                    Text(name).font(.system(size: 17, weight: .semibold)).foregroundStyle(.white).shadow(color: .black.opacity(0.6), radius: 4, y: 1)
+                    Text(name).font(.dyn51(size: 17, weight: .semibold)).foregroundStyle(.white).shadow(color: .black.opacity(0.6), radius: 4, y: 1)
                     Spacer()
                     VaerCloseButton(dark: true) { dismiss() }
                 }
@@ -231,7 +231,7 @@ struct WxMapView22: View {
             ForEach(WxMapView22.layers, id: \.0) { l in
                 let on: Bool = layer == l.0
                 Button { Haptics.shared.select(); layer = l.0 } label: {
-                    Text(l.1).font(.system(size: 13.5, weight: .semibold)).lineLimit(1)
+                    Text(l.1).font(.dyn51(size: 13.5, weight: .semibold)).lineLimit(1)
                         .foregroundStyle(on ? Color(hex: "#0d1520") : Color.white)
                         .padding(.horizontal, 14).frame(height: 38)
                         .background(on ? Color.white : Color.clear, in: Capsule())

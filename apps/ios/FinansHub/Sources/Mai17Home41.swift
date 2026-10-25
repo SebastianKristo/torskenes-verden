@@ -169,7 +169,7 @@ struct Mai17Home41: View {
                     Text(x.time).font(PF.mono(13)).foregroundStyle(x.next ? Color(hex: "#BA0C2F") : (x.past ? p.mut : p.ink)).frame(width: 46, alignment: .leading)
                     Text(x.title).font(PF.ui(14.5, x.next ? .bold : .medium)).foregroundStyle(x.past ? p.mut : p.ink)
                     Spacer(minLength: 0)
-                    if x.kind == "calendar" { Image(systemName: "calendar").font(.system(size: 12)).foregroundStyle(p.mut) }
+                    if x.kind == "calendar" { Image(systemName: "calendar").font(.dyn51(size: 12)).foregroundStyle(p.mut) }
                 }
             }
         }

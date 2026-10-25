@@ -44,7 +44,7 @@ struct Smb30Header: View {
                 }
                 Spacer(minLength: 8)
                 Button { m.close() } label: {
-                    Image(systemName: "xmark").font(.system(size: 17, weight: .semibold)).foregroundStyle(p.ink).frame(width: 44, height: 44)
+                    Image(systemName: "xmark").font(.dyn51(size: 17, weight: .semibold)).foregroundStyle(p.ink).frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Lukk")
@@ -350,7 +350,7 @@ struct Smb30Done: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: "checkmark").font(.system(size: 34, weight: .semibold)).foregroundStyle(p.pos)
+            Image(systemName: "checkmark").font(.dyn51(size: 34, weight: .semibold)).foregroundStyle(p.pos)
                 .frame(width: 72, height: 72)
                 .overlay(Rectangle().stroke(p.pos, lineWidth: 2))
             Text("Koblet til").font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
@@ -424,7 +424,7 @@ struct Smb30Row: View {
                     if !sub.isEmpty { Text(sub).font(PF.ui(13)).foregroundStyle(p.mut).multilineTextAlignment(.leading) }
                 }
                 Spacer(minLength: 8)
-                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(p.mut)
+                Image(systemName: "chevron.right").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 4)
             .frame(minHeight: 60)
@@ -445,7 +445,7 @@ struct Smb30Check: View {
     var body: some View {
         Button(action: act) {
             HStack(spacing: 12) {
-                Image(systemName: on ? "checkmark.square.fill" : "square").font(.system(size: 22)).foregroundStyle(on ? p.ink : p.mut)
+                Image(systemName: on ? "checkmark.square.fill" : "square").font(.dyn51(size: 22)).foregroundStyle(on ? p.ink : p.mut)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title).font(PF.ui(16, .semibold)).foregroundStyle(p.ink)
                     Text(sub).font(PF.ui(13)).foregroundStyle(p.mut).multilineTextAlignment(.leading)
@@ -470,7 +470,7 @@ struct Smb30Who: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "externaldrive.connected.to.line.below").font(.system(size: 18)).foregroundStyle(p.ink)
+            Image(systemName: "externaldrive.connected.to.line.below").font(.dyn51(size: 18)).foregroundStyle(p.ink)
                 .frame(width: 44, height: 44)
                 .overlay(Rectangle().stroke(p.ink, lineWidth: 1))
             VStack(alignment: .leading, spacing: 3) {

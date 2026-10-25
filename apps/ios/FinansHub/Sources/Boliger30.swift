@@ -207,7 +207,7 @@ struct Bol30UserTile: View {
     }
 
     private var check: some View {
-        Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy)).foregroundStyle(p.bg)
+        Image(systemName: "checkmark").font(.dyn51(size: 10, weight: .heavy)).foregroundStyle(p.bg)
             .frame(width: 20, height: 20)
             .background(p.ink, in: Circle())
             .padding(6)

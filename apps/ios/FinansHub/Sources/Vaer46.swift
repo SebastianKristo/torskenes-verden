@@ -144,15 +144,15 @@ struct Vaer46PlaceRow: View {
             pick()
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: "location.fill").font(.system(size: 14, weight: .bold)).foregroundStyle(Color.white)
+                Image(systemName: "location.fill").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(Color.white)
                     .frame(width: 34, height: 34)
                     .background(Color(hex: "#2f7cf6"), in: Circle())
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(v.title).font(.system(size: 16, weight: .semibold)).lineLimit(1)
-                    Text(v.subtitle).font(.system(size: 12.5)).foregroundStyle(Color(hex: "#c4cbd4")).lineLimit(1)
+                    Text(v.title).font(.dyn51(size: 16, weight: .semibold)).lineLimit(1)
+                    Text(v.subtitle).font(.dyn51(size: 12.5)).foregroundStyle(Color(hex: "#c4cbd4")).lineLimit(1)
                 }
                 Spacer(minLength: 6)
-                if on { Image(systemName: "checkmark").font(.system(size: 14, weight: .bold)).foregroundStyle(Color(hex: "#8fb8ff")) }
+                if on { Image(systemName: "checkmark").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(Color(hex: "#8fb8ff")) }
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
             .background(on ? Color(hex: "#2f3a4c") : Color(hex: "#20232a"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))

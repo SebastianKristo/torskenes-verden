@@ -161,7 +161,7 @@ struct Vaer41EditButton: View {
 
     var body: some View {
         Button { v.begin() } label: {
-            Text("Rediger kort").font(.system(size: 13.5, weight: .semibold)).foregroundStyle(.white)
+            Text("Rediger kort").font(.dyn51(size: 13.5, weight: .semibold)).foregroundStyle(.white)
                 .padding(.horizontal, 16).frame(height: 36)
                 .background(Color.white.opacity(0.14), in: Capsule())
         }
@@ -177,10 +177,10 @@ struct Vaer41Sheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Rediger Vær").font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
+                Text("Rediger Vær").font(.dyn51(size: 22, weight: .bold)).foregroundStyle(.white)
                 Spacer()
                 Button { v.done(store) } label: {
-                    Text("Ferdig").font(.system(size: 14, weight: .bold)).foregroundStyle(Color(hex: "#17191e"))
+                    Text("Ferdig").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(Color(hex: "#17191e"))
                         .padding(.horizontal, 16).frame(height: 34).background(Color.white, in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -195,13 +195,13 @@ struct Vaer41Sheet: View {
             }
             HStack(spacing: 8) {
                 Button { Haptics.shared.select(); v.glimt = v.glimt == "top" ? "bottom" : "top" } label: {
-                    Text(v.glimt == "top" ? "Glimt-kortet nederst" : "Glimt-kortet øverst").font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                    Text(v.glimt == "top" ? "Glimt-kortet nederst" : "Glimt-kortet øverst").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(.white)
                         .padding(.horizontal, 14).frame(height: 36).background(Color.white.opacity(0.14), in: Capsule())
                 }
                 .buttonStyle(.plain)
                 Spacer()
                 Button { v.reset() } label: {
-                    Text("Nullstill").font(.system(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.8))
+                    Text("Nullstill").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(.white.opacity(0.8))
                         .padding(.horizontal, 14).frame(height: 36).overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
@@ -215,11 +215,11 @@ struct Vaer41Sheet: View {
     private func row(_ k: String, _ i: Int) -> some View {
         let name: String = Vaer41.all.first(where: { $0.0 == k })?.1 ?? k
         return HStack(spacing: 10) {
-            Text(name).font(.system(size: 15, weight: .semibold)).foregroundStyle(.white.opacity(v.isOn(k) ? 1 : 0.5))
+            Text(name).font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(.white.opacity(v.isOn(k) ? 1 : 0.5))
             Spacer()
-            Button { v.move(k, -1) } label: { Image(systemName: "chevron.up").font(.system(size: 13, weight: .bold)).foregroundStyle(.white).frame(width: 32, height: 32) }
+            Button { v.move(k, -1) } label: { Image(systemName: "chevron.up").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(.white).frame(width: 32, height: 32) }
                 .buttonStyle(.plain).disabled(i == 0).opacity(i == 0 ? 0.3 : 1).accessibilityLabel("Flytt " + name + " opp")
-            Button { v.move(k, 1) } label: { Image(systemName: "chevron.down").font(.system(size: 13, weight: .bold)).foregroundStyle(.white).frame(width: 32, height: 32) }
+            Button { v.move(k, 1) } label: { Image(systemName: "chevron.down").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(.white).frame(width: 32, height: 32) }
                 .buttonStyle(.plain).disabled(i == v.order.count - 1).opacity(i == v.order.count - 1 ? 0.3 : 1).accessibilityLabel("Flytt " + name + " ned")
             Toggle("", isOn: Binding<Bool>(get: { v.isOn(k) }, set: { (_: Bool) in v.toggle(k) })).labelsHidden().tint(Color(hex: "#3fbf7a"))
         }
@@ -237,9 +237,9 @@ struct Vaer41SkiCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(s.title).font(.system(size: 12, weight: .heavy)).tracking(1.6).opacity(0.85)
-                    Text("✦ GLIMT ANBEFALER").font(.system(size: 11, weight: .bold)).tracking(1.2).foregroundStyle(Color(hex: "#f2c14e"))
-                    Text(s.wax.isEmpty ? s.grip : s.wax).font(.system(size: 24, weight: .bold)).fixedSize(horizontal: false, vertical: true)
+                    Text(s.title).font(.dyn51(size: 12, weight: .heavy)).tracking(1.6).opacity(0.85)
+                    Text("✦ GLIMT ANBEFALER").font(.dyn51(size: 11, weight: .bold)).tracking(1.2).foregroundStyle(Color(hex: "#f2c14e"))
+                    Text(s.wax.isEmpty ? s.grip : s.wax).font(.dyn51(size: 24, weight: .bold)).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 6)
                 TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { (ctx: TimelineViewDefaultContext) in
@@ -247,7 +247,7 @@ struct Vaer41SkiCard: View {
                 }
                 .frame(width: 60, height: 64)
             }
-            Text(s.text).font(.system(size: 14)).opacity(0.9).fixedSize(horizontal: false, vertical: true)
+            Text(s.text).font(.dyn51(size: 14)).opacity(0.9).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 stat(String(Int(s.snowCm)) + " cm", "snødybde")
                 stat(String(Int(s.newCm)) + " cm", "ny snø")
@@ -259,7 +259,7 @@ struct Vaer41SkiCard: View {
                 if !s.glide.isEmpty { chip(s.glide) }
                 Spacer(minLength: 4)
                 Button { store.openLink(s.url) } label: {
-                    Text("Løyper ↗").font(.system(size: 13, weight: .semibold)).underline()
+                    Text("Løyper ↗").font(.dyn51(size: 13, weight: .semibold)).underline()
                 }
                 .buttonStyle(.plain)
             }
@@ -273,14 +273,14 @@ struct Vaer41SkiCard: View {
 
     private func stat(_ v: String, _ l: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(v).font(.system(size: 16, weight: .bold)).monospacedDigit()
-            Text(l).font(.system(size: 11)).opacity(0.75)
+            Text(v).font(.dyn51(size: 16, weight: .bold)).monospacedDigit()
+            Text(l).font(.dyn51(size: 11)).opacity(0.75)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func chip(_ t: String) -> some View {
-        Text(t).font(.system(size: 12.5, weight: .semibold)).lineLimit(1)
+        Text(t).font(.dyn51(size: 12.5, weight: .semibold)).lineLimit(1)
             .padding(.horizontal, 10).frame(height: 28)
             .background(Color.white.opacity(0.14), in: Capsule())
     }

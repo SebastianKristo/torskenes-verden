@@ -176,8 +176,8 @@ struct WxWeek39Card: View {
                 Glimt35Fig(id: m.person, size: 54, mood: .glad, still: true)
                     .frame(width: 58, height: 62)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(who).font(.system(size: 13, weight: .bold)).opacity(0.75)
-                    Text(txt).font(.system(size: 15.5)).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+                    Text(who).font(.dyn51(size: 13, weight: .bold)).opacity(0.75)
+                    Text(txt).font(.dyn51(size: 15.5)).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                         .animation(.easeOut(duration: 0.2), value: txt)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -191,9 +191,9 @@ struct WxWeek39Card: View {
                 VStack(spacing: 0) {
                     ForEach(0..<sum.rows.count, id: \.self) { (i: Int) in
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            Text(sum.rows[i].0).font(.system(size: 14)).opacity(0.75)
+                            Text(sum.rows[i].0).font(.dyn51(size: 14)).opacity(0.75)
                             Spacer(minLength: 6)
-                            Text(sum.rows[i].1).font(.system(size: 14, weight: .semibold)).multilineTextAlignment(.trailing)
+                            Text(sum.rows[i].1).font(.dyn51(size: 14, weight: .semibold)).multilineTextAlignment(.trailing)
                         }
                         .padding(.vertical, 10)
                         .overlay(alignment: .top) { Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1) }
@@ -220,12 +220,12 @@ struct WxWeek39Card: View {
                     Circle().fill(Color(hex: "#fffdf8")).frame(width: 10, height: 10)
                 }
                 .frame(width: 16, height: 16)
-                Text("GLIMT · UKAS VÆR").font(.system(size: 12, weight: .heavy)).tracking(1).opacity(0.8).lineLimit(1)
+                Text("GLIMT · UKAS VÆR").font(.dyn51(size: 12, weight: .heavy)).tracking(1).opacity(0.8).lineLimit(1)
             }
             HStack(spacing: 4) {
                 ForEach(WxWeek39Model.persons, id: \.0) { (p: (String, String, String)) in
                     Button { m.pick(p.0, store) } label: {
-                        Text(p.1).font(.system(size: 13, weight: .bold))
+                        Text(p.1).font(.dyn51(size: 13, weight: .bold))
                             .foregroundStyle(m.person == p.0 ? Color(hex: "#1b2a40") : Color.white)
                             .frame(maxWidth: .infinity).frame(height: 32)
                             .background(m.person == p.0 ? Color.white.opacity(0.9) : Color.clear, in: Capsule())
@@ -243,10 +243,10 @@ struct WxWeek39Card: View {
 
     private func stat(_ s: (String, String, String)) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(s.0).font(.system(size: 11, weight: .heavy)).tracking(0.9).opacity(0.65)
-            Text(s.1).font(.system(size: 20, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.7)
+            Text(s.0).font(.dyn51(size: 11, weight: .heavy)).tracking(0.9).opacity(0.65)
+            Text(s.1).font(.dyn51(size: 20, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.7)
             // Prompt 40: undertekstene får gå over to linjer i stedet for å kuttes.
-            Text(s.2).font(.system(size: 11.5)).opacity(0.7).lineLimit(2).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
+            Text(s.2).font(.dyn51(size: 11.5)).opacity(0.7).lineLimit(2).lineSpacing(2).fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 12).padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)

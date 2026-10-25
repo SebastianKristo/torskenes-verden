@@ -106,7 +106,7 @@ struct SheetButton30: View {
     private var label: some View {
         HStack(spacing: 4) {
             if kind == .back {
-                Image(systemName: "chevron.left").font(.system(size: 14, weight: .bold))
+                Image(systemName: "chevron.left").font(.dyn51(size: 14, weight: .bold))
             }
             Text(title).font(font).lineLimit(1)
         }

@@ -305,11 +305,11 @@ struct Zone45Banner: View {
                     Okonomi40Icon(size: 16).offset(x: 4, y: 4)
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(s.0).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.primary).lineLimit(1)
-                    Text(s.1).font(.system(size: 15)).foregroundStyle(Color.primary).lineLimit(2)
+                    Text(s.0).font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(Color.primary).lineLimit(1)
+                    Text(s.1).font(.dyn51(size: 15)).foregroundStyle(Color.primary).lineLimit(2)
                 }
                 Spacer(minLength: 4)
-                Text("nå").font(.system(size: 13)).foregroundStyle(Color.secondary)
+                Text("nå").font(.dyn51(size: 13)).foregroundStyle(Color.secondary)
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))

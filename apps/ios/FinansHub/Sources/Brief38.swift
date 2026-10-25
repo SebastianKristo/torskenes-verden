@@ -555,13 +555,13 @@ struct Brief38CardsSettings: View {
             Text(Brief38Cards.names[id] ?? id).font(PF.ui(14.5, .bold)).foregroundStyle(Brief34C.ink)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button { c.move(id, up: true, store) } label: {
-                Image(systemName: "chevron.up").font(.system(size: 12, weight: .bold)).foregroundStyle(first ? Brief34C.mut2 : Brief34C.ink)
+                Image(systemName: "chevron.up").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(first ? Brief34C.mut2 : Brief34C.ink)
                     .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain).disabled(first)
             .accessibilityLabel("Flytt opp")
             Button { c.move(id, up: false, store) } label: {
-                Image(systemName: "chevron.down").font(.system(size: 12, weight: .bold)).foregroundStyle(last ? Brief34C.mut2 : Brief34C.ink)
+                Image(systemName: "chevron.down").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(last ? Brief34C.mut2 : Brief34C.ink)
                     .frame(width: 32, height: 32)
             }
             .buttonStyle(.plain).disabled(last)

@@ -56,5 +56,62 @@ struct Quick29Shortcuts: AppShortcutsProvider {
             shortTitle: "Legg til time",
             systemImageName: "calendar.badge.plus"
         )
+        // Prompt 51 (IOSPLAT51): Sjekk inn, Hent meg, handleliste, saldo, avganger og Vel fremme (Shared/Plat51Intents.swift).
+        AppShortcut(
+            intent: CheckIn51Intent(),
+            phrases: [
+                "Sjekk inn i \(.applicationName)",
+                "Sjekk inn med \(.applicationName)",
+                "\(.applicationName) sjekk inn",
+            ],
+            shortTitle: "Sjekk inn",
+            systemImageName: "checkmark.message"
+        )
+        AppShortcut(
+            intent: PickMe51Intent(),
+            phrases: [
+                "Hent meg med \(.applicationName)",
+                "Be om henting i \(.applicationName)",
+            ],
+            shortTitle: "Hent meg",
+            systemImageName: "car"
+        )
+        AppShortcut(
+            intent: ShopAdd51Intent(),
+            phrases: [
+                "Legg til på handlelisten i \(.applicationName)",
+                "Legg til i handlelisten i \(.applicationName)",
+                "Handleliste i \(.applicationName)",
+            ],
+            shortTitle: "Legg til på handlelisten",
+            systemImageName: "cart.badge.plus"
+        )
+        AppShortcut(
+            intent: Balance51Intent(),
+            phrases: [
+                "Hva er saldoen i \(.applicationName)",
+                "Saldo i \(.applicationName)",
+            ],
+            shortTitle: "Saldo",
+            systemImageName: "creditcard"
+        )
+        AppShortcut(
+            intent: NextBus51Intent(),
+            phrases: [
+                "Når går bussen i \(.applicationName)",
+                "Neste avgang i \(.applicationName)",
+            ],
+            shortTitle: "Når går bussen",
+            systemImageName: "bus"
+        )
+        AppShortcut(
+            intent: Hjemlys40StartIntent(),
+            phrases: [
+                "Jeg er på vei hjem i \(.applicationName)",
+                "På vei hjem i \(.applicationName)",
+            ],
+            shortTitle: "På vei hjem",
+            systemImageName: "house"
+        )
     }
 }

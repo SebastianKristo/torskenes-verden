@@ -41,7 +41,7 @@ struct Scan41Row: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "viewfinder").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.onLab)
+            Image(systemName: "viewfinder").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.onLab)
                 .frame(width: 32, height: 32)
                 .background(p.lab, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .accessibilityHidden(true)

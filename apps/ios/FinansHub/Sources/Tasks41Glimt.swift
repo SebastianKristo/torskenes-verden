@@ -418,7 +418,7 @@ struct Tasks41MadeView: View {
                         HStack(alignment: .top, spacing: 10) {
                             Text(String(i + 1)).font(PF.mono(12)).foregroundStyle(p.lab).frame(width: 16)
                             Button { m.toggle(t, store) } label: {
-                                Image(systemName: t.done ? "checkmark.circle.fill" : "circle").font(.system(size: 18)).foregroundStyle(t.done ? p.pos : p.mut)
+                                Image(systemName: t.done ? "checkmark.circle.fill" : "circle").font(.dyn51(size: 18)).foregroundStyle(t.done ? p.pos : p.mut)
                             }
                             .buttonStyle(.plain)
                             VStack(alignment: .leading, spacing: 2) {
@@ -542,7 +542,7 @@ struct HomeSearch41Huske: View {
     var body: some View {
         Button(action: act) {
             HStack(spacing: 10) {
-                Image(systemName: "checklist").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.bg)
+                Image(systemName: "checklist").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.bg)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(text).font(PF.ui(13.5, .bold)).foregroundStyle(p.bg).lineLimit(1)
                     Text("Glimt deler opp i punkter").font(PF.ui(12)).foregroundStyle(p.bg.opacity(0.8)).lineLimit(1)

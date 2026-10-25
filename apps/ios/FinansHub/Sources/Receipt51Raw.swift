@@ -167,7 +167,7 @@ struct Receipt51RawSection: View {
                     Text("RÅDATA").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.mut)
                     Text(summary).font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
                     Spacer(minLength: 6)
-                    Image(systemName: open ? "chevron.up" : "chevron.down").font(.system(size: 11, weight: .semibold)).foregroundStyle(p.mut)
+                    Image(systemName: open ? "chevron.up" : "chevron.down").font(.dyn51(size: 11, weight: .semibold)).foregroundStyle(p.mut)
                 }
                 .frame(minHeight: 32).contentShape(Rectangle())
             }

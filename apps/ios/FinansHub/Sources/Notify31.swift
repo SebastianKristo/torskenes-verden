@@ -201,6 +201,13 @@ enum Notify31 {
         // Prompt 51 (SEC51): «Ny enhet vil logge inn» → Innstillinger → Sikkerhet.
         if u.contains("sikkerhet") || u.contains("security") { return "innst-sik" }
         if u.contains("chat") { return "chat" }
+        // Prompt 51 (IOSFEAT51): /#/familiekalender (famcal51), /finans/plan51#skatt og /#/mediakveld (Feat51Kit.swift).
+        if u.contains("familiekalender") || u.contains("famcal51") { return "famcal51" }
+        if u.contains("plan51") {
+            let tab51: String = u.contains("#") ? (u.components(separatedBy: "#").last ?? "") : ""
+            return tab51.isEmpty ? "plan51" : "plan51:" + tab51
+        }
+        if u.contains("mediakveld") { return "ikveld51" }
         if u.contains("kalender") || u.contains("calendar") { return "kalender" }
         if u.contains("abonnement") || u.contains("subscription") || u.contains("trial") { return "abo" }
         if u.contains("system") || u.contains("oppdater") || u.contains("update") { return "system" }
@@ -237,7 +244,13 @@ enum Notify31 {
             System31Model.shared.show()
         case "innst-sik":
             store.paperGo("innst-sik")
+        case "famcal51":
+            FamCal51.shared.show()
+        case "ikveld51":
+            Kveld51.shared.show()
         default:
+            // Prompt 51 (IOSFEAT51): «plan51:skatt» → Planlegging på riktig fane.
+            if go.hasPrefix("plan51") { Plan51.shared.show(go.components(separatedBy: ":").dropFirst().first); return }
             store.paperGo("hjem")
         }
     }

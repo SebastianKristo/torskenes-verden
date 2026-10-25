@@ -278,7 +278,7 @@ struct Glimt31Toast: View {
                 Text(text).font(PF.ui(14, .semibold)).foregroundStyle(Color(hex: "#f3efe6")).lineLimit(1)
                 if state != .done { Glimt31Dots() }
                 if chevron {
-                    Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold))
+                    Image(systemName: "chevron.down").font(.dyn51(size: 10, weight: .bold))
                         .foregroundStyle(Color(hex: "#f3efe6").opacity(0.6))
                 }
             }
@@ -378,7 +378,7 @@ struct Glimt31StepRow: View {
             ZStack {
                 if done {
                     Circle().fill(Color(hex: "#2f7d4f"))
-                    Image(systemName: "checkmark").font(.system(size: 8.5, weight: .heavy)).foregroundStyle(Color.white)
+                    Image(systemName: "checkmark").font(.dyn51(size: 8.5, weight: .heavy)).foregroundStyle(Color.white)
                 } else if act {
                     Glimt31PulseRing()
                 } else {

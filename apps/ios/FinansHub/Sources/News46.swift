@@ -373,14 +373,14 @@ struct News46CategoriesSection: View {
 
     private func row(_ c: News46Cat) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: "tag").font(.system(size: 13, weight: .semibold)).foregroundStyle(p.lab)
+            Image(systemName: "tag").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(p.lab)
             VStack(alignment: .leading, spacing: 1) {
                 Text(c.name).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
                 if !c.keywords.isEmpty { Text(c.keywords.joined(separator: ", ")).font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1) }
             }
             Spacer(minLength: 4)
             Button { m.deleteCategory(c, store) } label: {
-                Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(p.mut).frame(width: 44, height: 44)
+                Image(systemName: "xmark").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(p.mut).frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Slett " + c.name)
@@ -410,7 +410,7 @@ struct News46InterestsSection: View {
                     HStack(spacing: 6) {
                         Text(w).font(PF.ui(12.5, .semibold)).foregroundStyle(p.ink)
                         Button { m.setInterests(m.interests.filter { $0 != w }, store) } label: {
-                            Image(systemName: "xmark").font(.system(size: 9, weight: .heavy)).foregroundStyle(p.mut)
+                            Image(systemName: "xmark").font(.dyn51(size: 9, weight: .heavy)).foregroundStyle(p.mut)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Fjern " + w)

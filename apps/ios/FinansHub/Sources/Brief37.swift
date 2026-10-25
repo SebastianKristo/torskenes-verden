@@ -81,7 +81,7 @@ struct Brief37TodosCard: View {
         let od: Bool = (t.due ?? Date()) < Calendar.current.startOfDay(for: Date())
         return HStack(spacing: 10) {
             Button { m.toggle(t, store) } label: {
-                Image(systemName: t.done ? "checkmark.circle.fill" : "circle").font(.system(size: 20, weight: .semibold))
+                Image(systemName: t.done ? "checkmark.circle.fill" : "circle").font(.dyn51(size: 20, weight: .semibold))
                     .foregroundStyle(t.done ? Color(hex: "#2f7a4f") : Brief34C.mut)
             }
             .buttonStyle(.plain)

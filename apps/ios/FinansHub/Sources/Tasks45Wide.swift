@@ -50,7 +50,7 @@ struct Tasks45GlimtButton: View {
 
     var body: some View {
         Button { Tasks37Glimt.shared.open(store) } label: {
-            Image(systemName: "sparkle").font(.system(size: 24, weight: .bold)).foregroundStyle(p.onLab)
+            Image(systemName: "sparkle").font(.dyn51(size: 24, weight: .bold)).foregroundStyle(p.onLab)
                 .frame(width: 60, height: 60)
                 .background(p.lab, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .shadow(color: Color.black.opacity(0.4), radius: 14, y: 10)

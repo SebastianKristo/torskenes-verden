@@ -29,10 +29,14 @@ struct FinansHubApp: App {
                 .appAuth41Host()
                 // Prompt 51: «Ny enhet vil logge inn», «Nytt i denne versjonen», feature flags og krasjkøen (FHSec51.swift).
                 .fh51Host()
+                // Prompt 51 (IOSPLAT51): offline-køen, Live Activities og Apple Watch-innloggingen (Plat51Host.swift).
+                .plat51Host()
                 .environment(store)
                 // Prompt 38: homelab://login?c=… (QR-innlogging på ny enhet, QrLogin38.swift) før de vanlige dyplenkene.
                 .onOpenURL { (u: URL) in
                     if AppAuth41.shared.handle(u, store) { return }
+                    // Prompt 51 (IOSFEAT51): papir://join?i=…&c=…&srv=… – invitasjon for nye familiemedlemmer (Onboard51.swift).
+                    if Onboard51.shared.handleURL(u, store) { return }
                     if Qr38Model.shared.handle(u, store) { return }
                     // Prompt 43: magnet:-lenker og homelab://magnet?url=… åpner «Legg til magnet-lenke» i Media.
                     if Media43.shared.handleURL(u, store) { return }
@@ -42,6 +46,7 @@ struct FinansHubApp: App {
                 .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { (a: NSUserActivity) in
                     if let u = a.webpageURL {
                         if AppAuth41.shared.handle(u, store) { return }
+                        if Onboard51.shared.handleURL(u, store) { return }
                         _ = Qr38Model.shared.handle(u, store)
                     }
                 }

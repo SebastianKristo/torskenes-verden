@@ -267,7 +267,7 @@ struct Receipt48CategoryPicker: View {
                 HStack {
                     Text(category.isEmpty ? "Velg kategori" : category).font(PF.ui(15, .semibold)).foregroundStyle(category.isEmpty ? p.mut : p.ink)
                     Spacer()
-                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 12, weight: .semibold)).foregroundStyle(p.mut)
+                    Image(systemName: "chevron.up.chevron.down").font(.dyn51(size: 12, weight: .semibold)).foregroundStyle(p.mut)
                 }
                 .padding(.horizontal, 12).frame(height: 46)
                 .background(p.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))

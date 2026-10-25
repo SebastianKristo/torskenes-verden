@@ -289,6 +289,8 @@ struct Fam50Folk: View {
                 if !wide {
                     Fam50MapStrip().padding(.horizontal, 14).padding(.top, 12)
                 }
+                // Prompt 51 (IOSFEAT51): familiekalender med «hvem kjører?» (FamCal51.swift).
+                FamCal51Strip().padding(.horizontal, 14).padding(.top, 12)
                 Fam50TodayList(items: m.today, title: "I DAG").padding(.top, 14)
             }
             .padding(.bottom, 24)
@@ -298,6 +300,9 @@ struct Fam50Folk: View {
         .confirmationDialog("Legg til", isPresented: $plusMenu, titleVisibility: .hidden) {
             Button("Nytt sted") { FamilyModel.shared.tab = "soner"; Fam50Nav.shared.stack = [.nyttSted("annet")] }
             Button("Deling og familie") { store.paperGo("innst-fam") }
+            // Prompt 51 (IOSFEAT51): familiekalender og invitasjon av nye familiemedlemmer (FamCal51.swift, Onboard51.swift).
+            Button("Ny hendelse i familiekalenderen") { FamCal51.shared.show(add: true) }
+            if store.account?.role == "admin" { Button("Inviter familiemedlem") { Invite51.shared.show() } }
             Button("Avbryt", role: .cancel) {}
         }
     }

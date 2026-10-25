@@ -190,7 +190,7 @@ struct MatView: View {
     /// Prompt 43: «⋯» med dagens valg (Foreslå en annen rett, fast dag, kokk).
     private func dayMenuButton(_ d: MealDay, _ w: Week, _ color: Color) -> some View {
         Menu { dayMenu(d, w) } label: {
-            Image(systemName: "ellipsis").font(.system(size: 15, weight: .bold)).foregroundStyle(color)
+            Image(systemName: "ellipsis").font(.dyn51(size: 15, weight: .bold)).foregroundStyle(color)
                 .frame(width: 32, height: 28).contentShape(Rectangle())
         }
         .accessibilityLabel("Valg for dagen")
@@ -383,7 +383,7 @@ struct MatView: View {
         ForEach(shop) { it in
             Button { store.toggleShop(it.id) } label: {
                 HStack(spacing: 10) {
-                    Text(it.done ? "✓" : "").font(.system(size: 12, weight: .bold)).foregroundStyle(pal.limeInk).frame(width: 20, height: 20)
+                    Text(it.done ? "✓" : "").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(pal.limeInk).frame(width: 20, height: 20)
                         .background(it.done ? pal.lime : Color.clear, in: RoundedRectangle(cornerRadius: 5))
                         .overlay(RoundedRectangle(cornerRadius: 5).stroke(it.done ? pal.lime : pal.muted, lineWidth: 1.5))
                     Text(it.text).font(pal.ui(14.5)).strikethrough(it.done).foregroundStyle(it.done ? pal.muted : pal.text)
@@ -411,7 +411,7 @@ struct DishThumb: View {
             if let img {
                 Image(uiImage: img).resizable().scaledToFill()
             } else {
-                Text(initial(dish.name)).font(.system(size: size * 0.4, weight: .heavy)).foregroundStyle(pal.limeInk.opacity(0.7))
+                Text(initial(dish.name)).font(.dyn51(size: size * 0.4, weight: .heavy)).foregroundStyle(pal.limeInk.opacity(0.7))
             }
         }
         .frame(width: size, height: size)
@@ -528,7 +528,7 @@ struct DishDetailView: View {
                 ForEach(Array(ing.enumerated()), id: \.offset) { i, n in
                     Button { if checked.contains(i) { checked.remove(i) } else { checked.insert(i) } } label: {
                         HStack(alignment: .top, spacing: 10) {
-                            Text(checked.contains(i) ? "✓" : "").font(.system(size: 11, weight: .bold)).foregroundStyle(pal.limeInk).frame(width: 18, height: 18)
+                            Text(checked.contains(i) ? "✓" : "").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(pal.limeInk).frame(width: 18, height: 18)
                                 .background(checked.contains(i) ? pal.lime : Color.clear, in: RoundedRectangle(cornerRadius: 5))
                                 .overlay(RoundedRectangle(cornerRadius: 5).stroke(checked.contains(i) ? pal.lime : pal.muted, lineWidth: 1.5))
                             Text(n).font(pal.ui(14.5)).foregroundStyle(checked.contains(i) ? pal.muted : pal.text).multilineTextAlignment(.leading)
@@ -585,14 +585,14 @@ struct DishDetailView: View {
             ForEach(d.links) { l in
                 Button { store.openDishLink(l) } label: {
                     HStack(spacing: 10) {
-                        Image(systemName: l.icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+                        Image(systemName: l.icon).font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(.white)
                             .frame(width: 30, height: 30).background(l.tint, in: RoundedRectangle(cornerRadius: 8))
                         VStack(alignment: .leading, spacing: 1) {
                             Text(l.label).font(pal.ui(13.5, .semibold)).foregroundStyle(pal.text).lineLimit(1)
                             Text(l.kindName).font(pal.ui(11.5)).foregroundStyle(pal.muted)
                         }
                         Spacer(minLength: 0)
-                        Image(systemName: "arrow.up.right").font(.system(size: 12)).foregroundStyle(pal.muted)
+                        Image(systemName: "arrow.up.right").font(.dyn51(size: 12)).foregroundStyle(pal.muted)
                     }
                     .padding(8)
                     .background(pal.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

@@ -102,7 +102,7 @@ struct Hjemlys41Start: View {
         let main: Bool = k.0 == "hjem"
         return Button { h.begin(k.0, store) } label: {
             VStack(alignment: .leading, spacing: 6) {
-                Text(k.1).font(.system(size: 20, weight: .bold)).foregroundStyle(main ? Hjemlys40Look.gold : iconColor(k.0))
+                Text(k.1).font(.dyn51(size: 20, weight: .bold)).foregroundStyle(main ? Hjemlys40Look.gold : iconColor(k.0))
                 Text(k.2).font(PF.ui(15, .bold)).foregroundStyle(main ? p.bg : p.ink)
                 Text(k.3).font(PF.ui(12)).foregroundStyle(main ? p.bg.opacity(0.75) : p.mut)
                     .multilineTextAlignment(.leading).fixedSize(horizontal: false, vertical: true)
@@ -146,7 +146,7 @@ struct Hjemlys41People: View {
             }
             Text("Hvem får beskjed?").font(PF.serif(26, medium: true)).foregroundStyle(p.ink)
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").font(.system(size: 14, weight: .semibold)).foregroundStyle(p.mut)
+                Image(systemName: "magnifyingglass").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(p.mut)
                 TextField("Søk", text: Binding<String>(get: { h.query }, set: { (v: String) in h.query = v }))
                     .font(PF.ui(15)).foregroundStyle(p.ink).autocorrectionDisabled()
             }
@@ -233,7 +233,7 @@ struct Hjemlys41People: View {
                 ZStack {
                     Circle().fill(on ? p.pos : Color.clear)
                     Circle().stroke(on ? Color.clear : p.line, lineWidth: 1.5)
-                    if on { Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(Color.white) }
+                    if on { Image(systemName: "checkmark").font(.dyn51(size: 11, weight: .heavy)).foregroundStyle(Color.white) }
                 }
                 .frame(width: 24, height: 24)
             }
@@ -455,15 +455,15 @@ struct Hjemlys41LockPreview: View {
                 HStack(spacing: 4) {
                     Hjemlys41Glow(size: 24, state: s.state)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Vel fremme").font(.system(size: 14, weight: .bold)).foregroundStyle(Color.white)
-                        Text(m.recipientsText).font(.system(size: 11.5)).foregroundStyle(Color.white.opacity(0.75)).lineLimit(1)
+                        Text("Vel fremme").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(Color.white)
+                        Text(m.recipientsText).font(.dyn51(size: 11.5)).foregroundStyle(Color.white.opacity(0.75)).lineLimit(1)
                     }
                     Spacer(minLength: 4)
                     VStack(alignment: .trailing, spacing: 1) {
-                        Text(Hjemlys40Look.clock(s.eta)).font(.system(size: 20, weight: .bold)).monospacedDigit()
+                        Text(Hjemlys40Look.clock(s.eta)).font(.dyn51(size: 20, weight: .bold)).monospacedDigit()
                             .foregroundStyle(s.state == "late" ? Hjemlys40Look.red : Hjemlys40Look.green)
                         Text(s.state == "late" ? "\(s.lateMinutes) min over" : "om " + Hjemlys40Look.mins(Hjemlys40Look.minutesLeft(s.eta.timeIntervalSince1970)))
-                            .font(.system(size: 11)).foregroundStyle(Color.white.opacity(0.7))
+                            .font(.dyn51(size: 11)).foregroundStyle(Color.white.opacity(0.7))
                     }
                     .frame(minWidth: 64, alignment: .trailing)
                 }
@@ -475,9 +475,9 @@ struct Hjemlys41LockPreview: View {
                 }
                 .frame(height: 5)
                 HStack(spacing: 8) {
-                    Text("+ 10 min").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.white)
+                    Text("+ 10 min").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(Color.white)
                         .frame(maxWidth: .infinity, minHeight: 34).background(Color.white.opacity(0.12), in: Capsule())
-                    Text("Jeg er hjemme").font(.system(size: 13, weight: .heavy)).foregroundStyle(Hjemlys40Look.c(0x0d1a12))
+                    Text("Jeg er hjemme").font(.dyn51(size: 13, weight: .heavy)).foregroundStyle(Hjemlys40Look.c(0x0d1a12))
                         .frame(maxWidth: .infinity, minHeight: 34).background(Hjemlys40Look.green, in: Capsule())
                 }
             }

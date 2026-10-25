@@ -194,7 +194,7 @@ struct Glimt31Check: View {
 
     var body: some View {
         Image(systemName: "checkmark")
-            .font(.system(size: size * 0.4, weight: .heavy))
+            .font(.dyn51(size: size * 0.4, weight: .heavy))
             .foregroundStyle(Glimt31.green)
             .scaleEffect(shown ? 1 : 0.4)
             .opacity(shown ? 1 : 0)

@@ -204,7 +204,7 @@ struct ClaudeImport43Tab: View {
         VStack(alignment: .leading, spacing: 12) {
             card {
                 HStack(spacing: 12) {
-                    Text("✳").font(.system(size: 22, weight: .bold)).foregroundStyle(Color(hex: "#d97757"))
+                    Text("✳").font(.dyn51(size: 22, weight: .bold)).foregroundStyle(Color(hex: "#d97757"))
                         .frame(width: 44, height: 44).background(Color(hex: "#d97757").opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Importer fra Claude").font(PF.serif(20, medium: true)).foregroundStyle(p.ink)
@@ -222,7 +222,7 @@ struct ClaudeImport43Tab: View {
             }
             Button { Haptics.shared.tap(); picking = true } label: {
                 VStack(spacing: 4) {
-                    Image(systemName: "square.and.arrow.down").font(.system(size: 20, weight: .semibold))
+                    Image(systemName: "square.and.arrow.down").font(.dyn51(size: 20, weight: .semibold))
                     Text(c.busy ? "Leser fila …" : "Velg .zip eller conversations.json").font(PF.ui(14, .bold))
                     Text("Maks 200 MB").font(PF.ui(11.5)).foregroundStyle(p.mut)
                 }
@@ -302,7 +302,7 @@ struct ClaudeImport43Tab: View {
                             if c.picked.contains(cv.id) { c.picked.remove(cv.id) } else { c.picked.insert(cv.id) }
                         } label: {
                             HStack(spacing: 10) {
-                                Image(systemName: c.picked.contains(cv.id) ? "checkmark.square.fill" : "square").font(.system(size: 18)).foregroundStyle(c.picked.contains(cv.id) ? p.ink : p.mut)
+                                Image(systemName: c.picked.contains(cv.id) ? "checkmark.square.fill" : "square").font(.dyn51(size: 18)).foregroundStyle(c.picked.contains(cv.id) ? p.ink : p.mut)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(cv.title).font(PF.ui(14, .semibold)).foregroundStyle(p.ink).lineLimit(1)
                                     Text([Claude43.day(cv.date), "\(cv.count) meldinger", cv.before ? "Importert før" : ""].filter { !$0.isEmpty }.joined(separator: " · "))
@@ -329,7 +329,7 @@ struct ClaudeImport43Tab: View {
                             if c.pickedMem.contains(m) { c.pickedMem.remove(m) } else { c.pickedMem.insert(m) }
                         } label: {
                             HStack(alignment: .top, spacing: 10) {
-                                Image(systemName: c.pickedMem.contains(m) ? "checkmark.square.fill" : "square").font(.system(size: 18)).foregroundStyle(c.pickedMem.contains(m) ? p.ink : p.mut)
+                                Image(systemName: c.pickedMem.contains(m) ? "checkmark.square.fill" : "square").font(.dyn51(size: 18)).foregroundStyle(c.pickedMem.contains(m) ? p.ink : p.mut)
                                 Text(m).font(PF.ui(13.5)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
                                 Spacer(minLength: 0)
                             }

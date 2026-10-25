@@ -119,7 +119,7 @@ struct Wiggle43Plate: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "line.3.horizontal").font(.system(size: 14, weight: .bold))
+            Image(systemName: "line.3.horizontal").font(.dyn51(size: 14, weight: .bold))
             Text(text).font(PF.ui(15, .semibold)).lineLimit(1)
         }
         .foregroundStyle(ink)

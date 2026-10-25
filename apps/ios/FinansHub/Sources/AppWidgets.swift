@@ -38,6 +38,8 @@ extension Store {
         // Prompt 26: finanshub://kalender[/<id>] åpner Kalender (og detaljkortet for timen).
         // Prompt 33: kalender-login fra Kalender-appen, og widget-lenkene videre til Kalender-appen når den er installert.
         if page == "kalender-login" { KalCompanion33.loginLink(self); return }
+        // Prompt 51 (IOSFEAT51): planlegging, familiekalender, ikveld, sok (Feat51Links i Search51.swift).
+        if Feat51Links.handle(page, sub, url, self) { return }
         // Prompt 34: finanshub://brief (Glimt-brief-widgetene) åpner briefen i fullskjerm.
         if page == "brief" { paperGo("hjem"); Brief34Model.shared.show(); return }
         // Prompt 37: bibelvers-widgetene (finanshub://bibel) åpner Bibel-siden.

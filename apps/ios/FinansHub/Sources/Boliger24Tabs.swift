@@ -149,7 +149,7 @@ struct Bol24Access: View {
                     let hid: Int = home.id
                     Task { await m.removeMember(hid, u, store) }
                 } label: {
-                    Text("−").font(.system(size: 18)).foregroundStyle(p.lab).frame(width: 32, height: 32)
+                    Text("−").font(.dyn51(size: 18)).foregroundStyle(p.lab).frame(width: 32, height: 32)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Fjern \(u.name)")

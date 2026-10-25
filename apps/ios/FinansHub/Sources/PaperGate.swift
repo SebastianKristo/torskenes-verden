@@ -80,6 +80,7 @@ struct PaperLoginView: View {
         .onAppear { if !store.addingAccount { server = store.server } }
         .server41Host(p)
         .qr46Host(p, store)
+        .onboard51Host(p)
     }
 
     private var host: String {
@@ -112,6 +113,8 @@ struct PaperLoginView: View {
         }
         // Prompt 46: QR-innlogging – en innlogget mobil skanner koden og godkjenner med Face ID (Qr46Login.swift).
         Qr46LoginButton()
+        // Prompt 51 (IOSFEAT51): ny i familien – skann invitasjons-QR-en (Onboard51.swift).
+        Onboard51Button()
         Text("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.").font(PF.ui(12.5)).foregroundStyle(p.mut)
     }
 

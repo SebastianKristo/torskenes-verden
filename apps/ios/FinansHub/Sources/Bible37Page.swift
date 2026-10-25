@@ -68,7 +68,7 @@ struct Bible37Flame: View {
     @State private var wob: Bool = false
 
     var body: some View {
-        Image(systemName: "flame.fill").font(.system(size: 26, weight: .semibold))
+        Image(systemName: "flame.fill").font(.dyn51(size: 26, weight: .semibold))
             .foregroundStyle(on ? Color.white : Color(hex: "#f3efe6").opacity(0.55))
             .rotationEffect(.degrees(on && wob && !reduce ? 6 : 0))
             .frame(width: 56, height: 56)
@@ -94,7 +94,7 @@ struct Bible37Dot: View {
         VStack(spacing: 4) {
             ZStack {
                 Circle().fill(read ? Color(hex: "#ffb067") : Color.white.opacity(0.1)).frame(width: 30, height: 30)
-                if read { Image(systemName: "checkmark").font(.system(size: 12, weight: .heavy)).foregroundStyle(Color(hex: "#2b2350")) }
+                if read { Image(systemName: "checkmark").font(.dyn51(size: 12, weight: .heavy)).foregroundStyle(Color(hex: "#2b2350")) }
             }
             .overlay(Circle().stroke(today ? Color(hex: "#ffd9c2") : Color.clear, lineWidth: 2).padding(-3))
             Text(letter).font(PF.mono(10.5)).foregroundStyle(Color(hex: "#f3efe6").opacity(0.6))
@@ -304,7 +304,7 @@ struct Bible37SavedCard: View {
             }
             Spacer(minLength: 4)
             Button { m.removeSaved(v) } label: {
-                Image(systemName: "xmark").font(.system(size: 11, weight: .bold)).foregroundStyle(p.mut)
+                Image(systemName: "xmark").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(p.mut)
                     .frame(width: 30, height: 30)
                     .contentShape(Rectangle())
             }

@@ -175,7 +175,7 @@ struct Receipts23Page: View {
     private var cameraCard: some View {
         Button { Haptics.shared.tap(); scanning = true } label: {
             HStack(spacing: 14) {
-                Image(systemName: "camera").font(.system(size: 22, weight: .semibold)).foregroundStyle(Color.white)
+                Image(systemName: "camera").font(.dyn51(size: 22, weight: .semibold)).foregroundStyle(Color.white)
                     .frame(width: 52, height: 52)
                     .background(p.lab, in: Circle())
                 VStack(alignment: .leading, spacing: 2) {
@@ -245,7 +245,7 @@ struct Receipts23SourceLabel: View {
     let icon: String
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: icon).font(.system(size: 17, weight: .semibold))
+            Image(systemName: icon).font(.dyn51(size: 17, weight: .semibold))
             Text(title).font(PF.ui(15, .bold))
         }
         .foregroundStyle(p.ink)
@@ -538,7 +538,7 @@ struct Receipts23ReviewRow: View {
                 .buttonStyle(.plain)
                 .disabled(reanBusy)
                 Button { Haptics.shared.warning(); Task { await model.delete(r.id, store) } } label: {
-                    Text("🗑").font(.system(size: 16)).frame(width: 42, height: 42).overlay(Circle().stroke(p.line, lineWidth: 1))
+                    Text("🗑").font(.dyn51(size: 16)).frame(width: 42, height: 42).overlay(Circle().stroke(p.line, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Slett")

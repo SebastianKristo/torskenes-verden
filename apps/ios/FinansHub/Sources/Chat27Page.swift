@@ -184,7 +184,7 @@ struct Chat27TopBar: View {
 
     private func iconButton(_ icon: String, _ label: String, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Image(systemName: icon).font(.system(size: 18, weight: .semibold)).foregroundStyle(c.ink)
+            Image(systemName: icon).font(.dyn51(size: 18, weight: .semibold)).foregroundStyle(c.ink)
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
@@ -350,7 +350,7 @@ struct Chat27Composer: View {
                     } else {
                         // Prompt 43: tom melding = lys knapp med synlig pil og tynn kant (ikke 35 % opasitet); med tekst mørk som før.
                         Button { send() } label: {
-                            Image(systemName: "arrow.up").font(.system(size: 17, weight: .bold)).foregroundStyle(canSend ? c.bg : c.mut)
+                            Image(systemName: "arrow.up").font(.dyn51(size: 17, weight: .bold)).foregroundStyle(canSend ? c.bg : c.mut)
                                 .frame(width: 38, height: 38)
                                 .background {
                                     if canSend {
@@ -439,7 +439,7 @@ struct Chat27Composer: View {
 
     private func round(_ icon: String, _ label: String, on: Bool, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(on ? Color.white : c.ink)
+            Image(systemName: icon).font(.dyn51(size: 17, weight: .semibold)).foregroundStyle(on ? Color.white : c.ink)
                 .frame(width: 38, height: 38)
                 .background(on ? Color(hex: "#b23a2a") : Color.clear, in: Circle())
                 .contentShape(Circle())
@@ -451,7 +451,7 @@ struct Chat27Composer: View {
     private func chip(_ icon: String, _ label: String, on: Bool, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: 5) {
-                Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+                Image(systemName: icon).font(.dyn51(size: 12, weight: .semibold))
                 Text(label).font(c.ui(13, .semibold)).lineLimit(1).minimumScaleFactor(0.8)
             }
             .foregroundStyle(on ? c.bg : c.ink)

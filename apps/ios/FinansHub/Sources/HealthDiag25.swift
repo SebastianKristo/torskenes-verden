@@ -36,7 +36,7 @@ struct HealthDiagRow25: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.triangle").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.lab)
+            Image(systemName: "exclamationmark.triangle").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.lab)
             Text(text).font(PF.ui(12.5)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }

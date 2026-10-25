@@ -343,7 +343,7 @@ struct Chat50AttachRow: View {
                     .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(a.err.isEmpty ? c.line : Color(hex: "#b23a2a"), lineWidth: a.err.isEmpty ? 1 : 2))
                     .overlay(alignment: .bottom) { if a.uploading { progress(a.pct) } }
                 Button { s.removeAttach(a) } label: {
-                    Text("✕").font(.system(size: 11, weight: .bold)).foregroundStyle(c.bg)
+                    Text("✕").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(c.bg)
                         .frame(width: 22, height: 22)
                         .background(c.ink, in: Circle())
                         .frame(width: 32, height: 32)
@@ -405,7 +405,7 @@ struct Chat50PasteChip: View {
                     Chat50.shared.paste()
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "doc.on.clipboard").font(.system(size: 12, weight: .semibold))
+                        Image(systemName: "doc.on.clipboard").font(.dyn51(size: 12, weight: .semibold))
                         Text("Lim inn bilde").font(c.ui(12.5, .semibold))
                     }
                     .foregroundStyle(c.ink)
@@ -576,7 +576,7 @@ struct Chat50Lightbox: View {
             .tabViewStyle(.page(indexDisplayMode: .never))
             .offset(y: dragY)
             Text(lb.items.count > 1 ? "\(idx + 1) av \(lb.items.count)" : " ")
-                .font(.system(size: 12, weight: .medium)).foregroundStyle(Color.white.opacity(0.7))
+                .font(.dyn51(size: 12, weight: .medium)).foregroundStyle(Color.white.opacity(0.7))
                 .padding(.vertical, 10)
         }
         .background(Color(red: 10 / 255, green: 10 / 255, blue: 10 / 255).opacity(0.94).ignoresSafeArea())
@@ -597,7 +597,7 @@ struct Chat50Lightbox: View {
     private var head: some View {
         let it: Chat50LBItem? = lb.items.indices.contains(idx) ? lb.items[idx] : nil
         return HStack(spacing: 10) {
-            Text(it?.name ?? "Bilde").font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
+            Text(it?.name ?? "Bilde").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
             Spacer(minLength: 6)
             if let it { button("Del") { shareImage(it) } }
             button("Lukk") { close() }
@@ -607,7 +607,7 @@ struct Chat50Lightbox: View {
 
     private func button(_ t: String, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Text(t).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+            Text(t).font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(.white)
                 .padding(.horizontal, 16).frame(height: 40)
                 .background(Color.white.opacity(0.08), in: Capsule())
                 .overlay(Capsule().stroke(Color.white.opacity(0.3), lineWidth: 1))
@@ -814,7 +814,7 @@ struct Chat50Drop: ViewModifier {
                 .padding(16)
             VStack(spacing: 6) {
                 Text("Slipp for å legge ved").font(PF.serif(28, medium: true)).foregroundStyle(c.dark ? c.ink : Color(hex: "#1b1a17"))
-                Text("Bilder, PDF, tekst · maks 20 MB").font(.system(size: 14)).foregroundStyle(c.dark ? c.mut : Color(hex: "#6b665c"))
+                Text("Bilder, PDF, tekst · maks 20 MB").font(.dyn51(size: 14)).foregroundStyle(c.dark ? c.mut : Color(hex: "#6b665c"))
             }
         }
         .allowsHitTesting(false)

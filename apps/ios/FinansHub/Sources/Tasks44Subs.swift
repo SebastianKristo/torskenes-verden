@@ -183,7 +183,7 @@ struct Tasks44SubRow: View {
                 .strikethrough(sub.done)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button { Tasks44UI.shared.removeSub(taskId, index, store) } label: {
-                Image(systemName: "xmark").font(.system(size: 11, weight: .bold)).foregroundStyle(p.mut)
+                Image(systemName: "xmark").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(p.mut)
                     .frame(width: 36, height: 36).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -206,7 +206,7 @@ struct Tasks44Check: View {
             shape.stroke(color, lineWidth: 2)
             if on {
                 shape.fill(color)
-                Image(systemName: "checkmark").font(.system(size: size * 0.48, weight: .bold)).foregroundStyle(Color.white)
+                Image(systemName: "checkmark").font(.dyn51(size: size * 0.48, weight: .bold)).foregroundStyle(Color.white)
             }
         }
         .frame(width: size, height: size)

@@ -219,7 +219,7 @@ struct TaskShareSheet21: View {
                 Text(mem.name).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
                 Spacer()
                 Image(systemName: on ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20, weight: .semibold)).foregroundStyle(on ? p.pos : p.line)
+                    .font(.dyn51(size: 20, weight: .semibold)).foregroundStyle(on ? p.pos : p.line)
             }
             .padding(.horizontal, 14).frame(height: 54)
             .contentShape(Rectangle())

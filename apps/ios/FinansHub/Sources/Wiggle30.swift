@@ -42,7 +42,7 @@ struct WiggleBadge30: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol).font(.system(size: kind == .lock ? 11 : 12, weight: .heavy)).foregroundStyle(p.ink)
+            Image(systemName: symbol).font(.dyn51(size: kind == .lock ? 11 : 12, weight: .heavy)).foregroundStyle(p.ink)
                 .frame(width: 28, height: 28)
                 .background(p.card, in: Circle())
                 .overlay(Circle().stroke(p.line, lineWidth: 1))
@@ -207,7 +207,7 @@ struct Mer30Card: View {
                 // Prompt 40: Økonomi-ikonet 3c.
                 Okonomi40Icon(size: 40)
             } else {
-                Image(systemName: r.icon).font(.system(size: 19, weight: .medium))
+                Image(systemName: r.icon).font(.dyn51(size: 19, weight: .medium))
                     .foregroundStyle(PaperIconTheme.color(store.iconTheme, index))
                     .frame(width: 40, height: 40)
                     .background(p.bg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -223,7 +223,7 @@ struct Mer30Card: View {
     }
 
     private var handle: some View {
-        Image(systemName: "line.3.horizontal").font(.system(size: 18, weight: .medium)).foregroundStyle(p.mut)
+        Image(systemName: "line.3.horizontal").font(.dyn51(size: 18, weight: .medium)).foregroundStyle(p.mut)
             .frame(width: 44, height: 44)
             .contentShape(Rectangle())
             .padding(.vertical, -8).padding(.trailing, -8)
@@ -315,7 +315,7 @@ struct FinResetOrder30: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Image(systemName: "arrow.counterclockwise").font(.system(size: 12, weight: .bold))
+                Image(systemName: "arrow.counterclockwise").font(.dyn51(size: 12, weight: .bold))
                 Text("Tilbakestill rekkefølge").font(PF.ui(13, .semibold))
             }
             .foregroundStyle(p.ink)

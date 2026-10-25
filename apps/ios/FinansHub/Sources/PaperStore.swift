@@ -12,7 +12,9 @@ extension Store {
     func applyPaperLayout(_ o: [String: Any]) {
         if JS.str(o, "mobileDesign") == "klassisk" { migrateClassic42(server: true) }
         // Prompt 50: Liquid Glass er et lokalt valg (serveren kjenner bare auto/lys/mork) og overskrives ikke herfra.
-        if let v = JS.str(o, "paperMode"), ["auto", "lys", "mork"].contains(v), v != paperMode, paperMode != Glass50.mode { paperMode = v }
+        // Prompt 51 (IOSFEAT51): når temaet er synket via /api/me/theme51 (Theme51.swift), er det den som gjelder (også «auto51-…»).
+        if let v = JS.str(o, "paperMode"), ["auto", "lys", "mork"].contains(v), v != paperMode, paperMode != Glass50.mode,
+           !paperMode.hasPrefix(Theme51.autoPrefix), Theme51.shared.updatedAt <= 0 { paperMode = v }
         // Prompt 46: Google Photos-albumet synkes som bgType 'gphoto' (layout.photo godtar ikke verdien) og vinner over photo.
         let bg46: String? = JS.str(o, "bgType") == "gphoto" ? "gphoto" : JS.str(o, "photo")
         if let v = bg46, ["cur", "oslo", "weather", "planets", "custom", "gphoto"].contains(v), v != photo {
@@ -72,6 +74,11 @@ extension Store {
         paperMode = v
         // Prompt 50: Glass lagres bare lokalt (layout.paperMode godtar ikke verdien).
         if v != Glass50.mode { savePaperLayout(["paperMode": v]) }
+        // Prompt 51 (IOSFEAT51): temaet følger kontoen til de andre enhetene (/api/me/theme51, Theme51.swift).
+        if v != Glass50.mode {
+            Theme51.shared.mode = v == "lys" ? "light" : (v == "mork" ? "dark" : "system")
+            Task { await Theme51.shared.push(v, self) }
+        }
         Haptics.shared.select()
     }
 

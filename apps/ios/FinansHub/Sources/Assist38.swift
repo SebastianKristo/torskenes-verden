@@ -67,7 +67,7 @@ struct Assist38Catcher: View {
 struct Assist38CloseButton: View {
     var body: some View {
         Button { Assist38.close() } label: {
-            Image(systemName: "xmark").font(.system(size: 11, weight: .bold)).foregroundStyle(Color.white.opacity(0.85))
+            Image(systemName: "xmark").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(Color.white.opacity(0.85))
                 .frame(width: 30, height: 30)
                 .background(Color.white.opacity(0.14), in: Circle())
                 .overlay(Circle().strokeBorder(Color.white.opacity(0.12), lineWidth: 1))

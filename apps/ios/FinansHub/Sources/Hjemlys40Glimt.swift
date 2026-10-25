@@ -237,7 +237,7 @@ struct Hjemlys40ChatSheet: View {
                     .submitLabel(.send)
                     .onSubmit { g.send(store) }
                 Button { g.send(store) } label: {
-                    Image(systemName: "arrow.up").font(.system(size: 15, weight: .bold)).foregroundStyle(p.bg)
+                    Image(systemName: "arrow.up").font(.dyn51(size: 15, weight: .bold)).foregroundStyle(p.bg)
                         .frame(width: 42, height: 42).background(p.ink, in: Circle())
                 }
                 .buttonStyle(.plain)

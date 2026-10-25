@@ -204,7 +204,7 @@ struct StocksMobileView: View {
             VStack(spacing: 14) {
                 ModuleHeader(title: "Aksjer", trailing: {
                     Button { store.syncStocks() } label: {
-                        Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
+                        Image(systemName: "arrow.triangle.2.circlepath").font(.dyn51(size: 16, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Synk nå")
                 })
@@ -262,7 +262,7 @@ struct StocksMobileView: View {
                 Text(x.mock ? "Demo" : x.env.lowercased() == "demo" ? "Demo" : "Live").font(.caption.weight(.semibold)).padding(.horizontal, 8).padding(.vertical, 3).background(Color.skinFg.opacity(0.12), in: Capsule())
             }
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(krs(x.total)).font(.system(size: 34, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                Text(krs(x.total)).font(.dyn51(size: 34, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                 if let c = rangeCh {
                     Text("\(chg(c)) \(range == "1D" ? "i dag" : label.lowercased())").font(.caption.weight(.semibold)).foregroundStyle(c < 0 ? th.down : th.up)
                         .padding(.horizontal, 8).padding(.vertical, 4).background(c < 0 ? th.downBg : th.upBg, in: Capsule())
@@ -373,7 +373,7 @@ struct StocksMobileView: View {
     }
 
     private func tickerBadge(_ ini: String, _ tint: Color, _ size: CGFloat = 40) -> some View {
-        Text(ini).font(.system(size: size * 0.34, weight: .bold)).foregroundStyle(Color.skinFg).frame(width: size, height: size)
+        Text(ini).font(.dyn51(size: size * 0.34, weight: .bold)).foregroundStyle(Color.skinFg).frame(width: size, height: size)
             .background(tint, in: RoundedRectangle(cornerRadius: size * 0.3)).overlay(RoundedRectangle(cornerRadius: size * 0.3).stroke(Color.skinFg.opacity(0.12), lineWidth: 1))
     }
 
@@ -469,7 +469,7 @@ struct StocksMobileView: View {
                     Text(ranges.first { $0.0 == range }?.1 ?? "").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text("\(n2(p.price)) kr").font(.system(size: 32, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
+                    Text("\(n2(p.price)) kr").font(.dyn51(size: 32, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                     changePill(ch, th)
                 }
                 VStack(spacing: 10) {

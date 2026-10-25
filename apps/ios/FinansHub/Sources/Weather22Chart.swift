@@ -80,7 +80,7 @@ struct WxChartPainter22 {
     private func pt(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x * s, y: p.y * s) }
 
     private func label(_ ctx: inout GraphicsContext, _ text: String, x: CGFloat, baseline: CGFloat, size: CGFloat, color: Color, center: Bool) {
-        let t: Text = Text(text).font(.system(size: size * s, weight: .bold)).foregroundColor(color)
+        let t: Text = Text(text).font(.dyn51(size: size * s, weight: .bold)).foregroundColor(color)
         let at: CGPoint = CGPoint(x: x * s, y: (baseline - size * 0.36) * s)
         ctx.draw(t, at: at, anchor: center ? .center : .leading)
     }

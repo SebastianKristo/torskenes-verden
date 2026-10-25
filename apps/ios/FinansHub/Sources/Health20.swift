@@ -83,7 +83,7 @@ struct HealthToggleRow20: View {
             if enabled { act() }
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(p.lab)
+                Image(systemName: icon).font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.lab)
                     .frame(width: 34, height: 34)
                     .background(p.bg, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
@@ -117,7 +117,7 @@ struct HealthLinkRow20: View {
     var body: some View {
         Button(action: act) {
             HStack(spacing: 10) {
-                Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(p.lab)
+                Image(systemName: icon).font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.lab)
                     .frame(width: 34, height: 34)
                     .background(p.bg, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {

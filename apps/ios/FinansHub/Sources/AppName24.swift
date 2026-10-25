@@ -124,7 +124,7 @@ struct AppName24Sheet: View {
                 Image(AppMeta.shared.iconPreview24).resizable().scaledToFit().frame(width: 62, height: 62)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
-                Text(name.isEmpty ? " " : name).font(.system(size: 12, weight: .medium)).foregroundStyle(.white).lineLimit(1)
+                Text(name.isEmpty ? " " : name).font(.dyn51(size: 12, weight: .medium)).foregroundStyle(.white).lineLimit(1)
                     .frame(maxWidth: 90)
             }
             .padding(.vertical, 16)

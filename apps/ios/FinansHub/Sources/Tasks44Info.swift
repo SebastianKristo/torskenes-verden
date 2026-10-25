@@ -212,7 +212,7 @@ struct Tasks44InfoTop: View {
     }
 
     private var star: some View {
-        Image(systemName: flag ? "star.fill" : "star").font(.system(size: 16, weight: .semibold))
+        Image(systemName: flag ? "star.fill" : "star").font(.dyn51(size: 16, weight: .semibold))
             .foregroundStyle(flag ? Color(hex: "#e0a81a") : Color(hex: "#b23a2a"))
     }
 
@@ -223,7 +223,7 @@ struct Tasks44InfoTop: View {
             Button(role: .destructive, action: onDelete) { Label("Slett oppgaven", systemImage: "trash") }
         } label: {
             Tasks44Round {
-                Image(systemName: "slider.horizontal.3").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.ink)
+                Image(systemName: "slider.horizontal.3").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.ink)
             }
         }
         .accessibilityLabel("Flere valg")
@@ -365,7 +365,7 @@ struct Tasks44WhenShell<C: View>: View {
 
     private var clearButton: some View {
         Button(action: clear) {
-            Image(systemName: "xmark").font(.system(size: 11, weight: .bold)).foregroundStyle(p.mut)
+            Image(systemName: "xmark").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(p.mut)
                 .frame(width: 40, height: 40).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -551,7 +551,7 @@ struct Tasks44InfoSubRow: View {
             Text(sub.n).font(PF.ui(15)).foregroundStyle(sub.done ? p.mut : p.ink).strikethrough(sub.done)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Button { Tasks44UI.shared.removeSub(taskId, index, store) } label: {
-                Image(systemName: "xmark").font(.system(size: 11, weight: .bold)).foregroundStyle(p.mut)
+                Image(systemName: "xmark").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(p.mut)
                     .frame(width: 40, height: 40).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -574,7 +574,7 @@ struct Tasks44InfoSubAdd: View {
                 .submitLabel(.next)
                 .onSubmit { add() }
             Button { add() } label: {
-                Image(systemName: "plus").font(.system(size: 14, weight: .bold)).foregroundStyle(p.bg)
+                Image(systemName: "plus").font(.dyn51(size: 14, weight: .bold)).foregroundStyle(p.bg)
                     .frame(width: 32, height: 32).background(p.ink, in: Circle())
                     .frame(width: 44, height: 44).contentShape(Circle())
             }

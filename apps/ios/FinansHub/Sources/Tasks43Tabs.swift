@@ -166,7 +166,7 @@ struct Tasks43OrderSheet: View {
 
     private func arrow(_ icon: String, _ label: String, enabled: Bool, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
-            Image(systemName: icon).font(.system(size: 13, weight: .bold)).foregroundStyle(enabled ? p.ink : p.mut.opacity(0.4))
+            Image(systemName: icon).font(.dyn51(size: 13, weight: .bold)).foregroundStyle(enabled ? p.ink : p.mut.opacity(0.4))
                 .frame(width: 36, height: 36).background(p.bg, in: Circle())
         }
         .buttonStyle(.borderless)

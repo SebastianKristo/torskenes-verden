@@ -114,6 +114,8 @@ extension Store {
         case "lys": return "Papir lys"
         case "mork": return "Papir mørk"
         case Glass50.mode: return "Liquid Glass"
+        // Prompt 51 (IOSFEAT51): automatisk tema (Theme51.swift).
+        case let m where m.hasPrefix(Theme51.autoPrefix): return "Automatisk"
         default: return "Følger systemet"
         }
     }

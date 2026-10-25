@@ -121,7 +121,7 @@ struct Tasks32bChip: View {
     var body: some View {
         Button(action: tap) {
             HStack(spacing: 6) {
-                Image(systemName: "archivebox").font(.system(size: 12, weight: .semibold))
+                Image(systemName: "archivebox").font(.dyn51(size: 12, weight: .semibold))
                 Text(a.count > 0 ? "Arkivert · \(a.count)" : "Arkivert").font(PF.ui(13, .bold))
             }
             .foregroundStyle(on ? p.bg : p.ink)
@@ -140,7 +140,7 @@ struct Tasks32bArchiveButton: View {
 
     var body: some View {
         Button { Tasks32b.shared.archive(t, store) } label: {
-            Image(systemName: "archivebox").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.mut)
+            Image(systemName: "archivebox").font(.dyn51(size: 15, weight: .semibold)).foregroundStyle(p.mut)
                 .frame(width: 36, height: 36)
                 .contentShape(Rectangle())
         }

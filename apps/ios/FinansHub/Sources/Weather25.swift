@@ -96,11 +96,11 @@ struct WxWide25: View {
     private var footer: some View {
         VStack(spacing: 6) {
             Button { store.openLink(w.yrUrl) } label: {
-                Text("Data: MET Norge · Se også yr.no ↗").font(.system(size: 12.5)).underline().opacity(0.85).padding(.top, 4)
+                Text("Data: MET Norge · Se også yr.no ↗").font(.dyn51(size: 12.5)).underline().opacity(0.85).padding(.top, 4)
             }
             .buttonStyle(.plain)
             if w.mock {
-                Text("Eksempeldata – serveren fikk ikke kontakt med MET.").font(.system(size: 11.5)).opacity(0.7)
+                Text("Eksempeldata – serveren fikk ikke kontakt med MET.").font(.dyn51(size: 11.5)).opacity(0.7)
             }
         }
         .frame(maxWidth: .infinity)
@@ -125,7 +125,7 @@ struct WxInlineMap25: View {
                 picker
                 Spacer(minLength: 4)
                 Button { Haptics.shared.tap(); full() } label: {
-                    Text("⤢ Fullskjerm").font(.system(size: 12.5, weight: .semibold)).foregroundStyle(.white)
+                    Text("⤢ Fullskjerm").font(.dyn51(size: 12.5, weight: .semibold)).foregroundStyle(.white)
                         .padding(.horizontal, 12).frame(height: 32)
                         .background(Color(hex: "#0a1423").opacity(0.75), in: Capsule())
                 }
@@ -143,7 +143,7 @@ struct WxInlineMap25: View {
             ForEach(WxInlineMap25.layers, id: \.0) { l in
                 let on: Bool = layer == l.0
                 Button { Haptics.shared.select(); layer = l.0 } label: {
-                    Text(l.1).font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                    Text(l.1).font(.dyn51(size: 12, weight: .semibold)).lineLimit(1)
                         .foregroundStyle(on ? Color(hex: "#0d1520") : Color.white)
                         .padding(.horizontal, 10).frame(height: 28)
                         .background(on ? Color.white : Color.clear, in: Capsule())

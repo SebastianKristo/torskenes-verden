@@ -113,7 +113,7 @@ struct BirthdayCalendars24: View {
 
     @ViewBuilder private var ha: some View {
         head("Home Assistant", haStatus, m.haSyncedAt != nil) {
-            Image(systemName: "house").font(.system(size: 18, weight: .semibold)).foregroundStyle(.white)
+            Image(systemName: "house").font(.dyn51(size: 18, weight: .semibold)).foregroundStyle(.white)
                 .frame(width: 40, height: 40)
                 .background(Color(hex: "#18bcf2"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }

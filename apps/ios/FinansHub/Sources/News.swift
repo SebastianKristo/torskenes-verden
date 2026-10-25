@@ -80,7 +80,7 @@ struct NewsReaderView: View {
                 Button { store.paperGo("innst-nyheter") } label: { Label("Nyhetsinnstillinger", systemImage: "gearshape") }
                 Button { store.refreshNews() } label: { Label("Hent nyheter nå", systemImage: "arrow.clockwise") }
             } label: {
-                Image(systemName: "ellipsis").font(.system(size: 17, weight: .bold)).foregroundStyle(p.ink)
+                Image(systemName: "ellipsis").font(.dyn51(size: 17, weight: .bold)).foregroundStyle(p.ink)
                     .frame(width: 40, height: 40).background(p.card, in: Circle()).overlay(Circle().stroke(p.line, lineWidth: 1))
                     .frame(width: 44, height: 44)
             }
@@ -293,7 +293,7 @@ struct NewsSourcesSheet: View {
                     .frame(minHeight: 44)
             }
             Button { store.deleteFeed(f) } label: {
-                Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(p.mut).frame(width: 28, height: 28)
+                Image(systemName: "xmark").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(p.mut).frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Fjern \(f.name)")

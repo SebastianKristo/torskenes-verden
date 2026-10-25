@@ -47,7 +47,7 @@ struct CarrierLogo22: View {
                 Image(uiImage: i).resizable().scaledToFit().padding(bundled != nil ? 0 : size * 0.12)
             } else {
                 RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color(hex: s.carrierColor))
-                Text(Carrier42.initials(s.carrierName)).font(.system(size: size * 0.32, weight: .heavy))
+                Text(Carrier42.initials(s.carrierName)).font(.dyn51(size: size * 0.32, weight: .heavy))
                     .foregroundStyle(Color(hex: s.carrierFg)).lineLimit(1).minimumScaleFactor(0.5).padding(.horizontal, size * 0.08)
             }
         }

@@ -352,7 +352,7 @@ struct System36HistoryRow: View {
                         Text(sub).font(PF.ui(12.5)).foregroundStyle(item.failed ? Color(hex: "#b23a2a") : p.mut).lineLimit(1)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(p.mut)
+                    Image(systemName: "chevron.right").font(.dyn51(size: 12, weight: .semibold)).foregroundStyle(p.mut)
                         .rotationEffect(.degrees(open ? 90 : 0))
                 }
                 .padding(.horizontal, 14).frame(minHeight: 52)

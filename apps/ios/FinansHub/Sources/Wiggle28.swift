@@ -106,7 +106,7 @@ struct Edit28Pill: View {
         let primary: Bool = kind == .done
         Button(action: action) {
             HStack(spacing: 6) {
-                Image(systemName: icon).font(.system(size: primary ? 16 : 14, weight: .bold))
+                Image(systemName: icon).font(.dyn51(size: primary ? 16 : 14, weight: .bold))
                 if !text.isEmpty { Text(text).font(PF.ui(14, .bold)) }
             }
             .foregroundStyle(primary ? p.bg : p.ink)
@@ -146,7 +146,7 @@ struct Edit28Minus: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "minus").font(.system(size: 12, weight: .heavy)).foregroundStyle(p.ink)
+            Image(systemName: "minus").font(.dyn51(size: 12, weight: .heavy)).foregroundStyle(p.ink)
                 .frame(width: 28, height: 28)
                 .background(p.card, in: Circle())
                 .overlay(Circle().stroke(p.line, lineWidth: 1))
@@ -166,7 +166,7 @@ struct Edit28WidgetPill: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Image(systemName: "pencil").font(.system(size: 12, weight: .bold))
+                Image(systemName: "pencil").font(.dyn51(size: 12, weight: .bold))
                 Text("Rediger widget").font(PF.ui(12.5, .bold))
             }
             .foregroundStyle(p.bg)
@@ -187,7 +187,7 @@ struct Edit28Arrow: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: up ? "chevron.up" : "chevron.down").font(.system(size: 12, weight: .bold)).foregroundStyle(p.ink)
+            Image(systemName: up ? "chevron.up" : "chevron.down").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(p.ink)
                 .frame(width: 30, height: 30)
                 .background(p.card, in: Circle())
                 .overlay(Circle().stroke(p.line, lineWidth: 1))
@@ -249,7 +249,7 @@ struct Edit28AddRow: View {
             HStack(spacing: 12) {
                 Text(name).font(PF.ui(15.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
                 Spacer(minLength: 6)
-                Image(systemName: "plus").font(.system(size: 13, weight: .heavy)).foregroundStyle(Color.white)
+                Image(systemName: "plus").font(.dyn51(size: 13, weight: .heavy)).foregroundStyle(Color.white)
                     .frame(width: 28, height: 28).background(p.pos, in: Circle())
             }
             .padding(.horizontal, 16).frame(minHeight: 54)

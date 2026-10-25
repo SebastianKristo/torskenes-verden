@@ -601,7 +601,7 @@ struct Trial31Row: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "clock.badge.exclamationmark").font(.system(size: 17, weight: .semibold)).foregroundStyle(p.lab)
+            Image(systemName: "clock.badge.exclamationmark").font(.dyn51(size: 17, weight: .semibold)).foregroundStyle(p.lab)
                 .frame(width: 40, height: 40)
                 .background(p.lab.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
@@ -615,7 +615,7 @@ struct Trial31Row: View {
                 .background(t.daysLeft <= 3 ? p.lab : p.line, in: Capsule())
             if let u = URL(string: t.cancelUrl), !t.cancelUrl.isEmpty {
                 Link(destination: u) {
-                    Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .bold)).foregroundStyle(p.mut)
+                    Image(systemName: "arrow.up.right").font(.dyn51(size: 12, weight: .bold)).foregroundStyle(p.mut)
                         .frame(width: 30, height: 30)
                 }
                 .accessibilityLabel("Åpne oppsigelsessiden")

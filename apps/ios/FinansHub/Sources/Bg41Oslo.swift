@@ -243,7 +243,7 @@ struct Bg41CreditLine: View {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(c.text).font(PF.ui(12)).foregroundStyle(p.mut).multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
-                    if !c.url.isEmpty { Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .bold)).foregroundStyle(p.mut) }
+                    if !c.url.isEmpty { Image(systemName: "arrow.up.right").font(.dyn51(size: 9, weight: .bold)).foregroundStyle(p.mut) }
                 }
             }
             .buttonStyle(.plain)

@@ -37,7 +37,7 @@ struct WxRainHourCell32b: View {
     var body: some View {
         let f: CGFloat = CGFloat(Swift.min(1, Swift.max(0, h.precip / 3)))
         VStack(spacing: 8) {
-            Text(first ? "Nå" : h.hour).font(.system(size: 14, weight: first ? .heavy : .bold))
+            Text(first ? "Nå" : h.hour).font(.dyn51(size: 14, weight: first ? .heavy : .bold))
             ZStack(alignment: .bottom) {
                 RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Color.white.opacity(0.12))
                 RoundedRectangle(cornerRadius: 9, style: .continuous).fill(Wx32b.rain).frame(height: 62 * f)
@@ -51,8 +51,8 @@ struct WxRainHourCell32b: View {
             }
             .frame(width: 30, height: 62)
             .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-            Text(Wx32b.mm(h.precip)).font(.system(size: 13, weight: .bold)).frame(minHeight: 15)
-            Text("\(Int(h.precipProb)) %").font(.system(size: 11, weight: .bold)).foregroundStyle(Color(hex: "#9fe0ff"))
+            Text(Wx32b.mm(h.precip)).font(.dyn51(size: 13, weight: .bold)).frame(minHeight: 15)
+            Text("\(Int(h.precipProb)) %").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(Color(hex: "#9fe0ff"))
         }
         .padding(.vertical, 4)
         .frame(width: Wx32b.cellW, height: Wx32b.cellH, alignment: .top)
@@ -101,10 +101,10 @@ struct WxWindHourCell32b: View {
 
     var body: some View {
         VStack(spacing: 4) {
-            Text(first ? "Nå" : h.hour).font(.system(size: 14, weight: first ? .heavy : .bold))
-            Text(String(Int(h.wind.rounded()))).font(.system(size: 24, weight: .bold)).padding(.top, 4)
-            Text("m/s").font(.system(size: 11, weight: .semibold)).opacity(0.8)
-            Text("kast " + String(Int(h.gust.rounded()))).font(.system(size: 11, weight: .bold)).foregroundStyle(Color(hex: "#9fe0ff"))
+            Text(first ? "Nå" : h.hour).font(.dyn51(size: 14, weight: first ? .heavy : .bold))
+            Text(String(Int(h.wind.rounded()))).font(.dyn51(size: 24, weight: .bold)).padding(.top, 4)
+            Text("m/s").font(.dyn51(size: 11, weight: .semibold)).opacity(0.8)
+            Text("kast " + String(Int(h.gust.rounded()))).font(.dyn51(size: 11, weight: .bold)).foregroundStyle(Color(hex: "#9fe0ff"))
         }
         .padding(.vertical, 4)
         .frame(width: Wx32b.cellW, height: Wx32b.cellH, alignment: .top)
@@ -181,7 +181,7 @@ struct WxRainDayRow32b: View {
     var body: some View {
         let nowH: Int = Calendar.current.component(.hour, from: Date())
         HStack(spacing: 8) {
-            Text(today ? "I dag" : WxFmt22.weekday(d.date)).font(.system(size: 17, weight: .bold)).frame(width: 52, alignment: .leading)
+            Text(today ? "I dag" : WxFmt22.weekday(d.date)).font(.dyn51(size: 17, weight: .bold)).frame(width: 52, alignment: .leading)
             HStack(alignment: .bottom, spacing: 3) {
                 ForEach(0..<12, id: \.self) { (i: Int) in
                     bar(i, now: today && nowH / 2 == i)
@@ -189,9 +189,9 @@ struct WxRainDayRow32b: View {
             }
             .frame(height: 28)
             .frame(maxWidth: .infinity)
-            Text(d.precipSum > 0 ? Wx32b.mm(d.precipSum) + " mm" : "0 mm").font(.system(size: 14, weight: .bold))
+            Text(d.precipSum > 0 ? Wx32b.mm(d.precipSum) + " mm" : "0 mm").font(.dyn51(size: 14, weight: .bold))
                 .opacity(d.precipSum > 0 ? 1 : 0.5).frame(width: 52, alignment: .trailing)
-            Text((d.precipProb >= 30 ? "💧 " : "") + "\(Int(d.precipProb)) %").font(.system(size: 12.5, weight: .bold))
+            Text((d.precipProb >= 30 ? "💧 " : "") + "\(Int(d.precipProb)) %").font(.dyn51(size: 12.5, weight: .bold))
                 .foregroundStyle(d.precipProb >= 30 ? Color(hex: "#9fe0ff") : Color.white.opacity(0.55))
                 .frame(width: 58, alignment: .trailing)
         }
@@ -230,11 +230,11 @@ struct WxWindDayRow32b: View {
         let lo: Int = Int((gusts.min() ?? 0).rounded())
         let hi: Int = Int((gusts.max() ?? d.windMax).rounded())
         HStack(spacing: 8) {
-            Text(today ? "I dag" : WxFmt22.weekday(d.date)).font(.system(size: 17, weight: .bold)).frame(width: 52, alignment: .leading)
+            Text(today ? "I dag" : WxFmt22.weekday(d.date)).font(.dyn51(size: 17, weight: .bold)).frame(width: 52, alignment: .leading)
             WxWindMini32b(hours: hours, today: today)
                 .frame(height: 30)
                 .frame(maxWidth: .infinity)
-            Text("\(lo)–\(hi) m/s").font(.system(size: 14, weight: .bold)).frame(width: 84, alignment: .trailing)
+            Text("\(lo)–\(hi) m/s").font(.dyn51(size: 14, weight: .bold)).frame(width: 84, alignment: .trailing)
         }
         .padding(.vertical, 12)
         .contentShape(Rectangle())

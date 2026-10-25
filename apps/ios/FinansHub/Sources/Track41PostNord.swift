@@ -14,7 +14,7 @@ struct Track41PostNordCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Image(systemName: "shippingbox").font(.system(size: 14, weight: .semibold)).foregroundStyle(p.ink)
+                Image(systemName: "shippingbox").font(.dyn51(size: 14, weight: .semibold)).foregroundStyle(p.ink)
                 Text("Sporing uten konto og uten nøkkel").font(PF.ui(14.5, .bold)).foregroundStyle(p.ink)
             }
             Text("Lim inn sporingsnummeret i Sporing. Nummer som 00370…, …SE/DK/FI eller 2 bokstaver + 9 sifre + SE/DK/FI går automatisk til PostNord. Nøkkelen under er valgfri.")

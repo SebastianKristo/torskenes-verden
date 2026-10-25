@@ -23,7 +23,7 @@ struct WxCardLabel22: View {
                 Glyph22Icon(name: icon, size: 15, color: .white, stroke: 2)
                 if let f = fillIcon { Glyph22Icon(name: f, size: 15, color: .white, fill: true) }
             }
-            Text(text).font(.system(size: 12, weight: .heavy)).tracking(0.96)
+            Text(text).font(.dyn51(size: 12, weight: .heavy)).tracking(0.96)
         }
         .opacity(0.7)
     }
@@ -42,8 +42,8 @@ struct WxTopBar22: View {
             Color.clear.frame(width: 42, height: 42)
             Spacer(minLength: 4)
             VStack(spacing: 0) {
-                Text(w?.placeName ?? "").font(.system(size: 17, weight: .bold))
-                Text(centerLine).font(.system(size: 13)).opacity(0.9)
+                Text(w?.placeName ?? "").font(.dyn51(size: 17, weight: .bold))
+                Text(centerLine).font(.dyn51(size: 13)).opacity(0.9)
             }
             .lineLimit(1)
             .opacity(scrolled ? 1 : 0)
@@ -78,15 +78,15 @@ struct WxHeader22: View {
     let w: WeatherFull
     var body: some View {
         VStack(spacing: 0) {
-            Text(w.placeId == "pos" || w.placeId == Vaer46.gpsId ? "MIN POSISJON" : "VÆRET I").font(.system(size: 12, weight: .heavy)).tracking(1.92).opacity(0.85)
-            Text(w.placeName).font(.system(size: 36, weight: .medium)).lineLimit(1).minimumScaleFactor(0.6)
-            Text(WxFmt22.deg(w.temp)).font(.system(size: 112, weight: .ultraLight)).tracking(-4.48)
+            Text(w.placeId == "pos" || w.placeId == Vaer46.gpsId ? "MIN POSISJON" : "VÆRET I").font(.dyn51(size: 12, weight: .heavy)).tracking(1.92).opacity(0.85)
+            Text(w.placeName).font(.dyn51(size: 36, weight: .medium)).lineLimit(1).minimumScaleFactor(0.6)
+            Text(WxFmt22.deg(w.temp)).font(.dyn51(size: 112, weight: .ultraLight)).tracking(-4.48)
                 .padding(.leading, 22).padding(.top, 2).lineLimit(1)
-            Text(WxFmt22.desc(w.code)).font(.system(size: 19, weight: .bold)).padding(.top, 4)
-            Text("H:\(WxFmt22.degOpt(w.hi))  L:\(WxFmt22.degOpt(w.lo))").font(.system(size: 16, weight: .semibold)).opacity(0.9)
+            Text(WxFmt22.desc(w.code)).font(.dyn51(size: 19, weight: .bold)).padding(.top, 4)
+            Text("H:\(WxFmt22.degOpt(w.hi))  L:\(WxFmt22.degOpt(w.lo))").font(.dyn51(size: 16, weight: .semibold)).opacity(0.9)
             // Prompt 32: kilden og tiden flyttet hit fra toppraden.
             Text(w.mock ? "Eksempeldata" : "MET Norway · yr.no · " + JS.fmt(w.loadedAt, "HH:mm"))
-                .font(.system(size: 11.5)).opacity(0.7).padding(.top, 4)
+                .font(.dyn51(size: 11.5)).opacity(0.7).padding(.top, 4)
         }
         .shadow(color: Color.black.opacity(0.18), radius: 10, y: 2)
         .frame(maxWidth: .infinity)
@@ -107,8 +107,8 @@ struct WxHourCard22: View {
                 Button(action: openToday) {
                     // Prompt 32: fast høyde på tittel (20) og undertittel (17, én linje), så kortet ikke flytter seg ved bytte.
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Forhold ›").font(.system(size: 16, weight: .bold)).frame(height: 20)
-                        Text(title).font(.system(size: 12.5)).foregroundStyle(Color(hex: "#9fe0ff")).lineLimit(1).truncationMode(.tail).frame(height: 17)
+                        Text("Forhold ›").font(.dyn51(size: 16, weight: .bold)).frame(height: 20)
+                        Text(title).font(.dyn51(size: 12.5)).foregroundStyle(Color(hex: "#9fe0ff")).lineLimit(1).truncationMode(.tail).frame(height: 17)
                     }
                 }
                 .buttonStyle(.plain)
@@ -169,12 +169,12 @@ struct WxHourCell22: View {
     var body: some View {
         let k: String = WxFmt22.icon(h.code, night: !h.isDay)
         VStack(spacing: 8) {
-            Text(first ? "Nå" : h.hour).font(.system(size: 14, weight: first ? .heavy : .bold))
+            Text(first ? "Nå" : h.hour).font(.dyn51(size: 14, weight: first ? .heavy : .bold))
             Glyph22Icon(name: k, size: 28, color: WxFmt22.iconColor(k), stroke: 1.8)
-            Text(h.precipProb >= 20 ? "\(Int(h.precipProb)) %" : " ").font(.system(size: 11, weight: .bold)).foregroundStyle(Color(hex: "#9fe0ff"))
+            Text(h.precipProb >= 20 ? "\(Int(h.precipProb)) %" : " ").font(.dyn51(size: 11, weight: .bold)).foregroundStyle(Color(hex: "#9fe0ff"))
                 .frame(minHeight: 13)
-            Text(value).font(.system(size: 17, weight: .bold))
-            Text(pentText).font(.system(size: 12.5, weight: .bold)).foregroundStyle(Color(hex: "#ffb27a")).frame(minHeight: 15)
+            Text(value).font(.dyn51(size: 17, weight: .bold))
+            Text(pentText).font(.dyn51(size: 12.5, weight: .bold)).foregroundStyle(Color(hex: "#ffb27a")).frame(minHeight: 15)
         }
         .padding(.vertical, 4)
         .frame(width: 56)
@@ -240,17 +240,17 @@ struct WxDayRow22: View {
     var body: some View {
         let k: String = WxFmt22.icon(d.code, night: false)
         HStack(spacing: 8) {
-            Text(today ? "I dag" : WxFmt22.weekday(d.date)).font(.system(size: 17, weight: .bold)).frame(width: 52, alignment: .leading)
+            Text(today ? "I dag" : WxFmt22.weekday(d.date)).font(.dyn51(size: 17, weight: .bold)).frame(width: 52, alignment: .leading)
             VStack(spacing: 1) {
                 Glyph22Icon(name: k, size: 24, color: WxFmt22.iconColor(k), stroke: 1.8)
                 if d.precipProb >= 30 {
-                    Text("\(Int(d.precipProb)) %").font(.system(size: 10.5, weight: .heavy)).foregroundStyle(Color(hex: "#9fe0ff"))
+                    Text("\(Int(d.precipProb)) %").font(.dyn51(size: 10.5, weight: .heavy)).foregroundStyle(Color(hex: "#9fe0ff"))
                 }
             }
             .frame(width: 40)
-            Text(WxFmt22.deg(d.lo)).font(.system(size: 17, weight: .bold)).foregroundStyle(Color(hex: "#bfe6ff")).frame(width: 38, alignment: .trailing)
+            Text(WxFmt22.deg(d.lo)).font(.dyn51(size: 17, weight: .bold)).foregroundStyle(Color(hex: "#bfe6ff")).frame(width: 38, alignment: .trailing)
             WxDayBar22(lo: d.lo, hi: d.hi, min: lo, max: hi, now: today ? now : nil)
-            Text(WxFmt22.deg(d.hi)).font(.system(size: 17, weight: .bold)).frame(width: 38, alignment: .trailing)
+            Text(WxFmt22.deg(d.hi)).font(.dyn51(size: 17, weight: .bold)).frame(width: 38, alignment: .trailing)
         }
         .padding(.vertical, 12)
         .contentShape(Rectangle())
@@ -303,10 +303,10 @@ struct WxCompareCard22: View {
                     WxLogo30(asset: "StormLogo", size: 30)
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Yr og Storm").font(.system(size: 16, weight: .bold))
+                    Text("Yr og Storm").font(.dyn51(size: 16, weight: .bold))
                     HStack(spacing: 6) {
                         Circle().fill(dotColor).frame(width: 8, height: 8)
-                        Text(statusText).font(.system(size: 12.5)).opacity(0.85)
+                        Text(statusText).font(.dyn51(size: 12.5)).opacity(0.85)
                     }
                 }
                 Spacer(minLength: 0)
@@ -315,12 +315,12 @@ struct WxCompareCard22: View {
             if let c = w.compare, !c.days.isEmpty {
                 WxCompareTable22(c: c, rows: 4, line: Color.white.opacity(0.18), header: 0.8)
             } else if w.compareState == 0 {
-                Text("Henter Storm …").font(.system(size: 13)).opacity(0.75).padding(.top, 8).padding(.bottom, 10)
+                Text("Henter Storm …").font(.dyn51(size: 13)).opacity(0.75).padding(.top, 8).padding(.bottom, 10)
             }
             Rectangle().fill(Color.white.opacity(0.18)).frame(height: 1)
             Button(action: open) {
                 HStack {
-                    Text("Time for time og hele uka").font(.system(size: 14, weight: .semibold))
+                    Text("Time for time og hele uka").font(.dyn51(size: 14, weight: .semibold))
                     Spacer()
                     Text("›").opacity(0.7)
                 }
@@ -345,7 +345,7 @@ struct WxCompareCard22: View {
     }
 
     private func badge(_ t: String, _ c: String) -> some View {
-        Text(t).font(.system(size: 11, weight: .heavy))
+        Text(t).font(.dyn51(size: 11, weight: .heavy))
             .frame(width: 28, height: 28)
             .background(Color(hex: c), in: Circle())
             .overlay(Circle().stroke(Color.white.opacity(0.7), lineWidth: 2))
@@ -367,7 +367,7 @@ struct WxCompareTable22: View {
                 WxLogoLabel30(asset: "StormLogo", text: "STORM", color: Color(hex: "#ffb27a"))
                 Text("AVVIK").frame(width: 44, alignment: .trailing)
             }
-            .font(.system(size: 11, weight: .heavy)).tracking(0.88).opacity(header)
+            .font(.dyn51(size: 11, weight: .heavy)).tracking(0.88).opacity(header)
             .padding(.bottom, 6)
             ForEach(Array(c.days.prefix(rows).enumerated()), id: \.element.id) { pair in
                 Rectangle().fill(line).frame(height: 1)
@@ -383,10 +383,10 @@ struct WxCompareRow22: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Text(label).font(.system(size: 15, weight: .bold)).frame(width: 44, alignment: .leading)
+            Text(label).font(.dyn51(size: 15, weight: .bold)).frame(width: 44, alignment: .leading)
             side(d.yr)
             side(d.pent)
-            Text(diffText).font(.system(size: 12, weight: .heavy)).lineLimit(1)
+            Text(diffText).font(.dyn51(size: 12, weight: .heavy)).lineLimit(1)
                 .padding(.horizontal, 7).padding(.vertical, 3)
                 .background(diffBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .frame(width: 44, alignment: .trailing)
@@ -406,8 +406,8 @@ struct WxCompareRow22: View {
         return HStack(spacing: 6) {
             if s.code != nil { Glyph22Icon(name: k, size: 22, color: WxFmt22.iconColor(k), stroke: 1.8) }
             VStack(alignment: .leading, spacing: 0) {
-                Text(t).font(.system(size: 14.5, weight: .bold)).lineLimit(1).minimumScaleFactor(0.8)
-                Text(p).font(.system(size: 11.5)).foregroundStyle(Color(hex: "#9fe0ff")).lineLimit(1)
+                Text(t).font(.dyn51(size: 14.5, weight: .bold)).lineLimit(1).minimumScaleFactor(0.8)
+                Text(p).font(.dyn51(size: 11.5)).foregroundStyle(Color(hex: "#9fe0ff")).lineLimit(1)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -466,9 +466,9 @@ struct WxRow22: View {
         VStack(spacing: 0) {
             if top { Rectangle().fill(Color.white.opacity(0.2)).frame(height: 1) }
             HStack(spacing: 8) {
-                Text(a).font(.system(size: 15.5, weight: .bold))
+                Text(a).font(.dyn51(size: 15.5, weight: .bold))
                 Spacer(minLength: 4)
-                Text(b).font(.system(size: 15.5, weight: .bold)).foregroundStyle(Color(hex: "#bfe6ff")).lineLimit(1)
+                Text(b).font(.dyn51(size: 15.5, weight: .bold)).foregroundStyle(Color(hex: "#bfe6ff")).lineLimit(1)
             }
             .padding(.vertical, 10)
         }
@@ -487,7 +487,7 @@ struct WxCompass22: View {
             ctx.stroke(ring, with: .color(Color.white.opacity(0.35)), style: StrokeStyle(lineWidth: 7 * s, dash: [0.8 * s, 2.5 * s]))
             let lbl: [(String, CGFloat, CGFloat, Double)] = [("N", 50, 9, 1), ("Ø", 91, 50, 0.75), ("S", 50, 94, 0.75), ("V", 9, 50, 0.75)]
             for l in lbl {
-                ctx.draw(Text(l.0).font(.system(size: 8 * s, weight: .heavy)).foregroundColor(Color.white.opacity(l.3)), at: CGPoint(x: l.1 * s, y: l.2 * s))
+                ctx.draw(Text(l.0).font(.dyn51(size: 8 * s, weight: .heavy)).foregroundColor(Color.white.opacity(l.3)), at: CGPoint(x: l.1 * s, y: l.2 * s))
             }
             var arrow: Path = Path()
             arrow.addEllipse(in: CGRect(x: 46.8 * s, y: 8.8 * s, width: 6.4 * s, height: 6.4 * s))
@@ -500,8 +500,8 @@ struct WxCompass22: View {
             ctx.fill(arrow.applying(rot), with: .color(.white))
             ctx.stroke(lines.applying(rot), with: .color(.white), style: StrokeStyle(lineWidth: 2 * s, lineJoin: .round))
             ctx.fill(Path(ellipseIn: CGRect(x: 31 * s, y: 31 * s, width: 38 * s, height: 38 * s)), with: .color(Color(red: 20.0 / 255.0, green: 50.0 / 255.0, blue: 90.0 / 255.0).opacity(0.35)))
-            ctx.draw(Text(speed).font(.system(size: 14 * s, weight: .heavy)).foregroundColor(.white), at: CGPoint(x: 50 * s, y: 46 * s))
-            ctx.draw(Text("m/s").font(.system(size: 7.5 * s, weight: .bold)).foregroundColor(.white), at: CGPoint(x: 50 * s, y: 58.5 * s))
+            ctx.draw(Text(speed).font(.dyn51(size: 14 * s, weight: .heavy)).foregroundColor(.white), at: CGPoint(x: 50 * s, y: 46 * s))
+            ctx.draw(Text("m/s").font(.dyn51(size: 7.5 * s, weight: .bold)).foregroundColor(.white), at: CGPoint(x: 50 * s, y: 58.5 * s))
         }
     }
 }

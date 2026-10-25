@@ -15,7 +15,8 @@ struct PaperPalette {
     var glass: Bool = false
 
     static let light = PaperPalette(dark: false, ink: Color(hex: "#1b1a17"), bg: Color(hex: "#f3efe6"), card: .white, line: Color(hex: "#d8d1c2"),
-                                    lab: Color(hex: "#b23a2a"), mut: Color(hex: "#7a7468"), pos: Color(hex: "#2f7a4f"), nav: Color(hex: "#1b1a17"),
+                                    // Prompt 51 (IOSPLAT51): mut #7a7468 → #6e685c (kontrast 4,0 → 4,8 mot bg, WCAG AA for vanlig tekst).
+                                    lab: Color(hex: "#b23a2a"), mut: Color(hex: "#6e685c"), pos: Color(hex: "#2f7a4f"), nav: Color(hex: "#1b1a17"),
                                     navInk: Color(hex: "#b3ada1"), navAct: Color(hex: "#f3efe6"), navActInk: Color(hex: "#1b1a17"),
                                     onLab: .white, pop: Color(hex: "#f3efe6"), popSel: Color(hex: "#e6e0d2"))
     static let night = PaperPalette(dark: true, ink: Color(hex: "#ece7dc"), bg: Color(hex: "#14130f"), card: Color(hex: "#211f19"), line: Color(hex: "#3a372e"),
@@ -24,6 +25,8 @@ struct PaperPalette {
                                     onLab: Color(hex: "#1b1a17"), pop: Color(hex: "#2a2821"), popSel: Color(hex: "#3a372e"))
 
     static func of(_ mode: String, system: ColorScheme) -> PaperPalette {
+        // Prompt 51 (IOSFEAT51): automatisk tema – «auto51-d» (mørk nå) / «auto51-l» (lys nå), Theme51.swift.
+        if mode.hasPrefix("auto51") { return mode.hasSuffix("-d") ? night : light }
         switch mode {
         case "lys": return light
         case "mork": return night
@@ -343,6 +346,8 @@ struct PaperShell: View {
         .widgets43Host(p)
         // Prompt 44: Logger (Innstillinger → Server), Studie → Dokumenter og «Logget inn som X · Gå ut» (Logs44/Study44/Konto44.swift).
         .hosts44(p)
+        // Prompt 51 (IOSFEAT51): Planlegging, Familiekalender, «I kveld», felles søk, onboarding og tema (Feat51Kit.swift).
+        .feat51Host(p)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)
@@ -982,6 +987,10 @@ struct PaperPage: View {
             .onPreferenceChange(PaperScrollKey.self) { v in
                 let s = v < -1
                 if s != scrolled { scrolled = s }
+                // Prompt 51 (IOSFEAT51): dra Hjem langt ned (> 120 pt) → felles søk (Search51.swift). Passivt, ingen gest.
+                let y51: CGFloat = v
+                let home51: Bool = home
+                if home51 && (y51 > 110 || (y51 >= 0 && y51 < 10)) { Task { @MainActor in Search51.shared.pull(y51, home: home51) } }
             }
             .mask(
                 VStack(spacing: 0) {

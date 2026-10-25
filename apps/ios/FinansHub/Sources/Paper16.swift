@@ -525,6 +525,8 @@ struct PaperLookSettings: View {
                 PaperLinkRow(name: "Papir · lys", sub: "Lyst papir og svart fanelinje", value: store.paperMode == "lys" ? "✓" : "", valueColor: p.pos, icon: "sun.max") { store.setPaperMode("lys") },
                 PaperLinkRow(name: "Papir · mørk", sub: "Kveldspapir og lys fanelinje", value: store.paperMode == "mork" ? "✓" : "", valueColor: p.pos, icon: "moon") { store.setPaperMode("mork") },
                 PaperLinkRow(name: "Følg systemet", sub: "Lys om dagen, mørk i mørk modus", value: store.paperMode == "auto" ? "✓" : "", valueColor: p.pos, icon: "circle.lefthalf.filled") { store.setPaperMode("auto") },
+                // Prompt 51 (IOSFEAT51): automatisk etter solnedgang eller klokkeslett, synket mellom enheter (Theme51.swift).
+                PaperLinkRow(name: "Automatisk", sub: "Etter solnedgang eller klokkeslett", value: store.paperMode.hasPrefix(Theme51.autoPrefix) ? "✓" : "›", valueColor: p.pos, icon: "sunset") { Theme51.shared.sheet = true },
                 // Prompt 50: Liquid Glass (Glass50.swift) – slår også på flisene på Hjem.
                 PaperLinkRow(name: "Liquid Glass", sub: "Mørkt glass, fargeskyer og fliser på Hjem", value: store.glass50 ? "✓" : "", valueColor: p.pos, icon: "drop") { store.setGlass50() },
             ])

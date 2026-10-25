@@ -81,7 +81,7 @@ struct Quick29SheetHeader: View {
             }
             Spacer(minLength: 4)
             Button { q.sheetOpen = false } label: {
-                Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).foregroundStyle(p.ink)
+                Image(systemName: "xmark").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(p.ink)
                     .frame(width: 36, height: 36)
                     .background(p.card, in: Circle())
             }
@@ -101,7 +101,7 @@ struct Quick29Chips: View {
         Flow(spacing: 6) {
             Button { q.paste(store) } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "doc.on.clipboard").font(.system(size: 12, weight: .semibold))
+                    Image(systemName: "doc.on.clipboard").font(.dyn51(size: 12, weight: .semibold))
                     Text("Lim inn melding").font(PF.ui(12.5, .bold))
                 }
                 .foregroundStyle(p.bg)

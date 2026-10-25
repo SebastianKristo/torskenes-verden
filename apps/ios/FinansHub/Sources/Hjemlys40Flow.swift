@@ -567,7 +567,7 @@ struct Hjemlys40Ring: View {
                     .stroke(late ? Hjemlys40Look.red : Hjemlys40Look.green, style: StrokeStyle(lineWidth: 14, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 VStack(spacing: 2) {
-                    Text(Hjemlys40Ring.mmss(abs(left))).font(.system(size: 46, weight: .light)).monospacedDigit().foregroundStyle(Hjemlys40Night.ink)
+                    Text(Hjemlys40Ring.mmss(abs(left))).font(.dyn51(size: 46, weight: .light)).monospacedDigit().foregroundStyle(Hjemlys40Night.ink)
                     Text(late ? "over tiden" : "til " + Hjemlys40Look.clock(s.eta)).font(PF.ui(13)).foregroundStyle(Hjemlys40Night.mut)
                 }
             }

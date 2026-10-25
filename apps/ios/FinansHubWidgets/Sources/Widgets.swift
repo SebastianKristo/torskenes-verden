@@ -13,6 +13,19 @@ struct FinansHubWidgetBundle: WidgetBundle {
         FinansHubWidgetsB().body
         // Prompt 40: egen gruppe for Hjemlys (Live Activity), så A og B holder seg under 10.
         FinansHubWidgetsC().body
+        // Prompt 51 (IOSPLAT51): Planlegging-saldo, Sjekk inn, pakker og avganger + Live Activities (Plat51Widgets.swift, Plat51Live.swift).
+        FinansHubWidgetsD().body
+    }
+}
+
+/// Gruppe 4 (prompt 51): 5 av maks 10.
+struct FinansHubWidgetsD: WidgetBundle {
+    var body: some Widget {
+        Plat51PlanWidget()
+        Plat51CheckinWidget()
+        Plat51PackagesLockWidget()
+        Plat51DeparturesWidget()
+        Plat51LiveWidget()
     }
 }
 

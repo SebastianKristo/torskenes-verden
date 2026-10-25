@@ -59,7 +59,7 @@ struct Chat28PlusSheet: View {
             Text("Legg ved").font(c.head(24)).foregroundStyle(c.ink)
             Spacer(minLength: 4)
             Button { s.sheet = nil } label: {
-                Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).foregroundStyle(c.ink)
+                Image(systemName: "xmark").font(.dyn51(size: 13, weight: .bold)).foregroundStyle(c.ink)
                     .frame(width: 36, height: 36)
                     .background(c.card, in: Circle())
             }
@@ -97,7 +97,7 @@ struct Chat28IconBox: View {
     let icon: String
 
     var body: some View {
-        Image(systemName: icon).font(.system(size: 20, weight: .regular)).foregroundStyle(c.ink)
+        Image(systemName: icon).font(.dyn51(size: 20, weight: .regular)).foregroundStyle(c.ink)
             .frame(width: 46, height: 46)
             .background(c.bg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
@@ -117,7 +117,7 @@ struct Chat28KbRow: View {
                     Text(count == 1 ? "1 dokument" : "\(count) dokumenter").font(c.ui(12.5)).foregroundStyle(c.mut)
                 }
                 Spacer(minLength: 4)
-                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)).foregroundStyle(c.mut)
+                Image(systemName: "chevron.right").font(.dyn51(size: 13, weight: .semibold)).foregroundStyle(c.mut)
             }
             .padding(.leading, 9).padding(.trailing, 14).padding(.vertical, 9)
             .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
