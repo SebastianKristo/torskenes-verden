@@ -152,7 +152,14 @@ BUILD_DIR="$(swift build -c release --package-path "$SCRIPT_DIR" --show-bin-path
 
 if [ "$RUN_TESTS" = 1 ]; then
   info "Kjører swift test …"
-  swift test --package-path "$SCRIPT_DIR"
+  # XCTest følger bare med full Xcode, ikke med Command Line Tools. Da hoppes testene over (bygget over er allerede ok).
+  if ! swift test --package-path "$SCRIPT_DIR"; then
+    if ! xcode-select -p 2>/dev/null | grep -q '\.app/'; then
+      warn "swift test kunne ikke kjøre (XCTest krever full Xcode, ikke bare Command Line Tools). Hopper over testene og installerer likevel."
+    else
+      die "swift test feilet"
+    fi
+  fi
 fi
 
 # --- Installer binæren ------------------------------------------------------------
