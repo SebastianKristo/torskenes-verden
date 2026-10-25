@@ -2,6 +2,19 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.49.0] – 25.10.2026 · Raskere svar som strømmer
+- **Glimt svarer raskere:**
+  - Når en oppgave ba modellen om ikke å tenke, gjaldt ikke det når «La modellen tenke» var på. qwen3 tenkte da på hvert Glimt-kall. Det er rettet, så valget bare gjelder der det hører hjemme (for eksempel Chat).
+  - Finans skriver beskrivelser av nye transaksjoner i bakgrunnen, så det ikke holder igjen Glimt-svarene.
+  - Hovedmodellen holdes varm, også rett etter at bildemodellen er brukt.
+  - Faste deler av promptene kommer først, så Ollama og oMLX kan gjenbruke arbeidet fra forrige kall.
+  - Vær, strømpris og nettsøk huskes en stund (vær 15 min, strømpris til neste hele time, nettsøk 30 min). Kalender og finans huskes aldri.
+  - Verktøy som ikke avhenger av hverandre kjøres samtidig, for eksempel vær for to steder.
+- **Svaret strømmer på web:** i Glimt-søket og Glimt i Chat kommer ordene mens de skrives, med en statuslinje som «Sjekker kalenderen …» og en Stopp-knapp. Appene får det i neste versjon.
+- **Raskere svar** i AI-kontroll → Valg: hver del kan slås av for seg.
+- **Eval** viser svartid, median og p90 per intent, og kan sammenligne med en tidligere kjøring (`--compare`).
+- **oMLX installeres med Mac-appen** når Homebrew-pakken feiler.
+
 ## [4.48.0] – 25.10.2026 · Tale til tekst på norsk, egne stemmer, oMLX og Glimt som består alle testene
 - **Glimt består hele testsettet:** 19 av 19 caser 3 av 3 ganger mot ekte modell på Mac minien.
   - Når planleggeren ikke får til en plan, prøver den én gang til med tenking og spør deretter kort med konkrete valg. Den lagrer aldri noe ut fra en gjetning.
