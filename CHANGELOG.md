@@ -2,6 +2,29 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.46.0] – 25.10.2026 · prompt 51 – appene: Planlegging, familiekalender, mediekveld, søk, widgets, Watch, Wear OS og Android Auto
+- **Appene (iPhone/iPad og Android):**
+  - Planlegging: sparemål, kalender for faste utgifter med saldoprognose, skattehjelp, prishistorikk og abonnementsjeger.
+  - Familiekalender med «hvem kjører?».
+  - Media: «Hva skal vi se i kveld?», lydbøker og podkaster, undertekster og lagring (bare admin).
+- **Felles søk overalt:** ⌘K, Ctrl+K eller «/» på web. Dra Hjem ned på iPhone. Søkefeltet på Hjem i Android. Treffene har handlinger som «ny oppgave», «Sjekk inn» og «Hent meg».
+- **Invitasjon av nye familiemedlemmer:** admin lager en QR-kode med engangskode, uten token. Den nye brukeren er i gang etter tre steg.
+- **Tema per bruker:** synkes mellom enhetene og kan bytte automatisk etter solen eller klokka.
+- **Offline-modus:** endringer i gjøremål, handleliste, notater, kvitteringer, Sjekk inn og familiekalenderen legges i kø uten nett. Siste endring vinner, og du får varsel ved konflikt.
+- **Widgets, snarveier og klokke:**
+  - Nye widgets for saldo, Sjekk inn, pakker og avganger.
+  - Live Activities på iPhone.
+  - Siri-snarveier og app-snarveier på Android.
+  - **Apple Watch-app** (kjøres fra Xcode) og **Wear OS-app** (egen APK i releasen), med Sjekk inn, Hent meg, avganger, handleliste, Glimt med tale og mediekontroll.
+  - **Android Auto:** avganger, «På vei hjem» og mediekontroll.
+- **Mediekontroll:**
+  - Spill av/pause, stopp, neste og forrige, spoling og volum for Plex og Jellyfin, fra web, apper, klokke og bil.
+  - Du kan bare styre dine egne avspillinger. Admin kobler brukerne under Media › Avspilling › «Hvem kan styre avspillinger».
+- **Tilgjengelighet:**
+  - Web: 1155 brudd er rettet til 0. Det gjelder kontrast i lys og mørk modus, berøringsflater og fokusmarkering.
+  - Appene: dynamisk tekst på iPhone og TalkBack-etiketter på Android.
+- **Utvikling:** `npm run a11y` og `npm run test:visual` sjekker tilgjengelighet og utseende.
+
 ## [4.45.0] – 25.10.2026 · kvitteringsrettingen og prompt 51 – backup, sikkerhet, drift, Planlegging og mediekveld
 - **Bedre lesing av kvitteringer:**
   - OCR leser originalbildet, minst ca. 2000 px på lengste side, og retter rotasjon og perspektiv.
