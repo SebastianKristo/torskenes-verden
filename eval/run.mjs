@@ -148,7 +148,30 @@ function cleanEnv() {
   const keep = /^(PATH|HOME|USER|LOGNAME|SHELL|LANG|LANGUAGE|LC_\w+|TMPDIR|TMP|TEMP|SystemRoot|ComSpec|PATHEXT|TESSDATA_PREFIX|OCR_FALLBACK|EVAL_\w+|NODE_OPTIONS|NODE_EXTRA_CA_CERTS)$/; // EVAL_MAC_OCR_URL/KEY går med
   return Object.fromEntries(Object.entries(process.env).filter(([k]) => keep.test(k)));
 }
+// Andre klienter på samme Ollama (f.eks. Homelab-serveren eller Open WebUI) gir kø og modellbytter med OLLAMA_MAX_LOADED_MODELS=1.
+// /api/ps leses hvert 2. sekund mens casen kjører; modeller eval ikke bruker selv blir notert per kjøring og vist i rapporten.
+const OURS = new Set([...Object.values(cfg?.tasks ?? {}).map((t) => (typeof t === "string" ? t : t?.model ?? "")), ...Object.values(STANDARD_ROUTING)].map((m) => String(m).replace(/:latest$/, '')));
+async function psModels() {
+  if (backend !== 'ollama') return [];
+  try {
+    const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 1500);
+    const j = await fetch(`${url.replace(/\/$/, '')}/api/ps`, { signal: ac.signal }).then((r) => r.json()).finally(() => clearTimeout(t));
+    return (j?.models ?? []).map((m) => String(m.name ?? m.model ?? '').replace(/:latest$/, '')).filter(Boolean);
+  } catch { return []; }
+}
+function watchForeign() {
+  const seen = new Set();
+  const tick = async () => { for (const m of await psModels()) if (!OURS.has(m)) seen.add(m); };
+  tick();
+  const iv = setInterval(tick, 2000);
+  return () => { clearInterval(iv); return [...seen]; };
+}
+{
+  const pre = (await psModels()).filter((m) => !OURS.has(m));
+  if (pre.length) console.log(`  ADVARSEL: Ollama har ${pre.join(', ')} lastet – noe annet (Homelab-serveren, Open WebUI) bruker den. Pause AI-køen i Homelab (AI-kontroll → Jobber) eller stopp klienten, ellers blir tidene og tidsavbruddene feil.`);
+}
 function runOne(meta, i) {
+  const stopWatch = watchForeign();
   return new Promise((res) => {
     const out = join(tmpRoot, `${meta.id}-${i}.json`);
     const t0 = Date.now();
@@ -165,7 +188,8 @@ function runOne(meta, i) {
       if (r.error && /^Riggfeil/.test(r.reason ?? '')) r.riggError = true;
       r.log = logs.split('\n').filter((l) => l.trim()).slice(-60);
       r.run = i;
-      const env = envFailure(r, logs);
+      r.foreign = stopWatch();
+      const env = envFailure(r, logs) ?? (!r.ok && !r.riggError && r.foreign.length ? `Ollama ble brukt av noe annet samtidig (${r.foreign.join(', ')})` : null);
       if (env) { r.status = 'env'; r.envReason = env; } else r.status = r.ok ? 'ok' : r.riggError ? 'rigg' : 'feil';
       res(r);
     });
@@ -231,7 +255,7 @@ const md = [`# Glimt eval ${date} · ${backend} · ${modelTag}`, '',
   ...rows.map((r) => `| ${r.map((x) => String(x).replace(/\|/g, '\\|').replace(/\n/g, ' ')).join(' | ')} |`), '',
   '## Per case', '',
   ...all.flatMap((c) => [`### ${c.id} – ${c.title} (${c.passes}/${c.runs})`, '', ...c.results.flatMap((r) => [
-    `- Kjøring ${r.run}: ${r.ok ? 'OK' : r.status === 'env' ? `ENV (${r.envReason})` : 'FEIL'} · ${(r.ms / 1000).toFixed(1)} s · modellkall ${r.tokens?.calls ?? 0} · prompt-tok maks ${r.tokens?.maxPrompt ?? '–'}${r.trace?.model?.length ? ` · ${modelTimes(r.trace.model)}` : ''}`,
+    `- Kjøring ${r.run}: ${r.ok ? 'OK' : r.status === 'env' ? `ENV (${r.envReason})` : 'FEIL'}${r.foreign?.length && r.ok ? ` (andre på Ollama: ${r.foreign.join(', ')})` : ''} · ${(r.ms / 1000).toFixed(1)} s · modellkall ${r.tokens?.calls ?? 0} · prompt-tok maks ${r.tokens?.maxPrompt ?? '–'}${r.trace?.model?.length ? ` · ${modelTimes(r.trace.model)}` : ''}`,
     ...(r.checks ?? []).map((k) => `  - ${k.info ? 'ℹ' : k.ok ? '✓' : '✗'} ${k.name}${k.detail ? `: ${String(k.detail).replace(/\n/g, ' ')}` : ''}`),
     ...(r.riggError ? [`  - Riggfeil: ${String(r.error ?? '').split('\n')[0]}`] : []),
   ]), '']),
