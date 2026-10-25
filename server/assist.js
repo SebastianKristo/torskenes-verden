@@ -653,6 +653,8 @@ export function assistSettings(user) {
 
 /* ---------------- Chat ---------------- */
 
+/** Prompt 59: Chat på web strømmer Glimt-svar via /api/glimt/agent/stream og lagrer dem i samtalen her etterpå (som /api/assist gjorde). */
+export const saveGlimtChat59 = (user, chatId, text, a) => saveToChat(user, chatId, text, a);
 function saveToChat(user, chatId, text, a, { assistantOnly = false } = {}) {
   const now = Date.now();
   const msgs = [...(assistantOnly ? [] : [{ role: 'user', content: text, ts: now }]), { role: 'assistant', content: a.text, ts: now + 1, card: a.card, tool: a.tool, meta: { glimt: true, intent: a.intent, source: a.source, tool: a.tool, card: a.card, ms: a.ms } }];

@@ -406,3 +406,18 @@ test('eval: svartid vs totalt, median/p90 per intent, --compare, cache-effekt og
   const think = L59.whySlow59({ ms: 50_000, replyMs: 50_000, trace: { model: [planner(2000, 2000, 1500), { ...planner(2000, 2000, 1500), think: true, thinkingChars: 4000, genMs: 44_000 }] } });
   assert.ok(think.some((w) => /planleggeren kalt 2 ganger \(nytt forsøk med tenking/.test(w.why)) && think.some((w) => /tenkte/.test(w.why)));
 });
+
+test('strømmet Glimt-svar lagres i samtalen på serveren (POST /stream/save), bare egne samtaler', async () => {
+  const r = await A('/api/glimt/agent/stream/save', 'POST', { q: 'været i Oslo', text: 'Sol og 12 grader i Oslo.', intent: 'weather', card: { type: 'weather' } });
+  assert.equal(r.status, 200);
+  const j = r.body;
+  assert.ok(j.chatId);
+  const again = (await A('/api/glimt/agent/stream/save', 'POST', { q: 'og i morgen?', text: 'Regn i morgen.', chatId: j.chatId, intent: 'weather' })).body;
+  assert.equal(again.chatId, j.chatId, 'samme samtale');
+  const { db } = await import('../server/db.js');
+  const row = db.prepare('SELECT messages FROM hl_chats WHERE id=?').get(j.chatId);
+  const msgs = JSON.parse(row.messages);
+  assert.equal(msgs.length, 4);
+  assert.equal(msgs[1].meta.glimt, true);
+  assert.equal((await A('/api/glimt/agent/stream/save', 'POST', { q: '', text: '' })).status, 400);
+});

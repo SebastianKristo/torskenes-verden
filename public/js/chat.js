@@ -10,7 +10,9 @@ import { store } from './store.js';
 import { searchField } from './searchfield.js';
 import { lang, locale } from './i18n.js';
 import { glimt, glimtDots } from './glimt.js';
-import { assist, looksLikeTool } from './assist.js';
+import { assist, looksLikeTool, normAnswer } from './assist.js';
+import { agentStream59, cacheNote59 } from './stream59.js'; // prompt 59: Glimt-svar strømmes (ord for ord, statuslinje, Stopp)
+import { agentText, isPlain } from './glimt-agent45.js';
 import { cardHtml, bindCards } from './chat-cards.js';
 import { factsHtml41, usedWithoutFacts41 } from './chat-facts41.js'; // prompt 41: faktakort
 import { css50, rejectReason50, isImg50, upload50, attRow50, bubbleImgs50, otherFiles50, filePills50, imagesOf50, bindDrop50, pastedFiles50, lightbox50, readWith50, finansBtn50, MAX_FILES50 } from './chat50.js'; // prompt 50: vedlegg, miniatyr, lysboks
@@ -254,7 +256,7 @@ function msgsHtml() {
     }
     const meta = m.meta ?? {}, used = usedWithoutFacts41(meta.used, meta.facts), tool = meta.tool ? [].concat(meta.tool) : [];
     const sec = meta.ms ? `${(meta.ms / 1000).toFixed(1).replace('.', ',')} s` : '';
-    const st = meta.glimt || tool.length ? [`Verktøy${sec ? ` · ${sec}` : ''}`, meta.source && meta.source !== 'Glimt' ? meta.source : ''].filter(Boolean).join(' · ')
+    const st = meta.glimt || tool.length ? [meta.stopped ? 'Stoppet' : '', `Verktøy${sec ? ` · ${sec}` : ''}`, meta.source && meta.source !== 'Glimt' ? meta.source : '', meta.cached ? 'Fra cachen' : ''].filter(Boolean).join(' · ') // prompt 59: Stoppet / svar-cachen
       : [meta.stopped ? 'Stoppet' : '', autoWhy41(meta), meta.tokensPerSec ? `${String(meta.tokensPerSec).replace('.', ',')} tok/s` : '', sec].filter(Boolean).join(' · ');
     const who = meta.glimt ? 'GLIMT' : `GLIMT · ${(meta.auto?.modelName ?? mName(meta.auto?.model || meta.model || C.chat?.model || '')).toUpperCase()}`;
     const pu = i > 0 && msgs[i - 1]?.role === 'user' ? i - 1 : -1; // prompt 50: bildet svaret leste, som liten miniatyr + filnavn
@@ -274,10 +276,10 @@ function autoWhy41(meta) {
 function streamHtml() {
   const b = C.busy;
   // Prompt 31: Glimt-merket ved siden av modellnavnet: Tenker (før første ord), Svarer (mens teksten strømmer inn).
-  const who = b.glimt ? 'GLIMT · TENKER' : `GLIMT · ${(b.pickLabel || (b.picked ? `✦ ${mName(b.picked)}` : mName(b.model))).toUpperCase()}`;
+  const who = b.glimt ? (b.text ? 'GLIMT · SVARER' : 'GLIMT · TENKER') : `GLIMT · ${(b.pickLabel || (b.picked ? `✦ ${mName(b.picked)}` : mName(b.model))).toUpperCase()}`;
   const all = (C.chat?.messages ?? []).filter((m) => m.role !== 'system'), lu = all.length - 1;
   return `<div class="ch-a" data-ch-stream><div class="ch-ah"><span class="ch-lab">${glimt(22, b.text ? 'svarer' : 'tenker')}${esc(who)}</span>${all[lu]?.role === 'user' ? filePills50(all[lu], lu) : ''}${(b.reading ?? []).map((u) => `<span class="ch-used">Leser <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-    ${streamThink52(b)}${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : b.think?.length ? '' : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}${factsHtml41(b.facts)}${b.readWith ? readWith50({ readWith: b.readWith }) : ''}</div>`;
+    ${streamThink52(b)}${b.status59 ? `<div class="ch-st59" role="status" data-ch-status59><span class="ch-st59-dot" aria-hidden="true"></span><span data-no-i18n>${esc(b.status59)}</span></div>` : ''}${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : b.think?.length ? '' : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}${factsHtml41(b.facts)}${b.readWith ? readWith50({ readWith: b.readWith }) : ''}</div>`;
 }
 /** Prompt 52: «✦ Tenker … 2,1 s ▾» mens modellen tenker; «✦ Tenkte i 2,1 s ›» når svaret strømmer. */
 function streamThink52(b) {
@@ -508,16 +510,50 @@ async function sendTool(t) {
   C.chat = shown; C.inp = ''; C.sheet = null; C.edit = null;
   C.busy = { chatId: C.cur, model: curModelId(), glimt: true, text: '', ctl };
   paint(); toBottom();
-  let a;
-  try { a = await assist(t, { source: 'chat', chatId: C.cur && !isLocalId(C.cur) ? C.cur : undefined, signal: ctl.signal, toast: false }); }
-  catch (e) {
+  let a, s59 = null;
+  // Prompt 59: Glimt-motoren strømmer (POST /api/glimt/agent/stream): statuslinje mens verktøyene jobber, ordene mens de skrives.
+  // Eldre server (404/405) → /api/assist som før. Stopp beholder det som er skrevet, merket «Stoppet».
+  try {
+    let raf = 0;
+    const live = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; paintStream(); }); };
+    s59 = await agentStream59(t, 'chat', {}, { signal: ctl.signal,
+      onStatus: (st) => { if (C.busy?.ctl === ctl) { C.busy.status59 = st.text; live(); } },
+      onToken: (all) => { if (C.busy?.ctl === ctl) { C.busy.text = all; live(); } } });
+  } catch (e) {
+    const part = e.partial || (C.busy?.ctl === ctl ? C.busy.text : '');
     C.busy = null;
-    if (e.name === 'AbortError') { C.chat = before.chat; C.inp = before.inp; paint(); return true; }
-    C.chat = before.chat; return false;
+    if (e.name === 'AbortError') {
+      if (!part) { C.chat = before.chat; C.inp = before.inp; paint(); return true; }
+      const am = { role: 'assistant', content: part, ts: Date.now(), meta: { glimt: true, stopped: true, model: 'Glimt' } };
+      const id = C.cur || `g:${Date.now().toString(36)}`;
+      toolsAdd(id, [userMsg, am]); C.cur = id; C.chat = { ...shown, id, ...(isLocalId(id) ? { local: true } : {}), messages: [...shown.messages, am] };
+      writeLocal(); paint(); toBottom(); return true;
+    }
+    if (e.status === 429) { C.chat = before.chat; C.inp = before.inp; toast(e.message); return true; }
+    C.chat = before.chat; return false; // feil i Glimt-motoren: til språkmodellen som før (ingen ny kjøring som kan gjenta en handling)
+  }
+  if (s59) {
+    a = fromAgent59(s59, t);
+    // Lagre svaret i samtalen på serveren (som /api/assist gjorde), så det også vises i appene. Feil her stopper ikke svaret.
+    if (a?.text && a.intent !== 'chat' && a.intent !== 'llm') {
+      try {
+        const r = await fetch('/api/glimt/agent/stream/save', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ q: t, text: a.text, chatId: C.cur && !isLocalId(C.cur) ? C.cur : undefined, card: a.card ?? null, tool: a.tool ?? null, intent: a.intent ?? null, ms: a.ms ?? 0 }) });
+        if (r.ok) { const j = await r.json(); if (j?.chatId) a.chatId = j.chatId; }
+      } catch { /* lagres lokalt som før */ }
+    }
+  }
+  else {
+    try { a = await assist(t, { source: 'chat', chatId: C.cur && !isLocalId(C.cur) ? C.cur : undefined, signal: ctl.signal, toast: false }); }
+    catch (e) {
+      C.busy = null;
+      if (e.name === 'AbortError') { C.chat = before.chat; C.inp = before.inp; paint(); return true; }
+      C.chat = before.chat; return false;
+    }
   }
   C.busy = null;
   if (!a?.text || a.intent === 'llm' || a.intent === 'chat' || (!a.card && !a.tool && !/^(weather|calendar|departures|packages|finance|tasks|trial|appointment)/.test(a.intent ?? ''))) { C.chat = before.chat; return false; }
-  const am = { role: 'assistant', content: a.text, ts: Date.now(), meta: { glimt: true, tool: a.tool ?? null, card: a.card ?? null, ms: a.ms ?? 0, source: a.source ?? '', model: 'Glimt' } };
+  const am = { role: 'assistant', content: a.text, ts: Date.now(), meta: { glimt: true, tool: a.tool ?? null, card: a.card ?? null, ms: a.ms ?? 0, source: a.source ?? '', model: 'Glimt', ...(a.cached ? { cached: true, note: a.notice } : {}) } };
   if (a.chatId && !isLocalId(a.chatId)) {
     // Serveren lagret spørsmålet og svaret i samtalen. Kortet lagres også lokalt, i tilfelle serveren ikke tar vare på det.
     toolsAdd(String(a.chatId), [userMsg, am]);
@@ -532,6 +568,33 @@ async function sendTool(t) {
   }
   writeLocal(); paint(); toBottom();
   return true;
+}
+
+/** Prompt 59: svaret fra Glimt-motoren (done i strømmen) i samme form som /api/assist ga, med kortet når det finnes. */
+const SRC59 = { calendar: 'Kalender', tasks: 'Huskeliste', finance: 'Finans', weather: 'Vær', ruter: 'Avganger', family: 'Familie', media: 'Media', study: 'Studie' };
+const WD59 = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
+function fromAgent59(g, q) {
+  const raw = g.raw ?? {};
+  // Gamle svar (vær, avganger, pakker …) kommer med sitt eget kort i legacyAnswer.
+  if (raw.legacyAnswer && typeof raw.legacyAnswer === 'object') {
+    const L = normAnswer(raw.legacyAnswer);
+    return { ...L, text: agentText(g) || L.text, ms: raw.ms ?? L.ms, cached: g.cached, notice: cacheNote59(g) || L.notice };
+  }
+  const a0 = g.actions[0] ?? null, tool = a0?.tool ?? null;
+  if (isPlain(g) && ['chat', 'ask', ''].includes(g.intent)) return { text: agentText(g), intent: 'chat' };
+  let card = null;
+  const evs = g.results.filter((x) => x.kind === 'event');
+  if (evs.length || tool?.startsWith('calendar.')) {
+    const d = (typeof a0?.result?.from === 'string' ? a0.result.from : null) ?? evs[0]?.date ?? new Date().toISOString().slice(0, 10);
+    const x = new Date(`${d}T00:00:00Z`);
+    card = { k: 'calendar', date: d, wd: WD59[x.getUTCDay()], n: x.getUTCDate(), t: x.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).replace(/^./, (c) => c.toUpperCase()), sub: `${evs.length} ${evs.length === 1 ? 'hendelse' : 'hendelser'}`,
+      items: evs.slice(0, 8).map((e) => ({ id: e.id, time: e.allDay ? 'Hele' : e.time, title: e.title, color: e.color ?? null, place: e.place ?? null, date: e.date })) };
+  } else if (tool?.startsWith('tasks.')) {
+    const ts = g.results.filter((x) => x.kind === 'task');
+    card = { k: 'tasks', count: ts.length, items: ts.map((x) => ({ id: x.id, title: x.title, due: x.date, done: !!x.done })) };
+  }
+  const src = SRC59[g.module] ?? 'Glimt';
+  return { text: agentText(g) || 'Ferdig.', intent: tool ?? g.intent ?? 'agent', tool: src, source: src, card, ms: raw.ms ?? 0, cached: g.cached, notice: cacheNote59(g), q };
 }
 
 async function readSse(res, ctl) {

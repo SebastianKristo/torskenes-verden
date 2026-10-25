@@ -12,6 +12,7 @@ import { fast59, serverFast59, userFast59, saveFast59, FAST_LABELS59, FAST_HELP5
 import { cacheCount59, cacheClear59, TTL59 } from './cache.js';
 import { wordsOf59 } from './status.js';
 import { warmNow59, warmState59 } from './warm.js';
+import { saveGlimtChat59 } from '../assist.js';
 
 const RID = /^[A-Za-z0-9_-]{8,80}$/;
 const live = new Map(); // `${user}|${requestId}` → AbortController
@@ -79,6 +80,16 @@ export function installFast59(api) {
     const ctrl = live.get(`${c.get('user')}|${id}`);
     if (ctrl) ctrl.abort(new Error('Stoppet'));
     return c.json({ ok: true, stopped: !!ctrl });
+  });
+  // Lagrer et ferdig strømmet Glimt-svar i brukerens samtale (ny samtale uten chatId). → {chatId}. Bare egne samtaler.
+  api.post('/stream/save', async (c) => {
+    const b = await c.req.json().catch(() => null);
+    const q = String(b?.q ?? '').trim().slice(0, 4000), text = String(b?.text ?? '').trim().slice(0, 20_000);
+    if (!q || !text) return c.json({ error: 'Forventet {q, text, chatId?, card?, tool?, intent?, ms?}' }, 400);
+    const chatId = typeof b.chatId === 'string' && /^[\w-]{1,80}$/.test(b.chatId) ? b.chatId : null;
+    const card = b.card && typeof b.card === 'object' && JSON.stringify(b.card).length <= 50_000 ? b.card : null;
+    const id = saveGlimtChat59(c.get('user'), chatId, q, { text, card, tool: typeof b.tool === 'string' ? b.tool.slice(0, 80) : null, intent: typeof b.intent === 'string' ? b.intent.slice(0, 40) : null, source: 'glimt', ms: Number(b.ms) || 0 });
+    return id ? c.json({ chatId: id }) : c.json({ error: 'Kunne ikke lagre i samtalen' }, 500);
   });
   api.get('/fast', (c) => c.json(fastOut(c.get('user')), 200, { 'Cache-Control': 'no-store' }));
   api.put('/fast', async (c) => {
