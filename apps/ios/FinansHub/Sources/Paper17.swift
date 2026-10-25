@@ -1103,6 +1103,8 @@ struct PaperAiSettings: View {
             Privacy27Section()
             // Prompt 27: CHAT (Chat27Settings.swift).
             Chat27SettingsGroup()
+            // Prompt 56: TALE TIL TEKST – Serveren (anbefalt) / På enheten (Voice56.swift).
+            Voice56SettingsGroup()
             // Prompt 32: GLIMT I SØKEFELTET – «Send til Chat etter» 5/8/15/30 s (Search32.swift).
             Search32bSettingsGroup()
             // Prompt 33: GLIMT HUSKER (Memory33.swift).

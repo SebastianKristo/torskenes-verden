@@ -1,7 +1,7 @@
 # Lisenser for tredjepartsmodeller
 
 Homelab bruker modeller som kjører lokalt i huset. Tekst, bilder og lyd sendes ikke ut for å bli behandlet.
-Den samme teksten vises på web under **Innstillinger → Konto → Om / Lisenser** (eller `#/om`). Appene får den i neste runde.
+Den samme teksten vises på web under **Innstillinger → Konto → Om / Lisenser** (eller `#/om`). iOS- og Android-appen har den under Om appen (Innstillinger).
 
 ## Desert Ant Labs
 

@@ -982,9 +982,11 @@ class ChatVoice27(ctx: Context, private val s: Chat27State, private val onFail: 
 }
 
 /** Mikrofonen: start eller stopp. Tillatelsen spørres om i grensesnittet før dette kalles. */
-fun AppViewModel.micChat27(ctx: Context) {
+fun AppViewModel.micChat27(ctx: Context, hold: Boolean = false) {
     val s = chat27
     s.voice?.let { it.stop(); return }
+    // Prompt 56 (AND56): serveren skriver ned (Voice56.kt) når den har en motor; ellers telefonen som før (stille reserve).
+    if (micServer56(ctx, Voice56.CHAT, hold) { t -> s.input = join56(s.input, t) }) return
     if (!SpeechRecognizer.isRecognitionAvailable(ctx)) { chatToast27("Talegjenkjenning finnes ikke på denne telefonen"); return }
     val v = ChatVoice27(ctx, s) { chatToast27(it) }
     s.voice = v

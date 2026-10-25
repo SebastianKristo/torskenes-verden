@@ -212,6 +212,8 @@ struct HomeSearch29: View {
         let items: [String] = empty ? Array(store.history.prefix(5)) : Array(store.suggestions.prefix(6))
         return VStack(spacing: 0) {
             row
+            // Prompt 56: «Lytter …» / «Skriver ned …» og motor · språk etterpå (Voice56.swift).
+            Voice56SearchStatus()
             if showSuggest && !items.isEmpty {
                 Rectangle().fill(p.line).frame(height: 1)
                 ForEach(items, id: \.self) { s in suggestRow(s, empty) }
@@ -239,6 +241,8 @@ struct HomeSearch29: View {
             if !q.isEmpty {
                 SearchClear27 { clearField() }
             }
+            // Prompt 56: snakk inn søket (serveren, ellers talegjenkjenningen på enheten).
+            Voice56Mic(ctx: micCtx, ink: p.ink, size: 34, icon: 15, label: "Snakk inn søket")
             Button { askAi() } label: {
                 Text("✦ AI").font(PF.ui(12.5, .bold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
                     .padding(.horizontal, 12).frame(height: 34)
@@ -267,6 +271,18 @@ struct HomeSearch29: View {
         if m.engine != "ai" { store.suggest(v) }
         if !v.isEmpty && Assist31.shared.homeAnswer != nil { Assist31.shared.closeHome() }
         m.changed(v, store)
+    }
+
+    /// Prompt 56: teksten settes inn i feltet (søket startes ikke av seg selv).
+    private var micCtx: Voice56Ctx {
+        Voice56Ctx(target: "search",
+                   insert: { (t: String) in q = q.isEmpty || q.hasSuffix(" ") ? q + t : q + " " + t },
+                   error: { (e: String) in Voice56.shared.show(e) },
+                   note: { (n: String) in Voice56.shared.show(n) },
+                   device: {
+                       ChatVoice27.shared.toggle(onText: { (t: String) in q = t },
+                                                 onError: { (e: String) in Voice56.shared.show(e) })
+                   })
     }
 
     private func clearField() {

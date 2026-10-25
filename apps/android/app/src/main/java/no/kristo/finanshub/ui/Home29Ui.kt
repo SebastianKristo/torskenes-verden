@@ -104,6 +104,7 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
                 Modifier.size(30.dp).clip(CircleShape).background(p.line).clickable(role = Role.Button, onClickLabel = "Tøm") { vm.setHomeQuery29("") },
                 contentAlignment = Alignment.Center,
             ) { WxIcon(H29_X, p.ink, 11.dp, stroke = 3.2f) }
+            SearchMic56(vm) // prompt 56 (AND56): snakk inn søket (ui/Voice56Ui.kt)
             Box(
                 Modifier.height(34.dp).clip(CircleShape).background(p.bg)
                     .clickable(role = Role.Button, onClickLabel = "Åpne Chat") { Haptics.select(); fm.clearFocus(); vm.openChat() }
@@ -111,6 +112,7 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
                 contentAlignment = Alignment.Center,
             ) { Text("✦ AI", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
         }
+        VoiceBar56(vm, Voice56.SEARCH, p.ink, p.mut, PaperFonts.sans, Modifier.clip(RoundedCornerShape(16.dp)).background(p.card)) // prompt 56: Lytter / Skriver ned / motor · språk
         if (!above45) extras45()
     }
 }

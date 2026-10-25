@@ -314,6 +314,10 @@ internal fun AboutPage(vm: AppViewModel) = Pages {
     }
     Section("Lisenser") {
         Note("Jetpack Compose, Material 3, AndroidX Biometric og Security Crypto (Apache 2.0).")
+        // Prompt 56 (AND56): modellene på serveren og Mac mini-en (docs/lisenser-tredjepart.md).
+        Note("Inneholder modeller fra Desert Ant Labs (license.desertant.com): Eye, Redact, Gist, Tongue, Emo, Moderator, Clear og Voz. Desert Ant Labs Source-Available License 1.0. Copyright © 2026 Desert Ant Labs B.V.")
+        Note("Fermion Research: Phonon (tale til tekst) © Fermion Research, CC-BY-4.0. Neutrino-1 © Fermion Research, Apache-2.0 (Qwen3 © Alibaba Cloud, Apache-2.0).")
+        Note("NB-Whisper fra Nasjonalbiblioteket (Apache-2.0): tale til tekst på norsk og engelsk. Finjustert fra OpenAI Whisper (MIT).")
     }
 }
 

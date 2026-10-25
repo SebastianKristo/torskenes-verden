@@ -514,9 +514,10 @@ private fun Ch27Empty(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
 private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
     val s = vm.chat27
     val ctx = LocalContext.current
-    val askMic = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        if (ok) vm.micChat27(ctx) else vm.chatToast27("Mikrofonen trenger tillatelse")
-    }
+    // Prompt 56 (AND56): forklaring før tillatelsesdialogen, trykk/hold og serveren som skriver ned (ui/Voice56Ui.kt, Voice56.kt).
+    val askMic = rememberMic56(onDenied = { vm.chatToast27("Mikrofonen trenger tillatelse") }) { vm.micChat27(ctx) }
+    LaunchedEffect(Unit) { vm.voice56Refresh() }
+    val mic56 = s.rec || Voice56.on(Voice56.CHAT)
     Box(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(start = 12.dp, top = 4.dp, end = 12.dp, bottom = 14.dp)) {
         Column(Modifier.fillMaxWidth().widthIn(max = 760.dp).align(Alignment.Center)) {
             Column(
@@ -527,7 +528,8 @@ private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
                 // Prompt 50: miniatyrrad (64×64, ×, fremdrift) og «Lim inn bilde» (ui/Chat50Ui.kt).
                 ChatAttRow50(vm, v)
                 ChatPaste50(vm, v)
-                if (s.rec) Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (Voice56.on(Voice56.CHAT)) VoiceBar56(vm, Voice56.CHAT, v.ink, v.mut, v.sans) // prompt 56
+                else if (s.rec) Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Box(Modifier.size(9.dp).clip(CircleShape).background(CH27_SKY))
                     Text(s.input.ifBlank { "Lytter … snakk nå" }, color = v.ink, fontFamily = v.sans, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Ch27Wave(s.rms)
@@ -548,14 +550,14 @@ private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
                         if (!s.myDataOn) vm.chatToast27("Slått av i Innstillinger → AI og tolkning") else { s.data = !s.data; Haptics.select() }
                     }
                     }
-                    Box(Modifier.size(38.dp).clip(CircleShape).background(if (s.rec) CH27_SKY else Color.Transparent).press24 {
-                        if (s.rec) vm.micChat27(ctx)
-                        else if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) vm.micChat27(ctx)
-                        else askMic.launch(Manifest.permission.RECORD_AUDIO)
-                    }.ch27Label("Snakk"), contentAlignment = Alignment.Center) { WxIcon(ChIc27.MIC, if (s.rec) Color.White else v.ink, 20.dp, stroke = 1.9f) }
+                    Box(Modifier.size(38.dp).clip(CircleShape).background(if (mic56) CH27_SKY else Color.Transparent).holdMic56("Snakk (hold inne, eller trykk for start og stopp)",
+                        onTap = { Haptics.tap(); if (mic56) vm.micChat27(ctx) else askMic() },
+                        onHold = { if (micOk56(ctx)) vm.micChat27(ctx, hold = true) else askMic() },
+                        onRelease = { cancel -> vm.releaseChatMic56(cancel) },
+                    ), contentAlignment = Alignment.Center) { WxIcon(ChIc27.MIC, if (mic56) Color.White else v.ink, 20.dp, stroke = 1.9f) }
                     if (s.busy) Box(Modifier.size(38.dp).clip(CircleShape).background(v.ink).press24 { vm.stopChat27() }.ch27Label("Stopp"), contentAlignment = Alignment.Center) {
                         Box(Modifier.size(13.dp).clip(RoundedCornerShape(3.dp)).background(v.bg))
-                    } else SendBtn43(v, (s.input.isNotBlank() || s.att.isNotEmpty()) && !s.uploading50) { s.voice?.stop(); vm.sendChat27(s.input) } // prompt 50: av til alt er lastet opp
+                    } else SendBtn43(v, (s.input.isNotBlank() || s.att.isNotEmpty()) && !s.uploading50) { s.voice?.stop(); if (Voice56.on(Voice56.CHAT)) vm.cancelMic56(); vm.sendChat27(s.input) } // prompt 50: av til alt er lastet opp
                 }
             }
             if (s.toast.isNotEmpty()) Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp).clip(CircleShape).background(v.ink).padding(14.dp, 9.dp)) {

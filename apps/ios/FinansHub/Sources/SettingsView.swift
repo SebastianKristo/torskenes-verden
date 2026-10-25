@@ -623,6 +623,9 @@ private struct AboutPage: View {
             Note(text: "Appen snakker bare med din egen homelab-server. Tokenet lagres i nøkkelringen, og passordet lagres ikke. Ingen data sendes til tredjeparter fra appen.")
             SectionLabel(text: "Lisenser")
             Note(text: "Bygget med SwiftUI og Apples rammeverk. Ingen tredjepartsbiblioteker.")
+            // Prompt 56: modellene bak tale til tekst og Chat på serveren (docs/lisenser-tredjepart.md).
+            SectionLabel(text: "Modeller på serveren")
+            Note(text: "• Inneholder modeller fra Desert Ant Labs (license.desertant.com): Voz, Clear, Eye, Redact, Gist, Tongue, Emo og Moderator.\n• Fermion Research: Phonon (CC-BY-4.0) og Neutrino (Apache-2.0).\n• NB-Whisper fra Nasjonalbiblioteket (Apache-2.0).\nModellene kjører i huset. Tale til tekst sendes bare til serveren og lagres ikke.")
         }
     }
 }

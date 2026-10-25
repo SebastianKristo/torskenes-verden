@@ -67,8 +67,8 @@ targets:
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Homelab kobler til homelab-serveren din på lokalt nett."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Posisjonen din deles med familien i Familie og kart når du har slått på deling."
         INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket, og du får varsler når noen kommer til eller forlater en sone."
-        # Prompt 27: mikrofonen i Chat (tale til tekst på norsk).
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Mikrofonen brukes når du snakker til Chat."
+        # Prompt 27: mikrofonen i Chat (tale til tekst på norsk). Prompt 56: tale til tekst via serveren (Voice56.swift).
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Homelab bruker mikrofonen til tale til tekst. Lyden sendes bare til serveren i huset og lagres ikke."
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Talen din gjøres om til tekst på norsk i Chat."
         INFOPLIST_KEY_NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Appen leser skritt, puls, søvn og aktivitet for å vise dem i Familie."
@@ -87,6 +87,9 @@ targets:
         NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
         NSHealthShareUsageDescription: "Appen leser skritt, puls, søvn og aktivitet for å vise dem i Familie."
         NSHealthUpdateUsageDescription: "Appen skriver ikke til Apple Health. Den leser bare det du velger å dele i Familie."
+        # Prompt 56: mikrofonen (tale til tekst via serveren) og talegjenkjenningen på enheten (reserven).
+        NSMicrophoneUsageDescription: "Homelab bruker mikrofonen til tale til tekst. Lyden sendes bare til serveren i huset og lagres ikke."
+        NSSpeechRecognitionUsageDescription: "Talen din gjøres om til tekst på norsk i Chat."
         # «Last ned» lagrer kvitteringer i appens mappe, som vises i Filer → På min iPhone → FinansHub.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true

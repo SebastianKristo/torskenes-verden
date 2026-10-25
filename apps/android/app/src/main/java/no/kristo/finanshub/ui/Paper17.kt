@@ -117,7 +117,7 @@ private fun PaperSettings17Body(vm: AppViewModel, navBottom: Dp, onPrivacyChange
             "accounts" -> item { AccountsPage(vm) }
             "security" -> { item { SecurityPage(vm, onPrivacyChanged) }; item { Sec51Section(vm) } } // prompt 51: enheter som venter
             "tokens" -> item { TokensPage(vm) }
-            "ai" -> { item { GlimtSearchSettings32b(vm) }; item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { Memory33Settings(vm) }; item { AiTimeouts23(vm) } }
+            "ai" -> { item { GlimtSearchSettings32b(vm) }; item { VoiceSettings56(vm) } /* prompt 56 */; item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { Memory33Settings(vm) }; item { AiTimeouts23(vm) } }
             // Prompt 26: gruppert liste som på web, egen side per integrasjon, og Kalendere.
             // Prompt 37: husstandens sporingsnøkler øverst (maskert, bare admin endrer).
             "integ" -> { item { TrkKeys37Section(vm) }; item { IntegList26(vm) } }

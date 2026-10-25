@@ -43,6 +43,8 @@ struct Chat27Page: View {
         .onDisappear {
             ChatVoice27.shared.stop()
             ChatVoice27.shared.stopSpeaking()
+            // Prompt 56: et serveropptak fra Chat avbrytes (temp-fila slettes) når Chat lukkes.
+            if Voice56.shared.target == "chat" { Voice56.shared.cancel() }
         }
         .sheet(item: Binding<Chat27SheetId?>(get: { s.sheet.map { Chat27SheetId(id: $0) } }, set: { s.sheet = $0?.id })) { sh in
             Chat27Sheet(kind: sh.id, c: c, pickPhoto: { pick(photo: true) }, pickCamera: { pick(camera: true) },
@@ -320,7 +322,10 @@ struct Chat27Composer: View {
             VStack(alignment: .leading, spacing: 6) {
                 // Prompt 50: miniatyrrad (64×64, ×, fremdrift) og «Lim inn bilde» (Chat50Attach.swift).
                 if !s.attach.isEmpty { Chat50AttachRow(c: c) }
-                if voice.recording {
+                // Prompt 56: tale til tekst via serveren – «Lytter …» / «Skriver ned …» med Avbryt (Voice56.swift).
+                if Voice56.shared.active("chat") {
+                    Voice56Bar(ink: c.ink, mut: c.mut, font: c.ui)
+                } else if voice.recording {
                     HStack(spacing: 10) {
                         Circle().fill(Color(hex: "#b23a2a")).frame(width: 8, height: 8)
                         Text("Lytter … snakk nå").font(c.ui(15)).foregroundStyle(c.ink)
@@ -342,7 +347,8 @@ struct Chat27Composer: View {
                     chip("globe", "Nettsøk", on: s.webOn) { s.webOn.toggle(); Haptics.shared.select() }
                     chip("lock", "Mine data", on: s.dataOn && s.myDataAllowed) { s.toggleData() }
                     Spacer(minLength: 2)
-                    round("mic", "Snakk", on: voice.recording) { mic() }
+                    // Prompt 56: serveren når den har en motor, ellers talegjenkjenningen på enheten (mic()) som før.
+                    Voice56Mic(ctx: micCtx, ink: c.ink)
                     if s.busy {
                         Button { s.stop() } label: {
                             RoundedRectangle(cornerRadius: 3).fill(c.bg).frame(width: 12, height: 12)
@@ -413,7 +419,21 @@ struct Chat27Composer: View {
 
     private func send() {
         if voice.recording { voice.stop() }
+        if Voice56.shared.phase == "rec" { Voice56.shared.cancel() }
         s.send(s.input, store)
+    }
+
+    /// Prompt 56: teksten fra serveren legges til i skrivefeltet (sendes ikke).
+    private var micCtx: Voice56Ctx {
+        Voice56Ctx(target: "chat",
+                   insert: { (t: String) in
+                       let cur: String = ChatStore27.shared.input
+                       let sep: String = cur.isEmpty || cur.hasSuffix(" ") || cur.hasSuffix("\n") ? "" : " "
+                       ChatStore27.shared.input = cur + sep + t
+                   },
+                   error: { (e: String) in ChatStore27.shared.flash(e) },
+                   note: { (n: String) in ChatStore27.shared.flash(n) },
+                   device: { mic() })
     }
 
     private func mic() {
