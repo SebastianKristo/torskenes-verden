@@ -40,7 +40,7 @@ Ingen av dem er standard. Bruk dem side om side med qwen3:8b og la eval/erfaring
 Krever macOS på Apple silicon og Python 3.10+ (`brew install python@3.12` – macOS sin python3 er 3.9).
 
 ```bash
-cd ~/torskenes-verden && git pull
+cd ~/git/torskenes-verden && git pull
 cd tools/fermion
 ./install.sh                                    # begge tjenestene, standard adresser
 ./install.sh --cache-dir /Volumes/AI/fermion    # anbefalt: modellene på den eksterne disken (som Ollama)

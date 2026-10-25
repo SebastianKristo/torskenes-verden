@@ -13,7 +13,7 @@ To valgfrie tjenester fra Fermion Research, på Mac mini-en i huset:
 - Ikke Ollama: Neutrino krever fermion-runtime (`fermion serve`).
 
 ```bash
-cd ~/torskenes-verden/tools/fermion
+cd ~/git/torskenes-verden/tools/fermion
 ./install.sh                                   # begge tjenestene
 ./install.sh --cache-dir /Volumes/AI/fermion   # modellene på den eksterne disken
 ./install.sh --only neutrino                   # bare én (neutrino | phonon | begge)

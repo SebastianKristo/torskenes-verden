@@ -17,7 +17,7 @@ En liten, egen tjeneste på Mac mini-en som leser tekst i bilder med Apple Visio
 På Mac mini-en, som brukeren som er logget inn (ikke `sudo`):
 
 ```bash
-cd ~/torskenes-verden/tools/vision-ocr     # der repoet ligger på Mac-en
+cd ~/git/torskenes-verden/tools/vision-ocr     # der repoet ligger på Mac-en
 ./install.sh
 ```
 

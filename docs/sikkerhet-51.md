@@ -31,7 +31,7 @@ Innstillinger → **Sikkerhet** samler passkeys, nye enheter, innloggingsloggen,
 
 1. Sett `PUBLIC_URL` i `.env` til den offentlige https-adressen (f.eks. `PUBLIC_URL=https://os.example.no`). Passkeys gjelder for
    den adressen. Uten den virker passkeys bare på `http://localhost`.
-2. Start på nytt: `docker compose up -d homelab`.
+2. Start på nytt: `docker compose up -d os`.
 3. Logg inn hjemme én gang på enhetene du bruker, og legg til en passkey i Innstillinger → Sikkerhet.
 4. Har du nøkler som bør roteres, lag nye hos tjenesten, lim dem inn under «Roter», og slett de gamle hos tjenesten.
 
@@ -45,7 +45,7 @@ Valgfritt:
 ```sh
 # Ny SESSION_SECRET (logger ut alle; lagrede nøkler i Innstillinger må legges inn på nytt hvis SECRET_KEY ikke er satt)
 openssl rand -hex 32
-docker compose up -d homelab
+docker compose up -d os
 
 # Tester
 node --test test/p51-sec.test.js

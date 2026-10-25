@@ -31,7 +31,7 @@ Flagget `whisper_nb54` (Flagg-siden) er PÅ som standard. Slår du det av, bruke
 ## Installere på Mac mini-en
 
 ```bash
-cd ~/torskenes-verden && git pull
+cd ~/git/torskenes-verden && git pull
 cd tools/nb-whisper
 ./install.sh
 ```

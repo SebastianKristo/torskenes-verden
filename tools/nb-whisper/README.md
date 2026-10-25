@@ -13,7 +13,7 @@ Metal hvis MLX-sporet ikke går. Glimt-serveren bruker den for `POST /api/voice5
 | Filer | `~/Library/Application Support/nb-whisper/` (venv, `config.json` 600, `nbwhisper.py`, `models/`) |
 
 ```bash
-cd ~/torskenes-verden/tools/nb-whisper
+cd ~/git/torskenes-verden/tools/nb-whisper
 ./install.sh                                    # alt i ett: venv, mlx-whisper, modellen (lastes ned nå), LaunchAgent
 ./install.sh --model large                      # large (~3 GB i minnet) · medium (~1,5 GB) · small
 ./install.sh --engine cpp                       # whisper.cpp (brew install whisper-cpp) i stedet for MLX

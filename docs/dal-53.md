@@ -30,7 +30,7 @@ En Whisper-tjeneste kan legges til senere med `registerAsrBackend53({id:'whisper
 1. Bygg og start serveren på nytt (nye npm-pakker; imaget blir større, ca. 0,5 GB for linux-x64 etter at de andre plattformenes
    binærfiler er fjernet i Dockerfile, pluss ffmpeg):
    ```sh
-   docker compose build homelab && docker compose up -d homelab
+   cd /opt/homelab-os && docker compose up -d --build os   # eller Innstillinger → System → Oppdatering
    ```
 2. Forhåndslast modellene (laster ned vektene fra Hugging Face til `DATA_DIR/models/dal53/`, noen hundre MB, Voz ca. 400 MB):
    Innstillinger → System → **Lokale modeller** → «Forhåndslast alle». Eller:
