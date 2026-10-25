@@ -169,6 +169,8 @@ function serverRouting() {
   const raw = kv.get(OWNER, 'ai_routing', null);
   const base = cleanRouting(raw ?? {}, DEFAULT_ROUTING());
   if (raw?.migratedAt) base.migratedAt = raw.migratedAt;
+  // Prompt 55: oppgaver der administratoren selv har valgt llama3.2:3b i AI-kontroll (PUT /api/ai/routing) etter prompt 55.
+  if (raw?.chosen55 && typeof raw.chosen55 === 'object') base.chosen55 = Object.fromEntries(Object.entries(raw.chosen55).filter(([k, v]) => typeof v === 'string' && base.tasks[k]?.model === v));
   return base;
 }
 export function saveServerRouting(r) { const cur = kv.get(OWNER, 'ai_routing', {}) ?? {}; kv.set(OWNER, 'ai_routing', { ...r, migratedAt: cur.migratedAt ?? Date.now(), legacy: cur.legacy ?? legacyOf() }); invalidateStatus(); }
@@ -598,7 +600,7 @@ async function callOllama(model, o, signal, r, ctx = {}) {
   } : null;
   try {
     const out = await gateChat({ model, body, base, fetch: F, signal, priority: o.background ? 'background' : 'interactive', short: true, allowThink: !('think' in body), image: !!o.images?.length,
-      loadMs: lim.loadMs, warmMs: lim.firstMs, idleMs: lim.idleMs, deadlineMs: o.timeoutMs ?? null, retryTimeouts: ctx.last !== false, ...(o.retries != null ? { retries: o.retries } : {}), label: o.title ?? taskName(t),
+      loadMs: lim.loadMs, warmMs: lim.firstMs, idleMs: lim.idleMs, deadlineMs: o.timeoutMs ?? null, ...(o.deadlineAfterLoad ? { deadlineAfterLoad: true } : {}), retryTimeouts: ctx.last !== false, ...(o.retries != null ? { retries: o.retries } : {}), label: o.title ?? taskName(t),
       onQueue: ctx.onQueue, onStart: ctx.onStart, onPhase, onRetry: jobId ? ({ attempt, waitMs }) => jobUpdate(jobId, { step: `Nytt forsøk ${attempt + 1} om ${Math.round(waitMs / 1000)} s …`, attempts: attempt }) : null });
     if (jobId) { const n = out.text.length; jobUpdate(jobId, { phase: { kind: 'answer', chars: n }, step: `Svarer · ${n} tegn`, backend: out.telemetry.backend, backendNote: out.telemetry.backendNote ?? null }); }
     return { text: out.text, tin: out.telemetry.tokIn, tout: out.telemetry.tokOut, telemetry: out.telemetry, ...(out.message?.tool_calls?.length ? { toolCalls: out.message.tool_calls } : {}) };
@@ -713,6 +715,17 @@ export function paramsB47(name, invn = null) {
 /** «3,2B» når modellen er under 7B, ellers null. */
 export function smallModel47(name, invn = null) { const b = paramsB47(name, invn); return b != null && b < 7 ? `${String(Math.round(b * 10) / 10).replace('.', ',')}B` : null; }
 
+/* ---------------- Prompt 55: llama3.2:3b er tatt ut av alle standardveier ---------------- */
+
+// llama3.2 (1b/3b, ikke llama3.2-vision) svarte dårlig på norsk tolkning, og med OLLAMA_MAX_LOADED_MODELS=1 ga hvert kall et modellbytte
+// mot qwen3:8b (26–90 s i eval). Den brukes aldri lenger fra serverrutingen, «gammel innstilling», reserven eller auto-valget – bare når
+// brukeren selv har valgt den som sin egen modell for oppgaven i AI-kontroll (routing(u).own[task]).
+export const RETIRED55 = /^(?:ollama\/)?llama3\.2(?::(?:1b|3b|latest)(?:-[\w.-]+)?)?$/i;
+export const retiredModel55 = (id) => RETIRED55.test(String(id ?? '').trim());
+/** Har brukeren (eget valg) eller administratoren (valgt i AI-kontroll etter prompt 55) selv valgt modellen for oppgaven? */
+export const explicit55 = (r, task, id) => !!(r?.own?.[task] || (r?.chosen55?.[task] && (r.chosen55[task] === id || r.chosen55[task] === `ollama/${id}`)));
+export const RETIRED_NOTE55 = (id) => `«${id}» brukes ikke lenger automatisk (for svak på norsk tolkning, og gir modellbytter). Velg den selv under AI-kontroll hvis du vil bruke den`;
+
 /* ---------------- Oppløsning: rute → kandidater ---------------- */
 
 /**
@@ -734,6 +747,8 @@ export async function resolveTask(task, { user = me(), images = null, localOnly 
     if (!id) return;
     const pv = providerOf(id);
     if (pv.provider === 'roboflow') return;
+    // Prompt 55: llama3.2:3b bare som brukerens eget, eksplisitte valg – aldri som serverstandard, reserve, gammel innstilling eller auto.
+    if (pv.provider === 'ollama' && retiredModel55(pv.id) && !(from === 'model' && explicit55(r, t.id, pv.id))) { warnings.push(RETIRED_NOTE55(pv.id)); return; }
     if (pv.provider === 'ollama') {
       if (!invn.ok) { if (!list.some((x) => x.provider === 'ollama' && x.id === pv.id)) list.push({ ...pv, from, unverified: true }); return; }
       const hit = invn.models.find((m) => sameModel(m.name, pv.id));
@@ -756,7 +771,7 @@ export async function resolveTask(task, { user = me(), images = null, localOnly 
   if (invn.ok && !list.some((x) => x.provider === 'ollama')) {
     const lg = legacyOf(); // bare verdier brukeren (eller env) har satt, ikke standarden qwen2.5vl:7b
     const legacy = wantKind === 'embedding' ? lg.embed : wantKind === 'bilde' ? lg.vision : lg.text;
-    const hit = legacy && invn.models.find((m) => sameModel(m.name, legacy) && fitsKindOf(m));
+    const hit = legacy && !retiredModel55(legacy) && invn.models.find((m) => sameModel(m.name, legacy) && fitsKindOf(m));
     if (hit) { if (warnings.length && !list.length) warnings.push(`bruker «${hit.name}»`); list.push({ provider: 'ollama', id: hit.name, from: 'legacy' }); }
   }
   // Første installerte modell av riktig type (lokalt først). Embedding-modeller brukes aldri til tekst.
@@ -764,7 +779,7 @@ export async function resolveTask(task, { user = me(), images = null, localOnly 
     // Første installerte modell som passer: tekst = tekst/resonnering (aldri bilde- eller embedding-modeller); bilde = rene bildemodeller først.
     // Modeller som får plass i VRAM (AI_GPU_VRAM_GB, standard 8) går foran: gemma4:12b (9,6 GB) kjører delvis på CPU og er treg.
     const vram = Number(process.env.AI_GPU_VRAM_GB) > 0 ? Number(process.env.AI_GPU_VRAM_GB) : 8;
-    const byFit = [...invn.models].sort((a, b) => ((a.sizeGb ?? 0) > vram - 0.5) - ((b.sizeGb ?? 0) > vram - 0.5));
+    const byFit = [...invn.models].filter((m) => !retiredModel55(m.name)).sort((a, b) => ((a.sizeGb ?? 0) > vram - 0.5) - ((b.sizeGb ?? 0) > vram - 0.5)); // prompt 55: aldri llama3.2:3b automatisk
     // Prompt 47: tolkningsoppgaver (glimt, sok, kat, fsok) velger hovedmodellen qwen3:8b, ellers en tekstmodell på minst 7B, før små modeller.
     const interp = wantKind === 'tekst' && INTERPRET_TASKS47.includes(t.id)
       ? byFit.find((m) => m.kind === 'tekst' && /^qwen3:8b/.test(m.name)) ?? byFit.find((m) => m.kind === 'tekst' && (paramsB47(m.name, invn) ?? 0) >= 7) : null;
@@ -794,14 +809,18 @@ export async function modelFor(task, p, oldModel, { user = me(), images = null }
   let r;
   try { r = routing(user); } catch { return oldModel; }
   const route = r.tasks[t] ?? {};
-  for (const m of [route.model, route.fallback]) { const pv = m ? providerOf(m) : null; if (pv && pv.provider === p) { if (p !== 'ollama' || MOCK()) return pv.id; break; } }
+  for (const m of [route.model, route.fallback]) {
+    const pv = m ? providerOf(m) : null;
+    if (pv && pv.provider === 'ollama' && retiredModel55(pv.id) && !(m === route.model && explicit55(r, t, pv.id))) continue; // prompt 55
+    if (pv && pv.provider === p) { if (p !== 'ollama' || MOCK()) return pv.id; break; }
+  }
   if (p !== 'ollama' || MOCK()) return oldModel;
   try {
     const invn = await ollamaInventory();
     if (!invn.ok) return oldModel;
     const res = await resolveTask(t, { user, images, localOnly: true });
     const c = res.list.find((x) => x.provider === 'ollama');
-    if (oldModel && invn.models.some((m) => sameModel(m.name, oldModel)) && (!c || c.from !== 'model')) return oldModel;
+    if (oldModel && !retiredModel55(oldModel) && invn.models.some((m) => sameModel(m.name, oldModel)) && (!c || c.from !== 'model')) return oldModel;
     if (c && c.id !== oldModel) console.warn(`[ai] ${t}: bruker «${c.id}»${oldModel ? ` i stedet for «${oldModel}» (${invn.models.some((m) => sameModel(m.name, oldModel)) ? 'valgt i rutingen' : 'finnes ikke på Ollama-serveren'})` : ''}`);
     return c?.id ?? oldModel;
   } catch { return oldModel; }

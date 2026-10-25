@@ -40,7 +40,10 @@ async function fakeFetch(url, init = {}) {
       const wait = ollama.slow.get(body.model) ?? 0;
       if (wait) await new Promise((res, rej) => { const t = setTimeout(res, wait); init.signal?.addEventListener('abort', () => { clearTimeout(t); rej(Object.assign(new Error('aborted'), { name: init.signal.reason?.name === 'TimeoutError' ? 'TimeoutError' : 'AbortError' })); }); });
       const prompt = JSON.stringify(body.messages ?? body.prompt ?? '');
-      const content = /kalenderhendelse/.test(prompt) ? '{"t":"Tannlege","k":"2026-10-21","s":"10:00","e":"","all":false,"r":""}' : body.format ? '{"ok":true,"answer":"ok"}' : /Svar bare: ok/.test(prompt) ? 'ok' : `Svar fra **${body.model}**.`;
+      // Prompt 55: Glimt-planleggeren får en gyldig plan (de eksisterende svarene, app.answer) – en ugyldig plan gir nå et
+      // oppfølgingsspørsmål i stedet for den gamle veien.
+      const planner = /^You are the planner for Glimt/.test(String(body.messages?.[0]?.content ?? ''));
+      const content = planner ? JSON.stringify({ intent: 'app', calls: [{ tool: 'app.answer', args: { topic: 'other' } }], needs_clarification: false, clarification_question: null }) : /kalenderhendelse/.test(prompt) ? '{"t":"Tannlege","k":"2026-10-21","s":"10:00","e":"","all":false,"r":""}' : body.format ? '{"ok":true,"answer":"ok"}' : /Svar bare: ok/.test(prompt) ? 'ok' : `Svar fra **${body.model}**.`;
       return Response.json({ model: body.model, message: { role: 'assistant', content }, done: true, prompt_eval_count: 12, eval_count: 5 });
     }
     if (u.endsWith('/api/embed')) return Response.json({ embeddings: [[0.1, 0.2]], prompt_eval_count: 1 });
@@ -98,7 +101,7 @@ test('Glimt (AI-søk): modellen i innstillingene finnes ikke (404) → før: sti
   assert.match(r.body.text, /Svar fra/);
   assert.match(r.body.warning, /Modellen «qwen2\.5vl:7b» finnes ikke på Ollama-serveren · bruker «qwen3:8b»/);
   const chat = ollama.calls.filter((c) => c.url.endsWith('/api/chat'));
-  // Prompt 47: Glimt-planleggeren får alltid spørsmålet først (her svarer den falske modellen med prat, ikke en plan → lokal plan),
+  // Prompt 47: Glimt-planleggeren får alltid spørsmålet først (her planlegger den falske modellen app.answer → de eksisterende svarene),
   // så svaret. Ingen kall går til modellen som ikke finnes.
   assert.ok(chat.length >= 1 && chat.every((c) => c.body.model === 'qwen3:8b'), 'ingen kall til en modell som ikke finnes');
   chat.splice(0, chat.length - 1);

@@ -8,6 +8,7 @@ import { join, dirname, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
+import { STANDARD_ROUTING, envFailure55 } from './lib/env.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -27,8 +28,9 @@ const HELP = `Glimt eval (GLIMT47)
   --case 01,07,vaer                 Bare casene med id som starter med / inneholder dette.
   --routing prod-db|standard|auto|FIL.json
                                     Modellrutingen. prod-db = les ai_routing fra produksjonsbasen ($DATA_DIR/homelab.db,
-                                    skrivebeskyttet; standard når den finnes, f.eks. i containeren). standard = glimt/chat/brief/fsok/dom
-                                    qwen3:8b, sok/kat llama3.2:3b, rc/bar qwen2.5vl:7b, kb nomic-embed-text (dagens oppsett).
+                                    skrivebeskyttet; standard når den finnes, f.eks. i containeren). standard = alle tekstruter
+                                    (glimt, sok, chat, brief, fsok, kat, dom) qwen3:8b, rc/bar qwen2.5vl:7b, kb nomic-embed-text.
+                                    (Prompt 55: llama3.2:3b er tatt ut av standarden.)
                                     auto = appens standard (tomme ruter, appen velger). FIL = JSON fra GET /api/ai/routing.
   --db PATH                         homelab.db for --routing prod-db (standard $DATA_DIR/homelab.db).
   --model M                         Overstyr tekstrutene (glimt, sok, chat, brief, fsok, kat) med M.
@@ -37,6 +39,9 @@ const HELP = `Glimt eval (GLIMT47)
   --keep                            Behold DATA_DIR for hver kjøring (stien står i JSON-resultatet).
   --out DIR                         Resultatmappe (standard eval/results).
   --quiet                           Ikke skriv fremdrift per kjøring.
+
+  Miljø (prompt 55): EVAL_MAC_OCR_URL + EVAL_MAC_OCR_KEY kobler på Mac-OCR (ellers har eval ingen Mac-OCR). Feil som skyldes
+  miljøet (ingen OCR, modell ikke installert) får status «env» og telles ikke som modellfeil.
 `;
 const argv = process.argv.slice(2);
 const opt = {};
@@ -62,7 +67,8 @@ const ollamaUrl = backend === 'openwebui' ? (opt['ollama-url'] ?? '') : url;
 
 /* ---------------- Ruting ---------------- */
 
-const STANDARD = { glimt: 'qwen3:8b', chat: 'qwen3:8b', brief: 'qwen3:8b', fsok: 'qwen3:8b', dom: 'qwen3:8b', sok: 'llama3.2:3b', kat: 'llama3.2:3b', rc: 'qwen2.5vl:7b', bar: 'qwen2.5vl:7b', kb: 'nomic-embed-text' };
+// Prompt 55: sok og kat er qwen3:8b (ikke llama3.2:3b): ingen modellbytter mellom tolkning og svar med OLLAMA_MAX_LOADED_MODELS=1.
+const STANDARD = STANDARD_ROUTING;
 const TEXT_TASKS = ['glimt', 'sok', 'chat', 'brief', 'fsok', 'kat'], VISION_TASKS = ['rc', 'bar'];
 function readProdRouting(dbPath) {
   const Database = require(join(REPO, 'node_modules', 'better-sqlite3'));
@@ -89,7 +95,7 @@ if (routingMode === 'prod-db') {
   if (!routingFull) routingNote += ' – fant ingen ai_routing, appens standard brukes';
 } else if (routingMode === 'standard') {
   tasks = Object.fromEntries(Object.entries(STANDARD).map(([k, m]) => [k, { model: m, fallback: '' }]));
-  routingNote = 'standard (dagens oppsett: glimt qwen3:8b, sok llama3.2:3b, rc qwen2.5vl:7b)';
+  routingNote = 'standard (tekst qwen3:8b, rc/bar qwen2.5vl:7b, kb nomic-embed-text)';
 } else if (routingMode === 'auto') {
   routingNote = 'auto (appens standard: tomme ruter)';
 } else {
@@ -139,7 +145,7 @@ if (missing.length) console.log(`ADVARSEL: modeller i rutingen som ikke er insta
 // Bare et lite, kjent miljø går videre til kjøringene: ingen produksjonsnøkler (Google, HA, IMAP, Cloudflare …) og ingen
 // produksjons-DATA_DIR (worker.mjs lager sin egen). Slik kan eval trygt kjøres inne i containeren.
 function cleanEnv() {
-  const keep = /^(PATH|HOME|USER|LOGNAME|SHELL|LANG|LANGUAGE|LC_\w+|TMPDIR|TMP|TEMP|SystemRoot|ComSpec|PATHEXT|TESSDATA_PREFIX|OCR_FALLBACK|EVAL_\w+|NODE_OPTIONS|NODE_EXTRA_CA_CERTS)$/;
+  const keep = /^(PATH|HOME|USER|LOGNAME|SHELL|LANG|LANGUAGE|LC_\w+|TMPDIR|TMP|TEMP|SystemRoot|ComSpec|PATHEXT|TESSDATA_PREFIX|OCR_FALLBACK|EVAL_\w+|NODE_OPTIONS|NODE_EXTRA_CA_CERTS)$/; // EVAL_MAC_OCR_URL/KEY går med
   return Object.fromEntries(Object.entries(process.env).filter(([k]) => keep.test(k)));
 }
 function runOne(meta, i) {
@@ -159,37 +165,52 @@ function runOne(meta, i) {
       if (r.error && /^Riggfeil/.test(r.reason ?? '')) r.riggError = true;
       r.log = logs.split('\n').filter((l) => l.trim()).slice(-60);
       r.run = i;
+      const env = envFailure(r, logs);
+      if (env) { r.status = 'env'; r.envReason = env; } else r.status = r.ok ? 'ok' : r.riggError ? 'rigg' : 'feil';
       res(r);
     });
   });
 }
 
+const envFailure = (r, logs) => envFailure55(r, logs, missing); // prompt 55: miljøfeil (eval/lib/env.mjs)
 const all = [];
 for (const meta of metas) {
   const results = [];
   for (let i = 1; i <= runs; i++) {
     const r = await runOne(meta, i);
     results.push(r);
-    log(`  ${r.ok ? 'OK  ' : r.riggError ? 'RIGG' : 'FEIL'} ${meta.id} #${i} ${(r.ms / 1000).toFixed(1)} s${r.ok ? '' : ` – ${String(r.reason ?? '').slice(0, 220)}`}`);
+    log(`  ${r.ok ? 'OK  ' : r.riggError ? 'RIGG' : r.status === 'env' ? 'ENV ' : 'FEIL'} ${meta.id} #${i} ${(r.ms / 1000).toFixed(1)} s${r.ok ? '' : r.status === 'env' ? ` – miljø: ${r.envReason} (${String(r.reason ?? '').slice(0, 140)})` : ` – ${String(r.reason ?? '').slice(0, 220)}`}`);
   }
   const ms = results.map((r) => r.ms ?? 0).sort((a, b) => a - b);
-  all.push({ ...meta, passes: results.filter((r) => r.ok).length, runs, medianMs: ms[Math.floor((ms.length - 1) / 2)], models: [...new Set(results.flatMap((r) => r.models ?? []))],
+  all.push({ ...meta, passes: results.filter((r) => r.ok).length, envRuns: results.filter((r) => r.status === 'env').length, envReasons: [...new Set(results.filter((r) => r.status === 'env').map((r) => r.envReason))], runs, medianMs: ms[Math.floor((ms.length - 1) / 2)], models: [...new Set(results.flatMap((r) => r.models ?? []))],
     maxPromptTokens: Math.max(0, ...results.map((r) => r.tokens?.maxPrompt ?? 0)), riggErrors: results.filter((r) => r.riggError).length, results });
 }
 
 /* ---------------- Rapport ---------------- */
 
 const pad = (s, n) => { s = String(s); return s.length > n ? `${s.slice(0, n - 1)}…` : s + ' '.repeat(n - s.length); };
-const firstReason = (c) => c.results.find((r) => !r.ok)?.reason ?? '';
-const rows = all.map((c) => [c.id, `${c.passes}/${c.runs}`, `${(c.medianMs / 1000).toFixed(1)} s`, c.models.join(', ') || '–', c.maxPromptTokens || '–', c.passes === c.runs ? '' : firstReason(c)]);
+const firstReason = (c) => { const r = c.results.find((x) => !x.ok && x.status !== 'env') ?? c.results.find((x) => !x.ok); return r ? `${r.status === 'env' ? `[miljø: ${r.envReason}] ` : ''}${r.reason ?? ''}` : ''; };
+const okText = (c) => `${c.passes}/${c.runs}${c.envRuns ? ` (${c.envRuns} env)` : ''}`;
+const rows = all.map((c) => [c.id, okText(c), `${(c.medianMs / 1000).toFixed(1)} s`, c.models.join(', ') || '–', c.maxPromptTokens || '–', c.passes === c.runs ? '' : firstReason(c)]);
 const head = ['Case', 'OK', 'Median', 'Modell(er)', 'Maks prompt-tok', 'Grunn (første feil)'];
-const widths = [26, 5, 8, 26, 15, 90];
+const widths = [26, 11, 8, 26, 15, 90];
 console.log(`\n${head.map((h, i) => pad(h, widths[i])).join(' ')}\n${widths.map((w) => '-'.repeat(w)).join(' ')}`);
 for (const r of rows) console.log(r.map((x, i) => pad(x, widths[i])).join(' '));
 const totalPass = all.reduce((a, c) => a + c.passes, 0), total = all.reduce((a, c) => a + c.runs, 0);
 const green = all.filter((c) => c.passes === c.runs).length;
-console.log(`\nTotalt ${totalPass}/${total} kjøringer bestått · ${green}/${all.length} caser ${runs}/${runs}`);
+// Prompt 55: miljøfeil på egen linje – ikke talt som modellfeil (de er med i «total», men ikke i «modellfeil»).
+const envTotal = all.reduce((a, c) => a + c.envRuns, 0);
+const modelFails = total - totalPass - envTotal;
+const envLine = envTotal ? `Miljøfeil (ikke modellfeil): ${envTotal} kjøring(er) · ${[...new Set(all.flatMap((c) => c.envReasons))].join(' | ')} · caser: ${all.filter((c) => c.envRuns).map((c) => c.id).join(', ')}` : null;
+console.log(`\nTotalt ${totalPass}/${total} kjøringer bestått · ${green}/${all.length} caser ${runs}/${runs} · modellfeil ${modelFails}${envTotal ? ` · miljøfeil ${envTotal}` : ''}`);
+if (envLine) console.log(envLine);
 
+// Prompt 55: tid per modellkall (modell, steg/tittel, total, lasting fra Ollama) – modellbytter og kald lasting synes i rapporten.
+function modelTimes(calls) {
+  const list = calls.filter((m) => m.kind !== 'embed').map((m) => `${m.model}${m.think ? ' (think)' : ''} ${((m.ms ?? 0) / 1000).toFixed(1)} s${m.loadMs > 500 ? ` [lasting ${(m.loadMs / 1000).toFixed(1)} s]` : ''}${m.error ? ' ✗' : ''}`);
+  const swaps = calls.filter((m, i) => m.kind !== 'embed' && i && calls[i - 1].model !== m.model).length;
+  return `kall: ${list.join(' → ')}${swaps ? ` · ${swaps} modellbytte(r)` : ''}`;
+}
 const date = new Date().toISOString().slice(0, 10);
 const modelTag = (tasks.glimt?.model || routingFull?.tasks?.glimt?.model || userRouting?.tasks?.glimt?.model || (backend === 'mock' ? 'mock' : 'auto')).replace(/[^\w.-]+/g, '_');
 const outDir = resolve(opt.out ?? join(HERE, 'results'));
@@ -198,17 +219,19 @@ let base = join(outDir, `${date}-${backend}-${modelTag}`);
 for (let n = 2; existsSync(`${base}.json`); n++) base = join(outDir, `${date}-${backend}-${modelTag}-${n}`);
 const meta = { date: new Date().toISOString(), frozenClock: '2026-10-24T10:00:00+02:00 (Europe/Oslo)', backend, url: backend === 'mock' ? null : mask(url), ollamaUrl: backend === 'openwebui' ? (ollamaUrl || null) : undefined,
   routing: { mode: routingMode, note: routingNote, effective: all[0]?.results?.[0]?.routing ?? null }, missingModels: missing, runs, commit, node: process.version };
-writeFileSync(`${base}.json`, JSON.stringify({ meta, summary: { passed: totalPass, total, greenCases: green, cases: all.length }, cases: all }, null, 2));
+writeFileSync(`${base}.json`, JSON.stringify({ meta, summary: { passed: totalPass, total, greenCases: green, cases: all.length, modelFailures: modelFails, envFailures: envTotal }, cases: all }, null, 2));
 const md = [`# Glimt eval ${date} · ${backend} · ${modelTag}`, '',
   `- Klokke: ${meta.frozenClock}`, `- Backend: ${backend}${meta.url ? ` (${meta.url})` : ''}`, `- Ruting: ${routingNote}`,
   `- Effektiv ruting: ${Object.entries(meta.routing.effective ?? {}).map(([k, v]) => `${k}=${v}`).join(', ')}`,
   ...(missing.length ? [`- Mangler i Ollama: ${missing.join(', ')}`] : []), `- Commit: ${commit ?? 'ukjent'} · Node ${process.version}`, '',
-  `**${totalPass}/${total} kjøringer bestått · ${green}/${all.length} caser ${runs}/${runs}**`, '',
+  `**${totalPass}/${total} kjøringer bestått · ${green}/${all.length} caser ${runs}/${runs} · modellfeil ${modelFails}${envTotal ? ` · miljøfeil ${envTotal}` : ''}**`, '',
+  ...(envLine ? [`> ${envLine}`, ''] : []),
+  `- Miljø: ${(all[0]?.results?.[0]?.env?.notes ?? []).join(' · ') || 'OCR tilgjengelig'}`, '',
   '| Case | OK | Median | Modell(er) | Maks prompt-tok | Grunn (første feil) |', '|---|---|---|---|---|---|',
   ...rows.map((r) => `| ${r.map((x) => String(x).replace(/\|/g, '\\|').replace(/\n/g, ' ')).join(' | ')} |`), '',
   '## Per case', '',
   ...all.flatMap((c) => [`### ${c.id} – ${c.title} (${c.passes}/${c.runs})`, '', ...c.results.flatMap((r) => [
-    `- Kjøring ${r.run}: ${r.ok ? 'OK' : 'FEIL'} · ${(r.ms / 1000).toFixed(1)} s · modellkall ${r.tokens?.calls ?? 0} · prompt-tok maks ${r.tokens?.maxPrompt ?? '–'}`,
+    `- Kjøring ${r.run}: ${r.ok ? 'OK' : r.status === 'env' ? `ENV (${r.envReason})` : 'FEIL'} · ${(r.ms / 1000).toFixed(1)} s · modellkall ${r.tokens?.calls ?? 0} · prompt-tok maks ${r.tokens?.maxPrompt ?? '–'}${r.trace?.model?.length ? ` · ${modelTimes(r.trace.model)}` : ''}`,
     ...(r.checks ?? []).map((k) => `  - ${k.info ? 'ℹ' : k.ok ? '✓' : '✗'} ${k.name}${k.detail ? `: ${String(k.detail).replace(/\n/g, ' ')}` : ''}`),
     ...(r.riggError ? [`  - Riggfeil: ${String(r.error ?? '').split('\n')[0]}`] : []),
   ]), '']),

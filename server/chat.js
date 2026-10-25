@@ -791,7 +791,9 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
 
   // Prompt 44: rutingen før hovedmodellen. Bare delene av «Mine data» rutingen valgte legges ved (ikke Finans, Kalender og
   // Huskeliste på «hvem er statsminister i England»). «Nettsøk»-knappen (b.webSearch) tvinger web.
-  const route = b.noTools ? { tools: ['none'], query: '', via: 'av', ms: 0 } : await routeTools(routeTextOf(history), { user: u, forceWeb: !!b.webSearch, localOnly: m.kind !== 'sky', useLlm: !isMock() }).catch(() => ({ tools: ['none'], query: '', via: 'feil', ms: 0 }));
+  // Prompt 55: med bilde i meldingen er veien allerede valgt (kvittering/dokument/visjon) – bare regelen, ingen LLM-ruting. Ruteren
+  // gikk til «AI-søk» (llama3.2:3b) og ga et ekstra modellbytte (qwen3 ↔ llama3.2 ↔ qwen2.5vl med OLLAMA_MAX_LOADED_MODELS=1).
+  const route = b.noTools ? { tools: ['none'], query: '', via: 'av', ms: 0 } : await routeTools(routeTextOf(history), { user: u, forceWeb: !!b.webSearch, localOnly: m.kind !== 'sky', useLlm: !isMock() && !hasImg50 }).catch(() => ({ tools: ['none'], query: '', via: 'feil', ms: 0 }));
   // Prompt 46 (GLIMT46): Nettsøk av (webSearch:false fra appene) = ingen nettkall i det hele tatt – heller ikke vårt eget søk eller
   // Open WebUIs (features.web_search:false, tool_ids:[] i hvert kall, se ai-gate owuiBody). Ville rutingen søke, sier Glimt fra.
   const webOff = b.webSearch === false;

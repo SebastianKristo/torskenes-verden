@@ -106,7 +106,8 @@ export async function recommend(u, { hw = null, withWhy = true } = {}) {
   const finLocal = !!r.rules?.finLocal;
   const pick = (t) => {
     const w = WEIGHTS[t.id];
-    const cands = REC.filter((c) => w.need.every((e) => c.evner.includes(e)) && (w.need.includes('embedding') || !c.evner.every((e) => NO_TEXT.has(e))) && c.mem <= budget - 0.2);
+    const cands = REC.filter((c) => w.need.every((e) => c.evner.includes(e)) && (w.need.includes('embedding') || !c.evner.every((e) => NO_TEXT.has(e))) && c.mem <= budget - 0.2
+      && !(ai.INTERPRET_TASKS47.includes(t.id) && ai.retiredModel55(c.id))); // prompt 55: llama3.2:3b anbefales aldri til tolkning
     const cur = r.tasks?.[t.id]?.model ?? '';
     return cands.map((c) => ({ c, s: scoreOf(c, w, budget, { installed: isInst(c.id), inUse: sameModel(cur, c.id) }) })).sort((a, b) => b.s - a.s);
   };

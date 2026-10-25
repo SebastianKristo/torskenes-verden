@@ -24,6 +24,7 @@ import { mkdtemp, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { tool45, pdfPages45, heicToJpg45, parseCourses45 } from './study45.js';
+import { isSubjectCode55, unwrapGrade55, clean55 } from './study55.js'; // prompt 55: karakter, fagkode og fagnavn
 
 const run = (cmd, args, timeout = 60_000) => new Promise((res, rej) => execFile(cmd, args, { timeout, maxBuffer: 64 * 1024 * 1024, encoding: 'utf8' }, (e, out) => (e ? rej(e) : res(out))));
 const tmp = async (fn) => { const dir = await mkdtemp(join(tmpdir(), 'st46-')); try { return await fn(dir); } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); } };
@@ -139,8 +140,11 @@ function headerOf(row) {
   return cols.filter((c) => c.type);
 }
 const GRADE_RE = /^([A-F]|[1-6]|bestått|ikke bestått|godkjent|ikke godkjent|stryk|iv|ib|fritatt|fritak|deltatt|ikke møtt|passed|failed)$/i;
+// Prompt 55: «strconv(4)», «4.0», «Karakter: 4» pakkes ut, og en fagkode (NOR1211) er aldri en karakter.
 const normGrade = (g) => {
-  const s = String(g ?? '').trim().replace(/\s+/g, ' ');
+  if (isSubjectCode55(g)) return null;
+  const s = unwrapGrade55(g).replace(/\s+/g, ' ');
+  if (isSubjectCode55(s)) return null;
   if (/^[a-f]$/i.test(s)) return s.toUpperCase();
   if (/^[1-6]$/.test(s)) return s;
   if (/^passed$/i.test(s)) return 'Bestått';
@@ -267,13 +271,16 @@ export function validate46(emner, total) {
 
 /* ---------------- 4. Visjon i striper (reserve) ---------------- */
 
-export const ROWS_SCHEMA46 = { type: 'object', properties: { rows: { type: 'array', items: { type: 'object', properties: { code: { type: 'string' }, name: { type: 'string' }, semester: { type: 'string' }, grade: { type: 'string' }, ects: { type: 'number' } }, required: ['name', 'grade'] } } }, required: ['rows'] };
+// Prompt 55: karakteren er et enum (en fagkode eller annen tekst kan ikke havne i grade), fagkoden har eget felt.
+export const GRADES55 = ['1', '2', '3', '4', '5', '6', 'A', 'B', 'C', 'D', 'E', 'F', 'Bestått', 'Ikke bestått', 'Godkjent', 'Ikke godkjent', 'IV', 'IB', 'Fritatt', ''];
+export const ROWS_SCHEMA46 = { type: 'object', properties: { rows: { type: 'array', items: { type: 'object', properties: { code: { type: 'string' }, name: { type: 'string' }, semester: { type: 'string' }, grade: { type: 'string', enum: GRADES55 }, ects: { type: 'number' } }, required: ['name', 'grade'] } } }, required: ['rows'] };
+export const STRIPE_PROMPT55 = 'Dette er en stripe av en tabell fra et norsk vitnemål/karakterutskrift. Les hver rad som et emne: code = fagkoden (bokstaver + sifre, f.eks. NOR1211, REA3056, IN1000), name = fagnavnet slik det står, semester, grade = BARE karakteren (1–6, A–F, Bestått, IV …; fagkoden er aldri karakteren, tom tekst hvis raden ikke har karakter) og studiepoeng. Hopp over overskrifter og halve rader. Svar KUN med JSON.';
 let stripeImpl = null;
 /** Bare for tester: (stripeBuffer, user, i) → {rows:[…]}. */
 export const _setStudyStripe46 = (fn) => { stripeImpl = fn; };
 const stripeAi = () => stripeImpl ?? (process.env.MOCK_DATA === '1' ? null : async (img, user) => {
   const { run: aiRun } = await import('./ai-run.js');
-  const out = await aiRun('rc', { user, images: [img], prompt: 'Dette er en stripe av en tabell fra et norsk vitnemål/karakterutskrift. Les hver rad som et emne: kode, navn, semester, karakter (A–F, 1–6, Bestått) og studiepoeng. Hopp over overskrifter. Svar KUN med JSON.', schema: ROWS_SCHEMA46, json: true, localOnly: true, numPredict: 700, title: 'Glimt · les vitnemål (stripe)', background: true });
+  const out = await aiRun('rc', { user, images: [img], prompt: STRIPE_PROMPT55, schema: ROWS_SCHEMA46, json: true, localOnly: true, numPredict: 700, title: 'Glimt · les vitnemål (stripe)', background: true });
   return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}');
 });
 /** Bilde → horisontale striper (ImageMagick), min. 1600 px bredde. → [Buffer] */
@@ -300,14 +307,20 @@ async function visionRows46(images, user) {
     }
   }
   const seen = new Set();
-  return rows.map((r) => {
-    const karakter = normGrade(r?.grade);
+  // Prompt 55: en ugyldig karakter (fagkode, «strconv(4)» …) skrives aldri ut som karakter – den blir null med «Sjekk», og fagnavnet
+  // matches mot kjente fag (clean55). Fagkode i karakterfeltet flyttes til kode.
+  const mapped = rows.map((r) => {
+    const g0 = r?.grade, c0 = r?.code;
+    let karakter = normGrade(g0);
+    let kodeRaw = c0;
+    if (!karakter && isSubjectCode55(g0)) { karakter = normGrade(c0); if (!isSubjectCode55(c0)) kodeRaw = g0; } // kode og karakter i byttet felt
     const sp = Number.isFinite(+r?.ects) && +r.ects > 0 && +r.ects <= 60 ? +r.ects : null;
-    const kode = r?.code && CODE_RE.test(String(r.code).trim().toUpperCase()) ? String(r.code).trim().toUpperCase() : null;
+    const kode = kodeRaw && CODE_RE.test(String(kodeRaw).trim().toUpperCase()) ? String(kodeRaw).trim().toUpperCase() : null;
     const e = { kode, navn: cap(String(r?.name ?? '').trim().slice(0, 120)), sp, karakter, semester: r?.semester ? semNorm(r.semester) ?? String(r.semester).slice(0, 20) : null, source: 'visjon' };
-    if (!karakter) { e.check = true; e.checkReason = `Ukjent karakter «${String(r?.grade ?? '').slice(0, 20)}»`; e.karakter = String(r?.grade ?? '').slice(0, 20) || null; }
+    if (!karakter) { e.check = true; e.checkReason = String(g0 ?? '').trim() ? `Ukjent karakter «${String(g0).slice(0, 20)}»` : 'Mangler karakter'; e.karakter = null; }
     return e;
   }).filter((e) => { const k = `${e.kode ?? ''}|${e.navn.toLowerCase()}`; if (e.navn.length < 2 || seen.has(k)) return false; seen.add(k); return true; });
+  return clean55(mapped);
 }
 
 /* ---------------- Hele kjeden ---------------- */

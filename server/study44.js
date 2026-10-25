@@ -185,6 +185,7 @@ export const _setStudyAi44 = (fn) => { aiImpl = fn; };
 // Prompt 47: dokumentstrukturering med steg «document» (params47: num_ctx 16384, num_predict 4096, temperatur 0, think av) og
 // strengt JSON-skjema når kalleren gir et – før kuttet 4096/900 lange dokumenter, og fag manglet.
 import { completeness47, retryMissing47, completenessText47 } from './glimt45/document47.js'; // prompt 47
+import { clean55 } from './study55.js'; // prompt 55
 const ai = () => aiImpl ?? (MOCK() ? null : async (prompt, user, schema = null) => { const { run: aiRun } = await import('./ai-run.js'); const out = await aiRun('glimt', { user, prompt, json: true, ...(schema ? { schema } : {}), step: 'document', localOnly: true, title: 'Glimt · les dokument', background: true }); return out.data ?? JSON.parse(String(out.text).match(/\{[\s\S]*\}/)?.[0] ?? '{}'); });
 async function analyse(user, buf, mime, name) {
   const steps = [];
@@ -225,6 +226,8 @@ async function analyse(user, buf, mime, name) {
       steps.push({ key: 'glimt', label: 'Glimt leste fagene (lokal modell)', ms: 0, ok: true });
     } catch (e) { steps.push({ key: 'glimt', label: 'Glimt kunne ikke lese fagene', ms: 0, ok: false, error: e.message }); }
   }
+  // Prompt 55: karakteren valideres (fagkode/«strconv(4)» blir aldri karakter), fagnavn matches mot kjente fag, dubletter fjernes.
+  emner = clean55(emner).map((e) => ({ ...e, tone: toneOf(e.karakter) }));
   // Prompt 47: fullstendighetssjekk i kode – fag-rader i OCR-teksten mot fagene i JSON. Manglende rader får ett nytt forsøk (bare de
   // radene, strengt skjema), og avvik flagges i svaret. Modellen får ikke legge til fag som ikke står i OCR-teksten.
   let comp = ex.text ? completeness47(ex.text, emner) : null;

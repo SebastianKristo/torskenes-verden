@@ -4,9 +4,12 @@
 //   C  Mac Vision OCR på bildet                           → qwen3:8b → valider (ett nytt forsøk)
 //   T  Tesseract (tsv) når Mac-OCR er av/utilgjengelig    → qwen3:8b → valider (ett nytt forsøk)
 //   (D  Gemini er fjernet i prompt 52: kvitteringer leses bare lokalt, også når sperren er av)
+//   V  Prompt 55: INGEN OCR tilgjengelig (Mac-OCR nede/mangler nøkkel OG Tesseract mangler/av) → visjonsmodellen (ruten «rc»,
+//      qwen2.5vl:7b) med SAMME schema og SAMME validering, merket «lest med visjonsmodell (ingen OCR)», sikkerhet maks middels.
+//      Visjonsmodellen er aldri eneste kilde når OCR finnes: ga OCR tekst (eller finnes Tesseract), brukes ikke V.
 // Hvert steg kan slås av (settings.receipts48). Finnes både device-OCR og Mac-OCR, sammenlignes totalen: avvik → resultatet
 // som består sumsjekken brukes, ellers merkes totalen som usikker. Består ingen, brukes det beste forsøket (færrest feil).
-import { checkOcr48 } from './schema.js';
+import { checkOcr48, modelFormat48 } from './schema.js';
 import { normalizeOcr48, ocrText48 } from './normalize.js';
 import { validateReceipt48, score48, totalCandidates48 } from './validate.js';
 import { r48Settings, macOcrKey48 } from './settings.js';
@@ -16,7 +19,26 @@ import { tesseractOcr48 } from './engines/tesseract.js';
 import { macHealth48 } from './engines/mac-vision.js';
 import { resolveMerchant51 } from './brreg51.js'; // prompt 51: butikknavn via org.nr. → kjent butikk → modellen
 
-export const STEP_NAMES48 = { A: 'Tolket på enheten', B: 'Enhetens OCR + lokal modell', C: 'Mac Vision + lokal modell', T: 'Tesseract + lokal modell' };
+export const STEP_NAMES48 = { A: 'Tolket på enheten', B: 'Enhetens OCR + lokal modell', C: 'Mac Vision + lokal modell', T: 'Tesseract + lokal modell', V: 'Visjonsmodell (ingen OCR)' };
+export const VISION_LABEL55 = 'visjonsmodell (ingen OCR)';
+let visionImpl55 = null;
+/** Bare for tester: ({image, mime, prompt, system, schema, feedback}) → {data, model}. */
+export const _setReceiptVision55 = (fn) => { visionImpl55 = fn ?? null; };
+const VISION_SYSTEM55 = `Du leser BILDET av en norsk kvittering og gjør det om til JSON etter skjemaet. Det finnes ingen OCR-tekst – les selv, linje for linje.
+Regler:
+- Hver varelinje er én post i items (description slik den står, amount = linjens sum). Hopp aldri over en linje. Pant og tips er egne varelinjer.
+- Rabatter er egne poster i discounts med NEGATIVT beløp. Ikke regn ut noe selv. Ikke finn på varer, beløp eller datoer. Ukjent felt = null (lister = []).
+- Beløp i kroner som tall med punktum som desimalskille (1299.00). total = beløpet ved TOTAL / Å BETALE / SUM / BETALT.
+- date = kjøpsdatoen som ÅÅÅÅ-MM-DD. time = TT:MM. org_number = bare sifre. vat = mva per sats (25, 15 eller 12) slik det står.
+- category_suggestion = én kategori fra listen brukeren gir.`;
+/** Visjonsmodellen via ai-run (ruten «rc», bare lokalt). → {data, model} */
+async function visionParse55({ image, mime, categories, feedback, signal }) {
+  const prompt = `Kategorier: ${categories.length ? categories.join(', ') : 'Mat og dagligvarer, Restaurant og kafé, Transport og lading, Bolig, Hjem, Fritid og hobby, Abonnementer, Skole, Annet'}\n\nLes kvitteringen i bildet.${feedback ? `\n\n${feedback}` : ''}`;
+  if (visionImpl55) return visionImpl55({ image, mime, prompt, system: VISION_SYSTEM55, schema: modelFormat48(), feedback });
+  const { run: aiRun } = await import('../ai-run.js');
+  const out = await aiRun('rc', { images: [image], system: VISION_SYSTEM55, prompt, schema: modelFormat48(), localOnly: true, temperature: 0, numCtx: 8192, numPredict: 3072, title: 'Kvittering · visjonsmodell (ingen OCR)', signal });
+  return { data: out.data ?? JSON.parse(String(out.text ?? '').match(/\{[\s\S]*\}/)?.[0] ?? 'null'), model: out.model };
+}
 export const DEVICE_OCR_SOURCES48 = ['ios_vision', 'android_mlkit'];
 // Mac-OCR som ikke svarte, hoppes over i 2 minutter (så hver kvittering ikke venter på samme tidsavbrudd).
 // Prompt 51: før bildet sendes, sjekkes /health med kort tidsavbrudd (1,5 s) – svarer ikke verten, merkes Mac-OCR som nede i 5 min
@@ -53,7 +75,7 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
   // Prompt 51: Tesseract og Mac-OCR leser ORIGINALEN (forbehandlet, aldri under 2000 px). Den nedskalerte kopien er bare reserve når
   // originalen ikke kan leses (HEIC uten libheif).
   const pipeline = [], cands = [];
-  let modelDown = null, macOcr = null, macErr = null, tessOcr = null, passed = null;
+  let modelDown = null, macOcr = null, macErr = null, tessOcr = null, passed = null, tessMissing = !cfg.tesseract ? 'Tesseract er slått av' : null;
   const entry = (step, extra = {}) => { const e = { step, name: STEP_NAMES48[step], status: 'skipped', ms: 0, ...extra }; pipeline.push(e); return e; };
   const skip = (step, reason) => { entry(step, { reason }); log(`steg-${step}`, `hoppet over: ${reason}`); };
 
@@ -156,9 +178,44 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
         const pp = tessOcr.preprocess;
         log('tesseract', `${tessOcr.rows.length} rader · ${tessOcr.ms} ms${tessOcr.image_size ? ` · ${tessOcr.image_size.join('×')} px` : ''}${pp ? ` · ${[pp.from === 'scan' ? 'fra 1600 px-kopien' : 'original', pp.rotated && 'rotert', pp.perspective && 'perspektiv rettet', pp.cropped && 'beskåret', pp.upscaled && 'skalert opp'].filter(Boolean).join(', ')}` : ''}`);
       }
-      catch (e) { entry('T', { status: 'unavailable', engine: 'tesseract', ms: Date.now() - t0, error: e.message }); log('tesseract', `utilgjengelig: ${e.message}`); }
+      catch (e) { entry('T', { status: 'unavailable', engine: 'tesseract', ms: Date.now() - t0, error: e.message }); log('tesseract', `utilgjengelig: ${e.message}`); if (e.missing) tessMissing = e.message; }
       if (tessOcr && await modelStep('T', tessOcr, 'tesseract')) passed = 'T';
     }
+  }
+
+  // V (prompt 55): ingen OCR i det hele tatt (Mac-OCR utilgjengelig/av og Tesseract mangler/av, ingen device-OCR) → visjonsmodellen
+  // med samme schema og validering. Finnes OCR (også når den ikke ga et godkjent resultat), brukes ikke visjonsmodellen.
+  const noOcr55 = !passed && !!image && !deviceOcr && !macOcr && !tessOcr && (!cfg.macOcr || !!macErr) && !!tessMissing && !/pdf/i.test(String(mime ?? ''));
+  let visionUsed = false;
+  if (noOcr55) {
+    const why = [cfg.macOcr ? macErr : 'Mac-OCR er slått av', tessMissing].filter(Boolean).join(' · ');
+    const e = entry('V', { engine: 'vision', status: 'failed', attempts: [], reason: `ingen OCR: ${why}` });
+    log('steg-V', `ingen OCR (${why}) · leser bildet med visjonsmodellen`);
+    let feedback = null;
+    const t0 = Date.now();
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const ta = Date.now();
+      try {
+        const r = await visionParse55({ image, mime, categories, feedback, signal });
+        const v = validateReceipt48(r.data, { ocrText: '', categories });
+        e.model = r.model ?? null;
+        e.attempts.push({ attempt, ms: Date.now() - ta, confidence: v.confidence, failed_fields: v.failed_fields });
+        cands.push({ step: 'V', v, ocr: null, engine: 'vision', model: r.model ?? null, provider: 'ollama', order: cands.length });
+        visionUsed = true;
+        log('steg-V', `${r.model ?? 'visjonsmodell'}${attempt > 1 ? ' (nytt forsøk)' : ''} · ${v.ok ? 'besto kontrollen' : `feilet: ${v.failed_fields.join(', ')}`} · ${Date.now() - ta} ms`);
+        if (v.ok) { Object.assign(e, { status: 'ok', ms: Date.now() - t0, confidence: v.confidence }); passed = 'V'; break; }
+        feedback = v.feedback;
+        Object.assign(e, { failed_fields: v.failed_fields, confidence: v.confidence });
+      } catch (err) {
+        e.attempts.push({ attempt, ms: Date.now() - ta, error: err.message });
+        Object.assign(e, { status: 'error', error: err.message });
+        log('steg-V', `visjonsmodellen: ${err.message}`);
+        if (signal?.aborted) throw err;
+        if (!/JSON/i.test(err.message)) break;
+        feedback = 'Forrige svar var ikke gyldig JSON. Svar bare med ett JSON-objekt etter skjemaet.';
+      }
+    }
+    e.ms = Date.now() - t0;
   }
 
   // Beste OCR-tekst så langt (til lagring): Mac, så enheten, så Tesseract.
@@ -204,11 +261,14 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
   const uncertain = [...new Set([...(v?.failed_fields ?? ['merchant', 'date', 'total', 'items']), ...uncertainExtra])];
   let confidence = v?.confidence ?? 'low';
   if (confidence === 'high' && uncertainExtra.length) confidence = 'medium';
-  const label = !pick ? null : pick.step === 'A' ? (client?.platform === 'android' ? 'Android' : 'iPhone') : pick.step === 'B' ? (deviceOcr?.source === 'android_mlkit' ? 'Android + Glimt' : 'iPhone + Glimt') : pick.step === 'C' ? 'Mac' : pick.step === 'T' ? 'Glimt (Tesseract)' : 'Lokal AI';
+  // Prompt 55: lest uten OCR (bare visjonsmodellen) → aldri «høy» sikkerhet, og totalen regnes som usikker.
+  if (pick?.step === 'V') { if (confidence === 'high') confidence = 'medium'; if (!uncertain.includes('total')) uncertain.push('total'); }
+  const label = !pick ? null : pick.step === 'A' ? (client?.platform === 'android' ? 'Android' : 'iPhone') : pick.step === 'B' ? (deviceOcr?.source === 'android_mlkit' ? 'Android + Glimt' : 'iPhone + Glimt') : pick.step === 'C' ? 'Mac' : pick.step === 'T' ? 'Glimt (Tesseract)' : pick.step === 'V' ? VISION_LABEL55 : 'Lokal AI';
   return {
     receipt: v?.receipt ?? null, confidence, failed_fields: v?.failed_fields ?? [], uncertain_fields: uncertain, errors: v?.errors ?? ['Ingen steg ga et resultat'], warnings: v?.warnings ?? [],
     checks: v?.checks ?? null, pipeline, used: pick?.step ?? null, passed: !!passed && pick?.step === passed, engine: pick?.engine ?? null, provider: pick?.provider ?? null, model: pick?.model ?? null, label,
     ocr: ocrUsed, compare, macError: macErr, seconds: (Date.now() - t00) / 1000, merchant51,
+    ...(pick?.step === 'V' ? { noOcr: true, visionOnly: true } : noOcr55 && !visionUsed ? { noOcr: true } : {}),
   };
 }
 

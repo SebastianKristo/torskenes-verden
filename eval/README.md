@@ -30,7 +30,7 @@ npm run eval -- --help
 | `--routing` | Hva |
 |---|---|
 | `prod-db` | Leser `ai_routing` og eierens personlige valg fra produksjonsbasen (`$DATA_DIR/homelab.db`, skrivebeskyttet). Dette er standard når fila finnes, f.eks. i containeren. Eval skriver aldri til produksjonsbasen. |
-| `standard` | Standard ellers. Dagens oppsett slik kartleggingen fant det: `glimt`, `chat`, `brief`, `fsok` og `dom` = qwen3:8b, `sok` og `kat` = llama3.2:3b, `rc` og `bar` = qwen2.5vl:7b, `kb` = nomic-embed-text. |
+| `standard` | Standard ellers. Alle tekstruter (`glimt`, `sok`, `chat`, `brief`, `fsok`, `kat`, `dom`) = qwen3:8b, `rc` og `bar` = qwen2.5vl:7b, `kb` = nomic-embed-text. (Prompt 55: llama3.2:3b er tatt ut – den ga modellbytter mot qwen3:8b med `OLLAMA_MAX_LOADED_MODELS=1`.) |
 | `auto` | Appens standard med tomme ruter, så appen velger selv. |
 | `fil.json` | JSON med `{tasks:{…}}`. Det er verdien av `ai_routing`, se under. |
 
@@ -75,6 +75,19 @@ til ingen modellkall er i gang og det har vært stille i 1,5 s. Den ventetiden e
   - De eksterne kallene er geokoding, prognoser, søk og Sonarr.
   - `tokens.nearCtx` teller kall der prompt + `num_predict` ≥ `num_ctx`, altså kall der Ollama kan ha kuttet.
 - `eval/results/<…>.md` er samme rapport i lesbar form. `eval/results/` er i `.gitignore`.
+- Prompt 55: hvert modellkall har også `loadMs`, `promptMs`, `genMs` og `totalMs` fra Ollama, og rapporten viser kallene per kjøring
+  (`qwen3:8b 3.1 s → qwen2.5vl:7b 12.4 s [lasting 6.2 s]`) og antall modellbytter. Glimt-tracen (`trace47`) har `timing`
+  (køtid, lastetid, kald modell, tenketegn) og `errKind` for planleggeren.
+
+### Miljøfeil (`env`)
+
+Mangler miljøet noe en case trenger, og kjøringen faktisk traff det, får kjøringen status **`env`** med grunn (f.eks. «ingen OCR
+(Mac-OCR-nøkkel mangler · Tesseract ikke installert)» eller «modell ikke installert: qwen2.5vl:7b»). Den står på egen linje i
+oppsummeringen og telles ikke som modellfeil (`summary.modelFailures` / `summary.envFailures` i JSON-fila).
+
+Eval har ingen Mac-OCR med mindre du kobler den på: `EVAL_MAC_OCR_URL=http://<mac>:8765 EVAL_MAC_OCR_KEY=… npm run eval`. Uten OCR
+leser appen kvitteringer med visjonsmodellen (samme schema og validering, merket «lest med visjonsmodell (ingen OCR)», maks middels
+sikkerhet) og vitnemål med visjonsmodellen i striper.
 
 Exit-kode 0 betyr at riggen virket, uansett hvor mange caser som feilet. Det er en måling, ikke en port. Exit-kode 1 betyr
 riggfeil (worker krasjet eller tidsavbrudd), og 3 betyr at modellen ikke svarte på `/api/tags`.
@@ -109,10 +122,10 @@ xcode-select --install                   # én gang, hvis better-sqlite3 må kom
 brew install node@22 gh tesseract tesseract-lang
 echo 'export PATH="/opt/homebrew/opt/node@22/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 gh auth login                            # GitHub.com → HTTPS → logg inn i nettleseren
-gh repo clone SebastianKristo/torskenes-verden ~/torskenes-verden
-cd ~/torskenes-verden
+gh repo clone SebastianKristo/torskenes-verden ~/git/torskenes-verden
+cd ~/git/torskenes-verden
 npm ci
-ollama pull qwen3:8b && ollama pull llama3.2:3b && ollama pull qwen2.5vl:7b && ollama pull nomic-embed-text
+ollama pull qwen3:8b && ollama pull qwen2.5vl:7b && ollama pull nomic-embed-text   # prompt 55: llama3.2:3b trengs ikke
 npm run eval -- --backend ollama --url http://localhost:11434
 ```
 
@@ -125,7 +138,7 @@ Uten produksjonsbase på Macen brukes `--routing standard`. Slik henter du den e
 # på serveren (LXC-en med Docker):
 docker exec homelab-os node -e 'const D=require("better-sqlite3");const d=new D("/data/homelab.db",{readonly:true});console.log(d.prepare("SELECT value FROM kv WHERE user=? AND key=?").pluck().get("owner","ai_routing"))' > /tmp/routing.json
 # på Macen:
-scp <server>:/tmp/routing.json ~/torskenes-verden/routing.json
+scp <server>:/tmp/routing.json ~/git/torskenes-verden/routing.json
 npm run eval -- --routing routing.json
 ```
 

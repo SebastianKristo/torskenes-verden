@@ -29,7 +29,10 @@ export function startTrace47(user, text, { module = 'home' } = {}) {
     model(c) {
       tr.models.push({ step: c.step ?? null, model: c.model ?? null, numCtx: c.params?.numCtx ?? c.numCtx ?? null, numPredict: c.params?.numPredict ?? c.numPredict ?? null,
         temperature: c.params?.temperature ?? c.temperature ?? null, think: c.params?.think ?? c.think ?? null, promptEst: c.params?.promptEst ?? c.promptEst ?? null,
-        promptEvalCount: c.tokens?.in ?? null, evalCount: c.tokens?.out ?? null, trimmed: c.trimmed ?? [], ms: c.ms ?? null, ok: c.ok !== false, error: c.error ? clip(c.error, 200) : null });
+        promptEvalCount: c.tokens?.in ?? null, evalCount: c.tokens?.out ?? null, trimmed: c.trimmed ?? [], ms: c.ms ?? null, ok: c.ok !== false, error: c.error ? clip(c.error, 200) : null,
+        // Prompt 55: hvor tiden gikk (kø i gaten, kald lasting/modellbytte, prompt, generering) – så «87 s» kan forklares fra tracen.
+        ...(c.errKind ? { errKind: c.errKind } : {}),
+        ...(c.timing ? { timing: { queueMs: c.timing.queueMs ?? null, loadMs: c.timing.loadMs ?? null, promptMs: c.timing.promptMs ?? null, genMs: c.timing.genMs ?? null, cold: c.timing.cold ?? null, attempts: c.timing.attempts ?? null, thinkChars: c.timing.thinkChars ?? null, firstTokenMs: c.timing.firstTokenMs ?? null } } : {}) });
     },
     tool(a) { tr.tools.push({ tool: a.tool, status: a.status, args: a.args ?? {}, result: clip(a.result ?? a.error ?? null, 700) }); },
     norm(x) { tr.normalized.push(x); },

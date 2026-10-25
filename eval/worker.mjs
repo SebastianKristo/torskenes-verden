@@ -36,7 +36,10 @@ process.env.OCR_FALLBACK = process.env.OCR_FALLBACK ?? 'on';
 
 freezeClock();
 const modelHosts = new Set([process.env.OLLAMA_URL, cfg.backend === 'openwebui' ? cfg.url : null].filter(Boolean).map((x) => new URL(x).host));
-const net = installNet({ modelHosts, fakeModel: cfg.backend === 'mock' ? makeFakeModel() : null });
+// Prompt 55: Mac-OCR kan kobles på eval med EVAL_MAC_OCR_URL + EVAL_MAC_OCR_KEY (ellers finnes den ikke i eval – fersk DATA_DIR uten nøkkel).
+const macUrl = String(process.env.EVAL_MAC_OCR_URL ?? '').replace(/\/+$/, ''), macKey = process.env.EVAL_MAC_OCR_KEY ?? '';
+const passHosts = new Set(macUrl ? [(() => { try { return new URL(macUrl).host; } catch { return null; } })()].filter(Boolean) : []);
+const net = installNet({ modelHosts, passHosts, fakeModel: cfg.backend === 'mock' ? makeFakeModel() : null });
 
 const { hashPassword } = await import(pathToFileURL(join(REPO, 'server/password.js')).href);
 process.env.APP_PASSWORD_HASH = hashPassword('evalpassord47');
@@ -53,11 +56,12 @@ E._setClock45({ today: TODAY, nowMin: NOW_MIN });
 // Rutingen: samme oppgaver/modeller som i produksjon (se run.mjs: --routing).
 ai.migrateOnce();
 const r0 = JSON.parse(JSON.stringify(ai.routing('owner')));
-if (cfg.routingFull) { for (const k of ['tasks', 'rules', 'params']) if (cfg.routingFull[k]) r0[k] = { ...r0[k], ...cfg.routingFull[k] }; }
+if (cfg.routingFull) { for (const k of ['tasks', 'rules', 'params']) if (cfg.routingFull[k]) r0[k] = { ...r0[k], ...cfg.routingFull[k] }; if (cfg.routingFull.chosen55) r0.chosen55 = cfg.routingFull.chosen55; } // prompt 55: eksplisitte valg av llama3.2:3b følger med
 for (const [k, v] of Object.entries(cfg.tasks ?? {})) if (r0.tasks[k]) r0.tasks[k] = { model: v.model ?? '', fallback: v.fallback ?? '' };
 delete r0.own;
 ai.saveServerRouting(r0);
 ai.invalidateInventory();
+
 
 /* ---------------- Innlogging og hjelpere ---------------- */
 
@@ -65,6 +69,18 @@ const login = await app.request('/api/login', { method: 'POST', headers: { 'cont
 const cookie = login.headers.getSetCookie().map((x) => x.split(';')[0]).find((x) => x.startsWith('hl_sid='));
 if (!cookie) throw new Error(`Innlogging feilet (${login.status})`);
 const USER = db.prepare("SELECT id FROM users WHERE username='sebastian'").pluck().get();
+// Prompt 55: miljøet (OCR) – står i resultatet, og run.mjs merker feil som skyldes det som «env» (ikke modellfeil).
+const env = { tesseract: false, macOcr: false, notes: [] };
+try { env.tesseract = await (await imp('server/study45.js')).tool45('tesseract'); } catch { env.tesseract = false; }
+if (macUrl && macKey) {
+  try {
+    const F = await imp('server/finans/db.js');
+    for (const u of [...new Set([USER, F.me(), 'owner'])].filter(Boolean)) { try { F.saveSettings({ macOcrUrl: macUrl }, u); F.setSecret('macOcrKey', macKey, u); } catch { /* */ } }
+    env.macOcr = true;
+  } catch (e) { env.notes.push(`Mac-OCR kunne ikke settes opp: ${e.message}`); }
+}
+if (!env.macOcr) env.notes.push('Mac-OCR-nøkkel mangler (sett EVAL_MAC_OCR_URL og EVAL_MAC_OCR_KEY)');
+if (!env.tesseract) env.notes.push('Tesseract ikke installert');
 if (cfg.userRouting) { kv.set(USER, 'ai_routing_user', cfg.userRouting); ai.invalidateInventory(); } // personlige valg (glimt/sok/chat …) fra produksjonsbrukeren
 const effRouting = Object.fromEntries(Object.entries(ai.routing(USER).tasks).map(([k, v]) => [k, v.model || '(auto)']));
 const A = async (path, method = 'GET', body, headers = {}) => {
@@ -211,6 +227,7 @@ result.models = [...new Set(chat.map((m) => m.model).filter(Boolean))];
 result.tokens = { maxPrompt: Math.max(0, ...chat.map((m) => m.promptTokens ?? 0)), sumPrompt: chat.reduce((a, m) => a + (m.promptTokens ?? 0), 0), sumOut: chat.reduce((a, m) => a + (m.outTokens ?? 0), 0), calls: chat.length,
   nearCtx: chat.filter((m) => m.promptTokens && m.options?.num_ctx && m.promptTokens + (m.options.num_predict ?? 0) >= m.options.num_ctx).length };
 result.routing = effRouting;
+result.env = env;
 result.wall = Date.now() - t0;
 result.dataDir = dataDir;
 writeFileSync(outFile, JSON.stringify(result, null, 2));

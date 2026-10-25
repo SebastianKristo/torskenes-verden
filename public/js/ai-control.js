@@ -129,7 +129,7 @@ function normRouting(d) {
 }
 const loadRouting = () => { get('finRouting', '/routing?scope=finans', normRouting); return get('routing', '/routing', (d) => { const r = normRouting(d); if (typeof r?.admin === 'boolean') G.admin = r.admin; return r; }); };
 /* Prompt 38 (claude-code-ai-kontroll-modellvalg-fiks.md): Finans har alltid fire rader, med standard og reserve fra spec. */
-const FIN4 = [['rc', 'Kvitteringer (bilde)', 'Leser butikk, beløp og varelinjer', 'qwen2.5vl:7b', 'gemini-2.5-flash'], ['kat', 'Kategorisering', 'Foreslår kategori for transaksjoner', 'llama3.2:3b', 'llama-3.3-70b-versatile'],
+const FIN4 = [['rc', 'Kvitteringer (bilde)', 'Leser butikk, beløp og varelinjer', 'qwen2.5vl:7b', 'gemini-2.5-flash'], ['kat', 'Kategorisering', 'Foreslår kategori for transaksjoner', 'qwen3:8b', 'llama-3.3-70b-versatile'],
   ['fsok', 'Finans · spør', '«Har jeg et musikkabonnement?»', 'gemma4:latest', 'gemini-2.5-flash'], ['bar', 'Strekkoder og pakkelapper', 'Bildefelt fra kamera', 'roboflow/kvittering/1', 'qwen2.5vl:7b']];
 const FIN_ALIAS = { kvittering: 'rc', kvitteringer: 'rc', receipts: 'rc', categorize: 'kat', kategorisering: 'kat', finans_sok: 'fsok', ask: 'fsok', barcode: 'bar', strekkode: 'bar' };
 function finRows() {
@@ -532,12 +532,12 @@ function allModelOpts() {
 // Kuratert tabell (start fra REC i fasiten): [modell, GB, hvorfor]. Rangert per oppgave. Serverens GET /api/ai/recommend vinner når den finnes.
 const REC = {
   chat: [['gemma4:latest', 9.6, 'Best på norsk av det som får plass, og svarer raskt.'], ['gemma3:12b', 8.1, 'Sterk norsk og leser bilder.'], ['qwen3:8b', 5.2, 'Rask og god til verktøy.'], ['llama3.2:3b', 2.0, 'Liten og rask når minnet er knapt.']],
-  sok: [['gemma4:latest', 9.6, 'Forstår norske spørsmål godt og deler modell med Chat.'], ['qwen3:8b', 5.2, 'Rask med verktøy og søk.'], ['llama3.2:3b', 2.0, 'Raskest, men svakere norsk.']],
+  sok: [['qwen3:8b', 5.2, 'Rask med verktøy og søk, og samme modell som Glimt (ingen modellbytte).'], ['gemma4:latest', 9.6, 'Forstår norske spørsmål godt og deler modell med Chat.']], // prompt 55: ikke llama3.2:3b
   glimt: [['gemma4:latest', 9.6, 'Forstår datoer og steder på norsk, samme modell som Chat.'], ['qwen3:8b', 5.2, 'Rask og presis på strukturerte svar.'], ['gemma3:12b', 8.1, 'God norsk.']],
   brief: [['gemma4:latest', 9.6, 'Skriver naturlig norsk og gjenbruker modellen som allerede er lastet.'], ['qwen3:8b', 5.2, 'Rask.'], ['llama3.2:3b', 2.0, 'Liten.']],
   rc: [['qwen2.5vl:7b', 6.0, 'Best til å lese tekst i bilder, bare 6 GB.'], ['gemma3:12b', 8.1, 'Leser bilder og forstår norske varenavn.'], ['minicpm-v', 5.5, 'Bilde på lite minne.']],
-  kat: [['llama3.2:3b', 2.0, 'Kategorisering er en enkel oppgave – den minste modellen er rask nok.'], ['qwen3:8b', 5.2, 'Mer presis på vanskelige butikknavn.'], ['gemma4:latest', 9.6, 'Deler modell med Chat.']],
-  fsok: [['qwen3:8b', 5.2, 'Rask med verktøy og tall.'], ['gemma4:latest', 9.6, 'God norsk.'], ['llama3.2:3b', 2.0, 'Liten.']],
+  kat: [['qwen3:8b', 5.2, 'Presis på norske butikknavn, og samme modell som Glimt (ingen modellbytte).'], ['gemma4:latest', 9.6, 'Deler modell med Chat.']], // prompt 55
+  fsok: [['qwen3:8b', 5.2, 'Rask med verktøy og tall.'], ['gemma4:latest', 9.6, 'God norsk.']],
   bar: [['qwen2.5vl:7b', 6.0, 'Leser pakkelapper og strekkoder fra bilder.'], ['minicpm-v', 5.5, 'Bilde på lite minne.'], ['gemma3:12b', 8.1, 'Leser bilder.']],
   dom: [['qwen3:8b', 5.2, 'Korte sammendrag – rask og presis.'], ['gemma4:latest', 9.6, 'God norsk.'], ['llama3.2:3b', 2.0, 'Liten.']],
   kb: [['bge-m3', 1.2, 'Flerspråklige embeddings, god på norsk.'], ['nomic-embed-text', 0.27, 'Liten og rask.']],

@@ -5,8 +5,10 @@
 // «neste time») – koden tolker dem (dates.js). Systemprompten er kort og på engelsk, med instruks om at spørsmål til brukeren skal
 // være på norsk, og few-shots (de fem eksemplene fra oppdraget + flere). Etter planen filtreres kallene på intent: et spørsmål om
 // britisk politikk kan ikke ende i Finans/Kalender/Gjøremål.
-// Feil: ugyldig JSON/plan → ett nytt forsøk med feilmeldingen og think på (token- og tidsgrense, params47.plannerRetry),
-// deretter null (motoren bruker den lokale planen). Tekstmønstre (localPlan45) er bare HINT i meldingen, aldri portvakt.
+// Feil (prompt 55): ugyldig JSON/plan ELLER tidsavbrudd → ett nytt forsøk med think på (samme modell, lengre grense med tak,
+// params47.plannerRetry), deretter {failed:'timeout'|'invalid'} – motoren stiller da et kort oppfølgingsspørsmål med konkrete valg
+// (aldri den gamle veien, aldri lagring ut fra en gjetning). null bare når modellen er nede/ikke finnes (motoren bruker den lokale
+// planen). Tekstmønstre (localPlan45) er bare HINT i meldingen, aldri portvakt.
 import { TOOLS45, TOOL45, ollamaTools45 } from './tools.js';
 import { STEP47, fitParts47, estTokens47 } from './params47.js';
 import { contextBlock47 } from './context.js';
@@ -147,7 +149,7 @@ export async function modelPlan47(user, text, { ctx, hint = '', mode: mode0 = 'j
   const sys0 = plannerSystem47();
   const schema = planSchema47();
   const tools = mode === 'tools' ? ollamaTools45(TOOLS45.filter((t) => TOOL_LINES47[t.name]).map((t) => t.name)) : null;
-  let lastErr = null;
+  let lastErr = null, lastFail = null, lastModel = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     const sp = attempt === 0 ? STEP47.planner : STEP47.plannerRetry;
     const user0 = `Melding: ${text}${hint ? `\nHints (from simple text patterns, may be wrong): ${hint}` : ''}${lastErr ? `\nYour previous answer could not be used (${lastErr}). Reply with valid JSON that follows the schema.` : ''}`;
@@ -159,19 +161,33 @@ export async function modelPlan47(user, text, { ctx, hint = '', mode: mode0 = 'j
     try {
       out = await call({ user, mode, system, prompt: user0, schema, tools: mode === 'tools' ? tools : null, step: attempt === 0 ? 'planner' : 'plannerRetry' });
     } catch (e) {
-      trace?.model({ step: attempt === 0 ? 'planner' : 'plannerRetry', model: null, ms: Date.now() - t0, ok: false, error: e?.message ?? e, trimmed: fit.trimmed, promptEst: fit.est });
+      const kind = plannerErrKind55(e);
+      trace?.model({ step: attempt === 0 ? 'planner' : 'plannerRetry', model: e?.model ?? null, ms: Date.now() - t0, ok: false, error: e?.message ?? e, errKind: kind, trimmed: fit.trimmed, promptEst: fit.est, timing: e?.timing ?? e?.telemetry ?? null });
       // Tools-modus (bare testkrok/eldre oppsett) mot en modell uten verktøystøtte: samme forespørsel i JSON-modus.
       if (mode === 'tools' && /support(s)? tools|does not support tools|tools.*not supported/i.test(String(e?.message ?? ''))) { mode = 'json'; lastErr = null; attempt--; continue; }
-      if (/JSON/i.test(String(e?.message ?? '')) && attempt === 0) { lastErr = 'the answer was not valid JSON'; continue; }
-      console.warn('[glimt47] planlegger:', String(e?.message ?? e).slice(0, 160));
-      return null;
+      console.warn(`[glimt47] planlegger (${attempt === 0 ? 'planner' : 'plannerRetry'}, ${kind}):`, String(e?.message ?? e).slice(0, 160));
+      // Modellen nede / ikke installert: ingen vits i et nytt forsøk – motoren bruker den lokale planen.
+      if (kind === 'down') return null;
+      // Prompt 55: tidsavbrudd eller ugyldig svar → ett nytt forsøk med thinking (plannerRetry), så {failed}.
+      lastErr = kind === 'timeout' ? 'the previous attempt timed out; answer with the JSON plan directly' : 'the answer was not valid JSON';
+      lastFail = kind === 'timeout' ? 'timeout' : 'invalid';
+      continue;
     }
-    trace?.model({ step: attempt === 0 ? 'planner' : 'plannerRetry', model: out?.model ?? null, params: out?.params ?? { ...sp, promptEst: fit.est }, tokens: out?.tokens, ms: Date.now() - t0, trimmed: fit.trimmed });
+    trace?.model({ step: attempt === 0 ? 'planner' : 'plannerRetry', model: out?.model ?? null, params: out?.params ?? { ...sp, promptEst: fit.est }, tokens: out?.tokens, ms: Date.now() - t0, trimmed: fit.trimmed, timing: out?.timing ?? null });
     const p = cleanPlan47(out);
     if (!p.error) return { ...p, engine: mode === 'tools' ? 'ollama-tools' : 'ollama-json', model: out?.model ?? null, attempts: attempt + 1, raw: out?.data ?? null };
-    lastErr = p.error;
+    lastErr = p.error; lastFail = 'invalid'; lastModel = out?.model ?? lastModel;
   }
-  return null;
+  return { failed: lastFail ?? 'invalid', error: lastErr, attempts: 2, model: lastModel, engine: 'ollama-json' };
+}
+/** Prompt 55: hva slags feil planleggerkallet fikk. → 'down' (modellen nede/mangler) | 'timeout' | 'invalid' */
+export function plannerErrKind55(e) {
+  const m = String(e?.message ?? e ?? '');
+  const kinds = [e?.kind, e?.code, ...(Array.isArray(e?.errors) ? e.errors.map((x) => x?.kind) : [])].filter(Boolean).map(String);
+  if (kinds.some((k) => /^(no_model|model_not_found|nocontact|memory)$/.test(k))) return 'down';
+  if (e?.timeout || kinds.some((k) => /timeout/.test(k)) || /svarte ikke innen|ingen nye tokens|lastet ikke inn|tidsavbrudd/i.test(m)) return 'timeout';
+  if (/kan ikke nås|ikke satt|not found|ECONNREFUSED|ENOTFOUND|fetch failed|ingen modell|Ingen modell|for lite minne|ikke installert/i.test(m)) return 'down';
+  return 'invalid';
 }
 export const _planner47 = { estTokens: estTokens47 };
 

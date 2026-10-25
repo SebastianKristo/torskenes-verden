@@ -198,15 +198,20 @@ test('modell: «Minn meg på å kjøpe melk i morgen» → oppgave «Kjøpe melk
   assert.equal(t.glimt, 1);
 });
 
-test('modell: ugyldig JSON → ett nytt forsøk, så lokal plan (maks to modellkall)', async () => {
+test('modell: ugyldig JSON → ett nytt forsøk (med thinking), så et oppfølgingsspørsmål med valg – ingenting lagres (prompt 55)', async () => {
   let n = 0;
-  P._setGlimtModel45(async () => { n++; return { text: 'tull og tøys', model: 'mock' }; });
+  const steps = [];
+  P._setGlimtModel45(async (o) => { n++; steps.push(o.step); return { text: 'tull og tøys', model: 'mock' }; });
   try {
+    const before = tasksOf(OLA).length;
     const r = await agent(O, 'Minn meg på å vanne blomstene i morgen', { requestId: RID() });
     assert.ok(n <= 2, `modellkall: ${n}`);
-    assert.equal(r.body.actions[0].tool, 'tasks.create');
-    assert.equal(r.body.engine, 'lokal');
-    assert.ok(tasksOf(OLA).some((x) => x.title === 'Vanne blomstene' && x.due === '2026-10-24'));
+    assert.deepEqual(steps, ['planner', 'plannerRetry']);
+    assert.equal(r.body.intent, 'ask');
+    assert.deepEqual(r.body.actions, []);
+    assert.ok(r.body.ask?.options?.some((o) => o.id === 'task'), JSON.stringify(r.body.ask));
+    assert.equal(r.body.ask.options[0].id, 'task', 'tekstmønstrene setter rekkefølgen');
+    assert.equal(tasksOf(OLA).length, before, 'ingenting lagret ut fra en gjetning');
   } finally { P._setGlimtModel45(null); }
 });
 

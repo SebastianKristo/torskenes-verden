@@ -20,8 +20,9 @@ delete process.env.OPENWEBUI_KEY;
 const { hashPassword } = await import('../server/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');
 
-// Falsk Ollama. «llama3.2:3b» støtter ikke tenking og svarer 400 når think er med.
-const OLD = 'llama3.2:3b';
+// Falsk Ollama. «mistral:7b» støtter ikke tenking og svarer 400 når think er med.
+// (Prompt 55: før llama3.2:3b – den brukes ikke lenger fra den gamle innstillingen, så testen bruker en annen modell uten tenking.)
+const OLD = 'mistral:7b';
 const calls = [];
 const enc = (s) => new TextEncoder().encode(s);
 const streamOf = (chunks) => new ReadableStream({ start(c) { for (const x of chunks) c.enqueue(enc(x)); c.close(); } });

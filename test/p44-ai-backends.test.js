@@ -59,6 +59,9 @@ test.after(() => { globalThis.fetch = realFetch; });
 // Svaret fra den falske modellen bygger på det som står i systemprompten (søketreff og strømpris).
 sim.answer = (body) => {
   const sys = String(body.messages?.[0]?.role === 'system' ? body.messages[0].content : '');
+  // Prompt 55: planleggeren får en gyldig plan (en ugyldig plan gir nå et oppfølgingsspørsmål, ikke den gamle veien).
+  if (/^You are the planner for Glimt/.test(sys)) return JSON.stringify(/statsminister/i.test(JSON.stringify(body.messages)) ? { intent: 'web_search', calls: [{ tool: 'web.search', args: { query: 'hvem er statsminister i England' } }], needs_clarification: false, clarification_question: null } : { intent: 'chat', calls: [{ tool: 'chat.answer', args: {} }], needs_clarification: false, clarification_question: null });
+  if (/# Search results for/.test(sys) && /Andy Burnham/.test(sys)) return 'Statsministeren i Storbritannia er **Andy Burnham** (BBC).'; // Glimt-motorens svarsteg
   if (/Søkeresultater \(hentet nå\)/.test(sys)) { const h = sys.match(/\[1\] ([^–\n]+)–\s*([^–\n]+)–/); return /Andy Burnham/.test(sys) ? `Statsministeren i Storbritannia er Andy Burnham (${h?.[2]?.trim() ?? 'kilde'}).` : 'Søket var uklart.'; }
   const p = sys.match(/Strømpris \(hentet nå[^)]*\) for (NO\d)[^:]*: snitt (\d+(?:,\d+)?), min (\d+(?:,\d+)?), maks (\d+(?:,\d+)?)/);
   if (p) return `I ${p[1]} er snittet ${p[2]} øre/kWh (min ${p[3]}, maks ${p[4]}).`;
@@ -288,9 +291,9 @@ for (const mode of ['openwebui', 'ollama']) {
     const g = await A('/api/assist', 'POST', { q: 'hvem er statsminister i England' });
     assert.equal(g.status, 200, g.text);
     assert.match(g.body.text, /Andy Burnham/);
-    assert.equal(g.body.web.provider, 'openwebui');
-    assert.deepEqual(g.body.used, ['Nettsøk']);
-    assert.match(g.body.source, /^Nettsøk · BBC/);
+    // Prompt 55: Glimt-motoren planlegger web.search og svarer selv (svarsteget, grunnet i treffene). Den gamle assist-veien
+    // (web/used/source-feltene) brukes ikke lenger som reserve for en ugyldig plan.
+    assert.ok(owui.searches.every((x) => x.body.queries?.[0] === 'hvem er statsminister i England'), 'samme nettsøk (treffet kan komme fra bufferen)');
   });
 }
 

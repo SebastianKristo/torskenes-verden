@@ -182,7 +182,7 @@ export async function agent45(user, text0, opts = {}) {
     try {
       const out = await pipeline(user, text, { ...opts, module, key });
       if (opts.preview) q('DELETE FROM glimt45_requests WHERE user_id=? AND key=?').run(user, key); // forhåndsvisning caches ikke
-      else if (!out.legacy) q('UPDATE glimt45_requests SET state=?, response=? WHERE user_id=? AND key=?').run('done', JSON.stringify(out), user, key);
+      else if (!out.legacy && !out.retryable) q('UPDATE glimt45_requests SET state=?, response=? WHERE user_id=? AND key=?').run('done', JSON.stringify(out), user, key); // prompt 55: oppfølgingsspørsmålet etter tidsavbrudd caches ikke
       else q('DELETE FROM glimt45_requests WHERE user_id=? AND key=?').run(user, key);
       return out;
     } catch (e) {
@@ -227,18 +227,27 @@ async function pipeline(user, text, opts) {
     const mp = modelPlan47(user, text, { ctx: c47, hint: hintOf47(local, legacyIntent), mode: info.mode, call: plannerCall47, trace: tr }).catch((e) => { console.warn('[glimt47] plan:', String(e?.message ?? e).slice(0, 160)); return null; });
     // Prompt 46: forhåndsvisningen venter maks 3 s på modellen; ellers lokal tolkning (dato/tid er uansett fra teksten).
     let mpl = await (opts.preview ? Promise.race([mp, new Promise((r) => { const t = setTimeout(() => r(null), opts.previewMs ?? 3000); t.unref?.(); })]) : mp);
+    // Prompt 55: planleggeren ga opp etter nytt forsøk med thinking (tidsavbrudd/ugyldig plan). Aldri den gamle veien (prat med en
+    // modell uten verktøy) og aldri lagring ut fra tekstmønstrene: et kort oppfølgingsspørsmål med konkrete valg. Forhåndsvisningen
+    // (Kalender «Skriv en time») bruker fortsatt den lokale tolkningen – den lagrer ingenting.
+    if (mpl?.failed) {
+      tr?.norm({ plannerFailed: mpl.failed, error: String(mpl.error ?? '').slice(0, 200) });
+      if (opts.preview) mpl = null;
+      else plan = clarifyPlan55(text, local, legacyIntent, mpl, opts.module);
+    }
     // Steg G: dekker planen det tekstmønstrene så (alle steder i værspørsmålet, abonnementsdata, frist)? Ellers ett nytt forsøk med hint.
-    const gap = mpl && !opts.preview ? planGap47(local, mpl) : null;
+    const gap = mpl && !mpl.failed && !opts.preview ? planGap47(local, mpl) : null;
     if (gap) {
       tr?.norm({ planGap: gap });
       const p2 = await modelPlan47(user, text, { ctx: c47, hint: `${hintOf47(local, legacyIntent)}. ${gap}`, mode: info.mode, call: plannerCall47, trace: tr }).catch(() => null);
-      if (p2 && !planGap47(local, p2)) mpl = { ...p2, attempts: (mpl.attempts ?? 1) + (p2.attempts ?? 1), gapFixed: true };
+      if (p2 && !p2.failed && !planGap47(local, p2)) mpl = { ...p2, attempts: (mpl.attempts ?? 1) + (p2.attempts ?? 1), gapFixed: true };
     }
-    if (mpl) plan = { ...mpl, module: mpl.calls[0] ? TOOL45[mpl.calls[0].tool]?.module ?? opts.module : opts.module, intent: mpl.calls.length ? (mpl.calls.length > 1 ? 'multi' : intentOfCalls45(mpl.calls)) : 'ask', planIntent: mpl.intent };
+    if (mpl && !mpl.failed) plan = { ...mpl, module: mpl.calls[0] ? TOOL45[mpl.calls[0].tool]?.module ?? opts.module : opts.module, intent: mpl.calls.length ? (mpl.calls.length > 1 ? 'multi' : intentOfCalls45(mpl.calls)) : 'ask', planIntent: mpl.intent };
   }
-  // Modellen nede, tidsavbrudd eller to ubrukelige svar: den lokale planen (samme validering og utførelse).
+  // Modellen nede (eller ikke installert): den lokale planen (samme validering og utførelse). Prompt 55: tidsavbrudd og ugyldige
+  // planer gir oppfølgingsspørsmålet over, ikke den lokale planen.
   plan ??= local;
-  tr?.set('plan', { engine: plan.engine, model: plan.model ?? null, intent: plan.planIntent ?? plan.intent, calls: plan.calls, ask: plan.ask ?? null, dropped: plan.dropped ?? [], fast: !!plan.fast, attempts: plan.attempts ?? null, hint: plan.engine === 'lokal' ? null : hintOf47(local, legacyIntent) });
+  tr?.set('plan', { engine: plan.engine, model: plan.model ?? null, intent: plan.planIntent ?? plan.intent, calls: plan.calls, ask: plan.ask ?? null, dropped: plan.dropped ?? [], fast: !!plan.fast, attempts: plan.attempts ?? null, hint: plan.engine === 'lokal' ? null : hintOf47(local, legacyIntent), ...(plan.failed ? { failed: plan.failed } : {}) });
   tr?.step('plan');
   const modelPlan = plan.engine !== 'lokal';
   // Én dag fra Hjem («hva skjer i morgen?»): de eksisterende dagsvarene (med vær og første avtale) er riktige og beholdes.
@@ -312,6 +321,27 @@ export function fastPath47(text, { module = 'home', legacyIntent = null } = {}) 
   if (ep) return { ...P('media.episode', { title: ep.title, pick: ep.pick, season: ep.season ?? null, episode: ep.episode ?? null }, 'media'), module: 'media' };
   return null;
 }
+/**
+ * Prompt 55: planleggeren ga opp (tidsavbrudd eller ugyldig plan etter nytt forsøk med thinking). Et kort spørsmål med konkrete valg,
+ * ordnet etter det tekstmønstrene tror (bare rekkefølgen – ingenting utføres eller lagres). Hvert valg har `text`: meldingen klienten
+ * sender når brukeren trykker på det («Legg i kalenderen: …»).
+ */
+export function clarifyPlan55(text, local, legacyIntent, failed, module = 'home') {
+  const t = String(text ?? '').trim().slice(0, 200);
+  const tools = (local?.calls ?? []).map((c) => c.tool);
+  const opts = [];
+  const add = (id, label, prefix) => { if (!opts.some((o) => o.id === id)) opts.push({ id, label, text: prefix ? `${prefix}: ${t}` : t }); };
+  if (tools.includes('calendar.create') || legacyIntent === 'appointment.create' || module === 'calendar') add('calendar', 'Legg det i kalenderen', 'Legg i kalenderen');
+  if (tools.includes('tasks.create') || module === 'tasks') add('task', 'Lag et gjøremål', 'Lag et gjøremål');
+  if (tools.some((x) => /^calendar\.(search|next|list)$/.test(x))) add('calendar_query', 'Søk i kalenderen', 'Søk i kalenderen etter');
+  if (tools.some((x) => /^finance\./.test(x))) add('finance', 'Se i Finans', 'Svar fra Finans');
+  if (tools.includes('weather.get')) add('weather', 'Sjekk været', 'Hvordan er været');
+  add('calendar', 'Legg det i kalenderen', 'Legg i kalenderen');
+  add('task', 'Lag et gjøremål', 'Lag et gjøremål');
+  add('answer', 'Bare svar meg', 'Svar kort');
+  const why = failed?.failed === 'timeout' ? 'Modellen brukte for lang tid, så jeg har ikke gjort noe ennå.' : 'Jeg klarte ikke å tolke meldingen sikkert, så jeg har ikke gjort noe ennå.';
+  return { intent: 'ask', module, calls: [], ask: `${why} Hva vil du at jeg skal gjøre?`, askOptions: opts.slice(0, 4), engine: 'ollama-json', model: failed?.model ?? null, failed: failed?.failed ?? 'invalid', attempts: failed?.attempts ?? 2 };
+}
 /** Kort hint fra tekstmønstrene til planleggeren (kan være feil – modellen bestemmer). */
 export function hintOf47(local, legacyIntent) {
   const parts = [];
@@ -330,9 +360,10 @@ async function plannerCall47(o) {
   if (impl) return impl(o);
   const ai = await import('../ai-run.js');
   const sp = STEP47[o.step] ?? STEP47.planner;
+  // Prompt 55: tidsgrensen gjelder selve svaret – en kald modell (modellbytte) får lastetiden i tillegg (deadlineAfterLoad i gaten).
   const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, ...(o.mode === 'tools' && o.tools ? { ollamaTools: o.tools } : { schema: o.schema }), step: o.step,
-    localOnly: true, background: false, title: 'Glimt · forstår', timeoutMs: sp.timeoutMs, noRetry: true, retries: 0 });
-  return { toolCalls: out.toolCalls ?? null, text: out.text, data: out.data, model: out.model, tokens: out.tokens, params: out.params };
+    localOnly: true, background: false, title: 'Glimt · forstår', timeoutMs: sp.timeoutMs, deadlineAfterLoad: true, noRetry: true, retries: 0 });
+  return { toolCalls: out.toolCalls ?? null, text: out.text, data: out.data, model: out.model, tokens: out.tokens, params: out.params, timing: out.timing ?? null };
 }
 /** Svarstegets modellkall (fritekst og nettsøk): ruten «glimt», steg answer. */
 let answerImpl47 = null;
@@ -374,7 +405,11 @@ function sanitizeCtx(c) {
 async function executePlan(user, plan, ctxT, base, t0) {
   const today = ctxT.today;
   const res0 = { ...base, intent: plan.intent, module: plan.calls[0] ? TOOL45[plan.calls[0].tool].module : plan.module, engine: plan.engine, model: plan.model ?? null };
-  if (plan.ask && !plan.calls.length) return { ...res0, reply: plan.ask, text: plan.ask, intent: 'ask', actions: [], results: [], ask: { question: plan.ask }, ms: Date.now() - t0 };
+  if (plan.ask && !plan.calls.length) {
+    const opt = plan.askOptions ?? null; // prompt 55: konkrete valg når planleggeren ga opp
+    return { ...res0, reply: plan.ask, text: plan.ask, intent: 'ask', actions: [], results: (opt ?? []).map((o) => ({ kind: 'option', id: o.id, title: o.label, text: o.text })), ask: { question: plan.ask, ...(opt ? { options: opt } : {}) },
+      ...(plan.failed ? { plannerFailed: plan.failed, retryable: true } : {}), ms: Date.now() - t0 };
+  }
   // 4. Valider alle kallene før noe utføres.
   const checked = [];
   for (const c of plan.calls) {

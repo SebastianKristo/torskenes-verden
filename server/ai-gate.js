@@ -401,7 +401,10 @@ async function attempt(o, job) {
   const armIdle = () => { clock.clearTimeout(tIdle); tIdle = clock.setTimeout(fire('idle'), idleMs); };
   const embedMs = o.kind === 'embed' ? (cold ? Math.max(loadMs, o.timeoutMs ?? EMBED_MS) : o.timeoutMs ?? EMBED_MS) : null;
   tFirst = clock.setTimeout(fire('first'), embedMs ?? firstMs);
-  if (o.deadlineMs) tDead = clock.setTimeout(fire('deadline'), o.deadlineMs);
+  // Prompt 55: deadlineAfterLoad – en kald modell får lastetiden (loadMs, før første token) i tillegg; totalgrensen gjelder selve svaret.
+  // (Planleggeren hadde 45 s totalt; et modellbytte med OLLAMA_MAX_LOADED_MODELS=1 spiste grensen før modellen fikk svare.)
+  const deadAfterLoad = !!(o.deadlineMs && o.deadlineAfterLoad && cold);
+  if (o.deadlineMs && !deadAfterLoad) tDead = clock.setTimeout(fire('deadline'), o.deadlineMs);
   const timeoutErr = () => {
     if (why === 'user') return cancelErr();
     if (why === 'deadline') return new GateError('idle_timeout', `svarte ikke innen ${secs(o.deadlineMs)} s`, { timeout: true, deadline: true, transient: false });
@@ -416,7 +419,7 @@ async function attempt(o, job) {
   // over er felles; backenden melder hver bit med onToken (som holder tidsgrensene i live).
   const be = getBackend(o.backend);
   const onToken = async (j) => {
-    if (!gotFirst) { gotFirst = true; job.gotFirst = true; firstAt = clock.now(); clock.clearTimeout(tFirst); }
+    if (!gotFirst) { gotFirst = true; job.gotFirst = true; firstAt = clock.now(); clock.clearTimeout(tFirst); if (deadAfterLoad) tDead = clock.setTimeout(fire('deadline'), o.deadlineMs); }
     if (o.kind !== 'embed') armIdle();
     if (j && o.onChunk) await o.onChunk(j);
     if (j && o.onPhase && o.kind !== 'embed' && out0.content !== undefined) { try { o.onPhase(stripThink(out0.content) ? { kind: 'answer', chars: stripThink(out0.content).length } : { kind: 'think', chars: out0.thinking.length + thinkInText(out0.content) }); } catch { /* */ } }

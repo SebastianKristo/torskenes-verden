@@ -4,7 +4,7 @@
 //
 //   steg           temperature  think                                  num_ctx  num_predict
 //   planner        0            av                                     8192     512
-//   plannerRetry   0.1          PÅ (andre forsøk, med token-/tidsgrense) 8192   1536
+//   plannerRetry   0.1          PÅ (andre forsøk, med token-/tidsgrense) 8192   2560
 //   answer         0.3          av                                     8192     600
 //   document       0            av                                     16384    4096
 //   brief          0.4          av                                     16384    1500
@@ -14,7 +14,8 @@
 // trimmes historikk og verktøyresultater (fitParts47) – aldri systemprompten.
 export const STEP47 = {
   planner: { numCtx: 8192, numPredict: 512, temperature: 0, think: false, timeoutMs: 45_000 },
-  plannerRetry: { numCtx: 8192, numPredict: 1536, temperature: 0.1, think: true, timeoutMs: 90_000 },
+  // Prompt 55: tankene teller med i num_predict – 1536 kunne brukes opp av tenkingen før JSON-en kom («tomt svar»). 2560, tak 90 s.
+  plannerRetry: { numCtx: 8192, numPredict: 2560, temperature: 0.1, think: true, timeoutMs: 90_000 },
   answer: { numCtx: 8192, numPredict: 600, temperature: 0.3, think: false, timeoutMs: 60_000 },
   document: { numCtx: 16384, numPredict: 4096, temperature: 0, think: false, timeoutMs: 240_000 },
   brief: { numCtx: 16384, numPredict: 1500, temperature: 0.4, think: false },

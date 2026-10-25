@@ -175,6 +175,8 @@ async function tapStream(stream, entry) {
     if (j.eval_count != null) entry.outTokens = j.eval_count;
     if (j.usage) { entry.promptTokens = j.usage.prompt_tokens ?? entry.promptTokens; entry.outTokens = j.usage.completion_tokens ?? entry.outTokens; }
     if (j.done_reason) entry.doneReason = j.done_reason;
+    // Prompt 55: hvor tiden gikk (Ollama oppgir nanosekunder): lasting (modellbytte/kald), prompt og generering.
+    for (const [k, f] of [['loadMs', 'load_duration'], ['promptMs', 'prompt_eval_duration'], ['genMs', 'eval_duration'], ['totalMs', 'total_duration']]) if (j[f] != null) entry[k] = Math.round(j[f] / 1e6);
     if (j.error) entry.error = clip(j.error, 300);
   };
   try {
@@ -208,7 +210,7 @@ function describeRequest(path, b) {
  * Installerer global fetch. opts: {modelHosts:Set<host>, fakeModel:(url, init)=>Response|null}
  * → {trace:{model:[], ext:[]}, reset()}
  */
-export function installNet({ modelHosts, fakeModel = null }) {
+export function installNet({ modelHosts, passHosts = new Set(), fakeModel = null }) {
   const real = globalThis.fetch.bind(globalThis);
   const trace = { model: [], ext: [], inflight: 0, lastActivity: Date.now() };
   const rec = (x) => trace.ext.push({ at: Date.now(), ...x });
@@ -241,6 +243,8 @@ export function installNet({ modelHosts, fakeModel = null }) {
       return res;
     }
     trace.lastActivity = Date.now();
+    // Prompt 55: tjenester som skal være ekte (Mac-OCR med EVAL_MAC_OCR_URL) slippes gjennom og logges.
+    if (passHosts.has(host)) { rec({ kind: 'pass', host, path: u.pathname }); return real(input, init); }
     // Eksterne datakilder (deterministiske).
     if (host === 'geocoding-api.open-meteo.com') { const g = geocode(u); rec({ kind: 'weather', api: 'open-meteo-geocode', q: g.q, place: g.place }); return J(g.body); }
     if (host === 'api.open-meteo.com') { const f = openMeteoForecast(u); rec({ kind: 'weather', api: 'open-meteo-forecast', place: f.place, tz: f.tz, lat: +u.searchParams.get('latitude'), lon: +u.searchParams.get('longitude'), params: clip(u.search, 300) }); return J(f.body); }

@@ -216,16 +216,16 @@ test('AI: GET /api/ai/recommend (Mac mini M4 16 GB), ask, plan, apply + angre', 
   assert.ok(Array.isArray(r.body));
   const by = Object.fromEntries(r.body.map((x) => [x.task, x]));
   assert.equal(by.rc.model, 'qwen2.5vl:7b');
-  assert.equal(by.kat.model, 'llama3.2:3b');
+  assert.equal(by.kat.model, 'qwen3:8b'); // prompt 55: llama3.2:3b anbefales aldri til tolkning (glimt, sok, kat, fsok)
+  assert.ok(r.body.every((x) => !['glimt', 'sok', 'kat', 'fsok'].includes(x.task) || x.model !== 'llama3.2:3b'), JSON.stringify(r.body.map((x) => [x.task, x.model])));
   assert.equal(by.kb.model, 'nomic-embed-text');
   assert.ok(r.body.every((x) => ['PASSER', 'TRANGT'].includes(x.fit)), 'ingen FOR STOR');
   for (const k of ['task', 'model', 'why', 'alt', 'fit', 'installed', 'inUse', 'sizeGb', 'pullCmd']) assert.ok(k in by.rc, k);
   assert.equal(by.rc.installed, true);
-  assert.equal(by.kat.installed, false);
-  assert.equal(by.kat.pullCmd, 'ollama pull llama3.2:3b');
+  assert.equal(by.kat.pullCmd, 'ollama pull qwen3:8b');
   const full = await A('/api/ai/recommend?full=1');
   assert.equal(full.body.title, '✦ GLIMT ANBEFALER · Mac mini M4 · 16 GB');
-  assert.ok(full.body.missing.some((m) => m.model === 'llama3.2:3b'));
+  assert.ok(Array.isArray(full.body.missing));
   const q = await A('/api/ai/recommend/ask', 'POST', { q: 'lese kvitteringer' });
   assert.match(q.body.text, /^Til kvitteringer anbefaler jeg qwen2\.5vl:7b \(6 GB, passer\)\. .*Alternativ: /);
   assert.deepEqual(q.body.tasks, ['rc']);

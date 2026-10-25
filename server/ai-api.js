@@ -280,6 +280,10 @@ api.put('/routing', async (c) => {
   } else {
     const clean = ai.cleanRouting(b, stripOwn(ai.routing(OWNER)), errors);
     if (errors.length) return bad(c, errors[0], 400, { errors });
+    // Prompt 55: llama3.2:3b brukes bare der administratoren velger den her (eksplisitt), aldri fra eldre/migrerte verdier.
+    const ch = { ...(clean.chosen55 ?? {}) };
+    for (const k of Object.keys(b.tasks ?? {})) { const id = ai.TASK_ALIAS[k] ?? k; const m = clean.tasks[id]?.model; if (m && ai.retiredModel55(m)) ch[id] = m; else delete ch[id]; }
+    clean.chosen55 = ch;
     ai.saveServerRouting(clean);
   }
   return c.json(await routingOut(u));
