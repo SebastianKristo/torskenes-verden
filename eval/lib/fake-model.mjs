@@ -7,7 +7,7 @@ const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: 
 export const MOCK_MODELS = ['qwen3:8b', 'llama3.2:3b', 'qwen2.5vl:7b', 'nomic-embed-text:latest'];
 
 /** Hvilke verktøy en flink planlegger ville valgt. */
-function oracle(msg) {
+export function oracle(msg) {
   const m = String(msg ?? '').toLowerCase();
   if (/er frisøren min/.test(m)) return [{ name: 'app.answer', arguments: { topic: 'memory' } }];
   if (/nina/.test(m)) return [{ name: 'calendar.search', arguments: { query: 'Nina' } }];
@@ -19,7 +19,7 @@ function oracle(msg) {
   if (/brukt på mat|mat denne/.test(m)) return [{ name: 'finance.summary', arguments: { period: 'denne måneden', category: 'Mat og dagligvarer', group_by: 'total' } }];
   return [{ name: 'chat.answer', arguments: {} }];
 }
-function chatText(all) {
+export function chatText(all) {
   if (/Whitcombe/.test(all)) return 'Statsministeren i Storbritannia er **Eleanor Whitcombe**, ifølge søkeresultatene (NRK).';
   if (/frankrike/i.test(all)) return 'Hovedstaden i Frankrike er **Paris**.';
   return 'Jeg vet dessverre ikke det.';

@@ -44,6 +44,8 @@ const MKEEP = [[null, 'Standard'], [0, '0'], ['5m', '5 min'], ['15m', '15 min'],
 const LOADT = [[30, '30 s'], [60, '60 s'], [90, '90 s'], [180, '180 s']], FIRSTT = [[15, '15 s'], [30, '30 s'], [60, '60 s']];
 const IDLET = [[15, '15 s'], [30, '30 s'], [60, '60 s'], [120, '120 s']], IDLEI = [[30, '30 s'], [60, '60 s'], [120, '120 s']];
 
+// Prompt 58 (OMLX58): oMLX på Mac mini-en – «Motor per oppgave» (Valg) og admin-kortet (Modeller) fylles av omlx58.js.
+if (typeof document !== 'undefined') import('./omlx58.js').catch(() => {});
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 const nb = (n, d = 0) => Number(n || 0).toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -512,7 +514,7 @@ function modTab(o) {
       <div class="ac-search">${svg('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 16)}<input data-ac-q value="${esc(G.q)}" placeholder="Søk eller skriv modellnavn, f.eks. qwen3:14b" autocomplete="off" spellcheck="false" aria-label="Søk i Ollama-biblioteket"${admin ? '' : ' disabled'}>${q && okName && admin && !lib.some((l) => l.id === q) && !I.some((m) => m.id === q) ? btn('Last ned', `data-ac-pull="${esc(q)}"`, 'ink') : ''}</div>
       <div class="ac-chips">${[['alle', 'Alle'], ['tekst', 'Tekst'], ['bilde', 'Bilde'], ['resonnering', 'Resonnering'], ['embedding', 'Embeddings']].map(([k, n]) => `<button type="button" class="${G.cat === k ? 'on' : ''}" data-ac-cat="${k}">${n}</button>`).join('')}</div>
       <div class="ac-card ac-list">${libH}</div>${admin ? '' : '<div class="ac-note">Bare administrator kan laste ned og slette modeller.</div>'}${G.missing.lib === true ? '<div class="ac-note">Viser et utvalg. Serveren har ikke biblioteksøk ennå.</div>' : ''}</div>
-    <div class="ac-sec">${lab('SKY-MODELLER')}<div class="ac-card ac-list">${cl.map((m) => `<button type="button" class="ac-li" data-ac-cloud="${esc(m.id)}"${admin ? '' : ' disabled'} role="switch" aria-checked="${m.on}">${logo(PROV_LOGO[m.provider] ?? '', String(m.provider ?? '?').slice(0, 1).toUpperCase(), 'var(--mut)').replace('ac-logo', 'ac-logo sm')}<span class="ac-col ac-grow"><b class="ac-mono ac-ell">${esc(m.id)}</b><span>${esc(m.desc || m.provider)}${m.key === false ? ' · mangler nøkkel' : ''}</span></span>${sw(m.on)}</button>`).join('')}</div></div>${extH53()}<div data-v54-ai></div>`; // prompt 54: «Tale til tekst» (public/js/voice54.js fyller den)
+    <div class="ac-sec">${lab('SKY-MODELLER')}<div class="ac-card ac-list">${cl.map((m) => `<button type="button" class="ac-li" data-ac-cloud="${esc(m.id)}"${admin ? '' : ' disabled'} role="switch" aria-checked="${m.on}">${logo(PROV_LOGO[m.provider] ?? '', String(m.provider ?? '?').slice(0, 1).toUpperCase(), 'var(--mut)').replace('ac-logo', 'ac-logo sm')}<span class="ac-col ac-grow"><b class="ac-mono ac-ell">${esc(m.id)}</b><span>${esc(m.desc || m.provider)}${m.key === false ? ' · mangler nøkkel' : ''}</span></span>${sw(m.on)}</button>`).join('')}</div></div>${extH53()}<div data-v54-ai></div><div data-omlx58-ai></div>`; // prompt 54 / 58: «Tale til tekst» (public/js/voice54.js fyller den)
 }
 /* Prompt 53 (FERMION53): Fermion Research på Mac mini-en (Neutrino-1 8B i Chat, Phonon til tale→tekst). Bare visning – oppsett og test i
    /api/admin/fermion53/*. Neutrino er aldri standard og står ikke i rutingen (eval avgjør). */
@@ -687,6 +689,7 @@ function rtTab(o) {
       ['idleTimeout', 'Tid uten nye tokens · tekst', 'Stopper bare når svaret står stille, ikke mens det skrives', IDLET], ['idleTimeoutImage', 'Tid uten nye tokens · bilde', 'Bilder (kvitteringer, strekkoder) trenger mer tid', IDLEI]])
     .map(([k, n, s, opts]) => { const cur = opts.find((x) => String(x[0]) === String(P[k])); return `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>${n}</b><span>${s}</span></span><b class="ac-mono">${esc(cur?.[1] ?? P[k] ?? '–')}</b></span><div class="ac-seg">${opts.map(([v, l]) => `<button type="button" class="${String(P[k]) === String(v) ? 'on' : ''}" data-ac-par="${k}" data-v="${esc(JSON.stringify(v))}"${admin || k === 'temperature' ? '' : ' disabled'}>${l}</button>`).join('')}</div></div>`; }).join('');
   return `${rwBox}${fin ? '' : glCard() + beMini(admin)}<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
+    ${fin ? '' : '<div data-omlx58-rt></div>'}
     <div class="ac-sec">${lab('REGLER')}<div class="ac-card ac-list">${rules}</div></div>
     <div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>
     ${fin ? '' : mkaCard(P, admin)}`;

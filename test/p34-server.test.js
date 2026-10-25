@@ -212,7 +212,7 @@ test('GET /api/ai/status: ekte mini-generering, 3 tilstander, cache 5 min', asyn
   const o = s.providers.find((p) => p.id === 'ollama');
   assert.equal(o.state, 'ok'); assert.equal(o.label, 'Svarer'); assert.equal(typeof o.ms, 'number');
   assert.equal(s.providers.find((p) => p.id === 'groq').state, 'off');
-  assert.ok(ollama.calls.some((c) => c.url.endsWith('/api/chat') && c.body.options?.num_predict === 3), 'num_predict 3');
+  assert.ok(ollama.calls.some((c) => c.url.endsWith('/api/chat') && c.body.options?.num_predict === 8 && c.body.think === false), 'num_predict 8 og think:false (koordinator 2026-10-25: miniGenerate bruker numPredict 8, noThink)');
   assert.equal((await A('/api/ai/status')).body.cached, true);
   // Nås, men genererer ikke (oransje).
   for (const m of ['gemma4:12b', 'qwen3:8b']) ollama.fail.set(m, 'model requires more system memory (9.6 GiB) than is available');

@@ -1,3 +1,5 @@
+// Prompt 58: tredje backend «omlx» (server/omlx58/backend.js, registreres av ai-run.js) – backends med conf() får egen kø-instans, ingen
+// /api/ps/keep_alive/utlasting mot Ollama. Open WebUI nede (nocontact/502–504) → ett nytt forsøk direkte mot Ollama (OWUI_DOWN_NOTE).
 // Prompt 44: server/ai-gate.js (før server/ollama-gate.js, som nå bare re-eksporterer herfra). Én sentral AI-klient med to
 // backends som deler samme kø: «ollama» (direkte, NDJSON) og «openwebui» (Open WebUI 0.12, OpenAI-kompatibel
 // /api/chat/completions med Bearer-nøkkel og SSE). Valget: innstillingen ai_backend ('openwebui' | 'ollama'; tom = Open WebUI
@@ -51,6 +53,7 @@ import { settings as fhSettings } from './finans/db.js';
 import { OWNER, kv } from './db.js';
 import { cfg } from './settings.js';
 import { THINK_UNSUPPORTED, isThinkingModel, rememberNoThink, hasNoThink, stripThink, userWantsThink } from './ollama-opts.js';
+import { omlxConf58 } from './omlx58/config.js'; // prompt 58: «Bruk Ollama hvis … ikke svarer» (felles for oMLX og Open WebUI)
 
 /* ---------------- Innstillinger ---------------- */
 
@@ -98,6 +101,17 @@ const defaultBase = () => { try { return String(fhSettings(OWNER).ollamaUrl || '
 
 export const BACKENDS = ['openwebui', 'ollama'];
 export const THINK_NOTE = 'via Ollama direkte: Open WebUI slo ikke av tenking';
+export const OWUI_DOWN_NOTE = 'via Ollama direkte (Open WebUI svarte ikke)';
+/**
+ * Prompt 58: Open WebUI nede (ingen kontakt eller 502/503/504) og Ollama-adressen satt → ett nytt forsøk direkte mot Ollama med samme
+ * modell. Ikke når administratoren har valgt Open WebUI eksplisitt (ai_backend='openwebui') OG slått av «Bruk Ollama hvis … ikke svarer».
+ */
+export function owuiFallbackAllowed() {
+  let on = true;
+  try { on = omlxConf58().fallbackOllama !== false; } catch { /* standard på */ }
+  return on || backendConfig().mode !== 'openwebui';
+}
+const owuiDown = (e) => e?.kind === 'nocontact' || [502, 503, 504].includes(e?.status);
 const cfgOf = (k) => { try { return String(cfg(k) ?? '').trim(); } catch { return ''; } };
 /** Open WebUI-oppsettet (adresse + nøkkel) eller null. Nøkkelen forlater aldri serveren. */
 export function owuiConf() {
@@ -150,6 +164,8 @@ export function maskSecrets(text) {
   let s = String(text ?? '');
   const k = cfgOf('openwebui_key');
   if (k && k.length >= 4) s = s.split(k).join('sk-••••');
+  // Prompt 58: nøklene til backends med eget oppsett (oMLX) maskeres også.
+  for (const b of backends.values()) { let bk = ''; try { bk = String(b.conf?.()?.key ?? ''); } catch { /* */ } if (bk.length >= 4) s = s.split(bk).join('••••'); }
   return s.replace(/\bsk-[A-Za-z0-9_\-.]{4,}/g, 'sk-••••').replace(/(Bearer\s+)[^\s"',}]+/gi, '$1••••');
 }
 const sleep = (ms, signal) => new Promise((res, rej) => {
@@ -170,7 +186,7 @@ const UNLOADED_RE = /runner process has terminated|model (?:was )?unloaded|unloa
 const BUSY_RE = /server busy|too many requests|maximum pending requests/i;
 const secs = (ms) => Math.round(ms / 1000);
 /** HTTP-svar (eller {error} i strømmen) → GateError. */
-function httpGateError(status, text, name = 'Ollama') {
+export function httpGateError(status, text, name = 'Ollama') {
   let msg = text;
   try { const j = JSON.parse(text); msg = j.error?.message ?? j.error ?? j.detail?.message ?? j.detail ?? j.message ?? text; } catch { /* tekst */ }
   msg = maskSecrets(String(typeof msg === 'string' ? msg : JSON.stringify(msg)).replace(/\s+/g, ' ').trim()).slice(0, 200);
@@ -181,7 +197,7 @@ function httpGateError(status, text, name = 'Ollama') {
   const text2 = name !== 'Ollama' ? `${name} HTTP ${status}: ${msg}` : status === 404 || status === 401 || status === 403 ? `${status} ${msg}` : `Ollama HTTP ${status}: ${msg}`;
   return new GateError('http', text2, { status, ollamaError: msg, transient, backendName: name });
 }
-function netGateError(e, base, name = 'Ollama') {
+export function netGateError(e, base, name = 'Ollama') {
   const code = e?.cause?.code || e?.code || '';
   const transient = /ECONNRESET|UND_ERR_SOCKET|EPIPE|socket hang up|other side closed/i.test(`${code} ${e?.message ?? ''} ${e?.cause?.message ?? ''}`);
   return new GateError('nocontact', maskSecrets(`${name} kan ikke nås${base ? ` på ${base}` : ''} (${code || e?.message || e?.name})`), { net: true, transient, code, backendName: name });
@@ -303,6 +319,7 @@ function startJob(j) {
  */
 function afterJob(j) {
   if (j.internal || j.kind === 'unload' || j.kind === 'load') return;
+  if (j.backend && j.backend !== 'ollama' && j.backend !== 'openwebui') return; // prompt 58: oMLX styrer minnet selv (ingen keep_alive mot Ollama)
   if (!isZeroKeep(keepAliveFor(j.model)) || !j.didRequest || !j.base) return;
   if (Q.unloadTimers.has(j.model)) clock.clearTimeout(Q.unloadTimers.get(j.model));
   const t = clock.setTimeout(() => { Q.unloadTimers.delete(j.model); maybeUnload(j); }, _gateTest.unloadGraceMs);
@@ -333,10 +350,11 @@ async function doUnload(model, base, f) {
 }
 
 /** Legger én forespørsel (ett forsøk) i køen. → promise med resultatet av run() */
-function enqueue({ model, backend = 'ollama', prio, retry = false, exclusive = false, auto = false, kind, label, signal, run, onQueue, base, fetch: f }) {
+function enqueue({ model, backend = 'ollama', prio, retry = false, exclusive = false, auto = false, kind, label, signal, run, onQueue, base, inst, fetch: f }) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(cancelErr()); return; }
-    const j = { id: `g${++Q.seq}`, seq: Q.seq, model, backend, prio, retry, exclusive, auto, kind, label, signal, run, base, inst: base || defaultBase() || '', fetch: f, enqAt: clock.now(), resolve, reject };
+    // Prompt 58: inst = egen kø-instans for backends med egen server (oMLX på Mac mini-en), ellers Ollama-adressen.
+    const j = { id: `g${++Q.seq}`, seq: Q.seq, model, backend, prio, retry, exclusive, auto, kind, label, signal, run, base, inst: inst || base || defaultBase() || '', fetch: f, enqAt: clock.now(), resolve, reject };
     j.onAbort = () => { const i = Q.waiting.indexOf(j); if (i >= 0) { Q.waiting.splice(i, 1); reject(cancelErr()); pump(); } };
     signal?.addEventListener?.('abort', j.onAbort, { once: true });
     if (kind !== 'unload') cancelUnload(model);
@@ -361,17 +379,22 @@ async function attempt(o, job) {
   // Prompt 44: Ollama-adressen brukes til /api/ps, innlasting og utlasting også når kallet går via Open WebUI.
   const ollamaBase = o.base || defaultBase();
   const owui = o.backend === 'openwebui' ? (o.owuiConf ?? owuiConf()) : null;
-  const base = o.backend === 'openwebui' ? owui?.url ?? '' : ollamaBase;
-  const beName = o.backend === 'openwebui' ? 'Open WebUI' : 'Ollama';
+  // Prompt 58: backends med eget oppsett (conf() → {url, key, label}), f.eks. oMLX på Mac mini-en. Ingen /api/ps, keep_alive eller
+  // utlasting mot Ollama for dem.
+  const be = getBackend(o.backend);
+  const bconf = be.conf ? (o.backendConf ?? be.conf()) : null;
+  const base = o.backend === 'openwebui' ? owui?.url ?? '' : be.conf ? bconf?.url ?? '' : ollamaBase;
+  const beName = o.backend === 'openwebui' ? 'Open WebUI' : be.label ?? 'Ollama';
   if (ollamaBase) Q.lastBase = ollamaBase;
   if (!base) throw o.backend === 'openwebui' ? new GateError('http', 'Open WebUI er ikke satt opp (adresse og API-nøkkel mangler)', { status: 501, transient: false, backendName: beName })
-    : new GateError('nocontact', 'Ollama-adressen er ikke satt', { net: true, transient: false });
+    : be.conf ? new GateError('http', `${beName} er ikke satt opp (adresse mangler)`, { status: 501, transient: false, backendName: beName })
+      : new GateError('nocontact', 'Ollama-adressen er ikke satt', { net: true, transient: false });
   const f = fetchOf(o.fetch);
-  job.base = ollamaBase; job.fetch = o.fetch; job.backend = o.backend ?? 'ollama';
+  job.base = be.conf ? null : ollamaBase; job.fetch = o.fetch; job.backend = o.backend ?? 'ollama';
   const loadMs = o.loadMs ?? p.loadTimeout * 1000;
   const warmMs = o.warmMs ?? p.firstTokenTimeout * 1000;
   // Kald eller varm? /api/ps (kort cache) – også modeller Open WebUI har lastet. Trengs bare når grensene er ulike.
-  const ps = ollamaBase && (o.kind === 'load' || o.kind === 'embed' || loadMs !== warmMs) ? await loadedModels({ base: ollamaBase, fetch: o.fetch }) : null;
+  const ps = !be.conf && ollamaBase && (o.kind === 'load' || o.kind === 'embed' || loadMs !== warmMs) ? await loadedModels({ base: ollamaBase, fetch: o.fetch }) : null;
   const warmKnown = (Q.warm.get(o.model) ?? 0) > clock.now();
   const cold = ps ? !isLoadedIn(ps, o.model) : !warmKnown;
   const conf = keepAliveFor(o.model, p);
@@ -417,7 +440,6 @@ async function attempt(o, job) {
   let firstAt = null, out;
   // Prompt 43: selve kallet går via en backend (standard «ollama»). Køen, grupperingen, tidsgrensene, nye forsøk og telemetrien
   // over er felles; backenden melder hver bit med onToken (som holder tidsgrensene i live).
-  const be = getBackend(o.backend);
   const onToken = async (j) => {
     if (!gotFirst) { gotFirst = true; job.gotFirst = true; firstAt = clock.now(); clock.clearTimeout(tFirst); if (deadAfterLoad) tDead = clock.setTimeout(fire('deadline'), o.deadlineMs); }
     if (o.kind !== 'embed') armIdle();
@@ -426,7 +448,7 @@ async function attempt(o, job) {
   };
   const out0 = { content: '', thinking: '' }; // backenden oppdaterer underveis (fasevisning)
   try {
-    out = await be.chatStream({ kind: o.kind, model: o.model, base, path, body, fetch: f, thinking, partial: out0, owui, extra: o.owuiExtra ?? null }, { onToken, signal: ctrl.signal, onRequest: () => { job.didRequest = true; } });
+    out = await be.chatStream({ kind: o.kind, model: o.model, base, path, body, fetch: f, thinking, partial: out0, owui, conf: bconf, extra: o.owuiExtra ?? null }, { onToken, signal: ctrl.signal, onRequest: () => { job.didRequest = true; } });
   } catch (e) {
     if (why) throw timeoutErr();
     if (e instanceof GateError) throw e;
@@ -676,6 +698,12 @@ const keepMs = (v) => (v === -1 || v === '-1' ? 365 * 86400_000 : isZeroKeep(v) 
  * retries: maks antall nye forsøk (standard 2). retryTimeouts:false → tidsavbrudd før første token gir ikke nye forsøk
  * (brukes når ruteren har en reserve å gå til).
  */
+/** Prompt 58: egen kø-instans for backends med egen server (oMLX): adressen deres. Ellers null (Ollama-adressen). */
+function laneOf(o) {
+  const b = backends.get(o.backend);
+  if (!b?.conf) return null;
+  try { const u = (o.backendConf ?? b.conf())?.url; return u ? `${o.backend}:${u}` : null; } catch { return null; }
+}
 async function request(o0) {
   const t0 = clock.now();
   const prio = PRIO[o0.priority] ?? PRIO.background;
@@ -683,7 +711,7 @@ async function request(o0) {
   // Prompt 44: backend per kall (ai_backend, think-merket modell). Modellen er køens nøkkel på tvers av backends.
   let sel = chooseBackend(o0);
   let o = { ...o0, backend: sel.backend };
-  let queueMs = 0, attempts = 0, leakSwitched = false;
+  let queueMs = 0, attempts = 0, leakSwitched = false, downSwitched = false;
   const tele = (x = {}) => ({ queueMs, loadMs: x.loadMs ?? 0, promptMs: x.promptMs ?? 0, genMs: x.genMs ?? 0, totalMs: clock.now() - t0, tokIn: x.tokIn ?? 0, tokOut: x.tokOut ?? 0,
     thinkChars: x.thinkChars ?? 0, attempts, model: o.model, keepAlive: x.keepAlive ?? null, cold: x.cold ?? null, firstTokenMs: x.firstTokenMs ?? null,
     backend: o.backend, backendNote: sel.note ?? null, ...(x.thinkLeak ? { thinkLeak: true } : {}) });
@@ -695,7 +723,7 @@ async function request(o0) {
       const runIt = (qj) => { qjob = qj; qj.attemptNo = attempts; startedAt = clock.now(); queueMs += startedAt - enq; return attempt(o, qj); };
       // noQueue: sky-modeller via Open WebUI (ingen Ollama bak) skal ikke vente på Ollama-køen.
       const out = o.noQueue ? await runIt({ id: `nq${++Q.seq}` })
-        : await enqueue({ model: o.model, backend: o.backend, prio, retry: attempts > 1, kind: o.kind, label: o.label, signal: o.signal, onQueue: o.onQueue, base: o.base, fetch: o.fetch, run: runIt });
+        : await enqueue({ model: o.model, backend: o.backend, prio, retry: attempts > 1, kind: o.kind, label: o.label, signal: o.signal, onQueue: o.onQueue, base: o.base, inst: laneOf(o), fetch: o.fetch, run: runIt });
       const { t, thinkLeak, ...rest } = out;
       // Open WebUI slo ikke av tenkingen og svaret ble tomt (tenkingen brukte opp num_predict): samme kall direkte til Ollama.
       if (thinkLeak && !leakSwitched && !String(rest.text ?? '').trim() && (o.base || defaultBase()) && o.backend === 'openwebui' && !o0.backend) {
@@ -719,10 +747,17 @@ async function request(o0) {
         if ((o.base || defaultBase()) && o.backend === 'openwebui' && !o0.backend) { sel = { backend: 'ollama', note: 'via Ollama direkte: Open WebUI søkte på nettet selv om Nettsøk var av' }; o = { ...o0, backend: 'ollama' }; }
         continue;
       }
+      // Prompt 58: Open WebUI svarer ikke → samme kall direkte til Ollama (én gang). Embeddings/innlasting går allerede til Ollama.
+      if (o.backend === 'openwebui' && !o0.backend && !downSwitched && !streamedOut && owuiDown(e) && (o.base || defaultBase()) && o.kind !== 'embed' && o.kind !== 'load' && owuiFallbackAllowed()) {
+        downSwitched = true;
+        console.warn(`[ai-gate] ${o.model}: ${e.message} · prøver Ollama direkte`);
+        sel = { backend: 'ollama', note: OWUI_DOWN_NOTE }; o = { ...o0, backend: 'ollama' };
+        continue;
+      }
       if (!e.transient || timeoutBlocked || streamedOut || attempts > maxRetries) throw e;
       // Prompt 47: ingen stablende nye forsøk. Venter allerede en annen forespørsel mot samme instans på et nytt forsøk, gir denne
       // opp med en gang (feilen går videre til ruterens reserve) i stedet for å legge seg i kø bak.
-      const inst = o.base || defaultBase() || '';
+      const inst = laneOf(o) || o.base || defaultBase() || '';
       if ((Q.retrying.get(inst) ?? 0) >= _gateTest.maxRetrying) { e.retrySkipped = true; throw e; }
       const wait = _gateTest.backoffMs[Math.min(attempts - 1, _gateTest.backoffMs.length - 1)] ?? 2000;
       console.warn(`[ai-gate] ${o.model} (${o.backend}): ${e.message} · nytt forsøk ${attempts}/${maxRetries} om ${Math.round(wait / 100) / 10} s`);

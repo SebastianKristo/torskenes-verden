@@ -218,3 +218,18 @@ test('ai_think finnes som personlig innstilling, av som standard', async () => {
   assert.ok(f, 'ai_think i SCHEMA');
   assert.match(f.label, /La modellen tenke før den svarer/);
 });
+
+test('selvtesten tenker aldri, selv når «La modellen tenke» (ai_think) er på', async () => {
+  const ai = await import('../server/ai-run.js');
+  setUserCfg(OWNER, { ai_think: '1' });
+  calls.length = 0;
+  const r = await ai.miniGenerate('ollama', 'qwen3:8b', { user: OWNER });
+  const gen = calls.find((c) => c.url.endsWith('/api/chat'));
+  assert.ok(gen, 'kallet gikk til Ollama');
+  assert.equal(gen.body.think, false, 'think:false sendes');
+  assert.equal(r.ok, true, r.error);
+  // Bildetesten bruker et bilde på minst 28×28 (qwen2.5vl avviser mindre).
+  const png = Buffer.from(ai.PIXEL, 'base64');
+  assert.ok(png.readUInt32BE(16) >= 28 && png.readUInt32BE(20) >= 28);
+  setUserCfg(OWNER, { ai_think: '0' });
+});

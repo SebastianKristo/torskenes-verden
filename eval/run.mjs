@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // GLIMT47 eval: kjører Glimt-casene mot den EKTE modellen (eller en falsk med --backend mock), N ganger hver,
 // med fryst klokke (2026-10-24 10:00 Europe/Oslo), fersk DATA_DIR per kjøring og mockede eksterne data.
-// Se eval/README.md. Bruk: npm run eval -- [--backend ollama|openwebui|mock] [--url …] [--key …] [--runs 3] [--case 01,07] …
+// Se eval/README.md. Bruk: npm run eval -- [--backend ollama|openwebui|omlx|mock] [--url …] [--key …] [--runs 3] [--case 01,07] …
+// Prompt 58: --backend omlx kjører de samme casene mot oMLX (MLX på Mac mini-en) med egen standardruting for MLX-modell-ID-ene, og
+// rapporten har motoren i tittelen og p50/p90 per case og totalt (for alle motorer).
 import { spawn, execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, mkdtempSync, existsSync, rmSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
@@ -9,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { STANDARD_ROUTING, envFailure55 } from './lib/env.mjs';
+import { STANDARD_OMLX58, OMLX_TASKS58, pct58, resolveMlx58, ENGINE_LABEL58 } from './lib/omlx58.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -20,10 +23,15 @@ const HELP = `Glimt eval (GLIMT47)
 
   npm run eval -- [valg]
 
-  --backend ollama|openwebui|mock   Modellen (standard ollama). mock = falsk modell uten nett (CI/rigg-sjekk).
-  --url URL                         Ollama (standard $OLLAMA_URL eller http://localhost:11434) eller Open WebUI-adressen.
-  --key KEY                         Open WebUI API-nøkkel (eller $OPENWEBUI_KEY).
-  --ollama-url URL                  Med openwebui: Ollama direkte (embeddings, tenkemodeller, kvitteringer). Valgfri.
+  --backend ollama|openwebui|omlx|mock
+                                    Modellen (standard ollama). mock = falsk modell uten nett (CI/rigg-sjekk).
+                                    omlx = oMLX (OpenAI-kompatibel MLX-server) for oppgavene glimt, sok, brief, dom, fsok, rc.
+  --url URL                         Ollama (standard $OLLAMA_URL eller http://localhost:11434), Open WebUI-adressen eller oMLX
+                                    (standard $OMLX_URL eller http://127.0.0.1:18040 = oMLX bak vakten på Mac mini-en).
+  --key KEY                         Open WebUI API-nøkkel (eller $OPENWEBUI_KEY) / oMLX-nøkkelen (eller $OMLX_API_KEY).
+  --ollama-url URL                  Med openwebui/omlx: Ollama direkte (embeddings, Chat, kvitteringenes tekststeg; med omlx også
+                                    reserven når --omlx-fallback er på). Valgfri (med omlx: standard $OLLAMA_URL).
+  --omlx-fallback                   Med omlx: slå på «Bruk Ollama hvis oMLX ikke svarer» (standard AV i eval, så tallene er rene oMLX).
   --runs N                          Kjøringer per case (standard 3).
   --case 01,07,vaer                 Bare casene med id som starter med / inneholder dette.
   --routing prod-db|standard|auto|FIL.json
@@ -50,20 +58,20 @@ for (let i = 0; i < argv.length; i++) {
   if (a === '-h' || a === '--help') { console.log(HELP); process.exit(0); }
   if (!a.startsWith('--')) continue;
   const [k, inline] = a.slice(2).split('=');
-  const flag = ['keep', 'quiet'].includes(k);
+  const flag = ['keep', 'quiet', 'omlx-fallback'].includes(k);
   opt[k] = flag ? true : inline ?? argv[++i];
 }
 const ORIG_DATA_DIR = process.env.DATA_DIR || join(REPO, 'data');
 const backend = (opt.backend ?? 'ollama').toLowerCase();
-if (!['ollama', 'openwebui', 'mock'].includes(backend)) { console.error(`Ukjent --backend ${backend}`); process.exit(2); }
+if (!['ollama', 'openwebui', 'omlx', 'mock'].includes(backend)) { console.error(`Ukjent --backend ${backend}`); process.exit(2); }
 const runs = Math.max(1, +(opt.runs ?? 3) || 3);
 const timeoutMs = Math.max(30, +(opt.timeout ?? 900) || 900) * 1000;
-let url = opt.url ?? (backend === 'openwebui' ? process.env.OPENWEBUI_URL : process.env.OLLAMA_URL) ?? 'http://localhost:11434';
+let url = opt.url ?? (backend === 'openwebui' ? process.env.OPENWEBUI_URL : backend === 'omlx' ? process.env.OMLX_URL ?? 'http://127.0.0.1:18040' : process.env.OLLAMA_URL) ?? 'http://localhost:11434';
 if (backend === 'mock') url = 'http://ollama.mock47:11434';
 url = String(url).replace(/\/+$/, '');
-const key = opt.key ?? process.env.OPENWEBUI_KEY ?? '';
+const key = opt.key ?? (backend === 'omlx' ? process.env.OMLX_API_KEY : process.env.OPENWEBUI_KEY) ?? '';
 if (backend === 'openwebui' && (!opt.url && !process.env.OPENWEBUI_URL || !key)) { console.error('--backend openwebui krever --url og --key'); process.exit(2); }
-const ollamaUrl = backend === 'openwebui' ? (opt['ollama-url'] ?? '') : url;
+const ollamaUrl = backend === 'openwebui' ? (opt['ollama-url'] ?? '') : backend === 'omlx' ? String(opt['ollama-url'] ?? process.env.OLLAMA_URL ?? '').replace(/\/+$/, '') : url;
 
 /* ---------------- Ruting ---------------- */
 
@@ -104,8 +112,15 @@ if (routingMode === 'prod-db') {
   routingNote = `fil ${routingMode}`;
 }
 const setTasks = (ids, m) => { for (const k of ids) { tasks[k] = { model: m, fallback: '' }; if (userRouting?.tasks?.[k]) delete userRouting.tasks[k]; } };
-if (opt.model) setTasks(TEXT_TASKS, opt.model);
-if (opt['vision-model']) setTasks(VISION_TASKS, opt['vision-model']);
+// Prompt 58: med omlx har MLX-modellene egen ruting (oMLX-motoren per oppgave); Ollama-rutene over gjelder Chat, embeddings og reserven.
+const omlxModels = backend === 'omlx' ? { ...STANDARD_OMLX58 } : null;
+if (omlxModels) {
+  if (opt.model) for (const k of OMLX_TASKS58.filter((t) => !['rc', 'bar'].includes(t))) omlxModels[k] = opt.model;
+  if (opt['vision-model']) omlxModels.rc = opt['vision-model'];
+} else {
+  if (opt.model) setTasks(TEXT_TASKS, opt.model);
+  if (opt['vision-model']) setTasks(VISION_TASKS, opt['vision-model']);
+}
 
 /* ---------------- Cases ---------------- */
 
@@ -126,9 +141,17 @@ if (backend === 'ollama') {
 } else if (backend === 'openwebui') {
   try { const r = await fetch(`${url}/api/models`, { headers: { Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(8000) }); const j = await r.json(); inventory = (j.data ?? j.models ?? []).map((m) => m.id ?? m.name); }
   catch (e) { inventoryErr = `Fikk ikke kontakt med Open WebUI på ${url} (${e?.cause?.code ?? e.message}).`; }
+} else if (backend === 'omlx') {
+  try {
+    const r = await fetch(`${url}/v1/models`, { headers: key ? { Authorization: `Bearer ${key}` } : {}, signal: AbortSignal.timeout(8000) });
+    if (r.status === 401 || r.status === 403) inventoryErr = `oMLX på ${url} avviste nøkkelen (HTTP ${r.status}). Bruk --key (nøkkelen fra tools/omlx/install.sh).`;
+    else { const j = await r.json(); inventory = (j.data ?? j.models ?? []).map((m) => m.id ?? m.name).filter(Boolean); }
+  } catch (e) { inventoryErr = `Fikk ikke kontakt med oMLX på ${url} (${e?.cause?.code ?? e.message}). Kjører LaunchAgenten? (tools/omlx/README.md)`; }
+  // Bruk ID-ene oMLX selv oppgir (med eller uten «mlx-community/»).
+  if (inventory) for (const [k, m] of Object.entries(omlxModels)) omlxModels[k] = resolveMlx58(m, inventory) ?? m;
 }
 if (inventoryErr) { console.error(inventoryErr); process.exit(3); }
-const wanted = new Set([...Object.values(tasks).map((t) => t.model), ...Object.values(routingFull?.tasks ?? {}).map((t) => t?.model), ...Object.values(userRouting?.tasks ?? {}).map((t) => t?.model)].filter(Boolean));
+const wanted = new Set(backend === 'omlx' ? Object.values(omlxModels) : [...Object.values(tasks).map((t) => t.model), ...Object.values(routingFull?.tasks ?? {}).map((t) => t?.model), ...Object.values(userRouting?.tasks ?? {}).map((t) => t?.model)].filter(Boolean));
 const has = (m) => inventory?.some((x) => x === m || x === `${m}:latest` || `${x}:latest` === m);
 const missing = inventory ? [...wanted].filter((m) => !has(m)) : [];
 
@@ -137,10 +160,12 @@ const missing = inventory ? [...wanted].filter((m) => !has(m)) : [];
 let commit = null;
 try { commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: REPO, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { /* ikke et git-repo (container) */ }
 const tmpRoot = mkdtempSync(join(tmpdir(), 'glimt-eval-run-'));
-const cfg = { backend, url, key, ollamaUrl, tasks, routingFull, userRouting, keepData: !!opt.keep, tmpRoot };
+const omlx = backend === 'omlx' ? { models: omlxModels, tasks: OMLX_TASKS58, fallback: !!opt['omlx-fallback'] } : null;
+const cfg = { backend, url, key, ollamaUrl, tasks, routingFull, userRouting, keepData: !!opt.keep, tmpRoot, omlx };
+const engineLabel = ENGINE_LABEL58[backend] ?? backend;
 const log = (...a) => { if (!opt.quiet) console.log(...a); };
-console.log(`Glimt eval · backend ${backend}${backend !== 'mock' ? ` · ${mask(url)}` : ''} · ruting: ${routingNote} · ${runs} kjøring(er) × ${metas.length} caser · klokke 2026-10-24 10:00 Europe/Oslo`);
-if (missing.length) console.log(`ADVARSEL: modeller i rutingen som ikke er installert: ${missing.join(', ')} (appen faller da til reserve/auto)`);
+console.log(`Glimt eval · motor ${engineLabel} · backend ${backend}${backend !== 'mock' ? ` · ${mask(url)}` : ''} · ruting: ${backend === 'omlx' ? `oMLX ${Object.entries(omlxModels).map(([k, m]) => `${k}=${m}`).join(', ')}${omlx.fallback ? ' · reserve Ollama på' : ' · uten Ollama-reserve'}` : routingNote} · ${runs} kjøring(er) × ${metas.length} caser · klokke 2026-10-24 10:00 Europe/Oslo`);
+if (missing.length) console.log(`ADVARSEL: modeller i rutingen som ikke er installert${backend === 'omlx' ? ' på oMLX' : ''}: ${missing.join(', ')} (appen faller da til reserve/auto)`);
 
 // Bare et lite, kjent miljø går videre til kjøringene: ingen produksjonsnøkler (Google, HA, IMAP, Cloudflare …) og ingen
 // produksjons-DATA_DIR (worker.mjs lager sin egen). Slik kan eval trygt kjøres inne i containeren.
@@ -152,12 +177,32 @@ function cleanEnv() {
 // /api/ps leses hvert 2. sekund mens casen kjører; modeller eval ikke bruker selv blir notert per kjøring og vist i rapporten.
 const OURS = new Set([...Object.values(cfg?.tasks ?? {}).map((t) => (typeof t === "string" ? t : t?.model ?? "")), ...Object.values(STANDARD_ROUTING)].map((m) => String(m).replace(/:latest$/, '')));
 async function psModels() {
+  if (backend === 'omlx') return omlxForeign();
   if (backend !== 'ollama') return [];
   try {
     const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 1500);
     const j = await fetch(`${url.replace(/\/$/, '')}/api/ps`, { signal: ac.signal }).then((r) => r.json()).finally(() => clearTimeout(t));
     return (j?.models ?? []).map((m) => String(m.name ?? m.model ?? '').replace(/:latest$/, '')).filter(Boolean);
   } catch { return []; }
+}
+// Prompt 58: oMLX – /v1/models viser lastede modeller bare hvis oMLX oppgir det (loaded/status); ellers droppes sjekken. Det som teller
+// mest på 16 GB er om Ollama holder en modell samtidig (to motorer om samme minne), så /api/ps på --ollama-url sjekkes også.
+const OURS_MLX = new Set(Object.values(omlxModels ?? {}));
+async function omlxForeign() {
+  const out = [];
+  try {
+    const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 1500);
+    const j = await fetch(`${url}/v1/models`, { headers: key ? { Authorization: `Bearer ${key}` } : {}, signal: ac.signal }).then((r) => r.json()).finally(() => clearTimeout(t));
+    for (const m of j?.data ?? []) { const ld = typeof m.loaded === 'boolean' ? m.loaded : /^(loaded|ready|running|active)$/i.test(String(m.status ?? '')) ? true : null; if (ld && !OURS_MLX.has(m.id)) out.push(`oMLX:${m.id}`); }
+  } catch { /* */ }
+  if (ollamaUrl) {
+    try {
+      const ac = new AbortController(); const t = setTimeout(() => ac.abort(), 1500);
+      const j = await fetch(`${ollamaUrl}/api/ps`, { signal: ac.signal }).then((r) => r.json()).finally(() => clearTimeout(t));
+      for (const m of j?.models ?? []) { const n = String(m.name ?? m.model ?? '').replace(/:latest$/, ''); if (n && !/embed/i.test(n)) out.push(`Ollama:${n}`); }
+    } catch { /* */ }
+  }
+  return out;
 }
 function watchForeign() {
   const seen = new Set();
@@ -168,7 +213,8 @@ function watchForeign() {
 }
 {
   const pre = (await psModels()).filter((m) => !OURS.has(m));
-  if (pre.length) console.log(`  ADVARSEL: Ollama har ${pre.join(', ')} lastet – noe annet (Homelab-serveren, Open WebUI) bruker den. Pause AI-køen i Homelab (AI-kontroll → Jobber) eller stopp klienten, ellers blir tidene og tidsavbruddene feil.`);
+  if (pre.length && backend === 'omlx') console.log(`  ADVARSEL: ${pre.join(', ')} er lastet. På 16 GB bør ikke Ollama og oMLX holde en modell samtidig: kjør «ollama stop <modell>» (eller keep_alive 0) og pause AI-køen i Homelab, ellers blir tidene feil.`);
+  else if (pre.length) console.log(`  ADVARSEL: Ollama har ${pre.join(', ')} lastet – noe annet (Homelab-serveren, Open WebUI) bruker den. Pause AI-køen i Homelab (AI-kontroll → Jobber) eller stopp klienten, ellers blir tidene og tidsavbruddene feil.`);
 }
 function runOne(meta, i) {
   const stopWatch = watchForeign();
@@ -189,14 +235,17 @@ function runOne(meta, i) {
       r.log = logs.split('\n').filter((l) => l.trim()).slice(-60);
       r.run = i;
       r.foreign = stopWatch();
-      const env = envFailure(r, logs) ?? (!r.ok && !r.riggError && r.foreign.length ? `Ollama ble brukt av noe annet samtidig (${r.foreign.join(', ')})` : null);
+      const env = envFailure(r, logs) ?? (!r.ok && !r.riggError && r.foreign.length ? `${backend === 'omlx' ? 'Annen modell lastet samtidig' : 'Ollama ble brukt av noe annet samtidig'} (${r.foreign.join(', ')})` : null);
       if (env) { r.status = 'env'; r.envReason = env; } else r.status = r.ok ? 'ok' : r.riggError ? 'rigg' : 'feil';
       res(r);
     });
   });
 }
 
-const envFailure = (r, logs) => envFailure55(r, logs, missing); // prompt 55: miljøfeil (eval/lib/env.mjs)
+// Prompt 58: med omlx uten --ollama-url går Chat, embeddings og kvitteringenes tekststeg fortsatt til Ollama (finnes ikke) → miljøfeil.
+const noOllama58 = (r, logs) => (backend === 'omlx' && !ollamaUrl && !r.ok && !r.riggError && /ollama\.eval-unset/.test(`${logs}\n${JSON.stringify(r.trace?.model ?? [])}\n${JSON.stringify(r.trace?.steps ?? [])}`)
+  ? 'trenger Ollama (Chat/embeddings/kvitteringstekst går ikke via oMLX) – kjør med --ollama-url' : null);
+const envFailure = (r, logs) => noOllama58(r, logs) ?? envFailure55(r, logs, missing); // prompt 55: miljøfeil (eval/lib/env.mjs)
 const all = [];
 for (const meta of metas) {
   const results = [];
@@ -206,7 +255,8 @@ for (const meta of metas) {
     log(`  ${r.ok ? 'OK  ' : r.riggError ? 'RIGG' : r.status === 'env' ? 'ENV ' : 'FEIL'} ${meta.id} #${i} ${(r.ms / 1000).toFixed(1)} s${r.ok ? '' : r.status === 'env' ? ` – miljø: ${r.envReason} (${String(r.reason ?? '').slice(0, 140)})` : ` – ${String(r.reason ?? '').slice(0, 220)}`}`);
   }
   const ms = results.map((r) => r.ms ?? 0).sort((a, b) => a - b);
-  all.push({ ...meta, passes: results.filter((r) => r.ok).length, envRuns: results.filter((r) => r.status === 'env').length, envReasons: [...new Set(results.filter((r) => r.status === 'env').map((r) => r.envReason))], runs, medianMs: ms[Math.floor((ms.length - 1) / 2)], models: [...new Set(results.flatMap((r) => r.models ?? []))],
+  all.push({ ...meta, passes: results.filter((r) => r.ok).length, envRuns: results.filter((r) => r.status === 'env').length, envReasons: [...new Set(results.filter((r) => r.status === 'env').map((r) => r.envReason))], runs, medianMs: ms[Math.floor((ms.length - 1) / 2)],
+    p50Ms: pct58(ms, 0.5), p90Ms: pct58(ms, 0.9), models: [...new Set(results.flatMap((r) => r.models ?? []))],
     maxPromptTokens: Math.max(0, ...results.map((r) => r.tokens?.maxPrompt ?? 0)), riggErrors: results.filter((r) => r.riggError).length, results });
 }
 
@@ -215,9 +265,10 @@ for (const meta of metas) {
 const pad = (s, n) => { s = String(s); return s.length > n ? `${s.slice(0, n - 1)}…` : s + ' '.repeat(n - s.length); };
 const firstReason = (c) => { const r = c.results.find((x) => !x.ok && x.status !== 'env') ?? c.results.find((x) => !x.ok); return r ? `${r.status === 'env' ? `[miljø: ${r.envReason}] ` : ''}${r.reason ?? ''}` : ''; };
 const okText = (c) => `${c.passes}/${c.runs}${c.envRuns ? ` (${c.envRuns} env)` : ''}`;
-const rows = all.map((c) => [c.id, okText(c), `${(c.medianMs / 1000).toFixed(1)} s`, c.models.join(', ') || '–', c.maxPromptTokens || '–', c.passes === c.runs ? '' : firstReason(c)]);
-const head = ['Case', 'OK', 'Median', 'Modell(er)', 'Maks prompt-tok', 'Grunn (første feil)'];
-const widths = [26, 11, 8, 26, 15, 90];
+const sec = (v) => `${((v ?? 0) / 1000).toFixed(1)} s`;
+const rows = all.map((c) => [c.id, okText(c), sec(c.medianMs), sec(c.p50Ms), sec(c.p90Ms), c.models.join(', ') || '–', c.maxPromptTokens || '–', c.passes === c.runs ? '' : firstReason(c)]);
+const head = ['Case', 'OK', 'Median', 'p50', 'p90', 'Modell(er)', 'Maks prompt-tok', 'Grunn (første feil)'];
+const widths = [26, 11, 8, 8, 8, 26, 15, 90];
 console.log(`\n${head.map((h, i) => pad(h, widths[i])).join(' ')}\n${widths.map((w) => '-'.repeat(w)).join(' ')}`);
 for (const r of rows) console.log(r.map((x, i) => pad(x, widths[i])).join(' '));
 const totalPass = all.reduce((a, c) => a + c.passes, 0), total = all.reduce((a, c) => a + c.runs, 0);
@@ -226,7 +277,10 @@ const green = all.filter((c) => c.passes === c.runs).length;
 const envTotal = all.reduce((a, c) => a + c.envRuns, 0);
 const modelFails = total - totalPass - envTotal;
 const envLine = envTotal ? `Miljøfeil (ikke modellfeil): ${envTotal} kjøring(er) · ${[...new Set(all.flatMap((c) => c.envReasons))].join(' | ')} · caser: ${all.filter((c) => c.envRuns).map((c) => c.id).join(', ')}` : null;
-console.log(`\nTotalt ${totalPass}/${total} kjøringer bestått · ${green}/${all.length} caser ${runs}/${runs} · modellfeil ${modelFails}${envTotal ? ` · miljøfeil ${envTotal}` : ''}`);
+// Prompt 58: p50/p90 over alle kjøringer (samme mål for alle motorer, så Ollama og oMLX kan sammenlignes).
+const allMs = all.flatMap((c) => c.results.map((r) => r.ms ?? 0)).sort((a, b) => a - b);
+const p50All = pct58(allMs, 0.5), p90All = pct58(allMs, 0.9);
+console.log(`\nTotalt ${totalPass}/${total} kjøringer bestått · ${green}/${all.length} caser ${runs}/${runs} · modellfeil ${modelFails}${envTotal ? ` · miljøfeil ${envTotal}` : ''} · motor ${engineLabel} · p50 ${sec(p50All)} · p90 ${sec(p90All)}`);
 if (envLine) console.log(envLine);
 
 // Prompt 55: tid per modellkall (modell, steg/tittel, total, lasting fra Ollama) – modellbytter og kald lasting synes i rapporten.
@@ -236,22 +290,25 @@ function modelTimes(calls) {
   return `kall: ${list.join(' → ')}${swaps ? ` · ${swaps} modellbytte(r)` : ''}`;
 }
 const date = new Date().toISOString().slice(0, 10);
-const modelTag = (tasks.glimt?.model || routingFull?.tasks?.glimt?.model || userRouting?.tasks?.glimt?.model || (backend === 'mock' ? 'mock' : 'auto')).replace(/[^\w.-]+/g, '_');
+const modelTag = ((backend === 'omlx' ? String(omlxModels.glimt).split('/').pop() : null) || tasks.glimt?.model || routingFull?.tasks?.glimt?.model || userRouting?.tasks?.glimt?.model || (backend === 'mock' ? 'mock' : 'auto')).replace(/[^\w.-]+/g, '_');
 const outDir = resolve(opt.out ?? join(HERE, 'results'));
 mkdirSync(outDir, { recursive: true });
 let base = join(outDir, `${date}-${backend}-${modelTag}`);
 for (let n = 2; existsSync(`${base}.json`); n++) base = join(outDir, `${date}-${backend}-${modelTag}-${n}`);
-const meta = { date: new Date().toISOString(), frozenClock: '2026-10-24T10:00:00+02:00 (Europe/Oslo)', backend, url: backend === 'mock' ? null : mask(url), ollamaUrl: backend === 'openwebui' ? (ollamaUrl || null) : undefined,
+const meta = { date: new Date().toISOString(), frozenClock: '2026-10-24T10:00:00+02:00 (Europe/Oslo)', backend, engine: engineLabel, url: backend === 'mock' ? null : mask(url), ollamaUrl: backend === 'openwebui' || backend === 'omlx' ? (ollamaUrl || null) : undefined,
+  ...(omlx ? { omlx: { models: omlxModels, tasks: OMLX_TASKS58, fallbackOllama: omlx.fallback } } : {}),
   routing: { mode: routingMode, note: routingNote, effective: all[0]?.results?.[0]?.routing ?? null }, missingModels: missing, runs, commit, node: process.version };
-writeFileSync(`${base}.json`, JSON.stringify({ meta, summary: { passed: totalPass, total, greenCases: green, cases: all.length, modelFailures: modelFails, envFailures: envTotal }, cases: all }, null, 2));
-const md = [`# Glimt eval ${date} · ${backend} · ${modelTag}`, '',
-  `- Klokke: ${meta.frozenClock}`, `- Backend: ${backend}${meta.url ? ` (${meta.url})` : ''}`, `- Ruting: ${routingNote}`,
+writeFileSync(`${base}.json`, JSON.stringify({ meta, summary: { passed: totalPass, total, greenCases: green, cases: all.length, modelFailures: modelFails, envFailures: envTotal, engine: engineLabel, p50Ms: p50All, p90Ms: p90All }, cases: all }, null, 2));
+const md = [`# Glimt eval ${date} · motor ${engineLabel} · ${backend} · ${modelTag}`, '',
+  `- Klokke: ${meta.frozenClock}`, `- Motor: ${engineLabel} · backend: ${backend}${meta.url ? ` (${meta.url})` : ''}`, `- Ruting: ${routingNote}`,
+  ...(omlx ? [`- oMLX-ruting: ${Object.entries(omlxModels).map(([k, m]) => `${k}=${m}`).join(', ')} · Ollama-reserve ${omlx.fallback ? 'på' : 'av'}${ollamaUrl ? ` · Ollama (Chat, embeddings, kvitteringstekst) ${mask(ollamaUrl)}` : ''}`] : []),
+  `- Tid per kjøring: p50 ${sec(p50All)} · p90 ${sec(p90All)} (alle kjøringer)`,
   `- Effektiv ruting: ${Object.entries(meta.routing.effective ?? {}).map(([k, v]) => `${k}=${v}`).join(', ')}`,
-  ...(missing.length ? [`- Mangler i Ollama: ${missing.join(', ')}`] : []), `- Commit: ${commit ?? 'ukjent'} · Node ${process.version}`, '',
+  ...(missing.length ? [`- Mangler i ${backend === 'omlx' ? 'oMLX' : 'Ollama'}: ${missing.join(', ')}`] : []), `- Commit: ${commit ?? 'ukjent'} · Node ${process.version}`, '',
   `**${totalPass}/${total} kjøringer bestått · ${green}/${all.length} caser ${runs}/${runs} · modellfeil ${modelFails}${envTotal ? ` · miljøfeil ${envTotal}` : ''}**`, '',
   ...(envLine ? [`> ${envLine}`, ''] : []),
   `- Miljø: ${(all[0]?.results?.[0]?.env?.notes ?? []).join(' · ') || 'OCR tilgjengelig'}`, '',
-  '| Case | OK | Median | Modell(er) | Maks prompt-tok | Grunn (første feil) |', '|---|---|---|---|---|---|',
+  '| Case | OK | Median | p50 | p90 | Modell(er) | Maks prompt-tok | Grunn (første feil) |', '|---|---|---|---|---|---|---|---|',
   ...rows.map((r) => `| ${r.map((x) => String(x).replace(/\|/g, '\\|').replace(/\n/g, ' ')).join(' | ')} |`), '',
   '## Per case', '',
   ...all.flatMap((c) => [`### ${c.id} – ${c.title} (${c.passes}/${c.runs})`, '', ...c.results.flatMap((r) => [

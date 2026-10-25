@@ -26,16 +26,19 @@ process.env.TZ = 'Europe/Oslo';
 process.env.AI_FALLBACK = 'none'; // aldri sky-reserve (Gemini/Groq) i eval
 delete process.env.MOCK_DATA; // MOCK_DATA ville slått av modellen (ai-run/plan/assist) og lagt inn demodata – eksterne data mockes i stedet i lib/net.mjs
 for (const k of ['GEMINI_API_KEY', 'GROQ_API_KEY', 'AI_PROVIDER', 'OLLAMA_MODEL', 'OLLAMA_TEXT_MODEL', 'OPENWEBUI_URL', 'OPENWEBUI_KEY', 'AI_BACKEND', 'AI_GPU_VRAM_GB',
-  'BRAVE_KEY', 'SEARXNG_URL', 'RADARR_API_KEY', 'QBIT_PASS', 'PROWLARR_API_KEY', 'JF_KEY', 'PLEX_TOKEN', 'HA_TOKEN', 'HA_URL']) delete process.env[k];
+  'BRAVE_KEY', 'SEARXNG_URL', 'RADARR_API_KEY', 'QBIT_PASS', 'PROWLARR_API_KEY', 'JF_KEY', 'PLEX_TOKEN', 'HA_TOKEN', 'HA_URL',
+  'OMLX_URL', 'OMLX_API_KEY', 'OMLX_TASKS', 'OMLX_FALLBACK', 'OMLX_MODEL_TEXT', 'OMLX_MODEL_VISION']) delete process.env[k];
 process.env.OLLAMA_URL = cfg.ollamaUrl || 'http://ollama.eval-unset:11434';
 if (cfg.backend === 'openwebui') { process.env.OPENWEBUI_URL = cfg.url; process.env.OPENWEBUI_KEY = cfg.key ?? ''; process.env.AI_BACKEND = 'openwebui'; }
 else process.env.AI_BACKEND = 'ollama';
+// Prompt 58: oMLX-motoren for oppgavene i cfg.omlx.tasks (adresse og nøkkel bare i miljøet, aldri lagret i basen).
+if (cfg.backend === 'omlx') { process.env.OMLX_URL = cfg.url; process.env.OMLX_API_KEY = cfg.key ?? ''; }
 process.env.SONARR_URL = 'http://sonarr.eval:8989';
 process.env.SONARR_API_KEY = 'eval-sonarr-key';
 process.env.OCR_FALLBACK = process.env.OCR_FALLBACK ?? 'on';
 
 freezeClock();
-const modelHosts = new Set([process.env.OLLAMA_URL, cfg.backend === 'openwebui' ? cfg.url : null].filter(Boolean).map((x) => new URL(x).host));
+const modelHosts = new Set([process.env.OLLAMA_URL, cfg.backend === 'openwebui' || cfg.backend === 'omlx' ? cfg.url : null].filter(Boolean).map((x) => new URL(x).host));
 // Prompt 55: Mac-OCR kan kobles på eval med EVAL_MAC_OCR_URL + EVAL_MAC_OCR_KEY (ellers finnes den ikke i eval – fersk DATA_DIR uten nøkkel).
 const macUrl = String(process.env.EVAL_MAC_OCR_URL ?? '').replace(/\/+$/, ''), macKey = process.env.EVAL_MAC_OCR_KEY ?? '';
 const passHosts = new Set(macUrl ? [(() => { try { return new URL(macUrl).host; } catch { return null; } })()].filter(Boolean) : []);
@@ -61,6 +64,11 @@ for (const [k, v] of Object.entries(cfg.tasks ?? {})) if (r0.tasks[k]) r0.tasks[
 delete r0.own;
 ai.saveServerRouting(r0);
 ai.invalidateInventory();
+if (cfg.omlx) {
+  const O = await imp('server/omlx58/config.js');
+  const r = O.saveConf58({ engines: Object.fromEntries(cfg.omlx.tasks.map((t) => [t, 'omlx'])), models: { text: cfg.omlx.models.glimt, vision: cfg.omlx.models.rc, ...cfg.omlx.models }, fallbackOllama: !!cfg.omlx.fallback });
+  if (!r.ok) throw new Error(`oMLX-oppsett: ${r.error}`);
+}
 
 
 /* ---------------- Innlogging og hjelpere ---------------- */
@@ -82,7 +90,7 @@ if (macUrl && macKey) {
 if (!env.macOcr) env.notes.push('Mac-OCR-nøkkel mangler (sett EVAL_MAC_OCR_URL og EVAL_MAC_OCR_KEY)');
 if (!env.tesseract) env.notes.push('Tesseract ikke installert');
 if (cfg.userRouting) { kv.set(USER, 'ai_routing_user', cfg.userRouting); ai.invalidateInventory(); } // personlige valg (glimt/sok/chat …) fra produksjonsbrukeren
-const effRouting = Object.fromEntries(Object.entries(ai.routing(USER).tasks).map(([k, v]) => [k, v.model || '(auto)']));
+const effRouting = Object.fromEntries(Object.entries(ai.routing(USER).tasks).map(([k, v]) => [k, cfg.omlx?.tasks?.includes(k) ? `oMLX:${cfg.omlx.models[k]}` : v.model || '(auto)']));
 const A = async (path, method = 'GET', body, headers = {}) => {
   const isForm = body instanceof FormData;
   const r = await app.request(path, { method, headers: { cookie, ...(isForm || body === undefined ? {} : { 'content-type': 'application/json' }), ...headers }, body: body === undefined ? undefined : isForm ? body : JSON.stringify(body) });

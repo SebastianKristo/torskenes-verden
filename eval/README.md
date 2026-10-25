@@ -36,6 +36,20 @@ npm run eval -- --help
 
 `--model` og `--vision-model` overstyrer på toppen av dette. Effektiv ruting står i resultatfila (`meta.routing.effective`).
 
+### oMLX (prompt 58)
+
+```sh
+npm run eval -- --backend omlx --url http://127.0.0.1:18040 --key <nøkkel> --ollama-url http://127.0.0.1:11434
+node eval/lib/fake-omlx.mjs 18040 <nøkkel>          # falsk oMLX (bare riggsjekk, uten Mac)
+```
+
+- Med `--backend omlx` går oppgavene `glimt`, `sok`, `brief`, `dom`, `fsok` og `rc` til oMLX. Tekst er `mlx-community/Qwen3-8B-4bit`
+  og bilde `mlx-community/Qwen2.5-VL-7B-Instruct-4bit`. `--model` og `--vision-model` overstyrer.
+- Ollama-reserven er av, så tallene er rene oMLX. `--omlx-fallback` slår den på.
+- Chat, embeddings og kvitteringenes tekststeg bruker fortsatt Ollama (`--ollama-url`). Uten den får de status «env».
+- Rapporten har motoren i tittelen og p50/p90 per case og totalt. Det gjelder alle motorer, så Ollama- og oMLX-filene kan
+  sammenlignes direkte. Se `docs/omlx-58.md`.
+
 ## Casene
 
 | # | Case | Sjekker (lagret data og struktur) |

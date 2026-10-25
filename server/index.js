@@ -82,6 +82,7 @@ import { mountFermion53 } from './fermion53/index.js'; // prompt 53 (FERMION53):
 import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant Labs-modellene (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)
 import { mountWhisper54 } from './whisper54/index.js'; // prompt 54 (WHISPER54): NB-Whisper på Mac mini-en (admin: /api/admin/whisper54/*), norsk tale til tekst i /api/voice53/*
 import { mountVoxcpm57 } from './voxcpm57/index.js'; // prompt 57 (VOX57): VoxCPM2 på Mac mini-en – /api/voices57 (stemmer per bruker) og /api/admin/voxcpm57/*
+import { mountOmlx58 } from './omlx58/index.js'; // prompt 58 (OMLX58): oMLX på Mac mini-en som motor bak AI-gaten (admin: /api/admin/omlx58/*)
 import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
@@ -169,6 +170,7 @@ mountFermion53(app); // prompt 53 (FERMION53): /api/admin/fermion53/{health,conf
 mountDal53(app); // prompt 53 (DAL53): /api/admin/dal53/{health,preload}, /api/emo53/suggest, /api/voice53/*; Moderator foran /api/chat/files og /api/img
 mountWhisper54(app); // prompt 54 (WHISPER54): /api/admin/whisper54/{health,config,test} (bare admin)
 mountVoxcpm57(app); // prompt 57 (VOX57): /api/voices57*, /api/admin/voxcpm57/{health,config,test}
+mountOmlx58(app); // prompt 58 (OMLX58): /api/admin/omlx58/{health,config,test} (bare admin)
 app.route('/api', auth44Api); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
 app.get('/hl/:token', hlPage41); // prompt 41: Hjemlys-statusside for kontakter uten Papir (24 t)
 

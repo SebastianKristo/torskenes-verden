@@ -56,6 +56,11 @@ const LICENSES53 = [
   // Prompt 57 (VOX57): VoxCPM2.
   { name: 'VoxCPM2 – OpenBMB', what: 'Tekst til tale på norsk på Mac mini-en: ferdige stemmer, egne stemmer fra beskrivelse og klonede stemmer (bare egen stemme eller med samtykke). Kjøres med llama.cpp-omni (MIT) eller PyTorch (BSD-3-Clause).',
     lic: 'Apache-2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0', credit: 'VoxCPM2 © OpenBMB' },
+  // Prompt 58 (OMLX58): oMLX og MLX-modellene.
+  { name: 'oMLX', what: 'Valgfri MLX-motor for tekst og bilder på Mac mini-en (bak AI-gaten, ved siden av Ollama). Bygger på MLX, mlx-lm og mlx-vlm (MIT).',
+    lic: 'Apache-2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0', credit: 'oMLX © jundot (github.com/jundot/omlx)' },
+  { name: 'Qwen3-8B og Qwen2.5-VL-7B (MLX 4-bit, mlx-community)', what: 'Tekst- og bildemodellen i oMLX (samme modeller som qwen3:8b og qwen2.5vl:7b i Ollama, kvantisert for MLX).',
+    lic: 'Apache-2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0', credit: 'Qwen3 og Qwen2.5-VL © Alibaba Cloud (Qwen)' },
 ];
 export function openAbout53() {
   overlay(`<h2>Om / Lisenser</h2>

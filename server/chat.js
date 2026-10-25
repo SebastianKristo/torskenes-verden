@@ -34,7 +34,7 @@ import { isAdmin } from './auth.js';
 import { cfg, userCfg, userBool, setUserCfg } from './settings.js';
 import { settings, secret } from './finans/db.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
-import { aiTimeoutsOf, GEMINI_DEFAULT, GROQ_DEFAULT, GROQ_MODELS, GROQ_VISION_DEFAULT } from './finans/ai.js';
+import { aiTimeoutsOf, GEMINI_DEFAULT, GROQ_DEFAULT, GROQ_MODELS, GROQ_VISION_DEFAULT, groqModelOf } from './finans/ai.js';
 import { CATALOG } from './finans/ollama-models.js';
 import { audit } from './finans/ai-audit.js';
 import { finansSummary } from './finans/summary.js';
@@ -101,7 +101,7 @@ export async function testOpenWebui() {
 const VISION_RE = /vl|vision|llava|minicpm-v|gemma3|moondream|bakllava|llama-4|scout|gemini|gpt-4o/i;
 const prettyLocal = (id) => id.replace(/:latest$/, '').replace(/^([a-z])/, (m) => m.toUpperCase()).replace(/:(\d+(?:\.\d+)?)b$/i, ' $1B').replace(/:/g, ' ');
 const prettyGemini = (m) => m.replace(/^gemini-/, 'Gemini ').replace(/-latest$/, '').replace(/-/g, ' ').replace(/\b(flash|pro|lite)\b/g, (x) => x[0].toUpperCase() + x.slice(1));
-const GROQ_NAMES = { 'llama-3.3-70b-versatile': 'Llama 3.3 70B (Groq)', 'llama-3.1-8b-instant': 'Llama 3.1 8B (Groq)', 'meta-llama/llama-4-scout-17b-16e-instruct': 'Llama 4 Scout (Groq)', 'qwen/qwen3-32b': 'Qwen3 32B (Groq)' };
+const GROQ_NAMES = { 'llama-3.3-70b-versatile': 'Llama 3.3 70B (Groq)', 'meta-llama/llama-4-scout-17b-16e-instruct': 'Llama 4 Scout (Groq)', 'qwen/qwen3-32b': 'Qwen3 32B (Groq)' };
 const MOCK_MODELS = [
   { id: 'qwen3:8b', name: 'Qwen3 8B', kind: 'lokal', provider: 'ollama', size: '5.2 GB', vision: false, installed: true },
   { id: 'qwen2.5vl:7b', name: 'Qwen2.5 VL 7B', kind: 'lokal', provider: 'ollama', size: '6.0 GB', vision: true, installed: true },
@@ -454,7 +454,7 @@ async function runEngineRaw53(m, ctx) {
   if (m.provider === 'groq') {
     const key = secret('groqKey');
     if (!key) throw new Error('Groq-nøkkel mangler (Innstillinger → AI)');
-    let model = m.id.replace(/^groq:/, '');
+    let model = groqModelOf(m.id.replace(/^groq:/, ''));
     if (msgs.some((x) => x.images?.length) && !/llama-4|scout/.test(model)) model = GROQ_VISION_DEFAULT;
     return { ...(await openaiStream('Groq', 'https://api.groq.com/openai/v1/chat/completions', { Authorization: `Bearer ${key}` },
       { model: model || GROQ_DEFAULT, stream: true, messages: openaiMessages(sys, msgs), temperature: s.temperature, top_p: s.topP }, { onDelta, onThink, signal, idleMs: aiTimeoutsOf().groq * 1000 })), engine: 'groq', usedWeb: false };

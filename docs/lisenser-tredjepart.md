@@ -63,3 +63,16 @@ eller pip-pakken `voxcpm` (Apache-2.0) med PyTorch (BSD-3-Clause). Installert me
 Hugging Face på Mac mini-en, aldri i Docker-imaget eller repoet. Bruksvilkår fra OpenBMB: kloning skal ikke brukes til å utgi seg for andre,
 svindel eller desinformasjon, og KI-generert lyd bør merkes (Glimt viser «KI-stemme», og mp3-filene har en kommentar om det).
 Detaljer: `docs/voxcpm-57.md`.
+
+## oMLX og MLX-modellene (prompt 58)
+
+| Programvare / modell | Lisens | Brukes til |
+| --- | --- | --- |
+| oMLX (`jundot/omlx`, Homebrew-tap `jundot/omlx`) | Apache-2.0 (<https://www.apache.org/licenses/LICENSE-2.0>) | Valgfri MLX-motor (OpenAI-kompatibel) bak AI-gaten på Mac mini-en |
+| MLX, mlx-lm, mlx-vlm (Apple / Blaizzy) | MIT | Kjøretiden oMLX bygger på |
+| `mlx-community/Qwen3-8B-4bit` (Qwen3-8B, Alibaba Cloud) | Apache-2.0 | Tekstmodell i oMLX (samme modell som `qwen3:8b` i Ollama) |
+| `mlx-community/Qwen2.5-VL-7B-Instruct-4bit` (Qwen2.5-VL-7B-Instruct, Alibaba Cloud) | Apache-2.0 | Bildemodell i oMLX (erstatter `qwen2.5vl:7b` når oMLX er valgt) |
+
+Kreditering: «oMLX © jundot, Apache-2.0» og «Qwen3 / Qwen2.5-VL © Alibaba Cloud, Apache-2.0». oMLX installeres med
+`tools/omlx/install.sh` fra Homebrew, og vektene lastes ned fra Hugging Face på Mac mini-en. Ingenting av dette ligger i Docker-imaget
+eller i repoet. Detaljer: `docs/omlx-58.md`.

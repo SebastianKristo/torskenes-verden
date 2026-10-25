@@ -92,7 +92,10 @@ export function validate(x) {
 
 export const ENGINES = ['ollama', 'gemini', 'groq'];
 export const providerName = (p) => ({ gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama', tesseract: 'Lokal OCR', roboflow: 'Roboflow', 'apple-fm': 'Apple Intelligence', device: 'Enheten' }[p] ?? 'Ollama'); // prompt 47: apple-fm, prompt 48: device
-export const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'meta-llama/llama-4-scout-17b-16e-instruct', 'qwen/qwen3-32b'];
+// Groq har tatt ut llama-3.1-8b-instant (404 «does not exist»). Lagrede valg flyttes til etterfølgeren når kallet sendes.
+export const GROQ_RETIRED = Object.freeze({ 'llama-3.1-8b-instant': 'llama-3.3-70b-versatile' });
+export const groqModelOf = (id) => GROQ_RETIRED[String(id ?? '').replace(/^groq[:/]/, '')] ?? id;
+export const GROQ_MODELS = ['llama-3.3-70b-versatile', 'meta-llama/llama-4-scout-17b-16e-instruct', 'qwen/qwen3-32b'];
 export const ROBOFLOW_WORKSPACE = 'sebastians-workspace-y3jnc';
 
 /* ---------------- «Hvem gjør hva»: motor per oppgave ---------------- */
@@ -394,7 +397,7 @@ async function groqChat(content, schema, { timeout, temperature, model, signal =
   let res;
   try { res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, signal: withSignal(timeout, signal),
-    body: JSON.stringify({ model, temperature, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: sys }, { role: 'user', content }] }),
+    body: JSON.stringify({ model: groqModelOf(model), temperature, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: sys }, { role: 'user', content }] }),
   }); } catch (e) { throw netErr('Groq', null, e); }
   if (!res.ok) throw await httpErr('Groq', res);
   const d = await res.json();
