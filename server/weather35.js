@@ -160,7 +160,10 @@ export class PlaceNotFound extends Error {
 }
 /** Været for et sted (navn). Kaster PlaceNotFound. */
 export async function placeWeather(q, { offset = 0 } = {}) {
-  const p = await geocode(q);
+  // Prompt 60: {name, lat, lon} (et kjent sted fra entitetsregisteret) brukes direkte uten geokoding.
+  const at = q && typeof q === 'object' && Number.isFinite(q.lat) && Number.isFinite(q.lon) ? q : null;
+  const inNo = at && at.lat > 57.5 && at.lat < 71.5 && at.lon > 4 && at.lon < 31.5;
+  const p = at ? placeOut(String(at.name ?? '').slice(0, 60) || 'Stedet', inNo ? 'NO' : null, inNo ? 'Norge' : null, at.lat, at.lon, inNo ? 'Europe/Oslo' : null) : await geocode(q);
   if (!p) throw new PlaceNotFound(String(q ?? '').trim());
   const f = await forecastOf(p);
   const days = f.days.map(dayOut);

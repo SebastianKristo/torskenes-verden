@@ -153,7 +153,9 @@ export async function fetchWeather46(user, req, today = todayOslo45()) {
   const name = req.place ?? await homePlace(user);
   let r;
   try {
-    r = fetchImpl ? await fetchImpl(name, { user }) : await (await import('../weather35.js')).placeWeather(name, { offset: 0 });
+    // Prompt 60: et sted fra entitetsregisteret med koordinater («hytta» = Familie-stedet) hentes på koordinatene, ikke geokodes.
+    const at = req.placeAt && Number.isFinite(req.placeAt.lat) && Number.isFinite(req.placeAt.lon) ? { name, lat: req.placeAt.lat, lon: req.placeAt.lon } : null;
+    r = fetchImpl ? await fetchImpl(name, { user, ...(at ? { at } : {}) }) : await (await import('../weather35.js')).placeWeather(at ?? name, { offset: 0 });
   } catch (e) {
     if (e?.status === 404 || /fant ikke stedet/i.test(String(e?.message))) return { ok: false, notFound: true, place: name, when: req.when, info: req.info, error: `Fant ikke stedet «${name}»`, suggest: e?.suggest ?? null };
     return { ok: false, place: name, when: req.when, info: req.info, error: `Fikk ikke hentet været for ${name} (${String(e?.message ?? e).slice(0, 80)})` };

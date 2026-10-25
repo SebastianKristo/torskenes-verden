@@ -11,6 +11,7 @@ import { isQuestion } from './ask36.js';
 import { isHuske41, addFromSearch41 } from './tasks41.js'; // prompt 41: huskebeskjeder fra søket
 import { agent, agentOn, agentExtras, agentText, isPlain, resultHref } from './glimt-agent45.js'; // prompt 45: felles Glimt-agent
 import { agentLive59, cacheNote59 } from './stream59.js'; // prompt 59: strømming (ord for ord, statuslinje, Stopp)
+import { homeConv60, resetHomeConv60 } from './convo60.js'; // prompt 60: Glimt-søket er en kortlevd samtale («og i Bergen?»)
 
 /* ---------- Popup ---------- */
 
@@ -311,15 +312,15 @@ async function handoff(q, jobId) {
 const GL = { q: '', busy: false, ans: null, err: '', ctl: null, seq: 0 };
 // Prompt 45: valg i oppfølgingsspørsmålet sendes som nytt spørsmål (med valgt id), bekreftelsen oppdaterer boblen.
 const agentCb = () => ({
-  resend: (t, ctx) => { const f = ansForm; agentFollow(t, ctx, f); },
+  resend: (t, ctx, o60) => { const f = ansForm; agentFollow(t, ctx, f, o60); }, // prompt 60: o60.choice = valgknappen {setId, id}
   update: (a) => { if (!GL.ans) return; GL.ans = { ...GL.ans, text: agentText(a) || GL.ans.text, agent: a }; paintAns(); },
   open: (r) => { closeAns(); const h = resultHref(r); if (h) { if (h.startsWith('#')) location.hash = h; else location.href = h; } return true; },
 });
-async function agentFollow(t, ctx, form) {
+async function agentFollow(t, ctx, form, o60 = {}) {
   const q = GL.q;
   Object.assign(GL, { busy: true }); paintAns();
   const my = GL.seq;
-  try { const a = await agent(t, 'home', ctx); if (my !== GL.seq) return; GL.ans = a ? { text: agentText(a) || 'Ferdig.', source: 'Glimt', agent: a } : { text: 'Glimt fikk ikke svart.' }; GL.err = ''; }
+  try { const a = await agent(t, 'home', ctx, { conversationId: homeConv60(), conversationKind: 'search', choice: o60?.choice ?? null }); if (my !== GL.seq) return; GL.ans = a ? { text: agentText(a) || 'Ferdig.', source: 'Glimt', agent: a } : { text: 'Glimt fikk ikke svart.' }; GL.err = ''; }
   catch (er) { GL.err = er.message; }
   GL.q = q; GL.busy = false; ansForm = form; paintAns();
 }
@@ -439,7 +440,7 @@ async function askGlimt(q, form = null) {
     let raf59 = 0;
     const live59 = () => { if (!raf59) raf59 = requestAnimationFrame(() => { raf59 = 0; if (my === GL.seq && GL.busy) paintLive59(); }); };
     try {
-      ag = await agentLive59(q, 'home', {}, { signal: ctl.signal,
+      ag = await agentLive59(q, 'home', {}, { signal: ctl.signal, conversationId: homeConv60(), conversationKind: 'search', // prompt 60
         onStatus: (st) => { if (my !== GL.seq) return; GL.status = st.text; live59(); },
         onToken: (all) => { if (my !== GL.seq) return; GL.live = all; live59(); } });
     } catch (er) { if (er.name === 'AbortError') { if (er.partial && my === GL.seq) GL.live = er.partial; throw er; } if (er.status !== 429) ag = { err: er.message }; }
@@ -614,6 +615,7 @@ export function bindSearch() {
     const f = formOf(e);
     if (!f) return;
     clearTimeout(sq.timer); sq.seq++; sq.sugg = []; sq.ai = null; sq.sel = -1;
+    resetHomeConv60(); // prompt 60: feltet er tømt med ✕ – neste spørsmål starter en ny samtale
     const d = f.querySelector('.sq-drop'); if (d) d.hidden = true;
     f.q.setAttribute('aria-expanded', 'false');
   });

@@ -13,6 +13,7 @@ import { cacheCount59, cacheClear59, TTL59 } from './cache.js';
 import { wordsOf59 } from './status.js';
 import { warmNow59, warmState59 } from './warm.js';
 import { saveGlimtChat59 } from '../assist.js';
+import { bodyConvo60 } from '../convo60/api.js';
 
 const RID = /^[A-Za-z0-9_-]{8,80}$/;
 const live = new Map(); // `${user}|${requestId}` → AbortController
@@ -36,6 +37,8 @@ export function installFast59(api) {
     const b = await c.req.json().catch(() => null);
     const err = bodyErr(b);
     if (err) return c.json({ error: err }, 400);
+    const cv = bodyConvo60(b); // prompt 60: conversationId, conversationKind, choice (samme som POST /)
+    if (cv.error) return c.json({ error: cv.error }, 400);
     if (busyOf45(u) >= 4) return c.json({ error: 'Glimt jobber allerede med flere ting. Vent litt.' }, 429);
     const text = String(b.text ?? b.q).trim();
     const module = MODULES45.includes(b.module) ? b.module : 'home';
@@ -59,7 +62,7 @@ export function installFast59(api) {
           if (event === 'token') { if (!on) return; tokens++; send('token', data); return; }
           send(event, data);
         };
-        const out = await runAsUser(u, () => agent45(u, text, { module, context: b.context, requestId, onEvent, signal: ctrl.signal, ...(typeof b.webSearch === 'boolean' ? { webSearch: b.webSearch } : {}) }));
+        const out = await runAsUser(u, () => agent45(u, text, { module, context: b.context, requestId, onEvent, signal: ctrl.signal, ...(typeof b.webSearch === 'boolean' ? { webSearch: b.webSearch } : {}), ...cv.opts }));
         // Kodemalene (kalender, vær, finans …) skriver ingen tekst underveis: hele setningen ord for ord med en gang.
         if (on && !tokens && out?.reply) for (const w of wordsOf59(out.reply)) send('token', { t: w, source: 'mal' });
         await send('done', { ...out, cached: !!out?.cached });

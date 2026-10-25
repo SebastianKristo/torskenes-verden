@@ -7,6 +7,7 @@
 // Reserve: 404/405 (eldre server) → null, så kalleren bruker POST /api/glimt/agent eller /api/assist som før.
 // stream:false (Strømming av i innstillingene) → bare status og done; svaret i done brukes som før.
 import { agent, normAgent } from './glimt-agent45.js';
+import { convBody60 } from './convo60.js'; // prompt 60: conversationId / conversationKind / choice (SERVER60-API.md §1)
 
 const OFF_MS = 10 * 60_000;
 let offUntil = 0;
@@ -55,7 +56,7 @@ export async function readEvents59(res, onEvent) {
 }
 
 /**
- * Spør Glimt med strømming. o = { signal, requestId, webSearch?, onStart?({requestId, stream}), onStatus?({stage, text, tool}),
+ * Spør Glimt med strømming. o = { signal, requestId, webSearch?, conversationId?, conversationKind?, choice?, onStart?({requestId, stream}), onStatus?({stage, text, tool}),
  *   onToken?(textSoFar, bit) }.
  * → normAgent(done) med .raw (hele done), .cached, .cache, .streamed (true når token-hendelser kom).
  * null = serveren har ikke /stream (bruk agent()). Kaster AbortError ved Stopp, ellers Error med .status.
@@ -64,7 +65,7 @@ export async function agentStream59(text, module = 'home', context = {}, o = {})
   text = String(text ?? '').trim();
   if (!text || !streamOn59()) return null;
   const ctx = Object.fromEntries(Object.entries(context ?? {}).filter(([, v]) => v != null && v !== '' && !(Array.isArray(v) && !v.length)));
-  const body = { text: text.slice(0, 1000), module, ...(Object.keys(ctx).length ? { context: ctx } : {}), requestId: o.requestId ?? rid59(), ...(typeof o.webSearch === 'boolean' ? { webSearch: o.webSearch } : {}) };
+  const body = { text: text.slice(0, 1000), module, ...(Object.keys(ctx).length ? { context: ctx } : {}), requestId: o.requestId ?? rid59(), ...(typeof o.webSearch === 'boolean' ? { webSearch: o.webSearch } : {}), ...convBody60(o) };
   let r;
   try { r = await fetch('/api/glimt/agent/stream', { method: 'POST', credentials: 'same-origin', cache: 'no-store', signal: o.signal, headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream' }, body: JSON.stringify(body) }); }
   catch (e) { if (e.name === 'AbortError') throw e; throw new Error(`Fikk ikke kontakt med Glimt: ${e.message}`); }
@@ -107,7 +108,7 @@ function finish(d, streamed) {
 export async function agentLive59(text, module = 'home', context = {}, o = {}) {
   const a = await agentStream59(text, module, context, o);
   if (a) return a;
-  return agent(text, module, context, { signal: o.signal, requestId: o.requestId });
+  return agent(text, module, context, { signal: o.signal, requestId: o.requestId, conversationId: o.conversationId, conversationKind: o.conversationKind, choice: o.choice });
 }
 
 /** «Fant et ferskt svar» – kort merknad når svaret kom fra svar-cachen. */

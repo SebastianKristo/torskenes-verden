@@ -69,6 +69,8 @@ delete r0.own;
 ai.saveServerRouting(r0);
 // Prompt 59: --fast59 off = alle fire del 4-valgene av (før/etter på samme commit).
 if (process.env.EVAL_FAST59 === 'off') kv.set('owner', 'fast59', { cache: false, warm: false, stream: false, parallel: false });
+// Prompt 60: --convo60 off = samtaletilstand, entitetsregister og valg av (før/etter på samme commit).
+if (process.env.EVAL_CONVO60 === 'off') kv.set('owner', 'convo60', { state: false, entities: false, choices: false });
 ai.invalidateInventory();
 if (cfg.omlx) {
   const O = await imp('server/omlx58/config.js');
@@ -116,6 +118,8 @@ const slimAgent = (b) => ({
   results: (b?.results ?? []).slice(0, 8).map((x) => ({ kind: x.kind, title: x.title, subtitle: x.subtitle, date: x.date })), ms: b?.ms ?? null,
   traceId: b?.traceId ?? null, cached: !!b?.cached, cache: b?.cache ?? null, // prompt 59
 });
+/** Prompt 60: feltene for samtaler (conversationId, followUp, choices, confirm) i steget. */
+const convoOf60 = (b) => ({ conversationId: b?.conversationId ?? null, followUp: b?.followUp ?? null, choices: b?.choices ?? null, confirm: b?.confirm ? { token: b.confirm.token, summary: b.confirm.summary ?? null } : null });
 /** Prompt 59: Glimt-tracen (trace47) for en forespørsel, kort: plan-intent, cache, parallelle grupper og modellkall med tider. */
 const glimtTrace = (id) => {
   if (!id) return null;
@@ -123,6 +127,7 @@ const glimtTrace = (id) => {
   if (!r) return null;
   const t = JSON.parse(r);
   return { id: t.id, intent: t.plan?.intent ?? null, engine: t.engine ?? t.plan?.engine ?? null, cache: t.cache ?? null, parallel: t.parallel ?? null, totalMs: t.totalMs ?? null, steps: t.steps,
+    convo: t.convo ?? null, entities: t.entities ?? null, // prompt 60
     models: (t.models ?? []).map((m) => ({ step: m.step, model: m.model, ms: m.ms, ok: m.ok, timing: m.timing ?? null, prompt: m.prompt ?? null, think: m.think })) };
 };
 /** Prompt 59: leser en SSE-strøm (POST /api/glimt/agent/stream) og noterer når hver hendelse kom. → {status, events:[{event, data, at}], firstTokenMs, firstStatusMs} */
@@ -159,17 +164,20 @@ async function settle(quietMs = 1500, maxMs = +(process.env.EVAL_SETTLE_MS ?? 30
 const h = {
   user: USER, db, kv, A, fixture, today: TODAY, steps,
   /** Spør Glimt slik Hjem gjør (POST /api/glimt/agent). Bekrefter automatisk hvis motoren ber om det (som når brukeren trykker Ja). */
-  async ask(text, module = 'home') {
+  // Prompt 60 (del 3): tredje argument {conversationId, conversationKind, choice, noConfirm} – flerstegssamtaler i samme samtale.
+  // noConfirm: ikke trykk «Ja» automatisk (casen sjekker at ingenting er gjort før bekreftelsen, og bekrefter selv med h.confirm).
+  async ask(text, module = 'home', o = {}) {
     const ts = Date.now();
     const m0 = net.trace.model.length, e0 = net.trace.ext.length;
-    const r = await A('/api/glimt/agent', 'POST', { text, module, requestId: `eval47-${process.pid}-${++reqN}` });
+    const extra = { ...(o.conversationId ? { conversationId: o.conversationId } : {}), ...(o.conversationKind ? { conversationKind: o.conversationKind } : {}), ...(o.choice ? { choice: o.choice } : {}) };
+    const r = await A('/api/glimt/agent', 'POST', { text, module, requestId: `eval47-${process.pid}-${++reqN}`, ...extra });
     let body = r.body, confirmed = null;
-    if (r.status === 200 && body?.confirm?.token) {
+    if (r.status === 200 && body?.confirm?.token && !o.noConfirm) {
       const c = await A('/api/glimt/agent/confirm', 'POST', { token: body.confirm.token });
       confirmed = { status: c.status, summary: body.confirm.summary ?? null };
       if (c.status === 200) body = { ...c.body, actions: c.body.actions ?? body.actions };
     }
-    const s = { kind: 'agent', text, module, status: r.status, error: r.status >= 400 ? clip(r.body, 300) : undefined, confirmed, ...slimAgent(body), msTotal: Date.now() - ts,
+    const s = { kind: 'agent', text, module, status: r.status, error: r.status >= 400 ? clip(r.body, 300) : undefined, confirmed, ...slimAgent(body), ...convoOf60(body), msTotal: Date.now() - ts,
       modelCalls: [m0, null], extCalls: [e0, null] };
     s._finish = () => { s.modelCalls[1] = net.trace.model.length; s.extCalls[1] = net.trace.ext.length; };
     steps.push(s);
@@ -192,6 +200,16 @@ const h = {
     s.modelCalls[1] = net.trace.model.length; s.extCalls[1] = net.trace.ext.length;
     return s;
   },
+  /** Prompt 60: bekreft en lagret plan (som når brukeren trykker Ja). → {status, reply, actions} */
+  async confirm(token) {
+    const c = await A('/api/glimt/agent/confirm', 'POST', { token });
+    const s = { kind: 'confirm', status: c.status, reply: c.body?.reply ?? c.body?.error ?? null, actions: (c.body?.actions ?? []).map((x) => ({ tool: x.tool, status: x.status, args: x.args, error: x.error })) };
+    steps.push(s);
+    s.settledMs = await settle();
+    return s;
+  },
+  /** Prompt 60: abonnementene i Subscription OS (fh_subscriptions). */
+  subscriptions: () => db.prepare('SELECT id, name, plan, active FROM fh_subscriptions WHERE user_id=? ORDER BY id').all(USER),
   /** Prompt 59: Glimt-tracen for et svar (s.traceId). */
   glimtTrace: (s) => glimtTrace(s?.traceId),
   /** Media-feltet: agenten (module media) først, så Media-Glimt hvis svaret er ren prat (som public/js/media43.js). */

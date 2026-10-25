@@ -52,6 +52,8 @@ const HELP = `Glimt eval (GLIMT47)
                                     resultatfil (f.eks. eval/results/2026-10-25-ollama-qwen3_8b-4.json).
   --fast59 on|off                   Prompt 59: «raskere svar» (svar-cache, varm modell, strømming, parallelle verktøy). Standard on
                                     (som i produksjonen); off måler uten, for før/etter på samme commit.
+  --convo60 on|off                  Prompt 60: «bedre forståelse i samtaler» (samtaletilstand, entitetsregister, valg). Standard on;
+                                    off måler uten (casene 23–26 feiler da med vilje), for før/etter på samme commit.
 
   Miljø (prompt 55): EVAL_MAC_OCR_URL + EVAL_MAC_OCR_KEY kobler på Mac-OCR (ellers har eval ingen Mac-OCR). Feil som skyldes
   miljøet (ingen OCR, modell ikke installert) får status «env» og telles ikke som modellfeil.
@@ -139,6 +141,7 @@ for (const f of caseFiles) { const m = (await import(pathToFileURL(join(caseDir,
 let prevRun = null;
 if (opt.compare) { try { prevRun = JSON.parse(readFileSync(resolve(opt.compare), 'utf8')); if (!Array.isArray(prevRun.cases)) throw new Error('mangler cases'); } catch (e) { console.error(`--compare ${opt.compare}: ${e.message}`); process.exit(2); } }
 const fastMode = String(opt.fast59 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on';
+const convoMode = String(opt.convo60 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on'; // prompt 60
 
 /* ---------------- Modellsjekk ---------------- */
 
@@ -230,7 +233,7 @@ function runOne(meta, i) {
   return new Promise((res) => {
     const out = join(tmpRoot, `${meta.id}-${i}.json`);
     const t0 = Date.now();
-    const child = spawn(process.execPath, [join(HERE, 'worker.mjs'), join(caseDir, meta.file), out], { cwd: REPO, env: { ...cleanEnv(), EVAL47_CONFIG: JSON.stringify(cfg), EVAL_FAST59: fastMode }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [join(HERE, 'worker.mjs'), join(caseDir, meta.file), out], { cwd: REPO, env: { ...cleanEnv(), EVAL47_CONFIG: JSON.stringify(cfg), EVAL_FAST59: fastMode, EVAL_CONVO60: convoMode }, stdio: ['ignore', 'pipe', 'pipe'] });
     let logs = '';
     child.stdout.on('data', (d) => { logs += d; });
     child.stderr.on('data', (d) => { logs += d; });
@@ -298,7 +301,7 @@ const intents59 = perIntent59(all);
 const cache59 = cacheEffect59(all);
 const cmp59 = prevRun ? compare59(prevRun, all, opt.compare) : null;
 const allReply = all.flatMap((c) => c.results.map(replyMsOf59)).sort((a, b) => a - b);
-console.log(`Svartid (forespørsel → svar, uten bakgrunnsjobber etter svaret): p50 ${sec(pct58(allReply, 0.5))} · p90 ${sec(pct58(allReply, 0.9))} · «raskere svar» ${fastMode}`);
+console.log(`Svartid (forespørsel → svar, uten bakgrunnsjobber etter svaret): p50 ${sec(pct58(allReply, 0.5))} · p90 ${sec(pct58(allReply, 0.9))} · «raskere svar» ${fastMode} · «forståelse i samtaler» ${convoMode}`);
 console.log(`\nPer intent (svartid p50 / p90 · totalt p50 / p90):`);
 for (const x of intents59) console.log(`  ${pad(x.intent, 22)} ${pad(`${x.runs} kj.`, 7)} ${pad(`${sec59(x.replyP50)} / ${sec59(x.replyP90)}`, 18)} ${sec59(x.totalP50)} / ${sec59(x.totalP90)}`);
 const cacheLine59 = cache59.total ? `Prompt-cache: ${cache59.total.evaluated} av ~${cache59.total.est} prompt-tokens regnet ut · ${cache59.total.reusedPct ?? 0} % gjenbrukt fra KV-/prefiks-cachen (${cache59.method}) · ${Object.entries(cache59.byStep).map(([k, v]) => `${k} ${v.reusedPct ?? 0} % (${v.calls} kall)`).join(' · ')}` : null;
@@ -325,6 +328,7 @@ const meta = { date: new Date().toISOString(), frozenClock: '2026-10-24T10:00:00
   ...(omlx ? { omlx: { models: omlxModels, tasks: OMLX_TASKS58, fallbackOllama: omlx.fallback } } : {}),
   routing: { mode: routingMode, note: routingNote, effective: all[0]?.results?.[0]?.routing ?? null }, missingModels: missing, runs, commit, node: process.version };
 meta.fast59 = fastMode;
+meta.convo60 = convoMode;
 writeFileSync(`${base}.json`, JSON.stringify({ meta, summary: { passed: totalPass, total, greenCases: green, cases: all.length, modelFailures: modelFails, envFailures: envTotal, engine: engineLabel, p50Ms: p50All, p90Ms: p90All,
   replyP50Ms: pct58(allReply, 0.5), replyP90Ms: pct58(allReply, 0.9), perIntent: intents59, cacheEffect: cache59, ...(cmp59 ? { compare: cmp59 } : {}) }, cases: all }, null, 2));
 const md = [`# Glimt eval ${date} · motor ${engineLabel} · ${backend} · ${modelTag}`, '',

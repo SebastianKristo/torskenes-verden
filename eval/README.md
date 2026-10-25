@@ -67,6 +67,18 @@ node eval/why59.mjs eval/results/2026-10-25-ollama-qwen3_8b-4.json         # hvo
 - Eval måler med produksjonens standard for del 4 (alt på). Nye caser: 20 (vær to ganger → svar-cache), 21 (strømming, kalendersvar
   ord for ord) og 22 (strømming, nettsøk + svarformulering token for token). Med `--fast59 off` feiler 20 og 21 med vilje.
 
+### Flerstegssamtaler (prompt 60, prompt 49 del 3)
+
+```sh
+npm run eval -- --case 23,24,25,26                 # samtalecasene (flere meldinger i samme samtale)
+npm run eval -- --case 23,24,25,26 --convo60 off   # før/etter: samtaletilstand, entitetsregister og valg av
+```
+
+- En case kan sende flere meldinger i samme samtale: `h.ask(tekst, modul, {conversationId, conversationKind, choice, noConfirm})`.
+  `noConfirm` lar være å trykke «Ja» automatisk (casen bekrefter selv med `h.confirm(token)`). `h.subscriptions()` leser Subscription OS.
+- Steget har `conversationId`, `followUp`, `choices` og `confirm`, og Glimt-tracen har `convo` (oppfølging, fylte felt, valg).
+- Med `--convo60 off` feiler 23, 25 og 26 med vilje (24 kan bestå uten tilstand fordi «den» også slås opp i sist viste avtaler).
+
 ## Casene
 
 | # | Case | Sjekker (lagret data og struktur) |
@@ -87,6 +99,10 @@ node eval/why59.mjs eval/results/2026-10-25-ollama-qwen3_8b-4.json         # hvo
 | 14 | «Hva er hovedstaden i Frankrike?» | Paris, og ingen datakall, nettsøk eller vær |
 | 15 | «Last ned siste episode fra 9-1-1» (Media) | Sonarr `EpisodeSearch` for S09E06 (id 9106), eller en handling som peker på den. Riktig serie, ikke Lone Star/Nashville |
 | 16 | «hvordan er været i oslo neste time og været i new york imorgen» | Som 07. Skal **ikke** gi kalendersvar («TRE1400 Forelesning …») |
+| 23 | «Hvordan er været i Oslo i morgen?» → «og i Bergen?» (samme `conversationId`) | Andre tur: ett `weather.get` for Bergen med samme tidsrom (25.10), prognose hentet for Bergen, svaret gjelder Bergen |
+| 24 | «Legg inn tannlege fredag kl 10» → «flytt den til 11» (Chat-samtale) | Samme lagrede hendelse flyttet til 30.10 kl. 11:00, ingen kopi, ingenting annet endret |
+| 25 | «Hva er det dyreste abonnementet mitt?» → «si opp det» | Bekreftelse (`confirm.token`) for Aftenposten Digital, ingenting endret før «ja»; etter «ja» er det markert som sagt opp, de andre urørt |
+| 26 | To Nina-avtaler fredag → «Flytt Nina til lørdag» → «den andre» | Spør med to konkrete valg (`choices`), flytter ingenting på en gjetning; «den andre» flytter riktig avtale til 31.10 |
 
 Hjem-spørsmål går til `POST /api/glimt/agent` (module `home`), akkurat som søkefeltet på Hjem. Ber motoren om bekreftelse,
 bekrefter eval automatisk, som når brukeren trykker Ja. Det står i tracen (`confirmed`). Media-casen gjør som

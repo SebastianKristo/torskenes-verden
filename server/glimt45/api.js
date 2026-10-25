@@ -10,10 +10,12 @@ import { personalityOf, setPersonality, PERSONALITIES, PERSONALITY_LABELS } from
 import { traceOf47, tracesOf47, traceHtml47 } from './trace47.js';
 import { isAdmin } from '../auth.js';
 import { installFast59 } from '../fast59/api.js';
+import { installConvo60, bodyConvo60 } from '../convo60/api.js';
 
 export const agentApi45 = new Hono();
 agentApi45.use('*', authOrToken);
 installFast59(agentApi45); // prompt 59 (del 4): POST /stream (SSE), /stream/stop, GET|PUT /fast, DELETE /fast/cache, POST /fast/warm
+installConvo60(agentApi45); // prompt 60 (del 3): GET|PUT /understand, GET|DELETE /convo/:id
 const RID = /^[A-Za-z0-9_-]{8,80}$/;
 const settingsOut = (u) => ({ personality: personalityOf(u), options: PERSONALITIES, labels: PERSONALITY_LABELS });
 
@@ -25,11 +27,13 @@ agentApi45.post('/', async (c) => {
   if (!text) return c.json({ error: 'Skriv noe til Glimt' }, 400);
   if (text.length > 1000) return c.json({ error: 'Teksten er for lang (maks 1000 tegn)' }, 400);
   if (b.requestId != null && !RID.test(String(b.requestId))) return c.json({ error: 'Ugyldig requestId (8–80 tegn: bokstaver, tall, - og _)' }, 400);
+  const cv = bodyConvo60(b); // prompt 60: conversationId, conversationKind, choice
+  if (cv.error) return c.json({ error: cv.error }, 400);
   if (busyOf45(u) >= 4) return c.json({ error: 'Glimt jobber allerede med flere ting. Vent litt.' }, 429);
   const module = MODULES45.includes(b.module) ? b.module : 'home';
   try {
     // Prompt 46: preview:true = bare forstå og validere (Kalender «Skriv en time»), webSearch:false = ingen nettverktøy.
-    const out = await runAsUser(u, () => agent45(u, text, { module, context: b.context, requestId: b.requestId ?? null, preview: b.preview === true, ...(typeof b.webSearch === 'boolean' ? { webSearch: b.webSearch } : {}) }));
+    const out = await runAsUser(u, () => agent45(u, text, { module, context: b.context, requestId: b.requestId ?? null, preview: b.preview === true, ...(typeof b.webSearch === 'boolean' ? { webSearch: b.webSearch } : {}), ...cv.opts }));
     return c.json(out, 200, { 'Cache-Control': 'no-store' });
   } catch (e) {
     console.warn('[glimt45]', String(e?.message ?? e).slice(0, 200));

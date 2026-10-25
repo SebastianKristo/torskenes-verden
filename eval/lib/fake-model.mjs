@@ -8,8 +8,14 @@ export const MOCK_MODELS = ['qwen3:8b', 'llama3.2:3b', 'qwen2.5vl:7b', 'nomic-em
 
 /** Hvilke verktøy en flink planlegger ville valgt. */
 export function oracle(msg) {
-  const m = String(msg ?? '').toLowerCase();
+  const m = String(msg ?? '').toLowerCase().replace(/\s*\/no_think\s*$/, ''); // prompt 60: de forankrede reglene under
   if (/er frisøren min/.test(m)) return [{ name: 'app.answer', arguments: { topic: 'memory' } }];
+  // Prompt 60 (del 3): flerstegssamtalene (oppfølging av forrige tur). Før de generelle reglene, så de gamle meldingene gir det samme.
+  if (/^og i ([a-zæøå ]+)\?*$/.test(m)) return [{ name: 'weather.get', arguments: { place: m.replace(/^og i\s+/, '').replace(/\?+$/, '').trim().replace(/^./, (c) => c.toUpperCase()) } }];
+  if (/^flytt den til (\d{1,2})$/.test(m)) return [{ name: 'calendar.update', arguments: { target: 'den', time: m.match(/(\d{1,2})$/)[1] } }];
+  if (/^si opp det$/.test(m)) return [{ name: 'subscriptions.cancel', arguments: { service: 'det' } }];
+  if (/^legg inn tannlege fredag kl 10$/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Tannlege', date: 'fredag', time: 'kl 10' } }];
+  if (/^flytt nina til lørdag$/.test(m)) return [{ name: 'calendar.update', arguments: { target: 'Nina', date: 'lørdag' } }];
   if (/nina/.test(m)) return [{ name: 'calendar.search', arguments: { query: 'Nina' } }];
   if (/dune/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Dune', date: '17.12', time: '17.30', location: 'Colosseum kino' } }];
   if (/middag hos mamma/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Middag hos mamma', date: 'fredag', time: '18' } }];
@@ -60,7 +66,7 @@ export function makeFakeModel() {
       if (b.tools) return nd([{ model: b.model, message: { role: 'assistant', content: '', tool_calls: plan.map((x) => ({ function: x })) }, done: false }, done]);
       if (b.format) {
         const fj = JSON.stringify(b.format);
-        if (/"calls"/.test(fj)) return say(JSON.stringify({ intent: 'ask', module: 'home', calls: plan.map((x) => ({ tool: x.name, args: x.arguments })), ask: null }));
+        if (/"calls"/.test(fj)) return say(JSON.stringify({ intent: 'ask', module: 'home', calls: plan.map((x) => ({ tool: x.name, args: x.arguments })), ask: null, ...(/"refers_to_previous"/.test(fj) && /Conversation state:/.test(all) && /^(og i |flytt den |si opp det)/i.test(lastUser.replace(/^Melding:\s*/, '')) ? { refers_to_previous: true } : {}) }));
         if (/"tools"/.test(fj)) return say(JSON.stringify({ tools: /statsminister/i.test(lastUser) ? ['web'] : ['none'], query: lastUser.slice(0, 80) }));
         if (/"type"/.test(fj)) return say(JSON.stringify({ type: 'question' }));
         return say('{}');

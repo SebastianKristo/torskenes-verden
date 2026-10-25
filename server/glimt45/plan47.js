@@ -20,8 +20,8 @@ export const INTENT_TOOLS47 = {
   calendar_create: ['calendar.create'],
   calendar_change: ['calendar.update', 'calendar.delete'],
   weather: ['weather.get'],
-  finance_query: ['finance.search', 'finance.summary', 'finance.subscriptions', 'finance.fixed'],
-  todo: ['tasks.create', 'tasks.list', 'tasks.complete', 'subscriptions.trial'],
+  finance_query: ['finance.search', 'finance.summary', 'finance.subscriptions', 'finance.fixed', 'subscriptions.cancel'],
+  todo: ['tasks.create', 'tasks.list', 'tasks.complete', 'subscriptions.trial', 'subscriptions.cancel'],
   web_search: ['web.search'],
   media: ['media.episode'],
   memory_save: ['memory.save'],
@@ -47,6 +47,7 @@ const TOOL_LINES47 = {
   'finance.fixed': '{mode:"top"|"month"|"total", month} fixed monthly costs.',
   'finance.summary': '{period, category, group_by:"total"|"category"|"merchant"} spending sums computed from transactions.',
   'finance.search': '{merchant, item, amount, period, kind:"receipt"|"transaction"|"any"} find purchases and receipts.',
+  'subscriptions.cancel': '{service} cancel (si opp) one of the user\'s registered subscriptions now; "det"/"den" = the one from the previous turn. The app asks for confirmation.',
   'subscriptions.trial': '{service, date} a subscription or free trial must be cancelled by a date.',
   'memory.save': '{subject, object} remember a fact the user states about someone/something ("Nina er frisøren min" → subject "Nina", object "frisør").',
   'web.search': '{query} current facts that may have changed: people in office, news, prices, results, events.',
@@ -56,7 +57,7 @@ const TOOL_LINES47 = {
   'chat.answer': '{} general knowledge, explanations or small talk that need no app data and no fresh facts.',
 };
 const J = (o) => JSON.stringify(o);
-const ex = (u, intent, calls, ask = null) => `User: ${u}\n${J({ intent, calls, needs_clarification: !!ask, clarification_question: ask })}`;
+const ex = (u, intent, calls, ask = null, prev = false) => `User: ${u}\n${J({ intent, calls, needs_clarification: !!ask, clarification_question: ask, ...(prev ? { refers_to_previous: true } : {}) })}`;
 const FEWSHOTS47 = [
   ex('Når er neste gang jeg skal til Nina?   [Memory: Nina = frisør]', 'calendar_query', [{ tool: 'calendar.search', args: { terms: ['Nina', 'frisør'], direction: 'next', limit: 1 } }]),
   ex('Skal se Dune på Colosseum kino 17.12 17.30', 'calendar_create', [{ tool: 'calendar.create', args: { title: 'Dune', location: 'Colosseum kino', date: '17.12', time: '17.30' } }]),
@@ -73,6 +74,10 @@ const FEWSHOTS47 = [
   ex('Hva skjer i morgen?', 'calendar_query', [{ tool: 'calendar.list', args: { period: 'i morgen' } }]),
   ex('Når går neste buss?', 'app', [{ tool: 'app.answer', args: { topic: 'departures' } }]),
   ex('Flytt den', 'calendar_change', [], 'Hvilken avtale vil du flytte, og til når?'),
+  // Prompt 60 (del 3): oppfølging av forrige tur (Conversation state i konteksten) – bare det meldingen endrer, koden fyller inn resten.
+  ex('og i Bergen?   [State: weather.get(place=Oslo, when=i morgen)]', 'weather', [{ tool: 'weather.get', args: { place: 'Bergen' } }], null, true),
+  ex('flytt den til 11   [State: last event «Tannlege» fredag 10:00]', 'calendar_change', [{ tool: 'calendar.update', args: { target: 'den', time: '11' } }], null, true),
+  ex('si opp det   [State: last subscription Aftenposten Digital]', 'finance_query', [{ tool: 'subscriptions.cancel', args: { service: 'det' } }], null, true),
 ];
 const buildSystem47 = () => `You are the planner for Glimt, a personal assistant in a Norwegian app. Turn the user's message into tool calls. You never answer the user yourself.
 Reply with ONLY JSON: {"intent": one of ${INTENTS47.join('|')}, "calls": [{"tool": "...", "args": {...}}], "needs_clarification": bool, "clarification_question": string or null}.
@@ -84,6 +89,7 @@ Rules:
 - Use Memory facts: when a person or alias is mentioned, search with the name AND the related terms.
 - Fresh facts (people in office, news, prices, results) → web.search. Timeless knowledge → chat.answer. Never call calendar, finance or to-do tools for general questions.
 - If the request is genuinely ambiguous, set needs_clarification true, no calls, and ask ONE short question in Norwegian (bokmål).
+- "Conversation state" in the context is the previous turn. If the message continues it ("og i Bergen?", "flytt den til 11", "si opp det"), set refers_to_previous true and give only what the message changes; the code fills in the rest. A new, complete request has refers_to_previous false.
 Tools:
 ${TOOLS45.filter((t) => TOOL_LINES47[t.name]).map((t) => `- ${t.name} ${TOOL_LINES47[t.name]}`).join('\n')}
 Examples:
@@ -100,6 +106,7 @@ export function planSchema47() {
       calls: { type: 'array', maxItems: 6, items: { type: 'object', properties: { tool: { type: 'string', enum: TOOLS45.filter((t) => TOOL_LINES47[t.name]).map((t) => t.name) }, args: { type: 'object' } }, required: ['tool', 'args'] } },
       needs_clarification: { type: 'boolean' },
       clarification_question: { type: ['string', 'null'] },
+      refers_to_previous: { type: 'boolean' },
     },
     required: ['intent', 'calls', 'needs_clarification'],
   };
@@ -134,9 +141,11 @@ export function cleanPlan47(out) {
     for (const c of calls) if (!ok.includes(c.tool)) dropped.push(c.tool);
     calls = keep;
   }
-  if ((d.needs_clarification === true || (!calls.length && askQ)) && askQ) return { intent: intent ?? 'chat', calls: [], ask: askQ, dropped };
+  // Prompt 60: refers_to_previous (meldingen bygger på forrige tur) – koden fyller da inn manglende argumenter fra samtaletilstanden.
+  const prev = d.refers_to_previous === true ? { refersToPrevious: true } : {};
+  if ((d.needs_clarification === true || (!calls.length && askQ)) && askQ) return { intent: intent ?? 'chat', calls: [], ask: askQ, dropped, ...prev };
   if (!calls.length) return { error: dropped.length ? `the tools ${dropped.join(', ')} do not belong to intent ${intent}` : unknown.length ? `unknown tools: ${unknown.join(', ')}` : 'no calls and no clarification question' };
-  return { intent: intent ?? intentOfTool47(calls[0].tool) ?? 'chat', calls, dropped };
+  return { intent: intent ?? intentOfTool47(calls[0].tool) ?? 'chat', calls, dropped, ...prev };
 }
 
 /**

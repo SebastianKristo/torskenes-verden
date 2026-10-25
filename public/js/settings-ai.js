@@ -11,6 +11,7 @@ import { LEARN_TYPES, memoryLine, loadMemory, addMemory, deleteMemory, applyMemo
 import { setHsTimeout } from './extras.js';
 import { mountAiControl } from './ai-control.js';
 import { is2c } from './hltheme.js';
+import './entities60.js'; // prompt 60: entitetsregisteret fyller [data-ent60] under «Glimt husker»
 import { mountReceipts48 } from './receipts48-set.js'; // prompt 48: Innstillinger → AI → Kvitteringer (Mac-OCR, steg i kjeden)
 // Prompt 32 (claude-code-sok-fullfor-forst.md): GLIMT I SØKEFELTET → «Send til Chat etter» 5 / 8 / 15 / 30 s (hs_timeout_s i /api/me/layout).
 const HS = [5, 8, 15, 30];
@@ -94,6 +95,9 @@ export function aiView({ group, row, note }) {
     }
   } else groups.push(group('Personvern og logoer', [row({ t: 'Ikke tilgjengelig', s: A.privErr ? `Serveren svarte: ${A.privErr}` : 'Oppdater serveren' })]));
   groups.push(memoryGroup(group, row));
+  // Prompt 60 (prompt 49 del 3): ett felles register over personer, steder, butikker, abonnementer og faste hendelser med aliaser.
+  groups.push({ t: 'Entitetsregister', cls: 'set-e60', note: 'Det Glimt vet om personer, steder («hytta», «jobben», «hjemme»), butikker, abonnementer og faste hendelser. Brukes i minne, kalendersøk, vær og finans. Steder fra Familie og abonnementer fra Subscription OS redigeres der – her legger du til egne ord. Lagres bare for deg og sendes aldri til sky.',
+    rows: [{ q: 'entitetsregister entiteter alias personer steder butikker abonnementer faste hendelser hytta jobben hjemme skolen', html: '<div data-ent60 data-hl="ai-ent60"></div>' }] });
   if (A.msg) groups.push({ t: '', note: '', rows: [{ q: '', html: `<div class="sg-row"><span class="sg-txt"><span>${esc(A.msg)}</span></span></div>` }] });
   void note;
   return { pre, mount, groups };

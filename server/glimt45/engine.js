@@ -26,6 +26,8 @@ import { installPosterDecorator46 } from './calendar46.js';
 import { fast59 } from '../fast59/settings.js';
 import { cacheKindOf59, legacyKindOf59, planKey59, legacyKey59, cacheGet59, cachePut59 } from '../fast59/cache.js';
 import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STATUS59 } from '../fast59/status.js';
+// Prompt 60 (prompt 49 del 3): samtaletilstand, entitetsregister og konkrete valg – krokene ligger i convo60/engine60.js.
+import { begin60, ctx60, facts60, afterPlan60, adjust60, finish60, confirmed60, convoTrace60 } from '../convo60/engine60.js';
 installTaskHooks46(); installPosterDecorator46(); // Gjøremål: plukk ut, ikke skriv om · plakat på kinoavtaler
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt45_requests (user_id TEXT NOT NULL, key TEXT NOT NULL, state TEXT NOT NULL, response TEXT, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));
@@ -173,7 +175,9 @@ export const busyOf45 = (user) => busy.get(user) ?? 0;
 export async function agent45(user, text0, opts = {}) {
   const text = String(text0 ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 1000);
   const module = opts.module ?? 'home';
-  const key = `${opts.preview ? 'p:' : ''}${keyOf(user, module, text, opts.requestId)}`; // prompt 46: forhåndsvisning har egen nøkkel
+  // Prompt 60: samtalen og et trykket valg er en del av nøkkelen («den første» i to samtaler er to forskjellige spørsmål).
+  const convKey = `${opts.conversationId ? `|c:${opts.conversationId}` : ''}${opts.choice?.setId ? `|v:${opts.choice.setId}:${opts.choice.id}` : ''}`;
+  const key = `${opts.preview ? 'p:' : ''}${keyOf(user, `${module}${convKey}`, text, opts.requestId)}`; // prompt 46: forhåndsvisning har egen nøkkel
   const row = q('SELECT * FROM glimt45_requests WHERE user_id=? AND key=?').get(user, key);
   if (row?.state === 'done' && !opts.preview && (opts.requestId || Date.now() - row.created < IMPLICIT_MS)) {
     try { return { ...JSON.parse(row.response), repeated: true }; } catch { /* lag på nytt */ }
@@ -184,7 +188,8 @@ export async function agent45(user, text0, opts = {}) {
     busy.set(user, busyOf45(user) + 1);
     q('INSERT OR REPLACE INTO glimt45_requests(user_id, key, state, response, created) VALUES(?,?,?,?,?)').run(user, key, 'running', null, Date.now());
     try {
-      const out = await pipeline(user, text, { ...opts, module, key });
+      const c60 = begin60(user, text, { ...opts, module });
+      const out = finish60(user, c60, await pipeline(user, c60?.execText ?? text, { ...opts, module, key, c60, ...(c60?.context ? { context: c60.context } : {}) }));
       if (opts.signal?.aborted) throw abortErr59();
       if (opts.preview) q('DELETE FROM glimt45_requests WHERE user_id=? AND key=?').run(user, key); // forhåndsvisning caches ikke
       else if (!out.legacy && !out.retryable) q('UPDATE glimt45_requests SET state=?, response=? WHERE user_id=? AND key=?').run('done', JSON.stringify(out), user, key); // prompt 55: oppfølgingsspørsmålet etter tidsavbrudd caches ikke
@@ -220,8 +225,13 @@ async function pipeline(user, text, opts) {
   // Prompt 47: trace per forespørsel (melding, fakta, plan, normaliserte verdier, verktøy, modellkall, svar, tid per steg).
   const tr = opts.preview ? null : startTrace47(user, text, { module: opts.module });
   // A + B. Kontekst og minne: dato/klokke/tidssone, profil, relevante minnefakta (med hvorfor), siste meldinger.
-  const facts = await recallFacts47(user, text, { embed: !opts.preview }).catch(() => []);
-  const c47 = buildContext47(user, text, { today, nowMin, facts });
+  const c60 = opts.c60 ?? null;
+  // Prompt 60: entitetsregisterets treff («hytta», «Rema») som fakta; samtalens egen historikk og kort tilstand til planleggeren.
+  const facts = facts60(user, c60, await recallFacts47(user, text, { embed: !opts.preview }).catch(() => []));
+  if (c60) c60.facts = facts;
+  const x60 = ctx60(c60);
+  const c47 = buildContext47(user, text, { today, nowMin, facts, ...(x60.history ? { history: x60.history } : {}) });
+  c47.stateText = x60.stateText;
   tr?.set('facts', facts.map((f) => ({ subject: f.subject, object: f.object, aliases: f.aliases, why: f.why, score: f.score })));
   tr?.set('now', c47.nowLine);
   tr?.step('kontekst og minne');
@@ -229,7 +239,7 @@ async function pipeline(user, text, opts) {
   // Hurtigvei uten modell bare for helt entydige kommandoer (fastPath47, se under).
   const legacyIntent = legacy?.detect ? (() => { try { return legacy.detect(text, today); } catch { return null; } })() : null;
   const local = localPlan45(text, { module: opts.module, today, legacyIntent, user, nowMin });
-  let plan = fastPath47(text, { module: opts.module, legacyIntent });
+  let plan = c60?.choicePlan ?? fastPath47(text, { module: opts.module, legacyIntent }); // prompt 60: svar på et valg = den lagrede planen
   const fast = fast59(user);
   if (opts.signal?.aborted) throw abortErr59();
   // Prompt 59: modellkallene får brukerens Stopp-signal (gaten avbryter kallet).
@@ -260,6 +270,8 @@ async function pipeline(user, text, opts) {
   // Modellen nede (eller ikke installert): den lokale planen (samme validering og utførelse). Prompt 55: tidsavbrudd og ugyldige
   // planer gir oppfølgingsspørsmålet over, ikke den lokale planen.
   plan ??= local;
+  plan = afterPlan60(c60, plan); // prompt 60: refers_to_previous → manglende argumenter fra samtaletilstanden
+  if (c60) tr?.set('convo', convoTrace60(c60));
   if (opts.signal?.aborted) throw abortErr59();
   tr?.set('plan', { engine: plan.engine, model: plan.model ?? null, intent: plan.planIntent ?? plan.intent, calls: plan.calls, ask: plan.ask ?? null, dropped: plan.dropped ?? [], fast: !!plan.fast, attempts: plan.attempts ?? null, hint: plan.engine === 'lokal' ? null : hintOf47(local, legacyIntent), ...(plan.failed ? { failed: plan.failed } : {}) });
   tr?.step('plan');
@@ -323,7 +335,8 @@ async function pipeline(user, text, opts) {
     return out;
   }
   const ctxT = { user, text, today, nowMin, context, module: opts.module, preview: !!opts.preview, facts, c47, trace: tr, webSearch: opts.webSearch !== false,
-    fast, onEvent: opts.onEvent ?? null, signal: opts.signal ?? null, compare: plan.compare ?? null }; // prompt 59
+    fast, onEvent: opts.onEvent ?? null, signal: opts.signal ?? null, compare: plan.compare ?? null, c60 }; // prompt 59 · prompt 60
+  if (c60) c60.plan = { intent: plan.intent, calls: ownedCalls };
   const out = await executePlan(user, { ...plan, calls: ownedCalls }, ctxT, base, t0);
   if (opts.signal?.aborted) throw abortErr59();
   logChoice(user, { module: opts.module, intent: out.intent, tools: out.actions.map((x) => x.tool), statuses: out.cached ? out.actions.map(() => 'cache') : out.actions.map((x) => x.status), engine: out.engine, ms: out.ms, len: text.length });
@@ -452,6 +465,7 @@ async function executePlan(user, plan, ctxT, base, t0) {
     try { v = await tool.validate(c.args ?? {}, ctxT); } catch (e) { v = { error: String(e?.message ?? e).slice(0, 200) }; }
     if (v.ask) return { ...res0, reply: v.ask.question, text: v.ask.question, intent: 'ask', actions: [{ tool: c.tool, args: c.args ?? {}, status: 'proposed' }], results: (v.ask.options ?? []).map((o) => ({ kind: 'option', id: o.id, title: o.label })), ask: v.ask, ms: Date.now() - t0 };
     if (v.error) return { ...res0, reply: v.error, text: v.error, actions: [{ tool: c.tool, args: c.args ?? {}, status: 'failed', error: v.error }], results: [], ms: Date.now() - t0 };
+    if (ctxT.c60) adjust60(user, ctxT.c60, c, v, ctxT.trace); // prompt 60: tid/sted fra forrige tur, entiteter
     checked.push({ tool: c.tool, args: v.args, summary: v.summary ?? null });
     ctxT.trace?.norm({ tool: c.tool, args: publicArgs(v.args) }); // prompt 47: normaliserte verdier (tolkede datoer, steder, beløp, søketermer)
   }
@@ -469,7 +483,7 @@ async function executePlan(user, plan, ctxT, base, t0) {
   const destr = checked.filter((c) => TOOL45[c.tool].destructive);
   if (destr.length && !ctxT.confirmed) {
     const token = `c${randomBytes(12).toString('hex')}`;
-    q('INSERT INTO glimt45_confirm(token, user_id, payload, created) VALUES(?,?,?,?)').run(token, user, JSON.stringify({ calls: checked, plan: { intent: plan.intent, engine: plan.engine, model: plan.model ?? null }, ctx: { text: ctxT.text, today, module: ctxT.module, context: ctxT.context } }), Date.now());
+    q('INSERT INTO glimt45_confirm(token, user_id, payload, created) VALUES(?,?,?,?)').run(token, user, JSON.stringify({ calls: checked, plan: { intent: plan.intent, engine: plan.engine, model: plan.model ?? null }, ctx: { text: ctxT.text, today, module: ctxT.module, context: ctxT.context, conv: ctxT.c60 ? { id: ctxT.c60.conv.id, kind: ctxT.c60.conv.kind } : null } }), Date.now());
     const summary = destr.map((c) => c.summary).filter(Boolean).join(' ') || 'Vil du utføre dette?';
     return { ...res0, reply: summary, text: summary, actions: checked.map((c) => ({ tool: c.tool, args: publicArgs(c.args), status: TOOL45[c.tool].destructive ? 'needs_confirm' : 'proposed' })), results: [],
       confirm: { token, summary, expiresAt: new Date(Date.now() + CONFIRM_MS).toISOString() }, ms: Date.now() - t0 };
@@ -600,6 +614,7 @@ export async function confirm45(user, token) {
   // Planen er allerede validert; kallene kjøres direkte (validate kjøres ikke på nytt, målet er det brukeren bekreftet).
   const fakePlan = { intent: p.plan.intent, engine: p.plan.engine, model: p.plan.model, calls: [] };
   const out = await executeChecked(user, fakePlan, p.calls, ctxT);
+  confirmed60(user, p.ctx.conv, out); // prompt 60: tilstanden i samtalen bekreftelsen hørte til
   logChoice(user, { module: p.ctx.module, intent: out.intent, tools: out.actions.map((x) => x.tool), statuses: out.actions.map((x) => x.status), engine: out.engine, ms: out.ms, len: p.ctx.text.length });
   return out;
 }

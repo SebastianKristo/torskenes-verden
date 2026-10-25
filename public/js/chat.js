@@ -12,7 +12,8 @@ import { lang, locale } from './i18n.js';
 import { glimt, glimtDots } from './glimt.js';
 import { assist, looksLikeTool, normAnswer } from './assist.js';
 import { agentStream59, cacheNote59 } from './stream59.js'; // prompt 59: Glimt-svar strømmes (ord for ord, statuslinje, Stopp)
-import { agentText, isPlain } from './glimt-agent45.js';
+import { agentText, isPlain, agentConfirm } from './glimt-agent45.js';
+import { chatConv60, bindConv60, rekeyConv60, newChatConv60, forgetConv60, choicePick60, followsGlimt60 } from './convo60.js'; // prompt 60: samtale-id, valgknapper
 import { cardHtml, bindCards } from './chat-cards.js';
 import { factsHtml41, usedWithoutFacts41 } from './chat-facts41.js'; // prompt 41: faktakort
 import { css50, rejectReason50, isImg50, upload50, attRow50, bubbleImgs50, otherFiles50, filePills50, imagesOf50, bindDrop50, pastedFiles50, lightbox50, readWith50, finansBtn50, MAX_FILES50 } from './chat50.js'; // prompt 50: vedlegg, miniatyr, lysboks
@@ -30,7 +31,7 @@ const isLocalId = (id) => typeof id === 'string' && id.startsWith('g:');
 function toolsRead() { try { return JSON.parse(localStorage.getItem(TKEY) || '{}') ?? {}; } catch { return {}; } }
 function toolsWrite(o) { try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch { /* privat modus */ } }
 function toolsAdd(id, msgs) { const o = toolsRead(); o[id] = [...(o[id] ?? []), ...msgs].slice(-120); toolsWrite(o); }
-function toolsRekey(from, to) { const o = toolsRead(); if (!o[from]) return; o[to] = [...(o[to] ?? []), ...o[from]]; delete o[from]; toolsWrite(o); }
+function toolsRekey(from, to) { rekeyConv60(from, to); const o = toolsRead(); if (!o[from]) return; o[to] = [...(o[to] ?? []), ...o[from]]; delete o[from]; toolsWrite(o); }
 function toolsDrop(id) { const o = toolsRead(); if (o[id]) { delete o[id]; toolsWrite(o); } }
 /** Fletter lokale Glimt-svar inn i meldingene fra serveren: samme tekst fra serveren får kortet, resten settes inn etter tid. */
 function mergeTools(id, msgs) {
@@ -261,9 +262,36 @@ function msgsHtml() {
     const who = meta.glimt ? 'GLIMT' : `GLIMT · ${(meta.auto?.modelName ?? mName(meta.auto?.model || meta.model || C.chat?.model || '')).toUpperCase()}`;
     const pu = i > 0 && msgs[i - 1]?.role === 'user' ? i - 1 : -1; // prompt 50: bildet svaret leste, som liten miniatyr + filnavn
     return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${pu >= 0 ? filePills50(msgs[pu], pu) : ''}${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-      ${(() => { const th = thinkOf52(m); return th ? thinkHtml52({ key, steps: th.steps, s: th.s, source: th.source, open: !!C.thOpen?.[key] }) : ''; })()}<div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}${finansBtn50(meta, `${C.cur}:${i}`, C.fin50?.[`${C.cur}:${i}`])}${readWith50(meta)}
+      ${(() => { const th = thinkOf52(m); return th ? thinkHtml52({ key, steps: th.steps, s: th.s, source: th.source, open: !!C.thOpen?.[key] }) : ''; })()}<div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${i === lastA && !busyHere ? choices60Html(meta, i) : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}${finansBtn50(meta, `${C.cur}:${i}`, C.fin50?.[`${C.cur}:${i}`])}${readWith50(meta)}
       <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}${i === lastA && !busyHere && !C.web && C.webAsk46 && String(C.webAsk46.chatId ?? '') === String(C.cur ?? '') ? `<button type="button" class="ch-web46" data-ch-web46="${i}">${svg(IC.web, 15)}${esc(C.webAsk46.action?.label ?? 'Søk denne gangen')}</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? `Stopp${C.speakAi ? aiTag57() : ''}` : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
   }).join('') + (busyHere ? streamHtml() : '');
+}
+/** Prompt 60: valgknapper (meta.choices) og bekreftelse (meta.confirm) under det siste Glimt-svaret. */
+function choices60Html(meta, i) {
+  const c = meta.choices, f = meta.confirm, out = [];
+  if (c?.items?.length) out.push(`<div class="ga45-ask ga60-ch" data-ch-set60="${esc(c.setId ?? '')}"><div class="ga45-opts" role="group" aria-label="Velg">${c.items.map((x, j) => `<button type="button" class="ga45-o" data-ch-ch60="${i}:${j}" data-no-i18n>${esc(x.label)}</button>`).join('')}</div></div>`);
+  if (f?.token) out.push(`<div class="ga45-cf">${f.summary && !String(meta.content ?? '').includes(f.summary) ? `<b data-no-i18n>${esc(f.summary)}</b>` : ''}<div class="ga45-opts"><button type="button" class="ga45-o danger" data-ch-cf60="yes:${i}">Ja, gjør det</button><button type="button" class="ga45-o" data-ch-cf60="no:${i}">Avbryt</button></div></div>`);
+  return out.length ? `<div class="ga45 ch-ga60">${out.join('')}</div>` : '';
+}
+/** Prompt 60: «Ja, gjør det» / «Avbryt» på en endrende handling (POST /api/glimt/agent/confirm {token}). */
+async function confirm60(i, yes) {
+  const msgs = (C.chat?.messages ?? []).filter((m) => m.role !== 'system'), m = msgs[i];
+  if (!m?.meta?.confirm?.token || C.busy) return;
+  const token = m.meta.confirm.token;
+  m.meta = { ...m.meta, confirm: null };
+  let text, meta = { glimt: true, model: 'Glimt', tool: 'Glimt', source: 'Glimt' };
+  if (!yes) text = 'Greit, jeg lot det være.';
+  else {
+    C.busy = { chatId: C.cur, model: 'Glimt', glimt: true, text: '', ctl: new AbortController() }; paint(); toBottom();
+    try { const a = await agentConfirm(token); text = agentText(a) || 'Ferdig.'; if (a.choices) meta.choices = a.choices; if (a.confirm) meta.confirm = a.confirm; }
+    catch (e) { text = e.message || 'Fikk ikke utført handlingen.'; meta.error = text; }
+    C.busy = null;
+  }
+  const am = { role: 'assistant', content: text, ts: Date.now(), meta };
+  const id = C.cur || `g:${Date.now().toString(36)}`;
+  toolsAdd(id, [am]); C.cur = id;
+  C.chat = { ...(C.chat ?? {}), id, messages: [...(C.chat?.messages ?? []), am] };
+  writeLocal(); paint(); toBottom();
 }
 /** «✦ Kode · Qwen 3» når Auto valgte modellen (serveren sender auto/reason/task i meta). */
 function autoWhy41(meta) {
@@ -441,6 +469,7 @@ function autoMigDone() { try { return localStorage.getItem(AKEY41) === '1'; } ca
 function autoMigSet() { try { localStorage.setItem(AKEY41, '1'); } catch { /* */ } }
 function fresh41() { C.data = !!C.set.chat_my_data; if (C.auto) C.draftModel = C.auto.id; }
 function newChat() {
+  newChatConv60(); // prompt 60: ny chat = ny samtale-id (Glimt glemmer forrige samtales tilstand)
   C.cur = null; C.chat = null; C.inp = ''; C.att = []; C.edit = null; C.drawer = false; C.sheet = null; fresh41();
   writeLocal(); paint();
   host()?.querySelector('[data-ch-in]')?.focus();
@@ -459,7 +488,8 @@ async function sendInner(text, opt = {}) {
   if (C.busy) return;
   if (!t && opt.editFrom == null) return;
   if (C.att.some((a) => a.up)) { toast('Vent til vedleggene er lastet opp'); return; }
-  if (opt.editFrom == null && !opt.history && !opt.noTool && !C.att.length && looksLikeTool(t) && await sendTool(t)) return;
+  // Prompt 60: valgknapp (opt.choice60) og korte oppfølgere etter et Glimt-svar («og i Bergen?», «den første») går også til Glimt.
+  if (opt.editFrom == null && !opt.history && !opt.noTool && !C.att.length && (opt.choice60 || looksLikeTool(t) || followsGlimt60(C.chat?.messages, t)) && await sendTool(t, { choice: opt.choice60?.setId ? opt.choice60 : null })) return;
   const model = curModelId();
   if (!model) { toast('Ingen modell er tilgjengelig'); return; }
   // En samtale som bare finnes lokalt (bare Glimt-svar så langt) blir en ny samtale på serveren nå.
@@ -502,7 +532,7 @@ async function sendInner(text, opt = {}) {
 }
 
 /** Glimt-verktøy (vær, kalender …): true når svaret er vist, false = send til språkmodellen som vanlig. */
-async function sendTool(t) {
+async function sendTool(t, o60 = {}) {
   const before = { chat: C.chat, cur: C.cur, inp: C.inp };
   const ts = Date.now(), userMsg = { role: 'user', content: t, ts };
   const shown = { ...(C.chat ?? { id: null, title: t.slice(0, 60), model: curModelId(), settings: curSet() }), messages: [...(C.chat?.messages ?? []), userMsg] };
@@ -510,13 +540,14 @@ async function sendTool(t) {
   C.chat = shown; C.inp = ''; C.sheet = null; C.edit = null;
   C.busy = { chatId: C.cur, model: curModelId(), glimt: true, text: '', ctl };
   paint(); toBottom();
-  let a, s59 = null;
+  let a, s59 = null, conv60 = null;
   // Prompt 59: Glimt-motoren strømmer (POST /api/glimt/agent/stream): statuslinje mens verktøyene jobber, ordene mens de skrives.
   // Eldre server (404/405) → /api/assist som før. Stopp beholder det som er skrevet, merket «Stoppet».
   try {
     let raf = 0;
     const live = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; paintStream(); }); };
-    s59 = await agentStream59(t, 'chat', {}, { signal: ctl.signal,
+    conv60 = chatConv60(C.cur);
+    s59 = await agentStream59(t, 'chat', {}, { signal: ctl.signal, conversationId: conv60, conversationKind: 'chat', choice: o60.choice ?? null,
       onStatus: (st) => { if (C.busy?.ctl === ctl) { C.busy.status59 = st.text; live(); } },
       onToken: (all) => { if (C.busy?.ctl === ctl) { C.busy.text = all; live(); } } });
   } catch (e) {
@@ -553,7 +584,8 @@ async function sendTool(t) {
   }
   C.busy = null;
   if (!a?.text || a.intent === 'llm' || a.intent === 'chat' || (!a.card && !a.tool && !/^(weather|calendar|departures|packages|finance|tasks|trial|appointment)/.test(a.intent ?? ''))) { C.chat = before.chat; return false; }
-  const am = { role: 'assistant', content: a.text, ts: Date.now(), meta: { glimt: true, tool: a.tool ?? null, card: a.card ?? null, ms: a.ms ?? 0, source: a.source ?? '', model: 'Glimt', ...(a.cached ? { cached: true, note: a.notice } : {}) } };
+  const am = { role: 'assistant', content: a.text, ts: Date.now(), meta: { glimt: true, tool: a.tool ?? null, card: a.card ?? null, ms: a.ms ?? 0, source: a.source ?? '', model: 'Glimt', ...(a.cached ? { cached: true, note: a.notice } : {}),
+    ...(a.choices ? { choices: a.choices } : {}), ...(a.confirm ? { confirm: a.confirm } : {}), ...(conv60 ? { conv60 } : {}) } }; // prompt 60: valgknapper / bekreftelse
   if (a.chatId && !isLocalId(a.chatId)) {
     // Serveren lagret spørsmålet og svaret i samtalen. Kortet lagres også lokalt, i tilfelle serveren ikke tar vare på det.
     toolsAdd(String(a.chatId), [userMsg, am]);
@@ -566,6 +598,7 @@ async function sendTool(t) {
     toolsAdd(id, [userMsg, am]);
     C.cur = id; C.chat = { ...shown, id, ...(isLocalId(id) ? { local: true } : {}), messages: [...shown.messages, am] };
   }
+  bindConv60(C.cur, conv60); // prompt 60: chat-id-en (lokal eller fra serveren) beholder samtale-id-en som ble brukt
   writeLocal(); paint(); toBottom();
   return true;
 }
@@ -578,7 +611,7 @@ function fromAgent59(g, q) {
   // Gamle svar (vær, avganger, pakker …) kommer med sitt eget kort i legacyAnswer.
   if (raw.legacyAnswer && typeof raw.legacyAnswer === 'object') {
     const L = normAnswer(raw.legacyAnswer);
-    return { ...L, text: agentText(g) || L.text, ms: raw.ms ?? L.ms, cached: g.cached, notice: cacheNote59(g) || L.notice };
+    return { ...L, text: agentText(g) || L.text, ms: raw.ms ?? L.ms, cached: g.cached, notice: cacheNote59(g) || L.notice, choices: g.choices, confirm: g.confirm };
   }
   const a0 = g.actions[0] ?? null, tool = a0?.tool ?? null;
   if (isPlain(g) && ['chat', 'ask', ''].includes(g.intent)) return { text: agentText(g), intent: 'chat' };
@@ -594,7 +627,7 @@ function fromAgent59(g, q) {
     card = { k: 'tasks', count: ts.length, items: ts.map((x) => ({ id: x.id, title: x.title, due: x.date, done: !!x.done })) };
   }
   const src = SRC59[g.module] ?? 'Glimt';
-  return { text: agentText(g) || 'Ferdig.', intent: tool ?? g.intent ?? 'agent', tool: src, source: src, card, ms: raw.ms ?? 0, cached: g.cached, notice: cacheNote59(g), q };
+  return { text: agentText(g) || 'Ferdig.', intent: tool ?? g.intent ?? 'agent', tool: src, source: src, card, ms: raw.ms ?? 0, cached: g.cached, notice: cacheNote59(g), q, choices: g.choices, confirm: g.confirm };
 }
 
 async function readSse(res, ctl) {
@@ -827,7 +860,7 @@ async function menuAct(act, arg) {
     if (!C.delArm) { C.delArm = true; paint(); return; }
     C.delArm = false; C.sheet = null;
     try { await call(`/chats/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { toast(e.message); }
-    toolsDrop(id);
+    toolsDrop(id); forgetConv60(chatConv60(id)); // prompt 60: glem samtaletilstanden på serveren også
     if (C.cur === id) { C.cur = null; C.chat = null; writeLocal(); }
     refreshList();
   }
@@ -905,6 +938,13 @@ function bind(h) {
       send(t); return;
     }
     if ('chSend' in d) { send(C.inp); return; }
+    if (d.chCh60) { // prompt 60: valgknapp → item.text + choice {setId, id} i samme samtale
+      const [mi, j] = d.chCh60.split(':').map(Number), m = (C.chat?.messages ?? []).filter((x) => x.role !== 'system')[mi];
+      const pick = choicePick60(m?.meta?.choices, m?.meta?.choices?.items?.[j]);
+      if (pick && !C.busy) send(pick.text, { choice60: pick.choice ?? { text: pick.text } });
+      return;
+    }
+    if (d.chCf60) { const [k, mi] = d.chCf60.split(':'); confirm60(+mi, k === 'yes'); return; }
     if ('chStop' in d) { stop(); return; }
     if ('chWeb' in d) { C.web = !C.web; writeLocal(); paint(); return; }
     if ('chData' in d) { if (!C.set.chat_my_data) { toast('Slått av i Innstillinger → AI og tolkning'); return; } C.data = !C.data; dataSave41(C.cur, C.data); writeLocal(); paint(); return; }

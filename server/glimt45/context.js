@@ -60,5 +60,6 @@ export function buildContext47(user, text, { today = todayOslo45(), nowMin = now
 export function contextBlock47(c, parts = {}) {
   const facts = parts.facts ?? c.factsText, hist = parts.history ?? c.historyText;
   // Prompt 59: fast rekkefølge for KV-cachen – det som er likt lengst (profil) før klokka, så minne og historikk.
-  return [c.profileText, `${c.nowLine}.`, facts ? `Memory facts (from the user):\n${facts}` : '', hist ? `Recent conversation:\n${hist}` : ''].filter(Boolean).join('\n');
+  // Prompt 60 (del 3): samtaletilstanden (forrige tur) sist – den endres hver tur.
+  return [c.profileText, `${c.nowLine}.`, facts ? `Memory facts (from the user):\n${facts}` : '', hist ? `Recent conversation:\n${hist}` : '', c.stateText ? `Conversation state:\n${c.stateText}` : ''].filter(Boolean).join('\n');
 }

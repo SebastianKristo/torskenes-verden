@@ -4,10 +4,13 @@
 //        confirm?:{token, summary}, personality, joke?, engine, model, nav?:{target, web}}
 //   POST /api/glimt/agent/confirm {token} → samme form (handlingen er utført)
 // Eldre server (404/405): agent() gir null, og feltet bruker sin gamle vei (assist, /api/tasks/glimt, /search/ask …).
-// Selvstendig modul (ingen import), så den også kan brukes fra FinansHub (public/finans/js).
+// Selvstendig modul (bare convo60.js i samme mappe), så den også kan brukes fra FinansHub (/assets/js/glimt-agent45.js).
+// Prompt 60 (prompt 49 del 3): conversationId/conversationKind/choice inn (SERVER60-API.md §1), `choices` ut (§2) som valgknapper:
+//   trykk sender item.text + choice {setId, id} i samme samtale (cb.resend(text, ctx, {choice})).
 //
 // Felles visning: agentExtras(a) gir HTML for treff (velg), oppfølgingsspørsmål med valg, og bekreftelse (Slett / Avbryt).
 // Klikkene håndteres her (document-delegert) og sendes tilbake til feltet via callbacks registrert med agentExtras(a, cb).
+import { normChoices60, choicePick60, convBody60 } from './convo60.js';
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
@@ -35,22 +38,23 @@ export function normAgent(d = {}) {
     reply: String(d.reply ?? d.text ?? ''), intent: d.intent ?? '', module: d.module ?? '', actions,
     results: Array.isArray(d.results) ? d.results : [], ask: d.ask?.question ? d.ask : null, confirm: d.confirm?.token ? d.confirm : null,
     joke: d.joke ?? null, engine: d.engine ?? '', model: d.model ?? null, nav: d.nav ?? null, requestId: d.requestId ?? null, repeated: !!d.repeated, ms: d.ms ?? null,
+    choices: normChoices60(d.choices), conversationId: d.conversationId ?? null, followUp: d.followUp?.refersToPrevious ? d.followUp : null, // prompt 60
     done: actions.filter((x) => x.status === 'done'), failed: actions.filter((x) => x.status === 'failed'),
   };
 }
 /** Ingen handling, treff, spørsmål eller bekreftelse: et vanlig spørsmål/prat. */
-export const isPlain = (a) => !!a && !a.actions.length && !a.results.length && !a.ask && !a.confirm && !a.nav?.web;
+export const isPlain = (a) => !!a && !a.actions.length && !a.results.length && !a.ask && !a.confirm && !a.choices && !a.nav?.web;
 
 /**
  * Spør den felles agenten. null = serveren har den ikke (eldre server). Kaster ved andre feil.
  * module: 'home'|'calendar'|'tasks'|'finance'|'ruter'|'chat'|'weather'|'family'|'media'|'study'
  */
-export async function agent(text, module = 'home', context = {}, { signal, requestId } = {}) {
+export async function agent(text, module = 'home', context = {}, { signal, requestId, conversationId, conversationKind, choice } = {}) {
   text = String(text ?? '').trim();
   if (!text || !agentOn()) return null;
   const ctx = Object.fromEntries(Object.entries(context ?? {}).filter(([, v]) => v != null && v !== '' && !(Array.isArray(v) && !v.length)));
   let r;
-  try { r = await post('/api/glimt/agent', { text: text.slice(0, 1000), module, ...(Object.keys(ctx).length ? { context: ctx } : {}), requestId: requestId ?? rid() }, signal); }
+  try { r = await post('/api/glimt/agent', { text: text.slice(0, 1000), module, ...(Object.keys(ctx).length ? { context: ctx } : {}), requestId: requestId ?? rid(), ...convBody60({ conversationId, conversationKind, choice }) }, signal); }
   catch (e) { if (e.name === 'AbortError') throw e; throw new Error(`Fikk ikke kontakt med Glimt: ${e.message}`); }
   if (r.status === 404 || r.status === 405) { offUntil = Date.now() + OFF_MS; return null; }
   if (!r.ok) throw Object.assign(new Error(r.d?.error || (r.status === 429 ? 'Glimt jobber med mye nå. Prøv igjen om litt.' : `Glimt svarte ikke (feil ${r.status}).`)), { status: r.status });
@@ -108,14 +112,19 @@ export function agentExtras(a, cb = {}, opts = {}) {
   CB.set(id, { a, cb });
   if (CB.size > 40) CB.delete(CB.keys().next().value);
   const out = [];
-  if (a.results.length) {
-    out.push(`<div class="ga45-res">${a.results.slice(0, 8).map((r, i) => {
+  // Prompt 60: med valgknapper (choices) vises ikke de gamle valg-treffene (kind 'option') eller ask.options i tillegg.
+  const res = a.choices ? a.results.filter((r) => r.kind !== 'option') : a.results;
+  if (res.length) {
+    out.push(`<div class="ga45-res">${res.slice(0, 8).map((r) => { const i = a.results.indexOf(r);
       const [kn, kc] = KIND[r.kind] ?? ['', '#7a7468'];
       const meta = r.subtitle || [r.date ? dShort(r.date) : '', r.time].filter(Boolean).join(' · ');
       return `<button type="button" class="ga45-r" data-ga45="${id}" data-ga45-r="${i}"><i style="background:${esc(r.color ?? kc)}"></i><span class="ga45-rt"><b data-no-i18n>${esc(r.title ?? r.name ?? '')}</b>${meta ? `<span data-no-i18n>${esc(meta)}</span>` : ''}</span>${typeof r.amount === 'number' ? `<b class="ga45-amt">${esc(kr(r.amount))}</b>` : kn ? `<span class="ga45-k">${esc(kn)}</span>` : ''}</button>`;
-    }).join('')}${a.results.length > 8 ? `<span class="ga45-more">+ ${a.results.length - 8} til</span>` : ''}</div>`);
+    }).join('')}${res.length > 8 ? `<span class="ga45-more">+ ${res.length - 8} til</span>` : ''}</div>`);
   }
-  if (a.ask) {
+  if (a.choices) {
+    const c = a.choices, same = a.reply && a.reply.replace(/\*\*/g, '').includes(c.question);
+    out.push(`<div class="ga45-ask ga60-ch" data-ga60-set="${esc(c.setId ?? '')}">${same || !c.question ? '' : `<b data-no-i18n>${esc(c.question)}</b>`}<div class="ga45-opts" role="group" aria-label="Velg">${c.items.map((x, i) => `<button type="button" class="ga45-o" data-ga45="${id}" data-ga60-i="${i}" data-no-i18n>${esc(x.label)}</button>`).join('')}</div></div>`);
+  } else if (a.ask) {
     const o = Array.isArray(a.ask.options) ? a.ask.options : [];
     const same = a.reply && a.reply.replace(/\*\*/g, '').includes(a.ask.question);
     out.push(`<div class="ga45-ask">${same ? '' : `<b data-no-i18n>${esc(a.ask.question)}</b>`}${o.length ? `<div class="ga45-opts">${o.slice(0, 6).map((x, i) => `<button type="button" class="ga45-o" data-ga45="${id}" data-ga45-o="${i}" data-no-i18n>${esc(x.label ?? x.title ?? x)}</button>`).join('')}</div>` : ''}</div>`);
@@ -138,8 +147,8 @@ export function agentText(a, { plain = false } = {}) {
 
 /** Ren tekst + oppfølgingsspørsmålet (når det ikke allerede står i svaret) – for felt som ikke viser agentExtras. */
 export function agentFull(a) {
-  const t = agentText(a, { plain: true }), q = a?.ask?.question ?? '';
-  const o = (a?.ask?.options ?? []).map((x) => x.label ?? x.title ?? x).filter(Boolean);
+  const t = agentText(a, { plain: true }), q = a?.choices?.question || a?.ask?.question || '';
+  const o = (a?.choices ? a.choices.items : a?.ask?.options ?? []).map((x) => x.label ?? x.title ?? x).filter(Boolean);
   return `${t}${q && !t.includes(q) ? ` ${q}` : ''}${o.length ? ` (${o.slice(0, 4).join(' · ')})` : ''}`.trim();
 }
 
@@ -161,10 +170,17 @@ export function initAgent45() {
       if (href.startsWith('#')) location.hash = href; else location.href = href;
       return;
     }
+    if (b.dataset.ga60I != null) { // prompt 60: valgknapp → item.text + choice i samme samtale
+      const pick = choicePick60(a.choices, a.choices?.items?.[+b.dataset.ga60I]);
+      if (!pick) return;
+      b.closest('.ga45-opts')?.querySelectorAll('button').forEach((x) => { x.disabled = true; });
+      cb.resend?.(pick.text, {}, { choice: pick.choice ?? null, label: a.choices.items[+b.dataset.ga60I].label });
+      return;
+    }
     if (b.dataset.ga45O != null) {
       const o = a.ask?.options?.[+b.dataset.ga45O];
       if (!o) return;
-      cb.resend?.(String(o.label ?? o.title ?? o), { selectedId: o.id ?? undefined });
+      cb.resend?.(String(o.text ?? o.label ?? o.title ?? o), { selectedId: o.id ?? undefined }); // prompt 60: text (prompt 55) når den finnes
       return;
     }
     if (b.dataset.ga45C) {
