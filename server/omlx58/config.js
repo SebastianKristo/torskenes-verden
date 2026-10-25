@@ -46,7 +46,9 @@ export function omlxConf58() {
   const models = { text: cleanModel(r.models?.text) || cleanModel(process.env.OMLX_MODEL_TEXT) || DEFAULT_TEXT58, vision: cleanModel(r.models?.vision) || cleanModel(process.env.OMLX_MODEL_VISION) || DEFAULT_VISION58 };
   for (const t of ENGINE_TASKS58) { const m = cleanModel(r.models?.[t]); if (m) models[t] = m; }
   const engines = { ...envTasks(), ...Object.fromEntries(Object.entries(r.engines ?? {}).filter(([t, e]) => ENGINE_TASKS58.includes(t) && ENGINES58.includes(e))) };
-  return { url: u.ok ? u.url : '', urlError: u.ok ? null : u.error, key, fallbackOllama, models, engines, label: 'oMLX' };
+  // Slått av (enabled:false): adresse, nøkkel og valg beholdes, men oMLX brukes ikke og sjekkes ikke (alt går til Ollama).
+  const enabled = r.enabled !== false, savedUrl = u.ok ? u.url : '';
+  return { url: enabled ? savedUrl : '', savedUrl, enabled, urlError: u.ok ? null : u.error, key, fallbackOllama, models, engines, label: 'oMLX' };
 }
 /** {url, key, label} når adressen er satt (nøkkelen kan mangle når oMLX bare lytter på localhost), ellers null. */
 export const omlxReady58 = () => { const c = omlxConf58(); return c.url ? c : null; };
@@ -66,7 +68,7 @@ export function omlxModelFor58(task, { images = false } = {}) {
 /** Til admin-klienten: aldri nøkkelen, bare om den er satt. */
 export function confOut58() {
   const c = omlxConf58();
-  return { url: c.url || null, keySet: !!c.key, fallbackOllama: c.fallbackOllama, models: c.models, engines: Object.fromEntries(ENGINE_TASKS58.map((t) => [t, c.engines[t] === 'omlx' ? 'omlx' : 'ollama'])),
+  return { url: c.savedUrl || null, enabled: c.enabled, keySet: !!c.key, fallbackOllama: c.fallbackOllama, models: c.models, engines: Object.fromEntries(ENGINE_TASKS58.map((t) => [t, c.engines[t] === 'omlx' ? 'omlx' : 'ollama'])),
     tasks: ENGINE_TASKS58, defaults: { text: DEFAULT_TEXT58, vision: DEFAULT_VISION58 }, standard: 'ollama', urlError: c.urlError };
 }
 
@@ -82,6 +84,10 @@ export function saveConf58(patch = {}) {
     const v = String(patch.key).trim();
     if (v && (v.length < 16 || v.length > 256 || /\s/.test(v))) return { ok: false, error: 'Nøkkelen må være 16–256 tegn uten mellomrom (den tools/omlx/install.sh skrev ut)' };
     cur.key = v ? seal(v) : '';
+  }
+  if (patch.enabled !== undefined && patch.enabled !== null) {
+    if (typeof patch.enabled !== 'boolean') return { ok: false, error: 'enabled må være true eller false' };
+    cur.enabled = patch.enabled;
   }
   if (patch.fallbackOllama !== undefined && patch.fallbackOllama !== null) {
     if (typeof patch.fallbackOllama !== 'boolean') return { ok: false, error: 'fallbackOllama må være true eller false' };

@@ -370,3 +370,24 @@ test('eval: npm run eval -- --backend omlx --url … --key … mot den falske oM
   assert.match(md, /^# Glimt eval .* · motor oMLX · omlx · Qwen3-8B-4bit/);
   assert.match(md, /\| Case \| OK \| Median \| p50 \| p90 \|/);
 });
+
+test('oMLX kan slås av uten å miste oppsettet: alt går til Ollama, ingen sjekk, Test sier «slått av»; på igjen gir samme valg', async () => {
+  assert.equal((await A('/api/admin/omlx58/config', 'PUT', { engines: { glimt: 'omlx' } })).status, 200);
+  assert.equal(cfg58.engineFor58('glimt'), 'omlx');
+  const off = await A('/api/admin/omlx58/config', 'PUT', { enabled: false });
+  assert.equal(off.status, 200);
+  assert.equal(off.body.enabled, false);
+  assert.ok(off.body.url, 'adressen er lagret');
+  assert.equal(off.body.engines.glimt, 'omlx', 'valget per oppgave er lagret');
+  assert.equal(cfg58.engineFor58('glimt'), 'ollama', 'slått av → Ollama');
+  const h = await A('/api/admin/omlx58/health');
+  assert.equal(h.body.status, 'disabled');
+  assert.equal(h.body.enabled, false);
+  const t = await A('/api/admin/omlx58/test', 'POST', {});
+  assert.match(t.body.error ?? '', /slått av/);
+  assert.equal((await A('/api/admin/omlx58/config', 'PUT', { enabled: 'ja' })).status, 400);
+  assert.equal((await I('/api/admin/omlx58/config', 'PUT', { enabled: true })).status, 403);
+  assert.equal((await A('/api/admin/omlx58/config', 'PUT', { enabled: true })).status, 200);
+  assert.equal(cfg58.engineFor58('glimt'), 'omlx', 'på igjen → samme valg');
+  await A('/api/admin/omlx58/config', 'PUT', { engines: { glimt: 'ollama' } });
+});

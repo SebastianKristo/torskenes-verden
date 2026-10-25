@@ -6,7 +6,7 @@
 // Nøkkelen sendes bare inn (PUT) og vises aldri. Serveren godtar bare adresser i huset.
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 const TASK_NAMES = { glimt: 'Glimt · kalender og planlegger', sok: 'AI-søk', brief: 'Glimt · brief', fsok: 'Finans · spør', dom: 'Domener · oppsummering', rc: 'Dokumenter og bilder (vitnemål, kvitteringsreserve)' };
-const ST = { ok: 'Svarer', auth: 'Nøkkel eller IP avvist', down: 'Svarer ikke', starting: 'Starter', off: 'Ikke satt opp' };
+const ST = { ok: 'Svarer', auth: 'Nøkkel eller IP avvist', down: 'Svarer ikke', starting: 'Starter', off: 'Ikke satt opp', disabled: 'Slått av · alt går til Ollama' };
 const CSS = `
 .o58 input{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:10px;border:1px solid var(--line,#2a3142);background:transparent;color:inherit;font:500 13px var(--mono,'JetBrains Mono',monospace)}
 .o58 .o58-form{display:grid;gap:8px;margin-top:8px}.o58 .o58-btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -42,6 +42,7 @@ async function put(body) {
 function statusLine() {
   const h = S.health;
   if (!h) return 'Laster …';
+  if (h.enabled === false) return ST.disabled;
   if (!h.configured) return 'Ikke satt opp · installer med tools/omlx/install.sh på Mac mini-en';
   return `${ST[h.status] ?? h.status}${h.ms != null && h.ok ? ` · ${h.ms} ms` : ''}${h.error && !h.ok ? ` · ${h.error}` : ''}${h.ok && h.missing?.length ? ` · mangler ${h.missing.join(', ')}` : ''}`;
 }
@@ -52,6 +53,7 @@ function aiHtml() {
   const chips = (h?.models ?? []).map((m) => `<span class="o58-chip${loaded.has(m) ? ' on' : ''}" title="${loaded.has(m) ? 'Lastet i minnet' : ''}">${esc(m)}${loaded.has(m) ? ' · lastet' : ''}</span>`).join('');
   return `<div class="ac-sec"><span class="ac-lab">MAC MINI · OMLX</span><div class="ac-card o58" style="padding:12px 14px">
       <b>oMLX på Mac mini-en</b>
+      <div class="ac-card ac-list" style="margin:8px 0"><button type="button" class="ac-li" data-o58-on role="switch" aria-checked="${c.enabled !== false}"${S.busy ? ' disabled' : ''}><span class="ac-col ac-grow"><b>Bruk oMLX</b><span>${c.enabled !== false ? 'På: oppgavene du har valgt oMLX for, går dit.' : 'Av: alt går til Ollama. Adresse, nøkkel og valg er lagret til du slår den på igjen.'}</span></span><span class="ac-sw${c.enabled !== false ? ' on' : ''}" aria-hidden="true"><i></i></span></button></div>
       <div class="ac-mut" role="status">${esc(statusLine())}</div>
       ${chips ? `<div class="o58-models" aria-label="Modeller i oMLX">${chips}</div><div class="ac-mut" style="font-size:12px">${h?.loadedKnown ? 'Grønn ramme = lastet i minnet.' : 'oMLX oppgir ikke hvilke modeller som er lastet (se admin-panelet på Mac-en).'}</div>` : ''}
       <form class="o58-form" data-o58-form>
@@ -67,7 +69,7 @@ function aiHtml() {
 function rtHtml() {
   const c = S.cfg;
   if (!c) return '';
-  const ready = !!c.url;
+  const ready = !!c.url && c.enabled !== false;
   const rows = (c.tasks ?? []).map((t) => {
     const e = c.engines?.[t] ?? 'ollama', model = c.models?.[t] ?? (['rc', 'bar'].includes(t) ? c.models?.vision : c.models?.text);
     return `<div class="o58-rt"><span class="o58-grow"><b>${esc(TASK_NAMES[t] ?? t)}</b><span>${e === 'omlx' ? `oMLX · ${esc(model)}` : 'Ollama · modellen over'}</span></span>
@@ -76,7 +78,7 @@ function rtHtml() {
   const fb = c.fallbackOllama !== false;
   return `<div class="ac-sec"><span class="ac-lab">MOTOR PER OPPGAVE</span><div class="ac-card ac-list o58" style="padding:4px 14px">${rows}</div>
     <div class="ac-card ac-list" style="margin-top:8px"><button type="button" class="ac-li" data-o58-fb role="switch" aria-checked="${fb}"${S.busy ? ' disabled' : ''}><span class="ac-col ac-grow"><b>Bruk Ollama hvis oMLX ikke svarer</b><span>Ingen kontakt eller 5xx → samme spørsmål til Ollama med Ollama-modellen, merket «via Ollama». Gjelder også Open WebUI.</span></span><span class="ac-sw${fb ? ' on' : ''}" aria-hidden="true"><i></i></span></button></div>
-    <div class="ac-note">${ready ? 'Ollama er standard. Bytt en oppgave til oMLX når eval har vist at den er bedre (npm run eval -- --backend omlx, se docs/omlx-58.md).' : 'oMLX er ikke satt opp ennå (fanen Modeller › oMLX på Mac mini-en).'}${S.rtMsg ? ` <b role="status">${esc(S.rtMsg)}</b>` : ''}</div></div>`;
+    <div class="ac-note">${c.enabled === false ? 'oMLX er slått av (fanen Modeller) – alle oppgaver bruker Ollama.' : ready ? 'Ollama er standard. Bytt en oppgave til oMLX når eval har vist at den er bedre (npm run eval -- --backend omlx, se docs/omlx-58.md).' : 'oMLX er ikke satt opp ennå (fanen Modeller › oMLX på Mac mini-en).'}${S.rtMsg ? ` <b role="status">${esc(S.rtMsg)}</b>` : ''}</div></div>`;
 }
 
 const repaint = () => {
@@ -105,6 +107,11 @@ document.addEventListener('submit', async (e) => {
 });
 document.addEventListener('click', async (e) => {
   const eng = e.target.closest?.('[data-o58-engine]'), fb = e.target.closest?.('[data-o58-fb]');
+  if (e.target.closest?.('[data-o58-on]')) {
+    S.busy = true; repaint();
+    try { const on = S.cfg?.enabled === false; await put({ enabled: on }); S.msg = on ? 'oMLX er slått på' : 'oMLX er slått av · alt går til Ollama'; await load(true); } catch (err) { S.msg = err.message; }
+    S.busy = false; repaint(); return;
+  }
   if (e.target.closest?.('[data-o58-fresh]')) { S.busy = true; repaint(); await load(true); S.busy = false; repaint(); return; }
   if (e.target.closest?.('[data-o58-test]')) {
     S.busy = true; S.msg = 'Tester (første svar kan ta tid mens modellen lastes) …'; repaint();

@@ -27,7 +27,7 @@ const body = async (c) => { try { const b = await c.req.json(); return b && type
 export async function healthOut58({ force = false } = {}) {
   const c = omlxConf58();
   const h = await omlxModels58({ force });
-  return { configured: !!c.url, keySet: !!c.key, ok: h.ok, status: c.url ? h.status : 'off', url: c.url || null, ms: h.ms ?? null, checkedAt: h.checkedAt ? new Date(h.checkedAt).toISOString() : null,
+  return { configured: !!c.savedUrl, enabled: c.enabled, keySet: !!c.key, ok: c.enabled && h.ok, status: !c.enabled ? 'disabled' : c.url ? h.status : 'off', url: c.savedUrl || null, ms: h.ms ?? null, checkedAt: h.checkedAt ? new Date(h.checkedAt).toISOString() : null,
     error: h.ok ? null : h.error, models: (h.models ?? []).map((m) => m.id), modelInfo: (h.models ?? []).map((m) => ({ id: m.id, maxContext: m.maxContext, loaded: m.loaded })),
     loaded: h.loaded ?? null, loadedKnown: Array.isArray(h.loaded), engines: confOut58().engines, fallbackOllama: c.fallbackOllama, wanted: { text: c.models.text, vision: c.models.vision },
     missing: h.ok ? [c.models.text, c.models.vision].filter((m) => !resolveModel58(m, h.models)) : [] };
@@ -36,6 +36,7 @@ export async function healthOut58({ force = false } = {}) {
 /** «Svar bare: ok» gjennom gaten (backend omlx). → {ok, ms, text, model, error?} */
 export async function testOmlx58({ model = null } = {}) {
   const c = omlxConf58();
+  if (!c.enabled) return { ok: false, ms: 0, error: 'oMLX er slått av' };
   if (!c.url) return { ok: false, ms: 0, error: 'Adressen til oMLX er ikke satt' };
   const h = await omlxModels58({ force: true });
   const want = model || c.models.text;
