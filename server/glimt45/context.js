@@ -59,5 +59,6 @@ export function buildContext47(user, text, { today = todayOslo45(), nowMin = now
 /** Kontekstblokken som tekst (modellkallene). parts kan være trimmet av fitParts47. */
 export function contextBlock47(c, parts = {}) {
   const facts = parts.facts ?? c.factsText, hist = parts.history ?? c.historyText;
-  return [`${c.nowLine}.`, c.profileText, facts ? `Memory facts (from the user):\n${facts}` : '', hist ? `Recent conversation:\n${hist}` : ''].filter(Boolean).join('\n');
+  // Prompt 59: fast rekkefølge for KV-cachen – det som er likt lengst (profil) før klokka, så minne og historikk.
+  return [c.profileText, `${c.nowLine}.`, facts ? `Memory facts (from the user):\n${facts}` : '', hist ? `Recent conversation:\n${hist}` : ''].filter(Boolean).join('\n');
 }

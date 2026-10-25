@@ -173,7 +173,7 @@ async function tapStream(stream, entry) {
     for (const ch of j.choices ?? []) { content += ch.delta?.content ?? ch.message?.content ?? ''; for (const t of ch.delta?.tool_calls ?? ch.message?.tool_calls ?? []) if (t.function?.name) tools.push({ name: t.function.name, arguments: t.function.arguments }); }
     if (j.prompt_eval_count != null) entry.promptTokens = j.prompt_eval_count;
     if (j.eval_count != null) entry.outTokens = j.eval_count;
-    if (j.usage) { entry.promptTokens = j.usage.prompt_tokens ?? entry.promptTokens; entry.outTokens = j.usage.completion_tokens ?? entry.outTokens; }
+    if (j.usage) { entry.promptTokens = j.usage.prompt_tokens ?? entry.promptTokens; entry.outTokens = j.usage.completion_tokens ?? entry.outTokens; const ct = j.usage.prompt_tokens_details?.cached_tokens ?? j.usage.cached_tokens; if (ct != null) entry.cachedTokens = ct; } // prompt 59: oMLX prefiks-cache
     if (j.done_reason) entry.doneReason = j.done_reason;
     // Prompt 55: hvor tiden gikk (Ollama oppgir nanosekunder): lasting (modellbytte/kald), prompt og generering.
     for (const [k, f] of [['loadMs', 'load_duration'], ['promptMs', 'prompt_eval_duration'], ['genMs', 'eval_duration'], ['totalMs', 'total_duration']]) if (j[f] != null) entry[k] = Math.round(j[f] / 1e6);

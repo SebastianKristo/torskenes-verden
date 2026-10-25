@@ -22,6 +22,10 @@ import { SENTENCES46, FAIL_TEXT46 } from './tools46.js'; // prompt 46: vær, abo
 import { weatherCompare46 } from './weather46.js';
 import { installTaskHooks46 } from './tasks46.js';
 import { installPosterDecorator46 } from './calendar46.js';
+// Prompt 59 (prompt 49 del 4): svar-cache, strømming (status + tekstbiter), parallelle verktøy – hver for seg av/på (fast59/settings.js).
+import { fast59 } from '../fast59/settings.js';
+import { cacheKindOf59, legacyKindOf59, planKey59, legacyKey59, cacheGet59, cachePut59 } from '../fast59/cache.js';
+import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STATUS59 } from '../fast59/status.js';
 installTaskHooks46(); installPosterDecorator46(); // Gjøremål: plukk ut, ikke skriv om · plakat på kinoavtaler
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt45_requests (user_id TEXT NOT NULL, key TEXT NOT NULL, state TEXT NOT NULL, response TEXT, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));
@@ -181,6 +185,7 @@ export async function agent45(user, text0, opts = {}) {
     q('INSERT OR REPLACE INTO glimt45_requests(user_id, key, state, response, created) VALUES(?,?,?,?,?)').run(user, key, 'running', null, Date.now());
     try {
       const out = await pipeline(user, text, { ...opts, module, key });
+      if (opts.signal?.aborted) throw abortErr59();
       if (opts.preview) q('DELETE FROM glimt45_requests WHERE user_id=? AND key=?').run(user, key); // forhåndsvisning caches ikke
       else if (!out.legacy && !out.retryable) q('UPDATE glimt45_requests SET state=?, response=? WHERE user_id=? AND key=?').run('done', JSON.stringify(out), user, key); // prompt 55: oppfølgingsspørsmålet etter tidsavbrudd caches ikke
       else q('DELETE FROM glimt45_requests WHERE user_id=? AND key=?').run(user, key);
@@ -193,6 +198,9 @@ export async function agent45(user, text0, opts = {}) {
   running.set(rk, p);
   try { return await p; } finally { running.delete(rk); }
 }
+/** Prompt 59: Stopp i strømmingen (klienten koblet fra eller /stream/stop). */
+export const abortErr59 = () => Object.assign(new Error('Stoppet'), { cancelled: true, kind: 'cancelled' });
+const emit59 = (opts, event, data) => { if (typeof opts?.onEvent === 'function') { try { opts.onEvent(event, data); } catch { /* lytteren er borte */ } } };
 // Rydd gamle nøkler (beholder 7 dager).
 try { q('DELETE FROM glimt45_requests WHERE created < ?').run(Date.now() - 7 * 86400_000); q('DELETE FROM glimt45_confirm WHERE created < ?').run(Date.now() - 86400_000); } catch { /* */ }
 
@@ -222,9 +230,14 @@ async function pipeline(user, text, opts) {
   const legacyIntent = legacy?.detect ? (() => { try { return legacy.detect(text, today); } catch { return null; } })() : null;
   const local = localPlan45(text, { module: opts.module, today, legacyIntent, user, nowMin });
   let plan = fastPath47(text, { module: opts.module, legacyIntent });
+  const fast = fast59(user);
+  if (opts.signal?.aborted) throw abortErr59();
+  // Prompt 59: modellkallene får brukerens Stopp-signal (gaten avbryter kallet).
+  const planCall = opts.signal ? (o) => plannerCall47({ ...o, signal: opts.signal }) : plannerCall47;
   if (!plan && !opts.noModel && modelAvailable45()) {
     const info = await modelInfo45(user);
-    const mp = modelPlan47(user, text, { ctx: c47, hint: hintOf47(local, legacyIntent), mode: info.mode, call: plannerCall47, trace: tr }).catch((e) => { console.warn('[glimt47] plan:', String(e?.message ?? e).slice(0, 160)); return null; });
+    emit59(opts, 'status', PLAN_STATUS59);
+    const mp = modelPlan47(user, text, { ctx: c47, hint: hintOf47(local, legacyIntent), mode: info.mode, call: planCall, trace: tr }).catch((e) => { if (opts.signal?.aborted || e?.cancelled) throw e; console.warn('[glimt47] plan:', String(e?.message ?? e).slice(0, 160)); return null; });
     // Prompt 46: forhåndsvisningen venter maks 3 s på modellen; ellers lokal tolkning (dato/tid er uansett fra teksten).
     let mpl = await (opts.preview ? Promise.race([mp, new Promise((r) => { const t = setTimeout(() => r(null), opts.previewMs ?? 3000); t.unref?.(); })]) : mp);
     // Prompt 55: planleggeren ga opp etter nytt forsøk med thinking (tidsavbrudd/ugyldig plan). Aldri den gamle veien (prat med en
@@ -239,7 +252,7 @@ async function pipeline(user, text, opts) {
     const gap = mpl && !mpl.failed && !opts.preview ? planGap47(local, mpl) : null;
     if (gap) {
       tr?.norm({ planGap: gap });
-      const p2 = await modelPlan47(user, text, { ctx: c47, hint: `${hintOf47(local, legacyIntent)}. ${gap}`, mode: info.mode, call: plannerCall47, trace: tr }).catch(() => null);
+      const p2 = await modelPlan47(user, text, { ctx: c47, hint: `${hintOf47(local, legacyIntent)}. ${gap}`, mode: info.mode, call: planCall, trace: tr }).catch((e) => { if (opts.signal?.aborted || e?.cancelled) throw e; return null; });
       if (p2 && !p2.failed && !planGap47(local, p2)) mpl = { ...p2, attempts: (mpl.attempts ?? 1) + (p2.attempts ?? 1), gapFixed: true };
     }
     if (mpl && !mpl.failed) plan = { ...mpl, module: mpl.calls[0] ? TOOL45[mpl.calls[0].tool]?.module ?? opts.module : opts.module, intent: mpl.calls.length ? (mpl.calls.length > 1 ? 'multi' : intentOfCalls45(mpl.calls)) : 'ask', planIntent: mpl.intent };
@@ -247,6 +260,7 @@ async function pipeline(user, text, opts) {
   // Modellen nede (eller ikke installert): den lokale planen (samme validering og utførelse). Prompt 55: tidsavbrudd og ugyldige
   // planer gir oppfølgingsspørsmålet over, ikke den lokale planen.
   plan ??= local;
+  if (opts.signal?.aborted) throw abortErr59();
   tr?.set('plan', { engine: plan.engine, model: plan.model ?? null, intent: plan.planIntent ?? plan.intent, calls: plan.calls, ask: plan.ask ?? null, dropped: plan.dropped ?? [], fast: !!plan.fast, attempts: plan.attempts ?? null, hint: plan.engine === 'lokal' ? null : hintOf47(local, legacyIntent), ...(plan.failed ? { failed: plan.failed } : {}) });
   tr?.step('plan');
   const modelPlan = plan.engine !== 'lokal';
@@ -282,18 +296,37 @@ async function pipeline(user, text, opts) {
       }
     }
     const topic = modelPlan ? plan.calls.find((c) => c.tool === 'app.answer')?.args?.topic ?? null : null;
+    // Prompt 59: svar-cache for de gamle svarene som har kjent levetid (strømpris til neste hele time, vær 15 min). Nøkkelen er planen
+    // (emne + tekstmønster) + teksten, per bruker. Bare Hjem/Glimt-søket (Kalender har egne svar).
+    const lkey = fast.cache && opts.module !== 'calendar' ? legacyKey59(user, { module: opts.module, topic, legacyIntent, text }) : null;
+    const lhit = lkey ? cacheGet59(user, lkey) : null;
+    if (lhit) {
+      emit59(opts, 'status', CACHE_STATUS59);
+      const out = { ...lhit.response, ...base, ms: Date.now() - t0, traceId: tr?.id ?? null, cached: true, cache: { ageMs: lhit.ageMs, ttlMs: lhit.ttlMs, kind: lhit.kind } };
+      tr?.set('cache', { hit: true, kind: lhit.kind, ageMs: lhit.ageMs, ttlMs: lhit.ttlMs });
+      logChoice(user, { module: opts.module, intent: out.intent, tools: ['app.answer'], statuses: ['cache'], engine: out.engine, ms: out.ms, len: text.length });
+      tr?.step('svar-cache'); tr?.save(out);
+      rememberTurn47(user, text, out.reply);
+      return out;
+    }
+    emit59(opts, 'status', legacyStatus59(legacyIntent));
     const a = opts.module === 'calendar' && legacy?.calendar ? await legacy.calendar(user, text, { today }) : await legacy.answer(user, text, { today, skipAgent: true, module: opts.module, noWeb: opts.webSearch === false, ...(topic ? { topic } : {}) });
+    if (opts.signal?.aborted) throw abortErr59();
     const out = { ...base, reply: a.text, text: a.text, intent: plan.calls[0]?.tool === 'chat.answer' ? 'chat' : 'ask', module: opts.module, actions: [{ tool: plan.calls[0]?.tool ?? 'app.answer', args: {}, status: 'done', result: { intent: a.intent, source: a.source } }],
       results: [], legacyAnswer: a, engine: plan.engine, model: plan.model ?? null, ms: Date.now() - t0, ...(a.nav ? { nav: a.nav } : {}), traceId: tr?.id ?? null };
+    const lk = lkey ? legacyKindOf59(a, legacyIntent) : null;
+    if (lk && cachePut59(user, lkey, lk.kind, lk.ttlMs, out)) tr?.set('cache', { stored: true, kind: lk.kind, ttlMs: lk.ttlMs });
     logChoice(user, { module: opts.module, intent: out.intent, tools: ['app.answer'], statuses: ['done'], engine: plan.engine, ms: out.ms, len: text.length });
     tr?.tool({ tool: out.actions[0].tool, status: 'done', args: { topic }, result: { intent: a.intent, source: a.source } });
     tr?.step('gamle svar'); tr?.save(out);
     rememberTurn47(user, text, out.reply);
     return out;
   }
-  const ctxT = { user, text, today, nowMin, context, module: opts.module, preview: !!opts.preview, facts, c47, trace: tr, webSearch: opts.webSearch !== false };
+  const ctxT = { user, text, today, nowMin, context, module: opts.module, preview: !!opts.preview, facts, c47, trace: tr, webSearch: opts.webSearch !== false,
+    fast, onEvent: opts.onEvent ?? null, signal: opts.signal ?? null, compare: plan.compare ?? null }; // prompt 59
   const out = await executePlan(user, { ...plan, calls: ownedCalls }, ctxT, base, t0);
-  logChoice(user, { module: opts.module, intent: out.intent, tools: out.actions.map((x) => x.tool), statuses: out.actions.map((x) => x.status), engine: out.engine, ms: out.ms, len: text.length });
+  if (opts.signal?.aborted) throw abortErr59();
+  logChoice(user, { module: opts.module, intent: out.intent, tools: out.actions.map((x) => x.tool), statuses: out.cached ? out.actions.map(() => 'cache') : out.actions.map((x) => x.status), engine: out.engine, ms: out.ms, len: text.length });
   if (tr) { for (const a of out.actions) tr.tool(a); tr.step('verktøy og svar'); tr.save(out); out.traceId = tr.id; }
   if (!opts.preview && !out.ask) rememberTurn47(user, text, out.reply);
   return out;
@@ -362,7 +395,7 @@ async function plannerCall47(o) {
   const sp = STEP47[o.step] ?? STEP47.planner;
   // Prompt 55: tidsgrensen gjelder selve svaret – en kald modell (modellbytte) får lastetiden i tillegg (deadlineAfterLoad i gaten).
   const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, ...(o.mode === 'tools' && o.tools ? { ollamaTools: o.tools } : { schema: o.schema }), step: o.step,
-    localOnly: true, background: false, title: 'Glimt · forstår', timeoutMs: sp.timeoutMs, deadlineAfterLoad: true, noRetry: true, retries: 0 });
+    localOnly: true, background: false, title: 'Glimt · forstår', timeoutMs: sp.timeoutMs, deadlineAfterLoad: true, noRetry: true, retries: 0, ...(o.signal ? { signal: o.signal } : {}) });
   return { toolCalls: out.toolCalls ?? null, text: out.text, data: out.data, model: out.model, tokens: out.tokens, params: out.params, timing: out.timing ?? null };
 }
 /** Svarstegets modellkall (fritekst og nettsøk): ruten «glimt», steg answer. */
@@ -372,8 +405,9 @@ export const _setAnswerModel47 = (fn) => { answerImpl47 = fn ?? null; };
 async function answerCall47(o) {
   if (answerImpl47) { const r = await answerImpl47(o); return { text: r?.text ?? '', model: r?.model ?? 'test' }; }
   const ai = await import('../ai-run.js');
-  const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, step: 'answer', localOnly: true, background: false, title: 'Glimt · svarer', timeoutMs: STEP47.answer.timeoutMs, noRetry: true, retries: 0 });
-  return { text: out.text, model: out.model, tokens: out.tokens, params: out.params };
+  const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, step: 'answer', localOnly: true, background: false, title: 'Glimt · svarer', timeoutMs: STEP47.answer.timeoutMs, noRetry: true, retries: 0,
+    ...(o.onToken ? { onToken: o.onToken } : {}), ...(o.signal ? { signal: o.signal } : {}) }); // prompt 59: strømming og Stopp
+  return { text: out.text, model: out.model, tokens: out.tokens, params: out.params, timing: out.timing ?? null };
 }
 // Prompt 46: etterkontroll av modellens plan mot den deterministiske oppdelingen av teksten. Delspørsmål modellen glemte
 // («… og temperaturen i New York i morgen»), abonnementsdata den ville svart på fra egen kunnskap, og frist i Subscription OS når
@@ -440,12 +474,29 @@ async function executePlan(user, plan, ctxT, base, t0) {
     return { ...res0, reply: summary, text: summary, actions: checked.map((c) => ({ tool: c.tool, args: publicArgs(c.args), status: TOOL45[c.tool].destructive ? 'needs_confirm' : 'proposed' })), results: [],
       confirm: { token, summary, expiresAt: new Date(Date.now() + CONFIRM_MS).toISOString() }, ms: Date.now() - t0 };
   }
+  // Prompt 59: svar-cache. Nøkkel = normalisert plan (de validerte kallene med tolkede argumenter) + bruker; bare planer der alle kall
+  // er cachebare lesekall (vær 15 min, nettsøk 30 min). Kalender, finans, gjøremål og alt som endrer data caches aldri.
+  const ck = ctxT.fast?.cache ? cacheKindOf59(checked) : null;
+  const ckey = ck ? planKey59(user, { module: ctxT.module, calls: checked.map((c) => ({ tool: c.tool, args: publicArgs(c.args) })), text: ck.needsText ? ctxT.text : null, compare: plan.compare ?? null }) : null;
+  if (ckey) {
+    const hit = cacheGet59(user, ckey);
+    if (hit) {
+      emit59(ctxT, 'status', CACHE_STATUS59);
+      ctxT.trace?.set('cache', { hit: true, kind: hit.kind, ageMs: hit.ageMs, ttlMs: hit.ttlMs });
+      return { ...hit.response, ...base, ms: Date.now() - t0, cached: true, cache: { ageMs: hit.ageMs, ttlMs: hit.ttlMs, kind: hit.kind } };
+    }
+  }
   // 5–6. Utfør og kontroller.
   const actions = [], results = [], lines = [], events = [];
   let anyFail = false, quipOutcome = null;
   // Prompt 46: uavhengige lesekall (vær for flere steder) kjøres parallelt; resten i rekkefølge. Resultatene behandles i planens rekkefølge.
+  // Prompt 59: med «Parallelle verktøy» på kjøres alle uavhengige lesekall som står etter hverandre samtidig (kalender, finans, vær,
+  // nettsøk …). Skrivekall (opprette, flytte, slette, krysse av, lagre minne) kjøres alltid ett og ett. Modellkall går uansett gjennom køen.
+  const isPar = (c) => !!TOOL45[c.tool].parallel || (!!ctxT.fast?.parallel && READ_TOOLS59.has(c.tool));
   const runOne = async (c) => {
     const tool = TOOL45[c.tool];
+    if (ctxT.signal?.aborted) return { status: 'failed', error: 'Stoppet' };
+    emit59(ctxT, 'status', toolStatus59(c));
     let r;
     try { r = await tool.run(c.args, ctxT); } catch (e) { r = { status: 'failed', error: String(e?.message ?? e).slice(0, 300), reconnect: !!e?.reconnect }; }
     if (r.status === 'done' && tool.verify) {
@@ -455,12 +506,15 @@ async function executePlan(user, plan, ctxT, base, t0) {
     return r;
   };
   const outs = new Array(checked.length);
+  const groups = [];
   for (let i = 0; i < checked.length;) {
     let j = i;
-    while (j < checked.length && TOOL45[checked[j].tool].parallel) j++;
-    if (j > i) { const rs = await Promise.all(checked.slice(i, j).map(runOne)); rs.forEach((r, k) => { outs[i + k] = r; }); i = j; continue; }
+    while (j < checked.length && isPar(checked[j])) j++;
+    if (j > i) { if (j - i > 1) groups.push(checked.slice(i, j).map((c) => c.tool)); const rs = await Promise.all(checked.slice(i, j).map(runOne)); rs.forEach((r, k) => { outs[i + k] = r; }); i = j; continue; }
     outs[i] = await runOne(checked[i]); i++;
   }
+  if (groups.length) ctxT.trace?.set('parallel', groups);
+  if (ctxT.signal?.aborted) throw abortErr59();
   for (const [ci, c] of checked.entries()) {
     const r = outs[ci];
     actions.push({ tool: c.tool, args: publicArgs(c.args), status: r.status, ...(r.result ? { result: r.result } : {}), ...(r.error ? { error: r.error } : {}) });
@@ -482,13 +536,18 @@ async function executePlan(user, plan, ctxT, base, t0) {
       const { routeLocal, webQueryOf } = await import('../tool-router44.js');
       const rl = routeLocal(ctxT.text);
       if (rl.tools.includes('web') && /aktuelle fakta/.test(rl.reason)) {
+        emit59(ctxT, 'status', toolStatus59({ tool: 'web.search' }));
         const wr = await TOOL45['web.search'].run({ query: rl.query || webQueryOf(ctxT.text) }, ctxT).catch((e) => ({ status: 'failed', error: String(e?.message ?? e).slice(0, 200) }));
         webAct = { tool: 'web.search', args: { query: rl.query, via: 'hint' }, status: wr.status, ...(wr.result ? { result: wr.result } : {}), ...(wr.error ? { error: wr.error } : {}) };
         actions.push(webAct);
       }
     }
     const web = webAct?.result ? { query: webAct.result.query, hits: webAct.result.hits ?? [] } : null;
-    const a = await answer47(user, ctxT.text, { ctx: ctxT.c47, web, call: answerCall47, trace: ctxT.trace });
+    emit59(ctxT, 'status', ANSWER_STATUS59);
+    // Prompt 59: svarformuleringen strømmes (token for token) når kalleren lytter; Stopp avbryter modellkallet.
+    const onToken = ctxT.onEvent ? (t) => emit59(ctxT, 'token', { t, source: 'model' }) : null;
+    const call = onToken || ctxT.signal ? (o) => answerCall47({ ...o, ...(onToken ? { onToken } : {}), ...(ctxT.signal ? { signal: ctxT.signal } : {}) }) : answerCall47;
+    const a = await answer47(user, ctxT.text, { ctx: ctxT.c47, web, call, trace: ctxT.trace });
     answerModel = a.model;
     if (a.error) anyFail = true;
     lines.push(a.text);
@@ -503,11 +562,17 @@ async function executePlan(user, plan, ctxT, base, t0) {
   const nav = checked.find((c) => c.tool === 'nav.open');
   const multiChoice = actions.some((a) => (a.tool === 'finance.search' && a.result?.count > 1 && !a.args?.sort) || (a.tool === 'calendar.search' && a.result?.count > 1));
   if (answerModel && !res0.model) res0.model = answerModel;
-  return { ...res0, reply: joke ? `${reply} ${joke}` : reply, text: joke ? `${reply} ${joke}` : reply, joke, actions, results, events,
+  const out = { ...res0, reply: joke ? `${reply} ${joke}` : reply, text: joke ? `${reply} ${joke}` : reply, joke, actions, results, events,
     ...(multiChoice ? { choose: true } : {}),
     ...(nav ? { nav: { target: nav.args.target, label: NAV_LABEL[nav.args.target] ?? nav.args.target, web: NAV_WEB[nav.args.target] ?? '/', deepLink: `finanshub://${nav.args.target}`, delayMs: 450 } } : {}),
     ms: Date.now() - t0 };
+  // Prompt 59: lagre i svar-cachen bare vellykkede svar (ingen feil, ingen tomme søk, ingen modellfeil).
+  const webEmpty = actions.some((x) => x.tool === 'web.search' && !(x.result?.count > 0));
+  if (ckey && !anyFail && !webEmpty && cachePut59(user, ckey, ck.kind, ck.ttlMs, out)) ctxT.trace?.set('cache', { stored: true, kind: ck.kind, ttlMs: ck.ttlMs });
+  return out;
 }
+/** Prompt 59: lesekall uten bivirkninger (kan kjøres samtidig med «Parallelle verktøy»). */
+const READ_TOOLS59 = new Set(['calendar.list', 'calendar.search', 'calendar.next', 'tasks.list', 'finance.search', 'finance.summary', 'finance.subscriptions', 'finance.fixed', 'weather.get', 'web.search']);
 /** Prompt 46: forhåndsvisningen i Kalender (GLIMT FORSTÅR). Linje 1 tittel + kalender, linje 2 dag · tid · varsel, linje 3 sted. */
 const REM_LABEL46 = { none: 'uten varsel', '15m': '15 min før', '1h': '1 t før', day: 'dagen før' };
 function previewOf46(a, today) {

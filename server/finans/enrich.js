@@ -212,7 +212,9 @@ async function runFor(u) {
     if (!rows.length) return;
     const input = rows.map((r) => ({ id: String(r.id), text: r.merchant || r.description, raw: r.description !== r.merchant ? r.description : undefined, amount: r.amount / 100,
       category: catName.get(r.category_id) ?? null, lines: r.extraction ? (JSON.parse(r.extraction).lines ?? []).slice(0, 15).map((l) => l.description) : undefined }));
-    const res = await askJson(SUM_PROMPT(input, cats.map((c) => c.name)), SUM_SCHEMA, { timeout: 90_000, task: 'categorize' });
+    // Prompt 59: bakgrunnsjobb → bakgrunnsprioritet i AI-køen (Glimt/søk/chat går foran). Før gikk den som interaktiv og holdt
+    // modellen i 40–60 s etter at transaksjoner ble lagt inn (eval-casene 08/09 målte den med).
+    const res = await askJson(SUM_PROMPT(input, cats.map((c) => c.name)), SUM_SCHEMA, { timeout: 90_000, task: 'categorize', priority: 'background' });
     const upd = q('UPDATE fh_transactions SET ai_short=?, ai_long=?, domain=COALESCE(domain, ?), category_id=COALESCE(category_id, ?), ai_done=1 WHERE id=? AND user_id=?');
     const byId = new Map((res.items ?? []).map((x) => [String(x.id), x]));
     db.transaction(() => {

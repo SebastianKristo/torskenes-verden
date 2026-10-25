@@ -50,6 +50,23 @@ node eval/lib/fake-omlx.mjs 18040 <nøkkel>          # falsk oMLX (bare riggsjek
 - Rapporten har motoren i tittelen og p50/p90 per case og totalt. Det gjelder alle motorer, så Ollama- og oMLX-filene kan
   sammenlignes direkte. Se `docs/omlx-58.md`.
 
+### Fart og før/etter (prompt 59, prompt 49 del 4)
+
+```sh
+npm run eval -- --compare eval/results/2026-10-25-ollama-qwen3_8b-4.json   # før/etter mot en tidligere resultatfil
+npm run eval -- --fast59 off                                               # uten «raskere svar» (svar-cache, varm modell, strømming, parallelle verktøy)
+node eval/why59.mjs eval/results/2026-10-25-ollama-qwen3_8b-4.json         # hvorfor var kjøringene over 10 s trege (også eldre filer)
+```
+
+- **Svartid** = det brukeren venter (forespørsel → svar). **Totalt** (kolonnene Median/p50/p90 som før) tar også med bakgrunnsjobber
+  som går etter svaret, f.eks. Finans' AI-sammendrag av nye transaksjoner (08/09 seeder 15 transaksjoner). Gamle filer får svartiden
+  regnet ut fra `trace.steps`, så `--compare` virker også mot resultatfiler fra før prompt 59.
+- Rapporten har median og p90 **per intent**, cache-effekten for den faste prompt-prefiksen («X av ~Y prompt-tokens regnet ut · Z %
+  gjenbrukt fra KV-/prefiks-cachen») og en «Hvorfor N s»-linje for kjøringer over 10 s (bakgrunnsjobb, lasting/modellbytte, tenking,
+  nye planleggerforsøk, kø i Ollama fra en annen klient, lang generering).
+- Eval måler med produksjonens standard for del 4 (alt på). Nye caser: 20 (vær to ganger → svar-cache), 21 (strømming, kalendersvar
+  ord for ord) og 22 (strømming, nettsøk + svarformulering token for token). Med `--fast59 off` feiler 20 og 21 med vilje.
+
 ## Casene
 
 | # | Case | Sjekker (lagret data og struktur) |

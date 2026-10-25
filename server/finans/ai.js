@@ -301,7 +301,8 @@ async function ollamaChat(st, messages, schema, { timeout, temperature, model, s
   if (!probe.ok) throw Object.assign(new Error(probe.err ?? `Ollama kan ikke nås på ${base}`), { noRetry: true, net: true });
   if (signal?.aborted) throw cancelled();
   const image = messages.some((m) => m.images?.length);
-  const body = shortBody({ model: useModel, format: forOllama(lowerTypes(schema)), options: { temperature }, messages });
+  // Prompt 59: JSON-skjema-kall tenker aldri (før slo brukerens «La modellen tenke» inn her også, og qwen3 tenkte på hver kategorisering).
+  const body = shortBody({ model: useModel, format: forOllama(lowerTypes(schema)), options: { temperature }, messages }, { think: false });
   try {
     const out = await gateChat({ model: useModel, body, base, signal, priority: priority ?? (image ? 'background' : 'interactive'), short: true, allowThink: !('think' in body), image,
       loadMs: timeout, warmMs: timeout, idleMs: timeout, deadlineMs: Math.max(timeout, OLLAMA_MAX_TOTAL), retryTimeouts: false, label: image ? 'Finans · kvittering' : 'Finans · spør' });
@@ -568,7 +569,7 @@ async function lowConfCheck(res, image, mime, st, log) {
 // Prompt 25: ingen fast tidsgrense her lenger. Grensen per motor slås opp i Innstillinger → AI → Tidsgrenser ved hvert kall
 // (timeout fra eldre kallere ignoreres). signal = brukerens Avbryt; onEngine(engine, limitS) når en motor starter;
 // status(text, info) ved tidsavbrudd («✦ Ollama svarte ikke innen 60 s · prøver Groq …»).
-export async function textJson(prompt, schema, { temperature = 0.2, force = null, task = 'text', status = () => {}, signal = null, onEngine = () => {} } = {}) {
+export async function textJson(prompt, schema, { temperature = 0.2, force = null, task = 'text', status = () => {}, signal = null, onEngine = () => {}, priority = null } = {}) {
   const st = settings();
   const errors = [], timeouts = [];
   let list = engineOrder(st, { force, task: TASKS[task] ? task : null });
@@ -601,7 +602,7 @@ export async function textJson(prompt, schema, { temperature = 0.2, force = null
     try {
       const r = await runEngine(p, st, (ms, startKey) => (p === 'gemini' ? geminiGenerate([{ text: prompt }], { schema, timeout: ms, temperature, model, startKey, signal })
         : p === 'groq' ? groqChat(prompt, schema, { timeout: ms, temperature, model, signal })
-        : ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout: ms, temperature, model, signal })), { status, task, onTimeout: 'next', signal });
+        : ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout: ms, temperature, model, signal, priority })), { status, task, onTimeout: 'next', signal });
       logAi({ task, engine: p, model: r.model, promptLen: prompt.length, ms: Date.now() - t0, timeoutEngine: timeouts[0]?.engine ?? null, layer: null });
       return { provider: providerName(p), engine: p, model: r.model, data: r.data, timeouts };
     } catch (e) {
@@ -621,8 +622,8 @@ export async function textJson(prompt, schema, { temperature = 0.2, force = null
 }
 
 // Eldre navn: gir bare dataene. Kallerne har alltid en heuristisk reserve. timeout ignoreres (grensen per motor gjelder).
-export async function askJson(prompt, schema, { task = 'text', signal = null } = {}) {
-  return (await textJson(prompt, schema, { task, signal })).data;
+export async function askJson(prompt, schema, { task = 'text', signal = null, priority = null } = {}) {
+  return (await textJson(prompt, schema, { task, signal, priority })).data;
 }
 
 // Hva slags feil? Brukes i ai_log og i feilmeldingen i AI-søket.

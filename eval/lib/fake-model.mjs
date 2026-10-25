@@ -14,7 +14,13 @@ export function oracle(msg) {
   if (/dune/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Dune', date: '17.12', time: '17.30', location: 'Colosseum kino' } }];
   if (/middag hos mamma/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Middag hos mamma', date: 'fredag', time: '18' } }];
   if (/tannlege/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Tannlege', date: '3/2', time: '08:15' } }];
-  if (/været|vær/.test(m)) return [{ name: 'weather.get', arguments: { place: 'Oslo', when: 'neste time' } }, { name: 'weather.get', arguments: { place: 'New York', when: 'i morgen' } }];
+  if (/været|vær/.test(m)) {
+    // Prompt 59: bare stedene som står i meldingen (cache-casen spør om Oslo alene).
+    const w = [];
+    if (/oslo/.test(m)) w.push({ name: 'weather.get', arguments: { place: 'Oslo', when: /oslo neste time/.test(m) ? 'neste time' : /i morgen/.test(m) && !/new york/.test(m) ? 'i morgen' : 'neste time' } });
+    if (/new york/.test(m)) w.push({ name: 'weather.get', arguments: { place: 'New York', when: 'i morgen' } });
+    return w.length ? w : [{ name: 'weather.get', arguments: { place: '', when: 'i dag' } }];
+  }
   if (/abonnement/.test(m)) return [{ name: 'finance.subscriptions', arguments: { mode: 'top' } }];
   if (/brukt på mat|mat denne/.test(m)) return [{ name: 'finance.summary', arguments: { period: 'denne måneden', category: 'Mat og dagligvarer', group_by: 'total' } }];
   return [{ name: 'chat.answer', arguments: {} }];
@@ -26,6 +32,9 @@ export function chatText(all) {
 }
 
 export function makeFakeModel() {
+  // Prompt 59: som Ollama med én KV-cache-plass per modell: tokens i en felles prefiks med forrige forespørsel regnes ikke på nytt,
+  // og prompt_eval_count teller bare de nye (det er slik cache-effekten ser ut i tracen med ekte Ollama).
+  const lastPrompt = new Map();
   return async function fakeOllama(url, init = {}) {
     const u = new URL(url);
     const p = u.pathname;
@@ -39,8 +48,12 @@ export function makeFakeModel() {
       const msgs = b.messages ?? [];
       const lastUser = String(msgs.filter((x) => x.role === 'user').at(-1)?.content ?? b.prompt ?? '');
       const all = msgs.map((x) => (typeof x.content === 'string' ? x.content : JSON.stringify(x.content))).join('\n');
-      const ptok = Math.round((all.length + (b.tools ? JSON.stringify(b.tools).length : 0) + (b.format ? JSON.stringify(b.format).length : 0)) / 3.5) + 256 * msgs.reduce((a, x) => a + (x.images?.length ?? 0), 0);
-      const done = { model: b.model, done: true, done_reason: 'stop', prompt_eval_count: ptok, eval_count: 30, message: { role: 'assistant', content: '' } };
+      const full = `${b.tools ? JSON.stringify(b.tools) : ''}${all}`;
+      const prev = lastPrompt.get(b.model) ?? '';
+      let common = 0; while (common < prev.length && common < full.length && prev[common] === full[common]) common++;
+      lastPrompt.set(b.model, full);
+      const ptok = Math.max(1, Math.round((full.length - common) / 3.5)) + 256 * msgs.reduce((a, x) => a + (x.images?.length ?? 0), 0);
+      const done = { model: b.model, done: true, done_reason: 'stop', prompt_eval_count: ptok, prompt_eval_duration: ptok * 2.5e6, eval_count: 30, eval_duration: 30 * 4e7, load_duration: 1e6, message: { role: 'assistant', content: '' } };
       const say = (content) => nd([{ model: b.model, message: { role: 'assistant', content }, done: false }, done]);
       if (msgs.some((x) => x.images?.length)) return say('{}');
       const plan = oracle(lastUser.replace(/^Melding:\s*/, '').split('\n')[0]);

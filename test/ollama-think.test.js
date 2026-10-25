@@ -135,7 +135,9 @@ test('kort oppgave: ai_think på → think sendes ikke', async () => {
   calls.length = 0;
   await describe(OWNER, 'Tannlege med Ola');
   const gen = calls.find((c) => c.url.endsWith('/api/chat'));
-  assert.equal('think' in gen.body, false);
+  // Prompt 59 (del 4): Glimt-tolkning (ruten glimt, JSON) tenker aldri, heller ikke med «La modellen tenke» på – det var rotårsaken
+  // til trege Glimt-svar i produksjon. ai_think gjelder fritekst-svar uten eget steg (se test/p59-fast.test.js).
+  assert.equal(gen.body.think, false);
   assert.equal(gen.body.options.num_ctx, 8192, 'prompt 47: num_ctx eksplisitt, uten 4096-taket');
   setUserCfg(OWNER, { ai_think: '0' });
 });

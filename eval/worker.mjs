@@ -36,6 +36,10 @@ if (cfg.backend === 'omlx') { process.env.OMLX_URL = cfg.url; process.env.OMLX_A
 process.env.SONARR_URL = 'http://sonarr.eval:8989';
 process.env.SONARR_API_KEY = 'eval-sonarr-key';
 process.env.OCR_FALLBACK = process.env.OCR_FALLBACK ?? 'on';
+// Prompt 59 (del 4): eval måler med produksjonens standard for «raskere svar» (svar-cache, varm modell, strømming, parallelle verktøy
+// – alt på; NODE_ENV=test ville ellers slått av svar-cachen). EVAL_FAST59=off måler uten (alle fire av), for før/etter på samme commit.
+process.env.FAST59_DEFAULTS = 'prod';
+process.env.FAST59_WARM = process.env.EVAL_FAST59 === 'off' ? '0' : '1';
 
 freezeClock();
 const modelHosts = new Set([process.env.OLLAMA_URL, cfg.backend === 'openwebui' || cfg.backend === 'omlx' ? cfg.url : null].filter(Boolean).map((x) => new URL(x).host));
@@ -63,6 +67,8 @@ if (cfg.routingFull) { for (const k of ['tasks', 'rules', 'params']) if (cfg.rou
 for (const [k, v] of Object.entries(cfg.tasks ?? {})) if (r0.tasks[k]) r0.tasks[k] = { model: v.model ?? '', fallback: v.fallback ?? '' };
 delete r0.own;
 ai.saveServerRouting(r0);
+// Prompt 59: --fast59 off = alle fire del 4-valgene av (før/etter på samme commit).
+if (process.env.EVAL_FAST59 === 'off') kv.set('owner', 'fast59', { cache: false, warm: false, stream: false, parallel: false });
 ai.invalidateInventory();
 if (cfg.omlx) {
   const O = await imp('server/omlx58/config.js');
@@ -108,7 +114,37 @@ const slimAgent = (b) => ({
   legacyIntent: b?.legacyAnswer?.intent ?? null, legacySource: b?.legacyAnswer?.source ?? null, ask: b?.ask?.question ?? null,
   actions: (b?.actions ?? []).map((x) => ({ tool: x.tool, status: x.status, args: x.args, error: x.error, result: clipObj(x.result) })),
   results: (b?.results ?? []).slice(0, 8).map((x) => ({ kind: x.kind, title: x.title, subtitle: x.subtitle, date: x.date })), ms: b?.ms ?? null,
+  traceId: b?.traceId ?? null, cached: !!b?.cached, cache: b?.cache ?? null, // prompt 59
 });
+/** Prompt 59: Glimt-tracen (trace47) for en forespørsel, kort: plan-intent, cache, parallelle grupper og modellkall med tider. */
+const glimtTrace = (id) => {
+  if (!id) return null;
+  const r = db.prepare('SELECT data FROM glimt47_trace WHERE id=?').pluck().get(id);
+  if (!r) return null;
+  const t = JSON.parse(r);
+  return { id: t.id, intent: t.plan?.intent ?? null, engine: t.engine ?? t.plan?.engine ?? null, cache: t.cache ?? null, parallel: t.parallel ?? null, totalMs: t.totalMs ?? null, steps: t.steps,
+    models: (t.models ?? []).map((m) => ({ step: m.step, model: m.model, ms: m.ms, ok: m.ok, timing: m.timing ?? null, prompt: m.prompt ?? null, think: m.think })) };
+};
+/** Prompt 59: leser en SSE-strøm (POST /api/glimt/agent/stream) og noterer når hver hendelse kom. → {status, events:[{event, data, at}], firstTokenMs, firstStatusMs} */
+async function readSse(res, t0) {
+  const events = [];
+  const dec = new TextDecoder();
+  let buf = '';
+  const take = (block) => {
+    let event = 'message', data = '';
+    for (const line of block.split('\n')) { if (line.startsWith('event:')) event = line.slice(6).trim(); else if (line.startsWith('data:')) data += line.slice(5).trim(); }
+    if (!data && event === 'message') return;
+    let d = data; try { d = JSON.parse(data); } catch { /* tekst */ }
+    events.push({ event, data: d, at: Date.now() - t0 });
+  };
+  if (res.body?.getReader) {
+    const rd = res.body.getReader();
+    for (;;) { const { value, done } = await rd.read(); if (done) break; buf += dec.decode(value, { stream: true }); let i; while ((i = buf.indexOf('\n\n')) >= 0) { take(buf.slice(0, i)); buf = buf.slice(i + 2); } }
+  } else buf = await res.text();
+  buf += dec.decode();
+  for (const b of buf.split('\n\n')) if (b.trim()) take(b);
+  return { events, firstTokenMs: events.find((e) => e.event === 'token')?.at ?? null, firstStatusMs: events.find((e) => e.event === 'status')?.at ?? null };
+}
 
 /** Venter til ingen modellkall er i gang og det har vært stille i 1,5 s (maks EVAL_SETTLE_MS, standard 5 min). */
 async function settle(quietMs = 1500, maxMs = +(process.env.EVAL_SETTLE_MS ?? 300_000)) {
@@ -141,6 +177,23 @@ const h = {
     s._finish(); delete s._finish;
     return s;
   },
+  /** Prompt 59: Glimt med strømming (SSE), slik web-chatten gjør. → steg med events, done (hele svaret), firstTokenMs */
+  async askStream(text, module = 'home') {
+    const ts = Date.now();
+    const m0 = net.trace.model.length, e0 = net.trace.ext.length;
+    const r = await app.request('/api/glimt/agent/stream', { method: 'POST', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ text, module, requestId: `eval59-${process.pid}-${++reqN}` }) });
+    const sse = r.status === 200 ? await readSse(r, ts) : { events: [], firstTokenMs: null, firstStatusMs: null };
+    const done = sse.events.find((e) => e.event === 'done')?.data ?? null;
+    const s = { kind: 'stream', text, module, status: r.status, error: r.status >= 400 ? clip(await r.text().catch(() => ''), 300) : sse.events.find((e) => e.event === 'error')?.data?.error, ...slimAgent(done ?? {}),
+      events: sse.events.map((e) => ({ event: e.event, at: e.at, ...(e.event === 'token' ? { t: e.data?.t, source: e.data?.source } : e.event === 'status' ? { stage: e.data?.stage, text: e.data?.text, tool: e.data?.tool } : e.event === 'start' ? { stream: e.data?.stream } : e.event === 'error' ? { error: e.data?.error } : {}) })),
+      firstTokenMs: sse.firstTokenMs, firstStatusMs: sse.firstStatusMs, msTotal: Date.now() - ts, modelCalls: [m0, null], extCalls: [e0, null] };
+    steps.push(s);
+    s.settledMs = await settle();
+    s.modelCalls[1] = net.trace.model.length; s.extCalls[1] = net.trace.ext.length;
+    return s;
+  },
+  /** Prompt 59: Glimt-tracen for et svar (s.traceId). */
+  glimtTrace: (s) => glimtTrace(s?.traceId),
   /** Media-feltet: agenten (module media) først, så Media-Glimt hvis svaret er ren prat (som public/js/media43.js). */
   async askMedia(text) {
     const a = await h.ask(text, 'media');
@@ -228,6 +281,11 @@ try {
 }
 await new Promise((res) => setTimeout(res, 100));
 result.trace.steps = steps;
+// Prompt 59: svartid = det brukeren venter (forespørsel → svar), uten bakgrunnsjobber som går etter svaret (f.eks. AI-sammendrag av
+// nye transaksjoner i Finans). result.ms (totalt, med bakgrunnsjobbene) beholdes som før, så gamle resultatfiler kan sammenlignes.
+result.replyMs = steps.reduce((a, x) => a + (x.msTotal ?? 0), 0);
+try { result.trace.glimt = steps.map((x) => glimtTrace(x.traceId)).filter(Boolean); } catch { result.trace.glimt = []; }
+result.intent = result.trace.glimt?.[0]?.intent ?? null;
 result.trace.model = net.trace.model;
 result.trace.ext = net.trace.ext;
 const chat = net.trace.model.filter((m) => m.kind !== 'embed');

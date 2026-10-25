@@ -161,6 +161,7 @@ export async function modelPlan47(user, text, { ctx, hint = '', mode: mode0 = 'j
     try {
       out = await call({ user, mode, system, prompt: user0, schema, tools: mode === 'tools' ? tools : null, step: attempt === 0 ? 'planner' : 'plannerRetry' });
     } catch (e) {
+      if (e?.cancelled || e?.kind === 'cancelled') throw e; // prompt 59: brukeren trykket Stopp – ikke nytt forsøk
       const kind = plannerErrKind55(e);
       trace?.model({ step: attempt === 0 ? 'planner' : 'plannerRetry', model: e?.model ?? null, ms: Date.now() - t0, ok: false, error: e?.message ?? e, errKind: kind, trimmed: fit.trimmed, promptEst: fit.est, timing: e?.timing ?? e?.telemetry ?? null });
       // Tools-modus (bare testkrok/eldre oppsett) mot en modell uten verktøystøtte: samme forespørsel i JSON-modus.

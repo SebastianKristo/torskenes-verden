@@ -81,8 +81,22 @@ export function gateParams() {
 const sameModel = (a, b) => a === b || a === `${b}:latest` || `${a}:latest` === b;
 /** Den konfigurerte keep_alive for modellen (map per modell, ellers params.keepAlive). */
 export function keepAliveFor(model, p = gateParams()) {
-  for (const [k, v] of Object.entries(p.modelKeepAlive ?? {})) if (sameModel(k, model) && v !== undefined && v !== null && v !== '') return v;
-  return p.keepAlive ?? '30m';
+  let out = p.keepAlive ?? '30m';
+  for (const [k, v] of Object.entries(p.modelKeepAlive ?? {})) if (sameModel(k, model) && v !== undefined && v !== null && v !== '') { out = v; break; }
+  // Prompt 59 (del 4 «Varm modell»): hovedmodellen får en lengre keep_alive (gulv) så den ikke lastes ut mellom forespørslene.
+  if (keepAliveHook) { try { out = keepAliveHook(model, out) ?? out; } catch { /* */ } }
+  return out;
+}
+let keepAliveHook = null;
+/** Prompt 59: (model, keepAlive) → keepAlive. Brukes av server/fast59/warm.js. null = av. */
+export const setKeepAliveHook59 = (fn) => { keepAliveHook = typeof fn === 'function' ? fn : null; };
+const doneHooks = new Set();
+/** Prompt 59: lytter som får {model, kind, image, priority, label, ok} når en jobb i køen er ferdig. → avmeld() */
+export function onGateJobDone59(fn) { doneHooks.add(fn); return () => doneHooks.delete(fn); }
+/** Prompt 59: er noe i gang eller i kø for modellen (eller for bilder)? */
+export function gateBusyWith59({ model = null, image = false } = {}) {
+  const all = [...Q.running.values(), ...Q.waiting];
+  return all.some((j) => !j.exclusive && ((model && sameModel(j.model, model)) || (image && j.image)));
 }
 const isZeroKeep = (v) => v === 0 || v === '0' || v === '0m' || v === '0s';
 
@@ -306,10 +320,13 @@ function startJob(j) {
   j.startedAt = now;
   Q.running.set(j.id, j);
   j.signal?.removeEventListener?.('abort', j.onAbort);
-  Promise.resolve().then(() => j.run(j)).then(j.resolve, j.reject).finally(() => {
+  let ok = false;
+  Promise.resolve().then(() => j.run(j)).then((v) => { ok = true; j.resolve(v); }, j.reject).finally(() => {
     Q.running.delete(j.id);
     afterJob(j);
     pump();
+    // Prompt 59: «Varm modell» varmer opp hovedmodellen etter en bildejobb (når køen for bilder er tom).
+    if (doneHooks.size && !j.exclusive && !j.internal) for (const fn of doneHooks) { try { fn({ model: j.model, kind: j.kind ?? null, image: !!j.image, backend: j.backend ?? 'ollama', priority: j.prio === PRIO.interactive ? 'interactive' : 'background', label: j.label ?? null, ok }); } catch { /* */ } }
   });
 }
 /**
@@ -350,11 +367,11 @@ async function doUnload(model, base, f) {
 }
 
 /** Legger én forespørsel (ett forsøk) i køen. → promise med resultatet av run() */
-function enqueue({ model, backend = 'ollama', prio, retry = false, exclusive = false, auto = false, kind, label, signal, run, onQueue, base, inst, fetch: f }) {
+function enqueue({ model, backend = 'ollama', prio, retry = false, exclusive = false, auto = false, kind, label, signal, run, onQueue, base, inst, fetch: f, image = false }) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(cancelErr()); return; }
     // Prompt 58: inst = egen kø-instans for backends med egen server (oMLX på Mac mini-en), ellers Ollama-adressen.
-    const j = { id: `g${++Q.seq}`, seq: Q.seq, model, backend, prio, retry, exclusive, auto, kind, label, signal, run, base, inst: inst || base || defaultBase() || '', fetch: f, enqAt: clock.now(), resolve, reject };
+    const j = { id: `g${++Q.seq}`, seq: Q.seq, model, backend, prio, retry, exclusive, auto, kind, label, signal, run, base, inst: inst || base || defaultBase() || '', fetch: f, enqAt: clock.now(), resolve, reject, image: !!image };
     j.onAbort = () => { const i = Q.waiting.indexOf(j); if (i >= 0) { Q.waiting.splice(i, 1); reject(cancelErr()); pump(); } };
     signal?.addEventListener?.('abort', j.onAbort, { once: true });
     if (kind !== 'unload') cancelUnload(model);
@@ -472,7 +489,7 @@ async function attempt(o, job) {
   return { thinkLeak, usedWeb: !!out.usedWeb,
     content, thinking: thinkingText, text: out.text ?? stripThink(content), final: fin, message: message ? { ...message, content, ...(thinkingText ? { thinking: thinkingText } : {}) } : { role: 'assistant', content },
     embeddings: out.embeddings ?? fin.embeddings ?? null,
-    t: { loadMs: out.timing?.loadMs ?? 0, promptMs: out.timing?.promptMs ?? 0, genMs: out.timing?.genMs ?? 0, tokIn: out.usage?.tokIn ?? 0, tokOut: out.usage?.tokOut ?? 0,
+    t: { loadMs: out.timing?.loadMs ?? 0, promptMs: out.timing?.promptMs ?? 0, genMs: out.timing?.genMs ?? 0, tokIn: out.usage?.tokIn ?? 0, tokOut: out.usage?.tokOut ?? 0, cachedTokens: out.usage?.cachedTokens ?? null,
       thinkChars, keepAlive, cold, firstTokenMs: firstAt ? firstAt - t0 : null, runMs: clock.now() - t0 },
   };
 }
@@ -714,7 +731,7 @@ async function request(o0) {
   let queueMs = 0, attempts = 0, leakSwitched = false, downSwitched = false;
   const tele = (x = {}) => ({ queueMs, loadMs: x.loadMs ?? 0, promptMs: x.promptMs ?? 0, genMs: x.genMs ?? 0, totalMs: clock.now() - t0, tokIn: x.tokIn ?? 0, tokOut: x.tokOut ?? 0,
     thinkChars: x.thinkChars ?? 0, attempts, model: o.model, keepAlive: x.keepAlive ?? null, cold: x.cold ?? null, firstTokenMs: x.firstTokenMs ?? null,
-    backend: o.backend, backendNote: sel.note ?? null, ...(x.thinkLeak ? { thinkLeak: true } : {}) });
+    backend: o.backend, backendNote: sel.note ?? null, ...(x.thinkLeak ? { thinkLeak: true } : {}), ...(x.cachedTokens != null ? { cachedTokens: x.cachedTokens } : {}) });
   for (;;) {
     attempts++;
     const enq = clock.now();
@@ -723,7 +740,7 @@ async function request(o0) {
       const runIt = (qj) => { qjob = qj; qj.attemptNo = attempts; startedAt = clock.now(); queueMs += startedAt - enq; return attempt(o, qj); };
       // noQueue: sky-modeller via Open WebUI (ingen Ollama bak) skal ikke vente på Ollama-køen.
       const out = o.noQueue ? await runIt({ id: `nq${++Q.seq}` })
-        : await enqueue({ model: o.model, backend: o.backend, prio, retry: attempts > 1, kind: o.kind, label: o.label, signal: o.signal, onQueue: o.onQueue, base: o.base, inst: laneOf(o), fetch: o.fetch, run: runIt });
+        : await enqueue({ model: o.model, backend: o.backend, prio, retry: attempts > 1, kind: o.kind, label: o.label, signal: o.signal, onQueue: o.onQueue, base: o.base, inst: laneOf(o), fetch: o.fetch, run: runIt, image: !!o.image });
       const { t, thinkLeak, ...rest } = out;
       // Open WebUI slo ikke av tenkingen og svaret ble tomt (tenkingen brukte opp num_predict): samme kall direkte til Ollama.
       if (thinkLeak && !leakSwitched && !String(rest.text ?? '').trim() && (o.base || defaultBase()) && o.backend === 'openwebui' && !o0.backend) {

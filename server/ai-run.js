@@ -42,6 +42,7 @@ import { jobTimes41, groupTimes41 } from './ai41.js'; // prompt 41: klokkeslett 
 import { OMLX_BACKEND58 } from './omlx58/backend.js';
 import { engineFor58, omlxModelFor58, omlxConf58 } from './omlx58/config.js';
 import { omlxModels58, resolveModel58, markDown58 } from './omlx58/health.js';
+import { tokenSink59 } from './fast59/status.js'; // prompt 59: strømming av svarteksten (Glimt /stream)
 
 /* ---------------- Oppgaver ---------------- */
 
@@ -584,7 +585,13 @@ async function callOllama(model, o, signal, r, ctx = {}) {
   const np = o.numPredict ?? sp?.numPredict;
   if (np) options.num_predict = np;
   const think = o.think ?? sp?.think;
-  const body = shortBody({ model, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: o.noThink ? false : think === true || (think == null && r.rules.think) ? true : undefined }); // noThink: selvtesten – aldri tenking, uansett brukerens valg «La modellen tenke»
+  // Prompt 59 (rotårsak i produksjon): steg med eksplisitt think:false (planleggeren, svarsteget) sendte før `undefined` videre, og da
+  // slo brukerens personlige «La modellen tenke» (ai_think) inn – qwen3 tenkte på hvert Glimt-kall. Nå: eksplisitt false er false, og
+  // korte strukturerte kall (JSON/skjema/verktøy) og
+  // tolkningsoppgavene (glimt, kat, fsok) tenker aldri uten eget steg. ai_think gjelder fortsatt fritekst-svar uten eget steg (sok, brief, domener).
+  const structured = !!(o.schema || o.json || (Array.isArray(o.ollamaTools) && o.ollamaTools.length));
+  const thinkArg = o.noThink ? false : think === true || (think == null && r.rules.think) ? true : think === false || (think == null && (structured || (['glimt', 'kat', 'fsok'].includes(t) && !sp))) ? false : undefined;
+  const body = shortBody({ model, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: thinkArg }); // noThink: selvtesten – aldri tenking, uansett brukerens valg «La modellen tenke»
   if (think === true) body.think = true; // prompt 47: planleggerens andre forsøk tenker (med token-/tidsgrense)
   if (Array.isArray(o.ollamaTools) && o.ollamaTools.length) body.tools = o.ollamaTools; // prompt 45: Ollama tool calling (Glimt-motoren)
   // Prompt 47: mål prompt-lengden før kallet. Ollama kutter stille fra starten hvis prompten er lengre enn num_ctx.
@@ -604,10 +611,13 @@ async function callOllama(model, o, signal, r, ctx = {}) {
     lastUpd = now;
     jobUpdate(jobId, ph.kind === 'answer' ? { phase: { kind: 'answer', chars: ph.chars }, step: `Svarer · ${ph.chars} tegn` } : { phase: { kind: 'think', chars: ph.chars ?? 0, ...(ctx.sizeGb ? { loadedGb: ctx.sizeGb, totalGb: ctx.sizeGb } : {}) }, step: 'Tenker …' });
   } : null;
+  // Prompt 59: strømming til klienten (Glimt /stream): o.onToken(bit) får ren tekst (uten tenking) mens modellen skriver.
+  const sink = typeof o.onToken === 'function' ? tokenSink59(o.onToken) : null;
   try {
-    const out = await gateChat({ model, body, base, fetch: F, signal, ...(ctx.backend ? { backend: ctx.backend } : {}) /* prompt 58: «omlx» for oMLX-ruten */, priority: o.background ? 'background' : 'interactive', short: true, allowThink: !('think' in body), image: !!o.images?.length,
+    const out = await gateChat({ model, body, base, fetch: F, signal, ...(ctx.backend ? { backend: ctx.backend } : {}) /* prompt 58: «omlx» for oMLX-ruten */, ...(sink ? { onChunk: sink.onChunk } : {}), priority: o.background ? 'background' : 'interactive', short: true, allowThink: !('think' in body), image: !!o.images?.length,
       loadMs: lim.loadMs, warmMs: lim.firstMs, idleMs: lim.idleMs, deadlineMs: o.timeoutMs ?? null, ...(o.deadlineAfterLoad ? { deadlineAfterLoad: true } : {}), retryTimeouts: ctx.last !== false, ...(o.retries != null ? { retries: o.retries } : {}), label: o.title ?? taskName(t),
       onQueue: ctx.onQueue, onStart: ctx.onStart, onPhase, onRetry: jobId ? ({ attempt, waitMs }) => jobUpdate(jobId, { step: `Nytt forsøk ${attempt + 1} om ${Math.round(waitMs / 1000)} s …`, attempts: attempt }) : null });
+    sink?.end();
     if (jobId) { const n = out.text.length; jobUpdate(jobId, { phase: { kind: 'answer', chars: n }, step: `Svarer · ${n} tegn`, backend: out.telemetry.backend, backendNote: out.telemetry.backendNote ?? null }); }
     return { text: out.text, tin: out.telemetry.tokIn, tout: out.telemetry.tokOut, telemetry: out.telemetry, ...(out.message?.tool_calls?.length ? { toolCalls: out.message.tool_calls } : {}) };
   } catch (e) {

@@ -12,6 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { STANDARD_ROUTING, envFailure55 } from './lib/env.mjs';
 import { STANDARD_OMLX58, OMLX_TASKS58, pct58, resolveMlx58, ENGINE_LABEL58 } from './lib/omlx58.mjs';
+import { addReplyStats59, perIntent59, cacheEffect59, compare59, timingLine59, replyMsOf59, sec59, whySlow59 } from './lib/fast59.mjs'; // prompt 59: fart (del 4)
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
@@ -47,6 +48,10 @@ const HELP = `Glimt eval (GLIMT47)
   --keep                            Behold DATA_DIR for hver kjøring (stien står i JSON-resultatet).
   --out DIR                         Resultatmappe (standard eval/results).
   --quiet                           Ikke skriv fremdrift per kjøring.
+  --compare FIL.json                Prompt 59: før/etter – svartid (median/p90) per case, per intent og totalt mot en tidligere
+                                    resultatfil (f.eks. eval/results/2026-10-25-ollama-qwen3_8b-4.json).
+  --fast59 on|off                   Prompt 59: «raskere svar» (svar-cache, varm modell, strømming, parallelle verktøy). Standard on
+                                    (som i produksjonen); off måler uten, for før/etter på samme commit.
 
   Miljø (prompt 55): EVAL_MAC_OCR_URL + EVAL_MAC_OCR_KEY kobler på Mac-OCR (ellers har eval ingen Mac-OCR). Feil som skyldes
   miljøet (ingen OCR, modell ikke installert) får status «env» og telles ikke som modellfeil.
@@ -129,7 +134,11 @@ let caseFiles = readdirSync(caseDir).filter((f) => /^\d.*\.mjs$/.test(f)).sort()
 if (opt.case) { const want = String(opt.case).split(',').map((x) => x.trim().toLowerCase()).filter(Boolean); caseFiles = caseFiles.filter((f) => want.some((w) => f.toLowerCase().startsWith(w) || f.toLowerCase().includes(w))); }
 if (!caseFiles.length) { console.error('Ingen caser valgt.'); process.exit(2); }
 const metas = [];
-for (const f of caseFiles) { const m = (await import(pathToFileURL(join(caseDir, f)).href)).default; metas.push({ file: f, id: m.id, title: m.title, area: m.area }); }
+for (const f of caseFiles) { const m = (await import(pathToFileURL(join(caseDir, f)).href)).default; metas.push({ file: f, id: m.id, title: m.title, area: m.area, ...(m.intent ? { intent: m.intent } : {}) }); }
+// Prompt 59: --compare leses før kjøringen (feil fil = feil med en gang, ikke etter en time med eval).
+let prevRun = null;
+if (opt.compare) { try { prevRun = JSON.parse(readFileSync(resolve(opt.compare), 'utf8')); if (!Array.isArray(prevRun.cases)) throw new Error('mangler cases'); } catch (e) { console.error(`--compare ${opt.compare}: ${e.message}`); process.exit(2); } }
+const fastMode = String(opt.fast59 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on';
 
 /* ---------------- Modellsjekk ---------------- */
 
@@ -221,7 +230,7 @@ function runOne(meta, i) {
   return new Promise((res) => {
     const out = join(tmpRoot, `${meta.id}-${i}.json`);
     const t0 = Date.now();
-    const child = spawn(process.execPath, [join(HERE, 'worker.mjs'), join(caseDir, meta.file), out], { cwd: REPO, env: { ...cleanEnv(), EVAL47_CONFIG: JSON.stringify(cfg) }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [join(HERE, 'worker.mjs'), join(caseDir, meta.file), out], { cwd: REPO, env: { ...cleanEnv(), EVAL47_CONFIG: JSON.stringify(cfg), EVAL_FAST59: fastMode }, stdio: ['ignore', 'pipe', 'pipe'] });
     let logs = '';
     child.stdout.on('data', (d) => { logs += d; });
     child.stderr.on('data', (d) => { logs += d; });
@@ -252,7 +261,7 @@ for (const meta of metas) {
   for (let i = 1; i <= runs; i++) {
     const r = await runOne(meta, i);
     results.push(r);
-    log(`  ${r.ok ? 'OK  ' : r.riggError ? 'RIGG' : r.status === 'env' ? 'ENV ' : 'FEIL'} ${meta.id} #${i} ${(r.ms / 1000).toFixed(1)} s${r.ok ? '' : r.status === 'env' ? ` – miljø: ${r.envReason} (${String(r.reason ?? '').slice(0, 140)})` : ` – ${String(r.reason ?? '').slice(0, 220)}`}`);
+    log(`  ${r.ok ? 'OK  ' : r.riggError ? 'RIGG' : r.status === 'env' ? 'ENV ' : 'FEIL'} ${meta.id} #${i} ${(r.ms / 1000).toFixed(1)} s (svar ${(replyMsOf59(r) / 1000).toFixed(1)} s)${r.ok ? '' : r.status === 'env' ? ` – miljø: ${r.envReason} (${String(r.reason ?? '').slice(0, 140)})` : ` – ${String(r.reason ?? '').slice(0, 220)}`}`);
   }
   const ms = results.map((r) => r.ms ?? 0).sort((a, b) => a - b);
   all.push({ ...meta, passes: results.filter((r) => r.ok).length, envRuns: results.filter((r) => r.status === 'env').length, envReasons: [...new Set(results.filter((r) => r.status === 'env').map((r) => r.envReason))], runs, medianMs: ms[Math.floor((ms.length - 1) / 2)],
@@ -262,13 +271,15 @@ for (const meta of metas) {
 
 /* ---------------- Rapport ---------------- */
 
+addReplyStats59(all); // prompt 59: svartid (det brukeren venter) per case, «bakgrunn etter svaret» og intent
+
 const pad = (s, n) => { s = String(s); return s.length > n ? `${s.slice(0, n - 1)}…` : s + ' '.repeat(n - s.length); };
 const firstReason = (c) => { const r = c.results.find((x) => !x.ok && x.status !== 'env') ?? c.results.find((x) => !x.ok); return r ? `${r.status === 'env' ? `[miljø: ${r.envReason}] ` : ''}${r.reason ?? ''}` : ''; };
 const okText = (c) => `${c.passes}/${c.runs}${c.envRuns ? ` (${c.envRuns} env)` : ''}`;
 const sec = (v) => `${((v ?? 0) / 1000).toFixed(1)} s`;
-const rows = all.map((c) => [c.id, okText(c), sec(c.medianMs), sec(c.p50Ms), sec(c.p90Ms), c.models.join(', ') || '–', c.maxPromptTokens || '–', c.passes === c.runs ? '' : firstReason(c)]);
-const head = ['Case', 'OK', 'Median', 'p50', 'p90', 'Modell(er)', 'Maks prompt-tok', 'Grunn (første feil)'];
-const widths = [26, 11, 8, 8, 8, 26, 15, 90];
+const rows = all.map((c) => [c.id, okText(c), sec(c.medianMs), sec(c.p50Ms), sec(c.p90Ms), sec(c.replyMedianMs), sec(c.replyP90Ms), c.models.join(', ') || '–', c.maxPromptTokens || '–', c.passes === c.runs ? '' : firstReason(c)]);
+const head = ['Case', 'OK', 'Median', 'p50', 'p90', 'Svar p50', 'Svar p90', 'Modell(er)', 'Maks prompt-tok', 'Grunn (første feil)'];
+const widths = [26, 11, 8, 8, 8, 9, 9, 26, 15, 90];
 console.log(`\n${head.map((h, i) => pad(h, widths[i])).join(' ')}\n${widths.map((w) => '-'.repeat(w)).join(' ')}`);
 for (const r of rows) console.log(r.map((x, i) => pad(x, widths[i])).join(' '));
 const totalPass = all.reduce((a, c) => a + c.passes, 0), total = all.reduce((a, c) => a + c.runs, 0);
@@ -282,6 +293,21 @@ const allMs = all.flatMap((c) => c.results.map((r) => r.ms ?? 0)).sort((a, b) =>
 const p50All = pct58(allMs, 0.5), p90All = pct58(allMs, 0.9);
 console.log(`\nTotalt ${totalPass}/${total} kjøringer bestått · ${green}/${all.length} caser ${runs}/${runs} · modellfeil ${modelFails}${envTotal ? ` · miljøfeil ${envTotal}` : ''} · motor ${engineLabel} · p50 ${sec(p50All)} · p90 ${sec(p90All)}`);
 if (envLine) console.log(envLine);
+// Prompt 59 (del 4): median og p90 per intent, cache-effekten og før/etter.
+const intents59 = perIntent59(all);
+const cache59 = cacheEffect59(all);
+const cmp59 = prevRun ? compare59(prevRun, all, opt.compare) : null;
+const allReply = all.flatMap((c) => c.results.map(replyMsOf59)).sort((a, b) => a - b);
+console.log(`Svartid (forespørsel → svar, uten bakgrunnsjobber etter svaret): p50 ${sec(pct58(allReply, 0.5))} · p90 ${sec(pct58(allReply, 0.9))} · «raskere svar» ${fastMode}`);
+console.log(`\nPer intent (svartid p50 / p90 · totalt p50 / p90):`);
+for (const x of intents59) console.log(`  ${pad(x.intent, 22)} ${pad(`${x.runs} kj.`, 7)} ${pad(`${sec59(x.replyP50)} / ${sec59(x.replyP90)}`, 18)} ${sec59(x.totalP50)} / ${sec59(x.totalP90)}`);
+const cacheLine59 = cache59.total ? `Prompt-cache: ${cache59.total.evaluated} av ~${cache59.total.est} prompt-tokens regnet ut · ${cache59.total.reusedPct ?? 0} % gjenbrukt fra KV-/prefiks-cachen (${cache59.method}) · ${Object.entries(cache59.byStep).map(([k, v]) => `${k} ${v.reusedPct ?? 0} % (${v.calls} kall)`).join(' · ')}` : null;
+if (cacheLine59) console.log(`\n${cacheLine59}`);
+if (cmp59) {
+  console.log(`\nFør/etter mot ${cmp59.file} (${cmp59.before.engine ?? '?'}, commit ${cmp59.before.commit ?? '?'}) · svartid median:`);
+  for (const r of cmp59.rows) console.log(`  ${pad(r.id, 30)} ${pad(sec59(r.beforeMs), 8)} → ${pad(sec59(r.afterMs), 8)} ${r.deltaPct != null ? `${r.deltaPct > 0 ? '+' : ''}${r.deltaPct} %` : '(ny)'}  ${r.beforePass ?? '–'} → ${r.afterPass}`);
+  console.log(`  Totalt (${cmp59.total.cases} felles caser): p50 ${sec59(cmp59.total.beforeP50)} → ${sec59(cmp59.total.afterP50)} · p90 ${sec59(cmp59.total.beforeP90)} → ${sec59(cmp59.total.afterP90)}`);
+}
 
 // Prompt 55: tid per modellkall (modell, steg/tittel, total, lasting fra Ollama) – modellbytter og kald lasting synes i rapporten.
 function modelTimes(calls) {
@@ -298,7 +324,9 @@ for (let n = 2; existsSync(`${base}.json`); n++) base = join(outDir, `${date}-${
 const meta = { date: new Date().toISOString(), frozenClock: '2026-10-24T10:00:00+02:00 (Europe/Oslo)', backend, engine: engineLabel, url: backend === 'mock' ? null : mask(url), ollamaUrl: backend === 'openwebui' || backend === 'omlx' ? (ollamaUrl || null) : undefined,
   ...(omlx ? { omlx: { models: omlxModels, tasks: OMLX_TASKS58, fallbackOllama: omlx.fallback } } : {}),
   routing: { mode: routingMode, note: routingNote, effective: all[0]?.results?.[0]?.routing ?? null }, missingModels: missing, runs, commit, node: process.version };
-writeFileSync(`${base}.json`, JSON.stringify({ meta, summary: { passed: totalPass, total, greenCases: green, cases: all.length, modelFailures: modelFails, envFailures: envTotal, engine: engineLabel, p50Ms: p50All, p90Ms: p90All }, cases: all }, null, 2));
+meta.fast59 = fastMode;
+writeFileSync(`${base}.json`, JSON.stringify({ meta, summary: { passed: totalPass, total, greenCases: green, cases: all.length, modelFailures: modelFails, envFailures: envTotal, engine: engineLabel, p50Ms: p50All, p90Ms: p90All,
+  replyP50Ms: pct58(allReply, 0.5), replyP90Ms: pct58(allReply, 0.9), perIntent: intents59, cacheEffect: cache59, ...(cmp59 ? { compare: cmp59 } : {}) }, cases: all }, null, 2));
 const md = [`# Glimt eval ${date} · motor ${engineLabel} · ${backend} · ${modelTag}`, '',
   `- Klokke: ${meta.frozenClock}`, `- Motor: ${engineLabel} · backend: ${backend}${meta.url ? ` (${meta.url})` : ''}`, `- Ruting: ${routingNote}`,
   ...(omlx ? [`- oMLX-ruting: ${Object.entries(omlxModels).map(([k, m]) => `${k}=${m}`).join(', ')} · Ollama-reserve ${omlx.fallback ? 'på' : 'av'}${ollamaUrl ? ` · Ollama (Chat, embeddings, kvitteringstekst) ${mask(ollamaUrl)}` : ''}`] : []),
@@ -308,11 +336,25 @@ const md = [`# Glimt eval ${date} · motor ${engineLabel} · ${backend} · ${mod
   `**${totalPass}/${total} kjøringer bestått · ${green}/${all.length} caser ${runs}/${runs} · modellfeil ${modelFails}${envTotal ? ` · miljøfeil ${envTotal}` : ''}**`, '',
   ...(envLine ? [`> ${envLine}`, ''] : []),
   `- Miljø: ${(all[0]?.results?.[0]?.env?.notes ?? []).join(' · ') || 'OCR tilgjengelig'}`, '',
-  '| Case | OK | Median | p50 | p90 | Modell(er) | Maks prompt-tok | Grunn (første feil) |', '|---|---|---|---|---|---|---|---|',
+  '| Case | OK | Median | p50 | p90 | Svar p50 | Svar p90 | Modell(er) | Maks prompt-tok | Grunn (første feil) |', '|---|---|---|---|---|---|---|---|---|---|',
   ...rows.map((r) => `| ${r.map((x) => String(x).replace(/\|/g, '\\|').replace(/\n/g, ' ')).join(' | ')} |`), '',
+  // Prompt 59: «Median/p50/p90» = totalt (med bakgrunnsjobber som går etter svaret, f.eks. AI-sammendrag av nye transaksjoner);
+  // «Svar» = det brukeren venter (forespørsel → svar).
+  `- «raskere svar» (svar-cache, varm modell, strømming, parallelle verktøy): **${fastMode}** · svartid p50 ${sec(pct58(allReply, 0.5))} · p90 ${sec(pct58(allReply, 0.9))}`,
+  ...(cacheLine59 ? [`- ${cacheLine59}`] : []), '',
+  '## Per intent', '', '| Intent | Kjøringer | Svar p50 | Svar p90 | Totalt p50 | Totalt p90 | Caser |', '|---|---|---|---|---|---|---|',
+  ...intents59.map((x) => `| ${x.intent} | ${x.runs} | ${sec59(x.replyP50)} | ${sec59(x.replyP90)} | ${sec59(x.totalP50)} | ${sec59(x.totalP90)} | ${x.cases.join(', ')} |`), '',
+  ...(cmp59 ? ['## Før/etter', '', `Mot \`${cmp59.file}\` (${cmp59.before.engine ?? '?'}, commit ${cmp59.before.commit ?? '?'}, ${cmp59.before.date ?? ''}). Svartid = forespørsel → svar.`, '',
+    '| Case | Før median | Etter median | Endring | Før p90 | Etter p90 | Totalt før → etter | OK før → etter |', '|---|---|---|---|---|---|---|---|',
+    ...cmp59.rows.map((r) => `| ${r.id} | ${sec59(r.beforeMs)} | ${sec59(r.afterMs)} | ${r.deltaPct != null ? `${r.deltaPct > 0 ? '+' : ''}${r.deltaPct} %` : 'ny'} | ${sec59(r.beforeP90)} | ${sec59(r.afterP90)} | ${sec59(r.beforeTotalMs)} → ${sec59(r.afterTotalMs)} | ${r.beforePass ?? '–'} → ${r.afterPass} |`), '',
+    '| Intent | Før p50 / p90 | Etter p50 / p90 |', '|---|---|---|',
+    ...cmp59.intents.map((x) => `| ${x.intent} | ${x.before ? `${sec59(x.before.replyP50)} / ${sec59(x.before.replyP90)}` : '–'} | ${sec59(x.replyP50)} / ${sec59(x.replyP90)} |`), '',
+    `**Totalt (${cmp59.total.cases} felles caser): p50 ${sec59(cmp59.total.beforeP50)} → ${sec59(cmp59.total.afterP50)} · p90 ${sec59(cmp59.total.beforeP90)} → ${sec59(cmp59.total.afterP90)}**`, ''] : []),
   '## Per case', '',
   ...all.flatMap((c) => [`### ${c.id} – ${c.title} (${c.passes}/${c.runs})`, '', ...c.results.flatMap((r) => [
-    `- Kjøring ${r.run}: ${r.ok ? 'OK' : r.status === 'env' ? `ENV (${r.envReason})` : 'FEIL'}${r.foreign?.length && r.ok ? ` (andre på Ollama: ${r.foreign.join(', ')})` : ''} · ${(r.ms / 1000).toFixed(1)} s · modellkall ${r.tokens?.calls ?? 0} · prompt-tok maks ${r.tokens?.maxPrompt ?? '–'}${r.trace?.model?.length ? ` · ${modelTimes(r.trace.model)}` : ''}`,
+    `- Kjøring ${r.run}: ${r.ok ? 'OK' : r.status === 'env' ? `ENV (${r.envReason})` : 'FEIL'}${r.foreign?.length && r.ok ? ` (andre på Ollama: ${r.foreign.join(', ')})` : ''} · ${(r.ms / 1000).toFixed(1)} s (svar ${(replyMsOf59(r) / 1000).toFixed(1)} s${(r.ms ?? 0) - replyMsOf59(r) > 1500 ? `, bakgrunn etter svaret ${(((r.ms ?? 0) - replyMsOf59(r)) / 1000).toFixed(1)} s` : ''}) · modellkall ${r.tokens?.calls ?? 0} · prompt-tok maks ${r.tokens?.maxPrompt ?? '–'}${r.trace?.model?.length ? ` · ${modelTimes(r.trace.model)}` : ''}`,
+    ...(timingLine59(r) ? [`  - Glimt-spor: ${timingLine59(r)}${(r.trace?.glimt ?? []).some((g) => g.cache?.hit) ? ' · **fra svar-cachen**' : ''}`] : []),
+    ...((r.ms ?? 0) >= 10_000 && whySlow59(r).length ? [`  - Hvorfor ${(r.ms / 1000).toFixed(0)} s: ${whySlow59(r).map((x) => x.why).join(' · ')}`] : []),
     ...(r.checks ?? []).map((k) => `  - ${k.info ? 'ℹ' : k.ok ? '✓' : '✗'} ${k.name}${k.detail ? `: ${String(k.detail).replace(/\n/g, ' ')}` : ''}`),
     ...(r.riggError ? [`  - Riggfeil: ${String(r.error ?? '').split('\n')[0]}`] : []),
   ]), '']),

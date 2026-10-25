@@ -43,12 +43,13 @@ export async function answer47(user, text, { ctx, web = null, call, trace = null
   let out;
   try { out = await call({ user, system: sys, prompt: text, step: 'answer' }); }
   catch (e) {
+    if (e?.cancelled || e?.kind === 'cancelled') throw e; // prompt 59: Stopp
     trace?.model({ step: 'answer', ms: Date.now() - t0, ok: false, error: e?.message ?? e, trimmed: fit.trimmed, promptEst: fit.est });
     // Modellen nede: med søketreff svarer vi med treffet direkte (kilden er med), ellers en ærlig feilmelding.
     if (hits.length) return { text: `Ifølge ${hits[0].source || 'søket'}: ${hits[0].title}. ${String(hits[0].snippet ?? '').slice(0, 220)}`, model: null, grounded: true, fallback: true };
     return { text: `Glimt fikk ikke svar fra den lokale modellen akkurat nå (${String(e?.message ?? e).slice(0, 120)}). Prøv igjen om litt.`, model: null, error: String(e?.message ?? e).slice(0, 200) };
   }
-  trace?.model({ step: 'answer', model: out?.model ?? null, params: out?.params ?? { ...sp, promptEst: fit.est }, tokens: out?.tokens, ms: Date.now() - t0, trimmed: fit.trimmed });
+  trace?.model({ step: 'answer', model: out?.model ?? null, params: out?.params ?? { ...sp, promptEst: fit.est }, tokens: out?.tokens, ms: Date.now() - t0, trimmed: fit.trimmed, timing: out?.timing ?? null });
   let t = String(out?.text ?? '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
   if (hits.length) {
     const g = groundedIn47(t, hits);

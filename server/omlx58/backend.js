@@ -185,6 +185,7 @@ registerBackend(OMLX_BACKEND58, {
     await onToken(final);
     const message = { role: 'assistant', ...(toolCalls.length ? { tool_calls: toolCalls } : {}) };
     return { text: stripThink(part.content), content: part.content, thinking: part.thinking, message, final,
-      usage: { tokIn, tokOut }, timing: { loadMs: 0, promptMs, genMs } };
+      // Prompt 59: prefiks-cachen (OpenAI-formen usage.prompt_tokens_details.cached_tokens, når oMLX oppgir den) – cache-effekten i tracen.
+      usage: { tokIn, tokOut, cachedTokens: u.prompt_tokens_details?.cached_tokens ?? u.cached_tokens ?? null }, timing: { loadMs: 0, promptMs, genMs } };
   },
 });

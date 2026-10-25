@@ -9,9 +9,11 @@ import { modelInfo45, MODULES45 } from './plan.js';
 import { personalityOf, setPersonality, PERSONALITIES, PERSONALITY_LABELS } from './personality.js';
 import { traceOf47, tracesOf47, traceHtml47 } from './trace47.js';
 import { isAdmin } from '../auth.js';
+import { installFast59 } from '../fast59/api.js';
 
 export const agentApi45 = new Hono();
 agentApi45.use('*', authOrToken);
+installFast59(agentApi45); // prompt 59 (del 4): POST /stream (SSE), /stream/stop, GET|PUT /fast, DELETE /fast/cache, POST /fast/warm
 const RID = /^[A-Za-z0-9_-]{8,80}$/;
 const settingsOut = (u) => ({ personality: personalityOf(u), options: PERSONALITIES, labels: PERSONALITY_LABELS });
 

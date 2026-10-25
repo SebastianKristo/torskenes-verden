@@ -32,7 +32,9 @@ export function startTrace47(user, text, { module = 'home' } = {}) {
         promptEvalCount: c.tokens?.in ?? null, evalCount: c.tokens?.out ?? null, trimmed: c.trimmed ?? [], ms: c.ms ?? null, ok: c.ok !== false, error: c.error ? clip(c.error, 200) : null,
         // Prompt 55: hvor tiden gikk (kø i gaten, kald lasting/modellbytte, prompt, generering) – så «87 s» kan forklares fra tracen.
         ...(c.errKind ? { errKind: c.errKind } : {}),
-        ...(c.timing ? { timing: { queueMs: c.timing.queueMs ?? null, loadMs: c.timing.loadMs ?? null, promptMs: c.timing.promptMs ?? null, genMs: c.timing.genMs ?? null, cold: c.timing.cold ?? null, attempts: c.timing.attempts ?? null, thinkChars: c.timing.thinkChars ?? null, firstTokenMs: c.timing.firstTokenMs ?? null } } : {}) });
+        ...(c.timing ? { timing: { queueMs: c.timing.queueMs ?? null, loadMs: c.timing.loadMs ?? null, promptMs: c.timing.promptMs ?? null, genMs: c.timing.genMs ?? null, cold: c.timing.cold ?? null, attempts: c.timing.attempts ?? null, thinkChars: c.timing.thinkChars ?? null, firstTokenMs: c.timing.firstTokenMs ?? null } } : {}),
+        // Prompt 59 (del 4): cache-effekten for den faste prefiksen – prompt_eval_count/prompt_eval_duration og andel gjenbrukt.
+        prompt: promptStats59(c) });
     },
     tool(a) { tr.tools.push({ tool: a.tool, status: a.status, args: a.args ?? {}, result: clip(a.result ?? a.error ?? null, 700) }); },
     norm(x) { tr.normalized.push(x); },
@@ -47,6 +49,19 @@ export function startTrace47(user, text, { module = 'home' } = {}) {
       return id;
     },
   };
+}
+/**
+ * Prompt 59: prompt-tall for ett modellkall. evalCount = prompt_eval_count (Ollama teller bare tokens som faktisk ble regnet ut;
+ * prefiksen som lå i KV-cachen er ikke med), evalMs = prompt_eval_duration, est = anslått hele prompten (tegn / 3,5).
+ * reusedPct: eksakt fra oMLX (cached_tokens) når den finnes, ellers anslått 1 − evalCount/est (null når det ikke kan sies).
+ */
+export function promptStats59(c) {
+  const evalCount = c.tokens?.in ?? null, est = c.params?.promptEst ?? c.promptEst ?? null, evalMs = c.timing?.promptMs ?? null;
+  const cached = c.timing?.cachedTokens ?? null;
+  let reusedPct = null, exact = false;
+  if (cached != null && evalCount) { reusedPct = Math.round((100 * cached) / Math.max(evalCount, cached)); exact = true; }
+  else if (evalCount != null && est) { const r = evalCount / est; reusedPct = r >= 0.85 ? 0 : Math.max(0, Math.min(100, Math.round(100 * (1 - r)))); } // anslaget bommer ±15 %
+  return { evalCount, evalMs, est, reusedPct, ...(exact ? { exact: true, cachedTokens: cached } : {}) };
 }
 /** En trace (bare eierens egen, eller alle for admin). → data | null */
 export function traceOf47(id, user, { admin = false } = {}) {
