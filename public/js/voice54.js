@@ -222,6 +222,30 @@ function decorate() {
 
 const A = { health: null, admin: null, cfg: null, msg: '', busy: false, at: 0 };
 const ST = { ok: 'Svarer', starting: 'Laster modellen', down: 'Svarer ikke', auth: 'Nøkkel eller IP avvist', error: 'Modellen kunne ikke lastes', off: 'Av' };
+// Fermion (Neutrino i Chat, Phonon til tale→tekst) på Mac mini-en: adresse og nøkkel (PUT /api/admin/fermion53/config, bare admin).
+const F = { at: 0, cfg: null, health: null, busy: false, msg: '' };
+async function loadFermion(force = false) {
+  if (!force && F.at && Date.now() - F.at < 30_000) return;
+  F.at = Date.now();
+  const [h, c] = await Promise.all([fetch(`/api/admin/fermion53/health${force ? '?fresh=1' : ''}`, { credentials: 'same-origin' }), fetch('/api/admin/fermion53/config', { credentials: 'same-origin' })].map((p) => p.then((r) => (r.ok ? r.json() : null)).catch(() => null)));
+  F.health = h; F.cfg = c;
+}
+function fermionHtml() {
+  if (!F.cfg) return '';
+  const st = (x) => (!x ? 'Laster …' : x.ok ? 'Svarer' : ({ auth: 'Nøkkel eller IP avvist', down: 'Svarer ikke', starting: 'Starter', off: 'Ikke satt opp' }[x.status] ?? x.status ?? 'Ikke satt opp'));
+  const keySet = F.cfg.neutrinoKeySet || F.cfg.phononKeySet;
+  return `<div class="ac-card v54-ai" style="margin-top:10px;padding:12px 14px">
+      <b>Fermion på Mac mini-en</b>
+      <div class="ac-mut">Neutrino-1 8B (Chat): ${esc(st(F.health?.neutrino))} · Phonon (engelsk tale): ${esc(st(F.health?.phonon))}</div>
+      <form class="v54-form" data-f53-form>
+        <input name="neutrinoUrl" value="${esc(F.cfg.neutrinoUrl ?? '')}" placeholder="Neutrino: http://10.69.1.173:8000" autocomplete="off" spellcheck="false" aria-label="Adressen til Neutrino (i huset)">
+        <input name="phononUrl" value="${esc(F.cfg.phononUrl ?? '')}" placeholder="Phonon: http://10.69.1.173:8010" autocomplete="off" spellcheck="false" aria-label="Adressen til Phonon (i huset)">
+        <input name="key" type="password" value="" placeholder="${keySet ? 'Nøkkel er lagret – skriv en ny for å bytte' : 'Nøkkelen tools/fermion/install.sh skrev ut'}" autocomplete="new-password" aria-label="Nøkkel (samme for begge)">
+        <div class="v54-btns"><button type="submit" class="ac-b ink"${F.busy ? ' disabled' : ''}>Lagre</button><button type="button" class="ac-b line" data-f53-test="neutrino"${F.busy || !F.cfg.neutrinoUrl ? ' disabled' : ''}>Test Neutrino</button><button type="button" class="ac-b line" data-f53-test="phonon"${F.busy || !F.cfg.phononUrl ? ' disabled' : ''}>Test Phonon</button></div>
+        ${F.msg ? `<span class="ac-mut" role="status">${esc(F.msg)}</span>` : ''}
+      </form>
+      <div class="ac-note">Samme nøkkel brukes for begge tjenestene. Tom adresse slår tjenesten av. Bare adresser i huset godtas; nøkkelen lagres kryptert og vises aldri.</div></div>`;
+}
 async function loadAdmin(force = false) {
   if (!force && A.at && Date.now() - A.at < 30_000) return;
   A.at = Date.now();
@@ -247,14 +271,14 @@ function aiHtml() {
         <div class="v54-btns"><button type="submit" class="ac-b ink"${A.busy ? ' disabled' : ''}>Lagre</button><button type="button" class="ac-b line" data-v54-test${A.busy || !n?.configured ? ' disabled' : ''}>Test</button><button type="button" class="ac-b line" data-v54-fresh>Sjekk nå</button></div>
         ${A.msg ? `<span class="ac-mut" role="status">${esc(A.msg)}</span>` : ''}
       </form>
-      <div class="ac-note">Installer på Mac mini-en: <span class="ac-mono">tools/nb-whisper/install.sh</span> (se docs/nb-whisper-54.md). Bare adresser i huset godtas; nøkkelen lagres kryptert og vises aldri.</div></div>` : '';
+      <div class="ac-note">Installer på Mac mini-en: <span class="ac-mono">tools/nb-whisper/install.sh</span> (se docs/nb-whisper-54.md). Bare adresser i huset godtas; nøkkelen lagres kryptert og vises aldri.</div></div>${fermionHtml()}` : '';
   return `<div class="ac-sec"><span class="ac-lab">TALE TIL TEKST</span><div class="ac-card ac-list">${rows}</div>
     <div class="ac-note">${S.info?.norwegian ? `Norsk: ${esc(S.info.norwegian_engine ?? 'klar')}.` : 'Norsk tale til tekst krever NB-Whisper på Mac mini-en.'} Språket oppdages automatisk; engelsk går til Voz, så Phonon, så NB-Whisper. Lyden forlater aldri huset.</div>${adm}</div>`;
 }
 async function aiCard(el) {
   el.dataset.v54Done = '1';
   el.innerHTML = aiHtml();
-  await Promise.all([backends(), loadAdmin()]);
+  await Promise.all([backends(), loadAdmin(), loadFermion()]);
   if (document.contains(el)) el.innerHTML = aiHtml();
 }
 const repaintAi = () => { for (const el of document.querySelectorAll('[data-v54-ai]')) el.innerHTML = aiHtml(); };
@@ -272,6 +296,33 @@ document.addEventListener('submit', async (e) => {
     if (r.ok) { A.cfg = j; setTimeout(async () => { await Promise.all([loadAdmin(true), backends(true)]); A.msg = ''; repaintAi(); }, 1800); }
   } catch (err) { A.msg = err.message; }
   A.busy = false; repaintAi();
+});
+document.addEventListener('submit', async (e) => {
+  const f = e.target.closest?.('[data-f53-form]');
+  if (!f) return;
+  e.preventDefault();
+  const body = { neutrinoUrl: f.neutrinoUrl.value.trim(), phononUrl: f.phononUrl.value.trim() };
+  const k = f.key.value.trim();
+  if (k) { body.neutrinoKey = k; body.phononKey = k; }
+  F.busy = true; F.msg = 'Lagrer …'; repaintAi();
+  try {
+    const r = await fetch('/api/admin/fermion53/config', { method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    F.msg = r.ok ? 'Lagret. Sjekker Mac mini-en …' : j.error || `Feil ${r.status}`;
+    if (r.ok) { setTimeout(async () => { await Promise.all([loadFermion(true), backends(true)]); F.msg = ''; repaintAi(); }, 2500); }
+  } catch (err) { F.msg = err.message; }
+  F.busy = false; repaintAi();
+});
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest?.('[data-f53-test]');
+  if (!t) return;
+  F.busy = true; F.msg = `Tester ${t.dataset.f53Test === 'neutrino' ? 'Neutrino (første svar kan ta litt tid)' : 'Phonon'} …`; repaintAi();
+  try {
+    const j = await fetch('/api/admin/fermion53/test', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ service: t.dataset.f53Test }) }).then((r) => r.json());
+    F.msg = j.ok ? `OK på ${j.ms} ms${j.model ? ` · ${j.model}` : ''}${j.text ? ` · «${String(j.text).slice(0, 60)}»` : ''}` : `Feilet: ${j.error ?? 'ukjent feil'}`;
+    await loadFermion(true);
+  } catch (err) { F.msg = err.message; }
+  F.busy = false; repaintAi();
 });
 document.addEventListener('click', async (e) => {
   if (e.target.closest?.('[data-v54-fresh]')) { await Promise.all([loadAdmin(true), backends(true)]); repaintAi(); return; }
