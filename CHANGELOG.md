@@ -2,7 +2,44 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
-## [4.46.0] – 25.10.2026 · prompt 51 – appene: Planlegging, familiekalender, mediekveld, søk, widgets, Watch, Wear OS og Android Auto
+## [4.47.0] – 25.10.2026 · Familie uten krasj, Blekkspruten, lokale modeller og kvitteringer bare i huset
+Inneholder også alt fra 4.46.0 nedenfor (appene: Planlegging, familiekalender, mediekveld, søk, widgets, Watch, Wear OS og Android Auto).
+- **Familie krasjer ikke lenger:**
+  - iPhone: profilbildet i kartnålene krasjet appen når noen hadde posisjon.
+  - Android: profilbilder i full oppløsning gjorde at appen gikk tom for minne.
+  - Hvert kort har nå en egen krasjgrense.
+- **Kvitteringer leses bare lokalt:** Gemini er helt fjernet fra kvitteringslesingen, også som reserve. Boliger bruker samme kvitteringsleser og -visning som resten av Finans.
+- **Glimt:**
+  - «Sist jeg var på Jem & Fix» svarer med dato og beløp.
+  - «jeg skal ha møte med lalila på olvia» blir «Møte med Laila» på Olivia.
+  - Brief med nye kort per innlogget bruker: Dagens fokus, Min reise, Huskeliste, Regninger, Klær, Nytt i kveld, Homelab, Domener og Aksjer.
+  - Ny figur: **Blekkspruten**. Hver bruker har sin egen figur.
+  - Chat viser tankegangen (trykk for å se stegene) og større miniatyrer av bilder.
+- **Hjem som fliser** i et rutenett med to kolonner. Avgang, Finans, Middag, Familie og Domener kan flyttes og skjules hver for seg.
+- **Finans:**
+  - Saldokortet har fire utseender (hold inne for å velge).
+  - Mer har fått farger, og titler og søkefelt kan skjules.
+  - Månedslinja er avrundet når den står fast øverst.
+  - Kvitteringspanelet på web scroller for seg selv.
+  - Butikklogoer i Filter og Boliger.
+- **Ruter** viser avgangene med en gang, før nye data er hentet.
+- **Vær:**
+  - Bakgrunnen følger værtype og tid på døgnet.
+  - Bryterne er glass-piller du kan dra.
+  - Søk går rett til stedssøket.
+- **Overganger:** sider glir inn på mobil. Web laster uten rar header og med en rolig overgang.
+- **«Nytt i versjon»** er lesbar, med overskrift per punkt.
+- **Appen heter Homelab.**
+- **Lokale modeller (nytt):**
+  - Desert Ant Labs: Eye sorterer bilder (kvittering, dokument eller foto) og retter rotasjon. Redact fjerner personopplysninger før tekst sendes til skymodeller. Gist lager emner til Nyheter. Tongue lar Glimt svare på ditt språk. Emo foreslår emoji. Moderator skjuler upassende bilder for barn.
+  - Valgfritt på Mac minien: Neutrino-1 8B i Chat og Phonon for tale til tekst. Phonon og Voz støtter ikke norsk ennå.
+  - Underdog Saluki 27B kan installeres på Mac minien (se `docs/modell-saluki.md`).
+  - Lisenser og kreditering står under «Om / Lisenser».
+- **Manuelt:**
+  - Bygg Docker-imaget på nytt, og forhåndslast modellene under Innstillinger → System → Lokale modeller.
+  - Fermion og Saluki installeres på Mac minien (se `docs/fermion-53.md` og `docs/modell-saluki.md`).
+
+## [4.46.0] – 25.10.2026 · (ble ikke sluppet alene – kom med i 4.47.0) · appene: Planlegging, familiekalender, mediekveld, søk, widgets, Watch, Wear OS og Android Auto
 - **Appene (iPhone/iPad og Android):**
   - Planlegging: sparemål, kalender for faste utgifter med saldoprognose, skattehjelp, prishistorikk og abonnementsjeger.
   - Familiekalender med «hvem kjører?».
