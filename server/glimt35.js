@@ -37,7 +37,7 @@ import * as ai from './ai-run.js';
 import { cardsOf, cleanCards, saveCards, auroraNotifyOf, setAuroraNotify } from './cards38.js'; // prompt 38: kortene i Now Brief
 import { julActive, cleanJul, JUL_DEFAULTS } from './jul40.js'; // prompt 40: julemodus
 import { mai17Active, cleanMai17, MAI17_DEFAULTS } from './mai17-41.js'; // prompt 41: 17. mai
-import { isVxId57, vxVoiceOf57, classicOf57, vxSpeakFor57, VX_LABEL57 } from './voxcpm57/voices.js'; // prompt 57: VoxCPM2 på Mac mini-en
+import { isVxId57, vxVoiceOf57, classicOf57, vxSpeakFor57, vxEnqueue57, VX_LABEL57 } from './voxcpm57/voices.js'; // prompt 57: VoxCPM2 på Mac mini-en
 import { vxReady57, vxConfigured57 } from './voxcpm57/health.js';
 
 const MOCK = () => process.env.MOCK_DATA === '1';
@@ -324,13 +324,15 @@ function vxWanted57(engine, voiceId) {
   if (engine === 'voxcpm') return VOICES.some((v) => v.id === voiceId) ? `vx-${voiceId}` : 'vx-nora';
   return null;
 }
-async function vxTry57(user, vxId, say, L, R) {
-  const r = await vxSpeakFor57(user, { voiceId: vxId, text: say, lang: L, speed: SPEED[R] });
+async function vxTry57(user, vxId, say, L, R, { live = false, purpose = null } = {}) {
+  // Prompt 59: med en gang (live) bare fra cachen; mangler lyden, lages den i bakgrunnen (ikke for nyheter, som skifter hver dag).
+  const r = await vxSpeakFor57(user, { voiceId: vxId, text: say, lang: L, speed: SPEED[R], cacheOnly: live });
+  if (!r) { if (purpose !== 'news') vxEnqueue57(user, { voiceId: vxId, text: say, lang: L, speed: SPEED[R] }); return null; }
   return { ...r, engine: 'voxcpm', fallback: null };
 }
 
 /** → {audio:Buffer, engine, cache:'hit'|'miss', voice, chars, text, contentType?, fallback?} */
-export async function speak(user, { text, character, voice, rate, lang, purpose } = {}) {
+export async function speak(user, { text, character, voice, rate, lang, purpose, live = false } = {}) {
   const s = glimtSettingsOf(user);
   const raw = String(text ?? '').trim();
   if (!raw) throw new TtsUnavailable('Skriv en tekst', 400);
@@ -345,7 +347,7 @@ export async function speak(user, { text, character, voice, rate, lang, purpose 
   let fallback = null;
   if (vxId) {
     if (vxReady57()) {
-      try { return await vxTry57(user, vxId, say, L, R); } catch (e) { if (e?.status === 400) throw new TtsUnavailable(e.message, 400); }
+      try { const r = await vxTry57(user, vxId, say, L, R, { live, purpose }); if (r) return r; } catch (e) { if (e?.status === 400) throw new TtsUnavailable(e.message, 400); }
     }
     fallback = 'voxcpm';
   }
@@ -354,7 +356,7 @@ export async function speak(user, { text, character, voice, rate, lang, purpose 
   try { engine = pickEngine(vxId && s.tts.engine === 'voxcpm' ? null : s.tts.engine); }
   catch (e) {
     // Ingen sky-motor: VoxCPM som siste reserve (ikke når nettleserstemmen er valgt med vilje).
-    if (!vxId && s.tts.engine !== 'browser' && vxReady57()) { try { return await vxTry57(user, `vx-${V.id}`, say, L, R); } catch { /* nettleseren */ } }
+    if (!vxId && s.tts.engine !== 'browser' && vxReady57() && !live) { try { const r = await vxTry57(user, `vx-${V.id}`, say, L, R); if (r) return r; } catch { /* nettleseren */ } }
     throw e;
   }
   const model = TTS_ENGINES.find((e) => e.id === engine).model;
@@ -392,7 +394,7 @@ ttsApi.post('/', async (c) => {
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b.text !== 'string') return c.json({ error: 'Forventet {text, character?, voice?, rate?, lang?, purpose?}' }, 400);
   try {
-    const r = await speak(c.get('user'), b);
+    const r = await speak(c.get('user'), { ...b, live: true }); // prompt 59: klientene venter – VoxCPM bare fra cachen
     return new Response(r.audio, { status: 200, headers: { 'Content-Type': r.contentType || 'audio/mpeg', 'Content-Length': String(r.audio.length), 'Cache-Control': 'private, max-age=2592000',
       'X-TTS-Engine': r.engine, 'X-TTS-Cache': r.cache, 'X-TTS-Voice': r.voice, 'X-TTS-Chars': String(r.chars), 'X-TTS-AI': '1', ...(r.fallback ? { 'X-TTS-Fallback': r.fallback } : {}) } }); // prompt 57: + X-TTS-AI, X-TTS-Fallback
   } catch (e) {

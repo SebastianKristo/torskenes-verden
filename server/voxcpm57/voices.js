@@ -204,7 +204,7 @@ const TYPE = { mp3: 'audio/mpeg', wav: 'audio/wav', opus: 'audio/ogg' };
  * Leser opp med en VoxCPM-stemme. Ukjent/slettet stemme → vx-nora. text er allerede normalisert for uttale.
  * → {audio, contentType, cache:'hit'|'miss', voice, chars, text}
  */
-export async function vxSpeakFor57(u, { voiceId, text, lang = 'no', speed = 1, cache = true, title = 'Glimt · stemme (VoxCPM)' } = {}) {
+export async function vxSpeakFor57(u, { voiceId, text, lang = 'no', speed = 1, cache = true, cacheOnly = false, title = 'Glimt · stemme (VoxCPM)' } = {}) {
   const v = vxVoiceOf57(u, voiceId) ?? vxVoiceOf57(u, 'vx-nora');
   const h = createHash('sha256').update(JSON.stringify(['voxcpm', 'VoxCPM2', v.id, v.kind === 'clone' ? v.sha : v.prompt, v.transcript ?? null, speed, lang, text])).digest('hex').slice(0, 40);
   if (cache) {
@@ -213,6 +213,7 @@ export async function vxSpeakFor57(u, { voiceId, text, lang = 'no', speed = 1, c
       if (existsSync(f) && Date.now() - statSync(f).mtimeMs < CACHE_MS) return { audio: readFileSync(f), contentType: TYPE[ext], cache: 'hit', voice: v.id, chars: text.length, text };
     }
   }
+  if (cacheOnly) return null; // prompt 59: opplesning med en gang bruker bare ferdig lyd – VoxCPM er for treg på Mac mini-en til å vente på
   const t0 = Date.now();
   let job = null;
   try { job = ai.jobStart({ user: u, task: 'tts', kind: 'tts', title, model: 'VoxCPM2', provider: 'voxcpm' }); } catch { /* jobbloggen er best effort */ }
@@ -224,6 +225,30 @@ export async function vxSpeakFor57(u, { voiceId, text, lang = 'no', speed = 1, c
     try { mkdirSync(cacheDir(u), { recursive: true, mode: 0o700 }); writeAtomic(join(cacheDir(u), `${v.id}.${h}.${EXT[r.contentType] ?? 'mp3'}`), r.audio); } catch (e) { console.warn('[voxcpm57] cache:', e.message); }
   }
   return { audio: r.audio, contentType: r.contentType, cache: 'miss', voice: v.id, chars: text.length, text };
+}
+
+/* ---------------- Prompt 59: VoxCPM-lyd lages i bakgrunnen ---------------- */
+// VoxCPM2 lager lyd ~13 ganger tregere enn sanntid på Mac mini-en (16 GB). Opplesning med en gang (nyheter, «Les høyt», Glimt) bruker
+// derfor bare ferdig lyd fra cachen; mangler den, brukes en rask stemme, og setningen legges i køen her så den er klar neste gang.
+// Briefens faste replikker lages på forhånd (brief34 pregenerate). Køen kjører én om gangen, uten duplikater, maks 40 ventende.
+const Q57 = { list: [], keys: new Set(), running: false };
+export const vxQueueState57 = () => ({ waiting: Q57.list.length, running: Q57.running });
+export function vxEnqueue57(u, opts) {
+  const k = createHash('sha256').update(JSON.stringify([u, opts.voiceId, opts.text, opts.lang, opts.speed])).digest('hex');
+  if (Q57.keys.has(k) || Q57.list.length >= 40) return false;
+  Q57.keys.add(k); Q57.list.push({ u, opts, k });
+  if (!Q57.running) runQ57();
+  return true;
+}
+async function runQ57() {
+  Q57.running = true;
+  try {
+    while (Q57.list.length) {
+      const j = Q57.list.shift();
+      try { await vxSpeakFor57(j.u, { ...j.opts, title: 'Glimt · stemme (VoxCPM, i bakgrunnen)' }); } catch (e) { console.warn('[voxcpm57] bakgrunn:', String(e?.message ?? e).slice(0, 120)); }
+      Q57.keys.delete(j.k);
+    }
+  } finally { Q57.running = false; }
 }
 
 /** Når en bruker slettes: hele stemmemappa, og referansene på Mac-en (best effort, i bakgrunnen). */

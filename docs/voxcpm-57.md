@@ -89,3 +89,12 @@ Mac-tjenestens API står i `tools/voxcpm/README.md`.
 - «Mac mini-en avviste avsenderen»: Glimt-serverens adresse står ikke i `allow` (installer med `--allow <ip>`).
 - «VoxCPM er ikke klar»: `voxcpm2-cli` eller GGUF-filene mangler, eller voxcpm/torch er ikke installert – kjør `./install.sh` igjen.
 - Treg første setning: forventet med GGUF (modellen lastes per forespørsel). Bytt til `--engine torch` hvis du har minne nok.
+
+## Fart på Mac mini-en (målt 25.10.2026) og hvordan Homelab bruker den
+- **GGUF (standard):** ca. 175 s for 13 s lyd, omtrent 13 ganger tregere enn sanntid. Modellen lastes bare mens den lager lyd (~3 GB).
+- **torch:** enda tregere på 16 GB. Modellen kjører i float32 på MPS (8–9 GB) og presser minnet sammen med qwen3:8b. Ikke anbefalt.
+- Derfor venter opplesning med en gang (nyhetsleseren, «Les høyt», Glimt-svar) **aldri** på VoxCPM. Finnes lyden i cachen, spilles
+  den med VoxCPM-stemmen. Ellers brukes en rask stemme (sky-motoren, eller nettleseren), og setningen lages med VoxCPM i bakgrunnen
+  til neste gang. Unntaket er nyheter, som skifter hver dag og ikke lages i bakgrunnen.
+- Briefens faste replikker lages på forhånd når briefen bygges, med «Les opp brief» på.
+- Anbefalt: egen, rask stemme for nyhetsleseren (Glimt-innstillinger › Stemmer).

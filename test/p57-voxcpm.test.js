@@ -57,6 +57,19 @@ const as = (ck) => async (path, method = 'GET', body, headers = {}) => { const r
 const A = as(await cookie('sebastian', 'testpassord1'));
 assert.equal((await A('/api/users', 'POST', { username: 'ingrid', password: 'ingridPassord123', role: 'bruker', name: 'Ingrid' })).status, 200);
 const I = as(await cookie('ingrid', 'ingridPassord123'));
+// Prompt 59: /api/tts venter aldri på VoxCPM (for treg på Mac mini-en). Første gang: rask reserve, og lyden lages i bakgrunnen
+// (nyheter lages ikke i bakgrunnen – de forhåndslages ikke, så her lages lyden direkte med speak() uten «live»).
+const G57 = await import('../server/glimt35.js');
+const vxIdle = async () => { for (let i = 0; i < 800 && (V.vxQueueState57().running || V.vxQueueState57().waiting); i++) await new Promise((r) => setTimeout(r, 25)); };
+const ingridId = async () => { const l = (await A('/api/users')).body; return (Array.isArray(l) ? l : l?.users ?? []).find((x) => x.username === 'ingrid')?.id; };
+async function ttsVx(body) {
+  let r = await I('/api/tts', 'POST', body);
+  if (r.status !== 200 || r.headers.get('x-tts-engine') !== 'voxcpm') {
+    if (body.purpose === 'news') await G57.speak(await ingridId(), { ...body }); else await vxIdle();
+    r = await I('/api/tts', 'POST', body);
+  }
+  return r;
+}
 
 /* ---------------- lyd ---------------- */
 
@@ -168,12 +181,17 @@ test('POST /api/tts med VoxCPM: ferdig stemme, cache, motor voxcpm + gammel stem
   await useVx();
   const s = await I('/api/glimt/settings');
   assert.equal(s.body.engines.find((x) => x.id === 'voxcpm').ready, true);
+  // Første gang med en gang: ingen sky-motor → nettleser-reserve (503), og VoxCPM lager lyden i bakgrunnen.
+  const r0 = await I('/api/tts', 'POST', { text: 'Neste er tannlege kl. 15:15.', voice: 'vx-henrik' });
+  assert.equal(r0.status, 503);
+  assert.equal(r0.body.fallback, 'browser');
+  await vxIdle();
   const r1 = await I('/api/tts', 'POST', { text: 'Neste er tannlege kl. 15:15.', voice: 'vx-henrik' });
   assert.equal(r1.status, 200, r1.text);
   assert.equal(r1.headers.get('content-type'), 'audio/mpeg');
   assert.equal(r1.headers.get('x-tts-engine'), 'voxcpm');
   assert.equal(r1.headers.get('x-tts-voice'), 'vx-henrik');
-  assert.equal(r1.headers.get('x-tts-cache'), 'miss');
+  assert.equal(r1.headers.get('x-tts-cache'), 'hit', 'lyden fra bakgrunnen ligger i cachen');
   assert.equal(r1.headers.get('x-tts-ai'), '1');
   const j = lastSpeech().json;
   assert.equal(j.input, 'Neste er tannlege klokka kvart over tre.', 'teksten er normalisert for uttale');
@@ -185,13 +203,16 @@ test('POST /api/tts med VoxCPM: ferdig stemme, cache, motor voxcpm + gammel stem
   assert.equal(calls.length, n, 'cache-treff spør ikke Mac-en');
   // Motoren voxcpm med en gammel stemme → vx-<samme>
   assert.equal((await I('/api/glimt/settings', 'PUT', { tts: { engine: 'voxcpm', voice: 'lys' } })).status, 200);
-  const r3 = await I('/api/tts', 'POST', { text: 'Hei Lys' });
+  const r3 = await ttsVx({ text: 'Hei Lys' });
   assert.equal(r3.headers.get('x-tts-engine'), 'voxcpm');
   assert.equal(r3.headers.get('x-tts-voice'), 'vx-lys');
   // Egen stemme for nyhetsleseren
   assert.equal((await I('/api/glimt/settings', 'PUT', { tts: { newsVoice: 'vx-nyhet' } })).body.tts.newsVoice, 'vx-nyhet');
-  assert.equal((await I('/api/tts', 'POST', { text: 'Dagens nyheter', purpose: 'news' })).headers.get('x-tts-voice'), 'vx-nyhet');
-  assert.equal((await I('/api/tts', 'POST', { text: 'Dagens Glimt' })).headers.get('x-tts-voice'), 'vx-lys');
+  const q0 = V.vxQueueState57().waiting;
+  assert.equal((await I('/api/tts', 'POST', { text: 'Dagens nyheter', purpose: 'news' })).status, 503, 'nyheter venter ikke på VoxCPM');
+  assert.equal(V.vxQueueState57().waiting, q0, 'nyheter legges ikke i bakgrunnskøen');
+  assert.equal((await ttsVx({ text: 'Dagens nyheter', purpose: 'news' })).headers.get('x-tts-voice'), 'vx-nyhet');
+  assert.equal((await ttsVx({ text: 'Dagens Glimt' })).headers.get('x-tts-voice'), 'vx-lys');
   assert.equal((await I('/api/glimt/settings', 'PUT', { tts: { newsVoice: 'feil' } })).status, 400);
   assert.equal((await I('/api/glimt/settings', 'PUT', { tts: { engine: 'openai', voice: 'nora', newsVoice: null } })).status, 200);
 });
@@ -236,7 +257,7 @@ test('egen stemme fra beskrivelse: per bruker, kan velges, andre ser den ikke', 
   assert.equal((await A(`/api/voices57/${designId}/preview`, 'POST', {})).status, 404);
   assert.equal((await A(`/api/voices57/${designId}`, 'DELETE')).status, 404);
   assert.equal((await I('/api/glimt/settings', 'PUT', { tts: { voice: designId } })).status, 200);
-  const t = await I('/api/tts', 'POST', { text: 'Med min egen stemme' });
+  const t = await ttsVx({ text: 'Med min egen stemme' });
   assert.equal(t.headers.get('x-tts-voice'), designId);
   assert.deepEqual(lastSpeech().json.voice, { kind: 'design', prompt: 'En rolig mannsstemme, middels tempo' });
   const p = await I(`/api/voices57/${designId}/preview`, 'POST', { text: 'Prøv meg' });
@@ -290,7 +311,7 @@ test('kloning: krever samtykke, 5–60 s, 16 kHz WAV lagres privat, Mac-en får 
   assert.ok(!(await A('/api/voices57')).body.voices.some((x) => x.id === cloneId));
   // Nyhetsleseren med klonet stemme
   assert.equal((await I('/api/glimt/settings', 'PUT', { tts: { newsVoice: cloneId } })).status, 200);
-  const t = await I('/api/tts', 'POST', { text: 'Nyheter i min stemme', purpose: 'news' });
+  const t = await ttsVx({ text: 'Nyheter i min stemme', purpose: 'news' });
   assert.equal(t.headers.get('x-tts-voice'), cloneId);
   assert.ok(readdirSync(join(dir, 'cache')).some((f) => f.startsWith(`${cloneId}.`)), 'lyden caches per bruker og stemme');
 });
@@ -326,7 +347,7 @@ test('ekte voxcpm_service.py (testmotor) ende til ende: design og klon via /api/
   t.after(() => proc.kill());
   for (let i = 0; i < 100; i++) { try { const r = await realFetch(`http://127.0.0.1:${port}/health`); if (r.status) break; } catch { await new Promise((r) => setTimeout(r, 50)); } }
   await useVx(`http://127.0.0.1:${port}`);
-  const r = await I('/api/tts', 'POST', { text: 'Hei fra den ekte tjenesten. Dette er setning to.', voice: 'vx-nyhet' });
+  const r = await ttsVx({ text: 'Hei fra den ekte tjenesten. Dette er setning to.', voice: 'vx-nyhet' });
   assert.equal(r.status, 200, r.text);
   assert.match(r.headers.get('content-type'), /^audio\/(mpeg|wav)$/);
   assert.ok(r.buf.length > 1000);
