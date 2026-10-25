@@ -59,6 +59,7 @@ Bruk: ./install.sh [valg]
   --ssd-cache MAPPE   KV-cache på SSD (--paged-ssd-cache-dir, standard ~/.omlx/cache, maks 20 GB)
   --no-vision         Ikke last ned $VISION_MODEL
   --skip-models       Ikke last ned modeller nå
+  --omlx-bin STI      bruk denne omlx (f.eks. ~/.omlx/bin/omlx fra Mac-appen) i stedet for Homebrew
   --upgrade           brew update && brew upgrade omlx
   --rotate-key        Lag ny nøkkel selv om det finnes en
   -h, --help          Denne hjelpen
@@ -88,6 +89,7 @@ while [ $# -gt 0 ]; do
     --ssd-cache=*) CACHE_DIR="${1#*=}"; shift ;;
     --no-vision) NO_VISION=1; shift ;;
     --skip-models) SKIP_MODELS=1; shift ;;
+    --omlx-bin) [ $# -ge 2 ] || die "--omlx-bin trenger en sti"; OMLX_BIN="$2"; shift 2 ;;
     --upgrade) UPGRADE=1; shift ;;
     --rotate-key) ROTATE=1; shift ;;
     -h|--help) usage; exit 0 ;;
@@ -113,21 +115,41 @@ if [ -z "$MEMORY_GB" ]; then MEMORY_GB=$(( RAM_GB - 7 )); [ "$MEMORY_GB" -ge 6 ]
 [ "$MEMORY_GB" -lt "$RAM_GB" ] || die "--memory-gb ($MEMORY_GB) må være mindre enn minnet i Mac-en ($RAM_GB GB)"
 [ "$MEMORY_GB" -ge 6 ] || warn "Minnevakt $MEMORY_GB GB: Qwen3-8B 4-bit (~4,6 GB) + KV-cache får knapt plass."
 
-# --- oMLX fra Homebrew --------------------------------------------------------
-if ! brew list --versions omlx >/dev/null 2>&1; then
-  info "Installerer oMLX fra Homebrew (jundot/omlx, uten egne Metal-kjerner – Xcode trengs ikke) …"
-  brew tap jundot/omlx https://github.com/jundot/omlx
-  brew install jundot/omlx/omlx
-elif [ "$UPGRADE" = 1 ]; then
-  info "Oppgraderer oMLX …"
-  brew update && brew upgrade omlx || true
-fi
+# --- oMLX: Homebrew, ellers Mac-appen (ferdigbygd .dmg) -----------------------
+# Homebrew-formelen bygger noen pakker fra kildekode og har feilet i etterkontrollen (spaCy: «OverflowError: Python int too large to
+# convert to C ssize_t»). Mac-appen fra github.com/jundot/omlx/releases er ferdigbygd og legger en CLI i ~/.omlx/bin/omlx – den brukes
+# når Homebrew-varianten mangler eller feiler. Sett --omlx-bin STI for å peke på en annen omlx.
+BREW_OK=0
+if [ -z "${OMLX_BIN:-}" ] && [ ! -x "$HOME/.omlx/bin/omlx" ]; then
+  if brew list --versions omlx >/dev/null 2>&1; then BREW_OK=1
+  else
+    info "Installerer oMLX fra Homebrew (jundot/omlx, uten egne Metal-kjerner – Xcode trengs ikke) …"
+    if brew tap jundot/omlx https://github.com/jundot/omlx && brew install jundot/omlx/omlx; then BREW_OK=1
+    else warn "Homebrew-installasjonen av oMLX feilet (kjent feil i formelen). Prøver Mac-appen i stedet."; fi
+  fi
+elif brew list --versions omlx >/dev/null 2>&1; then BREW_OK=1; fi
+if [ "$BREW_OK" = 1 ] && [ "$UPGRADE" = 1 ]; then info "Oppgraderer oMLX …"; brew update && brew upgrade omlx || true; fi
 BREW_PREFIX="$(brew --prefix)"
-OMLX_BIN="$BREW_PREFIX/bin/omlx"
-[ -x "$OMLX_BIN" ] || OMLX_BIN="$(command -v omlx || true)"
-[ -n "$OMLX_BIN" ] && [ -x "$OMLX_BIN" ] || die "Fant ikke omlx etter installasjonen."
+if [ -z "${OMLX_BIN:-}" ]; then
+  for c in "$BREW_PREFIX/bin/omlx" "$HOME/.omlx/bin/omlx" "$(command -v omlx || true)"; do
+    if [ -n "$c" ] && [ -x "$c" ] && [ "$c" != "$BREW_PREFIX/bin/omlx" -o "$BREW_OK" = 1 ]; then OMLX_BIN="$c"; break; fi
+  done
+fi
+if [ -z "${OMLX_BIN:-}" ] || [ ! -x "$OMLX_BIN" ]; then
+  die "Fant ikke omlx. Installer Mac-appen: last ned siste oMLX-*.dmg fra https://github.com/jundot/omlx/releases, dra den til Programmer, åpne den én gang (den lager ~/.omlx/bin/omlx), slå av «start server automatisk» i appen (vi kjører vår egen tjeneste på port 18040), og kjør ./install.sh på nytt."
+fi
+# Python til vakten og nedlastingene: oMLX sin egen fra Homebrew, ellers et eget venv med huggingface_hub.
 OPY="$BREW_PREFIX/opt/omlx/libexec/bin/python"
-[ -x "$OPY" ] || OPY="$(command -v python3)"
+if [ "$BREW_OK" != 1 ] || [ ! -x "$OPY" ]; then
+  VENV="$APP_DIR/venv"
+  if [ ! -x "$VENV/bin/python" ]; then
+    PYB=""; for v in python3.12 python3.11 python3.13; do command -v "$v" >/dev/null 2>&1 && { PYB="$(command -v "$v")"; break; }; done
+    [ -n "$PYB" ] || die "Fant ikke Python 3.11–3.13 (brew install python@3.12)."
+    mkdir -p "$APP_DIR" && "$PYB" -m venv "$VENV" || die "Kunne ikke lage venv i $VENV"
+  fi
+  "$VENV/bin/python" -c 'import huggingface_hub' 2>/dev/null || "$VENV/bin/python" -m pip install -q --upgrade pip huggingface_hub || die "Kunne ikke installere huggingface_hub i $VENV"
+  OPY="$VENV/bin/python"
+fi
 "$OPY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)' || die "Python for vakten ($OPY) er for gammel."
 info "oMLX: $("$OMLX_BIN" --version 2>/dev/null || echo omlx) ($OMLX_BIN)"
 

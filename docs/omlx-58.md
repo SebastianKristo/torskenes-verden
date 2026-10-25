@@ -20,7 +20,7 @@ tools/omlx/install.sh                       # eller: --model-dir /Volumes/AI/oml
 
 Skriptet gjør dette:
 
-1. `brew tap jundot/omlx https://github.com/jundot/omlx` og `brew install jundot/omlx/omlx`.
+1. `brew tap jundot/omlx https://github.com/jundot/omlx` og `brew install jundot/omlx/omlx`. Feiler Homebrew (kjent feil 25.10.2026: spaCy «OverflowError: Python int too large to convert to C ssize_t» i etterkontrollen), bruker skriptet Mac-appen: last ned `oMLX-*.dmg` fra https://github.com/jundot/omlx/releases, dra den til Programmer, åpne den én gang (den lager `~/.omlx/bin/omlx`), slå av at appen starter serveren selv, og kjør `./install.sh` på nytt (eller `./install.sh --omlx-bin ~/.omlx/bin/omlx`). Nedlastingene og vakten bruker da et eget Python-venv i `~/Library/Application Support/omlx58/venv`.
 2. Det stopper Homebrew-tjenesten `omlx`. Den lytter på port 8000, og den porten bruker Neutrino (Fermion).
 3. Det laster ned `mlx-community/Qwen3-8B-4bit` (~4,6 GB) og `mlx-community/Qwen2.5-VL-7B-Instruct-4bit` (~5,6 GB) til
    `~/.omlx/models/mlx-community/…`.
