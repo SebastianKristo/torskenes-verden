@@ -238,7 +238,7 @@ if (matchMedia('(pointer:coarse)').matches) {
     pull.style.transform = `translate(-50%,${Math.min(0, -60 + d * 0.7)}px)`;
   };
   addEventListener('touchstart', (e) => {
-    if (P.open || e.touches.length !== 1 || e.target.closest?.('input,textarea,select,[contenteditable],.leaflet-container,[data-no-pull51]')) { y0 = null; return; }
+    if (P.open || e.touches.length !== 1 || e.target.closest?.('input,textarea,select,[contenteditable],.leaflet-container,[data-no-pull51],[role=dialog],.ch-sheet-bg,.wn52-veil')) { y0 = null; return; }
     y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; ok = y0 < innerHeight * 0.5 && scrollParentAtTop(e.target);
   }, { passive: true });
   addEventListener('touchmove', (e) => {

@@ -41,7 +41,10 @@ test('«Nytt i denne versjonen»: vises første gang, ikke etter «Ok», og igje
   const card = page.locator('[data-qa51="whatsnew"]');
   await card.waitFor({ timeout: 15_000 });
   const w = await json(ctx, 'GET', '/api/whatsnew');
-  assert.match(await card.innerText(), new RegExp(`Nytt i versjon ${w.body.version.replace(/\./g, '\\.')}`));
+  // Prompt 52: papirkortet har etiketten «NYTT I HOMELAB» og tittelen «Versjon x.y.z».
+  const txt = await card.innerText();
+  assert.match(txt, /nytt i homelab/i);
+  assert.match(txt, new RegExp(`Versjon ${w.body.version.replace(/\./g, '\\.')}`));
   await card.getByRole('button', { name: 'Ok' }).click();
   await page.waitForFunction(() => !document.querySelector('[data-qa51="whatsnew"]'));
   await page.waitForFunction(async () => (await (await fetch('/api/whatsnew')).json()).seen === true);

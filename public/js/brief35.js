@@ -9,6 +9,7 @@ import { api, esc, p2 } from './util.js';
 import { fig, hostFor, WHO, NAME_COLOR } from './glimt-figs.js';
 import { gs, loadGlimt, saveGlimt, say, stopSpeak, onSpeak, tts, replayAfterTap, voiceName, glimtSettingsHtml, glimtClick, glimtChange, glimtSubmit } from './glimt35.js';
 import { outfit } from './glimt-outfits36.js'; // prompt 38: Glimt i prestedrakt ved bibelvers
+import { brief52Top, brief52Bottom, brief52Click, loadBrief52 } from './brief52.js'; // prompt 52: kort per innlogget bruker
 import { briefCards38, cardOrder38, giftAdd38 } from './brief38.js'; // prompt 38: Pakker, Familie, Skole og jobb, Bursdager, Nordlys
 
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
@@ -165,6 +166,7 @@ export function openBrief({ tapped = true } = {}) {
   P.el = el;
   bindPanel(el);
   paintPanel();
+  loadBrief52(() => paintPanel(), true);
   loadBrief().then(() => {
     // Guide-runden starter automatisk første gang denne briefen åpnes i dag (kan slås av).
     const key = `gb_tour_${new Date().toLocaleDateString('sv-SE')}_${B.kind}`;
@@ -229,7 +231,9 @@ function panelHtml() {
     <div class="gb-sc"><div class="gb-pad">
       <div class="gb-spkw">${spkHtml()}</div>
       <div class="gb-title gb38-sum"><span>${esc(v.summary)}</span></div>
+      ${brief52Top()}
       ${cardOrder38({ cards: gs().cards ?? B.data?.cards }, { vaer, bibel: bibleHtml('top'), huske: todosHtml(v), kal, abo, ...briefCards38(B.data), nyh })}${bibleHtml('bottom')}
+      ${brief52Bottom()}
       <span class="gb-foot">${esc(foot)}</span>
     </div></div>
     ${figOn() ? `<div class="gb-guide">${bub}<button type="button" class="gb-figbtn" data-gb-fig aria-label="${bubble ? 'Avslutt guide-runden' : 'Start guide-runden med Glimt'}">${pop ? `<span class="gf-pop">${fig(ch, 82, mood)}</span>` : fig(ch, 82, mood)}</button></div>` : ''}
@@ -263,6 +267,7 @@ function bindPanel(el) {
   el.addEventListener('click', (e) => {
     const t = e.target;
     if (P.cfg && t.closest('.gb-sheet') && glimtClick(e, () => { P.sheetTop = el.querySelector('.gb-sheet')?.scrollTop ?? 0; paintPanel(); paintCards(); })) return;
+    if (brief52Click(e, { close: closeBrief, redraw: paintPanel })) return; // prompt 52
     if (t.closest('[data-gb-close]')) { try { navigator.vibrate?.(8); } catch { /* */ } closeBrief(); return; }
     // Prompt 40: «✦ Glimt-sammendrag ›» lukker briefen og åpner Nyhetsleseren rett på Glimt-siden.
     if (t.closest('[data-gb40-glimt]')) { e.preventDefault?.(); closeBrief(); import('./news.js').then((m) => m.openNews({ glimt: true })).catch(() => {}); return; }

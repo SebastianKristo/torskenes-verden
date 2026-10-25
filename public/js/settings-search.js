@@ -71,7 +71,7 @@ const LOCAL = [
   ['backup', 'Automatisk backup', 'Backup → Automatisk', 'backup', 'backup sikkerhetskopi automatisk gjenopprett nas smb', 'bk-auto'],
   // Prompt 35: GLIMT → Glimt (figur, brief, stemme og venner).
   ['glimt', 'Glimt', 'Glimt', 'glimt', 'glimt brief morgenbrief kveldsbrief dagsbrief nattbrief venner guide', 'glimt'],
-  ['glimt-figur', 'Glimt-figur', 'Glimt → Glimt-figur', 'glimt', 'figur figurer karakter maskot gris ugle sky dråpe stjerne spire halo boble', 'glimt-fig'],
+  ['glimt-figur', 'Glimt-figur', 'Glimt → Glimt-figur', 'glimt', 'figur figurer karakter maskot gris ugle sky dråpe stjerne spire halo boble blekksprut', 'glimt-fig'],
   ['glimt-stemme', 'Stemme og opplesning', 'Glimt → Stemmemotor', 'glimt', 'stemme stemmer opplesning les opp tts tale openai elevenlabs azure engelsk tempo', 'glimt-voice'],
   ['backup-now', 'Ta backup nå', 'Backup → Ta backup nå', 'backup', 'backup nå manuell kjør start', 'bk-now'],
 ].map(([id, title, path, web, kw, anchor]) => ({ id, title, path, keywords: kw.split(' '), description: '', route: { web }, ...(anchor ? { anchor } : {}) }));

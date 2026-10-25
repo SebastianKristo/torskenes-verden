@@ -42,6 +42,7 @@ import * as study44 from './study44.js'; // prompt 44: nytt Studie-design
 import { initWeb45, after45 } from './web45.js'; // prompt 45
 import { initWeb46, after46, renderKart46 } from './web46.js'; // prompt 46: Kart, nyheter, bakgrunn m.m.
 import { renderFam51, renderMedia51, afterMedfam51 } from './medfam51.js'; // prompt 51 (MEDFAM51): Familiekalender og «I kveld»
+import { initWeb52, after52 } from './web52.js'; // prompt 52 (WEB52H): oppstart, sideanimasjon, Ruter-buffer m.m.
 
 const ROUTES = { dash: dash.render, studie: study44.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, gjoremal: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, media: media43.render, kart: renderKart46, familiekalender: renderFam51, mediakveld: renderMedia51, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
@@ -87,6 +88,7 @@ function renderRoute() {
   after45(route, view); // prompt 45
   after46(route, view); // prompt 46
   afterMedfam51(route, view); // prompt 51 (MEDFAM51)
+  after52(route, view); // prompt 52 (WEB52H)
   // Rom er en underside av «Mer» på mobil.
   const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'gjoremal', 'domener', 'bursdager', 'kalender', 'media', 'kart', 'familiekalender', 'mediakveld'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
@@ -195,6 +197,7 @@ async function main() {
   initWeb44(lay44);
   initWeb45();
   initWeb46();
+  initWeb52();
   bindSearch();
   setupDnd(document.querySelector('header'));
   study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);

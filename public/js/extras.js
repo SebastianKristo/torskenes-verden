@@ -3,6 +3,7 @@ import { esc, hm, api, backdropClick, haptic } from './util.js';
 import { store, on, emit } from './store.js';
 import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
 import { addQuick, preview, quickLabel } from './kal-quick.js';
+import { aiParse52, waitParse52, apptText52, apptLabel52 } from './glimt52.js'; // prompt 52: kalenderkontekst med AI
 import { glimt, setGlimt } from './glimt.js';
 import { assist, boldHtml, wxRoute } from './assist.js';
 import { toast } from './toast.js';
@@ -126,7 +127,9 @@ function addHuske(form, q) {
   const d = form.querySelector('.sq-drop'); if (d) d.hidden = true;
 }
 function addAppt(form, q) {
-  addQuick(q);
+  // Prompt 52: AI-tolkningen (tittel, sted, dato, tid) sendes som ryddig tekst til hurtig-timen.
+  const a = sq.ap52 && form.q.value.trim() === q ? sq.ap52 : null;
+  addQuick(a ? apptText52(a) : q);
   form.q.value = ''; syncSearch(form.q); form.q.blur();
   const d = form.querySelector('.sq-drop'); if (d) d.hidden = true;
 }
@@ -174,15 +177,23 @@ function drawDrop(form) {
   if (sq.sel >= sq.items.length) sq.sel = -1;
   const ai = sq.ai && sq.ai.q === v.trim() ? sq.ai : null;
   const err = lv && !sq.items.length && sq.suggErr ? sq.suggErr : '';
-  const ap = apptOf(v), hu = huskeOf(v);
+  // Prompt 52: med Glimt som motor tolker AI-tilkoblingen beskjeden (minst 3 ord, 450 ms pause) og overstyrer regelparseren.
+  const a52 = engine === 'ai' && lv && !isUrl(v.trim()) ? aiParse52(v, () => { if (form.q.value === v) drawDrop(form); }) : null;
+  let ap = apptOf(v), hu = huskeOf(v);
+  if (a52?.type === 'kalender' && a52.title) { ap = { ...a52, ai52: true }; hu = null; }
+  else if (a52?.type === 'huske') { ap = null; hu = hu || v.trim(); }
+  else if (a52?.type) ap = null; // spørsmål/annet: vanlig svar
+  if (ap && a52?.pending) ap = { ...ap, pending52: true };
+  const pend52 = !!a52?.pending;
+  sq.ap52 = ap?.ai52 ? ap : null;
   const open = document.activeElement === input && (sq.items.length > 0 || !lv || !!ai || !!err || !!ap || !!hu);
   drop.hidden = !open;
   input.setAttribute('aria-expanded', String(open));
   if (!open) return;
   if (ai) { drop.innerHTML = aiPanel(ai); return; }
   // Mørkt forslag øverst: kalender-ikon · «Nina frisør» · «fre 25. sep · 14:30» · Legg i kalender (↵ gjør det samme).
-  const apH = ap ? `<div class="sq-appt" role="option" data-sq-appt aria-label="Legg i kalender: ${esc(ap.title)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v15H4zM4 10h16M9 3v4M15 3v4"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(ap.title)}</b><span>${esc(quickLabel(ap))}</span></span><span class="sq-appt-b">Legg i kalender</span></div>` : '';
-  const huH = hu ? `<div class="sq-appt sq-huske41" role="option" data-sq-huske aria-label="Legg i Huskeliste: ${esc(hu)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(hu.length > 70 ? `${hu.slice(0, 70)} …` : hu)}</b><span>Glimt deler opp i punkter</span></span><span class="sq-appt-b">Legg i Huskeliste</span></div>` : '';
+  const apH = ap ? `<div class="sq-appt" role="option" data-sq-appt aria-label="Legg i kalender: ${esc(ap.title)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v15H4zM4 10h16M9 3v4M15 3v4"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(ap.title)}</b><span>${ap.pending52 ? '✦ tolker … · ' : ''}${esc(ap.ai52 ? apptLabel52(ap, quickLabel(ap)) : quickLabel(ap))}</span></span><span class="sq-appt-b">Legg i kalender</span></div>` : '';
+  const huH = hu ? `<div class="sq-appt sq-huske41" role="option" data-sq-huske aria-label="Legg i Huskeliste: ${esc(hu)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3 8-8M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h11"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(hu.length > 70 ? `${hu.slice(0, 70)} …` : hu)}</b><span>${pend52 ? '✦ tolker … · ' : ''}Glimt deler opp i punkter</span></span><span class="sq-appt-b">Legg i Huskeliste</span></div>` : '';
   if (huH) { drop.innerHTML = huH + (sq.items.length ? sq.items.slice(0, 4).map((x, i) => `<div class="sq-item" role="option" id="sq-${i}" aria-selected="${sq.sel === i}" data-sq-i="${i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.h ? HIC : SIC}"/></svg><span class="sq-t" data-no-i18n><b>${esc(x.t)}</b></span></div>`).join('') : ''); return; }
   if (err) { drop.innerHTML = apH + (apH ? '' : `<div class="sq-empty">Forslag utilgjengelig: ${esc(err)}</div>`); return; }
   const split = (t) => { const i = lv ? t.toLowerCase().indexOf(lv) : -1; return i === 0 ? `<span>${esc(t.slice(0, lv.length))}</span><b>${esc(t.slice(lv.length))}</b>` : `<b>${esc(t)}</b>`; };
@@ -496,6 +507,19 @@ export function bindSearch() {
     if (GL.q) closeAns();
     // Prompt 45: med Glimt som motor går alt til den felles agenten (forstår, planlegger, utfører). Lokal tolking bare uten agent.
     const ag = engine === 'ai' && agentOn();
+    // Prompt 52: Enter før AI har svart: vent opptil 2,5 s og bruk AI-svaret (kalender/huske), ellers som før.
+    if (!it && engine === 'ai' && q.trim().split(/\s+/).length >= 3 && !sq.ap52) {
+      const form = e.target;
+      waitParse52(q).then((a) => {
+        if (a?.type === 'kalender' && a.title) { sq.ap52 = a; addAppt(form, q.trim()); }
+        else if (a?.type === 'huske') addHuske(form, q.trim());
+        else if (!a && !ag && apptOf(q)) addAppt(form, q.trim());
+        else if (!a && !ag && huskeOf(q)) addHuske(form, q.trim());
+        else runSearch(q);
+      });
+      return;
+    }
+    if (!it && sq.ap52) { addAppt(e.target, q.trim()); return; }
     if (!it && !ag && apptOf(q)) { addAppt(e.target, q.trim()); return; }
     if (!it && !ag && huskeOf(q)) { addHuske(e.target, q.trim()); return; }
     if (aiOn()) askAi(e.target, q); else runSearch(q);

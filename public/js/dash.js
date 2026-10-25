@@ -1,4 +1,5 @@
 import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile, api, logoImg, NOT_SET_UP } from './util.js';
+import { home52Html } from './home52.js'; // prompt 52: Hjem 3a i PWA-en
 import { store, widget, card, refresh, errBox, on, load } from './store.js';
 import { renderSearch, popHandler } from './extras.js';
 import { hiddenWidgets } from './profile.js';
@@ -84,7 +85,7 @@ function ruterColor(d) {
   return [RUTER[k], '#fff'];
 }
 // Prompt 51 (A11Y51): linjemerket skal ha minst 4,5:1 kontrast (11 px tekst). Mørkner bakgrunnen (samme fargetone) til kravet er nådd.
-function ruterColorA11y(d) {
+export function ruterColorA11y(d) {
   const [bg, fg] = ruterColor(d);
   const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
@@ -449,14 +450,9 @@ function render2c(n, cardH) {
   return `<div class="p-dash">${photoWindow(n)}
     <div class="p-paper">
       <div class="p-search p38-search">${store.me.hideSearch ? '' : renderSearch()}</div>
-      <div id="p-ticker-slot" class="p38-tick"></div>
+      ${isMobile() ? '<div id="p-ticker-slot" class="p38-tick" hidden></div>' : '<div id="p-ticker-slot" class="p38-tick"></div>'}
       ${updBanner('dash')}
-      ${!isMobile() ? grid2c() : `<div class="p-cols">
-        <div class="p-col">${card('p_school')}${hiddenWidgets().has('d_cal') ? '' : card('d_cal')}</div>
-        <div class="p-col">${lab('AVGANGER')}<div id="trips" class="p-trips">${renderTrips()}</div>${hiddenWidgets().has('d_kal') ? '' : card('p_kal')}${hiddenWidgets().has('d_energy') ? '' : card('p_energy')}${card('p_wx')}${card('p_pk')}</div>
-        <div class="p-col">${hiddenWidgets().has('d_pos') ? '' : card('p_pos')}${hiddenWidgets().has('d_bday') ? '' : card('p_bday')}${card('p_play')}${hiddenWidgets().has('d_trading') && hiddenWidgets().has('d_eco') ? '' : card('p_money')}${hiddenWidgets().has('d_links') ? '' : card('p_links')}</div>
-      </div>
-      <div class="grid" data-dnd="dash2c">${['d_upcoming', 'd_media', 'd_media_hist', 'd_trading', 'd_eco'].map(cardH).join('')}</div>`}
+      ${!isMobile() ? grid2c() : home52Html() /* prompt 52: Hjem 3a – 2-kolonners rutenett med fliser (home52.js); den gamle mobilvisningen (p-cols) brukes ikke lenger */}
     </div></div>`;
 }
 

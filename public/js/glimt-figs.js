@@ -1,7 +1,7 @@
 // Prompt 35 (WEB35): Glimt-figurene – nøyaktig port av fasiten design_handoff_homelab/prompts/prompt-35-pakke/glimt-figurer.js
 // (fig(id, størrelse, humør)) til ren HTML uten React. Keyframes (gfBob, gfSpin …) ligger i /assets/css/glimt-figs.css.
 // Brukes av web (brief, Hjem-kort, Innstillinger → Glimt) og av PWA-en (/assets/js/glimt-figs.js).
-//   fig(id, S, mood)  → HTML-streng. id: glimt|halo|boble|antenne|bane|pastell|natt|sky|drape|ugle|stjerne|spire|gris
+//   fig(id, S, mood)  → HTML-streng. id: glimt|halo|boble|antenne|bane|pastell|natt|sky|drape|ugle|stjerne|spire|gris|blekk (prompt 52)
 //                        mood: 'idle' | 'glad' | 'talk' | 'sov' (også 'sover' / 'sleep' / 'happy')
 //   figNode(id, S, mood) → Element.   FIGS: [{id, name, family}].   hostFor(sel, date) → vert (Glimt → Natt 21–06).
 const UNITLESS = new Set(['opacity', 'zIndex', 'flex', 'fontWeight', 'lineHeight', 'order']);
@@ -72,18 +72,40 @@ function figRaw(id,S,mood){const ink='#1b1a17',ck='rgba(232,121,74,.38)';
     e('span',{style:{position:'absolute',left:S*.12,top:S*.3,width:S*.76,height:S*.6}},...face(S*.76,mood,'#173a22','rgba(255,170,150,.55)',{ey:'34%',my:'58%',cy:'50%'})),...(zz(S,mood,'#2f7a4f')||[])],1)}
 }
 
+
+// ---- Prompt 52: Blekksprut (fasit prompt-52-pakke/design/glimt-figurer.js → blekk), SVG-attributter i kebab-form ----
+let bkN = 0;
+function figBlekk(S,mood){const u='bk'+(++bkN),G=n=>'url(#'+u+n+')',bw=S*1.16,bh=bw*536/600,box={position:'absolute',left:-S*.08,top:S*.04,width:bw,height:bh,pointerEvents:'none'};
+  const ring=(cx,cy,r)=>e('g',{transform:'rotate('+r+' '+cx+' '+cy+')'},e('ellipse',{cx:cx+2,cy:cy+6,rx:47,ry:58,fill:'#6e1c2a',opacity:.28,filter:G('b')}),e('ellipse',{cx,cy,rx:47,ry:58,fill:G('r')}),e('ellipse',{cx,cy:cy+3,rx:37,ry:47,fill:G('i')}),e('path',{d:'M'+(cx-36)+' '+(cy-30)+' Q'+cx+' '+(cy-66)+' '+(cx+36)+' '+(cy-30),fill:'none',stroke:'#f3b3bc','stroke-width':5,'stroke-linecap':'round',opacity:.55,filter:G('s')}));
+  const pup=(cx,cy)=>mood==='glad'?e('path',{d:'M'+(cx-22)+' '+(cy+6)+' Q'+cx+' '+(cy-26)+' '+(cx+22)+' '+(cy+6),fill:'none',stroke:'#120a0c','stroke-width':9,'stroke-linecap':'round'}):mood==='sov'?e('path',{d:'M'+(cx-22)+' '+cy+' Q'+cx+' '+(cy+20)+' '+(cx+22)+' '+cy,fill:'none',stroke:'#120a0c','stroke-width':8,'stroke-linecap':'round'}):e('g',{style:{transformBox:'fill-box',transformOrigin:'50% 50%',animation:'gfBlink 4.2s infinite'}},e('ellipse',{cx,cy:cy+2,rx:25,ry:35,fill:G('p')}),e('ellipse',{cx:cx-4,cy:cy-16,rx:11,ry:7,fill:'#fff',opacity:.95}),e('ellipse',{cx:cx+6,cy:cy+22,rx:7,ry:3.5,fill:'#fff',opacity:.18}));
+  const mouth=mood==='talk'?e('ellipse',{cx:288,cy:338,rx:17,ry:14,fill:G('m'),style:{transformBox:'fill-box',transformOrigin:'50% 0%',animation:'gfTalk .3s ease-in-out infinite'}}):mood==='glad'?e('g',null,e('path',{d:'M250 322 Q288 372 326 322 Q288 336 250 322Z',fill:G('m')}),e('ellipse',{cx:288,cy:346,rx:14,ry:7,fill:'#e2707e'})):mood==='sov'?e('ellipse',{cx:288,cy:336,rx:8,ry:7,fill:'#4a0f18',opacity:.75}):e('path',{d:'M262 328 Q288 350 314 328',fill:'none',stroke:'#4f1220','stroke-width':6,'stroke-linecap':'round'});
+  const cheeks=mood==='glad'||mood==='talk'?[e('ellipse',{cx:170,cy:300,rx:30,ry:16,fill:'#ff8f9f',opacity:.45,filter:G('b')}),e('ellipse',{cx:392,cy:290,rx:30,ry:16,fill:'#ff8f9f',opacity:.45,filter:G('b')})]:[];
+  const tear=mood==='glad'?e('g',{style:{animation:'gfDrip 2.6s ease-in infinite'}},e('path',{d:'M192 268 C182 290 166 304 166 322 A26 26 0 0 0 218 322 C218 304 202 290 192 268Z',fill:G('w')}),e('ellipse',{cx:183,cy:316,rx:6,ry:11,fill:'#fff',opacity:.85,transform:'rotate(18 183 316)'})):null;
+  const st=(o,c)=>e('stop',{offset:o,'stop-color':c});
+  const svg=e('svg',{viewBox:'0 0 600 536',style:{...box,overflow:'visible'}},
+    e('defs',null,
+      e('radialGradient',{id:u+'r',cx:'42%',cy:'30%',r:'75%'},st(0,'#e58c98'),st(1,'#b04656')),
+      e('radialGradient',{id:u+'i',cx:'50%',cy:'40%',r:'70%'},st(0,'#c4596a'),st(1,'#a63d4d')),
+      e('radialGradient',{id:u+'p',cx:'45%',cy:'70%',r:'60%'},st(0,'#555'),st(.6,'#121212'),st(1,'#000')),
+      e('linearGradient',{id:u+'m',x1:0,y1:0,x2:0,y2:1},st(0,'#3a0a12'),st(1,'#6a1a28')),
+      e('linearGradient',{id:u+'w',x1:0,y1:0,x2:0,y2:1},st(0,'#c9efff'),st(.55,'#5cc0f4'),st(1,'#2a86d6')),
+      e('filter',{id:u+'b',x:'-50%',y:'-50%',width:'200%',height:'200%'},e('feGaussianBlur',{stdDeviation:6})),
+      e('filter',{id:u+'s'},e('feGaussianBlur',{stdDeviation:2}))),
+    ...cheeks,ring(222,222,-6),ring(332,214,6),pup(224,228),pup(330,220),mouth,tear);
+  return wrap(S,mood,[e('img',{src:'/assets/img/glimt-blekk-base.png',alt:'',draggable:'false',style:{...box,height:'auto',userSelect:'none',filter:'drop-shadow(0 '+(S*.03)+'px '+(S*.05)+'px rgba(80,20,30,.25))'}}),svg,...(zz(S,mood,'#b3303f')||[])],1.04)}
+
 // ---- slutt fasit ----
 
 const MOOD = { idle: 'idle', glad: 'glad', happy: 'glad', talk: 'talk', sov: 'sov', sover: 'sov', sleep: 'sov', point: 'talk', wave: 'glad' };
 export const FIGS = [
   ['glimt', 'Glimt', 'ring'], ['halo', 'Halo', 'ring'], ['boble', 'Boble', 'ring'], ['antenne', 'Antenne', 'ring'], ['bane', 'Bane', 'ring'],
   ['pastell', 'Pastell', 'ring'], ['natt', 'Natt', 'ring'], ['sky', 'Sky', 'venn'], ['drape', 'Dråpe', 'venn'], ['ugle', 'Ugle', 'venn'],
-  ['stjerne', 'Stjerne', 'venn'], ['spire', 'Spire', 'venn'], ['gris', 'Gris', 'venn'],
+  ['stjerne', 'Stjerne', 'venn'], ['spire', 'Spire', 'venn'], ['gris', 'Gris', 'venn'], ['blekk', 'Blekksprut', 'venn'],
 ].map(([id, name, family]) => ({ id, name, family }));
 export const FIG_IDS = FIGS.map((f) => f.id);
 // Navn i boblen og fargen på navnet (fasit Glimt Brief.dc.html WHO/NC).
-export const WHO = { gris: 'GRIS', glimt: 'GLIMT', natt: 'GLIMT', sky: 'SKY', drape: 'DRÅPE', ugle: 'UGLE', stjerne: 'STJERNE', spire: 'SPIRE', halo: 'GLIMT', boble: 'GLIMT', antenne: 'GLIMT', bane: 'GLIMT', pastell: 'GLIMT' };
-export const NAME_COLOR = { gris: '#f6b3c1', glimt: '#ffc7b8', natt: '#ffe7a8', sky: '#bcd7ef', drape: '#9fd0f2', ugle: '#e8c49a', stjerne: '#ffb38a', spire: '#9fd8a8', halo: '#ffc7b8', boble: '#c3b4ef', antenne: '#ffc7b8', bane: '#f2c14e', pastell: '#f4a6a0' };
+export const WHO = { gris: 'GRIS', glimt: 'GLIMT', natt: 'GLIMT', sky: 'SKY', drape: 'DRÅPE', ugle: 'UGLE', stjerne: 'STJERNE', spire: 'SPIRE', halo: 'GLIMT', boble: 'GLIMT', antenne: 'GLIMT', bane: 'GLIMT', pastell: 'GLIMT', blekk: 'BLEKKSPRUT' };
+export const NAME_COLOR = { gris: '#f6b3c1', glimt: '#ffc7b8', natt: '#ffe7a8', sky: '#bcd7ef', drape: '#9fd0f2', ugle: '#e8c49a', stjerne: '#ffb38a', spire: '#9fd8a8', halo: '#ffc7b8', boble: '#c3b4ef', antenne: '#ffc7b8', bane: '#f2c14e', pastell: '#f4a6a0', blekk: '#f1a3ad' };
 
 /* ---------- Prompt 40: julemodus (claude-code-glimt-jul.md, fasit glimt-figurer.js → julOn/dress) ----------
    Figurbiblioteket legger selv på antrekket når julemodus er aktiv, så alle steder som tegner Glimt (Hjem-briefen, brief-siden,
@@ -182,7 +204,7 @@ export const mai17State = () => ({ ...M17, on: mai17On() });
 /** Glimt-figuren som HTML. Ukjent id → Glimt. opts.noJul: uten julantrekk (figurvelgeren, drakter med egen hatt). */
 export function fig(id, S = 76, mood = 'idle', opts = {}) {
   const m = MOOD[mood] ?? 'idle', k = FIG_IDS.includes(id) ? id : 'glimt';
-  const html = figRaw(k, S, m).replace('<span ', `<span class="gf gf-${k} gf-${m}" aria-hidden="true" `);
+  const html = (k === 'blekk' ? figBlekk(S, m) : figRaw(k, S, m)).replace('<span ', `<span class="gf gf-${k} gf-${m}" aria-hidden="true" `);
   const ph = opts?.ph ?? (opts?.noJul ? null : julOn() ?? (mai17On() ? '17mai' : null));
   return ph ? dress(html, S, ph, k) : html;
 }

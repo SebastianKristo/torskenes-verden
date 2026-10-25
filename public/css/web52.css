@@ -1,0 +1,131 @@
+/* Prompt 52 (WEB52H): oppstart, sideanimasjon og nye Homelab-tillegg på web og PWA. */
+
+/* Oppstart uten cache: fanepillen som skjelett, ingen standardliste. */
+.pillnav .nav-skel52{display:inline-block;height:14px;margin:9px 8px;border-radius:999px;background:currentColor;opacity:.18;flex:none}
+html.boot52-nocache header.top .logo{color:transparent!important}
+.skel52{padding:24px 0}
+.skel52-h{height:44px;width:min(420px,70%);border-radius:14px;background:var(--row,rgba(127,127,127,.18));opacity:.5;margin:0 0 22px}
+.skel52-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.skel52-g>div{height:180px;border-radius:24px;background:var(--row,rgba(127,127,127,.18));opacity:.5}
+@media (max-width:767px){.skel52{padding:16px}.skel52-g{grid-template-columns:1fr 1fr;gap:12px}.skel52-g>div{height:130px}}
+
+/* Inngang ved første visning og fanebytte (kun innholdet, headeren står i ro). */
+@keyframes pgIn{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
+.page-enter{animation:pgIn .28s cubic-bezier(.22,.9,.28,1) both}
+@media (prefers-reduced-motion:reduce){.page-enter{animation:none}}
+
+/* Glimt-briefen: nye kort per bruker (brief52.js, fasit Glimt Brief.dc.html nk.*). */
+.b52{flex:none;border-radius:24px;background:#fffdf8;color:#1b1a17;padding:18px;display:flex;flex-direction:column;gap:8px;text-decoration:none;font-family:var(--gb-sans,Manrope,system-ui,sans-serif);box-sizing:border-box}
+.b52-tap{cursor:pointer}.b52-tap:focus-visible,.b52 .b52-r:focus-visible,.b52-act:focus-visible{outline:2px solid #b23a2a;outline-offset:2px}
+.b52-dark{background:#1b1a17;color:#f3efe6}
+.b52-blue{background:#dfe8f3;color:#1b2a40}
+.b52-media{background:#1f2333;color:#eef0f6;flex-direction:row;align-items:center;gap:14px}
+.b52-k{font:600 10px var(--gb-mono,'IBM Plex Mono',monospace);letter-spacing:.12em;color:#f29a8a}
+.b52-k.blue{color:#2b5d8a}.b52-k.media{color:#a9b3d6}.b52-k.grey{color:#6b665c}
+.b52-big{font:400 32px/1.1 var(--gb-serif,Newsreader,serif);text-wrap:pretty}
+.b52-mid{font:500 24px/1.15 var(--gb-serif,Newsreader,serif);text-wrap:pretty}
+.b52-s{font-size:13.5px;color:#a9a397}.b52-s.dim{color:#6b665c}
+.b52-blue .b52-s,.b52 .b52-s{line-height:1.4}.b52:not(.b52-dark):not(.b52-media) .b52-s{color:#6b665c}
+.b52-btn{margin-top:6px;align-self:flex-start;height:38px;padding:0 16px;border-radius:19px;background:#f3efe6;color:#1b1a17;font:700 13px var(--gb-sans,Manrope);display:flex;align-items:center}
+.b52-min{display:flex;align-items:baseline;gap:8px}.b52-min b{font:400 64px/1 var(--gb-serif,Newsreader,serif)}.b52-min span{font:600 15px var(--gb-sans,Manrope);color:#a9a397}
+.b52-line{display:flex;align-items:center;gap:8px;font:600 15px var(--gb-sans,Manrope)}
+.b52-line span{min-width:30px;height:24px;padding:0 4px;box-sizing:border-box;border-radius:6px;color:#1b1a17;display:grid;place-items:center;font:800 12px var(--gb-sans,Manrope)}
+.b52-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.b52-h b{font:500 26px var(--gb-serif,Newsreader,serif)}.b52-h span{font:600 11px var(--gb-mono,'IBM Plex Mono',monospace);letter-spacing:.1em;color:#b23a2a}
+.b52-r{display:flex;align-items:center;gap:12px;min-height:48px;width:100%;padding:4px 0;border:0;border-top:1px solid #e6dfd1;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit;text-decoration:none}
+div.b52-r{cursor:default}
+.b52-cb{flex:none;width:22px;height:22px;border-radius:7px;border:2px solid #a39d90;box-sizing:border-box}
+.b52-n{flex:1;min-width:0;font:600 15px var(--gb-sans,Manrope);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b52-d{flex:none;font-size:12px;font-weight:700;color:#6b665c}.b52 .red{color:#b23a2a!important;font-weight:700}
+.b52-ic{flex:none;width:36px;height:36px;border-radius:11px;color:#fff;font:800 12px var(--gb-sans,Manrope);display:grid;place-items:center}
+.b52-m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.b52-m b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.b52-m b.mono{font:600 14px var(--gb-mono,'IBM Plex Mono',monospace)}
+.b52-m>span{font-size:12.5px;color:#6b665c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b52-media .b52-m>span{color:#a9b3d6}
+.b52-a{flex:none;font:600 13px var(--gb-mono,'IBM Plex Mono',monospace)}
+.b52-dd{flex:none;font:500 22px var(--gb-serif,Newsreader,serif);color:#2f7a4f}
+.b52-chips{display:flex;gap:6px;flex-wrap:wrap}.b52-chips span{height:30px;padding:0 12px;border-radius:15px;background:#fffdf8;font:700 12.5px var(--gb-sans,Manrope);display:flex;align-items:center}
+.b52-post{flex:none;width:76px;height:110px;border-radius:10px;display:grid;place-items:center;color:#fff;font:800 22px var(--gb-sans,Manrope)}
+.b52-dot{flex:none;width:10px;height:10px;border-radius:5px}
+.b52-act{flex:none;min-height:32px;padding:0 14px;border-radius:16px;border:0;background:#1b1a17;color:#f3efe6;font:700 12px var(--gb-sans,Manrope);cursor:pointer}
+.b52-act[disabled]{opacity:.7;cursor:default}
+.b52-st{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.b52-st b{font:500 26px var(--gb-serif,Newsreader,serif)}.b52-st b.v{font:400 40px/1 var(--gb-serif,Newsreader,serif)}
+.b52-e{font-size:13.5px;color:#6b665c}.b52-dark .b52-e,.b52-media .b52-e{color:#a9a397}
+:where(html[data-mode="dark"][data-hl="2c"]) .b52:not(.b52-dark):not(.b52-media):not(.b52-blue){background:#211e18;color:#f3efe6}
+:where(html[data-mode="dark"][data-hl="2c"]) .b52 .b52-r{border-top-color:#3a352c}
+:where(html[data-mode="dark"][data-hl="2c"]) .b52:not(.b52-dark):not(.b52-media) .b52-m>span,:where(html[data-mode="dark"][data-hl="2c"]) .b52:not(.b52-dark):not(.b52-media) .b52-s{color:#b5ae9f}
+:where(html[data-mode="dark"][data-hl="2c"]) .b52 .red{color:#f29a8a!important}
+:where(html[data-mode="dark"][data-hl="2c"]) .b52-act{background:#f3efe6;color:#1b1a17}
+
+/* «Vær nå»-bakgrunnen: toning etter tid på døgnet (morgen 5–9, dag 9–17, kveld 17–21, natt). Bildet velges etter værtype på serveren. */
+.pw[data-wx52] .pw-img{transition:filter .6s ease}
+.pw[data-wx52="morgen"] .pw-img{filter:sepia(.18) saturate(1.1) brightness(1.02)}
+.pw[data-wx52="kveld"] .pw-img{filter:sepia(.3) saturate(1.25) hue-rotate(-10deg) brightness(.82)}
+.pw[data-wx52="natt"] .pw-img{filter:saturate(.8) brightness(.72) hue-rotate(10deg)}
+@media (prefers-reduced-motion:reduce){.pw[data-wx52] .pw-img{transition:none}}
+
+/* Vær: glass-pille med dra (wx52.js) på Forhold-bryteren, «Faktisk / Føles som» og lagvelgeren. */
+.g52{position:relative;isolation:isolate;touch-action:pan-y}
+.g52>button{position:relative;z-index:1;background:transparent!important;color:#fff!important;transition:color .2s}
+.g52-pill{position:absolute;left:0;top:0;z-index:0;border-radius:999px;pointer-events:none;opacity:0;
+  background:linear-gradient(180deg,rgba(255,255,255,.46),rgba(255,255,255,.2));-webkit-backdrop-filter:blur(10px) saturate(1.4);backdrop-filter:blur(10px) saturate(1.4);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(255,255,255,.12),0 4px 14px -6px rgba(0,0,0,.35);will-change:transform,width}
+.g52.g52-press .g52-pill{transform-origin:center;scale:.96 .92}
+.wxp-seg.g52 .g52-pill{background:linear-gradient(180deg,rgba(255,255,255,.3),rgba(255,255,255,.12))}
+@media (prefers-reduced-motion:reduce){.g52-pill{transition:none!important}.g52.g52-press .g52-pill{scale:none}}
+.b52-m b.b52-mid{font:500 24px/1.15 var(--gb-serif,Newsreader,serif);white-space:normal}
+
+/* Hjem 3a i PWA-en (home52.js): 2-kolonners rutenett, flisstil som Homelab.dc.html. */
+.h52{--t52card:#fffdf8;--t52ink:#1b1a17;--t52mut:#6b665c;--t52lab:#6b665c;--t52line:#e6dfd1;--t52pos:#2f7a4f;
+  --t52av:#1b1a17;--t52avi:#f3efe6;--t52avs:#b5ae9f;--t52mat:#f4e3cf;--t52mati:#3a2410;--t52matl:#8a4f12;--t52fam:#e1ece4;--t52fami:#1b1a17;--t52faml:#2f6b4a;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row dense;gap:12px;margin:12px 0 24px}
+:where(html[data-mode="dark"]) .h52{--t52card:#211e18;--t52ink:#f3efe6;--t52mut:#b5ae9f;--t52lab:#b5ae9f;--t52line:#3a352c;--t52pos:#8fd0a5;
+  --t52av:#0f0e0c;--t52avi:#f3efe6;--t52avs:#b5ae9f;--t52mat:oklch(.32 .05 60);--t52mati:#f4e3cf;--t52matl:#f2c38f;--t52fam:oklch(.31 .04 150);--t52fami:#e1ece4;--t52faml:#9fd3b0}
+.h52-i{position:relative;min-width:0;display:flex;flex-direction:column}
+.h52-i.full{grid-column:1 / -1}.h52-i.tall{grid-row:span 2}
+.h52-i>section{margin:0}
+.t52{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-height:132px;box-sizing:border-box;width:100%;padding:16px;border-radius:24px;border:0;text-decoration:none;text-align:left;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;font-family:Manrope,Geist,system-ui,sans-serif}
+.t52:focus-visible{outline:2px solid #b23a2a;outline-offset:2px}
+.t52-card{background:var(--t52card);color:var(--t52ink)}
+.t52-av{background:var(--t52av);color:var(--t52avi)}
+.t52-mat{background:var(--t52mat);color:var(--t52mati)}
+.t52-fam{background:var(--t52fam);color:var(--t52fami)}
+.t52-k{font:600 10px/1.3 'IBM Plex Mono','JetBrains Mono',monospace;letter-spacing:.12em;color:var(--t52mut);text-transform:uppercase}
+.t52-av .t52-k{color:#f29a8a}.t52-k.mat{color:var(--t52matl)}.t52-k.fam{color:var(--t52faml)}
+.t52-v{font:500 26px/1.1 Newsreader,Georgia,serif;margin-top:auto}
+.t52-mid{font:500 20px/1.15 Newsreader,Georgia,serif;margin-top:auto;text-wrap:pretty}
+.t52-n{font:400 40px/1 Newsreader,Georgia,serif;margin-top:auto}
+.t52-mn{display:flex;align-items:baseline;gap:6px;margin-top:auto}.t52-mn b{font:400 48px/1 Newsreader,Georgia,serif}.t52-mn span{font:600 13px Manrope,system-ui,sans-serif;color:var(--t52mut)}
+.t52-av .t52-mn span,.t52-av .t52-sub{color:var(--t52avs)}.t52-mn span.fam{color:var(--t52faml)}
+.h52-i.tall .t52-mn b{font-size:64px}
+.t52-t{max-width:100%;font:600 14px/1.3 Manrope,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t52-s,.t52-sub{max-width:100%;font-size:12px;line-height:1.35;color:var(--t52lab);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t52-s.ok{color:var(--t52pos)}.t52-s.mat{color:var(--t52matl)}.t52-s.fam{color:var(--t52faml)}
+.t52-line{min-width:34px;height:26px;padding:0 5px;box-sizing:border-box;border-radius:7px;display:grid;place-items:center;font:800 14px Manrope,system-ui,sans-serif;margin-top:6px}
+.t52-dest{max-width:100%;font:600 15px Manrope,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t52-ppl{display:flex;padding-left:8px;margin-top:auto}.t52-ppl span{width:32px;height:32px;margin-left:-8px;border-radius:16px;color:#fff;display:grid;place-items:center;font:800 11px Manrope,system-ui,sans-serif;border:2px solid var(--t52fam)}
+.t52-hl{max-width:100%;font:600 13px Manrope,system-ui,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.t52-hl.over{color:#b23a2a}
+:where(html[data-mode="dark"]) .t52-hl.over{color:#f29a8a}
+.t52-news{min-height:0;gap:8px}
+.t52-row{display:flex;justify-content:space-between;gap:8px;width:100%}
+.t52-nt{font:500 24px/1.15 Newsreader,Georgia,serif;text-wrap:pretty}
+.t52-nl{display:flex;flex-direction:column;gap:6px;width:100%;padding-top:8px;border-top:1px solid var(--t52line)}
+.t52-nl span{display:flex;gap:8px;align-items:baseline;min-width:0;font:500 15px/1.3 Newsreader,Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t52-nl i{flex:none;width:30px;font:600 10px 'IBM Plex Mono',monospace;font-style:normal;color:var(--t52lab)}
+/* Redigering */
+@keyframes h52w{0%,100%{rotate:-.8deg}50%{rotate:.8deg}}
+.h52.edit .h52-i{animation:h52w .32s ease-in-out infinite;touch-action:none;user-select:none;-webkit-user-select:none}
+.h52.edit .h52-i:nth-child(2n){animation-delay:-.16s}
+.h52.edit .h52-i.lift{animation:none;z-index:5;scale:1.03;filter:drop-shadow(0 14px 24px rgba(0,0,0,.25))}
+@media (prefers-reduced-motion:reduce){.h52.edit .h52-i{animation:none;outline:2px dashed rgba(178,58,42,.5);outline-offset:2px;border-radius:24px}}
+.h52-i{-webkit-touch-callout:none}
+.h52-x{position:absolute;top:-9px;left:-9px;z-index:4;width:30px;height:30px;border-radius:15px;border:1px solid var(--t52line);background:var(--t52card);color:var(--t52ink);font:700 18px/1 Manrope,sans-serif;display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 4px 10px -3px rgba(0,0,0,.3)}
+.h52-bar{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:2147480000;display:flex;gap:10px;justify-content:space-between;padding:10px;border-radius:24px;background:#1b1a17;box-shadow:0 18px 40px -16px rgba(0,0,0,.5)}
+.h52-b{height:44px;padding:0 18px;border-radius:22px;border:1px solid rgba(243,239,230,.3);background:transparent;color:#f3efe6;font:700 14px Manrope,sans-serif;cursor:pointer}
+.h52-b.ink{background:#f3efe6;color:#1b1a17;border-color:#f3efe6}.h52-b[disabled]{opacity:.5;cursor:default}
+.h52-add{position:fixed;left:16px;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:2147480001;max-height:50vh;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:2px;padding:14px;border-radius:24px;background:#fffdf8;color:#1b1a17;box-shadow:0 18px 40px -16px rgba(0,0,0,.45)}
+.h52-add b{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-transform:uppercase;color:#6b665c;padding:4px 4px 8px}
+.h52-add button{display:flex;justify-content:space-between;align-items:center;min-height:44px;padding:0 6px;border:0;border-top:1px solid #e6dfd1;background:transparent;color:#1b1a17;font:600 15px Manrope,sans-serif;cursor:pointer}
+.h52-add button span:last-child{color:#8f2e21;font-size:13px}
+.h52 .t52-card{color:var(--t52ink)}.h52 .t52-av{color:var(--t52avi)}.h52 .t52-mat{color:var(--t52mati)}.h52 .t52-fam{color:var(--t52fami)}
+.h52 .t52 :is(b,.t52-dest,.t52-t,.t52-nt,.t52-hl:not(.over),.t52-nl span){color:inherit}

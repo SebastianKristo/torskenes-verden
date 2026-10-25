@@ -586,7 +586,7 @@ async function saveGroup(name, changes) {
 const H = { group, row, note };
 // Prompt 35: Innstillinger → GLIMT → Glimt (fasit Glimt Brief.dc.html mode="settings"). Samme data som ⚙ i briefen.
 const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [group('Glimt', [
-  row({ t: 'Glimt-figur', s: 'Velg vert: Glimt, Halo, Boble, Antenne, Bane, Pastell, Natt, Sky, Dråpe, Ugle, Stjerne, Spire eller Gris', go: 'glimt', btn: 'Åpne', k: 'glimt figur karakter maskot gris ugle sky' }),
+  row({ t: 'Glimt-figur', s: 'Velg vert: Glimt, Halo, Boble, Antenne, Bane, Pastell, Natt, Sky, Dråpe, Ugle, Stjerne, Spire, Gris eller Blekksprut', go: 'glimt', btn: 'Åpne', k: 'glimt figur karakter maskot gris ugle sky blekksprut' }),
   row({ t: 'Glimt-brief', s: 'Morgen-, dags-, kvelds- og nattbrief med klokkeslett', go: 'glimt', btn: 'Åpne', k: 'brief morgenbrief kveldsbrief varsel guide venner' }),
   row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure' }),
 ])] });

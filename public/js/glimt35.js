@@ -28,12 +28,14 @@ const merge = (a, b) => ({
 function readLocal() {
   let c = {};
   try { c = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { /* privat modus */ }
-  try { const ch = localStorage.getItem('glimt_char'); if (ch && !c.char) c.char = ch; } catch { /* */ }
+  // Prompt 52: figuren per bruker (glimt_char_<bruker>) før den felles glimt_char. Serverens valg (/api/glimt/settings, /api/me) vinner.
+  try { const ch = localStorage.getItem(charKey52()) || localStorage.getItem('glimt_char'); if (ch) c.char = ch; } catch { /* */ }
   return c;
 }
 function writeLocal(s) {
-  try { const { engines, chars, ...rest } = s; localStorage.setItem(LS, JSON.stringify(rest)); localStorage.setItem('glimt_char', s.char); } catch { /* */ }
+  try { const { engines, chars, ...rest } = s; localStorage.setItem(LS, JSON.stringify(rest)); localStorage.setItem('glimt_char', s.char); localStorage.setItem(charKey52(), s.char); } catch { /* */ }
 }
+function charKey52() { let u = ''; try { u = localStorage.getItem('hl_uid') || ''; } catch { /* */ } return `glimt_char_${u || 'meg'}`; }
 /** Gjeldende innstillinger (standard + lokal kopi til serveren har svart). */
 export const gs = () => G.s ?? (G.s = merge(DEF, readLocal()));
 
@@ -91,7 +93,7 @@ const ENG = [
   ['browser', 'Nettleserens stemme', 'Robotaktig. Bare for testing uten nøkkel.', '', '', '', '', ''],
 ];
 const RATES = [['calm', 'Rolig', 0.85], ['normal', 'Normal', 1], ['fast', 'Rask', 1.15]];
-const CHV = { glimt: [1, 1], natt: [0.92, 0.95], sky: [1.12, 1.02], drape: [1.25, 1.06], ugle: [0.8, 0.94], gris: [1.08, 1.04], stjerne: [1.1, 1.04], spire: [1.06, 1] };
+const CHV = { glimt: [1, 1], natt: [0.92, 0.95], sky: [1.12, 1.02], drape: [1.25, 1.06], ugle: [0.8, 0.94], gris: [1.08, 1.04], stjerne: [1.1, 1.04], spire: [1.06, 1], blekk: [1.06, 1.02] };
 export const rateOf = (r) => RATES.find((x) => x[0] === r)?.[2] ?? 1;
 export const voiceName = (id) => (VOICES.find((v) => v[0] === id) ?? VOICES[0])[1].split(' · ')[0];
 const engineInfo = (id) => { const s = gs(), e = (s.engines ?? []).find((x) => x.id === id || (id === 'elevenlabs' && x.id === 'eleven')); return e ?? null; };
@@ -232,7 +234,7 @@ export function glimtSettingsHtml({ figs = false } = {}) {
   const grid = figs ? `<span class="gs-h">GLIMT-FIGUR</span>
     <div class="gs-figs" data-hl="glimt-fig">${FIGS.map((f) => { const on = sel === f.id; return `<button type="button" class="gs-fig${f.id === 'natt' ? ' dark' : ''}" data-gs-char="${f.id}" aria-pressed="${on}" aria-label="${esc(f.name)}"><span class="gs-fi">${fig(f.id, 54, on ? 'glad' : 'idle', { noJul: true })}</span><b>${esc(f.name)}</b></button>`; }).join('')}</div>
     <p class="gs-note">Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle …) tar over når temaet passer, om det er slått på under.${sel === 'glimt' ? ' Mellom 21 og 06 blir Glimt automatisk Glimt Natt.' : ''}</p>` : '';
-  return `<div class="gs" data-gs>${grid}${julCard(s)}
+  return `<div class="gs" data-gs>${grid}${figs ? adminChars52() : ''}${julCard(s)}
     <div class="gs-list" data-hl="glimt">${MAIN.map(([k, n, d]) => `<button type="button" class="gs-row${k === 'friends' && s.briefGlimt === false ? ' gs-dim' : ''}" data-gs-tog="${k}" role="switch" aria-checked="${!!s[k]}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span>${sw(!!s[k])}</button>`).join('')}</div>
     <span class="gs-h">BRIEFER GJENNOM DAGEN</span>
     <div class="gs-list">${BR.map(([k, n, d]) => { const B = s.briefs[k]; return `<div class="gs-row gs-br${s.brief ? '' : ' off'}"><button type="button" class="gs-brt" data-gs-brief="${k}"><span class="gs-ot"><b>${esc(n)}</b><span class="gs-os">${esc(d)}</span></span></button><input type="time" value="${esc(B.at)}" data-gs-at="${k}" aria-label="Klokkeslett for ${esc(n)}"><button type="button" class="gs-swb" data-gs-brief="${k}" role="switch" aria-checked="${!!B.on}" aria-label="${esc(n)}">${sw(!!B.on)}</button></div>`; }).join('')}</div>
@@ -252,6 +254,33 @@ export function glimtSettingsHtml({ figs = false } = {}) {
     ${G.err ? `<p class="gs-msg">Kunne ikke hente innstillingene: ${esc(G.err)}</p>` : ''}</div>`;
 }
 
+/* Prompt 52: admin setter standardfigur per bruker (GET/PUT /api/admin/glimt-char52, SRV52). Gjelder til brukeren velger selv. */
+const A52 = { users: null, chars: null, err: '', loading: false };
+const admin52 = () => store.me?.me?.role === 'admin';
+function adminRows52() {
+  if (A52.err) return `<p class="gs-msg">${esc(A52.err)}</p>`;
+  if (!A52.users) return '<p class="gs-note">Henter brukere …</p>';
+  const chars = A52.chars?.length ? A52.chars : FIGS.map((f) => ({ id: f.id, name: f.name }));
+  return `<div class="gs-list">${A52.users.map((u) => `<label class="gs-row gs52-def"><span class="gs-ot"><b>${esc(u.name)}</b><span class="gs-os">${esc(u.source === 'user' ? `Har valgt selv: ${chars.find((c) => c.id === u.char)?.name ?? u.char}` : 'Bruker standarden')}</span></span><select data-gs52-def="${esc(u.id)}" aria-label="Standardfigur for ${esc(u.name)}"><option value="">Glimt (standard)</option>${chars.filter((c) => c.id !== 'glimt').map((c) => `<option value="${esc(c.id)}"${u.default === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>`).join('')}</div>`;
+}
+function adminChars52() {
+  if (!admin52()) return '';
+  if (!A52.users && !A52.loading && !A52.err) {
+    A52.loading = true;
+    api('/admin/glimt-char52').then((r) => { A52.users = r.users ?? []; A52.chars = r.chars ?? null; }).catch((e) => { A52.err = e.status === 404 ? 'Serveren støtter ikke standardfigur per bruker ennå.' : e.message; })
+      .finally(() => { A52.loading = false; document.querySelectorAll('[data-gs52-adm]').forEach((el) => { el.innerHTML = adminRows52(); }); });
+  }
+  return `<span class="gs-h">STANDARDFIGUR PER BRUKER</span><div data-gs52-adm>${adminRows52()}</div><p class="gs-note">Bare for administrator. Standarden gjelder til brukeren velger figur selv, og følger brukeren på alle enheter.</p>`;
+}
+function saveDefault52(sel) {
+  const id = sel.dataset.gs52Def, v = sel.value || null;
+  sel.disabled = true;
+  api(`/admin/glimt-char52/${encodeURIComponent(id)}`, { method: 'PUT', json: { default: v } })
+    .then(() => { const u = A52.users?.find((x) => x.id === id); if (u) u.default = v; })
+    .catch((e) => { A52.err = e.message; document.querySelectorAll('[data-gs52-adm]').forEach((el) => { el.innerHTML = adminRows52(); }); })
+    .finally(() => { sel.disabled = false; });
+}
+
 /** Klikk i innstillingene. Returnerer true når klikket er håndtert. redraw tegner på nytt. */
 export function glimtClick(e, redraw) {
   const t = e.target;
@@ -261,7 +290,7 @@ export function glimtClick(e, redraw) {
     saveGlimt({ char: k });
     try { navigator.vibrate?.(8); } catch { /* */ }
     redraw();
-    say(k === 'gris' ? 'Nøff! Nå er jeg din Glimt.' : 'Hei! Nå er jeg din Glimt.', hostFor(k), { force: gs().readAloud });
+    say(k === 'gris' ? 'Nøff! Nå er jeg din Glimt.' : k === 'blekk' ? 'Hei! Seks armer klare. Nå er jeg din Glimt.' : 'Hei! Nå er jeg din Glimt.', hostFor(k), { force: gs().readAloud });
     return true;
   }
   const jm = t.closest('[data-gs-jul]');
@@ -302,6 +331,8 @@ function bell40() {
   } catch { /* ingen lyd */ }
 }
 export function glimtChange(e) {
+  const d52 = e.target.closest?.('[data-gs52-def]');
+  if (d52) { saveDefault52(d52); return true; }
   const at = e.target.closest?.('[data-gs-at]');
   if (!at) return false;
   const k = at.dataset.gsAt, v = at.value;

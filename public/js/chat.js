@@ -14,6 +14,7 @@ import { assist, looksLikeTool } from './assist.js';
 import { cardHtml, bindCards } from './chat-cards.js';
 import { factsHtml41, usedWithoutFacts41 } from './chat-facts41.js'; // prompt 41: faktakort
 import { css50, rejectReason50, isImg50, upload50, attRow50, bubbleImgs50, otherFiles50, filePills50, imagesOf50, bindDrop50, pastedFiles50, lightbox50, readWith50, finansBtn50, MAX_FILES50 } from './chat50.js'; // prompt 50: vedlegg, miniatyr, lysboks
+import { css52, thinkOf52, thinkHtml52, thumbDataUrl52 } from './chat52.js'; // prompt 52: tankegang, miniatyr (attTh), modellark som scroller
 
 /* Prompt 31: Glimt i Chat (claude-code-chat-kort-vaer-kalender.md, claude-code-glimt-ai.md).
    - Avsender er Glimt-merket (22 px) + modellnavnet; mens svaret kommer: merket animert og tre prikker (ikke «Tenker …»).
@@ -257,7 +258,7 @@ function msgsHtml() {
     const who = meta.glimt ? 'GLIMT' : `GLIMT · ${(meta.auto?.modelName ?? mName(meta.auto?.model || meta.model || C.chat?.model || '')).toUpperCase()}`;
     const pu = i > 0 && msgs[i - 1]?.role === 'user' ? i - 1 : -1; // prompt 50: bildet svaret leste, som liten miniatyr + filnavn
     return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${pu >= 0 ? filePills50(msgs[pu], pu) : ''}${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-      <div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}${finansBtn50(meta, `${C.cur}:${i}`, C.fin50?.[`${C.cur}:${i}`])}${readWith50(meta)}
+      ${(() => { const th = thinkOf52(m); return th ? thinkHtml52({ key, steps: th.steps, s: th.s, source: th.source, open: !!C.thOpen?.[key] }) : ''; })()}<div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}${finansBtn50(meta, `${C.cur}:${i}`, C.fin50?.[`${C.cur}:${i}`])}${readWith50(meta)}
       <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}${i === lastA && !busyHere && !C.web && C.webAsk46 && String(C.webAsk46.chatId ?? '') === String(C.cur ?? '') ? `<button type="button" class="ch-web46" data-ch-web46="${i}">${svg(IC.web, 15)}${esc(C.webAsk46.action?.label ?? 'Søk denne gangen')}</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
   }).join('') + (busyHere ? streamHtml() : '');
 }
@@ -275,7 +276,14 @@ function streamHtml() {
   const who = b.glimt ? 'GLIMT · TENKER' : `GLIMT · ${(b.pickLabel || (b.picked ? `✦ ${mName(b.picked)}` : mName(b.model))).toUpperCase()}`;
   const all = (C.chat?.messages ?? []).filter((m) => m.role !== 'system'), lu = all.length - 1;
   return `<div class="ch-a" data-ch-stream><div class="ch-ah"><span class="ch-lab">${glimt(22, b.text ? 'svarer' : 'tenker')}${esc(who)}</span>${all[lu]?.role === 'user' ? filePills50(all[lu], lu) : ''}${(b.reading ?? []).map((u) => `<span class="ch-used">Leser <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-    ${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}${factsHtml41(b.facts)}${b.readWith ? readWith50({ readWith: b.readWith }) : ''}</div>`;
+    ${streamThink52(b)}${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : b.think?.length ? '' : `<span class="ch-think" aria-label="Glimt tenker">${glimtDots()}</span>`}${factsHtml41(b.facts)}${b.readWith ? readWith50({ readWith: b.readWith }) : ''}</div>`;
+}
+/** Prompt 52: «✦ Tenker … 2,1 s ▾» mens modellen tenker; «✦ Tenkte i 2,1 s ›» når svaret strømmer. */
+function streamThink52(b) {
+  if (!b.think?.length) return '';
+  const live = !b.text && b.thS == null;
+  const s = b.thS ?? (Date.now() - (b.thT0 ?? Date.now())) / 1000;
+  return thinkHtml52({ key: 'live', steps: b.think, s, live, source: b.thSrc, open: b.thOpen ?? live });
 }
 function emptyHtml() {
   const id = curModelId(), m = modelOf(id), P = curSet();
@@ -455,11 +463,12 @@ async function sendInner(text, opt = {}) {
   if (isLocalId(C.cur)) { C.pendingLocal = C.cur; C.cur = null; if (C.chat) C.chat = { ...C.chat, id: null }; }
   const prev = (C.chat?.messages ?? []).filter((m) => m.role !== 'system');
   // Prompt 50: bildene er lastet opp på forhånd (POST /files); meldingen bærer bare id-ene (attachments), aldri base64.
-  const imgAtt = C.att.filter((a) => a.kind === 'img' && a.id).map((a) => ({ id: a.id, kind: 'image', name: a.name, thumb: a.thumb || a.preview, preview: a.preview, url: a.url || a.preview }));
+  const imgAtt = C.att.filter((a) => a.kind === 'img' && a.id).map((a) => ({ id: a.id, kind: 'image', name: a.name, thumb: a.thumb || a.th52 || a.preview, preview: a.preview, url: a.url || a.preview }));
+  const attTh = C.att.filter((a) => a.kind === 'img' && a.id && a.th52).map((a) => a.th52).slice(0, 4); // prompt 52: miniatyr lagret på meldingen
   const files = C.att.filter((a) => a.kind !== 'img' && a.id).map((a) => a.id);
-  const userMsg = { role: 'user', content: t, ...(imgAtt.length ? { attachments: imgAtt } : {}), ...(C.att.some((a) => a.kind !== 'img') ? { files: C.att.filter((a) => a.kind !== 'img').map((a) => a.name) } : {}) };
+  const userMsg = { role: 'user', content: t, ...(imgAtt.length ? { attachments: imgAtt } : {}), ...(attTh.length ? { attTh } : {}), ...(C.att.some((a) => a.kind !== 'img') ? { files: C.att.filter((a) => a.kind !== 'img').map((a) => a.name) } : {}) };
   const history = opt.history ?? [...prev, userMsg];
-  const payload = { chatId: C.cur || undefined, model, messages: history.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length && !m.attachments?.length ? { images: m.images } : {}), ...(m.attachments?.length ? { attachments: m.attachments.map((a) => a.id).filter(Boolean) } : {}) })),
+  const payload = { chatId: C.cur || undefined, model, messages: history.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length && !m.attachments?.length ? { images: m.images } : {}), ...(m.attachments?.length ? { attachments: m.attachments.map((a) => a.id).filter(Boolean) } : {}), ...(m.role === 'user' && m.attTh?.length ? { attTh: m.attTh } : {}) })),
     settings: { ...curSet(), theme: C.theme, ...(opt.remember ? { skipCloudAsk: true } : {}) }, webSearch: opt.webOnce ? true : C.web, myData: C.data && !!C.set.chat_my_data, files,
     ...(opt.editFrom != null ? { editFrom: opt.editFrom } : {}), ...(opt.confirm ? { confirmCloud: true } : {}), ...(opt.withoutData ? { withoutMyData: true } : {}) };
   // Optimistisk: vis meldingen med en gang.
@@ -542,18 +551,22 @@ async function readSse(res, ctl) {
         if (ev === 'meta' && C.busy && d.readWith) C.busy.readWith = d.readWith; // prompt 50: «Lest med …»
         if (ev === 'meta') { if (C.busy && (d.auto?.model || d.picked)) { C.busy.picked = d.auto?.model ?? d.picked; C.busy.pickLabel = d.auto?.label ?? ''; paintStream(); } if (C.data && d.chatId) dataSave41(d.chatId, C.data); chatId = d.chatId ?? chatId; if (!C.cur) { if (C.pendingLocal && chatId) { toolsRekey(C.pendingLocal, chatId); C.pendingLocal = null; } C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
         else if (ev === 'facts') { C.busy.facts = d.facts ?? []; if (Array.isArray(d.used)) C.busy.reading = [...new Set([...(C.busy.reading ?? []), ...d.used])]; paintStream(); } // prompt 41: faktakort mens svaret kommer
-        else if (ev === 'delta') { C.busy.text += d.text ?? ''; if (!raf) raf = requestAnimationFrame(flush); }
-        else if (ev === 'done') { done = d; if (d?.webSearchOff) C.webAsk46 = { chatId: d.chatId ?? chatId, ...d.webSearchOff }; }
+        else if (ev === 'thinking' && C.busy) { if (!C.busy.think) { C.busy.think = []; C.busy.thT0 = Date.now() - (+d.s || 0) * 1000; thinkTick52(); } if (d.step) C.busy.think = [...C.busy.think, String(d.step)]; C.busy.thSrc = d.source ?? C.busy.thSrc; paintStream(); } // prompt 52
+        else if (ev === 'thinking_done' && C.busy) { C.busy.thS = d.thS ?? (Date.now() - (C.busy.thT0 ?? Date.now())) / 1000; C.busy.thOpen = false; paintStream(); }
+        else if (ev === 'delta') { if (C.busy.think?.length && C.busy.thS == null) { C.busy.thS = (Date.now() - (C.busy.thT0 ?? Date.now())) / 1000; C.busy.thOpen = false; } C.busy.text += d.text ?? ''; if (!raf) raf = requestAnimationFrame(flush); }
+        else if (ev === 'done') { done = d; if (C.busy && Array.isArray(d?.think)) { C.busy.think = d.think; C.busy.thS = d.thS ?? C.busy.thS; C.busy.thSrc = d.thinkSource ?? C.busy.thSrc; } if (d?.webSearchOff) C.webAsk46 = { chatId: d.chatId ?? chatId, ...d.webSearchOff }; }
         else if (ev === 'websearch_off') C.webAsk46 = { chatId, ...d }; // prompt 46: Nettsøk er av – tilby «Søk denne gangen»
         else if (ev === 'error') { C.busy.error = d.error || 'Ukjent feil'; paintStream(); }
       }
     }
   } catch (e) { if (e.name !== 'AbortError') C.busy && (C.busy.error = e.message); else stopped = C.busy?.text ?? ''; }
-  const err = C.busy?.error;
+  const err = C.busy?.error, th52 = C.busy?.think?.length ? { think: C.busy.think, thS: Math.round((C.busy.thS ?? (Date.now() - (C.busy.thT0 ?? Date.now())) / 1000) * 10) / 10, thinkSource: C.busy.thSrc } : null;
   C.busy = null;
   // Prompt 40: en ny samtale er startet mens denne strømmet (✦ AI i søket): ikke ta over den nye samtalen.
   if (gen !== sendGen) { refreshList(); return; }
   if (chatId) { C.cur = chatId; await loadChat(chatId, false); }
+  // Prompt 52: eldre server uten think på lagrede meldinger: legg tankegangen fra strømmen på siste svar (bare i visningen).
+  { const la = C.chat?.messages?.at(-1); if (th52 && la?.role === 'assistant' && !la.think && !la.meta?.think) Object.assign(la, th52); }
   // Stoppet: det som er kommet lagres (merket «Stoppet») hvis serveren ikke har tatt vare på det.
   if (stopped && C.chat && C.chat.messages?.at(-1)?.role !== 'assistant') C.chat.messages = [...C.chat.messages, { role: 'assistant', content: stopped, meta: { stopped: true, model: model0 } }];
   if (err && C.chat && !(C.chat.messages ?? []).some((m) => m.role === 'assistant' && m === C.chat.messages.at(-1))) C.chat.messages = [...C.chat.messages, { role: 'assistant', content: '', meta: { error: err, model: curModelId() } }];
@@ -561,6 +574,15 @@ async function readSse(res, ctl) {
   paint(); toBottom(); refreshList();
 }
 function stop() { C.busy?.ctl.abort(); }
+/** Prompt 52: sekundene i «Tenker … 2,1 s» teller opp mens modellen tenker. */
+function thinkTick52() {
+  const t = setInterval(() => {
+    const b = C.busy;
+    if (!b || b.thS != null || b.text) { clearInterval(t); return; }
+    const el = host()?.querySelector('[data-ch-stream] [data-ch-ths]');
+    if (el) el.textContent = `${((Date.now() - b.thT0) / 1000).toFixed(1).replace('.', ',')} s`;
+  }, 100);
+}
 
 /* ---------------- Vedlegg ---------------- */
 
@@ -577,6 +599,7 @@ async function addFiles(kind, files) {
     if (kind === 'img' && !img) { toast(`${f.name} er ikke et bilde`); continue; }
     const a = { kind: kind === 'kbup' ? 'doc' : img ? 'img' : 'file', name: f.name || 'Bilde', up: true, pct: 2, ...(img && !/heic|heif/i.test(f.type) ? { preview: URL.createObjectURL(f) } : {}) };
     C.att = [...C.att, a];
+    if (img) thumbDataUrl52(f).then((u) => { if (u) a.th52 = u; }); // prompt 52: attTh
     let raf = 0;
     jobs.push(upload50(f, (p) => { a.pct = p; if (!raf) raf = requestAnimationFrame(() => { raf = 0; const el = host()?.querySelectorAll('.ch-att50 .p i')[C.att.indexOf(a)]; if (el) el.style.width = `${Math.round(p)}%`; }); })
       .then((r) => { a.id = r.id; a.thumb = r.thumb ?? null; a.url = r.url ?? null; a.up = false; C.att = [...C.att]; if (kind === 'kbup') C.kb = null; })
@@ -748,6 +771,7 @@ async function menuAct(act, arg) {
 function bind(h) {
   bindCards();
   css50();
+  css52();
   // Prompt 50: hele chatområdet tar imot filer (dra og slipp); lim inn bilder i feltet.
   bindDrop50(h, (fs) => { if (C.missing) return; addFiles('drop', fs); });
   if (h.dataset.chBound) return;
@@ -820,6 +844,7 @@ function bind(h) {
     if ('chMic' in d) { mic(); return; }
     if (d.chRmatt) { const x = C.att[+d.chRmatt]; if (x?.preview) setTimeout(() => URL.revokeObjectURL(x.preview), 60_000); C.att = C.att.filter((_, i) => i !== +d.chRmatt); paint(); return; }
     if (d.chLb) { openLb(d.chLb); return; } // prompt 50: lysboks
+    if (d.chThk) { if (d.chThk === 'live') { if (C.busy) { C.busy.thOpen = !(C.busy.thOpen ?? (!C.busy.text && C.busy.thS == null)); paintStream(); } } else { C.thOpen = { ...(C.thOpen ?? {}), [d.chThk]: !C.thOpen?.[d.chThk] }; paint(); } return; } // prompt 52: tankegang
     if (d.chFin50) { toFinans(d.chFin50); return; }
     if (d.chKbsel) { const doc = C.kb?.find((x) => x.id === d.chKbsel); if (!doc) return; C.att = C.att.some((a) => a.id === doc.id) ? C.att.filter((a) => a.id !== doc.id) : [...C.att, { kind: 'doc', id: doc.id, name: doc.name }]; paint(); return; }
     if (d.chCopy) {

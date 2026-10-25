@@ -75,6 +75,9 @@ test('feature flags: admin slår på et flagg for én bruker i panelet, og klien
   const ctx = await E.browser.newContext({ viewport: { width: 1280, height: 900 } });
   await apiLogin(ctx, 'sebastian', PASSWORD);
   await json(ctx, 'POST', '/api/whatsnew/seen', { version: NEXT });
+  // Prompt 52: «Nytt i versjon» er nå et modalt kort med slør; marker gjeldende versjon som sett (også når forrige test ikke byttet versjon).
+  const wn = (await json(ctx, 'GET', '/api/whatsnew')).body;
+  if (wn?.version) await json(ctx, 'POST', '/api/whatsnew/seen', { version: wn.version });
   const me = (await json(ctx, 'GET', '/api/me')).body;
   const page = await ctx.newPage();
   const errors = watchErrors(page);

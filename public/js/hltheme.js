@@ -83,10 +83,12 @@ export async function paintPhoto(force) {
   const e = await resolveBg(t, force);
   const grad = e.r?.gradient || FALLBACK_GRAD;
   const light = e.url && e.r?.theme_hint === 'light';
-  document.querySelectorAll('.pw-img').forEach((el) => {
-    el.style.backgroundImage = e.url ? `url("${e.url.replace(/"/g, '%22')}")` : grad;
-    el.classList.add('on');
-  });
+  // Prompt 52: forrige bilde står til det nye er lastet (ingen blink), og «Vær nå» tones etter tid på døgnet.
+  const bgv = e.url ? `url("${e.url.replace(/"/g, '%22')}")` : grad;
+  const apply = () => document.querySelectorAll('.pw-img').forEach((el) => { el.style.backgroundImage = bgv; el.classList.add('on'); });
+  if (e.url && [...document.querySelectorAll('.pw-img')].some((el) => el.style.backgroundImage && el.style.backgroundImage !== bgv)) { const im = new Image(); im.onload = im.onerror = apply; im.src = e.url; } else apply();
+  const hr = new Date().getHours(), tod = hr >= 5 && hr < 9 ? 'morgen' : hr >= 9 && hr < 17 ? 'dag' : hr >= 17 && hr < 21 ? 'kveld' : 'natt';
+  document.querySelectorAll('.pw').forEach((el) => { if (t === 'weather') el.dataset.wx52 = tod; else delete el.dataset.wx52; });
   // Prompt 27: «Planeter» vises som hele kloden (~62 % bredde) sentrert på svart på Dashboard, ikke beskåret med cover.
   document.querySelectorAll('.pw').forEach((el) => { el.classList.toggle('pw-light', !!light); el.classList.toggle('pw-planet', t === 'planets' && !!e.url); particles(el, e.url || t === 'weather' ? e.r?.particles ?? null : null); });
   const cr = creditOf(e);

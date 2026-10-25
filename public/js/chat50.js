@@ -94,6 +94,8 @@ export function attRow50(att) {
 /** Bildene i en melding: vedlegg (thumb/url) og eldre base64-bilder. → [{thumb, url, name}] */
 export function imagesOf50(m) {
   const out = (m.attachments ?? []).filter((a) => a && (a.kind === 'image' || isImg50(a))).map((a) => ({ thumb: a.preview || a.thumb || a.url, url: a.url || a.preview || a.thumb, name: a.name || 'Bilde' }));
+  // Prompt 52: miniatyrer lagret på meldingen (attTh) når vedleggene ikke har egen thumb.
+  if (!out.length && Array.isArray(m.attTh)) for (const u of m.attTh) if (typeof u === 'string' && u.startsWith('data:image/')) out.push({ thumb: u, url: u, name: 'Bilde' });
   for (const b of m.images ?? []) { const u = String(b).startsWith('data:') ? b : `data:image/jpeg;base64,${b}`; out.push({ thumb: u, url: u, name: 'Bilde' }); }
   return out;
 }

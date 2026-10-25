@@ -51,27 +51,111 @@ async function loadFlags() {
 
 /* ---------------- Nytt i denne versjonen ---------------- */
 
+// Prompt 52 (claude-code-nytt-i-versjon-lesbar.md): ugjennomsiktig papirkort med slør bak, fast hode og bunn,
+// grå dato, ett punkt per blokk med overskrift, mørk Ok-knapp. På mobil et bunnark i full bredde.
+// Punktene kan komme som {title, text} (SRV52) eller som tekst («Overskrift: brødtekst»). Interne merknader («prompt 51») vises aldri.
+const CSS52 = `
+.wn52-veil{position:fixed;inset:0;z-index:2147481000;background:rgba(27,26,23,.35);display:flex;align-items:center;justify-content:center;padding:24px 16px}
+.wn52:focus{outline:none}
+.wn52{background:#fbf8f2;color:#1b1a17;border:1px solid #d8d1c2;border-radius:24px;box-shadow:0 24px 60px -20px rgba(27,26,23,.45);width:min(440px,calc(100vw - 32px));max-height:min(640px,calc(100vh - 48px));display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box;font:400 14px/1.55 Manrope,Geist,system-ui,sans-serif;text-align:left}
+.wn52-head{padding:22px 24px 14px;border-bottom:1px solid #d8d1c2;flex:none}
+.wn52-lbl{font:600 10.5px/1.2 'IBM Plex Mono','JetBrains Mono',ui-monospace,monospace;letter-spacing:.12em;color:#b23a2a;text-transform:uppercase}
+.wn52 h2{margin:6px 0 0;font:500 28px/1.1 Newsreader,Georgia,serif;color:#1b1a17}
+.wn52-date{margin-top:6px;font:500 13px/1.4 Manrope,Geist,system-ui,sans-serif;color:#6b665c}
+.wn52-body{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+.wn52-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 24px 8px;margin:0;list-style:none}
+.wn52-list li{padding:14px 0;border-top:1px solid #e6dfd2}.wn52-list li:first-child{border-top:0;padding-top:0}
+.wn52-list h3{margin:0 0 4px;font:700 15px/1.35 Manrope,Geist,system-ui,sans-serif;color:#1b1a17}
+.wn52-list p{margin:0;font:400 14px/1.55 Manrope,Geist,system-ui,sans-serif;color:#3d3a34}
+.wn52-list p.wn52-x{margin-top:6px}
+.wn52-list p.wn52-clamp{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.wn52-more{margin-top:4px;border:0;background:none;padding:6px 0;min-height:24px;font:600 13px Manrope,Geist,system-ui,sans-serif;color:#8f2e21;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.wn52-fade{position:absolute;left:0;right:0;bottom:0;height:28px;background:linear-gradient(rgba(251,248,242,0),#fbf8f2);pointer-events:none}
+.wn52-foot{flex:none;display:flex;justify-content:flex-end;padding:14px 24px 20px;border-top:1px solid #d8d1c2}
+.wn52-ok{height:46px;padding:0 26px;border-radius:23px;background:#1b1a17;color:#f3efe6;font:700 14.5px Manrope,Geist,system-ui,sans-serif;border:0;cursor:pointer}
+.wn52-ok:focus{outline:none}.wn52-ok:focus-visible,.wn52-more:focus-visible{outline:2px solid #b23a2a;outline-offset:3px}
+@media (max-width:600px){.wn52-veil{align-items:flex-end;padding:0}.wn52{width:100%;max-width:none;border-radius:24px 24px 0 0;border-bottom:0;max-height:calc(100vh - 56px)}.wn52-foot{padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}}
+@keyframes wn52In{from{opacity:0;transform:translate3d(0,14px,0)}to{opacity:1;transform:none}}
+.wn52{animation:wn52In .28s cubic-bezier(.22,.9,.28,1) both}
+@media (prefers-reduced-motion:reduce){.wn52{animation:none}}
+`;
+function css52() { if (!document.getElementById('wn52-css')) { const s = document.createElement('style'); s.id = 'wn52-css'; s.textContent = CSS52; document.head.appendChild(s); } }
+const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+// «25.10.2026» / «2026-10-25» → «25. oktober 2026».
+export function wnDate52(d) {
+  const s = String(d ?? '').trim();
+  let m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (m) return `${+m[1]}. ${MONTHS[+m[2] - 1] ?? m[2]} ${m[3]}`;
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${+m[3]}. ${MONTHS[+m[2] - 1] ?? m[2]} ${m[1]}`;
+  return s;
+}
+// Fjerner interne merknader: «prompt 51 – …», «(prompt 47)», «Prompt 52:».
+export function wnClean52(t) {
+  return String(t ?? '').replace(/\(\s*prompt\s*\d+[a-z]?\s*\)/gi, '').replace(/^\s*prompt\s*\d+[a-z]?\s*(runde\s*\d+\s*)?[–—:\-·]*\s*/i, '').replace(/\s*[–—·]\s*prompt\s*\d+[a-z]?\b/gi, '').replace(/\bprompt\s*\d+[a-z]?\b\s*/gi, '').replace(/\s{2,}/g, ' ').trim();
+}
+// Ett punkt → {title, text}. Tekst med «Overskrift: …» deles ved første kolon når overskriften er kort.
+export function wnItem52(it) {
+  if (it && typeof it === 'object') return { title: wnClean52(it.title ?? it.heading ?? ''), text: wnClean52(it.text ?? it.body ?? it.summary ?? ''), more: it.more ? wnClean52(it.more) : '' };
+  const s = wnClean52(it);
+  const m = s.match(/^([^:.!?]{3,60}):\s+(.+)$/s);
+  if (m) return { title: m[1].trim(), text: m[2].trim().replace(/^\p{Ll}/u, (c) => c.toUpperCase()) };
+  // Ellers: første setning som overskrift når den er kort.
+  const f = s.match(/^(.{6,70}?[.!?])\s+(.+)$/s);
+  if (f) return { title: f[1].replace(/[.]$/, ''), text: f[2] };
+  return { title: s, text: '' };
+}
+
 export function showWhatsNew51(w, { manual = false } = {}) {
-  css();
-  document.querySelector('.qa51-card')?.remove();
+  css52();
+  document.querySelector('.wn52-veil')?.remove();
+  const veil = document.createElement('div');
+  veil.className = 'wn52-veil';
   const el = document.createElement('section');
-  el.className = 'qa51-card';
+  el.className = 'wn52';
+  el.tabIndex = -1;
   el.setAttribute('role', 'dialog');
+  el.setAttribute('aria-modal', 'true');
   el.setAttribute('aria-labelledby', 'qa51-wn-t');
   el.dataset.qa51 = 'whatsnew';
-  const items = (w.items ?? []).slice(0, 12);
-  el.innerHTML = `<header><h2 id="qa51-wn-t">Nytt i versjon ${esc(w.version)}</h2><div class="qa51-sub">${esc([w.date, w.title].filter(Boolean).join(' · '))}</div></header>
-    <ul>${items.map((t) => `<li>${esc(t)}</li>`).join('')}${(w.items?.length ?? 0) > items.length ? `<li class="qa51-muted">… og ${w.items.length - items.length} til</li>` : ''}</ul>
-    <footer><button type="button" class="qa51-btn pri" data-qa51-ok>Ok</button></footer>`;
-  document.body.appendChild(el);
+  const raw = Array.isArray(w.points) && w.points.length ? w.points : (w.items ?? []);
+  const items = raw.map(wnItem52).filter((x) => x.title || x.text);
+  const date = w.date_label || wnDate52(w.date);
+  el.innerHTML = `<header class="wn52-head"><div class="wn52-lbl">${esc(w.label || 'Nytt i Homelab')}</div><h2 id="qa51-wn-t">${esc(w.heading || `Versjon ${w.version}`)}</h2>${date ? `<div class="wn52-date">${esc(date)}</div>` : ''}</header>
+    <div class="wn52-body"><ul class="wn52-list" tabindex="0" aria-label="Endringer">${items.map((x, i) => `<li>${x.title ? `<h3>${esc(x.title)}</h3>` : ''}${x.text ? `<p${x.text.length > 220 ? ` class="wn52-clamp"` : ''}>${esc(x.text)}</p>` : ''}${x.more ? `<p class="wn52-x" id="wn52-p${i}" hidden>${esc(x.more)}</p>` : ''}${x.more || x.text.length > 220 ? `<button type="button" class="wn52-more"${x.more ? ` aria-controls="wn52-p${i}"` : ''} aria-expanded="false">Les mer</button>` : ''}</li>`).join('')}</ul><div class="wn52-fade" aria-hidden="true"></div></div>
+    <footer class="wn52-foot"><button type="button" class="wn52-ok" data-qa51-ok>Ok</button></footer>`;
+  veil.appendChild(el);
+  document.body.appendChild(veil);
   const ok = el.querySelector('[data-qa51-ok]');
+  const prev = document.activeElement;
   const close = () => {
-    el.remove();
+    veil.remove();
+    try { prev?.focus?.({ preventScroll: true }); } catch { /* */ }
     if (!manual) api('/api/whatsnew/seen', { method: 'POST', body: JSON.stringify({ version: w.version }) }).catch(() => {});
   };
   ok.addEventListener('click', close);
-  el.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-  ok.focus({ preventScroll: true });
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('.wn52-more');
+    if (!b) return;
+    const li = b.closest('li'), open = b.getAttribute('aria-expanded') !== 'true';
+    const x = li.querySelector('.wn52-x'), clamp = li.querySelector('p:not(.wn52-x)');
+    if (x) x.hidden = !open;
+    if (clamp && clamp.textContent.length > 220) clamp.classList.toggle('wn52-clamp', !open);
+    b.setAttribute('aria-expanded', String(open));
+    b.textContent = open ? 'Vis mindre' : 'Les mer';
+  });
+  veil.addEventListener('click', (e) => { if (e.target === veil) close(); });
+  veil.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+    if (e.key === 'Tab') { // fokus blir i dialogen
+      const f = [...el.querySelectorAll('button,[tabindex="0"]')];
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  // Fokus på dialogen (ikke Ok-knappen), så ringen bare vises når brukeren tabber dit.
+  el.focus({ preventScroll: true });
 }
 async function checkWhatsNew() {
   try {
