@@ -280,6 +280,8 @@ test('offsite slått på: B2-nøkkelen bare i miljøet til offsite; feil på ett
   assert.ok(envs.filter((e) => !e.repo.startsWith('b2:')).every((e) => e.b2 === null && e.b2key === null), 'B2-nøkkelen gis bare til offsite');
   const card = (await A('/api/ops51/summary')).body.backup;
   assert.match(card.issues.join(' '), /Offsite: .*connection refused/);
+  // Gjenoppretting fra et mål uten vellykket backup → tydelig melding, ikke restic sin «repository does not exist».
+  assert.throws(() => b51.startRestoreTest51({ target: 'offsite', by: 'test' }), (e) => e.status === 409 && /Ingen backup er tatt til Offsite ennå/.test(e.message));
   await A('/api/ops51/backup/settings', 'PUT', { targets: { offsite: { enabled: false } } });
 });
 

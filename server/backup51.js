@@ -341,6 +341,8 @@ export function startRestoreTest51({ kind = 'manual', by = null, target = null }
   if (!resticInfo51().available) throw Object.assign(new Error(resticInfo51().error), { status: 409 });
   const src = restoreSource(target);
   if (!src) throw Object.assign(new Error('Ingen backupmål er slått på'), { status: 400 });
+  // Uten en vellykket backup til målet finnes ikke repoet ennå – si det i stedet for restic sin «repository does not exist».
+  if (!backupRuns51(30).some((r) => r.targets.some((t) => t.id === src && t.state === 'ok'))) throw Object.assign(new Error(`Ingen backup er tatt til ${LABEL[src]} ennå – trykk «Ta backup nå» først`), { status: 409 });
   const id = newId('rt');
   q('INSERT INTO ops51_restore_tests(id, kind, state, started, target, by_user) VALUES(?,?,?,?,?,?)').run(id, kind, 'running', Date.now(), src, by ? String(by).slice(0, 64) : null);
   running = { id, kind: 'restore-test', started: Date.now() };
