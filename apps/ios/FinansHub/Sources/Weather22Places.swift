@@ -15,6 +15,8 @@ struct WxPlacesSheet22: View {
     @State private var searched: Bool = false
     /// Prompt 28: nettet eller serveren feilet («Får ikke søkt nå. Prøv igjen.»).
     @State private var failed: Bool = false
+    /// Prompt 52: «Steder og søk» åpner med markøren rett i søkefeltet (tastaturet opp), som i Vaer.dc.html.
+    @FocusState private var qFocus52: Bool
 
     var body: some View {
         List {
@@ -68,6 +70,11 @@ struct WxPlacesSheet22: View {
         .foregroundStyle(.white)
         .background(Color(hex: "#17191e").ignoresSafeArea())
         .environment(\.colorScheme, .dark)
+        .task {
+            // Litt etter at arket har glidd opp, så tastaturet ikke kolliderer med animasjonen.
+            try? await Task.sleep(for: .milliseconds(350))
+            qFocus52 = true
+        }
         .task(id: q) {
             let t: String = q.trimmingCharacters(in: .whitespaces)
             if t.count < 2 { hits = []; searched = false; busy = false; failed = false; return }
@@ -115,7 +122,7 @@ struct WxPlacesSheet22: View {
     private var searchField: some View {
         // Prompt 27: ✕ til venstre (SearchField27). Tømming lukker treffene.
         SearchField27(text: $q, placeholder: "Søk etter by eller sted", font: .system(size: 16, weight: .medium), ink: Color.white,
-                      placeholderColor: Color(hex: "#9aa3ae"), onClear: { hits = []; searched = false; busy = false; failed = false }, lead: {
+                      placeholderColor: Color(hex: "#9aa3ae"), focus: $qFocus52, onClear: { hits = []; searched = false; busy = false; failed = false }, lead: {
             Glyph22Icon(name: "search", size: 17, color: Color(hex: "#9aa3ae"), stroke: 2.2)
         })
         .padding(.horizontal, 14).frame(height: 46)
@@ -226,20 +233,11 @@ struct WxMapView22: View {
         .environment(\.colorScheme, .dark)
     }
 
+    /// Prompt 52: glass-pille som kan dras (WxGlass52.swift), samme som temp/regn/vind-bryteren.
     private var layerPicker: some View {
-        HStack(spacing: 2) {
-            ForEach(WxMapView22.layers, id: \.0) { l in
-                let on: Bool = layer == l.0
-                Button { Haptics.shared.select(); layer = l.0 } label: {
-                    Text(l.1).font(.dyn51(size: 13.5, weight: .semibold)).lineLimit(1)
-                        .foregroundStyle(on ? Color(hex: "#0d1520") : Color.white)
-                        .padding(.horizontal, 14).frame(height: 38)
-                        .background(on ? Color.white : Color.clear, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
+        WxGlass52(value: $layer, items: WxMapView22.layers.map { WxGlass52Item(id: $0.0, label: $0.1) },
+                  fontSize: 13.5, height: 38, padH: 14, track: Color.clear, a11y: "Kartlag")
+        .padding(1)
         .background(.ultraThinMaterial, in: Capsule())
         .background(Color(hex: "#0a1423").opacity(0.75), in: Capsule())
         .overlay(Capsule().stroke(Color.white.opacity(0.14), lineWidth: 1))

@@ -439,7 +439,7 @@ final class Fam22Photos {
 
     func ensure(_ mem: FamMember, _ store: Store) async {
         if images[mem.id] != nil { return }
-        if let d = UserDefaults.standard.data(forKey: localKey(mem.id)), let img = UIImage(data: d) { images[mem.id] = img; return }
+        if let d = UserDefaults.standard.data(forKey: localKey(mem.id)), let img = UIImage(data: d) { images[mem.id] = Fam22Photos.small(img); return }
         let enc: String = mem.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? mem.id
         var url: String = mem.photoUrl
         if url.isEmpty { url = mem.avatarUrl }
@@ -447,10 +447,19 @@ final class Fam22Photos {
         if tried.contains(url) { return }
         tried.insert(url)
         if let img = await loadImage(store, url) {
-            images[mem.id] = img
+            images[mem.id] = Fam22Photos.small(img)
         } else if mem.id == FamilyModel.shared.meId, let a = store.avatar {
-            images[mem.id] = a
+            images[mem.id] = Fam22Photos.small(a)
         }
+    }
+
+    /// Prompt 52: profilbilder nedskaleres til maks ca. 2 × største visning (52 pt × 3) – fullstørrelsesbilder i
+    /// kartnåler, lister og rutenett samtidig ga for mye minne på eldre telefoner.
+    nonisolated static func small(_ img: UIImage) -> UIImage {
+        let w: CGFloat = img.size.width * img.scale, h: CGFloat = img.size.height * img.scale
+        guard w > 0, h > 0, w.isFinite, h.isFinite else { return img }
+        if Swift.max(w, h) <= 320 { return img }
+        return img.squared(240)
     }
 
     /// Beskjæres til kvadrat (160 px) og lagres for deg. Faller tilbake til lokal lagring når serveren mangler ruten.

@@ -55,15 +55,16 @@ targets:
         # Prompt 40: «Økonomi · lommebok» (3c) som alternativt ikon.
         ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "AppIcon-Hus AppIcon-Rom AppIcon-Monogram AppIcon-Okonomi"
         ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
-        INFOPLIST_KEY_CFBundleDisplayName: FinansHub
+        # Prompt 52: visningsnavnet på hjemskjermen er «Homelab» (bundle-id no.kristo.finanshub er uendret).
+        INFOPLIST_KEY_CFBundleDisplayName: Homelab
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_NSCameraUsageDescription: "Kameraet brukes til å ta bilde av kvitteringer og skanne QR-koder for å logge inn på en ny enhet."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Velg kvitteringsbilder fra biblioteket."
-        INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID brukes til å låse opp FinansHub."
-        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "FinansHub kobler til homelab-serveren din på lokalt nett."
+        INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID brukes til å låse opp Homelab."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Homelab kobler til homelab-serveren din på lokalt nett."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Posisjonen din deles med familien i Familie og kart når du har slått på deling."
         INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket, og du får varsler når noen kommer til eller forlater en sone."
         # Prompt 27: mikrofonen i Chat (tale til tekst på norsk).
@@ -78,6 +79,14 @@ targets:
       properties:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        # Prompt 52 (Familie-krasjet): personverntekstene står også direkte i Info.plist, ikke bare som INFOPLIST_KEY_-
+        # innstillinger. Mangler en av dem når Familie ber om posisjon, bevegelse eller Helse, avslutter iOS appen med en gang.
+        NSLocationWhenInUseUsageDescription: "Posisjonen din deles med familien i Familie og kart når du har slått på deling."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket, og du får varsler når noen kommer til eller forlater en sone."
+        NSLocationAlwaysUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket."
+        NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
+        NSHealthShareUsageDescription: "Appen leser skritt, puls, søvn og aktivitet for å vise dem i Familie."
+        NSHealthUpdateUsageDescription: "Appen skriver ikke til Apple Health. Den leser bare det du velger å dele i Familie."
         # «Last ned» lagrer kvitteringer i appens mappe, som vises i Filer → På min iPhone → FinansHub.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
@@ -144,7 +153,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub.widgets
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: FinansHub
+        INFOPLIST_KEY_CFBundleDisplayName: Homelab
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
     info:
@@ -444,7 +453,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "4"
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: FinansHub
+        INFOPLIST_KEY_CFBundleDisplayName: Homelab
         INFOPLIST_KEY_WKApplication: YES
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: no.kristo.finanshub
         INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: YES

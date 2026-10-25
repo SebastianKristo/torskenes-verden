@@ -190,7 +190,7 @@ final class Quick29Model {
     /* ---------- Bakgrunnsjobben ---------- */
 
     /// «Legg til i kalenderen» (arket, Hjem-søket og Snarveier): lukker arket med en gang og legger jobben i køen.
-    func submit(_ raw: String, _ store: Store) {
+    func submit(_ raw: String, _ store: Store, local52: Quick29Preview? = nil) {
         let t: String = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }
         sheetOpen = false
@@ -207,6 +207,13 @@ final class Quick29Model {
                 var body: [String: Any] = ["text": t]
                 if let lp = Time44.preview(t) {
                     body["local"] = ["title": lp.title, "date": lp.date, "start": lp.start, "end": lp.end]
+                }
+                // Prompt 52: AI-tolkningen (tittel, dato, tid og sted) fra /api/glimt/quickparse52 går foran (Quick52.swift).
+                if let a = local52 {
+                    var l: [String: Any] = ["title": a.title, "date": a.date, "start": a.start, "end": a.end]
+                    if !a.place.isEmpty { l["location"] = a.place; l["place"] = a.place }
+                    body["local"] = l
+                    body["source"] = "glimt52"
                 }
                 let d: Data = try await store.api.callAt("/api", "POST", "/kalender/quick", json: body, timeout: 20)
                 let o: [String: Any] = JS.obj(d)

@@ -82,62 +82,36 @@ struct Glimt43Pill: View {
 }
 
 /// Finans → Oversikt: saldokortet (f1) i 4b-oppsett med Papir-farger. Bare to tall: saldo og brukt denne måneden.
+/// Prompt 52: fire utseender (Standard, Glass, Kvittering, Fargebunn) – hold inne for å velge (Saldo52.swift).
 struct Fin43Saldo: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
+    @MainActor private var s: Sal52 { Sal52.shared }
 
     var body: some View {
-        let total: Double = (store.boot?.accounts ?? []).reduce(0) { $0 + $1.balance }
-        let spent: Double? = store.summary.map { abs($0.ut) }
-        let cal: Calendar = Calendar(identifier: .gregorian)
-        let now: Date = Date()
-        let d: Int = cal.component(.day, from: now)
-        let dm: Int = cal.range(of: .day, in: .month, for: now)?.count ?? 30
-        let frac: Double = Double(d) / Double(Swift.max(1, dm))
+        let d: Sal52Data = Sal52Data.of(store)
         Button {
+            // Et langt trykk (arket) åpner ikke Kontoer.
+            if s.blocksWiggle || s.sheet { return }
             Haptics.shared.tap()
             store.paperFinGo("kontoer")
         } label: {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text("SALDO · ALLE KONTOER").font(PF.mono(10.5)).tracking(1.4).foregroundStyle(p.lab)
-                    Spacer()
-                    Text("›").font(PF.ui(15, .bold)).foregroundStyle(p.ink)
-                        .frame(width: 30, height: 30).background(p.bg, in: Circle())
-                }
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(store.boot == nil ? "–" : neg0(total)).font(PF.serif(52, medium: true)).foregroundStyle(p.ink)
-                        .lineLimit(1).minimumScaleFactor(0.5)
-                    Text("kr").font(PF.serif(30, medium: true)).foregroundStyle(p.mut)
-                }
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle().fill(p.line.opacity(0.8))
-                        Circle().inset(by: 2.5).trim(from: 0, to: frac).stroke(p.lab, lineWidth: 5).rotationEffect(.degrees(-90))
-                        Circle().fill(p.bg).frame(width: 36, height: 36)
-                        // «21.» på én linje: tall og punktum i samme tekst.
-                        Text("\(d).").font(PF.ui(11, .bold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
-                    }
-                    .frame(width: 46, height: 46)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Brukt i \(Fin43Saldo.month(now)) · dag \(d) av \(dm)").font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1).minimumScaleFactor(0.8)
-                        Text(spent.map { n0($0) + " kr" } ?? "–").font(PF.serif(26, medium: true)).foregroundStyle(p.ink).lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 14).padding(.vertical, 12)
-                .background(p.bg, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            }
-            .padding(20)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(p.card, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(p.line.opacity(0.7), lineWidth: 1))
-            .shadow(color: Color.black.opacity(0.18), radius: 18, y: 12)
-            .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            Sal52Card(style: s.style, data: d)
+                .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Saldo alle kontoer \(store.boot == nil ? "" : neg0(total)) kroner. Brukt i \(Fin43Saldo.month(now)) \(spent.map { n0($0) } ?? "") kroner.")
-        .accessibilityHint("Åpner Kontoer")
+        // Hold 0,45 s: før wiggle-holdet (0,5 s) i kortstabelen, som da hoppes over (PaperCardStack, Sal52.blocksWiggle).
+        .simultaneousGesture(LongPressGesture(minimumDuration: 0.45, maximumDistance: 8).onEnded { (_: Bool) in s.hold() })
+        .sheet(isPresented: Binding<Bool>(get: { s.sheet }, set: { s.sheet = $0 })) {
+            Sal52Sheet()
+                .environment(\.paper, p)
+                .environment(store)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
+        .onAppear { s.boot() }
+        .accessibilityLabel("Saldo alle kontoer \(d.amount) kroner. Brukt i \(d.month) \(d.spent).")
+        .accessibilityHint("Åpner Kontoer. Hold inne for å velge utseende.")
     }
 
     static func month(_ d: Date) -> String {
@@ -182,6 +156,8 @@ struct Fin43MonthHead: View {
     @Environment(\.paper) private var p
     let title: String
     let net: Double
+    /// Prompt 52: festet øverst (har scrollet forbi starten av måneden) → avrundet, flytende pille (Fin52Stick.swift).
+    var pinned: Bool = false
 
     var body: some View {
         VStack(spacing: 6) {
@@ -190,11 +166,15 @@ struct Fin43MonthHead: View {
                 Spacer(minLength: 8)
                 Text("Netto " + (net > 0 ? "+" : "") + Fin43MonthHead.kr(net)).font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
             }
-            .padding(.horizontal, 2)
-            Rectangle().fill(p.ink).frame(height: 2)
+            .padding(.horizontal, pinned ? 14 : 2)
+            .padding(.vertical, pinned ? 10 : 0)
+            .background { if pinned { Fin52StickBg() } }
+            .padding(.horizontal, pinned ? -6 : 0)
+            if !pinned { Rectangle().fill(p.ink).frame(height: 2) }
         }
-        .padding(.top, 4)
-        .background(p.bg)
+        .padding(.top, pinned ? 10 : 4)
+        .background(pinned ? Color.clear : p.bg)
+        .animation(.easeOut(duration: 0.22), value: pinned)
         .accessibilityElement(children: .combine)
     }
 

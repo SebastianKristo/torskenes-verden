@@ -561,13 +561,12 @@ struct WxForholdBody22: View {
         .padding(.trailing, 36)
     }
 
+    /// Prompt 52: samme glass-pille med dra som temp/regn/vind-bryteren (WxGlass52.swift).
     private var toggle: some View {
-        HStack(spacing: 4) {
-            seg("Faktisk", false)
-            seg("Føles som", true)
-        }
-        .padding(4)
-        .background(Color(hex: "#24272e"), in: Capsule())
+        WxGlass52(value: Binding<String>(get: { feel ? "feel" : "real" }, set: { (v: String) in feel = v == "feel" }),
+                  items: [WxGlass52Item(id: "real", label: "Faktisk"), WxGlass52Item(id: "feel", label: "Føles som")],
+                  fontSize: 15, height: 40, equalWidth: 136, track: Color(hex: "#24272e"), a11y: "Temperatur")
+            .frame(maxWidth: .infinity)
     }
 
     private func seg(_ t: String, _ f: Bool) -> some View {

@@ -241,7 +241,7 @@ enum Rc48Check {
         case "B": return "iPhone + Glimt"
         case "C": return "Mac"
         case "T": return "Glimt"
-        case "D": return "Gemini"
+        case "D": return "Gemini (eldre)"
         default: return r.label ?? "Ikke tolket"
         }
     }

@@ -124,6 +124,8 @@ struct Glimt35SettingsContent: View {
             Glimt35FigGrid()
             Text("Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle …) tar over når temaet passer, om det er slått på under.")
                 .font(PF.ui(12.5)).foregroundStyle(Brief34C.mut).fixedSize(horizontal: false, vertical: true)
+            // Prompt 52: admin – standardfigur per bruker (Glimt52Char.swift).
+            Glimt52AdminDefaults()
             // Prompt 40: Julemodus rett under figurvalget og teksten om vennene, før Glimt-brief-bryteren (Glimt40Settings.swift).
             Glimt40JulCard()
             // Prompt 41: Høytider → 17. mai (Automatisk / Vis nå / Av).

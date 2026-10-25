@@ -387,7 +387,10 @@ struct Bol24EntrySheet: View {
             VStack(alignment: .leading, spacing: 12) {
                 Capsule().fill(p.line).frame(width: 40, height: 5).frame(maxWidth: .infinity)
                 head
-                info
+                // Prompt 52: samme kvitteringsvisning som Finans → transaksjon (Receipt52Panel.swift): logo, butikk,
+                // «kategori · dato · bolig», stort beløp, ✦ Glimt-tekst og «ORIGINAL KVITTERING». Ingen egen leser i Boliger.
+                Bol52ReceiptPanel(home: home, entry: e)
+                if home.canEdit && !e.pending { edit52 }
                 if home.canEdit { cats }
                 if home.canEdit { buttons }
             }
@@ -407,6 +410,18 @@ struct Bol24EntrySheet: View {
             // Prompt 30: felles Ferdig-pille.
             SheetButton30(kind: .primary, title: "Ferdig", action: close)
         }
+    }
+
+    /// Prompt 52: beløp og dato kan fortsatt endres (prompt 30), under panelet.
+    private var edit52: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Endre beløp og dato").font(PF.ui(12.5)).foregroundStyle(p.mut)
+            Bol30AmountDate(hid: home.id, eid: e.id, amount: e.amount, date: e.date)
+            if !e.paidBy.isEmpty { Text("Lagt til av " + e.paidBy).font(PF.ui(13)).foregroundStyle(p.mut) }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private var info: some View {

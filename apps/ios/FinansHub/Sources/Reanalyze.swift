@@ -1,6 +1,6 @@
 import SwiftUI
 
-/* ---------------- «✦ Analyser på nytt med Gemini» ---------------- */
+/* ---------------- «✦ Les på nytt» (lokalt; prompt 52: Gemini leser aldri kvitteringer) ---------------- */
 
 /// Ett lesresultat (det forrige eller det nye fra Gemini).
 struct ReadResult: Hashable {
@@ -51,7 +51,7 @@ extension Store {
 
     /// Sender originalbildet til Gemini på nytt (POST /receipts/:id/reanalyze) og gir begge resultatene.
     /// Prompt 50: som jobb med polling i stedet for ett synkront kall på opptil 120 s (det ga 502 fra proxyen), Receipt50Reread.swift.
-    func reanalyze(_ id: String, small: Bool = false, engine: String = "gemini") async throws -> ReanalyzeResult {
+    func reanalyze(_ id: String, small: Bool = false, engine: String = "ollama") async throws -> ReanalyzeResult {
         try await reanalyze50(id, engine: engine, small: small)
     }
 
@@ -74,7 +74,8 @@ struct ReanalyzeButton: View {
     var primary50 = false
     var disabledWhy: String? = nil
     /// Prompt 50: «tesseract» = sekundærknappen «Les med lokal OCR».
-    var engine50: String = "gemini"
+    /// Prompt 52: «ollama» (lokalt) som standard – Gemini leser aldri kvitteringer.
+    var engine50: String = "ollama"
     @State private var busy = false
     @State private var shown: ReanalyzeResult?
 
@@ -83,9 +84,9 @@ struct ReanalyzeButton: View {
 
     private var title50: String {
         if ocr50 { return busy ? "Leser med lokal OCR …" : "Les med lokal OCR" }
-        if busy { return "Gemini leser på nytt …" }
-        if primary50 { return "✦ Analyser på nytt med Gemini" }
-        return compact ? "Analyser på nytt" : "Analyser på nytt med Gemini"
+        if busy { return "Glimt leser lokalt …" }
+        if primary50 { return "✦ Les på nytt" }
+        return "Les på nytt"
     }
 
     var body: some View {
@@ -168,11 +169,11 @@ struct ReanalyzeCompare: View {
                     Spacer()
                     Button { dismiss() } label: { Text("Lukk").fontWeight(.semibold).foregroundStyle(Color.accentLight).frame(height: 44) }.buttonStyle(.plain)
                 }
-                Text("Velg hvilket resultat som skal beholdes. Originalbildet er lest på nytt av Gemini.")
+                Text("Velg hvilket resultat som skal beholdes. Originalbildet er lest på nytt lokalt.")
                     .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65))
                 HStack(alignment: .top, spacing: 10) {
                     column("Forrige", result.previous, fresh: false)
-                    column("Gemini", result.result, fresh: true)
+                    column("Lokal AI", result.result, fresh: true)
                 }
                 HStack(spacing: 10) {
                     Button { store.applyReanalyze(result, keepNew: false); dismiss() } label: {

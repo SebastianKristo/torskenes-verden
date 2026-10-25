@@ -16,7 +16,7 @@ struct AiTimeouts23: View {
     }
 
     static let steps: [Int] = [5, 10, 15, 20, 30, 45, 60, 90, 120]
-    static let engines: [(String, String, String, Int)] = [("gemini", "Gemini", "Les kvitteringer", 20), ("groq", "Groq", "AI-søk og kategorier", 15),
+    static let engines: [(String, String, String, Int)] = [("gemini", "Gemini", "Bare «Finn logo» (butikknavn)", 20), ("groq", "Groq", "AI-søk og kategorier", 15),
                                                           ("roboflow", "Roboflow", "Strekkoder", 15), ("ollama", "Ollama (lokal)", "Reserve på hjemmeserveren", 45)]
     static let actions: [(String, String)] = [("next", "Prøv neste motor"), ("ocr", "Bruk lokal OCR"), ("queue", "Legg i kø og prøv senere")]
     private static let key: String = "papir_ai_to"

@@ -440,11 +440,8 @@ private struct ScanPrefsPage: View {
             }
             SectionLabel(text: "AI-motor (på serveren)")
             Card {
-                Choice(label: "Ollama lokalt", sub: "Bildet forlater aldri huset", on: st?.provider == "ollama" && st?.fallback != true) { store.save("provider", "ollama"); store.save("fallback", false) }
-                Sep()
-                Choice(label: "Gemini", sub: "Raskest og mest presis", on: st?.provider == "gemini") { store.save("provider", "gemini"); store.save("fallback", false) }
-                Sep()
-                Choice(label: "Ollama + Gemini", sub: "Lokalt først, Gemini som reserve", on: st?.provider == "ollama" && st?.fallback == true) { store.save("provider", "ollama"); store.save("fallback", true) }
+                // Prompt 52: kvitteringer leses bare lokalt – Gemini er fjernet, også som reserve (SERVER52-API.md § 1).
+                Choice(label: "Lokal AI", sub: "Glimt leser lokalt · bildet forlater aldri huset", on: true) { store.save("provider", "ollama"); store.save("fallback", false) }
             }
             .disabled(!store.canEditServer).opacity(store.canEditServer ? 1 : 0.55)
             if !store.canEditServer { Note(text: ServerLock26.note) }
@@ -639,11 +636,8 @@ private struct AiPage: View {
         VStack(spacing: 12) {
             SectionLabel(text: "AI-motor (på serveren)")
             Card {
-                Choice(label: "Ollama lokalt", sub: "Bildet forlater aldri huset", on: st?.provider == "ollama" && st?.fallback != true) { store.save("provider", "ollama"); store.save("fallback", false) }
-                Sep()
-                Choice(label: "Gemini", sub: "Raskest og mest presis", on: st?.provider == "gemini") { store.save("provider", "gemini"); store.save("fallback", false) }
-                Sep()
-                Choice(label: "Ollama + Gemini", sub: "Lokalt først, Gemini som reserve", on: st?.provider == "ollama" && st?.fallback == true) { store.save("provider", "ollama"); store.save("fallback", true) }
+                // Prompt 52: kvitteringer leses bare lokalt – Gemini er fjernet, også som reserve (SERVER52-API.md § 1).
+                Choice(label: "Lokal AI", sub: "Glimt leser lokalt · bildet forlater aldri huset", on: true) { store.save("provider", "ollama"); store.save("fallback", false) }
             }
             .disabled(!store.canEditServer).opacity(store.canEditServer ? 1 : 0.55)
             if !store.canEditServer { Note(text: ServerLock26.note) }
@@ -656,7 +650,7 @@ private struct AiPage: View {
                 }
             }
             .disabled(!store.canEditServer).opacity(store.canEditServer ? 1 : 0.55)
-            Note(text: "Kvitteringer under grensen må sjekkes før de bokføres. API-nøkler for Gemini legges inn i FinansHub på PC.")
+            Note(text: "Kvitteringer under grensen må sjekkes før de bokføres. Kvitteringer leses bare lokalt (telefonen, Mac Vision, Tesseract og lokal modell).")
         }
     }
 }

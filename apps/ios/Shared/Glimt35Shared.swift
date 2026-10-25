@@ -32,6 +32,8 @@ struct Glimt35Char: Identifiable, Hashable {
         Glimt35Char(id: "stjerne", name: "Stjerne", full: "Stjerne", who: "STJERNE", nameColor: 0xffb38a, family: "venn"),
         Glimt35Char(id: "spire", name: "Spire", full: "Spire", who: "SPIRE", nameColor: 0x9fd8a8, family: "venn"),
         Glimt35Char(id: "gris", name: "Gris", full: "Gris", who: "GRIS", nameColor: 0xf6b3c1, family: "venn"),
+        // Prompt 52: Blekksprut (Runes figur), Glimt52Blekk.swift.
+        Glimt35Char(id: "blekk", name: "Blekksprut", full: "Blekksprut", who: "BLEKKSPRUT", nameColor: 0xf1a3ad, family: "venn"),
     ]
 
     static func get(_ id: String) -> Glimt35Char {
@@ -56,7 +58,8 @@ struct Glimt35Char: Identifiable, Hashable {
 
     /// Hilsenen når figuren velges.
     static func hello(_ id: String) -> String {
-        id == "gris" ? "Nøff! Nå er jeg din Glimt." : "Hei! Nå er jeg din Glimt."
+        if id == "blekk" { return "Hei! Seks armer klare. Nå er jeg din Glimt." }
+        return id == "gris" ? "Nøff! Nå er jeg din Glimt." : "Hei! Nå er jeg din Glimt."
     }
 
     /// Tonehøyde og tempo for nettleser-/systemstemmen (CHV i fasiten).
@@ -67,6 +70,7 @@ struct Glimt35Char: Identifiable, Hashable {
         case "drape": return (1.25, 1.06)
         case "ugle": return (0.8, 0.94)
         case "gris": return (1.1, 1.04)
+        case "blekk": return (1.06, 1.02)
         default: return (1, 1)
         }
     }

@@ -153,6 +153,10 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
     let content: (String) -> Content
     let accessory: (String) -> Accessory
 
+    /// Prompt 52: halve kort (to ved siden av hverandre på mobil) og høye halve kort (to rader, med to halve ved siden av).
+    var half: Set<String> = []
+    var tall: Set<String> = []
+
     @State private var live: [String]? = nil
     @State private var dragKey: String? = nil
     @State private var hoverKey: String? = nil
@@ -181,6 +185,14 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
         self.accessory = accessory
     }
 
+    /// Prompt 52: slår på 2-kolonners rutenett for `half` (og `tall`) på mobil (Home52Grid.swift).
+    func halves52(_ h: Set<String>, tall t: Set<String>) -> Self {
+        var c: Self = self
+        c.half = h
+        c.tall = t
+        return c
+    }
+
     private var order: [String] {
         guard editing, let l = live else { return keys }
         return Wiggle43.reconcile(l, keys)
@@ -189,7 +201,12 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
     var body: some View {
         let o: [String] = order
         Group {
-            if columns > 1 {
+            if columns == 1 && !half.isEmpty {
+                // Prompt 52: Hjem som 2-kolonners rutenett (3a). Samme celler, dra-og-slipp og minus som lista.
+                VStack(spacing: spacing) {
+                    ForEach(Home52Rows.rows(o, half: half, tall: tall)) { (r: Home52Row) in row52(r, o) }
+                }
+            } else if columns > 1 {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: columns), spacing: spacing) {
                     ForEach(Array(o.enumerated()), id: \.element) { i, k in cell(k, i) }
                 }
@@ -214,6 +231,36 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
         // Nye kort (lagt til med ＋) skal også vugge.
         .onChange(of: keys) { (_: [String], _: [String]) in if editing && !paused { startWiggle(true) } }
         .onDisappear { if live != nil { finish() } }
+    }
+
+    /// Prompt 52: én rad i rutenettet – helt kort, to halve, eller et høyt halvt kort med to halve stablet ved siden av.
+    @ViewBuilder private func row52(_ r: Home52Row, _ o: [String]) -> some View {
+        switch r.kind {
+        case .full:
+            cell(r.keys[0], o.firstIndex(of: r.keys[0]) ?? 0).id("card37-" + r.keys[0])
+        case .pair:
+            HStack(alignment: .top, spacing: spacing) {
+                ForEach(r.keys, id: \.self) { (k: String) in
+                    cell(k, o.firstIndex(of: k) ?? 0).id("card37-" + k)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
+                if r.keys.count == 1 { Color.clear.frame(maxWidth: .infinity, maxHeight: 1) }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        case .tall:
+            HStack(alignment: .top, spacing: spacing) {
+                cell(r.keys[0], o.firstIndex(of: r.keys[0]) ?? 0).id("card37-" + r.keys[0])
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                VStack(spacing: spacing) {
+                    ForEach(Array(r.keys.dropFirst()), id: \.self) { (k: String) in
+                        cell(k, o.firstIndex(of: k) ?? 0).id("card37-" + k)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     @ViewBuilder private func cell(_ k: String, _ i: Int) -> some View {

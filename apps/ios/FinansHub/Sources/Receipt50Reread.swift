@@ -58,7 +58,7 @@ enum Receipt50Err {
 
 extension Store {
     /// Prompt 50: les kvitteringen på nytt som jobb (ingen lange HTTP-kall). Gir begge resultatene til sammenligningen.
-    func reanalyze50(_ id: String, engine: String = "gemini", small: Bool = false) async throws -> ReanalyzeResult {
+    func reanalyze50(_ id: String, engine: String = "ollama", small: Bool = false) async throws -> ReanalyzeResult {
         var body: [String: Any] = ["engine": engine, "async": true, "apply": false]
         if small { body["small"] = true; body["maxSide"] = 1024 }
         let d: Data = try await api.callAt("/finans/api", "POST", "/receipts/\(id)/reanalyze", json: body, timeout: 30)
@@ -133,7 +133,7 @@ struct Receipt50LowBox: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(text).font(PF.ui(13.5)).foregroundStyle(Receipt50Look.ink2(p)).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
-                ReanalyzeButton(receiptId: r.id, compact: true, primary50: true, disabledWhy: store.canReanalyze(r) ? nil : (r.reanalyzeReason ?? "Gemini er ikke tilgjengelig for denne kvitteringen"))
+                ReanalyzeButton(receiptId: r.id, compact: true, primary50: true, disabledWhy: store.canReanalyze(r) ? nil : (r.reanalyzeReason ?? "Kan ikke leses på nytt akkurat nå"))
                 if (r.mime ?? "") != "text/plain" {
                     ReanalyzeButton(receiptId: r.id, compact: true, engine50: "tesseract")
                 }

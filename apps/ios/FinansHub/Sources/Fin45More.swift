@@ -138,13 +138,15 @@ struct PaperFinMore45: View {
         let vis: [More28Row] = all.filter { $0.id != FinHidden30.locked && !FinHidden30.shared.isHidden($0.id) && n.hit($0) }
         let hidden: [More28Row] = all.filter { FinHidden30.shared.isHidden($0.id) }
         VStack(alignment: .leading, spacing: 10) {
-            Fin45Search()
+            // Prompt 52: brytere for søkefelt, FINANS og VERKTØY i wiggle; av = borte, også luften (Mer52Vis.swift).
+            if editing { Mer52VisRow(page: "fmer") }
+            if Mer52Vis.shared.on("fmer", "sok") { Fin45Search() }
             Fin45Body(visible: vis, editing: editing, enter: start, hide: hide, commit: commit)
             if let s = all.first(where: { $0.id == FinHidden30.locked }), n.hit(s) { Fin45SettingsRow(row: s, editing: editing) }
             if editing && !hidden.isEmpty { Fin45ShowHidden(count: hidden.count) { showAll(hidden) } }
             if !editing && vis.isEmpty && !n.query.isEmpty { Fin45Empty(query: n.query) }
         }
-        .onAppear { order = FinTileOrder20.load() }
+        .onAppear { order = FinTileOrder20.load(); Mer52Vis.shared.boot() }
         .onDisappear { if editing { store.paperEditPage = nil } }
         .task { await Fin45.load(store) }
     }
@@ -195,9 +197,11 @@ struct Fin45Body: View {
         let big: [More28Row] = visible.filter { Fin45More.bigKeys.contains($0.id) }
         let tools: [More28Row] = n.low ? visible : visible.filter { !Fin45More.bigKeys.contains($0.id) }
         VStack(alignment: .leading, spacing: 10) {
-            if !n.low || editing { Fin45Header(title: n.low ? "" : "FINANS", editing: editing) }
+            // Prompt 52: «FINANS» av = ingen rad utenfor wiggle; i wiggle står raden (Store · Lave, Ferdig) uten teksten.
+            let tit: Bool = Mer52Vis.shared.on("fmer", "tit")
+            if (!n.low && tit) || editing { Fin45Header(title: n.low || !tit ? "" : "FINANS", editing: editing) }
             if !n.low && !big.isEmpty { Fin45Tiles(rows: big, columns: wide ? 4 : 2, editing: editing, enter: enter, hide: hide, commit: commit) }
-            if !n.low && !tools.isEmpty { More44Label(text: "VERKTØY").padding(.top, 8) }
+            if !n.low && !tools.isEmpty && Mer52Vis.shared.on("fmer", "vkt") { More44Label(text: "VERKTØY").padding(.top, 8) }
             if !tools.isEmpty { Fin45Tools(rows: tools, columns: wide ? 2 : 1, editing: editing, enter: enter, hide: hide, commit: commit) }
         }
     }
@@ -317,13 +321,18 @@ struct Fin45Tile: View {
     var body: some View {
         Button { if !editing { row.act() } } label: {
             VStack(alignment: .leading, spacing: 0) {
-                More44TileTop(row: row)
+                // Prompt 52: helfylt ikonbrikke i modulfargen (Mer52Vis.swift).
+                HStack(spacing: 9) {
+                    Mer52Chip(row: row, size: 30, radius: 9)
+                    Text(row.name).font(PF.ui(14, .bold)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.85)
+                }
                 Spacer(minLength: 6)
                 More44TileValue(live: live)
             }
             .padding(14)
             .frame(maxWidth: .infinity, minHeight: 150, maxHeight: 150, alignment: .topLeading)
-            .background(p.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            // Prompt 52: modulfargen 13 % blandet inn i kortfargen (følger lyst/mørkt tema).
+            .background(Mer52Vis.mix(Color(hex: Mer52Vis.hex(row.id)), p.card, 0.13), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -373,7 +382,7 @@ struct Fin45ToolRow: View {
 
     var body: some View {
         Button { if !editing { row.act() } } label: {
-            More44ToolRowContent(row: row, sub: row.sub)
+            Fin52ToolRowContent(row: row)
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
                 .background(card ? p.card : Color.clear, in: RoundedRectangle(cornerRadius: card ? 18 : 0, style: .continuous))
@@ -431,5 +440,23 @@ struct Fin45Empty: View {
     var body: some View {
         Text("Ingen moduler heter «\(query)».").font(PF.ui(13.5)).foregroundStyle(p.mut)
             .frame(maxWidth: .infinity).padding(.vertical, 14)
+    }
+}
+
+/// Prompt 52: Verktøy-raden i Finans → Mer med helfylt ikonbrikke i modulfargen (Mer52Vis.swift).
+struct Fin52ToolRowContent: View {
+    @Environment(\.paper) private var p
+    let row: More28Row
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Mer52Chip(row: row, size: 34, radius: 10)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(row.name).font(PF.serif(18, medium: true)).foregroundStyle(p.ink).lineLimit(1)
+                Text(row.sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
+            }
+            Spacer(minLength: 6)
+            Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+        }
     }
 }

@@ -314,6 +314,9 @@ final class EdgePanCoordinator: NSObject, UIGestureRecognizerDelegate {
 
     /// Hver berøring i vinduet passerer her: bildet av siden tas før trykket rekker å bytte side.
     func gestureRecognizer(_ g: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        // Prompt 52: mens et ark ligger over appen (f.eks. Chat → Velg modell) tar kantgesten ingen berøringer,
+        // så arkets scroll og sveip-ned aldri venter på den (og ingen skjermbilder tas av siden bak).
+        if win?.rootViewController?.presentedViewController != nil { return false }
         Nav23History.shared.capture(key: key)
         return true
     }

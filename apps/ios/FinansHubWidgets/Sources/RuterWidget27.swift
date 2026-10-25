@@ -29,7 +29,15 @@ enum RuterFetch27 {
             var devs: [String] = []
             for ref in h.stops.prefix(3) {
                 let enc: String = ref.id.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ref.id
-                guard let d = await TasksFetch.request("/api/ruter/departures?stop=\(enc)&n=8") else { continue }
+                // Prompt 52: uten svar brukes appens buffer for stoppet (Ruter52Buffer.swift).
+                guard let d = await TasksFetch.request("/api/ruter/departures?stop=\(enc)&n=8") else {
+                    if let b = Ruter52Buffer.stop(ref.id, name: ref.name, now: now) {
+                        stops.append(b.0)
+                        for x in b.1 where !devs.contains(x) { devs.append(x) }
+                    }
+                    continue
+                }
+                Ruter52Buffer.put(ref.id, name: ref.name, data: d, at: now)
                 let r: (Ruter27Stop, [String]) = Ruter27Shared.parseStop(d, id: ref.id, name: ref.name, now: now)
                 stops.append(r.0)
                 for x in r.1 where !devs.contains(x) { devs.append(x) }
@@ -38,6 +46,22 @@ enum RuterFetch27 {
                 let s: Ruter27Snapshot = Ruter27Snapshot(stops: stops, deviations: devs, fetched: now)
                 Ruter27Shared.saveCache(s)
                 return (s, linked)
+            }
+        }
+        // Prompt 52: bufferen per stopp er ofte nyere enn det siste øyeblikksbildet.
+        if let h = Ruter27Shared.home(), !h.stops.isEmpty {
+            var stops: [Ruter27Stop] = []
+            var devs: [String] = []
+            var newest: Date = .distantPast
+            for ref in h.stops.prefix(3) {
+                guard let b = Ruter52Buffer.stop(ref.id, name: ref.name, now: now) else { continue }
+                stops.append(b.0)
+                for x in b.1 where !devs.contains(x) { devs.append(x) }
+                if let e = Ruter52Buffer.entry(ref.id), e.at > newest { newest = e.at }
+            }
+            let old: Date = Ruter27Shared.cache()?.fetched ?? .distantPast
+            if stops.contains(where: { !$0.deps.isEmpty }) && newest > old {
+                return (Ruter27Snapshot(stops: stops, deviations: devs, fetched: newest), linked)
             }
         }
         return (Ruter27Shared.cache(), linked)

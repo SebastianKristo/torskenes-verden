@@ -55,7 +55,8 @@ struct PaperFinList: View {
             // øverst mens du scroller i måneden. Med kategorifilter: «MAT OG DAGLIGVARER · OKT · 7».
             LazyVStack(spacing: 14, pinnedViews: [.sectionHeaders]) {
                 ForEach(Fin43Month.groups(Array(list.prefix(400)))) { g in
-                    Section {
+                    // Prompt 52: overskriften blir en avrundet, flytende pille når den er festet (Fin52Stick.swift).
+                    Fin52MonthSection(title: (cat == "Alle" ? g.label : cat.uppercased() + " · " + g.short) + " · \(g.txs.count)", net: g.net) {
                         VStack(spacing: 0) {
                             ForEach(Array(g.txs.enumerated()), id: \.element.id) { i, t in
                                 if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
@@ -65,8 +66,6 @@ struct PaperFinList: View {
                         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                         .padding(.top, 6)
-                    } header: {
-                        Fin43MonthHead(title: (cat == "Alle" ? g.label : cat.uppercased() + " · " + g.short) + " · \(g.txs.count)", net: g.net)
                     }
                 }
             }

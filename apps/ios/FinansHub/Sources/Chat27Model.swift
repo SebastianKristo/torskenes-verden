@@ -68,6 +68,10 @@ struct ChatMsg27: Identifiable, Hashable {
     var readWith50: String = ""
     var fin50: String = ""
     var fin50Label: String = ""
+    /// Prompt 52: tankegangen på svaret (think: string[], thS: sekunder) og miniatyrene på brukermeldingen (attTh, data-URL).
+    var think: [String] = []
+    var thS: Double = 0
+    var attTh: [String] = []
 }
 
 struct ChatSettings27: Hashable {
@@ -216,6 +220,10 @@ final class ChatStore27 {
     /// Prompt 31: Glimt-ruteren jobber (verktøy-spørsmål), Chat31Cards.swift.
     var pendingTool31: Bool = false
     var scrollTick: Int = 0
+    /// Prompt 52: tankestegene mens modellen tenker (SSE thinking), når den startet, og sekundene når svaret begynte (thinking_done).
+    var think52: [String] = []
+    var think52Start: Date? = nil
+    var think52S: Double? = nil
 
     /* ---------- Ark ---------- */
     /// model, params, menu, guard, plus, kb, mods.
@@ -457,6 +465,11 @@ final class ChatStore27 {
             // Prompt 50: vedlegg med miniatyr (bilder i boblen), andre filer som piller.
             msg.att50 = Chat50File.list(JS.list(m, "attachments"))
             for f in msg.att50 where !f.isImage && !msg.attach.contains(f.name) { msg.attach.append(f.name) }
+            // Prompt 52: tankegangen (svar) og miniatyrene (bruker). Bilder vises som miniatyr, ikke som «# Bilde 1.jpg».
+            msg.think = JS.strings(m, "think")
+            msg.thS = JS.num(m, "thS") ?? 0
+            msg.attTh = JS.strings(m, "attTh")
+            if !msg.attTh.isEmpty || msg.att50.contains(where: { $0.isImage }) { msg.attach.removeAll { Chat52.isImageName($0) } }
             // Prompt 31: kort og verktøy lagret i meldingen.
             if let cd = m["card"] as? [String: Any], let cj = try? JSONSerialization.data(withJSONObject: cd) {
                 msg.card31 = String(data: cj, encoding: .utf8) ?? ""
@@ -688,6 +701,8 @@ final class ChatStore27 {
             Chat50File(id: a.fileId, name: a.name, mime: a.mime.isEmpty ? "image/jpeg" : a.mime, kind: "image", thumb: a.thumb,
                        url: "/api/chat/files/" + a.fileId, preview: a.id)
         }
+        // Prompt 52: miniatyr (maks 220 px) på meldingen, så historikken viser bildet uten å hente originalen (Chat52Think.swift).
+        m.attTh = Chat52.thumbs(attach)
         msgs.append(m)
         if title.isEmpty { title = String(t.prefix(48)) }
         input = ""
@@ -735,6 +750,8 @@ final class ChatStore27 {
             var o: [String: Any] = ["role": m.role, "content": m.content]
             if i == lastUser && !m.images.isEmpty { o["images"] = m.images }
             if i == lastUser && !m.att50.isEmpty { o["attachments"] = m.att50.map { $0.id } }
+            // Prompt 52: miniatyrene lagres med meldingen. Tankegangen (think/thS) sendes aldri tilbake til modellen.
+            if i == lastUser && !m.attTh.isEmpty { o["attTh"] = Array(m.attTh.prefix(4)) }
             list.append(o)
         }
         var b: [String: Any] = ["model": model, "messages": list, "settings": params.json, "webSearch": webOn,
@@ -768,6 +785,9 @@ final class ChatStore27 {
         finished = false
         streamText = ""
         doneStats = [:]
+        think52 = []
+        think52Start = nil
+        think52S = nil
         streamModel = model
         t0 = Date()
         scrollTick += 1
@@ -827,6 +847,12 @@ final class ChatStore27 {
             } else if let ch = (o["choices"] as? [Any])?.first as? [String: Any], let dd = JS.dict(ch, "delta"), let t = dd["content"] as? String {
                 streamText += t
             }
+        case "thinking":
+            // Prompt 52: ett steg per hendelse (modellens egen tenkning eller Glimts steg).
+            if think52Start == nil { think52Start = Date().addingTimeInterval(-(JS.num(o, "s") ?? 0)) }
+            if let st = JS.str(o, "step"), !st.isEmpty { think52.append(st) }
+        case "thinking_done":
+            think52S = JS.num(o, "thS") ?? think52Start.map { Date().timeIntervalSince($0) }
         case "done":
             doneStats = o
         case "error":
@@ -851,8 +877,15 @@ final class ChatStore27 {
             a.used = used
             a.facts41 = ChatFact41.parse41(JS.list(doneStats, "facts"))
             Chat50.shared.apply(&a, doneStats)
+            // Prompt 52: tankegangen lagres på svaret (fra done, ellers det som kom underveis).
+            let th: [String] = JS.strings(doneStats, "think")
+            a.think = th.isEmpty ? think52 : th
+            a.thS = JS.num(doneStats, "thS") ?? think52S ?? think52Start.map { Date().timeIntervalSince($0) } ?? 0
             msgs.append(a)
         }
+        think52 = []
+        think52Start = nil
+        think52S = nil
         busy = false
         streamText = ""
         streamTool = []

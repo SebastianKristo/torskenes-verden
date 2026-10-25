@@ -671,7 +671,7 @@ struct UploadPill: View {
         if store.uploading > 0 { return "Laster opp \(store.uploading) fil" + (store.uploading > 1 ? "er" : "") + " …" }
         if !active.isEmpty {
             let pct = active.map { $0.progress ?? 0 }.reduce(0, +) / max(1, active.count)
-            return "Gemini leser \(active.count) · \(pct) %"
+            return "Glimt leser lokalt \(active.count) · \(pct) %"
         }
         return "\(ready) klar · trykk for å bekrefte"
     }
@@ -709,7 +709,7 @@ struct JobQueue: View {
         Button { store.selectedReceipt = j.id } label: {
             switch j.status {
             case "pending": row(j.name ?? "Fil", "I kø", nil)
-            case "processing": row(j.name ?? "Fil", "Gemini leser … \(j.progress ?? 0) %", Double(j.progress ?? 0) / 100)
+            case "processing": row(j.name ?? "Fil", "Glimt leser lokalt … \(j.progress ?? 0) %", Double(j.progress ?? 0) / 100)
             case "needs_review": row(j.merchant ?? j.name ?? "Kvittering", "Klar · trykk for å bekrefte", nil, ready: true)
             case "error": row(j.name ?? "Fil", "Feilet – fyll ut manuelt", nil)
             default: row(j.name ?? "Fil", j.status, nil)

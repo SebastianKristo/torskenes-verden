@@ -188,7 +188,8 @@ struct PaperShell: View {
                 VStack(spacing: 0) {
                     // Ikke .clipped(): da kuttes fotovinduet ved safe area, og statuslinja får papirfarge i stedet for bildet.
                     // Prompt 22: FinansHub-sidene bruker «Lys hovedbok» (lys-tokens) som standard (Theme22.swift).
-                    content(store.finPalette22(p)).environment(\.paper, store.finPalette22(p)).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Prompt 52 (IOS52B): sidene glir inn 18 pt fra høyre (260 ms), tilbake 12 pt fra venstre (220 ms), Pg52Anim.swift.
+                    content(store.finPalette22(p)).pg52Enter(Pg52.key(store)).environment(\.paper, store.finPalette22(p)).frame(maxWidth: .infinity, maxHeight: .infinity)
                         // Sidene fra den klassiske appen skal ikke ligge under skinnen på bred skjerm.
                         .padding(.leading, rail45 && (store.paperClassic != nil || store.paperFin != nil) ? 108 : 0)
                         // Prompt 34: innholdet går helt ned bak fanelinjen og skann-knappen (claude-code-innhold-under-navbar.md).
@@ -348,6 +349,8 @@ struct PaperShell: View {
         .hosts44(p)
         // Prompt 51 (IOSFEAT51): Planlegging, Familiekalender, «I kveld», felles søk, onboarding og tema (Feat51Kit.swift).
         .feat51Host(p)
+        // Prompt 52 (IOS52B): Ruter-avgangene forhåndshentes for alle stopp og bufres i App Group (Ruter52.swift).
+        .ruter52Prefetch(store)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)
@@ -689,8 +692,8 @@ struct PaperScanSheet: View {
         return store.paperInFinance ? "Legg til kvittering" : "Skann"
     }
     private var sub: String {
-        store.paperInFinance ? "Ta bilde, velg filer eller del fra e-post. ✦ Gemini leser i bakgrunnen og kobler mot transaksjonen."
-            : "Kvittering, oppskrift eller dokument. ✦ Gemini leser i bakgrunnen."
+        store.paperInFinance ? "Ta bilde, velg filer eller del fra e-post. ✦ Glimt leser lokalt i bakgrunnen og kobler mot transaksjonen."
+            : "Kvittering, oppskrift eller dokument. ✦ Glimt leser lokalt i bakgrunnen."
     }
 
     @ViewBuilder private var queue: some View {

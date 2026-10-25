@@ -101,13 +101,14 @@ struct Fam50Person: Hashable, Identifiable {
     }
 
     var coord: CLLocationCoordinate2D? {
-        guard let lat, let lon else { return nil }
+        // Prompt 52: ugyldig eller manglende posisjon (NaN, 0,0, utenfor jorda) → ingen nål (Family52Guard.swift).
+        guard let lat, let lon, Fam52Geo.valid(lat, lon) else { return nil }
         return CLLocationCoordinate2D(latitude: lat, longitude: lon)
     }
 
     /// «82 %» med ⚡ ved lading, tom når batteri ikke deles.
     var batteryText: String {
-        guard let b = battery else { return "" }
+        guard let b = battery, b.isFinite else { return "" }
         return String(Int(b.rounded())) + " %" + (charging ? " ⚡" : "")
     }
 
@@ -547,6 +548,21 @@ final class Fam50Model {
     var log: [Fam50Item] = []
     var lastSent: Fam50Checkin? = nil
 
+    /// Prompt 52: til avatarene (også inne i kartnåler, der miljøet ikke alltid er med).
+    @ObservationIgnored weak var storeRef: Store? = nil
+
+    /// Like id-er fra serveren får et løpenummer, så ForEach aldri ser samme id to ganger.
+    nonisolated static func unique(_ list: [Fam50Item]) -> [Fam50Item] {
+        var seen: Set<String> = []
+        return list.map { (x: Fam50Item) -> Fam50Item in
+            var y: Fam50Item = x
+            var n: Int = 1
+            while seen.contains(y.id) { n += 1; y.id = x.id + "#" + String(n) }
+            seen.insert(y.id)
+            return y
+        }
+    }
+
     private var loadingAll: Bool = false
     private var refreshTask: Task<Void, Never>? = nil
 
@@ -578,6 +594,7 @@ final class Fam50Model {
     /* ---------- Henting ---------- */
 
     private func get(_ store: Store, _ path: String) async throws -> [String: Any] {
+        storeRef = store
         let d: Data = try await store.api.callAt("/api", "GET", path, timeout: 20)
         return JS.obj(d)
     }
@@ -614,7 +631,14 @@ final class Fam50Model {
             let o: [String: Any] = try await get(store, "/family/people50")
             title = JS.str(o, "title") ?? "Familie"
             subtitle = JS.str(o, "subtitle") ?? ""
-            people = JS.list(o, "people").map { Fam50Person($0) }
+            // Prompt 52: én rad per person (LazyVGrid krasjer på like id-er), personer uten id hoppes over.
+            var seen: Set<String> = []
+            people = JS.list(o, "people").map { Fam50Person($0) }.filter { (x: Fam50Person) -> Bool in
+                if x.id.isEmpty || seen.contains(x.id) { return false }
+                seen.insert(x.id)
+                return true
+            }
+            storeRef = store
             supported = true
             error = nil
             let minis: [Fam50Mini] = people.map { $0.mini }
@@ -628,7 +652,7 @@ final class Fam50Model {
 
     func loadToday(_ store: Store) async {
         guard let o = try? await get(store, "/family/today50") else { return }
-        today = JS.list(o, "items").map { Fam50Item($0) }
+        today = Fam50Model.unique(JS.list(o, "items").map { Fam50Item($0) })
     }
 
     func loadPlaces(_ store: Store) async {
@@ -645,7 +669,12 @@ final class Fam50Model {
     func loadHealth(_ store: Store) async {
         guard let o = try? await get(store, "/family/health50") else { return }
         healthSummary = JS.str(o, "summary") ?? ""
-        health = JS.list(o, "people").map { Fam50Health($0) }
+        var seen: Set<String> = []
+        health = JS.list(o, "people").map { Fam50Health($0) }.filter { (h: Fam50Health) -> Bool in
+            if h.id.isEmpty || seen.contains(h.id) { return false }
+            seen.insert(h.id)
+            return true
+        }
     }
 
     func loadCheckin(_ store: Store) async {
@@ -672,7 +701,7 @@ final class Fam50Model {
         // 6b-kortet følger med («Sendt til Ingrid» → «Sett av Ingrid»).
         if let l = latest, let s0 = lastSent, l.id == s0.id { lastSent = l }
         requests = JS.list(o, "requests").map { Fam50Checkin($0) }
-        log = JS.list(JS.dict(o, "log"), "items").map { Fam50Item($0) }
+        log = Fam50Model.unique(JS.list(JS.dict(o, "log"), "items").map { Fam50Item($0) })
     }
 
     /// Fersk posisjon (bare til selve innsjekken), så nytt forslag.
@@ -905,7 +934,8 @@ struct Fam50Tok {
 /* ---------- Avatar (profilbilde, ellers initialer i personens farge) ---------- */
 
 struct Fam50Avatar: View {
-    @Environment(Store.self) private var store
+    // Prompt 52: ingen @Environment(Store.self) her – avataren brukes i kartnåler (Annotation), og et manglende
+    // miljøobjekt der er en fatal feil. Butikken hentes fra Fam50Model (satt ved første henting).
     let mini: Fam50Mini
     let size: CGFloat
     var ring: CGFloat = 0
@@ -923,7 +953,9 @@ struct Fam50Avatar: View {
         }
         .frame(width: size, height: size)
         .overlay(Circle().stroke(ringColor, lineWidth: ring))
-        .task(id: mini.userId + mini.photoUrl) { await Fam50Avatar.ensure(mini, store) }
+        .task(id: mini.userId + mini.photoUrl) {
+            if let store = Fam50Model.shared.storeRef { await Fam50Avatar.ensure(mini, store) }
+        }
         .accessibilityHidden(true)
     }
 

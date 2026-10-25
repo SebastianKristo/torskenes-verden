@@ -226,7 +226,7 @@ struct SearchView: View {
         @Bindable var s = store
         let r = store.ai
         let ai = store.searchMode == "ai"
-        let provider = store.boot?.settings.provider == "gemini" ? "Gemini" : "Ollama"
+        let provider = "Ollama" // prompt 52: kvitteringer og AI-søk her leses lokalt
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 HStack { Text(store.tabName(.search)).font(.system(size: 34, weight: .bold)); Spacer(); Avatar() }.padding(.top, 6)

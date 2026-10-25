@@ -47,7 +47,8 @@ struct RuterView24: View {
 
     private var all: [RuterDeparture] {
         guard let s = m.current else { return [] }
-        let list: [RuterDeparture] = m.departures[s.id] ?? []
+        // Prompt 52: minuttene regnes på nytt fra klokka, og avganger som har gått filtreres bort (Ruter52.swift).
+        let list: [RuterDeparture] = Ruter52.fresh(m.departures[s.id] ?? [])
         return Array(list.sorted { ($0.minutes ?? 9999) < ($1.minutes ?? 9999) }.prefix(20))
     }
 
@@ -96,7 +97,7 @@ struct RuterView24: View {
         if m.loading && all.isEmpty {
             Text("Henter sanntid fra Entur …").font(PF.ui(13)).foregroundStyle(p.mut).padding(.horizontal, 4)
         }
-        if let e = m.error {
+        if let e = m.error, all.isEmpty {
             Text(e.contains("finnes ikke") ? e : "Fikk ikke kontakt med Entur. Trykk ↻ for å prøve igjen.")
                 .font(PF.ui(13)).foregroundStyle(p.lab).padding(.horizontal, 4).fixedSize(horizontal: false, vertical: true)
         }

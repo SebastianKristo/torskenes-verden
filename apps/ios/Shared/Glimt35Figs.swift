@@ -579,6 +579,7 @@ struct Glimt35Fig: View {
         case "ugle": G35Ugle(S: size, mood: mood, a: a)
         case "gris": G35Gris(S: size, mood: mood, a: a)
         case "spire": G35Spire(S: size, mood: mood, a: a)
+        case "blekk": G35Blekk(S: size, mood: mood, a: a) // prompt 52 (Glimt52Blekk.swift)
         default: G35Glimt(S: size, mood: mood, a: a)
         }
     }
@@ -587,7 +588,7 @@ struct Glimt35Fig: View {
     static func heightFactor(_ id: String) -> CGFloat {
         switch id {
         case "drape", "spire": return 1
-        case "ugle", "gris": return 1.04
+        case "ugle", "gris", "blekk": return 1.04
         default: return 1.1
         }
     }

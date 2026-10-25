@@ -44,7 +44,7 @@ final class Rean39Model {
     static let steps: [(String, String)] = [
         ("upload", "Laster opp bildet"),
         ("ocr", "Leser teksten (OCR)"),
-        ("llm", "✦ Gemini tolker butikk, linjer og beløp"),
+        ("llm", "✦ Glimt tolker lokalt butikk, linjer og beløp"),
         ("verify", "Sjekker sum og dato"),
     ]
 
@@ -87,7 +87,7 @@ final class Rean39Model {
         Task {
             do {
                 let d: Data = try await store.api.callAt("/finans/api", "POST", "/receipts/\(id)/reanalyze",
-                                                         json: ["engine": "gemini", "async": true], timeout: 30)
+                                                         json: ["engine": "ollama", "async": true], timeout: 30)
                 let o: [String: Any] = JS.obj(d)
                 if let jid = JS.str(o, "jobId") ?? JS.str(o, "id"), !jid.isEmpty {
                     self.update(id) { (x: inout Rean39Job) in x.jobId = jid }
@@ -108,7 +108,7 @@ final class Rean39Model {
                     return
                 }
             } catch {
-                self.fail(id, "Gemini svarte ikke")
+                self.fail(id, "Glimt svarte ikke")
                 return
             }
             self.startTicker(id, model, store)
@@ -153,7 +153,7 @@ final class Rean39Model {
         let pct: Int? = JS.int(o, "pct") ?? JS.int(o, "progress")
         let msg: String = JS.str(o, "msg") ?? JS.str(o, "message") ?? ""
         if step == "error" {
-            fail(key, msg.isEmpty ? "Gemini svarte ikke" : msg)
+            fail(key, msg.isEmpty ? "Glimt svarte ikke" : msg)
             return true
         }
         update(key) { (x: inout Rean39Job) in
@@ -291,7 +291,7 @@ struct Rean39Panel: View {
         let cur: Int = Rean39Model.stepIndex(job.step)
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                Text(err ? "✕ " + (job.msg.isEmpty ? "Gemini svarte ikke" : job.msg) : title)
+                Text(err ? "✕ " + (job.msg.isEmpty ? "Glimt svarte ikke" : job.msg) : title)
                     .font(PF.ui(13.5, .bold)).foregroundStyle(err ? Rc39.bad : p.ink).lineLimit(2)
                 Spacer(minLength: 6)
                 if !err { Text("\(job.pct) %").font(PF.mono(13)).foregroundStyle(p.lab) }
@@ -406,7 +406,7 @@ enum Rc39 {
     /// «✦ Analyserer på nytt … 42 %» eller vanlig meta (+ «✦ ny kategori «Skole og studier»» når AI lagde en ny).
     @MainActor static func meta(_ r: Receipt) -> String {
         if let j = Rean39Model.shared.jobs[r.id] {
-            if j.step == "error" { return "✕ " + (j.msg.isEmpty ? "Gemini svarte ikke" : j.msg) }
+            if j.step == "error" { return "✕ " + (j.msg.isEmpty ? "Glimt svarte ikke" : j.msg) }
             return "✦ Glimt analyserer på nytt … \(j.pct) %"
         }
         var s: String = Receipts23Line.meta(r)

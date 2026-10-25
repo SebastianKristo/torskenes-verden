@@ -22,7 +22,10 @@ struct Fam50HealthList: View {
                 }
                 .padding(.horizontal, 20).padding(.top, 48).padding(.bottom, 12)
                 VStack(spacing: 8) {
-                    ForEach(m.health) { (h: Fam50Health) in Fam50HealthCard(h: h) }
+                    // Prompt 52: krasjgrense rundt helsekortene (Family52Guard.swift).
+                    Fam52Guard(id: "helse", title: "helse") {
+                        ForEach(m.health) { (h: Fam50Health) in Fam50HealthCard(h: h) }
+                    }
                 }
                 .padding(.horizontal, 14)
             }

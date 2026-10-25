@@ -225,6 +225,9 @@ struct Brief35Content: View {
             Brief34Calendar(b: b).brief36Ring(target == "kal").id("gb35-kal")
             // Prompt 37: Gjøremål i dag (forfalt + i dag) med avkrysning (Brief37.swift).
             Brief37TodosCard()
+            // Prompt 52: kortene for brukeren som er logget inn (Dagens fokus, Min reise, Huskeliste, Regninger, Klær,
+            // Nytt i kveld, Homelab, Domener, Aksjer – filtrert på tilgang av serveren), Brief52.swift.
+            Brief52Stack()
             if !g.extra.trials.isEmpty {
                 Brief35TrialsCard(trials: g.extra.trials).brief36Ring(target == "abo").id("gb35-abo")
             }

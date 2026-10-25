@@ -29,6 +29,7 @@ enum Haptic34 {
 
     /// Lett impuls for «tilbake». To kall innen 120 ms gir bare én.
     static func back() {
+        Pg52.markBack() // prompt 52: retningen på sideanimasjonen (Pg52Anim.swift)
         let h: Haptics = Haptics.shared
         guard h.on, h.taps else { return }
         let now: Date = Date()

@@ -246,9 +246,11 @@ struct Fam50Battery: View {
 
 enum Fam50Geo {
     /// Område som viser alle punktene (som Fam22MapCtl.fit), Oslo når det ikke finnes noen.
-    static func region(_ coords: [CLLocationCoordinate2D], minMeters: Double = 1500) -> MKCoordinateRegion {
+    static func region(_ all: [CLLocationCoordinate2D], minMeters: Double = 1500) -> MKCoordinateRegion {
+        // Prompt 52: bare gyldige punkter, og området klemmes til noe MapKit godtar (Family52Guard.swift).
+        let coords: [CLLocationCoordinate2D] = all.filter { Fam52Geo.valid($0) }
         if coords.isEmpty { return Fam22MapCtl.oslo }
-        if coords.count == 1 { return MKCoordinateRegion(center: coords[0], latitudinalMeters: minMeters, longitudinalMeters: minMeters) }
+        if coords.count == 1 { return Fam52Geo.safe(MKCoordinateRegion(center: coords[0], latitudinalMeters: minMeters, longitudinalMeters: minMeters)) }
         var minLa: Double = 90, maxLa: Double = -90, minLo: Double = 180, maxLo: Double = -180
         for c in coords {
             minLa = Swift.min(minLa, c.latitude); maxLa = Swift.max(maxLa, c.latitude)
@@ -256,14 +258,18 @@ enum Fam50Geo {
         }
         let center: CLLocationCoordinate2D = CLLocationCoordinate2D(latitude: (minLa + maxLa) / 2, longitude: (minLo + maxLo) / 2)
         let span: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: Swift.max(0.008, (maxLa - minLa) * 1.45), longitudeDelta: Swift.max(0.008, (maxLo - minLo) * 1.45))
-        return MKCoordinateRegion(center: center, span: span)
+        return Fam52Geo.safe(MKCoordinateRegion(center: center, span: span))
     }
 
     /// Pil etter retningen på skjermen (0° = opp).
     static func arrow(dx: CGFloat, dy: CGFloat) -> String {
-        let a: Double = (atan2(Double(dx), Double(-dy)) * 180 / Double.pi + 360).truncatingRemainder(dividingBy: 360)
         let arrows: [String] = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖"]
-        return arrows[Int((a / 45).rounded()) % 8]
+        // Prompt 52: Int(NaN/±inf) er en fatal feil – ugyldig retning gir ingen pil.
+        guard dx.isFinite, dy.isFinite, dx != 0 || dy != 0 else { return "" }
+        let a: Double = (atan2(Double(dx), Double(-dy)) * 180 / Double.pi + 360).truncatingRemainder(dividingBy: 360)
+        guard a.isFinite else { return "" }
+        let i: Int = Int((a / 45).rounded()) % 8
+        return arrows[(i + 8) % 8]
     }
 }
 
@@ -284,13 +290,16 @@ struct Fam50Folk: View {
                 if let e = m.error { Fam50Note(text: e).padding(.horizontal, 14).padding(.bottom, 10) }
                 if FamilyModel.shared.sharing != "on" { Fam50SharingOff().padding(.horizontal, 14).padding(.bottom, 10) }
                 // Vel fremme («På vei hjem») pågår: liten statuslinje som før (Family42.swift).
-                if Hjemlys41PosRow.any(Hjemlys40Model.shared) { VelFremmeStatus42().padding(.horizontal, 14).padding(.bottom, 10) }
-                Fam50PeopleGrid().padding(.horizontal, 14)
+                // Prompt 52: hvert kort har egen krasjgrense (Family52Guard.swift) – feiler ett, virker resten.
+                if Hjemlys41PosRow.any(Hjemlys40Model.shared) {
+                    Fam52Guard(id: "velfremme", title: "Vel fremme") { VelFremmeStatus42() }.padding(.horizontal, 14).padding(.bottom, 10)
+                }
+                Fam52Guard(id: "folk", title: "personene") { Fam50PeopleGrid() }.padding(.horizontal, 14)
                 if !wide {
-                    Fam50MapStrip().padding(.horizontal, 14).padding(.top, 12)
+                    Fam52Guard(id: "kartstripe", title: "kartet", height: 120) { Fam50MapStrip() }.padding(.horizontal, 14).padding(.top, 12)
                 }
                 // Prompt 51 (IOSFEAT51): familiekalender med «hvem kjører?» (FamCal51.swift).
-                FamCal51Strip().padding(.horizontal, 14).padding(.top, 12)
+                Fam52Guard(id: "famcal", title: "familiekalenderen") { FamCal51Strip() }.padding(.horizontal, 14).padding(.top, 12)
                 Fam50TodayList(items: m.today, title: "I DAG").padding(.top, 14)
             }
             .padding(.bottom, 24)
@@ -411,7 +420,8 @@ struct Fam50MapStrip: View {
     var body: some View {
         let t: Fam50Tok = Fam50Tok.of(p)
         let ps: [Fam50Person] = m.people.filter { $0.coord != nil }
-        let key: String = ps.map { $0.id + String(format: "%.3f%.3f", $0.lat ?? 0, $0.lon ?? 0) }.joined()
+        // Prompt 52: kartet lages på nytt bare når noen flytter seg merkbart (~1 km), ikke ved hver henting hvert 30. s.
+        let key: String = ps.map { $0.id + String(format: "%.2f%.2f", $0.lat ?? 0, $0.lon ?? 0) }.joined()
         ZStack(alignment: .bottomTrailing) {
             Map(initialPosition: MapCameraPosition.region(Fam50Geo.region(ps.compactMap { $0.coord })), interactionModes: []) {
                 ForEach(ps) { (x: Fam50Person) in
@@ -505,7 +515,7 @@ struct Fam50Map: View {
     var body: some View {
         Map(position: pos, interactionModes: [.pan, .zoom]) {
             if let id = accFor, let x = people.first(where: { $0.id == id }), let c = x.coord {
-                MapCircle(center: c, radius: Swift.max(15, x.acc ?? 30))
+                MapCircle(center: c, radius: Swift.max(15, Swift.min(20_000, (x.acc ?? 30).isFinite ? (x.acc ?? 30) : 30)))
                     .foregroundStyle(Color(hex: "#2b5d8a").opacity(0.16))
                     .stroke(Color(hex: "#2b5d8a").opacity(0.5), style: StrokeStyle(lineWidth: 1.5))
             }
@@ -560,15 +570,19 @@ struct Fam50EdgeLabels: View {
         let inner: CGRect = box.insetBy(dx: Swift.min(90, box.width * 0.3), dy: 22)
         let mid: CGPoint = CGPoint(x: inner.midX, y: inner.midY)
         var out: [Tag] = []
+        // Prompt 52: ingen merkelapper før kartet har en størrelse (null-rektangel gir uendelige/NaN-punkter).
+        guard size.width > 60, size.height > 60, !inner.isNull, !inner.isEmpty, Fam52Geo.finite(mid) else { return out }
         for x in people where !x.mini.isSelf {
             guard let c = x.coord else { continue }
             let pt: CGPoint = screen(c)
+            if !Fam52Geo.finite(pt) { continue }
             if box.insetBy(dx: 12, dy: 12).contains(pt) { continue }
             let dx: CGFloat = pt.x - mid.x, dy: CGFloat = pt.y - mid.y
             let sx: CGFloat = abs(dx) > 0.01 ? (inner.width / 2) / abs(dx) : CGFloat.greatestFiniteMagnitude
             let sy: CGFloat = abs(dy) > 0.01 ? (inner.height / 2) / abs(dy) : CGFloat.greatestFiniteMagnitude
             let s: CGFloat = Swift.min(sx, sy, 1)
             let at: CGPoint = CGPoint(x: mid.x + dx * s, y: mid.y + dy * s)
+            if !Fam52Geo.finite(at) { continue }
             let label: String = x.fromMe?.label.isEmpty == false ? (x.fromMe?.label ?? x.mini.first) : x.mini.first
             out.append(Tag(id: x.id, person: x, point: at, text: label + " " + Fam50Geo.arrow(dx: dx, dy: dy)))
         }
@@ -616,7 +630,9 @@ struct Fam50KartView: View {
             let maxH: CGFloat = Swift.min(430, g.size.height * 0.62)
             let h: CGFloat = embedded ? 0 : Swift.min(sheetH, maxH)
             ZStack(alignment: .top) {
-                Fam50Map(people: m.people, ctl: ctl, bottomPad: h, onPin: { id in Fam50Nav.shared.push(.person(id)) }, onCamera: { r in region = r })
+                Fam52Guard(id: "kart", title: "kartet") {
+                    Fam50Map(people: m.people, ctl: ctl, bottomPad: h, onPin: { id in Fam50Nav.shared.push(.person(id)) }, onCamera: { r in region = r })
+                }
                     .overlay {
                         // Samme ramme som kartet (hele skjermen), så punktene regnes riktig fra utsnittet.
                         GeometryReader { (mg: GeometryProxy) in
@@ -774,7 +790,9 @@ struct Fam50PersonView: View {
         GeometryReader { (g: GeometryProxy) in
             let h: CGFloat = Swift.min(480, g.size.height * 0.64)
             ZStack(alignment: .top) {
-                Fam50Map(people: m.people, ctl: ctl, accFor: userId, bottomPad: h, pinSize: 34, onPin: { id in if id != userId { Fam50Nav.shared.push(.person(id)) } })
+                Fam52Guard(id: "kart", title: "kartet") {
+                    Fam50Map(people: m.people, ctl: ctl, accFor: userId, bottomPad: h, pinSize: 34, onPin: { id in if id != userId { Fam50Nav.shared.push(.person(id)) } })
+                }
                     .ignoresSafeArea()
                 HStack {
                     Fam50TopPill(title: "‹ " + backLabel, height: 40, shadow: true) { Fam50Nav.shared.back() }

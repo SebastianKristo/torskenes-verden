@@ -82,9 +82,13 @@ extension Store {
             else if k == "h13", let i = order.firstIndex(of: "h12") { order.insert(k, at: i + 1) }
             // Prompt 46: Snarveier (h16) var en del av Søk (h1) – står rett etter Søk også med lagret oppsett.
             else if k == "h16", let i = order.firstIndex(of: "h1") { order.insert(k, at: i + 1) }
+            // Prompt 52: flisene som egne kort (Home52Grid.swift) får plassen der h16 (flisene samlet) sto.
+            else if page == "hjem", let i = Home52.slot(k, l.order, order) { order.insert(k, at: i) }
             else { order.append(k) }
         }
-        let hid = l.hidden.filter { keys.contains($0) }
+        var hid = l.hidden.filter { keys.contains($0) }
+        // Prompt 52: var den samlede flisen (h16) skjult, er de fem flisene skjult også.
+        if page == "hjem" { hid = Home52.hiddenFromSlot(hid, l, keys) }
         return (order.filter { !hid.contains($0) }, hid)
     }
 
@@ -278,6 +282,9 @@ struct PaperCardStack: View {
     /// På bred skjerm: to kolonner, unntatt disse kortene, som går over hele bredden.
     var fullWidth: Set<String> = []
     var twoColumns = false
+    /// Prompt 52: halve kort på mobil (2-kolonners Hjem, 3a) og høye halve kort (Avgang-flisen), Home52Grid.swift.
+    var half: Set<String> = []
+    var tall: Set<String> = []
 
     private struct Segment: Identifiable {
         let id: Int
@@ -319,13 +326,15 @@ struct PaperCardStack: View {
                     paused: Edit28.shared.anySheet39,
                     label: { (k: String) in cardLabel(k) },
                     hide: hideFn,
-                    enter: { store.enterPaperEdit(page) },
+                    // Prompt 52: holdet på saldokortet åpner utseende-arket, ikke wiggle (Saldo52.swift).
+                    enter: { if !(page == "finans" && Sal52.shared.blocksWiggle) { store.enterPaperEdit(page) } },
                     commit: { (o: [String]) in store.commitPaperOrder37(page, o, keys) },
                     content: { (k: String) in cardView(k, shown, keys) },
                     accessory: { (k: String) in
                         PaperEditAccessory43(page: page, key: k, index: shown.firstIndex(of: k) ?? 0, count: shown.count, keys: keys)
                     }
                 )
+                .halves52(wide ? [] : half, tall: wide ? [] : tall)
             }
         }
         .animation(.easeOut(duration: 0.3), value: Pkg37.animKey(page, editing, store))
@@ -336,7 +345,7 @@ struct PaperCardStack: View {
 
     /// Bred skjerm utenfor redigering: hold inne et kort for å starte redigering.
     private func held(_ k: String, _ vis: [String], _ keys: [String]) -> some View {
-        cardView(k, vis, keys).wiggle43Hold(editing: false) { store.enterPaperEdit(page) }
+        cardView(k, vis, keys).wiggle43Hold(editing: false) { if !(page == "finans" && Sal52.shared.blocksWiggle) { store.enterPaperEdit(page) } }
     }
 
     private func pairs(_ keys: [String]) -> [[String]] {

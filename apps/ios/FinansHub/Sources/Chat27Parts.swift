@@ -107,8 +107,9 @@ struct Chat27UserBubble: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 6) {
-            // Prompt 50: bildene over teksten (ett maks 240×240, flere i 2 × 120), trykk åpner lysboksen (Chat50Attach.swift).
-            Chat50BubbleImages(m: m, c: c)
+            // Prompt 52: miniatyrer 96 × 120 over boblen, på rad og brutt til ny linje; trykk åpner bildet i full skjerm
+            // (lysboksen i Chat50Attach.swift). Lagrede meldinger viser attTh når originalen ikke er hentet (Chat52Think.swift).
+            Chat52BubbleThumbs(m: m, c: c)
             if !m.attach.isEmpty {
                 Flow(spacing: 6) {
                     ForEach(m.attach, id: \.self) { a in tag("# " + a) }
@@ -185,6 +186,8 @@ struct Chat27Answer: View {
         VStack(alignment: .leading, spacing: 10) {
             let read50: [Chat50LBItem] = Chat50.shared.itemsBefore(index)
             Chat27AnswerHead(title: headName, tools: tools50(read50), prefix: "Brukte", c: c)
+            // Prompt 52: «✦ Tenkte i 2,1 s ›» – trykk viser tankegangen (lagret på meldingen, Chat52Think.swift).
+            if !m.think.isEmpty { Chat52ThinkView(steps: m.think, secs: m.thS, c: c) }
             // Prompt 50: bildene som ble lest som små miniatyrer (28 pt), tabeller (kvittering) og «Lest med …» / «Legg i Finans ›».
             if !read50.isEmpty { Chat50FilePills(items: read50, c: c) }
             Chat50Body(text: m.content, c: c)
@@ -255,6 +258,13 @@ struct Chat27Streaming: View {
     @MainActor private var s: ChatStore27 { ChatStore27.shared }
     let c: ChatPal27
 
+    /// nil mens modellen fortsatt tenker; sekundene når thinking_done kom eller svaret begynte.
+    @MainActor private var thinkSecs: Double? {
+        if let d = s.think52S { return d }
+        if !s.streamText.isEmpty { return s.think52Start.map { Date().timeIntervalSince($0) } ?? 0 }
+        return nil
+    }
+
     /// «GLIMT · TENKER» mens Glimt-ruteren jobber, ellers modellnavnet.
     @MainActor private var headTitle31: String {
         if s.pendingTool31 { return "GLIMT · TENKER" }
@@ -267,6 +277,11 @@ struct Chat27Streaming: View {
             HStack(alignment: .center, spacing: 8) {
                 Glimt31Mark(size: 22, state: s.streamText.isEmpty ? .thinking : .answering)
                 Chat27AnswerHead(title: headTitle31, tools: s.streamTool, prefix: "Leser", c: c)
+            }
+            // Prompt 52: «✦ Tenker … 2,1 s ▾» med stegene åpne mens modellen tenker; lukkes når svaret begynner å strømme.
+            if !s.think52.isEmpty || (s.think52Start != nil && s.streamText.isEmpty) {
+                Chat52ThinkView(steps: s.think52, secs: thinkSecs, start: s.think52Start, c: c)
+                    .id(thinkSecs == nil ? "live" : "done")
             }
             if !s.streamText.isEmpty {
                 Chat27Blocks(text: s.streamText, c: c)

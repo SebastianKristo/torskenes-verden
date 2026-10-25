@@ -80,6 +80,15 @@ final class Search29Model {
             // Prompt 44: lokal tolking først (dato og tid), tittelen er resten av teksten (Time44Parse.swift).
             let pv: Quick29Preview? = Time44.merge(pv0, t)
             self.appt = Search29Model.isAppt(pv) ? pv : nil
+            // Prompt 52: med Glimt og minst 3 ord tolker AI beskjeden (450 ms pause totalt) og overstyrer reglene (Quick52.swift).
+            guard self.engine == "ai", Quick52.words(t) >= 3 else { return }
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if Task.isCancelled { return }
+            let r: Quick52Result? = await Quick52.shared.parse(t, store)
+            if Task.isCancelled { return }
+            if let r, r.source == "ai" || r.isCalendar {
+                self.appt = r.isCalendar ? r.preview : nil
+            }
         }
     }
 
@@ -101,6 +110,18 @@ final class Search29Model {
         // Prompt 32: alle søk logges for brukeren (vises bare på web), og snarveier til sider åpnes med en gang (Search32.swift).
         Search32b.shared.log(t, engine: engine, store)
         if Search32b.shared.tryShortcut(t, engine: engine, store) { appt = nil; return }
+        // Prompt 52: AI-tolket kalenderbeskjed («møte med Laila på Olivia») legges rett i kalenderen med feltene fra AI.
+        // Er svaret ikke klart, venter Glimt opptil 2,5 s (Quick52.swift).
+        if engine == "ai" && !Assist36.blocksAppt(t) && Quick52.words(t) >= 3 {
+            var r: Quick52Result? = Quick52.shared.cached(t)
+            if r == nil && Quick52.shared.isBusy(t) { r = await Quick52.shared.wait(t, seconds: 2.5) }
+            if let r, r.isCalendar {
+                appt = nil
+                store.suggestions = []
+                Quick29Model.shared.submit(t, store, local52: r.preview)
+                return
+            }
+        }
         // Prompt 45: med Glimt valgt går teksten rett til den felles agenten (forstår, velger verktøy, utfører og svarer),
         // i stedet for at appen gjetter avtale/huskebeskjed først. Eldre server (404): kjeden under som før (GlimtAgent45.swift).
         if engine == "ai" && GlimtAgent45.shared.available {
@@ -157,6 +178,15 @@ struct HomeSearch29: View {
             card
             if let a = m.appt, !q.trimmingCharacters(in: .whitespaces).isEmpty {
                 HomeSearch29Appt(appt: a) { submit() }
+                    .overlay(alignment: .topTrailing) {
+                        // Prompt 52: «✦ tolker …» mens AI forstår beskjeden (Quick52.swift).
+                        if Quick52.shared.isBusy(q) {
+                            Text("✦ tolker …").font(PF.ui(11, .bold)).foregroundStyle(p.ink)
+                                .padding(.horizontal, 8).frame(height: 20)
+                                .background(p.bg, in: Capsule())
+                                .offset(x: -8, y: -10)
+                        }
+                    }
                     .transition(.opacity)
             } else if Tasks41Glimt.isHuske(q) {
                 // Prompt 41: «Legg i Huskeliste» (Glimt deler opp i punkter).

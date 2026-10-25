@@ -48,7 +48,9 @@ struct Chat27Page: View {
             Chat27Sheet(kind: sh.id, c: c, pickPhoto: { pick(photo: true) }, pickCamera: { pick(camera: true) },
                         pickFile: { kb in pick(file: true, kb: kb) })
                 .presentationDetents(detents(sh.id))
-                .presentationDragIndicator(sh.id == "plus" ? .visible : .automatic)
+                // Prompt 52: sveip i arket scroller innholdet (ikke arkets høyde); grabberen/toppen drar arket ned.
+                .presentationContentInteraction(.scrolls)
+                .presentationDragIndicator(sh.id == "plus" || sh.id == "model" ? .visible : .automatic)
                 .presentationBackground(c.bg)
                 .environment(\.colorScheme, c.dark ? .dark : .light)
         }
@@ -72,6 +74,8 @@ struct Chat27Page: View {
         // Prompt 28: «Legg ved» får høyden etter innholdet (Chat28.swift måler den).
         if id == "plus" { return [.height(Chat28.shared.plusHeight)] }
         if id == "guard" { return [.medium] }
+        // Prompt 52 (claude-code-chat-velg-modell-scroll.md): modellvelgeren åpnes stor, med én scrollflate.
+        if id == "model" { return [.large] }
         return [.medium, .large]
     }
 
@@ -422,7 +426,8 @@ struct Chat27Composer: View {
             HStack(spacing: 6) {
                 ForEach(s.attach) { a in
                     HStack(spacing: 6) {
-                        Text(a.icon).font(c.ui(12, .bold)).foregroundStyle(c.mut)
+                        // Prompt 52: bildevedlegg får en 24 × 24 miniatyr i stedet for ▣ (Chat52Think.swift).
+                        Chat52AttachIcon(a: a, c: c)
                         Text(a.name).font(c.ui(12.5, .semibold)).foregroundStyle(c.ink).lineLimit(1)
                         Button { s.removeAttach(a) } label: {
                             Text("✕").font(c.ui(11)).foregroundStyle(c.mut).frame(width: 26, height: 26)

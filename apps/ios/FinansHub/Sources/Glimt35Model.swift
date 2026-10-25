@@ -51,10 +51,12 @@ final class Glimt35Model {
     @ObservationIgnored private var flashTask: Task<Void, Never>? = nil
 
     func load(_ store: Store) async {
+        // Prompt 52: figuren per konto fra bufferen før serveren svarer (Glimt52Char.swift).
+        if let c = Glimt52CharCache.cached(store), c != cfg.char { cfg.char = c }
         do {
             let d: Data = try await store.api.callAt("/api", "GET", "/glimt/settings", timeout: 15)
             legacy = false
-            if let c = Glimt35Cfg.parse(d) { apply(c) }
+            if let c = Glimt35Cfg.parse(d) { apply(c); Glimt52CharCache.remember(store, c.char) }
         } catch let e as APIError {
             if e.status == 404 {
                 legacy = true
@@ -161,6 +163,7 @@ final class Glimt35Model {
     /// Trykk i figurvelgeren: velg, bli glad og si «Hei! Nå er jeg din Glimt.» (Gris: «Nøff!»).
     func choose(_ id: String, _ store: Store) {
         change(["char": id], store) { (c: inout Glimt35Cfg) in c.char = id }
+        Glimt52CharCache.remember(store, id) // prompt 52: figur per bruker (lagres på profilen via /api/glimt/settings)
         greeted = id
         greetTask?.cancel()
         greetTask = Task { @MainActor in

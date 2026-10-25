@@ -27,6 +27,8 @@ final class RuterHome27 {
             stops = (o["stops"] as? [String]) ?? []
             n = Swift.min(4, Swift.max(1, (o["n"] as? Int) ?? 3))
         }
+        // Prompt 52: Hjem-kortet tegnes fra bufferen før første henting (Ruter52.swift).
+        deps = Ruter52.loadAll()
     }
 
     /// Valgte stopp i rekkefølgen fra Mine stopp. Ingen valgt: første stopp.
@@ -137,7 +139,9 @@ final class RuterHome27 {
         for s in sel {
             let enc: String = s.id.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? s.id
             guard let d = try? await store.api.callAt("/api", "GET", "/ruter/departures?stop=\(enc)&n=8", timeout: 20) else { continue }
-            let list: [RuterDeparture] = JS.list(JS.obj(d), "departures").enumerated().map { RuterDeparture($0.element, $0.offset) }
+            // Prompt 52: Ruter-siden har ofte flere avganger i bufferen (n=20); behold den lengste lista.
+            if (Ruter52Buffer.age(s.id) ?? 999) > 30 { Ruter52Buffer.put(s.id, name: s.name, data: d) }
+            let list: [RuterDeparture] = Ruter52.parse(d)
             deps[s.id] = list.sorted { ($0.minutes ?? 9999) < ($1.minutes ?? 9999) }
         }
         updated = Date()
@@ -209,11 +213,11 @@ struct RuterHomeCard27: View {
 
     private func flatRows(_ sel: [RuterStop]) -> [RuterDeparture] {
         if sel.count == 1, let s = sel.first {
-            return Array((h.deps[s.id] ?? []).filter { !$0.cancelled }.prefix(h.n))
+            return Array(Ruter52.fresh(h.deps[s.id] ?? []).filter { !$0.cancelled }.prefix(h.n))
         }
         var out: [RuterDeparture] = []
         for s in sel {
-            if let d = (h.deps[s.id] ?? []).first(where: { !$0.cancelled }), !out.contains(where: { $0.id == d.id }) { out.append(d) }
+            if let d = Ruter52.fresh(h.deps[s.id] ?? []).first(where: { !$0.cancelled }), !out.contains(where: { $0.id == d.id }) { out.append(d) }
         }
         return out
     }

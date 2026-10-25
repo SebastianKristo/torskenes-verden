@@ -145,29 +145,16 @@ struct PaperTxDetailView: View {
         }
     }
 
+    /// Prompt 52: samme hode som Boliger-arket (Receipt52Panel.swift).
     private func head(_ d: PaperTxData) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
-                PaperLogo(domain: d.domain, name: d.merchant, color: d.color, size: 46, radius: 13)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(d.merchant).font(PF.serif(22, medium: true)).foregroundStyle(p.ink).lineLimit(2)
-                    Text([d.category, dmy(d.date), d.account].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2)
-                }
-                // Prompt 27: «Velg logo» når butikken mangler logo (Privacy27.swift).
-                if (d.domain ?? "").isEmpty && !d.merchant.isEmpty {
-                    Spacer(minLength: 4)
-                    MerchantLogo27Button(name: d.merchant) { reloadDetail27(d.id) }
-                }
-            }
-            Text((d.amount > 0 ? "+" : "") + pkr(d.amount)).font(PF.serif(40)).foregroundStyle(d.amount > 0 ? p.pos : p.ink).lineLimit(1).minimumScaleFactor(0.6)
-            if !d.aiSummary.isEmpty {
-                Text("✦ " + d.aiSummary).font(PF.ui(13.5, .medium)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true)
+        Rc52Head(logo: .domain(d.domain, d.color), merchant: d.merchant, sub: [d.category, dmy(d.date), d.account].filter { !$0.isEmpty }.joined(separator: " · "),
+                 amount: d.amount, ai: d.aiSummary) {
+            // Prompt 27: «Velg logo» når butikken mangler logo (Privacy27.swift).
+            if (d.domain ?? "").isEmpty && !d.merchant.isEmpty {
+                Spacer(minLength: 4)
+                MerchantLogo27Button(name: d.merchant) { reloadDetail27(d.id) }
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 15, y: 10)
     }
 
     private func reloadDetail27(_ id: Int) {
@@ -176,41 +163,13 @@ struct PaperTxDetailView: View {
         }
     }
 
-    /// Kvitteringen som papirlapp. Et trykk åpner originalen i fullskjerm.
+    /// Kvitteringen som papirlapp. Et trykk åpner originalen i fullskjerm. Prompt 52: felles med Boliger (Receipt52Panel.swift).
     private func receipt(_ d: PaperTxData) -> some View {
-        let ink = Color(hex: "#2a2620")
-        return Button { store.openOriginal(d.id, "receipt") } label: {
-            VStack(spacing: 6) {
-                Text(d.merchant.uppercased()).font(.system(size: 14, weight: .bold, design: .monospaced)).foregroundStyle(ink).multilineTextAlignment(.center)
-                Text("\(dmy(d.date)) · KVITTERING").font(.system(size: 11, design: .monospaced)).foregroundStyle(ink.opacity(0.7))
-                dashed(ink)
-                if d.lines.isEmpty {
-                    Text(d.receiptFile == nil ? "Ingen varelinjer lest ennå" : "Trykk for å se originalen").font(.system(size: 12, design: .monospaced)).foregroundStyle(ink.opacity(0.7))
-                }
-                // Prompt 30: linjene som matcher søket markeres gult (Receipt30.swift).
-                let hl: (idx: [Int], word: String) = hl30(d)
-                ForEach(Array(d.lines.prefix(40).enumerated()), id: \.offset) { i, l in
-                    Hl30Line(name: l.name, price: l.price, hit: hl.idx.contains(i), word: hl.word, first: hl.idx.first == i)
-                }
-                dashed(ink)
-                HStack {
-                    Text("TOTAL").font(.system(size: 13, weight: .bold, design: .monospaced))
-                    Spacer()
-                    Text(n2(abs(d.total ?? d.amount))).font(.system(size: 13, weight: .bold, design: .monospaced))
-                }
-                .foregroundStyle(ink)
-                if d.receiptFile != nil {
-                    Text("Trykk for originalen ›").font(PF.ui(11.5, .semibold)).foregroundStyle(ink.opacity(0.6)).padding(.top, 4)
-                }
-            }
-            .padding(.horizontal, 18).padding(.vertical, 16)
-            .frame(maxWidth: .infinity)
-            .background(Color(hex: "#fbf8f1"), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-            .padding(.horizontal, 8)
+        let hl: (idx: [Int], word: String) = hl30(d)
+        return Rc52Paper(merchant: d.merchant, date: d.date, lines: d.lines.map { Rc52Line(name: $0.name, price: $0.price) },
+                         total: d.total ?? d.amount, hasFile: d.receiptFile != nil, hlIdx: hl.idx, hlWord: hl.word) {
+            store.openOriginal(d.id, "receipt")
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Original kvittering, \(d.lines.count) varelinjer")
     }
 
     private func hl30(_ d: PaperTxData) -> (idx: [Int], word: String) {

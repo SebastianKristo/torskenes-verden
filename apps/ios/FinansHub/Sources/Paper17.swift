@@ -999,9 +999,9 @@ final class AiSettingsModel {
     /// ISO2: canEditServer fra bootstrap. nil = eldre server (Store.canEditServer avgjør da).
     var canEdit: Bool? = nil
 
-    static let engines: [(String, String, String)] = [("gemini", "Gemini", "Kvitteringer og bilder"), ("groq", "Groq", "AI-søk og kategorier (raskt)"),
+    static let engines: [(String, String, String)] = [("gemini", "Gemini", "Bare «Finn logo» (butikknavn)"), ("groq", "Groq", "AI-søk og kategorier (raskt)"),
                                                      ("roboflow", "Roboflow", "Strekkoder og pakkelapper"), ("ollama", "Ollama", "Lokalt · reserve")]
-    static let tasks: [(String, String, String)] = [("receipts", "Les kvitteringer", "gemini"), ("search", "AI-søk og sammendrag", "groq"),
+    static let tasks: [(String, String, String)] = [("receipts", "Les kvitteringer", "ollama"), ("search", "AI-søk og sammendrag", "groq"),
                                                    ("categorize", "Kategorisering", "groq"), ("barcode", "Strekkoder", "roboflow")]
 
     func load(_ store: Store) async {
@@ -1035,7 +1035,9 @@ final class AiSettingsModel {
     }
 
     func engineFor(_ task: String, default d: String) -> String {
-        JS.str(JS.dict(settings, "aiTasks"), task) ?? d
+        // Prompt 52: kvitteringer leses bare lokalt – lagret «gemini»/«groq» vises (og lagres) som Ollama.
+        if task == "receipts" { return "ollama" }
+        return JS.str(JS.dict(settings, "aiTasks"), task) ?? d
     }
 
     func setTask(_ task: String, _ engine: String, _ store: Store) {
@@ -1174,8 +1176,10 @@ struct PaperAiSettings: View {
     private func taskRow(_ task: String, _ name: String, _ def: String) -> some View {
         let cur = m.engineFor(task, default: def)
         let curName = AiSettingsModel.engines.first { $0.0 == cur }?.1 ?? cur
+        // Prompt 52: «Les kvitteringer» kan bare være lokal (Ollama). Ingen sky-motor i menyen.
+        let choices: [(String, String, String)] = task == "receipts" ? AiSettingsModel.engines.filter { $0.0 == "ollama" } : AiSettingsModel.engines
         return Menu {
-            ForEach(AiSettingsModel.engines, id: \.0) { e in
+            ForEach(choices, id: \.0) { e in
                 Button { m.setTask(task, e.0, store) } label: { Text(e.1 + (e.0 == cur ? " ✓" : "")) }
             }
         } label: {

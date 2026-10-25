@@ -337,6 +337,8 @@ extension Store {
         if let cached = Store.cachedBg(kind) { photoImage = cached }
         // Prompt 41: Oslo = frie Commons-bilder fra lufta som skifter gjennom dagen (Bg41Oslo.swift), med mindre serveren har egne.
         if kind == "oslo", await Oslo41.shared.load(self) { return }
+        // Prompt 52: «Vær nå» velger bilde etter værtype × tid på døgnet (Wx52Bg.swift).
+        if kind == "weather", await Wx52Bg.shared.load(self) { return }
         // Prompt 46: delt Google Photos-album (serveren henter og cacher, GPhoto46.swift).
         if kind == "gphoto" { if !(await GPhoto46.shared.load(self)) { photoFailed = true }; return }
         // Ny bakgrunnstjeneste (prompt 19). Eldre servere: /api/photo-window under.

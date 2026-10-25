@@ -605,6 +605,8 @@ struct Fam50AreaMap: View {
 
     private var map: some View {
         let c: Color = Color(hex: color)
+        // Prompt 52: områder uten gyldig posisjon tegnes ikke (Family52Guard.swift).
+        let areas: [Fam50Area] = self.areas.filter { Fam52Geo.valid($0.lat, $0.lon) && $0.radius.isFinite && $0.radius > 0 }
         return Map(position: pos, interactionModes: [.pan, .zoom]) {
             ForEach(areas) { (a: Fam50Area) in
                 MapCircle(center: a.coord, radius: a.radius)

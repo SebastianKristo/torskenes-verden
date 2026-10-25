@@ -160,7 +160,7 @@ struct RootView: View {
             Button("Velg fra Bilder") { showPhotos = true }
             Button("Velg fil (PDF, JPG, HEIC)") { showFiles = true }
             Button("Avbryt", role: .cancel) {}
-        } message: { Text("Filene legges i opplastingskøen, og Gemini leser dem i bakgrunnen.") }
+        } message: { Text("Filene legges i opplastingskøen, og Glimt leser dem lokalt i bakgrunnen.") }
         .sheet(isPresented: Binding(get: { store.menuOpen }, set: { store.menuOpen = $0 })) {
             ProfileMenu().presentationDetents([.medium, .large]).skinSheetBackground()
         }

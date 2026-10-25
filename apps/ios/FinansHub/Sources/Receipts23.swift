@@ -180,7 +180,7 @@ struct Receipts23Page: View {
                     .background(p.lab, in: Circle())
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Ta bilde av kvittering").font(PF.ui(17, .bold)).foregroundStyle(p.ink)
-                    Text("Bakkamera · ✦ Gemini leser beløp og butikk").font(PF.ui(13)).foregroundStyle(p.mut)
+                    Text("Bakkamera · ✦ Glimt leser lokalt beløp og butikk").font(PF.ui(13)).foregroundStyle(p.mut)
                 }
                 Spacer(minLength: 0)
             }

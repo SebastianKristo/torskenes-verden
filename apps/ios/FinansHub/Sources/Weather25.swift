@@ -138,21 +138,10 @@ struct WxInlineMap25: View {
         .overlay(shape.stroke(Color.white.opacity(0.16), lineWidth: 1))
     }
 
+    /// Prompt 52: glass-pille som kan dras (WxGlass52.swift).
     private var picker: some View {
-        HStack(spacing: 2) {
-            ForEach(WxInlineMap25.layers, id: \.0) { l in
-                let on: Bool = layer == l.0
-                Button { Haptics.shared.select(); layer = l.0 } label: {
-                    Text(l.1).font(.dyn51(size: 12, weight: .semibold)).lineLimit(1)
-                        .foregroundStyle(on ? Color(hex: "#0d1520") : Color.white)
-                        .padding(.horizontal, 10).frame(height: 28)
-                        .background(on ? Color.white : Color.clear, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(3)
-        .background(Color(hex: "#0a1423").opacity(0.75), in: Capsule())
+        WxGlass52(value: $layer, items: WxInlineMap25.layers.map { WxGlass52Item(id: $0.0, label: $0.1) },
+                  fontSize: 12, height: 28, padH: 10, track: Color(hex: "#0a1423").opacity(0.75), a11y: "Kartlag")
     }
 
     static func url(lat: Double, lon: Double, layer: String) -> URL? {

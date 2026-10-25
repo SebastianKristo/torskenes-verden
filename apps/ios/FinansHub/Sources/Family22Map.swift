@@ -44,7 +44,9 @@ final class Fam22MapCtl {
     var region: MKCoordinateRegion = Fam22MapCtl.oslo
     var fitted: Bool = false
 
-    private func go(_ r: MKCoordinateRegion) {
+    private func go(_ raw: MKCoordinateRegion) {
+        // Prompt 52: MapKit kaster unntak på ugyldige områder (NaN, spenn over 180°) – klem først (Family52Guard.swift).
+        let r: MKCoordinateRegion = Fam52Geo.safe(raw)
         region = r
         withAnimation(.easeInOut(duration: 0.35)) { position = MapCameraPosition.region(r) }
     }
@@ -74,7 +76,8 @@ final class Fam22MapCtl {
         focus(c, meters: Swift.max(300, radius * 2 / 0.7))
     }
 
-    func fit(_ coords: [CLLocationCoordinate2D]) {
+    func fit(_ all: [CLLocationCoordinate2D]) {
+        let coords: [CLLocationCoordinate2D] = all.filter { Fam52Geo.valid($0) }
         if coords.isEmpty { go(Fam22MapCtl.oslo); return }
         if coords.count == 1 { focus(coords[0], meters: 1500); return }
         var minLa: Double = 90

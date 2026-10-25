@@ -164,7 +164,7 @@ struct Bol24Review: View {
                 thumb(e)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(e.description).font(PF.ui(15, .bold)).foregroundStyle(p.ink).lineLimit(1)
-                    Text(e.pending ? "Gemini leser kvitteringen …" : "AI foreslår " + e.category + (e.paidBy.isEmpty ? "" : " · " + e.paidBy))
+                    Text(e.pending ? "Glimt leser lokalt …" : "AI foreslår " + e.category + (e.paidBy.isEmpty ? "" : " · " + e.paidBy))
                         .font(PF.ui(12.5)).foregroundStyle(e.pending ? p.lab : p.mut).lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

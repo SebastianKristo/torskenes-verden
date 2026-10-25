@@ -49,16 +49,23 @@ final class Mer45 {
     func take(_ o: [String: Any]) {
         guard let m = o["mer45"] as? [String: Any] else { return }
         apply(m)
+        // Prompt 52: synlighet for søkefelt og titler i Mer og Finans → Mer (Mer52Vis.swift).
+        Mer52Vis.shared.take(m)
         UserDefaults.standard.set(m, forKey: Mer45.key)
     }
 
     private func save(_ store: Store) {
-        let v: [String: Any] = ["title": title == Mer45.defaultTitle ? "" : title, "titleHidden": titleHidden, "big": big]
+        var v: [String: Any] = ["title": title == Mer45.defaultTitle ? "" : title, "titleHidden": titleHidden, "big": big]
+        // Prompt 52: {sok, tit, vkt} for begge Mer-sidene følger med (serveren lagrer mer45 som ett objekt).
+        for (k, x) in Mer52Vis.shared.payload { v[k] = x }
         UserDefaults.standard.set(v, forKey: Mer45.key)
         let a: API = store.api
         // Tåler at eldre servere avviser nøkkelen (lagres da bare på enheten).
         Task { _ = try? await a.callAt("/api", "PUT", "/me/layout", json: ["mer45": v]) }
     }
+
+    /// Prompt 52: lagrer etter endring i Mer52Vis.
+    func save52(_ store: Store) { save(store) }
 
     func hideTitle(_ store: Store) {
         Haptics.shared.tick()

@@ -22,3 +22,12 @@ Fasit for hvordan siden skal se ut: `Familie App.dc.html` (brukt i `Homelab.dc.h
 - Familie åpner uten krasj fra kald start, fra Hjem, fra Mer og fra varsel/deep link, både med og uten posisjonstillatelse, og i flymodus.
 - Legg til en krasjgrense: feil i ett kort (kart, helse, Live Activity) viser «Kunne ikke laste» i det kortet, resten av siden virker.
 - Kjør med Address Sanitizer / StrictMode én gang for å fange flere feil.
+
+## Funnet årsak – Android (AND52A, 2026-10-25)
+Profilbildene ble dekodet i full oppløsning og lagt i en cache som talte antall bilder, ikke byte. Det ga OOM eller «trying to draw too large bitmap» når Familie viste alle profilbildene samtidig. Nå nedskaleres de til maks 2 × visningsstørrelsen, og kortene har krasjgrense. Detaljer i `docs/familie-krasj-52.md`.
+
+## Årsak (iOS, funnet i koden 2026-10-25 – ingen stacktrace tilgjengelig)
+Profilbildet i kartnålene på Folk-fanen (`Fam50Avatar` i MapKit `Annotation`) krevde `@Environment(Store.self)`. Miljøobjektet følger
+ikke alltid med inn i kartnålene, og da avslutter SwiftUI appen med en gang (bare når noen har posisjon). Rettet, sammen med NaN-/ugyldige
+kartområder, `Int(NaN)` i kantpilene, like id-er i `LazyVGrid`, nedskalering av profilbilder, personverntekstene direkte i Info.plist og
+krasjgrense per kort. Detaljer: `docs/familie-krasj-52.md`. Android: se samme fil.

@@ -36,7 +36,12 @@ struct PaperHome: View {
         // Prompt 41: 17. mai – eget Hjem på dagen med bryteren «17. mai-design» (Mai17Home41.swift).
         Mai17Home41()
         // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
-        PaperCardStack(page: "hjem", cards: homeCards + [shortcuts46], fullWidth: ["h1", "h5", "h12", "h13", "h14", "h16"], twoColumns: true)
+        // Prompt 52 (IOS52B): med fliser er Hjem et 2-kolonners rutenett (3a), og de fem flisene er egne kort (Home52Grid.swift).
+        let tiles52: Bool = Home50Tiles.shared.on
+        PaperCardStack(page: "hjem", cards: tiles52 ? Home52.asTiles(homeCards) + Home52.tileCards() : homeCards + [shortcuts46],
+                       fullWidth: ["h1", "h5", "h12", "h13", "h14", "h16"], twoColumns: true,
+                       half: tiles52 ? Home52.half : [], tall: tiles52 ? Home52.tall : [])
+            .modifier(Home52Keeper(on: tiles52))
             .task(id: store.account?.id ?? "") { if !Trial31Model.shared.loaded { await Trial31Model.shared.load(store.api) } }
         homeErrorText
     }
@@ -89,7 +94,8 @@ struct PaperHome: View {
                 // Prompt 26: KALENDER etter Avganger (med lagret oppsett legger pageCards den nederst).
                 PaperCardDef(key: "h10", label: "Kalender", view: AnyView(Cal26HomeCard())),
                 PaperCardDef(key: "h4", label: "Lenker", view: AnyView(shortcuts)), // prompt 46: «Snarveier» er nå h16
-                PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(newsCard)),
+                // Prompt 52: hele Siste nytt-kortet åpner nyhetsleseren, med haptikk (Home52Grid.swift).
+                PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(Home52NewsTile())),
                 PaperCardDef(key: "h6", label: "Gjøremål", view: AnyView(PaperTasksCard())),
                 PaperCardDef(key: "h7", label: "Posisjon", view: AnyView(PaperFamilyCard())),
                 PaperCardDef(key: "h8", label: "Bolig", view: AnyView(PaperHomeBoligCard())),
@@ -1080,6 +1086,12 @@ struct PaperLogo: View {
 
     private func load() async {
         if let u = logoUrl, !u.isEmpty, let i = await store.image(u) { img = i; return }
+        // Prompt 52: uten domene slås navnet opp i serverens lokale logo-cache (bolker, aldri eksterne oppslag), Logos52.swift.
+        if domain == nil || domain?.isEmpty == true {
+            let l52: Logos52 = Logos52.shared
+            if let u = await l52.url(for: name, store), let i = await store.image(u) { img = i; return }
+            if !l52.unsupported { return }
+        }
         // Uten domene: slå opp butikknavnet i logobiblioteket (prompt 20).
         var d: String? = domain
         if d == nil || d?.isEmpty == true { d = await LogoRegistry20.shared.domain(forName: name, api: store.api) }

@@ -64,7 +64,8 @@ final class RuterModel {
 
     var stops: [RuterStop] = RuterModel.loadLocal()
     var selected: String?
-    var departures: [String: [RuterDeparture]] = [:]
+    // Prompt 52: bufferen fra App Group lastes før første frame (Ruter52.swift), så Ruter tegnes med en gang.
+    var departures: [String: [RuterDeparture]] = Ruter52.loadAll()
     var updated: Date?
     var loading = false
     var error: String?
@@ -92,20 +93,24 @@ final class RuterModel {
             }
             if !list.isEmpty { stops = list; saveLocal() }
         }
+        // Prompt 52: ny henting bare når bufferen for stoppet er eldre enn 30 s (bytter radene stille).
+        if let s = current, let a = Ruter52Buffer.age(s.id), a < 30, departures[s.id] != nil { return }
         await refresh(store)
     }
 
     func refresh(_ store: Store) async {
         guard let s = current else { return }
-        loading = true
+        // Prompt 52: «Henter sanntid …» bare når stoppet ikke har noen data i det hele tatt.
+        loading = departures[s.id] == nil
         defer { loading = false }
         do {
             let d = try await store.api.callAt("/api", "GET", "/ruter/departures?stop=\(enc(s.id))&n=20", timeout: 20)
-            let o = JS.obj(d)
-            departures[s.id] = JS.list(o, "departures").enumerated().map { RuterDeparture($0.element, $0.offset) }
+            Ruter52Buffer.put(s.id, name: s.name, data: d)
+            departures[s.id] = Ruter52.parse(d)
             updated = Date()
             error = nil
         } catch let e as APIError {
+            // Prompt 52: behold gamle data; feilen vises bare når det ikke finnes noe å vise (RuterView24).
             error = e.status == 404 ? "Avganger finnes ikke på serveren ennå. Oppdater homelab." : e.message
         } catch {
             self.error = error.localizedDescription

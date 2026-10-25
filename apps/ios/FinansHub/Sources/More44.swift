@@ -80,7 +80,9 @@ struct PaperMore44: View {
         let cur = m.arrange(all)
         let vis: [More28Row] = cur.visible.filter { $0.id != Mer28.locked && n.hit($0) }
         VStack(alignment: .leading, spacing: 10) {
-            More44Search()
+            // Prompt 52: brytere for søkefelt, tittel og Verktøy i wiggle; av = borte, også luften (Mer52Vis.swift).
+            if m.editing { Mer52VisRow(page: "mer") }
+            if Mer52Vis.shared.on("mer", "sok") { More44Search() }
             More44Body(visible: vis, all: all, hiddenCount: cur.hidden.count)
             if let s = all.first(where: { $0.id == Mer28.locked }), n.hit(s) { More44Settings(row: s) }
             if m.editing && !cur.hidden.isEmpty { More44ShowHidden(count: cur.hidden.count) }
@@ -88,9 +90,10 @@ struct PaperMore44: View {
         }
         // Prompt 45: «Velg boks» og nytt navn på tittelen (Mer45.swift).
         .modifier(Mer45Sheets(all: all))
-        .onAppear { Mer45.shared.boot() }
+        .onAppear { Mer45.shared.boot(); Mer52Vis.shared.boot() }
         .task(id: store.account?.id ?? "") {
             Mer45.shared.boot()
+            Mer52Vis.shared.boot()
             await m.load(store)
             await Media43.shared.probe(store)
             await More44Rows.warm(store)
@@ -117,7 +120,7 @@ struct More44Body: View {
             // Prompt 46: skjult tittel utenfor wiggle = ingen rad (heller ikke høyde/mellomrom), kortene starter rett under søket.
             if (!n.low && !Mer45.shared.titleHidden) || m.editing { More44Header(title: n.low ? "" : Mer45.shared.title) }
             if !n.low && !daily.isEmpty { More44Tiles(rows: daily, all: all, columns: wide ? 4 : 2) }
-            if !n.low && !tools.isEmpty { More44Label(text: "VERKTØY").padding(.top, 8) }
+            if !n.low && !tools.isEmpty && Mer52Vis.shared.on("mer", "vkt") { More44Label(text: "VERKTØY").padding(.top, 8) }
             if !tools.isEmpty { More44Tools(rows: tools, all: all, columns: wide ? 2 : 1) }
         }
     }

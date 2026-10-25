@@ -220,7 +220,8 @@ final class AiCtl34 {
         ("glimt", "Glimt · kalender", "Forstå hendelser og svare om kalenderen", "", "", false),
         ("brief", "Glimt · brief", "Morgen-, dags- og kveldsbrief", "", "", false),
         // Prompt 38: standardene for Finans (claude-code-ai-kontroll-modellvalg-fiks.md).
-        ("rc", "Kvitteringer (bilde)", "Leser butikk, beløp og varelinjer", "qwen2.5vl:7b", "gemini-2.5-flash", true),
+        // Prompt 52: ingen sky-reserve for kvitteringer (Gemini er fjernet helt fra kvitteringslesingen).
+        ("rc", "Kvitteringer (bilde)", "Leses lokalt: telefon → Mac Vision → Tesseract → lokal modell", "qwen2.5vl:7b", "", true),
         ("kat", "Kategorisering", "Foreslår kategori for transaksjoner", "llama3.2:3b", "llama-3.3-70b-versatile", true),
         ("fsok", "Finans · spør", "«Har jeg et musikkabonnement?»", "gemma4:latest", "gemini-2.5-flash", true),
         ("bar", "Strekkoder og pakkelapper", "Bildefelt fra kamera", "roboflow/kvittering/1", "qwen2.5vl:7b", true),

@@ -36,8 +36,13 @@ struct Chat27Sheet: View {
                 }
             }
             .padding(.horizontal, 16).padding(.top, 18).padding(.bottom, 22)
+            // Prompt 52: innholdet får høyden det trenger og scroller – ingenting presses sammen eller klippes.
+            .fixedSize(horizontal: false, vertical: true)
         }
+        .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
+        // Luft til hjemindikatoren under «Administrer modeller».
+        .safeAreaPadding(.bottom, 12)
         .background(c.bg)
     }
 }
@@ -121,7 +126,7 @@ struct Chat27ModelSheet: View {
     let c: ChatPal27
 
     var body: some View {
-        Chat27Head(title: "Velg modell", c: c)
+        Chat27Head(title: "Velg modell", c: c).fixedSize(horizontal: false, vertical: true)
         // Prompt 41: «✦ Auto» øverst – Glimt velger beste modell for hver melding (standard).
         if let a = s.autoModel {
             Button { s.select(a, store) } label: {
@@ -183,6 +188,7 @@ struct Chat27ModelSheet: View {
         }
         .padding(.horizontal, 14)
         .background(c.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func detail(_ m: ChatLLM27) -> String {
