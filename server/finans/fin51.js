@@ -499,7 +499,7 @@ export function hunter51(u, { weeks = 6, today = today51() } = {}) {
   for (const s of subs) {
     const g = sig.get(s.id);
     if (g && g.ts < limit) {
-      const w = Math.floor((Date.parse(`${today}T12:00:00Z`) - g.ts) / (7 * 86400_000));
+      const w = Math.floor(Math.round((Date.parse(`${today}T12:00:00Z`) - g.ts) / 86400_000) / 7); // hele dager, så klokkeslettet ikke gir én uke for lite
       add({ key: `unused:${s.id}:${N}`, kind: 'unused', subId: s.id, name: s.name, title: `${s.name} er ikke brukt på ${w} uker`, text: `Siste bruk-signal: ${g.source.toLowerCase()} ${dayLabel51(new Date(g.ts).toISOString().slice(0, 10))}. Si opp, eller trykk «Jeg bruker den».`,
         lastUsed: new Date(g.ts).toISOString(), weeks: w, signal: g.source, monthly: kr51(monthlyOre(s)), saving: kr51(monthlyOre(s)), source: 'bruk' });
     } else if (!g && s.low_use) {

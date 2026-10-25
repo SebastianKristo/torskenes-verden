@@ -165,8 +165,11 @@ export async function preprocess51(image, mime, { tools = {}, fallback = null } 
     if (long < MIN_PX51) { scale = MIN_PX51 / long; info.upscaled = true; }
     else if (long > MAX_PX51) { scale = MAX_PX51 / long; info.downscaled = true; }
     const resize = scale !== 1 ? ['-resize', `${Math.round(scale * 10000) / 100}%`] : [];
+    // Prompt 53 (DAL53): Eye retter rotasjon som EXIF ikke fanger (kvittering fotografert sidelengs/opp-ned). 0 når Eye ikke er klar.
+    const rot53 = await import('../dal53/image.js').then((m) => m.eyeRotation53(src)).catch(() => 0);
+    if (rot53) { info.rotated = true; info.eye_rotation53 = rot53; if (rot53 !== 180) [W, H] = [H, W]; }
     const out = join(dir, 'ocr.png');
-    await T.run(im, [`${src}[0]`, '-auto-orient', ...geo, ...resize, '-colorspace', 'Gray', '-normalize', '-background', 'white', '-deskew', '40%', '+repage', '-unsharp', '0x1', '-density', '300', '-units', 'PixelsPerInch', out], { timeout: 60_000 });
+    await T.run(im, [`${src}[0]`, '-auto-orient', ...geo, ...resize, ...(rot53 ? ['-rotate', String(rot53), '+repage'] : []), '-colorspace', 'Gray', '-normalize', '-background', 'white', '-deskew', '40%', '+repage', '-unsharp', '0x1', '-density', '300', '-units', 'PixelsPerInch', out], { timeout: 60_000 });
     const buf = await readFile(out);
     return { buf, mime: 'image/png', size: [Math.round(W * scale), Math.round(H * scale)], preprocess: info };
   } catch { return null; } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); }

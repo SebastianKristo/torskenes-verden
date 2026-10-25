@@ -172,6 +172,11 @@ export function mountReceipts48(api, { W, R, adminOnly, sessionOnly, enqueue, ou
     const log = (step, detail) => { logs.push([step, detail]); console.info(`[skann48] ${step} – ${String(detail).slice(0, 200)}`); };
     // Kjeden fullføres selv om klienten kobler fra (kvitteringen lagres uansett; appens kø sender den ellers på nytt).
     const id = randomUUID();
+    // Prompt 53 (DAL53): Eye sier hva slags bilde det er (og rotasjonen brukes før Tesseract). Et foto som ikke er en kvittering gir en
+    // advarsel – kjeden kjører likevel (bare lokalt, aldri Gemini). Uten Eye: som før.
+    const eye53 = await import('../dal53/index.js').then((m) => m.eyeKind53(buf)).catch(() => null);
+    if (eye53?.kind) log('eye', `${eye53.kind}${eye53.confidence != null ? ` (${Math.round(eye53.confidence * 100)} %)` : ''}${eye53.rotation ? ` · rotert ${eye53.rotation}°` : ''}`);
+    if (eye53?.route === 'photo' && (eye53.confidence ?? 0) >= 0.6) warnings.push('Bildet ser ut som et vanlig foto, ikke en kvittering. Sjekk at du valgte riktig bilde.');
     const res = await runChain48({ image: buf, mime, smallImage: scanImg, deviceOcr, deviceParse, client, categories: expenseCats(u), log, user: u, receiptId: id });
 
     const file = await storeFile(id, buf, `.${IMG[mime]}`);

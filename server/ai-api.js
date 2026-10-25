@@ -47,6 +47,7 @@ import { updateConfig } from './settings.js';
 import { webSearch, webSettings, clearWebCache, PROVIDERS as WEB_PROVIDERS, PROVIDER_NAME as WEB_NAME } from './web-search.js'; // prompt 44
 import { getAzureRegion, setAzureRegion } from './glimt35.js'; // prompt 35: Azure-region for TTS
 import { hostHw, envHw, hwOut, fit38, recommendFor, SUGGESTED_MODELS, TIMEOUTS, FIT_LABEL } from './aihw38.js'; // prompt 38: Mac mini M4
+import { externalModels53 } from './fermion53/index.js'; // prompt 53 (FERMION53): Neutrino/Phonon på Mac mini-en i AI-kontroll
 
 const api = new Hono();
 api.use('*', authOrToken);
@@ -107,7 +108,7 @@ api.get('/models', async (c) => {
       vramGb: p ? Math.round((p.size_vram ?? 0) / 1e8) / 10 : null, expiresAt: p?.expires_at ?? null, lastUsed: lu[m.name] ?? null, fit: fitOf(m.sizeGb), fitLabel: FIT_LABEL[fitOf(m.sizeGb)] ?? null };
   });
   const cloud = ai.CLOUD_MODELS.map((m) => ({ ...m, on: r.cloudOn[m.id] !== false, available: m.provider === 'gemini' ? geminiKeys().length > 0 : !!secret(m.provider === 'groq' ? 'groqKey' : 'openrouterKey') }));
-  return c.json({ ok: inv.ok, ...(inv.ok ? {} : { error: inv.err }), url: base() || null, gpu: gpu(), hw: envHw(), installed, pulls: pullsOut(), cloud, defaults: { chat: r.tasks.chat.model || null } }, 200, { 'Cache-Control': 'no-store' });
+  return c.json({ ok: inv.ok, ...(inv.ok ? {} : { error: inv.err }), url: base() || null, gpu: gpu(), hw: envHw(), installed, pulls: pullsOut(), cloud, external: externalModels53(), defaults: { chat: r.tasks.chat.model || null } }, 200, { 'Cache-Control': 'no-store' });
 });
 
 // Nedlastinger: navn → {model, status, completed, total, pct, mbps, done, error, started, ctrl}

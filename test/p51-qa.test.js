@@ -55,7 +55,8 @@ test('flagg: GET /api/flags krever innlogging og gir innebygde flagg AV som stan
   assert.equal(r.status, 200);
   assert.equal(r.body.flags.crash_breadcrumbs51, false);
   assert.equal(r.body.flags.glimt_proactive51, false);
-  assert.ok(Object.values(r.body.flags).every((v) => v === false), 'alt nytt er av som standard');
+  // Prompt 53: modellflaggene (navn som slutter på «53», via flags53.js) er PÅ som standard etter kontrakt 53.
+  assert.ok(Object.entries(r.body.flags).filter(([k]) => !/53$/.test(k)).every(([, v]) => v === false), 'alt nytt er av som standard');
 });
 
 test('flagg: bare admin kan se og endre; nye flagg er alltid av selv om klienten ber om på', async () => {

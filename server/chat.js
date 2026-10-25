@@ -42,6 +42,7 @@ import { nextTasks } from './tasks.js';
 import { chatBody, isThinkingModel } from './ollama-opts.js';
 import { thinkSplit52, thinkState52, glimtSteps52, stripThink52, cleanAttTh52 } from './chat52.js'; // prompt 52 (SRV52): tankegang
 import { gateChat, GateError } from './ai-gate.js'; // prompt 43: alle Ollama-kall via gaten
+import { chatModels53, neutrinoChatStream53, isNeutrino53, NEUTRINO_NAME53 } from './fermion53/neutrino.js'; // prompt 53 (FERMION53): Neutrino-1 8B på Mac mini-en
 import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './chat-scans.js';
 import { gatherFacts, factsPrompt, factsAnswer, hasFactWords } from './chat-tools41.js'; // prompt 41: Glimt henter fakta
 import { AUTO_ID, pickAuto41, autoEntry41, recordAuto41, feedbackAuto41, autoSummary41 } from './chat41.js'; // prompt 41: «✦ Auto»
@@ -56,6 +57,7 @@ import { saveFile50, deleteFile50, desc50, mountFiles50, visionCaps50, bestVisio
 import { rankFor41 } from './chat41.js';
 import { externalBlocked48, r48Settings } from './receipts48/settings.js';
 import { imageIntent51, looksLikeDocument51, documentNote51, readDocument51, visionModel51, textModel51, isMultimodalError51, markNoVision51, friendlyError51, owuiVision51 } from './chat51.js'; // prompt 51 (RCPTSRV51): bilder i chatten
+import { engine53, webSearch53, eyeIntent53 } from './dal53/index.js'; // prompt 53 (DAL53): Tongue/Redact rundt motoren, Redact på søkeord, Eye for bilder
 
 const q = (sql) => db.prepare(sql);
 const isMock = () => process.env.MOCK_DATA === '1' && !fx;
@@ -144,7 +146,9 @@ async function owuiModels(o) {
 }
 const modelCache = { at: 0, key: '', list: [] };
 /** Alle modeller (Open WebUI når den er satt opp og svarer, ellers Ollama direkte + Gemini/Groq). Cachet 30 s. */
-export async function listModels() {
+// Prompt 53 (FERMION53): Neutrino-1 8B (Mac mini) legges til når den svarer og flagget er på (bufret helsesjekk, venter aldri).
+export async function listModels() { return [...(await listModels0()), ...chatModels53()]; }
+async function listModels0() {
   if (isMock()) return MOCK_MODELS;
   const o = owui(), key = `${o?.url ?? ''}|${ollamaBase()}|${hasGemini()}|${!!secret('groqKey')}`;
   if (modelCache.key === key && Date.now() - modelCache.at < 30_000) return modelCache.list;
@@ -159,6 +163,7 @@ export async function listModels() {
 function infer(id) {
   if (id.startsWith('gemini:')) return { id, name: prettyGemini(id.slice(7)), kind: 'sky', provider: 'gemini', vision: true, installed: true };
   if (id.startsWith('groq:')) return { id, name: GROQ_NAMES[id.slice(5)] ?? id.slice(5), kind: 'sky', provider: 'groq', vision: /llama-4|scout/.test(id), installed: true };
+  if (isNeutrino53(id)) return { id, name: NEUTRINO_NAME53, kind: 'lokal', provider: 'fermion', vision: false, installed: false }; // prompt 53: Neutrino nede → tydelig feil, aldri til Ollama
   return { id, name: prettyLocal(id), kind: 'lokal', provider: 'ollama', vision: VISION_RE.test(id), installed: true };
 }
 async function modelFor(id) { const list = await listModels(); return list.find((m) => m.id === id) ?? infer(id); }
@@ -166,7 +171,8 @@ async function defaultModel(u) {
   const list = await listModels();
   const want = userCfg(u, 'chat_default_model') || kv.get(u, 'chat_last_model', '');
   if (want && list.some((m) => m.id === want && m.installed)) return want;
-  return (list.find((m) => m.kind === 'lokal' && m.installed && !m.vision) ?? list.find((m) => m.installed))?.id ?? null;
+  const std = list.filter((m) => m.provider !== 'fermion'); // prompt 53: Neutrino blir aldri standard av seg selv (eval avgjør)
+  return (std.find((m) => m.kind === 'lokal' && m.installed && !m.vision) ?? std.find((m) => m.installed))?.id ?? null;
 }
 
 /* ---------------- Samtaler ---------------- */
@@ -421,11 +427,14 @@ async function mockStream(text, data, { onDelta, signal, facts = null }) {
 }
 
 /** Kjører modellen: Open WebUI først når den er satt opp (og modellen kommer derfra), ellers direkte. */
-async function runEngine(m, ctx) {
+// Prompt 53 (DAL53): Tongue (svarspråk) for alle modeller og Redact (personopplysninger → plassholdere) for sky-modeller.
+const runEngine = (m, ctx) => engine53(runEngineRaw53, m, ctx);
+async function runEngineRaw53(m, ctx) {
   const { sys, s, webSearch, files, onDelta, signal, gotText } = ctx;
   const msgs = stripThink52(ctx.msgs); // prompt 52: tankegangen sendes aldri tilbake til modellen
   const onThink = ctx.onThink ?? (async () => {});
   if (isMock()) return { ...(await mockStream(msgs.at(-1)?.content, ctx.data, { onDelta, signal, facts: ctx.facts })), engine: 'mock' };
+  if (m.provider === 'fermion') return { ...(await neutrinoChatStream53(m.id, sys, msgs, s, { onDelta, onThink, signal })), engine: 'fermion' }; // prompt 53: aldri via Open WebUI/sky
   const o = owui();
   // Prompt 44: Open WebUI via gaten (samme kø som Ollama). ai_backend = 'ollama' → Ollama-modeller går direkte.
   const viaOwui = o && (m.via === 'openwebui' || !/^(gemini|groq):/.test(m.id)) && (m.provider !== 'ollama' || backendConfig().effective === 'openwebui');
@@ -731,7 +740,8 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
   let readWith50 = null, modelMsgs = history;
   // Prompt 51 (RCPTSRV51): vei per bilde – kvittering (kjeden), dokument (OCR-rader → tekstmodell), foto (visjonsmodell) eller modellen selv.
   // Aldri bilder til en modell uten bildestøtte; veien som ble brukt står i readWith (route, label).
-  const intent51 = hasImg50 && !wantReceipt50 ? (b.imageMode === 'ocr' ? 'document' : imageIntent51(last50.content)) : null;
+  // Prompt 53 (DAL53): sier ikke teksten hva bildet er, avgjør Eye (kvittering/dokument/skjermbilde → OCR, foto → visjonsmodellen); uten Eye som før.
+  const intent51 = hasImg50 && !wantReceipt50 ? (b.imageMode === 'ocr' ? 'document' : imageIntent51(last50.content) ?? await eyeIntent53(prep50.imageFiles)) : null;
   const toDocument51 = async (doc, why = null) => {
     const tm = textModel51(m, await listModels(), { blocked: externalBlocked48().blocked, fallbackId: r48Settings().textModel || 'qwen3:8b' });
     const from = m.id;
@@ -876,7 +886,7 @@ api.post('/send', bodyLimit({ maxSize: 40 * 1024 * 1024, onError: (c) => bad(c, 
     }
     if (route.tools.includes('web')) {
       try {
-        web = await webSearch(route.query || history.at(-1).content, { signal: ctrl.signal });
+        web = await webSearch53(webSearch, route.query || history.at(-1).content, { signal: ctrl.signal }); // prompt 53: Redact på søkeordene
         if (web.hits.length) {
           facts = [...facts, webFact(web)]; factUsed = [...new Set([...factUsed, 'Nettsøk'])];
           sysAll = `${sysAll}\n\n${webPrompt(web)}`;

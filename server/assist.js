@@ -77,6 +77,7 @@ import { fagAnswer, rememberCtx } from './glimt39-fag.js'; // prompt 39: oppføl
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { extractPlace, placeWeather, PlaceNotFound } from './weather35.js'; // prompt 35: været for et sted
 import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from './ai-run.js';
+import { aiRun53 } from './dal53/text.js'; // prompt 53 (DAL53): Redact på brukerteksten når AI-søket kan gå til sky
 import { once } from './ai-gate.js'; // prompt 43: single-flight
 import { routeTools, osloNowLine } from './tool-router44.js'; // prompt 44: ruting før modellen (Glimt-søk på Hjem)
 import { webSearch, webPrompt, webMeta, webFact, PROVIDER_NAME } from './web-search.js'; // prompt 44: eget nettsøk
@@ -513,7 +514,7 @@ async function toolLlm(user, text, web = null) {
   try {
     // Prompt 43: samme spørsmål fra samme bruker samtidig (dobbeltklikk, app + widget) gir ett kall.
     const wp = web?.hits?.length ? `\n\n${webPrompt(web)}` : '';
-    const out = await once(`assist|${user}|${localOnly ? 1 : 0}|${text}|${web?.hits?.length ?? 0}`, () => aiRun('sok', { user, prompt: text, system: (p) => (p === 'ollama' ? localSystem(user) : cloudSystem()) + wp, numPredict: 160, temperature: 0.3, localOnly,
+    const out = await once(`assist|${user}|${localOnly ? 1 : 0}|${text}|${web?.hits?.length ?? 0}`, () => aiRun53(aiRun, 'sok', { user, prompt: text, system: (p) => (p === 'ollama' ? localSystem(user) : cloudSystem()) + wp, numPredict: 160, temperature: 0.3, localOnly,
       title: `AI-søk · «${text.slice(0, 60)}»`, ...(wp ? { numCtx: 8192, tools: ['web'], web: { query: web.query, hits: web.hits.length, provider: web.provider } } : {}) }));
     const t = short(out.text);
     if (out.provider !== 'ollama') { try { const { audit } = await import('./finans/ai-audit.js'); audit(out.provider, 'assist', { spørsmål: text }, user); } catch { /* logg er best effort */ } }

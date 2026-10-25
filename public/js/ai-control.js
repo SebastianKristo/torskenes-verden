@@ -512,7 +512,15 @@ function modTab(o) {
       <div class="ac-search">${svg('M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5', 16)}<input data-ac-q value="${esc(G.q)}" placeholder="Søk eller skriv modellnavn, f.eks. qwen3:14b" autocomplete="off" spellcheck="false" aria-label="Søk i Ollama-biblioteket"${admin ? '' : ' disabled'}>${q && okName && admin && !lib.some((l) => l.id === q) && !I.some((m) => m.id === q) ? btn('Last ned', `data-ac-pull="${esc(q)}"`, 'ink') : ''}</div>
       <div class="ac-chips">${[['alle', 'Alle'], ['tekst', 'Tekst'], ['bilde', 'Bilde'], ['resonnering', 'Resonnering'], ['embedding', 'Embeddings']].map(([k, n]) => `<button type="button" class="${G.cat === k ? 'on' : ''}" data-ac-cat="${k}">${n}</button>`).join('')}</div>
       <div class="ac-card ac-list">${libH}</div>${admin ? '' : '<div class="ac-note">Bare administrator kan laste ned og slette modeller.</div>'}${G.missing.lib === true ? '<div class="ac-note">Viser et utvalg. Serveren har ikke biblioteksøk ennå.</div>' : ''}</div>
-    <div class="ac-sec">${lab('SKY-MODELLER')}<div class="ac-card ac-list">${cl.map((m) => `<button type="button" class="ac-li" data-ac-cloud="${esc(m.id)}"${admin ? '' : ' disabled'} role="switch" aria-checked="${m.on}">${logo(PROV_LOGO[m.provider] ?? '', String(m.provider ?? '?').slice(0, 1).toUpperCase(), 'var(--mut)').replace('ac-logo', 'ac-logo sm')}<span class="ac-col ac-grow"><b class="ac-mono ac-ell">${esc(m.id)}</b><span>${esc(m.desc || m.provider)}${m.key === false ? ' · mangler nøkkel' : ''}</span></span>${sw(m.on)}</button>`).join('')}</div></div>`;
+    <div class="ac-sec">${lab('SKY-MODELLER')}<div class="ac-card ac-list">${cl.map((m) => `<button type="button" class="ac-li" data-ac-cloud="${esc(m.id)}"${admin ? '' : ' disabled'} role="switch" aria-checked="${m.on}">${logo(PROV_LOGO[m.provider] ?? '', String(m.provider ?? '?').slice(0, 1).toUpperCase(), 'var(--mut)').replace('ac-logo', 'ac-logo sm')}<span class="ac-col ac-grow"><b class="ac-mono ac-ell">${esc(m.id)}</b><span>${esc(m.desc || m.provider)}${m.key === false ? ' · mangler nøkkel' : ''}</span></span>${sw(m.on)}</button>`).join('')}</div></div>${extH53()}`;
+}
+/* Prompt 53 (FERMION53): Fermion Research på Mac mini-en (Neutrino-1 8B i Chat, Phonon til tale→tekst). Bare visning – oppsett og test i
+   /api/admin/fermion53/*. Neutrino er aldri standard og står ikke i rutingen (eval avgjør). */
+function extH53() {
+  const X = Array.isArray(G.models?.external) ? G.models.external : [];
+  if (!X.length) return '';
+  const st = { ok: 'Svarer', starting: 'Starter', down: 'Svarer ikke', auth: 'Nøkkel eller IP avvist', off: 'Av' };
+  return `<div class="ac-sec">${lab('MAC MINI · FERMION')}<div class="ac-card ac-list">${X.map((m) => `<div class="ac-mrow"><div class="ac-row"><span class="ac-dot" style="background:${m.ok ? 'var(--ok)' : 'var(--line)'}"></span><b class="ac-mono ac-grow ac-ell">${esc(m.id)}</b><span class="ac-mut">${esc(m.flag === false ? 'Flagg av' : st[m.status] ?? m.status ?? '')}</span></div><span class="ac-mut">${esc(m.desc ?? '')}</span></div>`).join('')}</div><div class="ac-note">Inneholder modeller fra Fermion Research (Neutrino: Apache-2.0, Phonon: CC-BY-4.0). Kjører på Mac mini-en i huset.</div></div>`;
 }
 
 function allModelOpts() {

@@ -16,6 +16,7 @@ import { authOrToken, languageOf } from './mobile.js';
 import { ICON_DEFAULTS, validId as validIconId } from './icons.js';
 // Prompt 46 (SERVER46): egne kategorier + «For deg», favicon på kildene, sammendrag per kategori, Innstillinger → Nyheter (news46.js).
 import { mountNews46, customIds46, feedIcon46, itemsForCat46, fetchIcon46, feedDomain46, categoriesOut46 } from './news46.js';
+import { gistCategory53, topicSlugs53 } from './dal53/topics.js'; // prompt 53 (DAL53): emner fra Gist per sak
 
 const MOCK = process.env.MOCK_DATA === '1';
 const REFRESH_MS = 10 * 60_000;
@@ -372,7 +373,8 @@ Saker: ${JSON.stringify(top.map((t) => `${t.feed}: ${t.title}`))}`, DIGEST_SCHEM
 
 /* ---------------- Lesing ---------------- */
 
-const catOf = (row, s) => (row.fcat !== 'auto' ? row.fcat : mapCategory(row.category) ?? (s.aiCategorize ? row.ai_category : null) ?? 'norge');
+// Prompt 53 (DAL53): uten kjent kategori fra kilden/AI brukes emnet fra Gist (sport/teknologi/økonomi/kultur) før standarden «norge».
+const catOf = (row, s) => (row.fcat !== 'auto' ? row.fcat : mapCategory(row.category) ?? (s.aiCategorize ? row.ai_category : null) ?? gistCategory53(row.id) ?? 'norge');
 
 /** Siste saker for brukeren, valgfritt filtrert på kategori eller feed. */
 export function latest(user, { cat = 'siste', feed = null, limit = 40 } = {}) {
@@ -385,7 +387,8 @@ export function latest(user, { cat = 'siste', feed = null, limit = 40 } = {}) {
     const category = catOf(r, s);
     if (cat && cat !== 'siste' && category !== cat) continue;
     out.push({ id: r.id, feedId: r.feed_id, feed: r.feed, color: r.color, title: r.title, url: r.url, published: r.published, category,
-      ai: r.fcat === 'auto' && !mapCategory(r.category) && s.aiCategorize && !!r.ai_category, image: r.image ?? null, readMin: readMinOf(r), excerpt: r.excerpt || '' });
+      ai: r.fcat === 'auto' && !mapCategory(r.category) && s.aiCategorize && !!r.ai_category, image: r.image ?? null, readMin: readMinOf(r), excerpt: r.excerpt || '',
+      topics: topicSlugs53(r.id) }); // prompt 53 (DAL53): Gist-emner (tom liste uten Gist)
     if (out.length >= limit) break;
   }
   return out;

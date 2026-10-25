@@ -30,6 +30,7 @@ import { db, kv } from './db.js';
 import { config } from './config.js';
 import { aiJson } from './homeos-common.js';
 import { isPrivateIp46 } from './public-url46.js';
+import { interestMatchesTopics53 } from './dal53/topics.js'; // prompt 53 (DAL53): interesser treffer også Gist-emner
 
 const MOCK = () => process.env.MOCK_DATA === '1';
 const STD = ['norge', 'verden', 'okonomi', 'sport', 'teknologi', 'kultur'];
@@ -97,7 +98,7 @@ export function forYou46(user, all, { limit = 30, now = Date.now() } = {}) {
   const scored = [];
   for (const it of all) {
     const title = String(it.title ?? '').toLowerCase(), ex = String(it.excerpt ?? '').toLowerCase();
-    const matched = words.filter((w) => wordRe(w).test(title) || wordRe(w).test(ex));
+    const matched = words.filter((w) => wordRe(w).test(title) || wordRe(w).test(ex) || interestMatchesTopics53(w, it.topics)); // prompt 53: + Gist-emner
     if (!matched.length) continue;
     const s = matched.reduce((a, w) => a + (wordRe(w).test(title) ? 3 : 1), 0) + Math.log1p(feedAff.get(it.feedId) ?? 0)
       - Math.max(0, (now - (Date.parse(it.published) || now)) / 3_600_000) / 24 - (readIds.has(it.id) ? 1.5 : 0);
