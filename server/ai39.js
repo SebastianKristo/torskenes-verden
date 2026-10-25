@@ -182,6 +182,32 @@ export async function planFor(u, tasks = null) {
     text: done ? (miss ? `✓ Ferdig · ${miss} anbefalt modell mangler (se Modeller)` : '✓ Ferdig') : `Fyller ut ${changes.length} ${changes.length === 1 ? 'oppgave' : 'oppgaver'} med beste installerte modell${miss ? ` · ${miss} mangler (se Modeller)` : ''}` };
 }
 
+/* ---------------- Prompt 59: de beste modellene settes én gang ved oppgraderingen ---------------- */
+// Etter eval på Mac mini-en (qwen3:8b til tekst, qwen2.5vl:7b til bilder) fyller serveren ut serverrutingen med anbefalingen ÉN gang,
+// når Ollama svarer og modellene er installert. Brukernes egne valg (routing.own) og reservemodellene røres ikke. Kan angres ved å velge
+// på nytt i AI-kontroll › Valg. Resultatet lagres i kv(OWNER,'rec59_applied') og logges.
+export async function applyBest59({ force = false } = {}) {
+  const done = kv.get(OWNER, 'rec59_applied', null);
+  if (done && !force) return { skipped: 'allerede gjort', ...done };
+  const inv = await ai.ollamaInventory({ force: true }).catch(() => null);
+  if (!inv?.ok || !(inv.models ?? []).length) return { skipped: 'Ollama svarer ikke' };
+  // Kunnskapsbasen (kb) røres aldri: en annen embedding-modell betyr at alt må indekseres på nytt («auto» peker gjerne på bge-m3).
+  const plan = await planFor(OWNER, ai.AI_TASKS.map((t) => t.id).filter((t) => t !== 'kb'));
+  const r = ai.routing(OWNER);
+  for (const ch of plan.changes) r.tasks[ch.task] = { model: ch.to, fallback: r.tasks[ch.task]?.fallback ?? '' };
+  if (plan.changes.length) { const { own, ...rest } = r; void own; ai.saveServerRouting(rest); }
+  const out = { at: Date.now(), changes: plan.changes.map((c) => ({ task: c.task, from: c.from, to: c.to })), missing: plan.skipped.map((x) => x.model) };
+  kv.set(OWNER, 'rec59_applied', out);
+  console.info(`[ai39] beste modeller satt (prompt 59): ${out.changes.map((c) => `${c.task} ${c.from ?? '–'} → ${c.to}`).join(', ') || 'ingen endring'}${out.missing.length ? ` · mangler ${[...new Set(out.missing)].join(', ')}` : ''}`);
+  return out;
+}
+/** Ved oppstart: prøv etter 1 min, så hvert 10. min i opptil 2 t til Ollama svarer. */
+export function startBest59() {
+  let n = 0;
+  const tick = async () => { n++; try { const r = await applyBest59(); if (r.skipped === 'Ollama svarer ikke' && n < 12) setTimeout(tick, 10 * 60_000).unref?.(); } catch (e) { console.warn('[ai39] beste modeller:', e.message); } };
+  setTimeout(tick, 60_000).unref?.();
+}
+
 // Spør Glimt: nøkkelord (fasitens RKW) → oppgaver.
 export const RKW = [
   ['rc', /kvittering|bilde|skann|ocr|foto|lese tekst/], ['kat', /kategori|sorter|klassifiser/], ['glimt', /kalender|avtale|glimt|timeplan/],

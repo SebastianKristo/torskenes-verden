@@ -905,6 +905,7 @@ if (process.env.OPS51_SANDBOX !== '1') startObs51(); // prompt 51 (OBS51): sampl
 if (BG51) startTax51(); // prompt 51 (FIN51): påminnelse om skattemeldingen (15. mars og 20. april, én gang per år)
 if (BG51) startQa51(); // prompt 51 (QA51): sender krasjrapporter som ikke kom fram til GlitchTip
 if (BG51) startMedfam51(); // prompt 51 (MEDFAM51): påminnelser «hvem kjører?» og slettinger etter angrefristen
+if (BG51) import('./ai39.js').then((m) => m.startBest59()).catch((e) => console.warn('[ai39] beste modeller:', e?.message)); // prompt 59: de beste modellene (fra eval) settes én gang
 if (BG51) import('./fast59/warm.js').then((m) => m.startWarm59()).catch((e) => console.warn('[fast59] varm modell:', e?.message)); // prompt 59 (del 4): hovedmodellen varm ved oppstart
 
 app.onError((err, c) => {
