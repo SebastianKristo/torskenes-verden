@@ -10,7 +10,12 @@
 // Prompt 50 (FAMWEB50): v35 – Familie i nytt design (family50.js, family50-web.js, family50.css). Sjekk inn-varsler (data.kind
 // 'checkin.*') får handlingene 👍 / Ring / Hent (data.actions) som svarer med POST /api/family/checkin/:id/reply uten å åpne appen;
 // «Hent meg» (data.priority 'high', kanal sjekkinn-hast) blir liggende til den er sett (requireInteraction) og vibrerer.
-const CACHE = 'os-v35';
+// Prompt 51 (WEBX51): v36 – offline-modus. Noen få lese-API-er (gjøremål, familiekalender, profil, tema) svares nettverk-først med
+// siste kopi som reserve (egen cache API51, tømmes ved utlogging/401), og «sync»-hendelsen ber åpne faner sende offline-køen
+// (webx51.js, IndexedDB). Skrivinger går aldri via cachen.
+const CACHE = 'os-v36';
+const API51 = 'api51-les';
+const API51_RE = /^\/api\/(tasks(\/lists)?|famcal51\/events|me|me\/layout|me\/theme51|me\/share51|family\/checkin|search51\/types)$/;
 const BILDER = 'mb50-bilder';
 const BILDER_MAX = 800;
 const SHELL = ['/assets/icons/icon-192.png'];
@@ -22,6 +27,8 @@ self.addEventListener('fetch', (e) => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== 'GET' || url.origin !== location.origin) return;
   if (url.pathname.startsWith('/api/media/bilde/') && url.searchParams.has('v')) { e.respondWith(bilde(req)); return; }
+  if (API51_RE.test(url.pathname)) { e.respondWith(api51(req)); return; }
+  if (req.mode === 'navigate' && /^\/(login|logout)/.test(url.pathname)) caches.delete(API51).catch(() => {});
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/finans/') || url.pathname === '/version.json' || url.pathname === '/sw.js') return;
   if (req.mode === 'navigate') {
     // HTML: nettverket først, uten HTTP-cache. Uten nett: siste kopi.
@@ -34,6 +41,25 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => put(req, res)).catch(() => caches.match(req).then((r) => r || Response.error())));
+});
+
+/** Prompt 51: nettverket først for lese-API-ene over; uten nett siste kopi (merket X-Offline51-Cache: 1). 401 tømmer cachen. */
+async function api51(req) {
+  try {
+    const res = await fetch(req);
+    if (res.status === 401 || res.status === 403) { caches.delete(API51).catch(() => {}); return res; }
+    if (res.ok && res.type === 'basic') { const copy = res.clone(); caches.open(API51).then((c) => c.put(req, copy)).catch(() => {}); }
+    return res;
+  } catch (err) {
+    const hit = await caches.open(API51).then((c) => c.match(req)).catch(() => null);
+    if (!hit) throw err;
+    const h = new Headers(hit.headers); h.set('X-Offline51-Cache', '1');
+    return new Response(await hit.blob(), { status: hit.status, headers: h });
+  }
+}
+self.addEventListener('sync', (e) => {
+  if (e.tag !== 'webx51-queue') return;
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => cs.forEach((c) => c.postMessage({ type: 'webx51-flush' }))));
 });
 
 /** Prompt 50: cache først for plakatene (adressen har versjonen, så et endret bilde får ny adresse). */

@@ -1,0 +1,159 @@
+{
+  "updated": "2026-10-25T09:36:43.711Z",
+  "counts": {
+    "login|lys|1440": {
+      "kontrast": 2,
+      "beroringsflate": 1
+    },
+    "login|lys|390": {
+      "kontrast": 2,
+      "beroringsflate": 1
+    },
+    "login|mork|1440": {
+      "kontrast": 2,
+      "beroringsflate": 1
+    },
+    "login|mork|390": {
+      "kontrast": 2,
+      "beroringsflate": 1
+    },
+    "hjem|lys|1440": {
+      "kontrast": 51,
+      "beroringsflate": 8
+    },
+    "hjem|lys|390": {
+      "kontrast": 49,
+      "beroringsflate": 22
+    },
+    "hjem|mork|1440": {
+      "kontrast": 80,
+      "beroringsflate": 8
+    },
+    "hjem|mork|390": {
+      "kontrast": 22,
+      "beroringsflate": 22
+    },
+    "gjoremal|lys|1440": {
+      "kontrast": 9
+    },
+    "gjoremal|lys|390": {
+      "kontrast": 7
+    },
+    "gjoremal|mork|1440": {
+      "kontrast": 7
+    },
+    "gjoremal|mork|390": {
+      "kontrast": 2
+    },
+    "kalender|lys|1440": {
+      "kontrast": 11,
+      "beroringsflate": 13
+    },
+    "kalender|lys|390": {
+      "kontrast": 5,
+      "beroringsflate": 1
+    },
+    "kalender|mork|1440": {
+      "kontrast": 10,
+      "beroringsflate": 13
+    },
+    "kalender|mork|390": {
+      "kontrast": 5,
+      "beroringsflate": 1
+    },
+    "familie|lys|1440": {
+      "kontrast": 5
+    },
+    "familie|lys|390": {
+      "kontrast": 5
+    },
+    "familie|mork|1440": {
+      "kontrast": 2
+    },
+    "familie|mork|390": {
+      "kontrast": 2
+    },
+    "familiekalender|lys|1440": {
+      "kontrast": 15
+    },
+    "familiekalender|lys|390": {
+      "kontrast": 15
+    },
+    "familiekalender|mork|1440": {
+      "kontrast": 2
+    },
+    "familiekalender|mork|390": {
+      "kontrast": 2
+    },
+    "media|lys|1440": {
+      "kontrast": 9
+    },
+    "media|lys|390": {
+      "kontrast": 5
+    },
+    "media|mork|1440": {},
+    "media|mork|390": {},
+    "innstillinger|lys|1440": {
+      "kontrast": 55,
+      "beroringsflate": 13
+    },
+    "innstillinger|lys|390": {
+      "kontrast": 53,
+      "beroringsflate": 22
+    },
+    "innstillinger|mork|1440": {
+      "kontrast": 83,
+      "beroringsflate": 13
+    },
+    "innstillinger|mork|390": {
+      "kontrast": 25,
+      "beroringsflate": 22
+    },
+    "finans|lys|1440": {
+      "kontrast": 60,
+      "beroringsflate": 3
+    },
+    "finans|lys|390": {
+      "kontrast": 10,
+      "beroringsflate": 3
+    },
+    "finans|mork|1440": {
+      "kontrast": 60,
+      "beroringsflate": 3
+    },
+    "finans|mork|390": {
+      "kontrast": 5,
+      "beroringsflate": 3
+    },
+    "planlegging|lys|1440": {
+      "kontrast": 18,
+      "beroringsflate": 1
+    },
+    "planlegging|lys|390": {
+      "kontrast": 18,
+      "beroringsflate": 1
+    },
+    "planlegging|mork|1440": {
+      "beroringsflate": 1
+    },
+    "planlegging|mork|390": {
+      "beroringsflate": 1
+    },
+    "sok|lys|1440": {
+      "kontrast": 51,
+      "beroringsflate": 8
+    },
+    "sok|lys|390": {
+      "kontrast": 49,
+      "beroringsflate": 22
+    },
+    "sok|mork|1440": {
+      "kontrast": 80,
+      "beroringsflate": 8
+    },
+    "sok|mork|390": {
+      "kontrast": 22,
+      "beroringsflate": 22
+    }
+  }
+}

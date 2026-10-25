@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3efe6">
+<meta name="referrer" content="no-referrer">
+<title>Bli med · Homelab</title>
+<link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/login.css">
+<style>
+  /* Prompt 51 (WEBX51): onboarding for nye familiemedlemmer – tre steg, ferdig på ett minutt. */
+  .j51-share{display:grid;gap:8px;margin:6px 0 4px}
+  .j51-opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px solid rgba(23,21,15,.18);border-radius:12px;cursor:pointer;min-height:48px}
+  .j51-opt input{width:22px;height:22px;margin:2px 0 0;accent-color:#17150f;flex:none}
+  .j51-opt b{display:block;font:600 15px/1.3 Manrope,system-ui,sans-serif}
+  .j51-opt span{display:block;font:400 13px/1.4 Manrope,system-ui,sans-serif;opacity:.75}
+  .j51-done{font:400 15px/1.5 Manrope,system-ui,sans-serif}
+  .j51-app{display:block;margin-top:10px;font:500 13px/1.4 "IBM Plex Mono",monospace;word-break:break-all;opacity:.8}
+  @media (prefers-color-scheme: dark){ .j51-opt{border-color:rgba(236,233,226,.22)} .j51-opt input{accent-color:#ece9e2} }
+</style>
+<script src="/assets/js/crash51.js"></script>
+<script type="module" src="/assets/js/join51.js"></script>
+</head>
+<body>
+<main class="gate" id="gate-root">
+  <div class="gate-hero">
+    <span class="gate-brand" id="j-brand">Homelab</span>
+    <div class="gate-hero-t"><span class="gate-kick">INVITASJON</span><h1 id="j-title">Bli med i familien</h1></div>
+  </div>
+  <div class="gate-side">
+    <form id="j51" class="gate-form" novalidate>
+      <div class="gate-bars" aria-hidden="true"><span></span><span></span><span></span></div>
+      <span class="gate-lab" id="j-lab">STEG 1 AV 3</span>
+      <b class="gate-h" id="j-h">Henter invitasjonen …</b>
+      <span class="gate-sub" id="j-sub"></span>
+
+      <div class="gate-fields" data-step="1" hidden>
+        <label class="gate-l" for="j-name">Navnet ditt</label>
+        <input id="j-name" class="gate-in" autocomplete="name" maxlength="60">
+        <label class="gate-l" for="j-user">Brukernavn</label>
+        <input id="j-user" class="gate-in" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32">
+      </div>
+
+      <div class="gate-fields" data-step="2" hidden>
+        <label class="gate-l" for="j-pw">Velg passord (minst 8 tegn)</label>
+        <input id="j-pw" type="password" class="gate-in" autocomplete="new-password">
+        <label class="gate-l" for="j-pw2">Gjenta passord</label>
+        <input id="j-pw2" type="password" class="gate-in" autocomplete="new-password">
+      </div>
+
+      <div class="gate-fields" data-step="3" hidden>
+        <span class="gate-l" id="j-share-l">Hva vil du dele med familien?</span>
+        <div class="j51-share" role="group" aria-labelledby="j-share-l">
+          <label class="j51-opt"><input type="checkbox" id="j-loc"><span><b>Posisjon</b><span>Familien ser hvor du er når appen sender posisjon. Kan pauses når som helst.</span></span></label>
+          <label class="j51-opt"><input type="checkbox" id="j-health"><span><b>Helse</b><span>Skritt, søvn, hvilepuls og aktive kalorier – ikke puls. Deles sammen med posisjon.</span></span></label>
+          <label class="j51-opt"><input type="checkbox" id="j-cal"><span><b>Kalender</b><span>Med i familiekalenderen og «hvem kjører?».</span></span></label>
+        </div>
+      </div>
+
+      <div class="gate-fields" data-step="4" hidden>
+        <p class="j51-done" id="j-done"></p>
+        <span class="j51-app" id="j-app" hidden></span>
+      </div>
+
+      <span class="gate-err" id="j-err" role="alert" hidden></span>
+      <button type="submit" class="gate-btn" id="j-btn" disabled>Neste</button>
+      <div class="gate-foot">
+        <button type="button" class="gate-back" id="j-back" hidden>← Tilbake</button>
+        <span class="gate-grow"></span>
+        <span class="gate-foot-t" id="j-foot"></span>
+      </div>
+    </form>
+  </div>
+</main>
+</body>
+</html>
