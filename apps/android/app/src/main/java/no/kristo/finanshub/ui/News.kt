@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -75,7 +77,7 @@ internal fun NewsReader(vm: AppViewModel) {
                     Box(
                         Modifier.size(40.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(onClickLabel = "Mer") { menu = true },
                         contentAlignment = Alignment.Center,
-                    ) { Text("⋯", color = p.ink, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text("⋯", modifier = Modifier.semantics { contentDescription = "Mer" }, color = p.ink, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
                     androidx.compose.material3.DropdownMenu(menu, { menu = false }, containerColor = p.card) {
                         androidx.compose.material3.DropdownMenuItem({ Text("Nyhetsinnstillinger", color = p.ink) }, { menu = false; vm.openNewsSettings46() })
                         androidx.compose.material3.DropdownMenuItem({ Text("Hent nye saker nå", color = p.ink) }, { menu = false; vm.refreshNews() })
@@ -160,7 +162,7 @@ internal fun NewsSettingsContent46(vm: AppViewModel, p: PaperPal) {
                         }
                         FeedCatMenu46(vm, f, p, cats)
                         Box(Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).clickable(onClickLabel = "Fjern ${f.name}") { vm.removeFeed(f.id) }, contentAlignment = Alignment.Center) {
-                            Text("×", color = p.mut, fontSize = 16.sp)
+                            Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = 16.sp)
                         }
                     }
                 }

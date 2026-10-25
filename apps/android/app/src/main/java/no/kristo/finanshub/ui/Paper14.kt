@@ -726,6 +726,7 @@ internal fun PaperLogin(vm: AppViewModel) {
                     PButton(if (vm.busy) "Logger inn …" else "Logg inn", Modifier.fillMaxWidth(), height = 54.dp) { if (server.isNotBlank() && pw.isNotBlank() && !vm.busy) vm.login(server, user, pw) }
                     // Prompt 46 (claude-code-qr-innlogging-finans-kalender.md): logg inn ved å skanne QR-en med en innlogget mobil.
                     QrLoginButton46 { vm.openQrLogin46(server) }
+                    Join51Button() // prompt 51 (ANDFEAT51): ny i familien med invitasjon (ui/Onboard51Ui.kt)
                     Text("Face ID / fingeravtrykk kan slås på etter innlogging, under Innstillinger → Sikkerhet.", color = p.mut, fontSize = 12.sp)
                     if (vm.addingAccount) Text("‹ Avbryt", color = p.lab, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.addingAccount = false })
                 } else {
@@ -742,6 +743,7 @@ internal fun PaperLogin(vm: AppViewModel) {
         }
         if (vm.p46.qrShowOpen) QrLoginScreen46(vm) // prompt 46
         if (vm.sec51.wait != null) ApprovalWait51(vm) // prompt 51: ny enhet venter på godkjenning
+        Join51Screen(vm) // prompt 51 (ANDFEAT51): onboarding-veiviseren
         SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 16.dp))
     }
 }

@@ -47,6 +47,7 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.FileUpload
@@ -500,6 +501,7 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
         FinTile("kvitt", "Kvitteringer", if (review > 0) "$review til gjennomgang" else "Kø og bokført", Icons.Filled.Receipt, if (review > 0) "$review" else null) { vm.openFromFinMer(Screen.Scan) },
         FinTile("faste", "Faste utgifter", vm.recurring?.let { "${it.size} faste trekk" } ?: "Neste 30 dager", Icons.Filled.Repeat) { vm.openFromFinMer(Screen.Fast) },
         FinTile("kontoer", "Kontoer", saldo?.let { "${neg0(it)} kr" } ?: "Saldo og sparemål", Icons.Filled.AccountBalance) { vm.openFromFinMer(Screen.Accounts) },
+        FinTile("plan", "Planlegging", "Sparemål, kalender og skatt", Icons.Filled.Savings) { vm.open51("plan") }, // prompt 51 (ANDFEAT51): ui/Plan51Ui.kt
         FinTile("aksjer", "Aksjer", st?.let { "${n0(it.value)} kr" } ?: "Trading 212", Icons.AutoMirrored.Filled.ShowChart, pos = (st?.result ?: 0.0) > 0) { vm.openFromFinMer(Screen.Stocks) },
         FinTile("rapp", "Rapporter", "Måned og år", Icons.Filled.BarChart) { vm.openFromFinMer(Screen.Reports) },
         FinTile("abo", "Subscription OS", vm.subs?.let { "${n0(it.monthly)} kr/mnd" } ?: "Abonnementer", Icons.Filled.Autorenew) { vm.openFromFinMer(Screen.Sub) },
@@ -966,7 +968,7 @@ private fun ReceiptFullscreen(bmp: android.graphics.Bitmap, close: () -> Unit) {
             Image(bmp.asImageBitmap(), "Kvittering", contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxSize().transformable(state).graphicsLayer { scaleX = scale; scaleY = scale; translationX = offset.x; translationY = offset.y })
             Box(Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).size(40.dp).clip(CircleShape).background(Color(0x99000000)).clickable(onClick = close), contentAlignment = Alignment.Center) {
-                Text("✕", color = Color.White, fontSize = 16.sp)
+                Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = Color.White, fontSize = 16.sp)
             }
         }
     }

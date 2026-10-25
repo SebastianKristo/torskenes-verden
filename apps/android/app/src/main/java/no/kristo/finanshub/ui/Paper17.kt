@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -637,7 +639,7 @@ private fun TaskRow(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, member
             // Prompt 32: fullførte oppgaver kan arkiveres (boks ved siden av ×).
             if (t.done) {
                 ArchiveBtn32b { vm.archiveTask32b(t.id) }
-                Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.deleteTask(t.id) }, contentAlignment = Alignment.Center) { Text("×", color = p.mut, fontSize = 20.sp) }
+                Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.deleteTask(t.id) }, contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Slett" }, color = p.mut, fontSize = 20.sp) }
             }
         }
     }

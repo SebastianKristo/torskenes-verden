@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -356,7 +358,7 @@ private fun KPanel46(vm: AppViewModel, modifier: Modifier) {
                 if (k.q.isEmpty()) Text("Søk etter holdeplass", color = p.mut, fontSize = 14.sp)
                 BasicTextField(k.q, { vm.kartSearch46(it) }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 14.sp), cursorBrush = SolidColor(p.lab), modifier = Modifier.fillMaxWidth())
             }
-            if (k.q.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.clickable { vm.kartSearch46("") }.padding(6.dp))
+            if (k.q.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.clickable { vm.kartSearch46("") }.padding(6.dp))
         }
         if (k.hits.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card)) {
             k.hits.forEachIndexed { i, hit ->
@@ -453,7 +455,7 @@ private fun StopPanel46(vm: AppViewModel, s: KStop46) {
             PSerif(d?.stop?.name ?: s.name, 22.sp, maxLines = 2)
             Text((d?.stop?.modes ?: s.modes).joinToString(" · ") { MODE_NAME46[it] ?: it }, color = p.mut, fontSize = 12.5.sp)
         }
-        Text("✕", color = p.mut, fontSize = 18.sp, modifier = Modifier.clip(CircleShape).clickable(onClickLabel = "Lukk holdeplass") { k.sel = null; k.deps = null }.padding(8.dp))
+        Text("✕", color = p.mut, fontSize = 18.sp, modifier = Modifier.semantics { contentDescription = "Lukk holdeplass" }.clip(CircleShape).clickable(onClickLabel = "Lukk holdeplass") { k.sel = null; k.deps = null }.padding(8.dp))
     }
     if (k.depsBusy) Text("Henter avganger …", color = p.mut, fontSize = 13.sp)
     if (d != null && d.calls.isEmpty()) Text("Ingen avganger de neste to timene.", color = p.mut, fontSize = 13.sp)

@@ -241,7 +241,7 @@ internal fun AnsBox38(vm: AppViewModel, onPull41: (() -> Unit)? = null, content:
             Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = 10.dp).size(30.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f))
                 .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk svaret") { close() },
             contentAlignment = Alignment.Center,
-        ) { Text("✕", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        ) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk svaret" }, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp).size((36f + 44f * (pull41 / open41).coerceIn(0f, 1f)).dp, 4.dp).clip(CircleShape)
             .background(Color.White.copy(alpha = if (pull41 >= open41) .6f else .28f)))
     }
@@ -678,7 +678,7 @@ internal fun DomGlimt38(vm: AppViewModel) {
             Box(Modifier.height(28.dp).clip(CircleShape).background(p.surf2).clickable(enabled = !s.domSumBusy, role = Role.Button) { Haptics.select(); vm.loadDomSum38(fresh = true) }
                 .padding(horizontal = 10.dp), contentAlignment = Alignment.Center) { Text("↻ Lag ny", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
             Box(Modifier.size(28.dp).clip(CircleShape).background(p.surf2).clickable(role = Role.Button, onClickLabel = "Lukk") { Haptics.dismiss(); s.domSumOpen = false },
-                contentAlignment = Alignment.Center) { Text("✕", color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
         }
         if (sum == null || (s.domSumBusy && sum.domain != (vm.domain ?: "*"))) Text("Glimt ser på domenene …", color = p.mut, fontSize = 14.sp)
         else {

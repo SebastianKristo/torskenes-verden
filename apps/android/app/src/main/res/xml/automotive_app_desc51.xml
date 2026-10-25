@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 51 (ANDPLAT51): Android Auto – appen bruker bare malene fra Car App Library (Car51Plat.kt). -->
+<automotiveApp>
+    <uses name="template" />
+</automotiveApp>

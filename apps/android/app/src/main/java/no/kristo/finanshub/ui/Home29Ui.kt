@@ -123,6 +123,7 @@ private fun Search29Extras45(vm: AppViewModel, text: String, above: Boolean, go:
         if (vm.p31.ans != null && text.isBlank()) {
             if (above) Box(Modifier.fillMaxWidth().heightIn(max = 220.dp).verticalScroll(rememberScrollState())) { HomeAnswer31(vm) } else HomeAnswer31(vm)
         }
+        Search51Hint(vm, text) // prompt 51 (ANDFEAT51): treff fra felles søk og «Søk i alt ›» (ui/Search51Ui.kt)
         if (appt != null && text.isNotBlank()) {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).clickable(role = Role.Button, onClickLabel = "Legg i kalender") { go() }

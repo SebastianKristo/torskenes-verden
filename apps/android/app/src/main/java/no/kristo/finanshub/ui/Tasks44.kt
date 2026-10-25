@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -91,7 +93,7 @@ internal fun SubRows44(vm: AppViewModel, t: TaskItem, color: Color) {
                 Text(sb.n, color = if (sb.done) p.mut else p.ink, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis,
                     textDecoration = if (sb.done) TextDecoration.LineThrough else null)
                 Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett deloppgave") { vm.delSub44(t.id, i) }, contentAlignment = Alignment.Center) {
-                    Text("✕", color = p.mut, fontSize = 13.sp)
+                    Text("✕", modifier = Modifier.semantics { contentDescription = "Slett deloppgave" }, color = p.mut, fontSize = 13.sp)
                 }
             }
         }
@@ -259,7 +261,7 @@ internal fun TaskPage44(vm: AppViewModel) {
                             Box(Modifier.size(22.dp).clip(CircleShape).background(if (sb.done) c else Color.Transparent).border(2.dp, c, CircleShape).clickable(role = Role.Checkbox) { vm.toggleSub44(t.id, i) },
                                 contentAlignment = Alignment.Center) { if (sb.done) Text("✓", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
                             Text(sb.n, color = if (sb.done) p.mut else p.ink, fontSize = 15.sp, modifier = Modifier.weight(1f), textDecoration = if (sb.done) TextDecoration.LineThrough else null)
-                            Box(Modifier.size(36.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.delSub44(t.id, i) }, contentAlignment = Alignment.Center) { Text("✕", color = p.mut, fontSize = 13.sp) }
+                            Box(Modifier.size(36.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.delSub44(t.id, i) }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Slett" }, color = p.mut, fontSize = 13.sp) }
                         }
                     }
                     SubField44(focusNow = false, hint = "Legg til deloppgave") { vm.addSub44(t.id, it) }
@@ -311,7 +313,7 @@ private fun DateCard44(label: String, value: String?, badge: String?, red: Boole
         .clickable(role = Role.Button, onClickLabel = label) { onPick() }.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PLabel(label, color = if (red) RED44 else p.mut, modifier = Modifier.weight(1f))
-            if (value != null) Box(Modifier.size(28.dp).clip(CircleShape).clickable(onClickLabel = "Fjern") { onClear() }, contentAlignment = Alignment.Center) { Text("✕", color = p.mut, fontSize = 12.sp) }
+            if (value != null) Box(Modifier.size(28.dp).clip(CircleShape).clickable(onClickLabel = "Fjern") { onClear() }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = 12.sp) }
         }
         Text(value ?: "Legg til", color = if (value == null) p.mut else if (red) RED44 else p.ink, fontFamily = PaperFonts.serif, fontSize = 17.sp, lineHeight = 21.sp)
         badge?.let { Text(it, color = RED44, fontWeight = FontWeight.Bold, fontSize = 11.5.sp) }
@@ -333,7 +335,7 @@ private fun Place44(vm: AppViewModel, t: TaskItem) {
             Text("📍", fontSize = 16.sp)
             Text(shown, color = p.ink, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 8.dp).clickable { edit = true; q = shown })
             Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Fjern sted") { vm.patchTask37(t.id) { it.copy(place = null, geo = null) } }, contentAlignment = Alignment.Center) {
-                Text("✕", color = p.mut, fontSize = 12.sp)
+                Text("✕", modifier = Modifier.semantics { contentDescription = "Fjern sted" }, color = p.mut, fontSize = 12.sp)
             }
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {

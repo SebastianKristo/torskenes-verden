@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -193,7 +195,7 @@ internal fun MatScreen(vm: AppViewModel) {
                         Spacer(Modifier.weight(1f))
                         FilterChip(selected = d.fixed, onClick = { vm.toggleFixed(d) }, label = { Text("Fast") },
                             colors = FilterChipDefaults.filterChipColors(selectedContainerColor = C.positiveBg, selectedLabelColor = C.positive))
-                        FilledTonalIconButton(onClick = { vm.planDay(d.date) }) { Text("✦") }
+                        FilledTonalIconButton(onClick = { vm.planDay(d.date) }, modifier = Modifier.semantics { contentDescription = "Lag plan for dagen med Glimt" }) { Text("✦") }
                     }
                 }
             }

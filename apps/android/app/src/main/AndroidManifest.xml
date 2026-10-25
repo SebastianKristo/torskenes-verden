@@ -86,12 +86,16 @@
                 <data android:scheme="homelab" android:host="login" />
                 <!-- Prompt 46: papir://login?s=<sid>&amp;c=<kode>&amp;srv=<server> (QR-innlogging for Finans og Kalender). -->
                 <data android:scheme="papir" android:host="login" />
+                <!-- Prompt 51 (ANDFEAT51): invitasjon for nytt familiemedlem – papir://join?i=<id>&amp;c=<kode>&amp;srv=<server> (Onboard51.kt). -->
+                <data android:scheme="papir" android:host="join" />
             </intent-filter>
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="home.kristo.no" android:pathPrefix="/l/" />
+                <!-- Prompt 51 (ANDFEAT51): https://<vert>/join/<id>.<kode> (invitasjon). -->
+                <data android:scheme="https" android:host="home.kristo.no" android:pathPrefix="/join/" />
             </intent-filter>
             <!-- Prompt 41: Kalender ber Homelab godkjenne innloggingen (PKCE). Egen URL-skjema virker uten signering/App Links;
                  https://home.kristo.no/app-auth brukes når assetlinks.json (ANDROID_CERT_SHA256) er satt på serveren. -->
@@ -151,6 +155,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconMonogram"
@@ -163,6 +169,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconRom"
@@ -175,6 +183,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
 
         <!-- Prompt 24: navnet under ikonet. Android kan ikke endre etiketten under kjøring, så hvert ferdig navn er et eget alias
@@ -191,6 +201,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconHus_Hjem"
@@ -204,6 +216,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconHus_Familie"
@@ -217,6 +231,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconHus_Finans"
@@ -230,6 +246,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconHus_Papir"
@@ -243,6 +261,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconMonogram_Homelab"
@@ -256,6 +276,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconMonogram_Hjem"
@@ -269,6 +291,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconMonogram_Familie"
@@ -282,6 +306,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconMonogram_Finans"
@@ -295,6 +321,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconMonogram_Papir"
@@ -308,6 +336,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconRom_Homelab"
@@ -321,6 +351,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconRom_Hjem"
@@ -334,6 +366,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconRom_Familie"
@@ -347,6 +381,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconRom_Finans"
@@ -360,6 +396,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
         <activity-alias
             android:name=".IconRom_Papir"
@@ -373,6 +411,8 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Prompt 51 (ANDPLAT51): app-snarveier og App Actions. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts51" />
         </activity-alias>
 
         <!-- Familie: posisjonsdeling i bakgrunnen. -->
@@ -752,6 +792,28 @@
         <!-- Prompt 50: geofencing per område (Familie › Steder) og svar 👍 / Hent fra Sjekk inn-varsler (P50Fam.kt). -->
         <receiver android:name=".Geofence50Receiver" android:exported="false" />
         <receiver android:name=".Checkin50Receiver" android:exported="false" />
+
+        <!-- Prompt 51 (ANDPLAT51): widgets Planlegging · saldo og Sjekk inn (Glance, widget/Widgets51Plat.kt). -->
+        <receiver android:name=".widget.Plan51SaldoReceiver" android:exported="true" android:label="Planlegging · saldo">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_plan51" />
+        </receiver>
+        <receiver android:name=".widget.Checkin51Receiver" android:exported="true" android:label="Sjekk inn">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_checkin51" />
+        </receiver>
+
+        <!-- Prompt 51 (ANDPLAT51): Android Auto (Car App Library): Avganger, På vei hjem og Media (Car51Plat.kt). -->
+        <service
+            android:name=".Car51Service"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.POI" />
+            </intent-filter>
+        </service>
+        <meta-data android:name="com.google.android.gms.car.application" android:resource="@xml/automotive_app_desc51" />
+        <meta-data android:name="androidx.car.app.minCarApiLevel" android:value="1" />
 
         <!-- Prompt 33: server-adresse og et eget token til Kalender-appen (call «companion»). -->
         <provider

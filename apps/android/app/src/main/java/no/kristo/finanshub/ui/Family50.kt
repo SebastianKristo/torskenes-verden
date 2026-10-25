@@ -358,6 +358,7 @@ private fun Folk50(vm: AppViewModel, wide: Boolean, startSharing: () -> Unit) {
     Column(Modifier.padding(horizontal = 14.dp)) {
         Grid50(people.map { pr -> @Composable { m: Modifier -> PersonCard50(vm, pr, m) { openPerson50(vm, pr.userId, null) } } }, 10.dp)
     }
+    FamCalEntry51(vm) // prompt 51 (ANDFEAT51): familiekalender med «hvem kjører?» (ui/FamCal51Ui.kt)
     if (!wide && people.any { it.hasPos }) {
         Box(Modifier.padding(14.dp, 12.dp, 14.dp, 0.dp).fillMaxWidth().height(120.dp).clip(RoundedCornerShape(22.dp)).background(p.surf2)) {
             val ctl = remember { Fam22MapCtl() }

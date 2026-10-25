@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -760,7 +762,7 @@ private fun EditHomeSheet24(vm: AppViewModel, h: Home24, index: Int, count: Int)
                 Box(
                     Modifier.align(Alignment.CenterEnd).size(38.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { s.edit = null },
                     contentAlignment = Alignment.Center,
-                ) { Text("×", color = p.ink, fontSize = 17.sp) }
+                ) { Text("×", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = 17.sp) }
             }
             // Forhåndsvisning med bakgrunn og navn.
             Box(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(c, lerp(c, Color.Black, .3f)), Offset.Zero, Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)))) {

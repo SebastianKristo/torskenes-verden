@@ -147,11 +147,13 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp, head: (androidx.co
         item {
             PCard(Modifier.hl34(vm, "theme")) { // prompt 34: mål «theme»
                 val sel = "✓"
-                SetRow(vm, 0, Icons.Filled.Palette, "Papir · lys", "Lyst papir og svart fanelinje", if (vm.paperMode == "lys") sel else "") { vm.setPaperMode("lys") }
-                SetRow(vm, 1, Icons.Filled.Palette, "Papir · mørk", "Kveldspapir og lys fanelinje", if (vm.paperMode == "mork") sel else "", top = true) { vm.setPaperMode("mork") }
-                SetRow(vm, 2, Icons.Filled.Palette, "Følg systemet", "Lys om dagen, mørk når telefonen er mørk", if (vm.paperMode == "auto") sel else "", top = true) { vm.setPaperMode("auto") }
+                SetRow(vm, 0, Icons.Filled.Palette, "Papir · lys", "Lyst papir og svart fanelinje", if (vm.paperMode == "lys" && !Theme51.auto) sel else "") { vm.setPaperMode("lys") }
+                SetRow(vm, 1, Icons.Filled.Palette, "Papir · mørk", "Kveldspapir og lys fanelinje", if (vm.paperMode == "mork" && !Theme51.auto) sel else "", top = true) { vm.setPaperMode("mork") }
+                SetRow(vm, 2, Icons.Filled.Palette, "Følg systemet", "Lys om dagen, mørk når telefonen er mørk", if (vm.paperMode == "auto" && !Theme51.auto) sel else "", top = true) { vm.setPaperMode("auto") }
                 // Prompt 50: Liquid Glass slår også på fliser på Hjem (ui/Glass50.kt).
                 SetRow(vm, 3, Icons.Filled.Palette, "Liquid Glass", "Mørkt glass, fargeskyer og fliser på Hjem", if (vm.paperMode == "glass") sel else "", top = true) { vm.setGlass50() }
+                // Prompt 51 (ANDFEAT51): automatisk tema (etter solen / klokkeslett) og synk mellom enheter (ui/Theme51Ui.kt).
+                SetRow(vm, 4, Icons.Filled.Palette, "Automatisk tema", if (Theme51.auto) (if (Theme51.by == "time") "Etter klokkeslett · på alle enheter" else "Etter solnedgang · på alle enheter") else "Etter solnedgang eller klokkeslett, på alle enheter", if (Theme51.auto) sel else "›", top = true) { vm.open51("tema") }
             }
         }
         item { PCard { PToggle("Hjem som fliser", "Avgang, Finans, Middag, Familie og Domener som fliser", vm.homeTiles50()) { vm.setPref(HOME_TILES50, it) } } } // prompt 50

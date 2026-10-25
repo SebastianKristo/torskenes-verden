@@ -429,6 +429,7 @@ private fun PaperApp45(
             if (vm.p46.gpSheet) GphotoSheet46(vm) // Prompt 46: Google Photos-album som bakgrunn (ui/Ui46b.kt)
             if (vm.p43.galleryOpen) WidgetGallery43(vm) // Prompt 43: Widgets-galleri (ui/WidgetGallery43.kt)
             if (vm.compareOpen) CompareScreen(vm)
+            Pages51(vm) // prompt 51 (ANDFEAT51): Planlegging, familiekalender, Media-sidene, felles søk og tema (ui/Feat51Ui.kt)
             // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
             if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
             // Prompt 31: System-siden «Nordlys OS» i fullskjerm (uten bakgrunnsbilde, fanelinje og skann).

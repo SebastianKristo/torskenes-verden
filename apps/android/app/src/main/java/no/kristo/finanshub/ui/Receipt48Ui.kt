@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -292,6 +294,6 @@ private fun ItemRow48(vm: AppViewModel, i: Int, it: ScanItem48) {
         BasicTextField(it.amount, { v -> vm.scan48.edit { f -> f.copy(items = f.items.mapIndexed { j, x -> if (j == i) x.copy(amount = v) else x }) } },
             singleLine = true, textStyle = style.copy(fontFamily = PaperFonts.mono), cursorBrush = SolidColor(p.lab), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.width(92.dp).border(1.dp, p.line, RoundedCornerShape(8.dp)).padding(8.dp, 6.dp))
-        Text("×", color = p.mut, fontSize = 18.sp, modifier = Modifier.clickable(role = Role.Button) { vm.scan48.edit { f -> f.copy(items = f.items.filterIndexed { j, _ -> j != i }) } }.padding(6.dp))
+        Text("×", color = p.mut, fontSize = 18.sp, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable(role = Role.Button) { vm.scan48.edit { f -> f.copy(items = f.items.filterIndexed { j, _ -> j != i }) } }.padding(6.dp))
     }
 }

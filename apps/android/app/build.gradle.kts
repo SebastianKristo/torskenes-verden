@@ -93,4 +93,6 @@ dependencies {
     // fra Play-tjenester (ingen kameratillatelse, ingen modell i APK-en). Brukes bare når «Dokumentskanner» er på; ellers/uten
     // Play-tjenester brukes systemkameraet som før (ui/Receipt48Ui.kt).
     implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
+    // Prompt 51 (ANDPLAT51): Android Auto – Avganger, På vei hjem og Media som bilmaler (Car51Plat.kt). Fast stabil versjon.
+    implementation("androidx.car.app:app:1.4.0")
 }

@@ -161,9 +161,10 @@ val FM_COLORS: Map<String, Long> = mapOf(
     "budsjett" to 0xFFC0562A, "kvitt" to 0xFFB23A2A, "faste" to 0xFF7A5AD6, "kontoer" to 0xFF2B5D8A,
     "aksjer" to 0xFF2F7D4F, "rapp" to 0xFFA8661A, "abo" to 0xFFC2417A, "boliger" to 0xFF3F7A6E,
     "fimport" to 0xFF4A5BBF, "finn" to 0xFF2B6CB0, "sok" to 0xFF7A3B6B, "innst" to 0xFF6B6558, "liste" to 0xFF5A5246,
+    "plan" to 0xFF2F7A4F, // prompt 51 (ANDFEAT51): Planlegging
 )
 
-val FM_DEFAULT_ORDER = listOf("sok", "liste", "finn", "budsjett", "kvitt", "faste", "kontoer", "aksjer", "rapp", "abo", "boliger", "fimport", "innst")
+val FM_DEFAULT_ORDER = listOf("sok", "liste", "finn", "budsjett", "kvitt", "faste", "kontoer", "plan", "aksjer", "rapp", "abo", "boliger", "fimport", "innst")
 
 /** Lagret rekkefølge + nye fliser bakerst; ukjente nøkler fjernes. */
 fun normalizeFmOrder(saved: List<String>): List<String> = saved.filter { it in FM_DEFAULT_ORDER }.distinct() + FM_DEFAULT_ORDER.filter { it !in saved }

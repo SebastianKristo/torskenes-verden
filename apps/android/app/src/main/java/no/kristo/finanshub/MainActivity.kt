@@ -26,6 +26,7 @@ class MainActivity : FragmentActivity() {
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         runCatching { Crash51.install(this) } // prompt 51: krasj → fil, sendes ved neste oppstart (Qa51.kt)
+        runCatching { Theme51.init(this) } // prompt 51 (ANDFEAT51): tema per bruker / automatisk tema
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         preferHighRefresh39() // prompt 39: myke sveip på 90/120 Hz-skjermer
@@ -40,7 +41,8 @@ class MainActivity : FragmentActivity() {
             // Brettbare: bredde ≥ 600 dp (Medium/Expanded) gir navigasjonsrail og to paneler.
             val size = calculateWindowSizeClass(this)
             // Papir · lys / mørk / følg systemet (Innstillinger → Utseende). Prompt 42: det eneste designet.
-            FinansTheme(vm.paperMode) {
+            // Prompt 51 (ANDFEAT51): «Automatisk» tema (etter solen / klokkeslett, synket mellom enheter) velger lys/mørk her (Theme51.kt).
+            FinansTheme(Theme51.paperMode(vm.paperMode)) {
                 FinansApp(vm, size.widthSizeClass, unlock = ::unlock, onPrivacyChanged = ::applySwitcherPrivacy)
             }
         }
@@ -52,6 +54,9 @@ class MainActivity : FragmentActivity() {
         runCatching { no.kristo.finanshub.family.FamilyService.sync(this) }
         if (no.kristo.finanshub.family.FamilyPrefs.health(this).isNotEmpty()) runCatching { no.kristo.finanshub.family.HealthSync.schedule(this) }
         intent?.data?.let(::openData43)
+        // Prompt 51 (ANDPLAT51): dynamisk snarvei (siste vare) og offline-køen sendes når nettet er tilbake.
+        runCatching { Shortcuts51.publish(this) }
+        if (Offline51.count(this) > 0) Offline51.schedule(this)
     }
 
     /** Prompt 43: magnet:-lenker går til Media; alt annet som før. */

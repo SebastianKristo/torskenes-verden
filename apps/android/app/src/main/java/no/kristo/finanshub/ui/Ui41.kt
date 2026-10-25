@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.content.Context
 import android.content.ContextWrapper
 import androidx.biometric.BiometricManager
@@ -514,7 +516,7 @@ internal fun GlimtJobs41(vm: AppViewModel) {
             // Prompt 42: «Angre» slår delingen sammen igjen, «Endre» åpner «Laget med Glimt».
             if (s.glimtUndo42 != null || s.glimtUndoIds42.isNotEmpty()) Text("Angre", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { vm.undoGlimt42() }.padding(6.dp))
             Text(if (s.glimtUndo42 != null || s.glimtUndoIds42.isNotEmpty()) "Endre" else "Se", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clickable { vm.loadSources41(); s.srcOpen = true }.padding(6.dp))
-            Text("✕", color = p.mut, modifier = Modifier.clickable { s.glimtDone = null }.padding(6.dp))
+            Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Lukk" }.clickable { s.glimtDone = null }.padding(6.dp))
         }
     }
 }

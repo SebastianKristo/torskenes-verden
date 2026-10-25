@@ -33,6 +33,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             Kal26WidgetStore.useAccount(ctx, null)
             Ruter27Store.useAccount(ctx, null)
             Trials32bStore.useAccount(ctx, null)
+            Plat51Store.useAccount(ctx, null) // prompt 51 (ANDPLAT51)
             WidgetStore.fail(ctx, "Logg inn i FinansHub", loggedIn = false)
             WidgetSync.redraw(ctx)
             return Result.success()
@@ -70,6 +71,9 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 runCatching { fetchBible37(ctx, Api(base, acc.token), acc.id, acc.username) }
                 // Prompt 43: Media-widgetene (/api/widgets/media; 404 = eldre server).
                 runCatching { fetchMedia43(ctx, Api(base, acc.token), acc.id); Media43Widgets.redraw(ctx) }
+                // Prompt 51 (ANDPLAT51): Planlegging-saldo og Sjekk inn (Widgets51Plat.kt), og offline-køen sendes når nettet er her.
+                runCatching { fetchPlat51(ctx, Api(base, acc.token), acc.id) }
+                runCatching { if (no.kristo.finanshub.Offline51.count(ctx) > 0) no.kristo.finanshub.Offline51.schedule(ctx) }
                 // Prompt 40: Hjemlys – varsler om husstanden og egen økt også når appen er lukket (404 = eldre server).
                 runCatching { no.kristo.finanshub.pollHjemlys40(ctx, Api(base, acc.token)) }
                 return Result.success()
@@ -133,5 +137,6 @@ object WidgetSync {
         runCatching { Preview40.publish(ctx) }
         runCatching { HjemlysWidget40.redraw(ctx) }
         runCatching { Media43Widgets.redraw(ctx) } // prompt 43
+        runCatching { Plat51Widgets.redraw(ctx) } // prompt 51 (ANDPLAT51)
     }
 }

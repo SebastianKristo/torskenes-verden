@@ -87,6 +87,7 @@ internal fun MediaScreen43(vm: AppViewModel) {
                 MEDIA_TABS43.forEach { (k, n) -> MediaTab45(k, n, s.tab == k) { s.tab = k; s.detail = null; s.relFor = null } } // prompt 45: tjenestefarger
             }
             ServerRow44(vm) // prompt 44: felles servervalg
+            MediaEntry51(vm) // prompt 51 (ANDFEAT51): I kveld · Fortsett · Undertekster · Lagring (ui/Media51Ui.kt)
             if (s.glimtOpen) MediaGlimt43(vm)
             if (s.missing) Note43("Media er ikke satt opp på serveren ennå. Oppdater Homelab og legg inn Sonarr, Radarr, qBittorrent og Prowlarr under Integrasjoner.")
             s.error?.let { e -> Note43(e, red = true) { s.error = null; vm.p44.errKind = null } }

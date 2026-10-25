@@ -424,6 +424,12 @@ fun AppViewModel.patchTask37(id: String, f: (TaskItem) -> TaskItem) {
             api37 { request("PATCH", "/tasks/" + URLEncoder.encode(id, "UTF-8"), nw.toJson37(), prefix = Api.HOMELAB) }
             if (old.urgent != nw.urgent || old.time != nw.time || old.due != nw.due || old.early != nw.early) Alarms37.schedule(appCtx35, tasks)
         } catch (e: CancellationException) { throw e } catch (e: Exception) {
+            // Prompt 51 (ANDPLAT51): uten nett beholdes endringen lokalt og sendes fra offline-køen (siste skriving vinner).
+            if (Offline51.isOffline(e)) {
+                Offline51.enqueue(appCtx35, "PATCH", "/tasks/" + URLEncoder.encode(id, "UTF-8"), nw.toJson37(), nw.title, kind = "task", taskId = id)
+                flash("Uten nett – sendes når du er på nett igjen")
+                return@launch37
+            }
             flash("Fikk ikke lagret: ${e.message ?: "ukjent feil"}")
             refreshTasks37()
         }

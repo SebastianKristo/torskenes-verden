@@ -119,6 +119,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.menuOpen) ProfileSheet(vm)
     if (vm.widgetGallery) WidgetGallery(vm)
     Overlays51(vm) // prompt 51: «Ny enhet vil logge inn» og «Nytt i denne versjonen»
+    Theme51Effects(vm) // prompt 51 (ANDFEAT51): tema synket mellom enheter + automatisk tema (ui/Theme51Ui.kt)
 }
 
 /**
@@ -194,6 +195,7 @@ private fun MenuContent(vm: AppViewModel) {
             }
         }
         MenuRow("Homelab", "Dashbord, søk og snarveier", Icons.Filled.Dashboard, vm.screen == Screen.Homelab, 0, 1) { vm.editHome = false; vm.go(Screen.Homelab) }
+        MenuRow("Søk i alt", "Gjøremål, kvitteringer, familie, steder …", Icons.Filled.Search, false, 0, 1) { vm.open51("sok") } // prompt 51 (ANDFEAT51)
         SectionLabel("Andre OS")
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 8) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }

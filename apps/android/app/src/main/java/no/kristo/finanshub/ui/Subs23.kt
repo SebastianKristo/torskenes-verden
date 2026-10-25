@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -193,7 +195,7 @@ private fun HomeCards23(vm: AppViewModel, x: SubsX, t: SubTok) {
                 .padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(t.chip).clickable { Haptics.select(); vm.p37.subAdd = true }.padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("＋", color = t.fg, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("＋", modifier = Modifier.semantics { contentDescription = "Legg til" }, color = t.fg, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     if (hid.isNotEmpty()) Text("${hid.size}", color = t.neg, fontFamily = sans, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
                 Text("Dra for å flytte · − for å skjule", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, modifier = Modifier.weight(1f), maxLines = 2)
@@ -655,7 +657,7 @@ private fun AddCard23(vm: AppViewModel, t: SubTok) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(t.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Legg til abonnement", color = t.fg, fontFamily = sans, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, modifier = Modifier.weight(1f))
-            Box(Modifier.size(32.dp).clip(CircleShape).background(t.chip).clickable { vm.subAdding = false }, contentAlignment = Alignment.Center) { Text("×", color = t.fg, fontSize = 18.sp) }
+            Box(Modifier.size(32.dp).clip(CircleShape).background(t.chip).clickable { vm.subAdding = false }, contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = t.fg, fontSize = 18.sp) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(Triple("sk", "▣", "Skjermbilde"), Triple("man", "✎", "Manuelt"), Triple("rc", "⎙", "Kvittering"), Triple("tx", "⇄", "Transaksjon")).forEach { (k, ic, n) ->

@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -219,7 +221,7 @@ internal fun KalSearch32b(vm: AppViewModel, today: LocalDate) {
                 Modifier.size(30.dp).clip(CircleShape).background(Color(0x337F7F7F))
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { vm.searchKal27(""); g.kAsk = null; runCatching { focus.requestFocus() } },
                 contentAlignment = Alignment.Center,
-            ) { Text("✕", color = p.ink, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
             Box(
                 Modifier.height(36.dp).clip(CircleShape).background(if (has) p.ink else lerp(p.card, GLIMT_LILLA32B, .12f))
                     .clickable(enabled = has, role = Role.Button, onClickLabel = "Spør Glimt") { vm.askKal32b(q) }.padding(start = 10.dp, end = 12.dp),
@@ -227,7 +229,7 @@ internal fun KalSearch32b(vm: AppViewModel, today: LocalDate) {
             ) { Text("✦ Spør", color = if (has) p.bg else GLIMT_LILLA32B, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
         }
         Box(Modifier.size(44.dp).clip(CircleShape).background(p.card).press24(onClick = close), contentAlignment = Alignment.Center) {
-            Text("✕", color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
     }
     KalFilters32b(vm)

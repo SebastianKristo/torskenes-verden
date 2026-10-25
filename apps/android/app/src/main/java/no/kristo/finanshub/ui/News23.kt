@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -134,7 +136,7 @@ internal fun IconPicker23(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory
                         PSerif(cat.name, 22.sp, p.ink, maxLines = 1)
                     }
                     Box(Modifier.align(Alignment.CenterEnd).size(38.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable { close() },
-                        contentAlignment = Alignment.Center) { Text("×", color = p.ink, fontSize = 17.sp) }
+                        contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.ink, fontSize = 17.sp) }
                 }
                 Row(Modifier.fillMaxWidth().height(46.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).padding(start = 14.dp, end = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

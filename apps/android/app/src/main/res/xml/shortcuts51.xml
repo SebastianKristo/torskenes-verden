@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 51 (ANDPLAT51): statiske app-snarveier (hold inne ikonet) og App Actions for Google Assistant.
+     Alle åpner dyplenker finanshub://act51/… i MainActivity (Shortcuts51Plat.kt). Ingen tokens i lenkene. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- «Hey Google, åpne sjekk inn / saldo / bussen i Homelab» -->
+    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+        <intent>
+            <url-template android:value="finanshub://act51/feature{?feature}" />
+            <parameter android:name="feature" android:key="feature" />
+        </intent>
+    </capability>
+
+    <!-- «Hey Google, legg til melk i Homelab» / søk -->
+    <capability android:name="actions.intent.GET_THING">
+        <intent>
+            <url-template android:value="finanshub://act51/q{?q}" />
+            <parameter android:name="thing.name" android:key="q" />
+        </intent>
+    </capability>
+
+    <shortcut
+        android:shortcutId="checkin51"
+        android:enabled="true"
+        android:icon="@drawable/sc51_checkin"
+        android:shortcutShortLabel="@string/sc51_checkin_short"
+        android:shortcutLongLabel="@string/sc51_checkin_long"
+        android:shortcutDisabledMessage="@string/sc51_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="no.kristo.finanshub"
+            android:targetClass="no.kristo.finanshub.MainActivity"
+            android:data="finanshub://act51/checkin" />
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
+            <parameter-binding android:key="feature" android:value="@array/sc51_feature_checkin" />
+        </capability-binding>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="add51"
+        android:enabled="true"
+        android:icon="@drawable/sc51_add"
+        android:shortcutShortLabel="@string/sc51_add_short"
+        android:shortcutLongLabel="@string/sc51_add_long"
+        android:shortcutDisabledMessage="@string/sc51_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="no.kristo.finanshub"
+            android:targetClass="no.kristo.finanshub.MainActivity"
+            android:data="finanshub://act51/add?item=melk" />
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
+            <parameter-binding android:key="feature" android:value="@array/sc51_feature_handle" />
+        </capability-binding>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="saldo51"
+        android:enabled="true"
+        android:icon="@drawable/sc51_saldo"
+        android:shortcutShortLabel="@string/sc51_saldo_short"
+        android:shortcutLongLabel="@string/sc51_saldo_long"
+        android:shortcutDisabledMessage="@string/sc51_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="no.kristo.finanshub"
+            android:targetClass="no.kristo.finanshub.MainActivity"
+            android:data="finanshub://act51/saldo" />
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
+            <parameter-binding android:key="feature" android:value="@array/sc51_feature_saldo" />
+        </capability-binding>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="buss51"
+        android:enabled="true"
+        android:icon="@drawable/sc51_buss"
+        android:shortcutShortLabel="@string/sc51_buss_short"
+        android:shortcutLongLabel="@string/sc51_buss_long"
+        android:shortcutDisabledMessage="@string/sc51_disabled">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="no.kristo.finanshub"
+            android:targetClass="no.kristo.finanshub.MainActivity"
+            android:data="finanshub://act51/buss" />
+        <capability-binding android:key="actions.intent.OPEN_APP_FEATURE">
+            <parameter-binding android:key="feature" android:value="@array/sc51_feature_buss" />
+        </capability-binding>
+    </shortcut>
+</shortcuts>

@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -134,7 +136,7 @@ private fun MerSearch44() {
             if (Mer44.q.isEmpty()) Text("Søk i moduler", color = p.mut, fontSize = 15.sp)
             BasicTextField(Mer44.q, { Mer44.q = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp), cursorBrush = SolidColor(p.lab), modifier = Modifier.fillMaxWidth())
         }
-        if (Mer44.q.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { Mer44.q = "" }.wrapContentSize())
+        if (Mer44.q.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.size(40.dp).clip(CircleShape).clickable { Mer44.q = "" }.wrapContentSize())
     }
 }
 

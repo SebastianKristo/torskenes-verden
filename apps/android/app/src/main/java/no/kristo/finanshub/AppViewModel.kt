@@ -669,6 +669,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun deepLink(uri: Uri) {
         // Prompt 38: homelab://login?c=… / https://<vert>/l/… (QR-innlogging på ny enhet).
         if (qrLink38(uri)) return
+        // Prompt 51 (ANDFEAT51): invitasjon for nytt familiemedlem (papir://join?…, https://…/join/…) – Onboard51.kt.
+        if (joinLink51(uri)) return
         // Prompt 41: homelab://app-auth / https://<vert>/app-auth (Kalender ber Homelab om å godkjenne innloggingen).
         if (appAuthLink41(uri)) return
         if (uri.scheme != "finanshub" || !loggedIn) return
@@ -715,6 +717,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "scan" -> { open(Screen.Scan); pendingScan = when (uri.path?.trim('/')) { "camera" -> "camera"; "files" -> "files"; else -> null } }
             // Prompt 35: Kalender-appen åpner finanshub://settings/glimt og finanshub://settings/kalendere.
             "settings", "innstillinger" -> settingsLink35(uri.path?.trim('/').orEmpty())
+            // Prompt 51 (ANDPLAT51): app-snarveier og App Actions (Shortcuts51Plat.kt).
+            "act51" -> act51Link(uri)
+            // Prompt 51 (ANDFEAT51): Planlegging, familiekalender, Media-kveld og felles søk (Feat51.kt).
+            "plan", "planlegging", "famcal", "familiekalender", "kveld", "mediakveld", "sok", "search51" -> deepLink51(uri)
         }
     }
 
@@ -1567,7 +1573,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var photoMenu by mutableStateOf(false)
 
-    fun setPaperMode(m: String) { setPref(AppPrefs.PAPER_MODE, m); pushDesign() }
+    fun setPaperMode(m: String) { setPref(AppPrefs.PAPER_MODE, m); pushDesign(); runCatching { themeChanged51(m) } } // prompt 51: tema synkes (Theme51.kt)
     fun setPhotoKind(k: String) { setPref(AppPrefs.PHOTO, k); photoMenu = false; loadPhoto(); pushDesign() }
 
     /** Papir-fanene: Hjem, Finans, Mat, Sporing og Mer. */
@@ -3105,7 +3111,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         taskNext = nextTasks(tasks!!)
         if (done) Haptics.success() else Haptics.select()
         launch {
-            api.request("PATCH", "/tasks/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("done", done), prefix = Api.HOMELAB)
+            // Prompt 51 (ANDPLAT51): uten nett legges avkryssingen i offline-køen (Offline51Plat.kt) og sendes senere.
+            if (!sendOrQueue51(appCtx, api, "PATCH", "/tasks/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("done", done), it0.title, "task", id)) {
+                flash("Uten nett – sendes når du er på nett igjen"); return@launch
+            }
             loadTasksNow()
             no.kristo.finanshub.widget.TasksWidgetSync.refresh(appCtx)
         }

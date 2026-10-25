@@ -239,7 +239,7 @@ private fun RecipeJobs(vm: AppViewModel, p: MatPalette) {
                     j.status == "done" && j.dishId != null -> Text("Åpne ›", color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { vm.matDay = null; vm.dishOpen = j.dishId })
                     else -> {}
                 }
-                if (!j.active) Text("×", color = p.muted, fontSize = 16.sp, modifier = Modifier.clickable { vm.removeRecipeJob(j.id) }.padding(4.dp))
+                if (!j.active) Text("×", color = p.muted, fontSize = 16.sp, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable { vm.removeRecipeJob(j.id) }.padding(4.dp))
             }
         }
     }
@@ -346,7 +346,7 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
                             Text(l.title, color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(l.kindLabel, color = p.muted, fontSize = 12.sp)
                         }
-                        Text("×", color = p.muted, fontSize = 16.sp, modifier = Modifier.clickable { vm.removeDishLink(dish.id, l.id) }.padding(4.dp))
+                        Text("×", color = p.muted, fontSize = 16.sp, modifier = Modifier.semantics { contentDescription = "Fjern" }.clickable { vm.removeDishLink(dish.id, l.id) }.padding(4.dp))
                     }
                 }
                 if (addLink) {

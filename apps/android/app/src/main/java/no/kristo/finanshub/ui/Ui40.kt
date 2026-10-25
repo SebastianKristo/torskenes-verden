@@ -616,7 +616,7 @@ internal fun EditAll40Sheet(vm: AppViewModel, d: TxDetail) {
                         Box(Modifier.width(96.dp)) { PField("", l.price, { v -> lines[i] = l.copy(price = v); linesTouched = true }, placeholder = "0,00",
                             keyboard = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal)) }
                         Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Fjern linje") { lines.removeAt(i); linesTouched = true }, contentAlignment = Alignment.Center) {
-                            Text("×", color = p.mut, fontSize = 20.sp)
+                            Text("×", modifier = Modifier.semantics { contentDescription = "Fjern linje" }, color = p.mut, fontSize = 20.sp)
                         }
                     }
                 }

@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -111,7 +113,7 @@ internal fun BriefBible37(vm: AppViewModel, period: String) {
                 Box(Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(l.chip).clickable(role = Role.Button) { copy37(ctx, v); copied = true; Haptics.select() }.padding(horizontal = 12.dp),
                     contentAlignment = Alignment.Center) { Text(if (copied) "Kopiert" else "Kopier", color = l.fg, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.sp) }
                 Box(Modifier.size(32.dp).clip(CircleShape).background(l.chip).clickable(role = Role.Button, onClickLabel = "Nytt vers") { vm.nextVerse37() }, contentAlignment = Alignment.Center) {
-                    Text("↻", color = l.fg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text("↻", modifier = Modifier.semantics { contentDescription = "Nytt vers" }, color = l.fg, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
         }
@@ -370,7 +372,7 @@ internal fun BiblePage37(vm: AppViewModel) {
                         Text(ref, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
                     }
                     Box(Modifier.size(30.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Fjern $ref") { Haptics.select(); vm.removeSaved37(ref) }, contentAlignment = Alignment.Center) {
-                        Text("×", color = p.mut, fontSize = 20.sp)
+                        Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = 20.sp)
                     }
                 }
             }

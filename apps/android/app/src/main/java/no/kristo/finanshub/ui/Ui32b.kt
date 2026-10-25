@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -410,7 +412,7 @@ internal fun ArchivedList32b(vm: AppViewModel, lists: List<TaskList>) {
                             contentAlignment = Alignment.Center,
                         ) { Text("↺ Gjenopprett", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp) }
                         Box(Modifier.size(32.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Slett for godt") { vm.deleteArchived32b(t.id) }, contentAlignment = Alignment.Center) {
-                            Text("×", color = p.mut, fontSize = 20.sp)
+                            Text("×", modifier = Modifier.semantics { contentDescription = "Slett for godt" }, color = p.mut, fontSize = 20.sp)
                         }
                     }
                 }

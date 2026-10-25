@@ -276,7 +276,7 @@ private fun GlimtCard37(title: String, sub: String, actions: List<Pair<String, (
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("✦", color = RED37, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
             Text(title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Box(Modifier.size(28.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Ikke nå") { Haptics.select(); onClose() }, contentAlignment = Alignment.Center) { Text("✕", color = p.mut, fontSize = 13.sp) }
+            Box(Modifier.size(28.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = "Ikke nå") { Haptics.select(); onClose() }, contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Ikke nå" }, color = p.mut, fontSize = 13.sp) }
         }
         Text(sub, color = p.mut, fontSize = 12.5.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -341,7 +341,7 @@ private fun Row37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, users: L
             }
             if (t.done) {
                 ArchiveBtn32b { vm.archiveTask32b(t.id) }
-                Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.deleteTask37(t.id) }, contentAlignment = Alignment.Center) { Text("×", color = p.mut, fontSize = 20.sp) }
+                Box(Modifier.size(32.dp).clip(CircleShape).clickable(onClickLabel = "Slett") { vm.deleteTask37(t.id) }, contentAlignment = Alignment.Center) { Text("×", modifier = Modifier.semantics { contentDescription = "Slett" }, color = p.mut, fontSize = 20.sp) }
             } else SubAddBtn44(vm, t) // prompt 44: ↳+ legg til deloppgave
         }
         SubRows44(vm, t, l?.let { Color(it.color) } ?: p.mut) // prompt 44: deloppgaver innrykket under oppgaven
@@ -506,7 +506,7 @@ private fun DetailSheet37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, 
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(36.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { close() },
-                    contentAlignment = Alignment.Center) { Text("✕", color = p.ink, fontSize = 14.sp) }
+                    contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = 14.sp) }
                 PSerif("Detaljer", 22.sp, modifier = Modifier.weight(1f), maxLines = 1)
                 Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable(role = Role.Button) { Haptics.success(); close() }.padding(horizontal = 18.dp), contentAlignment = Alignment.Center) {
                     Text("Ferdig", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
@@ -614,7 +614,7 @@ private fun DetailSheet37(vm: AppViewModel, t: TaskItem, lists: List<TaskList>, 
                         }
                         Text(sb.n, color = if (sb.done) p.mut else p.ink, fontSize = 14.5.sp, textDecoration = if (sb.done) TextDecoration.LineThrough else null, modifier = Modifier.weight(1f))
                         Box(Modifier.size(28.dp).clip(CircleShape).clickable(onClickLabel = "Fjern") { d = d.copy(subs = d.subs.filterIndexed { j, _ -> j != i }) }, contentAlignment = Alignment.Center) {
-                            Text("×", color = p.mut, fontSize = 18.sp)
+                            Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = 18.sp)
                         }
                     }
                 }
@@ -689,7 +689,7 @@ private fun ListSheet37(vm: AppViewModel, l: TaskList?, users: List<TaskMember>)
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.size(36.dp).clip(CircleShape).background(p.card).border(1.dp, p.line, CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk") { close() },
-                    contentAlignment = Alignment.Center) { Text("✕", color = p.ink, fontSize = 14.sp) }
+                    contentAlignment = Alignment.Center) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk" }, color = p.ink, fontSize = 14.sp) }
                 PSerif(if (l == null) "Ny liste" else "Liste", 22.sp, modifier = Modifier.weight(1f), maxLines = 1)
                 if (owner) Box(Modifier.height(36.dp).clip(CircleShape).background(if (name.isNotBlank()) p.ink else p.line).clickable(enabled = name.isNotBlank() && !s.listBusy, role = Role.Button) {
                     vm.saveList37(l?.id, name, color, (picked + listOfNotNull(me)).toList())

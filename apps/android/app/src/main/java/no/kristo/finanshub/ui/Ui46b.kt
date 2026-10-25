@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
@@ -91,7 +93,7 @@ internal fun NewsCategories46(vm: AppViewModel, p: PaperPal) {
                 Row(Modifier.height(32.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(w, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     Box(Modifier.size(26.dp).clip(CircleShape).clickable(onClickLabel = "Fjern $w") { vm.setInterests46(n.interests - w) }, contentAlignment = Alignment.Center) {
-                        Text("×", color = p.mut, fontSize = 15.sp)
+                        Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = 15.sp)
                     }
                 }
             }
@@ -113,7 +115,7 @@ internal fun NewsCategories46(vm: AppViewModel, p: PaperPal) {
                     if (c.keywords.isNotEmpty()) Text(c.keywords.joinToString(", "), color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Box(Modifier.size(30.dp).clip(CircleShape).clickable(onClickLabel = "Slett ${c.name}") { vm.deleteNewsCat46(c.id) }, contentAlignment = Alignment.Center) {
-                    Text("×", color = p.mut, fontSize = 17.sp)
+                    Text("×", modifier = Modifier.semantics { contentDescription = "Fjern" }, color = p.mut, fontSize = 17.sp)
                 }
             }
         }

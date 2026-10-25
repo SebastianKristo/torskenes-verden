@@ -215,7 +215,7 @@ internal fun FinMer45(vm: AppViewModel, tiles: List<FinTile>, navBottom: android
                     if (finQ45.isEmpty()) Text("Søk i moduler", color = p.mut, fontSize = 15.sp)
                     BasicTextField(finQ45, { finQ45 = it }, singleLine = true, textStyle = TextStyle(color = p.ink, fontSize = 15.sp), cursorBrush = SolidColor(p.lab), modifier = Modifier.fillMaxWidth())
                 }
-                if (finQ45.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.size(40.dp).clip(CircleShape).clickable { finQ45 = "" }.wrapContentSize())
+                if (finQ45.isNotEmpty()) Text("✕", color = p.mut, modifier = Modifier.semantics { contentDescription = "Tøm søket" }.size(40.dp).clip(CircleShape).clickable { finQ45 = "" }.wrapContentSize())
             }
         }
         if (big.isNotEmpty()) {

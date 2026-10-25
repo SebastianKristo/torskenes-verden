@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 51 (ANDPLAT51): app-snarveier / App Actions, widgets (Planlegging-saldo, Sjekk inn) og Android Auto. -->
+<resources>
+    <string name="sc51_checkin_short">Sjekk inn</string>
+    <string name="sc51_checkin_long">Sjekk inn til familien</string>
+    <string name="sc51_add_short">Legg til melk</string>
+    <string name="sc51_add_long">Legg til melk i handlelisten</string>
+    <string name="sc51_saldo_short">Saldo</string>
+    <string name="sc51_saldo_long">Hva er saldoen?</string>
+    <string name="sc51_buss_short">Neste buss</string>
+    <string name="sc51_buss_long">Når går bussen?</string>
+    <string name="sc51_disabled">Logg inn i FinansHub først</string>
+
+    <string-array name="sc51_feature_checkin">
+        <item>sjekk inn</item>
+        <item>innsjekk</item>
+        <item>sjekk inn til familien</item>
+    </string-array>
+    <string-array name="sc51_feature_saldo">
+        <item>saldo</item>
+        <item>saldoen</item>
+        <item>hva er saldoen</item>
+        <item>kontoer</item>
+    </string-array>
+    <string-array name="sc51_feature_buss">
+        <item>buss</item>
+        <item>bussen</item>
+        <item>avganger</item>
+        <item>når går bussen</item>
+    </string-array>
+    <string-array name="sc51_feature_handle">
+        <item>handleliste</item>
+        <item>handlelisten</item>
+        <item>handlelista</item>
+    </string-array>
+
+    <string name="widget_plan51_desc">Planlegging: laveste saldo de neste 30 dagene og hva som trekkes</string>
+    <string name="widget_checkin51_desc">Sjekk inn til familien med ett trykk, og «Hent meg»</string>
+    <string name="car51_name">Homelab</string>
+</resources>

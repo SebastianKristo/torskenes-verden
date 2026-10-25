@@ -256,6 +256,7 @@ internal suspend fun pending31(ctx: Context, api: Api) {
         val url = x.optString("url").takeIf { it.isNotBlank() }?.let { u ->
             when {
                 u.startsWith("finanshub://") -> u
+                url51(u) != null -> url51(u)!! // prompt 51 (ANDFEAT51): familiekalender og Planlegging (skatt) – Feat51.kt
                 u.contains("/chat/") -> "finanshub://chat/" + u.substringAfterLast("/chat/").substringBefore('?')
                 u.contains("system") || u.contains("oppdater") -> "finanshub://nordlys"
                 u.contains("subscriptions") || u.contains("abo") -> "finanshub://subs"
