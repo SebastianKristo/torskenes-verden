@@ -50,6 +50,9 @@ const LICENSES53 = [
     lic: 'Desert Ant Labs Source-Available License 1.0', url: 'https://license.desertant.com/1.0', credit: 'Inneholder modeller fra Desert Ant Labs (license.desertant.com)' },
   { name: 'Fermion Research – Phonon-2 / Phonon-2.5', what: 'Tale til tekst på Mac mini-en.', lic: 'CC-BY-4.0', url: 'https://creativecommons.org/licenses/by/4.0/', credit: 'Phonon © Fermion Research' },
   { name: 'Fermion Research – Neutrino-1 8B', what: 'Valgfri tekstmotor på Mac mini-en (bygger på Qwen3-8B).', lic: 'Apache-2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0', credit: 'Neutrino-1 © Fermion Research (Qwen3 © Alibaba Cloud)' },
+  // Prompt 54 (WHISPER54): NB-Whisper.
+  { name: 'NB-Whisper – Nasjonalbiblioteket', what: 'Tale til tekst på norsk (bokmål og nynorsk) og engelsk, og språkdeteksjon, på Mac mini-en (NbAiLab/nb-whisper, bygger på OpenAI Whisper, MIT). Kjøres med MLX (Apple, MIT) eller whisper.cpp (MIT).',
+    lic: 'Apache-2.0', url: 'https://www.apache.org/licenses/LICENSE-2.0', credit: 'NB-Whisper © Nasjonalbiblioteket (NbAiLab)' },
 ];
 export function openAbout53() {
   overlay(`<h2>Om / Lisenser</h2>

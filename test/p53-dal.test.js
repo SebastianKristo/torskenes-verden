@@ -338,7 +338,7 @@ test('Tale til tekst: norsk → 422 (Voz/Phonon støtter ikke norsk); engelsk �
   assert.equal(r.body.enhanced, false);
   const bk = await I('/api/voice53/backends');
   assert.equal(bk.body.norwegian, false);
-  assert.deepEqual(bk.body.backends.map((b) => b.id), ['phonon', 'voz']);
+  assert.deepEqual(bk.body.backends.map((b) => b.id).filter((id) => id !== 'nbwhisper'), ['phonon', 'voz']); // prompt 54: NB-Whisper står i lista (ikke satt opp her)
   ASR._setPhonon53(undefined); ASR._setAudioDecoder53(null);
 });
 

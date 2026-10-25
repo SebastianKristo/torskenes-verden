@@ -3,11 +3,13 @@
 //
 // Backends velges etter prioritet blant dem som er klare OG støtter språket brukeren valgte:
 //   phonon (FERMION53, prioritet 10) · voz (lokal, prioritet 5) · andre registrert med registerAsrBackend53 (f.eks. Whisper senere).
-// Norsk: verken Voz eller Phonon støtter norsk (begge oppgir 25 europeiske språk uten norsk). Ber brukeren om norsk og ingen
-// backend støtter det, svarer vi 422 language_unsupported i stedet for en dårlig transkripsjon.
+// Norsk: verken Voz eller Phonon støtter norsk (begge oppgir 25 europeiske språk uten norsk). Prompt 54 (WHISPER54): NB-Whisper på
+// Mac mini-en (server/whisper54, lat import) tar norsk (bokmål/nynorsk), språkdeteksjon (language mangler/auto) og er reserve for
+// engelsk. Rekkefølgen per språk står i ../whisper54/route.js. 422 language_unsupported bare når ingen motor for språket er satt opp.
 import { execFile } from 'node:child_process';
 import { use53, ready53 } from './models.js';
 import { on53 } from './flags.js';
+import { splitLang54, nbWire54, decide54, order54, langLabel54, ENGINE_LABELS54 } from '../whisper54/route.js';
 
 // Språkene Voz oppgir (25, europeiske). Pakken har ingen språkliste; tallet og lista stemmer med modellfamilien Voz og Phonon-2.5
 // bygger på (parakeet-tdt-0.6b-v3). Modellkortet på Hugging Face kunne ikke leses herfra (blokkert) – se docs/dal-53.md.
@@ -30,6 +32,29 @@ async function phonon() {
 /** Bare for tester. */
 export const _setPhonon53 = (p) => { fermion = p; };
 
+let nbw = undefined; // lat import av WHISPER54 (NB-Whisper på Mac mini-en)
+async function nbWhisper() {
+  if (nbw === undefined) nbw = (await import('../whisper54/asr.js').catch(() => null))?.nbWhisperAsr54 ?? null;
+  return nbw;
+}
+/** Bare for tester. */
+export const _setNbWhisper54 = (p) => { nbw = p; };
+function nbBackend(p) {
+  return {
+    id: 'nbwhisper', label: p.label ?? 'NB-Whisper (Mac mini)', priority: 8,
+    get languages() { try { return p.languages?.() ?? null; } catch { return null; } },
+    // «Finnes» = satt opp og flagget på. Er den bare nede, er svaret 503 (ikke 422).
+    get configured() { try { return !!p.configured?.() && (p.flag ? !!p.flag() : true); } catch { return false; } },
+    supports: (l) => { try { return p.supports ? !!p.supports(l) : true; } catch { return false; } },
+    available: async () => { try { return !!p.ready?.(); } catch { return false; } },
+    detect: (wav, o) => p.detect(wav, o),
+    async transcribe({ wav, language, variant, signal }) {
+      const r = await p.transcribe(wav, { language: nbWire54(language, variant), signal, timeoutMs: 180_000 });
+      return { text: String(r?.text ?? '').trim(), words: (r?.words ?? []).map((w) => ({ text: w.text ?? w.word, start: w.start, end: w.end })), duration: r?.duration };
+    },
+  };
+}
+
 const vozBackend = {
   id: 'voz', label: 'Voz (lokal, Desert Ant Labs)', priority: 5, languages: VOZ_LANGS53,
   available: async () => on53('dal_voice53') && !!ready53('voz'),
@@ -43,6 +68,7 @@ function phononBackend(p) {
   return {
     id: 'phonon', label: p.label ?? 'Phonon (Mac mini)', priority: 10,
     get languages() { try { return p.languages?.() ?? null; } catch { return null; } },
+    get configured() { try { return p.configured ? !!p.configured() : true; } catch { return false; } }, // prompt 54: 422 vs 503
     supports: (l) => { try { return p.supports ? !!p.supports(l) : true; } catch { return false; } },
     available: async () => { try { return !!p.ready?.(); } catch { return false; } },
     async transcribe({ wav, language, signal }) {
@@ -57,11 +83,13 @@ export async function asrBackends53() {
   const list = [vozBackend, ...extra.values()];
   const p = await phonon();
   if (p) list.push(phononBackend(p));
+  const n = await nbWhisper();
+  if (n) list.push(nbBackend(n));
   const out = [];
   for (const b of list) {
     // eslint-disable-next-line no-await-in-loop
     const available = await Promise.race([Promise.resolve().then(() => b.available()).catch(() => false), new Promise((r) => { setTimeout(() => r(false), 1500).unref?.(); })]);
-    out.push({ id: b.id, label: b.label, languages: b.languages ?? null, available: !!available, priority: b.priority ?? 0, b });
+    out.push({ id: b.id, label: b.label, engine_label: ENGINE_LABELS54[b.id] ?? b.label, languages: b.languages ?? null, available: !!available, configured: b.configured ?? true, priority: b.priority ?? 0, b });
   }
   return out.sort((a, b) => b.priority - a.priority);
 }
@@ -104,36 +132,75 @@ export async function enhance53(samples) {
   return r?.samples?.length ? { samples: r.samples instanceof Float32Array ? r.samples : Float32Array.from(r.samples), enhanced: true } : { samples, enhanced: false };
 }
 
+const asrErr53 = (code, message, status, extra = {}) => Object.assign(new Error(message), { code, status, ...extra });
+const r3 = (v) => (Number.isFinite(+v) ? Math.round(+v * 1000) / 1000 : null);
+
 /**
- * Transkriber. → {text, words, language, backend, enhanced, duration, ms}
+ * Transkriber. → {text, words:[{text,start,end}], language, variant?, language_label, detected?, engine, engine_label, backend, enhanced, duration, ms}
+ * language: 'no'|'nb'|'nn'|'en'|… eller null/'auto' (språkdeteksjon via NB-Whisper; hint = brukerens foretrukne språk, bare et hint).
  * kaster Error med .code 'language_unsupported' (status 422, .supported) | 'asr_unavailable' (503) | 'bad_audio' (400).
  */
-export async function transcribe53(buf, { language = null, backend = 'auto', enhance = true, signal = null } = {}) {
+export async function transcribe53(buf, { language = null, backend = 'auto', enhance = true, signal = null, hint = null } = {}) {
   const t0 = Date.now();
-  const lang = normLang53(language);
+  const auto = !String(language ?? '').trim() || /^auto$/i.test(String(language).trim());
+  let { lang, variant } = auto ? { lang: null, variant: null } : splitLang54(language);
   const all = await asrBackends53();
   const want = backend && backend !== 'auto' ? all.filter((x) => x.id === backend) : all;
-  if (backend && backend !== 'auto' && !want.length) throw Object.assign(new Error(`Ukjent backend «${backend}»`), { code: 'bad_backend', status: 400 });
-  const capable = want.filter((x) => supports(x, lang));
-  if (!capable.length) {
-    const supported = [...new Set(want.flatMap((x) => x.languages ?? []))].sort();
-    throw Object.assign(new Error(lang === 'no'
-      ? 'Tale til tekst på norsk er ikke tilgjengelig ennå: Voz og Phonon støtter ikke norsk. Velg et annet språk, eller bruk talegjenkjenningen på enheten.'
-      : `Språket «${lang}» støttes ikke av tale til tekst-motorene som finnes.`), { code: 'language_unsupported', status: 422, supported });
-  }
-  const ready = capable.filter((x) => x.available);
-  if (!ready.length) throw Object.assign(new Error('Tale til tekst er ikke klar ennå (modellen lastes eller Mac mini-en svarer ikke). Prøv igjen om litt.'), { code: 'asr_unavailable', status: 503 });
+  if (backend && backend !== 'auto' && !want.length) throw asrErr53('bad_backend', `Ukjent backend «${backend}»`, 400);
+  const usable = want.filter((x) => x.configured !== false); // satt opp og flagget på (kan være nede akkurat nå)
+  const unsupported = (l, found = false) => asrErr53('language_unsupported', l === 'no'
+    ? 'Tale til tekst på norsk krever NB-Whisper på Mac mini-en, og den er ikke satt opp eller er slått av (AI-kontroll › Tale til tekst). Voz og Phonon støtter ikke norsk. Velg engelsk, eller bruk talegjenkjenningen på enheten.'
+    : found ? `Oppdaget språk «${l}» støttes ikke av tale til tekst-motorene som finnes. Velg språk selv.` : `Språket «${l}» støttes ikke av tale til tekst-motorene som finnes.`,
+  422, { supported: [...new Set(usable.flatMap((x) => x.languages ?? []))].sort(), ...(found ? { detected: l } : {}) });
+  const unavailable = () => asrErr53('asr_unavailable', 'Tale til tekst er ikke klar ennå (modellen lastes eller Mac mini-en svarer ikke). Prøv igjen om litt.', 503);
+  const pick = (l, isAuto = false) => order54(usable.filter((x) => x.available && supports(x, l)), l, { auto: isAuto });
+  if (!auto) {
+    if (!usable.some((x) => supports(x, lang))) throw unsupported(lang);
+    if (!pick(lang).length) throw unavailable();
+  } else if (!usable.some((x) => x.available)) throw unavailable();
   const raw = await decodeAudio53(buf);
-  if (!raw.length) throw Object.assign(new Error('Lydfilen er tom'), { code: 'bad_audio', status: 400 });
+  if (!raw.length) throw asrErr53('bad_audio', 'Lydfilen er tom', 400);
+  // Clear (støyfjerning) før alle motorene, også før språkdeteksjonen.
   const { samples, enhanced } = enhance ? await enhance53(raw) : { samples: raw, enhanced: false };
-  let wav = null, lastErr = null;
-  for (const x of ready) {
+  let wav = null, detected = null;
+  if (auto) {
+    const h = splitLang54(hint);
+    const det = usable.find((x) => x.available && typeof x.b.detect === 'function');
+    let d = null;
+    if (det) {
+      try { d = await det.b.detect(wav16k53(samples.subarray(0, 30 * 16000)), { signal, timeoutMs: 20_000 }); }
+      catch (e) { console.warn(`[dal53] språkdeteksjon (${det.id}) feilet: ${String(e?.code ?? '')} ${String(e?.message ?? e).slice(0, 120)}`); }
+    }
+    const dec = d ? decide54(d, h.lang) : null;
+    if (dec) {
+      lang = dec.lang;
+      variant = lang === 'no' ? (dec.variant === 'nn' || h.variant === 'nn' ? 'nn' : 'nb') : null;
+      detected = { language: dec.lang, probability: r3(dec.probability), source: dec.source, engine: det.id };
+    } else {
+      // Ingen deteksjon (NB-Whisper mangler/nede): brukerens foretrukne språk, norsk som standard.
+      lang = h.lang ?? 'no';
+      variant = lang === 'no' ? h.variant ?? 'nb' : null;
+      detected = { language: lang, probability: null, source: 'hint', engine: null };
+    }
+    if (!usable.some((x) => supports(x, lang))) throw unsupported(lang, !!dec);
+  }
+  const ready = pick(lang, auto && detected?.source === 'detected');
+  if (!ready.length) throw unavailable();
+  let lastErr = null;
+  for (const [i, x] of ready.entries()) {
     try {
       if (x.id !== 'voz') wav ??= wav16k53(samples);
       // eslint-disable-next-line no-await-in-loop
-      const r = await x.b.transcribe({ wav, samples16k: samples, sampleRate: 16000, language: lang, signal });
-      return { text: r.text, words: r.words ?? [], language: r.language ?? lang, backend: x.id, enhanced, duration: r.duration ?? Math.round((samples.length / 16000) * 100) / 100, ms: Date.now() - t0 };
-    } catch (e) { lastErr = e; console.warn(`[dal53] ASR ${x.id} feilet: ${String(e?.code ?? '')} ${String(e?.message ?? e).slice(0, 160)}`); }
+      const r = await x.b.transcribe({ wav, samples16k: samples, sampleRate: 16000, language: lang, variant, signal });
+      const words = (r.words ?? []).map((w) => ({ text: String(w.text ?? w.word ?? '').trim(), start: r3(w.start), end: r3(w.end) })).filter((w) => w.text && w.start != null && w.end != null);
+      return { text: r.text, words, language: lang, ...(lang === 'no' ? { variant } : {}), language_label: langLabel54(lang, variant), ...(detected ? { detected } : {}),
+        engine: x.id, engine_label: ENGINE_LABELS54[x.id] ?? x.label, backend: x.id, ...(i > 0 ? { fallback: true } : {}),
+        enhanced, duration: r.duration ?? Math.round((samples.length / 16000) * 100) / 100, ms: Date.now() - t0 };
+    } catch (e) {
+      lastErr = e;
+      if (e?.code === 'cancelled' || signal?.aborted) throw asrErr53('cancelled', 'Avbrutt', 499);
+      console.warn(`[dal53] ASR ${x.id} feilet: ${String(e?.code ?? '')} ${String(e?.message ?? e).slice(0, 160)}`);
+    }
   }
-  throw Object.assign(new Error(`Tale til tekst feilet${lastErr?.message ? `: ${String(lastErr.message).slice(0, 160)}` : ''}`), { code: 'asr_unavailable', status: 503 });
+  throw asrErr53('asr_unavailable', `Tale til tekst feilet${lastErr?.message ? `: ${String(lastErr.message).slice(0, 160)}` : ''}`, 503);
 }

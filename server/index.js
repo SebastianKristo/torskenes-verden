@@ -80,6 +80,7 @@ import { mountWebx51 } from './webx51.js'; // prompt 51 (WEBX51): felles søk, o
 import { mountSrv52 } from './srv52.js'; // prompt 52 (SRV52): Glimt «sist jeg var på», kalenderkontekst, brief-kort, Glimt-figur per bruker
 import { mountFermion53 } from './fermion53/index.js'; // prompt 53 (FERMION53): Neutrino-1 8B og Phonon på Mac mini-en (admin: /api/admin/fermion53/*)
 import { mountDal53 } from './dal53/index.js'; // prompt 53 (DAL53): Desert Ant Labs-modellene (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)
+import { mountWhisper54 } from './whisper54/index.js'; // prompt 54 (WHISPER54): NB-Whisper på Mac mini-en (admin: /api/admin/whisper54/*), norsk tale til tekst i /api/voice53/*
 import { tracking46Api, startAccounts46 } from './tracking46.js'; // prompt 46 (DATA46): Posten/Bring- og PostNord-konto
 import { gphoto46Api, startGphoto46 } from './gphoto46.js'; // prompt 46 (DATA46): Google Photos-album som bakgrunn
 import { kart46Api } from './kart46.js'; // prompt 46 (DATA46): Kart-API
@@ -164,6 +165,7 @@ mountWebx51(app); // prompt 51 (WEBX51): /api/search51, /api/onboard51, /api/me/
 mountSrv52(app); // prompt 52 (SRV52): /api/glimt/quickparse52, /api/glimt/lex52, /api/brief52, /api/me/glimt-char52, admin; mellomvare foran POST /api/glimt/agent
 mountFermion53(app); // prompt 53 (FERMION53): /api/admin/fermion53/{health,config,test} (bare admin)
 mountDal53(app); // prompt 53 (DAL53): /api/admin/dal53/{health,preload}, /api/emo53/suggest, /api/voice53/*; Moderator foran /api/chat/files og /api/img
+mountWhisper54(app); // prompt 54 (WHISPER54): /api/admin/whisper54/{health,config,test} (bare admin)
 app.route('/api', auth44Api); // prompt 44: POST /api/auth/refresh og POST /api/apps/kalender/log
 app.get('/hl/:token', hlPage41); // prompt 41: Hjemlys-statusside for kontakter uten Papir (24 t)
 

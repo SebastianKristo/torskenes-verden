@@ -22,6 +22,7 @@ import { FLAGS53, on53 } from './flags.js';
 import { suggestEmoji53 } from './text.js';
 import { eyeAnalyze53 } from './image.js';
 import { asrBackends53, transcribe53 } from './asr.js';
+import { nbFlag54 } from '../whisper54/health.js'; // prompt 54 (WHISPER54): NB-Whisper-flagget
 import { startNews53 } from './news.js';
 import { chatUploadMw53, childImageMw53 } from './moderate.js';
 
@@ -88,15 +89,17 @@ dal53Api.post('/emo53/suggest', A, async (c) => {
 
 dal53Api.get('/voice53/backends', A, async (c) => {
   const list = (await asrBackends53().catch(() => [])).map(({ b, ...x }) => x);
-  return c.json({ backends: list, norwegian: list.some((x) => !x.languages || x.languages.includes('no')) }, 200, NO_STORE);
+  // Prompt 54: norsk = en klar motor som støtter norsk (NB-Whisper), detect = språkdeteksjon (auto) er mulig.
+  const nor = list.filter((x) => x.available && x.configured !== false && (!x.languages || x.languages.includes('no')));
+  return c.json({ backends: list, norwegian: nor.length > 0, detect: list.some((x) => x.id === 'nbwhisper' && x.available), norwegian_engine: nor[0]?.engine_label ?? null }, 200, NO_STORE);
 });
 
 const AUDIO_MAX = 50 * 1024 * 1024;
 dal53Api.post('/voice53/transcribe', A, bodyLimit({ maxSize: AUDIO_MAX + 1024 * 1024, onError: (c) => bad(c, 'Lydfilen kan være maks 50 MB', 413) }), async (c) => {
   const u = c.get('user');
-  if (!on53('dal_voice53', u)) return bad(c, 'Tale til tekst (prompt 53) er slått av for deg', 403, { code: 'disabled' });
+  if (!on53('dal_voice53', u) && !nbFlag54(u)) return bad(c, 'Tale til tekst er slått av for deg', 403, { code: 'disabled' }); // prompt 54: NB-Whisper har eget flagg
   const ct = c.req.header('content-type') ?? '';
-  let buf = null, language = c.req.query('language') ?? null, backend = c.req.query('backend') ?? 'auto', enhance = c.req.query('enhance');
+  let buf = null, language = c.req.query('language') ?? null, backend = c.req.query('backend') ?? 'auto', enhance = c.req.query('enhance'), hint = c.req.query('hint') ?? null;
   if (/multipart\/form-data/i.test(ct)) {
     const form = await c.req.parseBody().catch(() => null);
     const f = form?.file ?? form?.audio;
@@ -105,17 +108,20 @@ dal53Api.post('/voice53/transcribe', A, bodyLimit({ maxSize: AUDIO_MAX + 1024 * 
     language = typeof form.language === 'string' ? form.language : language;
     backend = typeof form.backend === 'string' ? form.backend : backend;
     enhance = typeof form.enhance === 'string' ? form.enhance : enhance;
+    hint = typeof form.hint === 'string' ? form.hint : hint;
   } else if (/^(audio|video)\/|application\/octet-stream/i.test(ct)) {
     buf = Buffer.from(await c.req.arrayBuffer());
   } else return bad(c, 'Forventet multipart/form-data med feltet «file», eller rå lyd (Content-Type: audio/*)');
   if (!buf?.length) return bad(c, 'Lydfilen er tom');
   if (buf.length > AUDIO_MAX) return bad(c, 'Lydfilen kan være maks 50 MB', 413);
-  if (!language) language = languageOf(u) === 'en' ? 'en' : 'no';
+  // Prompt 54: uten språk (eller 'auto') oppdages språket (NB-Whisper). Profilens språk er bare et hint, aldri sannhet over deteksjonen.
+  if (!language) language = 'auto';
+  if (!hint) hint = languageOf(u) === 'en' ? 'en' : 'no';
   try {
-    const r = await transcribe53(buf, { language, backend, enhance: enhance !== '0', signal: c.req.raw.signal });
+    const r = await transcribe53(buf, { language, backend, enhance: enhance !== '0', signal: c.req.raw.signal, hint });
     return c.json(r, 200, NO_STORE);
   } catch (e) {
-    return bad(c, e.message, e.status ?? 500, { code: e.code ?? 'error', ...(e.supported ? { supported: e.supported } : {}) });
+    return bad(c, e.message, e.status ?? 500, { code: e.code ?? 'error', ...(e.supported ? { supported: e.supported } : {}), ...(e.detected ? { detected: e.detected } : {}) });
   }
 });
 

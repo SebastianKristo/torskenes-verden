@@ -39,3 +39,14 @@ Phonon-2-familien er avledet av NVIDIAs parakeet-tdt-0.6b-v3 (CC-BY-4.0); endrin
 Hugging Face (`FermionResearch/Phonon-2`, `FermionResearch/Phonon-2.5`). Kjøretiden på Mac mini-en er `fermion-research`
 (PyPI, Apache-2.0), installert med `tools/fermion/install.sh`. Vektene lastes ned på Mac mini-en, aldri i Docker-imaget eller repoet.
 Detaljer om oppsettet: `docs/fermion-53.md`.
+
+## NB-Whisper (Nasjonalbiblioteket)
+
+| Modell | Lisens | Brukes til |
+| --- | --- | --- |
+| NB-Whisper (`NbAiLab/nb-whisper-large` / `-medium` / `-small`) | Apache-2.0 (<https://www.apache.org/licenses/LICENSE-2.0>) | Tale til tekst på norsk (bokmål og nynorsk) og engelsk, og språkdeteksjon, på Mac mini-en |
+
+Kreditering: «NB-Whisper © Nasjonalbiblioteket (NbAiLab), Apache-2.0». NB-Whisper er finjustert fra OpenAI Whisper (MIT).
+Kjøretiden på Mac mini-en er `mlx` og `mlx-whisper` (Apple, MIT) eller whisper.cpp (`whisper-cpp` fra Homebrew, MIT), installert med
+`tools/nb-whisper/install.sh`. Vektene lastes ned fra Hugging Face på Mac mini-en ved installasjon (eventuelt konvertert til MLX der),
+aldri i Docker-imaget eller repoet. Detaljer: `docs/nb-whisper-54.md`.
