@@ -23,7 +23,7 @@ const HELP = {
 };
 export const STATUS62 = { active: 'Aktiv', paused: 'Pauset', ended: 'Ferdig' };
 export const RUN62 = { running: 'Kjører', ok: 'Levert', failed: 'Feilet', skipped: 'Hoppet over', missed: 'Tapt', condition_false: 'Betingelsen ikke oppfylt' };
-const KIND62 = { power: 'Strømpriser', reminder: 'Påminnelse', query: 'Glimt-forespørsel', brief: 'Brief' };
+const KIND62 = { power: 'Strømpriser', reminder: 'Påminnelse', query: 'Glimt-forespørsel', brief: 'Brief', memory: 'Nattlig oppsummering av minnet' };
 const TRIG = { schedule: 'planlagt', catchup: 'tatt igjen etter omstart', 'run-now': 'kjørt nå' };
 const ZONES = ['NO1', 'NO2', 'NO3', 'NO4', 'NO5'];
 const ZLAB = { NO1: 'Øst', NO2: 'Sør', NO3: 'Midt', NO4: 'Nord', NO5: 'Vest' };
@@ -256,21 +256,23 @@ function detailHtml(it) {
   const zone = it.params?.zone, power = it.kind === 'power' || it.condition?.source === 'power';
   const off = L.d?.enabled === false;
   const tgl = it.status === 'active' ? `<button type="button" class="s62-b" data-s62-st="paused" data-s62-id="${id}"${busy || off ? ' disabled' : ''}>Pause</button>` : it.status === 'paused' ? `<button type="button" class="s62-b" data-s62-st="active" data-s62-id="${id}"${busy || off ? ' disabled' : ''}>Fortsett</button>` : '';
-  const del = `<button type="button" class="s62-b bad" data-s62-del="${id}"${busy ? ' disabled' : ''}>${L.arm === it.id ? 'Trykk igjen for å slette' : 'Slett'}</button>`;
+  // Prompt 63: systemoppgaver (nattlig oppsummering av minnet) kan bare pauses – ikke slettes eller flyttes.
+  const del = it.system ? '' : `<button type="button" class="s62-b bad" data-s62-del="${id}"${busy ? ' disabled' : ''}>${L.arm === it.id ? 'Trykk igjen for å slette' : 'Slett'}</button>`;
   return `<div class="s62-det" data-s62-det="${id}">
     ${kv('Hva', it.what)}${kv('Type', KIND62[it.kind] ?? it.kind)}${kv('Når', whenLabel62(it.when))}
     ${it.condition ? kv('Bare hvis', `<span data-no-i18n>${esc(it.condition.label || it.condition.text || '')}</span>${it.condition.expr ? `<small>Sjekkes i koden: <code data-no-i18n>${esc(it.condition.expr)}</code></small>` : ''}`, true) : ''}
     ${power && zone ? kv('Prisområde', `${zone}${ZLAB[zone] ? ` (${ZLAB[zone]})` : ''}`) : ''}
     ${runs.length ? kv('Neste', runs.join(' · ')) : ''}${kv('Levering', it.channel && it.channel !== 'push' ? it.channel : 'Push i appen')}
     ${it.when?.explicitTime === false ? kv('Stille timer', 'Flyttes til 07:00 hvis den havner mellom 23 og 07') : ''}
-    ${L.edit === it.id ? editHtml(it) : `<div class="s62-acts"><button type="button" class="s62-b pri" data-s62-run="${id}"${busy || off ? ' disabled' : ''}>${busy === 'run' ? 'Kjører …' : 'Kjør nå'}</button>${tgl}<button type="button" class="s62-b" data-s62-edit="${id}"${off ? ' disabled' : ''}>Endre tidspunkt</button>${del}</div>`}
+    ${L.edit === it.id ? editHtml(it) : `<div class="s62-acts"><button type="button" class="s62-b pri" data-s62-run="${id}"${busy || off ? ' disabled' : ''}>${busy === 'run' ? 'Kjører …' : 'Kjør nå'}</button>${tgl}${it.system ? '' : `<button type="button" class="s62-b" data-s62-edit="${id}"${off ? ' disabled' : ''}>Endre tidspunkt</button>`}${del}</div>`}
+    ${it.system ? '<div class="s62-mut">Systemoppgave: Glimt går gjennom dagens samtaler og foreslår nye fakta til «Glimt husker». Ingenting lagres før du godkjenner. Kan settes på pause, ikke slettes.</div>' : ''}
     ${L.rmsg[it.id] ? `<div class="s62-prev${L.rmsg[it.id].bad ? ' bad' : ' ok'}" role="status">${L.rmsg[it.id].html}</div>` : ''}
     <div class="s62-sub">Siste kjøringer</div>${D?.runs ? runsHtml(D.runs) : D?.err ? `<div class="s62-prev bad">${esc(D.err)}</div>` : '<div class="s62-mut">Laster kjøringer …</div>'}</div>`;
 }
 function rowHtml(it) {
   const open = L.open === it.id, lr = it.lastRun;
   const next = it.status === 'active' && it.nextRunAt ? `Neste ${when62(it.nextRunAt)}` : it.status === 'paused' ? 'På pause' : 'Ingen flere kjøringer';
-  return `<div class="s62-item${open ? ' open' : ''}" data-s62-row="${esc(it.id)}"><button type="button" class="sg-row s62-head" data-s62-toggle="${esc(it.id)}" aria-expanded="${open}"><span class="s62-ic" aria-hidden="true">${clock}</span><span class="sg-txt"><b data-no-i18n>${esc(it.title || it.what)}</b><span>${pill(it.status)}<span data-no-i18n>${esc(whenLabel62(it.when))}</span></span><span class="s62-l2">${esc(next)}${it.condition ? ' · med betingelse' : ''}</span><span class="s62-l2 s62-last s62-r-${esc(lr?.status ?? 'none')}">Sist: ${esc(runLine62(lr))}${lr?.result ? ` – <span data-no-i18n>${esc(String(lr.result).slice(0, 90))}${String(lr.result).length > 90 ? '…' : ''}</span>` : ''}</span></span><span aria-hidden="true" class="s62-chev">${open ? '▾' : '›'}</span></button>${open ? detailHtml(it) : ''}</div>`;
+  return `<div class="s62-item${open ? ' open' : ''}" data-s62-row="${esc(it.id)}"><button type="button" class="sg-row s62-head" data-s62-toggle="${esc(it.id)}" aria-expanded="${open}"><span class="s62-ic" aria-hidden="true">${clock}</span><span class="sg-txt"><b data-no-i18n>${esc(it.title || it.what)}</b><span>${pill(it.status)}${it.system ? '<i class="s62-st s62-sys">System</i>' : ''}<span data-no-i18n>${esc(whenLabel62(it.when))}</span></span><span class="s62-l2">${esc(next)}${it.condition ? ' · med betingelse' : ''}</span><span class="s62-l2 s62-last s62-r-${esc(lr?.status ?? 'none')}">Sist: ${esc(runLine62(lr))}${lr?.result ? ` – <span data-no-i18n>${esc(String(lr.result).slice(0, 90))}${String(lr.result).length > 90 ? '…' : ''}</span>` : ''}</span></span><span aria-hidden="true" class="s62-chev">${open ? '▾' : '›'}</span></button>${open ? detailHtml(it) : ''}</div>`;
 }
 function briefHtml(b) {
   const id = esc(b.id), busy = L.busy[b.id], canAt = !b.editable || b.editable.includes('at'), canOn = !b.editable || b.editable.includes('on');
@@ -309,7 +311,7 @@ const STYLE62 = `.s62-card{display:flex;flex-direction:column;gap:6px;padding:12
 .s62-l2{font-size:13.5px;opacity:.75}.s62-last.s62-r-failed,.s62-last.s62-r-missed{color:#d0503c;opacity:1}
 .s62-chev{flex:none;opacity:.6}
 .s62-st{font-style:normal;font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:6px;border:1px solid currentColor}
-.s62-active{color:#2f9e5b}.s62-paused{color:#b7871a}.s62-ended{color:#8a8a8a}
+.s62-sys{color:#7a3b6b}.s62-active{color:#2f9e5b}.s62-paused{color:#b7871a}.s62-ended{color:#8a8a8a}
 .s62-det{display:flex;flex-direction:column;gap:9px;padding:4px 26px 18px 76px;font-size:14.5px;line-height:1.45}
 .s62-det .s62-kv{grid-template-columns:110px minmax(0,1fr)}
 .s62-acts{display:flex;gap:8px;flex-wrap:wrap}

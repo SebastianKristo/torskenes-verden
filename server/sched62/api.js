@@ -122,6 +122,8 @@ schedulesApi62.patch('/:id', async (c) => {
   const row = SID62.test(id) ? rowOf62(u, id) : null;
   if (!row) return c.json({ error: 'Fant ikke oppgaven' }, 404);
   if (!sched62(u).enabled) return c.json(OFF, 409);
+  // Prompt 63: systemoppgaven kan bare pauses/fortsettes.
+  if (row.source === 'system' && Object.keys(b).some((k) => k !== 'status')) return c.json({ error: 'Systemoppgave – den kan bare settes på pause eller slås på igjen' }, 400);
   const set = {};
   let tmp = { ...row };
   if (b.title !== undefined) { const t = str(b.title, 60); if (t.length < 2) return c.json({ error: 'title må være 2–60 tegn' }, 400); set.title = t; }
@@ -145,13 +147,14 @@ schedulesApi62.patch('/:id', async (c) => {
     set.next_run_at = nx;
   } else set.next_run_at = null;
   const parsed = { ...publicSchedule62(tmp, { now, lastRun: null }), label: tmp.label, params: JSON.parse(tmp.params || '{}'), condition: tmp.condition ? JSON.parse(tmp.condition) : null };
-  set.summary = summaryOf62(parsed);
+  if (row.source !== 'system') set.summary = summaryOf62(parsed); // prompt 63: systemoppgaven beholder sin egen tekst
   const r = updateSchedule62(u, id, set, now);
   return c.json({ ok: true, item: publicSchedule62(r, { now, quiet: sched62(u).quiet }) });
 });
 schedulesApi62.delete('/:id', (c) => {
   const u = c.get('user'), id = c.req.param('id');
   if (!SID62.test(id)) return c.json({ error: 'Fant ikke oppgaven' }, 404);
+  if (rowOf62(u, id)?.source === 'system') return c.json({ error: 'Systemoppgave – sett den på pause i stedet' }, 400); // prompt 63
   const n = deleteSchedule62(u, id);
   if (!n) return c.json({ error: 'Fant ikke oppgaven' }, 404);
   return c.json({ ok: true, removed: n });

@@ -58,6 +58,8 @@ const HELP = `Glimt eval (GLIMT47)
                                     off måler uten (casene 27–29 feiler da med vilje), for før/etter på samme commit.
   --sched62 on|off                  Prompt 62: planlagte oppgaver (og betingede varsler). Standard on; off måler uten (casene
                                     30–35 feiler da med vilje), for før/etter på samme commit.
+  --mem63 on|off                    Prompt 63: «minnet holder seg ryddig» (nattlige forslag, motstrid, ubrukte fakta). Standard on;
+                                    off måler uten (casene 36–39 feiler da med vilje), for før/etter på samme commit.
   --learned on|off|DIR              Prompt 61: ta med testtilfellene fra rettelser (eval/learned/*.json, eller DIR). Standard on
                                     (bare når filene finnes).
 
@@ -167,6 +169,7 @@ const fastMode = String(opt.fast59 ?? 'on').toLowerCase() === 'off' ? 'off' : 'o
 const convoMode = String(opt.convo60 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on'; // prompt 60
 const recipesMode = String(opt.recipes61 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on'; // prompt 61
 const schedMode = String(opt.sched62 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on'; // prompt 62
+const memMode = String(opt.mem63 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on'; // prompt 63
 
 /* ---------------- Modellsjekk ---------------- */
 
@@ -258,7 +261,7 @@ function runOne(meta, i) {
   return new Promise((res) => {
     const out = join(tmpRoot, `${meta.id}-${i}.json`);
     const t0 = Date.now();
-    const child = spawn(process.execPath, [join(HERE, 'worker.mjs'), meta.path ?? join(caseDir, meta.file), out], { cwd: REPO, env: { ...cleanEnv(), EVAL47_CONFIG: JSON.stringify(cfg), EVAL_FAST59: fastMode, EVAL_CONVO60: convoMode, EVAL_RECIPES61: recipesMode, EVAL_SCHED62: schedMode }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [join(HERE, 'worker.mjs'), meta.path ?? join(caseDir, meta.file), out], { cwd: REPO, env: { ...cleanEnv(), EVAL47_CONFIG: JSON.stringify(cfg), EVAL_FAST59: fastMode, EVAL_CONVO60: convoMode, EVAL_RECIPES61: recipesMode, EVAL_SCHED62: schedMode, EVAL_MEM63: memMode }, stdio: ['ignore', 'pipe', 'pipe'] });
     let logs = '';
     child.stdout.on('data', (d) => { logs += d; });
     child.stderr.on('data', (d) => { logs += d; });
@@ -326,7 +329,7 @@ const intents59 = perIntent59(all);
 const cache59 = cacheEffect59(all);
 const cmp59 = prevRun ? compare59(prevRun, all, opt.compare) : null;
 const allReply = all.flatMap((c) => c.results.map(replyMsOf59)).sort((a, b) => a - b);
-console.log(`Svartid (forespørsel → svar, uten bakgrunnsjobber etter svaret): p50 ${sec(pct58(allReply, 0.5))} · p90 ${sec(pct58(allReply, 0.9))} · «raskere svar» ${fastMode} · «forståelse i samtaler» ${convoMode} · «Glimt lærer» ${recipesMode} · «planlagte oppgaver» ${schedMode}`);
+console.log(`Svartid (forespørsel → svar, uten bakgrunnsjobber etter svaret): p50 ${sec(pct58(allReply, 0.5))} · p90 ${sec(pct58(allReply, 0.9))} · «raskere svar» ${fastMode} · «forståelse i samtaler» ${convoMode} · «Glimt lærer» ${recipesMode} · «planlagte oppgaver» ${schedMode} · «ryddig minne» ${memMode}`);
 console.log(`\nPer intent (svartid p50 / p90 · totalt p50 / p90):`);
 for (const x of intents59) console.log(`  ${pad(x.intent, 22)} ${pad(`${x.runs} kj.`, 7)} ${pad(`${sec59(x.replyP50)} / ${sec59(x.replyP90)}`, 18)} ${sec59(x.totalP50)} / ${sec59(x.totalP90)}`);
 const cacheLine59 = cache59.total ? `Prompt-cache: ${cache59.total.evaluated} av ~${cache59.total.est} prompt-tokens regnet ut · ${cache59.total.reusedPct ?? 0} % gjenbrukt fra KV-/prefiks-cachen (${cache59.method}) · ${Object.entries(cache59.byStep).map(([k, v]) => `${k} ${v.reusedPct ?? 0} % (${v.calls} kall)`).join(' · ')}` : null;
@@ -356,6 +359,7 @@ meta.fast59 = fastMode;
 meta.convo60 = convoMode;
 meta.recipes61 = recipesMode;
 meta.sched62 = schedMode;
+meta.mem63 = memMode;
 writeFileSync(`${base}.json`, JSON.stringify({ meta, summary: { passed: totalPass, total, greenCases: green, cases: all.length, modelFailures: modelFails, envFailures: envTotal, engine: engineLabel, p50Ms: p50All, p90Ms: p90All,
   replyP50Ms: pct58(allReply, 0.5), replyP90Ms: pct58(allReply, 0.9), perIntent: intents59, cacheEffect: cache59, ...(cmp59 ? { compare: cmp59 } : {}) }, cases: all }, null, 2));
 const md = [`# Glimt eval ${date} · motor ${engineLabel} · ${backend} · ${modelTag}`, '',

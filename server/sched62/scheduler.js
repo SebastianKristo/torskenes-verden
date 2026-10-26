@@ -67,7 +67,7 @@ function finishState(id, next, now) { if (next == null) q("UPDATE glimt_schedule
 async function prepare(row, now) {
   const p = prepared.get(row.id);
   if (p && p.plannedAt === row.next_run_at) return false;
-  if (row.condition || row.kind === 'reminder' || !sched62(row.user_id).enabled) return false;
+  if (row.condition || row.kind === 'reminder' || row.kind === 'memory' || !sched62(row.user_id).enabled) return false;
   prepared.set(row.id, { plannedAt: row.next_run_at, out: { status: 'pending' }, at: now });
   const out = await compute62(row, { now });
   prepared.set(row.id, { plannedAt: row.next_run_at, out, at: now });

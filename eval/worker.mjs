@@ -79,6 +79,8 @@ if (process.env.EVAL_CONVO60 === 'off') kv.set('owner', 'convo60', { state: fals
 if (process.env.EVAL_RECIPES61 === 'off') kv.set('owner', 'recipes61', { save: false, fewshot: false, fast: false, learn: false });
 // Prompt 62: --sched62 off = planlagte oppgaver av (før/etter på samme commit).
 if (process.env.EVAL_SCHED62 === 'off') kv.set('owner', 'sched62', { enabled: false, conditions: false, quiet: true });
+// Prompt 63: --mem63 off = nattlig oppsummering, motstrid-sjekk og markering av ubrukte fakta av (før/etter på samme commit).
+if (process.env.EVAL_MEM63 === 'off') kv.set('owner', 'mem63', { nightly: false, conflicts: false, stale: false });
 // Prompt 62: strømprisene er falske data i eval (h.setPower62) – hvakosterstrommen.no er ikke tilgjengelig her.
 const RUN62 = await imp('server/sched62/run.js');
 let power62 = null;
@@ -251,6 +253,20 @@ const h = {
     return s;
   },
   briefs: () => (kv.get(USER, 'glimt35_settings', {}) ?? {}).briefs ?? null,
+  /** Prompt 63: nattjobben for minnet nå (POST /api/glimt/memory/hygiene/run-now) – som når klokka blir 03. → {status, run} */
+  async runMemory63() {
+    const m0 = net.trace.model.length;
+    const r = await A('/api/glimt/memory/hygiene/run-now', 'POST');
+    const s = { kind: 'memory-nightly', status: r.status, run: r.body?.run ?? null, error: r.status >= 400 ? clip(r.body, 300) : undefined, modelCalls: [m0, net.trace.model.length] };
+    steps.push(s);
+    return s;
+  },
+  /** Prompt 63: forslag, motstrid og ubrukte fakta (API-formene i SERVER63-API.md). */
+  pending63: async (status = 'pending') => (await A(`/api/glimt/memory/pending?status=${status}`)).body?.items ?? [],
+  conflicts63: async () => (await A('/api/glimt/memory/conflicts')).body?.items ?? [],
+  stale63: async () => (await A('/api/glimt/memory/stale')).body?.items ?? [],
+  /** Prompt 63: en Glimt-forespørsel fra tidligere i dag i sporet (som om brukeren hadde skrevet den). */
+  seedTrace63: (message, agoMs = 3600_000) => db.prepare('INSERT INTO glimt47_trace(id, user_id, created, data) VALUES(?,?,?,?)').run(`t63e${Math.random().toString(16).slice(2, 12)}`, USER, Date.now() - agoMs, JSON.stringify({ user: USER, message })),
   /** Prompt 59: Glimt-tracen for et svar (s.traceId). */
   glimtTrace: (s) => glimtTrace(s?.traceId),
   /** Media-feltet: agenten (module media) først, så Media-Glimt hvis svaret er ren prat (som public/js/media43.js). */

@@ -214,7 +214,17 @@ export async function learnFromAssist(user, text, intent, ctx = getContext(user)
 
 const api = new Hono();
 api.use('*', authOrToken);
-api.get('/', (c) => c.json({ items: listMemory(c.get('user')), types: MEMORY_TYPES }, 200, { 'Cache-Control': 'no-store' }));
+// Prompt 63 (del 5): hvert faktum har også lastUsedAt («sist brukt», used_at), keptAt («behold») og stale (ikke brukt på lenge).
+api.get('/', async (c) => {
+  const user = c.get('user');
+  let extra = new Map();
+  try {
+    const [{ memRows63, lastActive63 }, { mem63, staleDays63 }] = await Promise.all([import('./mem63/store.js'), import('./mem63/settings.js')]);
+    const lim = staleDays63(user) * 86400_000, on = mem63(user).stale, now = Date.now();
+    extra = new Map(memRows63(user).map((m) => [m.id, { lastUsedAt: m.usedAt ? new Date(m.usedAt).toISOString() : null, keptAt: m.keptAt ? new Date(m.keptAt).toISOString() : null, stale: on && now - lastActive63(m) > lim }]));
+  } catch { /* */ }
+  return c.json({ items: listMemory(user).map((m) => ({ ...m, ...(extra.get(m.id) ?? { lastUsedAt: m.used_at ? new Date(m.used_at).toISOString() : null, keptAt: null, stale: false }) })), types: MEMORY_TYPES }, 200, { 'Cache-Control': 'no-store' });
+});
 api.post('/', async (c) => {
   const user = c.get('user');
   const r = addMemory(user, await c.req.json().catch(() => null));

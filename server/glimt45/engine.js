@@ -10,6 +10,7 @@ import { localPlan45, modelAvailable45, modelInfo45, intentOfCalls45, _glimtMode
 import { modelPlan47, planGap47 } from './plan47.js';
 import { buildContext47, rememberTurn47 } from './context.js';
 import { recallFacts47 } from './memory47.js';
+import { touchFacts63 } from '../mem63/store.js'; // prompt 63: «sist brukt» per faktum
 import { startTrace47 } from './trace47.js';
 import { STEP47 } from './params47.js';
 import { answer47 } from './answer47.js';
@@ -233,6 +234,8 @@ async function pipeline(user, text, opts) {
   // Prompt 60: entitetsregisterets treff («hytta», «Rema») som fakta; samtalens egen historikk og kort tilstand til planleggeren.
   const facts = facts60(user, c60, await recallFacts47(user, text, { embed: !opts.preview }).catch(() => []));
   if (c60) c60.facts = facts;
+  // Prompt 63 (del 5): «sist brukt» per faktum – minnet som faktisk går inn i konteksten/planleggeren (ikke forhåndsvisning).
+  if (!opts.preview && facts.length) touchFacts63(user, facts);
   const x60 = ctx60(c60);
   const c47 = buildContext47(user, text, { today, nowMin, facts, ...(x60.history ? { history: x60.history } : {}) });
   c47.stateText = x60.stateText;

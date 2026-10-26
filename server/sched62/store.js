@@ -58,6 +58,7 @@ export function publicSchedule62(row, { now = Date.now(), lastRun = undefined, q
     condition: J(row.condition, null), params: J(row.params, {}), channel: row.channel, status: row.status, summary: row.summary ?? null, private: !!row.private,
     nextRunAt: row.status === 'active' ? iso(row.next_run_at) : null, nextRuns: nexts.slice(0, 3).map(iso),
     lastRun: lr ? publicRun62(lr) : null, createdAt: iso(row.created_at), updatedAt: iso(row.updated_at), source: row.source,
+    system: row.source === 'system', // prompt 63: systemoppgaven (nattlig oppsummering av minnet) – kan pauses, ikke slettes/endres
   };
 }
 export function publicRun62(r) {

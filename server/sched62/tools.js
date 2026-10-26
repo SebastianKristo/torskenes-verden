@@ -176,6 +176,9 @@ async function validateChange(args, ctx, kind) {
   const tr = resolveTarget62(ctx.user, args.target, ctx.text, ctx, verb);
   if (tr.error || tr.ask) return tr;
   const row = tr.row;
+  // Prompt 63: systemoppgaven (nattlig oppsummering av minnet) kan bare stoppes (pause) eller slås på igjen.
+  if (row.source === 'system' && action === 'delete') action = 'pause';
+  if (row.source === 'system' && action === 'move') return { error: `«${row.title}» er en systemoppgave – den kan bare stoppes eller slås på igjen` };
   const base = { id: row.id, title: row.title, label: row.label, action };
   if (action === 'delete') return { args: base, summary: `Slette den faste oppgaven «${row.title}» (${row.label}) og loggen? Stemmer det?` };
   if (action === 'stop' || action === 'pause') {

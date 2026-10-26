@@ -78,6 +78,8 @@ export async function compute62(row, { now = Date.now(), runId = null } = {}) {
       if (!res.met) return { status: 'condition_false', condition: condOut, reason: `Ikke oppfylt: ${cond.label}` };
       return { status: 'ok', condition: condOut, result: conditionSentence62(cond, res, data) ?? `Betingelsen er oppfylt: ${cond.label}.` };
     }
+    // Prompt 63 (del 5): systemoppgaven «Nattlig oppsummering av minnet» – ingen levering kl. 03 (push kommer om morgenen).
+    if (row.kind === 'memory') return (await import('../mem63/nightly.js')).computeMemory63(row, { now });
     if (row.kind === 'reminder') return { status: 'ok', result: `Påminnelse: ${row.what.charAt(0).toUpperCase()}${row.what.slice(1)}.` };
     if (row.kind === 'power') {
       const d = await powerData62(params.zone ?? 'NO1', params.day ?? 'today', now);
@@ -113,7 +115,7 @@ export async function runOnce62(row, { plannedAt = Date.now(), trigger = 'schedu
   const usePrep = prepared && prepared.plannedAt === plannedAt && prepared.out?.status === 'ok' && now - prepared.at < 45 * 60_000;
   const out = usePrep ? prepared.out : await compute62(row, { now, runId });
   let delivery = null;
-  if (out.status === 'ok') delivery = await deliver(row, out.result, { runId, isPrivate: !!out.private || !!row.private });
+  if (out.status === 'ok' && !out.noDeliver) delivery = await deliver(row, out.result, { runId, isPrivate: !!out.private || !!row.private });
   const fin = finishRun62(runId, { finishedAt: now + (Date.now() - t0), ms: Date.now() - t0, status: out.status, result: out.result ?? null, condition: out.condition ?? null, delivery,
     reason: out.reason ?? (usePrep ? 'Forhåndsberegnet' : null), error: out.error ?? null, traceId: out.traceId ?? null });
   return { run: publicRun62(fin), retry: !!out.retry, raw: out };

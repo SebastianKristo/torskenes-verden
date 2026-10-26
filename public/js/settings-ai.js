@@ -13,6 +13,7 @@ import { mountAiControl } from './ai-control.js';
 import { is2c } from './hltheme.js';
 import './entities60.js'; // prompt 60: entitetsregisteret fyller [data-ent60] under «Glimt husker»
 import './recipes61.js'; // prompt 61: «Glimt lærer» fyller [data-learn61] under entitetsregisteret
+import './memory63.js'; // prompt 63: forslag, motstrid og «ikke brukt på lenge» fyller [data-mem63] øverst i «Glimt husker»
 import { mountReceipts48 } from './receipts48-set.js'; // prompt 48: Innstillinger → AI → Kvitteringer (Mac-OCR, steg i kjeden)
 // Prompt 32 (claude-code-sok-fullfor-forst.md): GLIMT I SØKEFELTET → «Send til Chat etter» 5 / 8 / 15 / 30 s (hs_timeout_s i /api/me/layout).
 const HS = [5, 8, 15, 30];
@@ -26,7 +27,10 @@ const fin = async (path, opts = {}) => {
   return d;
 };
 
+let reloadAi = null; // prompt 63: «Glimt husker»-lista lastes på nytt når forslag godkjennes / ubrukte fakta slettes
+if (typeof document !== 'undefined') document.addEventListener('mem63:changed', () => { api('/glimt/memory').then((d) => { A.mem = d.items ?? []; reloadAi?.(); }).catch(() => {}); });
 export async function loadAi(reload, force = false) {
+  if (reload) reloadAi = reload;
   if ((A.loaded && !force) || A.loading) return;
   A.loading = true;
   const [c, m, p, a, o, g, l] = await Promise.allSettled([api('/chat/settings'), api('/chat/models'), fin('/ai-privacy'), fin('/ai-audit?limit=50'), isAdmin() ? api('/integrations/openwebui') : Promise.resolve(null), api('/glimt/memory'), api('/me/layout')]);
@@ -111,8 +115,10 @@ export function aiView({ group, row, note }) {
 function memoryGroup(group, row) {
   const note = 'Det du lærer Glimt, f.eks. at «Påhåret» er frisøren din. Brukes når du legger inn timer og spør «når er neste frisørtime». Lagres bare for deg og sendes aldri til sky.';
   if (!A.mem) return group('Glimt husker', [row({ t: 'Ikke tilgjengelig', s: A.memErr ? `Serveren svarte: ${A.memErr}` : 'Oppdater serveren' })], esc(note));
-  const rows = A.mem.map((m) => ({ q: `glimt husker ${m.match} ${m.type ?? ''} ${m.title ?? ''}`, html: `<div class="sg-row"><span class="sg-txt"><b data-no-i18n>${esc(m.match)}</b><span data-no-i18n>${esc(memoryLine(m))}</span></span><button type="button" class="sg-btn2" data-ai-mdel="${esc(m.id)}" aria-label="Slett ${esc(m.match)}">Slett</button></div>` }));
-  if (!rows.length) rows.push({ q: 'glimt husker', html: '<div class="sg-row"><span class="sg-txt"><span>Glimt husker ingenting ennå. Skriv f.eks. «husk at Påhåret er frisøren min» til Glimt.</span></span></div>' });
+  const rows = A.mem.map((m) => ({ q: `glimt husker ${m.match} ${m.type ?? ''} ${m.title ?? ''}`, html: `<div class="sg-row"><span class="sg-txt"><b data-no-i18n>${esc(m.match)}</b><span>${m.stale ? '<i class="m63-chip">ikke brukt på lenge</i>' : ''}<span data-no-i18n>${esc(m.kind === 'fact' && m.note ? `er ${m.note}` : memoryLine(m))}</span></span></span><button type="button" class="sg-btn2" data-ai-mdel="${esc(m.id)}" aria-label="Slett ${esc(m.match)}">Slett</button></div>` }));
+  // Prompt 63 (prompt 49 del 5): forslag fra nattjobben, motstrid og ubrukte fakta (memory63.js fyller plassen).
+  rows.unshift({ q: 'glimt husker forslag godkjenn avvis rediger motstrid ikke brukt på lenge ubrukte fakta behold slett nattlig oppsummering', html: '<div data-mem63 data-hl="ai-mem63"></div>' });
+  if (rows.length === 1) rows.push({ q: 'glimt husker', html: '<div class="sg-row"><span class="sg-txt"><span>Glimt husker ingenting ennå. Skriv f.eks. «husk at Påhåret er frisøren min» til Glimt.</span></span></div>' });
   rows.push(A.memAdd ? { q: 'glimt husker legg til', html: `<form class="sg-form" data-ai-mform>
       <label class="sg-field"><span>Navn</span><input name="match" required minlength="2" maxlength="80" placeholder="Påhåret" autocomplete="off"></label>
       <label class="sg-field"><span>Type</span><select name="type" aria-label="Type">${LEARN_TYPES.map(([v, n]) => `<option value="${esc(v)}">${esc(n)}</option>`).join('')}</select></label>

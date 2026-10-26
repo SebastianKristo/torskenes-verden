@@ -49,6 +49,8 @@ import { entitiesApi60 } from './convo60/api.js'; // prompt 60 (prompt 49 del 3)
 import { recipesApi61 } from './recipes61/api.js'; // prompt 61 (prompt 49 del 1): Glimt lærer (oppskrifter)
 import { schedulesApi62 } from './sched62/api.js'; // prompt 62 (prompt 49 del 2): planlagte oppgaver («Faste oppgaver»)
 import { startScheduler62 } from './sched62/scheduler.js'; // prompt 62: scheduler (tikk hvert minutt, ikke i test)
+import { memoryApi63 } from './mem63/api.js'; // prompt 63 (prompt 49 del 5): minnet holder seg ryddig (forslag, motstrid, ubrukte fakta)
+import { startMem63 } from './mem63/nightly.js'; // prompt 63: systemoppgaven kl. 03 og morgenvarselet (ikke i test)
 import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
 import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
@@ -849,6 +851,7 @@ app.route('/api/system', logs44Api); // prompt 44: /api/system/containers, /api/
 app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/version'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); });
 app.get('/api/system/changelog', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/changelog'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); }); // prompt 36
 app.route('/api/glimt/news-digest', newsDigestApi); // prompt 40: samme som POST /api/news/glimt
+app.route('/api/glimt/memory', memoryApi63); // prompt 63: /pending, /conflicts, /stale, /hygiene (før «Glimt husker»-rutene)
 app.route('/api/glimt/memory', glimtMemoryApi); // prompt 33: GET/POST/DELETE, POST /:id/apply (sesjon eller app-token, per bruker)
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
 app.route('/api/ai/memory', aiMemory43Api); // prompt 43: AI-minne per bruker
@@ -869,6 +872,7 @@ app.route('/api/glimt/entities', entitiesApi60); // prompt 60: entitetsregistere
 app.route('/api/glimt/recipes', recipesApi61); // prompt 61: oppskrifter som lærer av bruk (per bruker)
 app.route('/api/glimt/schedules', schedulesApi62); // prompt 62: planlagte oppgaver (per bruker)
 startScheduler62();
+startMem63();
 app.route('/api/glimt', glimtApi); // prompt 34: POST /api/glimt {prompt, tool:'calendar'} (etter /api/glimt/memory)
 app.use('/api/assist', assistLocalMw44); // prompt 44: local (Glimt-tid) i svaret
 app.route('/api/assist', assistApi); // prompt 31: Glimt-ruteren (sesjon eller app-token, per bruker)

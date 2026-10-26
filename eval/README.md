@@ -244,3 +244,22 @@ npm run eval -- --case 30,31,32,33,34,35 --sched62 off   # før/etter: planlagte
 
 - Strømprisene er falske data i eval (`h.setPower62([...24 timepriser i kr/kWh])`), hvakosterstrommen.no nås ikke.
 - `h.schedules()`, `h.scheduleRuns(id)`, `h.runNow62(id)` (steget har `modelCalls:[før, etter]`) og `h.briefs()` finnes for casene.
+
+
+### Minnet holder seg ryddig (prompt 63, prompt 49 del 5)
+
+```sh
+npm run eval -- --case 36,37,38,39               # casene for nattlig oppsummering, motstrid og ubrukte fakta
+npm run eval -- --case 36,37,38,39 --mem63 off   # før/etter: alt for del 5 av (casene feiler da med vilje)
+```
+
+| # | Case | Sjekker (lagret data og struktur) |
+|---|---|---|
+| 36 | «Hva bør jeg kjøpe til Kari, søsteren min, …» → nattjobben | Forslag (`pending`) «Kari er søsteren din» fra samtalen, ikke i minnet før «godkjenn», etter godkjenning i `glimt_memory` |
+| 37 | To forslag (sporet) → avvis begge → ny natt | Aldri i minnet, ikke foreslått på nytt, avvisningene husket |
+| 38 | «Nina er frisør» i minnet + «Nina er tannlegen min» | Motstrid `value` med valgene behold A / behold B / begge, godkjenning stoppes (409), minnet urørt før valget, «behold B» → tannlege |
+| 39 | Faktum ubrukt i 120 dager | Markert (`/stale`), ikke slettet etter to netter, «behold» fjerner merket, «sist brukt» settes når Glimt bruker faktumet |
+
+- `h.runMemory63()` kjører nattjobben nå (samme kode som systemoppgaven kl. 03), `h.pending63()`, `h.conflicts63()`, `h.stale63()` og
+  `h.seedTrace63(tekst)` (en Glimt-forespørsel tidligere i dag i sporet) finnes for casene. Med ekte modell foreslår også den lokale
+  modellen (gaten, bakgrunnsprioritet, `think:false`, JSON-schema, bare lokal) – forslag som ikke står i teksten forkastes i koden.
