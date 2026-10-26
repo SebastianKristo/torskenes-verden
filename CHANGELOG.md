@@ -2,6 +2,16 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.53.0] – 26.10.2026 · Ryddig minne, bedre mikrofonknapp og Vær på mobil
+- **Glimt holder minnet ryddig:**
+  - Hver natt kl. 03 foreslår Glimt nye fakta fra dine egne samtaler, rettelser og avtaler. Ingenting lagres i minnet før du sier ja. Om morgenen får du et varsel når det finnes forslag.
+  - Når to fakta motsier hverandre, spør Glimt hvilket som gjelder (behold det ene, det andre eller begge).
+  - Fakta som ikke er brukt på 90 dager merkes, men slettes aldri av seg selv.
+  - Forslag, motstrid og gamle fakta finner du i «Glimt husker» under Innstillinger → AI. Nattjobben står i Faste oppgaver og kan settes på pause.
+- **Mikrofonknappen i søkefeltet på web** er en ren, rund knapp med ikonet midt i, rød under opptak.
+- **Vær på mobil:** dra-pillene (Temp/Regn/Vind, Faktisk/Føles som og kartlag) følger nå fingeren.
+- **Tregere AI-jobber rettet:** regelen «Tenking» fikk JSON-jobber og bakgrunnsjobber (modellanbefaling, domener, ukas vær) til å tenke til svaret ble tomt. De tenker ikke lenger, og fritekst som tenker får plass til tankene.
+
 ## [4.52.0] – 26.10.2026 · Faste oppgaver i vanlig språk
 - **Faste oppgaver:** «Send meg strømprisene hver morgen kl. 7», «Minn meg på å betale husleia den 1. hver måned», «Hver fredag kl. 16: oppsummer hva jeg har brukt penger på denne uka», «Si fra hvis strømprisen går over 2 kr i morgen».
   - Glimt bekrefter alltid hvordan oppgaven er forstått før den lagres.
