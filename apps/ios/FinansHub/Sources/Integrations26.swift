@@ -196,6 +196,8 @@ extension Store {
         if paperTab.hasPrefix("innst-glimt:") { return "innst-glimt" }
         // Prompt 67: Finans-sidene ligger under Moduler → Finans (som på web) og går tilbake dit.
         if ["innst-kat", "innst-regler", "innst-aksjer", "innst-fin"].contains(paperTab) { return "innst-finans67" }
+        // Prompt 68: Familie og helse, Helse og posisjon og Home Assistant · Mobilapp ligger under Brukere og familie.
+        if ["innst-fam", "innst-helse", "innst-hahelse"].contains(paperTab) { return Users68.key }
         return nil
     }
 
@@ -204,6 +206,7 @@ extension Store {
         if t == "innst-integ" { return "Integrasjoner" }
         if t == "innst-glimt" { return "Glimt" }
         if t == "innst-finans67" { return "Finans" }
+        if t == Users68.key { return Users68.name }
         if t == "bursdag" { return "Bursdager" }
         if t == "kalender" { return "Kalender" }
         return nil

@@ -166,7 +166,8 @@ struct G67FlagsView: View {
                     }
                 }
                 if !flags.msg.isEmpty && flags.data != nil { G67Note(text: flags.msg) }
-                if flags.admin && Update28Model.isAdmin(store) { adminPart }
+                // Prompt 68: uten egne brytere for alle (Kvalitet: de ligger i «Innstillinger for nattlig eval») vises ikke admin-delen.
+                if flags.admin && Update28Model.isAdmin(store) && !flags.serverKeys.isEmpty { adminPart }
             }
         }
         .task { await flags.load(store) }

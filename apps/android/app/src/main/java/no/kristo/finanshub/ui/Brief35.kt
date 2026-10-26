@@ -538,7 +538,10 @@ internal fun GlimtSettings35(vm: AppViewModel, figures: Boolean) {
             Text("Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle, Gris …) tar over når temaet passer, om det er slått på under. Er «Glimt» valgt, blir verten Glimt Natt mellom 21 og 06.",
                 color = p.mut, fontSize = 12.5.sp, lineHeight = 17.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
         }
-        if (figures) CharAdmin52(vm) // prompt 52 (AND52B): admin setter standardfigur per bruker (f.eks. Blekksprut)
+        // Prompt 52 (AND52B): standardfigur per bruker (admin) – prompt 68: flyttet til Husstand → Brukere og familie (ui/Users68Ui.kt).
+        if (figures && vm.userIsAdmin) Users68Link(vm, "Standardfigur per bruker (admin) ligger under Brukere og familie") {
+            vm.closeGlimt35(); vm.openPaperPage("set"); vm.settingsPage = USERS68
+        }
         // Prompt 40 (claude-code-glimt-jul.md): Julemodus rett under figurvalget og teksten om vennene, før Glimt-brief-bryteren.
         Jul40Card(vm)
         Mai41Card(vm) // Prompt 41: Høytider → 17. mai

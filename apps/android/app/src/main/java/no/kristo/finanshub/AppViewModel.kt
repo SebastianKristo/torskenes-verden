@@ -719,6 +719,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "settings", "innstillinger" -> settingsLink35(uri.path?.trim('/').orEmpty())
             // Prompt 67: data.deepLink fra push (finanshub://faste-oppgaver, finanshub://glimt-husker, finanshub://kvalitet/run/<id>).
             "faste-oppgaver", "glimt-husker", "kvalitet" -> settingsLink35((uri.host + (uri.path ?: "")).trim('/'))
+            // Prompt 68: Innstillinger → Husstand → Brukere og familie (finanshub://familie er fortsatt Familie-siden, se familyLink50).
+            "husstand", "brukere-og-familie" -> settingsLink35("brukere-og-familie")
             // Prompt 51 (ANDPLAT51): app-snarveier og App Actions (Shortcuts51Plat.kt).
             "act51" -> act51Link(uri)
             // Prompt 51 (ANDFEAT51): Planlegging, familiekalender, Media-kveld og felles søk (Feat51.kt).

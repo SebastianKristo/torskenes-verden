@@ -65,6 +65,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "huske" to "Gjøremål", // prompt 44: synk med Home Assistant
     "nyheter" to "Nyheter", // prompt 46: innstillingene fra Nyheter-siden (kilder, kategorier, For deg, sammendrag)
     "media" to "Media", // prompt 45: innstillingene fra Media (status per tjeneste, Integrasjoner, Rydd uovervåkede)
+    USERS68 to "Brukere og familie", // prompt 68: HUSSTAND (ui/Users68Ui.kt)
     "prog50" to "System", // prompt 50: egen side i høyre kolonne på brett · prompt 67: «System» under SERVER (bare admin)
 ) + SET67_TITLES // prompt 67: Glimt og undersidene, App og Finans (ui/Set67Ui.kt)
 
@@ -145,7 +146,9 @@ private fun PaperSettings17Body(vm: AppViewModel, navBottom: Dp, onPrivacyChange
             "data" -> item { DataPage(vm) }
             "backup" -> item { BackupPage(vm) }
             "about" -> item { AboutPage(vm) }
-            "healthpos" -> item { HealthPosPage(vm) }
+            // Prompt 68: «Brukere og familie» samler brukerne og Logg inn som (fra Konto), Glimt-figur per bruker, Familie og Helse og posisjon.
+            USERS68 -> item { Users68Page(vm) }
+            "healthpos" -> item { LaunchedEffect(Unit) { vm.settingsPage = USERS68 } } // gamle lenker og søk
             // Prompt 32: den gamle Oppdatering-siden (og lenker hit) går til Nordlys-siden.
             "update" -> item { LaunchedEffect(Unit) { vm.settingsPage = null; vm.openNordlys31() } }
             "sysbackup" -> item { Backup29Page(vm) } // Prompt 29: backup av hele systemet (bare admin)

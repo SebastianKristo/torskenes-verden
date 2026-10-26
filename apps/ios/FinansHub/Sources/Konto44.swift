@@ -168,7 +168,7 @@ final class Konto44 {
             if undo.isEmpty && changes > 0 { undo = "/users/\(i.userId)/layout/undo" }
             let n: String = changes == 1 ? "1 endring lagret" : "\(changes) endringer lagret"
             self.flash(msg.isEmpty ? "Logget ut av \(i.name) · \(n). Du er \(i.adminName) igjen." : msg, undo: undo, method: method)
-            store.paperGo("innst-konto")
+            store.paperGo(Users68.key) // prompt 68: Logg inn som ligger på Brukere og familie
         }
     }
 

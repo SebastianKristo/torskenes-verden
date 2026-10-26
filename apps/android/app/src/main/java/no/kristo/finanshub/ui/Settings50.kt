@@ -62,6 +62,7 @@ private fun navKey50(vm: AppViewModel, page: String?): String? = when {
     page == "kal" && vm.b26.kalFrom == "integ" -> "integ"
     page == "look" -> "tilpass"
     page == "haptics" -> "notify"
+    page == "healthpos" -> USERS68 // prompt 68: Helse og posisjon ligger på Brukere og familie
     else -> page
 }
 

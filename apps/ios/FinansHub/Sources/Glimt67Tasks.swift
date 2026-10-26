@@ -720,10 +720,17 @@ struct G67QualityPage: View {
             } else {
                 G67Weekly()
                 if Update28Model.isAdmin(store) { G67EvalRuns() }
+                // Prompt 68: «Innstillinger for nattlig eval» – bare når både /settings og appen sier admin.
+                if evalAdmin { G67EvalSettingsView() }
                 G67FlagsView(flags: G67Flags.quality, title: "Kvalitet", note: "Av her slår funksjonen av for alle brukere. Ukerapporten kan hver bruker i tillegg slå av for seg selv over.")
             }
         }
         .task { await q.load(store, admin: Update28Model.isAdmin(store)) }
+    }
+
+    private var evalAdmin: Bool {
+        let server: Bool = JS.bool(q.settings, "admin") == true
+        return server && Update28Model.isAdmin(store)
     }
 }
 
@@ -980,5 +987,150 @@ struct G67EvalCase: View {
         .padding(8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(p.line.opacity(0.25), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+/* ---------- Prompt 68: Innstillinger for nattlig eval (admin) ---------- */
+
+/// Brytere for nattlig eval og ukerapport for alle, og kjøringer per case, tidsgrense, «Gi plass etter» og «Lagre rapporter».
+/// Verdiene klemmes til grensene (G67EvalLimits), og «Lagre» sender bare det som er endret (G67EvalSet).
+struct G67EvalSettingsView: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    @MainActor private var m: G67EvalSet { G67EvalSet.shared }
+    @MainActor private var q: G67Quality { G67Quality.shared }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            PLabel(text: "Innstillinger for nattlig eval").padding(.leading, 4).padding(.top, 14)
+            G67Card {
+                G67EvalToggle(title: "Nattlig eval", sub: nightlyHelp, on: m.nightly, disabled: m.busy) { (v: Bool) in m.setNightly(v) }
+                G67Sep()
+                G67EvalToggle(title: "Ukerapport for alle", sub: "Av her slår ukerapporten av for alle brukere.", on: m.weekly, disabled: m.busy) { (v: Bool) in m.setWeekly(v) }
+                ForEach(G67EvalLimits.all) { (l: G67EvalLimit) in
+                    G67Sep()
+                    G67EvalStepper(l: l, off: off(l))
+                }
+                G67Sep()
+                G67EvalActions()
+                if !m.err.isEmpty {
+                    G67Sep()
+                    G67Line(title: m.err, bad: true)
+                }
+            }
+            G67Note(text: "«Nattlig eval» står også i Faste oppgaver som systemoppgave, der den kan settes på pause.")
+        }
+    }
+
+    private var nightlyHelp: String {
+        let h: String = JS.str(JS.dict(q.settings, "help"), "nightly") ?? ""
+        if !h.isEmpty && h != "…" { return h }
+        return G67Flags.quality.defs.first?.help ?? ""
+    }
+
+    /// Som web: kjøringer, tidsgrense og «Gi plass etter» er låst når nattlig eval er av.
+    private func off(_ l: G67EvalLimit) -> Bool {
+        if m.busy { return true }
+        if l.key == G67EvalLimits.keepDays.key { return false }
+        return !m.nightly
+    }
+}
+
+struct G67EvalToggle: View {
+    @Environment(\.paper) private var p
+    let title: String
+    let sub: String
+    let on: Bool
+    var disabled: Bool = false
+    let set: (Bool) -> Void
+
+    var body: some View {
+        Toggle(isOn: Binding<Bool>(get: { on }, set: { (v: Bool) in set(v) })) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .tint(p.pos)
+        .disabled(disabled)
+        .padding(.horizontal, 14).padding(.vertical, 9)
+    }
+}
+
+struct G67EvalStepper: View {
+    @Environment(\.paper) private var p
+    let l: G67EvalLimit
+    let off: Bool
+    @MainActor private var m: G67EvalSet { G67EvalSet.shared }
+
+    private var value: Binding<Int> {
+        Binding<Int>(get: { m.value(l) }, set: { (v: Int) in m.set(l, v) })
+    }
+
+    private var changed: Bool { m.value(l) != m.saved(l) }
+
+    private var range: ClosedRange<Int> { l.lo...l.hi }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(l.label).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                Text(l.help).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 10) {
+                presets
+                Spacer(minLength: 6)
+                Stepper(l.label, value: value, in: range, step: l.step).labelsHidden()
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .disabled(off)
+        .opacity(off ? 0.5 : 1)
+        .accessibilityElement(children: .contain)
+    }
+
+    /// Verdien som knapp: hurtigvalgene fra web.
+    private var presets: some View {
+        Menu {
+            ForEach(l.presets, id: \.self) { (n: Int) in
+                Button(l.text(n)) { m.set(l, n) }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(l.text(m.value(l))).font(PF.ui(15, .bold)).foregroundStyle(changed ? p.lab : p.ink)
+                Image(systemName: "chevron.up.chevron.down").font(.system(size: 11, weight: .semibold)).foregroundStyle(p.mut)
+            }
+            .padding(.horizontal, 12).frame(height: 34)
+            .overlay(Capsule().stroke(p.line, lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .accessibilityLabel(l.label + ": " + l.text(m.value(l)))
+    }
+}
+
+struct G67EvalActions: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    @MainActor private var m: G67EvalSet { G67EvalSet.shared }
+
+    private var status: String {
+        if !m.msg.isEmpty { return m.msg }
+        let n: Int = m.changes().count
+        if n == 0 { return "Ingen endringer" }
+        if n == 1 { return "1 endring ikke lagret" }
+        return "\(n) endringer ikke lagret"
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(status).font(PF.ui(12.5)).foregroundStyle(p.mut).frame(maxWidth: .infinity, alignment: .leading)
+            if m.dirty {
+                G67Btn(title: "Angre", disabled: m.busy) { m.reset() }
+            }
+            G67Btn(title: m.busy ? "Lagrer …" : "Lagre", primary: true, disabled: m.busy || !m.dirty) {
+                Task { await m.save(store) }
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 6)
     }
 }

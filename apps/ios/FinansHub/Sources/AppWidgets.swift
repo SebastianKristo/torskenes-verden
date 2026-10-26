@@ -47,6 +47,8 @@ extension Store {
         // Prompt 35: fra Kalender-appen – finanshub://glimt (Innstillinger → Glimt) og finanshub://integrasjoner.
         if page == "glimt" { paperGo("hjem"); Glimt35Model.shared.showPage = true; return }
         if page == "integrasjoner" || page == "integrations" { paperGo("innst-integ"); return }
+        // Prompt 68: finanshub://husstand, brukere-og-familie og innstillinger/familie → Innstillinger → Brukere og familie.
+        if Users68.isLink(page, sub) { paperGo(Users68.key); return }
         // Prompt 67: finanshub://faste-oppgaver, glimt-husker, kvalitet/run/<id> og kvalitet/uke/<uke> (deepLink i push fra serveren).
         if ["faste-oppgaver", "glimt-husker", "kvalitet"].contains(page), let go = G67Nav.page("/" + page + url.path) { G67Nav.open(go, self); return }
         if (page == "kalender" || page == "calendar") && KalLink33.forward(url) { return }

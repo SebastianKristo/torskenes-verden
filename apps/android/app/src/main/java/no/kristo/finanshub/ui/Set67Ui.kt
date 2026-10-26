@@ -13,7 +13,7 @@ import no.kristo.finanshub.*
 /*
  * Prompt 67 (ANDSET67, prompt 50b/66 – settings65.js på web): Innstillinger gruppert som på web.
  *   GENERELT    Konto · Sikkerhet · API-tokens · Utseende · Varsler · App
- *   HUSSTAND    Helse og posisjon (appens del av «Brukere og familie»; Logg inn som ligger under Konto som før)
+ *   HUSSTAND    Brukere og familie (prompt 68: brukerne og Logg inn som, Glimt-figur per bruker, Familie, helse og posisjon – ui/Users68Ui.kt)
  *   GLIMT OG AI Glimt (figur/brief/stemme, Glimt husker, Entitetsregister, Glimt lærer, Faste oppgaver, Kvalitet) · AI
  *   TILKOBLINGER Integrasjoner · Kalender og gjøremål
  *   MODULER     Moduler · Finans · Media · Nyheter
@@ -56,7 +56,8 @@ internal fun menu67(vm: AppViewModel): List<Menu67Group> {
             Menu67Row("app67", "App", "Appprofil, widgets, skanning, server, data og oppdatering", Icons.Filled.PhoneAndroid, if (appAvail) "Oppdater" else null, page("app67")),
         )),
         Menu67Group("Husstand", listOf(
-            Menu67Row("healthpos", "Helse og posisjon", "Health Connect, typer og posisjonsdeling", Icons.Filled.MonitorHeart, go = page("healthpos")),
+            // Prompt 68: «Brukere og familie» (ui/Users68Ui.kt) – brukerne og Logg inn som (admin), Glimt-figur per bruker, Familie, helse og posisjon.
+            Menu67Row(USERS68, "Brukere og familie", users68Sub(admin), Icons.Filled.Groups, go = page(USERS68)),
         )),
         Menu67Group("Glimt og AI", listOf(
             Menu67Row("glimt67", "Glimt", "Figur, brief, stemme · Glimt husker, Glimt lærer, faste oppgaver og kvalitet", Icons.Filled.AutoAwesome, go = page("glimt67")),

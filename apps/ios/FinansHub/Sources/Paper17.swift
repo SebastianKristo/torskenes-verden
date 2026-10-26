@@ -663,13 +663,9 @@ struct PaperSettings17: View {
         // Tilkoblinger · Moduler · Server. Ingen side er fjernet, bare flyttet; Finans-radene ligger under Moduler → Finans.
         var out: [Settings50Group] = []
         out.append(Settings50Group(title: "Generelt", offset: 0, rows: generalRows67(store)))
-        // Prompt 42: Apple Health, Health Connect, Home Assistant · Mobilapp og hva som deles (Health42.swift).
-        var family: [PaperLinkRow] = [
-            PaperLinkRow(name: "Familie og helse", sub: "Deling av posisjon, personvern og Apple Helse", icon: "person.2") { store.paperGo("innst-fam") },
-        ]
-        family.append(contentsOf: Health42.rows(store, p))
-        family.append(PaperLinkRow(name: "Helse og posisjon", sub: HealthSync.shared.master ? "Apple Health er på · posisjon og bakgrunn" : "Apple Health er av · posisjon og bakgrunn", icon: "heart.text.square") { store.paperGo("innst-helse") })
-        out.append(Settings50Group(title: "Brukere og familie", offset: 4, rows: family))
+        // Prompt 68: én rad til siden «Brukere og familie» (Users68.swift) – Logg inn som, eier, figur per bruker, Familie og helse
+        // (Apple Health, Health Connect, Home Assistant · Mobilapp, hva som deles, Helse og posisjon) ligger der.
+        out.append(Settings50Group(title: "Brukere og familie", offset: 4, rows: [Users68.menuRow(store)]))
         out.append(Settings50Group(title: "Glimt og AI", offset: 5, rows: [
             // Prompt 67: Glimt-siden (figur/brief/stemme, Glimt husker, Entitetsregister, Glimt lærer, Faste oppgaver, Kvalitet).
             PaperLinkRow(name: "Glimt", sub: "Figur, brief, stemme · Glimt husker, lærer, faste oppgaver og kvalitet", icon: "sparkle", tint30: Color(hex: "#b23a2a")) { store.paperGo("innst-glimt") },
@@ -707,7 +703,7 @@ struct PaperSettings17: View {
     /// Prompt 67: GENERELT – Konto, Utseende, Varsler og App (som web).
     @MainActor private static func generalRows67(_ store: Store) -> [PaperLinkRow] {
         [
-            PaperLinkRow(name: "Konto", sub: "Profil, server, brukere og flere kontoer", icon: "person.crop.circle") { store.paperGo("innst-konto") },
+            PaperLinkRow(name: "Konto", sub: "Profil, server og flere kontoer", icon: "person.crop.circle") { store.paperGo("innst-konto") },
             PaperLinkRow(name: "Sikkerhet", sub: store.lockEnabled ? "Lås med Face ID er på" : "2FA, Face ID og pålitelige enheter", icon: "lock") { store.paperGo("innst-sik") },
             PaperLinkRow(name: "API-tokens", sub: "Snarveier og integrasjoner", icon: "key") { store.loadTokens(); store.paperGo("innst-api") },
             // Prompt 46: skann QR-koden som Kalender (Mac/iOS/Android) eller Finans viser, og godkjenn med Face ID (QrLogin38.swift).
@@ -819,8 +815,8 @@ struct PaperSettingsSub: View {
                 // Prompt 47: med status, Test og «Tilbakestill til standard» (Server47.swift).
                 Server47Group()
                 SettingsSubpage(page: "accounts")
-                // Prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER (Konto44.swift).
-                Konto44Sections()
+                // Prompt 44: FAMILIE · LOGG INN SOM og SERVER · EIER (Konto44.swift) ligger fra prompt 68 på Brukere og familie.
+                PaperLinkList(rows: [Users68.kontoRow(store)]).padding(.top, 6)
             case "sik": SettingsSubpage(page: "security")
             case "api": SettingsSubpage(page: "tokens")
             case "ai": PaperAiSettings()
@@ -861,6 +857,8 @@ struct PaperSettingsSub: View {
             case "glimt:faste": G67SchedPage()
             case "glimt:kvalitet": G67QualityPage()
             case "finans67": PaperLinkList(rows: PaperSettings17.financeRows67(store))
+            // Prompt 68: Innstillinger → Brukere og familie (Users68.swift).
+            case "brukere": Users68Page()
             default: SettingsSubpage(page: key)
             }
         }
@@ -870,7 +868,8 @@ struct PaperSettingsSub: View {
     @Environment(\.paper) private var p41
 
     static let titles: [String: (String, String)] = [
-        "konto": ("Kontoer og brukere", "Profil, brukere og kontoer"),
+        "konto": ("Kontoer og brukere", "Profil, server og kontoer"),
+        "brukere": ("Brukere og familie", "Logg inn som, figur per bruker, familie og helse"),
         "sik": ("Sikkerhet", "2FA, Face ID og enheter"),
         "api": ("API-tokens", "Snarveier og integrasjoner"),
         "ai": ("AI og tolkning", "Motorer, roller og sikkerhet"),

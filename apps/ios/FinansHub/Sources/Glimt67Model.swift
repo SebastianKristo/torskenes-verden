@@ -210,7 +210,7 @@ final class G67Flags {
     static let quality: G67Flags = G67Flags("/glimt/quality/settings", [
         G67FlagDef(key: "nightly", label: "Nattlig eval", help: "Kl. 02 hver natt kjøres eval-testene mot den lokale modellen. Du får push bare når noe som var grønt har blitt rødt. Avbrytes hvis noen bruker Glimt."),
         G67FlagDef(key: "weekly", label: "Ukerapport", help: "Søndag kl. 20: én kort melding med antall forespørsler, andel løst på første forsøk, rettelser, nye oppskrifter, hurtigvei og median svartid."),
-    ], user: ["weekly"])
+    ], user: ["weekly"], server: []) // prompt 68: bryterne for alle ligger i «Innstillinger for nattlig eval» (G67EvalSet)
 
     static let understand: G67Flags = G67Flags("/glimt/agent/understand", [
         G67FlagDef(key: "state", label: "Samtaletilstand", help: "Glimt husker forrige spørsmål i samtalen, så «og i Bergen?» og «flytt den til 11» forstås. Utløper etter 30 min i søket på Hjem og 12 t i Chat."),
@@ -1021,6 +1021,7 @@ final class G67Quality {
         await loadWeek(store)
         if missing { loaded = true; return }
         settings = try? await G67Api.get(store, "/glimt/quality/settings")
+        G67EvalSet.shared.adopt(settings) // prompt 68
         if admin { await loadRuns(store) }
         if let r = openRun {
             openRun = nil
@@ -1113,5 +1114,157 @@ final class G67Quality {
         }
         if let reason = JS.str(r, "reason") { parts.append(reason) }
         return parts.joined(separator: " · ")
+    }
+}
+
+/* ---------- Prompt 68: Innstillinger for nattlig eval (bare admin) ----------
+ PUT /api/glimt/quality/settings {scope:'server', nightly?, weekly?, runs?, maxMinutes?, interactiveWaitSec?, keepDays?}
+ (SERVER64-API.md § 2). Grenser: runs 1–5, maxMinutes 15–360, interactiveWaitSec 5–120, keepDays 7–180. Tekstene fra
+ quality64.js (settingsHtml64). Verdiene klemmes til grensene, og «Lagre» sender bare feltene som er endret. */
+
+struct G67EvalLimit: Identifiable {
+    var id: String { key }
+    let key: String
+    let label: String
+    let help: String
+    let lo: Int
+    let hi: Int
+    let step: Int
+    let def: Int
+    let unit: String
+    /// Hurtigvalgene på web (RUNS64, MAXMIN64, WAIT64, KEEP64 i quality64.js).
+    let presets: [Int]
+
+    func clamp(_ v: Int) -> Int { min(hi, max(lo, v)) }
+
+    func text(_ v: Int) -> String {
+        let n: String = String(v)
+        if unit == "×" { return n + unit }
+        return n + " " + unit
+    }
+}
+
+enum G67EvalLimits {
+    static let runs: G67EvalLimit = G67EvalLimit(key: "runs", label: "Kjøringer per case", help: "Hver test kjøres så mange ganger – suksessraten rapporteres",
+                                                 lo: 1, hi: 5, step: 1, def: 3, unit: "×", presets: [1, 2, 3, 4, 5])
+    static let maxMinutes: G67EvalLimit = G67EvalLimit(key: "maxMinutes", label: "Tidsgrense", help: "Evalen stopper etter så lang tid",
+                                                       lo: 15, hi: 360, step: 15, def: 180, unit: "min", presets: [60, 120, 180, 240, 360])
+    static let wait: G67EvalLimit = G67EvalLimit(key: "interactiveWaitSec", label: "Gi plass etter", help: "Avbryt hvis en vanlig forespørsel venter så lenge",
+                                                 lo: 5, hi: 120, step: 5, def: 20, unit: "s", presets: [10, 20, 30, 60, 120])
+    static let keepDays: G67EvalLimit = G67EvalLimit(key: "keepDays", label: "Lagre rapporter", help: "Eldre rapporter slettes fra serveren",
+                                                     lo: 7, hi: 180, step: 1, def: 30, unit: "dager", presets: [7, 14, 30, 90, 180])
+    static let all: [G67EvalLimit] = [runs, maxMinutes, wait, keepDays]
+}
+
+@MainActor
+@Observable
+final class G67EvalSet {
+    static let shared = G67EvalSet()
+
+    /// Det serveren har (server-delen av /settings).
+    var baseNightly: Bool = true
+    var baseWeekly: Bool = true
+    var base: [String: Int] = [:]
+    /// Det som står i skjemaet.
+    var nightly: Bool = true
+    var weekly: Bool = true
+    var draft: [String: Int] = [:]
+    var busy: Bool = false
+    var msg: String = ""
+    var err: String = ""
+
+    /// Tar inn svaret fra GET/PUT /settings. Ulagrede endringer beholdes, med mindre force.
+    func adopt(_ s: [String: Any]?, force: Bool = false) {
+        guard let srv = JS.dict(s, "server") else { return }
+        let keep: Bool = !force && dirty
+        baseNightly = JS.bool(srv, "nightly") != false
+        baseWeekly = JS.bool(srv, "weekly") != false
+        var b: [String: Int] = [:]
+        for l in G67EvalLimits.all {
+            if let n = JS.int(srv, l.key) { b[l.key] = l.clamp(n) }
+        }
+        base = b
+        if keep { return }
+        nightly = baseNightly
+        weekly = baseWeekly
+        draft = b
+    }
+
+    func saved(_ l: G67EvalLimit) -> Int { base[l.key] ?? l.def }
+
+    func value(_ l: G67EvalLimit) -> Int { draft[l.key] ?? saved(l) }
+
+    func set(_ l: G67EvalLimit, _ v: Int) {
+        draft[l.key] = l.clamp(v)
+        msg = ""
+        err = ""
+    }
+
+    func setNightly(_ on: Bool) {
+        nightly = on
+        msg = ""
+        err = ""
+    }
+
+    func setWeekly(_ on: Bool) {
+        weekly = on
+        msg = ""
+        err = ""
+    }
+
+    /// Bare feltene som er endret.
+    func changes() -> [String: Any] {
+        var out: [String: Any] = [:]
+        if nightly != baseNightly { out["nightly"] = nightly }
+        if weekly != baseWeekly { out["weekly"] = weekly }
+        for l in G67EvalLimits.all {
+            let v: Int = value(l)
+            if v != saved(l) { out[l.key] = v }
+        }
+        return out
+    }
+
+    var dirty: Bool { !changes().isEmpty }
+
+    func reset() {
+        nightly = baseNightly
+        weekly = baseWeekly
+        draft = base
+        msg = ""
+        err = ""
+    }
+
+    func save(_ store: Store) async {
+        var body: [String: Any] = changes()
+        if body.isEmpty { return }
+        body["scope"] = "server"
+        busy = true
+        msg = ""
+        err = ""
+        do {
+            let o: [String: Any] = try await G67Api.send(store, "PUT", "/glimt/quality/settings", body)
+            if JS.dict(o, "server") != nil {
+                G67Quality.shared.settings = o
+                G67Flags.quality.data = o
+                adopt(o, force: true)
+            } else {
+                commitDraft()
+            }
+            msg = "Lagret ✓"
+            Haptics.shared.select()
+        } catch {
+            err = "Kunne ikke lagre: " + G67Api.message(error)
+        }
+        busy = false
+    }
+
+    /// Svar uten server-delen: skjemaet blir det lagrede.
+    private func commitDraft() {
+        baseNightly = nightly
+        baseWeekly = weekly
+        var b: [String: Int] = base
+        for l in G67EvalLimits.all { b[l.key] = value(l) }
+        base = b
+        draft = b
     }
 }

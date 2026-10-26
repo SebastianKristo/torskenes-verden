@@ -258,8 +258,9 @@ internal suspend fun pending31(ctx: Context, api: Api) {
                 u.startsWith("finanshub://") -> u
                 url51(u) != null -> url51(u)!! // prompt 51 (ANDFEAT51): familiekalender og Planlegging (skatt) – Feat51.kt
                 // Prompt 67: /#/innstillinger/faste-oppgaver, …/glimt-husker og …/kvalitet[/run/<id>|/uke/<uke>] → sidene under Glimt.
-                Regex("innstillinger/(?:ai/)?((?:faste-oppgaver|glimt-husker|kvalitet)[\\w/-]*)").find(u) != null ->
-                    "finanshub://settings/" + Regex("innstillinger/(?:ai/)?((?:faste-oppgaver|glimt-husker|kvalitet)[\\w/-]*)").find(u)!!.groupValues[1].trimEnd('/')
+                // Prompt 68: …/brukere-og-familie, …/users, …/husstand og …/familie → Husstand → Brukere og familie (alias67).
+                Regex("innstillinger/(?:ai/)?((?:faste-oppgaver|glimt-husker|kvalitet|brukere-og-familie|users|husstand|familie)[\\w/-]*)").find(u) != null ->
+                    "finanshub://settings/" + Regex("innstillinger/(?:ai/)?((?:faste-oppgaver|glimt-husker|kvalitet|brukere-og-familie|users|husstand|familie)[\\w/-]*)").find(u)!!.groupValues[1].trimEnd('/')
                 u.contains("/chat/") -> "finanshub://chat/" + u.substringAfterLast("/chat/").substringBefore('?')
                 u.contains("system") || u.contains("oppdater") -> "finanshub://nordlys"
                 u.contains("subscriptions") || u.contains("abo") -> "finanshub://subs"

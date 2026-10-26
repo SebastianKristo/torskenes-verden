@@ -41,7 +41,8 @@ final class Set24Model {
         "ha": ["Home Assistant"], "domene": ["Cloudflare"], "cloudflare": ["Cloudflare"], "vær": ["MET"], "yr": ["MET"], "kart": ["Kart", "Helse og posisjon"],
         "posisjon": ["Helse og posisjon"], "helse": ["Helse og posisjon"], "skritt": ["Helse og posisjon"], "kvitter": ["IMAP", "Skanning"],
         "epost": ["IMAP"], "mail": ["IMAP"], "finn": ["Finn"], "profil": ["Standard", "Finans + Boliger", "Boliger-profil"], "fane": ["Fanelinje i Hjem", "Fanelinje og Mer i Finans"],
-        "widget": ["Widgets"], "modul": ["Moduler"], "bruker": ["Kontoer og brukere"], "bilde": ["Unsplash/Pexels", "Utseende og fanelinje"],
+        "widget": ["Widgets"], "modul": ["Moduler"], "bruker": ["Brukere og familie", "Kontoer og brukere"],
+        "familie": ["Brukere og familie", "Familie og helse"], "husstand": ["Brukere og familie"], "barn": ["Brukere og familie"], "rolle": ["Brukere og familie"], "bilde": ["Unsplash/Pexels", "Utseende og fanelinje"],
     ]
 
     static let stop: Set<String> = ["hvor", "hvordan", "kan", "jeg", "du", "meg", "min", "mitt", "mine", "en", "et", "den", "det", "på", "i", "til",
@@ -54,7 +55,9 @@ final class Set24Model {
             out.append(Set24Item(id: id, title: t, sub: s, path: path, route: r))
         }
         for d in Prof24.shared.defs { add("profil." + d.key, d.name, d.sub, "Profil", "profile:" + d.key) }
-        add("konto", "Kontoer og brukere", "Profil, brukere og flere kontoer", "Konto", "innst-konto")
+        add("konto", "Kontoer og brukere", "Profil, server og flere kontoer", "Konto", "innst-konto")
+        // Prompt 68: Brukere og familie (Users68.swift) – brukere, Logg inn som, eier, figur per bruker, Familie og helse.
+        add("brukere68", Users68.name, "Brukere, roller, Logg inn som, familie, husstand, barn, helse og posisjon", "Husstand", Users68.key)
         add("konto.bilde", "Profilbilde", "Vises i menyer og hilsener", "Kontoer og brukere", "innst-konto")
         add("sik", "Sikkerhet", "2FA, Face ID og pålitelige enheter", "Konto", "innst-sik")
         add("sik.2fa", "Totrinnsbekreftelse", "Autentiseringsapp", "Sikkerhet", "innst-sik")
@@ -83,8 +86,10 @@ final class Set24Model {
         add("trk", "Pakkevarsler", "Sporing og kvitteringer", "Varsler og haptikk", "innst-trk")
         add("kal", "Kalendere", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "App", "innst-kal")
         add("integ", "Integrasjoner", "Home Assistant, Google, Entur, Bring og flere", "App", "innst-integ")
-        add("helse", "Helse og posisjon", "Apple Health, posisjon og bakgrunn", "App", "innst-helse")
-        add("fam", "Familie og helse", "Deling i Familie", "App", "innst-fam")
+        add("helse", "Helse og posisjon", "Apple Health, posisjon og bakgrunn", Users68.name, "innst-helse")
+        add("fam", "Familie og helse", "Deling i Familie", Users68.name, "innst-fam")
+        add("helse.apple68", "Apple Health", "Koble til og velg hva som deles", Users68.name, "innst-helse")
+        add("helse.ha68", "Home Assistant · Mobilapp", "Helse fra Mobilapp-integrasjonen", Users68.name, "innst-hahelse")
         add("avansert", "Avansert", "Skanning, widgets, server og data", "App", "innst-avansert")
         add("skann", "Skanning", "Kamera, beskjæring og AI", "Avansert", "innst-skann")
         add("widgets", "Widgets", "Hjemskjermen", "Avansert", "innst-widgets")
@@ -98,10 +103,11 @@ final class Set24Model {
         if Update28Model.isAdmin(store) {
             add("logger44", "Logger", "Docker-logger, logg, feil og feilsøking", "Server", "logs44")
             add("versjoner44", "Tidligere versjoner", "Rull tilbake, installer en eldre versjon", "System", "innst-oppdatering")
-            add("loggInnSom44", "Logg inn som", "Rediger oppsettet til et familiemedlem", "Kontoer og brukere", "innst-konto")
+            add("loggInnSom44", "Logg inn som", "Rediger oppsettet til et familiemedlem", Users68.name, Users68.key)
+            add("figur68", "Standardfigur per bruker", "Brief og Glimt-figur per bruker", Users68.name, Users68.key)
         }
         add("huske44", "Gjøremål", "Synk med Home Assistant", "App", "innst-huske")
-        add("eier44", "Overfør eierskap", "Eier av serveren", "Kontoer og brukere", "innst-konto")
+        add("eier44", "Overfør eierskap", "Eier av serveren", Users68.name, Users68.key)
         // Prompt 34: handlinger med mål-id (Oppdater nå, Se etter oppdatering, Krev passord) og AI-kontroll (Settings34.swift).
         out += Set24Model.items34(store)
         let integ: [Int24Item] = Int24Model.shared.items
@@ -338,7 +344,8 @@ struct Set24Results: View {
         case "innst-varsler", "innst-haptikk", "innst-trk": return "bell"
         case "innst-ut", "innst-tilpass": return "paintpalette"
         case "innst-appprofil": return "person.2"
-        case "innst-helse", "innst-fam": return "heart.text.square"
+        case "innst-helse", "innst-fam", "innst-hahelse": return "heart.text.square"
+        case "innst-brukere": return "person.2"
         default: return "gearshape"
         }
     }

@@ -966,6 +966,74 @@ class G67Q {
     val det = mutableStateMapOf<String, G67QDet>()
     val md = mutableStateMapOf<String, String>()
     var busy by mutableStateOf(false)
+    /** Prompt 68: «Innstillinger for nattlig eval» (admin) – serverens verdier og utkastet som ikke er lagret. */
+    var cfg by mutableStateOf<Map<String, Any>>(emptyMap())
+    var draft by mutableStateOf<Map<String, Any>>(emptyMap())
+    var cfgBusy by mutableStateOf(false)
+    var cfgMsg by mutableStateOf("")
+    var cfgErr by mutableStateOf(false)
+}
+
+/* ---------------- Prompt 68: innstillingene for nattlig eval (bare admin, PUT /settings scope 'server') ---------------- */
+
+/** Grensene på serveren (SERVER64-API.md §2). */
+val QCFG68_LIM: Map<String, IntRange> = mapOf("runs" to 1..5, "maxMinutes" to 15..360, "interactiveWaitSec" to 5..120, "keepDays" to 7..180)
+/** Steget for − / + per felt. */
+val QCFG68_STEP: Map<String, Int> = mapOf("runs" to 1, "maxMinutes" to 15, "interactiveWaitSec" to 5, "keepDays" to 7)
+val QCFG68_BOOLS = listOf("nightly", "weekly")
+
+/** Klemmer verdien til grensen for feltet. */
+fun qClamp68(key: String, v: Int): Int {
+    val r = QCFG68_LIM[key] ?: return v
+    return v.coerceIn(r.first, r.last)
+}
+
+private fun qCfg68(o: JSONObject?): Map<String, Any> {
+    val m = mutableMapOf<String, Any>()
+    if (o == null) return m
+    for (k in QCFG68_BOOLS) m[k] = o.optBoolean(k, true)
+    for (k in QCFG68_LIM.keys) o.i67(k)?.let { m[k] = qClamp68(k, it) }
+    return m
+}
+
+/** Feltene i utkastet som er endret (klemt til grensene) – det er bare dem «Lagre» sender. */
+fun qChanged68(cfg: Map<String, Any>, draft: Map<String, Any>): Map<String, Any> {
+    val out = linkedMapOf<String, Any>()
+    for ((k, v) in draft) {
+        val x: Any = if (v is Int) qClamp68(k, v) else v
+        if (cfg[k] != x) out[k] = x
+    }
+    return out
+}
+
+/** Endrer utkastet (stepper, felt eller bryter). Tall klemmes til grensene. */
+fun AppViewModel.setQDraft68(key: String, v: Any) {
+    val s = g67.q
+    val x: Any = if (v is Int) qClamp68(key, v) else v
+    s.draft = s.draft + (key to x)
+    s.cfgMsg = ""; s.cfgErr = false
+}
+
+/** Lagre: PUT /glimt/quality/settings {scope:'server', …} med bare de endrede feltene. */
+fun AppViewModel.saveQCfg68() {
+    val s = g67.q
+    if (!userIsAdmin || !s.admin) return
+    val ch = qChanged68(s.cfg, s.draft)
+    if (ch.isEmpty()) { s.cfgMsg = "Ingen endringer"; s.cfgErr = false; return }
+    val body = JSONObject().put("scope", "server")
+    ch.forEach { (k, v) -> body.put(k, v) }
+    s.cfgBusy = true
+    launch33 {
+        try {
+            val r = api33 { hlPut("/glimt/quality/settings", body) }
+            val srv = runCatching { JSONObject(r).optJSONObject("server") }.getOrNull()
+            s.cfg = if (srv != null) qCfg68(srv) else s.cfg + ch
+            s.draft = s.cfg
+            s.cfgMsg = "Lagret ✓"; s.cfgErr = false
+            Haptics.success(); loadQ67()
+        } catch (e: Exception) { s.cfgMsg = msg67(e, "Kunne ikke lagre"); s.cfgErr = true }
+        s.cfgBusy = false
+    }
 }
 
 private fun qRun67(r: JSONObject): G67QRun? {
@@ -1031,6 +1099,10 @@ fun AppViewModel.loadQ67() {
             s.weekly = sw.firstOrNull { it.key == "weekly" }; s.nightly = sw.firstOrNull { it.key == "nightly" }
             s.admin = o.optBoolean("admin") && userIsAdmin
             s.keepDays = o.optJSONObject("server")?.i67("keepDays") ?: s.keepDays
+            // Prompt 68: serverens verdier for «Innstillinger for nattlig eval»; utkastet følger med når ingenting er endret.
+            val dirty = qChanged68(s.cfg, s.draft).isNotEmpty()
+            s.cfg = qCfg68(o.optJSONObject("server"))
+            if (!dirty) s.draft = s.cfg
             val sch = o.optJSONObject("schedules")?.optJSONObject("nightly")
             s.evalOn = o.optJSONObject("settings")?.optBoolean("nightly", true) != false
             s.next = when {
@@ -1170,6 +1242,8 @@ fun AppViewModel.alias67(path: String): String? {
         }
         "glimt67", "glimt-og-ai" -> "glimt67"
         "huske", "gjoremal", "gjøremål" -> "kal"
+        // Prompt 68: Husstand → Brukere og familie (ui/Users68Ui.kt), som web-aliasene i settings65.js.
+        "brukere-og-familie", "users", "brukere", "familie", "family", "fam", "husstand", "barn", "helse", "healthpos" -> "users68"
         else -> null
     }
 }

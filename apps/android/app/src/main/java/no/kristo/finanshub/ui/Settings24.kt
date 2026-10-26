@@ -52,7 +52,7 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("g67ent", "Entitetsregister", "Glimt og AI → Glimt", "Personer, steder, butikker og abonnementer med aliaser", "g67ent", "entitetsregister entiteter alias personer steder hytta jobben"))
     add(SetItem24("g67rec", "Glimt lærer", "Glimt og AI → Glimt", "Oppskrifter fra vellykkede kjøringer og rettelser", "g67rec", "glimt lærer oppskrifter skills hurtigvei rettelser tommel"))
     add(SetItem24("g67sch", "Faste oppgaver", "Glimt og AI → Glimt", "Planlagte oppgaver og varsler · Lag fra tekst · Kjør nå", "g67sch", "faste oppgaver planlagte påminnelse strømpris brief lag fra tekst"))
-    add(SetItem24("g67q", "Kvalitet", "Glimt og AI → Glimt", if (vm.userIsAdmin) "Ukerapport og nattlige eval-kjøringer" else "Ukerapporten din", "g67q", "kvalitet ukerapport eval regresjon"))
+    add(SetItem24("g67q", "Kvalitet", "Glimt og AI → Glimt", if (vm.userIsAdmin) "Ukerapport og nattlige eval-kjøringer" else "Ukerapporten din", "g67q", "kvalitet ukerapport eval regresjon nattlig eval kjøringer per case tidsgrense lagre rapporter"))
     add(SetItem24("app67", "App", "Generelt", "Appprofil, widgets, skanning, server, data og oppdatering", "app67", "app widgets oppdater appen"))
     add(SetItem24("fin67", "Finans", "Moduler", "Kategorier, regler, bankimport, aksjer, fanelinje og abonnementer", "fin67", "finans økonomi"))
     add(SetItem24("profil", "Appprofil", "Generelt → App", "Standard, Finans + Boliger eller Boliger-profil", "profil", "profil boliger oppsett"))
@@ -65,7 +65,9 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     if (vm.userIsAdmin) add(SetItem24("logger44", "Logger", "Server", "Docker-logger, feil og feilsøking", null, "logg logger docker feil feilsøking container"))
     add(SetItem24("huske", "Gjøremål", "Tilkoblinger → Kalender og gjøremål", "Synk med Home Assistant", "kal", "gjøremål synk home assistant todo"))
     add(SetItem24("nyheter", "Nyheter", "Moduler", "Kilder, kategorier, For deg og Glimt-sammendrag", "nyheter", "nyheter rss kilder kategori for deg sammendrag favicon")) // prompt 46
-    if (vm.userIsAdmin) add(SetItem24("as44", "Logg inn som", "Generelt → Konto", "Rediger oppsettet til et familiemedlem · overfør eierskap", "accounts", "logg inn som impersonering eier overfør familie oppsett"))
+    // Prompt 68: brukerne og Logg inn som ligger under Husstand → Brukere og familie (ui/Users68Ui.kt).
+    if (vm.userIsAdmin) add(SetItem24("as44", "Logg inn som", "Husstand → Brukere og familie", "Rediger oppsettet til et familiemedlem · overfør eierskap", USERS68, "logg inn som impersonering eier overfør familie oppsett brukere"))
+    if (vm.userIsAdmin) add(SetItem24("char52", "Glimt-figur per bruker", "Husstand → Brukere og familie", "Standardfiguren hver bruker starter med", USERS68, "brief figur glimt-figur standard per bruker blekksprut"))
     if (vm.userIsAdmin) add(SetItem24("rollback44", "Tidligere versjoner", "System", "Rull tilbake til en tidligere versjon", null, "rull tilbake rollback versjon nedgrader"))
     add(SetItem24("ai", "AI", "Glimt og AI", "AI og modeller · kvitteringer · chat · tale · tidsgrenser", "ai", "gemini groq ollama roboflow ocr tolkning modeller"))
     add(SetItem24("cats", "Kategorier og budsjett", "Moduler → Finans", "Farger og typer", "cats", "budsjett kategori"))
@@ -84,7 +86,8 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("notify", "Varsler", "Generelt", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))
     add(SetItem24("kal", "Kalender og gjøremål", "Tilkoblinger", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "kal", "kalender google ha skole canvas ical timeplan bursdag"))
     add(SetItem24("integ", "Integrasjoner", "Tilkoblinger", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring, IMAP og flere", "integ", "integrasjon"))
-    add(SetItem24("healthpos", "Helse og posisjon", "Husstand", "Health Connect, skritt, puls, søvn og posisjonsdeling", "healthpos", "helse posisjon skritt kart"))
+    add(SetItem24(USERS68, "Brukere og familie", "Husstand", users68Sub(vm.userIsAdmin), USERS68, "brukere bruker familie husstand barn roller logg inn som helse posisjon"))
+    add(SetItem24("healthpos", "Helse og posisjon", "Husstand → Brukere og familie", "Health Connect, skritt, puls, søvn og posisjonsdeling", USERS68, "helse posisjon skritt kart"))
     add(SetItem24("scan", "Skanning", "Generelt → App", "Kamera, beskjæring og opplasting", "scan", "kamera skann"))
     add(SetItem24("server", "Server og synk", "Generelt → App", "Lokal og ekstern adresse", "server", "server adresse"))
     add(SetItem24("backup", "Backup og data", "Generelt → App", "Nedlasting og lagring", "backup", "backup eksport"))
@@ -109,9 +112,10 @@ private val SYN24: Map<String, List<String>> = mapOf(
     "budsjett" to listOf("cats"), "kategori" to listOf("cats"), "regel" to listOf("rules"), "home" to listOf("integ:ha"), "ha" to listOf("integ:ha"),
     "domene" to listOf("integ:cloudflare"), "cloudflare" to listOf("integ:cloudflare"), "vær" to listOf("integ:met"), "yr" to listOf("integ:met"),
     "kart" to listOf("integ:map", "healthpos"), "posisjon" to listOf("healthpos"), "helse" to listOf("healthpos"), "skritt" to listOf("healthpos"),
+    "famil" to listOf(USERS68), "husstand" to listOf(USERS68), "barn" to listOf(USERS68), "impersoner" to listOf("as44"),
     "kvitter" to listOf("integ:imap"), "epost" to listOf("integ:imap"), "e-post" to listOf("integ:imap"), "mail" to listOf("integ:imap"), "finn" to listOf("integ:finn"),
     "profil" to listOf("profile:standard", "profile:finans_boliger", "profile:boliger"), "bolig" to listOf("profile:finans_boliger", "profile:boliger"),
-    "fane" to listOf("tabedit", "fin"), "widget" to listOf("modules"), "modul" to listOf("modules"), "bruker" to listOf("accounts"),
+    "fane" to listOf("tabedit", "fin"), "widget" to listOf("modules"), "modul" to listOf("modules"), "bruker" to listOf(USERS68, "accounts"),
     "bilde" to listOf("integ:photos", "look"), "oppdat" to listOf("upd", "nordlys"), "versjon" to listOf("chk", "nordlys"), "update" to listOf("upd", "nordlys"),
     "haptikk" to listOf("haptic"), "vibrer" to listOf("haptic"), "stille" to listOf("quiet"), "2fa" to listOf("2fa"), "totrinn" to listOf("2fa"),
     "modell" to listOf("ai-mod"), "ollama" to listOf("ai-mod"), "backup" to listOf("bk-now", "bk-auto"), "bakgrunn" to listOf("bg"), "unsplash" to listOf("integ:photos"), "pexels" to listOf("integ:photos"),
@@ -150,7 +154,7 @@ private fun iconFor24(id: String): ImageVector = when {
         "cats" -> Icons.Filled.Category; "rules" -> Icons.Filled.Tune; "import" -> Icons.Filled.AccountBalance; "stocks" -> Icons.AutoMirrored.Filled.ShowChart
         "fin", "tabedit" -> Icons.Filled.ViewWeek; "sub" -> Icons.Filled.Autorenew; "appname" -> Icons.Filled.Edit; "appicon" -> Icons.Filled.Image
         "modules" -> Icons.Filled.Dashboard; "news" -> Icons.Filled.Newspaper; "look" -> Icons.Filled.Palette; "notify" -> Icons.Filled.Notifications
-        "integ" -> Icons.Filled.Home; "healthpos" -> Icons.Filled.MonitorHeart; "scan" -> Icons.Filled.DocumentScanner; "server" -> Icons.Filled.Dns
+        "integ" -> Icons.Filled.Home; "healthpos" -> Icons.Filled.MonitorHeart; USERS68, "as44" -> Icons.Filled.Groups; "char52" -> Icons.Filled.AutoAwesome; "scan" -> Icons.Filled.DocumentScanner; "server" -> Icons.Filled.Dns
         "backup", "sysbackup" -> Icons.Filled.Backup
         "glimt67", "g67rec" -> Icons.Filled.AutoAwesome; "g67mem" -> Icons.Filled.Psychology; "g67ent" -> Icons.Filled.People; "g67sch" -> Icons.Filled.Schedule
         "g67q" -> Icons.Filled.Insights; "app67" -> Icons.Filled.PhoneAndroid; "fin67" -> Icons.Filled.AccountBalance; else -> Icons.Filled.Settings

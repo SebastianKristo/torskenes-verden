@@ -147,6 +147,11 @@ extension Set24Model {
         out.append(Set24Item(id: "glimt.laerer67", title: "Glimt lærer", sub: "Oppskrifter, hurtigvei og rettelser", path: "Glimt", route: G67Nav.laerer, anchor: ""))
         out.append(Set24Item(id: "glimt.faste67", title: "Faste oppgaver", sub: "Planlagte oppgaver, påminnelser og varsler · Lag fra tekst", path: "Glimt", route: G67Nav.faste, anchor: ""))
         out.append(Set24Item(id: "glimt.kvalitet67", title: "Kvalitet", sub: "Ukerapport og nattlig eval", path: "Glimt", route: G67Nav.kvalitet, anchor: ""))
+        // Prompt 68: «Innstillinger for nattlig eval» på Kvalitet (bare admin).
+        if Update28Model.isAdmin(store) {
+            out.append(Set24Item(id: "glimt.eval68", title: "Innstillinger for nattlig eval", sub: "Nattlig eval, ukerapport for alle, kjøringer per case, tidsgrense, gi plass etter og lagre rapporter",
+                                 path: "Kvalitet", route: G67Nav.kvalitet, anchor: ""))
+        }
         return out
     }
 

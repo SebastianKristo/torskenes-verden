@@ -124,8 +124,8 @@ struct Glimt35SettingsContent: View {
             Glimt35FigGrid()
             Text("Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Vennene (Sky, Dråpe, Ugle …) tar over når temaet passer, om det er slått på under.")
                 .font(PF.ui(12.5)).foregroundStyle(Brief34C.mut).fixedSize(horizontal: false, vertical: true)
-            // Prompt 52: admin – standardfigur per bruker (Glimt52Char.swift).
-            Glimt52AdminDefaults()
+            // Prompt 52: admin – standardfigur per bruker (Glimt52Char.swift). Fra prompt 68 på Brukere og familie (Users68.swift).
+            Glimt35UsersLink()
             // Prompt 40: Julemodus rett under figurvalget og teksten om vennene, før Glimt-brief-bryteren (Glimt40Settings.swift).
             Glimt40JulCard()
             // Prompt 41: Høytider → 17. mai (Automatisk / Vis nå / Av).
@@ -586,6 +586,29 @@ struct Glimt35Segment: View {
             }
             .padding(3)
             .background(Brief34C.rgb(0xefe9dc), in: Capsule())
+        }
+    }
+}
+
+/// Prompt 68: «Standardfigur per bruker» (bare admin) ligger på Innstillinger → Brukere og familie.
+struct Glimt35UsersLink: View {
+    @Environment(Store.self) private var store
+    @MainActor private var m: Glimt35Model { Glimt35Model.shared }
+
+    var body: some View {
+        if store.account?.role == "admin" {
+            Button {
+                Haptic34.light()
+                m.showPage = false
+                Brief34Model.shared.open = false
+                store.paperGo(Users68.key)
+            } label: {
+                Text("Standardfigur per bruker ligger under Brukere og familie ›").font(PF.ui(13.5, .bold)).foregroundStyle(Brief34C.red)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 }

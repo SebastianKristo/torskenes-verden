@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
@@ -683,13 +684,91 @@ internal fun G67QPage(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (G67Loading(s.missing, s.loaded, s.err, "kvalitetsrapporter")) return@Column
         G67WeekCard(vm)
-        if (s.admin && vm.userIsAdmin) G67Eval(vm)
+        val admin = s.admin && vm.userIsAdmin
+        if (admin) G67Eval(vm)
+        if (admin) G67QCfg68(vm) // prompt 68: bryteren for nattlig eval (for alle) ligger nå bare her
         G67Lab("Valg")
         PCard {
             s.weekly?.let { w -> PToggle(w.label, if (!w.srv) "Slått av for alle av administrator" else w.help, w.on) { if (w.srv) vm.setQSw67(w, false) } }
-            if (s.admin && vm.userIsAdmin) s.nightly?.let { n -> PToggle(n.label + " (admin)", n.help, n.srv, top = true) { vm.setQSw67(n, true) } }
         }
         if (s.swMsg.isNotBlank()) G67Note(s.swMsg)
+    }
+}
+
+/* ---------------- Prompt 68: Innstillinger for nattlig eval (admin) ---------------- */
+
+private class QField68(val key: String, val title: String, val sub: String, val unit: String)
+
+private val QFIELDS68 = listOf(
+    QField68("runs", "Kjøringer per case", "Hver test kjøres så mange ganger – suksessraten rapporteres · 1–5", "×"),
+    QField68("maxMinutes", "Tidsgrense", "Evalen stopper etter så mange minutter · 15–360", "min"),
+    QField68("interactiveWaitSec", "Gi plass etter", "Evalen viker hvis en vanlig forespørsel har ventet så mange sekunder · 5–120", "s"),
+    QField68("keepDays", "Lagre rapporter", "Eldre rapporter slettes fra serveren etter så mange dager · 7–180", "d"),
+)
+
+private fun qBool68(m: Map<String, Any>, k: String): Boolean = m[k] as? Boolean ?: true
+private fun qInt68(m: Map<String, Any>, k: String): Int? = m[k] as? Int
+
+@Composable
+private fun G67QCfg68(vm: AppViewModel) {
+    val s = vm.g67.q
+    val d = s.draft
+    val changed = qChanged68(s.cfg, d)
+    G67Lab("Innstillinger for nattlig eval")
+    PCard {
+        PToggle("Nattlig eval", s.nightly?.help ?: "Kl. 02 hver natt kjøres eval-testene mot den lokale modellen.", qBool68(d, "nightly")) { vm.setQDraft68("nightly", it) }
+        PToggle("Ukerapport for alle", "Av her slår ukerapporten av for alle brukere", qBool68(d, "weekly"), top = true) { vm.setQDraft68("weekly", it) }
+        QFIELDS68.forEach { f -> G67Rule(); QStepper68(vm, f, qInt68(d, f.key)) }
+        G67Rule()
+        Row(Modifier.fillMaxWidth().padding(14.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            val what = if (changed.isEmpty()) "Ingen endringer" else "${changed.size} ${if (changed.size == 1) "endring" else "endringer"}"
+            Text(what, color = PaperPal.current.mut, fontSize = 12.5.sp, modifier = Modifier.weight(1f))
+            if (changed.isNotEmpty()) G67Btn("Angre", enabled = !s.cfgBusy) { s.draft = s.cfg; s.cfgMsg = "" }
+            G67Btn(if (s.cfgBusy) "Lagrer …" else "Lagre", "pri", changed.isNotEmpty() && !s.cfgBusy) { vm.saveQCfg68() }
+        }
+    }
+    if (s.cfgMsg.isNotBlank()) Text(s.cfgMsg, color = if (s.cfgErr) PaperPal.current.lab else PaperPal.current.mut, fontSize = 12.5.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 8.dp))
+    G67Note("«Nattlig eval» står også i Faste oppgaver som systemoppgave, der den kan settes på pause. Bare for administrator.")
+}
+
+/** − verdi + og et tallfelt. Verdien klemmes til grensene (QCFG68_LIM). */
+@Composable
+private fun QStepper68(vm: AppViewModel, f: QField68, cur: Int?) {
+    val p = PaperPal.current
+    val lim = QCFG68_LIM.getValue(f.key)
+    val step = QCFG68_STEP[f.key] ?: 1
+    var txt by remember(f.key) { mutableStateOf(cur?.toString() ?: "") }
+    // Stepper, Angre eller ny verdi fra serveren: vis den (men ikke mens man skriver et tall som klemmes til samme verdi).
+    LaunchedEffect(cur) { if (txt.toIntOrNull()?.let { qClamp68(f.key, it) } != cur) txt = cur?.toString() ?: "" }
+    Column(Modifier.fillMaxWidth().padding(14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(f.title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
+        Text(f.sub, color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val v = cur ?: lim.first
+            G67Btn("−", enabled = cur != null && v > lim.first) { vm.setQDraft68(f.key, v - step) }
+            Box(Modifier.width(76.dp).heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, p.line, RoundedCornerShape(12.dp)).padding(horizontal = 10.dp),
+                contentAlignment = Alignment.Center) {
+                BasicTextField(
+                    txt, { t ->
+                        val digits = t.filter { it.isDigit() }.take(3)
+                        txt = digits
+                        digits.toIntOrNull()?.let { n -> vm.setQDraft68(f.key, n) } // klemmes i setQDraft68
+                    },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                    cursorBrush = SolidColor(p.lab),
+                    modifier = Modifier.fillMaxWidth().onFocusChanged { fs ->
+                        // Utenfor grensene: klem når feltet mister fokus.
+                        if (!fs.isFocused) txt.toIntOrNull()?.let { n -> if (n !in lim) { val c = qClamp68(f.key, n); txt = c.toString(); vm.setQDraft68(f.key, c) } }
+                    },
+                )
+            }
+            Text(f.unit, color = p.mut, fontSize = 13.sp)
+            G67Btn("+", enabled = cur != null && v < lim.last) { vm.setQDraft68(f.key, v + step) }
+        }
+        val n = txt.toIntOrNull()
+        if (n != null && n !in lim) Text("Må være mellom ${lim.first} og ${lim.last} – settes til ${qClamp68(f.key, n)}", color = p.lab, fontSize = 12.sp)
     }
 }
 
