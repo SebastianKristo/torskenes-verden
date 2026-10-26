@@ -950,13 +950,30 @@ struct G67EvalCase: View {
     @Environment(\.paper) private var p
     let c: [String: Any]
 
-    var body: some View {
-        let st: String = JS.str(c, "status") ?? ""
+    private var label: String {
         let reg: Bool = JS.bool(c, "regression") == true
-        let base: [String: Any]? = JS.dict(c, "baseline")
+        let id: String = JS.str(c, "id") ?? ""
+        let passes: Int = JS.int(c, "passes") ?? 0
+        let runs: Int = JS.int(c, "runs") ?? 0
+        var out: String = (reg ? "▼ " : "") + id + " · \(passes)/\(runs)"
+        if let base = JS.dict(c, "baseline") {
+            let bp: Int = JS.int(base, "passes") ?? 0
+            let br: Int = JS.int(base, "runs") ?? 0
+            out += " (før \(bp)/\(br))"
+        }
+        return out
+    }
+
+    private var tone: Color {
+        let st: String = JS.str(c, "status") ?? ""
+        if JS.bool(c, "regression") == true || st == "red" { return p.lab }
+        return st == "green" ? p.pos : p.ink
+    }
+
+    var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text((reg ? "▼ " : "") + (JS.str(c, "id") ?? "") + " · \(JS.int(c, "passes") ?? 0)/\(JS.int(c, "runs") ?? 0)" + (base.map { " (før \(JS.int($0, "passes") ?? 0)/\(JS.int($0, "runs") ?? 0))" } ?? ""))
-                .font(PF.ui(13, .semibold)).foregroundStyle(reg || st == "red" ? p.lab : (st == "green" ? p.pos : p.ink))
+            Text(label)
+                .font(PF.ui(13, .semibold)).foregroundStyle(tone)
             if let t = JS.str(c, "title") { Text(t).font(PF.ui(12.5)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true) }
             if let r = JS.str(c, "reason") { Text(r).font(PF.ui(12)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true) }
         }
