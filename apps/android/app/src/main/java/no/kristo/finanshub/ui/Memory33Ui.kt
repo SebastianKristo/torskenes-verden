@@ -112,7 +112,7 @@ internal fun Mem33LearnBody(vm: AppViewModel, l: Mem33Learn) {
     if (l.type == "annet") M33Field(l.title, { v -> s.learn = s.learn?.copy(title = v) }, "Tittel, f.eks. Massasje · Spa Nova", p.card)
     if (l.err.isNotEmpty()) Text(l.err, color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
     M33Btn(if (l.busy) "Lagrer …" else if (l.suggest) "Husk" else "Lagre", true, Modifier.fillMaxWidth(), height = 50.dp, enabled = l.type.isNotEmpty() && !l.busy) { vm.saveLearn33() }
-    Text("Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → AI → Glimt husker.", color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
+    Text("Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → Glimt → Glimt husker.", color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
 }
 
 /* ---------------- Innstillinger → AI → GLIMT HUSKER ---------------- */

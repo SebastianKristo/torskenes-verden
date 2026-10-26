@@ -175,6 +175,7 @@ fun AppViewModel.settingsBack26() {
         pg?.startsWith("integ:") == true -> settingsPage = "integ"
         pg == "kal" && b26.kalFrom == "integ" -> { settingsPage = "integ"; b26.kalFrom = null }
         pg == "kal" && b26.kalFrom == "bd" -> { settingsPage = null; b26.kalFrom = null; paperPage = b26.kalBackPage; bd24.open = true }
+        no.kristo.finanshub.ui.parent67(pg) != null -> settingsPage = no.kristo.finanshub.ui.parent67(pg) // prompt 67: Glimt/App/Finans-undersider
         else -> settingsPage = null
     }
 }
@@ -183,6 +184,7 @@ fun AppViewModel.settingsBackLabel26(): String = when {
     settingsPage?.startsWith("integ:") == true -> "Integrasjoner"
     settingsPage == "kal" && b26.kalFrom == "integ" -> "Integrasjoner"
     settingsPage == "kal" && b26.kalFrom == "bd" -> "Bursdager"
+    no.kristo.finanshub.ui.parent67(settingsPage) != null -> no.kristo.finanshub.ui.SET67_TITLES[no.kristo.finanshub.ui.parent67(settingsPage)] ?: "Alle innstillinger"
     else -> "Alle innstillinger"
 }
 

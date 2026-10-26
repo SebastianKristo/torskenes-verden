@@ -200,6 +200,8 @@ enum Notify31 {
         let u: String = url.lowercased()
         // Prompt 51 (SEC51): «Ny enhet vil logge inn» → Innstillinger → Sikkerhet.
         if u.contains("sikkerhet") || u.contains("security") { return "innst-sik" }
+        // Prompt 67: Faste oppgaver, Glimt husker og Kvalitet (uke/kjøring) → Innstillinger → Glimt (Glimt67Model.swift).
+        if let g = G67Nav.page(url) { return g }
         if u.contains("chat") { return "chat" }
         // Prompt 51 (IOSFEAT51): /#/familiekalender (famcal51), /finans/plan51#skatt og /#/mediakveld (Feat51Kit.swift).
         if u.contains("familiekalender") || u.contains("famcal51") { return "famcal51" }
@@ -251,6 +253,7 @@ enum Notify31 {
         default:
             // Prompt 51 (IOSFEAT51): «plan51:skatt» → Planlegging på riktig fane.
             if go.hasPrefix("plan51") { Plan51.shared.show(go.components(separatedBy: ":").dropFirst().first); return }
+            if go.hasPrefix("innst-glimt") || go.hasPrefix("q67") { G67Nav.open(go, store); return } // prompt 67
             store.paperGo("hjem")
         }
     }

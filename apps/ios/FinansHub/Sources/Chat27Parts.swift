@@ -196,10 +196,14 @@ struct Chat27Answer: View {
             if !m.facts41.isEmpty { Chat41FactsView(facts: m.facts41, c: c) }
             // Prompt 31: kortet fra Glimt (vær, kalender, avganger …), lagret i meldingen (Chat31Cards.swift).
             if !m.card31.isEmpty { Chat31Card(json: m.card31, c: c) }
+            // Prompt 67: valgknapper og Bekreft/Avbryt på siste Glimt-svar (Convo67.swift).
+            Chat67Extras(m: m, last: last, c: c)
             Flow(spacing: 2) {
                 action("doc.on.doc", s.copied == m.id ? "Kopiert" : "Kopier") { s.copy(m) }
-                if last && !s.busy { action("arrow.clockwise", "Nytt svar") { s.regenerate(store) } }
+                if last && !s.busy && !m.glimt67 { action("arrow.clockwise", "Nytt svar") { s.regenerate(store) } }
                 action(voice.speaking == m.id ? "stop.fill" : "speaker.wave.2", voice.speaking == m.id ? "Stopp" : "Les høyt") { voice.speak(m.id, m.content) }
+                // Prompt 67: tommel opp/ned når svaret har traceId (POST /api/glimt/recipes/feedback).
+                if !m.traceId67.isEmpty && !m.stopped67 { Thumbs67View(traceId: m.traceId67, ink: c.ink, mut: c.mut, font: c.ui(12, .semibold)) }
                 if !m.stats.isEmpty {
                     Text(m.stats).font(PF.mono(11, bold: false)).foregroundStyle(c.mut).padding(.leading, 6).frame(height: 34)
                 }
@@ -277,6 +281,10 @@ struct Chat27Streaming: View {
             HStack(alignment: .center, spacing: 8) {
                 Glimt31Mark(size: 22, state: s.streamText.isEmpty ? .thinking : .answering)
                 Chat27AnswerHead(title: headTitle31, tools: s.streamTool, prefix: "Leser", c: c)
+            }
+            // Prompt 67: statuslinja mens Glimt strømmer («Sjekker kalenderen …», Convo67.swift). Stopp er knappen i skrivefeltet.
+            if s.pendingTool31 && !s.status67.isEmpty {
+                Chat67StatusLine(text: s.status67, c: c)
             }
             // Prompt 52: «✦ Tenker … 2,1 s ▾» med stegene åpne mens modellen tenker; lukkes når svaret begynner å strømme.
             if !s.think52.isEmpty || (s.think52Start != nil && s.streamText.isEmpty) {

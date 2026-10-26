@@ -111,6 +111,7 @@ extension ChatStore27 {
             let tool: String = Chat31.toolName(a)
             if !tool.isEmpty { m.used = [tool] }
             m.card31 = a.cardJSON
+            m.glimt67 = true
             let sec: String = String(format: "%.1f", Swift.max(0.1, a.ms / 1000)).replacingOccurrences(of: ".", with: ",")
             m.stats = (tool.isEmpty ? Glimt31.name : "Verktøy") + " · " + sec + " s"
             self.msgs.append(m)

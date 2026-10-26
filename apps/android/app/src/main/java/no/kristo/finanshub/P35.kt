@@ -342,7 +342,8 @@ fun AppViewModel.settingsLink35(path: String) {
         "kalendere", "kalender", "kal", "calendars" -> openKalSettings26(null)
         "ai" -> openAiCtl34("ov")
         "" -> settingsPage = null
-        else -> settingsPage = path
+        // Prompt 67: lenkene fra push (faste-oppgaver, glimt-husker, kvalitet[/run/<id>|/uke/<uke>]) → sidene under Glimt (G67.kt).
+        else -> settingsPage = alias67(path) ?: path
     }
 }
 

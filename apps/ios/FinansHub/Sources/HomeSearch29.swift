@@ -289,6 +289,8 @@ struct HomeSearch29: View {
         q = ""
         store.suggestions = []
         m.clear()
+        // Prompt 67: feltet er tømt med ✕ – neste spørsmål til Glimt starter en ny samtale (Convo67.swift).
+        Convo67.shared.resetHome()
     }
 
     private func submit() {

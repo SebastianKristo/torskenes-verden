@@ -101,7 +101,7 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
                 decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { if (text.isEmpty()) Text(placeholder29(q.engine), color = p.mut, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis); inner() } },
             )
             if (text.isNotEmpty()) Box(
-                Modifier.size(30.dp).clip(CircleShape).background(p.line).clickable(role = Role.Button, onClickLabel = "Tøm") { vm.setHomeQuery29("") },
+                Modifier.size(30.dp).clip(CircleShape).background(p.line).clickable(role = Role.Button, onClickLabel = "Tøm") { vm.setHomeQuery29(""); no.kristo.finanshub.Glimt67.resetHomeConv() /* prompt 67: ny samtale */ },
                 contentAlignment = Alignment.Center,
             ) { WxIcon(H29_X, p.ink, 11.dp, stroke = 3.2f) }
             SearchMic56(vm) // prompt 56 (AND56): snakk inn søket (ui/Voice56Ui.kt)

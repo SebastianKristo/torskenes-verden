@@ -284,20 +284,29 @@ fun AppViewModel.askHome31(q: String) {
     }
 }
 
-fun AppViewModel.closeAns31() { p31.ans = null; p31.ansSeq++ }
+fun AppViewModel.closeAns31() { p31.ans = null; p31.ansSeq++; Glimt67.homeChoices = null; Glimt67.homeTrace = null }
 
-/** Chat: verktøysvar (vær, kalender, avganger …) før LLM. Returnerer true når Glimt tar spørsmålet. */
-fun AppViewModel.chatTool31(text: String): Boolean {
+/**
+ * Chat: verktøysvar (vær, kalender, avganger …) før LLM. Returnerer true når Glimt tar spørsmålet.
+ * Prompt 67 (ANDCHAT67): Glimt-motoren strømmer (POST /api/glimt/agent/stream, module chat, conversationId for samtalen):
+ * statuslinje mens verktøyene jobber, ordene mens de skrives, Stopp beholder det som er skrevet («Stoppet»). Verktøysvaret lagres
+ * i samtalen med POST /api/glimt/agent/stream/save. Prat går videre til modellen. Eldre server (404/405) → /api/assist som før.
+ * [pick] = valgknappen som ble trykket (choice {setId, id}).
+ */
+fun AppViewModel.chatTool31(text: String, pick: Pick67? = null): Boolean {
     val c = chat27
     val s = p31
-    if (s.assistMissing || c.att.isNotEmpty() || c.busy) return false
+    if ((s.assistMissing && !Glimt67.streamOn()) || c.att.isNotEmpty() || c.busy) return false
     val t = text.trim()
     if (t.isEmpty()) return false
+    val before = c.msgs
     c.msgs = c.msgs + ChatMsg27("user", t)
     c.input = ""
     c.busy = true; c.stream = ""; c.streamTools = emptyList(); c.stopped = false
     val t0 = System.currentTimeMillis()
     c.job = launchJob31 {
+        if (chatGlimt67(t, pick, before, t0)) return@launchJob31
+        if (s.assistMissing) { c.msgs = before; c.busy = false; sendChat27(t, tool31 = false); return@launchJob31 }
         val r = try { assist31(t, "chat", c.curId) { id -> rememberJob31(id, t, "chat") } } catch (e: CancellationException) { c.busy = false; return@launchJob31 }
         val tool = r?.tool ?: r?.card?.let { cardTool31(it) }
         if (r == null || (r.intent == "llm" && tool == null) || r.intent == "chat") {
@@ -317,6 +326,100 @@ fun AppViewModel.chatTool31(text: String): Boolean {
         loadChats27()
     }
     return true
+}
+
+/**
+ * Prompt 67: Glimt i Chat med strømming. true = ferdig håndtert (svaret vist, stoppet, feil vist eller sendt videre til modellen);
+ * false = serveren har ikke strømmingen (bruk /api/assist).
+ */
+private suspend fun AppViewModel.chatGlimt67(t: String, pick: Pick67?, before: List<ChatMsg27>, t0: Long): Boolean {
+    val c = chat27
+    val g = Glimt67
+    if (!g.streamOn()) return false
+    val conv = g.chatConv(c.curId)
+    val rid = g.rid()
+    g.chatRid = rid; g.chatStatus = null; g.chatLive = true
+    val done = try {
+        stream67(agentBody67(t, "chat", rid, conv, "chat", pick), { c.stopped }, { c.conn = it }, { g.chatStatus = it }, { c.stream = it })
+    } catch (e: CancellationException) {
+        g.chatLive = false; g.chatRid = null; g.chatStatus = null; c.busy = false
+        throw e
+    } catch (e: Stopped67) {
+        g.chatLive = false; g.chatRid = null; g.chatStatus = null
+        if (e.partial.isBlank()) { c.msgs = before; c.input = t }
+        else c.msgs = c.msgs + ChatMsg27("assistant", e.partial + " …", model = "Glimt", stats = "Stoppet", tool = "Glimt", conv67 = conv)
+        c.busy = false; c.stream = ""
+        return true
+    } catch (e: ApiException) {
+        g.chatLive = false; g.chatRid = null; g.chatStatus = null; c.stream = ""
+        if (e.status == 429) { c.msgs = before; c.input = t; c.busy = false; chatToast27(e.message ?: "Glimt jobber med mye nå. Prøv igjen om litt."); return true }
+        // Feil i Glimt-motoren: til språkmodellen som før (ingen ny kjøring som kan gjenta en handling).
+        c.msgs = before; c.busy = false
+        sendChat27(t, tool31 = false)
+        return true
+    } catch (e: Exception) {
+        g.chatLive = false; g.chatRid = null; g.chatStatus = null; c.stream = ""
+        c.msgs = before; c.busy = false
+        sendChat27(t, tool31 = false)
+        return true
+    }
+    g.chatLive = false; g.chatRid = null; g.chatStatus = null
+    if (done == null) { c.stream = ""; return false }
+    val a = agentView67(done)
+    if (a.isChat() || a.text.isBlank()) {
+        // Prat: vanlig samtale med modellen (meldingen legges inn på nytt av sendChat27).
+        c.msgs = before; c.busy = false; c.stream = ""
+        sendChat27(t, tool31 = false)
+        return true
+    }
+    val chatId = saveStream67(t, a, c.curId)
+    if (chatId != null && c.curId == null) c.curId = chatId
+    g.bindConv(c.curId, conv)
+    val st = stats67(a.ms ?: (System.currentTimeMillis() - t0), a.cacheNote())
+    c.msgs = c.msgs + ChatMsg27("assistant", a.text, model = "Glimt", stats = st, card = a.card?.toString(), tool = a.tool,
+        trace67 = a.traceId, choices67 = a.choices, confirm67 = a.confirm, conv67 = conv)
+    c.busy = false; c.stream = ""
+    if (a.toolName?.startsWith("calendar.") == true || a.intent.startsWith("calendar") || a.module == "calendar") reloadKal27()
+    if (a.module == "subscriptions" || a.intent.startsWith("trial")) loadTrials31()
+    loadChats27()
+    return true
+}
+
+/** Prompt 67: valgknapp under et Glimt-svar i Chat → item.text + choice {setId, id} i samme samtale. */
+fun AppViewModel.pickChat67(ch: Choices67, item: ChoiceItem67) {
+    val c = chat27
+    if (c.busy) return
+    Haptics.select()
+    // Knappene forsvinner fra svaret når et valg er gjort.
+    c.msgs = c.msgs.map { if (it.choices67 === ch) it.copy(choices67 = null) else it }
+    if (!chatTool31(item.text, pick67(ch, item))) sendChat27(item.text, tool31 = false)
+}
+
+/** Prompt 67: «Ja, gjør det» / «Avbryt» på en endrende handling i Chat (POST /api/glimt/agent/confirm {token}). */
+fun AppViewModel.confirmChat67(i: Int, yes: Boolean) {
+    val c = chat27
+    val m = c.msgs.getOrNull(i) ?: return
+    val cf = m.confirm67 ?: return
+    if (c.busy) return
+    c.msgs = c.msgs.toMutableList().also { it[i] = m.copy(confirm67 = null) }
+    if (!yes) { Haptics.select(); c.msgs = c.msgs + ChatMsg27("assistant", "Greit, jeg lot det være.", model = "Glimt", tool = "Glimt"); return }
+    Haptics.tap()
+    c.busy = true; c.stream = ""; c.streamTools = emptyList(); c.stopped = false
+    Glimt67.chatLive = true; Glimt67.chatStatus = "Utfører …"
+    c.job = launchJob31 {
+        val msg = try {
+            val o = JSONObject(api31 { hlPost("/glimt/agent/confirm", JSONObject().put("token", cf.token)) })
+            val a = agentView67(o)
+            ChatMsg27("assistant", a.text.ifBlank { "Ferdig." }, model = "Glimt", tool = a.tool, card = a.card?.toString(), trace67 = a.traceId, choices67 = a.choices, confirm67 = a.confirm, conv67 = m.conv67)
+        } catch (e: CancellationException) { Glimt67.chatLive = false; c.busy = false; throw e } catch (e: Exception) {
+            Haptics.error()
+            ChatMsg27("assistant", e.message ?: "Fikk ikke utført handlingen.", model = "Glimt", tool = "Glimt")
+        }
+        Glimt67.chatLive = false; Glimt67.chatStatus = null
+        c.msgs = c.msgs + msg
+        c.busy = false
+        reloadKal27()
+    }
 }
 
 /** Verktøynavnet ut fra kortet. */

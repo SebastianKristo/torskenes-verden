@@ -28,7 +28,7 @@ import no.kristo.finanshub.*
 /** Tittelen i fotovinduet for en underside i Innstillinger. */
 internal fun settingsTitle26(vm: AppViewModel): String {
     val pg = vm.settingsPage ?: return "Innstillinger"
-    if (pg == "kal") return "Kalendere"
+    if (pg == "kal") return "Kalender og gjøremål" // prompt 67: som på web
     if (pg.startsWith("integ:")) {
         val id = pg.removePrefix("integ:")
         return (vm.b24.integ ?: INTEG24_FALLBACK).firstOrNull { it.id == id }?.name ?: "Integrasjon"

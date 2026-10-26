@@ -6,7 +6,7 @@ import UIKit
 // API: GET/POST /api/glimt/memory {match, type, title?} → {item, matches}, DELETE /api/glimt/memory/:id,
 //      POST /api/glimt/memory/:id/apply {dryRun?} → {count}. Hendelsen som vises: GET /api/kalender/events/:id (kontekst for
 //      «det var frisør» i Glimt). PATCH /api/kalender/events/:id kan svare suggestMemory {match, name, type, title, text}.
-// Visninger: Memory33SettingsGroup (Innstillinger → AI → GLIMT HUSKER), Memory33LearnLink (detaljarket) og Memory33LearnSheet.
+// Visninger: Memory33SettingsGroup (Innstillinger → Glimt → Glimt husker, prompt 67), Memory33LearnLink (detaljarket) og Memory33LearnSheet.
 
 struct Memory33Item: Identifiable, Hashable {
     var id: Int
@@ -267,7 +267,7 @@ private struct Memory33Pick: View {
             .buttonStyle(.plain)
             .disabled(l.type.isEmpty || l.busy)
             .opacity(l.type.isEmpty ? 0.45 : 1)
-            Text("Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → AI → Glimt husker.")
+            Text("Glimt bruker dette neste gang en melding fra samme avsender legges inn. Se Innstillinger → Glimt → Glimt husker.")
                 .font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
         }
     }

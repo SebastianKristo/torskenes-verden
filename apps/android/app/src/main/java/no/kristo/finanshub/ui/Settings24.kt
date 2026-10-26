@@ -46,41 +46,50 @@ import no.kristo.finanshub.*
 
 private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     // Prompt 39: profilene ligger på undersiden «Appprofil» (APP-gruppen).
-    add(SetItem24("profil", "Appprofil", "App", "Standard, Finans + Boliger eller Boliger-profil", "profil", "profil boliger oppsett"))
+    // Prompt 67: stiene følger den nye menyen (Generelt · Husstand · Glimt og AI · Tilkoblinger · Moduler · Server).
+    add(SetItem24("glimt67", "Glimt", "Glimt og AI", "Figur, brief, stemme, Send til Chat etter, Glimt husker og Glimt lærer", "glimt67", "glimt personlighet stemme figur brief send til chat søkefelt"))
+    add(SetItem24("g67mem", "Glimt husker", "Glimt og AI → Glimt", "Det du har lært Glimt, forslag, motstrid og ikke brukt på lenge", "g67mem", "glimt husker minne alias forslag motstrid ubrukte fakta nattlig oppsummering"))
+    add(SetItem24("g67ent", "Entitetsregister", "Glimt og AI → Glimt", "Personer, steder, butikker og abonnementer med aliaser", "g67ent", "entitetsregister entiteter alias personer steder hytta jobben"))
+    add(SetItem24("g67rec", "Glimt lærer", "Glimt og AI → Glimt", "Oppskrifter fra vellykkede kjøringer og rettelser", "g67rec", "glimt lærer oppskrifter skills hurtigvei rettelser tommel"))
+    add(SetItem24("g67sch", "Faste oppgaver", "Glimt og AI → Glimt", "Planlagte oppgaver og varsler · Lag fra tekst · Kjør nå", "g67sch", "faste oppgaver planlagte påminnelse strømpris brief lag fra tekst"))
+    add(SetItem24("g67q", "Kvalitet", "Glimt og AI → Glimt", if (vm.userIsAdmin) "Ukerapport og nattlige eval-kjøringer" else "Ukerapporten din", "g67q", "kvalitet ukerapport eval regresjon"))
+    add(SetItem24("app67", "App", "Generelt", "Appprofil, widgets, skanning, server, data og oppdatering", "app67", "app widgets oppdater appen"))
+    add(SetItem24("fin67", "Finans", "Moduler", "Kategorier, regler, bankimport, aksjer, fanelinje og abonnementer", "fin67", "finans økonomi"))
+    add(SetItem24("profil", "Appprofil", "Generelt → App", "Standard, Finans + Boliger eller Boliger-profil", "profil", "profil boliger oppsett"))
     vm.b24.profiles.forEach { add(SetItem24("profile:${it.key}", it.name, "App → Appprofil", it.sub, null, "profil oppsett")) }
-    add(SetItem24("accounts", "Kontoer og brukere", "Konto", "Bytt konto, legg til og logg ut", "accounts", "bruker brukere"))
-    add(SetItem24("security", "Sikkerhet", "Konto", "Totrinnsbekreftelse, passord, fingeravtrykk og aktive økter", "security", "2fa passord face logg"))
-    if (vm.userIsAdmin) add(SetItem24("sysbackup", "Backup", "Konto", "Backup av hele systemet: automatisk, hva som tas med, sky og gjenoppretting", "sysbackup", "backup sikkerhetskopi gjenopprett restore"))
-    add(SetItem24("tokens", "API-tokens", "Konto", "Snarveier og integrasjoner", "tokens", "token nøkkel"))
+    add(SetItem24("accounts", "Konto", "Generelt", "Profil, kontoer, økter og logg ut", "accounts", "bruker brukere kontoer"))
+    add(SetItem24("security", "Sikkerhet", "Generelt", "Totrinnsbekreftelse, passord, fingeravtrykk og aktive økter", "security", "2fa passord face logg"))
+    if (vm.userIsAdmin) add(SetItem24("sysbackup", "Backup", "Server", "Backup av hele systemet: automatisk, hva som tas med, sky og gjenoppretting", "sysbackup", "backup sikkerhetskopi gjenopprett restore"))
+    add(SetItem24("tokens", "API-tokens", "Generelt", "Snarveier og integrasjoner", "tokens", "token nøkkel"))
     // Prompt 44: Logger (Docker), Gjøremål-synk, Logg inn som / Overfør eier, Tidligere versjoner.
     if (vm.userIsAdmin) add(SetItem24("logger44", "Logger", "Server", "Docker-logger, feil og feilsøking", null, "logg logger docker feil feilsøking container"))
-    add(SetItem24("huske", "Gjøremål", "App", "Synk med Home Assistant", "huske", "gjøremål synk home assistant todo"))
-    add(SetItem24("nyheter", "Nyheter", "App", "Kilder, kategorier, For deg og Glimt-sammendrag", "nyheter", "nyheter rss kilder kategori for deg sammendrag favicon")) // prompt 46
-    if (vm.userIsAdmin) add(SetItem24("as44", "Logg inn som", "Konto → Kontoer og brukere", "Rediger oppsettet til et familiemedlem · overfør eierskap", "accounts", "logg inn som impersonering eier overfør familie oppsett"))
+    add(SetItem24("huske", "Gjøremål", "Tilkoblinger → Kalender og gjøremål", "Synk med Home Assistant", "kal", "gjøremål synk home assistant todo"))
+    add(SetItem24("nyheter", "Nyheter", "Moduler", "Kilder, kategorier, For deg og Glimt-sammendrag", "nyheter", "nyheter rss kilder kategori for deg sammendrag favicon")) // prompt 46
+    if (vm.userIsAdmin) add(SetItem24("as44", "Logg inn som", "Generelt → Konto", "Rediger oppsettet til et familiemedlem · overfør eierskap", "accounts", "logg inn som impersonering eier overfør familie oppsett"))
     if (vm.userIsAdmin) add(SetItem24("rollback44", "Tidligere versjoner", "System", "Rull tilbake til en tidligere versjon", null, "rull tilbake rollback versjon nedgrader"))
-    add(SetItem24("ai", "AI og tolkning", "Finans", "Gemini · Groq · Roboflow · Ollama · tidsgrenser", "ai", "gemini groq ollama roboflow ocr"))
-    add(SetItem24("cats", "Kategorier og budsjett", "Finans", "Farger og typer", "cats", "budsjett kategori"))
-    add(SetItem24("rules", "Regler", "Finans", "Automatisk kategorisering", "rules", "regel"))
-    add(SetItem24("import", "Bankimport", "Finans", "DNB · CSV · ✦ AI", null, "bank csv excel"))
-    add(SetItem24("stocks", "Aksjer · Trading 212", "Finans", "Nøkkel, miljø og synk", "stocks", "aksje trading"))
-    add(SetItem24("fin", "Fanelinje og Mer i Finans", "Finans", "Fanene i Finans", "fin", "fane faner"))
-    add(SetItem24("sub", "Subscription OS", "Finans", "Abonnementer og AI-sparing", null, "abonnement"))
+    add(SetItem24("ai", "AI", "Glimt og AI", "AI og modeller · kvitteringer · chat · tale · tidsgrenser", "ai", "gemini groq ollama roboflow ocr tolkning modeller"))
+    add(SetItem24("cats", "Kategorier og budsjett", "Moduler → Finans", "Farger og typer", "cats", "budsjett kategori"))
+    add(SetItem24("rules", "Regler", "Moduler → Finans", "Automatisk kategorisering", "rules", "regel"))
+    add(SetItem24("import", "Bankimport", "Moduler → Finans", "DNB · CSV · ✦ AI", null, "bank csv excel"))
+    add(SetItem24("stocks", "Aksjer · Trading 212", "Moduler → Finans", "Nøkkel, miljø og synk", "stocks", "aksje trading"))
+    add(SetItem24("fin", "Fanelinje og Mer i Finans", "Moduler → Finans", "Fanene i Finans", "fin", "fane faner"))
+    add(SetItem24("sub", "Subscription OS", "Moduler → Finans", "Abonnementer og AI-sparing", null, "abonnement"))
     add(SetItem24("appname", "Navn på appen", vm.appName, vm.appName, null, "navn"))
     add(SetItem24("appicon", "App-ikon", vm.appName, "Bytt ikon på appen", null, "ikon logo"))
     add(SetItem24("navstyle", "Fanelinje-stil", vm.appName, "Tekst, bare ikoner eller ikoner + navn på valgt", null, "fane faner ikon ikoner stil navbar"))
     add(SetItem24("tabedit", "Fanelinje i Hjem", vm.appName, "Fjern, flytt, gi nytt navn og ikon", null, "fane faner"))
-    add(SetItem24("modules", "Moduler", vm.appName, "Familie, Gjøremål, Avganger, Vær", "modules", "widget modul"))
-    add(SetItem24("news", "Nyhetsleser", vm.appName, "Kilder og AI", null, "nyheter rss"))
-    add(SetItem24("look", "Tilpass", vm.appName, "Navn, ikon, tema, farger, bakgrunn og fanelinje", "tilpass", "tema mørk lys farge farger ikon navn fanelinje bakgrunn tilpass utseende"))
-    add(SetItem24("notify", "Varsler og haptikk", "App", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))
-    add(SetItem24("kal", "Kalendere", "App", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "kal", "kalender google ha skole canvas ical timeplan bursdag"))
-    add(SetItem24("integ", "Integrasjoner", "App", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring, IMAP og flere", "integ", "integrasjon"))
-    add(SetItem24("healthpos", "Helse og posisjon", "App", "Health Connect, skritt, puls, søvn og posisjonsdeling", "healthpos", "helse posisjon skritt kart"))
-    add(SetItem24("scan", "Skanning", "App", "Kamera, beskjæring og opplasting", "scan", "kamera skann"))
-    add(SetItem24("server", "Server og synk", "App", "Lokal og ekstern adresse", "server", "server adresse"))
-    add(SetItem24("backup", "Backup og data", "App", "Nedlasting og lagring", "backup", "backup eksport"))
+    add(SetItem24("modules", "Moduler", "Moduler", "Familie, Gjøremål, Avganger, Vær", "modules", "widget modul"))
+    add(SetItem24("news", "Nyhetsleser", "Moduler → Moduler", "Kilder og AI", null, "nyheter rss"))
+    add(SetItem24("look", "Utseende", "Generelt", "Navn, ikon, tema, farger, bakgrunn og fanelinje", "tilpass", "tema mørk lys farge farger ikon navn fanelinje bakgrunn tilpass utseende"))
+    add(SetItem24("notify", "Varsler", "Generelt", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))
+    add(SetItem24("kal", "Kalender og gjøremål", "Tilkoblinger", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "kal", "kalender google ha skole canvas ical timeplan bursdag"))
+    add(SetItem24("integ", "Integrasjoner", "Tilkoblinger", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring, IMAP og flere", "integ", "integrasjon"))
+    add(SetItem24("healthpos", "Helse og posisjon", "Husstand", "Health Connect, skritt, puls, søvn og posisjonsdeling", "healthpos", "helse posisjon skritt kart"))
+    add(SetItem24("scan", "Skanning", "Generelt → App", "Kamera, beskjæring og opplasting", "scan", "kamera skann"))
+    add(SetItem24("server", "Server og synk", "Generelt → App", "Lokal og ekstern adresse", "server", "server adresse"))
+    add(SetItem24("backup", "Backup og data", "Generelt → App", "Nedlasting og lagring", "backup", "backup eksport"))
     // Prompt 32: «oppdatering», «versjon» og «update» treffer Nordlys OS (Oppdatering-raden er fjernet).
-    add(SetItem24("nordlys", "Nordlys OS", "Programvare", "Oppdatering, versjon og hva er nytt", null, "oppdatering oppdater versjon update system programvare"))
+    add(SetItem24("nordlys", "Nordlys OS", "Server → System", "Oppdatering, versjon og hva er nytt", null, "oppdatering oppdater versjon update system programvare"))
     // Prompt 34: mål-id-er for konkrete kontroller (Oppdater nå, Tema, Haptikk …): treffet går til siden og markerer kontrollen.
     ANCHORS34.filter { vm.userIsAdmin || !it.admin }.forEach { a -> add(SetItem24(a.id, a.title, a.path, "Markeres på siden", null, a.words)) }
     (vm.b24.integ ?: INTEG24_FALLBACK).filter { vm.userIsAdmin || it.personal }.forEach { i ->
@@ -142,7 +151,9 @@ private fun iconFor24(id: String): ImageVector = when {
         "fin", "tabedit" -> Icons.Filled.ViewWeek; "sub" -> Icons.Filled.Autorenew; "appname" -> Icons.Filled.Edit; "appicon" -> Icons.Filled.Image
         "modules" -> Icons.Filled.Dashboard; "news" -> Icons.Filled.Newspaper; "look" -> Icons.Filled.Palette; "notify" -> Icons.Filled.Notifications
         "integ" -> Icons.Filled.Home; "healthpos" -> Icons.Filled.MonitorHeart; "scan" -> Icons.Filled.DocumentScanner; "server" -> Icons.Filled.Dns
-        "backup", "sysbackup" -> Icons.Filled.Backup; else -> Icons.Filled.Settings
+        "backup", "sysbackup" -> Icons.Filled.Backup
+        "glimt67", "g67rec" -> Icons.Filled.AutoAwesome; "g67mem" -> Icons.Filled.Psychology; "g67ent" -> Icons.Filled.People; "g67sch" -> Icons.Filled.Schedule
+        "g67q" -> Icons.Filled.Insights; "app67" -> Icons.Filled.PhoneAndroid; "fin67" -> Icons.Filled.AccountBalance; else -> Icons.Filled.Settings
     }
 }
 
@@ -165,13 +176,14 @@ private fun open24(vm: AppViewModel, it: SetItem24) {
         it.id == "logger44" -> vm.openLogs44() // prompt 44
         it.id == "rollback44" -> vm.openNordlys31() // prompt 44: TIDLIGERE VERSJONER ligger på System-siden
         // Prompt 39: PROFIL er borte fra hovedsiden (to plasser færre), og navn/ikon/fanelinje ligger i Tilpass.
-        it.id == "import" -> main(rowKey25("Bankimport"), 5)
-        it.id == "sub" -> main(rowKey25("Subscription OS"), 5)
+        // Prompt 67: Bankimport og Subscription OS står på siden Moduler → Finans.
+        it.id == "import" -> { vm.settingsPage = "fin67"; vm.highlight25(rowKey25("Bankimport"), 0) }
+        it.id == "sub" -> { vm.settingsPage = "fin67"; vm.highlight25(rowKey25("Subscription OS"), 0) }
         it.id == "appname" || it.id == "appicon" || it.id == "navstyle" || it.id == "tabedit" -> {
             vm.settingsPage = "tilpass"
             vm.highlight25(rowKey25(when (it.id) { "appname" -> "Navn på appen"; "appicon" -> "App-ikon"; "navstyle" -> "Fanelinje-stil"; else -> "Fanelinje i Hjem" }), 1)
         }
-        it.id == "news" -> main(rowKey25("Nyhetsleser"), 7)
+        it.id == "news" -> { vm.settingsPage = "modules"; vm.highlight25(rowKey25("Nyhetsleser"), 0) }
         it.page != null -> { vm.settingsPage = it.page; vm.highlight25("page:${it.page}", 0) }
     }
 }

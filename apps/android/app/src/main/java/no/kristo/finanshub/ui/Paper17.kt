@@ -57,16 +57,16 @@ import java.time.LocalDate
 
 /** Undersidene i Innstillinger (vm.settingsPage) med tittel i fotovinduet. */
 internal val PAPER_SET_TITLES = mapOf(
-    "accounts" to "Kontoer og brukere", "security" to "Sikkerhet", "tokens" to "API-tokens", "ai" to "AI og tolkning",
+    "accounts" to "Konto", "security" to "Sikkerhet", "tokens" to "API-tokens", "ai" to "AI", // prompt 67: navnene fra web-menyen
     "cats" to "Kategorier og budsjett", "rules" to "Regler", "stocks" to "Aksjer · Trading 212", "fin" to "Fanelinje og Mer i Finans",
-    "modules" to "Moduler", "look" to "Tilpass", "tilpass" to "Tilpass", "profil" to "Appprofil", "notify" to "Varsler og haptikk", "haptics" to "Haptikk",
+    "modules" to "Moduler", "look" to "Utseende", "tilpass" to "Utseende", "profil" to "Appprofil", "notify" to "Varsler", "haptics" to "Haptikk",
     "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner", "kal" to "Kalendere",
     "update" to "Oppdatering", "sysbackup" to "Backup",
     "huske" to "Gjøremål", // prompt 44: synk med Home Assistant
     "nyheter" to "Nyheter", // prompt 46: innstillingene fra Nyheter-siden (kilder, kategorier, For deg, sammendrag)
     "media" to "Media", // prompt 45: innstillingene fra Media (status per tjeneste, Integrasjoner, Rydd uovervåkede)
-    "prog50" to "Programvare", // prompt 50: egen side i høyre kolonne på brett
-)
+    "prog50" to "System", // prompt 50: egen side i høyre kolonne på brett · prompt 67: «System» under SERVER (bare admin)
+) + SET67_TITLES // prompt 67: Glimt og undersidene, App og Finans (ui/Set67Ui.kt)
 
 /**
  * Innstillinger: profilkort øverst, og gruppene KONTO, FINANS, <APPNAVN>, APP og Logg ut, med versjon nederst.
@@ -117,12 +117,23 @@ private fun PaperSettings17Body(vm: AppViewModel, navBottom: Dp, onPrivacyChange
             "accounts" -> item { AccountsPage(vm) }
             "security" -> { item { SecurityPage(vm, onPrivacyChanged) }; item { Sec51Section(vm) } } // prompt 51: enheter som venter
             "tokens" -> item { TokensPage(vm) }
-            "ai" -> { item { GlimtSearchSettings32b(vm) }; item { VoiceSettings56(vm) } /* prompt 56 */; item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { Memory33Settings(vm) }; item { AiTimeouts23(vm) } }
+            // Prompt 67: «AI og modeller» øverst; «Send til Chat etter» og Glimt husker er flyttet til Glimt (glimt67, g67mem).
+            "ai" -> { item { Ai67Head(vm) }; item { VoiceSettings56(vm) } /* prompt 56 */; item { AiPage(vm) }; item { PrivacyLogos27(vm) }; item { ChatSettings27(vm) }; item { AiTimeouts23(vm) } }
+            // Prompt 67: Glimt-siden og undersidene (ui/Glimt67Ui.kt), App og Finans (ui/Set67Ui.kt).
+            "glimt67" -> item { Glimt67Page(vm) }
+            "g67mem" -> item { G67MemPage(vm) }
+            "g67ent" -> item { G67EntPage(vm) }
+            "g67rec" -> item { G67RecPage(vm) }
+            "g67sch" -> item { G67SchPage(vm) }
+            "g67q" -> item { G67QPage(vm) }
+            "app67" -> item { App67Page(vm) }
+            "fin67" -> item { Fin67Page(vm) }
             // Prompt 26: gruppert liste som på web, egen side per integrasjon, og Kalendere.
             // Prompt 37: husstandens sporingsnøkler øverst (maskert, bare admin endrer).
             "integ" -> { item { TrkKeys37Section(vm) }; item { IntegList26(vm) } }
-            "kal" -> item { KalSettings26(vm) }
-            "huske" -> item { TasksSyncPage44(vm) } // prompt 44: Innstillinger → Gjøremål
+            // Prompt 67: «Kalender og gjøremål» som på web – Gjøremål-synken (prompt 44) står under Kalendere; gamle lenker til «huske» havner her.
+            "kal" -> { item { KalSettings26(vm) }; item { PLabel("Gjøremål · synk med Home Assistant", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }; item { TasksSyncPage44(vm) } }
+            "huske" -> item { LaunchedEffect(Unit) { vm.openKalSettings26(null) } }
             "media" -> item { MediaSettings45(vm) } // prompt 45: Innstillinger → Media (flyttet fra ⚙ i Media)
             "nyheter" -> item { NewsSettingsContent46(vm, PaperPal.current) } // prompt 46: Innstillinger → Nyheter (flyttet fra ⚙ i Nyheter)
             "cats" -> item { CategoriesPage(vm) }
@@ -178,58 +189,13 @@ internal fun androidx.compose.foundation.lazy.LazyListScope.profileCard17(vm: Ap
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.settingsGroups17(vm: AppViewModel) {
-    group("Konto") { i ->
-        SetRow(vm, i(), Icons.Filled.People, "Kontoer og brukere", "Bytt konto, legg til og logg ut") { vm.settingsPage = "accounts" }
-        SetRow(vm, i(), Icons.Filled.Lock, "Sikkerhet", if (vm.me?.totp == true) "2FA på" else "2FA av", top = true) { vm.settingsPage = "security" }
-        // Prompt 29: Backup av hele systemet (bare admin) – «Hver natt 03:00 · Hele systemet» eller «Automatisk av».
-        if (vm.userIsAdmin) SetRow(vm, i(), Icons.Filled.Backup, "Backup", bkSummary29(vm.bk29), top = true) { vm.settingsPage = "sysbackup" }
-        SetRow(vm, i(), Icons.Filled.Key, "API-tokens", vm.tokens?.let { "${it.size} aktive" } ?: "Snarveier og integrasjoner", top = true) { vm.settingsPage = "tokens" }
-    }
-    group("Finans") { i ->
-        SetRow(vm, i(), Icons.Filled.AutoAwesome, "AI og tolkning", "Gemini · Groq · Roboflow · Ollama") { vm.settingsPage = "ai" }
-        SetRow(vm, i(), Icons.Filled.Category, "Kategorier og budsjett", "Farger og typer", top = true) { vm.settingsPage = "cats" }
-        SetRow(vm, i(), Icons.Filled.Tune, "Regler", "Automatisk kategorisering", top = true) { vm.settingsPage = "rules" }
-        SetRow(vm, i(), Icons.Filled.AccountBalance, "Bankimport", "DNB · CSV · ✦ AI", top = true) { vm.openFromMer(Screen.Import) }
-        SetRow(vm, i(), Icons.AutoMirrored.Filled.ShowChart, "Aksjer · Trading 212", "Nøkkel, miljø og synk", top = true) { vm.settingsPage = "stocks" }
-        SetRow(vm, i(), Icons.Filled.ViewWeek, "Fanelinje og Mer i Finans", "${vm.paperFinTabs.size} faner", top = true) { vm.settingsPage = "fin" }
-        SetRow(vm, i(), Icons.Filled.Autorenew, "Subscription OS", "Abonnementer og AI-sparing", top = true) { vm.openFromMer(Screen.Sub) }
-    }
-    group(vm.appName) { i ->
-        // Prompt 39: navn, ikon, fanelinje, tema og bakgrunn ligger i «Tilpass».
-        SetRow(vm, i(), Icons.Filled.Palette, "Tilpass", "Navn, ikon, tema, farger, bakgrunn og fanelinje", "›") { vm.settingsPage = "tilpass" }
-        SetRow(vm, i(), Icons.Filled.Dashboard, "Moduler", "Familie, Gjøremål, Avganger, Vær", top = true) { vm.settingsPage = "modules" }
-        SetRow(vm, i(), Icons.Filled.Newspaper, "Nyheter", "Kilder, kategorier, For deg og Glimt-sammendrag", top = true) { vm.settingsPage = "nyheter"; if (vm.news == null) vm.loadNews() }
-    }
-    // Prompt 35: ny gruppe GLIMT → «Glimt» (figur, brief, stemme og venner) i fullskjerm.
-    group("Glimt") { _ -> GlimtSettingsRow35(vm) }
-    group("App") { i ->
-        AiSettingsRow34(vm, i()) // Prompt 34: AI og modeller → AI-kontroll i fullskjerm (ui/AiCtl34.kt)
-        SetRow(vm, i(), Icons.Filled.Notifications, "Varsler og haptikk", "Lyd, stille timer og test", top = true) { vm.settingsPage = "notify" }
-        SetRow(vm, i(), Icons.Filled.CalendarMonth, "Kalendere", "Google Kalender · Home Assistant · Skole-iCal", top = true) { vm.openKalSettings26(null) }
-        // Prompt 44: Gjøremål (synk med Home Assistant) under Kalendere.
-        SetRow(vm, i(), Icons.Filled.Checklist, "Gjøremål", "Synk med Home Assistant · " + (if (vm.tasksHa?.enabled == true) "på" else "av"), top = true) { vm.settingsPage = "huske" }
-        // Prompt 45 (claude-code-innstillinger-samlet.md): Media-innstillingene ligger her, ikke inne i Media.
-        SetRow(vm, i(), Icons.Filled.Movie, "Media", "Sonarr, Radarr, qBittorrent, Prowlarr · status", top = true) { vm.settingsPage = "media" }
-        SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", if (vm.userIsAdmin) "Home Assistant, Media, Entur, Bring og flere" else "Kalendere, Trading 212, Bring, e-post og flere", top = true) { vm.settingsPage = "integ" }
-        SetRow(vm, i(), Icons.Filled.Widgets, "Widgets", "Media, Avganger, Kalender og 3 til", top = true) { vm.p43.galleryOpen = true } // prompt 43
-        SetRow(vm, i(), Icons.Filled.MonitorHeart, "Helse og posisjon", "Health Connect, typer og posisjonsdeling", top = true) { vm.settingsPage = "healthpos" }
-        SetRow(vm, i(), Icons.Filled.People, "Appprofil", profileName39(vm), "›", top = true) { vm.settingsPage = "profil" } // prompt 39
-        SetRow(vm, i(), Icons.Filled.DocumentScanner, "Skanning", "Kamera, beskjæring og opplasting", top = true) { vm.settingsPage = "scan" }
-        SetRow(vm, i(), Icons.Filled.Dns, "Server og synk", "Lokal og ekstern adresse", top = true) { vm.settingsPage = "server" }
-        SetRow(vm, i(), Icons.Filled.Backup, "Backup og data", "Nedlasting og lagring", top = true) { vm.settingsPage = "backup" }
-    }
-    // Prompt 28: oppdatering av hele systemet (bare admin; startes i nettleseren). ui/Update28.kt.
-    // Prompt 30: PROGRAMVARE med «Oppdater ›» (passord-ark) og bryterne for automatiske oppdateringer og varsler.
-    // Prompt 32: «FinansHub-appen» (oppdater selve appen) for alle brukere; Homelab-oppdateringen bare for admin.
-    group("Programvare") { i ->
-        AppUpdateRow32(vm)
-        if (vm.userIsAdmin) {
-            Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
-            Programvare30(vm)
-            // Prompt 44: Logger (Docker-logger, feil og feilsøking), bare admin.
-            Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
-            SetRow(vm, i(), Icons.Filled.Dns, "Logger", "Docker-logger, feil og feilsøking") { vm.openLogs44() }
-            // Prompt 32: «Oppdatering» er fjernet; Nordlys OS-raden over gjør det samme (claude-code-fjern-oppdatering-rad.md).
+    // Prompt 67 (prompt 50b/66): gruppene som på web – GENERELT, HUSSTAND, GLIMT OG AI, TILKOBLINGER, MODULER og SERVER (ui/Set67Ui.kt).
+    // De gamle radene (Finans, Appprofil, Skanning, Server og synk, App-oppdatering …) ligger på undersidene Finans og App.
+    menu67(vm).forEach { g ->
+        group(g.title) { i ->
+            g.rows.forEachIndexed { n, r ->
+                SetRow(vm, i(), r.icon, r.title, r.sub, r.value ?: "›", top = n > 0) { r.go() }
+            }
         }
     }
     item { Spacer(Modifier.height(4.dp)) }

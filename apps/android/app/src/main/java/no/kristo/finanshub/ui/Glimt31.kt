@@ -89,6 +89,8 @@ import no.kristo.finanshub.Haptics
 import no.kristo.finanshub.boldParts31
 import no.kristo.finanshub.cancelAiJob31
 import no.kristo.finanshub.closeAns31
+import no.kristo.finanshub.pickHome67
+import no.kristo.finanshub.stopHome67
 import no.kristo.finanshub.quickJob31
 import no.kristo.finanshub.retryHome34
 import no.kristo.finanshub.openWeatherGeo35
@@ -366,10 +368,8 @@ internal fun HomeAnswer31(vm: AppViewModel) {
             .padding(start = 18.dp, top = 16.dp, end = 46.dp, bottom = 18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        if (a.busy) Row(Modifier.heightIn(min = 28.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            GlimtMark31(26.dp, GLIMT_TENKER, dark = true)
-            Text("Tenker på «${a.q}» …", color = light.copy(alpha = .75f), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 22.sp)
-        } else {
+        if (a.busy) HomeLive67(vm, a.q, light)
+        else {
             Text(
                 buildAnnotatedString {
                     boldParts31(a.text).forEach { (t, b) -> if (b) withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold, color = Color.White)) { append(t) } else append(t) }
@@ -395,6 +395,10 @@ internal fun HomeAnswer31(vm: AppViewModel) {
                     ) { Text("Avbryt", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1) }
                 }
             }
+            // Prompt 67: valgknapper («Mener du A eller B?») → item.text + choice i samme samtale.
+            no.kristo.finanshub.Glimt67.homeChoices?.let { ch ->
+                Choices67Row(ch, Color.White, Color.White.copy(alpha = .14f), Color.White.copy(alpha = .22f), PaperFonts.sans) { vm.pickHome67(ch, it) }
+            }
             // Prompt 34: Glimt svarte ikke → Prøv igjen og Åpne AI-kontroll.
             if (a.err) AiErrActions34(vm, Color.White, Color.White.copy(alpha = .14f)) { vm.retryHome34() }
             // Prompt 35: «været i New York» → trykk åpner Vær for stedet.
@@ -404,6 +408,8 @@ internal fun HomeAnswer31(vm: AppViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("✦ " + a.source.replace("System-AI", "Glimt").ifBlank { "Glimt" }, color = light.copy(alpha = .55f), fontFamily = PaperFonts.sans, fontWeight = FontWeight.SemiBold,
                     fontSize = 11.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                // Prompt 67: tommel opp/ned (POST /api/glimt/recipes/feedback) når svaret har traceId.
+                no.kristo.finanshub.Glimt67.homeTrace?.let { Thumbs67(vm, it, light.copy(alpha = .7f), Color(0xFF161412), Color.White, PaperFonts.sans) }
                 Box(
                     Modifier.height(32.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f))
                         .clickable(role = Role.Button) { Haptics.select(); vm.growToChat41(a.q) }.padding(horizontal = 14.dp), // prompt 41: samme animasjon
@@ -412,6 +418,35 @@ internal fun HomeAnswer31(vm: AppViewModel) {
             }
         }
     }
+    }
+}
+
+/**
+ * Prompt 67: mens Glimt-søket strømmer: merket + statuslinja («Sjekker kalenderen …»), teksten så langt og Stopp
+ * (POST /api/glimt/agent/stream/stop). Uten strømming: «Tenker på «…» …» som før.
+ */
+@Composable
+private fun HomeLive67(vm: AppViewModel, q: String, light: Color) {
+    val g = no.kristo.finanshub.Glimt67
+    val live = g.homeRid != null
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.heightIn(min = 28.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            GlimtMark31(26.dp, if (g.homeText.isEmpty()) GLIMT_TENKER else GLIMT_SVARER, dark = true)
+            if (g.homeStatus == null && g.homeText.isEmpty()) Text("Tenker på «$q» …", color = light.copy(alpha = .75f), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium,
+                fontSize = 16.sp, lineHeight = 22.sp, modifier = Modifier.weight(1f))
+            else GlimtStatus67(g.homeStatus ?: "Skriver svaret …", light.copy(alpha = .72f), PaperFonts.sans, Modifier.weight(1f))
+            if (live) Box(
+                Modifier.height(32.dp).clip(CircleShape).background(Color.White.copy(alpha = .14f))
+                    .clickable(role = Role.Button, onClickLabel = "Stopp") { vm.stopHome67() }.padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text("Stopp", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
+        }
+        if (g.homeText.isNotEmpty()) Text(
+            buildAnnotatedString {
+                boldParts31(g.homeText).forEach { (t, b) -> if (b) withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold, color = Color.White)) { append(t) } else append(t) }
+            },
+            color = light, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 24.sp,
+        )
     }
 }
 

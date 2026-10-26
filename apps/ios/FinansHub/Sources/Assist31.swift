@@ -164,6 +164,8 @@ final class Assist31 {
     @ObservationIgnored var action36: Bool = false
 
     func closeHome() {
+        // Prompt 67: et svar som strømmer stoppes når boblen lukkes (GlimtAgent45.swift).
+        GlimtAgent45.shared.drop67()
         homeId += 1
         homeBusy = false
         homeAnswer = nil
@@ -347,7 +349,10 @@ struct Assist31Bubble: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if m.homeBusy {
+            if m.homeBusy && GlimtAgent45.shared.streaming67 {
+                // Prompt 67: ordene så langt, statuslinja og Stopp mens Glimt strømmer (Convo67.swift).
+                Glimt67HomeLive()
+            } else if m.homeBusy {
                 HStack(spacing: 10) {
                     Glimt31Mark(size: 22, state: .thinking, dark: true)
                     Text("Tenker på «" + m.homeQ + "» …").font(PF.ui(16, .medium)).foregroundStyle(Color(hex: "#f6f2ea").opacity(0.75))
@@ -357,6 +362,8 @@ struct Assist31Bubble: View {
             } else if let a = m.homeAnswer {
                 Assist31BoldText(text: a.text, size: 17, color: Color(hex: "#f6f2ea"), bold: Color.white)
                     .fixedSize(horizontal: false, vertical: true)
+                // Prompt 67: «Stoppet» / cache-merknad, valgknapper og tommel opp/ned (Convo67.swift).
+                Glimt67HomeExtras(a: a)
                 if a.applyId > 0 && a.applyCount > 0 { Memory33ApplyButton(a: a) }
                 // Prompt 34: feil → Prøv igjen og Åpne AI-kontroll (Assist34.swift).
                 if a.failed34 {

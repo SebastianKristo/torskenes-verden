@@ -140,6 +140,13 @@ extension Set24Model {
         out.append(Set24Item(id: "glimt.fig", title: "Glimt-figur", sub: "Velg figur: Glimt, Halo, Sky, Ugle, Gris …", path: "Glimt", route: "glimt35", anchor: ""))
         out.append(Set24Item(id: "glimt.brief", title: "Glimt-brief", sub: "Morgen-, dags-, kvelds- og nattbrief med klokkeslett", path: "Glimt", route: "glimt35", anchor: ""))
         out.append(Set24Item(id: "glimt.voice", title: "Stemme og opplesning", sub: "Les opp, stemmemotor, stemme, tempo og språk", path: "Glimt", route: "glimt35", anchor: ""))
+        // Prompt 67: Innstillinger → Glimt og undersidene (Glimt67Pages.swift).
+        out.append(Set24Item(id: "glimt.innst67", title: "Glimt-innstillinger", sub: "Send til Chat etter, Forstår samtaler, minne, lærer og faste oppgaver", path: "Glimt og AI", route: "innst-glimt", anchor: ""))
+        out.append(Set24Item(id: "glimt.husker67", title: "Glimt husker", sub: "Minne, forslag, motstrid og ikke brukt på lenge", path: "Glimt", route: G67Nav.husker, anchor: ""))
+        out.append(Set24Item(id: "glimt.ent67", title: "Entitetsregister", sub: "Personer, steder, butikker og abonnementer med aliaser", path: "Glimt", route: G67Nav.ent, anchor: ""))
+        out.append(Set24Item(id: "glimt.laerer67", title: "Glimt lærer", sub: "Oppskrifter, hurtigvei og rettelser", path: "Glimt", route: G67Nav.laerer, anchor: ""))
+        out.append(Set24Item(id: "glimt.faste67", title: "Faste oppgaver", sub: "Planlagte oppgaver, påminnelser og varsler · Lag fra tekst", path: "Glimt", route: G67Nav.faste, anchor: ""))
+        out.append(Set24Item(id: "glimt.kvalitet67", title: "Kvalitet", sub: "Ukerapport og nattlig eval", path: "Glimt", route: G67Nav.kvalitet, anchor: ""))
         return out
     }
 

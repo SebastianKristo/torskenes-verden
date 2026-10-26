@@ -7,6 +7,9 @@ private let groups: [(String, [(String, String, String)])] = [
     ("Finans", [("ai", "AI og tolkning", "sparkles"), ("cats", "Kategorier og budsjett", "tag"), ("rules", "Regler", "list.bullet.rectangle"),
                 ("bank", "Bankimport", "building.columns"), ("stocks", "Aksjer · Trading 212", "chart.line.uptrend.xyaxis"), ("backup", "Backup og data", "externaldrive")]),
     ("App", [("look", "Utseende", "paintpalette"), ("scan", "Skanning og AI", "doc.viewfinder"), ("notify", "Varsler", "bell"), ("haptics", "Haptikk", "hand.tap"), ("widgets", "Widgets", "square.grid.2x2")]),
+    // Prompt 67: Glimt-sidene som på web (Glimt67Pages.swift, Glimt67Tasks.swift).
+    ("Glimt og AI", [("g67husker", "Glimt husker", "brain"), ("g67ent", "Entitetsregister", "person.text.rectangle"), ("g67laerer", "Glimt lærer", "graduationcap"),
+                     ("g67faste", "Faste oppgaver", "clock.arrow.circlepath"), ("g67kvalitet", "Kvalitet", "checkmark.seal")]),
     ("System", [("server", "Server og synk", "server.rack"), ("data", "Data og lagring", "internaldrive"), ("about", "Om FinansHub", "info.circle")]),
 ]
 
@@ -45,6 +48,7 @@ struct SettingsView: View {
                 case "rules": RulesPage()
                 case "stocks": StocksPrefsPage()
                 case "backup": BackupPage()
+                case "g67husker", "g67ent", "g67laerer", "g67faste", "g67kvalitet": G67ClassicPage(page: page ?? "")
                 default: AboutPage()
                 }
             }
@@ -117,6 +121,7 @@ struct SettingsSubpage: View {
             case "rules": RulesPage()
             case "stocks": StocksPrefsPage()
             case "backup": BackupPage()
+            case "g67husker", "g67ent", "g67laerer", "g67faste", "g67kvalitet": G67ClassicPage(page: page)
             default: AboutPage()
             }
         }

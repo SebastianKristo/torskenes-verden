@@ -423,6 +423,12 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                     // Prompt 41: faktakort (vær, tid, sol) under svaret.
                     if (msg.facts.isNotEmpty()) ChatFacts41(v, msg.facts)
                     msg.card?.let { ChatCard31(vm, it, v) }
+                    // Prompt 67: valgknapper og bekreftelse under det siste Glimt-svaret.
+                    if (i == lastA && !s.busy) msg.choices67?.let { ch -> Choices67Row(ch, v.ink, v.card, v.line, v.sans) { vm.pickChat67(ch, it) } }
+                    if (i == lastA && !s.busy) msg.confirm67?.let { cf ->
+                        if (cf.summary.isNotBlank() && cf.summary != "Ja, gjør det" && !msg.content.contains(cf.summary)) Text(cf.summary, color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        Confirm67Row(v.ink, v.bg, v.line, v.sans, { vm.confirmChat67(i, true) }, { vm.confirmChat67(i, false) })
+                    }
                     if (showModel) {
                         val mm = msg.model?.let { k -> s.models.firstOrNull { it.id == k } }
                         val where = when { msg.model == "Glimt" || msg.tool != null -> "Glimt"; mm?.sky == true -> "sky"; mm != null -> "lokal"; else -> null }
@@ -434,6 +440,8 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                         Ch27Act(v, ChIc27.COPY, if (s.copied == key) "Kopiert" else "Kopier") { clip.setText(AnnotatedString(msg.content)); vm.chatCopied27(key) }
                         if (i == lastA && !s.busy) Ch27Act(v, ChIc27.REGEN, "Nytt svar") { vm.regenChat27() }
                         Ch27Act(v, ChIc27.SPEAK, if (s.speaking == key) "Stopp" else "Les høyt") { vm.speakChat27(key, msg.content) }
+                        // Prompt 67: tommel opp/ned på Glimt-svar (traceId), ikke på stoppede svar.
+                        msg.trace67?.takeIf { msg.stats != "Stoppet" }?.let { Box(Modifier.align(Alignment.CenterVertically)) { Thumbs67(vm, it, v.mut, v.bg, v.ink, v.sans) } }
                         msg.stats?.takeIf { it.isNotBlank() }?.let {
                             Text(it, color = v.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 11.sp, modifier = Modifier.align(Alignment.CenterVertically).padding(start = 6.dp))
                         }
@@ -448,12 +456,14 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                     // Prompt 31: Glimt-merket (Tenker / Svarer mens teksten strømmer inn) i stedet for «Tenker …»-teksten.
                     Row(Modifier.align(Alignment.CenterVertically), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         GlimtMark31(22.dp, if (s.stream.isEmpty()) GLIMT_TENKER else GLIMT_SVARER)
-                        Ch27Mono((m?.label ?: "Glimt").uppercase(), v.acc)
+                        Ch27Mono((if (Glimt67.chatLive) "Glimt" else m?.label ?: "Glimt").uppercase(), v.acc)
                     }
                     Ch27Chips(v, "Leser", s.streamTools)
                 }
+                // Prompt 67: Glimt strømmer – statuslinja («Sjekker kalenderen …») i stedet for tankegangen.
+                if (Glimt67.chatLive) GlimtStatus67(Glimt67.chatStatus ?: if (s.stream.isEmpty()) "Forstår spørsmålet …" else "Skriver svaret …", v.mut, v.sans)
                 // Prompt 52: «✦ Tenker … 2,1 s ▾» med stegene (modellens egne, eller Glimts når modellen ikke tenker).
-                ThinkLive52(v, s.stream.isNotEmpty(), localSteps52(s.streamTools.isNotEmpty(), m?.label, s.data && s.myDataOn))
+                else ThinkLive52(v, s.stream.isNotEmpty(), localSteps52(s.streamTools.isNotEmpty(), m?.label, s.data && s.myDataOn))
                 if (s.stream.isNotEmpty()) Ch27Body(v, s.stream)
                 ChatReadWith50(v, Chat50.busyReadWith) // prompt 50
             }

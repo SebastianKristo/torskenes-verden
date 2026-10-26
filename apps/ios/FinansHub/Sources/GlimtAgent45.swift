@@ -9,7 +9,9 @@ import UIKit
  – reply i svarboblen under feltet (Assist31), results som liste i svaret,
  – ask {question, options} som ett oppfølgingsspørsmål (valg sendes tilbake med samme kontekst),
  – confirm {token, summary} før destruktive/viktige handlinger (POST /api/glimt/agent/confirm {token}).
- requestId er fast for samme tekst i 30 s, så et dobbelttrykk ikke lager to avtaler. Eldre server (404): den gamle kjeden som før. */
+ requestId er fast for samme tekst i 30 s, så et dobbelttrykk ikke lager to avtaler. Eldre server (404): den gamle kjeden som før.
+ Prompt 67: svaret strømmes (POST /api/glimt/agent/stream, Stream67.swift) med statuslinje og Stopp i boblen; 404/405 → POST /agent
+ som før. conversationId «home-…» (Convo67.swift), valgknapper (choices → choice tilbake) og tommel opp/ned når traceId finnes. */
 
 struct GlimtAgent45Ask: Identifiable, Equatable {
     var id: String { question }
@@ -33,6 +35,20 @@ final class GlimtAgent45 {
     var ask: GlimtAgent45Ask? = nil
     var confirm: GlimtAgent45Confirm? = nil
 
+    /* Prompt 67: strømmen (statuslinja, ordene så langt) og svaret valgknappene/tommelen hører til (answer67 = svarteksten). */
+    var streaming67: Bool = false
+    var status67: String = ""
+    var live67: String = ""
+    var choices67: Choices67? = nil
+    var traceId67: String = ""
+    var stopped67: Bool = false
+    var note67: String = ""
+    var answer67: String = ""
+    @ObservationIgnored private var task67: Task<Stream67Done?, Error>? = nil
+    @ObservationIgnored private var seq67: Int = 0
+    @ObservationIgnored private var rid67: String = ""
+    @ObservationIgnored private var api67: API? = nil
+
     @ObservationIgnored private var lastText: String = ""
     @ObservationIgnored private var lastId: String = ""
     @ObservationIgnored private var lastAt: Date = .distantPast
@@ -46,19 +62,26 @@ final class GlimtAgent45 {
     }
 
     /// Hjem-feltet. true = agenten tok forespørselen (også ved feil som er vist); false = bruk den gamle kjeden.
-    func home(_ text: String, _ store: Store, context: [String: Any] = [:]) async -> Bool {
+    func home(_ text: String, _ store: Store, context: [String: Any] = [:], choice: [String: String]? = nil) async -> Bool {
         guard available else { return false }
         let a: Assist31 = Assist31.shared
         a.homeQ = text
         a.homeBusy = true
         a.homeAnswer = nil
-        var body: [String: Any] = ["text": text, "module": "home", "requestId": requestId(text)]
+        // Prompt 67: et nytt spørsmål avløser svaret som strømmer (ny requestId, så serveren ikke ser det som et dobbelttrykk).
+        if let old = task67 { old.cancel(); lastText = ""; end67() }
+        seq67 += 1
+        clear67()
+        let rid: String = requestId(text)
+        var body: [String: Any] = ["text": text, "module": "home", "requestId": rid]
         if !context.isEmpty { body["context"] = context }
         // Svar på et åpent spørsmål uten valg: forrige forespørsel og spørsmålet følger med som kontekst.
         if context.isEmpty, let q = ask, q.options.isEmpty {
             body["context"] = ["question": q.question, "previous": q.text]
             ask = nil
         }
+        Convo67.add(&body, conv: Convo67.shared.home(), kind: "search", choice: choice)
+        if Stream67Gate.on, let handled = await stream67(body, text, rid, store) { return handled }
         do {
             let d: Data = try await store.api.callAt("/api", "POST", "/glimt/agent", json: body, timeout: 45)
             show(JS.obj(d), text, store)
@@ -76,13 +99,116 @@ final class GlimtAgent45 {
         }
     }
 
+    /// Prompt 67: strømmet svar. nil = serveren har ikke /stream (bruk POST /agent som før).
+    private func stream67(_ body: [String: Any], _ text: String, _ rid: String, _ store: Store) async -> Bool? {
+        let my: Int = seq67
+        rid67 = rid
+        api67 = store.api
+        streaming67 = true
+        status67 = ""
+        live67 = ""
+        let api: API = store.api
+        let data: Data = Stream67.data(body)
+        let t: Task<Stream67Done?, Error> = Task {
+            try await Stream67.run(api, body: data, onStatus: { (s: String) in
+                if GlimtAgent45.shared.seq67 == my { GlimtAgent45.shared.status67 = s }
+            }, onToken: { (s: String) in
+                if GlimtAgent45.shared.seq67 == my { GlimtAgent45.shared.live67 = s }
+            })
+        }
+        task67 = t
+        do {
+            let r: Stream67Done? = try await t.value
+            guard seq67 == my else { return true }
+            end67()
+            guard let r else {
+                Stream67Gate.off()
+                return nil
+            }
+            show(JS.obj(r.data), text, store)
+            return true
+        } catch {
+            guard seq67 == my else { return true }
+            let partial: String = live67
+            end67()
+            let e: Stream67Error = (error as? Stream67Error) ?? Stream67Error(message: error.localizedDescription, status: 0)
+            var ans: Assist31Answer = Assist31Answer()
+            ans.source = "glimt"
+            if e.stopped {
+                // Stopp: det som er skrevet så langt blir stående, merket «Stoppet».
+                let p: String = e.partial.isEmpty ? partial : e.partial
+                ans.text = p.isEmpty ? "Stoppet." : p
+                Assist31.shared.showLocal36(text, ans)
+                stopped67 = !p.isEmpty
+                answer67 = ans.text
+            } else {
+                ans.text = e.status == 429 ? e.message : Assist31.errorText34(e.message, model: nil)
+                ans.failed34 = e.status != 429
+                Assist31.shared.showLocal36(text, ans)
+            }
+            return true
+        }
+    }
+
+    private func end67() {
+        task67 = nil
+        streaming67 = false
+        status67 = ""
+        live67 = ""
+    }
+
+    private func clear67() {
+        choices67 = nil
+        traceId67 = ""
+        stopped67 = false
+        note67 = ""
+        answer67 = ""
+    }
+
+    /// Stopp i boblen: oppgaven avbrytes (serveren merker det) og POST /stream/stop {requestId}.
+    func stop67() {
+        guard let t = task67 else { return }
+        Haptics.shared.tap()
+        t.cancel()
+        lastText = ""
+        let rid: String = rid67
+        if let api = api67 { Task { await Stream67.stop(api, requestId: rid) } }
+    }
+
+    /// Boblen lukkes mens svaret strømmer: stopp uten å vise noe («Stoppet» vises bare ved Stopp).
+    func drop67() {
+        guard let t = task67 else { return }
+        seq67 += 1
+        t.cancel()
+        lastText = ""
+        end67()
+        let rid: String = rid67
+        if let api = api67 { Task { await Stream67.stop(api, requestId: rid) } }
+    }
+
+    /// Valgknapp: valget sendes som ny melding i samme samtale, med choice {setId, id}.
+    func pick67(_ it: Choice67Item, _ store: Store) {
+        guard let ch = choices67 else { return }
+        Haptics.shared.select()
+        let c: [String: String]? = ch.pick(it)
+        choices67 = nil
+        Task { _ = await home(it.text, store, choice: c) }
+    }
+
     private func show(_ o: [String: Any], _ text: String, _ store: Store) {
         var ans: Assist31Answer = Assist31Answer()
-        ans.text = answerText(o)
+        ans.text = GlimtAgent45.answerText(o)
         ans.intent = JS.str(o, "intent") ?? ""
         ans.source = "glimt"
         Assist31.shared.showLocal36(text, ans)
-        if let q = JS.dict(o, "ask"), let question = JS.str(q, "question") {
+        // Prompt 67: valgknapper (choices) i stedet for ask.options, og tommel opp/ned når traceId finnes.
+        let ch: Choices67? = Choices67.parse(JS.dict(o, "choices"))
+        choices67 = ch
+        traceId67 = JS.str(o, "traceId") ?? ""
+        stopped67 = false
+        note67 = Glimt67Answer.cacheNote(o)
+        answer67 = ans.text
+        if ch == nil, let q = JS.dict(o, "ask"), let question = JS.str(q, "question") {
             ask = GlimtAgent45Ask(question: question, options: JS.strings(q, "options"), text: text)
         }
         if let c = JS.dict(o, "confirm"), let token = JS.str(c, "token") {
@@ -92,9 +218,11 @@ final class GlimtAgent45 {
     }
 
     /// Svaret + treffene (results) som en kort liste. Aldri oppdiktede data: bare det serveren sendte.
-    private func answerText(_ o: [String: Any]) -> String {
+    /// Prompt 67: med valgknapper (choices) vises ikke de gamle valg-treffene (kind 'option') i tillegg.
+    static func answerText(_ o: [String: Any]) -> String {
         var t: String = JS.str(o, "reply") ?? ""
-        let res: [[String: Any]] = JS.list(o, "results")
+        let all: [[String: Any]] = JS.list(o, "results")
+        let res: [[String: Any]] = JS.dict(o, "choices") != nil ? all.filter { JS.str($0, "kind") != "option" } : all
         if !res.isEmpty {
             let lines: [String] = res.prefix(6).map { (r: [String: Any]) -> String in
                 let title: String = JS.str(r, "title") ?? JS.str(r, "name") ?? JS.str(r, "merchant") ?? ""
@@ -107,7 +235,7 @@ final class GlimtAgent45 {
     }
 
     /// Data som ble endret, lastes på nytt (kalender, gjøremål, finans) – først etter at serveren har bekreftet.
-    private func refresh(_ actions: [[String: Any]], _ store: Store) {
+    func refresh(_ actions: [[String: Any]], _ store: Store) {
         let done: [[String: Any]] = actions.filter { (JS.str($0, "status") ?? "") == "done" }
         if done.isEmpty { return }
         let tools: [String] = done.compactMap { JS.str($0, "tool") }

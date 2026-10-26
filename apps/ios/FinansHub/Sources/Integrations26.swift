@@ -192,12 +192,18 @@ extension Store {
     func nav26BackTarget() -> String? {
         if paperTab.hasPrefix("innst-int:") { return "innst-integ" }
         if paperTab == "innst-kal", let f = Int26Nav.kalFrom { return f }
+        // Prompt 67: undersidene til Glimt (Glimt husker, Entitetsregister, Glimt lærer, Faste oppgaver, Kvalitet) går til Glimt.
+        if paperTab.hasPrefix("innst-glimt:") { return "innst-glimt" }
+        // Prompt 67: Finans-sidene ligger under Moduler → Finans (som på web) og går tilbake dit.
+        if ["innst-kat", "innst-regler", "innst-aksjer", "innst-fin"].contains(paperTab) { return "innst-finans67" }
         return nil
     }
 
     var nav26UpLabel: String? {
         guard let t = nav26BackTarget() else { return nil }
         if t == "innst-integ" { return "Integrasjoner" }
+        if t == "innst-glimt" { return "Glimt" }
+        if t == "innst-finans67" { return "Finans" }
         if t == "bursdag" { return "Bursdager" }
         if t == "kalender" { return "Kalender" }
         return nil
@@ -208,6 +214,7 @@ extension PaperSettingsSub {
     /// Tittel og undertittel for undersidene fra prompt 26 (resten fra titles).
     @MainActor static func title26(_ key: String) -> (String, String)? {
         if key == "kal" { return ("Kalendere", "Google Kalender · Home Assistant · Skole-iCal") }
+        if let t = G67Nav.title(key) { return t } // prompt 67
         if key.hasPrefix("int:") {
             let id: String = String(key.dropFirst(4))
             if let it = Int24Model.shared.items.first(where: { $0.id == id }) { return (it.name, it.category26) }

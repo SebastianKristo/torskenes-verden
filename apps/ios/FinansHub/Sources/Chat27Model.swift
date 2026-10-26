@@ -72,6 +72,12 @@ struct ChatMsg27: Identifiable, Hashable {
     var think: [String] = []
     var thS: Double = 0
     var attTh: [String] = []
+    /// Prompt 67: Glimt-svar fra strømmen (Convo67.swift): stoppet, traceId (tommel opp/ned), valgknapper og bekreftelse.
+    var glimt67: Bool = false
+    var stopped67: Bool = false
+    var traceId67: String = ""
+    var choices67: Choices67? = nil
+    var confirm67: String = ""
 }
 
 struct ChatSettings27: Hashable {
@@ -219,6 +225,11 @@ final class ChatStore27 {
     var streamTool: [String] = []
     /// Prompt 31: Glimt-ruteren jobber (verktøy-spørsmål), Chat31Cards.swift.
     var pendingTool31: Bool = false
+    /// Prompt 67: statuslinja mens Glimt strømmer («Sjekker kalenderen …»), og strømmen som pågår (Convo67.swift).
+    var status67: String = ""
+    @ObservationIgnored var task67: Task<Void, Never>? = nil
+    @ObservationIgnored var rid67: String = ""
+    @ObservationIgnored var api67: API? = nil
     var scrollTick: Int = 0
     /// Prompt 52: tankestegene mens modellen tenker (SSE thinking), når den startet, og sekundene når svaret begynte (thinking_done).
     var think52: [String] = []
@@ -432,6 +443,7 @@ final class ChatStore27 {
 
     func open(_ c: ChatSummary27, _ store: Store) {
         stop()
+        drop67()
         drawer = false
         editIndex = nil
         curId = c.id
@@ -477,6 +489,13 @@ final class ChatStore27 {
             if let tool = JS.str(m, "tool"), msg.used.isEmpty { msg.used = [tool] }
             // Prompt 41: brukte kilder og faktakort ligger i meta.
             let meta41: [String: Any]? = JS.dict(m, "meta")
+            // Prompt 67: Glimt-svar (meta.glimt), så korte oppfølgere går til Glimt og tommelen vises når traceId finnes.
+            if role == "assistant" && JS.bool(meta41, "glimt") == true {
+                msg.glimt67 = true
+                msg.stopped67 = JS.bool(meta41, "stopped") ?? false
+                msg.traceId67 = JS.str(meta41, "traceId") ?? ""
+                if msg.model.isEmpty { msg.model = Glimt31.name }
+            }
             if msg.used.isEmpty { msg.used = JS.strings(meta41, "used") }
             msg.facts41 = ChatFact41.parse41(JS.list(meta41, "facts"))
             if role == "assistant" { Chat50.shared.apply(&msg, meta41) }
@@ -490,6 +509,8 @@ final class ChatStore27 {
 
     func newChat() {
         stop()
+        drop67()
+        Convo67.shared.newChat()
         curId = nil
         title = ""
         msgs = []
@@ -706,6 +727,8 @@ final class ChatStore27 {
         msgs.append(m)
         if title.isEmpty { title = String(t.prefix(48)) }
         input = ""
+        // Prompt 67: Glimt strømmer svaret (statuslinje, Stopp) og forstår oppfølgere; eldre server → prompt 31 under.
+        if toolRun67(t, store) { return }
         // Prompt 31: vær, kalender, avganger … svarer Glimt med et kort (Chat31Cards.swift).
         if toolRun31(t, store) { return }
         run(store, editFrom: nil)
@@ -910,6 +933,7 @@ final class ChatStore27 {
 
     func stop() {
         runTask?.cancel()
+        stop67()
     }
 
     /* ---------- «Sende til …?» ---------- */

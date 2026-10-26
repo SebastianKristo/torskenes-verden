@@ -659,9 +659,73 @@ struct PaperSettings17: View {
 
     /// Alle radgruppene i Innstillinger (tittel, fargeforskyvning, rader). Brukes av telefonlisten og venstre kolonne på Fold/iPad.
     @MainActor static func groups50(_ store: Store, _ p: PaperPalette) -> [Settings50Group] {
+        // Prompt 67 (prompt 50b/66, settings65.js MENU65): gruppert som på web – Generelt · Brukere og familie · Glimt og AI ·
+        // Tilkoblinger · Moduler · Server. Ingen side er fjernet, bare flyttet; Finans-radene ligger under Moduler → Finans.
         var out: [Settings50Group] = []
-        out.append(Settings50Group(title: "Konto", offset: 0, rows: kontoRows29(store)))
-        out.append(Settings50Group(title: "Finans", offset: 3, rows: [
+        out.append(Settings50Group(title: "Generelt", offset: 0, rows: generalRows67(store)))
+        // Prompt 42: Apple Health, Health Connect, Home Assistant · Mobilapp og hva som deles (Health42.swift).
+        var family: [PaperLinkRow] = [
+            PaperLinkRow(name: "Familie og helse", sub: "Deling av posisjon, personvern og Apple Helse", icon: "person.2") { store.paperGo("innst-fam") },
+        ]
+        family.append(contentsOf: Health42.rows(store, p))
+        family.append(PaperLinkRow(name: "Helse og posisjon", sub: HealthSync.shared.master ? "Apple Health er på · posisjon og bakgrunn" : "Apple Health er av · posisjon og bakgrunn", icon: "heart.text.square") { store.paperGo("innst-helse") })
+        out.append(Settings50Group(title: "Brukere og familie", offset: 4, rows: family))
+        out.append(Settings50Group(title: "Glimt og AI", offset: 5, rows: [
+            // Prompt 67: Glimt-siden (figur/brief/stemme, Glimt husker, Entitetsregister, Glimt lærer, Faste oppgaver, Kvalitet).
+            PaperLinkRow(name: "Glimt", sub: "Figur, brief, stemme · Glimt husker, lærer, faste oppgaver og kvalitet", icon: "sparkle", tint30: Color(hex: "#b23a2a")) { store.paperGo("innst-glimt") },
+            // Prompt 34: AI-kontroll i fullskjerm.
+            PaperLinkRow(name: "AI", sub: "Modeller, jobber, forbruk og nøkler", icon: "cpu") { AiCtl34.shared.show("ov") },
+        ]))
+        out.append(Settings50Group(title: "Tilkoblinger", offset: 2, rows: [
+            PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Media, Entur, Bring og 17 til", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
+            PaperLinkRow(name: "Kalendere", sub: "Google Kalender · Home Assistant · Skole-iCal", icon: "calendar") { Int26Nav.openKal(from: nil, store) },
+            // Prompt 44/45: Gjøremål (synk med Home Assistant) – på web under «Kalender og gjøremål».
+            PaperLinkRow(name: "Gjøremål", sub: "Synk med Home Assistant · på/av", icon: "checklist") { store.paperGo("innst-huske") },
+        ]))
+        // Prompt 45: én rad per modul (Settings45.swift). Gjøremål står under Tilkoblinger.
+        var modules: [PaperLinkRow] = [
+            PaperLinkRow(name: "Moduler", sub: "Sporing, Domener, Mat, Familie, Avganger og Vær", icon: "square.grid.2x2") { store.paperGo("innst-hl") },
+            PaperLinkRow(name: "Finans", sub: "AI og tolkning, kategorier, regler, bank, aksjer og abonnementer", icon: "creditcard") { store.paperGo("innst-finans67") },
+        ]
+        modules.append(contentsOf: Settings45.rows(store).filter { (r: PaperLinkRow) -> Bool in r.name != "Gjøremål" })
+        modules.append(PaperLinkRow(name: "Nyhetsleser", sub: "Kilder og AI", icon: "newspaper") { store.openNews() })
+        out.append(Settings50Group(title: "Moduler", offset: 3, rows: modules))
+        // Prompt 28/29/44: Backup og Logger (bare admin). PROGRAMVARE (Nordlys OS) følger rett under.
+        if Update28Model.isAdmin(store) || Backup29Model.isAdmin(store) {
+            var server: [PaperLinkRow] = []
+            if Backup29Model.isAdmin(store) {
+                server.append(PaperLinkRow(name: "Backup", sub: Backup29Model.shared.summary, icon: "externaldrive.badge.timemachine") { store.paperGo("innst-sysbackup") })
+            }
+            if Update28Model.isAdmin(store) {
+                server.append(PaperLinkRow(name: "Logger", sub: "Docker-logger, feil og feilsøking", icon: "doc.text.magnifyingglass") { Logs44.shared.show() })
+            }
+            out.append(Settings50Group(title: "Server", offset: 6, rows: server))
+        }
+        return out
+    }
+
+    /// Prompt 67: GENERELT – Konto, Utseende, Varsler og App (som web).
+    @MainActor private static func generalRows67(_ store: Store) -> [PaperLinkRow] {
+        [
+            PaperLinkRow(name: "Konto", sub: "Profil, server, brukere og flere kontoer", icon: "person.crop.circle") { store.paperGo("innst-konto") },
+            PaperLinkRow(name: "Sikkerhet", sub: store.lockEnabled ? "Lås med Face ID er på" : "2FA, Face ID og pålitelige enheter", icon: "lock") { store.paperGo("innst-sik") },
+            PaperLinkRow(name: "API-tokens", sub: "Snarveier og integrasjoner", icon: "key") { store.loadTokens(); store.paperGo("innst-api") },
+            // Prompt 46: skann QR-koden som Kalender (Mac/iOS/Android) eller Finans viser, og godkjenn med Face ID (QrLogin38.swift).
+            PaperLinkRow(name: "Logg inn på annen enhet", sub: "Skann QR-koden på den andre enheten", icon: "qrcode.viewfinder") { Qr38Model.shared.show() },
+            // Prompt 39: navn, ikon, tema, farger, bakgrunn og fanelinje ligger samlet i «Tilpass» (Settings39.swift).
+            PaperLinkRow(name: "Utseende", sub: "Navn, ikon, tema, farger, bakgrunn og fanelinje", icon: "paintpalette") { store.paperGo("innst-tilpass") },
+            PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
+            // Prompt 39: egen underside for profilene (Standard / Finans + Boliger / Boliger-profil).
+            PaperLinkRow(name: "Appprofil", sub: store.appProfileName39, icon: "person.2") { store.paperGo("innst-appprofil") },
+            // Prompt 43: Widgets-galleriet (Widgets43.swift).
+            PaperLinkRow(name: "Widgets", sub: "Media, Avganger, Kalender og 3 til", icon: "square.grid.2x2") { Widgets43.shared.open = true },
+            PaperLinkRow(name: "Avansert", sub: "Skanning, widgets, server og data", icon: "gearshape.2") { store.paperGo("innst-avansert") },
+        ]
+    }
+
+    /// Prompt 67: Moduler → Finans (radene som før lå i gruppen FINANS).
+    @MainActor static func financeRows67(_ store: Store) -> [PaperLinkRow] {
+        [
             // Prompt 34: AI i Finans er AI-kontroll med scope finans (AI-valg, Tilkoblinger, Jobber, Forbruk).
             PaperLinkRow(name: "AI og tolkning", sub: "Modeller per oppgave, tilkoblinger, jobber og forbruk", icon: "sparkles") { AiCtl34.shared.show("rt", scope: "finans") },
             PaperLinkRow(name: "Kategorier og budsjett", sub: "\(store.boot?.categories.count ?? 0) kategorier", icon: "tag") { store.paperGo("innst-kat") },
@@ -670,59 +734,7 @@ struct PaperSettings17: View {
             PaperLinkRow(name: "Aksjer · Trading 212", sub: "Nøkkel, miljø og synk", icon: "chart.line.uptrend.xyaxis") { store.paperGo("innst-aksjer") },
             PaperLinkRow(name: "Fanelinje og Mer i Finans", sub: "\(store.finNav.count) faner", icon: "dock.rectangle") { store.paperGo("innst-fin") },
             PaperLinkRow(name: "Subscription OS", sub: "Abonnementer og AI-sparing", icon: "repeat") { store.paperFinGo("abo") },
-        ]))
-        out.append(Settings50Group(title: AppMeta.shared.name, offset: 1, rows: [
-            // Prompt 39: navn, ikon, tema, farger, bakgrunn og fanelinje ligger samlet i «Tilpass» (Settings39.swift).
-            PaperLinkRow(name: "Tilpass", sub: "Navn, ikon, tema, farger, bakgrunn og fanelinje", icon: "paintpalette") { store.paperGo("innst-tilpass") },
-            PaperLinkRow(name: "Moduler", sub: "Sporing, Domener, Mat, Familie, Avganger og Vær", icon: "square.grid.2x2") { store.paperGo("innst-hl") },
-            PaperLinkRow(name: "Nyhetsleser", sub: "Kilder og AI", icon: "newspaper") { store.openNews() },
-        ]))
-        // Prompt 35: ny gruppe GLIMT → «Glimt» (figur, brief, stemme og venner) i fullskjerm (Glimt35Settings.swift).
-        out.append(Settings50Group(title: "Glimt", offset: 5, rows: [
-            PaperLinkRow(name: "Glimt", sub: "Figur, brief, stemme og venner", icon: "sparkle", tint30: Color(hex: "#b23a2a")) { Glimt35Model.shared.showPage = true },
-        ]))
-        // Prompt 42: HELSE (FAMILIE) – Apple Health, Health Connect, Home Assistant · Mobilapp og hva som deles (Health42.swift).
-        out.append(Settings50Group(title: "Helse (Familie)", offset: 4, rows: Health42.rows(store, p)))
-        // Prompt 45: én seksjon per modul (claude-code-innstillinger-samlet.md) – Media, Gjøremål, Ruter og Sonevarsler
-        // samlet her i stedet for egne innstillingssider inne i modulene (Settings45.swift).
-        out.append(Settings50Group(title: "Moduler", offset: 3, rows: Settings45.rows(store)))
-        out.append(Settings50Group(title: "App", offset: 2, rows: [
-            // Prompt 34: APP → AI og modeller (AI-kontroll i fullskjerm).
-            PaperLinkRow(name: "AI og modeller", sub: "Modeller, jobber, forbruk og nøkler", icon: "cpu") { AiCtl34.shared.show("ov") },
-            PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
-            PaperLinkRow(name: "Kalendere", sub: "Google Kalender · Home Assistant · Skole-iCal", icon: "calendar") { Int26Nav.openKal(from: nil, store) },
-            // Prompt 44: Innstillinger → Gjøremål ligger nå under MODULER (prompt 45, Settings45.swift).
-            // Prompt 43: Widgets-galleriet (Widgets43.swift).
-            PaperLinkRow(name: "Widgets", sub: "Media, Avganger, Kalender og 3 til", icon: "square.grid.2x2") { Widgets43.shared.open = true },
-            PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Media, Entur, Bring og 17 til", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
-            PaperLinkRow(name: "Helse og posisjon", sub: HealthSync.shared.master ? "Apple Health er på · posisjon og bakgrunn" : "Apple Health er av · posisjon og bakgrunn", icon: "heart.text.square") { store.paperGo("innst-helse") },
-            // Prompt 39: egen underside for profilene (Standard / Finans + Boliger / Boliger-profil).
-            PaperLinkRow(name: "Appprofil", sub: store.appProfileName39, icon: "person.2") { store.paperGo("innst-appprofil") },
-            PaperLinkRow(name: "Avansert", sub: "Skanning, widgets, server og data", icon: "gearshape.2") { store.paperGo("innst-avansert") },
-        ]))
-        // Prompt 28: oppdatering av hele systemet (bare admin; startes i nettleseren). Update28.swift.
-        // Prompt 44: SERVER → Logger (Docker-logger, feil og feilsøking) for admin (Logs44.swift).
-        if Update28Model.isAdmin(store) {
-            out.append(Settings50Group(title: "Server", offset: 6, rows: [
-                PaperLinkRow(name: "Logger", sub: "Docker-logger, feil og feilsøking", icon: "doc.text.magnifyingglass") { Logs44.shared.show() },
-            ]))
-        }
-        return out
-    }
-
-    /// Prompt 29: Backup (hele systemet) under Konto for admin (Backup29Page.swift).
-    @MainActor private static func kontoRows29(_ store: Store) -> [PaperLinkRow] {
-        var rows: [PaperLinkRow] = [
-            PaperLinkRow(name: "Kontoer og brukere", sub: "Profil, brukere og flere kontoer", icon: "person.2") { store.paperGo("innst-konto") },
-            PaperLinkRow(name: "Sikkerhet", sub: store.lockEnabled ? "Lås med Face ID er på" : "2FA, Face ID og pålitelige enheter", icon: "lock") { store.paperGo("innst-sik") },
         ]
-        if Backup29Model.isAdmin(store) {
-            rows.append(PaperLinkRow(name: "Backup", sub: Backup29Model.shared.summary, icon: "externaldrive.badge.timemachine") { store.paperGo("innst-sysbackup") })
-        }
-        rows.append(PaperLinkRow(name: "API-tokens", sub: "Snarveier og integrasjoner", icon: "key") { store.loadTokens(); store.paperGo("innst-api") })
-        // Prompt 46: skann QR-koden som Kalender (Mac/iOS/Android) eller Finans viser, og godkjenn med Face ID (QrLogin38.swift).
-        rows.append(PaperLinkRow(name: "Logg inn på annen enhet", sub: "Skann QR-koden på den andre enheten", icon: "qrcode.viewfinder") { Qr38Model.shared.show() })
-        return rows
     }
 
     private var themeSub: String {
@@ -841,6 +853,14 @@ struct PaperSettingsSub: View {
             case "sone": Zone45SettingsPage()
             // Prompt 46: Innstillinger → Nyheter (kilder, kategorier, For deg, Glimt-sammendrag) – flyttet fra Nyheter-siden.
             case "nyheter": News46SettingsPage()
+            // Prompt 67: Innstillinger → Glimt og undersidene (Glimt67Pages.swift, Glimt67Tasks.swift), og Moduler → Finans.
+            case "glimt": G67GlimtPage()
+            case "glimt:husker": G67HuskerPage()
+            case "glimt:ent": G67EntPage()
+            case "glimt:laerer": G67LearnPage()
+            case "glimt:faste": G67SchedPage()
+            case "glimt:kvalitet": G67QualityPage()
+            case "finans67": PaperLinkList(rows: PaperSettings17.financeRows67(store))
             default: SettingsSubpage(page: key)
             }
         }
@@ -1105,10 +1125,11 @@ struct PaperAiSettings: View {
             Chat27SettingsGroup()
             // Prompt 56: TALE TIL TEKST – Serveren (anbefalt) / På enheten (Voice56.swift).
             Voice56SettingsGroup()
-            // Prompt 32: GLIMT I SØKEFELTET – «Send til Chat etter» 5/8/15/30 s (Search32.swift).
-            Search32bSettingsGroup()
-            // Prompt 33: GLIMT HUSKER (Memory33.swift).
-            Memory33SettingsGroup()
+            // Prompt 67: «Send til Chat etter» (prompt 32) og GLIMT HUSKER (prompt 33) ligger nå på Innstillinger → Glimt (som web).
+            PLabel(text: "Glimt").padding(.leading, 4).padding(.top, 14)
+            PaperLinkList(rows: [
+                PaperLinkRow(name: "Glimt husker og «Send til Chat etter»", sub: "Flyttet til Innstillinger → Glimt", value: "Glimt ›", valueColor: p.lab, icon: "sparkle") { store.paperGo("innst-glimt") },
+            ])
             // Prompt 23: tidsgrense per motor, nye forsøk og hva som skjer ved tidsavbrudd (AiTimeouts23.swift).
             AiTimeouts23(locked: !canEdit)
             PLabel(text: "Hvem gjør hva").padding(.leading, 4).padding(.top, 14)

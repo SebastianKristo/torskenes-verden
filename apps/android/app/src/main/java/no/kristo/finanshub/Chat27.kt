@@ -66,6 +66,8 @@ data class ChatMsg27(
     val files50: List<ChatFile50> = emptyList(), val readWith50: String? = null, val finUrl50: String? = null,
     /** Prompt 52 (AND52A): tankegangen (think: string[]) og tiden den tok (thS). Sendes aldri tilbake til modellen. */
     val think52: List<String> = emptyList(), val thS52: Double? = null,
+    /** Prompt 67 (ANDCHAT67): Glimt-svarets traceId (tommel opp/ned), valgknappene, bekreftelsen og samtale-id-en. */
+    val trace67: String? = null, val choices67: Choices67? = null, val confirm67: Confirm67? = null, val conv67: String? = null,
 )
 
 data class ChatSet27(
@@ -491,6 +493,7 @@ fun AppViewModel.newChat27() {
     val s = chat27
     stopChat27(silent = true)
     s.curId = null; s.msgs = emptyList(); s.title = ""; s.model = s.defModel; s.settings = s.defSettings
+    Glimt67.newChatConv() // prompt 67: ny samtale-id for Glimt
     s.data = s.myDataOn // Prompt 41: «Mine data» på i hver nye samtale
     s.att = emptyList(); s.input = ""; s.editIdx = null; s.drawer = false; s.guard = null
 }
@@ -845,7 +848,9 @@ fun AppViewModel.stopChat27(silent: Boolean = false) {
     s.stopped = true
     val c = s.conn
     viewModelScope.launch(Dispatchers.IO) { runCatching { c?.disconnect() } }
-    if (silent) { s.job?.cancel(); s.busy = false; s.stream = "" }
+    // Prompt 67: Glimt strømmer svaret – be serveren stoppe også (POST /api/glimt/agent/stream/stop {requestId}).
+    Glimt67.chatRid?.let { stopStream67(it, null) }
+    if (silent) { s.job?.cancel(); s.busy = false; s.stream = ""; Glimt67.chatLive = false; Glimt67.chatStatus = null }
 }
 
 /** Nytt svar på siste melding. */

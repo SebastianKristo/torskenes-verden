@@ -41,31 +41,69 @@ internal fun agentModule45(source: String): String = when (source) { "search", "
  */
 internal suspend fun AppViewModel.agent45(q: String, source: String): Assist31? {
     val s = p45
-    if (s.agentOk == false) return null
     val module = agentModule45(source)
-    val body = JSONObject().put("text", q).put("module", module).put("requestId", UUID.randomUUID().toString())
-    val raw = try { api45 { request("POST", "/glimt/agent", body, prefix = Api.HOMELAB, timeout = 6000, read = 45_000) } } catch (e: CancellationException) { throw e } catch (e: ApiException) {
-        if (e.status == 404 || e.status == 405) s.agentOk = false
-        return null
-    } catch (e: Exception) { return null }
-    val o = runCatching { JSONObject(raw) }.getOrNull() ?: return null
-    s.agentOk = true
-    val reply = o.s45("reply") ?: o.s45("text") ?: return null
-    val ask = o.optJSONObject("ask")?.s45("question")
-    val text = if (ask != null && !reply.contains(ask)) "$reply\n$ask" else reply
+    // Prompt 67 (ANDCHAT67): Glimt-søket strømmer (POST /api/glimt/agent/stream) med statuslinje og Stopp, i samme samtale
+    // (conversationId «home-…», kind search). Valgknappen som ble trykket sendes som choice. Eldre server → POST /api/glimt/agent som før.
+    val g = Glimt67
+    val pick = g.pendingPick?.takeIf { it.text.trim() == q.trim() }
+    g.pendingPick = null
+    val conv = if (module == "home") g.homeConv() else null
+    val rid = Glimt67.rid()
+    val body = agentBody67(q, module, rid, conv, if (conv != null) "search" else null, pick)
+    g.homeChoices = null; g.homeTrace = null
+    var o: JSONObject? = null
+    if (module == "home" && g.streamOn()) {
+        g.homeRid = rid; g.homeStop = false; g.homeStatus = null; g.homeText = ""
+        try {
+            o = stream67(body, { g.homeStop }, { g.homeConn = it }, { g.homeStatus = it }, { g.homeText = it })
+        } catch (e: CancellationException) { g.homeRid = null; g.homeStatus = null; g.homeText = ""; throw e } catch (e: Stopped67) {
+            g.homeRid = null; g.homeStatus = null; g.homeText = ""
+            return Assist31(if (e.partial.isBlank()) "Stoppet." else e.partial + " …", "Glimt · Stoppet", "home.stopped", null, null, null, null, null, kind = "question")
+        } catch (e: ApiException) {
+            g.homeRid = null; g.homeStatus = null; g.homeText = ""
+            if (e.status == 429) return Assist31(e.message ?: "Glimt jobber med mye nå. Prøv igjen om litt.", "Glimt", "home.busy", null, null, null, null, null, kind = "question")
+            return null
+        } catch (e: Exception) { g.homeRid = null; g.homeStatus = null; g.homeText = ""; return null }
+        g.homeRid = null; g.homeStatus = null; g.homeText = ""
+        if (o != null) s.agentOk = true
+    }
+    if (o == null) {
+        if (s.agentOk == false) return null
+        val raw = try { api45 { request("POST", "/glimt/agent", body, prefix = Api.HOMELAB, timeout = 6000, read = 45_000) } } catch (e: CancellationException) { throw e } catch (e: ApiException) {
+            if (e.status == 404 || e.status == 405) s.agentOk = false
+            return null
+        } catch (e: Exception) { return null }
+        o = runCatching { JSONObject(raw) }.getOrNull() ?: return null
+        s.agentOk = true
+    }
+    val a = agentView67(o)
+    val reply = a.text.takeIf { it.isNotBlank() } ?: return null
+    // Prompt 67: valgknappene (choices) vises i boblen; spørsmålet står allerede i svaret.
+    val text = reply
     val intent = o.s45("intent") ?: "ask"
     val mod = o.s45("module") ?: module
-    val actions = o.optJSONArray("actions")
-    val tool = actions?.optJSONObject(0)?.s45("tool")
-    s.agentConfirm = o.optJSONObject("confirm")?.let { c -> c.s45("token")?.let { it to (c.s45("summary") ?: "Bekreft") } }
+    val tool = a.toolName
+    s.agentConfirm = a.confirm?.let { it.token to it.summary.ifBlank { "Bekreft" } }
+    g.homeChoices = a.choices
+    g.homeTrace = a.traceId
     // Intent som resten av appen kjenner igjen (reloadKal27 ved «calendar.create», trial.* osv.).
     val legacy = when {
         mod == "calendar" && intent in setOf("create", "update", "delete") -> "calendar.$intent"
         intent == "ask" || intent == "summarize" || intent == "search" -> "$mod.$intent"
         else -> "$mod.$intent"
     }
-    return Assist31(text, "Glimt", legacy, o.optJSONObject("card"), tool, null, null, null, null, o.optJSONObject("open"),
-        if (intent in setOf("create", "update", "delete", "multi")) "action" else "question")
+    // Spørsmål med valg eller bekreftelse vises alltid i boblen (ikke som pille), så knappene kan trykkes.
+    val kind = if (a.choices != null || a.confirm != null) "question" else if (intent in setOf("create", "update", "delete", "multi")) "action" else "question"
+    return Assist31(text, a.cacheNote()?.let { "Glimt · $it" } ?: "Glimt", legacy, a.card ?: o.optJSONObject("card"), tool, a.ms, null, null, null, a.open, kind)
+}
+
+/** Prompt 67: valgknapp i boblen → item.text + choice {setId, id} i samme samtale (søket på Hjem). */
+fun AppViewModel.pickHome67(ch: Choices67, item: ChoiceItem67) {
+    if (p31.ans?.busy == true) return
+    Haptics.select()
+    Glimt67.pendingPick = pick67(ch, item)
+    Glimt67.homeChoices = null
+    askHome32b(item.text)
 }
 
 /** «Bekreft» på en handling Glimt foreslo. Svaret erstatter teksten i boblen. */

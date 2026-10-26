@@ -57,6 +57,8 @@ internal fun setWide50(vm: AppViewModel, wide: Boolean): Boolean =
 private fun navKey50(vm: AppViewModel, page: String?): String? = when {
     page == null -> null
     page.startsWith("integ:") -> "integ"
+    parent67(page) != null -> parent67(page) // prompt 67: undersider av Glimt, App og Finans markerer forelderen
+    page == "huske" -> "kal"
     page == "kal" && vm.b26.kalFrom == "integ" -> "integ"
     page == "look" -> "tilpass"
     page == "haptics" -> "notify"
@@ -66,55 +68,9 @@ private fun navKey50(vm: AppViewModel, page: String?): String? = when {
 private class Row50(val key: String?, val title: String, val icon: ImageVector, val value: String? = null, val go: () -> Unit)
 private class Group50(val title: String, val rows: List<Row50>)
 
-private fun groups50(vm: AppViewModel): List<Group50> {
-    val admin = vm.userIsAdmin
-    val u = vm.p30.upd
-    val sysAvail = admin && (u.phase == "avail" || (u.available && u.phase == "none"))
-    val appAvail = AppUpd32.s.phase == "avail"
-    fun page(k: String): () -> Unit = { vm.settingsPage = k }
-    return listOf(
-        Group50("Programvare", buildList {
-            add(Row50("prog50", "Programvare", Icons.Filled.SystemUpdate, if (appAvail) "Oppdater" else null, page("prog50")))
-            if (admin) add(Row50(null, "Nordlys OS", Icons.Filled.AutoAwesome, if (sysAvail) "Oppdater" else null) { vm.openNordlys31() })
-            if (admin) add(Row50(null, "Logger", Icons.Filled.Dns) { vm.openLogs44() })
-        }),
-        Group50("Konto", buildList {
-            add(Row50("accounts", "Kontoer og brukere", Icons.Filled.People, go = page("accounts")))
-            add(Row50("security", "Sikkerhet", Icons.Filled.Lock, go = page("security")))
-            if (admin) add(Row50("sysbackup", "Backup", Icons.Filled.Backup, go = page("sysbackup")))
-            add(Row50("tokens", "API-tokens", Icons.Filled.Key, go = page("tokens")))
-        }),
-        Group50("Finans", listOf(
-            Row50("ai", "AI og tolkning", Icons.Filled.AutoAwesome, go = page("ai")),
-            Row50("cats", "Kategorier og budsjett", Icons.Filled.Category, go = page("cats")),
-            Row50("rules", "Regler", Icons.Filled.Tune, go = page("rules")),
-            Row50(null, "Bankimport", Icons.Filled.AccountBalance) { vm.openFromMer(Screen.Import) },
-            Row50("stocks", "Aksjer · Trading 212", Icons.AutoMirrored.Filled.ShowChart, go = page("stocks")),
-            Row50("fin", "Fanelinje og Mer i Finans", Icons.Filled.ViewWeek, go = page("fin")),
-            Row50(null, "Subscription OS", Icons.Filled.Autorenew) { vm.openFromMer(Screen.Sub) },
-        )),
-        Group50(vm.appName, listOf(
-            Row50("tilpass", "Tilpass", Icons.Filled.Palette, go = page("tilpass")),
-            Row50("modules", "Moduler", Icons.Filled.Dashboard, go = page("modules")),
-            Row50("nyheter", "Nyheter", Icons.Filled.Newspaper) { vm.settingsPage = "nyheter"; if (vm.news == null) vm.loadNews() },
-        )),
-        Group50("Glimt", listOf(Row50(null, "Glimt", Icons.Filled.AutoAwesome) { vm.openGlimt35() })),
-        Group50("App", listOf(
-            Row50(null, "AI og modeller", Icons.Filled.Memory) { vm.openAiCtl34("ov") },
-            Row50("notify", "Varsler og haptikk", Icons.Filled.Notifications, go = page("notify")),
-            Row50("kal", "Kalendere", Icons.Filled.CalendarMonth) { vm.openKalSettings26(null) },
-            Row50("huske", "Gjøremål", Icons.Filled.Checklist, go = page("huske")),
-            Row50("media", "Media", Icons.Filled.Movie, go = page("media")),
-            Row50("integ", "Integrasjoner", Icons.Filled.Home, go = page("integ")),
-            Row50(null, "Widgets", Icons.Filled.Widgets) { vm.p43.galleryOpen = true },
-            Row50("healthpos", "Helse og posisjon", Icons.Filled.MonitorHeart, go = page("healthpos")),
-            Row50("profil", "Appprofil", Icons.Filled.People, go = page("profil")),
-            Row50("scan", "Skanning", Icons.Filled.DocumentScanner, go = page("scan")),
-            Row50("server", "Server og synk", Icons.Filled.Dns, go = page("server")),
-            Row50("backup", "Backup og data", Icons.Filled.Backup, go = page("backup")),
-        )),
-    ).filter { it.rows.isNotEmpty() }
-}
+/** Prompt 67: samme grupper som på telefon og web (menu67 i ui/Set67Ui.kt), uten undertekst. */
+private fun groups50(vm: AppViewModel): List<Group50> =
+    menu67(vm).map { g -> Group50(g.title, g.rows.map { r -> Row50(r.key, r.title, r.icon, r.value, r.go) }) }
 
 /** Sider som kan gjenopprettes fra papir_set_sub (ikke «update», som sender videre til Nordlys, og ikke Kalendere fra Bursdager). */
 private fun restorable50(k: String): Boolean = k.startsWith("integ:") || (k in PAPER_SET_TITLES && k != "update") || k == "kal"
@@ -208,7 +164,7 @@ internal fun LazyListScope.settingsHead50(vm: AppViewModel) {
                 Modifier.heightIn(min = 46.dp).shadow(12.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
                     .clip(CircleShape).background(p.card).padding(horizontal = 20.dp),
                 contentAlignment = Alignment.CenterStart,
-            ) { PSerif(if (sub == "prog50") "Programvare" else settingsTitle26(vm), 24.sp, maxLines = 1) }
+            ) { PSerif(settingsTitle26(vm), 24.sp, maxLines = 1) }
         }
     }
 }
@@ -219,18 +175,13 @@ internal fun LazyListScope.settingsHome50(vm: AppViewModel) {
     profileCard17(vm)
 }
 
-/** Innstillinger → Programvare på brett: appen, Nordlys OS med automatiske oppdateringer, og Logger (admin). */
+/**
+ * Innstillinger → System (prompt 67; før «Programvare»): Nordlys OS med automatiske oppdateringer (admin).
+ * App-oppdateringen står under App (App67Page) og Logger har egen rad under SERVER. Uten admin (f.eks. en gammel lagret side) vises appen.
+ */
 @Composable
 internal fun Programvare50(vm: AppViewModel) {
-    PCard {
-        AppUpdateRow32(vm)
-        if (vm.userIsAdmin) {
-            Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
-            Programvare30(vm)
-            Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
-            SetRow(vm, 0, Icons.Filled.Dns, "Logger", "Docker-logger, feil og feilsøking") { vm.openLogs44() }
-        }
-    }
+    PCard { if (vm.userIsAdmin) Programvare30(vm) else AppUpdateRow32(vm) }
 }
 
 /**

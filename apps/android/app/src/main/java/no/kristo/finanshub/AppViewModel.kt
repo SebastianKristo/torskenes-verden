@@ -717,6 +717,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "scan" -> { open(Screen.Scan); pendingScan = when (uri.path?.trim('/')) { "camera" -> "camera"; "files" -> "files"; else -> null } }
             // Prompt 35: Kalender-appen åpner finanshub://settings/glimt og finanshub://settings/kalendere.
             "settings", "innstillinger" -> settingsLink35(uri.path?.trim('/').orEmpty())
+            // Prompt 67: data.deepLink fra push (finanshub://faste-oppgaver, finanshub://glimt-husker, finanshub://kvalitet/run/<id>).
+            "faste-oppgaver", "glimt-husker", "kvalitet" -> settingsLink35((uri.host + (uri.path ?: "")).trim('/'))
             // Prompt 51 (ANDPLAT51): app-snarveier og App Actions (Shortcuts51Plat.kt).
             "act51" -> act51Link(uri)
             // Prompt 51 (ANDFEAT51): Planlegging, familiekalender, Media-kveld og felles søk (Feat51.kt).
@@ -3564,6 +3566,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Prompt 33 (GLIMT-MEMORY): «Glimt husker» – alias per bruker (Memory33.kt, ui/Memory33Ui.kt) ---------- */
     val mem33 = Mem33State()
+    val g67 = G67State() // prompt 67 (ANDSET67): Glimt lærer, Faste oppgaver, Entitetsregister, Glimt husker 63 og Kvalitet (G67.kt)
     internal suspend fun <T> api33(f: suspend Api.() -> T): T = api.f()
     internal fun launch33(block: suspend () -> Unit) = launch(block)
 

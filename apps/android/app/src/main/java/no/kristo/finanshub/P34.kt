@@ -333,12 +333,12 @@ val ANCHORS34: List<Anchor34> = listOf(
     Anchor34("bg", "Bakgrunn", "Utseende", "bakgrunn bilde forside bakgrunnsbilde"),
     Anchor34("quiet", "Stille timer", "Varsler", "stille timer natt lyd av forstyrr"),
     Anchor34("push", "Varsler", "Varsler", "push varsel varsler lyd"),
-    Anchor34("haptic", "Haptikk", "App", "haptikk vibrasjon vibrer haptisk"),
+    Anchor34("haptic", "Haptikk", "Varsler", "haptikk vibrasjon vibrer haptisk"),
     Anchor34("2fa", "Totrinnsbekreftelse", "Sikkerhet", "2fa totrinn tofaktor autentisering kode"),
     Anchor34("bk-now", "Ta backup nå", "Backup", "backup nå sikkerhetskopi ta", admin = true),
     Anchor34("bk-auto", "Automatisk backup", "Backup", "automatisk backup hver natt", admin = true),
     Anchor34("glimt", "Glimt", "Glimt", "glimt brief briefer stemme stemmer figur figurer opplesning les opp venner sky dråpe ugle gris morgenbrief kveldsbrief nattbrief tts openai elevenlabs azure"),
-    Anchor34("ai-mod", "AI og modeller", "App", "ai modell modeller ollama gemini groq nøkkel tokens jobber glimt"),
+    Anchor34("ai-mod", "AI og modeller", "Glimt og AI → AI", "ai modell modeller ollama gemini groq nøkkel tokens jobber glimt"),
 )
 
 /* ---------------- Tilstand ---------------- */
