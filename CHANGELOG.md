@@ -2,6 +2,10 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.58.0] – 26.10.2026 · Brukere og familie i appene
+- **Brukere og familie** er nå en egen side i iOS- og Android-appen, som på web. Der finner du Logg inn som og eier (bare for admin), Glimt-figur per bruker, Familie, og helse og posisjon. Konto og Glimt har en lenke dit.
+- **Innstillinger for nattlig eval** ligger under Kvalitet i appene (bare for admin). Her slår du av og på nattlig eval og ukerapport for alle, og velger antall kjøringer per case, tidsgrense, hvor lenge evalen venter før den viker for deg, og hvor mange dager rapportene beholdes.
+
 ## [4.57.0] – 26.10.2026 · Appene tar igjen web
 - **Raskere svar i iOS- og Android-appen:** svaret fra Glimt kommer fortløpende i Glimt-søket og i Chat, med en statuslinje som viser hva Glimt gjør, og en Stopp-knapp. Fungerer det ikke, svarer appen som før.
 - **Glimt forstår samtaler i appene:** oppfølgere som «og i Bergen?» og «flytt den til 11» virker i appen også. Oppfølgingsspørsmål har valgknapper, og handlinger kan bekreftes eller avbrytes rett i Chat.
