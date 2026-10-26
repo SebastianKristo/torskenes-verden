@@ -60,8 +60,8 @@ const HELP = `Glimt eval (GLIMT47)
                                     30–35 feiler da med vilje), for før/etter på samme commit.
   --mem63 on|off                    Prompt 63: «minnet holder seg ryddig» (nattlige forslag, motstrid, ubrukte fakta). Standard on;
                                     off måler uten (casene 36–39 feiler da med vilje), for før/etter på samme commit.
-  --learned on|off|DIR              Prompt 61: ta med testtilfellene fra rettelser (eval/learned/*.json, eller DIR). Standard on
-                                    (bare når filene finnes).
+  --learned on|off|DIR[,DIR…]       Prompt 61: ta med testtilfellene fra rettelser (eval/learned/*.json, eller DIR). Standard on
+                                    (bare når filene finnes). Prompt 64: flere mapper kommaseparert.
 
   Miljø (prompt 55): EVAL_MAC_OCR_URL + EVAL_MAC_OCR_KEY kobler på Mac-OCR (ellers har eval ingen Mac-OCR). Feil som skyldes
   miljøet (ingen OCR, modell ikke installert) får status «env» og telles ikke som modellfeil.
@@ -147,16 +147,20 @@ for (const f of caseFiles) { const m = (await import(pathToFileURL(join(caseDir,
 // Prompt 61: lærte testtilfeller (JSON fra rettelser i Glimt, server/recipes61/learn.js). Data, aldri kode: eval/lib/learned61.mjs lager casen.
 const learnedOpt = String(opt.learned ?? 'on');
 if (learnedOpt.toLowerCase() !== 'off') {
-  const ldir = ['on', 'true'].includes(learnedOpt.toLowerCase()) ? join(HERE, 'learned') : resolve(learnedOpt);
-  let lf = [];
-  try { lf = readdirSync(ldir).filter((f) => f.endsWith('.json')).sort(); } catch { /* ingen */ }
+  // Prompt 64: flere mapper kommaseparert (nattevalen: repoets eval/learned og $DATA_DIR/eval-learned); samme id telles én gang.
+  const ldirs = ['on', 'true'].includes(learnedOpt.toLowerCase()) ? [join(HERE, 'learned')] : learnedOpt.split(',').map((x) => x.trim()).filter(Boolean).map((x) => resolve(x));
+  const lf = [];
+  for (const ldir of ldirs) { try { for (const f of readdirSync(ldir).filter((x) => x.endsWith('.json')).sort()) lf.push({ ldir, f }); } catch { /* ingen */ } }
   const want = opt.case ? String(opt.case).split(',').map((x) => x.trim().toLowerCase()).filter(Boolean) : null;
-  for (const f of lf) {
+  const seenL = new Set();
+  for (const { ldir, f } of lf) {
     try {
       const d = JSON.parse(readFileSync(join(ldir, f), 'utf8'));
       if (d?.kind !== 'glimt-learned/1' || !d.query) continue;
       const id = `L-${String(d.id ?? f).replace(/[^\w-]+/g, '').slice(0, 40)}`;
       if (want && !want.some((w) => id.toLowerCase().includes(w) || f.toLowerCase().includes(w) || w === 'learned')) continue;
+      if (seenL.has(id)) continue;
+      seenL.add(id);
       metas.push({ file: f, path: join(ldir, f), id, title: String(d.title ?? f).slice(0, 120), area: 'lært', intent: d.expect?.intent ?? null });
     } catch (e) { console.warn(`  Hopper over ${f}: ${e.message}`); }
   }

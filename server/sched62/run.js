@@ -80,6 +80,8 @@ export async function compute62(row, { now = Date.now(), runId = null } = {}) {
     }
     // Prompt 63 (del 5): systemoppgaven «Nattlig oppsummering av minnet» – ingen levering kl. 03 (push kommer om morgenen).
     if (row.kind === 'memory') return (await import('../mem63/nightly.js')).computeMemory63(row, { now });
+    // Prompt 64 (del 7): systemoppgavene «Nattlig eval» (kl. 02, starter evalen i bakgrunnen) og «Ukerapport» (søndag kl. 20, egen push).
+    if (row.kind === 'quality' || row.kind === 'weekly') return (await import('../quality64/system.js')).computeSystem64(row, { now });
     if (row.kind === 'reminder') return { status: 'ok', result: `Påminnelse: ${row.what.charAt(0).toUpperCase()}${row.what.slice(1)}.` };
     if (row.kind === 'power') {
       const d = await powerData62(params.zone ?? 'NO1', params.day ?? 'today', now);
