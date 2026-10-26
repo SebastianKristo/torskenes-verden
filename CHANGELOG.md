@@ -2,6 +2,12 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.54.0] – 26.10.2026 · Kvalitet over tid
+- **Nattlig eval:** hver natt kl. 02 tester serveren Glimt mot Ollama med det samme testsettet som før, i en egen prosess som aldri rører dataene dine. Den viker for deg hvis du bruker Glimt, og hopper over natta hvis Ollama ikke svarer. Admin får varsel bare når noe som virket, har blitt dårligere.
+- **Ukerapport søndag kl. 20:** antall forespørsler, hvor mange som ble løst på første forsøk, rettelser, nye oppskrifter, hurtigvei og median svartid – én kort melding.
+- **Innstillinger → Glimt → Kvalitet:** ukerapportene, og for admin de nattlige kjøringene med rapport og «Kjør nå».
+- Begge står i Faste oppgaver og kan settes på pause.
+
 ## [4.53.0] – 26.10.2026 · Ryddig minne, bedre mikrofonknapp og Vær på mobil
 - **Glimt holder minnet ryddig:**
   - Hver natt kl. 03 foreslår Glimt nye fakta fra dine egne samtaler, rettelser og avtaler. Ingenting lagres i minnet før du sier ja. Om morgenen får du et varsel når det finnes forslag.
