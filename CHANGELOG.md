@@ -2,6 +2,15 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.55.0] – 26.10.2026 · Innstillinger samlet, ny AI-side
+- **Hver innstilling finnes ett sted.** Ny sidemeny: Konto, Utseende, Varsler, App · Brukere og familie · Glimt, AI · Integrasjoner, Kalender og gjøremål · Moduler · System, Backup, Logger.
+  - Sikkerhet og innlogging ligger under Konto, Startside er delt mellom Utseende og App, Familie ligger under Brukere og familie, og Gjøremål under Kalender og gjøremål.
+  - Glimt-siden har alt om Glimt: personlighet, nettsøk, «Glimt husker», register over personer og steder, «Glimt lærer», Faste oppgaver og Kvalitet.
+- **Ny AI-side** med faner øverst: Oversikt, Modeller, Oppgaver, Kvitteringer, Tjenester, Jobber og Forbruk. **Tjenester** samler oppsettet for Ollama, oMLX, Mac-OCR, NB-Whisper, VoxCPM, Phonon, Neutrino, Voz, SearXNG, Gemini, Groq og flere, med adresse, nøkkel og test i én rad.
+- **System** har faner, og **Backup** er en egen side.
+- Gamle lenker, lenker fra varsler og søk sender deg til det nye stedet.
+- Ikoner på alle sider og rader.
+
 ## [4.54.0] – 26.10.2026 · Kvalitet over tid
 - **Nattlig eval:** hver natt kl. 02 tester serveren Glimt mot Ollama med det samme testsettet som før, i en egen prosess som aldri rører dataene dine. Den viker for deg hvis du bruker Glimt, og hopper over natta hvis Ollama ikke svarer. Admin får varsel bare når noe som virket, har blitt dårligere.
 - **Ukerapport søndag kl. 20:** antall forespørsler, hvor mange som ble løst på første forsøk, rettelser, nye oppskrifter, hurtigvei og median svartid – én kort melding.
