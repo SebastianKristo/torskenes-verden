@@ -21,6 +21,8 @@ struct PaperHome: View {
                 phone
             }
         }
+        // Prompt 70: trykk utenfor søkefeltet og Glimt-kortet lukker et ferdig svar – uten lag over Hjem (Home70Assist.swift).
+        .assist70Tap()
         // Prompt 46: Min posisjon (standard) holdes fersk for Vær-kortet på Hjem (Vaer46.swift).
         .vaer46Keeper()
         .update30Sheet()
@@ -40,11 +42,14 @@ struct PaperHome: View {
         let tiles52: Bool = Home50Tiles.shared.on
         PaperCardStack(page: "hjem", cards: tiles52 ? Home52.asTiles(homeCards) + Home52.tileCards() : homeCards + [shortcuts46],
                        fullWidth: ["h1", "h5", "h12", "h13", "h14", "h16"], twoColumns: true,
-                       half: tiles52 ? Home52.half : [], tall: tiles52 ? Home52.tall : [])
+                       half: tiles52 ? half70 : [], tall: tiles52 ? Home52.tall : [])
             .modifier(Home52Keeper(on: tiles52))
             .task(id: store.account?.id ?? "") { if !Trial31Model.shared.loaded { await Trial31Model.shared.load(store.api) } }
         homeErrorText
     }
+
+    /// Prompt 70: halve kort etter brukerens valg (↔ i redigering), med Home52.half som standard (Home70Grid.swift).
+    private var half70: Set<String> { Home70Size.shared.half(Home52.half) }
 
     @ViewBuilder private var homeErrorText: some View {
         if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }

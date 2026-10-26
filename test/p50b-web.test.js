@@ -1,4 +1,4 @@
-// Prompt 50b: statiske sjekker for to små web-fikser.
+// Prompt 50b: statiske sjekker for to små web-fikser. (Mikrofonens utseende er erstattet i prompt 70, se p70-webhome.test.js.)
 //  - claude-code-web-mikrofonknapp.md: mikrofonen i søkefeltet på Dashboard (voice54.js) er en 40×40 sirkel med sentrert
 //    18 px strek-ikon, gjennomsiktig i hvile, rød under opptak, 0,18 s overgang – og ligger mellom «✦ AI» og «Søk».
 //    Funksjonen er den samme som før: opptak til /api/voice53/transcribe (NB-Whisper/Voz/Phonon), ikke Web Speech i søket.
@@ -11,17 +11,16 @@ import { readFileSync } from 'node:fs';
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
 test('mikrofonknappen i søket følger md-en (utseende) og beholder tale til tekst via serveren', () => {
+  // Prompt 70 (claude-code-mikrofon-sokefelt.md) erstatter utseendet fra prompt 50b: ikon uten ring/bakgrunn, 36 px trykkflate,
+  // mellom tekstfeltet og «✦ AI», opptak som kort i søkefeltets farge. Motoren er den samme (serveren).
   const v = read('public/js/voice54.js');
   const rule = v.match(/form\[data-search\]\.sbar button\.v54-mic\{([^}]*)\}/)?.[1] ?? '';
-  for (const s of ['width:40px', 'height:40px', 'padding:0', 'border-radius:50%', 'display:grid', 'place-items:center', 'border:1px solid #e4ddcf', 'background:transparent', 'color:#1b1a17', 'transition:background-color .18s,color .18s,border-color .18s']) {
+  for (const s of ['width:36px', 'height:36px', 'padding:0', 'border-radius:50%', 'display:grid', 'place-items:center', 'border:0', 'background:transparent', 'color:inherit']) {
     assert.ok(rule.includes(s), `mangler ${s}`);
   }
-  assert.match(v, /form\[data-search\]\.sbar button\.v54-mic:hover\{background:#f3efe6\}/);
-  assert.match(v, /button\.v54-mic\.v54-on\{background:#b23a2a!important;border-color:#b23a2a;color:#fff!important\}/);
-  assert.match(v, /button\.v54-mic svg\{display:block;width:18px;height:18px\}/);
-  assert.match(v, /const MIC = '<svg width="18" height="18"[^']*stroke-width="2"[^']*stroke-linecap="round"[^']*style="display:block"/);
-  // Plassering: rett før «Søk» (submit), og «✦ AI» står før submit i extras.js.
-  assert.match(v, /f\.insertBefore\(b, f\.querySelector\('button\[type="submit"\]'\)\)/);
+  assert.match(v, /const MIC = '<svg width="20" height="20"[^']*stroke-width="1\.9"[^']*<rect x="9" y="3" width="6" height="11\.5" rx="3"\/>/);
+  // Plassering: rett før «✦ AI» (som står før «Søk» i extras.js).
+  assert.match(v, /f\.insertBefore\(b, f\.querySelector\('\[data-sq-ai\]'\) \?\? f\.querySelector\('button\[type="submit"\]'\)\)/);
   assert.match(read('public/js/extras.js'), /data-sq-ai[^`]*✦ AI<\/button><button type="submit">Søk<\/button>/);
   // Funksjonen er ikke byttet til Web Speech: opptaket sendes til serveren.
   assert.match(v, /fetch\('\/api\/voice53\/transcribe'/);

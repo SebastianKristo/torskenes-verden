@@ -35,7 +35,7 @@ const WHERE_CAL = /\s*(?:i|på|til|inn\s+i)\s+(?:kalender(?:en)?|min\s+kalender|
 const FILLER = /(?<![a-zæøå])(?:kl\.?|klokka|klokken|den|på|til|om)\s*$/i;
 /**
  * Ryddig tittel fra teksten når modellen ikke ga en (eller ga hele setningen): dato, tid, innledningsord og «i kalenderen» fjernes.
- * «Legg til time 12.10 12:15 Kino se på dune» → «Kino – Dune».
+ * «Legg til time 12.10 12:15 Kino se på dune» → «Kino: Dune».
  */
 export function cleanEventTitle45(raw) {
   let t = ` ${String(raw ?? '')} `.replace(WHERE_CAL, ' ').replace(/\s+/g, ' ').trim();
@@ -43,9 +43,9 @@ export function cleanEventTitle45(raw) {
   t = t.replace(/(?<![a-zæøå])(?:i dag|i morgen|i overmorgen|i kveld|neste uke)(?![a-zæøå])/gi, ' ').replace(/(?<![a-zæøå])(?:kl\.?|klokka|klokken)(?=\s|$)/gi, ' ').replace(/\s+/g, ' ').trim();
   while (FILLER.test(t)) t = t.replace(FILLER, '').trim();
   t = t.replace(/^(?:på|den|til|om)\s+/i, '').replace(/[\s.,;:!–-]+$/g, '').replace(/^[\s.,;:–-]+/, '').trim();
-  // «Kino se på dune», «teater for å se Peer Gynt», «konsert med Kygo» → «Kino – Dune»
+  // «Kino se på dune», «teater for å se Peer Gynt», «konsert med Kygo» → «Kino: Dune»
   const m = /^(kino|teater(?:et)?|konsert|forestilling|musikal|film|opera|ballett|stand-?up|show|kamp)\s+(?:for\s+å\s+se|å\s+se|se\s+på|se|med|:)\s+(.+)$/i.exec(t);
-  if (m) t = `${cap(m[1].toLowerCase())} – ${m[2].replace(/(^|\s)(\p{L})/gu, (x, a, c) => a + c.toUpperCase())}`;
+  if (m) t = `${cap(m[1].toLowerCase())}: ${m[2].replace(/(^|\s)(\p{L})/gu, (x, a, c) => a + c.toUpperCase())}`; // prompt 70: «Kino: Dune»
   t = t.replace(/\s+/g, ' ').trim();
   return t ? cap(t.length > 120 ? `${t.slice(0, 118)}…` : t) : '';
 }
@@ -76,11 +76,21 @@ export function wordsFromText46(title, text) {
 /* ---------------- Kalender ---------------- */
 
 const WD_IDX45 = { søn: 0, man: 1, tir: 2, ons: 3, tor: 4, fre: 5, lør: 6 };
-// Prompt 47: standardvarighet per type når brukeren ikke sa når det slutter: kino/film 3 t, frisør 1 t, ellers 1 t. Alltid merket som
+// Prompt 47: standardvarighet per type når brukeren ikke sa når det slutter: kino/film 2 t (prompt 70, før 3 t), frisør 1 t, ellers 1 t. Alltid merket som
 // antatt (durationAssumed) og sagt i bekreftelsen. Kjent spilletid for filmen (TMDB via Media) brukes når den finnes.
-export const DURATION47 = [[/(?<![\p{L}])(kino|film|forestilling|teater|konsert|opera|musikal)/u, 180, 'kino'], [/(?<![\p{L}])(frisør|hårklipp|klipp|barber)/u, 60, 'frisør']];
+export const DURATION47 = [[/(?<![\p{L}])(kino|film|forestilling|teater|konsert|opera|musikal)/u, 120, 'kino'], [/(?<![\p{L}])(frisør|hårklipp|klipp|barber)/u, 60, 'frisør']];
 export const durationOf47 = (title, place = '') => { const t = `${String(title ?? '')} ${String(place ?? '')}`.toLowerCase(); const k = DURATION47.find(([re]) => re.test(t)); return k ? { min: k[1], kind: k[2] } : { min: 60, kind: null }; };
 const durationOf = (title) => durationOf47(title).min;
+// Prompt 70: «Dune – Kino» / «Kino – Dune» (eldre format, eller fra modellen) → «Kino: Dune», som i kort A.
+const TYPE70 = '(kino|teater|konsert|opera|musikal|forestilling|ballett|show|kamp)';
+export function typeTitle70(t) {
+  const s = String(t ?? '').trim();
+  const a = new RegExp(`^(.+?)\\s+[–-]\\s+${TYPE70}$`, 'iu').exec(s);
+  if (a && !new RegExp(`^${TYPE70}$`, 'iu').test(a[1])) return `${cap(a[2].toLowerCase())}: ${a[1]}`;
+  const b = new RegExp(`^${TYPE70}\\s+[–-]\\s+(.+)$`, 'iu').exec(s);
+  if (b) return `${cap(b[1].toLowerCase())}: ${b[2]}`;
+  return s;
+}
 void KINDS;
 async function eventsIn(user, from, to) { return (await runAsUser(user, () => eventsFor(user, from, to))).events ?? []; }
 const onDay = (e, d) => (e.allDay ? e.date <= d && (e.end ?? e.date) > d || e.date === d : e.date === d);
@@ -235,7 +245,20 @@ const FIN_CATS45 = [[/(?<![a-zæøå])(mat|matvarer|dagligvare\w*|matbutikk)(?![
 
 /* ---------------- Felles validering ---------------- */
 
-const ask = (question, options = null, field = null) => ({ ask: { question, ...(options ? { options } : {}), ...(field ? { field } : {}) } });
+// Prompt 70: strukturert spørsmål {type:'ask', field, options[]} – klientene viser ett kort spørsmål med knapper i kortet (aldri systemmeny).
+const ask = (question, options = null, field = null) => ({ ask: { type: 'ask', question, ...(options ? { options } : {}), ...(field ? { field } : {}) } });
+/** «Hvilken dag?» · I dag · I morgen · Velg dato (id 'pick' = klienten åpner datovalget i kortet). */
+// text = meldingen som sendes når knappen trykkes (prompt 60 bruker den). «{dato}» byttes av klienten med datoen fra datovelgeren i kortet.
+const dayOptions70 = (today, text = '') => { const t = String(text ?? '').trim(); return [{ id: today, label: 'I dag', value: today, text: `${t} i dag` }, { id: addDays45(today, 1), label: 'I morgen', value: addDays45(today, 1), text: `${t} i morgen` }, { id: 'pick', label: 'Velg dato', pick: 'date', text: `${t} {dato}` }]; };
+/** «Jobb er skrivebeskyttet. Legg i Personlig?» → to knapper: standardkalenderen · Avbryt. */
+// Etiketten er bare kalendernavnet (ikke «Legg i …»): prompt 60 matcher neste melding mot etikettene, og «legg» står i nesten alle.
+const roOptions70 = (def, C46) => [{ id: def.id, label: C46.calendarLabel46(def), primary: true }, { id: 'cancel', label: 'Avbryt', cancel: true }];
+/** Nevner brukeren familie («pappa», «mamma», «familien», et familienavn)? Da foreslås Familie øverst i kalenderlista (standard brukes likevel). */
+const FAMILY_WORDS70 = /(?<![\p{L}])(pappa|mamma|far|mor|farmor|farfar|mormor|morfar|bestemor|bestefar|familien|familie|søster|bror|søsteren|broren|onkel|tante|svigers)(?![\p{L}])/iu;
+function familyHint70(text, withWho = []) {
+  if (FAMILY_WORDS70.test(String(text ?? ''))) return true;
+  return (withWho ?? []).some((w) => FAMILY_WORDS70.test(w));
+}
 /**
  * Dato/tid for et verktøy: brukerens tekst er fasit når den inneholder dato/tid (koden tolker, ikke modellen).
  * Modellens felt brukes bare når teksten ikke sier noe selv – og da bare hvis feltet er gyldig og kan tolkes av parseren.
@@ -268,8 +291,8 @@ const sTxt = (d) => ({ type: 'string', description: d });
 export const TOOLS45 = [
   {
     name: 'calendar.create', module: 'calendar', destructive: false,
-    description: 'Opprett en avtale i kalenderen. title = kort ryddig tittel («Hva – Type», f.eks. «Dune – Kino», «Tannlege»; ikke hele setningen), date/time slik brukeren skrev dem, location = stedet (rett åpenbare stavefeil). calendarId bare hvis brukeren nevner en kalender.',
-    parameters: S({ title: sTxt('Kort tittel, f.eks. «Dune – Kino», «Tannlege»'), date: sTxt('Dato slik brukeren skrev den («12.10», «fredag», «i morgen») eller YYYY-MM-DD'), time: sTxt('Starttid («12:15», «klokka sju») eller tom'), end_time: sTxt('Sluttid hvis oppgitt'), location: sTxt('Sted hvis oppgitt («Colosseum Kino», «Nina»)'), calendarId: sTxt('Kalender-id bare hvis brukeren nevnte en kalender'), note: sTxt('Ekstra info') }, ['title']),
+    description: 'Opprett en avtale i kalenderen. title = kort ryddig tittel («Type: Hva», f.eks. «Kino: Dune», «Tannlege»; ikke hele setningen), date/time slik brukeren skrev dem, location = stedet (rett åpenbare stavefeil). calendarId bare hvis brukeren nevner en kalender – ellers brukes standardkalenderen, spør aldri om kalender.',
+    parameters: S({ title: sTxt('Kort tittel, f.eks. «Kino: Dune», «Tannlege»'), date: sTxt('Dato slik brukeren skrev den («12.10», «fredag», «i morgen») eller YYYY-MM-DD'), time: sTxt('Starttid («12:15», «klokka sju») eller tom'), end_time: sTxt('Sluttid hvis oppgitt'), location: sTxt('Sted hvis oppgitt («Colosseum Kino», «Nina»)'), calendarId: sTxt('Kalender-id bare hvis brukeren nevnte en kalender'), note: sTxt('Ekstra info') }, ['title']),
     async validate(args, ctx) {
       // Prompt 46: «i familiekalenderen» er valg av kalender, ikke en del av tittelen/datoen.
       const C46 = await import('./calendar46.js');
@@ -282,7 +305,7 @@ export const TOOLS45 = [
       let aliases = []; try { aliases = (await import('../glimt-memory.js')).aliasesOf(ctx.user); } catch { /* */ }
       const pq = parseQuick(textNoCal, ctx.today, aliases);
       const richPq = !!(pq.memory || pq.business || /(?<![a-zæøå])hos\s/i.test(textNoCal) || (pq.type && pq.type !== 'annet'));
-      // Prompt 46: tittel og sted fra teksten (fyllord bort, «på coluseum kino» → sted Colosseum Kino, film → «Dune – Kino»).
+      // Prompt 46: tittel og sted fra teksten (fyllord bort, «på coluseum kino» → sted Colosseum Kino, film → «Kino: Dune»).
       const sp = C46.splitTitlePlace46(w.rest);
       const fromText = (x) => wordsFromText46(x, ctx.text);
       if (pq.memory) title = pq.title;
@@ -290,8 +313,9 @@ export const TOOLS45 = [
       else if (!title || title.length > 60 || normText(title) === normText(ctx.text) || /\d{1,2}[.:/]\d{1,2}|(?<![a-zæøå])(?:kl|klokka|legg til|i kalenderen|vi skal|jeg skal)(?![a-zæøå])/i.test(title) || !fromText(title)) {
         title = ((sp.location || sp.film) && !/^(?:time|timen|avtale|avtalen|møte|hendelse)$/i.test(sp.title) ? sp.title : '') || (richPq ? (pq.type && pq.type !== 'annet' && sp.location && !pq.business && !/^(?:time|timen|avtale|avtalen|møte|hendelse)$/i.test(sp.title) ? sp.title : pq.title) : '') || cleanEventTitle45(w.rest) || cleanEventTitle45(title);
       }
+      title = typeTitle70(title);
       if (!title) return ask('Hva skal avtalen hete?', null, 'title');
-      if (!w.date) return ask(`Hvilken dag skal «${title}» være?`, null, 'date');
+      if (!w.date) return ask(`Hvilken dag skal «${title}» være?`, dayOptions70(ctx.today, ctx.text), 'date');
       // Sted: modellens sted bare når ordene står i teksten (stavefeil rettes mot kjente steder), ellers fra teksten.
       const mLoc = str(args.location, 200);
       let location = (mLoc && fromText(mLoc) ? (C46.venueOf46(mLoc)?.name ?? mLoc) : '') || sp.location || (richPq ? pq.place : null) || null;
@@ -302,35 +326,40 @@ export const TOOLS45 = [
       const wantId = str(ctx.context?.calendarId ?? args.calendarId, 80);
       const mention = C46.calendarMention46(ctx.text);
       let cal = null;
+      // Prompt 70: spørsmålet har med meldingen (text), så klienten kan sende den på nytt med context.calendarId når knappen trykkes.
+      const askCal = (question, options) => { const r = ask(question, options, 'calendar'); r.ask.text = String(ctx.text ?? '').slice(0, 1000); return r; };
       const opts = () => cals.calendars.filter((c) => !c.virtual || c.id === 'familie').slice(0, 6).map((c) => ({ id: c.id, label: C46.calendarLabel46(c) }));
       if (wantId) {
         cal = cals.calendars.find((c) => c.id === wantId) ?? null;
         const ro = !cal && cals.readOnly.find((c) => c.id === wantId);
-        if (ro) return ask(`Kan ikke legge til i «${ro.name}», den er skrivebeskyttet. Legge i ${C46.calendarLabel46(def)} i stedet?`, [{ id: def.id, label: C46.calendarLabel46(def) }], 'calendar');
+        if (ro) return askCal(`${ro.name} er skrivebeskyttet. Legg i ${C46.calendarLabel46(def)}?`, roOptions70(def, C46));
         if (!cal && mention) cal = C46.matchCalendar46(cals.calendars, mention);
         if (!cal && !mention) cal = null;
       } else if (mention) {
         cal = C46.matchCalendar46(cals.calendars, mention);
         if (!cal) {
           const ro = C46.matchCalendar46(cals.readOnly, mention);
-          if (ro) return ask(`Kan ikke legge til i «${ro.name}», den er skrivebeskyttet. Legge i ${C46.calendarLabel46(def)} i stedet?`, [{ id: def.id, label: C46.calendarLabel46(def) }], 'calendar');
-          return ask(`Hvilken kalender? ${opts().map((o) => o.label).join(' · ')}`, opts(), 'calendar');
+          if (ro) return askCal(`${ro.name} er skrivebeskyttet. Legg i ${C46.calendarLabel46(def)}?`, roOptions70(def, C46));
+          // Prompt 70: aldri «Hvilken kalender?» med lista i teksten. Ett kort spørsmål; valgene er knapper i kortet.
+          return askCal(`Fant ingen kalender som heter «${cap(mention)}». Legg i ${C46.calendarLabel46(def)}?`, [{ id: def.id, label: C46.calendarLabel46(def), primary: true }, ...opts().filter((o) => o.id !== def.id).slice(0, 4)]);
         }
       }
       // Klientens valgte standard (context.defaultCalendarId) når den er skrivbar, ellers serverens standardkalender.
       cal ??= cals.calendars.find((c) => c.id === ctx.context?.defaultCalendarId) ?? def;
       const allDay = !w.start;
-      // Film på kino: slutt = start + spilletid + 15 min (Media/TMDB), plakaten blir bilde på avtalen. Ellers standardvarighet.
-      const film = sp.film ?? (/^(.+?)\s+–\s+kino$/i.exec(title)?.[1] ?? null);
+      // Film på kino: slutt = start + spilletid avrundet til nærmeste 5 min (prompt 70: 2 t 46 min fra 17:30 → 20:15), plakaten blir bilde
+      // på avtalen. Ellers standardvarighet (2 t for kino).
+      const film = sp.film ?? (/^(.+?)\s+–\s+kino$/i.exec(title)?.[1] ?? /^kino:\s+(.+)$/i.exec(title)?.[1] ?? null);
       const movie = film && w.start && !w.end ? await C46.movieOf46(film).catch(() => null) : null;
       const dur = durationOf47(title, location ?? '');
       const durationAssumed = !!(w.start && !w.end && !movie?.runtime);
-      const end = w.start ? (w.end ?? addMin45(w.start, movie?.runtime ? movie.runtime + 15 : dur.min)) : null;
+      const end = w.start ? (w.end ?? addMin45(w.start, movie?.runtime ? Math.round(movie.runtime / 5) * 5 : dur.min)) : null;
       const place = location && (sp.location === location || C46.VENUES46.some(([n]) => n === location)) ? await C46.lookupPlace46(location) : null;
       const prefs = await import('../kalender33.js').then((k) => k.kal46.prefs(ctx.user)).catch(() => ({}));
       return { args: { title, date: w.date, start: w.start, end, allDay, location, note: [str(args.note ?? args.notes, 500), w.softTime].filter(Boolean).join(' · ') || null, assumedPm: w.assumedPm, corrections: w.corrections,
         ...(durationAssumed ? { durationAssumed: true, durationMin: dur.min, durationKind: dur.kind } : {}),
         calendarId: cal.id, calendarName: C46.calendarLabel46(cal), calendarSource: cal.source, ...(cal.calId ? { calId: cal.calId } : {}), backend: cal.backend,
+        ...(sp.with?.length ? { with: sp.with } : {}), ...(familyHint70(ctx.text, sp.with) ? { suggestCalendar: 'familie' } : {}),
         reminder: allDay ? 'none' : ({ none: 'none', '10m': '15m', '30m': '1h', '1h': '1h', '1d': 'day' }[prefs.defaultReminder] ?? '1h'),
         ...(place ? { place: { name: location, address: place.address, label: place.label, lat: place.lat, lon: place.lon } } : {}),
         ...(movie ? { movie: { title: movie.title, runtime: movie.runtime, poster: movie.poster ?? null } } : {}), ...(sp.corrected ? { locationCorrected: true } : {}) } };
@@ -356,7 +385,10 @@ export const TOOLS45 = [
       try { const { attachGeo } = await import('../kal37.js'); if (ev?.id) await attachGeo(user, ev, { place: a.location ?? null, text: ctx.text }); if (ev?.id && !ev.address && a.place?.address) await attachGeo(user, ev, { place: a.place.address, text: '' }); } catch { /* best effort */ }
       if (ev?.id && a.movie?.poster) { const C46 = await import('./calendar46.js'); C46.rememberPoster46(user, ev.id, a.movie.poster); ev.image = a.movie.poster; }
       broadcast('kalender', { action: 'created', id: ev?.id }, [user]);
-      return { status: 'done', result: { event: eventCard45(ev ?? { ...v.value, id: null }), eventId: ev?.id ?? null, calendar: { id: a.calendarId, name: a.calendarName, source: a.calendarSource }, ...(a.calId ? { calId: a.calId } : {}), undo: ev?.id && a.calendarSource !== 'google' ? { method: 'DELETE', url: `/api/kalender/events/${encodeURIComponent(ev.id)}` } : null }, cards: ev ? [eventCard45(ev)] : [], events: ev ? [ev] : [] };
+      // Prompt 70: kort A (lagt inn i standardkalenderen, bytt kalender i kortet, Angre i 10 s).
+      let c70 = null;
+      try { const C70 = await import('./cal70.js'); if (ev?.id) { C70.rememberMade70(user, ev.id, a); c70 = await C70.card70(user, a, ev); } } catch (e) { console.warn('[glimt70] kort:', String(e?.message ?? e).slice(0, 160)); }
+      return { status: 'done', result: { event: eventCard45(ev ?? { ...v.value, id: null }), eventId: ev?.id ?? null, calendar: { id: a.calendarId, name: a.calendarName, source: a.calendarSource }, ...(a.calId ? { calId: a.calId } : {}), undo: ev?.id && a.calendarSource !== 'google' ? { method: 'DELETE', url: `/api/kalender/events/${encodeURIComponent(ev.id)}` } : null, ...(c70 ? { card70: c70 } : {}) }, cards: ev ? [eventCard45(ev)] : [], events: ev ? [ev] : [] };
     },
     async verify(r, ctx) {
       if (r.result?.existing) return true;

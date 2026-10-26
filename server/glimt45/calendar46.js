@@ -49,10 +49,14 @@ export async function writableCalendars46(user) {
 export const calendarLabel46 = (c) => (c ? `${c.name}${c.google && c.source === 'app' && c.backend === 'privat' && c.id === 'personlig' ? ' (Google)' : ''}` : 'Personlig');
 
 const CAL_MENTION = /(?<![a-zæøå])(?:i|på|til|inn\s+i)\s+(?:den\s+|min\s+|mitt\s+)?([\p{L}\d@.]*?)-?kalender(?:en)?(?:\s+(?:«|")?([\p{Lu}][\p{L}\d .@-]{1,30}?)(?:»|")?(?=[\s,.!?]|$))?(?![a-zæøå])/iu;
+const NOT_NAME70 = /^(?:at|og|om|for|med|som|der|den|det|de|en|et|jeg|vi|du|meg|oss|til|fra|på|i|kl|klokka|neste|denne|hver|alle|hele)(?![\p{L}\d])/iu;
 /** Kalendernavnet brukeren nevner («i familiekalenderen», «på jobb-kalenderen», «i kalenderen Trening»), eller null. */
 export function calendarMention46(text) {
   const m = CAL_MENTION.exec(String(text ?? ''));
-  const n2 = (m?.[2] ?? '').trim();
+  // Prompt 70: navnet etter «kalenderen» må ha stor forbokstav i teksten («i kalenderen Trening»). Med /i matchet \p{Lu} også
+  // små bokstaver, så «legg til i kalender at jeg og pappa …» ble kalenderen «at» → «Hvilken kalender?». Fyllord er aldri et navn.
+  const n2r = (m?.[2] ?? '').trim();
+  const n2 = n2r && /^\p{Lu}/u.test(n2r) && !NOT_NAME70.test(n2r) ? n2r : '';
   const n = (m?.[1] || (n2 && !/^(?:i|på|neste|denne|kl|klokka|om)?\s*(?:mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag|morgen|dag|kveld|\d)/i.test(n2) ? n2 : '') || '').trim();
   if (!n) return null;
   return /^personlige?$/i.test(n) ? 'personlig' : n;
@@ -148,15 +152,22 @@ export async function movieOf46(title) {
 /* ---------------- Tittel og sted fra teksten ---------------- */
 
 const FILL_LEAD = /^(?:(?:vi|jeg|dere|du|de)\s+(?:skal|må|vil|kan|har\s+lyst\s+til\s+å)\s+|skal\s+|må\s+|husk\s+(?:å\s+)?|planlegger\s+å\s+|tenker\s+å\s+)+(?:(?:å|og)\s+)?/i;
+// «jeg og pappa skal …», «vi og mamma og Ingrid skal …» (prompt 70: deltakerne vises i kort A som «Med pappa»).
+const WITH70 = /^(?:jeg|vi|meg)\s+og\s+((?:(?!skal|må|vil|kan)[\p{L}-]+)(?:\s*(?:,|og)\s*(?:(?!skal|må|vil|kan)[\p{L}-]+)){0,3})\s+(?=skal|må|vil|kan|har\s+lyst)/iu;
 const SEE = /^(?:se\s+på|se|å\s+se|gå\s+på|dra\s+på|gå\s+og\s+se)\s+/i;
 /**
  * Tittel og sted fra resten av teksten (dato og tid er allerede tatt ut). Ingen modell: deterministisk reserve og etterkontroll.
- * «vi skal se på dune på coluseum kino» → {title:'Dune – Kino', location:'Colosseum Kino', venueType:'kino', film:'Dune'}
+ * «vi skal se på dune på coluseum kino» → {title:'Kino: Dune', location:'Colosseum Kino', venueType:'kino', film:'Dune', with:[]}
  * «tannlege hos Nina» → {title:'Tannlege', location:'Nina'} · «middag med mormor» → {title:'Middag med mormor', location:null}
  */
 export function splitTitlePlace46(rest) {
   let t = String(rest ?? '').replace(/\s+/g, ' ').replace(/[\s.,;:!–-]+$/g, '').trim();
   t = t.replace(/^(?:(?:kan du|vil du|glimt,?)\s+)?(?:legg(?:e)?\s+(?:til|inn)|sett\s+opp|book(?:e)?|lag|opprett|ny|nytt)\s+(?:en\s+|et\s+)?(?:time|avtale)?\s*/i, '').trim();
+  // Prompt 70: «at jeg og pappa skal se på …» → deltaker «pappa», tittel fra resten.
+  t = t.replace(/^(?:at|om\s+at)\s+/i, '').trim();
+  let withWho = [];
+  const wm = WITH70.exec(t);
+  if (wm) { withWho = wm[1].split(/\s*(?:,|\bog\b)\s*/i).map((x) => x.trim()).filter(Boolean).slice(0, 4); t = t.slice(wm[0].length).trim(); t = t.replace(/^(?:skal|må|vil|kan|har\s+lyst\s+til\s+å)\s+(?:å\s+)?/i, '').trim(); }
   t = t.replace(FILL_LEAD, '').trim();
   let location = null, venueType = null, corrected = false;
   // «… på/i/ved X kino|teater|…» eller kjent sted. Alle delingspunkt prøves; kjent sted vinner, ellers siste med typeord.
@@ -179,11 +190,11 @@ export function splitTitlePlace46(rest) {
   let film = null;
   if (venueType === 'kino' && t && !/^(kino|film)$/i.test(t)) {
     film = t.replace(/^(?:filmen|den\s+nye)\s+/i, '').replace(/(^|\s)(\p{Ll})/gu, (m, a, c) => a + c.toUpperCase());
-    t = `${film} – Kino`;
+    t = `Kino: ${film}`; // prompt 70: «Kino: Dune» (aktivitet + film), som i kort A
   } else if (venueType && t && !new RegExp(venueType, 'i').test(t) && ['teater', 'konsert', 'opera'].includes(venueType) && t.split(/\s+/).length <= 4) {
-    t = `${t.replace(/(^|\s)(\p{Ll})/gu, (m, a, c) => a + c.toUpperCase())} – ${cap(venueType)}`;
+    t = `${cap(venueType)}: ${t.replace(/(^|\s)(\p{Ll})/gu, (m, a, c) => a + c.toUpperCase())}`;
   } else if (!t && venueType) t = cap(venueType);
-  return { title: cap(t.slice(0, 120)), location, venueType, film, corrected };
+  return { title: cap(t.slice(0, 120)), location, venueType, film, corrected, with: withWho };
 }
 
 /* ---------------- Plakat på hendelsen ---------------- */

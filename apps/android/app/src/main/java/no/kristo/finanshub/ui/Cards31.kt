@@ -78,6 +78,7 @@ internal fun ChatCard31(vm: AppViewModel, raw: String, v: ChatV27) {
         "packages", "pk" -> ListCard31(v, o, "Pakker") { vm.go(Screen.Tracking) }
         "finance", "fin" -> FinanceCard31(v, o) { vm.go(Screen.Home) }
         "tasks" -> TasksCard31(vm, v, o)
+        "cal70" -> Cal70Card(vm, o, inBubble = false) // prompt 70: kort A (ui/Cal70Card.kt)
         else -> {}
     }
 }

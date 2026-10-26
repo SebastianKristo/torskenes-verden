@@ -67,7 +67,9 @@ extension Store {
     }
 
     func savePaperLayout(_ body: [String: Any]) {
-        Task { _ = try? await self.api.callAt("/api", "PUT", "/me/layout", json: body) }
+        // Prompt 70: pages.hjem.sz (halv/full per widget) følger med når pages.hjem lagres (Home70Grid.swift).
+        let b70: [String: Any] = Home70Size.shared.inject(body)
+        Task { _ = try? await self.api.callAt("/api", "PUT", "/me/layout", json: b70) }
     }
 
     func setPaperMode(_ v: String) {

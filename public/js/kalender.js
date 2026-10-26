@@ -781,9 +781,9 @@ function body() {
   const today = d0(new Date()), V = K.view, nar = narrow() || isMobile();
   const vis = k39.view();
   ensureRange(key(add(vis.st, -7)), key(add(vis.end, 7)));
-  // Prompt 39: verktøylinje, «NESTE»-banner, linje, sidemeny (252 px) + visning – samme oppsett som MacRoot.
+  // Prompt 39: verktøylinje, linje (prompt 70: uten «NESTE»-banner), sidemeny (252 px) + visning – samme oppsett som MacRoot.
   const side = K.noSide && !nar ? '' : k39.sidebar(nar);
-  return `${K.toast ? `<div class="k39-toast" role="status"><span>${esc(K.toast)}</span></div>` : k39.migrationNote()}${k39.toolbar(!!k38.appMode())}${k39.nextBanner()}<div class="k39-line"></div>
+  return `${K.toast ? `<div class="k39-toast" role="status"><span>${esc(K.toast)}</span></div>` : k39.migrationNote()}${k39.toolbar(!!k38.appMode())}<div class="k39-line"></div>
     <div class="k39-main">${side}<div class="k39-vw"><div class="k39-view k2-view k39-v-${V}" data-k-swipe>${vis.html}</div></div></div>
     ${k38.glimtPanel()}${k38.gotoSheet(today)}${detailSheet()}${formSheet()}${searchSheet()}${qaSheet()}${learnSheet()}`;
 }

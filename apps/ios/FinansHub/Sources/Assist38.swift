@@ -7,15 +7,17 @@ import UIKit
    - ✕ oppe til høyre (30 pt, glass) lukker.
    - Sveip opp på boblen (> 40 pt) lukker med glid og fade; under terskelen spretter den tilbake. Håndtak nederst.
    - Trykk utenfor lukker via et usynlig lag over hele appen med et hull der boblen er. Laget fanger trykket, så kortet
-     under (f.eks. Vær) ikke åpnes. Å begynne å dra/scrolle utenfor lukker også. Lett haptikk ved lukking. */
+     under (f.eks. Vær) ikke åpnes. Å begynne å dra/scrolle utenfor lukker også. Lett haptikk ved lukking.
+   Prompt 70: laget er fjernet (Hjem skal kunne scrolles mens Glimt svarer), sveipet virker bare fra grepet nederst,
+   og trykk utenfor lukker bare et ferdig svar (Home70Assist.swift). */
 
 @MainActor
 @Observable
 final class Assist38 {
     static let shared = Assist38()
 
-    /// Boblens ramme i globale koordinater (hullet i laget).
-    var rect: CGRect = .zero
+    /// Boblens ramme i globale koordinater. Prompt 70: endres for hvert scroll-bilde, så den observeres ikke (ingen ny tegning).
+    @ObservationIgnored var rect: CGRect = .zero
 
     static func close() {
         Haptic34.light()
@@ -24,7 +26,7 @@ final class Assist38 {
     }
 }
 
-/// Hele flaten minus hullet (even-odd), så trykk i hullet går rett til boblen.
+/// Hele flaten minus hullet (even-odd). Prompt 70: brukes ikke lenger av laget (det er fjernet), beholdt for andre flater.
 struct Hole38: Shape {
     var hole: CGRect
 
@@ -37,29 +39,13 @@ struct Hole38: Shape {
     }
 }
 
-/// Det usynlige laget. Legges over PaperShell (Paper.swift).
+/// Prompt 70 (hjem-scroll-mens-ai): det usynlige fullskjerm-laget er borte – det stoppet scroll og lukket kortet ved første
+/// bevegelse. Hjem scroller fritt mens Glimt tenker og etter svaret. Trykk utenfor lukker via Assist70Tap på innholdet
+/// (Home70Assist.swift). Plassen over PaperShell (Paper.swift) viser nå bare pillen «Glimt svarte ↑» nederst over fanelinjen
+/// når svaret ble ferdig mens kortet var scrollet ut av syne.
 struct Assist38Catcher: View {
-    @Environment(Store.self) private var store
-    @MainActor private var a: Assist31 { Assist31.shared }
-    @MainActor private var m: Assist38 { Assist38.shared }
-
     var body: some View {
-        if a.homeOpen && store.paperTab == "hjem" && m.rect.width > 0 {
-            GeometryReader { (g: GeometryProxy) in
-                let o: CGRect = g.frame(in: .global)
-                let hole: CGRect = m.rect.offsetBy(dx: -o.minX, dy: -o.minY)
-                Color.white.opacity(0.001)
-                    .contentShape(Hole38(hole: hole), eoFill: true)
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { (_: DragGesture.Value) in
-                                if Assist31.shared.homeOpen { Assist38.close() }
-                            }
-                    )
-            }
-            .ignoresSafeArea()
-            .accessibilityHidden(true)
-        }
+        Assist70Pill()
     }
 }
 
@@ -96,10 +82,20 @@ struct Assist38Swipe: ViewModifier {
                         .onChange(of: g.frame(in: .global)) { (_: CGRect, r: CGRect) in Assist38.shared.rect = r }
                 }
             }
+            // Prompt 70: sveip opp / dra ned bare fra grepet nederst (30 pt). Resten av kortet scroller siden (som pan-y).
+            .overlay(alignment: .bottom) { grip }
             .offset(y: dy + down)
             .opacity(Double(1 + Swift.max(-1, dy / 160)))
+            .onDisappear { Assist38.shared.rect = .zero }
+    }
+
+    private var grip: some View {
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: 30)
+            .contentShape(Rectangle())
             .gesture(
-                DragGesture(minimumDistance: 12)
+                DragGesture(minimumDistance: 6, coordinateSpace: .global)
                     .onChanged { (v: DragGesture.Value) in
                         let t: CGFloat = v.translation.height
                         if t < 0 {
@@ -131,7 +127,7 @@ struct Assist38Swipe: ViewModifier {
                         }
                     }
             )
-            .onDisappear { Assist38.shared.rect = .zero }
+            .accessibilityHidden(true)
     }
 }
 

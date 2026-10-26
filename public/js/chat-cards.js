@@ -4,6 +4,7 @@
 // Huskeliste). Huskeliste-punktene kan krysses av direkte i kortet (PATCH /api/tasks/:id).
 // card.k: weather|wx · calendar|cal · departures · packages · finance · tasks. Formen tåles løst (serveren og reserven
 // i assist.js kan bruke litt ulike feltnavn).
+import { cal70Html } from './cal70.js'; // prompt 70: card.k 'cal70' = kort A
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 const WD3 = ['SØN', 'MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR'], MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
@@ -115,7 +116,8 @@ function tasks(c) {
     <button type="button" class="gc-open" data-gc-go="huskeliste">Åpne Gjøremål ›</button></div>`;
 }
 
-const KIND = { weather, wx: weather, vaer: weather, calendar, cal: calendar, kalender: calendar, departures, avganger: departures, packages, pakker: packages, finance, finans: finance, tasks, huskeliste: tasks };
+const cal70 = (c) => cal70Html(c, { mode: 'card' }); // prompt 70: kort A (cal70.js)
+const KIND = { weather, wx: weather, vaer: weather, calendar, cal: calendar, kalender: calendar, cal70, departures, avganger: departures, packages, pakker: packages, finance, finans: finance, tasks, huskeliste: tasks };
 /** HTML for kortet, eller '' når typen er ukjent. */
 export function cardHtml(card) {
   if (!card || typeof card !== 'object') return '';

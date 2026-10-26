@@ -326,7 +326,7 @@ private fun PaperApp45(
 
     CompositionLocalProvider(LocalTopRow provides true) {
       Nav23Back(vm, nav, backEnabled, p.bg, preview = !backLocal, onBack = onBack) {
-        Box(Modifier.fillMaxSize().background(p.bg)) {
+        Box(Modifier.fillMaxSize().background(p.bg).ansTapOutside70(vm)) { // prompt 70: trykk utenfor Glimt-svaret (ui/Home70.kt)
             GlassBackdrop50() // prompt 50: fargeskyene bak alt innhold i Liquid Glass (ui/Glass50.kt)
             Column(Modifier.fillMaxSize()) {
                 // Prompt 41: Fold 1c – toppbildet skjules på Hjem (bildet ligger i det store Glimt-kortet, ui/Fold41.kt).
@@ -413,8 +413,8 @@ private fun PaperApp45(
             // Meldinger ligger over fanelinja, ikke midt i innholdet.
             SnackbarHost(snack, Modifier.align(Alignment.BottomCenter).padding(bottom = if (wide) navInset + 24.dp else barBottom + 70.dp))
             if (vm.busy) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) }
-            // Prompt 38: trykk utenfor Glimt-boblen lukker den og fanges (under fullskjermsflatene under).
-            AnsScrim38(vm)
+            // Prompt 38: trykk utenfor Glimt-boblen lukker den. Prompt 70 (claude-code-hjem-scroll-mens-ai.md): ikke lenger et lag som
+            // fanger berøringen (AnsScrim38) – Modifier.ansTapOutside70 på roten under, så Hjem kan scrolles mens Glimt svarer.
             if (vm.newsOpen) PgIn52 { NewsReader(vm) } // prompt 52: pgIn – alle fullskjermsider glir inn (ui/Ui52B.kt)
             // Prompt 37: Vær åpnet fra briefen legger seg over briefen (lenger ned); ✕ går tilbake til briefen.
             if (vm.weatherOpen && !vm.p34.briefOpen) PgIn52 { WeatherApp(vm) }
@@ -781,8 +781,9 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean, mode43: Fo
 @Composable
 private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose.foundation.lazy.grid.LazyGridState, pad: PaddingValues, cols: Int, secs37: List<PSec>, wide: Boolean, trip: Boolean, navBottom: Dp, g52: Boolean = false) {
     val p = PaperPal.current
-    val ctx = LocalContext.current
-    val h = vm.mobileHome
+    // Prompt 70 (ANDHOME70, claude-code-android-hjem-flishoyde.md + wiggle-flytt-android.md): telefonens 2-kolonners Hjem er et eget
+    // rutenett i én Column(verticalScroll) – flisene får innholdets høyde, ikke LazyVerticalGrid med fast 150 dp (ui/Home70.kt).
+    if (g52) { HomeColumn70(vm, mod, pad, secs37, top = { HomeTop70(vm, trip) }, skip = { k -> homeSkip41(vm, k, trip, secs37) }) { k -> HomeBody41(vm, k, wide) }; return }
     LazyVerticalGrid(
         GridCells.Fixed(if (g52) 2 else cols), mod.gridBounds37(vm), state = grid37, contentPadding = pad, // prompt 52 (AND52B): 2 kolonner i 3a
         verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -795,81 +796,102 @@ private fun HomeGrid41(vm: AppViewModel, mod: Modifier, grid37: androidx.compose
         // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (admin; ✕ skjuler «Tilgjengelig» i 24 t).
         if (vm.editPage != "hjem" && upd30Show(vm, home = true)) item(key = "upd30", span = { GridItemSpan(maxLineSpan) }) { UpdateBanner30(vm, home = true) }
         if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
-        homeGridSecs52(vm, g52, secs37, wide, skip = { k -> (k == "h40" && vm.p40.hlMissing) || (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) ||
+        homeGridSecs52(vm, g52, secs37, wide, skip = { k -> homeSkip41(vm, k, trip, secs37) }) { k -> HomeBody41(vm, k, wide) }
+    }
+}
+
+/** Prompt 70: det som ligger over kortene i Home70 (samme som de første radene i rutenettet). */
+@Composable
+private fun HomeTop70(vm: AppViewModel, trip: Boolean) {
+    val p = PaperPal.current
+    if (vm.maiHome41() && vm.editPage != "hjem") Mai17Home41(vm)
+    if (trip && vm.editPage != "hjem") MinReise41(vm, home = true)
+    vm.homeError?.let { e -> Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(4.dp)) }
+    if (vm.editPage != "hjem" && upd30Show(vm, home = true)) UpdateBanner30(vm, home = true)
+    if (vm.editPage != "hjem" && vm.appUpd32OnHome()) AppUpdateBanner32(vm)
+}
+
+/** Prompt 70: kort som skjules helt utenfor redigeringsmodus (felles for rutenettet og Home70). */
+private fun homeSkip41(vm: AppViewModel, k: String, trip: Boolean, secs37: List<PSec>): Boolean = (k == "h40" && vm.p40.hlMissing) || (k == "h2" && vm.h2Hidden37()) || (k == "h13" && (vm.bibleHomeHidden37() || vm.p37.verse == null)) ||
             (k == "h3" && trip && vm.p41.homeCard == "instead") || tilesHide50(vm, k, secs37) || (k == "h43" && vm.homeMediaHidden43()) ||
-            (k == "h11" && vm.editPage != "hjem" && !vm.activeTrials46()) }) { k -> // prompt 46: Prøveperioder bare med aktive prøver (vises i wiggle)
-            when (k) {
-                "h12" -> SwipeBrief36(vm) { HomeBrief34(vm) } // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt). Prompt 36: sveip mot høyre skjuler til neste brief
-                "h13" -> BibleHome37(vm) // Prompt 37: dagens bibelvers (ui/Bible37.kt)
-                "h43" -> HomeMedia43(vm) // Prompt 43: Media (lastes ned + kommer), ui/Media43.kt
-                "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (Glimt / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
-                // Prompt 37: «Vis bare når det er pakker» (skjult uten aktive pakker, dempet i wiggle) og 1–3 pakker.
-                "h2" -> Packages37(vm, wide) {
-                    val pk = (vm.homePackages ?: emptyList()).sortedByDescending { it.ready }.firstOrNull()
-                    // På Fold står pakkekortet ved siden av Avganger og er like høyt.
-                    val cardMod = if (wide) Modifier.height(FOLD_CARD) else Modifier
-                    if (pk == null) PCard(cardMod, onClick = { vm.paperTab("trk") }) {
-                        // Prompt 24: kortet vises alltid, også uten aktive pakker.
-                        Column(Modifier.padding(16.dp, 14.dp)) {
-                            PLabel("Sporing")
-                            PSerif("Ingen aktive pakker", 20.sp, maxLines = 1)
-                            Text("Legg til et sporingsnummer", color = p.mut, fontSize = 12.5.sp, maxLines = 1)
-                        }
+            (k == "h11" && vm.editPage != "hjem" && !vm.activeTrials46())
+
+/** Prompt 70: innholdet i hvert kort på Hjem (felles for rutenettet og Home70). */
+@Composable
+private fun HomeBody41(vm: AppViewModel, k: String, wide: Boolean) {
+    val p = PaperPal.current
+    val ctx = LocalContext.current
+    val h = vm.mobileHome
+    when (k) {
+        "h12" -> SwipeBrief36(vm) { HomeBrief34(vm) } // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt). Prompt 36: sveip mot høyre skjuler til neste brief
+        "h13" -> BibleHome37(vm) // Prompt 37: dagens bibelvers (ui/Bible37.kt)
+        "h43" -> HomeMedia43(vm) // Prompt 43: Media (lastes ned + kommer), ui/Media43.kt
+        "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (Glimt / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
+        // Prompt 37: «Vis bare når det er pakker» (skjult uten aktive pakker, dempet i wiggle) og 1–3 pakker.
+        "h2" -> Packages37(vm, wide) {
+            val pk = (vm.homePackages ?: emptyList()).sortedByDescending { it.ready }.firstOrNull()
+            // På Fold står pakkekortet ved siden av Avganger og er like høyt.
+            val cardMod = if (wide) Modifier.height(FOLD_CARD) else Modifier
+            if (pk == null) PCard(cardMod, onClick = { vm.paperTab("trk") }) {
+                // Prompt 24: kortet vises alltid, også uten aktive pakker.
+                Column(Modifier.padding(16.dp, 14.dp)) {
+                    PLabel("Sporing")
+                    PSerif("Ingen aktive pakker", 20.sp, maxLines = 1)
+                    Text("Legg til et sporingsnummer", color = p.mut, fontSize = 12.5.sp, maxLines = 1)
+                }
+            }
+            else PCard(cardMod, onClick = { vm.paperTab("trk") }) {
+                Row(Modifier.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    PackageLogo(vm, pk, 52)
+                    Column(Modifier.weight(1f)) {
+                        PLabel(if (pk.ready) "Hent i dag" else pk.statusText.ifBlank { "På vei" })
+                        // Tittel: varenavn eller butikk, ellers «Pakke fra Bring». Sporingsnummeret står i detaljene.
+                        PSerif(pk.cardTitle, 20.sp, maxLines = 1)
+                        Text(listOf(pk.etaText, pk.carrierName).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    else PCard(cardMod, onClick = { vm.paperTab("trk") }) {
-                        Row(Modifier.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            PackageLogo(vm, pk, 52)
-                            Column(Modifier.weight(1f)) {
-                                PLabel(if (pk.ready) "Hent i dag" else pk.statusText.ifBlank { "På vei" })
-                                // Tittel: varenavn eller butikk, ellers «Pakke fra Bring». Sporingsnummeret står i detaljene.
-                                PSerif(pk.cardTitle, 20.sp, maxLines = 1)
-                                Text(listOf(pk.etaText, pk.carrierName).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            Text(morePackagesLabel(vm, pk), color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        }
+                    Text(morePackagesLabel(vm, pk), color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+        // Prompt 27: valgte stopp (Velg stopp), én gruppe per stopp, sanntid hvert 30. s. Uten egne stopp: kortet fra /mobile/home.
+        "h3" -> if (homeRuter27(vm)) RuterHome27(vm, if (wide) Modifier.height(FOLD_CARD) else Modifier) else {
+            val lines = h?.ruter ?: emptyList()
+            // Trykk åpner Avganger (egen side med flere avganger, detaljer og egne stopp).
+            if (lines.isNotEmpty()) PaperRuter(lines, if (wide) Modifier.height(FOLD_CARD) else Modifier) { vm.openRuter() }
+            else PCard(if (wide) Modifier.height(FOLD_CARD) else Modifier, onClick = { vm.openRuter() }) { Text("Ingen avganger ennå. Trykk for å legge til en holdeplass.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
+        }
+        "hm" -> if (vm.homeTiles50()) HomeTiles50(vm) else PaperMinis(vm) // prompt 50: fliser (1d), ui/Tiles50.kt
+        // Nye kort: Huskeliste (de tre neste med avkrysning), Posisjon (familien) og Bolig.
+        "h8" -> HomeTasksCard(vm)
+        "h9" -> HomeBirthdaysCard24(vm)
+        "h10" -> HomeKalCard26(vm)
+        "h11" -> HomeTrials32b(vm) // Prompt 32: prøveperioder (ui/Ui32b.kt)
+        "h6" -> HomePositionCard(vm)
+        "h40" -> HjemlysCard40(vm, compact = true) // prompt 40: Hjemlys (ui/Ui40.kt)
+        "h7" -> HomeBoligCard(vm)
+        "h5" -> PaperNewsCard(vm)
+        "h4" -> if (!h?.shortcuts.isNullOrEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PHead("Snarveier")
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                h?.shortcuts?.forEach { sc ->
+                    Row(
+                        Modifier.height(36.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).background(p.card).clickable { openLink(ctx, sc.url) }.padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Box(Modifier.size(8.dp).clip(CircleShape).background(if (sc.local) p.pos else p.lab))
+                        Text(sc.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
                     }
                 }
-                // Prompt 27: valgte stopp (Velg stopp), én gruppe per stopp, sanntid hvert 30. s. Uten egne stopp: kortet fra /mobile/home.
-                "h3" -> if (homeRuter27(vm)) RuterHome27(vm, if (wide) Modifier.height(FOLD_CARD) else Modifier) else {
-                    val lines = h?.ruter ?: emptyList()
-                    // Trykk åpner Avganger (egen side med flere avganger, detaljer og egne stopp).
-                    if (lines.isNotEmpty()) PaperRuter(lines, if (wide) Modifier.height(FOLD_CARD) else Modifier) { vm.openRuter() }
-                    else PCard(if (wide) Modifier.height(FOLD_CARD) else Modifier, onClick = { vm.openRuter() }) { Text("Ingen avganger ennå. Trykk for å legge til en holdeplass.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
-                }
-                "hm" -> if (vm.homeTiles50()) HomeTiles50(vm) else PaperMinis(vm) // prompt 50: fliser (1d), ui/Tiles50.kt
-                // Nye kort: Huskeliste (de tre neste med avkrysning), Posisjon (familien) og Bolig.
-                "h8" -> HomeTasksCard(vm)
-                "h9" -> HomeBirthdaysCard24(vm)
-                "h10" -> HomeKalCard26(vm)
-                "h11" -> HomeTrials32b(vm) // Prompt 32: prøveperioder (ui/Ui32b.kt)
-                "h6" -> HomePositionCard(vm)
-                "h40" -> HjemlysCard40(vm, compact = true) // prompt 40: Hjemlys (ui/Ui40.kt)
-                "h7" -> HomeBoligCard(vm)
-                "h5" -> PaperNewsCard(vm)
-                "h4" -> if (!h?.shortcuts.isNullOrEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PHead("Snarveier")
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        h?.shortcuts?.forEach { sc ->
-                            Row(
-                                Modifier.height(36.dp).clip(CircleShape).border(1.dp, p.line, CircleShape).background(p.card).clickable { openLink(ctx, sc.url) }.padding(horizontal = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Box(Modifier.size(8.dp).clip(CircleShape).background(if (sc.local) p.pos else p.lab))
-                                Text(sc.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
-                            }
-                        }
+            }
+        }
+        "hs" -> h?.serverStatus?.let { st ->
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                PHead("Server", h.serverName)
+                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    listOf("CPU" to st.cpu, "Minne" to st.mem, "Disk" to st.disk).forEach { (n, v) ->
+                        Column { Text(n, color = p.mut, fontSize = 11.5.sp); PSerif(v?.let { "${Math.round(it)} %" } ?: "–", 18.sp) }
                     }
-                }
-                "hs" -> h?.serverStatus?.let { st ->
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        PHead("Server", h.serverName)
-                        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                            listOf("CPU" to st.cpu, "Minne" to st.mem, "Disk" to st.disk).forEach { (n, v) ->
-                                Column { Text(n, color = p.mut, fontSize = 11.5.sp); PSerif(v?.let { "${Math.round(it)} %" } ?: "–", 18.sp) }
-                            }
-                            Column { Text("Oppe", color = p.mut, fontSize = 11.5.sp); PSerif(st.uptime ?: "–", 18.sp, maxLines = 1) }
-                        }
-                    }
+                    Column { Text("Oppe", color = p.mut, fontSize = 11.5.sp); PSerif(st.uptime ?: "–", 18.sp, maxLines = 1) }
                 }
             }
         }

@@ -14,7 +14,7 @@ export const MENU65 = [
   ['Husstand', ['users']],
   ['Glimt og AI', ['glimt', 'ai']],
   ['Tilkoblinger', ['int', 'kal']],
-  ['Moduler', ['dom', 'finans', 'media', 'nyheter', 'ruter', 'studie', 'vaer']],
+  ['Moduler', ['dom', 'finans', 'media', 'nyheter', 'ruter', 'sporing', 'studie', 'vaer']], // prompt 70: Sporing mellom Ruter og Studie
   ['Server', ['system', 'backup', 'logger']],
 ];
 /** Side som vises under en annen i menyen (menyen markerer forelderen, tilbakeknappen går dit). */

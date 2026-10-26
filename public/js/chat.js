@@ -13,6 +13,7 @@ import { glimt, glimtDots } from './glimt.js';
 import { assist, looksLikeTool, normAnswer } from './assist.js';
 import { agentStream59, cacheNote59 } from './stream59.js'; // prompt 59: Glimt-svar strømmes (ord for ord, statuslinje, Stopp)
 import { agentText, isPlain, agentConfirm } from './glimt-agent45.js';
+import { cal70Of } from './cal70.js'; // prompt 70
 import { chatConv60, bindConv60, rekeyConv60, newChatConv60, forgetConv60, choicePick60, followsGlimt60 } from './convo60.js'; // prompt 60: samtale-id, valgknapper
 import { thumbs61Html } from './recipes61.js'; // prompt 61: tommel opp/ned på Glimt-svar
 import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './sched62.js'; // prompt 62: kortet for en fast oppgave + kvittering
@@ -21,6 +22,7 @@ import { factsHtml41, usedWithoutFacts41 } from './chat-facts41.js'; // prompt 4
 import { css50, rejectReason50, isImg50, upload50, attRow50, bubbleImgs50, otherFiles50, filePills50, imagesOf50, bindDrop50, pastedFiles50, lightbox50, readWith50, finansBtn50, MAX_FILES50 } from './chat50.js'; // prompt 50: vedlegg, miniatyr, lysboks
 import { speak57, stop57, aiTag57 } from './voices57.js'; // prompt 57: «Les høyt» med valgt stemme (POST /api/tts), nettleseren som reserve
 import { css52, thinkOf52, thinkHtml52, thumbDataUrl52 } from './chat52.js'; // prompt 52: tankegang, miniatyr (attTh), modellark som scroller
+import { L70, start70, step70, fail70, finish70, loaderHtml70, update70, cacheRead70, cacheWrite70, listCount70, skelRows70 } from './chat70.js'; // prompt 70: lasteside
 
 /* Prompt 31: Glimt i Chat (claude-code-chat-kort-vaer-kalender.md, claude-code-glimt-ai.md).
    - Avsender er Glimt-merket (22 px) + modellnavnet; mens svaret kommer: merket animert og tre prikker (ikke «Tenker …»).
@@ -67,7 +69,7 @@ const IC = {
 const svg = (d, s = 18, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
 const C = {
-  booted: false, missing: false, err: '', models: null, def: '', owui: false, set: { chat_my_data: true, chat_ask_cloud: true, chat_default_model: '', chat_theme: 'papir' },
+  booted: false, ready70: false, show70: 30, missing: false, err: '', models: null, def: '', owui: false, set: { chat_my_data: true, chat_ask_cloud: true, chat_default_model: '', chat_theme: 'papir' },
   list: null, q: '', qList: null, cur: null, chat: null, draftModel: '', draftSet: { ...DEF }, open: {},
   inp: '', att: [], web: false, data: false, busy: null, sheet: null, menuId: null, guard: null, rem: false, edit: null,
   copied: '', speak: '', rec: false, toast: '', pulls: {}, mdel: '', kb: null, drawer: false, delArm: false, rn: '', nf: '', pn: '', theme: 'papir',
@@ -109,24 +111,73 @@ async function boot() {
   const l = readLocal();
   C.cur = l.cur ?? null; C.draftModel = l.model ?? ''; C.theme = l.theme === 'noytral' ? 'noytral' : 'papir'; C.web = !!l.web; C.data = !!l.data; C.open = l.open ?? {};
   if (l.def) C.draftSet = { ...DEF, ...l.def };
-  const [m, s, list] = await Promise.allSettled([call('/models'), call('/settings'), call('/chats')]);
-  if (m.status === 'rejected' && m.reason?.status === 404) { C.missing = true; paint(); return; }
-  if (m.status === 'fulfilled') { C.models = m.value.models ?? []; C.def = m.value.default ?? ''; C.owui = !!m.value.openwebui; C.auto = m.value.auto?.id ? m.value.auto : null; } else { C.models = []; C.err = m.reason?.message ?? ''; }
+  // Prompt 70: samtalelista fra cache med en gang (byttes ut uten hopp når den ferske kommer).
+  const cache = cacheRead70();
+  if (cache?.list && !C.list) C.list = cache.list;
+  return load70();
+}
+/* Prompt 70 (claude-code-chat-laster-web.md): samtaler og modeller hentes parallelt. Skrivefeltet blir aktivt så snart modellen
+   er valgt, selv om samtalelista fortsatt lastes. Lastesiden viser stegene; treg etter 8 s, feil etter 20 s eller ved nettverksfeil. */
+let ctl70 = null;
+const netErr70 = (r) => r.status === 'rejected' && !r.reason?.status;
+async function load70() {
+  ctl70?.abort();
+  const ctl = ctl70 = new AbortController(), signal = ctl.signal;
+  const run = start70(() => paint(), () => { ctl.abort(); paint(); });
+  paint();
+  const seen = () => { if (run === L70.run && L70.steps[0].s !== 'ok') { step70(0, 'ok', location.host); paint(); } };
+  const tap = (pr) => pr.then((v) => { seen(); return v; }, (e) => { if (e?.status) seen(); throw e; });
+  const pm = tap(call('/models', { signal })), ps = tap(call('/settings', { signal })), pl = tap(call('/chats', { signal }));
+  pl.then((v) => {
+    if (run !== L70.run) return;
+    C.list = v; cacheWrite70({ list: v });
+    const n = listCount70(v);
+    step70(1, 'ok', `${n} ${n === 1 ? 'samtale' : 'samtaler'}`);
+    if (C.ready70) { if (C.q) searchChats(C.q, true); paintSide(); } else paint();
+  }, (e) => {
+    if (run !== L70.run || !e?.status) return; // nettverksfeil/tidsavbrudd håndteres av modellkallet og tidsgrensen
+    if (!C.list) C.list = { pinned: [], folders: [], chats: [] };
+    step70(1, 'ok', '');
+    if (C.ready70) paintSide(); else paint();
+  });
+  const [m, s] = await Promise.allSettled([pm, ps]);
+  if (run !== L70.run) return;
+  if (m.status === 'rejected' && m.reason?.status === 404) { C.missing = true; ready70(); return; }
+  if (netErr70(m)) { if (!C.ready70) { fail70(); paint(); } return; }
+  const l = readLocal();
+  if (m.status === 'fulfilled') { C.models = m.value.models ?? []; C.def = m.value.default ?? ''; C.owui = !!m.value.openwebui; C.auto = m.value.auto?.id ? m.value.auto : null; C.err = ''; } else { C.models = []; C.err = m.reason?.message ?? ''; }
   // Prompt 41 (claude-code-chat-auto-modell.md): «✦ Auto» øverst i velgeren når serveren har det. Auto er standard i nye samtaler,
   // og eksisterende brukere flyttes til Auto én gang (autoMig).
   if (C.auto) { C.models = [{ id: C.auto.id, name: C.auto.label || '✦ Auto', kind: 'auto', installed: true, picks: C.auto.picks ?? {} }, ...C.models.filter((x) => x.id !== C.auto.id)]; if (!autoMigDone()) { C.draftModel = C.auto.id; autoMigSet(); } }
+  if (m.status === 'fulfilled') cacheWrite70({ models: C.models.filter((x) => x.kind !== 'auto'), def: C.def });
   if (s.status === 'fulfilled') { C.set = { ...C.set, ...s.value }; if (!l.theme && s.value.chat_theme) C.theme = s.value.chat_theme === 'noytral' ? 'noytral' : 'papir'; }
-  if (list.status === 'fulfilled') C.list = list.value; else C.list = { pinned: [], folders: [], chats: [] };
   if (!C.draftModel || !C.models.some((x) => x.id === C.draftModel && x.installed)) C.draftModel = (C.auto ? C.auto.id : '') || C.set.chat_default_model || C.def || C.models.find((x) => x.installed)?.id || '';
   // Prompt 41 (claude-code-chat-mine-data-standard.md): «Mine data» er på som standard (innstillingen mangler = på), og brikken er på i hver ny samtale.
   if (C.set.chat_my_data == null) C.set.chat_my_data = true;
   C.data = !!C.set.chat_my_data && dataFor41(C.cur);
+  step70(2, 'ok', mName(C.draftModel)); L70.model = mName(C.draftModel); L70.modelOk = true;
+  if (C.ready70) { paint(); return; } // «Bruk lokal modell» var valgt: modellene kom senere, oppdater bare visningen
+  if (!C.list) C.list = { pinned: [], folders: [], chats: [] };
   if (pendingChat) { C.cur = pendingChat; pendingChat = null; watchHandoff(C.cur); }
   // Prompt 40: spørsmål fra «✦ AI» i søket: rett inn i en ny samtale (ikke forsiden eller forrige samtale først).
-  if (pendingPrompt && C.models?.length) { const p = pendingPrompt; pendingPrompt = null; freshChat(); send(p); paint(); return; }
+  if (pendingPrompt && C.models?.length) { const p = pendingPrompt; pendingPrompt = null; freshChat(); ready70(); send(p); paint(); return; }
   if (C.cur) await loadChat(C.cur, false);
-  paint();
+  if (run !== L70.run || C.ready70) return;
+  ready70();
   if (pendingPrompt) { const p = pendingPrompt; pendingPrompt = null; newChat(); send(p); }
+}
+/** Prompt 70: alt er klart – lastesiden byttes med Chat (overgang og fokus i skrivefeltet). */
+function ready70() { C.ready70 = true; const h = host(); h?.removeAttribute('aria-busy'); document.getElementById('view')?.removeAttribute('aria-busy'); finish70(h, () => paint()); }
+/** Prompt 70: «Bruk lokal modell» – åpne Chat med modellene fra forrige gang (lokal modell først); hentingen fortsetter i bakgrunnen. */
+function useLocal70() {
+  const c = cacheRead70() ?? {};
+  if (!C.models?.length) { C.models = (c.models ?? []).filter((x) => x.kind !== 'auto'); C.def = C.def || c.def || ''; }
+  const loc = C.models.find((x) => x.kind === 'lokal' && x.installed);
+  if (loc) C.draftModel = loc.id;
+  else if (!C.models.some((x) => x.id === C.draftModel)) C.draftModel = C.models.find((x) => x.installed)?.id || C.draftModel;
+  if (!C.list) C.list = c.list ?? { pinned: [], folders: [], chats: [] };
+  if (L70.mode === 'feil') C.err = 'Fikk ikke kontakt med Homelab. Prøv igjen om litt.';
+  ready70();
 }
 async function refreshList() {
   try { C.list = await call('/chats'); } catch { /* beholder forrige liste */ }
@@ -139,6 +190,7 @@ async function loadChat(id, repaint = true) {
     if (L.length) { C.chat = { id, local: true, title: L.find((m) => m.role === 'user')?.content?.slice(0, 60) ?? 'Glimt', model: C.draftModel, settings: { ...C.draftSet }, messages: L }; C.cur = id; }
     else { C.chat = null; C.cur = null; }
   } else {
+    if (id !== C.cur) C.show70 = 30; // prompt 70: siste 30 meldinger først i hver samtale
     try { C.chat = await call(`/chats/${encodeURIComponent(id)}`); C.cur = id; C.chat.messages = mergeTools(id, C.chat.messages ?? []); } catch { C.chat = null; C.cur = null; }
   }
   if (C.cur && C.busy?.chatId !== C.cur) C.data = !!C.set.chat_my_data && dataFor41(C.cur);
@@ -208,7 +260,7 @@ function rowHtml(x) {
   return `<div class="ch-row${x.id === C.cur ? ' on' : ''}" role="button" tabindex="0" data-ch-open="${esc(x.id)}"><span class="ch-grow"><b data-no-i18n>${esc(x.title)}</b><span>${esc(mName(x.model || ''))} · ${esc(rel(x.updatedAt))}</span></span><button type="button" class="ch-dots" data-ch-menu="${esc(x.id)}" aria-label="Valg for samtalen">⋯</button></div>`;
 }
 function groupsHtml() {
-  if (!C.list) return '<div class="ch-empty-s">Laster …</div>';
+  if (!C.list) return skelRows70(); // prompt 70: skjelettrader til lista er hentet
   if (C.q.trim()) {
     const L = C.qList ?? [];
     return `<div class="ch-gh">TREFF · ${L.length}</div>${L.map(rowHtml).join('')}`;
@@ -246,7 +298,10 @@ function msgsHtml() {
   const msgs = (C.chat?.messages ?? []).filter((m) => m.role !== 'system');
   const busyHere = C.busy && (C.busy.chatId === C.cur || (!C.cur && !C.busy.chatId));
   const lastA = msgs.map((m) => m.role).lastIndexOf('assistant');
-  return msgs.map((m, i) => {
+  // Prompt 70: lange samtaler tegnes fra de siste 30 meldingene; «Vis eldre» henter 30 til.
+  const start70 = Math.max(0, msgs.length - C.show70);
+  return (start70 ? `<button type="button" class="ch70-older" data-ch-older>Vis eldre meldinger (${start70})</button>` : '') + msgs.map((m, i) => {
+    if (i < start70) return '';
     const key = `${C.cur}:${i}`;
     if (m.role === 'user') {
       // Prompt 50: bildene vises over teksten (miniatyrer); andre filer som piller.
@@ -434,9 +489,15 @@ function body() {
   ${!wide && C.drawer ? `<div class="ch-dbg" data-ch-drawer-close></div>${sideHtml(true)}` : ''}${sheetHtml()}`;
 }
 
+/** Prompt 70: lastesiden til alt er klart (oppdateres på stedet, så orben og spinnerne ikke starter på nytt). */
+function paintLoad70(h) {
+  if (update70(h)) return;
+  h.innerHTML = loaderHtml70({ wide: !isMobile(), cache: cacheRead70() });
+}
 function paint() {
   const h = host();
   if (!h) return;
+  if (!C.ready70) { paintLoad70(h); return; }
   const sc = h.querySelector('[data-ch-sc]'), atBottom = sc ? sc.scrollHeight - sc.scrollTop - sc.clientHeight < 40 : true, y = sc?.scrollTop ?? 0;
   const gs = h.querySelector('[data-ch-groups]')?.scrollTop ?? 0;
   const ae = document.activeElement, fk = ae && h.contains(ae) ? ['data-ch-in', 'data-ch-q', 'data-ch-edv', 'data-ch-sys'].find((a) => ae.hasAttribute(a)) : null;
@@ -620,7 +681,9 @@ function fromAgent59(g, q) {
   if (isPlain(g) && ['chat', 'ask', ''].includes(g.intent)) return { text: agentText(g), intent: 'chat' };
   let card = null;
   const evs = g.results.filter((x) => x.kind === 'event');
-  if (evs.length || tool?.startsWith('calendar.')) {
+  const c70 = cal70Of(g); // prompt 70: kort A (lagt i kalenderen, bytt kalender i kortet, Angre)
+  if (c70) card = { k: 'cal70', ...c70 };
+  else if (evs.length || (tool?.startsWith('calendar.') && !g.ask)) { // prompt 70: «Hvilken dag?» viser ikke dagens kalender
     const d = (typeof a0?.result?.from === 'string' ? a0.result.from : null) ?? evs[0]?.date ?? new Date().toISOString().slice(0, 10);
     const x = new Date(`${d}T00:00:00Z`);
     card = { k: 'calendar', date: d, wd: WD59[x.getUTCDay()], n: x.getUTCDate(), t: x.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).replace(/^./, (c) => c.toUpperCase()), sub: `${evs.length} ${evs.length === 1 ? 'hendelse' : 'hendelser'}`,
@@ -919,6 +982,10 @@ function bind(h) {
     const b = tg.closest('button,[data-ch-open]');
     if (!b || !h.contains(b)) return;
     const d = b.dataset;
+    // Prompt 70: knappene på lastesiden og «Vis eldre meldinger».
+    if ('l70Retry' in d) { load70(); return; }
+    if ('l70Local' in d) { useLocal70(); return; }
+    if ('chOlder' in d) { const sc = h.querySelector('[data-ch-sc]'), fromEnd = sc ? sc.scrollHeight - sc.scrollTop : 0; C.show70 += 30; paint(); const s2 = h.querySelector('[data-ch-sc]'); if (s2) s2.scrollTop = s2.scrollHeight - fromEnd; return; }
     if ('chClose' in d) { if (C.guard?.fresh) { C.inp = C.guard.text; C.chat = null; } C.sheet = null; C.guard = null; C.delArm = false; paint(); return; }
     if (d.chMenu) { e.stopPropagation(); C.menuId = d.chMenu; C.rn = ''; C.delArm = false; C.sheet = 'menu'; paint(); return; }
     if (d.chOpen) { C.drawer = false; C.edit = null; loadChat(d.chOpen); return; }
@@ -1053,7 +1120,8 @@ export function render() {
     void locale;
   });
   document.body.classList.add('chat-fs');
-  return `<div id="chat" class="ch ch-fs ${C.theme === 'noytral' ? 'noytral' : 'papir'}">${C.booted ? body() : '<div class="ch-miss"><span>Laster Chat …</span></div>'}</div>`;
+  // Prompt 70: lastesiden (skjelett + Glimt-orb + steg) til modellene er klare; samme markup som det statiske skjelettet i chat70-boot.js.
+  return `<div id="chat" class="ch ch-fs ${C.theme === 'noytral' ? 'noytral' : 'papir'}"${C.ready70 ? '' : ' aria-busy="true"'}>${C.ready70 ? body() : loaderHtml70({ wide: !isMobile(), cache: cacheRead70() })}</div>`;
 }
 let wasMob = isMobile();
 window.addEventListener('resize', () => { if (host() && isMobile() !== wasMob) { wasMob = isMobile(); C.drawer = false; applyChFull(); paint(); } });

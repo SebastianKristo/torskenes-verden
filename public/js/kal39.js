@@ -172,7 +172,6 @@ const isSunCol = (i) => (weekSun() ? i === 0 : i === 6);
 const range = (a, b) => (a.getMonth() === b.getMonth() ? `${a.getDate()}.–${b.getDate()}. ${MS[b.getMonth()]}` : `${a.getDate()}. ${MS[a.getMonth()]} – ${b.getDate()}. ${MS[b.getMonth()]}`);
 const fd = (d) => `${WD[d.getDay()]} ${d.getDate()}. ${MONTHS[d.getMonth()]}`;
 const dl = (d) => `${cap(WDS[d.getDay()])}. ${d.getDate()}. ${MS[d.getMonth()]}`;
-const dur = (x) => { if (x < 60) return `${x} min`; const h = Math.floor(x / 60), m = x % 60; return m ? `${h} t ${m} min` : `${h} t`; };
 const nowMin = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); };
 const timed = (e) => !!(e.s && e.e && e.kind !== 'innl');
 const startM = (e) => C.mm(e.s), endM = (e) => Math.max(C.mm(e.e), C.mm(e.s) + 1);
@@ -259,31 +258,7 @@ function isTodayVisible() {
   return false;
 }
 
-/* ---------------- «NESTE» / «NÅ» (MacNextBanner) ---------------- */
-
-export function nextTimed() {
-  const t0 = C.d0(new Date()), nm = nowMin();
-  for (let i = 0; i < 60; i++) {
-    const d = C.add(t0, i), L = C.evOn(d).filter(timed).sort((a, b) => startM(a) - startM(b));
-    for (const e of L) if (i * 1440 + endM(e) > nm) return { e, i, d };
-  }
-  return null;
-}
-export function nextBanner() {
-  const n = nextTimed();
-  if (!n) return '';
-  const { e, i, d } = n, nm = nowMin(), a = i * 1440 + startM(e), b = i * 1440 + endM(e), now = a <= nm && b > nm;
-  const dayText = i === 0 ? 'i dag' : i === 1 ? 'i morgen' : fd(d);
-  let big = cap(WDS[d.getDay()]), small = e.s;
-  if (now) { big = dur(b - nm); small = 'igjen'; } else if (a - nm < 1440) { big = dur(a - nm); small = 'til start'; }
-  const pct = now ? Math.max(0, Math.min(100, (nm - a) / Math.max(1, b - a) * 100)) : 0;
-  return `<div class="k39-nx-w"><button type="button" class="k39-nx" data-k-sel="${esc(e.id)}" data-k39-cur="${esc(e.k)}" style="${tStyle(e)}">
-    <span class="k39-nx-bar"></span>
-    <span class="k39-nx-m"><span class="k39-nx-k"><span>${now ? 'NÅ' : 'NESTE'}</span><span>${esc(`${e.s}–${e.e} · ${dayText}`)}</span></span>
-      <span class="k39-nx-t"><b data-no-i18n>${esc(e.t)}</b>${e.r ? `<span data-no-i18n>${esc(e.r)}</span>` : ''}</span></span>
-    <span class="k39-nx-r"><b>${esc(big)}</b><span>${esc(small)}</span></span>
-    ${now ? `<span class="k39-nx-p" style="width:${pct.toFixed(1)}%"></span>` : ''}</button></div>`;
-}
+/* Prompt 70: «NESTE»/«NÅ»-kortet øverst er fjernet (som i Mac-appen). Rutenettet bruker plassen. */
 
 /* ---------------- Sidemenyen (MacSidebar) ---------------- */
 

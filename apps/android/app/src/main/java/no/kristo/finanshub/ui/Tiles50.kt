@@ -132,7 +132,7 @@ private fun Tile50(bg: Color, label: String, modifier: Modifier, onClick: () -> 
     val t = tileTok50
     Column(
         modifier.clip(TILE_SHAPE50).background(bg).then(t.edge?.takeIf { edge || Tone.glass }?.let { if (Tone.glass) glassEdge50(TILE_SHAPE50) else Modifier.border(1.dp, it, TILE_SHAPE50) } ?: Modifier)
-            .clickable(role = Role.Button, onClickLabel = "Åpne $label", onClick = onClick).padding(if (pad) 16.dp else 14.dp, if (pad) 16.dp else 14.dp),
+            .clickable(role = Role.Button, onClickLabel = "Åpne $label", onClick = onClick).padding(16.dp, if (pad) 16.dp else 14.dp), // prompt 70: 16 dp sider, 14 dp topp/bunn
         verticalArrangement = Arrangement.spacedBy(if (pad) 6.dp else 2.dp),
         content = content,
     )

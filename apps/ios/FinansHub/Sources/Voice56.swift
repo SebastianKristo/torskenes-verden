@@ -377,8 +377,21 @@ struct Voice56Mic: View {
     var size: CGFloat = 38
     var icon: CGFloat = 17
     var label: String = "Snakk"
+    /// Prompt 70: søkefeltet på Hjem – nytt ikon uten rød knapp (opptaket vises som kort, Home70Mic.swift). Bare trykk.
+    var home70: Bool = false
 
     var body: some View {
+        if home70 {
+            Home70MicButton(ink: ink, label: label) { press() }
+                .task(id: store.account?.id ?? "") {
+                    if v.useServer { await v.refresh(store) }
+                }
+        } else {
+            classic
+        }
+    }
+
+    @ViewBuilder private var classic: some View {
         let on: Bool = v.active(ctx.target) || (dev.recording && ctx.device != nil)
         Button { press() } label: {
             Image(systemName: v.phase == "busy" && v.target == ctx.target ? "ellipsis" : "mic")

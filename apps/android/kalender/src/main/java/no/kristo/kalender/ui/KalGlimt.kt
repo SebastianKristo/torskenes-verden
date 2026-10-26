@@ -287,6 +287,8 @@ private fun AsstMsg(vm: KalVm, m: KGMsg) {
                 }
             }
             if (m.done) {
+                m.c70?.let { KalCal70Card(vm, it) } // prompt 70: kort C (KalCal70Ui.kt)
+                m.ask70?.let { KalCal70Ask(vm, it) }
                 m.cards.forEach { e -> Card(vm, vm.find(e.id) ?: e) }
                 if (m.slots.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     m.slots.forEach { sl ->

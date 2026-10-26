@@ -293,9 +293,13 @@ struct Glimt67HomeExtras: View {
                     Text(g.note67).font(PF.ui(12, .semibold)).foregroundStyle(light.opacity(0.55))
                 }
                 if let ch = g.choices67 {
-                    Choices67View(ch: ch, ink: Color.white, line: Color.white.opacity(0.3), font: PF.ui(13, .semibold)) { (it: Choice67Item) in
+                    // Prompt 70: «Velg dato» viser datovelgeren i kortet (Cal70Card.swift).
+                    Cal70Choices(ch: ch, ink: Color.white, line: Color.white.opacity(0.3), font: PF.ui(13, .semibold), pick: { (it: Choice67Item) in
                         g.pick67(it, store)
-                    }
+                    }, date: { (t: String) in
+                        g.choices67 = nil
+                        Task { _ = await g.home(t, store) }
+                    })
                 }
                 if !g.traceId67.isEmpty && !g.stopped67 {
                     Thumbs67View(traceId: g.traceId67, ink: Color.white, mut: light.opacity(0.6)).padding(.leading, -8)
@@ -362,7 +366,7 @@ struct Glimt67Answer {
         let tool0: String = JS.str(a.actions.first, "tool") ?? ""
         a.intent = tool0.isEmpty ? (intent.isEmpty ? "agent" : intent) : tool0
         a.tool = Glimt67Answer.src[JS.str(o, "module") ?? ""] ?? Glimt31.name
-        a.card = Glimt67Answer.card(tool0, a.actions.first, results)
+        a.card = JS.dict(o, "ask") != nil && results.allSatisfy({ JS.str($0, "kind") != "event" }) ? nil : Glimt67Answer.card(tool0, a.actions.first, results) // prompt 70: «Hvilken dag?» uten dagens kalender
         if let c = a.card, let d = try? JSONSerialization.data(withJSONObject: c) { a.cardJSON = String(data: d, encoding: .utf8) ?? "" }
         // Med kort: bare svaret (treffene står i kortet). Ellers svaret + treffene som en kort liste.
         a.text = a.card != nil ? reply : GlimtAgent45.answerText(o)
@@ -372,6 +376,7 @@ struct Glimt67Answer {
 
     /// Kalender- eller gjøremålskort fra treffene (samme form som kortene fra /api/assist, Chat31Cards.swift).
     static func card(_ tool: String, _ a0: [String: Any]?, _ results: [[String: Any]]) -> [String: Any]? {
+        if let c70 = Cal70Data.chatCard(a0) { return c70 } // prompt 70: kort A (Cal70Card.swift)
         let evs: [[String: Any]] = results.filter { JS.str($0, "kind") == "event" }
         if !evs.isEmpty || tool.hasPrefix("calendar.") {
             let today: String = JS.fmt(Date(), "yyyy-MM-dd")
@@ -636,9 +641,11 @@ struct Chat67Extras: View {
     var body: some View {
         if last && !s.busy {
             if let ch = m.choices67 {
-                Choices67View(ch: ch, ink: c.ink, line: c.line, font: c.ui(13.5, .semibold)) { (it: Choice67Item) in
+                Cal70Choices(ch: ch, ink: c.ink, line: c.line, font: c.ui(13.5, .semibold), pick: { (it: Choice67Item) in
                     s.pick67(ch, it, store)
-                }
+                }, date: { (t: String) in
+                    s.pick67(ch, Choice67Item(id: "", label: t, text: t), store) // prompt 70: valgt dato som ny tekst
+                })
             }
             if !m.confirm67.isEmpty {
                 HStack(spacing: 8) {

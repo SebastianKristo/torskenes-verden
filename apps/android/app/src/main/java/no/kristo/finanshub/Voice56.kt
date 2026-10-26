@@ -77,6 +77,11 @@ object Voice56 {
     var mode by mutableStateOf("server")
     var info by mutableStateOf<VoiceInfo56?>(null)
     var infoLoaded by mutableStateOf(false)
+    /** Prompt 70 (ANDHOME70, mikrofon-sokefelt): teksten så langt – bare med talegjenkjenningen på telefonen (serveren gir teksten til slutt). */
+    var partial by mutableStateOf("")
+    /** Prompt 70: ↑ Send i opptakskortet – søket sendes når teksten er satt inn (sendTick øker). */
+    var autoSend = false
+    var sendTick by mutableStateOf(0)
 
     internal var modeLoaded = false
     internal var infoAt = 0L
@@ -320,7 +325,7 @@ fun AppViewModel.micDevice56(ctx: Context, target: String, hold: Boolean, insert
             done(if (got.isBlank()) "Hørte ingen ord" else "På telefonen · norsk")
         }
         override fun onPartialResults(partialResults: Bundle?) {
-            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let { got = it }
+            partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.takeIf { it.isNotBlank() }?.let { got = it; if (v.seq == my) v.partial = it }
         }
         override fun onEvent(eventType: Int, params: Bundle?) {}
     })
@@ -329,6 +334,7 @@ fun AppViewModel.micDevice56(ctx: Context, target: String, hold: Boolean, insert
         .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "nb-NO")
         .putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "nb-NO")
         .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+    v.partial = "" // prompt 70
     v.device = sr; v.target = target; v.hold = hold; v.onDevice = true; v.level = 0f; v.secs = 0; v.t0 = System.currentTimeMillis(); v.insert = insert; v.phase = "rec"
     if (v.noteFor == target) { v.note = null; v.noteFor = null }
     runCatching { sr.startListening(i) }.onFailure { done("Fikk ikke startet mikrofonen"); return }
@@ -346,7 +352,9 @@ fun AppViewModel.micDevice56(ctx: Context, target: String, hold: Boolean, insert
 
 /** Søkefeltet på Hjem: serveren når den har en motor, ellers telefonen. */
 fun AppViewModel.micSearch56(ctx: Context, hold: Boolean = false) {
-    val put: (String) -> Unit = { t -> setHomeQuery29(join56(q29.homeQ, t)) }
+    // Prompt 70: ↑ Send i opptakskortet → søket går når teksten er satt inn.
+    val put: (String) -> Unit = { t -> setHomeQuery29(join56(q29.homeQ, t)); if (Voice56.autoSend) { Voice56.autoSend = false; Voice56.sendTick++ } }
+    if (Voice56.phase == "idle") { Voice56.autoSend = false; Voice56.partial = "" }
     if (Voice56.phase != "idle" && Voice56.target == Voice56.SEARCH && Voice56.onDevice) { if (Voice56.phase == "rec") stopMic56(false); return }
     if (!micServer56(ctx, Voice56.SEARCH, hold, put)) micDevice56(ctx, Voice56.SEARCH, hold, put)
 }

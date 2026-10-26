@@ -424,7 +424,10 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                     if (msg.facts.isNotEmpty()) ChatFacts41(v, msg.facts)
                     msg.card?.let { ChatCard31(vm, it, v) }
                     // Prompt 67: valgknapper og bekreftelse under det siste Glimt-svaret.
-                    if (i == lastA && !s.busy) msg.choices67?.let { ch -> Choices67Row(ch, v.ink, v.card, v.line, v.sans) { vm.pickChat67(ch, it) } }
+                    if (i == lastA && !s.busy) msg.choices67?.let { ch ->
+                        // Prompt 70: «Velg dato» → datovelger i kortet; valgt dato sendes som ny tekst (uten choice).
+                        Cal70Choices(ch, v.ink, v.card, v.line, v.sans, { vm.pickChat67(ch, it) }) { t -> vm.pickChat67(ch, no.kristo.finanshub.ChoiceItem67("", t, t)) }
+                    }
                     if (i == lastA && !s.busy) msg.confirm67?.let { cf ->
                         if (cf.summary.isNotBlank() && cf.summary != "Ja, gjør det" && !msg.content.contains(cf.summary)) Text(cf.summary, color = v.ink, fontFamily = v.sans, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Confirm67Row(v.ink, v.bg, v.line, v.sans, { vm.confirmChat67(i, true) }, { vm.confirmChat67(i, false) })

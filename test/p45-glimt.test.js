@@ -143,7 +143,7 @@ test('dato/tid: norske formater, relative datoer, månedsskifte, årsskifte og u
 });
 
 test('tittel: aldri hele setningen', () => {
-  assert.equal(TL.cleanEventTitle45('Legg til time Kino se på dune'), 'Kino – Dune');
+  assert.equal(TL.cleanEventTitle45('Legg til time Kino se på dune'), 'Kino: Dune');
   assert.equal(TL.cleanEventTitle45('Legg til kino i kalenderen'), 'Kino');
   assert.equal(TL.cleanTaskTitle45('Minn meg på å kjøpe melk'), 'Kjøpe melk');
   assert.equal(TL.cleanTaskTitle45('Husk at jeg må kjøpe melk'), 'Kjøpe melk');
@@ -160,14 +160,14 @@ test('modell (JSON): «Legg til time 12.10 12:15 Kino se på dune» → avtale m
     assert.equal(r.body.intent, 'create');
     assert.equal(r.body.actions[0].tool, 'calendar.create');
     assert.equal(r.body.actions[0].status, 'done');
-    assert.deepEqual([r.body.actions[0].args.title, r.body.actions[0].args.date, r.body.actions[0].args.start, r.body.actions[0].args.end], ['Kino – Dune', '2027-10-12', '12:15', '15:15']); // prompt 47: kino = 3 t (antatt)
-    assert.match(r.body.reply, /^Lagt inn: \*\*Kino – Dune, tirsdag 12\. oktober 2027 kl\. 12:15\*\*.*Slutt kl\. 15:15 er antatt \(3 t for kino\)/);
+    assert.deepEqual([r.body.actions[0].args.title, r.body.actions[0].args.date, r.body.actions[0].args.start, r.body.actions[0].args.end], ['Kino: Dune', '2027-10-12', '12:15', '14:15']); // prompt 70: kino = 2 t (antatt), tittel «Kino: Dune»
+    assert.match(r.body.reply, /^Lagt inn: \*\*Kino: Dune, tirsdag 12\. oktober 2027 kl\. 12:15\*\*.*Slutt kl\. 14:15 er antatt \(2 t for kino\)/);
     assert.equal(calls.length, 1, 'ett modellkall');
   });
   const saved = await evsOf(OLA, '2027-10-12');
   assert.equal(saved.length, 1);
-  assert.equal(saved[0].title, 'Kino – Dune');
-  assert.equal(saved[0].time, '12:15–15:15');
+  assert.equal(saved[0].title, 'Kino: Dune');
+  assert.equal(saved[0].time, '12:15–14:15');
 });
 
 test('modell (tool calling): «Legg til kino neste fredag klokka sju» → riktig fredag og 19:00, ingen oppdiktet sted', async () => {
@@ -182,7 +182,7 @@ test('modell (tool calling): «Legg til kino neste fredag klokka sju» → rikti
   });
   const e = (await evsOf(OLA, '2026-10-30')).find((x) => x.title === 'Kino');
   assert.ok(e, 'lagret');
-  assert.equal(e.time, '19:00–22:00', 'prompt 47: kino = 3 t');
+  assert.equal(e.time, '19:00–21:00', 'prompt 70: kino = 2 t (før 3 t)');
   assert.equal(e.room, '');
 });
 
@@ -287,9 +287,9 @@ test('regresjon: «flytt den til fredag» på en avtale neste år (12.10 etter a
   assert.equal(m.body.actions[0].status, 'done', JSON.stringify(m.body).slice(0, 500));
   assert.ok(!/bekreftet ikke/.test(m.body.reply), m.body.reply);
   assert.equal(m.body.actions[0].args.date, '2027-10-15', 'fredagen i avtalens uke, ikke 30.10.2026');
-  assert.match(m.body.reply, /^Flyttet \*\*«Kino – Dune»\*\* til \*\*fredag 15\. oktober 2027 kl\. 12:15–15:15\*\*/);
-  assert.equal((await evsOf(KARI, '2027-10-15')).find((e) => e.title === 'Kino – Dune')?.time, '12:15–15:15', 'lagret');
-  assert.equal((await evsOf(KARI, '2027-10-12')).filter((e) => e.title === 'Kino – Dune').length, 0);
+  assert.match(m.body.reply, /^Flyttet \*\*«Kino: Dune»\*\* til \*\*fredag 15\. oktober 2027 kl\. 12:15–14:15\*\*/);
+  assert.equal((await evsOf(KARI, '2027-10-15')).find((e) => e.title === 'Kino: Dune')?.time, '12:15–14:15', 'lagret');
+  assert.equal((await evsOf(KARI, '2027-10-12')).filter((e) => e.title === 'Kino: Dune').length, 0);
   // Med klokkeslett, og fra Hjem med kontekst: samme uke, kontrollert.
   const t = await agent(K, 'flytt den til torsdag kl 18', { module: 'calendar', context: { selectedId: id }, requestId: RID() });
   assert.equal(t.body.actions[0].status, 'done', t.body.reply);
@@ -298,7 +298,7 @@ test('regresjon: «flytt den til fredag» på en avtale neste år (12.10 etter a
   const n = await agent(K, 'flytt den til neste fredag', { module: 'calendar', context: { selectedId: id }, requestId: RID() });
   assert.equal(n.body.actions[0].status, 'done', n.body.reply);
   assert.equal(n.body.actions[0].args.date, '2026-10-30');
-  assert.ok((await evsOf(KARI, '2026-10-30')).some((e) => e.title === 'Kino – Dune' && e.time === '18:00–21:00')); // varigheten (3 t kino) beholdes
+  assert.ok((await evsOf(KARI, '2026-10-30')).some((e) => e.title === 'Kino: Dune' && e.time === '18:00–20:00')); // varigheten (2 t kino) beholdes
 });
 
 test('regresjon: flytt en kopi til samme tid som en lik avtale → spør (ikke «bekreftet ikke»); kontrollen leser lagringen direkte', async () => {

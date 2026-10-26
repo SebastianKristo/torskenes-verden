@@ -90,11 +90,14 @@ enum KalWData {
         let tk: String = KalD.key(now)
         let nm: Int = KalD.minutes(now)
         // Prompt 35: også kalendere som er skjult fra menyen.
-        let hidden: Set<String> = Set(s.cals.filter { (c: KalCal) -> Bool in !c.shown }.map { (c: KalCal) -> String in c.id })
+        var hidden: Set<String> = Set(s.cals.filter { (c: KalCal) -> Bool in !c.shown }.map { (c: KalCal) -> String in c.id })
+        // Prompt 70: Innstillinger → Widgets (kalendere som tas med, «Skjul fullførte i dag»).
+        hidden.formUnion(KalWPrefs70.off)
+        let hideDone: Bool = KalWPrefs70.hideDone
         let list: [KalEvent] = s.events.filter { (e: KalEvent) -> Bool in
             if hidden.contains(e.cal) || e.cont { return false }
             if e.day > tk { return true }
-            if e.day == tk { return e.allDay || e.endMin > nm }
+            if e.day == tk { return e.allDay || !hideDone || e.endMin > nm }
             return false
         }
         return list.sorted { (a: KalEvent, b: KalEvent) -> Bool in
@@ -157,15 +160,19 @@ enum KalWData {
     /// Prompt 41: «Ny hendelse» i stor og ekstra stor åpner skrivefeltet i appen.
     static let newURL: URL = URL(string: "kalender://ny")!
 
-    /// Neste tidspunkt widgeten bør tegnes på nytt (slutten på neste hendelse eller midnatt).
+    /// Neste tidspunkter widgeten bør tegnes på nytt (start og slutt på de neste hendelsene og midnatt).
     static func refreshDates(_ s: KalSnapshot, now: Date) -> [Date] {
+        // Prompt 70: også ved hver start (pågående → neste), ikke bare slutt.
         var out: [Date] = []
-        for e in upcoming(s, now: now).prefix(6) where !e.allDay {
+        let limit: Date = now.addingTimeInterval(8 * 3600)
+        for e in upcoming(s, now: now).prefix(8) where !e.allDay {
+            let start: Date = KalD.at(e.day, e.startMin)
             let end: Date = KalD.at(e.day, e.endMin)
-            if end > now && end < now.addingTimeInterval(6 * 3600) { out.append(end) }
+            if start > now && start < limit { out.append(start) }
+            if end > now && end < limit { out.append(end) }
         }
         out.append(KalD.add(KalD.cal.startOfDay(for: now), 1).addingTimeInterval(30))
-        return out.sorted()
+        return Array(Set(out)).sorted()
     }
 }
 
@@ -235,6 +242,8 @@ final class KalWOnce43: @unchecked Sendable {
 
 /* ---------- Farger ---------- */
 
+// Prompt 70: fasit Kalender Widgets.dc.html (iPhone): hvit flate, systemfont, grå sekundærtekst (#8a8a8e), rød ukedag og
+// i dag-sirkel (#b23a2a), + i lys grå sirkel (#f2f2f7). Mørk modus: systemets mørke widgetflate.
 struct KalWPal {
     let bg: Color
     let ink: Color
@@ -242,14 +251,17 @@ struct KalWPal {
     let line: Color
     let acc: Color
     let sunday: Color
+    let plus: Color
     let dark: Bool
-    /// Prompt 35: ukenummer («UKE 43») i --ink2.
-    var ink2: Color { dark ? Color(kalHex: "#d6cfc2") : Color(kalHex: "#3d3a33") }
+    /// Ukenummer («UKE 44») – grått som i fasiten.
+    var ink2: Color { mut }
 
-    static let light: KalWPal = KalWPal(bg: Color(kalHex: "#fffdf8"), ink: Color(kalHex: "#1b1a17"), mut: Color(kalHex: "#6b665c"),
-                                        line: Color(kalHex: "#e6dfd1"), acc: Color(kalHex: "#b23a2a"), sunday: Color(kalHex: "#b23a2a"), dark: false)
-    static let darkPal: KalWPal = KalWPal(bg: Color(kalHex: "#211f1b"), ink: Color(kalHex: "#efe9de"), mut: Color(kalHex: "#a49d91"),
-                                          line: Color(kalHex: "#2e2b26"), acc: Color(kalHex: "#ec7a64"), sunday: Color(kalHex: "#ec7a64"), dark: true)
+    static let light: KalWPal = KalWPal(bg: Color(kalHex: "#ffffff"), ink: Color(kalHex: "#1b1a17"), mut: Color(kalHex: "#8a8a8e"),
+                                        line: Color(kalHex: "#ececf0"), acc: Color(kalHex: "#b23a2a"), sunday: Color(kalHex: "#b23a2a"),
+                                        plus: Color(kalHex: "#f2f2f7"), dark: false)
+    static let darkPal: KalWPal = KalWPal(bg: Color(kalHex: "#1c1c1e"), ink: Color(kalHex: "#ffffff"), mut: Color(kalHex: "#8e8e93"),
+                                          line: Color(kalHex: "#38383a"), acc: Color(kalHex: "#ff6a55"), sunday: Color(kalHex: "#ff6a55"),
+                                          plus: Color(kalHex: "#2c2c2e"), dark: true)
 }
 
 /* ---------- Hjemskjerm: liten, medium, stor ---------- */
@@ -260,7 +272,7 @@ struct KalHomeWidget: Widget {
             KalHomeWidgetView(entry: e)
         }
         .configurationDisplayName("Kalender")
-        .description("Dato, vær og de neste hendelsene. Stor viser måneden.")
+        .description("Dato, uke og de neste hendelsene i kalenderfargene. Stor viser måneden.")
         .supportedFamilies(KalHomeWidget.families)
         .contentMarginsDisabled()
     }
@@ -276,22 +288,28 @@ extension KalHomeWidget {
 struct KalHomeWidgetView: View {
     @Environment(\.widgetFamily) private var family
     @Environment(\.colorScheme) private var scheme
-    /// Prompt 41: «apper foran» på Mac (og tonet Hjem-skjerm på iOS) = accented/vibrant → nedtonet bakgrunn.
+    /// Prompt 41: «apper foran» på Mac og tonet Hjem-skjerm / StandBy på iOS = accented/vibrant → systemets bakgrunn.
     @Environment(\.widgetRenderingMode) private var mode
     let entry: KalWEntry
 
     private var tinted: Bool { mode != .fullColor }
     private var pal: KalWPal { scheme == .dark ? KalWPal.darkPal : KalWPal.light }
 
+    /// Prompt 70: 14 pt i liten, 14/16 pt i de andre (fasiten).
+    private var pad: EdgeInsets {
+        if family == .systemSmall { return EdgeInsets(top: 14, leading: 14, bottom: 14, trailing: 14) }
+        return EdgeInsets(top: 14, leading: 16, bottom: 16, trailing: 16)
+    }
+
     @ViewBuilder var body: some View {
         if tinted {
             content
-                .padding(16)
+                .padding(pad)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .containerBackground(.fill.tertiary, for: .widget)
         } else {
             content
-                .padding(16)
+                .padding(pad)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .containerBackground(for: .widget) { pal.bg }
         }
@@ -306,7 +324,7 @@ struct KalHomeWidgetView: View {
             case .systemExtraLarge:
                 KalWExtraLarge41(entry: entry, pal: pal).widgetURL(KalWData.monthURL41(entry.date))
             case .systemLarge:
-                KalWLarge(entry: entry, pal: pal).widgetURL(KalWData.monthURL41(entry.date))
+                KalWLarge(entry: entry, pal: pal).widgetURL(KalWData.dayURL(KalD.key(entry.date)))
             case .systemMedium:
                 KalWMedium(entry: entry, pal: pal).widgetURL(KalWData.dayURL(KalD.key(entry.date)))
             default:
@@ -316,8 +334,9 @@ struct KalHomeWidgetView: View {
     }
 
     private var smallURL: URL {
-        if let n = KalWData.nextTimed(entry.snap, now: entry.date) { return KalWData.eventURL(n) }
-        return KalWData.dayURL(KalD.key(entry.date))
+        let tk: String = KalD.key(entry.date)
+        if let n = KalWData.upcoming(entry.snap, now: entry.date).first, n.day == tk { return KalWData.eventURL(n) }
+        return KalWData.dayURL(tk)
     }
 }
 
@@ -326,7 +345,7 @@ struct KalWNotLinked: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("KALENDER").font(.system(size: 10, weight: .heavy)).tracking(1).foregroundStyle(pal.acc)
+            Text("KALENDER").font(.system(size: 11, weight: .bold)).tracking(0.5).foregroundStyle(pal.acc)
             Spacer(minLength: 0)
             Text(KalGroup.linked ? "Åpne Kalender og logg inn" : "Widgeten når ikke appen").font(.system(size: 13, weight: .semibold)).foregroundStyle(pal.ink)
             #if os(macOS)
@@ -339,18 +358,29 @@ struct KalWNotLinked: View {
     }
 }
 
-/// Ukedag og dato øverst (TIRSDAG / 19 / oktober 2026).
+/// Ukedag (rød, store bokstaver) og stor dato i tynn systemfont («MANDAG / 26»).
 struct KalWDateBlock: View {
     let date: Date
     let pal: KalWPal
-    var big: CGFloat = 58
+    var big: CGFloat = 44
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(KalD.weekdays[KalD.wd(date)].uppercased()).font(KalFont.monoW(10.5)).tracking(1.2).foregroundStyle(pal.acc).lineLimit(1)
-            Text(String(KalD.dayOfMonth(date))).font(KalFont.serifW(big)).foregroundStyle(pal.ink).lineLimit(1)
+        VStack(alignment: .leading, spacing: 0) {
+            Text(KalD.weekdays[KalD.wd(date)].uppercased()).font(.system(size: 11, weight: .bold)).tracking(0.44)
+                .foregroundStyle(pal.acc).lineLimit(1)
+            Text(String(KalD.dayOfMonth(date))).font(.system(size: big, weight: .light)).tracking(-0.02 * big)
+                .foregroundStyle(pal.ink).lineLimit(1)
                 .widgetAccentable()
         }
+    }
+}
+
+/// Fargestreken foran en hendelse (3,5 pt, kalenderfargen).
+struct KalWStripe70: View {
+    let hex: String
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 2).fill(Color(kalHex: hex)).frame(width: 3.5).widgetAccentable()
     }
 }
 
@@ -359,28 +389,35 @@ struct KalWSmall: View {
     let pal: KalWPal
 
     var body: some View {
-        let n: KalEvent? = KalWData.nextTimed(entry.snap, now: entry.date)
-        let c: KalCal? = n.flatMap { (e: KalEvent) -> KalCal? in KalWData.evCal(entry.snap, e) }
-        VStack(alignment: .leading, spacing: 2) {
-            Text(KalD.weekdays[KalD.wd(entry.date)].uppercased()).font(KalFont.monoW(10)).tracking(1.2).foregroundStyle(pal.acc)
-            // Prompt 35: «UKE 43» rett til høyre for datoen (baseline-justert), mono 800, 11,5 pt, --ink2.
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(String(KalD.dayOfMonth(entry.date))).font(KalFont.serifW(40)).foregroundStyle(pal.ink).widgetAccentable()
-                Text("UKE " + String(KalWeek35.weekNo(KalWeek35.start(entry.date)))).font(KalFont.monoHeavyW(11.5)).tracking(0.7).foregroundStyle(pal.ink2)
-                    .lineLimit(1).fixedSize()
-            }
-            Spacer(minLength: 0)
-            HStack(alignment: .top, spacing: 7) {
-                RoundedRectangle(cornerRadius: 2).fill(n == nil ? pal.line : Color(kalHex: c?.hex ?? "#b23a2a")).frame(width: 4).widgetAccentable()
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(n?.title ?? "Ingenting planlagt").font(KalFont.uiW(13, .bold)).foregroundStyle(pal.ink).lineLimit(2)
-                    if let n {
-                        Text(KalWData.whenPrefix(n.day, now: entry.date).replacingOccurrences(of: " · ", with: " ") + KalD.hm(n.startMin))
-                            .font(KalFont.monoW(11)).foregroundStyle(pal.mut).lineLimit(1)
-                    }
+        let today: [KalEvent] = KalWData.today70(entry.snap, now: entry.date)
+        VStack(alignment: .leading, spacing: 0) {
+            KalWDateBlock(date: entry.date, pal: pal, big: 40)
+            Spacer(minLength: 4)
+            if let n = today.first {
+                KalWRow(e: n, snap: entry.snap, now: entry.date, pal: pal, lines: 2)
+                if today.count > 1 {
+                    Text("+" + String(today.count - 1) + " til").font(.system(size: 10, weight: .semibold)).foregroundStyle(pal.mut)
+                        .padding(.top, 6)
                 }
+            } else {
+                KalWEmpty70(entry: entry, pal: pal)
             }
-            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// «Ingen flere i dag» + neste dag med hendelser.
+struct KalWEmpty70: View {
+    let entry: KalWEntry
+    let pal: KalWPal
+
+    var body: some View {
+        let n: KalEvent? = KalWData.upcoming(entry.snap, now: entry.date).first
+        VStack(alignment: .leading, spacing: 1) {
+            Text("Ingen flere i dag").font(.system(size: 13, weight: .semibold)).foregroundStyle(pal.ink).lineLimit(1)
+            if let n {
+                Text(KalWData.nextDayText70(n, now: entry.date)).font(.system(size: 11.5)).foregroundStyle(pal.mut).lineLimit(2)
+            }
         }
     }
 }
@@ -390,38 +427,44 @@ struct KalWMedium: View {
     let pal: KalWPal
 
     var body: some View {
-        let up: [KalEvent] = Array(KalWData.upcoming(entry.snap, now: entry.date).prefix(3))
-        let w: KalWxDay? = KalWData.wx(entry.snap, KalD.key(entry.date))
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 2) {
-                KalWDateBlock(date: entry.date, pal: pal)
-                Text(KalD.months[KalD.month(entry.date) - 1] + " " + String(KalD.year(entry.date))).font(KalFont.uiW(12)).foregroundStyle(pal.mut)
-                // Prompt 35: «UKE 43» under måned og år.
-                Text("UKE " + String(KalWeek35.weekNo(KalWeek35.start(entry.date)))).font(KalFont.monoHeavyW(11.5)).tracking(0.7).foregroundStyle(pal.ink2)
-                    .lineLimit(1).padding(.top, 2)
+        let d: Date = entry.date
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 0) {
+                KalWDateBlock(date: d, pal: pal, big: 44)
+                Text(KalD.months[KalD.month(d) - 1]).font(.system(size: 12, weight: .semibold)).foregroundStyle(pal.mut).lineLimit(1)
                 Spacer(minLength: 0)
-                if let w {
-                    HStack(spacing: 4) {
-                        Image(systemName: KalWx.symbol(w.kind)).font(.system(size: 13, weight: .semibold)).foregroundStyle(KalWx.color(w.kind, mut: pal.mut))
-                        Text(String(w.hi) + "°").font(KalFont.monoW(12)).foregroundStyle(pal.mut)
-                    }
-                }
+                Text(KalWData.weekText70(d)).font(.system(size: 10.5, weight: .bold)).tracking(0.63).foregroundStyle(pal.mut).lineLimit(1)
             }
-            .frame(width: 104, alignment: .leading)
-            VStack(alignment: .leading, spacing: 8) {
-                if up.isEmpty {
-                    Text("Ingenting planlagt").font(KalFont.uiW(13, .bold)).foregroundStyle(pal.mut)
-                }
-                ForEach(up, id: \.self) { (e: KalEvent) in
-                    Link(destination: KalWData.eventURL(e)) {
-                        KalWRow(e: e, snap: entry.snap, now: entry.date, pal: pal)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.leading, 14)
-            .overlay(alignment: .leading) { Rectangle().fill(pal.line).frame(width: 1) }
+            .frame(width: 96, alignment: .leading)
+            KalWList70(entry: entry, pal: pal, max: 3, spacing: 9)
+                .padding(.top, 2)
         }
+    }
+}
+
+/// De neste hendelsene (fargestrek, tittel, når). Uten flere i dag: «Ingen flere i dag» over de neste dagene.
+struct KalWList70: View {
+    let entry: KalWEntry
+    let pal: KalWPal
+    let max: Int
+    let spacing: CGFloat
+
+    var body: some View {
+        let up: [KalEvent] = KalWData.upcoming(entry.snap, now: entry.date)
+        let none: Bool = KalWData.today70(entry.snap, now: entry.date).isEmpty
+        let rows: [KalEvent] = Array(up.prefix(none ? Swift.max(1, max - 1) : max))
+        VStack(alignment: .leading, spacing: spacing) {
+            if none {
+                Text("Ingen flere i dag").font(.system(size: 12, weight: .semibold)).foregroundStyle(pal.mut).lineLimit(1)
+            }
+            ForEach(rows, id: \.self) { (e: KalEvent) in
+                Link(destination: KalWData.eventURL(e)) {
+                    KalWRow(e: e, snap: entry.snap, now: entry.date, pal: pal)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -430,17 +473,31 @@ struct KalWRow: View {
     let snap: KalSnapshot
     let now: Date
     let pal: KalWPal
+    var lines: Int = 1
 
     var body: some View {
-        let c: KalCal? = KalWData.evCal(snap, e)
         HStack(alignment: .top, spacing: 8) {
-            RoundedRectangle(cornerRadius: 2).fill(Color(kalHex: c?.hex ?? "#b23a2a")).frame(width: 4).widgetAccentable()
-            VStack(alignment: .leading, spacing: 0) {
-                Text(KalBd41.listTitle(e, calName: c?.name ?? "")).font(KalFont.uiW(13, .bold)).foregroundStyle(pal.ink).lineLimit(1)
-                Text(KalWData.whenPrefix(e.day, now: now) + KalWData.timeText(e)).font(KalFont.monoW(11)).foregroundStyle(pal.mut).lineLimit(1)
+            KalWStripe70(hex: KalWData.hex70(snap, e))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(KalWData.title70(snap, e)).font(.system(size: 13, weight: .semibold)).foregroundStyle(pal.ink).lineLimit(lines)
+                Text(KalWData.wl70(e, now: now)).font(.system(size: 11.5)).foregroundStyle(pal.mut).lineLimit(1)
             }
         }
         .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// + i en lys grå sirkel → kalender://ny (skrivefeltet med Glimt).
+struct KalWPlus70: View {
+    let pal: KalWPal
+
+    var body: some View {
+        Link(destination: KalWData.newURL) {
+            Text("+").font(.system(size: 17, weight: .medium)).foregroundStyle(pal.ink)
+                .frame(width: 26, height: 26)
+                .background(Circle().fill(pal.plus))
+        }
+        .accessibilityLabel("Ny hendelse")
     }
 }
 
@@ -450,32 +507,19 @@ struct KalWLarge: View {
 
     var body: some View {
         let d: Date = entry.date
-        let up: [KalEvent] = Array(KalWData.upcoming(entry.snap, now: d).prefix(2))
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(KalD.cap(KalD.months[KalD.month(d) - 1])).font(KalFont.serifW(22)).foregroundStyle(pal.ink).widgetAccentable()
-                Spacer()
-                Text("UKE " + String(KalWeek35.weekNo(KalWeek35.start(d)))).font(KalFont.monoHeavyW(11.5)).tracking(1).foregroundStyle(pal.acc)
-                // Prompt 41: «Ny hendelse» åpner skrivefeltet i appen.
-                KalWNewButton41(pal: pal)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
+                Link(destination: KalWData.monthURL41(d)) {
+                    Text(KalD.cap(KalD.months[KalD.month(d) - 1])).font(.system(size: 15, weight: .bold)).foregroundStyle(pal.acc)
+                        .widgetAccentable()
+                }
+                Spacer(minLength: 4)
+                Text(KalWData.weekText70(d)).font(.system(size: 11, weight: .bold)).tracking(0.66).foregroundStyle(pal.mut)
+                KalWPlus70(pal: pal)
             }
             KalWMonthGrid(entry: entry, pal: pal)
-            Spacer(minLength: 0)
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(up, id: \.self) { (e: KalEvent) in
-                    Link(destination: KalWData.eventURL(e)) {
-                        HStack(spacing: 8) {
-                            Circle().fill(Color(kalHex: KalWData.evCal(entry.snap, e)?.hex ?? "#b23a2a")).frame(width: 8, height: 8)
-                            Text(e.title).font(KalFont.uiW(13, .bold)).foregroundStyle(pal.ink).lineLimit(1)
-                            Spacer(minLength: 4)
-                            Text(KalWData.whenPrefix(e.day, now: d).replacingOccurrences(of: " · ", with: " ") + (e.allDay ? "Hele dagen" : KalD.hm(e.startMin)))
-                                .font(KalFont.monoW(11)).foregroundStyle(pal.mut).lineLimit(1)
-                        }
-                    }
-                }
-            }
-            .padding(.top, 10)
-            .overlay(alignment: .top) { Rectangle().fill(pal.line).frame(height: 1) }
+            Rectangle().fill(pal.line).frame(height: 1)
+            KalWList70(entry: entry, pal: pal, max: 2, spacing: 12)
         }
     }
 }
@@ -489,11 +533,10 @@ struct KalWMonthGrid: View {
         // Prompt 35: «Uken starter» (mandag/søndag).
         let start: Date = KalWeek35.start(first)
         let weeks: Int = KalWeek35.rows(first)
-        VStack(spacing: 3) {
+        VStack(spacing: 4) {
             HStack(spacing: 0) {
-                Color.clear.frame(width: 18, height: 12)
                 ForEach(0..<7, id: \.self) { (i: Int) in
-                    Text(KalWeek35.letters[i]).font(KalFont.uiW(10, .bold)).foregroundStyle(KalWeek35.isSunday(i) ? pal.sunday : pal.mut).frame(maxWidth: .infinity)
+                    Text(KalWeek35.letters[i]).font(.system(size: 10, weight: .bold)).foregroundStyle(pal.mut).frame(maxWidth: .infinity)
                 }
             }
             ForEach(0..<weeks, id: \.self) { (w: Int) in
@@ -511,9 +554,8 @@ struct KalWWeekRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Text(String(KalWeek35.weekNo(start))).font(KalFont.monoHeavyW(10)).foregroundStyle(pal.ink2).frame(width: 18)
             ForEach(0..<7, id: \.self) { (i: Int) in
-                KalWDayCell(entry: entry, pal: pal, day: KalD.add(start, i), month: month, sunday: KalWeek35.isSunday(i))
+                KalWDayCell(entry: entry, pal: pal, day: KalD.add(start, i), month: month)
             }
         }
     }
@@ -524,23 +566,32 @@ struct KalWDayCell: View {
     let pal: KalWPal
     let day: Date
     let month: Int
-    let sunday: Bool
+
+    private var key: String { KalD.key(day) }
+    private var isToday: Bool { key == KalD.key(entry.date) }
+    private var inMonth: Bool { KalD.month(day) == month }
+
+    private var dot: Color {
+        if isToday { return Color.clear }
+        guard let hex = KalWData.dotHex70(entry.snap, key) else { return Color.clear }
+        return Color(kalHex: hex)
+    }
+
+    private var numColor: Color { isToday ? Color.white : pal.ink }
+    private var weight: Font.Weight { isToday ? Font.Weight.bold : Font.Weight.medium }
+    private var circle: Color { isToday ? pal.acc : Color.clear }
 
     var body: some View {
-        let k: String = KalD.key(day)
-        let inMonth: Bool = KalD.month(day) == month
-        let today: Bool = k == KalD.key(entry.date)
-        let first: KalEvent? = entry.snap.events.first { (e: KalEvent) -> Bool in e.day == k }
-        let dot: Color = (inMonth && first != nil) ? Color(kalHex: KalWData.cal(entry.snap, first?.cal ?? "p")?.hex ?? "#b23a2a") : Color.clear
-        VStack(spacing: 1) {
-            Text(inMonth ? String(KalD.dayOfMonth(day)) : "").font(KalFont.uiW(11, .bold))
-                .foregroundStyle(today ? Color.white : (sunday ? pal.sunday : pal.ink))
-                .frame(width: 22, height: 20)
-                .background(Capsule().fill(today ? Color(kalHex: "#b23a2a") : Color.clear))
+        VStack(spacing: 2) {
+            Text(String(KalD.dayOfMonth(day))).font(.system(size: 12.5, weight: weight))
+                .foregroundStyle(numColor)
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(circle))
+                .opacity(inMonth ? 1 : 0.3)
             Circle().fill(dot).frame(width: 4, height: 4)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 26)
+        .frame(height: 30)
     }
 }
 
@@ -553,7 +604,7 @@ struct KalLockWidget: Widget {
             KalLockWidgetView(entry: e)
         }
         .configurationDisplayName("Kalender · låseskjerm")
-        .description("Neste hendelse med tid og sted, ukedag og dato, eller dato · neste over klokken.")
+        .description("Neste hendelse med tid og sted, ukedag og dato, eller dato og neste over klokken.")
         .supportedFamilies([.accessoryRectangular, .accessoryCircular, .accessoryInline])
     }
 }
@@ -563,7 +614,7 @@ struct KalLockWidgetView: View {
     let entry: KalWEntry
 
     var body: some View {
-        let n: KalEvent? = KalWData.nextTimed(entry.snap, now: entry.date)
+        let n: KalEvent? = KalWData.upcoming(entry.snap, now: entry.date).first
         Group {
             switch family {
             case .accessoryCircular: circular
@@ -576,37 +627,35 @@ struct KalLockWidgetView: View {
     }
 
     private var circular: some View {
-        ZStack {
+        let wd: String = KalD.weekdaysShort[KalD.wd(entry.date)].uppercased()
+        return ZStack {
             AccessoryWidgetBackground()
-            VStack(spacing: 0) {
-                Text(KalD.weekdaysShort[KalD.wd(entry.date)].uppercased()).font(.system(size: 10, weight: .bold)).tracking(0.8)
-                Text(String(KalD.dayOfMonth(entry.date))).font(KalFont.serifW(26))
+            VStack(spacing: 2) {
+                Text(wd).font(.system(size: 10, weight: .bold)).opacity(0.85)
+                Text(String(KalD.dayOfMonth(entry.date))).font(.system(size: 24, weight: .semibold))
             }
         }
         .widgetAccentable()
     }
 
+    /// «Man 26.  ▦ 15:15 Tannlege»
     private func inline(_ n: KalEvent?) -> some View {
         let date: String = KalD.cap(KalD.weekdaysShort[KalD.wd(entry.date)]) + " " + String(KalD.dayOfMonth(entry.date)) + "."
-        let next: String = n.map { (e: KalEvent) -> String in e.title + " " + KalD.hm(e.startMin) } ?? "Ingen hendelser"
-        return Label(date + " · " + next, systemImage: "calendar")
+        let next: String = n.map { (e: KalEvent) -> String in KalWData.inline70(e, now: entry.date) } ?? "Ingen flere i dag"
+        return Text(date + "  ▦ " + next)
     }
 
     private func rectangular(_ n: KalEvent?) -> some View {
-        // Prompt 35: «Man 19. okt · U43» i første linje.
-        let d: Date = entry.date
-        let wdName: String = KalD.cap(KalD.weekdaysShort[KalD.wd(d)])
-        let dateText: String = String(KalD.dayOfMonth(d)) + ". " + KalD.monthsShort[KalD.month(d) - 1]
-        let head: String = wdName + " " + dateText + " · U" + String(KalWeek35.weekNo(KalWeek35.start(d)))
-        return VStack(alignment: .leading, spacing: 1) {
-            Text(head).font(.system(size: 12, weight: .heavy)).opacity(0.8).lineLimit(1)
+        VStack(alignment: .leading, spacing: 1) {
             if let n {
-                Text(n.title).font(.system(size: 15, weight: .bold)).lineLimit(1).widgetAccentable()
-                let place: String = n.loc.isEmpty ? (KalWData.cal(entry.snap, n.cal)?.name ?? "") : n.loc
-                Text(KalWData.whenPrefix(n.day, now: d) + KalWData.timeText(n) + (place.isEmpty ? "" : " · " + place))
-                    .font(.system(size: 12)).opacity(0.8).lineLimit(1)
+                Text(KalWData.title70(entry.snap, n)).font(.system(size: 14, weight: .bold)).lineLimit(1).widgetAccentable()
+                Text(KalWData.wl70(n, now: entry.date)).font(.system(size: 12)).opacity(0.9).lineLimit(1)
+                let place: String = KalWData.place70(entry.snap, n)
+                if !place.isEmpty {
+                    Text(place).font(.system(size: 11)).opacity(0.75).lineLimit(1)
+                }
             } else {
-                Text("Ingenting planlagt").font(.system(size: 15, weight: .bold)).widgetAccentable()
+                Text("Ingen flere i dag").font(.system(size: 14, weight: .bold)).widgetAccentable()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

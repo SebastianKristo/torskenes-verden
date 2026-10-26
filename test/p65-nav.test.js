@@ -19,7 +19,7 @@ test('sidemenyen: gruppene og sidene fra samlet-md, i riktig rekkefølge', () =>
   assert.deepEqual(ids.Husstand, ['users']);
   assert.deepEqual(ids['Glimt og AI'], ['glimt', 'ai']);
   assert.deepEqual(ids.Tilkoblinger, ['int', 'kal']);
-  assert.deepEqual(ids.Moduler, ['dom', 'finans', 'media', 'nyheter', 'ruter', 'studie', 'vaer']); // Domener flyttet hit fra Generelt
+  assert.deepEqual(ids.Moduler, ['dom', 'finans', 'media', 'nyheter', 'ruter', 'sporing', 'studie', 'vaer']); // Domener flyttet hit fra Generelt; prompt 70: Sporing mellom Ruter og Studie
   assert.deepEqual(ids.Server, ['system', 'backup', 'logger']);
   // Fjernet som egne menypunkter: Startside, Familie, Gjøremål, Sikkerhet/Innlogging.
   const all = N.MENU65.flatMap(([, l]) => l);

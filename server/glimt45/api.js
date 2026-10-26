@@ -11,11 +11,13 @@ import { traceOf47, tracesOf47, traceHtml47 } from './trace47.js';
 import { isAdmin } from '../auth.js';
 import { installFast59 } from '../fast59/api.js';
 import { installConvo60, bodyConvo60 } from '../convo60/api.js';
+import { installCal70 } from './cal70.js';
 
 export const agentApi45 = new Hono();
 agentApi45.use('*', authOrToken);
 installFast59(agentApi45); // prompt 59 (del 4): POST /stream (SSE), /stream/stop, GET|PUT /fast, DELETE /fast/cache, POST /fast/warm
 installConvo60(agentApi45); // prompt 60 (del 3): GET|PUT /understand, GET|DELETE /convo/:id
+installCal70(agentApi45); // prompt 70: PATCH /calendar70/:id {calendarId}, POST /calendar70/:id/undo, GET /calendar70/:id (kort A)
 const RID = /^[A-Za-z0-9_-]{8,80}$/;
 const settingsOut = (u) => ({ personality: personalityOf(u), options: PERSONALITIES, labels: PERSONALITY_LABELS });
 

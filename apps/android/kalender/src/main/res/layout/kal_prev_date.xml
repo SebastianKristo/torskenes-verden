@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Forhåndsvisning i widgetgalleriet (Android 12+): eksempeldata. -->
+<!-- Forhåndsvisning i widgetgalleriet (Android 12+): eksempeldata. Prompt 70: Material You 2 × 2 (ukedag-pille, dato, neste). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:padding="16dp" android:background="@drawable/kal_w_card">
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TIRSDAG"
-        android:textColor="@color/kal_acc" android:textSize="10.5sp" android:fontFamily="monospace" android:letterSpacing="0.12" android:textStyle="bold" />
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="21"
-        android:textColor="@color/kal_ink" android:textSize="52sp" android:fontFamily="serif" android:includeFontPadding="false" />
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="oktober 2026 · uke 43"
-        android:textColor="@color/kal_mut" android:textSize="12sp" />
+    android:orientation="vertical" android:padding="16dp" android:background="@drawable/kal_w70_card">
+    <TextView android:layout_width="wrap_content" android:layout_height="26dp" android:gravity="center" android:paddingStart="10dp" android:paddingEnd="10dp"
+        android:text="Mandag" android:textColor="#173320" android:textSize="12sp" android:textStyle="bold" android:background="@drawable/kal_w70_row" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="26"
+        android:textColor="#173320" android:textSize="56sp" android:includeFontPadding="false" />
     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="☁ 9° / 4°"
-        android:textColor="@color/kal_ink" android:textSize="13sp" android:fontFamily="monospace" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tannlege" android:maxLines="1"
+        android:textColor="#173320" android:textSize="13sp" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="15:15–16:00" android:maxLines="1"
+        android:textColor="#3D5A44" android:textSize="11.5sp" />
 </LinearLayout>

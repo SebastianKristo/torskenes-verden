@@ -89,7 +89,7 @@ struct KalPad42Main<Stage: View>: View {
                     KalTop44(inline: canInline, width: geo.size.width - (inline ? sideW + 1 : 0) - (dayPane ? paneW + 1 : 0))
                         .fixedSize(horizontal: false, vertical: true)
                         .layoutPriority(2)
-                    KalPad42Next()
+                    // Prompt 70: NESTE-linjen (som NÅ/NESTE-kortet på Mac/web) er fjernet; rutenettet bruker plassen.
                     Rectangle().fill(t.line).frame(height: 1)
                     stage()
                         .frame(minHeight: 0, maxHeight: .infinity)
@@ -222,34 +222,6 @@ struct KalPad42Toolbar: View {
         .padding(.horizontal, 12)
         .padding(.top, 4)
         .padding(.bottom, 8)
-    }
-}
-
-/// «NESTE · 14:30 · i dag  Nina frisør · Grünerløkka» (som på web/Mac).
-struct KalPad42Next: View {
-    @Environment(\.kal) private var t
-    @MainActor private var s: KalStore { KalStore.shared }
-
-    var body: some View {
-        if let n = s.upcoming(limit: 12).first(where: { (e: KalEvent) -> Bool in !e.allDay }) {
-            let c: KalCal? = KalFag37.tint(s.cal(n.cal), n)
-            Button(action: { s.openDetail(n) }) {
-                HStack(spacing: 10) {
-                    RoundedRectangle(cornerRadius: 2).fill(t.calColor(c)).frame(width: 4, height: 22)
-                    Text("NESTE").font(KalFont.mono(10)).tracking(1.2).foregroundStyle(t.acc)
-                    Text(KalD.hm(n.startMin) + " · " + KalAsk.rel(n.day)).font(KalFont.mono(11.5)).foregroundStyle(t.mut)
-                    Text(n.title).font(KalFont.serif(17)).foregroundStyle(t.ink).lineLimit(1)
-                    if !n.loc.isEmpty { Text(n.loc).font(KalFont.ui(12.5)).foregroundStyle(t.mut).lineLimit(1) }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 16)
-                .frame(height: 36)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .hoverEffect(.highlight)
-            .accessibilityLabel("Neste: " + n.title + " " + KalD.hm(n.startMin))
-        }
     }
 }
 

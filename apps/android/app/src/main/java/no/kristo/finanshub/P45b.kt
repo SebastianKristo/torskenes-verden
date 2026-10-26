@@ -50,7 +50,7 @@ internal suspend fun AppViewModel.agent45(q: String, source: String): Assist31? 
     val conv = if (module == "home") g.homeConv() else null
     val rid = Glimt67.rid()
     val body = agentBody67(q, module, rid, conv, if (conv != null) "search" else null, pick)
-    g.homeChoices = null; g.homeTrace = null
+    g.homeChoices = null; g.homeTrace = null; g.homeCard70 = null
     var o: JSONObject? = null
     if (module == "home" && g.streamOn()) {
         g.homeRid = rid; g.homeStop = false; g.homeStatus = null; g.homeText = ""
@@ -86,6 +86,7 @@ internal suspend fun AppViewModel.agent45(q: String, source: String): Assist31? 
     s.agentConfirm = a.confirm?.let { it.token to it.summary.ifBlank { "Bekreft" } }
     g.homeChoices = a.choices
     g.homeTrace = a.traceId
+    g.homeCard70 = a.card?.takeIf { it.optString("k") == "cal70" }?.let { text to it } // prompt 70: kort A i boblen
     // Intent som resten av appen kjenner igjen (reloadKal27 ved «calendar.create», trial.* osv.).
     val legacy = when {
         mod == "calendar" && intent in setOf("create", "update", "delete") -> "calendar.$intent"

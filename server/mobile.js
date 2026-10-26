@@ -133,7 +133,8 @@ const SCALAR = {
   // Prompt 15: tilpassede sider (rekkefølge og skjulte kort per side), Finans-fanelinjen, fjerde fane og skanneknapp.
   pages: (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 30
     && Object.entries(v).every(([k, o]) => /^[\w.-]{1,40}$/.test(k) && o && typeof o === 'object' && !Array.isArray(o)
-      && Object.keys(o).every((f) => f === 'order' || f === 'hidden') && (o.order === undefined || cardIds(o.order)) && (o.hidden === undefined || cardIds(o.hidden))),
+      && Object.keys(o).every((f) => f === 'order' || f === 'hidden' || f === 'sz') && (o.order === undefined || cardIds(o.order)) && (o.hidden === undefined || cardIds(o.hidden))
+      && (o.sz === undefined || cardSizes70(o.sz))),
   finTabs: (v) => Array.isArray(v) && v.length >= 1 && v.length <= 4 && new Set(v).size === v.length && v.every((x) => FIN_TABS.includes(x)),
   fourthTab: (v) => ['auto', 'domener', 'sporing'].includes(v),
   fab: (v) => ['float', 'inline'].includes(v),
@@ -261,6 +262,9 @@ export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'm
 export const TAB_BAR_DEFAULT = { items: [{ id: 'hjem', label: 'Hjem', icon: 'house' }, { id: 'finans', label: 'Finans', icon: 'wallet' }, { id: 'mat', label: 'Mat', icon: 'fork.knife' }, { id: 'domener', label: 'Domener', icon: 'globe' }, { id: 'sok', label: 'Søk', icon: 'magnifyingglass' }, { id: 'mer', label: 'Mer', icon: 'ellipsis' }] };
 const ICON_THEMES = ['standard', 'varm', 'kjolig', 'mono', 'fargerik'];
 const cardIds = (a) => Array.isArray(a) && a.length <= 40 && a.every((x) => typeof x === 'string' && /^[\w.-]{1,40}$/.test(x));
+// Prompt 70: widgetstørrelse på Hjem (mobil) – pages.<side>.sz = {kort-id: 'full'|'half'} ved siden av order/hidden.
+const cardSizes70 = (o) => o && typeof o === 'object' && !Array.isArray(o) && Object.keys(o).length <= 40
+  && Object.entries(o).every(([k, x]) => /^[\w.-]{1,40}$/.test(k) && (x === 'full' || x === 'half'));
 const FIN_TABS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'chat'];
 const FIN_TABS_DEFAULT = ['oversikt', 'liste', 'finn', 'sok'];
 const TRK_CARDS = ['add', 'shipments', 'notify', 'carriers'];
@@ -550,7 +554,9 @@ api.put('/me/layout', authOrToken, async (c) => {
       if (!SCALAR[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
       // Sidene flettes per side, så en klient kan lagre én side uten å sende resten.
       // Profilmenyen: felt som ikke sendes beholdes (eller får standardverdien).
-      next[k] = k === 'pages' ? { ...(next.pages ?? {}), ...v } : k === 'profile_menu' ? { ...layoutDefaults30().profile_menu, ...(next.profile_menu ?? {}), ...v } : v;
+      // Prompt 70: sz slås sammen per side, så iOS og Android (ulike kort-id-er) ikke nullstiller hverandres widgetstørrelser.
+      next[k] = k === 'pages' ? { ...(next.pages ?? {}), ...Object.fromEntries(Object.entries(v).map(([p, o]) => [p, next.pages?.[p]?.sz
+        ? { ...o, sz: Object.fromEntries(Object.entries({ ...next.pages[p].sz, ...(o.sz ?? {}) }).slice(-40)) } : o])) } : k === 'profile_menu' ? { ...layoutDefaults30().profile_menu, ...(next.profile_menu ?? {}), ...v } : v;
       // Gamle klienter sender photo, nye bgType. «Ingen» finnes bare som bgType og vises som gradient (cur).
       if (k === 'photo') next.bgType = v;
       if (k === 'bgType') next.photo = v === 'none' ? 'cur' : v;

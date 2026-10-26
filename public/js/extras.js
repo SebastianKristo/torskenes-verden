@@ -10,6 +10,7 @@ import { toast } from './toast.js';
 import { isQuestion } from './ask36.js';
 import { isHuske41, addFromSearch41 } from './tasks41.js'; // prompt 41: huskebeskjeder fra søket
 import { agent, agentOn, agentExtras, agentText, isPlain, resultHref } from './glimt-agent45.js'; // prompt 45: felles Glimt-agent
+import { cal70Of } from './cal70.js'; // prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale
 import { thumbs61Html } from './recipes61.js'; // prompt 61: tommel opp/ned på Glimt-svaret
 import { agentLive59, cacheNote59 } from './stream59.js'; // prompt 59: strømming (ord for ord, statuslinje, Stopp)
 import { homeConv60, resetHomeConv60 } from './convo60.js'; // prompt 60: Glimt-søket er en kortlevd samtale («og i Bergen?»)
@@ -336,7 +337,7 @@ function ansHtml() {
     : GL.busy ? `<div class="gl-busy">${glimt(22, 'tenker', { dark: true })}<span>Tenker på «<span data-no-i18n>${esc(GL.q)}</span>» …</span><button type="button" class="gl-chat gl-stop59" data-gl-stop aria-label="Stopp svaret">Stopp</button></div>`
     // Prompt 34: feil vises tydelig («Glimt fikk ikke svar fra {modell}: {feil}») med Prøv igjen og Åpne AI-kontroll.
     : GL.err || !GL.ans?.text ? `<span class="gl-txt gl-err" data-no-i18n>${esc(GL.err || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.model || GL.ans?.source || 'Glimt')}</span><button type="button" class="gl-chat" data-gl-retry>Prøv igjen</button><button type="button" class="gl-chat" data-gl-aictl>Åpne AI-kontroll ›</button></div>`
-    : `<span class="gl-txt" data-no-i18n>${boldHtml(GL.ans.text)}</span>${GL.ans.agent ? agentExtras(GL.ans.agent, agentCb(), { dark: true }) : ''}${GL.ans.notice ? `<span class="gl-note" data-no-i18n>${esc(GL.ans.notice)}</span>` : ''}${GL.ans.stopped ? '<span class="gl-note">Stoppet</span>' : ''}<div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.open?.route === 'vaer' ? `<button type="button" class="gl-chat" data-gl-wx>${GL.ans.open.name ? `Åpne Vær for ${esc(GL.ans.open.name)}` : 'Åpne Vær'} ›</button>` : ''}${GL.ans?.open?.route === 'familie' ? '<button type="button" class="gl-chat" data-gl-fam>Vis på kart ›</button>' : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}${GL.ans.agent?.traceId && !GL.ans.stopped ? thumbs61Html(GL.ans.agent.traceId, { dark: true }) : ''}</div>`;
+    : `${GL.ans.agent && cal70Of(GL.ans.agent) ? '' : `<span class="gl-txt" data-no-i18n>${boldHtml(GL.ans.text)}</span>`}${GL.ans.agent ? agentExtras(GL.ans.agent, agentCb(), { dark: true }) : ''}${GL.ans.notice ? `<span class="gl-note" data-no-i18n>${esc(GL.ans.notice)}</span>` : ''}${GL.ans.stopped ? '<span class="gl-note">Stoppet</span>' : ''}<div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.open?.route === 'vaer' ? `<button type="button" class="gl-chat" data-gl-wx>${GL.ans.open.name ? `Åpne Vær for ${esc(GL.ans.open.name)}` : 'Åpne Vær'} ›</button>` : ''}${GL.ans?.open?.route === 'familie' ? '<button type="button" class="gl-chat" data-gl-fam>Vis på kart ›</button>' : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}${GL.ans.agent?.traceId && !GL.ans.stopped ? thumbs61Html(GL.ans.agent.traceId, { dark: true }) : ''}</div>`;
   // Prompt 38: lukkes med ✕, sveip opp eller trykk utenfor (laget under fanger trykket); trykk i boblen lukker ikke.
   return `<div class="gl-ans" data-gl-ans role="status" aria-live="polite"><button type="button" class="gl-x" data-gl-x aria-label="Lukk svaret" title="Lukk (Esc)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>${body}<span class="gl-grab" aria-hidden="true"></span></div>`;
 }
@@ -353,50 +354,91 @@ function placeAns() {
   el.style.left = `${r.left + window.scrollX + (r.width - w) / 2}px`;
   el.style.top = `${r.bottom + window.scrollY + 10}px`;
 }
-/* Prompt 38: usynlig lag under boblen. Trykk (eller rull/touchmove) der lukker boblen og når ikke kortet under. */
-function scrim(on) {
-  let s = document.getElementById('gl-scrim');
-  if (!on) { s?.remove(); return; }
-  if (s) return;
-  s = document.createElement('div'); s.id = 'gl-scrim'; s.className = 'gl-scrim'; s.setAttribute('aria-hidden', 'true');
-  const shut = (e) => { e.preventDefault(); e.stopPropagation(); haptic(6); closeAns(); };
-  s.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); });
-  s.addEventListener('click', shut);
-  s.addEventListener('wheel', (e) => { closeAns(); e.stopPropagation(); }, { passive: true });
-  s.addEventListener('touchmove', (e) => { closeAns(); e.stopPropagation(); }, { passive: true });
-  document.body.appendChild(s);
+/* Prompt 70 (claude-code-hjem-scroll-mens-ai.md): ingen fullskjerm-lag lenger – Hjem scroller fritt mens Glimt tenker og etter
+   svaret. Kortet ligger i siden og scroller med den. Trykk utenfor (flyttet < 8 px, utenfor kortet og søkefeltet) lukker når
+   svaret er ferdig; mens Glimt tenker lukkes det bare med ✕. Trykket som lukker, når ikke det som ligger under. */
+let outDown = null, eatClick = 0;
+function bindOutside70() {
+  document.addEventListener('pointerdown', (e) => { outDown = GL.q ? { x: e.clientX, y: e.clientY } : null; }, true);
+  document.addEventListener('pointerup', (e) => {
+    const d = outDown; outDown = null;
+    if (!d || !GL.q || GL.busy || GL.slow) return;
+    if (Math.abs(e.clientX - d.x) >= 8 || Math.abs(e.clientY - d.y) >= 8) return;
+    if (e.target.closest?.('[data-gl-ans], [data-search], [data-v54-card], .gl70-pill, #sq-eng-menu')) return;
+    haptic(6); closeAns();
+    eatClick = Date.now();
+  }, true);
+  document.addEventListener('click', (e) => { if (eatClick && Date.now() - eatClick < 500) { eatClick = 0; e.preventDefault(); e.stopPropagation(); } }, true);
 }
-/** Sveip opp på boblen (> 40 px) lukker med glid og fade; under terskelen spretter den tilbake. */
+/** «Glimt svarte ↑»: svaret ble ferdig mens kortet var scrollet ut av syne. Trykk scroller opp til kortet. */
+function pill70(on) {
+  let p = document.getElementById('gl70-pill');
+  if (!on) { p?.remove(); window.removeEventListener('scroll', pillScroll70); return; }
+  if (!p) {
+    p = document.createElement('button'); p.type = 'button'; p.id = 'gl70-pill'; p.className = 'gl70-pill';
+    p.innerHTML = `${glimt(16, 'klar', { dark: true })}<span>Glimt svarte</span><span aria-hidden="true">↑</span>`;
+    p.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); const a = document.querySelector('#gl-layer [data-gl-ans]'); if (a) window.scrollTo({ top: Math.max(0, a.getBoundingClientRect().top + window.scrollY - 96), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); pill70(false); });
+    document.body.appendChild(p);
+  }
+  window.addEventListener('scroll', pillScroll70, { passive: true });
+}
+function ansInView70() {
+  const a = document.querySelector('#gl-layer [data-gl-ans]');
+  if (!a) return true;
+  const r = a.getBoundingClientRect();
+  return r.height === 0 || (r.bottom > 40 && r.top < innerHeight - 60);
+}
+function pillScroll70() { if (ansInView70()) pill70(false); }
+/** Sveip opp for å lukke / dra ned for å åpne i Chat: med finger bare fra grepet nederst (30 px, touch-action:none),
+    med mus fra hele kortet som før. Vertikal sveip ellers på kortet scroller siden (touch-action:pan-y). */
 function bindSwipe(el) {
   if (el.dataset.glSw) return;
   el.dataset.glSw = '1';
   let st = null;
-  el.addEventListener('pointerdown', (e) => { if (e.button || e.target.closest('button, a') || getSelection()?.toString()) { st = null; return; } st = { y: e.clientY, x: e.clientX, id: e.pointerId, dy: 0 }; });
+  const card = () => el.querySelector('.gl-ans');
+  el.addEventListener('pointerdown', (e) => {
+    st = null;
+    if (e.button) return;
+    const grab = !!e.target.closest('.gl-grab');
+    if (e.pointerType !== 'mouse' && !grab) return;
+    if (!grab && (e.target.closest('button, a, input, textarea, select') || getSelection()?.toString())) return;
+    st = { y: e.clientY, x: e.clientX, id: e.pointerId, dy: 0 };
+    if (grab) { try { e.target.setPointerCapture(e.pointerId); } catch { /* */ } }
+  });
   el.addEventListener('pointermove', (e) => {
     if (!st || e.pointerId !== st.id) return;
-    st.dy = Math.min(0, e.clientY - st.y);
-    if (Math.abs(e.clientX - st.x) > 30 && st.dy > -10) { st = null; el.style.transform = ''; return; }
-    if (st.dy < -6) { const a = el.querySelector('.gl-ans'); if (a) { a.style.transition = 'none'; a.style.transform = `translateY(${st.dy}px)`; a.style.opacity = String(Math.max(0.3, 1 + st.dy / 160)); } }
+    st.dy = Math.max(-200, Math.min(120, e.clientY - st.y));
+    if (Math.abs(e.clientX - st.x) > 30 && Math.abs(st.dy) < 10) { st = null; const a = card(); if (a) { a.style.transform = ''; a.style.opacity = ''; } return; }
+    const a = card();
+    if (!a || Math.abs(st.dy) < 6) return;
+    a.style.transition = 'none';
+    a.style.transform = `translateY(${st.dy < 0 ? st.dy : st.dy * 0.5}px)`;
+    a.style.opacity = st.dy < 0 ? String(Math.max(0.3, 1 + st.dy / 160)) : '';
   });
   const end = () => {
     if (!st) return;
-    const dy = st.dy, a = el.querySelector('.gl-ans'); st = null;
+    const dy = st.dy, a = card(); st = null;
     if (!a) return;
     if (dy < -40) { a.style.transition = 'transform .2s ease, opacity .2s ease'; a.style.transform = 'translateY(-60px)'; a.style.opacity = '0'; haptic(6); setTimeout(closeAns, 190); return; }
+    if (dy > 60 && GL.q) { haptic(6); const q = GL.q, jobId = GL.busy ? GL.jobId : null; closeAns(); handoff(q, jobId); return; }
     a.style.transition = 'transform .22s cubic-bezier(.2,.8,.2,1), opacity .2s'; a.style.transform = ''; a.style.opacity = '';
   };
   el.addEventListener('pointerup', end);
   el.addEventListener('pointercancel', end);
 }
+let wasBusy70 = false;
 function paintAns() {
   let el = document.getElementById('gl-layer');
   const h = ansHtml();
-  scrim(!!h);
-  if (!h) { el?.remove(); return; }
+  document.getElementById('gl-scrim')?.remove(); // prompt 70: ingen fullskjerm-lag
+  const fin = wasBusy70 && !!h && !GL.busy; wasBusy70 = !!h && GL.busy;
+  if (!h) { el?.remove(); pill70(false); return; }
   if (!el) { el = document.createElement('div'); el.id = 'gl-layer'; el.className = 'gl-layer'; document.body.appendChild(el); }
   bindSwipe(el);
   el.innerHTML = h;
   placeAns();
+  // Prompt 70: svaret strømmet ferdig mens kortet var ute av syne → lett haptikk + «Glimt svarte ↑» over fanelinjen.
+  if (fin && !ansInView70()) { haptic(10); pill70(true); }
   clearInterval(placeT); placeT = setInterval(() => { if (!document.getElementById('gl-layer')) { clearInterval(placeT); placeT = 0; return; } placeAns(); }, 400);
 }
 /** Prompt 59: bare innholdet i boblen tegnes på nytt mens ordene kommer (laget, sveipet og plasseringen beholdes). */
@@ -526,6 +568,7 @@ async function clearHist(form) {
 }
 
 export function bindSearch() {
+  bindOutside70();
   const formOf = (e) => e.target.closest?.('[data-search]');
   document.addEventListener('focusin', (e) => { const f = formOf(e); if (f) lastForm = f; });
   document.addEventListener('submit', (e) => {
@@ -543,7 +586,8 @@ export function bindSearch() {
     if (!it && engine === 'ai' && q.trim().split(/\s+/).length >= 3 && !sq.ap52) {
       const form = e.target;
       waitParse52(q).then((a) => {
-        if (a?.type === 'kalender' && a.title) { sq.ap52 = a; addAppt(form, q.trim()); }
+        if (a?.type === 'kalender' && a.title && ag) { if (aiOn()) askAi(form, q); else runSearch(q); } // prompt 70: Glimt legger inn og viser kort A
+        else if (a?.type === 'kalender' && a.title) { sq.ap52 = a; addAppt(form, q.trim()); }
         else if (a?.type === 'huske') addHuske(form, q.trim());
         else if (!a && !ag && apptOf(q)) addAppt(form, q.trim());
         else if (!a && !ag && huskeOf(q)) addHuske(form, q.trim());
@@ -551,7 +595,7 @@ export function bindSearch() {
       });
       return;
     }
-    if (!it && sq.ap52) { addAppt(e.target, q.trim()); return; }
+    if (!it && sq.ap52 && !ag) { addAppt(e.target, q.trim()); return; } // prompt 70: med Glimt går avtaler til agenten (kort A)
     if (!it && !ag && apptOf(q)) { addAppt(e.target, q.trim()); return; }
     if (!it && !ag && huskeOf(q)) { addHuske(e.target, q.trim()); return; }
     if (aiOn()) askAi(e.target, q); else runSearch(q);
@@ -577,7 +621,7 @@ export function bindSearch() {
   // Svarboblen: «Fortsett i Chat ›» åpner en ny samtale med spørsmålet; trykk ellers på boblen lukker den.
   document.addEventListener('click', (e) => {
     const b = e.target.closest?.('[data-gl-ans]');
-    if (!b) return; // trykk utenfor håndteres av laget under boblen (gl-scrim)
+    if (!b) return; // trykk utenfor: bindOutside70 (prompt 70, ikke lenger et lag under boblen)
     e.preventDefault(); e.stopPropagation();
     if (e.target.closest('[data-gl-x]')) { haptic(6); closeAns(); return; }
     if (e.target.closest('[data-gl-stop]')) { haptic(6); if (GL.busy && GL.ctl) { GL.stopped = true; GL.ctl.abort(); } return; } // prompt 59

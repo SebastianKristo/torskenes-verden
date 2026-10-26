@@ -39,6 +39,9 @@ struct KalSettings35View: View {
                     general
                     KalLabel(text: "VISNING").padding(.top, 6)
                     display
+                    // Prompt 70: Widgets – kalendere som tas med, «Skjul fullførte i dag» og «Legg til widget».
+                    KalLabel(text: "WIDGETS").padding(.top, 6)
+                    KalWSettings70()
                     // Prompt 37: Kalendere → Studie → Fag (egen farge per fag; trykk gir fargevelger).
                     KalLabel(text: "STUDIE · FAG").padding(.top, 6)
                     KalFagSettings37()
@@ -206,9 +209,6 @@ struct KalSettings35View: View {
             }
             KalLinkRow35(title: "Glimt", sub: "Figur, stemme og briefer") { s.openGlimtSettings() }
             KalLinkRow35(title: "Kontoer og synk", sub: "Google, iCloud, Outlook, Home Assistant") { s.openAccounts() }
-            KalLinkRow35(title: "Widgets", sub: "Slik legger du til på Hjem- og låseskjerm") {
-                s.showToast("Hold inne på Hjem-skjermen → + → Kalender", undo: "")
-            }
             KalLinkRow35(title: "Om Kalender", sub: "Versjon 1.0 · personvern") {
                 s.showToast("Kalender 1.0 · data ligger på hjemmeserveren din", undo: "")
             }

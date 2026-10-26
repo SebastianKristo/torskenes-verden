@@ -19,6 +19,9 @@ struct KalGlimtMsg: Identifiable, Equatable {
     /// Prompt 34: svaret er en feil fra Glimt («Glimt fikk ikke svar fra {modell}: {feil}») → Prøv igjen.
     var error34: Bool = false
     var q34: String = ""
+    /// Prompt 70: kort C (card70 som JSON) og spørsmål med knapper (ask som JSON), KalCal70.swift.
+    var c70: String = ""
+    var ask70: String = ""
 
     var words: [String] { text.split(separator: " ").map { (s: Substring) -> String in String(s) } }
     var done: Bool { !thinking && shown >= words.count }
@@ -68,7 +71,8 @@ final class KalGlimtModel {
     private func run(_ q: String, _ id: Int) async {
         let local: KalAnswer = KalAsk.ask(q)
         // Ukjent spørsmål, eller lang innlimt melding uten klokkeslett: serveren (Glimt-agenten med kalenderverktøy).
-        let unsure: Bool = local.unknown || (q.count > 50 && local.created?.s == nil)
+        // Prompt 70: nye avtaler går også til serveren (standardkalenderen + kort C); uten svar lagres de lokalt som før.
+        let unsure: Bool = local.unknown || local.created != nil || (q.count > 50 && local.created?.s == nil)
         var ans: KalAnswer = local
         var fromServer: Bool = false
         var failed: Bool = false
@@ -88,7 +92,7 @@ final class KalGlimtModel {
                 ans = srv
                 fromServer = true
                 if KalGlimtServer.lastError != nil { failed = true }
-            } else if let err = KalGlimtServer.lastError {
+            } else if local.created == nil, let err = KalGlimtServer.lastError {
                 // Prompt 34: den ekte feilen (ikke den lokale «Jeg kan svare på …»-teksten).
                 var e: KalAnswer = KalAnswer(steps: ["Spør Glimt"])
                 e.text = err
@@ -96,6 +100,7 @@ final class KalGlimtModel {
                 failed = true
             }
         }
+        let got70: (String, String) = fromServer ? KalCal70.take() : ("", "")
         if fromServer {
             if let made = KalGlimtServer.lastCreated {
                 undoId = made
@@ -137,7 +142,9 @@ final class KalGlimtModel {
             m.text = text
             m.cards = cards
             m.slots = slots
-            m.undoId = uid
+            m.undoId = got70.0.isEmpty ? uid : "" // prompt 70: kortet har sin egen Angre
+            m.c70 = got70.0
+            m.ask70 = got70.1
             m.shown = 0
         }
         let total: Int = text.split(separator: " ").count
@@ -264,6 +271,7 @@ enum KalGlimtServer {
                 a.slots.append(KalSlot(day: String(day.prefix(10)), s: st, e: en ?? st + 60))
             }
         }
+        KalCal70.capture(raw) // prompt 70: kort C og spørsmål med knapper
         if let c = o["created"] as? [String: Any] {
             if let ev = KalParse.event(c, calIds: ids) {
                 lastCreated = ev.id
@@ -480,7 +488,10 @@ struct KalGlimtRow: View {
             KalPill(title: "Prøv igjen", filled: false, height: 32) { KalGlimtModel.shared.retry(m) }
         }
         if m.done {
-            ForEach(m.cards) { (e: KalEvent) in KalGlimtCard(e: e) }
+            // Prompt 70: kort C i stedet for hendelseskortet, og spørsmålet med knapper (KalCal70.swift).
+            if let c = KalCal70Data.parse(KalCal70.obj(m.c70)) { KalCal70Card(card: c).id(c.eventId) }
+            else { ForEach(m.cards) { (e: KalEvent) in KalGlimtCard(e: e) } }
+            if let q = KalCal70Ask.parse(KalCal70.obj(m.ask70)) { KalCal70AskView(ask: q) }
             if !m.slots.isEmpty {
                 KalFlow(spacing: 6) {
                     ForEach(m.slots, id: \.self) { (sl: KalSlot) in KalSlotChip(slot: sl) }

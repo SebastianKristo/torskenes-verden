@@ -360,8 +360,14 @@ struct Assist31Bubble: View {
                 }
                 .frame(minHeight: 28)
             } else if let a = m.homeAnswer {
-                Assist31BoldText(text: a.text, size: 17, color: Color(hex: "#f6f2ea"), bold: Color.white)
-                    .fixedSize(horizontal: false, vertical: true)
+                // Prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale (Cal70Card.swift).
+                if let c = Cal70Model.shared.card, Cal70Model.shared.showsCard(a.text) {
+                    Cal70CardView(card: c, mode: .home).id(c.eventId)
+                } else {
+                    Assist31BoldText(text: a.text, size: 17, color: Color(hex: "#f6f2ea"), bold: Color.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let q = Cal70Model.shared.ask, Cal70Model.shared.showsAsk(a.text) { Assist31Cal70Ask(ask: q) }
                 // Prompt 67: «Stoppet» / cache-merknad, valgknapper og tommel opp/ned (Convo67.swift).
                 Glimt67HomeExtras(a: a)
                 if a.applyId > 0 && a.applyCount > 0 { Memory33ApplyButton(a: a) }
@@ -380,7 +386,8 @@ struct Assist31Bubble: View {
             }
         }
         // Prompt 41: pillen strekker seg når den dras ned (bunnmarg + 0,65 × dra), Search41Pull.swift.
-        .padding(.leading, 18).padding(.trailing, 40).padding(.top, 16).padding(.bottom, 18 + Pull41.shared.pull * 0.65)
+        // Prompt 70: litt mer luft nederst, så grepet (30 pt, Assist38Swipe) ikke dekker knappene i foten.
+        .padding(.leading, 18).padding(.trailing, 40).padding(.top, 16).padding(.bottom, 26 + Pull41.shared.pull * 0.65)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
@@ -389,8 +396,9 @@ struct Assist31Bubble: View {
         }
         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
         .shadow(color: Color.black.opacity(0.45), radius: 25, y: 16)
-        // Prompt 38: ✕ oppe til høyre, håndtak nederst, sveip opp lukker. Trykk i boblen lukker ikke lenger
-        // (trykk utenfor fanges av Assist38Catcher, så kortet under ikke åpnes). Assist38.swift.
+        // Prompt 38: ✕ oppe til høyre, håndtak nederst, sveip opp lukker. Trykk i boblen lukker ikke lenger.
+        // Prompt 70: ingen fullskjerm-lag – kortet scroller med Hjem, sveip bare fra grepet, trykk utenfor lukker et ferdig
+        // svar (Assist70Tap, Home70Assist.swift).
         .overlay(alignment: .topTrailing) { Assist38CloseButton().padding(.top, 2).padding(.trailing, 2) }
         .overlay(alignment: .bottom) {
             // Prompt 41: håndtaket blir bredere (34 → 80 pt) og «Dra ned / Slipp for å åpne i Chat» tones inn.

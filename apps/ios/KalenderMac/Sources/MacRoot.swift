@@ -92,7 +92,8 @@ struct MacRoot: View {
             if store.useWeb38 && web.phase == .failed { MacWeb38Banner(model: web) }
             MacOffline43()
             MacToolbar(win: win)
-            MacNextBanner(win: win)
+            // Prompt 70: NÅ/NESTE-kortet under verktøylinjen er fjernet (rutenettet bruker plassen). Neste hendelse vises i widgets,
+            // varsler og Glimt · Dagen din; den røde nå-linjen i uke/dag er uendret.
             Rectangle().fill(t.line).frame(height: 1)
             HStack(spacing: 0) {
                 if win.sidebar {
@@ -389,83 +390,3 @@ struct MacTab: View {
     }
 }
 
-/* ---------- «NESTE» / «NÅ» ---------- */
-
-struct MacNextBanner: View {
-    @Environment(\.mk) private var t
-    @ObservedObject var win: MacWin
-    @ObservedObject var store: MacStore = MacStore.shared
-
-    var body: some View {
-        if let e = store.nextTimed() {
-            bannerFor(e)
-        }
-    }
-
-    private func bannerFor(_ e: KalEvent) -> some View {
-        let tk: String = KalD.todayKey()
-        let nm: Int = KalD.minutesNow()
-        let days: Int = KalD.daysBetween(tk, e.day)
-        let startAbs: Int = days * 1440 + e.startMin
-        let endAbs: Int = days * 1440 + e.endMin
-        let now: Bool = startAbs <= nm && endAbs > nm
-        let c: KalCal? = KalFag37.tint(store.cal(e.cal), e)
-        let dayText: String = days == 0 ? "i dag" : (days == 1 ? "i morgen" : KalD.fd(KalD.date(e.day)))
-        let tm: String = KalD.hm(e.startMin) + "–" + KalD.hm(e.endMin)
-        var big: String = KalD.cap(KalD.weekdaysShort[KalD.wd(KalD.date(e.day))])
-        var small: String = KalD.hm(e.startMin)
-        if now {
-            big = MacNextBanner.dur(endAbs - nm)
-            small = "igjen"
-        } else if startAbs - nm < 1440 {
-            big = MacNextBanner.dur(startAbs - nm)
-            small = "til start"
-        }
-        let pct: Double = now ? Double(nm - startAbs) / Double(Swift.max(1, endAbs - startAbs)) : 0
-        return Button(action: { win.anchor = e.day; win.openDetail(e) }) {
-            HStack(spacing: 14) {
-                RoundedRectangle(cornerRadius: 3).fill(t.calColor(c)).frame(width: 5, height: 34)
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
-                        Text(now ? "NÅ" : "NESTE").font(MacFont.mono(10.5)).tracking(1.2).foregroundColor(t.acc)
-                        Text(tm + " · " + dayText).font(MacFont.mono(10.5)).foregroundColor(t.mut)
-                    }
-                    HStack(spacing: 8) {
-                        Text(e.title).font(MacFont.ui(15, .bold)).foregroundColor(t.ink).lineLimit(1)
-                        if !e.loc.isEmpty { Text(e.loc).font(MacFont.ui(13)).foregroundColor(t.mut).lineLimit(1) }
-                    }
-                }
-                Spacer(minLength: 10)
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text(big).font(MacFont.ui(15, .heavy)).foregroundColor(t.ink)
-                    Text(small).font(MacFont.ui(11.5)).foregroundColor(t.mut)
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 9)
-            .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
-            .overlay(alignment: .bottomLeading) { progress(pct, now) }
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 14)
-        .padding(.bottom, 10)
-    }
-
-    @ViewBuilder private func progress(_ pct: Double, _ now: Bool) -> some View {
-        if now {
-            GeometryReader { (g: GeometryProxy) in
-                Rectangle().fill(t.red).frame(width: g.size.width * CGFloat(pct), height: 3)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-            }
-        }
-    }
-
-    static func dur(_ x: Int) -> String {
-        if x < 60 { return String(x) + " min" }
-        let h: Int = x / 60
-        let m: Int = x % 60
-        return m == 0 ? String(h) + " t" : String(h) + " t " + String(m) + " min"
-    }
-}

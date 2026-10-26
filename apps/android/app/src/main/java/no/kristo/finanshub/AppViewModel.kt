@@ -2293,15 +2293,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val other = vis.getOrNull(v + dir) ?: return
         val a = order.indexOf(key); val b = order.indexOf(other)
         order[a] = other; order[b] = key
-        if (live) { pageLayouts = pageLayouts + (page to PageLay(order, hid.toList())); p37.dirty.add(page); return }
-        savePage(page, PageLay(order, hid.toList()))
+        val sz = pageLayouts[page]?.sz ?: emptyMap() // prompt 70: størrelsene beholdes
+        if (live) { pageLayouts = pageLayouts + (page to PageLay(order, hid.toList(), sz)); p37.dirty.add(page); return }
+        savePage(page, PageLay(order, hid.toList(), sz))
+    }
+    /** Prompt 70 (ANDHOME70): flytter [key] til plassen til [target] (de andre glir unna). live = bare state, lagres ved slipp. */
+    fun movePageTo70(page: String, keys: List<String>, key: String, target: String, live: Boolean = true) {
+        val order = pageOrder(page, keys).toMutableList()
+        val a = order.indexOf(key); val b = order.indexOf(target)
+        if (a < 0 || b < 0 || a == b) return
+        order.removeAt(a); order.add(b, key)
+        val l = PageLay(order, pageHidden(page).toList(), pageLayouts[page]?.sz ?: emptyMap())
+        if (live) { pageLayouts = pageLayouts + (page to l); p37.dirty.add(page); return }
+        savePage(page, l)
+    }
+    /** Prompt 70: halv/full bredde for et kort (sz). null = standard. live = bare state (håndtaket ↔ mens man drar). */
+    fun setPageSz70(page: String, keys: List<String>, key: String, v: String?, live: Boolean) {
+        val cur = pageLayouts[page]?.sz ?: emptyMap()
+        val sz = if (v == null) cur - key else cur + (key to v)
+        val l = PageLay(pageOrder(page, keys), pageHidden(page).toList(), sz)
+        if (live) { pageLayouts = pageLayouts + (page to l); p37.dirty.add(page); return }
+        savePage(page, l)
     }
     fun hidePageItem(page: String, keys: List<String>, key: String) {
         if (page == "hjem" && key == "h2") prefs.set("p24_h2_user", true)
-        savePage(page, PageLay(pageOrder(page, keys), (pageHidden(page) + key).toList()))
+        savePage(page, PageLay(pageOrder(page, keys), (pageHidden(page) + key).toList(), pageLayouts[page]?.sz ?: emptyMap()))
     }
     fun showPageItem(page: String, keys: List<String>, key: String) {
-        savePage(page, PageLay(pageOrder(page, keys), (pageHidden(page) - key).toList()))
+        savePage(page, PageLay(pageOrder(page, keys), (pageHidden(page) - key).toList(), pageLayouts[page]?.sz ?: emptyMap()))
     }
     fun resetPage(page: String) { savePage(page, PageLay()) }
 
@@ -2353,7 +2372,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         prefs.str(AppPrefs.PAGES_LAYOUT + id, "").takeIf { it.isNotBlank() }?.let { raw ->
             runCatching {
                 val o = JSONObject(raw)
-                pageLayouts = o.keys().asSequence().associateWith { k -> o.getJSONObject(k).let { v -> PageLay(v.optJSONArray("order").strings(), v.optJSONArray("hidden").strings()) } }
+                pageLayouts = o.keys().asSequence().associateWith { k -> o.getJSONObject(k).let { v -> PageLay(v.optJSONArray("order").strings(), v.optJSONArray("hidden").strings(), parseSz70(v.optJSONObject("sz"))) } }
             }
         }
         prefs.str(AppPrefs.FIN_TABS + id, "").takeIf { it.isNotBlank() }?.let { paperFinTabs = it.split(',').filter { k -> FIN_TABS.any { t -> t.first == k } }.ifEmpty { FIN_TABS_DEFAULT } }
@@ -3536,7 +3555,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal fun launch28b(block: suspend () -> Unit) = launch(block)
     /** «Legg til widget»: viser kortet igjen og legger det sist. */
     fun showPageItemLast28(page: String, keys: List<String>, key: String) {
-        savePage(page, PageLay(pageOrder(page, keys).filter { it != key } + key, (pageHidden(page) - key).toList()))
+        savePage(page, PageLay(pageOrder(page, keys).filter { it != key } + key, (pageHidden(page) - key).toList(), pageLayouts[page]?.sz ?: emptyMap()))
     }
 
     /* ---------- Prompt 28: Innstillinger → System → Oppdatering (ui/Update28.kt) ---------- */

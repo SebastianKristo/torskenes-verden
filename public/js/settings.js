@@ -41,6 +41,7 @@ import { TABS46, ALIAS46, nyheterView46, gphotoBox46 } from './settings46.js'; /
 import { TABS51, ALIAS51, sikkerhetView51 } from './sec51.js'; // prompt 51 (SEC51): Innstillinger → Sikkerhet
 import { TABS62, ALIAS62, fasteView62 } from './settings62.js'; // prompt 62 (prompt 49 del 2): Innstillinger → Faste oppgaver
 import { TABS64, ALIAS64, kvalitetView64 } from './settings64.js'; // prompt 64 (prompt 49 del 7): Innstillinger → Kvalitet
+import { TABS70, ALIAS70, sporView70, click70 } from './settings-track70.js'; // prompt 70: Moduler → Sporing (kilder og transportører)
 import { TABS45, ALIAS45, mediaView45, ruterView45, zoneGroups45, click45, setRender45, huskeTips45, vaerView45, studieView45, finansView45 } from './settings45.js'; // prompt 45: Media, Ruter, sonevarsler
 
 const modal = () => document.getElementById('settings');
@@ -104,6 +105,7 @@ const TABS = [
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['kal', 'Kalender og gjøremål', 'Google, iCloud, skole · lister og synk med Home Assistant.', 'Tilkoblinger', P.cal],
   ...TABS45, // prompt 45: innstillinger som lå i modulene (Media, Ruter)
+  ...TABS70, // prompt 70: Sporing (kilder og transportører, flyttet fra Sporing-siden)
   ...TABS46, // prompt 46: Nyheter (flyttet fra nyhetsleseren)
   ['ai', 'AI', 'Modeller, jobber, forbruk og nøkler.', 'Glimt og AI', P.ai],
   ['users', 'Brukere og familie', 'Roller, tilgang og invitasjoner · barn og helse · brief og Glimt-figur per bruker.', 'Husstand', P.users],
@@ -122,7 +124,7 @@ function menu65() {
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
 // Prompt 63: «glimt-husker» / «minne» er lenken fra pushen «Glimt har 3 forslag til minnet» (memory63.js blar ned til forslagene).
 // Prompt 65: Glimt husker står nå på Glimt-siden (AI-sidens Glimt-del bygd inn med only='glimt'), så lenken går dit.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', 'glimt-husker': 'glimt', minne: 'glimt', ...ALIAS45, ...ALIAS46, ...ALIAS51, ...ALIAS62 };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', 'glimt-husker': 'glimt', minne: 'glimt', ...ALIAS45, ...ALIAS70, ...ALIAS46, ...ALIAS51, ...ALIAS62 };
 Object.assign(ALIAS, ALIAS64); // prompt 64: kvalitet, eval, ukerapport → Kvalitet
 // Prompt 65: Startside → Utseende, Familie → Brukere og familie, Gjøremål → Kalender og gjøremål, Sikkerhet/Innlogging → Konto,
 // Glimt husker (lenken fra pushen) → Glimt. Gjelder også ALIAS51 (passkey, sperrer …) som pekte på den gamle Sikkerhet-siden.
@@ -689,7 +691,8 @@ function ruterView65() {
 }
 let sysTab65 = 'ov'; // System-fanen som vises (Oversikt · Oppdateringer · Ytelse · Selvreparasjon · Mer)
 const VIEWS = { glimt: glimtView65, konto: kontoView65, look: lookView65, dom: domView, varsel: () => withZones45(notifyView(H), 'familie'), app: appView65, int: intView, kal: kalView65, ai: () => aiView(H), users: usersView65, system: () => systemView({ ...H, sysTab: sysTab65 }), backup: backupView65, logger: () => loggerView44(H), media: () => (setRender45(rerender45), mediaView45(H)), ruter: () => (setRender45(rerender45), ruterView65()), vaer: () => (setRender45(rerender45), vaerView45(H)), studie: () => studieView45(H), finans: () => finansView45(H), nyheter: () => join65(nyheterView46(H), [{ v: { groups: [group('Nyhetssammendrag', [row({ t: 'Modell for nyhetssammendraget', s: 'Hvilken AI-modell som lager sammendragene – under AI → Oppgaver', act: 'data-p65-ai="task"', btn: 'AI', k: 'nyheter sammendrag modell ai oppgave' })])] } }]),
-  'faste-oppgaver': () => fasteView62(H), kvalitet: () => kvalitetView64(H) };
+  'faste-oppgaver': () => fasteView62(H), kvalitet: () => kvalitetView64(H),
+  sporing: () => sporView70(H, () => { if (!modal().hidden && (tab === 'sporing' || q.trim())) render(); }) }; // prompt 70
 // Prompt 45: Sonevarsler (av/på, per person og sone). Prompt 65: bare under Varsler (hele settet); Brukere og familie viser en lenke.
 const rerender45 = () => { if (!modal().hidden && ['users', 'varsel', 'media', 'ruter', 'vaer'].includes(tab)) render(); };
 function withZones45(v, where) { setRender45(rerender45); if (v?.groups) v.groups = [...v.groups, ...zoneGroups45(H, where)]; return v; }
@@ -1019,6 +1022,7 @@ export function bindSettings() {
     if (ai65) { setAiTab(ai65.dataset.p65Ai); return go('ai'); }
     if (await click44(e, render)) return; // prompt 44
     if (await click45(e, render)) return; // prompt 45
+    if (await click70(e, render)) return; // prompt 70: Sporing (brytere og «Sjekk nå»)
     if (tab === 'glimt' && !q.trim() && glimtClick(e, render)) return;
     const g = e.target.closest('[data-go]');
     if (g) return go(g.dataset.go);

@@ -171,11 +171,23 @@ struct HomeSearch29: View {
     @Environment(\.paper) private var p
     @State private var q: String = ""
     @FocusState private var focused: Bool
+    /// Prompt 70: opptak med motoren på enheten startet herfra, teksten så langt, feltet før opptaket,
+    /// ↑ trykket (send når teksten er klar) og × trykket (forkast).
+    @State private var dev70: Bool = false
+    @State private var live70: String = ""
+    @State private var base70: String = ""
+    @State private var send70: Bool = false
+    @State private var drop70: Bool = false
     @MainActor private var m: Search29Model { Search29Model.shared }
 
     var body: some View {
         VStack(spacing: 6) {
-            card
+            // Prompt 70: under opptak blir søkefeltet et kort i samme farge (Home70Mic.swift).
+            if rec70 {
+                recCard70.transition(.opacity)
+            } else {
+                card.transition(.opacity)
+            }
             if let a = m.appt, !q.trimmingCharacters(in: .whitespaces).isEmpty {
                 HomeSearch29Appt(appt: a) { submit() }
                     .overlay(alignment: .topTrailing) {
@@ -199,7 +211,13 @@ struct HomeSearch29: View {
             }
         }
         .animation(.easeOut(duration: 0.15), value: m.appt)
+        .animation(.easeInOut(duration: 0.25), value: rec70)
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: Assist31.shared.homeOpen)
+        // Prompt 70: rammen til trykk-utenfor og «Glimt svarte ↑» når kortet er ute av syne (Home70Assist.swift).
+        .assist70Track()
+        .onChange(of: rec70) { (_: Bool, on: Bool) in if on { focused = false } }
+        .onChange(of: ChatVoice27.shared.recording) { (_: Bool, on: Bool) in if !on { finishDevice70() } }
+        .onChange(of: Voice56.shared.phase) { (_: String, ph: String) in if ph == "idle" && !dev70 { send70 = false } }
         // Prompt 45: bekreftelse og oppfølgingsspørsmål fra Glimt-agenten.
         .glimtAgent45Host()
         .task(id: store.account?.id ?? "") { await m.boot(store) }
@@ -242,7 +260,8 @@ struct HomeSearch29: View {
                 SearchClear27 { clearField() }
             }
             // Prompt 56: snakk inn søket (serveren, ellers talegjenkjenningen på enheten).
-            Voice56Mic(ctx: micCtx, ink: p.ink, size: 34, icon: 15, label: "Snakk inn søket")
+            // Prompt 70: nytt ikon uten rød knapp; opptaket vises som kort (Home70Mic.swift).
+            Voice56Mic(ctx: micCtx, ink: p.ink, size: 34, icon: 15, label: "Snakk inn søket", home70: true)
             Button { askAi() } label: {
                 Text("✦ AI").font(PF.ui(12.5, .bold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
                     .padding(.horizontal, 12).frame(height: 34)
@@ -274,15 +293,97 @@ struct HomeSearch29: View {
     }
 
     /// Prompt 56: teksten settes inn i feltet (søket startes ikke av seg selv).
+    /// Prompt 70: ↑ i opptakskortet sender når teksten er satt inn. Med motoren på enheten vises teksten live i kortet
+    /// og settes inn i feltet når opptaket stopper.
     private var micCtx: Voice56Ctx {
         Voice56Ctx(target: "search",
-                   insert: { (t: String) in q = q.isEmpty || q.hasSuffix(" ") ? q + t : q + " " + t },
-                   error: { (e: String) in Voice56.shared.show(e) },
+                   insert: { (t: String) in insert70(t) },
+                   error: { (e: String) in send70 = false; Voice56.shared.show(e) },
                    note: { (n: String) in Voice56.shared.show(n) },
-                   device: {
-                       ChatVoice27.shared.toggle(onText: { (t: String) in q = t },
-                                                 onError: { (e: String) in Voice56.shared.show(e) })
-                   })
+                   device: { device70() })
+    }
+
+    /* ---------- Prompt 70: opptakskortet ---------- */
+
+    private var rec70: Bool { Voice56.shared.active("search") || (dev70 && ChatVoice27.shared.recording) }
+
+    private var recCard70: some View {
+        let dev: Bool = dev70 && ChatVoice27.shared.recording
+        return Home70RecCard(text: dev ? live70 : "", busy: !dev && Voice56.shared.phase == "busy", device: dev,
+                             cancel: { cancel70() }, stop: { stop70() }, send: { sendNow70() })
+    }
+
+    private static func joined70(_ a: String, _ t: String) -> String {
+        if a.isEmpty || a.hasSuffix(" ") { return a + t }
+        return a + " " + t
+    }
+
+    private func insert70(_ t: String) {
+        q = HomeSearch29.joined70(q, t)
+        if send70 {
+            send70 = false
+            submit()
+        }
+    }
+
+    private func device70() {
+        if ChatVoice27.shared.recording { ChatVoice27.shared.stop(); return }
+        base70 = q
+        live70 = ""
+        drop70 = false
+        dev70 = true
+        ChatVoice27.shared.toggle(onText: { (t: String) in if dev70 { live70 = t } },
+                                  onError: { (e: String) in
+                                      dev70 = false
+                                      send70 = false
+                                      Voice56.shared.show(e)
+                                  })
+    }
+
+    /// Opptaket på enheten er stoppet (■, ↑, ×, eller av seg selv).
+    private func finishDevice70() {
+        guard dev70 else { return }
+        dev70 = false
+        let t: String = live70.trimmingCharacters(in: .whitespacesAndNewlines)
+        live70 = ""
+        if drop70 || t.isEmpty {
+            drop70 = false
+            send70 = false
+            return
+        }
+        q = HomeSearch29.joined70(base70, t)
+        if send70 {
+            send70 = false
+            submit()
+        }
+    }
+
+    /// ×: avbryt og forkast teksten.
+    private func cancel70() {
+        Haptics.shared.tap()
+        send70 = false
+        if dev70 {
+            drop70 = true
+            ChatVoice27.shared.stop()
+        } else {
+            Voice56.shared.cancel()
+        }
+    }
+
+    /// ■: stopp, teksten legges i feltet så den kan rettes.
+    private func stop70() {
+        if dev70 {
+            ChatVoice27.shared.stop()
+        } else if Voice56.shared.phase == "rec" {
+            Voice56.shared.stop(cancel: false)
+        }
+    }
+
+    /// ↑: stopp og send med en gang (som ↵).
+    private func sendNow70() {
+        Haptics.shared.tap()
+        send70 = true
+        stop70()
     }
 
     private func clearField() {

@@ -24,6 +24,8 @@ struct MacSettingsView: View {
                 section("VARSLER") { notifyPrefs }
                 section("UTSEENDE") { appearance }
                 section("VISNING") { display }
+                // Prompt 70: kalendere i widgetene og «Skjul fullførte i dag».
+                section("WIDGETS") { MacWidgets70Section() }
                 // Prompt 37: Kalendere → Studie → Fag (egen farge per fag).
                 section("STUDIE · FAG") { MacFagSettings37() }
             }

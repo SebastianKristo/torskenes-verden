@@ -16,8 +16,17 @@ fun greetingFor(hour: Int = LocalTime.now().hour): String = when (hour) {
 }
 
 /** Rekkefølge og skjulte kort på en side (layout.pages[side]). */
-data class PageLay(val order: List<String> = emptyList(), val hidden: List<String> = emptyList()) {
-    fun toJson(): JSONObject = JSONObject().put("order", JSONArray(order)).put("hidden", JSONArray(hidden))
+data class PageLay(val order: List<String> = emptyList(), val hidden: List<String> = emptyList(), val sz: Map<String, String> = emptyMap()) {
+    // Prompt 70 (ANDHOME70, claude-code-widget-storrelse-mobil.md): sz = { h9: "full", h52fi: "half", … } (bare Hjem på mobil).
+    fun toJson(): JSONObject = JSONObject().put("order", JSONArray(order)).put("hidden", JSONArray(hidden)).also { o -> if (sz.isNotEmpty()) o.put("sz", JSONObject(sz)) }
+}
+
+/** Prompt 70: «sz» fra layout.pages[side] – bare «full» og «half» godtas. */
+fun parseSz70(o: JSONObject?): Map<String, String> {
+    if (o == null) return emptyMap()
+    val out = mutableMapOf<String, String>()
+    o.keys().forEach { k -> val v = o.optString(k); if (v == "full" || v == "half") out[k] = v }
+    return out
 }
 
 /** Valgene fra GET /api/me/layout som kom i prompt 15. */
@@ -29,7 +38,7 @@ fun parseLayout15(s: String): Layout15 {
     o.optJSONObject("pages")?.let { pg ->
         pg.keys().forEach { k ->
             val v = pg.optJSONObject(k) ?: return@forEach
-            pages[k] = PageLay(v.optJSONArray("order").strings(), (v.optJSONArray("hidden") ?: v.optJSONArray("hid")).strings())
+            pages[k] = PageLay(v.optJSONArray("order").strings(), (v.optJSONArray("hidden") ?: v.optJSONArray("hid")).strings(), parseSz70(v.optJSONObject("sz")))
         }
     }
     return Layout15(pages, o.optJSONArray("finTabs").strings().filter { k -> FIN_TABS.any { it.first == k } }.distinct().take(5),

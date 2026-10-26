@@ -45,6 +45,9 @@ class KGMsg(val id: Long, val user: Boolean, val text: String) {
     var engine by mutableStateOf("lokal")
     /** Prompt 34: Glimt fikk ikke svar – svaret viser feilen med Prøv igjen og Åpne AI-kontroll. */
     var err by mutableStateOf(false)
+    /** Prompt 70: kort C (card70) og spørsmål med knapper (ask) fra Glimt, ui/KalCal70Ui.kt. */
+    var c70 by mutableStateOf<JSONObject?>(null)
+    var ask70 by mutableStateOf<JSONObject?>(null)
     var q: String = ""
     val words: List<String> get() = full.split(' ').filter { it.isNotEmpty() }
     val done: Boolean get() = !thinking && shown >= words.size
@@ -652,6 +655,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         glOpen = true
         val local = KalAsk(visible, calMap, if (swx) data.wx else emptyMap(), drem, all, sun).ask(qq)
         glJob = viewModelScope.launch {
+            // Prompt 70: nye avtaler går til serveren (standardkalenderen + kort C) når vi er logget inn; uten svar lokalt som før.
+            if (local?.create != null && session != null && glServer(m, qq, fallback = true)) return@launch
             if (local != null) {
                 m.steps = local.steps
                 local.create?.let { ev0 ->
@@ -687,10 +692,10 @@ class KalVm(app: Application) : AndroidViewModel(app) {
      * Serverens Glimt (POST /api/assist {q, source:'calendar', context}). SERVER33 svarer {text, steps[], events[], slots[], created?}
      * direkte (200) eller som jobb (202 {jobId} → GET /api/assist/:id med steps[] underveis). 404 / uten nett: hjelpeteksten.
      */
-    private suspend fun glServer(m: KGMsg, qq: String) {
+    private suspend fun glServer(m: KGMsg, qq: String, fallback: Boolean = false): Boolean {
         val s = session
         m.steps = listOf("Spør Glimt", "Leser kalenderen", "Skriver svar")
-        if (s == null) { tickSteps(m); stream(m, KalAsk.HELP); return }
+        if (s == null) { if (fallback) return false; tickSteps(m); stream(m, KalAsk.HELP); return true }
         m.engine = "server"
         val ctxO = JSONObject().put("date", a.toString()).put("view", v).put("today", today().toString())
         det?.let { ctxO.put("eventId", it) }
@@ -726,13 +731,14 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             if (e.status == 404 || e.status == 405) missing = true else if (errT == null) errT = e.message
         } catch (e: Exception) { ans = null; if (errT == null) errT = e.message ?: "fikk ikke kontakt med serveren" }
         if (ans == null) {
+            if (fallback) { m.engine = "lokal"; m.step = 0; return false } // prompt 70: den lokale tolkningen tar over
             tickSteps(m)
             // Eldre server uten Glimt-ruteren: hjelpeteksten som før. Ellers den ekte feilen.
-            if (missing || errT == null) { stream(m, KalAsk.HELP); return }
+            if (missing || errT == null) { stream(m, KalAsk.HELP); return true }
             m.err = true
             m.engine = "feil"
             stream(m, "Glimt fikk ikke svar fra " + (errModel ?: "modellen") + ": " + errT + ".")
-            return
+            return true
         }
         val a0 = ans!!
         a0.optJSONArray("steps")?.let { arr -> val l = (0 until arr.length()).mapNotNull { arr.opt(it).let { x -> if (x is JSONObject) x.str("label", "key") else x?.toString() } }; if (l.isNotEmpty()) m.steps = l }
@@ -762,12 +768,17 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             }
         }
         m.slots = slots
+        // Prompt 70: kort C og spørsmålet med knapper (kortet har egen Angre).
+        m.c70 = K70.of(a0)
+        m.ask70 = a0.optJSONObject("agent")?.optJSONObject("ask")
+        if (m.c70 != null) { m.cards = emptyList(); refresh(); stream(m, (a0.str("text", "txt") ?: "").replace("**", "")); return true }
         (a0.opt("created") as? JSONObject)?.let { c ->
             val ev = parseServerEvent(c.optJSONObject("event") ?: c, calMap)
             m.undoId = ev?.id ?: c.optStrOrNull("id")
             refresh()
         } ?: (a0.opt("created") as? String)?.let { m.undoId = it; refresh() }
         stream(m, (a0.str("text", "txt") ?: KalAsk.HELP).replace("**", ""))
+        return true
     }
 
     /** Prompt 34: «Prøv igjen» på et feilet Glimt-svar. */

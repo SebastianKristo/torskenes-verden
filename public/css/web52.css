@@ -129,3 +129,7 @@ div.b52-r{cursor:default}
 .h52-add button span:last-child{color:#8f2e21;font-size:13px}
 .h52 .t52-card{color:var(--t52ink)}.h52 .t52-av{color:var(--t52avi)}.h52 .t52-mat{color:var(--t52mati)}.h52 .t52-fam{color:var(--t52fami)}
 .h52 .t52 :is(b,.t52-dest,.t52-t,.t52-nt,.t52-hl:not(.over),.t52-nl span){color:inherit}
+/* Prompt 70 (claude-code-widget-storrelse-mobil.md): håndtaket ↔ nede til høyre i redigering – dra ut/inn eller trykk for halv/full bredde. */
+.h52-rz{position:absolute;right:-9px;bottom:-9px;z-index:4}
+.h52-rz button{width:34px;height:34px;padding:0;border-radius:17px;border:1px solid var(--t52line);background:var(--t52card);color:var(--t52ink);cursor:ew-resize;display:grid;place-items:center;touch-action:none;-webkit-tap-highlight-color:transparent;box-shadow:0 4px 10px -3px rgba(0,0,0,.3)}
+.h52-rz button:focus-visible{outline:2px solid var(--t52ink);outline-offset:2px}

@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,6 +15,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -74,10 +83,18 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
     // Prompt 45 (claude-code-fold-skannikon-og-sokefelt.md): i Glimt-panelet på Fold/brett ligger svar og forslag OVER feltet
     // (svaret maks 220 dp, scroller), så de aldri havner bak tastaturet. Telefon: under feltet som før.
     val extras45: @Composable () -> Unit = { Search29Extras45(vm, text, above45, go) }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // Prompt 70 (claude-code-mikrofon-sokefelt.md): ↑ i opptakskortet sender søket når teksten er satt inn (Voice56.sendTick).
+    val tick70 = Voice56.sendTick
+    var seen70 by remember { mutableIntStateOf(tick70) }
+    LaunchedEffect(tick70) { if (tick70 != seen70) { seen70 = tick70; if (vm.q29.homeQ.isNotBlank()) go() } }
+    val mic70 = Voice56.on(Voice56.SEARCH)
+    LaunchedEffect(mic70) { if (mic70) fm.clearFocus() } // tastaturet lukkes når opptaket starter
+    Column(Modifier.animateContentSize(tween(250)), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (above45) extras45()
+        // Prompt 70: opptak → feltet blir et kort i samme farge (ui/Mic70.kt); ingen egen «Lytter …»-rad under lenger.
+        if (mic70) Box(Modifier.searchRect70()) { MicCard70(vm) } else
         Row(
-            Modifier.fillMaxWidth().height(46.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.card).padding(start = 8.dp, end = 6.dp),
+            Modifier.fillMaxWidth().searchRect70().height(46.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.card).padding(start = 8.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box {
@@ -104,7 +121,7 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
                 Modifier.size(30.dp).clip(CircleShape).background(p.line).clickable(role = Role.Button, onClickLabel = "Tøm") { vm.setHomeQuery29(""); no.kristo.finanshub.Glimt67.resetHomeConv() /* prompt 67: ny samtale */ },
                 contentAlignment = Alignment.Center,
             ) { WxIcon(H29_X, p.ink, 11.dp, stroke = 3.2f) }
-            SearchMic56(vm) // prompt 56 (AND56): snakk inn søket (ui/Voice56Ui.kt)
+            SearchMic70(vm) // prompt 70: nytt mikrofonikon uten rød knapp (ui/Mic70.kt); motoren er Voice56 som før
             Box(
                 Modifier.height(34.dp).clip(CircleShape).background(p.bg)
                     .clickable(role = Role.Button, onClickLabel = "Åpne Chat") { Haptics.select(); fm.clearFocus(); vm.openChat() }
@@ -112,9 +129,15 @@ internal fun PaperSearch29(vm: AppViewModel, above45: Boolean = false) {
                 contentAlignment = Alignment.Center,
             ) { Text("✦ AI", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
         }
-        VoiceBar56(vm, Voice56.SEARCH, p.ink, p.mut, PaperFonts.sans, Modifier.clip(RoundedCornerShape(16.dp)).background(p.card)) // prompt 56: Lytter / Skriver ned / motor · språk
+        // Prompt 56: bare beskjedene (motor · språk, «For kort opptak» …) – selve opptaket vises i kortet over (prompt 70).
+        if (!mic70) VoiceBar56(vm, Voice56.SEARCH, p.ink, p.mut, PaperFonts.sans, Modifier.clip(RoundedCornerShape(16.dp)).background(p.card))
         if (!above45) extras45()
     }
+}
+
+/** Prompt 70: søkefeltets ramme (uklippet) for «trykk utenfor» og pillen «Glimt svarte ↑» (ui/Home70.kt). */
+private fun Modifier.searchRect70(): Modifier = this.onGloballyPositioned { c ->
+    Ans70.searchRect = androidx.compose.ui.geometry.Rect(c.positionInRoot(), androidx.compose.ui.geometry.Size(c.size.width.toFloat(), c.size.height.toFloat()))
 }
 
 /** Svaret fra Glimt og forslagene (Legg i kalender / Legg i Huskeliste / søkeforslag) under – eller over – søkefeltet. */

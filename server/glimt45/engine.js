@@ -672,7 +672,9 @@ export function toAssist45(g, text, today = todayOslo45(), { caller = 'home' } =
   const isAction = !!g.confirm || ['calendar.create', 'calendar.update', 'calendar.delete', 'tasks.create', 'tasks.complete'].includes(tool);
   let card;
   const evs = (g.results ?? []).filter((x) => x.kind === 'event');
-  if (evs.length || tool?.startsWith('calendar.')) {
+  const c70 = tool === 'calendar.create' && a0?.status === 'done' ? a0.result?.card70 ?? null : null;
+  if (c70) card = { k: 'cal70', ...c70 }; // prompt 70: kort A i Chat (/api/assist); eldre klienter uten k 'cal70' viser bare teksten
+  else if (evs.length || (tool?.startsWith('calendar.') && !g.ask)) {
     const d = (typeof a0?.result?.from === 'string' ? a0.result.from : null) ?? evs[0]?.date ?? today;
     const x = new Date(`${d}T00:00:00Z`);
     card = { k: 'calendar', date: d, wd: WD3[x.getUTCDay()], n: x.getUTCDate(), t: relDate45(d, today).replace(/^./, (c) => c.toUpperCase()), sub: `${evs.length} ${evs.length === 1 ? 'hendelse' : 'hendelser'}`,
@@ -689,7 +691,7 @@ export function toAssist45(g, text, today = todayOslo45(), { caller = 'home' } =
     tool: SRC[g.module] ?? 'Glimt', ...(card ? { card } : {}), ms: g.ms, model: g.engine === 'lokal' ? 'Glimt · verktøy' : 'Glimt · lokal', engine: g.engine === 'lokal' ? 'tool' : 'ollama',
     ...(g.events?.length ? { events: g.events } : {}), ...(g.nav ? { nav: g.nav, target: g.nav.target } : {}),
     agent: { intent: g.intent, module: g.module, actions: g.actions, results: g.results, ...(g.ask ? { ask: g.ask } : {}), ...(g.confirm ? { confirm: g.confirm } : {}), personality: g.personality, joke: g.joke ?? null, engine: g.engine, requestId: g.requestId } };
-  if (tool === 'calendar.create' && a0.status === 'done' && a0.result?.eventId) out.created = { event: g.events?.[0] ?? a0.result.event, undo: a0.result.undo };
+  if (tool === 'calendar.create' && a0.status === 'done' && a0.result?.eventId) out.created = { event: g.events?.[0] ?? a0.result.event, undo: a0.result.undo, ...(a0.result.card70 ? { card70: a0.result.card70 } : {}) }; // prompt 70: kort A
   out.chatContext = { q: text, intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: g.reply, ...(card ? { card } : {}) }] };
   return out;
 }

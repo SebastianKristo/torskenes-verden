@@ -200,6 +200,7 @@ final class GlimtAgent45 {
         ans.text = GlimtAgent45.answerText(o)
         ans.intent = JS.str(o, "intent") ?? ""
         ans.source = "glimt"
+        Cal70Model.shared.take(o, ans.text) // prompt 70: kort A (lagt i kalenderen) og spørsmål med knapper i kortet (Cal70Card.swift)
         Assist31.shared.showLocal36(text, ans)
         // Prompt 67: valgknapper (choices) i stedet for ask.options, og tommel opp/ned når traceId finnes.
         let ch: Choices67? = Choices67.parse(JS.dict(o, "choices"))
@@ -293,22 +294,14 @@ struct GlimtAgent45Host: ViewModifier {
             } message: {
                 Text("Glimt gjør dette først når du bekrefter.")
             }
-            .confirmationDialog(g.ask?.question ?? "", isPresented: askBinding, titleVisibility: .visible) {
-                ForEach(g.ask?.options ?? [], id: \.self) { (o: String) in
-                    Button(o) { g.answer(o, store) }
-                }
-                Button("Avbryt", role: .cancel) { g.ask = nil }
-            }
+            // Prompt 70: «Hvilken …?» blir ikke lenger en systemmeny (confirmationDialog). Valgene står som knapper i svarkortet
+            // (Choices67View / Cal70AskView i Assist31Bubble), og spørsmålet står én gang.
     }
 
     private var confirmBinding: Binding<Bool> {
         Binding<Bool>(get: { GlimtAgent45.shared.confirm != nil }, set: { (v: Bool) in if !v { GlimtAgent45.shared.confirm = nil } })
     }
 
-    /// Bare når det finnes valg; uten valg står spørsmålet i svarboblen og svaret skrives i feltet.
-    private var askBinding: Binding<Bool> {
-        Binding<Bool>(get: { !(GlimtAgent45.shared.ask?.options.isEmpty ?? true) }, set: { (v: Bool) in if !v { GlimtAgent45.shared.ask = nil } })
-    }
 }
 
 extension View {

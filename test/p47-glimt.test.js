@@ -141,16 +141,16 @@ test('minne: henting med hvorfor, alias begge veier, læring lagrer ikke gjetnin
   M47._setEmbed47(null);
 });
 
-test('kalender: Dune – tittel ikke hele setningen, sted, 17.12 17:30, kino 3 t antatt i bekreftelsen', async () => {
+test('kalender: Dune – tittel ikke hele setningen, sted, 17.12 17:30, kino 2 t antatt i bekreftelsen (prompt 70)', async () => {
   const r = await agent('Skal se Dune på Colosseum kino 17.12 17.30');
   const a = r.body.actions[0];
   assert.equal(a.status, 'done', r.text);
   assert.ok(a.args.title.length <= 60 && !/17\.12|skal se/i.test(a.args.title), a.args.title);
   assert.match(a.args.title, /Dune/);
-  assert.deepEqual([a.args.date, a.args.start, a.args.end, a.args.durationAssumed], ['2026-12-17', '17:30', '20:30', true]);
+  assert.deepEqual([a.args.date, a.args.start, a.args.end, a.args.durationAssumed], ['2026-12-17', '17:30', '19:30', true]);
   assert.match(a.args.location, /^Colosseum kino/i);
   assert.match(r.body.reply, /Lagt inn: \*\*.*Dune.*, Colosseum kino, torsdag 17\. desember kl\. 17:30\*\*/i);
-  assert.match(r.body.reply, /Slutt kl\. 20:30 er antatt \(3 t for kino\)/);
+  assert.match(r.body.reply, /Slutt kl\. 19:30 er antatt \(2 t for kino\)/);
 });
 
 test('svarsteg: nettsøk først i prompten, egennavn må stå i treffene; prat uten verktøy', async () => {

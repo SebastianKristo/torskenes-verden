@@ -50,6 +50,8 @@ extension Store {
                 out[k] = PaperPageLayout(order: order, hidden: hidden)
             }
             if !out.isEmpty && out != paperPages { paperPages = out }
+            // Prompt 70: halv/full per widget på Hjem (pages.hjem.sz, Home70Grid.swift).
+            Home70Size.shared.take(pages)
         }
         let tabs = JS.strings(o, "finTabs").filter { Store.finNavAll.map(\.id).contains($0) }
         if !tabs.isEmpty && tabs != finNav { finNav = Array(tabs.prefix(5)) }

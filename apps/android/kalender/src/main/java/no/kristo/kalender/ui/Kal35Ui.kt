@@ -392,6 +392,10 @@ fun SettingsPage35(vm: KalVm) {
                 OptRow("Vær", "Oslo · MET / Open-Meteo, 16 dager frem", vm.swx) { vm.setWx(!vm.swx) }
             }
 
+            // Prompt 70: Widgets – kalendere som tas med, «Skjul fullførte i dag» og «Legg til widget».
+            Label("WIDGETS", Modifier.padding(top = 4.dp))
+            Widgets70Section(vm)
+
             // Prompt 37: Kalendere → Studie → Fag (egen farge per fag; trykk gir fargevelger).
             Label("STUDIE · FAG", Modifier.padding(top = 4.dp))
             FagSettings37(vm)
@@ -443,7 +447,6 @@ fun SettingsPage35(vm: KalVm) {
                 // Prompt 46: godkjenn QR-koden en annen enhet viser (fingeravtrykk/PIN først).
                 ScanRow46(vm)
                 LinkRow35("Kontoer og synk", "Google, iCloud, Outlook, Home Assistant") { vm.openAccounts() }
-                LinkRow35("Widgets", "Slik legger du til på Hjem- og låseskjerm") { Hap.tick(); vm.showToast("Hold inne på Hjem-skjermen → Widgets → Kalender") }
                 // Prompt 43: oppdater Kalender fra appen (APK fra GitHub-releasen via serveren, SHA-256 og samme signatur).
                 LinkRow35("Programvareoppdatering", updSub43(vm.getApplication())) { Hap.tick(); no.kristo.kalender.Kal43Upd.pageOpen = true }
                 LinkRow35("Om Kalender", "Versjon 1.0 · personvern") { Hap.tick(); vm.showToast("Kalender 1.0 · data ligger på hjemmeserveren din") }

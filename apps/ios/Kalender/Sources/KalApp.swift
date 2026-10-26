@@ -92,6 +92,8 @@ struct KalSchemeReader: View {
         // Prompt 51: «Nytt i denne versjonen» over alt annet (tegner ingenting når det ikke er noe nytt).
         KalRoot()
             .overlay { KalNew51Host() }
+            // Prompt 70: «Kalender på hjemskjermen» én gang etter oppdateringen (etter «Nytt i denne versjonen»).
+            .overlay { KalWIntro70Host() }
             .environment(\.kal, cs == .dark ? KalTheme.darkTheme : KalTheme.light)
     }
 }

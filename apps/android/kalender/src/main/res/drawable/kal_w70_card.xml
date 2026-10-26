@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 70: Material You-flate i forhåndsvisningen (eksempelfarger fra Kalender Widgets.dc.html). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#DCEBD8" />
+    <corners android:radius="28dp" />
+</shape>

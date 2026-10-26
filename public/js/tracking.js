@@ -11,9 +11,7 @@ const SEGS = ['Aktive', 'Klar for henting', 'Utgående', 'Levert', 'Arkiv'];
 // Vindu og papir har flere faner (som i «Homelab Papir Web»).
 const SEGS_2C = ['Aktive', 'Klar for henting', 'På vei', 'Registrert', 'Levert', 'Arkiv', 'Alle'];
 const segs = () => (is2c() ? SEGS_2C : SEGS);
-// Hva hver transportør trenger. 17TRACK er reserven for alle uten egen klient.
-const KEYS = [['posten', 'Posten og Bring', 'API-nøkkel fra Mybring (bruker-ID og nøkkel)'], ['postnord', 'PostNord', 'Uten konto og nøkkel · offentlig sporing (nøkkel valgfri)'], ['dhl', 'DHL', 'DHL Shipment Tracking API (Unified)'],
-  ['ups', 'UPS', 'OAuth-klient fra UPS Developer'], ['other', '17TRACK', 'Reserve for FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox og andre']];
+// Prompt 70: transportørene (og hva hver trenger) vises i Innstillinger → Moduler → Sporing (settings-track70.js).
 // Prompt 26: overstyr sporingstjenesten (carrierOverride, null = auto) ved ny pakke og under «Spor via» på en pakke.
 const OVR = [['posten', 'Posten'], ['bring', 'Bring'], ['postnord', 'PostNord'], ['dhl', 'DHL'], ['helthjem', 'Helthjem'], ['ups', 'UPS'], ['budbee', 'Budbee'], ['instabox', 'Instabox'], ['parcelsapp', 'ParcelsApp']];
 const OVR_EXTRA = { parcelsapp: { color: '#4B5BD6', fg: '#fff', ini: 'PA' } };
@@ -71,7 +69,6 @@ function etaText(t) {
 const SRC = { finn: ['Finn', 'rgba(122,167,255,.16)', '#a9c3ff'], email: ['E-post', 'rgba(255,154,92,.16)', '#ffb08a'], manual: ['Manuelt', 'rgba(255,255,255,.1)', '#c4cad6'] };
 // Transportørlogo på hvit bakgrunn; mangler logoen, vises initialene i transportørens farge.
 const badge = (c, fg, ini, cls = '', logo = '') => `<span class="trk-ini ${cls}" style="background:${esc(c)};color:${esc(fg)}">${esc(ini)}${logo ? `<img class="trk-logo" src="${esc(logo)}" alt="" loading="lazy">` : ''}</span>`;
-const sw = (on) => `<span class="trk-sw${on ? ' on' : ''}"><i></i></span>`;
 
 /* ---------- Visning ---------- */
 function card(t) {
@@ -137,23 +134,12 @@ function body2c() {
   const rank = (t) => (isPick(t) ? 0 : t.status === 'out_for_delivery' ? 1 : isDone(t) ? 3 : 2);
   const shown = shownOf();
   const tabs = SEGS_2C.map((n) => `<button role="tab" aria-selected="${S.seg === n}" class="${S.seg === n ? 'on' : ''}" data-trk-seg="${esc(n)}">${esc(n)} <span>${L[n].length}</span></button>`).join('');
-  const src = (k) => d.sources?.[k]?.on !== false && (k !== 'autoArchive' || d.sources?.[k]?.on === true);
-  const nF = d.items.filter((t) => t.source === 'finn').length, nM = d.items.filter((t) => t.source === 'email').length;
-  const kilder = [['email', 'Kilde: e-post (Proton)', `${nM} funnet i innboksen`], ['finn', 'Kilde: Finn-handler', `${nF} fra handler`], ['autoArchive', 'Arkiver leverte automatisk', 'Leverte pakker flyttes til arkivet']]
-    .map(([k, n, sub]) => [`data-trk-src="${k}"`, n, sub, src(k)]);
-  const rows = kilder
-    .map(([a, n, sub, on]) => `<button class="trk-tog" ${a} aria-pressed="${on}"><span><b>${esc(n)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${sw(on)}</button>`).join('') + notifyLink();
-  const conf = (id) => d.carriers.find((c) => c.id === id) ?? {};
-  const conns = KEYS.map(([id, n, sub]) => { const c = conf(id); return `<div class="trk-conn">${badge(c.color, c.fg, c.ini, 'md', c.logo)}<span><b>${esc(n)}</b><small>${esc(sub)}</small></span><em class="${c.configured || id === 'postnord' ? 'ok' : 'miss'}">${c.configured ? 'Tilkoblet' : id === 'postnord' ? 'Uten nøkkel' : 'Mangler nøkkel'}</em></div>`; }).join('');
-  const last = d.lastRun ? `Sist sjekket ${hm(new Date(d.lastRun))}` : 'Ikke sjekket ennå';
+  // Prompt 70 (claude-code-sporing-innstillinger.md): KILDER og TRANSPORTØRER ligger i Innstillinger → Moduler → Sporing.
   return `<div class="p-trk-bar"><div class="p-trk-tabs" role="tablist">${tabs}</div>
       <div class="p-trk-add"><input name="trk-no" value="${esc(S.no)}" placeholder="Legg til sporingsnummer" autocomplete="off" spellcheck="false" aria-label="Sporingsnummer"><button class="trk-go" data-trk-add ${S.adding ? 'disabled' : ''}>${S.adding ? 'Sporer …' : 'Spor'}</button></div></div>
     <div class="trk-guess">${addHint()}</div>
     ${selBar(shown)}${shown.length ? `<div class="trk-grid">${shown.map(card).join('')}</div>` : '<div class="trk-empty">Ingen pakker her.</div>'}${keysLine()}
-    <div class="p-trk-cols">
-      <div class="trk-panel"><div class="trk-ph"><b>KILDER</b><small>${esc(last)} · <button class="trk-link" data-trk-check ${S.busy ? 'disabled' : ''}>${S.busy ? 'Sjekker …' : 'Sjekk nå'}</button></small></div>${rows}</div>
-      <div class="trk-panel"><div class="trk-ph"><b>TRANSPORTØRER</b><button class="trk-link" data-trk-keys>Nøkler i Innstillinger ›</button></div>${conns}</div>
-    </div>`;
+    ${setRow70()}`;
 }
 
 // Valgte pakker (klikk på ikonet): meny for å velge alle, arkivere/gjenopprette og slette (to trykk).
@@ -178,14 +164,7 @@ function body() {
   const d = S.d, L = lists(), seg = L[S.seg] ?? L.Aktive;
   const rank = (t) => (isPick(t) ? 0 : t.status === 'out_for_delivery' ? 1 : 2);
   const shown = shownOf();
-  const nF = d.items.filter((t) => t.source === 'finn').length, nM = d.items.filter((t) => t.source === 'email').length;
-  const srcs = [['finn', `✦ Finn · ${nF} fra handler`], ['email', `✦ E-post · ${nM} funnet i innboksen`]].map(([k, n]) => {
-    const on = d.sources[k]?.on !== false;
-    return `<button class="trk-srcb${on ? ' on' : ''}" data-trk-src="${k}" aria-pressed="${on}" title="${on ? 'Slå av' : 'Slå på'} henting fra ${k === 'finn' ? 'Finn' : 'e-post'}"><i></i>${esc(n)}</button>`;
-  }).join('');
-  const last = d.lastRun ? `Sist sjekket ${hm(new Date(d.lastRun))}` : 'Ikke sjekket ennå';
-  const conf = (id) => d.carriers.find((c) => c.id === id) ?? {};
-  const conns = KEYS.map(([id, n, s]) => { const c = conf(id); return `<div class="trk-conn">${badge(c.color, c.fg, c.ini, 'md', c.logo)}<span><b>${esc(n)}</b><small>${esc(s)}</small></span><em class="${c.configured || id === 'postnord' ? 'ok' : 'miss'}">${c.configured ? 'Tilkoblet' : id === 'postnord' ? 'Uten nøkkel' : 'Mangler nøkkel'}</em></div>`; }).join('');
+  // Prompt 70: kildene (e-post, Finn, arkivering), «Sjekk nå» og transportørene ligger i Innstillinger → Moduler → Sporing.
   return `
   <div class="trk-box">
     <div class="trk-add">
@@ -194,18 +173,15 @@ function body() {
       <button class="trk-go" data-trk-add ${S.adding ? 'disabled' : ''}>${S.adding ? 'Sporer …' : 'Spor'}</button>
     </div>
     <div class="trk-guess">${addHint()}</div>
-    <div class="trk-srcs">${srcs}<span class="trk-sp"></span><span class="trk-sync">${esc(last)}</span><button class="trk-btn" data-trk-check ${S.busy ? 'disabled' : ''}>${S.busy ? 'Sjekker …' : 'Sjekk nå'}</button></div>
   </div>
   <div class="trk-segs" role="tablist">${segs().map((n) => `<button role="tab" aria-selected="${S.seg === n}" class="${S.seg === n ? 'on' : ''}" data-trk-seg="${esc(n)}">${esc(n)} ${L[n].length}</button>`).join('')}</div>
   ${selBar(shown)}${shown.length ? `<div class="trk-grid">${shown.map(card).join('')}</div>` : '<div class="trk-empty">Ingen sendinger her.</div>'}${keysLine()}
-  <div class="trk-side">
-    <div class="trk-panel"><div class="trk-ph"><b>Varsler</b><small>Samlet under Innstillinger → Varsler</small></div>${notifyLink()}</div>
-    <div class="trk-panel"><div class="trk-ph"><b>Transportører</b><button class="trk-link" data-trk-keys>Nøkler i Innstillinger → Integrasjoner ›</button></div>${conns}</div>
-  </div>`;
+  ${setRow70()}`;
 }
 
-// Pakkevarsler (og lyd, stille timer og haptikk) ligger nå i Innstillinger → Varsler.
-const notifyLink = () => `<button class="trk-tog" data-trk-notify><span><b>Varsler for pakker</b><small>Ny pakke, klar for henting, ute for levering, forsinket og levert</small></span><span class="trk-link">Innstillinger ›</span></button>`;
+// Prompt 70 (claude-code-sporing-innstillinger.md): én rad nederst i stedet for KILDER og TRANSPORTØRER.
+// Trykk åpner Innstillinger direkte på Sporing (kilder, transportører og pakkevarsler).
+const setRow70 = () => `<button type="button" class="trk-set70" data-trk-set><span><b>Kilder, transportører og varsler</b><small>E-post, Finn, arkivering og API-nøkler ligger i Innstillinger</small></span><em>Innstillinger ›</em></button>`;
 
 function summary() {
   if (!S.d) return '';
@@ -257,7 +233,7 @@ export function render() {
     clearInterval(pollT);
     pollT = setInterval(() => { if (!host()) { unLive?.(); unLive = null; return clearInterval(pollT); } if (!document.hidden && !S.busy && !S.adding) load(); }, 60_000);
   });
-  return `<div id="trk-ptr" class="trk-ptr" aria-hidden="true"><span>Dra for å oppdatere</span></div><div class="trk-top"><div class="os-title">Spor<b>ing</b></div><div id="trk-sum" class="trk-sumtxt">${esc(summary())}</div><button class="trk-btn trk-refresh" data-trk-refresh ${S.busy ? 'disabled' : ''} aria-label="Oppdater status">↻ Oppdater</button></div>
+  return `<div id="trk-ptr" class="trk-ptr" aria-hidden="true"><span>Dra for å oppdatere</span></div><div class="trk-top"><div class="os-title">Spor<b>ing</b></div><div id="trk-sum" class="trk-sumtxt">${esc(summary())}</div><button class="trk-btn trk-refresh" data-trk-refresh ${S.busy ? 'disabled' : ''} aria-label="Oppdater status">↻ Oppdater</button><button class="trk-btn trk-gear70" data-trk-set aria-label="Innstillinger for Sporing" title="Innstillinger for Sporing">⚙</button></div>
     <div id="trk-os" class="trk">${body()}</div><div id="trk-toast" class="trk-toast" role="status" aria-live="polite" hidden></div>`;
 }
 
@@ -333,7 +309,7 @@ async function bulk(action) {
 
 export function bind(view) {
   bindPull(view);
-  view.addEventListener('click', (e) => { if (e.target.closest('[data-trk-refresh]')) check(); });
+  view.addEventListener('click', (e) => { if (e.target.closest('[data-trk-refresh]')) check(); else if (e.target.closest('.trk-top [data-trk-set]')) openSettings('sporing'); });
   view.addEventListener('input', (e) => {
     if (!e.target.closest('#trk-os')) return;
     if (e.target.name === 'trk-name') { S.name = e.target.value; return; }
@@ -353,8 +329,7 @@ export function bind(view) {
     const el = (s) => e.target.closest(s);
     if (el('[data-trk-add]')) return add();
     if (el('[data-trk-check]')) return check();
-    if (el('[data-trk-keys]')) return openSettings('int', 'cfg:Sporing');
-    if (el('[data-trk-notify]')) return openSettings('varsel');
+    if (el('[data-trk-set]')) return openSettings('sporing'); // prompt 70
     let b;
     if ((b = el('[data-trk-selb]'))) {
       e.preventDefault(); e.stopPropagation();

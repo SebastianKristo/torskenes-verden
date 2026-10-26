@@ -265,7 +265,7 @@ struct PaperShell: View {
                 // Prompt 29: «✦ Legger til i kalenderen …» og banneret «✓ Nina frisør · …» over hele appen (Quick29Views.swift).
                 Quick29Overlay()
             }
-            // Prompt 38: usynlig lag som lukker AI-svarboblen ved trykk utenfor og fanger trykket (Assist38.swift).
+            // Prompt 38/70: tidligere et usynlig lag over Hjem; nå bare pillen «Glimt svarte ↑» (Assist38.swift, Home70Assist.swift).
             .overlay { Assist38Catcher() }
             // Prompt 41: svar-pillen vokser til fullskjerm og blir Chat (Search41Pull.swift).
             .overlay { Pull41Overlay() }

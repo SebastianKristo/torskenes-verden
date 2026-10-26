@@ -105,9 +105,18 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/kal_widget_next" />
         </receiver>
-        <receiver android:name=".widget.KalAgendaReceiver" android:exported="true" android:enabled="true" android:label="Kalender · i dag og i morgen">
+        <receiver android:name=".widget.KalAgendaReceiver" android:exported="true" android:enabled="true" android:label="Kalender · agenda">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/kal_widget_agenda" />
+        </receiver>
+        <!-- Prompt 70: 4 × 2 og 4 × 4 måned (Material You / One UI). -->
+        <receiver android:name=".widget.KalWeek70Receiver" android:exported="true" android:enabled="true" android:label="Kalender · uke">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/kal_widget_week70" />
+        </receiver>
+        <receiver android:name=".widget.KalMonth70Receiver" android:exported="true" android:enabled="true" android:label="Kalender · måned">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/kal_widget_month70" />
         </receiver>
         <receiver android:name=".widget.KalClockReceiver" android:exported="true" android:enabled="true" android:label="Kalender · klokke">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>

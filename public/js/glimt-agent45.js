@@ -12,6 +12,7 @@
 // Klikkene håndteres her (document-delegert) og sendes tilbake til feltet via callbacks registrert med agentExtras(a, cb).
 import { normChoices60, choicePick60, convBody60 } from './convo60.js';
 import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './sched62.js'; // prompt 62: bekreftelseskort for faste oppgaver
+import { cal70Of, cal70Html, datePick70 } from './cal70.js'; // prompt 70: kort A (lagt i kalenderen, bytt kalender i kortet, Angre)
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
@@ -117,7 +118,9 @@ export function agentExtras(a, cb = {}, opts = {}) {
   const out = [];
   // Prompt 60: med valgknapper (choices) vises ikke de gamle valg-treffene (kind 'option') eller ask.options i tillegg.
   const dn62 = a.confirm ? null : done62(a); // prompt 62: kvitteringen viser oppgaven, så samme treff vises ikke to ganger
-  const res = (a.choices ? a.results.filter((r) => r.kind !== 'option') : a.results).filter((r) => !(dn62 && r.kind === 'schedule' && String(r.id) === String(dn62.schedule?.id)));
+  const c70 = a.confirm ? null : cal70Of(a); // prompt 70: kortet viser avtalen, så den vises ikke også som treff
+  const res = (a.choices ? a.results.filter((r) => r.kind !== 'option') : a.results).filter((r) => !(dn62 && r.kind === 'schedule' && String(r.id) === String(dn62.schedule?.id)) && !(c70 && r.kind === 'event' && String(r.id) === String(c70.eventId)));
+  if (c70) out.push(cal70Html(c70, { mode: opts.cal70 ?? (opts.dark ? 'in' : a.module === 'calendar' ? 'kal' : 'card') }));
   if (res.length) {
     out.push(`<div class="ga45-res">${res.slice(0, 8).map((r) => { const i = a.results.indexOf(r);
       const [kn, kc] = KIND[r.kind] ?? ['', '#7a7468'];
@@ -180,6 +183,7 @@ export function initAgent45() {
     if (b.dataset.ga60I != null) { // prompt 60: valgknapp → item.text + choice i samme samtale
       const pick = choicePick60(a.choices, a.choices?.items?.[+b.dataset.ga60I]);
       if (!pick) return;
+      if (datePick70(b, pick.text, (t) => cb.resend?.(t, {}, { label: t }))) return; // prompt 70: «Velg dato» → datovelger i kortet
       b.closest('.ga45-opts')?.querySelectorAll('button').forEach((x) => { x.disabled = true; });
       cb.resend?.(pick.text, {}, { choice: pick.choice ?? null, label: a.choices.items[+b.dataset.ga60I].label });
       return;
@@ -187,6 +191,9 @@ export function initAgent45() {
     if (b.dataset.ga45O != null) {
       const o = a.ask?.options?.[+b.dataset.ga45O];
       if (!o) return;
+      if (o.cancel) { cb.update?.({ ...a, ask: null, actions: [], done: [], failed: [], results: [], reply: 'Greit, jeg lot det være.' }); return; } // prompt 70: «Avbryt»
+      if (datePick70(b, o.text, (t) => cb.resend?.(t, {}))) return; // prompt 70: «Velg dato» → datovelger i kortet
+      if (a.ask.field === 'calendar' && o.id && a.ask.text) { cb.resend?.(a.ask.text, { calendarId: o.id }); return; }
       cb.resend?.(String(o.text ?? o.label ?? o.title ?? o), { selectedId: o.id ?? undefined }); // prompt 60: text (prompt 55) når den finnes
       return;
     }

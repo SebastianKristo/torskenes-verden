@@ -28,7 +28,7 @@ const DEF_ORDER = ['p_school', 'd_cal', ...TILES52, 'w52news', 'w52kal', 'w52bd'
 const OLD_HID = { d_cal: ['d_cal'], w52kal: ['d_kal'], w52bd: ['d_bday'], w52fam: ['d_pos'], p_energy: ['d_energy'], p_links: ['d_links'], d_media: ['d_media'], d_upcoming: ['d_upcoming'], d_media_hist: ['d_media_hist'], p_money: ['d_trading', 'd_eco'] };
 const LS = 'hl_home52';
 
-const H = { order: null, hidden: null, edit: false, drag: null, addOpen: false, data: {}, at: 0, loading: false };
+const H = { order: null, hidden: null, sz: {}, edit: false, drag: null, addOpen: false, data: {}, at: 0, loading: false };
 
 /* ---------------- Oppsett ---------------- */
 
@@ -51,19 +51,23 @@ function ensure() {
     // Nye kort som mangler i et lagret oppsett settes inn på standardplassen (flisene samlet).
     for (const id of DEF_ORDER) if (!order.includes(id)) { const i = DEF_ORDER.indexOf(id), prev = DEF_ORDER.slice(0, i).reverse().find((x) => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : 0, 0, id); }
     H.order = order; H.hidden = new Set((s.hidden ?? []).filter((id) => T[id]));
+    H.sz = Object.fromEntries(Object.entries(s.sz ?? {}).filter(([id, v]) => T[id] && (v === 'half' || v === 'full')));
   } else {
     H.order = [...DEF_ORDER];
     const hw = hiddenWidgets();
     H.hidden = new Set(Object.entries(OLD_HID).filter(([, L]) => L.every((x) => hw.has(x))).map(([id]) => id));
+    H.sz = {};
   }
 }
 async function persist() {
-  const v = { order: H.order, hidden: [...H.hidden] };
+  const v = { order: H.order, hidden: [...H.hidden], sz: { ...H.sz } }; // prompt 70: sz (halv/full) lagres ved siden av order og hidden
   try { localStorage.setItem(LS, JSON.stringify(v)); } catch { /* */ }
   try {
     // pages erstattes i sin helhet på serveren: les siste versjon først så andre sider (mer45hl …) beholdes.
     const cur = await api('/me/layout').catch(() => null);
-    const pages = { ...(cur?.pages ?? {}), pwa52hjem: v };
+    // Prompt 70: sz slås sammen med det som er lagret (ukjente nøkler beholdes), maks 40 nøkler (cardSizes70 på serveren).
+    const sz = Object.fromEntries(Object.entries({ ...(cur?.pages?.pwa52hjem?.sz ?? {}), ...v.sz }).filter(([, x]) => x === 'full' || x === 'half').slice(-40));
+    const pages = { ...(cur?.pages ?? {}), pwa52hjem: { ...v, sz } };
     const r = await api('/me/layout', { method: 'PUT', json: { pages } });
     store.me.layoutAll = { ...(store.me.layoutAll ?? {}), pages: r?.pages ?? pages };
   } catch { /* lagres lokalt */ }
@@ -152,10 +156,18 @@ function huske() {
 }
 const RENDER = { w52av: avgang, w52fin: finans, w52mat: middag, w52fam: familie, w52dom: domener, w52news: news, w52kal: kalender, w52bd: bursdag, w52bol: bolig, w52pr: prove, w52hus: huske };
 
+/* Prompt 70 (claude-code-widget-storrelse-mobil.md): størrelse per kort i redigering – håndtaket ↔ nede til høyre.
+   Halv → full: dra mer enn 40 px (uansett retning). Full → halv: dra mer enn 40 px mot venstre. Trykk bytter.
+   Snarveier er alltid full (Søk er ikke et kort her). Lagres som pages.pwa52hjem.sz = {id: 'half'|'full'}. */
+const FIXED = new Set(['p_links']);
+const isHalf = (id) => !FIXED.has(id) && (H.sz[id] ? H.sz[id] === 'half' : T[id][1] === 'h');
+const RZ = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/></svg>';
+const rzHtml = (id) => (FIXED.has(id) ? '' : `<div class="h52-rz" data-edc><button type="button" data-h52-rz="${id}" aria-label="Endre størrelse på ${esc(T[id][0])} – dra ut eller inn, eller trykk" title="${isHalf(id) ? 'Halv bredde' : 'Full bredde'}">${RZ}</button></div>`);
+const sizeCls = (id) => `${isHalf(id) ? 'half' : 'full'}${T[id][2] && isHalf(id) ? ' tall' : ''}`;
 function item(id) {
-  const [name, w, tall] = T[id];
+  const [name] = T[id];
   const body = RENDER[id] ? RENDER[id]() : card(id);
-  return `<div class="h52-i ${w === 'h' ? 'half' : 'full'}${tall ? ' tall' : ''}" data-h52="${id}">${H.edit ? `<button type="button" class="h52-x" data-h52-hide="${id}" aria-label="Skjul ${esc(name)}">−</button>` : ''}${body}</div>`;
+  return `<div class="h52-i ${sizeCls(id)}" data-h52="${id}">${H.edit ? `<button type="button" class="h52-x" data-h52-hide="${id}" aria-label="Skjul ${esc(name)}">−</button>${rzHtml(id)}` : ''}${body}</div>`;
 }
 function visible() { ensure(); return H.order.filter((id) => allowed(id) && !H.hidden.has(id)); }
 function hiddenList() { ensure(); return H.order.filter((id) => allowed(id) && H.hidden.has(id)); }
@@ -193,7 +205,7 @@ function enterEdit() {
   const r = document.querySelector('[data-h52-root]');
   if (!r) return;
   r.classList.add('edit');
-  r.querySelectorAll(':scope > [data-h52]').forEach((el) => { if (!el.querySelector(':scope > .h52-x')) el.insertAdjacentHTML('afterbegin', `<button type="button" class="h52-x" data-h52-hide="${el.dataset.h52}" aria-label="Skjul ${esc(T[el.dataset.h52][0])}">−</button>`); });
+  r.querySelectorAll(':scope > [data-h52]').forEach((el) => { if (!el.querySelector(':scope > .h52-x')) el.insertAdjacentHTML('afterbegin', `<button type="button" class="h52-x" data-h52-hide="${el.dataset.h52}" aria-label="Skjul ${esc(T[el.dataset.h52][0])}">−</button>${rzHtml(el.dataset.h52)}`); });
   const hid = hiddenList().length;
   document.querySelectorAll('.h52-bar,.h52-add').forEach((x) => x.remove());
   r.insertAdjacentHTML('afterend', `<div class="h52-bar" role="toolbar" aria-label="Rediger Hjem"><button type="button" class="h52-b" data-h52-add${hid ? '' : ' disabled'}>+ Legg til${hid ? ` (${hid})` : ''}</button><button type="button" class="h52-b ink" data-h52-done>Ferdig</button></div>`);
@@ -209,14 +221,38 @@ export function bindHome52() {
   let hold = 0, start = null;
   const root = () => document.querySelector('[data-h52-root]');
   document.addEventListener('pointerdown', (e) => {
-    if (e.target.closest?.('.h52-x,.h52-bar,.h52-add')) H.suppress = false;
+    if (e.target.closest?.('.h52-x,.h52-bar,.h52-add,.h52-rz')) H.suppress = false;
     const it = e.target.closest?.('[data-h52]');
-    if (!it || !root()?.contains(it) || e.target.closest('.h52-x')) return;
+    if (!it || !root()?.contains(it) || e.target.closest('.h52-x,[data-edc]')) return;
+    if (e.target.closest('[data-h52-rz]')) return;
     start = { x: e.clientX, y: e.clientY, id: it.dataset.h52, pid: e.pointerId };
     if (H.edit) { H.drag = { id: it.dataset.h52, moved: false, el: it }; return; }
     clearTimeout(hold);
     hold = setTimeout(() => { start = null; H.edit = true; H.suppress = true; haptic?.(20); enterEdit(); }, 560);
   });
+  // Prompt 70: håndtaket ↔ (pointer-lyttere på window under draget, touch-action:none på håndtaket).
+  document.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest?.('[data-h52-rz]');
+    if (!b || !H.edit || e.button > 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const id = b.dataset.h52Rz, el = b.closest('[data-h52]'), x0 = e.clientX, h0 = isHalf(id);
+    let cur = h0;
+    const set = (half) => { H.sz[id] = half ? 'half' : 'full'; if (el) { el.classList.toggle('half', half); el.classList.toggle('full', !half); el.classList.toggle('tall', half && !!T[id][2]); } b.title = half ? 'Halv bredde' : 'Full bredde'; };
+    const mv = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      const dx = ev.clientX - x0, w = h0 ? !(Math.abs(dx) > 40) : dx < -40;
+      if (w !== cur) { cur = w; set(w); haptic?.(8); }
+    };
+    const up = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      const dx = (ev.type === 'pointercancel' ? x0 : ev.clientX) - x0;
+      if (ev.type !== 'pointercancel' && Math.abs(dx) < 6) { cur = !h0; set(cur); haptic?.(8); }
+      H.suppress = true; // klikket etter slipp skal ikke åpne kortet
+      persist();
+    };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  }, true);
   document.addEventListener('pointermove', (e) => {
     if (start && !H.edit && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 8) { clearTimeout(hold); start = null; }
     if (!H.edit || !H.drag) return;

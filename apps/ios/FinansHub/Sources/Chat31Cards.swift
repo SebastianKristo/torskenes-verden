@@ -140,6 +140,7 @@ struct Chat31Card: View {
             case "packages": Chat31Packages(o: o, c: c)
             case "finance": Chat31Finance(o: o, c: c)
             case "tasks": Chat31Tasks(o: o, c: c)
+            case "cal70": if let d = Cal70Data.parse(o) { Cal70CardView(card: d, mode: .chat).id(d.eventId) } // prompt 70: kort A
             default: EmptyView()
             }
         }

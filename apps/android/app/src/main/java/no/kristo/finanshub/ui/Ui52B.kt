@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -190,7 +191,7 @@ internal fun PgBase52(vm: AppViewModel, content: @Composable () -> Unit) {
 internal val TILE_KEYS52 = listOf("h52av", "h52fi", "h52ma", "h52fa", "h52do")
 private val TILE_LABELS52 = mapOf("h52av" to "Avgang", "h52fi" to "Finans", "h52ma" to "Middag", "h52fa" to "Familie", "h52do" to "Domener")
 /** Halve fliser på telefon (fasit: h7, h9, h10, h11 og h13–h17 får grid-column auto). */
-private val HALF52 = setOf("h7", "h9", "h10", "h11") + TILE_KEYS52
+internal val HALF52 = setOf("h7", "h9", "h10", "h11") + TILE_KEYS52
 
 /** Kortlista for 3a: «Fliser» (hm) erstattes av de fem flisene som egne kort på samme plass. */
 internal fun homeSecs52(secs: List<PSec>): List<PSec> = secs.flatMap { s -> if (s.key == "hm") TILE_KEYS52.map { PSec(it, TILE_LABELS52.getValue(it)) } else listOf(s) }
@@ -246,10 +247,10 @@ internal fun LazyGridScope.homeGridSecs52(vm: AppViewModel, g52: Boolean, secs0:
 private val TILE_H52 = 150.dp
 private val SHAPE52 = RoundedCornerShape(24.dp)
 
-/** Én flis i 3a med fast høyde (rutenettet strekker ikke radene). */
+/** Én flis i 3a. Prompt 70 (ANDHOME70): h = Dp.Unspecified → innholdets høyde (raden i Home70.kt strekker begge likt). */
 @Composable
-private fun Tile52(vm: AppViewModel, k: String, h: Dp, body: @Composable (String) -> Unit = {}) {
-    val m = Modifier.fillMaxWidth().height(h)
+internal fun Tile52(vm: AppViewModel, k: String, h: Dp, body: @Composable (String) -> Unit = {}) {
+    val m = if (h == Dp.Unspecified) Modifier.fillMaxWidth().fillMaxHeight() else Modifier.fillMaxWidth().height(h)
     when (k) {
         "h52av" -> {
             LaunchedEffect(Unit) { while (true) { delay(30_000); if (!vm.ruterOpen && vm.b27.homeStops?.isNotEmpty() == true) runCatching { vm.refreshHomeDeps27() } } }

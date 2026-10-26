@@ -174,3 +174,17 @@ html[data-hl="2c"] .trk-err{color:#b23a2a}
 .trk-via{display:flex;flex-direction:column;gap:8px;min-width:0}
 .trk-via-k{font:600 10.5px var(--mono);letter-spacing:.12em;color:var(--text-2)}
 .trk-via .trk-chips{flex-wrap:wrap}
+
+/* Prompt 70 (claude-code-sporing-innstillinger.md): kilder og transportører ligger i Innstillinger → Moduler → Sporing.
+   Én rad nederst («Kilder, transportører og varsler · … · Innstillinger ›»); ⚙ i toppen på smal skjerm åpner samme side. */
+.trk-set70{margin-top:28px;width:100%;display:flex;align-items:center;gap:12px;padding:14px 4px;border:0;border-top:2px solid var(--text,currentColor);border-bottom:1px solid rgba(127,127,127,.25);background:transparent;color:var(--text,inherit);cursor:pointer;text-align:left;font:inherit}
+.trk-set70>span{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.trk-set70 b{font-size:14.5px;font-weight:600}
+.trk-set70 small{font-size:12.5px;color:var(--muted)}
+.trk-set70 em{flex:none;font-style:normal;font-weight:700;font-size:13px;color:var(--acc,#f59a8f)}
+.trk-set70:hover b{text-decoration:underline;text-underline-offset:3px}
+html[data-hl="2c"] .trk-set70{padding:14px 0;border-top-color:var(--ink);border-bottom-color:var(--rule)}
+html[data-hl="2c"] .trk-set70 small{color:var(--muted,#6b665c)}
+html[data-hl="2c"] .trk-set70 em{color:var(--acc,#b23a2a)}
+.trk-top .trk-gear70{display:none;width:36px;padding:0;justify-content:center;font-size:17px}
+@media (max-width:767px){.trk-top .trk-gear70{display:inline-flex;align-items:center}}

@@ -68,7 +68,7 @@ test('qwen3:8b: planleggeren via gaten → format:<JSON-skjema> → validert avt
   assert.equal(r.body.engine, 'ollama-json', JSON.stringify(r.body));
   assert.equal(r.body.model, 'qwen3:8b');
   assert.equal(r.body.actions[0].status, 'done');
-  assert.deepEqual([r.body.actions[0].args.title, r.body.actions[0].args.date, r.body.actions[0].args.start], ['Kino – Dune', '2027-10-12', '12:15']);
+  assert.deepEqual([r.body.actions[0].args.title, r.body.actions[0].args.date, r.body.actions[0].args.start], ['Kino: Dune', '2027-10-12', '12:15']);
   const b = fake.bodies.find((x) => x.format);
   assert.ok(b, 'format (JSON-skjema) sendt til Ollama');
   assert.equal(b.stream, true);

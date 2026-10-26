@@ -324,7 +324,8 @@ async function seriesOut(s) {
   return { id: s.id, kind: 'series', title: s.title, year: s.year ?? null, network: s.network ?? '', status: s.status === 'ended' ? 'ended' : 'continuing', statusLabel: s.status === 'ended' ? 'Avsluttet' : 'Fortsetter', overview: s.overview ?? '',
     poster: posterOf('sonarr', s.images, s.id), fanart: fanartOf('sonarr', s.images, s.id), color: artOf('sonarr', s.id), tvdbId: s.tvdbId ?? null, profileId: s.qualityProfileId ?? null, profile: await profName('sonarr', s.qualityProfileId),
     monitored: s.monitored !== false, monitor: s._monitor ?? null, seriesType: s.seriesType ?? 'standard', seriesTypeLabel: SERIES_TYPES43.find((x) => x[0] === s.seriesType)?.[1] ?? 'Standard', path: s.path ?? null, rootFolder: s.rootFolderPath ?? null,
-    episodes: { have, total, missing: Math.max(0, total - have) }, episodesText: `${have} av ${total} episoder${total - have > 0 ? ` · ${total - have} mangler` : ''}`, sizeOnDisk: st.sizeOnDisk ?? 0, sizeText: st.sizeOnDisk ? sizeText43(st.sizeOnDisk) : '0 GB', seasonCount: st.seasonCount ?? s.seasons?.length ?? 0 };
+    episodes: { have, total, missing: Math.max(0, total - have) }, episodesText: `${have} av ${total} episoder${total - have > 0 ? ` · ${total - have} mangler` : ''}`, sizeOnDisk: st.sizeOnDisk ?? 0, sizeText: st.sizeOnDisk ? sizeText43(st.sizeOnDisk) : '0 GB', seasonCount: st.seasonCount ?? s.seasons?.length ?? 0,
+    nextAiring: s.nextAiring ?? null, added: s.added ?? null }; // prompt 70: sortering «Neste episode» / «Sist lagt til» i Media → Bibliotek
 }
 async function seriesList() { return cached('sonarr:series', 60_000, () => arr('sonarr', 'GET', '/series')); }
 async function libSeries() {
@@ -410,7 +411,7 @@ async function movieOut(m, q = null) {
   const f = m.movieFile;
   const d = m.digitalRelease?.slice(0, 10) ?? null;
   return { id: m.id, kind: 'movie', title: m.title, year: m.year ?? null, overview: m.overview ?? '', poster: posterOf('radarr', m.images, m.id), fanart: fanartOf('radarr', m.images, m.id), color: artOf('radarr', m.id), tmdbId: m.tmdbId ?? null,
-    movieFileId: f?.id ?? null, canRedownload: !!m.hasFile, canDeleteFile: !!m.hasFile, // prompt 44
+    movieFileId: f?.id ?? null, canRedownload: !!m.hasFile, canDeleteFile: !!m.hasFile, added: m.added ?? null, // prompt 44 · prompt 70: added
     profileId: m.qualityProfileId ?? null, profile: await profName('radarr', m.qualityProfileId), monitored: m.monitored !== false, minimumAvailability: m.minimumAvailability ?? 'released',
     availabilityLabel: AVAILABILITY43.find((x) => x[0] === m.minimumAvailability)?.[1] ?? 'Utgitt digitalt', hasFile: !!m.hasFile, path: m.path ?? null, rootFolder: m.rootFolderPath ?? null,
     digitalRelease: d, inCinemas: m.inCinemas?.slice(0, 10) ?? null, physicalRelease: m.physicalRelease?.slice(0, 10) ?? null, note: (MOCK() && svcConf43('radarr').mock ? mockArt43('radarr', m.id)?.note : null) ?? (m.status === 'announced' && m.inCinemas ? `På kino ${dateText(m.inCinemas.slice(0, 10))}` : null),
@@ -551,8 +552,9 @@ async function grabRelease(b) {
 
 /* ---------------- Kommer snart ---------------- */
 
-async function calendarRaw(days) {
-  const today = osloDate();
+// Prompt 70 (MEDIA70): valgfri `from` (YYYY-MM-DD, maks ±1 år) så Media → Kalender kan bla mellom uker. Uten from: fra i dag som før.
+async function calendarRaw(days, from = null) {
+  const today = from ?? osloDate();
   const start = new Date(Date.parse(`${today}T00:00:00Z`) - 3 * 3600_000).toISOString(), end = new Date(Date.parse(`${addDays(today, days)}T00:00:00Z`) + 3 * 3600_000).toISOString();
   const [tv, mv] = await Promise.all([
     svcConf43('sonarr').on ? cached(`cal:s:${today}:${days}`, 60_000, () => arr('sonarr', 'GET', '/calendar', { query: { start, end, includeSeries: true, includeEpisodeFile: false, unmonitored: true } })).catch((e) => ({ error: e.message })) : null,
@@ -560,9 +562,11 @@ async function calendarRaw(days) {
   ]);
   return { today, tv, mv };
 }
-export async function upcoming43(days = 7) {
+const from70 = (f) => { const s = String(f ?? ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; const t = Date.parse(`${s}T12:00:00Z`); return Number.isFinite(t) && Math.abs(t - Date.now()) < 366 * 86400_000 ? s : null; };
+export async function upcoming43(days = 7, fromQ = null) {
   days = Math.max(1, Math.min(31, Math.round(+days) || 7));
-  const { today, tv, mv } = await calendarRaw(days);
+  const realToday = osloDate();
+  const { today, tv, mv } = await calendarRaw(days, from70(fromQ));
   const q = await queues().catch(() => null);
   const items = [];
   const last = addDays(today, days - 1);
@@ -584,7 +588,7 @@ export async function upcoming43(days = 7) {
   const daysOut = [];
   for (let i = 0; i < days; i++) {
     const d = addDays(today, i), it = items.filter((x) => x.date === d);
-    daysOut.push({ date: d, label: dayLabel(d, today), title: longDay(d), short: shortDay(d), today: i === 0, count: it.length, countText: it.length ? `${it.length} stk` : '', items: it });
+    daysOut.push({ date: d, label: dayLabel(d, realToday), title: longDay(d), short: shortDay(d), today: d === realToday, count: it.length, countText: it.length ? `${it.length} stk` : '', items: it });
   }
   const tq = await torrentsOut().catch(() => null);
   const active = tq ? tq.items.filter((t) => ['dl', 'stall', 'meta'].includes(t.status)) : [];
@@ -614,7 +618,7 @@ async function torrentsOut(filter = 'all') {
     const res = String(t.name).match(/(2160|1080|720|480)p/)?.[1];
     return { hash: t.hash, name: t.name, title, code, quality: res ? `${res}p` : '', kind, poster, color, open, size, sizeText: status === 'meta' || !size ? 'størrelse ukjent' : sizeText43(size), progress, progressText: `${Math.floor(progress)} %`,
       state: t.state, status, statusText: tStatusText(status, t), dlSpeed: t.dlspeed ?? 0, upSpeed: t.upspeed ?? 0, speedText: speedText43(t.dlspeed ?? 0), eta: t.eta ?? null, etaText: etaText43(t.eta), category: t.category ?? '', savePath: t.save_path ?? '',
-      queue: queueOrder.indexOf(t.hash) + 1 || null, seeds: t.num_seeds ?? 0, peers: t.num_leechs ?? 0, addedAt: t.added_on ? new Date(t.added_on * 1000).toISOString() : null, completedAt: t.completion_on > 0 ? new Date(t.completion_on * 1000).toISOString() : null,
+      queue: queueOrder.indexOf(t.hash) + 1 || null, ratio: Number.isFinite(+t.ratio) ? Math.round(+t.ratio * 100) / 100 : null, seeds: t.num_seeds ?? 0, peers: t.num_leechs ?? 0, addedAt: t.added_on ? new Date(t.added_on * 1000).toISOString() : null, completedAt: t.completion_on > 0 ? new Date(t.completion_on * 1000).toISOString() : null,
       forceStart: !!t.force_start, sequential: !!t.seq_dl, firstLast: !!t.f_l_piece_prio, paused: status === 'pause', done: status === 'seed', canToggle: status !== 'seed' };
   }).sort((a, b) => (a.done - b.done) || ((a.queue ?? 999) - (b.queue ?? 999)) || String(b.addedAt).localeCompare(String(a.addedAt)));
   const F = { all: () => true, active: (t) => ['dl', 'meta', 'check', 'queued'].includes(t.status), paused: (t) => t.status === 'pause', done: (t) => t.status === 'seed', stalled: (t) => t.status === 'stall' || t.status === 'error' };
@@ -1198,8 +1202,8 @@ media43Api.put('/access', ...A, async (c) => {
   return c.json({ userId: b.userId, allowed: mediaAllowed43(b.userId) });
 });
 // GET /api/media/upcoming?days=7 → {from, to, days:[{date, label, title, short, today, count, countText, items}], items:[Item], downloading:[Torrent ×3], downloadingCount, allPaused, speedText, sources}
-media43Api.get('/upcoming', ...G, H((c) => upcoming43(c.req.query('days') ?? 7)));
-media43Api.get('/calendar', ...G, H((c) => upcoming43(c.req.query('days') ?? 7)));
+media43Api.get('/upcoming', ...G, H((c) => upcoming43(c.req.query('days') ?? 7, c.req.query('from'))));
+media43Api.get('/calendar', ...G, H((c) => upcoming43(c.req.query('days') ?? 7, c.req.query('from'))));
 media43Api.get('/widget', ...G, H((c) => mediaWidget43(c.get('user'))));
 // Sonarr
 media43Api.get('/series', ...G, L('sonarr', () => libSeries()));

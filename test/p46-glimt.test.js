@@ -1,6 +1,6 @@
 // Prompt 46 (GLIMT46): Glimt-oppfølgingene bygget på motoren i server/glimt45/. Fast «i dag»: fredag 23. oktober 2026.
 // Abonnementer og faste utgifter, avslutningsfrist i Subscription OS + påminnelse, sammensatte værspørsmål, standardkalender,
-// rask time («Dune – Kino» + Colosseum Kino), Gjøremål uten omskriving av norsken, og Chat uten nett når Nettsøk er av.
+// rask time («Kino: Dune» + Colosseum Kino), Gjøremål uten omskriving av norsken, og Chat uten nett når Nettsøk er av.
 // Mock av Ollama/værtjeneste/stedssøk/film for determinisme. Testene sjekker lagrede/hentede data, ikke bare svartekst.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -346,10 +346,10 @@ test('kalender: standardkalenderen brukes (ingen «må være privat eller famili
   // Skrivebeskyttet → tydelig spørsmål, ingenting lagret.
   const n0 = localEvents(KARI).length;
   const ro = await agent(K, 'Legg til lunsj i helligdager-kalenderen fredag 12', { module: 'calendar' });
-  assert.match(ro.body.reply, /Kan ikke legge til i «Helligdager», den er skrivebeskyttet\. Legge i Fritid i stedet\?/);
+  assert.match(ro.body.reply, /^Helligdager er skrivebeskyttet\. Legg i Fritid\?$/);
   assert.equal(localEvents(KARI).length, n0);
   const unk = await agent(K, 'Legg til lunsj i jobbkalenderen fredag 12', { module: 'calendar' });
-  assert.match(unk.body.reply, /^Hvilken kalender\? /);
+  assert.match(unk.body.reply, /^Fant ingen kalender som heter «Jobb»\. Legg i Fritid\?$/); // prompt 70: aldri «Hvilken kalender?»-lista i teksten
   assert.ok(unk.body.ask.options.some((o) => o.id === 'personlig'));
   // Svar på spørsmålet: samme tekst med context.calendarId.
   const pick = await agent(K, 'Legg til lunsj i jobbkalenderen fredag 12', { module: 'calendar', context: { calendarId: 'personlig' } });
@@ -371,26 +371,26 @@ test('kalender-API: appens kalender-id i «calendar» (som appene sender) gir ik
   assert.equal((await K('/api/kalender/events', 'POST', { title: 'x', date: '2026-11-02', allDay: true, calendar: 'timeplan' })).status, 400, 'ukjent id som før');
 });
 
-/* ---------------- Rask time: «Dune – Kino» ---------------- */
+/* ---------------- Rask time: «Kino: Dune» (prompt 70, før «Dune – Kino») ---------------- */
 
 C46._setPlace46(async (name) => (/colosseum/i.test(name) ? { address: 'Fridtjof Nansens vei 6, 0369 Oslo', label: 'Fridtjof Nansens vei 6, Majorstuen', lat: 59.9296, lon: 10.7116 } : null));
 C46._setMovie46(async (t) => (/^dune$/i.test(t) ? { title: 'Dune', year: 2021, runtime: 150, poster: 'https://image.tmdb.org/t/p/w500/dune.jpg' } : null));
 
-test('rask time: forhåndsvisning (lagrer ingenting) og lagring – «Dune – Kino», Colosseum Kino, 17.12 17:30–20:15', async () => {
+test('rask time: forhåndsvisning (lagrer ingenting) og lagring – «Kino: Dune», Colosseum Kino, 17.12 17:30–20:00 (spilletid 2 t 30, prompt 70 uten +15)', async () => {
   const before = localEvents(OLA).length;
   const pv = await O('/api/glimt/agent/preview', 'POST', { text: 'vi skal se på dune på coluseum kino 17.12 kl 17:30', module: 'calendar', context: { today: TODAY, defaultCalendarId: 'personlig', local: { date: '2026-12-17', start: '17:30' } } });
   assert.equal(pv.status, 200, pv.text);
   assert.deepEqual([pv.body.title, pv.body.location, pv.body.address, pv.body.date, pv.body.start, pv.body.end, pv.body.calendarId, pv.body.reminder, pv.body.saved],
-    ['Dune – Kino', 'Colosseum Kino', 'Fridtjof Nansens vei 6, 0369 Oslo', '2026-12-17', '17:30', '20:15', 'personlig', 60, false]);
+    ['Kino: Dune', 'Colosseum Kino', 'Fridtjof Nansens vei 6, 0369 Oslo', '2026-12-17', '17:30', '20:00', 'personlig', 60, false]);
   assert.equal(pv.body.poster, 'https://image.tmdb.org/t/p/w500/dune.jpg');
-  assert.equal(pv.body.preview.line2, 'Torsdag 17. desember · 17:30–20:15 · 1 t før');
+  assert.equal(pv.body.preview.line2, 'Torsdag 17. desember · 17:30–20:00 · 1 t før');
   assert.equal(pv.body.actions[0].status, 'proposed');
   assert.equal(localEvents(OLA).length, before, 'forhåndsvisningen lagrer aldri');
   // Lagring etterpå (samme tekst) blir ikke stoppet av forhåndsvisningen (egen nøkkel).
   const r = await agent(O, 'vi skal se på dune på coluseum kino 17.12 kl 17:30', { module: 'calendar' });
   assert.equal(r.body.actions[0].status, 'done', r.text);
-  const e = localEvents(OLA).find((x) => x.title === 'Dune – Kino');
-  assert.deepEqual([e.date, e.start, e.end, e.location], ['2026-12-17', '17:30', '20:15', 'Colosseum Kino']);
+  const e = localEvents(OLA).find((x) => x.title === 'Kino: Dune');
+  assert.deepEqual([e.date, e.start, e.end, e.location], ['2026-12-17', '17:30', '20:00', 'Colosseum Kino']);
   // Flere eksempler uten modell.
   const t = await O('/api/glimt/agent/preview', 'POST', { text: 'tannlege hos Nina fredag kl 9', module: 'calendar' });
   assert.deepEqual([t.body.title, t.body.location, t.body.date, t.body.start], ['Tannlege', 'Nina', '2026-10-30', '09:00']);
@@ -408,7 +408,7 @@ test('rask time med modell: modellen bestemmer tittel og sted, teksten bestemmer
   try {
     const pv = await O('/api/glimt/agent/preview', 'POST', { text: 'vi skal se på dune på coluseum kino 17.12 kl 17:30', module: 'calendar' });
     assert.equal(pv.body.engine, 'ollama-json');
-    assert.deepEqual([pv.body.title, pv.body.location, pv.body.date, pv.body.start], ['Dune – Kino', 'Colosseum Kino', '2026-12-17', '17:30']);
+    assert.deepEqual([pv.body.title, pv.body.location, pv.body.date, pv.body.start], ['Kino: Dune', 'Colosseum Kino', '2026-12-17', '17:30']);
     P._setGlimtModel45(async () => ({ data: { intent: 'create', module: 'calendar', calls: [{ tool: 'calendar.create', args: { title: 'Tannlege', location: 'Storgata 1' } }] }, model: 'mock' }));
     const t = await O('/api/glimt/agent/preview', 'POST', { text: 'tannlege hos Nina fredag kl 9', module: 'calendar' });
     assert.equal(t.body.location, 'Nina', 'oppdiktet sted forkastes');

@@ -120,6 +120,8 @@ fun KalRoot(vm: KalVm, onBackToHomelab: () -> Unit) {
             Kal37Effects(vm)
             // Prompt 51: «Nytt i denne versjonen» over alt annet (bare når det finnes noe nytt).
             if (vm.session != null) News51Host(vm)
+            // Prompt 70: «Kalender på hjemskjermen» én gang etter oppdateringen.
+            if (vm.session != null) Intro70Host(vm)
         }
     }
 }

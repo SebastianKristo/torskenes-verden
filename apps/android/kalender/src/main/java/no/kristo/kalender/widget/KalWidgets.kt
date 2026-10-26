@@ -101,6 +101,7 @@ class KalSyncWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ct
             runCatching { KalRepo.sync(ctx, s, t.minusDays(7), t.plusDays(62)) }
         }
         KalSync.redraw(ctx)
+        KalSync.scheduleEdges(ctx)
         runCatching { KalNotify.reschedule(ctx) }
         return Result.success()
     }
@@ -126,9 +127,13 @@ object KalSync {
         }
     }
 
-    val ALL: List<GlanceAppWidget> get() = listOf(KalDateWidget(), KalNextWidget(), KalAgendaWidget(), KalClockWidget())
+    // Prompt 70: + 4 × 2 og 4 × 4 måned (KalWidgets70.kt).
+    val ALL: List<GlanceAppWidget> get() = listOf(KalDateWidget(), KalNextWidget(), KalAgendaWidget(), KalClockWidget(), KalWeek70Widget(), KalMonth70Widget())
 
     suspend fun redraw(ctx: Context) { ALL.forEach { w -> runCatching { w.updateAll(ctx) } } }
+
+    /** Prompt 70: også en tegning ved neste start/slutt på en hendelse og ved midnatt (KalEdge70). */
+    fun scheduleEdges(ctx: Context) = KalEdge70.schedule(ctx)
 }
 
 /* ---------------- Innholdet (fasitens wv() / R.wd) ---------------- */
@@ -160,7 +165,8 @@ private fun data(ctx: Context): WData {
     val d0 = KalStore.current(ctx)
     // Prompt 35: egne farger og «Skjul fra menyen» gjelder også widgetene.
     val d = d0.copy(cals = no.kristo.kalender.cals35(ctx, d0.cals))
-    val hid = no.kristo.kalender.hiddenAll35(ctx)
+    // Prompt 70: Innstillinger → Widgets (kalendere som tas med) gjelder også neste- og klokke-widgeten.
+    val hid = no.kristo.kalender.hiddenAll35(ctx) + KalW70Prefs.off(ctx)
     return WData(d, d.withOverrides(ctx).filter { it.cal !in hid }, KalPrefs.weather(ctx), no.kristo.kalender.Kal35Prefs.sunStart(ctx))
 }
 
@@ -194,11 +200,6 @@ private fun Tx(text: String, size: TextUnit, color: ColorProvider, weight: FontW
 @Composable
 private fun ColumnScope.Grow() = Spacer(GlanceModifier.defaultWeight())
 
-@Composable
-private fun Stripe(c: Long, h: Dp) = Box(GlanceModifier.width(4.dp).height(h).cornerRadius(2.dp).background(fixed(c))) {}
-
-private fun wxText(w: no.kristo.kalender.KWx?): String = w?.let { (WEMO[wkd(it.c)] ?: "") + " " + it.hi + "° / " + it.lo + "°" } ?: ""
-
 /* ---------------- 2 × 2 dato ---------------- */
 
 class KalDateWidget : GlanceAppWidget() {
@@ -206,23 +207,10 @@ class KalDateWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val st by KalStore.data.collectAsState()
-            val w = data(context).also { st.hashCode() }
-            DateBody(w)
+            // Prompt 70: Material You / One UI-designet (KalWidgets70.kt → Small70).
+            val w = W70(context).also { st.hashCode() }
+            androidx.glance.GlanceTheme { Small70(w) }
         }
-    }
-}
-
-@Composable
-private fun DateBody(w: WData) {
-    val ctx = LocalContext.current
-    val T = w.T
-    Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(P.card).padding(16.dp).clickable(open(ctx, "kalender://dag/$T"))) {
-        Tx(WD[T.jsDay].uppercase(), 10.5.sp, P.acc, FontWeight.Bold, FontFamily.Monospace)
-        Tx("${T.dayOfMonth}", 52.sp, P.ink, FontWeight.Medium, FontFamily.Serif)
-        // Prompt 35: «oktober 2026 · uke 43».
-        Tx(MN[T.monthValue - 1] + " " + T.year + " · uke " + w.wk, 12.sp, P.mut)
-        Grow()
-        if (w.wx != null) Tx(wxText(w.wx), 13.sp, P.ink2, FontWeight.Medium, FontFamily.Monospace)
     }
 }
 
@@ -256,51 +244,14 @@ private fun NextBody(w: WData) {
 /* ---------------- 4 × 3 I dag og i morgen ---------------- */
 
 class KalAgendaWidget : GlanceAppWidget() {
-    override val sizeMode: SizeMode = SizeMode.Exact
+    // Prompt 70: skalerbar agenda (SizeMode.Responsive) i Material You / One UI-stil (KalWidgets70.kt → Agenda70).
+    override val sizeMode: SizeMode = SizeMode.Responsive(AGENDA_SIZES)
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val st by KalStore.data.collectAsState()
-            val w = data(context).also { st.hashCode() }
-            AgendaBody(w)
+            val w = W70(context).also { st.hashCode() }
+            androidx.glance.GlanceTheme { Agenda70(w) }
         }
-    }
-}
-
-@Composable
-private fun AgendaBody(w: WData) {
-    val ctx = LocalContext.current
-    val size = LocalSize.current
-    val rows = w.up.filter { !it.d.isAfter(w.T.plusDays(1)) }
-    // Plass: overskrift ca. 48 dp, rad ca. 44 dp.
-    val max = ((size.height - 26.dp - 48.dp) / 44.dp).toInt().coerceIn(1, 5)
-    Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(P.card).padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 10.dp)
-        .clickable(open(ctx, "kalender://dag/${w.T}"))) {
-        Row(GlanceModifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Tx("I dag og i morgen", 22.sp, P.ink, FontWeight.Medium, FontFamily.Serif, modifier = GlanceModifier.defaultWeight())
-            Tx("UKE " + w.wk, 11.5.sp, P.ink2, FontWeight.Bold, FontFamily.Monospace)
-            Spacer(GlanceModifier.width(10.dp))
-            Box(GlanceModifier.size(36.dp).cornerRadius(18.dp).background(P.ink).clickable(open(ctx, "kalender://ny")), contentAlignment = Alignment.Center) {
-                Tx("+", 20.sp, P.bg, FontWeight.Bold)
-            }
-        }
-        if (rows.isEmpty()) {
-            Tx("Ingenting planlagt i dag eller i morgen.", 13.sp, P.mut, maxLines = 2)
-            return@Column
-        }
-        // Én Column per rad (skillelinje + rad): Glance tillater maks 10 barn i en Column.
-        rows.take(max).map(w::row).forEach { r -> Column(GlanceModifier.fillMaxWidth()) {
-            Box(GlanceModifier.fillMaxWidth().height(1.dp).background(P.line2)) {}
-            Row(GlanceModifier.fillMaxWidth().padding(vertical = 7.dp).clickable(open(ctx, evLink(r.ev))), verticalAlignment = Alignment.CenterVertically) {
-                Stripe(r.c, 28.dp)
-                Spacer(GlanceModifier.width(10.dp))
-                Column(GlanceModifier.defaultWeight()) {
-                    Tx(r.t, 13.5.sp, P.ink, FontWeight.Bold)
-                    Tx(r.loc, 11.5.sp, P.mut)
-                }
-                Spacer(GlanceModifier.width(8.dp))
-                Tx(r.whenL + (if (r.ev?.all == true) "Hele dagen" else hm(r.ev?.s ?: 0)), 11.5.sp, P.mut, FontWeight.Medium, FontFamily.Monospace)
-            }
-        } }
     }
 }
 
@@ -344,6 +295,7 @@ abstract class KalReceiver : GlanceAppWidgetReceiver() {
         super.onEnabled(context)
         KalSync.schedule(context)
         KalSync.refreshNow(context)
+        KalSync.scheduleEdges(context)
     }
 }
 

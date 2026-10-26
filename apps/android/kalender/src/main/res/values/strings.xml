@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Kalender</string>
-    <string name="kal_widget_date_desc">Dato, uke og vær</string>
+    <string name="kal_widget_date_desc">Ukedag, dato og neste hendelse</string>
     <string name="kal_widget_next_desc">Neste hendelse (mørk)</string>
-    <string name="kal_widget_agenda_desc">I dag og i morgen, med + for ny hendelse</string>
+    <string name="kal_widget_agenda_desc">Agenda: i dag, i morgen og dagene etter, med + Ny (kan skaleres)</string>
+    <string name="kal_widget_week70_desc">Dato og uke med de tre neste hendelsene</string>
+    <string name="kal_widget_month70_desc">Måneden med ‹ ›, + og de to neste hendelsene</string>
     <string name="kal_widget_clock_desc">Stor klokke, dato · vær og neste hendelse (også låseskjerm der telefonen støtter det)</string>
     <string name="kal_shortcut_new">Ny hendelse</string>
     <string name="kal_shortcut_new_long">Ny hendelse med Glimt</string>

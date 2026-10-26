@@ -7,7 +7,10 @@
 //  - Mikrofonen virker bare i en sikker kontekst (https eller localhost). Over http på hjemmenettet sier vi det i stedet for å feile.
 //  - AI-kontroll: kortet «Tale til tekst» (status for motorene; admin: adresse/nøkkel og test av NB-Whisper) i [data-v54-ai].
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-const MIC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+// Prompt 70 (claude-code-mikrofon-sokefelt.md): nytt ikon – kapsel 6×11,5 (radius 3) + bue + fot, strek 1,9, i tekstfargen.
+const MIC = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><rect x="9" y="3" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M9 21h6"/></svg>';
+const XIC = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const UPIC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
 const MAX_MS = 60_000, HOLD_MS = 350, MIN_MS = 400;
 const LS_OK = 'voice54_ok';
 
@@ -19,17 +22,39 @@ const CSS = `
 .v54-mic,[data-ch-mic]{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 @keyframes v54p{0%,100%{box-shadow:0 0 0 0 rgba(178,58,42,.45)}50%{box-shadow:0 0 0 7px rgba(178,58,42,0)}}
 @media (prefers-reduced-motion:reduce){.v54-mic.v54-on,.ch-mic.v54-on{animation:none}}
-/* Prompt 50b (claude-code-web-mikrofonknapp.md): mikrofonen i søkefeltet på Dashboard, mellom «✦ AI» og «Søk». «.sbar button»
-   (app.css) ga før fylt blå sirkel og padding 0 20px som skjøv ikonet mot høyre – derfor høyere spesifisitet her. */
-form[data-search].sbar button.v54-mic{flex:none;box-sizing:border-box;width:40px;height:40px;min-width:40px;margin:0;padding:0;border-radius:50%;
-  border:1px solid #e4ddcf;background:transparent;color:#1b1a17;display:grid;place-items:center;line-height:0;font-size:0;cursor:pointer;
-  box-shadow:none;transition:background-color .18s,color .18s,border-color .18s}
-form[data-search].sbar button.v54-mic svg{display:block;width:18px;height:18px}
-form[data-search].sbar button.v54-mic:hover{background:#f3efe6}
-form[data-search].sbar button.v54-mic.v54-on{background:#b23a2a!important;border-color:#b23a2a;color:#fff!important}
-html[data-mode="dark"] form[data-search].sbar button.v54-mic:not(.v54-on),html:not([data-hl="2c"]) form[data-search].sbar:is(.dark,.wide) button.v54-mic:not(.v54-on){border-color:rgba(255,255,255,.18);color:inherit}
-html[data-mode="dark"] form[data-search].sbar button.v54-mic:not(.v54-on):hover,html:not([data-hl="2c"]) form[data-search].sbar:is(.dark,.wide) button.v54-mic:not(.v54-on):hover{background:rgba(255,255,255,.08)}
-@media (max-width:767px){form[data-search].sbar button.v54-mic{display:none}} /* som før: knappene i søkefeltet er skjult på smal skjerm (app.css) */
+/* Prompt 70 (claude-code-mikrofon-sokefelt.md): mikrofonen står mellom tekstfeltet og «✦ AI» – 36 px rund trykkflate uten
+   bakgrunn, lys bakgrunn ved trykk/hover. Vises også på smal skjerm. «.sbar button» (app.css) skjuler knappene på mobil og
+   gir fylt sirkel på PC – derfor høyere spesifisitet her. */
+form[data-search].sbar button.v54-mic{flex:none;box-sizing:border-box;width:36px;height:36px;min-width:36px;margin:0 -2px;padding:0;border-radius:50%;
+  border:0;background:transparent;color:inherit;display:grid;place-items:center;line-height:0;font-size:0;cursor:pointer;box-shadow:none;transition:background-color .18s}
+form[data-search].sbar button.v54-mic svg{display:block;width:20px;height:20px}
+form[data-search].sbar button.v54-mic:is(:hover,:active){background:var(--v54-btn,rgba(127,127,127,.14))}
+html[data-hl="2c"] form[data-search].sbar{--v54-btn:var(--pp)}
+html[data-hl="2c"] .p-search .sbar button.v54-mic{color:var(--ink)}
+form[data-search].sbar.v54-away{display:none!important}
+/* Opptakskortet: søkefeltet utvides til et kort i samme farge (tekst øverst, × · bølgeform · tid · ■ · ↑ nederst). */
+.v54-card{box-sizing:border-box;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:12px;padding:16px 10px 10px 18px;border-radius:26px;
+  background:var(--v54-card,#fff);color:var(--v54-ink,#1b1a17);box-shadow:0 10px 30px -14px rgba(0,0,0,.35);text-align:left;
+  --v54-btn:color-mix(in srgb,currentColor 9%,transparent);--v54-mut:color-mix(in srgb,currentColor 55%,transparent);
+  transform-origin:50% 0;animation:v54in .25s cubic-bezier(.2,.8,.2,1)}
+html[data-hl="2c"] .v54-card{--v54-btn:var(--pp)}
+@keyframes v54in{from{opacity:0;transform:scaleY(.5)}to{opacity:1;transform:none}}
+.v54-card .v54-txt{min-height:24px;padding-right:8px;font:500 17px/1.4 Manrope,Outfit,system-ui,sans-serif;text-wrap:pretty;overflow-wrap:anywhere}
+.v54-card .v54-ph{color:var(--v54-mut)}
+.v54-card .v54-caret{display:inline-block;width:2px;height:20px;margin-left:2px;vertical-align:-4px;background:currentColor;animation:v54blink 1.06s steps(1) infinite}
+@keyframes v54blink{50%{opacity:0}}
+.v54-card .v54-ctl{display:flex;align-items:center;gap:8px}
+.v54-card button.v54-cb{flex:none;box-sizing:border-box;width:40px;height:40px;min-width:40px;margin:0;padding:0;border:0;border-radius:20px;background:var(--v54-btn);color:inherit;
+  display:grid;place-items:center;cursor:pointer;box-shadow:none;-webkit-tap-highlight-color:transparent}
+.v54-card button.v54-cb:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.v54-card button.v54-send{background:#c8633f;color:#fff}
+.v54-card button.v54-cb[disabled]{opacity:.45;cursor:default}
+.v54-card .v54-sq{width:13px;height:13px;border-radius:3px;background:currentColor}
+.v54-card .v54-wave{flex:1;min-width:0;display:flex;align-items:center;gap:10px}
+.v54-card .v54-bars{flex:1;min-width:0;height:24px;display:flex;align-items:center;justify-content:flex-end;gap:3.5px;overflow:hidden}
+.v54-card .v54-bars i{flex:none;width:2.5px;height:22px;border-radius:2px;background:currentColor;transform:scaleY(.14);opacity:.25;will-change:transform}
+.v54-card .v54-time{flex:none;min-width:30px;font:600 12px 'IBM Plex Mono',ui-monospace,monospace;color:var(--v54-mut);font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.v54-card,.v54-card .v54-caret{animation:none}}
 .v54-pill{position:fixed;z-index:2147481500;max-width:min(420px,calc(100vw - 32px));padding:8px 14px;border-radius:999px;background:#11141b;color:#eef0f4;font:500 13px/1.35 Outfit,Geist,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.3);pointer-events:none}
 .v54-pill b{font-weight:600}.v54-pill .v54-dot{display:inline-block;width:8px;height:8px;border-radius:4px;background:#f05a46;margin-right:8px;vertical-align:1px}
 .v54-ov{position:fixed;inset:0;z-index:2147481600;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -96,10 +121,101 @@ function confirmMic() {
 
 /* ---------------- Opptak ---------------- */
 
-const R = { state: 'idle', btn: null, target: null, mr: null, stream: null, chunks: [], t0: 0, timer: 0, tick: 0, hold: false, cancel: false };
+const R = { state: 'idle', btn: null, target: null, mr: null, stream: null, chunks: [], t0: 0, timer: 0, tick: 0, hold: false, cancel: false, card: null, form: null, after: 'field', ac: null };
 const setBtn = (cls) => { if (!R.btn) return; R.btn.classList.toggle('v54-on', cls === 'on'); R.btn.classList.toggle('v54-busy', cls === 'busy'); R.btn.setAttribute('aria-pressed', String(cls === 'on')); };
 
-async function start(btn, target, hold) {
+/* ---------------- Prompt 70: opptakskortet i søkefeltet (claude-code-mikrofon-sokefelt.md) ----------------
+   Motoren er den samme som før (opptak → POST /api/voice53/transcribe på serveren). Teksten kan derfor ikke vises live:
+   «Snakk nå …» mens man snakker, «Skriver ned …» etter ■ (og ↑), og teksten settes inn når svaret kommer.
+   Bølgeformen følger lydnivået fra mikrofonen (AnalyserNode) og tegnes med egen timer (bare transform/opacity per strek). */
+const W = { ctx: null, an: null, buf: null, id: 0, hist: [], els: [], t0: 0 };
+const fmt = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+function cardHtml() {
+  return `<div class="v54-txt" data-v54-txt aria-live="polite"><span class="v54-ph">Snakk nå …</span><span class="v54-caret" aria-hidden="true"></span></div>
+    <div class="v54-ctl"><button type="button" class="v54-cb" data-v54-x aria-label="Avbryt opptaket">${XIC}</button>
+      <span class="v54-wave"><span class="v54-bars" data-v54-bars aria-hidden="true"></span><span class="v54-time" data-v54-time>0:00</span></span>
+      <button type="button" class="v54-cb" data-v54-stop aria-label="Stopp opptaket – teksten legges i søkefeltet"><span class="v54-sq"></span></button>
+      <button type="button" class="v54-cb v54-send" data-v54-send aria-label="Send">${UPIC}</button></div>`;
+}
+function attachCard(form) {
+  css();
+  const fs = getComputedStyle(form), is = form.q ? getComputedStyle(form.q) : fs;
+  let bg = fs.backgroundColor;
+  if (!bg || /rgba\(0, 0, 0, 0\)|transparent/.test(bg)) bg = html2c() ? (document.documentElement.dataset.mode === 'dark' ? '#211e18' : '#fff') : '#1d2230';
+  const w = form.getBoundingClientRect().width;
+  let card = R.card;
+  if (!card) {
+    card = document.createElement('div');
+    card.className = 'v54-card'; card.dataset.v54Card = '';
+    card.setAttribute('role', 'group'); card.setAttribute('aria-label', 'Opptak – snakk inn søket');
+    card.innerHTML = cardHtml();
+  }
+  card.style.setProperty('--v54-card', bg);
+  card.style.setProperty('--v54-ink', is.color || fs.color);
+  if (w > 0) card.style.maxWidth = `${Math.round(w)}px`;
+  form.classList.add('v54-away');
+  form.after(card);
+  R.card = card; R.form = form;
+  return card;
+}
+const html2c = () => document.documentElement.dataset.hl === '2c';
+function closeCard() {
+  waveStop();
+  R.card?.remove();
+  for (const f of document.querySelectorAll('form[data-search].v54-away')) f.classList.remove('v54-away');
+  R.card = null;
+}
+function cardText(text, ph = false) {
+  const t = R.card?.querySelector('[data-v54-txt]');
+  if (!t) return;
+  t.innerHTML = `${ph ? `<span class="v54-ph">${esc(text)}</span>` : esc(text)}<span class="v54-caret" aria-hidden="true"></span>`;
+}
+function waveStart(stream) {
+  waveStop();
+  const bars = R.card?.querySelector('[data-v54-bars]');
+  if (!bars) return;
+  const n = Math.max(12, Math.floor(((bars.getBoundingClientRect().width || 200) + 3.5) / 6));
+  bars.innerHTML = '<i></i>'.repeat(n);
+  W.els = [...bars.children];
+  W.hist = new Array(n).fill(null); W.hist[n - 1] = 'S'; // den høye streken der opptaket startet ruller mot venstre
+  W.t0 = Date.now();
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    W.ctx = new AC();
+    const src = W.ctx.createMediaStreamSource(stream);
+    W.an = W.ctx.createAnalyser(); W.an.fftSize = 1024;
+    src.connect(W.an);
+    W.buf = new Float32Array(W.an.fftSize);
+  } catch { W.ctx = null; W.an = null; }
+  const time = R.card.querySelector('[data-v54-time]');
+  const tick = () => {
+    let v = 0;
+    if (W.an) {
+      W.an.getFloatTimeDomainData(W.buf);
+      let sum = 0; for (let i = 0; i < W.buf.length; i++) sum += W.buf[i] * W.buf[i];
+      v = Math.min(1, Math.sqrt(Math.sqrt(sum / W.buf.length)) * 2.2); // RMS → 0–1 (rot gjør tale tydelig og stillhet lav)
+    }
+    W.hist.push(v); W.hist.shift();
+    for (let i = 0; i < W.els.length; i++) {
+      const x = W.hist[i], el = W.els[i];
+      // Høyde i px (av 22): start 24, høy strek 8–22 når man snakker, prikk 3–5 i stillhet. Bare transform og opacity endres.
+      const h = x === 'S' ? 24 : x == null ? 3 : x > 0.55 ? 8 + x * 14 : x > 0.25 ? 5 : 3;
+      el.style.transform = `scaleY(${(h / 22).toFixed(3)})`;
+      el.style.opacity = x === 'S' ? '1' : x == null ? '.25' : x > 0.55 ? '1' : '.55';
+    }
+    if (time) time.textContent = fmt(Date.now() - W.t0);
+  };
+  tick();
+  W.id = setInterval(tick, 90); // ≈ 11 oppdateringer i sekundet
+}
+function waveStop() {
+  clearInterval(W.id); W.id = 0;
+  try { W.ctx?.close(); } catch { /* */ }
+  W.ctx = null; W.an = null; W.buf = null;
+}
+const isSearchBtn = (btn) => !!btn?.matches?.('[data-v54-mic]') && !!btn.closest('form[data-search]');
+
+async function start(btn, target, hold, kb = false) {
   if (R.state !== 'idle') return;
   if (!canRecord()) {
     say(window.isSecureContext ? 'Nettleseren kan ikke ta opp lyd her.' : '<b>Mikrofonen virker bare over https.</b> Åpne Homelab via https-adressen (eller appen) for å snakke.', btn, 6000);
@@ -116,60 +232,95 @@ async function start(btn, target, hold) {
   }
   const type = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm'].find((t) => MediaRecorder.isTypeSupported?.(t));
   const mr = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
-  Object.assign(R, { state: 'rec', btn, target, mr, stream, chunks: [], t0: Date.now(), hold: hold && !released, cancel: false });
+  const form = isSearchBtn(btn) ? btn.closest('form[data-search]') : null;
+  Object.assign(R, { state: 'rec', btn, target, mr, stream, chunks: [], t0: Date.now(), hold: hold && !released, cancel: false, after: 'field', form });
   mr.ondataavailable = (e) => { if (e.data?.size) R.chunks.push(e.data); };
   mr.onstop = () => finish();
   mr.start(250);
-  setBtn('on');
-  const show = () => say(`<span class="v54-dot"></span><b>Lytter</b> ${Math.floor((Date.now() - R.t0) / 1000)} s · ${R.hold ? 'slipp for å sende' : 'trykk igjen for å stoppe'} · Esc avbryter`, R.btn);
-  show();
-  R.tick = setInterval(show, 1000);
+  if (form) {
+    // Søkefeltet blir til opptakskortet (ingen egen «Lytter …»-rad). Tastaturet lukkes, lett haptikk.
+    if (document.activeElement?.blur && form.contains(document.activeElement)) document.activeElement.blur();
+    R.target = () => R.form?.q ?? null;
+    attachCard(form);
+    waveStart(stream);
+    try { navigator.vibrate?.(10); } catch { /* */ }
+    if (kb) R.card.querySelector('[data-v54-stop]')?.focus({ preventScroll: true }); // fra tastaturet: fokus videre til ■
+  } else {
+    setBtn('on');
+    const show = () => say(`<span class="v54-dot"></span><b>Lytter</b> ${Math.floor((Date.now() - R.t0) / 1000)} s · ${R.hold ? 'slipp for å sende' : 'trykk igjen for å stoppe'} · Esc avbryter`, R.btn);
+    show();
+    R.tick = setInterval(show, 1000);
+  }
   R.timer = setTimeout(() => stop(), MAX_MS);
 }
-function stop(cancel = false) {
+function stop(cancel = false, after = 'field') {
+  if (R.state === 'busy' && cancel) { R.cancel = true; R.ac?.abort(); return; } // × mens teksten skrives ned
   if (R.state !== 'rec') return;
-  R.cancel = cancel;
+  R.cancel = cancel; R.after = after;
   clearTimeout(R.timer); clearInterval(R.tick);
   R.state = 'stopping';
+  waveStop();
   try { R.mr.stop(); } catch { finish(); }
 }
 async function finish() {
   R.stream?.getTracks().forEach((t) => t.stop());
-  const ms = Date.now() - R.t0, btn = R.btn, target = R.target, mime = R.mr?.mimeType || 'audio/webm';
+  const ms = Date.now() - R.t0, btn = R.btn, target = R.target, mime = R.mr?.mimeType || 'audio/webm', card = !!R.card, after = R.after;
   const blob = new Blob(R.chunks, { type: mime });
   Object.assign(R, { mr: null, stream: null, chunks: [] });
-  if (R.cancel) { setBtn(''); R.state = 'idle'; R.btn = null; hide(); return; }
-  if (ms < MIN_MS || blob.size < 600) { setBtn(''); R.state = 'idle'; R.btn = null; say('For kort opptak – hold inne mens du snakker, eller trykk én gang for å starte.', btn, 4000); return; }
+  const anchor = () => (R.form?.isConnected ? R.form : btn);
+  const done = () => { setBtn(''); const f = R.form; closeCard(); R.state = 'idle'; R.btn = null; R.form = null; R.ac = null; return f; };
+  if (R.cancel) { const f = done(); hide(); if (card) f?.q?.focus({ preventScroll: true }); return; }
+  if (ms < MIN_MS || blob.size < 600) { const a = anchor(); done(); say('For kort opptak – hold inne mens du snakker, eller trykk én gang for å starte.', a, 4000); return; }
   R.state = 'busy'; setBtn('busy');
-  say('<b>Tolker</b> talen …', btn);
+  if (card) {
+    cardText('Skriver ned …', true);
+    R.card?.querySelectorAll('[data-v54-stop],[data-v54-send]').forEach((b) => { b.disabled = true; });
+  } else say('<b>Tolker</b> talen …', btn);
+  R.ac = new AbortController();
   try {
     const fd = new FormData();
     fd.append('file', blob, `tale.${/mp4/.test(mime) ? 'm4a' : /ogg/.test(mime) ? 'ogg' : 'webm'}`);
     fd.append('language', 'auto');
     fd.append('hint', appLang());
-    const r = await fetch('/api/voice53/transcribe', { method: 'POST', body: fd, credentials: 'same-origin' });
+    const r = await fetch('/api/voice53/transcribe', { method: 'POST', body: fd, credentials: 'same-origin', signal: R.ac.signal });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(j.error || `Feil ${r.status}`), { status: r.status });
+    if (R.cancel) throw Object.assign(new Error('avbrutt'), { name: 'AbortError' });
     const text = String(j.text ?? '').trim();
-    if (!text) say(`Hørte ingen ord · ${esc(j.engine_label ?? '')}`, btn, 4000);
+    const f = card ? done() : null;
+    if (!text) say(`Hørte ingen ord · ${esc(j.engine_label ?? '')}`, f ?? btn, 4000);
     else {
-      insert(target, text);
-      say(`<b>${esc(j.engine_label ?? j.engine ?? 'Tale til tekst')}</b> · ${esc(j.language_label ?? j.language ?? '')}${j.detected?.source === 'detected' ? ' (oppdaget)' : ''}`, btn, 5000);
+      insert(card ? f?.q : target, text, !(card && after === 'send')); // kortet: feltet som var der (R.form er nullstilt av done)
+      // ↑ Send: samme som Enter i feltet. ■ Stopp: teksten står i feltet så den kan rettes.
+      if (card && after === 'send' && f?.isConnected) { if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }
+      else say(`<b>${esc(j.engine_label ?? j.engine ?? 'Tale til tekst')}</b> · ${esc(j.language_label ?? j.language ?? '')}${j.detected?.source === 'detected' ? ' (oppdaget)' : ''}`, f ?? btn, 4000);
     }
   } catch (e) {
-    say(`Tale til tekst: ${esc(e.message)}`, btn, 8000);
+    const f = card ? done() : null;
+    if (e.name === 'AbortError') { hide(); f?.q?.focus({ preventScroll: true }); return; }
+    say(`Tale til tekst: ${esc(e.message)}`, f ?? btn, 8000);
     if (e.status === 503 || e.status === 422) backends(true);
-  } finally { setBtn(''); R.state = 'idle'; R.btn = null; }
+  } finally { if (R.state === 'busy') { setBtn(''); R.state = 'idle'; R.btn = null; R.ac = null; } }
 }
-function insert(target, text) {
+function insert(target, text, focus = true) {
   const el = typeof target === 'function' ? target() : target;
   if (!el) return;
   const cur = el.value ?? '';
   el.value = `${cur}${cur && !/\s$/.test(cur) ? ' ' : ''}${text}`;
   el.dispatchEvent(new Event('input', { bubbles: true }));
+  if (!focus) return;
   el.focus({ preventScroll: true });
   try { el.setSelectionRange(el.value.length, el.value.length); } catch { /* */ }
 }
+// Knappene i kortet: × avbryter (forkaster), ■ stopper og legger teksten i feltet, ↑ stopper og sender med en gang.
+document.addEventListener('click', (e) => {
+  const c = e.target.closest?.('[data-v54-card]');
+  if (!c) return;
+  e.preventDefault(); e.stopPropagation();
+  if (e.target.closest('[data-v54-x]')) { try { navigator.vibrate?.(6); } catch { /* */ } stop(true); return; }
+  if (e.target.closest('[data-v54-stop]')) { stop(false, 'field'); return; }
+  if (e.target.closest('[data-v54-send]')) { stop(false, 'send'); }
+}, true);
 
 /* ---------------- Knappene (Glimt-chatten og Glimt-søket) ---------------- */
 
@@ -205,10 +356,10 @@ document.addEventListener('click', (e) => {
   const btn = e.target.closest?.('[data-ch-mic],[data-v54-mic]');
   if (!btn || !ours(btn)) return;
   e.preventDefault(); e.stopPropagation(); // chat.js sin mic() skal ikke også starte
-  if (e.detail === 0) { if (R.state === 'rec') stop(); else start(btn, targetOf(btn), false); } // tastatur (Enter/mellomrom)
+  if (e.detail === 0) { if (R.state === 'rec') stop(); else start(btn, targetOf(btn), false, true); } // tastatur (Enter/mellomrom)
 }, true);
 document.addEventListener('contextmenu', (e) => { if (e.target.closest?.('[data-ch-mic],[data-v54-mic]')) e.preventDefault(); }, true);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && R.state === 'rec') { e.stopPropagation(); stop(true); } }, true);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && (R.state === 'rec' || (R.state === 'busy' && R.card))) { e.stopPropagation(); stop(true); } }, true);
 
 function decorate() {
   const show = anyEngine() || (!window.isSecureContext && !!S.info);
@@ -223,8 +374,11 @@ function decorate() {
     b.title = window.isSecureContext ? 'Snakk (norsk eller engelsk)' : 'Mikrofonen krever https';
     b.setAttribute('aria-pressed', 'false');
     b.innerHTML = MIC;
-    f.insertBefore(b, f.querySelector('button[type="submit"]'));
+    // Prompt 70: mellom tekstfeltet og «✦ AI» (før: mellom «✦ AI» og «Søk»).
+    f.insertBefore(b, f.querySelector('[data-sq-ai]') ?? f.querySelector('button[type="submit"]'));
   }
+  // Siden kan tegnes på nytt mens kortet er åpent: kortet flyttes til det nye søkefeltet (opptaket fortsetter).
+  if (R.card && !R.card.isConnected) { const f = document.querySelector('form[data-search]'); if (f && R.state !== 'idle') attachCard(f); else closeCard(); }
   for (const m of document.querySelectorAll('[data-ch-mic]')) if (ours(m)) { m.title = 'Snakk (hold inne, eller trykk for start og stopp)'; if (R.state === 'rec' && R.btn !== m && R.btn && !document.contains(R.btn)) { R.btn = m; setBtn('on'); } }
   for (const el of document.querySelectorAll('[data-v54-ai]:not([data-v54-done])')) aiCard(el);
 }

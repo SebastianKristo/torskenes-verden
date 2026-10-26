@@ -90,6 +90,7 @@ import no.kristo.finanshub.boldParts31
 import no.kristo.finanshub.cancelAiJob31
 import no.kristo.finanshub.closeAns31
 import no.kristo.finanshub.pickHome67
+import no.kristo.finanshub.askHome32b // prompt 70
 import no.kristo.finanshub.stopHome67
 import no.kristo.finanshub.quickJob31
 import no.kristo.finanshub.retryHome34
@@ -370,7 +371,10 @@ internal fun HomeAnswer31(vm: AppViewModel) {
     ) {
         if (a.busy) HomeLive67(vm, a.q, light)
         else {
-            Text(
+            // Prompt 70: kort A erstatter svarteksten når Glimt har lagt inn en avtale (ui/Cal70Card.kt).
+            val c70 = no.kristo.finanshub.Glimt67.homeCard70?.takeIf { it.first == a.text }?.second
+            if (c70 != null) Cal70Card(vm, c70, inBubble = true)
+            else Text(
                 buildAnnotatedString {
                     boldParts31(a.text).forEach { (t, b) -> if (b) withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold, color = Color.White)) { append(t) } else append(t) }
                 },
@@ -397,7 +401,10 @@ internal fun HomeAnswer31(vm: AppViewModel) {
             }
             // Prompt 67: valgknapper («Mener du A eller B?») → item.text + choice i samme samtale.
             no.kristo.finanshub.Glimt67.homeChoices?.let { ch ->
-                Choices67Row(ch, Color.White, Color.White.copy(alpha = .14f), Color.White.copy(alpha = .22f), PaperFonts.sans) { vm.pickHome67(ch, it) }
+                // Prompt 70: «Velg dato» viser datovelgeren i kortet; datoen sendes som ny tekst.
+                Cal70Choices(ch, Color.White, Color.White.copy(alpha = .14f), Color.White.copy(alpha = .22f), PaperFonts.sans, { vm.pickHome67(ch, it) }) { t ->
+                    no.kristo.finanshub.Glimt67.homeChoices = null; vm.askHome32b(t)
+                }
             }
             // Prompt 34: Glimt svarte ikke → Prøv igjen og Åpne AI-kontroll.
             if (a.err) AiErrActions34(vm, Color.White, Color.White.copy(alpha = .14f)) { vm.retryHome34() }

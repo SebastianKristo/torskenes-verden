@@ -70,6 +70,8 @@ object Glimt67 {
     var homeText by mutableStateOf("")
     /** Valgknappene og tommelen under svaret i boblen. */
     var homeChoices by mutableStateOf<Choices67?>(null)
+    /** Prompt 70: kort A for svaret som vises (svarteksten → card {k:'cal70'}), ui/Cal70Card.kt. */
+    var homeCard70 by mutableStateOf<Pair<String, JSONObject>?>(null)
     var homeTrace by mutableStateOf<String?>(null)
     /** requestId for svaret som strømmer nå (null = ingen). Stopp-knappen vises mens den er satt. */
     var homeRid by mutableStateOf<String?>(null)
@@ -197,7 +199,9 @@ fun agentView67(d: JSONObject): Agent67 {
     val toolName = a0?.s67("tool")
     var card: JSONObject? = null
     val evs = results.filter { it.s67("kind") == "event" }
-    if (evs.isNotEmpty() || toolName?.startsWith("calendar.") == true) {
+    val c70 = cal70Of(a0) // prompt 70: kort A (Cal70.kt / ui/Cal70Card.kt)
+    if (c70 != null) card = c70
+    else if (evs.isNotEmpty() || (toolName?.startsWith("calendar.") == true && askQ == null)) { // prompt 70: «Hvilken dag?» uten dagens kalender
         val ds = a0?.optJSONObject("result")?.s67("from") ?: evs.firstOrNull()?.s67("date") ?: LocalDate.now(OSLO31).toString()
         val dt = runCatching { LocalDate.parse(ds.take(10)) }.getOrNull() ?: LocalDate.now(OSLO31)
         card = JSONObject().put("k", "calendar").put("date", dt.toString()).put("wd", WD67[dt.dayOfWeek.value - 1]).put("n", dt.dayOfMonth.toString())

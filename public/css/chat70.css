@@ -1,0 +1,107 @@
+/* Prompt 70 (WEBCHAT70): lasteside for Chat på web (fasit «Chat Laster Web.dc.html», claude-code-chat-laster-web.md).
+   Bruker Chat-variablene (--cb, --cc, --ci, --cm, --cl, --ca, --cs) så Papir, mørk Papir og Nøytral fungerer.
+   Animerer bare transform og opacity. */
+.ch70{--l70card:color-mix(in srgb,var(--cc) 55%,var(--cb));--l70ok:#2f7a4f;--l70err:#b23a2a;flex:1;min-width:0;display:flex;min-height:0}
+html:not([data-hl="2c"]) .ch.papir .ch70,.ch.noytral .ch70{--l70ok:#5fbf86;--l70err:#f07a6c}
+.ch70 *{box-sizing:border-box}
+
+/* Sidemeny-skjelett (280–288 px som ekte sidemeny) */
+.ch70-side{position:relative;overflow:hidden;gap:14px;padding:18px 14px}
+.ch70-sh{display:flex;align-items:center;justify-content:space-between;padding:0 4px}
+.ch70-sh b{font:500 22px var(--hf)}
+.ch70-c34{width:34px;height:34px;border-radius:17px;background:var(--cl);opacity:.7}
+.ch70-new{flex:none;height:42px;border-radius:21px;background:var(--ci);opacity:.12}
+.ch70-sq{flex:none;height:38px;border-radius:19px;background:var(--cl);opacity:.7}
+.ch70-gh{padding:6px 6px 0;font:600 10px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;color:var(--cm)}
+.ch70-rows{display:flex;flex-direction:column;gap:4px}
+.ch70-sr{display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:12px}
+.ch70-sr i{display:block;height:11px;border-radius:6px;background:var(--cl);opacity:.85}
+.ch70-sr i+i{height:8px;border-radius:4px;opacity:.55}
+.ch70-shim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.45) 50%,transparent 70%);animation:ch70Sh 1.6s ease-in-out infinite;will-change:transform}
+html:not([data-hl="2c"]) .ch.papir .ch70-shim,.ch.noytral .ch70-shim{background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.07) 50%,transparent 70%)}
+.ch70-cached{padding-left:0;padding-right:0}
+.ch70-cached>.ch70-sh,.ch70-cached>.ch70-new,.ch70-cached>.ch70-sq{margin:0 14px}
+.ch70-cached .ch-row{cursor:default}
+
+/* Topplinje */
+.ch70-top{flex:none;height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-bottom:1px solid var(--cl)}
+.ch70-pill{display:flex;align-items:center;gap:8px;height:34px;padding:0 14px;border-radius:17px;background:var(--cs);font:600 12.5px var(--ff);color:var(--cm)}
+.ch70-pill i{width:8px;height:8px;border-radius:4px;background:var(--cl)}
+.ch70-pill i.ok{background:var(--l70ok)}
+.ch70-pill i.err{background:var(--l70err)}
+.ch70-rb{display:flex;gap:8px}
+.ch70-rb span{width:34px;height:34px;border-radius:17px;background:var(--cs)}
+
+/* Midten */
+.ch70-mid{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:24px;opacity:0;animation:ch70In .25s ease-out both}
+.ch70-mid.now{animation:none;opacity:1}
+.ch70-tt{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.ch70-tt b{font:500 28px/1.15 var(--hf);color:var(--ci)}
+.ch70-tt span{max-width:380px;font-size:14px;line-height:1.5;color:var(--cm);text-wrap:pretty}
+.ch70-steps{display:flex;flex-direction:column;gap:4px;min-width:280px;padding:8px;border-radius:20px;background:var(--l70card);border:1px solid var(--cl)}
+.ch70-step{display:flex;align-items:center;gap:12px;height:40px;padding:0 12px;border-radius:12px}
+.ch70-si{flex:none;width:20px;height:20px;display:grid;place-items:center}
+.ch70-sn{flex:1;font:600 13.5px var(--ff);color:var(--ci)}
+.ch70-step.wait .ch70-sn{color:var(--cm)}
+.ch70-step.err .ch70-sn{color:var(--l70err)}
+.ch70-st{font:500 11px 'IBM Plex Mono',var(--mono,monospace);color:var(--cm);font-variant-numeric:tabular-nums}
+.ch70-wait{width:8px;height:8px;border-radius:4px;background:var(--cl)}
+.ch70-spin{width:16px;height:16px;border-radius:8px;border:2px solid var(--cl);border-top-color:var(--ca);animation:ch70Sp .8s linear infinite}
+.ch70-ok{display:grid;place-items:center;color:var(--l70ok)}
+.ch70-err{width:16px;height:16px;border-radius:8px;background:var(--l70err);color:#fff;display:grid;place-items:center;font:800 11px var(--ff)}
+.ch70-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.ch70-btns[hidden]{display:none}
+.ch70-b{height:42px;padding:0 20px;border-radius:21px;cursor:pointer;font:700 13.5px var(--ff)}
+.ch70-b.ink{border:0;background:var(--ci);color:var(--cb)!important}
+.ch70-b.line{padding:0 18px;border:1px solid var(--cl);background:transparent}
+.ch70-b:hover{opacity:.9}
+
+/* Glimt-orben: fargering som roterer sakte, ansiktet puster */
+.ch70-orb{position:relative;flex:none;width:96px;height:96px;animation:ch70Br 2.4s ease-in-out infinite}
+.ch70-ring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(#e9a13b,#d9534f,#9b59b6,#4a90d9,#3fae7a,#e9a13b);animation:ch70Sp 3.2s linear infinite;will-change:transform}
+.ch70-face{position:absolute;inset:6px;border-radius:50%;background:var(--l70card);display:grid;place-items:center}
+.ch70-fc{display:flex;flex-direction:column;align-items:center;gap:5px;animation:ch70Bl 2.4s ease-in-out infinite}
+.ch70-eyes{display:flex;gap:14px}
+.ch70-eyes i{width:7px;height:9px;border-radius:4px;background:var(--ci)}
+.ch70-mouth{width:12px;height:6px;border-bottom:2.5px solid var(--ci);border-radius:0 0 8px 8px}
+.ch70-orb.sad,.ch70-orb.sad .ch70-ring,.ch70-orb.sad .ch70-fc{animation:none}
+.ch70-orb.sad .ch70-ring{filter:grayscale(1);opacity:.5}
+.ch70-orb.sad .ch70-eyes i{height:3px}
+.ch70-orb.sad .ch70-mouth{transform:scaleY(-1)}
+
+/* Skrivefeltet nederst (nedtonet) */
+.ch70-comp{flex:none;padding:4px 16px 22px}
+.ch70-box{max-width:760px;margin:0 auto;padding:8px;border-radius:26px;background:var(--l70card);border:1px solid var(--cl);box-shadow:0 10px 30px -18px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:6px;opacity:.75}
+.ch70-ph{min-height:44px;display:flex;align-items:center;padding:0 10px;font-size:15.5px;color:var(--cm)}
+.ch70-bar{display:flex;align-items:center;gap:6px}
+.ch70-bar span{height:36px;border-radius:18px;background:var(--cs)}
+.ch70-bar .c36{width:36px}.ch70-bar .p96{width:96px}.ch70-bar .g{flex:1;background:none}
+.ch70-bar .ink{background:var(--ci);opacity:.18}
+
+/* Overgang: skjelettet byttes med ekte rader (fade 150 ms), orben og stegene glir ut */
+.ch70-fadein .ch-groups,.ch70-fadein .ch-msgs,.ch70-fadein .ch-empty{animation:ch70In .15s ease-out both}
+.ch70-out{pointer-events:none;display:flex;animation:ch70Out .22s ease-in both}
+.ch70-out .ch70-mid{opacity:1;animation:none}
+
+@keyframes ch70Sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+@keyframes ch70Br{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes ch70Sp{to{transform:rotate(360deg)}}
+@keyframes ch70Bl{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes ch70In{from{opacity:0}to{opacity:1}}
+@keyframes ch70Out{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-14px)}}
+
+@media (max-width:767px){
+  .ch70-top{padding:0 14px;height:56px}
+  .ch70-mid{gap:18px;padding:18px 16px}
+  .ch70-steps{min-width:0;width:100%;max-width:340px}
+  .ch70-tt b{font-size:25px}
+  .ch70-comp{padding:4px 12px 14px}
+}
+@media (prefers-reduced-motion:reduce){
+  .ch70-orb,.ch70-ring,.ch70-fc,.ch70-shim{animation:none}
+  .ch70-spin{animation-duration:1.6s}
+}
+
+/* «Vis eldre meldinger» øverst i lange samtaler (de siste 30 tegnes først) */
+.ch70-older{align-self:center;display:block;margin:4px auto 14px;height:34px;padding:0 16px;border-radius:17px;border:1px solid var(--cl);background:transparent;cursor:pointer;font:600 12.5px var(--ff);color:var(--cm)}
+.ch70-older:hover{background:var(--cc)}

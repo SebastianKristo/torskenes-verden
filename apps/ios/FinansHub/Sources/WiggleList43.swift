@@ -156,6 +156,8 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
     /// Prompt 52: halve kort (to ved siden av hverandre på mobil) og høye halve kort (to rader, med to halve ved siden av).
     var half: Set<String> = []
     var tall: Set<String> = []
+    /// Prompt 70: håndtaket for halv/full bredde i redigering.
+    var resize70: Bool = false
 
     @State private var live: [String]? = nil
     @State private var dragKey: String? = nil
@@ -190,6 +192,8 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
         var c: Self = self
         c.half = h
         c.tall = t
+        // Prompt 70: håndtaket ↔ (endre størrelse) bare i 2-kolonners Hjem på mobil (Home70Grid.swift).
+        c.resize70 = !h.isEmpty
         return c
     }
 
@@ -203,8 +207,11 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
         Group {
             if columns == 1 && !half.isEmpty {
                 // Prompt 52: Hjem som 2-kolonners rutenett (3a). Samme celler, dra-og-slipp og minus som lista.
-                VStack(spacing: spacing) {
-                    ForEach(Home52Rows.rows(o, half: half, tall: tall)) { (r: Home52Row) in row52(r, o) }
+                // Prompt 70: eget Layout med én ForEach (stabile celler), så størrelsen kan byttes midt i et drag (Home70Grid.swift).
+                Home70GridLayout(half: half, tall: tall, spacing: spacing) {
+                    ForEach(Array(o.enumerated()), id: \.element) { (pair: (offset: Int, element: String)) in
+                        grid70(pair.element, pair.offset)
+                    }
                 }
             } else if columns > 1 {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: spacing), count: columns), spacing: spacing) {
@@ -233,34 +240,12 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
         .onDisappear { if live != nil { finish() } }
     }
 
-    /// Prompt 52: én rad i rutenettet – helt kort, to halve, eller et høyt halvt kort med to halve stablet ved siden av.
-    @ViewBuilder private func row52(_ r: Home52Row, _ o: [String]) -> some View {
-        switch r.kind {
-        case .full:
-            cell(r.keys[0], o.firstIndex(of: r.keys[0]) ?? 0).id("card37-" + r.keys[0])
-        case .pair:
-            HStack(alignment: .top, spacing: spacing) {
-                ForEach(r.keys, id: \.self) { (k: String) in
-                    cell(k, o.firstIndex(of: k) ?? 0).id("card37-" + k)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                }
-                if r.keys.count == 1 { Color.clear.frame(maxWidth: .infinity, maxHeight: 1) }
-            }
-            .fixedSize(horizontal: false, vertical: true)
-        case .tall:
-            HStack(alignment: .top, spacing: spacing) {
-                cell(r.keys[0], o.firstIndex(of: r.keys[0]) ?? 0).id("card37-" + r.keys[0])
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                VStack(spacing: spacing) {
-                    ForEach(Array(r.keys.dropFirst()), id: \.self) { (k: String) in
-                        cell(k, o.firstIndex(of: k) ?? 0).id("card37-" + k)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .fixedSize(horizontal: false, vertical: true)
-        }
+    /// Prompt 70: én celle i 2-kolonners Hjem. Radene (hel, to halve, høy + to) regnes ut i Home70GridLayout.
+    private func grid70(_ k: String, _ i: Int) -> some View {
+        cell(k, i)
+            .id("card37-" + k)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .layoutValue(key: Home70KeyLV.self, value: k)
     }
 
     @ViewBuilder private func cell(_ k: String, _ i: Int) -> some View {
@@ -318,6 +303,13 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
                 }
             }
             .overlay { if editing { accessory(k) } }
+            .overlay(alignment: .bottomTrailing) {
+                // Prompt 70: ↔ nede i høyre hjørne (34 pt, 9 pt utenfor kanten som minus-merket oppe til venstre).
+                if editing && resize70 && Home70Size.canResize(k) {
+                    Home70Handle(key: k, isHalf: half.contains(k), label: text)
+                        .offset(x: 14, y: 14)
+                }
+            }
             .rotationEffect(.degrees(editing ? (wig ? a : -a) : 0))
             .animation(editing && a != 0 ? Animation.easeInOut(duration: Edit28.half).repeatForever(autoreverses: true) : Animation.easeOut(duration: 0.15), value: wig)
             .wiggle43Hold(editing: editing) { enter() }

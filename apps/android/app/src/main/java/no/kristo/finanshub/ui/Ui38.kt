@@ -21,6 +21,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.awaitVerticalTouchSlopOrCancellation
+import androidx.compose.foundation.gestures.verticalDrag
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -210,8 +213,10 @@ internal fun AnsBox38(vm: AppViewModel, onPull41: (() -> Unit)? = null, content:
             .onGloballyPositioned { vm.p38.ansRect = it.boundsInRoot() }
             .graphicsLayer { translationY = if (onPull41 != null && drag > 0f) pull41 * .35f else drag; alpha = (1f + minOf(drag, 0f) / (limit * 3f)).coerceIn(0f, 1f) }
             .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragEnd = {
+                // Prompt 70 (claude-code-hjem-scroll-mens-ai.md): sveip opp / dra ned bare fra grepet nederst (30 dp), med mus fra hele
+                // kortet. Ellers får siden sveipet, så Hjem kan scrolles med fingeren på kortet (før tok detectVerticalDragGestures alt).
+                val gripPx = 30.dp.toPx()
+                val onEnd70: () -> Unit = {
                         scope.launch {
                             if (onPull41 != null && drag > 0f && (if (drag <= open41) drag else open41 + (drag - open41) * .4f) >= open41) {
                                 Haptics.select(); armed41 = false; drag = 0f; onPull41()
@@ -221,12 +226,20 @@ internal fun AnsBox38(vm: AppViewModel, onPull41: (() -> Unit)? = null, content:
                                 drag = 0f
                             } else animate(drag, 0f, animationSpec = if (drag > 0f && onPull41 != null) tween(250, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, .8f, .2f, 1f)) else spring(dampingRatio = .6f)) { v, _ -> drag = v }
                         }
-                    },
-                    onDragCancel = { scope.launch { animate(drag, 0f, animationSpec = spring()) { v, _ -> drag = v } } },
-                ) { ch, amt ->
-                    ch.consume()
+                    Unit
+                }
+                val onDrag70: (Float) -> Unit = { amt ->
                     val n = drag + amt
                     drag = if (n > 0f) (if (onPull41 != null) n else minOf(n * .5f, limit * .3f)) else n
+                }
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    if (!gripHit70(down.type, down.position.y, size.height, gripPx)) return@awaitEachGesture
+                    var over = 0f
+                    val first = awaitVerticalTouchSlopOrCancellation(down.id) { ch, o -> ch.consume(); over = o } ?: return@awaitEachGesture
+                    onDrag70(over)
+                    val ok = verticalDrag(first.id) { ch -> onDrag70(ch.positionChange().y); ch.consume() }
+                    if (ok) onEnd70() else scope.launch { animate(drag, 0f, animationSpec = spring()) { v, _ -> drag = v } }
                 }
             },
     ) {
