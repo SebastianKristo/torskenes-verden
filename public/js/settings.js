@@ -677,7 +677,9 @@ function kalView65() {
 }
 function backupView65() {
   const v = backupView(H);
-  return join65(v, [{ v: { html: ops51PartHtml('backup', () => { if (!modal().hidden && tab === 'backup') render(); }) }, moved: 'System' }]);
+  // Prompt 66: Backup-siden starter med banneret (3-2-1), Kopier, Gjenoppretting og Database; systembackupen under.
+  const c = combine65([{ v: { html: ops51PartHtml('backup', () => { if (!modal().hidden && tab === 'backup') render(); }) }, moved: 'System' }, { v }], groupHtml);
+  return { title: v.title, sub: v.sub, ...c };
 }
 /** Ruter: Entur-status med lenke til Integrasjoner (nøkkelen/strekningene settes der, ikke her). */
 function ruterView65() {

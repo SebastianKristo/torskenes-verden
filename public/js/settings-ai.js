@@ -9,11 +9,11 @@
 // Tilstanden og hendelsene for disse ligger i ai-glimt65.js (samme API-er og lagrede felt som før).
 import { store } from './store.js';
 import { mountAiControl, aiTabKey65 } from './ai-control.js';
-import { is2c } from './hltheme.js';
 import { load65 } from './ai-glimt65.js';
 
 const isAdmin = () => store.me?.me?.role === 'admin';
-const theme = () => ((document.documentElement.dataset.hlTheme ? document.documentElement.dataset.hlTheme === '2c' : is2c()) ? 'papir' : 'mork');
+// Prompt 66: AI-siden følger temaet og lys/mørk modus selv (ai-control themeKey66: papir · mork · cur) og bytter farger uten ny montering.
+const theme = () => 'auto';
 const variant = () => (matchMedia('(max-width: 767px)').matches ? 'mobile' : 'web');
 
 /** Laster Glimt/Chat-dataene (begge sidene). reload kalles når de er klare. */

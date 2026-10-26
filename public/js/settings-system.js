@@ -18,6 +18,7 @@ import { versionsHtml44 } from './settings44.js'; // prompt 44: TIDLIGERE VERSJO
 import { obs51PartHtml } from './obs51.js'; // prompt 65: én del per System-fane
 import { ops51PartHtml } from './ops51.js'; // prompt 51 (OPS51): staging/tilbakerulling (Oppdateringer); backup og database er egen side (prompt 65)
 import { SYS_TABS65, tabBar65 } from './settings65.js'; // prompt 65: System med faner
+import { root66, row66, sec, swb, val66, chev66, lnk66, setR66, sys66Click } from './sys66.js'; // prompt 66: samme rad/kort som AI-siden i alle faner
 
 let rerender = () => {}, subscribed = false;
 const admin = () => store.me?.me?.role === 'admin';
@@ -111,14 +112,14 @@ function verHtml(ph, d, h) {
 function notesHtml(ph, d) {
   const up = ph === 'avail' || ph === 'setup' || ph === 'run' || ph === 'fail';
   const v = (up ? d?.latest?.version : d?.installed?.version) || d?.latest?.version || '';
-  const sec = (d?.changes ?? []).find((c) => c.version === v) ?? (up ? d?.changes?.[0] : null);
-  let items = (up && V.d?.notes?.length ? V.d.notes : sec?.items ?? []).map((x) => String(x ?? '').trim()).filter((x) => x && !/^[^.!?]{1,60}:$/.test(x) && !/^[-–:.\s]*$/.test(x));
-  const date = sec?.date || (up ? V.d?.publishedAt && dmy(V.d.publishedAt) : '') || '';
+  const sec0 = (d?.changes ?? []).find((c) => c.version === v) ?? (up ? d?.changes?.[0] : null);
+  let items = (up && V.d?.notes?.length ? V.d.notes : sec0?.items ?? []).map((x) => String(x ?? '').trim()).filter((x) => x && !/^[^.!?]{1,60}:$/.test(x) && !/^[-–:.\s]*$/.test(x));
+  const date = sec0?.date || (up ? V.d?.publishedAt && dmy(V.d.publishedAt) : '') || '';
   const tag = V.d?.tagline || 'Lys i mørket, kjørt hjemme.';
   items = items.slice(0, 16);
-  return `<section class="ny-notes"><b class="ny-h">Dette er Nordlys ${esc(majMin(v) || '')}. ${esc(tag)}</b>
-    ${v ? `<span class="ny-cap">NYTT I <span data-no-i18n>${esc(v)}</span>${date ? ` · <span data-no-i18n>${esc(date)}</span>` : ''}</span>` : ''}
-    ${items.length ? `<ul data-no-i18n>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span class="ny-note">Ingen endringsnotater for denne versjonen ennå.</span>'}${buildLine(d)}</section>${histHtml(v, d)}`;
+  // Prompt 66: «Nytt i …» som seksjon + kort (grå mono-etikett), punktene som vanlig tekst i kortet.
+  const body = `<div class="sys66-notes"><b>Dette er Nordlys ${esc(majMin(v) || '')}. ${esc(tag)}</b>${items.length ? `<ul data-no-i18n>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="ac-note">Ingen endringsnotater for denne versjonen ennå.</p>'}</div>${buildLine(d)}`;
+  return sec(v ? `NYTT I <span data-no-i18n>${esc(v)}</span>` : 'NYTT', body, { right: date ? `<span data-no-i18n>${esc(date)}</span>` : '' }) + histHtml(v, d);
 }
 
 // Prompt 36: TIDLIGERE VERSJONER. GET /api/system/changelog?limit=20&before=<v> → {items:[{version, date, notes[], installedAt?, failed?}], more}.
@@ -139,24 +140,29 @@ function histHtml(v, d) {
   if (HI.key !== key) { HI.key = key; HI.items = null; HI.fallback = false; HI.open = ''; loadHist(v); }
   let L = HI.items;
   if (!L && HI.fallback) L = (d?.changes ?? []).filter((c) => c.version && c.version !== v).map((c) => ({ version: c.version, date: c.date, notes: cleanNotes(c.items) }));
-  if (!L) return `<section class="ny-hist"><span class="ny-cap">TIDLIGERE VERSJONER</span><span class="ny-note">Henter …</span></section>`;
+  if (!L) return sec('VERSJONER', row66({ ic: 'refresh', dot: 'busy', t: 'Henter versjoner …' }));
   if (!L.length) return '';
   const when = (t) => { const x = new Date(ms(t) ?? t); return Number.isNaN(+x) ? '' : `${pad(x.getDate())}.${pad(x.getMonth() + 1)} kl. ${pad(x.getHours())}.${pad(x.getMinutes())}`; };
-  return `<section class="ny-hist" id="ny-hist"><span class="ny-cap">TIDLIGERE VERSJONER</span><div class="ny-hl">${L.map((x) => {
+  // Prompt 66: Versjoner som mono-rader (dato · endringer, «Installert …» grønt til høyre), «Vis flere» i etiketten.
+  const shown = HI.all ? L : L.slice(0, 6);
+  const rows = shown.map((x) => {
     const on = HI.open === x.version, n = x.notes?.length ?? 0;
     const meta = [x.date ? (/^\d{4}-/.test(x.date) ? dmy(x.date) : x.date) : '', `${n} ${n === 1 ? 'endring' : 'endringer'}`].filter(Boolean).join(' · ');
-    const tag = x.failed ? '<span class="ny-hf">Feilet</span>' : x.installedAt ? `<span class="ny-hi">Installert ${esc(when(x.installedAt))}</span>` : '';
-    return `<div class="ny-hr${on ? ' on' : ''}"><button type="button" class="ny-hb" data-upd="hist:${esc(x.version)}" aria-expanded="${on}"><span class="ny-hv"><b data-no-i18n>Nordlys ${esc(x.version)}</b><span>${esc(meta)}</span></span>${tag}<span class="ny-chev" aria-hidden="true">›</span></button>
-      ${on ? `<div class="ny-hn">${n ? `<ul data-no-i18n>${x.notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<span class="ny-note">Ingen endringsnotater.</span>'}${x.failed ? `<button type="button" class="sg-link" data-upd="log">Vis logg</button>` : ''}</div>` : ''}</div>`;
-  }).join('')}</div>${HI.more ? `<button type="button" class="ny-more" data-upd="histmore"${HI.busy ? ' disabled' : ''}>${HI.busy ? 'Henter …' : 'Vis flere'}</button>` : ''}</section>`;
+    const right = x.failed ? val66('Feilet', 'bad') : x.installedAt ? val66(`Installert ${when(x.installedAt)}`, 'ok') : '';
+    const ch = `<button type="button" class="ac-chev${on ? ' on' : ''}" data-upd="hist:${esc(x.version)}" aria-expanded="${on}" aria-label="${on ? 'Skjul' : 'Vis'} endringene i ${esc(x.version)}">${chevI()}</button>`;
+    const panel = on ? `<div class="ac-xp">${n ? `<ul class="sys66-ul" data-no-i18n>${x.notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : '<p class="ac-note">Ingen endringsnotater.</p>'}${x.failed ? '<span class="ac-btns"><button type="button" class="ac-b line" data-upd="log">Vis logg</button></span>' : ''}</div>` : '';
+    return row66({ ic: x.failed ? 'warn' : 'refresh', dot: x.failed ? 'bad' : x.installedAt ? 'ok' : '', t: `Nordlys ${x.version}`, mono: true, s: meta, right: right + ch, cls: `ac-rx${on ? ' open' : ''}` }) + panel;
+  }).join('');
+  return `<div id="ny-hist">${sec('VERSJONER', rows, { right: !HI.all && L.length > 6 ? lnk66('Vis flere', 'data-upd="histall"') : HI.more ? lnk66(HI.busy ? 'Henter …' : 'Vis flere', `data-upd="histmore"${HI.busy ? ' disabled' : ''}`) : '' })}</div>`;
 }
+const chevI = () => '<svg class="ac-i" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 // Prompt 32 (claude-code-fjern-oppdatering-rad.md): «Installert 4.24.0 · build 8512626» med Kopier, flyttet hit fra den
 // gamle Oppdatering-raden. Nordlys OS er det eneste stedet å oppdatere.
 let copiedBuild = false;
 function buildTxt(d) { const i = d?.installed ?? {}; return [i.version ? `Installert ${i.version}` : '', i.sha ? `build ${shortSha(i.sha)}` : ''].filter(Boolean).join(' · '); }
 function buildLine(d) {
   const t = buildTxt(d);
-  return t ? `<span class="ny-build"><span data-no-i18n>${esc(t)}</span><button type="button" class="ny-copy" data-upd="copybuild">${copiedBuild ? 'Kopiert ✓' : 'Kopier'}</button></span>` : '';
+  return t ? `<p class="ac-note sys66-build"><span data-no-i18n>${esc(t)}</span><button type="button" class="ac-lnk" data-upd="copybuild">${copiedBuild ? 'Kopiert ✓' : 'Kopier'}</button></p>` : '';
 }
 
 const setupHtml = (lead) => `<section class="ny-sec ny-setup"><b>${esc(lead)}</b>
@@ -204,19 +210,19 @@ export function systemView(h) {
   const d = U.d, ph = phase(), st = settings30();
   if (U.st === 'missing') return { html: heroHtml('error', null) + setupHtml('Serveren har ikke oppdatering fra appen ennå.') };
   if (U.st === 'forbidden') return { groups: [h.group('Oppdatering', [h.row({ t: 'Oppdatering fra appen', v: 'Ikke tilgjengelig', s: 'Bare administrator kan se og starte oppdateringer.' })])] };
-  const soft = h.group('Programvare', [
-    h.row({ t: 'Automatiske oppdateringer', k: 'auto automatisk natt', s: 'Kl. 03:30, etter nattlig backup.', tog: !!st.auto_update, act: 'data-upd-set="auto_update"', disabled: !st.loaded }),
-  ]); // prompt 39: «Varsle om nye versjoner» ligger nå under Varsler (updNotifyRow)
+  // Prompt 39: «Varsle om nye versjoner» ligger under Varsler (updNotifyRow).
   // Prompt 65 (System.dc.html): nordlys-hero, oppdater-knappen og «Krev passord» øverst; resten i faner under.
   const top = `<div class="ny">${heroHtml(ph, d)}${btnHtml(ph, d)}${stuck46Html(ph, d)}${d ? verHtml(ph, d, h) : ''}${d && d.available === false ? setupHtml('Oppdatering fra appen er ikke satt opp.') : ''}${logHtml(ph)}</div>`;
   const t = SYS_TABS65.some(([k]) => k === h.sysTab) ? h.sysTab : 'ov';
-  const softHtml = `<section class="sg"><h3 class="sg-t">Programvare</h3><div class="sg-box">${soft.rows.map((r) => r.html).join('')}</div></section>`;
-  const body = t === 'upd' ? softHtml + ops51PartHtml('updates', rerender) + versionsHtml44(rerender) + (d ? `<div class="ny">${notesHtml(ph, d)}</div>` : '')
+  // Prompt 66: alle faner med samme komponenter som AI-siden (rad, kort, banner, KPI-stripe) i en .sys66-rot.
+  const softHtml = sec('PROGRAMVARE', row66({ ic: 'refresh', dot: st.auto_update ? 'ok' : 'off', t: 'Automatiske oppdateringer', s: 'Kl. 03:30, etter nattlig backup', right: swb(!!st.auto_update, 'data-upd-set="auto_update"', 'Automatiske oppdateringer', !st.loaded) }));
+  setR66(rerender);
+  const body = t === 'upd' ? softHtml + ops51PartHtml('updates', rerender) + (d ? notesHtml(ph, d) : '') + versionsHtml44(rerender)
     : t === 'perf' ? obs51PartHtml('trace')
       : t === 'heal' ? obs51PartHtml('heal')
-        : t === 'mer' ? merHtml65(h)
+        : t === 'mer' ? merHtml65()
           : obs51PartHtml('health');
-  return { html: `${top}${tabBar65(SYS_TABS65, t)}<div class="sys65-body" data-sys65-tab="${t}">${body}</div>`, extra: sheetHtml(), mount: (el) => { el.scrollTop = el.scrollHeight; },
+  return { html: `${top}${tabBar65(SYS_TABS65, t)}<div class="sys65-body" data-sys65-tab="${t}">${root66(body)}</div>`, extra: sheetHtml(), mount: (el) => { el.scrollTop = el.scrollHeight; },
     search: [h.group('System', [
       h.row({ t: 'Helse', s: 'Containere, disk, Ollama, Mac-OCR, Mac mini, Proxmox og ntfy', go: 'system|ov', btn: 'Åpne', k: 'helse containere disk ollama mac-ocr mac mini proxmox ntfy oversikt' }),
       h.row({ t: 'Oppdateringer', s: 'Automatiske oppdateringer, staging, tilbakerulling og versjoner', go: 'system|upd', btn: 'Åpne', k: 'oppdatering automatisk staging røyktest tilbakerulling versjoner tidligere' }),
@@ -226,17 +232,19 @@ export function systemView(h) {
     ])] };
 }
 
-/** Prompt 65: System → Mer. Bare Kvalitet (Feature flags, Krasjrapporter, Nytt i denne versjonen). Det som er flyttet, står som lenke. */
-function merHtml65(h) {
-  const r = (t, s, act) => h.row({ t, s, act, btn: 'Åpne' }).html;
-  return `<section class="sg"><h3 class="sg-t">Kvalitet</h3><div class="sg-box">
-      ${r('Feature flags', 'Slå nye funksjoner på per bruker eller enhet', 'data-p65-qa="flags"')}
-      ${r('Krasjrapporter', 'Feil fra web, appene og serveren (GlitchTip eller lokalt)', 'data-p65-qa="crashes"')}
-      ${r('Nytt i denne versjonen', 'Vis endringene i installert versjon', 'data-p65-qa="whatsnew"')}</div></section>`
-    + `<section class="sg"><h3 class="sg-t">Flyttet herfra</h3><div class="sg-box">
-      ${h.row({ t: 'Backup', s: 'Kopier, gjenoppretting og database – egen side under Server', go: 'backup', btn: 'Backup' }).html}
-      ${h.row({ t: 'Lokale modeller', s: 'Desert Ant Labs-modellene – AI → Modeller', act: 'data-p65-ai="mod"', btn: 'AI' }).html}
-      ${h.row({ t: 'Brief og Glimt-figur', s: 'Per bruker – Brukere og familie', go: 'users', btn: 'Brukere og familie' }).html}</div></section>`;
+/** Prompt 65/66: System → Mer. Bare Kvalitet (Feature flags, Krasjrapporter, Nytt i denne versjonen) som rader med chevron.
+ *  Det som er flyttet, står som lenke. */
+function merHtml65() {
+  const r = (ic, t, s, attrs) => row66({ ic, t, s, attrs, btn: true, cls: 'ac-click', right: chev66() });
+  return sec('KVALITET', [
+    r('flag', 'Feature flags', 'Slå nye funksjoner på per bruker eller enhet', 'data-p65-qa="flags"'),
+    r('bug', 'Krasjrapporter', 'Feil fra web, appene og serveren (GlitchTip eller lokalt)', 'data-p65-qa="crashes"'),
+    r('spark', 'Nytt i denne versjonen', 'Vis endringene i installert versjon', 'data-p65-qa="whatsnew"'),
+  ].join('')) + sec('FLYTTET HERFRA', [
+    r('hdd', 'Backup', 'Kopier, gjenoppretting og database – egen side under Server', 'data-go="backup"'),
+    r('chip', 'Lokale modeller', 'Desert Ant Labs-modellene – AI → Modeller', 'data-p65-ai="mod"'),
+    r('people', 'Brief og Glimt-figur', 'Per bruker – Brukere og familie', 'data-go="users"'),
+  ].join(''));
 }
 
 /** Prompt 39 (claude-code-varsler-versjon-app-ikon.md): raden i Innstillinger → Varsler (samme nøkkel notify_updates, bare admin). */
@@ -282,6 +290,7 @@ export async function startNow() {
 }
 
 export async function systemClick(e) {
+  if (sys66Click(e)) return true; // prompt 66: utvidbare rader (chevron) på System og Backup
   const b46 = e.target.closest('[data-upd46]');
   if (b46 && !b46.disabled) {
     e.preventDefault();
@@ -320,6 +329,7 @@ export async function systemClick(e) {
   else if (a === 'close') openSheet(false);
   else if (a === 'log') toggleLog();
   else if (a.startsWith('hist:')) { const v = a.slice(5); HI.open = HI.open === v ? '' : v; rerender(); }
+  else if (a === 'histall') { HI.all = true; rerender(); } // prompt 66: de 6 nyeste først
   else if (a === 'histmore') loadHist(HI.items?.at(-1)?.version, true);
   else if (a === 'copy') await copyCmd();
   else if (a === 'copybuild') { try { await navigator.clipboard.writeText(buildTxt(U.d)); } catch { /* */ } copiedBuild = true; rerender(); setTimeout(() => { copiedBuild = false; rerender(); }, 1800); }

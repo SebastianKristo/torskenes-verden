@@ -53,12 +53,196 @@ html:not([data-hl="2c"]) #settings .set-body .si36.si36-green,html[data-mode="da
 }
 
 /* ---------- Sider uten eget design (samlet-md): samme seksjon + kort + rad som AI/System ----------
-   Grå mono-etikett (ikke rød, ingen strek), hvitt kort radius 14 med 0 14 px luft, rad min. 46 px med 1 px skillelinje mellom radene. */
-html[data-hl="2c"] #settings .set-body .sg-t{font:500 10.5px/1.3 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:#8f897c;border-bottom:0;padding:0 2px 7px}
-html[data-hl="2c"] #settings .set-body .sg-box{background:#fffdf8;border-radius:14px;padding:0 14px}
-html[data-hl="2c"] #settings .set-body .sg-box>.sg-row{min-height:46px;padding:8px 0;border-bottom:1px solid #ddd5c5}
-html[data-hl="2c"] #settings .set-body .sg-box>.sg-row:last-child{border-bottom:0}
-html[data-hl="2c"] #settings .set-body .sg-note{font-size:12px;padding:8px 2px 0}
-html[data-mode="dark"][data-hl="2c"] #settings .set-body .sg-box{background:#1f1c17}
-html[data-mode="dark"][data-hl="2c"] #settings .set-body .sg-box>.sg-row{border-bottom-color:#3a352c}
-html[data-mode="dark"][data-hl="2c"] #settings .set-body .sg-box>.sg-row:last-child{border-bottom:0}
+   Prompt 66 (UTCOMP): gjelder nå ALLE temaer og mørk modus – samme mål og komponenter, temaets egne farger (--s65-*).
+   Grå mono-etikett (ikke rød, ingen strek), kort radius 14 med 0 14 px luft, rad min. 46 px med 1 px skillelinje,
+   tittel 13,5 px/600 + undertekst 12 px på én linje (web), 28 px ikonflis, knapp/segment/select 30 px, bryter 36×22. */
+#settings{--s65-card:#111723;--s65-line:#1f2736;--s65-fld:#1a2231;--s65-ink:#eef0f4;--s65-mut:#8a93a6;--s65-lab:#8a93a6;--s65-ico:#b6bccb;
+  --s65-ok:#34c759;--s65-warn:#e0a85a;--s65-bad:#f59a8f;--s65-pri:#eef0f4;--s65-prifg:#0c1119;--s65-off:#3a4560;--s65-hov:rgba(255,255,255,.03);--s65-in:#0c1119}
+html[data-hl="2c"] #settings{--s65-card:#fffdf8;--s65-line:#ddd5c5;--s65-fld:#ece6da;--s65-ink:#1b1a17;--s65-mut:#6b665c;--s65-lab:#8f897c;--s65-ico:#4a463f;
+  --s65-ok:#2f7a4f;--s65-warn:#a8661a;--s65-bad:#b23a2a;--s65-pri:#1b1a17;--s65-prifg:#f3efe6;--s65-off:#cfc8b9;--s65-hov:rgba(27,26,23,.03);--s65-in:#f3efe6}
+html[data-mode="dark"][data-hl="2c"] #settings{--s65-card:#1f1c17;--s65-line:#3a352c;--s65-fld:#2a261f;--s65-ink:#f3efe6;--s65-mut:#a39d90;--s65-lab:#8f897c;--s65-ico:#c9c2b4;
+  --s65-ok:#6fc28f;--s65-warn:#e0a85a;--s65-bad:#ec7a64;--s65-pri:#f3efe6;--s65-prifg:#16140f;--s65-off:#4a443a;--s65-hov:rgba(243,239,230,.03);--s65-in:#16140f}
+/* Inni AI-kontrollen (Glimt-delen, modulplassene): samme farger som AI-siden. */
+#settings .ac{--s65-card:var(--card);--s65-line:var(--line);--s65-fld:var(--fld);--s65-ink:var(--ink);--s65-mut:var(--mut);--s65-lab:var(--mut);--s65-ok:var(--ok);--s65-warn:var(--warn);--s65-bad:var(--bad);--s65-pri:var(--ink);--s65-prifg:var(--bg);--s65-in:var(--bg)}
+
+/* Seksjon: etikett + kort + notat */
+#settings .set-body .sg{gap:7px}
+#settings .set-body .set-inner{gap:20px}
+#settings .set-body :not(.set-inner)>.sg+.sg,#settings .set-body :not(.set-inner)>.sg+.ac-sec,#settings .set-body :not(.set-inner)>.ac-sec+.sg{margin-top:20px}
+#settings .set-body .set-moved-row{margin:0 0 -14px}
+#settings .set-body .sg-t,#settings .set-body .gs-h,#settings .set-body .m63-t{margin:0;font:500 10.5px/1.3 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--s65-lab);text-transform:uppercase;border-bottom:0;padding:0 2px}
+#settings .set-body .sg-box,#settings .set-body .gs-list{background:var(--s65-card);border:0;border-radius:14px;padding:0 14px;overflow:visible}
+#settings .set-body .sg-note,#settings .set-body .gs-note{font-size:12px;line-height:1.5;color:var(--s65-mut);padding:0 2px}
+#settings .set-body .sg-note b{color:var(--s65-ink)}
+#settings .set-body .sg-empty{padding:16px 14px;border-radius:14px;border:1px dashed var(--s65-line);font-size:12.5px;color:var(--s65-mut)}
+
+/* Rad (SettingsRow) */
+#settings .set-body .sg-row,#settings .set-body .gs-row{min-height:46px;padding:8px 0;gap:12px;border:0;border-top:1px solid var(--s65-line);background:transparent;color:var(--s65-ink);border-radius:0;font-size:13.5px}
+#settings .set-body .sg-row:first-child,#settings .set-body .gs-row:first-child,#settings .set-body .sg-box>.sg-row:first-child{border-top:0}
+#settings .set-body :is(.r61-item,.q64-run,.s62-item,.m63-item)+:is(.r61-item,.q64-run,.s62-item,.m63-item,.sg-row){border-top:1px solid var(--s65-line)}
+#settings .set-body :is(.r61-item,.q64-run,.s62-item)>.sg-row:first-child{border-top:0}
+#settings .set-body button.sg-row:hover,#settings .set-body button.gs-row:hover{background:var(--s65-hov)}
+#settings .set-body .sg-txt,#settings .set-body .gs-ot{gap:1px;min-width:0}
+#settings .set-body .sg-txt b,#settings .set-body .gs-ot b{font:600 13.5px/1.35 Manrope,Outfit,system-ui,sans-serif;color:inherit}
+#settings .set-body .sg-txt>span,#settings .set-body .gs-os{font:400 12px/1.4 Manrope,Outfit,system-ui,sans-serif;color:var(--s65-mut)}
+#settings .set-body .sg-v{font:500 11.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--s65-mut);max-width:42%}
+#settings .set-body .sg-row.danger b,#settings .set-body b.si36-dt{color:var(--s65-bad)}
+@media (min-width:768px){
+  /* Én linje med ellipsis på web (hele teksten ligger i title, se settings-icons36.js). */
+  #settings .set-body .sg-row>.sg-txt>span:first-of-type:not([role]),#settings .set-body .gs-row .gs-os{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+
+/* Ikonflis 28 px på hver rad (statusprikken som 9 px merke) */
+#settings .set-body .si36,#settings .set-body .sg-ic40,#settings .set-body .s62-ic,#settings .set-body .gs65-ic{flex:none;width:28px;height:28px;border-radius:8px;background:var(--s65-fld);color:var(--s65-ico);display:grid;place-items:center;margin:0}
+#settings .set-body .si36 svg,#settings .set-body .s62-ic svg,#settings .set-body .gs65-ic svg{width:15px;height:15px;stroke-width:1.9}
+#settings .set-body .sg-ic40{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;border:0}
+#settings .set-body .sg-ic40 img{width:16px;height:16px}
+#settings .set-body .si36.si36-red{color:var(--s65-bad)}
+#settings .set-body .si36.si36-green{color:var(--s65-ok)}
+#settings .set-body .si36-b{right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--s65-bad);box-shadow:0 0 0 2px var(--s65-card)}
+#settings .set-body .si36-b svg{display:none}
+#settings .set-body .si36>.kal-sc-dot{position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;box-shadow:0 0 0 2px var(--s65-card)}
+#settings .set-body .sg-row>.sg-av{width:28px;height:28px;font-size:11px}
+#settings .set-body .sg-row>.lg.sg-lg{width:28px;height:28px;border-radius:8px;font-size:11px}
+#settings .set-body .sg-row>.lg.sg-lg img{width:18px;height:18px}
+
+/* Kontroller: knapp 30 px pill (primær = blekk, sekundær = kant, fare = rød tekst), ingen «→»-tekstlenker */
+#settings .set-body .sg-btn2,#settings .set-body .sg-pill,#settings .set-body .sg-btn,#settings .set-body .s62-b,#settings .set-body .q64-b,#settings .set-body .m63-b,#settings .set-body .gs-pill,#settings .set-body .gs-try,#settings .set-body .sg-row .sbtn{
+  flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;min-height:30px;padding:0 13px;border-radius:15px;border:1px solid var(--s65-line);background:transparent;color:var(--s65-ink);font:600 12.5px Manrope,system-ui,sans-serif;white-space:nowrap;text-decoration:none;box-shadow:none;cursor:pointer}
+#settings .set-body .sg-btn2::after{content:none}
+#settings .set-body button.sg-row:hover .sg-btn2,#settings .set-body .sg-btn:hover,#settings .set-body .sg-pill:hover,#settings .set-body .s62-b:hover,#settings .set-body .q64-b:hover,#settings .set-body .m63-b:hover{background:transparent;border-color:var(--s65-mut)}
+#settings .set-body .sg-row .sbtn.pri,#settings .set-body .sg-btn.pri,#settings .set-body .s62-b.pri,#settings .set-body .q64-b.pri,#settings .set-body .m63-b.pri,#settings .set-body .gs-pill.dark,#settings .set-body button[type=submit].sg-btn2{border-color:var(--s65-pri);background:var(--s65-pri);color:var(--s65-prifg)}
+#settings .set-body .sg-btn.danger,#settings .set-body .sg-pill.danger,#settings .set-body .s62-b.bad,#settings .set-body .q64-b.bad,#settings .set-body .m63-b.bad,#settings .set-body .e60-del,#settings .set-body .r61-del{border-color:transparent;background:transparent;color:var(--s65-bad)!important;padding:0 8px}
+#settings .set-body .sg-btn:disabled,#settings .set-body .s62-b:disabled,#settings .set-body .q64-b:disabled,#settings .set-body .m63-b:disabled{opacity:.5}
+#settings .set-body .sg-link{color:var(--s65-ink);font:600 12.5px Manrope,system-ui,sans-serif}
+#settings .set-body .sg-link.red{color:var(--s65-bad)}
+/* Rader som bare åpner en underside: chevron i stedet for «Åpne →» */
+#settings .set-body button.sg-row[data-go]>.sg-btn2{width:28px;min-width:28px;padding:0;border:0;font-size:0;color:var(--s65-mut);background:no-repeat center/14px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238f897c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 6l6 6-6 6'/%3E%3C/svg%3E")}
+#settings .set-body button.sg-row[data-go]:hover>.sg-btn2{background-color:transparent}
+#settings .set-body .r61-chev,#settings .set-body .s62-chev,#settings .set-body .q64-chev{flex:none;width:28px;text-align:center;color:var(--s65-mut);opacity:1}
+
+#settings .set-body .nf-sound,#settings .set-body .f42-chip{height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--s65-line);font:600 12px Manrope,system-ui,sans-serif;color:var(--s65-ink)}
+#settings .set-body .ai-save{height:30px;padding:0 13px;border-radius:15px;background:var(--s65-pri);color:var(--s65-prifg);font:600 12.5px Manrope,system-ui,sans-serif}
+#settings .set-body .sg-row>input:is([type=text],[type=url],[type=email],:not([type])),#settings .set-body .ai-name input{height:34px;padding:0 12px;border-radius:10px;border:1px solid transparent;background:var(--s65-in);color:var(--s65-ink);font:500 12.5px 'IBM Plex Mono',ui-monospace,monospace}
+#settings .set-body :is(.nf-sound.on,.sg-pill.on,.f42-chip.on,.f42-chip[aria-pressed=true]){background:var(--s65-pri);border-color:var(--s65-pri);color:var(--s65-prifg)}
+/* Bryter 36×22 grønn */
+#settings .set-body .sg-sw,#settings .set-body .gs-sw{width:36px;height:22px;border-radius:11px;padding:2px;background:var(--s65-off)}
+#settings .set-body .sg-sw::after{width:18px;height:18px;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+#settings .set-body .gs-sw i{top:2px;left:2px;width:18px;height:18px;border-radius:9px}
+#settings .set-body .gs-sw.on i{left:16px}
+#settings .set-body .sg-row[aria-checked=true] .sg-sw,#settings .set-body .s62-sw[aria-checked=true] .sg-sw,#settings .set-body .gs-sw.on{background:var(--s65-ok)}
+
+/* Segmentert 30 px (2 px innpakning, aktiv = kortfarge med skygge), høyrestilt – og filterchips 30 px */
+#settings .set-body .kal-seg,#settings .set-body .s62-seg,#settings .set-body .gs-seg,#settings .set-body .gs40-seg{display:inline-flex;flex:none;gap:0;height:30px;padding:2px;border-radius:15px;background:var(--s65-fld);max-width:100%;overflow-x:auto;scrollbar-width:none}
+#settings .set-body .kal-seg-b,#settings .set-body .s62-seg button,#settings .set-body .gs-seg button,#settings .set-body .gs40-seg button{flex:none;height:26px;padding:0 10px;border:0;border-radius:13px;background:transparent;color:var(--s65-mut);font:600 12px Manrope,system-ui,sans-serif;box-shadow:none}
+#settings .set-body .gs-seg button,#settings .set-body .gs40-seg button{flex:1 1 auto}
+#settings .set-body .kal-seg-b[aria-pressed=true],#settings .set-body .s62-seg button.on,#settings .set-body .gs-seg button[aria-pressed="true"],#settings .set-body .gs40-seg button[aria-pressed="true"]{background:var(--s65-card);color:var(--s65-ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+html[data-hl="2c"]:not([data-mode="dark"]) #settings .set-body :is(.kal-seg-b[aria-pressed=true],.s62-seg button.on,.gs-seg button[aria-pressed="true"],.gs40-seg button[aria-pressed="true"]){background:#fff}
+#settings .set-body .e60-bar,#settings .set-body .s62-bar{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;padding:10px 0;border-top:0}
+#settings .set-body :is(.e60-bar,.s62-bar) button,#settings .set-body .gs40-ph button{flex:none;height:30px;min-height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--s65-line);background:transparent;color:var(--s65-ink);font:600 12px Manrope,system-ui,sans-serif;white-space:nowrap}
+#settings .set-body :is(.e60-bar,.s62-bar) button.on{background:var(--s65-pri);border-color:var(--s65-pri);color:var(--s65-prifg)}
+#settings .set-body :is(.e60-bar,.s62-bar) small{opacity:.7;font:500 11px 'IBM Plex Mono',ui-monospace,monospace}
+
+/* Felt 34 px (radius 10, mono 12,5 px) og select 30 px pill */
+#settings .set-body .sg-field{min-height:46px;padding:6px 0;gap:10px;border:0;border-top:1px solid var(--s65-line);font-size:12px;color:var(--s65-mut)}
+#settings .set-body .sg-field:first-child{border-top:0}
+#settings .set-body .sg-field>span:first-child{width:96px;min-width:96px;flex:none}
+#settings .set-body .sg-field input:not([type=range]):not([type=checkbox]):not([type=color]),#settings .set-body .sg-field select,#settings .set-body .e60-q,#settings .set-body .r61-q input,#settings .set-body .r61-tf input,#settings .set-body .s62-fl input,#settings .set-body .m63-fl input,#settings .set-body .gs-kr input,#settings .set-body .gs-br input[type=time],#settings .set-body .s62-bt input{
+  height:34px;padding:0 12px;border-radius:10px;border:1px solid transparent;background:var(--s65-in);color:var(--s65-ink);font:500 12.5px 'IBM Plex Mono',ui-monospace,monospace;text-align:left}
+#settings .set-body .sg-field select{-webkit-appearance:none;appearance:none;padding-right:28px;background:var(--s65-in) no-repeat right 11px center/10px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238f897c' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")}
+#settings .set-body .sg-field input:focus,#settings .set-body .e60-q:focus,#settings .set-body .r61-q input:focus{border-color:var(--s65-ink)}
+#settings .set-body .sg-field:focus-within{background:transparent}
+#settings .set-body .sg-field textarea,#settings .set-body .r61-form textarea{border-radius:10px;border:1px solid transparent;background:var(--s65-in);color:var(--s65-ink);font:500 12.5px/1.5 'IBM Plex Mono',ui-monospace,monospace}
+#settings .set-body .q64-wnav select,#settings .set-body .sg-row>select,#settings .set-body .gs52-def select{height:30px;max-width:230px;padding:0 28px 0 12px;border-radius:15px;border:1px solid var(--s65-line);-webkit-appearance:none;appearance:none;background:var(--s65-card) no-repeat right 11px center/10px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238f897c' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");color:var(--s65-ink);font:500 12px 'IBM Plex Mono',ui-monospace,monospace}
+#settings .set-body .q64-wnav .q64-b{width:30px;padding:0}
+
+/* Modulene (punkt 3): samme rad, ingen egne 26 px-marger, grå småbokser blir rader/tall i kortet, tags er små mono-tags */
+#settings .set-body :is(.r61-det,.q64-det,.s62-det){padding:2px 0 12px 40px;font-size:12.5px;gap:8px}
+#settings .set-body :is(.r61-kv,.s62-kv){font-size:12.5px;grid-template-columns:96px minmax(0,1fr)}
+#settings .set-body :is(.r61-kv,.s62-kv)>b{font-weight:500;color:var(--s65-mut);opacity:1}
+#settings .set-body .m63-item{padding:8px 0;border-top:1px solid var(--s65-line)}
+#settings .set-body .m63-t{padding:12px 2px 2px}
+#settings .set-body .m63-note{padding:6px 0;font-size:12px;color:var(--s65-mut);opacity:1}
+#settings .set-body :is(.r61-stats,.q64-tiles){display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:0;padding:0;margin:0 -14px;border-top:0;border-bottom:1px solid var(--s65-line)}
+#settings .set-body .q64-tiles{border-top:1px solid var(--s65-line);border-bottom:0}
+#settings .set-body :is(.r61-stats>span,.q64-tile){padding:10px 14px;border-radius:0;background:transparent;gap:2px}
+#settings .set-body :is(.r61-stats>span,.q64-tile)+:is(span,.q64-tile){box-shadow:inset 1px 0 0 var(--s65-line)}
+#settings .set-body .r61-stats b,#settings .set-body .q64-tile>b{font:500 20px/1.15 Newsreader,Georgia,serif}
+html:not([data-hl="2c"]) #settings .set-body .r61-stats b,html:not([data-hl="2c"]) #settings .set-body .q64-tile>b{font-family:Manrope,system-ui,sans-serif;font-weight:600}
+#settings .set-body .r61-stats small,#settings .set-body .q64-tile>span,#settings .set-body .q64-tile>small{font-size:12px;color:var(--s65-mut);opacity:1}
+#settings .set-body .q64-tile>span{font:500 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;order:-1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#settings .set-body .q64-tile>small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#settings .set-body :is(.r61-st,.s62-st,.m63-chip,.q64-chip,.s62-ch i){padding:0;border:0;border-radius:0;background:transparent;font:500 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;margin-right:6px}
+#settings .set-body :is(.e60-al,.m63-al,.r61-chips) i{font:500 11px 'IBM Plex Mono',ui-monospace,monospace;padding:1px 7px;border-radius:6px;border:0;background:var(--s65-fld);color:var(--s65-mut)}
+#settings .set-body .e60-al i.e60-bi{border:0;opacity:.8}
+#settings .set-body .e60-al{flex-wrap:nowrap!important;overflow:hidden}
+#settings .set-body :is(.s62-r,.r61-test,.s62-prev,.m63-side,.q64-md){border-radius:10px;background:var(--s65-in)}
+#settings .set-body .q64-cases{border-color:var(--s65-line)}
+#settings .set-body .q64-case{border-top-color:var(--s65-line)}
+#settings .set-body .s62-l2,#settings .set-body .q64-l2,#settings .set-body .r61-plan1{font-size:12px;color:var(--s65-mut);opacity:1}
+#settings .set-body .s62-off,#settings .set-body .e60-off{box-shadow:none}
+#settings .set-body .s62-head,#settings .set-body .r61-head,#settings .set-body .q64-head{border-top:0}
+#settings .set-body .gs-list{border-top:0}
+#settings .set-body .gs-br{padding:8px 0}
+/* Glimt (glimt35): Julemodus-kortet som kort med rader – segmentet høyrestilt i første rad, ingen rød flis */
+#settings .set-body .gs40-jul{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 12px;align-items:center;padding:0 14px;margin:0;border-radius:14px;background:var(--s65-card)}
+#settings .set-body .gs40-jul>*{grid-column:1/-1}
+#settings .set-body .gs40-jul>.gs40-jh{grid-column:1;grid-row:1;min-height:46px;padding:8px 0;gap:12px}
+#settings .set-body .gs40-jul>.gs40-seg{grid-column:2;grid-row:1}
+#settings .set-body .gs40-jul>.gs40-ph{padding:0 0 10px 40px}
+#settings .set-body .gs40-ph button[aria-pressed="true"]{background:var(--s65-pri);border-color:var(--s65-pri);color:var(--s65-prifg)}
+#settings .set-body .gs40-ji{width:28px;height:28px;border-radius:8px;background:var(--s65-fld);color:var(--s65-ico)}
+#settings .set-body .gs40-ji svg{width:15px;height:15px}
+#settings .set-body :is(.gs40-sub,.gs40-snd){min-height:46px;padding:8px 0;gap:12px;border:0;border-top:1px solid var(--s65-line);flex-wrap:nowrap}
+#settings .set-body .gs40-snd .gs-ot{min-width:0}
+#settings .set-body .gs40-seg.sm{min-width:0}
+/* Stemmemotor og stemmer: én liste med rader (valgt = hake), ingen innrammede bokser eller fargede piller */
+#settings .set-body .gs-opts{gap:0;padding:0 14px;border-radius:14px;background:var(--s65-card)}
+#settings .set-body .gs-opt{min-height:46px;gap:12px;padding:8px 0;border:0;border-top:1px solid var(--s65-line);border-radius:0;background:transparent}
+#settings .set-body .gs-opt:first-child{border-top:0}
+#settings .set-body .gs-opt[aria-pressed="true"]{border-color:var(--s65-line)}
+#settings .set-body .gs-opt[aria-pressed="true"]::after{content:'';flex:none;width:16px;height:16px;background:var(--s65-ok);-webkit-mask:no-repeat center/16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E");mask:no-repeat center/16px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5 9-10'/%3E%3C/svg%3E")}
+#settings .set-body .gs-voice{padding:8px 0}
+#settings .set-body .gs-vb{padding:0}
+#settings .set-body .gs-tag{padding:0!important;border-radius:0;background:transparent!important;color:var(--s65-mut)!important;font:500 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.06em}
+#settings .set-body .gs-on b{font:600 13.5px/1.35 Manrope,Outfit,system-ui,sans-serif}
+/* Språk og tempo: rad med segmentet til høyre (ikke full bredde) */
+#settings .set-body .gs-seg-w{flex-direction:row;align-items:center;gap:12px;min-height:46px;padding:8px 14px;border-radius:14px;background:var(--s65-card)}
+#settings .set-body .gs-seg-l{flex:1;min-width:0;font-size:13.5px}
+#settings .set-body .gs-seg-l b{font-weight:600}
+#settings .set-body .gs-seg-l>span{display:none}
+#settings .set-body .gs-seg-w>.gs-seg{flex:none}
+#settings .set-body .gs-seg-w>.v57-sel{flex:0 1 230px;width:auto;min-width:0;max-width:230px;height:30px;min-height:30px;padding:0 28px 0 12px;border-radius:15px;border:1px solid var(--s65-line);-webkit-appearance:none;appearance:none;background:var(--s65-card) no-repeat right 11px center/10px 6px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238f897c' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");color:var(--s65-ink);font:500 12px 'IBM Plex Mono',ui-monospace,monospace;text-overflow:ellipsis}
+#settings .set-body .gs-key{padding:10px 14px;border-radius:14px;background:var(--s65-card)}
+#settings .set-body .gs-kl{font-size:12px}
+#settings .set-body .gs-kl a{color:var(--s65-ink)}
+#settings .set-body .gs-kr .gs-pill{height:34px;border-radius:17px}
+#settings .set-body .gs-seg button{flex:none}
+@media (max-width:600px){
+  #settings .set-body .gs40-jul>.gs40-seg{grid-column:1/-1;grid-row:auto;justify-self:start;margin:0 0 10px 40px}
+  #settings .set-body .gs40-jul>.gs40-ph{padding-left:0}
+  #settings .set-body .gs40-snd{flex-wrap:wrap}
+  #settings .set-body .gs40-snd>.gs-ot,#settings .set-body .gs-seg-w>.gs-seg-l{flex:1 1 calc(100% - 52px)}
+  #settings .set-body .gs-seg-w>.v57-sel{margin-left:40px;flex:1 1 auto;max-width:none}
+  #settings .set-body .gs40-snd>.gs40-seg{margin-left:40px}
+  #settings .set-body .gs-seg-w{flex-wrap:wrap}
+  #settings .set-body .gs-seg-w>.gs-seg{margin-left:40px}
+}
+#settings .set-body .v57-box{border:1px dashed var(--s65-line);border-radius:12px}
+
+/* Nyheter (news.js i Innstillinger): grå mono-etiketter, kort uten kant, 30/34 px kontroller */
+#settings .set-body .nw46-set .nw-lab{color:var(--s65-lab);font-weight:500}
+#settings .set-body .nw46-set .nw-box{border:0;border-radius:14px;background:var(--s65-card)}
+#settings .set-body :is(.nw46-row,.nw46-cc,.nw-add)>input{height:34px;border-radius:10px;border:1px solid transparent;background:var(--s65-in);color:var(--s65-ink);font:500 12.5px 'IBM Plex Mono',ui-monospace,monospace}
+#settings .set-body :is(.nw46-row,.nw46-cc,.nw-add)>button{align-self:flex-end;height:30px;padding:0 13px;border-radius:15px;border:0;background:var(--s65-pri);color:var(--s65-prifg);font:600 12.5px Manrope,system-ui,sans-serif}
+@media (max-width:767px){
+  /* Mobil: kontrollene (knapper, felt, segment) wrapper under teksten med samme innrykk som teksten; verdier og brytere blir stående. */
+  #settings .set-body .sg-row{flex-wrap:nowrap}
+  #settings .set-body .sg-row:has(>:is(button,select,.kal-seg,.sbtn,.s51-act,.ka36-acts,input:not([type=checkbox]):not([type=color]):not([type=file]):not([hidden]))){flex-wrap:wrap}
+  #settings .set-body .sg-row:has(>:is(button,select,.kal-seg,.sbtn,.s51-act,.ka36-acts,input:not([type=checkbox]):not([type=color]):not([type=file]):not([hidden])))>.sg-txt{flex:1 1 calc(100% - 52px)}
+  #settings .set-body .sg-row:has(>:is(button,select,.kal-seg,.sbtn,.s51-act,.ka36-acts,input:not([type=checkbox]):not([type=color]):not([type=file]):not([hidden])))>:is(.si36,.sg-av,.lg)~.sg-txt+*{margin-left:40px}
+  #settings .set-body :is(.r61-det,.q64-det,.s62-det){padding-left:0}
+  #settings .set-body .sg-field>span:first-child{width:auto;min-width:0}
+  #settings .set-body .sg-field{flex-wrap:wrap}
+  #settings .set-body .sg-field input:not([type=range]):not([type=checkbox]):not([type=color]),#settings .set-body .sg-field select{flex:1 1 100%}
+}

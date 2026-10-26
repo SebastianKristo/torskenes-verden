@@ -1,0 +1,95 @@
+/* Prompt 66 (prompt 50b «fullfør utseendet», UTSYS): Innstillinger → System og Backup med samme komponenter som AI-siden
+   (ai-control.css: .ac-r rad, .ac-card kort, .ac-lab etikett, .ac-ban banner, .ac-kpis KPI-stripe, kontroller 30 px).
+   Innholdet tegnes i <div class="ac emb sys66"> (public/js/sys66.js). Her settes bare temafargene og noen få tillegg:
+   4 px stolper, sporlegende, skjemaer og «Tidligere versjoner» (settings44.js) som samme rad. */
+
+/* ---------- Temafarger: Papir (lys) · Papir mørk · Nåværende (mørkt glass) ---------- */
+#settings .sys66{--bg:#f3efe6;--card:#fffdf8;--fld:#ece6da;--line:#ddd5c5;--ink:#1b1a17;--mut:#6b665c;--acc:#b23a2a;--ok:#2f7a4f;--warn:#a8661a;--bad:#b23a2a;--hf:Newsreader,Georgia,serif}
+html[data-mode="dark"] #settings .sys66{--bg:#161513;--card:#1f1c17;--fld:#2b2824;--line:#3a352c;--ink:#efe9de;--mut:#a49d91;--acc:#ec7a64;--ok:#6fc28f;--warn:#e0a85a;--bad:#ec7a64}
+/* Nåværende: samme farger som AI-siden i det temaet (THEMES.cur i ai-control.js, web30 --w30-*). */
+html:not([data-hl="2c"]) #settings .sys66{--bg:#0c1119;--card:#111723;--fld:#1a2231;--line:#1f2736;--ink:#eef0f4;--mut:#8a93a6;--acc:#a8d4fb;--ok:#34c759;--warn:#e0a85a;--bad:#f59a8f;--hf:Manrope,system-ui,sans-serif}
+/* Ikonflisen: blekk-ikon i lyst papir, dempet i mørke temaer (uavhengig av th-klassen, så et temabytte slår inn med en gang). */
+html[data-mode="dark"] #settings .sys66 .ac-ic,html[data-mode="dark"] #settings .sys66 .ac-ic.txt b,
+html:not([data-hl="2c"]) #settings .sys66 .ac-ic,html:not([data-hl="2c"]) #settings .sys66 .ac-ic.txt b{color:var(--mut)}
+html[data-hl="2c"]:not([data-mode="dark"]) #settings .sys66 .ac-ic{color:#4a463f}
+html[data-hl="2c"]:not([data-mode="dark"]) #settings .sys66 .ac-seg button.on{background:#fff}
+html:not([data-hl="2c"]) #settings .sys66 .ac-seg button.on{background:#26314a}
+html:not([data-hl="2c"]) #settings .sys66 .ac-b.ink{background:var(--ink);color:#0c1119;border-color:var(--ink)}
+
+/* ---------- Ramme ---------- */
+#settings .sys66{gap:20px;max-width:940px;margin:0 0 8px;padding:0;background:transparent;color:var(--ink)}
+#settings .sys65-body>.sys66{margin-top:0}
+#settings .sys66 .ac-sec>.ac-lab{padding:0 2px}
+#settings .sys66 button.ac-r{cursor:pointer;border-radius:0}
+#settings .sys66 button.ac-r:hover .ac-rt1 b{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+#settings .sys66 .ac-rr .ac-chev:not(button){pointer-events:none}
+#settings .sys66 .ac-note.bad{color:var(--bad)}
+#settings .sys66 .ac-list>*+*{border-top:1px solid var(--line)}
+#settings .sys66 .ac-xp .ac-list{border-radius:10px;background:color-mix(in oklab,var(--fld) 45%,transparent);padding:0 12px}
+#settings .sys66 .ac-kpi{min-width:0}
+
+/* Banner: issues som vanlig tekst rett under (ingen grå notatboks). */
+#settings .sys66-is{list-style:none;margin:-12px 0 0;padding:0 2px;display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--mut)}
+#settings .sys66-is li{position:relative;padding-left:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#settings .sys66-is li::before{content:'·';position:absolute;left:2px}
+
+/* ---------- 4 px stolper ---------- */
+#settings .sys66 .sys66-b4{margin-top:0}
+#settings .sys66-meter{display:inline-flex;align-items:center;gap:8px}
+#settings .sys66-meter .sys66-b4{width:96px;flex:none}
+/* Trege forespørsler: raden + stolpe i kategorifarge under, rett under teksten. */
+#settings .sys66-trw{display:flex;flex-direction:column;padding-bottom:10px}
+#settings .sys66-trw>.ac-r{padding-bottom:4px}
+#settings .sys66-trw>.sys66-b4{margin-left:40px}
+#settings .sys66-leg{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:-12px;padding:0 2px;font-size:12px;color:var(--mut)}
+#settings .sys66-leg span{display:inline-flex;align-items:center;gap:5px}
+#settings .sys66-leg i{width:8px;height:8px;border-radius:2px}
+
+/* ---------- Tekst: «Nytt i …», versjoner, byggnummer ---------- */
+#settings .sys66-notes{padding:12px 0;display:flex;flex-direction:column;gap:6px}
+#settings .sys66-notes>b{font-size:13.5px;font-weight:600}
+#settings .sys66-notes ul,#settings .sys66-ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:12.5px;line-height:1.5;color:var(--ink)}
+#settings .sys66-build{display:flex;align-items:center;gap:10px;padding:0 0 12px!important;font:500 11.5px 'IBM Plex Mono',ui-monospace,monospace}
+
+/* ---------- Skjema (Proxmox, passord, backup-oppsett): felt 34 px, etikett 96 px ---------- */
+#settings .sys66-form{padding:10px 0 14px}
+#settings .sys66-form .ac-f textarea{width:100%;min-width:0;padding:8px 12px;border-radius:10px;border:1px solid transparent;background:var(--bg);color:var(--ink);font:500 12.5px 'IBM Plex Mono',ui-monospace,monospace;outline:none;resize:vertical}
+#settings .sys66-form .ac-f input:focus,#settings .sys66-form .ac-f textarea:focus{border-color:var(--ink)}
+#settings .sys66-ck{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);cursor:pointer}
+#settings .sys66-ck input{width:16px;height:16px;accent-color:var(--ok)}
+#settings .sys66-fh{margin-top:8px}
+#settings .sys66-key{display:block;padding:10px 12px;border-radius:10px;background:var(--bg);font:500 12px 'IBM Plex Mono',ui-monospace,monospace;word-break:break-all;user-select:all}
+#settings .sys66-foot{display:flex;justify-content:flex-end}
+
+/* ---------- «Tidligere versjoner» (settings44.js) som samme seksjon + kort + rad ---------- */
+#settings .sys66 .rb44{gap:7px;padding:0}
+#settings .sys66 .rb44-cap{font:500 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--mut);border:0;padding:0 2px}
+#settings .sys66 .rb44-list{background:var(--card);border-radius:14px;padding:0 14px}
+#settings .sys66 .rb44-r{grid-template-columns:auto minmax(0,1fr) auto;gap:12px;min-height:46px;padding:8px 0;border-bottom:0;border-top:1px solid var(--line);background:transparent}
+#settings .sys66 .rb44-r:first-child{border-top:0}
+#settings .sys66 .rb44-r>b.mono{font:600 13px 'IBM Plex Mono',ui-monospace,monospace;min-width:64px}
+#settings .sys66 .rb44-t{font-size:12px;gap:7px;color:var(--mut)}
+#settings .sys66 .rb44-tag{height:auto;padding:0;background:none;color:var(--mut);font:500 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase}
+#settings .sys66 .rb44-tag.ok{color:var(--ok)}#settings .sys66 .rb44-tag.warn{color:var(--warn)}
+#settings .sys66 .rb44-n{font-size:12px;color:var(--mut)}
+#settings .sys66 .rb44-b{height:30px;padding:0 13px;border-radius:15px;border:1px solid var(--line);font:600 12.5px Manrope,system-ui,sans-serif;color:var(--ink)}
+#settings .sys66 .rb44-run{font:500 11.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--ok)}
+#settings .sys66 .rb44>.ny-note{font-size:12px;line-height:1.5;color:var(--mut);padding:0 2px}
+
+/* ---------- Mobil (< 600 px): samme komponenter, kontrollene under teksten ---------- */
+/* Oppsett-kommandoen øverst (settings-system.js) var hvit med lys tekst i Papir mørk. */
+html[data-mode="dark"][data-hl="2c"] #settings .ny-setup .upd-cmd code{background:#211e18;border-color:#3a352c;color:#efe9de}
+
+/* ---------- Mobil (< 600 px): samme komponenter; rader med kontroller wrapper under teksten (ai-control.css), verdier blir stående ---------- */
+@media (max-width:600px){
+  #settings .sys66 .ac-r.ctl>.ac-rr:has(>.ac-chev:only-child){flex:none;padding-left:0;margin-left:auto;flex-basis:auto}
+  #settings .sys66 .ac-r .ac-rr .ac-v{white-space:nowrap}
+  #settings .sys66 .ac-ban{flex-wrap:wrap}
+  #settings .sys66 .ac-ban>.ac-b{margin-left:20px}
+  #settings .sys66 .ac-ban .ac-rm span{white-space:normal}
+  #settings .sys66-meter .sys66-b4{width:56px}
+  #settings .sys66 .rb44-r{grid-template-columns:minmax(0,1fr) auto}
+  #settings .sys66 .rb44-r>b.mono{grid-column:1/-1}
+  /* Backup-siden: «Omfang»-segmentet i systembackupen (settings-backup.js) gikk 6 px utenfor kortet. */
+  #settings .sg-row.bk-wrap .kal-seg{box-sizing:border-box;min-width:0;max-width:calc(100% - var(--bk66-ind,40px));width:auto}
+}

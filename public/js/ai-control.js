@@ -21,6 +21,8 @@
 const THEMES = {
   papir: { bg: '#f3efe6', card: '#fffdf8', fld: '#ece6da', line: '#ddd5c5', ink: '#1b1a17', mut: '#6b665c', acc: '#b23a2a', ok: '#2f7a4f', warn: '#a8661a', bad: '#b23a2a', hf: 'Newsreader,Georgia,serif' },
   mork: { bg: '#161513', card: '#211f1b', fld: '#2b2824', line: '#3b3731', ink: '#efe9de', mut: '#a49d91', acc: '#ec7a64', ok: '#6fc28f', warn: '#e0a85a', bad: '#ec7a64', hf: 'Newsreader,Georgia,serif' },
+  // Prompt 66: «Nåværende» (mørkt glass) – samme farger som Innstillinger i det temaet (web30 --w30-*).
+  cur: { bg: '#0c1119', card: '#111723', fld: '#1a2231', line: '#1f2736', ink: '#eef0f4', mut: '#8a93a6', acc: '#a8d4fb', ok: '#34c759', warn: '#e0a85a', bad: '#f59a8f', hf: 'Manrope,system-ui,sans-serif' },
   finans: { bg: '#0A0A0C', card: '#141418', fld: '#1B1B20', line: '#2A2A31', ink: '#F2F2F4', mut: '#8C8C96', acc: '#FF7A3D', ok: '#9FE3C6', warn: '#FFC86B', bad: '#FF7A7A', hf: 'Manrope,system-ui,sans-serif' },
 };
 // Brukes når serveren ikke har /api/ai/library ennå.
@@ -1077,7 +1079,7 @@ function webSec() {
 const TABS_FN = { ov: ovTab, mod: modTab, task: taskTab, rcpt: rcptTab, svc: svcTab, job: jobTab, use: useTab };
 function svcBad(o) { try { return svcList(o).filter((x) => x.dot === 'bad').length; } catch { return 0; } }
 function parts(p) {
-  const o = p.o, fin = o.scope === 'finans', T = THEMES[o.theme] ?? THEMES.papir, tabs = tabsFor(o), web = o.variant !== 'mobile';
+  const o = p.o, fin = o.scope === 'finans', thk = themeKey66(o.theme), T = THEMES[thk] ?? THEMES.papir, tabs = tabsFor(o), web = o.variant !== 'mobile';
   const only = o.only ? (o.only === 'glimt' ? 'glimt' : aiTabKey65(o.only).split(':')[0]) : '';
   if (only && only !== 'glimt') p.tab = only;
   if (!only && !tabs.some(([k]) => k === p.tab)) p.tab = tabs[0][0];
@@ -1091,9 +1093,30 @@ function parts(p) {
   const hd = o.embedded ? '' : `<div class="ac-hd"><span class="ac-hic" aria-hidden="true">${ico(fin ? 'receipt' : 'spark', 19)}</span><span class="ac-rm"><b class="ac-title">${fin ? 'AI i Finans' : 'AI'}</b><span class="ac-hs ac-ell">${esc(status)}</span></span>${o.onClose ? '<button type="button" class="ac-b ink ac-done" data-ac-close>Ferdig</button>' : ''}</div>`;
   const nav = only ? '' : `<nav class="ac-tabs" role="tablist" aria-label="AI">${tabs.map(([k, n, ic]) => { const b = k === 'job' ? failN : k === 'svc' ? svcN : 0; return `<button type="button" role="tab" class="${p.tab === k ? 'on' : ''}" data-ac-tab="${k}" aria-selected="${p.tab === k}">${ico(ic)}<span>${n}</span>${b ? `<i class="ac-badge ${k === 'job' ? 'b-bad' : 'b-warn'}">${b}</i>` : ''}</button>`; }).join('')}</nav>`;
   const top = hd || nav ? `${hd}${nav}` : '';
-  const root = `ac ${web ? 'web' : 'mob'} th-${esc(o.theme ?? 'papir')}${o.embedded ? ' emb' : ''}${only ? ' only' : ''}|${Object.entries(T).map(([k, v]) => `--${k}:${v}`).join(';')}`;
+  const root = `ac ${web ? 'web' : 'mob'} th-${esc(thk)}${o.embedded ? ' emb' : ''}${only ? ' only' : ''}|${Object.entries(T).map(([k, v]) => `--${k}:${v}`).join(';')}`;
   return { root, top, main, toast: G.toast ? `<div class="ac-toast" role="status">${esc(G.toast)}</div>` : '' };
 }
+
+/** Prompt 66: theme 'auto' følger siden – Vindu og papir (lys → papir, mørk modus → mork) eller Nåværende (cur). */
+export function themeKey66(t) {
+  if (t && t !== 'auto') return t;
+  if (typeof document === 'undefined') return 'papir';
+  const h = document.documentElement;
+  return h.dataset.hl === '2c' ? (h.getAttribute('data-mode') === 'dark' ? 'mork' : 'papir') : 'cur';
+}
+/** Bytter bare fargene (klasse + variabler på roten) når tema eller lys/mørk endres – innholdet og monterte moduler beholdes. */
+function retheme66() {
+  for (const p of inst) {
+    if (p.o.theme && p.o.theme !== 'auto') continue;
+    const r = p.el.querySelector('[data-ac-root]');
+    if (!r || !p.el.isConnected) continue;
+    const P = parts(p);
+    if (P.root === p.rootKey) continue;
+    const [cls, style] = P.root.split('|');
+    r.className = cls; r.setAttribute('style', style); p.rootKey = P.root;
+  }
+}
+if (typeof window !== 'undefined') { window.addEventListener('papir-web-mode', () => setTimeout(retheme66)); document.addEventListener('hl:theme', () => setTimeout(retheme66)); }
 
 /** Tegner ett panel på nytt (bare delene som er endret), og beholder fokus/markør og scroll. */
 function paint(p) {
@@ -1312,7 +1335,7 @@ function poll() {
 }
 
 /**
- * Monterer AI-kontroll i el. o: {variant:'web'|'mobile', scope:'alle'|'chat'|'finans', theme:'papir'|'mork'|'finans', tab, admin, onClose, onTab,
+ * Monterer AI-kontroll i el. o: {variant:'web'|'mobile', scope:'alle'|'chat'|'finans', theme:'papir'|'mork'|'cur'|'finans'|'auto', tab, admin, onClose, onTab,
  * embedded (ingen egen tittel/Ferdig), only ('glimt' = Glimt-delen uten faner, eller en fanenøkkel), onStatus, onPaint}.
  * Returnerer {setTab, destroy, open}.
  */

@@ -115,6 +115,20 @@ export const ANCHORS = {
 const PATH65 = [[/^Helse \(Familie\)/, 'Brukere og familie → Helse'], [/^Varsler → Familie → /, 'Varsler → '], [/^Startside → Faner/, 'App → Topplinje → Faner'], [/^Startside → Topplinje/, 'App → Topplinje'], [/^Startside/, 'Utseende'], [/^Familie/, 'Brukere og familie'], [/^Brukere(?! og familie)/, 'Brukere og familie'],
   [/^Gjøremål/, 'Kalender og gjøremål → Gjøremål'], [/^Kalendere/, 'Kalender og gjøremål'], [/^Sikkerhet/, 'Konto → Sikkerhet'], [/^AI → API og nøkler/, 'AI → Tjenester'], [/^AI → Valg/, 'AI → Oppgaver'],
   [/^AI → Glimt og chat/, 'Glimt'], [/^System → Backup/, 'Backup'], [/^System → Mer → (Lokale modeller|Desert)/, 'AI → Modeller'], [/^System → Mer → Brukere/, 'Brukere og familie'], [/^Generelt → Domener/, 'Moduler → Domener']];
+/** Prompt 66: titler fra serverens indeks som er navnet på en side som er slått sammen eller flyttet. Skrives om på klienten
+ *  (samme sted som stiene), så treffene viser de nye navnene. Etter id først (sikrest), ellers etter tittelen. */
+const TITLE66_ID = { startside: 'Forside og nyhetsbar', 'startside.faner': 'Faner i topplinjen', kalendere: 'Kalender og gjøremål', brukere: 'Brukere og familie', gjoremal: 'Gjøremål og lister',
+  'gjoremal.synk': 'Synk gjøremål med Home Assistant', 'ai.motor': 'Modell per oppgave', 'ai.gemini': 'Gemini-nøkkel', 'ai.personlighet': 'Glimts personlighet', nyheter: 'Nyheter', 'helse.ha': 'Helse fra Home Assistant' };
+const TITLE66 = [[/^Startside$/, 'Forside og nyhetsbar'], [/^Familie$/, 'Brukere og familie'], [/^Brukere$/, 'Brukere og familie'], [/^Gjøremål$/, 'Gjøremål og lister'], [/^Kalendere$/, 'Kalender og gjøremål'],
+  [/^Sikkerhet$/, 'Konto og sikkerhet'], [/^Innlogging$/, 'Konto og innlogging'], [/^AI-motor$/, 'Modell per oppgave'], [/^API og nøkler$/, 'AI-tjenester og nøkler'], [/^Nyhetsleser$/, 'Nyheter'], [/^Glimt og chat$/, 'Glimt']];
+export function title66(x) {
+  const t = String(x?.title ?? '');
+  if (x?.id && TITLE66_ID[x.id] && (x.id !== 'nyheter' || t === 'Nyhetsleser')) return TITLE66_ID[x.id];
+  for (const [re, to] of TITLE66) if (re.test(t)) return to;
+  return t;
+}
+/** Stier og titler fra serverens AI-svar («Det finner du under Startside → Forside …») med de nye navnene. */
+export const answer66 = (a) => String(a ?? '').replace(/(under )((?:Startside|Familie|Gjøremål|Kalendere|Sikkerhet|Helse \(Familie\)|AI → API og nøkler|AI → Valg|AI → Glimt og chat|System → Backup|Generelt → Domener)(?: → [^.,]+)?)/g, (m, u, p) => u + path65(p));
 export const path65 = (p) => { let s = String(p ?? ''); for (const [re, to] of PATH65) if (re.test(s)) { s = s.replace(re, to); break; } return s; };
 /** Sidenøkkel for ikonet i treffet (gamle nøkler → nye sider). Settes av settings.js. */
 let normTab = (k) => k;
@@ -133,7 +147,8 @@ export function loadIndex(redraw) {
       // Mål-id fra den innebygde indeksen når serveren ikke har dem, og mål som serveren mangler helt.
       const loc = new Map(LOCAL.map((x) => [x.id, x])), has = new Set(list.map((x) => x.anchor).filter(Boolean));
       X.index = [...list.map((x) => (x.anchor || !loc.get(x.id)?.anchor ? x : { ...x, anchor: loc.get(x.id).anchor })), ...LOCAL.filter((x) => (x.anchor ? !has.has(x.anchor) : NEW65.has(x.id)) && !list.some((y) => y.id === x.id))]
-        .map((x) => ({ ...x, path: path65(x.path) })); // prompt 65: nye sidenavn i stiene
+        .map((x) => ({ ...x, path: path65(x.path) })) // prompt 65: nye sidenavn i stiene
+        .map((x) => ({ ...x, title: title66(x) })); // prompt 66: og nye titler i treffene («Startside» → …)
     } else X.index = LOCAL;
   }).catch(() => { X.index = LOCAL; }).finally(() => { X.loading = null; redraw?.(); });
 }
@@ -204,7 +219,7 @@ export async function ask(q, redraw, onDone) {
     if (r && (r.answer || r.targetId)) {
       const tg = index().find((x) => x.id === r.targetId) ?? (r.anchor ? index().find((x) => anchorOf(x) === r.anchor) : null) ?? null;
       const an = tg ? (r.anchor ?? anchorFor(tg, q)) : null;
-      ans = { answer: String(r.answer ?? ''), target: tg && an && !anchorOf(tg) ? { ...tg, anchor: an } : tg };
+      ans = { answer: answer66(r.answer), target: tg && an && !anchorOf(tg) ? { ...tg, anchor: an } : tg }; // prompt 66: nye navn i svaret
       if (ans.target?.anchor && ANS[ans.target.anchor] && !r.anchor) ans.answer = ANS[ans.target.anchor];
     }
   } catch (e) { if (e.name === 'AbortError') return; }

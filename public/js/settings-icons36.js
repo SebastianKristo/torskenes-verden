@@ -95,6 +95,12 @@ const MAP = [
   // Prompt 65: System (containere = boks, disk/backup = disk, database, oppdateringer = sirkelpiler, tilbakerulling = angre,
   // røyktest = kolbe, trege forespørsler = klokke, /api/health = puls, feature flags = flagg, krasjrapporter = insekt).
   [/container/i, 'box'], [/database|integritet|vacuum|vedlikehold/i, 'database'], [/feature flag/i, 'flag'], [/krasj/i, 'bug'], [/røyktest|staging/i, 'flask'],
+  // Prompt 66: Glimt-radene, modulene og Konto/Utseende/Varsler (ikon etter innhold).
+  [/^les opp|leser .* høyt/i, 'audio-lines'], [/^tempo/i, 'timer'], [/språk for opplesning/i, 'languages'], [/stemme for/i, 'audio-lines'], [/vis meg rundt|guide/i, 'hand'], [/venner av/i, 'smile'], [/^varsel når|^push-varsel/i, 'bell'], [/julemodus|jul|17\. mai|høytid/i, 'sparkles'],
+[/^sted\b/i, 'map-pin'], [/^person\b/i, 'user'], [/^butikk\b/i, 'package'], [/^abonnement\b/i, 'repeat'], [/^fast hendelse/i, 'calendar'],
+    [/^vær$|^været/i, 'cloud'], [/^gjøremål|huskeliste/i, 'list-checks'], [/^pakker/i, 'package'], [/^familie/i, 'users'], [/^nyheter/i, 'newspaper'], [/^økonomi|^penger|^aksjer/i, 'coins'],
+  [/entitet|hva betyr/i, 'users'], [/oppskrift|glimt lærer|hurtigvei|rettelse/i, 'list-checks'], [/^legg til/i, 'pencil'], [/ukerapport|eval|kjører hver natt|^uke \d/i, 'flask'], [/alle brukere/i, 'users'],
+  [/morgenbrief|dagsbrief|kveldsbrief|nattbrief/i, 'sunrise'], [/betinget/i, 'bell'], [/prisområde|strøm/i, 'activity'], [/planlagte oppgaver/i, 'calendar-clock'],
   [/trege forespørsler|ytelse|per rute/i, 'clock'], [/api\/health|^helse/i, 'activity'], [/tilbakerull|gå tilbake|rull tilbake/i, 'undo'], [/passkey/i, 'key-round'],
   [/brief og glimt-figur/i, 'smile'], [/apple health|health connect|^helse|deles med familien/i, 'heart'], [/faste oppgaver/i, 'calendar-clock'], [/snarvei/i, 'link'], [/hastighet|pause/i, 'timer'], [/^stil$|kategori/i, 'palette'], [/søkehistorikk/i, 'history'], [/^kvalitet$/i, 'check-circle-2'], [/sonevarsel/i, 'map-pin'], [/selvreparasjon|omstart/i, 'refresh-cw'], [/timeplan|skole/i, 'calendar'],
   [/^navn på serveren/i, 'server'], [/^(navn|fullt navn|visningsnavn)$/i, 'user'], [/^brukernavn/i, 'at-sign'], [/^rolle/i, 'shield'], [/^profilbilde|^bilde$/i, 'image'],
@@ -134,8 +140,29 @@ export function decorateRows(root) {
     const danger = DANGER.test(t.trim()) || r.classList.contains('danger');
     const v = r.querySelector('.sg-v')?.textContent ?? '';
     const st = /^(siste backup|status)/i.test(t.trim()) ? (/feil|failed|mislyk/i.test(v + r.textContent) ? 'red' : /ok|✓|verifisert/i.test(v + r.textContent) ? 'green' : '') : '';
-    const k = iconFor(t);
+    // Prompt 66: tittelen er ofte et navn (entiteter, oppgaver) – da velges ikonet etter underteksten.
+    let k = iconFor(t);
+    if (k === 'info') { const sub = r.querySelector('.sg-txt > span')?.textContent ?? ''; if (sub) k = iconFor(sub); }
     r.insertAdjacentHTML('afterbegin', chipHtml(k, danger ? 'red' : st, /backup feiler/i.test(t)));
     if (danger && b) b.classList.add('si36-dt');
   });
+  // Prompt 66: kalender- og fagrader (fargeprikk foran tittelen) får flis; prikken blir 9 px merke nederst til høyre på flisen.
+  root.querySelectorAll('.sg-row.kal-sc:not([data-si66])').forEach((r) => {
+    r.dataset.si66 = '1';
+    const dot = r.querySelector(':scope > .kal-sc-dot');
+    if (!dot) return;
+    dot.insertAdjacentHTML('beforebegin', chipHtml(r.classList.contains('kal40-row') ? 'calendar' : 'palette'));
+    dot.previousElementSibling.appendChild(dot);
+  });
+  // Prompt 66 (Ikoner på alt): Glimt-radene (glimt35 .gs-row) får samme 28 px flis.
+  root.querySelectorAll(':is(.gs-row,.gs40-snd,.gs-seg-w,.gs-opt):not([data-si36])').forEach((r) => {
+    r.dataset.si36 = '1';
+    if (r.querySelector(':scope > .si36,:scope > .gs40-ji,:scope > [class*="-ic"]')) return;
+    const t = r.querySelector('.gs-ot b, .gs-on b, .gs-seg-l b, b')?.textContent ?? '';
+    const k = r.matches('.gs-opt:not(.gs-voice)') ? 'audio-lines' : r.matches('.gs-voice') ? 'volume' : iconFor(t);
+    if (!t.trim()) return;
+    r.insertAdjacentHTML('afterbegin', chipHtml(k));
+  });
+  // Prompt 66: undertekstene er én linje med ellipsis på web – hele teksten som verktøytips.
+  root.querySelectorAll('.sg-row > .sg-txt > span:first-of-type:not([title]):not([role]), .gs-row .gs-os:not([title])').forEach((s) => { const x = s.textContent.trim(); if (x) s.title = x; });
 }

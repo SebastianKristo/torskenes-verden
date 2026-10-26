@@ -4,6 +4,8 @@
 //   Varsler: ntfy-emner per enhet (/api/me/ntfy51).
 import { esc } from './util.js';
 import { store } from './store.js';
+import { row66, sec, btn, seg, swb, banner, val66, bar66, kpis66, tone66, fld } from './sys66.js'; // prompt 66: samme komponenter som AI-siden
+import { backupKpi66 } from './ops51.js'; // prompt 66: Backup-cellen i KPI-stripen
 
 let R = () => {};
 export const setObs51Render = (fn) => { if (typeof fn === 'function') R = fn; };
@@ -28,84 +30,103 @@ function loadAll(force = false) {
 }
 
 /* ---------------- Visning: System ---------------- */
+// Prompt 66 (prompt 50b «fullfør utseendet»): samme komponenter som AI-siden (sys66.js → ui65): helse-banner, KPI-stripe,
+// rader med ikonflis og statusmerke, 4 px stolper. Erstatter de grå flisene og de store kortene. Data og handlinger er de samme.
 
-const DOT = { green: '#3ecf8e', yellow: '#f2c94c', red: '#f2766b', ok: '#3ecf8e', warn: '#f2c94c', crit: '#f2766b' };
-const dot = (c) => `<i class="o51-dot" style="background:${DOT[c] ?? '#8a93a6'}"></i>`;
-const card = (title, body, extra = '') => `<div class="o51-card"${extra}><b class="o51-ct">${title}</b>${body}</div>`;
-const bar = (pct, c) => `<span class="o51-bar"><span style="width:${Math.max(0, Math.min(100, pct ?? 0))}%;background:${c}"></span></span>`;
 const ago = (iso) => { const s = Math.round((Date.now() - Date.parse(iso)) / 1000); return s < 60 ? 'nå' : s < 3600 ? `${Math.round(s / 60)} min siden` : s < 86400 ? `${Math.round(s / 3600)} t siden` : `${Math.round(s / 86400)} d siden`; };
+const TONE_C = { ok: 'var(--ok)', warn: 'var(--warn)', bad: 'var(--bad)' };
+const loadingSec = (t) => sec('', row66({ ic: 'refresh', t, dot: 'busy' }));
+const msgNote = () => `${O.msg ? `<p class="ac-note">${esc(O.msg)}</p>` : ''}${O.err ? `<p class="ac-note bad" role="alert">${esc(O.err)}</p>` : ''}`;
 
 function healthHtml() {
   const h = O.h;
-  if (!h) return `<section class="sg"><h3 class="sg-t">Helse</h3><div class="sg-box"><div class="sg-row"><span class="sg-txt"><b>${O.hErr ? 'Fikk ikke hentet helsen' : 'Henter helsen …'}</b><span>${esc(O.hErr)}</span></span></div></div></section>`;
-  const al = h.alerts.length ? `<ul class="o51-al">${h.alerts.map((a) => `<li>${dot(a.level)}<span><b>${esc(a.title)}</b>${a.text ? `<span>${esc(a.text)}</span>` : ''}</span></li>`).join('')}</ul>` : '';
-  const ct = h.containers.available ? `<ul class="o51-list">${h.containers.items.map((c) => `<li>${dot(c.color)}<span class="o51-n" data-no-i18n>${esc(c.name)}</span><span class="o51-s">${c.health === 'unhealthy' ? 'unhealthy' : esc(c.state)}</span><span class="o51-m">${c.cpuText ? `${esc(c.cpuText)} · ${esc(c.memText)}` : ''}</span></li>`).join('')}</ul><span class="o51-sub">${h.containers.up} av ${h.containers.total} kjører</span>`
-    : `<span class="o51-sub">${esc(h.containers.error || 'Docker-proxyen svarer ikke')}</span>`;
-  const disks = h.disks.map((d) => (d.error ? `<div class="o51-disk"><b>${esc(d.name)}</b><span class="o51-sub">${esc(d.error)}</span></div>`
-    : `<div class="o51-disk"><b>${esc(d.name)}</b>${bar(d.pct, DOT[d.level] ?? DOT.ok)}<span class="o51-sub">${esc(d.text)}${d.pctText ? ` · ${esc(d.pctText)} brukt` : ''}</span>${d.trend?.text ? `<span class="o51-tr" style="color:${DOT[d.level]}">${esc(d.trend.text)}</span>` : d.trend?.perDayText ? `<span class="o51-sub">${esc(d.trend.perDayText)}</span>` : `<span class="o51-sub">Trenden kommer etter noen timer med målinger.</span>`}</div>`)).join('');
-  const ol = h.ollama;
-  const olB = ol.ok ? `<span class="o51-sub">${ol.paused ? 'Køen er satt på pause · ' : ''}${ol.running.length ? `Kjører: ${ol.running.map((r) => esc(r.model)).join(', ')}` : 'Ingen jobb nå'} · ${ol.queued} i kø</span><span class="o51-sub">Lastet: ${ol.loaded.length ? ol.loaded.map((m) => `<span data-no-i18n>${esc(m.name)}</span>${m.vramGb ? ` (${String(m.vramGb).replace('.', ',')} GB)` : ''}`).join(', ') : 'ingen'}</span>` : `<span class="o51-sub">${esc(ol.error)}</span>`;
-  const mac = h.macOcr;
-  const macB = mac.enabled === false ? '<span class="o51-sub">Slått av i kvitteringsinnstillingene</span>' : `<span class="o51-sub">${mac.ok ? `Svarer${mac.ms != null ? ` på ${mac.ms} ms` : ''}${mac.version ? ` · ${esc(mac.version)}` : ''}` : esc(mac.error || 'Svarer ikke')}</span>`;
-  const mm = h.macMini;
-  const mmB = `<span class="o51-sub">${esc(mm.model ?? 'AI-maskinen')}${mm.memGb ? ` · ${mm.memGb} GB` : ''} · ${mm.ok ? 'Ollama svarer' : 'Ollama svarer ikke'}</span>`;
-  const pv = h.proxmox;
-  const pvB = !pv.configured ? '<span class="o51-sub">Ikke satt opp (valgfritt)</span>' : pv.ok ? pv.nodes.map((n) => `<span class="o51-sub">${dot(n.status === 'online' ? 'ok' : 'crit')}<span data-no-i18n>${esc(n.node)}</span> · CPU ${n.cpu ?? '–'} % · minne ${n.memPct ?? '–'} %</span>`).join('') : `<span class="o51-sub">${esc(pv.error)}</span>`;
-  const nt = h.ntfy;
-  const ntB = `<span class="o51-sub">${!nt.configured ? 'Ikke satt opp (NTFY_URL)' : nt.ok ? `Svarer${nt.tokenSet ? '' : ' · NTFY_TOKEN mangler'}` : esc(nt.error || 'Svarer ikke')}</span>`;
-  return `<section class="sg o51"><h3 class="sg-t">Helse <span class="o51-pill">${dot(h.overall)}${esc(h.overallText)}</span><button type="button" class="o51-btn" data-o51="refresh" ${O.hLoading ? 'disabled' : ''}>${O.hLoading ? 'Henter …' : 'Oppdater'}</button></h3>
-    ${al}<div class="o51-grid">${card('Containere', ct, ' style="grid-row:span 2"')}${card('Disk', disks)}${card('Ollama', olB)}${card('Mac-OCR', macB)}${card('Mac mini', mmB)}${card('Proxmox', pvB + `<button type="button" class="o51-link" data-o51="pve">${pv.configured ? 'Endre' : 'Sett opp'}</button>`)}${card('ntfy', ntB)}</div>
-    ${O.pveOpen ? pveForm() : ''}<span class="o51-sub">Sist hentet ${esc(ago(h.at))}${h.mock ? ' · eksempeldata' : ''}</span></section>`;
+  if (!h) return O.hErr ? banner('bad', 'Fikk ikke hentet helsen', O.hErr, btn('Prøv igjen', 'data-o51="refresh"')) : loadingSec('Henter helsen …');
+  const tone = tone66(h.overall);
+  const ban = banner(tone === 'off' ? 'info' : tone, h.overallText, `${h.alerts.length ? `${h.alerts.length} ${h.alerts.length === 1 ? 'ting trenger' : 'ting trenger'} tilsyn · ` : ''}Sist hentet ${ago(h.at)}${h.mock ? ' · eksempeldata' : ''}`,
+    btn(O.hLoading ? 'Henter …' : 'Oppdater', `data-o51="refresh"${O.hLoading ? ' disabled' : ''}`));
+  const al = h.alerts.length ? sec('TRENGER TILSYN', h.alerts.map((a) => row66({ ic: 'warn', dot: tone66(a.level), t: a.title, s: a.text || '' })).join('')) : '';
+  // KPI-stripe: Containere · Disk · Ollama · Backup (klikk går til siden der det hører hjemme).
+  const C = h.containers, d0 = h.disks.find((d) => !d.error), ol = h.ollama, bk = backupKpi66(R);
+  const kpi = kpis66([
+    ['Containere', C.available ? `${C.up}/${C.total}` : '–', C.available ? (C.up < C.total ? `${C.total - C.up} kjører ikke` : 'alle kjører') : 'Docker svarer ikke', '', C.available && C.up < C.total ? 'warn' : !C.available ? 'bad' : ''],
+    ['Disk', d0 ? (d0.pctText || `${Math.round(d0.pct ?? 0)} %`) : '–', d0 ? `${d0.name} brukt` : 'Ikke målt', '', d0 && tone66(d0.level) !== 'ok' ? tone66(d0.level) : ''],
+    ['Ollama', ol.ok ? String(ol.loaded.length) : 'Av', ol.ok ? `i minnet · ${ol.queued} i kø` : 'svarer ikke', 'data-p65-ai="ov"', ol.ok ? '' : 'warn'],
+    ['Backup', bk.v, bk.s, 'data-go="backup"', bk.tone],
+  ]);
+  const ct = C.available ? C.items.map((c) => row66({ ic: 'box', dot: c.health === 'unhealthy' ? 'bad' : tone66(c.color), t: c.name, mono: true, s: c.cpuText ? `CPU ${c.cpuText} · ${c.memText}` : '',
+    right: val66(c.health === 'unhealthy' ? 'unhealthy' : c.state, c.health === 'unhealthy' ? 'bad' : c.state === 'running' ? '' : 'warn') })).join('')
+    : row66({ ic: 'box', dot: 'bad', t: 'Docker-proxyen svarer ikke', s: C.error || '' });
+  const disks = h.disks.map((d) => (d.error ? row66({ ic: 'hdd', dot: 'bad', t: d.name, s: d.error })
+    : row66({ ic: 'hdd', dot: tone66(d.level), t: d.name, s: `${d.text}${d.trend?.text ? ` · ${d.trend.text}` : d.trend?.perDayText ? ` · ${d.trend.perDayText}` : ' · trenden kommer etter noen timer'}`, sc: d.trend?.text && tone66(d.level) !== 'ok' ? 'warn' : '',
+      right: `<span class="sys66-meter">${bar66(d.pct, TONE_C[tone66(d.level)] ?? 'var(--ok)')}${val66(d.pctText || '')}</span>` }))).join('');
+  const mm = h.macMini, mac = h.macOcr, pv = h.proxmox, nt = h.ntfy;
+  const olS = ol.ok ? `${ol.paused ? 'Køen er på pause · ' : ''}${ol.running.length ? `Kjører: ${ol.running.map((r) => r.model).join(', ')}` : 'Ingen jobb nå'} · ${ol.queued} i kø · lastet: ${ol.loaded.length ? ol.loaded.map((m) => `${m.name}${m.vramGb ? ` (${String(m.vramGb).replace('.', ',')} GB)` : ''}`).join(', ') : 'ingen'}` : ol.error;
+  const pvS = !pv.configured ? 'Ikke satt opp (valgfritt)' : pv.ok ? pv.nodes.map((n) => `${n.node} · CPU ${n.cpu ?? '–'} % · minne ${n.memPct ?? '–'} %`).join(' · ') : pv.error;
+  const mach = [
+    disks,
+    row66({ ic: 'mac', dot: mm.ok ? 'ok' : 'warn', t: 'Mac mini', s: `${mm.model ?? 'AI-maskinen'}${mm.memGb ? ` · ${mm.memGb} GB` : ''} · ${mm.ok ? 'Ollama svarer' : 'Ollama svarer ikke'}` }),
+    row66({ ic: 'chip', dot: ol.ok ? 'ok' : 'warn', t: 'Ollama', s: olS, right: btn('AI', 'data-p65-ai="ov"') }),
+    row66({ ic: 'eye', dot: mac.enabled === false ? 'off' : mac.ok ? 'ok' : 'warn', t: 'Mac-OCR', s: mac.enabled === false ? 'Slått av i kvitteringsinnstillingene' : mac.ok ? `Svarer${mac.ms != null ? ` på ${mac.ms} ms` : ''}${mac.version ? ` · ${mac.version}` : ''}` : mac.error || 'Svarer ikke' }),
+    row66({ ic: 'server', dot: !pv.configured ? 'off' : pv.ok ? 'ok' : 'bad', t: 'Proxmox', s: pvS, right: btn(O.pveOpen ? 'Lukk' : pv.configured ? 'Endre' : 'Sett opp', 'data-o51="pve"') }),
+    O.pveOpen ? pveForm() : '',
+    row66({ ic: 'bell', dot: !nt.configured ? 'off' : nt.ok ? (nt.tokenSet ? 'ok' : 'warn') : 'bad', t: 'ntfy', s: !nt.configured ? 'Ikke satt opp (NTFY_URL) · emner per enhet under Varsler' : nt.ok ? `Svarer${nt.tokenSet ? '' : ' · NTFY_TOKEN mangler'}` : nt.error || 'Svarer ikke', right: btn(nt.configured ? 'Varsler' : 'Sett opp', 'data-go="varsel"') }),
+  ].join('');
+  return `${ban}${kpi}${al}${sec('CONTAINERE', ct, { right: C.available ? `${C.up} av ${C.total} kjører` : '' })}${sec('MASKINER OG TJENESTER', mach)}${msgNote()}`;
 }
 function pveForm() {
   const p = O.pve ?? {};
-  return `<form class="o51-form" data-o51-form="pve"><b>Proxmox-API</b><span class="o51-sub">Lag et API-token i Proxmox (Datacenter → Permissions → API Tokens) med rollen PVEAuditor. Tokenet lagres kryptert og vises aldri igjen.</span>
-    <label>Adresse<input name="url" placeholder="https://proxmox.lan:8006" value="${esc(p.url ?? '')}" autocomplete="off"></label>
-    <label>Token-ID<input name="tokenId" placeholder="homelab@pve!drift" value="${esc(p.tokenId ?? '')}" autocomplete="off"></label>
-    <label>Hemmelighet<input name="secret" type="password" placeholder="${p.secretSet ? '•••• (lagret – fyll inn for å bytte)' : 'UUID fra Proxmox'}" autocomplete="new-password"></label>
-    <label>CA-sertifikat (valgfritt, PEM fra /etc/pve/pve-root-ca.pem)<textarea name="ca" rows="3" placeholder="${p.caSet ? 'Lagret – lim inn for å bytte' : '-----BEGIN CERTIFICATE-----'}"></textarea></label>
-    <span class="o51-row"><button type="submit" class="o51-btn pri">Lagre</button>${p.configured ? '<button type="button" class="o51-btn" data-o51="pveclear">Fjern</button>' : ''}<button type="button" class="o51-btn" data-o51="pve">Lukk</button></span></form>`;
+  const f = (label, input) => fld(label, input);
+  return `<form class="ac-form sys66-form" data-o51-form="pve"><p class="ac-note">Lag et API-token i Proxmox (Datacenter → Permissions → API Tokens) med rollen PVEAuditor. Tokenet lagres kryptert og vises aldri igjen.</p>
+    ${f('Adresse', `<input name="url" placeholder="https://proxmox.lan:8006" value="${esc(p.url ?? '')}" autocomplete="off">`)}
+    ${f('Token-ID', `<input name="tokenId" placeholder="homelab@pve!drift" value="${esc(p.tokenId ?? '')}" autocomplete="off">`)}
+    ${f('Hemmelighet', `<input name="secret" type="password" placeholder="${p.secretSet ? '•••• (lagret – fyll inn for å bytte)' : 'UUID fra Proxmox'}" autocomplete="new-password">`)}
+    ${f('CA (valgfritt)', `<textarea name="ca" rows="3" placeholder="${p.caSet ? 'Lagret – lim inn for å bytte' : '-----BEGIN CERTIFICATE----- (fra /etc/pve/pve-root-ca.pem)'}"></textarea>`)}
+    <span class="ac-btns"><button type="submit" class="ac-b ink">Lagre</button>${p.configured ? btn('Fjern', 'data-o51="pveclear"', 'red') : ''}${btn('Lukk', 'data-o51="pve"')}</span></form>`;
 }
 function healHtml() {
   const he = O.heal;
   if (!he) return '';
   const s = he.settings;
-  const ev = he.events.slice(0, 8).map((e) => `<li>${dot(e.ok ? 'ok' : e.action === 'limit' ? 'crit' : 'warn')}<span><b data-no-i18n>${esc(e.container)}</b> · ${esc({ restart: 'startet på nytt', verify: e.ok ? 'frisk igjen' : 'fortsatt syk', limit: 'grensen nådd' }[e.action] ?? e.action)} (${esc(e.reason)})<span>${esc(ago(e.at))}${e.message ? ` · ${esc(e.message)}` : ''}</span></span></li>`).join('');
-  const dr = he.drafts.map((d) => `<li>${dot('warn')}<span><b>${esc(d.title)}</b><span>${d.count > 1 ? `${d.count} ganger · ` : ''}${esc(ago(d.updatedAt))}</span></span><button type="button" class="o51-btn" data-o51="copy:${esc(d.id)}">${O.copied === d.id ? 'Kopiert' : 'Kopier'}</button><button type="button" class="o51-btn" data-o51="dismiss:${esc(d.id)}">Forkast</button></li>`).join('');
-  return `<section class="sg o51"><h3 class="sg-t">Selvreparasjon</h3><div class="sg-box">
-    <button type="button" class="sg-row" data-o51="healtog" role="switch" aria-checked="${s.on}"><span class="sg-txt"><b>Start containere på nytt automatisk</b><span>Unhealthy eller død → omstart via Docker-proxyen, maks ${s.maxPerHour} per time per container. Homelab selv startes aldri på nytt herfra.</span></span><span class="sg-sw"></span></button>
-    <div class="sg-row"><span class="sg-txt"><b>Maks omstarter per time</b><span>Når grensen nås, får du et issue-utkast med loggene (hemmeligheter maskert).</span></span><select data-o51-max aria-label="Maks omstarter per time">${[1, 2, 3, 4, 5, 6, 8, 10].map((n) => `<option value="${n}"${n === s.maxPerHour ? ' selected' : ''}>${n}</option>`).join('')}</select></div>
-  </div>${dr ? `<b class="o51-ct">Issue-utkast</b><span class="o51-sub">Opprettes aldri automatisk. Kopier og lim inn i GitHub selv.</span><ul class="o51-al">${dr}</ul>` : ''}
-  ${ev ? `<b class="o51-ct">Siste hendelser</b><ul class="o51-al">${ev}</ul>` : '<span class="o51-sub">Ingen omstarter ennå.</span>'}${O.msg ? `<span class="o51-sub">${esc(O.msg)}</span>` : ''}${O.err ? `<span class="o51-sub red">${esc(O.err)}</span>` : ''}</section>`;
+  const steps = [...new Set([1, 3, 5, 10, s.maxPerHour].filter((n) => Number.isFinite(n)))].sort((a, b) => a - b);
+  const main = sec('SELVREPARASJON', [
+    row66({ ic: 'wrench', dot: s.on ? 'ok' : 'off', t: 'Start containere på nytt automatisk', s: 'Unhealthy eller død → omstart via Docker-proxyen. Homelab selv startes aldri på nytt herfra.', right: swb(s.on, 'data-o51="healtog"', 'Start containere på nytt automatisk') }),
+    row66({ ic: 'refresh', t: 'Maks omstarter per time', s: 'Per container. Når grensen nås, får du et issue-utkast med loggene (hemmeligheter maskert).', right: seg(steps.map((n) => [n, String(n)]), s.maxPerHour, (n) => `data-o51="max:${n}"`, 'Maks omstarter per time') }),
+  ].join(''));
+  const dr = he.drafts.length ? sec('ISSUE-UTKAST', he.drafts.map((d) => row66({ ic: 'bug', dot: 'warn', t: d.title, s: `${d.count > 1 ? `${d.count} ganger · ` : ''}${ago(d.updatedAt)}`,
+    right: `${btn(O.copied === d.id ? 'Kopiert' : 'Kopier', `data-o51="copy:${esc(d.id)}"`)}${btn('Forkast', `data-o51="dismiss:${esc(d.id)}"`, 'red')}` })).join(''), { right: 'Opprettes aldri automatisk', note: 'Kopier og lim inn i GitHub selv.' }) : '';
+  const act = { restart: 'startet på nytt', verify: 'frisk igjen', limit: 'grensen nådd' };
+  const ev = he.events.slice(0, 8).map((e) => row66({ ic: e.action === 'limit' ? 'warn' : 'refresh', dot: e.ok ? 'ok' : e.action === 'limit' ? 'bad' : 'warn', t: e.container, mono: true,
+    s: `${e.action === 'verify' && !e.ok ? 'fortsatt syk' : act[e.action] ?? e.action} (${e.reason})${e.message ? ` · ${e.message}` : ''}`, right: val66(ago(e.at)) })).join('');
+  return `${main}${dr}${sec('HISTORIKK', ev || row66({ ic: 'clock', t: 'Ingen omstarter ennå', s: 'Hendelsene vises her når en container startes på nytt.' }))}${msgNote()}`;
 }
+// Kategorifargene i sporene: database · AI · eksterne kall · serverkode.
+const CAT = { db: ['database', '#5b84d6'], ai: ['AI', '#9a6fd0'], ext: ['eksterne kall', '#c99a3e'], app: ['serverkode', '#7d8597'] };
 function traceHtml() {
   const t = O.tr;
   if (!t) return '';
-  const rows = t.routes.slice(0, 8).map((r) => `<tr><td data-no-i18n>${esc(r.method)} ${esc(r.route)}</td><td>${r.n}</td><td>${r.p50 ?? '–'}</td><td>${r.p95 ?? '–'}</td><td>${r.slow}</td></tr>`).join('');
+  const isHealth = (r) => /\/api\/health/.test(r);
+  const max = Math.max(1, ...t.items.slice(0, 10).map((x) => x.ms));
   const items = t.items.slice(0, 10).map((x) => {
-    const tot = Math.max(1, x.ms), seg = (k, c) => (x.spans[k]?.ms ? `<span title="${k} ${x.spans[k].ms} ms" style="width:${(x.spans[k].ms / tot) * 100}%;background:${c}"></span>` : '');
     const top = [...(x.spans.ai.top ?? []), ...(x.spans.ext.top ?? []), ...(x.spans.db.top ?? [])].sort((a, b) => b.ms - a.ms)[0];
-    return `<li><span class="o51-tl"><b data-no-i18n>${esc(x.method)} ${esc(x.route)}</b><span>${x.ms} ms · ${x.status} · ${esc(ago(x.at))}</span></span><span class="o51-bar stack">${seg('db', '#7aa2f7')}${seg('ai', '#bb9af7')}${seg('ext', '#e0af68')}${seg('app', '#565f89')}</span><span class="o51-sub">${esc(x.mainText)}${top ? ` · tregest: <span data-no-i18n>${esc(top.label)}</span> (${Math.round(top.ms)} ms)` : ''}</span></li>`;
+    const main = x.main ?? Object.entries(CAT).find(([k]) => x.spans[k]?.ms)?.[0] ?? 'app';
+    const r = row66({ ic: isHealth(x.route) ? 'pulse' : 'clock', t: `${x.method} ${x.route}`, mono: true, s: `${x.mainText ?? ''}${top ? ` · tregest: ${top.label} (${Math.round(top.ms)} ms)` : ''}`,
+      right: val66(`${x.ms} ms · ${x.status} · ${ago(x.at)}`, x.status >= 500 ? 'bad' : '') });
+    return `<div class="sys66-trw">${r}${bar66((x.ms / max) * 100, CAT[main]?.[1] ?? CAT.app[1])}</div>`;
   }).join('');
-  return `<section class="sg o51"><h3 class="sg-t">Trege forespørsler</h3><span class="o51-sub">Over ${t.slowMs} ms siden serveren startet. <span style="color:#7aa2f7">■</span> database <span style="color:#bb9af7">■</span> AI <span style="color:#e0af68">■</span> eksterne kall <span style="color:#565f89">■</span> serverkode</span>
-    ${items ? `<ul class="o51-al o51-trace">${items}</ul>` : '<span class="o51-sub">Ingen trege forespørsler ennå.</span>'}
-    ${rows ? `<div class="o51-tw"><table class="o51-t"><thead><tr><th>Rute</th><th>Antall</th><th>p50 ms</th><th>p95 ms</th><th>Trege</th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}</section>`;
+  const legend = `<span class="sys66-leg">${Object.values(CAT).map(([n, c]) => `<span><i style="background:${c}"></i>${esc(n)}</span>`).join('')}</span>`;
+  const routes = t.routes.slice(0, 12).map((r) => row66({ ic: isHealth(r.route) ? 'pulse' : 'route', t: `${r.method} ${r.route}`, mono: true, s: `${r.n} kall · ${r.slow} trege${r.errors ? ` · ${r.errors} feil` : ''}`,
+    right: val66(`${r.p50 ?? '–'} · ${r.p95 ?? '–'} ms`, (r.p95 ?? 0) > 60000 ? 'bad' : '') })).join('');
+  return `${sec('TREGE FORESPØRSLER', items || row66({ ic: 'clock', dot: 'ok', t: 'Ingen trege forespørsler ennå', s: `Over ${t.slowMs} ms siden serveren startet` }), { right: `over ${t.slowMs} ms` })}${items ? legend : ''}
+    ${routes ? sec('PER RUTE', routes, { right: 'p50 · p95' }) : ''}`;
 }
 
-/** HTML-en under oppdateringskortet i System (bare admin). */
-export function obs51SystemHtml() {
-  if (!admin()) return '';
-  css();
-  loadAll();
-  return `<div class="o51-wrap">${healthHtml()}${healHtml()}${traceHtml()}</div>`;
-}
-/** Prompt 65: System har faner – én del per fane (health = Oversikt, heal = Selvreparasjon, trace = Ytelse). */
+/** Prompt 65/66: System har faner – én del per fane (health = Oversikt, heal = Selvreparasjon, trace = Ytelse). Bare innholdet; roten (.sys66) legges rundt i settings-system.js. */
 export function obs51PartHtml(part) {
   if (!admin()) return '';
   css();
   loadAll();
   const h = part === 'heal' ? healHtml() : part === 'trace' ? traceHtml() : healthHtml();
-  return `<div class="o51-wrap">${h || `<section class="sg"><div class="sg-box"><div class="sg-row"><span class="sg-txt"><b>${part === 'trace' ? 'Henter trege forespørsler …' : 'Henter selvreparasjonen …'}</b></span></div></div></section>`}</div>`;
+  return h || loadingSec(part === 'trace' ? 'Henter trege forespørsler …' : 'Henter selvreparasjonen …');
 }
 
 /* ---------------- Visning: Varsler (ntfy) ---------------- */
@@ -145,6 +166,7 @@ export async function obs51Click(e, rr) {
     if (a === 'refresh') loadAll(true);
     else if (a === 'pve') { O.pveOpen = !O.pveOpen; R(); }
     else if (a === 'pveclear') { if (confirm('Fjerne Proxmox-tokenet?')) { O.pve = await j('/api/system/obs51/proxmox', { method: 'PUT', body: JSON.stringify({ clear: true }) }); O.pveOpen = false; loadAll(true); } }
+    else if (a.startsWith('max:')) { O.heal = await j('/api/system/obs51/heal', { method: 'PUT', body: JSON.stringify({ maxPerHour: Number(a.slice(4)) }) }); R(); } // prompt 66: segment 1/3/5/10
     else if (a === 'healtog') { O.heal = await j('/api/system/obs51/heal', { method: 'PUT', body: JSON.stringify({ on: !O.heal?.settings?.on }) }); R(); }
     else if (a.startsWith('copy:')) { const d = await j(`/api/system/obs51/heal/drafts/${encodeURIComponent(a.slice(5))}`); if (await copy(d.markdown)) flashCopied(d.id); else O.err = 'Fikk ikke kopiert. Prøv igjen.'; }
     else if (a.startsWith('dismiss:')) { await j(`/api/system/obs51/heal/drafts/${encodeURIComponent(a.slice(8))}`, { method: 'DELETE' }); O.heal = await j('/api/system/obs51/heal'); R(); }

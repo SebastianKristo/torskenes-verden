@@ -8,7 +8,7 @@
 .ac button{font-family:inherit;cursor:pointer}
 .ac button:disabled{cursor:default;opacity:.5}
 .ac :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
-.ac.th-papir{color-scheme:light}.ac.th-mork,.ac.th-finans{color-scheme:dark}
+.ac.th-papir{color-scheme:light}.ac.th-mork,.ac.th-finans,.ac.th-cur{color-scheme:dark}
 .ac p{margin:0}
 @keyframes acSpin{to{transform:rotate(360deg)}}
 @keyframes acStripe{to{background-position:28px 0}}
@@ -64,9 +64,9 @@
 .ac-r,.ac-li,.ac-par{width:100%;display:flex;align-items:center;gap:12px;min-height:46px;padding:var(--r-pad) 0;border:0;background:transparent;color:var(--ink);text-align:left;font:inherit;min-width:0}
 .ac-r.ac-click,.ac-r.ac-rx{cursor:pointer}
 .ac-ic{flex:none;position:relative;width:28px;height:28px;border-radius:8px;background:var(--fld);color:#4a463f;display:grid;place-items:center}
-.ac.th-mork .ac-ic,.ac.th-finans .ac-ic{color:var(--mut)}
+.ac.th-mork .ac-ic,.ac.th-finans .ac-ic,.ac.th-cur .ac-ic{color:var(--mut)}
 .ac-ic.txt b{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;color:#4a463f}
-.ac.th-mork .ac-ic.txt b,.ac.th-finans .ac-ic.txt b{color:var(--mut)}
+.ac.th-mork .ac-ic.txt b,.ac.th-finans .ac-ic.txt b,.ac.th-cur .ac-ic.txt b{color:var(--mut)}
 .ac-icd{position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--line);box-shadow:0 0 0 2px var(--card)}
 .ac-icd.ok{background:var(--ok)}.ac-icd.warn{background:var(--warn)}.ac-icd.bad{background:var(--bad)}.ac-icd.off{background:var(--line)}
 .ac-icd.busy{background:var(--card);border:2px solid var(--line);border-top-color:var(--acc);animation:acSpin .8s linear infinite}
