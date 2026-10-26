@@ -7,7 +7,7 @@
 //  - Mikrofonen virker bare i en sikker kontekst (https eller localhost). Over http på hjemmenettet sier vi det i stedet for å feile.
 //  - AI-kontroll: kortet «Tale til tekst» (status for motorene; admin: adresse/nøkkel og test av NB-Whisper) i [data-v54-ai].
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-const MIC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+const MIC = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:block"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
 const MAX_MS = 60_000, HOLD_MS = 350, MIN_MS = 400;
 const LS_OK = 'voice54_ok';
 
@@ -19,6 +19,17 @@ const CSS = `
 .v54-mic,[data-ch-mic]{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 @keyframes v54p{0%,100%{box-shadow:0 0 0 0 rgba(178,58,42,.45)}50%{box-shadow:0 0 0 7px rgba(178,58,42,0)}}
 @media (prefers-reduced-motion:reduce){.v54-mic.v54-on,.ch-mic.v54-on{animation:none}}
+/* Prompt 50b (claude-code-web-mikrofonknapp.md): mikrofonen i søkefeltet på Dashboard, mellom «✦ AI» og «Søk». «.sbar button»
+   (app.css) ga før fylt blå sirkel og padding 0 20px som skjøv ikonet mot høyre – derfor høyere spesifisitet her. */
+form[data-search].sbar button.v54-mic{flex:none;box-sizing:border-box;width:40px;height:40px;min-width:40px;margin:0;padding:0;border-radius:50%;
+  border:1px solid #e4ddcf;background:transparent;color:#1b1a17;display:grid;place-items:center;line-height:0;font-size:0;cursor:pointer;
+  box-shadow:none;transition:background-color .18s,color .18s,border-color .18s}
+form[data-search].sbar button.v54-mic svg{display:block;width:18px;height:18px}
+form[data-search].sbar button.v54-mic:hover{background:#f3efe6}
+form[data-search].sbar button.v54-mic.v54-on{background:#b23a2a!important;border-color:#b23a2a;color:#fff!important}
+html[data-mode="dark"] form[data-search].sbar button.v54-mic:not(.v54-on),html:not([data-hl="2c"]) form[data-search].sbar:is(.dark,.wide) button.v54-mic:not(.v54-on){border-color:rgba(255,255,255,.18);color:inherit}
+html[data-mode="dark"] form[data-search].sbar button.v54-mic:not(.v54-on):hover,html:not([data-hl="2c"]) form[data-search].sbar:is(.dark,.wide) button.v54-mic:not(.v54-on):hover{background:rgba(255,255,255,.08)}
+@media (max-width:767px){form[data-search].sbar button.v54-mic{display:none}} /* som før: knappene i søkefeltet er skjult på smal skjerm (app.css) */
 .v54-pill{position:fixed;z-index:2147481500;max-width:min(420px,calc(100vw - 32px));padding:8px 14px;border-radius:999px;background:#11141b;color:#eef0f4;font:500 13px/1.35 Outfit,Geist,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.3);pointer-events:none}
 .v54-pill b{font-weight:600}.v54-pill .v54-dot{display:inline-block;width:8px;height:8px;border-radius:4px;background:#f05a46;margin-right:8px;vertical-align:1px}
 .v54-ov{position:fixed;inset:0;z-index:2147481600;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px}

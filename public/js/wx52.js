@@ -7,6 +7,19 @@ const SEL = '.wxp-modes, .wxp-seg, .wxp-layers';
 const last = new Map(); // kontrolltype → {x, w} (pillen glir fra forrige plass når siden tegnes på nytt)
 const reduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
 const haptic = (ms = 6) => { try { navigator.vibrate?.(ms); } catch { /* */ } };
+// Prompt 50b (claude-code-vaer-dra-piller-mobil.md): på telefon tolket nettleseren en litt skrå fingerbevegelse som rulling
+// (touch-action: pan-y → pointercancel), så pillen stoppet. Nå: touch-action: none på containerne (web52.css), én ikke-passiv
+// touchmove på document som bare stopper rullingen mens et pille-drag er aktivt, og Temp/Regn/Vind fanger fingeren allerede
+// ved pointerdown (trykk håndteres da selv i pointerup). «Faktisk / Føles som» og kartlag fanger fortsatt først etter 5 px.
+const active = new Set(); // containere med et pille-drag som pågår
+if (!window.__g52tm) {
+  window.__g52tm = true;
+  document.addEventListener('touchmove', (e) => { if (active.size && e.cancelable) e.preventDefault(); }, { passive: false, capture: true });
+  // Sikring: en container som tegnes bort midt i et drag skal aldri låse rullingen på resten av siden.
+  const clear = (e) => { if (!e.touches?.length) setTimeout(() => active.clear(), 0); };
+  document.addEventListener('touchend', clear, true);
+  document.addEventListener('touchcancel', clear, true);
+}
 const kindOf = (el) => (el.classList.contains('wxp-modes') ? 'modes' : el.classList.contains('wxp-seg') ? 'seg' : el.classList.contains('sm') ? 'layers-sm' : 'layers');
 
 function enhance(ctl) {
@@ -36,19 +49,27 @@ function enhance(ctl) {
     requestAnimationFrame(() => requestAnimationFrame(() => place(on, true)));
   } else place(on, false);
 
-  // Dra: pekeren fanges først etter 5 px bevegelse.
-  let down = null, drag = false, lastX = 0, lastT = 0, over = null;
+  // Dra: pekeren fanges først etter 5 px bevegelse (Temp/Regn/Vind med finger: med en gang).
+  let down = null, drag = false, lastX = 0, lastT = 0, over = null, quietUntil = 0;
+  const early = k === 'modes';
+  const hold = (on) => { if (on) active.add(ctl); else active.delete(ctl); };
+  const at = (e) => btns.find((b) => { const r = b.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom; });
+  // Ekte klikk rett etter et drag (eller et trykk vi har håndtert selv) skal ikke treffe en annen knapp.
+  ctl.addEventListener('click', (e) => { if (e.isTrusted && performance.now() < quietUntil) { e.stopPropagation(); e.preventDefault(); } }, true);
   const nearest = (x) => btns.reduce((a, b) => (Math.abs(b.offsetLeft + b.offsetWidth / 2 - x) < Math.abs(a.offsetLeft + a.offsetWidth / 2 - x) ? b : a));
   ctl.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
     down = { x: e.clientX, id: e.pointerId, left: ctl.getBoundingClientRect().left - ctl.scrollLeft };
     drag = false; lastX = e.clientX; lastT = performance.now(); over = cur();
+    down.touch = e.pointerType !== 'mouse';
+    down.cap = early && down.touch;
+    if (down.cap) { try { ctl.setPointerCapture(e.pointerId); } catch { down.cap = false; } hold(true); }
     ctl.classList.add('g52-press');
   });
   ctl.addEventListener('pointermove', (e) => {
     if (!down || e.pointerId !== down.id) return;
     if (!drag && Math.abs(e.clientX - down.x) < 5) return;
-    if (!drag) { drag = true; try { ctl.setPointerCapture(e.pointerId); } catch { /* */ } }
+    if (!drag) { drag = true; hold(true); if (!down.cap) { try { ctl.setPointerCapture(e.pointerId); } catch { /* */ } } }
     const x = e.clientX - down.left, b = nearest(x), now = performance.now();
     const v = Math.min(1.6, Math.abs(e.clientX - lastX) / Math.max(8, now - lastT)); lastX = e.clientX; lastT = now;
     const w = b.offsetWidth * (1 + v * 0.18), minX = btns[0].offsetLeft, maxX = btns[btns.length - 1].offsetLeft + btns[btns.length - 1].offsetWidth - w;
@@ -61,19 +82,29 @@ function enhance(ctl) {
   const end = (e) => {
     if (!down || (e && e.pointerId !== down.id)) return;
     ctl.classList.remove('g52-press');
-    const wasDrag = drag;
-    down = null; drag = false;
-    if (!wasDrag) return; // vanlig trykk: klikket går til knappen
+    const wasDrag = drag, d = down;
+    down = null; drag = false; hold(false);
+    if (!wasDrag) {
+      if (!d.cap) return; // vanlig trykk: klikket går til knappen
+      // Fanget ved pointerdown: klikket havner på containeren, så trykket håndteres her.
+      if (!e || e.type !== 'pointerup') return;
+      const b = at(e);
+      if (!b) return;
+      quietUntil = performance.now() + 450;
+      setTimeout(() => { if (!b.classList.contains('on') && b.getAttribute('aria-selected') !== 'true') b.click(); }, 0);
+      return;
+    }
     const b = over ?? cur();
     place(b, true);
     // Klikket etter et drag skal ikke treffe en annen knapp; velg knappen pillen landet på.
-    const stop = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
-    ctl.addEventListener('click', stop, { capture: true, once: true });
-    setTimeout(() => { ctl.removeEventListener('click', stop, { capture: true }); if (b && !b.classList.contains('on')) b.click(); }, 0);
+    quietUntil = performance.now() + 450;
+    setTimeout(() => { if (b && !b.classList.contains('on')) b.click(); }, 0);
   };
   ctl.addEventListener('pointerup', end);
   ctl.addEventListener('pointercancel', end);
-  ctl.addEventListener('lostpointercapture', () => { if (down && drag) end(); });
+  // Bare når containeren selv mister fangsten: med finger har knappen under en implisitt fangst som slippes (og bobler hit)
+  // i det containeren tar over – det skal ikke avslutte draget.
+  ctl.addEventListener('lostpointercapture', (e) => { if (e.target === ctl && down && (drag || down.cap)) end(); });
   ctl.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && btns.includes(b)) haptic(8); });
 }
 

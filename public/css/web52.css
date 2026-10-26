@@ -65,7 +65,7 @@ div.b52-r{cursor:default}
 @media (prefers-reduced-motion:reduce){.pw[data-wx52] .pw-img{transition:none}}
 
 /* Vær: glass-pille med dra (wx52.js) på Forhold-bryteren, «Faktisk / Føles som» og lagvelgeren. */
-.g52{position:relative;isolation:isolate;touch-action:pan-y}
+.g52{position:relative;isolation:isolate;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none} /* prompt 50b: ikke pan-y – skrå fingerdrag ga pointercancel */
 .g52>button{position:relative;z-index:1;background:transparent!important;color:#fff!important;transition:color .2s}
 .g52-pill{position:absolute;left:0;top:0;z-index:0;border-radius:999px;pointer-events:none;opacity:0;
   background:linear-gradient(180deg,rgba(255,255,255,.46),rgba(255,255,255,.2));-webkit-backdrop-filter:blur(10px) saturate(1.4);backdrop-filter:blur(10px) saturate(1.4);
