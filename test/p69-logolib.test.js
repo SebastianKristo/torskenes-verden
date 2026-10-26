@@ -320,3 +320,20 @@ test('403 respekteres: nettstedet prøves ikke på nytt med nettleser-headere', 
   for (const c of site) assert.match(c.headers['User-Agent'] ?? '', /KristoHomelab/, 'alltid logo-UA-en, aldri nettleser-UA');
   assert.equal(new Set(site.map((c) => c.url)).size, site.length, 'hver URL hentes bare én gang');
 });
+
+test('varianter av butikknavn treffer samme kjede (store/små bokstaver, underkjeder, selskapsform, sted, domene)', () => {
+  const cases = {
+    ica: ['ICA', 'ica kvantum', 'ICA KVANTUM BERGEN', 'ICA Maxi Strömstad', 'VIPPS*ICA'],
+    biltema: ['Biltema', 'BILTEMA', 'BILTEMA NORGE AS', 'VIPPS*BILTEMA'],
+    'rema-1000': ['Rema', 'Rema1000', 'REMA-1000', 'REMA 1000 MAJORSTUEN'],
+    kiwi: ['KIWI 512 STORO', 'Kiwi Minipris', 'kiwi.no'],
+    'coop-obs': ['COOP OBS HYPERMARKED', 'OBS!', 'Obs Lillestrøm'],
+    'circle-k': ['Circle K Storo', 'CIRCLEK', 'circle-k'],
+    'apotek-1': ['Apotek 1 Storo', 'APOTEK1'],
+    ikea: ['IKEA FURUSET', 'Ikea Norge AS'],
+    elkjop: ['Elkjøp', 'ELKJOP', 'ELKJØP STORO'],
+    mcdonalds: ['Mcdonalds', 'MC DONALDS', "McDonald's"],
+    hm: ['H&M', 'HM NORGE', 'H & M'],
+  };
+  for (const [id, names] of Object.entries(cases)) for (const n of names) assert.equal(M.matchMerchant(n)?.id, id, n);
+});
