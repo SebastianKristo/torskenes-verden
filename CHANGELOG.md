@@ -2,6 +2,13 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.51.0] – 26.10.2026 · Glimt lærer
+- **Glimt husker hvordan den løste en oppgave:** når et svar var riktig (ingen retting de neste meldingene, eller tommel opp), lagres oppskriften. Lignende spørsmål får den som eksempel, og etter 5 vellykkede bruk uten feil går Glimt rett på svaret uten planleggeren. Endringer i data krever fortsatt bekreftelse.
+- **Glimt lærer av rettelser:** «nei, jeg mente …» lagrer riktig og feil plan, og rettelsen blir en egen test i eval.
+- **«Glimt lærer»** under Innstillinger → AI: alle oppskriftene med bruk og treffsikkerhet, test, rediger, slå av og slett.
+- **Tommel opp og ned** på Glimt-svar i Chat og i søket på Hjem.
+- Alt kan slås av for seg under AI-kontroll → Valg.
+
 ## [4.50.0] – 26.10.2026 · Glimt forstår samtaler, beste modeller og stemmer i bakgrunnen
 - **Glimt husker samtalen:**
   - «Hvordan er været i Oslo i morgen?» og så «og i Bergen?» virker. Det samme gjør «Legg inn tannlege fredag kl 10» og så «flytt den til 11».
