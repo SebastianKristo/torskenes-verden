@@ -212,7 +212,7 @@ function pageToggles() {
   }).join('');
   const z = zoneOf(d);
   const zone = `<div class="sg-row s62-zr"><span class="sg-txt"><b>Prisområde for strøm</b><span>Standard for strømpriser og strømvarsler</span></span><span class="s62-seg" role="group" aria-label="Prisområde">${zonesOf(d).map((x) => `<button type="button" class="${x.id === z ? 'on' : ''}" data-s62-zone="${esc(x.id)}" aria-pressed="${x.id === z}" title="${esc(x.label)}"${S.busy ? ' disabled' : ''}>${esc(x.id)}</button>`).join('')}</span></div>`;
-  return `<section class="sg"><h3 class="sg-t">Valg</h3><div class="sg-box">${rows}${zone}</div>${S.msg ? `<div class="sg-note" role="status">${esc(S.msg)}</div>` : ''}<div class="sg-note">Valgene finnes også i AI-kontroll → Valg.</div></section>`;
+  return `<section class="sg"><h3 class="sg-t">Valg</h3><div class="sg-box">${rows}${zone}</div>${S.msg ? `<div class="sg-note" role="status">${esc(S.msg)}</div>` : ''}<div class="sg-note">Valgene finnes også i AI → Oppgaver.</div></section>`;
 }
 async function putSettings(body) { const j = await call('/settings', 'PUT', body); S.d = j; S.at = Date.now(); return j; }
 
@@ -286,7 +286,7 @@ export function pageHtml62() {
   if (!d) return `<section class="sg"><div class="sg-box"><div class="sg-row"><span class="sg-txt"><span>${L.err ? `Serveren svarte: ${esc(L.err)}` : 'Laster …'}</span></span></div></div></section>`;
   const items = Array.isArray(d.items) ? d.items : [], c = d.counts ?? {};
   const n = (s) => c[s] ?? items.filter((x) => x.status === s).length;
-  const off = d.enabled === false ? '<div class="sg-row s62-off"><span class="sg-txt"><b>Planlagte oppgaver er slått av</b><span>Ingenting kjøres nå. Oppgavene står, og du kan slå det på igjen under Valg nederst eller i AI-kontroll → Valg.</span></span></div>' : '';
+  const off = d.enabled === false ? '<div class="sg-row s62-off"><span class="sg-txt"><b>Planlagte oppgaver er slått av</b><span>Ingenting kjøres nå. Oppgavene står, og du kan slå det på igjen under Valg nederst eller i AI → Oppgaver.</span></span></div>' : '';
   const bar = `<div class="s62-bar" role="group" aria-label="Vis status"><button type="button" class="${L.filter ? '' : 'on'}" data-s62-f="" aria-pressed="${!L.filter}">Alle <small>${c.total ?? items.length}</small></button>${['active', 'paused', 'ended'].map((s) => `<button type="button" class="${L.filter === s ? 'on' : ''}" data-s62-f="${s}" aria-pressed="${L.filter === s}">${s === 'active' ? 'Aktive' : s === 'paused' ? 'Pauset' : 'Ferdige'} <small>${n(s)}</small></button>`).join('')}</div>`;
   const shown = items.filter((x) => !L.filter || x.status === L.filter);
   const list = shown.length ? shown.map(rowHtml).join('') : `<div class="sg-row"><span class="sg-txt"><span>${items.length ? 'Ingen oppgaver her.' : 'Ingen faste oppgaver ennå. Si det til Glimt i Chat eller søkefeltet, f.eks. «Send meg strømprisene hver morgen kl. 7», «Minn meg på å betale husleia den 1. hver måned» eller «Si fra hvis strømprisen går over 2 kr i morgen». Glimt viser alltid tolkningen før noe lagres.'}</span></span></div>`;

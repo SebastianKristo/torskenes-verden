@@ -99,7 +99,7 @@ export function finansView45(H) {
     group('Finans', [
       row({ t: 'Innstillinger i FinansHub', s: 'Kategorier og regler, budsjett, bank, import og eksport', act: 'data-s45-href="/finans/?desktop=1#/inn"', btn: 'Åpne', k: 'finans finanshub regler kategorier budsjett bank import' }),
       row({ t: 'Bank og aksjer', s: 'Nøkler for bank-import og Trading 212', go: 'int', btn: 'Integrasjoner', k: 'bank trading 212 aksjer nøkkel' }),
-      row({ t: 'Glimt i Finans', s: 'Hvilken AI-modell som leser kvitteringer og svarer på spørsmål', go: 'ai', btn: 'AI', k: 'glimt kvittering ai finans modell' }),
+      row({ t: 'Glimt i Finans', s: 'Kvitteringslesing og modell – under AI → Kvitteringer', act: 'data-p65-ai="rcpt"', btn: 'AI', k: 'glimt kvittering ai finans modell ocr' }), // prompt 65: lenke til AI → Kvitteringer
     ]),
   ] };
 }

@@ -36,14 +36,19 @@ const statusTxt = (it) => {
 };
 
 const scopeOf = (it) => (it.scope === 'personal' ? 'personal' : 'server');
+/** Prompt 65: AI-tjenestene settes opp under AI → Tjenester, kalenderne under Kalender og gjøremål. Her står bare status + lenke. */
+export const moved65 = (it) => (String(it.group ?? '').toLowerCase() === 'ai' || ['ai', 'openwebui'].includes(String(it.id)) ? 'ai' : it.id === 'calendars' ? 'kal' : null);
 /** Rader til listen under Integrasjoner (scope: 'personal' | 'server' | utelatt = alle). */
 export function integRows(cfg, row, scope) {
   return extra(cfg).filter((it) => !scope || scopeOf(it) === scope).map((it) => {
-    const [v, vc] = statusTxt(it);
-    return row({ t: it.name, s: it.group ?? '', k: (it.fields ?? []).map((f) => f.label).join(' '), logo: it.domain ?? DOMAIN[String(it.id).toLowerCase()] ?? null, ini: it.name, v, vc, btn: 'Oppsett', go: it.id === 'calendars' ? 'kal' : `int|i24:${it.id}` });
+    const [v, vc] = statusTxt(it), mv = moved65(it);
+    const base = { t: it.name, s: it.group ?? '', k: (it.fields ?? []).map((f) => f.label).join(' '), logo: it.domain ?? DOMAIN[String(it.id).toLowerCase()] ?? null, ini: it.name, v, vc };
+    if (mv === 'ai') return row({ ...base, s: 'Adresse og nøkkel settes opp under AI → Tjenester', btn: 'AI', act: `data-p65-ai="${it.id === 'openwebui' ? 'svc:owui' : 'svc'}"` });
+    if (mv === 'kal') return row({ ...base, s: 'Settes opp under Kalender og gjøremål', btn: 'Kalender og gjøremål', go: 'kal' });
+    return row({ ...base, btn: 'Oppsett', go: `int|i24:${it.id}` });
   });
 }
-export const integCount = (cfg) => extra(cfg).filter((it) => it.status !== 'ok').length;
+export const integCount = (cfg) => extra(cfg).filter((it) => it.status !== 'ok' && !moved65(it)).length;
 
 /** Undersiden for én integrasjon. */
 export function integSub(id, note) {

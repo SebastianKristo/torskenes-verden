@@ -15,8 +15,9 @@ import { U, UPD_CMD, onUpdate, loadUpdate, checkUpdate, openSheet, startUpdate, 
 import { progress, ackDone, doneRecent } from './upd-banner.js';
 import { carpOnBar, sherlockFly, setSherlockText } from './glimt-outfits36.js'; // prompt 36: Sherlock- og snekker-Glimt
 import { versionsHtml44 } from './settings44.js'; // prompt 44: TIDLIGERE VERSJONER (tilbakerulling)
-import { obs51SystemHtml } from './obs51.js'; // prompt 51 (OBS51): helse, selvreparasjon og trege forespørsler
-import { ops51SystemHtml } from './ops51.js'; // prompt 51 (OPS51): backup (3-2-1, testet gjenoppretting), staging/tilbakerulling, database
+import { obs51PartHtml } from './obs51.js'; // prompt 65: én del per System-fane
+import { ops51PartHtml } from './ops51.js'; // prompt 51 (OPS51): staging/tilbakerulling (Oppdateringer); backup og database er egen side (prompt 65)
+import { SYS_TABS65, tabBar65 } from './settings65.js'; // prompt 65: System med faner
 
 let rerender = () => {}, subscribed = false;
 const admin = () => store.me?.me?.role === 'admin';
@@ -104,7 +105,7 @@ function verHtml(ph, d, h) {
   const pw = requirePw();
   return `<section class="ny-sec"><div class="ny-row"><span class="ny-rt"><b>Programvareversjon</b><span class="ny-mono" data-no-i18n>${esc(line)}</span></span><span class="ny-inst${up ? '' : ' ok'}">${esc(right)}</span></div>
     ${h.row({ t: 'Krev passord for å oppdatere', k: 'passord oppdatering sikkerhet', s: pw ? 'Passord kreves før oppdateringen starter' : 'Av · admin kan oppdatere med ett trykk', tog: pw, act: 'data-upd-set="require_password"', disabled: !SET.loaded }).html}
-    <span class="ny-note">Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.</span>${SET.err ? `<span class="ny-note red">${esc(SET.err)}</span>` : ''}</section>${versionsHtml44(rerender)}`;
+    <span class="ny-note">Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.</span>${SET.err ? `<span class="ny-note red">${esc(SET.err)}</span>` : ''}</section>`;
 }
 
 function notesHtml(ph, d) {
@@ -206,8 +207,36 @@ export function systemView(h) {
   const soft = h.group('Programvare', [
     h.row({ t: 'Automatiske oppdateringer', k: 'auto automatisk natt', s: 'Kl. 03:30, etter nattlig backup.', tog: !!st.auto_update, act: 'data-upd-set="auto_update"', disabled: !st.loaded }),
   ]); // prompt 39: «Varsle om nye versjoner» ligger nå under Varsler (updNotifyRow)
-  const html = `<div class="ny">${heroHtml(ph, d)}${btnHtml(ph, d)}${stuck46Html(ph, d)}${d ? verHtml(ph, d, h) : ''}${d && d.available === false ? setupHtml('Oppdatering fra appen er ikke satt opp.') : ''}${logHtml(ph)}${d ? notesHtml(ph, d) : ''}</div>`;
-  return { html: html + `<section class="sg"><h3 class="sg-t">Programvare</h3><div class="sg-box">${soft.rows.map((r) => r.html).join('')}</div></section>` + ops51SystemHtml(rerender) + obs51SystemHtml(), extra: sheetHtml(), mount: (el) => { el.scrollTop = el.scrollHeight; } };
+  // Prompt 65 (System.dc.html): nordlys-hero, oppdater-knappen og «Krev passord» øverst; resten i faner under.
+  const top = `<div class="ny">${heroHtml(ph, d)}${btnHtml(ph, d)}${stuck46Html(ph, d)}${d ? verHtml(ph, d, h) : ''}${d && d.available === false ? setupHtml('Oppdatering fra appen er ikke satt opp.') : ''}${logHtml(ph)}</div>`;
+  const t = SYS_TABS65.some(([k]) => k === h.sysTab) ? h.sysTab : 'ov';
+  const softHtml = `<section class="sg"><h3 class="sg-t">Programvare</h3><div class="sg-box">${soft.rows.map((r) => r.html).join('')}</div></section>`;
+  const body = t === 'upd' ? softHtml + ops51PartHtml('updates', rerender) + versionsHtml44(rerender) + (d ? `<div class="ny">${notesHtml(ph, d)}</div>` : '')
+    : t === 'perf' ? obs51PartHtml('trace')
+      : t === 'heal' ? obs51PartHtml('heal')
+        : t === 'mer' ? merHtml65(h)
+          : obs51PartHtml('health');
+  return { html: `${top}${tabBar65(SYS_TABS65, t)}<div class="sys65-body" data-sys65-tab="${t}">${body}</div>`, extra: sheetHtml(), mount: (el) => { el.scrollTop = el.scrollHeight; },
+    search: [h.group('System', [
+      h.row({ t: 'Helse', s: 'Containere, disk, Ollama, Mac-OCR, Mac mini, Proxmox og ntfy', go: 'system|ov', btn: 'Åpne', k: 'helse containere disk ollama mac-ocr mac mini proxmox ntfy oversikt' }),
+      h.row({ t: 'Oppdateringer', s: 'Automatiske oppdateringer, staging, tilbakerulling og versjoner', go: 'system|upd', btn: 'Åpne', k: 'oppdatering automatisk staging røyktest tilbakerulling versjoner tidligere' }),
+      h.row({ t: 'Trege forespørsler', s: 'Ytelse per rute (p50 og p95)', go: 'system|perf', btn: 'Åpne', k: 'ytelse trege forespørsler rute p50 p95 api health' }),
+      h.row({ t: 'Selvreparasjon', s: 'Start containere på nytt automatisk, maks omstarter per time', go: 'system|heal', btn: 'Åpne', k: 'selvreparasjon omstart container unhealthy' }),
+      h.row({ t: 'Feature flags og krasjrapporter', s: 'System → Mer → Kvalitet', go: 'system|mer', btn: 'Åpne', k: 'feature flags flagg krasjrapporter krasj glitchtip nytt i denne versjonen kvalitet' }),
+    ])] };
+}
+
+/** Prompt 65: System → Mer. Bare Kvalitet (Feature flags, Krasjrapporter, Nytt i denne versjonen). Det som er flyttet, står som lenke. */
+function merHtml65(h) {
+  const r = (t, s, act) => h.row({ t, s, act, btn: 'Åpne' }).html;
+  return `<section class="sg"><h3 class="sg-t">Kvalitet</h3><div class="sg-box">
+      ${r('Feature flags', 'Slå nye funksjoner på per bruker eller enhet', 'data-p65-qa="flags"')}
+      ${r('Krasjrapporter', 'Feil fra web, appene og serveren (GlitchTip eller lokalt)', 'data-p65-qa="crashes"')}
+      ${r('Nytt i denne versjonen', 'Vis endringene i installert versjon', 'data-p65-qa="whatsnew"')}</div></section>`
+    + `<section class="sg"><h3 class="sg-t">Flyttet herfra</h3><div class="sg-box">
+      ${h.row({ t: 'Backup', s: 'Kopier, gjenoppretting og database – egen side under Server', go: 'backup', btn: 'Backup' }).html}
+      ${h.row({ t: 'Lokale modeller', s: 'Desert Ant Labs-modellene – AI → Modeller', act: 'data-p65-ai="mod"', btn: 'AI' }).html}
+      ${h.row({ t: 'Brief og Glimt-figur', s: 'Per bruker – Brukere og familie', go: 'users', btn: 'Brukere og familie' }).html}</div></section>`;
 }
 
 /** Prompt 39 (claude-code-varsler-versjon-app-ikon.md): raden i Innstillinger → Varsler (samme nøkkel notify_updates, bare admin). */

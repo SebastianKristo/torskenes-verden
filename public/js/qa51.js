@@ -1,7 +1,7 @@
 // Prompt 51 (QA51): web/PWA-delen av kvalitet.
 //  - Feature flags: GET /api/flags ved oppstart → window.hlFlags51 + hendelsen «hl:flags51». hlFlag51('nøkkel') i andre moduler.
 //  - «Nytt i denne versjonen»: kort første gang etter en oppdatering (GET /api/whatsnew → show), «Ok» markerer som sett.
-//  - Admin: Innstillinger → System får seksjonen «Kvalitet» med Feature flags og Krasjrapporter (eget panel).
+//  - Admin: Innstillinger → System → Mer → Kvalitet med Feature flags og Krasjrapporter (eget panel, prompt 65).
 // Krasjfangeren (error/unhandledrejection) er crash51.js, som lastes tidligere som vanlig skript.
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 async function api(path, opt = {}) {
@@ -271,35 +271,12 @@ async function onPanelClick(e) {
   if (d.qa51Clear !== undefined) { if (!confirm('Slette alle krasjrapportene?')) return; return act(() => api('/api/admin/crashes51', { method: 'DELETE' })); }
 }
 
-// Innstillinger → System: seksjonen «Kvalitet» legges til nederst (siden tegnes på nytt ofte, så en observatør legger den inn igjen).
-function injectSettings() {
-  const body = document.querySelector('#settings .set-body[data-key^="system|null"] .set-inner, #settings .set-body[data-key^="system||"] .set-inner');
-  if (!body || body.querySelector('[data-qa51-sec]')) return;
-  const sec = document.createElement('section');
-  sec.className = 'sg';
-  sec.dataset.qa51Sec = '1';
-  sec.innerHTML = `<h3 class="sg-t">Kvalitet</h3><div class="sg-box">
-    <button type="button" class="sg-row" data-qa51-open="flags"><span class="sg-txt"><b>Feature flags</b><span>Slå nye funksjoner på per bruker eller enhet</span></span><span class="sg-btn2">Åpne</span></button>
-    <button type="button" class="sg-row" data-qa51-open="crashes"><span class="sg-txt"><b>Krasjrapporter</b><span>Feil fra web, appene og serveren (GlitchTip eller lokalt)</span></span><span class="sg-btn2">Åpne</span></button>
-    <button type="button" class="sg-row" data-qa51-open="whatsnew"><span class="sg-txt"><b>Nytt i denne versjonen</b><span>Vis endringene i installert versjon</span></span><span class="sg-btn2">Vis</span></button></div>`;
-  sec.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-qa51-open]');
-    if (!b) return;
-    e.stopPropagation();
-    if (b.dataset.qa51Open === 'whatsnew') window.hlWhatsNew51(); else openQa51(b.dataset.qa51Open);
-  });
-  body.appendChild(sec);
-}
+// Prompt 65: Innstillinger → System → Mer → Kvalitet tegnes nå av settings-system.js (rader med data-p65-qa) og åpner
+// panelene via window.hlOpenQa51 / window.hlWhatsNew51. Ingen innsetting i siden lenger.
 
 async function init() {
   css();
   await loadFlags();
   checkWhatsNew();
-  let me = null;
-  try { me = await api('/api/me'); } catch { /* */ }
-  if (me?.role === 'admin') {
-    const watch = () => { const m = document.getElementById('settings'); if (!m) return false; new MutationObserver(injectSettings).observe(m, { childList: true, subtree: true }); injectSettings(); return true; };
-    if (!watch()) { const t = setInterval(() => { if (watch()) clearInterval(t); }, 1000); setTimeout(() => clearInterval(t), 30_000); }
-  }
 }
 if (!window.__hlQa51) { window.__hlQa51 = true; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init(); }

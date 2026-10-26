@@ -46,11 +46,25 @@ function statusLine() {
   if (!h.configured) return 'Ikke satt opp · installer med tools/omlx/install.sh på Mac mini-en';
   return `${ST[h.status] ?? h.status}${h.ms != null && h.ok ? ` · ${h.ms} ms` : ''}${h.error && !h.ok ? ` · ${h.error}` : ''}${h.ok && h.missing?.length ? ` · mangler ${h.missing.join(', ')}` : ''}`;
 }
-function aiHtml() {
+// Prompt 65: «row» = innholdet i den utvidede raden «oMLX» i AI → Tjenester (ingen eget kort/overskrift).
+function aiHtml(row = false) {
   const c = S.cfg, h = S.health;
-  if (!c) return '';
+  if (!c) return row ? `<span class="ac-mut">${esc(S.msg || 'Laster …')}</span>` : '';
   const loaded = new Set(h?.loaded ?? []);
   const chips = (h?.models ?? []).map((m) => `<span class="o58-chip${loaded.has(m) ? ' on' : ''}" title="${loaded.has(m) ? 'Lastet i minnet' : ''}">${esc(m)}${loaded.has(m) ? ' · lastet' : ''}</span>`).join('');
+  if (row) {
+    return `<div class="o58 o58-row"><button type="button" class="ac-li" data-o58-on role="switch" aria-checked="${c.enabled !== false}"${S.busy ? ' disabled' : ''}><span class="ac-col ac-grow"><b>Bruk oMLX</b><span>${c.enabled !== false ? 'På: oppgavene du har valgt oMLX for, går dit.' : 'Av: alt går til Ollama. Adresse, nøkkel og valg er lagret.'}</span></span><span class="ac-sw${c.enabled !== false ? ' on' : ''}" aria-hidden="true"><i></i></span></button>
+      ${chips ? `<div class="o58-models" aria-label="Modeller i oMLX">${chips}</div>` : ''}
+      <form class="ac-form" data-o58-form>
+        <label class="ac-f"><span>Adresse</span><input name="url" value="${esc(c.url ?? '')}" placeholder="http://10.69.1.173:8040" autocomplete="off" spellcheck="false" aria-label="Adressen til oMLX-vakten (i huset)"></label>
+        <label class="ac-f"><span>Nøkkel${c.keySet ? ' <i class="ac-tg">SATT</i>' : ''}</span><input name="key" type="password" value="" placeholder="${c.keySet ? 'Lagret – skriv en ny for å bytte' : 'Nøkkelen tools/omlx/install.sh skrev ut'}" autocomplete="new-password" aria-label="Nøkkel"></label>
+        <label class="ac-f"><span>Tekstmodell</span><input name="text" value="${esc(c.models?.text ?? '')}" placeholder="${esc(c.defaults?.text ?? '')}" autocomplete="off" spellcheck="false" aria-label="Tekstmodell (MLX-ID)"></label>
+        <label class="ac-f"><span>Bildemodell</span><input name="vision" value="${esc(c.models?.vision ?? '')}" placeholder="${esc(c.defaults?.vision ?? '')}" autocomplete="off" spellcheck="false" aria-label="Bildemodell (MLX-ID)"></label>
+        <div class="ac-btns"><button type="submit" class="ac-b ink"${S.busy ? ' disabled' : ''}>Lagre</button><button type="button" class="ac-b line" data-o58-test${S.busy || !c.url ? ' disabled' : ''}>Test</button><button type="button" class="ac-b line" data-o58-fresh${S.busy ? ' disabled' : ''}>Sjekk nå</button></div>
+        ${S.msg ? `<span class="ac-mut" role="status">${esc(S.msg)}</span>` : ''}
+      </form>
+      <p class="ac-note">Tom adresse slår oMLX av. Bare adresser i huset godtas; nøkkelen lagres kryptert og vises aldri. Embeddings, Chat, kategorisering og strekkoder går alltid til Ollama. På 16 GB bør ikke Ollama og oMLX holde samme modell samtidig (docs/omlx-58.md).</p></div>`;
+  }
   return `<div class="ac-sec"><span class="ac-lab">MAC MINI · OMLX</span><div class="ac-card o58" style="padding:12px 14px">
       <b>oMLX på Mac mini-en</b>
       <div class="ac-card ac-list" style="margin:8px 0"><button type="button" class="ac-li" data-o58-on role="switch" aria-checked="${c.enabled !== false}"${S.busy ? ' disabled' : ''}><span class="ac-col ac-grow"><b>Bruk oMLX</b><span>${c.enabled !== false ? 'På: oppgavene du har valgt oMLX for, går dit.' : 'Av: alt går til Ollama. Adresse, nøkkel og valg er lagret til du slår den på igjen.'}</span></span><span class="ac-sw${c.enabled !== false ? ' on' : ''}" aria-hidden="true"><i></i></span></button></div>
@@ -82,15 +96,35 @@ function rtHtml() {
 }
 
 const repaint = () => {
-  for (const el of document.querySelectorAll('[data-omlx58-ai]')) el.innerHTML = S.admin ? aiHtml() : '';
+  for (const el of document.querySelectorAll('[data-omlx58-ai]')) el.innerHTML = S.admin ? aiHtml(el.dataset.omlx58Ai === 'row') : '';
   for (const el of document.querySelectorAll('[data-omlx58-rt]')) el.innerHTML = S.admin ? rtHtml() : '';
+  document.dispatchEvent(new Event('ac:redraw')); // prompt 65: AI-kontroll tegner motor-kolonnen og statusen i Tjenester selv
 };
+/* Prompt 65: AI → Oppgaver viser «Motor» som egen kolonne i oppgavetabellen, og AI → Tjenester viser statusen på oMLX-raden. */
+export const load58 = (force = false) => load(force).then(() => document.dispatchEvent(new Event('ac:redraw')));
+/** Motor for én oppgave, eller null når oppgaven ikke kan gå til oMLX (eller du ikke er admin). */
+export function engine58(task) {
+  const c = S.cfg;
+  if (!S.admin || !c || !(c.tasks ?? []).includes(task)) return null;
+  const e = c.engines?.[task] ?? 'ollama', model = c.models?.[task] ?? (['rc', 'bar'].includes(task) ? c.models?.vision : c.models?.text);
+  return { engine: e, model: model ?? '', ready: !!c.url && c.enabled !== false, busy: S.busy, name: TASK_NAMES[task] ?? task };
+}
+/** «Bruk Ollama hvis oMLX ikke svarer» (null når ikke admin/ikke lastet). */
+export const fallback58 = () => (S.admin && S.cfg ? { on: S.cfg.fallbackOllama !== false, busy: S.busy, msg: S.rtMsg, enabled: S.cfg.enabled !== false, ready: !!S.cfg.url } : null);
+/** Status for raden i Tjenester: {dot:'ok'|'warn'|'bad'|'off', text, admin}. */
+export function status58() {
+  if (S.admin === false) return { dot: 'off', text: 'Bare administrator', admin: false };
+  const h = S.health;
+  if (!h) return { dot: 'off', text: S.msg || 'Laster …', admin: S.admin };
+  const dot = h.enabled === false || !h.configured ? 'off' : h.ok ? (h.missing?.length ? 'warn' : 'ok') : h.status === 'starting' ? 'warn' : 'bad';
+  return { dot, text: statusLine(), admin: true, url: S.cfg?.url ?? '' };
+}
 let raf = 0;
 function decorate() {
   const els = [...document.querySelectorAll('[data-omlx58-ai]:not([data-o58-done]),[data-omlx58-rt]:not([data-o58-done])')];
   if (!els.length || S.admin === false) return;
   css();
-  for (const el of els) { el.dataset.o58Done = '1'; el.innerHTML = el.hasAttribute('data-omlx58-rt') ? rtHtml() : aiHtml(); }
+  for (const el of els) { el.dataset.o58Done = '1'; el.innerHTML = el.hasAttribute('data-omlx58-rt') ? rtHtml() : aiHtml(el.dataset.omlx58Ai === 'row'); }
   load().then(repaint);
 }
 const schedule = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; decorate(); }); };

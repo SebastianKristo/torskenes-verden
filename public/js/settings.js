@@ -20,9 +20,11 @@ import { myProfile, profilesLoaded, hasProfiles, loadProfiles } from './onboard3
 import { loadTrackKeys, trackGroup, trackSub, trackClick, trackChange } from './settings-track37.js'; // prompt 37: delte sporingsnøkler
 import { loadTrack46, trackGroup46, trackSub46, trackClick46, trackSubmit46, trackInput46 } from './settings-track46.js'; // prompt 46: Posten/Bring og PostNord-konto
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
-import { mountHa } from './tasks-ha.js';
 import { kalView, kalClick, kalChange } from './settings-kal.js';
 import { loadAi, aiView, aiClick, aiChange, aiSubmit, setAiTab } from './settings-ai.js';
+import * as SAI65 from './settings-ai.js'; // prompt 65: glimtAiView() (Glimt-delen av AI-siden, only='glimt') når SETAI har den
+import { MENU65, PARENT65, ALIAS65, SUB65, combine65, moved65, movedGroup65, movedTitle65, sysTabOf65 } from './settings65.js'; // prompt 65: ny meny og samlede sider
+import { ops51PartHtml } from './ops51.js'; // prompt 65: kopier/gjenoppretting/database på Backup-siden
 import { clearBtn, glassIcon } from './searchfield.js';
 import { loadSystem, systemView, systemClick, systemInput, systemSubmit, systemEsc } from './settings-system.js';
 import { setObs51Render, obs51Click, obs51Change, obs51Input, obs51Submit } from './obs51.js'; // prompt 51 (OBS51): drift i System, ntfy i Varsler
@@ -30,7 +32,7 @@ import { ops51Click, ops51Submit } from './ops51.js'; // prompt 51 (OPS51): back
 import { loadBackup, backupView, backupClick, backupChange, backupInput, backupSubmit, backupEsc } from './settings-backup.js';
 import { decorateRows } from './settings-icons36.js';
 import { kontoAvatar, avatarRow } from './avatar36.js'; // prompt 36: profilbilde i Konto // prompt 36: ikon på hver rad
-import { TAB_IC, icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor } from './settings-search.js';
+import { TAB_IC, icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor, setNormTab65 } from './settings-search.js';
 import { sheetBtn } from './util.js';
 import { loadServer41, serverGroup41 } from './settings-server41.js'; // prompt 41: Konto → Server (lokal/ekstern adresse)
 import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } from './glimt35.js'; // prompt 35: GLIMT → Glimt
@@ -81,44 +83,56 @@ export function row(o) {
 }
 /** Seksjon: overskrift over et innrammet kort. rows er row()-objekter eller ferdig HTML. */
 export const group = (t, rows, note = '') => ({ t, note, rows: rows.filter(Boolean).map((r) => (typeof r === 'string' ? { html: r, q: r.replace(/<[^>]+>/g, ' ') } : r)) });
-const groupHtml = (g) => `<section class="sg${g.cls ? ' ' + g.cls : ''}">${g.t ? `<h3 class="sg-t">${esc(g.t)}</h3>` : ''}<div class="sg-box">${g.rows.map((r) => r.html).join('')}</div>${g.note ? `<div class="sg-note">${g.note}</div>` : ''}</section>`;
+const groupHtml = (g) => `<section class="sg${g.cls ? ' ' + g.cls : ''}">${g.t ? `<h3 class="sg-t">${esc(g.t)}${movedTitle65(g)}</h3>` : ''}<div class="sg-box">${g.rows.map((r) => r.html).join('')}</div>${g.note ? `<div class="sg-note">${g.note}</div>` : ''}</section>`;
 const note = (html) => `<div class="sg-note">${html}</div>`;
 const box = (t, inner, n = '') => `<section class="sg">${t ? `<h3 class="sg-t">${esc(t)}</h3>` : ''}<div class="sg-box">${inner}</div>${n ? note(n) : ''}</section>`;
 
 /* ---------- Faner og tilstand ---------- */
 
-// [id, navn, undertekst, seksjon, ikon, bare admin]
+// [id, navn, undertekst, seksjon, ikon, bare admin]. Prompt 65 (claude-code-innstillinger-samlet.md): Startside, Familie, Gjøremål og
+// Sikkerhet er ikke egne sider lenger (innholdet står på Utseende/App, Brukere og familie, Kalender og gjøremål og Konto, se ALIAS65).
+// Rekkefølgen og gruppene i sidemenyen står i MENU65 (settings65.js); Faste oppgaver og Kvalitet er undersider av Glimt (PARENT65).
 const TABS = [
-  ['konto', 'Konto', 'Personlig informasjon og innlogging.', 'Generelt', P.user],
-  ['look', 'Utseende', 'Tema, bakgrunnsbilde, søkebar og kategorier.', 'Generelt', P.look],
-  ['top', 'Startside', 'Topplinje, faner, nyhetsbar og forsiden.', 'Generelt', P.top],
-  ['dom', 'Domener', 'Domener, statistikkilder og verdenskart.', 'Generelt', P.map],
-  ['varsel', 'Varsler', 'Lyd, stille timer, grupper og test.', 'Generelt', P.bell],
-  ['app', 'App', 'Navn på appen, app-ikon, widgets og Kalender-appen.', 'Generelt', P.app],
-  ['familie', 'Familie', 'Helsekilder: Apple Health, Health Connect og Home Assistant.', 'Generelt', P.users], // prompt 42
-  ['glimt', 'Glimt', 'Figur, brief, stemme og venner.', 'Glimt', P.star],
+  ['konto', 'Konto', 'Profil, passord, 2FA, økter, enheter og passkeys.', 'Generelt', P.user],
+  ['look', 'Utseende', 'Tema, bakgrunn, widgets og rekkefølge på forsiden, nyhetsbar og søkebar.', 'Generelt', P.look],
+  ['dom', 'Domener', 'Domener, statistikkilder og verdenskart.', 'Moduler', P.map],
+  ['varsel', 'Varsler', 'Push, e-post, ntfy, stille timer og grupper.', 'Generelt', P.bell],
+  ['app', 'App', 'Faner, navn på appen, app-ikon, widgets og Kalender-appen.', 'Generelt', P.app],
+  ['glimt', 'Glimt', 'Figur, brief, stemme og venner · personlighet, nettsøk og Glimt husker.', 'Glimt og AI', P.star],
   ...TABS62, // prompt 62: Faste oppgaver (planlagte oppgaver fra Glimt)
   ...TABS64, // prompt 64: Kvalitet (ukerapport og nattlig eval)
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
-  ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
-  TABS44[0], // prompt 44: Gjøremål (synk med Home Assistant)
+  ['kal', 'Kalender og gjøremål', 'Google, iCloud, skole · lister og synk med Home Assistant.', 'Tilkoblinger', P.cal],
   ...TABS45, // prompt 45: innstillinger som lå i modulene (Media, Ruter)
   ...TABS46, // prompt 46: Nyheter (flyttet fra nyhetsleseren)
-  ['ai', 'AI', 'Modeller, jobber, forbruk og nøkler.', 'Tilkoblinger', P.ai],
-  ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
-  ...TABS51, // prompt 51: passkeys, nye enheter, innloggingslogg, sperrer og nøkler
-  ['system', 'System', 'Oppdater serveren til nyeste versjon.', 'Server', P.sys, true],
-  ['backup', 'Backup', 'Backup av hele systemet: automatisk, hva som tas med, hvor og gjenoppretting.', 'Server', P.backup, true],
+  ['ai', 'AI', 'Modeller, jobber, forbruk og nøkler.', 'Glimt og AI', P.ai],
+  ['users', 'Brukere og familie', 'Roller, tilgang og invitasjoner · barn og helse · brief og Glimt-figur per bruker.', 'Husstand', P.users],
+  ['system', 'System', 'Helse, oppdateringer, ytelse og selvreparasjon.', 'Server', P.sys, true],
+  ['backup', 'Backup', 'Kopier, gjenoppretting og database.', 'Server', P.backup, true],
   TABS44[1], // prompt 44: Logger
 ];
 const tabsFor = () => TABS.filter((t) => !t[5] || isAdmin());
+/** Prompt 65: menyen (grupper i MENU65-rekkefølge). Sider som ikke står i MENU65 (f.eks. nye moduler), havner sist i sin seksjon. */
+function menu65() {
+  const ok = new Map(tabsFor().filter(([k]) => !PARENT65[k]).map((t) => [t[0], t])), used = new Set();
+  const out = MENU65.map(([sec, ids]) => [sec, ids.filter((k) => ok.has(k)).map((k) => (used.add(k), ok.get(k)))]);
+  for (const t of ok.values()) if (!used.has(t[0])) (out.find(([s]) => s === t[3]) ?? out[out.length - 1])[1].push(t);
+  return out.filter(([, l]) => l.length);
+}
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
 // Prompt 63: «glimt-husker» / «minne» er lenken fra pushen «Glimt har 3 forslag til minnet» (memory63.js blar ned til forslagene).
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', 'glimt-husker': 'ai', minne: 'ai', ...ALIAS45, ...ALIAS46, ...ALIAS51, ...ALIAS62 };
+// Prompt 65: Glimt husker står nå på Glimt-siden (AI-sidens Glimt-del bygd inn med only='glimt'), så lenken går dit.
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', 'glimt-husker': 'glimt', minne: 'glimt', ...ALIAS45, ...ALIAS46, ...ALIAS51, ...ALIAS62 };
 Object.assign(ALIAS, ALIAS64); // prompt 64: kvalitet, eval, ukerapport → Kvalitet
+// Prompt 65: Startside → Utseende, Familie → Brukere og familie, Gjøremål → Kalender og gjøremål, Sikkerhet/Innlogging → Konto,
+// Glimt husker (lenken fra pushen) → Glimt. Gjelder også ALIAS51 (passkey, sperrer …) som pekte på den gamle Sikkerhet-siden.
+Object.assign(ALIAS, ALIAS65);
+for (const k of Object.keys(ALIAS51)) ALIAS[k] = 'konto';
+setNormTab65((k) => ALIAS[k] ?? k); // ikonet i søketreff følger den nye siden
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app', hahealth: 'familie' };
+Object.assign(SUB_TAB, SUB65); // prompt 65: Faner/Avstand → App, Nyhetsbar/Widgets/Snarveier → Utseende, HA-helse → Brukere og familie
 const subTab = (sub) => SUB_TAB[sub] ?? (sub?.startsWith('cfg:') || sub?.startsWith('i24:') || sub?.startsWith('trk37:') ? 'int' : sub?.startsWith('user:') ? 'users' : null);
 const tabOf = (k) => TABS.find(([id]) => id === k) ?? TABS[0];
 
@@ -342,22 +356,22 @@ function topView() {
       ], 'Rekkefølgen kan også endres ved å dra kortene på forsiden.'),
     ] };
   }
-  if (sub === 'tabs') return { title: 'Faner', sub: 'Startside · Topplinje', html: box('Faner i topplinjen', tabRows(), 'Klikk på navnet for å endre det. Tomt felt gir standardnavnet. Dashboard kan ikke skjules. Skjulte sider kan fortsatt åpnes med lenke.')
+  if (sub === 'tabs') return { title: 'Faner', sub: 'App · Topplinje', html: box('Faner i topplinjen', tabRows(), 'Klikk på navnet for å endre det. Tomt felt gir standardnavnet. Dashboard kan ikke skjules. Skjulte sider kan fortsatt åpnes med lenke.')
       + '<div class="sg-acts"><button class="sg-btn" data-tabs-reset>Tilbakestill faner</button></div>' };
-  if (sub === 'head') return { title: 'Avstand og faner', sub: 'Startside · Topplinje', html: box('Avstand', TOP.map(([k, , label, min, max, step]) =>
+  if (sub === 'head') return { title: 'Avstand og faner', sub: 'App · Topplinje', html: box('Avstand', TOP.map(([k, , label, min, max, step]) =>
       `<label class="sg-field range"><span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${topVal(k)}" data-top="${k}"><output class="mono">${topVal(k)} px</output></label>`).join(''),
     'Endringene vises med en gang i topplinjen bak dette vinduet.') };
   if (sub === 'speed') {
     const v = u.newsSpeed ?? 5;
-    return { title: 'Hastighet', sub: 'Startside · Nyhetsbar', html: `<section class="sg"><h3 class="sg-t">Hastighet</h3><div class="sg-box speed-box">
+    return { title: 'Hastighet', sub: 'Utseende · Nyhetsbar', html: `<section class="sg"><h3 class="sg-t">Hastighet</h3><div class="sg-box speed-box">
       <div class="speed-top"><b data-speed-n>${v}</b><span class="mono" data-speed-t>${speedTxt(v)}</span></div>
       <div class="speed-ctl"><button class="speed-pm" data-speed-step="-1" aria-label="Saktere">−</button><input type="range" min="1" max="10" step="1" value="${v}" data-news-speed aria-label="Hastighet"><button class="speed-pm" data-speed-step="1" aria-label="Raskere">+</button></div>
       <div class="speed-pre">${[['Sakte', 2], ['Normal', 5], ['Rask', 8]].map(([n, x]) => `<button data-speed-set="${x}" aria-pressed="${v === x}">${n}</button>`).join('')}</div></div>
       ${note('1 er tregest og 10 raskest. Endringen vises med en gang. Du kan også åpne denne siden med knappen helt til høyre i nyhetsbaren.')}</section>` };
   }
-  if (sub === 'dash') return { title: 'Widgets på dashboardet', sub: 'Startside · Forside', html: box('', layList('dash', DASH_WIDGETS, hiddenWidgets())) };
-  if (sub === 'mob') return { title: 'Widgets på mobil', sub: 'Startside · Forside', html: box('', layList('m_home', MOBILE_WIDGETS, hiddenWidgets())) };
-  if (sub === 'sc') return { title: 'Snarveier', sub: 'Startside · Forside', html: `<form class="sg" data-sc-form><h3 class="sg-t">Snarveier</h3><div class="sg-box">
+  if (sub === 'dash') return { title: 'Widgets på dashboardet', sub: 'Utseende · Forside', html: box('', layList('dash', DASH_WIDGETS, hiddenWidgets())) };
+  if (sub === 'mob') return { title: 'Widgets på mobil', sub: 'Utseende · Forside', html: box('', layList('m_home', MOBILE_WIDGETS, hiddenWidgets())) };
+  if (sub === 'sc') return { title: 'Snarveier', sub: 'Utseende · Forside', html: `<form class="sg" data-sc-form><h3 class="sg-t">Snarveier</h3><div class="sg-box">
       ${sc.map((x, i) => `<div class="sg-row sc-row">${logoImg(x.domain, x.name, 'sg-lg sm')}<input class="tab-name" name="n${i}" value="${esc(x.name)}" aria-label="Navn" maxlength="30" style="flex:0 1 150px"><input class="tab-name mono" name="u${i}" value="${esc(x.url)}" aria-label="Adresse" spellcheck="false"><button type="button" class="sg-pill danger" data-sc-del="${i}" aria-label="Fjern ${esc(x.name)}">Fjern</button></div>`).join('')}
       <div class="sg-row sc-row"><span class="lg sg-lg sm"><i>+</i></span><input class="tab-name" name="nnew" placeholder="Navn" maxlength="30" style="flex:0 1 150px"><input class="tab-name mono" name="unew" placeholder="https://…" spellcheck="false"><button class="sg-pill" type="submit">Legg til</button></div></div>
       ${note('Logoen hentes fra adressen. For adresser på lokalnettet (192.168.x.x, .local) slås navnet opp med AI én gang, for eksempel «Proxmox» → proxmox.com. Uten treff vises forbokstavene.')}
@@ -371,7 +385,7 @@ async function saveShortcuts(list) {
     emit('route'); render();
     const m2 = modal().querySelector('[data-sc-msg]'); if (m2) { m2.textContent = 'Lagret ✓'; m2.className = 'green'; }
     if (store.me.shortcuts.some((s) => s.local && !s.resolved)) {
-      api('/me/shortcuts/resolve', { method: 'POST' }).then((l) => { if (Array.isArray(l)) { store.me.shortcuts = l; emit('route'); if (tab === 'top' && sub === 'sc') render(); } }).catch(() => {});
+      api('/me/shortcuts/resolve', { method: 'POST' }).then((l) => { if (Array.isArray(l)) { store.me.shortcuts = l; emit('route'); if (tab === 'look' && sub === 'sc') render(); } }).catch(() => {});
     }
   } catch (e) { const msg = modal().querySelector('[data-sc-msg]'); if (msg) { msg.textContent = e.message; msg.className = 'red'; } }
 }
@@ -471,7 +485,10 @@ function mailVal() {
 // ISO2: alle får sine egne personlige grupper (scope 'personal') med egne verdier; servergruppene (scope 'server') bare admin.
 const isPersonal = (g) => g?.scope === 'personal';
 const canEdit = (g) => isPersonal(g) || isAdmin();
-const warnCount = () => (cfg ? cfg.filter((g) => valOf(g).startsWith('!')).length : 0) + (mailVal().startsWith('!') ? 1 : 0) + integCount(cfg);
+const AI_TAB65 = { 'Open WebUI': 'svc:owui', 'AI-backend og nettsøk': 'svc', Chat: 'task', 'Personvern og logoer': 'rcpt', 'Lokal AI': 'task' };
+const AI_TABN65 = { 'svc:owui': 'Tjenester', svc: 'Tjenester', task: 'Oppgaver', rcpt: 'Kvitteringer' };
+const isAi65 = (g) => g?.category === 'AI' || !!AI_TAB65[g?.name];
+const warnCount = () => (cfg ? cfg.filter((g) => g.name !== 'Kalender / timeplan' && !isAi65(g) && valOf(g).startsWith('!')).length : 0) + (mailVal().startsWith('!') ? 1 : 0) + integCount(cfg);
 
 function intView() {
   if (cfgErr) return { html: `<div class="err">${esc(cfgErr)}</div>` };
@@ -482,7 +499,11 @@ function intView() {
     const catSort = (a, b) => (CAT_ORDER.indexOf(a) + 99) % 99 - (CAT_ORDER.indexOf(b) + 99) % 99;
     const intRow = (g) => {
       const m = metaOf(g), v = valOf(g), warn = v.startsWith('!'), t = testState(g.name);
-      return row({ t: m.name, s: m.s, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: t?.v ?? (warn ? v.slice(1) : v), vc: t?.vc ?? (warn ? '#f3b54a' : undefined), btn: 'Oppsett', go: g.name === 'Kalender / timeplan' ? 'kal' : 'int|cfg:' + g.name });
+      // Prompt 65: «Kalendere»-kortet er flyttet til Kalender og gjøremål – her bare status + lenke.
+      // Prompt 65: AI-gruppene i /api/config (Open WebUI, AI-backend og nettsøk, Chat, Personvern og logoer, Lokal AI) settes opp på AI-siden.
+      if (isAi65(g)) return row({ t: m.name, s: `Settes opp under AI → ${AI_TABN65[AI_TAB65[g.name] ?? 'svc'] ?? 'Tjenester'}`, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: warn ? v.slice(1) : v, btn: 'AI', act: `data-p65-ai="${AI_TAB65[g.name] ?? 'svc'}"` });
+      if (g.name === 'Kalender / timeplan') return row({ t: m.name, s: 'Settes opp under Kalender og gjøremål', k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: warn ? v.slice(1) : v, btn: 'Kalender og gjøremål', go: 'kal' });
+      return row({ t: m.name, s: m.s, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: t?.v ?? (warn ? v.slice(1) : v), vc: t?.vc ?? (warn ? '#f3b54a' : undefined), btn: 'Oppsett', go: 'int|cfg:' + g.name });
     };
     const mv = mailVal(), mailRow = row({ t: 'Proton Mail', s: 'Kvitteringer fra e-post via Bridge', logo: 'proton.me', v: mv.replace(/^!/, ''), vc: mv.startsWith('!') ? '#f3b54a' : undefined, btn: 'Oppsett', go: 'int|mail' });
     // Prompt 43: Media-tjenestene (Sonarr, Radarr, qBittorrent, Prowlarr, Jellyfin, Plex) i egen gruppe «Media».
@@ -514,9 +535,9 @@ function intView() {
   const res = t && t.st !== 'run' ? `<div class="sg-res"><i style="background:${t.st === 'ok' ? '#34c759' : '#f26b5e'}"></i><div><b>${t.st === 'ok' ? 'Tilkoblet' : 'Tilkoblingen feilet'}</b><span>${esc(t.msg)}</span></div><span class="mono">${when(t.at)}${t.ms ? ` · ${t.ms} ms` : ''}</span></div>` : '';
   const med = isMedia43(g), mst = med ? cfgStatus43(g, t) : null;
   const head = `<div class="int-head">${logoImg(m.domain, m.name, 'sg-lg big')}<div><b>${esc(m.name)}</b><span>${esc(m.s)}</span></div>${mst ? `<span class="sg-v m43i-st" style="color:${mst[1]}">${esc(mst[0])}</span>` : ''}</div>`;
-  // Prompt 22: Huskeliste ↔ HA To-do under Home Assistant (bare admin, samme innstillinger som på Huskeliste-siden).
-  const haTodo = g.name === 'Home Assistant' && !ro ? '<section class="sg"><h3 class="sg-h">Gjøremål</h3><div data-mount-host></div></section>' : '';
-  return { mount: haTodo ? mountHaTodo : undefined, title: m.name, sub: `Integrasjoner · ${m.s}`, html: `${head}<form class="sg" data-group="${esc(g.name)}"><h3 class="sg-t">Oppsett</h3><div class="sg-box">${fields}</div>
+  // Prompt 22: Huskeliste ↔ HA To-do under Home Assistant. Prompt 65: står nå bare på Kalender og gjøremål – her en lenke.
+  const haTodo = g.name === 'Home Assistant' && !ro ? box('Gjøremål', row({ t: 'Synk gjøremål med Home Assistant', s: 'Lister, todo-entiteter og Synk nå – under Kalender og gjøremål', go: 'kal', btn: 'Kalender og gjøremål', k: 'gjøremål huskeliste todo synk' }).html) : '';
+  return { title: m.name, sub: `Integrasjoner · ${m.s}`, html: `${head}<form class="sg" data-group="${esc(g.name)}"><h3 class="sg-t">Oppsett</h3><div class="sg-box">${fields}</div>
       ${NOTES[g.name] ? note(NOTES[g.name]) : typeof g.help === 'string' && g.help.trim() && !/```|\n\n/.test(g.help) ? note(esc(g.help)) : ''}</form>
       ${ro ? note('Settes opp av administrator.') : `<div class="sg-acts">${med ? `<button type="button" class="sg-btn" data-m43-cfgsave="${esc(g.name)}">Lagre</button>` : ''}<button class="sg-btn pri" data-test="${esc(g.name)}"${t?.st === 'run' ? ' disabled' : ''}>${t?.st === 'run' ? 'Tester …' : 'Test tilkobling'}</button>
         <span class="${msg ? (msg.ok ? 'green' : 'red') : 'muted'}" style="font-size:13px">${esc(msg?.text ?? 'Endringer lagres automatisk')}</span></div>`}${res}${haTodo}${med ? cfgGuide43(g) : guideHtml(g)}` };
@@ -537,12 +558,6 @@ function guideHtml(g) {
   }).join('')}</div></section>`;
 }
 
-// Huskeliste-synken med HA beholdes som samme element mellom omtegninger (som Proton-panelet).
-let haHost = null;
-function mountHaTodo(slot) {
-  if (!haHost) { haHost = document.createElement('div'); haHost.className = 'tk tk-set'; mountHa(haHost); }
-  slot.replaceWith(haHost);
-}
 
 // Proton-panelet tegnes av FinansHub-modulen og beholdes mellom omtegninger av innstillingene.
 let mailHost = null, mailMounted = false;
@@ -597,9 +612,84 @@ const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [gro
   row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure, VoxCPM2 lokalt), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure voxcpm' }),
   row({ t: 'Stemmer', s: 'Lag stemme fra beskrivelse, klon en stemme, egen stemme for nyhetsleseren (VoxCPM2 på Mac mini-en)', go: 'glimt', btn: 'Åpne', k: 'stemmer klone klon stemmekloning voxcpm nyhetsleser nyhetsoppleser egen stemme beskrivelse' }), // prompt 57
 ])] });
-const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => withZones45(notifyView(H), 'varsel'), app: () => appView({ ...H, sub }), familie: () => (sub ? fam42View(H, sub) : withZones45(fam42View(H, sub), 'familie')), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H), logger: () => loggerView44(H), huske: () => { setRender45(() => { if (!modal().hidden && tab === 'huske') render(); }); const v = huskeView44(H); return { ...v, extra: (v.extra ?? '') + huskeTips45(H) }; }, media: () => (setRender45(rerender45), mediaView45(H)), ruter: () => (setRender45(rerender45), ruterView45(H)), vaer: () => (setRender45(rerender45), vaerView45(H)), studie: () => studieView45(H), finans: () => finansView45(H), nyheter: () => nyheterView46(H), sikkerhet: () => sikkerhetView51(H), 'faste-oppgaver': () => fasteView62(H), kvalitet: () => kvalitetView64(H) };
-// Prompt 45: Sonevarsler (av/på, per person og sone) i Familie og speilet i Varsler.
-const rerender45 = () => { if (!modal().hidden && ['familie', 'varsel', 'media', 'ruter', 'vaer'].includes(tab)) render(); };
+/* ---------- Prompt 65: samlede sider (claude-code-innstillinger-samlet.md) ---------- */
+// Én side bygd av flere visninger; flyttet innhold får «FLYTTET FRA …». Undersidene tegnes som før.
+const join65 = (base, parts) => { const c = combine65([{ v: base }, ...parts], groupHtml); return { title: base.title, sub: base.sub, ...c }; };
+const TOP_APP65 = new Set(['tabs', 'head']), TOP_LOOK65 = new Set(['speed', 'dash', 'mob', 'sc']);
+/** Startside sin rotliste: [Topplinje, Nyhetsbar, Forside] (sub må være null). */
+const topGroups65 = () => { const s0 = sub; sub = null; const g = topView().groups; sub = s0; return g; };
+function lookView65() {
+  if (sub && TOP_LOOK65.has(sub)) return topView();
+  if (sub) return lookView();
+  const lv = lookView(), [, nyhet, forside] = topGroups65();
+  if (!lv.groups) return lv;
+  const i = lv.groups.findIndex((g) => g?.t === 'Bakgrunn') + 1 || lv.groups.length;
+  return { ...lv, groups: [...lv.groups.slice(0, i), movedGroup65(forside, 'Startside'), movedGroup65(nyhet, 'Startside'), ...lv.groups.slice(i)] };
+}
+function appView65() {
+  if (sub && TOP_APP65.has(sub)) return topView();
+  const v = appView({ ...H, sub });
+  if (sub || !v.groups) return v;
+  const [topp] = topGroups65();
+  return { ...v, groups: [movedGroup65(topp, 'Startside'), ...v.groups] };
+}
+function kontoView65() {
+  const v = kontoView();
+  if (sub || !v.groups) return v;
+  return join65(v, [{ v: sikkerhetView51(H), moved: 'Sikkerhet' }]);
+}
+const peopleGroup65 = () => (isAdmin() ? movedGroup65(group('Brief og Glimt-figur', [row({ t: 'Brief og Glimt-figur', k: 'brief figur glimt-figur barn homelab domener aksjer standard per bruker', s: 'Hvem som er barn, hvem som får Homelab, Domener og Aksjer, og hvilken figur hver bruker starter med', act: 'data-p65-people', btn: 'Åpne' })]), 'System') : null);
+function zoneLink65() {
+  return group('Sonevarsler', [row({ t: 'Sonevarsler', k: 'sonevarsel posisjonsvarsel kommer går familie per sone per person', s: 'Av og på per person og per sone – under Varsler', go: 'varsel', btn: 'Varsler' })]);
+}
+function usersView65() {
+  if (sub === 'hahealth') return fam42View(H, sub);
+  const v = usersView();
+  if (sub) return v;
+  const fam = fam42View(H, null);
+  return join65(v, [{ v: { groups: [peopleGroup65()].filter(Boolean) } }, { v: fam, moved: 'Familie' }, { v: { groups: [zoneLink65()] } }]);
+}
+// Glimt-delen av AI-siden (only='glimt': personlighet, «Send til Chat etter», nettsøk, Glimt husker, entiteter, Glimt lærer).
+const glimtAi65 = () => { try { return typeof SAI65.glimtAiView === 'function' ? SAI65.glimtAiView(H) : null; } catch (e) { console.error(e); return null; } };
+const GLIMT_SEARCH65 = () => group('Glimt', [
+  row({ t: 'Personlighet', s: 'Hvordan Glimt svarer', go: 'glimt', btn: 'Åpne', k: 'personlighet tone stil glimt svar' }),
+  row({ t: 'Send til Chat etter', s: 'Glimt i søkefeltet: 5, 8, 15 eller 30 sekunder', go: 'glimt', btn: 'Åpne', k: 'glimt søkefelt søk chat tid timeout sekunder fullfør' }),
+  row({ t: 'Nettsøk-rekkefølge', s: 'Hvilke søkemotorer Glimt prøver først', go: 'glimt', btn: 'Åpne', k: 'nettsøk søkemotor searxng rekkefølge' }),
+  row({ t: 'Glimt husker', s: 'Det du har lært Glimt, forslag og motstrid', go: 'glimt-husker', btn: 'Åpne', k: 'glimt husker minne alias forslag motstrid ubrukte fakta' }),
+  row({ t: 'Entitetsregister', s: 'Personer, steder, butikker og abonnementer med aliaser', go: 'glimt', btn: 'Åpne', k: 'entitetsregister entiteter alias personer steder hytta jobben' }),
+  row({ t: 'Glimt lærer', s: 'Oppskrifter fra vellykkede kjøringer og rettelser', go: 'glimt', btn: 'Åpne', k: 'glimt lærer oppskrifter skills hurtigvei rettelser tommel' }),
+]);
+function glimtView65() {
+  const g = glimtView(), ai = glimtAi65();
+  const more = group('Oppgaver og kvalitet', [
+    row({ t: 'Faste oppgaver', s: 'Planlagte oppgaver og varsler du har bedt Glimt om', go: 'faste-oppgaver', btn: 'Åpne', k: 'faste oppgaver planlagte påminnelse' }),
+    row({ t: 'Kvalitet', s: 'Ukerapport og nattlige eval-kjøringer', go: 'kvalitet', btn: 'Åpne', k: 'kvalitet ukerapport eval' }),
+  ]);
+  const c = join65(g, [ai ? { v: ai, moved: 'AI → Glimt og chat', sel: '[data-ai-glimt65]' } : null, { v: { groups: [more] } }].filter(Boolean));
+  return { ...c, search: [...c.search, GLIMT_SEARCH65()] };
+}
+function kalView65() {
+  const k = kalView({ ...H, cfg });
+  setRender45(() => { if (!modal().hidden && tab === 'kal') render(); });
+  const hv = huskeView44(H);
+  const todo = { ...hv, html: `<section class="sg"><h3 class="sg-t">Gjøremål · synk med Home Assistant</h3>${hv.html}</section>`, extra: (hv.extra ?? '') + huskeTips45(H) };
+  return join65(k, [{ v: todo, moved: 'Gjøremål' }]);
+}
+function backupView65() {
+  const v = backupView(H);
+  return join65(v, [{ v: { html: ops51PartHtml('backup', () => { if (!modal().hidden && tab === 'backup') render(); }) }, moved: 'System' }]);
+}
+/** Ruter: Entur-status med lenke til Integrasjoner (nøkkelen/strekningene settes der, ikke her). */
+function ruterView65() {
+  const v = ruterView45(H), g = cfg?.find((x) => x.name === 'Ruter (Entur)'), val = g ? valOf(g) : '';
+  const st = row({ t: 'Entur', k: 'entur ruter strekninger stopp nsr', s: 'Strekninger og stopp settes under Integrasjoner', v: val.replace(/^!/, ''), vc: val.startsWith('!') ? '#f3b54a' : undefined, btn: 'Integrasjoner', go: g ? 'int|cfg:Ruter (Entur)' : 'int' });
+  return v.groups ? { ...v, groups: [...v.groups, group('Entur', [st])] } : v;
+}
+let sysTab65 = 'ov'; // System-fanen som vises (Oversikt · Oppdateringer · Ytelse · Selvreparasjon · Mer)
+const VIEWS = { glimt: glimtView65, konto: kontoView65, look: lookView65, dom: domView, varsel: () => withZones45(notifyView(H), 'familie'), app: appView65, int: intView, kal: kalView65, ai: () => aiView(H), users: usersView65, system: () => systemView({ ...H, sysTab: sysTab65 }), backup: backupView65, logger: () => loggerView44(H), media: () => (setRender45(rerender45), mediaView45(H)), ruter: () => (setRender45(rerender45), ruterView65()), vaer: () => (setRender45(rerender45), vaerView45(H)), studie: () => studieView45(H), finans: () => finansView45(H), nyheter: () => join65(nyheterView46(H), [{ v: { groups: [group('Nyhetssammendrag', [row({ t: 'Modell for nyhetssammendraget', s: 'Hvilken AI-modell som lager sammendragene – under AI → Oppgaver', act: 'data-p65-ai="task"', btn: 'AI', k: 'nyheter sammendrag modell ai oppgave' })])] } }]),
+  'faste-oppgaver': () => fasteView62(H), kvalitet: () => kvalitetView64(H) };
+// Prompt 45: Sonevarsler (av/på, per person og sone). Prompt 65: bare under Varsler (hele settet); Brukere og familie viser en lenke.
+const rerender45 = () => { if (!modal().hidden && ['users', 'varsel', 'media', 'ruter', 'vaer'].includes(tab)) render(); };
 function withZones45(v, where) { setRender45(rerender45); if (v?.groups) v.groups = [...v.groups, ...zoneGroups45(H, where)]; return v; }
 function searchView() {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean), out = [];
@@ -622,7 +712,7 @@ function searchView() {
 
 function sideHtml() {
   const me = store.me.me ?? {}, name = me.name || me.username || '', warn = warnCount();
-  const tabs = tabsFor(), secs = [...new Set(tabs.map((t) => t[3]))], qq = q.trim();
+  const qq = q.trim(), here = PARENT65[tab] ?? tab; // prompt 65: Faste oppgaver/Kvalitet markerer Glimt i menyen
   // Prompt 30: hele profilblokken er en knapp til Konto («Admin · Se konto ›», ingen @brukernavn). Søket har ✦ AI.
   return `<aside class="set-side" aria-label="Innstillinger">
     <div class="set-side-in">
@@ -630,9 +720,9 @@ function sideHtml() {
         <span class="set-me-t"><b>${esc(name)}</b><span>${esc(roleName(me.role))} · Se konto ›</span></span></button>
       <div class="set-q${q ? ' has' : ''}${SQ.ai ? ' ai' : ''}" data-sf><span class="sf-ic">${svg(P.search, 18)}</span>${clearBtn()}<input name="setq" value="${esc(q)}" placeholder="${SQ.ai ? 'Spør, f.eks. «hvor bytter jeg bakgrunn?»' : 'Søk i innstillinger'}" autocomplete="off" spellcheck="false" aria-label="Søk i innstillinger" enterkeyhint="search" data-setq><button type="button" class="set-aibtn" data-set-ai aria-pressed="${SQ.ai}" aria-label="AI-søk" title="Spør med egne ord (⌘K / Ctrl+K)"><span class="sai-s" aria-hidden="true">✦</span><span>AI</span></button></div>
       ${qq ? `<div class="set-res">${sideResults(q, (k) => tabOf(ALIAS[k] ?? k)[1])}</div>` : ''}
-      <nav class="set-nav${qq ? ' has-q' : ''}">${secs.map((sec) => `<div class="set-sec"><div class="set-sec-t">${esc(sec)}</div>${tabs.filter((t) => t[3] === sec).map(([k, n]) => {
-        const on = tab === k && !qq, badge = k === 'int' && warn ? `<span class="set-badge" title="${warn} mangler oppsett">${warn}</span>` : '';
-        return `<button type="button" class="set-tab" data-tab="${k}" aria-current="${on ? 'page' : 'false'}">${icBox(k)}<span>${esc(n)}</span>${badge}</button>`;
+      <nav class="set-nav set-nav65${qq ? ' has-q' : ''}">${menu65().map(([sec, list]) => `<div class="set-sec"><div class="set-sec-t">${esc(sec)}</div>${list.map(([k, n]) => {
+        const on = here === k && !qq, badge = k === 'int' && warn ? `<span class="set-badge" title="${warn} mangler oppsett">${warn}</span>` : '';
+        return `<button type="button" class="set-tab" data-tab="${k}" aria-current="${on ? 'page' : 'false'}" title="${esc(n)}">${icBox(k, 26, 14)}<span>${esc(n)}</span>${badge}</button>`;
       }).join('')}</div>`).join('')}</nav>
     </div>
     </aside>`;
@@ -689,15 +779,18 @@ function render() {
   const oldSide = modal().querySelector('.set-side-in');
   if (oldSide && !oldSide.querySelector('.set-nav.has-q')) { NAV41.y = oldSide.scrollTop; NAV41.x = oldSide.querySelector('.set-nav')?.scrollLeft ?? NAV41.x; }
   const same = !!keep && body?.dataset.key === key, oldMount = same ? body.querySelector('[data-mail-host],[data-mount-host]') : null, oldH = same ? body.querySelector('.set-inner')?.offsetHeight ?? 0 : 0;
+  // Prompt 65: flere monterte moduler på samme side (v.mounts = [[velger, fn]]) – hver beholdes som eget element mellom tegningene.
+  const oldMounts = same ? (v.mounts ?? []).map(([sel]) => body.querySelector(sel)) : [];
   modal().innerHTML = `<div class="set-box" role="dialog" aria-modal="true" aria-labelledby="set-title">${sideHtml()}
     <div class="set-main">${sheetBtn('Ferdig', 'data-close data-set-done', 'pri').replace('class="sbtn pri"', 'class="sbtn pri set-done"')}
     <div class="set-body" data-key="${esc(key)}"><div class="set-inner">
-      <header class="set-ph">${sub ? `<button type="button" class="set-back" data-back>${svg(P.back, 18)}${esc(tName)}</button>` : ''}
+      <header class="set-ph">${sub ? `<button type="button" class="set-back" data-back>${svg(P.back, 18)}${esc(tName)}</button>` : PARENT65[tab] && !searching ? `<button type="button" class="set-back" data-tab="${PARENT65[tab]}">${svg(P.back, 18)}${esc(tabOf(PARENT65[tab])[1])}</button>` : ''}
         <div class="set-ph-row">${searching ? '' : tab === 'konto' && !sub ? kontoAvatar(store.me.me ?? {}) : icBox(tab, 44, 22)}<div class="set-ph-t"><h2 id="set-title">${esc(v.title ?? tName)}</h2><div class="set-ps">${esc(v.sub ?? tSub)}</div></div></div></header>
       ${content}</div></div></div></div>`;
   if (same) {
     const inner = modal().querySelector('.set-inner'), slot = modal().querySelector('[data-mail-host],[data-mount-host]');
     if (oldMount && slot && v.mount && slot.className === oldMount.className) slot.replaceWith(oldMount);
+    (v.mounts ?? []).forEach(([sel], i) => { const o = oldMounts[i], n = modal().querySelector(`.set-body ${sel}`); if (o && n && o !== n && o.className === n.className) n.replaceWith(o); });
     if (inner && oldH) { inner.style.minHeight = `${oldH}px`; clearTimeout(render.mh); render.mh = setTimeout(() => { const i = modal().querySelector('.set-inner'); if (i) i.style.minHeight = ''; }, 1500); }
   }
   restoreNav41();
@@ -705,6 +798,7 @@ function render() {
   if (keep) requestAnimationFrame(() => { const b = modal().querySelector('.set-body'); if (b && b.dataset.key === key && b.scrollTop < keep - 1) b.scrollTop = keep; });
   if (keepQ) { const nq = modal().querySelector('[data-setq]'); if (nq) { nq.replaceWith(keepQ); keepQ.focus({ preventScroll: true }); } }
   if (v.mount) { const slot = modal().querySelector('[data-mail-host],[data-mount-host]'); if (slot) v.mount(slot); }
+  for (const [sel, fn] of v.mounts ?? []) { const slot = modal().querySelector(`.set-body ${sel}`); if (slot) { try { fn(slot); } catch (e) { console.error(e); } } }
   // Prompt 36: ikonbrikker i sidens farge på alle rader (også de som tegnes senere av andre moduler).
   modal().querySelector('.set-main')?.style.setProperty('--pg', (TAB_IC[tab] ?? TAB_IC.app)[0]);
   decorateRows(modal());
@@ -763,6 +857,20 @@ function askGo(val) {
 }
 
 /** Åpner en side. «tab|sub», «tab» eller bare «sub» (fanen finnes da ut fra undersiden). Tom streng = listen. */
+/** Prompt 65: System-fanen fra lenken («system/upd», gamle «oppdatering» → Oppdateringer, ellers Oversikt) og «ai/glimt-husker» → Glimt. */
+function fix65(raw) {
+  if (tab === 'system') {
+    const st = sysTabOf65(sub ?? '') ?? (sub ? null : sysTabOf65(String(raw ?? '')));
+    if (sub && st) { sysTab65 = st; sub = null; } else if (!sub) sysTab65 = st ?? 'ov';
+  }
+  if (sub && ALIAS[sub] === 'glimt' && tab !== 'glimt') { tab = 'glimt'; sub = null; }
+  // Ruter i serverens søkeindeks (GET /api/settings/index) til sider som er slått sammen: helse/ha, gjoremal/synk, system/logger, ai/mod …
+  if (tab === 'users' && sub === 'ha') sub = 'hahealth';
+  if (tab === 'system' && sub === 'logger') { tab = 'logger'; sub = null; }
+  if (tab === 'ai' && sub && !sub.includes(':')) { setAiTab(sub); sub = null; }
+  if (sub && NOSUB65.has(tab)) sub = null;
+}
+const NOSUB65 = new Set(['kal', 'varsel', 'glimt', 'backup', 'logger', 'faste-oppgaver', 'kvalitet']); // sider uten undersider
 function go(to) {
   let a = null, b = to ?? '';
   if (b.includes('|')) [a, b] = b.split('|');
@@ -770,6 +878,9 @@ function go(to) {
   a ??= b ? subTab(b) ?? tab : tab;
   tab = ALIAS[a] ?? a;
   sub = b || null;
+  // Prompt 65: undersider som har byttet side (Startside → Faner = App, Widgets = Utseende) og System-fanene (system|upd …).
+  if (sub && SUB65[sub]) tab = SUB65[sub];
+  fix65(a);
   q = '';
   enter();
   render();
@@ -778,7 +889,7 @@ function go(to) {
 
 function enter() {
   const reload = () => { if (!modal().hidden) render(); };
-  if ((tab === 'int' || tab === 'kal' || q) && !cfg) loadCfg();
+  if ((tab === 'int' || tab === 'kal' || tab === 'ruter' || q) && !cfg) loadCfg();
   if (tab === 'int' && !mail) loadMail();
   if (tab === 'int' || tab === 'kal' || q) loadInteg(reload);
   if (tab === 'int' || q) { loadTrackKeys(reload); loadTrack46(reload); }
@@ -786,12 +897,12 @@ function enter() {
   if (tab === 'dom' || q) loadDomains(reload);
   if (tab === 'varsel' || q) loadNotify(reload);
   if (tab === 'app' || q) loadApp(reload);
-  if (tab === 'familie' || q) loadFam42(reload);
+  if (tab === 'users' || q) loadFam42(reload); // prompt 65: Familie → Brukere og familie
   if (tab === 'ai' || q) loadAi(reload, tab === 'ai');
   if (tab === 'system' || q) loadSystem(reload);
   if (tab === 'system' || tab === 'varsel' || q) setObs51Render(reload); // prompt 51
   if (tab === 'backup' || q) loadBackup(reload);
-  if (tab === 'glimt') loadGlimt(reload);
+  if (tab === 'glimt') { loadGlimt(reload); loadAi(reload); } // prompt 65: Glimt-delen av AI-siden står på Glimt
 }
 
 async function loadCfg() {
@@ -803,6 +914,7 @@ export function openSettings(which = 'konto', subPage = null) {
   tab = ALIAS[which] ?? which; sub = subPage; q = '';
   // Undersiden bestemmer fanen (gamle lenker kan peke på feil fane, f.eks. «look/speed»).
   if (sub) tab = subTab(sub) ?? tab;
+  fix65(which);
   if (!TABS.some(([k]) => k === tab)) tab = 'konto';
   resetAsk();
   const wasOpen = !modal().hidden;
@@ -824,7 +936,7 @@ export function closeSettings() {
 
 /* Prompt 30: #/innstillinger/<fane> i adressefeltet mens innstillingene er åpne (pushState, så siden under ikke tegnes på nytt). */
 let urlBack = false;
-const setHash = () => `#/innstillinger/${tab}${sub && !/[:]/.test(sub) ? `/${sub}` : ''}`;
+const setHash = () => `#/innstillinger/${tab}${sub && !/[:]/.test(sub) ? `/${sub}` : tab === 'system' && sysTab65 !== 'ov' ? `/${sysTab65}` : ''}`;
 function pushUrl() { try { history.pushState({ hlSet: 1, under: location.hash || '#/' }, '', location.pathname + location.search + setHash()); } catch { /* */ } }
 function syncUrl() { if (!modal().hidden && history.state?.hlSet) try { history.replaceState(history.state, '', location.pathname + location.search + setHash()); } catch { /* */ } }
 /** Ble hashendringen laget av innstillingene selv (åpne/lukke)? Da skal ikke siden under tegnes på nytt. */
@@ -895,6 +1007,14 @@ export function bindSettings() {
     if (e.target.closest('[data-open-fh-mail]')) { location.href = '/finans/?desktop=1#/inn'; return; }
     if (e.target.closest('[data-hp-edit]')) { closeSettings(); toggleHeadEdit(true); return; }
     if (e.target.closest('[data-gs-ai]')) return go('ai');
+    /* Prompt 65: System-faner, Kvalitet-panelene, Brief og Glimt-figur, og lenker til en bestemt AI-fane. */
+    const st65 = e.target.closest('[data-sys65]');
+    if (st65) { sysTab65 = st65.dataset.sys65; render(); syncUrl(); return; }
+    const qa65 = e.target.closest('[data-p65-qa]');
+    if (qa65) { const k = qa65.dataset.p65Qa; if (k === 'whatsnew') window.hlWhatsNew51?.(); else window.hlOpenQa51?.(k); return; }
+    if (e.target.closest('[data-p65-people]')) { window.hlPeople55?.(); return; }
+    const ai65 = e.target.closest('[data-p65-ai]');
+    if (ai65) { setAiTab(ai65.dataset.p65Ai); return go('ai'); }
     if (await click44(e, render)) return; // prompt 44
     if (await click45(e, render)) return; // prompt 45
     if (tab === 'glimt' && !q.trim() && glimtClick(e, render)) return;
@@ -905,7 +1025,7 @@ export function bindSettings() {
     if (await obs51Click(e, render)) return; // prompt 51
     if (await ops51Click(e)) return; // prompt 51 (OPS51)
     if (await notifyClick(e)) return;
-    if (tab === 'familie' && await fam42Click(e, render)) return;
+    if (tab === 'users' && await fam42Click(e, render)) return; // prompt 65: Familie er en del av Brukere og familie
     if (await appClick(e)) return;
     if (await systemClick(e)) return;
     if (await backupClick(e)) return;
@@ -1089,7 +1209,7 @@ export function bindSettings() {
     if (domainsChange(e)) return;
     if (await obs51Change(e)) return; // prompt 51
     if (await notifyChange(e)) return;
-    if (tab === 'familie' && fam42Change(e)) return;
+    if (tab === 'users' && fam42Change(e)) return;
     if (t.matches('[data-news-speed]')) { saveUi({ newsSpeed: +t.value }); return; }
     if (t.matches('[data-tab-label]')) { await saveLabels(t.dataset.tabLabel, t.value); return; }
     if (kalChange(e, render)) return;

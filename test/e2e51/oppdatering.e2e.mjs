@@ -32,8 +32,9 @@ test('oppdatering: System viser versjonen, start sender bare en id, fremdrift fr
   await page.goto(`${BASE}/#/innstillinger/system`);
   await page.waitForSelector('#settings .set-body[data-key^="system|"]', { timeout: 15_000 });
   await page.waitForFunction((v) => document.querySelector('#settings .set-body')?.innerText.includes(v), OLD, { timeout: 15_000 });
-  // QA51-seksjonen «Kvalitet» er lagt til for admin.
-  await page.waitForSelector('#settings [data-qa51-sec] [data-qa51-open="flags"]', { timeout: 10_000 });
+  // QA51-seksjonen «Kvalitet» for admin ligger under System → Mer (prompt 65).
+  await page.goto(`${BASE}/#/innstillinger/system/mer`);
+  await page.waitForSelector('#settings [data-p65-qa="flags"]', { timeout: 10_000 });
 
   // Start oppdateringen (samme kall som knappen «Oppdater nå»).
   beat();
@@ -62,8 +63,9 @@ test('oppdatering: System viser versjonen, start sender bare en id, fremdrift fr
   const card = page.locator('[data-qa51="whatsnew"]');
   await card.waitFor({ timeout: 15_000 });
   const txt = await card.innerText();
-  assert.match(txt, new RegExp(`Nytt i versjon ${NEXT.replace(/\./g, '\\.')}`));
-  assert.match(txt, /E2E51: ny funksjon fra testen\./);
+  // Prompt 52: «Nytt i versjon» er strukturert (overskrift «Versjon X», ett punkt per linje med egen overskrift).
+  assert.match(txt, new RegExp(`Versjon ${NEXT.replace(/\./g, '\\.')}`));
+  assert.match(txt, /E2E51[\s\S]*Ny funksjon fra testen\./);
   await card.getByRole('button', { name: 'Ok' }).click();
   await page.waitForFunction(async () => (await (await fetch('/api/whatsnew')).json()).seen === true);
   assert.deepEqual(errors, []);
@@ -81,8 +83,8 @@ test('feature flags: admin slår på et flagg for én bruker i panelet, og klien
   const me = (await json(ctx, 'GET', '/api/me')).body;
   const page = await ctx.newPage();
   const errors = watchErrors(page);
-  await page.goto(`${BASE}/#/innstillinger/system`);
-  await page.click('#settings [data-qa51-sec] [data-qa51-open="flags"]', { timeout: 15_000 });
+  await page.goto(`${BASE}/#/innstillinger/system/mer`);
+  await page.click('#settings [data-p65-qa="flags"]', { timeout: 15_000 });
   await page.waitForSelector('#qa51-ov [data-qa51-new]');
   await page.fill('#qa51-ov [data-qa51-new] input[name=key]', 'e2e_flagg51');
   await page.fill('#qa51-ov [data-qa51-new] input[name=description]', 'Laget av E2E');
@@ -97,8 +99,8 @@ test('feature flags: admin slår på et flagg for én bruker i panelet, og klien
   await page.goto(`${BASE}/`);
   await page.waitForFunction(() => window.hlFlags51?.e2e_flagg51 === true, null, { timeout: 15_000 });
   // Krasjrapport-fanen åpner uten feil (GlitchTip ikke satt opp → lokalt).
-  await page.goto(`${BASE}/#/innstillinger/system`);
-  await page.click('#settings [data-qa51-sec] [data-qa51-open="crashes"]', { timeout: 15_000 });
+  await page.goto(`${BASE}/#/innstillinger/system/mer`);
+  await page.click('#settings [data-p65-qa="crashes"]', { timeout: 15_000 });
   await page.waitForFunction(() => /lagres bare lokalt/i.test(document.querySelector('#qa51-ov')?.innerText ?? ''));
   assert.ok(!existsSync(join(upd(), 'request.json')));
   assert.deepEqual(errors, []);

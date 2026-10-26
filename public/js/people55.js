@@ -1,4 +1,4 @@
-// Brief og Glimt-figur per bruker (admin). Innstillinger → System → «Brukere: brief og figur».
+// Brief og Glimt-figur per bruker (admin). Innstillinger → Brukere og familie → «Brief og Glimt-figur» (prompt 65; var System → Mer).
 // Bruker API-et fra prompt 52: GET/PUT /api/admin/brief52/access og GET /api/admin/glimt-char52, PUT /api/admin/glimt-char52/:userId.
 // Admin får alltid alle kortene; barn mister Regninger, Nytt i kveld, Homelab, Domener og Aksjer.
 import { esc, api, overlay } from './dal53.js';
@@ -67,21 +67,12 @@ export function openPeople55() {
   });
 }
 
-function inject() {
-  const sys = document.querySelector('#settings .set-body[data-key^="system|null"] .set-inner, #settings .set-body[data-key^="system||"] .set-inner');
-  if (!sys || sys.querySelector('[data-p55-sec]')) return;
-  const sec = document.createElement('section');
-  sec.className = 'sg'; sec.dataset.p55Sec = '1';
-  sec.innerHTML = '<h3 class="sg-t">Brukere</h3><div class="sg-box"><button type="button" class="sg-row"><span class="sg-txt"><b>Brief og Glimt-figur</b><span>Hvem som er barn, hvem som får Homelab, Domener og Aksjer, og hvilken figur hver bruker starter med</span></span><span class="sg-btn2">Åpne</span></button></div>';
-  sec.addEventListener('click', (e) => { if (e.target.closest('button')) { e.stopPropagation(); openPeople55(); } });
-  sys.appendChild(sec);
-}
+// Prompt 65: raden «Brief og Glimt-figur» står nå på Innstillinger → Brukere og familie (settings.js, data-p65-people) og
+// åpner panelet via window.hlPeople55 (settes bare for admin). Ingen innsetting i System lenger.
 async function init() {
   let me = null;
   try { me = await api('/api/me'); } catch { return; }
   if (me?.role !== 'admin') return;
-  const watch = () => { const m = document.getElementById('settings'); if (!m) return false; new MutationObserver(inject).observe(m, { childList: true, subtree: true }); inject(); return true; };
-  if (!watch()) { const t = setInterval(() => { if (watch()) clearInterval(t); }, 1000); setTimeout(() => clearInterval(t), 30_000); }
+  window.hlPeople55 = openPeople55;
 }
-if (!window.__hlPeople55) { window.__hlPeople55 = true; if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init(); }
-window.hlPeople55 = openPeople55;
+if (!window.__hlPeople55) { window.__hlPeople55 = true; init(); }

@@ -1,240 +1,229 @@
-/* Prompt 34: AI-kontroll (fasit design/AI Kontroll.dc.html). Fargene kommer som --bg/--card/--fld/--line/--ink/--mut/--acc/--ok/--warn/--bad/--hf på .ac. */
-.ac{background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;position:relative;display:flex;flex-direction:column;box-sizing:border-box;min-width:0;border-radius:inherit;-webkit-font-smoothing:antialiased;text-align:left}
+/* Prompt 65 (prompt 50b: claude-code-ai-innstillinger-kompakt.md): kompakt, uniform AI-side. Fargene kommer som
+   --bg/--card/--fld/--line/--ink/--mut/--acc/--ok/--warn/--bad/--hf på .ac (papir · mørk · finans).
+   Én rad (.ac-r), ett kort (.ac-card), én seksjonsetikett (.ac-lab), banner (.ac-ban), KPI-stripe (.ac-kpis) og kontroller
+   med samme høyde: knapp 30 · segment 30 · select 30 · bryter 36×22 · felt 34. Gamle klasser som modulene bruker
+   (.ac-li, .ac-par, .ac-note …) er stylet som samme komponent. */
+.ac{--r-pad:8px;background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;position:relative;display:flex;flex-direction:column;box-sizing:border-box;min-width:0;-webkit-font-smoothing:antialiased;text-align:left;font-size:13.5px}
 .ac *,.ac *::before,.ac *::after{box-sizing:border-box}
 .ac button{font-family:inherit;cursor:pointer}
-.ac button:disabled{cursor:default;opacity:.55}
+.ac button:disabled{cursor:default;opacity:.5}
 .ac :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
 .ac.th-papir{color-scheme:light}.ac.th-mork,.ac.th-finans{color-scheme:dark}
+.ac p{margin:0}
 @keyframes acSpin{to{transform:rotate(360deg)}}
 @keyframes acStripe{to{background-position:28px 0}}
 @keyframes acIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .ac-row{display:flex;align-items:center;gap:10px;min-width:0}
-.ac-sb{justify-content:space-between;align-items:baseline}
+.ac-sb{justify-content:space-between}
 .ac-wrap{flex-wrap:wrap}
-.ac-col{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ac-col{display:flex;flex-direction:column;gap:1px;min-width:0}
 .ac-grow{flex:1;min-width:0}
-.ac-ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ac-mut{font-size:12.5px;color:var(--mut)}
-.ac-small{font-size:12px;line-height:1.5}
-.ac-mono{font:600 11.5px 'IBM Plex Mono',ui-monospace,monospace}
-.ac-col>span{font-size:12px;color:var(--mut)}
-.ac-col>b{font-size:14px}
-.ac .bad{color:var(--bad)!important}
-.ac-h3{font-size:15px!important}
-.ac-lab{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--mut)}
-.ac-hd{flex:none;display:flex;align-items:center;gap:12px;padding:28px 32px 18px}
-.ac-kick{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace!important;letter-spacing:.14em;color:var(--acc)!important}
-.ac .ac-title{font:500 40px/1.05 var(--hf);letter-spacing:-.01em}
-.ac-hd .ac-mut{font-size:13px}
-.ac-done{flex:none;height:38px;padding:0 18px;border-radius:19px;border:0;background:var(--ink);color:var(--bg);font:700 13.5px Manrope,system-ui,sans-serif}
-.ac-body{flex:1;min-height:0;display:flex;gap:28px;padding:0 32px}
-.ac-nav{flex:none;width:220px;display:flex;flex-direction:column;gap:2px;align-self:flex-start;position:sticky;top:0}
-.ac-nav button{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-radius:12px;border:0;background:transparent;color:var(--mut);font:700 14px Manrope,system-ui,sans-serif;text-align:left;white-space:nowrap}
-.ac-nav button span{flex:1}
-.ac-nav button.on{background:var(--card);color:var(--ink)}
-.ac-nav button:not(.on):hover{color:var(--ink)}
-.ac-badge{flex:none;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--acc);color:#fff;font:700 11px/20px Manrope,sans-serif;font-style:normal;text-align:center}
-.ac-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:18px;padding-bottom:32px}
-.ac-card{border-radius:20px;background:var(--card);padding:16px;display:flex;flex-direction:column}
-.ac-gap{gap:12px}
-.ac-list{padding:4px 16px}
-.ac-list>*+*{border-top:1px solid var(--line)}
-.ac-sec{display:flex;flex-direction:column;gap:8px}
-.ac-note{font-size:12.5px;color:var(--mut);padding:10px 14px;border-radius:14px;background:var(--fld);line-height:1.45}
-.ac-b{flex:none;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--line);background:transparent;color:var(--ink);font:700 12.5px Manrope,system-ui,sans-serif;white-space:nowrap}
-.ac-b.ink{border:0;background:var(--ink);color:var(--bg);height:36px;padding:0 16px;border-radius:18px;font-size:13px}
-.ac-b.red{border:0;color:var(--bad)}
-.ac-tx{border:0;background:transparent;color:var(--ink);font:700 12.5px Manrope,system-ui,sans-serif;padding:0}
-.ac-tx.red{color:var(--bad)}
-.ac-dot{flex:none;width:9px;height:9px;border-radius:5px}
-.ac-sw{flex:none;position:relative;width:44px;height:26px;border-radius:13px;background:var(--line);transition:background .2s}
-.ac-sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}
-.ac-sw.on{background:var(--ok)}.ac-sw.on i{left:21px}
-.ac-li{width:100%;display:flex;align-items:center;gap:12px;padding:11px 0;border:0;background:transparent;color:var(--ink);text-align:left}
-.ac-li.tight{padding:10px 0 2px;border-top:1px solid var(--line)}
-.ac-li>.ac-mono{color:var(--mut)}
-.ac-track{display:block;height:8px;border-radius:4px;background:var(--fld);overflow:hidden}
-.ac-track.sm{height:6px}.ac-track.xs{height:5px}
-.ac-track i{display:block;height:100%;border-radius:inherit;transition:width .4s}
-.ac-bar{display:flex;flex-direction:column;gap:6px;font-size:13px}
-.ac-bar .ac-mono{font-size:12.5px}
-/* Selvtest */
-.ac-self{gap:10px;box-shadow:0 0 0 1px transparent inset}
-.ac-self.isbad{box-shadow:0 0 0 1px color-mix(in oklab,var(--bad) 40%,transparent) inset}
-.ac-strows{display:flex;flex-direction:column}
-.ac-st{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
-.ac-st .ac-col>b{font-size:13.5px}
-.ac-st .ac-col>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ac-dot2{width:16px;height:16px;border-radius:8px;border:1.5px solid var(--line);display:grid;place-items:center;color:#fff;font:800 9px Manrope,sans-serif}
-.ac-dot2.busy{border:2px solid var(--line);border-top-color:var(--acc);animation:acSpin .8s linear infinite}
-.ac-dot2.ok{border:0;background:var(--ok)}.ac-dot2.bad{border:0;background:var(--bad)}
-.ac-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px}
-.ac-kpis.sm{grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
-.ac-kpi{display:flex;flex-direction:column;gap:4px;padding:16px;border-radius:20px;border:0;background:var(--card);color:var(--ink);text-align:left;min-width:0}
-.ac .ac-kpi b{font:500 30px/1.05 var(--hf)}
-.ac-kpis.sm .ac-kpi b{font-size:28px}
-.ac-kpi>span:last-child{font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* Modeller */
-.ac-mrow{display:flex;flex-direction:column;gap:8px;padding:12px 0}
-.ac-mrow .ac-mono{font-size:14px}
-.ac-std{flex:none;padding:2px 8px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.06em}
-.ac-tags{display:flex;flex-wrap:wrap;gap:5px}
-.ac-tags span{white-space:nowrap;padding:2px 8px;border-radius:999px;background:var(--fld);font:600 11px 'IBM Plex Mono',monospace;color:var(--mut)}
-.ac-acts{display:flex;flex-wrap:wrap;gap:6px}
-.ac-pull{gap:8px;padding:14px 16px;border-radius:18px;animation:acIn .25s ease both}
-.ac-pull .ac-mono{font-size:14px}
-.ac-stripe{background-color:var(--acc)!important;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.25) 0 7px,transparent 7px 14px);background-size:28px 100%;animation:acStripe .8s linear infinite}
-.ac-search{display:flex;align-items:center;gap:8px;height:46px;padding:0 6px 0 14px;border-radius:23px;background:var(--card);border:1px solid var(--line);color:var(--mut)}
-.ac-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:500 15px Manrope,system-ui,sans-serif}
-.ac-search .ac-b.ink{height:34px;padding:0 14px}
-.ac-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
-.ac-chips button{flex:none;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:transparent;color:var(--ink);font:700 12px Manrope,system-ui,sans-serif;white-space:nowrap}
-.ac-chips button.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
-.ac-lrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 0}
-.ac-lrow .ac-col{gap:3px}
-.ac-lrow b.ac-mono{font-size:13.5px}
-.ac-fit{flex:none;white-space:nowrap;padding:1px 7px;border-radius:999px;font:700 10px 'IBM Plex Mono',monospace}
-.ac-fit.ok{background:color-mix(in oklab,var(--ok) 18%,transparent);color:var(--ok)}
-.ac-fit.warn{background:color-mix(in oklab,var(--warn) 18%,transparent);color:var(--warn)}
-.ac-fit.bad{background:color-mix(in oklab,var(--bad) 16%,transparent);color:var(--bad)}
-/* Valg */
-.ac-rt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;align-items:center;padding:12px 0}
-.ac-rt>.ac-col{grid-column:1/-1}
-.ac-rt.web{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)}
-.ac-rt.web>.ac-col{grid-column:auto}
-.ac-sel{display:flex;flex-direction:column;gap:3px;min-width:0}
-.ac-sel>span{font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:var(--mut)}
-.ac-sel select{width:100%;height:38px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--fld);color:var(--ink);font:600 12.5px 'IBM Plex Mono',monospace}
-.ac-warn{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--warn)}
-.ac-par{display:flex;flex-direction:column;gap:8px;padding:12px 0}
-.ac-par .ac-mono{font-size:13px}
-.ac-seg{display:flex;padding:3px;border-radius:999px;background:var(--fld);gap:2px}
-.ac-seg.auto{align-self:flex-start}
-.ac-seg button{flex:1;min-width:0;height:30px;border:0;border-radius:999px;background:transparent;color:var(--mut);font:700 12px Manrope,system-ui,sans-serif;white-space:nowrap;padding:0 10px}
-.ac-seg.auto button{flex:none;height:32px;padding:0 14px;font-size:12.5px}
-.ac-seg button.on{background:var(--card);color:var(--ink)}
-/* Prompt 43: keep_alive per modell (sju valg) brytes over to linjer på smale skjermer */
-.ac-mka .ac-seg{flex-wrap:wrap;border-radius:16px}
-.ac-mka .ac-seg button{flex:1 0 auto;padding:0 8px}
-.ac-mka b.ac-mono{word-break:break-all}
-/* Jobber */
-.ac-job{display:flex;flex-direction:column;gap:7px;padding:12px 0}
-.ac-ring{flex:none;width:18px;height:18px;border-radius:9px;display:grid;place-items:center;color:#fff;font:800 10px Manrope,sans-serif}
-.ac-ring.run{border:2.5px solid var(--line);border-top-color:var(--acc);animation:acSpin .9s linear infinite}
-.ac-ring.queue{border:1.5px dashed var(--mut)}
-.ac-ring.ok{background:var(--ok)}.ac-ring.bad{background:var(--bad)}
-/* Forbruk */
-.ac-legend{gap:12px;font-size:12px}
-.ac-legend span{display:flex;align-items:center;gap:5px}
-.ac-legend i{width:9px;height:9px;border-radius:2px}
-.ac-chart{height:120px;display:flex;align-items:flex-end;gap:4px}
-.ac-chart>div{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
-.ac-chart>div span{display:block;border-radius:3px 3px 0 0;min-height:0}
-.ac-feat{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:11px 0}
-.ac-feat .ac-track{grid-column:1/-1}
-.ac-feat b.ac-mono{font-size:13px;text-align:right}
-.ac-feat span.ac-mono{text-align:right}
-.ac input[type=range]{width:100%;accent-color:var(--acc)}
-/* API */
-.ac-pic{flex:none;width:38px;height:38px;border-radius:12px;background:var(--fld);display:grid;place-items:center;font:800 15px Manrope,sans-serif}
-.ac-stl{display:flex!important;align-items:center;gap:6px;font-size:12.5px!important}
-.ac-stl i{flex:none;width:7px;height:7px;border-radius:4px}
-.ac-fld{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mut)}
-.ac-fld a{color:var(--acc);font-weight:700;text-decoration:none}
-.ac-in{display:flex;align-items:center;gap:6px;height:44px;padding:0 6px 0 12px;border-radius:12px;background:var(--fld);border:1px solid var(--line)}
-.ac-in input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:500 13.5px 'IBM Plex Mono',monospace}
-.ac-in button{flex:none;height:32px;padding:0 10px;border-radius:9px;border:0;background:transparent;color:var(--mut);font:700 12px Manrope,sans-serif}
-.ac-fresh{padding:12px;border-radius:12px;background:var(--fld);display:flex;flex-direction:column;gap:6px;animation:acIn .25s ease both}
-.ac-fresh span{font-size:12.5px;color:var(--warn);font-weight:700}
-.ac-fresh b{font-size:13px;word-break:break-all}
-.ac-tok{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
-.ac-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:300;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 12px 30px rgba(0,0,0,.25);animation:acIn .2s ease both}
-/* Mobil: fanepiller og én kolonne */
-.ac.mob .ac-hd{padding:8px 18px 12px}
-.ac.mob .ac-title{font-size:34px}
-.ac.mob .ac-body{flex-direction:column;gap:12px;padding:0 16px}
-.ac.mob .ac-nav{width:auto;flex-direction:row;gap:6px;overflow-x:auto;scrollbar-width:none;position:static;padding-bottom:2px;align-self:stretch}
-.ac.mob .ac-nav::-webkit-scrollbar{display:none}
-.ac.mob .ac-nav button{flex:none;height:36px;border-radius:18px;border:1px solid var(--line);font-size:13px}
-.ac.mob .ac-nav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.ac.mob .ac-main{padding-bottom:28px}
-.ac.mob .ac-toast{bottom:34px}
-/* Innebygd i Innstillinger: ingen egen kant/luft rundt */
+.ac-ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ac-mut{font-size:12px;color:var(--mut)}
+.ac-mono,.ac code{font:500 12px 'IBM Plex Mono',ui-monospace,monospace}
+.ac .bad{color:var(--bad)!important}.ac .warn{color:var(--warn)!important}.ac .ok{color:var(--ok)}
+
+/* ---------- Topp: header (bare overlegg/frittstående) og sticky fanerad ---------- */
+.ac-top{position:sticky;top:var(--ac-sticky-top,0);z-index:5;background:var(--bg)}
+.ac-hd{display:flex;align-items:center;gap:12px;padding:20px 24px 8px}
+.ac-hic{flex:none;width:36px;height:36px;border-radius:10px;background:var(--fld);display:grid;place-items:center;color:var(--ink)}
+.ac .ac-title{font:500 26px/1.1 var(--hf);letter-spacing:-.01em;display:block}
+.ac-hs{display:block;font-size:12.5px;color:var(--mut)}
+.ac-hd .ac-rm{flex:1}
+.ac-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--line);padding:0 24px}
+.ac-tabs::-webkit-scrollbar{display:none}
+.ac-tabs button{flex:none;display:flex;align-items:center;gap:7px;height:38px;padding:0 10px;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:transparent;color:var(--mut);font:600 13.5px Manrope,system-ui,sans-serif;white-space:nowrap}
+.ac-tabs button:hover{color:var(--ink)}
+.ac-tabs button.on{color:var(--ink);border-bottom-color:var(--ink)}
+.ac-badge{flex:none;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font:700 10.5px/18px Manrope,sans-serif;font-style:normal;text-align:center}
+.ac-badge.b-warn{background:var(--warn)}
+.ac.emb .ac-tabs,.ac.emb .ac-hd{padding-left:0;padding-right:0}
+.ac.emb .ac-top{background:var(--ac-top-bg,var(--bg))}
 .ac.emb{background:transparent}
-.ac.emb .ac-hd{padding:0 0 16px}
-.ac.emb .ac-body{padding:0}
-.ac.emb.mob .ac-hd{padding:0 0 12px}
-@media (max-width:900px){.ac.web .ac-body{flex-direction:column;gap:12px}.ac.web .ac-nav{width:auto;flex-direction:row;overflow-x:auto;position:static;scrollbar-width:none}.ac.web .ac-nav button{flex:none}.ac-rt.web{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ac-rt.web>.ac-col{grid-column:1/-1}}
-/* Overlegg (Chat → Modeller, Glimt-feil → Åpne AI-kontroll) */
+
+/* ---------- Innhold ---------- */
+.ac-main{width:100%;max-width:940px;display:flex;flex-direction:column;gap:20px;padding:16px 24px 32px}
+.ac.emb .ac-main{padding:16px 0 24px}
+.ac.only .ac-main{padding-top:0}
+.ac-sec{display:flex;flex-direction:column;gap:7px;min-width:0}
+.ac-lab{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font:500 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--mut);text-transform:uppercase}
+.ac-sec>.ac-lab{padding:0 2px}
+.ac-labr{letter-spacing:.02em;text-transform:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ac-lnk{border:0;background:transparent;padding:0;color:var(--ink);font:600 12px Manrope,system-ui,sans-serif;text-decoration:none;letter-spacing:0;text-transform:none}
+.ac-lnk:hover{text-decoration:underline}
+.ac-card{border-radius:14px;background:var(--card);padding:0 14px;display:flex;flex-direction:column;min-width:0}
+.ac-card>*+*:not(.ac-xp),.ac-xp>*+.ac-r,.ac-list>*+*{border-top:1px solid var(--line)}
+.ac-card .ac-card{background:transparent;padding:0;border-radius:0}
+.ac-note{font-size:12px;line-height:1.5;color:var(--mut);padding:0 2px}
+.ac-card .ac-note,.ac-xp .ac-note{padding:6px 0}
+.ac-pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.ac-pad{padding:10px 0}
+.ac-subbar{display:flex}
+
+/* ---------- Rad (SettingsRow) ---------- */
+.ac-r,.ac-li,.ac-par{width:100%;display:flex;align-items:center;gap:12px;min-height:46px;padding:var(--r-pad) 0;border:0;background:transparent;color:var(--ink);text-align:left;font:inherit;min-width:0}
+.ac-r.ac-click,.ac-r.ac-rx{cursor:pointer}
+.ac-ic{flex:none;position:relative;width:28px;height:28px;border-radius:8px;background:var(--fld);color:#4a463f;display:grid;place-items:center}
+.ac.th-mork .ac-ic,.ac.th-finans .ac-ic{color:var(--mut)}
+.ac-ic.txt b{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;color:#4a463f}
+.ac.th-mork .ac-ic.txt b,.ac.th-finans .ac-ic.txt b{color:var(--mut)}
+.ac-icd{position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;background:var(--line);box-shadow:0 0 0 2px var(--card)}
+.ac-icd.ok{background:var(--ok)}.ac-icd.warn{background:var(--warn)}.ac-icd.bad{background:var(--bad)}.ac-icd.off{background:var(--line)}
+.ac-icd.busy{background:var(--card);border:2px solid var(--line);border-top-color:var(--acc);animation:acSpin .8s linear infinite}
+.ac-rm{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.ac-rt1{display:flex;align-items:center;gap:7px;min-width:0}
+.ac-rt1 b{font-weight:600;font-size:13.5px;min-width:0}
+.ac-rt1 b.ac-mono{font:600 13px 'IBM Plex Mono',ui-monospace,monospace}
+.ac-tg{flex:none;font:500 10px 'IBM Plex Mono',ui-monospace,monospace;font-style:normal;letter-spacing:.06em;color:var(--mut);white-space:nowrap}
+.ac-tg.ok{color:var(--ok)}.ac-tg.warn{color:var(--warn)}.ac-tg.bad{color:var(--bad)}
+.ac-rs{font-size:12px;color:var(--mut);display:block}
+.ac-rs.warn{color:var(--warn)}
+.ac-rr{flex:none;display:flex;align-items:center;gap:6px;max-width:62%;flex-wrap:wrap;justify-content:flex-end}
+.ac-v{font:500 11.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--mut);white-space:nowrap}
+.ac-v.ok{color:var(--ok)}
+.ac-chev{flex:none;width:28px;height:28px;border:0;border-radius:8px;background:transparent;color:var(--mut);display:grid;place-items:center;transition:transform .15s}
+.ac-chev.on{transform:rotate(90deg)}
+.ac-chev:hover{color:var(--ink)}
+.ac-xp{padding:2px 0 12px 40px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.ac-xp:empty{display:none}
+.ac-st65{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--mut);white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis}
+.ac-st65 i{flex:none;width:7px;height:7px;border-radius:50%;background:var(--line)}
+.ac-st65.ok i{background:var(--ok)}.ac-st65.warn i{background:var(--warn)}.ac-st65.bad{color:var(--bad)}.ac-st65.bad i{background:var(--bad)}.ac-st65.busy i{background:var(--acc)}
+.ac-b4{display:block;height:4px;border-radius:2px;background:var(--fld);overflow:hidden;margin-top:5px}
+.ac-b4 i{display:block;height:100%;border-radius:inherit;transition:width .4s}
+.ac-stripe{background-color:var(--acc)!important;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.3) 0 7px,transparent 7px 14px);background-size:28px 100%;animation:acStripe .8s linear infinite}
+/* Modulrader (fast59, understand60, recipes61, sched62, memory63, quality64, omlx58): samme rad */
+.ac-li .ac-col,.ac-par>.ac-row .ac-col{flex:1;min-width:0}
+.ac-col>b{font-size:13.5px;font-weight:600}
+.ac-col>span{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-par{flex-wrap:wrap}
+.ac-par>.ac-row{flex:1 1 220px}
+.ac-par>.ac-seg{margin-left:auto}
+
+/* ---------- Kontroller ---------- */
+.ac-b{flex:none;display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 13px;border-radius:15px;border:1px solid var(--line);background:transparent;color:var(--ink);font:600 12.5px Manrope,system-ui,sans-serif;white-space:nowrap;text-decoration:none}
+.ac-b.ink{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.ac-b.red{border-color:transparent;color:var(--bad);padding:0 8px}
+.ac-b.ac-sq{width:30px;padding:0}
+.ac-b.line:hover:not(:disabled){border-color:var(--mut)}
+.ac-btns{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ac-tx{border:0;background:transparent;color:var(--ink);font:600 12.5px Manrope,system-ui,sans-serif;padding:0}
+.ac-tx.red{color:var(--bad)}
+.ac-seg{flex:none;display:inline-flex;align-items:center;height:30px;padding:2px;border-radius:15px;background:var(--fld);gap:0;max-width:100%;overflow-x:auto;scrollbar-width:none}
+.ac-seg::-webkit-scrollbar{display:none}
+.ac-seg button{flex:none;height:26px;border:0;border-radius:13px;background:transparent;color:var(--mut);font:600 12px Manrope,system-ui,sans-serif;white-space:nowrap;padding:0 10px}
+.ac-seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.ac.th-papir .ac-seg button.on{background:#fff}
+.ac-seg.auto{align-self:flex-start}
+.ac-selp{flex:none;height:30px;max-width:230px;padding:0 28px 0 12px;border-radius:15px;border:1px solid var(--line);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b665c' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 11px center;color:var(--ink);font:500 12px 'IBM Plex Mono',ui-monospace,monospace;-webkit-appearance:none;appearance:none;text-overflow:ellipsis}
+.ac-sw{flex:none;position:relative;width:36px;height:22px;border-radius:11px;background:var(--line);transition:background .2s;display:inline-block}
+.ac-sw i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:9px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .2s}
+.ac-sw.on{background:var(--ok)}.ac-sw.on i{left:16px}
+.ac-swb{flex:none;border:0;background:transparent;padding:4px 0;display:inline-flex}
+.ac-form{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ac-f{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:10px;font-size:12px;color:var(--mut)}
+.ac-f>span{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ac-f input,.ac-f select,.ac-in input,.ac-o58f input{width:100%;min-width:0;height:34px;padding:0 12px;border-radius:10px;border:1px solid transparent;background:var(--bg);color:var(--ink);font:500 12.5px 'IBM Plex Mono',ui-monospace,monospace;outline:none}
+.ac-f input:focus,.ac-in input:focus{border-color:var(--ink)}
+.ac-in{display:flex;align-items:center;min-width:0}
+.ac-askf{flex-direction:row;align-items:center}
+.ac-search{display:flex;align-items:center;gap:8px;height:38px;padding:0 4px 0 14px;border-radius:19px;background:var(--card);border:1px solid var(--line);color:var(--mut)}
+.ac-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:500 13.5px Manrope,system-ui,sans-serif}
+.ac-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.ac-chips::-webkit-scrollbar{display:none}
+.ac-chips button{flex:none;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:transparent;color:var(--ink);font:600 12px Manrope,system-ui,sans-serif;white-space:nowrap}
+.ac-chips button.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.ac-fresh{padding:10px 12px;border-radius:10px;background:var(--bg);display:flex;flex-direction:column;gap:4px;animation:acIn .25s ease both}
+.ac-fresh span{font-size:12px;color:var(--warn);font-weight:600}
+.ac-fresh b{font-size:12.5px;word-break:break-all}
+
+/* ---------- Banner og KPI-stripe ---------- */
+.ac-ban{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:color-mix(in oklab,var(--mut) 10%,var(--card))}
+.ac-ban.t-ok{background:color-mix(in oklab,var(--ok) 11%,var(--card))}
+.ac-ban.t-warn{background:color-mix(in oklab,var(--warn) 13%,var(--card))}
+.ac-ban.t-bad{background:color-mix(in oklab,var(--bad) 11%,var(--card))}
+.ac-band{flex:none;width:8px;height:8px;border-radius:50%;background:var(--mut)}
+.ac-ban.t-ok .ac-band{background:var(--ok)}.ac-ban.t-warn .ac-band{background:var(--warn)}.ac-ban.t-bad .ac-band{background:var(--bad)}
+.ac-ban .ac-rm b{font-size:13.5px;font-weight:600}
+.ac-ban .ac-rm span{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-radius:14px;background:var(--card);overflow:hidden}
+.ac-kpi{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:0;background:transparent;color:var(--ink);text-align:left;min-width:0;font:inherit}
+.ac-kpi+.ac-kpi{border-left:1px solid var(--line)}
+button.ac-kpi:hover{background:color-mix(in oklab,var(--ink) 4%,transparent)}
+.ac .ac-kpi b{font:500 24px/1.1 var(--hf)}
+.ac-kpi>span:last-child{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---------- Oppgaver: tabell ---------- */
+.ac-tbl{display:flex;flex-direction:column}
+.ac-tbl>*+*{border-top:1px solid var(--line)}
+.ac-tr{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr) 138px;gap:10px;align-items:center}
+.ac-tbl.fin .ac-tr{grid-template-columns:minmax(0,1.35fr) minmax(0,1fr) minmax(0,1fr)}
+.ac-tr>.ac-r{min-width:0}
+.ac-th{padding:8px 0 6px;font:500 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--mut)}
+.ac-th span:first-child{padding-left:40px}
+.ac-tc{min-width:0;display:flex}
+.ac-tc .ac-selp{max-width:100%;width:100%}
+.ac-te{justify-content:flex-end}
+.ac-dash{color:var(--mut);padding-right:12px}
+.ac-slots{display:flex;flex-direction:column;gap:20px}
+.ac-slots>div:empty{display:none}
+.ac-slots>div{display:flex;flex-direction:column;gap:20px}
+
+/* ---------- Jobber og Forbruk ---------- */
+.ac-jt41{display:flex;flex-direction:column;align-items:flex-end;font:500 11.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--mut);white-space:nowrap}
+.ac-jt41 b{font-weight:500;color:var(--ink)}
+.ac-jt41 i{font-style:normal;font-size:10.5px}
+.ac-chartw{padding:12px 0;display:flex;flex-direction:column;gap:8px}
+.ac-legend{display:flex;gap:12px;font-size:12px;color:var(--mut)}
+.ac-legend span{display:flex;align-items:center;gap:5px}
+.ac-legend i{width:8px;height:8px;border-radius:2px}
+.ac-chart{height:110px;display:flex;align-items:flex-end;gap:3px}
+.ac-chart>div{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:1px}
+.ac-chart>div span{display:block;border-radius:2px 2px 0 0;min-height:0}
+
+/* ---------- Moduler inni (omlx58, voice54, voices57) ---------- */
+.o58-models{display:flex;gap:6px;flex-wrap:wrap}
+.o58-chip{font:500 11.5px 'IBM Plex Mono',ui-monospace,monospace;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.o58-chip.on{border-color:var(--ok)}
+.ac-slot:empty,.ac-slotc:empty{display:none}
+.ac-slotc{border-radius:14px;overflow:hidden;background:var(--card);padding:2px 14px}
+
+.ac-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:300;max-width:calc(100% - 32px);padding:9px 16px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 12px 30px rgba(0,0,0,.25);animation:acIn .2s ease both}
+
+/* ---------- Overlegg (dashboardet, Chat, Glimt-feil): containeren scroller ---------- */
 .ac-ov{position:fixed;inset:0;z-index:250;background:rgba(20,18,14,.46);display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,40px);animation:acIn .16s ease both}
-.ac-ovbox{width:min(1180px,100%);height:min(860px,100%);border-radius:24px;overflow:hidden;box-shadow:0 30px 80px -24px rgba(0,0,0,.5);display:flex}
-.ac-ovbox>.ac{flex:1;min-height:0;overflow:hidden}
-.ac-ovbox .ac-body{min-height:0;overflow:hidden}
-.ac-ovbox .ac-nav{position:static}
-.ac-ovbox .ac-main{overflow-y:auto;scrollbar-width:thin;min-height:0}
-@media (max-width:767px){.ac-ov{padding:0}.ac-ovbox{width:100%;height:100%;border-radius:0}.ac-ovbox>.ac .ac-hd{padding-top:max(12px,env(safe-area-inset-top))}}
-/* Innstillinger → AI (web) */
-.set-aictl{margin:0 0 26px;min-height:200px}
-.set-aimore{margin:6px 0 10px}
+.ac-ovbox{width:min(1040px,100%);height:min(880px,100%);border-radius:20px;overflow-y:auto;overscroll-behavior:contain;box-shadow:0 30px 80px -24px rgba(0,0,0,.5);background:var(--ac-ovbg,#f3efe6)}
+.ac-ovbox>.ac{min-height:100%}
+.ac-ovbox .ac-main{margin:0 auto}
+.ac-ovbox .ac-tabs{justify-content:flex-start}
+@media (max-width:767px){.ac-ov{padding:0}.ac-ovbox{width:100%;height:100%;border-radius:0}.ac-ovbox .ac-hd{padding-top:max(14px,env(safe-area-inset-top))}}
+
+/* ---------- Mobil (< 600 px): samme komponenter; kontrollene wrapper under teksten ---------- */
+@media (max-width:600px){
+  .ac-hd{padding:14px 16px 6px}.ac-tabs{padding:0 16px}.ac-main{padding:14px 16px 28px}
+  .ac.emb .ac-tabs{padding:0}.ac.emb .ac-main{padding:14px 0 24px}
+  .ac-r.ctl{flex-wrap:wrap}
+  .ac-r.ctl>.ac-rr{flex:1 1 100%;max-width:none;justify-content:flex-start;padding-left:40px}
+  .ac-r.ctl>.ac-rr .ac-chev{margin-left:auto}
+  .ac-li,.ac-par{flex-wrap:wrap}
+  .ac-par>.ac-seg{margin-left:40px}
+  .ac-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ac-kpi:nth-child(3){border-left:0}.ac-kpi:nth-child(n+3){border-top:1px solid var(--line)}
+  .ac-tr,.ac-tbl.fin .ac-tr{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding-bottom:10px}
+  .ac-tr>.ac-r{grid-column:1/-1}
+  .ac-tr .ac-te{grid-column:1/-1;justify-content:flex-start;padding-left:40px}
+  .ac-tr .ac-tc:not(.ac-te){padding-left:0}
+  .ac-tr .ac-dash{display:none}
+  .ac-th{display:none}
+  .ac-f{grid-template-columns:1fr;gap:4px}
+  .ac-xp{padding-left:0}
+  .ac-st65{max-width:150px}
+}
+.ac.mob .ac-r.ctl{flex-wrap:wrap}
+.ac.mob .ac-r.ctl>.ac-rr{flex:1 1 100%;max-width:none;justify-content:flex-start;padding-left:40px}
+
+/* ---------- Innstillinger (web) og FinansHub ---------- */
+.set-aictl{margin:0 0 20px;min-height:0}
+.set-aictl>.ac{margin:0}
+.set-aiglimt{margin:0 0 20px}
 .fh-aictl>.ac{border-radius:20px;overflow:hidden}
-
-/* Prompt 38: AI-maskinen (Mac mini M4), anbefalinger og Finans-modellvalg med fire rader og tom tilstand. */
-.ac-sels{display:contents}
-.ac-rt38 .ac-def{font-size:11px;margin-top:2px}
-.ac-rt38 .ac-warn{grid-column:1/-1;color:var(--bad);font-weight:700}
-.ac-empty{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:16px}
-.ac-hwn{display:block;font-size:12px;line-height:1.45}
-.ac-rec{align-items:flex-start}
-.ac-rec .ac-col{gap:4px}
-.ac-env{display:inline-block;align-self:flex-start;padding:2px 8px;border-radius:6px;background:var(--fld);font-size:11.5px;color:var(--ink);overflow-wrap:anywhere}
-.ac-adv{display:block;cursor:pointer}
-.ac-adv summary{list-style:none;cursor:pointer}
-.ac-adv summary::-webkit-details-marker{display:none}
-.ac-adv summary::after{content:' ›';color:var(--mut)}
-.ac-adv[open] summary::after{content:' ⌄'}
-.ac-adv .ac-mut{display:block;margin-top:6px;font-size:12.5px;line-height:1.5}
-.ac-adv code{padding:1px 6px;border-radius:5px;background:var(--fld)}
-
-/* Prompt 39: fyll kortet i Innstillinger (ingen egen topp, fanemeny 200 px, 24 px mellomrom), «La Glimt velge», Glimt anbefaler og logoer. */
-.ac.emb.web .ac-body{gap:24px;padding:4px 0 0}
-.ac.emb.web .ac-nav{width:200px}
-.set-aictl{margin:0 0 26px;min-height:max(640px,calc(100vh - 150px))}
-.set-aictl>.ac{border-radius:0;margin:0}
-.ac-card.ac-gl39{display:flex;flex-direction:row;align-items:center;text-align:left;gap:14px;background:var(--card);border:1px solid var(--line)}
-.ac-glm{position:relative;flex:none;width:34px;height:34px;display:grid;place-items:center}
-.ac-glm i{position:absolute;inset:0;border-radius:50%;background:conic-gradient(#b23a2a,#e8794a,#7a5ad6,#3fbf9a,#b23a2a);-webkit-mask:radial-gradient(circle,transparent 12px,#000 12.5px);mask:radial-gradient(circle,transparent 12px,#000 12.5px);animation:acspin 3.2s linear infinite}
-.ac-glm b{font-size:15px;color:var(--acc)}
-@keyframes acspin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){.ac-glm i{animation:none}}
-.ac-glok{flex:none;display:inline-flex;align-items:center;height:36px;padding:0 16px;border-radius:18px;background:color-mix(in srgb,var(--ok) 12%,transparent);border:1px solid var(--ok);color:var(--ok);font:700 13px Manrope,system-ui,sans-serif;cursor:default;white-space:nowrap}
-.ac-recm .ac-recr{align-items:center;gap:12px}
-.ac-recr .ac-row{gap:8px;flex-wrap:wrap}
-.ac-recr code{font-size:12px;padding:2px 7px;border-radius:6px;background:var(--fld)}
-.ac-recb{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.ac-ask{display:flex;gap:8px;margin-top:10px}
-.ac-ask input{flex:1;min-width:0;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:500 14px Manrope,system-ui,sans-serif;outline:none}
-.ac-ask input:focus{border-color:var(--ink)}
-.ac-askr{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:13.5px;line-height:1.45}
-.ac-askr span{flex:1;min-width:220px}
-.ac-logo{flex:none;width:40px;height:40px;border-radius:12px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;overflow:hidden}
-.ac-logo b{font:800 15px Manrope,sans-serif}
-.ac-logo.sm{width:24px;height:24px;border-radius:7px}
-.ac-logo.sm svg{width:16px;height:16px}
-/* Prompt 44: AI-backend (Open WebUI / Ollama) og nettsøk i API og nøkler */
-.ac-be44{display:flex;flex-direction:column;gap:8px;padding:12px 0 2px;border-top:1px solid var(--line)}
-.ac-tag44{font-style:normal;font:800 10px Manrope,system-ui,sans-serif;letter-spacing:.06em;color:var(--ok);border:1px solid currentColor;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:2px}
-.ac-keyrow{gap:10px;min-height:34px}
-.ac-ords44{border:1px solid var(--line);border-radius:14px;padding:2px 10px}
-.ac-ord44{gap:10px;padding:8px 0;border-top:1px solid var(--line);min-width:0}
-.ac-ord44:first-child{border-top:0}
-.ac-ord44 .ac-tx{min-width:34px;height:32px;padding:0 8px}
-.ac-swb{border:0;background:transparent;padding:4px;cursor:pointer}
-.ac-wt44{gap:8px;flex-wrap:wrap}
-.ac-wt44 .ac-in{min-width:0;flex:1 1 220px}
-.ac-hit44{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:12px;background:var(--fld);font-size:12.5px;line-height:1.45;min-width:0;overflow-wrap:anywhere}
-.ac-hit44 a{color:var(--acc);font-size:11.5px;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* Prompt 48: advarslene fra GET /api/ai/routing (warning/smallModel) – samlet øverst i Valg og «FOR LITEN» på raden. */
-.ac-warn48{gap:4px;margin-bottom:12px;box-shadow:0 0 0 1px color-mix(in oklab,var(--warn) 45%,transparent) inset}
-.ac-warn48 b{color:var(--warn);font-size:13px}
-.ac-warn48 span{font-size:12.5px;color:var(--ink)}
-.ac-small48{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.05em;vertical-align:middle;background:color-mix(in oklab,var(--warn) 20%,transparent);color:var(--warn)}

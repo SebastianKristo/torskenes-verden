@@ -244,7 +244,7 @@ export function learnHtml61() {
   const n = (s) => c[s] ?? items.filter((x) => x.status === s).length;
   const bar = `<div class="e60-bar r61-bar" role="group" aria-label="Vis status"><button type="button" class="${L.filter ? '' : 'on'}" data-r61-f="" aria-pressed="${!L.filter}">Alle <small>${c.total ?? items.length}</small></button>${['active', 'candidate', 'disabled'].map((s) => `<button type="button" class="${L.filter === s ? 'on' : ''}" data-r61-f="${s}" aria-pressed="${L.filter === s}">${STATUS61[s]} <small>${n(s)}</small></button>`).join('')}</div>`;
   const search = `<form class="sg-row r61-q" data-r61-q autocomplete="off"><input name="q" maxlength="80" value="${esc(L.q)}" placeholder="Søk i oppskriftene" aria-label="Søk i oppskriftene"><button type="submit" class="sg-btn2">Søk</button></form>`;
-  const off = d.enabled === false ? '<div class="sg-row e60-off"><span class="sg-txt"><b>Glimt lærer ikke nå</b><span>Slått av i AI-kontroll → Valg → Glimt lærer. Lagrede oppskrifter står.</span></span></div>' : '';
+  const off = d.enabled === false ? '<div class="sg-row e60-off"><span class="sg-txt"><b>Glimt lærer ikke nå</b><span>Slått av i AI → Oppgaver → Glimt lærer. Lagrede oppskrifter står.</span></span></div>' : '';
   const q = L.q.toLowerCase();
   const shown = items.filter((x) => (!L.filter || x.status === L.filter) && (!q || `${x.exampleQuery} ${x.queryTemplate}`.toLowerCase().includes(q)));
   const list = shown.length ? shown.map(rowHtml).join('') : `<div class="sg-row"><span class="sg-txt"><span>${items.length ? 'Ingen oppskrifter passer.' : 'Glimt har ikke lært noe ennå. Når Glimt løser noe riktig (og du ikke retter det), lagres oppskriften her. Tommel opp på et svar gjør den aktiv med en gang.'}</span></span></div>`;

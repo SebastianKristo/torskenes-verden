@@ -142,9 +142,11 @@ test('AI-kontroll: «Forstår samtaler» med tre brytere (bruker + admin)', () =
 });
 
 test('Entitetsregisteret i Innstillinger → AI: liste, filter, rediger, legg til, slett og oppslag', () => {
-  assert.match(SA, /import '\.\/entities60\.js';/);
-  assert.match(SA, /groups\.push\(memoryGroup\(group, row\)\);\n  \/\/ Prompt 60/);
-  assert.match(SA, /<div data-ent60 data-hl="ai-ent60"><\/div>/);
+  // Prompt 65: flyttet fra Innstillinger → AI til Innstillinger → Glimt (ai-control only:'glimt'), rett under «Glimt husker».
+  const G65 = rd('public/js/ai-glimt65.js');
+  assert.match(G65, /import '\.\/entities60\.js';/);
+  assert.match(A, /data-hl="ai-ent60"><div class="ac-lab"><span>ENTITETSREGISTER<\/span><\/div><div class="ac-slotc set-e60" data-ent60><\/div>/);
+  assert.ok(A.indexOf('const mem = g ? g.memorySec65') < A.indexOf('data-ent60'), 'under Glimt husker');
   assert.match(E, /fetch\('\/api\/glimt\/entities', \{ credentials: 'same-origin'/);
   for (const m of ["'PATCH'", "'DELETE'", "'POST'", '/resolve?q=']) assert.ok(E.includes(m), m);
   assert.match(E, /const body = derived \? \{ aliases \} :/); // avledede: bare aliaser (én sannhet)

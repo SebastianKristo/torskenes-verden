@@ -88,7 +88,8 @@ test('Glimt i Chat strømmer verktøysvarene, beholder kortene og faller tilbake
 
 test('AI-kontroll har «Raskere svar» med de fire bryterne (bruker + admin)', () => {
   assert.match(A, /import\('\.\/fast59\.js'\)/);
-  assert.match(A, /<div data-omlx58-rt><\/div><div data-fast59><\/div>/);
+  // Prompt 65: «Motor per oppgave» (omlx58) er slått sammen inn i oppgavetabellen (engine58), så plassen står nå rett etter tabellen.
+  assert.match(A, /<div class="ac-slots"><div data-fast59><\/div>/);
   assert.match(F, /fetch\('\/api\/glimt\/agent\/fast', \{ credentials: 'same-origin'/);
   assert.match(F, /method: 'PUT'/);
   assert.match(F, /put\(\{ scope: 'user', \[k\]: next === srv \? null : next \}\)/);

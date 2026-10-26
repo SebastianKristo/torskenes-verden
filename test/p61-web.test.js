@@ -105,9 +105,10 @@ test('AI-kontroll → Valg: «Glimt lærer» med fire brytere (bruker + admin)',
 });
 
 test('Innstillinger → AI: siden «Glimt lærer» med liste, test, rediger, slå av og slett', () => {
-  assert.match(SA, /import '\.\/recipes61\.js';/);
-  assert.match(SA, /groups\.push\(\{ t: 'Glimt lærer'/);
-  assert.match(SA, /<div data-learn61 data-hl="ai-learn61"><\/div>/);
-  assert.ok(SA.indexOf('data-ent60') < SA.indexOf('data-learn61'), 'rett under entitetsregisteret');
+  // Prompt 65: flyttet fra Innstillinger → AI til Innstillinger → Glimt (ai-control only:'glimt').
+  const G65 = rd('public/js/ai-glimt65.js');
+  assert.match(G65, /import '\.\/recipes61\.js';/);
+  assert.match(A, /<span>GLIMT LÆRER<\/span><\/div><div class="ac-slotc set-r61" data-learn61><\/div>/);
+  assert.ok(A.indexOf('data-ent60') < A.indexOf('data-learn61'), 'rett under entitetsregisteret');
   for (const m of ["'/stats'", "/test`, 'POST'", "'PATCH', { status: ds.r61St }", "'DELETE'", 'Trykk igjen for å slette', 'Rediger mal', 'Slå av', 'Slå på', 'Negative eksempler', 'Siste kjøringer', 'Hurtigvei også for endringer']) assert.ok(R.includes(m), m);
 });

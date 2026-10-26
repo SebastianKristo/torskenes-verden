@@ -491,9 +491,19 @@ function healthText(H) {
   if (h.error && !h.ok) bits.push(h.error);
   return bits.join(' · ');
 }
-function adminHtml() {
-  if (!A.cfg) return '';
+function adminHtml(row = false) {
+  if (!A.cfg) return row ? '<span class="ac-mut">Laster …</span>' : '';
   const c = A.cfg, n = A.health?.voices ?? null;
+  if (row) { // prompt 65: innholdet i raden «VoxCPM2» i AI → Tjenester
+    return `${n ? `<p class="ac-note">${esc(`Egne stemmer: ${n.clones ?? 0} klonet og ${n.designs ?? 0} fra beskrivelse, hos ${n.users ?? 0} ${n.users === 1 ? 'bruker' : 'brukere'}`)}</p>` : ''}
+      ${c.urlError ? `<p class="ac-note bad" role="alert">${esc(c.urlError)}</p>` : ''}
+      <form class="ac-form" data-v57-adm>
+        <label class="ac-f"><span>Adresse</span><input name="url" value="${esc(c.url ?? '')}" placeholder="http://10.69.1.173:8030" autocomplete="off" spellcheck="false" aria-label="Adressen til VoxCPM (i huset)"></label>
+        <label class="ac-f"><span>Nøkkel${c.keySet ? ' <i class="ac-tg">SATT</i>' : ''}</span><input name="key" type="password" value="" placeholder="${c.keySet ? 'Lagret – skriv en ny for å bytte' : 'Nøkkelen tools/voxcpm/install.sh skrev ut'}" autocomplete="new-password" aria-label="Nøkkel"></label>
+        <div class="ac-btns"><button type="submit" class="ac-b ink"${A.busy ? ' disabled' : ''}>Lagre</button><button type="button" class="ac-b line" data-v57-atest${A.busy || !c.url ? ' disabled' : ''}>Test</button><button type="button" class="ac-b line" data-v57-afresh>Sjekk nå</button></div>
+        ${A.msg ? `<span class="ac-mut" role="status">${esc(A.msg)}</span>` : ''}
+      </form><p class="ac-note">Tekst til tale. Installer på Mac mini-en: <span class="ac-mono">tools/voxcpm/install.sh</span> (docs/voxcpm-57.md). Bare adresser i huset godtas; nøkkelen lagres kryptert og vises aldri. Administrator ser bare antall stemmer, aldri andres opptak.</p>`;
+  }
   return `<div class="ac-card v57-adm" style="margin-top:10px;padding:12px 14px">
       <b>VoxCPM2 på Mac mini-en (tekst til tale)</b>
       <div class="ac-mut">${esc(healthText(A.health))}</div>
@@ -507,11 +517,20 @@ function adminHtml() {
       </form>
       <div class="ac-note">Installer på Mac mini-en: <span class="ac-mono">tools/voxcpm/install.sh</span> (se docs/voxcpm-57.md). Bare adresser i huset godtas; nøkkelen lagres kryptert og vises aldri. Administrator ser bare antall stemmer, aldri andres opptak.</div></div>`;
 }
-const repaintAdm = () => { for (const el of document.querySelectorAll('[data-v57-ai]')) el.innerHTML = adminHtml(); };
+const repaintAdm = () => { for (const el of document.querySelectorAll('[data-v57-ai]')) el.innerHTML = adminHtml(el.dataset.v57Ai === 'row'); document.dispatchEvent(new Event('ac:redraw')); };
+/** Prompt 65: status for raden «VoxCPM2» i AI → Tjenester. */
+export function voxStatus57() {
+  if (!isAdmin()) return { dot: 'off', text: 'Bare administrator', admin: false };
+  if (!A.cfg && !A.health) return { dot: 'off', text: 'Laster …', admin: true };
+  const h = A.health?.voxcpm ?? A.health;
+  return { dot: !A.cfg?.url ? 'off' : h?.ok ? 'ok' : h?.status === 'starting' ? 'warn' : 'bad', text: A.cfg?.url ? healthText(A.health) : 'Ikke satt opp', admin: true, url: A.cfg?.url ?? '' };
+}
+export const loadVox57 = () => (isAdmin() ? loadAdmin().then(() => document.dispatchEvent(new Event('ac:redraw'))) : Promise.resolve());
 async function decorateAdm() {
   if (!isAdmin()) return;
   let added = false;
-  for (const el of document.querySelectorAll('[data-v54-ai]')) {
+  for (const el of document.querySelectorAll('[data-v57-ai="row"]:not([data-v57-done])')) { el.dataset.v57Done = '1'; added = true; }
+  for (const el of document.querySelectorAll('[data-v54-ai=""]')) { // prompt 65: bare det gamle «Tale til tekst»-kortet får VoxCPM-kortet etter seg
     if (el.nextElementSibling?.matches?.('[data-v57-ai]')) continue;
     const d = document.createElement('div'); d.dataset.v57Ai = ''; el.after(d); added = true;
   }

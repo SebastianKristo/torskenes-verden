@@ -129,6 +129,24 @@ export function ops51SystemHtml(onChange) {
     ${pwHtml()}${keyHtml()}${settingsHtml()}${O.msg ? `<span class="p51o-sub">${esc(O.msg)}</span>` : ''}${O.err ? `<span class="p51o-sub p51o-err">${esc(O.err)}</span>` : ''}</section>`;
 }
 
+/** Prompt 65: Backup er egen side og oppdateringene egen fane i System. part = 'backup' (kopier, gjenoppretting, database,
+ *  oppsett og repo-passord) eller 'updates' (staging og tilbakerulling). Passordskjemaet vises der handlingen hører hjemme. */
+const PW_UPD65 = new Set(['stage', 'promote', 'rollback-image']);
+export function ops51PartHtml(part, onChange) {
+  if (!admin()) return '';
+  if (onChange) R = onChange;
+  css();
+  load();
+  const s = O.s, upd = part === 'updates';
+  const title = upd ? 'Staging og tilbakerulling' : 'Kopier og database';
+  const head = `<h3 class="sg-t">${title} <button type="button" class="p51o-btn" data-p51o="refresh" ${O.loading ? 'disabled' : ''}>${O.loading ? 'Henter …' : 'Oppdater'}</button></h3>`;
+  if (!s) return `<section class="sg p51o"><h3 class="sg-t">${title}</h3><span class="p51o-sub">${O.err ? esc(O.err) : 'Henter …'}</span></section>`;
+  const pw = O.pwFor && PW_UPD65.has(O.pwFor) === upd ? pwHtml() : '';
+  const msg = `${O.msg ? `<span class="p51o-sub">${esc(O.msg)}</span>` : ''}${O.err ? `<span class="p51o-sub p51o-err">${esc(O.err)}</span>` : ''}`;
+  return upd ? `<section class="sg p51o">${head}<div class="p51o-grid">${updatesCard(s.updates)}</div>${pw}${msg}</section>`
+    : `<section class="sg p51o">${head}<div class="p51o-grid">${backupCard(s.backup)}${restoreCard(s.backup)}${dbCard(s.db)}</div>${pw}${keyHtml()}${settingsHtml()}${msg}</section>`;
+}
+
 async function act(a, extra = {}) {
   O.busy = a; O.msg = ''; O.err = ''; R();
   try {

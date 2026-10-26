@@ -78,11 +78,25 @@ const L = {
   volume: 'M11 4.7a.7.7 0 0 0-1.2-.5L6.4 7.6A1.4 1.4 0 0 1 5.4 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.4a1.4 1.4 0 0 1 1 .4l3.4 3.4a.7.7 0 0 0 1.2-.5zM16 9a5 5 0 0 1 0 6M19.4 18.4a9 9 0 0 0 0-12.7',
   'message-circle': 'M7.9 20A9 9 0 1 0 4 16.1L2 22z',
   'map-pin': 'M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0zM12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  // Prompt 65 (samlet-md § Ikoner på alt): System og flyttede rader.
+  box: 'M21 8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4a2 2 0 0 0 1-1.7zM3.3 7L12 12l8.7-5M12 22V12',
+  database: 'M12 8c4.4 0 8-1.3 8-3s-3.6-3-8-3-8 1.3-8 3 3.6 3 8 3zM4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+  flag: 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7',
+  bug: 'M8 2l1.9 1.9M14.1 3.9L16 2M9 7.1V6a3 3 0 1 1 6 0v1.1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6zM12 20v-9M6.5 13H3M21 13h-3.5M6 9.5L3 8M21 8l-3 1.5M6 17l-3 2M21 19l-3-2',
+  flask: 'M10 2v7.5L4.6 18.4A2 2 0 0 0 6.4 21h11.2a2 2 0 0 0 1.8-2.6L14 9.5V2M8.5 2h7M7 16h10',
+  clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2',
+  undo: 'M3 7v6h6M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13',
+  heart: 'M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z',
 };
 const ALERT = 'M21.7 18L13.7 4a2 2 0 0 0-3.5 0L2.3 18a2 2 0 0 0 1.7 3h16a2 2 0 0 0 1.7-3zM12 9v4M12 17h.01';
 
 // [regex på tittelen, ikon]. Første treff vinner.
 const MAP = [
+  // Prompt 65: System (containere = boks, disk/backup = disk, database, oppdateringer = sirkelpiler, tilbakerulling = angre,
+  // røyktest = kolbe, trege forespørsler = klokke, /api/health = puls, feature flags = flagg, krasjrapporter = insekt).
+  [/container/i, 'box'], [/database|integritet|vacuum|vedlikehold/i, 'database'], [/feature flag/i, 'flag'], [/krasj/i, 'bug'], [/røyktest|staging/i, 'flask'],
+  [/trege forespørsler|ytelse|per rute/i, 'clock'], [/api\/health|^helse/i, 'activity'], [/tilbakerull|gå tilbake|rull tilbake/i, 'undo'], [/passkey/i, 'key-round'],
+  [/brief og glimt-figur/i, 'smile'], [/apple health|health connect|^helse|deles med familien/i, 'heart'], [/faste oppgaver/i, 'calendar-clock'], [/snarvei/i, 'link'], [/hastighet|pause/i, 'timer'], [/^stil$|kategori/i, 'palette'], [/søkehistorikk/i, 'history'], [/^kvalitet$/i, 'check-circle-2'], [/sonevarsel/i, 'map-pin'], [/selvreparasjon|omstart/i, 'refresh-cw'], [/timeplan|skole/i, 'calendar'],
   [/^navn på serveren/i, 'server'], [/^(navn|fullt navn|visningsnavn)$/i, 'user'], [/^brukernavn/i, 'at-sign'], [/^rolle/i, 'shield'], [/^profilbilde|^bilde$/i, 'image'],
   [/totrinn|2fa|tofaktor/i, 'key-round'], [/^pålitelige enheter/i, 'monitor-smartphone'], [/^pålitelig enhet|^denne enheten/i, 'laptop'], [/passord/i, 'lock'], [/^økter|^aktive økter/i, 'history'],
   [/logg ut/i, 'log-out'], [/^lås skjermen|^lås/i, 'lock'],

@@ -241,8 +241,18 @@ async function loadFermion(force = false) {
   const [h, c] = await Promise.all([fetch(`/api/admin/fermion53/health${force ? '?fresh=1' : ''}`, { credentials: 'same-origin' }), fetch('/api/admin/fermion53/config', { credentials: 'same-origin' })].map((p) => p.then((r) => (r.ok ? r.json() : null)).catch(() => null)));
   F.health = h; F.cfg = c;
 }
-function fermionHtml() {
+function fermionHtml(row = false) {
   if (!F.cfg) return '';
+  if (row) { // prompt 65: innholdet i raden «Neutrino» i AI → Tjenester
+    const keySet = F.cfg.neutrinoKeySet || F.cfg.phononKeySet;
+    return `<form class="ac-form" data-f53-form>
+        <label class="ac-f"><span>Neutrino</span><input name="neutrinoUrl" value="${esc(F.cfg.neutrinoUrl ?? '')}" placeholder="http://10.69.1.173:8000" autocomplete="off" spellcheck="false" aria-label="Adressen til Neutrino (i huset)"></label>
+        <label class="ac-f"><span>Phonon</span><input name="phononUrl" value="${esc(F.cfg.phononUrl ?? '')}" placeholder="http://10.69.1.173:8010" autocomplete="off" spellcheck="false" aria-label="Adressen til Phonon (i huset)"></label>
+        <label class="ac-f"><span>Nøkkel${keySet ? ' <i class="ac-tg">SATT</i>' : ''}</span><input name="key" type="password" value="" placeholder="${keySet ? 'Lagret – skriv en ny for å bytte' : 'Nøkkelen tools/fermion/install.sh skrev ut'}" autocomplete="new-password" aria-label="Nøkkel (samme for begge)"></label>
+        <div class="ac-btns"><button type="submit" class="ac-b ink"${F.busy ? ' disabled' : ''}>Lagre</button><button type="button" class="ac-b line" data-f53-test="neutrino"${F.busy || !F.cfg.neutrinoUrl ? ' disabled' : ''}>Test Neutrino</button><button type="button" class="ac-b line" data-f53-test="phonon"${F.busy || !F.cfg.phononUrl ? ' disabled' : ''}>Test Phonon</button></div>
+        ${F.msg ? `<span class="ac-mut" role="status">${esc(F.msg)}</span>` : ''}
+      </form><p class="ac-note">Samme nøkkel brukes for Neutrino og Phonon. Tom adresse slår tjenesten av. Bare adresser i huset godtas; nøkkelen lagres kryptert og vises aldri.</p>`;
+  }
   const st = (x) => (!x ? 'Laster …' : x.ok ? 'Svarer' : ({ auth: 'Nøkkel eller IP avvist', down: 'Svarer ikke', starting: 'Starter', off: 'Ikke satt opp' }[x.status] ?? x.status ?? 'Ikke satt opp'));
   const keySet = F.cfg.neutrinoKeySet || F.cfg.phononKeySet;
   return `<div class="ac-card v54-ai" style="margin-top:10px;padding:12px 14px">
@@ -263,6 +273,28 @@ async function loadAdmin(force = false) {
   const [h, c] = await Promise.all([fetch(`/api/admin/whisper54/health${force ? '?fresh=1' : ''}`, { credentials: 'same-origin' }), fetch('/api/admin/whisper54/config', { credentials: 'same-origin' })].map((p) => p.then((r) => (r.ok ? r.json() : null)).catch(() => null)));
   A.admin = !!h; A.health = h; A.cfg = c;
 }
+// Prompt 65: [data-v54-ai="nb"] / [data-v54-ai="fermion"] = innholdet i de utvidede radene i AI → Tjenester (uten eget kort).
+function nbRowHtml() {
+  if (!A.admin) return '<p class="ac-note">Adressen og nøkkelen settes av administrator.</p>';
+  const n = A.health?.nbwhisper;
+  return `<form class="ac-form" data-v54-form>
+        <label class="ac-f"><span>Adresse</span><input name="url" value="${esc(A.cfg?.url ?? '')}" placeholder="http://10.69.1.173:8020" autocomplete="off" spellcheck="false" aria-label="Adressen til NB-Whisper (i huset)"></label>
+        <label class="ac-f"><span>Nøkkel${A.cfg?.keySet ? ' <i class="ac-tg">SATT</i>' : ''}</span><input name="key" type="password" value="" placeholder="${A.cfg?.keySet ? 'Lagret – skriv en ny for å bytte' : 'Nøkkelen install.sh skrev ut'}" autocomplete="new-password" aria-label="Nøkkel"></label>
+        <div class="ac-btns"><button type="submit" class="ac-b ink"${A.busy ? ' disabled' : ''}>Lagre</button><button type="button" class="ac-b line" data-v54-test${A.busy || !n?.configured ? ' disabled' : ''}>Test</button><button type="button" class="ac-b line" data-v54-fresh>Sjekk nå</button></div>
+        ${A.msg ? `<span class="ac-mut" role="status">${esc(A.msg)}</span>` : ''}
+      </form><p class="ac-note">Norsk (bokmål og nynorsk), engelsk og språkdeteksjon · Nasjonalbiblioteket, Apache-2.0. Installer på Mac mini-en: <span class="ac-mono">tools/nb-whisper/install.sh</span> (docs/nb-whisper-54.md). Bare adresser i huset godtas; nøkkelen lagres kryptert og vises aldri. Lyden forlater aldri huset.</p>`;
+}
+const partHtml = (part) => (part === 'nb' ? nbRowHtml() : part === 'fermion' ? (A.admin ? fermionHtml(true) || '<span class="ac-mut">Laster …</span>' : '<p class="ac-note">Adressene og nøkkelen settes av administrator.</p>') : aiHtml());
+/** Prompt 65: status for radene NB-Whisper, Voz, Phonon og Neutrino i AI → Tjenester. */
+export function voiceStatus54() {
+  const B = S.info?.backends ?? [], by = (id) => B.find((b) => b.id === id);
+  const one = (id) => { const b = by(id); return b ? { dot: b.configured === false ? 'off' : b.available ? 'ok' : 'bad', text: b.configured === false ? 'Ikke satt opp' : b.available ? 'Klar' : 'Ikke klar', label: b.engine_label ?? b.label } : null; };
+  const n = A.health?.nbwhisper, fs = (x) => (!x ? null : { dot: x.ok ? 'ok' : x.status === 'off' ? 'off' : x.status === 'starting' ? 'warn' : 'bad', text: x.ok ? 'Svarer' : ({ auth: 'Nøkkel eller IP avvist', down: 'Svarer ikke', starting: 'Starter', off: 'Ikke satt opp' }[x.status] ?? x.status ?? 'Ikke satt opp') });
+  return { admin: !!A.admin, norwegian: S.info?.norwegian ?? null,
+    nbwhisper: n ? { dot: n.ok ? 'ok' : n.configured === false || n.status === 'off' ? 'off' : n.status === 'starting' ? 'warn' : 'bad', text: `${ST[n.status] ?? n.status}${n.model ? ` · ${n.model}` : ''}`, url: A.cfg?.url ?? '' } : one('nbwhisper'),
+    voz: one('voz'), phonon: fs(F.health?.phonon) ?? one('phonon'), neutrino: fs(F.health?.neutrino), fermionUrls: F.cfg ? { neutrino: F.cfg.neutrinoUrl ?? '', phonon: F.cfg.phononUrl ?? '' } : null };
+}
+export const loadVoice54 = () => Promise.all([backends(), loadAdmin(), loadFermion()]).then(() => document.dispatchEvent(new Event('ac:redraw')));
 function aiHtml() {
   const B = S.info?.backends ?? [];
   const rows = B.map((b) => {
@@ -288,11 +320,12 @@ function aiHtml() {
 }
 async function aiCard(el) {
   el.dataset.v54Done = '1';
-  el.innerHTML = aiHtml();
+  el.innerHTML = partHtml(el.dataset.v54Ai);
   await Promise.all([backends(), loadAdmin(), loadFermion()]);
-  if (document.contains(el)) el.innerHTML = aiHtml();
+  if (document.contains(el)) el.innerHTML = partHtml(el.dataset.v54Ai);
+  document.dispatchEvent(new Event('ac:redraw'));
 }
-const repaintAi = () => { for (const el of document.querySelectorAll('[data-v54-ai]')) el.innerHTML = aiHtml(); };
+const repaintAi = () => { for (const el of document.querySelectorAll('[data-v54-ai]')) el.innerHTML = partHtml(el.dataset.v54Ai); document.dispatchEvent(new Event('ac:redraw')); };
 document.addEventListener('submit', async (e) => {
   const f = e.target.closest?.('[data-v54-form]');
   if (!f) return;

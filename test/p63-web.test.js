@@ -57,21 +57,24 @@ test('motstrid: valgknappene (behold A / behold B / begge) og nattjobbens linje'
   assert.equal(m.countsLine63({}), '');
 });
 
-test('lenken fra pushen (url i SERVER63-API.md §3) åpner Innstillinger → AI og blar til forslagene', () => {
+test('lenken fra pushen (url i SERVER63-API.md §3) åpner Innstillinger → Glimt og blar til forslagene', () => {
   assert.equal(m.ROUTE63, '/#/innstillinger/glimt-husker');
   assert.ok(m.isRoute63('#/innstillinger/glimt-husker'));
   assert.ok(m.isRoute63('#/innstillinger/ai/glimt-husker'));
   assert.ok(!m.isRoute63('#/innstillinger/ai'));
-  assert.match(ST, /'glimt-husker': 'ai', minne: 'ai'/);
+  // Prompt 65 (samlet-md): «Glimt husker» flyttet med vilje fra AI → Glimt og chat til Innstillinger → Glimt, så lenken går dit.
+  assert.match(ST, /'glimt-husker': 'glimt', minne: 'glimt'/);
   assert.match(M, /if \(isRoute63\(location\.hash\)\) want = true;/);
   assert.match(M, /scrollIntoView\(\{ behavior: 'smooth', block: 'start' \}\)/);
 });
 
 test('«Glimt husker»: plassen for forslag/motstrid/ubrukte, merket på minneradene og ny lasting etter endringer', () => {
-  assert.match(SA, /import '\.\/memory63\.js';/);
-  assert.match(SA, /rows\.unshift\(\{ q: 'glimt husker forslag[^']*', html: '<div data-mem63 data-hl="ai-mem63"><\/div>' \}\)/);
-  assert.match(SA, /m\.stale \? '<i class="m63-chip">ikke brukt på lenge<\/i>' : ''/);
-  assert.match(SA, /document\.addEventListener\('mem63:changed'/);
+  // Prompt 65: «Glimt husker» er flyttet fra settings-ai.js til ai-glimt65.js (Innstillinger → Glimt, samme rad-komponent som AI-siden).
+  const G65 = rd('public/js/ai-glimt65.js');
+  assert.match(G65, /import '\.\/memory63\.js';/);
+  assert.match(G65, /const head = '<div class="ac-slot" data-mem63 data-hl="ai-mem63"><\/div>';/);
+  assert.match(G65, /tag: m\.stale \? 'IKKE BRUKT PÅ LENGE' : ''/);
+  assert.match(G65, /document\.addEventListener\('mem63:changed'/);
   for (const s of ["call(`/pending/${encodeURIComponent(p.id)}/approve`, 'POST', body)", "call(`/pending/${encodeURIComponent(id)}/reject`, 'POST')", "call(`/pending/${encodeURIComponent(p.id)}/edit`, 'POST', body)",
     "call(`/conflicts/${encodeURIComponent(id)}/resolve`, 'POST', { choice })", "call(`/stale/${encodeURIComponent(id)}/keep`, 'POST')", "call('/hygiene/run-now', 'POST')", 'await deleteMemory(id)',
     'Godkjenn', 'Rediger', 'Avvis', 'Lagre og godkjenn', 'Motstrid', 'Ikke brukt på lenge', 'Behold', 'Trykk igjen for å slette', 'Slettes aldri automatisk', "new CustomEvent('mem63:changed')"]) assert.ok(M.includes(s), s);

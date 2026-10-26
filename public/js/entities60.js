@@ -90,7 +90,7 @@ export function entitiesHtml60() {
   const items = Array.isArray(d.items) ? d.items : [], lab = (t) => d.labels?.[t] ?? LABELS[t];
   const n = (t) => items.filter((x) => x.type === t).length;
   const chips = `<div class="e60-bar" role="group" aria-label="Vis type"><button type="button" class="${S.filter ? '' : 'on'}" data-e60-f="" aria-pressed="${!S.filter}">Alle <small>${items.length}</small></button>${TYPES60.map((t) => `<button type="button" class="${S.filter === t ? 'on' : ''}" data-e60-f="${t}" aria-pressed="${S.filter === t}">${esc(lab(t))} <small>${n(t)}</small></button>`).join('')}</div>`;
-  const off = d.enabled === false ? '<div class="sg-row e60-off"><span class="sg-txt"><b>Glimt bruker ikke registeret nå</b><span>Slått av i AI-kontroll → Valg → Forstår samtaler. Lista kan fortsatt redigeres.</span></span></div>' : '';
+  const off = d.enabled === false ? '<div class="sg-row e60-off"><span class="sg-txt"><b>Glimt bruker ikke registeret nå</b><span>Slått av i AI → Oppgaver → Forstår samtaler. Lista kan fortsatt redigeres.</span></span></div>' : '';
   const shown = items.filter((x) => !S.filter || x.type === S.filter);
   const list = shown.length ? shown.map(rowHtml).join('') : `<div class="sg-row"><span class="sg-txt"><span>${S.filter ? `Ingen ${esc(lab(S.filter).toLowerCase())} ennå.` : 'Registeret er tomt. Legg til personer og steder, eller skriv «husk at Nina er frisøren min» til Glimt.'}</span></span></div>`;
   const add = S.add ? formHtml(null) : `<div class="sg-row"><span class="sg-txt"><b>Legg til</b><span>Person, sted, butikk, abonnement eller fast hendelse – med egne ord for det</span></span><button type="button" class="sg-btn2" data-e60-add>Legg til</button></div>`;

@@ -1,7 +1,8 @@
 // Prompt 53 (DAL53): web/PWA-delen av de lokale modellene.
 //  - «Om / Lisenser» (alle): #/om eller #/lisenser åpner siden med krediteringen (Desert Ant Labs, Fermion Research m.fl.).
 //    Innstillinger → Konto får raden «Om / Lisenser».
-//  - Admin: Innstillinger → System får kortet «Lokale modeller» med helse per modell og «Forhåndslast» (GET/POST /api/admin/dal53/*).
+//  - Admin: Innstillinger → AI → Modeller har kortet «Lokale modeller · Desert Ant Labs» med helse per modell og «Forhåndslast»
+//    (GET/POST /api/admin/dal53/*). Prompt 65: flyttet fra System → Mer; seksjonen tegnes av ai-control.js. window.hlModels53 åpner panelet.
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 export async function api(path, opt = {}) {
   const r = await fetch(path, { credentials: 'same-origin', ...opt, headers: { ...(opt.body ? { 'content-type': 'application/json' } : {}), ...(opt.headers ?? {}) } });
@@ -71,6 +72,7 @@ export function openAbout53() {
     Hele lista står i <span class="dal53-mono">docs/lisenser-tredjepart.md</span>.</p>`, 'Om / Lisenser');
 }
 window.hlAbout53 = openAbout53;
+window.hlModels53 = (...a) => openModels53(...a); // prompt 65
 const hashOpen = () => { if (/^#\/(om|lisenser)$/.test(location.hash)) openAbout53(); };
 addEventListener('hashchange', hashOpen);
 
@@ -133,14 +135,7 @@ function inject(isAdmin) {
     konto.appendChild(sec);
   }
   if (!isAdmin) return;
-  const sys = document.querySelector('#settings .set-body[data-key^="system|null"] .set-inner, #settings .set-body[data-key^="system||"] .set-inner');
-  if (sys && !sys.querySelector('[data-dal53-sec]')) {
-    const sec = document.createElement('section');
-    sec.className = 'sg'; sec.dataset.dal53Sec = '1';
-    sec.innerHTML = '<h3 class="sg-t">Lokale modeller</h3><div class="sg-box"><button type="button" class="sg-row"><span class="sg-txt"><b>Desert Ant Labs-modellene</b><span>Helse per modell og forhåndslasting (Eye, Redact, Gist, Tongue, Emo, Moderator, Clear, Voz)</span></span><span class="sg-btn2">Åpne</span></button></div>';
-    sec.addEventListener('click', (e) => { if (e.target.closest('button')) { e.stopPropagation(); openModels53(); } });
-    sys.appendChild(sec);
-  }
+  // Prompt 65: «Lokale modeller · Desert Ant Labs» står nå i AI → Modeller → Installert (tegnes av ai-control.js), ikke i System.
 }
 async function init() {
   hashOpen();

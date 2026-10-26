@@ -99,6 +99,14 @@ export function obs51SystemHtml() {
   loadAll();
   return `<div class="o51-wrap">${healthHtml()}${healHtml()}${traceHtml()}</div>`;
 }
+/** Prompt 65: System har faner – én del per fane (health = Oversikt, heal = Selvreparasjon, trace = Ytelse). */
+export function obs51PartHtml(part) {
+  if (!admin()) return '';
+  css();
+  loadAll();
+  const h = part === 'heal' ? healHtml() : part === 'trace' ? traceHtml() : healthHtml();
+  return `<div class="o51-wrap">${h || `<section class="sg"><div class="sg-box"><div class="sg-row"><span class="sg-txt"><b>${part === 'trace' ? 'Henter trege forespørsler …' : 'Henter selvreparasjonen …'}</b></span></div></div></section>`}</div>`;
+}
 
 /* ---------------- Visning: Varsler (ntfy) ---------------- */
 

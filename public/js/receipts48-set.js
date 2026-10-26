@@ -87,7 +87,7 @@ function stepsCard(H) {
   const st = { ...(H.steps ?? {}), compareMac: H.compareMac }, blk = H.gemini?.blocked ?? H.external?.blocked, can = admin();
   const rows = STEPS.map(([k, n, s]) => {
     const gem = k === 'gemini' && blk, on = !!st[k] && !gem, dis = !can || gem || X.busy === k;
-    const sub = gem ? `${H.gemini?.blockedReason ?? H.external?.text ?? 'Eksterne tjenester er sperret'}: Gemini brukes ikke for kvitteringer, og ingenting sendes ut av huset. Slå av sperren i AI-kontroll → Valg for å bruke Gemini som siste reserve.` : s;
+    const sub = gem ? `${H.gemini?.blockedReason ?? H.external?.text ?? 'Eksterne tjenester er sperret'}: Gemini brukes ikke for kvitteringer, og ingenting sendes ut av huset. Slå av sperren i AI → Oppgaver for å bruke Gemini som siste reserve.` : s;
     return `<button type="button" class="r48s-li${gem ? ' blocked' : ''}" role="switch" aria-checked="${on}" data-r48s="tog" data-k="${k}"${dis ? ' disabled' : ''}${gem ? ' aria-describedby="r48s-gem"' : ''}><span class="r48s-col2"><b>${esc(n)}</b><span${gem ? ' id="r48s-gem"' : ''}>${esc(sub)}</span></span>${sw(on)}</button>`;
   }).join('');
   return `<div class="r48s-card"><span class="r48s-lab">STEG I KJEDEN</span>${rows}
@@ -107,7 +107,9 @@ export function viewReceipts48() {
 }
 
 /** Tegner alle verter på nytt (beholder fokus og markør i et felt som skrives i). */
+const listeners = new Set(); // prompt 65: AI-kontroll tegner Kvitteringer og Mac-OCR-raden selv fra samme tilstand
 function paint() {
+  for (const fn of listeners) { try { fn(X); } catch { /* */ } }
   const hosts = document.querySelectorAll('[data-r48-host]');
   if (!hosts.length) return;
   const a = document.activeElement, k = a?.dataset?.r48sIn, pos = k ? [a.selectionStart, a.selectionEnd] : null;
@@ -180,3 +182,8 @@ export function mountReceipts48(el) {
 /** For verter som tegner med strenger: kall etter at [data-r48-host] er i DOM-en. */
 export function ensureReceipts48() { bind(); loadReceipts48(false); }
 export const _r48State = X;
+/* Prompt 65 (AI → Kvitteringer og AI → Tjenester → Mac-OCR): samme tilstand og handlinger, tegnet av ai-control.js. */
+export function onReceipts48(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+export const r48Act = { save: (clearKey = false) => save(clearKey), test: () => test(), toggle: (k) => toggle(k), setUrl: (v) => { X.url = v; }, setKey: (v) => { X.key = v; } };
+export const r48Admin = () => admin();
+export const R48_STEPS = STEPS;

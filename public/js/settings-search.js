@@ -39,22 +39,28 @@ const LOCAL = [
   ['tema', 'Mørkt og lyst tema', 'Utseende → Tema', 'look', 'tema papir vindu mørk lys farger', 'theme'],
   ['sokebar', 'Søkebar', 'Utseende → Søkebar', 'look', 'søk google historikk stil'],
   ['kategorier', 'Kategorier for kvitteringer', 'Utseende → Kvitteringer', 'look/cats', 'kategori farge kvittering'],
-  ['widgets', 'Widgets på forsiden', 'Startside → Forsiden', 'top/dash', 'widget kort rekkefølge forside dashboard'],
-  ['faner', 'Faner i menyen', 'Startside → Faner', 'top/tabs', 'fane meny rekkefølge skjul'],
-  ['nyhetslinje', 'Nyhetslinje', 'Startside → Nyhetsbar', 'top/speed', 'nyheter ticker fart hastighet'],
-  ['snarveier', 'Snarveier', 'Startside → Snarveier', 'top/sc', 'lenker snarvei'],
-  ['domener', 'Legg til domene', 'Domener', 'dom', 'domene cloudflare token statistikk plausible umami'],
+  ['widgets', 'Widgets på forsiden', 'Utseende → Forside', 'look/dash', 'widget kort rekkefølge forside dashboard startside'],
+  ['faner', 'Faner i menyen', 'App → Topplinje → Faner', 'app/tabs', 'fane meny rekkefølge skjul topplinje startside'],
+  ['nyhetslinje', 'Nyhetslinje', 'Utseende → Nyhetsbar', 'look/speed', 'nyheter ticker fart hastighet startside'],
+  ['snarveier', 'Snarveier', 'Utseende → Forside → Snarveier', 'look/sc', 'lenker snarvei startside'],
+  ['domener', 'Legg til domene', 'Moduler → Domener', 'dom', 'domene cloudflare token statistikk plausible umami'],
   ['cloudflare', 'Cloudflare API-token', 'Domener → Legg til domene', 'dom', 'token api cloudflare tillatelser'],
   ['varsler', 'Push-varsler', 'Varsler → Push', 'varsel', 'push varsel varsler lyd', 'push'],
   ['stille', 'Stille timer', 'Varsler → Stille timer', 'varsel', 'natt stille forstyrr', 'quiet'],
+  ['ntfy', 'ntfy (selvhostet push)', 'Varsler → ntfy', 'varsel', 'ntfy selvhostet push emne abonner'], // prompt 65: fra System → Helse
+  ['sonevarsler', 'Sonevarsler', 'Varsler → Sonevarsler', 'varsel', 'sonevarsel posisjonsvarsel sone kommer går familie'],
   ['appnavn', 'Navn og ikon på appen', 'App', 'app', 'app ikon navn'],
   ['sprak', 'Språk', 'Profilmenyen → Språk', 'app', 'språk engelsk english norsk'],
   ['integrasjoner', 'API-nøkler', 'Integrasjoner', 'int', 'nøkkel api token tjeneste sonarr radarr ruter home assistant'],
-  ['kalendere', 'Google Kalender', 'Kalendere → Google', 'kal', 'google kalender ical canvas skole timeplan'],
+  ['kalendere', 'Google Kalender', 'Kalender og gjøremål → Google', 'kal', 'google kalender ical canvas skole timeplan icloud'],
   ['ai', 'Modeller (Ollama)', 'AI → Modeller', 'ai', 'ollama modell modeller laste ned lokal chat ai-kontroll vram', 'ai-mod'],
-  ['ai-gemini', 'Gemini-nøkkel', 'AI → API og nøkler → Gemini', 'ai', 'gemini groq nøkkel api-nøkkel openrouter roboflow nasa', 'ai-key-gemini'],
-  ['brukere', 'Inviter bruker', 'Brukere → Legg til', 'users', 'bruker rolle tilgang ny inviter', 'invite'],
+  ['ai-gemini', 'Gemini-nøkkel', 'AI → Tjenester → Gemini', 'ai', 'gemini groq nøkkel api-nøkkel openrouter roboflow nasa tjenester', 'ai-key-gemini'],
+  ['ai-dal53', 'Lokale modeller (Desert Ant Labs)', 'AI → Modeller → Lokale modeller', 'ai', 'desert ant labs eye redact gist tongue emo moderator clear voz lokale modeller forhåndslast', 'ai-dal53'], // prompt 65: fra System → Mer
+  ['brukere', 'Inviter bruker', 'Brukere og familie → Legg til', 'users', 'bruker rolle tilgang ny inviter', 'invite'],
+  ['familie', 'Helse (Familie)', 'Brukere og familie → Helse', 'users', 'familie helse apple health health connect barn foresatte'], // prompt 65
+  ['brief-figur', 'Brief og Glimt-figur per bruker', 'Brukere og familie → Brief og Glimt-figur', 'users', 'brief figur glimt-figur barn homelab domener aksjer standard', 'people55'], // prompt 65: fra System → Mer
   ['passord', 'Bytt passord', 'Konto → Passord', 'konto/pw', 'passord endre bytt'],
+  ['passkeys', 'Passkeys', 'Konto → Sikkerhet → Passkeys', 'konto', 'passkey webauthn face id touch id windows hello sikkerhet innloggingslogg sperrer nøkler'], // prompt 65: fra Sikkerhet
   ['profilbilde', 'Profilbilde og navn', 'Konto → Profil', 'konto/me', 'bilde avatar navn profil'],
   ['2fa', 'Totrinnsbekreftelse', 'Konto → Innlogging → 2FA', 'konto', '2fa totp kode tofaktor sikkerhet totrinn', '2fa'],
   ['enheter', 'Pålitelige enheter', 'Konto → Innlogging', 'konto/devices', 'enhet lokalt nett lan'],
@@ -63,16 +69,30 @@ const LOCAL = [
   ['chk', 'Se etter oppdatering', 'System → Se etter oppdatering', 'system', 'oppdatering versjon sjekk ny build programvare', 'chk'],
   ['pw', 'Krev passord for å oppdatere', 'System → Krev passord', 'system', 'krev passord oppdater sikkerhet', 'pw'],
   ['logg44', 'Logger', 'Server → Logger', 'logger', 'logg logger log docker feil feilsøking container'],
-  ['rb44', 'Tidligere versjoner', 'System → Tidligere versjoner', 'system', 'tilbake rull tilbake rollback tidligere versjon installer eldre'],
+  ['rb44', 'Tidligere versjoner', 'System → Oppdateringer → Tidligere versjoner', 'system/upd', 'tilbake rull tilbake rollback tidligere versjon installer eldre'],
+  ['staging65', 'Staging og tilbakerulling', 'System → Oppdateringer', 'system/upd', 'staging røyktest prøv ny versjon gå tilbake forrige versjon'], // prompt 65
+  ['helse65', 'Helse (containere, disk, Ollama)', 'System → Oversikt', 'system/ov', 'helse containere disk ollama mac mini proxmox'], // prompt 65
+  ['ytelse65', 'Trege forespørsler', 'System → Ytelse', 'system/perf', 'ytelse trege forespørsler rute p50 p95'], // prompt 65
+  ['heal65', 'Selvreparasjon', 'System → Selvreparasjon', 'system/heal', 'selvreparasjon omstart container automatisk'], // prompt 65
+  ['flags65', 'Feature flags og krasjrapporter', 'System → Mer → Kvalitet', 'system/mer', 'feature flags flagg krasjrapporter krasj glitchtip nytt i denne versjonen'], // prompt 65
   ['lm44', 'Lys og mørk', 'Utseende → Lys og mørk', 'look', 'lys mørk mørkt dark light system følg systemet'],
-  ['hk44', 'Synk med Home Assistant', 'Gjøremål → Synk', 'huske', 'gjøremål huskeliste synk home assistant todo'],
-  ['ow44', 'Overfør eierskap', 'Brukere → Server · eier', 'users', 'eier overfør eierskap owner'],
-  ['as44', 'Logg inn som', 'Brukere → Familie · logg inn som', 'users', 'logg inn som impersonering rediger oppsett familie'],
+  ['hk44', 'Synk med Home Assistant', 'Kalender og gjøremål → Gjøremål', 'kal', 'gjøremål huskeliste synk home assistant todo'],
+  ['ow44', 'Overfør eierskap', 'Brukere og familie → Server · eier', 'users', 'eier overfør eierskap owner'],
+  ['as44', 'Logg inn som', 'Brukere og familie → Familie · logg inn som', 'users', 'logg inn som impersonering rediger oppsett familie'],
   ['backup', 'Automatisk backup', 'Backup → Automatisk', 'backup', 'backup sikkerhetskopi automatisk gjenopprett nas smb', 'bk-auto'],
+  ['backup-db65', 'Database (integritet og vedlikehold)', 'Backup → Database', 'backup', 'database integritet vacuum vedlikehold wal restic 3-2-1 gjenopprettingstest'], // prompt 65: fra System
   // Prompt 35: GLIMT → Glimt (figur, brief, stemme og venner).
   ['glimt', 'Glimt', 'Glimt', 'glimt', 'glimt brief morgenbrief kveldsbrief dagsbrief nattbrief venner guide', 'glimt'],
   ['glimt-figur', 'Glimt-figur', 'Glimt → Glimt-figur', 'glimt', 'figur figurer karakter maskot gris ugle sky dråpe stjerne spire halo boble blekksprut', 'glimt-fig'],
   ['glimt-stemme', 'Stemme og opplesning', 'Glimt → Stemmemotor', 'glimt', 'stemme stemmer opplesning les opp tts tale openai elevenlabs azure engelsk tempo', 'glimt-voice'],
+  // Prompt 65: Glimt-delen av AI-siden (fra AI → Glimt og chat) og Chat-brytere/AI-logg (AI → Oppgaver → Regler).
+  ['glimt-husker', 'Glimt husker', 'Glimt → Glimt husker', 'glimt', 'glimt husker minne alias forslag motstrid ubrukte fakta', 'ai-mem63'],
+  ['glimt-pers', 'Personlighet', 'Glimt → Personlighet', 'glimt', 'personlighet tone stil glimt', 'glimt-pers65'],
+  ['glimt-hs', 'Send til Chat etter', 'Glimt → Send til Chat etter', 'glimt', 'søkefelt send til chat sekunder timeout', 'glimt-hs65'],
+  ['glimt-web', 'Nettsøk-rekkefølge', 'Glimt → Nettsøk', 'glimt', 'nettsøk søkemotor searxng rekkefølge', 'glimt-web65'],
+  ['entiteter', 'Entitetsregister', 'Glimt → Entitetsregister', 'glimt', 'entitetsregister entiteter alias personer steder', 'ai-ent60'],
+  ['glimt-laerer', 'Glimt lærer', 'Glimt → Glimt lærer', 'glimt', 'glimt lærer oppskrifter skills hurtigvei', 'ai-learn61'],
+  ['chat-regler', 'La Chat lese mine data', 'AI → Oppgaver → Regler', 'ai', 'chat mine data spør før sky-modeller ai-logg personvern regler', 'ai-rules65'],
   ['backup-now', 'Ta backup nå', 'Backup → Ta backup nå', 'backup', 'backup nå manuell kjør start', 'bk-now'],
   ['faste-oppgaver', 'Faste oppgaver', 'Glimt → Faste oppgaver', 'faste-oppgaver', 'faste oppgaver planlagte planlagt påminnelse minn meg strømpris varsel betinget hver morgen kjør nå pause prisområde'], // prompt 62
   ['kvalitet', 'Kvalitet', 'Glimt → Kvalitet', 'kvalitet', 'kvalitet ukerapport uke statistikk første forsøk rettelser hurtigvei svartid nattlig eval regresjon test rapport kjør nå'], // prompt 64
@@ -84,8 +104,21 @@ export const ANCHORS = {
   theme: { sel: '.sg-theme .sg-box' }, bg: { title: /^Bakgrunnsbilde$/ }, push: { title: /^Varsler på denne enheten$/ }, quiet: { title: /^Stille timer$/ }, '2fa': { title: /^Totrinnsbekreftelse$/ },
   'bk-auto': { title: /^(Backup|Automatisk backup)$/ }, 'bk-now': { title: /^Ta backup nå$/, sel: '[data-bk="run"]' }, invite: { title: /^Ny bruker$/ },
   glimt: { sel: '[data-gs] .gs-list' }, 'glimt-fig': { sel: '[data-gs] .gs-figs' }, 'glimt-voice': { sel: '[data-gs] .gs-opts' },
-  'cf-token': { sel: '.cfg-tokrow' }, 'ai-mod': { sel: '.set-aictl', acTab: 'mod' }, 'ai-key-gemini': { sel: '[data-ac-key="gemini"]', up: '.ac-card', acTab: 'api' },
+  'cf-token': { sel: '.cfg-tokrow' }, 'ai-mod': { sel: '.set-aictl', acTab: 'mod' }, 'ai-key-gemini': { sel: '[data-ac-key="gemini"],[data-hl="ai-svc-gemini"]', up: '.ac-card,.ac-row,[data-ac-row]', acTab: 'svc:gemini' },
+  // Prompt 65: nye plasser (data-hl fra settings-ai.js / ai-control.js, se $S/SET65-NOTES.md).
+  'ai-dal53': { sel: '[data-hl="ai-dal53"],.set-aictl', acTab: 'mod' }, 'ai-rules65': { sel: '[data-hl="ai-rules65"]', acTab: 'task' }, 'ai-r48': { sel: '[data-hl="ai-r48"]', acTab: 'rcpt' },
+  'ai-mem63': { sel: '[data-mem63],[data-hl="ai-mem63"]' }, 'ai-ent60': { sel: '[data-ent60],[data-hl="ai-ent60"]' }, 'ai-learn61': { sel: '[data-learn61],[data-hl="ai-learn61"]' },
+  'glimt-pers65': { sel: '[data-hl="glimt-pers65"]' }, 'glimt-hs65': { sel: '[data-hl="glimt-hs65"]' }, 'glimt-web65': { sel: '[data-hl="glimt-web65"]' },
+  people55: { sel: '[data-p65-people]' },
 };
+/** Prompt 65: stier fra serverens indeks (GET /api/settings/index) som peker til sider som er slått sammen eller flyttet. */
+const PATH65 = [[/^Helse \(Familie\)/, 'Brukere og familie → Helse'], [/^Varsler → Familie → /, 'Varsler → '], [/^Startside → Faner/, 'App → Topplinje → Faner'], [/^Startside → Topplinje/, 'App → Topplinje'], [/^Startside/, 'Utseende'], [/^Familie/, 'Brukere og familie'], [/^Brukere(?! og familie)/, 'Brukere og familie'],
+  [/^Gjøremål/, 'Kalender og gjøremål → Gjøremål'], [/^Kalendere/, 'Kalender og gjøremål'], [/^Sikkerhet/, 'Konto → Sikkerhet'], [/^AI → API og nøkler/, 'AI → Tjenester'], [/^AI → Valg/, 'AI → Oppgaver'],
+  [/^AI → Glimt og chat/, 'Glimt'], [/^System → Backup/, 'Backup'], [/^System → Mer → (Lokale modeller|Desert)/, 'AI → Modeller'], [/^System → Mer → Brukere/, 'Brukere og familie'], [/^Generelt → Domener/, 'Moduler → Domener']];
+export const path65 = (p) => { let s = String(p ?? ''); for (const [re, to] of PATH65) if (re.test(s)) { s = s.replace(re, to); break; } return s; };
+/** Sidenøkkel for ikonet i treffet (gamle nøkler → nye sider). Settes av settings.js. */
+let normTab = (k) => k;
+export function setNormTab65(f) { normTab = f; }
 
 const X = { index: null, loading: null, ai: false, askQ: '', busy: false, ans: null, ctl: null };
 export const SQ = X;
@@ -99,11 +132,14 @@ export function loadIndex(redraw) {
     if (list?.length) {
       // Mål-id fra den innebygde indeksen når serveren ikke har dem, og mål som serveren mangler helt.
       const loc = new Map(LOCAL.map((x) => [x.id, x])), has = new Set(list.map((x) => x.anchor).filter(Boolean));
-      X.index = [...list.map((x) => (x.anchor || !loc.get(x.id)?.anchor ? x : { ...x, anchor: loc.get(x.id).anchor })), ...LOCAL.filter((x) => x.anchor && !has.has(x.anchor) && !list.some((y) => y.id === x.id))];
+      X.index = [...list.map((x) => (x.anchor || !loc.get(x.id)?.anchor ? x : { ...x, anchor: loc.get(x.id).anchor })), ...LOCAL.filter((x) => (x.anchor ? !has.has(x.anchor) : NEW65.has(x.id)) && !list.some((y) => y.id === x.id))]
+        .map((x) => ({ ...x, path: path65(x.path) })); // prompt 65: nye sidenavn i stiene
     } else X.index = LOCAL;
   }).catch(() => { X.index = LOCAL; }).finally(() => { X.loading = null; redraw?.(); });
 }
 const index = () => X.index ?? LOCAL;
+/** Prompt 65: oppføringer serverens indeks ikke har ennå (nye plasser etter samlingen); tas med selv uten mål-id. */
+const NEW65 = new Set(['ntfy', 'sonevarsler', 'ai-dal53', 'familie', 'brief-figur', 'passkeys', 'staging65', 'helse65', 'ytelse65', 'heal65', 'flags65', 'backup-db65', 'chat-regler']);
 
 /** «#/innstillinger/look/bg», «/innstillinger/utseende» eller «look|bg» → { tab, sub }. */
 export function routeOf(item) {
@@ -192,7 +228,7 @@ export function sideResults(q, tabName) {
   // Prompt 31: Glimt-merket (Tenker mens den leter, Ferdig med svaret).
   const ai = showAi ? `<div class="set-aians" role="status" aria-live="polite"><span class="set-cap">${glimt(18, X.busy ? 'tenker' : 'klar')}GLIMT · SVAR</span>${X.busy ? '<span class="set-aibusy">Leter i innstillingene …</span>'
     : `<span class="set-aitxt">${esc(X.ans?.answer ?? '')}</span>${X.ans?.target ? `<button type="button" class="set-aigo" data-setgo="${esc(X.ans.target.id)}"${X.ans.target.anchor ? ` data-setanchor="${esc(X.ans.target.anchor)}"` : ''}>${anchorOf(X.ans.target) ? 'Vis meg nå ›' : `Åpne ${esc(tabName(routeOf(X.ans.target).tab))} ›`}</button>` : ''}`}</div>` : '';
-  const hl = list.length ? `<div class="set-hits"><span class="set-cap">TREFF</span>${list.map((h) => `<button type="button" class="set-hit" data-setgo="${esc(h.id)}">${icBox(routeOf(h).tab, 28, 15)}<span class="set-hit-t"><b>${esc(h.title)}</b><span>${esc(h.path)}</span></span></button>`).join('')}</div>`
+  const hl = list.length ? `<div class="set-hits"><span class="set-cap">TREFF</span>${list.map((h) => `<button type="button" class="set-hit" data-setgo="${esc(h.id)}">${icBox(normTab(routeOf(h).tab), 28, 15)}<span class="set-hit-t"><b>${esc(h.title)}</b><span>${esc(h.path)}</span></span></button>`).join('')}</div>`
     : showAi ? '' : '<span class="set-nohit">Ingen treff. Slå på ✦ AI og spør med egne ord.</span>';
   return ai + hl;
 }
