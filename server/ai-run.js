@@ -32,7 +32,7 @@ import { randomUUID } from 'node:crypto';
 import { db, kv, OWNER } from './db.js';
 import { settings as fhSettings, secret, me } from './finans/db.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
-import { shortBody, stripThink, SHORT_NUM_CTX } from './ollama-opts.js';
+import { shortBody, stripThink, SHORT_NUM_CTX, THINKING_RE } from './ollama-opts.js';
 import { STEP47, TASK_STEP47, stepOf47, estTokens47, CTX_MARGIN47 } from './glimt45/params47.js'; // prompt 47: parametre per steg
 import { configureGate, gateChat, gateEmbed, gateLoad, gateState, holdGate, setGatePaused, gatePaused, loadedModels, DEFAULT_MODEL_KEEP_ALIVE, GateError, maskSecrets, backendConfig, owuiConf, testOpenWebuiModels } from './ai-gate.js';
 import { broadcast } from './realtime.js';
@@ -590,9 +590,16 @@ async function callOllama(model, o, signal, r, ctx = {}) {
   // korte strukturerte kall (JSON/skjema/verktøy) og
   // tolkningsoppgavene (glimt, kat, fsok) tenker aldri uten eget steg. ai_think gjelder fortsatt fritekst-svar uten eget steg (sok, brief, domener).
   const structured = !!(o.schema || o.json || (Array.isArray(o.ollamaTools) && o.ollamaTools.length));
-  const thinkArg = o.noThink ? false : think === true || (think == null && r.rules.think) ? true : think === false || (think == null && (structured || (['glimt', 'kat', 'fsok'].includes(t) && !sp))) ? false : undefined;
+  // Prompt 62 (produksjon): regelen «Tenking» i AI-kontroll (r.rules.think) slo før inn foran «strukturert», så JSON-kall som «Glimt anbefaler
+  // modeller» og «Domener · oppsummering» tenkte opp hele num_predict og ga «tomt svar». Nå: strukturerte kall og bakgrunnsjobber tenker aldri
+  // uten et eksplisitt think:true, uansett regel eller personlig valg.
+  const noThinkHere = structured || !!o.background || (['glimt', 'kat', 'fsok'].includes(t) && !sp);
+  const thinkArg = o.noThink ? false : think === true ? true : think === false || (think == null && noThinkHere) ? false : think == null && r.rules.think ? true : undefined;
   const body = shortBody({ model, messages: msgs, options, ...(o.schema ? { format: o.schema } : o.json ? { format: 'json' } : {}) }, { user: o.user, think: thinkArg }); // noThink: selvtesten – aldri tenking, uansett brukerens valg «La modellen tenke»
   if (think === true) body.think = true; // prompt 47: planleggerens andre forsøk tenker (med token-/tidsgrense)
+  // Prompt 62: tenkingen teller med i num_predict. Fritekst som kan tenke (regel/personlig valg) får plass til tankene i tillegg,
+  // ellers blir korte svar (ukas vær: 220 tokens) tomme.
+  if (body.think !== false && think !== true && body.options?.num_predict && THINKING_RE.test(model)) { body.options.num_predict += 1536; options.num_predict = body.options.num_predict; }
   if (Array.isArray(o.ollamaTools) && o.ollamaTools.length) body.tools = o.ollamaTools; // prompt 45: Ollama tool calling (Glimt-motoren)
   // Prompt 47: mål prompt-lengden før kallet. Ollama kutter stille fra starten hvis prompten er lengre enn num_ctx.
   const promptEst = estTokens47(`${sys ?? ''}\n${o.prompt ?? ''}`) + (body.tools ? estTokens47(JSON.stringify(body.tools)) : 0) + (o.schema ? estTokens47(JSON.stringify(o.schema)) : 0) + (o.images?.length ?? 0) * 800;

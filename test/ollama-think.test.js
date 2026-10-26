@@ -235,3 +235,25 @@ test('selvtesten tenker aldri, selv når «La modellen tenke» (ai_think) er på
   assert.ok(png.readUInt32BE(16) >= 28 && png.readUInt32BE(20) >= 28);
   setUserCfg(OWNER, { ai_think: '0' });
 });
+
+test('regelen «Tenking» på: JSON-kall og bakgrunnsjobber tenker ikke; fritekst tenker med plass til tankene i num_predict', async () => {
+  const ai = await import('../server/ai-run.js');
+  const r0 = ai.routing(OWNER);
+  const { own, ...rest } = r0; void own;
+  ai.saveServerRouting({ ...rest, rules: { ...rest.rules, think: true } });
+  try {
+    calls.length = 0;
+    await ai.run('glimt', { user: OWNER, prompt: 'Svar KUN med JSON {"a":1}', json: true, numPredict: 500, localOnly: true, background: true, title: 'Glimt · anbefaler modeller' }).catch(() => null);
+    let gen = calls.filter((c) => c.url.endsWith('/api/chat')).at(-1);
+    assert.equal(gen.body.think, false, 'JSON tenker ikke');
+    calls.length = 0;
+    await ai.run('dom', { user: OWNER, prompt: 'Lag et kort sammendrag.', numPredict: 220, localOnly: true, background: true }).catch(() => null);
+    gen = calls.filter((c) => c.url.endsWith('/api/chat')).at(-1);
+    assert.equal(gen.body.think, false, 'bakgrunnsjobb tenker ikke');
+    calls.length = 0;
+    await ai.run('sok', { user: OWNER, prompt: 'Skriv to setninger om været.', numPredict: 220, localOnly: true }).catch(() => null);
+    gen = calls.filter((c) => c.url.endsWith('/api/chat')).at(-1);
+    assert.notEqual(gen.body.think, false, 'fritekst følger regelen');
+    assert.equal(gen.body.options.num_predict, 220 + 1536, 'plass til tankene');
+  } finally { ai.saveServerRouting(rest); }
+});

@@ -89,6 +89,9 @@ async function glimtWhy(items, hw, installedIds) {
   const key = createHash('sha1').update(JSON.stringify([items.map((x) => [x.task, x.model, x.alt]), installedIds, hw.model, hw.memGb])).digest('hex').slice(0, 16);
   const cache = kv.get(OWNER, 'ai39_why', null);
   if (cache?.key === key && Date.now() - cache.at < 7 * 86400_000) return { why: cache.why, at: cache.at };
+  // Prompt 62: feilet forrige forsøk for samme nøkkel, vent 1 t (AI-kontroll ba om begrunnelsen hvert minutt og la en ny jobb i køen hver gang).
+  const failed = kv.get(OWNER, 'ai39_why_fail', null);
+  if (failed?.key === key && Date.now() - failed.at < 3600_000) return { why: null, at: null };
   let why = null;
   try {
     if (llmImpl) why = await llmImpl(items);
@@ -99,6 +102,7 @@ async function glimtWhy(items, hw, installedIds) {
     }
   } catch { why = null; }
   if (why && typeof why === 'object') { kv.set(OWNER, 'ai39_why', { key, at: Date.now(), why }); return { why, at: Date.now() }; }
+  if (!llmImpl && !MOCK()) kv.set(OWNER, 'ai39_why_fail', { key, at: Date.now() });
   return { why: null, at: null };
 }
 
