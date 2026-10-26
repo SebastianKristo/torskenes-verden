@@ -2,6 +2,13 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.56.0] – 26.10.2026 · Ferdig utseende i innstillingene
+- **System og Backup** har fått samme rader som resten av innstillingene, med nøkkeltall og statusfelt øverst. Det gjelder Oversikt, Oppdateringer, Ytelse, Selvreparasjon, Mer og Backup.
+- **Alle temaer og mørk modus:** innstillingene og AI-siden følger nå temaet du har valgt.
+- **Moduler** står på samme type rad som resten, med ikon.
+- **Ikoner** på radene som manglet dem.
+- **Søket i innstillingene** viser sidetitler og svar fra de nye sidene.
+
 ## [4.55.0] – 26.10.2026 · Innstillinger samlet, ny AI-side
 - **Hver innstilling finnes ett sted.** Ny sidemeny: Konto, Utseende, Varsler, App · Brukere og familie · Glimt, AI · Integrasjoner, Kalender og gjøremål · Moduler · System, Backup, Logger.
   - Sikkerhet og innlogging ligger under Konto, Startside er delt mellom Utseende og App, Familie ligger under Brukere og familie, og Gjøremål under Kalender og gjøremål.
