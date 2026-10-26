@@ -1,23 +1,23 @@
 # Logoer som mangler (2026-10-26). Generert av server/logos/fetch-logos.mjs.
-# 422 hentet, 17 mangler, 4 bruker bokstav (felles favicon eller ukjent domene).
-aleris	Aleris	aleris.no	wikidata:ingen-id, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, html-icon:31px, og-image:ikke-kvadratisk, google:31px, duckduckgo:404
+# 423 hentet, 16 mangler, 5 bruker bokstav (felles favicon eller ukjent domene).
+aleris	Aleris	aleris.no	wikidata:ingen-id, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, html-icon:31px, og-image:ikke-kvadratisk, google:31px, duckduckgo:31px
 bokklubben	Bokklubben	bokklubben.no	wikidata:ingen-logo, apple-touch-icon:403, apple-touch-icon:403, favicon-svg:403, google:404, duckduckgo:404
 deli-de-luca	Deli de Luca	delideluca.no	wikidata:ingen-logo, apple-touch-icon:ikke-bilde, apple-touch-icon:ikke-bilde, favicon-svg:404, google:404, duckduckgo:404
 dixy-chicken	Dixy Chicken	dixychicken.com	wikidata:ingen-logo, apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, favicon-svg:fetch failed, google:404, duckduckgo:404
 dna	dna	dna-shoes.com	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, google:404, duckduckgo:404
-eurosko	Eurosko	eurosko.no	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, google:404, duckduckgo:404
+eurosko	Eurosko	eurosko.no	wikidata:ukjent-id, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, google:404, duckduckgo:404
 fedex	FedEx	fedex.com	src:fant ikke ikon på merkevaresiden
-gresvig	Gresvig	gresvig.no	wikidata:ingen-logo, apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, favicon-svg:fetch failed, google:404, duckduckgo:404
+gresvig	Gresvig	gresvig.no	wikidata:ukjent-id, apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, favicon-svg:fetch failed, google:404, duckduckgo:404
 lagerhaus	Lagerhaus	lagerhaus.no	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, manifest:16px, google:16px, duckduckgo:404
 lille-vinkel-sko	Lille Vinkel Sko	lillevinkelsko.no	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, html-icon:16px, google:16px, duckduckgo:16px
-nordic-feet	Nordic Feet	nordicfeet.com	wikidata:ingen-id, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:ikke-bilde, og-image:ikke-kvadratisk, google:404, duckduckgo:404
+nordic-feet	Nordic Feet	nordicfeet.com	wikidata:ingen-id, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:ikke-bilde, og-image:ikke-kvadratisk, google:404, duckduckgo:16px
 pizzabakeren	Pizzabakeren	pizzabakeren.no	wikidata:ingen-logo, apple-touch-icon:ikke-bilde, apple-touch-icon:ikke-bilde, favicon-svg:ikke-bilde, html-icon:16px, google:16px, duckduckgo:16px
 porterbuddy	Porterbuddy	porterbuddy.com	wikidata:ingen-id, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, google:404, duckduckgo:404
 q-park	Q-Park	q-park.no	wikidata:ingen-id, apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, favicon-svg:fetch failed, google:404, duckduckgo:404
-samsoe-samsoe	Samsøe Samsøe	samsoe.com	wikidata:330px, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, og-image:ikke-kvadratisk, google:404, duckduckgo:404
 shoeday	Shoeday	shoeday.no	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, google:404, duckduckgo:404
 wash-world	Wash World	washworld.dk	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, html-icon:16px, og-image:fetch failed, google:16px, duckduckgo:16px
 bislett-har	Bislett Hår	-	bokstav
 coop-byggmix	Coop Byggmix	coop.no	bokstav
+ica	ICA	ica.se	bokstav
 palais-des-thes	Palais des Thés	-	bokstav
 vivikes	Vivikes	-	bokstav
