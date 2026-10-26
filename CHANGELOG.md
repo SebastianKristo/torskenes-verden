@@ -2,6 +2,15 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.52.0] – 26.10.2026 · Faste oppgaver i vanlig språk
+- **Faste oppgaver:** «Send meg strømprisene hver morgen kl. 7», «Minn meg på å betale husleia den 1. hver måned», «Hver fredag kl. 16: oppsummer hva jeg har brukt penger på denne uka», «Si fra hvis strømprisen går over 2 kr i morgen».
+  - Glimt bekrefter alltid hvordan oppgaven er forstått før den lagres.
+  - «Hvilke faste oppgaver har jeg?», «Stopp strømprisvarselet» og «Flytt morgenbriefen til 06:30» virker også. Briefen flyttes, det lages ingen kopi.
+  - Betingelser (for eksempel strømpris over 2 kr) sjekkes i koden, ikke av modellen.
+  - Oppgavene overlever omstart, tapte kjøringer tas igjen innen to timer, og stille timer 23–07 gjelder med mindre du har bedt om et klokkeslett. Resultatet kommer som varsel i appen.
+- **Faste oppgaver** under Innstillinger → Glimt: neste kjøring, siste resultater, kjør nå, pause, endre tidspunkt og slett. Prisområde (NO1–NO5) under AI-kontroll → Valg.
+- Søket på Hjem sendte «… hver morgen kl. 7» til avtale-/huskelisteforslaget i stedet for til Glimt. Rettet.
+
 ## [4.51.0] – 26.10.2026 · Glimt lærer
 - **Glimt husker hvordan den løste en oppgave:** når et svar var riktig (ingen retting de neste meldingene, eller tommel opp), lagres oppskriften. Lignende spørsmål får den som eksempel, og etter 5 vellykkede bruk uten feil går Glimt rett på svaret uten planleggeren. Endringer i data krever fortsatt bekreftelse.
 - **Glimt lærer av rettelser:** «nei, jeg mente …» lagrer riktig og feil plan, og rettelsen blir en egen test i eval.
