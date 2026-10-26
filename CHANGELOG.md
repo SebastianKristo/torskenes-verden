@@ -2,6 +2,18 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.57.0] – 26.10.2026 · Appene tar igjen web
+- **Raskere svar i iOS- og Android-appen:** svaret fra Glimt kommer fortløpende i Glimt-søket og i Chat, med en statuslinje som viser hva Glimt gjør, og en Stopp-knapp. Fungerer det ikke, svarer appen som før.
+- **Glimt forstår samtaler i appene:** oppfølgere som «og i Bergen?» og «flytt den til 11» virker i appen også. Oppfølgingsspørsmål har valgknapper, og handlinger kan bekreftes eller avbrytes rett i Chat.
+- **Tommel opp/ned** på Glimt-svar hjelper Glimt å lære.
+- **Innstillingene i appene er gruppert som på web**, med en egen Glimt-side. Der ligger:
+  - Glimt husker, med Forslag, Motstrid og «Ikke brukt på lenge»
+  - Entitetsregister
+  - Glimt lærer
+  - Faste oppgaver, med «Lag fra tekst»
+  - Kvalitet, der den nattlige testingen bare vises for admin
+- Varsler og lenker til Faste oppgaver, Glimt husker og Kvalitet åpner riktig side i appen.
+
 ## [4.56.0] – 26.10.2026 · Ferdig utseende i innstillingene
 - **System og Backup** har fått samme rader som resten av innstillingene, med nøkkeltall og statusfelt øverst. Det gjelder Oversikt, Oppdateringer, Ytelse, Selvreparasjon, Mer og Backup.
 - **Alle temaer og mørk modus:** innstillingene og AI-siden følger nå temaet du har valgt.
