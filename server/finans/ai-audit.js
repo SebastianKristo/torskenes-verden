@@ -1,4 +1,4 @@
-// Prompt 27: AI-logg for personvern. Hver gang noe sendes til en sky-motor (Gemini/Groq) for logo-oppslag eller Chat,
+// Prompt 27: AI-logg for personvern. Hver gang noe sendes til en sky-motor (Gemini/Groq) eller Wikidata (prompt 69) for logo-oppslag eller Chat,
 // lagres tid, motor, formål og nøyaktig hvilke felt som ble sendt. Brukeren ser sine egne rader i Innstillinger
 // (GET /finans/api/ai-audit). Tabellen er ny (CREATE IF NOT EXISTS); ingenting slettes utover de eldste radene per bruker.
 import { db, me } from './db.js';
@@ -18,7 +18,7 @@ export function audit(engine, purpose, fields, u = me()) {
 }
 
 const PURPOSE = { logo: 'Finn logo', chat: 'Chat', subscreenshot: 'Abonnement fra skjermbilde' };
-const ENGINE = { gemini: 'Gemini', groq: 'Groq', openwebui: 'Open WebUI' };
+const ENGINE = { gemini: 'Gemini', groq: 'Groq', openwebui: 'Open WebUI', wikidata: 'Wikidata' };
 /** Brukerens egne rader, nyeste først: [{id, ts, at, engine, engineName, purpose, purposeName, fieldsSent, fields}]. */
 export function auditList(u = me(), limit = 100) {
   return db.prepare('SELECT * FROM ai_audit WHERE user_id=? ORDER BY id DESC LIMIT ?').all(u, Math.min(500, Math.max(1, limit))).map((r) => {

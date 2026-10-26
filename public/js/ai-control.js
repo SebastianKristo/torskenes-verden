@@ -881,7 +881,7 @@ function rcptTab() {
   const model = row({ ic: 'chip', dot: mo.ok && mo.installed !== false ? 'ok' : 'bad', t: `Lokal modell · ${mo.name ?? 'qwen3:8b'}`, mono: false, s: mo.ok ? (mo.installed === false ? `Ollama svarer, men modellen mangler – kjør: ollama pull ${mo.name ?? 'qwen3:8b'}` : 'Klar') : mo.error ?? 'Svarer ikke', right: btn('Modell for kvitteringer ›', 'data-ac-tab="task"') });
   const cats = (H.categories ?? []).length ? `Kategoriforslag velges fra ${H.categories.length} kategorier: ${H.categories.slice(0, 6).join(', ')}${H.categories.length > 6 ? ' …' : ''}.` : '';
   return `${ban}${sec('STEG I KJEDEN', steps, { note: `Rekkefølgen er A → B → C → Tesseract, ellers legges kvitteringen i kø og prøves igjen; første steg som består kontrollen, vinner. Selve lesingen på telefonen slås på i FinansHub-appen.${can ? '' : ' Bare administrator kan endre stegene.'}`, hl: 'ai-r48' })}
-    ${sec('TOLKING', model + L.tolk.join(''), { note: cats })}${L.logo.length ? sec('LOGOER', L.logo.join(''), { note: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }) : ''}
+    ${sec('TOLKING', model + L.tolk.join(''), { note: cats })}${L.logo.length ? sec('LOGOER', L.logo.join(''), { note: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, Wikidata, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }) : ''}
     ${X.msg ? `<p class="ac-note ${X.ok ? '' : 'bad'}" role="status">${esc(X.msg)}</p>` : ''}`;
 }
 

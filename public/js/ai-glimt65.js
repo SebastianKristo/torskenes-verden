@@ -94,7 +94,8 @@ export function logoRows65(ui) {
   if (!pv) { const r = ui.row({ ic: 'shield', dot: 'off', t: 'Personvern og logoer er ikke tilgjengelig', s: A.privErr ? `Serveren svarte: ${A.privErr}` : 'Oppdater serveren' }); return { tolk: [r], logo: [] }; }
   return {
     tolk: [ui.row({ ic: 'home', t: 'Les kvitteringer lokalt', s: 'Ollama på hjemmeserveren leser hele kvitteringen. Ingenting sendes ut', right: swb(ui, !!pv.logo_local_receipts, 'data-g65-ptog="logo_local_receipts"', 'Les kvitteringer lokalt') })],
-    logo: [ui.row({ ic: 'spark', t: 'Finn logo med Gemini', s: 'Gemini får bare butikknavnet, f.eks. «Blomsterlandet»', right: swb(ui, !!pv.logo_gemini, 'data-g65-ptog="logo_gemini"', 'Finn logo med Gemini') }),
+    logo: [ui.row({ ic: 'globe', t: 'Finn logo i Wikidata', s: 'Wikidata får bare butikknavnet. Åpne data, ingen AI', right: swb(ui, pv.logo_wikidata !== false, 'data-g65-ptog="logo_wikidata"', 'Finn logo i Wikidata') }),
+      ui.row({ ic: 'spark', t: 'Finn logo med Gemini', s: 'Gemini får bare butikknavnet, f.eks. «Blomsterlandet»', right: swb(ui, !!pv.logo_gemini, 'data-g65-ptog="logo_gemini"', 'Finn logo med Gemini') }),
       ui.row({ ic: 'check', t: 'Sjekk logoen før den lagres', s: 'Domenet må svare, og bildet må være et ekte bilde', right: swb(ui, !!pv.logo_verify, 'data-g65-ptog="logo_verify"', 'Sjekk logoen før den lagres') })],
   };
 }

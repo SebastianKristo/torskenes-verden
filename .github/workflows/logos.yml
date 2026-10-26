@@ -1,5 +1,7 @@
 name: Logoer
-# Laster ned logobiblioteket (server/logos/fetch-logos.mjs) og committer filene til main.
+# Prompt 69: fyller registeret fra OpenStreetMap-kjedene (server/logos/grow-nsi.mjs, Name Suggestion Index + Wikidata),
+# laster ned logobiblioteket (server/logos/fetch-logos.mjs: Wikidata/Commons først, favicon som reserve) og committer
+# filene til main. Bare offentlige data (kjedelista, NSI, Wikidata/Commons) – aldri brukerdata.
 # Push med GITHUB_TOKEN starter ikke andre workflows: kjør «Docker-image» manuelt etterpå for å få logoene med i imaget.
 on:
   workflow_dispatch:
@@ -13,7 +15,7 @@ concurrency:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,8 +30,23 @@ jobs:
             sudo apt-get install -y --no-install-recommends imagemagick librsvg2-bin
           fi
           (command -v magick || command -v convert) && (magick -version 2>/dev/null || convert -version) | head -1
+      - name: Nye kjeder fra NSI
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # bare til å liste NSI-filene i api.github.com (høyere grense)
+        run: node server/logos/grow-nsi.mjs
       - name: Hent logoer
         run: node server/logos/fetch-logos.mjs
+      - name: Forhåndsvisning (preview.html)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logo-preview
+          path: |
+            server/logos/preview.html
+            server/logos/missing.txt
+            server/logos/files
+          retention-days: 30
+          if-no-files-found: ignore
       - name: Commit til main
         run: |
           git config user.name 'github-actions[bot]'

@@ -108,10 +108,11 @@ export function aiSections() {
   const aud = AUD.open ? `<div class="p27-aud">${AUD.list === null ? '<div class="m-spin"></div>' : AUD.err ? `<span class="pp-mut">${esc(AUD.err)}</span>` : AUD.list.length ? AUD.list.slice(0, 30).map((r) => `<div class="p27-ar"><span class="m-grow"><b>${esc(`${r.engine ?? ''} · ${r.purpose ?? ''}`)}</b><small>${esc(Array.isArray(r.fields_sent ?? r.fieldsSent) ? (r.fields_sent ?? r.fieldsSent).join(', ') : String(r.fields_sent ?? r.fieldsSent ?? ''))}</small></span><span class="pp-mut">${esc(r.ts ? new Date(r.ts).toLocaleString('nb-NO', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '')}</span></div>`).join('') : '<span class="pp-mut">Ingenting er sendt til AI ennå.</span>'}</div>` : '';
   return `<span class="pp-lab p17-gl">PERSONVERN OG LOGOER</span><div class="list p17-list p27-set">
       <div class="opt-row p17-row" data-p52="rc-local"><span class="m-grow p17-rt"><b>Kvitteringer leses lokalt</b><small>Glimt leser hele kvitteringen på hjemmeserveren. Kvitteringsbilder sendes aldri ut, heller ikke som reserve</small></span><span class="pp-mut">Alltid</span></div>
+      ${tgRow('privacy', 'logo_wikidata', 'Finn logo i Wikidata', 'Wikidata får bare butikknavnet. Åpne data, ingen AI. På som standard', true)}
       ${tgRow('privacy', 'logo_gemini', 'Finn logo med Gemini', 'Gemini får bare butikknavnet, f.eks. «Blomsterlandet». Av som standard', false)}
       ${tgRow('privacy', 'logo_verify', 'Sjekk logoen før den lagres', 'Domenet må svare, og bildet må være et ekte bilde', true)}
       <button class="opt-row p17-row" data-p27="audit" aria-expanded="${AUD.open}"><span class="m-grow p17-rt"><b>AI-logg</b><small>Hva som er sendt til hvilken motor</small></span><span class="p17-chev" aria-hidden="true">${AUD.open ? '⌄' : '›'}</span></button>${aud}</div>
-    <div class="snote">Av «Finn logo med Gemini» = logoen finnes fra Brønnøysundregistrene og nettstedet, uten AI.</div>
+    <div class="snote">Av «Finn logo med Gemini» = logoen finnes fra Brønnøysundregistrene, Wikidata og nettstedet, uten AI.</div>
     <span class="pp-lab p17-gl">CHAT</span><div class="list p17-list p27-set">
       ${tgRow('chat', 'chat_my_data', 'Chat kan lese mine data', 'Finans, Kalender og Huskeliste når «Mine data» er på', false)}
       ${tgRow('chat', 'chat_ask_cloud', 'Spør før sky-modeller får data', 'Gemini og Groq må godkjennes per samtale', true)}

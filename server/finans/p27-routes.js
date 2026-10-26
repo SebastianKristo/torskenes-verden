@@ -19,7 +19,7 @@ const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
 const str = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 const TYPES = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', ico: 'image/x-icon', svg: 'image/svg+xml' };
 const typeOf = (b) => (b[0] === 0x89 ? TYPES.png : b[0] === 0xff ? TYPES.jpg : b.slice(0, 4).toString() === 'RIFF' ? TYPES.webp : b.slice(0, 3).toString() === 'GIF' ? TYPES.gif : b[0] === 0 && b[2] === 1 ? TYPES.ico : null);
-const PRIVACY_KEYS = ['logo_local_receipts', 'logo_gemini', 'logo_verify'];
+const PRIVACY_KEYS = ['logo_local_receipts', 'logo_wikidata', 'logo_gemini', 'logo_verify']; // prompt 69: logo_wikidata
 const privacyOut = (u) => Object.fromEntries(PRIVACY_KEYS.map((k) => [k, userBool(u, k)]));
 
 export function mountP27Public(api) {

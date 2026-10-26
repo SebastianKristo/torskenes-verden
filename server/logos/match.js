@@ -81,7 +81,7 @@ function load() {
   if (REG) return REG;
   REG = JSON.parse(readFileSync(REGISTRY_FILE, 'utf8'));
   INDEX = [];
-  for (const it of REG.items) for (const a of it.alias ?? []) { const n = normalize(a); if (n) INDEX.push({ a: n, words: n.split(' ').length, it }); }
+  for (const it of REG.items) for (const a of it.alias ?? []) { const n = normalize(a); if (n) INDEX.push({ a: n, words: n.split(' ').length, it, g: isGeneric(n) || (it.fra === 'nsi' && !n.includes(' ')) }); }
   INDEX.sort((x, y) => y.a.length - x.a.length); // lengste alias først: «coop extra» før «coop», «max burger» før «max»
   return REG;
 }
@@ -148,7 +148,7 @@ export function itemForDomain(domain) {
 
 // normalisert navn → domene. Settes av routes.js fra kv ved oppstart og når admin lagrer et valg.
 let OVERRIDES = new Map();
-export function setOverrides(obj) { OVERRIDES = new Map(Object.entries(obj ?? {}).map(([k, v]) => [normalize(k), String(v).toLowerCase()])); }
+export function setOverrides(obj) { MEMO.clear(); OVERRIDES = new Map(Object.entries(obj ?? {}).map(([k, v]) => [normalize(k), String(v).toLowerCase()])); }
 export const overrides = () => Object.fromEntries(OVERRIDES);
 
 // Til appene: liten liste med ETag (endres når registeret eller filene endres).
@@ -181,13 +181,38 @@ function lev(a, b, max) {
   }
   return prev[b.length];
 }
+// Prompt 69: korte eller generiske navn («Max», «Normal», «Extra», «Power», «Obs») gir falske treff når registeret vokser
+// (NSI-kjedene). De matches bare som hele ord først i teksten (eksakt eller prefiks, etter at betalingsformidler og bankord
+// er fjernet i candidates()), aldri med Levenshtein og aldri midt i teksten. Brukes også av grow-nsi.mjs.
+// Oppføringer lagt til automatisk fra NSI (fra: 'nsi') behandles likt for alle enkeltord-alias («Volt», «Glitter»).
+export const GENERIC = new Set(('max maxi normal extra power mega prix obs spar joker meny marked plus super best good one city smart fresh life basic express ' +
+  'shop store market house home sport apotek kiosk bakeri pizza burger sushi cafe kafe kaffe taxi parkering bensin service senter ' +
+  'mat bar pub hotell hotel bygg auto bil data mobil tele energi strom bank finans post pakke frakt gull optikk blomster ' +
+  'helse lege tannlege klinikk frisor salong hage dyr zoo bok leker sko klaer interior mote design').split(' '));
+export const isGeneric = (alias) => { const n = normalize(alias); return n.replace(/[^a-z0-9]/g, '').length <= 3 || GENERIC.has(n); };
+
 // Tillatt avstand etter aliasets lengde: 2 fra 8 tegn, 1 fra 5 tegn, ellers ingen (korte navn gir for mange falske treff).
 const maxDist = (n) => (n >= 8 ? 2 : n >= 5 ? 1 : 0);
 const out = (it) => ({ id: it.id, navn: it.navn, domene: it.domene || null, farge: it.farge, kategori: it.kategori });
 
+// Hurtigbuffer for matchMerchant: et større register (NSI) gjør Levenshtein-steget dyrere, og samme banktekst går igjen.
+// Tømmes når registeret leses på nytt eller egne valg endres.
+const MEMO = new Map(), MEMO_MAX = 5000;
+let MEMO_REG = null;
+
 /** Banktekst eller butikknavn → { id, navn, domene, farge, kategori } eller null (vis bokstav). */
 export function matchMerchant(text) {
-  load();
+  const reg = load();
+  if (MEMO_REG !== reg) { MEMO.clear(); MEMO_REG = reg; }
+  const key = String(text ?? '');
+  if (MEMO.has(key)) { const v = MEMO.get(key); return v && { ...v }; }
+  const v = matchUncached(text);
+  if (MEMO.size >= MEMO_MAX) MEMO.delete(MEMO.keys().next().value);
+  MEMO.set(key, v && { ...v });
+  return v;
+}
+
+function matchUncached(text) {
   const cands = candidates(text).filter((c) => c.length >= 2);
   if (!cands.length) return null;
   // 0. Eget valg for navnet (overstyrer registeret).
@@ -207,14 +232,14 @@ export function matchMerchant(text) {
     const words = c.split(' ');
     for (const x of INDEX) {
       const m = maxDist(x.a.length);
-      if (!m || x.words > words.length) continue;
+      if (!m || x.g || x.words > words.length) continue;
       const d = lev(words.slice(0, x.words).join(' '), x.a, m);
       if (d <= m && (!best || d < best.d || (d === best.d && x.a.length > best.x.a.length))) best = { d, x };
     }
   }
   if (best) return out(best.x.it);
   // 4. Alias på minst 5 tegn som hele ord et annet sted i teksten («BETALING FINN.NO»).
-  for (const c of cands) { const h = INDEX.find((x) => x.a.length >= 5 && (' ' + c + ' ').includes(' ' + x.a + ' ')); if (h) return out(h.it); }
+  for (const c of cands) { const h = INDEX.find((x) => x.a.length >= 5 && !x.g && (' ' + c + ' ').includes(' ' + x.a + ' ')); if (h) return out(h.it); }
   return null;
 }
 

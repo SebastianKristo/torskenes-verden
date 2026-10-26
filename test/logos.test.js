@@ -23,7 +23,9 @@ test('registeret har alle feltene, unike id-er, ekte domener og minst 250 oppfø
     assert.ok(!ids.has(x.id), `dobbel id ${x.id}`); ids.add(x.id);
     assert.match(x.farge, /^#[0-9a-f]{6}$/i);
     assert.ok(Array.isArray(x.alias) && x.alias.length, x.id);
-    if (x.kilde !== 'bokstav') assert.match(x.domene, /^([a-z0-9-]+\.)+[a-z]{2,}$/, x.id);
+    // Prompt 69: kjeder fra NSI kan mangle domene (Wikidata uten P856); de har da wikidata-id.
+    if (x.domene) assert.match(x.domene, /^([a-z0-9-]+\.)+[a-z]{2,}$/, x.id);
+    else assert.ok(x.kilde === 'bokstav' || /^Q\d+$/.test(x.wikidata ?? ''), `${x.id} mangler domene og wikidata`);
   }
   assert.equal(new Set(items.map((x) => x.kategori)).size, 15);
   // Coop-kjedene har egne id-er (ikke én felles logo).

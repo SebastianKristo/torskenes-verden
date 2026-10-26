@@ -1,14 +1,24 @@
-// Prompt 27: logo-oppslag for butikker uten at AI gjetter URL-er. AI brukes bare til å foreslå et domene ut fra det
+// Prompt 27 (+ prompt 69): logo-oppslag for butikker uten at AI gjetter URL-er. AI brukes bare til å foreslå domener ut fra det
 // ryddede butikknavnet; koden henter og sjekker logoen selv. Rekkefølgen (stopp på første treff):
-//   1. merchant_logos (egen tabell per bruker, manuelle valg vinner alltid, sjekkes på nytt etter 90 dager)
+//   1. merchant_logos (egen tabell per bruker, manuelle valg vinner alltid, sjekkes på nytt etter 90 dager, «ingen» etter 7 dager)
 //   2. rydd navnet uten AI (AS/ASA, org.nr., kortnr., butikknummer, sted) + kjente kjeder (logobiblioteket i server/logos)
+//      — «Finansdata forlater aldri huset» (externalBlocked48) stopper alt herfra som går ut: bare steg 7 kan kjøre —
 //   3. Brønnøysundregistrene (org.nr. først, så navn) → hjemmeside
-//   4. Gemini, KUN via logoLookup(name, country): sanert navn (maks 60 tegn) + land, Google Search grounding, JSON {domene, sikkerhet}
+//   3b. Wikidata (prompt 69, innstillingen logo_wikidata, på som standard): bare det ryddede navnet, logget i ai_audit (wikidata).
+//      wbsearchentities (nb, så en) → wbgetentities for de 3 beste. Godtas bare når P31 er virksomhet/kjede/merkevare, landet er
+//      Norge (P17 Q20) eller domenet (P856) er .no/står i registeret, og en etikett/et alias er navnet. Logo fra P154 → P8972 → P2910
+//      som PNG fra Commons (Special:FilePath/<fil>?width=256, aldri SVG). Bare P856 → domenet prøves som i steg 6.
+//      Én forespørsel om gangen per vert, egen User-Agent med kontaktadresse, tidsgrense 6 s og hurtigbuffer.
+//   4. Gemini, KUN via logoLookup(name, country): sanert navn (maks 60 tegn) + land, Google Search grounding,
+//      JSON {domene, alternativer (maks 2), sikkerhet}. Sikkerhet < 0.5 → ingen forsøk. Maks 3 domener, i rekkefølge, alle med
+//      «svarer» og (med «Sjekk logoen») <title> som inneholder navnet. Sosiale medier og kataloger hoppes over.
 //   5. gjett domene (navn.no/.com/.se): krever HTTP 200 og at <title> inneholder navnet
-//   6. hent ikon fra domenet: apple-touch-icon → icon ≥ 64 px/SVG → og:logo/og:image → /favicon.ico → Google s2 (reserve)
+//   6. hent ikon fra domenet: apple-touch-icon (største) → manifest-ikonene (største) → <link rel=icon> (SVG bare med ImageMagick,
+//      så største) → og:logo → og:image (bare kvadratisk) → /favicon.svg (bare med ImageMagick) → /favicon.ico → Google s2 (reserve).
+//      Under 32 px brukes bare når ingenting større finnes (og aldri med «Sjekk logoen»). 403 respekteres (ingen nytt forsøk).
 //   7. klipp logoen fra kvitteringen lokalt (Ollama-bildemodell gir en boks, ImageMagick klipper)
 //   8. ingen treff → {none:true} (klienten viser initialer og «Velg logo»)
-// Personvern: Ollama (lokalt) kan se hele kvitteringen. Gemini får bare {butikk, land}. Alt som sendes til Gemini logges i ai_audit.
+// Personvern: Ollama (lokalt) kan se hele kvitteringen. Gemini får bare {butikk, land}, Wikidata bare {navn}. Begge logges i ai_audit.
 import { mkdir, readFile, writeFile, mkdtemp, rm } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -22,7 +32,7 @@ import { geminiFetch, hasGemini } from './gemini-keys.js';
 import { aiTimeoutsOf, GEMINI_DEFAULT } from './ai.js';
 import { audit } from './ai-audit.js';
 import { validDomain } from './enrich.js';
-import { matchMerchant, filePath as libraryFile } from '../logos/match.js';
+import { matchMerchant, filePath as libraryFile, itemForDomain, normalize as libNorm } from '../logos/match.js';
 import { ocrTools } from '../ocr-fallback.js';
 import { run as aiRun } from '../ai-run.js';
 import { externalBlocked48 } from '../receipts48/settings.js'; // prompt 48: «Finansdata forlater aldri huset»
@@ -90,14 +100,17 @@ const countryOf = (c) => (/^[A-Za-z]{2}$/.test(String(c ?? '').trim()) ? String(
 
 /**
  * Spør Gemini (med Google Search grounding) om domenet til butikken. Tar bare tekst: navnet (sanert) og land.
- * Svarer {domene, sikkerhet} eller null. Ingen logo-URL, bilder, varelinjer, beløp, org.nr. eller kortdata kan sendes herfra.
+ * Svarer {domene, alternativer (maks 2), sikkerhet} eller null. Ingen logo-URL, bilder, varelinjer, beløp, org.nr. eller kortdata kan sendes herfra.
  */
 export async function logoLookup(name, country) {
   const butikk = sanitizeLogoName(name), land = countryOf(country);
   if (!butikk || butikk.length < 2 || !hasGemini()) return null;
   const sent = { butikk, land };
-  const prompt = 'Finn det offisielle nettstedet til butikken eller kjeden under. Bruk Google-søk. Svar KUN med JSON '
-    + '{"domene":"eksempel.no","sikkerhet":0.0-1.0}. Ikke oppgi logo- eller bilde-URL. Er du usikker, sett "domene" til null.\n' + JSON.stringify(sent);
+  // Prompt 69: også små lokale butikker – be om butikkens egen hjemmeside og inntil 2 alternativer (prøves i rekkefølge).
+  const prompt = 'Finn det offisielle nettstedet til butikken eller kjeden under. Bruk Google-søk. Det kan være en liten lokal butikk: '
+    + 'let etter butikkens egen hjemmeside, ikke Facebook, Instagram, Google Maps, Gule Sider, Proff eller Finn. Svar KUN med JSON '
+    + '{"domene":"eksempel.no","alternativer":["eksempel.com"],"sikkerhet":0.0-1.0}. "alternativer" er maks 2 andre domener som også kan være '
+    + 'riktige, ellers []. Ikke oppgi logo- eller bilde-URL. Er du usikker, sett "domene" til null.\n' + JSON.stringify(sent);
   audit('gemini', 'logo', sent);
   const model = settings().geminiModel || GEMINI_DEFAULT;
   let res;
@@ -116,17 +129,22 @@ export async function logoLookup(name, country) {
     const j = JSON.parse(m[0]);
     const domene = cleanDomain(j.domene ?? j.domain);
     const sikkerhet = Math.max(0, Math.min(1, Number(j.sikkerhet ?? j.confidence) || 0));
-    return domene ? { domene, sikkerhet } : null;
+    const alt = j.alternativer ?? j.alternatives;
+    const alternativer = [...new Set((Array.isArray(alt) ? alt : []).slice(0, 2).map(cleanDomain).filter((d) => d && d !== domene))];
+    if (!domene && !alternativer.length) return null;
+    return { domene: domene ?? alternativer[0], alternativer: domene ? alternativer : alternativer.slice(1), sikkerhet };
   } catch { return null; }
 }
 
 /* ---------------- Nett: domener, sider og ikoner ---------------- */
 
 export const cleanDomain = (v) => validDomain(String(v ?? '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split(/[/?#]/)[0]);
+// Prompt 69: 403 respekteres – nettsteder som stenger ute ukjente klienter, prøves ikke på nytt med nettleser-headere.
+const get403 = (url, headers, accept) => F(url, { headers: { 'user-agent': 'Mozilla/5.0 (Homelab logo)', accept, ...headers } });
 async function getPage(domain) {
   for (const url of [`https://${domain}/`, `https://www.${domain}/`]) {
     try {
-      const r = await F(url, { headers: { 'user-agent': 'Mozilla/5.0 (Homelab logo)', accept: 'text/html' } });
+      const r = await get403(url, {}, 'text/html,application/xhtml+xml,*/*;q=0.8');
       if (r.status !== 200) continue;
       const html = (await r.text()).slice(0, 400_000);
       return { url: r.url || url, html, title: (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? '').replace(/\s+/g, ' ').trim() };
@@ -136,60 +154,198 @@ async function getPage(domain) {
 }
 const attrs = (tag) => Object.fromEntries([...tag.matchAll(/([\w:-]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/g)].map((m) => [m[1].toLowerCase(), m[3] ?? m[4] ?? m[5] ?? '']));
 const abs = (href, base) => { try { const u = new URL(href.replace(/&amp;/g, '&'), base); return /^https?:$/.test(u.protocol) ? u.href : null; } catch { return null; } };
-/** Ikon-kandidater fra forsiden, best først. */
-export function iconCandidates(html, base) {
+const sizeOf = (sizes) => Math.max(0, ...String(sizes ?? '').split(/\s+/).map((x) => +x.split('x')[0] || 0));
+const svgLike = (type, href) => /svg/.test(type ?? '') || /\.svg(\?|$)/i.test(href ?? '');
+/**
+ * Ikon-kandidater fra forsiden, best først. svg:false (ingen ImageMagick) hopper over SVG-ikonene og /favicon.svg.
+ * Manifest-ikonene (egen forespørsel) settes inn etter apple-touch-icon i iconFrom.
+ */
+export function iconCandidates(html, base, { svg = true } = {}) {
   const links = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => attrs(m[0]));
   const metas = [...html.matchAll(/<meta\b[^>]*>/gi)].map((m) => attrs(m[0]));
   const out = [];
   const rel = (l) => String(l.rel ?? '').toLowerCase();
-  for (const l of links) if (/apple-touch-icon/.test(rel(l)) && l.href) out.push(['apple-touch-icon', abs(l.href, base)]);
-  const icons = links.filter((l) => /(^|\s)icon(\s|$)/.test(rel(l)) && l.href).map((l) => ({ l, size: Math.max(0, ...String(l.sizes ?? '').split(/\s+/).map((x) => +x.split('x')[0] || 0)), svg: /svg/.test(l.type ?? '') || /\.svg(\?|$)/i.test(l.href) }));
+  for (const l of links.filter((l) => /apple-touch-icon/.test(rel(l)) && l.href).sort((a, b) => sizeOf(b.sizes) - sizeOf(a.sizes))) out.push(['apple-touch-icon', abs(l.href, base)]);
+  const icons = links.filter((l) => /(^|\s)icon(\s|$)/.test(rel(l)) && l.href).map((l) => ({ l, size: sizeOf(l.sizes), svg: svgLike(l.type, l.href) })).filter((i) => svg || !i.svg);
   for (const i of icons.filter((i) => i.svg || i.size >= 64).sort((a, b) => (b.svg - a.svg) || b.size - a.size)) out.push(['icon', abs(i.l.href, base)]);
   const meta = (p) => metas.find((m) => String(m.property ?? m.name ?? '').toLowerCase() === p)?.content;
   if (meta('og:logo')) out.push(['og:logo', abs(meta('og:logo'), base)]);
   if (meta('og:image')) out.push(['og:image', abs(meta('og:image'), base)]);
+  // Mindre <link rel=icon>: 32–63 px først, så uten oppgitt størrelse, så under 32 px (brukes bare når ingenting større finnes).
+  const rank = (s) => (s >= 32 ? s : s === 0 ? 31 : s - 100);
+  for (const i of icons.filter((i) => !i.svg && i.size < 64).sort((a, b) => rank(b.size) - rank(a.size))) out.push(['icon', abs(i.l.href, base)]);
+  if (svg) out.push(['favicon.svg', abs('/favicon.svg', base)]);
   out.push(['favicon', abs('/favicon.ico', base)]);
-  return out.filter(([, u]) => u);
+  const seen = new Set();
+  return out.filter(([, u]) => u && !seen.has(u) && seen.add(u));
+}
+/** Ikonene i web-manifestet (<link rel=manifest>), største først. Monokrome ikoner og (uten ImageMagick) SVG hoppes over. */
+async function manifestIcons(html, base, svg) {
+  const l = [...html.matchAll(/<link\b[^>]*>/gi)].map((m) => attrs(m[0])).find((x) => /(^|\s)manifest(\s|$)/i.test(x.rel ?? '') && x.href);
+  const url = l ? abs(l.href, base) : null;
+  if (!url) return [];
+  try {
+    const r = await get403(url, {}, 'application/manifest+json,application/json;q=0.9,*/*;q=0.5');
+    if (r.status !== 200) return [];
+    const j = JSON.parse((await r.text()).slice(0, 200_000));
+    return (Array.isArray(j?.icons) ? j.icons : []).filter((i) => i?.src && !/monochrome/i.test(i.purpose ?? ''))
+      .map((i) => ({ u: abs(String(i.src), url), size: sizeOf(i.sizes), svg: svgLike(i.type, String(i.src)) }))
+      .filter((i) => i.u && (svg || !i.svg) && (i.svg || i.size >= 64 || i.size === 0))
+      .sort((a, b) => (b.svg - a.svg) || b.size - a.size).slice(0, 3).map((i) => ['manifest', i.u]);
+  } catch { return []; }
 }
 const sniff = (b) => (b[0] === 0x89 && b[1] === 0x50 ? 'png' : b[0] === 0xff && b[1] === 0xd8 ? 'jpg' : b.slice(0, 4).toString() === 'RIFF' ? 'webp' : b[0] === 0 && b[1] === 0 && b[2] === 1 ? 'ico'
   : b.slice(0, 3).toString() === 'GIF' ? 'gif' : /^\s*(<\?xml|<svg)/i.test(b.slice(0, 200).toString()) ? 'svg' : null);
-const pngSize = (b) => (sniff(b) === 'png' && b.length > 24 ? Math.min(b.readUInt32BE(16), b.readUInt32BE(20)) : null);
-async function getImage(url, verify) {
+/** [bredde, høyde] for PNG, GIF og ICO (største ikon i fila); null når det ikke kan leses billig. */
+function imgDims(b, kind) {
+  if (kind === 'png' && b.length > 24) return [b.readUInt32BE(16), b.readUInt32BE(20)];
+  if (kind === 'gif' && b.length > 10) return [b.readUInt16LE(6), b.readUInt16LE(8)];
+  if (kind === 'ico' && b.length >= 22) { let m = 0; for (let i = 0, n = b.readUInt16LE(4); i < n && 6 + 16 * i + 1 < b.length; i++) m = Math.max(m, b[6 + 16 * i] || 256); return m ? [m, m] : null; }
+  return null;
+}
+const minSide = (img) => (img?.dims ? Math.min(...img.dims) : null);
+/** Henter et bilde. SVG godtas bare med svg:true (ImageMagick finnes og gjør den om til PNG). */
+async function getImage(url, { svg = false, headers = {} } = {}) {
   try {
-    const r = await F(url, { headers: { 'user-agent': 'Mozilla/5.0 (Homelab logo)', accept: 'image/*' } });
+    const r = await get403(url, headers, 'image/avif,image/webp,image/png,image/*;q=0.9,*/*;q=0.5');
     if (r.status !== 200) return null;
     const buf = Buffer.from(await r.arrayBuffer());
     const kind = sniff(buf);
     if (!kind || buf.length < 64 || buf.length > 2_000_000) return null;
-    if (verify) { const px = pngSize(buf); if (px !== null && px < 32) return null; }
-    return { buf, kind };
+    if (kind === 'svg' && !svg) return null;
+    return { buf, kind, dims: imgDims(buf, kind) };
   } catch { return null; }
 }
 async function iconFrom(domain, page, verify) {
+  const svg = !!(await ocrTools().catch(() => ({}))).magick;
   const p = page ?? (await getPage(domain));
-  const cands = p ? iconCandidates(p.html, p.url) : [['favicon', `https://${domain}/favicon.ico`]];
-  for (const [kind, url] of cands) { const img = await getImage(url, verify); if (img) return { ...img, from: kind }; }
-  const s2 = await getImage(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`, false);
-  return s2 ? { ...s2, from: 's2' } : null;
+  let cands = p ? iconCandidates(p.html, p.url, { svg }) : [...(svg ? [['favicon.svg', `https://${domain}/favicon.svg`]] : []), ['favicon', `https://${domain}/favicon.ico`]];
+  if (p) {
+    const man = (await manifestIcons(p.html, p.url, svg)).filter(([, u]) => !cands.some(([, c]) => c === u));
+    const at = cands.findLastIndex(([k]) => k === 'apple-touch-icon') + 1;
+    cands = [...cands.slice(0, at), ...man, ...cands.slice(at)];
+  }
+  let small = null; // under 32 px: bare når ingenting større finnes, og aldri med «Sjekk logoen»
+  for (const [kind, url] of cands) {
+    const img = await getImage(url, { svg });
+    if (!img) continue;
+    if (kind === 'og:image' && img.dims && img.dims[0] !== img.dims[1]) continue; // og:image bare når bildet er kvadratisk
+    const px = minSide(img);
+    if (px !== null && px < 32) { if (!verify && (!small || px > minSide(small))) small = { ...img, from: kind }; continue; }
+    return { ...img, from: kind };
+  }
+  const s2 = await getImage(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`);
+  if (s2 && (minSide(s2) ?? 32) >= 32) return { ...s2, from: 's2' };
+  return small ?? (s2 && !verify ? { ...s2, from: 's2' } : null);
 }
 /** 128×128 PNG med gjennomsiktighet når ImageMagick finnes; ellers lagres originalen (klienten skalerer). */
 async function toPng128(buf, kind) {
   const tl = await ocrTools().catch(() => ({}));
-  if (!tl.magick) return buf;
+  if (!tl.magick) return kind === 'svg' ? null : buf; // SVG lagres aldri som den er
   const dir = await mkdtemp(join(tmpdir(), 'logo-'));
   try {
     const src = join(dir, `in.${kind}`), out = join(dir, 'out.png');
     await writeFile(src, buf);
-    await run(tl.magick, [kind === 'ico' ? `${src}[0]` : src, '-background', 'none', '-resize', '128x128', '-gravity', 'center', '-extent', '128x128', `png:${out}`], { timeout: 15_000 });
+    const pre = kind === 'svg' ? ['-background', 'none', '-density', '384'] : []; // SVG: gjennomsiktig og skarp før den leses
+    await run(tl.magick, [...pre, kind === 'ico' ? `${src}[0]` : src, '-background', 'none', '-resize', '128x128', '-gravity', 'center', '-extent', '128x128', `png:${out}`], { timeout: 15_000 });
     return await readFile(out);
-  } catch { return buf; } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); }
+  } catch { return kind === 'svg' ? null : buf; } finally { await rm(dir, { recursive: true, force: true }).catch(() => {}); }
 }
+/** Lagrer logoen som PNG; null når den ikke kan lagres trygt (SVG uten ImageMagick). */
 async function saveFile(name, buf, kind) {
   await mkdir(LOGO_DIR, { recursive: true });
   const png = await toPng128(buf, kind);
+  if (!png) return null;
   await writeFile(join(LOGO_DIR, name), png);
   return name;
 }
+
+/* ---------------- Steg 3b: Wikidata og Commons (prompt 69) ---------------- */
+
+// Wikimedias regler for API-bruk: tydelig User-Agent med kontaktadresse, én forespørsel om gangen per vert og hurtigbuffer.
+export const WD_UA = 'KristoHomelab-logo/1.0 (https://kristo.no; logo-oppslag fra hjemmeserver)';
+const WD_API = 'https://www.wikidata.org/w/api.php';
+const WD_TIMEOUT_MS = 6000;
+// P31 (forekomst av) som betyr virksomhet, kjede eller merkevare.
+// business, enterprise, company, corporation, public/privately held company, subsidiary, retail/supermarket/restaurant/fast food chain,
+// brand, trademark, shop, supermarket, restaurant, coffeehouse, bank, pharmacy, franchise.
+export const WD_TYPES = new Set(['Q4830453', 'Q6881511', 'Q783794', 'Q167037', 'Q891723', 'Q1589009', 'Q658255', 'Q507619', 'Q18043413', 'Q18534714',
+  'Q18509232', 'Q431289', 'Q167270', 'Q213441', 'Q180846', 'Q11707', 'Q30022', 'Q22687', 'Q13107184', 'Q1774898']);
+const hostChain = new Map();
+/** Kjør fn når forrige forespørsel til samme vert er ferdig (maks 1 om gangen per vert). */
+function oneAtATime(url, fn) {
+  const host = new URL(url).host;
+  const p = (hostChain.get(host) ?? Promise.resolve()).then(() => fn());
+  const tail = p.catch(() => {});
+  hostChain.set(host, tail);
+  tail.then(() => { if (hostChain.get(host) === tail) hostChain.delete(host); });
+  return p;
+}
+async function wdJson(params, deadline) {
+  if (deadline - Date.now() < 300) return { failed: true };
+  const url = `${WD_API}?${new URLSearchParams({ ...params, format: 'json' })}`;
+  return oneAtATime(url, async () => {
+    try {
+      const r = await F(url, { headers: { 'user-agent': WD_UA, 'api-user-agent': WD_UA, accept: 'application/json' }, timeout: Math.max(300, deadline - Date.now()) });
+      return r.status === 200 ? { json: await r.json() } : { failed: r.status >= 500 || r.status === 429 };
+    } catch { return { failed: true }; }
+  });
+}
+// Navnet slik det sammenlignes: normalisert, uten selskapsform og «Norge», uten mellomrom.
+const WD_DROP = new Set(['as', 'asa', 'ab', 'sa', 'norge', 'norway', 'norsk', 'group', 'gruppen', 'konsern', 'ltd', 'inc']);
+const wdKey = (s) => libNorm(s).split(' ').filter((w) => w && !WD_DROP.has(w)).join('');
+const claims = (e, p) => [...(e?.claims?.[p] ?? [])].filter((c) => c.rank !== 'deprecated').sort((a, b) => (b.rank === 'preferred') - (a.rank === 'preferred')).map((c) => c.mainsnak?.datavalue?.value).filter((v) => v != null);
+const qidOf = (v) => (typeof v === 'string' ? v : v?.id ?? (v?.['numeric-id'] ? `Q${v['numeric-id']}` : null));
+/** Godtar en Wikidata-entitet bare når typen, landet/domenet og navnet stemmer. Svarer {id, domain, logo} eller null. */
+export function wdAccept(e, name) {
+  if (!e || !e.claims || 'missing' in e) return null;
+  const key = wdKey(name);
+  if (!key || !claims(e, 'P31').map(qidOf).some((t) => WD_TYPES.has(t))) return null;
+  const domain = claims(e, 'P856').map(cleanDomain).find(Boolean) ?? null;
+  let inRegistry = false;
+  try { inRegistry = !!(domain && itemForDomain(domain)); } catch { /* registeret mangler */ }
+  if (!claims(e, 'P17').map(qidOf).includes('Q20') && !(domain && (domain.endsWith('.no') || inRegistry))) return null;
+  const names = [...Object.values(e.labels ?? {}), ...Object.values(e.aliases ?? {}).flat()].map((x) => x?.value).filter(Boolean);
+  if (!names.some((n) => wdKey(n) === key)) return null;
+  const logo = ['P154', 'P8972', 'P2910'].map((p) => claims(e, p).find((v) => typeof v === 'string')).find(Boolean) ?? null;
+  return { id: e.id, domain, logo };
+}
+const WD_CACHE = new Map();
+const WD_HIT_MS = 30 * 86400_000, WD_FAIL_MS = 3600_000;
+export const _clearWikidataCache = () => WD_CACHE.clear();
+/**
+ * Slår opp butikken i Wikidata. Sender BARE det ryddede navnet (sanert som for Gemini) og logger det i ai_audit (wikidata).
+ * Svarer {id, domain, logo (Commons-filnavn)} eller null. Hurtigbuffer: treff 30 dager, «ingen» 7 dager, nettfeil 1 time.
+ */
+export async function wikidataLookup(name, { u = me() } = {}) {
+  const navn = sanitizeLogoName(name);
+  const key = wdKey(navn);
+  if (!navn || key.length < 2) return null;
+  const hitC = WD_CACHE.get(key);
+  if (hitC && Date.now() < hitC.until) return hitC.val;
+  audit('wikidata', 'logo', { navn }, u);
+  const deadline = Date.now() + WD_TIMEOUT_MS;
+  let failed = false, val = null;
+  const ids = [];
+  for (const language of ['nb', 'en']) {
+    const s = await wdJson({ action: 'wbsearchentities', search: navn, language, uselang: language, type: 'item', limit: '5' }, deadline);
+    failed ||= !!s.failed;
+    for (const h of s.json?.search ?? []) if (/^Q\d+$/.test(h?.id ?? '') && !ids.includes(h.id)) ids.push(h.id);
+    if (ids.length) break;
+  }
+  if (ids.length) {
+    const top = ids.slice(0, 3);
+    const g = await wdJson({ action: 'wbgetentities', ids: top.join('|'), props: 'labels|aliases|claims', languages: 'nb|nn|no|en|mul' }, deadline);
+    failed ||= !!g.failed;
+    for (const id of top) { val = wdAccept(g.json?.entities?.[id], navn); if (val) break; }
+  }
+  if (WD_CACHE.size > 1000) WD_CACHE.delete(WD_CACHE.keys().next().value);
+  WD_CACHE.set(key, { val, until: Date.now() + (val ? WD_HIT_MS : failed ? WD_FAIL_MS : NONE_RECHECK_MS) });
+  return val;
+}
+/** Commons-fil som PNG (Commons skalerer, også SVG-logoer). Serveren tar aldri imot SVG herfra. */
+export const commonsPngUrl = (file) => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(String(file).trim().replace(/ /g, '_'))}?width=256`;
+const commonsImage = (file) => { const url = commonsPngUrl(file); return oneAtATime(url, () => getImage(url, { headers: { 'user-agent': WD_UA } })); };
 
 /* ---------------- Steg 3: Brønnøysundregistrene ---------------- */
 
@@ -269,8 +425,13 @@ async function tryDomain(domain, key, { verify, requireTitle = null }) {
   const icon = await iconFrom(d, page, verify);
   if (!icon) return null;
   const file = await saveFile(`${key}.png`, icon.buf, icon.kind);
-  return { domain: d, file, from: icon.from };
+  return file ? { domain: d, file, from: icon.from } : null;
 }
+
+// Gemini-domener som aldri er butikkens eget nettsted (sosiale medier, kart og kataloger).
+const NOT_SHOP = /(^|\.)(facebook|fb|instagram|google|goo|gulesider|proff|1881|finn|tripadvisor|linkedin|tiktok|youtube|twitter|x|wikipedia|yelp|mapquest)\.[a-z.]+$/;
+/** Domenene fra Gemini i rekkefølge: hoveddomenet, så alternativene. Maks 3, uten dubletter og sosiale medier. */
+export const geminiDomains = (g) => [...new Set([g?.domene, ...(g?.alternativer ?? [])].map(cleanDomain).filter((d) => d && !NOT_SHOP.test(d)))].slice(0, 3);
 
 const inflight = new Map();
 /**
@@ -286,7 +447,7 @@ export async function findLogo(rawName, { orgnr = null, receiptId = null, force 
     const cur = rowOf(u, c.key);
     if (cur?.manual) return out(cur); // manuelle valg vinner alltid
     if (cur && !force && Date.now() - cur.checked_at < (cur.source === 'none' ? NONE_RECHECK_MS : RECHECK_MS)) return out(cur);
-    const verify = userBool(u, 'logo_verify'), useGemini = userBool(u, 'logo_gemini'), localReceipts = userBool(u, 'logo_local_receipts');
+    const verify = userBool(u, 'logo_verify'), useGemini = userBool(u, 'logo_gemini'), useWikidata = userBool(u, 'logo_wikidata'), localReceipts = userBool(u, 'logo_local_receipts');
     const save = (v) => { upsert(u, c.key, { ...v, name: c.name }); return out(rowOf(u, c.key)); };
     // Steg 2b: kjent kjede i logobiblioteket (ferdig fil eller kjent domene).
     const lib = matchMerchant(c.name) ?? matchMerchant(rawName);
@@ -311,11 +472,23 @@ export async function findLogo(rawName, { orgnr = null, receiptId = null, force 
     // Steg 3: Brreg.
     hit = await attempt(await brregDomain(c.name, orgnr), 'brreg');
     if (hit) return hit;
+    // Steg 3b: Wikidata (bare det ryddede navnet), når brukeren ikke har slått det av.
+    if (useWikidata) {
+      const w = await wikidataLookup(c.name, { u });
+      if (w?.logo) {
+        const img = await commonsImage(w.logo);
+        const file = img && (minSide(img) ?? 32) >= 32 ? await saveFile(`${c.key}.png`, img.buf, img.kind) : null;
+        if (file) return save({ domain: w.domain, file, source: 'wikidata' });
+      }
+      if (w?.domain) { hit = await attempt(w.domain, 'wikidata'); if (hit) return hit; }
+    }
     // Steg 4: Gemini (bare navn + land), bare når brukeren har slått det på.
     if (useGemini) {
       const g = await logoLookup(c.name, country);
-      // Gå videre bare når domenet svarer og (med «Sjekk logoen») tittelen på siden inneholder navnet, som i steg 5.
-      if (g && g.sikkerhet >= 0.5) { hit = await attempt(g.domene, 'gemini', { verify: true, requireTitle: verify ? c.name : null }); if (hit) return hit; }
+      // Lav sikkerhet → ingen forsøk. Ellers maks 3 domener i rekkefølge; hvert må svare og (med «Sjekk logoen») ha navnet i <title>.
+      if (g && g.sikkerhet >= 0.5) {
+        for (const d of geminiDomains(g)) { hit = await attempt(d, 'gemini', { verify: true, requireTitle: verify ? c.name : null }); if (hit) return hit; }
+      }
     }
     // Steg 5: gjett domenet. Krever 200 og at <title> inneholder navnet.
     const base = slug(c.name).replace(/-/g, '');
