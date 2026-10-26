@@ -30,6 +30,8 @@ import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STA
 import { begin60, ctx60, facts60, afterPlan60, adjust60, finish60, confirmed60, convoTrace60 } from '../convo60/engine60.js';
 // Prompt 61 (prompt 49 del 1): oppskrifter som lærer av bruk – krokene ligger i recipes61/engine61.js.
 import { prepare61, finish61, confirmed61 } from '../recipes61/engine61.js';
+// Prompt 62 (prompt 49 del 2): planlagte oppgaver – verktøyene schedule.* i registeret (sched62/tools.js).
+import '../sched62/tools.js';
 installTaskHooks46(); installPosterDecorator46(); // Gjøremål: plukk ut, ikke skriv om · plakat på kinoavtaler
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt45_requests (user_id TEXT NOT NULL, key TEXT NOT NULL, state TEXT NOT NULL, response TEXT, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));
@@ -249,7 +251,8 @@ async function pipeline(user, text, opts) {
   const fast = fast59(user);
   if (opts.signal?.aborted) throw abortErr59();
   // Prompt 59: modellkallene får brukerens Stopp-signal (gaten avbryter kallet).
-  const planCall = opts.signal ? (o) => plannerCall47({ ...o, signal: opts.signal }) : plannerCall47;
+  // Prompt 62 (del 2): planlagte oppgaver kjøres som vanlige forespørsler med bakgrunnsprioritet i gaten (opts.background).
+  const planCall = opts.signal || opts.background ? (o) => plannerCall47({ ...o, ...(opts.signal ? { signal: opts.signal } : {}), ...(opts.background ? { background: true } : {}) }) : plannerCall47;
   if (!plan && !opts.noModel && modelAvailable45()) {
     const info = await modelInfo45(user);
     emit59(opts, 'status', PLAN_STATUS59);
@@ -343,7 +346,7 @@ async function pipeline(user, text, opts) {
     return out;
   }
   const ctxT = { user, text, today, nowMin, context, module: opts.module, preview: !!opts.preview, facts, c47, trace: tr, webSearch: opts.webSearch !== false,
-    fast, onEvent: opts.onEvent ?? null, signal: opts.signal ?? null, compare: plan.compare ?? null, c60 }; // prompt 59 · prompt 60
+    fast, onEvent: opts.onEvent ?? null, signal: opts.signal ?? null, compare: plan.compare ?? null, c60, background: !!opts.background }; // prompt 59 · prompt 60 · prompt 62
   if (c60) c60.plan = { intent: plan.intent, calls: ownedCalls };
   let out = await executePlan(user, { ...plan, calls: ownedCalls }, ctxT, base, t0);
   if (opts.signal?.aborted) throw abortErr59();
@@ -417,7 +420,7 @@ async function plannerCall47(o) {
   const sp = STEP47[o.step] ?? STEP47.planner;
   // Prompt 55: tidsgrensen gjelder selve svaret – en kald modell (modellbytte) får lastetiden i tillegg (deadlineAfterLoad i gaten).
   const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, ...(o.mode === 'tools' && o.tools ? { ollamaTools: o.tools } : { schema: o.schema }), step: o.step,
-    localOnly: true, background: false, title: 'Glimt · forstår', timeoutMs: sp.timeoutMs, deadlineAfterLoad: true, noRetry: true, retries: 0, ...(o.signal ? { signal: o.signal } : {}) });
+    localOnly: true, background: !!o.background, title: o.background ? 'Glimt · planlagt oppgave' : 'Glimt · forstår', timeoutMs: sp.timeoutMs, deadlineAfterLoad: true, noRetry: true, retries: 0, ...(o.signal ? { signal: o.signal } : {}) });
   return { toolCalls: out.toolCalls ?? null, text: out.text, data: out.data, model: out.model, tokens: out.tokens, params: out.params, timing: out.timing ?? null };
 }
 /** Svarstegets modellkall (fritekst og nettsøk): ruten «glimt», steg answer. */
@@ -427,7 +430,7 @@ export const _setAnswerModel47 = (fn) => { answerImpl47 = fn ?? null; };
 async function answerCall47(o) {
   if (answerImpl47) { const r = await answerImpl47(o); return { text: r?.text ?? '', model: r?.model ?? 'test' }; }
   const ai = await import('../ai-run.js');
-  const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, step: 'answer', localOnly: true, background: false, title: 'Glimt · svarer', timeoutMs: STEP47.answer.timeoutMs, noRetry: true, retries: 0,
+  const out = await ai.run('glimt', { user: o.user, system: o.system, prompt: o.prompt, step: 'answer', localOnly: true, background: !!o.background, title: o.background ? 'Glimt · planlagt oppgave' : 'Glimt · svarer', timeoutMs: STEP47.answer.timeoutMs, noRetry: true, retries: 0,
     ...(o.onToken ? { onToken: o.onToken } : {}), ...(o.signal ? { signal: o.signal } : {}) }); // prompt 59: strømming og Stopp
   return { text: out.text, model: out.model, tokens: out.tokens, params: out.params, timing: out.timing ?? null };
 }
@@ -569,7 +572,7 @@ async function executePlan(user, plan, ctxT, base, t0) {
     emit59(ctxT, 'status', ANSWER_STATUS59);
     // Prompt 59: svarformuleringen strømmes (token for token) når kalleren lytter; Stopp avbryter modellkallet.
     const onToken = ctxT.onEvent ? (t) => emit59(ctxT, 'token', { t, source: 'model' }) : null;
-    const call = onToken || ctxT.signal ? (o) => answerCall47({ ...o, ...(onToken ? { onToken } : {}), ...(ctxT.signal ? { signal: ctxT.signal } : {}) }) : answerCall47;
+    const call = onToken || ctxT.signal || ctxT.background ? (o) => answerCall47({ ...o, ...(onToken ? { onToken } : {}), ...(ctxT.signal ? { signal: ctxT.signal } : {}), ...(ctxT.background ? { background: true } : {}) }) : answerCall47;
     const a = await answer47(user, ctxT.text, { ctx: ctxT.c47, web, call, trace: ctxT.trace });
     answerModel = a.model;
     if (a.error) anyFail = true;

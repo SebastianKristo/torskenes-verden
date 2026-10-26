@@ -74,6 +74,7 @@ const LOCAL = [
   ['glimt-figur', 'Glimt-figur', 'Glimt → Glimt-figur', 'glimt', 'figur figurer karakter maskot gris ugle sky dråpe stjerne spire halo boble blekksprut', 'glimt-fig'],
   ['glimt-stemme', 'Stemme og opplesning', 'Glimt → Stemmemotor', 'glimt', 'stemme stemmer opplesning les opp tts tale openai elevenlabs azure engelsk tempo', 'glimt-voice'],
   ['backup-now', 'Ta backup nå', 'Backup → Ta backup nå', 'backup', 'backup nå manuell kjør start', 'bk-now'],
+  ['faste-oppgaver', 'Faste oppgaver', 'Glimt → Faste oppgaver', 'faste-oppgaver', 'faste oppgaver planlagte planlagt påminnelse minn meg strømpris varsel betinget hver morgen kjør nå pause prisområde'], // prompt 62
 ].map(([id, title, path, web, kw, anchor]) => ({ id, title, path, keywords: kw.split(' '), description: '', route: { web }, ...(anchor ? { anchor } : {}) }));
 
 /** Mål-id → velger når elementet ikke har data-hl selv (eller fanen i AI-kontroll som må åpnes først). */

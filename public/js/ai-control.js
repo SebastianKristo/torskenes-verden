@@ -52,6 +52,8 @@ if (typeof document !== 'undefined') import('./fast59.js').catch(() => {});
 if (typeof document !== 'undefined') import('./understand60.js').catch(() => {});
 // Prompt 61 (prompt 49 del 1): «Glimt lærer» (Lagre oppskrifter, Bruk som eksempler, Hurtigvei, Lær av rettelser) under «Forstår samtaler» fylles av recipes61.js.
 if (typeof document !== 'undefined') import('./recipes61.js').catch(() => {});
+// Prompt 62 (prompt 49 del 2): «Faste oppgaver» (Planlagte oppgaver, Betingede varsler, Stille timer, prisområde) under «Glimt lærer» fylles av sched62.js.
+if (typeof document !== 'undefined') import('./sched62.js').catch(() => {});
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 const nb = (n, d = 0) => Number(n || 0).toLocaleString('nb-NO', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -695,7 +697,7 @@ function rtTab(o) {
       ['idleTimeout', 'Tid uten nye tokens · tekst', 'Stopper bare når svaret står stille, ikke mens det skrives', IDLET], ['idleTimeoutImage', 'Tid uten nye tokens · bilde', 'Bilder (kvitteringer, strekkoder) trenger mer tid', IDLEI]])
     .map(([k, n, s, opts]) => { const cur = opts.find((x) => String(x[0]) === String(P[k])); return `<div class="ac-par"><span class="ac-row ac-sb"><span class="ac-col"><b>${n}</b><span>${s}</span></span><b class="ac-mono">${esc(cur?.[1] ?? P[k] ?? '–')}</b></span><div class="ac-seg">${opts.map(([v, l]) => `<button type="button" class="${String(P[k]) === String(v) ? 'on' : ''}" data-ac-par="${k}" data-v="${esc(JSON.stringify(v))}"${admin || k === 'temperature' ? '' : ' disabled'}>${l}</button>`).join('')}</div></div>`; }).join('');
   return `${rwBox}${fin ? '' : glCard() + beMini(admin)}<div class="ac-sec">${lab(fin ? 'HVILKEN MODELL GJØR HVA I FINANS' : 'HVILKEN MODELL GJØR HVA')}<div class="ac-card ac-list">${rows}</div>${admin ? '' : '<div class="ac-note">Du kan velge egne modeller for Chat, AI-søk, Glimt og brief. Resten bestemmer administrator.</div>'}</div>
-    ${fin ? '' : '<div data-omlx58-rt></div><div data-fast59></div><div data-understand60></div><div data-recipes61></div>'}
+    ${fin ? '' : '<div data-omlx58-rt></div><div data-fast59></div><div data-understand60></div><div data-recipes61></div><div data-sched62></div>'}
     <div class="ac-sec">${lab('REGLER')}<div class="ac-card ac-list">${rules}</div></div>
     <div class="ac-sec">${lab('PARAMETRE')}<div class="ac-card ac-list">${par}</div></div>
     ${fin ? '' : mkaCard(P, admin)}`;

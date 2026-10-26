@@ -15,6 +15,7 @@ import { agentStream59, cacheNote59 } from './stream59.js'; // prompt 59: Glimt-
 import { agentText, isPlain, agentConfirm } from './glimt-agent45.js';
 import { chatConv60, bindConv60, rekeyConv60, newChatConv60, forgetConv60, choicePick60, followsGlimt60 } from './convo60.js'; // prompt 60: samtale-id, valgknapper
 import { thumbs61Html } from './recipes61.js'; // prompt 61: tommel opp/ned på Glimt-svar
+import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './sched62.js'; // prompt 62: kortet for en fast oppgave + kvittering
 import { cardHtml, bindCards } from './chat-cards.js';
 import { factsHtml41, usedWithoutFacts41 } from './chat-facts41.js'; // prompt 41: faktakort
 import { css50, rejectReason50, isImg50, upload50, attRow50, bubbleImgs50, otherFiles50, filePills50, imagesOf50, bindDrop50, pastedFiles50, lightbox50, readWith50, finansBtn50, MAX_FILES50 } from './chat50.js'; // prompt 50: vedlegg, miniatyr, lysboks
@@ -263,7 +264,7 @@ function msgsHtml() {
     const who = meta.glimt ? 'GLIMT' : `GLIMT · ${(meta.auto?.modelName ?? mName(meta.auto?.model || meta.model || C.chat?.model || '')).toUpperCase()}`;
     const pu = i > 0 && msgs[i - 1]?.role === 'user' ? i - 1 : -1; // prompt 50: bildet svaret leste, som liten miniatyr + filnavn
     return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">${glimt(22, 'klar')}${esc(who)}</span>${pu >= 0 ? filePills50(msgs[pu], pu) : ''}${tool.map((u) => `<span class="ch-used ch-tool">${esc(u)}</span>`).join('')}${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
-      ${(() => { const th = thinkOf52(m); return th ? thinkHtml52({ key, steps: th.steps, s: th.s, source: th.source, open: !!C.thOpen?.[key] }) : ''; })()}<div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${i === lastA && !busyHere ? choices60Html(meta, i) : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}${finansBtn50(meta, `${C.cur}:${i}`, C.fin50?.[`${C.cur}:${i}`])}${readWith50(meta)}
+      ${(() => { const th = thinkOf52(m); return th ? thinkHtml52({ key, steps: th.steps, s: th.s, source: th.source, open: !!C.thOpen?.[key] }) : ''; })()}<div class="ch-md" data-no-i18n>${md(m.content)}</div>${factsHtml41(meta.facts)}${meta.card ? `<div class="ch-card">${cardHtml(meta.card)}</div>` : ''}${meta.s62done ? schedDone62Html(meta.s62done) : ''}${i === lastA && !busyHere ? choices60Html(meta, i) : ''}${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}${finansBtn50(meta, `${C.cur}:${i}`, C.fin50?.[`${C.cur}:${i}`])}${readWith50(meta)}
       <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere && !meta.glimt ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}${i === lastA && !busyHere && !C.web && C.webAsk46 && String(C.webAsk46.chatId ?? '') === String(C.cur ?? '') ? `<button type="button" class="ch-web46" data-ch-web46="${i}">${svg(IC.web, 15)}${esc(C.webAsk46.action?.label ?? 'Søk denne gangen')}</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? `Stopp${C.speakAi ? aiTag57() : ''}` : 'Les høyt'}</button>${meta.glimt && meta.traceId && !meta.stopped ? thumbs61Html(meta.traceId) : ''}${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
   }).join('') + (busyHere ? streamHtml() : '');
 }
@@ -271,7 +272,8 @@ function msgsHtml() {
 function choices60Html(meta, i) {
   const c = meta.choices, f = meta.confirm, out = [];
   if (c?.items?.length) out.push(`<div class="ga45-ask ga60-ch" data-ch-set60="${esc(c.setId ?? '')}"><div class="ga45-opts" role="group" aria-label="Velg">${c.items.map((x, j) => `<button type="button" class="ga45-o" data-ch-ch60="${i}:${j}" data-no-i18n>${esc(x.label)}</button>`).join('')}</div></div>`);
-  if (f?.token) out.push(`<div class="ga45-cf">${f.summary && !String(meta.content ?? '').includes(f.summary) ? `<b data-no-i18n>${esc(f.summary)}</b>` : ''}<div class="ga45-opts"><button type="button" class="ga45-o danger" data-ch-cf60="yes:${i}">Ja, gjør det</button><button type="button" class="ga45-o" data-ch-cf60="no:${i}">Avbryt</button></div></div>`);
+  const p62 = f?.token ? meta.s62 ?? null : null; // prompt 62: hva, når, betingelse og neste kjøringer over Ja/Avbryt
+  if (f?.token) out.push(`<div class="ga45-cf">${f.summary && !p62 && !String(meta.content ?? '').includes(f.summary) ? `<b data-no-i18n>${esc(f.summary)}</b>` : ''}${p62 ? schedCard62Html(p62) : ''}<div class="ga45-opts">${p62 ? `<button type="button" class="ga45-o${/^(delete|stop|pause)$/.test(p62.action) ? ' danger' : ''}" data-ch-cf60="yes:${i}">${esc(yesLabel62(p62))}</button>` : `<button type="button" class="ga45-o danger" data-ch-cf60="yes:${i}">Ja, gjør det</button>`}<button type="button" class="ga45-o" data-ch-cf60="no:${i}">Avbryt</button></div></div>`);
   return out.length ? `<div class="ga45 ch-ga60">${out.join('')}</div>` : '';
 }
 /** Prompt 60: «Ja, gjør det» / «Avbryt» på en endrende handling (POST /api/glimt/agent/confirm {token}). */
@@ -284,7 +286,7 @@ async function confirm60(i, yes) {
   if (!yes) text = 'Greit, jeg lot det være.';
   else {
     C.busy = { chatId: C.cur, model: 'Glimt', glimt: true, text: '', ctl: new AbortController() }; paint(); toBottom();
-    try { const a = await agentConfirm(token); text = agentText(a) || 'Ferdig.'; if (a.choices) meta.choices = a.choices; if (a.confirm) meta.confirm = a.confirm; if (a.traceId) meta.traceId = a.traceId; }
+    try { const a = await agentConfirm(token); text = agentText(a) || 'Ferdig.'; if (a.choices) meta.choices = a.choices; if (a.confirm) meta.confirm = a.confirm; if (a.traceId) meta.traceId = a.traceId; const p62 = a.confirm ? preview62(a) : null, d62 = done62(a); if (p62) meta.s62 = p62; if (d62) meta.s62done = d62; }
     catch (e) { text = e.message || 'Fikk ikke utført handlingen.'; meta.error = text; }
     C.busy = null;
   }
@@ -584,9 +586,9 @@ async function sendTool(t, o60 = {}) {
     }
   }
   C.busy = null;
-  if (!a?.text || a.intent === 'llm' || a.intent === 'chat' || (!a.card && !a.tool && !/^(weather|calendar|departures|packages|finance|tasks|trial|appointment)/.test(a.intent ?? ''))) { C.chat = before.chat; return false; }
+  if (!a?.text || a.intent === 'llm' || a.intent === 'chat' || (!a.card && !a.tool && !/^(weather|calendar|departures|packages|finance|tasks|trial|appointment|schedule)/.test(a.intent ?? ''))) { C.chat = before.chat; return false; }
   const am = { role: 'assistant', content: a.text, ts: Date.now(), meta: { glimt: true, tool: a.tool ?? null, card: a.card ?? null, ms: a.ms ?? 0, source: a.source ?? '', model: 'Glimt', ...(a.cached ? { cached: true, note: a.notice } : {}),
-    ...(a.choices ? { choices: a.choices } : {}), ...(a.confirm ? { confirm: a.confirm } : {}), ...(conv60 ? { conv60 } : {}), ...(a.traceId ? { traceId: a.traceId } : {}) } }; // prompt 60: valgknapper / bekreftelse · prompt 61: traceId (tommel)
+    ...(a.choices ? { choices: a.choices } : {}), ...(a.confirm ? { confirm: a.confirm } : {}), ...(conv60 ? { conv60 } : {}), ...(a.traceId ? { traceId: a.traceId } : {}), ...(a.s62 ? { s62: a.s62 } : {}) } }; // prompt 60: valgknapper / bekreftelse · prompt 61: traceId (tommel) · prompt 62: oppgavekortet
   if (a.chatId && !isLocalId(a.chatId)) {
     // Serveren lagret spørsmålet og svaret i samtalen. Kortet lagres også lokalt, i tilfelle serveren ikke tar vare på det.
     toolsAdd(String(a.chatId), [userMsg, am]);
@@ -612,7 +614,7 @@ function fromAgent59(g, q) {
   // Gamle svar (vær, avganger, pakker …) kommer med sitt eget kort i legacyAnswer.
   if (raw.legacyAnswer && typeof raw.legacyAnswer === 'object') {
     const L = normAnswer(raw.legacyAnswer);
-    return { ...L, text: agentText(g) || L.text, ms: raw.ms ?? L.ms, cached: g.cached, notice: cacheNote59(g) || L.notice, choices: g.choices, confirm: g.confirm, traceId: g.traceId ?? raw.traceId ?? null };
+    return { ...L, text: agentText(g) || L.text, ms: raw.ms ?? L.ms, cached: g.cached, notice: cacheNote59(g) || L.notice, choices: g.choices, confirm: g.confirm, traceId: g.traceId ?? raw.traceId ?? null, s62: g.confirm ? preview62(g) : null };
   }
   const a0 = g.actions[0] ?? null, tool = a0?.tool ?? null;
   if (isPlain(g) && ['chat', 'ask', ''].includes(g.intent)) return { text: agentText(g), intent: 'chat' };
@@ -628,7 +630,7 @@ function fromAgent59(g, q) {
     card = { k: 'tasks', count: ts.length, items: ts.map((x) => ({ id: x.id, title: x.title, due: x.date, done: !!x.done })) };
   }
   const src = SRC59[g.module] ?? 'Glimt';
-  return { text: agentText(g) || 'Ferdig.', intent: tool ?? g.intent ?? 'agent', tool: src, source: src, card, ms: raw.ms ?? 0, cached: g.cached, notice: cacheNote59(g), q, choices: g.choices, confirm: g.confirm, traceId: g.traceId ?? raw.traceId ?? null };
+  return { text: agentText(g) || 'Ferdig.', intent: tool ?? g.intent ?? 'agent', tool: src, source: src, card, ms: raw.ms ?? 0, cached: g.cached, notice: cacheNote59(g), q, choices: g.choices, confirm: g.confirm, traceId: g.traceId ?? raw.traceId ?? null, s62: g.confirm ? preview62(g) : null };
 }
 
 async function readSse(res, ctl) {

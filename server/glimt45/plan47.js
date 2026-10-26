@@ -13,7 +13,8 @@ import { TOOLS45, TOOL45, ollamaTools45 } from './tools.js';
 import { STEP47, fitParts47, estTokens47 } from './params47.js';
 import { contextBlock47 } from './context.js';
 
-export const INTENTS47 = ['calendar_query', 'calendar_create', 'calendar_change', 'weather', 'finance_query', 'todo', 'web_search', 'media', 'memory_save', 'chat', 'app'];
+// Prompt 62 (del 2): schedule_create|list|update|delete – planlagte oppgaver (server/sched62/tools.js).
+export const INTENTS47 = ['calendar_query', 'calendar_create', 'calendar_change', 'weather', 'finance_query', 'todo', 'web_search', 'media', 'memory_save', 'schedule_create', 'schedule_list', 'schedule_update', 'schedule_delete', 'chat', 'app'];
 /** Hvilke verktøy hver intent får utføre (verktøyutvalg per intent i utførelsen). */
 export const INTENT_TOOLS47 = {
   calendar_query: ['calendar.search', 'calendar.next', 'calendar.list'],
@@ -25,6 +26,10 @@ export const INTENT_TOOLS47 = {
   web_search: ['web.search'],
   media: ['media.episode'],
   memory_save: ['memory.save'],
+  schedule_create: ['schedule.create'],
+  schedule_list: ['schedule.list'],
+  schedule_update: ['schedule.update', 'schedule.delete'],
+  schedule_delete: ['schedule.delete', 'schedule.update'],
   chat: ['chat.answer'],
   app: ['app.answer', 'nav.open'],
 };
@@ -52,6 +57,10 @@ const TOOL_LINES47 = {
   'memory.save': '{subject, object} remember a fact the user states about someone/something ("Nina er frisøren min" → subject "Nina", object "frisør").',
   'web.search': '{query} current facts that may have changed: people in office, news, prices, results, events.',
   'media.episode': '{title, pick:"latest"|"next", season, episode} TV episodes in Sonarr ("last ned siste episode av X").',
+  'schedule.create': '{what, when, condition} a recurring or scheduled task ("hver morgen kl. 7", "den 1. hver måned", "hver fredag kl. 16") or an alert with a condition ("si fra hvis …"). what = the request to run each time, in Norwegian; when and condition = the user\'s raw words. Never evaluate the condition. The app asks for confirmation.',
+  'schedule.list': '{} list the user\'s scheduled tasks ("faste oppgaver") and briefs.',
+  'schedule.update': '{target, when, action:"move"|"pause"|"resume"} move or pause a scheduled task or a brief ("flytt morgenbriefen til 06:30"). when = raw words.',
+  'schedule.delete': '{target} stop or delete a scheduled task or alert ("stopp strømprisvarselet").',
   'nav.open': '{target} open a page in the app (only when asked to open/go to a page).',
   'app.answer': '{topic:"departures"|"packages"|"sun"|"family"|"trial"|"school"|"other"} public transport departures, package tracking, sunrise/daylight, where family members are, registering a free trial, school tests.',
   'chat.answer': '{} general knowledge, explanations or small talk that need no app data and no fresh facts.',
@@ -78,6 +87,13 @@ const FEWSHOTS47 = [
   ex('og i Bergen?   [State: weather.get(place=Oslo, when=i morgen)]', 'weather', [{ tool: 'weather.get', args: { place: 'Bergen' } }], null, true),
   ex('flytt den til 11   [State: last event «Tannlege» fredag 10:00]', 'calendar_change', [{ tool: 'calendar.update', args: { target: 'den', time: '11' } }], null, true),
   ex('si opp det   [State: last subscription Aftenposten Digital]', 'finance_query', [{ tool: 'subscriptions.cancel', args: { service: 'det' } }], null, true),
+  // Prompt 62 (del 2): planlagte oppgaver – hva + når som råtekst, betingelsen som råtekst (koden tolker og sjekker den).
+  ex('Send meg strømprisene hver morgen kl. 7', 'schedule_create', [{ tool: 'schedule.create', args: { what: 'strømprisene for i dag', when: 'hver morgen kl. 7' } }]),
+  ex('Minn meg på å betale husleia den 1. hver måned', 'schedule_create', [{ tool: 'schedule.create', args: { what: 'betale husleia', when: 'den 1. hver måned' } }]),
+  ex('Si fra hvis strømprisen går over 2 kr i morgen', 'schedule_create', [{ tool: 'schedule.create', args: { what: 'strømprisen i morgen', when: 'i morgen', condition: 'strømprisen går over 2 kr' } }]),
+  ex('Hvilke faste oppgaver har jeg?', 'schedule_list', [{ tool: 'schedule.list', args: {} }]),
+  ex('Flytt morgenbriefen til 06:30', 'schedule_update', [{ tool: 'schedule.update', args: { target: 'morgenbriefen', when: '06:30', action: 'move' } }]),
+  ex('Stopp strømprisvarselet', 'schedule_delete', [{ tool: 'schedule.delete', args: { target: 'strømprisvarselet' } }]),
 ];
 const buildSystem47 = () => `You are the planner for Glimt, a personal assistant in a Norwegian app. Turn the user's message into tool calls. You never answer the user yourself.
 Reply with ONLY JSON: {"intent": one of ${INTENTS47.join('|')}, "calls": [{"tool": "...", "args": {...}}], "needs_clarification": bool, "clarification_question": string or null}.
@@ -88,6 +104,7 @@ Rules:
 - Titles are short (max 60 characters), never the whole message. Put the place in location.
 - Use Memory facts: when a person or alias is mentioned, search with the name AND the related terms.
 - Fresh facts (people in office, news, prices, results) → web.search. Timeless knowledge → chat.answer. Never call calendar, finance or to-do tools for general questions.
+- Something to do at a time or repeatedly ("hver …", "den 1. hver måned", "si fra hvis …") → schedule.create (not tasks.create or calendar.create). A one-off reminder without repetition is still tasks.create.
 - If the request is genuinely ambiguous, set needs_clarification true, no calls, and ask ONE short question in Norwegian (bokmål).
 - "Conversation state" in the context is the previous turn. If the message continues it ("og i Bergen?", "flytt den til 11", "si opp det"), set refers_to_previous true and give only what the message changes; the code fills in the rest. A new, complete request has refers_to_previous false.
 Tools:
@@ -221,5 +238,9 @@ export function planGap47(local, plan) {
   }
   if (lc.some((c) => c.tool === 'finance.subscriptions' || c.tool === 'finance.fixed') && !pc.some((c) => c.tool === 'finance.subscriptions' || c.tool === 'finance.fixed')) out.push("This is about the user's registered subscriptions or fixed costs: use finance.subscriptions (or finance.fixed). Never answer from your own knowledge.");
   if (lc.some((c) => c.tool === 'subscriptions.trial') && !pc.some((c) => c.tool === 'subscriptions.trial')) out.push('The user wants to cancel a subscription by a date: include subscriptions.trial (and tasks.create if they asked for a reminder).');
+  // Prompt 62: tekstmønstrene ser en gjentakelse/et betinget varsel («hver morgen kl. 7», «si fra hvis …») som planen ikke dekker.
+  for (const t of ['schedule.create', 'schedule.list', 'schedule.update', 'schedule.delete']) {
+    if (lc.some((c) => c.tool === t) && !pc.some((c) => /^schedule\./.test(c.tool))) { out.push(t === 'schedule.create' ? 'This is a scheduled or recurring task (or an alert with a condition): use schedule.create with what, when and condition as raw text.' : `This is about the user's scheduled tasks: use ${t}.`); break; }
+  }
   return out.length ? out.join(' ') : null;
 }

@@ -37,6 +37,7 @@ import { glimtSettingsHtml, loadGlimt, glimtClick, glimtChange, glimtSubmit } fr
 import { TABS44, modeGroup44, loggerView44, huskeView44, usersGroups44, click44 } from './settings44.js'; // prompt 44
 import { TABS46, ALIAS46, nyheterView46, gphotoBox46 } from './settings46.js'; // prompt 46: Innstillinger → Nyheter
 import { TABS51, ALIAS51, sikkerhetView51 } from './sec51.js'; // prompt 51 (SEC51): Innstillinger → Sikkerhet
+import { TABS62, ALIAS62, fasteView62 } from './settings62.js'; // prompt 62 (prompt 49 del 2): Innstillinger → Faste oppgaver
 import { TABS45, ALIAS45, mediaView45, ruterView45, zoneGroups45, click45, setRender45, huskeTips45, vaerView45, studieView45, finansView45 } from './settings45.js'; // prompt 45: Media, Ruter, sonevarsler
 
 const modal = () => document.getElementById('settings');
@@ -95,6 +96,7 @@ const TABS = [
   ['app', 'App', 'Navn på appen, app-ikon, widgets og Kalender-appen.', 'Generelt', P.app],
   ['familie', 'Familie', 'Helsekilder: Apple Health, Health Connect og Home Assistant.', 'Generelt', P.users], // prompt 42
   ['glimt', 'Glimt', 'Figur, brief, stemme og venner.', 'Glimt', P.star],
+  ...TABS62, // prompt 62: Faste oppgaver (planlagte oppgaver fra Glimt)
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
   TABS44[0], // prompt 44: Gjøremål (synk med Home Assistant)
@@ -109,7 +111,7 @@ const TABS = [
 ];
 const tabsFor = () => TABS.filter((t) => !t[5] || isAdmin());
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', ...ALIAS45, ...ALIAS46, ...ALIAS51 };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup', brief: 'glimt', stemme: 'glimt', figur: 'glimt', tts: 'glimt', opplesning: 'glimt', helse: 'familie', family: 'familie', fam: 'familie', logg: 'logger', logs: 'logger', docker: 'logger', gjoremal: 'huske', huskeliste: 'huske', tasks: 'huske', ...ALIAS45, ...ALIAS46, ...ALIAS51, ...ALIAS62 };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app', hahealth: 'familie' };
@@ -591,7 +593,7 @@ const glimtView = () => ({ html: glimtSettingsHtml({ figs: true }), search: [gro
   row({ t: 'Stemme og opplesning', s: 'Les opp, stemmemotor (OpenAI, ElevenLabs, Azure, VoxCPM2 lokalt), stemme, språk og tempo', go: 'glimt', btn: 'Åpne', k: 'stemme opplesning les opp tts tale engelsk tempo openai elevenlabs azure voxcpm' }),
   row({ t: 'Stemmer', s: 'Lag stemme fra beskrivelse, klon en stemme, egen stemme for nyhetsleseren (VoxCPM2 på Mac mini-en)', go: 'glimt', btn: 'Åpne', k: 'stemmer klone klon stemmekloning voxcpm nyhetsleser nyhetsoppleser egen stemme beskrivelse' }), // prompt 57
 ])] });
-const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => withZones45(notifyView(H), 'varsel'), app: () => appView({ ...H, sub }), familie: () => (sub ? fam42View(H, sub) : withZones45(fam42View(H, sub), 'familie')), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H), logger: () => loggerView44(H), huske: () => { setRender45(() => { if (!modal().hidden && tab === 'huske') render(); }); const v = huskeView44(H); return { ...v, extra: (v.extra ?? '') + huskeTips45(H) }; }, media: () => (setRender45(rerender45), mediaView45(H)), ruter: () => (setRender45(rerender45), ruterView45(H)), vaer: () => (setRender45(rerender45), vaerView45(H)), studie: () => studieView45(H), finans: () => finansView45(H), nyheter: () => nyheterView46(H), sikkerhet: () => sikkerhetView51(H) };
+const VIEWS = { glimt: glimtView, konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => withZones45(notifyView(H), 'varsel'), app: () => appView({ ...H, sub }), familie: () => (sub ? fam42View(H, sub) : withZones45(fam42View(H, sub), 'familie')), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H), logger: () => loggerView44(H), huske: () => { setRender45(() => { if (!modal().hidden && tab === 'huske') render(); }); const v = huskeView44(H); return { ...v, extra: (v.extra ?? '') + huskeTips45(H) }; }, media: () => (setRender45(rerender45), mediaView45(H)), ruter: () => (setRender45(rerender45), ruterView45(H)), vaer: () => (setRender45(rerender45), vaerView45(H)), studie: () => studieView45(H), finans: () => finansView45(H), nyheter: () => nyheterView46(H), sikkerhet: () => sikkerhetView51(H), 'faste-oppgaver': () => fasteView62(H) };
 // Prompt 45: Sonevarsler (av/på, per person og sone) i Familie og speilet i Varsler.
 const rerender45 = () => { if (!modal().hidden && ['familie', 'varsel', 'media', 'ruter', 'vaer'].includes(tab)) render(); };
 function withZones45(v, where) { setRender45(rerender45); if (v?.groups) v.groups = [...v.groups, ...zoneGroups45(H, where)]; return v; }

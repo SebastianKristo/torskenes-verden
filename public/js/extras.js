@@ -13,6 +13,7 @@ import { agent, agentOn, agentExtras, agentText, isPlain, resultHref } from './g
 import { thumbs61Html } from './recipes61.js'; // prompt 61: tommel opp/ned på Glimt-svaret
 import { agentLive59, cacheNote59 } from './stream59.js'; // prompt 59: strømming (ord for ord, statuslinje, Stopp)
 import { homeConv60, resetHomeConv60 } from './convo60.js'; // prompt 60: Glimt-søket er en kortlevd samtale («og i Bergen?»)
+import { isSched62 } from './sched62.js'; // prompt 62: faste oppgaver går rett til Glimt (ikke forslag om avtale/huskeliste)
 
 /* ---------- Popup ---------- */
 
@@ -186,6 +187,7 @@ function drawDrop(form) {
   if (a52?.type === 'kalender' && a52.title) { ap = { ...a52, ai52: true }; hu = null; }
   else if (a52?.type === 'huske') { ap = null; hu = hu || v.trim(); }
   else if (a52?.type) ap = null; // spørsmål/annet: vanlig svar
+  if (engine === 'ai' && agentOn() && isSched62(v)) { ap = null; hu = null; } // prompt 62: «… hver morgen kl. 7» er en fast oppgave, ikke én avtale
   if (ap && a52?.pending) ap = { ...ap, pending52: true };
   const pend52 = !!a52?.pending;
   sq.ap52 = ap?.ai52 ? ap : null;
@@ -535,6 +537,8 @@ export function bindSearch() {
     if (GL.q) closeAns();
     // Prompt 45: med Glimt som motor går alt til den felles agenten (forstår, planlegger, utfører). Lokal tolking bare uten agent.
     const ag = engine === 'ai' && agentOn();
+    // Prompt 62: faste oppgaver («… hver morgen kl. 7», «si fra hvis …») går rett til Glimt, som bekrefter før noe lagres.
+    if (!it && ag && isSched62(q)) { if (aiOn()) askAi(e.target, q); else runSearch(q); return; }
     // Prompt 52: Enter før AI har svart: vent opptil 2,5 s og bruk AI-svaret (kalender/huske), ellers som før.
     if (!it && engine === 'ai' && q.trim().split(/\s+/).length >= 3 && !sq.ap52) {
       const form = e.target;

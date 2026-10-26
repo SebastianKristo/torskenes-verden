@@ -4,13 +4,14 @@
 //        confirm?:{token, summary}, personality, joke?, engine, model, nav?:{target, web}}
 //   POST /api/glimt/agent/confirm {token} → samme form (handlingen er utført)
 // Eldre server (404/405): agent() gir null, og feltet bruker sin gamle vei (assist, /api/tasks/glimt, /search/ask …).
-// Selvstendig modul (bare convo60.js i samme mappe), så den også kan brukes fra FinansHub (/assets/js/glimt-agent45.js).
+// Selvstendig modul (bare convo60.js og sched62.js i samme mappe), så den også kan brukes fra FinansHub (/assets/js/glimt-agent45.js).
 // Prompt 60 (prompt 49 del 3): conversationId/conversationKind/choice inn (SERVER60-API.md §1), `choices` ut (§2) som valgknapper:
 //   trykk sender item.text + choice {setId, id} i samme samtale (cb.resend(text, ctx, {choice})).
 //
 // Felles visning: agentExtras(a) gir HTML for treff (velg), oppfølgingsspørsmål med valg, og bekreftelse (Slett / Avbryt).
 // Klikkene håndteres her (document-delegert) og sendes tilbake til feltet via callbacks registrert med agentExtras(a, cb).
 import { normChoices60, choicePick60, convBody60 } from './convo60.js';
+import { preview62, schedCard62Html, yesLabel62, done62, schedDone62Html } from './sched62.js'; // prompt 62: bekreftelseskort for faste oppgaver
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
@@ -40,6 +41,7 @@ export function normAgent(d = {}) {
     joke: d.joke ?? null, engine: d.engine ?? '', model: d.model ?? null, nav: d.nav ?? null, requestId: d.requestId ?? null, repeated: !!d.repeated, ms: d.ms ?? null,
     choices: normChoices60(d.choices), conversationId: d.conversationId ?? null, followUp: d.followUp?.refersToPrevious ? d.followUp : null, // prompt 60
     traceId: d.traceId ?? null, recipe: d.recipe && typeof d.recipe === 'object' ? d.recipe : null, // prompt 61: tommel opp/ned + oppskriften
+    schedule62: d.schedule62 && typeof d.schedule62 === 'object' ? d.schedule62 : null, // prompt 62: kortet for en ny/endret fast oppgave
     done: actions.filter((x) => x.status === 'done'), failed: actions.filter((x) => x.status === 'failed'),
   };
 }
@@ -81,7 +83,7 @@ function announce(a) {
 
 /* ---------------- Felles visning ---------------- */
 
-const KIND = { event: ['Kalender', '#2F7A4F'], task: ['Gjøremål', '#b23a2a'], receipt: ['Kvittering', '#3d7dd6'], transaction: ['Transaksjon', '#6B4FA0'], tx: ['Transaksjon', '#6B4FA0'], category: ['Kategori', '#D98C1F'] };
+const KIND = { event: ['Kalender', '#2F7A4F'], task: ['Gjøremål', '#b23a2a'], receipt: ['Kvittering', '#3d7dd6'], transaction: ['Transaksjon', '#6B4FA0'], tx: ['Transaksjon', '#6B4FA0'], category: ['Kategori', '#D98C1F'], schedule: ['Fast oppgave', '#7a3b6b'] };
 const kr = (v) => (typeof v === 'number' ? `${new Intl.NumberFormat('nb-NO', { maximumFractionDigits: 2 }).format(v)} kr` : '');
 const dShort = (d) => { const x = new Date(`${String(d).slice(0, 10)}T12:00`); return Number.isNaN(+x) ? '' : x.toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/\./g, ''); };
 const CB = new Map();
@@ -114,7 +116,8 @@ export function agentExtras(a, cb = {}, opts = {}) {
   if (CB.size > 40) CB.delete(CB.keys().next().value);
   const out = [];
   // Prompt 60: med valgknapper (choices) vises ikke de gamle valg-treffene (kind 'option') eller ask.options i tillegg.
-  const res = a.choices ? a.results.filter((r) => r.kind !== 'option') : a.results;
+  const dn62 = a.confirm ? null : done62(a); // prompt 62: kvitteringen viser oppgaven, så samme treff vises ikke to ganger
+  const res = (a.choices ? a.results.filter((r) => r.kind !== 'option') : a.results).filter((r) => !(dn62 && r.kind === 'schedule' && String(r.id) === String(dn62.schedule?.id)));
   if (res.length) {
     out.push(`<div class="ga45-res">${res.slice(0, 8).map((r) => { const i = a.results.indexOf(r);
       const [kn, kc] = KIND[r.kind] ?? ['', '#7a7468'];
@@ -131,8 +134,11 @@ export function agentExtras(a, cb = {}, opts = {}) {
     out.push(`<div class="ga45-ask">${same ? '' : `<b data-no-i18n>${esc(a.ask.question)}</b>`}${o.length ? `<div class="ga45-opts">${o.slice(0, 6).map((x, i) => `<button type="button" class="ga45-o" data-ga45="${id}" data-ga45-o="${i}" data-no-i18n>${esc(x.label ?? x.title ?? x)}</button>`).join('')}</div>` : ''}</div>`);
   }
   if (a.confirm) {
-    out.push(`<div class="ga45-cf"><b data-no-i18n>${esc(a.confirm.summary || 'Er du sikker?')}</b><div class="ga45-opts"><button type="button" class="ga45-o danger" data-ga45="${id}" data-ga45-c="yes">Ja, gjør det</button><button type="button" class="ga45-o" data-ga45="${id}" data-ga45-c="no">Avbryt</button></div></div>`);
+    const p62 = preview62(a); // prompt 62: hva, når, betingelse og neste kjøringer over Ja/Avbryt
+    const sum = p62 && a.confirm.summary && a.reply.replace(/\*\*/g, '').includes(a.confirm.summary) ? '' : `<b data-no-i18n>${esc(a.confirm.summary || 'Er du sikker?')}</b>`;
+    out.push(`<div class="ga45-cf">${sum}${p62 ? schedCard62Html(p62, { dark: opts.dark }) : ''}<div class="ga45-opts"><button type="button" class="ga45-o${p62 && !/^(delete|stop|pause)$/.test(p62.action) ? '' : ' danger'}" data-ga45="${id}" data-ga45-c="yes">${esc(yesLabel62(p62))}</button><button type="button" class="ga45-o" data-ga45="${id}" data-ga45-c="no">Avbryt</button></div></div>`);
   }
+  if (dn62) out.push(schedDone62Html(dn62, { dark: opts.dark }));
   if (a.failed.length && !a.reply) out.push(`<span class="ga45-err">${esc(a.failed[0].error || 'Noe gikk galt.')}</span>`);
   return out.length ? `<div class="ga45${opts.dark ? ' dark' : ''}">${out.join('')}</div>` : '';
 }

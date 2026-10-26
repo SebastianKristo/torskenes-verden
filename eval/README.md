@@ -225,3 +225,22 @@ npm run eval -- --learned off                      # uten dem · --learned DIR =
   minnet og (med oppskrifter på) den lærte oppskriften og det negative eksemplet, stiller det opprinnelige spørsmålet og sjekker bare
   planen (riktige verktøy, ikke den feile planen) – brukerens egne kalender-/finansdata finnes ikke i eval.
 
+
+### Planlagte oppgaver (prompt 62, prompt 49 del 2)
+
+```sh
+npm run eval -- --case 30,31,32,33,34,35                 # casene for faste oppgaver
+npm run eval -- --case 30,31,32,33,34,35 --sched62 off   # før/etter: planlagte oppgaver av (casene feiler da med vilje)
+```
+
+| # | Case | Sjekker (lagret data og struktur) |
+|---|---|---|
+| 30 | «Send meg strømprisene hver morgen kl. 7» | Bekreftelse («Hver dag kl. 07:00 … (NO1). Stemmer det?»), ingenting lagret før «ja»; etter «ja» én jobb med RRULE `FREQ=DAILY;BYHOUR=7;BYMINUTE=0`, Europe/Oslo, neste 25.10 07:00 (06:00Z, vintertid) |
+| 31 | «Minn meg på å betale husleia den 1. hver måned» | Månedlig jobb `BYMONTHDAY=1`, første gang 1.11, påminnelse (ikke et vanlig gjøremål) |
+| 32 | «Si fra hvis strømprisen går over 2 kr i morgen» | Betinget jobb med `max(price_nok_kwh) > 2` (kode); «Kjør nå» med falske priser: 2,31 → varsel med tallet, 1,95 → `condition_false`; 0 modellkall under kjøringene |
+| 33 | «Hvilke faste oppgaver har jeg?» (to oppgaver lagt inn via API-et) | `schedule.list` uten bekreftelse, begge oppgavene og briefene i svaret |
+| 34 | «Stopp strømprisvarselet» (strømpriser, strømprisvarsel og husleie lagt inn) | Bekreftelse for det betingede varselet, ingenting endret før «ja», etter «ja» er det stoppet (`paused`), de andre urørt |
+| 35 | «Flytt morgenbriefen til 06:30» | Bekreftelse, så er brief-innstillingen (`briefs.morning.at`) 06:30 – ingen ny planlagt oppgave |
+
+- Strømprisene er falske data i eval (`h.setPower62([...24 timepriser i kr/kWh])`), hvakosterstrommen.no nås ikke.
+- `h.schedules()`, `h.scheduleRuns(id)`, `h.runNow62(id)` (steget har `modelCalls:[før, etter]`) og `h.briefs()` finnes for casene.

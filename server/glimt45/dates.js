@@ -390,3 +390,8 @@ export function parseNorwegianDateTime(text, now = {}, tz = 'Europe/Oslo') {
   const w = whenOf45(text, today, { prefer: now.prefer ?? 'future', nowMin, timeWithoutDate: now.timeWithoutDate ?? 'today' });
   return { ...w, window: parseWindow47(text, today, nowMin), tz };
 }
+
+/* ---------------- Prompt 62 (prompt 49 del 2): gjentakelse ---------------- */
+// «hver morgen kl. 7», «hver hverdag», «den 1. hver måned», «annenhver tirsdag», «hver fredag i vinter», «i 2 uker» → RRULE (RFC 5545)
+// med Europe/Oslo og ev. sluttdato. Ligger i recur62.js (samme felles parser, egen fil for RRULE-beregningen).
+export { parseRecurrence62, parseRRule62, ruleToRRule62, icalOf62, nextRun62, nextRuns62, labelOf62, untilOf62, osloToUtc62, osloParts62, quiet62, afterQuiet62, ruleOfWhen62, matches62, TZ62 } from './recur62.js';

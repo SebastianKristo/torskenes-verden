@@ -77,6 +77,12 @@ if (process.env.EVAL_FAST59 === 'off') kv.set('owner', 'fast59', { cache: false,
 if (process.env.EVAL_CONVO60 === 'off') kv.set('owner', 'convo60', { state: false, entities: false, choices: false });
 // Prompt 61: --recipes61 off = lagre oppskrifter, eksempler, hurtigvei og lære av rettelser av (før/etter på samme commit).
 if (process.env.EVAL_RECIPES61 === 'off') kv.set('owner', 'recipes61', { save: false, fewshot: false, fast: false, learn: false });
+// Prompt 62: --sched62 off = planlagte oppgaver av (før/etter på samme commit).
+if (process.env.EVAL_SCHED62 === 'off') kv.set('owner', 'sched62', { enabled: false, conditions: false, quiet: true });
+// Prompt 62: strømprisene er falske data i eval (h.setPower62) – hvakosterstrommen.no er ikke tilgjengelig her.
+const RUN62 = await imp('server/sched62/run.js');
+let power62 = null;
+RUN62._setSchedData62({ power: async ({ zone, when }) => { if (!power62) throw Object.assign(new Error('Prisene er ikke publisert ennå'), { notYet: true }); return { zone, date: when === 'tomorrow' ? '2026-10-25' : TODAY, hours: power62.map((kr, hour) => ({ hour, ore: kr * 100 })), source: 'eval (falske data)', vat: true }; } });
 ai.invalidateInventory();
 if (cfg.omlx) {
   const O = await imp('server/omlx58/config.js');
@@ -231,6 +237,20 @@ const h = {
     const n = doc.negative;
     if (n?.wrongPlan?.calls?.length) S.insertNegative61(USER, { query: n.query ?? doc.query, template: n.template ?? '', wrongCalls: n.wrongPlan.calls, rightCalls: n.rightPlan?.calls ?? null, reason: 'retting' });
   },
+  /** Prompt 62: planlagte oppgaver (tabell glimt_schedules) og kjøringene. */
+  schedules: () => db.prepare('SELECT id, title, what, kind, rrule, dtstart, tz, until, explicit_time, condition, params, status, next_run_at FROM glimt_schedules WHERE user_id=? ORDER BY created_at, rowid').all(USER),
+  scheduleRuns: (id) => db.prepare('SELECT id, status, trigger, result, condition, delivery, reason, error FROM glimt_schedule_runs WHERE schedule_id=? ORDER BY planned_at, rowid').all(id),
+  /** Prompt 62: falske strømpriser (24 timepriser i kr/kWh med mva) eller null = ikke publisert. */
+  setPower62: (prices) => { power62 = prices ? [...prices] : null; },
+  /** Prompt 62: «Kjør nå» (POST /api/glimt/schedules/:id/run-now) – som når brukeren trykker i Innstillinger → Faste oppgaver. */
+  async runNow62(id) {
+    const m0 = net.trace.model.length;
+    const r = await A(`/api/glimt/schedules/${id}/run-now`, 'POST');
+    const s = { kind: 'schedule-run', id, status: r.status, run: r.body?.run ?? null, error: r.status >= 400 ? clip(r.body, 300) : undefined, modelCalls: [m0, net.trace.model.length] };
+    steps.push(s);
+    return s;
+  },
+  briefs: () => (kv.get(USER, 'glimt35_settings', {}) ?? {}).briefs ?? null,
   /** Prompt 59: Glimt-tracen for et svar (s.traceId). */
   glimtTrace: (s) => glimtTrace(s?.traceId),
   /** Media-feltet: agenten (module media) først, så Media-Glimt hvis svaret er ren prat (som public/js/media43.js). */

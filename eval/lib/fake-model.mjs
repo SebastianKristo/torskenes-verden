@@ -18,6 +18,13 @@ export function oracle(msg) {
   if (/^flytt nina til lørdag$/.test(m)) return [{ name: 'calendar.update', arguments: { target: 'Nina', date: 'lørdag' } }];
   // Prompt 61 (del 1): rettelsen «nei, jeg mente middagen» → søk etter det brukeren mente.
   if (/^nei,? jeg mente middagen$/.test(m)) return [{ name: 'calendar.search', arguments: { terms: ['middag'], direction: 'next', limit: 1 } }];
+  // Prompt 62 (del 2): planlagte oppgaver – hva + når (råtekst) og betingelsen (råtekst); koden tolker og sjekker.
+  if (/strømprisene hver morgen/.test(m)) return [{ name: 'schedule.create', arguments: { what: 'strømprisene for i dag', when: 'hver morgen kl. 7' } }];
+  if (/husleia.*hver måned/.test(m)) return [{ name: 'schedule.create', arguments: { what: 'betale husleia', when: 'den 1. hver måned' } }];
+  if (/^si fra hvis strømprisen går over (\d+) kr i morgen/.test(m)) return [{ name: 'schedule.create', arguments: { what: 'strømprisen i morgen', when: 'i morgen', condition: `strømprisen går over ${m.match(/over (\d+) kr/)[1]} kr` } }];
+  if (/faste oppgaver/.test(m)) return [{ name: 'schedule.list', arguments: {} }];
+  if (/^stopp strømprisvarselet/.test(m)) return [{ name: 'schedule.delete', arguments: { target: 'strømprisvarselet' } }];
+  if (/^flytt morgenbriefen til/.test(m)) return [{ name: 'schedule.update', arguments: { target: 'morgenbriefen', when: m.replace(/^flytt morgenbriefen til\s*/, ''), action: 'move' } }];
   if (/nina/.test(m)) return [{ name: 'calendar.search', arguments: { query: 'Nina' } }];
   if (/dune/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Dune', date: '17.12', time: '17.30', location: 'Colosseum kino' } }];
   if (/middag hos mamma/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Middag hos mamma', date: 'fredag', time: '18' } }];

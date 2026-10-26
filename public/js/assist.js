@@ -29,6 +29,8 @@ export const TOOL_RE = {
   finance: /brukt på|bruker jeg på|forbruk|kostet|utgifter|hvor mye (har jeg )?brukt/i,
   tasks: /huskeliste|handleliste|gjøremål|to-?do|oppgaver|må jeg huske/i,
   trial: /pr(ø|o)ve(periode)?|gratis i|avslutt|si opp|oppsig|trial/i,
+  // Prompt 62 (prompt 49 del 2): faste oppgaver («send meg strømprisene hver morgen kl. 7», «si fra hvis …», «flytt morgenbriefen …»)
+  schedule: /\bhver\s+(dag|morgen|kveld|natt|uke|måned|år|hverdag|helg|mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag)|\bhverdag(er)?\b|\bannenhver\b|\bden \d{1,2}\.? (i )?hver\b|\bfaste oppgaver?|\bplanlagte? oppgaver?|\bsi (fra|ifra)\b.*\b(hvis|når|om)\b|\bvarsle? meg\b|\bgi (meg )?beskjed\b.*\b(hvis|når|om)\b|strømpris|morgenbrief|kveldsbrief|\bbriefen\b|\bminn meg\b|påminnels/i,
   // Prompt 33: «husk at Påhåret er frisøren min», «det var frisør», «dette er for tannlegen»
   memory: /^(husk at\s+)?.{0,60}\b(er|var|gjelder)\s+(for\s+|hos\s+)?(min\s+|en\s+)?(frisør|frisøren|lege|legen|fastlegen|tannlege|tannlegen|fysio|fysioterapeut(en)?|optiker(en)?|psykolog(en)?)(\s+min)?[.!]?$/i,
 };

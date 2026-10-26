@@ -18,7 +18,11 @@ export const MODULES45 = ['home', 'calendar', 'tasks', 'finance', 'ruter', 'chat
 const MODULE_OF_TOOL = (name) => TOOL45[name]?.module ?? 'home';
 const INTENT_OF_TOOL = { 'calendar.create': 'create', 'tasks.create': 'create', 'calendar.update': 'update', 'tasks.complete': 'update', 'calendar.delete': 'delete',
   'calendar.list': 'summarize', 'tasks.list': 'summarize', 'finance.summary': 'summarize', 'calendar.search': 'search', 'finance.search': 'search', 'nav.open': 'nav', 'app.answer': 'ask', 'chat.answer': 'chat',
-  'weather.get': 'ask', 'finance.subscriptions': 'summarize', 'finance.fixed': 'summarize', 'subscriptions.trial': 'update' };
+  'weather.get': 'ask', 'finance.subscriptions': 'summarize', 'finance.fixed': 'summarize', 'subscriptions.trial': 'update',
+  'schedule.create': 'create', 'schedule.list': 'summarize', 'schedule.update': 'update', 'schedule.delete': 'delete' }; // prompt 62
+// Prompt 62 (del 2): lokal plan for planlagte oppgaver (sched62/tools.js registrerer seg; modellen nede / hint til planleggeren).
+let localHook62 = null;
+export const registerLocalPlan62 = (fn) => { localHook62 = typeof fn === 'function' ? fn : null; };
 export const intentOfCalls45 = (calls) => (calls.length > 1 ? 'multi' : INTENT_OF_TOOL[calls[0]?.tool] ?? 'chat');
 
 /* ---------------- Modell ---------------- */
@@ -169,6 +173,7 @@ export function localPlan45(text, { module = 'home', today = todayOslo45(), lega
   const w = whenOf45(text, today, { timeWithoutDate: 'none' });
   const hasWhen = !!(w.date || w.start || w.errors.length);
   if (!t) return askP('Hva kan jeg hjelpe med?');
+  if (localHook62 && module !== 'tasks' && module !== 'calendar') { try { const s62 = localHook62(text, { today }); if (s62) return s62; } catch { /* prompt 62: best effort */ } }
   // Gjøremål-funksjonene fra prompt 37–42 (slå sammen, forfalte, pakkeliste, matplan, butikk, spørsmål om lista, limt inn flere linjer).
   if (module === 'tasks' && (TASKS37.test(t) || String(text).includes('\n') || (q && !/kalender/.test(t) && !TASK_LIST_SIMPLE.test(t)))) return P('app.answer', { topic: 'tasks37' });
   // Prompt 46: sammensatte værspørsmål (flere steder/tider, periode, sammenligning) → ett weather.get per delspørsmål.
