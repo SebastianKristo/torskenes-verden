@@ -2,6 +2,13 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.59.0] – 26.10.2026 · Flere og bedre butikklogoer
+- **Offisielle logoer fra Wikidata og Wikimedia Commons:** 228 av logoene i biblioteket er nå offisielle logoer, ikke små favicon. Coop Extra, Mega, Prix, Obs og Obs Bygg har fått hver sin logo, og 7-Eleven, Narvesen, Biltema, Lindex og Subway har fått logo.
+- **Flere kjeder:** biblioteket henter norske kjeder fra OpenStreetMap og har nå 443 butikker og tjenester. Logoene i biblioteket virker også når «Finansdata forlater aldri huset» er på. Den månedlige jobben holder biblioteket oppdatert.
+- **Butikker som ikke er i biblioteket:** serveren slår først opp i Wikidata (kan slås av under Logoer), og deretter i Gemini, som nå foreslår opptil tre nettsteder som sjekkes etter tur. Bare butikknavnet sendes, og alt logges i AI-loggen. Når «Finansdata forlater aldri huset» er på, sendes ingenting ut.
+- **Skarpere ikoner:** når det finnes et større ikon, brukes aldri et lite på 16 px. Nettsteder som stenger ute ukjente klienter, blir ikke spurt på nytt.
+- **Færre feil treff:** korte og vanlige navn som «Max», «Normal» og «Extra» gjenkjennes bare når de står først i bankteksten.
+
 ## [4.58.0] – 26.10.2026 · Brukere og familie i appene
 - **Brukere og familie** er nå en egen side i iOS- og Android-appen, som på web. Der finner du Logg inn som og eier (bare for admin), Glimt-figur per bruker, Familie, og helse og posisjon. Konto og Glimt har en lenke dit.
 - **Innstillinger for nattlig eval** ligger under Kvalitet i appene (bare for admin). Her slår du av og på nattlig eval og ukerapport for alle, og velger antall kjøringer per case, tidsgrense, hvor lenge evalen venter før den viker for deg, og hvor mange dager rapportene beholdes.

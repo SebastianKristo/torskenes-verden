@@ -80,8 +80,15 @@ test('locationSet og kategori: Norge gir nye, globale bare sammenslåing, eksklu
   for (const f of NSI) assert.ok(cats.has(N.categoryFor(f.path)), f.path);
 });
 
-test('mergeNsi: slår sammen via navn og wikidata, rører aldri manuelle eller valgte felt, legger til norske kjeder', () => {
+// Registeret slik det var før NSI (den månedlige jobben har allerede slått sammen): uten NSI-oppføringer og wikidata-felt.
+const preNsi = () => {
   const reg = clone();
+  reg.items = reg.items.filter((x) => x.fra !== 'nsi').map(({ wikidata, nsi, ...x }) => x);
+  return reg;
+};
+
+test('mergeNsi: slår sammen via navn og wikidata, rører aldri manuelle eller valgte felt, legger til norske kjeder', () => {
+  const reg = preNsi();
   const before = new Map(reg.items.map((x) => [x.id, structuredClone(x)]));
   const entities = new Map([
     ['Q108810007', entity('Q108810007', { label: 'Nærbutikken', site: 'https://www.naerbutikken.no/', color: '1a7f3c' })],
