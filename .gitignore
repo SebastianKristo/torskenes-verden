@@ -27,6 +27,8 @@ apps/ios/build/
 
 # Prompt 47: resultater fra npm run eval (lokale baselinekjøringer)
 eval/results/
+# Prompt 61: testtilfeller fra rettelser i Glimt (brukerens egne spørsmål – kan inneholde personopplysninger/finans)
+eval/learned/*.json
 
 # Prompt 48: kvitterings-eval – dine egne ekte kvitteringer og resultatene (kan inneholde finansdata)
 tests/receipts/real/*

@@ -46,6 +46,7 @@ import { reauthHandler } from './reauth.js'; // prompt 31: POST /api/auth/reauth
 import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (alias per bruker)
 import { agentApi45 } from './glimt45/api.js'; // prompt 45: Glimt-motoren
 import { entitiesApi60 } from './convo60/api.js'; // prompt 60 (prompt 49 del 3): entitetsregisteret
+import { recipesApi61 } from './recipes61/api.js'; // prompt 61 (prompt 49 del 1): Glimt lærer (oppskrifter)
 import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
 import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
@@ -863,6 +864,7 @@ app.route('/api/weather/week-summary', week39Api); // prompt 39: Glimt · ukas v
 app.route('/api/weather/place', weather35Api); // prompt 35
 app.route('/api/glimt/agent', agentApi45); // prompt 45: Glimt-motoren (én inngang for alle Glimt-felt)
 app.route('/api/glimt/entities', entitiesApi60); // prompt 60: entitetsregisteret (per bruker)
+app.route('/api/glimt/recipes', recipesApi61); // prompt 61: oppskrifter som lærer av bruk (per bruker)
 app.route('/api/glimt', glimtApi); // prompt 34: POST /api/glimt {prompt, tool:'calendar'} (etter /api/glimt/memory)
 app.use('/api/assist', assistLocalMw44); // prompt 44: local (Glimt-tid) i svaret
 app.route('/api/assist', assistApi); // prompt 31: Glimt-ruteren (sesjon eller app-token, per bruker)

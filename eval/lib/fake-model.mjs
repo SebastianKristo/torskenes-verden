@@ -16,6 +16,8 @@ export function oracle(msg) {
   if (/^si opp det$/.test(m)) return [{ name: 'subscriptions.cancel', arguments: { service: 'det' } }];
   if (/^legg inn tannlege fredag kl 10$/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Tannlege', date: 'fredag', time: 'kl 10' } }];
   if (/^flytt nina til lørdag$/.test(m)) return [{ name: 'calendar.update', arguments: { target: 'Nina', date: 'lørdag' } }];
+  // Prompt 61 (del 1): rettelsen «nei, jeg mente middagen» → søk etter det brukeren mente.
+  if (/^nei,? jeg mente middagen$/.test(m)) return [{ name: 'calendar.search', arguments: { terms: ['middag'], direction: 'next', limit: 1 } }];
   if (/nina/.test(m)) return [{ name: 'calendar.search', arguments: { query: 'Nina' } }];
   if (/dune/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Dune', date: '17.12', time: '17.30', location: 'Colosseum kino' } }];
   if (/middag hos mamma/.test(m)) return [{ name: 'calendar.create', arguments: { title: 'Middag hos mamma', date: 'fredag', time: '18' } }];

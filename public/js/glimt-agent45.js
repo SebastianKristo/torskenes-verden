@@ -39,6 +39,7 @@ export function normAgent(d = {}) {
     results: Array.isArray(d.results) ? d.results : [], ask: d.ask?.question ? d.ask : null, confirm: d.confirm?.token ? d.confirm : null,
     joke: d.joke ?? null, engine: d.engine ?? '', model: d.model ?? null, nav: d.nav ?? null, requestId: d.requestId ?? null, repeated: !!d.repeated, ms: d.ms ?? null,
     choices: normChoices60(d.choices), conversationId: d.conversationId ?? null, followUp: d.followUp?.refersToPrevious ? d.followUp : null, // prompt 60
+    traceId: d.traceId ?? null, recipe: d.recipe && typeof d.recipe === 'object' ? d.recipe : null, // prompt 61: tommel opp/ned + oppskriften
     done: actions.filter((x) => x.status === 'done'), failed: actions.filter((x) => x.status === 'failed'),
   };
 }

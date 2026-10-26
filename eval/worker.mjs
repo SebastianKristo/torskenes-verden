@@ -1,7 +1,7 @@
 // Én kjøring av én case i en egen prosess: fersk DATA_DIR, fryst klokke, mocket nett (bortsett fra modellen), seedet testdata.
 // Startes av run.mjs: node eval/worker.mjs <case-fil> <resultat.json>   (oppsettet kommer i env EVAL47_CONFIG)
 // Skriver {ok, checks, reason, ms, trace} til resultatfila.
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -39,6 +39,10 @@ process.env.OCR_FALLBACK = process.env.OCR_FALLBACK ?? 'on';
 // Prompt 59 (del 4): eval måler med produksjonens standard for «raskere svar» (svar-cache, varm modell, strømming, parallelle verktøy
 // – alt på; NODE_ENV=test ville ellers slått av svar-cachen). EVAL_FAST59=off måler uten (alle fire av), for før/etter på samme commit.
 process.env.FAST59_DEFAULTS = 'prod';
+// Prompt 61: «Glimt lærer» med produksjonens standard (alt på; NODE_ENV=test ville slått det av). Testtilfeller fra rettelser
+// skrives i kjøringens egen DATA_DIR (aldri i repoet).
+process.env.RECIPES61_DEFAULTS = 'prod';
+process.env.GLIMT_LEARNED_DIR = join(dataDir, 'eval-learned');
 process.env.FAST59_WARM = process.env.EVAL_FAST59 === 'off' ? '0' : '1';
 
 freezeClock();
@@ -71,6 +75,8 @@ ai.saveServerRouting(r0);
 if (process.env.EVAL_FAST59 === 'off') kv.set('owner', 'fast59', { cache: false, warm: false, stream: false, parallel: false });
 // Prompt 60: --convo60 off = samtaletilstand, entitetsregister og valg av (før/etter på samme commit).
 if (process.env.EVAL_CONVO60 === 'off') kv.set('owner', 'convo60', { state: false, entities: false, choices: false });
+// Prompt 61: --recipes61 off = lagre oppskrifter, eksempler, hurtigvei og lære av rettelser av (før/etter på samme commit).
+if (process.env.EVAL_RECIPES61 === 'off') kv.set('owner', 'recipes61', { save: false, fewshot: false, fast: false, learn: false });
 ai.invalidateInventory();
 if (cfg.omlx) {
   const O = await imp('server/omlx58/config.js');
@@ -117,6 +123,7 @@ const slimAgent = (b) => ({
   actions: (b?.actions ?? []).map((x) => ({ tool: x.tool, status: x.status, args: x.args, error: x.error, result: clipObj(x.result) })),
   results: (b?.results ?? []).slice(0, 8).map((x) => ({ kind: x.kind, title: x.title, subtitle: x.subtitle, date: x.date })), ms: b?.ms ?? null,
   traceId: b?.traceId ?? null, cached: !!b?.cached, cache: b?.cache ?? null, // prompt 59
+  recipe: b?.recipe ?? null, // prompt 61
 });
 /** Prompt 60: feltene for samtaler (conversationId, followUp, choices, confirm) i steget. */
 const convoOf60 = (b) => ({ conversationId: b?.conversationId ?? null, followUp: b?.followUp ?? null, choices: b?.choices ?? null, confirm: b?.confirm ? { token: b.confirm.token, summary: b.confirm.summary ?? null } : null });
@@ -128,6 +135,7 @@ const glimtTrace = (id) => {
   const t = JSON.parse(r);
   return { id: t.id, intent: t.plan?.intent ?? null, engine: t.engine ?? t.plan?.engine ?? null, cache: t.cache ?? null, parallel: t.parallel ?? null, totalMs: t.totalMs ?? null, steps: t.steps,
     convo: t.convo ?? null, entities: t.entities ?? null, // prompt 60
+    recipe: t.recipe ?? null, plan: t.plan ? { engine: t.plan.engine ?? null, intent: t.plan.intent ?? null, calls: t.plan.calls ?? [] } : null, // prompt 61
     models: (t.models ?? []).map((m) => ({ step: m.step, model: m.model, ms: m.ms, ok: m.ok, timing: m.timing ?? null, prompt: m.prompt ?? null, think: m.think })) };
 };
 /** Prompt 59: leser en SSE-strøm (POST /api/glimt/agent/stream) og noterer når hver hendelse kom. → {status, events:[{event, data, at}], firstTokenMs, firstStatusMs} */
@@ -210,6 +218,19 @@ const h = {
   },
   /** Prompt 60: abonnementene i Subscription OS (fh_subscriptions). */
   subscriptions: () => db.prepare('SELECT id, name, plan, active FROM fh_subscriptions WHERE user_id=? ORDER BY id').all(USER),
+  /** Prompt 61: oppskriftene (tabell recipes), negative eksempler, testtilfellene fra rettelser og tommel opp/ned. */
+  recipes: () => db.prepare('SELECT id, status, use_count, success_count, fail_count, example_query, query_template, intent, plan, source FROM recipes WHERE user_id=? ORDER BY created_at').all(USER),
+  negatives: () => db.prepare('SELECT id, query, wrong_plan, right_plan FROM recipe_negatives WHERE user_id=?').all(USER),
+  learnedFiles: () => { try { return readdirSync(process.env.GLIMT_LEARNED_DIR).filter((f) => f.endsWith('.json')).map((f) => JSON.parse(readFileSync(join(process.env.GLIMT_LEARNED_DIR, f), 'utf8'))); } catch { return []; } },
+  feedback: (traceId, vote) => A('/api/glimt/recipes/feedback', 'POST', { traceId, vote }),
+  /** Prompt 61: legg inn en lært oppskrift og et negativt eksempel (testtilfellene fra eval/learned/). */
+  async seedLearned61(doc) {
+    const S = await imp('server/recipes61/store.js');
+    const r = doc.recipe;
+    if (r?.plan?.calls?.length) S.insertRecipe61(USER, { exampleQuery: r.exampleQuery ?? doc.query, queryTemplate: r.queryTemplate, intent: r.intent, module: r.module, calls: r.plan.calls, slots: r.slots ?? {}, source: 'correction', status: r.status ?? 'candidate' });
+    const n = doc.negative;
+    if (n?.wrongPlan?.calls?.length) S.insertNegative61(USER, { query: n.query ?? doc.query, template: n.template ?? '', wrongCalls: n.wrongPlan.calls, rightCalls: n.rightPlan?.calls ?? null, reason: 'retting' });
+  },
   /** Prompt 59: Glimt-tracen for et svar (s.traceId). */
   glimtTrace: (s) => glimtTrace(s?.traceId),
   /** Media-feltet: agenten (module media) først, så Media-Glimt hvis svaret er ren prat (som public/js/media43.js). */
@@ -278,7 +299,8 @@ async function seed(spec = {}) {
 const result = { case: null, ok: false, checks: [], reason: null, ms: 0, error: null, trace: {} };
 let mod;
 try {
-  mod = (await import(pathToFileURL(resolve(caseFile)).href)).default;
+  // Prompt 61: lærte testtilfeller er JSON (fra rettelser i Glimt) – casen lages av eval/lib/learned61.mjs.
+  mod = caseFile.endsWith('.json') ? (await import('./lib/learned61.mjs')).caseFromLearned61(JSON.parse(readFileSync(resolve(caseFile), 'utf8')), caseFile) : (await import(pathToFileURL(resolve(caseFile)).href)).default;
   result.case = mod.id;
   const seeded = await seed(mod.seed);
   const s0 = { calendar: h.calendar(), memory: h.memory(), tasks: h.tasks() };

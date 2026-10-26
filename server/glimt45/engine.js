@@ -28,6 +28,8 @@ import { cacheKindOf59, legacyKindOf59, planKey59, legacyKey59, cacheGet59, cach
 import { toolStatus59, legacyStatus59, PLAN_STATUS59, ANSWER_STATUS59, CACHE_STATUS59 } from '../fast59/status.js';
 // Prompt 60 (prompt 49 del 3): samtaletilstand, entitetsregister og konkrete valg – krokene ligger i convo60/engine60.js.
 import { begin60, ctx60, facts60, afterPlan60, adjust60, finish60, confirmed60, convoTrace60 } from '../convo60/engine60.js';
+// Prompt 61 (prompt 49 del 1): oppskrifter som lærer av bruk – krokene ligger i recipes61/engine61.js.
+import { prepare61, finish61, confirmed61 } from '../recipes61/engine61.js';
 installTaskHooks46(); installPosterDecorator46(); // Gjøremål: plukk ut, ikke skriv om · plakat på kinoavtaler
 
 db.exec(`CREATE TABLE IF NOT EXISTS glimt45_requests (user_id TEXT NOT NULL, key TEXT NOT NULL, state TEXT NOT NULL, response TEXT, created INTEGER NOT NULL, PRIMARY KEY (user_id, key));
@@ -240,6 +242,10 @@ async function pipeline(user, text, opts) {
   const legacyIntent = legacy?.detect ? (() => { try { return legacy.detect(text, today); } catch { return null; } })() : null;
   const local = localPlan45(text, { module: opts.module, today, legacyIntent, user, nowMin });
   let plan = c60?.choicePlan ?? fastPath47(text, { module: opts.module, legacyIntent }); // prompt 60: svar på et valg = den lagrede planen
+  // Prompt 61: oppskriftene – vinduet for forrige svar, rettelser, few-shot til planleggeren og ev. hurtigveien (planleggeren hoppes over).
+  const r61 = await prepare61(user, text, { facts, local, today, module: opts.module, c60, preview: !!opts.preview, trace: tr }).catch((e) => { console.warn('[recipes61]', String(e?.message ?? e).slice(0, 160)); return null; });
+  if (!plan && r61?.fast && !opts.noModel) plan = r61.fast.plan;
+  if (r61?.fewshotText) c47.recipesText = r61.fewshotText;
   const fast = fast59(user);
   if (opts.signal?.aborted) throw abortErr59();
   // Prompt 59: modellkallene får brukerens Stopp-signal (gaten avbryter kallet).
@@ -247,7 +253,8 @@ async function pipeline(user, text, opts) {
   if (!plan && !opts.noModel && modelAvailable45()) {
     const info = await modelInfo45(user);
     emit59(opts, 'status', PLAN_STATUS59);
-    const mp = modelPlan47(user, text, { ctx: c47, hint: hintOf47(local, legacyIntent), mode: info.mode, call: planCall, trace: tr }).catch((e) => { if (opts.signal?.aborted || e?.cancelled) throw e; console.warn('[glimt47] plan:', String(e?.message ?? e).slice(0, 160)); return null; });
+    const hint61 = [hintOf47(local, legacyIntent), r61?.hint].filter(Boolean).join('. '); // prompt 61: rettelsen som hint
+    const mp = modelPlan47(user, text, { ctx: c47, hint: hint61, mode: info.mode, call: planCall, trace: tr }).catch((e) => { if (opts.signal?.aborted || e?.cancelled) throw e; console.warn('[glimt47] plan:', String(e?.message ?? e).slice(0, 160)); return null; });
     // Prompt 46: forhåndsvisningen venter maks 3 s på modellen; ellers lokal tolkning (dato/tid er uansett fra teksten).
     let mpl = await (opts.preview ? Promise.race([mp, new Promise((r) => { const t = setTimeout(() => r(null), opts.previewMs ?? 3000); t.unref?.(); })]) : mp);
     // Prompt 55: planleggeren ga opp etter nytt forsøk med thinking (tidsavbrudd/ugyldig plan). Aldri den gamle veien (prat med en
@@ -262,8 +269,9 @@ async function pipeline(user, text, opts) {
     const gap = mpl && !mpl.failed && !opts.preview ? planGap47(local, mpl) : null;
     if (gap) {
       tr?.norm({ planGap: gap });
-      const p2 = await modelPlan47(user, text, { ctx: c47, hint: `${hintOf47(local, legacyIntent)}. ${gap}`, mode: info.mode, call: planCall, trace: tr }).catch((e) => { if (opts.signal?.aborted || e?.cancelled) throw e; return null; });
+      const p2 = await modelPlan47(user, text, { ctx: c47, hint: `${hint61}. ${gap}`, mode: info.mode, call: planCall, trace: tr }).catch((e) => { if (opts.signal?.aborted || e?.cancelled) throw e; return null; });
       if (p2 && !p2.failed && !planGap47(local, p2)) mpl = { ...p2, attempts: (mpl.attempts ?? 1) + (p2.attempts ?? 1), gapFixed: true };
+      else mpl = { ...mpl, gapOpen: true }; // prompt 61: Steg G besto ikke – kjøringen blir ikke en oppskrift
     }
     if (mpl && !mpl.failed) plan = { ...mpl, module: mpl.calls[0] ? TOOL45[mpl.calls[0].tool]?.module ?? opts.module : opts.module, intent: mpl.calls.length ? (mpl.calls.length > 1 ? 'multi' : intentOfCalls45(mpl.calls)) : 'ask', planIntent: mpl.intent };
   }
@@ -337,8 +345,9 @@ async function pipeline(user, text, opts) {
   const ctxT = { user, text, today, nowMin, context, module: opts.module, preview: !!opts.preview, facts, c47, trace: tr, webSearch: opts.webSearch !== false,
     fast, onEvent: opts.onEvent ?? null, signal: opts.signal ?? null, compare: plan.compare ?? null, c60 }; // prompt 59 · prompt 60
   if (c60) c60.plan = { intent: plan.intent, calls: ownedCalls };
-  const out = await executePlan(user, { ...plan, calls: ownedCalls }, ctxT, base, t0);
+  let out = await executePlan(user, { ...plan, calls: ownedCalls }, ctxT, base, t0);
   if (opts.signal?.aborted) throw abortErr59();
+  if (r61) { out.traceId = tr?.id ?? null; try { out = finish61(user, r61, { plan: { ...plan, calls: ownedCalls }, out }); } catch (e) { console.warn('[recipes61] registrering:', String(e?.message ?? e).slice(0, 160)); } } // prompt 61
   logChoice(user, { module: opts.module, intent: out.intent, tools: out.actions.map((x) => x.tool), statuses: out.cached ? out.actions.map(() => 'cache') : out.actions.map((x) => x.status), engine: out.engine, ms: out.ms, len: text.length });
   if (tr) { for (const a of out.actions) tr.tool(a); tr.step('verktøy og svar'); tr.save(out); out.traceId = tr.id; }
   if (!opts.preview && !out.ask) rememberTurn47(user, text, out.reply);
@@ -615,6 +624,7 @@ export async function confirm45(user, token) {
   const fakePlan = { intent: p.plan.intent, engine: p.plan.engine, model: p.plan.model, calls: [] };
   const out = await executeChecked(user, fakePlan, p.calls, ctxT);
   confirmed60(user, p.ctx.conv, out); // prompt 60: tilstanden i samtalen bekreftelsen hørte til
+  try { const o61 = confirmed61(user, token, out); if (o61 !== out) Object.assign(out, { recipe: o61.recipe }); } catch { /* prompt 61: best effort */ }
   logChoice(user, { module: p.ctx.module, intent: out.intent, tools: out.actions.map((x) => x.tool), statuses: out.actions.map((x) => x.status), engine: out.engine, ms: out.ms, len: p.ctx.text.length });
   return out;
 }

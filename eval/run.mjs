@@ -54,6 +54,10 @@ const HELP = `Glimt eval (GLIMT47)
                                     (som i produksjonen); off måler uten, for før/etter på samme commit.
   --convo60 on|off                  Prompt 60: «bedre forståelse i samtaler» (samtaletilstand, entitetsregister, valg). Standard on;
                                     off måler uten (casene 23–26 feiler da med vilje), for før/etter på samme commit.
+  --recipes61 on|off                Prompt 61: «Glimt lærer» (oppskrifter: lagre, eksempler, hurtigvei, lære av rettelser). Standard on;
+                                    off måler uten (casene 27–29 feiler da med vilje), for før/etter på samme commit.
+  --learned on|off|DIR              Prompt 61: ta med testtilfellene fra rettelser (eval/learned/*.json, eller DIR). Standard on
+                                    (bare når filene finnes).
 
   Miljø (prompt 55): EVAL_MAC_OCR_URL + EVAL_MAC_OCR_KEY kobler på Mac-OCR (ellers har eval ingen Mac-OCR). Feil som skyldes
   miljøet (ingen OCR, modell ikke installert) får status «env» og telles ikke som modellfeil.
@@ -134,14 +138,32 @@ if (omlxModels) {
 const caseDir = join(HERE, 'cases');
 let caseFiles = readdirSync(caseDir).filter((f) => /^\d.*\.mjs$/.test(f)).sort();
 if (opt.case) { const want = String(opt.case).split(',').map((x) => x.trim().toLowerCase()).filter(Boolean); caseFiles = caseFiles.filter((f) => want.some((w) => f.toLowerCase().startsWith(w) || f.toLowerCase().includes(w))); }
-if (!caseFiles.length) { console.error('Ingen caser valgt.'); process.exit(2); }
 const metas = [];
 for (const f of caseFiles) { const m = (await import(pathToFileURL(join(caseDir, f)).href)).default; metas.push({ file: f, id: m.id, title: m.title, area: m.area, ...(m.intent ? { intent: m.intent } : {}) }); }
+// Prompt 61: lærte testtilfeller (JSON fra rettelser i Glimt, server/recipes61/learn.js). Data, aldri kode: eval/lib/learned61.mjs lager casen.
+const learnedOpt = String(opt.learned ?? 'on');
+if (learnedOpt.toLowerCase() !== 'off') {
+  const ldir = ['on', 'true'].includes(learnedOpt.toLowerCase()) ? join(HERE, 'learned') : resolve(learnedOpt);
+  let lf = [];
+  try { lf = readdirSync(ldir).filter((f) => f.endsWith('.json')).sort(); } catch { /* ingen */ }
+  const want = opt.case ? String(opt.case).split(',').map((x) => x.trim().toLowerCase()).filter(Boolean) : null;
+  for (const f of lf) {
+    try {
+      const d = JSON.parse(readFileSync(join(ldir, f), 'utf8'));
+      if (d?.kind !== 'glimt-learned/1' || !d.query) continue;
+      const id = `L-${String(d.id ?? f).replace(/[^\w-]+/g, '').slice(0, 40)}`;
+      if (want && !want.some((w) => id.toLowerCase().includes(w) || f.toLowerCase().includes(w) || w === 'learned')) continue;
+      metas.push({ file: f, path: join(ldir, f), id, title: String(d.title ?? f).slice(0, 120), area: 'lært', intent: d.expect?.intent ?? null });
+    } catch (e) { console.warn(`  Hopper over ${f}: ${e.message}`); }
+  }
+}
+if (!metas.length) { console.error('Ingen caser valgt.'); process.exit(2); }
 // Prompt 59: --compare leses før kjøringen (feil fil = feil med en gang, ikke etter en time med eval).
 let prevRun = null;
 if (opt.compare) { try { prevRun = JSON.parse(readFileSync(resolve(opt.compare), 'utf8')); if (!Array.isArray(prevRun.cases)) throw new Error('mangler cases'); } catch (e) { console.error(`--compare ${opt.compare}: ${e.message}`); process.exit(2); } }
 const fastMode = String(opt.fast59 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on';
 const convoMode = String(opt.convo60 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on'; // prompt 60
+const recipesMode = String(opt.recipes61 ?? 'on').toLowerCase() === 'off' ? 'off' : 'on'; // prompt 61
 
 /* ---------------- Modellsjekk ---------------- */
 
@@ -233,7 +255,7 @@ function runOne(meta, i) {
   return new Promise((res) => {
     const out = join(tmpRoot, `${meta.id}-${i}.json`);
     const t0 = Date.now();
-    const child = spawn(process.execPath, [join(HERE, 'worker.mjs'), join(caseDir, meta.file), out], { cwd: REPO, env: { ...cleanEnv(), EVAL47_CONFIG: JSON.stringify(cfg), EVAL_FAST59: fastMode, EVAL_CONVO60: convoMode }, stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, [join(HERE, 'worker.mjs'), meta.path ?? join(caseDir, meta.file), out], { cwd: REPO, env: { ...cleanEnv(), EVAL47_CONFIG: JSON.stringify(cfg), EVAL_FAST59: fastMode, EVAL_CONVO60: convoMode, EVAL_RECIPES61: recipesMode }, stdio: ['ignore', 'pipe', 'pipe'] });
     let logs = '';
     child.stdout.on('data', (d) => { logs += d; });
     child.stderr.on('data', (d) => { logs += d; });
@@ -301,7 +323,7 @@ const intents59 = perIntent59(all);
 const cache59 = cacheEffect59(all);
 const cmp59 = prevRun ? compare59(prevRun, all, opt.compare) : null;
 const allReply = all.flatMap((c) => c.results.map(replyMsOf59)).sort((a, b) => a - b);
-console.log(`Svartid (forespørsel → svar, uten bakgrunnsjobber etter svaret): p50 ${sec(pct58(allReply, 0.5))} · p90 ${sec(pct58(allReply, 0.9))} · «raskere svar» ${fastMode} · «forståelse i samtaler» ${convoMode}`);
+console.log(`Svartid (forespørsel → svar, uten bakgrunnsjobber etter svaret): p50 ${sec(pct58(allReply, 0.5))} · p90 ${sec(pct58(allReply, 0.9))} · «raskere svar» ${fastMode} · «forståelse i samtaler» ${convoMode} · «Glimt lærer» ${recipesMode}`);
 console.log(`\nPer intent (svartid p50 / p90 · totalt p50 / p90):`);
 for (const x of intents59) console.log(`  ${pad(x.intent, 22)} ${pad(`${x.runs} kj.`, 7)} ${pad(`${sec59(x.replyP50)} / ${sec59(x.replyP90)}`, 18)} ${sec59(x.totalP50)} / ${sec59(x.totalP90)}`);
 const cacheLine59 = cache59.total ? `Prompt-cache: ${cache59.total.evaluated} av ~${cache59.total.est} prompt-tokens regnet ut · ${cache59.total.reusedPct ?? 0} % gjenbrukt fra KV-/prefiks-cachen (${cache59.method}) · ${Object.entries(cache59.byStep).map(([k, v]) => `${k} ${v.reusedPct ?? 0} % (${v.calls} kall)`).join(' · ')}` : null;
@@ -329,6 +351,7 @@ const meta = { date: new Date().toISOString(), frozenClock: '2026-10-24T10:00:00
   routing: { mode: routingMode, note: routingNote, effective: all[0]?.results?.[0]?.routing ?? null }, missingModels: missing, runs, commit, node: process.version };
 meta.fast59 = fastMode;
 meta.convo60 = convoMode;
+meta.recipes61 = recipesMode;
 writeFileSync(`${base}.json`, JSON.stringify({ meta, summary: { passed: totalPass, total, greenCases: green, cases: all.length, modelFailures: modelFails, envFailures: envTotal, engine: engineLabel, p50Ms: p50All, p90Ms: p90All,
   replyP50Ms: pct58(allReply, 0.5), replyP90Ms: pct58(allReply, 0.9), perIntent: intents59, cacheEffect: cache59, ...(cmp59 ? { compare: cmp59 } : {}) }, cases: all }, null, 2));
 const md = [`# Glimt eval ${date} · motor ${engineLabel} · ${backend} · ${modelTag}`, '',

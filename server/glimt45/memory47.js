@@ -72,6 +72,8 @@ async function embedTexts(user, texts) {
     return out;
   } catch { embedDownUntil = Date.now() + 5 * 60_000; return null; }
 }
+/** Prompt 61: samme embedding-kall (gaten, kb-ruten, 2,5 s, nede-merke 5 min) for oppskriftene. → {vectors, model} | null */
+export const embed47 = (user, texts) => embedTexts(user, texts);
 const toBlob = (v) => Buffer.from(new Float32Array(v).buffer);
 const fromBlob = (b) => (b ? Array.from(new Float32Array(b.buffer, b.byteOffset, Math.floor(b.byteLength / 4))) : null);
 const cos = (a, b) => { let s = 0, na = 0, nb = 0; for (let i = 0; i < Math.min(a.length, b.length); i++) { s += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; } return na && nb ? s / Math.sqrt(na * nb) : 0; };

@@ -163,8 +163,11 @@ export async function modelPlan47(user, text, { ctx, hint = '', mode: mode0 = 'j
     const sp = attempt === 0 ? STEP47.planner : STEP47.plannerRetry;
     const user0 = `Melding: ${text}${hint ? `\nHints (from simple text patterns, may be wrong): ${hint}` : ''}${lastErr ? `\nYour previous answer could not be used (${lastErr}). Reply with valid JSON that follows the schema.` : ''}`;
     // Mål prompten før kallet; trim eldste historikk og så fakta – aldri systemprompten eller meldingen.
-    const fit = fitParts47({ fixed: `${sys0}\n${user0}\n${JSON.stringify(schema)}${tools ? JSON.stringify(tools) : ''}\n${ctx.nowLine}\n${ctx.profileText}`, parts: [{ key: 'history', text: ctx.historyText, fromStart: true }, { key: 'facts', text: ctx.factsText, minChars: 200 }], numCtx: sp.numCtx, numPredict: sp.numPredict });
-    const system = `${sys0}\n\n# Context\n${contextBlock47(ctx, fit.parts)}`;
+    // Prompt 61 (del 1): lærte oppskrifter (ctx.recipesText, maks ~600 tokens) står rett etter den faste prefiksen (KV-cachen beholdes),
+    // før konteksten – instruksen i teksten sier at de går foran de faste eksemplene når meldingen ligner.
+    const learned = ctx.recipesText ? `\n\n# Learned examples\n${ctx.recipesText}` : '';
+    const fit = fitParts47({ fixed: `${sys0}${learned}\n${user0}\n${JSON.stringify(schema)}${tools ? JSON.stringify(tools) : ''}\n${ctx.nowLine}\n${ctx.profileText}`, parts: [{ key: 'history', text: ctx.historyText, fromStart: true }, { key: 'facts', text: ctx.factsText, minChars: 200 }], numCtx: sp.numCtx, numPredict: sp.numPredict });
+    const system = `${sys0}${learned}\n\n# Context\n${contextBlock47(ctx, fit.parts)}`;
     const t0 = Date.now();
     let out;
     try {

@@ -204,3 +204,24 @@ docker exec homelab-os npm run eval -- --url http://<mac-mini-ip>:11434 --out /d
 Containeren må nå Ollama på Macen. Ollama lytter bare på localhost som standard, så kjør
 `launchctl setenv OLLAMA_HOST 0.0.0.0` og start Ollama på nytt. I containeren leses rutingen fra `/data/homelab.db` (`--routing prod-db`), skrivebeskyttet. Testdataene havner i `/tmp` og
 slettes, og produksjonsdataene røres ikke. Med `--out /data/eval-results` havner resultatene i `./data/eval-results` på verten.
+
+### Glimt lærer – oppskrifter (prompt 61, prompt 49 del 1)
+
+```sh
+npm run eval -- --case 27,28,29                    # oppskriftscasene
+npm run eval -- --case 27,28,29 --recipes61 off    # før/etter: lagre oppskrifter, eksempler, hurtigvei og lære av rettelser av
+npm run eval -- --recipes61 off --out /tmp/f && npm run eval -- --compare /tmp/f/<fil>.json   # svartid før/etter
+npm run eval -- --case learned                     # bare testtilfellene fra rettelser (eval/learned/*.json)
+npm run eval -- --learned off                      # uten dem · --learned DIR = en annen mappe (f.eks. $DATA_DIR/eval-learned)
+```
+
+- 27: Nina-spørsmålet 3 ganger → oppskriften lagres, 3. gang brukes den som eksempel (`trace.recipe.use = fewshot`), og den blir
+  aktiv (2 vellykkede bruk; en kjøring er vellykket først når de neste 2 meldingene ikke retter/angrer/omformulerer, så casen sender én
+  melding til). 28: samme spørsmål 7 ganger → 7. gang går hurtigveien (ingen planlegger-kall, `engine = oppskrift`). 29: «nei, jeg mente
+  middagen» → ny kandidat + negativt eksempel + testtilfelle i `eval/learned/` (i eval: kjøringens egen DATA_DIR).
+- Med `--recipes61 off` feiler 27–29 med vilje.
+- `eval/learned/*.json` skrives av serveren når brukeren retter Glimt (data, aldri kode; i `.gitignore`). Kan ikke serveren skrive i repoet
+  (f.eks. i containeren), havner de i `$DATA_DIR/eval-learned/` – kjør da `--learned $DATA_DIR/eval-learned`. Casen seeder personen fra
+  minnet og (med oppskrifter på) den lærte oppskriften og det negative eksemplet, stiller det opprinnelige spørsmålet og sjekker bare
+  planen (riktige verktøy, ikke den feile planen) – brukerens egne kalender-/finansdata finnes ikke i eval.
+
