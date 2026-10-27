@@ -8,7 +8,7 @@ Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. 
   - På Android hakker Hjem, Chat og ark mindre første gang de åpnes.
   - På web regnes siden ut omtrent fem ganger sjeldnere under mikrofonopptak, og når man drar i kartarket i Familie. Det lengste bildet når man bytter fane i Media er under halvparten så langt som før.
   - Med «Reduser bevegelse» på brukes korte fades i stedet for bevegelse.
-- **Glimt:** «neste forelesning» og andre kalendersøk regner «nå» likt som resten av svaret. En avtale som pågår, kunne bli regnet som ferdig.
+- **Glimt:** kalendersøket bruker samme klokke som resten av Glimt (intern retting, ingen endring i svarene).
 - **Logoer:** butikker uten nettside beholder bokstav-logoen.
 
 ## [4.60.0] – 27.10.2026 · Widgets i to størrelser, ny mikrofon og nytt Media
