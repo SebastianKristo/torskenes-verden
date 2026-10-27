@@ -337,3 +337,15 @@ test('varianter av butikknavn treffer samme kjede (store/små bokstaver, underkj
   };
   for (const [id, names] of Object.entries(cases)) for (const n of names) assert.equal(M.matchMerchant(n)?.id, id, n);
 });
+
+test('delt domene: oppføringen med samme navn som domenet eier det (ica.se → ICA), og bokstav prøves på nytt', () => {
+  const items = [
+    { id: 'maxi-ica-stormarknad', navn: 'Maxi ICA Stormarknad', domene: 'ica.se', kilde: 'html-icon' },
+    { id: 'ica', navn: 'ICA', domene: 'ica.se', kilde: 'bokstav' },
+    { id: 'coop-extra', navn: 'Coop Extra', domene: 'coop.no', kilde: 'wikidata' },
+    { id: 'coop', navn: 'Coop', domene: 'coop.no', kilde: 'html-icon' },
+  ];
+  const o = F.domainOwners(items);
+  assert.equal(o.get('ica.se'), 'ica');
+  assert.equal(o.get('coop.no'), 'coop');
+});

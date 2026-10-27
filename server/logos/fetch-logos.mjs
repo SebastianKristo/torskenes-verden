@@ -330,10 +330,14 @@ export function serialize(reg) {
   return `{\n  "version": ${JSON.stringify(reg.version)},\n  "note": ${JSON.stringify(reg.note ?? '')},\n  "items": [\n${reg.items.map((x) => '    ' + JSON.stringify(x)).join(',\n')}\n  ]\n}\n`;
 }
 
-/** Domener som deles: domene → id-en til den første oppføringen (ikke manuell, ikke bokstav) som har det. */
+/** Domener som deles: domene → id-en til oppføringen som eier det. Navnet som er lik domenet vinner (ica.se → «ICA», ikke
+ *  «Maxi ICA Stormarknad»), ellers den første som ikke er manuell eller bokstav. */
 export function domainOwners(items) {
   const count = new Map(), owner = new Map();
+  const stem = (d) => String(d).split('.')[0].replace(/[^a-z0-9]/g, '');
+  const bare = (n) => String(n ?? '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
   for (const it of items) if (it.domene) count.set(it.domene, (count.get(it.domene) ?? 0) + 1);
+  for (const it of items) if (it.domene && count.get(it.domene) > 1 && !owner.has(it.domene) && it.kilde !== 'manuell' && bare(it.navn) === stem(it.domene)) owner.set(it.domene, it.id);
   for (const it of items) if (it.domene && count.get(it.domene) > 1 && !owner.has(it.domene) && it.kilde !== 'bokstav' && it.kilde !== 'manuell') owner.set(it.domene, it.id);
   for (const it of items) if (it.domene && count.get(it.domene) > 1 && !owner.has(it.domene)) owner.set(it.domene, null);
   return owner;
@@ -361,7 +365,7 @@ export async function processItem(it, { filesDir = FILES, owners = new Map(), wi
     reasons.push(...w.reasons);
   }
   // 2–4. Favicon-kildene, bare når domenet er oppføringens eget.
-  if (it.domene && !shared && it.kilde !== 'bokstav') {
+  if (it.domene && !shared) {
     const r = await fetchSite(it.domene);
     if (r.png) {
       await save(r.png, { kilde: r.kind });
@@ -373,7 +377,7 @@ export async function processItem(it, { filesDir = FILES, owners = new Map(), wi
   // Behold en tidligere nedlastet fil hvis den finnes.
   const had = it.kilde !== 'bokstav' && await stat(file).then((x) => x.size > 0).catch(() => false);
   if (had) return { status: 'kept', reasons };
-  if (shared || it.kilde === 'bokstav') { it.kilde = 'bokstav'; it.hentet = ''; return { status: 'letter', reasons }; }
+  if (shared) { it.kilde = 'bokstav'; it.hentet = ''; return { status: 'letter', reasons }; }
   if (!it.domene) { if (it.kilde !== 'nsi') it.kilde = ''; it.hentet = ''; return { status: 'letter', reasons }; }
   it.kilde = ''; it.hentet = '';
   return { status: 'missing', reasons };
