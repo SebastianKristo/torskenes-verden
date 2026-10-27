@@ -2,6 +2,22 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.60.0] – 27.10.2026 · Widgets i to størrelser, ny mikrofon og nytt Media
+- **Hjem:**
+  - Endre størrelse på widgets på mobil: hold inne for å redigere, og dra eller trykk på håndtaket ↔ for å bytte mellom halv og full bredde.
+  - På Android er flisene nå like høye som innholdet, som på iPhone, og widgetene kan flyttes i redigering. Hold, dra og slipp.
+  - Du kan scrolle mens Glimt svarer. Et trykk utenfor lukker svaret når det er ferdig, og blir svaret ferdig mens du har scrollet bort, får du «Glimt svarte ↑».
+- **Ny mikrofon i søkefeltet:** opptaket vises som et kort med bølgeform. Med × avbryter du, med ■ legges teksten i feltet, og med ↑ sendes den med en gang.
+- **Glimt og kalender:** «legg til i kalender at jeg og pappa skal se Dune på Colosseum 17. desember kl 17:30» legges rett i standardkalenderen. Du får et kort der du kan bytte kalender, åpne avtalen i Kalender eller angre. Glimt spør ikke lenger «Hvilken kalender?».
+- **Media på web** har nytt design med Oversikt, Kalender, Bibliotek og Nedlastinger. Under Nedlastinger finner du fartsgraf, filter, ferdige nedlastinger per dag, lagring og kilder.
+- **Chat på web** viser en lasteside med samtalelista fra forrige gang, og sier fra hvis Homelab svarer sakte eller ikke svarer.
+- **Sporing:** kilder og transportører ligger nå under Innstillinger → Moduler → Sporing.
+- **Kalender-appene:**
+  - Nye widgets for iPhone og låseskjermen, Android (Material You) og Samsung (One UI, med en måned du kan bla i).
+  - NÅ-kortet øverst er fjernet.
+  - Under Innstillinger → Widgets velger du hvilke kalendere som vises.
+- **Logoer:** ICA, ICA Kvantum, Maxi og de andre ICA-butikkene har fått logo.
+
 ## [4.59.0] – 26.10.2026 · Flere og bedre butikklogoer
 - **Offisielle logoer fra Wikidata og Wikimedia Commons:** 228 av logoene i biblioteket er nå offisielle logoer, ikke små favicon. Coop Extra, Mega, Prix, Obs og Obs Bygg har fått hver sin logo, og 7-Eleven, Narvesen, Biltema, Lindex og Subway har fått logo.
 - **Flere kjeder:** biblioteket henter norske kjeder fra OpenStreetMap og har nå 443 butikker og tjenester. Logoene i biblioteket virker også når «Finansdata forlater aldri huset» er på. Den månedlige jobben holder biblioteket oppdatert.
