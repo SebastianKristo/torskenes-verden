@@ -378,7 +378,7 @@ export async function processItem(it, { filesDir = FILES, owners = new Map(), wi
   const had = it.kilde !== 'bokstav' && await stat(file).then((x) => x.size > 0).catch(() => false);
   if (had) return { status: 'kept', reasons };
   if (shared) { it.kilde = 'bokstav'; it.hentet = ''; return { status: 'letter', reasons }; }
-  if (!it.domene) { if (it.kilde !== 'nsi') it.kilde = ''; it.hentet = ''; return { status: 'letter', reasons }; }
+  if (!it.domene) { if (it.kilde !== 'nsi') it.kilde = 'bokstav'; it.hentet = ''; return { status: 'letter', reasons }; }
   it.kilde = ''; it.hentet = '';
   return { status: 'missing', reasons };
 }
