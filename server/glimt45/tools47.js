@@ -50,6 +50,17 @@ export async function searchTerms47(user, text, raw = [], facts = null) {
   return { terms, expanded, person: p ? { name: p.subject, type: p.object } : null, facts: rel };
 }
 
+// «Nå» fra samme klokke som resten av motoren (ctx.today + ctx.nowMin i Europe/Oslo), ikke Date.now() – ellers blander
+// søket den injiserte klokka (tester, planlagte kjøringer) med den ekte, og en avtale i dag regnes som ferdig/ikke ferdig feil.
+export function osloMs47(today, nowMin) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(today ?? '') || !Number.isFinite(nowMin)) return null;
+  const [y, m, d] = today.split('-').map(Number);
+  const guess = Date.UTC(y, m - 1, d, Math.floor(nowMin / 60), nowMin % 60);
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date(guess)).map((x) => [x.type, x.value]));
+  const shown = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+  return guess - (shown - guess);
+}
 const calSearch = {
   name: 'calendar.search', module: 'calendar', destructive: false,
   description: 'Finn kommende (eller tidligere) avtaler som matcher ett av ordene (OR) i tittel, sted, notat eller deltakere – hele ord, med «Glimt husker»-aliaser begge veier («Nina» ↔ «frisør»).',
@@ -65,7 +76,7 @@ const calSearch = {
   async run(a, ctx) {
     const from = a.past ? addDays45(ctx.today, -365) : ctx.today, to = a.past ? ctx.today : addDays45(ctx.today, 365);
     const evs = ((await runAsUser(ctx.user, () => eventsFor(ctx.user, from, to))).events ?? []).filter((e) => anyWord47(evText(e), a.expanded)).sort(sortEv);
-    const now = ctx.nowMs ?? Date.now();
+    const now = ctx.nowMs ?? osloMs47(ctx.today, ctx.nowMin) ?? Date.now();
     const list = a.past ? evs.filter((e) => (e.allDay ? e.date <= ctx.today : Date.parse(e.start) <= now)).reverse() : evs.filter((e) => (e.allDay ? e.date >= ctx.today : Date.parse(e.end ?? e.start) > now));
     return { status: 'done', result: { query: a.query, count: list.length, searched: { terms: a.expanded, direction: a.past ? 'past' : 'next', from, to }, person: a.person ?? null,
       results: list.slice(0, a.limit).map((e) => ({ title: e.title, date: e.date, time: e.allDay ? null : osloHm(e.start), location: e.room ?? e.location ?? null })) },
