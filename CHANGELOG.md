@@ -2,6 +2,15 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.61.0] – 27.10.2026 · Jevnere animasjoner
+- **Jevnere på web, iPhone og Android:** Glimt-orben, skimmer på lasteskjermer, ark som glir opp, brytere, vugging og flytting av widgets, og mikrofonbølgen beveger nå bare det som flytter seg, uten å tegne hele siden på nytt. De ser ut som før.
+  - På iPhone går orben og Kalender-stjernen i skjermens takt (opptil 120 Hz), ikke 30 bilder i sekundet. Kalender-appen bruker også 120 Hz.
+  - På Android hakker Hjem, Chat og ark mindre første gang de åpnes.
+  - På web regnes siden ut omtrent fem ganger sjeldnere under mikrofonopptak, og når man drar i kartarket i Familie. Det lengste bildet når man bytter fane i Media er under halvparten så langt som før.
+  - Med «Reduser bevegelse» på brukes korte fades i stedet for bevegelse.
+- **Glimt:** «neste forelesning» og andre kalendersøk regner «nå» likt som resten av svaret. En avtale som pågår, kunne bli regnet som ferdig.
+- **Logoer:** butikker uten nettside beholder bokstav-logoen.
+
 ## [4.60.0] – 27.10.2026 · Widgets i to størrelser, ny mikrofon og nytt Media
 - **Hjem:**
   - Endre størrelse på widgets på mobil: hold inne for å redigere, og dra eller trykk på håndtaket ↔ for å bytte mellom halv og full bredde.
