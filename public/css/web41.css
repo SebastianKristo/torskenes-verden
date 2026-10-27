@@ -133,8 +133,8 @@ html:not([data-hl="2c"]) .ch-badge.auto41{color:#b9a4ff;background:rgba(160,130,
 .wx41-er>button:not(.wx41-tg){flex:none;width:36px;height:36px;border-radius:18px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;cursor:pointer}
 .wx41-er>button:disabled{opacity:.3;cursor:default}
 .wx41-tg{flex:none;position:relative;width:44px;height:26px;border-radius:13px;border:0;background:rgba(255,255,255,.2);cursor:pointer;padding:0}
-.wx41-tg i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;transition:left .18s}
-.wx41-tg.on{background:#3fbf7a}.wx41-tg.on i{left:21px}
+.wx41-tg i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;transition:transform .18s}
+.wx41-tg.on{background:#3fbf7a}.wx41-tg.on i{transform:translateX(18px)}
 .wx41-btns{display:flex;gap:8px}
 .wx41-btns button{flex:1;height:40px;border-radius:20px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#fff;cursor:pointer;font:700 12.5px Manrope,system-ui,sans-serif}
 .wx41-btns button.ghost{flex:none;padding:0 14px;border:0;opacity:.75}
@@ -170,8 +170,8 @@ html:not([data-hl="2c"]) .ch-badge.auto41{color:#b9a4ff;background:rgba(160,130,
 .m17-pill{position:absolute;right:14px;top:52px;z-index:3;height:32px;padding:0 6px 0 12px;border-radius:16px;border:0;background:rgba(27,26,23,.55);backdrop-filter:blur(10px);color:#fff;cursor:pointer;display:flex;align-items:center;gap:8px;font:700 12px Manrope,system-ui,sans-serif}
 .m17.plain .m17-pill{position:static;background:#1b1a17}
 .m17-sw{position:relative;width:34px;height:20px;border-radius:10px;background:rgba(255,255,255,.3)}
-.m17-sw i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:8px;background:#fff;transition:left .18s}
-.m17-sw.on{background:#3fbf7a}.m17-sw.on i{left:16px}
+.m17-sw i{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:8px;background:#fff;transition:transform .18s}
+.m17-sw.on{background:#3fbf7a}.m17-sw.on i{transform:translateX(14px)}
 .m17-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .m17-date{font:italic 400 16px Newsreader,Georgia,serif;opacity:.95}
 .m17-greet{font:500 clamp(28px,4vw,40px)/1.05 Newsreader,Georgia,serif;overflow-wrap:anywhere}
@@ -272,8 +272,8 @@ html:not([data-hl="2c"]) .hl41-ch.dark{background:#eef0f4;color:#0b0e15}html:not
 .hl41-avs{display:flex}.hl41-avs .hl41-av{margin-right:-6px;box-shadow:0 0 0 2px var(--f-card)}
 .hl41-sp{flex:1}
 .hl41-tg{position:relative;flex:none;width:40px;height:24px;border-radius:12px;border:0;background:var(--f-line);cursor:pointer;padding:0}
-.hl41-tg i{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:10px;background:#fff;transition:left .18s}
-.hl41-tg.on{background:#3fbf7a}.hl41-tg.on i{left:18px}
+.hl41-tg i{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:10px;background:#fff;transition:transform .18s}
+.hl41-tg.on{background:#3fbf7a}.hl41-tg.on i{transform:translateX(16px)}
 .hl41-b{height:42px;padding:0 18px;border-radius:21px;border:1px solid var(--f-line);background:transparent;color:var(--f-ink);cursor:pointer;font:700 14px Manrope,system-ui,sans-serif;display:inline-flex;align-items:center;gap:8px}
 .hl41-b.ink{border:0;background:var(--f-on);color:var(--f-onink)}
 .hl41-b:disabled{opacity:.5;cursor:default}

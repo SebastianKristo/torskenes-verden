@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -57,7 +58,7 @@ internal fun GlimtStatus67(text: String, color: Color, font: FontFamily, modifie
     val tr = rememberInfiniteTransition(label = "st67")
     val a by tr.animateFloat(.25f, 1f, infiniteRepeatable(tween(550), RepeatMode.Reverse), label = "st67a")
     Row(modifier.heightIn(min = 24.dp).semantics { contentDescription = text }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.size(7.dp).alpha(a).clip(CircleShape).background(color))
+        Box(Modifier.size(7.dp).graphicsLayer { alpha = a; clip = true }.clip(CircleShape).background(color)) // prompt 71: pulsen i laget
         Text(text, color = color, fontFamily = font, fontWeight = FontWeight.Medium, fontSize = 13.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.FastOutSlowInEasing
 
 import android.graphics.Bitmap
@@ -468,11 +469,12 @@ internal fun ReorderWrap(vm: AppViewModel, id: String, title: String, index: Int
     val edit = vm.trkEdit
     val wob = rememberInfiniteTransition(label = "vugge")
     // Dempet vugging: ±0,2° med periode 0,6 s, annenhver i motsatt fase.
-    val angle by wob.animateFloat(
+    val angle = wob.animateFloat(
         initialValue = if (index % 2 == 0) -0.2f else 0.2f, targetValue = if (index % 2 == 0) 0.2f else -0.2f,
         animationSpec = infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "vinkel",
     )
-    Box(Modifier.fillMaxWidth().then(if (edit) Modifier.rotate(angle) else Modifier).longPressEdit(!edit) { Haptics.tap(); vm.trkEdit = true }) {
+    // Prompt 71: vinkelen leses i laget (graphicsLayer), ikke i komposisjonen.
+    Box(Modifier.fillMaxWidth().then(if (edit) Modifier.graphicsLayer { rotationZ = angle.value } else Modifier).longPressEdit(!edit) { Haptics.tap(); vm.trkEdit = true }) {
         Column {
             if (edit) Row(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp, 14.dp, 0.dp, 0.dp)).background(barBg).padding(start = 14.dp, end = 6.dp),

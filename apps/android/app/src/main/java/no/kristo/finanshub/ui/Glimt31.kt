@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -147,7 +149,10 @@ internal fun GlimtMark31(size: Dp, state: Int = GLIMT_TENKER, dark: Boolean = fa
     val star = remember { PathParser().parsePathString(STAR31).toPath() }
     val check = remember { PathParser().parsePathString(CHECK31).toPath() }
     val done = state == GLIMT_FERDIG
-    Canvas(modifier.size(size).semantics { contentDescription = when (state) { GLIMT_KLAR -> "Glimt er klar"; GLIMT_FERDIG -> "Glimt er ferdig"; else -> "Glimt jobber" } }) {
+    // Prompt 71: tre lag i samme flate. Ringen tegnes én gang og roteres som et ferdig lag (graphicsLayer.rotationZ rundt midten –
+    // samme bilde som rotate() i tegningen før), så bare laget snus hvert bilde. Gløden og stjernen leser pulsen i tegnefasen.
+    Box(modifier.size(size).semantics { contentDescription = when (state) { GLIMT_KLAR -> "Glimt er klar"; GLIMT_FERDIG -> "Glimt er ferdig"; else -> "Glimt jobber" } }) {
+    Canvas(Modifier.matchParentSize()) {
         val s = this.size.minDimension
         val c = Offset(s / 2, s / 2)
         if (s > 60.dp.toPx()) {
@@ -156,10 +161,20 @@ internal fun GlimtMark31(size: Dp, state: Int = GLIMT_TENKER, dark: Boolean = fa
             val k = if (reduce) 1f else .9f + .2f * pulse
             scale(k, k, c) { drawCircle(g, s * .85f, c, alpha = if (state == GLIMT_TENKER || state == GLIMT_SVARER) .35f + .35f * pulse else .5f) }
         }
+        if (done) {
+            val bw = maxOf(2.dp.toPx(), s * .06f)
+            drawCircle(DONE31, s / 2 - bw / 2, c, style = Stroke(bw))
+        }
+    }
+    if (!done) Canvas(Modifier.matchParentSize().graphicsLayer { rotationZ = if (reduce) 0f else rot }) {
+        val s = this.size.minDimension
+        val c = Offset(s / 2, s / 2)
         val bw = maxOf(2.dp.toPx(), s * .06f)
-        val r = s / 2 - bw / 2
-        if (done) drawCircle(DONE31, r, c, style = Stroke(bw))
-        else rotate(if (reduce) 0f else rot, c) { drawCircle(Brush.sweepGradient(RING31, c), r, c, style = Stroke(bw)) }
+        drawCircle(Brush.sweepGradient(RING31, c), s / 2 - bw / 2, c, style = Stroke(bw))
+    }
+    Canvas(Modifier.matchParentSize()) {
+        val s = this.size.minDimension
+        val c = Offset(s / 2, s / 2)
         if (done) {
             val k = s * .46f / 24f * pop.value
             translate(c.x - 12f * k, c.y - 12f * k) { scale(k, k, Offset.Zero) { drawPath(check, DONE31, style = Stroke(3f, cap = StrokeCap.Round, join = StrokeJoin.Round)) } }
@@ -181,6 +196,7 @@ internal fun GlimtMark31(size: Dp, state: Int = GLIMT_TENKER, dark: Boolean = fa
             drawCircle(Color(0xFFFFD9C2), s * .05f * (.3f + .7f * a2), Offset(s * .01f, s * .93f), alpha = a2)
         }
     }
+    }
 }
 
 /** Tre hoppende prikker (toasten). */
@@ -190,7 +206,8 @@ internal fun GlimtDots31(color: Color) {
     Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
         for (i in 0 until 3) {
             val v by inf.animateFloat(0f, 1f, infiniteRepeatable(keyframes { durationMillis = 1200; 0f at 0; 1f at 480; 0f at 960 }, initialStartOffset = StartOffset(i * 150)), label = "d$i")
-            Box(Modifier.offset(y = (-3 * v).dp).size(4.dp).alpha(.25f + .75f * v).clip(CircleShape).background(color))
+            // Prompt 71: hoppet og tonen leses i layout-/lagfasen (offset-lambda + graphicsLayer), ikke i komposisjonen.
+            Box(Modifier.offset { IntOffset(0, (-3 * v).dp.roundToPx()) }.size(4.dp).graphicsLayer { alpha = .25f + .75f * v; clip = true }.clip(CircleShape).background(color))
         }
     }
 }
@@ -286,7 +303,11 @@ private fun Bubble31(vm: AppViewModel, j: AiJob31) {
     val pctA by animateFloatAsState(pct.toFloat(), tween(300), label = "pct31")
     BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
         Column(
-            Modifier.widthIn(max = 340.dp).fillMaxWidth().scale(grow.value).alpha(((grow.value - .6f) / .4f).coerceIn(0f, 1f))
+            // Prompt 71: inngangen (skala + tone) i ett lag – samme verdier som scale()/alpha() før, men lest i lagfasen.
+            Modifier.widthIn(max = 340.dp).fillMaxWidth().graphicsLayer {
+                val g = grow.value; scaleX = g; scaleY = g
+                val a = ((g - .6f) / .4f).coerceIn(0f, 1f); alpha = a; clip = a < 1f
+            }
                 .shadow(28.dp, RoundedCornerShape(28.dp), ambientColor = Color.Black.copy(alpha = .45f), spotColor = Color.Black.copy(alpha = .45f))
                 .clip(RoundedCornerShape(28.dp)).background(Color(0xF5FAF8F3))
                 .border(1.dp, Color.White.copy(alpha = .6f), RoundedCornerShape(28.dp))
@@ -340,7 +361,7 @@ private fun Step31(label: String, state: String) {
     val p by inf.animateFloat(.85f, 1.08f, infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "sp")
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(
-            Modifier.size(18.dp).scale(if (act) p else 1f).clip(CircleShape)
+            Modifier.size(18.dp).graphicsLayer { val k = if (act) p else 1f; scaleX = k; scaleY = k }.clip(CircleShape) // prompt 71: puls i laget
                 .then(if (done) Modifier.background(Color(0xFF2F7D4F)) else Modifier.border(if (act) 2.dp else 1.5.dp, if (act) Color(0xFFB23A2A) else Color(0xFFC9C1B1), CircleShape)),
             contentAlignment = Alignment.Center,
         ) { if (done) WxIcon(CHECK31, Color.White, 10.dp, stroke = 3.6f) }

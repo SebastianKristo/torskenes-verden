@@ -23,11 +23,16 @@ struct Star43: Shape {
 
 /// Glimt-orben: konisk fargering (#b23a2a → #e8794a → #f2c14e → #3fbf9a → #7a5ad6), kremfarget innside og rød stjerne.
 /// Roterer sakte (6 s per runde), raskere (1,6 s) mens Glimt svarer. Står stille med «Reduser bevegelse».
+/// Prompt 71: ringen er et ferdig lag (Orb43Ring, drawingGroup) som bare roteres av TimelineView(.animation) – ingen
+/// repeatForever som kan lekke inn i layout, og farten byttes uten hopp (vinkelen fortsetter der den var).
 struct Orb43: View {
     var size: CGFloat = 20
     var busy: Bool = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var spin: Bool = false
+    @State private var t0: Double = Date.timeIntervalSinceReferenceDate
+    @State private var deg0: Double = 0
+    /// Perioden som gjelder fra t0 (byttes sammen med t0/deg0, så det aldri blir et bilde med feil vinkel).
+    @State private var per: Double = 0
 
     static let colors: [Color] = [Color(hex: "#b23a2a"), Color(hex: "#e8794a"), Color(hex: "#f2c14e"), Color(hex: "#3fbf9a"), Color(hex: "#7a5ad6"), Color(hex: "#b23a2a")]
 
@@ -35,21 +40,42 @@ struct Orb43: View {
         let ring: CGFloat = Swift.max(2, size * 0.12)
         ZStack {
             Circle().fill(Color(hex: "#f3efe6"))
-            Circle()
-                .strokeBorder(AngularGradient(colors: Orb43.colors, center: .center), lineWidth: ring)
-                .rotationEffect(.degrees(spin ? 360 : 0))
+            TimelineView(.animation(minimumInterval: nil, paused: reduceMotion)) { (ctx: TimelineViewDefaultContext) in
+                Orb43Ring(ring: ring)
+                    .rotationEffect(.degrees(angle(ctx.date.timeIntervalSinceReferenceDate)))
+            }
             Star43().fill(Color(hex: "#b23a2a")).frame(width: size * 0.5, height: size * 0.5)
         }
         .frame(width: size, height: size)
-        .onAppear { start() }
-        .onChange(of: busy) { (_: Bool, _: Bool) in start() }
+        .onAppear { t0 = Date.timeIntervalSinceReferenceDate; deg0 = 0; per = Orb43.period(busy) }
+        .onChange(of: busy) { (_: Bool, now: Bool) in rebase(now) }
         .accessibilityHidden(true)
     }
 
-    private func start() {
-        guard !reduceMotion else { return }
-        spin = false
-        withAnimation(.linear(duration: busy ? 1.6 : 6).repeatForever(autoreverses: false)) { spin = true }
+    private static func period(_ busy: Bool) -> Double { busy ? 1.6 : 6 }
+
+    private func angle(_ t: Double) -> Double {
+        if reduceMotion { return 0 }
+        return Anim71.turn(t, per: per > 0 ? per : Orb43.period(busy), t0: t0, deg0: deg0)
+    }
+
+    /// Ny fart: start fra vinkelen ringen har nå.
+    private func rebase(_ next: Bool) {
+        let now: Double = Date.timeIntervalSinceReferenceDate
+        deg0 = angle(now)
+        t0 = now
+        per = Orb43.period(next)
+    }
+}
+
+/// Fargeringen som ett ferdig lag (tegnes én gang, roteres som bilde).
+struct Orb43Ring: View {
+    let ring: CGFloat
+
+    var body: some View {
+        Circle()
+            .strokeBorder(AngularGradient(colors: Orb43.colors, center: .center), lineWidth: ring)
+            .drawingGroup()
     }
 }
 

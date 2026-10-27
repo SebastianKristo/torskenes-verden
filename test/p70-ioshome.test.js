@@ -57,7 +57,8 @@ test('mikrofon: nytt ikon, opptakskort med × · bølge · ■ · ↑, serveren 
   assert.match(m, /"Snakk nå …"/);
   assert.match(m, /"Skriver ned …"/);
   assert.match(m, /cornerRadius: 26/);
-  assert.match(m, /nanoseconds: 90_000_000/, 'egen timer i bølgen (~11/s)');
+  // Prompt 71: prøvene tas fortsatt ~11/s, men bølgen tegnes av TimelineView(.animation) i sin egen lille visning.
+  assert.match(m, /static let every: Double = 0\.09/, 'egen prøvetakt i bølgen (~11/s)');
   const s = code('HomeSearch29.swift');
   assert.match(s, /home70: true/);
   assert.match(s, /Home70RecCard\(text: dev \? live70 : ""/, 'live tekst bare med motoren på enheten');

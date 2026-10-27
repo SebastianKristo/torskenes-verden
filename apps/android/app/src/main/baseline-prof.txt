@@ -1,0 +1,91 @@
+# Prompt 71 (ANIAND71, claude-code-animasjoner-jevne.md): Baseline Profile for FinansHub (Hjem, Chat og ark).
+# AGP kompilerer denne fila (src/main/baseline-prof.txt) inn i APK-en, og androidx.profileinstaller skriver profilen til ART ved første
+# oppstart (også for sideload utenfor Play), så koden for disse skjermene er AOT-kompilert fra første åpning (mindre hakking første gang).
+# Håndskrevet med jokertegn (* = innen én pakke/klasse, ** = alt). En generert profil (baselineprofile-modul + Macrobenchmark) krever
+# emulator og nye Gradle-plugins og er ikke laget ennå. Compose/Material3 har egne profiler i bibliotekene.
+
+# Oppstart
+HSPLno/kristo/finanshub/MainActivity*;->**(**)**
+Lno/kristo/finanshub/MainActivity*;
+HSPLno/kristo/finanshub/AppViewModel*;->**(**)**
+Lno/kristo/finanshub/AppViewModel*;
+HSPLno/kristo/finanshub/Models15Kt*;->**(**)**
+Lno/kristo/finanshub/Models15Kt*;
+HSPLno/kristo/finanshub/PageLay*;->**(**)**
+Lno/kristo/finanshub/PageLay*;
+HSPLno/kristo/finanshub/ui/ThemeKt*;->**(**)**
+Lno/kristo/finanshub/ui/ThemeKt*;
+HSPLno/kristo/finanshub/ui/PaperPal*;->**(**)**
+Lno/kristo/finanshub/ui/PaperPal*;
+HSPLno/kristo/finanshub/ui/PaperFonts*;->**(**)**
+Lno/kristo/finanshub/ui/PaperFonts*;
+
+# Hjem (rutenett, wiggle/flytting, Glimt-orb og -svar, mikrofon)
+HSPLno/kristo/finanshub/ui/PaperKt*;->**(**)**
+Lno/kristo/finanshub/ui/PaperKt*;
+HSPLno/kristo/finanshub/ui/Home70Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Home70Kt*;
+HSPLno/kristo/finanshub/ui/Home70State*;->**(**)**
+Lno/kristo/finanshub/ui/Home70State*;
+HSPLno/kristo/finanshub/ui/Row70*;->**(**)**
+Lno/kristo/finanshub/ui/Row70*;
+HSPLno/kristo/finanshub/ui/Ans70*;->**(**)**
+Lno/kristo/finanshub/ui/Ans70*;
+HSPLno/kristo/finanshub/ui/Ui52BKt*;->**(**)**
+Lno/kristo/finanshub/ui/Ui52BKt*;
+HSPLno/kristo/finanshub/ui/Tiles50Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Tiles50Kt*;
+HSPLno/kristo/finanshub/ui/Paper15Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Paper15Kt*;
+HSPLno/kristo/finanshub/ui/PSec*;->**(**)**
+Lno/kristo/finanshub/ui/PSec*;
+HSPLno/kristo/finanshub/ui/Anim71Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Anim71Kt*;
+HSPLno/kristo/finanshub/ui/Glimt31Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Glimt31Kt*;
+HSPLno/kristo/finanshub/ui/Glimt43Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Glimt43Kt*;
+HSPLno/kristo/finanshub/ui/Ui38Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Ui38Kt*;
+HSPLno/kristo/finanshub/ui/Ui46Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Ui46Kt*;
+HSPLno/kristo/finanshub/ui/Mic70Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Mic70Kt*;
+HSPLno/kristo/finanshub/ui/Voice56UiKt*;->**(**)**
+Lno/kristo/finanshub/ui/Voice56UiKt*;
+HSPLno/kristo/finanshub/ui/Convo67UiKt*;->**(**)**
+Lno/kristo/finanshub/ui/Convo67UiKt*;
+HSPLno/kristo/finanshub/ui/Cal70CardKt*;->**(**)**
+Lno/kristo/finanshub/ui/Cal70CardKt*;
+HSPLno/kristo/finanshub/P31*;->**(**)**
+Lno/kristo/finanshub/P31*;
+HSPLno/kristo/finanshub/P38*;->**(**)**
+Lno/kristo/finanshub/P38*;
+HSPLno/kristo/finanshub/Stream67Kt*;->**(**)**
+Lno/kristo/finanshub/Stream67Kt*;
+HSPLno/kristo/finanshub/Glimt67*;->**(**)**
+Lno/kristo/finanshub/Glimt67*;
+HSPLno/kristo/finanshub/Voice56*;->**(**)**
+Lno/kristo/finanshub/Voice56*;
+
+# Chat
+HSPLno/kristo/finanshub/ui/Chat27UiKt*;->**(**)**
+Lno/kristo/finanshub/ui/Chat27UiKt*;
+HSPLno/kristo/finanshub/ui/Chat27SheetsKt*;->**(**)**
+Lno/kristo/finanshub/ui/Chat27SheetsKt*;
+HSPLno/kristo/finanshub/ui/Cards31Kt*;->**(**)**
+Lno/kristo/finanshub/ui/Cards31Kt*;
+HSPLno/kristo/finanshub/ui/Chat50UiKt*;->**(**)**
+Lno/kristo/finanshub/ui/Chat50UiKt*;
+HSPLno/kristo/finanshub/Chat27Kt*;->**(**)**
+Lno/kristo/finanshub/Chat27Kt*;
+
+# Ark (ModalBottomSheet i Material3 og appens ark-innhold)
+HSPLandroidx/compose/material3/ModalBottomSheet*;->**(**)**
+Landroidx/compose/material3/ModalBottomSheet*;
+HSPLandroidx/compose/material3/SheetState*;->**(**)**
+Landroidx/compose/material3/SheetState*;
+HSPLandroidx/compose/material3/SheetDefaults*;->**(**)**
+Landroidx/compose/material3/SheetDefaults*;
+HSPLandroidx/compose/material3/internal/AnchoredDraggable*;->**(**)**
+Landroidx/compose/material3/internal/AnchoredDraggable*;

@@ -51,7 +51,8 @@ struct KalSpark: View {
     @Environment(\.accessibilityReduceMotion) private var reduce
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { (ctx: TimelineViewDefaultContext) in
+        // Prompt 71: skjermens egen takt (60/120 Hz) i stedet for 30 bilder/s.
+        TimelineView(.animation(minimumInterval: nil, paused: false)) { (ctx: TimelineViewDefaultContext) in
             KalSparkFrame(size: size, fast: fast, reduce: reduce, t: ctx.date.timeIntervalSinceReferenceDate)
         }
         .frame(width: size, height: size)
@@ -77,8 +78,8 @@ struct KalSparkFrame: View {
     private var ring: some View {
         let angle: Double = reduce ? 0 : KalAnim.turn(t, fast ? 1 : 3.2)
         let bw: CGFloat = Swift.max(2, size * 0.1)
-        return Circle()
-            .strokeBorder(AngularGradient(colors: KalAnim.ring, center: .center), lineWidth: bw)
+        // Prompt 71: ringen er et ferdig lag (drawingGroup) som bare roteres.
+        return KalSparkRing(bw: bw)
             .rotationEffect(.degrees(angle))
     }
 
@@ -119,7 +120,7 @@ struct KalOrb: View {
     @Environment(\.accessibilityReduceMotion) private var reduce
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { (ctx: TimelineViewDefaultContext) in
+        TimelineView(.animation(minimumInterval: nil, paused: false)) { (ctx: TimelineViewDefaultContext) in
             KalOrbFrame(size: size, thinking: thinking, reduce: reduce, t: ctx.date.timeIntervalSinceReferenceDate)
         }
         .frame(width: size, height: size)
@@ -150,10 +151,8 @@ struct KalOrbFrame: View {
 
     private var glow: some View {
         let angle: Double = reduce ? 0 : KalAnim.turn(t, thinking ? 1.4 : 7)
-        return Circle()
-            .fill(AngularGradient(colors: KalAnim.glow, center: .center))
-            .frame(width: size * 1.24, height: size * 1.24)
-            .blur(radius: size * 0.16)
+        // Prompt 71: gløden (blur med fast radius) tegnes én gang som et ferdig lag og roteres – blur beregnes ikke per bilde.
+        return KalOrbGlow(size: size)
             .opacity(thinking ? 0.85 : 0.55)
             .rotationEffect(.degrees(angle))
             .allowsHitTesting(false)
@@ -161,32 +160,102 @@ struct KalOrbFrame: View {
 
     private var ring: some View {
         let angle: Double = reduce ? 0 : -KalAnim.turn(t, thinking ? 1 : 4.5)
-        return Circle()
-            .fill(AngularGradient(colors: KalAnim.ring, center: .center, startAngle: .degrees(90), endAngle: .degrees(450)))
+        return KalOrbRing()
             .rotationEffect(.degrees(angle))
     }
 }
 
+/// Prompt 71: ringen i stjernen som ett ferdig lag.
+struct KalSparkRing: View {
+    let bw: CGFloat
+
+    var body: some View {
+        Circle()
+            .strokeBorder(AngularGradient(colors: KalAnim.ring, center: .center), lineWidth: bw)
+            .drawingGroup()
+    }
+}
+
+/// Prompt 71: orbens fargeskive som ett ferdig lag.
+struct KalOrbRing: View {
+    var body: some View {
+        Circle()
+            .fill(AngularGradient(colors: KalAnim.ring, center: .center, startAngle: .degrees(90), endAngle: .degrees(450)))
+            .drawingGroup()
+    }
+}
+
+/// Prompt 71: gløden bak orben (blur med fast radius) som ett ferdig lag. drawingGroup klipper til rammen, så laget får
+/// luft rundt (3 × radius) før blur og samme layoutstørrelse som før etterpå.
+struct KalOrbGlow: View {
+    let size: CGFloat
+
+    var body: some View {
+        let r: CGFloat = size * 0.16
+        Circle()
+            .fill(AngularGradient(colors: KalAnim.glow, center: .center))
+            .frame(width: size * 1.24, height: size * 1.24)
+            .padding(r * 3)
+            .blur(radius: r)
+            .drawingGroup()
+            .padding(-r * 3)
+    }
+}
+
 /// «Glimt tenker» med skimmer (glShim).
+/// Prompt 71: teksten tegnes én gang (dempet) og én gang i rødt under en maske. Bare masken (et ferdig gradientbånd) flyttes
+/// med offset per bilde, så teksten ikke tegnes på nytt med ny gradient hvert bilde. Samme bånd og fart som før.
 struct KalShimmer: View {
     @Environment(\.kal) private var th
     @Environment(\.accessibilityReduceMotion) private var reduce
     let text: String
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduce)) { (ctx: TimelineViewDefaultContext) in
-            let x: Double = reduce ? 0.5 : (ctx.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.4)) / 1.4
-            let p: CGFloat = CGFloat(1.5 - 2 * x)
-            Text(text)
-                .font(KalFont.ui(14, .bold))
-                .foregroundStyle(LinearGradient(stops: [
-                    Gradient.Stop(color: th.mut, location: 0),
-                    Gradient.Stop(color: th.mut, location: 0.35),
-                    Gradient.Stop(color: Color(kalHex: "#b23a2a"), location: 0.5),
-                    Gradient.Stop(color: th.mut, location: 0.65),
-                    Gradient.Stop(color: th.mut, location: 1),
-                ], startPoint: UnitPoint(x: p - 1, y: 0.5), endPoint: UnitPoint(x: p + 1, y: 0.5)))
+        Text(text)
+            .font(KalFont.ui(14, .bold))
+            .foregroundStyle(th.mut)
+            .overlay {
+                Text(text)
+                    .font(KalFont.ui(14, .bold))
+                    .foregroundStyle(Color(kalHex: "#b23a2a"))
+                    .mask { KalShimmerBand(reduce: reduce) }
+                    .accessibilityHidden(true)
+            }
+    }
+}
+
+/// Båndet i masken: 2 × tekstbredden, midten går fra 1,5 til −0,5 tekstbredder på 1,4 s (som før).
+struct KalShimmerBand: View {
+    let reduce: Bool
+
+    var body: some View {
+        GeometryReader { (g: GeometryProxy) in
+            let w: CGFloat = g.size.width
+            TimelineView(.animation(minimumInterval: nil, paused: reduce)) { (ctx: TimelineViewDefaultContext) in
+                KalShimmerStrip()
+                    .frame(width: w * 2, height: g.size.height)
+                    .offset(x: (KalShimmerBand.pos(ctx.date.timeIntervalSinceReferenceDate, reduce) - 1) * w)
+            }
         }
+    }
+
+    /// Båndets midte i tekstbredder.
+    static func pos(_ t: Double, _ reduce: Bool) -> CGFloat {
+        let x: Double = reduce ? 0.5 : t.truncatingRemainder(dividingBy: 1.4) / 1.4
+        return CGFloat(1.5 - 2 * x)
+    }
+}
+
+/// Gradientbåndet (gjennomsiktig – helt – gjennomsiktig ved 35/50/65 %).
+struct KalShimmerStrip: View {
+    var body: some View {
+        LinearGradient(stops: [
+            Gradient.Stop(color: Color.clear, location: 0),
+            Gradient.Stop(color: Color.clear, location: 0.35),
+            Gradient.Stop(color: Color.black, location: 0.5),
+            Gradient.Stop(color: Color.clear, location: 0.65),
+            Gradient.Stop(color: Color.clear, location: 1),
+        ], startPoint: .leading, endPoint: .trailing)
     }
 }
 

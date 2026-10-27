@@ -95,4 +95,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-mlkit-document-scanner:16.0.0-beta1")
     // Prompt 51 (ANDPLAT51): Android Auto – Avganger, På vei hjem og Media som bilmaler (Car51Plat.kt). Fast stabil versjon.
     implementation("androidx.car.app:app:1.4.0")
+    // Prompt 71 (ANIAND71): Baseline Profile (src/main/baseline-prof.txt) for Hjem, Chat og ark. Profilinstalleren skriver profilen ved
+    // første oppstart, også for APK-er som sideloades. Ingen ny Gradle-plugin (AGP tar med baseline-prof.txt av seg selv).
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 }

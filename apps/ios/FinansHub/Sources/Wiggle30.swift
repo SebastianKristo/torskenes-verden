@@ -71,10 +71,9 @@ struct Wiggle30Mod: ViewModifier {
 
     func body(content: Content) -> some View {
         let sign: Double = index % 2 == 0 ? 1 : -1
-        let deg: Double = on ? (phase ? Edit28.angle : -Edit28.angle) * sign : 0
+        // Prompt 71: bare rotasjonen animeres (Anim71.swift).
         content
-            .rotationEffect(.degrees(deg))
-            .animation(on ? .easeInOut(duration: Edit28.half).repeatForever(autoreverses: true) : .default, value: phase)
+            .wiggle71(on, up: phase, angle: Edit28.angle * sign, half: Edit28.half)
             .onAppear { if on { DispatchQueue.main.async { phase = true } } }
             .onChange(of: on) { _, v in phase = v }
     }

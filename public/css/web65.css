@@ -129,7 +129,7 @@ html[data-mode="dark"][data-hl="2c"] #settings{--s65-card:#1f1c17;--s65-line:#3a
 #settings .set-body .sg-sw,#settings .set-body .gs-sw{width:36px;height:22px;border-radius:11px;padding:2px;background:var(--s65-off)}
 #settings .set-body .sg-sw::after{width:18px;height:18px;box-shadow:0 1px 2px rgba(0,0,0,.25)}
 #settings .set-body .gs-sw i{top:2px;left:2px;width:18px;height:18px;border-radius:9px}
-#settings .set-body .gs-sw.on i{left:16px}
+#settings .set-body .gs-sw.on i{transform:translateX(14px)}
 #settings .set-body .sg-row[aria-checked=true] .sg-sw,#settings .set-body .s62-sw[aria-checked=true] .sg-sw,#settings .set-body .gs-sw.on{background:var(--s65-ok)}
 
 /* Segmentert 30 px (2 px innpakning, aktiv = kortfarge med skygge), høyrestilt – og filterchips 30 px */

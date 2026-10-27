@@ -123,19 +123,15 @@ import no.kristo.finanshub.*
 
 /** Et kort på en side som kan flyttes eller skjules. full = over hele bredden på Fold (Hjem i to kolonner). */
 /** hold = langt trykk på kortet starter redigering (av for pakkelisten, der langt trykk velger pakker). */
+@androidx.compose.runtime.Immutable // prompt 71: Hjem-radene (stabil, så radene kan hoppes over ved rekomponering)
 data class PSec(val key: String, val label: String, val full: Boolean = false, val hold: Boolean = true)
 
-/** Dempet vugging: ±0,2° med periode 0,6 s (ease-in-out), annenhver i motsatt fase. */
+/**
+ * Dempet vugging: ±0,2° med periode 0,6 s (ease-in-out), annenhver i motsatt fase.
+ * Prompt 71: bruk heller [wobble71] (State, lest i graphicsLayer) – denne leser verdien i komposisjonen og bygger kortet på nytt hvert bilde.
+ */
 @Composable
-internal fun wobbleAngle(on: Boolean, index: Int, amp: Float = 0.2f): Float {
-    if (!on) return 0f
-    val t = rememberInfiniteTransition(label = "vugge")
-    val a by t.animateFloat(
-        initialValue = if (index % 2 == 0) -amp else amp, targetValue = if (index % 2 == 0) amp else -amp,
-        animationSpec = infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "vinkel",
-    )
-    return a
-}
+internal fun wobbleAngle(on: Boolean, index: Int, amp: Float = 0.2f): Float = wobble71(on, index, amp).value
 
 @Composable
 internal fun EditDot(text: String, enabled: Boolean, onClick: () -> Unit) {
@@ -162,7 +158,7 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
     // Prompt 28: samme vugging som iOS (±0,45°, 0,6 s, annenhver i motfase).
     // Prompt 39: vuggingen stopper mens et redigeringsark (Velg stopp, Pakker) er åpent.
     val sheet39 = vm.b27.homeSheet || vm.p37.h2Menu
-    val angle = wobbleAngle(edit && !dragging && !sheet39, index, 0.45f)
+    val angle = wobble71(edit && !dragging && !sheet39, index, 0.45f) // prompt 71: leses i graphicsLayer
     val dens = androidx.compose.ui.platform.LocalDensity.current.density
     val bkey = "$page|${sec.key}"
     // Prompt 37 (krasjfiksen, claude-code-wiggle-krasj-ios.md A): bytt bare når fingeren står i midtre 30 % av nabokortet og maks hver 140 ms;
@@ -181,7 +177,7 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
     Box(
         Modifier.fillMaxWidth().zIndex(if (dragging) 5f else 0f)
             .graphicsLayer {
-                rotationZ = angle; translationY = if (dragging) ty else 0f; st.applied = translationY
+                rotationZ = angle.value; translationY = if (dragging) ty else 0f; st.applied = translationY
                 val sc = if (dragging) 1.03f else 1f; scaleX = sc; scaleY = sc; alpha = if (dragging) .6f else 1f
                 transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 0f)
             }
@@ -423,7 +419,7 @@ internal fun ScanPress(vm: AppViewModel, bar: String, modifier: Modifier, size: 
     val trk = vm.screen == Screen.Tracking && bar == "main"
     val label = when { bar == "dom" -> "Glimt · oppsummering av domenene"; bar == "sub" -> "Legg til abonnement"; trk -> "Ny sending"; bar == "fin" -> "Legg til kvittering"; vm.screen == Screen.Mat -> "Skann oppskrift"; else -> "Skann" }
     Box(
-        modifier.size(size).scale(if (pressed) 0.9f else 1f).clip(shape).background(p.lab)
+        modifier.size(size).graphicsLayer { val k = if (pressed) 0.9f else 1f; scaleX = k; scaleY = k }.clip(shape).background(p.lab)
             .semantics { contentDescription = if (trk || bar == "dom" || bar == "sub") label else "$label. Trykk for valg, hold inne for å laste opp." }
             .pointerInput(bar, trk) {
                 detectTapGestures(onPress = {

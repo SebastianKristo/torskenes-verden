@@ -17,11 +17,15 @@ const LS_OK = 'voice54_ok';
 const CSS = `
 .v54-mic{flex:none;width:36px;height:36px;margin:0 2px;border:0;border-radius:18px;background:transparent;color:inherit;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none}
 .v54-mic:hover{background:rgba(127,127,127,.16)}.v54-mic:focus-visible{outline:2px solid currentColor;outline-offset:-3px}
-.v54-mic.v54-on,.ch-mic.v54-on{background:#b23a2a!important;color:#fff!important;animation:v54p 1.2s ease-in-out infinite}
+.v54-mic.v54-on,.ch-mic.v54-on{position:relative;isolation:isolate;background:#b23a2a!important;color:#fff!important}
+/* Prompt 71 (ANIWEB71): pulsen er en ferdig skive bak knappen (::after) som skaleres og tones – ikke animert box-shadow.
+   Skala = (knapp + 2 × 7 px) / knapp, så ringen når like langt ut som før (36 px → 50 px, Chat 40 px → 54 px). */
+.v54-mic.v54-on::after,.ch-mic.v54-on::after{content:'';position:absolute;z-index:-1;inset:0;border-radius:50%;background:rgba(178,58,42,.45);pointer-events:none;animation:v54p 1.2s ease-in-out infinite;will-change:transform,opacity;--v54s:1.389}
+.ch-mic.v54-on::after{--v54s:1.35}
 .v54-mic.v54-busy,.ch-mic.v54-busy{opacity:.6;cursor:progress}
 .v54-mic,[data-ch-mic]{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-@keyframes v54p{0%,100%{box-shadow:0 0 0 0 rgba(178,58,42,.45)}50%{box-shadow:0 0 0 7px rgba(178,58,42,0)}}
-@media (prefers-reduced-motion:reduce){.v54-mic.v54-on,.ch-mic.v54-on{animation:none}}
+@keyframes v54p{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(var(--v54s));opacity:0}}
+@media (prefers-reduced-motion:reduce){.v54-mic.v54-on::after,.ch-mic.v54-on::after{animation:none;opacity:0}}
 /* Prompt 70 (claude-code-mikrofon-sokefelt.md): mikrofonen står mellom tekstfeltet og «✦ AI» – 36 px rund trykkflate uten
    bakgrunn, lys bakgrunn ved trykk/hover. Vises også på smal skjerm. «.sbar button» (app.css) skjuler knappene på mobil og
    gir fylt sirkel på PC – derfor høyere spesifisitet her. */
@@ -51,9 +55,9 @@ html[data-hl="2c"] .v54-card{--v54-btn:var(--pp)}
 .v54-card button.v54-cb[disabled]{opacity:.45;cursor:default}
 .v54-card .v54-sq{width:13px;height:13px;border-radius:3px;background:currentColor}
 .v54-card .v54-wave{flex:1;min-width:0;display:flex;align-items:center;gap:10px}
-.v54-card .v54-bars{flex:1;min-width:0;height:24px;display:flex;align-items:center;justify-content:flex-end;gap:3.5px;overflow:hidden}
+.v54-card .v54-bars{flex:1;min-width:0;height:24px;display:flex;align-items:center;justify-content:flex-end;gap:3.5px;overflow:hidden;contain:layout paint}
 .v54-card .v54-bars i{flex:none;width:2.5px;height:22px;border-radius:2px;background:currentColor;transform:scaleY(.14);opacity:.25;will-change:transform}
-.v54-card .v54-time{flex:none;min-width:30px;font:600 12px 'IBM Plex Mono',ui-monospace,monospace;color:var(--v54-mut);font-variant-numeric:tabular-nums}
+.v54-card .v54-time{flex:none;min-width:30px;contain:layout paint;font:600 12px 'IBM Plex Mono',ui-monospace,monospace;color:var(--v54-mut);font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){.v54-card,.v54-card .v54-caret{animation:none}}
 .v54-pill{position:fixed;z-index:2147481500;max-width:min(420px,calc(100vw - 32px));padding:8px 14px;border-radius:999px;background:#11141b;color:#eef0f4;font:500 13px/1.35 Outfit,Geist,system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.3);pointer-events:none}
 .v54-pill b{font-weight:600}.v54-pill .v54-dot{display:inline-block;width:8px;height:8px;border-radius:4px;background:#f05a46;margin-right:8px;vertical-align:1px}
@@ -128,7 +132,7 @@ const setBtn = (cls) => { if (!R.btn) return; R.btn.classList.toggle('v54-on', c
    Motoren er den samme som før (opptak → POST /api/voice53/transcribe på serveren). Teksten kan derfor ikke vises live:
    «Snakk nå …» mens man snakker, «Skriver ned …» etter ■ (og ↑), og teksten settes inn når svaret kommer.
    Bølgeformen følger lydnivået fra mikrofonen (AnalyserNode) og tegnes med egen timer (bare transform/opacity per strek). */
-const W = { ctx: null, an: null, buf: null, id: 0, hist: [], els: [], t0: 0 };
+const W = { ctx: null, an: null, buf: null, id: 0, raf: 0, run: null, hist: [], els: [], t0: 0 };
 const fmt = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 function cardHtml() {
   return `<div class="v54-txt" data-v54-txt aria-live="polite"><span class="v54-ph">Snakk nå …</span><span class="v54-caret" aria-hidden="true"></span></div>
@@ -188,6 +192,10 @@ function waveStart(stream) {
     W.buf = new Float32Array(W.an.fftSize);
   } catch { W.ctx = null; W.an = null; }
   const time = R.card.querySelector('[data-v54-time]');
+  // Prompt 71 (ANIWEB71): én klokke (requestAnimationFrame) i stedet for setInterval. Bølgen rulles fortsatt ett steg hvert 90. ms
+  // (samme fart som før), men bare strekene som faktisk endres, får ny transform/opacity, og tiden skrives bare når teksten endres.
+  const last = W.els.map(() => ''), lastO = W.els.map(() => '');
+  let lastT = '';
   const tick = () => {
     let v = 0;
     if (W.an) {
@@ -200,16 +208,22 @@ function waveStart(stream) {
       const x = W.hist[i], el = W.els[i];
       // Høyde i px (av 22): start 24, høy strek 8–22 når man snakker, prikk 3–5 i stillhet. Bare transform og opacity endres.
       const h = x === 'S' ? 24 : x == null ? 3 : x > 0.55 ? 8 + x * 14 : x > 0.25 ? 5 : 3;
-      el.style.transform = `scaleY(${(h / 22).toFixed(3)})`;
-      el.style.opacity = x === 'S' ? '1' : x == null ? '.25' : x > 0.55 ? '1' : '.55';
+      const tf = `scaleY(${(h / 22).toFixed(3)})`, op = x === 'S' ? '1' : x == null ? '.25' : x > 0.55 ? '1' : '.55';
+      if (last[i] !== tf) { el.style.transform = tf; last[i] = tf; }
+      if (lastO[i] !== op) { el.style.opacity = op; lastO[i] = op; }
     }
-    if (time) time.textContent = fmt(Date.now() - W.t0);
+    const tt = fmt(Date.now() - W.t0);
+    if (time && tt !== lastT) { time.textContent = tt; lastT = tt; }
   };
   tick();
-  W.id = setInterval(tick, 90); // ≈ 11 oppdateringer i sekundet
+  // Skrivingen skjer alltid i et animasjonsbilde (requestAnimationFrame); en kort pause mellom stegene gjør at vi bare ber om
+  // ≈ 11 bilder i sekundet i stedet for å vekke hovedtråden hvert bilde når ingenting endres.
+  const run = W.run = {};
+  const step = () => { W.raf = requestAnimationFrame(() => { W.raf = 0; if (W.run !== run) return; tick(); W.id = setTimeout(step, 80); }); };
+  W.id = setTimeout(step, 80);
 }
 function waveStop() {
-  clearInterval(W.id); W.id = 0;
+  W.run = null; clearTimeout(W.id); cancelAnimationFrame(W.raf); W.id = 0; W.raf = 0;
   try { W.ctx?.close(); } catch { /* */ }
   W.ctx = null; W.an = null; W.buf = null;
 }

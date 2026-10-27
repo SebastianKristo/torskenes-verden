@@ -58,8 +58,8 @@ html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tkha-tgl b{display:block;font-size:15px;font-weight:700}
 .tkha-tgl .tk-main{padding:0}
 .tkha-sw{flex:none;width:46px;height:28px;border-radius:14px;background:var(--t-line);position:relative;transition:background .15s}
-.tkha-sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
-.tkha-sw.on{background:#2f7a4f}.tkha-sw.on i{left:21px}
+.tkha-sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s}
+.tkha-sw.on{background:#2f7a4f}.tkha-sw.on i{transform:translateX(18px)}
 .tkha-row{min-height:52px;border-top:1px solid var(--t-line)}
 .tkha-n{flex:1;min-width:0;font-size:14.5px;font-weight:600}
 .tkha-e{flex:none;font:600 12.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--t-ink);max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -169,8 +169,8 @@ body.tk-sheet-open{overflow:hidden}
 .tk-in{border:0;background:transparent;color:var(--t-lab);font:700 13px inherit;font-family:inherit;padding:0;outline:0;color-scheme:light dark;width:max-content}
 html:not([data-hl="2c"]) .tk-in{color-scheme:dark}
 .tk-sw{flex:none;width:50px;height:30px;border-radius:15px;border:0;background:var(--t-line);position:relative;cursor:pointer;padding:0;transition:background .15s}
-.tk-sw i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
-.tk-sw.on{background:#2f7a4f}.tk-sw.on i{left:23px}
+.tk-sw i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:12px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .15s}
+.tk-sw.on{background:#2f7a4f}.tk-sw.on i{transform:translateX(20px)}
 .tk-sw.ro{cursor:default;opacity:.7}
 .tk-sel{flex:none;max-width:52%;height:36px;border:0;border-radius:10px;background:transparent;color:var(--t-mut);font:700 14px inherit;font-family:inherit;text-align:right;cursor:pointer;color-scheme:light dark}
 html:not([data-hl="2c"]) .tk-sel{color-scheme:dark}

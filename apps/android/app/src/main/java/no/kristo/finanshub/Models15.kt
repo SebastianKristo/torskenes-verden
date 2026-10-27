@@ -16,6 +16,7 @@ fun greetingFor(hour: Int = LocalTime.now().hour): String = when (hour) {
 }
 
 /** Rekkefølge og skjulte kort på en side (layout.pages[side]). */
+@androidx.compose.runtime.Immutable // prompt 71: Hjem-oppsettet (order/hidden/sz) endres bare med copy – stabilt for Compose
 data class PageLay(val order: List<String> = emptyList(), val hidden: List<String> = emptyList(), val sz: Map<String, String> = emptyMap()) {
     // Prompt 70 (ANDHOME70, claude-code-widget-storrelse-mobil.md): sz = { h9: "full", h52fi: "half", … } (bare Hjem på mobil).
     fun toJson(): JSONObject = JSONObject().put("order", JSONArray(order)).put("hidden", JSONArray(hidden)).also { o -> if (sz.isNotEmpty()) o.put("sz", JSONObject(sz)) }

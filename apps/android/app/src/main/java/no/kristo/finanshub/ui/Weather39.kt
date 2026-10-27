@@ -215,7 +215,7 @@ internal fun CmpSheet39(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
                 val flip = remember { Animatable(0f) }
                 val scope = rememberCoroutineScope()
                 var lastTop by remember { mutableFloatStateOf(Float.NaN) }
-                val angle = wobbleAngle(edit && !dragging, i, 0.5f)
+                val angle = wobble71(edit && !dragging, i, 0.5f) // prompt 71: leses i graphicsLayer
                 Box(
                     Modifier.fillMaxWidth().zIndex(if (dragging) 5f else 0f)
                         .onGloballyPositioned { c ->
@@ -230,7 +230,7 @@ internal fun CmpSheet39(vm: AppViewModel, w: WeatherFull, close: () -> Unit) {
                             tops[k] = y to h
                         }
                         .graphicsLayer {
-                            rotationZ = angle
+                            rotationZ = angle.value
                             translationY = if (dragging) dragDy - ((tops[k]?.first ?: start[1]) - start[1]) else flip.value
                             val sc = if (dragging) 1.03f else 1f; scaleX = sc; scaleY = sc
                         }

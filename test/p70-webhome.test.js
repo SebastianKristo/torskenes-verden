@@ -18,8 +18,9 @@ test('mikrofon-sokefelt: nytt ikon, kort i søkefeltets farge, motoren er fortsa
   for (const s of ['data-v54-x', 'data-v54-stop', 'data-v54-send', 'data-v54-bars', 'data-v54-time', 'Snakk nå …', 'Skriver ned …']) assert.ok(v.includes(s), `mangler ${s}`);
   assert.match(v, /\.v54-card button\.v54-send\{background:#c8633f;color:#fff\}/);
   assert.match(v, /createAnalyser\(\)/, 'bølgeformen følger lydnivået');
-  assert.match(v, /setInterval\(tick, 90\)/, 'egen timer for bølgeformen');
-  assert.match(v, /el\.style\.transform = `scaleY\(/, 'bare transform per strek');
+  assert.match(v, /W\.raf = requestAnimationFrame\(\(\) => \{ W\.raf = 0;[^\n]*tick\(\)/, 'egen klokke for bølgeformen (prompt 71: skrives i et animasjonsbilde, ikke setInterval)');
+  assert.match(v, /const tf = `scaleY\(/, 'bare transform per strek'); // prompt 71: skrives bare når verdien endres (el.style.transform = tf)
+  assert.match(v, /el\.style\.transform = tf/, 'bare transform per strek');
   assert.match(v, /requestSubmit\(\)/, '↑ sender som Enter');
   assert.match(v, /fetch\('\/api\/voice53\/transcribe'/);
   assert.doesNotMatch(v, /SpeechRecognition/, 'ikke Web Speech (brukerens beslutning)');

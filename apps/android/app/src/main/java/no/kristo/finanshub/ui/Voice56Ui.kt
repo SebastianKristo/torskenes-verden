@@ -102,16 +102,7 @@ internal fun rememberMic56(onDenied: () -> Unit = {}, onGranted: () -> Unit): ()
 
 /** Lydbølgen (sju streker) som følger nivået, som i Chat. */
 @Composable
-internal fun Wave56(level: Float, color: Color) {
-    val tr = rememberInfiniteTransition(label = "wave56")
-    Row(Modifier.height(22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        for (i in 0 until 7) {
-            val a by tr.animateFloat(.25f, 1f, infiniteRepeatable(tween(450, delayMillis = i * 60), RepeatMode.Reverse), label = "w56$i")
-            val h = (6f + 16f * a * (.35f + .65f * level)).dp
-            Box(Modifier.width(3.dp).height(h).clip(RoundedCornerShape(2.dp)).background(color))
-        }
-    }
-}
+internal fun Wave56(level: Float, color: Color) = WaveBars71(level, color, "w56") // prompt 71: én Canvas, pulsen leses i tegnefasen
 
 /** «Lytter … 12 s · slipp for å sende» med bølge og Avbryt, eller «Skriver ned …». */
 @Composable

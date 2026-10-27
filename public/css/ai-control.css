@@ -11,7 +11,7 @@
 .ac.th-papir{color-scheme:light}.ac.th-mork,.ac.th-finans,.ac.th-cur{color-scheme:dark}
 .ac p{margin:0}
 @keyframes acSpin{to{transform:rotate(360deg)}}
-@keyframes acStripe{to{background-position:28px 0}}
+@keyframes acStripe{to{transform:translateX(28px)}}
 @keyframes acIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .ac-row{display:flex;align-items:center;gap:10px;min-width:0}
 .ac-sb{justify-content:space-between}
@@ -91,7 +91,10 @@
 .ac-st65.ok i{background:var(--ok)}.ac-st65.warn i{background:var(--warn)}.ac-st65.bad{color:var(--bad)}.ac-st65.bad i{background:var(--bad)}.ac-st65.busy i{background:var(--acc)}
 .ac-b4{display:block;height:4px;border-radius:2px;background:var(--fld);overflow:hidden;margin-top:5px}
 .ac-b4 i{display:block;height:100%;border-radius:inherit;transition:width .4s}
-.ac-stripe{background-color:var(--acc)!important;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.3) 0 7px,transparent 7px 14px);background-size:28px 100%;animation:acStripe .8s linear infinite}
+/* Prompt 71 (ANIWEB71): stripene er et ferdig lag (::after) som flyttes med transform – ikke animert background-position. */
+.ac-stripe{position:relative;overflow:hidden;background-color:var(--acc)!important}
+.ac-stripe::after{content:'';position:absolute;top:0;bottom:0;left:-28px;width:calc(100% + 28px);pointer-events:none;background:repeating-linear-gradient(45deg,rgba(255,255,255,.3) 0 7px,transparent 7px 14px) 0 0/28px 100%;animation:acStripe .8s linear infinite;will-change:transform}
+@media (prefers-reduced-motion:reduce){.ac-stripe::after{animation:none}}
 /* Modulrader (fast59, understand60, recipes61, sched62, memory63, quality64, omlx58): samme rad */
 .ac-li .ac-col,.ac-par>.ac-row .ac-col{flex:1;min-width:0}
 .ac-col>b{font-size:13.5px;font-weight:600}
@@ -117,8 +120,8 @@
 .ac-seg.auto{align-self:flex-start}
 .ac-selp{flex:none;height:30px;max-width:230px;padding:0 28px 0 12px;border-radius:15px;border:1px solid var(--line);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b665c' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 11px center;color:var(--ink);font:500 12px 'IBM Plex Mono',ui-monospace,monospace;-webkit-appearance:none;appearance:none;text-overflow:ellipsis}
 .ac-sw{flex:none;position:relative;width:36px;height:22px;border-radius:11px;background:var(--line);transition:background .2s;display:inline-block}
-.ac-sw i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:9px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .2s}
-.ac-sw.on{background:var(--ok)}.ac-sw.on i{left:16px}
+.ac-sw i{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:9px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s}
+.ac-sw.on{background:var(--ok)}.ac-sw.on i{transform:translateX(14px)}
 .ac-swb{flex:none;border:0;background:transparent;padding:4px 0;display:inline-flex}
 .ac-form{display:flex;flex-direction:column;gap:8px;min-width:0}
 .ac-f{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:10px;font-size:12px;color:var(--mut)}

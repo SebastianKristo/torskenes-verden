@@ -84,9 +84,11 @@
 .m70-h2.s26{font-size:26px}.m70-h2.s24{font-size:24px}.m70-h2.s22{font-size:22px}
 .m70-ph{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px}
 .m70-sub{margin:8px 0 0}
-.m70-skel{border-radius:24px;background:linear-gradient(90deg,var(--p-ln2),var(--p-card),var(--p-ln2));background-size:200% 100%;animation:m70sk 1.4s linear infinite;opacity:.8}
-@keyframes m70sk{from{background-position:200% 0}to{background-position:-200% 0}}
-@media (prefers-reduced-motion:reduce){.m70-skel{animation:none}}
+/* Prompt 71 (ANIWEB71): skimmeren er et ferdig lag (::after, samme gradient og fase) som flyttes med transform – ikke animert background-position. */
+.m70-skel{position:relative;overflow:hidden;isolation:isolate;border-radius:24px;background:var(--p-ln2);opacity:.8}
+.m70-skel::after{content:'';position:absolute;z-index:-1;top:0;bottom:0;left:-200%;width:500%;pointer-events:none;background:linear-gradient(90deg,var(--p-ln2),var(--p-card),var(--p-ln2)) 0 0/40% 100% repeat-x;animation:m70sk 1.4s linear infinite;will-change:transform}
+@keyframes m70sk{from{transform:translateX(-40%)}to{transform:translateX(40%)}}
+@media (prefers-reduced-motion:reduce){.m70-skel::after{animation:none}}
 .m70-empty{padding:56px 24px;text-align:center;border:1px dashed var(--p-dim);border-radius:24px;color:var(--p-mt);display:flex;flex-direction:column;align-items:center;gap:14px}
 .m70 .m43-empty{background:var(--p-card);border-color:var(--p-ln);border-radius:24px}
 
@@ -140,7 +142,7 @@
 .m70-np{display:flex;flex-wrap:wrap;gap:28px;padding:28px;border-radius:24px;background:var(--p-ink);color:var(--p-inkf)}
 .m70.dk .m70-np{border:1px solid var(--p-ln)}
 .m70-np.empty{flex-direction:column;gap:12px;min-height:160px;justify-content:center}
-.m70-np.empty .m70-skel{background:var(--p-inkb);min-height:120px!important}
+.m70-np.empty .m70-skel{background:var(--p-inkb);min-height:120px!important}.m70-np.empty .m70-skel::after{display:none}
 .m70-npa{width:148px;height:220px;flex:none;border-radius:12px}
 .m70-npa .m70-pa{padding:14px}
 .m70-npa .m70-pa b{font-size:20px}

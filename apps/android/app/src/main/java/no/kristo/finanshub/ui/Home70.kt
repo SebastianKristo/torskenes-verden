@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.Stable
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -112,6 +114,7 @@ internal object Ans70 {
 }
 
 /** Tilstanden under flytting og størrelsesendring (én per Hjem). */
+@Stable
 internal class Home70State {
     var dragKey by mutableStateOf<String?>(null)
     var finger by mutableStateOf(Offset.Zero)
@@ -142,6 +145,7 @@ internal fun isFull70(k: String, sz: Map<String, String>): Boolean = when {
 }
 
 /** Én rad i rutenettet: ett fullt kort, to halve (b kan mangle), eller Avgang med opptil to halve oppå hverandre ved siden av. */
+@Immutable
 internal sealed class Row70(val id: String, val keys: List<String>) {
     class One(val k: String) : Row70("s-$k", listOf(k))
     class Two(val a: String, val b: String?) : Row70("p-$a-${b ?: ""}", listOfNotNull(a, b))
@@ -215,7 +219,7 @@ internal fun HomeColumn70(
     val skip52: (String) -> Boolean = { k -> skip(k) || (k == "h3" && "h52av" in shown0) || (k == "h6" && "h52fa" in shown0) }
     val vis = shown0.filter { edit || !skip52(it) }
     val sz = vm.pageLayouts[PAGE70]?.sz ?: emptyMap()
-    val rows = rows70(vis, sz)
+    val rows = remember(vis, sz) { rows70(vis, sz) } // prompt 71: ikke ny liste ved hver rekomponering
     val st = remember { Home70State() }
     st.vis = vis; st.keys = keys; st.sz = sz
     val scroll = rememberScrollState()
@@ -291,7 +295,8 @@ private fun Tile70(vm: AppViewModel, st: Home70State, k: String, label: String, 
     val dragging = st.dragKey == k
     val sheet = vm.b27.homeSheet || vm.p37.h2Menu
     val reduce = reduceMotion45()
-    val angle = wobbleAngle(edit && !dragging && !sheet && !reduce, index, 0.45f)
+    // Prompt 71: vinkelen som State, lest i graphicsLayer under (ikke i komposisjonen – kortet bygges ikke på nytt hvert bilde).
+    val angle = wobble71(edit && !dragging && !sheet && !reduce, index, 0.45f)
     val ghost = p.ink.copy(alpha = .07f)
     DisposableEffect(k) { onDispose { st.bounds.remove(k); st.ctl.remove("m$k"); st.ctl.remove("e$k"); st.ctl.remove("r$k") } }
     Box(
@@ -309,7 +314,7 @@ private fun Tile70(vm: AppViewModel, st: Home70State, k: String, label: String, 
                     translationX = t.x; translationY = t.y
                     scaleX = 1.03f; scaleY = 1.03f
                     shadowElevation = 18.dp.toPx(); shape = RoundedCornerShape(24.dp); clip = false
-                } else rotationZ = angle
+                } else rotationZ = angle.value
             },
     ) {
         if (k in TILE_KEYS52 || k in HALF52 || k == "h5") Tile52(vm, k, Dp.Unspecified, body) else body(k)

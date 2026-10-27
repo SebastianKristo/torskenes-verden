@@ -143,8 +143,11 @@ html[data-kal-app] .k2.k2-fs{padding-top:6px}
 .k38-mapbox{display:flex;flex-direction:column;gap:8px}
 .k38-map{position:relative;display:block;width:100%;border-radius:16px;overflow:hidden;background:color-mix(in oklab,var(--k-line) 60%,var(--k-card));text-decoration:none;color:var(--k-ink);isolation:isolate}
 .k38-map.sm{border-radius:0}
-.k38-map-wait{height:160px;background:linear-gradient(90deg,var(--k-card),color-mix(in oklab,var(--k-line) 50%,var(--k-card)),var(--k-card));background-size:200% 100%;animation:k38shim 1.4s linear infinite}
-@keyframes k38shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+/* Prompt 71 (ANIWEB71): skimmeren er et ferdig lag (::after, samme gradient og fase) som flyttes med transform. .k38-map har allerede position/overflow/isolation. */
+.k38-map-wait{height:160px;background:var(--k-card)}
+.k38-map-wait::after{content:'';position:absolute;z-index:-1;top:0;bottom:0;left:-200%;width:500%;pointer-events:none;background:linear-gradient(90deg,var(--k-card),color-mix(in oklab,var(--k-line) 50%,var(--k-card)),var(--k-card)) 0 0/40% 100% repeat-x;animation:k38shim 1.4s linear infinite;will-change:transform}
+@keyframes k38shim{0%{transform:translateX(-40%)}100%{transform:translateX(40%)}}
+@media (prefers-reduced-motion:reduce){.k38-map-wait::after{animation:none}}
 .k38-tiles{position:absolute;inset:0}
 .k38-tiles img{position:absolute;width:256px;height:256px;max-width:none;user-select:none;pointer-events:none}
 html[data-hl="2c"] .k38-tiles{filter:sepia(.25) saturate(.8)}

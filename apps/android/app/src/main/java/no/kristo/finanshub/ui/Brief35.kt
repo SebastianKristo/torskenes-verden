@@ -1,5 +1,9 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import no.kristo.finanshub.hasBriefTodo52
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -249,8 +253,14 @@ private fun SpeakingPill35(vm: AppViewModel) {
     val vals = durs.map { d -> t.animateFloat(.4f, 1f, infiniteRepeatable(tween(d, easing = LinearEasing), RepeatMode.Reverse), label = "b$d") }
     Row(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).background(INK35).padding(start = 12.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.height(14.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            vals.forEach { v -> Box(Modifier.width(3.dp).fillMaxHeight(v.value).clip(RoundedCornerShape(2.dp)).background(Color(0xFFFF7A52))) }
+        // Prompt 71: fire streker (3 dp, 2 dp mellomrom, nederst, høyde 14 dp × verdi, radius 2) i én Canvas – før animert
+        // fillMaxHeight (layout hvert bilde), nå lest i tegnefasen.
+        Canvas(Modifier.width((4 * 3 + 3 * 2).dp).height(14.dp)) {
+            val bw = 3.dp.toPx(); val gap = 2.dp.toPx(); val r = CornerRadius(2.dp.toPx())
+            vals.forEachIndexed { i, v ->
+                val h = size.height * v.value
+                drawRoundRect(Color(0xFFFF7A52), Offset(i * (bw + gap), size.height - h), Size(bw, h), r)
+            }
         }
         Text("$who snakker · $voice", color = Color(0xFFF3EFE6), fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
         Box(Modifier.height(30.dp).clickable(role = Role.Button) { Haptics.select(); vm.stopSay35() }.padding(horizontal = 6.dp), contentAlignment = Alignment.Center) {

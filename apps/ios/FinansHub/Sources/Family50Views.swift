@@ -699,7 +699,8 @@ struct Fam50KartView: View {
             }.onEnded { v in
                 let target: CGFloat = (dragStart ?? h) - v.predictedEndTranslation.height
                 dragStart = nil
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) { sheetH = target < (maxH + 150) / 2 ? 150 : maxH }
+                // Prompt 71: designets fjær for ark (respons 0,35 s, demping 0,85).
+                withAnimation(Anim71.sheet) { sheetH = target < (maxH + 150) / 2 ? 150 : maxH }
             })
             ScrollView {
                 Fam50KartList().padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 40)

@@ -258,7 +258,8 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
     }
 
     @ViewBuilder private func editCell(_ k: String, _ i: Int) -> some View {
-        let a: Double = (reduceMotion || paused) ? 0 : Edit28.angle * Wiggle43.sign(i)
+        // Prompt 71: fast fase per flis ut fra nøkkelen (ikke plassen `i`), så vuggingen ikke snur når kortene bytter plass.
+        let a: Double = (reduceMotion || paused) ? 0 : Edit28.angle * Anim71.sign(k)
         let ink: Color = p.ink
         let card: Color = p.card
         let line: Color = p.line
@@ -310,8 +311,8 @@ struct WiggleReorderList<Content: View, Accessory: View>: View {
                         .offset(x: 14, y: 14)
                 }
             }
-            .rotationEffect(.degrees(editing ? (wig ? a : -a) : 0))
-            .animation(editing && a != 0 ? Animation.easeInOut(duration: Edit28.half).repeatForever(autoreverses: true) : Animation.easeOut(duration: 0.15), value: wig)
+            // Prompt 71: repeatForever bare på rotasjonen (Anim71.swift), så flytting og ↔ ikke arver den evige animasjonen.
+            .wiggle71(editing, up: wig, angle: a, half: Edit28.half)
             .wiggle43Hold(editing: editing) { enter() }
     }
 

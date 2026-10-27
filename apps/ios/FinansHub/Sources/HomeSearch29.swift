@@ -169,6 +169,7 @@ final class Search29Model {
 struct HomeSearch29: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
+    @Environment(\.accessibilityReduceMotion) private var reduce71
     @State private var q: String = ""
     @FocusState private var focused: Bool
     /// Prompt 70: opptak med motoren på enheten startet herfra, teksten så langt, feltet før opptaket,
@@ -206,8 +207,9 @@ struct HomeSearch29: View {
                     .transition(.opacity)
             }
             if Assist31.shared.homeOpen {
+                // Prompt 71: «Reduser bevegelse» gir bare fade.
                 Assist31Bubble()
-                    .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
+                    .transition(reduce71 ? AnyTransition.opacity : AnyTransition.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
             }
         }
         .animation(.easeOut(duration: 0.15), value: m.appt)

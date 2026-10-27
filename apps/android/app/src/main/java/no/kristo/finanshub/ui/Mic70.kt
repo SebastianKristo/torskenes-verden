@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -165,11 +166,12 @@ private fun MicBtn70(bg: Color, label: String, onClick: () -> Unit) {
 /** Blinkende markør etter teksten (står stille når opptaket er stoppet). */
 @Composable
 private fun Caret70(color: Color, blink: Boolean) {
+    // Prompt 71: blinkingen leses i laget (graphicsLayer), så bare markøren tegnes på nytt – ikke kortet.
     val a = if (blink) {
         val t = rememberInfiniteTransition(label = "caret70")
-        t.animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "c70").value
-    } else 1f
-    Box(Modifier.padding(start = 2.dp).size(2.dp, 20.dp).alpha(if (a > .5f) 1f else 0f).background(color))
+        t.animateFloat(1f, 0f, infiniteRepeatable(tween(530), RepeatMode.Reverse), label = "c70")
+    } else null
+    Box(Modifier.padding(start = 2.dp).size(2.dp, 20.dp).graphicsLayer { alpha = if ((a?.value ?: 1f) > .5f) 1f else 0f }.background(color))
 }
 
 /**

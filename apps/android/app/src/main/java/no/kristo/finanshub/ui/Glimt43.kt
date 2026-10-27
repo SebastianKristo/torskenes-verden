@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -40,10 +41,16 @@ internal val GLIMT_RED43 = Color(0xFFB23A2A)
 internal fun GlimtOrb43(size: Dp, busy: Boolean = false, modifier: Modifier = Modifier) {
     val tr = rememberInfiniteTransition(label = "orb43")
     val deg by tr.animateFloat(0f, 360f, infiniteRepeatable(tween(if (busy) 1400 else 9000, easing = LinearEasing)), label = "orb43r")
-    Canvas(modifier.size(size)) {
+    // Prompt 71: fargeringen er et ferdig lag som roteres (graphicsLayer.rotationZ rundt midten = rotate() i tegningen før);
+    // innsiden og stjernen står stille og tegnes ikke på nytt hvert bilde.
+    Box(modifier.size(size)) {
+    Canvas(Modifier.matchParentSize().graphicsLayer { rotationZ = deg }) {
+        val c = Offset(this.size.width / 2, this.size.height / 2)
+        drawCircle(Brush.sweepGradient(ORB43, c), this.size.minDimension / 2, c)
+    }
+    Canvas(Modifier.matchParentSize()) {
         val c = Offset(this.size.width / 2, this.size.height / 2)
         val r = this.size.minDimension / 2
-        rotate(deg, c) { drawCircle(Brush.sweepGradient(ORB43, c), r, c) }
         drawCircle(Color(0xFFF6F0E4), r * .68f, c)
         // Firetakket stjerne (✦) i rødt.
         val s = r * .5f
@@ -53,6 +60,7 @@ internal fun GlimtOrb43(size: Dp, busy: Boolean = false, modifier: Modifier = Mo
             lineTo(c.x, c.y + s); lineTo(c.x - k, c.y + k); lineTo(c.x - s, c.y); lineTo(c.x - k, c.y - k); close()
         }
         drawPath(path, GLIMT_RED43)
+    }
     }
 }
 

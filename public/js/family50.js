@@ -684,7 +684,7 @@ const ARROW = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
 /** Personer utenfor utsnittet: merkelapp i kartkanten, «Kari · 7,4 km sør ↓». Trykk sentrerer på personen. */
 function edgeLabels(M) {
   if (!M.edges) return;
-  const map = M.map, sz = map.getSize(), b = map.getBounds(), padB = !F.two && F.v.v === 'kart' ? (M.el.closest('.f50-mapfull')?.querySelector('[data-f50-sheet]')?.offsetHeight ?? 0) + 12 : 12;
+  const map = M.map, sz = map.getSize(), b = map.getBounds(), padB = !F.two && F.v.v === 'kart' ? sheetVis71(M.el.closest('.f50-mapfull')?.querySelector('[data-f50-sheet]')) + 12 : 12;
   // Utenfor = utenfor kartet eller skjult under arket.
   const out = located().filter((p) => { if (p.self) return false; if (!b.contains([p.lat, p.lon])) return true; const q = map.latLngToContainerPoint([p.lat, p.lon]); return q.y > sz.y - padB + 10; });
   M.edges.innerHTML = out.slice(0, 6).map((p) => {
@@ -893,18 +893,27 @@ function onKey(e) {
   if (e.key === 'Enter' && e.target?.dataset?.f50in === 'newname') { e.preventDefault(); F.root.querySelector('[data-f50="addok"]')?.click(); return; }
   if ((e.key === 'Enter' || e.key === ' ') && e.target?.matches?.('[role="button"][data-f50]')) { e.preventDefault(); e.target.click(); }
 }
-/** Arket på Kart: dra i håndtaket for å bytte mellom lavt og høyt. */
+/** Prompt 71: synlig høyde av arket på Kart (arket er alltid 86 % høyt og flyttes med transform; se family50.css). */
+function sheetVis71(sh) {
+  if (!sh) return 0;
+  if (sh.classList.contains('tall')) return sh.offsetHeight;
+  const P = sh.parentElement?.clientHeight ?? innerHeight;
+  return sh.classList.contains('low') ? 150 : sh.classList.contains('high') ? Math.round(P * 0.86) : Math.min(430, Math.round(P * 0.62));
+}
+/** Arket på Kart: dra i håndtaket for å bytte mellom lavt og høyt. Prompt 71: arket flyttes med transform (ingen høyde per bilde). */
 function onDown(e) {
   const g = e.target.closest?.('[data-f50-grab]');
   if (!g) return;
-  const sh = g.closest('[data-f50-sheet]'), y0 = e.clientY, h0 = sh.offsetHeight;
+  const sh = g.closest('[data-f50-sheet]'), y0 = e.clientY;
+  const H = sh.offsetHeight, P = sh.parentElement?.getBoundingClientRect(), h0 = P ? P.bottom - sh.getBoundingClientRect().top : sheetVis71(sh);
+  sh.style.transform = `translateY(${Math.round(H - h0)}px)`; // hold arket der det er (også midt i en glidning)
   sh.classList.add('drag');
-  const mv = (ev) => { sh.style.height = `${Math.max(120, Math.min(innerHeight * 0.85, h0 + (y0 - ev.clientY)))}px`; };
+  const mv = (ev) => { const h = Math.max(120, Math.min(innerHeight * 0.85, H, h0 + (y0 - ev.clientY))); sh.style.transform = `translateY(${Math.round(H - h)}px)`; };
   const up = (ev) => {
     removeEventListener('pointermove', mv); removeEventListener('pointerup', up); removeEventListener('pointercancel', up);
     sh.classList.remove('drag'); const dy = y0 - ev.clientY;
     F.sheet = Math.abs(dy) < 6 ? (F.sheet === 'low' ? 'mid' : 'low') : dy > 0 ? (F.sheet === 'low' ? 'mid' : 'high') : (F.sheet === 'high' ? 'mid' : 'low');
-    sh.style.height = ''; sh.className = `f50-sheet ${F.sheet}`;
+    sh.style.transform = ''; sh.className = `f50-sheet ${F.sheet}`;
     setTimeout(() => { if (MAPS.big) edgeLabels(MAPS.big); }, 260);
   };
   addEventListener('pointermove', mv); addEventListener('pointerup', up); addEventListener('pointercancel', up);

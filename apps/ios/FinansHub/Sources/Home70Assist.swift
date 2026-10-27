@@ -114,6 +114,7 @@ extension View {
 /// «Glimt svarte ↑» nederst over fanelinjen. Ligger over PaperShell (via Assist38Catcher), uten lag over resten.
 struct Assist70Pill: View {
     @Environment(Store.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduce
     @MainActor private var m: Assist70 { Assist70.shared }
 
     var body: some View {
@@ -128,7 +129,8 @@ struct Assist70Pill: View {
             if m.pill && store.paperTab == "hjem" {
                 pillButton
                     .padding(.bottom, 62 + 22)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    // Prompt 71: «Reduser bevegelse» gir bare fade.
+                    .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .bottom).combined(with: .opacity))
             }
         }
     }

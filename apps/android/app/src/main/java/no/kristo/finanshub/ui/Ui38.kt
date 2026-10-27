@@ -1,5 +1,9 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -203,7 +207,11 @@ internal fun AnsBox38(vm: AppViewModel, onPull41: (() -> Unit)? = null, content:
     // pillen flytter seg 0,35 × dra og bunnen vokser 0,65 × dra; håndtaket blir bredere (34 → 80) og lysere, lett haptikk ved terskelen.
     val open41 = with(LocalDensity.current) { 70.dp.toPx() }
     val dens41 = LocalDensity.current.density
-    val pull41 = if (onPull41 != null && drag > 0f) (if (drag <= open41) drag else open41 + (drag - open41) * .4f) else 0f
+    // Prompt 71: dra-verdien leses i laget (graphicsLayer under). pull41 er derivedStateOf, så kortet bygges bare på nytt når man drar
+    // ned mot Chat (bunnen vokser) – ikke hvert bilde mens kortet sveipes opp eller fjærer tilbake.
+    val hasPull41 by rememberUpdatedState(onPull41 != null)
+    val pull41State = remember { derivedStateOf { if (hasPull41 && drag > 0f) (if (drag <= open41) drag else open41 + (drag - open41) * .4f) else 0f } }
+    val pull41 by pull41State
     var armed41 by remember { mutableStateOf(false) }
     LaunchedEffect(pull41 >= open41) { if ((pull41 >= open41) != armed41) { armed41 = pull41 >= open41; Haptics.tap() } }
     DisposableEffect(Unit) { onDispose { vm.p38.ansRect = null } }
@@ -255,8 +263,12 @@ internal fun AnsBox38(vm: AppViewModel, onPull41: (() -> Unit)? = null, content:
                 .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).clickable(role = Role.Button, onClickLabel = "Lukk svaret") { close() },
             contentAlignment = Alignment.Center,
         ) { Text("✕", modifier = Modifier.semantics { contentDescription = "Lukk svaret" }, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp).size((36f + 44f * (pull41 / open41).coerceIn(0f, 1f)).dp, 4.dp).clip(CircleShape)
-            .background(Color.White.copy(alpha = if (pull41 >= open41) .6f else .28f)))
+        // Håndtaket (36 → 80 dp bredt): tegnes i tegnefasen i en fast flate, så bredden ikke måles på nytt hvert bilde.
+        Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp).size(80.dp, 4.dp).drawBehind {
+            val pl = pull41State.value
+            val w = (36f + 44f * (pl / open41).coerceIn(0f, 1f)).dp.toPx()
+            drawRoundRect(Color.White.copy(alpha = if (pl >= open41) .6f else .28f), Offset((size.width - w) / 2f, 0f), Size(w, size.height), CornerRadius(size.height / 2f))
+        })
     }
 }
 

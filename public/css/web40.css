@@ -240,8 +240,10 @@ html:not([data-hl="2c"]) .hl40-f input{background:#0f141d;color:#eef0f4;color-sc
 .hl40-btns{display:flex;gap:8px;justify-content:flex-end}
 .hl40-btns .hl40-b{height:42px;padding:0 18px;font-size:14px}
 .hl40-sh .hl40-b.ink{color:var(--hl-chip)}
-@media (prefers-reduced-motion:no-preference){.hl40-me:not(.home) .hl40-glow{animation:hl40g 2.4s ease-in-out infinite}}
-@keyframes hl40g{50%{filter:brightness(1.15)}}
+/* Prompt 71 (ANIWEB71): lysningen er et ferdig lag (::after) med color-dodge #212121 (= lysstyrke × 1,15) som tones inn og ut –
+   ikke animert filter. Laget dekker prikken og den grønne/røde ringen (2,5 px), som brightness() gjorde. */
+@media (prefers-reduced-motion:no-preference){.hl40-me:not(.home) .hl40-glow{position:relative}.hl40-me:not(.home) .hl40-glow::after{content:'';position:absolute;inset:-2.5px;border-radius:50%;background:#212121;mix-blend-mode:color-dodge;pointer-events:none;opacity:0;animation:hl40g 2.4s ease-in-out infinite}}
+@keyframes hl40g{50%{opacity:1}}
 /* Hjemlys 1a/1b/1c (tillegg i CONTRACT40) */
 .hl40-k{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--hl40-amb,#8f6112)}
 .hl40-k.n{color:#ffd27a}

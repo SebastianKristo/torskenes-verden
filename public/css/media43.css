@@ -31,8 +31,11 @@ body[data-route="media"]{overflow:hidden}
 .m43-lab.inv{color:var(--b);opacity:.8;letter-spacing:.06em}
 .m43-card{border-radius:18px;background:var(--cd);border:1px solid var(--ln);padding:16px}
 .m43-card.nopad{padding:0;overflow:hidden}
-.m43-skel{border-radius:18px;background:linear-gradient(90deg,var(--cd),color-mix(in srgb,var(--ln) 40%,var(--cd)),var(--cd));background-size:200% 100%;animation:m43sk 1.4s ease-in-out infinite}
-@keyframes m43sk{from{background-position:100% 0}to{background-position:-100% 0}}
+/* Prompt 71 (ANIWEB71): skimmeren er et ferdig lag (::after, samme gradient og fase) som flyttes med transform – ikke animert background-position. */
+.m43-skel{position:relative;overflow:hidden;isolation:isolate;border-radius:18px;background:var(--cd)}
+.m43-skel::after{content:'';position:absolute;z-index:-1;top:0;bottom:0;left:-200%;width:400%;pointer-events:none;background:linear-gradient(90deg,var(--cd),color-mix(in srgb,var(--ln) 40%,var(--cd)),var(--cd)) 0 0/50% 100% repeat-x;animation:m43sk 1.4s ease-in-out infinite;will-change:transform}
+@keyframes m43sk{from{transform:translateX(-25%)}to{transform:translateX(25%)}}
+@media (prefers-reduced-motion:reduce){.m43-skel::after{animation:none}}
 .m43-empty{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:28px;border-radius:20px;background:var(--cd);border:1px solid var(--ln);max-width:640px}
 .m43-empty b{font:500 24px/1.15 Newsreader,Georgia,serif}
 .m43-empty span{font-size:14px;line-height:1.5;color:var(--mt)}

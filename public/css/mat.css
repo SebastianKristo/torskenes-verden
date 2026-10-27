@@ -61,8 +61,8 @@ html[data-hl-theme="cur"] .mat{
 /* Prompt 34: samme bryter som resten av appen (44 × 26, knott 20 px absolutt plassert, ingen padding som skyver knotten). */
 .mat .mp-sw{flex:none;position:relative;width:44px;height:26px;padding:0;border-radius:13px;background:var(--mp-sw-off);transition:background .2s;box-sizing:border-box}
 .mat .mp-sw.on{background:var(--mp-acc)}
-.mat .mp-sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}
-.mat .mp-sw.on i{left:21px}
+.mat .mp-sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:transform .2s}
+.mat .mp-sw.on i{transform:translateX(18px)}
 .mat .mp-calwrap{position:relative}
 .mat .mp-pop{position:absolute;right:0;top:58px;z-index:30;width:min(380px,86vw);padding:18px;border-radius:18px;background:var(--mp-pop);border:1px solid var(--mp-line3);box-shadow:var(--mp-shadow);display:flex;flex-direction:column;gap:12px}
 .mat .mp-pop b{font-size:16px;font-weight:600}

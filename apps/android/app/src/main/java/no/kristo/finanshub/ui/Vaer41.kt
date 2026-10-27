@@ -45,9 +45,9 @@ private val GLASS41 = Color.White.copy(alpha = .12f)
 @Composable
 internal fun VaerWrap41(vm: AppViewModel, index: Int, content: @Composable () -> Unit) {
     val edit = vm.p41.vaerEdit
-    val angle = wobbleAngle(edit, index, 0.6f)
+    val angle = wobble71(edit, index, 0.6f) // prompt 71: leses i graphicsLayer
     Box(
-        Modifier.fillMaxWidth().graphicsLayer { rotationZ = angle }
+        Modifier.fillMaxWidth().graphicsLayer { rotationZ = angle.value }
             .pointerInput(Unit) {
                 val slop = 8.dp.toPx()
                 awaitEachGesture {

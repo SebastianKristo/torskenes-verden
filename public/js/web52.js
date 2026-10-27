@@ -38,13 +38,17 @@ let lastRoute = null;
 function pageEnter(route, view) {
   const changed = route !== lastRoute;
   lastRoute = route;
-  if (!changed || reduced()) return;
-  view.classList.remove('page-enter');
-  void view.offsetWidth; // start animasjonen på nytt
-  view.classList.add('page-enter');
-  const done = () => view.classList.remove('page-enter'); // ingen transform igjen etterpå (position:fixed inni siden)
-  view.addEventListener('animationend', done, { once: true });
-  setTimeout(done, 600);
+  if (!changed) return;
+  // Prompt 71 (ANIWEB71): Web Animations i stedet for klasse + tvungen layout (offsetWidth) for å starte på nytt. Samme bevegelse
+  // (pgIn: 10 px nedenfra, 280 ms); uten fill, så ingen transform blir igjen etterpå (position:fixed inni siden).
+  // «Reduser bevegelse»: kort inntoning (150 ms) uten bevegelse.
+  try {
+    view.getAnimations?.().forEach((a) => { if (a.id === 'pg71') a.cancel(); });
+    const a = reduced()
+      ? view.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' })
+      : view.animate([{ opacity: 0, transform: 'translate3d(0,10px,0)' }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(.22,.9,.28,1)' });
+    a.id = 'pg71';
+  } catch { /* eldre nettleser: ingen animasjon */ }
 }
 
 /* ---------------- Ruter: buffer ---------------- */

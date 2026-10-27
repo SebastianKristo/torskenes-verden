@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -426,7 +427,7 @@ private fun GlimtSheet37(vm: AppViewModel, lists: List<TaskList>) {
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (s.glimtBusy) {
                     val rot = rememberInfiniteTransition(label = "g37").animateFloat(0f, 360f, infiniteRepeatable(tween(1200, easing = LinearEasing)), label = "r")
-                    Box(Modifier.rotate(rot.value)) { WxIcon(STAR37, RED37, 16.dp, fill = true) }
+                    Box(Modifier.graphicsLayer { rotationZ = rot.value }) { WxIcon(STAR37, RED37, 16.dp, fill = true) }
                 }
                 BasicTextField(q, { q = it }, textStyle = TextStyle(color = p.ink, fontSize = 15.5.sp, fontFamily = PaperFonts.sans), cursorBrush = SolidColor(p.lab), maxLines = 6,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { if (q.isNotBlank()) { vm.glimt37(q); q = "" } }),

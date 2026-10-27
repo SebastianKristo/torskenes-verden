@@ -83,7 +83,8 @@ struct Glimt31Mark: View {
     @Environment(\.accessibilityReduceMotion) private var reduce
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: state == .done)) { (ctx: TimelineViewDefaultContext) in
+        // Prompt 71: skjermens egen takt (60/120 Hz) i stedet for 30 bilder/s; bare denne lille visningen tegnes på nytt.
+        TimelineView(.animation(minimumInterval: nil, paused: state == .done)) { (ctx: TimelineViewDefaultContext) in
             let t: Double = ctx.date.timeIntervalSinceReferenceDate
             Glimt31Frame(size: size, state: state, dark: dark, reduce: reduce, t: t)
         }
@@ -126,8 +127,8 @@ struct Glimt31Frame: View {
         if state == .done {
             Circle().strokeBorder(Glimt31.green, lineWidth: bw)
         } else {
-            Circle()
-                .strokeBorder(AngularGradient(colors: Glimt31.ringColors, center: .center), lineWidth: bw)
+            // Prompt 71: ringen er et ferdig lag (drawingGroup) som bare roteres.
+            Glimt31Ring(bw: bw)
                 .rotationEffect(.degrees(spinAngle))
         }
     }
@@ -187,6 +188,17 @@ struct Glimt31Frame: View {
     }
 }
 
+/// Prompt 71: fargeringen som ett ferdig lag (tegnes én gang, roteres som bilde).
+struct Glimt31Ring: View {
+    let bw: CGFloat
+
+    var body: some View {
+        Circle()
+            .strokeBorder(AngularGradient(colors: Glimt31.ringColors, center: .center), lineWidth: bw)
+            .drawingGroup()
+    }
+}
+
 /// Haken som spretter inn når Glimt er ferdig.
 struct Glimt31Check: View {
     let size: CGFloat
@@ -210,7 +222,7 @@ struct Glimt31Dots: View {
     @Environment(\.accessibilityReduceMotion) private var reduce
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduce)) { (ctx: TimelineViewDefaultContext) in
+        TimelineView(.animation(minimumInterval: nil, paused: reduce)) { (ctx: TimelineViewDefaultContext) in
             let t: Double = ctx.date.timeIntervalSinceReferenceDate
             HStack(spacing: 3) {
                 ForEach(0..<3, id: \.self) { (i: Int) in

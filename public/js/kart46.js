@@ -315,6 +315,18 @@ function selHtml() {
     ${D ? `<div class="k46-box flat">${deps || '<div class="k46-empty">Ingen avganger de neste to timene.</div>'}</div>` : ''}
     <button type="button" class="k46-fly" data-k46="sel-fly">Vis på kartet</button>`;
 }
+/** Prompt 71 (ANIWEB71): arket på smal skjerm er alltid fullt høyt og flyttes med transform (ingen animert høyde). Den skjulte
+    delen fylles av en tom rad nederst (--k46-hide) så lista kan scrolles helt ned; når arket går ned, endres den først etter glidningen. */
+let hide71 = 0;
+function place71(pan) {
+  const full = Math.round((host?.clientHeight ?? 700) * 0.86), hide = Math.max(0, full - sheetH());
+  pan.style.height = `${full}px`;
+  pan.style.transform = `translateY(${hide}px)`;
+  const was = parseFloat(pan.style.getPropertyValue('--k46-hide')) || 0;
+  clearTimeout(hide71);
+  if (hide <= was || matchMedia('(prefers-reduced-motion: reduce)').matches) pan.style.setProperty('--k46-hide', `${hide}px`);
+  else hide71 = setTimeout(() => { if (pan.isConnected) pan.style.setProperty('--k46-hide', `${hide}px`); }, 320);
+}
 function paintPanel() {
   const pan = host?.querySelector('[data-k46-pan]');
   if (!pan) return;
@@ -328,7 +340,7 @@ function paintPanel() {
   if (body) { body.innerHTML = inner; body.scrollTop = sc; }
   pan.dataset.sheet = S.sheet;
   host.classList.toggle('k46-nar', !wide());
-  if (!wide()) pan.style.height = `${sheetH()}px`; else pan.style.height = '';
+  if (!wide()) place71(pan); else { pan.style.height = ''; pan.style.transform = ''; pan.style.removeProperty('--k46-hide'); }
   paintSrc();
 }
 function paintChips() {

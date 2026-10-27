@@ -214,6 +214,27 @@ function enterEdit() {
 /** Verktøylinjen og listen over skjulte kort flyttes til <body> (papiret er egen stablingskontekst under bunnmenyen). */
 function portal() { document.querySelectorAll('[data-h52-root] ~ .h52-bar, [data-h52-root] ~ .h52-add').forEach((x) => document.body.appendChild(x)); }
 
+/** Prompt 71: FLIP for flisene som flytter seg når en flis dras forbi. p0 = posisjonene (offsetLeft/Top) før flyttingen. */
+function flip71(els, p0) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // 1) Bare lesing: ny plass og (for glidninger som pågår) hvor flisen er nå.
+  const go = [];
+  for (const x of els) {
+    const [l0, t0] = p0.get(x), dx = l0 - x.offsetLeft, dy = t0 - x.offsetTop;
+    if (!dx && !dy) continue;
+    const run = x.getAnimations().filter((an) => an.id === 'h52flip');
+    let cx = 0, cy = 0;
+    if (run.length) { const m = /(-?[\d.]+)px(?:\s+(-?[\d.]+)px)?/.exec(getComputedStyle(x).translate); if (m) { cx = +m[1]; cy = +(m[2] ?? 0); } }
+    go.push([x, dx + cx, dy + cy, run]);
+  }
+  // 2) Bare skriving: start glidningene (ingen lesing etterpå i samme bilde).
+  for (const [x, dx, dy, run] of go) {
+    run.forEach((an) => an.cancel());
+    const an = x.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0px 0px' }], { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    an.id = 'h52flip';
+  }
+}
+
 let bound = false;
 export function bindHome52() {
   if (bound) return;
@@ -260,15 +281,21 @@ export function bindHome52() {
     if (!H.drag.moved) { H.drag.moved = true; H.drag.el.classList.add('lift'); try { H.drag.el.setPointerCapture(e.pointerId); } catch { /* */ } }
     e.preventDefault();
     H.drag.el.style.translate = `${e.clientX - start.x}px ${e.clientY - start.y}px`;
-    const over = document.elementsFromPoint(e.clientX, e.clientY).map((x) => x.closest?.('[data-h52]')).find((x) => x && x !== H.drag.el);
+    // Prompt 71: en flis som fortsatt glir (FLIP), er ikke et mål – ellers bytter den tilbake når den glir inn under fingeren.
+    const over = document.elementsFromPoint(e.clientX, e.clientY).map((x) => x.closest?.('[data-h52]')).find((x) => x && x !== H.drag.el && !x.getAnimations?.().some((an) => an.id === 'h52flip' && an.playState === 'running'));
     if (over) {
       const a = H.order.indexOf(H.drag.id), b = H.order.indexOf(over.dataset.h52);
       if (a >= 0 && b >= 0 && a !== b) {
         H.order.splice(a, 1); H.order.splice(b, 0, H.drag.id);
-        const r0 = H.drag.el.getBoundingClientRect();
+        // Prompt 71 (ANIWEB71): FLIP – les alle posisjoner før flyttingen (layout er ren), flytt, les én gang til (én layout), og la de
+        // andre flisene gli fra gammel til ny plass med translate (Web Animations, kompositoren). Ingen lesing midt i skrivingen.
+        const sibs = [...H.drag.el.parentElement.children].filter((x) => x !== H.drag.el && x.matches('[data-h52]'));
+        const p0 = new Map(sibs.map((x) => [x, [x.offsetLeft, x.offsetTop]]));
+        const r0 = [H.drag.el.offsetLeft, H.drag.el.offsetTop];
         if (b > a) over.after(H.drag.el); else over.before(H.drag.el);
-        const r1 = H.drag.el.getBoundingClientRect();
-        start = { ...start, x: start.x + (r1.left - r0.left), y: start.y + (r1.top - r0.top) };
+        const r1 = [H.drag.el.offsetLeft, H.drag.el.offsetTop];
+        flip71(sibs, p0);
+        start = { ...start, x: start.x + (r1[0] - r0[0]), y: start.y + (r1[1] - r0[1]) };
         H.drag.el.style.translate = `${e.clientX - start.x}px ${e.clientY - start.y}px`;
         haptic?.(6);
       }

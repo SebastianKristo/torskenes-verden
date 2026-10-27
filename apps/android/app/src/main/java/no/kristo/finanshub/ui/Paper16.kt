@@ -304,9 +304,9 @@ internal fun RuterPage(vm: AppViewModel) {
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 vm.myStops.forEachIndexed { i, st ->
                                     val on = st.id == sel?.id
-                                    val angle = wobbleAngle(vm.stopEdit, i)
+                                    val angle = wobble71(vm.stopEdit, i) // prompt 71: leses i graphicsLayer
                                     Column(
-                                        Modifier.graphicsLayer { rotationZ = angle * 3f }.widthIn(min = 120.dp).clip(RoundedCornerShape(14.dp))
+                                        Modifier.graphicsLayer { rotationZ = angle.value * 3f }.widthIn(min = 120.dp).clip(RoundedCornerShape(14.dp))
                                             .background(if (on) p.ink else p.surf2)
                                             .longPressEdit(!vm.stopEdit) { Haptics.tap(); vm.stopEdit = true }
                                             .clickable(enabled = !vm.stopEdit) { Haptics.select(); vm.stopSel = st.id }.padding(12.dp, 10.dp),

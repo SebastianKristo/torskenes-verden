@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -146,7 +147,7 @@ private fun RcAiCard34(vm: AppViewModel, r: RcAi34) {
             Box(Modifier.size(46.dp, 58.dp).clip(RoundedCornerShape(8.dp)).background(p.bg).border(1.dp, p.line, RoundedCornerShape(8.dp))) {
                 ServerImage(vm, r.thumb ?: "/finans/api/receipts/${r.id}/thumb", Modifier.matchParentSize())
                 // Rød skannelinje som glir over bildet.
-                Box(Modifier.fillMaxWidth().height(2.dp).offset(y = (56 * y).dp).background(p.lab))
+                Box(Modifier.fillMaxWidth().height(2.dp).offset { IntOffset(0, (56 * y).dp.roundToPx()) }.background(p.lab)) // prompt 71: offset-lambda
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, color = p.ink, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

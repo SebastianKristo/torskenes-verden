@@ -1,5 +1,8 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.unit.constrain
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Spring
@@ -476,7 +479,11 @@ internal fun LiquidTextSeg52(
             },
     ) {
         if (ready) Box(
-            Modifier.offset { IntOffset(px.value.roundToInt(), 0) }.size(with(dens) { pw.value.toDp() }, cellH)
+            // Prompt 71: bredden leses i målefasen (layout-lambda) i stedet for size(pw.value.toDp()) i komposisjonen – samme mål.
+            Modifier.offset { IntOffset(px.value.roundToInt(), 0) }.layout { m, c ->
+                val pl = m.measure(c.constrain(Constraints.fixed(with(dens) { pw.value.toDp() }.roundToPx(), cellH.roundToPx())))
+                layout(pl.width, pl.height) { pl.place(0, 0) }
+            }
                 .graphicsLayer { scaleX = 1f + .14f * st; scaleY = 1f - .1f * st }
                 .shadow(6.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
                 .clip(CircleShape)

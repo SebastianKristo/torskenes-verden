@@ -591,16 +591,7 @@ private fun Ch27Toggle(v: ChatV27, ic: String, label: String, on: Boolean, modif
 
 /** Lydbølgen mens mikrofonen lytter: sju streker som følger lydnivået. */
 @Composable
-private fun Ch27Wave(rms: Float) {
-    val tr = rememberInfiniteTransition(label = "wave")
-    Row(Modifier.height(22.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        for (i in 0 until 7) {
-            val a by tr.animateFloat(.25f, 1f, infiniteRepeatable(tween(450, delayMillis = i * 60), RepeatMode.Reverse), label = "w$i")
-            val h = (6f + 16f * a * (.35f + .65f * rms)).dp
-            Box(Modifier.width(3.dp).height(h).clip(RoundedCornerShape(2.dp)).background(CH27_SKY))
-        }
-    }
-}
+private fun Ch27Wave(rms: Float) = WaveBars71(rms, CH27_SKY, "wave") // prompt 71: én Canvas, pulsen leses i tegnefasen (ui/Anim71.kt)
 
 /* Brukes av Hjem og Mer (rad «Chat»). */
 internal const val CHAT27_MER_ICON = "M4 5h16v11H9l-5 4zM9 10.5h6"

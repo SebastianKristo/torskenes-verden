@@ -152,8 +152,8 @@ html[data-mode="dark"] .s45-seg button[aria-checked=true]{background:#f3efe6}
 .za45-t{flex:1;min-width:0;display:flex;flex-direction:column}
 .za45-t b{font-size:15px}.za45-t span{font-size:12.5px;opacity:.7}
 .za45-sw{flex:none;position:relative;width:52px;height:32px;border-radius:16px;border:0;background:#c9c2b4;cursor:pointer;transition:background .2s;padding:0}
-.za45-sw i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
-.za45-sw.on{background:#2f7a4f}.za45-sw.on i{left:23px}
+.za45-sw i{position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:13px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.za45-sw.on{background:#2f7a4f}.za45-sw.on i{transform:translateX(20px)}
 .za45-sw:disabled{cursor:default}
 .za45-ppl{display:flex;flex-direction:column;border-top:1px solid rgba(127,127,127,.22)}
 .za45-ppl.off{opacity:.45}

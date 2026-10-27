@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -177,8 +178,8 @@ internal fun AcBar34(T: AcT34, frac: Float, color: Color, h: Dp = 6.dp) = Box(Mo
 @Composable
 private fun AcSpin34(T: AcT34, size: Dp = 18.dp) {
     val t = rememberInfiniteTransition(label = "acspin")
-    val a by t.animateFloat(0f, 360f, infiniteRepeatable(tween(850, easing = LinearEasing)), label = "a")
-    Canvas(Modifier.size(size).rotate(a)) {
+    val a = t.animateFloat(0f, 360f, infiniteRepeatable(tween(850, easing = LinearEasing)), label = "a")
+    Canvas(Modifier.size(size).graphicsLayer { rotationZ = a.value }) { // prompt 71: rotasjonen i laget
         drawCircle(T.line, style = Stroke(2.5f * density))
         drawArc(T.acc, 0f, 90f, false, style = Stroke(2.5f * density))
     }

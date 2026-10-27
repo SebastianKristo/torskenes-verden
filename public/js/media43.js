@@ -60,9 +60,13 @@ async function mapi(path, { method = 'GET', json, quiet } = {}) {
   if (!r.ok) { const e = new Error(j.error || (r.status === 404 ? 'Serveren har ikke Media ennå.' : `Feil ${r.status}`)); e.status = r.status; e.body = j; if (!quiet) throw e; throw e; }
   return j;
 }
+// Prompt 71 (ANIWEB71): flere svar som kommer i samme bilde (f.eks. Oversikt henter 5–6 ting), gir én tegning i neste bilde i stedet
+// for én full tegning per svar. paint() direkte (brukerhandlinger) tegner med en gang og tar med det som venter.
+let paintRaf = 0;
+const paintSoon = () => { if (!paintRaf) paintRaf = requestAnimationFrame(() => { paintRaf = 0; paint(); }); };
 const get = async (key, path, after) => {
   try { M[key] = await mapi(path); M.err[key] = ''; } catch (e) { M.err[key] = e.message; if (M[key] == null) M[key] = { error: e.message, status: e.status }; }
-  after?.(); paint();
+  after?.(); paintSoon();
 };
 const loadUp = () => get('up', '/upcoming?days=7');
 const loadSer = () => get('ser', '/series');
@@ -508,7 +512,7 @@ function paintSheet() {
   document.body.classList.toggle('m43-modal', !!M.sh);
 }
 function paintToast() { const t = root?.querySelector('[data-m43-toast]'); if (t) t.innerHTML = M.undo ? `<div class="m43-toast" role="status"><span>${esc(M.undo.text)}</span><button type="button" class="m44-undo" data-m44="undo">Angre</button></div>` : M.toast ? `<div class="m43-toast" role="status">${esc(M.toast)}</div>` : ''; }
-function paint() { if (!root?.isConnected) return; paintTop(); paintGl(); paintMain(); paintSheet(); paintToast(); }
+function paint() { if (paintRaf) { cancelAnimationFrame(paintRaf); paintRaf = 0; } if (!root?.isConnected) return; paintTop(); paintGl(); paintMain(); paintSheet(); paintToast(); }
 
 /* ---------------- Handlinger ---------------- */
 

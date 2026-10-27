@@ -347,12 +347,15 @@ function placeAns() {
   const el = document.getElementById('gl-layer');
   if (!el) return;
   const f = ansForm?.isConnected ? ansForm : document.querySelector('[data-search]');
-  if (!f || !f.offsetParent) { el.style.display = 'none'; return; }
+  if (!f || !f.offsetParent) { if (el.style.display !== 'none') el.style.display = 'none'; return; }
   const r = f.getBoundingClientRect(), w = Math.min(r.width, 680);
-  el.style.display = '';
-  el.style.width = `${w}px`;
-  el.style.left = `${r.left + window.scrollX + (r.width - w) / 2}px`;
-  el.style.top = `${r.bottom + window.scrollY + 10}px`;
+  // Prompt 71 (ANIWEB71): skriv bare når noe faktisk er endret (sjekken går hvert 400. ms) – ellers ny stil/layout for hele kortet uten grunn.
+  const set = (k, v) => { if (el.style[k] !== v) el.style[k] = v; };
+  set('display', '');
+  const px = (n) => `${Math.round(n * 100) / 100}px`;
+  set('width', px(w));
+  set('left', px(r.left + window.scrollX + (r.width - w) / 2));
+  set('top', px(r.bottom + window.scrollY + 10));
 }
 /* Prompt 70 (claude-code-hjem-scroll-mens-ai.md): ingen fullskjerm-lag lenger – Hjem scroller fritt mens Glimt tenker og etter
    svaret. Kortet ligger i siden og scroller med den. Trykk utenfor (flyttet < 8 px, utenfor kortet og søkefeltet) lukker når
@@ -435,7 +438,10 @@ function paintAns() {
   if (!h) { el?.remove(); pill70(false); return; }
   if (!el) { el = document.createElement('div'); el.id = 'gl-layer'; el.className = 'gl-layer'; document.body.appendChild(el); }
   bindSwipe(el);
+  const had = !!el.querySelector('.gl-ans');
   el.innerHTML = h;
+  // Prompt 71 (ANIWEB71): kortet glir inn bare første gang. Når innholdet byttes (tenker → svar), står det stille (ingen ny inntoning/hopp).
+  if (had) el.querySelector('.gl-ans')?.classList.add('gl71-still');
   placeAns();
   // Prompt 70: svaret strømmet ferdig mens kortet var ute av syne → lett haptikk + «Glimt svarte ↑» over fanelinjen.
   if (fin && !ansInView70()) { haptic(10); pill70(true); }

@@ -142,8 +142,8 @@ struct Vaer41Wiggle: ViewModifier {
     func body(content: Content) -> some View {
         let sign: Double = index % 2 == 0 ? 1 : -1
         content
-            .rotationEffect(.degrees(v.editing ? (on ? 0.6 : -0.6) * sign : 0))
-            .animation(v.editing ? .easeInOut(duration: 0.3).repeatForever(autoreverses: true) : .default, value: on)
+            // Prompt 71: bare rotasjonen animeres (Anim71.swift).
+            .wiggle71(v.editing, up: on, angle: 0.6 * sign, half: 0.3)
             .onChange(of: v.editing) { _, e in on = e }
             .simultaneousGesture(LongPressGesture(minimumDuration: 0.6, maximumDistance: 6).onEnded { (_: Bool) in
                 if !v.editing { v.holdStart() }

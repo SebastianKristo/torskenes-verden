@@ -13,6 +13,9 @@ html.boot52-nocache header.top .logo{color:transparent!important}
 @keyframes pgIn{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
 .page-enter{animation:pgIn .28s cubic-bezier(.22,.9,.28,1) both}
 @media (prefers-reduced-motion:reduce){.page-enter{animation:none}}
+/* Prompt 71 (ANIWEB71): «Reduser bevegelse» – ark og kort som ellers glir/skaleres inn, tones i stedet kort inn (150 ms). */
+@keyframes fade71{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.tk-sheet,.k2-sheet,.wxp-sheet,.gb-sheet,.ub-sheet,.gl-ans:not(.gl71-still),.v54-card{animation:fade71 .15s ease-out both!important}}
 
 /* Glimt-briefen: nye kort per bruker (brief52.js, fasit Glimt Brief.dc.html nk.*). */
 .b52{flex:none;border-radius:24px;background:#fffdf8;color:#1b1a17;padding:18px;display:flex;flex-direction:column;gap:8px;text-decoration:none;font-family:var(--gb-sans,Manrope,system-ui,sans-serif);box-sizing:border-box}
@@ -114,7 +117,7 @@ div.b52-r{cursor:default}
 .t52-nl i{flex:none;width:30px;font:600 10px 'IBM Plex Mono',monospace;font-style:normal;color:var(--t52lab)}
 /* Redigering */
 @keyframes h52w{0%,100%{rotate:-.8deg}50%{rotate:.8deg}}
-.h52.edit .h52-i{animation:h52w .32s ease-in-out infinite;touch-action:none;user-select:none;-webkit-user-select:none}
+.h52.edit .h52-i{animation:h52w .32s ease-in-out infinite;touch-action:none;user-select:none;-webkit-user-select:none;will-change:rotate,translate} /* prompt 71: will-change bare i redigering (mens flisene vrikker) */
 .h52.edit .h52-i:nth-child(2n){animation-delay:-.16s}
 .h52.edit .h52-i.lift{animation:none;z-index:5;scale:1.03;filter:drop-shadow(0 14px 24px rgba(0,0,0,.25))}
 @media (prefers-reduced-motion:reduce){.h52.edit .h52-i{animation:none;outline:2px dashed rgba(178,58,42,.5);outline-offset:2px;border-radius:24px}}

@@ -50,9 +50,12 @@ html[data-hl="2c"] .dm{--dm-pos:#2f7a4f;--dm-neg:#9a5a10;--dm-warn:#b23a2a;--dm-
 .dm-sum-p>div{display:flex;gap:10px;font-size:14px;line-height:1.5;text-wrap:pretty;opacity:.92}
 .dm-sum-p i{flex:none;width:7px;height:7px;border-radius:4px;margin-top:7px}
 .dm-sum-sk{display:flex;flex-direction:column;gap:10px}
-.dm-sum-sk span{display:block;border-radius:7px;background:linear-gradient(90deg,rgba(255,255,255,.06) 0,rgba(255,255,255,.12) 50%,rgba(255,255,255,.06) 100%);background-size:400px 100%;animation:dm-shim 1.3s linear infinite}
-html[data-hl="2c"] .dm-sum-sk span{background-image:linear-gradient(90deg,#efe9dd 0,#f8f4ec 50%,#efe9dd 100%)}
-@keyframes dm-shim{from{background-position:-400px 0}to{background-position:400px 0}}
+/* Prompt 71 (ANIWEB71): skimmeren er et ferdig lag (::after) som flyttes med transform – ikke animert background-position. */
+.dm-sum-sk span{display:block;position:relative;overflow:hidden;isolation:isolate;border-radius:7px;--dm71:linear-gradient(90deg,rgba(255,255,255,.06) 0,rgba(255,255,255,.12) 50%,rgba(255,255,255,.06) 100%)}
+.dm-sum-sk span::after{content:'';position:absolute;z-index:-1;top:0;bottom:0;left:-400px;width:calc(100% + 800px);pointer-events:none;background:var(--dm71) 0 0/400px 100% repeat-x;animation:dm-shim 1.3s linear infinite;will-change:transform}
+html[data-hl="2c"] .dm-sum-sk span{--dm71:linear-gradient(90deg,#efe9dd 0,#f8f4ec 50%,#efe9dd 100%)}
+@keyframes dm-shim{from{transform:translateX(-400px)}to{transform:translateX(400px)}}
+@media (prefers-reduced-motion:reduce){.dm-sum-sk span::after{animation:none}}
 [data-dm-gsc]{display:flex;flex-direction:column;gap:14px}
 .dm-gsc-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px}
 .dm-gsc-t{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:500}

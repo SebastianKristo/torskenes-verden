@@ -99,8 +99,9 @@ struct Media44BannerBack: View {
             Color(hex: "#1b1a17")
             // Prompt 50: fanart/plakat via disk- og minnecachen (Media50Img.swift) – plakaten fra listen vises med en gang.
             if !src.isEmpty {
+                // Prompt 71: blur-radiusen animeres aldri (bytte av tittel med ‹ › kunne tone radiusen 18 ↔ 3 per bilde).
                 Media50Remote(url: src, want: t.fanart.isEmpty ? 320 : 1280)
-                .blur(radius: t.fanart.isEmpty ? 18 : 3)
+                .animation(nil) { $0.blur(radius: t.fanart.isEmpty ? 18 : 3) }
                 .opacity(t.fanart.isEmpty ? 0.7 : 1)
             }
             LinearGradient(colors: [Color.black.opacity(0.92), Color.black.opacity(0.55)], startPoint: .leading, endPoint: .trailing)

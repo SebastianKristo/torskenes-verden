@@ -212,7 +212,7 @@ const STYLE63 = `.m63,section:has([data-mem63]){scroll-margin-top:72px}.m63-head
 .m63-form{display:flex;flex-direction:column;gap:8px}.m63-fl{display:flex;flex-direction:column;gap:4px}.m63-fl span{font-weight:600;opacity:.8;font-size:14px}
 .m63-fl input{min-width:0;height:42px;padding:0 12px;border-radius:10px;border:1px solid rgba(127,127,127,.45);background:transparent;color:inherit;font:inherit}
 .m63-note{padding:8px 26px 12px;font-size:13px;opacity:.7}
-.m63-flash{animation:m63f 2.4s ease-out}@keyframes m63f{0%,40%{box-shadow:0 0 0 3px rgba(122,59,107,.55)}100%{box-shadow:0 0 0 0 rgba(122,59,107,0)}}
+.m63-flash{position:relative}.m63-flash::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;box-shadow:0 0 0 3px rgba(122,59,107,.55);opacity:0;animation:m63f 2.4s ease-out}@keyframes m63f{0%,40%{opacity:1}100%{opacity:0}}
 @media (max-width:600px){.m63-t{padding:12px 16px 4px}.m63-item{padding:12px 16px}.m63-note{padding:8px 16px 12px}.m63-head{flex-wrap:wrap;gap:10px}.m63-b{flex:1 1 auto}}`;
 function css() { if (typeof document === 'undefined' || document.getElementById('m63-css')) return; const st = document.createElement('style'); st.id = 'm63-css'; st.textContent = STYLE63; document.head.appendChild(st); }
 

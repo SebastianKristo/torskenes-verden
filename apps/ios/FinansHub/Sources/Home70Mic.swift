@@ -133,10 +133,8 @@ struct Home70RecCard: View {
 /// Teksten øverst: det som er sagt (live på enheten), ellers «Snakk nå …» / «Skriver ned …» dempet, med blinkende markør.
 struct Home70RecText: View {
     @Environment(\.paper) private var p
-    @Environment(\.accessibilityReduceMotion) private var reduce
     let text: String
     let busy: Bool
-    @State private var blink: Bool = false
 
     var body: some View {
         let t: String = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -149,10 +147,10 @@ struct Home70RecText: View {
             if busy {
                 ProgressView().controlSize(.small).tint(p.mut)
             } else {
+                // Prompt 71: markøren blinker i sin egen lille tilstand (bare opasiteten animeres, Anim71.swift), så teksten
+                // som strømmer inn ved siden av ikke arver den evige animasjonen.
                 Rectangle().fill(p.ink).frame(width: 2, height: 20)
-                    .opacity(blink ? 0.1 : 1)
-                    .animation(reduce ? nil : .easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: blink)
-                    .onAppear { blink = true }
+                    .pulse71(from: 1, to: 0.1, half: 0.5)
             }
         }
         .padding(.trailing, 8)
@@ -165,56 +163,28 @@ struct Home70RecText: View {
 }
 
 /// Bølgeformen: én høy strek (start) og streker/prikker som ruller mot venstre etter lydnivået, og tiden.
-/// Egen timer (11 oppdateringer/s) i denne lille visningen, så Hjem ikke tegnes på nytt.
+/// Prompt 71: lydnivået hentes fortsatt 11 ganger/s (som før), men bølgen tegnes av TimelineView(.animation) + Canvas i
+/// denne lille visningen og glir jevnt mellom prøvene (i stedet for å hoppe 5,5 pt hver 90 ms). Prøvene ligger i en liten
+/// referanse (Home70WaveBuf), ikke i @State, så ingenting annet tegnes på nytt. Med «Reduser bevegelse» hopper den som før.
 struct Home70Wave: View {
     @Environment(\.paper) private var p
+    @Environment(\.accessibilityReduceMotion) private var reduce
     let device: Bool
 
-    @State private var samples: [CGFloat] = []
-    @State private var secs: Int = 0
-    @State private var t0: Date = Date()
+    @State private var buf: Home70WaveBuf = Home70WaveBuf()
 
     nonisolated static let step: CGFloat = 5.5
     nonisolated static let maxSamples: Int = 160
 
     var body: some View {
-        HStack(spacing: 10) {
-            Canvas { (ctx: inout GraphicsContext, size: CGSize) in
-                Home70Wave.draw(&ctx, size, samples, p.ink)
-            }
-            .frame(height: 24)
-            .frame(maxWidth: .infinity)
-            .accessibilityHidden(true)
-            Text(clock).font(PF.mono(12)).foregroundStyle(p.mut).monospacedDigit()
-                .frame(minWidth: 30, alignment: .leading)
-                .accessibilityLabel("Opptak " + clock)
+        let slow: Bool = reduce || !running
+        TimelineView(.animation(minimumInterval: slow ? Home70WaveBuf.every : nil)) { (ctx: TimelineViewDefaultContext) in
+            Home70WaveFrame(snap: buf.pull(ctx.date.timeIntervalSinceReferenceDate, device: device, smooth: !reduce), ink: p.ink, mut: p.mut)
         }
-        .task {
-            t0 = Date()
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 90_000_000)
-                if Task.isCancelled { break }
-                tick()
-            }
-        }
+        .onAppear { buf.reset() }
     }
 
-    private var clock: String {
-        let m: Int = secs / 60
-        let s: Int = secs % 60
-        return String(m) + ":" + (s < 10 ? "0" : "") + String(s)
-    }
-
-    private func tick() {
-        secs = Int(Date().timeIntervalSince(t0))
-        let running: Bool = device ? ChatVoice27.shared.recording : Voice56.shared.phase == "rec"
-        guard running else { return }
-        let lv: [CGFloat] = device ? ChatVoice27.shared.levels : Voice56.shared.levels
-        var s: [CGFloat] = samples
-        s.append(Home70Wave.norm(lv.last ?? 0.15))
-        if s.count > Home70Wave.maxSamples { s.removeFirst(s.count - Home70Wave.maxSamples) }
-        samples = s
-    }
+    private var running: Bool { device ? ChatVoice27.shared.recording : Voice56.shared.phase == "rec" }
 
     /// Nivået (0,15–1 fra motoren) → 0–1.
     nonisolated static func norm(_ v: CGFloat) -> CGFloat {
@@ -222,11 +192,13 @@ struct Home70Wave: View {
     }
 
     /// Nyeste til høyre. Strekhøyde 3–22 pt; stille = prikk (3 pt, dempet).
-    nonisolated static func draw(_ ctx: inout GraphicsContext, _ size: CGSize, _ samples: [CGFloat], _ ink: Color) {
+    /// `shift` (0–1): hvor langt bølgen har glidd mot neste prøve (Prompt 71).
+    nonisolated static func draw(_ ctx: inout GraphicsContext, _ size: CGSize, _ samples: [CGFloat], _ ink: Color, shift: CGFloat = 0) {
         let mid: CGFloat = size.height / 2
         let n: Int = samples.count
+        let dx: CGFloat = shift * step
         for (i, v) in samples.enumerated() {
-            let x: CGFloat = size.width - CGFloat(n - i) * step
+            let x: CGFloat = size.width - CGFloat(n - i) * step - dx
             if x < 0 { continue }
             let quiet: Bool = v < 0.06
             let h: CGFloat = quiet ? 3 : 3 + 19 * v
@@ -235,10 +207,86 @@ struct Home70Wave: View {
             ctx.fill(Path(roundedRect: r, cornerRadius: w / 2), with: .color(ink.opacity(h > 8 ? 1 : 0.55)))
         }
         // Startstreken (høy) foran det første utslaget, ruller ut til venstre når bølgen fyller bredden.
-        let sx: CGFloat = size.width - CGFloat(n + 1) * step + 2
+        let sx: CGFloat = size.width - CGFloat(n + 1) * step + 2 - dx
         if sx >= 0 {
             let r: CGRect = CGRect(x: sx - 2, y: 0, width: 2.5, height: 24)
             ctx.fill(Path(roundedRect: r, cornerRadius: 1.25), with: .color(ink))
         }
+    }
+}
+
+/// Ett bilde av bølgen: prøvene, hvor langt den har glidd, og tiden.
+struct Home70WaveSnap {
+    let samples: [CGFloat]
+    let shift: CGFloat
+    let secs: Int
+}
+
+/// Prompt 71: tegner ett bilde (Canvas + tid). Ingen tilstand.
+struct Home70WaveFrame: View {
+    let snap: Home70WaveSnap
+    let ink: Color
+    let mut: Color
+
+    var body: some View {
+        let s: [CGFloat] = snap.samples
+        let f: CGFloat = snap.shift
+        let c: Color = ink
+        HStack(spacing: 10) {
+            Canvas { (ctx: inout GraphicsContext, size: CGSize) in
+                Home70Wave.draw(&ctx, size, s, c, shift: f)
+            }
+            .frame(height: 24)
+            .frame(maxWidth: .infinity)
+            .drawingGroup()
+            .accessibilityHidden(true)
+            Text(clock).font(PF.mono(12)).foregroundStyle(mut).monospacedDigit()
+                .frame(minWidth: 30, alignment: .leading)
+                .accessibilityLabel("Opptak " + clock)
+        }
+    }
+
+    private var clock: String {
+        let m: Int = snap.secs / 60
+        let sec: Int = snap.secs % 60
+        return String(m) + ":" + (sec < 10 ? "0" : "") + String(sec)
+    }
+}
+
+/// Prompt 71: prøvene (ikke @State). `pull` kalles for hvert bilde og tar inn en ny prøve hver 90 ms mens det tas opp.
+final class Home70WaveBuf {
+    static let every: Double = 0.09
+    private var samples: [CGFloat] = []
+    private var t0: Double = Date.timeIntervalSinceReferenceDate
+    private var last: Double = 0
+
+    @MainActor func reset() {
+        samples = []
+        t0 = Date.timeIntervalSinceReferenceDate
+        last = 0
+    }
+
+    @MainActor func pull(_ t: Double, device: Bool, smooth: Bool) -> Home70WaveSnap {
+        let secs: Int = Swift.max(0, Int(t - t0))
+        let running: Bool = device ? ChatVoice27.shared.recording : Voice56.shared.phase == "rec"
+        if !running {
+            last = 0
+            return Home70WaveSnap(samples: samples, shift: 0, secs: secs)
+        }
+        if last == 0 { last = t }
+        // Etter en pause (appen i bakgrunnen o.l.) tas bare én prøve, ikke mange på en gang.
+        if t - last > 1 { last = t - Home70WaveBuf.every }
+        while t - last >= Home70WaveBuf.every {
+            last += Home70WaveBuf.every
+            add(device)
+        }
+        let f: Double = smooth ? Swift.min(1, Swift.max(0, (t - last) / Home70WaveBuf.every)) : 0
+        return Home70WaveSnap(samples: samples, shift: CGFloat(f), secs: secs)
+    }
+
+    @MainActor private func add(_ device: Bool) {
+        let lv: [CGFloat] = device ? ChatVoice27.shared.levels : Voice56.shared.levels
+        samples.append(Home70Wave.norm(lv.last ?? 0.15))
+        if samples.count > Home70Wave.maxSamples { samples.removeFirst(samples.count - Home70Wave.maxSamples) }
     }
 }

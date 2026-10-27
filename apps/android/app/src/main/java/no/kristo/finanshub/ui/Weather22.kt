@@ -1,5 +1,6 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.focusRequester
 import android.annotation.SuppressLint
 import android.webkit.WebView
@@ -658,7 +659,7 @@ private fun PlaceRow(
     val shown by animateFloatAsState(if (swiping) dx else if (open) openPx else 0f, label = "swipe")
     val sc by animateFloatAsState(if (dragging) 1.03f else 1f, label = "lift")
     Box(
-        Modifier.fillMaxWidth().zIndex(if (dragging) 2f else 1f).scale(sc)
+        Modifier.fillMaxWidth().zIndex(if (dragging) 2f else 1f).graphicsLayer { scaleX = sc; scaleY = sc } // prompt 71: løftet i laget
             .then(if (dragging) Modifier.shadow(18.dp, RoundedCornerShape(18.dp)) else Modifier)
             .clip(RoundedCornerShape(18.dp)).onSizeChanged { width = it.width }
             .onGloballyPositioned { val r = it.boundsInRoot(); rootTop = r.top; onBounds(r) }

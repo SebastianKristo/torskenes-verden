@@ -255,8 +255,10 @@ struct PaperDepartures: View {
                     smallButton("−", true) { m.remove(s, store) }
                 }
                 .padding(.horizontal, 14).padding(.vertical, 8)
-                .rotationEffect(.degrees(m.editing ? (i % 2 == 0 ? 0.2 : -0.2) : 0))
-                .animation(m.editing ? .easeInOut(duration: 0.3).repeatForever(autoreverses: true) : .default, value: m.editing)
+                // Prompt 71: repeatForever bare på rotasjonen, ikke på resten av raden.
+                .animation(m.editing ? Animation.easeInOut(duration: 0.3).repeatForever(autoreverses: true) : Animation.default) {
+                    $0.rotationEffect(.degrees(m.editing ? (i % 2 == 0 ? 0.2 : -0.2) : 0))
+                }
             }
         }
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))

@@ -109,7 +109,8 @@ private val RING46 = listOf(Color(0xFFB23A2A), Color(0xFFE8794A), Color(0xFFF2C1
 @Composable
 internal fun GlimtAvatar46(vm: AppViewModel, size: Dp = 40.dp, gap: Color = Color(0xFFF3EFE6), ink: Color = Color(0xFF1B1A17), busy: Boolean = false, label: String = "Innstillinger", onClick: () -> Unit) {
     val reduce = reduceMotion45()
-    val spin = if (busy && !reduce) rememberInfiniteTransition(label = "ring46").animateFloat(0f, 360f, infiniteRepeatable(tween(12_000, easing = androidx.compose.animation.core.LinearEasing)), label = "r").value else 0f
+    // Prompt 71: vinkelen som State, lest i drawBehind (tegnefasen) – profilknappen bygges ikke på nytt hvert bilde.
+    val spin = if (busy && !reduce) rememberInfiniteTransition(label = "ring46").animateFloat(0f, 360f, infiniteRepeatable(tween(12_000, easing = androidx.compose.animation.core.LinearEasing)), label = "r") else null
     val inner = size - 8.dp
     Box(
         // Skyggen tegnes selv som en myk sirkel (y 2, radius 8, 25 % svart) – ikke som elevation-skygge, som i et lag med alpha
@@ -121,7 +122,7 @@ internal fun GlimtAvatar46(vm: AppViewModel, size: Dp = 40.dp, gap: Color = Colo
                     radius = r + 8.dp.toPx(), center = Offset(r, r + 2.dp.toPx()))
             }
             .clip(CircleShape)
-            .drawBehind { rotate(110f + spin) { drawCircle(Brush.sweepGradient(RING46), radius = size.toPx() / 2f + 2f) } }
+            .drawBehind { rotate(110f + (spin?.value ?: 0f)) { drawCircle(Brush.sweepGradient(RING46), radius = size.toPx() / 2f + 2f) } }
             .clickable(role = Role.Button, onClickLabel = label, onClick = onClick).semantics { contentDescription = label }
             .padding(2.5.dp).clip(CircleShape).background(gap).padding(1.5.dp).clip(CircleShape),
         contentAlignment = Alignment.Center,

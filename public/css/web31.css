@@ -120,6 +120,10 @@ html[data-hl="2c"] .ny-notes ul{color:#3d3a33}
 #gl-layer button.gl-chat{flex:none;height:32px;padding:0 14px;border-radius:16px;border:0;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;font:700 12.5px Manrope,Outfit,system-ui,sans-serif;box-shadow:none;width:auto;margin:0}
 #gl-layer button.gl-chat:hover{background:rgba(255,255,255,.22)}
 @media (prefers-reduced-motion:reduce){.gl-ans{animation:none}}
+/* Prompt 71 (ANIWEB71): nytt innhold i et kort som allerede vises, tones ikke inn på nytt; laget er egen layout-boks (endringer
+   inni kortet, f.eks. ord som strømmer inn, legger ikke ut resten av siden på nytt). */
+.gl-ans.gl71-still{animation:none}
+.gl-layer{contain:layout style}
 
 /* «Glimt svarte mens du var borte» (4 s). */
 .glimt-away{position:fixed;z-index:96;left:50%;top:calc(env(safe-area-inset-top,0px) + 16px);transform:translate(-50%,-140%);width:min(440px,calc(100vw - 32px));box-sizing:border-box;display:flex;align-items:flex-start;gap:12px;padding:12px 16px 12px 12px;border-radius:22px;background:rgba(27,26,23,.92);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#f3efe6;box-shadow:0 18px 40px -14px rgba(0,0,0,.55);transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .3s;opacity:0;cursor:pointer;font-family:Manrope,Outfit,system-ui,sans-serif}

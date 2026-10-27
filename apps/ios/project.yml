@@ -211,6 +211,8 @@ targets:
     info:
       path: Kalender/Info.plist
       properties:
+        # Prompt 71: 120 Hz på ProMotion-skjermer (jevne animasjoner: orb, skimmer, ark).
+        CADisableMinimumFrameDurationOnPhone: true
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UIAppFonts:

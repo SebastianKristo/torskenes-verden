@@ -1,5 +1,9 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.unit.IntOffset
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -167,14 +171,15 @@ private fun CarpHammer36(S: Dp, mod: Modifier) = Canvas(mod.size(S * .7f)) {
 
 /* ---------------- Klokke ---------------- */
 
+/** Prompt 71: klokka som State – leses i graphicsLayer/offset-lambdaene (lag-/layoutfasen), ikke i komposisjonen. */
 @Composable
-private fun clock36(on: Boolean): Float {
+private fun clock36(on: Boolean): State<Float> {
     val t = remember { mutableFloatStateOf(0f) }
     if (on) LaunchedEffect(Unit) {
         val t0 = withFrameNanos { it }
         while (true) withFrameNanos { n -> t.floatValue = (n - t0) / 1_000_000_000f }
     }
-    return t.floatValue
+    return t
 }
 
 private fun lerp36(a: Float, b: Float, f: Float) = a + (b - a) * f
@@ -206,7 +211,8 @@ internal fun Sherlock36(vm: AppViewModel, modifier: Modifier = Modifier) {
     val reduce = reduceMotion31()
     val seq = s.sherSeq
     val S = 52.dp
-    var tl by remember(seq) { mutableFloatStateOf(0f) }
+    val tlS = remember(seq) { mutableFloatStateOf(0f) }
+    var tl by tlS
     val searching = vm.p31.checking
     LaunchedEffect(seq) {
         val total = 3600L
@@ -227,15 +233,19 @@ internal fun Sherlock36(vm: AppViewModel, modifier: Modifier = Modifier) {
         Haptics.select(); Haptics.select()
         s.sherOn = false
     }
+    // Prompt 71: klokka og banen (tl) leses bare i lambdaene under (graphicsLayer/offset), så Sherlock bygges ikke på nytt hvert bilde.
+    // Komposisjonen trenger bare å vite om boblen synes (derivedStateOf).
     val clock = clock36(!reduce)
-    val p = tl
     val fresh = vm.p30.upd.phase == "none" || (!vm.p30.upd.available && vm.p30.upd.phase != "avail")
-    val bubbleA = if (searching) 0f else kf36(p, floatArrayOf(0f, .68f, .74f, .92f, 1f), floatArrayOf(0f, 0f, 1f, 1f, 0f))
-    val bob = if (reduce) 0f else (sin(clock * PI.toFloat() * 2f / .9f) * .5f + .5f) * -6f
-    val scan = if (reduce) 0f else kf36(((clock % 1.1f) / 1.1f), floatArrayOf(0f, .5f, 1f), floatArrayOf(-24f, 18f, -24f))
+    val searchNow by rememberUpdatedState(searching)
+    val bubbleA: () -> Float = { if (searchNow) 0f else kf36(tlS.floatValue, floatArrayOf(0f, .68f, .74f, .92f, 1f), floatArrayOf(0f, 0f, 1f, 1f, 0f)) }
+    val bubbleOn by remember(seq) { derivedStateOf { bubbleA() > 0f } }
+    val bob: () -> Float = { if (reduce) 0f else (sin(clock.value * PI.toFloat() * 2f / .9f) * .5f + .5f) * -6f }
+    val scan: () -> Float = { if (reduce) 0f else kf36(((clock.value % 1.1f) / 1.1f), floatArrayOf(0f, .5f, 1f), floatArrayOf(-24f, 18f, -24f)) }
     Box(modifier.padding(top = 70.dp, end = 62.dp).wrapContentSize(unbounded = true)) {
         Box(
             Modifier.size(S * 2.6f, S * 2f).graphicsLayer {
+                val p = tlS.floatValue
                 if (reduce) { alpha = SH_A.let { kf36(p, SH_ST, it) } } else {
                     translationX = kf36(p, SH_ST, SH_X) * density
                     translationY = kf36(p, SH_ST, SH_Y) * density
@@ -248,15 +258,15 @@ internal fun Sherlock36(vm: AppViewModel, modifier: Modifier = Modifier) {
             // Figuren står i (ox, oy) i en flate som også har plass til luen, glasset og boblen.
             val ox = S * .9f
             val oy = S * .45f
-            Box(Modifier.offset(0.dp, bob.dp)) {
+            Box(Modifier.offset { IntOffset(0, bob().dp.roundToPx()) }) {
                 SherCape36(S, Modifier.offset(ox - S * .1f, oy + S * 1.1f - S * .38f))
                 GlimtFig35(hostChar35(vm.p35.set.char), S, "talk", Modifier.offset(ox, oy))
                 SherHat36(S, Modifier.offset(ox - S * .025f, oy - S * .36f))
-                SherGlass36(S, Modifier.offset(ox + S * .92f, oy + S * .28f).graphicsLayer { rotationZ = scan; transformOrigin = TransformOrigin(.15f, .85f) })
+                SherGlass36(S, Modifier.offset(ox + S * .92f, oy + S * .28f).graphicsLayer { rotationZ = scan(); transformOrigin = TransformOrigin(.15f, .85f) })
             }
         }
-        if (bubbleA > 0f) Box(
-            Modifier.offset((-150).dp + (-10).dp, (-8).dp).graphicsLayer { alpha = bubbleA; translationY = (1f - bubbleA) * 6f * density }
+        if (bubbleOn) Box(
+            Modifier.offset((-150).dp + (-10).dp, (-8).dp).graphicsLayer { val a = bubbleA(); alpha = a; translationY = (1f - a) * 6f * density }
                 .widthIn(max = 220.dp).shadow(10.dp, RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp)).background(Color.White).padding(12.dp, 8.dp),
         ) {
             Text(if (fresh) "Elementært! Du har siste versjon." else "Aha! Jeg fant Nordlys ${vm.p30.upd.latest.ifBlank { "en ny versjon" }}.",
@@ -278,22 +288,24 @@ internal fun Carp36(vm: AppViewModel, pct: Int, S: Dp = 30.dp, modifier: Modifie
     val f by animateFloatAsState(pct.coerceIn(0, 100) / 100f, tween(400), label = "carp36")
     // Lett haptikk hvert 25 % (ikke for hvert slag).
     LaunchedEffect(pct / 25) { if (pct in 1..99) Haptics.select() }
-    val cyc = if (reduce) 0f else (clock % .62f) / .62f
-    val ham = if (reduce) -20f else kf36(cyc, floatArrayOf(0f, .55f, .82f, 1f), floatArrayOf(-55f, -55f, 18f, -55f))
-    val dip = if (reduce) 0f else kf36(cyc, floatArrayOf(0f, .7f, .82f, 1f), floatArrayOf(0f, 0f, 1f, 0f))
+    // Prompt 71: slaget (cyc/ham/dip) leses i graphicsLayer/offset-lambdaene; komposisjonen vet bare om sponet synes.
+    val cyc: () -> Float = { if (reduce) 0f else (clock.value % .62f) / .62f }
+    val ham: () -> Float = { if (reduce) -20f else kf36(cyc(), floatArrayOf(0f, .55f, .82f, 1f), floatArrayOf(-55f, -55f, 18f, -55f)) }
+    val dip: () -> Float = { if (reduce) 0f else kf36(cyc(), floatArrayOf(0f, .7f, .82f, 1f), floatArrayOf(0f, 0f, 1f, 0f)) }
+    val chips by remember(reduce) { derivedStateOf { !reduce && cyc() > .78f } }
     BoxWithConstraints(modifier.fillMaxWidth().height(S * 1.1f + 6.dp)) {
         val w = maxWidth
         val left = (w * f).coerceIn(S * .6f, w - S * 1.1f) - S * .5f
-        Box(Modifier.offset(left, 6.dp).size(S, S * 1.1f).graphicsLayer { translationY = dip * 1.5f * density; scaleY = 1f - dip * .03f; transformOrigin = TransformOrigin(.5f, 1f) }) {
+        Box(Modifier.offset(left, 6.dp).size(S, S * 1.1f).graphicsLayer { val d = dip(); translationY = d * 1.5f * density; scaleY = 1f - d * .03f; transformOrigin = TransformOrigin(.5f, 1f) }) {
             GlimtFig35(hostChar35(vm.p35.set.char), S, "idle", still = reduce)
             CarpBelt36(S, Modifier.offset(-S * .01f, S * 1.1f - S * .1f - S * .34f))
             CarpHat36(S, Modifier.offset(S * .025f, -S * .24f))
-            CarpHammer36(S, Modifier.offset(S * .8f, S * .1f).graphicsLayer { rotationZ = ham; transformOrigin = TransformOrigin(.2f, .9f) })
+            CarpHammer36(S, Modifier.offset(S * .8f, S * .1f).graphicsLayer { rotationZ = ham(); transformOrigin = TransformOrigin(.2f, .9f) })
             // Spon fra treffpunktet.
-            if (!reduce && cyc > .78f) for (i in 0..2) {
-                val q = ((cyc - .78f) / .22f).coerceIn(0f, 1f)
-                Box(Modifier.offset(S * (1.4f + i * .05f) + ((8 + i * 7) * q).dp, S * 1.1f - 3.dp + ((-10 - i * 5) * q).dp).size(4.dp, 3.dp)
-                    .graphicsLayer { alpha = 1f - q; rotationZ = 160f * q }.background(if (i == 1) Color(0xFFF2C14E) else Color(0xFFC8925A), RoundedCornerShape(1.dp)))
+            if (chips) for (i in 0..2) {
+                val q: () -> Float = { ((cyc() - .78f) / .22f).coerceIn(0f, 1f) }
+                Box(Modifier.offset { IntOffset((S * (1.4f + i * .05f) + ((8 + i * 7) * q()).dp).roundToPx(), (S * 1.1f - 3.dp + ((-10 - i * 5) * q()).dp).roundToPx()) }.size(4.dp, 3.dp)
+                    .graphicsLayer { val k = q(); alpha = 1f - k; rotationZ = 160f * k }.background(if (i == 1) Color(0xFFF2C14E) else Color(0xFFC8925A), RoundedCornerShape(1.dp)))
             }
         }
     }
@@ -325,7 +337,7 @@ internal fun NordHist36(vm: AppViewModel, before: String) {
                     val sub = listOfNotNull(relDate36(v.date).takeIf { it.isNotBlank() }, "${v.notes.size} ${if (v.notes.size == 1) "endring" else "endringer"}").joinToString(" · ")
                     Text(sub, color = p.mut, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     if (v.failed) Text("Feilet", color = Color(0xFFB23A2A), fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Box(Modifier.rotate(rot)) { WxIcon("M9 6l6 6-6 6", p.ink, 14.dp, stroke = 2.4f) }
+                    Box(Modifier.graphicsLayer { rotationZ = rot }) { WxIcon("M9 6l6 6-6 6", p.ink, 14.dp, stroke = 2.4f) } // prompt 71
                 }
                 AnimatedVisibility(open, enter = expandVertically(tween(200)) + fadeIn(tween(200)), exit = shrinkVertically(tween(160)) + fadeOut(tween(120))) {
                     Column(Modifier.padding(start = 2.dp, end = 2.dp, bottom = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

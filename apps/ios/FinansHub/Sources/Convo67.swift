@@ -613,17 +613,14 @@ extension ChatStore27 {
 struct Chat67StatusLine: View {
     let text: String
     let c: ChatPal27
-    @State private var pulse: Bool = false
-    @Environment(\.accessibilityReduceMotion) private var reduce
 
     var body: some View {
         HStack(spacing: 8) {
+            // Prompt 71: bare prikkens opasitet pulserer (Anim71.swift). Før startet withAnimation(repeatForever) i onAppear,
+            // og da kunne linjas første plassering i lista også bli animert for alltid.
             Circle().fill(c.mut).frame(width: 7, height: 7)
-                .opacity(reduce ? 0.7 : (pulse ? 1 : 0.25))
+                .pulse71(from: 0.25, to: 1, half: 0.55, still: 0.7)
             Text(text).font(c.ui(13)).foregroundStyle(c.mut).lineLimit(1)
-        }
-        .onAppear {
-            if !reduce { withAnimation(.easeInOut(duration: 0.55).repeatForever(autoreverses: true)) { pulse = true } }
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.updatesFrequently)
