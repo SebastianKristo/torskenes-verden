@@ -1,5 +1,6 @@
 // Prompt 52 (SRV52): Gemini ut av kvitteringer, Boliger på samme kvitteringsleser, «sist jeg var på X», kalenderkontekst,
 // brief-kort per bruker, Glimt-figur per bruker, tankegang i chat, «Nytt i versjon» som punkter og butikklogoer fra lokal cache.
+import './lib/day-clock.mjs'; // døgngrenser og nattstillhet: klokka holdes på dagtid (se lib/day-clock.mjs)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync } from 'node:fs';

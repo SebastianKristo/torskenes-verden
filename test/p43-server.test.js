@@ -1,6 +1,7 @@
 // Prompt 43 (SERVER43): Felles API – Media (Sonarr, Radarr, qBittorrent, Prowlarr, Glimt, varsler, webhooks, kalender), Integrasjoner MEDIA,
 // widgets (media + katalog), Claude-import + AI-minne, Google Search Console (årsak, Hent nå, Test), Kalender-oppdatering, Finans saldokort/måneder,
 // Gjøremål-rekkefølge.
+import './lib/day-clock.mjs'; // døgngrenser og nattstillhet: klokka holdes på dagtid (se lib/day-clock.mjs)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';

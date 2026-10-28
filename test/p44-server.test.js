@@ -2,6 +2,7 @@
 // søk som jobb, slett fil, bibliotekssøk), Logger (Docker), Avspilling, Studie-dokumenter, Kalender (deltakere, invitasjon, etag,
 // brukerliste, adresser), Gjøremål (deloppgaver, frist, synk), Logg inn som, andres oppsett, overfør eier, tidligere versjoner,
 // /api/version, /api/health-fase, refresh-token og Glimt-tid.
+import './lib/day-clock.mjs'; // døgngrenser og nattstillhet: klokka holdes på dagtid (se lib/day-clock.mjs)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';

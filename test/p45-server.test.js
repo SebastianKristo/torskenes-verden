@@ -1,5 +1,6 @@
 // Prompt 45 (SERVER45): Docker-oppsett, Search Console, Studie (vitnemål), AI-import (Claude/ChatGPT/Gemini), Media (uovervåkede, avspilling),
 // sonevarsler, HA-helse (bare mobile_app), Ruter antall, Vær min posisjon, Gjøremål-synkraden, Innstillinger samlet og «bare systemvarsel».
+import './lib/day-clock.mjs'; // døgngrenser og nattstillhet: klokka holdes på dagtid (se lib/day-clock.mjs)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
