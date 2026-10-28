@@ -453,14 +453,16 @@ test('Vær-uke: ukesspørsmål går til Ollama med 7 dager data; reserve uten AI
     assert.equal(a.intent, 'weather.week');
     assert.equal(a.engine, 'ollama');
     assert.match(a.source, /^✦ Ollama · Open-Meteo 7 dager · /);
-    assert.deepEqual(a.bold, ['Mest regn torsdag, rundt 6 mm (80 %).']);
+    // Ukedagen i testdataene er torsdag; på onsdag og torsdag sier svaret «i morgen (torsdag)» / «i dag (torsdag)».
+    assert.equal(a.bold.length, 1);
+    assert.match(a.bold[0], /^Mest regn (?:i (?:dag|morgen) \()?torsdag\)?(?: \d+\.\d+)?, rundt 6 mm \(80 %\)\.$/);
     assert.equal(a.week.length, 7);
     assert.match(a.open.label, /^Åpne Vær for .+ ›$/);
     assert.equal(seen.split('\n').filter((l) => /mm \(/.test(l)).length, 7, 'tabell per dag');
     wx41._setWeek41Llm(async () => { throw new Error('Ollama svarte ikke'); });
     const r2 = await wx41.weekAnswer41(sebId, 'Når blir det mest regn denne uka?');
     assert.equal(r2.noAi, true);
-    assert.match(r2.text, /^\*\*Mest regn torsdag \d+\.\d+, rundt 6 mm \(80 %\)\.\*\*/);
+    assert.match(r2.text, /^\*\*Mest regn (?:i (?:dag|morgen) \()?torsdag\)? \d+\.\d+, rundt 6 mm \(80 %\)\.\*\*/);
     assert.match(r2.source, /uten AI/);
     const best = wx41.localWeekAnswer41('Hvilken dag er best for å sykle?', wx41.mockWeek41({ lat: 59.9, lon: 10.7 }, '2026-10-19'), '2026-10-19');
     assert.match(best, /^\*\*Onsdag 21\.10 ser best ut: tørt/);

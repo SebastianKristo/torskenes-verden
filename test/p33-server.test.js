@@ -205,7 +205,8 @@ test('freeSlots: hull ≥ 45 min mellom 08 og 21', () => {
 
 test('assist source:calendar: ledig tid, neste, oppsummering, vær, bursdag og opprett med angre', async () => {
   // Lørdag uten skole: én hendelse 10–12.
-  let sat = addDaysISO(TODAY, 1);
+  // Fra dag 4: Korpsøving fra testen over ligger på TODAY + 3 (på en onsdag er det lørdagen).
+  let sat = addDaysISO(TODAY, 4);
   while (new Date(sat + 'T12:00:00Z').getUTCDay() !== 6) sat = addDaysISO(sat, 1);
   await T('/api/kalender/events', 'POST', { title: 'Brunsj', allDay: false, date: sat, start: '10:00', end: '12:00' });
   const ask = async (q) => { const r = await T('/api/assist', 'POST', { q, source: 'calendar' }); assert.equal(r.status, 200, JSON.stringify(r.body)); return r.body; };
@@ -216,7 +217,7 @@ test('assist source:calendar: ledig tid, neste, oppsummering, vær, bursdag og o
   assert.equal(f.steps.length, 3);
   assert.equal(f.steps[1], 'Finner hull på minst 45 min');
   assert.ok(f.slots.some((s) => s.gapStart === '08:00' && s.gapEnd === '10:00'), JSON.stringify([f.text, f.slots, f.events.map((e) => [e.title, e.date, e.time])]));
-  assert.ok(f.slots.some((s) => s.gapStart === '12:00' && s.gapEnd === '21:00'));
+  assert.ok(f.slots.some((s) => s.gapStart === '12:00' && s.gapEnd === '21:00'), JSON.stringify([f.slots, f.events.map((e) => [e.title, e.date, e.time])]));
   assert.ok(Array.isArray(f.events));
   assert.ok(f.jobId);
   const job = await T(`/api/assist/${f.jobId}`);
