@@ -2,6 +2,14 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.62.0] – 28.10.2026 · Test av nye modeller for kvitteringer
+- **LFM-modeller for kvitteringer (test, av som standard):** admin kan prøve LFM3-VL-2B og LFM2.5-VL-3B fra Liquid AI under AI → Kvitteringer → «LFM-motorer (test)».
+  - De kan brukes når ingen OCR er tilgjengelig, som ekstra kontroll av totalen, eller til å ordne linjene fra Mac-OCR i kolonner før varelinjene leses.
+  - Modellene kjører bare på Mac minien (Ollama eller oMLX), og kvitteringene forlater aldri huset.
+  - Standard er uendret: Apple Vision OCR og qwen3:8b.
+- **Test av kvitteringslesing på Mac-en:** `npm run eval:receipts72` sammenligner dagens lesing med LFM-modellene på dine egne kvitteringer. Den måler total, dato, butikk, varelinjer og tid. Rapporten inneholder bare tall, aldri innholdet i kvitteringene. Se `tools/lfm72/README.md` for hvordan modellene hentes.
+- **Tester:** testene feiler ikke lenger om kvelden, om natten eller på onsdager.
+
 ## [4.61.0] – 27.10.2026 · Jevnere animasjoner
 - **Jevnere på web, iPhone og Android:** Glimt-orben, skimmer på lasteskjermer, ark som glir opp, brytere, vugging og flytting av widgets, og mikrofonbølgen beveger nå bare det som flytter seg, uten å tegne hele siden på nytt. De ser ut som før.
   - På iPhone går orben og Kalender-stjernen i skjermens takt (opptil 120 Hz), ikke 30 bilder i sekundet. Kalender-appen bruker også 120 Hz.
