@@ -8,6 +8,7 @@ import { macHealth48 } from './engines/mac-vision.js';
 import { macState51 } from './chain.js';
 import { brregStatus51 } from './brreg51.js';
 import { MIN_PX51 } from './preprocess51.js';
+import { lfmModel72, ENGINE_LABELS72, LFM_NOTE72 } from './lfm72.js'; // prompt 72
 
 let F = (u, i) => fetch(u, i);
 export const _setHealthFetch48 = (fn) => { F = fn ?? ((u, i) => fetch(u, i)); };
@@ -25,7 +26,7 @@ export async function health48({ admin = false, categories = [] } = {}) {
         const r = await F(`${cfg.ollamaUrl}/api/tags`, { signal: AbortSignal.timeout(3000) });
         if (!r.ok) return { ok: false, error: `Ollama svarte ${r.status}` };
         const names = ((await r.json()).models ?? []).map((m) => m.name);
-        return { ok: true, installed: names.some((n) => sameModel(n, cfg.textModel)) };
+        return { ok: true, installed: names.some((n) => sameModel(n, cfg.textModel)), names };
       } catch (e) { return { ok: false, error: `Ollama kan ikke nås (${e?.cause?.code || e?.name || e?.message})` }; }
     })(),
     ocrTools().catch(() => ({})),
@@ -37,7 +38,15 @@ export async function health48({ admin = false, categories = [] } = {}) {
     local_only: true, source_label: RECEIPT_SOURCE_LABEL52, reading_text: RECEIPT_LOCAL_TEXT52,
     compareMac: cfg.compareMac,
     macOcr: { enabled: cfg.macOcr, ...mac, ...macState51(), ...(admin ? { url: cfg.macOcrUrl, keySet: !!key } : {}) },
-    model: { name: cfg.textModel, ...model, ...(admin ? { url: cfg.ollamaUrl } : {}) },
+    model: { name: cfg.textModel, ...(({ names, ...m }) => m)(model), ...(admin ? { url: cfg.ollamaUrl } : {}) },
+    // Prompt 72: LFM-motorene (av som standard). installed bare når motoren er Ollama og /api/tags svarte (oMLX sjekkes under Tjenester).
+    lfm72: (() => {
+      const m3 = lfmModel72('lfm3', cfg), m25 = lfmModel72('lfm25', cfg);
+      const inst = (id) => (cfg.lfmBackend72 === 'ollama' && model.names ? model.names.some((n) => sameModel(n, id)) : null);
+      return { visionEngine: cfg.visionEngine72, crossCheck: cfg.crossCheck72, layoutStep: cfg.layoutStep72, backend: cfg.lfmBackend72, labels: ENGINE_LABELS72, note: LFM_NOTE72,
+        models: { lfm3: { name: m3.id, own: !!cfg.lfm3Model72, installed: inst(m3.id) }, lfm25: { name: m25.id, own: !!cfg.lfm25Model72, installed: inst(m25.id) } },
+        active: cfg.visionEngine72 !== 'qwen25vl' || cfg.crossCheck72 !== 'off' || cfg.layoutStep72 };
+    })(),
     tesseract: { enabled: cfg.tesseract, installed: !!tools.tesseract, version: tools.tesseract || null, imagemagick: !!tools.magick },
     external: blk,
     brreg: (({ count, updated }) => ({ count, updated }))(brregStatus51()),

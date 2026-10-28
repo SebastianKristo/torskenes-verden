@@ -3,7 +3,8 @@
 
 De ferdige bildene ligger allerede i eval/fixtures/, så dette trengs bare hvis fasiten endres.
 Krever Pillow (pip install pillow) og en TrueType-font (DejaVu på Linux, Arial/Helvetica på macOS).
-Bruk: python3 eval/fixtures/make-images.py
+Bruk: python3 eval/fixtures/make-images.py              (alle)
+      python3 eval/fixtures/make-images.py receipts72   (bare de syntetiske kvitteringene for prompt 72)
 """
 import json
 import os
@@ -118,7 +119,64 @@ def kvittering():
     img.save(os.path.join(HERE, 'kvittering.png'), optimize=True)
 
 
+def receipts72():
+    """Prompt 72: syntetiske norske kvitteringer for eval/receipts72.mjs (receipts72/*.json → receipts72/*.png)."""
+    import glob
+    out = []
+    for path in sorted(glob.glob(os.path.join(HERE, 'receipts72', '*.json'))):
+        data = json.load(open(path, encoding='utf-8'))
+        lines = data['linjer']
+        W = 640
+        H = 400 + 48 * len(lines) + 340
+        img = Image.new('RGB', (W, H), 'white')
+        d = ImageDraw.Draw(img)
+        f, fb, fh = font(MONO, 26), font(BOLD, 30), font(BOLD, 46)
+
+        def center(text, y, fnt):
+            w = d.textlength(text, font=fnt)
+            d.text(((W - w) / 2, y), text, font=fnt, fill='black')
+
+        def row(left, right, y, fnt=f):
+            d.text((40, y), left, font=fnt, fill='black')
+            w = d.textlength(right, font=fnt)
+            d.text((W - 40 - w, y), right, font=fnt, fill='black')
+
+        kr = lambda v: f'{v:,.2f}'.replace(',', ' ').replace('.', ',')
+        center(data['butikk'].upper(), 50, fh)
+        center(data.get('avdeling', data['butikk']), 115, f)
+        center(data.get('adresse', ''), 155, f)
+        center(f'Org.nr {data.get("orgnr", "912 345 678")} MVA', 195, f)
+        center(f'{nb_date(data["dato"])}  kl. {data["tid"]}', 250, f)
+        y = 320
+        d.line((40, y, W - 40, y), fill='black', width=2)
+        y += 25
+        for l in lines:
+            row(l['navn'], kr(l['belop']), y)
+            y += 48
+        y += 10
+        d.line((40, y, W - 40, y), fill='black', width=2)
+        y += 25
+        row('TOTALT', f'kr {kr(data["total"])}', y, fb)
+        y += 60
+        row(data.get('betaling', 'Bankkort'), kr(data['total']), y)
+        y += 45
+        rate = data.get('mva', 15)
+        mva = round(data['total'] - data['total'] / (1 + rate / 100), 2)
+        row(f'herav MVA {rate} %', kr(mva), y)
+        y += 80
+        center('Takk for handelen!', y, f)
+        png = path[:-5] + '.png'
+        img.save(png, optimize=True)
+        out.append(os.path.basename(png))
+    return out
+
+
 if __name__ == '__main__':
-    vitnemal()
-    kvittering()
-    print('Laget vitnemal.png og kvittering.png i', HERE)
+    import sys
+    if sys.argv[1:] == ['receipts72']:
+        print('Laget', ', '.join(receipts72()), 'i', os.path.join(HERE, 'receipts72'))
+    else:
+        vitnemal()
+        kvittering()
+        made = receipts72()
+        print('Laget vitnemal.png, kvittering.png og', len(made), 'kvitteringer i receipts72/ i', HERE)

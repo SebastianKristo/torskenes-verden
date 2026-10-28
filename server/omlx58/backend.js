@@ -61,6 +61,8 @@ export function omlxBody58(kind, body = {}, { thinking = true } = {}) {
   const out = { model: body.model, stream: true, stream_options: { include_usage: true }, messages };
   if (opt.num_predict) out.max_tokens = opt.num_predict;
   for (const k of ['temperature', 'top_p', 'seed', 'stop']) if (opt[k] !== undefined) out[k] = opt[k];
+  // Prompt 72: LFM-innstillingen repeat_penalty → repetition_penalty (som mlx-lm kaller det). top_k sendes fortsatt ikke til oMLX.
+  if (opt.repeat_penalty !== undefined) out.repetition_penalty = opt.repeat_penalty;
   if (body.format && typeof body.format === 'object') out.response_format = { type: 'json_schema', json_schema: { name: 'plan', schema: body.format, strict: true } };
   else if (body.format === 'json') out.response_format = { type: 'json_object' };
   if (typeof body.think === 'boolean' && thinking) out.chat_template_kwargs = { enable_thinking: body.think };

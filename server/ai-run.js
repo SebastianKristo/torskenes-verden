@@ -584,6 +584,8 @@ async function callOllama(model, o, signal, r, ctx = {}) {
   const options = { temperature: o.temperature ?? sp?.temperature ?? r.params.temperature, num_ctx: o.numCtx ?? sp?.numCtx ?? (t === 'chat' ? r.params.numCtx : STEP47.short.numCtx) };
   const np = o.numPredict ?? sp?.numPredict;
   if (np) options.num_predict = np;
+  // Prompt 72: anbefalte samplingsvalg per modell (LFM: top_k, repeat_penalty). Bare kjente Ollama-felt slippes gjennom.
+  if (o.extraOptions && typeof o.extraOptions === 'object') for (const k of ['top_k', 'top_p', 'repeat_penalty', 'min_p', 'seed']) if (Number.isFinite(o.extraOptions[k])) options[k] = o.extraOptions[k];
   const think = o.think ?? sp?.think;
   // Prompt 59 (rotårsak i produksjon): steg med eksplisitt think:false (planleggeren, svarsteget) sendte før `undefined` videre, og da
   // slo brukerens personlige «La modellen tenke» (ai_think) inn – qwen3 tenkte på hvert Glimt-kall. Nå: eksplisitt false er false, og
@@ -870,10 +872,25 @@ export async function modelFor(task, p, oldModel, { user = me(), images = null }
  * Kjører en kort AI-oppgave gjennom ruteren. Se toppen av fila for felt og svar.
  * Hvert forsøk logges i jobbloggen (én jobb per run, modell og fallbackFrom oppdateres).
  */
+/**
+ * Prompt 72 (LFM72): fast, lokal kandidat for kvitteringskjeden (LFM-motorene) – ingen ruting, ingen reserve, aldri sky.
+ * local72 = {id, engine:'ollama'|'omlx'}. Et modellnavn som ikke er en Ollama-/MLX-modell (sky-leverandør eller «:cloud»), avvises.
+ */
+export function forcedLocal72(task, local72) {
+  const id = String(local72?.id ?? '').trim();
+  const pv = providerOf(id);
+  if (!id || pv.provider !== 'ollama' || /(^|[:/-])cloud\b/i.test(id)) {
+    throw Object.assign(new AiRunError(`Kvitteringer leses bare lokalt – «${id || '–'}» er ikke en lokal modell`, { code: 'blocked', task, model: id || null, fix: 'model' }), { blocked: true, noRetry: true, cloud52: true });
+  }
+  const omlx = local72.engine === 'omlx';
+  return { list: [{ provider: 'ollama', id: pv.id, from: 'model', ...(omlx ? { engine: OMLX_BACKEND58 } : {}) }], warnings: [], notices: [], reason: null,
+    route: { model: pv.id, fallback: '' }, ollama: { ok: true, err: null }, engine: omlx ? 'omlx' : 'ollama' };
+}
+
 export async function run(task, o = {}) {
   const tid = taskId(task), user = o.user ?? me();
   const opts = { ...o, task: tid, user };
-  const res = await resolveTask(tid, { user, images: o.images, localOnly: o.localOnly });
+  const res = o.local72 ? forcedLocal72(tid, o.local72) : await resolveTask(tid, { user, images: o.images, localOnly: o.localOnly });
   const ctrl = new AbortController();
   const onUser = () => ctrl.abort(o.signal.reason ?? new Error('Avbrutt'));
   o.signal?.addEventListener?.('abort', onUser, { once: true });

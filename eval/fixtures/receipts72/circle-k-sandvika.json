@@ -1,0 +1,16 @@
+{
+  "_om": "Syntetisk kvittering (prompt 72). make-images.py receipts72 tegner bildet fra denne fila. Ikke en ekte kvittering.",
+  "butikk": "Circle K",
+  "avdeling": "Circle K Sandvika",
+  "adresse": "Sandviksveien 2, 1337 Sandvika",
+  "orgnr": "912 345 678",
+  "dato": "2026-10-05",
+  "tid": "07:58",
+  "betaling": "Mastercard",
+  "mva": 25,
+  "total": 801.45,
+  "linjer": [
+    { "navn": "Diesel pumpe 4", "belop": 712.45 },
+    { "navn": "Spylervæske 4L", "belop": 89.00 }
+  ]
+}

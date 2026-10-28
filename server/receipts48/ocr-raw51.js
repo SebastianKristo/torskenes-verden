@@ -10,6 +10,7 @@ import { ocrText48 } from './normalize.js';
 import { resolveMerchant51 } from './brreg51.js';
 import { r48Settings } from './settings.js';
 import { ocrStore } from './routes.js';
+import { lfmTotal72, ENGINE_LABELS72 } from './lfm72.js'; // prompt 72: ekstra totalkontroll med LFM (crossCheck72, av som standard)
 
 const q = (sql) => db.prepare(sql);
 const parse = (s) => { try { return s ? JSON.parse(s) : null; } catch { return null; } };
@@ -68,6 +69,18 @@ export async function crossCheck51(res, { id, user, original, fallback = null, l
       if (!agree) { d.needs_review = true; d.confidence = { ...(d.confidence ?? {}), total: Math.min(d.confidence?.total ?? 0.5, 0.4) }; }
       log('ocr-kontroll', agree ? `OCR fant samme total (${d.total} kr)` : `OCR fant ikke totalen ${d.total} kr (OCR: ${totals.slice(0, 3).join(', ') || 'ingen'}) – til gjennomgang`);
     }
+  }
+  // Prompt 72: ekstra kontroll av totalen med en LFM-modell (crossCheck72 = lfm3vl | lfm25layout, av som standard). Kan bare gjøre
+  // kvitteringen MER usikker (avvik → til gjennomgang), aldri fjerne en merknad fra OCR-kontrollen over.
+  const cc72 = r48Settings().crossCheck72;
+  if (cc72 && cc72 !== 'off' && d.total != null && original?.buf && /^image\//.test(original.mime ?? '')) {
+    try {
+      const t = await lfmTotal72(cc72, { image: original.buf, cfg: r48Settings() });
+      const agree = t.total != null && t.totals.some((x) => Math.abs(x - d.total) < 0.01);
+      d.ocr51 = { ...(d.ocr51 ?? { check: 'none' }), lfm72: { engine: cc72, model: t.model, agree, total: t.total } };
+      if (!agree) { d.needs_review = true; d.confidence = { ...(d.confidence ?? {}), total: Math.min(d.confidence?.total ?? 0.5, 0.4) }; }
+      log('lfm-kontroll', `${ENGINE_LABELS72[cc72]}: ${agree ? `samme total (${d.total} kr)` : `fant ${t.total ?? 'ingen total'} – til gjennomgang`}`);
+    } catch (e) { log('lfm-kontroll', `${ENGINE_LABELS72[cc72]}: ${e.message}`); }
   }
   try {
     const m = resolveMerchant51({ user, receipt: { merchant: d.merchant, org_number: d.org_number }, ocrText: text, receiptId: id });

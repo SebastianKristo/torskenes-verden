@@ -1,0 +1,16 @@
+{
+  "_om": "Syntetisk kvittering (prompt 72). make-images.py receipts72 tegner bildet fra denne fila. Ikke en ekte kvittering.",
+  "butikk": "Narvesen",
+  "avdeling": "Narvesen Oslo S",
+  "adresse": "Jernbanetorget 1, 0154 Oslo",
+  "orgnr": "912 345 678",
+  "dato": "2026-10-23",
+  "tid": "07:48",
+  "betaling": "Vipps",
+  "total": 146.00,
+  "linjer": [
+    { "navn": "Kaffe stor", "belop": 42.00 },
+    { "navn": "Rundstykke ost og skinke", "belop": 59.00 },
+    { "navn": "Aftenposten", "belop": 45.00 }
+  ]
+}

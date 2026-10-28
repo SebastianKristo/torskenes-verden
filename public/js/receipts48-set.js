@@ -184,6 +184,13 @@ export function ensureReceipts48() { bind(); loadReceipts48(false); }
 export const _r48State = X;
 /* Prompt 65 (AI → Kvitteringer og AI → Tjenester → Mac-OCR): samme tilstand og handlinger, tegnet av ai-control.js. */
 export function onReceipts48(fn) { listeners.add(fn); return () => listeners.delete(fn); }
-export const r48Act = { save: (clearKey = false) => save(clearKey), test: () => test(), toggle: (k) => toggle(k), setUrl: (v) => { X.url = v; }, setKey: (v) => { X.key = v; } };
+/** Prompt 72: én verdi i settings.receipts48 (LFM-motorene: visionEngine72, crossCheck72, layoutStep72, lfmBackend72, lfm3Model72, lfm25Model72). Bare admin. */
+async function setOpt72(k, v) {
+  if (!admin() || !/^(visionEngine72|crossCheck72|layoutStep72|lfmBackend72|lfm3Model72|lfm25Model72)$/.test(k)) return;
+  X.busy = k; paint();
+  try { X.set = await fin('/settings', { method: 'PUT', json: { receipts48: { [k]: v } } }); X.busy = ''; await loadReceipts48(true); flash('Lagret'); }
+  catch (e) { X.busy = ''; flash(e.status === 403 ? 'Bare administrator kan endre kvitteringsmotorene' : e.message, false); }
+}
+export const r48Act = { save: (clearKey = false) => save(clearKey), test: () => test(), toggle: (k) => toggle(k), setUrl: (v) => { X.url = v; }, setKey: (v) => { X.key = v; }, set72: (k, v) => setOpt72(k, v) };
 export const r48Admin = () => admin();
 export const R48_STEPS = STEPS;

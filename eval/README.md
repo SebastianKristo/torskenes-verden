@@ -50,6 +50,23 @@ node eval/lib/fake-omlx.mjs 18040 <nøkkel>          # falsk oMLX (bare riggsjek
 - Rapporten har motoren i tittelen og p50/p90 per case og totalt. Det gjelder alle motorer, så Ollama- og oMLX-filene kan
   sammenlignes direkte. Se `docs/omlx-58.md`.
 
+### Kvitteringer med LFM (prompt 72)
+
+```sh
+npm run eval:receipts72 -- --dry                                # riggsjekk uten modeller
+npm run eval:receipts72 -- --dir ~/Kvitteringer/eval --runs 3   # på Mac-en, mot dine egne kvitteringer (bilde + <navn>.json)
+```
+
+- `eval/receipts72.mjs` kjører kvitteringskjeden med disse kombinasjonene:
+  - dagens kjede (`C`)
+  - steg V med qwen2.5vl, LFM3-VL-2B og LFM2.5-VL-3B-layout (`V-qwen`, `V-lfm3`, `V-lfm25`)
+  - C med layout-steget L (`CL`)
+  - crossCheck med LFM3 (`X-lfm3`)
+- Den måler total, dato, butikk, presisjon og dekning for varelinjer, om valideringen besto, p50/p90 og lastetid for modellen (målt for seg).
+- Kvitteringene ligger lokalt på Mac-en og aldri i repoet. De syntetiske eksemplene ligger i `fixtures/receipts72/` (`make-images.py receipts72`).
+- Rapporten (`results/<dato>-receipts72-*.md/.json`) har ingen kvitteringsinnhold, bare hash av filnavnet og tall.
+- Se `tools/lfm72/README.md` for hvordan du henter modellene og hva som må sjekkes.
+
 ### Fart og før/etter (prompt 59, prompt 49 del 4)
 
 ```sh

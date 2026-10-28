@@ -879,9 +879,23 @@ function rcptTab() {
   const SIC = { deviceParse: 'receipt', deviceOcr: 'eye', macOcr: 'eye', tesseract: 'doc', compareMac: 'check' };
   const steps = M.R48_STEPS.map(([k, nm, s]) => { const S2 = status[k]; return row({ ic: SIC[k] ?? 'receipt', dot: S2?.[0] ?? '', t: nm, s: S2 ? `${S2[1]} · ${s}` : s, sc: S2?.[0] === 'bad' ? 'bad' : '', right: swb(!!st[k], `data-ac-r48tog="${k}"`, nm, !can || X.busy === k) }); }).join('');
   const model = row({ ic: 'chip', dot: mo.ok && mo.installed !== false ? 'ok' : 'bad', t: `Lokal modell · ${mo.name ?? 'qwen3:8b'}`, mono: false, s: mo.ok ? (mo.installed === false ? `Ollama svarer, men modellen mangler – kjør: ollama pull ${mo.name ?? 'qwen3:8b'}` : 'Klar') : mo.error ?? 'Svarer ikke', right: btn('Modell for kvitteringer ›', 'data-ac-tab="task"') });
+  // Prompt 72: LFM-motorene (av som standard). Samme radstil som stegene; bare admin kan endre.
+  const F72 = H.lfm72, lfm72 = !F72 ? '' : (() => {
+    const L72 = F72.labels ?? {}, dis = !can, mods = F72.models ?? {};
+    const inst = (m) => (m?.installed === false ? ' · ikke hentet' : m?.installed ? ' · hentet' : '');
+    const mIn = (k, m) => `<input type="text" class="ac-selp" data-ac-r48set="${k}" value="${esc(m?.own ? m.name : '')}" placeholder="${esc(m?.name ?? '')}" spellcheck="false" autocomplete="off" aria-label="Modellnavn"${dis ? ' disabled' : ''}>`;
+    return [
+      row({ ic: 'eye', t: 'Visjonsmotor · steg V (ingen OCR)', s: `${L72[F72.visionEngine] ?? F72.visionEngine} · brukes bare når ingen OCR svarer`, right: sel([['qwen25vl', L72.qwen25vl ?? 'qwen2.5vl (standard)'], ['lfm3vl', L72.lfm3vl ?? 'LFM3-VL-2B'], ['lfm25layout', L72.lfm25layout ?? 'LFM2.5-VL-3B layout']], F72.visionEngine, 'data-ac-r48set="visionEngine72" aria-label="Visjonsmotor for steg V"', dis || X.busy === 'visionEngine72') }),
+      row({ ic: 'check', t: 'Ekstra totalkontroll', s: 'En LFM-modell leser totalen på nytt i OCR-kontrollen. Avvik → til gjennomgang', right: sel([['off', 'Av (standard)'], ['lfm3vl', L72.lfm3vl ?? 'LFM3-VL-2B'], ['lfm25layout', 'LFM2.5-VL-3B layout']], F72.crossCheck, 'data-ac-r48set="crossCheck72" aria-label="Ekstra totalkontroll"', dis || X.busy === 'crossCheck72') }),
+      row({ ic: 'doc', t: 'L · Layout + Mac-OCR', s: 'LFM2.5-VL ordner Mac-OCR-linjene i kolonner før qwen3:8b. Består ikke L, brukes C som før', right: swb(!!F72.layoutStep, 'data-ac-r48set72="layoutStep72"', 'Steg L', dis || X.busy === 'layoutStep72') }),
+      row({ ic: 'chip', t: 'Motor for LFM', s: 'Ollama på Mac mini-en eller oMLX (bak vakten). Aldri sky', right: sel([['ollama', 'Ollama'], ['omlx', 'oMLX']], F72.backend, 'data-ac-r48set="lfmBackend72" aria-label="Motor for LFM"', dis || X.busy === 'lfmBackend72') }),
+      row({ ic: 'chip', t: 'LFM3-VL-2B', mono: true, s: `${mods.lfm3?.name ?? ''}${inst(mods.lfm3)}`, right: mIn('lfm3Model72', mods.lfm3) }),
+      row({ ic: 'chip', t: 'LFM2.5-VL-3B', mono: true, s: `${mods.lfm25?.name ?? ''}${inst(mods.lfm25)}`, right: mIn('lfm25Model72', mods.lfm25) }),
+    ].join('');
+  })();
   const cats = (H.categories ?? []).length ? `Kategoriforslag velges fra ${H.categories.length} kategorier: ${H.categories.slice(0, 6).join(', ')}${H.categories.length > 6 ? ' …' : ''}.` : '';
   return `${ban}${sec('STEG I KJEDEN', steps, { note: `Rekkefølgen er A → B → C → Tesseract, ellers legges kvitteringen i kø og prøves igjen; første steg som består kontrollen, vinner. Selve lesingen på telefonen slås på i FinansHub-appen.${can ? '' : ' Bare administrator kan endre stegene.'}`, hl: 'ai-r48' })}
-    ${sec('TOLKING', model + L.tolk.join(''), { note: cats })}${L.logo.length ? sec('LOGOER', L.logo.join(''), { note: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, Wikidata, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }) : ''}
+    ${sec('TOLKING', model + L.tolk.join(''), { note: cats })}${lfm72 ? sec('LFM-MOTORER (TEST)', lfm72, { note: `${F72.note ?? ''} Standard er Apple Vision + qwen3:8b. Bytt bare der evalen (eval/receipts72.mjs) viser at LFM er bedre.${can ? '' : ' Bare administrator kan endre.'}` }) : ''}${L.logo.length ? sec('LOGOER', L.logo.join(''), { note: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, Wikidata, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }) : ''}
     ${X.msg ? `<p class="ac-note ${X.ok ? '' : 'bad'}" role="status">${esc(X.msg)}</p>` : ''}`;
 }
 
@@ -1270,6 +1284,7 @@ function bind(el) {
     if ('acWddg' in d) return saveBackend({ web: { ddg: !G.backend?.web?.ddg?.on } });
     // Prompt 65: Kvitteringer (stegene) og Mac-OCR (Tjenester) bruker receipts48-set.js sin tilstand og handlinger
     if (d.acR48tog) return MOD.r48?.r48Act.toggle(d.acR48tog);
+    if (d.acR48set72) return MOD.r48?.r48Act.set72?.(d.acR48set72, !MOD.r48?._r48State?.health?.lfm72?.layoutStep); // prompt 72
     if (d.acR48) { const box = b.closest('.ac-xp'); MOD.r48?.r48Act.setUrl(box?.querySelector('[data-ac-r48in="url"]')?.value ?? null); if (d.acR48 === 'test') return MOD.r48?.r48Act.test(); if (d.acR48 === 'clearkey') { if (!confirm('Fjerne nøkkelen til Mac-OCR?')) return; return MOD.r48?.r48Act.save(true); } return; }
     if ('acNewtok' in d) { try { const r = await call('/tokens', { method: 'POST', json: { name: 'Ny nøkkel' } }); G.fresh = r.token ?? r.key ?? null; vibe(); } catch (err) { toast(err.message); } loadTokens(); return; }
     if (d.acDeltok) { if (!confirm('Trekke tilbake nøkkelen? Skript som bruker den slutter å virke.')) return; try { await call(`/tokens/${encodeURIComponent(d.acDeltok)}`, { method: 'DELETE' }); vibe(); } catch (err) { toast(err.message); } loadTokens(); }
@@ -1300,6 +1315,7 @@ function bind(el) {
     const t = e.target;
     if (t.matches('[data-ac-rt]')) { vibe(); return saveRouting({ tasks: { [t.dataset.acRt]: { [t.dataset.f]: t.value } } }).then(() => { G.at.finRouting = 0; get('finRouting', '/routing?scope=finans', normRouting); }); }
     if (t.matches('[data-ac-mkas]')) { vibe(); let v = null; try { v = t.value === '' ? null : JSON.parse(t.value); } catch { v = t.value; } return saveRouting({ params: { modelKeepAlive: { [t.dataset.acMkas]: v } } }, `${t.dataset.acMkas}: ${t.selectedOptions[0]?.textContent ?? ''}`); } // prompt 43, nå i raden
+    if (t.matches('[data-ac-r48set]')) return MOD.r48?.r48Act.set72?.(t.dataset.acR48set, t.value.trim()); // prompt 72: LFM-motorene
     if (t.matches('[data-ac-key]')) { if (t.dataset.f === 'key' && !t.value.trim()) return; return saveKey(t.dataset.acKey, t.dataset.f, t.value); }
     if (t.matches('[data-ac-be]')) { const k = t.dataset.acBe, v = t.value.trim(); if (k === 'openwebuiKey' && !v) return; return saveBackend({ [k]: v }); }
     if (t.matches('[data-ac-wset]')) { const k = t.dataset.acWset, v = t.value.trim(); if (k === 'braveKey' && !v) return; return saveBackend({ web: { [k]: v } }); }

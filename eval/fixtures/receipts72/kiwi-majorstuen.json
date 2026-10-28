@@ -1,0 +1,19 @@
+{
+  "_om": "Syntetisk kvittering (prompt 72). make-images.py receipts72 tegner bildet fra denne fila. Ikke en ekte kvittering.",
+  "butikk": "KIWI",
+  "avdeling": "KIWI Majorstuen",
+  "adresse": "Bogstadveien 52, 0366 Oslo",
+  "orgnr": "912 345 678",
+  "dato": "2026-10-19",
+  "tid": "18:05",
+  "betaling": "BankAxept",
+  "total": 192.15,
+  "linjer": [
+    { "navn": "Tine Helmelk 1,75L", "belop": 29.90 },
+    { "navn": "Grandiosa Original", "belop": 49.90 },
+    { "navn": "Pant", "belop": 2.00 },
+    { "navn": "Bananer", "belop": 18.45 },
+    { "navn": "Friele Frokost 500g", "belop": 89.90 },
+    { "navn": "Bærepose", "belop": 2.00 }
+  ]
+}

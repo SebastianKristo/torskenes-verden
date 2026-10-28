@@ -7,6 +7,10 @@
 //   V  Prompt 55: INGEN OCR tilgjengelig (Mac-OCR nede/mangler nøkkel OG Tesseract mangler/av) → visjonsmodellen (ruten «rc»,
 //      qwen2.5vl:7b) med SAMME schema og SAMME validering, merket «lest med visjonsmodell (ingen OCR)», sikkerhet maks middels.
 //      Visjonsmodellen er aldri eneste kilde når OCR finnes: ga OCR tekst (eller finnes Tesseract), brukes ikke V.
+//   L  Prompt 72 (av som standard, layoutStep72): LFM2.5-VL-3B leser layouten, og Mac-OCR-linjene ordnes etter den (kolonner/rader i
+//      lesefølge) før qwen3:8b. Består ikke L, kjøres C som før.
+//   Prompt 72: V kan bruke LFM3-VL-2B (lfm3vl) eller LFM2.5-VL-3B layout + qwen3:8b (lfm25layout) i stedet for qwen2.5vl (visionEngine72,
+//      standard qwen25vl). Samme schema og validering. Alt via ai-run/ai-gate til Ollama eller oMLX i huset (server/receipts48/lfm72.js).
 // Hvert steg kan slås av (settings.receipts48). Finnes både device-OCR og Mac-OCR, sammenlignes totalen: avvik → resultatet
 // som består sumsjekken brukes, ellers merkes totalen som usikker. Består ingen, brukes det beste forsøket (færrest feil).
 import { checkOcr48, modelFormat48 } from './schema.js';
@@ -18,8 +22,9 @@ import { macOcr48 } from './engines/mac-vision.js';
 import { tesseractOcr48 } from './engines/tesseract.js';
 import { macHealth48 } from './engines/mac-vision.js';
 import { resolveMerchant51 } from './brreg51.js'; // prompt 51: butikknavn via org.nr. → kjent butikk → modellen
+import { lfm3Read72, lfm25Read72, lfm25Layout72, orderOcrByLayout72, ENGINE_LABELS72 } from './lfm72.js'; // prompt 72: LFM-motorene (av som standard)
 
-export const STEP_NAMES48 = { A: 'Tolket på enheten', B: 'Enhetens OCR + lokal modell', C: 'Mac Vision + lokal modell', T: 'Tesseract + lokal modell', V: 'Visjonsmodell (ingen OCR)' };
+export const STEP_NAMES48 = { A: 'Tolket på enheten', B: 'Enhetens OCR + lokal modell', C: 'Mac Vision + lokal modell', T: 'Tesseract + lokal modell', V: 'Visjonsmodell (ingen OCR)', L: 'Mac Vision + layout (LFM2.5) + lokal modell' };
 export const VISION_LABEL55 = 'visjonsmodell (ingen OCR)';
 let visionImpl55 = null;
 /** Bare for tester: ({image, mime, prompt, system, schema, feedback}) → {data, model}. */
@@ -31,9 +36,20 @@ Regler:
 - Beløp i kroner som tall med punktum som desimalskille (1299.00). total = beløpet ved TOTAL / Å BETALE / SUM / BETALT.
 - date = kjøpsdatoen som ÅÅÅÅ-MM-DD. time = TT:MM. org_number = bare sifre. vat = mva per sats (25, 15 eller 12) slik det står.
 - category_suggestion = én kategori fra listen brukeren gir.`;
-/** Visjonsmodellen via ai-run (ruten «rc», bare lokalt). → {data, model} */
-async function visionParse55({ image, mime, categories, feedback, signal }) {
-  const prompt = `Kategorier: ${categories.length ? categories.join(', ') : 'Mat og dagligvarer, Restaurant og kafé, Transport og lading, Bolig, Hjem, Fritid og hobby, Abonnementer, Skole, Annet'}\n\nLes kvitteringen i bildet.${feedback ? `\n\n${feedback}` : ''}`;
+export const visionPrompt55 = (categories = [], feedback = null) => `Kategorier: ${categories.length ? categories.join(', ') : 'Mat og dagligvarer, Restaurant og kafé, Transport og lading, Bolig, Hjem, Fritid og hobby, Abonnementer, Skole, Annet'}\n\nLes kvitteringen i bildet.${feedback ? `\n\n${feedback}` : ''}`;
+export { VISION_SYSTEM55 };
+/**
+ * Visjonsmodellen via ai-run (ruten «rc», bare lokalt). → {data, model, ocrText?}
+ * Prompt 72: engine = visionEngine72. lfm3vl = LFM3-VL-2B (samme system/prompt/schema), lfm25layout = layout → qwen3:8b.
+ */
+async function visionParse55({ image, mime, categories, feedback, signal, engine = 'qwen25vl', cfg = {}, state = {} }) {
+  const prompt = visionPrompt55(categories, feedback);
+  if (engine === 'lfm3vl') return lfm3Read72({ image, system: VISION_SYSTEM55, prompt, cfg, signal });
+  if (engine === 'lfm25layout') {
+    const r = await lfm25Read72({ image, categories, feedback, cfg, signal, layout: state.layout ?? null });
+    state.layout = r.layout; // samme layout i det nye forsøket (bare tekststeget kjøres på nytt)
+    return { data: r.data, model: r.model, ocrText: r.rows.join('\n') };
+  }
   if (visionImpl55) return visionImpl55({ image, mime, prompt, system: VISION_SYSTEM55, schema: modelFormat48(), feedback });
   const { run: aiRun } = await import('../ai-run.js');
   const out = await aiRun('rc', { images: [image], system: VISION_SYSTEM55, prompt, schema: modelFormat48(), localOnly: true, temperature: 0, numCtx: 8192, numPredict: 3072, title: 'Kvittering · visjonsmodell (ingen OCR)', signal });
@@ -113,6 +129,25 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
     return null;
   }
 
+  // Prompt 72: layout fra LFM2.5-VL → Mac-OCR-linjene i lesefølge. → {ocr} | {skip}
+  async function layoutStep72(ocr) {
+    if (modelDown) { skip('L', `lokal modell utilgjengelig (${modelDown})`); return {}; }
+    if (ocr.cropped) { skip('L', 'Mac-OCR beskar bildet, så koordinatene passer ikke til layouten'); return {}; }
+    const t0 = Date.now();
+    try {
+      const lo = await lfm25Layout72({ image, cfg, signal });
+      const rows = orderOcrByLayout72(ocr, lo.elements);
+      log('steg-L', `${lo.model}: ${lo.elements.length} layout-elementer · ${Date.now() - t0} ms`);
+      if (!rows?.length) { skip('L', 'Mac-OCR-linjene mangler koordinater'); return {}; }
+      return { ocr: { ...ocr, rows, full_text: rows.join('\n'), layout72: { model: lo.model, engine: lo.engine, elements: lo.elements.length, ms: Date.now() - t0, timing: lo.timing } } };
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      entry('L', { engine: 'lfm25layout', status: 'error', ms: Date.now() - t0, error: err.message });
+      log('steg-L', `layout: ${err.message}`);
+      return {};
+    }
+  }
+
   // A: ferdig tolket på enheten (forslag – valideres her).
   const devText = deviceOcr ? ocrText48(deviceOcr) : '';
   if (!deviceParse) skip('A', 'ingen device_parse');
@@ -163,7 +198,14 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
     if (macErr && !pipeline.some((p) => p.step === 'C')) entry('C', { status: 'unavailable', engine: 'mac_vision', ms: Date.now() - t0, error: macErr });
     else if (!macOcr) { /* allerede registrert */ }
     else if (passed) entry('C', { status: 'compare', engine: 'mac_vision', ocr_ms: macOcr.ms ?? Date.now() - t0, ms: Date.now() - t0, reason: 'bare OCR for å sammenligne totalen' });
-    else if (await modelStep('C', macOcr, 'mac_vision')) passed = 'C';
+    else {
+      // Prompt 72 (steg L, av som standard): LFM2.5-layouten ordner Mac-OCR-linjene før qwen3:8b. Består ikke L, kjøres C som før.
+      if (cfg.layoutStep72) {
+        const lo = await layoutStep72(macOcr);
+        if (lo.ocr && await modelStep('L', lo.ocr, 'mac_vision+lfm25layout')) passed = 'L';
+      }
+      if (!passed && await modelStep('C', macOcr, 'mac_vision')) passed = 'C';
+    }
   }
 
   // T: Tesseract + lokal modell, bare når Mac-OCR ikke ga tekst.
@@ -189,15 +231,16 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
   let visionUsed = false;
   if (noOcr55) {
     const why = [cfg.macOcr ? macErr : 'Mac-OCR er slått av', tessMissing].filter(Boolean).join(' · ');
-    const e = entry('V', { engine: 'vision', status: 'failed', attempts: [], reason: `ingen OCR: ${why}` });
-    log('steg-V', `ingen OCR (${why}) · leser bildet med visjonsmodellen`);
+    const engine72 = cfg.visionEngine72 ?? 'qwen25vl', state72 = {};
+    const e = entry('V', { engine: 'vision', ...(engine72 !== 'qwen25vl' ? { vision72: engine72 } : {}), status: 'failed', attempts: [], reason: `ingen OCR: ${why}` });
+    log('steg-V', `ingen OCR (${why}) · leser bildet med ${engine72 === 'qwen25vl' ? 'visjonsmodellen' : ENGINE_LABELS72[engine72]}`);
     let feedback = null;
     const t0 = Date.now();
     for (let attempt = 1; attempt <= 2; attempt++) {
       const ta = Date.now();
       try {
-        const r = await visionParse55({ image, mime, categories, feedback, signal });
-        const v = validateReceipt48(r.data, { ocrText: '', categories });
+        const r = await visionParse55({ image, mime, categories, feedback, signal, engine: engine72, cfg, state: state72 });
+        const v = validateReceipt48(r.data, { ocrText: r.ocrText ?? '', categories });
         e.model = r.model ?? null;
         e.attempts.push({ attempt, ms: Date.now() - ta, confidence: v.confidence, failed_fields: v.failed_fields });
         cands.push({ step: 'V', v, ocr: null, engine: 'vision', model: r.model ?? null, provider: 'ollama', order: cands.length });
@@ -211,7 +254,7 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
         Object.assign(e, { status: 'error', error: err.message });
         log('steg-V', `visjonsmodellen: ${err.message}`);
         if (signal?.aborted) throw err;
-        if (!/JSON/i.test(err.message)) break;
+        if (!/JSON/i.test(err.message) && !err.badJson) break;
         feedback = 'Forrige svar var ikke gyldig JSON. Svar bare med ett JSON-objekt etter skjemaet.';
       }
     }
@@ -241,7 +284,7 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
       if (okB && !okC) pick = candB; else if (okC && !okB) pick = candC;
       else if (okB && okC) uncertainExtra.push('total');
       else if (!pick?.v.checks?.sumOk) uncertainExtra.push('total');
-      compare.chosen = pick?.step === 'B' ? 'device' : pick?.step === 'C' ? 'mac' : null;
+      compare.chosen = pick?.step === 'B' ? 'device' : pick?.step === 'C' || pick?.step === 'L' ? 'mac' : null;
       log('sammenligning', `totalen avviker: enheten ${device} kr, Mac ${mac} kr · ${uncertainExtra.length ? 'merket som usikker' : `bruker ${compare.chosen === 'mac' ? 'Mac' : 'enheten'} (består sumsjekken)`}`);
     }
   }
@@ -263,7 +306,7 @@ export async function runChain48({ image, mime, smallImage = null, deviceOcr = n
   if (confidence === 'high' && uncertainExtra.length) confidence = 'medium';
   // Prompt 55: lest uten OCR (bare visjonsmodellen) → aldri «høy» sikkerhet, og totalen regnes som usikker.
   if (pick?.step === 'V') { if (confidence === 'high') confidence = 'medium'; if (!uncertain.includes('total')) uncertain.push('total'); }
-  const label = !pick ? null : pick.step === 'A' ? (client?.platform === 'android' ? 'Android' : 'iPhone') : pick.step === 'B' ? (deviceOcr?.source === 'android_mlkit' ? 'Android + Glimt' : 'iPhone + Glimt') : pick.step === 'C' ? 'Mac' : pick.step === 'T' ? 'Glimt (Tesseract)' : pick.step === 'V' ? VISION_LABEL55 : 'Lokal AI';
+  const label = !pick ? null : pick.step === 'A' ? (client?.platform === 'android' ? 'Android' : 'iPhone') : pick.step === 'B' ? (deviceOcr?.source === 'android_mlkit' ? 'Android + Glimt' : 'iPhone + Glimt') : pick.step === 'C' ? 'Mac' : pick.step === 'L' ? 'Mac + layout' : pick.step === 'T' ? 'Glimt (Tesseract)' : pick.step === 'V' ? VISION_LABEL55 : 'Lokal AI';
   return {
     receipt: v?.receipt ?? null, confidence, failed_fields: v?.failed_fields ?? [], uncertain_fields: uncertain, errors: v?.errors ?? ['Ingen steg ga et resultat'], warnings: v?.warnings ?? [],
     checks: v?.checks ?? null, pipeline, used: pick?.step ?? null, passed: !!passed && pick?.step === passed, engine: pick?.engine ?? null, provider: pick?.provider ?? null, model: pick?.model ?? null, label,

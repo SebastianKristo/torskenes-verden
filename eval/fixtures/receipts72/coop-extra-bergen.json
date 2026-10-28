@@ -1,0 +1,18 @@
+{
+  "_om": "Syntetisk kvittering (prompt 72). make-images.py receipts72 tegner bildet fra denne fila. Ikke en ekte kvittering.",
+  "butikk": "Coop Extra",
+  "avdeling": "Coop Extra Danmarksplass",
+  "adresse": "Fjøsangerveien 30, 5054 Bergen",
+  "orgnr": "912 345 678",
+  "dato": "2026-10-12",
+  "tid": "11:20",
+  "betaling": "Visa",
+  "total": 259.70,
+  "linjer": [
+    { "navn": "Jarlsberg 700g", "belop": 119.00 },
+    { "navn": "Gulrøtter 1kg", "belop": 22.90 },
+    { "navn": "Kyllingfilet 400g", "belop": 79.90 },
+    { "navn": "Pepsi Max 1,5L", "belop": 34.90 },
+    { "navn": "Pant", "belop": 3.00 }
+  ]
+}
