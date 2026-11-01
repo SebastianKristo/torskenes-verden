@@ -1,5 +1,5 @@
-# Logoer som mangler (2026-10-27). Generert av server/logos/fetch-logos.mjs.
-# 424 hentet, 16 mangler, 4 bruker bokstav (felles favicon eller ukjent domene).
+# Logoer som mangler (2026-11-01). Generert av server/logos/fetch-logos.mjs.
+# 425 hentet, 16 mangler, 4 bruker bokstav (felles favicon eller ukjent domene).
 aleris	Aleris	aleris.no	wikidata:ingen-id, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, html-icon:31px, og-image:ikke-kvadratisk, google:31px, duckduckgo:31px
 bokklubben	Bokklubben	bokklubben.no	wikidata:ingen-logo, apple-touch-icon:403, apple-touch-icon:403, favicon-svg:403, google:404, duckduckgo:404
 deli-de-luca	Deli de Luca	delideluca.no	wikidata:ingen-logo, apple-touch-icon:ikke-bilde, apple-touch-icon:ikke-bilde, favicon-svg:404, google:404, duckduckgo:404
@@ -8,9 +8,9 @@ dna	dna	dna-shoes.com	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-ico
 eurosko	Eurosko	eurosko.no	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, google:404, duckduckgo:404
 fedex	FedEx	fedex.com	src:fant ikke ikon på merkevaresiden
 gresvig	Gresvig	gresvig.no	wikidata:ingen-logo, apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, favicon-svg:fetch failed, google:404, duckduckgo:404
-lagerhaus	Lagerhaus	lagerhaus.no	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, manifest:16px, google:16px, duckduckgo:16px
+lagerhaus	Lagerhaus	lagerhaus.no	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, manifest:16px, google:16px, duckduckgo:404
 lille-vinkel-sko	Lille Vinkel Sko	lillevinkelsko.no	wikidata:ingen-logo, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, html-icon:16px, google:16px, duckduckgo:16px
-nordic-feet	Nordic Feet	nordicfeet.com	wikidata:ingen-id, apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, favicon-svg:fetch failed, google:404, duckduckgo:404
+nordic-feet	Nordic Feet	nordicfeet.com	wikidata:ingen-id, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:fetch failed, google:404, duckduckgo:16px
 pizzabakeren	Pizzabakeren	pizzabakeren.no	wikidata:ingen-logo, apple-touch-icon:ikke-bilde, apple-touch-icon:ikke-bilde, favicon-svg:ikke-bilde, html-icon:16px, google:16px, duckduckgo:16px
 porterbuddy	Porterbuddy	porterbuddy.com	wikidata:ingen-id, apple-touch-icon:404, apple-touch-icon:404, favicon-svg:404, google:404, duckduckgo:404
 q-park	Q-Park	q-park.no	wikidata:ingen-id, apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, favicon-svg:fetch failed, google:404, duckduckgo:404
